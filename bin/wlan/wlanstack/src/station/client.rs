@@ -6,7 +6,7 @@ use failure::bail;
 use fidl::{endpoints::RequestStream, endpoints::ServerEnd};
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEventStream, MlmeProxy};
 use fidl_fuchsia_wlan_sme::{self as fidl_sme, ClientSmeRequest};
-use futures::{Poll, prelude::*, select, stream};
+use futures::{Poll, prelude::*, select, stream::{self, FuturesUnordered}};
 use futures::channel::mpsc;
 use log::{error, info};
 use pin_utils::pin_mut;
@@ -21,7 +21,6 @@ use fuchsia_zircon as zx;
 
 use fuchsia_cobalt::CobaltSender;
 use crate::fidl_util::is_peer_closed;
-use crate::future_util::ConcurrentTasks;
 use crate::Never;
 use crate::stats_scheduler::StatsRequest;
 use crate::telemetry;
@@ -63,19 +62,22 @@ pub async fn serve<S>(proxy: MlmeProxy,
     pin_mut!(mlme_sme);
     pin_mut!(sme_fidl);
     Ok(select! {
-        mlme_sme => mlme_sme?,
-        sme_fidl => sme_fidl?.into_any(),
+        mlme_sme = mlme_sme.fuse() => mlme_sme?,
+        sme_fidl = sme_fidl.fuse() => sme_fidl?.into_any(),
     })
 }
 
 async fn serve_fidl(sme: Arc<Mutex<Sme>>,
-                    mut new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
-                    mut user_stream: client_sme::UserStream<Tokens>,
-                    mut info_stream: InfoStream,
+                    new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
+                    user_stream: client_sme::UserStream<Tokens>,
+                    info_stream: InfoStream,
                     mut cobalt_sender: CobaltSender)
     -> Result<Never, failure::Error>
 {
-    let mut fidl_clients = ConcurrentTasks::new();
+    let mut new_fidl_clients = new_fidl_clients.fuse();
+    let mut user_stream = user_stream.fuse();
+    let mut info_stream = info_stream.fuse();
+    let mut fidl_clients = FuturesUnordered::new();
     let mut connection_times = ConnectionTimes { att_id: 0,
                                                  txn_id: 0,
                                                  connect_started_time: None,
@@ -83,23 +85,20 @@ async fn serve_fidl(sme: Arc<Mutex<Sme>>,
                                                  assoc_started_time: None,
                                                  rsna_started_time: None };
     loop {
-        let mut user_event = user_stream.next();
-        let mut info_event = info_stream.next();
-        let mut new_fidl_client = new_fidl_clients.next();
         select! {
-            user_event => match user_event {
+            user_event = user_stream.next() => match user_event {
                 Some(e) => handle_user_event(e),
                 None => bail!("SME->FIDL future unexpectedly finished"),
             },
-            info_event => match info_event {
+            info_event = info_stream.next() => match info_event {
                 Some(e) => handle_info_event(e, &mut cobalt_sender, &mut connection_times),
                 None => bail!("Info Event stream unexpectedly ended"),
             },
-            fidl_clients => fidl_clients.into_any(),
-            new_fidl_client => match new_fidl_client {
-                Some(c) => fidl_clients.add(serve_fidl_endpoint(Arc::clone(&sme), c)),
+            new_fidl_client = new_fidl_clients.next() => match new_fidl_client {
+                Some(c) => fidl_clients.push(serve_fidl_endpoint(Arc::clone(&sme), c)),
                 None => bail!("New FIDL client stream unexpectedly ended"),
             },
+            () = fidl_clients.select_next_some() => {},
         }
     }
 }

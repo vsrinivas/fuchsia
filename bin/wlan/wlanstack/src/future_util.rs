@@ -3,14 +3,11 @@
 // found in the LICENSE file.
 
 use futures::ready;
-use futures::future::Future;
-use futures::stream::{self, Fuse, Stream, StreamExt};
+use futures::stream::{Fuse, Stream, StreamExt};
 use futures::task::{Poll, LocalWaker};
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 use std::marker::Unpin;
 use std::pin::Pin;
-
-use crate::Never;
 
 pub struct GroupAvailable<S, T, E> where S: Stream<Item = Result<T, E>> {
     stream: Fuse<S>,
@@ -83,39 +80,6 @@ pub trait GroupAvailableExt: Stream {
 
 impl<T> GroupAvailableExt for T where T: Stream + ?Sized {}
 
-/// Similar to FuturesUnordered, but doesn't terminate when the there are no futures.
-/// Also, it is a Future rather than a Stream to make it easier to use with select! macro
-pub struct ConcurrentTasks<T> {
-    tasks: stream::FuturesUnordered<T>
-}
-
-impl<T> ConcurrentTasks<T> where T: Future {
-    unsafe_pinned!(tasks: stream::FuturesUnordered<T>);
-
-    pub fn new() -> Self {
-        ConcurrentTasks {
-            tasks: stream::FuturesUnordered::new(),
-        }
-    }
-
-    pub fn add(&mut self, task: T) {
-        self.tasks.push(task);
-    }
-}
-
-impl<T> Future for ConcurrentTasks<T> where T: Future<Output = ()> {
-    type Output = Never;
-
-    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
-        loop {
-            match self.tasks().poll_next(lw) {
-                Poll::Ready(Some(())) => {},
-                Poll::Pending | Poll::Ready(None) => return Poll::Pending,
-            }
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -123,8 +87,6 @@ mod tests {
     use fuchsia_async::{self as fasync, temp::TempStreamExt};
     use futures::channel::mpsc;
     use futures::stream::{self, TryStreamExt};
-    use std::sync::Arc;
-    use std::sync::atomic::{AtomicUsize, Ordering};
 
     use crate::Never;
 
@@ -175,26 +137,5 @@ mod tests {
 
         let res = exec.run_singlethreaded(s.try_next());
         assert_eq!(Err(-30i32), res);
-    }
-
-    #[test]
-    fn concurrent_tasks() {
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
-
-        let mut tasks = ConcurrentTasks::new();
-        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut tasks));
-
-        let count_one = Arc::new(AtomicUsize::new(0));
-        tasks.add(simple_future(Arc::clone(&count_one)));
-        let count_two = Arc::new(AtomicUsize::new(0));
-        tasks.add(simple_future(Arc::clone(&count_two)));
-
-        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut tasks));
-        assert_eq!(1, count_one.load(Ordering::SeqCst));
-        assert_eq!(1, count_two.load(Ordering::SeqCst));
-    }
-
-    async fn simple_future(res: Arc<AtomicUsize>) {
-        res.fetch_add(1, Ordering::SeqCst);
     }
 }

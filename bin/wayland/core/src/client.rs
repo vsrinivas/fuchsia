@@ -92,10 +92,11 @@ impl Client {
             async move {
                 let mut buffer = zx::MessageBuf::new();
                 loop {
-                    let mut message = self.chan.recv_msg(&mut buffer);
-                    let mut task = self.tasks.next();
                     select! {
-                        message => {
+                        // Fusing: we exit when `recv_msg` fails, so we don't
+                        // need to worry about fast-looping when the channel is
+                        // closed.
+                        message = self.chan.recv_msg(&mut buffer).fuse() => {
                             // We got a new message over the zircon channel.
                             if let Err(e) = message {
                                 println!("Failed to receive message on the channel {}", e);
@@ -108,7 +109,11 @@ impl Client {
                             }
                             buffer = zx::MessageBuf::new();
                         },
-                        task => {
+                        // Fusing: we panic immediately if the task queue ever returns
+                        // `None`, so no need to track state of the channel between
+                        // loop iterations. NOTE: for this to remain true, no other code
+                        // can be given access to mutate `self.tasks`.
+                        task = self.tasks.next().fuse() => {
                             // A new closure has been received.
                             //
                             // We unwrap since we retain a reference to the

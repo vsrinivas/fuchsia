@@ -13,7 +13,6 @@
 
 use {
     crate::{
-        future_util::ConcurrentTasks,
         packet_logs::PacketLogs,
         snooper::Snooper,
         subscription_manager::SubscriptionManager,
@@ -36,7 +35,7 @@ use {
         channel::mpsc,
         future::{ready, Join, Ready},
         select,
-        stream::StreamFuture,
+        stream::{FuturesUnordered, StreamFuture},
         FutureExt, StreamExt,
     },
     std::{
@@ -49,7 +48,6 @@ use {
 };
 
 mod bounded_queue;
-mod future_util;
 mod packet_logs;
 mod snooper;
 mod subscription_manager;
@@ -71,11 +69,11 @@ type ClientRequest = (
 /// A `Stream` that holds a collection of client request streams and will return the item from the
 /// next ready stream.
 type ConcurrentClientRequestFutures =
-    ConcurrentTasks<Join<Ready<ClientId>, StreamFuture<SnoopRequestStream>>>;
+    FuturesUnordered<Join<Ready<ClientId>, StreamFuture<SnoopRequestStream>>>;
 
 /// A `Stream` that holds a collection of snooper streams and will return the item from the
 /// next ready stream.
-type ConcurrentSnooperPacketFutures = ConcurrentTasks<StreamFuture<Snooper>>;
+type ConcurrentSnooperPacketFutures = FuturesUnordered<StreamFuture<Snooper>>;
 
 /// A `ClientId` represents the unique identifier for a client that has connected to the bt-snoop
 /// service.
@@ -145,7 +143,7 @@ fn handle_fs_event(
             fx_log_info!("Opening snoop channel for hci device \"{}\"", path.display());
             match Snooper::new(path.clone()) {
                 Ok(snooper) => {
-                    snoopers.add(snooper.into_future());
+                    snoopers.push(snooper.into_future());
                     let removed_device = packet_logs.add_device(path_to_string(&message.filename));
                     if let Some(device) = removed_device {
                         subscribers.remove_device(&device);
@@ -182,7 +180,7 @@ fn register_new_client(
 ) {
     if let Some(chan) = channel {
         let stream = SnoopRequestStream::from_channel(chan);
-        client_stream.add(ready(client_id).join(stream.into_future()));
+        client_stream.push(ready(client_id).join(stream.into_future()));
         fx_log_info!("New client connection: {}", client_id);
     }
 }
@@ -233,7 +231,7 @@ fn handle_client_request(
             if follow {
                 subscribers.register(id, control_handle, host_device)
                     .expect("A client `Start` request should never be processed more than once");
-                client_requests.add(ready(id).join(client_stream.into_future()));
+                client_requests.push(ready(id).join(client_stream.into_future()));
                 fx_vlog!(2, "Client {} subscribed and waiting", id);
             } else {
                 fx_vlog!(2, "Client {} shutting down", id);
@@ -267,7 +265,7 @@ fn handle_packet(
             }
             subscribers.notify(&device, &mut packet);
             packet_logs.log_packet(&device, packet);
-            snoopers.add(snooper.into_future());
+            snoopers.push(snooper.into_future());
         }
         None => {
             // TODO (belgum):
@@ -278,7 +276,7 @@ fn handle_packet(
             //                  - clean up logs for that device (very likely not!)
             let snooper = Snooper::new(snooper.device_path);
             match snooper {
-                Ok(snooper) => snoopers.add(snooper.into_future()),
+                Ok(snooper) => snoopers.push(snooper.into_future()),
                 Err(e) => fx_log_warn!("Attempt to re-open snoop channel failed: {}", e),
             }
         }
@@ -292,8 +290,9 @@ fn start(log_size_bytes: usize, log_time: Duration, max_device_count: usize,
 {
     let mut exec = fasync::Executor::new().expect("Could not create executor");
 
-    let (fdio_chan, mut service_chan) = mpsc::channel(512);
-    let mut server = start_server(fdio_chan)?;
+    let (fdio_chan, service_chan) = mpsc::channel(512);
+    let mut service_chan = service_chan.fuse();
+    let mut server = start_server(fdio_chan)?.fuse();
     let mut fs_event_stream = Watcher::new(&hci_dir).context("Cannot create device watcher")?;
     let mut snoopers = ConcurrentSnooperPacketFutures::new();
     let mut packet_logs = PacketLogs::new(max_device_count, log_size_bytes, log_time);
@@ -304,15 +303,12 @@ fn start(log_size_bytes: usize, log_time: Duration, max_device_count: usize,
     let main_loop = async {
         fx_vlog!(1, "Capturing snoop packets...");
         loop {
-            let mut fs_event = fs_event_stream.next();
-            let mut connection = service_chan.next();
-            let mut request = client_requests.next();
-            let mut packet = snoopers.next();
             select! {
-                server => {
+                _ = server => {
                     fx_log_err!("Fdio server has died. Exiting.");
+                    break Ok(());
                 },
-                fs_event => {
+                fs_event = fs_event_stream.next() => {
                     // extract message and handle vfs event for hci device directory
                     let message = fs_event.ok_or(err_msg("Cannot reach watch server")).and_then(|r| Ok(r?));
                     match message {
@@ -328,16 +324,14 @@ fn start(log_size_bytes: usize, log_time: Duration, max_device_count: usize,
                         }
                     }
                 },
-                connection => {
+                connection = service_chan.next() => {
                     register_new_client(connection, &mut client_requests, id_gen.next());
                 },
-                request => {
-                    let request = request.expect("ConcurrentTask never returns `None`");
+                request = client_requests.select_next_some() => {
                     handle_client_request(request, &mut client_requests, &mut subscribers,
                         &mut packet_logs)?;
                 },
-                packet => {
-                    let (packet, snooper) = packet.expect("ConcurrentTask never returns `None`");
+                (packet, snooper) = snoopers.select_next_some() => {
                     handle_packet(packet, snooper, &mut snoopers, &mut subscribers,
                         &mut packet_logs, truncate_payload);
                 },

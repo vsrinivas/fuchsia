@@ -35,16 +35,16 @@ async fn serve_mlme_sme<STA, SRS, TS>(proxy: MlmeProxy, mut event_stream: MlmeEv
     let (mut stats_sender, stats_receiver) = mpsc::channel(1);
     let stats_fut = serve_stats(proxy.clone(), stats_requests, stats_receiver);
     pin_mut!(stats_fut);
+    let mut stats_fut = stats_fut.fuse();
 
-    let mut timeout_stream = make_timer_stream(time_stream);
+    let mut timeout_stream = make_timer_stream(time_stream).fuse();
 
     loop {
-        let mut mlme_event = event_stream.next();
-        let mut mlme_req = mlme_stream.next();
-        let mut timeout = timeout_stream.next();
-
         select! {
-            mlme_event => match mlme_event {
+            // Fuse rationale: any `none`s in the MLME stream should result in
+            // bailing immediately, so we don't need to track if we've seen a
+            // `None` or not and can `fuse` directly in the `select` call.
+            mlme_event = event_stream.next().fuse() => match mlme_event {
                 // Handle the stats response separately since it is SME-independent
                 Some(Ok(MlmeEvent::StatsQueryResp{ resp })) => handle_stats_resp(&mut stats_sender, resp)?,
                 Some(Ok(other)) => station.lock().unwrap().on_mlme_event(other),
@@ -52,7 +52,7 @@ async fn serve_mlme_sme<STA, SRS, TS>(proxy: MlmeProxy, mut event_stream: MlmeEv
                 None => return Ok(()),
                 Some(Err(e)) => bail!("Error reading an event from MLME channel: {}", e),
             },
-            mlme_req => match mlme_req {
+            mlme_req = mlme_stream.next().fuse() => match mlme_req {
                 Some(req) => match forward_mlme_request(req, &proxy) {
                     Ok(()) => {},
                     Err(ref e) if is_peer_closed(e) => return Ok(()),
@@ -60,11 +60,11 @@ async fn serve_mlme_sme<STA, SRS, TS>(proxy: MlmeProxy, mut event_stream: MlmeEv
                 },
                 None => bail!("Stream of requests from SME to MLME has ended unexpectedly"),
             },
-            timeout => match timeout {
+            timeout = timeout_stream.next() => match timeout {
                 Some(timed_event) => station.lock().unwrap().on_timeout(timed_event),
                 None => bail!("SME timer stream has ended unexpectedly"),
             },
-            stats_fut => stats_fut?.into_any(),
+            stats = stats_fut => stats?.into_any(),
         }
     }
 }

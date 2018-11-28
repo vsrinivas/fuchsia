@@ -460,15 +460,12 @@ async fn ethernet_sender(receiver: &mut mpsc::Receiver<()>, state: Arc<Mutex<Sta
     let minstrel_update_interval_test = 20.millis();
     let mut eth_sender_timer_stream =
         fasync::Interval::new(minstrel_update_interval_test);
-    let mut client_stream = client.get_stream();
+    let mut client_stream = client.get_stream().fuse();
     const ETH_PACKETS_PER_INTERVAL : u16 = 160;
     let mut num_cycles = 15;
     'eth_sender: loop {
-        let mut next_timer_event = eth_sender_timer_stream.next();
-        let mut next_eth_event = client_stream.next();
-
         select! {
-            next_timer_event => {
+            () = eth_sender_timer_stream.select_next_some() => {
                 if num_cycles > 0 {
                     num_cycles -= 1;
                     for _ in 0..ETH_PACKETS_PER_INTERVAL { client.send(&buf); }
@@ -476,7 +473,7 @@ async fn ethernet_sender(receiver: &mut mpsc::Receiver<()>, state: Arc<Mutex<Sta
                 let state = state.lock().unwrap();
                 if !state.is_associated { break 'eth_sender; }
             },
-            next_eth_event => {
+            _ = client_stream.next() => {
                 await!(client.get_status()).expect("calling client.get_status() after an event");
             },
         }

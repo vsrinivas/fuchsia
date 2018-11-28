@@ -26,7 +26,7 @@ use {
     futures::{
         future::{self, Future, Ready, AndThen, TryFutureExt},
         ready,
-        stream::Stream,
+        stream::{FusedStream, Stream},
         task::{LocalWaker, Poll, Waker},
     },
     parking_lot::Mutex,
@@ -141,7 +141,7 @@ impl Client {
         }
 
         EventReceiver {
-            inner: self.inner.clone(),
+            inner: Some(self.inner.clone()),
         }
     }
 
@@ -286,18 +286,28 @@ impl MessageInterest {
 /// A stream of events as `MessageBuf`s.
 #[derive(Debug)]
 pub struct EventReceiver {
-    inner: Arc<ClientInner>,
+    inner: Option<Arc<ClientInner>>,
 }
 
 impl Unpin for EventReceiver {}
 
+impl FusedStream for EventReceiver {
+    fn is_terminated(&self) -> bool {
+        self.inner.is_none()
+    }
+}
+
 impl Stream for EventReceiver {
     type Item = Result<zx::MessageBuf, Error>;
 
-    fn poll_next(self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Option<Self::Item>> {
-        Poll::Ready(match ready!(self.inner.poll_recv_event(lw)) {
+    fn poll_next(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Option<Self::Item>> {
+        let inner = self.inner.as_ref().expect("polled EventReceiver after `None`");
+        Poll::Ready(match ready!(inner.poll_recv_event(lw)) {
             Ok(x) => Some(Ok(x)),
-            Err(Error::ClientRead(zx::Status::PEER_CLOSED)) => None,
+            Err(Error::ClientRead(zx::Status::PEER_CLOSED)) => {
+                self.inner = None;
+                None
+            },
             Err(e) => Some(Err(e)),
         })
     }
@@ -305,8 +315,10 @@ impl Stream for EventReceiver {
 
 impl Drop for EventReceiver {
     fn drop(&mut self) {
-        self.inner.event_channel.lock().listener = EventListener::None;
-        self.inner.wake_any();
+        if let Some(inner) = &self.inner {
+            inner.event_channel.lock().listener = EventListener::None;
+            inner.wake_any();
+        }
     }
 }
 

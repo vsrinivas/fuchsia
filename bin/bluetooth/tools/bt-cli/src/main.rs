@@ -22,6 +22,7 @@ use {
     fuchsia_bluetooth::types::Status,
     futures::{
         channel::mpsc::{channel, SendError},
+        FutureExt,
         Sink,
         SinkExt,
         Stream,
@@ -327,8 +328,8 @@ fn main() -> Result<(), Error> {
         pin_mut!(repl);
         pin_mut!(listeners);
         select! {
-            repl => (),
-            listeners => (),
+            () = repl.fuse() => (),
+            () = listeners.fuse() => (),
         };
     };
     exec.run_singlethreaded(fut);

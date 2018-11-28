@@ -12,6 +12,7 @@ use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::channel::mpsc::UnboundedReceiver;
 use futures::select;
+use futures::stream::FuturesUnordered;
 use futures::prelude::*;
 use log::{error, info};
 use pin_utils::pin_mut;
@@ -19,7 +20,6 @@ use std::marker::Unpin;
 use std::sync::Arc;
 
 use crate::device::{self, IfaceDevice, IfaceMap, PhyDevice, PhyMap};
-use crate::future_util::ConcurrentTasks;
 use crate::Never;
 use crate::station;
 use crate::stats_scheduler::StatsRef;
@@ -31,23 +31,24 @@ const CONCURRENT_LIMIT: usize = 1000;
 pub async fn device_service<S>(phys: Arc<PhyMap>, ifaces: Arc<IfaceMap>,
                                phy_events: UnboundedReceiver<MapEvent<u16, PhyDevice>>,
                                iface_events: UnboundedReceiver<MapEvent<u16, IfaceDevice>>,
-                               mut new_clients: S)
+                               new_clients: S)
     -> Result<Never, failure::Error>
     where S: Stream<Item = fasync::Channel> + Unpin
 {
     let (watcher_service, watcher_fut) = watcher_service::serve_watchers(
         phys.clone(), ifaces.clone(), phy_events, iface_events);
     pin_mut!(watcher_fut);
-    let mut active_clients = ConcurrentTasks::new();
+    let mut watcher_fut = watcher_fut.fuse();
+    let mut active_clients = FuturesUnordered::new();
+    let mut new_clients = new_clients.fuse();
     loop {
-        let mut new_client = new_clients.next();
         select! {
-            watcher_fut => watcher_fut
+            watcher_res = watcher_fut => watcher_res
                 .map_err(|e| format_err!("watcher service has failed: {}", e))?.into_any(),
-            active_clients => active_clients.into_any(),
-            new_client => match new_client {
+            () = active_clients.select_next_some() => {},
+            new_client = new_clients.next() => match new_client {
                 Some(channel) => {
-                    active_clients.add(serve_channel(
+                    active_clients.push(serve_channel(
                         Arc::clone(&phys), Arc::clone(&ifaces), watcher_service.clone(), channel));
                 }
                 None => bail!("stream of new FIDL clients has ended unexpectedly"),

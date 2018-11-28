@@ -12,7 +12,7 @@ use fuchsia_zircon::{self as zx, assoc_values};
 
 use fdio::fdio_sys;
 use fidl_fuchsia_io::{WATCH_MASK_ALL};
-use futures::{Poll, Stream, task::LocalWaker};
+use futures::{Poll, stream::{FusedStream, Stream}, task::LocalWaker};
 use std::ffi::OsStr;
 use std::fs::File;
 use std::io;
@@ -98,6 +98,14 @@ impl Watcher {
         pathbuf.push(OsStr::from_bytes(next_msg.name()));
         let event = next_msg.event();
         WatchMessage { event: event, filename: pathbuf }
+    }
+}
+
+impl FusedStream for Watcher {
+    fn is_terminated(&self) -> bool {
+        // `Watcher` never completes
+        // (FIXME: or does it? is an error completion?)
+        false
     }
 }
 

@@ -15,7 +15,7 @@ use {
     fuchsia_app::client::connect_to_service,
     fuchsia_async::{
         self as fasync,
-        futures::{select, TryStreamExt},
+        futures::{select, FutureExt, TryStreamExt},
     },
     parking_lot::Mutex,
     pin_utils::pin_mut,
@@ -216,8 +216,8 @@ fn main() -> Result<(), Error> {
         pin_mut!(service_delegate);
         pin_mut!(power_watcher);
         select! {
-            service_delegate => service_delegate?,
-            power_watcher => power_watcher?,
+            res = service_delegate.fuse() => res?,
+            res = power_watcher.fuse() => res?,
         };
 
         Ok(())

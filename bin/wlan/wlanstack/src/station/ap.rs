@@ -8,13 +8,13 @@ use fidl_fuchsia_wlan_sme as fidl_sme;
 use futures::{select, Stream};
 use futures::channel::{oneshot, mpsc};
 use futures::prelude::*;
+use futures::stream::FuturesUnordered;
 use log::error;
 use pin_utils::pin_mut;
 use std::marker::Unpin;
 use std::sync::{Arc, Mutex};
 use wlan_sme::{ap::{self as ap_sme, UserEvent}, DeviceInfo};
 
-use crate::future_util::ConcurrentTasks;
 use crate::Never;
 use crate::stats_scheduler::StatsRequest;
 
@@ -44,31 +44,31 @@ pub async fn serve<S>(proxy: MlmeProxy,
     pin_mut!(mlme_sme);
     pin_mut!(sme_fidl);
     select! {
-        mlme_sme => mlme_sme?,
-        sme_fidl => sme_fidl?.into_any(),
+        mlme_sme = mlme_sme.fuse() => mlme_sme?,
+        sme_fidl = sme_fidl.fuse() => sme_fidl?.into_any(),
     }
     Ok(())
 }
 
 async fn serve_fidl(sme: Arc<Mutex<Sme>>,
-                    mut new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
-                    mut user_stream: ap_sme::UserStream<Tokens>)
+                    new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
+                    user_stream: ap_sme::UserStream<Tokens>)
     -> Result<Never, failure::Error>
 {
-    let mut fidl_clients = ConcurrentTasks::new();
+    let mut new_fidl_clients = new_fidl_clients.fuse();
+    let mut user_stream = user_stream.fuse();
+    let mut fidl_clients = FuturesUnordered::new();
     loop {
-        let mut user_event = user_stream.next();
-        let mut new_fidl_client = new_fidl_clients.next();
         select! {
-            user_event => match user_event {
+            user_event = user_stream.next() => match user_event {
                 Some(e) => handle_user_event(e),
                 None => bail!("Stream of events from SME unexpectedly ended"),
             },
-            new_fidl_client => match new_fidl_client {
-                Some(c) => fidl_clients.add(serve_fidl_endpoint(Arc::clone(&sme), c)),
+            new_fidl_client = new_fidl_clients.next() => match new_fidl_client {
+                Some(c) => fidl_clients.push(serve_fidl_endpoint(Arc::clone(&sme), c)),
                 None => bail!("New FIDL client stream unexpectedly ended"),
             },
-            fidl_clients => {},
+            _ = fidl_clients.next() => {},
         }
     }
 }

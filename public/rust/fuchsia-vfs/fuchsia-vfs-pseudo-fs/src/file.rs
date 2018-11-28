@@ -49,6 +49,7 @@ use {
         Status,
     },
     futures::{
+        future::FusedFuture,
         stream::{FuturesUnordered, Stream, StreamExt, StreamFuture},
         task::LocalWaker,
         Future, Poll,
@@ -713,6 +714,21 @@ where
     OnRead: FnMut() -> Result<Vec<u8>, Status>,
     OnWrite: FnMut(Vec<u8>) -> Result<(), Status>,
 {
+}
+
+impl<OnRead, OnWrite> FusedFuture for PseudoFileImpl<OnRead, OnWrite>
+where
+    OnRead: FnMut() -> Result<Vec<u8>, Status>,
+    OnWrite: FnMut(Vec<u8>) -> Result<(), Status>,
+{
+    fn is_terminated(&self) -> bool {
+        // The `PseudoFileImpl` never completes, but once there are no
+        // more connections, it is blocked until more connections are
+        // added. If the object currently polling a `PseudoFile` with
+        // an empty set of connections is blocked on the `PseudoFile`
+        // completing, it will never terminate.
+        self.connections.len() == 0
+    }
 }
 
 impl<OnRead, OnWrite> Future for PseudoFileImpl<OnRead, OnWrite>
@@ -1741,32 +1757,26 @@ mod tests {
         impl Future<Output = ()>,
     ) {
         let (open_requests_tx, open_requests_rx) = mpsc::channel::<ServerEnd<FileMarker>>(0);
-
+        // Remember whether or not the `open_requests_rx` stream was closed between loop
+        // iterations.
+        let mut open_requests_rx = open_requests_rx.fuse();
         (
             open_requests_tx,
             async move {
-                // We will be giving the ownership of open_requests_rx to the future and then
-                // getting it back with the next result.
-                let mut open_requests_rx = open_requests_rx;
-
                 loop {
-                    let mut next_open = open_requests_rx.into_future();
                     select! {
-                        file => panic!("file should never complete"),
-                        next_open => match next_open {
-                            (Some(server_end), new_open_requests_rx) => {
-                                open_requests_rx = new_open_requests_rx;
-                                file
-                                    .add_request_stream(flags, server_end.into_stream().unwrap())
-                                    .expect("add_request_stream() failed");
-                            }
-                            (None, _) =>
-                                // open_requests stream should not be closed while the directory is
-                                // still running.  It will be closed by the destructor, but at that
-                                // time the directory should not be running any more.
-                                panic!("open_requests stream closed while the directory still running")
+                        _ = file => panic!("file should never complete"),
+                        open_req = open_requests_rx.next() => {
+                            // open_requests stream should not be closed while the directory is
+                            // still running.  It will be closed by the destructor, but at that
+                            // time the directory should not be running any more.
+                            let server_end = open_req.expect(
+                                "open_requests stream closed while the directory still running");
+                            file
+                                .add_request_stream(flags, server_end.into_stream().unwrap())
+                                .expect("add_request_stream() failed");
                         },
-                    };
+                    }
                 }
             },
         )

@@ -15,7 +15,7 @@ use {
     futures::{
         channel::{oneshot, mpsc},
         select,
-        future::Future,
+        future::{Future, FutureExt},
         stream::{self, StreamExt, TryStreamExt},
     },
     pin_utils::pin_mut,
@@ -89,16 +89,16 @@ async fn serve(iface_id: u16,
                sme_event_stream: fidl_sme::ClientSmeEventStream,
                req_stream: mpsc::UnboundedReceiver<ManualRequest>)
 {
-    let mut state_machine = auto_connect_state(services, req_stream.into_future())
+    let state_machine = auto_connect_state(services, req_stream.into_future())
             .into_state_machine();
-    let mut removal_watcher = sme_event_stream.map_ok(|_| ()).try_collect::<()>();
+    let removal_watcher = sme_event_stream.map_ok(|_| ()).try_collect::<()>();
     select! {
-        state_machine => match state_machine {
+        state_machine = state_machine.fuse() => match state_machine {
             Ok(never) => never.into_any(),
             Err(e) => println!("wlancfg: Client station state machine \
                                 for iface #{} terminated with an error: {}", iface_id, e)
         },
-        removal_watcher => if let Err(e) = removal_watcher {
+        removal_watcher = removal_watcher.fuse() => if let Err(e) = removal_watcher {
             println!("wlancfg: Error reading from Client SME channel of iface #{}: {}",
                      iface_id, e);
         },
@@ -113,12 +113,11 @@ async fn auto_connect_state(services: Services, mut next_req: NextReqFut)
     let auto_connected = auto_connect(&services);
     pin_mut!(auto_connected);
     select! {
-        auto_connected => {
-            let _ssid = auto_connected?;
+        ssid_res = auto_connected.fuse() => {
+            let _ssid = ssid_res?;
             Ok(connected_state(services.clone(), next_req).into_state())
         },
-        next_req => {
-            let (req, req_stream) = next_req;
+        (req, req_stream) = next_req => {
             handle_manual_request(services.clone(), req, req_stream)
         },
     }
@@ -194,11 +193,11 @@ async fn manual_connect_state(services: Services, mut next_req: NextReqFut, req:
     println!("wlancfg: Connecting to '{}' because of a manual request from the user",
         String::from_utf8_lossy(&req.ssid));
     let txn = start_connect_txn(&services.sme, &req.ssid, &req.password)?;
-    let connected = wait_until_connected(txn);
-    pin_mut!(connected);
+    let connected_fut = wait_until_connected(txn);
+    pin_mut!(connected_fut);
 
     select! {
-        connected => {
+        connected = connected_fut.fuse() => {
             let code = connected?;
             req.responder.send(code).unwrap_or_else(|_| ());
             Ok(match code {
@@ -217,8 +216,7 @@ async fn manual_connect_state(services: Services, mut next_req: NextReqFut, req:
                 }
             })
         },
-        next_req => {
-            let (new_req, req_stream) = next_req;
+        (new_req, req_stream) = next_req => {
             req.responder.send(fidl_sme::ConnectResultCode::Canceled).unwrap_or_else(|_| ());
             handle_manual_request(services, new_req, req_stream)
         },
@@ -242,12 +240,11 @@ async fn connected_state(services: Services, mut next_req: NextReqFut) -> Result
     let disconnected = wait_for_disconnection(services.clone());
     pin_mut!(disconnected);
     select! {
-        disconnected => {
+        disconnected = disconnected.fuse() => {
             disconnected?;
             Ok(go_to_auto_connect_state(services, next_req))
         },
-        next_req => {
-            let (req, req_stream) = next_req;
+        (req, req_stream) = next_req => {
             handle_manual_request(services, req, req_stream)
         },
     }
@@ -270,18 +267,17 @@ async fn disconnected_state(responder: oneshot::Sender<()>,
     // First, ask the SME to disconnect and wait for its response.
     // In the meantime, also listen to user requests.
     let mut responders = vec![responder];
-    let mut pending_disconnect = services.sme.disconnect();
+    let mut pending_disconnect = services.sme.disconnect().fuse();
     'waiting_to_disconnect: loop {
         next_req = select! {
-            pending_disconnect => {
+            res = pending_disconnect => {
                 // If 'disconnect' call to SME failed, return an error since we can't
                 // recover from it
-                pending_disconnect.map_err(
+                res.map_err(
                     |e| format_err!("Failed to send a disconnect command to wlanstack: {}", e))?;
                 break 'waiting_to_disconnect;
             },
-            next_req => {
-                let (req, req_stream) = next_req;
+            (req, req_stream) = next_req => {
                 match req {
                     // If another disconnect request comes in, save its responder
                     Some(ManualRequest::Disconnect(responder)) => {

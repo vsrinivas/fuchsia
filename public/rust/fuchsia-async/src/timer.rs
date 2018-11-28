@@ -13,6 +13,7 @@ use {
     futures::{
         task::{AtomicWaker, LocalWaker},
         Future, FutureExt, Poll, Stream,
+        stream::FusedStream,
     },
     pin_utils::{unsafe_pinned, unsafe_unpinned},
     std::{
@@ -152,6 +153,13 @@ impl Interval {
 }
 
 impl Unpin for Interval {}
+
+impl FusedStream for Interval {
+    fn is_terminated(&self) -> bool {
+        // `Interval` never yields `None`
+        false
+    }
+}
 
 impl Stream for Interval {
     type Item = ();

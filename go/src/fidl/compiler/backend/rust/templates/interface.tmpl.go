@@ -231,6 +231,12 @@ pub struct {{ $interface.Name }}EventStream {
 
 impl ::std::marker::Unpin for {{ $interface.Name }}EventStream {}
 
+impl futures::stream::FusedStream for {{ $interface.Name }}EventStream {
+	fn is_terminated(&self) -> bool {
+		self.event_receiver.is_terminated()
+	}
+}
+
 impl Stream for {{ $interface.Name }}EventStream {
 	type Item = Result<{{ $interface.Name }}Event, fidl::Error>;
 
@@ -477,17 +483,23 @@ impl<T: {{ $interface.Name }}> futures::Future for {{ $interface.Name }}Server<T
 /// A Stream of incoming requests for {{ $interface.Name }}
 pub struct {{ $interface.Name }}RequestStream {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
-	msg_buf: zx::MessageBuf,
+	msg_buf: Option<zx::MessageBuf>,
 }
 
 impl ::std::marker::Unpin for {{ $interface.Name }}RequestStream {}
+
+impl futures::stream::FusedStream for {{ $interface.Name }}RequestStream {
+	fn is_terminated(&self) -> bool {
+		self.msg_buf.is_none()
+	}
+}
 
 impl fidl::endpoints::RequestStream for {{ $interface.Name }}RequestStream {
         /// Consume a channel to make a {{ $interface.Name }}RequestStream
 	fn from_channel(channel: async::Channel) -> Self {
 		Self {
 			inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)),
-			msg_buf: zx::MessageBuf::new(),
+			msg_buf: Some(zx::MessageBuf::new()),
 		}
 	}
 
@@ -508,20 +520,25 @@ impl Stream for {{ $interface.Name }}RequestStream {
 	{
 		let this = &mut *self;
 		if this.inner.poll_shutdown(lw) {
+			this.msg_buf = None;
 			return futures::Poll::Ready(None);
 		}
-		match this.inner.channel().recv_from(&mut this.msg_buf, lw) {
+		let msg_buf = this.msg_buf.as_mut()
+								.expect("polled {{ $interface.Name }}RequestStream after completion");
+		match this.inner.channel().recv_from(msg_buf, lw) {
 			futures::Poll::Ready(Ok(())) => {},
 			futures::Poll::Pending => return futures::Poll::Pending,
-			futures::Poll::Ready(Err(zx::Status::PEER_CLOSED)) =>
-				return futures::Poll::Ready(None),
+			futures::Poll::Ready(Err(zx::Status::PEER_CLOSED)) => {
+				this.msg_buf = None;
+				return futures::Poll::Ready(None)
+			},
 			futures::Poll::Ready(Err(e)) =>
 				return futures::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e)))),
 		}
 
 		let res = {
 			// A message has been received from the channel
-			let (bytes, handles) = this.msg_buf.split_mut();
+			let (bytes, handles) = msg_buf.split_mut();
 			let (header, body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
 			match header.ordinal {
@@ -567,7 +584,7 @@ impl Stream for {{ $interface.Name }}RequestStream {
 			}
 		};
 
-		this.msg_buf.clear();
+		msg_buf.clear();
 		futures::Poll::Ready(Some(Ok(res)))
 	}
 }
