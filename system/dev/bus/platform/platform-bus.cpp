@@ -49,11 +49,11 @@ zx_status_t PlatformBus::Proxy(
 }
 
 zx_status_t PlatformBus::IommuGetBti(uint32_t iommu_index, uint32_t bti_id,
-                                     zx_handle_t* out_handle) {
+                                     zx::bti* out_bti) {
     if (iommu_index != 0) {
         return ZX_ERR_OUT_OF_RANGE;
     }
-    return zx_bti_create(iommu_handle_.get(), 0, bti_id, out_handle);
+    return zx::bti::create(iommu_handle_, 0, bti_id, out_bti);
 }
 
 zx_status_t PlatformBus::PBusRegisterProtocol(uint32_t proto_id, const void* protocol,
@@ -502,8 +502,9 @@ zx_status_t PlatformBus::Init(zx::vmo zbi) {
     // Set up a dummy IOMMU protocol to use in the case where our board driver does not
     // set a real one.
     zx_iommu_desc_dummy_t desc;
-    status = zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
-                             iommu_handle_.reset_and_get_address());
+    zx::unowned_resource root_resource(get_root_resource());
+    status = zx::iommu::create(*root_resource, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
+                               &iommu_handle_);
     if (status != ZX_OK) {
         return status;
     }

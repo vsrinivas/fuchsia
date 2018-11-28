@@ -142,8 +142,8 @@ zx_status_t Sherlock::BCM43458LpoClockInit() {
         return status;
     }
 
-    zx::handle bti;
-    status = iommu_.GetBti(BTI_BOARD, 0, bti.reset_and_get_address());
+    zx::bti bti;
+    status = iommu_.GetBti(BTI_BOARD, 0, &bti);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: GetBti() error: %d\n", __func__, status);
         return status;

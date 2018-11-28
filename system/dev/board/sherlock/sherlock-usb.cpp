@@ -95,8 +95,8 @@ zx_status_t PerformUsbTuning(bool host, bool default_val) {
 } // namespace
 
 zx_status_t Sherlock::UsbInit() {
-    zx::handle bti;
-    auto status = iommu_.GetBti(BTI_BOARD, 0, bti.reset_and_get_address());
+    zx::bti bti;
+    auto status = iommu_.GetBti(BTI_BOARD, 0, &bti);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: GetBti failed: %d\n", __func__, status);
         return status;

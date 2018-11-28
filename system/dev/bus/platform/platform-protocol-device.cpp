@@ -181,7 +181,10 @@ zx_status_t ProtocolDevice::PDevGetBti(uint32_t index, zx_handle_t* out_handle) 
 
     const pbus_bti_t& bti = resources_.bti(index);
 
-    return bus_->IommuGetBti(bti.iommu_index, bti.bti_id, out_handle);
+    zx::bti out_bti;
+    auto ret = bus_->IommuGetBti(bti.iommu_index, bti.bti_id, &out_bti);
+    *out_handle = out_bti.release();
+    return ret;
 }
 
 zx_status_t ProtocolDevice::PDevGetSmc(uint32_t index, zx_handle_t* out_handle) {

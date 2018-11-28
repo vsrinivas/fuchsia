@@ -17,7 +17,7 @@
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <lib/sync/completion.h>
-#include <lib/zx/handle.h>
+#include <lib/zx/iommu.h>
 #include <lib/zx/vmo.h>
 #include <stdint.h>
 #include <threads.h>
@@ -60,7 +60,7 @@ public:
     zx_status_t PBusSetBoardInfo(const pbus_board_info_t* info);
 
     // IOMMU protocol implementation.
-    zx_status_t IommuGetBti(uint32_t iommu_index, uint32_t bti_id, zx_handle_t* out_handle);
+    zx_status_t IommuGetBti(uint32_t iommu_index, uint32_t bti_id, zx::bti* out_bti);
 
     // Returns the resource handle to be used for creating MMIO regions, IRQs, and SMC ranges.
     // Currently this just returns the root resource, but we may change this to a more
@@ -141,7 +141,7 @@ private:
     fbl::Vector<fbl::unique_ptr<PlatformI2cBus>> i2c_buses_;
 
     // Dummy IOMMU.
-    zx::handle iommu_handle_;
+    zx::iommu iommu_handle_;
 
     fbl::WAVLTree<uint32_t, fbl::unique_ptr<ProtoProxy>> proto_proxys_
                                                 __TA_GUARDED(proto_proxys_mutex_);
