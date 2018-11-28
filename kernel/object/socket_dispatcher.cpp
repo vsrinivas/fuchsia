@@ -303,12 +303,6 @@ zx_status_t SocketDispatcher::Read(user_out_ptr<void> dst, size_t len,
 
     Guard<fbl::Mutex> guard{get_lock()};
 
-    // Just query for bytes outstanding.
-    if (!dst && len == 0) {
-        *nread = data_.size(flags_ & ZX_SOCKET_DATAGRAM);
-        return ZX_OK;
-    }
-
     if (len != (size_t)((uint32_t)len))
         return ZX_ERR_INVALID_ARGS;
 

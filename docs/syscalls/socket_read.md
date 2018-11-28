@@ -20,15 +20,6 @@ zx_status_t zx_socket_read(zx_handle_t handle, uint32_t options,
 successful, the number of bytes actually read are return via
 *actual*.
 
-If a NULL *buffer* and 0 *buffer_size* are passed in, then this syscall
-instead returns the number of outstanding bytes via *actual*.
-If the socket was created with **ZX_SOCKET_DATAGRAM**, this is the
-number of bytes in the first datagram.
-If the socket was created with **ZX_SOCKET_STREAM**, this is the
-total number of bytes in the stream.
-If no bytes are available, this syscall will still return **ZX_OK**,
-rather than **ZX_ERR_SHOULD_WAIT**.
-
 If a NULL *actual* is passed in, it will be ignored.
 
 If the socket was created with **ZX_SOCKET_DATAGRAM**, this syscall reads
@@ -38,6 +29,10 @@ truncated, and any remaining bytes in the datagram will be discarded.
 
 If *options* is set to **ZX_SOCKET_CONTROL**, then **socket_read**()
 attempts to read from the socket control plane.
+
+To determine how many bytes are available to read, use the **rx_buf_available**
+field of the resulting **zx_info_socket_t**, which you can obtain using the
+**ZX_INFO_SOCET** topic for [object_get_info](object_get_info.md).
 
 ## RIGHTS
 
@@ -59,14 +54,12 @@ disabled for this socket endpoint.
 **ZX_ERR_WRONG_TYPE**  *handle* is not a socket handle.
 
 **ZX_ERR_INVALID_ARGS** If any of *buffer* or *actual* are non-NULL
-but invalid pointers, or if *buffer* is NULL but *size* is positive,
-or if *options* is not either zero or **ZX_SOCKET_CONTROL*.
+but invalid pointers, or if *buffer* is NULL, or if *options* is not either zero
+or **ZX_SOCKET_CONTROL*.
 
 **ZX_ERR_ACCESS_DENIED**  *handle* does not have **ZX_RIGHT_READ**.
 
-**ZX_ERR_SHOULD_WAIT**  The socket contained no data to read. (However, if a
-NULL *buffer* and 0 *buffer_size* are passed in, ZX_OK will be returned in
-this case.)
+**ZX_ERR_SHOULD_WAIT**  The socket contained no data to read.
 
 **ZX_ERR_PEER_CLOSED**  The other side of the socket is closed and no data is
 readable.

@@ -1140,6 +1140,44 @@ bool socket_share_invalid_handle(void) {
     END_TEST;
 }
 
+bool socket_zero_size(void) {
+    BEGIN_TEST;
+
+    zx_handle_t socket[2];
+    zx_status_t status = zx_socket_create(0, &socket[0], &socket[1]);
+    EXPECT_EQ(status, ZX_OK, "");
+
+    char buffer;
+    status = zx_socket_read(socket[0], 0, &buffer, 0, NULL);
+    EXPECT_EQ(status, ZX_ERR_SHOULD_WAIT, "");
+
+    status = zx_socket_write(socket[0], 0, "a", 1, NULL);
+    EXPECT_EQ(status, ZX_OK, "");
+
+    status = zx_socket_read(socket[0], 0, &buffer, 0, NULL);
+    EXPECT_EQ(status, ZX_OK, "");
+
+    zx_handle_close(socket[0]);
+    zx_handle_close(socket[1]);
+
+    status = zx_socket_create(ZX_SOCKET_DATAGRAM, &socket[0], &socket[1]);
+    EXPECT_EQ(status, ZX_OK, "");
+
+    status = zx_socket_read(socket[0], 0, &buffer, 0, NULL);
+    EXPECT_EQ(status, ZX_ERR_SHOULD_WAIT, "");
+
+    status = zx_socket_write(socket[0], 0, "a", 1, NULL);
+    EXPECT_EQ(status, ZX_OK, "");
+
+    status = zx_socket_read(socket[0], 0, &buffer, 0, NULL);
+    EXPECT_EQ(status, ZX_OK, "");
+
+    zx_handle_close(socket[0]);
+    zx_handle_close(socket[1]);
+
+    END_TEST;
+}
+
 bool socket_share_consumes_on_failure(void) {
     BEGIN_TEST;
 
