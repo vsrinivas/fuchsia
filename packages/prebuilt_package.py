@@ -68,6 +68,10 @@ def main():
 
     with open(args.blobs_json, 'w') as f:
         blobs = []
+        blobs.append({"source_path": meta_far,
+                      "path": "meta/",
+                      "merkle": merkle,
+                      "size": os.path.getsize(meta_far)})
         for blob in bloblist:
             source_path = blob['path']
             path = ''
