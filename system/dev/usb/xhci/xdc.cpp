@@ -702,7 +702,7 @@ static void xdc_write_complete(usb_request_t* req, void* cookie) {
     }
 
     mtx_lock(&xdc->write_lock);
-    usb_request_pool_add(&xdc->free_write_reqs, req);
+    ZX_DEBUG_ASSERT(usb_request_pool_add(&xdc->free_write_reqs, req) == ZX_OK);
     xdc_update_write_signal_locked(xdc, status != ZX_ERR_IO_NOT_PRESENT /* online */);
     mtx_unlock(&xdc->write_lock);
 }
@@ -745,7 +745,7 @@ static zx_status_t xdc_write(xdc_t* xdc, uint32_t stream_id, const void* buf, si
     status = xdc_queue_transfer(xdc, req, false /* in */, is_ctrl_msg);
     if (status != ZX_OK) {
         zxlogf(ERROR, "xdc_write failed %d\n", status);
-        usb_request_pool_add(&xdc->free_write_reqs, req);
+        ZX_DEBUG_ASSERT(usb_request_pool_add(&xdc->free_write_reqs, req) == ZX_OK);
         goto out;
     }
 
@@ -1195,7 +1195,7 @@ static zx_status_t xdc_init_internal(xdc_t* xdc) {
 
     sync_completion_reset(&xdc->has_instance_completion);
 
-    usb_request_pool_init(&xdc->free_write_reqs);
+    usb_request_pool_init(&xdc->free_write_reqs, offsetof(usb_request_t, node));
     mtx_init(&xdc->write_lock, mtx_plain);
 
     list_initialize(&xdc->free_read_reqs);
@@ -1212,7 +1212,7 @@ static zx_status_t xdc_init_internal(xdc_t* xdc) {
         }
         req->complete_cb = xdc_write_complete;
         req->cookie = xdc;
-        usb_request_pool_add(&xdc->free_write_reqs, req);
+        ZX_DEBUG_ASSERT(usb_request_pool_add(&xdc->free_write_reqs, req) == ZX_OK);
     }
     for (int i = 0; i < MAX_REQS; i++) {
         usb_request_t* req;

@@ -223,7 +223,10 @@ static zx_status_t usb_device_control(void* ctx, uint8_t request_type, uint8_t r
     }
 
     if (use_free_list) {
-        usb_request_pool_add(&dev->free_reqs, req);
+        if (usb_request_pool_add(&dev->free_reqs, req) != ZX_OK) {
+            zxlogf(TRACE, "Unable to add back request to the free pool\n");
+            usb_request_release(req);
+        }
     } else {
         usb_request_release(req);
     }
@@ -518,7 +521,8 @@ zx_status_t usb_device_add(usb_bus_t* bus, uint32_t device_id, uint32_t hub_id,
     mtx_init(&dev->callback_lock, mtx_plain);
     sync_completion_reset(&dev->callback_thread_completion);
     list_initialize(&dev->completed_reqs);
-    usb_request_pool_init(&dev->free_reqs);
+    usb_request_pool_init(&dev->free_reqs, dev->parent_req_size +
+                          offsetof(usb_device_req_internal_t, node));
 
     // read device descriptor
     usb_device_descriptor_t* device_desc = &dev->device_desc;

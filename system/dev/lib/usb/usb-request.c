@@ -333,15 +333,21 @@ __EXPORT size_t usb_request_phys_iter_next(phys_iter_t* iter, zx_paddr_t* out_pa
     return phys_iter_next(iter, out_paddr);
 }
 
-__EXPORT void usb_request_pool_init(usb_request_pool_t* pool) {
+__EXPORT void usb_request_pool_init(usb_request_pool_t* pool, uint64_t node_offset) {
     mtx_init(&pool->lock, mtx_plain);
     list_initialize(&pool->free_reqs);
+    pool->node_offset = node_offset;
 }
 
-__EXPORT void usb_request_pool_add(usb_request_pool_t* pool, usb_request_t* req) {
+__EXPORT zx_status_t usb_request_pool_add(usb_request_pool_t* pool, usb_request_t* req) {
     mtx_lock(&pool->lock);
-    list_add_tail(&pool->free_reqs, &req->node);
+    if (req->alloc_size < (pool->node_offset + sizeof(list_node_t))) {
+        mtx_unlock(&pool->lock);
+        return ZX_ERR_INVALID_ARGS;
+    }
+    list_add_tail(&pool->free_reqs, (list_node_t*)((uintptr_t)req + pool->node_offset));
     mtx_unlock(&pool->lock);
+    return ZX_OK;
 }
 
 __EXPORT usb_request_t* usb_request_pool_get(usb_request_pool_t* pool, size_t length) {
@@ -349,14 +355,16 @@ __EXPORT usb_request_t* usb_request_pool_get(usb_request_pool_t* pool, size_t le
     bool found = false;
 
     mtx_lock(&pool->lock);
-    list_for_every_entry (&pool->free_reqs, req, usb_request_t, node) {
+    list_node_t* node;
+    list_for_every(&pool->free_reqs, node) {
+        req = (usb_request_t*)((uintptr_t)node - pool->node_offset);
         if (req->size == length) {
             found = true;
             break;
         }
     }
     if (found) {
-        list_delete(&req->node);
+        list_delete(node);
     }
     mtx_unlock(&pool->lock);
 
@@ -367,7 +375,9 @@ __EXPORT void usb_request_pool_release(usb_request_pool_t* pool) {
     mtx_lock(&pool->lock);
 
     usb_request_t* req;
-    while ((req = list_remove_tail_type(&pool->free_reqs, usb_request_t, node)) != NULL) {
+    list_node_t* node;
+    while ((node = list_remove_tail(&pool->free_reqs)) != NULL) {
+        req =  (usb_request_t*)((uintptr_t)node - pool->node_offset);
         usb_request_release(req);
     }
 

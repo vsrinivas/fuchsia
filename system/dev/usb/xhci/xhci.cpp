@@ -154,7 +154,9 @@ zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
     mtx_init(&xhci->input_context_lock, mtx_plain);
     sync_completion_reset(&xhci->command_queue_completion);
 
-    usb_request_pool_init(&xhci->free_reqs);
+    xhci->req_int_off = sizeof(usb_request_t);
+    usb_request_pool_init(&xhci->free_reqs, xhci->req_int_off +
+                          offsetof(xhci_usb_request_internal_t, node));
 
     xhci->cap_regs = (xhci_cap_regs_t*)xhci->mmio.vaddr;
     xhci->op_regs = (xhci_op_regs_t*)((uint8_t*)xhci->cap_regs + xhci->cap_regs->length);
@@ -202,7 +204,6 @@ zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
     }
     xhci_read_extended_caps(xhci);
 
-    xhci->req_int_off = sizeof(usb_request_t);
     // We need to claim before we write to any other registers on the
     // controller, but after we've read the extended capabilities.
     result = xhci_claim_ownership(xhci);

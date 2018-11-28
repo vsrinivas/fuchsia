@@ -88,10 +88,10 @@ static bool test_pool(void) {
     ASSERT_NONNULL(zero_req, "");
 
     usb_request_pool_t pool;
-    usb_request_pool_init(&pool);
+    usb_request_pool_init(&pool, offsetof(usb_request_t, node));
 
-    usb_request_pool_add(&pool, req);
-    usb_request_pool_add(&pool, zero_req);
+    ASSERT_EQ(usb_request_pool_add(&pool, req), ZX_OK, "");
+    ASSERT_EQ(usb_request_pool_add(&pool, zero_req), ZX_OK, "");
 
     ASSERT_EQ(usb_request_pool_get(&pool, 0), zero_req, "");
     ASSERT_EQ(usb_request_pool_get(&pool, 0), NULL, "");

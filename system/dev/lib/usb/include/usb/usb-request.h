@@ -20,6 +20,8 @@ __BEGIN_CDECLS;
 typedef struct {
     list_node_t free_reqs;
     mtx_t lock;
+    //offset of the list_node_t* (used for queueing) in usb_request_t.
+    uint64_t node_offset;
 } usb_request_pool_t;
 
 // usb_request_alloc() creates a new usb request with payload space of data_size.
@@ -90,10 +92,10 @@ size_t usb_request_phys_iter_next(phys_iter_t* iter, zx_paddr_t* out_paddr);
 
 // usb_request_pool_init() initializes the given pool. A driver may use
 // a pool for recycling their own usb requests.
-void usb_request_pool_init(usb_request_pool_t* pool);
+void usb_request_pool_init(usb_request_pool_t* pool, uint64_t node_offset);
 
 // usb_request_pool_add() adds the request to the pool.
-void usb_request_pool_add(usb_request_pool_t* pool, usb_request_t* req);
+zx_status_t usb_request_pool_add(usb_request_pool_t* pool, usb_request_t* req);
 
 // returns a request from the pool that has a buffer of the given length,
 // or null if no such request exists.

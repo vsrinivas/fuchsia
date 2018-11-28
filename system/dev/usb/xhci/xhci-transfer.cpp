@@ -585,7 +585,10 @@ zx_status_t xhci_control_request(xhci_t* xhci, uint32_t slot_id, uint8_t request
         }
     }
 
-    usb_request_pool_add(&xhci->free_reqs, req);
+    if (usb_request_pool_add(&xhci->free_reqs, req) != ZX_OK) {
+        zxlogf(TRACE, "xhci_control_transfer: Unable to add back request to the free pool\n");
+        usb_request_release(req);
+    }
 
     zxlogf(TRACE, "xhci_control_request returning %d\n", status);
     return status;

@@ -80,7 +80,10 @@ zx_status_t usb_util_control(usb_device_t* dev, uint8_t request_type, uint8_t re
         }
     }
     if (use_free_list) {
-        usb_request_pool_add(&dev->free_reqs, req);
+        if (usb_request_pool_add(&dev->free_reqs, req) != ZX_OK) {
+            zxlogf(TRACE, "Unable to add back request to the free pool\n");
+            usb_request_release(req);
+        }
     } else {
         usb_request_release(req);
     }
