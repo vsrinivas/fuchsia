@@ -33,10 +33,10 @@
 
 // Should match display_mmios table in board driver
 enum {
+    MMIO_VPU,
     MMIO_MPI_DSI,
     MMIO_DSI_PHY,
     MMIO_HHI,
-    MMIO_VPU,
     MMIO_AOBUS,
     MMIO_CBUS,
 };
@@ -64,7 +64,10 @@ constexpr uint8_t PANEL_DISPLAY_ID = 1;
 constexpr uint32_t DISPLAY_WIDTH = 608;
 constexpr uint32_t DISPLAY_HEIGHT = 1024;
 
-//
+// Sherlock Display dimension
+constexpr uint32_t SHERLOCK_DISPLAY_WIDTH = 800;
+constexpr uint32_t SHERLOCK_DISPLAY_HEIGHT = 1280;
+
 constexpr bool kBootloaderDisplayEnabled = true;
 
 // Supported panel types

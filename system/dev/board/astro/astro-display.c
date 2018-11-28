@@ -16,6 +16,11 @@
 
 static const pbus_mmio_t display_mmios[] = {
     {
+        // VBUS/VPU
+        .base = S905D2_VPU_BASE,
+        .length = S905D2_VPU_LENGTH,
+    },
+    {
         // DSI Host Controller
         .base = S905D2_MIPI_DSI_BASE,
         .length = S905D2_MIPI_DSI_LENGTH,
@@ -29,11 +34,6 @@ static const pbus_mmio_t display_mmios[] = {
         // HHI
         .base = S905D2_HIU_BASE,
         .length = S905D2_HIU_LENGTH,
-    },
-    {
-        // VBUS/VPU
-        .base = S905D2_VPU_BASE,
-        .length = S905D2_VPU_LENGTH,
     },
     {
         // AOBUS

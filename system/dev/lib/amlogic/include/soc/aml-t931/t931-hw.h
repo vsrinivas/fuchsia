@@ -76,6 +76,9 @@
 #define T931_AOBUS_BASE                 0xff800000
 #define T931_AOBUS_LENGTH               0x100000
 
+#define T931_VPU_BASE                   0xff900000
+#define T931_VPU_LENGTH                 0x40000
+
 #define T931_CBUS_BASE                  0xffd00000
 #define T931_CBUS_LENGTH                0x100000
 
@@ -146,14 +149,16 @@
 #define T931_RESET7_LEVEL             0x9c
 
 // IRQs
+#define T931_VIU1_VSYNC_IRQ             35
+#define T931_I2C0_IRQ                   53
 #define T931_DEMUX_IRQ                  55
+#define T931_UART_A_IRQ                 58
+#define T931_USB0_IRQ                   62
 #define T931_PARSER_IRQ                 64
+#define T931_I2C3_IRQ                   71
 #define T931_DOS_MBOX_0_IRQ             75
 #define T931_DOS_MBOX_1_IRQ             76
 #define T931_DOS_MBOX_2_IRQ             77
-#define T931_UART_A_IRQ                 58
-#define T931_UART_B_IRQ                 107
-#define T931_UART_C_IRQ                 125
 #define T931_GPIO_IRQ_0                 96
 #define T931_GPIO_IRQ_1                 97
 #define T931_GPIO_IRQ_2                 98
@@ -162,19 +167,19 @@
 #define T931_GPIO_IRQ_5                 101
 #define T931_GPIO_IRQ_6                 102
 #define T931_GPIO_IRQ_7                 103
-#define T931_I2C0_IRQ                   53
-#define T931_I2C1_IRQ                   246
-#define T931_I2C2_IRQ                   247
-#define T931_I2C3_IRQ                   71
-#define T931_I2C_AO_0_IRQ               227
-#define T931_USB0_IRQ                   62
-#define T931_SD_EMMC_A_IRQ              221
-#define T931_SD_EMMC_B_IRQ              222
-#define T931_SD_EMMC_C_IRQ              223
+#define T931_UART_B_IRQ                 107
+#define T931_RDMA_DONE                  121
+#define T931_UART_C_IRQ                 125
 #define T931_MALI_IRQ_GP                192
 #define T931_MALI_IRQ_GPMMU             193
 #define T931_MALI_IRQ_PP                194
 #define T931_MIPI_ADAPTER_IRQ           211
+#define T931_SD_EMMC_A_IRQ              221
+#define T931_SD_EMMC_B_IRQ              222
+#define T931_SD_EMMC_C_IRQ              223
+#define T931_I2C_AO_0_IRQ               227
+#define T931_I2C1_IRQ                   246
+#define T931_I2C2_IRQ                   247
 
 // Alternate Functions for EMMC
 #define T931_EMMC_D0                    T931_GPIOBOOT(0)

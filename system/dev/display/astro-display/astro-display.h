@@ -107,8 +107,8 @@ private:
     bool                                current_image_valid_ TA_GUARDED(display_lock_);;
 
     // display dimensions and format
-    const uint32_t                      width_;
-    const uint32_t                      height_;
+    uint32_t                            width_;
+    uint32_t                            height_;
     uint32_t                            stride_;
     zx_pixel_format_t                   format_;
 

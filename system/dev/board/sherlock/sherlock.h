@@ -11,6 +11,7 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/iommu.h>
 #include <ddktl/protocol/platform/bus.h>
+#include <soc/aml-t931/t931-hw.h>
 #include <fbl/macros.h>
 
 namespace sherlock {
@@ -25,6 +26,7 @@ enum {
     BTI_CANVAS,
     BTI_VIDEO,
     BTI_CAMERA,
+    BTI_DISPLAY,
 };
 
 // MAC address metadata indices
@@ -72,6 +74,7 @@ private:
     zx_status_t VideoInit();
     zx_status_t BacklightInit();
     zx_status_t ButtonsInit();
+    zx_status_t DisplayInit();
     int Thread();
 
     ddk::PBusProtocolProxy pbus_;

@@ -78,6 +78,11 @@ int Sherlock::Thread() {
         return -1;
     }
 
+    if (DisplayInit() != ZX_OK) {
+        zxlogf(ERROR, "DisplayInit()failed\n");
+        return -1;
+    }
+
     // Then the platform device drivers.
     if (UsbInit() != ZX_OK) {
         zxlogf(ERROR, "UsbInit() failed\n");

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 #include "astro-display.h"
 #include <fbl/auto_call.h>
+#include <ddk/platform-defs.h>
 
 namespace astro_display {
 
@@ -242,13 +243,18 @@ zx_status_t AstroDisplay::SetupDisplayInterface() {
     zx_status_t status;
     fbl::AutoLock lock(&display_lock_);
 
-    // Figure out board rev and panel type
-    skip_disp_init_ = true;
-    panel_type_ = PANEL_UNKNOWN;
+    // Figure out board rev and panel type for Astro only
+    if (board_info_.pid == PDEV_PID_ASTRO) {
+        //TODO(payamm): set to true for now until we figure out bootloader to userspace handoff
+        skip_disp_init_ = true;
+        panel_type_ = PANEL_UNKNOWN;
 
-    if (board_info_.board_revision < BOARD_REV_EVT_1) {
-        DISP_INFO("Unsupported Board REV (%d). Will skip display driver initialization\n",
-            board_info_.board_revision);
+        if (board_info_.board_revision < BOARD_REV_EVT_1) {
+            DISP_INFO("Unsupported Board REV (%d). Will skip display driver initialization\n",
+                board_info_.board_revision);
+            skip_disp_init_ = true;
+        }
+    } else {
         skip_disp_init_ = true;
     }
 
@@ -419,13 +425,20 @@ zx_status_t AstroDisplay::Bind() {
         return status;
     }
 
-    // Obtain GPIO Protocol for Panel reset
-    size_t actual;
-    status = pdev_get_protocol(&pdev_, ZX_PROTOCOL_GPIO, GPIO_PANEL_DETECT, &gpio_, sizeof(gpio_),
-                               &actual);
-    if (status != ZX_OK) {
-        DISP_ERROR("Could not obtain GPIO protocol\n");
-        return status;
+    if (board_info_.pid == PDEV_PID_ASTRO) {
+        // Obtain GPIO Protocol for Panel reset
+        size_t actual;
+        status = pdev_get_protocol(&pdev_, ZX_PROTOCOL_GPIO, GPIO_PANEL_DETECT, &gpio_, sizeof(gpio_),
+                                   &actual);
+        if (status != ZX_OK) {
+            DISP_ERROR("Could not obtain GPIO protocol.\n");
+            return status;
+        }
+    }
+
+    if (board_info_.pid == PDEV_PID_SHERLOCK) {
+        width_ = SHERLOCK_DISPLAY_WIDTH;
+        height_ = SHERLOCK_DISPLAY_HEIGHT;
     }
 
     status = device_get_protocol(parent_, ZX_PROTOCOL_AMLOGIC_CANVAS, &canvas_);
