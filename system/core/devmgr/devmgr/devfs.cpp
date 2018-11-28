@@ -150,8 +150,6 @@ struct ProtocolInfo {
 static ProtocolInfo proto_infos[] = {
 #define DDK_PROTOCOL_DEF(tag, val, name, flags) { name, nullptr, val, flags },
 #include <ddk/protodefs.h>
-
-#include <utility>
 };
 
 Devnode::Devnode(fbl::String name)
