@@ -1,6 +1,5 @@
 # Glossary
 
-
 ## Overview
 
 The purpose of this document is to provide short definitions for a collection of technical terms
@@ -15,14 +14,15 @@ consider adding a definition for that term and linking to it from the original d
 - A definition should be complemented by a list of links to more detailed documentation and related
 topics.
 
-
 ## Terms
 
 #### **Agent**
 
-A component whose life cycle is not tied to any story, is a singleton in user scope, and provides
-services to other components. An agent can be invoked by other components or by the system in
-response to triggers like push notifications. An agent can provide services to components, send and
+An agent is a role a [component](#Component) can play to execute in the background in
+the context of a [session](#Session). An agent's life cycle is not tied to any
+[story](#Story), is a singleton per session, and provides services to other components.
+An agent can be invoked by other components or by the system in response to triggers
+like push notifications. An agent can provide services to components, send and
 receive messages, and make proposals to give suggestions to the user.
 
 #### **AppMgr**
@@ -33,7 +33,7 @@ in which those components run. It is the first process started in the `fuchsia` 
 
 #### **Armadillo**
 
-An implementation of a session shell.
+An implementation of a [session shell](#SessionShell).
 - [Source](https://fuchsia.googlesource.com/topaz/+/master/shell/armadillo/)
 
 #### **Base shell**
@@ -61,8 +61,9 @@ These files end in `.cmx`, so they are also known as "cmx files".
 
 #### **Channel**
 
-A Channel is the fundamental IPC primitive provided by Zircon.  It is a bidirectional, datagram-like
-transport that can transfer small messages including [Handles](#Handle).
+A channel is an IPC primitive provided by Zircon.  It is a bidirectional, datagram-like
+transport that can transfer small messages including [Handles](#Handle).  [FIDL](#FIDL)
+protocols typically use channels as their underlying transport.
 - [Channel Overview](https://fuchsia.googlesource.com/zircon/+/master/docs/objects/channel.md)
 
 #### **DevHost**
@@ -117,10 +118,10 @@ implementations.
 
 #### **FIDL**
 
-The Fuchsia Interface Definition Language (FIDL) is a language for defining protocols for use over
-[Channels](#channel). FIDL is programming language agnostic and has bindings for many popular
-languages, including C, C++, Dart, Go, and Rust. This approach lets system components written in a
-variety of languages interact seamlessly.
+The Fuchsia Interface Definition Language (FIDL) is a language for defining protocols that are
+typically used over [channels](#channel). FIDL is programming language agnostic and has bindings
+for many popular languages, including C, C++, Dart, Go, and Rust. This approach lets system
+components written in a variety of languages interact seamlessly.
 
 #### **Flutter**
 
@@ -205,22 +206,17 @@ microcontroller-centric and lacks support for MMUs, userspace, system calls -- f
 added.
 - [LK on Github](https://github.com/littlekernel/lk)
 
-#### **Maxwell**
-
-Services to expose ambient and task-related context, suggestions and infrastructure for leveraging
-machine intelligence.
-
 #### **Module**
 
-A component with a `module` metadata file which primarily describes the Module's data compatibility
-and semantic role.
-
-Modules show UI and participate in Stories at runtime.
+A module is a role a [component](#Component) can play to participate in a [story][#Story]. Every
+component can be be used as a module, but typically a module is asked to show UI.  Additionally,
+a module can have a `module` metadata file which describes the Module's data compatibility and
+semantic role.
 - [module metadata format](https://fuchsia.googlesource.com/peridot/+/HEAD/docs/modular/manifests/module.md)
 
-#### **Mozart**
+#### **Scenic**
 
-The view subsystem. Includes views, input, compositor, and GPU service.
+The system compositor. Includes views, input, compositor, and GPU services.
 
 #### **Musl**
 
@@ -236,7 +232,7 @@ other named objects which are offered to components by their [environment](#Envi
 
 #### **Netstack**
 
-TODO(tkilbourn): add definition.
+An implementation of TCP, UDP, IP, and related networking protocols for Fuchsia.
 
 #### **Ninja**
 
@@ -267,13 +263,6 @@ Peridot is one of the four layers of the Fuchsia codebase.
 
 Synonym for [environment](#environment).
 
-#### **RemoteIO**
-
-RemoteIO is the Zircon RPC protocol used between fdio (open/close/read/write/ioctl) and filesystems,
-device drivers, etc.  As part of [FIDL](#FIDL) v2, it will become a set of FIDL Interfaces (File,
-Directory, Device, ...) allowing easier interoperability, and more flexible asynchronous IO for
-clients or servers.
-
 #### **Service**
 
 A service is an implementation of a [FIDL](#FIDL) interface. Components can offer their creator a
@@ -300,6 +289,13 @@ plus structure and state information read from each story.
 Topaz is one of the four layers of the Fuchsia codebase.
 - [The Fuchsia layer cake](development/source_code/layers.md)
 - [Source](https://fuchsia.googlesource.com/topaz/+/master)
+
+#### **Session**
+
+An interactive session with one or more users. Has a [session shell](#SessionShell), which manages
+the UI for the session, and zero or more [stories](#Story). A device might have multiple sessions,
+for example if users can interact with the device remotely or if the device has multiple
+terminals.
 
 #### **Session Shell**
 
