@@ -87,14 +87,7 @@ func (v *c_mxrio_sockopt_req_reply) Unpack() interface{} {
 	case SOL_TCP:
 		switch v.optname {
 		case TCP_NODELAY:
-			var delay int
-			noDelay := v.intValue()
-			if noDelay != 0 {
-				delay = 0
-			} else {
-				delay = 1
-			}
-			return tcpip.DelayOption(delay)
+			return tcpip.NoDelayOption(v.intValue())
 		case TCP_INFO:
 			return tcpip.TCPInfoOption{}
 		case TCP_MAXSEG:
