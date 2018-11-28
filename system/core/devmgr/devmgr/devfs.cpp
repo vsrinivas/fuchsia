@@ -27,6 +27,35 @@
 #include <stdlib.h>
 #include <string.h>
 
+// This is temporary while we rearrange things into anonymous
+// namespaces or classes.
+using namespace devmgr;
+
+namespace {
+
+uint64_t next_ino = 2;
+
+fbl::unique_ptr<Devnode> root_devnode;
+
+fbl::unique_ptr<Devnode> class_devnode;
+
+fbl::unique_ptr<Devnode> devfs_mkdir(Devnode* parent, const char* name);
+
+#define PNMAX 16
+const char* proto_name(uint32_t id, char buf[PNMAX]) {
+    switch (id) {
+#define DDK_PROTOCOL_DEF(tag, val, name, flags) case val: return name;
+#include <ddk/protodefs.h>
+    default:
+        snprintf(buf, PNMAX, "proto-%08x", id);
+        return buf;
+    }
+}
+
+zx::channel g_devfs_root;
+
+} // namespace
+
 namespace devmgr {
 
 struct Watcher : fbl::DoublyLinkedListable<fbl::unique_ptr<Watcher>> {
@@ -121,24 +150,9 @@ struct Devnode {
     uint32_t seqcount = 0;
 };
 
-static uint64_t next_ino = 2;
+} // namespace devmgr
 
-static fbl::unique_ptr<Devnode> root_devnode;
-
-static fbl::unique_ptr<Devnode> class_devnode;
-
-static fbl::unique_ptr<Devnode> devfs_mkdir(Devnode* parent, const char* name);
-
-#define PNMAX 16
-static const char* proto_name(uint32_t id, char buf[PNMAX]) {
-    switch (id) {
-#define DDK_PROTOCOL_DEF(tag, val, name, flags) case val: return name;
-#include <ddk/protodefs.h>
-    default:
-        snprintf(buf, PNMAX, "proto-%08x", id);
-        return buf;
-    }
-}
+namespace {
 
 struct ProtocolInfo {
     const char* name;
@@ -147,16 +161,12 @@ struct ProtocolInfo {
     uint32_t flags;
 };
 
-static ProtocolInfo proto_infos[] = {
+ProtocolInfo proto_infos[] = {
 #define DDK_PROTOCOL_DEF(tag, val, name, flags) { name, nullptr, val, flags },
 #include <ddk/protodefs.h>
 };
 
-Devnode::Devnode(fbl::String name)
-    : name(std::move(name)) {
-}
-
-static Devnode* proto_dir(uint32_t id) {
+Devnode* proto_dir(uint32_t id) {
     for (const auto& info : proto_infos) {
         if (info.id == id) {
             return info.devnode;
@@ -165,7 +175,7 @@ static Devnode* proto_dir(uint32_t id) {
     return nullptr;
 }
 
-static void prepopulate_protocol_dirs() {
+void prepopulate_protocol_dirs() {
     class_devnode = devfs_mkdir(root_devnode.get(), "class");
     for (auto& info : proto_infos) {
         if (!(info.flags & PF_NOPUB)) {
@@ -182,43 +192,10 @@ void describe_error(zx::channel h, zx_status_t status) {
     h.write(0, &msg, sizeof(msg), nullptr, 0);
 }
 
-DcIostate::DcIostate(Devnode* dn) : devnode_(dn) {
-
-    devnode_->iostate.push_back(this);
-}
-
-zx_status_t DcIostate::Create(Devnode* dn, zx::channel* ipc) {
-    auto ios = fbl::make_unique<DcIostate>(dn);
-    if (ios == nullptr) {
-        return ZX_ERR_NO_MEMORY;
-    }
-
-    ios->set_channel(std::move(*ipc));
-    zx_status_t status = DcIostate::BeginWait(&ios, DcAsyncLoop()->dispatcher());
-    if (status != ZX_OK) {
-        // Take the handle back from |ios| so it doesn't close it when it's
-        // destroyed
-        *ipc = ios->set_channel(zx::channel());
-    }
-    return status;
-}
-
-void DcIostate::DetachFromDevnode() {
-    if (devnode_) {
-        devnode_->iostate.erase(*this);
-        devnode_ = nullptr;
-    }
-    set_channel(zx::channel());
-}
-
-DcIostate::~DcIostate() {
-    DetachFromDevnode();
-}
-
 // A devnode is a directory (from stat's perspective) if
 // it has children, or if it doesn't have a device, or if
 // its device has no rpc handle
-static bool devnode_is_dir(const Devnode* dn) {
+bool devnode_is_dir(const Devnode* dn) {
     if (dn->children.is_empty()) {
         return (dn->device == nullptr) || (dn->device->hrpc == ZX_HANDLE_INVALID);
     }
@@ -227,7 +204,7 @@ static bool devnode_is_dir(const Devnode* dn) {
 
 // Local devnodes are ones that we should not hand off OPEN
 // RPCs to the underlying devhost
-static bool devnode_is_local(Devnode* dn) {
+bool devnode_is_local(Devnode* dn) {
     if (dn->device == nullptr) {
         return true;
     }
@@ -243,8 +220,8 @@ static bool devnode_is_local(Devnode* dn) {
 // Notify a single watcher about the given operation and path.  On failure,
 // frees the watcher.  This can only be called on a watcher that has not yet
 // been added to a Devnode's watchers list.
-static void devfs_notify_single(fbl::unique_ptr<Watcher>* watcher,
-                                const fbl::String& name, unsigned op) {
+void devfs_notify_single(fbl::unique_ptr<Watcher>* watcher,
+                         const fbl::String& name, unsigned op) {
     size_t len = name.length();
     if (!*watcher || len > fuchsia_io_MAX_FILENAME) {
         return;
@@ -270,7 +247,7 @@ static void devfs_notify_single(fbl::unique_ptr<Watcher>* watcher,
     }
 }
 
-static void devfs_notify(Devnode* dn, const fbl::String& name, unsigned op) {
+void devfs_notify(Devnode* dn, const fbl::String& name, unsigned op) {
     if (dn->watchers.is_empty()) {
         return;
     }
@@ -306,7 +283,7 @@ static void devfs_notify(Devnode* dn, const fbl::String& name, unsigned op) {
     }
 }
 
-static zx_status_t devfs_watch(Devnode* dn, zx::channel h, uint32_t mask) {
+zx_status_t devfs_watch(Devnode* dn, zx::channel h, uint32_t mask) {
     auto watcher = fbl::make_unique<Watcher>(dn, std::move(h), mask);
     if (watcher == nullptr) {
         return ZX_ERR_NO_MEMORY;
@@ -333,7 +310,7 @@ static zx_status_t devfs_watch(Devnode* dn, zx::channel h, uint32_t mask) {
     return ZX_OK;
 }
 
-static fbl::unique_ptr<Devnode> devfs_mknode(Device* dev, const char* name) {
+fbl::unique_ptr<Devnode> devfs_mknode(Device* dev, const char* name) {
     auto dn = fbl::make_unique<Devnode>(name);
     if (!dn) {
         return nullptr;
@@ -343,7 +320,7 @@ static fbl::unique_ptr<Devnode> devfs_mknode(Device* dev, const char* name) {
     return dn;
 }
 
-static fbl::unique_ptr<Devnode> devfs_mkdir(Devnode* parent, const char* name) {
+fbl::unique_ptr<Devnode> devfs_mkdir(Devnode* parent, const char* name) {
     fbl::unique_ptr<Devnode> dn = devfs_mknode(nullptr, name);
     if (dn == nullptr) {
         return nullptr;
@@ -353,13 +330,260 @@ static fbl::unique_ptr<Devnode> devfs_mkdir(Devnode* parent, const char* name) {
     return dn;
 }
 
-static Devnode* devfs_lookup(Devnode* parent, const char* name) {
+Devnode* devfs_lookup(Devnode* parent, const char* name) {
     for (auto& child : parent->children) {
         if (!strcmp(name, child.name.c_str())) {
             return &child;
         }
     }
     return nullptr;
+}
+
+zx_status_t fill_dirent(vdirent_t* de, size_t delen, uint64_t ino,
+                               const fbl::String& name, uint8_t type) {
+    size_t len = name.length();
+    size_t sz = sizeof(vdirent_t) + len;
+
+    if (sz > delen || len > NAME_MAX) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    de->ino = ino;
+    de->size = static_cast<uint8_t>(len);
+    de->type = type;
+    memcpy(de->name, name.c_str(), len);
+    return static_cast<zx_status_t>(sz);
+}
+
+zx_status_t devfs_readdir(Devnode* dn, uint64_t* ino_inout, void* data, size_t len) {
+    char* ptr = static_cast<char*>(data);
+    uint64_t ino = *ino_inout;
+
+    for (const auto& child : dn->children) {
+        if (child.ino <= ino) {
+            continue;
+        }
+        if (child.device == nullptr) {
+            // "pure" directories (like /dev/class/$NAME) do not show up
+            // if they have no children, to avoid clutter and confusion.
+            // They remain openable, so they can be watched.
+            if (child.children.is_empty()) {
+                continue;
+            }
+        } else {
+            // invisible devices also do not show up
+            if (child.device->flags & DEV_CTX_INVISIBLE) {
+                continue;
+            }
+        }
+        ino = child.ino;
+        auto vdirent = reinterpret_cast<vdirent_t*>(ptr);
+        zx_status_t r = fill_dirent(vdirent, len, ino, child.name,
+                                    VTYPE_TO_DTYPE(V_TYPE_DIR));
+        if (r < 0) {
+            break;
+        }
+        ptr += r;
+        len -= r;
+    }
+
+    *ino_inout = ino;
+    return static_cast<zx_status_t>(ptr - static_cast<char*>(data));
+}
+
+zx_status_t devfs_walk(Devnode** dn_inout, char* path, char** pathout) {
+    Devnode* dn = *dn_inout;
+
+again:
+    if ((path == nullptr) || (path[0] == 0)) {
+        *dn_inout = dn;
+        return ZX_OK;
+    }
+    char* name = path;
+    char* undo = nullptr;
+    if ((path = strchr(path, '/')) != nullptr) {
+        undo = path;
+        *path++ = 0;
+    }
+    if (name[0] == 0) {
+        return ZX_ERR_BAD_PATH;
+    }
+    for (auto& child : dn->children) {
+        if (!strcmp(child.name.c_str(), name)) {
+            if(child.device && (child.device->flags & DEV_CTX_INVISIBLE)) {
+                continue;
+            }
+            dn = &child;
+            goto again;
+        }
+    }
+    if (dn == *dn_inout) {
+        return ZX_ERR_NOT_FOUND;
+    }
+    if (undo) {
+        *undo = '/';
+    }
+    *dn_inout = dn;
+    *pathout = name;
+    return ZX_ERR_NEXT;
+}
+
+void devfs_open(Devnode* dirdn, zx_handle_t h, char* path, uint32_t flags) {
+    zx::channel ipc(h);
+    h = ZX_HANDLE_INVALID;
+
+    if (!strcmp(path, ".")) {
+        path = nullptr;
+    }
+
+    Devnode* dn = dirdn;
+    zx_status_t r = devfs_walk(&dn, path, &path);
+
+    bool describe = flags & ZX_FS_FLAG_DESCRIBE;
+
+    bool no_remote = (dn->device == nullptr) || (dn->device->hrpc == ZX_HANDLE_INVALID);
+    bool local_required = devnode_is_local(dn);
+    bool local_requested = flags & (ZX_FS_FLAG_NOREMOTE | ZX_FS_FLAG_DIRECTORY);
+
+    if (r == ZX_ERR_NEXT) {
+        // We only partially matched -- there's more path to walk.
+        if (no_remote || local_required) {
+            // No remote to pass this on to.
+            r = ZX_ERR_NOT_FOUND;
+        } else if (local_requested) {
+            // Local requested, but this is remote only.
+            r = ZX_ERR_NOT_SUPPORTED;
+        } else {
+            // There is more path to walk, and this node can accept
+            // remote requests.
+            r = ZX_OK;
+        }
+    } else {
+        path = (char*) ".";
+    }
+
+    if (r != ZX_OK) {
+        if (describe) {
+            describe_error(std::move(ipc), r);
+        }
+        return;
+    }
+
+    // If we are a local-only node, or we are asked to not go remote,
+    // or we are asked to open-as-a-directory, open locally:
+    if (local_requested || local_required) {
+        zx::unowned_channel unowned_ipc(ipc);
+        if ((r = DcIostate::Create(dn, &ipc)) != ZX_OK) {
+            if (describe) {
+                describe_error(std::move(ipc), r);
+            }
+            return;
+        }
+        if (describe) {
+            fs::OnOpenMsg msg;
+            memset(&msg, 0, sizeof(msg));
+            msg.primary.hdr.ordinal = fuchsia_io_NodeOnOpenOrdinal;
+            msg.primary.s = ZX_OK;
+            msg.primary.info = (fuchsia_io_NodeInfo*)FIDL_ALLOC_PRESENT;
+            msg.extra.tag = fuchsia_io_NodeInfoTag_directory;
+
+            // This is safe because this is executing on the same thread as the
+            // DcAsyncLoop(), so the handle can't be closed underneath us.
+            unowned_ipc->write(0, &msg, sizeof(msg), nullptr, 0);
+        }
+        return;
+    }
+
+    // Otherwise we will pass the request on to the remote.
+    fuchsia_io_DirectoryOpen(dn->device->hrpc.get(), flags, 0, path, strlen(path), ipc.release());
+}
+
+void devfs_remove(Devnode* dn) {
+    if (dn->node.InContainer()) {
+        dn->parent->children.erase(*dn);
+    }
+
+    // detach all connected iostates
+    while (!dn->iostate.is_empty()) {
+        dn->iostate.pop_front()->DetachFromDevnode();
+    }
+
+    // notify own file watcher
+    if ((dn->device == nullptr) ||
+        !(dn->device->flags & DEV_CTX_INVISIBLE)) {
+        devfs_notify(dn, "", fuchsia_io_WATCH_EVENT_DELETED);
+    }
+
+    // disconnect from device and notify parent/link directory watchers
+    if (dn->device != nullptr) {
+        if (dn->device->self == dn) {
+            dn->device->self = nullptr;
+
+            if ((dn->device->parent != nullptr) &&
+                (dn->device->parent->self != nullptr) &&
+                !(dn->device->flags & DEV_CTX_INVISIBLE)) {
+                devfs_notify(dn->device->parent->self, dn->name, fuchsia_io_WATCH_EVENT_REMOVED);
+            }
+        }
+        if (dn->device->link == dn) {
+            dn->device->link = nullptr;
+
+            if (!(dn->device->flags & DEV_CTX_INVISIBLE)) {
+                Devnode* dir = proto_dir(dn->device->protocol_id);
+                devfs_notify(dir, dn->name, fuchsia_io_WATCH_EVENT_REMOVED);
+            }
+        }
+        dn->device = nullptr;
+    }
+
+    // destroy all watchers
+    dn->watchers.clear();
+
+    // detach children
+    while ((dn->children.pop_front() != nullptr)) {
+        // they will be unpublished when the devices they're
+        // associated with are eventually destroyed
+    }
+}
+
+} // namespace
+
+namespace devmgr {
+
+Devnode::Devnode(fbl::String name)
+    : name(std::move(name)) {
+}
+
+DcIostate::DcIostate(Devnode* dn) : devnode_(dn) {
+
+    devnode_->iostate.push_back(this);
+}
+
+zx_status_t DcIostate::Create(Devnode* dn, zx::channel* ipc) {
+    auto ios = fbl::make_unique<DcIostate>(dn);
+    if (ios == nullptr) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    ios->set_channel(std::move(*ipc));
+    zx_status_t status = DcIostate::BeginWait(&ios, DcAsyncLoop()->dispatcher());
+    if (status != ZX_OK) {
+        // Take the handle back from |ios| so it doesn't close it when it's
+        // destroyed
+        *ipc = ios->set_channel(zx::channel());
+    }
+    return status;
+}
+
+void DcIostate::DetachFromDevnode() {
+    if (devnode_) {
+        devnode_->iostate.erase(*this);
+        devnode_ = nullptr;
+    }
+    set_channel(zx::channel());
+}
+
+DcIostate::~DcIostate() {
+    DetachFromDevnode();
 }
 
 void devfs_advertise(Device* dev) {
@@ -450,54 +674,6 @@ done:
     return ZX_OK;
 }
 
-static void devfs_remove(Devnode* dn) {
-    if (dn->node.InContainer()) {
-        dn->parent->children.erase(*dn);
-    }
-
-    // detach all connected iostates
-    while (!dn->iostate.is_empty()) {
-        dn->iostate.pop_front()->DetachFromDevnode();
-    }
-
-    // notify own file watcher
-    if ((dn->device == nullptr) ||
-        !(dn->device->flags & DEV_CTX_INVISIBLE)) {
-        devfs_notify(dn, "", fuchsia_io_WATCH_EVENT_DELETED);
-    }
-
-    // disconnect from device and notify parent/link directory watchers
-    if (dn->device != nullptr) {
-        if (dn->device->self == dn) {
-            dn->device->self = nullptr;
-
-            if ((dn->device->parent != nullptr) &&
-                (dn->device->parent->self != nullptr) &&
-                !(dn->device->flags & DEV_CTX_INVISIBLE)) {
-                devfs_notify(dn->device->parent->self, dn->name, fuchsia_io_WATCH_EVENT_REMOVED);
-            }
-        }
-        if (dn->device->link == dn) {
-            dn->device->link = nullptr;
-
-            if (!(dn->device->flags & DEV_CTX_INVISIBLE)) {
-                Devnode* dir = proto_dir(dn->device->protocol_id);
-                devfs_notify(dir, dn->name, fuchsia_io_WATCH_EVENT_REMOVED);
-            }
-        }
-        dn->device = nullptr;
-    }
-
-    // destroy all watchers
-    dn->watchers.clear();
-
-    // detach children
-    while ((dn->children.pop_front() != nullptr)) {
-        // they will be unpublished when the devices they're
-        // associated with are eventually destroyed
-    }
-}
-
 void devfs_unpublish(Device* dev) {
     if (dev->self != nullptr) {
         devfs_remove(dev->self);
@@ -507,164 +683,6 @@ void devfs_unpublish(Device* dev) {
         devfs_remove(dev->link);
         dev->link = nullptr;
     }
-}
-
-static zx_status_t devfs_walk(Devnode** dn_inout, char* path, char** pathout) {
-    Devnode* dn = *dn_inout;
-
-again:
-    if ((path == nullptr) || (path[0] == 0)) {
-        *dn_inout = dn;
-        return ZX_OK;
-    }
-    char* name = path;
-    char* undo = nullptr;
-    if ((path = strchr(path, '/')) != nullptr) {
-        undo = path;
-        *path++ = 0;
-    }
-    if (name[0] == 0) {
-        return ZX_ERR_BAD_PATH;
-    }
-    for (auto& child : dn->children) {
-        if (!strcmp(child.name.c_str(), name)) {
-            if(child.device && (child.device->flags & DEV_CTX_INVISIBLE)) {
-                continue;
-            }
-            dn = &child;
-            goto again;
-        }
-    }
-    if (dn == *dn_inout) {
-        return ZX_ERR_NOT_FOUND;
-    }
-    if (undo) {
-        *undo = '/';
-    }
-    *dn_inout = dn;
-    *pathout = name;
-    return ZX_ERR_NEXT;
-}
-
-static void devfs_open(Devnode* dirdn, zx_handle_t h, char* path, uint32_t flags) {
-    zx::channel ipc(h);
-    h = ZX_HANDLE_INVALID;
-
-    if (!strcmp(path, ".")) {
-        path = nullptr;
-    }
-
-    Devnode* dn = dirdn;
-    zx_status_t r = devfs_walk(&dn, path, &path);
-
-    bool describe = flags & ZX_FS_FLAG_DESCRIBE;
-
-    bool no_remote = (dn->device == nullptr) || (dn->device->hrpc == ZX_HANDLE_INVALID);
-    bool local_required = devnode_is_local(dn);
-    bool local_requested = flags & (ZX_FS_FLAG_NOREMOTE | ZX_FS_FLAG_DIRECTORY);
-
-    if (r == ZX_ERR_NEXT) {
-        // We only partially matched -- there's more path to walk.
-        if (no_remote || local_required) {
-            // No remote to pass this on to.
-            r = ZX_ERR_NOT_FOUND;
-        } else if (local_requested) {
-            // Local requested, but this is remote only.
-            r = ZX_ERR_NOT_SUPPORTED;
-        } else {
-            // There is more path to walk, and this node can accept
-            // remote requests.
-            r = ZX_OK;
-        }
-    } else {
-        path = (char*) ".";
-    }
-
-    if (r != ZX_OK) {
-        if (describe) {
-            describe_error(std::move(ipc), r);
-        }
-        return;
-    }
-
-    // If we are a local-only node, or we are asked to not go remote,
-    // or we are asked to open-as-a-directory, open locally:
-    if (local_requested || local_required) {
-        zx::unowned_channel unowned_ipc(ipc);
-        if ((r = DcIostate::Create(dn, &ipc)) != ZX_OK) {
-            if (describe) {
-                describe_error(std::move(ipc), r);
-            }
-            return;
-        }
-        if (describe) {
-            fs::OnOpenMsg msg;
-            memset(&msg, 0, sizeof(msg));
-            msg.primary.hdr.ordinal = fuchsia_io_NodeOnOpenOrdinal;
-            msg.primary.s = ZX_OK;
-            msg.primary.info = (fuchsia_io_NodeInfo*)FIDL_ALLOC_PRESENT;
-            msg.extra.tag = fuchsia_io_NodeInfoTag_directory;
-
-            // This is safe because this is executing on the same thread as the
-            // DcAsyncLoop(), so the handle can't be closed underneath us.
-            unowned_ipc->write(0, &msg, sizeof(msg), nullptr, 0);
-        }
-        return;
-    }
-
-    // Otherwise we will pass the request on to the remote.
-    fuchsia_io_DirectoryOpen(dn->device->hrpc.get(), flags, 0, path, strlen(path), ipc.release());
-}
-
-static zx_status_t fill_dirent(vdirent_t* de, size_t delen, uint64_t ino,
-                               const fbl::String& name, uint8_t type) {
-    size_t len = name.length();
-    size_t sz = sizeof(vdirent_t) + len;
-
-    if (sz > delen || len > NAME_MAX) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-    de->ino = ino;
-    de->size = static_cast<uint8_t>(len);
-    de->type = type;
-    memcpy(de->name, name.c_str(), len);
-    return static_cast<zx_status_t>(sz);
-}
-
-static zx_status_t devfs_readdir(Devnode* dn, uint64_t* ino_inout, void* data, size_t len) {
-    char* ptr = static_cast<char*>(data);
-    uint64_t ino = *ino_inout;
-
-    for (const auto& child : dn->children) {
-        if (child.ino <= ino) {
-            continue;
-        }
-        if (child.device == nullptr) {
-            // "pure" directories (like /dev/class/$NAME) do not show up
-            // if they have no children, to avoid clutter and confusion.
-            // They remain openable, so they can be watched.
-            if (child.children.is_empty()) {
-                continue;
-            }
-        } else {
-            // invisible devices also do not show up
-            if (child.device->flags & DEV_CTX_INVISIBLE) {
-                continue;
-            }
-        }
-        ino = child.ino;
-        auto vdirent = reinterpret_cast<vdirent_t*>(ptr);
-        zx_status_t r = fill_dirent(vdirent, len, ino, child.name,
-                                    VTYPE_TO_DTYPE(V_TYPE_DIR));
-        if (r < 0) {
-            break;
-        }
-        ptr += r;
-        len -= r;
-    }
-
-    *ino_inout = ino;
-    return static_cast<zx_status_t>(ptr - static_cast<char*>(data));
 }
 
 // Helper macros for |DevfsFidlHandler| which make it easier
@@ -822,8 +840,6 @@ void DcIostate::HandleRpc(fbl::unique_ptr<DcIostate> ios, async_dispatcher_t* di
     }
     // Do not start waiting again, and destroy |ios|
 }
-
-static zx::channel g_devfs_root;
 
 zx::unowned_channel devfs_root_borrow() {
     return zx::unowned_channel(g_devfs_root);

@@ -43,6 +43,10 @@
 #include "devmgr.h"
 #include "../shared/fdio.h"
 
+// This is temporary while we rearrange things into anonymous
+// namespaces or classes.
+using namespace devmgr;
+
 namespace {
 
 struct {
@@ -65,32 +69,8 @@ struct {
     zx::channel fs_root;
 } g_handles;
 
-} // namespace
-
-namespace devmgr {
-
-// Global flag tracking if devmgr believes this is a full Fuchsia build
-// (requiring /system, etc) or not.
-bool require_system;
-
-zx_handle_t virtcon_open;
-
-zx_handle_t get_root_resource() {
-    return g_handles.root_resource.get();
-}
-
-zx::job get_sysinfo_job_root() {
-    zx::job h;
-    //TODO: limit to enumerate rights
-    if (g_handles.root_job->duplicate(ZX_RIGHT_SAME_RIGHTS, &h) < 0) {
-        return zx::job();
-    } else {
-        return h;
-    }
-}
-
 // Wait for the requested file.  Its parent directory must exist.
-static zx_status_t wait_for_file(const char* path, zx::time deadline) {
+zx_status_t wait_for_file(const char* path, zx::time deadline) {
     char path_copy[PATH_MAX];
     if (strlen(path) >= PATH_MAX) {
         return ZX_ERR_INVALID_ARGS;
@@ -129,8 +109,8 @@ static zx_status_t wait_for_file(const char* path, zx::time deadline) {
     return status;
 }
 
-static const char* argv_sh[] = {"/boot/bin/sh"};
-static const char* argv_appmgr[] = {"/system/bin/appmgr"};
+const char* argv_sh[] = {"/boot/bin/sh"};
+const char* argv_appmgr[] = {"/system/bin/appmgr"};
 
 void do_autorun(const char* name, const char* env) {
     const char* cmd = getenv(env);
@@ -141,7 +121,7 @@ void do_autorun(const char* name, const char* env) {
     }
 }
 
-static int fuchsia_starter(void* arg) {
+int fuchsia_starter(void* arg) {
     bool appmgr_started = false;
     bool autorun_started = false;
     bool drivers_loaded = false;
@@ -206,6 +186,162 @@ static int fuchsia_starter(void* arg) {
         }
     } while (!appmgr_started);
     return 0;
+}
+
+int console_starter(void* arg) {
+    // if no kernel shell on serial uart, start a sh there
+    printf("devmgr: shell startup\n");
+
+    // If we got a TERM environment variable (aka a TERM=... argument on
+    // the kernel command line), pass this down; otherwise pass TERM=uart.
+    const char* term = getenv("TERM");
+    if (term == nullptr) {
+        term = "TERM=uart";
+    } else {
+        term -= sizeof("TERM=") - 1;
+    }
+
+    const char* device = getenv("console.path");
+    if (!device) {
+        device = "/dev/misc/console";
+    }
+
+    const char* envp[] = {
+        term,
+        nullptr,
+    };
+
+    zx_status_t status = wait_for_file(device, zx::time::infinite());
+    if (status != ZX_OK) {
+        printf("devmgr: failed to wait for console '%s'\n", device);
+        return 1;
+    }
+    fbl::unique_fd fd(open(device, O_RDWR));;
+    if (!fd.is_valid()) {
+        printf("devmgr: failed to open console '%s'\n", device);
+        return 1;
+    }
+
+    devmgr_launch(g_handles.svc_job, "sh:console",
+                  &devmgr_launch_load, nullptr,
+                  fbl::count_of(argv_sh), argv_sh, envp, fd.release(), nullptr, nullptr, 0,
+                  nullptr, FS_ALL);
+    return 0;
+}
+
+int pwrbtn_monitor_starter(void* arg) {
+    const char* name = "pwrbtn-monitor";
+    const char* argv[] = {"/boot/bin/pwrbtn-monitor"};
+    int argc = 1;
+
+    zx::job job_copy;
+    g_handles.svc_job.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE, &job_copy);
+
+    launchpad_t* lp;
+    launchpad_create(job_copy.get(), name, &lp);
+
+    zx_status_t status = devmgr_launch_load(nullptr, lp, argv[0]);
+    if (status != ZX_OK) {
+        launchpad_abort(lp, status, "cannot load file");
+    }
+    launchpad_set_args(lp, argc, argv);
+
+    // create a namespace containing /dev/class/input and /dev/misc
+    const char* nametable[2] = {};
+    uint32_t count = 0;
+    zx::channel fs_handle = fs_clone("dev/class/input");
+    if (fs_handle.is_valid()) {
+        nametable[count] = "/input";
+        launchpad_add_handle(lp, fs_handle.release(), PA_HND(PA_NS_DIR, count++));
+    } else {
+        launchpad_abort(lp, ZX_ERR_BAD_STATE, "devmgr: failed to clone /dev/class/input");
+    }
+
+    // Ideally we'd only expose /dev/misc/dmctl, but we do not support exposing
+    // single files
+    fs_handle = fs_clone("dev/misc");
+    if (fs_handle.is_valid()) {
+        nametable[count] = "/misc";
+        launchpad_add_handle(lp, fs_handle.release(), PA_HND(PA_NS_DIR, count++));
+    } else {
+        launchpad_abort(lp, ZX_ERR_BAD_STATE, "devmgr: failed to clone /dev/misc");
+    }
+    launchpad_set_nametable(lp, count, nametable);
+
+    zx::debuglog debuglog;
+    if ((status = zx::debuglog::create(zx::resource(), 0, &debuglog) < 0)) {
+        launchpad_abort(lp, status, "devmgr: cannot create debuglog handle");
+    } else {
+        launchpad_add_handle(lp, debuglog.release(), PA_HND(PA_FDIO_LOGGER, FDIO_FLAG_USE_FOR_STDIO | 0));
+    }
+
+    const char* errmsg;
+    if ((status = launchpad_go(lp, nullptr, &errmsg)) < 0) {
+        printf("devmgr: launchpad %s (%s) failed: %s: %d\n",
+               argv[0], name, errmsg, status);
+    } else {
+        printf("devmgr: launch %s (%s) OK\n", argv[0], name);
+    }
+    return 0;
+}
+
+void start_console_shell() {
+    // start a shell on the kernel console if it isn't already running a shell
+    if (!getenv_bool("kernel.shell", false)) {
+        thrd_t t;
+        if ((thrd_create_with_name(&t, console_starter, nullptr, "console-starter")) == thrd_success) {
+            thrd_detach(t);
+        }
+    }
+}
+
+zx_status_t fuchsia_create_job() {
+    zx_status_t status = zx::job::create(*g_handles.root_job, 0u, &g_handles.fuchsia_job);
+    if (status != ZX_OK) {
+        printf("devmgr: unable to create fuchsia job: %d (%s)\n", status,
+               zx_status_get_string(status));
+        return status;
+    }
+
+    g_handles.fuchsia_job.set_property(ZX_PROP_NAME, "fuchsia", 7);
+
+    const zx_policy_basic_t fuchsia_job_policy[] = {
+        {.condition = ZX_POL_NEW_PROCESS, .policy = ZX_POL_ACTION_DENY}};
+
+    status = g_handles.fuchsia_job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC,
+                                              fuchsia_job_policy,
+                                              fbl::count_of(fuchsia_job_policy));
+    if (status != ZX_OK) {
+        printf("devmgr: unable to set policy fuchsia job: %d (%s)\n", status,
+               zx_status_get_string(status));
+        return status;
+    }
+
+    return ZX_OK;
+}
+
+} // namespace
+
+namespace devmgr {
+
+// Global flag tracking if devmgr believes this is a full Fuchsia build
+// (requiring /system, etc) or not.
+bool require_system;
+
+zx_handle_t virtcon_open;
+
+zx_handle_t get_root_resource() {
+    return g_handles.root_resource.get();
+}
+
+zx::job get_sysinfo_job_root() {
+    zx::job h;
+    //TODO: limit to enumerate rights
+    if (g_handles.root_job->duplicate(ZX_RIGHT_SAME_RIGHTS, &h) < 0) {
+        return zx::job();
+    } else {
+        return h;
+    }
 }
 
 // Reads messages from crashsvc and launches analyzers for exceptions.
@@ -456,138 +592,6 @@ int service_starter(void* arg) {
     }
 
     return 0;
-}
-
-static int console_starter(void* arg) {
-    // if no kernel shell on serial uart, start a sh there
-    printf("devmgr: shell startup\n");
-
-    // If we got a TERM environment variable (aka a TERM=... argument on
-    // the kernel command line), pass this down; otherwise pass TERM=uart.
-    const char* term = getenv("TERM");
-    if (term == nullptr) {
-        term = "TERM=uart";
-    } else {
-        term -= sizeof("TERM=") - 1;
-    }
-
-    const char* device = getenv("console.path");
-    if (!device) {
-        device = "/dev/misc/console";
-    }
-
-    const char* envp[] = {
-        term,
-        nullptr,
-    };
-
-    zx_status_t status = wait_for_file(device, zx::time::infinite());
-    if (status != ZX_OK) {
-        printf("devmgr: failed to wait for console '%s'\n", device);
-        return 1;
-    }
-    fbl::unique_fd fd(open(device, O_RDWR));;
-    if (!fd.is_valid()) {
-        printf("devmgr: failed to open console '%s'\n", device);
-        return 1;
-    }
-
-    devmgr_launch(g_handles.svc_job, "sh:console",
-                  &devmgr_launch_load, nullptr,
-                  fbl::count_of(argv_sh), argv_sh, envp, fd.release(), nullptr, nullptr, 0,
-                  nullptr, FS_ALL);
-    return 0;
-}
-
-static int pwrbtn_monitor_starter(void* arg) {
-    const char* name = "pwrbtn-monitor";
-    const char* argv[] = {"/boot/bin/pwrbtn-monitor"};
-    int argc = 1;
-
-    zx::job job_copy;
-    g_handles.svc_job.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE, &job_copy);
-
-    launchpad_t* lp;
-    launchpad_create(job_copy.get(), name, &lp);
-
-    zx_status_t status = devmgr_launch_load(nullptr, lp, argv[0]);
-    if (status != ZX_OK) {
-        launchpad_abort(lp, status, "cannot load file");
-    }
-    launchpad_set_args(lp, argc, argv);
-
-    // create a namespace containing /dev/class/input and /dev/misc
-    const char* nametable[2] = {};
-    uint32_t count = 0;
-    zx::channel fs_handle = fs_clone("dev/class/input");
-    if (fs_handle.is_valid()) {
-        nametable[count] = "/input";
-        launchpad_add_handle(lp, fs_handle.release(), PA_HND(PA_NS_DIR, count++));
-    } else {
-        launchpad_abort(lp, ZX_ERR_BAD_STATE, "devmgr: failed to clone /dev/class/input");
-    }
-
-    // Ideally we'd only expose /dev/misc/dmctl, but we do not support exposing
-    // single files
-    fs_handle = fs_clone("dev/misc");
-    if (fs_handle.is_valid()) {
-        nametable[count] = "/misc";
-        launchpad_add_handle(lp, fs_handle.release(), PA_HND(PA_NS_DIR, count++));
-    } else {
-        launchpad_abort(lp, ZX_ERR_BAD_STATE, "devmgr: failed to clone /dev/misc");
-    }
-    launchpad_set_nametable(lp, count, nametable);
-
-    zx::debuglog debuglog;
-    if ((status = zx::debuglog::create(zx::resource(), 0, &debuglog) < 0)) {
-        launchpad_abort(lp, status, "devmgr: cannot create debuglog handle");
-    } else {
-        launchpad_add_handle(lp, debuglog.release(), PA_HND(PA_FDIO_LOGGER, FDIO_FLAG_USE_FOR_STDIO | 0));
-    }
-
-    const char* errmsg;
-    if ((status = launchpad_go(lp, nullptr, &errmsg)) < 0) {
-        printf("devmgr: launchpad %s (%s) failed: %s: %d\n",
-               argv[0], name, errmsg, status);
-    } else {
-        printf("devmgr: launch %s (%s) OK\n", argv[0], name);
-    }
-    return 0;
-}
-
-static void start_console_shell() {
-    // start a shell on the kernel console if it isn't already running a shell
-    if (!getenv_bool("kernel.shell", false)) {
-        thrd_t t;
-        if ((thrd_create_with_name(&t, console_starter, nullptr, "console-starter")) == thrd_success) {
-            thrd_detach(t);
-        }
-    }
-}
-
-static zx_status_t fuchsia_create_job() {
-    zx_status_t status = zx::job::create(*g_handles.root_job, 0u, &g_handles.fuchsia_job);
-    if (status != ZX_OK) {
-        printf("devmgr: unable to create fuchsia job: %d (%s)\n", status,
-               zx_status_get_string(status));
-        return status;
-    }
-
-    g_handles.fuchsia_job.set_property(ZX_PROP_NAME, "fuchsia", 7);
-
-    const zx_policy_basic_t fuchsia_job_policy[] = {
-        {.condition = ZX_POL_NEW_PROCESS, .policy = ZX_POL_ACTION_DENY}};
-
-    status = g_handles.fuchsia_job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC,
-                                              fuchsia_job_policy,
-                                              fbl::count_of(fuchsia_job_policy));
-    if (status != ZX_OK) {
-        printf("devmgr: unable to set policy fuchsia job: %d (%s)\n", status,
-               zx_status_get_string(status));
-        return status;
-    }
-
-    return ZX_OK;
 }
 
 // Get the root resource from the startup handle.  Not receiving the startup

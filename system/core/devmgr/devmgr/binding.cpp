@@ -10,7 +10,7 @@
 
 #include "coordinator.h"
 
-namespace devmgr {
+namespace {
 
 struct BindProgramContext {
     const zx_device_prop_t* props;
@@ -22,7 +22,7 @@ struct BindProgramContext {
     uint32_t autobind;
 };
 
-static uint32_t dev_get_prop(BindProgramContext* ctx, uint32_t id) {
+uint32_t dev_get_prop(BindProgramContext* ctx, uint32_t id) {
     const zx_device_prop_t* props = ctx->props;
     const zx_device_prop_t* end = ctx->end;
 
@@ -45,7 +45,7 @@ static uint32_t dev_get_prop(BindProgramContext* ctx, uint32_t id) {
     }
 }
 
-static bool is_bindable(BindProgramContext* ctx) {
+bool is_bindable(BindProgramContext* ctx) {
     const zx_bind_inst_t* ip = ctx->binding;
     const zx_bind_inst_t* end = ip + (ctx->binding_size / sizeof(zx_bind_inst_t));
     uint32_t flags = 0;
@@ -139,6 +139,10 @@ next_instruction:
     // default if we leave the program is no-match
     return false;
 }
+
+} // namespace
+
+namespace devmgr {
 
 bool dc_is_bindable(const Driver* drv, uint32_t protocol_id,
                     zx_device_prop_t* props, size_t prop_count,

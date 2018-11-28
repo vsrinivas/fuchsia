@@ -21,21 +21,23 @@
 
 namespace devmgr {
 
+namespace {
+
 struct AddContext {
     const char* libname;
     using Func = void(*)(Driver* drv, const char* version);
     Func func;
 };
 
-static bool is_driver_disabled(const char* name) {
+bool is_driver_disabled(const char* name) {
     // driver.<driver_name>.disable
     char opt[16 + DRIVER_NAME_LEN_MAX];
     snprintf(opt, 16 + DRIVER_NAME_LEN_MAX, "driver.%s.disable", name);
     return getenv_bool(opt, false);
 }
 
-static void found_driver(zircon_driver_note_payload_t* note,
-                         const zx_bind_inst_t* bi, void* cookie) {
+void found_driver(zircon_driver_note_payload_t* note,
+                  const zx_bind_inst_t* bi, void* cookie) {
     auto context = static_cast<const AddContext*>(cookie);
 
     // ensure strings are terminated
@@ -90,6 +92,8 @@ static void found_driver(zircon_driver_note_payload_t* note,
 
     context->func(drv.release(), note->version);
 }
+
+} // namespace
 
 void find_loadable_drivers(const char* path,
                            void (*func)(Driver* drv, const char* version)) {
