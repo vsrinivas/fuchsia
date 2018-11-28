@@ -425,9 +425,16 @@ void BasemgrImpl::SwapSessionShell() {
     return;
   }
 
+  auto shell_count = SessionShellSettings::GetSystemSettings().size();
+
+  if (shell_count <= 1) {
+    FXL_DLOG(INFO) << "Only one session shell has been defined so switch is disabled";
+    return;
+  }
+
   active_session_shell_index_ =
       (active_session_shell_index_ + 1) %
-      SessionShellSettings::GetSystemSettings().size();
+      shell_count;
   const auto& settings =
       SessionShellSettings::GetSystemSettings().at(active_session_shell_index_);
 
