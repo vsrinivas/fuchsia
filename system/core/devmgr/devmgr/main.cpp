@@ -27,7 +27,7 @@
 #include <zircon/syscalls/object.h>
 #include <zircon/syscalls/policy.h>
 
-#include <lib/bootsvc-protocol/processargs.h>
+#include <lib/devmgr-launcher/processargs.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/util.h>
@@ -599,7 +599,8 @@ int service_starter(void* arg) {
 // present.
 void fetch_root_resource() {
     // Read the root resource out of its channel
-    zx::channel root_resource_channel(zx_take_startup_handle(BOOTSVC_ROOT_RESOURCE_CHANNEL_HND));
+    zx::channel root_resource_channel(
+            zx_take_startup_handle(DEVMGR_LAUNCHER_ROOT_RESOURCE_CHANNEL_HND));
     if (!root_resource_channel.is_valid()) {
         printf("devmgr: did not receive root resource channel\n");
         return;

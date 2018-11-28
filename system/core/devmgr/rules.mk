@@ -36,12 +36,13 @@ MODULE_FIDL_LIBS := \
 # ddk is needed only for ddk/device.h
 MODULE_HEADER_DEPS := \
     system/ulib/ddk \
-    system/ulib/zircon-internal
+    system/ulib/bootsvc-protocol \
+    system/ulib/devmgr-launcher \
+    system/ulib/zircon-internal \
 
 MODULE_STATIC_LIBS := \
     system/ulib/fidl \
     system/ulib/bootdata \
-    system/ulib/bootsvc-protocol \
     system/ulib/loader-service \
     system/ulib/async \
     system/ulib/async.cpp \
