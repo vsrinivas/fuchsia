@@ -17,7 +17,7 @@ interface TestFunc {
     Callback() -> (zx.status s, TestReport report);
 };
 
-[Layout = "ddk-protocol", HandleWrappers]
+[Layout = "ddk-protocol"]
 interface Test {
     /// Sets test output socket.
     SetOutputSocket(handle<socket> @handle) -> ();

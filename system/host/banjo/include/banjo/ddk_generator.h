@@ -85,8 +85,6 @@ protected:
         std::string camel_case_name;
         std::string doc;
         std::vector<NamedMethod> methods;
-        // True if we wish to generate handle wrappers.
-        bool handle_wrappers;
     };
 
     struct NamedStruct {

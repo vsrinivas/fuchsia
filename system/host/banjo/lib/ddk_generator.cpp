@@ -419,55 +419,45 @@ void EmitDdkProtocolMethodImpl(std::ostream* file, const std::string& method_nam
 
 void EmitDdktlProtocolMethodImpl(std::ostream* file, const std::string& method_name,
                                  std::vector<DdkGenerator::Member> input,
-                                 std::vector<DdkGenerator::Member> output,
-                                 bool handle_wrappers) {
-    if (handle_wrappers) {
-        for (auto& member : input) {
-            if (member.kind == flat::Type::Kind::kHandle) {
-                member.name = member.type + "(" + member.name + ")";
-            }
+                                 std::vector<DdkGenerator::Member> output) {
+    for (auto& member : input) {
+        if (member.kind == flat::Type::Kind::kHandle) {
+            member.name = member.type + "(" + member.name + ")";
         }
-        for (auto& member : output) {
-            if (member.kind == flat::Type::Kind::kHandle) {
-                *file << kIndent << kIndent <<  member.type << " out_" << member.name << "2;\n";
-                member.name = member.name + "2";
-                member.address_of = true;
-            }
+    }
+    for (auto& member : output) {
+        if (member.kind == flat::Type::Kind::kHandle) {
+            *file << kIndent << kIndent <<  member.type << " out_" << member.name << "2;\n";
+            member.name = member.name + "2";
+            member.address_of = true;
         }
-        *file << kIndent << kIndent;
-        EmitMethodImplHelper(file, "static_cast<D*>(ctx)->" + method_name, input, output, "", true);
-        *file << ");\n";
-        for (auto& member : output) {
-            if (member.kind == flat::Type::Kind::kHandle) {
-                *file << kIndent << kIndent <<  "*out_"
-                      << member.name.substr(0, member.name.size() - 1) << " = out_"
-                      << member.name << ".release();\n";
-            }
+    }
+    *file << kIndent << kIndent;
+    EmitMethodImplHelper(file, "static_cast<D*>(ctx)->" + method_name, input, output, "", true);
+    *file << ");\n";
+    for (auto& member : output) {
+        if (member.kind == flat::Type::Kind::kHandle) {
+            *file << kIndent << kIndent <<  "*out_"
+                  << member.name.substr(0, member.name.size() - 1) << " = out_"
+                  << member.name << ".release();\n";
         }
-        if (ReturnFirst(output)) {
-            *file << kIndent << kIndent << "return ret;\n";
-        }
-    } else {
-        *file << kIndent << kIndent;
-        EmitMethodImplHelper(file, "static_cast<D*>(ctx)->" + method_name, input, output, "");
-        *file << ");\n";
+    }
+    if (ReturnFirst(output)) {
+        *file << kIndent << kIndent << "return ret;\n";
     }
 }
 
 void EmitClientMethodImpl(std::ostream* file, const std::string& method_name,
-                           std::vector<DdkGenerator::Member>& input,
-                          std::vector<DdkGenerator::Member>& output,
-                          bool handle_wrappers) {
-    if (handle_wrappers) {
-        for (auto& member : input) {
-            if (member.kind == flat::Type::Kind::kHandle) {
-                member.name = member.name + ".release()";
-            }
+                          std::vector<DdkGenerator::Member>& input,
+                          std::vector<DdkGenerator::Member>& output) {
+    for (auto& member : input) {
+        if (member.kind == flat::Type::Kind::kHandle) {
+            member.name = member.name + ".release()";
         }
-        for (auto& member : output) {
-            if (member.kind == flat::Type::Kind::kHandle) {
-                member.name = member.name + "->reset_and_get_address()";
-            }
+    }
+    for (auto& member : output) {
+        if (member.kind == flat::Type::Kind::kHandle) {
+            member.name = member.name + "->reset_and_get_address()";
         }
     }
     EmitMethodImplHelper(file, "ops_->" + method_name, input, output, "ctx_");
@@ -1226,7 +1216,6 @@ DdktlGenerator::NameInterfaces(const std::vector<std::unique_ptr<flat::Interface
         named_interface.camel_case_name = name;
         named_interface.snake_case_name = ToSnakeCase(std::move(name));
         named_interface.doc = interface_info->GetAttribute("Doc");
-        named_interface.handle_wrappers = interface_info->HasAttribute("HandleWrappers");
         for (const auto& method_pointer : interface_info->all_methods) {
             assert(method_pointer != nullptr);
             const auto& method = *method_pointer;
@@ -1574,8 +1563,7 @@ void DdktlGenerator::ProduceExample(const NamedInterface& named_interface) {
     for (const auto& method_info : named_interface.methods) {
         std::vector<Member> input;
         std::vector<Member> output;
-        GetMethodParameters(library_, method_info, &input, &output,
-                            named_interface.handle_wrappers);
+        GetMethodParameters(library_, method_info, &input, &output, true);
 
         file_ << "// " << kIndent;
         EmitProtocolMethodDecl(&file_, method_info.protocol_name, input, output);
@@ -1632,14 +1620,10 @@ void DdktlGenerator::ProduceProtocolImplementation(const NamedInterface& named_i
         file_ << kIndent << "static ";
         EmitProtocolMethodWithCtxDecl(&file_, method_info.protocol_name, input, output);
         file_ << ") {\n";
-        if (named_interface.handle_wrappers) {
-            std::vector<Member> input2;
-            std::vector<Member> output2;
-            GetMethodParameters(library_, method_info, &input2, &output2, true);
-            EmitDdktlProtocolMethodImpl(&file_, method_info.protocol_name, input2, output2, true);
-        } else {
-            EmitDdktlProtocolMethodImpl(&file_, method_info.protocol_name, input, output, false);
-        }
+        std::vector<Member> input2;
+        std::vector<Member> output2;
+        GetMethodParameters(library_, method_info, &input2, &output2, true);
+        EmitDdktlProtocolMethodImpl(&file_, method_info.protocol_name, input2, output2);
         file_ << kIndent << "}\n";
     }
     file_ << "};\n";
@@ -1692,16 +1676,14 @@ void DdktlGenerator::ProduceClientImplementation(const NamedInterface& named_int
     for (const auto& method_info : named_interface.methods) {
         std::vector<Member> input;
         std::vector<Member> output;
-        GetMethodParameters(library_, method_info, &input, &output,
-                            named_interface.handle_wrappers);
+        GetMethodParameters(library_, method_info, &input, &output, true);
 
         EmitDocstring(&file_, method_info, true);
         file_ << kIndent;
         EmitProtocolMethodDecl(&file_, method_info.proxy_name, input, output);
         file_ << ") const {\n"
               << kIndent << kIndent;
-        EmitClientMethodImpl(&file_, method_info.c_name, input, output,
-                             named_interface.handle_wrappers);
+        EmitClientMethodImpl(&file_, method_info.c_name, input, output);
         file_ << kIndent << "}\n";
     }
     EmitBlank(&file_);
@@ -1721,8 +1703,7 @@ void DdktlGenerator::ProduceProtocolSubclass(const NamedInterface& named_interfa
     for (const auto& method_info : named_interface.methods) {
         std::vector<Member> input;
         std::vector<Member> output;
-        GetMethodParameters(library_, method_info, &input, &output,
-                            named_interface.handle_wrappers);
+        GetMethodParameters(library_, method_info, &input, &output, true);
 
         file_ << "DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_" << sc_name << "_" << method_info.c_name
               << ", " << method_info.protocol_name << ",\n";
@@ -1736,8 +1717,7 @@ void DdktlGenerator::ProduceProtocolSubclass(const NamedInterface& named_interfa
     for (const auto& method_info : named_interface.methods) {
         std::vector<Member> input;
         std::vector<Member> output;
-        GetMethodParameters(library_, method_info, &input, &output,
-                            named_interface.handle_wrappers);
+        GetMethodParameters(library_, method_info, &input, &output, true);
 
         file_ << kIndent << "static_assert(internal::has_" << sc_name << "_" << method_info.c_name
               << "<D>::value,\n";

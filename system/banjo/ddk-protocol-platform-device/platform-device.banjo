@@ -42,7 +42,7 @@ struct PdevMmio {
     handle<vmo> vmo;
 };
 
-[Layout = "ddk-protocol", HandleWrappers]
+[Layout = "ddk-protocol"]
 interface PDev {
     GetMmio(uint32 index) -> (zx.status s, PdevMmio mmio);
     MapMmio(uint32 index, uint32 cache_policy) -> (zx.status s, vector<voidptr>? vaddr,
