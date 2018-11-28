@@ -211,6 +211,7 @@ static bool socket_buffer_test(void) {
     EXPECT_EQ(info.options, 0u, "");
     EXPECT_GT(info.rx_buf_max, 0u, "");
     EXPECT_EQ(info.rx_buf_size, sizeof(buf), "");
+    EXPECT_EQ(info.rx_buf_available, sizeof(buf), "");
     EXPECT_GT(info.tx_buf_max, 0u, "");
     EXPECT_EQ(info.tx_buf_size, 0u, "");
 
@@ -219,6 +220,7 @@ static bool socket_buffer_test(void) {
     EXPECT_EQ(info.options, 0u, "");
     EXPECT_GT(info.rx_buf_max, 0u, "");
     EXPECT_EQ(info.rx_buf_size, 0u, "");
+    EXPECT_EQ(info.rx_buf_available, 0u, "");
     EXPECT_GT(info.tx_buf_max, 0u, "");
     EXPECT_EQ(info.tx_buf_size, sizeof(buf), "");
 
@@ -231,6 +233,7 @@ static bool socket_buffer_test(void) {
     EXPECT_EQ(info.options, 0u, "");
     EXPECT_GT(info.rx_buf_max, 0u, "");
     EXPECT_EQ(info.rx_buf_size, 0u, "");
+    EXPECT_EQ(info.rx_buf_available, 0u, "");
     EXPECT_EQ(info.tx_buf_max, 0u, "");
     EXPECT_EQ(info.tx_buf_size, 0u, "");
 
@@ -243,8 +246,34 @@ static bool socket_buffer_test(void) {
     EXPECT_EQ(info.options, ZX_SOCKET_DATAGRAM, "");
     EXPECT_GT(info.rx_buf_max, 0u, "");
     EXPECT_EQ(info.rx_buf_size, 0u, "");
+    EXPECT_EQ(info.rx_buf_available, 0u, "");
     EXPECT_GT(info.tx_buf_max, 0u, "");
     EXPECT_EQ(info.tx_buf_size, 0u, "");
+
+    ASSERT_EQ(zx_socket_write(sockets[1], 0, buf, sizeof(buf), &actual), ZX_OK, "");
+    EXPECT_EQ(actual, sizeof(buf), "");
+
+    memset(&info, 0, sizeof(info));
+    ASSERT_EQ(zx_object_get_info(sockets[0], ZX_INFO_SOCKET, &info, sizeof(info), NULL, NULL), ZX_OK, "");
+    EXPECT_EQ(info.options, ZX_SOCKET_DATAGRAM, "");
+    EXPECT_GT(info.rx_buf_max, 0u, "");
+    EXPECT_EQ(info.rx_buf_size, 8u, "");
+    EXPECT_EQ(info.rx_buf_available, 8u, "");
+    EXPECT_GT(info.tx_buf_max, 0u, "");
+    EXPECT_EQ(info.tx_buf_size, 0u, "");
+
+    ASSERT_EQ(zx_socket_write(sockets[1], 0, buf, sizeof(buf) / 2, &actual), ZX_OK, "");
+    EXPECT_EQ(actual, sizeof(buf) / 2, "");
+
+    memset(&info, 0, sizeof(info));
+    ASSERT_EQ(zx_object_get_info(sockets[0], ZX_INFO_SOCKET, &info, sizeof(info), NULL, NULL), ZX_OK, "");
+    EXPECT_EQ(info.options, ZX_SOCKET_DATAGRAM, "");
+    EXPECT_GT(info.rx_buf_max, 0u, "");
+    EXPECT_EQ(info.rx_buf_size, 12u, "");
+    EXPECT_EQ(info.rx_buf_available, 8u, "");
+    EXPECT_GT(info.tx_buf_max, 0u, "");
+    EXPECT_EQ(info.tx_buf_size, 0u, "");
+
     zx_handle_close_many(sockets, 2);
 
     END_TEST;

@@ -373,6 +373,14 @@ typedef struct zx_info_socket {
     // The size of the receive buffer of a socket, in bytes.
     size_t rx_buf_size;
 
+    // The amount of data, in bytes, that is available for reading in a single
+    // zx_socket_read call.
+    //
+    // For stream sockets, this value will match |rx_buf_size|. For datagram
+    // sockets, this value will be the size of the next datagram in the receive
+    // buffer.
+    size_t rx_buf_available;
+
     // The maximum size of the transmit buffer of a socket, in bytes.
     //
     // The transmit buffer may become full at a capacity less than the maximum

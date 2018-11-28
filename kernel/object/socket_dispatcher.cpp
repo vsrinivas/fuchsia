@@ -456,6 +456,7 @@ void SocketDispatcher::GetInfo(zx_info_socket_t* info) const TA_NO_THREAD_SAFETY
         .options = flags_,
         .rx_buf_max = data_.max_size(),
         .rx_buf_size = data_.size(),
+        .rx_buf_available = data_.size(flags_ & ZX_SOCKET_DATAGRAM),
         .tx_buf_max = peer_ ? peer_->data_.max_size() : 0,
         .tx_buf_size = peer_ ? peer_->data_.size() : 0,
     };
