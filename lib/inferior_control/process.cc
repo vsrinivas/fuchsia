@@ -8,6 +8,8 @@
 #include <lib/fdio/io.h>
 #include <lib/fit/function.h>
 #include <link.h>
+#include <zircon/dlfcn.h>
+#include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 #include <cinttypes>
@@ -39,6 +41,13 @@ std::unique_ptr<process::ProcessBuilder> CreateProcessBuilder(
 
   builder->AddArgs(argv);
   builder->CloneAll();
+
+  // Also clone the loader since we call LoadVMO rather than use the resolver
+  // path of the ProcessBuilder.
+  zx::handle ldsvc;
+  dl_clone_loader_service(ldsvc.reset_and_get_address());
+  builder->AddHandle(PA_LDSVC_LOADER, std::move(ldsvc));
+
   return builder;
 }
 

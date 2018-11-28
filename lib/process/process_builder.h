@@ -35,7 +35,8 @@ class ProcessBuilder {
   ProcessBuilder(const ProcessBuilder&) = delete;
   ProcessBuilder& operator=(const ProcessBuilder&) = delete;
 
-  // Use |executable| as the executable for the process.
+  // Use |executable| as the executable for the process. The calling code is
+  // responsible for setting the correct loader service via AddHandle().
   void LoadVMO(zx::vmo executable);
 
   // Load the executable for the process from the given |path|.
@@ -83,14 +84,6 @@ class ProcessBuilder {
   // Defaults to zx_job_default() unless you passed a job explicitly when
   // constructing this object.
   void CloneJob();
-
-  // Clone the ldsvc for this process as the |PA_LOADER_SVC| for the created
-  // process.
-  //
-  // The created process will use this service to load shared libraries. A
-  // loader service of some kind is required in order to create the process
-  // to load the ELF |INTERP|.
-  void CloneLdsvc();
 
   // Clone the FDIO namespace for this process as the namespace for the created
   // process.

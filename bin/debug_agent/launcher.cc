@@ -29,7 +29,6 @@ zx_status_t Launcher::Setup(const std::vector<std::string>& argv) {
   builder_.CloneStdio();
   */
   builder_.CloneJob();
-  builder_.CloneLdsvc();
   builder_.CloneNamespace();
   builder_.CloneEnvironment();
 

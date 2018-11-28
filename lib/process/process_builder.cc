@@ -19,9 +19,25 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
+#include <array>
+#include <string_view>
+
 #include "lib/svc/cpp/services.h"
 
 namespace process {
+
+namespace {
+
+// This should match the values used by zircon/system/ulib/fdio/spawn.c
+constexpr size_t kFdioResolvePrefixLen = 10;
+const char kFdioResolvePrefix[kFdioResolvePrefixLen + 1] = "#!resolve ";
+
+// It is possible to setup an infinite loop of resolvers. We want to avoid this
+// being a common abuse vector, but also stay out of the way of any complex user
+// setups. This value is the same as spawn.c's above.
+constexpr int kFdioMaxResolveDepth = 256;
+
+}  // namespace
 
 ProcessBuilder::ProcessBuilder(std::shared_ptr<component::Services> services)
     : services_(services) {
@@ -44,24 +60,69 @@ zx_status_t ProcessBuilder::LoadPath(const std::string& path) {
   int fd = open(path.c_str(), O_RDONLY);
   if (fd < 0)
     return ZX_ERR_IO;
+
+  zx::vmo executable_vmo;
   zx_status_t status =
-      fdio_get_vmo_clone(fd, launch_info_.executable.reset_and_get_address());
+      fdio_get_vmo_clone(fd, executable_vmo.reset_and_get_address());
   close(fd);
+  if (status != ZX_OK)
+    return status;
 
-  if (status == ZX_OK) {
-    const char* name = path.c_str();
+  ::fidl::InterfaceHandle<::fuchsia::ldsvc::Loader> loader_iface;
 
-    if (path.length() >= ZX_MAX_NAME_LEN) {
-      size_t offset = path.rfind('/');
-      if (offset != std::string::npos) {
-        name += offset + 1;
-      }
-    }
+  // Resolve VMOs containing #!resolve.
+  fuchsia::process::ResolverSyncPtr resolver;  // Lazily bound.
+  for (int i = 0; true; i++) {
+    std::array<char, fuchsia::process::MAX_RESOLVE_NAME + kFdioResolvePrefixLen>
+        head;
+    head.fill(0);
+    status = executable_vmo.read(head.data(), 0, head.size());
+    if (status != ZX_OK)
+      return status;
+    if (memcmp(kFdioResolvePrefix, head.data(), kFdioResolvePrefixLen) != 0)
+      break;  // No prefix match.
 
-    launch_info_.executable.set_property(ZX_PROP_NAME, name, strlen(name));
+    if (i == kFdioMaxResolveDepth)
+      return ZX_ERR_IO_INVALID;  // Too much nesting.
+
+    // The process name is after the prefix until the first newline.
+    std::string_view name(&head[kFdioResolvePrefixLen],
+                          fuchsia::process::MAX_RESOLVE_NAME);
+    if (auto newline_index = name.rfind('\n');
+        newline_index != std::string_view::npos)
+      name = name.substr(0, newline_index);
+
+    // The resolver will give us a new VMO and loader to use.
+    if (!resolver)
+      services_->ConnectToService(resolver.NewRequest());
+    resolver->Resolve(fidl::StringPtr(name.data(), name.size()), &status,
+                      &executable_vmo, &loader_iface);
+    if (status != ZX_OK)
+      return status;
   }
 
-  return status;
+  // Save the loader info.
+  zx::handle loader = loader_iface.TakeChannel();
+  if (!loader) {
+    // Resolver didn't give us a specific one, clone ours.
+    status = dl_clone_loader_service(loader.reset_and_get_address());
+    if (status != ZX_OK)
+      return status;
+  }
+  AddHandle(PA_LDSVC_LOADER, std::move(loader));
+
+  // Save the VMO info. Name it with the file part of the path.
+  launch_info_.executable = std::move(executable_vmo);
+  const char* name = path.c_str();
+  if (path.length() >= ZX_MAX_NAME_LEN) {
+    size_t offset = path.rfind('/');
+    if (offset != std::string::npos) {
+      name += offset + 1;
+    }
+  }
+  launch_info_.executable.set_property(ZX_PROP_NAME, name, strlen(name));
+
+  return ZX_OK;
 }
 
 void ProcessBuilder::AddArgs(const std::vector<std::string>& argv) {
@@ -77,7 +138,8 @@ void ProcessBuilder::AddArgs(const std::vector<std::string>& argv) {
 
 void ProcessBuilder::AddHandle(uint32_t id, zx::handle handle) {
   handles_.push_back(fuchsia::process::HandleInfo{
-      .id = id, .handle = std::move(handle),
+      .id = id,
+      .handle = std::move(handle),
   });
 }
 
@@ -89,7 +151,8 @@ void ProcessBuilder::AddHandles(
 
 void ProcessBuilder::SetDefaultJob(zx::job job) {
   handles_.push_back(fuchsia::process::HandleInfo{
-      .id = PA_JOB_DEFAULT, .handle = std::move(job),
+      .id = PA_JOB_DEFAULT,
+      .handle = std::move(job),
   });
 }
 
@@ -106,15 +169,6 @@ void ProcessBuilder::CloneJob() {
   SetDefaultJob(std::move(duplicate_job));
 }
 
-void ProcessBuilder::CloneLdsvc() {
-  fuchsia::process::HandleInfo handle_info;
-  handle_info.id = PA_LDSVC_LOADER;
-  zx_status_t status =
-      dl_clone_loader_service(handle_info.handle.reset_and_get_address());
-  ZX_ASSERT(status == ZX_OK);
-  handles_.push_back(std::move(handle_info));
-}
-
 void ProcessBuilder::CloneNamespace() {
   fdio_flat_namespace_t* flat = nullptr;
   zx_status_t status = fdio_ns_export_root(&flat);
@@ -122,8 +176,9 @@ void ProcessBuilder::CloneNamespace() {
     fidl::VectorPtr<fuchsia::process::NameInfo> names;
     for (size_t i = 0; i < flat->count; ++i) {
       names.push_back(fuchsia::process::NameInfo{
-          flat->path[i], fidl::InterfaceHandle<fuchsia::io::Directory>(
-                             zx::channel(flat->handle[i])),
+          flat->path[i],
+          fidl::InterfaceHandle<fuchsia::io::Directory>(
+              zx::channel(flat->handle[i])),
       });
     }
     launcher_->AddNames(std::move(names));
@@ -147,7 +202,6 @@ void ProcessBuilder::CloneEnvironment() {
 
 void ProcessBuilder::CloneAll() {
   CloneJob();
-  CloneLdsvc();
   CloneNamespace();
   CloneStdio();
   CloneEnvironment();
@@ -162,7 +216,8 @@ zx_status_t ProcessBuilder::CloneFileDescriptor(int local_fd, int target_fd) {
     return status;
   for (int i = 0; i < status; ++i) {
     handles_.push_back(fuchsia::process::HandleInfo{
-        .id = fdio_types[i], .handle = zx::handle(fdio_handles[i]),
+        .id = fdio_types[i],
+        .handle = zx::handle(fdio_handles[i]),
     });
   }
   return ZX_OK;
