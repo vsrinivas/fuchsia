@@ -12,28 +12,6 @@ library fuchsia.modular;
 // framework.
 [Discoverable]
 interface StoryProvider {
-    // Creates a new story. If |module_url| is supplied, adds it to the story as
-    // the first module. The returned |story_id| can be used to obtain a
-    // StoryController connection to perform actions on the newly created story,
-    // specifically starting it.
-    //
-    // Providing |module_url| is deprecated. It is preferred to GetController()
-    // and call StoryController.AddModule().
-    //
-    // DEPRECATED: To create and modify existing stories, use PuppetMaster.
-    1: CreateStory(string? module_url) -> (string story_id);
-
-    // Like CreateStory(), but with extra info and with values for the root link
-    // atomically set.
-    //
-    // Providing |module_url| is deprecated. It is preferred to GetController()
-    // and call StoryController.AddModule().
-    //
-    // DEPRECATED: To create and modify existing stories, use PuppetMaster.
-    2: CreateStoryWithInfo(string? module_url,
-                           vector<StoryInfoExtraEntry>? extra_info,
-                           string? root_json) -> (string story_id);
-
     // Deletes an existing story from the list of known stories. Returns when the
     // delete notification is received from the Ledger. If the story to be deleted
     // is running, it is first stopped and its story controller disconnected. If
@@ -75,13 +53,6 @@ interface StoryProvider {
     // StoryActivityWatcher.OnStoryActivity() will be called to update clients
     // with the initial data. See StoryActivityWatcher for motivations.
     10: WatchActivity(StoryActivityWatcher watcher);
-
-    // Creates a story and sets the options it will have.
-    // EXPERIMENTAL
-    //
-    // DEPRECATED: To create stories, use PuppetMaster.
-    11: CreateStoryWithOptions(StoryOptions story_options)
-            -> (string story_id);
 };
 
 // Implemented by clients of StoryProvider.

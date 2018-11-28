@@ -45,33 +45,6 @@ class StoryProviderMock : public fuchsia::modular::StoryProvider {
 
  private:
   // |fuchsia::modular::StoryProvider|
-  void CreateStory(fidl::StringPtr url, CreateStoryCallback callback) override {
-    last_created_story_ = url;
-    callback("foo");
-  }
-
-  // |fuchsia::modular::StoryProvider|
-  void CreateStoryWithInfo(
-      fidl::StringPtr url,
-      fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info,
-      fidl::StringPtr json, CreateStoryWithInfoCallback callback) override {
-    last_created_story_ = url;
-    callback("foo");
-  }
-
-  // |fuchsia::modular::StoryProvider|
-  void CreateStoryWithOptions(
-      fuchsia::modular::StoryOptions story_options,
-      CreateStoryWithOptionsCallback callback) override {
-    if (story_options.kind_of_proto_story) {
-      last_created_kind_of_proto_story_ = "kindoffoo";
-    } else {
-      last_created_story_ = "kindoffoo";
-    }
-    callback("kindoffoo");
-  }
-
-  // |fuchsia::modular::StoryProvider|
   void GetStories(
       fidl::InterfaceHandle<fuchsia::modular::StoryProviderWatcher> watcher,
       GetStoriesCallback callback) override {

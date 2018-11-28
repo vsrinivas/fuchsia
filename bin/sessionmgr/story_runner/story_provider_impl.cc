@@ -44,89 +44,6 @@ namespace modular {
 
 constexpr char kSnapshotLoaderUrl[] = "snapshot";
 
-// 1. Ask SessionStorage to create an ID and storage for the new story.
-// 2. Optionally add the module in |url| to the story.
-class StoryProviderImpl::CreateStoryCall : public Operation<fidl::StringPtr> {
- public:
-  CreateStoryCall(
-      SessionStorage* const session_storage,
-      StoryProviderImpl* const story_provider_impl, fidl::StringPtr url,
-      fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info,
-      fidl::StringPtr root_json, fuchsia::modular::StoryOptions story_options,
-      ResultCall result_call)
-      : Operation("StoryProviderImpl::CreateStoryCall", std::move(result_call)),
-        session_storage_(session_storage),
-        story_provider_impl_(story_provider_impl),
-        extra_info_(std::move(extra_info)),
-        story_options_(std::move(story_options)),
-        start_time_(zx_clock_get(ZX_CLOCK_UTC)) {
-    intent_.handler = std::move(url);
-
-    if (!root_json.is_null()) {
-      fuchsia::modular::IntentParameter param;
-      param.name = nullptr;
-      fsl::SizedVmo vmo;
-      FXL_CHECK(fsl::VmoFromString(*root_json, &vmo));
-      param.data.set_json(std::move(vmo).ToTransport());
-      intent_.parameters.push_back(std::move(param));
-    }
-  }
-
- private:
-  void Run() override {
-    FlowToken flow{this, &story_id_};
-
-    // Steps:
-    // 1) Create the story storage.
-    // 2) Set any extra info.
-    // 3) If we got an initial module, add it.
-    session_storage_
-        ->CreateStory(std::move(extra_info_), std::move(story_options_))
-        ->WeakAsyncMap(GetWeakPtr(),
-                       [this, flow](fidl::StringPtr story_id,
-                                    fuchsia::ledger::PageId page_id) {
-                         story_id_ = story_id;
-                         return session_storage_->GetStoryStorage(story_id_);
-                       })
-        ->WeakThen(GetWeakPtr(),
-                   [this, flow](std::unique_ptr<StoryStorage> story_storage) {
-                     storage_ = std::move(story_storage);
-                     controller_ = std::make_unique<StoryControllerImpl>(
-                         story_id_, session_storage_, storage_.get(),
-                         story_provider_impl_);
-                     if (intent_.handler) {
-                       controller_->AddModule(
-                           {} /* parent_module_path */, kRootModuleName,
-                           std::move(intent_), nullptr /* surface_relation */);
-                     }
-
-                     // We ensure that everything has been written to the story
-                     // page before this operation is done.
-                     controller_->Sync([flow] {});
-
-                     ReportStoryLaunchTime(zx::duration(
-                         zx_clock_get(ZX_CLOCK_UTC) - start_time_));
-                   });
-  }
-
-  SessionStorage* const session_storage_;         // Not owned
-  StoryProviderImpl* const story_provider_impl_;  // Not owned
-  fuchsia::modular::Intent intent_;
-  fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info_;
-  fuchsia::modular::StoryOptions story_options_;
-  const zx_time_t start_time_;
-
-  std::unique_ptr<StoryStorage> storage_;
-  std::unique_ptr<StoryControllerImpl> controller_;
-
-  fidl::StringPtr story_id_;  // This is the result of the Operation.
-
-  // Sub operations run in this queue.
-  OperationQueue operation_queue_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(CreateStoryCall);
-};
-
 class StoryProviderImpl::DeleteStoryCall : public Operation<> {
  public:
   using StoryRuntimesMap = std::map<std::string, struct StoryRuntimeContainer>;
@@ -515,37 +432,6 @@ void StoryProviderImpl::MaybeLoadStoryShell() {
   preloaded_story_shell_app_ =
       std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
           user_environment_->GetLauncher(), CloneStruct(story_shell_));
-}
-
-// |fuchsia::modular::StoryProvider|
-void StoryProviderImpl::CreateStory(fidl::StringPtr module_url,
-                                    CreateStoryCallback callback) {
-  FXL_LOG(INFO) << "fuchsia::modular::CreateStory() " << module_url;
-  operation_queue_.Add(new CreateStoryCall(
-      session_storage_, this, module_url, nullptr /* extra_info */,
-      nullptr /* root_json */, {} /* story_options */, callback));
-}
-
-// |fuchsia::modular::StoryProvider|
-void StoryProviderImpl::CreateStoryWithOptions(
-    fuchsia::modular::StoryOptions story_options,
-    CreateStoryWithOptionsCallback callback) {
-  FXL_LOG(INFO) << "CreateStoryWithOptions() ";
-  operation_queue_.Add(
-      new CreateStoryCall(session_storage_, this, nullptr /* module_url */,
-                          nullptr /* extra_info */, nullptr /* root_json */,
-                          std::move(story_options), callback));
-}
-
-// |fuchsia::modular::StoryProvider|
-void StoryProviderImpl::CreateStoryWithInfo(
-    fidl::StringPtr module_url,
-    fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info,
-    fidl::StringPtr root_json, CreateStoryWithInfoCallback callback) {
-  FXL_LOG(INFO) << "CreateStoryWithInfo() " << module_url << " " << root_json;
-  operation_queue_.Add(new CreateStoryCall(
-      session_storage_, this, module_url, std::move(extra_info),
-      std::move(root_json), {} /* story_options */, callback));
 }
 
 // |fuchsia::modular::StoryProvider|

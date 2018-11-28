@@ -177,20 +177,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
 
  private:
   // |fuchsia::modular::StoryProvider|
-  void CreateStory(fidl::StringPtr module_url,
-                   CreateStoryCallback callback) override;
-
-  // |fuchsia::modular::StoryProvider|
-  void CreateStoryWithOptions(fuchsia::modular::StoryOptions story_options,
-                              CreateStoryWithOptionsCallback callback) override;
-
-  // |fuchsia::modular::StoryProvider|
-  void CreateStoryWithInfo(
-      fidl::StringPtr module_url,
-      fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info,
-      fidl::StringPtr root_json, CreateStoryWithInfoCallback callback) override;
-
-  // |fuchsia::modular::StoryProvider|
   void DeleteStory(fidl::StringPtr story_id,
                    DeleteStoryCallback callback) override;
 
