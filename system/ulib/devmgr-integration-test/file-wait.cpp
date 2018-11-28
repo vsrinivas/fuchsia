@@ -1,0 +1,75 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include <lib/devmgr-integration-test/fixture.h>
+
+#include <fcntl.h>
+
+#include <fbl/unique_fd.h>
+#include <lib/fdio/watcher.h>
+
+namespace devmgr_integration_test {
+
+// Waits for |file| to appear in |dir|, and opens it when it does.  Times out if
+// the deadline passes.
+zx_status_t WaitForFile(const fbl::unique_fd& dir, const char* file, zx::time deadline,
+                        fbl::unique_fd* out) {
+    auto watch_func = [](int dirfd, int event, const char* fn, void* cookie) -> zx_status_t {
+        auto file = reinterpret_cast<const char*>(cookie);
+        if (event != WATCH_EVENT_ADD_FILE) {
+            return ZX_OK;
+        }
+        if (!strcmp(fn, file)) {
+            return ZX_ERR_STOP;
+        }
+        return ZX_OK;
+    };
+
+    zx_status_t status = fdio_watch_directory(dir.get(), watch_func, deadline.get(),
+                                              const_cast<char*>(file));
+    if (status != ZX_ERR_STOP) {
+        return status;
+    }
+    out->reset(openat(dir.get(), file, O_RDWR));
+    if (!out->is_valid()) {
+        return ZX_ERR_IO;
+    }
+    return ZX_OK;
+}
+
+namespace {
+
+// Version of recursive_wait_for_file that can mutate its path
+zx_status_t RecursiveWaitForFileHelper(const fbl::unique_fd& dir, char* path,
+                                       zx::time deadline, fbl::unique_fd* out) {
+    char* first_slash = strchr(path, '/');
+    if (first_slash == nullptr) {
+        // If there's no first slash, then we're just waiting for the file
+        // itself to appear.
+        return WaitForFile(dir, path, deadline, out);
+    }
+    *first_slash = 0;
+
+    fbl::unique_fd next_dir;
+    zx_status_t status = WaitForFile(dir, path, deadline, &next_dir);
+    if (status != ZX_OK) {
+        return status;
+    }
+    return RecursiveWaitForFileHelper(next_dir, first_slash + 1, deadline, out);
+}
+
+} // namespace
+
+// Waits for the relative |path| starting in |dir| to appear, and opens it.
+zx_status_t RecursiveWaitForFile(const fbl::unique_fd& dir, const char* path,
+                                 zx::time deadline, fbl::unique_fd* out) {
+    char path_copy[PATH_MAX];
+    if (strlen(path) >= sizeof(path_copy)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    strcpy(path_copy, path);
+    return RecursiveWaitForFileHelper(dir, path_copy, deadline, out);
+}
+
+} // namespace devmgr_integration_test
