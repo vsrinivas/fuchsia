@@ -270,12 +270,7 @@ class InterfacePtr {
   // For example, the error handler will be called if the remote side of the
   // channel sends an invalid message. When the error handler is called, the
   // |Binding| will no longer be bound to the channel.
-  //
-  // TODO(FIDL-319): change this signature to void
-  // set_error_handler(fit::function<void(zx_status_t)>) when there are no more
-  // incompatible callers.
-  template <class T>
-  void set_error_handler(T error_handler) {
+  void set_error_handler(fit::function<void(zx_status_t)> error_handler) {
     impl_->controller.reader().set_error_handler(std::move(error_handler));
   }
 

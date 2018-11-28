@@ -104,27 +104,6 @@ class MessageReader {
     message_handler_ = message_handler;
   }
 
-  // DEPRECATED - Do not use, will be deleted soon.  Use the version whose
-  // function takes an error parameter, instead.
-  //
-  // The given error handler is called whenever the |MessageReader| encounters
-  // an error on the channel.
-  //
-  // Before calling the error handler, the |MessageReader| unbinds the current
-  // channel, which means the message handler will not be called after the
-  // error handler has been called unless the |MessageReader| is bound to a new
-  // |zx::channel|.
-  //
-  // The handler can destroy the |MessageReader|.
-  template <class Callable>
-  [[deprecated]]
-  typename std::enable_if<!std::is_assignable<fit::function<void(zx_status_t)>,
-                                              Callable>::value>::type
-  set_error_handler(Callable error_handler) {
-    error_handler_ = [handler = std::move(error_handler)](
-                         zx_status_t ignored) mutable { handler(); };
-  }
-
   // The given error handler is called whenever the |MessageReader| encounters
   // an error on the channel.
   //
@@ -141,14 +120,7 @@ class MessageReader {
   // |Binding| will no longer be bound to the channel.
   //
   // The handler can destroy the |MessageReader|.
-  //
-  // TODO(FIDL-319): Change this signature to void
-  // set_error_handler(fit::function<void(zx_status_t)>) when all callers of the
-  // other set_error_handler function are migrated to this one.
-  template <class Callable>
-  typename std::enable_if<std::is_assignable<fit::function<void(zx_status_t)>,
-                                             Callable>::value>::type
-  set_error_handler(Callable error_handler) {
+  void set_error_handler(fit::function<void(zx_status_t)> error_handler) {
     error_handler_ = std::move(error_handler);
   }
 

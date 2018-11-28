@@ -58,11 +58,6 @@ fuchsia::sys::ServiceProvider* V1BaseView::GetViewServiceProvider() {
   return view_container_.get();
 }
 
-void V1BaseView::SetReleaseHandler(fit::closure callback) {
-  view_listener_binding_.set_error_handler(
-      [cb = std::move(callback)](zx_status_t status) { cb(); });
-}
-
 void V1BaseView::SetReleaseHandler(
     fit::function<void(zx_status_t status)> callback) {
   view_listener_binding_.set_error_handler(std::move(callback));

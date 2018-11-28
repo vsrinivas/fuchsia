@@ -63,12 +63,7 @@ class Session : private fuchsia::ui::scenic::SessionListener {
   // All resources must be released prior to destruction.
   ~Session();
 
-  // Sets a callback which is invoked if the session dies.
-  // TODO(FIDL-319): change this signature to void
-  // set_error_handler(fit::function<void(zx_status_t)>) when there are no more
-  // incompatible callers.
-  template <class Callable>
-  void set_error_handler(Callable closure) {
+  void set_error_handler(fit::function<void(zx_status_t)> closure) {
     session_.set_error_handler(std::move(closure));
   }
 

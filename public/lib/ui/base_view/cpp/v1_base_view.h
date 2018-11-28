@@ -112,14 +112,6 @@ class V1BaseView : private ::fuchsia::ui::viewsv1::ViewListener,
   //
   // This should be used to implement cleanup policies to release resources
   // associated with the view (including the object itself).
-  // TODO(FIDL-319): Delete this function.
-  void SetReleaseHandler(fit::closure callback);
-
-  // Sets a callback which is invoked when the view's owner releases the
-  // view causing the view manager to unregister it.
-  //
-  // This should be used to implement cleanup policies to release resources
-  // associated with the view (including the object itself).
   void SetReleaseHandler(fit::function<void(zx_status_t)> callback);
 
   // Invalidates the scene, causing |OnSceneInvalidated()| to be invoked
