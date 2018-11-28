@@ -43,7 +43,6 @@ uint32_t GetRandomSeed() {;
         zx_cprng_draw(&random_seed, sizeof(uint32_t));
     }
 
-    printf("\nTEST_LOOP_RANDOM_SEED=\"%u\"\n", random_seed);
     return random_seed;
 }
 
@@ -147,10 +146,15 @@ private:
     TestLoopDispatcher* dispatcher_;
 };
 
-TestLoop::TestLoop()
-    : time_keeper_(new TestLoopTimeKeeper()), initial_state_(GetRandomSeed()), state_(initial_state_) {
+TestLoop::TestLoop() : TestLoop(0) {}
+
+TestLoop::TestLoop(uint32_t state)
+    : time_keeper_(new TestLoopTimeKeeper()),
+      initial_state_((state != 0)? state : GetRandomSeed()), state_(initial_state_) {
     dispatchers_.push_back(fbl::make_unique<TestLoopDispatcher>(time_keeper_.get()));
     async_set_default_dispatcher(dispatchers_[0].get());
+
+    printf("\nTEST_LOOP_RANDOM_SEED=\"%u\"\n", initial_state_);
 }
 
 TestLoop::~TestLoop() {

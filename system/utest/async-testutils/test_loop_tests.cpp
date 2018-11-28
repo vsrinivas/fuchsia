@@ -14,6 +14,7 @@
 #include <unittest/unittest.h>
 #include <zircon/syscalls.h>
 
+#include <memory>
 #include <utility>
 
 namespace {
@@ -525,15 +526,13 @@ bool WaitsAreDispatchedOnManyLoops() {
 
 
 // Populates |order| with the order in which two tasks and two waits on four
-// loops were dispatched, given a |random_seed|.
-bool DetermineDispatchOrder(const char* random_seed, int (*order)[4]) {
+// loops were dispatched, given a |loop|.
+    bool DetermineDispatchOrder(std::unique_ptr<async::TestLoop> loop, int (*order)[4]) {
     BEGIN_HELPER;
 
-    ASSERT_EQ(0, setenv("TEST_LOOP_RANDOM_SEED", random_seed, 1));
-    async::TestLoop loop;
-    auto loopA = loop.StartNewLoop();
-    auto loopB = loop.StartNewLoop();
-    auto loopC = loop.StartNewLoop();
+    auto loopA = loop->StartNewLoop();
+    auto loopB = loop->StartNewLoop();
+    auto loopC = loop->StartNewLoop();
     async::Wait wait;
     async::Wait waitB;
     zx::event event;
@@ -546,11 +545,11 @@ bool DetermineDispatchOrder(const char* random_seed, int (*order)[4]) {
     InitWait(&waitB, [&] { (*order)[2] = ++i; }, event, ZX_USER_SIGNAL_0);
     async::PostTask(loopC->dispatcher(), [&] { (*order)[3] = ++i; });
 
-    ASSERT_EQ(ZX_OK, wait.Begin(loop.dispatcher()));
+    ASSERT_EQ(ZX_OK, wait.Begin(loop->dispatcher()));
     ASSERT_EQ(ZX_OK, waitB.Begin(loopB->dispatcher()));
     ASSERT_EQ(ZX_OK, event.signal(0u, ZX_USER_SIGNAL_0));
 
-    loop.RunUntilIdle();
+    loop->RunUntilIdle();
 
     EXPECT_EQ(4, i);
     EXPECT_NE(0, (*order)[0]);
@@ -558,24 +557,44 @@ bool DetermineDispatchOrder(const char* random_seed, int (*order)[4]) {
     EXPECT_NE(0, (*order)[2]);
     EXPECT_NE(0, (*order)[3]);
 
-    ASSERT_EQ(0, unsetenv("TEST_LOOP_RANDOM_SEED"));
+    END_HELPER;
+}
+
+bool SeedTestLoopWithEnv(uint32_t random_seed, std::unique_ptr<async::TestLoop>* loop) {
+    BEGIN_HELPER;
+
+    char buf[12];
+    snprintf(buf, sizeof(buf), "%u", random_seed);
+    EXPECT_EQ(0, setenv("TEST_LOOP_RANDOM_SEED", buf, 1));
+    *loop = std::make_unique<async::TestLoop>();
+    EXPECT_EQ(0, unsetenv("TEST_LOOP_RANDOM_SEED"));
 
     END_HELPER;
 }
 
-bool DispatchOrderIsDeterministicFor(const char* random_seed) {
+bool DispatchOrderIsDeterministicFor(uint32_t random_seed) {
     BEGIN_HELPER;
 
     int expected_order[4] = {0, 0, 0, 0};
-    EXPECT_TRUE(DetermineDispatchOrder(random_seed, &expected_order));
+    std::unique_ptr<async::TestLoop> loop;
+
+    EXPECT_TRUE(SeedTestLoopWithEnv(random_seed, &loop));
+    EXPECT_TRUE(DetermineDispatchOrder(std::move(loop), &expected_order));
 
     for (int i = 0; i < 5; ++i) {
-        int actual_order[4] = {0, 0, 0, 0};
-        EXPECT_TRUE(DetermineDispatchOrder(random_seed, &actual_order));
-        EXPECT_EQ(expected_order[0], actual_order[0]);
-        EXPECT_EQ(expected_order[1], actual_order[1]);
-        EXPECT_EQ(expected_order[2], actual_order[2]);
-        EXPECT_EQ(expected_order[3], actual_order[3]);
+        for (int j = 0; j < 2; j++) {
+            int actual_order[4] = {0, 0, 0, 0};
+            if (j == 0) {
+                EXPECT_TRUE(SeedTestLoopWithEnv(random_seed, &loop));
+            } else {
+                loop = std::make_unique<async::TestLoop>(random_seed);
+            }
+            EXPECT_TRUE(DetermineDispatchOrder(std::move(loop), &actual_order));
+            EXPECT_EQ(expected_order[0], actual_order[0]);
+            EXPECT_EQ(expected_order[1], actual_order[1]);
+            EXPECT_EQ(expected_order[2], actual_order[2]);
+            EXPECT_EQ(expected_order[3], actual_order[3]);
+        }
     }
 
     END_HELPER;
@@ -585,15 +604,15 @@ bool DispatchOrderIsDeterministicFor(const char* random_seed) {
 bool DispatchOrderIsDeterministic() {
     BEGIN_TEST;
 
-    EXPECT_TRUE(DispatchOrderIsDeterministicFor("1"));
-    EXPECT_TRUE(DispatchOrderIsDeterministicFor("43"));
-    EXPECT_TRUE(DispatchOrderIsDeterministicFor("893"));
-    EXPECT_TRUE(DispatchOrderIsDeterministicFor("39408"));
-    EXPECT_TRUE(DispatchOrderIsDeterministicFor("844018"));
-    EXPECT_TRUE(DispatchOrderIsDeterministicFor("83018299"));
-    EXPECT_TRUE(DispatchOrderIsDeterministicFor("3213"));
-    EXPECT_TRUE(DispatchOrderIsDeterministicFor("139133113"));
-    EXPECT_TRUE(DispatchOrderIsDeterministicFor("1323234373"));
+    EXPECT_TRUE(DispatchOrderIsDeterministicFor(1));
+    EXPECT_TRUE(DispatchOrderIsDeterministicFor(43));
+    EXPECT_TRUE(DispatchOrderIsDeterministicFor(893));
+    EXPECT_TRUE(DispatchOrderIsDeterministicFor(39408));
+    EXPECT_TRUE(DispatchOrderIsDeterministicFor(844018));
+    EXPECT_TRUE(DispatchOrderIsDeterministicFor(83018299));
+    EXPECT_TRUE(DispatchOrderIsDeterministicFor(3213));
+    EXPECT_TRUE(DispatchOrderIsDeterministicFor(139133113));
+    EXPECT_TRUE(DispatchOrderIsDeterministicFor(1323234373));
 
     END_TEST;
 }

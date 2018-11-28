@@ -19,11 +19,15 @@ public:
     virtual async_dispatcher_t* dispatcher() = 0;
 };
 
-
 // A message loop with a fake clock, to be controlled within a test setting.
 class TestLoop {
 public:
+    // Constructs a TestLoop with a seed from the environment, or a random
+    // seed if absent.
     TestLoop();
+    // If state is nonzero, constructs a TestLoop with the given seed.
+    // Otherwise, uses a seed from the environment or a random seed.
+    TestLoop(uint32_t state);
     ~TestLoop();
 
     // Returns the test loop's asynchronous dispatcher.
