@@ -5,12 +5,31 @@
 #ifndef ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_ATTRIBUTES_H_
 #define ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_ATTRIBUTES_H_
 
-#include "flat_ast.h"
+#include <set>
+#include <vector>
+
+#include "error_reporter.h"
 #include "raw_ast.h"
 
 namespace fidl {
 
-bool HasSimpleLayout(const flat::Decl* decl);
+// AttributePlacement indicates the placement of an attribute list, e.g.
+// whether that list will be placed on an enum declaration, method, or
+// union member.
+enum AttributePlacement {
+    kConstDecl,
+    kEnumDecl,
+    kEnumMember,
+    kInterfaceDecl,
+    kLibrary,
+    kMethod,
+    kStructDecl,
+    kStructMember,
+    kTableDecl,
+    kTableMember,
+    kUnionDecl,
+    kUnionMember,
+};
 
 class AttributesBuilder {
 public:
@@ -27,6 +46,10 @@ public:
 
     bool Insert(std::unique_ptr<raw::Attribute> attribute);
     std::vector<std::unique_ptr<raw::Attribute>> Done();
+
+    static void ValidatePlacement(
+        ErrorReporter* error_reporter, AttributePlacement placement,
+        const std::vector<std::unique_ptr<raw::Attribute>>& attributes);
 
 private:
     struct InsertResult {

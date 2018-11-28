@@ -178,6 +178,55 @@ interface A {
     END_TEST;
 }
 
+bool incorrect_placement_layout() {
+    BEGIN_TEST;
+
+    TestLibrary library(R"FIDL(
+[Layout]
+library fidl.test;
+
+[Layout]
+const int32 MyConst = 0;
+
+[Layout]
+enum MyEnum {
+    [Layout]
+    MyMember = 5;
+};
+
+[Layout]
+struct MyStruct {
+    [Layout]
+    int32 MyMember;
+};
+
+[Layout]
+union MyUnion {
+    [Layout]
+    int32 MyMember;
+};
+
+[Layout]
+table MyTable {
+    [Layout]
+    1: int32 MyMember;
+};
+
+[Layout]
+interface MyInterface {
+    [Layout]
+    1: MyMethod();
+};
+
+)FIDL");
+    EXPECT_FALSE(library.Compile());
+    auto errors = library.errors();
+    ASSERT_EQ(errors.size(), 11);
+    ASSERT_STR_STR(errors[0].c_str(), "placement of attribute 'Layout' disallowed here");
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(attributes_tests);
@@ -189,4 +238,5 @@ RUN_TEST(empty_transport);
 RUN_TEST(bogus_transport);
 RUN_TEST(channel_transport);
 RUN_TEST(socket_control_transport);
+RUN_TEST(incorrect_placement_layout);
 END_TEST_CASE(attributes_tests);

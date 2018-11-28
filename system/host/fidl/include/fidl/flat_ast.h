@@ -17,6 +17,7 @@
 #include <type_traits>
 #include <vector>
 
+#include "attributes.h"
 #include "error_reporter.h"
 #include "raw_ast.h"
 #include "type_shape.h"
@@ -31,6 +32,8 @@ struct PtrCompare {
 
 struct Decl;
 class Library;
+
+bool HasSimpleLayout(const Decl* decl);
 
 // This is needed (for now) to work around declaration order issues.
 std::string LibraryName(const Library* library, StringView separator);
@@ -828,6 +831,9 @@ private:
         return Fail(name.source_location(), message);
     }
     bool Fail(const Decl& decl, StringView message) { return Fail(decl.name, message); }
+
+    void ValidateAttributesPlacement(AttributePlacement placement,
+                                     const raw::AttributeList* attributes);
 
     Name NextAnonymousName();
 

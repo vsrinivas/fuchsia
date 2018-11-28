@@ -458,6 +458,13 @@ bool Library::Fail(const SourceLocation& location, StringView message) {
     return false;
 }
 
+void Library::ValidateAttributesPlacement(AttributePlacement placement,
+                                          const raw::AttributeList* attributes) {
+    if (attributes == nullptr)
+        return;
+    AttributesBuilder::ValidatePlacement(error_reporter_, placement, attributes->attributes);
+}
+
 Name Library::NextAnonymousName() {
     // TODO(pascallouis): Improve anonymous name generation. We want to be
     // specific about how these names are generated once they appear in the
@@ -673,6 +680,7 @@ bool Library::ConsumeTypeAlias(std::unique_ptr<raw::Using> using_directive) {
 
 bool Library::ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const_declaration) {
     auto attributes = std::move(const_declaration->attributes);
+    ValidateAttributesPlacement(AttributePlacement::kConstDecl, attributes.get());
     auto location = const_declaration->identifier->location();
     auto name = Name(this, location);
     std::unique_ptr<Type> type;
@@ -698,6 +706,7 @@ bool Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_
         if (!ConsumeConstant(std::move(member->value), location, &value))
             return false;
         auto attributes = std::move(member->attributes);
+        ValidateAttributesPlacement(AttributePlacement::kEnumMember, attributes.get());
         members.emplace_back(location, std::move(value), std::move(attributes));
     }
     auto type = types::PrimitiveSubtype::kUint32;
@@ -705,6 +714,7 @@ bool Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_
         type = enum_declaration->maybe_subtype->subtype;
 
     auto attributes = std::move(enum_declaration->attributes);
+    ValidateAttributesPlacement(AttributePlacement::kEnumDecl, attributes.get());
     auto name = Name(this, enum_declaration->identifier->location());
 
     enum_declarations_.push_back(
@@ -727,6 +737,7 @@ bool Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_
 bool Library::ConsumeInterfaceDeclaration(
     std::unique_ptr<raw::InterfaceDeclaration> interface_declaration) {
     auto attributes = std::move(interface_declaration->attributes);
+    ValidateAttributesPlacement(AttributePlacement::kInterfaceDecl, attributes.get());
     auto name = Name(this, interface_declaration->identifier->location());
 
     std::vector<Name> superinterfaces;
@@ -745,6 +756,7 @@ bool Library::ConsumeInterfaceDeclaration(
             std::make_unique<raw::Ordinal>(fidl::ordinals::GetOrdinal(library_name_, name.name_part(), *method));
 
         auto attributes = std::move(method->attributes);
+        ValidateAttributesPlacement(AttributePlacement::kMethod, attributes.get());
         SourceLocation method_name = method->identifier->location();
 
         Struct* maybe_request = nullptr;
@@ -801,6 +813,7 @@ bool Library::ConsumeParameterList(std::unique_ptr<raw::ParameterList> parameter
 
 bool Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> struct_declaration) {
     auto attributes = std::move(struct_declaration->attributes);
+    ValidateAttributesPlacement(AttributePlacement::kStructDecl, attributes.get());
     auto name = Name(this, struct_declaration->identifier->location());
 
     std::vector<Struct::Member> members;
@@ -816,6 +829,7 @@ bool Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> s
                 return false;
         }
         auto attributes = std::move(member->attributes);
+        ValidateAttributesPlacement(AttributePlacement::kStructMember, attributes.get());
         members.emplace_back(std::move(type), member->identifier->location(),
                              std::move(maybe_default_value), std::move(attributes));
     }
@@ -827,6 +841,7 @@ bool Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> s
 
 bool Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> table_declaration) {
     auto attributes = std::move(table_declaration->attributes);
+    ValidateAttributesPlacement(AttributePlacement::kTableDecl, attributes.get());
     auto name = Name(this, table_declaration->identifier->location());
 
     std::vector<Table::Member> members;
@@ -847,6 +862,7 @@ bool Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> tab
                 return Fail(member->location(), "Table members cannot be nullable");
             }
             auto attributes = std::move(member->maybe_used->attributes);
+            ValidateAttributesPlacement(AttributePlacement::kTableMember, attributes.get());
             members.emplace_back(std::move(ordinal_literal), std::move(type),
                                  member->maybe_used->identifier->location(),
                                  std::move(maybe_default_value), std::move(attributes));
@@ -868,10 +884,12 @@ bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
         if (!ConsumeType(std::move(member->type), location, &type))
             return false;
         auto attributes = std::move(member->attributes);
+        ValidateAttributesPlacement(AttributePlacement::kUnionMember, attributes.get());
         members.emplace_back(std::move(type), location, std::move(attributes));
     }
 
     auto attributes = std::move(union_declaration->attributes);
+    ValidateAttributesPlacement(AttributePlacement::kUnionDecl, attributes.get());
     auto name = Name(this, union_declaration->identifier->location());
 
     union_declarations_.push_back(
@@ -881,6 +899,7 @@ bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
 
 bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
     if (file->attributes) {
+        ValidateAttributesPlacement(AttributePlacement::kLibrary, file->attributes.get());
         if (!attributes_) {
             attributes_ = std::move(file->attributes);
         } else {
@@ -1606,6 +1625,10 @@ bool Library::CompileEnum(Enum* enum_declaration) {
     return true;
 }
 
+bool HasSimpleLayout(const Decl* decl) {
+    return decl->GetAttribute("Layout") == "Simple";
+}
+
 bool Library::CompileInterface(Interface* interface_declaration) {
     Compiling guard(interface_declaration);
     MethodScope method_scope;
@@ -1913,7 +1936,7 @@ bool Library::Compile() {
         assert(decl->compiled);
     }
 
-    return true;
+    return error_reporter_->errors().size() == 0;
 }
 
 bool Library::CompileArrayType(flat::ArrayType* array_type, TypeShape* out_typeshape) {

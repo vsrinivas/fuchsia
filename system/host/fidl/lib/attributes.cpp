@@ -6,10 +6,6 @@
 
 namespace fidl {
 
-bool HasSimpleLayout(const flat::Decl* decl) {
-    return decl->GetAttribute("Layout") == "Simple";
-}
-
 size_t EditDistance(const std::string& sequence1, const std::string& sequence2) {
     size_t s1_length = sequence1.length();
     size_t s2_length = sequence2.length();
@@ -86,7 +82,7 @@ AttributesBuilder::InsertResult AttributesBuilder::InsertHelper(std::unique_ptr<
     CHECK_TOO_CLOSE("Doc", attribute_name);
     CHECK_TOO_CLOSE("FragileBase", attribute_name);
     CHECK_TOO_CLOSE("Internal", attribute_name);
-    CHECK_TOO_CLOSE("Simple", attribute_name);
+    CHECK_TOO_CLOSE("Layout", attribute_name);
     CHECK_TOO_CLOSE("Transport", attribute_name);
     if (attribute_name == "Transport") {
         if (attribute_value != "SocketControl" && attribute_value != "Channel") {
@@ -95,6 +91,32 @@ AttributesBuilder::InsertResult AttributesBuilder::InsertHelper(std::unique_ptr<
         }
     }
     return InsertResult(InsertResult::kOk, "");
+}
+
+void AttributesBuilder::ValidatePlacement(ErrorReporter* error_reporter,
+                     AttributePlacement placement,
+                     const std::vector<std::unique_ptr<raw::Attribute>>& attributes) {
+    auto report = [error_reporter](const std::unique_ptr<raw::Attribute>& attribute) {
+        std::string message("placement of attribute '");
+        message.append(attribute->name);
+        message.append("' disallowed here");
+        error_reporter->ReportError(attribute->location(), message);
+    };
+    for (const auto& attribute : attributes) {
+        if (attribute->name == "Discoverable") {
+            if (placement != kInterfaceDecl)
+                report(attribute);
+        } else if (attribute->name == "FragileBase") {
+            if (placement != kInterfaceDecl)
+                report(attribute);
+        } else if (attribute->name == "Layout") {
+            if (placement != kInterfaceDecl)
+                report(attribute);
+        } else if (attribute->name == "Transport") {
+            if (placement != kInterfaceDecl)
+                report(attribute);
+        }
+    }
 }
 
 } // namespace fidl
