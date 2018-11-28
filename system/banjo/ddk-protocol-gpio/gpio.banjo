@@ -19,7 +19,7 @@ enum GpioPolarity : uint32 {
     HIGH = 0x1;
 };
 
-[Layout="ddk-protocol"]
+[Layout="ddk-protocol", HandleWrappers]
 interface Gpio {
     /// Configures a GPIO for input.
     1: ConfigIn(uint32 flags) -> (zx.status s);

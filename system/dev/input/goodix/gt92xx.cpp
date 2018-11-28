@@ -182,7 +182,7 @@ zx_status_t Gt92xxDevice::Init() {
     // during startup
     Write(GT_REG_TOUCH_STATUS, 0);
 
-    status = int_gpio_.GetInterrupt(ZX_INTERRUPT_MODE_EDGE_HIGH, irq_.reset_and_get_address());
+    status = int_gpio_.GetInterrupt(ZX_INTERRUPT_MODE_EDGE_HIGH, &irq_);
 
     return status;
 }
