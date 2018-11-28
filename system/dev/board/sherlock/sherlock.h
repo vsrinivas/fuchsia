@@ -70,6 +70,7 @@ private:
     zx_status_t CameraInit();
     zx_status_t MaliInit();
     zx_status_t VideoInit();
+    zx_status_t BacklightInit();
     int Thread();
 
     ddk::PBusProtocolProxy pbus_;

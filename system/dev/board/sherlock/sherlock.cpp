@@ -120,6 +120,12 @@ int Sherlock::Thread() {
         zxlogf(ERROR, "MaliInit() failed\n");
         return -1;
     }
+
+    if (BacklightInit() != ZX_OK) {
+        zxlogf(ERROR, "BacklightInit() failed\n");
+        return -1;
+    }
+
     return 0;
 }
 
