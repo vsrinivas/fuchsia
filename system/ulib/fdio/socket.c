@@ -224,16 +224,19 @@ static ssize_t zxsio_posix_ioctl_stream(fdio_t* io, int req, va_list va) {
     zxsio_t* sio = (zxsio_t*)io;
     switch (req) {
     case FIONREAD: {
-        zx_status_t r;
-        size_t avail;
-        if ((r = zx_socket_read(sio->s.socket, 0, NULL, 0, &avail)) < 0) {
-            return r;
+        zx_info_socket_t info;
+        memset(&info, 0, sizeof(info));
+        zx_status_t status = zx_object_get_info(sio->s.socket, ZX_INFO_SOCKET,
+                                                &info, sizeof(info), NULL, NULL);
+        if (status != ZX_OK) {
+            return status;
         }
-        if (avail > INT_MAX) {
-            avail = INT_MAX;
+        size_t available = info.rx_buf_available;
+        if (available > INT_MAX) {
+            available = INT_MAX;
         }
         int* actual = va_arg(va, int*);
-        *actual = avail;
+        *actual = available;
         return ZX_OK;
     }
     default:

@@ -751,11 +751,14 @@ static ssize_t fdio_zxio_pipe_posix_ioctl(fdio_t* io, int request, va_list va) {
     zxio_pipe_t* pipe = fdio_get_zxio_pipe(io);
     switch (request) {
     case FIONREAD: {
-        size_t available;
-        zx_status_t status = zx_socket_read(pipe->socket, 0, NULL, 0, &available);
+        zx_info_socket_t info;
+        memset(&info, 0, sizeof(info));
+        zx_status_t status = zx_object_get_info(pipe->socket, ZX_INFO_SOCKET,
+                                                &info, sizeof(info), NULL, NULL);
         if (status != ZX_OK) {
             return status;
         }
+        size_t available = info.rx_buf_available;
         if (available > INT_MAX) {
             available = INT_MAX;
         }

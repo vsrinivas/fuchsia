@@ -112,6 +112,18 @@ bool TestLogPreprocessedMessage(void) {
     END_TEST;
 }
 
+static zx_status_t GetAvailableBytes(const zx::socket& socket,
+                                     size_t* out_available) {
+    zx_info_socket_t info = {};
+    zx_status_t status = socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info),
+                                         nullptr, nullptr);
+    if (status != ZX_OK) {
+        return status;
+    }
+    *out_available = info.rx_buf_available;
+    return ZX_OK;
+}
+
 bool TestLogSeverity(void) {
     BEGIN_TEST;
     Cleanup cleanup;
@@ -122,7 +134,7 @@ bool TestLogSeverity(void) {
     FX_LOG_SET_SEVERITY(WARNING);
     FX_LOGF(INFO, nullptr, "%d, %s", 10, "just some number");
     size_t outstanding_bytes = 10u; // init to non zero value.
-    ASSERT_EQ(ZX_OK, local.read(0, nullptr, 0, &outstanding_bytes));
+    ASSERT_EQ(ZX_OK, GetAvailableBytes(local, &outstanding_bytes));
     EXPECT_EQ(0u, outstanding_bytes);
 
     FX_LOGF(WARNING, nullptr, "%d, %s", 10, "just some number");
@@ -323,12 +335,12 @@ bool TestLogVerbosity(void) {
 
     FX_VLOGF(1, nullptr, "%d, %s", 10, "just some number");
     size_t outstanding_bytes = 10u; // init to non zero value.
-    ASSERT_EQ(ZX_OK, local.read(0, nullptr, 0, &outstanding_bytes));
+    ASSERT_EQ(ZX_OK, GetAvailableBytes(local, &outstanding_bytes));
     EXPECT_EQ(0u, outstanding_bytes);
 
     FX_VLOGF(1, nullptr, "%d, %s", 10, "just some number");
     outstanding_bytes = 10u; // init to non zero value.
-    ASSERT_EQ(ZX_OK, local.read(0, nullptr, 0, &outstanding_bytes));
+    ASSERT_EQ(ZX_OK, GetAvailableBytes(local, &outstanding_bytes));
     EXPECT_EQ(0u, outstanding_bytes);
 
     FX_LOG_SET_VERBOSITY(2);

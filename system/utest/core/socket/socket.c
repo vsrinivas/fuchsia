@@ -568,9 +568,12 @@ static bool socket_bytes_outstanding(void) {
     EXPECT_EQ(count, sizeof(write_data[1]), "");
 
     // Check the number of bytes outstanding.
-    size_t outstanding = 0u;
-    status = zx_socket_read(h[1], 0u, NULL, 0, &outstanding);
-    EXPECT_EQ(outstanding, sizeof(write_data), "");
+    zx_info_socket_t info;
+    memset(&info, 0, sizeof(info));
+    status = zx_object_get_info(h[1], ZX_INFO_SOCKET, &info, sizeof(info),
+                                NULL, NULL);
+    EXPECT_EQ(status, ZX_OK, "");
+    EXPECT_EQ(info.rx_buf_available, sizeof(write_data), "");
 
     // Check that the prior zx_socket_read call didn't disturb the pending data.
     status = zx_socket_read(h[1], 0u, read_data, sizeof(read_data), &count);
@@ -633,9 +636,12 @@ static bool socket_bytes_outstanding_shutdown_write(void) {
 
     char rbuf[10] = {0};
 
-    status = zx_socket_read(h0, 0u, NULL, 0, &count);
+    zx_info_socket_t info;
+    memset(&info, 0, sizeof(info));
+    status = zx_object_get_info(h0, ZX_INFO_SOCKET, &info, sizeof(info),
+                                NULL, NULL);
     EXPECT_EQ(status, ZX_OK, "");
-    EXPECT_EQ(count, 5u, "");
+    EXPECT_EQ(info.rx_buf_available, 5u, "");
     count = 0;
 
     status = zx_socket_read(h0, 0u, rbuf, sizeof(rbuf), &count);
@@ -703,9 +709,12 @@ static bool socket_bytes_outstanding_shutdown_read(void) {
 
     char rbuf[10] = {0};
 
-    status = zx_socket_read(h0, 0u, NULL, 0, &count);
+    zx_info_socket_t info;
+    memset(&info, 0, sizeof(info));
+    status = zx_object_get_info(h0, ZX_INFO_SOCKET, &info, sizeof(info),
+                                NULL, NULL);
     EXPECT_EQ(status, ZX_OK, "");
-    EXPECT_EQ(count, 5u, "");
+    EXPECT_EQ(info.rx_buf_available, 5u, "");
     count = 0;
 
     status = zx_socket_read(h0, 0u, rbuf, sizeof(rbuf), &count);
@@ -783,10 +792,12 @@ static bool socket_datagram(void) {
     EXPECT_EQ(status, ZX_OK, "");
     EXPECT_EQ(count, sizeof(rbuf), "");
 
-    count = 0;
-    status = zx_socket_read(h1, 0u, NULL, 0, &count);
+    zx_info_socket_t info;
+    memset(&info, 0, sizeof(info));
+    status = zx_object_get_info(h1, ZX_INFO_SOCKET, &info, sizeof(info),
+                                NULL, NULL);
     EXPECT_EQ(status, ZX_OK, "");
-    EXPECT_EQ(count, 8u, "");
+    EXPECT_EQ(info.rx_buf_available, 8u, "");
     count = 0;
 
     bzero(rbuf, sizeof(rbuf));
@@ -796,9 +807,11 @@ static bool socket_datagram(void) {
     EXPECT_EQ(memcmp(rbuf, "pac", 4), 0, ""); // short read "packet1"
     count = 0;
 
-    status = zx_socket_read(h1, 0u, NULL, 0, &count);
+    memset(&info, 0, sizeof(info));
+    status = zx_object_get_info(h1, ZX_INFO_SOCKET, &info, sizeof(info),
+                                NULL, NULL);
     EXPECT_EQ(status, ZX_OK, "");
-    EXPECT_EQ(count, 5u, "");
+    EXPECT_EQ(info.rx_buf_available, 5u, "");
     count = 0;
 
     status = zx_socket_read(h1, 0u, rbuf, sizeof(rbuf), &count);
@@ -816,9 +829,11 @@ static bool socket_datagram(void) {
     EXPECT_EQ(rbuf[4000], 'e', "");
     EXPECT_EQ(rbuf[4095], 'f', "");
 
-    status = zx_socket_read(h1, 0u, NULL, 0, &count);
+    memset(&info, 0, sizeof(info));
+    status = zx_object_get_info(h1, ZX_INFO_SOCKET, &info, sizeof(info),
+                                NULL, NULL);
     EXPECT_EQ(status, ZX_OK, "");
-    EXPECT_EQ(count, 0u, "");
+    EXPECT_EQ(info.rx_buf_available, 0u, "");
 
     END_TEST;
 }
