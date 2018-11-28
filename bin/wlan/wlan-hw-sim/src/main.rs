@@ -485,7 +485,7 @@ async fn ethernet_sender(receiver: &mut mpsc::Receiver<()>, state: Arc<Mutex<Sta
 }
 
 #[cfg(test)]
-mod tests {
+mod simulation_tests {
     use super::*;
     use {
         fidl_fuchsia_wlan_service as fidl_wlan_service,
@@ -511,12 +511,26 @@ mod tests {
     // Temporary workaround to run tests synchronously. This is because wlan service only works with
     // one PHY, so having tests with multiple PHYs running in parallel make them flaky.
     #[test]
-    fn all_tests() {
+    fn ethernet_scan() {
         let mut ok = true;
+        ok = run_test("verify_ethernet", verify_ethernet) && ok;
         ok = run_test("simulate_scan", simulate_scan) && ok;
         // TODO(NET-1885) - commenting out due to flake
         // ok = run_test("connecting_to_ap", connecting_to_ap) && ok;
         assert!(ok);
+    }
+
+    // test
+    fn verify_ethernet() {
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let _helper = test_utils::TestHelper::begin_test(&mut exec, create_wlantap_config());
+        let mut retry = test_utils::RetryWithBackoff::new(5.seconds());
+        loop {
+            let client = exec.run_singlethreaded(create_eth_client(&HW_MAC_ADDR));
+            if client.is_ok() { return; }
+            let slept = retry.sleep_unless_timed_out();
+            assert!(slept, "No ethernet client found in time");
+        }
     }
 
     // test
