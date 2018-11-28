@@ -11,6 +11,8 @@
 
 namespace zx {
 
+class bti;
+
 class vmo : public object<vmo> {
 public:
     static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_VMO;
@@ -29,6 +31,8 @@ public:
     }
 
     static zx_status_t create(uint64_t size, uint32_t options, vmo* result);
+    static zx_status_t create_contiguous(
+        const bti& bti, size_t size, uint32_t alignment_log2, vmo* result);
     static zx_status_t create_physical(
         const resource& resource, zx_paddr_t paddr, size_t size, vmo* result);
 
