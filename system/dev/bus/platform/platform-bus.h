@@ -18,6 +18,7 @@
 #include <fbl/vector.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/iommu.h>
+#include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
 #include <stdint.h>
 #include <threads.h>
@@ -65,7 +66,7 @@ public:
     // Returns the resource handle to be used for creating MMIO regions, IRQs, and SMC ranges.
     // Currently this just returns the root resource, but we may change this to a more
     // limited resource in the future.
-    zx_handle_t GetResource() const { return get_root_resource(); }
+    zx::unowned_resource GetResource() const { return zx::unowned_resource(get_root_resource()); }
 
     // Used by PlatformDevice to queue I2C transactions on an I2C bus.
     zx_status_t I2cTransact(uint32_t txid, rpc_i2c_req_t* req, const pbus_i2c_channel_t* channel,

@@ -58,10 +58,10 @@ public:
     // Platform device protocol implementation.
     zx_status_t PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio);
     zx_status_t PDevMapMmio(uint32_t index, uint32_t cache_policy, void** out_vaddr,
-                            size_t* out_size, zx_paddr_t* out_paddr, zx_handle_t* out_handle);
-    zx_status_t PDevGetInterrupt(uint32_t index, uint32_t flags, zx_handle_t* out_handle);
-    zx_status_t PDevGetBti(uint32_t index, zx_handle_t* out_handle);
-    zx_status_t PDevGetSmc(uint32_t index, zx_handle_t* out_handle);
+                            size_t* out_size, zx_paddr_t* out_paddr, zx::vmo* out_vmo);
+    zx_status_t PDevGetInterrupt(uint32_t index, uint32_t flags, zx::interrupt* out_irq);
+    zx_status_t PDevGetBti(uint32_t index, zx::bti* out_bti);
+    zx_status_t PDevGetSmc(uint32_t index, zx::resource* out_resource);
     zx_status_t PDevGetDeviceInfo(pdev_device_info_t* out_info);
     zx_status_t PDevGetBoardInfo(pdev_board_info_t* out_info);
     zx_status_t PDevDeviceAdd(uint32_t index, const device_add_args_t* args, zx_device_t** device);
@@ -93,13 +93,13 @@ private:
     struct Mmio {
         zx_paddr_t base;
         size_t length;
-        zx::handle resource;
+        zx::resource resource;
     };
     struct Irq {
         uint32_t irq;
         // ZX_INTERRUPT_MODE_* flags
         uint32_t mode;
-        zx::handle resource;
+        zx::resource resource;
     };
     struct GpioCtx {
         ProxyDevice* thiz;

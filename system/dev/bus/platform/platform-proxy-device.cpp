@@ -292,8 +292,7 @@ zx_status_t ProxyDevice::PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio) {
     const size_t vmo_size = ROUNDUP(mmio.base + mmio.length - vmo_base, ZX_PAGE_SIZE);
     zx::vmo vmo;
 
-    zx_status_t status = zx_vmo_create_physical(mmio.resource.get(), vmo_base, vmo_size,
-                                                vmo.reset_and_get_address());
+    zx_status_t status = zx::vmo::create_physical(mmio.resource, vmo_base, vmo_size, &vmo);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s %s: creating vmo failed %d\n", name_, __FUNCTION__, status);
         return status;
@@ -316,7 +315,7 @@ zx_status_t ProxyDevice::PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio) {
 // TODO(surajmalhotra): Remove after migrating all clients off.
 zx_status_t ProxyDevice::PDevMapMmio(uint32_t index, uint32_t cache_policy, void** out_vaddr,
                                  size_t* out_size, zx_paddr_t* out_paddr,
-                                 zx_handle_t* out_handle) {
+                                 zx::vmo* out_handle) {
     if (index >= mmios_.size()) {
         return ZX_ERR_OUT_OF_RANGE;
     }
@@ -360,12 +359,12 @@ zx_status_t ProxyDevice::PDevMapMmio(uint32_t index, uint32_t cache_policy, void
         *out_paddr = mmio.base;
     }
     *out_vaddr = reinterpret_cast<void*>(virt + (mmio.base - vmo_base));
-    *out_handle = vmo.release();
+    *out_handle = std::move(vmo);
     return ZX_OK;
 
 }
 
-zx_status_t ProxyDevice::PDevGetInterrupt(uint32_t index, uint32_t flags, zx_handle_t* out_handle) {
+zx_status_t ProxyDevice::PDevGetInterrupt(uint32_t index, uint32_t flags, zx::interrupt* out_irq) {
     if (index >= irqs_.size()) {
         return ZX_ERR_OUT_OF_RANGE;
     }
@@ -374,18 +373,16 @@ zx_status_t ProxyDevice::PDevGetInterrupt(uint32_t index, uint32_t flags, zx_han
     if (flags == 0) {
         flags = irq->mode;
     }
-    zx_handle_t handle;
-    zx_status_t status = zx_interrupt_create(irq->resource.get(), irq->irq, flags, &handle);
+    zx_status_t status = zx::interrupt::create(irq->resource, irq->irq, flags, out_irq);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s %s: creating interrupt failed: %d\n", name_, __FUNCTION__, status);
         return status;
     }
 
-    *out_handle = handle;
     return ZX_OK;
 }
 
-zx_status_t ProxyDevice::PDevGetBti(uint32_t index, zx_handle_t* out_handle) {
+zx_status_t ProxyDevice::PDevGetBti(uint32_t index, zx::bti* out_bti) {
     rpc_pdev_req_t req = {};
     rpc_pdev_rsp_t resp = {};
     req.header.proto_id = ZX_PROTOCOL_PDEV;
@@ -393,10 +390,10 @@ zx_status_t ProxyDevice::PDevGetBti(uint32_t index, zx_handle_t* out_handle) {
     req.index = index;
 
     return proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.header, sizeof(resp), nullptr, 0,
-                       out_handle, 1, nullptr);
+                       out_bti->reset_and_get_address(), 1, nullptr);
 }
 
-zx_status_t ProxyDevice::PDevGetSmc(uint32_t index, zx_handle_t* out_handle) {
+zx_status_t ProxyDevice::PDevGetSmc(uint32_t index, zx::resource* out_resource) {
     rpc_pdev_req_t req = {};
     rpc_pdev_rsp_t resp = {};
     req.header.proto_id = ZX_PROTOCOL_PDEV;
@@ -404,7 +401,7 @@ zx_status_t ProxyDevice::PDevGetSmc(uint32_t index, zx_handle_t* out_handle) {
     req.index = index;
 
     return proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.header, sizeof(resp), nullptr, 0,
-                       out_handle, 1, nullptr);
+                       out_resource->reset_and_get_address(), 1, nullptr);
 }
 
 zx_status_t ProxyDevice::PDevGetDeviceInfo(pdev_device_info_t* out_info) {

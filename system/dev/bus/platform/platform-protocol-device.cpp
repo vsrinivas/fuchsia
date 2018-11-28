@@ -79,8 +79,7 @@ zx_status_t ProtocolDevice::PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio) {
     const size_t vmo_size = ROUNDUP(mmio.base + mmio.length - vmo_base, ZX_PAGE_SIZE);
     zx::vmo vmo;
 
-    zx_status_t status = zx_vmo_create_physical(bus_->GetResource(), vmo_base, vmo_size,
-                                                vmo.reset_and_get_address());
+    zx_status_t status = zx::vmo::create_physical(*bus_->GetResource(), vmo_base, vmo_size, &vmo);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: creating vmo failed %d\n", __FUNCTION__, status);
         return status;
@@ -103,7 +102,7 @@ zx_status_t ProtocolDevice::PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio) {
 // TODO(surajmalhotra): Remove after migrating all clients off.
 zx_status_t ProtocolDevice::PDevMapMmio(uint32_t index, uint32_t cache_policy, void** out_vaddr,
                                         size_t* out_size, zx_paddr_t* out_paddr,
-                                        zx_handle_t* out_handle) {
+                                        zx::vmo* out_vmo) {
     if (index >= resources_.mmio_count()) {
         return ZX_ERR_OUT_OF_RANGE;
     }
@@ -112,8 +111,7 @@ zx_status_t ProtocolDevice::PDevMapMmio(uint32_t index, uint32_t cache_policy, v
     const zx_paddr_t vmo_base = ROUNDDOWN(mmio.base, ZX_PAGE_SIZE);
     const size_t vmo_size = ROUNDUP(mmio.base + mmio.length - vmo_base, ZX_PAGE_SIZE);
     zx::vmo vmo;
-    zx_status_t status = zx_vmo_create_physical(bus_->GetResource(), vmo_base, vmo_size,
-                                                vmo.reset_and_get_address());
+    zx_status_t status = zx::vmo::create_physical(*bus_->GetResource(), vmo_base, vmo_size, &vmo);
     if (status != ZX_OK) {
         zxlogf(ERROR, "platform_dev_map_mmio: zx_vmo_create_physical failed %d\n", status);
         return status;
@@ -142,7 +140,7 @@ zx_status_t ProtocolDevice::PDevMapMmio(uint32_t index, uint32_t cache_policy, v
     }
 
     *out_size = mmio.length;
-    *out_handle = vmo.release();
+    *out_vmo = std::move(vmo);
     if (out_paddr) {
         *out_paddr = vmo_base;
     }
@@ -151,11 +149,11 @@ zx_status_t ProtocolDevice::PDevMapMmio(uint32_t index, uint32_t cache_policy, v
 }
 
 zx_status_t ProtocolDevice::PDevGetInterrupt(uint32_t index, uint32_t flags,
-                                             zx_handle_t* out_handle) {
+                                             zx::interrupt* out_irq) {
     if (index >= resources_.irq_count()) {
         return ZX_ERR_OUT_OF_RANGE;
     }
-    if (out_handle == nullptr) {
+    if (out_irq == nullptr) {
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -163,7 +161,7 @@ zx_status_t ProtocolDevice::PDevGetInterrupt(uint32_t index, uint32_t flags,
     if (flags == 0) {
         flags = irq.mode;
     }
-    zx_status_t status = zx_interrupt_create(bus_->GetResource(), irq.irq, flags, out_handle);
+    zx_status_t status = zx::interrupt::create(*bus_->GetResource(), irq.irq, flags, out_irq);
     if (status != ZX_OK) {
         zxlogf(ERROR, "platform_dev_map_interrupt: zx_interrupt_create failed %d\n", status);
         return status;
@@ -171,44 +169,34 @@ zx_status_t ProtocolDevice::PDevGetInterrupt(uint32_t index, uint32_t flags,
     return status;
 }
 
-zx_status_t ProtocolDevice::PDevGetBti(uint32_t index, zx_handle_t* out_handle) {
+zx_status_t ProtocolDevice::PDevGetBti(uint32_t index, zx::bti* out_bti) {
     if (index >= resources_.bti_count()) {
         return ZX_ERR_OUT_OF_RANGE;
     }
-    if (out_handle == nullptr) {
+    if (out_bti == nullptr) {
         return ZX_ERR_INVALID_ARGS;
     }
 
     const pbus_bti_t& bti = resources_.bti(index);
 
-    zx::bti out_bti;
-    auto ret = bus_->IommuGetBti(bti.iommu_index, bti.bti_id, &out_bti);
-    *out_handle = out_bti.release();
-    return ret;
+    return bus_->IommuGetBti(bti.iommu_index, bti.bti_id, out_bti);
 }
 
-zx_status_t ProtocolDevice::PDevGetSmc(uint32_t index, zx_handle_t* out_handle) {
+zx_status_t ProtocolDevice::PDevGetSmc(uint32_t index, zx::resource* out_resource) {
     if (index >= resources_.smc_count()) {
         return ZX_ERR_OUT_OF_RANGE;
     }
-    if (out_handle == nullptr) {
+    if (out_resource == nullptr) {
         return ZX_ERR_INVALID_ARGS;
     }
 
     const pbus_smc_t& smc = resources_.smc(index);
 
-    zx_handle_t handle;
     uint32_t options = ZX_RSRC_KIND_SMC | ZX_RSRC_FLAG_EXCLUSIVE;
     char rsrc_name[ZX_MAX_NAME_LEN];
     snprintf(rsrc_name, ZX_MAX_NAME_LEN - 1, "%s.pbus[%u]", name_, index);
-    zx_status_t status = zx_resource_create(bus_->GetResource(), options, smc.service_call_num_base,
-                                            smc.count, rsrc_name, sizeof(rsrc_name), &handle);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    *out_handle = handle;
-    return status;
+    return zx::resource::create(*bus_->GetResource(), options, smc.service_call_num_base, smc.count,
+                                rsrc_name, sizeof(rsrc_name), out_resource);
 }
 
 zx_status_t ProtocolDevice::PDevGetDeviceInfo(pdev_device_info_t* out_info) {

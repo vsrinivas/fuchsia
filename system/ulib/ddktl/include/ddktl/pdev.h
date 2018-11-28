@@ -29,18 +29,8 @@ public:
 
     zx_status_t MapMmio(uint32_t index, std::optional<MmioBuffer>* mmio);
 
-    // TODO(surajmalhotra): Remove once feature once implemented in banjo.
-    zx_status_t GetInterrupt(uint32_t index, uint32_t flags, zx::interrupt* out) {
-        return PDevProtocolProxy::GetInterrupt(index, flags, out->reset_and_get_address());
-    }
-
     zx_status_t GetInterrupt(uint32_t index, zx::interrupt* out) {
-        return GetInterrupt(index, 0, out);
-    }
-
-    // TODO(surajmalhotra): Remove once feature once implemented in banjo.
-    zx_status_t GetBti(uint32_t index, zx::bti* out) {
-        return PDevProtocolProxy::GetBti(index, out->reset_and_get_address());
+        return PDevProtocolProxy::GetInterrupt(index, 0, out);
     }
 
     std::optional<I2cChannel> GetI2c(uint32_t index);
