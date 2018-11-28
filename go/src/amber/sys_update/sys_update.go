@@ -137,8 +137,10 @@ func (upMon *SystemUpdateMonitor) Check(initiator metrics.Initiator) error {
 		}
 
 		if upMon.needsUpdate(latestUpdateMerkle) {
-			log.Println("System update starting...")
+			log.Println("Performing GC")
+			upMon.d.GC()
 
+			log.Println("System update starting...")
 			metrics.Log(metrics.OtaStart{
 				Initiator: initiator,
 				Source:    upMon.systemImageMerkle,

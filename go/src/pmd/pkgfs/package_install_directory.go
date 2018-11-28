@@ -17,7 +17,6 @@ import (
 
 	"fuchsia.googlesource.com/far"
 	"fuchsia.googlesource.com/pm/pkg"
-	"fuchsia.googlesource.com/pmd/amberer"
 )
 
 const (
@@ -189,6 +188,11 @@ func (f *installFile) open() error {
 	var err error
 	// TODO(raggi): propagate flags instead to allow for resumption and so on
 	f.blob, err = os.OpenFile(f.fs.blobfs.PathOf(f.name), os.O_WRONLY|os.O_CREATE, os.ModePerm)
+
+	if f.isPkg {
+		f.fs.index.Installing(f.name)
+	}
+
 	// permission errors from blobfs are returned when the blob already exists and
 	// is no longer writable
 	if os.IsPermission(err) || os.IsExist(err) {
@@ -269,12 +273,14 @@ func (f *installFile) Truncate(sz uint64) error {
 func (f *installFile) importPackage() error {
 	b, err := f.fs.blobfs.Open(f.name)
 	if err != nil {
+		f.fs.index.InstallingFailed(f.name)
 		log.Printf("error opening package blob after writing: %s: %s", f.name, err)
 		return fs.ErrFailedPrecondition
 	}
 
 	r, err := far.NewReader(b)
 	if err != nil {
+		f.fs.index.InstallingFailed(f.name)
 		log.Printf("error reading package archive: %s", err)
 		// Note: translates to zx.ErrBadState
 		return fs.ErrFailedPrecondition
@@ -282,6 +288,7 @@ func (f *installFile) importPackage() error {
 
 	pf, err := r.ReadFile("meta/package")
 	if err != nil {
+		f.fs.index.InstallingFailed(f.name)
 		log.Printf("error reading package metadata: %s", err)
 		// Note: translates to zx.ErrBadState
 		return fs.ErrFailedPrecondition
@@ -290,16 +297,21 @@ func (f *installFile) importPackage() error {
 	var p pkg.Package
 	err = json.Unmarshal(pf, &p)
 	if err != nil {
+		f.fs.index.InstallingFailed(f.name)
 		log.Printf("error parsing package metadata: %s", err)
 		// Note: translates to zx.ErrBadState
 		return fs.ErrFailedPrecondition
 	}
 
 	if err := p.Validate(); err != nil {
+		f.fs.index.InstallingFailed(f.name)
 		log.Printf("package is invalid: %s", err)
 		// Note: translates to zx.ErrBadState
 		return fs.ErrFailedPrecondition
 	}
+
+	// Tell the index the identity of this package.
+	f.fs.index.UpdateInstalling(f.name, p)
 
 	contents, err := r.ReadFile("meta/contents")
 	if err != nil {
@@ -341,9 +353,9 @@ func (f *installFile) importPackage() error {
 		}
 	}
 
-	// a map from blob ID to whether or not it is present
-	pkgBlobs := make(map[string]bool)
-	needCount := 0
+	needBlobs := make(map[string]struct{})
+	foundBlobs := make(map[string]struct{})
+	needsCount := 0
 	for i := range files {
 		// Silence apparent errors from last line in file/empty lines.
 		if len(files[i]) == 0 {
@@ -356,49 +368,45 @@ func (f *installFile) importPackage() error {
 		}
 		root := string(parts[1])
 
-		// XXX(raggi): this can race, which can deadlock package installs
 		if mayHaveBlob(root) && f.fs.blobfs.HasBlob(root) {
-			// DEBUG: log.Printf("blob already present for %s: %q", p, root)
-			pkgBlobs[root] = true
+			foundBlobs[root] = struct{}{}
 			continue
 		}
 
-		pkgBlobs[root] = false
-		needCount++
+		needsCount++
+		needBlobs[root] = struct{}{}
 	}
 
-	if needCount == 0 {
-		if err := f.fs.index.Add(p, f.name); err != nil {
-			if os.IsExist(err) {
-				log.Printf("package already present: %q %s", f.name, p)
-				return fs.ErrAlreadyExists
-			}
-
-			log.Printf("unhandled error adding package %q: %s", f.name, err)
-			return fs.ErrFailedPrecondition
-		}
-		log.Printf("package activated %q %s", f.name, p)
-		return nil
+	// NOTE: the EEXIST returned here is sometimes not strictly "this package was
+	// already activated", as the package may have just been activated during the
+	// above loop that calls fulfill with each blob that is found that already
+	// exists. Doing otherwise would significantly harm performance, as it would
+	// require a strong consistency rather than an eventual consistency model, that
+	// requires global locking of the filesystem. What this means in the not
+	// entirely correct case is either:
+	// a) we raced another process that was fulfilling the same needs as this
+	//    package.
+	// b) all of the content was already on the system, but the package was missing
+	//    from the index.
+	// This state could be improved if there was an in-memory precomputed index of
+	// all active meta.far blobs on the system.
+	if needsCount == 0 {
+		return fs.ErrAlreadyExists
 	}
 
-	// in order to background the amber calls, we have to make a new copy of the
-	// blob list, as the index will take write ownership over the map via TrackPkg
-	var needList = make([]string, 0, needCount)
-	for blob, has := range pkgBlobs {
-		if has {
-			continue
-		}
-		needList = append(needList, blob)
+	// We tell the index about needs that we have which were explicitly not found
+	// on the system.
+	err = goErrToFSErr(f.fs.index.AddNeeds(f.name, needBlobs))
+
+	// In order to ensure eventual consistency in the case where multiple processes
+	// are racing on these needs, we must re-publish all of those fulfillments
+	// after publishing the locally discovered needs.
+	for blob := range foundBlobs {
+		f.fs.index.Fulfill(blob)
 	}
 
-	f.fs.index.TrackPkg(f.name, p, pkgBlobs)
-
-	log.Printf("pkgfs: asking amber to fetch %d blobs for %s", len(needList), p)
-	go func() {
-		for _, root := range needList {
-			amberer.GetBlob(root)
-		}
-	}()
-
-	return nil
+	// AddNeeds may return os.ErrExist if the package activation won the race
+	// between our needs check loop above, and the following registration of the
+	// packages needs.
+	return err
 }

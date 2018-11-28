@@ -55,18 +55,10 @@ func (d *versionsDirectory) Open(name string, flags fs.OpenFlags) (fs.File, fs.D
 }
 
 func (d *versionsDirectory) Read() ([]fs.Dirent, error) {
-	versions := make(map[string]struct{})
-	for _, merkle := range d.fs.static.PackageBlobs() {
-		versions[merkle] = struct{}{}
-	}
-	// error ignored, it is useless here
-	blobs, _ := d.fs.index.PackageBlobs()
-	for _, merkle := range blobs {
-		versions[merkle] = struct{}{}
-	}
+	roots := d.fs.index.AllPackageBlobs()
 
-	dents := make([]fs.Dirent, 0, len(versions))
-	for m := range versions {
+	dents := make([]fs.Dirent, 0, len(roots))
+	for _, m := range roots {
 		dents = append(dents, fileDirEnt(m))
 	}
 	return dents, nil

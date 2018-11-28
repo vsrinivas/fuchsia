@@ -7,13 +7,11 @@
 package index
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 	"sync"
 
 	"fuchsia.googlesource.com/pmd/amberer"
@@ -25,7 +23,6 @@ import (
 type DynamicIndex struct {
 	root string
 
-	// TODO(PKG-19): this will be removed in future
 	static *StaticIndex
 
 	// mu protects all following fields
@@ -39,14 +36,6 @@ type DynamicIndex struct {
 
 	// waiting is a map of package merkleroot -> set[blob merkleroots]
 	waiting map[string]map[string]struct{}
-
-	// installingCounts tracks the number of packages being installed which
-	// have a dependecy on the given content id
-	installingCounts map[string]uint
-
-	// installingPkgs is a map from a meta FAR content ID of a package currently being installed
-	// to all blobs needed by the package
-	installingPkgs map[string][]string
 }
 
 // NewDynamic initializes an DynamicIndex with the given root path.
@@ -54,13 +43,11 @@ func NewDynamic(root string, static *StaticIndex) *DynamicIndex {
 	// TODO(PKG-14): error is deliberately ignored. This should not be fatal to boot.
 	_ = os.MkdirAll(root, os.ModePerm)
 	return &DynamicIndex{
-		root:             root,
-		static:           static,
-		installing:       make(map[string]pkg.Package),
-		needs:            make(map[string]map[string]struct{}),
-		waiting:          make(map[string]map[string]struct{}),
-		installingCounts: make(map[string]uint),
-		installingPkgs:   make(map[string][]string),
+		root:       root,
+		static:     static,
+		installing: make(map[string]pkg.Package),
+		needs:      make(map[string]map[string]struct{}),
+		waiting:    make(map[string]map[string]struct{}),
 	}
 }
 
@@ -94,10 +81,10 @@ func (idx *DynamicIndex) Add(p pkg.Package, root string) error {
 	if _, found := idx.static.Get(p); found {
 		// TODO(PKG-19): this needs to be removed as the static package set should not
 		// be updated dynamically in future.
-		idx.static.Set(p, root)
+		err := idx.static.Set(p, root)
 
 		idx.Notify(root)
-		return nil
+		return err
 	}
 
 	if err := os.MkdirAll(idx.PackagePath(p.Name), os.ModePerm); err != nil {
@@ -132,44 +119,75 @@ func (idx *DynamicIndex) PackagesDir() string {
 	return dir
 }
 
-// TrackPkg starts tracking the package so that the index can notify watchers
-// when it is fulfilled. blobStatus is a map from package blobs to a boolean
-// which should be true if the blob already exists on the device and false
-// if it is needed before the package can be considered fulfilled.
-func (idx *DynamicIndex) TrackPkg(root string, p pkg.Package, blobStatus map[string]bool) {
+// Installing marks the given package as being in the process of installing. The
+// package identity is not yet known, and can be updated later using
+// UpdateInstalling.
+func (idx *DynamicIndex) Installing(root string) {
+	idx.mu.Lock()
+	defer idx.mu.Unlock()
+
+	idx.installing[root] = pkg.Package{}
+}
+
+// UpdateInstalling updates the installing index for the given package with an
+// identity once known (that is, once the package meta.far has been able to be
+// opened, so the packages identity is known).
+func (idx *DynamicIndex) UpdateInstalling(root string, p pkg.Package) {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
 
 	idx.installing[root] = p
+}
 
-	// find the blobs that are part of the package which we don't have
-	neededBlobs := make(map[string]struct{})
-	for blob, has := range blobStatus {
-		if has {
-			continue
-		}
-		neededBlobs[blob] = struct{}{}
+// InstallingFailed removes an entry from the package installation index, this
+// is called when the package meta.far blob is not readable, or the package is
+// not valid.
+func (idx *DynamicIndex) InstallingFailed(root string) {
+	log.Printf("installing package %s failed", root)
+
+	idx.mu.Lock()
+	defer idx.mu.Unlock()
+
+	delete(idx.installing, root)
+}
+
+// AddNeeds updates the index about the blobs required in order to activate an
+// installing package. It is possible for the addition of needs to race
+// fulfillment that is happening in other concurrent processes. When that
+// occurs, this method will return os.ErrExist.
+func (idx *DynamicIndex) AddNeeds(root string, needs map[string]struct{}) error {
+	idx.mu.Lock()
+	defer idx.mu.Unlock()
+
+	if _, found := idx.installing[root]; !found {
+		return os.ErrExist
+	}
+
+	for blob := range needs {
 		if _, found := idx.needs[blob]; found {
 			idx.needs[blob][root] = struct{}{}
 		} else {
 			idx.needs[blob] = map[string]struct{}{root: struct{}{}}
 		}
 	}
-	idx.waiting[root] = neededBlobs
+	// We wait on all of the "needs", that is, all blobs that were not found on the
+	// system at the time of import.
+	idx.waiting[root] = needs
 
-	// check if this package is already being installed
-	if _, ok := idx.installingPkgs[root]; !ok {
-		allBlobs := make([]string, 0, len(blobStatus)+1)
-		allBlobs = append(allBlobs, root)
-		idx.installingCounts[root]++
-		for blob := range blobStatus {
-			allBlobs = append(allBlobs, blob)
-			idx.installingCounts[blob]++
+	log.Printf("asking amber to fetch %d needed blobs", len(needs))
+	go func() {
+		for root := range needs {
+			amberer.GetBlob(root)
 		}
-		idx.installingPkgs[root] = allBlobs
-	}
+	}()
+	return nil
 }
 
+// Fulfill processes the signal that a blob need has been fulfilled. meta.far's
+// are also published through this path, but a meta.far fulfillment does not
+// mean that the package is activated, only that its blob has been written. When
+// a packages 'waiting' set has been emptied, fulfill will call Add, which is
+// the point of activation.
 func (idx *DynamicIndex) Fulfill(need string) []string {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
@@ -183,28 +201,20 @@ func (idx *DynamicIndex) Fulfill(need string) []string {
 		delete(waiting, need)
 		if len(waiting) == 0 {
 			delete(idx.waiting, pkgRoot)
-			idx.Add(idx.installing[pkgRoot], pkgRoot)
+			p := idx.installing[pkgRoot]
+			if err := idx.Add(p, pkgRoot); err != nil {
+				if os.IsExist(err) {
+					log.Printf("package already exists at fulfillment: %s", err)
+				} else {
+					log.Printf("unexpected error adding package after fulfillment: %s", err)
+				}
+			} else {
+				log.Printf("package activated %s/%s (%s)", p.Name, p.Version, pkgRoot)
+			}
 			delete(idx.installing, pkgRoot)
 			fulfilled = append(fulfilled, pkgRoot)
-
-			// remove reservations for all blobs needed by the fulfilled package
-			if pkgContents, ok := idx.installingPkgs[pkgRoot]; ok {
-				delete(idx.installingPkgs, pkgRoot)
-				for _, con := range pkgContents {
-					if c, ok := idx.installingCounts[con]; ok {
-						c--
-						if c == 0 {
-							delete(idx.installingCounts, con)
-						} else {
-							idx.installingCounts[con] = c
-						}
-					}
-				}
-			}
-			continue
 		}
 	}
-	idx.Notify(fulfilled...)
 	return fulfilled
 }
 
@@ -216,27 +226,12 @@ func (idx *DynamicIndex) HasNeed(root string) bool {
 	return found
 }
 
-// InstallingBlobs returns a list of all blobs IDs used by packages currently
-// being installed. These are both the blobs the system already has and those
-// still needed.
-func (idx *DynamicIndex) InstallingBlobs() []string {
-	idx.mu.Lock()
-	defer idx.mu.Unlock()
-
-	neededBlobs := make([]string, 0, len(idx.installingCounts))
-	for blob, _ := range idx.installingCounts {
-		neededBlobs = append(neededBlobs, blob)
-	}
-
-	return neededBlobs
-}
-
 func (idx *DynamicIndex) NeedsList() []string {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
 
 	names := make([]string, 0, len(idx.needs))
-	for name, _ := range idx.needs {
+	for name := range idx.needs {
 		names = append(names, name)
 	}
 
@@ -251,25 +246,49 @@ func (idx *DynamicIndex) Notify(roots ...string) {
 	go amberer.PackagesActivated(roots)
 }
 
-// PackageBlobs returns the list of blobs which are meta FARs backing packages in the index.
-func (idx *DynamicIndex) PackageBlobs() ([]string, error) {
+// PackageBlobs returns the list of blobs which are meta FARs backing packages
+// in the dynamic and static indices.
+func (idx *DynamicIndex) PackageBlobs() []string {
+	packageBlobs := idx.static.PackageBlobs()
 	paths, err := filepath.Glob(idx.PackageVersionPath("*", "*"))
 	if err != nil {
-		return nil, err
+		log.Printf("glob all extant dynamic packages: %s", err)
+		return packageBlobs
 	}
 
-	var errs []string
-	blobIds := make([]string, 0, len(paths))
 	for _, path := range paths {
 		merkle, err := ioutil.ReadFile(path)
 		if err != nil {
-			errs = append(errs, err.Error())
+			log.Printf("read dynamic package index %s: %s", path, err)
+			continue
 		}
-		blobIds = append(blobIds, string(merkle))
+		packageBlobs = append(packageBlobs, string(merkle))
 	}
-	if len(errs) > 0 {
-		err = fmt.Errorf("package index errors: %s", strings.Join(errs, ", "))
-		log.Printf("%s", err)
+	return packageBlobs
+}
+
+// AllPackageBlobs aggregates all installing, dynamic and static index package
+// meta.far blobs into a single list. Any errors encountered along the way are
+// logged, but otherwise the best available list is generated under a single
+// lock, to provide a relatively consistent view of objects that must be
+// maintained. This function is intended for use by the GC and the versions
+// directory. The list will not contain duplicates.
+func (idx *DynamicIndex) AllPackageBlobs() []string {
+	allPackageBlobs := make(map[string]struct{})
+	idx.mu.Lock()
+	for blob := range idx.installing {
+		allPackageBlobs[blob] = struct{}{}
 	}
-	return blobIds, err
+	idx.mu.Unlock()
+
+	for _, blob := range idx.PackageBlobs() {
+		allPackageBlobs[blob] = struct{}{}
+	}
+
+	blobList := make([]string, 0, len(allPackageBlobs))
+	for blob := range allPackageBlobs {
+		blobList = append(blobList, blob)
+	}
+
+	return blobList
 }

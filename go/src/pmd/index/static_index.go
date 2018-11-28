@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"io"
 	"log"
+	"os"
 	"sort"
 	"strings"
 	"sync"
@@ -162,11 +163,16 @@ func (idx *StaticIndex) GetRoot(root string) (pkg.Package, bool) {
 // Set sets the given package to the given root. TODO(PKG-16) This method should
 // be removed in future, the static index should only be updated as a whole unit
 // via Load.
-func (idx *StaticIndex) Set(p pkg.Package, root string) {
+func (idx *StaticIndex) Set(p pkg.Package, root string) error {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
 
+	if idx.roots[p] == root || idx.updates[p] == root {
+		return os.ErrExist
+	}
+
 	idx.updates[p] = root
+	return nil
 }
 
 // List returns the list of packages in byte-lexical order

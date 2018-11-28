@@ -204,17 +204,6 @@ func (f *Filesystem) Serve(c zx.Channel) error {
 	}
 	f.mountInfo.serveChannel = c
 
-	// TODO(jmatt) find a better time to run GC. Ideally GC would be fast
-	// enough that it could be done during startup, but testing indicates that
-	// it requires 1-2 seconds on hardware. Possibly this is related to the
-	// amount of I/O required, further investigation is clearly indicated.
-	go func() {
-		time.Sleep(15 * time.Second)
-		if err := f.GC(); err != nil {
-			log.Printf("pkgfs: GC error: %s", err)
-		}
-	}()
-
 	// TODO(raggi): serve has no quit/shutdown path.
 	for i := runtime.NumCPU(); i > 1; i-- {
 		go vfs.Serve()
@@ -331,121 +320,56 @@ func goErrToFSErr(err error) error {
 // list of blobs. Anything in blobfs that does not appear in the indexes is
 // removed.
 func (fs *Filesystem) GC() error {
-	log.Println("pkgfs: GC start")
+	log.Println("GC: start")
 	start := time.Now()
 	defer func() {
 		// this process produces a lot of garbage, so try to free that up (removes
 		// ~1.5mb of heap from a common (small) build target).
 		runtime.GC()
-		log.Printf("pkgfs: GC completed in %.3fs", time.Since(start).Seconds())
+		log.Printf("GC: completed in %.3fs", time.Since(start).Seconds())
 	}()
 
-	// First find everything used by the dynamic index
-	// Next find everything used by packages being installed
-	// Then find everything needed by the static index
-	// Finally find everything the system package needs
-
-	// get all the meta FAR blobs from the dynamic index
-	dPkgs, err := fs.index.PackageBlobs()
+	// read the list of installed blobs first, as there may be installations in
+	// progress, we want to not create orphans later, this list must be equal to or
+	// a subset of the set we intersect.
+	installedBlobs, err := readBlobfs(fs.blobfs)
 	if err != nil {
-		log.Printf("pkgfs: error getting package blobs from dynamic index: %s", err)
-		dPkgs = []string{}
+		return fmt.Errorf("GC: unable to list blobfs: %s", err)
 	}
+	log.Printf("GC: %d blobs in blobfs", len(installedBlobs))
 
-	// get directories for all the items in the dynamic index and collect all
-	// their blobs, which include the meta FAR itself
-	dynamicBlobs := make(map[string]struct{})
-	for _, pkg := range dPkgs {
-		pDir, err := newPackageDirFromBlob(pkg, fs)
+	// Walk the list of all packages and collate all involved blobs, both the fars
+	// themselves, and the contents on which they depend.
+	allBlobs := make(map[string]struct{})
+	allPackageBlobs := fs.index.AllPackageBlobs()
+	for _, pkgRoot := range allPackageBlobs {
+		allBlobs[pkgRoot] = struct{}{}
+
+		pDir, err := newPackageDirFromBlob(pkgRoot, fs)
 		if err != nil {
-			log.Printf("pkgfs: failed getting package from blob %s: %s", pkg, err)
+			log.Printf("GC: failed getting package from blob %s: %s", pkgRoot, err)
 			continue
 		}
 
-		for _, p := range pDir.Blobs() {
-			dynamicBlobs[p] = struct{}{}
+		for _, m := range pDir.Blobs() {
+			allBlobs[m] = struct{}{}
 		}
 		pDir.Close()
 	}
 
-	// find all the blobs belong to packages being installed
-	reserved := fs.index.InstallingBlobs()
+	log.Printf("GC: %d blobs referenced by %d packages", len(allBlobs), len(allPackageBlobs))
 
-	// get all the meta FAR blobs from the static index
-	sPkgs := fs.static.PackageBlobs()
-
-	// get all the blobs for the package
-	staticBlobs := make(map[string]struct{})
-	for _, pkg := range sPkgs {
-		pDir, err := newPackageDirFromBlob(pkg, fs)
-		if err != nil {
-			return fmt.Errorf("pkgfs: failed reading package for static index entry %s: %s",
-				pkg, err)
-		}
-
-		for _, p := range pDir.Blobs() {
-			staticBlobs[p] = struct{}{}
-		}
-		pDir.Close()
-	}
-
-	// get the system directory and its blobs
-	sysBlobs := []string{}
-	sd := fs.root.dir("system")
-	if sysDir, ok := sd.(*packageDir); ok && sysDir != nil {
-		sysBlobs = sysDir.Blobs()
-	} else {
-		return fmt.Errorf("pkgfs: failure reading system_image package, nil or unknown type")
-	}
-
-	// add the blobs for the system package to the one for the static index
-	// since they are all part of the "verified" set
-	for _, b := range sysBlobs {
-		staticBlobs[b] = struct{}{}
-	}
-
-	// for potentially interesting debugging purposes, see what things appear
-	// only in the dynamic index. This is not required for proper function, but
-	// is included as a sanity check during early deployment.
-	dUnique := []string{}
-	for blob, _ := range dynamicBlobs {
-		if _, ok := staticBlobs[blob]; !ok {
-			dUnique = append(dUnique, blob)
-		}
-	}
-
-	log.Printf("pkgfs: %d blobs in dynamic index are not in static index", len(dUnique))
-	log.Printf("pkgfs: system package backed by %d blobs", len(sysBlobs))
-	log.Printf("pkgfs: %d blobs in system software set", len(staticBlobs))
-
-	// get the set of blobs currently in blobfs
-	installedBlobs, err := readBlobfs(fs.blobfs)
-	if err != nil {
-		return fmt.Errorf("pkgfs: unable to list blobfs: %s", err)
-	}
-	log.Printf("pkgfs: %d blobs in blobfs", len(installedBlobs))
-
-	// remove the blobs for the dynamic index
-	for b := range dynamicBlobs {
-		delete(installedBlobs, b)
-	}
-
-	// remove blobs for installs in progress
-	for _, b := range reserved {
-		delete(installedBlobs, b)
-	}
-
-	// remove static index and system package blobs
-	for b := range staticBlobs {
-		delete(installedBlobs, b)
+	for m := range allBlobs {
+		delete(installedBlobs, m)
 	}
 
 	// remove all the blobs we no longer need
-	log.Printf("pkgfs: removing %d blobs from blobfs", len(installedBlobs))
-	for targ := range installedBlobs {
-		e := os.Remove(path.Join("/blob", targ))
+	log.Printf("GC: removing %d blobs from blobfs", len(installedBlobs))
+
+	for m := range installedBlobs {
+		e := os.Remove(path.Join("/blob", m))
 		if e != nil {
-			log.Printf("pkgfs: error removing %s from blobfs: %s\n", targ, e)
+			log.Printf("GC: error removing %s from blobfs: %s", m, e)
 		}
 	}
 	return nil
