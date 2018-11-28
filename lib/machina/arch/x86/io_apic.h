@@ -15,15 +15,13 @@
 namespace machina {
 
 class Guest;
-class Vcpu;
 
 // Implements the IO APIC.
 class IoApic : public IoHandler, public PlatformDevice {
  public:
+  static constexpr uint64_t kPhysBase = 0xf8000000;
   static constexpr size_t kNumRedirects = 48u;
   static constexpr size_t kNumRedirectOffsets = kNumRedirects * 2;
-  static constexpr uint64_t kPhysBase = 0xf8000000;
-  static constexpr uint64_t kMemSize = 0x1000;
 
   // An entry in the redirect table.
   struct RedirectEntry {
@@ -31,14 +29,13 @@ class IoApic : public IoHandler, public PlatformDevice {
     uint32_t lower;
   };
 
-  zx_status_t Init(Guest* guest);
+  IoApic(Guest* guest);
+
+  zx_status_t Init();
 
   // IoHandler interface.
   zx_status_t Read(uint64_t addr, IoValue* value) const override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
-
-  // Associate a VCPU with an IO APIC.
-  zx_status_t RegisterVcpu(uint8_t local_apic_id, Vcpu* vcpu);
 
   // Writes the redirect entry for a global IRQ.
   zx_status_t SetRedirect(uint32_t global_irq, RedirectEntry& redirect);
@@ -47,7 +44,7 @@ class IoApic : public IoHandler, public PlatformDevice {
   zx_status_t Interrupt(uint32_t global_irq);
 
  private:
-  static constexpr size_t kMaxVcpus = 16u;
+  Guest* guest_;
 
   mutable std::mutex mutex_;
   // IO register-select register.
@@ -56,8 +53,6 @@ class IoApic : public IoHandler, public PlatformDevice {
   uint32_t id_ __TA_GUARDED(mutex_) = 0;
   // IO redirection table.
   RedirectEntry redirect_[kNumRedirects] __TA_GUARDED(mutex_) = {};
-  // Connected VCPUs.
-  Vcpu* vcpus_[kMaxVcpus] __TA_GUARDED(mutex_) = {};
 
   zx_status_t ReadRegister(uint32_t select_register, IoValue* value) const;
   zx_status_t WriteRegister(uint32_t select_register, const IoValue& value);

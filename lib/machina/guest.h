@@ -9,8 +9,6 @@
 #include <shared_mutex>
 
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/fit/function.h>
-#include <zircon/types.h>
 #include <zx/guest.h>
 #include <zx/vmar.h>
 
@@ -26,13 +24,8 @@ enum class TrapType {
   PIO_SYNC = 2,
 };
 
-class IoHandler;
-class IoMapping;
-
 class Guest {
  public:
-  using VcpuFactory = fit::function<zx_status_t(Guest* guest, uintptr_t entry,
-                                                uint64_t id, Vcpu* vcpu)>;
   using IoMappingList = std::forward_list<IoMapping>;
 
   zx_status_t Init(size_t mem_size, bool host_memory);
@@ -47,14 +40,9 @@ class Guest {
   zx_status_t CreateMapping(TrapType type, uint64_t addr, size_t size,
                             uint64_t offset, IoHandler* handler);
 
-  // Setup a handler function to run when an additional VCPU is brought up. The
-  // factory should call Start on the new VCPU to begin executing the guest on a
-  // new thread.
-  void RegisterVcpuFactory(VcpuFactory factory);
-
   // Initializes a VCPU by calling the VCPU factory. The first VCPU must have id
   // 0.
-  zx_status_t StartVcpu(uintptr_t entry, uint64_t id);
+  zx_status_t StartVcpu(uint64_t id, zx_gpaddr_t entry, zx_gpaddr_t boot_ptr);
 
   // Signals an interrupt to the VCPUs indicated by |mask|.
   zx_status_t Interrupt(uint64_t mask, uint8_t vector);
@@ -79,8 +67,6 @@ class Guest {
   PhysMem phys_mem_;
   IoMappingList mappings_;
 
-  VcpuFactory vcpu_factory_ = [](Guest* guest, uintptr_t entry, uint64_t id,
-                                 Vcpu* vcpu) { return ZX_ERR_BAD_STATE; };
   std::shared_mutex mutex_;
   std::unique_ptr<Vcpu> vcpus_[kMaxVcpus] = {};
 

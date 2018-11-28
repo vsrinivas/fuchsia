@@ -20,7 +20,6 @@ enum class GicVersion {
 };
 
 class Guest;
-class Vcpu;
 
 // Implements GIC redistributor.
 class GicRedistributor : public IoHandler {
@@ -43,8 +42,9 @@ class GicRedistributor : public IoHandler {
 // Implements GIC distributor.
 class GicDistributor : public IoHandler, public PlatformDevice {
  public:
-  zx_status_t Init(Guest* guest,
-                   uint8_t num_cpus) __TA_NO_THREAD_SAFETY_ANALYSIS;
+  GicDistributor(Guest* guest);
+
+  zx_status_t Init(uint8_t num_cpus) __TA_NO_THREAD_SAFETY_ANALYSIS;
 
   zx_status_t Read(uint64_t addr, IoValue* value) const override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
@@ -52,20 +52,17 @@ class GicDistributor : public IoHandler, public PlatformDevice {
   zx_status_t ConfigureZbi(void* zbi_base, size_t zbi_max) const override;
   zx_status_t ConfigureDtb(void* dtb) const override;
 
-  zx_status_t RegisterVcpu(uint8_t vcpu_num,
-                           Vcpu* vcpu) __TA_NO_THREAD_SAFETY_ANALYSIS;
-
   zx_status_t Interrupt(uint32_t global_irq);
 
  private:
   // NOTE: This must match the same constant in arch/hypervisor.h within Zircon.
   static constexpr size_t kNumInterrupts = 256;
   static constexpr uint8_t kNumSgisAndPpis = 32;
-  static constexpr uint8_t kMaxVcpus = 8;
+
+  Guest* guest_;
   GicVersion gic_version_ = GicVersion::V2;
 
   mutable std::mutex mutex_;
-  Vcpu* vcpus_[kMaxVcpus] __TA_GUARDED(mutex_) = {};
   bool affinity_routing_ __TA_GUARDED(mutex_) = false;
   std::vector<GicRedistributor> __TA_GUARDED(mutex_) redistributors_;
 

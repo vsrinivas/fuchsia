@@ -5,6 +5,7 @@
 #ifndef GARNET_LIB_MACHINA_VIRTIO_PCI_H_
 #define GARNET_LIB_MACHINA_VIRTIO_PCI_H_
 
+#include <lib/fit/function.h>
 #include <virtio/virtio.h>
 #include <zircon/types.h>
 

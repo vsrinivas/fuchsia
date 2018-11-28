@@ -142,11 +142,11 @@ int main(int argc, char** argv) {
   }
   platform_devices.push_back(&uart);
   // Setup interrupt controller.
-  machina::InterruptController interrupt_controller;
+  machina::InterruptController interrupt_controller(&guest);
 #if __aarch64__
-  status = interrupt_controller.Init(&guest, cfg.cpus());
+  status = interrupt_controller.Init(cfg.cpus());
 #elif __x86_64__
-  status = interrupt_controller.Init(&guest);
+  status = interrupt_controller.Init();
 #endif
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create interrupt controller " << status;
@@ -416,16 +416,16 @@ int main(int argc, char** argv) {
   }
 
   // Setup kernel.
-  uintptr_t guest_ip = 0;
+  uintptr_t entry = 0;
   uintptr_t boot_ptr = 0;
   switch (cfg.kernel()) {
     case Kernel::ZIRCON:
       status = setup_zircon(cfg, guest.phys_mem(), dev_mem, platform_devices,
-                            &guest_ip, &boot_ptr);
+                            &entry, &boot_ptr);
       break;
     case Kernel::LINUX:
       status = setup_linux(cfg, guest.phys_mem(), dev_mem, platform_devices,
-                           &guest_ip, &boot_ptr);
+                           &entry, &boot_ptr);
       break;
     default:
       FXL_LOG(ERROR) << "Unknown kernel";
@@ -437,36 +437,8 @@ int main(int argc, char** argv) {
     return status;
   }
 
-  // Setup VCPUs.
-  auto initialize_vcpu = [boot_ptr, &interrupt_controller](
-                             machina::Guest* guest, uintptr_t guest_ip,
-                             uint64_t id, machina::Vcpu* vcpu) {
-    zx_status_t status = vcpu->Create(guest, guest_ip, id);
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to create VCPU " << id << " " << status;
-      return status;
-    }
-    // Register VCPU with interrupt controller.
-    status = interrupt_controller.RegisterVcpu(id, vcpu);
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to register VCPU with interrupt controller "
-                     << status;
-      return status;
-    }
-    // Setup initial VCPU state.
-    zx_vcpu_state_t vcpu_state = {};
-#if __aarch64__
-    vcpu_state.x[0] = boot_ptr;
-#elif __x86_64__
-    vcpu_state.rsi = boot_ptr;
-#endif
-    // Begin VCPU execution.
-    return vcpu->Start(&vcpu_state);
-  };
-
-  guest.RegisterVcpuFactory(initialize_vcpu);
-
-  status = guest.StartVcpu(guest_ip, 0 /* id */);
+  // Setup primary VCPU.
+  status = guest.StartVcpu(0 /* id */, entry, boot_ptr);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to start VCPU-0 " << status;
     loop.Quit();

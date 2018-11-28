@@ -39,23 +39,15 @@
 
 // clang-format on
 
+static constexpr uint64_t kMemSize = 0x1000;
+
 namespace machina {
 
-zx_status_t IoApic::Init(Guest* guest) {
-  return guest->CreateMapping(TrapType::MMIO_SYNC, kPhysBase, kMemSize, 0,
-                              this);
-}
+IoApic::IoApic(Guest* guest) : guest_(guest) {}
 
-zx_status_t IoApic::RegisterVcpu(uint8_t local_apic_id, Vcpu* vcpu) {
-  if (local_apic_id >= kMaxVcpus) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-  std::lock_guard<std::mutex> lock(mutex_);
-  if (vcpus_[local_apic_id] != nullptr) {
-    return ZX_ERR_ALREADY_EXISTS;
-  }
-  vcpus_[local_apic_id] = vcpu;
-  return ZX_OK;
+zx_status_t IoApic::Init() {
+  return guest_->CreateMapping(TrapType::MMIO_SYNC, kPhysBase, kMemSize, 0,
+                               this);
 }
 
 zx_status_t IoApic::SetRedirect(uint32_t global_irq, RedirectEntry& redirect) {
@@ -95,39 +87,16 @@ zx_status_t IoApic::Interrupt(uint32_t global_irq) {
   uint32_t destmod = bit_shift(entry.lower, 11);
   if (destmod == IO_APIC_DESTMOD_PHYSICAL) {
     uint32_t dest = bits_shift(entry.upper, 27, 24);
-    Vcpu* vcpu;
-    {
-      std::lock_guard<std::mutex> lock(mutex_);
-      vcpu = dest < kMaxVcpus ? vcpus_[dest] : nullptr;
-    }
-    if (vcpu == nullptr) {
-      return ZX_ERR_NOT_FOUND;
-    }
-    return vcpu->Interrupt(vector);
+    return guest_->Interrupt(1ul << dest, vector);
   }
 
-  // Logical DESTMOD.
+  // Logical DESTMOD. See Intel Volume 3, Section 10.12.10.2:
+  // logical ID = 1 << x2APIC ID[3:0].
+  //
+  // Note we're not currently respecting the DELMODE field and instead are only
+  // delivering to the fist local APIC that is targeted.
   uint16_t dest = bits_shift(entry.upper, 31, 24);
-  for (uint8_t local_apic_id = 0; local_apic_id < kMaxVcpus; ++local_apic_id) {
-    // See Intel Volume 3, Section 10.12.10.2: logical ID = 1 << x2APIC ID[3:0].
-    uint16_t logical_id = 1 << local_apic_id;
-    if (!(logical_id & dest)) {
-      continue;
-    }
-    Vcpu* vcpu;
-    {
-      std::lock_guard<std::mutex> lock(mutex_);
-      vcpu = vcpus_[local_apic_id];
-    }
-    if (vcpu == nullptr) {
-      continue;
-    }
-    // Note we're not currently respecting the DELMODE field and
-    // instead are only delivering to the fist local APIC that is
-    // targeted.
-    return vcpu->Interrupt(vector);
-  }
-  return ZX_ERR_NOT_FOUND;
+  return guest_->Interrupt(dest, vector);
 }
 
 zx_status_t IoApic::Read(uint64_t addr, IoValue* value) const {

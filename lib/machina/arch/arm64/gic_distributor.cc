@@ -198,7 +198,9 @@ static uint32_t pidr2_arch_rev(uint32_t revision) {
   return set_bits(revision, 7, 4);
 }
 
-zx_status_t GicDistributor::Init(Guest* guest, uint8_t num_cpus) {
+GicDistributor::GicDistributor(Guest* guest) : guest_(guest) {}
+
+zx_status_t GicDistributor::Init(uint8_t num_cpus) {
   zx_status_t status = get_gic_version(&gic_version_);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to get GIC version from sysinfo " << status;
@@ -213,13 +215,13 @@ zx_status_t GicDistributor::Init(Guest* guest, uint8_t num_cpus) {
 
   // Map the GICv2 distributor.
   if (gic_version_ == GicVersion::V2) {
-    return guest->CreateMapping(TrapType::MMIO_SYNC, kGicv2DistributorPhysBase,
-                                kGicv2DistributorSize, 0, this);
+    return guest_->CreateMapping(TrapType::MMIO_SYNC, kGicv2DistributorPhysBase,
+                                 kGicv2DistributorSize, 0, this);
   }
 
   // Map the GICv3 distributor.
-  status = guest->CreateMapping(TrapType::MMIO_SYNC, kGicv3DistributorPhysBase,
-                                kGicv3DistributorSize, 0, this);
+  status = guest_->CreateMapping(TrapType::MMIO_SYNC, kGicv3DistributorPhysBase,
+                                 kGicv3DistributorSize, 0, this);
   if (status != ZX_OK) {
     return status;
   }
@@ -227,7 +229,7 @@ zx_status_t GicDistributor::Init(Guest* guest, uint8_t num_cpus) {
   // Map the GICv3 redistributors, map both RD_BASE and SGI_BASE as one since
   // they are contiguous. See GIC v3.0/v4.0 Architecture Spec 8.10.
   for (uint16_t id = 0; id != num_cpus; id++) {
-    status = guest->CreateMapping(
+    status = guest_->CreateMapping(
         TrapType::MMIO_SYNC,
         kGicv3RedistributorPhysBase + (id * kGicv3RedistributorStride),
         kGicv3RedistributorSize + kGicv3RedistributorSgiSize, 0,
@@ -405,13 +407,7 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
       }
       // Affinity routing is being disabled.
       affinity_routing_ = false;
-      uint8_t default_mask = 0;
-      for (size_t i = 0; i != kMaxVcpus; i++) {
-        if (vcpus_[i] != nullptr) {
-          default_mask |= 1 << i;
-        }
-      }
-      memset(cpu_masks_, default_mask, sizeof(cpu_masks_));
+      memset(cpu_masks_, UINT8_MAX, sizeof(cpu_masks_));
       return ZX_OK;
     }
     case GicdRegister::IROUTE32... GicdRegister::IROUTE1019: {
@@ -444,21 +440,6 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
   }
 }
 
-zx_status_t GicDistributor::RegisterVcpu(uint8_t vcpu_num, Vcpu* vcpu) {
-  if (vcpu_num > kMaxVcpus) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-  std::lock_guard<std::mutex> lock(mutex_);
-  if (vcpus_[vcpu_num] != nullptr) {
-    return ZX_ERR_ALREADY_EXISTS;
-  }
-  vcpus_[vcpu_num] = vcpu;
-  // We set the default state of all CPU masks to target every registered VCPU.
-  uint8_t default_mask = cpu_masks_[0] | 1u << vcpu_num;
-  memset(cpu_masks_, default_mask, sizeof(cpu_masks_));
-  return ZX_OK;
-}
-
 zx_status_t GicDistributor::Interrupt(uint32_t global_irq) {
   uint8_t cpu_mask;
   {
@@ -487,26 +468,15 @@ zx_status_t GicDistributor::TargetInterrupt(uint32_t global_irq,
     if (!is_enabled) {
       return ZX_OK;
     }
-  }
-  for (size_t i = 0; cpu_mask != 0; cpu_mask >>= 1, i++) {
-    if (!(cpu_mask & 1)) {
-      continue;
-    }
-    Vcpu* vcpu;
-    {
-      std::lock_guard<std::mutex> lock(mutex_);
-      vcpu = vcpus_[i];
-      if (vcpu == nullptr || (global_irq < kNumSgisAndPpis &&
-                              !redistributors_[i].IsEnabled(global_irq))) {
-        continue;
+  } else {
+    std::lock_guard<std::mutex> lock(mutex_);
+    for (size_t i = 0; i < redistributors_.size(); i++) {
+      if (!redistributors_[i].IsEnabled(global_irq)) {
+        cpu_mask &= ~(1u << i);
       }
     }
-    zx_status_t status = vcpu->Interrupt(global_irq);
-    if (status != ZX_OK) {
-      return status;
-    }
   }
-  return ZX_OK;
+  return guest_->Interrupt(cpu_mask, global_irq);
 }
 
 zx_status_t GicDistributor::ConfigureZbi(void* zbi_base, size_t zbi_max) const {

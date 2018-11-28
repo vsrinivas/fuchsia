@@ -13,28 +13,23 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>
 #include <zircon/syscalls/port.h>
+#include <zx/thread.h>
 
 #include "garnet/lib/machina/guest.h"
 #include "garnet/lib/machina/io.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
-#ifdef __x86_64__
-#include "garnet/lib/machina/arch/x86/decode.h"
-#endif
-
-namespace machina {
-
-thread_local Vcpu* thread_vcpu = nullptr;
+static thread_local machina::Vcpu* thread_vcpu = nullptr;
 
 #if __aarch64__
-static zx_status_t HandleMmioArm(const zx_packet_guest_mem_t& mem,
-                                 uint64_t trap_key, uint64_t* reg) {
+static zx_status_t HandleMemArm(const zx_packet_guest_mem_t& mem,
+                                uint64_t trap_key, uint64_t* reg) {
   TRACE_DURATION("machina", "mmio", "addr", mem.addr, "access_size",
                  mem.access_size);
 
   machina::IoValue mmio = {mem.access_size, {.u64 = mem.data}};
-  IoMapping* mapping = IoMapping::FromPortKey(trap_key);
+  machina::IoMapping* mapping = machina::IoMapping::FromPortKey(trap_key);
   if (!mem.read) {
     return mapping->Write(mem.addr, mmio);
   }
@@ -50,14 +45,16 @@ static zx_status_t HandleMmioArm(const zx_packet_guest_mem_t& mem,
   return ZX_OK;
 }
 #elif __x86_64__
-static zx_status_t HandleMmioX86(const zx_packet_guest_mem_t& mem,
-                                 uint64_t trap_key,
-                                 const machina::Instruction* inst) {
+#include "garnet/lib/machina/arch/x86/decode.h"
+
+static zx_status_t HandleMemX86(const zx_packet_guest_mem_t& mem,
+                                uint64_t trap_key,
+                                const machina::Instruction* inst) {
   TRACE_DURATION("machina", "mmio", "addr", mem.addr, "access_size",
                  inst->access_size);
 
   zx_status_t status;
-  IoValue mmio = {inst->access_size, {.u64 = 0}};
+  machina::IoValue mmio = {inst->access_size, {.u64 = 0}};
   switch (inst->type) {
     case INST_MOV_WRITE:
       switch (inst->access_size) {
@@ -76,10 +73,10 @@ static zx_status_t HandleMmioX86(const zx_packet_guest_mem_t& mem,
       if (status != ZX_OK) {
         return status;
       }
-      return IoMapping::FromPortKey(trap_key)->Write(mem.addr, mmio);
+      return machina::IoMapping::FromPortKey(trap_key)->Write(mem.addr, mmio);
 
     case INST_MOV_READ:
-      status = IoMapping::FromPortKey(trap_key)->Read(mem.addr, &mmio);
+      status = machina::IoMapping::FromPortKey(trap_key)->Read(mem.addr, &mmio);
       if (status != ZX_OK) {
         return status;
       }
@@ -95,7 +92,7 @@ static zx_status_t HandleMmioX86(const zx_packet_guest_mem_t& mem,
       }
 
     case INST_TEST:
-      status = IoMapping::FromPortKey(trap_key)->Read(mem.addr, &mmio);
+      status = machina::IoMapping::FromPortKey(trap_key)->Read(mem.addr, &mmio);
       if (status != ZX_OK) {
         return status;
       }
@@ -112,161 +109,97 @@ static zx_status_t HandleMmioX86(const zx_packet_guest_mem_t& mem,
 }
 #endif
 
-struct Vcpu::ThreadEntryArgs {
-  Guest* guest;
-  Vcpu* vcpu;
-  zx_vaddr_t entry;
-};
+namespace machina {
 
-zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, uint64_t id) {
-  guest_ = guest;
-  id_ = id;
-  ThreadEntryArgs args = {
-      .guest = guest,
-      .vcpu = this,
-      .entry = entry,
-  };
-  auto name = fxl::StringPrintf("vcpu-%lu", id);
-  auto thread_entry = [](void* arg) {
-    ThreadEntryArgs* thread_args = reinterpret_cast<ThreadEntryArgs*>(arg);
-    return thread_args->vcpu->ThreadEntry(thread_args);
-  };
-  int ret = thrd_create_with_name(&thread_, thread_entry, &args, name.c_str());
-  if (ret != thrd_success) {
-    return ZX_ERR_INTERNAL;
-  }
+Vcpu::Vcpu(uint64_t id, Guest* guest, zx_gpaddr_t entry, zx_gpaddr_t boot_ptr)
+    : id_(id), guest_(guest), entry_(entry), boot_ptr_(boot_ptr) {}
 
-  WaitUntilStateNotEqualTo(State::UNINITIALIZED);
-
-  std::lock_guard<std::mutex> lock(mutex_);
-  if (state_ != State::WAITING_TO_START) {
-    return ZX_ERR_BAD_STATE;
-  }
-  return ZX_OK;
+void Vcpu::Start() {
+  future_ = std::async(std::launch::async, [this] { return Loop(); });
 }
+
+zx_status_t Vcpu::Join() { return future_.get(); }
 
 Vcpu* Vcpu::GetCurrent() {
   FXL_DCHECK(thread_vcpu != nullptr) << "Thread does not have a VCPU";
   return thread_vcpu;
 }
 
-zx_status_t Vcpu::ThreadEntry(const ThreadEntryArgs* args) {
-  {
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (state_ != State::UNINITIALIZED) {
-      return ZX_ERR_BAD_STATE;
-    }
-
-    zx_status_t status =
-        zx::vcpu::create(*args->guest->object(), 0, args->entry, &vcpu_);
-    if (status != ZX_OK) {
-      SetStateLocked(State::ERROR_FAILED_TO_CREATE);
-      return status;
-    }
-
-    SetStateLocked(State::WAITING_TO_START);
-  }
-  WaitUntilStateNotEqualTo(State::WAITING_TO_START);
-  {
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (state_ != State::STARTING) {
-      return ZX_ERR_BAD_STATE;
-    }
-
-    if (initial_vcpu_state_ != nullptr) {
-      zx_status_t status = vcpu_.write_state(ZX_VCPU_STATE, initial_vcpu_state_,
-                                             sizeof(*initial_vcpu_state_));
-      if (status != ZX_OK) {
-        SetStateLocked(State::ERROR_FAILED_TO_START);
-        return status;
-      }
-    }
-
-    SetStateLocked(State::STARTED);
-  }
-
-  return Loop();
-}
-
-void Vcpu::SetStateLocked(State new_state) {
-  state_ = new_state;
-  cv_.notify_one();
-}
-
-void Vcpu::WaitUntilStateNotEqualTo(State initial_state) {
-  std::unique_lock<std::mutex> lock(mutex_);
-  while (state_ == initial_state) {
-    cv_.wait(lock);
-  }
-}
-
-void Vcpu::SetState(State new_state) {
-  std::lock_guard<std::mutex> lock(mutex_);
-  SetStateLocked(new_state);
-}
-
 zx_status_t Vcpu::Loop() {
   FXL_DCHECK(thread_vcpu == nullptr) << "Thread has multiple VCPUs";
-  thread_vcpu = this;
-  zx_port_packet_t packet;
+
+  // Set the thread state.
+  {
+    thread_vcpu = this;
+    auto name = fxl::StringPrintf("vcpu-%lu", id_);
+    zx_status_t status = zx::thread::self()->set_property(
+        ZX_PROP_NAME, name.c_str(), name.size());
+    if (status != ZX_OK) {
+      FXL_LOG(WARNING) << "Failed to set VCPU-" << id_ << " thread name "
+                       << status;
+    }
+  }
+
+  // Create the VCPU.
+  {
+    std::lock_guard<std::shared_mutex> lock(mutex_);
+    zx_status_t status = zx::vcpu::create(*guest_->object(), 0, entry_, &vcpu_);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to create VCPU-" << id_ << " " << status;
+      return status;
+    }
+  }
+
+  // Set the initial VCPU state.
+  std::shared_lock<std::shared_mutex> lock(mutex_);
+  {
+    zx_vcpu_state_t vcpu_state = {};
+#if __aarch64__
+    vcpu_state.x[0] = boot_ptr_;
+#elif __x86_64__
+    vcpu_state.rsi = boot_ptr_;
+#endif
+
+    zx_status_t status =
+        vcpu_.write_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state));
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to set VCPU-" << id_ << " state " << status;
+      return status;
+    }
+  }
+
   while (true) {
+    zx_port_packet_t packet;
     zx_status_t status = vcpu_.resume(&packet);
     if (status == ZX_ERR_STOP) {
-      SetState(State::TERMINATED);
       return ZX_OK;
     }
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to resume VCPU-" << id_ << ": " << status;
+      FXL_LOG(ERROR) << "Failed to resume VCPU-" << id_ << " " << status;
       exit(status);
     }
 
-    status = HandlePacket(packet);
+    status = HandlePacketLocked(packet);
     if (status == ZX_ERR_STOP) {
-      SetState(State::TERMINATED);
       return ZX_OK;
     }
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to handle packet " << packet.type << ": "
+      FXL_LOG(ERROR) << "Failed to handle packet " << packet.type << " "
                      << status;
       exit(status);
     }
   }
 }
 
-zx_status_t Vcpu::Start(zx_vcpu_state_t* initial_vcpu_state) {
-  {
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (state_ != State::WAITING_TO_START) {
-      return ZX_ERR_BAD_STATE;
-    }
-
-    // Place the VCPU in the |STARTING| state which will cause the VCPU to
-    // write the initial state and begin VCPU execution.
-    initial_vcpu_state_ = initial_vcpu_state;
-    SetStateLocked(State::STARTING);
-  }
-
-  WaitUntilStateNotEqualTo(State::STARTING);
-
-  std::lock_guard<std::mutex> lock(mutex_);
-  if (state_ != State::STARTED) {
-    return ZX_ERR_BAD_STATE;
-  }
-  return ZX_OK;
+zx_status_t Vcpu::Interrupt(uint32_t vector) {
+  std::shared_lock<std::shared_mutex> lock(mutex_);
+  return vcpu_ ? vcpu_.interrupt(vector) : ZX_OK;
 }
 
-zx_status_t Vcpu::Join() {
-  zx_status_t vcpu_result = ZX_ERR_INTERNAL;
-  int ret = thrd_join(thread_, &vcpu_result);
-  return ret == thrd_success ? vcpu_result : ZX_ERR_INTERNAL;
-}
-
-zx_status_t Vcpu::Interrupt(uint32_t vector) { return vcpu_.interrupt(vector); }
-
-zx_status_t Vcpu::HandlePacket(const zx_port_packet_t& packet) {
+zx_status_t Vcpu::HandlePacketLocked(const zx_port_packet_t& packet) {
   switch (packet.type) {
     case ZX_PKT_TYPE_GUEST_MEM:
-      return HandleMem(packet.guest_mem, packet.key);
+      return HandleMemLocked(packet.guest_mem, packet.key);
 #if __x86_64__
     case ZX_PKT_TYPE_GUEST_IO:
       return HandleIo(packet.guest_io, packet.key);
@@ -279,8 +212,8 @@ zx_status_t Vcpu::HandlePacket(const zx_port_packet_t& packet) {
   }
 }
 
-zx_status_t Vcpu::HandleMem(const zx_packet_guest_mem_t& mem,
-                            uint64_t trap_key) {
+zx_status_t Vcpu::HandleMemLocked(const zx_packet_guest_mem_t& mem,
+                                  uint64_t trap_key) {
   zx_vcpu_state_t vcpu_state;
   zx_status_t status;
 #if __aarch64__
@@ -296,7 +229,7 @@ zx_status_t Vcpu::HandleMem(const zx_packet_guest_mem_t& mem,
   bool do_write = false;
 #if __aarch64__
   do_write = mem.read;
-  status = HandleMmioArm(mem, trap_key, &vcpu_state.x[mem.xt]);
+  status = HandleMemArm(mem, trap_key, &vcpu_state.x[mem.xt]);
 #elif __x86_64__
   Instruction inst;
   status = inst_decode(mem.inst_buf, mem.inst_len, mem.default_operand_size,
@@ -308,7 +241,7 @@ zx_status_t Vcpu::HandleMem(const zx_packet_guest_mem_t& mem,
     }
     FXL_LOG(ERROR) << "Unsupported instruction:" << inst;
   } else {
-    status = HandleMmioX86(mem, trap_key, &inst);
+    status = HandleMemX86(mem, trap_key, &inst);
     // If there was an attempt to read or test memory, update the GPRs.
     do_write = inst.type == INST_MOV_READ || inst.type == INST_TEST;
   }
@@ -332,7 +265,7 @@ zx_status_t Vcpu::HandleInput(const zx_packet_guest_io_t& io,
   zx_status_t status = IoMapping::FromPortKey(trap_key)->Read(io.port, &value);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to handle port in 0x" << std::hex << io.port
-                   << ": " << std::dec << status;
+                   << " " << std::dec << status;
     return status;
   }
 
@@ -360,7 +293,7 @@ zx_status_t Vcpu::HandleOutput(const zx_packet_guest_io_t& io,
   zx_status_t status = IoMapping::FromPortKey(trap_key)->Write(io.port, value);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to handle port out 0x" << std::hex << io.port
-                   << ": " << std::dec << status;
+                   << " " << std::dec << status;
   }
   return status;
 }
@@ -382,7 +315,8 @@ zx_status_t Vcpu::HandleVcpu(const zx_packet_guest_vcpu_t& packet,
                        << " be started by the primary processor";
         return ZX_ERR_BAD_STATE;
       }
-      return guest_->StartVcpu(packet.startup.entry, packet.startup.id);
+      return guest_->StartVcpu(packet.startup.id, packet.startup.entry,
+                               boot_ptr_);
     default:
       return ZX_ERR_NOT_SUPPORTED;
   }

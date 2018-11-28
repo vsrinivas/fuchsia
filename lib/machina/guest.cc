@@ -19,7 +19,6 @@
 #include <zircon/syscalls/port.h>
 #include <zircon/threads.h>
 
-#include "garnet/lib/machina/io.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
@@ -146,13 +145,12 @@ zx_status_t Guest::CreateMapping(TrapType type, uint64_t addr, size_t size,
   return ZX_OK;
 }
 
-void Guest::RegisterVcpuFactory(VcpuFactory factory) {
-  vcpu_factory_ = std::move(factory);
-}
-
-zx_status_t Guest::StartVcpu(uintptr_t entry, uint64_t id) {
+zx_status_t Guest::StartVcpu(uint64_t id, zx_gpaddr_t entry,
+                             zx_gpaddr_t boot_ptr) {
   if (id >= kMaxVcpus) {
-    return ZX_ERR_INVALID_ARGS;
+    FXL_LOG(ERROR) << "Failed to start VCPU-" << id << ", up to " << kMaxVcpus
+                   << " VCPUs are supported";
+    return ZX_ERR_OUT_OF_RANGE;
   }
 
   std::lock_guard<std::shared_mutex> lock(mutex_);
@@ -166,20 +164,15 @@ zx_status_t Guest::StartVcpu(uintptr_t entry, uint64_t id) {
     // on the first. So, we ignore subsequent requests.
     return ZX_OK;
   }
-
-  auto vcpu = std::make_unique<Vcpu>();
-  zx_status_t status = vcpu_factory_(this, entry, id, vcpu.get());
-  if (status != ZX_OK) {
-    return status;
-  }
-  vcpus_[id] = std::move(vcpu);
+  vcpus_[id] = std::make_unique<Vcpu>(id, this, entry, boot_ptr);
+  vcpus_[id]->Start();
   return ZX_OK;
 }
 
 zx_status_t Guest::Interrupt(uint64_t mask, uint8_t vector) {
   std::shared_lock<std::shared_mutex> lock(mutex_);
   for (size_t id = 0; id != kMaxVcpus; ++id) {
-    if (vcpus_[id] == nullptr || !((1u << id) & mask)) {
+    if (!(mask & (1ul << id)) || !vcpus_[id]) {
       continue;
     }
     zx_status_t status = vcpus_[id]->Interrupt(vector);
