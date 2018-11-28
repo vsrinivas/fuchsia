@@ -347,9 +347,8 @@ zx_status_t DWMacDevice::InitBuffers() {
     return ZX_OK;
 }
 
-zx_handle_t DWMacDevice::EthmacGetBti() {
-
-    return bti_.get();
+void DWMacDevice::EthmacGetBti(zx::bti* bti) {
+    bti_.duplicate(ZX_RIGHT_SAME_RIGHTS, bti);
 }
 
 zx_status_t DWMacDevice::MDIOWrite(uint32_t reg, uint32_t val) {

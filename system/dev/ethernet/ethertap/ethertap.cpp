@@ -210,8 +210,8 @@ zx_status_t TapDevice::EthmacSetParam(uint32_t param, int32_t value, const void*
     return ZX_OK;
 }
 
-zx_handle_t TapDevice::EthmacGetBti() {
-    return ZX_HANDLE_INVALID;
+void TapDevice::EthmacGetBti(zx::bti* bti) {
+    bti->reset();
 }
 
 int TapDevice::Thread() {

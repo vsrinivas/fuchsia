@@ -35,7 +35,7 @@ public:
 
     // Methods required by the TestProtocol mixin
     void TestSetOutputSocket(zx_handle_t handle);
-    zx_handle_t TestGetOutputSocket();
+    void TestGetOutputSocket(zx_handle_t* output_handle);
     void TestSetTestFunc(const test_func_t* func);
     zx_status_t TestRunTests(test_report_t* out_report);
     void TestDestroy();
@@ -73,8 +73,8 @@ void TestDevice::TestSetOutputSocket(zx_handle_t handle) {
     output_.reset(handle);
 }
 
-zx_handle_t TestDevice::TestGetOutputSocket() {
-    return output_.get();
+void TestDevice::TestGetOutputSocket(zx_handle_t* output_handle) {
+    *output_handle = output_.get();
 }
 
 void TestDevice::TestSetTestFunc(const test_func_t* func) {

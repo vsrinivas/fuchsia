@@ -64,8 +64,7 @@ std::string NameCount(const DdkGenerator::Member& member) {
 }
 
 bool ReturnFirst(const std::vector<DdkGenerator::Member>& output) {
-    return output.size() > 0 && (output[0].kind == flat::Type::Kind::kHandle ||
-                                 output[0].kind == flat::Type::Kind::kPrimitive ||
+    return output.size() > 0 && (output[0].kind == flat::Type::Kind::kPrimitive ||
                                  output[0].kind == flat::Type::Kind::kString);
 }
 

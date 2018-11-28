@@ -43,7 +43,7 @@ class TapDevice : public ddk::Device<TapDevice, ddk::Unbindable>,
     zx_status_t EthmacSetParam(uint32_t param, int32_t value, const void* data,
                                   size_t data_size);
     // No DMA capability, so return invalid handle for get_bti
-    zx_handle_t EthmacGetBti();
+    void EthmacGetBti(zx::bti* bti);
     int Thread();
 
   private:

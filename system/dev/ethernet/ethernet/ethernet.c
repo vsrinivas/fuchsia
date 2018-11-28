@@ -595,13 +595,21 @@ static ssize_t eth_set_iobuf_locked(ethdev_t* edev, zx_handle_t vmo) {
             status = ZX_ERR_NO_MEMORY;
             goto fail;
         }
-        zx_handle_t bti = ethmac_get_bti(&edev->edev0->mac);
+        zx_handle_t bti = ZX_HANDLE_INVALID;
+        ethmac_get_bti(&edev->edev0->mac, &bti);
+        if (bti == ZX_HANDLE_INVALID) {
+            status = ZX_ERR_INTERNAL;
+            zxlogf(ERROR, "eth [%s]: ethmac_get_bti return invalid handle\n", edev->name);
+            goto fail;
+        }
         if ((status = zx_bti_pin(bti, ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE,
                                  vmo, 0, size, edev->paddr_map, pages, &edev->pmt)) != ZX_OK) {
             zxlogf(ERROR, "eth [%s]: bti_pin failed, can't pin vmo: %d\n",
                    edev->name, status);
+            zx_handle_close(bti);
             goto fail;
         }
+        zx_handle_close(bti);
     }
     edev->io_vmo = vmo;
     edev->io_size = size;

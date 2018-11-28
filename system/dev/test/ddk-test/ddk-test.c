@@ -43,7 +43,8 @@ static zx_status_t ddk_test_func(void* cookie, test_report_t* report) {
         return status;
     }
 
-    zx_handle_t output = proto.ops->get_output_socket(proto.ctx);
+    zx_handle_t output;
+    proto.ops->get_output_socket(proto.ctx, &output);
     if (output != ZX_HANDLE_INVALID) {
         unittest_set_output_function(ddk_test_output_func, &output);
     }
