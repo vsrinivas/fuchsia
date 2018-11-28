@@ -3,9 +3,8 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "features": [ "persistent-storage" ],
         "services": [
-            "fuchsia.logger.LogSink",
+            "fuchsia.overnet.Overnet",
             "fuchsia.tracelink.Registry"
         ]
     }

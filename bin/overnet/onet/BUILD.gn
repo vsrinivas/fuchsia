@@ -22,7 +22,12 @@ rustc_binary("bin") {
 }
 
 package("onet") {
-  deprecated_no_cmx = "//build"
+  meta = [
+    {
+      path = "meta/onet.cmx"
+      dest = "onet.cmx"
+    },
+  ]
 
   deps = [
     ":bin",

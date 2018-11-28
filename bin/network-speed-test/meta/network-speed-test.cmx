@@ -3,10 +3,10 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "features": [ "persistent-storage" ],
         "services": [
             "fuchsia.logger.LogSink",
-            "fuchsia.tracelink.Registry"
+            "fuchsia.net.oldhttp.HttpService",
+            "fuchsia.net.stack.Stack"
         ]
     }
 }

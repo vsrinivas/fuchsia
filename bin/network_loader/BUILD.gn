@@ -22,7 +22,12 @@ executable("bin") {
 }
 
 package("network_loader") {
-  deprecated_no_cmx = "//build"
+  meta = [
+    {
+      path = "meta/network_loader.cmx"
+      dest = "network_loader.cmx"
+    },
+  ]
 
   deps = [
     ":bin",

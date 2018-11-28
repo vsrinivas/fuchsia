@@ -29,7 +29,12 @@ rustc_binary("bin") {
 }
 
 package("network-speed-test") {
-  deprecated_no_cmx = "//build"
+  meta = [
+    {
+      path = "meta/network-speed-test.cmx"
+      dest = "network-speed-test.cmx"
+    },
+  ]
 
   deps = [
     ":bin",

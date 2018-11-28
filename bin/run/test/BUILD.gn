@@ -70,7 +70,12 @@ executable("exiter_bin") {
 
 # Helper program for tests
 package("run_test_exiter") {
-  deprecated_no_cmx = "//build"
+  meta = [
+    {
+      path = "meta/run_test_exiter.cmx"
+      dest = "run_test_exiter.cmx"
+    },
+  ]
 
   deps = [
     ":exiter_bin",

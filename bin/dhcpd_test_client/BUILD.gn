@@ -16,7 +16,12 @@ rustc_binary("bin") {
 }
 
 package("dhcpd_test_client") {
-  deprecated_no_cmx = "//build"
+  meta = [
+    {
+      path = "meta/dhcpd_test_client.cmx"
+      dest = "dhcpd_test_client.cmx"
+    },
+  ]
 
   deps = [
     ":bin",
