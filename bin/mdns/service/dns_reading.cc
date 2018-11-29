@@ -17,6 +17,7 @@ static constexpr size_t kMaxQuestions = 1024;
 static constexpr size_t kMaxAnswers = 1024;
 static constexpr size_t kMaxAuthorities = 1024;
 static constexpr size_t kMaxAdditionals = 1024;
+static constexpr size_t kMaxDnsNameSize = 255;
 
 void ReadNameLabels(PacketReader& reader, std::vector<char>& chars) {
   size_t start_position_of_current_run = reader.bytes_consumed();
@@ -26,7 +27,7 @@ void ReadNameLabels(PacketReader& reader, std::vector<char>& chars) {
     uint8_t label_size;
     reader >> label_size;
 
-    if (label_size & 0xc0) {
+    if ((label_size & 0xc0) == 0xc0) {
       // We have an offset rather than the actual name. The offset is in the
       // 14 bits following two 1's.
       uint16_t offset = (label_size & 0x3f) << 8;
@@ -61,6 +62,13 @@ void ReadNameLabels(PacketReader& reader, std::vector<char>& chars) {
     }
 
     size_t old_size = chars.size();
+    size_t new_size = old_size + label_size + 1;
+
+    if (new_size > kMaxDnsNameSize) {
+      reader.MarkUnhealthy();
+      break;
+    }
+
     chars.resize(old_size + label_size + 1);
     if (!reader.GetBytes(label_size, chars.data() + old_size)) {
       break;
