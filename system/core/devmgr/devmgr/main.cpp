@@ -109,9 +109,6 @@ zx_status_t wait_for_file(const char* path, zx::time deadline) {
     return status;
 }
 
-const char* argv_sh[] = {"/boot/bin/sh"};
-const char* argv_appmgr[] = {"/system/bin/appmgr"};
-
 void do_autorun(const char* name, const char* env) {
     const char* cmd = getenv(env);
     if (cmd != nullptr) {
@@ -162,6 +159,7 @@ int fuchsia_starter(void* arg) {
             drivers_loaded = true;
         }
 
+        const char* argv_appmgr[] = {"/system/bin/appmgr"};
         struct stat s;
         if (!appmgr_started && stat(argv_appmgr[0], &s) == 0) {
             unsigned int appmgr_hnd_count = 0;
@@ -222,6 +220,7 @@ int console_starter(void* arg) {
         return 1;
     }
 
+    const char* argv_sh[] = {"/boot/bin/sh"};
     devmgr_launch(g_handles.svc_job, "sh:console",
                   &devmgr_launch_load, nullptr,
                   fbl::count_of(argv_sh), argv_sh, envp, fd.release(), nullptr, nullptr, 0,
