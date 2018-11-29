@@ -104,7 +104,7 @@ pub unsafe trait FromBytes {}
 ///     padding fields)
 ///   - All of its fields must implement `AsBytes`
 /// - If the type is an enum:
-///   - It must be a C-like enum
+///   - It must be a C-like enum (meaning that all variants have no fields)
 ///   - It must be `repr(u8)`, `repr(u16)`, `repr(u32)`, or `repr(u64)`
 pub unsafe trait AsBytes {}
 
