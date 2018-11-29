@@ -88,13 +88,6 @@ zx_status_t copy_user_string(const user_in_ptr<const char>& src,
     return ZX_OK;
 }
 
-// Convenience function to go from process handle to process.
-zx_status_t get_process(ProcessDispatcher* up,
-                        zx_handle_t proc_handle,
-                        fbl::RefPtr<ProcessDispatcher>* proc) {
-    return up->GetDispatcherWithRights(proc_handle, ZX_RIGHT_WRITE, proc);
-}
-
 // This represents the local storage for thread_read/write_state. It should be large enough to
 // handle all structures passed over these APIs.
 union thread_state_local_buffer_t {
@@ -170,7 +163,7 @@ zx_status_t sys_thread_create(zx_handle_t process_handle,
     auto up = ProcessDispatcher::GetCurrent();
 
     fbl::RefPtr<ProcessDispatcher> process;
-    result = get_process(up, process_handle, &process);
+    result = up->GetDispatcherWithRights(process_handle, ZX_RIGHT_WRITE, &process);
     if (result != ZX_OK)
         return result;
 
@@ -410,7 +403,7 @@ zx_status_t sys_process_start(zx_handle_t process_handle, zx_handle_t thread_han
 
     // get process dispatcher
     fbl::RefPtr<ProcessDispatcher> process;
-    zx_status_t status = get_process(up, process_handle, &process);
+    zx_status_t status = up->GetDispatcherWithRights(process_handle, ZX_RIGHT_WRITE, &process);
     if (status != ZX_OK) {
         up->RemoveHandle(arg_handle_value);
         return status;
