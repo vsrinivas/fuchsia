@@ -102,6 +102,8 @@ executable("tests") {
   testonly = true
 
   sources = [
+    "test/command_queue.cc",
+    "test/command_queue.h",
     "test/fakes/fake_audio.h",
     "test/fakes/fake_audio_renderer.cc",
     "test/fakes/fake_audio_renderer.h",

@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <fuchsia/mediaplayer/cpp/fidl.h>
 #include <queue>
+#include "garnet/bin/mediaplayer/test/command_queue.h"
 #include "garnet/bin/mediaplayer/test/fakes/fake_audio.h"
 #include "garnet/bin/mediaplayer/test/fakes/fake_scenic.h"
 #include "garnet/bin/mediaplayer/test/fakes/fake_wav_reader.h"
@@ -28,74 +29,8 @@ static constexpr uint32_t kSinkFeedMaxPacketCount = 10;
 constexpr char kBearFilePath[] = "/pkg/data/media_test_data/bear.mp4";
 
 // Base class for mediaplayer tests.
-class MediaPlayerTests
-    : public component::testing::TestWithEnvironment {
+class MediaPlayerTests : public component::testing::TestWithEnvironment {
  protected:
-  struct Command {
-    Command() = default;
-    virtual ~Command() = default;
-    virtual void Execute(MediaPlayerTests* test) = 0;
-  };
-
-  struct OpenCommand : public Command {
-    OpenCommand(const std::string& path) : path_(path) {}
-    void Execute(MediaPlayerTests* test) override {
-      auto fd = fxl::UniqueFD(open(path_.c_str(), O_RDONLY));
-      EXPECT_TRUE(fd.is_valid());
-      test->player_->SetFileSource(
-          fsl::CloneChannelFromFileDescriptor(fd.get()));
-      test->start_position_ = 0;
-      test->ExecuteNextCommand();
-    }
-    std::string path_;
-  };
-
-  struct PlayCommand : public Command {
-    void Execute(MediaPlayerTests* test) override {
-      test->player_->Play();
-      test->should_play_ = true;
-      test->ExecuteNextCommand();
-    }
-  };
-
-  struct PauseCommand : public Command {
-    void Execute(MediaPlayerTests* test) override {
-      test->player_->Pause();
-      test->should_play_ = false;
-      test->ExecuteNextCommand();
-    }
-  };
-
-  struct SeekCommand : public Command {
-    SeekCommand(zx::duration position) : position_(position) {}
-    void Execute(MediaPlayerTests* test) override {
-      test->player_->Seek(position_.get());
-      test->start_position_ = position_.get();
-      test->ExecuteNextCommand();
-    }
-    zx::duration position_;
-  };
-
-  struct WaitForPositionCommand : public Command {
-    WaitForPositionCommand(zx::duration position) : position_(position) {}
-    void Execute(MediaPlayerTests* test) override {
-      test->wait_for_position_ = position_.get();
-      // The |OnStatusChanged| handler calls |ExecuteNextCommand| for us when
-      // the time comes.
-    }
-    zx::duration position_;
-  };
-
-  struct SleepCommand : public Command {
-    SleepCommand(zx::duration duration) : duration_(duration) {}
-    void Execute(MediaPlayerTests* test) override {
-      async::PostDelayedTask(test->dispatcher(),
-                             [test]() { test->ExecuteNextCommand(); },
-                             zx::duration(duration_));
-    }
-    zx::duration duration_;
-  };
-
   void SetUp() override {
     auto services = CreateServices();
 
@@ -117,6 +52,8 @@ class MediaPlayerTests
     // Instantiate the player under test.
     environment_->ConnectToService(player_.NewRequest());
 
+    commands_.Init(player_.get());
+
     player_.set_error_handler([this](zx_status_t status) {
       FXL_LOG(ERROR) << "Player connection closed, status " << status << ".";
       player_connection_closed_ = true;
@@ -125,50 +62,21 @@ class MediaPlayerTests
 
     player_.events().OnStatusChanged =
         [this](fuchsia::mediaplayer::PlayerStatus status) {
-          if (status.end_of_stream) {
-            EXPECT_TRUE(status.ready);
-            EXPECT_TRUE(fake_audio_.renderer().expected());
-            EXPECT_TRUE(fake_scenic_.session().expected());
-
-            if (when_stream_ends_) {
-              when_stream_ends_();
-              when_stream_ends_ = nullptr;
-            }
-
-            QuitLoop();
-            return;
-          }
-
-          if (wait_for_position_ != fuchsia::media::NO_TIMESTAMP &&
-              status.timeline_function &&
-              status.timeline_function->subject_delta != 0 &&
-              status.timeline_function->subject_time == start_position_) {
-            // We're waiting for a specific position, and the timeline function
-            // is current. Apply the timeline function in reverse to find the
-            // CLOCK_MONOTONIC time at which we should resume executing
-            // commands.
-            auto timeline_function =
-                fxl::To<media::TimelineFunction>(*status.timeline_function);
-            int64_t wait_for_time =
-                timeline_function.ApplyInverse(wait_for_position_);
-            async::PostTaskForTime(dispatcher(),
-                                   [this]() { ExecuteNextCommand(); },
-                                   zx::time(wait_for_time));
-            wait_for_position_ = fuchsia::media::NO_TIMESTAMP;
-          }
+          commands_.NotifyStatusChanged(status);
         };
   }
 
   void TearDown() override { EXPECT_FALSE(player_connection_closed_); }
 
-  // Registers an action to be performed the next time end-of-stream is reached.
-  void WhenStreamEnds(fit::closure action) {
-    when_stream_ends_ = std::move(action);
+  // Queues commands to wait for end of stream and to call |QuitLoop|.
+  void QuitOnEndOfStream() {
+    commands_.WaitForEndOfStream();
+    commands_.Invoke([this]() { QuitLoop(); });
   }
 
   // Executes queued commands with the specified timeout.
   void Execute(zx::duration timeout = zx::sec(10)) {
-    ExecuteNextCommand();
+    commands_.Execute();
     EXPECT_FALSE(RunLoopWithTimeout(zx::duration(timeout)));
   }
 
@@ -181,41 +89,6 @@ class MediaPlayerTests
                         view_owner_ptr_.NewRequest());
   }
 
-  // Queues a file open command.
-  void Open(const std::string& path) { AddCommand(new OpenCommand(path)); }
-
-  // Queues a play command.
-  void Play() { AddCommand(new PlayCommand()); }
-
-  // Queues a pause command.
-  void Pause() { AddCommand(new PauseCommand()); }
-
-  // Queues a seek command.
-  void Seek(zx::duration position) { AddCommand(new SeekCommand(position)); }
-
-  // Queues a command that waits until the specified position is reached.
-  void WaitForPosition(zx::duration position) {
-    AddCommand(new WaitForPositionCommand(position));
-  }
-
-  // Queues a command that sleeps for the specified duration.
-  void Sleep(zx::duration duration) { AddCommand(new SleepCommand(duration)); }
-
-  // Adds a command to the command queue.
-  void AddCommand(Command* command) { command_queue_.emplace(command); }
-
-  void ExecuteNextCommand() {
-    if (command_queue_.empty()) {
-      return;
-    }
-
-    async::PostTask(dispatcher(), [this]() {
-      auto command = std::move(command_queue_.front());
-      command_queue_.pop();
-      command->Execute(this);
-    });
-  }
-
   fuchsia::mediaplayer::PlayerPtr player_;
   bool player_connection_closed_ = false;
 
@@ -226,12 +99,8 @@ class MediaPlayerTests
   std::unique_ptr<component::testing::EnclosingEnvironment> environment_;
   bool sink_connection_closed_ = false;
   SinkFeeder sink_feeder_;
-  fit::closure when_stream_ends_;
-  std::queue<std::unique_ptr<Command>> command_queue_;
-  int64_t start_position_ = 0;
-  bool should_play_ = false;
-  int64_t wait_for_position_ = fuchsia::media::NO_TIMESTAMP;
-};  // namespace media_player
+  CommandQueue commands_;
+};
 
 // Play a synthetic WAV file from beginning to end.
 TEST_F(MediaPlayerTests, PlayWav) {
@@ -261,9 +130,11 @@ TEST_F(MediaPlayerTests, PlayWav) {
   player_->CreateReaderSource(std::move(fake_reader_ptr), source.NewRequest());
   player_->SetSource(std::move(source));
 
-  Play();
+  commands_.Play();
+  QuitOnEndOfStream();
 
   Execute();
+  EXPECT_TRUE(fake_audio_.renderer().expected());
 }
 
 // Play an LPCM elementary stream using |StreamSource|
@@ -320,9 +191,11 @@ TEST_F(MediaPlayerTests, StreamSource) {
                     kSamplesPerFrame * sizeof(int16_t), kSinkFeedMaxPacketSize,
                     kSinkFeedMaxPacketCount);
 
-  Play();
+  commands_.Play();
+  QuitOnEndOfStream();
 
   Execute();
+  EXPECT_TRUE(fake_audio_.renderer().expected());
   EXPECT_FALSE(sink_connection_closed_);
 }
 
@@ -424,30 +297,37 @@ TEST_F(MediaPlayerTests, PlayBear) {
        {2788144739, 983040, 0x19a30916a3375f4e}});
 
   CreateView();
-  Open(kBearFilePath);
-  Play();
+  commands_.SetFile(kBearFilePath);
+  commands_.Play();
+  QuitOnEndOfStream();
 
   Execute();
+  EXPECT_TRUE(fake_audio_.renderer().expected());
+  EXPECT_TRUE(fake_scenic_.session().expected());
 }
 
 // Regression test for US-544.
 TEST_F(MediaPlayerTests, RegressionTestUS544) {
   CreateView();
-  Open(kBearFilePath);
+  commands_.SetFile(kBearFilePath);
 
   // Play for two seconds and pause.
-  Play();
-  WaitForPosition(zx::sec(2));
-  Pause();
+  commands_.Play();
+  commands_.WaitForPosition(zx::sec(2));
+  commands_.Pause();
 
   // Wait a bit.
-  Sleep(zx::sec(2));
+  commands_.Sleep(zx::sec(2));
 
   // Seek to the beginning and resume playing.
-  Seek(zx::sec(0));
-  Play();
+  commands_.Seek(zx::sec(0));
+  commands_.Play();
+
+  QuitOnEndOfStream();
 
   Execute(zx::sec(20));
+  EXPECT_TRUE(fake_audio_.renderer().expected());
+  EXPECT_TRUE(fake_scenic_.session().expected());
 }
 
 }  // namespace test
