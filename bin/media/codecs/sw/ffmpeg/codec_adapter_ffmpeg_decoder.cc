@@ -7,7 +7,7 @@
 CodecAdapterFfmpegDecoder::CodecAdapterFfmpegDecoder(
     std::mutex& lock, CodecAdapterEvents* codec_adapter_events)
     : CodecAdapter(lock, codec_adapter_events) {
-  // Not yet implemented.
+  codec_adapter_events->onCoreCodecFailCodec("Not implemented.");
 }
 
 CodecAdapterFfmpegDecoder::~CodecAdapterFfmpegDecoder() {
