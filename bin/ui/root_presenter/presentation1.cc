@@ -46,15 +46,14 @@ constexpr float kCursorElevation = 800;
 
 }  // namespace
 
-Presentation1::Presentation1(::fuchsia::ui::viewsv1::ViewManager* view_manager,
-                             fuchsia::ui::scenic::Scenic* scenic,
+Presentation1::Presentation1(fuchsia::ui::scenic::Scenic* scenic,
                              scenic::Session* session,
                              scenic::ResourceId compositor_id,
+                             zx::eventpair view_holder_token,
                              RendererParams renderer_params,
                              int32_t display_startup_rotation_adjustment,
                              component::StartupContext* startup_context)
-    : view_manager_(view_manager),
-      scenic_(scenic),
+    : scenic_(scenic),
       session_(session),
       compositor_id_(compositor_id),
       layer_(session_),
@@ -80,10 +79,20 @@ Presentation1::Presentation1(::fuchsia::ui::viewsv1::ViewManager* view_manager,
       HACK_legacy_input_path_(true),
       weak_factory_(this) {
   FXL_DCHECK(compositor_id != 0);
+
+  // Connect to the ViewManager.
+  startup_context_->ConnectToEnvironmentService(view_manager_.NewRequest());
+  view_manager_.set_error_handler([this](zx_status_t error) {
+    FXL_LOG(ERROR) << "Root presenter: ViewManager terminated unexpectedly.";
+    Shutdown();
+  });
+
+  // Set up the compositor for this presentation.
   renderer_.SetCamera(camera_);
   layer_.SetRenderer(renderer_);
   scene_.AddChild(root_view_host_node_);
 
+  // Create the root view's scene.
   scene_.AddLight(ambient_light_);
   scene_.AddLight(directional_light_);
   ambient_light_.SetColor(0.3f, 0.3f, 0.3f);
@@ -92,11 +101,80 @@ Presentation1::Presentation1(::fuchsia::ui::viewsv1::ViewManager* view_manager,
   directional_light_.SetDirection(light_direction_.x, light_direction_.y,
                                   light_direction_.z);
 
+  // Create host nodes for the views.
   root_view_host_node_.ExportAsRequest(&root_view_host_import_token_);
   root_view_parent_node_.BindAsRequest(&root_view_parent_export_token_);
   root_view_parent_node_.AddChild(content_view_host_node_);
   content_view_host_node_.ExportAsRequest(&content_view_host_import_token_);
   cursor_material_.SetColor(0xff, 0x00, 0xff, 0xff);
+
+  // Listen to events on the root view.
+  fuchsia::ui::viewsv1::ViewListenerPtr root_view_listener;
+  fuchsia::ui::viewsv1::ViewContainerListenerPtr view_container_listener;
+  view_listener_binding_.Bind(root_view_listener.NewRequest());
+  view_container_listener_binding_.Bind(view_container_listener.NewRequest());
+
+  // Create root view.
+  zx::eventpair root_view_token, root_view_holder_token;
+  if (zx::eventpair::create(0u, &root_view_token, &root_view_holder_token) !=
+      ZX_OK)
+    FXL_NOTREACHED() << "Failed to create view tokens";
+  view_manager_->CreateView2(
+      root_view_.NewRequest(), std::move(root_view_token),
+      std::move(root_view_listener), std::move(root_view_parent_export_token_),
+      "RootView");
+  root_view_->GetContainer(root_container_.NewRequest());
+  root_container_->SetListener(std::move(view_container_listener));
+
+  // Attach content view to root view.
+  root_container_->AddChild2(kContentViewKey, std::move(view_holder_token),
+                             std::move(content_view_host_import_token_));
+  root_container_->SetChildProperties(
+      kContentViewKey, fuchsia::ui::viewsv1::ViewProperties::New());
+
+  // Register the view tree.
+  fuchsia::ui::viewsv1::ViewTreeListenerPtr tree_listener;
+  tree_listener_binding_.Bind(tree_listener.NewRequest());
+  view_manager_->CreateViewTree(tree_.NewRequest(), std::move(tree_listener),
+                                "Presentation");
+  tree_.set_error_handler([this](zx_status_t error) {
+    FXL_LOG(ERROR) << "Root presenter: View tree connection error.";
+    Shutdown();
+  });
+  tree_->GetToken([this](fuchsia::ui::viewsv1::ViewTreeToken token) {
+    current_view_tree_ = token;
+    if (a11y_input_connection_) {
+      a11y_input_connection_->RegisterPresentation(std::move(token));
+    }
+  });
+
+  // Prepare the view tree's container for the root.
+  tree_->GetContainer(tree_container_.NewRequest());
+  tree_container_.set_error_handler([this](zx_status_t error) {
+    FXL_LOG(ERROR) << "Root presenter: Tree view container connection error.";
+    Shutdown();
+  });
+  fuchsia::ui::viewsv1::ViewContainerListenerPtr tree_container_listener;
+  tree_container_listener_binding_.Bind(tree_container_listener.NewRequest());
+  tree_container_->SetListener(std::move(tree_container_listener));
+
+  // Get view tree services.
+  fuchsia::sys::ServiceProviderPtr tree_service_provider;
+  tree_->GetServiceProvider(tree_service_provider.NewRequest());
+  input_dispatcher_ =
+      component::ConnectToService<fuchsia::ui::input::InputDispatcher>(
+          tree_service_provider.get());
+  input_dispatcher_.set_error_handler([this](zx_status_t error) {
+    // This isn't considered a fatal error right now since it is still useful
+    // to be able to test a view system that has graphics but no input.
+    FXL_LOG(WARNING)
+        << "Input dispatcher connection error, input will not work.";
+    input_dispatcher_.Unbind();
+  });
+
+  // Attach root view to view tree.
+  tree_container_->AddChild2(kRootViewKey, std::move(root_view_holder_token),
+                             std::move(root_view_host_import_token_));
 
   // Set up |a11y_toggle_| to listen for turning on/off a11y support.
   {
@@ -156,11 +234,9 @@ void Presentation1::OverrideRendererParams(RendererParams renderer_params,
 Presentation1::~Presentation1() {}
 
 void Presentation1::Present(
-    zx::eventpair view_owner_token,
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
         presentation_request,
     YieldCallback yield_callback, ShutdownCallback shutdown_callback) {
-  FXL_DCHECK(view_owner_token);
   FXL_DCHECK(!display_model_initialized_);
 
   yield_callback_ = std::move(yield_callback);
@@ -168,95 +244,16 @@ void Presentation1::Present(
 
   scenic_->GetDisplayInfo(fxl::MakeCopyable(
       [weak = weak_factory_.GetWeakPtr(),
-       view_owner_token = std::move(view_owner_token),
        presentation_request = std::move(presentation_request)](
           fuchsia::ui::gfx::DisplayInfo display_info) mutable {
-        if (weak)
-          weak->CreateViewTree(std::move(view_owner_token),
-                               std::move(presentation_request),
-                               std::move(display_info));
+        if (weak) {
+          weak->presentation_binding_.Bind(std::move(presentation_request));
+
+          // Get display parameters and propagate values appropriately.
+          weak->InitializeDisplayModel(std::move(display_info));
+          weak->PresentScene();
+        }
       }));
-}
-
-void Presentation1::CreateViewTree(
-    zx::eventpair view_owner_token,
-    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
-        presentation_request,
-    fuchsia::ui::gfx::DisplayInfo display_info) {
-  if (presentation_request) {
-    presentation_binding_.Bind(std::move(presentation_request));
-  }
-
-  // Register the view tree.
-  ::fuchsia::ui::viewsv1::ViewTreeListenerPtr tree_listener;
-  tree_listener_binding_.Bind(tree_listener.NewRequest());
-  view_manager_->CreateViewTree(tree_.NewRequest(), std::move(tree_listener),
-                                "Presentation");
-  tree_.set_error_handler([this](zx_status_t error) {
-    FXL_LOG(ERROR) << "Root presenter: View tree connection error.";
-    Shutdown();
-  });
-
-  tree_->GetToken([this](fuchsia::ui::viewsv1::ViewTreeToken token) {
-    current_view_tree_ = token;
-    if (a11y_input_connection_) {
-      a11y_input_connection_->RegisterPresentation(std::move(token));
-    }
-  });
-
-  // Prepare the view container for the root.
-  tree_->GetContainer(tree_container_.NewRequest());
-  tree_container_.set_error_handler([this](zx_status_t error) {
-    FXL_LOG(ERROR) << "Root presenter: Tree view container connection error.";
-    Shutdown();
-  });
-  ::fuchsia::ui::viewsv1::ViewContainerListenerPtr tree_container_listener;
-  tree_container_listener_binding_.Bind(tree_container_listener.NewRequest());
-  tree_container_->SetListener(std::move(tree_container_listener));
-
-  // Get view tree services.
-  fuchsia::sys::ServiceProviderPtr tree_service_provider;
-  tree_->GetServiceProvider(tree_service_provider.NewRequest());
-  input_dispatcher_ =
-      component::ConnectToService<fuchsia::ui::input::InputDispatcher>(
-          tree_service_provider.get());
-  input_dispatcher_.set_error_handler([this](zx_status_t error) {
-    // This isn't considered a fatal error right now since it is still useful
-    // to be able to test a view system that has graphics but no input.
-    FXL_LOG(WARNING)
-        << "Input dispatcher connection error, input will not work.";
-    input_dispatcher_.Unbind();
-  });
-
-  // Create root view.
-  zx::eventpair root_view_owner_token, root_view_token;
-  FXL_CHECK(zx::eventpair::create(0, &root_view_owner_token,
-                                  &root_view_token) == ZX_OK);
-  ::fuchsia::ui::viewsv1::ViewListenerPtr root_view_listener;
-  view_listener_binding_.Bind(root_view_listener.NewRequest());
-  view_manager_->CreateView2(
-      root_view_.NewRequest(), std::move(root_view_token),
-      std::move(root_view_listener), std::move(root_view_parent_export_token_),
-      "RootView");
-  root_view_->GetContainer(root_container_.NewRequest());
-
-  // Attach root view to view tree.
-  tree_container_->AddChild2(kRootViewKey, std::move(root_view_owner_token),
-                             std::move(root_view_host_import_token_));
-
-  // Get display parameters and propagate values appropriately.
-  InitializeDisplayModel(std::move(display_info));
-
-  // Add content view to root view.
-  ::fuchsia::ui::viewsv1::ViewContainerListenerPtr view_container_listener;
-  view_container_listener_binding_.Bind(view_container_listener.NewRequest());
-  root_container_->SetListener(std::move(view_container_listener));
-  root_container_->AddChild2(kContentViewKey, std::move(view_owner_token),
-                             std::move(content_view_host_import_token_));
-  root_container_->SetChildProperties(
-      kContentViewKey, ::fuchsia::ui::viewsv1::ViewProperties::New());
-
-  PresentScene();
 }
 
 void Presentation1::InitializeDisplayModel(

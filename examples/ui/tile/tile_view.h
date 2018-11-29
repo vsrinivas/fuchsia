@@ -10,7 +10,6 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <zx/eventpair.h>
 #include <map>
 #include <memory>
@@ -44,8 +43,8 @@ class TileView : public scenic::V1BaseView,
     scenic::EntityNode host_node;
     scenic::ShapeNode clip_shape_node;
 
-    ::fuchsia::ui::viewsv1::ViewProperties view_properties;
-    ::fuchsia::ui::viewsv1::ViewInfo view_info;
+    fuchsia::ui::viewsv1::ViewProperties view_properties;
+    fuchsia::ui::viewsv1::ViewInfo view_info;
   };
 
   // |scenic::V1BaseView|
@@ -56,17 +55,13 @@ class TileView : public scenic::V1BaseView,
   void OnSceneInvalidated(
       fuchsia::images::PresentationInfo presentation_info) override;
 
-  // |Presenter|:
-  void Present(
-      fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner> view_owner,
-      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation)
-      final;
+  // |fuchsia::ui::policy::Presenter|
   void Present2(zx::eventpair view_owner_token,
                 fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
                     presentation) final;
   void HACK_SetRendererParams(
       bool enable_clipping,
-      ::fidl::VectorPtr<fuchsia::ui::gfx::RendererParam> params) override {}
+      fidl::VectorPtr<fuchsia::ui::gfx::RendererParam> params) override {}
   void HACK_SetInputPath(bool use_legacy) override {}
   void HACK_QueryInputPath(HACK_QueryInputPathCallback callback) override {}
 

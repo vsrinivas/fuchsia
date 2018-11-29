@@ -8,7 +8,6 @@
 #include <cstdlib>
 #include <string>
 
-#include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 
 #include "lib/component/cpp/connect.h"
@@ -81,15 +80,7 @@ Presentation::ShutdownCallback App::GetShutdownCallback(
   });
 }
 
-void App::Present(fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner>
-                      view_owner_handle,
-                  fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
-                      presentation_request) {
-  Present2(zx::eventpair(view_owner_handle.TakeChannel().release()),
-           std::move(presentation_request));
-}
-
-void App::Present2(zx::eventpair view_owner_token,
+void App::Present2(zx::eventpair view_holder_token,
                    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
                        presentation_request) {
   InitializeServices();
@@ -107,11 +98,10 @@ void App::Present2(zx::eventpair view_owner_token,
   }
 
   auto presentation = std::make_unique<Presentation1>(
-      view_manager_.get(), scenic_.get(), session_.get(), compositor_->id(),
-      renderer_params_, display_startup_rotation_adjustment,
-      startup_context_.get());
-  presentation->Present(std::move(view_owner_token),
-                        std::move(presentation_request), GetYieldCallback(),
+      scenic_.get(), session_.get(), compositor_->id(),
+      std::move(view_holder_token), renderer_params_,
+      display_startup_rotation_adjustment, startup_context_.get());
+  presentation->Present(std::move(presentation_request), GetYieldCallback(),
                         GetShutdownCallback(presentation.get()));
 
   presentation->HACK_SetInputPath(HACK_legacy_input_path_);
@@ -263,22 +253,16 @@ void App::OnReport(mozart::InputDeviceImpl* input_device,
 }
 
 void App::InitializeServices() {
-  if (!view_manager_) {
-    startup_context_->ConnectToEnvironmentService(view_manager_.NewRequest());
-    view_manager_.set_error_handler([this](zx_status_t error) {
-      FXL_LOG(ERROR) << "ViewManager died, destroying view trees.";
-      Reset();
-    });
-
-    view_manager_->GetScenic(scenic_.NewRequest());
+  if (!scenic_) {
+    startup_context_->ConnectToEnvironmentService(scenic_.NewRequest());
     scenic_.set_error_handler([this](zx_status_t error) {
-      FXL_LOG(ERROR) << "Scenic died, destroying view trees.";
+      FXL_LOG(ERROR) << "Scenic died, destroying all presentations.";
       Reset();
     });
 
     session_ = std::make_unique<scenic::Session>(scenic_.get());
     session_->set_error_handler([this](zx_status_t error) {
-      FXL_LOG(ERROR) << "Session died, destroying view trees.";
+      FXL_LOG(ERROR) << "Session died, destroying all presentations.";
       Reset();
     });
 
@@ -306,7 +290,6 @@ void App::InitializeServices() {
 void App::Reset() {
   presentations_.clear();  // must be first, holds pointers to services
   active_presentation_idx_ = std::numeric_limits<size_t>::max();
-  view_manager_.Unbind();
   layer_stack_ = nullptr;
   compositor_ = nullptr;
   session_ = nullptr;

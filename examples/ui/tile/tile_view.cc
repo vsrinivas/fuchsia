@@ -29,17 +29,10 @@ TileView::TileView(scenic::ViewContext context, TileParams params)
 
 TileView::~TileView() {}
 
-void TileView::Present(
-    fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner> view_owner,
-    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation) {
-  Present2(zx::eventpair(view_owner.TakeChannel().release()),
-           std::move(presentation));
-}
-
 void TileView::Present2(
-    zx::eventpair view_owner_token,
+    zx::eventpair view_holder_token,
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation) {
-  AddChildView(std::move(view_owner_token), nullptr);
+  AddChildView(std::move(view_holder_token), nullptr);
 }
 
 void TileView::ConnectViews() {
@@ -63,21 +56,20 @@ void TileView::ConnectViews() {
       }
     }
 
-    // |env_launcher_| launches the app with our nested environment.
+    // |env_launcher_| launches the component with our nested environment.
     env_launcher_->CreateComponent(std::move(launch_info),
                                    controller.NewRequest());
 
-    // Get the view provider back from the launched app.
+    // Create a View from the launched component.
+    zx::eventpair view_token, view_holder_token;
+    if (zx::eventpair::create(0u, &view_token, &view_holder_token) != ZX_OK)
+      FXL_NOTREACHED() << "Failed to create view tokens";
     auto view_provider =
-        services.ConnectToService<::fuchsia::ui::viewsv1::ViewProvider>();
-
-    fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner>
-        child_view_owner;
-    view_provider->CreateView(child_view_owner.NewRequest(), nullptr);
+        services.ConnectToService<fuchsia::ui::app::ViewProvider>();
+    view_provider->CreateView(std::move(view_token), nullptr, nullptr);
 
     // Add the view, which increments child_key_.
-    AddChildView(zx::eventpair(child_view_owner.TakeChannel().release()),
-                 std::move(controller));
+    AddChildView(std::move(view_holder_token), std::move(controller));
   }
 }
 
@@ -123,7 +115,7 @@ void TileView::OnChildUnavailable(uint32_t child_key) {
   RemoveChildView(child_key);
 }
 
-void TileView::AddChildView(zx::eventpair view_owner_token,
+void TileView::AddChildView(zx::eventpair view_holder_token,
                             fuchsia::sys::ComponentControllerPtr controller) {
   const uint32_t view_key = next_child_view_key_++;
 
@@ -139,7 +131,7 @@ void TileView::AddChildView(zx::eventpair view_owner_token,
 
   views_.emplace(view_key, std::move(view_data));
 
-  GetViewContainer()->AddChild2(view_key, std::move(view_owner_token),
+  GetViewContainer()->AddChild2(view_key, std::move(view_holder_token),
                                 std::move(host_import_token));
   InvalidateScene();
 }

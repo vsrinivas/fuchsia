@@ -12,7 +12,6 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 
 #include "garnet/bin/ui/input_reader/input_reader.h"
 #include "garnet/bin/ui/root_presenter/presentation1.h"
@@ -49,20 +48,14 @@ class App : public fuchsia::ui::policy::Presenter,
 
  private:
   // |Presenter|
-  void Present(
-      fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner> view_owner,
-      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
-          presentation_request) final;
-
-  // |Presenter|
-  void Present2(zx::eventpair view_owner_token,
+  void Present2(zx::eventpair view_holder_token,
                 fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
                     presentation_request) final;
 
   // |Presenter|
   void HACK_SetRendererParams(
       bool enable_clipping,
-      ::fidl::VectorPtr<fuchsia::ui::gfx::RendererParam> params) override;
+      fidl::VectorPtr<fuchsia::ui::gfx::RendererParam> params) override;
 
   // |Presenter|
   void HACK_SetInputPath(bool use_legacy) override;
@@ -72,7 +65,7 @@ class App : public fuchsia::ui::policy::Presenter,
 
   // |Presenter2|
   void PresentView(zx::eventpair view_holder_token,
-                   ::fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
+                   fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
                        presentation_request) override;
 
   // |InputDeviceRegistry|
@@ -99,10 +92,9 @@ class App : public fuchsia::ui::policy::Presenter,
       input_receiver_bindings_;
   mozart::InputReader input_reader_;
 
-  ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
-
   std::unique_ptr<scenic::Session> session_;
+
   // Today, we have a global, singleton compositor, and it is managed solely by
   // a root presenter. Hence, a single resource ID is sufficient to identify it.
   // Additionally, it is a system invariant that any compositor is created and

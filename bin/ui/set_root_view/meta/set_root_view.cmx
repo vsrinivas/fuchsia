@@ -4,8 +4,9 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
-            "fuchsia.ui.viewsv1.ViewProvider",
+            "fuchsia.tracelink.Registry",
             "fuchsia.ui.policy.Presenter"
         ]
     }

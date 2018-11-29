@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/ui/app/cpp/fidl.h>
+#include <fuchsia/ui/policy/cpp/fidl.h>
+
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/eventpair.h>
 
-#include <fuchsia/ui/policy/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
@@ -40,10 +42,19 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
+  bool input_path = true;
+  {
+    auto input_path_arg =
+        command_line.GetOptionValueWithDefault("input_path", "old");
+    input_path = input_path_arg != "new";
+    FXL_LOG(INFO) << "set_root_view requesting input delivery by: "
+                  << (input_path ? "ViewManager" : "Scenic");
+  }
+
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto startup_context_ = component::StartupContext::CreateFromStartupInfo();
 
-  // Launch application.
+  // Launch the component.
   component::Services services;
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = positional_args[0];
@@ -54,21 +65,24 @@ int main(int argc, const char** argv) {
   startup_context_->launcher()->CreateComponent(std::move(launch_info),
                                                 controller.NewRequest());
   controller.set_error_handler([&loop](zx_status_t status) {
-    FXL_LOG(INFO) << "Launched application terminated.";
+    FXL_LOG(INFO) << "Launched component terminated.";
     loop.Quit();
   });
 
-  // Create the view.
-  fidl::InterfacePtr<::fuchsia::ui::viewsv1::ViewProvider> view_provider;
-  services.ConnectToService(view_provider.NewRequest());
-  fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner> view_owner;
-  view_provider->CreateView(view_owner.NewRequest(), nullptr);
+  // Create a View from the launched component.
+  zx::eventpair view_token, view_holder_token;
+  if (zx::eventpair::create(0u, &view_token, &view_holder_token) != ZX_OK)
+    FXL_NOTREACHED() << "Failed to create view tokens";
+  auto view_provider =
+      services.ConnectToService<fuchsia::ui::app::ViewProvider>();
+  view_provider->CreateView(std::move(view_token), nullptr, nullptr);
 
   // Ask the presenter to display it.
   auto presenter =
       startup_context_
           ->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>();
-  presenter->Present(std::move(view_owner), nullptr);
+  presenter->Present2(std::move(view_holder_token), nullptr);
+  presenter->HACK_SetInputPath(input_path);
 
   // Done!
   loop.Run();

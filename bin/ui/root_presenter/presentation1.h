@@ -73,10 +73,9 @@ class Presentation1 : private ::fuchsia::ui::viewsv1::ViewTreeListener,
                       private ::fuchsia::ui::viewsv1::ViewContainerListener,
                       public Presentation {
  public:
-  Presentation1(::fuchsia::ui::viewsv1::ViewManager* view_manager,
-                fuchsia::ui::scenic::Scenic* scenic, scenic::Session* session,
+  Presentation1(fuchsia::ui::scenic::Scenic* scenic, scenic::Session* session,
                 scenic::ResourceId compositor_id,
-                RendererParams renderer_params,
+                zx::eventpair view_holder_token, RendererParams renderer_params,
                 int32_t display_startup_rotation_adjustment,
                 component::StartupContext* startup_context);
 
@@ -86,8 +85,7 @@ class Presentation1 : private ::fuchsia::ui::viewsv1::ViewTreeListener,
   // Invokes the callback if an error occurs.
   // This method must be called at most once for the lifetime of the
   // presentation.
-  void Present(zx::eventpair view_owner_token,
-               fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
+  void Present(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
                    presentation_request,
                YieldCallback yield_callback,
                ShutdownCallback shutdown_callback);
@@ -224,11 +222,6 @@ class Presentation1 : private ::fuchsia::ui::viewsv1::ViewTreeListener,
       fidl::InterfaceHandle<fuchsia::ui::policy::PresentationModeListener>
           listener) override;
 
-  void CreateViewTree(zx::eventpair view_owner_token,
-                      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
-                          presentation_request,
-                      fuchsia::ui::gfx::DisplayInfo display_info);
-
   // Returns true if the event was consumed and the scene is to be invalidated.
   bool GlobalHooksHandleEvent(const fuchsia::ui::input::InputEvent& event);
 
@@ -245,7 +238,7 @@ class Presentation1 : private ::fuchsia::ui::viewsv1::ViewTreeListener,
   void PresentScene();
   void Shutdown();
 
-  ::fuchsia::ui::viewsv1::ViewManager* const view_manager_;
+  fuchsia::ui::viewsv1::ViewManagerPtr view_manager_;
   fuchsia::ui::scenic::Scenic* const scenic_;
   scenic::Session* const session_;
   scenic::ResourceId compositor_id_;
