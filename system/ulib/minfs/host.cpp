@@ -107,13 +107,13 @@ struct fakeFs {
 int emu_mkfs(const char* path) {
     fbl::unique_fd fd(open(path, O_RDWR));
     if (!fd) {
-        fprintf(stderr, "error: could not open path %s\n", path);
+        FS_TRACE_ERROR("error: could not open path %s\n", path);
         return -1;
     }
 
     struct stat s;
     if (fstat(fd.get(), &s) < 0) {
-        fprintf(stderr, "error: minfs could not find end of file/device\n");
+        FS_TRACE_ERROR("error: minfs could not find end of file/device\n");
         return -1;
     }
 
@@ -121,7 +121,7 @@ int emu_mkfs(const char* path) {
 
     fbl::unique_ptr<minfs::Bcache> bc;
     if (minfs::Bcache::Create(&bc, std::move(fd), (uint32_t) size) < 0) {
-        fprintf(stderr, "error: cannot create block cache\n");
+        FS_TRACE_ERROR("error: cannot create block cache\n");
         return -1;
     }
 
@@ -131,13 +131,13 @@ int emu_mkfs(const char* path) {
 int emu_mount(const char* path) {
     fbl::unique_fd fd(open(path, O_RDWR));
     if (!fd) {
-        fprintf(stderr, "error: could not open path %s\n", path);
+        FS_TRACE_ERROR("error: could not open path %s\n", path);
         return -1;
     }
 
     struct stat s;
     if (fstat(fd.get(), &s) < 0) {
-        fprintf(stderr, "error: minfs could not find end of file/device\n");
+        FS_TRACE_ERROR("error: minfs could not find end of file/device\n");
         return 0;
     }
 
@@ -145,7 +145,7 @@ int emu_mount(const char* path) {
 
     fbl::unique_ptr<minfs::Bcache> bc;
     if (minfs::Bcache::Create(&bc, std::move(fd), (uint32_t) size) < 0) {
-        fprintf(stderr, "error: cannot create block cache\n");
+        FS_TRACE_ERROR("error: cannot create block cache\n");
         return -1;
     }
 

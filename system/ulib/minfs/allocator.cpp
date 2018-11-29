@@ -190,7 +190,7 @@ zx_status_t Allocator::Extend(WriteTxn* txn) {
         // TODO(smklein): Grow the bitmap another slice.
         // TODO(planders): Once we start growing the [block] bitmap,
         //                 we will need to start growing the journal as well.
-        fprintf(stderr, "Minfs allocator needs to increase bitmap size\n");
+        FS_TRACE_ERROR("Minfs allocator needs to increase bitmap size\n");
         return ZX_ERR_NO_SPACE;
     }
 
@@ -201,13 +201,13 @@ zx_status_t Allocator::Extend(WriteTxn* txn) {
 
     zx_status_t status;
     if ((status = bc_->FVMExtend(&request)) != ZX_OK) {
-        fprintf(stderr, "minfs::Allocator::Extend failed to grow (on disk): %d\n", status);
+        FS_TRACE_ERROR("minfs::Allocator::Extend failed to grow (on disk): %d\n", status);
         return status;
     }
 
     if (grow_cb_) {
         if ((status = grow_cb_(pool_size)) != ZX_OK) {
-            fprintf(stderr, "minfs::Allocator grow callback failure: %d\n", status);
+            FS_TRACE_ERROR("minfs::Allocator grow callback failure: %d\n", status);
             return status;
         }
     }
@@ -216,7 +216,7 @@ zx_status_t Allocator::Extend(WriteTxn* txn) {
     ZX_DEBUG_ASSERT(pool_size >= map_.size());
     size_t old_pool_size = map_.size();
     if ((status = map_.Grow(fbl::round_up(pool_size, kMinfsBlockBits))) != ZX_OK) {
-        fprintf(stderr, "minfs::Allocator failed to Grow (in memory): %d\n", status);
+        FS_TRACE_ERROR("minfs::Allocator failed to Grow (in memory): %d\n", status);
         return ZX_ERR_NO_SPACE;
     }
     // Grow before shrinking to ensure the underlying storage is a multiple

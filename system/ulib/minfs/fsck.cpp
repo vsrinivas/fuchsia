@@ -13,13 +13,6 @@
 #include "minfs-private.h"
 #include <utility>
 
-// #define DEBUG_PRINTF
-#ifdef DEBUG_PRINTF
-#define xprintf(args...) fprintf(stderr, args)
-#else
-#define xprintf(args...)
-#endif
-
 namespace minfs {
 
 class MinfsChecker {
@@ -210,7 +203,7 @@ zx_status_t MinfsChecker::CheckDirectory(Inode* inode, ino_t ino,
         }
         if (de->ino == 0) {
             if (flags & CD_DUMP) {
-                xprintf("ino#%u: de[%u]: <empty> reclen=%u\n", ino, eno, rlen);
+                FS_TRACE_DEBUG("ino#%u: de[%u]: <empty> reclen=%u\n", ino, eno, rlen);
             }
         } else {
             // Re-read the dirent to acquire the full name
@@ -249,7 +242,7 @@ zx_status_t MinfsChecker::CheckDirectory(Inode* inode, ino_t ino,
             }
             //TODO: check for cycles (non-dot/dotdot dir ref already in checked bitmap)
             if (flags & CD_DUMP) {
-                xprintf("ino#%u: de[%u]: ino=%u type=%u '%.*s' %s\n", ino, eno, de->ino, de->type,
+                FS_TRACE_DEBUG("ino#%u: de[%u]: ino=%u type=%u '%.*s' %s\n", ino, eno, de->ino, de->type,
                         de->namelen, de->name, is_last ? "[last]" : "");
             }
 
@@ -299,11 +292,11 @@ const char* MinfsChecker::CheckDataBlock(blk_t bno) {
 }
 
 zx_status_t MinfsChecker::CheckFile(Inode* inode, ino_t ino) {
-    xprintf("Direct blocks: \n");
+    FS_TRACE_DEBUG("Direct blocks: \n");
     for (unsigned n = 0; n < kMinfsDirect; n++) {
-        xprintf(" %d,", inode->dnum[n]);
+        FS_TRACE_DEBUG(" %d,", inode->dnum[n]);
     }
-    xprintf(" ...\n");
+    FS_TRACE_DEBUG(" ...\n");
 
     uint32_t block_count = 0;
 
@@ -451,7 +444,7 @@ zx_status_t MinfsChecker::CheckInode(ino_t ino, ino_t parent, bool dot_or_dotdot
     }
 
     if (inode.magic == kMinfsMagicDir) {
-        xprintf("ino#%u: DIR blks=%u links=%u\n", ino, inode.block_count, inode.link_count);
+        FS_TRACE_DEBUG("ino#%u: DIR blks=%u links=%u\n", ino, inode.block_count, inode.link_count);
         if ((status = CheckFile(&inode, ino)) < 0) {
             return status;
         }
@@ -462,7 +455,7 @@ zx_status_t MinfsChecker::CheckInode(ino_t ino, ino_t parent, bool dot_or_dotdot
             return status;
         }
     } else {
-        xprintf("ino#%u: FILE blks=%u links=%u size=%u\n", ino, inode.block_count, inode.link_count,
+        FS_TRACE_DEBUG("ino#%u: FILE blks=%u links=%u size=%u\n", ino, inode.block_count, inode.link_count,
                 inode.size);
         if ((status = CheckFile(&inode, ino)) < 0) {
             return status;
