@@ -149,6 +149,7 @@ executable("story_storage_unittest") {
 
   deps = [
     ":story_storage",
+    "//peridot/lib/entity:entity_watcher",
     "//peridot/lib/testing:test_with_ledger",
     "//peridot/public/fidl/fuchsia.ledger",
     "//peridot/public/lib/async/cpp:future",

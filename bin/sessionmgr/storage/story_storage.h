@@ -9,6 +9,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async/cpp/future.h>
+#include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/fit/defer.h>
 
 #include "peridot/lib/ledger_client/ledger_client.h"
@@ -161,23 +162,15 @@ class StoryStorage : public PageClient {
   FuturePtr<Status, fuchsia::mem::BufferPtr> GetEntityData(
       const std::string& cookie, const std::string& type);
 
-  // A callback which is used to notify watchers of updates to Entity data.
-  //
-  // |cookie| The cookie for the Entity which was updated.
-  // |value| The new Entity data.
-  using EntityUpdatedCallback = std::function<void(const std::string& cookie,
-                                                   fuchsia::mem::Buffer value)>;
-
-  // A fit::deferred_action which is used to remove Entity watchers.
-  using EntityWatcherAutoCancel = fit::deferred_action<std::function<void()>>;
-
-  // Registers a watcher for an Entity and returns an EntityWatcherAutoCancel.
-  // Updates will be sent as long as the EntityWatcherAutoCancel stays alive.
+  // Registers a watcher for an Entity. The EntityWatcher is notified of data
+  // changes until it is closed.
   //
   // |cookie| The Entity cookie.
-  // |callback| The callback which gets called when an update is received.
-  EntityWatcherAutoCancel WatchEntity(const std::string& cookie,
-                                      EntityUpdatedCallback callback);
+  // |type| The type of the observed entity data.
+  // |watcher| The entity watcher which will get notified of updates to the
+  // entity stored under |cookie|.
+  void WatchEntity(const std::string& cookie, const std::string& type,
+                   fuchsia::modular::EntityWatcherPtr watcher);
 
   // Sets the |entity_name| of the Entity associated with |cookie|.
   //
@@ -237,9 +230,10 @@ class StoryStorage : public PageClient {
   // the same Link.
   std::multimap<std::string, LinkUpdatedCallback> link_watchers_;
 
-  // A map of Entity ledger key -> watcher callback. Multiple clients can watche
-  // the same Entity.
-  std::multimap<std::string, EntityUpdatedCallback> entity_watchers_;
+  // A map of Entity cookie (i.e. Ledger key) -> set of watchers. Multiple
+  // watchers can watch the same entity.
+  std::map<std::string, fidl::InterfacePtrSet<fuchsia::modular::EntityWatcher>>
+      entity_watchers_;
 
   // A map of ledger (key, value) to (vec of future). When we see a
   // notification in OnPageChange() for a matching (key, value), we complete

@@ -40,11 +40,7 @@ interface EntityWatcher {
     /// from absent to present at most once, as there is no deletion.
     ///
     /// No deduplication is performed.
-    ///
-    /// At most one update will be in-flight at a time; once a client is ready
-    /// for another update, it should call the callback. At most one update will
-    /// be queued for dispatch; older updates will be dropped.
-    1: OnUpdated(fuchsia.mem.Buffer? data) -> ();
+    1: OnUpdated(fuchsia.mem.Buffer? data);
 };
 
 enum EntityWriteStatus {

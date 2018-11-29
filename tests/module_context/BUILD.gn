@@ -81,6 +81,7 @@ executable_package("module_context_test_entity_module") {
   deps = [
     ":defs",
     "//garnet/public/fidl/fuchsia.ui.viewsv1",
+    "//peridot/lib/entity:entity_watcher",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:component_base",
     "//peridot/public/fidl/fuchsia.modular",

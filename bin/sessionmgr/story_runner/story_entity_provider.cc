@@ -4,7 +4,9 @@
 
 #include "peridot/bin/sessionmgr/story_runner/story_entity_provider.h"
 
+#include <lib/fxl/functional/make_copyable.h>
 #include <lib/fxl/random/uuid.h>
+#include <utility>
 
 namespace modular {
 
@@ -79,8 +81,8 @@ void StoryEntityProvider::WriteData(fidl::StringPtr cookie,
 void StoryEntityProvider::Watch(
     fidl::StringPtr cookie, fidl::StringPtr type,
     fidl::InterfaceHandle<fuchsia::modular::EntityWatcher> watcher) {
-  // TODO(MF-92)
-  FXL_NOTIMPLEMENTED();
+  fuchsia::modular::EntityWatcherPtr entity_watcher = watcher.Bind();
+  story_storage_->WatchEntity(cookie, type, std::move(entity_watcher));
 }
 
 }  // namespace modular

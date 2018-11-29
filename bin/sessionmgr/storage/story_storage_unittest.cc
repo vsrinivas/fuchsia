@@ -10,6 +10,7 @@
 #include <lib/fsl/vmo/strings.h>
 
 #include "gtest/gtest.h"
+#include "peridot/lib/entity/entity_watcher_impl.h"
 #include "peridot/lib/ledger_client/page_id.h"
 #include "peridot/lib/testing/test_with_ledger.h"
 
@@ -25,6 +26,7 @@ class StoryStorageTest : public testing::TestWithLedger {
     return std::make_unique<StoryStorage>(ledger_client(), MakePageId(page_id));
   }
 };
+
 ModuleData Clone(const ModuleData& data) {
   ModuleData dup;
   data.Clone(&dup);
@@ -652,17 +654,29 @@ TEST_F(StoryStorageTest, WatchEntityData) {
   FXL_CHECK(fsl::VmoFromString(data_string, &buffer));
 
   bool saw_entity_update{};
-  auto watcher = storage->WatchEntity(
-      expected_cookie,
-      [&](const std::string& cookie, fuchsia::mem::Buffer value) {
-        EXPECT_EQ(cookie, expected_cookie);
+  bool saw_entity_update_with_no_data{};
+  auto watcher_impl =
+      EntityWatcherImpl([&](std::unique_ptr<fuchsia::mem::Buffer> value) {
+        // Verify that the first callback is called with no data, since the
+        // entity data has yet to be set.
+        if (!value && !saw_entity_update_with_no_data) {
+          saw_entity_update_with_no_data = true;
+          return;
+        }
+
+        ASSERT_TRUE(value) << "Saw multiple empty entity updates.";
 
         std::string read_data;
-        EXPECT_TRUE(fsl::StringFromVmo(value, &read_data));
+        EXPECT_TRUE(fsl::StringFromVmo(*value, &read_data));
         EXPECT_EQ(read_data, data_string);
 
         saw_entity_update = true;
       });
+
+  fuchsia::modular::EntityWatcherPtr watcher_ptr;
+  watcher_impl.Connect(watcher_ptr.NewRequest());
+
+  storage->WatchEntity(expected_cookie, expected_type, std::move(watcher_ptr));
 
   bool created_entity{};
   storage->SetEntityData(expected_cookie, expected_type, std::move(buffer))
@@ -671,7 +685,8 @@ TEST_F(StoryStorageTest, WatchEntityData) {
         created_entity = true;
       });
   RunLoopUntil([&] { return created_entity; });
-  RunLoopUntil([&, watcher = std::move(watcher)] { return saw_entity_update; });
+  RunLoopUntil([&] { return saw_entity_update; });
+  EXPECT_TRUE(saw_entity_update_with_no_data);
 }
 
 // Creates an entity with multiple watchers and verifies that updates to the
@@ -686,30 +701,43 @@ TEST_F(StoryStorageTest, WatchEntityDataMultipleWatchers) {
   FXL_CHECK(fsl::VmoFromString(data_string, &buffer));
 
   bool saw_entity_update{};
-  auto watcher = storage->WatchEntity(
-      expected_cookie,
-      [&](const std::string& cookie, fuchsia::mem::Buffer value) {
-        EXPECT_EQ(cookie, expected_cookie);
+  auto watcher_impl =
+      EntityWatcherImpl([&](std::unique_ptr<fuchsia::mem::Buffer> value) {
+        if (!value) {
+          // The first update may not contain any data, so skip it.
+          return;
+        }
 
         std::string read_data;
-        EXPECT_TRUE(fsl::StringFromVmo(value, &read_data));
+        EXPECT_TRUE(fsl::StringFromVmo(*value, &read_data));
         EXPECT_EQ(read_data, data_string);
 
         saw_entity_update = true;
       });
 
+  fuchsia::modular::EntityWatcherPtr watcher_ptr;
+  watcher_impl.Connect(watcher_ptr.NewRequest());
+  storage->WatchEntity(expected_cookie, expected_type, std::move(watcher_ptr));
+
   bool saw_entity_update_too{};
-  auto second_watcher = storage->WatchEntity(
-      expected_cookie,
-      [&](const std::string& cookie, fuchsia::mem::Buffer value) {
-        EXPECT_EQ(cookie, expected_cookie);
+  auto second_watcher_impl =
+      EntityWatcherImpl([&](std::unique_ptr<fuchsia::mem::Buffer> value) {
+        if (!value) {
+          // The first update may not contain any data, so skip it.
+          return;
+        }
 
         std::string read_data;
-        EXPECT_TRUE(fsl::StringFromVmo(value, &read_data));
+        EXPECT_TRUE(fsl::StringFromVmo(*value, &read_data));
         EXPECT_EQ(read_data, data_string);
 
         saw_entity_update_too = true;
       });
+
+  fuchsia::modular::EntityWatcherPtr second_watcher_ptr;
+  second_watcher_impl.Connect(second_watcher_ptr.NewRequest());
+  storage->WatchEntity(expected_cookie, expected_type,
+                       std::move(second_watcher_ptr));
 
   bool created_entity{};
   storage->SetEntityData(expected_cookie, expected_type, std::move(buffer))
@@ -718,10 +746,7 @@ TEST_F(StoryStorageTest, WatchEntityDataMultipleWatchers) {
         created_entity = true;
       });
   RunLoopUntil([&] { return created_entity; });
-  RunLoopUntil([&, watcher = std::move(watcher),
-                second_watcher = std::move(second_watcher)] {
-    return saw_entity_update && saw_entity_update_too;
-  });
+  RunLoopUntil([&] { return saw_entity_update && saw_entity_update_too; });
 }
 
 // Creates a name for a given Entity cookie and verifies it is retrieved

@@ -704,18 +704,22 @@ StoryStorage::GetEntityData(const std::string& cookie,
   return did_update;
 }
 
-StoryStorage::EntityWatcherAutoCancel StoryStorage::WatchEntity(
-    const std::string& cookie, EntityUpdatedCallback callback) {
-  auto it = entity_watchers_.emplace(cookie, std::move(callback));
+void StoryStorage::WatchEntity(
+    const std::string& cookie, const std::string& type,
+    fuchsia::modular::EntityWatcherPtr entity_watcher) {
+  operation_queue_.Add(new GetEntityDataCall(
+      this, cookie, type,
+      fxl::MakeCopyable(
+          [this, cookie, entity_watcher = std::move(entity_watcher)](
+              StoryStorage::Status status,
+              std::unique_ptr<fuchsia::mem::Buffer> value) mutable {
+            // Send the current value as the initial update.
+            entity_watcher->OnUpdated(std::move(value));
 
-  auto auto_remove = [weak_this = GetWeakPtr(), it] {
-    if (!weak_this)
-      return;
-
-    weak_this->entity_watchers_.erase(it);
-  };
-
-  return EntityWatcherAutoCancel(std::move(auto_remove));
+            auto existing_watchers_it = entity_watchers_.try_emplace(cookie);
+            existing_watchers_it.first->second.AddInterfacePtr(
+                std::move(entity_watcher));
+          })));
 }
 
 FuturePtr<StoryStorage::Status> StoryStorage::SetEntityName(
@@ -843,9 +847,12 @@ void StoryStorage::NotifyEntityWatchers(const std::string& cookie,
                                         fuchsia::mem::Buffer value) {
   auto range = entity_watchers_.equal_range(cookie);
   for (auto it = range.first; it != range.second; ++it) {
-    fuchsia::mem::Buffer clone;
-    fuchsia::mem::Clone(value, &clone);
-    it->second(cookie, std::move(clone));
+    for (const auto& watcher : it->second.ptrs()) {
+      fuchsia::mem::Buffer clone;
+      fuchsia::mem::Clone(value, &clone);
+      (*watcher)->OnUpdated(
+          std::make_unique<fuchsia::mem::Buffer>(std::move(clone)));
+    }
   }
 }
 
