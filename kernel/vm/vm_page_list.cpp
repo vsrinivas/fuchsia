@@ -93,11 +93,10 @@ zx_status_t VmPageList::AddPage(vm_page* p, uint64_t offset) {
         DEBUG_ASSERT(status == ZX_OK);
 
         list_.insert(fbl::move(pl));
+        return ZX_OK;
     } else {
-        pln->AddPage(p, index);
+        return pln->AddPage(p, index);
     }
-
-    return ZX_OK;
 }
 
 vm_page* VmPageList::GetPage(uint64_t offset) {
