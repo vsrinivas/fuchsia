@@ -29,12 +29,16 @@ runbench_exec "${OUT_DIR}/zircon_benchmarks.json" \
     /pkgfs/packages/zircon_benchmarks/0/test/zircon_benchmarks \
     -p --out="${OUT_DIR}/zircon_benchmarks.json"
 
-if `/pkgfs/packages/run/0/bin/run vulkan_is_supported`; then
+vulkan_is_supported_result="$(/pkgfs/packages/run/0/bin/run vulkan_is_supported || echo '')"
+if [ "${vulkan_is_supported_result}" = '1' ]; then
   # Run the gfx benchmarks in the current shell environment, because they write
   # to (hidden) global state used by runbench_finish.
   . /pkgfs/packages/garnet_benchmarks/0/bin/gfx_benchmarks.sh "$@"
+elif [ "${vulkan_is_supported_result}" = '0' ]; then
+  echo 'Vulkan not supported; graphics tests skipped.'
 else
-  echo "Vulkan not supported; graphics tests skipped."
+  echo 'Error: Failed to run vulkan_is_supported'
+  exit 1
 fi
 
 # Test storage performance.

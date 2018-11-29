@@ -1,6 +1,6 @@
 # vulkan_is_supported
 
-Command-line utility. Returns 0 if Vulkan is supported; 1 otherwise.
+Command-line utility. Prints "1" if Vulkan is supported; "0" otherwise.
 
 ## USAGE
 
