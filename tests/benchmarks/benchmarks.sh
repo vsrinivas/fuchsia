@@ -42,8 +42,6 @@ else
 fi
 
 # Test storage performance.
-# TODO(ZX-2466): Enable these tests for ARM64 hardware bots once they exist
-# and have storage devices attached.
 if [ "${benchmarks_bot_name}" = garnet-x64-perf-dawson_canyon ]; then
   block_device=/dev/sys/pci/00:17.0/ahci/sata2/block
   waitfor class=block topo=${block_device} timeout=30000
@@ -64,6 +62,13 @@ if [ "${benchmarks_bot_name}" = garnet-x64-perf-dawson_canyon ]; then
       /system/test/sys/blobfs-bench-test -p --fs blobfs \
       --block_device ${block_device} \
       --print_statistics --out "${OUT_DIR}/blobfs_bench.json"
+elif [ "${benchmarks_bot_name}" = garnet-arm64-perf-vim2 ]; then
+  # TODO(ZX-2466): Enable the storage perf tests on the VIM2 bots when
+  # we figure out what partition or device we can use for testing.
+  echo "Storage perf tests skipped on bot '${benchmarks_bot_name}'"
+else
+  echo "Bot '${benchmarks_bot_name}' not recognized: please update benchmarks.sh in garnet"
+  exit 1
 fi
 
 # List block devices.  This is for debugging purposes and to help with
