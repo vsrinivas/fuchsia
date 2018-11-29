@@ -353,10 +353,15 @@ zx_status_t sys_process_create(zx_handle_t job_handle,
     LTRACEF("name %s\n", buf);
 
     fbl::RefPtr<JobDispatcher> job;
-    // TODO(ZX-968): define process creation job rights.
-    auto status = up->GetDispatcherWithRights(job_handle, ZX_RIGHT_WRITE, &job);
-    if (status != ZX_OK)
-        return status;
+    auto status = up->GetDispatcherWithRights(job_handle, ZX_RIGHT_MANAGE_PROCESS, &job);
+    if (status != ZX_OK) {
+        // Try again, but with the WRITE right.
+        // TODO(ZX-2967) Remove this when all callers are using MANAGE_PROCESS.
+        status = up->GetDispatcherWithRights(job_handle, ZX_RIGHT_WRITE, &job);
+        if (status != ZX_OK) {
+            return status;
+        }
+    }
 
     // create a new process dispatcher
     fbl::RefPtr<Dispatcher> proc_dispatcher;
