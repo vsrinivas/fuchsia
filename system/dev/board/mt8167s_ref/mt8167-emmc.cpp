@@ -18,13 +18,22 @@
 namespace {
 
 constexpr uintptr_t kClkBaseAligned =
-    fbl::round_down<uintptr_t, uintptr_t>(MT8167_MSDC0_CLK_MUX_BASE, PAGE_SIZE);
-constexpr size_t kClkOffset = MT8167_MSDC0_CLK_MUX_BASE - kClkBaseAligned;
-constexpr size_t kClkSizeAligned = fbl::round_up<size_t, size_t>(
-    kClkOffset + MT8167_MSDC0_CLK_MUX_SIZE, PAGE_SIZE);
+    fbl::round_down<uintptr_t, uintptr_t>(MT8167_XO_BASE, PAGE_SIZE);
+constexpr size_t kClkOffset = MT8167_XO_BASE - kClkBaseAligned;
+constexpr size_t kClkSizeAligned =
+    fbl::round_up<size_t, size_t>(kClkOffset + MT8167_XO_SIZE, PAGE_SIZE);
+
+constexpr uintptr_t kPllBaseAligned =
+    fbl::round_down<uintptr_t, uintptr_t>(MT8167_AP_MIXED_SYS_BASE, PAGE_SIZE);
+constexpr size_t kPllOffset = MT8167_AP_MIXED_SYS_BASE - kPllBaseAligned;
+constexpr size_t kPllSizeAligned =
+    fbl::round_up<size_t, size_t>(kPllOffset + MT8167_AP_MIXED_SYS_SIZE, PAGE_SIZE);
+
+// MMPLL is derived from the 26 MHz crystal oscillator.
+constexpr uint32_t kMmPllSrcClkFreq = 26000000;
 
 constexpr uint32_t kFifoDepth = 128;
-constexpr uint32_t kSrcClkFreq = 190000000;
+constexpr uint32_t kSrcClkFreq = 200000000;
 
 }  // namespace
 
@@ -37,6 +46,23 @@ public:
     static auto Get() { return hwreg::RegisterAddr<ClkMuxSel0>(kClkOffset); }
 
     DEF_FIELD(13, 11, msdc0_mux_sel);
+};
+
+class MmPllCon1 : public hwreg::RegisterBase<MmPllCon1, uint32_t> {
+public:
+    static constexpr uint32_t kDiv1  = 0;
+    static constexpr uint32_t kDiv2  = 1;
+    static constexpr uint32_t kDiv4  = 2;
+    static constexpr uint32_t kDiv8  = 3;
+    static constexpr uint32_t kDiv16 = 4;
+
+    static constexpr uint32_t kPcwFracBits = 14;
+
+    static auto Get() { return hwreg::RegisterAddr<MmPllCon1>(kPllOffset + 0x164); }
+
+    DEF_BIT(31, change);
+    DEF_FIELD(26, 24, div);
+    DEF_FIELD(20, 0, pcw);
 };
 
 zx_status_t Mt8167::EmmcInit() {
@@ -116,14 +142,34 @@ zx_status_t Mt8167::EmmcInit() {
     zx_status_t status = ddk::MmioBuffer::Create(kClkBaseAligned, kClkSizeAligned, *root_resource,
                                                  ZX_CACHE_POLICY_UNCACHED_DEVICE, &clk_mmio);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: Failed to mux MSDC0 clock: %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s: Failed to set MSDC0 clock: %d\n", __FUNCTION__, status);
         return status;
     }
 
-    auto clk_sel = ClkMuxSel0::Get().ReadFrom(&(*clk_mmio));
+    std::optional<ddk::MmioBuffer> pll_mmio;
+    status = ddk::MmioBuffer::Create(kPllBaseAligned, kPllSizeAligned, *root_resource,
+                                     ZX_CACHE_POLICY_UNCACHED_DEVICE, &pll_mmio);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: Failed to set MSDC0 clock: %d\n", __FUNCTION__, status);
+        return status;
+    }
 
-    // The closest we can get to 200 MHz is MMPLL/2, which is 190 MHz using the default settings.
-    clk_sel.set_msdc0_mux_sel(ClkMuxSel0::kClkMmPllDiv2).WriteTo(&(*clk_mmio));
+    constexpr uint32_t div_value = MmPllCon1::kDiv4;
+    // The MSDC0 clock will be set to MMPLL/2, so shift an extra bit to get 400 MHz.
+    constexpr uint32_t src_clk_shift = 1 + MmPllCon1::kPcwFracBits + div_value;
+    constexpr uint64_t pcw =
+        (static_cast<uint64_t>(kSrcClkFreq) << src_clk_shift) / kMmPllSrcClkFreq;
+    MmPllCon1::Get()
+        .ReadFrom(&(*pll_mmio))
+        .set_change(1)
+        .set_div(div_value)
+        .set_pcw(pcw)
+        .WriteTo(&(*pll_mmio));
+
+    ClkMuxSel0::Get()
+        .ReadFrom(&(*clk_mmio))
+        .set_msdc0_mux_sel(ClkMuxSel0::kClkMmPllDiv2)
+        .WriteTo(&(*clk_mmio));
 
     if ((status = pbus_.DeviceAdd(&emmc_dev)) != ZX_OK) {
         zxlogf(ERROR, "%s: DeviceAdd MSDC0 failed: %d\n", __FUNCTION__, status);

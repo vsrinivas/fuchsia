@@ -35,9 +35,6 @@
 #define MT8167_MSDC0_BASE                                   0x11120000
 #define MT8167_MSDC0_SIZE                                   0x22c
 
-#define MT8167_MSDC0_CLK_MUX_BASE                           0x10000000
-#define MT8167_MSDC0_CLK_MUX_SIZE                           0x4
-
 #define MT8167_MSDC2_BASE                                   0x11170000
 #define MT8167_MSDC2_SIZE                                   0x22c
 
@@ -49,6 +46,9 @@
 
 #define MT8167_MFG_TOP_CONFIG_BASE                          0x13ffe000
 #define MT8167_MFG_TOP_CONFIG_SIZE                          0x1000
+
+#define MT8167_AP_MIXED_SYS_BASE                            0x10018000
+#define MT8167_AP_MIXED_SYS_SIZE                            0x714
 
 // Display Subsystem
 #define MT8167_DISP_OVL_BASE                                0x14007000
