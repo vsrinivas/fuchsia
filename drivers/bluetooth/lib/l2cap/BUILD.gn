@@ -9,8 +9,9 @@ source_set("definitions") {
     "l2cap.h",
   ]
 
-  deps = [
+  public_deps = [
     "//garnet/drivers/bluetooth/lib/hci:definitions",
+    "//garnet/drivers/bluetooth/lib/sm:definitions",
   ]
 }
 

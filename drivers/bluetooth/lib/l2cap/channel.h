@@ -20,6 +20,8 @@
 
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/sdu.h"
+#include "garnet/drivers/bluetooth/lib/sm/status.h"
+#include "garnet/drivers/bluetooth/lib/sm/types.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/synchronization/thread_checker.h"
 
@@ -65,6 +67,30 @@ class Channel : public fbl::RefCounted<Channel> {
   // |id()| for fixed channels and allocated by the remote for dynamic channels.
   ChannelId remote_id() const { return remote_id_; }
 
+  // The type of the logical link this channel operates on.
+  hci::Connection::LinkType link_type() const { return link_type_; }
+
+  // The connection handle of the underlying logical link.
+  hci::ConnectionHandle link_handle() const { return link_handle_; }
+
+  // Returns a value that's unique for any channel connected to this device.
+  // If two channels have different unique_ids, they represent different
+  // channels even if their ids match.
+  using UniqueId = uint64_t;
+  UniqueId unique_id() const {
+    static_assert(
+        sizeof(UniqueId) >= sizeof(hci::ConnectionHandle) + sizeof(ChannelId),
+        "UniqueId needs to be large enough to make unique IDs");
+    return (link_handle() << (sizeof(ChannelId) * CHAR_BIT)) | id();
+  }
+
+  uint16_t tx_mtu() const { return tx_mtu_; }
+  uint16_t rx_mtu() const { return rx_mtu_; }
+
+  // Returns the current link security properties of the underlying link.
+  // Returns the lowest security level if the link is closed.
+  virtual const sm::SecurityProperties security() = 0;
+
   // Callback invoked when this channel has been closed without an explicit
   // request from the owner of this instance. For example, this can happen when
   // the remote end closes a dynamically configured channel or when the
@@ -105,30 +131,17 @@ class Channel : public fbl::RefCounted<Channel> {
   // close when the link gets removed later.
   virtual void SignalLinkError() = 0;
 
+  // Requests to upgrade the security properties of the underlying link to the
+  // requested |level| and reports the result via |callback|. |callback| will be
+  // run on the dispatcher that the channel was activated on. Has no effect if
+  // the channel is not active.
+  virtual void UpgradeSecurity(sm::SecurityLevel level,
+                               sm::StatusCallback callback) = 0;
+
   // Sends the given SDU payload over this channel. This takes ownership of
   // |sdu|. Returns false if the SDU is rejected, for example because it exceeds
   // the channel's MTU or because the link has been closed.
   virtual bool Send(common::ByteBufferPtr sdu) = 0;
-
-  // The type of the logical link this channel operates on.
-  hci::Connection::LinkType link_type() const { return link_type_; }
-
-  // The connection handle of the underlying logical link.
-  hci::ConnectionHandle link_handle() const { return link_handle_; }
-
-  // Returns a value that's unique for any channel connected to this device.
-  // If two channels have different unique_ids, they represent different
-  // channels even if their ids match.
-  using UniqueId = uint64_t;
-  UniqueId unique_id() const {
-    static_assert(
-        sizeof(UniqueId) >= sizeof(hci::ConnectionHandle) + sizeof(ChannelId),
-        "UniqueId needs to be large enough to make unique IDs");
-    return (link_handle() << (sizeof(ChannelId) * CHAR_BIT)) | id();
-  }
-
-  uint16_t tx_mtu() const { return tx_mtu_; }
-  uint16_t rx_mtu() const { return rx_mtu_; }
 
  protected:
   friend class fbl::RefPtr<Channel>;
@@ -157,11 +170,14 @@ class LogicalLink;
 class ChannelImpl : public Channel {
  public:
   // Channel overrides:
+  const sm::SecurityProperties security() override;
   bool Activate(RxCallback rx_callback, ClosedCallback closed_callback,
                 async_dispatcher_t* dispatcher) override;
   void Deactivate() override;
   void SignalLinkError() override;
   bool Send(common::ByteBufferPtr sdu) override;
+  void UpgradeSecurity(sm::SecurityLevel level,
+                       sm::StatusCallback callback) override;
 
  private:
   friend class fbl::RefPtr<ChannelImpl>;

@@ -59,16 +59,26 @@ class FakeChannel : public Channel {
   // True if Deactivate has yet not been called after Activate.
   bool activated() const { return static_cast<bool>(rx_cb_); }
 
+  // Assigns a link security level.
+  void set_security(const sm::SecurityProperties& sec_props) {
+    security_ = sec_props;
+  }
+
   // Channel overrides:
+  const sm::SecurityProperties security() override { return security_; }
   bool Activate(RxCallback rx_callback, ClosedCallback closed_callback,
                 async_dispatcher_t* dispatcher) override;
   void Deactivate() override;
   void SignalLinkError() override;
   bool Send(common::ByteBufferPtr sdu) override;
+  void UpgradeSecurity(sm::SecurityLevel level,
+                       sm::StatusCallback callback) override;
 
  private:
   hci::ConnectionHandle handle_;
   Fragmenter fragmenter_;
+
+  sm::SecurityProperties security_;
 
   ClosedCallback closed_cb_;
   RxCallback rx_cb_;

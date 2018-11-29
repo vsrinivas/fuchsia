@@ -64,11 +64,17 @@ class ChannelManager final {
   // |link_error_callback| will be used to notify when a channel signals a link
   // error. It will be posted onto |dispatcher|.
   //
+  // |security_callback| will be used to request an upgrade to the link security
+  // level. This can be triggered by dynamic L2CAP channel creation or by a
+  // service-level client via Channel::UpgradeSecurity().
+  //
+  // All callbacks will be posted onto |dispatcher|.
+  //
   // It is an error to register the same |handle| value more than once as either
   // kind of channel without first unregistering it (asserted in debug builds).
-  void RegisterACL(hci::ConnectionHandle handle,
-                   hci::Connection::Role role,
+  void RegisterACL(hci::ConnectionHandle handle, hci::Connection::Role role,
                    LinkErrorCallback link_error_callback,
+                   SecurityUpgradeCallback security_callback,
                    async_dispatcher_t* dispatcher);
 
   // Registers a LE connection with the L2CAP layer. L2CAP channels can be
@@ -81,16 +87,20 @@ class ChannelManager final {
   // |link_error_callback| will be used to notify when a channel signals a link
   // error.
   //
-  // Both callbacks will be posted onto |dispatcher|.
+  // |security_callback| will be used to request an upgrade to the link security
+  // level. This can be triggered by dynamic L2CAP channel creation or by a
+  // service-level client via Channel::UpgradeSecurity().
+  //
+  // All callbacks will be posted onto |dispatcher|.
   //
   // It is an error to register the same |handle| value more than once as either
   // kind of channel without first unregistering it (asserted in debug builds).
   using LEConnectionParameterUpdateCallback =
       internal::LESignalingChannel::ConnectionParameterUpdateCallback;
-  void RegisterLE(hci::ConnectionHandle handle,
-                  hci::Connection::Role role,
+  void RegisterLE(hci::ConnectionHandle handle, hci::Connection::Role role,
                   LEConnectionParameterUpdateCallback conn_param_callback,
                   LinkErrorCallback link_error_callback,
+                  SecurityUpgradeCallback security_callback,
                   async_dispatcher_t* dispatcher);
 
   // Removes a previously registered connection. All corresponding Channels will
@@ -101,6 +111,11 @@ class ChannelManager final {
   // link. This is to prevent incorrectly buffering data if the controller has
   // more packets to send after removing the link entry.
   void Unregister(hci::ConnectionHandle handle);
+
+  // Assigns the security level of a logical link. Has no effect if |handle| has
+  // not been previously registered or the link is closed.
+  void AssignLinkSecurityProperties(hci::ConnectionHandle handle,
+                                    sm::SecurityProperties security);
 
   // Opens the L2CAP fixed channel with |channel_id| over the logical link
   // identified by |connection_handle| and starts routing packets. Returns

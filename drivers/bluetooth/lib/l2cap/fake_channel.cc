@@ -121,6 +121,11 @@ bool FakeChannel::Send(common::ByteBufferPtr sdu) {
   return true;
 }
 
+void FakeChannel::UpgradeSecurity(sm::SecurityLevel level,
+                                  sm::StatusCallback callback) {
+  // TODO(armansito): implement
+}
+
 }  // namespace testing
 }  // namespace l2cap
 }  // namespace btlib

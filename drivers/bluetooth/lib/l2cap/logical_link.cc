@@ -224,6 +224,54 @@ void LogicalLink::HandleRxPacket(hci::ACLDataPacketPtr packet) {
   iter->second->HandleRxPdu(std::move(pdu));
 }
 
+void LogicalLink::UpgradeSecurity(sm::SecurityLevel level,
+                                  sm::StatusCallback callback,
+                                  async_dispatcher_t* dispatcher) {
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(security_callback_);
+  ZX_DEBUG_ASSERT(dispatcher);
+
+  if (closed_) {
+    bt_log(TRACE, "l2cap", "Ignoring security request on closed link");
+    return;
+  }
+
+  auto status_cb = [dispatcher,
+                    f = std::move(callback)](sm::Status status) mutable {
+    async::PostTask(dispatcher, [f = std::move(f), status] { f(status); });
+  };
+
+  // Report success If the link already has the expected security level.
+  if (level <= security().level()) {
+    status_cb(sm::Status());
+    return;
+  }
+
+  bt_log(TRACE, "l2cap", "Security upgrade requested (level = %s)",
+         sm::LevelToString(level));
+  async::PostTask(security_dispatcher_,
+                  [handle = handle_, level, f = security_callback_.share(),
+                   status_cb = std::move(status_cb)]() mutable {
+                    f(handle, level, std::move(status_cb));
+                  });
+}
+
+void LogicalLink::AssignSecurityProperties(
+    const sm::SecurityProperties& security) {
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+
+  if (closed_) {
+    bt_log(TRACE, "l2cap", "Ignoring security request on closed link");
+    return;
+  }
+
+  bt_log(TRACE, "l2cap", "Link security updated (handle: %#.4x): %s", handle_,
+         security.ToString().c_str());
+
+  std::lock_guard<std::mutex> lock(mtx_);
+  security_ = security;
+}
+
 void LogicalLink::SendBasicFrame(ChannelId id,
                                  const common::ByteBuffer& payload) {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
@@ -250,6 +298,15 @@ void LogicalLink::set_error_callback(fit::closure callback,
 
   link_error_cb_ = std::move(callback);
   link_error_dispatcher_ = dispatcher;
+}
+
+void LogicalLink::set_security_upgrade_callback(
+    SecurityUpgradeCallback callback, async_dispatcher_t* dispatcher) {
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(static_cast<bool>(callback) == static_cast<bool>(dispatcher));
+
+  security_callback_ = std::move(callback);
+  security_dispatcher_ = dispatcher;
 }
 
 LESignalingChannel* LogicalLink::le_signaling_channel() const {

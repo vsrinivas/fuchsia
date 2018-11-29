@@ -43,29 +43,30 @@ ChannelManager::~ChannelManager() {
   }
 }
 
-void ChannelManager::RegisterACL(
-    hci::ConnectionHandle handle,
-    hci::Connection::Role role,
-    LinkErrorCallback link_error_cb,
-    async_dispatcher_t* dispatcher) {
+void ChannelManager::RegisterACL(hci::ConnectionHandle handle,
+                                 hci::Connection::Role role,
+                                 LinkErrorCallback link_error_cb,
+                                 SecurityUpgradeCallback security_cb,
+                                 async_dispatcher_t* dispatcher) {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   bt_log(TRACE, "l2cap", "register ACL link (handle: %#.4x)", handle);
 
   auto* ll = RegisterInternal(handle, hci::Connection::LinkType::kACL, role);
   ll->set_error_callback(std::move(link_error_cb), dispatcher);
+  ll->set_security_upgrade_callback(std::move(security_cb), dispatcher);
 }
 
 void ChannelManager::RegisterLE(
-    hci::ConnectionHandle handle,
-    hci::Connection::Role role,
+    hci::ConnectionHandle handle, hci::Connection::Role role,
     LEConnectionParameterUpdateCallback conn_param_cb,
-    LinkErrorCallback link_error_cb,
+    LinkErrorCallback link_error_cb, SecurityUpgradeCallback security_cb,
     async_dispatcher_t* dispatcher) {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   bt_log(TRACE, "l2cap", "register LE link (handle: %#.4x)", handle);
 
   auto* ll = RegisterInternal(handle, hci::Connection::LinkType::kLE, role);
   ll->set_error_callback(std::move(link_error_cb), dispatcher);
+  ll->set_security_upgrade_callback(std::move(security_cb), dispatcher);
   ll->le_signaling_channel()->set_conn_param_update_callback(std::move(conn_param_cb),
                                                              dispatcher);
 }
@@ -85,6 +86,21 @@ void ChannelManager::Unregister(hci::ConnectionHandle handle) {
   // their strong references.
   iter->second->Close();
   ll_map_.erase(iter);
+}
+
+void ChannelManager::AssignLinkSecurityProperties(
+    hci::ConnectionHandle handle, sm::SecurityProperties security) {
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+
+  bt_log(TRACE, "l2cap", "update security properties (handle: %#.4x)", handle);
+
+  auto iter = ll_map_.find(handle);
+  if (iter == ll_map_.end()) {
+    bt_log(TRACE, "l2cap", "ignoring security update on unknown link");
+    return;
+  }
+
+  iter->second->AssignSecurityProperties(security);
 }
 
 fbl::RefPtr<Channel> ChannelManager::OpenFixedChannel(

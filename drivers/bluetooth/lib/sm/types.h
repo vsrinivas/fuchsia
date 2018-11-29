@@ -51,6 +51,9 @@ enum class SecurityLevel {
   kAuthenticated = 2,
 };
 
+// Returns a string representation of |level| for debug messages.
+const char* LevelToString(SecurityLevel level);
+
 // Represents the security properties of a key. The security properties of a
 // connection's LTK defines the security properties of the connection.
 class SecurityProperties final {

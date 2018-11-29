@@ -69,7 +69,13 @@ class Impl final : public Domain, public common::TaskDomain<Impl, Domain> {
     PostMessage([this, handle, role, lec = std::move(link_error_callback),
                  dispatcher]() mutable {
       if (l2cap_) {
-        l2cap_->RegisterACL(handle, role, std::move(lec), dispatcher);
+        // TODO(NET-1151): Pass security upgrade callback from an argument.
+        l2cap_->RegisterACL(
+            handle, role, std::move(lec),
+            [](auto, auto, auto) {
+              bt_log(TRACE, "data-domain", "not implemented: L2CAP security");
+            },
+            dispatcher);
       }
     });
   }
@@ -84,8 +90,13 @@ class Impl final : public Domain, public common::TaskDomain<Impl, Domain> {
                  link_err_cb = std::move(link_error_callback),
                  chan_cb = std::move(channel_callback), dispatcher]() mutable {
       if (l2cap_) {
-        l2cap_->RegisterLE(handle, role, std::move(cp_cb),
-                           std::move(link_err_cb), dispatcher);
+        // TODO(NET-1151): Pass security upgrade callback from an argument.
+        l2cap_->RegisterLE(
+            handle, role, std::move(cp_cb), std::move(link_err_cb),
+            [](auto, auto, auto) {
+              bt_log(TRACE, "data-domain", "not implemented: L2CAP security");
+            },
+            dispatcher);
 
         auto att = l2cap_->OpenFixedChannel(handle, l2cap::kATTChannelId);
         auto smp = l2cap_->OpenFixedChannel(handle, l2cap::kLESMPChannelId);

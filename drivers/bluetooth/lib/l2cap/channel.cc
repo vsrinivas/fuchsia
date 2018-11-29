@@ -47,6 +47,14 @@ ChannelImpl::ChannelImpl(ChannelId id, ChannelId remote_id,
   ZX_DEBUG_ASSERT(link_);
 }
 
+const sm::SecurityProperties ChannelImpl::security() {
+  std::lock_guard<std::mutex> lock(mtx_);
+  if (link_) {
+    return link_->security();
+  }
+  return sm::SecurityProperties();
+}
+
 bool ChannelImpl::Activate(RxCallback rx_callback,
                            ClosedCallback closed_callback,
                            async_dispatcher_t* dispatcher) {
@@ -157,6 +165,25 @@ bool ChannelImpl::Send(common::ByteBufferPtr sdu) {
                   });
 
   return true;
+}
+
+void ChannelImpl::UpgradeSecurity(sm::SecurityLevel level,
+                                  sm::StatusCallback callback) {
+  ZX_DEBUG_ASSERT(callback);
+
+  std::lock_guard<std::mutex> lock(mtx_);
+
+  if (!link_ || !active_) {
+    bt_log(TRACE, "l2cap", "Ignoring security request on inactive channel");
+    return;
+  }
+
+  ZX_DEBUG_ASSERT(dispatcher_);
+  async::PostTask(
+      link_->dispatcher(), [link = link_, level, callback = std::move(callback),
+                            dispatcher = dispatcher_]() mutable {
+        link->UpgradeSecurity(level, std::move(callback), dispatcher);
+      });
 }
 
 void ChannelImpl::OnClosed() {

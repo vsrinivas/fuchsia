@@ -89,10 +89,26 @@ class LogicalLink final : public fbl::RefCounted<LogicalLink> {
   // It is safe to call this function on a closed link; it will have no effect.
   void SendBasicFrame(ChannelId remote_id, const common::ByteBuffer& payload);
 
+  // Requests a security upgrade using the registered security upgrade callback.
+  // Invokes the |callback| argument with the result of the operation.
+  // |callback| will be run by the requested |dispatcher|.
+  //
+  // Has no effect if the link is closed.
+  void UpgradeSecurity(sm::SecurityLevel level, sm::StatusCallback callback,
+                       async_dispatcher_t* dispatcher);
+
+  // Assigns the security level of this link and resolves pending security
+  // upgrade requests. Has no effect if the link is closed.
+  void AssignSecurityProperties(const sm::SecurityProperties& security);
+
   // Assigns the link error callback to be invoked when a channel signals a link
   // error.
   void set_error_callback(fit::closure callback,
                           async_dispatcher_t* dispatcher);
+
+  // Assigns the security upgrade delegate for this link.
+  void set_security_upgrade_callback(SecurityUpgradeCallback callback,
+                                     async_dispatcher_t* dispatcher);
 
   // Returns the dispatcher that this LogicalLink operates on.
   async_dispatcher_t* dispatcher() const { return dispatcher_; }
@@ -100,6 +116,11 @@ class LogicalLink final : public fbl::RefCounted<LogicalLink> {
   hci::Connection::LinkType type() const { return type_; }
   hci::Connection::Role role() const { return role_; }
   hci::ConnectionHandle handle() const { return handle_; }
+
+  const sm::SecurityProperties security() {
+    std::lock_guard<std::mutex> lock(mtx_);
+    return security_;
+  }
 
   // Returns the LE signaling channel implementation or nullptr if this is not a
   // LE-U link.
@@ -159,6 +180,11 @@ class LogicalLink final : public fbl::RefCounted<LogicalLink> {
                            ChannelCallback open_cb,
                            async_dispatcher_t* dispatcher);
 
+  // Members that can be accessed from any thread.
+  std::mutex mtx_;
+  sm::SecurityProperties security_ __TA_GUARDED(mtx_);
+
+  // All members below must be accessed on the L2CAP dispatcher thread.
   fxl::RefPtr<hci::Transport> hci_;
   async_dispatcher_t* dispatcher_;
 
@@ -169,6 +195,9 @@ class LogicalLink final : public fbl::RefCounted<LogicalLink> {
 
   fit::closure link_error_cb_;
   async_dispatcher_t* link_error_dispatcher_;
+
+  SecurityUpgradeCallback security_callback_;
+  async_dispatcher_t* security_dispatcher_;
 
   // No data packets are processed once this gets set to true.
   bool closed_;

@@ -7,10 +7,15 @@ source_set("definitions") {
     "packet.cc",
     "packet.h",
     "smp.h",
+    "status.cc",
+    "status.h",
+    "types.cc",
+    "types.h",
   ]
 
   public_deps = [
     "//garnet/drivers/bluetooth/lib/common",
+    "//garnet/drivers/bluetooth/lib/hci:definitions", # for hci::LinkKey
   ]
 }
 
@@ -20,10 +25,6 @@ static_library("sm") {
     "bearer.h",
     "pairing_state.cc",
     "pairing_state.h",
-    "status.cc",
-    "status.h",
-    "types.cc",
-    "types.h",
     "util.cc",
     "util.h",
   ]

@@ -16,16 +16,20 @@ namespace btlib {
 namespace l2cap {
 namespace {
 
+using ::btlib::testing::TestController;
+using TestingBase = ::btlib::testing::FakeControllerTest<TestController>;
+
+using common::HostError;
+
 constexpr hci::ConnectionHandle kTestHandle1 = 0x0001;
 constexpr hci::ConnectionHandle kTestHandle2 = 0x0002;
 constexpr PSM kTestPsm = 0x0001;
 
-using ::btlib::testing::TestController;
-
-using TestingBase = ::btlib::testing::FakeControllerTest<TestController>;
-
 void DoNothing() {}
 void NopRxCallback(const SDU&) {}
+void NopLeConnParamCallback(const hci::LEPreferredConnectionParameters&) {}
+void NopSecurityCallback(hci::ConnectionHandle, sm::SecurityLevel,
+                         sm::StatusCallback) {}
 
 class L2CAP_ChannelManagerTest : public TestingBase {
  public:
@@ -54,6 +58,23 @@ class L2CAP_ChannelManagerTest : public TestingBase {
   void TearDown() override {
     chanmgr_ = nullptr;
     TestingBase::TearDown();
+  }
+
+  // Helper functions for registering logical links with default arguments.
+  void RegisterLE(
+      hci::ConnectionHandle handle, hci::Connection::Role role,
+      LinkErrorCallback lec = DoNothing,
+      LEConnectionParameterUpdateCallback cpuc = NopLeConnParamCallback,
+      SecurityUpgradeCallback suc = NopSecurityCallback) {
+    chanmgr()->RegisterLE(handle, role, std::move(cpuc), std::move(lec),
+                          std::move(suc), dispatcher());
+  }
+
+  void RegisterACL(hci::ConnectionHandle handle, hci::Connection::Role role,
+                   LinkErrorCallback lec = DoNothing,
+                   SecurityUpgradeCallback suc = NopSecurityCallback) {
+    chanmgr()->RegisterACL(handle, role, std::move(lec), std::move(suc),
+                           dispatcher());
   }
 
   fbl::RefPtr<Channel> ActivateNewFixedChannel(
@@ -100,8 +121,7 @@ TEST_F(L2CAP_ChannelManagerTest, OpenFixedChannelErrorNoConn) {
   // This should fail as the ChannelManager has no entry for |kTestHandle1|.
   EXPECT_EQ(nullptr, ActivateNewFixedChannel(kATTChannelId));
 
-  chanmgr()->RegisterLE(kTestHandle1, hci::Connection::Role::kMaster,
-                        [](auto) {}, DoNothing, dispatcher());
+  RegisterLE(kTestHandle1, hci::Connection::Role::kMaster);
 
   // This should fail as the ChannelManager has no entry for |kTestHandle2|.
   EXPECT_EQ(nullptr, ActivateNewFixedChannel(kATTChannelId, kTestHandle2));
@@ -109,12 +129,10 @@ TEST_F(L2CAP_ChannelManagerTest, OpenFixedChannelErrorNoConn) {
 
 TEST_F(L2CAP_ChannelManagerTest, OpenFixedChannelErrorDisallowedId) {
   // LE-U link
-  chanmgr()->RegisterLE(kTestHandle1, hci::Connection::Role::kMaster,
-                        [](auto) {}, DoNothing, dispatcher());
+  RegisterLE(kTestHandle1, hci::Connection::Role::kMaster);
 
   // ACL-U link
-  chanmgr()->RegisterACL(kTestHandle2, hci::Connection::Role::kMaster,
-                         DoNothing, dispatcher());
+  RegisterACL(kTestHandle2, hci::Connection::Role::kMaster);
 
   // This should fail as kSMPChannelId is ACL-U only.
   EXPECT_EQ(nullptr, ActivateNewFixedChannel(kSMPChannelId, kTestHandle1));
@@ -124,8 +142,7 @@ TEST_F(L2CAP_ChannelManagerTest, OpenFixedChannelErrorDisallowedId) {
 }
 
 TEST_F(L2CAP_ChannelManagerTest, ActivateFailsAfterDeactivate) {
-  chanmgr()->RegisterLE(kTestHandle1, hci::Connection::Role::kMaster,
-                        [](auto) {}, DoNothing, dispatcher());
+  RegisterLE(kTestHandle1, hci::Connection::Role::kMaster);
   auto chan = ActivateNewFixedChannel(kATTChannelId, kTestHandle1);
   ASSERT_TRUE(chan);
 
@@ -137,8 +154,7 @@ TEST_F(L2CAP_ChannelManagerTest, ActivateFailsAfterDeactivate) {
 
 TEST_F(L2CAP_ChannelManagerTest, OpenFixedChannelAndUnregisterLink) {
   // LE-U link
-  chanmgr()->RegisterLE(kTestHandle1, hci::Connection::Role::kMaster,
-                        [](auto) {}, DoNothing, dispatcher());
+  RegisterLE(kTestHandle1, hci::Connection::Role::kMaster);
 
   bool closed_called = false;
   auto closed_cb = [&closed_called] { closed_called = true; };
@@ -159,8 +175,7 @@ TEST_F(L2CAP_ChannelManagerTest, OpenFixedChannelAndUnregisterLink) {
 
 TEST_F(L2CAP_ChannelManagerTest, OpenFixedChannelAndCloseChannel) {
   // LE-U link
-  chanmgr()->RegisterLE(kTestHandle1, hci::Connection::Role::kMaster,
-                        [](auto) {}, DoNothing, dispatcher());
+  RegisterLE(kTestHandle1, hci::Connection::Role::kMaster);
 
   bool closed_called = false;
   auto closed_cb = [&closed_called] { closed_called = true; };
@@ -180,8 +195,7 @@ TEST_F(L2CAP_ChannelManagerTest, OpenFixedChannelAndCloseChannel) {
 
 TEST_F(L2CAP_ChannelManagerTest, OpenAndCloseWithLinkMultipleFixedChannels) {
   // LE-U link
-  chanmgr()->RegisterLE(kTestHandle1, hci::Connection::Role::kMaster,
-                        [](auto) {}, DoNothing, dispatcher());
+  RegisterLE(kTestHandle1, hci::Connection::Role::kMaster);
 
   bool att_closed = false;
   auto att_closed_cb = [&att_closed] { att_closed = true; };
@@ -208,9 +222,7 @@ TEST_F(L2CAP_ChannelManagerTest, OpenAndCloseWithLinkMultipleFixedChannels) {
 
 TEST_F(L2CAP_ChannelManagerTest, SendingPacketDuringCleanUpHasNoEffect) {
   // LE-U link
-  chanmgr()->RegisterLE(
-      kTestHandle1, hci::Connection::Role::kMaster, [](auto) {}, DoNothing,
-      dispatcher());
+  RegisterLE(kTestHandle1, hci::Connection::Role::kMaster);
 
   bool data_sent = false;
   auto data_cb = [&](const auto& bytes) { data_sent = true; };
@@ -238,9 +250,7 @@ TEST_F(L2CAP_ChannelManagerTest, SendingPacketDuringCleanUpHasNoEffect) {
 // Tests that destroying the ChannelManager cleanly shuts down all channels.
 TEST_F(L2CAP_ChannelManagerTest, DestroyingChannelManagerCleansUpChannels) {
   // LE-U link
-  chanmgr()->RegisterLE(
-      kTestHandle1, hci::Connection::Role::kMaster, [](auto) {}, DoNothing,
-      dispatcher());
+  RegisterLE(kTestHandle1, hci::Connection::Role::kMaster);
 
   bool data_sent = false;
   auto data_cb = [&](const auto& bytes) { data_sent = true; };
@@ -268,8 +278,7 @@ TEST_F(L2CAP_ChannelManagerTest, DestroyingChannelManagerCleansUpChannels) {
 TEST_F(L2CAP_ChannelManagerTest, DeactivateDoesNotCrashOrHang) {
   // Tests that the clean up task posted to the LogicalLink does not crash when
   // a dynamic registry is not present (which is the case for LE links).
-  chanmgr()->RegisterLE(kTestHandle1, hci::Connection::Role::kMaster,
-                        [](auto) {}, DoNothing, dispatcher());
+  RegisterLE(kTestHandle1, hci::Connection::Role::kMaster);
   auto chan = ActivateNewFixedChannel(kATTChannelId, kTestHandle1);
   ASSERT_TRUE(chan);
 
@@ -281,8 +290,7 @@ TEST_F(L2CAP_ChannelManagerTest, DeactivateDoesNotCrashOrHang) {
 
 TEST_F(L2CAP_ChannelManagerTest,
        CallingDeactivateFromClosedCallbackDoesNotCrashOrHang) {
-  chanmgr()->RegisterACL(kTestHandle1, hci::Connection::Role::kMaster,
-                         DoNothing, dispatcher());
+  RegisterACL(kTestHandle1, hci::Connection::Role::kMaster);
   auto chan = chanmgr()->OpenFixedChannel(kTestHandle1, kSMPChannelId);
   chan->Activate(NopRxCallback, [chan] { chan->Deactivate(); }, dispatcher());
   chanmgr()->Unregister(kTestHandle1);  // Triggers ClosedCallback.
@@ -291,8 +299,7 @@ TEST_F(L2CAP_ChannelManagerTest,
 
 TEST_F(L2CAP_ChannelManagerTest, ReceiveData) {
   // LE-U link
-  chanmgr()->RegisterLE(kTestHandle1, hci::Connection::Role::kMaster,
-                        [](auto) {}, DoNothing, dispatcher());
+  RegisterLE(kTestHandle1, hci::Connection::Role::kMaster);
 
   common::StaticByteBuffer<255> buffer;
 
@@ -392,8 +399,7 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeRegisteringLink) {
   // Run the loop so all packets are received.
   RunLoopUntilIdle();
 
-  chanmgr()->RegisterLE(kTestHandle1, hci::Connection::Role::kMaster,
-                        [](auto) {}, DoNothing, dispatcher());
+  RegisterLE(kTestHandle1, hci::Connection::Role::kMaster);
 
   att_chan =
       ActivateNewFixedChannel(kATTChannelId, kTestHandle1, [] {}, att_rx_cb);
@@ -412,8 +418,7 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeRegisteringLink) {
 TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeCreatingChannel) {
   constexpr size_t kPacketCount = 10;
 
-  chanmgr()->RegisterLE(kTestHandle1, hci::Connection::Role::kMaster,
-                        [](auto) {}, DoNothing, dispatcher());
+  RegisterLE(kTestHandle1, hci::Connection::Role::kMaster);
 
   common::StaticByteBuffer<255> buffer;
 
@@ -470,8 +475,7 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeCreatingChannel) {
 TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeSettingRxHandler) {
   constexpr size_t kPacketCount = 10;
 
-  chanmgr()->RegisterLE(kTestHandle1, hci::Connection::Role::kMaster,
-                        [](auto) {}, DoNothing, dispatcher());
+  RegisterLE(kTestHandle1, hci::Connection::Role::kMaster);
   auto att_chan = chanmgr()->OpenFixedChannel(kTestHandle1, kATTChannelId);
   ZX_DEBUG_ASSERT(att_chan);
 
@@ -522,8 +526,7 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeSettingRxHandler) {
 }
 
 TEST_F(L2CAP_ChannelManagerTest, SendOnClosedLink) {
-  chanmgr()->RegisterLE(kTestHandle1, hci::Connection::Role::kMaster,
-                        [](auto) {}, DoNothing, dispatcher());
+  RegisterLE(kTestHandle1, hci::Connection::Role::kMaster);
   auto att_chan = ActivateNewFixedChannel(kATTChannelId, kTestHandle1);
   ZX_DEBUG_ASSERT(att_chan);
 
@@ -533,8 +536,7 @@ TEST_F(L2CAP_ChannelManagerTest, SendOnClosedLink) {
 }
 
 TEST_F(L2CAP_ChannelManagerTest, SendBasicSdu) {
-  chanmgr()->RegisterLE(kTestHandle1, hci::Connection::Role::kMaster,
-                        [](auto) {}, DoNothing, dispatcher());
+  RegisterLE(kTestHandle1, hci::Connection::Role::kMaster);
   auto att_chan = ActivateNewFixedChannel(kATTChannelId, kTestHandle1);
   ZX_DEBUG_ASSERT(att_chan);
 
@@ -591,10 +593,8 @@ TEST_F(L2CAP_ChannelManagerTest, SendFragmentedSdus) {
   };
   test_device()->SetDataCallback(data_cb, dispatcher());
 
-  chanmgr()->RegisterLE(kTestHandle1, hci::Connection::Role::kMaster,
-                        [](auto) {}, DoNothing, dispatcher());
-  chanmgr()->RegisterACL(kTestHandle2, hci::Connection::Role::kMaster,
-                         DoNothing, dispatcher());
+  RegisterLE(kTestHandle1, hci::Connection::Role::kMaster);
+  RegisterACL(kTestHandle2, hci::Connection::Role::kMaster);
 
   // We use the ATT fixed-channel for LE and the SM fixed-channel for ACL.
   auto att_chan = ActivateNewFixedChannel(kATTChannelId, kTestHandle1);
@@ -691,10 +691,8 @@ TEST_F(L2CAP_ChannelManagerTest, SendFragmentedSdusDifferentBuffers) {
   };
   test_device()->SetDataCallback(data_cb, dispatcher());
 
-  chanmgr()->RegisterLE(kTestHandle1, hci::Connection::Role::kMaster,
-                        [](auto) {}, DoNothing, dispatcher());
-  chanmgr()->RegisterACL(kTestHandle2, hci::Connection::Role::kMaster,
-                         DoNothing, dispatcher());
+  RegisterLE(kTestHandle1, hci::Connection::Role::kMaster);
+  RegisterACL(kTestHandle2, hci::Connection::Role::kMaster);
 
   // We use the ATT fixed-channel for LE and the SM fixed-channel for ACL.
   auto att_chan = ActivateNewFixedChannel(kATTChannelId, kTestHandle1);
@@ -746,8 +744,7 @@ TEST_F(L2CAP_ChannelManagerTest, SendFragmentedSdusDifferentBuffers) {
 TEST_F(L2CAP_ChannelManagerTest, LEChannelSignalLinkError) {
   bool link_error = false;
   auto link_error_cb = [&link_error, this] { link_error = true; };
-  chanmgr()->RegisterLE(kTestHandle1, hci::Connection::Role::kMaster,
-                        [](auto) {}, link_error_cb, dispatcher());
+  RegisterLE(kTestHandle1, hci::Connection::Role::kMaster, link_error_cb);
 
   // Activate a new Attribute channel to signal the error.
   auto chan = ActivateNewFixedChannel(kATTChannelId, kTestHandle1);
@@ -763,8 +760,7 @@ TEST_F(L2CAP_ChannelManagerTest, LEChannelSignalLinkError) {
 TEST_F(L2CAP_ChannelManagerTest, ACLChannelSignalLinkError) {
   bool link_error = false;
   auto link_error_cb = [&link_error, this] { link_error = true; };
-  chanmgr()->RegisterACL(kTestHandle1, hci::Connection::Role::kMaster,
-                         link_error_cb, dispatcher());
+  RegisterACL(kTestHandle1, hci::Connection::Role::kMaster, link_error_cb);
 
   // Activate a new Security Manager channel to signal the error.
   auto chan = ActivateNewFixedChannel(kSMPChannelId, kTestHandle1);
@@ -788,8 +784,8 @@ TEST_F(L2CAP_ChannelManagerTest, LEConnectionParameterUpdateRequest) {
     conn_param_cb_called = true;
   };
 
-  chanmgr()->RegisterLE(kTestHandle1, hci::Connection::Role::kMaster,
-                        conn_param_cb, DoNothing, dispatcher());
+  RegisterLE(kTestHandle1, hci::Connection::Role::kMaster, DoNothing,
+             conn_param_cb);
 
   // clang-format off
   test_device()->SendACLDataChannelPacket(common::CreateStaticByteBuffer(
@@ -819,8 +815,7 @@ TEST_F(L2CAP_ChannelManagerTest, ACLOutboundDynamicChannelLocalDisconnect) {
   constexpr ChannelId kLocalId = 0x0040;
   constexpr ChannelId kRemoteId = 0x9042;
 
-  chanmgr()->RegisterACL(kTestHandle1, hci::Connection::Role::kMaster, [] {},
-                         dispatcher());
+  RegisterACL(kTestHandle1, hci::Connection::Role::kMaster);
 
   fbl::RefPtr<Channel> channel;
   auto channel_cb = [&channel](fbl::RefPtr<l2cap::Channel> activated_chan) {
@@ -927,8 +922,7 @@ TEST_F(L2CAP_ChannelManagerTest, ACLOutboundDynamicChannelLocalDisconnect) {
 }
 
 TEST_F(L2CAP_ChannelManagerTest, ACLOutboundDynamicChannelRemoteDisconnect) {
-  chanmgr()->RegisterACL(kTestHandle1, hci::Connection::Role::kMaster, [] {},
-                         dispatcher());
+  RegisterACL(kTestHandle1, hci::Connection::Role::kMaster);
 
   fbl::RefPtr<Channel> channel;
   auto channel_cb = [&channel](fbl::RefPtr<l2cap::Channel> activated_chan) {
@@ -1028,8 +1022,7 @@ TEST_F(L2CAP_ChannelManagerTest, ACLOutboundDynamicChannelRemoteDisconnect) {
 }
 
 TEST_F(L2CAP_ChannelManagerTest, ACLOutboundDynamicChannelDataNotBuffered) {
-  chanmgr()->RegisterACL(kTestHandle1, hci::Connection::Role::kMaster, [] {},
-                         dispatcher());
+  RegisterACL(kTestHandle1, hci::Connection::Role::kMaster);
 
   fbl::RefPtr<Channel> channel;
   auto channel_cb = [&channel](fbl::RefPtr<l2cap::Channel> activated_chan) {
@@ -1128,8 +1121,7 @@ TEST_F(L2CAP_ChannelManagerTest, ACLOutboundDynamicChannelDataNotBuffered) {
 }
 
 TEST_F(L2CAP_ChannelManagerTest, ACLOutboundDynamicChannelRemoteRefused) {
-  chanmgr()->RegisterACL(kTestHandle1, hci::Connection::Role::kMaster, [] {},
-                         dispatcher());
+  RegisterACL(kTestHandle1, hci::Connection::Role::kMaster);
 
   bool channel_cb_called = false;
   auto channel_cb = [&channel_cb_called](fbl::RefPtr<l2cap::Channel> channel) {
@@ -1161,8 +1153,7 @@ TEST_F(L2CAP_ChannelManagerTest, ACLOutboundDynamicChannelRemoteRefused) {
 }
 
 TEST_F(L2CAP_ChannelManagerTest, ACLOutboundDynamicChannelFailedConfiguration) {
-  chanmgr()->RegisterACL(kTestHandle1, hci::Connection::Role::kMaster, [] {},
-                         dispatcher());
+  RegisterACL(kTestHandle1, hci::Connection::Role::kMaster);
 
   bool channel_cb_called = false;
   auto channel_cb = [&channel_cb_called](fbl::RefPtr<l2cap::Channel> channel) {
@@ -1236,8 +1227,7 @@ TEST_F(L2CAP_ChannelManagerTest, ACLInboundDynamicChannelLocalDisconnect) {
   constexpr ChannelId kLocalId = 0x0040;
   constexpr ChannelId kRemoteId = 0x9042;
 
-  chanmgr()->RegisterACL(kTestHandle1, hci::Connection::Role::kMaster, [] {},
-                         dispatcher());
+  RegisterACL(kTestHandle1, hci::Connection::Role::kMaster);
 
   bool closed_cb_called = false;
   auto closed_cb = [&closed_cb_called] { closed_cb_called = true; };
@@ -1344,6 +1334,103 @@ TEST_F(L2CAP_ChannelManagerTest, ACLInboundDynamicChannelLocalDisconnect) {
   RunLoopUntilIdle();
 
   EXPECT_FALSE(closed_cb_called);
+}
+
+TEST_F(L2CAP_ChannelManagerTest, LinkSecurityProperties) {
+  sm::SecurityProperties security(sm::SecurityLevel::kEncrypted, 16, false);
+
+  // Has no effect.
+  chanmgr()->AssignLinkSecurityProperties(kTestHandle1, security);
+
+  // Register a link and open a channel. The security properties should be
+  // accessible using the channel.
+  RegisterLE(kTestHandle1, hci::Connection::Role::kMaster);
+  auto chan = ActivateNewFixedChannel(kATTChannelId, kTestHandle1);
+  ASSERT_TRUE(chan);
+
+  // The channel should start out at the lowest level of security.
+  EXPECT_EQ(sm::SecurityProperties(), chan->security());
+
+  // Assign a new security level.
+  chanmgr()->AssignLinkSecurityProperties(kTestHandle1, security);
+
+  // Channel should return the new security level.
+  EXPECT_EQ(security, chan->security());
+}
+
+// Tests that assigning a new security level on a closed link does nothing.
+TEST_F(L2CAP_ChannelManagerTest, AssignLinkSecurityPropertiesOnClosedLink) {
+  // Register a link and open a channel. The security properties should be
+  // accessible using the channel.
+  RegisterLE(kTestHandle1, hci::Connection::Role::kMaster);
+  auto chan = ActivateNewFixedChannel(kATTChannelId, kTestHandle1);
+  ASSERT_TRUE(chan);
+
+  chanmgr()->Unregister(kTestHandle1);
+  RunLoopUntilIdle();
+
+  // Assign a new security level.
+  sm::SecurityProperties security(sm::SecurityLevel::kEncrypted, 16, false);
+  chanmgr()->AssignLinkSecurityProperties(kTestHandle1, security);
+
+  // Channel should return the old security level.
+  EXPECT_EQ(sm::SecurityProperties(), chan->security());
+}
+
+TEST_F(L2CAP_ChannelManagerTest, UpgradeSecurity) {
+  // The callback passed to to Channel::UpgradeSecurity().
+  sm::Status received_status;
+  int security_status_count = 0;
+  auto status_callback = [&](sm::Status status) {
+    received_status = status;
+    security_status_count++;
+  };
+
+  // The security handler callback assigned when registering a link.
+  sm::Status delivered_status;
+  sm::SecurityLevel last_requested_level = sm::SecurityLevel::kNoSecurity;
+  int security_request_count = 0;
+  auto security_handler = [&](hci::ConnectionHandle handle,
+                              sm::SecurityLevel level, auto callback) {
+    EXPECT_EQ(kTestHandle1, handle);
+    last_requested_level = level;
+    security_request_count++;
+
+    callback(delivered_status);
+  };
+
+  RegisterLE(kTestHandle1, hci::Connection::Role::kMaster, DoNothing,
+             NopLeConnParamCallback, std::move(security_handler));
+  auto chan = ActivateNewFixedChannel(kATTChannelId, kTestHandle1);
+  ASSERT_TRUE(chan);
+
+  // Requesting security at or below the current level should succeed without
+  // doing anything.
+  chan->UpgradeSecurity(sm::SecurityLevel::kNoSecurity, status_callback);
+  RunLoopUntilIdle();
+  EXPECT_EQ(0, security_request_count);
+  EXPECT_EQ(1, security_status_count);
+  EXPECT_TRUE(received_status);
+
+  // Test reporting an error.
+  delivered_status = sm::Status(HostError::kNotSupported);
+  chan->UpgradeSecurity(sm::SecurityLevel::kEncrypted, status_callback);
+  RunLoopUntilIdle();
+  EXPECT_EQ(1, security_request_count);
+  EXPECT_EQ(2, security_status_count);
+  EXPECT_EQ(delivered_status, received_status);
+  EXPECT_EQ(sm::SecurityLevel::kEncrypted, last_requested_level);
+
+  // Close the link. Future security requests should have no effect.
+  chanmgr()->Unregister(kTestHandle1);
+  RunLoopUntilIdle();
+
+  chan->UpgradeSecurity(sm::SecurityLevel::kAuthenticated, status_callback);
+  chan->UpgradeSecurity(sm::SecurityLevel::kAuthenticated, status_callback);
+  chan->UpgradeSecurity(sm::SecurityLevel::kAuthenticated, status_callback);
+  RunLoopUntilIdle();
+  EXPECT_EQ(1, security_request_count);
+  EXPECT_EQ(2, security_status_count);
 }
 
 }  // namespace

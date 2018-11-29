@@ -16,6 +16,9 @@
 #include "lib/fxl/macros.h"
 
 #include "garnet/drivers/bluetooth/lib/hci/connection_parameters.h"
+#include "garnet/drivers/bluetooth/lib/hci/hci.h"
+#include "garnet/drivers/bluetooth/lib/sm/status.h"
+#include "garnet/drivers/bluetooth/lib/sm/types.h"
 
 namespace btlib {
 namespace l2cap {
@@ -35,6 +38,11 @@ using LEConnectionParameterUpdateCallback =
 // registered with L2CAP.
 using LEFixedChannelsCallback =
     fit::function<void(fbl::RefPtr<Channel> att, fbl::RefPtr<Channel> smp)>;
+
+// Callback used to request a security upgrade for an active logical link.
+// Invokes its |callback| argument with the result of the operation.
+using SecurityUpgradeCallback =
+    fit::function<void(hci::ConnectionHandle ll_handle, sm::SecurityLevel level, sm::StatusCallback callback)>;
 
 // L2CAP channel identifier uniquely identifies fixed and connection-oriented
 // channels over a logical link.
