@@ -24,12 +24,17 @@ struct MtkClkGate {
     const uint8_t bit;
 };
 
+constexpr MtkClkGateRegs kClkGatingCtrl0 = {.set = 0x50, .clr = 0x80};
 constexpr MtkClkGateRegs kClkGatingCtrl1 = { .set = 0x54, .clr = 0x84 };
+constexpr MtkClkGateRegs kClkGatingCtrl8 = {.set = 0xa0, .clr = 0xb0};
 
 constexpr MtkClkGate kMtkClkGates[] = {
-    [board_mt8167::kClkI2c0] = { .regs = kClkGatingCtrl1, .bit = 3 },
-    [board_mt8167::kClkI2c1] = { .regs = kClkGatingCtrl1, .bit = 4 },
-    [board_mt8167::kClkI2c2] = { .regs = kClkGatingCtrl1, .bit = 16 },
+        [board_mt8167::kClkI2c0] = {.regs = kClkGatingCtrl1, .bit = 3},
+        [board_mt8167::kClkI2c1] = {.regs = kClkGatingCtrl1, .bit = 4},
+        [board_mt8167::kClkI2c2] = {.regs = kClkGatingCtrl1, .bit = 16},
+        [board_mt8167::kClkSlowMfg] = {.regs = kClkGatingCtrl8, .bit = 7},
+        [board_mt8167::kClkAxiMfg] = {.regs = kClkGatingCtrl8, .bit = 6},
+        [board_mt8167::kClkMfgMm] = {.regs = kClkGatingCtrl0, .bit = 2},
 };
 
 zx_status_t MtkClk::Bind() {

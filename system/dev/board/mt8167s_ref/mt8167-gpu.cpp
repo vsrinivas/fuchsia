@@ -7,6 +7,7 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 
+#include <soc/mt8167/mt8167-clk.h>
 #include <soc/mt8167/mt8167-hw.h>
 
 #include "mt8167.h"
@@ -43,6 +44,16 @@ zx_status_t Mt8167::GpuInit() {
             .mode = ZX_INTERRUPT_MODE_LEVEL_LOW,
         }};
 
+    const pbus_clk_t gpu_clks[] = {
+        {
+            .clk = kClkSlowMfg,
+        },
+        {
+            .clk = kClkAxiMfg,
+        },
+        {
+            .clk = kClkMfgMm,
+        }};
     pbus_dev_t gpu_dev = {};
     gpu_dev.name = "gpio";
     gpu_dev.vid = PDEV_VID_MEDIATEK;
@@ -52,6 +63,8 @@ zx_status_t Mt8167::GpuInit() {
     gpu_dev.mmio_count = countof(gpu_mmios);
     gpu_dev.irq_list = gpu_irqs;
     gpu_dev.irq_count = countof(gpu_irqs);
+    gpu_dev.clk_list = gpu_clks;
+    gpu_dev.clk_count = countof(gpu_clks);
 
     zx_status_t status = pbus_.DeviceAdd(&gpu_dev);
     if (status != ZX_OK) {
