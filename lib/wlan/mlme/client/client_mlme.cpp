@@ -261,6 +261,11 @@ void ClientMlme::ResetMlmeStats() {
     if (sta_ != nullptr) { sta_->ResetStats(); }
 }
 
+bool ClientMlme::OnChannel() {
+    if (chan_sched_ != nullptr) { return chan_sched_->OnChannel(); }
+    return false;
+}
+
 void ClientMlme::Unjoin() {
     join_ctx_.reset();
     sta_.reset();

@@ -28,6 +28,7 @@ namespace wlan {
 // This allows to easily switch between different BSS to join to.
 static constexpr uint8_t kBssid1[6] = {0xB7, 0xCD, 0x3F, 0xB0, 0x93, 0x01};
 static constexpr uint8_t kBssid2[6] = {0xAC, 0xBF, 0x34, 0x11, 0x95, 0x02};
+static constexpr uint8_t kBroadcastBssid[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 static constexpr uint32_t kJoinTimeout = 200;        // Beacon Periods
 static constexpr uint32_t kAuthTimeout = 200;        // Beacon Periods
 static constexpr uint32_t kAutoDeauthTimeout = 100;  // Beacon Periods
@@ -61,6 +62,7 @@ static constexpr uint8_t kCipherOui[3] = {0x96, 0x85, 0x74};
 static constexpr uint8_t kCipherSuiteType = 0x11;
 
 ::fuchsia::wlan::mlme::BSSDescription CreateBssDescription();
+MlmeMsg<::fuchsia::wlan::mlme::ScanRequest> CreateScanRequest(uint32_t max_channel_time);
 MlmeMsg<::fuchsia::wlan::mlme::StartRequest> CreateStartRequest(bool protected_ap);
 MlmeMsg<::fuchsia::wlan::mlme::JoinRequest> CreateJoinRequest();
 MlmeMsg<::fuchsia::wlan::mlme::AuthenticateRequest> CreateAuthRequest();
@@ -68,7 +70,7 @@ MlmeMsg<::fuchsia::wlan::mlme::AuthenticateResponse> CreateAuthResponse(
     common::MacAddr client_addr, ::fuchsia::wlan::mlme::AuthenticateResultCodes result_code);
 MlmeMsg<::fuchsia::wlan::mlme::DeauthenticateRequest> CreateDeauthRequest(
     common::MacAddr, ::fuchsia::wlan::mlme::ReasonCode reason_code);
-MlmeMsg<::fuchsia::wlan::mlme::AssociateRequest> CreateAssocRequest();
+MlmeMsg<::fuchsia::wlan::mlme::AssociateRequest> CreateAssocRequest(bool rsn);
 MlmeMsg<::fuchsia::wlan::mlme::AssociateResponse> CreateAssocResponse(
     common::MacAddr client_addr, ::fuchsia::wlan::mlme::AssociateResultCodes result_code,
     uint16_t aid);
@@ -77,10 +79,9 @@ MlmeMsg<::fuchsia::wlan::mlme::SetKeysRequest> CreateSetKeysRequest(common::MacA
                                                                     std::vector<uint8_t> key_data,
                                                                     ::fuchsia::wlan::mlme::KeyType);
 fbl::unique_ptr<Packet> CreateAuthReqFrame(common::MacAddr client_addr);
-fbl::unique_ptr<Packet> CreateAuthRespFrame();
+fbl::unique_ptr<Packet> CreateAuthRespFrame(AuthAlgorithm auth_algo);
 fbl::unique_ptr<Packet> CreateDeauthFrame(common::MacAddr client_addr);
-fbl::unique_ptr<Packet> CreateBeaconFrame();
-fbl::unique_ptr<Packet> CreateBeaconFrameWithBssid(common::MacAddr);
+fbl::unique_ptr<Packet> CreateBeaconFrame(common::MacAddr bssid);
 fbl::unique_ptr<Packet> CreateProbeRequest();
 fbl::unique_ptr<Packet> CreateAssocReqFrame(common::MacAddr client_addr, Span<const uint8_t> ssid,
                                             bool rsn);

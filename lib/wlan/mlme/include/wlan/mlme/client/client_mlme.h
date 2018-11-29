@@ -39,6 +39,9 @@ class ClientMlme : public Mlme {
     ::fuchsia::wlan::stats::MlmeStats GetMlmeStats() const override final;
     void ResetMlmeStats() override final;
 
+    // Visible for tests only
+    bool OnChannel();
+
    private:
     struct OnChannelHandlerImpl : OnChannelHandler {
         ClientMlme* mlme_;

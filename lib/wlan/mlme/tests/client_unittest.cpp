@@ -4,8 +4,7 @@
 
 #include <lib/timekeeper/clock.h>
 #include <wlan/common/buffer_writer.h>
-#include <wlan/mlme/client/channel_scheduler.h>
-#include <wlan/mlme/client/station.h>
+#include <wlan/mlme/client/client_mlme.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/service.h>
@@ -29,85 +28,82 @@ namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
 static constexpr uint8_t kTestPayload[] = "Hello Fuchsia";
 
-struct MockOnChannelHandler : public OnChannelHandler {
-    void HandleOnChannelFrame(fbl::unique_ptr<Packet>) override {}
-    void PreSwitchOffChannel() override {}
-    void ReturnedOnChannel() override {}
-};
-
-struct MockOffChannelHandler : OffChannelHandler {
-    void BeginOffChannelTime() override {}
-    void HandleOffChannelFrame(fbl::unique_ptr<Packet>) override {}
-    bool EndOffChannelTime(bool interrupted, OffChannelRequest* next_req) override { return false; }
-};
-
 struct ClientTest : public ::testing::Test {
-    ClientTest()
-        : device(),
-          chan_sched(ChannelScheduler(&on_channel_handler, &device, device.CreateTimer(0))),
-          join_ctx(CreateBssDescription(), wlan_mlme::PHY::HR, wlan_mlme::CBW::CBW40BELOW),
-          station(&device, device.CreateTimer(1), &chan_sched, &join_ctx),
-          off_channel_handler(MockOffChannelHandler()) {
+    ClientTest() : device(), client(&device) {}
+
+    void SetUp() override {
         device.SetTime(zx::time(0));
-        station.HandleTimeout();
-        chan_sched.HandleTimeout();
+        client.Init();
+        TriggerTimeout(ObjectTarget::kChannelScheduler);
     }
 
     zx_status_t SendDataFrame() {
         auto frame = CreateDataFrame(kTestPayload, sizeof(kTestPayload));
         if (frame.IsEmpty()) { return ZX_ERR_NO_RESOURCES; }
-        station.HandleAnyWlanFrame(frame.Take());
+        client.HandleFramePacket(frame.Take());
         return ZX_OK;
     }
 
     zx_status_t SendEmptyDataFrame() {
         auto frame = CreateDataFrame(nullptr, 0);
         if (frame.IsEmpty()) { return ZX_ERR_NO_RESOURCES; }
-        station.HandleAnyWlanFrame(frame.Take());
+        client.HandleFramePacket(frame.Take());
         return ZX_OK;
     }
 
     zx_status_t SendNullDataFrame() {
         auto frame = CreateNullDataFrame();
         if (frame.IsEmpty()) { return ZX_ERR_NO_RESOURCES; }
-        station.HandleAnyWlanFrame(frame.Take());
+        client.HandleFramePacket(frame.Take());
         return ZX_OK;
     }
 
     zx_status_t SendEthFrame() {
         auto eth_frame = CreateEthFrame(kTestPayload, sizeof(kTestPayload));
         if (eth_frame.IsEmpty()) { return ZX_ERR_NO_RESOURCES; }
-        station.HandleEthFrame(EthFrame(eth_frame.Take()));
+        client.HandleFramePacket(eth_frame.Take());
         return ZX_OK;
     }
 
-    zx_status_t SendBeaconFrame(common::MacAddr bssid) {
-        station.HandleAnyWlanFrame(CreateBeaconFrameWithBssid(bssid));
-        return ZX_OK;
+    void SendBeaconFrame(common::MacAddr bssid = common::MacAddr(kBssid1)) {
+        client.HandleFramePacket(CreateBeaconFrame(bssid));
+    }
+    
+    void TriggerTimeout(ObjectTarget target) {
+        ObjectId timer_id;
+        timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
+        timer_id.set_target(to_enum_type(target));
+        client.HandleTimeout(timer_id);
+    }
+
+    void Join() {
+        ASSERT_EQ(ZX_OK, client.HandleMlmeMsg(CreateJoinRequest()));
+        device.svc_queue.clear();
     }
 
     void Authenticate() {
-        station.HandleAnyMlmeMsg(CreateAuthRequest());
-        station.HandleAnyWlanFrame(CreateAuthRespFrame());
+        client.HandleMlmeMsg(CreateAuthRequest());
+        client.HandleFramePacket(CreateAuthRespFrame(AuthAlgorithm::kOpenSystem));
         device.svc_queue.clear();
         device.wlan_queue.clear();
-        station.HandleTimeout();
-        chan_sched.HandleTimeout();
+        TriggerTimeout(ObjectTarget::kStation);
+        TriggerTimeout(ObjectTarget::kChannelScheduler);
     }
 
     void Associate() {
-        station.HandleAnyMlmeMsg(CreateAssocRequest());
-        station.HandleAnyWlanFrame(CreateAssocRespFrame());
+        client.HandleMlmeMsg(CreateAssocRequest(false));
+        client.HandleFramePacket(CreateAssocRespFrame());
         device.svc_queue.clear();
         device.wlan_queue.clear();
-        station.HandleTimeout();
-        chan_sched.HandleTimeout();
+        TriggerTimeout(ObjectTarget::kStation);
+        TriggerTimeout(ObjectTarget::kChannelScheduler);
     }
 
     void Connect() {
+        Join();
         Authenticate();
         Associate();
-        station.HandleTimeout();
+        TriggerTimeout(ObjectTarget::kStation);
     }
 
     zx::duration BeaconPeriodsToDuration(size_t periods) {
@@ -123,24 +119,19 @@ struct ClientTest : public ::testing::Test {
     }
 
     void GoOffChannel() {
-        // These numbers don't really affect below unit tests and were chosen arbitrarily.
-        OffChannelRequest off_channel_request =
-            OffChannelRequest{.chan = {.primary = 6, .cbw = CBW20, .secondary80 = 0},
-                              .duration = zx::msec(200),
-                              .handler = &off_channel_handler};
-        chan_sched.RequestOffChannelTime(off_channel_request);
-        station.PreSwitchOffChannel();
+        // For our test, scan duration doesn't matter for now since we explicit force station
+        // to go back on channel by calling `HandleTimeout`
+        ASSERT_EQ(ZX_OK, client.HandleMlmeMsg(CreateScanRequest(kBeaconPeriodTu)));
         device.wlan_queue.erase(device.wlan_queue.begin());  // dequeue the power-saving frame
-        ASSERT_FALSE(chan_sched.OnChannel());                // sanity check
+        ASSERT_FALSE(client.OnChannel());                    // sanity check
     }
 
-    void GoBackToMainChannel() {
-        chan_sched.EnsureOnChannel(device.GetTime() + BeaconPeriodsToDuration(1u));
-        chan_sched.HandleTimeout();  // calling this just to reset channel scheduler's
-                                     // `ensure_on_channel` flag.
-        station.BackToMainChannel();
+    // Forces station to go back on channel by issuing a timeout to channel scheduler. This assumes
+    // that a scan message was previously issue to cause station to go off channel.
+    void GoOnChannel() {
+        TriggerTimeout(ObjectTarget::kChannelScheduler);
         device.wlan_queue.erase(device.wlan_queue.begin());  // dequeue the power-saving frame
-        ASSERT_TRUE(chan_sched.OnChannel());                 // sanity check
+        ASSERT_TRUE(client.OnChannel());                     // sanity check
     }
 
     void AssertAuthConfirm(std::vector<uint8_t> vec,
@@ -173,17 +164,25 @@ struct ClientTest : public ::testing::Test {
     }
 
     MockDevice device;
-    ChannelScheduler chan_sched;
-    JoinContext join_ctx;
-    Station station;
-
-    MockOnChannelHandler on_channel_handler;
-    MockOffChannelHandler off_channel_handler;
+    ClientMlme client;
 };
 
+TEST_F(ClientTest, Join) {
+    ASSERT_EQ(ZX_OK, client.HandleMlmeMsg(CreateJoinRequest()));
+
+    ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));\
+    auto joins = device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEJoinConfOrdinal>);
+    ASSERT_FALSE(joins.empty());
+    MlmeMsg<wlan_mlme::JoinConfirm> msg;
+    ASSERT_EQ(ZX_OK, MlmeMsg<wlan_mlme::JoinConfirm>::Decode(joins[0], &msg));
+    ASSERT_EQ(msg.body()->result_code, wlan_mlme::JoinResultCodes::SUCCESS);
+}
+
 TEST_F(ClientTest, Authenticate) {
+    Join();
+
     // Send AUTHENTICATION.request. Verify that no confirmation was sent yet.
-    ASSERT_EQ(ZX_OK, station.HandleAnyMlmeMsg(CreateAuthRequest()));
+    ASSERT_EQ(ZX_OK, client.HandleMlmeMsg(CreateAuthRequest()));
     ASSERT_TRUE(device.svc_queue.empty());
 
     // Verify wlan frame is correct.
@@ -202,7 +201,7 @@ TEST_F(ClientTest, Authenticate) {
     ASSERT_EQ(frame.body()->status_code, 0);
 
     // Respond with a Authentication frame and verify a AUTHENTICATION.confirm message was sent.
-    ASSERT_EQ(ZX_OK, station.HandleAnyWlanFrame(CreateAuthRespFrame()));
+    ASSERT_EQ(ZX_OK, client.HandleFramePacket(CreateAuthRespFrame(AuthAlgorithm::kOpenSystem)));
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
     auto auths = device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAuthenticateConfOrdinal>);
     ASSERT_FALSE(auths.empty());
@@ -211,15 +210,16 @@ TEST_F(ClientTest, Authenticate) {
     // Verify a delayed timeout won't cause another confirmation.
     device.svc_queue.clear();
     SetTimeInBeaconPeriods(100);
-    station.HandleTimeout();
+    TriggerTimeout(ObjectTarget::kStation);
     ASSERT_TRUE(device.svc_queue.empty());
 }
 
 TEST_F(ClientTest, Associate) {
+    Join();
     Authenticate();
 
     // Send ASSOCIATE.request. Verify that no confirmation was sent yet.
-    ASSERT_EQ(ZX_OK, station.HandleAnyMlmeMsg(CreateAssocRequest()));
+    ASSERT_EQ(ZX_OK, client.HandleMlmeMsg(CreateAssocRequest(false)));
     ASSERT_TRUE(device.svc_queue.empty());
 
     // Verify wlan frame is correct.
@@ -238,7 +238,7 @@ TEST_F(ClientTest, Associate) {
     ASSERT_TRUE(frame.body()->Validate(ie_chain));
 
     // Respond with a Association Response frame and verify a ASSOCIATE.confirm message was sent.
-    ASSERT_EQ(ZX_OK, station.HandleAnyWlanFrame(CreateAssocRespFrame()));
+    ASSERT_EQ(ZX_OK, client.HandleFramePacket(CreateAssocRespFrame()));
     ASSERT_FALSE(device.svc_queue.empty());
     auto assocs = device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAssociateConfOrdinal>);
     ASSERT_EQ(assocs.size(), static_cast<size_t>(1));
@@ -247,24 +247,26 @@ TEST_F(ClientTest, Associate) {
     // Verify a delayed timeout won't cause another confirmation.
     device.svc_queue.clear();
     SetTimeInBeaconPeriods(100);
-    station.HandleTimeout();
+    TriggerTimeout(ObjectTarget::kStation);
     assocs = device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAssociateConfOrdinal>);
     ASSERT_TRUE(assocs.empty());
 }
 
 TEST_F(ClientTest, AuthTimeout) {
+    Join();
+
     // Send AUTHENTICATE.request. Verify that no confirmation was sent yet.
-    ASSERT_EQ(ZX_OK, station.HandleAnyMlmeMsg(CreateAuthRequest()));
+    ASSERT_EQ(ZX_OK, client.HandleMlmeMsg(CreateAuthRequest()));
     ASSERT_TRUE(device.svc_queue.empty());
 
     // Timeout not yet hit.
     SetTimeInBeaconPeriods(kAuthTimeout - 1);
-    station.HandleTimeout();
+    TriggerTimeout(ObjectTarget::kStation);
     ASSERT_TRUE(device.svc_queue.empty());
 
     // Timeout hit, verify a AUTHENTICATION.confirm message was sent.
     SetTimeInBeaconPeriods(kAuthTimeout);
-    station.HandleTimeout();
+    TriggerTimeout(ObjectTarget::kStation);
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
     auto auths = device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAuthenticateConfOrdinal>);
     ASSERT_FALSE(auths.empty());
@@ -272,20 +274,21 @@ TEST_F(ClientTest, AuthTimeout) {
 }
 
 TEST_F(ClientTest, AssocTimeout) {
+    Join();
     Authenticate();
 
     // Send ASSOCIATE.request. Verify that no confirmation was sent yet.
-    ASSERT_EQ(ZX_OK, station.HandleAnyMlmeMsg(CreateAssocRequest()));
+    ASSERT_EQ(ZX_OK, client.HandleMlmeMsg(CreateAssocRequest(false)));
     ASSERT_TRUE(device.svc_queue.empty());
 
     // Timeout not yet hit.
     SetTimeInBeaconPeriods(10);
-    station.HandleTimeout();
+    TriggerTimeout(ObjectTarget::kStation);
     ASSERT_TRUE(device.svc_queue.empty());
 
     // Timeout hit, verify a ASSOCIATE.confirm message was sent.
     SetTimeInBeaconPeriods(40);
-    station.HandleTimeout();
+    TriggerTimeout(ObjectTarget::kStation);
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
     auto assocs = device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAssociateConfOrdinal>);
     ASSERT_FALSE(assocs.empty());
@@ -294,6 +297,7 @@ TEST_F(ClientTest, AssocTimeout) {
 
 TEST_F(ClientTest, ExchangeDataAfterAssociation) {
     // Verify no data frame is exchanged before being associated.
+    Join();
     device.eth_queue.clear();
     SendDataFrame();
     SendNullDataFrame();
@@ -371,7 +375,7 @@ TEST_F(ClientTest, DropManagementFrames) {
     mgmt_hdr->addr2 = common::MacAddr(kClientAddress);
     mgmt_hdr->addr3 = common::MacAddr(kBssid2);
     w.Write<Deauthentication>()->reason_code = 42;
-    station.HandleAnyWlanFrame(std::move(packet));
+    client.HandleFramePacket(std::move(packet));
 
     // Verify neither a management frame nor service message were sent.
     ASSERT_TRUE(device.svc_queue.empty());
@@ -388,14 +392,14 @@ TEST_F(ClientTest, AutoDeauth_NoBeaconReceived) {
 
     // Timeout not yet hit.
     IncreaseTimeByBeaconPeriods(kAutoDeauthTimeout - 1);
-    station.HandleTimeout();
+    TriggerTimeout(ObjectTarget::kStation);
     ASSERT_TRUE(device.wlan_queue.empty());
     auto deauths = device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal>);
     ASSERT_TRUE(deauths.empty());
 
     // Auto-deauth timeout, client should be deauthenticated.
     IncreaseTimeByBeaconPeriods(1);
-    station.HandleTimeout();
+    TriggerTimeout(ObjectTarget::kStation);
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     AssertDeauthFrame(std::move(*device.wlan_queue.begin()),
                       wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
@@ -407,16 +411,16 @@ TEST_F(ClientTest, AutoDeauth_NoBeaconsShortlyAfterConnecting) {
     Connect();
 
     IncreaseTimeByBeaconPeriods(1);
-    station.HandleAnyWlanFrame(CreateBeaconFrame());
+    SendBeaconFrame();
 
     // Not enough time has passed yet since beacon frame was sent, so no deauth.
     IncreaseTimeByBeaconPeriods(kAutoDeauthTimeout - 1);
-    station.HandleTimeout();
+    TriggerTimeout(ObjectTarget::kStation);
     ASSERT_TRUE(device.wlan_queue.empty());
 
     // Auto-deauth triggers now.
     IncreaseTimeByBeaconPeriods(1);
-    station.HandleTimeout();
+    TriggerTimeout(ObjectTarget::kStation);
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     AssertDeauthFrame(std::move(*device.wlan_queue.begin()),
                       wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
@@ -432,23 +436,23 @@ TEST_F(ClientTest, AutoDeauth_DoNotDeauthWhileSwitchingChannel) {
 
     // For next two timeouts, still off channel, so should not deauth.
     IncreaseTimeByBeaconPeriods(1);
-    station.HandleTimeout();
+    TriggerTimeout(ObjectTarget::kStation);
     ASSERT_TRUE(device.wlan_queue.empty());
 
     IncreaseTimeByBeaconPeriods(kAutoDeauthTimeout);
-    station.HandleTimeout();
+    TriggerTimeout(ObjectTarget::kStation);
     ASSERT_TRUE(device.wlan_queue.empty());
 
     // Have not been back on main channel for long enough, so should not deauth.
     IncreaseTimeByBeaconPeriods(kAutoDeauthTimeout);
-    GoBackToMainChannel();
-    station.HandleTimeout();
+    GoOnChannel();
+    TriggerTimeout(ObjectTarget::kStation);
     ASSERT_TRUE(device.wlan_queue.empty());
 
     // Before going off channel, we did not receive beacon for `kAutoDeauthTimeout - 1` period.
     // Now one more beacon period has passed after going back on channel, so should auto deauth.
     IncreaseTimeByBeaconPeriods(1);
-    station.HandleTimeout();
+    TriggerTimeout(ObjectTarget::kStation);
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     AssertDeauthFrame(std::move(*device.wlan_queue.begin()),
                       wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
@@ -465,42 +469,42 @@ TEST_F(ClientTest, AutoDeauth_InterleavingBeaconsAndChannelSwitches) {
 
     // No deauth since off channel.
     IncreaseTimeByBeaconPeriods(5);
-    station.HandleTimeout();
+    TriggerTimeout(ObjectTarget::kStation);
     ASSERT_TRUE(device.wlan_queue.empty());
 
     IncreaseTimeByBeaconPeriods(1);
-    GoBackToMainChannel();
+    GoOnChannel();
 
     // Got beacon frame, which should reset the timeout.
     IncreaseTimeByBeaconPeriods(3);                   // -- On-channel time without beacon  -- //
-    station.HandleAnyWlanFrame(CreateBeaconFrame());  // -- Beacon timeout refresh -- ///
+    SendBeaconFrame();               // -- Beacon timeout refresh -- ///
 
     // No deauth since beacon was received not too long ago.
     IncreaseTimeByBeaconPeriods(2);  // -- On-channel time without beacon  -- //
-    station.HandleTimeout();
+    TriggerTimeout(ObjectTarget::kStation);
     ASSERT_TRUE(device.wlan_queue.empty());
 
     // Going off channel and back on channel
     // Total on-channel time without beacons so far: 2 beacon intervals
     GoOffChannel();
     IncreaseTimeByBeaconPeriods(kAutoDeauthTimeout);
-    GoBackToMainChannel();
+    GoOnChannel();
 
     IncreaseTimeByBeaconPeriods(kAutoDeauthTimeout - 3);  // -- On-channel time without beacon -- //
-    station.HandleTimeout();
+    TriggerTimeout(ObjectTarget::kStation);
     ASSERT_TRUE(device.wlan_queue.empty());
 
     // Going off channel and back on channel again
     // Total on-channel time without beacons so far: 2 + kAutoDeauthTimeout - 3
     GoOffChannel();
     IncreaseTimeByBeaconPeriods(kAutoDeauthTimeout);
-    GoBackToMainChannel();
-    station.HandleTimeout();
+    GoOnChannel();
+    TriggerTimeout(ObjectTarget::kStation);
     ASSERT_TRUE(device.wlan_queue.empty());
 
     // One more beacon period and auto-deauth triggers
     IncreaseTimeByBeaconPeriods(1);  // -- On-channel time without beacon -- //
-    station.HandleTimeout();
+    TriggerTimeout(ObjectTarget::kStation);
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     AssertDeauthFrame(std::move(*device.wlan_queue.begin()),
                       wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
@@ -519,21 +523,21 @@ TEST_F(ClientTest, AutoDeauth_SwitchingChannelBeforeDeauthTimeoutCouldTrigger) {
     // No deauth since off channel.
     IncreaseTimeByBeaconPeriods(kAutoDeauthTimeout);
     GoOffChannel();
-    station.HandleTimeout();
+    TriggerTimeout(ObjectTarget::kStation);
     ASSERT_TRUE(device.wlan_queue.empty());
 
     IncreaseTimeByBeaconPeriods(1);
-    GoBackToMainChannel();
+    GoOnChannel();
 
     // Auto-deauth timeout shouldn't trigger yet. This is because after going back on channel,
     // the client should always schedule timeout sufficiently far enough in the future
     // (at least one beacon interval)
-    station.HandleTimeout();
+    TriggerTimeout(ObjectTarget::kStation);
     ASSERT_TRUE(device.wlan_queue.empty());
 
     // Auto-deauth now
     IncreaseTimeByBeaconPeriods(1);
-    station.HandleTimeout();
+    TriggerTimeout(ObjectTarget::kStation);
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     AssertDeauthFrame(std::move(*device.wlan_queue.begin()),
                       wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
@@ -548,7 +552,7 @@ TEST_F(ClientTest, AutoDeauth_ForeignBeaconShouldNotPreventDeauth) {
     SendBeaconFrame(common::MacAddr(kBssid2));  // beacon frame from another AP
 
     IncreaseTimeByBeaconPeriods(1);
-    station.HandleTimeout();
+    TriggerTimeout(ObjectTarget::kStation);
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     AssertDeauthFrame(std::move(*device.wlan_queue.begin()),
                       wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
@@ -563,7 +567,7 @@ TEST_F(ClientTest, BufferFramesWhileOffChannelAndSendWhenOnChannel) {
     SendEthFrame();
     ASSERT_TRUE(device.wlan_queue.empty());
 
-    GoBackToMainChannel();
+    GoOnChannel();
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
 
     auto pkt = std::move(*device.wlan_queue.begin());
@@ -582,14 +586,14 @@ TEST_F(ClientTest, BufferFramesWhileOffChannelAndSendWhenOnChannel) {
 }
 
 TEST_F(ClientTest, InvalidAuthenticationResponse) {
+    Join();
+
     // Send AUTHENTICATION.request. Verify that no confirmation was sent yet.
-    ASSERT_EQ(ZX_OK, station.HandleAnyMlmeMsg(CreateAuthRequest()));
+    ASSERT_EQ(ZX_OK, client.HandleMlmeMsg(CreateAuthRequest()));
     ASSERT_TRUE(device.svc_queue.empty());
 
     // Send authentication frame with wrong algorithm.
-    MgmtFrame<Authentication> auth_frame(CreateAuthReqFrame(common::MacAddr(kClientAddress)));
-    auth_frame.body()->auth_algorithm_number = AuthAlgorithm::kSae;
-    ASSERT_EQ(station.HandleAnyWlanFrame(auth_frame.Take()), ZX_OK);
+    ASSERT_EQ(ZX_OK, client.HandleFramePacket(CreateAuthRespFrame(AuthAlgorithm::kSae)));
 
     // Verify that AUTHENTICATION.confirm was received.
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
@@ -602,20 +606,19 @@ TEST_F(ClientTest, InvalidAuthenticationResponse) {
     // The timeout however should have been canceled and we should not receive
     // and additional confirmation.
     SetTimeInBeaconPeriods(kAuthTimeout);
-    station.HandleTimeout();
+    TriggerTimeout(ObjectTarget::kStation);
     ASSERT_TRUE(device.svc_queue.empty());
 
     // Send a second, now valid authentication frame.
     // This frame should be ignored as the client reset.
-    auth_frame = MgmtFrame<Authentication>(CreateAuthReqFrame(common::MacAddr(kClientAddress)));
-    ASSERT_EQ(station.HandleAnyWlanFrame(auth_frame.Take()), ZX_OK);
+    ASSERT_EQ(ZX_OK, client.HandleFramePacket(CreateAuthRespFrame(AuthAlgorithm::kOpenSystem)));
 
     // Fast forward in time far beyond an authentication timeout.
     // There should not be any AUTHENTICATION.confirm sent as the client
     // is expected to have been reset into |idle| state after failing
     // to authenticate.
     SetTimeInBeaconPeriods(1000);
-    station.HandleTimeout();
+    TriggerTimeout(ObjectTarget::kStation);
     ASSERT_TRUE(device.svc_queue.empty());
 }
 

@@ -96,6 +96,19 @@ wlan_mlme::BSSDescription CreateBssDescription() {
     return bss_desc;
 }
 
+MlmeMsg<wlan_mlme::ScanRequest> CreateScanRequest(uint32_t max_channel_time) {
+    auto req = wlan_mlme::ScanRequest::New();
+    req->txn_id = 0;
+    req->bss_type = wlan_mlme::BSSTypes::ANY_BSS;
+    std::memcpy(req->bssid.mutable_data(), kBroadcastBssid, sizeof(kBroadcastBssid));
+    req->ssid.reset({0});
+    req->scan_type = wlan_mlme::ScanTypes::PASSIVE;
+    req->channel_list.reset({11});
+    req->max_channel_time = max_channel_time;
+
+    return {std::move(*req), fuchsia_wlan_mlme_MLMEStartScanOrdinal};
+}
+
 MlmeMsg<wlan_mlme::StartRequest> CreateStartRequest(bool protected_ap) {
     auto req = wlan_mlme::StartRequest::New();
     std::vector<uint8_t> ssid(kSsid, kSsid + sizeof(kSsid));
@@ -115,6 +128,8 @@ MlmeMsg<wlan_mlme::JoinRequest> CreateJoinRequest() {
     req->join_failure_timeout = kJoinTimeout;
     req->nav_sync_delay = 20;
     req->op_rate_set.reset({10, 22, 34});
+    req->phy = wlan_mlme::PHY::HR;
+    req->cbw = wlan_mlme::CBW::CBW20;
     req->selected_bss = CreateBssDescription();
 
     return {std::move(*req), fuchsia_wlan_mlme_MLMEJoinReqOrdinal};
@@ -148,12 +163,16 @@ MlmeMsg<wlan_mlme::AuthenticateResponse> CreateAuthResponse(
     return {std::move(*resp), fuchsia_wlan_mlme_MLMEAuthenticateRespOrdinal};
 }
 
-MlmeMsg<wlan_mlme::AssociateRequest> CreateAssocRequest() {
+MlmeMsg<wlan_mlme::AssociateRequest> CreateAssocRequest(bool rsn) {
     common::MacAddr bssid(kBssid1);
 
     auto req = wlan_mlme::AssociateRequest::New();
     std::memcpy(req->peer_sta_address.mutable_data(), bssid.byte, common::kMacAddrLen);
-    req->rsn.reset();
+    if (rsn) {
+        req->rsn.reset(std::vector<uint8_t>(kRsne, kRsne + sizeof(kRsne)));
+    } else {
+        req->rsn.reset();
+    }
 
     return {std::move(*req), fuchsia_wlan_mlme_MLMEAssociateReqOrdinal};
 }
@@ -199,11 +218,7 @@ MlmeMsg<wlan_mlme::SetKeysRequest> CreateSetKeysRequest(common::MacAddr client_a
     return {std::move(*req), fuchsia_wlan_mlme_MLMESetKeysReqOrdinal};
 }
 
-fbl::unique_ptr<Packet> CreateBeaconFrame() {
-    return CreateBeaconFrameWithBssid(common::MacAddr(kBssid1));
-}
-
-fbl::unique_ptr<Packet> CreateBeaconFrameWithBssid(common::MacAddr bssid) {
+fbl::unique_ptr<Packet> CreateBeaconFrame(common::MacAddr bssid) {
     constexpr size_t ie_len = 256;
     constexpr size_t max_frame_len = MgmtFrameHeader::max_len() + Beacon::max_len() + ie_len;
     auto packet = GetWlanPacket(max_frame_len);
@@ -302,7 +317,7 @@ fbl::unique_ptr<Packet> CreateAuthReqFrame(common::MacAddr client_addr) {
     return packet;
 }
 
-fbl::unique_ptr<Packet> CreateAuthRespFrame() {
+fbl::unique_ptr<Packet> CreateAuthRespFrame(AuthAlgorithm auth_algo) {
     common::MacAddr bssid(kBssid1);
     common::MacAddr client(kClientAddress);
 
@@ -319,7 +334,7 @@ fbl::unique_ptr<Packet> CreateAuthRespFrame() {
     mgmt_hdr->addr3 = bssid;
 
     auto auth = w.Write<Authentication>();
-    auth->auth_algorithm_number = AuthAlgorithm::kOpenSystem;
+    auth->auth_algorithm_number = auth_algo;
     auth->auth_txn_seq_number = 2;
     auth->status_code = status_code::kSuccess;
 
