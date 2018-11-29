@@ -102,7 +102,8 @@ class PairingState final : public Bearer::Listener {
   // |level| and notify the result in |callback|.
   //
   // If the desired security properties are already satisfied, this procedure
-  // will succeed immediately.
+  // will succeed immediately (|callback| will be run with the current security
+  // properties).
   //
   // If a pairing procedure has already been initiated (either by us or the
   // peer), the request will be queued and |callback| will be notified when the
@@ -115,7 +116,7 @@ class PairingState final : public Bearer::Listener {
   // the error.
   using PairingCallback =
       fit::function<void(Status status, const SecurityProperties& sec_props)>;
-  void UpdateSecurity(SecurityLevel level, PairingCallback callback);
+  void UpgradeSecurity(SecurityLevel level, PairingCallback callback);
 
   // Assign I/O capabilities. This aborts any ongoing pairing procedure and sets
   // up the I/O capabilities to use for future requests.
@@ -288,7 +289,7 @@ class PairingState final : public Bearer::Listener {
   // The state of the LE legacy pairing procedure, if any.
   std::unique_ptr<LegacyState> legacy_state_;
 
-  // The pending security requests added via UpdateSecurity().
+  // The pending security requests added via UpgradeSecurity().
   std::queue<PendingRequest> request_queue_;
 
   // TODO(armansito): Support SMP over ACL-U for LE Secure Connections.

@@ -88,9 +88,9 @@ class SMP_PairingStateTest : public l2cap::testing::FakeChannelTest,
     auth_failure_status_ = status;
   }
 
-  void UpdateSecurity(SecurityLevel level) {
+  void UpgradeSecurity(SecurityLevel level) {
     ZX_DEBUG_ASSERT(pairing_);
-    pairing_->UpdateSecurity(level, [this](auto status, const auto& props) {
+    pairing_->UpgradeSecurity(level, [this](auto status, const auto& props) {
       pairing_callback_count_++;
       pairing_status_ = status;
       sec_props_ = props;
@@ -284,7 +284,7 @@ class SMP_PairingStateTest : public l2cap::testing::FakeChannelTest,
   StaticByteBuffer<sizeof(Header) + sizeof(PairingRequestParams)>
       local_pairing_cmd_, peer_pairing_cmd_;
 
-  // Number of times the security callback given to UpdateSecurity has been
+  // Number of times the security callback given to UpgradeSecurity has been
   // called and the most recent parameters that it was called with.
   int pairing_callback_count_ = 0;
   Status pairing_status_;
@@ -358,7 +358,7 @@ class SMP_MasterPairingTest : public SMP_PairingStateTest {
                         SecurityLevel level = SecurityLevel::kEncrypted,
                         KeyDistGenField remote_keys = 0,
                         KeyDistGenField local_keys = 0) {
-    UpdateSecurity(level);
+    UpgradeSecurity(level);
 
     PairingRequestParams pairing_params;
     pairing_params.io_capability = IOCapability::kNoInputNoOutput;
@@ -440,8 +440,8 @@ class SMP_SlavePairingTest : public SMP_PairingStateTest {
 };
 
 // Requesting pairing at the current security level should succeed immediately.
-TEST_F(SMP_MasterPairingTest, UpdateSecurityCurrentLevel) {
-  UpdateSecurity(SecurityLevel::kNoSecurity);
+TEST_F(SMP_MasterPairingTest, UpgradeSecurityCurrentLevel) {
+  UpgradeSecurity(SecurityLevel::kNoSecurity);
   RunLoopUntilIdle();
 
   // No pairing requests should have been made.
@@ -458,7 +458,7 @@ TEST_F(SMP_MasterPairingTest, UpdateSecurityCurrentLevel) {
 
 // Peer aborts during Phase 1.
 TEST_F(SMP_MasterPairingTest, PairingFailedInPhase1) {
-  UpdateSecurity(SecurityLevel::kEncrypted);
+  UpgradeSecurity(SecurityLevel::kEncrypted);
   RunLoopUntilIdle();
 
   // Pairing not complete yet but we should be in Phase 1.
@@ -478,7 +478,7 @@ TEST_F(SMP_MasterPairingTest, PairingFailedInPhase1) {
 
 // Local aborts during Phase 1.
 TEST_F(SMP_MasterPairingTest, PairingAbortedInPhase1) {
-  UpdateSecurity(SecurityLevel::kEncrypted);
+  UpgradeSecurity(SecurityLevel::kEncrypted);
   RunLoopUntilIdle();
 
   // Pairing not complete yet but we should be in Phase 1.
@@ -500,7 +500,7 @@ TEST_F(SMP_MasterPairingTest, PairingAbortedInPhase1) {
 // pairing and the new I/O capabilities should be used in following pairing
 // requests.
 TEST_F(SMP_MasterPairingTest, PairingStateResetDuringPairing) {
-  UpdateSecurity(SecurityLevel::kEncrypted);
+  UpgradeSecurity(SecurityLevel::kEncrypted);
   RunLoopUntilIdle();
 
   // Pairing not complete yet but we should be in Phase 1.
@@ -517,7 +517,7 @@ TEST_F(SMP_MasterPairingTest, PairingStateResetDuringPairing) {
   EXPECT_EQ(1, pairing_complete_count());
   EXPECT_EQ(pairing_status(), pairing_complete_status());
 
-  UpdateSecurity(SecurityLevel::kEncrypted);
+  UpgradeSecurity(SecurityLevel::kEncrypted);
   RunLoopUntilIdle();
 
   // Should have sent a new pairing request.
@@ -541,7 +541,7 @@ TEST_F(SMP_MasterPairingTest, ReceiveConfirmValueWhileNotPairing) {
 }
 
 TEST_F(SMP_MasterPairingTest, ReceiveConfirmValueInPhase1) {
-  UpdateSecurity(SecurityLevel::kEncrypted);
+  UpgradeSecurity(SecurityLevel::kEncrypted);
   RunLoopUntilIdle();
 
   UInt128 confirm;
@@ -563,7 +563,7 @@ TEST_F(SMP_MasterPairingTest, ReceiveConfirmValueWhileWaitingForTK) {
   bool tk_requested = false;
   set_tk_delegate([&](auto, auto) { tk_requested = true; });
 
-  UpdateSecurity(SecurityLevel::kEncrypted);
+  UpgradeSecurity(SecurityLevel::kEncrypted);
   ReceivePairingFeatures();
   RunLoopUntilIdle();
   EXPECT_TRUE(tk_requested);
@@ -587,7 +587,7 @@ TEST_F(SMP_MasterPairingTest, PairingStateDestroyedStateWhileWaitingForTK) {
   PairingState::Delegate::TkResponse respond;
   set_tk_delegate([&](auto, auto rsp) { respond = std::move(rsp); });
 
-  UpdateSecurity(SecurityLevel::kEncrypted);
+  UpgradeSecurity(SecurityLevel::kEncrypted);
   ReceivePairingFeatures();
   RunLoopUntilIdle();
   EXPECT_TRUE(respond);
@@ -604,7 +604,7 @@ TEST_F(SMP_MasterPairingTest, PairingAbortedWhileWaitingForTK) {
   PairingState::Delegate::TkResponse respond;
   set_tk_delegate([&](auto, auto rsp) { respond = std::move(rsp); });
 
-  UpdateSecurity(SecurityLevel::kEncrypted);
+  UpgradeSecurity(SecurityLevel::kEncrypted);
   ReceivePairingFeatures();
   RunLoopUntilIdle();
   EXPECT_TRUE(respond);
@@ -636,7 +636,7 @@ TEST_F(SMP_MasterPairingTest, PairingRestartedWhileWaitingForTK) {
   PairingState::Delegate::TkResponse respond;
   set_tk_delegate([&](auto, auto rsp) { respond = std::move(rsp); });
 
-  UpdateSecurity(SecurityLevel::kEncrypted);
+  UpgradeSecurity(SecurityLevel::kEncrypted);
   ReceivePairingFeatures();
   RunLoopUntilIdle();
   EXPECT_TRUE(respond);
@@ -654,7 +654,7 @@ TEST_F(SMP_MasterPairingTest, PairingRestartedWhileWaitingForTK) {
   // pairing.
   set_tk_delegate(nullptr);
 
-  UpdateSecurity(SecurityLevel::kEncrypted);
+  UpgradeSecurity(SecurityLevel::kEncrypted);
   ReceivePairingFeatures();
   RunLoopUntilIdle();
   EXPECT_EQ(2, pairing_request_count());
@@ -691,7 +691,7 @@ TEST_F(SMP_MasterPairingTest, ReceiveRandomValueWhileNotPairing) {
 }
 
 TEST_F(SMP_MasterPairingTest, ReceiveRandomValueInPhase1) {
-  UpdateSecurity(SecurityLevel::kEncrypted);
+  UpgradeSecurity(SecurityLevel::kEncrypted);
   RunLoopUntilIdle();
 
   UInt128 random;
@@ -713,7 +713,7 @@ TEST_F(SMP_MasterPairingTest, ReceiveRandomValueWhileWaitingForTK) {
   bool tk_requested = false;
   set_tk_delegate([&](auto, auto) { tk_requested = true; });
 
-  UpdateSecurity(SecurityLevel::kEncrypted);
+  UpgradeSecurity(SecurityLevel::kEncrypted);
   ReceivePairingFeatures();
   RunLoopUntilIdle();
   EXPECT_TRUE(tk_requested);
@@ -733,7 +733,7 @@ TEST_F(SMP_MasterPairingTest, ReceiveRandomValueWhileWaitingForTK) {
 }
 
 TEST_F(SMP_MasterPairingTest, LegacyPhase2SlaveConfirmValueReceivedTwice) {
-  UpdateSecurity(SecurityLevel::kEncrypted);
+  UpgradeSecurity(SecurityLevel::kEncrypted);
   RunLoopUntilIdle();
 
   ReceivePairingFeatures();
@@ -768,7 +768,7 @@ TEST_F(SMP_MasterPairingTest, LegacyPhase2SlaveConfirmValueReceivedTwice) {
 }
 
 TEST_F(SMP_MasterPairingTest, LegacyPhase2ReceiveRandomValueInWrongOrder) {
-  UpdateSecurity(SecurityLevel::kEncrypted);
+  UpgradeSecurity(SecurityLevel::kEncrypted);
   RunLoopUntilIdle();
 
   ReceivePairingFeatures();
@@ -795,7 +795,7 @@ TEST_F(SMP_MasterPairingTest, LegacyPhase2ReceiveRandomValueInWrongOrder) {
 }
 
 TEST_F(SMP_MasterPairingTest, LegacyPhase2SlaveConfirmValueInvalid) {
-  UpdateSecurity(SecurityLevel::kEncrypted);
+  UpgradeSecurity(SecurityLevel::kEncrypted);
   RunLoopUntilIdle();
 
   // Pick I/O capabilities and MITM flags that will result in Just Works
@@ -841,7 +841,7 @@ TEST_F(SMP_MasterPairingTest, LegacyPhase2SlaveConfirmValueInvalid) {
 }
 
 TEST_F(SMP_MasterPairingTest, LegacyPhase2RandomValueReceivedTwice) {
-  UpdateSecurity(SecurityLevel::kEncrypted);
+  UpgradeSecurity(SecurityLevel::kEncrypted);
   RunLoopUntilIdle();
 
   // Pick I/O capabilities and MITM flags that will result in Just Works
@@ -895,7 +895,7 @@ TEST_F(SMP_MasterPairingTest, LegacyPhase2RandomValueReceivedTwice) {
 }
 
 TEST_F(SMP_MasterPairingTest, LegacyPhase2ConfirmValuesExchanged) {
-  UpdateSecurity(SecurityLevel::kEncrypted);
+  UpgradeSecurity(SecurityLevel::kEncrypted);
   RunLoopUntilIdle();
 
   // Pick I/O capabilities and MITM flags that will result in Just Works
@@ -949,7 +949,7 @@ TEST_F(SMP_MasterPairingTest, LegacyPhase2TKDelegateRejectsPasskeyInput) {
     respond = std::move(cb_rsp);
   });
 
-  UpdateSecurity(SecurityLevel::kEncrypted);
+  UpgradeSecurity(SecurityLevel::kEncrypted);
   RunLoopUntilIdle();
 
   // Pick I/O capabilities and MITM flags that will result in Passkey Entry
@@ -981,7 +981,7 @@ TEST_F(SMP_MasterPairingTest, LegacyPhase2TKDelegateRejectsPairing) {
     respond = std::move(cb_rsp);
   });
 
-  UpdateSecurity(SecurityLevel::kEncrypted);
+  UpgradeSecurity(SecurityLevel::kEncrypted);
   RunLoopUntilIdle();
 
   ReceivePairingFeatures();
@@ -1014,7 +1014,7 @@ TEST_F(SMP_MasterPairingTest, LegacyPhase2ConfirmValuesExchangedWithUserTK) {
     respond = std::move(cb_rsp);
   });
 
-  UpdateSecurity(SecurityLevel::kEncrypted);
+  UpgradeSecurity(SecurityLevel::kEncrypted);
   RunLoopUntilIdle();
 
   // Pick I/O capabilities and MITM flags that will result in Passkey Entry
@@ -1065,7 +1065,7 @@ TEST_F(SMP_MasterPairingTest, LegacyPhase2ConfirmValuesExchangedWithUserTK) {
 
 // Peer aborts during Phase 2.
 TEST_F(SMP_MasterPairingTest, PairingFailedInPhase2) {
-  UpdateSecurity(SecurityLevel::kEncrypted);
+  UpgradeSecurity(SecurityLevel::kEncrypted);
   ReceivePairingFeatures();
   RunLoopUntilIdle();
 
@@ -1534,7 +1534,7 @@ TEST_F(SMP_MasterPairingTest, Phase3CompleteWithAllKeys) {
 }
 
 TEST_F(SMP_MasterPairingTest, SetCurrentSecurityFailsDuringPairing) {
-  UpdateSecurity(SecurityLevel::kEncrypted);  // Initiate pairing.
+  UpgradeSecurity(SecurityLevel::kEncrypted);  // Initiate pairing.
   SecurityProperties sec_props(SecurityLevel::kAuthenticated, 16, false);
   EXPECT_FALSE(pairing()->SetCurrentSecurity(LTK(sec_props, hci::LinkKey())));
   EXPECT_EQ(SecurityLevel::kNoSecurity, pairing()->security().level());

@@ -127,7 +127,7 @@ class LowEnergyConnection final : public sm::PairingState::Delegate {
         gatt->DiscoverServices(self->id_);
       } else {
         bt_log(INFO, "gap-le", "pairing with device");
-        pairing->UpdateSecurity(
+        pairing->UpgradeSecurity(
             sm::SecurityLevel::kEncrypted,
             [gatt, id = self->id()](sm::Status status, const auto& props) {
               bt_log(INFO, "gap-le", "pairing status: %s, properties: %s",

@@ -155,8 +155,8 @@ bool PairingState::SetCurrentSecurity(const LTK& ltk) {
   return true;
 }
 
-void PairingState::UpdateSecurity(SecurityLevel level,
-                                  PairingCallback callback) {
+void PairingState::UpgradeSecurity(SecurityLevel level,
+                                   PairingCallback callback) {
   // If pairing is in progress then we queue the request.
   if (legacy_state_) {
     bt_log(SPEW, "sm", "LE legacy pairing in progress; request queued");
