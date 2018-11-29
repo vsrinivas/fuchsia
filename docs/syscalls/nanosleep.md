@@ -29,6 +29,18 @@ To sleep for a duration, use [**zx_deadline_after**](deadline_after.md) and the
 zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
 ```
 
+The nanosleep duration has 10% late slack with a minimum slack time of 1
+microsecond and a maximum slack time of 1 second. This slack time is the amount
+of additional time that the thread might sleep before being rescheduled. For
+example, a thread that requests a nanosleep with a duration of 1 second will
+have a slack time of .1 second. This means that the thread will sleep anywhere
+between 1 and 1.1 seconds. See [timer_set](timer_set.md) for a more in-depth
+description of slack.
+
+The slack is included so the operating system can coalesce sleeps for
+performance and energy reasons.  If more precise timing is needed, it is
+recommended to use a timer.
+
 ## RIGHTS
 
 No rights are required.
@@ -36,3 +48,10 @@ No rights are required.
 ## RETURN VALUE
 
 **nanosleep**() always returns **ZX_OK**.
+
+## SEE ALSO
+
+[deadline_after](deadline_after.md),
+[xz_timer_create](timer_create.md),
+[timer_set](timer_set.md),
+[timer_cancel](timer_cancel.md),
