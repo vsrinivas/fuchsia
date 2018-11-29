@@ -23,7 +23,7 @@ $VerifiedPlatform mac-amd64
 
 # Clang
 @Subdir clang
-fuchsia/clang/${platform} git_revision:de39621f0f03f20633bdfa50bde97a3908bf6e98
+fuchsia/clang/${platform} git_revision:e4ba76b2e98c9d4b41c82a37ec894d8c7f67b160
 
 # GCC
 @Subdir gcc
