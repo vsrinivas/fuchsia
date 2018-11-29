@@ -27,13 +27,6 @@
 #include <utility>
 #endif
 
-// #define DEBUG_PRINTF
-#ifdef DEBUG_PRINTF
-#define xprintf(args...) fprintf(stderr, args)
-#else
-#define xprintf(args...)
-#endif
-
 namespace fs {
 namespace {
 
@@ -129,7 +122,7 @@ zx_status_t Vfs::Open(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
 zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
                             fbl::StringPiece path, fbl::StringPiece* out_path,
                             uint32_t flags, uint32_t mode) {
-    xprintf("VfsOpen: path='%s' flags=%d\n", path.begin(), flags);
+    FS_TRACE_DEBUG("VfsOpen: path='%s' flags=%d\n", path.begin(), flags);
     zx_status_t r;
     if ((r = vfs_prevalidate_flags(flags)) != ZX_OK) {
         return r;
@@ -211,7 +204,7 @@ zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
             }
         }
     }
-    xprintf("VfsOpen: vn=%p\n", vn.get());
+    FS_TRACE_DEBUG("VfsOpen: vn=%p\n", vn.get());
     *out_path = "";
     *out = vn;
     return ZX_OK;

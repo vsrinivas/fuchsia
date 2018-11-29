@@ -119,7 +119,7 @@ void OpenAt(Vfs* vfs, fbl::RefPtr<Vnode> parent, zx::channel channel,
     zx_status_t r = vfs->Open(std::move(parent), &vnode, path, &path, open_flags, mode);
 
     if (r != ZX_OK) {
-        xprintf("vfs: open: r=%d\n", r);
+        FS_TRACE_DEBUG("vfs: open failure: %d\n", r);
     } else if (!(open_flags & ZX_FS_FLAG_NOREMOTE) && vnode->IsRemote()) {
         // Remote handoff to a remote filesystem node.
         vfs->ForwardOpenRemote(std::move(vnode), std::move(channel), std::move(path),

@@ -21,5 +21,7 @@
 
 // Enable trace printf()s
 
-#define FS_TRACE_ERROR(fmt...) fprintf(stderr, fmt)
+#define FS_TRACE_DEBUG(fmt...)
+#define FS_TRACE_INFO(fmt...)
 #define FS_TRACE_WARN(fmt...) fprintf(stderr, fmt)
+#define FS_TRACE_ERROR(fmt...) fprintf(stderr, fmt)
