@@ -716,8 +716,14 @@ func (s *socketServer) opGetSockOpt(ios *iostate, msg *zxsocket.Msg) zx.Status {
 			ios.ep.GetSockOpt(&o)
 			binary.LittleEndian.PutUint32(val.optval[:], uint32(o))
 			val.optlen = c_socklen(4)
-		case tcpip.NoDelayOption:
+		case tcpip.DelayOption:
 			ios.ep.GetSockOpt(&o)
+			// Socket option is TCP_NODELAY, so we need to invert the delay flag.
+			if o != 0 {
+				o = 0
+			} else {
+				o = 1
+			}
 			binary.LittleEndian.PutUint32(val.optval[:], uint32(o))
 			val.optlen = c_socklen(4)
 		case tcpip.ReuseAddressOption:
