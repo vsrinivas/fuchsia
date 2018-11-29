@@ -43,16 +43,15 @@
 
 // Handle ID to use for the root job when spawning devhosts.  This number must match the
 // value used in system/dev/misc/sysinfo/sysinfo.c
-#define ID_HJOBROOT 4
+static constexpr uint32_t kIdHJobRoot = 4;
 
 namespace devmgr {
 
 static void dc_driver_added(Driver* drv, const char* version);
 static void dc_driver_added_init(Driver* drv, const char* version);
 
-
-#define BOOT_FIRMWARE_DIR "/boot/lib/firmware"
-#define SYSTEM_FIRMWARE_DIR "/system/lib/firmware"
+static constexpr char kBootFirmwareDir[] = "/boot/lib/firmware";
+static constexpr char kSystemFirmwareDir[] = "/system/lib/firmware";
 
 extern zx_handle_t virtcon_open;
 
@@ -656,7 +655,7 @@ static zx_status_t dc_launch_devhost(Devhost* host,
 
     //TODO: limit root job access to root devhost only
     launchpad_add_handle(lp, get_sysinfo_job_root().release(),
-                         PA_HND(PA_USER0, ID_HJOBROOT));
+                         PA_HND(PA_USER0, kIdHJobRoot));
 
     const char* errmsg;
     zx_status_t status = launchpad_go(lp, host->proc.reset_and_get_address(), &errmsg);
@@ -1076,8 +1075,8 @@ static zx_status_t dc_bind_device(Device* dev, fbl::StringPiece drvlibname) {
 static zx_status_t dc_load_firmware(Device* dev, const char* path,
                                     zx::vmo* vmo, size_t* size) {
     static const char* fwdirs[] = {
-        BOOT_FIRMWARE_DIR,
-        SYSTEM_FIRMWARE_DIR,
+        kBootFirmwareDir,
+        kSystemFirmwareDir,
     };
 
     // Must be a relative path and no funny business.
@@ -2135,8 +2134,8 @@ void dc_handle_new_driver() {
     }
 }
 
-#define CTL_SCAN_SYSTEM 1
-#define CTL_ADD_SYSTEM 2
+static constexpr uint32_t kCtlScanSystem = 1u;
+static constexpr uint32_t kCtlAddSystem = 2u;
 
 static bool system_available;
 static bool system_loaded;
@@ -2165,10 +2164,10 @@ static void dc_control_event(async_dispatcher_t* dispatcher, async::Receiver* re
     }
 
     switch (data->u32[0]) {
-    case CTL_SCAN_SYSTEM:
+    case kCtlScanSystem:
         dc_scan_system();
         break;
-    case CTL_ADD_SYSTEM: {
+    case kCtlAddSystem: {
         Driver* drv;
         // Add system drivers to the new list
         while ((drv = list_drivers_system.pop_front()) != nullptr) {
@@ -2214,7 +2213,7 @@ static int system_driver_loader(void* arg) {
     find_loadable_drivers("/system/driver", dc_driver_added_sys);
 
     zx_packet_user_t pkt = {};
-    pkt.u32[0] = CTL_ADD_SYSTEM;
+    pkt.u32[0] = kCtlAddSystem;
     control_handler.QueuePacket(DcAsyncLoop()->dispatcher(), &pkt);
     return 0;
 }
@@ -2223,7 +2222,7 @@ void load_system_drivers() {
     system_available = true;
 
     zx_packet_user_t pkt = {};
-    pkt.u32[0] = CTL_SCAN_SYSTEM;
+    pkt.u32[0] = kCtlScanSystem;
     control_handler.QueuePacket(DcAsyncLoop()->dispatcher(), &pkt);
 }
 
