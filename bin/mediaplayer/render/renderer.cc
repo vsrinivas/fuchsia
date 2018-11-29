@@ -32,6 +32,7 @@ void Renderer::Dump(std::ostream& os) const {
   os << fostr::NewLine
      << "timeline:              " << current_timeline_function_;
   os << fostr::NewLine << "end of stream:         " << end_of_stream();
+  os << fostr::NewLine << "end of stream pending: " << end_of_stream_pending();
   os << fostr::NewLine
      << "end of stream pts:     " << AsNs(end_of_stream_pts());
   os << fostr::NewLine << "minimum pts:           " << AsNs(program_0_min_pts_);

@@ -90,10 +90,8 @@ PlayerImpl::PlayerImpl(
 
         os << fostr::NewLine
            << "duration:           " << AsNs(status_.duration_ns);
-        os << fostr::NewLine
-           << "can pause:          " << AsNs(status_.can_pause);
-        os << fostr::NewLine
-           << "can seek:           " << AsNs(status_.can_seek);
+        os << fostr::NewLine << "can pause:          " << status_.can_pause;
+        os << fostr::NewLine << "can seek:           " << status_.can_seek;
 
         if (status_.metadata) {
           for (auto& property : *status_.metadata->properties) {

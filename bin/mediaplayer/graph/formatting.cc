@@ -22,6 +22,10 @@ std::ostream& operator<<(std::ostream& os, AsNs value) {
     return os << "<min>";
   }
 
+  if (value.value_ == std::numeric_limits<int64_t>::max() - 1) {
+    return os << "<max>";
+  }
+
   if (value.value_ == 0) {
     return os << "0";
   }
