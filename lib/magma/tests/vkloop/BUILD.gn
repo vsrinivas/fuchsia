@@ -12,6 +12,11 @@ executable("vkloop") {
     "vkloop.cc",
   ]
 
+  deps = [
+    "//garnet/lib/magma/fidl",
+    "//garnet/lib/magma/include:magma_abi",
+    "//zircon/public/lib/fdio",
+  ]
   public_deps = [
     "//garnet/lib/magma/src/magma_util",
     "//third_party/googletest:gtest",

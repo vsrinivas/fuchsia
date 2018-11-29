@@ -9,12 +9,18 @@
 #else
 #include <vulkan/vulkan.h>
 #endif
+
+#include <fcntl.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <vector>
 
+#include <fuchsia/gpu/magma/c/fidl.h>
+#include <lib/fdio/unsafe.h>
+
+#include "magma.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 
@@ -25,7 +31,7 @@ public:
     explicit VkLoopTest(bool hang_on_event) : hang_on_event_(hang_on_event) {}
 
     bool Initialize();
-    bool Exec();
+    bool Exec(bool kill_driver);
 
 private:
     bool InitVulkan();
@@ -271,7 +277,7 @@ bool VkLoopTest::InitCommandBuffer()
     return true;
 }
 
-bool VkLoopTest::Exec()
+bool VkLoopTest::Exec(bool kill_driver)
 {
     VkResult result;
     result = vkQueueWaitIdle(vk_queue_);
@@ -292,6 +298,27 @@ bool VkLoopTest::Exec()
 
     if ((result = vkQueueSubmit(vk_queue_, 1, &submit_info, VK_NULL_HANDLE)) != VK_SUCCESS)
         return DRETF(false, "vkQueueSubmit failed");
+    if (kill_driver) {
+        uint32_t fd = open("/dev/class/gpu/000", O_RDONLY);
+        if (fd < 0) {
+            DLOG("Couldn't find driver, skipping test\n");
+            return true;
+        }
+        fdio_t* fdio = fdio_unsafe_fd_to_io(fd);
+        uint64_t is_supported = 0;
+        zx_status_t status = fuchsia_gpu_magma_DeviceQuery(
+            fdio_unsafe_borrow_channel(fdio), MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED, &is_supported);
+        if (status != ZX_OK || !is_supported) {
+            fdio_unsafe_release(fdio);
+            printf("Test restart not supported: status %d is_supported %lu\n", status,
+                   is_supported);
+            return true;
+        }
+
+        EXPECT_EQ(ZX_OK, fuchsia_gpu_magma_DeviceTestRestart(fdio_unsafe_borrow_channel(fdio)));
+        fdio_unsafe_release(fdio);
+        close(fd);
+    }
 
     for (int i = 0; i < 5; i++) {
         result = vkQueueWaitIdle(vk_queue_);
@@ -309,7 +336,7 @@ TEST(Vulkan, InfiniteLoop)
     for (int i = 0; i < 2; i++) {
         VkLoopTest test(false);
         ASSERT_TRUE(test.Initialize());
-        ASSERT_TRUE(test.Exec());
+        ASSERT_TRUE(test.Exec(false));
     }
 }
 
@@ -317,7 +344,14 @@ TEST(Vulkan, EventHang)
 {
     VkLoopTest test(true);
     ASSERT_TRUE(test.Initialize());
-    ASSERT_TRUE(test.Exec());
+    ASSERT_TRUE(test.Exec(false));
+}
+
+TEST(Vulkan, DriverDeath)
+{
+    VkLoopTest test(true);
+    ASSERT_TRUE(test.Initialize());
+    ASSERT_TRUE(test.Exec(true));
 }
 
 } // namespace
