@@ -53,14 +53,6 @@ struct ClientTest : public ::testing::Test {
         chan_sched.HandleTimeout();
     }
 
-    template <typename F> zx_status_t SendFrame() {
-        fbl::unique_ptr<Packet> pkt;
-        auto status = CreateFrame<F>(&pkt);
-        if (status != ZX_OK) { return status; }
-        station.HandleAnyWlanFrame(std::move(pkt));
-        return ZX_OK;
-    }
-
     zx_status_t SendDataFrame() {
         auto frame = CreateDataFrame(kTestPayload, sizeof(kTestPayload));
         if (frame.IsEmpty()) { return ZX_ERR_NO_RESOURCES; }
@@ -90,16 +82,13 @@ struct ClientTest : public ::testing::Test {
     }
 
     zx_status_t SendBeaconFrame(common::MacAddr bssid) {
-        fbl::unique_ptr<Packet> pkt;
-        auto status = CreateBeaconFrameWithBssid(&pkt, bssid);
-        if (status != ZX_OK) { return status; }
-        station.HandleAnyWlanFrame(std::move(pkt));
+        station.HandleAnyWlanFrame(CreateBeaconFrameWithBssid(bssid));
         return ZX_OK;
     }
 
     void Authenticate() {
-        ASSERT_EQ(ZX_OK, station.HandleAnyMlmeMsg(CreateAuthRequest()));
-        SendFrame<Authentication>();
+        station.HandleAnyMlmeMsg(CreateAuthRequest());
+        station.HandleAnyWlanFrame(CreateAuthRespFrame());
         device.svc_queue.clear();
         device.wlan_queue.clear();
         station.HandleTimeout();
@@ -107,8 +96,8 @@ struct ClientTest : public ::testing::Test {
     }
 
     void Associate() {
-        ASSERT_EQ(ZX_OK, station.HandleAnyMlmeMsg(CreateAssocRequest()));
-        SendFrame<AssociationResponse>();
+        station.HandleAnyMlmeMsg(CreateAssocRequest());
+        station.HandleAnyWlanFrame(CreateAssocRespFrame());
         device.svc_queue.clear();
         device.wlan_queue.clear();
         station.HandleTimeout();
@@ -213,7 +202,7 @@ TEST_F(ClientTest, Authenticate) {
     ASSERT_EQ(frame.body()->status_code, 0);
 
     // Respond with a Authentication frame and verify a AUTHENTICATION.confirm message was sent.
-    ASSERT_EQ(SendFrame<Authentication>(), ZX_OK);
+    ASSERT_EQ(ZX_OK, station.HandleAnyWlanFrame(CreateAuthRespFrame()));
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
     auto auths = device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAuthenticateConfOrdinal>);
     ASSERT_FALSE(auths.empty());
@@ -244,11 +233,12 @@ TEST_F(ClientTest, Associate) {
     ASSERT_EQ(std::memcmp(frame.hdr()->addr1.byte, kBssid1, 6), 0);
     ASSERT_EQ(std::memcmp(frame.hdr()->addr2.byte, kClientAddress, 6), 0);
     ASSERT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
-    size_t ie_len = frame.body_len() - frame.body()->len();
-    ASSERT_TRUE(frame.body()->Validate(ie_len));
+    auto assoc_req_frame = frame.NextFrame();
+    Span<const uint8_t> ie_chain{assoc_req_frame.body()->data, assoc_req_frame.body_len()};
+    ASSERT_TRUE(frame.body()->Validate(ie_chain));
 
     // Respond with a Association Response frame and verify a ASSOCIATE.confirm message was sent.
-    ASSERT_EQ(SendFrame<AssociationResponse>(), ZX_OK);
+    ASSERT_EQ(ZX_OK, station.HandleAnyWlanFrame(CreateAssocRespFrame()));
     ASSERT_FALSE(device.svc_queue.empty());
     auto assocs = device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAssociateConfOrdinal>);
     ASSERT_EQ(assocs.size(), static_cast<size_t>(1));
@@ -417,7 +407,7 @@ TEST_F(ClientTest, AutoDeauth_NoBeaconsShortlyAfterConnecting) {
     Connect();
 
     IncreaseTimeByBeaconPeriods(1);
-    SendFrame<Beacon>();
+    station.HandleAnyWlanFrame(CreateBeaconFrame());
 
     // Not enough time has passed yet since beacon frame was sent, so no deauth.
     IncreaseTimeByBeaconPeriods(kAutoDeauthTimeout - 1);
@@ -482,8 +472,8 @@ TEST_F(ClientTest, AutoDeauth_InterleavingBeaconsAndChannelSwitches) {
     GoBackToMainChannel();
 
     // Got beacon frame, which should reset the timeout.
-    IncreaseTimeByBeaconPeriods(3);  // -- On-channel time without beacon  -- //
-    SendFrame<Beacon>();             // -- Beacon timeout refresh -- ///
+    IncreaseTimeByBeaconPeriods(3);                   // -- On-channel time without beacon  -- //
+    station.HandleAnyWlanFrame(CreateBeaconFrame());  // -- Beacon timeout refresh -- ///
 
     // No deauth since beacon was received not too long ago.
     IncreaseTimeByBeaconPeriods(2);  // -- On-channel time without beacon  -- //
@@ -597,9 +587,7 @@ TEST_F(ClientTest, InvalidAuthenticationResponse) {
     ASSERT_TRUE(device.svc_queue.empty());
 
     // Send authentication frame with wrong algorithm.
-    fbl::unique_ptr<Packet> auth_pkt;
-    ASSERT_EQ(CreateFrame<Authentication>(&auth_pkt), ZX_OK);
-    MgmtFrame<Authentication> auth_frame(std::move(auth_pkt));
+    MgmtFrame<Authentication> auth_frame(CreateAuthReqFrame(common::MacAddr(kClientAddress)));
     auth_frame.body()->auth_algorithm_number = AuthAlgorithm::kSae;
     ASSERT_EQ(station.HandleAnyWlanFrame(auth_frame.Take()), ZX_OK);
 
@@ -619,8 +607,7 @@ TEST_F(ClientTest, InvalidAuthenticationResponse) {
 
     // Send a second, now valid authentication frame.
     // This frame should be ignored as the client reset.
-    ASSERT_EQ(CreateFrame<Authentication>(&auth_pkt), ZX_OK);
-    auth_frame = MgmtFrame<Authentication>(std::move(auth_pkt));
+    auth_frame = MgmtFrame<Authentication>(CreateAuthReqFrame(common::MacAddr(kClientAddress)));
     ASSERT_EQ(station.HandleAnyWlanFrame(auth_frame.Take()), ZX_OK);
 
     // Fast forward in time far beyond an authentication timeout.

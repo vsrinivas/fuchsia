@@ -138,17 +138,21 @@ void InfraBss::HandleAnyMgmtFrame(MgmtFrame<>&& frame) {
     // Special treatment for ProbeRequests which can be addressed towards
     // broadcast address.
     if (auto possible_probe_req_frame = mgmt_frame.CheckBodyType<ProbeRequest>()) {
-        if (auto probe_req_frame = possible_probe_req_frame.CheckLength()) {
+        if (auto mgmt_probe_req_frame = possible_probe_req_frame.CheckLength()) {
             // Drop all ProbeRequests which are neither targeted to this BSS nor to
             // broadcast address.
-            auto hdr = probe_req_frame.hdr();
+            auto hdr = mgmt_probe_req_frame.hdr();
             bool to_bcast = hdr->addr1.IsBcast() && hdr->addr3.IsBcast();
             if (!to_bss && !to_bcast) { return; }
 
             // Valid ProbeRequest, let BeaconSender process and respond to it.
-            bcn_sender_->SendProbeResponse(probe_req_frame);
+            auto ra = mgmt_probe_req_frame.hdr()->addr2;
+            auto probe_req_frame = mgmt_probe_req_frame.NextFrame();
+            Span<const uint8_t> ie_chain{probe_req_frame.body()->data, probe_req_frame.body_len()};
+            bcn_sender_->SendProbeResponse(ra, ie_chain);
             return;
         }
+        return;
     }
 
     // Drop management frames which are not targeted towards this BSS.

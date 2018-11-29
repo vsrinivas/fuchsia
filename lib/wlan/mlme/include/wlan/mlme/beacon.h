@@ -34,7 +34,7 @@ struct BeaconConfig {
 zx_status_t BuildBeacon(const BeaconConfig& config, MgmtFrame<Beacon>* buffer,
                         size_t* tim_ele_offset);
 
-zx_status_t BuildProbeResponse(const BeaconConfig& config, common::MacAddr addr1,
+zx_status_t BuildProbeResponse(const BeaconConfig& config, const common::MacAddr& recv_addr,
                                MgmtFrame<ProbeResponse>* buffer);
 
 }  // namespace wlan

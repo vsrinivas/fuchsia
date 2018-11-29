@@ -87,8 +87,8 @@ static bool SsidMatch(Span<const uint8_t> our_ssid, Span<const uint8_t> req_ssid
            || std::equal(our_ssid.begin(), our_ssid.end(), req_ssid.begin(), req_ssid.end());
 }
 
-bool ShouldSendProbeResponse(Span<const uint8_t> elements, Span<const uint8_t> our_ssid) {
-    auto splitter = common::ElementSplitter(elements);
+bool ShouldSendProbeResponse(Span<const uint8_t> ie_chain, Span<const uint8_t> our_ssid) {
+    auto splitter = common::ElementSplitter(ie_chain);
     auto it = std::find_if(splitter.begin(), splitter.end(), [](auto elem) {
         return std::get<element_id::ElementId>(elem) == element_id::kSsid;
     });
@@ -143,12 +143,10 @@ zx_status_t BeaconSender::UpdateBeacon(const PsCfg& ps_cfg) {
     return ZX_OK;
 }
 
-void BeaconSender::SendProbeResponse(const MgmtFrameView<ProbeRequest>& probe_req_frame) {
+void BeaconSender::SendProbeResponse(const common::MacAddr& recv_addr,
+                                     Span<const uint8_t> ie_chain) {
     if (!IsStarted()) { return; }
-    size_t elt_len = probe_req_frame.body_len() - probe_req_frame.hdr()->len();
-    if (!ShouldSendProbeResponse({probe_req_frame.body()->elements, elt_len}, *req_.ssid)) {
-        return;
-    }
+    if (!ShouldSendProbeResponse(ie_chain, *req_.ssid)) { return; }
 
     BeaconConfig c = {
         .bssid = bss_->bssid(),
@@ -164,7 +162,7 @@ void BeaconSender::SendProbeResponse(const MgmtFrameView<ProbeRequest>& probe_re
     c.rates = bss_->Rates();
 
     MgmtFrame<ProbeResponse> frame;
-    zx_status_t status = BuildProbeResponse(c, probe_req_frame.hdr()->addr2, &frame);
+    zx_status_t status = BuildProbeResponse(c, recv_addr, &frame);
     if (status != ZX_OK) {
         errorf("could not build a probe response frame: %s\n", zx_status_get_string(status));
         return;

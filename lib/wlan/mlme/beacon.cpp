@@ -120,7 +120,8 @@ template <typename T> static void SetBssType(T* bcn, BssType bss_type) {
 }
 
 template <typename T>
-static zx_status_t BuildBeaconOrProbeResponse(const BeaconConfig& config, common::MacAddr addr1,
+static zx_status_t BuildBeaconOrProbeResponse(const BeaconConfig& config,
+                                              const common::MacAddr& recv_addr,
                                               MgmtFrame<T>* buffer, size_t* tim_ele_offset) {
     constexpr size_t reserved_ie_len = 256;
     constexpr size_t max_frame_size =
@@ -132,7 +133,7 @@ static zx_status_t BuildBeaconOrProbeResponse(const BeaconConfig& config, common
     auto mgmt_hdr = w.Write<MgmtFrameHeader>();
     mgmt_hdr->fc.set_type(FrameType::kManagement);
     mgmt_hdr->fc.set_subtype(T::Subtype());
-    mgmt_hdr->addr1 = addr1;
+    mgmt_hdr->addr1 = recv_addr;
     mgmt_hdr->addr2 = config.bssid;
     mgmt_hdr->addr3 = config.bssid;
 
@@ -148,7 +149,7 @@ static zx_status_t BuildBeaconOrProbeResponse(const BeaconConfig& config, common
     BufferWriter elem_w(w.RemainingBuffer());
     size_t rel_tim_ele_offset = SIZE_MAX;
     WriteElements(&elem_w, config, &rel_tim_ele_offset);
-    ZX_DEBUG_ASSERT(bcn->Validate(elem_w.WrittenBytes()));
+    ZX_DEBUG_ASSERT(bcn->Validate(elem_w.WrittenData()));
 
     // Update packet's final length and tx_info.
     packet->set_len(w.WrittenBytes() + elem_w.WrittenBytes());
@@ -170,9 +171,9 @@ zx_status_t BuildBeacon(const BeaconConfig& config, MgmtFrame<Beacon>* buffer,
     return BuildBeaconOrProbeResponse(config, common::kBcastMac, buffer, tim_ele_offset);
 }
 
-zx_status_t BuildProbeResponse(const BeaconConfig& config, common::MacAddr addr1,
+zx_status_t BuildProbeResponse(const BeaconConfig& config, const common::MacAddr& recv_addr,
                                MgmtFrame<ProbeResponse>* buffer) {
-    return BuildBeaconOrProbeResponse(config, addr1, buffer, nullptr);
+    return BuildBeaconOrProbeResponse(config, recv_addr, buffer, nullptr);
 }
 
 }  // namespace wlan

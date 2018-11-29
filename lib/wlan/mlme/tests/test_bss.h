@@ -76,27 +76,20 @@ MlmeMsg<::fuchsia::wlan::mlme::EapolRequest> CreateEapolRequest(common::MacAddr 
 MlmeMsg<::fuchsia::wlan::mlme::SetKeysRequest> CreateSetKeysRequest(common::MacAddr client_addr,
                                                                     std::vector<uint8_t> key_data,
                                                                     ::fuchsia::wlan::mlme::KeyType);
-zx_status_t CreateAuthReqFrame(fbl::unique_ptr<Packet>*, common::MacAddr client_addr);
-zx_status_t CreateAuthRespFrame(fbl::unique_ptr<Packet>*);
-zx_status_t CreateDeauthFrame(fbl::unique_ptr<Packet>*, common::MacAddr client_addr);
-zx_status_t CreateBeaconFrame(fbl::unique_ptr<Packet>*);
-zx_status_t CreateBeaconFrameWithBssid(fbl::unique_ptr<Packet>*, common::MacAddr);
-zx_status_t CreateProbeRequest(fbl::unique_ptr<Packet>*);
-zx_status_t CreateAssocReqFrame(fbl::unique_ptr<Packet>*, common::MacAddr client_addr,
-                                Span<const uint8_t> ssid, bool rsn);
-zx_status_t CreateAssocRespFrame(fbl::unique_ptr<Packet>*);
-zx_status_t CreateDisassocFrame(fbl::unique_ptr<Packet>*, common::MacAddr client_addr);
+fbl::unique_ptr<Packet> CreateAuthReqFrame(common::MacAddr client_addr);
+fbl::unique_ptr<Packet> CreateAuthRespFrame();
+fbl::unique_ptr<Packet> CreateDeauthFrame(common::MacAddr client_addr);
+fbl::unique_ptr<Packet> CreateBeaconFrame();
+fbl::unique_ptr<Packet> CreateBeaconFrameWithBssid(common::MacAddr);
+fbl::unique_ptr<Packet> CreateProbeRequest();
+fbl::unique_ptr<Packet> CreateAssocReqFrame(common::MacAddr client_addr, Span<const uint8_t> ssid,
+                                            bool rsn);
+fbl::unique_ptr<Packet> CreateAssocRespFrame();
+fbl::unique_ptr<Packet> CreateDisassocFrame(common::MacAddr client_addr);
 DataFrame<LlcHeader> CreateDataFrame(const uint8_t* payload, size_t len);
 DataFrame<> CreateNullDataFrame();
 EthFrame CreateEthFrame(const uint8_t* payload, size_t len);
 
-template <typename F> zx_status_t CreateFrame(fbl::unique_ptr<Packet>* pkt) {
-    if (std::is_same<F, Authentication>::value) { return CreateAuthRespFrame(pkt); }
-    if (std::is_same<F, AssociationResponse>::value) { return CreateAssocRespFrame(pkt); }
-    if (std::is_same<F, Beacon>::value) { return CreateBeaconFrame(pkt); }
-
-    return ZX_ERR_NOT_SUPPORTED;
-}
 }  // namespace wlan
 
 #endif  // GARNET_LIB_WLAN_MLME_TESTS_TEST_BSS_H_

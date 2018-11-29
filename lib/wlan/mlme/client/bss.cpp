@@ -21,26 +21,26 @@ namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
 // TODO(NET-500): This file needs some clean-up.
 
-zx_status_t Bss::ProcessBeacon(const Beacon& beacon, size_t frame_len,
+zx_status_t Bss::ProcessBeacon(const Beacon& beacon, Span<const uint8_t> ie_chain,
                                const wlan_rx_info_t* rx_info) {
     if (!IsBeaconValid(beacon)) { return ZX_ERR_INTERNAL; }
 
     Renew(beacon, rx_info);
 
-    if (!HasBeaconChanged(beacon, frame_len)) {
+    if (!HasBeaconChanged(beacon, ie_chain)) {
         // If unchanged, it is sufficient to renew the BSS. Bail out.
         return ZX_OK;
     }
 
-    if (bcn_len_ != 0) {
+    if (last_ie_chain_len_ != 0) {
         // TODO(porce): Identify varying IE, and do IE-by-IE comparison.
         // BSS had been discovered, but the beacon changed.
         // Suspicious situation. Consider Deauth if in assoc.
         debugbcn("BSSID %s beacon change detected. (len %zu -> %zu)\n", bssid_.ToString().c_str(),
-                 bcn_len_, frame_len);
+                 last_ie_chain_len_, ie_chain.size());
     }
 
-    auto status = Update(beacon, frame_len);
+    auto status = Update(beacon, ie_chain);
     if (status != ZX_OK) {
         debugbcn("BSSID %s failed to update its BSS object: (%d)\n", bssid_.ToString().c_str(),
                  status);
@@ -101,18 +101,16 @@ void Bss::Renew(const Beacon& beacon, const wlan_rx_info_t* rx_info) {
         (rx_info->valid_fields & WLAN_RX_INFO_VALID_SNR) ? rx_info->snr_dbh : WLAN_RSNI_DBH_INVALID;
 }
 
-bool Bss::HasBeaconChanged(const Beacon& beacon, size_t frame_len) const {
+bool Bss::HasBeaconChanged(const Beacon& beacon, Span<const uint8_t> ie_chain) const {
     // Test changes in beacon, except for the timestamp field.
-    if (frame_len != bcn_len_) { return true; }
-    auto sig = GetBeaconSignature(beacon, frame_len);
-    if (sig != bcn_hash_) { return true; }
-    return false;
+    if (last_ie_chain_len_ != ie_chain.size()) { return true; }
+    auto sig = GetBeaconSignature(beacon, ie_chain);
+    return sig != last_bcn_signature_;
 }
 
-zx_status_t Bss::Update(const Beacon& beacon, size_t frame_len) {
-    // To be used to detect a change in Beacon.
-    bcn_len_ = frame_len;
-    bcn_hash_ = GetBeaconSignature(beacon, frame_len);
+zx_status_t Bss::Update(const Beacon& beacon, Span<const uint8_t> ie_chain) {
+    last_ie_chain_len_ = ie_chain.size();
+    last_bcn_signature_ = GetBeaconSignature(beacon, ie_chain);
 
     // Fields that are always present.
     bssid_.CopyTo(bss_desc_.bssid.mutable_data());
@@ -121,11 +119,7 @@ zx_status_t Bss::Update(const Beacon& beacon, size_t frame_len) {
     bss_desc_.cap = beacon.cap.ToFidl();
     bss_desc_.bss_type = GetBssType(beacon.cap);
 
-    // IE's.
-    auto ie_chains = beacon.elements;
-    size_t ie_chains_len = frame_len - beacon.len();
-
-    ParseBeaconElements({ie_chains, ie_chains_len}, bcn_rx_chan_.primary, &bss_desc_);
+    ParseBeaconElements(ie_chain, bcn_rx_chan_.primary, &bss_desc_);
     debugbcn("beacon BSSID %s Chan %u CBW %u Sec80 %u\n",
              common::MacAddr(bss_desc_.bssid).ToString().c_str(), bss_desc_.chan.primary,
              bss_desc_.chan.cbw, bss_desc_.chan.secondary80);
@@ -133,17 +127,12 @@ zx_status_t Bss::Update(const Beacon& beacon, size_t frame_len) {
     return ZX_OK;
 }
 
-BeaconHash Bss::GetBeaconSignature(const Beacon& beacon, size_t frame_len) const {
-    auto arr = reinterpret_cast<const uint8_t*>(&beacon);
-
+BeaconHash Bss::GetBeaconSignature(const Beacon& beacon, Span<const uint8_t> ie_chain) const {
     // Get a hash of the beacon except for its first field: timestamp.
-    arr += sizeof(beacon.timestamp);
-    frame_len -= sizeof(beacon.timestamp);
-
-    BeaconHash hash = 0;
     // TODO(porce): Change to a less humble version.
-    for (size_t idx = 0; idx < frame_len; idx++) {
-        hash += *(arr + idx);
+    BeaconHash hash = beacon.beacon_interval + beacon.cap.val();
+    for (auto b : ie_chain) {
+        hash += b;
     }
     return hash;
 }

@@ -195,9 +195,9 @@ void Scanner::HandleBeacon(const MgmtFrameView<Beacon>& frame) {
     if (!ShouldDropMgmtFrame(*frame.hdr())) { ProcessBeacon(frame); }
 }
 
-void Scanner::ProcessBeacon(const MgmtFrameView<Beacon>& bcn_frame) {
+void Scanner::ProcessBeacon(const MgmtFrameView<Beacon>& mgmt_bcn_frame) {
     debugfn();
-    auto bssid = bcn_frame.hdr()->addr3;
+    auto bssid = mgmt_bcn_frame.hdr()->addr3;
 
     auto it = current_bss_.find(bssid.ToU64());
     if (it == current_bss_.end()) {
@@ -211,11 +211,13 @@ void Scanner::ProcessBeacon(const MgmtFrameView<Beacon>& bcn_frame) {
                  .first;
     }
 
-    zx_status_t status =
-        it->second.ProcessBeacon(*bcn_frame.body(), bcn_frame.body_len(), bcn_frame.rx_info());
+    auto rx_info = mgmt_bcn_frame.rx_info();
+    auto bcn_frame = mgmt_bcn_frame.NextFrame();
+    Span<const uint8_t> ie_chain{bcn_frame.body()->data, bcn_frame.body_len()};
+    zx_status_t status = it->second.ProcessBeacon(*bcn_frame.hdr(), ie_chain, rx_info);
     if (status != ZX_OK) {
         debugbcn("Failed to handle beacon (err %3d): BSSID %s timestamp: %15" PRIu64 "\n", status,
-                 MACSTR(bssid), bcn_frame.body()->timestamp);
+                 MACSTR(bssid), bcn_frame.hdr()->timestamp);
     }
 }
 

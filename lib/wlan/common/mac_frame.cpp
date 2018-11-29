@@ -254,24 +254,24 @@ bool ValidateElements(Span<const element_id::ElementId> ids, Span<const uint8_t>
 }
 }  // namespace
 
-bool Beacon::Validate(size_t len) const {
-    return ValidateElements(kValidBeaconIds, { elements, len });
+bool Beacon::Validate(Span<const uint8_t> ie_chain) const {
+    return ValidateElements(kValidBeaconIds, ie_chain);
 }
 
-bool ProbeRequest::Validate(size_t len) const {
-    return ValidateElements(kValidProbeRequestIds, { elements, len });
+bool ProbeRequest::Validate(Span<const uint8_t> ie_chain) const {
+    return ValidateElements(kValidProbeRequestIds, ie_chain);
 }
 
-bool ProbeResponse::Validate(size_t len) const {
-    return ValidateElements(kValidProbeResponseIds, { elements, len });
+bool ProbeResponse::Validate(Span<const uint8_t> ie_chain) const {
+    return ValidateElements(kValidProbeResponseIds, ie_chain);
 }
 
-bool AssociationRequest::Validate(size_t len) const {
-    return ValidateElements(kValidAssociationRequestIds, { elements, len });
+bool AssociationRequest::Validate(Span<const uint8_t> ie_chain) const {
+    return ValidateElements(kValidAssociationRequestIds, ie_chain);
 }
 
-bool AssociationResponse::Validate(size_t len) const {
-    return ValidateElements(kValidAssociationResponseIds, { elements, len });
+bool AssociationResponse::Validate(Span<const uint8_t> ie_chain) const {
+    return ValidateElements(kValidAssociationResponseIds, ie_chain);
 }
 
 CapabilityInfo IntersectCapInfo(const CapabilityInfo& lhs, const CapabilityInfo& rhs) {

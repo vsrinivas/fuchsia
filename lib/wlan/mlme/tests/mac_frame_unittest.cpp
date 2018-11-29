@@ -92,7 +92,7 @@ TEST(ProbeRequest, Validate) {
     common::WriteSupportedRates(&writer, rates);
 
     auto probe_request = FromBytes<ProbeRequest>(buf, writer.WrittenBytes());
-    EXPECT_TRUE(probe_request->Validate(writer.WrittenBytes()));
+    EXPECT_TRUE(probe_request->Validate(writer.WrittenData()));
 }
 
 TEST(ProbeRequest, OutOfOrderElements) {
@@ -107,7 +107,7 @@ TEST(ProbeRequest, OutOfOrderElements) {
     common::WriteSsid(&writer, ssid);
 
     auto probe_request = FromBytes<ProbeRequest>(buf, writer.WrittenBytes());
-    EXPECT_FALSE(probe_request->Validate(writer.WrittenBytes()));
+    EXPECT_FALSE(probe_request->Validate(writer.WrittenData()));
 }
 
 TEST(ProbeRequest, InvalidElement) {
@@ -119,7 +119,7 @@ TEST(ProbeRequest, InvalidElement) {
     common::WriteCfParamSet(&writer, {1, 2, 3, 4});
 
     auto probe_request = FromBytes<ProbeRequest>(buf, writer.WrittenBytes());
-    EXPECT_FALSE(probe_request->Validate(writer.WrittenBytes()));
+    EXPECT_FALSE(probe_request->Validate(writer.WrittenData()));
 }
 
 TEST(Frame, General) {

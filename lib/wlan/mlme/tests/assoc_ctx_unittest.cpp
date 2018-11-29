@@ -96,25 +96,25 @@ AssocContext BuildSampleCtx() {
     return ctx;
 }
 
-AssociationResponse* BuildSampleAssocResponse(std::vector<uint8_t>& buffer) {
-    BufferWriter w(buffer);
-    AssociationResponse* assoc_resp = w.Write<AssociationResponse>();
+AssociationResponse* WriteAssocRespHdr(BufferWriter* w) {
+    auto assoc_resp = w->Write<AssociationResponse>();
     assoc_resp->aid = 1234;
     assoc_resp->status_code = 2345;
+    return assoc_resp;
+}
 
+Span<const uint8_t> WriteAssocRespElements(Span<uint8_t> buffer) {
+    BufferWriter w(buffer);
     HtCapabilities ht_cap{};
     ht_cap.ht_cap_info.set_rx_stbc(1);
     ht_cap.ht_cap_info.set_tx_stbc(1);
     HtOperation ht_op{};
     VhtCapabilities vht_cap{};
 
-    BufferWriter elem_w({assoc_resp->elements, buffer.capacity() - w.WrittenBytes()});
-    common::WriteHtCapabilities(&elem_w, ht_cap);
-    common::WriteHtOperation(&elem_w, ht_op);
-    common::WriteVhtCapabilities(&elem_w, vht_cap);
-
-    buffer.resize(w.WrittenBytes() + elem_w.WrittenBytes());
-    return assoc_resp;
+    common::WriteHtCapabilities(&w, ht_cap);
+    common::WriteHtOperation(&w, ht_op);
+    common::WriteVhtCapabilities(&w, vht_cap);
+    return w.WrittenData();
 }
 
 TEST(AssociationRatesTest, Success) {
@@ -316,17 +316,12 @@ TEST(AssocContext, IntersectBssNoVht) {
 }
 
 TEST(AssocContext, MakeBssAssocCtx) {
-    constexpr size_t kBufLen = 512;
-    std::vector<uint8_t> buffer(kBufLen);
+    uint8_t buffer[512]{};
+    BufferWriter w(buffer);
+    auto assoc_resp = WriteAssocRespHdr(&w);
+    auto ie_chain = WriteAssocRespElements(w.RemainingBuffer());
 
-    auto assoc_resp = BuildSampleAssocResponse(buffer);
-    ASSERT_TRUE(nullptr != assoc_resp);
-    size_t ie_chains_len = buffer.size() - assoc_resp->len();
-
-    EXPECT_EQ(1234, assoc_resp->aid);
-    EXPECT_EQ(2345, assoc_resp->status_code);
-
-    auto ctx = MakeBssAssocCtx(*assoc_resp, {assoc_resp->elements, ie_chains_len}, TestMac);
+    auto ctx = MakeBssAssocCtx(*assoc_resp, ie_chain, TestMac);
     ASSERT_TRUE(ctx.has_value());
     ASSERT_TRUE(ctx->ht_cap.has_value());
     EXPECT_TRUE(ctx->ht_op.has_value());

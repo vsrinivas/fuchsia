@@ -2,10 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <wlan/common/buffer_writer.h>
+#include <wlan/common/write_element.h>
 #include <wlan/mlme/ap/beacon_sender.h>
 #include <wlan/mlme/ap/bss_interface.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
+#include <wlan/mlme/rates_elements.h>
 #include <wlan/mlme/service.h>
 #include <wlan/mlme/timer.h>
 
@@ -88,10 +91,16 @@ TEST_F(BeaconSenderTest, ProbeRequest) {
 
     ASSERT_TRUE(device.wlan_queue.empty());
 
-    fbl::unique_ptr<Packet> packet;
-    CreateProbeRequest(&packet);
-    MgmtFrameView<ProbeRequest> probe_req(packet.get());
-    bcn_sender.SendProbeResponse(probe_req);
+    uint8_t buffer[1024] = {};
+    BufferWriter elem_w(buffer);
+    common::WriteSsid(&elem_w, kSsid);
+    RatesWriter rates_writer{kSupportedRates};
+    rates_writer.WriteSupportedRates(&elem_w);
+    rates_writer.WriteExtendedSupportedRates(&elem_w);
+    common::WriteDsssParamSet(&elem_w, kBssChannel.primary);
+
+    common::MacAddr ra(kClientAddress);
+    bcn_sender.SendProbeResponse(ra, elem_w.WrittenData());
 
     ASSERT_FALSE(device.wlan_queue.empty());
     auto pkt = std::move(*device.wlan_queue.begin());

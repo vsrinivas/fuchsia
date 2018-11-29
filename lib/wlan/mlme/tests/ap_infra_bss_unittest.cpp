@@ -51,22 +51,15 @@ struct Context {
         return frame;
     }
 
-    zx_status_t SendClientAuthReqFrame() {
-        return HandleFrame([=](auto pkt) { return CreateAuthReqFrame(pkt, client_addr); });
+    void SendClientAuthReqFrame() { bss->HandleAnyFrame(CreateAuthReqFrame(client_addr)); }
+
+    void SendClientDeauthFrame() { bss->HandleAnyFrame(CreateDeauthFrame(client_addr)); }
+
+    void SendClientAssocReqFrame(Span<const uint8_t> ssid = kSsid, bool rsn = true) {
+        bss->HandleAnyFrame(CreateAssocReqFrame(client_addr, ssid, rsn));
     }
 
-    zx_status_t SendClientDeauthFrame() {
-        return HandleFrame([=](auto pkt) { return CreateDeauthFrame(pkt, client_addr); });
-    }
-
-    zx_status_t SendClientAssocReqFrame(Span<const uint8_t> ssid = kSsid, bool rsn = true) {
-        return HandleFrame(
-            [=](auto pkt) { return CreateAssocReqFrame(pkt, client_addr, ssid, rsn); });
-    }
-
-    zx_status_t SendClientDisassocFrame() {
-        return HandleFrame([=](auto pkt) { return CreateDisassocFrame(pkt, client_addr); });
-    }
+    void SendClientDisassocFrame() { bss->HandleAnyFrame(CreateDisassocFrame(client_addr)); }
 
     zx_status_t SendNullDataFrame(bool pwr_mgmt) {
         return HandleFrame([=](auto pkt) {

@@ -323,7 +323,7 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
         common::WriteVhtCapabilities(&elem_w, vht_cap);
     }
 
-    ZX_DEBUG_ASSERT(assoc->Validate(elem_w.WrittenBytes()));
+    ZX_DEBUG_ASSERT(assoc->Validate(elem_w.WrittenData()));
     packet->set_len(w.WrittenBytes() + elem_w.WrittenBytes());
 
     finspect("Outbound Mgmt Frame (AssocReq): %s\n", debug::Describe(*mgmt_hdr).c_str());
@@ -369,8 +369,9 @@ void Station::HandleBeacon(MgmtFrame<Beacon>&& frame) {
     remaining_auto_deauth_timeout_ = FullAutoDeauthDuration();
     auto_deauth_last_accounted_ = timer_mgr_.Now();
 
-    size_t elt_len = frame.body_len() - frame.body()->len();
-    auto tim = common::FindAndParseTim({frame.body()->elements, elt_len});
+    auto bcn_frame = frame.View().NextFrame();
+    Span<const uint8_t> ie_chain{bcn_frame.body()->data, bcn_frame.body_len()};
+    auto tim = common::FindAndParseTim(ie_chain);
     if (tim && common::IsTrafficBuffered(assoc_ctx_.aid, tim->header, tim->bitmap)) {
         SendPsPoll();
     }
@@ -1324,9 +1325,9 @@ zx_status_t Station::SetAssocContext(const MgmtFrameView<AssociationResponse>& f
     assoc_ctx_.aid = frame.body()->aid & kAidMask;
     assoc_ctx_.listen_interval = join_ctx_->listen_interval();
 
-    auto ie_chains = frame.body()->elements;
-    size_t ie_chains_len = frame.body_len() - frame.body()->len();
-    auto bss_assoc_ctx = ParseAssocRespIe({ie_chains, ie_chains_len});
+    auto assoc_resp_frame = frame.NextFrame();
+    Span<const uint8_t> ie_chain{assoc_resp_frame.body()->data, assoc_resp_frame.body_len()};
+    auto bss_assoc_ctx = ParseAssocRespIe(ie_chain);
     if (!bss_assoc_ctx.has_value()) {
         debugf("failed to parse AssocResp\n");
         return ZX_ERR_INVALID_ARGS;
@@ -1448,9 +1449,10 @@ void Station::ResetStats() {
 std::optional<AssocContext> Station::BuildAssocCtx(const MgmtFrameView<AssociationResponse>& frame,
                                                    const wlan_channel_t& join_chan, PHY join_phy,
                                                    uint16_t listen_interval) {
-    size_t ie_chains_len = frame.body_len() - frame.body()->len();
+    auto assoc_resp_frame = frame.NextFrame();
+    Span<const uint8_t> ie_chain = {assoc_resp_frame.body()->data, assoc_resp_frame.body_len()};
     auto bssid = frame.hdr()->addr3;
-    auto bss = MakeBssAssocCtx(*frame.body(), {frame.body()->elements, ie_chains_len}, bssid);
+    auto bss = MakeBssAssocCtx(*frame.body(), ie_chain, bssid);
     if (!bss.has_value()) { return {}; }
 
     auto client = MakeClientAssocCtx(device_->GetWlanInfo().ifc_info, join_chan);

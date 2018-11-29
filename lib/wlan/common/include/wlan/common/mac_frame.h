@@ -12,12 +12,16 @@
 #include <wlan/common/bitfield.h>
 #include <wlan/common/element.h>
 #include <wlan/common/macaddr.h>
+#include <wlan/common/span.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
 #include <cstdint>
 
 namespace wlan {
+
+// TODO(NET-1985): Some of this file's definition are inconsistent in its naming and should not
+// represent a frame.
 
 // wlan_tu_t is an 802.11 Time Unit.
 typedef uint64_t wlan_tu_t;
@@ -473,7 +477,7 @@ struct Beacon {
     static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kBeacon; }
     static constexpr size_t max_len() { return sizeof(Beacon); }
 
-    bool Validate(size_t len) const;
+    bool Validate(Span<const uint8_t> ie_chain) const;
 
     // 9.4.1.10
     uint64_t timestamp;
@@ -481,8 +485,6 @@ struct Beacon {
     uint16_t beacon_interval;
     // 9.4.1.4
     CapabilityInfo cap;
-
-    uint8_t elements[];
 
     constexpr size_t len() const { return sizeof(*this); }
 } __PACKED;
@@ -492,10 +494,9 @@ struct ProbeRequest {
     static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kProbeRequest; }
     static constexpr size_t max_len() { return sizeof(ProbeRequest); }
 
-    bool Validate(size_t len) const;
+    bool Validate(Span<const uint8_t> ie_chain) const;
 
     size_t hdr_len() { return 0; }
-    uint8_t elements[];
 
     constexpr size_t len() const { return sizeof(*this); }
 } __PACKED;
@@ -505,7 +506,7 @@ struct ProbeResponse {
     static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kProbeResponse; }
     static constexpr size_t max_len() { return sizeof(ProbeResponse); }
 
-    bool Validate(size_t len) const;
+    bool Validate(Span<const uint8_t> ie_chain) const;
 
     // 9.4.1.10
     uint64_t timestamp;
@@ -513,8 +514,6 @@ struct ProbeResponse {
     uint16_t beacon_interval;
     // 9.4.1.4
     CapabilityInfo cap;
-
-    uint8_t elements[];
 
     constexpr size_t len() const { return sizeof(*this); }
 } __PACKED;
@@ -534,7 +533,7 @@ struct Authentication {
     static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kAuthentication; }
     static constexpr size_t max_len() { return sizeof(Authentication); }
 
-    // TODO(tkilbourn): bool Validate(size_t len)
+    // TODO(tkilbourn): bool Validate(Span<const uint8_t> ie_chain)
     // Authentication frames are complicated, so when we need more than Open
     // System auth, figure out how to proceed.
 
@@ -544,8 +543,6 @@ struct Authentication {
     uint16_t auth_txn_seq_number;
     // 9.4.1.9
     uint16_t status_code;
-
-    uint8_t elements[];
 
     constexpr size_t len() const { return sizeof(*this); }
 } __PACKED;
@@ -558,10 +555,6 @@ struct Deauthentication {
     // 9.4.1.7
     uint16_t reason_code;
 
-    // Vendor-specific elements and optional Management MIC element (MME) at the
-    // end
-    uint8_t elements[];
-
     constexpr size_t len() const { return sizeof(*this); }
 } __PACKED;
 
@@ -570,14 +563,12 @@ struct AssociationRequest {
     static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kAssociationRequest; }
     static constexpr size_t max_len() { return sizeof(AssociationRequest); }
 
-    bool Validate(size_t len) const;
+    bool Validate(Span<const uint8_t> ie_chain) const;
 
     // 9.4.1.4
     CapabilityInfo cap;
     // 9.4.1.6
     uint16_t listen_interval;
-
-    uint8_t elements[];
 
     constexpr size_t len() const { return sizeof(*this); }
 } __PACKED;
@@ -589,7 +580,7 @@ struct AssociationResponse {
     static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kAssociationResponse; }
     static constexpr size_t max_len() { return sizeof(AssociationResponse); }
 
-    bool Validate(size_t len) const;
+    bool Validate(Span<const uint8_t> ie_chain) const;
 
     // 9.4.1.4
     CapabilityInfo cap;
@@ -597,8 +588,6 @@ struct AssociationResponse {
     uint16_t status_code;
     // 9.4.1.8
     uint16_t aid;
-
-    uint8_t elements[];
 
     constexpr size_t len() const { return sizeof(*this); }
 } __PACKED;
@@ -610,10 +599,6 @@ struct Disassociation {
 
     // 9.4.1.7
     uint16_t reason_code;
-
-    // Vendor-specific elements and optional Management MIC element (MME) at the
-    // end
-    uint8_t elements[];
 
     constexpr size_t len() const { return sizeof(*this); }
 } __PACKED;

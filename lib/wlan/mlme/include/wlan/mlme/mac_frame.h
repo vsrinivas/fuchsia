@@ -109,23 +109,19 @@ template <typename Header, typename Body = UnknownBody> class FrameView {
 
         auto body = pkt_->field<uint8_t>(body_offset());
         ZX_DEBUG_ASSERT(body != nullptr);
-        return { body, body_len() };
+        return {body, body_len()};
     }
 
     const Header* hdr() const {
         ZX_DEBUG_ASSERT(pkt_ != nullptr);
 
-        auto hdr = pkt_->field<Header>(hdr_offset());
-        ZX_DEBUG_ASSERT(hdr != nullptr);
-        return hdr;
+        return pkt_->field<Header>(hdr_offset());
     }
 
     const Body* body() const {
         ZX_DEBUG_ASSERT(pkt_ != nullptr);
 
-        auto body = pkt_->field<Body>(body_offset());
-        ZX_DEBUG_ASSERT(body != nullptr);
-        return body;
+        return pkt_->field<Body>(body_offset());
     }
 
     size_t body_len() const {

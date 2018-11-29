@@ -186,7 +186,7 @@ void AuthenticatedState::HandleAssociationRequest(MgmtFrame<AssociationRequest>&
     debugbss("[client] [%s] received Assocation Request\n", client_->addr().ToString().c_str());
 
     auto assoc_req_frame = frame.View().NextFrame();
-    Span<const uint8_t> ies = {assoc_req_frame.hdr()->elements, assoc_req_frame.body_len()};
+    Span<const uint8_t> ies = {assoc_req_frame.body()->data, assoc_req_frame.body_len()};
 
     std::optional<Span<const uint8_t>> ssid;
     std::optional<Span<const uint8_t>> rsn_body;
@@ -603,7 +603,6 @@ zx_status_t AssociatedState::HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRe
 
 zx_status_t AssociatedState::HandleMlmeDeauthReq(
     const MlmeMsg<wlan_mlme::DeauthenticateRequest>& req) {
-
     client_->SendDeauthentication(req.body()->reason_code);
     service::SendDeauthConfirm(client_->device(), client_->addr());
     MoveToState<DeauthenticatedState>();
@@ -835,7 +834,7 @@ zx_status_t RemoteClient::SendAssociationResponse(aid_t aid, status_code::Status
     }
 
     // Validate the request in debug mode.
-    ZX_DEBUG_ASSERT(assoc->Validate(elem_w.WrittenBytes()));
+    ZX_DEBUG_ASSERT(assoc->Validate(elem_w.WrittenData()));
 
     packet->set_len(w.WrittenBytes() + elem_w.WrittenBytes());
 
