@@ -282,19 +282,3 @@ type c_ip_mreqn struct {
 	imr_address   c_in_addr
 	imr_ifindex   int32
 }
-
-type c_netc_if_info struct {
-	name       [16]byte
-	addr       c_sockaddr_storage
-	netmask    c_sockaddr_storage
-	broadaddr  c_sockaddr_storage
-	flags      uint32
-	index      uint16
-	hwaddr_len uint16
-	hwaddr     [8]uint8
-}
-
-type c_netc_get_if_info struct {
-	n_info uint32
-	info   [16]c_netc_if_info
-}

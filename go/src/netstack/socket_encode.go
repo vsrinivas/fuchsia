@@ -81,18 +81,6 @@ func (v *c_ip_mreqn) Decode(data []byte) error {
 	return nil
 }
 
-func (v *c_netc_get_if_info) Encode(msg *zxsocket.Msg) {
-	r := (*c_netc_get_if_info)(unsafe.Pointer(&msg.Data[0]))
-	*r = *v
-	msg.Datalen = uint32(unsafe.Sizeof(*v))
-}
-
-func (v *c_netc_if_info) Encode(msg *zxsocket.Msg) {
-	r := (*c_netc_if_info)(unsafe.Pointer(&msg.Data[0]))
-	*r = *v
-	msg.Datalen = uint32(unsafe.Sizeof(*v))
-}
-
 // TODO: make these methods on c_sockaddr_storage
 func writeSockaddrStorage4(dst *c_sockaddr_storage, src *c_sockaddr_in) c_socklen {
 	srcb := (*[unsafe.Sizeof(*src)]byte)(unsafe.Pointer(src))[:]

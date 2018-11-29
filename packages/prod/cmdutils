@@ -5,7 +5,6 @@
     ],
     "packages": [
         "//garnet/bin/cowsay",
-        "//garnet/bin/sysinfo",
         "//garnet/bin/time",
         "//garnet/bin/uname"
     ]
