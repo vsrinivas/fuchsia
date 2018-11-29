@@ -216,4 +216,26 @@ mod tests {
         socket_basic_helper(SocketOpts::STREAM);
         socket_basic_helper(SocketOpts::DATAGRAM);
     }
+
+    #[test]
+    fn socket_info() {
+        let (s1, s2) = Socket::create(SocketOpts::STREAM).unwrap();
+        let s1info = s1.info().unwrap();
+        // Socket should be empty.
+        assert_eq!(s1info.rx_buf_available, 0);
+        assert_eq!(s1info.rx_buf_size, 0);
+        assert_eq!(s1info.tx_buf_size, 0);
+
+        // Put some data in one end.
+        assert_eq!(s1.write(b"hello").unwrap(),5);
+
+        // We should see the info change on each end correspondingly.
+        let s1info = s1.info().unwrap();
+        let s2info = s2.info().unwrap();
+        assert_eq!(s1info.tx_buf_size, 5);
+        assert_eq!(s1info.rx_buf_size, 0);
+        assert_eq!(s2info.rx_buf_size, 5);
+        assert_eq!(s2info.rx_buf_available, 5);
+        assert_eq!(s2info.tx_buf_size, 0);
+    }
 }
