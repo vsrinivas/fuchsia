@@ -468,7 +468,7 @@ void PlayerImpl::Play() {
 }
 
 void PlayerImpl::Pause() {
-  if (!core_.can_pause()) {
+  if (target_state_ == State::kPlaying && !core_.can_pause()) {
     FXL_LOG(WARNING) << "Pause requested, cannot pause. Ignoring.";
     return;
   }
