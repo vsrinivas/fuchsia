@@ -86,6 +86,20 @@ Magma provides semaphores as a general signalling mechanism that can be used to 
 * Mappings: shared ownership of buffers
 * Command buffer: shared ownership of context; may have shared ownership of mappings
 
+## Thread Model
+
+The thread model used for each installed GPU device and driver is as follows:
+
+The msd is typically loaded by the [platform bus driver](../../../../zircon/docs/ddk/platform-bus.md) and a msd main devhost thread is created.  The msd main thread in turn creates a device thread to talk to the GPU and a driver-dependent number of interrupt threads to service GPU interrupts.
+
+A client driver library that implements the Vulkan api is referred to as a **vcd** (Vulkan Client Driver).  When a Vulkan application starts and makes a new VkDevice, the vcd makes a request to the msd to establish a connection for the device over which all Vulkan commands will be communicated.  The msd main thread responds to this call by creating a new connection thread to service all client commands. The connection thread in turn creates two zircon communication channels: the primary channel and the notification channel.
+
+Vulkan state configuration, resource creation and drawing command buffers are sent from the vcd to the msd over the primary channel.  The notification channel is used to convey asynchronous status messages back to the vcd.  A good example of a notification the vcd may be interested in is the completion of a command buffer.  The exact messages sent over the device and notification channels along with how those messages are handled varies by GPU driver.
+
+![](vulkan_driver_thread_model.png)
+
+Note that the process boundary enclosing the msd is the Fuchsia devhost process boundary for the msd.  This devhost process may include threads from other drivers as well but only msd-specific threads are shown here.
+
 ## Error Handling
 
 When an error occurs in the magma service driver, the corresponding connection is killed.  When the client driver attempts to access the closed connection it typically will pass up a "device lost" vulkan api error.
