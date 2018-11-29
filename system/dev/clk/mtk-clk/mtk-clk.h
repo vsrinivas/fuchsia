@@ -19,6 +19,8 @@ public:
 
     void DdkRelease() { delete this; }
 
+    zx_status_t Bind();
+
     zx_status_t ClkEnable(uint32_t index);
     zx_status_t ClkDisable(uint32_t index);
 

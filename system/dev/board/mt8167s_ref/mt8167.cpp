@@ -65,6 +65,10 @@ int Mt8167::Thread() {
         zxlogf(ERROR, "I2cInit() failed\n");
         return -1;
     }
+    if (ClkInit() != ZX_OK) {
+        zxlogf(ERROR, "ClkInit() failed\n");
+        return -1;
+    }
 
     // Then the platform device drivers.
     if (EmmcInit() != ZX_OK) {
@@ -85,10 +89,6 @@ int Mt8167::Thread() {
     }
     if (GpuInit() != ZX_OK) {
         zxlogf(ERROR, "GpuInit() failed\n");
-        return -1;
-    }
-    if (ClkInit() != ZX_OK) {
-        zxlogf(ERROR, "ClkInit() failed\n");
         return -1;
     }
     if (UsbInit() != ZX_OK) {

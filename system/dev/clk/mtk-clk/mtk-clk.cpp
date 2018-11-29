@@ -4,10 +4,11 @@
 
 #include "mtk-clk.h"
 
+#include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/pdev.h>
-#include <fbl/alloc_checker.h>
 #include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
 #include <soc/mt8167/mt8167-clk.h>
 
@@ -30,6 +31,32 @@ constexpr MtkClkGate kMtkClkGates[] = {
     [board_mt8167::kClkI2c1] = { .regs = kClkGatingCtrl1, .bit = 4 },
     [board_mt8167::kClkI2c2] = { .regs = kClkGatingCtrl1, .bit = 16 },
 };
+
+zx_status_t MtkClk::Bind() {
+    zx_status_t status;
+    pbus_protocol_t pbus;
+    status = device_get_protocol(parent(), ZX_PROTOCOL_PBUS, &pbus);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "MtkClk: failed to get ZX_PROTOCOL_PBUS, st = %d\n",
+               status);
+        return status;
+    }
+
+    clk_protocol_t clk_proto = {
+        .ops = &ops_,
+        .ctx = this,
+    };
+
+    const platform_proxy_cb_t kCallback = {nullptr, nullptr};
+    status = pbus_register_protocol(&pbus, ZX_PROTOCOL_CLK, &clk_proto, sizeof(clk_proto),
+                                    &kCallback);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "MtkClk::Create: pbus_register_protocol failed, st = %d\n", status);
+        return status;
+    }
+
+    return DdkAdd("mtk-clk");
+}
 
 zx_status_t MtkClk::Create(zx_device_t* parent) {
     zx_status_t status;
@@ -54,8 +81,8 @@ zx_status_t MtkClk::Create(zx_device_t* parent) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    if ((status = device->DdkAdd("mtk-clk")) != ZX_OK) {
-        zxlogf(ERROR, "%s: DdkAdd failed\n", __FILE__);
+    if ((status = device->Bind()) != ZX_OK) {
+        zxlogf(ERROR, "%s: MtkClk bind failed: %d\n", __FILE__, status);
         return status;
     }
 
