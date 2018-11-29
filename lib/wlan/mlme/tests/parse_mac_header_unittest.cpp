@@ -121,5 +121,250 @@ TEST(ParseDataFrameHeader, HtControlTooShort) {
     ASSERT_FALSE(parsed);
 }
 
+TEST(ParseMeshDataHeader, NoAddrExt) {
+    const uint8_t data[] = {
+        0x88, 0x02, // fc: qos data, 3-address, no ht ctl
+        0x00, 0x00, // duration
+        0x11, 0x11, 0x11, 0x11, 0x11, 0x11, // addr1
+        0x22, 0x22, 0x22, 0x22, 0x22, 0x22, // addr2
+        0x33, 0x33, 0x33, 0x33, 0x33, 0x33, // addr3
+        0x00, 0x00, // seq ctl
+        0x00, 0x01, // qos ctl: mesh control present
+        // Mesh control
+        0x00, // flags: no addr extension
+        0x20, // ttl
+        0xaa, 0xbb, 0xcc, 0xdd, // seq
+        // LLC header
+        0xaa, 0xaa, 0x03, // dsap ssap ctrl
+        0x00, 0x00, 0x00, // oui
+        0x12, 0x34, // protocol id
+    };
+    BufferReader r(data);
+    auto parsed = ParseMeshDataHeader(&r);
+    ASSERT_TRUE(parsed);
+
+    EXPECT_EQ(data, reinterpret_cast<const uint8_t*>(parsed->mac_header.fixed));
+    EXPECT_NE(nullptr, parsed->mac_header.qos_ctrl);
+    EXPECT_EQ(nullptr, parsed->mac_header.ht_ctrl);
+
+    EXPECT_EQ(0xddccbbaau, parsed->mesh_ctrl->seq);
+    EXPECT_EQ(0u, parsed->addr_ext.size());
+    EXPECT_EQ(0x3412u, parsed->llc->protocol_id);
+    EXPECT_EQ(0u, r.RemainingBytes());
+}
+
+TEST(ParseMeshDataHeader, Addr4Ext) {
+    const uint8_t data[] = {
+        0x88, 0x02, // fc: qos data, 3-address, no ht ctl
+        0x00, 0x00, // duration
+        0x11, 0x11, 0x11, 0x11, 0x11, 0x11, // addr1
+        0x22, 0x22, 0x22, 0x22, 0x22, 0x22, // addr2
+        0x33, 0x33, 0x33, 0x33, 0x33, 0x33, // addr3
+        0x00, 0x00, // seq ctl
+        0x00, 0x01, // qos ctl: mesh control present
+        // Mesh control
+        0x01, // flags: addr4 extension
+        0x20, // ttl
+        0xaa, 0xbb, 0xcc, 0xdd, // seq
+        0x44, 0x44, 0x44, 0x44, 0x44, 0x44, // addr4 extension
+        // LLC header
+        0xaa, 0xaa, 0x03, // dsap ssap ctrl
+        0x00, 0x00, 0x00, // oui
+        0x12, 0x34, // protocol id
+    };
+    BufferReader r(data);
+    auto parsed = ParseMeshDataHeader(&r);
+    ASSERT_TRUE(parsed);
+
+    EXPECT_EQ(data, reinterpret_cast<const uint8_t*>(parsed->mac_header.fixed));
+    EXPECT_NE(nullptr, parsed->mac_header.qos_ctrl);
+    EXPECT_EQ(nullptr, parsed->mac_header.ht_ctrl);
+
+    EXPECT_RANGES_EQ(std::vector<MacAddr>({ MacAddr("44:44:44:44:44:44") }), parsed->addr_ext);
+    EXPECT_EQ(0xddccbbaau, parsed->mesh_ctrl->seq);
+    EXPECT_EQ(0x3412u, parsed->llc->protocol_id);
+    EXPECT_EQ(0u, r.RemainingBytes());
+}
+
+TEST(ParseMeshDataHeader, Addr56Ext) {
+    const uint8_t data[] = {
+        0x88, 0x03, // fc: qos data, 4-address, no ht ctl
+        0x00, 0x00, // duration
+        0x11, 0x11, 0x11, 0x11, 0x11, 0x11, // addr1
+        0x22, 0x22, 0x22, 0x22, 0x22, 0x22, // addr2
+        0x33, 0x33, 0x33, 0x33, 0x33, 0x33, // addr3
+        0x00, 0x00, // seq ctl
+        0x44, 0x44, 0x44, 0x44, 0x44, 0x44, // addr4
+        0x00, 0x01, // qos ctl: mesh control present
+        // Mesh control
+        0x02, // flags: addr56 extension
+        0x20, // ttl
+        0xaa, 0xbb, 0xcc, 0xdd, // seq
+        0x55, 0x55, 0x55, 0x55, 0x55, 0x55, // addr5
+        0x66, 0x66, 0x66, 0x66, 0x66, 0x66, // addr6
+        // LLC header
+        0xaa, 0xaa, 0x03, // dsap ssap ctrl
+        0x00, 0x00, 0x00, // oui
+        0x12, 0x34, // protocol id
+    };
+    BufferReader r(data);
+    auto parsed = ParseMeshDataHeader(&r);
+    ASSERT_TRUE(parsed);
+
+    EXPECT_EQ(data, reinterpret_cast<const uint8_t*>(parsed->mac_header.fixed));
+    EXPECT_NE(nullptr, parsed->mac_header.qos_ctrl);
+    EXPECT_EQ(nullptr, parsed->mac_header.ht_ctrl);
+
+    EXPECT_RANGES_EQ(
+            std::vector<MacAddr>({ MacAddr("55:55:55:55:55:55"), MacAddr("66:66:66:66:66:66") }),
+            parsed->addr_ext);
+    EXPECT_EQ(0xddccbbaau, parsed->mesh_ctrl->seq);
+    EXPECT_EQ(0x3412u, parsed->llc->protocol_id);
+    EXPECT_EQ(0u, r.RemainingBytes());
+}
+
+TEST(ParseMeshDataHeader, TooShort_MacHeader) {
+    const uint8_t data[] = { 0x88, 0x02 };
+    BufferReader r(data);
+    auto parsed = ParseMeshDataHeader(&r);
+    ASSERT_FALSE(parsed);
+}
+
+TEST(ParseMeshDataHeader, TooShort_MeshControl) {
+    const uint8_t data[] = {
+        0x88, 0x02, // fc: qos data, 3-address, no ht ctl
+        0x00, 0x00, // duration
+        0x11, 0x11, 0x11, 0x11, 0x11, 0x11, // addr1
+        0x22, 0x22, 0x22, 0x22, 0x22, 0x22, // addr2
+        0x33, 0x33, 0x33, 0x33, 0x33, 0x33, // addr3
+        0x00, 0x00, // seq ctl
+        0x00, 0x01, // qos ctl: mesh control present
+        // Mesh control
+        0x00, // flags: no addr extension
+        0x20, // ttl
+        0xaa, 0xbb, 0xcc, // one byte missing from seq
+    };
+    BufferReader r(data);
+    auto parsed = ParseMeshDataHeader(&r);
+    ASSERT_FALSE(parsed);
+}
+
+TEST(ParseMeshDataHeader, TooShort_AddrExt) {
+    const uint8_t data[] = {
+        0x88, 0x03, // fc: qos data, 4-address, no ht ctl
+        0x00, 0x00, // duration
+        0x11, 0x11, 0x11, 0x11, 0x11, 0x11, // addr1
+        0x22, 0x22, 0x22, 0x22, 0x22, 0x22, // addr2
+        0x33, 0x33, 0x33, 0x33, 0x33, 0x33, // addr3
+        0x00, 0x00, // seq ctl
+        0x44, 0x44, 0x44, 0x44, 0x44, 0x44, // addr4
+        0x00, 0x01, // qos ctl: mesh control present
+        // Mesh control
+        0x02, // flags: addr56 extension
+        0x20, // ttl
+        0xaa, 0xbb, 0xcc, 0xdd, // seq
+        0x55, 0x55, 0x55, 0x55, 0x55, 0x55, // addr5
+        0x66, 0x66, 0x66, 0x66, 0x66, // one byte missing from addr6
+    };
+    BufferReader r(data);
+    auto parsed = ParseMeshDataHeader(&r);
+    ASSERT_FALSE(parsed);
+}
+
+TEST(ParseMeshDataHeader, TooShort_Llc) {
+    const uint8_t data[] = {
+        0x88, 0x02, // fc: qos data, 3-address, no ht ctl
+        0x00, 0x00, // duration
+        0x11, 0x11, 0x11, 0x11, 0x11, 0x11, // addr1
+        0x22, 0x22, 0x22, 0x22, 0x22, 0x22, // addr2
+        0x33, 0x33, 0x33, 0x33, 0x33, 0x33, // addr3
+        0x00, 0x00, // seq ctl
+        0x00, 0x01, // qos ctl: mesh control present
+        // Mesh control
+        0x00, // flags: no addr extension
+        0x20, // ttl
+        0xaa, 0xbb, 0xcc, 0xdd, // seq
+        // LLC header
+        0xaa, 0xaa, 0x03, // dsap ssap ctrl
+        0x00, 0x00, 0x00, // oui
+        0x12, // one byte missing from protocol id
+    };
+    BufferReader r(data);
+    auto parsed = ParseMeshDataHeader(&r);
+    ASSERT_FALSE(parsed);
+}
+
+TEST(ParseMeshDataHeader, MissingQosBit) {
+    const uint8_t data[] = {
+        0x08, 0x02, // fc: non-qos data, 3-address, no ht ctl
+        0x00, 0x00, // duration
+        0x11, 0x11, 0x11, 0x11, 0x11, 0x11, // addr1
+        0x22, 0x22, 0x22, 0x22, 0x22, 0x22, // addr2
+        0x33, 0x33, 0x33, 0x33, 0x33, 0x33, // addr3
+        0x00, 0x00, // seq ctl
+        0x00, 0x01, // qos ctl: mesh control present
+        // Mesh control
+        0x00, // flags: no addr extension
+        0x20, // ttl
+        0xaa, 0xbb, 0xcc, 0xdd, // seq
+        // LLC header
+        0xaa, 0xaa, 0x03, // dsap ssap ctrl
+        0x00, 0x00, 0x00, // oui
+        0x12, 0x34, // protocol id
+    };
+    BufferReader r(data);
+    auto parsed = ParseMeshDataHeader(&r);
+    ASSERT_FALSE(parsed);
+}
+
+TEST(ParseMeshDataHeader, MissingMeshControlPresentBit) {
+    const uint8_t data[] = {
+        0x88, 0x02, // fc: non-qos data, 3-address, no ht ctl
+        0x00, 0x00, // duration
+        0x11, 0x11, 0x11, 0x11, 0x11, 0x11, // addr1
+        0x22, 0x22, 0x22, 0x22, 0x22, 0x22, // addr2
+        0x33, 0x33, 0x33, 0x33, 0x33, 0x33, // addr3
+        0x00, 0x00, // seq ctl
+        0x00, 0x00, // qos ctl: no mesh control
+        // Mesh control
+        0x00, // flags: no addr extension
+        0x20, // ttl
+        0xaa, 0xbb, 0xcc, 0xdd, // seq
+        // LLC header
+        0xaa, 0xaa, 0x03, // dsap ssap ctrl
+        0x00, 0x00, 0x00, // oui
+        0x12, 0x34, // protocol id
+    };
+    BufferReader r(data);
+    auto parsed = ParseMeshDataHeader(&r);
+    ASSERT_FALSE(parsed);
+}
+
+TEST(ParseMeshDataHeader, InvalidAddrExt) {
+    const uint8_t data[] = {
+        0x88, 0x02, // fc: non-qos data, 3-address, no ht ctl
+        0x00, 0x00, // duration
+        0x11, 0x11, 0x11, 0x11, 0x11, 0x11, // addr1
+        0x22, 0x22, 0x22, 0x22, 0x22, 0x22, // addr2
+        0x33, 0x33, 0x33, 0x33, 0x33, 0x33, // addr3
+        0x00, 0x00, // seq ctl
+        0x00, 0x01, // qos ctl: mesh control present
+        // Mesh control
+        0x03, // flags: invalid addr extension
+        0x20, // ttl
+        0xaa, 0xbb, 0xcc, 0xdd, // seq
+        // LLC header
+        0xaa, 0xaa, 0x03, // dsap ssap ctrl
+        0x00, 0x00, 0x00, // oui
+        0x12, 0x34, // protocol id
+        // A bunch of bytes to make sure we don't fail because of a length check
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    };
+    BufferReader r(data);
+    auto parsed = ParseMeshDataHeader(&r);
+    ASSERT_FALSE(parsed);
+}
+
 } // namespace common
 } // namespace wlan

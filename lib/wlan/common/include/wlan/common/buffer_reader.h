@@ -30,6 +30,14 @@ class BufferReader {
         return data;
     }
 
+    template <typename T> Span<const T> ReadArray(size_t len) {
+        if (buf_.size() < offset_ + sizeof(T) * len) { return {}; }
+
+        auto data = reinterpret_cast<const T*>(buf_.data() + offset_);
+        offset_ += sizeof(T) * len;
+        return { data, len };
+    }
+
     template <typename T> std::optional<T> ReadValue() {
         if (auto t = Read<T>()) {
             return {*t};

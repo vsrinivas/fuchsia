@@ -45,7 +45,7 @@ void MacHeaderWriter::WriteMeshDataHeaderIndivAddressed(
     w->WriteValue(mesh_src_addr); // addr4
 
     auto qos_ctrl = w->Write<QosControl>();
-    qos_ctrl->set_byte(1); // mesh control present
+    qos_ctrl->set_byte(QosControl::kMeshControlPresentBit);
 }
 
 // See IEEE Std 802.11-2016, 9.3.5 (Table 9-42). See also 10.35.4.
@@ -67,7 +67,7 @@ void MacHeaderWriter::WriteMeshDataHeaderGroupAddressed(
     SetSeqNo(data_hdr, seq_);
 
     auto qos_ctrl = w->Write<QosControl>();
-    qos_ctrl->set_byte(1); // mesh control present
+    qos_ctrl->set_byte(QosControl::kMeshControlPresentBit);
 }
 
 } // namespace wlan

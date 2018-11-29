@@ -99,5 +99,15 @@ TEST(BufferUtils, Reader) {
     EXPECT_EQ(remaining[6], 15u);
 }
 
+TEST(BufferUtils, Reader_ReadArray) {
+    uint8_t buf[7] = { 0, 1, 2, 3, 4, 5, 6 };
+    BufferReader r(buf);
+    EXPECT_TRUE(r.ReadArray<uint16_t>(4).empty());
+
+    auto span = r.ReadArray<uint16_t>(3);
+    EXPECT_RANGES_EQ(std::vector<uint16_t>({ 0x0100u, 0x0302u, 0x0504u }), span);
+    EXPECT_EQ(6u, r.ReadBytes());
+}
+
 }  // namespace
 }  // namespace wlan

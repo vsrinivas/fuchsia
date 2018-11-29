@@ -131,6 +131,11 @@ enum AckPolicy : uint8_t {
 // IEEE Std 802.11-2016, 9.2.4.5.1, Table 9-6
 class QosControl : public common::BitField<uint16_t> {
    public:
+    // Possible flags for the 'byte' field
+    constexpr static uint8_t kMeshControlPresentBit = 1 << 0;
+    constexpr static uint8_t kMeshPowerSaveLevelBit = 1 << 1;
+    constexpr static uint8_t kRspiBit = 1 << 2;
+
     WLAN_BIT_FIELD(tid, 0, 4);
     WLAN_BIT_FIELD(eosp, 4, 1);  // End of Service Period
     WLAN_BIT_FIELD(ack_policy, 5, 2);
