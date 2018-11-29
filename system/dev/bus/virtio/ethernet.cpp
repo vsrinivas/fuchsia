@@ -373,6 +373,7 @@ zx_status_t EthernetDevice::Query(uint32_t options, ethmac_info_t* info) {
     if (info) {
         // TODO(aarongreen): Add info->features = GetFeatures();
         info->mtu = kVirtioMtu;
+        info->netbuf_size = sizeof(ethmac_netbuf_t);
         memcpy(info->mac, config_.mac, sizeof(info->mac));
     }
     return ZX_OK;
