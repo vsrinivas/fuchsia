@@ -101,12 +101,14 @@ package("debug_agent") {
     ":bin",
   ]
 
-  binaries = [
+  meta = [
     {
-      shell = true
-      name = "debug_agent"
+      path = rebase_path("meta/debug_agent.cmx")
+      dest = "debug_agent.cmx"
     },
   ]
+
+  binary = "debug_agent"
 }
 
 executable("unittests") {

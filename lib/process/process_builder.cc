@@ -194,7 +194,7 @@ void ProcessBuilder::CloneStdio() {
 }
 
 void ProcessBuilder::CloneEnvironment() {
-  fidl::VectorPtr<fidl::StringPtr> env;
+  auto env = fidl::VectorPtr<fidl::StringPtr>::New(0);
   for (size_t i = 0; environ[i]; ++i)
     env.push_back(environ[i]);
   launcher_->AddEnvirons(std::move(env));

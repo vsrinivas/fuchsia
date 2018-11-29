@@ -9,7 +9,6 @@
 #include "garnet/bin/zxdb/common/string_util.h"
 #include "garnet/bin/zxdb/console/actions.h"
 #include "garnet/bin/zxdb/console/command_line_options.h"
-#include "garnet/bin/zxdb/console/command_line_options.h"
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/lib/debug_ipc/helper/buffered_fd.h"
@@ -140,7 +139,7 @@ int ConsoleMain(int argc, const char* argv[]) {
       help.Append(
           Syntax::kComment,
           "Please \"connect <ip>:<port>\" matching what you passed to\n   "
-          "\"debug_agent --port=<port>\" on the target system. Or try "
+          "\"run debug_agent --port=<port>\" on the target system. Or try "
           "\"help\".");
       console.Output(std::move(help));
     }
@@ -153,4 +152,4 @@ int ConsoleMain(int argc, const char* argv[]) {
   return 0;
 }
 
-}  // namespace
+}  // namespace zxdb

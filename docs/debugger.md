@@ -76,7 +76,7 @@ target_ to see this).
 On the target system pick a port and run the debug agent:
 
 ```sh
-debug_agent --port=2345
+run debug_agent --port=2345
 ```
 
 ### 3. Run the client and connect

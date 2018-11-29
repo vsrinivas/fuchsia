@@ -133,7 +133,7 @@ The set up guide provides more information on how to do this. In short, first
 run the debug agent on the target system with a port number:
 
 ```
-$ debug_agent --port=2345
+$ run debug_agent --port=2345
 ```
 
 Then on the host use the `-c` command-line option or the connect command to
