@@ -10,6 +10,7 @@
 #include <locale.h>
 #include <stdint.h>
 
+#include <iostream>
 #include <limits>
 #include <map>
 #include <memory>
@@ -154,6 +155,16 @@ struct NumericConstantValue : ConstantValue {
     friend bool operator>=(const NumericConstantValue<ValueType>& l,
                            const NumericConstantValue<ValueType>& r) {
         return l.value >= r.value;
+    }
+
+    friend std::ostream& operator<<(std::ostream& os, const NumericConstantValue<ValueType>& v) {
+        if constexpr (GetKind() == Kind::kInt8)
+            os << static_cast<int>(v.value);
+        else if constexpr (GetKind() == Kind::kUint8)
+            os << static_cast<unsigned>(v.value);
+        else
+            os << v.value;
+        return os;
     }
 
     virtual bool Convert(Kind kind, std::unique_ptr<ConstantValue>* out_value) const override {
@@ -310,6 +321,11 @@ struct BoolConstantValue : ConstantValue {
         return l.value != r.value;
     }
 
+    friend std::ostream& operator<<(std::ostream& os, const BoolConstantValue& v) {
+        os << v.value;
+        return os;
+    }
+
     virtual bool Convert(Kind kind, std::unique_ptr<ConstantValue>* out_value) const override {
         assert(out_value != nullptr);
         switch (kind) {
@@ -327,6 +343,11 @@ struct BoolConstantValue : ConstantValue {
 struct StringConstantValue : ConstantValue {
     explicit StringConstantValue(StringView value)
         : ConstantValue(ConstantValue::Kind::kString), value(value) {}
+
+    friend std::ostream& operator<<(std::ostream& os, const StringConstantValue& v) {
+        os << v.value.data();
+        return os;
+    }
 
     virtual bool Convert(Kind kind, std::unique_ptr<ConstantValue>* out_value) const override {
         assert(out_value != nullptr);
@@ -363,7 +384,7 @@ struct Constant {
     }
 
     const ConstantValue& Value() const {
-        assert(IsResolved());
+        assert(IsResolved() && "Accessing the value of an unresolved Constant!");
         return *value_;
     }
 
@@ -963,44 +984,6 @@ public:
             *out_value = static_cast<NumericType>(value);
         }
         return true;
-    }
-
-    // TODO(FIDL-304): Use ResolveConstant() instead. Enum member validation in the C generator
-    // is the last thing that depends on this.
-    template <typename IntType>
-    bool ParseIntegerConstant(const Constant* constant, IntType* out_value) const {
-        if (!constant) {
-            return false;
-        }
-        switch (constant->kind) {
-        case Constant::Kind::kIdentifier: {
-            auto identifier_constant = static_cast<const IdentifierConstant*>(constant);
-            auto decl = LookupDeclByName(identifier_constant->name);
-            if (!decl || decl->kind != Decl::Kind::kConst)
-                return false;
-            return ParseIntegerConstant(static_cast<Const*>(decl)->value.get(), out_value);
-        }
-        case Constant::Kind::kLiteral: {
-            auto literal_constant = static_cast<const LiteralConstant*>(constant);
-            switch (literal_constant->literal->kind) {
-            case raw::Literal::Kind::kString:
-            case raw::Literal::Kind::kTrue:
-            case raw::Literal::Kind::kFalse: {
-                return false;
-            }
-
-            case raw::Literal::Kind::kNumeric: {
-                auto numeric_literal =
-                    static_cast<const raw::NumericLiteral*>(literal_constant->literal.get());
-                return ParseNumericLiteral<IntType>(numeric_literal, out_value);
-            }
-            }
-        }
-        case Constant::Kind::kSynthesized: {
-            *out_value = static_cast<const Size&>(constant->Value()).value;
-            return true;
-        }
-        }
     }
 
     bool HasAttribute(fidl::StringView name) const;

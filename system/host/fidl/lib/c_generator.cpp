@@ -372,76 +372,55 @@ void EmitLinearizeMessage(std::ostream* file,
 
 // Various computational helper routines.
 
-void EnumValue(types::PrimitiveSubtype type, const flat::Constant* constant,
-               const flat::Library* library, std::string* out_value) {
-    // TODO(FIDL-4): Move this into library resolution and use ResolveConstantValue() instead.
-
+void EnumValue(const flat::Constant* constant, std::string* out_value) {
     std::ostringstream member_value;
 
-    switch (type) {
-    case types::PrimitiveSubtype::kInt8: {
-        int8_t value;
-        bool success = library->ParseIntegerConstant(constant, &value);
-        assert(success && "Failed to parse enum int8 constant.");
-        // The char-sized overloads of operator<< here print
-        // the character value, not the numeric value, so cast up.
-        member_value << static_cast<int>(value);
-        break;
-    }
-    case types::PrimitiveSubtype::kInt16: {
-        int16_t value;
-        bool success = library->ParseIntegerConstant(constant, &value);
-        assert(success && "Failed to parse enum int16 constant.");
+    const flat::ConstantValue& const_val = constant->Value();
+    switch (const_val.kind) {
+    case flat::ConstantValue::Kind::kInt8: {
+        auto value = static_cast<const flat::NumericConstantValue<int8_t>&>(const_val);
         member_value << value;
         break;
     }
-    case types::PrimitiveSubtype::kInt32: {
-        int32_t value;
-        bool success = library->ParseIntegerConstant(constant, &value);
-        assert(success && "Failed to parse enum int32 constant.");
+    case flat::ConstantValue::Kind::kInt16: {
+        auto value = static_cast<const flat::NumericConstantValue<int16_t>&>(const_val);
         member_value << value;
         break;
     }
-    case types::PrimitiveSubtype::kInt64: {
-        int64_t value;
-        bool success = library->ParseIntegerConstant(constant, &value);
-        assert(success && "Failed to parse enum int64 constant.");
+    case flat::ConstantValue::Kind::kInt32: {
+        auto value = static_cast<const flat::NumericConstantValue<int32_t>&>(const_val);
         member_value << value;
         break;
     }
-    case types::PrimitiveSubtype::kUint8: {
-        uint8_t value;
-        bool success = library->ParseIntegerConstant(constant, &value);
-        assert(success && "Failed to parse enum uint8 constant.");
-        // The char-sized overloads of operator<< here print
-        // the character value, not the numeric value, so cast up.
-        member_value << static_cast<unsigned int>(value);
-        break;
-    }
-    case types::PrimitiveSubtype::kUint16: {
-        uint16_t value;
-        bool success = library->ParseIntegerConstant(constant, &value);
-        assert(success && "Failed to parse enum uint16 constant.");
+    case flat::ConstantValue::Kind::kInt64: {
+        auto value = static_cast<const flat::NumericConstantValue<int64_t>&>(const_val);
         member_value << value;
         break;
     }
-    case types::PrimitiveSubtype::kUint32: {
-        uint32_t value;
-        bool success = library->ParseIntegerConstant(constant, &value);
-        assert(success && "Failed to parse enum uint32 constant.");
+    case flat::ConstantValue::Kind::kUint8: {
+        auto value = static_cast<const flat::NumericConstantValue<uint8_t>&>(const_val);
         member_value << value;
         break;
     }
-    case types::PrimitiveSubtype::kUint64: {
-        uint64_t value;
-        bool success = library->ParseIntegerConstant(constant, &value);
-        assert(success && "Failed to parse enum uint64 constant.");
+    case flat::ConstantValue::Kind::kUint16: {
+        auto value = static_cast<const flat::NumericConstantValue<uint16_t>&>(const_val);
         member_value << value;
         break;
     }
-    case types::PrimitiveSubtype::kBool:
-    case types::PrimitiveSubtype::kFloat32:
-    case types::PrimitiveSubtype::kFloat64:
+    case flat::ConstantValue::Kind::kUint32: {
+        auto value = static_cast<const flat::NumericConstantValue<uint32_t>&>(const_val);
+        member_value << value;
+        break;
+    }
+    case flat::ConstantValue::Kind::kUint64: {
+        auto value = static_cast<const flat::NumericConstantValue<uint64_t>&>(const_val);
+        member_value << value;
+        break;
+    }
+    case flat::ConstantValue::Kind::kBool:
+    case flat::ConstantValue::Kind::kFloat32:
+    case flat::ConstantValue::Kind::kFloat64:
+    case flat::ConstantValue::Kind::kString:
         assert(false && "bad primitive type for an enum");
         break;
     }
@@ -790,7 +769,7 @@ void CGenerator::ProduceEnumForwardDeclaration(const NamedEnum& named_enum) {
     for (const auto& member : named_enum.enum_info.members) {
         std::string member_name = named_enum.name + "_" + NameIdentifier(member.name);
         std::string member_value;
-        EnumValue(named_enum.enum_info.type->subtype, member.value.get(), library_, &member_value);
+        EnumValue(member.value.get(), &member_value);
         GenerateIntegerDefine(member_name, subtype, std::move(member_value));
     }
 
