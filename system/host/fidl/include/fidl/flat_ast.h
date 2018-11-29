@@ -926,6 +926,8 @@ public:
         auto data = literal->location().data();
         std::string string_data(data.data(), data.data() + data.size());
         if constexpr (std::is_unsigned<NumericType>::value) {
+            if (string_data[0] == '-')
+                return false;
             errno = 0;
             unsigned long long value = strtoull(string_data.data(), nullptr, 0);
             if (errno != 0)

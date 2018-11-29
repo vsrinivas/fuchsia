@@ -117,6 +117,65 @@ const int32 c = true;
     END_TEST;
 }
 
+bool GoodConstTesUint64() {
+    BEGIN_TEST;
+
+    TestLibrary library(R"FIDL(
+library example;
+
+const int64 a = 42;
+)FIDL");
+    ASSERT_TRUE(library.Compile());
+
+    END_TEST;
+}
+
+bool GoodConstTestUint64FromOtherUint32() {
+    BEGIN_TEST;
+
+    TestLibrary library(R"FIDL(
+library example;
+
+const uint32 a = 42;
+const uint64 b = a;
+)FIDL");
+    ASSERT_TRUE(library.Compile());
+
+    END_TEST;
+}
+
+bool BadConstTestUint64Negative() {
+    BEGIN_TEST;
+
+    TestLibrary library(R"FIDL(
+library example;
+
+const uint64 a = -42;
+)FIDL");
+    ASSERT_FALSE(library.Compile());
+    auto errors = library.errors();
+    ASSERT_GE(errors.size(), 1);
+    ASSERT_STR_STR(errors[0].c_str(), "-42 cannot be interpreted as type uint64");
+
+    END_TEST;
+}
+
+bool BadConstTestUint64Overflow() {
+    BEGIN_TEST;
+
+    TestLibrary library(R"FIDL(
+library example;
+
+const uint64 a = 18446744073709551616;
+)FIDL");
+    ASSERT_FALSE(library.Compile());
+    auto errors = library.errors();
+    ASSERT_GE(errors.size(), 1);
+    ASSERT_STR_STR(errors[0].c_str(), "18446744073709551616 cannot be interpreted as type uint64");
+
+    END_TEST;
+}
+
 bool GoodConstTestFloat32() {
     BEGIN_TEST;
 
@@ -389,6 +448,11 @@ RUN_TEST(GoodConstTestInt32);
 RUN_TEST(GoodConstTestInt32FromOtherConst);
 RUN_TEST(BadConstTestInt32WithString);
 RUN_TEST(BadConstTestInt32WithBool);
+
+RUN_TEST(GoodConstTesUint64);
+RUN_TEST(GoodConstTestUint64FromOtherUint32);
+RUN_TEST(BadConstTestUint64Negative);
+RUN_TEST(BadConstTestUint64Overflow);
 
 RUN_TEST(GoodConstTestFloat32);
 RUN_TEST(GoodConstTestFloat32HighLimit);
