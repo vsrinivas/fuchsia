@@ -34,4 +34,24 @@ static inline bool DM_LOCK_HELD() {
     return thrd_equal(internal::devhost_api_lock_owner.load(), thrd_current());
 }
 
+class ApiAutoLock {
+public:
+    ApiAutoLock() TA_ACQ(&::devmgr::internal::devhost_api_lock) {
+        DM_LOCK();
+    }
+    ~ApiAutoLock() TA_REL(&::devmgr::internal::devhost_api_lock) {
+        DM_UNLOCK();
+    }
+};
+
+class ApiAutoRelock {
+public:
+    ApiAutoRelock() TA_REL(&::devmgr::internal::devhost_api_lock) {
+        DM_UNLOCK();
+    }
+    ~ApiAutoRelock() TA_ACQ(&::devmgr::internal::devhost_api_lock) {
+        DM_LOCK();
+    }
+};
+
 } // namespace devmgr

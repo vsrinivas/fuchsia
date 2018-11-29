@@ -247,9 +247,8 @@ void devhost_finalize() {
     while ((dev = list.pop_front()) != nullptr) {
         // invoke release op
         if (dev->flags & DEV_FLAG_ADDED) {
-            DM_UNLOCK();
+            ApiAutoRelock relock;
             dev->ReleaseOp();
-            DM_LOCK();
         }
 
         if (dev->parent) {
@@ -557,9 +556,8 @@ zx_status_t devhost_device_unbind(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LO
 #if TRACE_ADD_REMOVE
             printf("call unbind dev: %p(%s)\n", dev.get(), dev->name);
 #endif
-            DM_UNLOCK();
+            ApiAutoRelock relock;
             dev->UnbindOp();
-            DM_LOCK();
         }
     }
     return ZX_OK;
@@ -575,14 +573,15 @@ zx_status_t devhost_device_open_at(const fbl::RefPtr<zx_device_t>& dev,
     }
     fbl::RefPtr<zx_device_t> new_ref(dev);
     zx_status_t r;
-    DM_UNLOCK();
     zx_device_t* opened_dev = nullptr;
-    if (path) {
-        r = dev->OpenAtOp(&opened_dev, path, flags);
-    } else {
-        r = dev->OpenOp(&opened_dev, flags);
+    {
+        ApiAutoRelock relock;
+        if (path) {
+            r = dev->OpenAtOp(&opened_dev, path, flags);
+        } else {
+            r = dev->OpenOp(&opened_dev, flags);
+        }
     }
-    DM_LOCK();
     if (r < 0) {
         new_ref.reset();
     } else if (opened_dev != nullptr) {
@@ -601,10 +600,8 @@ zx_status_t devhost_device_open_at(const fbl::RefPtr<zx_device_t>& dev,
 }
 
 zx_status_t devhost_device_close(fbl::RefPtr<zx_device_t> dev, uint32_t flags) REQ_DM_LOCK {
-    DM_UNLOCK();
-    zx_status_t r = dev->CloseOp(flags);
-    DM_LOCK();
-    return r;
+    ApiAutoRelock relock;
+    return dev->CloseOp(flags);
 }
 
 static zx_status_t devhost_device_suspend_locked(const fbl::RefPtr<zx_device>& dev,
@@ -621,9 +618,10 @@ static zx_status_t devhost_device_suspend_locked(const fbl::RefPtr<zx_device>& d
     }
 
     // then invoke our suspend hook
-    DM_UNLOCK();
-    st = dev->ops->suspend(dev->ctx, flags);
-    DM_LOCK();
+    {
+        ApiAutoRelock relock;
+        st = dev->ops->suspend(dev->ctx, flags);
+    }
 
     // default_suspend() returns ZX_ERR_NOT_SUPPORTED
     if ((st != ZX_OK) && (st != ZX_ERR_NOT_SUPPORTED)) {

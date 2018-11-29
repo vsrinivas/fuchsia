@@ -533,9 +533,11 @@ static zx_status_t fidl_Suspend(void* raw_ctx, uint32_t flags, fidl_txn_t* txn) 
     while (device->parent != nullptr) {
         device = device->parent;
     }
-    DM_LOCK();
-    zx_status_t r = devhost_device_suspend(device, flags);
-    DM_UNLOCK();
+    zx_status_t r;
+    {
+        ApiAutoLock lock;
+        r = devhost_device_suspend(device, flags);
+    }
     // TODO(teisenbe): We should probably check this return...
     fuchsia_device_manager_ControllerSuspend_reply(txn, r);
     return ZX_OK;
