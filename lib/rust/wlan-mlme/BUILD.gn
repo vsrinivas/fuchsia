@@ -8,12 +8,31 @@ import("//build/rust/rustc_staticlib.gni")
 rustc_staticlib("wlan-mlme") {
   name = "wlan_mlme"
   version = "0.1.0"
+  with_unit_tests = true
   edition = "2018"
 
-  deps = []
+  deps = [
+    "//garnet/public/rust/zerocopy",
+    "//third_party/rust-crates/rustc_deps:bitfield",
+    "//third_party/rust-crates/rustc_deps:byteorder",
+  ]
   non_rust_deps = []
 
   public = [
     "abi.h",
+  ]
+}
+
+package("wlan-mlme-tests") {
+  testonly = true
+
+  deps = [
+    ":wlan-mlme",
+  ]
+
+  tests = [
+    {
+      name = "wlan_mlme_staticlib_test"
+    },
   ]
 }

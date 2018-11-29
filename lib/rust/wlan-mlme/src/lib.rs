@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub extern "C" fn hello() {
-    println!("Rusty MLME says hello!");
-}
+// Allow while bringing up MLME.
+#![allow(unused)]
+
+mod mac;
