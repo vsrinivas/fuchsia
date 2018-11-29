@@ -19,13 +19,20 @@ executable("bin") {
 }
 
 package("trace_stress") {
-  deprecated_no_cmx = "//build"
+  meta = [
+    {
+      path = rebase_path("meta/trace_stress.cmx")
+      dest = "trace_stress.cmx"
+    },
+  ]
 
   deps = [
     ":bin",
   ]
 
-  binaries = [ {
-    name = "trace_stress"
-  } ]
+  binaries = [
+    {
+      name = "trace_stress"
+    },
+  ]
 }

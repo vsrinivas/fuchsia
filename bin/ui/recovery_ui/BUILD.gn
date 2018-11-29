@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_binary.gni")
 import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bin") {
   name = "recovery_ui"
@@ -11,23 +11,27 @@ rustc_binary("bin") {
   with_lto = "fat"
 
   deps = [
+    "//garnet/public/fidl/fuchsia.amber:fuchsia.amber-rustc",
     "//garnet/public/rust/fuchsia-app",
-    "//garnet/public/rust/fuchsia-zircon",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-framebuffer",
-    "//garnet/public/fidl/fuchsia.amber:fuchsia.amber-rustc",
-    "//third_party/rust-crates/rustc_deps:font-rs",
+    "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:font-rs",
   ]
 }
 
 package("recovery_ui") {
-  deprecated_no_cmx = "//build"
+  meta = [
+    {
+      path = rebase_path("meta/recovery_ui.cmx")
+      dest = "recovery_ui.cmx"
+    },
+  ]
 
   deps = [
     ":bin",
   ]
 
   binary = "rust_crates/recovery_ui"
-
 }

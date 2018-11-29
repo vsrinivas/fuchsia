@@ -151,7 +151,12 @@ package("scenic") {
 }
 
 package("screencap") {
-  deprecated_no_cmx = "//build"
+  meta = [
+    {
+      path = rebase_path("screencap/meta/screencap.cmx")
+      dest = "screencap.cmx"
+    },
+  ]
 
   deps = [
     "screencap",
@@ -161,7 +166,12 @@ package("screencap") {
 }
 
 package("snapshot") {
-  deprecated_no_cmx = "//build"
+  meta = [
+    {
+      path = rebase_path("snapshot/meta/snapshot.cmx")
+      dest = "snapshot.cmx"
+    },
+  ]
 
   deps = [
     "snapshot",
@@ -171,7 +181,12 @@ package("snapshot") {
 }
 
 package("gltf_export") {
-  deprecated_no_cmx = "//build"
+  meta = [
+    {
+      path = rebase_path("gltf_export/meta/gltf_export.cmx")
+      dest = "gltf_export.cmx"
+    },
+  ]
 
   deps = [
     "gltf_export",

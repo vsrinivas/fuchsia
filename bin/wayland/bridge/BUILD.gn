@@ -13,8 +13,8 @@ rustc_binary("bin") {
   deps = [
     "//garnet/bin/wayland/core",
     "//garnet/bin/wayland/protocols:wayland",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/fidl/fuchsia.guest:fuchsia.guest-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-zircon",
@@ -25,7 +25,12 @@ rustc_binary("bin") {
 }
 
 package("bridge") {
-  deprecated_no_cmx = "//build"
+  meta = [
+    {
+      path = rebase_path("meta/wayland_bridge.cmx")
+      dest = "wayland_bridge.cmx"
+    },
+  ]
 
   package_name = "wayland_bridge"
   binary = "wayland_bridge"
@@ -40,8 +45,8 @@ rustc_library("wayland_bridge_test") {
   deps = [
     "//garnet/bin/wayland/core",
     "//garnet/bin/wayland/protocols:wayland",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/fidl/fuchsia.guest:fuchsia.guest-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-zircon",

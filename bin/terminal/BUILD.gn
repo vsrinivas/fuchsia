@@ -34,7 +34,12 @@ rustc_binary("bin") {
 }
 
 package("terminal") {
-  deprecated_no_cmx = "//build"
+  meta = [
+    {
+      path = rebase_path("meta/terminal.cmx")
+      dest = "terminal.cmx"
+    },
+  ]
 
   deps = [
     ":bin",
