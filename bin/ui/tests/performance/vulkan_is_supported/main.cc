@@ -7,9 +7,5 @@
 #include "garnet/public/lib/escher/util/check_vulkan_support.h"
 
 int main(int argc, const char** argv) {
-  bool vulkan_is_supported = escher::VulkanIsSupported();
-  printf("%c\n", vulkan_is_supported ? '1' : '0');
-  // TODO(PT-71): Always have an exit status of 0 once the above print rolls
-  // into topaz.
-  return vulkan_is_supported ? 0 : 1;
+  printf("%c\n", escher::VulkanIsSupported() ? '1' : '0');
 }
