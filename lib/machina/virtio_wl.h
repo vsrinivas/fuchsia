@@ -44,6 +44,14 @@ class VirtioWl : public VirtioInprocessDevice<VIRTIO_ID_WL, VIRTWL_QUEUE_COUNT,
       return ZX_ERR_NOT_SUPPORTED;
     }
 
+    // Returns the number of |bytes| and |handles| that are available for
+    // reading.
+    //
+    // Returns ZX_ERR_NOT_SUPPORTED if reading is not supported.
+    virtual zx_status_t AvailableForRead(uint32_t* bytes, uint32_t* handles) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+
     // Read at most |num_bytes| into |bytes| and at most |num_handles|
     // into |handles|. Returns actual bytes read in |actual_bytes| and
     // actual handles read in |actual_handles|.

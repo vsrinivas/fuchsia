@@ -153,10 +153,8 @@ func TestLoggerSeverity(t *testing.T) {
 	format := "integer: %d"
 	log.SetSeverity(logger.WarningLevel)
 	log.Infof(format, 10)
-	if n, err := sin.Read(make([]byte, 0), 0); err != nil {
+	if _, err := sin.Read(make([]byte, 0), 0); err != nil {
 		t.Fatal(err)
-	} else if n != 0 {
-		t.Fatalf("expected n: 0, got %d", n)
 	}
 	log.Warnf(format, 10)
 	expectedMsg := fmt.Sprintf(format, 10)
@@ -167,10 +165,8 @@ func TestLoggerVerbosity(t *testing.T) {
 	sin, log := setup(t)
 	format := "integer: %d"
 	log.VLogf(2, format, 10)
-	if n, err := sin.Read(make([]byte, 0), 0); err != nil {
+	if _, err := sin.Read(make([]byte, 0), 0); err != nil {
 		t.Fatal(err)
-	} else if n != 0 {
-		t.Fatalf("expected n: 0, got %d", n)
 	}
 	log.SetVerbosity(2)
 	log.VLogf(2, format, 10)

@@ -550,10 +550,12 @@ TEST_F(DATA_SocketChannelRelayRxTest,
   ASSERT_TRUE(DiscardFromSocket(n_junk_bytes));
   RunLoopUntilIdle();
 
-  size_t n_bytes_avail = std::numeric_limits<size_t>::max();
-  const auto read_res = remote_socket()->read(0, nullptr, 0, &n_bytes_avail);
-  EXPECT_EQ(ZX_OK, read_res);
-  EXPECT_EQ(0u, n_bytes_avail);
+  zx_info_socket_t info = {};
+  info.rx_buf_available = std::numeric_limits<size_t>::max();
+  const auto status = remote_socket()->get_info(ZX_INFO_SOCKET, &info,
+                                                sizeof(info), nullptr, nullptr);
+  EXPECT_EQ(ZX_OK, status);
+  EXPECT_EQ(0u, info.rx_buf_available);
 }
 
 // Alias for the fixture for tests which exercise the datapath to the

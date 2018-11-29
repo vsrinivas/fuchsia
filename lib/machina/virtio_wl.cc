@@ -76,9 +76,16 @@ class Connection : public VirtioWl::Vfd {
   zx_status_t BeginWaitOnData(async_dispatcher_t* dispatcher) override {
     return wait_.Begin(dispatcher);
   }
+  zx_status_t AvailableForRead(uint32_t* bytes, uint32_t* handles) override {
+    zx_status_t status = channel_.read(0, nullptr, 0u, bytes, nullptr, 0u, handles);
+    return status == ZX_ERR_BUFFER_TOO_SMALL ? ZX_OK : status;
+  }
   zx_status_t Read(void* bytes, zx_handle_info_t* handles, uint32_t num_bytes,
                    uint32_t num_handles, uint32_t* actual_bytes,
                    uint32_t* actual_handles) override {
+    if (bytes == nullptr) {
+      return ZX_ERR_INVALID_ARGS;
+    }
     return channel_.read_etc(0, bytes, num_bytes, actual_bytes, handles,
                              num_handles, actual_handles);
   }
@@ -114,6 +121,23 @@ class Pipe : public VirtioWl::Vfd {
   zx_status_t BeginWaitOnData(async_dispatcher_t* dispatcher) override {
     return rx_wait_.Begin(dispatcher);
   }
+
+  zx_status_t AvailableForRead(uint32_t* bytes, uint32_t* handles) override {
+    zx_info_socket_t info = {};
+    zx_status_t status = socket_.get_info(ZX_INFO_SOCKET, &info, sizeof(info),
+                                          nullptr, nullptr);
+    if (status != ZX_OK) {
+      return status;
+    }
+    if (bytes) {
+      *bytes = info.rx_buf_available;
+    }
+    if (handles) {
+      *handles = 0;
+    }
+    return ZX_OK;
+  }
+
   zx_status_t Read(void* bytes, zx_handle_info_t* handles, uint32_t num_bytes,
                    uint32_t num_handles, uint32_t* actual_bytes,
                    uint32_t* actual_handles) override {
@@ -128,7 +152,7 @@ class Pipe : public VirtioWl::Vfd {
     if (actual_handles) {
       *actual_handles = 0;
     }
-    return num_bytes ? ZX_OK : ZX_ERR_BUFFER_TOO_SMALL;
+    return ZX_OK;
   }
   zx_status_t BeginWaitOnWritable(async_dispatcher_t* dispatcher) override {
     return tx_wait_.Begin(dispatcher);
@@ -697,9 +721,8 @@ void VirtioWl::OnQueueReady(zx_status_t status, uint16_t index) {
 
     // Determine the number of handles in message.
     uint32_t actual_bytes, actual_handles;
-    status = vfd_it->second->Read(nullptr, nullptr, 0, 0, &actual_bytes,
-                                  &actual_handles);
-    if (status != ZX_ERR_BUFFER_TOO_SMALL) {
+    status = vfd_it->second->AvailableForRead(&actual_bytes, &actual_handles);
+    if (status != ZX_OK) {
       if (status != ZX_ERR_PEER_CLOSED) {
         FXL_LOG(ERROR) << "Failed to read size of message: " << status;
         break;
