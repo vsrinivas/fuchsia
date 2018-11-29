@@ -241,7 +241,7 @@ zx_status_t HidButtonsDevice::ConfigureInterrupt(uint32_t idx, uint64_t int_port
     // We setup a trigger for the opposite of the current GPIO value.
     status = gpio_get_interrupt(
         &gpios_[idx].gpio,
-        current ? ZX_INTERRUPT_MODE_LEVEL_LOW : ZX_INTERRUPT_MODE_LEVEL_HIGH,
+        current ? ZX_INTERRUPT_MODE_EDGE_LOW : ZX_INTERRUPT_MODE_EDGE_HIGH,
         gpios_[idx].irq.reset_and_get_address());
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s gpio_get_interrupt failed %d\n", __FUNCTION__, status);
