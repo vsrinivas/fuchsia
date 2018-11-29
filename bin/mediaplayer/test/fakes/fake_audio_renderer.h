@@ -95,16 +95,6 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer,
   void SetMute(bool muted) override;
 
  private:
-  // Converts a pts in |pts_rate_| units to ns.
-  int64_t to_ns(int64_t pts) {
-    return pts * (media::TimelineRate::NsPerSecond / pts_rate_);
-  }
-
-  // Converts a pts in ns to |pts_rate_| units.
-  int64_t from_ns(int64_t pts) {
-    return pts * (pts_rate_ / media::TimelineRate::NsPerSecond);
-  }
-
   // Determines if we care currently playing.
   bool progressing() { return timeline_function_.invertable(); }
 
@@ -123,8 +113,11 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer,
   bool mute_ = false;
   const int64_t min_lead_time_ns_ = ZX_MSEC(100);
   media::TimelineRate pts_rate_ = media::TimelineRate::NsPerSecond;
-  media::TimelineFunction timeline_function_;
   int64_t restart_media_time_ = fuchsia::media::NO_TIMESTAMP;
+
+  // Converts Reference time in ns units to presentation time in |pts_rate_|
+  // units.
+  media::TimelineFunction timeline_function_;
 
   bool dump_packets_ = false;
   std::vector<PacketInfo> expected_packets_info_;

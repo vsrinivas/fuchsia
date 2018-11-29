@@ -4,13 +4,11 @@
 
 #include "garnet/bin/mediaplayer/test/fakes/fake_audio_renderer.h"
 
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
 #include <iomanip>
 #include <iostream>
 #include <limits>
-
-#include <lib/async/cpp/task.h>
-#include <lib/async/default.h>
-
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline.h"
 
@@ -129,14 +127,14 @@ void FakeAudioRenderer::Play(int64_t reference_time, int64_t media_time,
     } else if (packet_queue_.empty()) {
       media_time = 0;
     } else {
-      media_time = to_ns(packet_queue_.front().first.pts);
+      media_time = packet_queue_.front().first.pts;
     }
   }
 
   callback(reference_time, media_time);
 
-  timeline_function_ =
-      media::TimelineFunction(media_time, reference_time, 1, 1);
+  timeline_function_ = media::TimelineFunction(
+      media_time, reference_time, pts_rate_ / media::TimelineRate::NsPerSecond);
 
   MaybeScheduleRetirement();
 }
@@ -184,26 +182,26 @@ void FakeAudioRenderer::MaybeScheduleRetirement() {
   }
 
   int64_t reference_time =
-      timeline_function_.ApplyInverse(to_ns(packet_queue_.front().first.pts));
+      timeline_function_.ApplyInverse(packet_queue_.front().first.pts);
 
-  async::PostTaskForTime(dispatcher_,
-                         [this]() {
-                           if (!progressing() || packet_queue_.empty()) {
-                             return;
-                           }
+  async::PostTaskForTime(
+      dispatcher_,
+      [this]() {
+        if (!progressing() || packet_queue_.empty()) {
+          return;
+        }
 
-                           int64_t reference_time =
-                               timeline_function_.ApplyInverse(
-                                   to_ns(packet_queue_.front().first.pts));
+        int64_t reference_time =
+            timeline_function_.ApplyInverse(packet_queue_.front().first.pts);
 
-                           if (reference_time <= media::Timeline::local_now()) {
-                             packet_queue_.front().second();
-                             packet_queue_.pop();
-                           }
+        if (reference_time <= media::Timeline::local_now()) {
+          packet_queue_.front().second();
+          packet_queue_.pop();
+        }
 
-                           MaybeScheduleRetirement();
-                         },
-                         zx::time(reference_time));
+        MaybeScheduleRetirement();
+      },
+      zx::time(reference_time));
 }
 
 }  // namespace test
