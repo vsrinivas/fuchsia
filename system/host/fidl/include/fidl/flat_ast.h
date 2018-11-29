@@ -46,13 +46,13 @@ std::string LibraryName(const Library* library, StringView separator);
 struct Name {
     Name() {}
 
-    Name(const Library* library, const SourceLocation name) :
-        library_(library),
-        name_from_source_(std::make_unique<SourceLocation>(name)) {}
- 
-    Name(const Library* library, const std::string& name) :
-        library_(library),
-        anonymous_name_(std::make_unique<std::string>(name)) {}
+    Name(const Library* library, const SourceLocation name)
+        : library_(library),
+          name_from_source_(std::make_unique<SourceLocation>(name)) {}
+
+    Name(const Library* library, const std::string& name)
+        : library_(library),
+          anonymous_name_(std::make_unique<std::string>(name)) {}
 
     Name(Name&&) = default;
     Name& operator=(Name&&) = default;
@@ -72,17 +72,15 @@ struct Name {
     bool operator==(const Name& other) const {
         // TODO(pascallouis): Why are we lenient, and allow a name comparison,
         // rather than require the more stricter pointer equality here?
-        if (LibraryName(library_, ".") != LibraryName(other.library_, ".")) {
+        if (LibraryName(library_, ".") != LibraryName(other.library_, "."))
             return false;
-        }
         return name_part() == other.name_part();
     }
     bool operator!=(const Name& other) const { return !operator==(other); }
 
     bool operator<(const Name& other) const {
-        if (LibraryName(library_, ".") != LibraryName(other.library_, ".")) {
+        if (LibraryName(library_, ".") != LibraryName(other.library_, "."))
             return LibraryName(library_, ".") < LibraryName(other.library_, ".");
-        }
         return name_part() < other.name_part();
     }
 
@@ -119,9 +117,11 @@ protected:
         : kind(kind) {}
 };
 
-template <typename ValueType, typename = std::enable_if_t<std::is_arithmetic<ValueType>::value &&
-                                                          !std::is_same<ValueType, bool>::value>>
+template <typename ValueType>
 struct NumericConstantValue : ConstantValue {
+    static_assert(std::is_arithmetic<ValueType>::value && !std::is_same<ValueType, bool>::value,
+                  "NumericConstantValue can only be used with a numeric ValueType!");
+
     NumericConstantValue(ValueType value)
         : ConstantValue(GetKind()), value(value) {}
 
@@ -693,7 +693,7 @@ struct Struct : public Decl {
     Struct(std::unique_ptr<raw::AttributeList> attributes, Name name,
            std::vector<Member> members, bool anonymous = false)
         : Decl(Kind::kStruct, std::move(attributes), std::move(name)),
-        members(std::move(members)), anonymous(anonymous) {
+          members(std::move(members)), anonymous(anonymous) {
     }
 
     std::vector<Member> members;
@@ -943,9 +943,8 @@ public:
 
     template <typename NumericType>
     bool ParseNumericLiteral(const raw::NumericLiteral* literal, NumericType* out_value) const {
-        if (!literal) {
-            return false;
-        }
+        assert(literal != nullptr);
+        assert(out_value != nullptr);
 
         // Set locale to "C" for numeric types, since all strtox() functions are locale-dependent
         setlocale(LC_NUMERIC, "C");

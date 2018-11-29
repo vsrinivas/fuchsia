@@ -1457,9 +1457,8 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
     case Decl::Kind::kStruct: {
         auto struct_decl = static_cast<const Struct*>(decl);
         for (const auto& member : struct_decl->members) {
-            auto option = struct_decl->anonymous ?
-                LookupOption::kIncludeNullable :
-                LookupOption::kIgnoreNullable;
+            auto option = struct_decl->anonymous ? LookupOption::kIncludeNullable
+                                                 : LookupOption::kIgnoreNullable;
             maybe_add_decl(member.type.get(), option);
             if (member.maybe_default_value) {
                 if (!maybe_add_constant(member.type.get(), member.maybe_default_value.get()))
