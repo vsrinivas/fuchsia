@@ -186,6 +186,11 @@ func (upMon *SystemUpdateMonitor) Stop() {
 
 // Check if we need to do an update.
 func (upMon *SystemUpdateMonitor) needsUpdate(latestUpdateMerkle string) bool {
+	latestSystemImageMerkle, err := latestSystemImageMerkle()
+	if err == nil {
+		upMon.latestSystemImageMerkle = latestSystemImageMerkle
+	}
+
 	// It's possible for updates to fail. For example, we could lose
 	// network connection while downloading the latest packages as
 	// specified in the `update` package. So, we need a way to tell if the
@@ -237,7 +242,6 @@ func (upMon *SystemUpdateMonitor) needsUpdate(latestUpdateMerkle string) bool {
 	// change), but this check should do a decent job of catching a Zircon
 	// change for people not directly modifying Zircon.
 
-	latestSystemImageMerkle, err := latestSystemImageMerkle()
 	if err != nil {
 		log.Printf("sys_upd_mon: error parsing \"update\"'s package \"meta/contents\": %s", err)
 	} else {
@@ -251,7 +255,6 @@ func (upMon *SystemUpdateMonitor) needsUpdate(latestUpdateMerkle string) bool {
 			log.Printf("sys_upd_mon: no current \"system_image\" package merkle, skipping check")
 		} else if upMon.systemImageMerkle != latestSystemImageMerkle {
 			log.Printf("sys_upd_mon: \"system_image\" merkle changed, triggering update")
-			upMon.latestSystemImageMerkle = latestSystemImageMerkle
 			return true
 		} else {
 			log.Printf("sys_upd_mon: \"system_image\" merkle has not changed")
