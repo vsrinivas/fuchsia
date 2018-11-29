@@ -40,10 +40,10 @@ void main() {
 #endif  // NO_SHADOW_LIGHTING_PASS
 
 
-#ifdef EXTRUDE_SHADOW_VOLUME
+#ifdef SHADOW_VOLUME_EXTRUSION
 #define USE_PAPER_SHADER_MESH_INSTANCE 1
 #include "shaders/paper/common/use.glsl"
 void main() {
   outColor = model_color;
 }
-#endif  // EXTRUDE_SHADOW_VOLUME
+#endif  // SHADOW_VOLUME_EXTRUSION

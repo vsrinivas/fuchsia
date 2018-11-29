@@ -53,9 +53,19 @@ PaperRenderer2::PaperRenderer2(EscherWeakPtr weak_escher,
           "shaders/paper/frag/main_point_light.frag",
           ShaderVariantArgs({
               {"USE_ATTRIBUTE_UV", "1"},
+              {"USE_PAPER_SHADER_POINT_LIGHT", "1"},
               {"USE_PAPER_SHADER_PUSH_CONSTANTS", "1"},
-              // TODO(ES-153): currently required by main.vert.
-              {"NO_SHADOW_LIGHTING_PASS", "1"},
+              {"SHADOW_VOLUME_POINT_LIGHTING", "1"},
+          }))),
+      point_light_falloff_program_(escher()->GetGraphicsProgram(
+          "shaders/model_renderer/main.vert",
+          "shaders/paper/frag/main_point_light.frag",
+          ShaderVariantArgs({
+              {"USE_ATTRIBUTE_UV", "1"},
+              {"USE_PAPER_SHADER_POINT_LIGHT", "1"},
+              {"USE_PAPER_SHADER_POINT_LIGHT_FALLOFF", "1"},
+              {"USE_PAPER_SHADER_PUSH_CONSTANTS", "1"},
+              {"SHADOW_VOLUME_POINT_LIGHTING", "1"},
           }))),
       shadow_volume_geometry_program_(escher()->GetGraphicsProgram(
           "shaders/model_renderer/main.vert", "",
@@ -63,7 +73,7 @@ PaperRenderer2::PaperRenderer2(EscherWeakPtr weak_escher,
               {"USE_ATTRIBUTE_BLEND_WEIGHT_1", "1"},
               {"USE_PAPER_SHADER_POINT_LIGHT", "1"},
               {"USE_PAPER_SHADER_PUSH_CONSTANTS", "1"},
-              {"EXTRUDE_SHADOW_VOLUME", "1"},
+              {"SHADOW_VOLUME_EXTRUSION", "1"},
           }))),
       shadow_volume_geometry_debug_program_(escher()->GetGraphicsProgram(
           "shaders/model_renderer/main.vert",
@@ -72,7 +82,7 @@ PaperRenderer2::PaperRenderer2(EscherWeakPtr weak_escher,
               {"USE_ATTRIBUTE_BLEND_WEIGHT_1", "1"},
               {"USE_PAPER_SHADER_POINT_LIGHT", "1"},
               {"USE_PAPER_SHADER_PUSH_CONSTANTS", "1"},
-              {"EXTRUDE_SHADOW_VOLUME", "1"},
+              {"SHADOW_VOLUME_EXTRUSION", "1"},
           }))) {
   FXL_DCHECK(config.num_depth_buffers > 0);
   depth_buffers_.resize(config.num_depth_buffers);
@@ -426,7 +436,16 @@ void PaperRenderer2::GenerateCommandsForShadowVolumes() {
     // Emit commands for adding lighting contribution.
     {
       context.set_draw_mode(PaperRendererDrawMode::kShadowVolumeLighting);
-      context.set_shader_program(point_light_program_);
+
+      // Use a slightly less expensive shader when distance-based attenuation is
+      // disabled.
+      const bool use_light_falloff =
+          frame_data_->scene->point_lights[i].falloff > 0.f;
+      if (use_light_falloff) {
+        context.set_shader_program(point_light_falloff_program_);
+      } else {
+        context.set_shader_program(point_light_program_);
+      }
 
       cmd_buf->SetBlendEnable(true);
       cmd_buf->SetBlendFactors(vk::BlendFactor::eOne, vk::BlendFactor::eZero,

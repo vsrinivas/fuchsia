@@ -226,8 +226,10 @@ std::vector<UniformBinding> PaperDrawCallFactory::BeginFrame(
         NewPaperShaderUniformBinding<PaperShaderPointLight>(frame, num_lights_);
     auto* point_lights = writable_binding.first;
     for (size_t i = 0; i < num_lights_; ++i) {
-      point_lights[i].position = vec4(scene->point_lights[i].position, 1);
-      point_lights[i].color = vec4(scene->point_lights[i].color, 1);
+      const PaperPointLight& light = scene->point_lights[i];
+      point_lights[i].position = vec4(light.position, 1);
+      point_lights[i].color = vec4(light.color, 1);
+      point_lights[i].falloff = light.falloff;
     }
     scene_uniforms.push_back(writable_binding.second);
   }

@@ -26,7 +26,7 @@ struct PaperAmbientLight {
 // properties such as a primary direction and angular falloff (although in that
 // case, maybe this would be renamed to PaperSpotLight?).
 //
-// TODO(ES-162): define physically-based units of light intensity.
+// TODO(ES-162): define physically based units of light intensity.
 struct PaperPointLight {
   vec3 position;
 
@@ -41,11 +41,9 @@ struct PaperPointLight {
 
   // The intensity of a light upon a surface is attenuated proportional to the
   // squared distance between them.  This parameter provides artistic control
-  // over the rate of fall off, where 0 means no distance-based falloff
-  // whatsoever, and 1 is the normal physically-based falloff.
-  //
-  // TODO(ES-163): not currently implemented.
-  float falloff = 1.f;
+  // over the rate of falloff, where 0 means no distance-based falloff
+  // whatsoever, and 1 is the normal physically based falloff.
+  float falloff = 0.f;
 };
 
 }  // namespace escher

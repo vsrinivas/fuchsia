@@ -246,7 +246,14 @@ static void UpdateLighting(PaperScene* paper_scene,
   paper_scene->ambient_light.color = kAmbientLightColor;
 
   for (auto& pl : paper_scene->point_lights) {
-    pl.color = (vec3(1, 1, 1) - kAmbientLightColor) / float(num_point_lights);
+    pl.color =
+        (vec3(1.f, 1.f, 1.f) - kAmbientLightColor) / float(num_point_lights);
+
+    // Choose a light intensity that looks good with the falloff.  If an object
+    // is too close to the light it will appear washed out.
+    // TODO(ES-170): add HDR support to address this.
+    pl.color *= 2.5f;
+    pl.falloff = 0.001f;
   }
 
   // Simple animation of point light.

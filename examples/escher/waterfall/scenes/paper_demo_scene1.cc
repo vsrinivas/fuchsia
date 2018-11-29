@@ -110,8 +110,14 @@ void PaperDemoScene1::Update(const escher::Stopwatch& stopwatch,
   // Create our background plane.  Don't waste GPU cycles casting shadows from
   // it, because there is nothing beneath it.
   transform_stack->PushElevation(10);
-  renderer->DrawRect(vec2(0, 0), vec2(screen_width, screen_height), bg_,
-                     escher::PaperDrawableFlagBits::kDisableShadowCasting);
+  // Rounded rectangles are centered around their origin.
+  transform_stack->PushTranslation(0.5f * vec2(screen_width, screen_height));
+  constexpr float kCornerRadius = 30.f;
+  renderer->DrawRoundedRect(
+      {screen_width, screen_height, kCornerRadius, kCornerRadius, kCornerRadius,
+       kCornerRadius},
+      bg_, escher::PaperDrawableFlagBits::kDisableShadowCasting);
+  transform_stack->Pop();  // pop translation only
 
   // Render clipped rounded rectangles obtained from PaperShapeCache.
   {

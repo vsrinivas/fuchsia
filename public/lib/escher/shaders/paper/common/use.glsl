@@ -39,6 +39,9 @@ layout(set = 0, binding = 0) uniform PaperShaderCameraAmbient {
 struct PointLight {
   vec4 position;  // world-space
   vec4 color;     // RGB intensities
+  // Only the x component is used, the rest are padding to handle GLSL packing
+  // requirements.
+  vec4 falloff;
 };
 
 layout(set = 0, binding = 1) uniform PointShaderPointLight {

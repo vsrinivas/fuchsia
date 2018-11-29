@@ -81,7 +81,35 @@ void main() {
 }
 #endif
 
-#ifdef EXTRUDE_SHADOW_VOLUME
+#ifdef SHADOW_VOLUME_POINT_LIGHTING
+layout(location = 0) out vec2 fragUV;
+
+#ifdef USE_PAPER_SHADER_POINT_LIGHT_FALLOFF
+layout(location = 1) out vec4 irradiance;
+#endif // USE_PAPER_SHADER_POINT_LIGHT_FALLOFF
+
+void main() {
+  vec4 world_pos = model_transform * ComputeVertexPosition();
+  gl_Position = vp_matrix * world_pos;
+  fragUV = inUV;
+
+#ifdef USE_PAPER_SHADER_POINT_LIGHT_FALLOFF
+  // Irradiance.  Compute an attenuation factor based on the distance to the
+  // light, and apply it to the incoming light color/intensity.  The attenuation
+  // is based on the inverse square law, with a falloff adjustment to prevent
+  // it from dropping off too rapidly.
+  vec3 light_position =
+      point_lights[PaperShaderPushConstants.light_index].position.xyz;
+  float falloff = point_lights[PaperShaderPushConstants.light_index].falloff.x;
+  vec3 adjusted_light = falloff * (light_position - world_pos.xyz);
+  float attenuation = 1.f / (1.f + dot(adjusted_light, adjusted_light));
+  irradiance = attenuation *
+      point_lights[PaperShaderPushConstants.light_index].color;
+#endif  // USE_PAPER_SHADER_POINT_LIGHT_FALLOFF
+}
+#endif  // SHADOW_VOLUME_POINT_LIGHTING
+
+#ifdef SHADOW_VOLUME_EXTRUSION
 void main() {
   #ifdef NUM_CLIP_PLANES
   #error Vertex clip planes are incompatible with shadow-volume extrusion.

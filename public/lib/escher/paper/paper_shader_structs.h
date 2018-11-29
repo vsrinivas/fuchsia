@@ -61,6 +61,10 @@ struct PaperShaderCameraAmbient {
 struct PaperShaderPointLight {
   vec4 position;
   vec4 color;
+  float falloff;
+  float __padding0;
+  float __padding1;
+  float __padding2;
 
   static constexpr size_t kDescriptorSet = 0;
   static constexpr size_t kDescriptorBinding = 1;

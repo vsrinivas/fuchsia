@@ -182,6 +182,7 @@ class PaperRenderer2 final : public Renderer {
 
   ShaderProgramPtr ambient_light_program_;
   ShaderProgramPtr point_light_program_;
+  ShaderProgramPtr point_light_falloff_program_;
   ShaderProgramPtr shadow_volume_geometry_program_;
   ShaderProgramPtr shadow_volume_geometry_debug_program_;
   ShaderProgramPtr shadow_volume_lighting_program_;
