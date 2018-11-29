@@ -56,6 +56,7 @@ void Serialize(const ThreadRecord& record, MessageWriter* writer) {
   writer->WriteUint64(record.koid);
   writer->WriteString(record.name);
   writer->WriteUint32(static_cast<uint32_t>(record.state));
+  writer->WriteUint32(static_cast<uint32_t>(record.blocked_reason));
   writer->WriteUint32(static_cast<uint32_t>(record.stack_amount));
   Serialize(record.frames, writer);
 }

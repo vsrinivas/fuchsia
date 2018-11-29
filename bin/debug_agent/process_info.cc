@@ -22,7 +22,35 @@ namespace debug_agent {
 
 namespace {
 
-debug_ipc::ThreadRecord::State ThreadStateToEnum(uint32_t state) {
+debug_ipc::ThreadRecord::BlockedReason ThreadStateBlockedReasonToEnum(
+    uint32_t state) {
+  FXL_DCHECK(ZX_THREAD_STATE_BASIC(state) == ZX_THREAD_STATE_BLOCKED);
+
+  switch (state) {
+    case ZX_THREAD_STATE_BLOCKED_EXCEPTION:
+      return debug_ipc::ThreadRecord::BlockedReason::kException;
+    case ZX_THREAD_STATE_BLOCKED_SLEEPING:
+      return debug_ipc::ThreadRecord::BlockedReason::kSleeping;
+    case ZX_THREAD_STATE_BLOCKED_FUTEX:
+      return debug_ipc::ThreadRecord::BlockedReason::kFutex;
+    case ZX_THREAD_STATE_BLOCKED_PORT:
+      return debug_ipc::ThreadRecord::BlockedReason::kPort;
+    case ZX_THREAD_STATE_BLOCKED_CHANNEL:
+      return debug_ipc::ThreadRecord::BlockedReason::kChannel;
+    case ZX_THREAD_STATE_BLOCKED_WAIT_ONE:
+      return debug_ipc::ThreadRecord::BlockedReason::kWaitOne;
+    case ZX_THREAD_STATE_BLOCKED_WAIT_MANY:
+      return debug_ipc::ThreadRecord::BlockedReason::kWaitMany;
+    case ZX_THREAD_STATE_BLOCKED_INTERRUPT:
+      return debug_ipc::ThreadRecord::BlockedReason::kInterrupt;
+    default:
+      FXL_NOTREACHED();
+      return debug_ipc::ThreadRecord::BlockedReason::kNotBlocked;
+  }
+}
+
+debug_ipc::ThreadRecord::State ThreadStateToEnums(
+    uint32_t state, debug_ipc::ThreadRecord::BlockedReason* blocked_reason) {
   struct Mapping {
     uint32_t int_state;
     debug_ipc::ThreadRecord::State enum_state;
@@ -35,12 +63,16 @@ debug_ipc::ThreadRecord::State ThreadStateToEnum(uint32_t state) {
       {ZX_THREAD_STATE_DYING, debug_ipc::ThreadRecord::State::kDying},
       {ZX_THREAD_STATE_DEAD, debug_ipc::ThreadRecord::State::kDead}};
 
-  // TODO(DX-662) save the blocked reason.
-  state = ZX_THREAD_STATE_BASIC(state);
+  const uint32_t basic_state = ZX_THREAD_STATE_BASIC(state);
+  *blocked_reason = debug_ipc::ThreadRecord::BlockedReason::kNotBlocked;
 
   for (const Mapping& mapping : mappings) {
-    if (mapping.int_state == state)
+    if (mapping.int_state == basic_state) {
+      if (mapping.enum_state == debug_ipc::ThreadRecord::State::kBlocked) {
+        *blocked_reason = ThreadStateBlockedReasonToEnum(state);
+      }
       return mapping.enum_state;
+    }
   }
   FXL_NOTREACHED();
   return debug_ipc::ThreadRecord::State::kDead;
@@ -113,7 +145,7 @@ void FillThreadRecord(const zx::process& process, uint64_t dl_debug_addr,
   zx_info_thread info;
   if (thread.get_info(ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr) ==
       ZX_OK) {
-    record->state = ThreadStateToEnum(info.state);
+    record->state = ThreadStateToEnums(info.state, &record->blocked_reason);
   } else {
     FXL_NOTREACHED();
     record->state = debug_ipc::ThreadRecord::State::kDead;

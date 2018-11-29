@@ -51,6 +51,7 @@ class Thread : public ClientObject {
   // To make sure this is up-to-date, call Process::SyncThreads() or
   // Thread::SyncFrames().
   virtual debug_ipc::ThreadRecord::State GetState() const = 0;
+  virtual debug_ipc::ThreadRecord::BlockedReason GetBlockedReason() const = 0;
 
   virtual void Pause() = 0;
   virtual void Continue() = 0;

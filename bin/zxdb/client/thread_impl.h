@@ -26,6 +26,7 @@ class ThreadImpl : public Thread {
   uint64_t GetKoid() const override;
   const std::string& GetName() const override;
   debug_ipc::ThreadRecord::State GetState() const override;
+  debug_ipc::ThreadRecord::BlockedReason GetBlockedReason() const override;
   void Pause() override;
   void Continue() override;
   void ContinueWith(std::unique_ptr<ThreadController> controller,
@@ -72,6 +73,7 @@ class ThreadImpl : public Thread {
   std::unique_ptr<RegisterSet> registers_;
   std::string name_;
   debug_ipc::ThreadRecord::State state_;
+  debug_ipc::ThreadRecord::BlockedReason blocked_reason_;
 
   std::vector<std::unique_ptr<FrameImpl>> frames_;
   bool has_all_frames_ = false;

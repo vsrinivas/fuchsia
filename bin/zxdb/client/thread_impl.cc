@@ -39,6 +39,9 @@ uint64_t ThreadImpl::GetKoid() const { return koid_; }
 const std::string& ThreadImpl::GetName() const { return name_; }
 
 debug_ipc::ThreadRecord::State ThreadImpl::GetState() const { return state_; }
+debug_ipc::ThreadRecord::BlockedReason ThreadImpl::GetBlockedReason() const {
+  return blocked_reason_;
+}
 
 void ThreadImpl::Pause() {
   // The frames may have been requested when the thread was running which
@@ -217,6 +220,7 @@ void ThreadImpl::SetMetadata(const debug_ipc::ThreadRecord& record) {
 
   name_ = record.name;
   state_ = record.state;
+  blocked_reason_ = record.blocked_reason;
 
   // The goal is to preserve pointer identity for frames. If a frame is the
   // same, weak pointers to it should remain valid.

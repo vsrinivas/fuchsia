@@ -179,7 +179,8 @@ void ListThreads(ConsoleContext* context, Process* process) {
       row.emplace_back();
 
     row.push_back(fxl::StringPrintf("%d", pair.first));
-    row.push_back(ThreadStateToString(pair.second->GetState()));
+    row.push_back(ThreadStateToString(pair.second->GetState(),
+                                      pair.second->GetBlockedReason()));
     row.push_back(fxl::StringPrintf("%" PRIu64, pair.second->GetKoid()));
     row.push_back(pair.second->GetName());
   }

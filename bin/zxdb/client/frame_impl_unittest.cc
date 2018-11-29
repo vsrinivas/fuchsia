@@ -47,6 +47,9 @@ class MockThread : public Thread {
   debug_ipc::ThreadRecord::State GetState() const override {
     return debug_ipc::ThreadRecord::State::kSuspended;
   }
+  debug_ipc::ThreadRecord::BlockedReason GetBlockedReason() const override {
+    return debug_ipc::ThreadRecord::BlockedReason::kNotBlocked;
+  }
   void Pause() override {}
   void Continue() override {}
   void ContinueWith(std::unique_ptr<ThreadController> controller,

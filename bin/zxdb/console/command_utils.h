@@ -71,7 +71,9 @@ Err ParseHostPort(const std::string& input, std::string* out_host,
 
 std::string TargetStateToString(Target::State state);
 std::string JobContextStateToString(JobContext::State state);
-std::string ThreadStateToString(debug_ipc::ThreadRecord::State state);
+std::string ThreadStateToString(
+    debug_ipc::ThreadRecord::State state,
+    debug_ipc::ThreadRecord::BlockedReason blocked_reason);
 
 std::string BreakpointScopeToString(const ConsoleContext* context,
                                     const BreakpointSettings& settings);

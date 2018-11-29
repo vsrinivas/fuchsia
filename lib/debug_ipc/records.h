@@ -56,6 +56,21 @@ struct ThreadRecord {
     kLast  // Not an actual thread state, for range checking.
   };
 
+  enum class BlockedReason : uint32_t {
+    kNotBlocked = 0,  // Used when State isn't kBlocked.
+
+    kException,
+    kSleeping,
+    kFutex,
+    kPort,
+    kChannel,
+    kWaitOne,
+    kWaitMany,
+    kInterrupt,
+
+    kLast  // Not an actual blocked reason, for range checking.
+  };
+
   // Indicates how much of the stack was attempted to be retrieved in this
   // call. This doesn't indicate how many stack frames were actually retrieved.
   // For example, there could be no stack frames because they weren't
@@ -81,6 +96,8 @@ struct ThreadRecord {
   uint64_t koid = 0;
   std::string name;
   State state = State::kNew;
+  // Only valid when state is kBlocked.
+  BlockedReason blocked_reason = BlockedReason::kNotBlocked;
   StackAmount stack_amount = StackAmount::kNone;
 
   // The frames of the top of the stack when the thread is in suspended or

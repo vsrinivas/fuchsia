@@ -35,6 +35,14 @@ bool Deserialize(MessageReader* reader, ThreadRecord* record) {
     return false;
   record->state = static_cast<ThreadRecord::State>(state);
 
+  uint32_t blocked_reason;
+  if (!reader->ReadUint32(&blocked_reason))
+    return false;
+  if (state >= static_cast<uint32_t>(ThreadRecord::BlockedReason::kLast))
+    return false;
+  record->blocked_reason =
+      static_cast<ThreadRecord::BlockedReason>(blocked_reason);
+
   uint32_t stack_amount;
   if (!reader->ReadUint32(&stack_amount))
     return false;

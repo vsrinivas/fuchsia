@@ -63,7 +63,9 @@ Err AssertStoppedThreadCommand(ConsoleContext* context, const Command& cmd,
         "To view and sync thread state with the remote system, type "
         "\"thread\".",
         command_name, context->IdForThread(cmd.thread()),
-        ThreadStateToString(cmd.thread()->GetState()).c_str()));
+        ThreadStateToString(cmd.thread()->GetState(),
+                            cmd.thread()->GetBlockedReason())
+            .c_str()));
   }
   return Err();
 }
@@ -241,7 +243,9 @@ std::string JobContextStateToString(JobContext::State state) {
   return std::string();
 }
 
-std::string ThreadStateToString(debug_ipc::ThreadRecord::State state) {
+std::string ThreadStateToString(
+    debug_ipc::ThreadRecord::State state,
+    debug_ipc::ThreadRecord::BlockedReason blocked_reason) {
   switch (state) {
     case debug_ipc::ThreadRecord::State::kNew:
       return "New";
@@ -249,8 +253,39 @@ std::string ThreadStateToString(debug_ipc::ThreadRecord::State state) {
       return "Running";
     case debug_ipc::ThreadRecord::State::kSuspended:
       return "Suspended";
-    case debug_ipc::ThreadRecord::State::kBlocked:
-      return "Blocked";
+    case debug_ipc::ThreadRecord::State::kBlocked: {
+      const char* reason;
+      switch (blocked_reason) {
+        case debug_ipc::ThreadRecord::BlockedReason::kException:
+          reason = "exception";
+          break;
+        case debug_ipc::ThreadRecord::BlockedReason::kSleeping:
+          reason = "sleeping";
+          break;
+        case debug_ipc::ThreadRecord::BlockedReason::kFutex:
+          reason = "futex";
+          break;
+        case debug_ipc::ThreadRecord::BlockedReason::kPort:
+          reason = "port";
+          break;
+        case debug_ipc::ThreadRecord::BlockedReason::kChannel:
+          reason = "channel";
+          break;
+        case debug_ipc::ThreadRecord::BlockedReason::kWaitOne:
+          reason = "wait_one";
+          break;
+        case debug_ipc::ThreadRecord::BlockedReason::kWaitMany:
+          reason = "wait_many";
+          break;
+        case debug_ipc::ThreadRecord::BlockedReason::kInterrupt:
+          reason = "interrupt";
+          break;
+        default:
+          reason = "unknown";
+          break;
+      }
+      return fxl::StringPrintf("Blocked (%s)", reason);
+    }
     case debug_ipc::ThreadRecord::State::kDying:
       return "Dying";
     case debug_ipc::ThreadRecord::State::kDead:
@@ -392,10 +427,11 @@ std::string DescribeJobContextName(const JobContext* job_context) {
 
 std::string DescribeThread(const ConsoleContext* context,
                            const Thread* thread) {
-  return fxl::StringPrintf("Thread %d %s koid=%" PRIu64 " %s",
-                           context->IdForThread(thread),
-                           ThreadStateToString(thread->GetState()).c_str(),
-                           thread->GetKoid(), thread->GetName().c_str());
+  return fxl::StringPrintf(
+      "Thread %d %s koid=%" PRIu64 " %s", context->IdForThread(thread),
+      ThreadStateToString(thread->GetState(), thread->GetBlockedReason())
+          .c_str(),
+      thread->GetKoid(), thread->GetName().c_str());
 }
 
 std::string DescribeBreakpoint(const ConsoleContext* context,
