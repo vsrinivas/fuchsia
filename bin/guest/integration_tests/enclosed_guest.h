@@ -27,7 +27,15 @@ class EnclosedGuest {
     return serial_.ExecuteBlocking(message, result);
   }
 
+  void GetHostVsockEndpoint(
+      fidl::InterfaceRequest<fuchsia::guest::HostVsockEndpoint> endpoint) {
+    environment_controller_->GetHostVsockEndpoint(std::move(endpoint));
+  }
+
+  uint32_t GetGuestCid() { return guest_cid_; }
+
  private:
+  uint32_t guest_cid_;
   async::Loop loop_;
   std::shared_ptr<component::Services> real_services_;
   fuchsia::sys::EnvironmentPtr real_env_;

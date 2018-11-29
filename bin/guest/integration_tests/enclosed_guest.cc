@@ -51,7 +51,11 @@ zx_status_t EnclosedGuest::Start(fuchsia::guest::LaunchInfo guest_launch_info) {
 
   environment_controller_->LaunchInstance(std::move(guest_launch_info),
                                           instance_controller_.NewRequest(),
-                                          [](...) {});
+                                          [this](uint32_t cid) {
+                                            guest_cid_ = cid;
+                                            loop_.Quit();
+                                          });
+  loop_.Run();
 
   zx::socket socket;
   instance_controller_->GetSerial(

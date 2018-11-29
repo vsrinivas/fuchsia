@@ -53,6 +53,13 @@ class GuestTest : public ::testing::Test {
     return GuestRun(*enclosed_guest_, cmx, args, result);
   }
 
+  uint32_t GetGuestCid() { return enclosed_guest_->GetGuestCid(); }
+
+  void GetHostVsockEndpoint(
+      fidl::InterfaceRequest<fuchsia::guest::HostVsockEndpoint> endpoint) {
+    enclosed_guest_->GetHostVsockEndpoint(std::move(endpoint));
+  }
+
  private:
   static bool setup_succeeded_;
   static EnclosedGuest* enclosed_guest_;
