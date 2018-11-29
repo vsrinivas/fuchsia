@@ -1564,17 +1564,37 @@ bool Library::CompileEnum(Enum* enum_declaration) {
     Compiling guard(enum_declaration);
     switch (enum_declaration->type->subtype) {
     case types::PrimitiveSubtype::kInt8:
-    case types::PrimitiveSubtype::kInt16:
-    case types::PrimitiveSubtype::kInt32:
-    case types::PrimitiveSubtype::kInt64:
-    case types::PrimitiveSubtype::kUint8:
-    case types::PrimitiveSubtype::kUint16:
-    case types::PrimitiveSubtype::kUint32:
-    case types::PrimitiveSubtype::kUint64:
-        // These are allowed as enum subtypes. Compile the size and alignment.
-        enum_declaration->typeshape = PrimitiveTypeShape(enum_declaration->type->subtype);
+        if (!ValidateEnumMembers<int8_t>(enum_declaration))
+            return false;
         break;
-
+    case types::PrimitiveSubtype::kInt16:
+        if (!ValidateEnumMembers<int16_t>(enum_declaration))
+            return false;
+        break;
+    case types::PrimitiveSubtype::kInt32:
+        if (!ValidateEnumMembers<int32_t>(enum_declaration))
+            return false;
+        break;
+    case types::PrimitiveSubtype::kInt64:
+        if (!ValidateEnumMembers<int64_t>(enum_declaration))
+            return false;
+        break;
+    case types::PrimitiveSubtype::kUint8:
+        if (!ValidateEnumMembers<uint8_t>(enum_declaration))
+            return false;
+        break;
+    case types::PrimitiveSubtype::kUint16:
+        if (!ValidateEnumMembers<uint16_t>(enum_declaration))
+            return false;
+        break;
+    case types::PrimitiveSubtype::kUint32:
+        if (!ValidateEnumMembers<uint32_t>(enum_declaration))
+            return false;
+        break;
+    case types::PrimitiveSubtype::kUint64:
+        if (!ValidateEnumMembers<uint64_t>(enum_declaration))
+            return false;
+        break;
     case types::PrimitiveSubtype::kBool:
     case types::PrimitiveSubtype::kFloat32:
     case types::PrimitiveSubtype::kFloat64:
@@ -1582,7 +1602,7 @@ bool Library::CompileEnum(Enum* enum_declaration) {
         return Fail(*enum_declaration, "Enums cannot be bools, statuses, or floats");
     }
 
-    // TODO(TO-702) Validate values.
+    enum_declaration->typeshape = PrimitiveTypeShape(enum_declaration->type->subtype);
     return true;
 }
 
@@ -2094,6 +2114,53 @@ bool Library::CompileType(Type* type, TypeShape* out_typeshape) {
         return CompileIdentifierType(identifier_type, out_typeshape);
     }
     }
+}
+
+template <typename MemberType>
+bool Library::ValidateEnumMembers(Enum* enum_decl) {
+    static_assert(std::is_integral<MemberType>::value && !std::is_same<MemberType, bool>::value,
+                  "Enum members must be an integral type!");
+    assert(enum_decl != nullptr);
+
+    Scope<std::string> name_scope;
+    Scope<MemberType> value_scope;
+    bool success = true;
+    for (auto& member : enum_decl->members) {
+        assert(member.value != nullptr && "Compiler bug: enum member value is null!");
+
+        if (!ResolveConstant(member.value.get(), enum_decl->type.get()))
+            return Fail(member.name, "unable to resolve struct member");
+
+        // Check that the enum member identifier hasn't been used yet
+        std::string name = NameIdentifier(member.name);
+        auto name_result = name_scope.Insert(name, member.name);
+        if (!name_result.ok()) {
+            std::ostringstream msg_stream;
+            msg_stream << "name of member " << name;
+            msg_stream << " conflicts with previously declared member in the enum ";
+            msg_stream << enum_decl->GetName();
+
+            // We can log the error and then continue validating for other issues in the enum
+            success = Fail(member.name, msg_stream.str());
+        }
+
+        MemberType value = static_cast<const NumericConstantValue<MemberType>&>(
+                               member.value->Value())
+                               .value;
+        auto value_result = value_scope.Insert(value, member.name);
+        if (!value_result.ok()) {
+            std::ostringstream msg_stream;
+            msg_stream << "value of member " << name;
+            msg_stream << " conflicts with previously declared member ";
+            msg_stream << NameIdentifier(value_result.previous_occurance()) << " in the enum ";
+            msg_stream << enum_decl->GetName();
+
+            // We can log the error and then continue validating other members for other bugs
+            success = Fail(member.name, msg_stream.str());
+        }
+    }
+
+    return success;
 }
 
 bool Library::HasAttribute(fidl::StringView name) const {

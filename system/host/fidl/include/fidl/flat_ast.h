@@ -906,14 +906,14 @@ private:
     bool ResolveIdentifierConstant(IdentifierConstant* identifier_constant, const Type* type);
     bool ResolveLiteralConstant(LiteralConstant* literal_constant, const Type* type);
 
+    template <typename MemberType>
+    bool ValidateEnumMembers(Enum* enum_decl);
+
 public:
     // Returns nullptr when the |name| cannot be resolved to a
     // Name. Otherwise it returns the declaration.
     Decl* LookupDeclByName(const Name& name) const;
 
-    // TODO(TO-702) Add a validate literal function. Some things
-    // (e.g. array indexes) want to check the value but print the
-    // constant, say.
     template <typename NumericType>
     bool ParseNumericLiteral(const raw::NumericLiteral* literal, NumericType* out_value) const {
         if (!literal) {
