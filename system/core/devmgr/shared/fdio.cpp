@@ -33,7 +33,7 @@
 namespace devmgr {
 
 #define MAX_ENVP 16
-#define CHILD_JOB_RIGHTS (ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE)
+#define CHILD_JOB_RIGHTS (ZX_RIGHTS_BASIC | ZX_RIGHT_MANAGE_JOB | ZX_RIGHT_MANAGE_PROCESS)
 
 static struct {
     const char* mount;
