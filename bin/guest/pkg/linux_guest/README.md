@@ -8,15 +8,34 @@ Repeat each of the following steps for ARCH=x64 and ARCH=arm64.
 
 Run the script to build Linux:
 ```
-$ ./garnet/bin/guest/pkg/linux_guest/mklinux.sh -l /tmp/linux/source -o garnet/bin/guest/pkg/linux_guest/images/${ARCH}/Image -b machina-4.18 ${ARCH}
+$ ./garnet/bin/guest/pkg/linux_guest/mklinux.sh \
+  -l /tmp/linux/source \
+  -o garnet/bin/guest/pkg/linux_guest/images/${ARCH}/Image \
+  -b machina-4.18 \
+  ${ARCH}
 ```
 
 Note: `-b` specifies the branch of zircon_guest to use. You can modify this
 value if you need a different version or omit it to use a local version.
 
-Repeat for the sysroot:
+Build the sysroot:
 ```
-$ ./garnet/bin/guest/pkg/linux_guest/mksysroot.sh -r -p garnet/bin/guest/pkg/linux_guest/images/${ARCH}/disk.img -d /tmp/toybox -s /tmp/dash S{ARCH}
+$ ./garnet/bin/guest/pkg/linux_guest/mksysroot.sh \
+  -r \
+  -u \
+  -p garnet/bin/guest/pkg/linux_guest/images/${ARCH}/disk.img \
+  -d /tmp/toybox \
+  -s /tmp/dash \
+  S{ARCH}
+```
+
+Build the tests image:
+```
+$ ./garnet/bin/guest/pkg/linux_guest/mktests.sh \
+  -u \
+  -o garnet/bin/guest/pkg/linux_guest/images/${ARCH}/tests.img \
+  -d /tmp/linux-tests \
+  S{ARCH}
 ```
 
 Ensure that `linux_guest` is working correctly. Then upload the images to cipd. There is a cipd binary at `//buildtools/cipd` and `cipd auth-login` must be run before any of the following commands.

@@ -23,6 +23,7 @@ usage() {
     echo "    -s Directory to clone dash into."
     echo "    -o Initrd output path."
     echo "    -p Disk image output path."
+    echo "    -u Update before building."
     echo ""
     exit 1
 }
@@ -35,6 +36,10 @@ get_toybox_source() {
 
   if [ ! -d "$toybox_src" ]; then
     git clone --depth 1 https://zircon-guest.googlesource.com/third_party/toybox "$toybox_src"
+  elif [[ "${UPDATE}" = "true" ]]; then
+    pushd "$toybox_src"
+    git pull --depth 1
+    popd
   fi
 }
 
@@ -61,6 +66,10 @@ get_dash_source() {
 
   if [ ! -d "$dash_src" ]; then
     git clone --depth 1 https://zircon-guest.googlesource.com/third_party/dash "$dash_src"
+  elif [[ "${UPDATE}" = "true" ]]; then
+    pushd "$dash_src"
+    git pull --depth 1
+    popd
   fi
 }
 
@@ -154,8 +163,9 @@ package_rootfs() {
 declare FORCE="${FORCE:-false}"
 declare BUILD_INITRD="${BUILD_INITRD:-false}"
 declare BUILD_ROOTFS="${BUILD_ROOTFS:-false}"
+declare UPDATE="${UPDATE:-false}"
 
-while getopts "fird:s:o:p:" opt; do
+while getopts "fird:s:o:p:u" opt; do
   case "${opt}" in
   f) FORCE="true" ;;
   i) BUILD_INITRD="true" ;;
@@ -164,6 +174,7 @@ while getopts "fird:s:o:p:" opt; do
   s) DASH_SRC_DIR="${OPTARG}" ;;
   o) INITRD_OUT="${OPTARG}" ;;
   p) DISK_OUT="${OPTARG}" ;;
+  u) UPDATE="true" ;;
   *) usage ;;
   esac
 done
