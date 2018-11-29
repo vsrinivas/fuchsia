@@ -17,7 +17,7 @@
 namespace btintel {
 
 Device::Device(zx_device_t* device, bt_hci_protocol_t* hci)
-    : DeviceType(device), hci_(*hci), firmware_loaded_(false) {}
+    : DeviceType(device), hci_(hci), firmware_loaded_(false) {}
 
 zx_status_t Device::Bind() {
   return DdkAdd("bt_hci_intel", DEVICE_ADD_INVISIBLE);
@@ -32,12 +32,12 @@ zx_status_t Device::LoadFirmware(bool secure) {
   zx::channel cmd_channel, acl_channel;
 
   // Get the channels
-  status = BtHciOpenCommandChannel(cmd_channel.reset_and_get_address());
+  status = BtHciOpenCommandChannel(&cmd_channel);
   if (status != ZX_OK) {
     return Remove(status, "failed to open command channel");
   }
 
-  status = BtHciOpenAclDataChannel(acl_channel.reset_and_get_address());
+  status = BtHciOpenAclDataChannel(&acl_channel);
   if (status != ZX_OK) {
     return Remove(status, "failed to open ACL channel");
   }
@@ -98,8 +98,7 @@ zx_status_t Device::DdkGetProtocol(uint32_t proto_id, void* out_proto) {
   bt_hci_protocol_t* hci_proto = static_cast<bt_hci_protocol_t*>(out_proto);
 
   // Forward the underlying bt-transport ops.
-  hci_proto->ops = hci_.ops;
-  hci_proto->ctx = hci_.ctx;
+  hci_.GetProto(hci_proto);
 
   return ZX_OK;
 }
@@ -112,20 +111,22 @@ zx_status_t Device::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
   }
 
   zx_handle_t* reply = static_cast<zx_handle_t*>(out_buf);
+  zx::channel out_channel;
 
   zx_status_t status = ZX_ERR_NOT_SUPPORTED;
   if (op == IOCTL_BT_HCI_GET_COMMAND_CHANNEL) {
-    status = BtHciOpenCommandChannel(reply);
+    status = BtHciOpenCommandChannel(&out_channel);
   } else if (op == IOCTL_BT_HCI_GET_ACL_DATA_CHANNEL) {
-    status = BtHciOpenAclDataChannel(reply);
+    status = BtHciOpenAclDataChannel(&out_channel);
   } else if (op == IOCTL_BT_HCI_GET_SNOOP_CHANNEL) {
-    status = BtHciOpenSnoopChannel(reply);
+    status = BtHciOpenSnoopChannel(&out_channel);
   }
 
   if (status != ZX_OK) {
     return status;
   }
 
+  *reply = out_channel.release();
   *actual = sizeof(*reply);
   return ZX_OK;
 }
@@ -270,16 +271,16 @@ zx_status_t Device::LoadLegacyFirmware(zx::channel* cmd, zx::channel* acl) {
   return ZX_OK;
 }
 
-zx_status_t Device::BtHciOpenCommandChannel(zx_handle_t* out_channel) {
-  return bt_hci_open_command_channel(&hci_, out_channel);
+zx_status_t Device::BtHciOpenCommandChannel(zx::channel* out_channel) {
+  return hci_.OpenCommandChannel(out_channel);
 }
 
-zx_status_t Device::BtHciOpenAclDataChannel(zx_handle_t* out_channel) {
-  return bt_hci_open_acl_data_channel(&hci_, out_channel);
+zx_status_t Device::BtHciOpenAclDataChannel(zx::channel* out_channel) {
+  return hci_.OpenAclDataChannel(out_channel);
 }
 
-zx_status_t Device::BtHciOpenSnoopChannel(zx_handle_t* out_channel) {
-  return bt_hci_open_snoop_channel(&hci_, out_channel);
+zx_status_t Device::BtHciOpenSnoopChannel(zx::channel* out_channel) {
+  return hci_.OpenSnoopChannel(out_channel);
 }
 
 }  // namespace btintel

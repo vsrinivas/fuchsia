@@ -41,9 +41,9 @@ class Device : public DeviceType, public ddk::BtHciProtocol<Device, ddk::base_pr
   zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
                        void* out_buf, size_t out_len, size_t* actual);
 
-  zx_status_t BtHciOpenCommandChannel(zx_handle_t* out_channel);
-  zx_status_t BtHciOpenAclDataChannel(zx_handle_t* out_channel);
-  zx_status_t BtHciOpenSnoopChannel(zx_handle_t* out_channel);
+  zx_status_t BtHciOpenCommandChannel(zx::channel* out_channel);
+  zx_status_t BtHciOpenAclDataChannel(zx::channel* out_channel);
+  zx_status_t BtHciOpenSnoopChannel(zx::channel* out_channel);
 
  private:
   zx_status_t LoadSecureFirmware(zx::channel* cmd, zx::channel* acl);
@@ -63,7 +63,7 @@ class Device : public DeviceType, public ddk::BtHciProtocol<Device, ddk::base_pr
   zx_handle_t MapFirmware(const char* name, uintptr_t* fw_addr,
                           size_t* fw_size);
 
-  bt_hci_protocol_t hci_;
+  ddk::BtHciProtocolClient hci_;
   bool firmware_loaded_;
 };
 
