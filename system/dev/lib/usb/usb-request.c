@@ -384,14 +384,24 @@ __EXPORT void usb_request_pool_release(usb_request_pool_t* pool) {
     mtx_unlock(&pool->lock);
 }
 
-__EXPORT void usb_req_list_add_head(list_node_t* list, usb_request_t* req, size_t parent_req_size) {
+__EXPORT zx_status_t usb_req_list_add_head(list_node_t* list, usb_request_t* req,
+                                           size_t parent_req_size) {
+   if (req->alloc_size < parent_req_size + sizeof(list_node_t)) {
+      return ZX_ERR_INVALID_ARGS;
+   }
    usb_req_internal_t* req_int = USB_REQ_TO_REQ_INTERNAL(req, parent_req_size);
    list_add_head(list, &req_int->node);
+   return ZX_OK;
 }
 
-__EXPORT void usb_req_list_add_tail(list_node_t* list, usb_request_t* req, size_t parent_req_size) {
+__EXPORT zx_status_t usb_req_list_add_tail(list_node_t* list, usb_request_t* req,
+                                           size_t parent_req_size) {
+   if (req->alloc_size < parent_req_size + sizeof(list_node_t)) {
+      return ZX_ERR_INVALID_ARGS;
+   }
    usb_req_internal_t* req_int = USB_REQ_TO_REQ_INTERNAL(req, parent_req_size);
    list_add_tail(list, &req_int->node);
+   return ZX_OK;
 }
 
 __EXPORT usb_request_t* usb_req_list_remove_head(list_node_t* list, size_t parent_req_size) {

@@ -113,8 +113,14 @@ usb_request_t* usb_request_pool_get(usb_request_pool_t* pool, size_t length);
 // releases all usb requests stored in the pool.
 void usb_request_pool_release(usb_request_pool_t* pool);
 
-void usb_req_list_add_head(list_node_t* list, usb_request_t* req, size_t parent_req_size);
-void usb_req_list_add_tail(list_node_t* list, usb_request_t* req, size_t parent_req_size);
+// Assumes usb_req_internal_t struct is allocated at parent_req_size offset in a usb request.
+// Adds a request to the head of the list using the list_node_t pointer from that struct.
+zx_status_t usb_req_list_add_head(list_node_t* list, usb_request_t* req, size_t parent_req_size);
+// Assumes usb_req_internal_t is allocated at parent_req_size offset in a usb request. Adds a
+// request to the tail of the list using the list_node_t pointer from that internal struct.
+zx_status_t usb_req_list_add_tail(list_node_t* list, usb_request_t* req, size_t parent_req_size);
+// Assumes usb_req_internal_t is allocated at parent_req_size offset in a usb request. Removes a
+// request from the head of the list and returns the usb_request_t.
 usb_request_t* usb_req_list_remove_head(list_node_t* list, size_t parent_req_size);
 
 __END_CDECLS;
