@@ -251,12 +251,13 @@ void BasemgrImpl::GetUserProvider(
 }
 
 void BasemgrImpl::Shutdown() {
-  // TODO(mesch): Some of these could be done in parallel too.
-  // fuchsia::modular::UserProvider must go first, but the order after user
-  // provider is for now rather arbitrary. We terminate base shell last so
-  // that in tests testing::Teardown() is invoked at the latest possible time.
-  // Right now it just demonstrates that AppTerminate() works as we like it
-  // to.
+  // Prevent the shutdown sequence from running twice.
+  if (state_ == State::TERMINATING) {
+    return;
+  }
+
+  state_ = State::TERMINATING;
+
   FXL_DLOG(INFO) << "fuchsia::modular::BaseShellContext::Shutdown()";
 
   if (settings_.test) {
@@ -267,6 +268,12 @@ void BasemgrImpl::Shutdown() {
         << "======================== [" << settings_.test_name << "] Done";
   }
 
+  // TODO(mesch): Some of these could be done in parallel too.
+  // fuchsia::modular::UserProvider must go first, but the order after user
+  // provider is for now rather arbitrary. We terminate base shell last so
+  // that in tests testing::Teardown() is invoked at the latest possible time.
+  // Right now it just demonstrates that AppTerminate() works as we like it
+  // to.
   user_provider_impl_.Teardown(kUserProviderTimeout, [this] {
     FXL_DLOG(INFO) << "- fuchsia::modular::UserProvider down";
     StopAccountProvider()->Then([this] {

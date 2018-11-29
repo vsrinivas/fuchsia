@@ -155,6 +155,15 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
 
   std::vector<SessionShellSettings>::size_type active_session_shell_index_{};
 
+  enum class State {
+    // normal mode of operation
+    RUNNING,
+    // basemgr is shutting down.
+    TERMINATING
+  };
+
+  State state_ = State::RUNNING;
+
   FXL_DISALLOW_COPY_AND_ASSIGN(BasemgrImpl);
 };
 
