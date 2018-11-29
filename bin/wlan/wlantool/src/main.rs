@@ -88,6 +88,11 @@ async fn do_iface(cmd: opts::IfaceCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
             let response = await!(wlan_svc.list_ifaces()).context("error getting response")?;
             println!("response: {:?}", response);
         },
+        opts::IfaceCmd::Query { iface_id } => {
+            let response =
+                await!(wlan_svc.query_iface(iface_id)).context("error querying iface")?;
+            println!("response: {:?}", response);
+        },
         opts::IfaceCmd::Stats { iface_id } => {
             let ids = await!(get_iface_ids(wlan_svc.clone(), iface_id))?;
 
