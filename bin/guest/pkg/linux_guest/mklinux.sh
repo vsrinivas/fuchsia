@@ -13,8 +13,9 @@ usage() {
   echo
   echo "  -b [branch]     Remote branch of zircon-guest linux repository to"
   echo "                  pull before building (default: machina)."
-  echo "  -l [linux-dir]  Linux source dir"
-  echo "  -o [image]      Output location for the built kernel"
+  echo "  -d [defconfig]  Linux config (default: machina_defconfig)."
+  echo "  -l [linux-dir]  Linux source dir."
+  echo "  -o [image]      Output location for the built kernel."
   echo
   exit 1
 }
@@ -22,9 +23,9 @@ usage() {
 while getopts "b:d:l:o:" OPT; do
   case $OPT in
   b) LINUX_BRANCH="${OPTARG}";;
+  d) LINUX_DEFCONFIG="${OPTARG}";;
   l) LINUX_DIR="${OPTARG}";;
   o) LINUX_OUT="${OPTARG}";;
-  d) LINUX_DEFCONFIG="${OPTARG}";;
   *) usage;;
   esac
 done
