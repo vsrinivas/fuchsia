@@ -52,7 +52,6 @@ struct AddrInfoHints {
 struct AddrStorage {
     array<uint8>:16 val;
     uint32 len;
-    array<uint8>:4 unused; // TODO(FIDL-204): remove this once the field alignment issue is fixed.
 };
 
 struct AddrInfo {
@@ -62,7 +61,6 @@ struct AddrInfo {
     int32 protocol;
     AddrStorage addr; // TODO(tamird): use vector<uint8>:16 addr when we can?
     uint16 port;
-    array<uint8>:6 unused; // TODO(FIDL-204): remove this once the field alignment issue is fixed.
 };
 
 [Discoverable, Layout = "Simple"]
