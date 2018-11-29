@@ -956,8 +956,8 @@ zx_status_t svchost_start() {
     int argc = require_system ? 2 : 1;
 
     zx::job job_copy;
-    status = g_handles.svc_job.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHT_MANAGE_JOB,
-                                         &job_copy);
+    status = g_handles.svc_job.duplicate(
+        ZX_RIGHTS_BASIC | ZX_RIGHT_MANAGE_JOB | ZX_RIGHT_MANAGE_PROCESS, &job_copy);
     if (status != ZX_OK) {
         return status;
     }
@@ -969,7 +969,7 @@ zx_status_t svchost_start() {
     launchpad_add_handle(lp, dir_request.release(), PA_DIRECTORY_REQUEST);
     launchpad_add_handle(lp, logger.release(), PA_HND(PA_FDIO_LOGGER, FDIO_FLAG_USE_FOR_STDIO));
 
-    // Remove once svchost hosts the tracelink serice itself.
+    // Remove once svchost hosts the tracelink service itself.
     launchpad_add_handle(lp, appmgr_svc.release(), PA_HND(PA_USER0, 0));
 
     const char* errmsg = nullptr;
