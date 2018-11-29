@@ -812,11 +812,82 @@ func (s *socketServer) opBind(ios *iostate, msg *zxsocket.Msg) (status zx.Status
 	return zx.ErrOk
 }
 
+func (s *socketServer) buildIfInfos() *c_netc_get_if_info {
+	rep := &c_netc_get_if_info{}
+
+	s.ns.mu.Lock()
+	defer s.ns.mu.Unlock()
+	index := uint32(0)
+	for nicid, ifs := range s.ns.ifStates {
+		if ifs.nic.Addr == ipv4Loopback {
+			continue
+		}
+		rep.info[index].index = uint16(index + 1)
+		rep.info[index].flags |= NETC_IFF_UP
+		copy(rep.info[index].name[:], ifs.nic.Name)
+		if _, err := writeSockaddrStorage(&rep.info[index].addr, tcpip.FullAddress{NIC: nicid, Addr: ifs.nic.Addr}); err != nil {
+			log.Printf("writeSockaddrStorage of address failed: %v", err)
+		}
+		if _, err := writeSockaddrStorage(&rep.info[index].netmask, tcpip.FullAddress{NIC: nicid, Addr: tcpip.Address(ifs.nic.Netmask)}); err != nil {
+			log.Printf("writeSockaddrStorage of netmask failed: %v", err)
+		}
+
+		// Long-hand for: broadaddr = ifs.nic.Addr | ^ifs.nic.Netmask
+		broadaddr := []byte(ifs.nic.Addr)
+		for i := range broadaddr {
+			broadaddr[i] |= ^ifs.nic.Netmask[i]
+		}
+		if _, err := writeSockaddrStorage(&rep.info[index].broadaddr, tcpip.FullAddress{NIC: nicid, Addr: tcpip.Address(broadaddr)}); err != nil {
+			log.Printf("writeSockaddrStorage of broadaddr failed: %v", err)
+		}
+		index++
+	}
+	rep.n_info = index
+	return rep
+}
+
+var (
+	ioctlNetcGetNumIfs   = fdio.IoctlNum(fdio.IoctlKindDefault, fdio.IoctlFamilyNetconfig, 1)
+	ioctlNetcGetIfInfoAt = fdio.IoctlNum(fdio.IoctlKindDefault, fdio.IoctlFamilyNetconfig, 2)
+	ioctlNetcGetNodename = fdio.IoctlNum(fdio.IoctlKindDefault, fdio.IoctlFamilyNetconfig, 8)
+)
+
+// We remember the interface list from the last time ioctlNetcGetNumIfs was called. This avoids
+// a race condition if the interface list changes between calls to ioctlNetcGetIfInfoAt.
+var lastIfInfo *c_netc_get_if_info
+
 func (s *socketServer) opIoctl(ios *iostate, msg *zxsocket.Msg) zx.Status {
-	// TODO: deprecated in favor of FIDL service. Remove.
-	// Currently used by //zircon/system/ulib/fdio/uname.c
-	ioctlNetcGetNodename := fdio.IoctlNum(fdio.IoctlKindDefault, fdio.IoctlFamilyNetconfig, 8)
 	switch msg.IoctlOp() {
+	// TODO(ZX-766): remove when dart/runtime/bin/socket_base_fuchsia.cc uses getifaddrs().
+	case ioctlNetcGetNumIfs:
+		lastIfInfo = s.buildIfInfos()
+		binary.LittleEndian.PutUint32(msg.Data[:msg.Arg], lastIfInfo.n_info)
+		msg.Datalen = 4
+		return zx.ErrOk
+	// TODO(ZX-766): remove when dart/runtime/bin/socket_base_fuchsia.cc uses getifaddrs().
+	case ioctlNetcGetIfInfoAt:
+		if lastIfInfo == nil {
+			if debug {
+				log.Printf("ioctlNetcGetIfInfoAt: called before ioctlNetcGetNumIfs")
+			}
+			return zx.ErrBadState
+		}
+		d := msg.Data[:msg.Datalen]
+		if len(d) != 4 {
+			if debug {
+				log.Printf("ioctlNetcGetIfInfoAt: bad input length %d", len(d))
+			}
+			return zx.ErrInvalidArgs
+		}
+		requestedIndex := binary.LittleEndian.Uint32(d)
+		if requestedIndex >= lastIfInfo.n_info {
+			if debug {
+				log.Printf("ioctlNetcGetIfInfoAt: index out of range (%d vs %d)", requestedIndex, lastIfInfo.n_info)
+			}
+			return zx.ErrInvalidArgs
+		}
+		lastIfInfo.info[requestedIndex].Encode(msg)
+		return zx.ErrOk
 	case ioctlNetcGetNodename:
 		nodename := s.ns.getNodeName()
 		msg.Datalen = uint32(copy(msg.Data[:msg.Arg], nodename))
