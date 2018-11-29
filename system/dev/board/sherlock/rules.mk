@@ -23,6 +23,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/sherlock-usb.cpp \
     $(LOCAL_DIR)/sherlock-video.cpp \
     $(LOCAL_DIR)/sherlock-backlight.cpp \
+    $(LOCAL_DIR)/sherlock-buttons.cpp \
 
 MODULE_STATIC_LIBS := \
     system/dev/lib/amlogic \

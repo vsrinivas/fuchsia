@@ -71,6 +71,7 @@ private:
     zx_status_t MaliInit();
     zx_status_t VideoInit();
     zx_status_t BacklightInit();
+    zx_status_t ButtonsInit();
     int Thread();
 
     ddk::PBusProtocolProxy pbus_;

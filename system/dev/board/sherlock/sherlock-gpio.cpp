@@ -83,6 +83,31 @@ zx_status_t Sherlock::GpioInit() {
         zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d\n", __func__, status);
         return status;
     }
+// This test binds to system/dev/gpio/gpio-test to check that GPIOs work at all.
+// gpio-test enables interrupts and write/read on the test GPIOs configured below.
+//#define GPIO_TEST
+#ifdef GPIO_TEST
+    const pbus_gpio_t gpio_test_gpios[] = {
+        {
+            .gpio = T931_GPIOZ(5), // Volume down, not used in this test.
+        },
+        {
+            .gpio = T931_GPIOZ(4), // Volume up, to test gpio_get_interrupt().
+        },
+    };
+
+    pbus_dev_t gpio_test_dev = {};
+    gpio_test_dev.name = "sherlock-gpio-test";
+    gpio_test_dev.vid = PDEV_VID_GENERIC;
+    gpio_test_dev.pid = PDEV_PID_GENERIC;
+    gpio_test_dev.did = PDEV_DID_GPIO_TEST;
+    gpio_test_dev.gpio_list = gpio_test_gpios;
+    gpio_test_dev.gpio_count = countof(gpio_test_gpios);
+    if ((status = pbus_.DeviceAdd(&gpio_test_dev)) != ZX_OK) {
+        zxlogf(ERROR, "%s: Could not add gpio_test_dev %d\n", __FUNCTION__, status);
+        return status;
+    }
+#endif
 
     status = device_get_protocol(parent(), ZX_PROTOCOL_GPIO_IMPL, &gpio_impl_);
     if (status != ZX_OK) {
