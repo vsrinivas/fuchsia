@@ -223,10 +223,7 @@ struct ClientTest : public ::testing::Test {
         EXPECT_EQ(frame.hdr()->fc.protected_frame(), asserts.protected_frame);
 
         auto llc_frame = frame.NextFrame();
-        EXPECT_EQ(llc_frame.body_len(), expected_payload.size());
-        EXPECT_EQ(std::memcmp(llc_frame.body_data().data(), expected_payload.data(),
-                              expected_payload.size()),
-                  0);
+        EXPECT_RANGES_EQ(llc_frame.body_data(), expected_payload);
 
         AssertSendRate(std::move(pkt), CBW20, WLAN_PHY_HT, 0);
     }
@@ -863,8 +860,7 @@ TEST_F(ClientTest, BufferFramesWhileOffChannelAndSendWhenOnChannel) {
     EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
 
     auto llc_frame = frame.NextFrame();
-    ASSERT_EQ(llc_frame.body_len(), sizeof(kTestPayload));
-    ASSERT_EQ(std::memcmp(llc_frame.body_data().data(), kTestPayload, sizeof(kTestPayload)), 0);
+    EXPECT_RANGES_EQ(llc_frame.body_data(), kTestPayload);
 
     AssertSendRate(std::move(pkt), CBW20, WLAN_PHY_HT, 0);
 }

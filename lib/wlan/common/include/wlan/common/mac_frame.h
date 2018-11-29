@@ -717,7 +717,7 @@ constexpr uint8_t kAddrExt56 = 2;
 
 // IEEE Std 802.11-2016, 9.2.4.7.3, Figure 9-17
 class MeshFlags : public common::BitField<uint8_t> {
- public:
+   public:
     WLAN_BIT_FIELD(addr_ext_mode, 0, 2);
     // bits 2-7 reserved
 } __PACKED;
@@ -737,7 +737,6 @@ struct LlcHeader {
     uint8_t control;
     uint8_t oui[3];
     uint16_t protocol_id;
-    uint8_t payload[];
 
     constexpr size_t len() const { return sizeof(*this); }
     static constexpr size_t max_len() { return sizeof(LlcHeader); }
@@ -772,7 +771,6 @@ struct EthernetII {
     common::MacAddr dest;
     common::MacAddr src;
     uint16_t ether_type;
-    uint8_t payload[];
 
     constexpr size_t len() const { return sizeof(*this); }
     static constexpr size_t max_len() { return sizeof(EthernetII); }
