@@ -7,6 +7,7 @@ package filter
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/google/netstack/tcpip/buffer"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -387,26 +388,26 @@ func (ss *States) getState(dir Direction, transProto tcpip.TransportProtocolNumb
 	}
 }
 
-func (ss *States) createState(dir Direction, transProto tcpip.TransportProtocolNumber, srcAddr tcpip.Address, srcPort uint16, dstAddr tcpip.Address, dstPort uint16, origAddr tcpip.Address, origPort uint16, rsvdAddr tcpip.Address, rsvdPort uint16, isNAT bool, isRDR bool, payloadLength uint16, b, th, plb []byte) *State {
+func (ss *States) createState(dir Direction, transProto tcpip.TransportProtocolNumber, srcAddr tcpip.Address, srcPort uint16, dstAddr tcpip.Address, dstPort uint16, origAddr tcpip.Address, origPort uint16, rsvdAddr tcpip.Address, rsvdPort uint16, isNAT bool, isRDR bool, payloadLength uint16, hdr buffer.Prependable, transportHeader []byte, payload buffer.VectorisedView) *State {
 	var srcEp, dstEp *Endpoint
 	var createTime, expireTime time.Time
 	var dataLen uint16
 	switch transProto {
 	case header.ICMPv4ProtocolNumber:
-		if len(th) < header.ICMPv4MinimumSize {
+		if len(transportHeader) < header.ICMPv4MinimumSize {
 			return nil
 		}
-		icmp := header.ICMPv4(th)
+		icmp := header.ICMPv4(transportHeader)
 		if isICMPv4ErrorMessage(icmp.Type()) {
 			// We don't have to create a state for this.
 			return nil
 		}
 		dataLen = payloadLength - 8 // ICMP header size is 8.
 		var id uint16
-		if len(th) > 4 {
-			id = binary.BigEndian.Uint16(th[4:])
-		} else if len(th)+len(plb) > 4 {
-			id = binary.BigEndian.Uint16(plb[4-len(th):])
+		if len(transportHeader) > 4 {
+			id = binary.BigEndian.Uint16(transportHeader[4:])
+		} else if len(transportHeader)+payload.Size() > 4 {
+			id = binary.BigEndian.Uint16(payload.First()[4-len(transportHeader):])
 		}
 		srcPort = id
 		dstPort = id
@@ -441,7 +442,7 @@ func (ss *States) createState(dir Direction, transProto tcpip.TransportProtocolN
 		createTime = time.Now()
 		expireTime = createTime.Add(30 * time.Second)
 	case header.TCPProtocolNumber:
-		tcp := header.TCP(th)
+		tcp := header.TCP(transportHeader)
 		flags := tcp.Flags()
 		dataLen = payloadLength - uint16(tcp.DataOffset())
 		wscale := -1
@@ -546,11 +547,11 @@ func isICMPv4ErrorMessage(t header.ICMPv4Type) bool {
 		t == header.ICMPv4ParamProblem
 }
 
-func (ss *States) findStateICMPv4(dir Direction, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, srcAddr tcpip.Address, dstAddr tcpip.Address, payloadLength uint16, th, plb []byte) (*State, error) {
-	if len(th) < header.ICMPv4MinimumSize {
+func (ss *States) findStateICMPv4(dir Direction, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, srcAddr tcpip.Address, dstAddr tcpip.Address, payloadLength uint16, transportHeader []byte, payload buffer.VectorisedView) (*State, error) {
+	if len(transportHeader) < header.ICMPv4MinimumSize {
 		return nil, ErrPacketTooShort
 	}
-	icmp := header.ICMPv4(th)
+	icmp := header.ICMPv4(transportHeader)
 	if isICMPv4ErrorMessage(icmp.Type()) {
 		// This ICMPv4 packet is reporting an error detected in a transport layer, and
 		// includes the IP header and the first 8 bytes of the transport header of the packet
@@ -559,16 +560,16 @@ func (ss *States) findStateICMPv4(dir Direction, netProto tcpip.NetworkProtocolN
 		// We also test if the values in transport header are consistent with the connection
 		// state we are tracking (but we have only the first 8 bytes and cannot do a full
 		// check).
-		if len(th) < header.IPv4MinimumSize {
+		if len(transportHeader) < header.IPv4MinimumSize {
 			return nil, ErrPacketTooShort
 		}
 		// First, look for an IP header at the offset 8.
-		b2 := th[8:]
+		b2 := transportHeader[8:]
 		ipv4 := header.IPv4(b2)
 		transProto2 := ipv4.TransportProtocol()
 		srcAddr = ipv4.SourceAddress()
 		dstAddr = ipv4.DestinationAddress()
-		if len(th) < int(ipv4.HeaderLength()+8) { // Need the first 8 bytes of transport header.
+		if len(transportHeader) < int(ipv4.HeaderLength()+8) { // Need the first 8 bytes of transport header.
 			return nil, ErrPacketTooShort
 		}
 		// Here's the transport header.
@@ -606,10 +607,10 @@ func (ss *States) findStateICMPv4(dir Direction, netProto tcpip.NetworkProtocolN
 
 		var id uint16
 		// ICMP query/reply message.
-		if len(th) > 4 {
-			id = binary.BigEndian.Uint16(th[4:])
-		} else if len(th)+len(plb) > 4 {
-			id = binary.BigEndian.Uint16(plb[4-len(th):])
+		if len(transportHeader) > 4 {
+			id = binary.BigEndian.Uint16(transportHeader[4:])
+		} else if len(transportHeader)+payload.Size() > 4 {
+			id = binary.BigEndian.Uint16(payload.First()[4-len(transportHeader):])
 		}
 		s := ss.getState(dir, transProto, srcAddr, id, dstAddr, id)
 		if s == nil {
@@ -623,7 +624,7 @@ func (ss *States) findStateICMPv4(dir Direction, netProto tcpip.NetworkProtocolN
 	}
 }
 
-func (ss *States) findStateUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, srcAddr tcpip.Address, srcPort uint16, dstAddr tcpip.Address, dstPort uint16, payloadLength uint16, th []byte) (*State, error) {
+func (ss *States) findStateUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, srcAddr tcpip.Address, srcPort uint16, dstAddr tcpip.Address, dstPort uint16, payloadLength uint16, transportHeader []byte) (*State, error) {
 	s := ss.getState(dir, transProto, srcAddr, srcPort, dstAddr, dstPort)
 	if s == nil {
 		return nil, nil
@@ -638,12 +639,12 @@ func (ss *States) findStateUDP(dir Direction, netProto tcpip.NetworkProtocolNumb
 	return s, nil
 }
 
-func (ss *States) findStateTCP(dir Direction, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, srcAddr tcpip.Address, srcPort uint16, dstAddr tcpip.Address, dstPort uint16, payloadLength uint16, th []byte) (*State, error) {
+func (ss *States) findStateTCP(dir Direction, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, srcAddr tcpip.Address, srcPort uint16, dstAddr tcpip.Address, dstPort uint16, payloadLength uint16, transportHeader []byte) (*State, error) {
 	s := ss.getState(dir, transProto, srcAddr, srcPort, dstAddr, dstPort)
 	if s == nil {
 		return nil, nil
 	}
-	tcp := header.TCP(th)
+	tcp := header.TCP(transportHeader)
 	dataLen := payloadLength - uint16(tcp.DataOffset())
 	win := tcp.WindowSize()
 	seq := seqnum(tcp.SequenceNumber())

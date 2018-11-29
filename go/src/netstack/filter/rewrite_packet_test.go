@@ -34,10 +34,9 @@ func TestRewritePacketICMPv4(t *testing.T) {
 
 	for _, test := range tests {
 		hdr, payload := test.packet()
-		b := hdr.View()
-		ipv4 := header.IPv4(b)
-		th := b[ipv4.HeaderLength():]
-		icmpv4 := header.ICMPv4(th)
+		ipv4 := header.IPv4(hdr.View())
+		transportHeader := ipv4[ipv4.HeaderLength():]
+		icmpv4 := header.ICMPv4(transportHeader)
 
 		// Make sure the checksum in the original packet is correct.
 		iCksum := ipv4.CalculateChecksum()
@@ -49,7 +48,7 @@ func TestRewritePacketICMPv4(t *testing.T) {
 			t.Errorf("icmpv4 checksum=%x, want=%x", got, want)
 		}
 
-		rewritePacketICMPv4(test.newAddr, test.isSource, b, th)
+		rewritePacketICMPv4(test.newAddr, test.isSource, hdr, transportHeader)
 
 		if test.isSource {
 			if got, want := ipv4.SourceAddress(), test.newAddr; got != want {
@@ -111,10 +110,9 @@ func TestRewritePacketUDPv4(t *testing.T) {
 
 	for _, test := range tests {
 		hdr, payload := test.packet()
-		b := hdr.View()
-		ipv4 := header.IPv4(b)
-		th := b[ipv4.HeaderLength():]
-		udp := header.UDP(th)
+		ipv4 := header.IPv4(hdr.View())
+		transportHeader := ipv4[ipv4.HeaderLength():]
+		udp := header.UDP(transportHeader)
 
 		// Make sure the checksum in the original packet is correct.
 		iCksum := ipv4.CalculateChecksum()
@@ -129,13 +127,13 @@ func TestRewritePacketUDPv4(t *testing.T) {
 			tCksum := header.PseudoHeaderChecksum(header.UDPProtocolNumber,
 				ipv4.SourceAddress(), ipv4.DestinationAddress())
 			tCksum = header.Checksum(payload.ToView(), tCksum)
-			tCksum = udp.CalculateChecksum(tCksum, uint16(len(th)+payload.Size()))
+			tCksum = udp.CalculateChecksum(tCksum, uint16(len(transportHeader)+payload.Size()))
 			if got, want := tCksum, uint16(0xffff); got != want {
 				t.Errorf("udp checksum=%x, want=%x", got, want)
 			}
 		}
 
-		rewritePacketUDPv4(test.newAddr, test.newPort, test.isSource, b, th)
+		rewritePacketUDPv4(test.newAddr, test.newPort, test.isSource, hdr, transportHeader)
 
 		if test.isSource {
 			if got, want := ipv4.SourceAddress(), test.newAddr; got != want {
@@ -167,7 +165,7 @@ func TestRewritePacketUDPv4(t *testing.T) {
 			tCksum := header.PseudoHeaderChecksum(header.UDPProtocolNumber,
 				ipv4.SourceAddress(), ipv4.DestinationAddress())
 			tCksum = header.Checksum(payload.ToView(), tCksum)
-			tCksum = udp.CalculateChecksum(tCksum, uint16(len(th)+payload.Size()))
+			tCksum = udp.CalculateChecksum(tCksum, uint16(len(transportHeader)+payload.Size()))
 			if got, want := tCksum, uint16(0xffff); got != want {
 				t.Errorf("udp checksum=%x, want=%x", got, want)
 			}
@@ -212,10 +210,9 @@ func TestRewritePacketTCPv4(t *testing.T) {
 
 	for _, test := range tests {
 		hdr, payload := test.packet()
-		b := hdr.View()
-		ipv4 := header.IPv4(b)
-		th := b[ipv4.HeaderLength():]
-		tcp := header.TCP(th)
+		ipv4 := header.IPv4(hdr.View())
+		transportHeader := ipv4[ipv4.HeaderLength():]
+		tcp := header.TCP(transportHeader)
 
 		// Make sure the checksum in the original packet is correct.
 		iCksum := ipv4.CalculateChecksum()
@@ -226,12 +223,12 @@ func TestRewritePacketTCPv4(t *testing.T) {
 		tCksum := header.PseudoHeaderChecksum(header.TCPProtocolNumber,
 			ipv4.SourceAddress(), ipv4.DestinationAddress())
 		tCksum = header.Checksum(payload.ToView(), tCksum)
-		tCksum = tcp.CalculateChecksum(tCksum, uint16(len(th)+payload.Size()))
+		tCksum = tcp.CalculateChecksum(tCksum, uint16(len(transportHeader)+payload.Size()))
 		if got, want := tCksum, uint16(0xffff); got != want {
 			t.Errorf("tcp checksum=%x, want=%x", got, want)
 		}
 
-		rewritePacketTCPv4(test.newAddr, test.newPort, test.isSource, b, th)
+		rewritePacketTCPv4(test.newAddr, test.newPort, test.isSource, hdr, transportHeader)
 
 		if test.isSource {
 			if got, want := ipv4.SourceAddress(), test.newAddr; got != want {
@@ -258,7 +255,7 @@ func TestRewritePacketTCPv4(t *testing.T) {
 		tCksum = header.PseudoHeaderChecksum(header.TCPProtocolNumber,
 			ipv4.SourceAddress(), ipv4.DestinationAddress())
 		tCksum = header.Checksum(payload.ToView(), tCksum)
-		tCksum = tcp.CalculateChecksum(tCksum, uint16(len(th)+payload.Size()))
+		tCksum = tcp.CalculateChecksum(tCksum, uint16(len(transportHeader)+payload.Size()))
 		if got, want := tCksum, uint16(0xffff); got != want {
 			t.Errorf("tcp checksum=%x, want=%x", got, want)
 		}
@@ -289,10 +286,9 @@ func TestRewritePacketUDPv6(t *testing.T) {
 
 	for _, test := range tests {
 		hdr, payload := test.packet()
-		b := hdr.View()
-		ipv6 := header.IPv6(b)
-		th := b[header.IPv6MinimumSize:]
-		udp := header.UDP(th)
+		ipv6 := header.IPv6(hdr.View())
+		transportHeader := ipv6[header.IPv6MinimumSize:]
+		udp := header.UDP(transportHeader)
 
 		// Make sure the checksum in the original packet is correct.
 		noUDPChecksum := false
@@ -302,13 +298,13 @@ func TestRewritePacketUDPv6(t *testing.T) {
 			tCksum := header.PseudoHeaderChecksum(header.UDPProtocolNumber,
 				ipv6.SourceAddress(), ipv6.DestinationAddress())
 			tCksum = header.Checksum(payload.ToView(), tCksum)
-			tCksum = udp.CalculateChecksum(tCksum, uint16(len(th)+payload.Size()))
+			tCksum = udp.CalculateChecksum(tCksum, uint16(len(transportHeader)+payload.Size()))
 			if got, want := tCksum, uint16(0xffff); got != want {
 				t.Errorf("udp checksum=%x, want=%x", got, want)
 			}
 		}
 
-		rewritePacketUDPv6(test.newAddr, test.newPort, test.isSource, b, th)
+		rewritePacketUDPv6(test.newAddr, test.newPort, test.isSource, hdr, transportHeader)
 
 		if test.isSource {
 			if got, want := ipv6.SourceAddress(), test.newAddr; got != want {
@@ -335,7 +331,7 @@ func TestRewritePacketUDPv6(t *testing.T) {
 			tCksum := header.PseudoHeaderChecksum(header.UDPProtocolNumber,
 				ipv6.SourceAddress(), ipv6.DestinationAddress())
 			tCksum = header.Checksum(payload.ToView(), tCksum)
-			tCksum = udp.CalculateChecksum(tCksum, uint16(len(th)+payload.Size()))
+			tCksum = udp.CalculateChecksum(tCksum, uint16(len(transportHeader)+payload.Size()))
 			if got, want := tCksum, uint16(0xffff); got != want {
 				t.Errorf("udp checksum=%x, want=%x", got, want)
 			}
@@ -367,21 +363,20 @@ func TestRewritePacketTCPv6(t *testing.T) {
 
 	for _, test := range tests {
 		hdr, payload := test.packet()
-		b := hdr.View()
-		ipv6 := header.IPv6(b)
-		th := b[header.IPv6MinimumSize:]
-		tcp := header.TCP(th)
+		ipv6 := header.IPv6(hdr.View())
+		transportHeader := ipv6[header.IPv6MinimumSize:]
+		tcp := header.TCP(transportHeader)
 
 		// Make sure the checksum in the original packet is correct.
 		tCksum := header.PseudoHeaderChecksum(header.TCPProtocolNumber,
 			ipv6.SourceAddress(), ipv6.DestinationAddress())
 		tCksum = header.Checksum(payload.ToView(), tCksum)
-		tCksum = tcp.CalculateChecksum(tCksum, uint16(len(th)+payload.Size()))
+		tCksum = tcp.CalculateChecksum(tCksum, uint16(len(transportHeader)+payload.Size()))
 		if got, want := tCksum, uint16(0xffff); got != want {
 			t.Errorf("tcp checksum=%x, want=%x", got, want)
 		}
 
-		rewritePacketTCPv6(test.newAddr, test.newPort, test.isSource, b, th)
+		rewritePacketTCPv6(test.newAddr, test.newPort, test.isSource, hdr, transportHeader)
 
 		if test.isSource {
 			if got, want := ipv6.SourceAddress(), test.newAddr; got != want {
@@ -403,7 +398,7 @@ func TestRewritePacketTCPv6(t *testing.T) {
 		tCksum = header.PseudoHeaderChecksum(header.TCPProtocolNumber,
 			ipv6.SourceAddress(), ipv6.DestinationAddress())
 		tCksum = header.Checksum(payload.ToView(), tCksum)
-		tCksum = tcp.CalculateChecksum(tCksum, uint16(len(th)+payload.Size()))
+		tCksum = tcp.CalculateChecksum(tCksum, uint16(len(transportHeader)+payload.Size()))
 		if got, want := tCksum, uint16(0xffff); got != want {
 			t.Errorf("tcp checksum=%x, want=%x", got, want)
 		}

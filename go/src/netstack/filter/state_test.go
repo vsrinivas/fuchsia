@@ -57,12 +57,11 @@ func TestFindStateICMPv4(t *testing.T) {
 
 		for _, test := range seq {
 			hdr, payload := test.packet()
-			b := hdr.View()
-			ipv4 := header.IPv4(b)
-			if !ipv4.IsValid(len(b) + payload.Size()) {
-				t.Fatalf("ipv4 packet is not valid: %v", b)
+			ipv4 := header.IPv4(hdr.View())
+			if !ipv4.IsValid(hdr.UsedLength() + payload.Size()) {
+				t.Fatalf("ipv4 packet is not valid: %v", ipv4)
 			}
-			th := b[ipv4.HeaderLength():]
+			transportHeader := ipv4[ipv4.HeaderLength():]
 
 			srcAddr := ipv4.SourceAddress()
 			dstAddr := ipv4.DestinationAddress()
@@ -75,8 +74,8 @@ func TestFindStateICMPv4(t *testing.T) {
 				srcAddr,
 				dstAddr,
 				payloadLength,
-				th,
-				nil, // plb
+				transportHeader,
+				buffer.VectorisedView{},
 			)
 			if err != nil {
 				t.Fatalf("err: %v", err)
@@ -96,9 +95,9 @@ func TestFindStateICMPv4(t *testing.T) {
 					false, // isNAT
 					false, // isRDR
 					payloadLength,
-					b,
-					th,
-					nil, // plb
+					hdr,
+					transportHeader,
+					buffer.VectorisedView{},
 				)
 			}
 			if s == nil {
@@ -169,13 +168,12 @@ func TestFindStateUDP(t *testing.T) {
 
 		for _, test := range seq {
 			hdr, payload := test.packet()
-			b := hdr.View()
-			ipv4 := header.IPv4(b)
-			if !ipv4.IsValid(len(b) + payload.Size()) {
-				t.Fatalf("ipv4 packet is not valid: %v", b)
+			ipv4 := header.IPv4(hdr.View())
+			if !ipv4.IsValid(hdr.UsedLength() + payload.Size()) {
+				t.Fatalf("ipv4 packet is not valid: %v", ipv4)
 			}
-			th := b[ipv4.HeaderLength():]
-			udp := header.UDP(th)
+			transportHeader := ipv4[ipv4.HeaderLength():]
+			udp := header.UDP(transportHeader)
 
 			srcAddr := ipv4.SourceAddress()
 			srcPort := udp.SourcePort()
@@ -192,7 +190,7 @@ func TestFindStateUDP(t *testing.T) {
 				dstAddr,
 				dstPort,
 				payloadLength,
-				th,
+				transportHeader,
 			)
 			if err != nil {
 				t.Fatalf("err: %v", err)
@@ -212,9 +210,9 @@ func TestFindStateUDP(t *testing.T) {
 					false, // isNAT
 					false, // isRDR
 					payloadLength,
-					b,
-					th,
-					nil, // plb
+					hdr,
+					transportHeader,
+					buffer.VectorisedView{},
 				)
 			}
 			if s == nil {
@@ -505,13 +503,12 @@ func TestFindStateTCPv4(t *testing.T) {
 
 		for _, test := range seq {
 			hdr, payload := test.packet()
-			b := hdr.View()
-			ipv4 := header.IPv4(b)
-			if !ipv4.IsValid(len(b) + payload.Size()) {
-				t.Fatalf("ipv4 packet is not valid: %v", b)
+			ipv4 := header.IPv4(hdr.View())
+			if !ipv4.IsValid(hdr.UsedLength() + payload.Size()) {
+				t.Fatalf("ipv4 packet is not valid: %v", ipv4)
 			}
-			th := b[ipv4.HeaderLength():]
-			tcp := header.TCP(th)
+			transportHeader := ipv4[ipv4.HeaderLength():]
+			tcp := header.TCP(transportHeader)
 
 			srcAddr := ipv4.SourceAddress()
 			srcPort := tcp.SourcePort()
@@ -528,7 +525,7 @@ func TestFindStateTCPv4(t *testing.T) {
 				dstAddr,
 				dstPort,
 				payloadLength,
-				th,
+				transportHeader,
 			)
 			if err != nil {
 				t.Fatalf("err: %v", err)
@@ -548,9 +545,9 @@ func TestFindStateTCPv4(t *testing.T) {
 					false, // isNAT
 					false, // isRDR
 					payloadLength,
-					b,
-					th,
-					nil, // plb
+					hdr,
+					transportHeader,
+					buffer.VectorisedView{},
 				)
 			}
 			if s == nil {

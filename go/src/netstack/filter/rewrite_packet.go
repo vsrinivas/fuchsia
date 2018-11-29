@@ -6,6 +6,7 @@ package filter
 
 import (
 	"encoding/binary"
+	"github.com/google/netstack/tcpip/buffer"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/header"
@@ -27,8 +28,8 @@ func newChecksum(oldCksum uint16, oldVal uint16, newVal uint16, udp bool) uint16
 	}
 }
 
-func rewritePacketICMPv4(newAddr tcpip.Address, isSource bool, b, th []byte) {
-	ipv4 := header.IPv4(b)
+func rewritePacketICMPv4(newAddr tcpip.Address, isSource bool, hdr buffer.Prependable, transportHeader []byte) {
+	ipv4 := header.IPv4(hdr.View())
 
 	var oldAddr tcpip.Address
 	if isSource {
@@ -53,8 +54,8 @@ func rewritePacketICMPv4(newAddr tcpip.Address, isSource bool, b, th []byte) {
 	ipv4.SetChecksum(iCksum)
 }
 
-func rewritePacketUDPv4(newAddr tcpip.Address, newPort uint16, isSource bool, b, th []byte) {
-	ipv4 := header.IPv4(b)
+func rewritePacketUDPv4(newAddr tcpip.Address, newPort uint16, isSource bool, hdr buffer.Prependable, transportHeader []byte) {
+	ipv4 := header.IPv4(hdr.View())
 
 	var oldAddr tcpip.Address
 	if isSource {
@@ -66,7 +67,7 @@ func rewritePacketUDPv4(newAddr tcpip.Address, newPort uint16, isSource bool, b,
 	}
 
 	iCksum := ipv4.Checksum()
-	udp := header.UDP(th)
+	udp := header.UDP(transportHeader)
 	tCksum := udp.Checksum()
 
 	oldA := []byte(oldAddr)
@@ -92,8 +93,8 @@ func rewritePacketUDPv4(newAddr tcpip.Address, newPort uint16, isSource bool, b,
 	udp.SetChecksum(tCksum)
 }
 
-func rewritePacketTCPv4(newAddr tcpip.Address, newPort uint16, isSource bool, b, th []byte) {
-	ipv4 := header.IPv4(b)
+func rewritePacketTCPv4(newAddr tcpip.Address, newPort uint16, isSource bool, hdr buffer.Prependable, transportHeader []byte) {
+	ipv4 := header.IPv4(hdr.View())
 
 	var oldAddr tcpip.Address
 	if isSource {
@@ -105,7 +106,7 @@ func rewritePacketTCPv4(newAddr tcpip.Address, newPort uint16, isSource bool, b,
 	}
 
 	iCksum := ipv4.Checksum()
-	tcp := header.TCP(th)
+	tcp := header.TCP(transportHeader)
 	tCksum := tcp.Checksum()
 
 	oldA := []byte(oldAddr)
@@ -131,8 +132,8 @@ func rewritePacketTCPv4(newAddr tcpip.Address, newPort uint16, isSource bool, b,
 	tcp.SetChecksum(tCksum)
 }
 
-func rewritePacketUDPv6(newAddr tcpip.Address, newPort uint16, isSource bool, b, th []byte) {
-	ipv6 := header.IPv6(b)
+func rewritePacketUDPv6(newAddr tcpip.Address, newPort uint16, isSource bool, hdr buffer.Prependable, transportHeader []byte) {
+	ipv6 := header.IPv6(hdr.View())
 
 	var oldAddr tcpip.Address
 	if isSource {
@@ -143,7 +144,7 @@ func rewritePacketUDPv6(newAddr tcpip.Address, newPort uint16, isSource bool, b,
 		ipv6.SetDestinationAddress(newAddr)
 	}
 
-	udp := header.UDP(th)
+	udp := header.UDP(transportHeader)
 	tCksum := udp.Checksum()
 
 	oldA := []byte(oldAddr)
@@ -165,8 +166,8 @@ func rewritePacketUDPv6(newAddr tcpip.Address, newPort uint16, isSource bool, b,
 	udp.SetChecksum(tCksum)
 }
 
-func rewritePacketTCPv6(newAddr tcpip.Address, newPort uint16, isSource bool, b, th []byte) {
-	ipv6 := header.IPv6(b)
+func rewritePacketTCPv6(newAddr tcpip.Address, newPort uint16, isSource bool, hdr buffer.Prependable, transportHeader []byte) {
+	ipv6 := header.IPv6(hdr.View())
 
 	var oldAddr tcpip.Address
 	if isSource {
@@ -177,7 +178,7 @@ func rewritePacketTCPv6(newAddr tcpip.Address, newPort uint16, isSource bool, b,
 		ipv6.SetDestinationAddress(newAddr)
 	}
 
-	tcp := header.TCP(th)
+	tcp := header.TCP(transportHeader)
 	tCksum := tcp.Checksum()
 
 	oldA := []byte(oldAddr)

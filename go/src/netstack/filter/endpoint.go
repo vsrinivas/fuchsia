@@ -31,8 +31,8 @@ func NewEndpoint(filter *Filter, lower tcpip.LinkEndpointID) tcpip.LinkEndpointI
 // DeliverNetworkPacket is called when a packet arrives at the lower endpoint.
 // It calls Run before dispatching the packet to the upper endpoint.
 func (e *endpoint) DeliverNetworkPacket(linkEP stack.LinkEndpoint, dstLinkAddr, srcLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, vv buffer.VectorisedView) {
-	payload := vv
 	hdr := buffer.NewPrependableFromView(vv.First())
+	payload := vv
 	payload.RemoveFirst()
 
 	if e.filter.Run(Incoming, protocol, hdr, payload) == Pass {

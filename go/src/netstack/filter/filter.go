@@ -53,14 +53,11 @@ func (f *Filter) IsEnabled() bool {
 // Run is the entry point to the packet filter. It should be called from
 // two hook locations in the network stack: one for incoming packets, another
 // for outgoing packets.
-func (f *Filter) Run(dir Direction, netProto tcpip.NetworkProtocolNumber, hdr buffer.Prependable, vv buffer.VectorisedView) Action {
+func (f *Filter) Run(dir Direction, netProto tcpip.NetworkProtocolNumber, hdr buffer.Prependable, payload buffer.VectorisedView) Action {
 	if f.enabled.Load().(bool) == false {
 		// The filter is disabled.
 		return Pass
 	}
-
-	b := hdr.View()
-	plb := vv.First()
 
 	// Lock the state maps.
 	// TODO: Improve concurrency with more granular locking.
@@ -73,11 +70,11 @@ func (f *Filter) Run(dir Direction, netProto tcpip.NetworkProtocolNumber, hdr bu
 	var transProto tcpip.TransportProtocolNumber
 	var srcAddr, dstAddr tcpip.Address
 	var payloadLength uint16
-	var th []byte
+	var transportHeader []byte
 	switch netProto {
 	case header.IPv4ProtocolNumber:
-		ipv4 := header.IPv4(b)
-		if !ipv4.IsValid(len(b) + len(plb)) {
+		ipv4 := header.IPv4(hdr.View())
+		if !ipv4.IsValid(hdr.UsedLength() + payload.Size()) {
 			if debug {
 				log.Printf("packet filter: ipv4 packet is not valid")
 			}
@@ -87,10 +84,10 @@ func (f *Filter) Run(dir Direction, netProto tcpip.NetworkProtocolNumber, hdr bu
 		srcAddr = ipv4.SourceAddress()
 		dstAddr = ipv4.DestinationAddress()
 		payloadLength = ipv4.PayloadLength()
-		th = b[ipv4.HeaderLength():]
+		transportHeader = ipv4[ipv4.HeaderLength():]
 	case header.IPv6ProtocolNumber:
-		ipv6 := header.IPv6(b)
-		if !ipv6.IsValid(len(b) + len(plb)) {
+		ipv6 := header.IPv6(hdr.View())
+		if !ipv6.IsValid(hdr.UsedLength() + payload.Size()) {
 			if debug {
 				log.Printf("packet filter: ipv6 packet is not valid")
 			}
@@ -100,7 +97,7 @@ func (f *Filter) Run(dir Direction, netProto tcpip.NetworkProtocolNumber, hdr bu
 		srcAddr = ipv6.SourceAddress()
 		dstAddr = ipv6.DestinationAddress()
 		payloadLength = ipv6.PayloadLength()
-		th = b[header.IPv6MinimumSize:]
+		transportHeader = ipv6[header.IPv6MinimumSize:]
 	case header.ARPProtocolNumber:
 		// TODO: Anything?
 		return Pass
@@ -113,14 +110,14 @@ func (f *Filter) Run(dir Direction, netProto tcpip.NetworkProtocolNumber, hdr bu
 
 	switch transProto {
 	case header.ICMPv4ProtocolNumber:
-		return f.runForICMPv4(dir, srcAddr, dstAddr, payloadLength, b, th, plb)
+		return f.runForICMPv4(dir, srcAddr, dstAddr, payloadLength, hdr, transportHeader, payload)
 	case header.ICMPv6ProtocolNumber:
 		// Do nothing.
 		return Pass
 	case header.UDPProtocolNumber:
-		return f.runForUDP(dir, netProto, srcAddr, dstAddr, payloadLength, b, th, plb)
+		return f.runForUDP(dir, netProto, srcAddr, dstAddr, payloadLength, hdr, transportHeader, payload)
 	case header.TCPProtocolNumber:
-		return f.runForTCP(dir, netProto, srcAddr, dstAddr, payloadLength, b, th, plb)
+		return f.runForTCP(dir, netProto, srcAddr, dstAddr, payloadLength, hdr, transportHeader, payload)
 	default:
 		if debug {
 			log.Printf("packet filter: %d: drop unknown transport protocol: %d", dir, transProto)
@@ -129,8 +126,8 @@ func (f *Filter) Run(dir Direction, netProto tcpip.NetworkProtocolNumber, hdr bu
 	}
 }
 
-func (f *Filter) runForICMPv4(dir Direction, srcAddr, dstAddr tcpip.Address, payloadLength uint16, b, th, plb []byte) Action {
-	if s, err := f.states.findStateICMPv4(dir, header.IPv4ProtocolNumber, header.ICMPv4ProtocolNumber, srcAddr, dstAddr, payloadLength, th, plb); s != nil {
+func (f *Filter) runForICMPv4(dir Direction, srcAddr, dstAddr tcpip.Address, payloadLength uint16, hdr buffer.Prependable, transportHeader []byte, payload buffer.VectorisedView) Action {
+	if s, err := f.states.findStateICMPv4(dir, header.IPv4ProtocolNumber, header.ICMPv4ProtocolNumber, srcAddr, dstAddr, payloadLength, transportHeader, payload); s != nil {
 		if debug {
 			log.Printf("packet filter: icmp state found: %v", s)
 		}
@@ -142,27 +139,27 @@ func (f *Filter) runForICMPv4(dir Direction, srcAddr, dstAddr tcpip.Address, pay
 			if s.lanAddr != s.gwyAddr {
 				switch dir {
 				case Incoming:
-					rewritePacketICMPv4(s.lanAddr, false, b, th)
+					rewritePacketICMPv4(s.lanAddr, false, hdr, transportHeader)
 				case Outgoing:
-					rewritePacketICMPv4(s.gwyAddr, true, b, th)
+					rewritePacketICMPv4(s.gwyAddr, true, hdr, transportHeader)
 				}
 			}
 		case header.UDPProtocolNumber:
 			if s.lanAddr != s.gwyAddr || s.lanPort != s.gwyPort {
 				switch dir {
 				case Incoming:
-					rewritePacketUDPv4(s.lanAddr, s.lanPort, false, b, th)
+					rewritePacketUDPv4(s.lanAddr, s.lanPort, false, hdr, transportHeader)
 				case Outgoing:
-					rewritePacketUDPv4(s.gwyAddr, s.gwyPort, true, b, th)
+					rewritePacketUDPv4(s.gwyAddr, s.gwyPort, true, hdr, transportHeader)
 				}
 			}
 		case header.TCPProtocolNumber:
 			if s.lanAddr != s.gwyAddr || s.lanPort != s.gwyPort {
 				switch dir {
 				case Incoming:
-					rewritePacketTCPv4(s.lanAddr, s.lanPort, false, b, th)
+					rewritePacketTCPv4(s.lanAddr, s.lanPort, false, hdr, transportHeader)
 				case Outgoing:
-					rewritePacketTCPv4(s.gwyAddr, s.gwyPort, true, b, th)
+					rewritePacketTCPv4(s.gwyAddr, s.gwyPort, true, hdr, transportHeader)
 				}
 			}
 		default:
@@ -186,7 +183,7 @@ func (f *Filter) runForICMPv4(dir Direction, srcAddr, dstAddr tcpip.Address, pay
 			// The original values are saved in origAddr.
 			origAddr = srcAddr
 			srcAddr = nat.newSrcAddr
-			rewritePacketICMPv4(srcAddr, true, b, th)
+			rewritePacketICMPv4(srcAddr, true, hdr, transportHeader)
 		}
 	}
 
@@ -200,7 +197,7 @@ func (f *Filter) runForICMPv4(dir Direction, srcAddr, dstAddr tcpip.Address, pay
 		if rm.action == DropReset {
 			if nat != nil {
 				// Revert the packet modified for NAT.
-				rewritePacketICMPv4(origAddr, true, b, th)
+				rewritePacketICMPv4(origAddr, true, hdr, transportHeader)
 			}
 			// TODO: Send a Reset packet.
 			return Drop
@@ -209,24 +206,24 @@ func (f *Filter) runForICMPv4(dir Direction, srcAddr, dstAddr tcpip.Address, pay
 		}
 	}
 	if (rm != nil && rm.keepState) || nat != nil {
-		f.states.createState(dir, header.ICMPv4ProtocolNumber, srcAddr, 0, dstAddr, 0, origAddr, 0, "", 0, nat != nil, false, payloadLength, b, th, plb)
+		f.states.createState(dir, header.ICMPv4ProtocolNumber, srcAddr, 0, dstAddr, 0, origAddr, 0, "", 0, nat != nil, false, payloadLength, hdr, transportHeader, payload)
 	}
 
 	return Pass
 }
 
-func (f *Filter) runForUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, srcAddr, dstAddr tcpip.Address, payloadLength uint16, b, th, plb []byte) Action {
-	if len(th) < header.UDPMinimumSize {
+func (f *Filter) runForUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, srcAddr, dstAddr tcpip.Address, payloadLength uint16, hdr buffer.Prependable, transportHeader []byte, payload buffer.VectorisedView) Action {
+	if len(transportHeader) < header.UDPMinimumSize {
 		if debug {
 			log.Printf("packet filter: udp packet too short")
 		}
 		return Drop
 	}
-	udp := header.UDP(th)
+	udp := header.UDP(transportHeader)
 	srcPort := udp.SourcePort()
 	dstPort := udp.DestinationPort()
 
-	if s, err := f.states.findStateUDP(dir, netProto, header.UDPProtocolNumber, srcAddr, srcPort, dstAddr, dstPort, payloadLength, th); s != nil {
+	if s, err := f.states.findStateUDP(dir, netProto, header.UDPProtocolNumber, srcAddr, srcPort, dstAddr, dstPort, payloadLength, transportHeader); s != nil {
 		if debug {
 			log.Printf("packet filter: udp state found: %v", s)
 		}
@@ -236,16 +233,16 @@ func (f *Filter) runForUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 			case header.IPv4ProtocolNumber:
 				switch dir {
 				case Incoming:
-					rewritePacketUDPv4(s.lanAddr, s.lanPort, false, b, th)
+					rewritePacketUDPv4(s.lanAddr, s.lanPort, false, hdr, transportHeader)
 				case Outgoing:
-					rewritePacketUDPv4(s.gwyAddr, s.gwyPort, true, b, th)
+					rewritePacketUDPv4(s.gwyAddr, s.gwyPort, true, hdr, transportHeader)
 				}
 			case header.IPv6ProtocolNumber:
 				switch dir {
 				case Incoming:
-					rewritePacketUDPv6(s.lanAddr, s.lanPort, false, b, th)
+					rewritePacketUDPv6(s.lanAddr, s.lanPort, false, hdr, transportHeader)
 				case Outgoing:
-					rewritePacketUDPv6(s.gwyAddr, s.gwyPort, true, b, th)
+					rewritePacketUDPv6(s.gwyAddr, s.gwyPort, true, hdr, transportHeader)
 				}
 			}
 		}
@@ -282,9 +279,9 @@ func (f *Filter) runForUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 			}
 			switch netProto {
 			case header.IPv4ProtocolNumber:
-				rewritePacketUDPv4(dstAddr, dstPort, false, b, th)
+				rewritePacketUDPv4(dstAddr, dstPort, false, hdr, transportHeader)
 			case header.IPv6ProtocolNumber:
-				rewritePacketUDPv6(dstAddr, dstPort, false, b, th)
+				rewritePacketUDPv6(dstAddr, dstPort, false, hdr, transportHeader)
 			}
 		}
 	case Outgoing:
@@ -314,9 +311,9 @@ func (f *Filter) runForUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 			}
 			switch netProto {
 			case header.IPv4ProtocolNumber:
-				rewritePacketUDPv4(srcAddr, srcPort, true, b, th)
+				rewritePacketUDPv4(srcAddr, srcPort, true, hdr, transportHeader)
 			case header.IPv6ProtocolNumber:
-				rewritePacketUDPv6(srcAddr, srcPort, true, b, th)
+				rewritePacketUDPv6(srcAddr, srcPort, true, hdr, transportHeader)
 			}
 		}
 	}
@@ -333,18 +330,18 @@ func (f *Filter) runForUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 				// Revert the packet modified for NAT.
 				switch netProto {
 				case header.IPv4ProtocolNumber:
-					rewritePacketUDPv4(origAddr, origPort, true, b, th)
+					rewritePacketUDPv4(origAddr, origPort, true, hdr, transportHeader)
 				case header.IPv6ProtocolNumber:
-					rewritePacketUDPv6(origAddr, origPort, true, b, th)
+					rewritePacketUDPv6(origAddr, origPort, true, hdr, transportHeader)
 				}
 			}
 			if rdr != nil {
 				// Revert the packet modified for RDR.
 				switch netProto {
 				case header.IPv4ProtocolNumber:
-					rewritePacketUDPv4(origAddr, origPort, false, b, th)
+					rewritePacketUDPv4(origAddr, origPort, false, hdr, transportHeader)
 				case header.IPv6ProtocolNumber:
-					rewritePacketUDPv6(origAddr, origPort, false, b, th)
+					rewritePacketUDPv6(origAddr, origPort, false, hdr, transportHeader)
 				}
 			}
 			// TODO: Send a Reset packet.
@@ -354,24 +351,24 @@ func (f *Filter) runForUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 		}
 	}
 	if (rm != nil && rm.keepState) || nat != nil || rdr != nil {
-		f.states.createState(dir, header.UDPProtocolNumber, srcAddr, srcPort, dstAddr, dstPort, origAddr, origPort, newAddr, newPort, nat != nil, rdr != nil, payloadLength, b, th, plb)
+		f.states.createState(dir, header.UDPProtocolNumber, srcAddr, srcPort, dstAddr, dstPort, origAddr, origPort, newAddr, newPort, nat != nil, rdr != nil, payloadLength, hdr, transportHeader, payload)
 	}
 
 	return Pass
 }
 
-func (f *Filter) runForTCP(dir Direction, netProto tcpip.NetworkProtocolNumber, srcAddr, dstAddr tcpip.Address, payloadLength uint16, b, th, plb []byte) Action {
-	if len(th) < header.TCPMinimumSize {
+func (f *Filter) runForTCP(dir Direction, netProto tcpip.NetworkProtocolNumber, srcAddr, dstAddr tcpip.Address, payloadLength uint16, hdr buffer.Prependable, transportHeader []byte, payload buffer.VectorisedView) Action {
+	if len(transportHeader) < header.TCPMinimumSize {
 		if debug {
 			log.Printf("packet filter: tcp packet too short")
 		}
 		return Drop
 	}
-	tcp := header.TCP(th)
+	tcp := header.TCP(transportHeader)
 	srcPort := tcp.SourcePort()
 	dstPort := tcp.DestinationPort()
 
-	if s, err := f.states.findStateTCP(dir, netProto, header.TCPProtocolNumber, srcAddr, srcPort, dstAddr, dstPort, payloadLength, th); s != nil {
+	if s, err := f.states.findStateTCP(dir, netProto, header.TCPProtocolNumber, srcAddr, srcPort, dstAddr, dstPort, payloadLength, transportHeader); s != nil {
 		if debug {
 			log.Printf("packet filter: tcp state found: %v", s)
 		}
@@ -382,16 +379,16 @@ func (f *Filter) runForTCP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 			case header.IPv4ProtocolNumber:
 				switch dir {
 				case Incoming:
-					rewritePacketTCPv4(s.lanAddr, s.lanPort, false, b, th)
+					rewritePacketTCPv4(s.lanAddr, s.lanPort, false, hdr, transportHeader)
 				case Outgoing:
-					rewritePacketTCPv4(s.gwyAddr, s.gwyPort, true, b, th)
+					rewritePacketTCPv4(s.gwyAddr, s.gwyPort, true, hdr, transportHeader)
 				}
 			case header.IPv6ProtocolNumber:
 				switch dir {
 				case Incoming:
-					rewritePacketTCPv6(s.lanAddr, s.lanPort, false, b, th)
+					rewritePacketTCPv6(s.lanAddr, s.lanPort, false, hdr, transportHeader)
 				case Outgoing:
-					rewritePacketTCPv6(s.gwyAddr, s.gwyPort, true, b, th)
+					rewritePacketTCPv6(s.gwyAddr, s.gwyPort, true, hdr, transportHeader)
 				}
 			}
 		}
@@ -422,9 +419,9 @@ func (f *Filter) runForTCP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 			dstPort = rdr.newDstPort
 			switch netProto {
 			case header.IPv4ProtocolNumber:
-				rewritePacketTCPv4(dstAddr, dstPort, false, b, th)
+				rewritePacketTCPv4(dstAddr, dstPort, false, hdr, transportHeader)
 			case header.IPv6ProtocolNumber:
-				rewritePacketTCPv6(dstAddr, dstPort, false, b, th)
+				rewritePacketTCPv6(dstAddr, dstPort, false, hdr, transportHeader)
 			}
 		}
 	case Outgoing:
@@ -448,9 +445,9 @@ func (f *Filter) runForTCP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 			srcPort = newPort
 			switch netProto {
 			case header.IPv4ProtocolNumber:
-				rewritePacketTCPv4(srcAddr, srcPort, true, b, th)
+				rewritePacketTCPv4(srcAddr, srcPort, true, hdr, transportHeader)
 			case header.IPv6ProtocolNumber:
-				rewritePacketTCPv6(srcAddr, srcPort, true, b, th)
+				rewritePacketTCPv6(srcAddr, srcPort, true, hdr, transportHeader)
 			}
 		}
 	}
@@ -466,18 +463,18 @@ func (f *Filter) runForTCP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 			if nat != nil {
 				switch netProto {
 				case header.IPv4ProtocolNumber:
-					rewritePacketTCPv4(origAddr, origPort, true, b, th)
+					rewritePacketTCPv4(origAddr, origPort, true, hdr, transportHeader)
 				case header.IPv6ProtocolNumber:
-					rewritePacketTCPv6(origAddr, origPort, true, b, th)
+					rewritePacketTCPv6(origAddr, origPort, true, hdr, transportHeader)
 				}
 			}
 			if rdr != nil {
 				// Revert the packet modified for RDR.
 				switch netProto {
 				case header.IPv4ProtocolNumber:
-					rewritePacketTCPv4(origAddr, origPort, false, b, th)
+					rewritePacketTCPv4(origAddr, origPort, false, hdr, transportHeader)
 				case header.IPv6ProtocolNumber:
-					rewritePacketTCPv6(origAddr, origPort, false, b, th)
+					rewritePacketTCPv6(origAddr, origPort, false, hdr, transportHeader)
 				}
 			}
 			// TODO: Send a Reset packet.
@@ -487,7 +484,7 @@ func (f *Filter) runForTCP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 		}
 	}
 	if (rm != nil && rm.keepState) || nat != nil || rdr != nil {
-		f.states.createState(dir, header.TCPProtocolNumber, srcAddr, srcPort, dstAddr, dstPort, origAddr, origPort, newAddr, newPort, nat != nil, rdr != nil, payloadLength, b, th, plb)
+		f.states.createState(dir, header.TCPProtocolNumber, srcAddr, srcPort, dstAddr, dstPort, origAddr, origPort, newAddr, newPort, nat != nil, rdr != nil, payloadLength, hdr, transportHeader, payload)
 	}
 
 	return Pass
