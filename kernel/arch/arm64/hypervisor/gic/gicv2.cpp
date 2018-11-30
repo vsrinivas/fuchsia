@@ -18,9 +18,11 @@ typedef struct Gich {
     uint32_t reserved0;
     uint32_t misr;
     uint32_t reserved1[3];
-    uint64_t eisr;
+    uint32_t eisr0;
+    uint32_t eisr1;
     uint32_t reserved2[2];
-    uint64_t elrsr;
+    uint32_t elrsr0;
+    uint32_t elrsr1;
     uint32_t reserved3[46];
     uint32_t apr;
     uint32_t reserved4[3];
@@ -31,8 +33,10 @@ static_assert(__offsetof(Gich, hcr) == 0x00, "");
 static_assert(__offsetof(Gich, vtr) == 0x04, "");
 static_assert(__offsetof(Gich, vmcr) == 0x08, "");
 static_assert(__offsetof(Gich, misr) == 0x10, "");
-static_assert(__offsetof(Gich, eisr) == 0x20, "");
-static_assert(__offsetof(Gich, elrsr) == 0x30, "");
+static_assert(__offsetof(Gich, eisr0) == 0x20, "");
+static_assert(__offsetof(Gich, eisr1) == 0x24, "");
+static_assert(__offsetof(Gich, elrsr0) == 0x30, "");
+static_assert(__offsetof(Gich, elrsr1) == 0x34, "");
 static_assert(__offsetof(Gich, apr) == 0xf0, "");
 static_assert(__offsetof(Gich, lr) == 0x100, "");
 
@@ -67,7 +71,7 @@ static uint32_t gicv2_read_gich_misr() {
 }
 
 static uint64_t gicv2_read_gich_elrsr() {
-    return gich->elrsr;
+    return gich->elrsr0 | (static_cast<uint64_t>(gich->elrsr1) << 32);
 }
 
 static uint32_t gicv2_read_gich_apr() {

@@ -78,8 +78,8 @@ static void gich_active_interrupts(GichState* gich_state) {
     }
 }
 
-static VcpuExit vmexit_interrupt_ktrace_meta(uint32_t misr) {
-    if (misr & kGichMisrU) {
+static VcpuExit vmexit_interrupt_ktrace_meta() {
+    if (gic_read_gich_misr() & kGichMisrU) {
         return VCPU_UNDERFLOW_MAINTENANCE_INTERRUPT;
     }
     return VCPU_PHYSICAL_INTERRUPT;
@@ -100,6 +100,17 @@ AutoGich::AutoGich(GichState* gich_state, uint64_t* curr_hcr)
             *curr_hcr |= HCR_EL2_VI;
         }
     }
+
+    // Underflow maintenance interrupt is signalled if there is one or no free
+    // LRs. We use it in case when there is not enough free LRs to inject all
+    // pending interrupts, so when guest finishes processing most of them, a maintenance
+    // interrupt will cause VM exit and will give us a chance to inject the remaining
+    // interrupts. The point of this is to reduce latency when processing interrupts.
+    uint32_t gich_hcr = kGichHcrEn;
+    if (gich_state_->interrupt_tracker.Pending() && gich_state_->num_lrs > 1) {
+        gich_hcr |= kGichHcrUie;
+    }
+    gic_write_gich_hcr(gich_hcr);
 }
 
 AutoGich::~AutoGich() {
@@ -159,11 +170,10 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, fbl::unique_ptr<Vcpu>* 
         return status;
     }
 
-    gic_write_gich_hcr(kGichHcrEn);
     vcpu->gich_state_.active_interrupts.Reset(kNumInterrupts);
     vcpu->gich_state_.num_lrs = gic_get_num_lrs();
     vcpu->gich_state_.vmcr = gic_default_gich_vmcr();
-    vcpu->gich_state_.elrsr = 0;
+    vcpu->gich_state_.elrsr = (1ul << gic_get_num_lrs()) - 1;
     vcpu->gich_state_.apr = 0;
     vcpu->el2_state_->guest_state.system_state.elr_el2 = entry;
     vcpu->el2_state_->guest_state.system_state.spsr_el2 = kSpsrDaif | kSpsrEl1h;
@@ -196,41 +206,20 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
         timer_maybe_interrupt(guest_state, &gich_state_);
         gich_maybe_interrupt(&gich_state_);
         uint64_t curr_hcr = hcr_;
-        uint32_t misr = 0;
         {
             AutoGich auto_gich(&gich_state_, &curr_hcr);
-
-            // Underflow maintenance interrupt is signalled if there is one or no free LRs.
-            // We use it in case when there is not enough free LRs to inject all pending
-            // interrupts, so when guest finishes processing most of them, a maintenance
-            // interrupt will cause VM exit and will give us a chance to inject the remaining
-            // interrupts. The point of this is to reduce latency when processing interrupts.
-            uint32_t gich_hcr = 0;
-            if (gich_state_.interrupt_tracker.Pending() && gich_state_.num_lrs > 1) {
-                gich_hcr = gic_read_gich_hcr() | kGichHcrUie;
-                gic_write_gich_hcr(gich_hcr);
-            }
 
             ktrace(TAG_VCPU_ENTER, 0, 0, 0, 0);
             running_.store(true);
             status = arm64_el2_resume(vttbr, el2_state_.PhysicalAddress(), curr_hcr);
             running_.store(false);
-
-            // If we enabled underflow interrupt before we entered the guest we disable it
-            // to deassert it in case it is signalled. For details please refer to ARM Generic
-            // Interrupt Controller, Architecture Specification, 5.3.4 Maintenance Interrupt
-            // Status Register, GICH_MISR. Description of U bit in GICH_MISR.
-            if (gich_hcr & kGichHcrUie) {
-                misr = gic_read_gich_misr();
-                gic_write_gich_hcr(gich_hcr & ~kGichHcrUie);
-            }
         }
         gich_active_interrupts(&gich_state_);
         if (status == ZX_ERR_NEXT) {
             // We received a physical interrupt. If it was due to the thread
             // being killed, then we should exit with an error, otherwise return
             // to the guest.
-            ktrace_vcpu_exit(vmexit_interrupt_ktrace_meta(misr),
+            ktrace_vcpu_exit(vmexit_interrupt_ktrace_meta(),
                              guest_state->system_state.elr_el2);
             status = thread_->signals & THREAD_SIGNAL_KILL ? ZX_ERR_CANCELED : ZX_OK;
         } else if (status == ZX_OK) {
