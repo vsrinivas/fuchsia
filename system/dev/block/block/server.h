@@ -4,18 +4,15 @@
 
 #pragma once
 
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <zircon/device/block.h>
-#include <ddk/protocol/block.h>
-#include <zircon/thread_annotations.h>
-#include <zircon/types.h>
-
-#ifdef __cplusplus
-
 #include <atomic>
+#include <utility>
+
+#include <ddk/protocol/block.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/block.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
@@ -25,7 +22,9 @@
 #include <lib/fzl/fifo.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
-#include <utility>
+#include <zircon/device/block.h>
+#include <zircon/thread_annotations.h>
+#include <zircon/types.h>
 
 #include "txn-group.h"
 
@@ -147,8 +146,9 @@ class BlockServer {
 public:
     // Creates a new BlockServer.
     static zx_status_t Create(
-        block_impl_protocol_t* bp, fzl::fifo<block_fifo_request_t,
-                              block_fifo_response_t>* fifo_out, BlockServer** out);
+        ddk::BlockProtocolProxy* bp,
+        fzl::fifo<block_fifo_request_t, block_fifo_response_t>* fifo_out,
+        BlockServer** out);
 
     // Starts the BlockServer using the current thread
     zx_status_t Serve() TA_EXCL(server_lock_);
@@ -172,7 +172,7 @@ public:
     ~BlockServer();
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(BlockServer);
-    BlockServer(block_impl_protocol_t* bp);
+    BlockServer(ddk::BlockProtocolProxy* bp);
 
     // Helper for processing a single message read from the FIFO.
     void ProcessRequest(block_fifo_request_t* request);
@@ -197,7 +197,7 @@ private:
 
     fzl::fifo<block_fifo_response_t, block_fifo_request_t> fifo_;
     block_info_t info_;
-    block_impl_protocol_t* bp_;
+    ddk::BlockProtocolProxy* bp_;
     size_t block_op_size_;
 
     // BARRIER_AFTER is implemented by sticking "BARRIER_BEFORE" on the
@@ -213,17 +213,11 @@ private:
     vmoid_t last_id_ TA_GUARDED(server_lock_);
 };
 
-#else
-
-typedef struct IoBuffer IoBuffer;
-typedef struct BlockServer BlockServer;
-
-#endif  // ifdef __cplusplus
-
-__BEGIN_CDECLS
+// TODO(smklein): The following names should be converted to their canonical C++ versions.
 
 // Allocate a new blockserver + FIFO combo
-zx_status_t blockserver_create(block_impl_protocol_t* bp, zx_handle_t* fifo_out, BlockServer** out);
+zx_status_t blockserver_create(ddk::BlockProtocolProxy* bp, zx_handle_t* fifo_out,
+                               BlockServer** out);
 
 // Shut down the blockserver. It will stop serving requests.
 void blockserver_shutdown(BlockServer* bs);
@@ -236,5 +230,3 @@ zx_status_t blockserver_serve(BlockServer* bs);
 
 // Attach an IO buffer to the Block Server
 zx_status_t blockserver_attach_vmo(BlockServer* bs, zx_handle_t vmo, vmoid_t* out);
-
-__END_CDECLS

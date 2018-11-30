@@ -69,10 +69,6 @@ public:
     void BlockImplQuery(block_info_t* out_info, size_t* out_op_size);
     void BlockImplQueue(block_op_t* block, block_impl_queue_callback completion_cb,
                         void* cookie) __TA_EXCLUDES(mtx_);
-    zx_status_t BlockImplGetStats(const void* cmd_buffer, size_t cmd_size, void* out_reply_buffer,
-                                  size_t reply_size, size_t* out_reply_actual) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
 
     // If |status| is |ZX_OK|, sends |block| to the parent block device; otherwise calls
     // |BlockComplete| on the |block|. Uses the extra space following the |block| to save fields

@@ -231,10 +231,6 @@ public:
     // Block Protocol
     void BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out);
     void BlockImplQueue(block_op_t* txn, block_impl_queue_callback completion_cb, void* cookie);
-    zx_status_t BlockImplGetStats(const void* cmd_buffer, size_t cmd_size, void* out_reply_buffer,
-                                  size_t reply_size, size_t* out_reply_actual) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
 
     auto ExtentBegin() TA_REQ(lock_) {
         return slice_map_.begin();

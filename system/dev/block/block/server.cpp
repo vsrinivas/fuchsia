@@ -258,11 +258,11 @@ void BlockServer::InQueueDrainer() {
         // This may be altered in the future if block devices
         // are capable of implementing hardware barriers.
         msg->op.command &= ~(BLOCK_FL_BARRIER_BEFORE | BLOCK_FL_BARRIER_AFTER);
-        bp_->ops->queue(bp_->ctx, &msg->op, BlockCompleteCb, &*msg);
+        bp_->Queue(&msg->op, BlockCompleteCb, &*msg);
     }
 }
 
-zx_status_t BlockServer::Create(block_impl_protocol_t* bp, fzl::fifo<block_fifo_request_t,
+zx_status_t BlockServer::Create(ddk::BlockProtocolProxy* bp, fzl::fifo<block_fifo_request_t,
                                 block_fifo_response_t>* fifo_out, BlockServer** out) {
     fbl::AllocChecker ac;
     BlockServer* bs = new (&ac) BlockServer(bp);
@@ -289,7 +289,7 @@ zx_status_t BlockServer::Create(block_impl_protocol_t* bp, fzl::fifo<block_fifo_
         return status;
     }
 
-    bp->ops->query(bp->ctx, &bs->info_, &bs->block_op_size_);
+    bp->Query(&bs->info_, &bs->block_op_size_);
 
     // TODO(ZX-1583): Allocate BlockMsg arena based on block_op_size_.
 
@@ -485,11 +485,11 @@ zx_status_t BlockServer::Serve() {
     }
 }
 
-BlockServer::BlockServer(block_impl_protocol_t* bp) :
+BlockServer::BlockServer(ddk::BlockProtocolProxy* bp) :
     bp_(bp), block_op_size_(0), pending_count_(0), barrier_in_progress_(false),
     last_id_(VMOID_INVALID + 1) {
     size_t block_op_size;
-    bp->ops->query(bp->ctx, &info_, &block_op_size);
+    bp->Query(&info_, &block_op_size);
 }
 
 BlockServer::~BlockServer() {
@@ -507,7 +507,7 @@ void BlockServer::ShutDown() {
 }
 
 // C declarations
-zx_status_t blockserver_create(block_impl_protocol_t* bp, zx_handle_t* fifo_out,
+zx_status_t blockserver_create(ddk::BlockProtocolProxy* bp, zx_handle_t* fifo_out,
                                BlockServer** out) {
     fzl::fifo<block_fifo_request_t, block_fifo_response_t> fifo;
     zx_status_t status = BlockServer::Create(bp, &fifo, out);

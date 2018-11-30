@@ -70,12 +70,29 @@ const uint32 BLOCK_FL_BARRIER_AFTER = 0x00000200;
 
 [Layout="ddk-protocol", DefaultProtocol]
 interface BlockImpl {
-  /// Obtain the parameters of the block device (block_info_t) and
+  /// Obtains the parameters of the block device (block_info_t) and
   /// the required size of block_txn_t.  The block_txn_t's submitted
   /// via queue() must have block_op_size_out - sizeof(block_op_t) bytes
   /// available at the end of the structure for the use of the driver.
   1: Query() -> (zircon.device.block.BlockInfo info, usize block_op_size);
-  /// Submit an IO request for processing. Ownership of |op| is transferred to
+
+  /// Submits an IO request for processing. Ownership of |op| is transferred to
+  /// callee until |completion_cb| is invoked|. Success or failure will
+  /// be reported via the |completion_cb|.  This / callback may be called
+  /// before the queue() method returns.
+  [Async]
+  2: Queue(BlockOp? txn) -> (zx.status status, BlockOp? op);
+};
+
+[Layout="ddk-protocol", DefaultProtocol]
+interface Block {
+  /// Obtains the parameters of the block device (block_info_t) and
+  /// the required size of block_txn_t.  The block_txn_t's submitted
+  /// via queue() must have block_op_size_out - sizeof(block_op_t) bytes
+  /// available at the end of the structure for the use of the driver.
+  1: Query() -> (zircon.device.block.BlockInfo info, usize block_op_size);
+
+  /// Submits an IO request for processing. Ownership of |op| is transferred to
   /// callee until |completion_cb| is invoked|. Success or failure will
   /// be reported via the |completion_cb|.  This / callback may be called
   /// before the queue() method returns.
