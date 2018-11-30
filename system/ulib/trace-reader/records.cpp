@@ -270,6 +270,9 @@ void EventData::Destroy() {
     case EventType::kDurationEnd:
         duration_end_.~DurationEnd();
         break;
+    case EventType::kDurationComplete:
+        duration_complete_.~DurationComplete();
+        break;
     case EventType::kAsyncBegin:
         async_begin_.~AsyncBegin();
         break;
@@ -306,6 +309,9 @@ void EventData::MoveFrom(EventData&& other) {
     case EventType::kDurationEnd:
         new (&duration_end_) DurationEnd(std::move(other.duration_end_));
         break;
+    case EventType::kDurationComplete:
+        new (&duration_complete_) DurationComplete(std::move(other.duration_complete_));
+        break;
     case EventType::kAsyncBegin:
         new (&async_begin_) AsyncBegin(std::move(other.async_begin_));
         break;
@@ -339,6 +345,9 @@ fbl::String EventData::ToString() const {
         return "DurationBegin";
     case EventType::kDurationEnd:
         return "DurationEnd";
+    case EventType::kDurationComplete:
+        return fbl::StringPrintf("DurationComplete(end_time: %" PRIu64 ")",
+                                 duration_complete_.end_time);
     case EventType::kAsyncBegin:
         return fbl::StringPrintf("AsyncBegin(id: %" PRIu64 ")",
                                  async_begin_.id);

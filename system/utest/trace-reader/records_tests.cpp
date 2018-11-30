@@ -418,6 +418,24 @@ bool event_data_test() {
         EXPECT_STR_EQ("DurationEnd", d.ToString().c_str());
     }
 
+    // duration complete
+
+    {
+        trace::EventData d(trace::EventData::DurationComplete{123});
+        EXPECT_EQ(trace::EventType::kDurationComplete, d.type());
+        EXPECT_EQ(123, d.GetDurationComplete().end_time);
+
+        trace::EventData m(std::move(d));
+        EXPECT_EQ(trace::EventType::kDurationComplete, m.type());
+        EXPECT_EQ(123, m.GetDurationComplete().end_time);
+
+        d = std::move(m);
+        EXPECT_EQ(trace::EventType::kDurationComplete, d.type());
+        EXPECT_EQ(123, d.GetDurationComplete().end_time);
+
+        EXPECT_STR_EQ("DurationComplete(end_time: 123)", d.ToString().c_str());
+    }
+
     // async begin
 
     {
@@ -683,7 +701,7 @@ bool record_test() {
         const char name[] = "name";
         const char blob[] = "abc";
         trace::Record r(trace::Record::Blob{
-                TRACE_BLOB_TYPE_DATA, "name", blob, sizeof(blob)});
+            TRACE_BLOB_TYPE_DATA, "name", blob, sizeof(blob)});
         EXPECT_EQ(trace::RecordType::kBlob, r.type());
         EXPECT_EQ(TRACE_BLOB_TYPE_DATA, r.GetBlob().type);
         EXPECT_EQ(sizeof(blob), r.GetBlob().blob_size);
@@ -748,8 +766,8 @@ bool record_test() {
         EXPECT_EQ(-3.14, r.GetKernelObject().arguments[1].value().GetDouble());
 
         EXPECT_STR_EQ("KernelObject(koid: 123, type: vmo, name: \"name\", "
-                       "{arg1: int32(11), arg2: double(-3.140000)})",
-                       r.ToString().c_str());
+                      "{arg1: int32(11), arg2: double(-3.140000)})",
+                      r.ToString().c_str());
     }
 
     // context switch

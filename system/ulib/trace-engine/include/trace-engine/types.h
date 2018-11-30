@@ -8,7 +8,8 @@
 // C/C++ and -O0/-On the inline functions are "static inline".
 //
 
-#pragma once
+#ifndef TRACE_ENGINE_TYPES_H_
+#define TRACE_ENGINE_TYPES_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -395,12 +396,13 @@ enum class EventType {
     kCounter = 1,
     kDurationBegin = 2,
     kDurationEnd = 3,
-    kAsyncBegin = 4,
-    kAsyncInstant = 5,
-    kAsyncEnd = 6,
-    kFlowBegin = 7,
-    kFlowStep = 8,
-    kFlowEnd = 9,
+    kDurationComplete = 4,
+    kAsyncBegin = 5,
+    kAsyncInstant = 6,
+    kAsyncEnd = 7,
+    kFlowBegin = 8,
+    kFlowStep = 9,
+    kFlowEnd = 10,
 };
 
 // Specifies the scope of instant events.
@@ -429,3 +431,5 @@ using RecordHeader = uint64_t;
 } // namespace trace
 
 #endif // __cplusplus
+
+#endif // TRACE_ENGINE_TYPES_H_

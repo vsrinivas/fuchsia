@@ -326,6 +326,11 @@ public:
     // Duration end event data.
     struct DurationEnd {};
 
+    // Duration complete event data.
+    struct DurationComplete {
+        trace_ticks_t end_time;
+    };
+
     // Async begin event data.
     struct AsyncBegin {
         trace_async_id_t id;
@@ -367,6 +372,9 @@ public:
 
     explicit EventData(DurationEnd duration_end)
         : type_(EventType::kDurationEnd), duration_end_(std::move(duration_end)) {}
+
+    explicit EventData(DurationComplete duration_complete)
+        : type_(EventType::kDurationComplete), duration_complete_(std::move(duration_complete)) {}
 
     explicit EventData(AsyncBegin async_begin)
         : type_(EventType::kAsyncBegin), async_begin_(std::move(async_begin)) {}
@@ -414,6 +422,11 @@ public:
         return duration_end_;
     }
 
+    const DurationComplete& GetDurationComplete() const {
+        ZX_DEBUG_ASSERT(type_ == EventType::kDurationComplete);
+        return duration_complete_;
+    }
+
     const AsyncBegin& GetAsyncBegin() const {
         ZX_DEBUG_ASSERT(type_ == EventType::kAsyncBegin);
         return async_begin_;
@@ -458,6 +471,7 @@ private:
         Counter counter_;
         DurationBegin duration_begin_;
         DurationEnd duration_end_;
+        DurationComplete duration_complete_;
         AsyncBegin async_begin_;
         AsyncInstant async_instant_;
         AsyncEnd async_end_;

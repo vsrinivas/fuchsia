@@ -262,6 +262,15 @@ bool TraceReader::ReadEventRecord(Chunk& record, RecordHeader header) {
             std::move(arguments), EventData(EventData::DurationEnd{})}));
         break;
     }
+    case EventType::kDurationComplete: {
+        trace_ticks_t end_time;
+        if (!record.ReadUint64(&end_time))
+            return false;
+        record_consumer_(Record(Record::Event{
+            timestamp, process_thread, std::move(category), std::move(name),
+            std::move(arguments), EventData(EventData::DurationComplete{end_time})}));
+        break;
+    }
     case EventType::kAsyncBegin: {
         trace_async_id_t id;
         if (!record.ReadUint64(&id))

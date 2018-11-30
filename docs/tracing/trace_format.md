@@ -460,7 +460,16 @@ Marks the end of an operation on a particular thread.
 
 No event-type specific data required.
 
-#### Async Begin Event (event type = 4)
+#### Duration Complete Event (event type = 4)
+
+Marks the beginning and end of an operation on a particular thread.
+
+##### Format
+
+_end time word_
+- `[0 .. 63]`: end time number of ticks
+
+#### Async Begin Event (event type = 5)
 
 Marks the beginning of an operation which may span threads.  Must be matched
 by an **Async End Event** using the same async correlation id.
@@ -470,7 +479,7 @@ by an **Async End Event** using the same async correlation id.
 _async correlation word_
 - `[0 .. 63]`: async correlation id
 
-#### Async Instant Event (event type = 5)
+#### Async Instant Event (event type = 6)
 
 Marks a moment within an operation which may span threads.  Must appear
 between **Async Begin Event** and **Async End Event** using the same async
@@ -481,7 +490,7 @@ correlation id.
 _async correlation word_
 - `[0 .. 63]`: async correlation id
 
-#### Async End Event (event type = 6)
+#### Async End Event (event type = 7)
 
 Marks the end of an operation which may span threads.
 
@@ -490,7 +499,7 @@ Marks the end of an operation which may span threads.
 _async correlation word_
 - `[0 .. 63]`: async correlation id
 
-#### Flow Begin Event (event type = 7)
+#### Flow Begin Event (event type = 8)
 
 Marks the beginning of an operation which results in a sequence of actions
 which may span multiple threads or abstraction layers.  Must be matched by a
@@ -505,7 +514,7 @@ for this thread; it begins where the enclosing **Duration Event** ends.
 _flow correlation word_
 - `[0 .. 63]`: flow correlation id
 
-#### Flow Step Event (event type = 8)
+#### Flow Step Event (event type = 9)
 
 Marks a point within a flow.
 
@@ -518,7 +527,7 @@ at the point where the enclosing **Duration Event** event ends.
 _flow correlation word_
 - `[0 .. 63]`: flow correlation id
 
-#### Flow End Event (event type = 9)
+#### Flow End Event (event type = 10)
 
 Marks the end of a flow.
 
