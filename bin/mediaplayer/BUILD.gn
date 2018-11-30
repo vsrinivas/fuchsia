@@ -58,6 +58,8 @@ executable("mediaplayer_test_util_bin") {
   output_name = "mediaplayer_test_util"
 
   sources = [
+    "test/command_queue.cc",
+    "test/command_queue.h",
     "test/test_util_main.cc",
     "test/mediaplayer_test_util_params.cc",
     "test/mediaplayer_test_util_params.h",

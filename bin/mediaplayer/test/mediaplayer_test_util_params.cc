@@ -17,6 +17,7 @@ MediaPlayerTestUtilParams::MediaPlayerTestUtilParams(
   play_ = command_line.HasOption("play");
   loop_ = command_line.HasOption("loop");
   test_seek_ = command_line.HasOption("test-seek");
+  experiment_ = command_line.HasOption("experiment");
 
   for (const std::string& arg : command_line.positional_args()) {
     if (arg.compare(0, 1, "/") == 0) {
@@ -61,6 +62,7 @@ void MediaPlayerTestUtilParams::Usage() {
   std::cerr << "    --play       play on startup\n";
   std::cerr << "    --loop       play the files in a loop on startup\n";
   std::cerr << "    --test-seek  play random segments of one file on startup\n";
+  // --experiment is deliberately omitted here. See the .h file.
 }
 
 }  // namespace test

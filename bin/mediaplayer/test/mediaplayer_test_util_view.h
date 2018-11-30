@@ -11,6 +11,7 @@
 #include <lib/fit/function.h>
 #include <memory>
 #include <queue>
+#include "garnet/bin/mediaplayer/test/command_queue.h"
 #include "garnet/bin/mediaplayer/test/mediaplayer_test_util_params.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/macros.h"
@@ -31,6 +32,20 @@ class MediaPlayerTestUtilView : public scenic::V1BaseView {
  private:
   enum class State { kPaused, kPlaying, kEnded };
 
+  // Implements --experiment. Implementations of this method should not, in
+  // general, be submitted. This is for developer experiments.
+  void RunExperiment();
+
+  // Implements --test-seek.
+  void TestSeek();
+
+  // Continues --test-seek assuming that a URL is loaded and the view is ready.
+  void ContinueTestSeek();
+
+  // Schedules playback of the next URL when end-of-stream is reached, if there
+  // is a next URL to be played.
+  void ScheduleNextUrl();
+
   // |scenic::V1BaseView|
   void OnPropertiesChanged(
       ::fuchsia::ui::viewsv1::ViewProperties old_properties) override;
@@ -42,17 +57,11 @@ class MediaPlayerTestUtilView : public scenic::V1BaseView {
   void OnChildUnavailable(uint32_t child_key) override;
   bool OnInputEvent(fuchsia::ui::input::InputEvent event) override;
 
-  // Updates the player to read from the specified URL.
-  void SetUrl(const std::string url_as_string);
-
   // Perform a layout of the UI elements.
   void Layout();
 
   // Handles a status changed event from the player.
   void HandleStatusChanged(const fuchsia::mediaplayer::PlayerStatus& status);
-
-  // Handle transition to end-of-stream.
-  void OnEndOfStream();
 
   // Toggles between play and pause.
   void TogglePlayPause();
@@ -63,19 +72,17 @@ class MediaPlayerTestUtilView : public scenic::V1BaseView {
   // Returns progress in the range 0.0 to 1.0.
   float normalized_progress() const;
 
-  // Seeks to a new position and sets |seek_interval_end_|.
-  void StartNewSeekInterval();
-
   fit::function<void(int)> quit_callback_;
   const MediaPlayerTestUtilParams& params_;
-  size_t current_url_index_ = 0;
+  size_t next_url_index_ = 0;
 
   scenic::ShapeNode background_node_;
   scenic::ShapeNode progress_bar_node_;
   scenic::ShapeNode progress_bar_slider_node_;
   std::unique_ptr<scenic::EntityNode> video_host_node_;
 
-  fuchsia::mediaplayer::PlayerPtr media_player_;
+  fuchsia::mediaplayer::PlayerPtr player_;
+  CommandQueue commands_;
   fuchsia::math::Size video_size_;
   fuchsia::math::Size pixel_aspect_ratio_;
   State state_ = State::kPaused;
@@ -85,12 +92,6 @@ class MediaPlayerTestUtilView : public scenic::V1BaseView {
   fuchsia::math::RectF content_rect_;
   fuchsia::math::RectF controls_rect_;
   bool problem_shown_ = false;
-  bool was_at_end_of_stream_ = false;
-
-  int64_t seek_interval_start_ = fuchsia::media::NO_TIMESTAMP;
-  int64_t seek_interval_end_ = fuchsia::media::NO_TIMESTAMP;
-  bool in_current_seek_interval_ = false;
-
   bool scenic_ready_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MediaPlayerTestUtilView);

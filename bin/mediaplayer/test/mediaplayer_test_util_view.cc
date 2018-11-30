@@ -82,19 +82,14 @@ MediaPlayerTestUtilView::MediaPlayerTestUtilView(
   pixel_aspect_ratio_.height = 1;
 
   // Create a player from all that stuff.
-  media_player_ =
-      startup_context()
-          ->ConnectToEnvironmentService<fuchsia::mediaplayer::Player>();
+  player_ = startup_context()
+                ->ConnectToEnvironmentService<fuchsia::mediaplayer::Player>();
 
-  media_player_.events().OnStatusChanged =
-      [this](fuchsia::mediaplayer::PlayerStatus status) {
-        HandleStatusChanged(status);
-      };
-
+  // Create the video view.
   zx::eventpair view_owner_token, view_token;
   if (zx::eventpair::create(0u, &view_owner_token, &view_token) != ZX_OK)
     FXL_NOTREACHED() << "failed to create tokens.";
-  media_player_->CreateView2(std::move(view_token));
+  player_->CreateView2(std::move(view_token));
 
   zx::eventpair video_host_import_token;
   video_host_node_.reset(new scenic::EntityNode(session()));
@@ -103,7 +98,115 @@ MediaPlayerTestUtilView::MediaPlayerTestUtilView(
   GetViewContainer()->AddChild2(kVideoChildKey, std::move(view_owner_token),
                                 std::move(video_host_import_token));
 
-  SetUrl(params_.urls().front());
+  commands_.Init(player_.get());
+
+  player_.events().OnStatusChanged =
+      [this](fuchsia::mediaplayer::PlayerStatus status) {
+        HandleStatusChanged(status);
+      };
+
+  // Seed the random number generator.
+  std::srand(std::time(nullptr));
+
+  if (params_.experiment()) {
+    RunExperiment();
+  } else if (params_.test_seek()) {
+    TestSeek();
+  } else {
+    // Get the player primed now.
+    commands_.SetUrl(params_.urls().front());
+    commands_.Pause();
+    commands_.WaitForViewReady();
+
+    if (params_.auto_play()) {
+      commands_.Play();
+    }
+
+    ScheduleNextUrl();
+  }
+
+  commands_.Execute();
+}
+
+void MediaPlayerTestUtilView::RunExperiment() {
+  // Add experimental code here.
+  // In general, no implementation for this method should be submitted.
+}
+
+void MediaPlayerTestUtilView::TestSeek() {
+  commands_.SetUrl(params_.urls().front());
+  commands_.WaitForViewReady();
+
+  // Need to load content before deciding where to seek.
+  commands_.WaitForContentLoaded();
+
+  commands_.Invoke([this]() { ContinueTestSeek(); });
+}
+
+void MediaPlayerTestUtilView::ContinueTestSeek() {
+  if (duration_ns_ == 0) {
+    // We have no duration yet. Just start over at zero.
+    commands_.Seek(0);
+    commands_.Play();
+    commands_.WaitForEndOfStream();
+    commands_.Invoke([this]() { ContinueTestSeek(); });
+    FXL_LOG(INFO) << "Seek interval: beginning to end";
+    return;
+  }
+
+  // For the start position, generate a number in the range [0..duration_ns_]
+  // with a 10% chance of being zero.
+  int64_t seek_interval_start =
+      rand_less_than(duration_ns_ + duration_ns_ / 10);
+  if (seek_interval_start >= duration_ns_) {
+    seek_interval_start = 0;
+  }
+
+  // For the end position, choose a position between start and 10% past the
+  // duration. If this value is greater than the duration, the interval
+  // effectively ends at the end of the file.
+  int64_t seek_interval_end =
+      seek_interval_start +
+      rand_less_than((duration_ns_ + duration_ns_ / 10) - seek_interval_start);
+
+  commands_.Seek(seek_interval_start);
+  commands_.Play();
+  if (seek_interval_end >= duration_ns_) {
+    FXL_LOG(INFO) << "Seek interval: " << AsNs(seek_interval_start)
+                  << " to end";
+    commands_.WaitForEndOfStream();
+  } else {
+    FXL_LOG(INFO) << "Seek interval: " << AsNs(seek_interval_start) << " to "
+                  << AsNs(seek_interval_end);
+    commands_.WaitForSeekCompletion();
+    commands_.WaitForPosition(seek_interval_end);
+  }
+
+  commands_.Invoke([this]() { ContinueTestSeek(); });
+}
+
+void MediaPlayerTestUtilView::ScheduleNextUrl() {
+  if (++next_url_index_ == params_.urls().size()) {
+    if (!params_.loop()) {
+      // No more files, not looping.
+      return;
+    }
+
+    next_url_index_ = 0;
+  }
+
+  commands_.WaitForEndOfStream();
+
+  if (params_.urls().size() > 1) {
+    commands_.SetUrl(params_.urls()[next_url_index_]);
+  } else {
+    // Just one file...seek to the beginning.
+    commands_.Seek(0);
+  }
+
+  commands_.Play();
+
+  commands_.Invoke([this]() { ScheduleNextUrl(); });
 }
 
 MediaPlayerTestUtilView::~MediaPlayerTestUtilView() {}
@@ -116,10 +219,10 @@ bool MediaPlayerTestUtilView::OnInputEvent(
     if (pointer.phase == fuchsia::ui::input::PointerEventPhase::DOWN) {
       if (duration_ns_ != 0 && Contains(controls_rect_, pointer.x, pointer.y)) {
         // User poked the progress bar...seek.
-        media_player_->Seek((pointer.x - controls_rect_.x) * duration_ns_ /
-                            controls_rect_.width);
+        player_->Seek((pointer.x - controls_rect_.x) * duration_ns_ /
+                      controls_rect_.width);
         if (state_ != State::kPlaying) {
-          media_player_->Play();
+          player_->Play();
         }
       } else {
         // User poked elsewhere.
@@ -154,28 +257,13 @@ void MediaPlayerTestUtilView::OnPropertiesChanged(
   Layout();
 }
 
-void MediaPlayerTestUtilView::SetUrl(const std::string url_as_string) {
-  url::GURL url = url::GURL(url_as_string);
-
-  if (url.SchemeIsFile()) {
-    media_player_->SetFileSource(fsl::CloneChannelFromFileDescriptor(
-        fxl::UniqueFD(open(url.path().c_str(), O_RDONLY)).get()));
-  } else {
-    media_player_->SetHttpSource(url_as_string, nullptr);
-  }
-}
-
 void MediaPlayerTestUtilView::Layout() {
   if (!has_logical_size())
     return;
 
   if (!scenic_ready_) {
     scenic_ready_ = true;
-    if (params_.auto_play()) {
-      media_player_->Play();
-    } else {
-      media_player_->Pause();
-    }
+    commands_.NotifyViewReady();
   }
 
   // Make the background fill the space.
@@ -278,11 +366,6 @@ void MediaPlayerTestUtilView::OnSceneInvalidated(
   if (state_ == State::kPlaying) {
     InvalidateScene();
   }
-
-  if (in_current_seek_interval_ && progress_ns() >= seek_interval_end_) {
-    // We've hit the end of the seek interval. Start a new one.
-    StartNewSeekInterval();
-  }
 }
 
 void MediaPlayerTestUtilView::OnChildAttached(
@@ -310,27 +393,15 @@ void MediaPlayerTestUtilView::HandleStatusChanged(
   if (status.timeline_function) {
     timeline_function_ =
         fxl::To<media::TimelineFunction>(*status.timeline_function);
-
-    if (seek_interval_start_ != fuchsia::media::NO_TIMESTAMP &&
-        !in_current_seek_interval_ &&
-        timeline_function_.subject_time() == seek_interval_start_) {
-      // The seek issued in |StartNewSeekInterval| is now reflected in the
-      // new |timeline_function_|. We can now use |timeline_function_| to
-      // determine if we've hit the end of the interval.
-      // TODO(dalesat): There should be a better way to determine when a seek
-      // has completed.
-      in_current_seek_interval_ = true;
-    }
+    state_ = status.end_of_stream
+                 ? State::kEnded
+                 : (timeline_function_.subject_delta() == 0) ? State::kPaused
+                                                             : State::kPlaying;
+  } else {
+    state_ = State::kPaused;
   }
 
-  if (!status.end_of_stream) {
-    state_ = (timeline_function_.subject_delta() == 0) ? State::kPaused
-                                                       : State::kPlaying;
-    was_at_end_of_stream_ = false;
-  } else if (!was_at_end_of_stream_) {
-    was_at_end_of_stream_ = true;
-    OnEndOfStream();
-  }
+  commands_.NotifyStatusChanged(status);
 
   if (status.problem) {
     if (!problem_shown_) {
@@ -356,42 +427,17 @@ void MediaPlayerTestUtilView::HandleStatusChanged(
   InvalidateScene();
 }
 
-void MediaPlayerTestUtilView::OnEndOfStream() {
-  if (params_.test_seek()) {
-    StartNewSeekInterval();
-    return;
-  }
-
-  if (++current_url_index_ == params_.urls().size()) {
-    current_url_index_ = 0;
-
-    if (!params_.loop()) {
-      // No more files, not looping.
-      state_ = State::kEnded;
-      return;
-    }
-  }
-
-  if (params_.urls().size() > 1) {
-    SetUrl(params_.urls()[current_url_index_]);
-  } else {
-    media_player_->Seek(0);
-  }
-
-  media_player_->Play();
-}
-
 void MediaPlayerTestUtilView::TogglePlayPause() {
   switch (state_) {
     case State::kPaused:
-      media_player_->Play();
+      player_->Play();
       break;
     case State::kPlaying:
-      media_player_->Pause();
+      player_->Pause();
       break;
     case State::kEnded:
-      media_player_->Seek(0);
-      media_player_->Play();
+      player_->Seek(0);
+      player_->Play();
       break;
     default:
       break;
@@ -423,42 +469,6 @@ float MediaPlayerTestUtilView::normalized_progress() const {
   }
 
   return progress_ns() / static_cast<float>(duration_ns_);
-}
-
-void MediaPlayerTestUtilView::StartNewSeekInterval() {
-  in_current_seek_interval_ = false;
-
-  if (duration_ns_ == 0) {
-    // We have no duration yet. Just start over at the start of the file.
-    media_player_->Seek(0);
-    media_player_->Play();
-    seek_interval_end_ = fuchsia::media::NO_TIMESTAMP;
-  }
-
-  // For the start position, generate a number in the range [0..duration_ns_]
-  // with a 10% chance of being zero.
-  seek_interval_start_ = rand_less_than(duration_ns_ + duration_ns_ / 10);
-  if (seek_interval_start_ >= duration_ns_) {
-    seek_interval_start_ = 0;
-  }
-
-  // For the end position, choose a position between start and 10% past the
-  // duration. If this value is greater than the duration, the interval
-  // effectively ends at the end of the file.
-  seek_interval_end_ =
-      seek_interval_start_ +
-      rand_less_than((duration_ns_ + duration_ns_ / 10) - seek_interval_start_);
-
-  if (seek_interval_end_ >= duration_ns_) {
-    FXL_LOG(INFO) << "Seek interval " << AsNs(seek_interval_start_)
-                  << " to end";
-  } else {
-    FXL_LOG(INFO) << "Seek interval " << AsNs(seek_interval_start_) << " to "
-                  << AsNs(seek_interval_end_);
-  }
-
-  media_player_->Seek(seek_interval_start_);
-  media_player_->Play();
 }
 
 }  // namespace test

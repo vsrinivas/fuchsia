@@ -25,6 +25,11 @@ class MediaPlayerTestUtilParams {
 
   bool test_seek() const { return test_seek_; }
 
+  // --experiment is intended for ad-hoc use when a developer wants to drop in
+  // e.g. a repro test. No implementation of it should be submitted, and it
+  // should not appear in the usage message.
+  bool experiment() const { return experiment_; }
+
   bool auto_play() const { return play_ || loop_ || test_seek_; }
 
   const std::vector<std::string>& urls() const { return urls_; }
@@ -38,6 +43,7 @@ class MediaPlayerTestUtilParams {
   bool play_ = false;
   bool loop_ = false;
   bool test_seek_ = false;
+  bool experiment_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MediaPlayerTestUtilParams);
 };
