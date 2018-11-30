@@ -513,7 +513,7 @@ mod simulation_tests {
     fn ethernet_scan() {
         let mut ok = true;
         ok = run_test("verify_ethernet", verify_ethernet) && ok;
-        1.seconds().after_now().sleep();
+        ensure_iface_gone();
         ok = run_test("simulate_scan", simulate_scan) && ok;
         // TODO(NET-1885) - commenting out due to flake
         // ok = run_test("connecting_to_ap", connecting_to_ap) && ok;
@@ -528,14 +528,31 @@ mod simulation_tests {
             .expect(&format!("creating ethernet client: {:?}", &HW_MAC_ADDR));
         assert!(client.is_none());
         // Create wlan_tap device which will in turn create ethernet device.
-        let _helper = test_utils::TestHelper::begin_test(&mut exec, create_wlantap_config());
+        let mut helper = test_utils::TestHelper::begin_test(&mut exec, create_wlantap_config());
         let mut retry = test_utils::RetryWithBackoff::new(5.seconds());
         loop {
             let client = exec.run_singlethreaded(create_eth_client(&HW_MAC_ADDR))
                 .expect(&format!("creating ethernet client: {:?}", &HW_MAC_ADDR));
-            if client.is_some() { return; }
+            if client.is_some() { break; }
             let slept = retry.sleep_unless_timed_out();
             assert!(slept, "No ethernet client with mac_addr {:?} found in time", &HW_MAC_ADDR);
+        }
+        let wlan_service = app::client::connect_to_service::<fidl_wlan_service::WlanMarker>()
+            .expect("connecting to wlan service");
+        loop_until_iface_is_found(&mut exec, &wlan_service, &mut helper);
+    }
+
+    fn ensure_iface_gone() {
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut retry = test_utils::RetryWithBackoff::new(5.seconds());
+        let wlan_service = app::client::connect_to_service::<fidl_wlan_service::WlanMarker>()
+            .expect("Failed to connect to wlan service");
+        loop {
+            let status = exec.run_singlethreaded(wlan_service.status())
+                .expect("error getting status() from wlan_service");
+            if status.error.code == fidl_wlan_service::ErrCode::NotFound { return; }
+            let slept = retry.sleep_unless_timed_out();
+            assert!(slept, "The interface was not removed in time");
         }
     }
 
