@@ -83,10 +83,8 @@ fn get_lang_match_score(font: &Font, request_lang: &[String]) -> usize {
 
 impl<'a> FontAndLangScore<'a> {
     fn new(font: &'a Font, request: &fonts::Request) -> FontAndLangScore<'a> {
-        FontAndLangScore {
-            font,
-            lang_score: get_lang_match_score(font, &request.language),
-        }
+        let lang_score = get_lang_match_score(font, request.language.as_ref().unwrap_or(&vec![]));
+        FontAndLangScore { font, lang_score }
     }
 }
 
@@ -247,13 +245,16 @@ impl FontCollection {
                     (font.width == request.width)
                         & (font.weight == request.weight)
                         & (font.slant == request.slant)
-                        & (request.language.is_empty() || request
-                            .language
-                            .iter()
-                            .find(|lang| font.language.contains(*lang))
-                            .is_some())
+                        & (request.language.as_ref().map_or(true, |value| {
+                            value.is_empty()
+                                || value
+                                    .iter()
+                                    .find(|lang| font.language.contains(*lang))
+                                    .is_some()
+                        }))
                         & ((request.character == 0) | font.info.charset.contains(request.character))
-                }).map(|f| f as &Font);
+                })
+                .map(|f| f as &Font);
         }
 
         fn fold<'a, 'b>(
@@ -282,9 +283,11 @@ impl FontCollection {
     }
 
     pub fn get_styles<'a>(&'a self) -> impl Iterator<Item = fonts::Style> + 'a {
-        self.fonts.iter().map(|f|
-            fonts::Style { width: f.width, slant: f.slant, weight: f.weight}
-        )
+        self.fonts.iter().map(|f| fonts::Style {
+            width: f.width,
+            slant: f.slant,
+            weight: f.weight,
+        })
     }
 }
 
@@ -328,15 +331,15 @@ mod tests {
 
     fn request_font<'a, 'b>(
         collection: &'a FontCollection, width: u32, slant: fonts::Slant, weight: u32,
-        lang: &'b [&'b str], flags: u32, fallback_group: FallbackGroup,
+        lang: Option<&'b [&'b str]>, flags: u32, fallback_group: FallbackGroup,
     ) -> Option<&'a Font> {
         let request = fonts::Request {
-            family: String::new(),
+            family: None,
             weight: weight,
             width: width,
             slant: slant,
             character: 0,
-            language: lang.iter().map(|s| s.to_ascii_lowercase()).collect(),
+            language: lang.map(|l| l.iter().map(|s| s.to_ascii_lowercase()).collect()),
             fallback_group: fallback_group,
             flags: flags,
         };
@@ -356,10 +359,11 @@ mod tests {
             width,
             slant,
             weight,
-            &[],
+            None,
             0,
             FallbackGroup::None,
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -442,7 +446,7 @@ mod tests {
             width,
             slant,
             weight,
-            &[],
+            None,
             fonts::REQUEST_FLAG_EXACT_MATCH,
             FallbackGroup::None,
         )
@@ -473,7 +477,16 @@ mod tests {
     }
 
     fn request_lang<'a, 'b>(collection: &'a FontCollection, lang: &'b [&'b str]) -> &'a Font {
-        request_font(collection, 5, Upright, 400, lang, 0, FallbackGroup::None).unwrap()
+        request_font(
+            collection,
+            5,
+            Upright,
+            400,
+            Some(lang),
+            0,
+            FallbackGroup::None,
+        )
+        .unwrap()
     }
 
     #[test]
@@ -509,7 +522,7 @@ mod tests {
     }
 
     fn request_fallback_group(collection: &FontCollection, fallback_group: FallbackGroup) -> &Font {
-        request_font(collection, 5, Upright, 400, &[], 0, fallback_group).unwrap()
+        request_font(collection, 5, Upright, 400, None, 0, fallback_group).unwrap()
     }
 
     #[test]

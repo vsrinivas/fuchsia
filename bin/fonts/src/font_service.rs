@@ -268,12 +268,14 @@ impl FontService {
     }
 
     fn match_request(&self, mut request: fonts::Request) -> Option<fonts::Response> {
-        for lang in request.language.iter_mut() {
-            *lang = lang.to_ascii_lowercase();
-        }
+        request.language = request
+            .language
+            .map(|list| list.iter().map(|l| l.to_ascii_lowercase()).collect());
 
-        let family_name = UniCase::new(request.family.clone());
-        let matched_family = self.match_family(&family_name);
+        let matched_family = request
+            .family
+            .as_ref()
+            .and_then(|family| self.match_family(&UniCase::new(family.clone())));
         let mut font = matched_family.and_then(|family| family.fonts.match_request(&request));
 
         if font.is_none() && (request.flags & fonts::REQUEST_FLAG_NO_FALLBACK) == 0 {
@@ -304,8 +306,8 @@ impl FontService {
         let family_name = UniCase::new(family_name);
         let family = self.match_family(&family_name)?;
         Some(fonts::FamilyInfo {
-                name: family.name.clone(),
-                styles: family.fonts.get_styles().collect(),
+            name: family.name.clone(),
+            styles: family.fonts.get_styles().collect(),
         })
     }
 

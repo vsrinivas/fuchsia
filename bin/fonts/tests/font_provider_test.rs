@@ -6,7 +6,7 @@
 
 use failure::{format_err, Error, ResultExt};
 use fidl_fuchsia_fonts as fonts;
-use fuchsia_app::client::{LaunchOptions, Launcher, App};
+use fuchsia_app::client::{App, LaunchOptions, Launcher};
 use fuchsia_async::Executor;
 use fuchsia_zircon as zx;
 use fuchsia_zircon::AsHandleRef;
@@ -20,7 +20,7 @@ struct FontInfo {
 }
 
 async fn get_font_info(
-    font_provider: &fonts::ProviderProxy, name: String, language: Vec<String>,
+    font_provider: &fonts::ProviderProxy, name: Option<String>, language: Option<Vec<String>>,
     character: char,
 ) -> Result<FontInfo, Error> {
     let font = await!(font_provider.get_font(&mut fonts::Request {
@@ -33,7 +33,7 @@ async fn get_font_info(
         fallback_group: fonts::FallbackGroup::None,
         flags: 0,
     }))?;
-    let font = *font.ok_or_else(|| format_err!("Received empty response for {}", name))?;
+    let font = *font.ok_or_else(|| format_err!("Received empty response for {:?}", name))?;
 
     assert!(font.buffer.size > 0);
     assert!(font.buffer.size <= font.buffer.vmo.get_size()?);
@@ -48,9 +48,9 @@ async fn get_font_info(
 }
 
 async fn get_font_info_basic(
-    font_provider: &fonts::ProviderProxy, name: String,
+    font_provider: &fonts::ProviderProxy, name: Option<String>,
 ) -> Result<FontInfo, Error> {
-    await!(get_font_info(font_provider, name, vec![], '\0'))
+    await!(get_font_info(font_provider, name, None, '\0'))
 }
 
 fn start_provider_with_default_fonts() -> Result<(App, fonts::ProviderProxy), Error> {
@@ -66,16 +66,21 @@ fn start_provider_with_default_fonts() -> Result<(App, fonts::ProviderProxy), Er
     Ok((app, font_provider))
 }
 
-
 async fn test_basic() -> Result<(), Error> {
     let (_app, font_provider) = start_provider_with_default_fonts()?;
 
-    let default = await!(get_font_info_basic(&font_provider, "".to_string()))
-        .context("Failed to load default font")?;
-    let roboto = await!(get_font_info_basic(&font_provider, "Roboto".to_string()))
-        .context("Failed to load Roboto")?;
-    let roboto_slab = await!(get_font_info_basic(&font_provider, "Roboto Slab".to_string()))
-        .context("Failed to load Roboto Slab")?;
+    let default =
+        await!(get_font_info_basic(&font_provider, None)).context("Failed to load default font")?;
+    let roboto = await!(get_font_info_basic(
+        &font_provider,
+        Some("Roboto".to_string())
+    ))
+    .context("Failed to load Roboto")?;
+    let roboto_slab = await!(get_font_info_basic(
+        &font_provider,
+        Some("Roboto Slab".to_string())
+    ))
+    .context("Failed to load Roboto Slab")?;
 
     // Roboto should be returned by default.
     assert!(default == roboto);
@@ -91,10 +96,16 @@ async fn test_aliases() -> Result<(), Error> {
     let (_app, font_provider) = start_provider_with_default_fonts()?;
 
     // Both requests should return the same font.
-    let robotoslab = await!(get_font_info_basic(&font_provider, "RobotoSlab".to_string()))
-        .context("Failed to load RobotoSlab")?;
-    let roboto_slab = await!(get_font_info_basic(&font_provider, "Roboto Slab".to_string()))
-        .context("Failed to load Roboto Slab")?;
+    let robotoslab = await!(get_font_info_basic(
+        &font_provider,
+        Some("RobotoSlab".to_string())
+    ))
+    .context("Failed to load RobotoSlab")?;
+    let roboto_slab = await!(get_font_info_basic(
+        &font_provider,
+        Some("Roboto Slab".to_string())
+    ))
+    .context("Failed to load Roboto Slab")?;
     assert!(robotoslab == roboto_slab);
 
     Ok(())
@@ -116,7 +127,8 @@ fn start_provider_with_test_fonts() -> Result<(App, fonts::ProviderProxy), Error
                 "/test_fonts/manifest.json".to_string(),
             ]),
             launch_options,
-        ).context("Failed to launch fonts::Provider")?;
+        )
+        .context("Failed to launch fonts::Provider")?;
 
     let font_provider = app
         .connect_to_service(fonts::ProviderMarker)
@@ -133,16 +145,18 @@ async fn test_font_collections() -> Result<(), Error> {
     // return the same buffer with different font index values.
     let noto_sans_cjk_ja = await!(get_font_info(
         &font_provider,
-        "NotoSansCJK".to_string(),
-        vec!["ja".to_string()],
+        Some("NotoSansCJK".to_string()),
+        Some(vec!["ja".to_string()]),
         '\0'
-    )).context("Failed to load NotoSansCJK font")?;
+    ))
+    .context("Failed to load NotoSansCJK font")?;
     let noto_sans_cjk_sc = await!(get_font_info(
         &font_provider,
-        "NotoSansCJK".to_string(),
-        vec!["zh-Hans".to_string()],
+        Some("NotoSansCJK".to_string()),
+        Some(vec!["zh-Hans".to_string()]),
         '\0'
-    )).context("Failed to load NotoSansCJK font")?;
+    ))
+    .context("Failed to load NotoSansCJK font")?;
 
     assert!(noto_sans_cjk_ja.vmo_koid == noto_sans_cjk_sc.vmo_koid);
     assert!(noto_sans_cjk_ja.index != noto_sans_cjk_sc.index);
@@ -155,17 +169,19 @@ async fn test_fallback() -> Result<(), Error> {
 
     let noto_sans_cjk_ja = await!(get_font_info(
         &font_provider,
-        "NotoSansCJK".to_string(),
-        vec!["ja".to_string()],
+        Some("NotoSansCJK".to_string()),
+        Some(vec!["ja".to_string()]),
         '\0'
-    )).context("Failed to load NotoSansCJK font")?;
+    ))
+    .context("Failed to load NotoSansCJK font")?;
 
     let noto_sans_cjk_ja_by_char = await!(get_font_info(
         &font_provider,
-        "Roboto".to_string(),
-        vec!["ja".to_string()],
+        Some("Roboto".to_string()),
+        Some(vec!["ja".to_string()]),
         'な'
-    )).context("Failed to load NotoSansCJK font")?;
+    ))
+    .context("Failed to load NotoSansCJK font")?;
 
     // Same font should be returned in both cases.
     assert!(noto_sans_cjk_ja == noto_sans_cjk_ja_by_char);
@@ -179,17 +195,19 @@ async fn test_fallback_group() -> Result<(), Error> {
 
     let noto_serif_cjk_ja = await!(get_font_info(
         &font_provider,
-        "Noto Serif CJK".to_string(),
-        vec!["ja".to_string()],
+        Some("Noto Serif CJK".to_string()),
+        Some(vec!["ja".to_string()]),
         '\0'
-    )).context("Failed to load Noto Serif CJK font")?;
+    ))
+    .context("Failed to load Noto Serif CJK font")?;
 
     let noto_serif_cjk_ja_by_char = await!(get_font_info(
         &font_provider,
-        "Roboto Slab".to_string(),
-        vec!["ja".to_string()],
+        Some("Roboto Slab".to_string()),
+        Some(vec!["ja".to_string()]),
         'な'
-    )).context("Failed to load Noto Serif CJK font")?;
+    ))
+    .context("Failed to load Noto Serif CJK font")?;
 
     // The query above requested Roboto Slab, so it's expected to return
     // Noto Serif CJK instead of Noto Sans CJK because Roboto Slab and

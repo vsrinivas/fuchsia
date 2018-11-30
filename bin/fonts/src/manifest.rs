@@ -46,10 +46,7 @@ pub struct Font {
     #[serde(default = "default_index")]
     pub index: u32,
 
-    #[serde(
-        default = "default_slant",
-        deserialize_with = "deserialize_slant"
-    )]
+    #[serde(default = "default_slant", deserialize_with = "deserialize_slant")]
     pub slant: fonts::Slant,
 
     #[serde(default = "default_weight")]

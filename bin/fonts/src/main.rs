@@ -31,7 +31,8 @@ fn main() -> Result<(), Error> {
             "font-manifest",
             "Load fonts from the specified font manifest file.",
             "MANIFEST",
-        ).optflag(
+        )
+        .optflag(
             "n",
             "no-default-fonts",
             "Don't load fonts from default location.",
@@ -65,7 +66,8 @@ fn main() -> Result<(), Error> {
     let fut = ServicesServer::new()
         .add_service((FontProviderMarker::NAME, move |channel| {
             font_service::spawn_server(service.clone(), channel)
-        })).start()
+        }))
+        .start()
         .context("Creating ServicesServer for Font service failed")?;
     executor
         .run_singlethreaded(fut)

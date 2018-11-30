@@ -36,7 +36,7 @@ struct Request {
     // specified family doesn't have glyph for the requested |character| then
     // a font from another family may be returned. This behavior can be disabled
     // using REQUEST_FLAG_NO_FALLBACK.
-    string:128 family;
+    string:128? family;
 
     // For example, 400 is normal, 700 is bold.
     uint32 weight = 400;
@@ -50,7 +50,7 @@ struct Request {
 
     // BCP47 language tags in order of preference. See
     // https://tools.ietf.org/html/bcp47 .
-    vector<string:35>:8 language;
+    vector<string:35>:8? language;
 
     // Codepoint for the character that must be present in the returned font or 0.
     // Caller that specify this field are expected to extract character set from
