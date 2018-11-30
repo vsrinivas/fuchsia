@@ -166,9 +166,7 @@ void Runner::GetFormatCallback(
       format.format.height * format.format.planes[0].bytes_per_row, 4096u);
   buffer_collection.buffer_count = kMaxFrames;
   buffer_collection.vmo_size = buffer_size;
-  // TODO(FIDL-204/kulakowski) Make this a union again when C bindings
-  // are rationalized.
-  buffer_collection.format.image = std::move(format.format);
+  buffer_collection.format.set_image(std::move(format.format));
 
   for (uint32_t i = 0; i < kMaxFrames; ++i) {
     zx::vmo vmo;
