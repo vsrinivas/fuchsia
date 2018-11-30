@@ -18,5 +18,9 @@ sdk_documentation("docs") {
       source = "bootserver.md"
       dest = "docs/bootserver.md"
     },
+    {
+      source = "packages.md"
+      dest = "docs/packages.md"
+    },
   ]
 }
