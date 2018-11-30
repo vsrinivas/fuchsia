@@ -67,13 +67,6 @@ class StoryProviderMock : public fuchsia::modular::StoryProvider {
   }
 
   // |fuchsia::modular::StoryProvider|
-  void DeleteStory(fidl::StringPtr story_id,
-                   DeleteStoryCallback callback) override {
-    deleted_story_ = story_id;
-    callback();
-  }
-
-  // |fuchsia::modular::StoryProvider|
   void GetStoryInfo(fidl::StringPtr story_id,
                     GetStoryInfoCallback callback) override {
     callback(nullptr);

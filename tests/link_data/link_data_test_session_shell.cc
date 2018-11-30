@@ -237,7 +237,7 @@ class TestApp : public modular::testing::ComponentBase<void> {
   TestPoint story2_stop_{"Story2 Stop"};
 
   void TestStory2_Delete() {
-    story_provider_->DeleteStory(story_info_.id, [this] {
+    puppet_master_->DeleteStory(story_info_.id, [this] {
       story2_stop_.Pass();
       session_shell_context_->Logout();
     });

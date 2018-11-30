@@ -44,45 +44,36 @@ namespace modular {
 
 constexpr char kSnapshotLoaderUrl[] = "snapshot";
 
-class StoryProviderImpl::DeleteStoryCall : public Operation<> {
+class StoryProviderImpl::StopStoryCall : public Operation<> {
  public:
   using StoryRuntimesMap = std::map<std::string, struct StoryRuntimeContainer>;
-  using PendingDeletion = std::pair<std::string, DeleteStoryCall*>;
 
-  DeleteStoryCall(SessionStorage* session_storage, fidl::StringPtr story_id,
-                  StoryRuntimesMap* const story_runtime_containers,
-                  MessageQueueManager* const message_queue_manager,
-                  const bool already_deleted, ResultCall result_call)
+  StopStoryCall(fidl::StringPtr story_id,
+                StoryRuntimesMap* const story_runtime_containers,
+                MessageQueueManager* const message_queue_manager,
+                ResultCall result_call)
       : Operation("StoryProviderImpl::DeleteStoryCall", std::move(result_call)),
-        session_storage_(session_storage),
         story_id_(story_id),
         story_runtime_containers_(story_runtime_containers),
-        message_queue_manager_(message_queue_manager),
-        already_deleted_(already_deleted) {}
+        message_queue_manager_(message_queue_manager) {}
 
  private:
   void Run() override {
     FlowToken flow{this};
 
-    if (already_deleted_) {
-      Teardown(flow);
-    } else {
-      session_storage_->DeleteStory(story_id_)->WeakThen(
-          GetWeakPtr(), [this, flow] { Teardown(flow); });
-    }
-  }
-
-  void Teardown(FlowToken flow) {
     auto i = story_runtime_containers_->find(story_id_);
     if (i == story_runtime_containers_->end()) {
+      FXL_LOG(WARNING) << "I was told to teardown story " << story_id_
+                       << ", but I can't find it.";
       return;
     }
 
     FXL_DCHECK(i->second.controller_impl != nullptr);
-    i->second.controller_impl->StopForDelete([this, flow] { Erase(flow); });
+    i->second.controller_impl->StopWithoutNotifying(
+        [this, flow] { CleanupRuntime(flow); });
   }
 
-  void Erase(FlowToken flow) {
+  void CleanupRuntime(FlowToken flow) {
     // Here we delete the instance from whose operation a result callback was
     // received. Thus we must assume that the callback returns to a method of
     // the instance. If we delete the instance right here, |this| would be
@@ -91,23 +82,21 @@ class StoryProviderImpl::DeleteStoryCall : public Operation<> {
     // functions that run as methods of other objects owned by |this| or
     // provided to |this|. To avoid such problems, the delete is invoked
     // through the run loop.
+    //
+    // TODO(thatguy); Understand the above comment, and rewrite it.
     async::PostTask(async_get_default_dispatcher(), [this, flow] {
       story_runtime_containers_->erase(story_id_);
       message_queue_manager_->DeleteNamespace(
           EncodeModuleComponentNamespace(story_id_), [flow] {});
-
-      // TODO(mesch): We must delete the story page too. MI4-1002
     });
   }
 
  private:
-  SessionStorage* const session_storage_;  // Not owned.
   const fidl::StringPtr story_id_;
   StoryRuntimesMap* const story_runtime_containers_;
   MessageQueueManager* const message_queue_manager_;
-  const bool already_deleted_;  // True if called from OnChange();
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(DeleteStoryCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(StopStoryCall);
 };
 
 // Loads a StoryRuntimeContainer object so that the given story is ready to be
@@ -196,12 +185,14 @@ class StoryProviderImpl::StopAllStoriesCall : public Operation<> {
       // Each callback has a copy of |flow| which only goes out-of-scope
       // once the story corresponding to |it| stops.
       //
-      // TODO(mesch): If a DeleteCall is executing in front of
-      // StopForTeardown(), then the StopCall in StopForTeardown() never
-      // executes because the fuchsia::modular::StoryController instance is
-      // deleted after the DeleteCall finishes. This will then block unless it
-      // runs in a timeout.
-      it.second.controller_impl->StopForTeardown(
+      // TODO(thatguy): If the StoryControllerImpl is deleted before it can
+      // complete StopWithoutNotifying(), we will never be called back and the
+      // OperationQueue on which we're running will block.  Moving over to
+      // fit::promise will allow us to observe cancellation.
+      //
+      // TODO(thatguy): Use StopStoryCall instead of reproducing some of its
+      // logic here.
+      it.second.controller_impl->StopWithoutNotifying(
           [this, story_id = it.first, flow] {
             // It is okay to erase story_id because story provider binding has
             // been closed and this callback cannot be invoked synchronously.
@@ -435,15 +426,6 @@ void StoryProviderImpl::MaybeLoadStoryShell() {
 }
 
 // |fuchsia::modular::StoryProvider|
-void StoryProviderImpl::DeleteStory(fidl::StringPtr story_id,
-                                    DeleteStoryCallback callback) {
-  operation_queue_.Add(new DeleteStoryCall(
-      session_storage_, story_id, &story_runtime_containers_,
-      component_context_info_.message_queue_manager,
-      false /* already_deleted */, callback));
-}
-
-// |fuchsia::modular::StoryProvider|
 void StoryProviderImpl::GetStoryInfo(fidl::StringPtr story_id,
                                      GetStoryInfoCallback callback) {
   auto on_run = Future<>::Create("StoryProviderImpl.GetStoryInfo.on_run");
@@ -611,14 +593,9 @@ void StoryProviderImpl::OnStoryStorageUpdated(
 }
 
 void StoryProviderImpl::OnStoryStorageDeleted(fidl::StringPtr story_id) {
-  // NOTE: DeleteStoryCall is used here, as well as in DeleteStory(). In this
-  // case, either another device deleted the story, or we did and the Ledger
-  // is now notifying us. In this case, we pass |already_deleted = true| so
-  // that we don't ask to delete the story data again.
-  operation_queue_.Add(new DeleteStoryCall(
-      session_storage_, story_id, &story_runtime_containers_,
-      component_context_info_.message_queue_manager, true /* already_deleted */,
-      [this, story_id] {
+  operation_queue_.Add(new StopStoryCall(
+      story_id, &story_runtime_containers_,
+      component_context_info_.message_queue_manager, [this, story_id] {
         for (const auto& i : watchers_.ptrs()) {
           (*i)->OnDelete(story_id);
         }
@@ -662,7 +639,7 @@ void StoryProviderImpl::NotifyStoryWatchers(
     const fuchsia::modular::internal::StoryData* const story_data,
     const fuchsia::modular::StoryState story_state,
     const fuchsia::modular::StoryVisibilityState story_visibility_state) {
-  if (story_data->story_options.kind_of_proto_story) {
+  if (!story_data || story_data->story_options.kind_of_proto_story) {
     return;
   }
   for (const auto& i : watchers_.ptrs()) {

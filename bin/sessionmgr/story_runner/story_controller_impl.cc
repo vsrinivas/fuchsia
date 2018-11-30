@@ -556,8 +556,7 @@ class StoryControllerImpl::StopCall : public Operation<> {
   }
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
-  const bool
-      notify_watchers_;  // Whether to notify state change; false in DeleteCall.
+  const bool notify_watchers_;  // Whether to notify state change to watchers.
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StopCall);
 };
@@ -626,34 +625,6 @@ class StoryControllerImpl::StopModuleAndStoryIfEmptyCall : public Operation<> {
   OperationQueue operation_queue_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StopModuleAndStoryIfEmptyCall);
-};
-
-class StoryControllerImpl::DeleteCall : public Operation<> {
- public:
-  DeleteCall(StoryControllerImpl* const story_controller_impl,
-             std::function<void()> done)
-      : Operation("StoryControllerImpl::DeleteCall", [] {}),
-        story_controller_impl_(story_controller_impl),
-        done_(std::move(done)) {}
-
- private:
-  void Run() override {
-    // No call to Done(), in order to block all further operations on the queue
-    // until the instance is deleted.
-    operation_queue_.Add(new StopCall(story_controller_impl_,
-                                      false /* notify watchers */, done_));
-  }
-
-  StoryControllerImpl* const story_controller_impl_;  // not owned
-
-  // Not the result call of the Operation, because it's invoked without
-  // unblocking the operation queue, to prevent subsequent operations from
-  // executing until the instance is deleted, which cancels those operations.
-  std::function<void()> done_;
-
-  OperationQueue operation_queue_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(DeleteCall);
 };
 
 class StoryControllerImpl::OnModuleDataUpdatedCall : public Operation<> {
@@ -1172,11 +1143,7 @@ bool StoryControllerImpl::IsRunning() {
   }
 }
 
-void StoryControllerImpl::StopForDelete(const StopCallback& done) {
-  operation_queue_.Add(new DeleteCall(this, done));
-}
-
-void StoryControllerImpl::StopForTeardown(const StopCallback& done) {
+void StoryControllerImpl::StopWithoutNotifying(const StopCallback& done) {
   operation_queue_.Add(new StopCall(this, false /* notify watchers */, done));
 }
 

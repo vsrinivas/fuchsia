@@ -64,21 +64,9 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   // Called by StoryProviderImpl.
   bool IsRunning();
 
-  // Called by StoryProviderImpl.
-  //
-  // A variant of Stop() that stops the story because the story is being
-  // deleted. The StoryControllerImpl instance is deleted by StoryProviderImpl
-  // and the story data are deleted from the ledger once the done callback is
-  // invoked.
-  //
-  // No further operations invoked after this one are executed. (The Operation
-  // accomplishes this by not calling Done() and instead invoking its callback
-  // directly from Run(), such that the OperationQueue stays blocked on it until
-  // it gets deleted.)
-  void StopForDelete(const std::function<void()>& done);
-
-  // Called by StoryProviderImpl.
-  void StopForTeardown(const std::function<void()>& done);
+  // Called by StoryProviderImpl. A variant of Stop() which does not notify
+  // listeners that we stopped the story.
+  void StopWithoutNotifying(const std::function<void()>& done);
 
   // Called by StoryProviderImpl.
   fuchsia::modular::StoryState GetStoryState() const;
@@ -355,7 +343,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   // Operations implemented here.
   class AddIntentCall;
   class DefocusCall;
-  class DeleteCall;
   class FocusCall;
   class KillModuleCall;
   class LaunchModuleCall;

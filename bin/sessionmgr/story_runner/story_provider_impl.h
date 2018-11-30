@@ -131,8 +131,8 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
       fidl::VectorPtr<fuchsia::modular::OngoingActivityType>
           ongoing_activities);
 
-  // Called by StoryControllerImpl. Sends request to fuchsia::modular::SessionShell
-  // through PresentationProvider.
+  // Called by StoryControllerImpl. Sends request to
+  // fuchsia::modular::SessionShell through PresentationProvider.
   void GetPresentation(
       fidl::StringPtr story_id,
       fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request);
@@ -176,10 +176,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
           entity_provider_request);
 
  private:
-  // |fuchsia::modular::StoryProvider|
-  void DeleteStory(fidl::StringPtr story_id,
-                   DeleteStoryCallback callback) override;
-
   // |fuchsia::modular::StoryProvider|
   void GetController(fidl::StringPtr story_id,
                      fidl::InterfaceRequest<fuchsia::modular::StoryController>
@@ -270,7 +266,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
       user_intelligence_provider_;                           // Not owned.
   fuchsia::modular::ModuleResolver* const module_resolver_;  // Not owned.
   EntityProviderRunner* const entity_provider_runner_;       // Not owned.
-  modular::ModuleFacetReader* const module_facet_reader_;  // Not owned.
+  modular::ModuleFacetReader* const module_facet_reader_;    // Not owned.
   PresentationProvider* const presentation_provider_;        // Not owned.
 
   // When a story gets created, or when it gets focused on this device, we write
@@ -313,9 +309,8 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   fxl::WeakPtrFactory<StoryProviderImpl> weak_factory_;
 
   // Operations implemented here.
-  class CreateStoryCall;
-  class DeleteStoryCall;
   class LoadStoryRuntimeCall;
+  class StopStoryCall;
   class StopAllStoriesCall;
   class StopStoryShellCall;
   class GetStoryEntityProviderCall;
