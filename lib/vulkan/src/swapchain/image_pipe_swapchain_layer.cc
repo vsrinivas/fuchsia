@@ -106,58 +106,6 @@ VkResult ImagePipeSwapchain::Initialize(
       GetLayerDataPtr(get_dispatch_key(device), layer_data_map)
           ->device_dispatch_table;
 
-  VkInstance instance =
-      GetLayerDataPtr(get_dispatch_key(device), layer_data_map)->instance;
-
-  VkLayerInstanceDispatchTable* instance_dispatch_table =
-      GetLayerDataPtr(get_dispatch_key(instance), layer_data_map)
-          ->instance_dispatch_table;
-
-  uint32_t physical_device_count;
-  result = instance_dispatch_table->EnumeratePhysicalDevices(
-      instance, &physical_device_count, nullptr);
-  if (result != VK_SUCCESS)
-    return result;
-
-  if (physical_device_count < 1)
-    return VK_ERROR_DEVICE_LOST;
-
-  std::vector<VkPhysicalDevice> physical_devices(physical_device_count);
-  result = instance_dispatch_table->EnumeratePhysicalDevices(
-      instance, &physical_device_count, physical_devices.data());
-  if (result != VK_SUCCESS)
-    return VK_ERROR_DEVICE_LOST;
-
-  bool external_semaphore_extension_available = false;
-  for (auto physical_device : physical_devices) {
-    uint32_t device_extension_count;
-    result = instance_dispatch_table->EnumerateDeviceExtensionProperties(
-        physical_device, nullptr, &device_extension_count, nullptr);
-    if (result != VK_SUCCESS)
-      return VK_ERROR_DEVICE_LOST;
-
-    if (device_extension_count > 0) {
-      std::vector<VkExtensionProperties> device_extensions(
-          device_extension_count);
-      result = instance_dispatch_table->EnumerateDeviceExtensionProperties(
-          physical_device, nullptr, &device_extension_count,
-          device_extensions.data());
-      if (result != VK_SUCCESS)
-        return VK_ERROR_DEVICE_LOST;
-
-      for (uint32_t i = 0; i < device_extension_count; i++) {
-        if (!strcmp(VK_KHR_EXTERNAL_SEMAPHORE_FUCHSIA_EXTENSION_NAME,
-                    device_extensions[i].extensionName)) {
-          external_semaphore_extension_available = true;
-          break;
-        }
-      }
-    }
-  }
-
-  if (!external_semaphore_extension_available)
-    return VK_ERROR_SURFACE_LOST_KHR;
-
   VkFlags usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
   // We can't call EnumerateInstanceExtensionsProperties here; so just assume
@@ -688,8 +636,57 @@ DestroyInstance(VkInstance instance, const VkAllocationCallbacks* pAllocator) {
 VKAPI_ATTR VkResult VKAPI_CALL
 CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo,
              const VkAllocationCallbacks* pAllocator, VkDevice* pDevice) {
-  LayerData* my_instance_data =
+  LayerData* layer_data =
       GetLayerDataPtr(get_dispatch_key(gpu), layer_data_map);
+
+  bool external_memory_extension_available = false;
+  bool external_semaphore_extension_available = false;
+  uint32_t device_extension_count;
+  VkResult result =
+      layer_data->instance_dispatch_table->EnumerateDeviceExtensionProperties(
+          gpu, nullptr, &device_extension_count, nullptr);
+  if (result == VK_SUCCESS && device_extension_count > 0) {
+    std::vector<VkExtensionProperties> device_extensions(
+        device_extension_count);
+    result =
+        layer_data->instance_dispatch_table->EnumerateDeviceExtensionProperties(
+            gpu, nullptr, &device_extension_count, device_extensions.data());
+    if (result == VK_SUCCESS) {
+      for (uint32_t i = 0; i < device_extension_count; i++) {
+        if (!strcmp(VK_KHR_EXTERNAL_MEMORY_FUCHSIA_EXTENSION_NAME,
+                    device_extensions[i].extensionName)) {
+          external_memory_extension_available = true;
+        }
+        if (!strcmp(VK_KHR_EXTERNAL_SEMAPHORE_FUCHSIA_EXTENSION_NAME,
+                    device_extensions[i].extensionName)) {
+          external_semaphore_extension_available = true;
+        }
+      }
+    }
+  }
+  if (!external_memory_extension_available) {
+    fprintf(stderr, "Device extension not available: %s\n",
+            VK_KHR_EXTERNAL_MEMORY_FUCHSIA_EXTENSION_NAME);
+  }
+  if (!external_semaphore_extension_available) {
+    fprintf(stderr, "Device extension not available: %s\n",
+            VK_KHR_EXTERNAL_SEMAPHORE_FUCHSIA_EXTENSION_NAME);
+  }
+  if (!external_memory_extension_available ||
+      !external_semaphore_extension_available)
+    return VK_ERROR_INITIALIZATION_FAILED;
+
+  VkDeviceCreateInfo create_info = *pCreateInfo;
+  std::vector<const char*> enabled_extensions;
+  for (uint32_t i = 0; i < create_info.enabledExtensionCount; i++) {
+    enabled_extensions.push_back(create_info.ppEnabledExtensionNames[i]);
+  }
+  enabled_extensions.push_back(VK_KHR_EXTERNAL_MEMORY_FUCHSIA_EXTENSION_NAME);
+  enabled_extensions.push_back(
+      VK_KHR_EXTERNAL_SEMAPHORE_FUCHSIA_EXTENSION_NAME);
+  create_info.enabledExtensionCount = enabled_extensions.size();
+  create_info.ppEnabledExtensionNames = enabled_extensions.data();
+
   VkLayerDeviceCreateInfo* chain_info =
       get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
 
@@ -699,7 +696,7 @@ CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo,
   PFN_vkGetDeviceProcAddr fpGetDeviceProcAddr =
       chain_info->u.pLayerInfo->pfnNextGetDeviceProcAddr;
   PFN_vkCreateDevice fpCreateDevice = (PFN_vkCreateDevice)fpGetInstanceProcAddr(
-      my_instance_data->instance, "vkCreateDevice");
+      layer_data->instance, "vkCreateDevice");
   if (fpCreateDevice == NULL) {
     return VK_ERROR_INITIALIZATION_FAILED;
   }
@@ -707,7 +704,7 @@ CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo,
   // Advance the link info for the next element on the chain
   chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;
 
-  VkResult result = fpCreateDevice(gpu, pCreateInfo, pAllocator, pDevice);
+  result = fpCreateDevice(gpu, &create_info, pAllocator, pDevice);
   if (result != VK_SUCCESS) {
     return result;
   }
@@ -717,7 +714,7 @@ CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo,
 
   // Setup device dispatch table
   my_device_data->device_dispatch_table = new VkLayerDispatchTable;
-  my_device_data->instance = my_instance_data->instance;
+  my_device_data->instance = layer_data->instance;
   layer_init_device_dispatch_table(
       *pDevice, my_device_data->device_dispatch_table, fpGetDeviceProcAddr);
 
