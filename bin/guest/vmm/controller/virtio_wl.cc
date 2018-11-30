@@ -11,15 +11,20 @@
 static constexpr char kVirtioWlUrl[] =
     "fuchsia-pkg://fuchsia.com/virtio_wl#meta/virtio_wl.cmx";
 
+// TODO(MAC-228): move feature flag to common location
+#define VIRTIO_WL_F_MAGMA_FLAGS (1u << 2)
+
 VirtioWl::VirtioWl(const PhysMem& phys_mem)
-    : VirtioComponentDevice(phys_mem, VIRTIO_WL_F_TRANS_FLAGS,
+    : VirtioComponentDevice(phys_mem,
+                            VIRTIO_WL_F_TRANS_FLAGS | VIRTIO_WL_F_MAGMA_FLAGS,
                             fit::bind_member(this, &VirtioWl::ConfigureQueue),
                             fit::bind_member(this, &VirtioWl::Ready)) {}
 
 zx_status_t VirtioWl::Start(
     const zx::guest& guest, zx::vmar vmar,
     fidl::InterfaceHandle<fuchsia::guest::WaylandDispatcher> dispatch_handle,
-    fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher) {
+    fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher,
+    const std::string& device_path, const std::string& driver_path) {
   component::Services services;
   fuchsia::sys::LaunchInfo launch_info{
       .url = kVirtioWlUrl,
@@ -32,8 +37,10 @@ zx_status_t VirtioWl::Start(
   if (status != ZX_OK) {
     return status;
   }
-  return wayland_->Start(std::move(start_info), std::move(vmar),
-                         std::move(dispatch_handle));
+  status =
+      wayland_->Start(std::move(start_info), std::move(vmar),
+                      std::move(dispatch_handle), device_path, driver_path);
+  return status;
 }
 
 zx_status_t VirtioWl::ConfigureQueue(uint16_t queue, uint16_t size,

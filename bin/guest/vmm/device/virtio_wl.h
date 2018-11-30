@@ -104,6 +104,7 @@ class VirtioWl : public DeviceBase<VirtioWl>,
   void Start(
       fuchsia::guest::device::StartInfo start_info, zx::vmar vmar,
       fidl::InterfaceHandle<fuchsia::guest::WaylandDispatcher> dispatcher,
+      fidl::StringPtr device_path, fidl::StringPtr driver_path,
       StartCallback callback) override;
 
  private:
@@ -141,6 +142,8 @@ class VirtioWl : public DeviceBase<VirtioWl>,
   std::unordered_map<uint32_t, zx_signals_t> ready_vfds_;
   uint32_t next_vfd_id_ = VIRTWL_NEXT_VFD_ID_BASE;
   std::unique_ptr<VirtioMagma> magma_;
+  std::string device_path_;
+  std::string driver_path_;
 };
 
 #endif  // GARNET_BIN_GUEST_VMM_DEVICE_VIRTIO_WL_H_

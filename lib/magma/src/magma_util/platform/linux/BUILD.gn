@@ -4,22 +4,21 @@
 
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
-static_library("libmagma_linux") {
-  public_deps = [
-    "$magma_build_root/include:magma_abi",
-  ]
-
-  deps = [
-    "$magma_build_root/src/magma_util",
-  ]
+source_set("futex") {
+  configs += [ "..:platform_include_config" ]
 
   sources = [
-    "magma.cc",
-    "virtio_magma_connection.cc",
-    "virtio_magma_connection.h",
-    "virtmagma.h",
+    "linux_platform_futex.cc",
+  ]
+
+  public_deps = [
+    "..:futex_header",
   ]
 
   # TODO(TC-300): [linux-toolchain] objects should be relocatable by default
   cflags = [ "-fPIC" ]
+
+  deps = [
+    "$magma_build_root/src/magma_util",
+  ]
 }

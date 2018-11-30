@@ -379,7 +379,9 @@ int main(int argc, char** argv) {
     }
     status = wl.Start(guest.object(), std::move(wl_vmar),
                       std::move(launch_info.wayland_device->dispatcher),
-                      launcher.get(), guest.device_dispatcher());
+                      launcher.get(), guest.device_dispatcher(),
+                      "/dev/class/gpu/000",
+                      "/pkg/data/drivers/libvulkan_intel_linux.so");
     if (status != ZX_OK) {
       FXL_LOG(INFO) << "Could not start wayland device";
       return status;
