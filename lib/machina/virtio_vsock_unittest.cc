@@ -870,5 +870,28 @@ TEST_F(VirtioVsockTest, UnsupportedSocketType) {
   EXPECT_EQ(rx_header->flags, 0u);
 }
 
+TEST_F(VirtioVsockTest, InitialCredit) {
+  GuestConnectOnPort(kVirtioVsockHostPort, kVirtioVsockGuestEphemeralPort,
+                     CreateSocket);
+  ASSERT_TRUE(remote_handles_.size() == 1);
+
+  zx::socket socket(std::move(remote_handles_.back()));
+
+  std::vector<uint8_t> expected = {1, 2, 3, 4};
+
+  // Write data to socket.
+  size_t actual;
+  ASSERT_EQ(socket.write(0, expected.data(), expected.size(), &actual), ZX_OK);
+  EXPECT_EQ(actual, expected.size());
+
+  // Expect that the connection has correct initial credit and so the guest
+  // will be able to pull out the data.
+  RxBuffer* rx_buffer = DoReceive();
+  ASSERT_NE(nullptr, rx_buffer);
+  VerifyHeader(rx_buffer, kVirtioVsockHostPort, kVirtioVsockGuestEphemeralPort,
+               expected.size(), VIRTIO_VSOCK_OP_RW, 0);
+  EXPECT_EQ(memcmp(rx_buffer->data, expected.data(), expected.size()), 0);
+}
+
 }  // namespace
 }  // namespace machina

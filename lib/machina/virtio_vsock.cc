@@ -138,8 +138,12 @@ uint32_t VirtioVsock::Connection::PeerFree() const {
 }
 
 void VirtioVsock::Connection::ReadCredit(virtio_vsock_hdr_t* header) {
-  peer_buf_alloc_ = header->buf_alloc;
-  peer_fwd_cnt_ = header->fwd_cnt;
+  SetCredit(header->buf_alloc, header->fwd_cnt);
+}
+
+void VirtioVsock::Connection::SetCredit(uint32_t buf_alloc, uint32_t fwd_cnt) {
+  peer_buf_alloc_ = buf_alloc;
+  peer_fwd_cnt_ = fwd_cnt;
 }
 
 static zx_status_t wait(async_dispatcher_t* dispatcher, async::Wait* wait,
@@ -577,7 +581,8 @@ void VirtioVsock::Accept(
 }
 
 void VirtioVsock::ConnectCallback(ConnectionKey key, zx_status_t status,
-                                  zx::handle handle) {
+                                  zx::handle handle, uint32_t buf_alloc,
+                                  uint32_t fwd_cnt) {
   auto new_conn =
       create_connection(std::move(handle), dispatcher_, nullptr, [this, key] {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -606,6 +611,7 @@ void VirtioVsock::ConnectCallback(ConnectionKey key, zx_status_t status,
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to setup connection " << status;
   }
+  conn->SetCredit(buf_alloc, fwd_cnt);
 }
 
 zx_status_t VirtioVsock::AddConnectionLocked(ConnectionKey key,
@@ -860,11 +866,14 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
         // If we don't have a connector then implicitly just refuse any outbound
         // connections. Otherwise send out a request for a connection to the
         // remote CID.
-        connector_->Connect(header->src_cid, header->src_port, header->dst_cid,
-                            header->dst_port,
-                            [this, key](zx_status_t status, zx::handle handle) {
-                              ConnectCallback(key, status, std::move(handle));
-                            });
+        connector_->Connect(
+            header->src_cid, header->src_port, header->dst_cid,
+            header->dst_port,
+            [this, key, buf_alloc = header->buf_alloc,
+             fwd_cnt = header->fwd_cnt](zx_status_t status, zx::handle handle) {
+              ConnectCallback(key, status, std::move(handle), buf_alloc,
+                              fwd_cnt);
+            });
         continue;
       }
     }

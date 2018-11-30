@@ -97,8 +97,8 @@ class VirtioVsock
   void Accept(
       uint32_t src_cid, uint32_t src_port, uint32_t port, zx::handle handle,
       fuchsia::guest::GuestVsockAcceptor::AcceptCallback callback) override;
-  void ConnectCallback(ConnectionKey key, zx_status_t status,
-                       zx::handle handle);
+  void ConnectCallback(ConnectionKey key, zx_status_t status, zx::handle handle,
+                       uint32_t buf_alloc, uint32_t fwd_cnt);
 
   zx_status_t AddConnectionLocked(ConnectionKey key,
                                   std::unique_ptr<Connection> conn)
@@ -146,6 +146,7 @@ class VirtioVsock::Connection {
   uint32_t PeerFree() const;
   // Read credit from the header.
   void ReadCredit(virtio_vsock_hdr_t* header);
+  void SetCredit(uint32_t buf_alloc, uint32_t fwd_cnt);
   // Write credit to the header. If this function returns:
   // - ZX_OK, it indicates to the device that it was successful.
   // - ZX_ERR_UNAVAILABLE, it indicates to the device that there is no buffer
