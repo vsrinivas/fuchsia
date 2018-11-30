@@ -11,6 +11,7 @@
             "fuchsia.bluetooth.le.Peripheral",
             "fuchsia.logger.Log",
             "fuchsia.logger.LogSink",
+            "fuchsia.net.LegacySocketProvider",
             "fuchsia.tracelink.Registry"
         ]
     }
