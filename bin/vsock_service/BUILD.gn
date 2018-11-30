@@ -1,0 +1,73 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+
+rustc_binary("bin") {
+  name = "vsock_service"
+  edition = "2018"
+
+  deps = [
+    ":lib",
+    "//garnet/public/fidl/fuchsia.vsock:fuchsia.vsock-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-app",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
+    "//zircon/public/fidl/fuchsia-hardware-vsock:fuchsia-hardware-vsock-rustc",
+  ]
+}
+
+rustc_library("lib") {
+  name = "vsock_service_lib"
+  edition = "2018"
+  with_unit_tests = true
+  deps = [
+    "//garnet/public/fidl/fuchsia.vsock:fuchsia.vsock-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust-crates/rustc_deps:crossbeam",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
+    "//third_party/rust-crates/rustc_deps:parking_lot",
+    "//third_party/rust-crates/rustc_deps:pin-utils",
+    "//zircon/public/fidl/fuchsia-hardware-vsock:fuchsia-hardware-vsock-rustc",
+  ]
+}
+
+package("vsock_service") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "rust_crates/vsock_service"
+
+  meta = [
+    {
+      path = rebase_path("meta/vsock_service.cmx")
+      dest = "vsock_service.cmx"
+    },
+  ]
+}
+
+test_package("vsock_service-tests") {
+  deps = [
+    ":lib",
+  ]
+
+  tests = [
+    {
+      name = "vsock_service_lib_lib_test"
+    },
+  ]
+}

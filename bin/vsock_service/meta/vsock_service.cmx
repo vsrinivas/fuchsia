@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "dev": [
+            "class/vsock"
+        ],
+        "services": [
+            "fuchsia.logger.Log",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}
