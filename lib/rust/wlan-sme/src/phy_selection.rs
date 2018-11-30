@@ -107,8 +107,7 @@ pub fn derive_phy_cbw(bss: &fidl_mlme::BssDescription,
         } else if band_cap.vht_cap.is_none() || bss.vht_cap.is_none() || bss.vht_op.is_none() {
             fidl_mlme::Phy::Ht
         } else {
-            // TODO(NET-1422): Change this to Vht when MLME is ready to handle
-            fidl_mlme::Phy::Ht
+            fidl_mlme::Phy::Vht
         };
 
     let phy_to_use = match params.phy {
@@ -249,10 +248,9 @@ mod tests {
     }
 
     #[test]
-    fn test_derivce_phy_cbw() {
+    fn test_derive_phy_cbw() {
         {
-            // TODO(NET-1422): Change this to Vht when MLME is ready to handle
-            let want = (fidl_mlme::Phy::Ht, fidl_mlme::Cbw::Cbw40);
+            let want = (fidl_mlme::Phy::Vht, fidl_mlme::Cbw::Cbw80);
             let got =
                 derive_phy_cbw(&fake_vht_bss_description(),
                                &fake_device_info_vht(fidl_mlme::ChanWidthSet::TwentyForty),
