@@ -1,0 +1,13 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.wlan.common;
+
+enum RequestStatus {
+    ACKNOWLEDGED = 0;
+    REJECTED_NOT_SUPPORTED = 1;
+    REJECTED_INCOMPATIBLE_MODE = 2;
+    REJECTED_ALREADY_IN_USE = 3;
+    REJECTED_DUPLICATE_REQUEST = 4;
+};
