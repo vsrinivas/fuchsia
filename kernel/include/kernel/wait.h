@@ -105,40 +105,8 @@ public:
         return wait_queue_block(&wq_, deadline);
     }
 
-    zx_status_t BlockWithMask(zx_time_t deadline, uint signal_mask) TA_REQ(thread_lock) {
-        return wait_queue_block_with_mask(&wq_, deadline, signal_mask);
-    }
-
-    int BlockedPriority() TA_REQ(thread_lock) {
-        return wait_queue_blocked_priority(&wq_);
-    }
-
     int WakeOne(bool reschedule, zx_status_t wait_queue_error) TA_REQ(thread_lock) {
         return wait_queue_wake_one(&wq_, reschedule, wait_queue_error);
-    }
-
-    int WakeAll(bool reschedule, zx_status_t wait_queue_error) TA_REQ(thread_lock) {
-        return wait_queue_wake_one(&wq_, reschedule, wait_queue_error);
-    }
-
-    struct thread* DequeueOne(zx_status_t wait_queue_error) TA_REQ(thread_lock) {
-        return wait_queue_dequeue_one(&wq_, wait_queue_error);
-    }
-
-    bool IsEmpty() TA_REQ(thread_lock) {
-        return wait_queue_is_empty(&wq_);
-    }
-
-    static zx_status_t UnblockThread(struct thread* t, zx_status_t wait_queue_error) TA_REQ(thread_lock) {
-        return wait_queue_unblock_thread(t, wait_queue_error);
-    }
-
-    static void PriorityChanged(struct thread* t, int old_prio) TA_REQ(thread_lock) {
-        return wait_queue_priority_changed(t, old_prio);
-    }
-
-    void Validate() TA_REQ(thread_lock) {
-        return wait_queue_validate_queue(&wq_);
     }
 
 private:
