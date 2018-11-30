@@ -48,6 +48,7 @@
         "garnet/packages/tests/log_listener",
         "garnet/packages/tests/logger",
         "garnet/packages/tests/magma",
+        "garnet/packages/tests/mdns",
         "garnet/packages/tests/media",
         "garnet/packages/tests/mediaplayer",
         "garnet/packages/tests/memory_monitor",

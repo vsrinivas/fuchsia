@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/test.gni")
+import("//build/test/test_package.gni")
 
 executable("bin") {
   output_name = "mdns"
@@ -81,6 +83,25 @@ executable("bin") {
   ]
 }
 
+test("tests") {
+  output_name = "mdns_tests"
+
+  sources = [
+    "dns_message.cc",
+    "dns_message.h",
+    "dns_reading.cc",
+    "dns_reading.h",
+    "packet_reader.cc",
+    "packet_reader.h",
+    "test/dns_reading_test.cc",
+  ]
+
+  deps = [
+    "//garnet/lib/inet",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
 package("service") {
   deps = [
     ":bin",
@@ -105,6 +126,18 @@ package("config") {
     {
       dest = "sysmgr/mdns.config"
       path = rebase_path("service.config")
+    },
+  ]
+}
+
+test_package("mdns_tests") {
+  deps = [
+    ":tests",
+  ]
+
+  tests = [
+    {
+      name = "mdns_tests"
     },
   ]
 }

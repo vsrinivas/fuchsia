@@ -250,6 +250,11 @@ PacketReader& operator>>(PacketReader& reader, DnsResource& value) {
     reader.MarkUnhealthy();
     FXL_DLOG(ERROR) << "data_size is " << data_size << ", remaining is "
                     << reader.bytes_remaining();
+  }
+
+  if (!reader.healthy()) {
+    // Make sure we don't run any of the union member destructors.
+    value.type_ = DnsType::kInvalid;
     return reader;
   }
 
