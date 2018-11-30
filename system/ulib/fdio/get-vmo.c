@@ -36,13 +36,13 @@ static zx_status_t read_at(fdio_t* io, void* buf, size_t len, off_t offset,
 static zx_status_t read_file_into_vmo(fdio_t* io, zx_handle_t* out_vmo) {
     zx_handle_t current_vmar_handle = zx_vmar_root_self();
 
-    vnattr_t attr;
+    fuchsia_io_NodeAttributes attr;
     zx_status_t status = io->ops->get_attr(io, &attr);
     if (status != ZX_OK) {
         return ZX_ERR_BAD_HANDLE;
     }
 
-    uint64_t size = attr.size;
+    uint64_t size = attr.content_size;
     uint64_t offset = 0;
 
     status = zx_vmo_create(size, 0, out_vmo);

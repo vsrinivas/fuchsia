@@ -819,22 +819,23 @@ zx_status_t fdio_wait_fd(int fd, uint32_t events, uint32_t* _pending, zx_time_t 
 }
 
 static zx_status_t fdio_stat(fdio_t* io, struct stat* s) {
-    vnattr_t attr;
+    fuchsia_io_NodeAttributes attr;
     zx_status_t status = io->ops->get_attr(io, &attr);
     if (status != ZX_OK) {
         return status;
     }
+
     memset(s, 0, sizeof(struct stat));
     s->st_mode = attr.mode;
-    s->st_ino = attr.inode;
-    s->st_size = attr.size;
-    s->st_blksize = attr.blksize;
-    s->st_blocks = attr.blkcount;
-    s->st_nlink = attr.nlink;
-    s->st_ctim.tv_sec = attr.create_time / ZX_SEC(1);
-    s->st_ctim.tv_nsec = attr.create_time % ZX_SEC(1);
-    s->st_mtim.tv_sec = attr.modify_time / ZX_SEC(1);
-    s->st_mtim.tv_nsec = attr.modify_time % ZX_SEC(1);
+    s->st_ino = attr.id;
+    s->st_size = attr.content_size;
+    s->st_blksize = VNATTR_BLKSIZE;
+    s->st_blocks = attr.storage_size / VNATTR_BLKSIZE;
+    s->st_nlink = attr.link_count;
+    s->st_ctim.tv_sec = attr.creation_time / ZX_SEC(1);
+    s->st_ctim.tv_nsec = attr.creation_time % ZX_SEC(1);
+    s->st_mtim.tv_sec = attr.modification_time / ZX_SEC(1);
+    s->st_mtim.tv_nsec = attr.modification_time % ZX_SEC(1);
     return ZX_OK;
 }
 
@@ -1606,21 +1607,22 @@ char* realpath(const char* restrict filename, char* restrict resolved) {
 
 static zx_status_t zx_utimens(fdio_t* io, const struct timespec times[2],
                               int flags) {
-    vnattr_t vn;
-    vn.valid = 0;
+    fuchsia_io_NodeAttributes attr;
+    memset(&attr, 0, sizeof(attr));
+    uint32_t mask = 0;
 
     // Extract modify time.
-    vn.modify_time = (times == NULL || times[1].tv_nsec == UTIME_NOW)
+    attr.modification_time = (times == NULL || times[1].tv_nsec == UTIME_NOW)
         ? zx_clock_get(ZX_CLOCK_UTC)
         : zx_time_add_duration(ZX_SEC(times[1].tv_sec), times[1].tv_nsec);
 
     if (times == NULL || times[1].tv_nsec != UTIME_OMIT) {
         // For setattr, tell which fields are valid.
-        vn.valid = ATTR_MTIME;
+        mask = fuchsia_io_NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME;
     }
 
     // set time(s) on underlying object
-    return io->ops->set_attr(io, &vn);
+    return io->ops->set_attr(io, mask, &attr);
 }
 
 __EXPORT

@@ -363,11 +363,11 @@ static zx_status_t mxdir_readdir_locked(mxdir_t* dir, void* buf, size_t len) {
     return ptr - buf;
 }
 
-static zx_status_t mxdir_get_attr(fdio_t* io, vnattr_t* attr) {
+static zx_status_t mxdir_get_attr(fdio_t* io, fuchsia_io_NodeAttributes* attr) {
     memset(attr, 0, sizeof(*attr));
     attr->mode = V_TYPE_DIR | V_IRUSR;
-    attr->inode = fuchsia_io_INO_UNKNOWN;
-    attr->nlink = 1;
+    attr->id = fuchsia_io_INO_UNKNOWN;
+    attr->link_count = 1;
     return ZX_OK;
 }
 

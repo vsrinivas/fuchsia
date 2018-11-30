@@ -115,35 +115,14 @@ static zx_status_t fdio_zxio_sync(fdio_t* io) {
     return zxio_sync(z);
 }
 
-static zx_status_t fdio_zxio_get_attr(fdio_t* io, vnattr_t* out) {
+static zx_status_t fdio_zxio_get_attr(fdio_t* io, fuchsia_io_NodeAttributes* out) {
     zxio_t* z = fdio_get_zxio(io);
-    zxio_node_attr_t attr;
-    zx_status_t status = zxio_attr_get(z, &attr);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    // Translate zxio_node_attr_t --> vnattr
-    out->mode = attr.mode;
-    out->inode = attr.id;
-    out->size = attr.content_size;
-    out->blksize = VNATTR_BLKSIZE;
-    out->blkcount = attr.storage_size / VNATTR_BLKSIZE;
-    out->nlink = attr.link_count;
-    out->create_time = attr.creation_time;
-    out->modify_time = attr.modification_time;
-
-    return ZX_OK;
+    return zxio_attr_get(z, out);
 }
 
-static zx_status_t fdio_zxio_set_attr(fdio_t* io, const vnattr_t* vnattr) {
+static zx_status_t fdio_zxio_set_attr(fdio_t* io, uint32_t flags, const fuchsia_io_NodeAttributes* attr) {
     zxio_t* z = fdio_get_zxio(io);
-    uint32_t flags = vnattr->valid;
-    zxio_node_attr_t attr;
-    memset(&attr, 0, sizeof(attr));
-    attr.creation_time = vnattr->create_time;
-    attr.modification_time = vnattr->modify_time;
-    return zxio_attr_set(z, flags, &attr);
+    return zxio_attr_set(z, flags, attr);
 }
 
 static ssize_t fdio_zxio_read(fdio_t* io, void* data, size_t len) {

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <zircon/types.h>
+#include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/limits.h>
 #include <lib/fdio/vfs.h>
 #include <stdarg.h>
@@ -15,6 +15,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <threads.h>
+#include <zircon/types.h>
 
 typedef struct fdio fdio_t;
 typedef struct fdio_namespace fdio_ns_t;
@@ -51,8 +52,8 @@ typedef struct fdio_ops {
     ssize_t (*posix_ioctl)(fdio_t* io, int req, va_list va);
     zx_status_t (*get_vmo)(fdio_t* io, int flags, zx_handle_t* out);
     zx_status_t (*get_token)(fdio_t* io, zx_handle_t* out);
-    zx_status_t (*get_attr)(fdio_t* io, vnattr_t* out);
-    zx_status_t (*set_attr)(fdio_t* io, const vnattr_t* attr);
+    zx_status_t (*get_attr)(fdio_t* io, fuchsia_io_NodeAttributes* out);
+    zx_status_t (*set_attr)(fdio_t* io, uint32_t flags, const fuchsia_io_NodeAttributes* attr);
     zx_status_t (*sync)(fdio_t* io);
     zx_status_t (*readdir)(fdio_t* io, void* ptr, size_t max, size_t* actual);
     zx_status_t (*rewind)(fdio_t* io);
@@ -182,7 +183,7 @@ fdio_t* fdio_waitable_create(zx_handle_t h, zx_signals_t signals_in,
 
 // unsupported / do-nothing hooks shared by implementations
 zx_status_t fdio_default_get_token(fdio_t* io, zx_handle_t* out);
-zx_status_t fdio_default_set_attr(fdio_t* io, const vnattr_t* attr);
+zx_status_t fdio_default_set_attr(fdio_t* io, uint32_t flags, const fuchsia_io_NodeAttributes* attr);
 zx_status_t fdio_default_sync(fdio_t* io);
 zx_status_t fdio_default_readdir(fdio_t* io, void* ptr, size_t max, size_t* actual);
 zx_status_t fdio_default_rewind(fdio_t* io);
@@ -207,7 +208,7 @@ ssize_t fdio_default_sendto(fdio_t* io, const void* _data, size_t len,
 ssize_t fdio_default_recvmsg(fdio_t* io, struct msghdr* msg, int flags);
 ssize_t fdio_default_sendmsg(fdio_t* io, const struct msghdr* msg, int flags);
 off_t fdio_default_seek(fdio_t* io, off_t offset, int whence);
-zx_status_t fdio_default_get_attr(fdio_t* io, vnattr_t* out);
+zx_status_t fdio_default_get_attr(fdio_t* io, fuchsia_io_NodeAttributes* out);
 zx_status_t fdio_default_misc(fdio_t* io, uint32_t op, int64_t off,
                               uint32_t arg, void* data, size_t len);
 zx_status_t fdio_default_close(fdio_t* io);
