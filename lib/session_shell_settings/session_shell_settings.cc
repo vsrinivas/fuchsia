@@ -100,10 +100,6 @@ fuchsia::ui::policy::DisplayUsage GetObjectValue(const rapidjson::Value& object,
 // Given a |json| string, parses it into list of session shell settings.
 std::vector<SessionShellSettings> ParseSessionShellSettings(
     const std::string& json) {
-  // TODO(MI4-1166): topaz/lib/base_shell/lib/session_shell_chooser.dart is a
-  // similar implementation of this in Dart. One of the two implementations
-  // could probably be removed now.
-
   std::vector<SessionShellSettings> settings;
 
   rapidjson::Document document;
@@ -141,6 +137,8 @@ std::vector<SessionShellSettings> ParseSessionShellSettings(
         .screen_height = GetObjectValue<float>(session_shell, "screen_height"),
         .display_usage = GetObjectValue<fuchsia::ui::policy::DisplayUsage>(
             session_shell, "display_usage"),
+        .auto_login =
+            GetObjectValue<std::string>(session_shell, "auto_login") == "true",
     });
   }
 
@@ -173,9 +171,6 @@ SessionShellSettings::GetSystemSettings() {
 
 bool operator==(const SessionShellSettings& lhs,
                 const SessionShellSettings& rhs) {
-  if (lhs.name != rhs.name)
-    return false;
-
   auto float_eq = [](float f, float g) {
     // OK to do direct float comparison here, since we want bitwise value
     // equality.
@@ -188,16 +183,10 @@ bool operator==(const SessionShellSettings& lhs,
     return false;
   };
 
-  if (!float_eq(lhs.screen_width, rhs.screen_width))
-    return false;
-
-  if (!float_eq(lhs.screen_height, rhs.screen_height))
-    return false;
-
-  if (lhs.display_usage != rhs.display_usage)
-    return false;
-
-  return true;
+  return lhs.name == rhs.name && lhs.auto_login == rhs.auto_login &&
+         float_eq(lhs.screen_width, rhs.screen_width) &&
+         float_eq(lhs.screen_height, rhs.screen_height) &&
+         lhs.display_usage == rhs.display_usage;
 }
 
 }  // namespace modular

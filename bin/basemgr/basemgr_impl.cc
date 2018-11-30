@@ -237,10 +237,6 @@ void BasemgrImpl::Start() {
         << std::endl;
   }
 
-  // Start the base shell. This is done first so that we can show some UI
-  // until other things come up.
-  StartBaseShell();
-
   // Wait for persistent data to come up.
   if (!settings_.no_minfs) {
     WaitForMinfs();
@@ -276,6 +272,25 @@ void BasemgrImpl::Start() {
       token_manager_factory_.get(),
       authentication_context_provider_binding_.NewBinding().Bind(),
       settings_.enable_garnet_token_manager, this));
+
+  // If the session shell settings specifies it, auto-login as the first
+  // authenticated user.
+  if (active_session_shell_settings_index_ < session_shell_settings_.size() &&
+      session_shell_settings_[active_session_shell_settings_index_]
+          .auto_login) {
+    user_provider_impl_->PreviousUsers(
+        [this](fidl::VectorPtr<fuchsia::modular::auth::Account> accounts) {
+          if (accounts->empty()) {
+            StartBaseShell();
+          } else {
+            fuchsia::modular::UserLoginParams params;
+            params.account_id = accounts->at(0).id;
+            user_provider_impl_->Login(std::move(params));
+          }
+        });
+  } else {
+    StartBaseShell();
+  }
 
   ReportEvent(ModularEvent::BOOTED_TO_BASEMGR);
 }

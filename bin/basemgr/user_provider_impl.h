@@ -76,13 +76,13 @@ class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
   FuturePtr<> SwapSessionShell(
       fuchsia::modular::AppConfig session_shell_config);
 
- private:
-  // |fuchsia::modular::UserProvider|
+  // |fuchsia::modular::UserProvider|, also called by |basemgr_impl|.
   void Login(fuchsia::modular::UserLoginParams params) override;
 
-  // |fuchsia::modular::UserProvider|
+  // |fuchsia::modular::UserProvider|, also called by |basemgr_impl|.
   void PreviousUsers(PreviousUsersCallback callback) override;
 
+ private:
   // |fuchsia::modular::UserProvider|
   void AddUser(fuchsia::modular::auth::IdentityProvider identity_provider,
                AddUserCallback callback) override;
