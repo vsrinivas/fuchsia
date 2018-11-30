@@ -148,7 +148,8 @@ void MdnsParams::Usage() {
   std::cout << "    --announce=<subtype,...>  # applies to respond\n";
   std::cout << "options must precede the command\n";
   std::cout << "<host_name> and <instance_name> cannot end in '.'\n";
-  std::cout << "<service_name> must end in '._tcp.' or '._udp.'\n";
+  std::cout
+      << "<service_name> must start with '_' and end in '._tcp.' or '._udp.'\n";
 }
 
 bool MdnsParams::Parse(const std::string& string_value, uint16_t* out) {
@@ -204,15 +205,12 @@ bool MdnsParams::ParseServiceName(const std::string& string_value,
                                   std::string* out) {
   FXL_DCHECK(out);
 
-  if (string_value.size() <= kTcpSuffix.size()) {
-    std::cout << "'" << string_value << "' is not a valid service name\n\n";
-    return false;
-  }
-
-  if (string_value.compare(string_value.size() - kTcpSuffix.size(),
-                           kTcpSuffix.size(), kTcpSuffix) != 0 &&
-      string_value.compare(string_value.size() - kUdpSuffix.size(),
-                           kUdpSuffix.size(), kUdpSuffix) != 0) {
+  if (string_value.size() <= kTcpSuffix.size() + 1 ||
+      string_value.compare(0, 1, "_") != 0 ||
+      (string_value.compare(string_value.size() - kTcpSuffix.size(),
+                            kTcpSuffix.size(), kTcpSuffix) != 0 &&
+       string_value.compare(string_value.size() - kUdpSuffix.size(),
+                            kUdpSuffix.size(), kUdpSuffix) != 0)) {
     std::cout << "'" << string_value << "' is not a valid service name\n\n";
     return false;
   }
