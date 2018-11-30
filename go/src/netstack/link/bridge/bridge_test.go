@@ -134,15 +134,14 @@ func TestBridge(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := s1txep.Connect(s2fulladdr); err != tcpip.ErrConnectStarted {
-		t.Logf("s1.Stats() = %+v", s1.Stats())
-		t.Fatal(err)
-	}
-
 	// Wait for the inbound TCP connection.
 	{
 		waitEntry, notifyCh := waiter.NewChannelEntry(nil)
 		wq.EventRegister(&waitEntry, waiter.EventIn)
+		if err := s1txep.Connect(s2fulladdr); err != tcpip.ErrConnectStarted {
+			t.Logf("s1.Stats() = %+v", s1.Stats())
+			t.Fatal(err)
+		}
 		<-notifyCh
 		wq.EventUnregister(&waitEntry)
 	}
@@ -151,15 +150,14 @@ func TestBridge(t *testing.T) {
 		t.Logf("s2.Stats() = %+v", s1.Stats())
 		t.Fatal(err)
 	}
-	if _, _, err := s1txep.Write(tcpip.SlicePayload(payload), tcpip.WriteOptions{To: &s2fulladdr}); err != nil {
-		t.Logf("s1.Stats() = %+v", s1.Stats())
-		t.Fatal(err)
-	}
-
 	// Wait for the inbound packet.
 	{
 		waitEntry, notifyCh := waiter.NewChannelEntry(nil)
 		wq.EventRegister(&waitEntry, waiter.EventIn)
+		if _, _, err := s1txep.Write(tcpip.SlicePayload(payload), tcpip.WriteOptions{To: &s2fulladdr}); err != nil {
+			t.Logf("s1.Stats() = %+v", s1.Stats())
+			t.Fatal(err)
+		}
 		<-notifyCh
 		wq.EventUnregister(&waitEntry)
 	}
