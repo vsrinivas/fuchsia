@@ -29,7 +29,7 @@ template("fidl_rust_library") {
   rustc_library(rustc_target_name) {
     name = underscore_name
     version = "0.1.0"
-    edition = "2015"
+    edition = "2018"
     forward_variables_from(invoker, [ "testonly" ])
     deps = [
       "//garnet/public/lib/fidl/rust/fidl",
