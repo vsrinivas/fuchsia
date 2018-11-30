@@ -771,6 +771,12 @@ syscall system_powerctl
     (resource: zx_handle_t, cmd: uint32_t, arg: zx_system_powerctl_arg_t[1] IN)
     returns (zx_status_t);
 
+# User pager
+
+syscall pager_create
+    (options: uint32_t)
+    returns (zx_status_t, out_pager: zx_handle_t pager);
+
 # Test syscalls (keep at the end)
 
 syscall syscall_test_0() returns (zx_status_t);

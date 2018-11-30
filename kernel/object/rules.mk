@@ -32,6 +32,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/log_dispatcher.cpp \
     $(LOCAL_DIR)/mbuf.cpp \
     $(LOCAL_DIR)/message_packet.cpp \
+    $(LOCAL_DIR)/pager_dispatcher.cpp \
     $(LOCAL_DIR)/pci_device_dispatcher.cpp \
     $(LOCAL_DIR)/pci_interrupt_dispatcher.cpp \
     $(LOCAL_DIR)/pinned_memory_token_dispatcher.cpp \
