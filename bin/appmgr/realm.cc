@@ -642,13 +642,15 @@ void Realm::CreateComponentFromPackage(
       return;
     }
   } else {
-    FXL_LOG(WARNING)
-        << "Component " << package->resolved_url.get()
-        << " does not have a component manifest (a.k.a. cmx file)! Cmx files "
-        << "will soon be required. Please add a cmx file to your component. "
-        << "https://fuchsia.googlesource.com/docs/+/master/the-book/"
-        << "package_metadata.md#Component-manifest.";
     TRACE_DURATION_END("appmgr", "Realm::CreateComponentFromPackage:IsFileAt");
+    FXL_LOG(ERROR) << "Component " << package->resolved_url.get()
+                   << " does not have a component manifest (a.k.a. cmx file)! "
+                   << "Please add a cmx file to your component. "
+                   << "https://fuchsia.googlesource.com/docs/+/master/the-book/"
+                   << "package_metadata.md#Component-manifest.";
+    component_request.SetReturnValues(kComponentCreationFailed,
+                                      TerminationReason::INTERNAL_ERROR);
+    return;
   }
 
   RuntimeMetadata runtime;
