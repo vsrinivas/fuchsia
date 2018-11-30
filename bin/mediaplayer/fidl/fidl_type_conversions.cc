@@ -20,7 +20,7 @@ static const char kVideoMimeTypeH264[] = "video/h264";
 // TODO(dalesat): (or dustingreen) Enable after amlogic-video VP9 decode
 // is fully working.
 //
-//static const char kVideoMimeTypeVp9[] = "video/vp9";
+// static const char kVideoMimeTypeVp9[] = "video/vp9";
 // TODO(dalesat): Add MPEG2.
 
 static inline constexpr uint32_t make_fourcc(uint8_t a, uint8_t b, uint8_t c,
@@ -30,6 +30,7 @@ static inline constexpr uint32_t make_fourcc(uint8_t a, uint8_t b, uint8_t c,
 }
 
 static constexpr uint32_t kNv12FourCc = make_fourcc('N', 'V', '1', '2');
+static constexpr uint32_t kYv12FourCc = make_fourcc('Y', 'V', '1', '2');
 
 bool KnownEncodingsMatch() {
   return !strcmp(media_player::StreamType::kAudioEncodingAac,
@@ -584,8 +585,16 @@ TypeConverter<std::unique_ptr<media_player::StreamType>,
 
     auto& format = input.domain->video().uncompressed();
 
-    if (format.fourcc != kNv12FourCc) {
-      return nullptr;
+    media_player::VideoStreamType::PixelFormat pixel_format;
+    switch (format.fourcc) {
+      case kNv12FourCc:
+        pixel_format = media_player::VideoStreamType::PixelFormat::kNv12;
+        break;
+      case kYv12FourCc:
+        pixel_format = media_player::VideoStreamType::PixelFormat::kYv12;
+        break;
+      default:
+        return nullptr;
     }
 
     std::vector<uint32_t> line_stride;
@@ -610,8 +619,7 @@ TypeConverter<std::unique_ptr<media_player::StreamType>,
     // a default as any, at least for now.
     return media_player::VideoStreamType::Create(
         media_player::StreamType::kVideoEncodingUncompressed, nullptr,
-        media_player::VideoStreamType::VideoProfile::kUnknown,
-        media_player::VideoStreamType::PixelFormat::kNv12,
+        media_player::VideoStreamType::VideoProfile::kUnknown, pixel_format,
         media_player::VideoStreamType::ColorSpace::kUnknown,
         format.primary_display_width_pixels,
         format.primary_display_height_pixels, format.primary_width_pixels,
