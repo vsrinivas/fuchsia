@@ -148,21 +148,6 @@ BeaconHash Bss::GetBeaconSignature(const Beacon& beacon, size_t frame_len) const
     return hash;
 }
 
-std::string Bss::RatesToString(const std::vector<uint8_t>& rates) const {
-    constexpr uint8_t kBasicRateMask = 0x80;
-    char buf[128];
-    char* ptr = buf;
-    for (auto const& rate : rates) {
-        // Rates are printed as Mbps, a preceding * indicates a basic rate
-        ptr += std::snprintf(ptr, 8, "%s%.1f ", (rate & kBasicRateMask) ? "" : "*",
-                             (rate & (kBasicRateMask - 1)) / 2.0);
-    }
-
-    // TODO: Support BSSMembershipSelectorSet.
-
-    return std::string(buf);
-}
-
 wlan_mlme::BSSTypes GetBssType(const CapabilityInfo& cap) {
     // Note. This is in Beacon / Probe Response frames context.
     // IEEE Std 802.11-2016, 9.4.1.4

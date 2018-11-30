@@ -29,8 +29,7 @@ typedef uint32_t BeaconHash;
 
 class Bss : public fbl::RefCounted<Bss> {
    public:
-    Bss(const common::MacAddr& bssid) : bssid_(bssid) {
-        supported_rates_.reserve(kMaxSupportedRatesLen);
+    explicit Bss(const common::MacAddr& bssid) : bssid_(bssid) {
         bss_desc_.ssid.resize(0);  // Make sure SSID is not marked as null
     }
 
@@ -38,11 +37,7 @@ class Bss : public fbl::RefCounted<Bss> {
 
     std::string ToString() const;
 
-    // TODO(porce): Move these out of Bss class.
-    std::string RatesToString(const std::vector<uint8_t>& rates) const;
-
     const common::MacAddr& bssid() { return bssid_; }
-    zx::time_utc ts_refreshed() { return ts_refreshed_; }
     const ::fuchsia::wlan::mlme::BSSDescription& bss_desc() const { return bss_desc_; }
 
    private:
@@ -54,7 +49,6 @@ class Bss : public fbl::RefCounted<Bss> {
 
     // Update content such as IEs.
     zx_status_t Update(const Beacon& beacon, size_t len);
-    void ParseIE(Span<const uint8_t> ies);
 
     // TODO(porce): Move Beacon method into Beacon class.
     uint32_t GetBeaconSignature(const Beacon& beacon, size_t len) const;
@@ -69,14 +63,6 @@ class Bss : public fbl::RefCounted<Bss> {
 
     // TODO(porce): Add ProbeResponse.
     ::fuchsia::wlan::mlme::BSSDescription bss_desc_;
-
-    // TODO(porce): Unify into FIDL data structure
-    std::vector<uint8_t> supported_rates_{};
-    std::vector<uint8_t> ext_supp_rates_{};
-
-    // Conditionally present. See IEEE Std 802.11-2016, 9.3.3.3 Table 9-27
-    bool has_dsss_param_set_chan_ = false;
-    uint8_t dsss_param_set_chan_;
 
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(Bss);
 };
