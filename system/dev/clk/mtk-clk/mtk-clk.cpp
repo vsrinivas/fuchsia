@@ -10,7 +10,9 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
+#include <hwreg/bitfields.h>
 #include <soc/mt8167/mt8167-clk.h>
+#include <zircon/device/clk.h>
 
 namespace clk {
 
@@ -36,6 +38,49 @@ constexpr MtkClkGate kMtkClkGates[] = {
         [board_mt8167::kClkAxiMfg] = {.regs = kClkGatingCtrl8, .bit = 6},
         [board_mt8167::kClkMfgMm] = {.regs = kClkGatingCtrl0, .bit = 2},
 };
+struct clock_info {
+    uint32_t idx;
+    const char* name;
+};
+
+static struct clock_info clks[] = {
+    {.idx = 1, .name = "mainpll_div8"},
+    {.idx = 2, .name = "mainpll_div11"},
+    {.idx = 3, .name = "mainpll_div12"},
+    {.idx = 4, .name = "mainpll_div20"},
+    {.idx = 5, .name = "mainpll_div7"},
+    {.idx = 6, .name = "univpll_div16"},
+    {.idx = 7, .name = "univpll_div24"},
+    {.idx = 8, .name = "nfix2"},
+    {.idx = 9, .name = "whpll"},
+    {.idx = 10, .name = "wpll"},
+    {.idx = 11, .name = "26mhz"},
+    {.idx = 18, .name = "mfg"},
+    {.idx = 45, .name = "axi_mfg"},
+    {.idx = 46, .name = "slow_mfg"},
+    {.idx = 67, .name = "mmpll"},
+};
+
+namespace {
+
+class FrequencyMeterControl : public hwreg::RegisterBase<FrequencyMeterControl, uint32_t> {
+public:
+    enum {
+        kFixClk26Mhz = 0,
+        kFixClk32Khz = 2,
+    };
+
+    DEF_FIELD(29, 28, ck_div);
+    DEF_FIELD(24, 24, fixclk_sel);
+    DEF_FIELD(22, 16, monclk_sel);
+    DEF_BIT(15, enable);
+    DEF_BIT(14, reset);
+    DEF_FIELD(11, 0, window);
+
+    static auto Get() { return hwreg::RegisterAddr<FrequencyMeterControl>(0x10); }
+};
+
+} // namespace
 
 zx_status_t MtkClk::Bind() {
     zx_status_t status;
@@ -114,6 +159,71 @@ zx_status_t MtkClk::ClkDisable(uint32_t index) {
     const MtkClkGate& gate = kMtkClkGates[index];
     mmio_.Write32(1 << gate.bit, gate.regs.set);
     return ZX_OK;
+}
+
+zx_status_t MtkClk::ClkMeasure(uint32_t clk, clk_freq_info_t* info) {
+    if (clk >= fbl::count_of(clks)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    size_t max_len = sizeof(info->clk_name);
+    size_t len = strnlen(clks[clk].name, max_len);
+    if (len == max_len) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    memcpy(info->clk_name, clks[clk].name, len + 1);
+
+    constexpr uint32_t kWindowSize = 512;
+    constexpr uint32_t kFixedClockFreqMHz = 26000000 / 1000000;
+    FrequencyMeterControl::Get().FromValue(0).set_reset(true).WriteTo(&mmio_);
+    FrequencyMeterControl::Get().FromValue(0).set_reset(false).WriteTo(&mmio_);
+    auto ctrl = FrequencyMeterControl::Get().FromValue(0);
+    ctrl.set_window(kWindowSize - 1).set_monclk_sel(clks[clk].idx);
+    ctrl.set_fixclk_sel(FrequencyMeterControl::kFixClk26Mhz).set_enable(true);
+    ctrl.WriteTo(&mmio_);
+
+    hw_wmb();
+
+    // Sleep at least kWindowSize ticks of the fixed clock.
+    zx_nanosleep(zx_deadline_after(ZX_USEC(30)));
+
+    // Assume it completed calculating.
+
+    constexpr uint32_t kFrequencyMeterReadData = 0x14;
+    uint32_t count = mmio_.Read32(kFrequencyMeterReadData);
+    info->clk_freq = (count * kFixedClockFreqMHz) / kWindowSize;
+    FrequencyMeterControl::Get().FromValue(0).set_reset(true).WriteTo(&mmio_);
+    FrequencyMeterControl::Get().FromValue(0).set_reset(false).WriteTo(&mmio_);
+    return ZX_OK;
+}
+
+zx_status_t MtkClk::DdkIoctl(uint32_t op, const void* in_buf,
+                             size_t in_len, void* out_buf,
+                             size_t out_len, size_t* out_actual) {
+    switch (op) {
+    case IOCTL_CLK_MEASURE: {
+        if (in_buf == nullptr || in_len != sizeof(uint32_t) ||
+            out_buf == nullptr || out_len != sizeof(clk_freq_info_t)) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        auto index = *(static_cast<const uint32_t*>(in_buf));
+        auto* info = static_cast<clk_freq_info_t*>(out_buf);
+        *out_actual = sizeof(clk_freq_info_t);
+        return ClkMeasure(index, info);
+    }
+    case IOCTL_CLK_GET_COUNT: {
+        if (out_buf == nullptr || out_len != sizeof(uint32_t)) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        auto* num_count = static_cast<uint32_t*>(out_buf);
+        *num_count = static_cast<uint32_t>(fbl::count_of(clks));
+        *out_actual = sizeof(uint32_t);
+        return ZX_OK;
+    }
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
 }
 
 }  // namespace clk
