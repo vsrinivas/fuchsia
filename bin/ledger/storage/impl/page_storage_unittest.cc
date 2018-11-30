@@ -519,11 +519,11 @@ class PageStorageTest : public ledger::TestWithEnvironment {
 
     if (!called) {
       return ::testing::AssertionFailure()
-             << "TreeNode::FromDigest callback was not executed.";
+             << "TreeNode::FromIdentifier callback was not executed.";
     }
     if (status != Status::OK) {
       return ::testing::AssertionFailure()
-             << "TreeNode::FromDigest failed with status " << status;
+             << "TreeNode::FromIdentifier failed with status " << status;
     }
     node->swap(result);
     return ::testing::AssertionSuccess();

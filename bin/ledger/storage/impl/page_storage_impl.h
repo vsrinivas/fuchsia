@@ -161,9 +161,8 @@ class PageStorageImpl : public PageStorage {
 
   bool IsFirstCommit(CommitIdView id);
 
-  // Adds the given synced object. |object_identifier| will be validated against
-  // the expected one based on the |data| and an |OBJECT_DIGEST_MISSMATCH| error
-  // will be returned in case of missmatch.
+  // Adds the given synced object. |object_identifier| is expected to match the
+  // given |data|.
   void AddPiece(ObjectIdentifier object_identifier, ChangeSource source,
                 IsObjectSynced is_object_synced,
                 std::unique_ptr<DataSource::DataChunk> data,

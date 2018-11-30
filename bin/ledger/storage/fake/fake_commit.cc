@@ -34,7 +34,7 @@ zx::time_utc FakeCommit::GetTimestamp() const { return zx::time_utc(); }
 uint64_t FakeCommit::GetGeneration() const { return journal_->GetGeneration(); }
 
 ObjectIdentifier FakeCommit::GetRootIdentifier() const {
-  // The object digest fake here: using journal id is arbitrary.
+  // The object digest is fake here: using journal id is arbitrary.
   return encryption::MakeDefaultObjectIdentifier(
       ObjectDigest(journal_->GetId()));
 }
