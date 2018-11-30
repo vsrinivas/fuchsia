@@ -391,6 +391,11 @@ func (f *installFile) importPackage() error {
 	// This state could be improved if there was an in-memory precomputed index of
 	// all active meta.far blobs on the system.
 	if needsCount == 0 {
+		// It is possible that we already had all of the content for a package at the
+		// time when importPackage starts, for example if a package is updated and
+		// then reverted to a prior version wihtout GC. In that case, we should still
+		// activate the package, even though there is nothing to fulfill.
+		f.fs.index.Add(p, f.name)
 		return fs.ErrAlreadyExists
 	}
 
