@@ -4998,6 +4998,39 @@ void brcmf_hook_eapol_req(void* ctx, wlanif_eapol_req_t* req) {
     ndev->if_callbacks->eapol_conf(ndev->if_callback_cookie, &confirm);
 }
 
+wlan_ht_caps_t brcmf_get_ht_cap() {
+    // TODO(NET-1987): Query the chipset capabilities
+    // Following values are read from AssociationRequest over-the-air.
+    wlan_ht_caps_t ht_caps =                 {
+        .ht_capability_info = 0x0063,
+        .ampdu_params = 0x17,
+        .supported_mcs_set =
+            {
+                // Rx MCS bitmask
+                // Supported MCS values: 0-7
+                0xff, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                // Tx parameters
+                0x01, 0x00, 0x00, 0x00,
+            },
+        .ht_ext_capabilities = 0x0000,
+        .tx_beamforming_capabilities = 0x00000000,
+        .asel_capabilities = 0x00,
+    };
+    return ht_caps;
+}
+
+wlan_vht_caps_t brcmf_get_vht_cap() {
+    // TODO(NET-1987): Query the chipset capabilities
+    // Following values are read from AssociationRequest over-the-air.
+    wlan_vht_caps_t vht_caps = {
+        .vht_capability_info = 0x0f805032,
+        .supported_vht_mcs_and_nss_set = 0x0000fffe0000fffe,
+    };
+    return vht_caps;
+}
+
 void brcmf_hook_query(void* ctx, wlanif_query_info_t* info) {
     struct net_device* ndev = ctx;
     struct brcmf_if* ifp = ndev_to_if(ndev);
@@ -5018,22 +5051,30 @@ void brcmf_hook_query(void* ctx, wlanif_query_info_t* info) {
     // bands
     info->num_bands = 2;
 
-    // 2Ghz band
+    // 2 GHz band
     wlanif_band_capabilities_t* band = &info->bands[0];
+    band->band_id = WLAN_BAND_2GHZ;
     band->num_basic_rates = min(WLAN_BASIC_RATES_MAX_LEN, wl_g_rates_size);
     memcpy(band->basic_rates, wl_g_rates, band->num_basic_rates * sizeof(uint16_t));
     band->base_frequency = 2407;
     band->num_channels = min(WLAN_CHANNELS_MAX_LEN, countof(__wl_2ghz_channels));
     memcpy(band->channels, __wl_2ghz_channels, band->num_channels);
+    band->ht_supported = true;
+    band->ht_caps = brcmf_get_ht_cap();
+    band->vht_supported = false;
 
-
-    // 5Ghz band
+    // 5 GHz band
     band = &info->bands[1];
+    band->band_id = WLAN_BAND_5GHZ;
     band->num_basic_rates = min(WLAN_BASIC_RATES_MAX_LEN, wl_a_rates_size);
     memcpy(band->basic_rates, wl_a_rates, band->num_basic_rates * sizeof(uint16_t));
     band->base_frequency = 5000;
     band->num_channels = min(WLAN_CHANNELS_MAX_LEN, countof(__wl_5ghz_channels));
     memcpy(band->channels, __wl_5ghz_channels, band->num_channels);
+    band->ht_supported = true;
+    band->ht_caps = brcmf_get_ht_cap();
+    band->vht_supported = true;
+    band->vht_caps = brcmf_get_vht_cap();
 }
 
 void brcmf_hook_stats_query_req(void* ctx) {

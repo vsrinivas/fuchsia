@@ -361,11 +361,16 @@ typedef struct wlanif_eapol_indication {
 } wlanif_eapol_indication_t;
 
 typedef struct wlanif_band_capabilities {
+    uint8_t band_id; // Values from enum Band (WLAN_BAND_*)
     size_t num_basic_rates;
     uint16_t basic_rates[WLAN_BASIC_RATES_MAX_LEN];
     uint16_t base_frequency;
     size_t num_channels;
     uint8_t channels[WLAN_CHANNELS_MAX_LEN];
+    bool ht_supported;
+    wlan_ht_caps_t ht_caps;
+    bool vht_supported;
+    wlan_vht_caps_t vht_caps;
 } wlanif_band_capabilities_t;
 
 enum {

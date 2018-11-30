@@ -5,6 +5,8 @@
 #include "convert.h"
 
 #include <net/ethernet.h>
+#include <wlan/common/band.h>
+#include <wlan/common/element.h>
 #include <wlan/common/logging.h>
 #include <wlan/protocol/mac.h>
 
@@ -765,6 +767,8 @@ wlan_mlme::MacRole ConvertMacRole(uint8_t role) {
 
 void ConvertBandCapabilities(wlan_mlme::BandCapabilities* fidl_band,
                              const wlanif_band_capabilities_t& band) {
+    fidl_band->band_id = ::wlan::common::BandToFidl(band.band_id);
+
     // basic_rates
     fidl_band->basic_rates.resize(0);
     fidl_band->basic_rates->assign(band.basic_rates, band.basic_rates + band.num_basic_rates);
@@ -775,6 +779,16 @@ void ConvertBandCapabilities(wlan_mlme::BandCapabilities* fidl_band,
     // channels
     fidl_band->channels.resize(0);
     fidl_band->channels->assign(band.channels, band.channels + band.num_channels);
+
+    if (band.ht_supported) {
+        fidl_band->ht_cap = std::make_unique<wlan_mlme::HtCapabilities>(
+            ::wlan::HtCapabilities::FromDdk(band.ht_caps).ToFidl());
+    }
+
+    if (band.vht_supported) {
+        fidl_band->vht_cap = std::make_unique<wlan_mlme::VhtCapabilities>(
+            ::wlan::VhtCapabilities::FromDdk(band.vht_caps).ToFidl());
+    }
 }
 
 void ConvertCounter(wlan_stats::Counter* fidl_counter, const wlanif_counter_t& counter) {
