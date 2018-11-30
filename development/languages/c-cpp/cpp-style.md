@@ -64,3 +64,22 @@ Rationale: [Tip of the Week #130: Namespace Naming][totw-130]
 
 [google-guide]: https://google.github.io/styleguide/cppguide.html
 [totw-130]: https://abseil.io/tips/130
+
+#### `#include`s
+
+`#include`s use either `<angle brackets>` or `"quotes"` depending on context.
+
+1) Use `""` if the path is from the root of the source tree (e.g.
+   `"garnet/foo/bar/baz.h"`) or if the include is in the same directory as the
+   includer (e.g. `"baz.h"`).
+2) Use `<>` otherwise, which typically means the header is a "public" header of
+   some sort (e.g. `<lib/foo/bar.h>` or `<zircon/foo.h>`).
+
+* Third-party headers may be included using the root-relative path (e.g.
+  `"third_party/skia/include/core/SkPaint.h"`) or a public include path (e.g.
+  `<gtest/gtest.h>`).
+* Public headers should use `<>` with their canonical path (e.g.
+  `<lib/foo/bar.h>`) even if included from the same directory.
+* Non-public headers should use root-relative paths (e.g.
+  `"garnet/foo/bar/baz.h"`) even if included from the same directory, except in
+  cases where this would be inconsistent with existing code (e.g. zircon).
