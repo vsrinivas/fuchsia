@@ -12,8 +12,11 @@ MODULE_COMPILEFLAGS += -fvisibility=hidden
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/heap.cpp \
+    $(LOCAL_DIR)/inspect.cpp \
     $(LOCAL_DIR)/scanner.cpp \
     $(LOCAL_DIR)/snapshot.cpp \
+    $(LOCAL_DIR)/state.cpp \
+    $(LOCAL_DIR)/types.cpp \
 
 MODULE_HEADER_DEPS := \
     system/ulib/zircon-internal \
@@ -40,13 +43,15 @@ TEST_DIR := $(LOCAL_DIR)/test
 MODULE_SRCS := \
     $(TEST_DIR)/main.cpp \
     $(TEST_DIR)/heap_tests.cpp \
+    $(TEST_DIR)/inspect_tests.cpp \
     $(TEST_DIR)/scanner_tests.cpp \
     $(TEST_DIR)/snapshot_tests.cpp \
+    $(TEST_DIR)/state_tests.cpp \
 
 MODULE_STATIC_LIBS := \
-    system/ulib/inspect \
     system/ulib/fbl \
     system/ulib/fzl \
+    system/ulib/inspect \
     system/ulib/zx \
     system/ulib/zxcpp \
 
