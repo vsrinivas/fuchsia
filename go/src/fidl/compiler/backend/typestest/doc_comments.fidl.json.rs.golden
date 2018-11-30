@@ -3,7 +3,7 @@
 #![feature(futures_api, pin, arbitrary_self_types, nll)]
 #![allow(warnings)]
 
-extern crate fuchsia_async as async;
+extern crate fuchsia_async;
 extern crate fuchsia_zircon as zx;
 #[macro_use]
 extern crate fidl;
@@ -96,7 +96,7 @@ pub struct InterfaceProxy {
 }
 
 impl fidl::endpoints::Proxy for InterfaceProxy {
-	fn from_channel(inner: async::Channel) -> Self {
+	fn from_channel(inner: ::fuchsia_async::Channel) -> Self {
 		Self::new(inner)
 	}
 }
@@ -112,7 +112,7 @@ impl Deref for InterfaceProxy {
 /// Proxy object for communicating with interface Interface
 impl InterfaceProxy {
         /// Create a new Proxy for Interface
-	pub fn new(channel: async::Channel) -> Self {
+   pub fn new(channel: ::fuchsia_async::Channel) -> Self {
 		Self { client: fidl::client::Client::new(channel) }
 	}
 
@@ -121,7 +121,7 @@ impl InterfaceProxy {
 	/// This will only succeed if there are no active clones of this Proxy
 	/// and no currently-alive EventStream or response futures that came from
 	/// this Proxy.
-	pub fn into_channel(self) -> Result<async::Channel, Self> {
+	pub fn into_channel(self) -> Result<::fuchsia_async::Channel, Self> {
 		self.client.into_channel().map_err(|client| Self { client })
 	}
 
@@ -195,7 +195,7 @@ pub trait Interface {
 	) -> Self::MethodFut;
 	
 
-	fn serve(mut self, channel: async::Channel)
+	fn serve(mut self, channel: ::fuchsia_async::Channel)
 		-> InterfaceServer<Self>
 	where Self: Sized
 	{
@@ -332,7 +332,7 @@ impl futures::stream::FusedStream for InterfaceRequestStream {
 
 impl fidl::endpoints::RequestStream for InterfaceRequestStream {
         /// Consume a channel to make a InterfaceRequestStream
-	fn from_channel(channel: async::Channel) -> Self {
+	fn from_channel(channel: ::fuchsia_async::Channel) -> Self {
 		Self {
 			inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)),
 			msg_buf: Some(zx::MessageBuf::new()),

@@ -47,7 +47,7 @@
           ],
           "maybe_request": [],
           "maybe_request_size": 16,
-          "maybe_request_alignment": 4,
+          "maybe_request_alignment": 8,
           "has_response": false
         }
       ]

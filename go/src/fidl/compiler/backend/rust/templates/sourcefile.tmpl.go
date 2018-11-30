@@ -11,7 +11,7 @@ const SourceFile = `
 #![feature(futures_api, pin, arbitrary_self_types, nll)]
 #![allow(warnings)]
 
-extern crate fuchsia_async as async;
+extern crate fuchsia_async;
 extern crate fuchsia_zircon as zx;
 #[macro_use]
 extern crate fidl;

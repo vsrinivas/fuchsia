@@ -125,7 +125,7 @@ pub struct {{ $interface.Name }}Proxy {
 }
 
 impl fidl::endpoints::Proxy for {{ $interface.Name }}Proxy {
-	fn from_channel(inner: async::Channel) -> Self {
+	fn from_channel(inner: ::fuchsia_async::Channel) -> Self {
 		Self::new(inner)
 	}
 }
@@ -141,7 +141,7 @@ impl Deref for {{ $interface.Name }}Proxy {
 /// Proxy object for communicating with interface {{ $interface.Name }}
 impl {{ $interface.Name }}Proxy {
         /// Create a new Proxy for {{ $interface.Name }}
-	pub fn new(channel: async::Channel) -> Self {
+   pub fn new(channel: ::fuchsia_async::Channel) -> Self {
 		Self { client: fidl::client::Client::new(channel) }
 	}
 
@@ -150,7 +150,7 @@ impl {{ $interface.Name }}Proxy {
 	/// This will only succeed if there are no active clones of this Proxy
 	/// and no currently-alive EventStream or response futures that came from
 	/// this Proxy.
-	pub fn into_channel(self) -> Result<async::Channel, Self> {
+	pub fn into_channel(self) -> Result<::fuchsia_async::Channel, Self> {
 		self.client.into_channel().map_err(|client| Self { client })
 	}
 
@@ -317,7 +317,7 @@ pub trait {{ $interface.Name }} {
 	{{ end -}}
 	{{- end }}
 
-	fn serve(mut self, channel: async::Channel)
+	fn serve(mut self, channel: ::fuchsia_async::Channel)
 		-> {{ $interface.Name }}Server<Self>
 	where Self: Sized
 	{
@@ -496,7 +496,7 @@ impl futures::stream::FusedStream for {{ $interface.Name }}RequestStream {
 
 impl fidl::endpoints::RequestStream for {{ $interface.Name }}RequestStream {
         /// Consume a channel to make a {{ $interface.Name }}RequestStream
-	fn from_channel(channel: async::Channel) -> Self {
+	fn from_channel(channel: ::fuchsia_async::Channel) -> Self {
 		Self {
 			inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)),
 			msg_buf: Some(zx::MessageBuf::new()),
