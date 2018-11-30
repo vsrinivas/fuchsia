@@ -7,7 +7,6 @@
 
 use {
     byteorder::{LittleEndian, ReadBytesExt},
-    failure::format_err,
     fidl_fuchsia_wlan_device as wlan_device,
     fidl_fuchsia_wlan_mlme as wlan_mlme,
     fidl_fuchsia_wlan_tap as wlantap,
@@ -23,6 +22,8 @@ use {
 
 mod mac_frames;
 mod eth_frames;
+
+const ETH_PATH : &str = "/dev/class/ethernet";
 
 #[cfg(test)]
 mod test_utils;
@@ -354,8 +355,7 @@ fn send_tx_status_report(tx_vec_idx: u16, is_successful: bool, proxy: &wlantap::
     Ok(())
 }
 
-async fn create_eth_client(mac: &[u8; 6]) -> Result<ethernet::Client, failure::Error> {
-    const ETH_PATH : &str = "/dev/class/ethernet";
+async fn create_eth_client(mac: &[u8; 6]) -> Result<Option<ethernet::Client>, failure::Error> {
     let files = fs::read_dir(ETH_PATH)?;
     for file in files {
         let vmo = zx::Vmo::create_with_opts(
@@ -374,14 +374,15 @@ async fn create_eth_client(mac: &[u8; 6]) -> Result<ethernet::Client, failure::E
                     // must call get_status() after start() to clear zx::Signals::USER_0
                     // otherwise there will be a stream of infinite StatusChanged events that blocks
                     // fasync::Interval
-                    println!("info: {:?} status: {:?}", await!(client.info()).unwrap(),
-                             await!(client.get_status()).unwrap());
-                    return Ok(client);
+                    println!("info: {:?} status: {:?}",
+                             await!(client.info()).expect("calling client.info()"),
+                             await!(client.get_status()).expect("calling client.get_status()"));
+                    return Ok(Some(client));
                 }
             }
         }
     }
-    Err(format_err!("No ethernet device found with MAC address {:?}", mac))
+    Ok(None)
 }
 
 fn main() -> Result<(), failure::Error> {
@@ -446,7 +447,8 @@ async fn ethernet_sender(receiver: &mut mpsc::Receiver<()>, state: Arc<Mutex<Sta
     };
 
     let mut client = await!(create_eth_client(&HW_MAC_ADDR))
-                     .expect("cannot create ethernet client");
+                     .expect("cannot create ethernet client")
+                     .expect(&format!("cannot create client with mac address: {:?}", &HW_MAC_ADDR));
 
     let mut buf : Vec<u8> = vec![];
     eth_frames::write_eth_header(&mut buf, &eth_frames::EthHeader{
@@ -521,13 +523,19 @@ mod simulation_tests {
     // test
     fn verify_ethernet() {
         let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        // Make sure there is no existing ethernet device.
+        let client = exec.run_singlethreaded(create_eth_client(&HW_MAC_ADDR))
+            .expect(&format!("creating ethernet client: {:?}", &HW_MAC_ADDR));
+        assert!(client.is_none());
+        // Create wlan_tap device which will in turn create ethernet device.
         let _helper = test_utils::TestHelper::begin_test(&mut exec, create_wlantap_config());
         let mut retry = test_utils::RetryWithBackoff::new(5.seconds());
         loop {
-            let client = exec.run_singlethreaded(create_eth_client(&HW_MAC_ADDR));
-            if client.is_ok() { return; }
+            let client = exec.run_singlethreaded(create_eth_client(&HW_MAC_ADDR))
+                .expect(&format!("creating ethernet client: {:?}", &HW_MAC_ADDR));
+            if client.is_some() { return; }
             let slept = retry.sleep_unless_timed_out();
-            assert!(slept, "No ethernet client found in time");
+            assert!(slept, "No ethernet client with mac_addr {:?} found in time", &HW_MAC_ADDR);
         }
     }
 
