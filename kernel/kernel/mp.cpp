@@ -409,7 +409,7 @@ interrupt_eoi mp_mbx_generic_irq(void*) {
         task->func(task->context);
     }
 
-    return IRQ_EOI_DEACTIVATE;
+    return IRQ_EOI_ISSUE;
 }
 
 interrupt_eoi mp_mbx_reschedule_irq(void*) {
@@ -423,7 +423,7 @@ interrupt_eoi mp_mbx_reschedule_irq(void*) {
         thread_preempt_set_pending();
     }
 
-    return IRQ_EOI_DEACTIVATE;
+    return IRQ_EOI_ISSUE;
 }
 
 interrupt_eoi mp_mbx_interrupt_irq(void*) {
@@ -434,7 +434,7 @@ interrupt_eoi mp_mbx_interrupt_irq(void*) {
     // do nothing, the entire point of this interrupt is to simply have one
     // delivered to the cpu.
 
-    return IRQ_EOI_DEACTIVATE;
+    return IRQ_EOI_ISSUE;
 }
 
 __WEAK zx_status_t arch_mp_cpu_hotplug(uint cpu_id) {

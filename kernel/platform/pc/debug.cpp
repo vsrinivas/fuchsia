@@ -99,7 +99,7 @@ static interrupt_eoi uart_irq_handler(void *arg) {
     }
 
     spin_unlock(&uart_spinlock);
-    return IRQ_EOI_DEACTIVATE;
+    return IRQ_EOI_ISSUE;
 }
 
 static void platform_drain_debug_uart_rx(void) {

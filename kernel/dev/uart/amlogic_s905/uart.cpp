@@ -129,7 +129,7 @@ static interrupt_eoi uart_irq(void* arg) {
         spin_unlock(&uart_spinlock);
     }
 
-    return IRQ_EOI_DEACTIVATE;
+    return IRQ_EOI_ISSUE;
 }
 
 static void s905_uart_init(const void* driver_data, uint32_t length) {

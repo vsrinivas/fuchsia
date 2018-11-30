@@ -520,7 +520,7 @@ interrupt_eoi PcieDevice::MsiIrqHandlerThunk(void *arg) {
     auto& hstate = *(reinterpret_cast<pcie_irq_handler_state_t*>(arg));
     DEBUG_ASSERT(hstate.dev);
     hstate.dev->MsiIrqHandler(hstate);
-    return IRQ_EOI_DEACTIVATE;
+    return IRQ_EOI_ISSUE;
 }
 
 /******************************************************************************

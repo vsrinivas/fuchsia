@@ -130,7 +130,7 @@ static interrupt_eoi uart_irq_handler(void* arg) {
         spin_unlock(&uart_spinlock);
     }
 
-    return IRQ_EOI_DEACTIVATE;
+    return IRQ_EOI_ISSUE;
 }
 
 // panic-time getc/putc

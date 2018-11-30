@@ -188,7 +188,7 @@ static uint64_t read_ct(void) {
 static interrupt_eoi platform_tick(void* arg) {
     write_ctl(0);
     timer_tick(current_time());
-    return IRQ_EOI_DEACTIVATE;
+    return IRQ_EOI_ISSUE;
 }
 
 zx_status_t platform_set_oneshot_timer(zx_time_t deadline) {
