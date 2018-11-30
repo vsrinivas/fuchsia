@@ -27,9 +27,9 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-class CrashpadAnalyzer {
+class CrashAnalyzer {
  public:
-  explicit CrashpadAnalyzer()
+  explicit CrashAnalyzer()
       : context_(component::StartupContext::CreateFromStartupInfo()) {
     FXL_DCHECK(context_);
   }
@@ -45,10 +45,10 @@ class CrashpadAnalyzer {
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "failed to connect to crash analyzer: " << status
                      << " (" << zx_status_get_string(status) << ")";
-    }
-    if (out_status != ZX_OK) {
-      FX_LOGS(ERROR) << "failed to process kernel crash log: " << out_status
-                     << " (" << zx_status_get_string(out_status) << ")";
+    } else if (out_status != ZX_OK) {
+      FX_LOGS(ERROR) << "failed to process kernel panic crash log: "
+                     << out_status << " (" << zx_status_get_string(out_status)
+                     << ")";
     }
   }
 
@@ -87,8 +87,8 @@ int main(int argc, char** argv) {
     if (!reachable) {
       return;
     }
-    CrashpadAnalyzer crashpad_analyzer;
-    crashpad_analyzer.ProcessCrashlog(std::move(crashlog_vmo).ToTransport());
+    CrashAnalyzer crash_analyzer;
+    crash_analyzer.ProcessCrashlog(std::move(crashlog_vmo).ToTransport());
   };
   loop.Run();
 
