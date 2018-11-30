@@ -6,16 +6,12 @@ library fuchsia.sysmem;
 
 // Describes how the contents of buffers are represented.
 // Buffers of each type are described by their own tables.
-// TODO(FIDL-204/kulakowski) Make this a union again when C bindings
-// are rationalized.
-struct BufferFormat {
+union BufferFormat {
     ImageFormat image;
 };
 
 // Describes constraints for allocating buffers of some desired form.
 // Buffers of each type are described by their own tables.
-// TODO(FIDL-204/kulakowski) Make this a union again when C bindings
-// are rationalized.
-struct BufferSpec {
+union BufferSpec {
     ImageSpec image;
 };
