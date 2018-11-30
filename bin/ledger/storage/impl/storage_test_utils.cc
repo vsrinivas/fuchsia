@@ -154,7 +154,10 @@ StorageTest::~StorageTest() {}
       callback::Capture(callback::SetWhenCalled(&called), &status,
                         &object_identifier));
   RunLoopFor(kSufficientDelay);
-  EXPECT_TRUE(called);
+  if (!called) {
+    return ::testing::AssertionFailure()
+           << "AddObjectFromLocal callback wasn't called.";
+  }
   if (status != Status::OK) {
     return ::testing::AssertionFailure()
            << "AddObjectFromLocal failed with status " << status
@@ -166,7 +169,9 @@ StorageTest::~StorageTest() {}
       object_identifier, PageStorage::Location::LOCAL,
       callback::Capture(callback::SetWhenCalled(&called), &status, &result));
   RunLoopFor(kSufficientDelay);
-  EXPECT_TRUE(called);
+  if (!called) {
+    return ::testing::AssertionFailure() << "GetObject callback wasn't called.";
+  }
   if (status != Status::OK) {
     return ::testing::AssertionFailure()
            << "GetObject failed with status " << status << ". value: " << value
@@ -231,7 +236,10 @@ StorageTest::~StorageTest() {}
       GetStorage(), callback::Capture(callback::SetWhenCalled(&called), &status,
                                       empty_node_identifier));
   RunLoopFor(kSufficientDelay);
-  EXPECT_TRUE(called);
+  if (!called) {
+    return ::testing::AssertionFailure()
+           << "TreeNode::Empty callback wasn't called.";
+  }
   if (status != Status::OK) {
     return ::testing::AssertionFailure()
            << "TreeNode::Empty failed with status " << status;
@@ -248,10 +256,13 @@ StorageTest::~StorageTest() {}
       GetStorage(), identifier,
       callback::Capture(callback::SetWhenCalled(&called), &status, &result));
   RunLoopFor(kSufficientDelay);
-  EXPECT_TRUE(called);
+  if (!called) {
+    return ::testing::AssertionFailure()
+           << "TreeNode::FromIdentifier callback wasn't called.";
+  }
   if (status != Status::OK) {
     return ::testing::AssertionFailure()
-           << "TreeNode::FromDigest failed with status " << status;
+           << "TreeNode::FromIdentifier failed with status " << status;
   }
   node->swap(result);
   return ::testing::AssertionSuccess();
@@ -270,7 +281,10 @@ StorageTest::~StorageTest() {}
                         &identifier));
 
   RunLoopFor(kSufficientDelay);
-  EXPECT_TRUE(called);
+  if (!called) {
+    return ::testing::AssertionFailure()
+           << "TreeNode::FromEntries callback wasn't called.";
+  }
   if (status != Status::OK) {
     return ::testing::AssertionFailure()
            << "TreeNode::FromEntries failed with status " << status;
@@ -293,7 +307,10 @@ StorageTest::~StorageTest() {}
                         new_root_identifier, &new_nodes),
       &kTestNodeLevelCalculator);
   RunLoopFor(kSufficientDelay);
-  EXPECT_TRUE(called);
+  if (!called) {
+    return ::testing::AssertionFailure()
+           << "btree::ApplyChanges callback wasn't called.";
+  }
   if (status != Status::OK) {
     return ::testing::AssertionFailure()
            << "btree::ApplyChanges failed with status " << status;
