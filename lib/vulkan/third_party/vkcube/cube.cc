@@ -2231,26 +2231,25 @@ static void demo_init_vk(struct demo* demo) {
 
   const char* instance_validation_layers_alt1[] = {
 #ifndef NDEBUG
-    "VK_LAYER_LUNARG_standard_validation",
-#endif
-#if defined(CUBE_USE_IMAGE_PIPE)
-    "VK_LAYER_GOOGLE_image_pipe_swapchain",
+      "VK_LAYER_LUNARG_standard_validation",
 #endif
   };
 
   const char* instance_validation_layers_alt2[] = {
 #ifndef NDEBUG
-    "VK_LAYER_GOOGLE_threading",
-    "VK_LAYER_LUNARG_parameter_validation",
-    "VK_LAYER_LUNARG_object_tracker",
-    "VK_LAYER_LUNARG_core_validation",
-    "VK_LAYER_LUNARG_swapchain",
-    "VK_LAYER_GOOGLE_unique_objects",
-#endif
-#if defined(CUBE_USE_IMAGE_PIPE)
-    "VK_LAYER_GOOGLE_image_pipe_swapchain",
+      "VK_LAYER_GOOGLE_threading",      "VK_LAYER_LUNARG_parameter_validation",
+      "VK_LAYER_LUNARG_object_tracker", "VK_LAYER_LUNARG_core_validation",
+      "VK_LAYER_LUNARG_swapchain",      "VK_LAYER_GOOGLE_unique_objects",
 #endif
   };
+
+#if VK_USE_PLATFORM_MAGMA_KHR
+#if CUBE_USE_IMAGE_PIPE
+  const char* kMagmaLayer = "VK_LAYER_GOOGLE_image_pipe_swapchain";
+#else
+  const char* kMagmaLayer = "VK_LAYER_GOOGLE_image_pipe_swapchain_fb";
+#endif
+#endif
 
   /* Look for validation layers */
   VkBool32 validation_found = 0;
@@ -2367,26 +2366,33 @@ static void demo_init_vk(struct demo* demo) {
     free(instance_extensions);
   }
 
-  if (!platformSurfaceExtFound) {
+  if (!surfaceExtFound || !platformSurfaceExtFound) {
     uint32_t count;
-    const char* kFbLayer = "VK_LAYER_GOOGLE_image_pipe_swapchain_fb";
     VkResult result =
-        vkEnumerateInstanceExtensionProperties(kFbLayer, &count, NULL);
+        vkEnumerateInstanceExtensionProperties(kMagmaLayer, &count, NULL);
     if (result == VK_SUCCESS && count > 0) {
       VkExtensionProperties* extensions =
           reinterpret_cast<VkExtensionProperties*>(
               malloc(sizeof(VkExtensionProperties) * count));
-      result =
-          vkEnumerateInstanceExtensionProperties(kFbLayer, &count, extensions);
+      result = vkEnumerateInstanceExtensionProperties(kMagmaLayer, &count,
+                                                      extensions);
       for (uint32_t i = 0; i < count; i++) {
+        if (!strcmp(VK_KHR_SURFACE_EXTENSION_NAME,
+                    extensions[i].extensionName)) {
+          surfaceExtFound = 1;
+          demo->extension_names[demo->enabled_extension_count++] =
+              VK_KHR_SURFACE_EXTENSION_NAME;
+          demo->enabled_layers[demo->enabled_layer_count++] = kMagmaLayer;
+        }
         if (!strcmp(VK_KHR_MAGMA_SURFACE_EXTENSION_NAME,
                     extensions[i].extensionName)) {
           platformSurfaceExtFound = 1;
           demo->extension_names[demo->enabled_extension_count++] =
               VK_KHR_MAGMA_SURFACE_EXTENSION_NAME;
-          demo->enabled_layers[demo->enabled_layer_count++] = kFbLayer;
+          demo->enabled_layers[demo->enabled_layer_count++] = kMagmaLayer;
         }
       }
+      free(extensions);
     }
   }
 
@@ -2559,6 +2565,29 @@ static void demo_init_vk(struct demo* demo) {
     }
 
     free(device_extensions);
+  }
+
+  if (!swapchainExtFound) {
+    uint32_t count;
+    VkResult result = vkEnumerateDeviceExtensionProperties(
+        demo->gpu, kMagmaLayer, &count, NULL);
+    if (result == VK_SUCCESS && count > 0) {
+      VkExtensionProperties* extensions =
+          reinterpret_cast<VkExtensionProperties*>(
+              malloc(sizeof(VkExtensionProperties) * count));
+      result = vkEnumerateDeviceExtensionProperties(demo->gpu, kMagmaLayer,
+                                                    &count, extensions);
+      for (uint32_t i = 0; i < count; i++) {
+        if (!strcmp(VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+                    extensions[i].extensionName)) {
+          swapchainExtFound = 1;
+          demo->extension_names[demo->enabled_extension_count++] =
+              VK_KHR_SWAPCHAIN_EXTENSION_NAME;
+          demo->enabled_layers[demo->enabled_layer_count++] = kMagmaLayer;
+        }
+      }
+      free(extensions);
+    }
   }
 
   if (!swapchainExtFound) {
