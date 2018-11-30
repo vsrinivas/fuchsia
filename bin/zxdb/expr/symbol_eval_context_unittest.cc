@@ -72,8 +72,7 @@ enum GetNamedValueAsync { kQuitLoop, kSynchronous };
 void GetNamedValue(fxl::RefPtr<ExprEvalContext>& eval_context,
                    const std::string& name, GetNamedValueAsync async,
                    ValueResult* result) {
-  Identifier ident;
-  Err err = Identifier::FromString(name, &ident);
+  auto [err, ident] = Identifier::FromString(name);
   ASSERT_FALSE(err.has_error());
 
   eval_context->GetNamedValue(

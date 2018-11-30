@@ -5,12 +5,15 @@
 #pragma once
 
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/expr/expr_token.h"
 
 namespace zxdb {
+
+class Err;
 
 // An identifier is a sequence of names. Currently this handles C++ and Rust,
 // but could be enhanced in the future for other languages.
@@ -37,8 +40,18 @@ class Identifier {
   class Component {
    public:
     Component();
+
+    // Constructor for names without templates.
     Component(ExprToken separator, ExprToken name)
         : separator_(std::move(separator)), name_(std::move(name)) {}
+
+    // Constructor for names without templates for use by tests that hard-code
+    // values.
+    Component(bool has_separator, const std::string& name)
+        : name_(ExprToken::kName, name, 0) {
+      if (has_separator)
+        separator_ = ExprToken(ExprToken::kColonColon, "::", 0);
+    }
 
     // Constructor for names with templates. The contents will be a
     // vector of somewhat-normalized type string in between the <>.
@@ -68,7 +81,9 @@ class Identifier {
     // string in between. Note that the contents may not exactly match the
     // input string (some whitespace may be removed).
     const ExprToken& template_begin() const { return template_begin_; }
-    const std::vector<std::string>& template_contents() const { return template_contents_; }
+    const std::vector<std::string>& template_contents() const {
+      return template_contents_;
+    }
     const ExprToken& template_end() const { return template_end_; }
 
    private:
@@ -83,11 +98,19 @@ class Identifier {
   Identifier() = default;
 
   // Makes a simple identifier with a standalone name.
-  Identifier(ExprToken name);
+  explicit Identifier(ExprToken name);
 
-  // Attempts to parse the given string as an identifier and fills the out
-  // parameter on success.
-  static Err FromString(const std::string& input, Identifier* out);
+  // Makes an identifier from a single component.
+  explicit Identifier(Component comp);
+
+  // Attempts to parse the given string as an identifier. Returns either a
+  // set Err or the resulting Identifier when the Err is not set.
+  static std::pair<Err, Identifier> FromString(const std::string& input);
+
+  // Makes an identifier over a range of components.
+  template <class InputIterator>
+  Identifier(InputIterator first, InputIterator last)
+      : components_(first, last) {}
 
   std::vector<Component>& components() { return components_; }
   const std::vector<Component>& components() const { return components_; }
@@ -95,8 +118,18 @@ class Identifier {
   void AppendComponent(Component c);
   void AppendComponent(ExprToken separator, ExprToken name);
   void AppendComponent(ExprToken separator, ExprToken name,
-                       ExprToken template_begin, std::vector<std::string> template_contents,
+                       ExprToken template_begin,
+                       std::vector<std::string> template_contents,
                        ExprToken template_end);
+
+  // Returns a new identifier that's the scope of this one. The scope is
+  // everything but the last identifier.
+  //
+  // If there is only one component, the resulting identifier will either be
+  // empty (if the component has no separator, e.g. "Foo" becomes ""), or
+  // contain only a separator (if the component has a separator, e.g. "::Foo"
+  // becomes "::" and "::" becomes itself).
+  Identifier GetScope() const;
 
   // Returns the full name with all components concatenated together.
   std::string GetFullName() const;

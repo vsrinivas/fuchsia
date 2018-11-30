@@ -14,23 +14,30 @@ Identifier::Identifier(ExprToken name) {
   components_.emplace_back(ExprToken(), std::move(name));
 }
 
+Identifier::Identifier(Component comp) {
+  components_.push_back(std::move(comp));
+}
+
 // static
-Err Identifier::FromString(const std::string& input, Identifier* out) {
+std::pair<Err, Identifier> Identifier::FromString(const std::string& input) {
   ExprTokenizer tokenizer(input);
   if (!tokenizer.Tokenize())
-    return tokenizer.err();
+    return std::make_pair(tokenizer.err(), Identifier());
 
   ExprParser parser(tokenizer.TakeTokens());
   auto root = parser.Parse();
   if (!root)
-    return parser.err();
+    return std::make_pair(parser.err(), Identifier());
 
   auto identifier_node = root->AsIdentifier();
-  if (!identifier_node)
-    return Err("Input did not parse as an identifier.");
+  if (!identifier_node) {
+    return std::make_pair(Err("Input did not parse as an identifier."),
+                          Identifier());
+  }
 
-  *out = const_cast<IdentifierExprNode*>(identifier_node)->TakeIdentifier();
-  return Err();
+  return std::make_pair(
+      Err(),
+      const_cast<IdentifierExprNode*>(identifier_node)->TakeIdentifier());
 }
 
 void Identifier::AppendComponent(Component c) {
@@ -50,13 +57,20 @@ void Identifier::AppendComponent(ExprToken separator, ExprToken name,
       std::move(template_contents), std::move(template_end));
 }
 
-std::string Identifier::GetFullName() const {
-  return GetName(false);
+Identifier Identifier::GetScope() const {
+  if (components_.empty())
+    return Identifier();
+  if (components_.size() == 1) {
+    if (components_[0].has_separator())
+      return Identifier(Component(components_[0].separator(), ExprToken()));
+    return Identifier();
+  }
+  return Identifier(components_.begin(), components_.end() - 1);
 }
 
-std::string Identifier::GetDebugName() const {
-  return GetName(true);
-}
+std::string Identifier::GetFullName() const { return GetName(false); }
+
+std::string Identifier::GetDebugName() const { return GetName(true); }
 
 const std::string* Identifier::GetSingleComponentName() const {
   if (components_.size() != 1)

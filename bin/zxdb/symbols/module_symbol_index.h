@@ -11,12 +11,18 @@
 #include "garnet/bin/zxdb/symbols/module_symbol_index_node.h"
 #include "garnet/public/lib/fxl/macros.h"
 #include "garnet/public/lib/fxl/strings/string_view.h"
-#include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 
 namespace llvm {
+
 class DWARFCompileUnit;
 class DWARFContext;
 class DWARFDie;
+class DWARFUnit;
+
+namespace object {
+class ObjectFile;
+}  // namespace object
+
 }  // namespace llvm
 
 namespace zxdb {
@@ -34,6 +40,7 @@ class ModuleSymbolIndex {
   void CreateIndex(llvm::object::ObjectFile* object_file);
 
   const ModuleSymbolIndexNode& root() const { return root_; }
+  ModuleSymbolIndexNode& root() { return root_; }
 
   size_t files_indexed() const { return file_name_index_.size(); }
 

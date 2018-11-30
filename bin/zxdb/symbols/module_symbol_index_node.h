@@ -9,10 +9,9 @@
 #include <string>
 #include <vector>
 
-#include "llvm/DebugInfo/DWARF/DWARFDie.h"
-
 namespace llvm {
 class DWARFContext;
+class DWARFDie;
 }
 
 namespace zxdb {
@@ -28,7 +27,13 @@ namespace zxdb {
 // compilation unit, and a single function can have multiple locations. So one
 // one can represent many namespaces and functions.
 class ModuleSymbolIndexNode {
+ private:
+  using Map = std::map<std::string, ModuleSymbolIndexNode>;
+
  public:
+  using Iterator = Map::iterator;
+  using ConstIterator = Map::const_iterator;
+
   // A reference to a DIE that doesn't need the unit or the underlying
   // llvm::DwarfDebugInfoEntry to be kept. This allows the discarding of the
   // full parsed DIE structures after indexing. It can be converted back to a
@@ -41,7 +46,7 @@ class ModuleSymbolIndexNode {
    public:
     explicit DieRef() : offset_(0) {}
     explicit DieRef(uint32_t offset) : offset_(offset) {}
-    explicit DieRef(const llvm::DWARFDie& die) : offset_(die.getOffset()) {}
+    explicit DieRef(const llvm::DWARFDie& die);
 
     uint32_t offset() const { return offset_; }
 
@@ -60,9 +65,7 @@ class ModuleSymbolIndexNode {
 
   bool empty() const { return sub_.empty() && dies_.empty(); }
 
-  const std::map<std::string, ModuleSymbolIndexNode>& sub() const {
-    return sub_;
-  }
+  const Map& sub() const { return sub_; }
   const std::vector<DieRef>& dies() const { return dies_; }
 
   // Dump DIEs for debugging. A node does not contain its own name (this

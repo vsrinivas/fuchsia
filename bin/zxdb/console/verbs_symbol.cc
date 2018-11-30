@@ -344,8 +344,7 @@ Err DoSymInfo(ConsoleContext* context, const Command& cmd) {
         "symbol to look up.");
   }
 
-  Identifier identifier;
-  Err err = Identifier::FromString(cmd.args()[0], &identifier);
+  auto [err, identifier] = Identifier::FromString(cmd.args()[0]);
   if (err.has_error())
     return err;
 

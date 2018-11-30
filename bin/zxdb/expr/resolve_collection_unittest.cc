@@ -35,8 +35,7 @@ fxl::RefPtr<Collection> GetTestClassType(const DataMember** member_a,
 // containing value.
 Err ResolveMemberFromString(const ExprValue& base, const std::string& name,
                             ExprValue* out) {
-  Identifier ident;
-  Err err = Identifier::FromString(name, &ident);
+  auto [err, ident] = Identifier::FromString(name);
   if (err.has_error())
     return err;
 

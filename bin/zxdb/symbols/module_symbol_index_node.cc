@@ -12,6 +12,9 @@
 
 namespace zxdb {
 
+ModuleSymbolIndexNode::DieRef::DieRef(const llvm::DWARFDie& die)
+    : offset_(die.getOffset()) {}
+
 llvm::DWARFDie ModuleSymbolIndexNode::DieRef::ToDie(
     llvm::DWARFContext* context) const {
   return context->getDIEForOffset(offset_);
