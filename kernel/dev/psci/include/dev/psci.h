@@ -63,9 +63,9 @@ static inline uint32_t psci_cpu_off(void) {
     return (uint32_t)do_psci_call(PSCI64_CPU_OFF,0,0,0);
 }
 
-static inline uint32_t psci_cpu_on(uint64_t cluster, uint64_t cpuid, paddr_t entry) {
+static inline uint32_t psci_cpu_on(uint64_t mpid, paddr_t entry) {
 
-    return (uint32_t)do_psci_call(PSCI64_CPU_ON, ARM64_MPID(cluster, cpuid), entry, 0);
+    return (uint32_t)do_psci_call(PSCI64_CPU_ON, mpid, entry, 0);
 }
 
 static inline uint32_t psci_get_affinity_info(uint64_t cluster, uint64_t cpuid) {

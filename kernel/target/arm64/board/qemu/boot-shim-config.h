@@ -6,14 +6,8 @@
 #define USE_DEVICE_TREE_CPU_COUNT 1
 #define USE_DEVICE_TREE_GIC_VERSION 1
 
-static zbi_cpu_config_t cpu_config = {
-    .cluster_count = 1,
-    .clusters = {
-        {
-            .cpu_count = 4,
-        },
-    },
-};
+#define MAX_CPU_COUNT 100
+static size_t cpu_count = 0;
 
 static const zbi_mem_range_t mem_config[] = {
     {
@@ -73,42 +67,64 @@ static void set_gic_version(int gic_version) {
     saved_gic_version = gic_version;
 }
 
+static void add_cpu_topology(zbi_header_t* zbi) {
+    zbi_topology_node_t nodes[MAX_CPU_COUNT];
+
+    for (size_t index = 0; index < cpu_count; index++) {
+        nodes[index] = (zbi_topology_node_t){
+            .entity_type = ZBI_TOPOLOGY_ENTITY_PROCESSOR,
+            .parent_index = ZBI_TOPOLOGY_NO_PARENT,
+            .entity = {
+                .processor = {
+                    .logical_ids = {index},
+                    .logical_id_count = 1,
+                    .flags = ZBI_TOPOLOGY_PROCESSOR_PRIMARY,
+                    .architecture = ZBI_TOPOLOGY_ARCH_ARM,
+                    .architecture_info = {
+                        .arm = {
+                            .cpu_id = index,
+                            .gic_id = index,
+                        }}}}};
+    }
+
+    append_boot_item(zbi, ZBI_TYPE_CPU_TOPOLOGY,
+                     sizeof(zbi_topology_node_t), // Extra
+                     &nodes, sizeof(zbi_topology_node_t) * cpu_count);
+}
+
 static void append_board_boot_item(zbi_header_t* bootdata) {
-    // add CPU configuration
-    append_boot_item(bootdata, ZBI_TYPE_CPU_CONFIG, 0, &cpu_config,
-                    sizeof(zbi_cpu_config_t) +
-                    sizeof(zbi_cpu_cluster_t) * cpu_config.cluster_count);
+    add_cpu_topology(bootdata);
 
     // add memory configuration
     append_boot_item(bootdata, ZBI_TYPE_MEM_CONFIG, 0, &mem_config,
-                    sizeof(zbi_mem_range_t) * countof(mem_config));
+                     sizeof(zbi_mem_range_t) * countof(mem_config));
 
     // add kernel drivers
     append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_PL011_UART, &uart_driver,
-                    sizeof(uart_driver));
+                     sizeof(uart_driver));
 
     // append the gic information for either the specific gic version we detected from the
     // device tree, or both if we didn't detect either (-1)
     if (saved_gic_version < 0 || saved_gic_version == 3) {
         append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V3, &gicv3_driver,
-                        sizeof(gicv3_driver));
+                         sizeof(gicv3_driver));
     }
     if (saved_gic_version < 0 || saved_gic_version == 2) {
         append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V2, &gicv2_driver,
-                        sizeof(gicv2_driver));
+                         sizeof(gicv2_driver));
     }
 
     append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_PSCI, &psci_driver,
-                    sizeof(psci_driver));
+                     sizeof(psci_driver));
     append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GENERIC_TIMER, &timer_driver,
-                    sizeof(timer_driver));
+                     sizeof(timer_driver));
 
     // add platform ID
     append_boot_item(bootdata, ZBI_TYPE_PLATFORM_ID, 0, &platform_id, sizeof(platform_id));
 }
 
-static void set_cpu_count(uint32_t cpu_count) {
-    if (cpu_count > 0) {
-        cpu_config.clusters[0].cpu_count = cpu_count;
+static void set_cpu_count(uint32_t new_count) {
+    if (new_count > 0) {
+        cpu_count = new_count;
     }
 }

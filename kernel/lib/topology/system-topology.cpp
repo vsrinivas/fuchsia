@@ -21,7 +21,10 @@ zx_status_t Graph::Update(zbi_topology_node_t* flat_nodes, size_t count) {
     }
 
     fbl::AllocChecker checker;
-    nodes_.reset(new Node[count]{{}});
+    nodes_.reset(new (&checker) Node[count]{{}});
+    if (!checker.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
 
     Node* node = nullptr;
     zbi_topology_node_t* flat_node = nullptr;

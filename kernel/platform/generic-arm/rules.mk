@@ -21,6 +21,7 @@ MODULE_DEPS += \
 	kernel/lib/lockdep \
 	kernel/lib/fbl \
 	kernel/lib/memory_limit \
+	kernel/lib/topology \
 	kernel/lib/zbi \
 	kernel/dev/pcie \
 	kernel/dev/pdev \

@@ -97,10 +97,9 @@ uint64_t arm64_get_boot_el() {
     return arch_boot_el >> 2;
 }
 
-zx_status_t arm64_create_secondary_stack(uint cluster, uint cpu) {
+zx_status_t arm64_create_secondary_stack(uint cpu_num, uint64_t mpid) {
     // Allocate a stack, indexed by CPU num so that |arm64_secondary_entry| can find it.
-    cpu_num_t cpu_num = arch_mpid_to_cpu_num(cluster, cpu);
-    DEBUG_ASSERT(cpu_num > 0 && cpu_num < SMP_MAX_CPUS);
+    DEBUG_ASSERT_MSG(cpu_num > 0 && cpu_num < SMP_MAX_CPUS, "cpu_num: %u", cpu_num);
     kstack_t* stack = &_init_thread[cpu_num - 1].stack;
     DEBUG_ASSERT(stack->base == 0);
     zx_status_t status = vm_allocate_kstack(stack);
@@ -125,7 +124,6 @@ zx_status_t arm64_create_secondary_stack(uint cluster, uint cpu) {
         return ZX_ERR_NO_RESOURCES;
 
     // Store it.
-    uint64_t mpid = ARM64_MPID(cluster, cpu);
     LTRACEF("set mpid 0x%lx sp to %p\n", mpid, sp);
 #if __has_feature(safe_stack)
     LTRACEF("set mpid 0x%lx unsafe-sp to %p\n", mpid, unsafe_sp);
@@ -138,8 +136,7 @@ zx_status_t arm64_create_secondary_stack(uint cluster, uint cpu) {
     return ZX_OK;
 }
 
-zx_status_t arm64_free_secondary_stack(uint cluster, uint cpu) {
-    cpu_num_t cpu_num = arch_mpid_to_cpu_num(cluster, cpu);
+zx_status_t arm64_free_secondary_stack(uint cpu_num) {
     DEBUG_ASSERT(cpu_num > 0 && cpu_num < SMP_MAX_CPUS);
     kstack_t* stack = &_init_thread[cpu_num - 1].stack;
     zx_status_t status = vm_free_kstack(stack);

@@ -42,6 +42,7 @@ struct arm64_percpu {
 } __CPU_ALIGN;
 
 void arch_init_cpu_map(uint cluster_count, const uint* cluster_cpus);
+void arch_register_mpid(uint cpu_id, uint64_t mpid);
 void arm64_init_percpu_early(void);
 
 // Use the x18 register to always point at the local cpu structure to allow fast access
@@ -77,6 +78,13 @@ static inline void arm64_write_percpu_u32(size_t offset, uint32_t val) {
 
 static inline cpu_num_t arch_curr_cpu_num(void) {
     return arm64_read_percpu_u32(offsetof(struct arm64_percpu, cpu_num));
+}
+
+// TODO(ZX-3068) get num_cpus from topology.
+// This needs to be set very early (before arch_init).
+static inline void arch_set_num_cpus(uint cpu_count) {
+    extern uint arm_num_cpus;
+    arm_num_cpus = cpu_count;
 }
 
 static inline uint arch_max_num_cpus(void) {

@@ -18,8 +18,24 @@
 
 #define LOCAL_TRACE 0
 
+namespace {
+// Mask the MPIDR register to only leave the AFFx ids.
+constexpr uint64_t kMpidAffMask = 0xFF00FFFFFF;
+
+struct MpidCpuidPair {
+    uint64_t mpid;
+    uint cpu_id;
+};
+
+// TODO(ZX-3068) Switch completely to list and remove map.
+bool use_cpu_map = true;
+
 // map of cluster/cpu to cpu_id
 uint arm64_cpu_map[SMP_CPU_MAX_CLUSTERS][SMP_CPU_MAX_CLUSTER_CPUS] = {{0}};
+MpidCpuidPair arm64_cpu_list[SMP_MAX_CPUS];
+size_t arm64_cpu_list_count = 0;
+
+} // namespace
 
 // cpu id to cluster and id within cluster map
 uint arm64_cpu_cluster_ids[SMP_MAX_CPUS] = {0};
@@ -55,16 +71,45 @@ void arch_init_cpu_map(uint cluster_count, const uint* cluster_cpus) {
         }
     }
     arm_num_cpus = cpu_id;
+    use_cpu_map = true;
     smp_mb();
+}
+
+void arch_register_mpid(uint cpu_id, uint64_t mpid) {
+    // TODO(ZX-3068) transition off of these maps to the topology.
+    arm64_cpu_cluster_ids[cpu_id] = (mpid & 0xFF00) >> MPIDR_AFF1_SHIFT; // "cluster" here is AFF1.
+    arm64_cpu_cpu_ids[cpu_id] = mpid & 0xFF; // "cpu" here is AFF0.
+
+    arm64_percpu_array[cpu_id].cpu_num = cpu_id;
+
+    arm64_cpu_list[arm64_cpu_list_count++] = {.mpid = mpid, .cpu_id = cpu_id};
+
+    use_cpu_map = false;
 }
 
 // do the 'slow' lookup by mpidr to cpu number
 static uint arch_curr_cpu_num_slow() {
     uint64_t mpidr = __arm_rsr64("mpidr_el1");
-    uint cluster = (mpidr & MPIDR_AFF1_MASK) >> MPIDR_AFF1_SHIFT;
-    uint cpu = (mpidr & MPIDR_AFF0_MASK) >> MPIDR_AFF0_SHIFT;
+    if (use_cpu_map) {
+        uint cluster = (mpidr & MPIDR_AFF1_MASK) >> MPIDR_AFF1_SHIFT;
+        uint cpu = (mpidr & MPIDR_AFF0_MASK) >> MPIDR_AFF0_SHIFT;
 
-    return arm64_cpu_map[cluster][cpu];
+        return arm64_cpu_map[cluster][cpu];
+    } else {
+        mpidr &= kMpidAffMask;
+        for (size_t i = 0; i < arm64_cpu_list_count; ++i) {
+            if (arm64_cpu_list[i].mpid == mpidr) {
+                return arm64_cpu_list[i].cpu_id;
+            }
+        }
+
+        // The only time we shouldn't find a cpu is when the list isn't
+        // defined yet during early boot, in this case the only processor up is 0
+        // so returning 0 is correct.
+        DEBUG_ASSERT(arm64_cpu_list_count == 0);
+
+        return 0;
+    }
 }
 
 cpu_num_t arch_mpid_to_cpu_num(uint cluster, uint cpu) {

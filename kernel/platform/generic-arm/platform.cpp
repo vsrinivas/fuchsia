@@ -47,6 +47,7 @@
 #include <lib/console.h>
 #include <lib/debuglog.h>
 #include <lib/memory_limit.h>
+#include <lib/system-topology.h>
 #if WITH_PANIC_BACKTRACE
 #include <kernel/thread.h>
 #endif
@@ -64,6 +65,8 @@ extern paddr_t zbi_paddr;
 
 static void* ramdisk_base;
 static size_t ramdisk_size;
+
+static zbi_header_t* zbi_root = nullptr;
 
 static zbi_nvram_t lastlog_nvram;
 
@@ -90,6 +93,11 @@ static size_t mexec_zbi_length = 0;
 
 static volatile int panic_started;
 
+// TODO(ZX-3068) This is temporary until we fully deprecate ZBI_CPU_CONFIG.
+static bool use_topology = false;
+
+static constexpr bool kProcessZbiEarly = true;
+
 static void halt_other_cpus(void) {
     static volatile int halted = 0;
 
@@ -104,6 +112,25 @@ static void halt_other_cpus(void) {
             __asm volatile("nop");
         }
     }
+}
+
+// Difference on SMT systems is that the AFF0 (cpu_id) level is implicit and not stored in the info.
+static uint64_t ToSmtMpid(const zbi_topology_processor_t& processor, uint8_t cpu_id) {
+    DEBUG_ASSERT(processor.architecture == ZBI_TOPOLOGY_ARCH_ARM);
+    const auto& info = processor.architecture_info.arm;
+    return (uint64_t)info.cluster_3_id << 32 |
+           info.cluster_2_id << 16 |
+           info.cluster_1_id << 8 |
+           cpu_id;
+}
+
+static uint64_t ToMpid(const zbi_topology_processor_t& processor) {
+    DEBUG_ASSERT(processor.architecture == ZBI_TOPOLOGY_ARCH_ARM);
+    const auto& info = processor.architecture_info.arm;
+    return (uint64_t)info.cluster_3_id << 32 |
+           info.cluster_2_id << 16 |
+           info.cluster_1_id << 8 |
+           info.cpu_id;
 }
 
 void platform_panic_start(void) {
@@ -143,34 +170,78 @@ void platform_halt_secondary_cpus(void) {
     DEBUG_ASSERT(result == ZX_OK);
 }
 
-static zx_status_t platform_start_cpu(uint cluster, uint cpu) {
+static zx_status_t platform_start_cpu(uint64_t mpid) {
     // Issue memory barrier before starting to ensure previous stores will be visible to new CPU.
     smp_mb();
 
-    uint32_t ret = psci_cpu_on(cluster, cpu, kernel_entry_paddr);
-    dprintf(INFO, "Trying to start cpu %u:%u returned: %d\n", cluster, cpu, (int)ret);
+    uint32_t ret = psci_cpu_on(mpid, kernel_entry_paddr);
+    dprintf(INFO, "Trying to start cpu %lu returned: %d\n", mpid, (int)ret);
     if (ret != 0) {
         return ZX_ERR_INTERNAL;
     }
     return ZX_OK;
 }
 
+static void topology_cpu_init(void) {
+    for (auto* node : system_topology::GetSystemTopology().processors()) {
+        if (node->entity_type != ZBI_TOPOLOGY_ENTITY_PROCESSOR ||
+            node->entity.processor.architecture != ZBI_TOPOLOGY_ARCH_ARM) {
+            panic("Invalid processor node.");
+        }
+
+        zx_status_t status;
+        const auto& processor = node->entity.processor;
+        for (uint8_t i = 0; i < processor.logical_id_count; i++) {
+            const uint64_t mpid =
+                (processor.logical_id_count > 1) ? ToSmtMpid(processor, i) : ToMpid(processor);
+            arch_register_mpid(processor.logical_ids[i], mpid);
+
+            // Skip processor 0, we are only starting secondary processors.
+            if (processor.logical_ids[i] == 0) {
+                continue;
+            }
+
+            status = arm64_create_secondary_stack(processor.logical_ids[i], mpid);
+            DEBUG_ASSERT(status == ZX_OK);
+
+            // start the cpu
+            status = platform_start_cpu(mpid);
+
+            if (status != ZX_OK) {
+                // TODO(maniscalco): Is continuing really the right thing to do here?
+
+                // start failed, free the stack
+                status = arm64_free_secondary_stack(processor.logical_ids[i]);
+                DEBUG_ASSERT(status == ZX_OK);
+                continue;
+            }
+        }
+        // the cpu booted
+        //
+        // bootstrap thread is now responsible for freeing its stack
+    }
+}
+
 static void platform_cpu_init(void) {
     for (uint cluster = 0; cluster < cpu_cluster_count; cluster++) {
         for (uint cpu = 0; cpu < cpu_cluster_cpus[cluster]; cpu++) {
             if (cluster != 0 || cpu != 0) {
+                const uint cpu_num = arch_mpid_to_cpu_num(cluster, cpu);
+                const uint64_t mpid = ARM64_MPID(cluster, cpu);
+
                 // create a stack for the cpu we're about to start
-                zx_status_t status = arm64_create_secondary_stack(cluster, cpu);
+                zx_status_t status = arm64_create_secondary_stack(cpu_num, mpid);
+
                 DEBUG_ASSERT(status == ZX_OK);
 
                 // start the cpu
-                status = platform_start_cpu(cluster, cpu);
+                status = platform_start_cpu(mpid);
 
                 if (status != ZX_OK) {
                     // TODO(maniscalco): Is continuing really the right thing to do here?
 
                     // start failed, free the stack
-                    zx_status_t status = arm64_free_secondary_stack(cluster, cpu);
+                    zx_status_t status = arm64_free_secondary_stack(cpu_num);
                     DEBUG_ASSERT(status == ZX_OK);
                     continue;
                 }
@@ -233,11 +304,14 @@ static void process_mem_range(const zbi_mem_range_t* mem_range) {
     }
 }
 
-static zbi_result_t process_zbi_item(zbi_header_t* item, void* payload, void* cookie) {
+// Called during platform_init_early, the heap is not yet present.
+static zbi_result_t process_zbi_item_early(zbi_header_t* item,
+                                           void* payload, void*) {
     if (ZBI_TYPE_DRV_METADATA(item->type)) {
         save_mexec_zbi(item);
         return ZBI_RESULT_OK;
     }
+
     switch (item->type) {
     case ZBI_TYPE_KERNEL_DRIVER:
     case ZBI_TYPE_PLATFORM_ID:
@@ -286,7 +360,47 @@ static zbi_result_t process_zbi_item(zbi_header_t* item, void* payload, void* co
     return ZBI_RESULT_OK;
 }
 
-static void process_zbi(zbi_header_t* root) {
+// Called after heap is up, but before multithreading.
+static zbi_result_t process_zbi_item_late(zbi_header_t* item,
+                                          void* payload, void*) {
+    switch (item->type) {
+    case ZBI_TYPE_CPU_TOPOLOGY: {
+        const int node_count = item->length / item->extra;
+
+        zbi_topology_node_t* nodes =
+            reinterpret_cast<zbi_topology_node_t*>(payload);
+
+        auto result = system_topology::GetMutableSystemTopology()
+                          .Update(nodes, node_count);
+        if (result != ZX_OK) {
+            printf("Failed to initialize system topology! error: %d \n",
+                   result);
+        } else {
+            use_topology = true;
+            arch_set_num_cpus(static_cast<uint>(
+                system_topology::GetSystemTopology().processor_count()));
+
+            // TODO(ZX-3068) Print the whole topology of the system.
+            if (LK_DEBUGLEVEL >= INFO) {
+                for (auto* proc :
+                     system_topology::GetSystemTopology().processors()) {
+                    auto& info = proc->entity.processor.architecture_info.arm;
+                    dprintf(INFO, "System topology: CPU %u:%u:%u:%u\n",
+                            info.cluster_3_id,
+                            info.cluster_2_id,
+                            info.cluster_1_id,
+                            info.cpu_id);
+                }
+            }
+        }
+
+        break;
+    }
+    }
+    return ZBI_RESULT_OK;
+}
+
+static void process_zbi(zbi_header_t* root, bool early) {
     DEBUG_ASSERT(root);
     zbi_result_t result;
 
@@ -300,7 +414,7 @@ static void process_zbi(zbi_header_t* root) {
         return;
     }
 
-    image.ForEach(process_zbi_item, nullptr);
+    image.ForEach(early ? process_zbi_item_early : process_zbi_item_late, nullptr);
 }
 
 void platform_early_init(void) {
@@ -328,15 +442,15 @@ void platform_early_init(void) {
         panic("no ramdisk!\n");
     }
 
-    zbi_header_t* zbi = reinterpret_cast<zbi_header_t*>(ramdisk_base);
+    zbi_root = reinterpret_cast<zbi_header_t*>(ramdisk_base);
     // walk the zbi structure and process all the items
-    process_zbi(zbi);
+    process_zbi(zbi_root, kProcessZbiEarly);
 
     // is the cmdline option to bypass dlog set ?
     dlog_bypass_init();
 
     // bring up kernel drivers after we have mapped our peripheral ranges
-    pdev_init(zbi);
+    pdev_init(zbi_root);
 
     // Serial port should be active now
 
@@ -378,8 +492,20 @@ void platform_early_init(void) {
     boot_reserve_wire();
 }
 
+// Called after the heap is up but before the system is multithreaded.
+void platform_init_pre_thread(uint) {
+    process_zbi(zbi_root, !kProcessZbiEarly);
+}
+
+LK_INIT_HOOK(platform_init_pre_thread, platform_init_pre_thread,
+             LK_INIT_LEVEL_THREADING - 1);
+
 void platform_init(void) {
-    platform_cpu_init();
+    if (use_topology) {
+        topology_cpu_init();
+    } else {
+        platform_cpu_init();
+    }
 }
 
 // after the fact create a region to reserve the peripheral map(s)

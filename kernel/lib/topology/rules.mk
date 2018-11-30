@@ -8,6 +8,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 LOCAL_SRCS := \
     $(LOCAL_DIR)/system-topology.cpp \
+    $(LOCAL_DIR)/system-topology_test.cpp \
 
 # system-topology
 
@@ -19,34 +20,8 @@ MODULE_SRCS := $(LOCAL_SRCS)
 
 MODULE_DEPS := \
     kernel/lib/fbl \
+    kernel/lib/unittest \
 
 MODULE_NAME := system-topology
 
 include make/module.mk
-
-
-# system-topology_test
-
-MODULE := $(LOCAL_DIR).test
-
-MODULE_TYPE := hosttest
-
-MODULE_SRCS := $(LOCAL_SRCS) $(LOCAL_DIR)/system-topology_test.cpp
-
-MODULE_COMPILEFLAGS := \
-        -Isystem/ulib/fbl/include \
-        -Isystem/ulib/runtests-utils/include \
-        -Isystem/ulib/unittest/include \
-
-MODULE_HOST_LIBS := \
-    system/ulib/fbl.hostlib \
-    system/ulib/pretty.hostlib \
-    system/ulib/runtests-utils.hostlib \
-    system/ulib/unittest.hostlib \
-
-MODULE_NAME := system-topology_test
-
-MODULE_DEFINES += BUILD_FOR_TEST=1
-
-include make/module.mk
-

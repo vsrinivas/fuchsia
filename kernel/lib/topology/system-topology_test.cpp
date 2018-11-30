@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/system-topology.h>
-#include <unittest/unittest.h>
+#include <lib/unittest/unittest.h>
 
 namespace {
 
@@ -33,16 +33,16 @@ bool test_flat_to_heap_simple() {
     FlatTopo topo = SimpleTopology();
 
     system_topology::Graph graph;
-    ASSERT_EQ(ZX_OK, graph.Update(topo.nodes, topo.node_count));
-    ASSERT_EQ(3, graph.processors().size());
+    ASSERT_EQ(ZX_OK, graph.Update(topo.nodes, topo.node_count), "");
+    ASSERT_EQ(3u, graph.processors().size(), "");
 
     // Test lookup.
     system_topology::Node* node;
-    ASSERT_EQ(ZX_OK, graph.ProcessorByLogicalId(1, &node));
-    ASSERT_EQ(ZBI_TOPOLOGY_ENTITY_PROCESSOR, node->entity_type);
-    ASSERT_EQ(ZBI_TOPOLOGY_PROCESSOR_PRIMARY, node->entity.processor.flags);
-    ASSERT_EQ(ZBI_TOPOLOGY_ENTITY_CLUSTER, node->parent->entity_type);
-    ASSERT_EQ(1, node->parent->entity.cluster.performance_class);
+    ASSERT_EQ(ZX_OK, graph.ProcessorByLogicalId(1, &node), "");
+    ASSERT_EQ(ZBI_TOPOLOGY_ENTITY_PROCESSOR, node->entity_type, "");
+    ASSERT_EQ(ZBI_TOPOLOGY_PROCESSOR_PRIMARY, node->entity.processor.flags, "");
+    ASSERT_EQ(ZBI_TOPOLOGY_ENTITY_CLUSTER, node->parent->entity_type, "");
+    ASSERT_EQ(1, node->parent->entity.cluster.performance_class, "");
 
     END_TEST;
 }
@@ -52,8 +52,8 @@ bool test_flat_to_heap_complex() {
     FlatTopo topo = ComplexTopology();
 
     system_topology::Graph graph;
-    ASSERT_EQ(ZX_OK, graph.Update(topo.nodes, topo.node_count));
-    ASSERT_EQ(32, graph.processors().size());
+    ASSERT_EQ(ZX_OK, graph.Update(topo.nodes, topo.node_count), "");
+    ASSERT_EQ(32u, graph.processors().size(), "");
 
     END_TEST;
 }
@@ -63,8 +63,8 @@ bool test_flat_to_heap_walk_result() {
     FlatTopo topo = ComplexTopology();
 
     system_topology::Graph graph;
-    ASSERT_EQ(ZX_OK, graph.Update(topo.nodes, topo.node_count));
-    ASSERT_EQ(32, graph.processors().size());
+    ASSERT_EQ(ZX_OK, graph.Update(topo.nodes, topo.node_count), "");
+    ASSERT_EQ(32u, graph.processors().size(), "");
 
     // For each processor we walk all the way up the graph.
     for (Node* processor : graph.processors()) {
@@ -95,7 +95,7 @@ bool test_validate_processor_not_leaf() {
     topo.nodes[1].entity_type = ZBI_TOPOLOGY_ENTITY_PROCESSOR;
 
     system_topology::Graph graph;
-    ASSERT_EQ(ZX_ERR_INVALID_ARGS, graph.Update(topo.nodes, topo.node_count));
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS, graph.Update(topo.nodes, topo.node_count),"");
 
     END_TEST;
 }
@@ -108,7 +108,7 @@ bool test_validate_leaf_not_processor() {
     topo.nodes[4].entity_type = ZBI_TOPOLOGY_ENTITY_CLUSTER;
 
     system_topology::Graph graph;
-    ASSERT_EQ(ZX_ERR_INVALID_ARGS, graph.Update(topo.nodes, topo.node_count));
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS, graph.Update(topo.nodes, topo.node_count), "");
 
     END_TEST;
 }
@@ -121,7 +121,7 @@ bool test_validate_cycle() {
     topo.nodes[1].parent_index = 4;
 
     system_topology::Graph graph;
-    ASSERT_EQ(ZX_ERR_INVALID_ARGS, graph.Update(topo.nodes, topo.node_count));
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS, graph.Update(topo.nodes, topo.node_count), "");
 
     END_TEST;
 }
@@ -136,7 +136,7 @@ bool test_validate_cycle_shared_parent() {
     topo.nodes[2].parent_index = 4;
 
     system_topology::Graph graph;
-    ASSERT_EQ(ZX_ERR_INVALID_ARGS, graph.Update(topo.nodes, topo.node_count));
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS, graph.Update(topo.nodes, topo.node_count), "");
 
     END_TEST;
 }
@@ -153,24 +153,22 @@ bool test_validate_hierarchical_storage() {
     topo.nodes[2].parent_index = 4;
 
     system_topology::Graph graph;
-    ASSERT_EQ(ZX_ERR_INVALID_ARGS, graph.Update(topo.nodes, topo.node_count));
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS, graph.Update(topo.nodes, topo.node_count), "");
 
     END_TEST;
 }
 
-BEGIN_TEST_CASE(system_topology_parsing_tests)
-RUN_TEST(test_flat_to_heap_simple)
-RUN_TEST(test_flat_to_heap_complex)
-RUN_TEST(test_flat_to_heap_walk_result)
-END_TEST_CASE(system_topology_parsing_tests)
-
-BEGIN_TEST_CASE(system_topology_validation_tests)
-RUN_TEST(test_validate_processor_not_leaf)
-RUN_TEST(test_validate_leaf_not_processor)
-RUN_TEST(test_validate_cycle)
-RUN_TEST(test_validate_cycle_shared_parent)
-RUN_TEST(test_validate_hierarchical_storage)
-END_TEST_CASE(system_topology_validation_tests)
+UNITTEST_START_TESTCASE(system_topology_tests)
+UNITTEST("Parse flat topology, simple.", test_flat_to_heap_simple)
+UNITTEST("Parse flat topology, complex.", test_flat_to_heap_complex)
+UNITTEST("Parse complex then walk result.", test_flat_to_heap_walk_result)
+UNITTEST("Fail validation if processor is not a leaf.", test_validate_processor_not_leaf)
+UNITTEST("Fail validation if leaf is not processor.", test_validate_leaf_not_processor)
+UNITTEST("Fail validation if there is a cycle.", test_validate_cycle)
+UNITTEST("Fail validation if a cycle with a shared parent.", test_validate_cycle_shared_parent)
+UNITTEST("Fail validation if storage order is incorrect.", test_validate_hierarchical_storage)
+UNITTEST_END_TESTCASE(system_topology_tests, "system-topology",
+                      "Test parsing and validation of the flat system topology.");
 
 // Generic ARM big.LITTLE layout.
 //   [cluster]       [cluster]
@@ -182,7 +180,7 @@ FlatTopo SimpleTopology() {
     uint16_t logical_processor = 0;
     uint16_t big_cluster = 0, little_cluster = 0;
 
-    size_t index = 0;
+    uint16_t index = 0;
     nodes[big_cluster = index++] = (zbi_topology_node_t){
         .entity_type = ZBI_TOPOLOGY_ENTITY_CLUSTER,
         .parent_index = ZBI_TOPOLOGY_NO_PARENT,
@@ -200,6 +198,7 @@ FlatTopo SimpleTopology() {
                 .logical_id_count = 2,
                 .flags = ZBI_TOPOLOGY_PROCESSOR_PRIMARY,
                 .architecture = ZBI_TOPOLOGY_ARCH_UNDEFINED,
+                .architecture_info = {},
             }}};
 
     nodes[little_cluster = index++] = (zbi_topology_node_t){
@@ -217,7 +216,9 @@ FlatTopo SimpleTopology() {
             .processor = {
                 .logical_ids = {logical_processor++},
                 .logical_id_count = 1,
+                .flags = 0,
                 .architecture = ZBI_TOPOLOGY_ARCH_UNDEFINED,
+                .architecture_info = {},
             }}};
 
     nodes[index++] = (zbi_topology_node_t){
@@ -227,10 +228,11 @@ FlatTopo SimpleTopology() {
             .processor = {
                 .logical_ids = {logical_processor++},
                 .logical_id_count = 1,
+                .flags = 0,
                 .architecture = ZBI_TOPOLOGY_ARCH_UNDEFINED,
+                .architecture_info = {},
             }}};
 
-    EXPECT_LT(index, kTopologyArraySize);
     topo.node_count = index;
     return topo;
 }
@@ -242,7 +244,7 @@ FlatTopo HierarchicalTopology() {
     uint16_t logical_processor = 0;
     uint16_t big_cluster = 0, little_cluster = 0;
 
-    size_t index = 0;
+    uint16_t index = 0;
     nodes[big_cluster = index++] = (zbi_topology_node_t){
         .entity_type = ZBI_TOPOLOGY_ENTITY_CLUSTER,
         .parent_index = ZBI_TOPOLOGY_NO_PARENT,
@@ -268,6 +270,7 @@ FlatTopo HierarchicalTopology() {
                 .logical_id_count = 2,
                 .flags = ZBI_TOPOLOGY_PROCESSOR_PRIMARY,
                 .architecture = ZBI_TOPOLOGY_ARCH_UNDEFINED,
+                .architecture_info = {},
             }}};
 
     nodes[index++] = (zbi_topology_node_t){
@@ -277,8 +280,9 @@ FlatTopo HierarchicalTopology() {
             .processor = {
                 .logical_ids = {logical_processor++},
                 .logical_id_count = 1,
-                .flags = ZBI_TOPOLOGY_PROCESSOR_PRIMARY,
+                .flags = 0,
                 .architecture = ZBI_TOPOLOGY_ARCH_UNDEFINED,
+                .architecture_info = {},
             }}};
 
     nodes[index++] = (zbi_topology_node_t){
@@ -288,18 +292,18 @@ FlatTopo HierarchicalTopology() {
             .processor = {
                 .logical_ids = {logical_processor++},
                 .logical_id_count = 1,
-                .flags = ZBI_TOPOLOGY_PROCESSOR_PRIMARY,
+                .flags = 0,
                 .architecture = ZBI_TOPOLOGY_ARCH_UNDEFINED,
+                .architecture_info = {},
             }}};
 
-    EXPECT_LT(index, kTopologyArraySize);
     topo.node_count = index;
     return topo;
 }
 
 // Add a threadripper CCX (CPU complex), a four core cluster.
 void AddCCX(uint16_t parent, zbi_topology_node_t* nodes,
-            size_t* index, uint16_t* logical_processor) {
+            uint16_t* index, uint16_t* logical_processor) {
     uint16_t cache = 0, cluster = 0;
     nodes[cluster = (*index)++] = (zbi_topology_node_t){
         .entity_type = ZBI_TOPOLOGY_ENTITY_CLUSTER,
@@ -312,6 +316,7 @@ void AddCCX(uint16_t parent, zbi_topology_node_t* nodes,
     nodes[cache = (*index)++] = (zbi_topology_node_t){
         .entity_type = ZBI_TOPOLOGY_ENTITY_CACHE,
         .parent_index = cluster,
+        .entity = {},
     };
 
     for (int i = 0; i < 4; i++) {
@@ -322,7 +327,9 @@ void AddCCX(uint16_t parent, zbi_topology_node_t* nodes,
                 .processor = {
                     .logical_ids = {(*logical_processor)++, (*logical_processor)++},
                     .logical_id_count = 2,
+                    .flags = 0,
                     .architecture = ZBI_TOPOLOGY_ARCH_UNDEFINED,
+                    .architecture_info = {},
                 }}};
     }
 }
@@ -342,7 +349,7 @@ FlatTopo ComplexTopology() {
     uint16_t die[4] = {0};
     uint16_t numa[4] = {0};
 
-    size_t index = 0;
+    uint16_t index = 0;
 
     nodes[numa[0] = index++] = (zbi_topology_node_t){
         .entity_type = ZBI_TOPOLOGY_ENTITY_NUMA_REGION,
@@ -356,6 +363,7 @@ FlatTopo ComplexTopology() {
     nodes[die[0] = index++] = (zbi_topology_node_t){
         .entity_type = ZBI_TOPOLOGY_ENTITY_DIE,
         .parent_index = numa[0],
+        .entity = {},
     };
 
     AddCCX(die[0], nodes, &index, &logical_processor);
@@ -373,6 +381,7 @@ FlatTopo ComplexTopology() {
     nodes[die[1] = index++] = (zbi_topology_node_t){
         .entity_type = ZBI_TOPOLOGY_ENTITY_DIE,
         .parent_index = numa[1],
+        .entity = {},
     };
 
     AddCCX(die[1], nodes, &index, &logical_processor);
@@ -390,6 +399,7 @@ FlatTopo ComplexTopology() {
     nodes[die[2] = index++] = (zbi_topology_node_t){
         .entity_type = ZBI_TOPOLOGY_ENTITY_DIE,
         .parent_index = numa[2],
+        .entity = {},
     };
 
     AddCCX(die[2], nodes, &index, &logical_processor);
@@ -407,18 +417,19 @@ FlatTopo ComplexTopology() {
     nodes[die[3] = index++] = (zbi_topology_node_t){
         .entity_type = ZBI_TOPOLOGY_ENTITY_DIE,
         .parent_index = numa[3],
+        .entity = {},
     };
 
     AddCCX(die[3], nodes, &index, &logical_processor);
     AddCCX(die[3], nodes, &index, &logical_processor);
 
-    EXPECT_LT(index, kTopologyArraySize);
     topo.node_count = index;
     return topo;
 }
 
 } // namespace
-
+/*
 int main(int argc, char** argv) {
     return unittest_run_all_tests(argc, argv) ? 0 : -1;
 }
+*/

@@ -50,13 +50,17 @@ public:
     zx_status_t Update(zbi_topology_node_t* nodes, size_t count);
 
     // Provides iterable container of pointers to all processor nodes.
-    IterableProcessors processors() {
+    IterableProcessors processors() const {
         return processors_;
+    }
+
+    size_t processor_count() const {
+        return processors_.size();
     }
 
     // Finds the processor node that is assigned the given logical id.
     // Sets processor to point to that node. If it wasn't found, returns ZX_ERR_NOT_FOUND.
-    zx_status_t ProcessorByLogicalId(uint16_t id, Node** processor) {
+    zx_status_t ProcessorByLogicalId(uint16_t id, Node** processor) const {
         if (id > processors_by_logical_id_.size()) {
             return ZX_ERR_NOT_FOUND;
         }
