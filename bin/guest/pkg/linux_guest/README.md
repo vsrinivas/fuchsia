@@ -19,16 +19,27 @@ Repeat for the sysroot:
 $ ./garnet/bin/guest/pkg/linux_guest/mksysroot.sh -r -p garnet/bin/guest/pkg/linux_guest/images/${ARCH}/disk.img -d /tmp/toybox -s /tmp/dash S{ARCH}
 ```
 
-Ensure that `linux_guest` is working correctly. Then upload the images to cipd.
+Ensure that `linux_guest` is working correctly. Then upload the images to cipd. There is a cipd binary at `//buildtools/cipd` and `cipd auth-login` must be run before any of the following commands.
+
 Use the git revision hash from `zircon-guest.googlesource.com/third_party/
-linux` as a tag.
-```
-cipd create -in garnet/bin/guest/pkg/linux_guest/images/${ARCH} -name fuchsia_internal/linux/linux_guest-<version>-${ARCH}-install-mode copy -tag "git_revision:<git revision>"
+linux` as the `kernel_git_revision` tag and from `zircon-guest.googlesource.com/linux-tests` as the `tests_git_revision` tag.
 
 ```
+$ cipd create \
+  -in garnet/bin/guest/pkg/linux_guest/images/${ARCH} \
+  -name fuchsia_internal/linux/linux_guest-<version>-${ARCH} \
+  -install-mode copy \
+  -tag "kernel_git_revision:<git revision>" \
+  -tag "tests_git_revision:<git revision>"
+```
 
-Then update `garnet/tools/cipd_internal.ensure` to point to the new version
-(with the appropriate git hash).
+Then update `garnet/tools/cipd_internal.ensure` to point to the new version using the instance ID of the package you created. You can find the instance ID with CIPD like so:
+```
+$ cipd describe \
+  fuchsia_internal/linux/linux_guest-<version>-${ARCH} \
+  -version "kernel_git_revision:<git revision>" \
+  -version "tests_git_revision:<git revision>"
+```
 
 ## Updating the Linux kernel version
 
