@@ -15,4 +15,6 @@ MODULE_SRCS += \
 
 MODULE_STATIC_LIBS := \
 
+MODULE_PACKAGE := src
+
 include make/module.mk
