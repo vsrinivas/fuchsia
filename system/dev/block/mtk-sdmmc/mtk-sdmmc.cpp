@@ -122,7 +122,8 @@ zx_status_t MtkSdmmc::Create(zx_device_t* parent) {
 
     sdmmc_host_info_t info = {
         .caps = SDMMC_HOST_CAP_BUS_WIDTH_8 | SDMMC_HOST_CAP_AUTO_CMD12 | SDMMC_HOST_CAP_ADMA2,
-        .max_transfer_size = BLOCK_MAX_TRANSFER_UNBOUNDED,
+        // Assuming 512 is smallest block size we are likely to see.
+        .max_transfer_size = SDMMC_PAGES_COUNT * 512,
         .max_transfer_size_non_dma = config.fifo_depth,
         // The datasheet claims that MSDC0 supports EMMC4.5 (and HS400), however there does not
         // appear to be a data strobe input pin on the chip.
