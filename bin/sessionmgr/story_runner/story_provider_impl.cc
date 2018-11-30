@@ -69,8 +69,7 @@ class StoryProviderImpl::StopStoryCall : public Operation<> {
     }
 
     FXL_DCHECK(i->second.controller_impl != nullptr);
-    i->second.controller_impl->StopWithoutNotifying(
-        [this, flow] { CleanupRuntime(flow); });
+    i->second.controller_impl->Stop([this, flow] { CleanupRuntime(flow); });
   }
 
   void CleanupRuntime(FlowToken flow) {
@@ -189,17 +188,14 @@ class StoryProviderImpl::StopAllStoriesCall : public Operation<> {
       // complete StopWithoutNotifying(), we will never be called back and the
       // OperationQueue on which we're running will block.  Moving over to
       // fit::promise will allow us to observe cancellation.
-      //
-      // TODO(thatguy): Use StopStoryCall instead of reproducing some of its
-      // logic here.
-      it.second.controller_impl->StopWithoutNotifying(
-          [this, story_id = it.first, flow] {
-            // It is okay to erase story_id because story provider binding has
-            // been closed and this callback cannot be invoked synchronously.
-            story_provider_impl_->story_runtime_containers_.erase(story_id);
-          });
+      operations_.Add(new StopStoryCall(
+          it.first, &story_provider_impl_->story_runtime_containers_,
+          story_provider_impl_->component_context_info_.message_queue_manager,
+          [flow] {}));
     }
   }
+
+  OperationCollection operations_;
 
   StoryProviderImpl* const story_provider_impl_;  // not owned
 

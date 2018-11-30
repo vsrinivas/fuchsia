@@ -64,10 +64,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   // Called by StoryProviderImpl.
   bool IsRunning();
 
-  // Called by StoryProviderImpl. A variant of Stop() which does not notify
-  // listeners that we stopped the story.
-  void StopWithoutNotifying(const std::function<void()>& done);
-
   // Called by StoryProviderImpl.
   fuchsia::modular::StoryState GetStoryState() const;
 
@@ -169,12 +165,15 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
       fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request,
       std::function<void(std::string /* entity_reference */)> callback);
 
+  // |StoryController|
+  // NOTE: Public so that StoryProviderImpl can call it.
+  void Stop(StopCallback done) override;
+
  private:
   // |StoryController|
   void GetInfo(GetInfoCallback callback) override;
   void Start(fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
                  request) override;
-  void Stop(StopCallback done) override;
   void TakeAndLoadSnapshot(
       fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> request,
       TakeAndLoadSnapshotCallback done) override;

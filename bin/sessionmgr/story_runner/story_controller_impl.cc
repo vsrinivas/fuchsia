@@ -481,10 +481,9 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
 class StoryControllerImpl::StopCall : public Operation<> {
  public:
   StopCall(StoryControllerImpl* const story_controller_impl,
-           const bool notify_watchers, std::function<void()> done)
+           std::function<void()> done)
       : Operation("StoryControllerImpl::StopCall", done),
-        story_controller_impl_(story_controller_impl),
-        notify_watchers_(notify_watchers) {}
+        story_controller_impl_(story_controller_impl) {}
 
  private:
   void Run() override {
@@ -538,16 +537,8 @@ class StoryControllerImpl::StopCall : public Operation<> {
           // been destroyed at this point.
           FXL_DCHECK(story_controller_impl_->ongoing_activities_.size() == 0);
 
-          // If this StopCall is part of a DeleteCall, then we don't notify
-          // watchers story state changes; the pertinent state change will be
-          // the delete notification instead.
-          if (notify_watchers_) {
-            story_controller_impl_->SetState(
-                fuchsia::modular::StoryState::STOPPED);
-          } else {
-            story_controller_impl_->state_ =
-                fuchsia::modular::StoryState::STOPPED;
-          }
+          story_controller_impl_->SetState(
+              fuchsia::modular::StoryState::STOPPED);
 
           story_controller_impl_->DestroyStoryEnvironment();
 
@@ -556,7 +547,6 @@ class StoryControllerImpl::StopCall : public Operation<> {
   }
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
-  const bool notify_watchers_;  // Whether to notify state change to watchers.
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StopCall);
 };
@@ -610,8 +600,7 @@ class StoryControllerImpl::StopModuleAndStoryIfEmptyCall : public Operation<> {
         story_controller_impl_->FindRunningModInfo(module_path_);
     if (running_mod_info &&
         story_controller_impl_->running_mod_infos_.size() == 1) {
-      operation_queue_.Add(new StopCall(story_controller_impl_,
-                                        true /* notify watchers */, [flow] {}));
+      operation_queue_.Add(new StopCall(story_controller_impl_, [flow] {}));
     } else {
       // Otherwise, stop this one module.
       operation_queue_.Add(new StopModuleCall(
@@ -1143,10 +1132,6 @@ bool StoryControllerImpl::IsRunning() {
   }
 }
 
-void StoryControllerImpl::StopWithoutNotifying(const StopCallback& done) {
-  operation_queue_.Add(new StopCall(this, false /* notify watchers */, done));
-}
-
 fuchsia::modular::StoryState StoryControllerImpl::GetStoryState() const {
   return state_;
 }
@@ -1409,7 +1394,7 @@ void StoryControllerImpl::Start(
 }
 
 void StoryControllerImpl::Stop(StopCallback done) {
-  operation_queue_.Add(new StopCall(this, true /* notify watchers */, done));
+  operation_queue_.Add(new StopCall(this, done));
 }
 
 void StoryControllerImpl::TakeAndLoadSnapshot(
