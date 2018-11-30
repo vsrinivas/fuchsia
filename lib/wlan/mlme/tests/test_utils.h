@@ -8,6 +8,7 @@
 #include <gtest/gtest.h>
 #include <algorithm>
 #include <lib/fidl/cpp/array.h>
+#include <wlan/mlme/packet.h>
 
 namespace wlan {
 namespace test_utils {
@@ -43,6 +44,15 @@ template <typename T> struct RangeWrapper {
         return std::equal(begin(), end(), other.begin(), other.end());
     }
 };
+
+static inline fbl::unique_ptr<Packet> MakeWlanPacket(std::initializer_list<uint8_t> bytes) {
+    auto packet = GetWlanPacket(bytes.size());
+    ZX_ASSERT(packet != nullptr);
+
+    std::copy(bytes.begin(), bytes.end(), packet->data());
+    packet->set_len(bytes.size());
+    return packet;
+}
 
 }  // namespace test_utils
 }  // namespace wlan

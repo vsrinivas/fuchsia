@@ -233,6 +233,9 @@ zx_status_t MeshMlme::HandleAnyWlanFrame(fbl::unique_ptr<Packet> pkt) {
         if (auto mgmt_frame = possible_mgmt_frame.CheckLength()) {
             return HandleAnyMgmtFrame(mgmt_frame.IntoOwned(std::move(pkt)));
         }
+    } else if (DataFrameView<>::CheckType(pkt.get())) {
+        HandleDataFrame(std::move(pkt));
+        return ZX_OK;
     }
     return ZX_OK;
 }
@@ -284,6 +287,103 @@ zx_status_t MeshMlme::HandleMpmOpenAction(common::MacAddr src_addr, BufferReader
 
     src_addr.CopyTo(action.common.peer_sta_address.data());
     return SendServiceMsg(device_, &action, fuchsia_wlan_mlme_MLMEIncomingMpOpenActionOrdinal);
+}
+
+void MeshMlme::HandleDataFrame(fbl::unique_ptr<Packet> packet) {
+    BufferReader r(*packet);
+    auto header = common::ParseMeshDataHeader(&r);
+    if (!header) { return; }
+
+    // Drop frames with 5 addresses (only 3, 4 or 6 addresses are allowed)
+    if (header->mac_header.addr4 != nullptr && header->addr_ext.size() == 1) { return; }
+
+    // Drop reflected frames
+    if (header->mac_header.fixed->addr2 == self_addr()) { return; }
+
+    // TODO(gbonik): drop frames from non-peers
+
+    // TODO(gbonik): maintain a cache of seen sequence IDs and drop duplicate frames
+
+    if (ShouldDeliverData(header->mac_header)) {
+        DeliverData(*header, *packet, r.ReadBytes());
+    }
+
+    // TODO(gbonik): forward data
+}
+
+// See IEEE Std 802.11-2016, 9.3.5 (Table 9-42)
+static const common::MacAddr& GetDestAddr(const common::ParsedMeshDataHeader& header) {
+    if (header.addr_ext.size() == 2) {
+        // For proxied individually addressed frames, addr5 is the DA
+        return header.addr_ext[0];
+    }
+    if (header.mac_header.addr4 != nullptr) {
+        // For unproxied individually addressed frames, addr3 is the DA
+        return header.mac_header.fixed->addr3;
+    }
+    // For group addressed frames, addr1 is the DA
+    return header.mac_header.fixed->addr1;
+}
+
+// See IEEE Std 802.11-2016, 9.3.5 (Table 9-42)
+static const common::MacAddr& GetSrcAddr(const common::ParsedMeshDataHeader& header) {
+    switch (header.addr_ext.size()) {
+    case 1:
+        // Proxied group addressed frame
+        return header.addr_ext[0];
+    case 2:
+        // Proxied individually addressed frame
+        return header.addr_ext[1];
+    default:
+        // Unproxied
+        if (header.mac_header.addr4 != nullptr) {
+            // Unproxied individually addressed frame
+            return *header.mac_header.addr4;
+        } else {
+            // Unproxied group addressed frame
+            return header.mac_header.fixed->addr3;
+        }
+    }
+}
+
+bool MeshMlme::ShouldDeliverData(const common::ParsedDataFrameHeader& header) {
+    if (header.addr4 != nullptr) {
+        // Individually addressed frame: addr3 is the mesh destination
+        return header.fixed->addr3 == self_addr();
+    } else {
+        // Group-addressed frame: check that addr1 is actually a group address
+        return header.fixed->addr1.IsGroupAddr();
+    }
+}
+
+void MeshMlme::DeliverData(const common::ParsedMeshDataHeader& header,
+                           Span<uint8_t> wlan_frame,
+                           size_t payload_offset) {
+    ZX_ASSERT(payload_offset >= sizeof(EthernetII));
+    auto eth_frame = wlan_frame.subspan(payload_offset - sizeof(EthernetII));
+    ZX_ASSERT(eth_frame.size() >= sizeof(EthernetII));
+
+    uint8_t old[sizeof(EthernetII)];
+    memcpy(old, eth_frame.data(), sizeof(EthernetII));
+
+    // Construct the header in a separate chunk of memory to make sure we don't overwrite
+    // the data while reading it at the same time
+    EthernetII eth_hdr = {
+        .dest = GetDestAddr(header),
+        .src = GetSrcAddr(header),
+        .ether_type = header.llc->protocol_id,
+    };
+
+    memcpy(eth_frame.data(), &eth_hdr, sizeof(EthernetII));
+    zx_status_t status = device_->DeliverEthernet(eth_frame);
+
+    // Restore the original buffer to make sure we don't confuse the caller
+    memcpy(eth_frame.data(), &old, sizeof(EthernetII));
+
+    if (status != ZX_OK) {
+        errorf("[mesh-mlme] Failed to deliver an ethernet frame: %s\n",
+               zx_status_get_string(status));
+    }
 }
 
 zx_status_t MeshMlme::HandleTimeout(const ObjectId id) {

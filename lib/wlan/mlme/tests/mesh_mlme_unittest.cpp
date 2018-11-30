@@ -58,4 +58,55 @@ TEST(MeshMlme, HandleMpmOpen) {
     }
 }
 
+TEST(MeshMlme, DeliverProxiedData) {
+    MockDevice device;
+    device.state->set_address(common::MacAddr("11:11:11:11:11:11"));
+    MeshMlme mlme(&device);
+
+    // Simulate receiving a data frame
+    zx_status_t status = mlme.HandleFramePacket(test_utils::MakeWlanPacket({
+        // clang-format off
+        // Data header
+        0x88, 0x03, // fc: qos data, 4-address, no ht ctl
+        0x00, 0x00, // duration
+        0x11, 0x11, 0x11, 0x11, 0x11, 0x11, // addr1
+        0x22, 0x22, 0x22, 0x22, 0x22, 0x22, // addr2
+        0x11, 0x11, 0x11, 0x11, 0x11, 0x11, // addr3: mesh da = ra
+        0x00, 0x00, // seq ctl
+        0x44, 0x44, 0x44, 0x44, 0x44, 0x44, // addr4
+        0x00, 0x01, // qos ctl: mesh control present
+        // Mesh control
+        0x02, // flags: addr56 extension
+        0x20, // ttl
+        0xaa, 0xbb, 0xcc, 0xdd, // seq
+        0x55, 0x55, 0x55, 0x55, 0x55, 0x55, // addr5
+        0x66, 0x66, 0x66, 0x66, 0x66, 0x66, // addr6
+        // LLC header
+        0xaa, 0xaa, 0x03, // dsap ssap ctrl
+        0x00, 0x00, 0x00, // oui
+        0x12, 0x34, // protocol id
+        // Payload
+        0xde, 0xad, 0xbe, 0xef,
+        // clang-format on
+    }));
+    EXPECT_EQ(ZX_OK, status);
+
+    auto eth_frames = device.GetEthPackets();
+    ASSERT_EQ(1u, eth_frames.size());
+
+    // clang-format off
+    const uint8_t expected[] = {
+        // Destination = addr5
+        0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
+        // Source = addr6
+        0x66, 0x66, 0x66, 0x66, 0x66, 0x66,
+        // Ethertype = protocol id from the LLC header
+        0x12, 0x34,
+        // Payload
+        0xde, 0xad, 0xbe, 0xef,
+    };
+    // clang-format on
+    EXPECT_RANGES_EQ(expected, eth_frames[0]);
+}
+
 }  // namespace wlan

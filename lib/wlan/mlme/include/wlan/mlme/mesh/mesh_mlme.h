@@ -6,6 +6,7 @@
 #define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_MESH_MESH_MLME_H_
 
 #include <wlan/common/buffer_reader.h>
+#include <wlan/common/parse_mac_header.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/mac_header_writer.h>
 #include <wlan/mlme/mesh/path_table.h>
@@ -43,6 +44,11 @@ class MeshMlme : public Mlme {
     zx_status_t HandleActionFrame(common::MacAddr src_addr, BufferReader* r);
     zx_status_t HandleSelfProtectedAction(common::MacAddr src_addr, BufferReader* r);
     zx_status_t HandleMpmOpenAction(common::MacAddr src_addr, BufferReader* r);
+
+    void HandleDataFrame(fbl::unique_ptr<Packet> packet);
+    bool ShouldDeliverData(const common::ParsedDataFrameHeader& header);
+    void DeliverData(const common::ParsedMeshDataHeader& header, Span<uint8_t> wlan_frame,
+                     size_t payload_offset);
 
     MacHeaderWriter CreateMacHeaderWriter();
 
