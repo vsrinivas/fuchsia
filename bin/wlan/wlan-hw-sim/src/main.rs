@@ -514,6 +514,7 @@ mod simulation_tests {
     fn ethernet_scan() {
         let mut ok = true;
         ok = run_test("verify_ethernet", verify_ethernet) && ok;
+        1.seconds().after_now().sleep();
         ok = run_test("simulate_scan", simulate_scan) && ok;
         // TODO(NET-1885) - commenting out due to flake
         // ok = run_test("connecting_to_ap", connecting_to_ap) && ok;
