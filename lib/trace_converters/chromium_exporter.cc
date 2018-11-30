@@ -29,6 +29,7 @@ bool IsEventTypeSupported(trace::EventType type) {
     case trace::EventType::kCounter:
     case trace::EventType::kDurationBegin:
     case trace::EventType::kDurationEnd:
+    case trace::EventType::kDurationComplete:
     case trace::EventType::kAsyncBegin:
     case trace::EventType::kAsyncInstant:
     case trace::EventType::kAsyncEnd:
@@ -163,7 +164,7 @@ void ChromiumExporter::ExportRecord(const trace::Record& record) {
       const auto& blob = record.GetBlob();
       if (blob.type == TRACE_BLOB_TYPE_LAST_BRANCH) {
         auto lbr =
-          reinterpret_cast<const cpuperf::LastBranchRecord*>(blob.blob);
+            reinterpret_cast<const cpuperf::LastBranchRecord*>(blob.blob);
         last_branch_records_.push_back(*lbr);
       }
       break;
@@ -237,6 +238,14 @@ void ChromiumExporter::ExportEvent(const trace::Record::Event& event) {
     case trace::EventType::kDurationEnd:
       writer_.Key("ph");
       writer_.String("E");
+      break;
+    case trace::EventType::kDurationComplete:
+      writer_.Key("ph");
+      writer_.String("X");
+      writer_.Key("dur");
+      writer_.Double(
+          (event.data.GetDurationComplete().end_time - event.timestamp) *
+          tick_scale_);
       break;
     case trace::EventType::kAsyncBegin:
       writer_.Key("ph");
