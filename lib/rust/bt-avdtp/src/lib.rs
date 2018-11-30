@@ -549,14 +549,20 @@ pub struct DiscoverResponder {
 
 impl DiscoverResponder {
     /// Sends the response to a discovery request.
+    /// At least one endpoint must be present.
     /// Will result in a Error::PeerWrite if the distant peer is disconnected.
     pub fn send(self, endpoints: &[StreamInformation]) -> Result<(), Error> {
+        if endpoints.len() == 0 {
+            // There shall be at least one SEP in a response (Sec 8.6.2)
+            return Err(Error::Encoding);
+        }
         let header = SignalingHeader::new(
             self.id,
             SignalIdentifier::Discover,
             SignalingMessageType::ResponseAccept,
         );
-        let mut reply = vec![0 as u8; header.encoded_len() + endpoints.len() * 2];
+        let mut reply =
+            vec![0 as u8; header.encoded_len() + endpoints.len() * endpoints[0].encoded_len()];
         header.encode(&mut reply[0..header.encoded_len()])?;
         let mut idx = header.encoded_len();
         for endpoint in endpoints {

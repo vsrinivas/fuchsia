@@ -138,13 +138,30 @@ fn responds_with_same_tx_id() {
     assert!(remote.write(&CMD_DISCOVER).is_ok());
 
     let respond_res = match next_request(&mut stream, &mut exec) {
-        Request::Discover { responder } => responder.send(&[]),
+        Request::Discover { responder } => {
+            let s = StreamInformation::new(
+                0x0A, // SEID from CMD_DISCOVER
+                false,
+                MediaType::Video,
+                EndpointType::Source,
+            )
+            .unwrap();
+            responder.send(&[s])
+        }
         _ => panic!("should have received a Discover"),
     };
 
     assert!(respond_res.is_ok());
 
-    expect_remote_recv(&[0x42, 0x01], &remote);
+    let response: &[u8] = &[
+        // txlabel (same as CMD_DISCOVER, 4), Single (0b00), Response Accept (0b10)
+        0x4 << 4 | 0x0 << 2 | 0x2,
+        0x01,                 // Discover
+        0x0A << 2 | 0x0 << 1, // SEID (0A), Not In Use (0b0)
+        0x01 << 4 | 0x0 << 3, // Video (0x01), Source (0x00)
+    ];
+
+    expect_remote_recv(response, &remote);
 }
 
 #[test]
