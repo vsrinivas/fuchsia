@@ -15,11 +15,60 @@
 namespace btlib {
 namespace att {
 
+using common::HostError;
+using common::NewSlabBuffer;
+
 // static
 constexpr Bearer::HandlerId Bearer::kInvalidHandlerId;
 constexpr Bearer::TransactionId Bearer::kInvalidTransactionId;
 
 namespace {
+
+// Returns the security level that is required to resolve the given ATT error
+// code and the current security properties of the link, according to the table
+// in v5.0, Vol 3, Part C, 10.3.2 (table 10.2). A security upgrade is not
+// required if the returned value equals sm::SecurityLevel::kNoSecurity.
+// TODO(armansito): Supporting requesting Secure Connections in addition to the
+// encrypted/MITM dimensions.
+sm::SecurityLevel CheckSecurity(ErrorCode ecode,
+                                const sm::SecurityProperties& security) {
+  bool encrypted = (security.level() != sm::SecurityLevel::kNoSecurity);
+
+  switch (ecode) {
+    // "Insufficient Encryption" error code is specified for cases when the peer
+    // is paired (i.e. a LTK or STK exists for it) but the link is not
+    // encrypted. We treat this as equivalent to "Insufficient Authentication"
+    // sent on an unencrypted link.
+    case ErrorCode::kInsufficientEncryption:
+      encrypted = false;
+      [[fallthrough]];
+    // We achieve authorization by pairing which requires a confirmation from
+    // the host's pairing delegate.
+    // TODO(armansito): Allow for this to be satisfied with a simple user
+    // confirmation if we're not paired?
+    case ErrorCode::kInsufficientAuthorization:
+    case ErrorCode::kInsufficientAuthentication:
+      // If the link is already authenticated we cannot request a further
+      // upgrade.
+      // TODO(armansito): Take into account "secure connections" once it's
+      // supported.
+      if (security.authenticated()) {
+        return sm::SecurityLevel::kNoSecurity;
+      }
+      return encrypted ? sm::SecurityLevel::kAuthenticated
+                       : sm::SecurityLevel::kEncrypted;
+
+    // Our SMP implementation always claims to support the maximum encryption
+    // key size. If the key size is too small then the peer must support a
+    // smaller size and we cannot upgrade the key.
+    case ErrorCode::kInsufficientEncryptionKeySize:
+      break;
+    default:
+      break;
+  }
+
+  return sm::SecurityLevel::kNoSecurity;
+}
 
 MethodType GetMethodType(OpCode opcode) {
   // We treat all packets as a command if the command bit was set. An
@@ -131,7 +180,8 @@ Bearer::PendingTransaction::PendingTransaction(OpCode opcode,
     : opcode(opcode),
       callback(std::move(callback)),
       error_callback(std::move(error_callback)),
-      pdu(std::move(pdu)) {
+      pdu(std::move(pdu)),
+      security_retry_level(sm::SecurityLevel::kNoSecurity) {
   ZX_DEBUG_ASSERT(this->callback);
   ZX_DEBUG_ASSERT(this->error_callback);
   ZX_DEBUG_ASSERT(this->pdu);
@@ -172,12 +222,28 @@ void Bearer::TransactionQueue::TrySendNext(l2cap::Channel* chan,
 
   // Advance to the next transaction.
   current_ = queue_.pop_front();
-  if (current()) {
+  while (current()) {
     ZX_DEBUG_ASSERT(!timeout_task_.is_pending());
-    timeout_task_.set_handler(std::move(timeout_cb));
-    timeout_task_.PostDelayed(async_get_default_dispatcher(),
-                              zx::msec(timeout_ms));
-    chan->Send(std::move(current()->pdu));
+    ZX_DEBUG_ASSERT(current()->pdu);
+
+    // We copy the PDU payload in case it needs to be retried following a
+    // security upgrade.
+    auto pdu = NewSlabBuffer(current()->pdu->size());
+    if (pdu) {
+      current()->pdu->Copy(pdu.get());
+      timeout_task_.set_handler(std::move(timeout_cb));
+      timeout_task_.PostDelayed(async_get_default_dispatcher(),
+                                zx::msec(timeout_ms));
+      chan->Send(std::move(pdu));
+      break;
+    }
+
+    bt_log(SPEW, "att", "Failed to start transaction: out of memory!");
+    auto t = std::move(current_);
+    t->error_callback(Status(HostError::kOutOfMemory), kInvalidHandle);
+
+    // Process the next command until we can send OR we have drained the queue.
+    current_ = queue_.pop_front();
   }
 }
 
@@ -201,7 +267,8 @@ void Bearer::TransactionQueue::InvokeErrorAll(Status status) {
 Bearer::Bearer(fbl::RefPtr<l2cap::Channel> chan)
     : chan_(std::move(chan)),
       next_remote_transaction_id_(1u),
-      next_handler_id_(1u) {
+      next_handler_id_(1u),
+      weak_ptr_factory_(this) {
   ZX_DEBUG_ASSERT(chan_);
 
   if (chan_->link_type() == hci::Connection::LinkType::kLE) {
@@ -265,8 +332,7 @@ void Bearer::ShutDownInternal(bool due_to_timeout) {
 
   // Terminate all remaining procedures with an error. This is safe even if
   // the bearer got deleted by |closed_cb_|.
-  Status status(due_to_timeout ? common::HostError::kTimedOut
-                               : common::HostError::kFailed);
+  Status status(due_to_timeout ? HostError::kTimedOut : HostError::kFailed);
   req_queue.InvokeErrorAll(status);
   ind_queue.InvokeErrorAll(status);
 }
@@ -445,8 +511,12 @@ bool Bearer::IsPacketValid(const common::ByteBuffer& packet) {
 }
 
 void Bearer::TryStartNextTransaction(TransactionQueue* tq) {
-  ZX_DEBUG_ASSERT(is_open());
   ZX_DEBUG_ASSERT(tq);
+
+  if (!is_open()) {
+    bt_log(SPEW, "att", "Cannot process transactions; bearer is closed");
+    return;
+  }
 
   tq->TrySendNext(
       chan_.get(),
@@ -461,8 +531,7 @@ void Bearer::SendErrorResponse(OpCode request_opcode, Handle attribute_handle,
                                ErrorCode error_code) {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 
-  auto buffer =
-      common::NewSlabBuffer(sizeof(Header) + sizeof(ErrorResponseParams));
+  auto buffer = NewSlabBuffer(sizeof(Header) + sizeof(ErrorResponseParams));
   ZX_ASSERT(buffer);
 
   PacketWriter packet(kErrorResponse, buffer.get());
@@ -522,17 +591,59 @@ void Bearer::HandleEndTransaction(TransactionQueue* tq,
     return;
   }
 
-  // The transaction is complete. Send out the next queued transaction and
-  // notify the callback.
+  // The transaction is complete.
   auto transaction = tq->ClearCurrent();
   ZX_DEBUG_ASSERT(transaction);
 
-  TryStartNextTransaction(tq);
+  sm::SecurityLevel security_requirement =
+      CheckSecurity(error_code, chan_->security());
+  if (transaction->security_retry_level >= security_requirement ||
+      security_requirement <= chan_->security().level()) {
+    // Resolve the transaction.
+    if (!report_error) {
+      transaction->callback(packet);
+    } else if (transaction->error_callback) {
+      transaction->error_callback(Status(error_code), attr_in_error);
+    }
 
-  if (!report_error)
-    transaction->callback(packet);
-  else if (transaction->error_callback)
-    transaction->error_callback(Status(error_code), attr_in_error);
+    // Send out the next queued transaction
+    TryStartNextTransaction(tq);
+    return;
+  }
+
+  bt_log(SPEW, "att",
+         "Received security error for transaction %#.2x; requesting upgrade to "
+         "level: %s",
+         error_code, sm::LevelToString(security_requirement));
+  chan_->UpgradeSecurity(
+      security_requirement,
+      [self = weak_ptr_factory_.GetWeakPtr(), error_code, attr_in_error,
+       security_requirement,
+       t = std::move(transaction)](sm::Status status) mutable {
+        // If the security upgrade failed or the bearer got destroyed, then
+        // resolve the transaction with the original error.
+        if (!self || !status) {
+          t->error_callback(Status(error_code), attr_in_error);
+          return;
+        }
+
+        ZX_DEBUG_ASSERT(self->thread_checker_.IsCreationThreadCurrent());
+
+        // TODO(armansito): Notify the upper layer to re-initiate service
+        // discovery and other necessary procedures (see Vol 3, Part C,
+        // 10.3.2).
+
+        // Re-send the request as described in Vol 3, Part G, 8.1. Since |t| was
+        // originally resolved with an Error Response, it must have come out of
+        // |request_queue_|.
+        ZX_DEBUG_ASSERT(GetMethodType(t->opcode) == MethodType::kRequest);
+        t->security_retry_level = security_requirement;
+        self->request_queue_.Enqueue(std::move(t));
+        self->TryStartNextTransaction(&self->request_queue_);
+      });
+
+  // Move on to the next queued transaction.
+  TryStartNextTransaction(tq);
 }
 
 Bearer::HandlerId Bearer::NextHandlerId() {

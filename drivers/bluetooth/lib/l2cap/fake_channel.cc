@@ -57,6 +57,14 @@ void FakeChannel::SetLinkErrorCallback(LinkErrorCallback callback,
   link_err_dispatcher_ = dispatcher;
 }
 
+void FakeChannel::SetSecurityCallback(SecurityUpgradeCallback callback,
+                                      async_dispatcher_t* dispatcher) {
+  ZX_DEBUG_ASSERT(static_cast<bool>(callback) == static_cast<bool>(dispatcher));
+
+  security_cb_ = std::move(callback);
+  security_dispatcher_ = dispatcher;
+}
+
 void FakeChannel::Close() {
   if (closed_cb_)
     closed_cb_();
@@ -123,7 +131,11 @@ bool FakeChannel::Send(common::ByteBufferPtr sdu) {
 
 void FakeChannel::UpgradeSecurity(sm::SecurityLevel level,
                                   sm::StatusCallback callback) {
-  // TODO(armansito): implement
+  ZX_DEBUG_ASSERT(security_dispatcher_);
+  async::PostTask(
+      security_dispatcher_,
+      [cb = std::move(callback), f = security_cb_.share(), handle = handle_,
+       level]() mutable { f(handle, level, std::move(cb)); });
 }
 
 }  // namespace testing

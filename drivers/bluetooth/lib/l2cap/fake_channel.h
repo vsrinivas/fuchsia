@@ -41,6 +41,10 @@ class FakeChannel : public Channel {
   void SetLinkErrorCallback(LinkErrorCallback callback,
                             async_dispatcher_t* dispatcher);
 
+  // Sets a callback to emulate the result of "UpgradeSecurity()".
+  void SetSecurityCallback(SecurityUpgradeCallback callback,
+                           async_dispatcher_t* dispatcher);
+
   // Emulates channel closure.
   void Close();
 
@@ -79,6 +83,8 @@ class FakeChannel : public Channel {
   Fragmenter fragmenter_;
 
   sm::SecurityProperties security_;
+  SecurityUpgradeCallback security_cb_;
+  async_dispatcher_t* security_dispatcher_;
 
   ClosedCallback closed_cb_;
   RxCallback rx_cb_;

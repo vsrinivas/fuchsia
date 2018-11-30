@@ -26,6 +26,7 @@
 #include "lib/fxl/functional/cancelable_callback.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_counted.h"
+#include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/synchronization/thread_checker.h"
 
 namespace btlib {
@@ -177,6 +178,19 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
 
     // Holds the pdu while the transaction is in the send queue.
     common::ByteBufferPtr pdu;
+
+    // Contains the most recently requested security upgrade level under which
+    // this transaction has been retried following an ATT security error. The
+    // states look like the following:
+    //
+    //   - sm::SecurityLevel::kNoSecurity: The transaction has not been retried.
+    //   - sm::SecurityLevel::kEncrypted: The request has been queued following
+    //     a security upgrate to level "Encrypted".
+    //   - sm::SecurityLevel::kAuthenticated: The request has been queued
+    //     following a security upgrate to level "Authenticated".
+    //
+    // and so on.
+    sm::SecurityLevel security_retry_level;
   };
   using PendingTransactionPtr = std::unique_ptr<PendingTransaction>;
 
@@ -304,6 +318,7 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
   RemoteTransaction remote_indication_;
 
   fxl::ThreadChecker thread_checker_;
+  fxl::WeakPtrFactory<Bearer> weak_ptr_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Bearer);
 };

@@ -12,6 +12,12 @@ namespace btlib {
 namespace att {
 namespace {
 
+using common::CreateStaticByteBuffer;
+using common::HostError;
+using common::LowerBits;
+using common::NewBuffer;
+using common::UpperBits;
+
 constexpr OpCode kTestRequest = kFindInformationRequest;
 constexpr OpCode kTestResponse = kFindInformationResponse;
 constexpr OpCode kTestRequest2 = kExchangeMTURequest;
@@ -86,8 +92,8 @@ TEST_F(ATT_BearerTest, StartTransactionErrorClosed) {
   bearer()->ShutDown();
   ASSERT_FALSE(bearer()->is_open());
 
-  EXPECT_FALSE(bearer()->StartTransaction(common::NewBuffer(kTestRequest),
-                                          NopCallback, NopErrorCallback));
+  EXPECT_FALSE(bearer()->StartTransaction(NewBuffer(kTestRequest), NopCallback,
+                                          NopErrorCallback));
 }
 
 TEST_F(ATT_BearerTest, StartTransactionInvalidPacket) {
@@ -97,18 +103,18 @@ TEST_F(ATT_BearerTest, StartTransactionInvalidPacket) {
 
   // Exceeds MTU.
   bearer()->set_mtu(1);
-  EXPECT_FALSE(bearer()->StartTransaction(common::NewBuffer(kTestRequest, 2),
+  EXPECT_FALSE(bearer()->StartTransaction(NewBuffer(kTestRequest, 2),
                                           NopCallback, NopErrorCallback));
 }
 
 TEST_F(ATT_BearerTest, StartTransactionWrongMethodType) {
   // Command
-  EXPECT_FALSE(bearer()->StartTransaction(common::NewBuffer(kWriteCommand),
-                                          NopCallback, NopErrorCallback));
+  EXPECT_FALSE(bearer()->StartTransaction(NewBuffer(kWriteCommand), NopCallback,
+                                          NopErrorCallback));
 
   // Notification
-  EXPECT_FALSE(bearer()->StartTransaction(common::NewBuffer(kNotification),
-                                          NopCallback, NopErrorCallback));
+  EXPECT_FALSE(bearer()->StartTransaction(NewBuffer(kNotification), NopCallback,
+                                          NopErrorCallback));
 }
 
 TEST_F(ATT_BearerTest, RequestTimeout) {
@@ -116,9 +122,8 @@ TEST_F(ATT_BearerTest, RequestTimeout) {
   // error.
   bool closed = false;
   bool err_cb_called = false;
-  bearer()->set_closed_callback([&closed, &err_cb_called, this] {
-    closed = true;
-  });
+  bearer()->set_closed_callback(
+      [&closed, &err_cb_called, this] { closed = true; });
 
   auto err_cb = [&closed, &err_cb_called, this](Status status, Handle handle) {
     EXPECT_EQ(common::HostError::kTimedOut, status.error());
@@ -128,8 +133,8 @@ TEST_F(ATT_BearerTest, RequestTimeout) {
   };
 
   ASSERT_FALSE(fake_att_chan()->link_error());
-  EXPECT_TRUE(bearer()->StartTransaction(common::NewBuffer(kTestRequest),
-                                         NopCallback, err_cb));
+  EXPECT_TRUE(
+      bearer()->StartTransaction(NewBuffer(kTestRequest), NopCallback, err_cb));
 
   RunLoopFor(zx::msec(kTransactionTimeoutMs));
 
@@ -152,9 +157,8 @@ TEST_F(ATT_BearerTest, RequestTimeoutMany) {
   bool closed = false;
   unsigned int err_cb_count = 0u;
 
-  bearer()->set_closed_callback([&err_cb_count, &closed, this] {
-    closed = true;
-  });
+  bearer()->set_closed_callback(
+      [&err_cb_count, &closed, this] { closed = true; });
 
   auto err_cb = [&closed, &err_cb_count, this](Status status, Handle handle) {
     EXPECT_EQ(common::HostError::kTimedOut, status.error());
@@ -164,11 +168,9 @@ TEST_F(ATT_BearerTest, RequestTimeoutMany) {
   };
 
   EXPECT_TRUE(bearer()->StartTransaction(
-      common::NewBuffer(kTestRequest, 'T', 'e', 's', 't'), NopCallback,
-      err_cb));
+      NewBuffer(kTestRequest, 'T', 'e', 's', 't'), NopCallback, err_cb));
   EXPECT_TRUE(bearer()->StartTransaction(
-      common::NewBuffer(kTestRequest2, 'T', 'e', 's', 't'), NopCallback,
-      err_cb));
+      NewBuffer(kTestRequest2, 'T', 'e', 's', 't'), NopCallback, err_cb));
 
   RunLoopUntilIdle();
 
@@ -191,9 +193,8 @@ TEST_F(ATT_BearerTest, IndicationTimeout) {
   bool closed = false;
   bool err_cb_called = false;
 
-  bearer()->set_closed_callback([&closed, &err_cb_called, this] {
-    closed = true;
-  });
+  bearer()->set_closed_callback(
+      [&closed, &err_cb_called, this] { closed = true; });
 
   auto err_cb = [&closed, &err_cb_called, this](Status status, Handle handle) {
     EXPECT_EQ(common::HostError::kTimedOut, status.error());
@@ -203,7 +204,7 @@ TEST_F(ATT_BearerTest, IndicationTimeout) {
   };
 
   EXPECT_TRUE(bearer()->StartTransaction(
-      common::NewBuffer(kIndication, 'T', 'e', 's', 't'), NopCallback, err_cb));
+      NewBuffer(kIndication, 'T', 'e', 's', 't'), NopCallback, err_cb));
 
   RunLoopFor(zx::msec(kTransactionTimeoutMs));
 
@@ -228,9 +229,8 @@ TEST_F(ATT_BearerTest, IndicationTimeoutMany) {
   bool closed = false;
   unsigned int err_cb_count = 0u;
 
-  bearer()->set_closed_callback([&closed, &err_cb_count, this] {
-    closed = true;
-  });
+  bearer()->set_closed_callback(
+      [&closed, &err_cb_count, this] { closed = true; });
 
   auto err_cb = [&closed, &err_cb_count, this](Status status, Handle handle) {
     EXPECT_EQ(common::HostError::kTimedOut, status.error());
@@ -239,10 +239,10 @@ TEST_F(ATT_BearerTest, IndicationTimeoutMany) {
     err_cb_count++;
   };
 
-  EXPECT_TRUE(bearer()->StartTransaction(
-      common::NewBuffer(kIndication, kIndValue1), NopCallback, err_cb));
-  EXPECT_TRUE(bearer()->StartTransaction(
-      common::NewBuffer(kIndication, kIndValue2), NopCallback, err_cb));
+  EXPECT_TRUE(bearer()->StartTransaction(NewBuffer(kIndication, kIndValue1),
+                                         NopCallback, err_cb));
+  EXPECT_TRUE(bearer()->StartTransaction(NewBuffer(kIndication, kIndValue2),
+                                         NopCallback, err_cb));
 
   RunLoopUntilIdle();
 
@@ -261,9 +261,7 @@ TEST_F(ATT_BearerTest, IndicationTimeoutMany) {
 
 TEST_F(ATT_BearerTest, ReceiveEmptyPacket) {
   bool closed = false;
-  bearer()->set_closed_callback([&closed] {
-    closed = true;
-  });
+  bearer()->set_closed_callback([&closed] { closed = true; });
 
   fake_chan()->Receive(common::BufferView());
 
@@ -273,11 +271,9 @@ TEST_F(ATT_BearerTest, ReceiveEmptyPacket) {
 
 TEST_F(ATT_BearerTest, ReceiveResponseWithoutRequest) {
   bool closed = false;
-  bearer()->set_closed_callback([&closed] {
-    closed = true;
-  });
+  bearer()->set_closed_callback([&closed] { closed = true; });
 
-  fake_chan()->Receive(common::CreateStaticByteBuffer(kTestResponse));
+  fake_chan()->Receive(CreateStaticByteBuffer(kTestResponse));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(closed);
@@ -285,11 +281,9 @@ TEST_F(ATT_BearerTest, ReceiveResponseWithoutRequest) {
 
 TEST_F(ATT_BearerTest, ReceiveConfirmationWithoutIndication) {
   bool closed = false;
-  bearer()->set_closed_callback([&closed] {
-    closed = true;
-  });
+  bearer()->set_closed_callback([&closed] { closed = true; });
 
-  fake_chan()->Receive(common::CreateStaticByteBuffer(kConfirmation));
+  fake_chan()->Receive(CreateStaticByteBuffer(kConfirmation));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(closed);
@@ -303,16 +297,14 @@ TEST_F(ATT_BearerTest, SendRequestWrongResponse) {
     EXPECT_EQ(kTestRequest, (*cb_packet)[0]);
 
     // Send back the wrong response.
-    fake_chan()->Receive(common::CreateStaticByteBuffer(kTestResponse2));
+    fake_chan()->Receive(CreateStaticByteBuffer(kTestResponse2));
   };
   fake_chan()->SetSendCallback(chan_cb, dispatcher());
 
   bool err_cb_called = false;
   bool closed = false;
 
-  bearer()->set_closed_callback([&closed, this] {
-    closed = true;
-  });
+  bearer()->set_closed_callback([&closed, this] { closed = true; });
 
   auto err_cb = [&err_cb_called, this](Status status, Handle handle) {
     EXPECT_EQ(common::HostError::kFailed, status.error());
@@ -320,8 +312,7 @@ TEST_F(ATT_BearerTest, SendRequestWrongResponse) {
 
     err_cb_called = true;
   };
-  bearer()->StartTransaction(common::NewBuffer(kTestRequest), NopCallback,
-                             err_cb);
+  bearer()->StartTransaction(NewBuffer(kTestRequest), NopCallback, err_cb);
 
   RunLoopUntilIdle();
   EXPECT_TRUE(closed);
@@ -330,7 +321,7 @@ TEST_F(ATT_BearerTest, SendRequestWrongResponse) {
 }
 
 TEST_F(ATT_BearerTest, SendRequestErrorResponseTooShort) {
-  auto malformed_error_rsp = common::CreateStaticByteBuffer(
+  auto malformed_error_rsp = CreateStaticByteBuffer(
       // Opcode: error response
       kErrorResponse,
 
@@ -351,9 +342,7 @@ TEST_F(ATT_BearerTest, SendRequestErrorResponseTooShort) {
   bool err_cb_called = false;
   bool closed = false;
 
-  bearer()->set_closed_callback([&closed, this] {
-    closed = true;
-  });
+  bearer()->set_closed_callback([&closed, this] { closed = true; });
 
   auto err_cb = [&err_cb_called, this](Status status, Handle handle) {
     EXPECT_EQ(0, handle);
@@ -361,8 +350,7 @@ TEST_F(ATT_BearerTest, SendRequestErrorResponseTooShort) {
 
     err_cb_called = true;
   };
-  bearer()->StartTransaction(common::NewBuffer(kTestRequest), NopCallback,
-                             err_cb);
+  bearer()->StartTransaction(NewBuffer(kTestRequest), NopCallback, err_cb);
 
   RunLoopUntilIdle();
   EXPECT_TRUE(closed);
@@ -371,7 +359,7 @@ TEST_F(ATT_BearerTest, SendRequestErrorResponseTooShort) {
 }
 
 TEST_F(ATT_BearerTest, SendRequestErrorResponseTooLong) {
-  auto malformed_error_rsp = common::CreateStaticByteBuffer(
+  auto malformed_error_rsp = CreateStaticByteBuffer(
       // Opcode: error response
       kErrorResponse,
 
@@ -392,9 +380,7 @@ TEST_F(ATT_BearerTest, SendRequestErrorResponseTooLong) {
   bool err_cb_called = false;
   bool closed = false;
 
-  bearer()->set_closed_callback([&closed, this] {
-    closed = true;
-  });
+  bearer()->set_closed_callback([&closed, this] { closed = true; });
 
   auto err_cb = [&err_cb_called, this](Status status, Handle handle) {
     EXPECT_EQ(0, handle);
@@ -402,8 +388,7 @@ TEST_F(ATT_BearerTest, SendRequestErrorResponseTooLong) {
 
     err_cb_called = true;
   };
-  bearer()->StartTransaction(common::NewBuffer(kTestRequest), NopCallback,
-                             err_cb);
+  bearer()->StartTransaction(NewBuffer(kTestRequest), NopCallback, err_cb);
 
   RunLoopUntilIdle();
   EXPECT_TRUE(closed);
@@ -412,7 +397,7 @@ TEST_F(ATT_BearerTest, SendRequestErrorResponseTooLong) {
 }
 
 TEST_F(ATT_BearerTest, SendRequestErrorResponseWrongOpCode) {
-  auto error_rsp = common::CreateStaticByteBuffer(
+  auto error_rsp = CreateStaticByteBuffer(
       // Opcode: error response
       kErrorResponse,
 
@@ -438,9 +423,7 @@ TEST_F(ATT_BearerTest, SendRequestErrorResponseWrongOpCode) {
   bool err_cb_called = false;
   bool closed = false;
 
-  bearer()->set_closed_callback([&closed, this] {
-    closed = true;
-  });
+  bearer()->set_closed_callback([&closed, this] { closed = true; });
 
   auto err_cb = [&err_cb_called, this](Status status, Handle handle) {
     EXPECT_EQ(0, handle);
@@ -448,8 +431,7 @@ TEST_F(ATT_BearerTest, SendRequestErrorResponseWrongOpCode) {
 
     err_cb_called = true;
   };
-  bearer()->StartTransaction(common::NewBuffer(kTestRequest), NopCallback,
-                             err_cb);
+  bearer()->StartTransaction(NewBuffer(kTestRequest), NopCallback, err_cb);
 
   RunLoopUntilIdle();
   EXPECT_TRUE(closed);
@@ -458,7 +440,7 @@ TEST_F(ATT_BearerTest, SendRequestErrorResponseWrongOpCode) {
 }
 
 TEST_F(ATT_BearerTest, SendRequestErrorResponse) {
-  auto error_rsp = common::CreateStaticByteBuffer(
+  auto error_rsp = CreateStaticByteBuffer(
       // Opcode: error response
       kErrorResponse,
 
@@ -489,8 +471,7 @@ TEST_F(ATT_BearerTest, SendRequestErrorResponse) {
 
     err_cb_called = true;
   };
-  bearer()->StartTransaction(common::NewBuffer(kTestRequest), NopCallback,
-                             err_cb);
+  bearer()->StartTransaction(NewBuffer(kTestRequest), NopCallback, err_cb);
 
   RunLoopUntilIdle();
   EXPECT_TRUE(err_cb_called);
@@ -501,8 +482,7 @@ TEST_F(ATT_BearerTest, SendRequestErrorResponse) {
 }
 
 TEST_F(ATT_BearerTest, SendRequestSuccess) {
-  auto response =
-      common::CreateStaticByteBuffer(kTestResponse, 'T', 'e', 's', 't');
+  auto response = CreateStaticByteBuffer(kTestResponse, 'T', 'e', 's', 't');
 
   bool chan_cb_called = false;
   auto chan_cb = [this, &chan_cb_called, &response](auto cb_packet) {
@@ -521,8 +501,7 @@ TEST_F(ATT_BearerTest, SendRequestSuccess) {
     cb_called = true;
     EXPECT_TRUE(common::ContainersEqual(response, rsp_packet.data()));
   };
-  bearer()->StartTransaction(common::NewBuffer(kTestRequest), cb,
-                             NopErrorCallback);
+  bearer()->StartTransaction(NewBuffer(kTestRequest), cb, NopErrorCallback);
 
   RunLoopUntilIdle();
   EXPECT_TRUE(chan_cb_called);
@@ -549,32 +528,27 @@ TEST_F(ATT_BearerTest, CloseChannelAndDeleteBearerWhileRequestsArePending) {
     DeleteBearer();
   };
 
-  bearer()->StartTransaction(common::NewBuffer(kTestRequest), NopCallback,
-                             error_cb);
-  bearer()->StartTransaction(common::NewBuffer(kTestRequest), NopCallback,
-                             error_cb);
-  bearer()->StartTransaction(common::NewBuffer(kTestRequest), NopCallback,
-                             error_cb);
+  bearer()->StartTransaction(NewBuffer(kTestRequest), NopCallback, error_cb);
+  bearer()->StartTransaction(NewBuffer(kTestRequest), NopCallback, error_cb);
+  bearer()->StartTransaction(NewBuffer(kTestRequest), NopCallback, error_cb);
 
   fake_chan()->Close();
   EXPECT_EQ(kExpectedCount, cb_count);
 }
 
 TEST_F(ATT_BearerTest, SendManyRequests) {
-  auto response1 = common::CreateStaticByteBuffer(kTestResponse, 'f', 'o', 'o');
-  auto response2 =
-      common::CreateStaticByteBuffer(kErrorResponse,
+  auto response1 = CreateStaticByteBuffer(kTestResponse, 'f', 'o', 'o');
+  auto response2 = CreateStaticByteBuffer(kErrorResponse,
 
-                                     // request opcode
-                                     kTestRequest2,
+                                          // request opcode
+                                          kTestRequest2,
 
-                                     // handle (0x0001)
-                                     0x01, 0x00,
+                                          // handle (0x0001)
+                                          0x01, 0x00,
 
-                                     // error code:
-                                     ErrorCode::kRequestNotSupported);
-  auto response3 =
-      common::CreateStaticByteBuffer(kTestResponse3, 'b', 'a', 'r');
+                                          // error code:
+                                          ErrorCode::kRequestNotSupported);
+  auto response3 = CreateStaticByteBuffer(kTestResponse3, 'b', 'a', 'r');
 
   auto chan_cb = [&, this](auto cb_packet) {
     OpCode opcode = (*cb_packet)[0];
@@ -609,22 +583,19 @@ TEST_F(ATT_BearerTest, SendManyRequests) {
     EXPECT_TRUE(common::ContainersEqual(response1, rsp_packet.data()));
     success_count++;
   };
-  bearer()->StartTransaction(common::NewBuffer(kTestRequest), callback1,
-                             error_cb);
+  bearer()->StartTransaction(NewBuffer(kTestRequest), callback1, error_cb);
 
   auto callback2 = [](const auto& rsp_packet) {
     ADD_FAILURE() << "Transaction should have ended in error!";
   };
-  bearer()->StartTransaction(common::NewBuffer(kTestRequest2), callback2,
-                             error_cb);
+  bearer()->StartTransaction(NewBuffer(kTestRequest2), callback2, error_cb);
 
   auto callback3 = [&success_count, &response3](const auto& rsp_packet) {
     EXPECT_EQ(1u, success_count);
     EXPECT_TRUE(common::ContainersEqual(response3, rsp_packet.data()));
     success_count++;
   };
-  bearer()->StartTransaction(common::NewBuffer(kTestRequest3), callback3,
-                             error_cb);
+  bearer()->StartTransaction(NewBuffer(kTestRequest3), callback3, error_cb);
 
   RunLoopUntilIdle();
 
@@ -643,7 +614,7 @@ TEST_F(ATT_BearerTest, SendManyRequests) {
 TEST_F(ATT_BearerTest, SendIndicationSuccess) {
   // Even though this is a malformed confirmation PDU it will not be rejected by
   // Bearer.
-  auto conf = common::CreateStaticByteBuffer(kConfirmation, 'T', 'e', 's', 't');
+  auto conf = CreateStaticByteBuffer(kConfirmation, 'T', 'e', 's', 't');
 
   bool chan_cb_called = false;
   auto chan_cb = [this, &chan_cb_called, &conf](auto cb_packet) {
@@ -662,8 +633,7 @@ TEST_F(ATT_BearerTest, SendIndicationSuccess) {
     cb_called = true;
     EXPECT_TRUE(common::ContainersEqual(conf, packet.data()));
   };
-  bearer()->StartTransaction(common::NewBuffer(kIndication), cb,
-                             NopErrorCallback);
+  bearer()->StartTransaction(NewBuffer(kIndication), cb, NopErrorCallback);
 
   RunLoopUntilIdle();
   EXPECT_TRUE(chan_cb_called);
@@ -677,7 +647,7 @@ TEST_F(ATT_BearerTest, SendWithoutResponseErrorClosed) {
   bearer()->ShutDown();
   ASSERT_FALSE(bearer()->is_open());
 
-  EXPECT_FALSE(bearer()->SendWithoutResponse(common::NewBuffer(kTestCommand)));
+  EXPECT_FALSE(bearer()->SendWithoutResponse(NewBuffer(kTestCommand)));
 }
 
 TEST_F(ATT_BearerTest, SendWithoutResponseInvalidPacket) {
@@ -687,25 +657,24 @@ TEST_F(ATT_BearerTest, SendWithoutResponseInvalidPacket) {
 
   // Exceeds MTU
   bearer()->set_mtu(1);
-  EXPECT_FALSE(
-      bearer()->SendWithoutResponse(common::NewBuffer(kTestCommand, 2)));
+  EXPECT_FALSE(bearer()->SendWithoutResponse(NewBuffer(kTestCommand, 2)));
 }
 
 TEST_F(ATT_BearerTest, SendWithoutResponseWrongMethodType) {
-  EXPECT_FALSE(bearer()->SendWithoutResponse(common::NewBuffer(kTestRequest)));
-  EXPECT_FALSE(bearer()->SendWithoutResponse(common::NewBuffer(kTestResponse)));
-  EXPECT_FALSE(bearer()->SendWithoutResponse(common::NewBuffer(kIndication)));
+  EXPECT_FALSE(bearer()->SendWithoutResponse(NewBuffer(kTestRequest)));
+  EXPECT_FALSE(bearer()->SendWithoutResponse(NewBuffer(kTestResponse)));
+  EXPECT_FALSE(bearer()->SendWithoutResponse(NewBuffer(kIndication)));
 }
 
 TEST_F(ATT_BearerTest, SendWithoutResponseCorrectMethodType) {
-  EXPECT_TRUE(bearer()->SendWithoutResponse(common::NewBuffer(kNotification)));
-  EXPECT_TRUE(bearer()->SendWithoutResponse(common::NewBuffer(kTestCommand)));
-  EXPECT_TRUE(bearer()->SendWithoutResponse(
-      common::NewBuffer(kTestRequest | kCommandFlag)));
+  EXPECT_TRUE(bearer()->SendWithoutResponse(NewBuffer(kNotification)));
+  EXPECT_TRUE(bearer()->SendWithoutResponse(NewBuffer(kTestCommand)));
+  EXPECT_TRUE(
+      bearer()->SendWithoutResponse(NewBuffer(kTestRequest | kCommandFlag)));
 
   // Any opcode is accepted as long as it has the command flag set.
-  EXPECT_TRUE(bearer()->SendWithoutResponse(
-      common::NewBuffer(kInvalidOpCode | kCommandFlag)));
+  EXPECT_TRUE(
+      bearer()->SendWithoutResponse(NewBuffer(kInvalidOpCode | kCommandFlag)));
 }
 
 TEST_F(ATT_BearerTest, SendWithoutResponseMany) {
@@ -723,8 +692,8 @@ TEST_F(ATT_BearerTest, SendWithoutResponseMany) {
 
   for (OpCode opcode = 0; opcode < kExpectedCount; opcode++) {
     // Everything
-    EXPECT_TRUE(bearer()->SendWithoutResponse(
-        common::NewBuffer(opcode | kCommandFlag)));
+    EXPECT_TRUE(
+        bearer()->SendWithoutResponse(NewBuffer(opcode | kCommandFlag)));
   }
 
   RunLoopUntilIdle();
@@ -759,7 +728,7 @@ TEST_F(ATT_BearerTest, UnregisterHandler) {
 }
 
 TEST_F(ATT_BearerTest, RemoteTransactionNoHandler) {
-  auto error_rsp = common::CreateStaticByteBuffer(
+  auto error_rsp = CreateStaticByteBuffer(
       // opcode
       kErrorResponse,
 
@@ -778,7 +747,7 @@ TEST_F(ATT_BearerTest, RemoteTransactionNoHandler) {
     EXPECT_TRUE(common::ContainersEqual(error_rsp, *packet));
   };
   fake_chan()->SetSendCallback(chan_cb, dispatcher());
-  fake_chan()->Receive(common::CreateStaticByteBuffer(kTestRequest));
+  fake_chan()->Receive(CreateStaticByteBuffer(kTestRequest));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(received_error_rsp);
@@ -794,7 +763,7 @@ TEST_F(ATT_BearerTest, RemoteTransactionSeqProtocolError) {
   };
 
   bearer()->RegisterHandler(kTestRequest, handler);
-  fake_chan()->Receive(common::CreateStaticByteBuffer(kTestRequest));
+  fake_chan()->Receive(CreateStaticByteBuffer(kTestRequest));
 
   RunLoopUntilIdle();
   ASSERT_EQ(1, request_count);
@@ -802,11 +771,9 @@ TEST_F(ATT_BearerTest, RemoteTransactionSeqProtocolError) {
   // Receiving a second request before sending a response should close the
   // bearer.
   bool closed = false;
-  bearer()->set_closed_callback([&closed] {
-    closed = true;
-  });
+  bearer()->set_closed_callback([&closed] { closed = true; });
 
-  fake_chan()->Receive(common::CreateStaticByteBuffer(kTestRequest));
+  fake_chan()->Receive(CreateStaticByteBuffer(kTestRequest));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(closed);
@@ -824,7 +791,7 @@ TEST_F(ATT_BearerTest, RemoteIndicationSeqProtocolError) {
   };
 
   bearer()->RegisterHandler(kIndication, handler);
-  fake_chan()->Receive(common::CreateStaticByteBuffer(kIndication));
+  fake_chan()->Receive(CreateStaticByteBuffer(kIndication));
 
   RunLoopUntilIdle();
   ASSERT_EQ(1, ind_count);
@@ -832,11 +799,9 @@ TEST_F(ATT_BearerTest, RemoteIndicationSeqProtocolError) {
   // Receiving a second indication before sending a confirmation should close
   // the bearer.
   bool closed = false;
-  bearer()->set_closed_callback([&closed] {
-    closed = true;
-  });
+  bearer()->set_closed_callback([&closed] { closed = true; });
 
-  fake_chan()->Receive(common::CreateStaticByteBuffer(kIndication));
+  fake_chan()->Receive(CreateStaticByteBuffer(kIndication));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(closed);
@@ -850,15 +815,15 @@ TEST_F(ATT_BearerTest, ReplyInvalidPacket) {
 
   // Exceeds MTU.
   bearer()->set_mtu(1);
-  EXPECT_FALSE(bearer()->Reply(0, common::NewBuffer(kTestRequest, 2)));
+  EXPECT_FALSE(bearer()->Reply(0, NewBuffer(kTestRequest, 2)));
 }
 
 TEST_F(ATT_BearerTest, ReplyInvalidId) {
-  EXPECT_FALSE(bearer()->Reply(Bearer::kInvalidTransactionId,
-                               common::NewBuffer(kTestResponse)));
+  EXPECT_FALSE(
+      bearer()->Reply(Bearer::kInvalidTransactionId, NewBuffer(kTestResponse)));
 
   // The ID is valid but doesn't correspond to an active transaction.
-  EXPECT_FALSE(bearer()->Reply(1u, common::NewBuffer(kTestResponse)));
+  EXPECT_FALSE(bearer()->Reply(1u, NewBuffer(kTestResponse)));
 }
 
 TEST_F(ATT_BearerTest, ReplyWrongOpCode) {
@@ -874,12 +839,12 @@ TEST_F(ATT_BearerTest, ReplyWrongOpCode) {
   };
 
   bearer()->RegisterHandler(kTestRequest, handler);
-  fake_chan()->Receive(common::CreateStaticByteBuffer(kTestRequest));
+  fake_chan()->Receive(CreateStaticByteBuffer(kTestRequest));
 
   RunLoopUntilIdle();
   ASSERT_TRUE(handler_called);
 
-  EXPECT_FALSE(bearer()->Reply(id, common::NewBuffer(kTestResponse2)));
+  EXPECT_FALSE(bearer()->Reply(id, NewBuffer(kTestResponse2)));
 }
 
 TEST_F(ATT_BearerTest, ReplyToIndicationWrongOpCode) {
@@ -895,12 +860,12 @@ TEST_F(ATT_BearerTest, ReplyToIndicationWrongOpCode) {
   };
 
   bearer()->RegisterHandler(kIndication, handler);
-  fake_chan()->Receive(common::CreateStaticByteBuffer(kIndication));
+  fake_chan()->Receive(CreateStaticByteBuffer(kIndication));
 
   RunLoopUntilIdle();
   ASSERT_TRUE(handler_called);
 
-  EXPECT_FALSE(bearer()->Reply(id, common::NewBuffer(kTestResponse)));
+  EXPECT_FALSE(bearer()->Reply(id, NewBuffer(kTestResponse)));
 }
 
 TEST_F(ATT_BearerTest, ReplyWithResponse) {
@@ -924,15 +889,15 @@ TEST_F(ATT_BearerTest, ReplyWithResponse) {
   };
 
   bearer()->RegisterHandler(kTestRequest, handler);
-  fake_chan()->Receive(common::CreateStaticByteBuffer(kTestRequest));
+  fake_chan()->Receive(CreateStaticByteBuffer(kTestRequest));
 
   RunLoopUntilIdle();
   ASSERT_TRUE(handler_called);
 
-  EXPECT_TRUE(bearer()->Reply(id, common::NewBuffer(kTestResponse)));
+  EXPECT_TRUE(bearer()->Reply(id, NewBuffer(kTestResponse)));
 
   // The transaction is marked as complete.
-  EXPECT_FALSE(bearer()->Reply(id, common::NewBuffer(kTestResponse)));
+  EXPECT_FALSE(bearer()->Reply(id, NewBuffer(kTestResponse)));
   EXPECT_FALSE(bearer()->ReplyWithError(id, 0, ErrorCode::kUnlikelyError));
 
   RunLoopUntilIdle();
@@ -959,15 +924,15 @@ TEST_F(ATT_BearerTest, IndicationConfirmation) {
   };
 
   bearer()->RegisterHandler(kIndication, handler);
-  fake_chan()->Receive(common::CreateStaticByteBuffer(kIndication));
+  fake_chan()->Receive(CreateStaticByteBuffer(kIndication));
 
   RunLoopUntilIdle();
   ASSERT_TRUE(handler_called);
 
-  EXPECT_TRUE(bearer()->Reply(id, common::NewBuffer(kConfirmation)));
+  EXPECT_TRUE(bearer()->Reply(id, NewBuffer(kConfirmation)));
 
   // The transaction is marked as complete.
-  EXPECT_FALSE(bearer()->Reply(id, common::NewBuffer(kConfirmation)));
+  EXPECT_FALSE(bearer()->Reply(id, NewBuffer(kConfirmation)));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(conf_sent);
@@ -990,7 +955,7 @@ TEST_F(ATT_BearerTest, IndicationReplyWithError) {
   };
 
   bearer()->RegisterHandler(kIndication, handler);
-  fake_chan()->Receive(common::CreateStaticByteBuffer(kIndication));
+  fake_chan()->Receive(CreateStaticByteBuffer(kIndication));
 
   RunLoopUntilIdle();
   ASSERT_TRUE(handler_called);
@@ -1005,8 +970,8 @@ TEST_F(ATT_BearerTest, ReplyWithError) {
     response_sent = true;
 
     // The error response that we send below
-    auto expected = common::CreateStaticByteBuffer(
-        kErrorResponse, kTestRequest, 0x00, 0x00, ErrorCode::kUnlikelyError);
+    auto expected = CreateStaticByteBuffer(kErrorResponse, kTestRequest, 0x00,
+                                           0x00, ErrorCode::kUnlikelyError);
     EXPECT_TRUE(common::ContainersEqual(expected, *packet));
   };
   fake_chan()->SetSendCallback(chan_cb, dispatcher());
@@ -1023,7 +988,7 @@ TEST_F(ATT_BearerTest, ReplyWithError) {
   };
 
   bearer()->RegisterHandler(kTestRequest, handler);
-  fake_chan()->Receive(common::CreateStaticByteBuffer(kTestRequest));
+  fake_chan()->Receive(CreateStaticByteBuffer(kTestRequest));
 
   RunLoopUntilIdle();
   ASSERT_TRUE(handler_called);
@@ -1031,7 +996,7 @@ TEST_F(ATT_BearerTest, ReplyWithError) {
   EXPECT_TRUE(bearer()->ReplyWithError(id, 0, ErrorCode::kUnlikelyError));
 
   // The transaction is marked as complete.
-  EXPECT_FALSE(bearer()->Reply(id, common::NewBuffer(kTestResponse)));
+  EXPECT_FALSE(bearer()->Reply(id, NewBuffer(kTestResponse)));
   EXPECT_FALSE(bearer()->ReplyWithError(id, 0, ErrorCode::kUnlikelyError));
 
   RunLoopUntilIdle();
@@ -1044,16 +1009,14 @@ TEST_F(ATT_BearerTest, RequestAndIndication) {
 
   int req_count = 0;
   int ind_count = 0;
-  auto req_handler = [&req_id, &req_count, this](auto id,
-                                                       const auto& packet) {
+  auto req_handler = [&req_id, &req_count, this](auto id, const auto& packet) {
     EXPECT_EQ(kTestRequest, packet.opcode());
     EXPECT_EQ(0u, packet.payload_size());
 
     req_count++;
     req_id = id;
   };
-  auto ind_handler = [&ind_id, &ind_count, this](auto id,
-                                                       const auto& packet) {
+  auto ind_handler = [&ind_id, &ind_count, this](auto id, const auto& packet) {
     EXPECT_EQ(kIndication, packet.opcode());
     EXPECT_EQ(0u, packet.payload_size());
 
@@ -1064,20 +1027,20 @@ TEST_F(ATT_BearerTest, RequestAndIndication) {
   bearer()->RegisterHandler(kTestRequest, req_handler);
   bearer()->RegisterHandler(kIndication, ind_handler);
 
-  fake_chan()->Receive(common::CreateStaticByteBuffer(kTestRequest));
-  fake_chan()->Receive(common::CreateStaticByteBuffer(kIndication));
+  fake_chan()->Receive(CreateStaticByteBuffer(kTestRequest));
+  fake_chan()->Receive(CreateStaticByteBuffer(kIndication));
 
   RunLoopUntilIdle();
   EXPECT_EQ(1, req_count);
   ASSERT_EQ(1, ind_count);
 
   // Opcodes for the wrong transaction should be rejected.
-  EXPECT_FALSE(bearer()->Reply(ind_id, common::NewBuffer(kTestResponse)));
-  EXPECT_FALSE(bearer()->Reply(req_id, common::NewBuffer(kConfirmation)));
+  EXPECT_FALSE(bearer()->Reply(ind_id, NewBuffer(kTestResponse)));
+  EXPECT_FALSE(bearer()->Reply(req_id, NewBuffer(kConfirmation)));
 
   // It should be possible to end two distinct transactions.
-  EXPECT_TRUE(bearer()->Reply(req_id, common::NewBuffer(kTestResponse)));
-  EXPECT_TRUE(bearer()->Reply(ind_id, common::NewBuffer(kConfirmation)));
+  EXPECT_TRUE(bearer()->Reply(req_id, NewBuffer(kTestResponse)));
+  EXPECT_TRUE(bearer()->Reply(ind_id, NewBuffer(kConfirmation)));
 }
 
 // Test receipt of non-transactional PDUs.
@@ -1098,12 +1061,299 @@ TEST_F(ATT_BearerTest, RemotePDUWithoutResponse) {
   };
   bearer()->RegisterHandler(kNotification, not_handler);
 
-  fake_chan()->Receive(common::CreateStaticByteBuffer(kTestCommand));
-  fake_chan()->Receive(common::CreateStaticByteBuffer(kNotification));
+  fake_chan()->Receive(CreateStaticByteBuffer(kTestCommand));
+  fake_chan()->Receive(CreateStaticByteBuffer(kNotification));
 
   RunLoopUntilIdle();
   EXPECT_EQ(1, cmd_count);
   EXPECT_EQ(1, not_count);
+}
+
+class ATT_BearerTest_Security : public ATT_BearerTest {
+ protected:
+  void SetUp() override {
+    ATT_BearerTest::SetUp();
+
+    fake_chan()->SetSecurityCallback(
+        [this](hci::ConnectionHandle handle, sm::SecurityLevel level,
+               sm::StatusCallback callback) {
+          security_request_count_++;
+          requested_security_level_ = level;
+
+          ASSERT_FALSE(security_responder_)
+              << "Security request received while one was pending";
+          security_responder_ = std::move(callback);
+        },
+        dispatcher());
+  }
+
+  // Sets up the fake channel to send an error response to all packets it
+  // receives.
+  void SetUpErrorResponder(ErrorCode ecode, Handle handle = 1) {
+    fake_chan()->SetSendCallback(
+        [this, ecode, handle](auto packet) {
+          att_request_count_++;
+          fake_chan()->Receive(CreateStaticByteBuffer(
+              kErrorResponse,                        // opcode (Error Response)
+              kTestRequest,                          // request opcode
+              LowerBits(handle), UpperBits(handle),  // handle
+              ecode                                  // error code
+              ));
+        },
+        dispatcher());
+  }
+
+  // Sets up the fake channel to respond with the given |response| opcode to all
+  // requests that it receives. The PDU contains no additional payload as it is
+  // not needed for this test fixture.
+  void SetUpResponder() {
+    fake_chan()->SetSendCallback(
+        [this](auto packet) {
+          att_request_count_++;
+          fake_chan()->Receive(CreateStaticByteBuffer(kTestResponse));
+        },
+        dispatcher());
+  }
+
+  // Resolves the currently pending security request.
+  void ResolvePendingSecurityRequest(sm::Status status) {
+    ASSERT_TRUE(security_responder_);
+
+    if (status) {
+      fake_chan()->set_security(
+          sm::SecurityProperties(requested_security_level_, 16, false));
+    }
+
+    // Clear the responder before invoking it.
+    auto f = std::move(security_responder_);
+    f(status);
+  }
+
+  void SendRequest() {
+    bearer()->StartTransaction(
+        NewBuffer(kTestRequest),
+        [this](auto&) {
+          request_success_count_++;
+          last_request_status_ = Status();
+        },
+        [this](Status status, Handle) {
+          request_error_count_++;
+          last_request_status_ = status;
+        });
+  }
+
+  const Status& last_request_status() const { return last_request_status_; }
+  size_t request_success_count() const { return request_success_count_; }
+  size_t request_error_count() const { return request_error_count_; }
+  size_t att_request_count() const { return att_request_count_; }
+
+  size_t security_request_count() const { return security_request_count_; }
+  sm::SecurityLevel requested_security_level() const {
+    return requested_security_level_;
+  }
+
+ private:
+  Status last_request_status_;
+  size_t request_success_count_ = 0u;
+  size_t request_error_count_ = 0u;
+
+  size_t att_request_count_ = 0u;
+  sm::SecurityLevel requested_security_level_ = sm::SecurityLevel::kNoSecurity;
+  size_t security_request_count_ = 0u;
+
+  sm::StatusCallback security_responder_;
+};
+
+TEST_F(ATT_BearerTest_Security,
+       SecurityUpgradeAfterInsufficientAuthentication) {
+  // Configure the endpoint to respond with an authentication error.
+  SetUpErrorResponder(ErrorCode::kInsufficientAuthentication);
+  SendRequest();
+  RunLoopUntilIdle();
+
+  // At this stage the remote device should have received the request and
+  // responded with "Insufficient Authentication". Since the link was not
+  // encrypted, the Bearer should have requested a security upgrade without
+  // requiring MITM protection.
+  EXPECT_EQ(1u, att_request_count());
+  EXPECT_EQ(1u, security_request_count());
+  EXPECT_EQ(sm::SecurityLevel::kEncrypted, requested_security_level());
+
+  // The request should be still unresolved.
+  EXPECT_EQ(0u, request_success_count());
+  EXPECT_EQ(0u, request_error_count());
+
+  // Configure the endpoint to respond with success and notify the Bearer of the
+  // security upgrade. The Bearer should re-send the request.
+  SetUpResponder();
+  ResolvePendingSecurityRequest(sm::Status());
+  RunLoopUntilIdle();
+
+  // We should have received the same request again.
+  EXPECT_EQ(2u, att_request_count());
+  EXPECT_EQ(1u, security_request_count());
+  EXPECT_EQ(1u, request_success_count());
+  EXPECT_EQ(0u, request_error_count());
+}
+
+TEST_F(ATT_BearerTest_Security,
+       SecurityUpgradeWithMitmAfterInsufficientAuthentication) {
+  // Configure the channel to be already encrypted.
+  fake_chan()->set_security(
+      sm::SecurityProperties(sm::SecurityLevel::kEncrypted, 16, false));
+
+  // Configure the endpoint to respond with an authentication error.
+  SetUpErrorResponder(ErrorCode::kInsufficientAuthentication);
+  SendRequest();
+  RunLoopUntilIdle();
+
+  // At this stage the remote device should have received the request and
+  // responded with "Insufficient Authentication". Since the link was already
+  // encrypted, the Bearer should have requested a security upgrade with MITM
+  // protection.
+  EXPECT_EQ(1u, att_request_count());
+  EXPECT_EQ(1u, security_request_count());
+  EXPECT_EQ(sm::SecurityLevel::kAuthenticated, requested_security_level());
+
+  // The request should be still unresolved.
+  EXPECT_EQ(0u, request_success_count());
+  EXPECT_EQ(0u, request_error_count());
+
+  // Configure the endpoint to respond with success and notify the Bearer of the
+  // security upgrade. The Bearer should re-send the request.
+  SetUpResponder();
+  ResolvePendingSecurityRequest(sm::Status());
+  RunLoopUntilIdle();
+
+  // We should have received the same request again.
+  EXPECT_EQ(2u, att_request_count());
+  EXPECT_EQ(1u, security_request_count());
+  EXPECT_EQ(1u, request_success_count());
+  EXPECT_EQ(0u, request_error_count());
+  EXPECT_TRUE(last_request_status());
+}
+
+TEST_F(ATT_BearerTest_Security, SecurityUpgradeFailsAfterAuthError) {
+  // Configure the endpoint to respond with an authentication error.
+  SetUpErrorResponder(ErrorCode::kInsufficientAuthentication);
+  SendRequest();
+  RunLoopUntilIdle();
+
+  // At this stage the remote device should have received the request and
+  // responded with "Insufficient Authentication". Since the link was not
+  // encrypted, the Bearer should have requested a security upgrade without
+  // requiring MITM protection.
+  EXPECT_EQ(1u, att_request_count());
+  EXPECT_EQ(1u, security_request_count());
+  EXPECT_EQ(sm::SecurityLevel::kEncrypted, requested_security_level());
+
+  // The request should be still unresolved.
+  EXPECT_EQ(0u, request_success_count());
+  EXPECT_EQ(0u, request_error_count());
+
+  // Configure the endpoint to respond with success and notify the Bearer of the
+  // security upgrade. The Bearer should re-send the request.
+  SetUpResponder();
+  ResolvePendingSecurityRequest(sm::Status(HostError::kFailed));
+  RunLoopUntilIdle();
+
+  // The request should not have been retried and failed with the original
+  // error.
+  EXPECT_EQ(1u, att_request_count());
+  EXPECT_EQ(1u, security_request_count());
+  EXPECT_EQ(0u, request_success_count());
+  EXPECT_EQ(1u, request_error_count());
+  EXPECT_EQ(ErrorCode::kInsufficientAuthentication,
+            last_request_status().protocol_error());
+}
+
+TEST_F(ATT_BearerTest_Security, NoSecurityUpgradeIfAlreadyRetried) {
+  // Configure the endpoint to respond with an authentication error.
+  SetUpErrorResponder(ErrorCode::kInsufficientAuthentication);
+  SendRequest();
+  RunLoopUntilIdle();
+
+  // At this stage the remote device should have received the request and
+  // responded with "Insufficient Authentication". Since the link was not
+  // encrypted, the Bearer should have requested a security upgrade without
+  // requiring MITM protection.
+  EXPECT_EQ(1u, att_request_count());
+  EXPECT_EQ(1u, security_request_count());
+  EXPECT_EQ(sm::SecurityLevel::kEncrypted, requested_security_level());
+
+  // The request should be still unresolved.
+  EXPECT_EQ(0u, request_success_count());
+  EXPECT_EQ(0u, request_error_count());
+
+  // Resolve the pending security request with success while the channel is
+  // configured to respond with "Insufficient Authentication". The Bearer should
+  // re-send the request.
+  ResolvePendingSecurityRequest(sm::Status());
+  RunLoopUntilIdle();
+
+  // The request should have been retried once. The "Insufficient
+  // Authentication" error received while the link is encrypted should result in
+  // a second security request at the next security level.
+  EXPECT_EQ(2u, att_request_count());
+  EXPECT_EQ(2u, security_request_count());
+  EXPECT_EQ(0u, request_success_count());
+  EXPECT_EQ(0u, request_error_count());
+
+  // Resolve the pending security request with success while the channel is
+  // configured to respond with "Insufficient Authentication. The Bearer should
+  // retry the request one last time.
+  ResolvePendingSecurityRequest(sm::Status());
+  RunLoopUntilIdle();
+
+  // The request should have failed without retrying the request a third time as
+  // the highest security level has been reached.
+  EXPECT_EQ(3u, att_request_count());
+  EXPECT_EQ(2u, security_request_count());
+  EXPECT_EQ(0u, request_success_count());
+  EXPECT_EQ(1u, request_error_count());
+  EXPECT_EQ(ErrorCode::kInsufficientAuthentication,
+            last_request_status().protocol_error());
+}
+
+TEST_F(ATT_BearerTest_Security, NoSecurityUpgradeIfChannelAlreadyEncrypted) {
+  // Configure the channel to be already encrypted.
+  fake_chan()->set_security(
+      sm::SecurityProperties(sm::SecurityLevel::kEncrypted, 16, false));
+
+  // Configure the endpoint to respond with an encryption error.
+  SetUpErrorResponder(ErrorCode::kInsufficientEncryption);
+  SendRequest();
+  RunLoopUntilIdle();
+
+  // No security upgrade should have been requested since the channel was
+  // sufficiently encrypted.
+  EXPECT_EQ(1u, att_request_count());
+  EXPECT_EQ(0u, security_request_count());
+  EXPECT_EQ(0u, request_success_count());
+  EXPECT_EQ(1u, request_error_count());
+  EXPECT_EQ(ErrorCode::kInsufficientEncryption,
+            last_request_status().protocol_error());
+}
+
+TEST_F(ATT_BearerTest_Security,
+       NoSecurityUpgradeIfChannelAlreadyEncryptedWithMitm) {
+  // Configure the channel to be already encrypted with MITM protection
+  fake_chan()->set_security(
+      sm::SecurityProperties(sm::SecurityLevel::kAuthenticated, 16, false));
+
+  // Configure the endpoint to respond with an authentication error.
+  SetUpErrorResponder(ErrorCode::kInsufficientAuthentication);
+  SendRequest();
+  RunLoopUntilIdle();
+
+  // No security upgrade should have been requested since the channel was
+  // sufficiently encrypted.
+  EXPECT_EQ(1u, att_request_count());
+  EXPECT_EQ(0u, security_request_count());
+  EXPECT_EQ(0u, request_success_count());
+  EXPECT_EQ(1u, request_error_count());
+  EXPECT_EQ(ErrorCode::kInsufficientAuthentication,
+            last_request_status().protocol_error());
 }
 
 }  // namespace
