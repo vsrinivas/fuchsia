@@ -10,8 +10,8 @@ import("//build/package.gni")
 go_binary("heartbeat_server_go_bin") {
   output_name = "heartbeat_server_go"
   gopackage = "heartbeat_server_go"
-  deps  = [
-    ":heartbeat_server_go_lib"
+  deps = [
+    ":heartbeat_server_go_lib",
   ]
 }
 
@@ -19,24 +19,28 @@ go_library("heartbeat_server_go_lib") {
   name = "heartbeat_server_go"
   deps = [
     "//garnet/examples/fidl/services:heartbeat($go_toolchain)",
+    "//garnet/examples/fidl/services:heartbeat($go_toolchain)",
+    "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
     "//garnet/public/lib/component/go/src/app",
     "//garnet/public/lib/svc/go/src/svc",
-    "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
-    "//garnet/examples/fidl/services:heartbeat($go_toolchain)",
   ]
 }
 
 package("heartbeat_server_go") {
-  deprecated_no_cmx = "//build"
-
   deps = [
     ":heartbeat_server_go_bin",
   ]
 
   binary = "heartbeat_server_go"
 
-  meta = [ {
-        path = rebase_path("//garnet/bin/appmgr/legacy_flat_exported_dir")
-        dest = "legacy_flat_exported_dir"
-      } ]
+  meta = [
+    {
+      path = rebase_path("//garnet/bin/appmgr/legacy_flat_exported_dir")
+      dest = "legacy_flat_exported_dir"
+    },
+    {
+      path = rebase_path("meta/heartbeat_server_go.cmx")
+      dest = "heartbeat_server_go.cmx"
+    },
+  ]
 }

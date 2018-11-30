@@ -60,8 +60,8 @@ executable("unittests") {
   sources = [
     "escher_vulkan_smoke_test.cc",
     "event_timestamper_unittest.cc",
-    "hittest_unittest.cc",
     "hittest_global_unittest.cc",
+    "hittest_unittest.cc",
     "image_pipe_unittest.cc",
     "import_unittest.cc",
     "memory_unittest.cc",
@@ -117,7 +117,12 @@ executable("mock_pose_buffer_provider_cc") {
 }
 
 package("mock_pose_buffer_provider") {
-  deprecated_no_cmx = "//build"
+  meta = [
+    {
+      path = "meta/mock_pose_buffer_provider.cmx"
+      dest = "mock_pose_buffer_provider.cmx"
+    },
+  ]
 
   deps = [
     ":mock_pose_buffer_provider_cc",

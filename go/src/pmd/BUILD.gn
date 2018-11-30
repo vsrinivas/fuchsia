@@ -34,7 +34,9 @@ go_binary("pkgsvr_bin") {
 go_binary("installblob_bin") {
   output_name = "installblob"
   gopackage = "fuchsia.googlesource.com/pmd/cmd/installblob"
-  deps = [ ":pmd" ]
+  deps = [
+    ":pmd",
+  ]
 }
 
 test_packages = [
@@ -44,15 +46,20 @@ test_packages = [
 foreach(testpkg, test_packages) {
   go_test("pmd_${testpkg}_test") {
     gopackage = "fuchsia.googlesource.com/pmd/${testpkg}"
-    deps = [ ":pmd", ]
-    non_go_deps = [
-      "//zircon/public/lib/fs-management",
+    deps = [
+      ":pmd",
     ]
+    non_go_deps = [ "//zircon/public/lib/fs-management" ]
   }
 }
 
 package("pkgsvr") {
-  deprecated_no_cmx = "//build"
+  meta = [
+    {
+      path = rebase_path("meta/pkgsvr.cmx")
+      dest = "pkgsvr.cmx"
+    },
+  ]
 
   deps = [
     ":pkgsvr_bin",

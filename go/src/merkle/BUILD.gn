@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/go/go_test.gni")
 import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
 import("//build/package.gni")
 
 go_library("merkle") {
@@ -13,17 +13,21 @@ go_library("merkle") {
 go_test("go_merkle_test") {
   gopackage = "fuchsia.googlesource.com/merkle"
 
-  deps = [ ":merkle" ]
+  deps = [
+    ":merkle",
+  ]
 }
 
 package("go_merkle_tests") {
-  deprecated_no_cmx = "//build"
+  testonly = true
 
   deps = [
     ":go_merkle_test",
   ]
 
-  tests = [ {
-        name = "go_merkle_test"
-      } ]
+  tests = [
+    {
+      name = "go_merkle_test"
+    },
+  ]
 }

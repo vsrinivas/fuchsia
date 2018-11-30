@@ -1,0 +1,12 @@
+{
+    "program": {
+        "binary": "bin/pkgsvr"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.amber.Control",
+            "fuchsia.amber.Events",
+            "fuchsia.sys.Environment"
+        ]
+    }
+}

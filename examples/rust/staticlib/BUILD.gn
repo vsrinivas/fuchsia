@@ -5,7 +5,12 @@
 import("//build/package.gni")
 
 package("crust") {
-  deprecated_no_cmx = "//build"
+  meta = [
+    {
+      path = rebase_path("meta/crust.cmx")
+      dest = "crust.cmx"
+    },
+  ]
 
   deps = [
     "c:bin",

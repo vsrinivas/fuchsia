@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_binary.gni")
 import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bin") {
   name = "httpget_rust"
@@ -22,7 +22,12 @@ rustc_binary("bin") {
 }
 
 package("httpget_rust") {
-  deprecated_no_cmx = "//build"
+  meta = [
+    {
+      path = rebase_path("meta/httpget_rust.cmx")
+      dest = "httpget_rust.cmx"
+    },
+  ]
 
   deps = [
     ":bin",
