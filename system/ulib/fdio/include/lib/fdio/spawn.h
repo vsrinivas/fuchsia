@@ -92,6 +92,21 @@ zx_status_t fdio_spawn(zx_handle_t job,
 // If |FDIO_SPAWN_CLONE_NAMESPACE| is specified via |flags|, the namespace entry
 // is added to the cloned namespace from the calling process.
 //
+// The namespace entries are added in the order they appear in the action list.
+// If |FDIO_SPAWN_CLONE_NAMESPACE| is specified via |flags|, the entries from
+// the calling process are added before any entries specified with
+// |FDIO_SPAWN_ACTION_ADD_NS_ENTRY|.
+//
+// The spawned process decides how to process and interpret the namespace
+// entries. Typically, the spawned process with disregard duplicate entries
+// (i.e., the first entry for a given name wins) and will ignore nested entries
+// (e.g., |/foo/bar| when |/foo| has already been added to the namespace).
+//
+// To override or replace an entry in the namespace of the calling process,
+// use |fdio_ns_export_root| to export the namespace table of the calling
+// process and construct the namespace for the spawned process explicitly using
+// |FDIO_SPAWN_ACTION_ADD_NS_ENTRY|.
+//
 // The given handle will be closed regardless of whether the |fdio_spawn_etc|
 // call succeeds.
 //
