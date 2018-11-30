@@ -16,6 +16,13 @@ source_set("defs") {
 executable_package("trigger_test_session_shell") {
   testonly = true
 
+  meta = [
+    {
+      path = "meta/trigger_test_session_shell.cmx"
+      dest = "trigger_test_session_shell.cmx"
+    },
+  ]
+
   sources = [
     "trigger_test_session_shell.cc",
   ]
@@ -37,6 +44,13 @@ executable_package("trigger_test_session_shell") {
 executable_package("trigger_test_module") {
   testonly = true
 
+  meta = [
+    {
+      path = "meta/trigger_test_module.cmx"
+      dest = "trigger_test_module.cmx"
+    },
+  ]
+
   sources = [
     "trigger_test_module.cc",
   ]
@@ -56,6 +70,13 @@ executable_package("trigger_test_module") {
 
 executable_package("trigger_test_agent") {
   testonly = true
+
+  meta = [
+    {
+      path = "meta/trigger_test_agent.cmx"
+      dest = "trigger_test_agent.cmx"
+    },
+  ]
 
   sources = [
     "trigger_test_agent.cc",

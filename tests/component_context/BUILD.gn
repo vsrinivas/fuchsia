@@ -8,6 +8,13 @@ import("//peridot/build/executable_package.gni")
 executable_package("component_context_test_module") {
   testonly = true
 
+    meta = [
+    {
+      path = "meta/component_context_test_module.cmx"
+      dest = "component_context_test_module.cmx"
+    },
+  ]
+
   sources = [
     "component_context_test_module.cc",
   ]
@@ -27,6 +34,13 @@ executable_package("component_context_test_module") {
 
 executable_package("component_context_test_one_agent") {
   testonly = true
+
+    meta = [
+    {
+      path = "meta/component_context_test_one_agent.cmx"
+      dest = "component_context_test_one_agent.cmx"
+    },
+  ]
 
   sources = [
     "component_context_test_one_agent.cc",
@@ -48,6 +62,13 @@ executable_package("component_context_test_one_agent") {
 executable_package("component_context_test_two_agent") {
   testonly = true
 
+    meta = [
+    {
+      path = "meta/component_context_test_two_agent.cmx"
+      dest = "component_context_test_two_agent.cmx"
+    },
+  ]
+
   sources = [
     "component_context_test_two_agent.cc",
   ]
@@ -64,6 +85,13 @@ executable_package("component_context_test_two_agent") {
 
 executable_package("component_context_test_unstoppable_agent") {
   testonly = true
+
+    meta = [
+    {
+      path = "meta/component_context_test_unstoppable_agent.cmx"
+      dest = "component_context_test_unstoppable_agent.cmx"
+    },
+  ]
 
   sources = [
     "component_context_test_unstoppable_agent.cc",

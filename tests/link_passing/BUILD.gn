@@ -15,6 +15,13 @@ source_set("defs") {
 executable_package("link_passing_test_module1") {
   testonly = true
 
+  meta = [
+    {
+      path = "meta/link_passing_test_module1.cmx"
+      dest = "link_passing_test_module1.cmx"
+    },
+  ]
+
   sources = [
     "link_passing_test_module1.cc",
   ]
@@ -33,6 +40,13 @@ executable_package("link_passing_test_module1") {
 executable_package("link_passing_test_module2") {
   testonly = true
 
+  meta = [
+    {
+      path = "meta/link_passing_test_module2.cmx"
+      dest = "link_passing_test_module2.cmx"
+    },
+  ]
+
   sources = [
     "link_passing_test_module2.cc",
   ]
@@ -50,6 +64,13 @@ executable_package("link_passing_test_module2") {
 
 executable_package("link_passing_test_module3") {
   testonly = true
+
+  meta = [
+    {
+      path = "meta/link_passing_test_module3.cmx"
+      dest = "link_passing_test_module3.cmx"
+    },
+  ]
 
   sources = [
     "link_passing_test_module3.cc",

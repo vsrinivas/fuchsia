@@ -15,6 +15,13 @@ source_set("defs") {
 executable_package("session_shell_test_session_shell") {
   testonly = true
 
+  meta = [
+    {
+      path = "meta/session_shell_test_session_shell.cmx"
+      dest = "session_shell_test_session_shell.cmx"
+    },
+  ]
+
   sources = [
     "session_shell_test_session_shell.cc",
   ]

@@ -15,6 +15,13 @@ source_set("defs") {
 executable_package("suggestion_test_module") {
   testonly = true
 
+  meta = [
+    {
+      path = "meta/suggestion_test_module.cmx"
+      dest = "suggestion_test_module.cmx"
+    },
+  ]
+
   sources = [
     "suggestion_test_module.cc",
   ]
@@ -33,6 +40,13 @@ executable_package("suggestion_test_module") {
 
 executable_package("suggestion_test_session_shell") {
   testonly = true
+
+  meta = [
+    {
+      path = "meta/suggestion_test_session_shell.cmx"
+      dest = "suggestion_test_session_shell.cmx"
+    },
+  ]
 
   sources = [
     "suggestion_test_session_shell.cc",

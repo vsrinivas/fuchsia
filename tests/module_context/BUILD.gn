@@ -7,6 +7,13 @@ import("//peridot/build/executable_package.gni")
 executable_package("module_context_test_session_shell") {
   testonly = true
 
+  meta = [
+    {
+      path = "meta/module_context_test_session_shell.cmx"
+      dest = "module_context_test_session_shell.cmx"
+    },
+  ]
+
   sources = [
     "module_context_test_session_shell.cc",
   ]
@@ -32,6 +39,13 @@ executable_package("module_context_test_session_shell") {
 executable_package("module_context_test_module") {
   testonly = true
 
+  meta = [
+    {
+      path = "meta/module_context_test_module.cmx"
+      dest = "module_context_test_module.cmx"
+    },
+  ]
+
   sources = [
     "module_context_test_module.cc",
   ]
@@ -52,6 +66,13 @@ executable_package("module_context_test_module") {
 
 executable_package("module_context_test_entity_module") {
   testonly = true
+
+  meta = [
+    {
+      path = "meta/module_context_test_entity_module.cmx"
+      dest = "module_context_test_entity_module.cmx"
+    },
+  ]
 
   sources = [
     "module_context_test_entity_module.cc",

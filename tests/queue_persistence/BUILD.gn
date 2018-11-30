@@ -16,6 +16,13 @@ source_set("defs") {
 executable_package("queue_persistence_test_module") {
   testonly = true
 
+  meta = [
+    {
+      path = "meta/queue_persistence_test_module.cmx"
+      dest = "queue_persistence_test_module.cmx"
+    },
+  ]
+
   sources = [
     "queue_persistence_test_module.cc",
   ]
@@ -35,6 +42,13 @@ executable_package("queue_persistence_test_module") {
 
 executable_package("queue_persistence_test_agent") {
   testonly = true
+
+  meta = [
+    {
+      path = "meta/queue_persistence_test_agent.cmx"
+      dest = "queue_persistence_test_agent.cmx"
+    },
+  ]
 
   sources = [
     "queue_persistence_test_agent.cc",

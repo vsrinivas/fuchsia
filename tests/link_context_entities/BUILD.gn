@@ -15,6 +15,13 @@ source_set("defs") {
 executable_package("link_context_entities_test_session_shell") {
   testonly = true
 
+  meta = [
+    {
+      path = "meta/link_context_entities_test_session_shell.cmx"
+      dest = "link_context_entities_test_session_shell.cmx"
+    },
+  ]
+
   sources = [
     "link_context_entities_test_session_shell.cc",
   ]
@@ -40,6 +47,13 @@ executable_package("link_context_entities_test_session_shell") {
 
 executable_package("link_context_entities_test_module") {
   testonly = true
+
+  meta = [
+    {
+      path = "meta/link_context_entities_test_module.cmx"
+      dest = "link_context_entities_test_module.cmx"
+    },
+  ]
 
   sources = [
     "link_context_entities_test_module.cc",

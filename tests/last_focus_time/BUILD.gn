@@ -15,6 +15,13 @@ source_set("defs") {
 executable_package("last_focus_time_test_session_shell") {
   testonly = true
 
+  meta = [
+    {
+      path = "meta/last_focus_time_test_session_shell.cmx"
+      dest = "last_focus_time_test_session_shell.cmx"
+    },
+  ]
+
   sources = [
     "last_focus_time_test_session_shell.cc",
   ]

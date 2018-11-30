@@ -15,6 +15,13 @@ source_set("defs") {
 executable_package("story_shell_test_story_shell") {
   testonly = true
 
+  meta = [
+    {
+      path = "meta/story_shell_test_story_shell.cmx"
+      dest = "story_shell_test_story_shell.cmx"
+    },
+  ]
+
   sources = [
     "story_shell_test_story_shell.cc",
   ]
@@ -42,6 +49,13 @@ executable_package("story_shell_test_story_shell") {
 
 executable_package("story_shell_test_session_shell") {
   testonly = true
+
+  meta = [
+    {
+      path = "meta/story_shell_test_session_shell.cmx"
+      dest = "story_shell_test_session_shell.cmx"
+    },
+  ]
 
   sources = [
     "story_shell_test_session_shell.cc",

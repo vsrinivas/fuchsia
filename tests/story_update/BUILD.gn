@@ -15,6 +15,13 @@ source_set("defs") {
 executable_package("story_update_test_session_shell") {
   testonly = true
 
+  meta = [
+    {
+      path = "meta/story_update_test_session_shell.cmx"
+      dest = "story_update_test_session_shell.cmx"
+    },
+  ]
+
   sources = [
     "story_update_test_session_shell.cc",
   ]

@@ -10,6 +10,14 @@ executable_package("clipboard_test_module") {
   sources = [
     "clipboard_test_module.cc",
   ]
+
+  meta = [
+    {
+      path = "meta/clipboard_test_module.cmx"
+      dest = "clipboard_test_module.cmx"
+    },
+  ]
+  
   deps = [
     ":defs",
     "//garnet/public/fidl/fuchsia.testing.runner",

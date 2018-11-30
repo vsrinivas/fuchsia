@@ -15,6 +15,13 @@ source_set("defs") {
 executable_package("parent_child_test_child_module1") {
   testonly = true
 
+  meta = [
+    {
+      path = "meta/parent_child_test_child_module1.cmx"
+      dest = "parent_child_test_child_module1.cmx"
+    },
+  ]
+
   sources = [
     "parent_child_test_child_module1.cc",
   ]
@@ -33,6 +40,13 @@ executable_package("parent_child_test_child_module1") {
 executable_package("parent_child_test_child_module2") {
   testonly = true
 
+  meta = [
+    {
+      path = "meta/parent_child_test_child_module2.cmx"
+      dest = "parent_child_test_child_module2.cmx"
+    },
+  ]
+
   sources = [
     "parent_child_test_child_module2.cc",
   ]
@@ -50,6 +64,13 @@ executable_package("parent_child_test_child_module2") {
 
 executable_package("parent_child_test_parent_module") {
   testonly = true
+
+  meta = [
+    {
+      path = "meta/parent_child_test_parent_module.cmx"
+      dest = "parent_child_test_parent_module.cmx"
+    },
+  ]
 
   sources = [
     "parent_child_test_parent_module.cc",

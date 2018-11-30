@@ -7,6 +7,13 @@ import("//peridot/build/executable_package.gni")
 executable_package("chain_test_session_shell") {
   testonly = true
 
+  meta = [
+    {
+      path = "meta/chain_test_session_shell.cmx"
+      dest = "chain_test_session_shell.cmx"
+    },
+  ]
+  
   sources = [
     "chain_test_session_shell.cc",
   ]
@@ -27,10 +34,19 @@ executable_package("chain_test_session_shell") {
     "//peridot/public/lib/context/cpp:formatting",
     "//peridot/tests/common:defs",
   ]
+
+#
 }
 
 executable_package("chain_test_module") {
   testonly = true
+
+  meta = [
+    {
+      path = "meta/chain_test_module.cmx"
+      dest = "chain_test_module.cmx"
+    },
+  ]
 
   sources = [
     "chain_test_module.cc",
@@ -50,6 +66,13 @@ executable_package("chain_test_module") {
 
 executable_package("chain_test_child_module") {
   testonly = true
+
+    meta = [
+    {
+      path = "meta/chain_test_child_module.cmx"
+      dest = "chain_test_child_module.cmx"
+    },
+  ]
 
   sources = [
     "chain_test_child_module.cc",
