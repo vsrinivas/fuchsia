@@ -21,31 +21,12 @@
 #include "peridot/bin/ledger/storage/fake/fake_db_factory.h"
 #include "peridot/bin/ledger/storage/public/types.h"
 #include "peridot/bin/ledger/testing/fake_disk_cleanup_manager.h"
+#include "peridot/bin/ledger/testing/inspect.h"
 #include "peridot/bin/ledger/testing/test_with_environment.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 namespace ledger {
 namespace {
-
-void ExpectRequestsMetric(fuchsia::inspect::Object* object,
-                          unsigned long expected_value) {
-  bool requests_found = false;
-  unsigned long extra_requests_found = 0UL;
-  unsigned long requests = 777'777;
-  for (auto& index : *object->metrics) {
-    if (index.key == "requests") {
-      if (!requests_found) {
-        requests_found = true;
-        requests = index.value.uint_value();
-      } else {
-        extra_requests_found++;
-      }
-    }
-  }
-  EXPECT_TRUE(requests_found);
-  EXPECT_EQ(expected_value, requests);
-  EXPECT_EQ(0UL, extra_requests_found);
-}
 
 class LedgerRepositoryImplTest : public TestWithEnvironment {
  public:

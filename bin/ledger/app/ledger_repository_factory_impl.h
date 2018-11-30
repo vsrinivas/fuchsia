@@ -40,10 +40,6 @@ class LedgerRepositoryFactoryImpl
       component::ObjectDir inspect_object_dir);
   ~LedgerRepositoryFactoryImpl() override;
 
- private:
-  class LedgerRepositoryContainer;
-  struct RepositoryInformation;
-
   // LedgerRepositoryFactoryErrorNotifierDelegate:
   void GetRepository(
       zx::channel repository_handle,
@@ -52,6 +48,10 @@ class LedgerRepositoryFactoryImpl
       fidl::InterfaceRequest<ledger_internal::LedgerRepository>
           repository_request,
       fit::function<void(Status)> callback) override;
+
+ private:
+  class LedgerRepositoryContainer;
+  struct RepositoryInformation;
 
   // Binds |repository_request| to the repository stored in the directory opened
   // in |root_fd|.

@@ -158,6 +158,7 @@ source_set("unittests") {
     "disk_cleanup_manager_unittest.cc",
     "fidl/serialization_size_unittest.cc",
     "ledger_manager_unittest.cc",
+    "ledger_repository_factory_impl_unittest.cc",
     "ledger_repository_impl_unittest.cc",
     "merging/common_ancestor_unittest.cc",
     "merging/conflict_resolver_client_unittest.cc",
