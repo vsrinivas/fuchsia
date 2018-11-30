@@ -29,7 +29,8 @@ The *options* argument can be either **ZX_WAIT_ASYNC_ONCE** or **ZX_WAIT_ASYNC_R
 In both cases, *signals* indicates which signals on the object specified by *handle*
 will cause a packet to be enqueued, and if **any** of those signals are asserted when
 **object_wait_async**() is called, or become asserted afterwards, a packet will be
-enqueued on *port*.
+enqueued on *port* containing all of the currently-asserted signals (not just the ones
+listed in the *signals* argument).
 
 In the case of **ZX_WAIT_ASYNC_ONCE**, once a packet has been enqueued the asynchronous
 waiting ends.  No further packets will be enqueued.
@@ -37,7 +38,8 @@ waiting ends.  No further packets will be enqueued.
 In the case of **ZX_WAIT_ASYNC_REPEATING** the asynchronous waiting continues until
 canceled. If any of *signals* are asserted and a packet is not currently in *port*'s
 queue on behalf of this wait, a packet is enqueued. If a packet is already in the
-queue, the packet's *observed* field is updated.
+queue, the packet's *observed* field is updated to include all of the currently-asserted
+signals (without removing the existing signals).
 
 In either mode, **port_cancel**() will terminate the operation and if a packet was
 in the queue on behalf of the operation, that packet will be removed from the queue.
