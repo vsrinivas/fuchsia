@@ -17,6 +17,7 @@
 #include <lib/user_copy/user_ptr.h>
 #include <list.h>
 #include <stdint.h>
+#include <vm/page_source.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>
 #include <vm/vm_aspace.h>
@@ -43,6 +44,9 @@ public:
                                         uint8_t alignment_log2, fbl::RefPtr<VmObject>* vmo);
 
     static zx_status_t CreateFromROData(const void* data, size_t size, fbl::RefPtr<VmObject>* vmo);
+
+    static zx_status_t CreateExternal(fbl::RefPtr<PageSource> src,
+                                      uint64_t size, fbl::RefPtr<VmObject>* vmo);
 
     zx_status_t Resize(uint64_t size) override;
     zx_status_t ResizeLocked(uint64_t size) override TA_REQ(lock_);
@@ -101,7 +105,8 @@ public:
 private:
     // private constructor (use Create())
     VmObjectPaged(
-        uint32_t options, uint32_t pmm_alloc_flags, uint64_t size, fbl::RefPtr<VmObject> parent);
+        uint32_t options, uint32_t pmm_alloc_flags, uint64_t size,
+        fbl::RefPtr<VmObject> parent, fbl::RefPtr<PageSource> page_source);
 
     // private destructor, only called from refptr
     ~VmObjectPaged() override;
@@ -143,6 +148,9 @@ private:
     uint64_t parent_offset_ TA_GUARDED(lock_) = 0;
     uint32_t pmm_alloc_flags_ TA_GUARDED(lock_) = PMM_ALLOC_FLAG_ANY;
     uint32_t cache_policy_ TA_GUARDED(lock_) = ARCH_MMU_FLAG_CACHED;
+
+    // The page source, if any.
+    const fbl::RefPtr<PageSource> page_source_;
 
     // a tree of pages
     VmPageList page_list_ TA_GUARDED(lock_);

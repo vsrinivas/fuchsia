@@ -65,14 +65,17 @@ zx_status_t RoundSize(uint64_t size, uint64_t* out_size) {
 } // namespace
 
 VmObjectPaged::VmObjectPaged(
-    uint32_t options, uint32_t pmm_alloc_flags, uint64_t size, fbl::RefPtr<VmObject> parent)
+    uint32_t options, uint32_t pmm_alloc_flags, uint64_t size,
+    fbl::RefPtr<VmObject> parent, fbl::RefPtr<PageSource> page_source)
     : VmObject(ktl::move(parent)),
       options_(options),
       size_(size),
-      pmm_alloc_flags_(pmm_alloc_flags) {
+      pmm_alloc_flags_(pmm_alloc_flags),
+      page_source_(ktl::move(page_source)) {
     LTRACEF("%p\n", this);
 
     DEBUG_ASSERT(IS_PAGE_ALIGNED(size_));
+    DEBUG_ASSERT(page_source_ == nullptr || parent_ == nullptr);
 }
 
 VmObjectPaged::~VmObjectPaged() {
@@ -91,6 +94,10 @@ VmObjectPaged::~VmObjectPaged() {
 
     // free all of the pages attached to us
     page_list_.FreeAllPages();
+
+    if (page_source_) {
+        page_source_->Close();
+    }
 }
 
 zx_status_t VmObjectPaged::Create(uint32_t pmm_alloc_flags,
@@ -109,7 +116,7 @@ zx_status_t VmObjectPaged::Create(uint32_t pmm_alloc_flags,
 
     fbl::AllocChecker ac;
     auto vmo = fbl::AdoptRef<VmObject>(
-        new (&ac) VmObjectPaged(options, pmm_alloc_flags, size, nullptr));
+        new (&ac) VmObjectPaged(options, pmm_alloc_flags, size, nullptr, nullptr));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -130,7 +137,7 @@ zx_status_t VmObjectPaged::CreateContiguous(uint32_t pmm_alloc_flags, uint64_t s
 
     fbl::AllocChecker ac;
     auto vmo = fbl::AdoptRef<VmObject>(
-        new (&ac) VmObjectPaged(kContiguous, pmm_alloc_flags, size, nullptr));
+        new (&ac) VmObjectPaged(kContiguous, pmm_alloc_flags, size, nullptr, nullptr));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -236,6 +243,26 @@ zx_status_t VmObjectPaged::CreateFromROData(const void* data, size_t size, fbl::
     return ZX_OK;
 }
 
+zx_status_t VmObjectPaged::CreateExternal(fbl::RefPtr<PageSource> src,
+                                          uint64_t size, fbl::RefPtr<VmObject>* obj) {
+    // make sure size is page aligned
+    zx_status_t status = RoundSize(size, &size);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    fbl::AllocChecker ac;
+    auto vmo = fbl::AdoptRef<VmObject>(new (&ac) VmObjectPaged(
+            kResizable, PMM_ALLOC_FLAG_ANY, size, nullptr, ktl::move(src)));
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    *obj = ktl::move(vmo);
+
+    return ZX_OK;
+}
+
 zx_status_t VmObjectPaged::CloneCOW(bool resizable, uint64_t offset, uint64_t size,
                                     bool copy_name, fbl::RefPtr<VmObject>* clone_vmo) {
     LTRACEF("vmo %p offset %#" PRIx64 " size %#" PRIx64 "\n", this, offset, size);
@@ -253,7 +280,7 @@ zx_status_t VmObjectPaged::CloneCOW(bool resizable, uint64_t offset, uint64_t si
     // allocate the clone up front outside of our lock
     fbl::AllocChecker ac;
     auto vmo = fbl::AdoptRef<VmObjectPaged>(
-        new (&ac) VmObjectPaged(options, pmm_alloc_flags_, size, fbl::WrapRefPtr(this)));
+        new (&ac) VmObjectPaged(options, pmm_alloc_flags_, size, fbl::WrapRefPtr(this), nullptr));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }

@@ -20,6 +20,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/bootreserve.cpp \
     $(LOCAL_DIR)/kstack.cpp \
     $(LOCAL_DIR)/page.cpp \
+    $(LOCAL_DIR)/page_source.cpp \
     $(LOCAL_DIR)/pinned_vm_object.cpp \
     $(LOCAL_DIR)/pmm.cpp \
     $(LOCAL_DIR)/pmm_arena.cpp \

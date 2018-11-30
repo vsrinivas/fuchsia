@@ -991,6 +991,10 @@ syscall pager_create
     (options: uint32_t)
     returns (zx_status_t, out_pager: zx_handle_t pager);
 
+syscall pager_create_vmo
+    (pager: zx_handle_t, port: zx_handle_t, key: uint64_t, size: uint64_t, options: uint32_t)
+    returns (zx_status_t, out_pager_vmo: zx_handle_t out_pager_vmo);
+
 # Test syscalls (keep at the end)
 
 syscall syscall_test_0() returns (zx_status_t);
