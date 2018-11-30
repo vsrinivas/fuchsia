@@ -383,3 +383,21 @@ __EXPORT void usb_request_pool_release(usb_request_pool_t* pool) {
 
     mtx_unlock(&pool->lock);
 }
+
+__EXPORT void usb_req_list_add_head(list_node_t* list, usb_request_t* req, size_t parent_req_size) {
+   usb_req_internal_t* req_int = USB_REQ_TO_REQ_INTERNAL(req, parent_req_size);
+   list_add_head(list, &req_int->node);
+}
+
+__EXPORT void usb_req_list_add_tail(list_node_t* list, usb_request_t* req, size_t parent_req_size) {
+   usb_req_internal_t* req_int = USB_REQ_TO_REQ_INTERNAL(req, parent_req_size);
+   list_add_tail(list, &req_int->node);
+}
+
+__EXPORT usb_request_t* usb_req_list_remove_head(list_node_t* list, size_t parent_req_size) {
+   usb_req_internal_t* req_int = list_remove_head_type(list, usb_req_internal_t, node);
+   if (req_int) {
+       return REQ_INTERNAL_TO_USB_REQ(req_int, parent_req_size);
+   }
+   return NULL;
+}

@@ -24,6 +24,14 @@ typedef struct {
     uint64_t node_offset;
 } usb_request_pool_t;
 
+typedef struct {
+    list_node_t node;
+} usb_req_internal_t;
+
+#define USB_REQ_TO_REQ_INTERNAL(req, size) \
+   ((usb_req_internal_t *)((uintptr_t)(req) + (size)))
+#define REQ_INTERNAL_TO_USB_REQ(ctx, size) ((usb_request_t *)((uintptr_t)(ctx) - (size)))
+
 // usb_request_alloc() creates a new usb request with payload space of data_size.
 zx_status_t usb_request_alloc(usb_request_t** out, uint64_t data_size,
                               uint8_t ep_address, size_t req_size);
@@ -104,5 +112,9 @@ usb_request_t* usb_request_pool_get(usb_request_pool_t* pool, size_t length);
 
 // releases all usb requests stored in the pool.
 void usb_request_pool_release(usb_request_pool_t* pool);
+
+void usb_req_list_add_head(list_node_t* list, usb_request_t* req, size_t parent_req_size);
+void usb_req_list_add_tail(list_node_t* list, usb_request_t* req, size_t parent_req_size);
+usb_request_t* usb_req_list_remove_head(list_node_t* list, size_t parent_req_size);
 
 __END_CDECLS;
