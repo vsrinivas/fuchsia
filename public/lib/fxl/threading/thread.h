@@ -7,8 +7,8 @@
 
 #include "lib/fxl/build_config.h"
 
+#include <lib/fit/function.h>
 #include <pthread.h>
-#include <functional>
 
 #include "lib/fxl/fxl_export.h"
 #include "lib/fxl/macros.h"
@@ -19,7 +19,7 @@ class FXL_EXPORT Thread {
  public:
   static constexpr size_t default_stack_size = 1 * 1024 * 1024;
 
-  explicit Thread(std::function<void(void)> runnable);
+  explicit Thread(fit::closure runnable);
   ~Thread();
   bool Run(size_t stack_size = default_stack_size);
   bool IsRunning() const;
@@ -29,7 +29,7 @@ class FXL_EXPORT Thread {
   static void* Entry(void* context);
   void Main();
 
-  std::function<void(void)> runnable_;
+  fit::closure runnable_;
   pthread_t thread_;
   bool running_;
 

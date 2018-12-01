@@ -132,6 +132,7 @@ source_set("fxl_lib") {
   public_deps = [
     ":fxl_common",
     ":fxl_logging",
+    "//zircon/public/lib/fit",
   ]
   if (is_fuchsia) {
     libs = [ "zircon" ]

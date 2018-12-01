@@ -10,7 +10,7 @@
 
 namespace fxl {
 
-Thread::Thread(std::function<void(void)> runnable)
+Thread::Thread(fit::closure runnable)
     : runnable_(std::move(runnable)), running_(false) {}
 
 Thread::~Thread() { Join(); }
