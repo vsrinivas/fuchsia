@@ -327,12 +327,12 @@ zx_status_t VnodeBlob::InitUncompressed() {
     BlockIterator block_iter(&extent_iter);
     // Read both the uncompressed merkle tree and data.
     const uint64_t blob_data_blocks = BlobDataBlocks(inode_);
-    if (blob_data_blocks > std::numeric_limits<uint32_t>::max()) {
+    const uint64_t merkle_blocks = MerkleTreeBlocks(inode_);
+    if (blob_data_blocks + merkle_blocks  > std::numeric_limits<uint32_t>::max()) {
         return ZX_ERR_IO_DATA_INTEGRITY;
     }
-    const uint32_t length = static_cast<uint32_t>(blob_data_blocks) + MerkleTreeBlocks(inode_);
+    const uint32_t length = static_cast<uint32_t>(blob_data_blocks + merkle_blocks);
     const uint64_t data_start = DataStartBlock(blobfs_->info_);
-
     zx_status_t status = StreamBlocks(&block_iter, length,
         [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
             txn.Enqueue(vmoid_, vmo_offset, dev_offset + data_start, length);
@@ -392,12 +392,12 @@ zx_status_t VnodeBlob::SpaceAllocate(uint64_t size_data) {
 
     auto write_info = fbl::make_unique<WritebackInfo>();
 
-    // Initialize the inode with known fields
+    // Initialize the inode with known fields.
     memset(inode_.merkle_root_hash, 0, Digest::kLength);
     inode_.blob_size = size_data;
     inode_.block_count = MerkleTreeBlocks(inode_) + static_cast<uint32_t>(BlobDataBlocks(inode_));
 
-    // Special case for the null blob: We skip the write phase
+    // Special case for the null blob: We skip the write phase.
     if (inode_.blob_size == 0) {
         zx_status_t status = blobfs_->ReserveNodes(1, &write_info->node_indices);
         if (status != ZX_OK) {
@@ -688,7 +688,8 @@ zx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actua
             inode_.block_count = blocks;
             inode_.header.flags |= kBlobFlagLZ4Compressed;
         } else {
-            uint64_t blocks64 = fbl::round_up(inode_.blob_size, kBlobfsBlockSize) / kBlobfsBlockSize;
+            uint64_t blocks64 =
+                    fbl::round_up(inode_.blob_size, kBlobfsBlockSize) / kBlobfsBlockSize;
             ZX_DEBUG_ASSERT(blocks64 <= std::numeric_limits<uint32_t>::max());
             uint32_t blocks = static_cast<uint32_t>(blocks64);
             status = StreamBlocks(&block_iter, blocks,

@@ -36,9 +36,9 @@ Allocator::~Allocator() {
     }
 }
 
-Inode* Allocator::GetNode(uint32_t ino) {
-    ZX_DEBUG_ASSERT(ino < node_map_.size() / kBlobfsInodeSize);
-    return &reinterpret_cast<Inode*>(node_map_.start())[ino];
+Inode* Allocator::GetNode(uint32_t node_index) {
+    ZX_DEBUG_ASSERT(node_index < node_map_.size() / kBlobfsInodeSize);
+    return &reinterpret_cast<Inode*>(node_map_.start())[node_index];
 }
 
 bool Allocator::CheckBlocksAllocated(uint64_t start_block, uint64_t end_block,

@@ -25,7 +25,7 @@ void BlobfsChecker::TraverseInodeBitmap() {
         if (inode->header.IsAllocated()) {
             alloc_inodes_++;
             if (inode->header.IsExtentContainer()) {
-                // TODO: sanity check these containers.
+                // TODO(smklein): sanity check these containers.
                 continue;
             }
 

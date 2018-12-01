@@ -83,20 +83,20 @@ struct Superblock {
     uint64_t magic1;
     uint32_t version;
     uint32_t flags;
-    uint32_t block_size;          // 8K typical
-    uint64_t data_block_count;    // Number of data blocks in this area
-    uint64_t journal_block_count; // Number of journal blocks in this area
-    uint64_t inode_count;         // Number of blobs in this area
-    uint64_t alloc_block_count;   // Total number of allocated blocks
-    uint64_t alloc_inode_count;   // Total number of allocated blobs and container nodes
-    uint64_t blob_header_next;    // Block containing next blobfs, or zero if this is the last one
+    uint32_t block_size;          // 8K typical.
+    uint64_t data_block_count;    // Number of data blocks in this area.
+    uint64_t journal_block_count; // Number of journal blocks in this area.
+    uint64_t inode_count;         // Number of blobs in this area.
+    uint64_t alloc_block_count;   // Total number of allocated blocks.
+    uint64_t alloc_inode_count;   // Total number of allocated blobs and container nodes.
+    uint64_t blob_header_next;    // Block containing next blobfs, or zero if this is the last one.
     // The following fields are only valid with (flags & kBlobFlagFVM):
-    uint64_t slice_size;          // Underlying slice size
-    uint64_t vslice_count;        // Number of underlying slices
-    uint32_t abm_slices;          // Slices allocated to block bitmap
-    uint32_t ino_slices;          // Slices allocated to node map
-    uint32_t dat_slices;          // Slices allocated to file data section
-    uint32_t journal_slices;      // Slices allocated to journal section
+    uint64_t slice_size;          // Underlying slice size.
+    uint64_t vslice_count;        // Number of underlying slices.
+    uint32_t abm_slices;          // Slices allocated to block bitmap.
+    uint32_t ino_slices;          // Slices allocated to node map.
+    uint32_t dat_slices;          // Slices allocated to file data section.
+    uint32_t journal_slices;      // Slices allocated to journal section.
 };
 
 static_assert(sizeof(Superblock) <= kBlobfsBlockSize, "Invalid blobfs superblock size");
@@ -249,13 +249,13 @@ constexpr size_t kMaxBlobExtents = std::numeric_limits<ExtentCountType>::max();
 
 // Identifies that the node is allocated.
 // Both inodes and extent containers can be allocated.
-constexpr uint16_t kBlobFlagAllocated = 0x0001;
+constexpr uint16_t kBlobFlagAllocated = 1 << 0;
 
 // Identifies that the on-disk storage of the blob is LZ4 compressed.
-constexpr uint16_t kBlobFlagLZ4Compressed = 0x0002;
+constexpr uint16_t kBlobFlagLZ4Compressed = 1 << 1;
 
 // Identifies that this node is a container for extents.
-constexpr uint16_t kBlobFlagExtentContainer = 0x0004;
+constexpr uint16_t kBlobFlagExtentContainer = 1 << 2;
 
 // The number of extents within a normal inode.
 constexpr uint32_t kInlineMaxExtents = 1;

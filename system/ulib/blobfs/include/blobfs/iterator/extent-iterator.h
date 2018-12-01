@@ -33,10 +33,10 @@ class NodeFinder {
 public:
     virtual ~NodeFinder() = default;
 
-    // Given an index, return a pointer to the requested node.
+    // Returns a pointer to the requested node.
     //
     // TODO(smklein): Return a zx_status_t to allow for invalid |ino| values.
-    virtual Inode* GetNode(uint32_t ino) = 0;
+    virtual Inode* GetNode(uint32_t node_index) = 0;
 };
 
 } // namespace blobfs

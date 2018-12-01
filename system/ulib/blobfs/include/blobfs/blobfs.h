@@ -410,12 +410,12 @@ public:
                               uint64_t* first_unset = nullptr) const {
         return allocator_->CheckBlocksAllocated(start_block, end_block, first_unset);
     }
-    AllocatedExtentIterator GetExtents(uint32_t ino) {
-        return AllocatedExtentIterator(allocator_.get(), ino);
+    AllocatedExtentIterator GetExtents(uint32_t node_index) {
+        return AllocatedExtentIterator(allocator_.get(), node_index);
     }
 
-    Inode* GetNode(uint32_t ino) {
-        return allocator_->GetNode(ino);
+    Inode* GetNode(uint32_t node_index) {
+        return allocator_->GetNode(node_index);
     }
     zx_status_t ReserveBlocks(size_t num_blocks, fbl::Vector<ReservedExtent>* out_extents) {
         return allocator_->ReserveBlocks(num_blocks, out_extents);

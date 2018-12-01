@@ -156,11 +156,11 @@ public:
     zx_status_t WriteNode(fbl::unique_ptr<InodeBlock> ino_block);
     zx_status_t WriteInfo();
 
-    // Access the |ino|-th inode
-    Inode* GetNode(uint32_t ino) final;
+    // Access the |node_index|-th inode
+    Inode* GetNode(uint32_t node_index) final;
 
-    AllocatedExtentIterator GetExtents(uint32_t ino) {
-        return AllocatedExtentIterator(this, ino);
+    AllocatedExtentIterator GetExtents(uint32_t node_index) {
+        return AllocatedExtentIterator(this, node_index);
     }
 
     // TODO(smklein): Consider deduplicating the host and target allocation systems.
