@@ -506,7 +506,7 @@ zx_status_t Station::HandleAssociationResponse(MgmtFrame<AssociationResponse>&& 
 
     infof("NIC %s associated with \"%s\"(%s) in channel %s, %s, %s\n",
           self_addr().ToString().c_str(), debug::ToAsciiOrHexStr(*join_ctx_->bss()->ssid).c_str(),
-          assoc_ctx_.bssid.ToString().c_str(), common::ChanStr(assoc_ctx_.chan).c_str(),
+          assoc_ctx_.bssid.ToString().c_str(), common::ChanStrLong(assoc_ctx_.chan).c_str(),
           common::BandStr(assoc_ctx_.chan).c_str(), common::GetPhyStr(assoc_ctx_.phy).c_str());
 
     // TODO(porce): Time when to establish BlockAck session
