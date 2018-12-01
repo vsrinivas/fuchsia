@@ -56,7 +56,7 @@ class Device {
   // Build a synchronous USB Request packet
   // |req| lifetime needs to be as long as the underlying
   // usb_request_t.
-  zx_status_t UsbRequest(usb_request_t* req);
+  zx_status_t UsbRequest(usb_request_t** req);
 
   // Load the Qualcomm firmware in RAM
   zx_status_t LoadRAM(const qca_version& ver);

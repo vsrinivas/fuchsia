@@ -68,7 +68,7 @@ static void interrupt_complete(usb_request_t* req, void* cookie) {
   }
 }
 
-zx_status_t Device::UsbRequest(usb_request_t* req) {
+zx_status_t Device::UsbRequest(usb_request_t** reqptr) {
   usb_desc_iter_t iter;
 
   zx_status_t result = usb_desc_iter_init(&usb_, &iter);
@@ -101,7 +101,11 @@ zx_status_t Device::UsbRequest(usb_request_t* req) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  result = usb_request_alloc(&req, DFU_PACKET_LEN, bulk_out_addr, parent_req_size_);
+  result = usb_request_alloc(reqptr, DFU_PACKET_LEN, bulk_out_addr, parent_req_size_);
+  if (result != ZX_OK) {
+      return result;
+  }
+  usb_request_t* req = *reqptr;
   req->complete_cb = interrupt_complete;
   req->cookie = &completion_;
   return result;
@@ -132,7 +136,7 @@ zx_status_t Device::LoadNVM(const qca_version& version) {
     return result;
   }
 
-  usb_request_t req;
+  usb_request_t* req = NULL;
   result = UsbRequest(&req);
   if (result != ZX_OK) {
     return result;
@@ -143,15 +147,15 @@ zx_status_t Device::LoadNVM(const qca_version& version) {
   while (count) {
     size = std::min(count, DFU_PACKET_LEN);
 
-    usb_request_copy_to(&req, file.view(sent, size).data(), size, 0);
-    req.complete_cb = interrupt_complete;
-    req.cookie = &completion_;
+    usb_request_copy_to(req, file.view(sent, size).data(), size, 0);
+    req->complete_cb = interrupt_complete;
+    req->cookie = &completion_;
     sync_completion_reset(&completion_);
-    usb_request_queue(&usb_, &req);
+    usb_request_queue(&usb_, req);
     sync_completion_wait(&completion_, ZX_TIME_INFINITE);
 
-    if (req.response.status != ZX_OK) {
-      result = req.response.status;
+    if (req->response.status != ZX_OK) {
+      result = req->response.status;
       break;
     }
 
@@ -160,6 +164,7 @@ zx_status_t Device::LoadNVM(const qca_version& version) {
   }
 
   zx_vmar_unmap(zx_vmar_root_self(), fw_addr, fw_size);
+  usb_request_release(req);
   return result;
 }
 
@@ -185,7 +190,7 @@ zx_status_t Device::LoadRAM(const qca_version& version) {
                        (void*)file.view(0, size).data(), size, ZX_TIME_INFINITE,
                        NULL);
 
-  usb_request_t req;
+  usb_request_t* req;
   result = UsbRequest(&req);
   if (result != ZX_OK) {
     return result;
@@ -196,15 +201,15 @@ zx_status_t Device::LoadRAM(const qca_version& version) {
   while (count) {
     size = std::min(count, DFU_PACKET_LEN);
 
-    usb_request_copy_to(&req, file.view(sent, size).data(), size, 0);
-    req.complete_cb = interrupt_complete;
-    req.cookie = &completion_;
+    usb_request_copy_to(req, file.view(sent, size).data(), size, 0);
+    req->complete_cb = interrupt_complete;
+    req->cookie = &completion_;
     sync_completion_reset(&completion_);
-    usb_request_queue(&usb_, &req);
+    usb_request_queue(&usb_, req);
     sync_completion_wait(&completion_, ZX_TIME_INFINITE);
 
-    if (req.response.status != ZX_OK) {
-      result = req.response.status;
+    if (req->response.status != ZX_OK) {
+      result = req->response.status;
       break;
     }
 
@@ -213,6 +218,7 @@ zx_status_t Device::LoadRAM(const qca_version& version) {
   }
 
   zx_vmar_unmap(zx_vmar_root_self(), fw_addr, fw_size);
+  usb_request_release(req);
   return result;
 }
 
