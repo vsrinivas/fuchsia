@@ -209,8 +209,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   void OnStoryStorageUpdated(fidl::StringPtr story_id,
                              fuchsia::modular::internal::StoryData story_data);
 
-  void NotifyImportanceWatchers();
-
   void NotifyStoryWatchers(
       const fuchsia::modular::internal::StoryData* const story_data,
       fuchsia::modular::StoryState story_state,
