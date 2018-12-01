@@ -31,6 +31,9 @@ case "${HOST_ARCH}" in
   arm*)
     readonly HOST_ARCH="${HOST_ARCH}"
     ;;
+  aarch64)
+    readonly HOST_ARCH="arm64"
+    ;;
   *86)
     readonly HOST_ARCH=386
     ;;
