@@ -10,6 +10,7 @@
 
 #include "lib/component/cpp/testing/enclosing_environment.h"
 #include "lib/component/cpp/testing/launcher_impl.h"
+#include "lib/component/cpp/testing/termination_result.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/gtest/real_loop_fixture.h"
 
@@ -112,6 +113,12 @@ class TestWithEnvironment : public gtest::RealLoopFixture {
         [enclosing_environment] { return enclosing_environment->is_running(); },
         timeout);
   }
+
+  // Run a loop until the given component is terminated or |timeout| elapses.
+  bool RunComponentUntilTerminatedOrTimeout(
+      fuchsia::sys::ComponentControllerPtr component_controller,
+      TerminationResult* termination_result = nullptr,
+      zx::duration timeout = zx::sec(5), zx::duration step = zx::msec(10));
 
  private:
   std::shared_ptr<component::Services> real_services_;

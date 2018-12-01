@@ -8,6 +8,7 @@ source_set("testing") {
   sources = [
     "startup_context_for_test.cc",
     "startup_context_for_test.h",
+    "termination_result.h",
     "test_with_context.cc",
     "test_with_context.h",
     "test_with_environment.cc",

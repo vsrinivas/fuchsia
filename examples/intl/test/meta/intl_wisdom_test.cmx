@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "test/intl_wisdom_test"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp"
+        ],
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}

@@ -153,19 +153,6 @@ class SystemTimeUpdaterTest : public TestWithEnvironment {
     return LaunchSystemTimeUpdateService(client_config_path.c_str());
   }
 
-  // Run a loop until the given component is terminated or |timeout| elapses.
-  void RunUntilTerminatedOrTimeout(
-      fuchsia::sys::ComponentControllerPtr component_controller,
-      const zx::duration timeout) {
-    bool is_terminated = false;
-    component_controller.events().OnTerminated =
-        [&](int64_t return_code, fuchsia::sys::TerminationReason reason) {
-          is_terminated = true;
-        };
-    RunLoopWithTimeoutOrUntil([&]() { return is_terminated; }, timeout,
-                              zx::sec(1));
-  }
-
   std::unique_ptr<LocalRoughtimeServer> local_roughtime_server_ = nullptr;
 
  private:
@@ -239,14 +226,16 @@ TEST_F(SystemTimeUpdaterTest, UpdateTimeFromLocalRoughtimeServer) {
 
   // Would use 1985-10-26, but it's considered too far in the past.
   local_roughtime_server_->SetTime(2000, kOctober, 26, 9, 0, 0);
-  RunUntilTerminatedOrTimeout(
-      LaunchSystemTimeUpdateServiceForLocalServer(port_number), zx::sec(20));
+  RunComponentUntilTerminatedOrTimeout(
+      LaunchSystemTimeUpdateServiceForLocalServer(port_number), nullptr,
+      zx::sec(20));
   EXPECT_THAT(system_clock::now(), EqualsGmtDate(2000, kOctober, 26));
 
   // Back to the future...
   local_roughtime_server_->SetTime(2015, kOctober, 21, 7, 28, 0);
-  RunUntilTerminatedOrTimeout(
-      LaunchSystemTimeUpdateServiceForLocalServer(port_number), zx::sec(20));
+  RunComponentUntilTerminatedOrTimeout(
+      LaunchSystemTimeUpdateServiceForLocalServer(port_number), nullptr,
+      zx::sec(20));
   EXPECT_THAT(system_clock::now(), EqualsGmtDate(2015, kOctober, 21));
 
   local_roughtime_server_->Stop();

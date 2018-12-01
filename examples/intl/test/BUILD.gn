@@ -1,0 +1,43 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+
+executable("intl_wisdom_test_bin") {
+  testonly = true
+  output_name = "intl_wisdom_test"
+
+  sources = [
+    "intl_wisdom_test.cc",
+  ]
+
+  deps = [
+    "//garnet/examples/intl:intl_wisdom",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+  ]
+}
+
+test_package("intl_wisdom_test") {
+  deps = [
+    ":intl_wisdom_test_bin",
+  ]
+
+  tests = [
+    {
+      name = "intl_wisdom_test"
+    },
+  ]
+
+  resources = [
+    {
+      path = "golden-output.txt"
+      dest = "golden-output.txt"
+    },
+  ]
+}
