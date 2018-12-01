@@ -593,7 +593,7 @@ There are commands that deal with assembly language:
 
   * `nexti` / `ni`: Step to the next instruction, stepping over function calls.
 
-  * `stepi` / `si`: Step the the next instruction, following function calls.
+  * `stepi` / `si`: Step the next instruction, following function calls.
 
   * `regs`: Get the CPU registers.
 

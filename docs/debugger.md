@@ -26,7 +26,7 @@ The debugger runs remotely only (you can't do self-hosted debug).
   * “step” steps into syscalls which end up as a few assembly instructions you
     have to step through.
 
-  * Obviuosly many advanced features are missing.
+  * Obviously many advanced features are missing.
 
 ### Bugs
 
