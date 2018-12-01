@@ -18,6 +18,7 @@
 #include "test_utils.h"
 
 #include <gtest/gtest.h>
+#include <vector>
 
 namespace wlan {
 
@@ -39,15 +40,6 @@ struct Context {
         return ZX_OK;
     }
 
-    template <typename M>
-    zx_status_t HandleMlmeMsg(std::function<zx_status_t(MlmeMsg<M>*)> create_msg) {
-        MlmeMsg<M> msg;
-        auto status = create_msg(&msg);
-        if (status != ZX_OK) { return status; }
-        bss->HandleMlmeMsg(msg);
-        return ZX_OK;
-    }
-
     void HandleTimeout() { bss->HandleTimeout(client_addr); }
 
     template <typename FV> FV TypeCheckWlanFrame(Packet* pkt) {
@@ -57,14 +49,6 @@ struct Context {
         auto frame = type_checked_frame.CheckLength();
         EXPECT_TRUE(frame);
         return frame;
-    }
-
-    zx_status_t SendStartReqMsg(bool protected_ap) {
-        MlmeMsg<wlan_mlme::StartRequest> start_req;
-        auto status = CreateStartRequest(&start_req, protected_ap);
-        if (status != ZX_OK) { return status; }
-        bss->Start(std::move(start_req));
-        return ZX_OK;
     }
 
     zx_status_t SendClientAuthReqFrame() {
@@ -128,34 +112,6 @@ struct Context {
         });
     }
 
-    zx_status_t SendDeauthReqMsg(wlan_mlme::ReasonCode reason_code) {
-        return HandleMlmeMsg<wlan_mlme::DeauthenticateRequest>([=](auto msg) {
-            return CreateDeauthRequest(msg, common::MacAddr(kClientAddress), reason_code);
-        });
-    }
-
-    zx_status_t SendAuthResponseMsg(wlan_mlme::AuthenticateResultCodes result_code) {
-        return HandleMlmeMsg<wlan_mlme::AuthenticateResponse>(
-            [=](auto msg) { return CreateAuthResponse(msg, client_addr, result_code); });
-    }
-
-    zx_status_t SendAssocResponseMsg(wlan_mlme::AssociateResultCodes result_code, uint16_t aid) {
-        return HandleMlmeMsg<wlan_mlme::AssociateResponse>(
-            [=](auto msg) { return CreateAssocResponse(msg, client_addr, result_code, aid); });
-    }
-
-    zx_status_t SendEapolRequestMsg() {
-        return HandleMlmeMsg<wlan_mlme::EapolRequest>(
-            [=](auto msg) { return CreateEapolRequest(msg, client_addr); });
-    }
-
-    zx_status_t SendSetKeysRequestMsg() {
-        return HandleMlmeMsg<wlan_mlme::SetKeysRequest>([=](auto msg) {
-            auto key_data = std::vector(kKeyData, kKeyData + sizeof(kKeyData));
-            return CreateSetKeysRequest(msg, client_addr, key_data, wlan_mlme::KeyType::PAIRWISE);
-        });
-    }
-
     zx::duration TuPeriodsToDuration(size_t periods) { return zx::usec(1024) * periods; }
 
     void SetTimeInTuPeriods(size_t periods) {
@@ -163,21 +119,23 @@ struct Context {
     }
 
     void StartAp(bool protected_ap = true) {
-        SendStartReqMsg(protected_ap);
+        bss->Start(CreateStartRequest(protected_ap));
         device->svc_queue.clear();
         device->wlan_queue.clear();
     }
 
     void AuthenticateClient() {
         SendClientAuthReqFrame();
-        SendAuthResponseMsg(wlan_mlme::AuthenticateResultCodes::SUCCESS);
+        bss->HandleMlmeMsg(
+            CreateAuthResponse(client_addr, wlan_mlme::AuthenticateResultCodes::SUCCESS));
         device->svc_queue.clear();
         device->wlan_queue.clear();
     }
 
     void AssociateClient(uint16_t aid) {
         SendClientAssocReqFrame();
-        SendAssocResponseMsg(wlan_mlme::AssociateResultCodes::SUCCESS, aid);
+        bss->HandleMlmeMsg(
+            CreateAssocResponse(client_addr, wlan_mlme::AssociateResultCodes::SUCCESS, aid));
         device->svc_queue.clear();
         device->wlan_queue.clear();
     }
@@ -189,7 +147,9 @@ struct Context {
 
     void EstablishRsna() {
         // current implementation naively assumes that RSNA is established as soon as one key is set
-        SendSetKeysRequestMsg();
+        auto key_data = std::vector(std::cbegin(kKeyData), std::cend(kKeyData));
+        bss->HandleMlmeMsg(
+            CreateSetKeysRequest(client_addr, key_data, wlan_mlme::KeyType::PAIRWISE));
     }
 
     void AssertAuthInd(std::vector<uint8_t> vec) {
@@ -305,7 +265,8 @@ TEST_F(ApInfraBssTest, Authenticate_Success) {
     ctx.AssertAuthInd(auth_inds[0]);
 
     // Simulate SME sending MLME-AUTHENTICATE.response msg with a success code
-    ctx.SendAuthResponseMsg(wlan_mlme::AuthenticateResultCodes::SUCCESS);
+    ctx.bss->HandleMlmeMsg(
+        CreateAuthResponse(ctx.client_addr, wlan_mlme::AuthenticateResultCodes::SUCCESS));
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     fbl::unique_ptr<Packet> pkt = std::move(*device.wlan_queue.begin());
     auto frame = ctx.TypeCheckWlanFrame<MgmtFrameView<Authentication>>(pkt.get());
@@ -326,7 +287,8 @@ TEST_F(ApInfraBssTest, Authenticate_SmeRefuses) {
     ctx.SendClientAuthReqFrame();
 
     // Simulate SME sending MLME-AUTHENTICATE.response msg with a refusal code
-    ctx.SendAuthResponseMsg(wlan_mlme::AuthenticateResultCodes::REFUSED);
+    ctx.bss->HandleMlmeMsg(
+        CreateAuthResponse(ctx.client_addr, wlan_mlme::AuthenticateResultCodes::REFUSED));
 
     // Verify that authentication response frame for client is a refusal
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
@@ -399,7 +361,8 @@ TEST_F(ApInfraBssTest, Associate_Success) {
     ctx.AssertAssocInd(assoc_inds[0]);
 
     // Simulate SME sending MLME-ASSOCIATE.response msg with a success code
-    ctx.SendAssocResponseMsg(wlan_mlme::AssociateResultCodes::SUCCESS, kAid);
+    ctx.bss->HandleMlmeMsg(
+        CreateAssocResponse(ctx.client_addr, wlan_mlme::AssociateResultCodes::SUCCESS, kAid));
 
     // Verify association response frame for the client
     // WLAN queue should have AssociateResponse and BlockAck request
@@ -425,7 +388,8 @@ TEST_F(ApInfraBssTest, Associate_AssociationContext) {
     ctx.SendClientAssocReqFrame();
 
     // Simulate SME sending MLME-ASSOCIATE.response msg with a success code
-    ctx.SendAssocResponseMsg(wlan_mlme::AssociateResultCodes::SUCCESS, kAid);
+    ctx.bss->HandleMlmeMsg(
+        CreateAssocResponse(ctx.client_addr, wlan_mlme::AssociateResultCodes::SUCCESS, kAid));
 
     // Expect association context has been set properly.
     const wlan_assoc_ctx_t* actual_ctx = device.GetStationAssocContext();
@@ -493,7 +457,8 @@ TEST_F(ApInfraBssTest, Associate_SmeRefuses) {
     ctx.SendClientAssocReqFrame();
 
     // Simulate SME sending MLME-ASSOCIATE.response msg with a success code
-    ctx.SendAssocResponseMsg(wlan_mlme::AssociateResultCodes::REFUSED_CAPABILITIES_MISMATCH, 0);
+    ctx.bss->HandleMlmeMsg(CreateAssocResponse(
+        ctx.client_addr, wlan_mlme::AssociateResultCodes::REFUSED_CAPABILITIES_MISMATCH, 0));
 
     // Expect association context has not been set (blank).
     wlan_assoc_ctx_t expected_ctx = {};
@@ -628,7 +593,7 @@ TEST_F(ApInfraBssTest, Exchange_Eapol_Frames) {
     ctx.AuthenticateAndAssociateClient(kAid);
 
     // Send MLME-EAPOL.request.
-    ctx.SendEapolRequestMsg();
+    ctx.bss->HandleMlmeMsg(CreateEapolRequest(ctx.client_addr));
 
     // Verify MLME-EAPOL.confirm message was sent.
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
@@ -699,8 +664,8 @@ TEST_F(ApInfraBssTest, MlmeDeauthReqWhileAssociated) {
     ctx.AuthenticateAndAssociateClient(kAid);
 
     // Send MLME-DEAUTHENTICATE.request
-    auto reason_code = wlan_mlme::ReasonCode::FOURWAY_HANDSHAKE_TIMEOUT;
-    ctx.SendDeauthReqMsg(reason_code);
+    const auto reason_code = wlan_mlme::ReasonCode::FOURWAY_HANDSHAKE_TIMEOUT;
+    ctx.bss->HandleMlmeMsg(CreateDeauthRequest(ctx.client_addr, reason_code));
 
     // Verify MLME-DEAUTHENTICATE.confirm message was sent
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
@@ -726,7 +691,9 @@ TEST_F(ApInfraBssTest, SetKeys) {
     ctx.AuthenticateAndAssociateClient(kAid);
 
     // Send MLME-SETKEYS.request
-    ctx.SendSetKeysRequestMsg();
+    auto key_data = std::vector(std::cbegin(kKeyData), std::cend(kKeyData));
+    ctx.bss->HandleMlmeMsg(
+        CreateSetKeysRequest(ctx.client_addr, key_data, wlan_mlme::KeyType::PAIRWISE));
 
     ASSERT_EQ(device.GetKeys().size(), static_cast<size_t>(1));
     auto key_config = std::move(device.GetKeys()[0]);
@@ -743,7 +710,9 @@ TEST_F(ApInfraBssTest, SetKeys_IgnoredForUnprotectedAp) {
     ctx.AuthenticateAndAssociateClient(kAid);
 
     // Send MLME-SETKEYS.request
-    ctx.SendSetKeysRequestMsg();
+    auto key_data = std::vector(std::cbegin(kKeyData), std::cend(kKeyData));
+    ctx.bss->HandleMlmeMsg(
+        CreateSetKeysRequest(ctx.client_addr, key_data, wlan_mlme::KeyType::PAIRWISE));
 
     EXPECT_TRUE(device.GetKeys().empty());
 }

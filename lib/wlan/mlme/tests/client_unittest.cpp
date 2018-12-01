@@ -53,14 +53,6 @@ struct ClientTest : public ::testing::Test {
         chan_sched.HandleTimeout();
     }
 
-    template <typename M> zx_status_t SendMlmeMsg() {
-        MlmeMsg<M> msg;
-        auto status = CreateMlmeMsg<M>(&msg);
-        if (status != ZX_OK) { return status; }
-        station.HandleAnyMlmeMsg(msg);
-        return ZX_OK;
-    }
-
     template <typename F> zx_status_t SendFrame() {
         fbl::unique_ptr<Packet> pkt;
         auto status = CreateFrame<F>(&pkt);
@@ -106,7 +98,7 @@ struct ClientTest : public ::testing::Test {
     }
 
     void Authenticate() {
-        SendMlmeMsg<wlan_mlme::AuthenticateRequest>();
+        ASSERT_EQ(ZX_OK, station.HandleAnyMlmeMsg(CreateAuthRequest()));
         SendFrame<Authentication>();
         device.svc_queue.clear();
         device.wlan_queue.clear();
@@ -115,7 +107,7 @@ struct ClientTest : public ::testing::Test {
     }
 
     void Associate() {
-        SendMlmeMsg<wlan_mlme::AssociateRequest>();
+        ASSERT_EQ(ZX_OK, station.HandleAnyMlmeMsg(CreateAssocRequest()));
         SendFrame<AssociationResponse>();
         device.svc_queue.clear();
         device.wlan_queue.clear();
@@ -202,7 +194,7 @@ struct ClientTest : public ::testing::Test {
 
 TEST_F(ClientTest, Authenticate) {
     // Send AUTHENTICATION.request. Verify that no confirmation was sent yet.
-    ASSERT_EQ(SendMlmeMsg<wlan_mlme::AuthenticateRequest>(), ZX_OK);
+    ASSERT_EQ(ZX_OK, station.HandleAnyMlmeMsg(CreateAuthRequest()));
     ASSERT_TRUE(device.svc_queue.empty());
 
     // Verify wlan frame is correct.
@@ -238,7 +230,7 @@ TEST_F(ClientTest, Associate) {
     Authenticate();
 
     // Send ASSOCIATE.request. Verify that no confirmation was sent yet.
-    ASSERT_EQ(SendMlmeMsg<wlan_mlme::AssociateRequest>(), ZX_OK);
+    ASSERT_EQ(ZX_OK, station.HandleAnyMlmeMsg(CreateAssocRequest()));
     ASSERT_TRUE(device.svc_queue.empty());
 
     // Verify wlan frame is correct.
@@ -272,7 +264,7 @@ TEST_F(ClientTest, Associate) {
 
 TEST_F(ClientTest, AuthTimeout) {
     // Send AUTHENTICATE.request. Verify that no confirmation was sent yet.
-    ASSERT_EQ(SendMlmeMsg<wlan_mlme::AuthenticateRequest>(), ZX_OK);
+    ASSERT_EQ(ZX_OK, station.HandleAnyMlmeMsg(CreateAuthRequest()));
     ASSERT_TRUE(device.svc_queue.empty());
 
     // Timeout not yet hit.
@@ -293,7 +285,7 @@ TEST_F(ClientTest, AssocTimeout) {
     Authenticate();
 
     // Send ASSOCIATE.request. Verify that no confirmation was sent yet.
-    ASSERT_EQ(SendMlmeMsg<wlan_mlme::AssociateRequest>(), ZX_OK);
+    ASSERT_EQ(ZX_OK, station.HandleAnyMlmeMsg(CreateAssocRequest()));
     ASSERT_TRUE(device.svc_queue.empty());
 
     // Timeout not yet hit.
@@ -601,7 +593,7 @@ TEST_F(ClientTest, BufferFramesWhileOffChannelAndSendWhenOnChannel) {
 
 TEST_F(ClientTest, InvalidAuthenticationResponse) {
     // Send AUTHENTICATION.request. Verify that no confirmation was sent yet.
-    ASSERT_EQ(SendMlmeMsg<wlan_mlme::AuthenticateRequest>(), ZX_OK);
+    ASSERT_EQ(ZX_OK, station.HandleAnyMlmeMsg(CreateAuthRequest()));
     ASSERT_TRUE(device.svc_queue.empty());
 
     // Send authentication frame with wrong algorithm.

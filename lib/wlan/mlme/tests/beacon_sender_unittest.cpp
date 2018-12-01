@@ -57,14 +57,6 @@ struct MockBss : public BssInterface {
 struct BeaconSenderTest : public ::testing::Test {
     BeaconSenderTest() : bcn_sender(&device) {}
 
-    void Start() {
-        MlmeMsg<wlan_mlme::StartRequest> start_req;
-        auto status = CreateStartRequest(&start_req, false);
-        ASSERT_EQ(status, ZX_OK);
-
-        bcn_sender.Start(&bss, ps_cfg, start_req);
-    }
-
     MockBss bss;
     MockDevice device;
     BeaconSender bcn_sender;
@@ -74,7 +66,7 @@ struct BeaconSenderTest : public ::testing::Test {
 TEST_F(BeaconSenderTest, Start) {
     ASSERT_FALSE(device.beaconing_enabled);
 
-    Start();
+    bcn_sender.Start(&bss, ps_cfg, CreateStartRequest(false));
 
     ASSERT_TRUE(device.beaconing_enabled);
     ASSERT_EQ(device.beacon.get(), nullptr);
@@ -92,7 +84,7 @@ TEST_F(BeaconSenderTest, Start) {
 }
 
 TEST_F(BeaconSenderTest, ProbeRequest) {
-    Start();
+    bcn_sender.Start(&bss, ps_cfg, CreateStartRequest(false));
 
     ASSERT_TRUE(device.wlan_queue.empty());
 

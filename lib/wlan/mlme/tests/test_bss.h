@@ -61,24 +61,21 @@ static constexpr uint8_t kCipherOui[3] = {0x96, 0x85, 0x74};
 static constexpr uint8_t kCipherSuiteType = 0x11;
 
 ::fuchsia::wlan::mlme::BSSDescription CreateBssDescription();
-zx_status_t CreateStartRequest(MlmeMsg<::fuchsia::wlan::mlme::StartRequest>*, bool protected_ap);
-zx_status_t CreateJoinRequest(MlmeMsg<::fuchsia::wlan::mlme::JoinRequest>*);
-zx_status_t CreateAuthRequest(MlmeMsg<::fuchsia::wlan::mlme::AuthenticateRequest>*);
-zx_status_t CreateAuthResponse(MlmeMsg<::fuchsia::wlan::mlme::AuthenticateResponse>*,
-                               common::MacAddr client_addr,
-                               ::fuchsia::wlan::mlme::AuthenticateResultCodes result_code);
-zx_status_t CreateDeauthRequest(MlmeMsg<::fuchsia::wlan::mlme::DeauthenticateRequest>*,
-                                common::MacAddr, ::fuchsia::wlan::mlme::ReasonCode reason_code);
-zx_status_t CreateAssocRequest(MlmeMsg<::fuchsia::wlan::mlme::AssociateRequest>* out_msg);
-zx_status_t CreateAssocResponse(MlmeMsg<::fuchsia::wlan::mlme::AssociateResponse>*,
-                                common::MacAddr client_addr,
-                                ::fuchsia::wlan::mlme::AssociateResultCodes result_code,
-                                uint16_t aid);
-zx_status_t CreateEapolRequest(MlmeMsg<::fuchsia::wlan::mlme::EapolRequest>*,
-                               common::MacAddr client_addr);
-zx_status_t CreateSetKeysRequest(MlmeMsg<::fuchsia::wlan::mlme::SetKeysRequest>*,
-                                 common::MacAddr client_addr, std::vector<uint8_t> key_data,
-                                 ::fuchsia::wlan::mlme::KeyType);
+MlmeMsg<::fuchsia::wlan::mlme::StartRequest> CreateStartRequest(bool protected_ap);
+MlmeMsg<::fuchsia::wlan::mlme::JoinRequest> CreateJoinRequest();
+MlmeMsg<::fuchsia::wlan::mlme::AuthenticateRequest> CreateAuthRequest();
+MlmeMsg<::fuchsia::wlan::mlme::AuthenticateResponse> CreateAuthResponse(
+    common::MacAddr client_addr, ::fuchsia::wlan::mlme::AuthenticateResultCodes result_code);
+MlmeMsg<::fuchsia::wlan::mlme::DeauthenticateRequest> CreateDeauthRequest(
+    common::MacAddr, ::fuchsia::wlan::mlme::ReasonCode reason_code);
+MlmeMsg<::fuchsia::wlan::mlme::AssociateRequest> CreateAssocRequest();
+MlmeMsg<::fuchsia::wlan::mlme::AssociateResponse> CreateAssocResponse(
+    common::MacAddr client_addr, ::fuchsia::wlan::mlme::AssociateResultCodes result_code,
+    uint16_t aid);
+MlmeMsg<::fuchsia::wlan::mlme::EapolRequest> CreateEapolRequest(common::MacAddr client_addr);
+MlmeMsg<::fuchsia::wlan::mlme::SetKeysRequest> CreateSetKeysRequest(common::MacAddr client_addr,
+                                                                    std::vector<uint8_t> key_data,
+                                                                    ::fuchsia::wlan::mlme::KeyType);
 zx_status_t CreateAuthReqFrame(fbl::unique_ptr<Packet>*, common::MacAddr client_addr);
 zx_status_t CreateAuthRespFrame(fbl::unique_ptr<Packet>*);
 zx_status_t CreateDeauthFrame(fbl::unique_ptr<Packet>*, common::MacAddr client_addr);
@@ -100,34 +97,6 @@ template <typename F> zx_status_t CreateFrame(fbl::unique_ptr<Packet>* pkt) {
 
     return ZX_ERR_NOT_SUPPORTED;
 }
-
-template <typename M, typename E>
-using enable_if_same = std::enable_if_t<std::is_same<M, E>::value, zx_status_t>;
-
-template <typename M>
-enable_if_same<M, ::fuchsia::wlan::mlme::AuthenticateRequest> CreateMlmeMsg(MlmeMsg<M>* msg) {
-    return CreateAuthRequest(msg);
-}
-
-template <typename M>
-enable_if_same<M, ::fuchsia::wlan::mlme::JoinRequest> CreateMlmeMsg(MlmeMsg<M>* msg) {
-    return CreateJoinRequest(msg);
-}
-
-template <typename M>
-enable_if_same<M, ::fuchsia::wlan::mlme::AssociateRequest> CreateMlmeMsg(MlmeMsg<M>* msg) {
-    return CreateAssocRequest(msg);
-}
-
-template <typename T>
-static zx_status_t WriteServiceMessage(T* message, uint32_t ordinal, MlmeMsg<T>* out_msg) {
-    fidl::Encoder enc(ordinal);
-    zx_status_t status = SerializeServiceMsg(&enc, message);
-    if (status != ZX_OK) { return status; }
-
-    return MlmeMsg<T>::Decode(enc.GetMessage().bytes(), out_msg);
-}
-
 }  // namespace wlan
 
 #endif  // GARNET_LIB_WLAN_MLME_TESTS_TEST_BSS_H_

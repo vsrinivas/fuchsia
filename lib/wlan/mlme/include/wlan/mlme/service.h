@@ -71,10 +71,11 @@ class BaseMlmeMsg {
     uint32_t ordinal() const { return ordinal_; }
 
    protected:
+    BaseMlmeMsg(uint32_t ordinal, zx_txid_t txid) : ordinal_(ordinal), txid_(txid) {}
     virtual const void* get_type_id() const = 0;
 
-    zx_txid_t txid_ = 0;
     uint32_t ordinal_ = 0;
+    zx_txid_t txid_ = 0;
 
    private:
     BaseMlmeMsg(BaseMlmeMsg const&) = delete;
@@ -84,6 +85,9 @@ class BaseMlmeMsg {
 template <typename M> class MlmeMsg : public BaseMlmeMsg {
    public:
     static const uint8_t kTypeId = 0;
+    MlmeMsg() = default;
+    MlmeMsg(M&& msg, uint32_t ordinal, zx_txid_t txid = 0)
+        : BaseMlmeMsg(ordinal, txid), msg_(std::move(msg)) {}
     ~MlmeMsg() override = default;
 
     static zx_status_t Decode(Span<uint8_t> span, MlmeMsg<M>* out_msg) {
