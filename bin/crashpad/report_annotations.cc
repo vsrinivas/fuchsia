@@ -61,7 +61,7 @@ std::string GetVersion() {
 
 }  // namespace
 
-std::map<std::string, std::string> MakeAnnotations(
+std::map<std::string, std::string> MakeDefaultAnnotations(
     const std::string& package_name) {
   return {
       {"product", "Fuchsia"},
@@ -71,6 +71,35 @@ std::map<std::string, std::string> MakeAnnotations(
       {"ptype", package_name},
       {"board_name", GetBoardName()},
   };
+}
+
+std::map<std::string, std::string> MakeManagedRuntimeExceptionAnnotations(
+    ManagedRuntimeLanguage language, const std::string& component_url,
+    const std::string& exception) {
+  std::map<std::string, std::string> annotations =
+      MakeDefaultAnnotations(component_url);
+  if (language == ManagedRuntimeLanguage::DART) {
+    annotations["type"] = "DartError";
+    // In the Dart C++ runner, the runtime type has already been pre-pended to
+    // the error message so we expect the format to be '$RuntimeType: $Message'.
+    const size_t delimiter_pos = exception.find_first_of(':');
+    if (delimiter_pos == std::string::npos) {
+      FX_LOGS(ERROR) << "error parsing Dart exception: expected format "
+                        "'$RuntimeType: $Message', got '"
+                     << exception << "'";
+      // We still need to specify a type, otherwise the stack trace does not
+      // show up in the crash server UI.
+      annotations["error_runtime_type"] = "UnknownError";
+      annotations["error_message"] = exception;
+    } else {
+      annotations["error_runtime_type"] = exception.substr(0, delimiter_pos);
+      annotations["error_message"] = exception.substr(
+          delimiter_pos + 2 /*to get rid of the leading ': '*/);
+    }
+  } else {
+    annotations["error_message"] = exception;
+  }
+  return annotations;
 }
 
 }  // namespace crash

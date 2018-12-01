@@ -65,6 +65,23 @@ zx_status_t WriteVMO(crashpad::FileWriter* writer,
   return ZX_OK;
 }
 
+zx_status_t AddAttachment(crashpad::CrashReportDatabase::NewReport* report,
+                          const std::string& filename,
+                          fuchsia::mem::Buffer buffer,
+                          const std::string& debug_name) {
+  crashpad::FileWriter* writer = report->AddAttachment(filename);
+  if (!writer) {
+    return ZX_ERR_INTERNAL;
+  }
+  if (zx_status_t status = WriteVMO(writer, std::move(buffer));
+      status != ZX_OK) {
+    FX_LOGS(ERROR) << "error writing " << debug_name
+                   << " to file: " << zx_status_get_string(status);
+    return ZX_ERR_INTERNAL;
+  }
+  return ZX_OK;
+}
+
 }  // namespace
 
 std::map<std::string, ScopedUnlink> MakeNativeExceptionAttachments(
@@ -78,19 +95,24 @@ std::map<std::string, ScopedUnlink> MakeNativeExceptionAttachments(
   return attachments;
 }
 
-zx_status_t WriteKernelPanicAttachments(
+zx_status_t AddManagedRuntimeExceptionAttachments(
+    crashpad::CrashReportDatabase::NewReport* report,
+    ManagedRuntimeLanguage language, fuchsia::mem::Buffer stack_trace) {
+  const std::string& stack_trace_filename =
+      (language == ManagedRuntimeLanguage::DART)
+          ? "DartError"  // the crash server expects a specific name for Dart.
+          : "stack_trace";
+  AddAttachment(report, stack_trace_filename, std::move(stack_trace),
+                "stack trace");
+  // TODO(DX-581): attach syslog as well.
+  // TODO(DX-748): attach kernel log as well.
+  return ZX_OK;
+}
+
+zx_status_t AddKernelPanicAttachments(
     crashpad::CrashReportDatabase::NewReport* report,
     fuchsia::mem::Buffer crashlog) {
-  crashpad::FileWriter* writer = report->AddAttachment("log");
-  if (!writer) {
-    return ZX_ERR_INTERNAL;
-  }
-  if (zx_status_t status = WriteVMO(writer, std::move(crashlog));
-      status != ZX_OK) {
-    FX_LOGS(ERROR) << "error writing kernel panic crashlog to buffer: "
-                   << zx_status_get_string(status);
-    return ZX_ERR_INTERNAL;
-  }
+  AddAttachment(report, "log", std::move(crashlog), "kernel panic crashlog");
   return ZX_OK;
 }
 

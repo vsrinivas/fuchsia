@@ -138,7 +138,7 @@ zx_status_t CrashpadAnalyzerImpl::HandleNativeException(
 
   // Prepare annotations and attachments.
   const std::map<std::string, std::string> annotations =
-      MakeAnnotations(package_name);
+      MakeDefaultAnnotations(package_name);
   // The Crashpad exception handler expects filepaths for the passed
   // attachments, not file objects, but we need the underlying files
   // to still be there.
@@ -207,6 +207,51 @@ zx_status_t CrashpadAnalyzerImpl::HandleNativeException(
   return UploadReport(std::move(report), annotations);
 }
 
+zx_status_t CrashpadAnalyzerImpl::HandleManagedRuntimeException(
+    ManagedRuntimeLanguage language, fidl::StringPtr component_url,
+    fidl::StringPtr exception, fuchsia::mem::Buffer stack_trace) {
+  FX_LOGS(INFO) << "generating crash report for exception thrown by "
+                << component_url;
+
+  crashpad::CrashReportDatabase::OperationStatus database_status;
+
+  // Create local crash report.
+  std::unique_ptr<crashpad::CrashReportDatabase::NewReport> report;
+  database_status = database_->PrepareNewCrashReport(&report);
+  if (database_status != crashpad::CrashReportDatabase::kNoError) {
+    FX_LOGS(ERROR) << "error creating local crash report (" << database_status
+                   << ")";
+    return ZX_ERR_INTERNAL;
+  }
+
+  // Prepare annotations and attachments.
+  const std::map<std::string, std::string> annotations =
+      MakeManagedRuntimeExceptionAnnotations(language, component_url,
+                                             exception);
+  if (AddManagedRuntimeExceptionAttachments(report.get(), language,
+                                            std::move(stack_trace)) != ZX_OK) {
+    FX_LOGS(WARNING) << "error adding attachments to local crash report";
+  }
+
+  // Finish new local crash report.
+  crashpad::UUID local_report_id;
+  database_status = database_->FinishedWritingCrashReport(std::move(report),
+                                                          &local_report_id);
+  if (database_status != crashpad::CrashReportDatabase::kNoError) {
+    FX_LOGS(ERROR) << "error writing local crash report (" << database_status
+                   << ")";
+    return ZX_ERR_INTERNAL;
+  }
+
+  // Read local crash report as an "upload" report and upload it.
+  std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport>
+      upload_report = GetUploadReport(local_report_id);
+  if (!upload_report) {
+    return ZX_ERR_INTERNAL;
+  }
+  return UploadReport(std::move(upload_report), annotations);
+}
+
 zx_status_t CrashpadAnalyzerImpl::ProcessKernelPanicCrashlog(
     fuchsia::mem::Buffer crashlog) {
   FX_LOGS(INFO) << "generating crash report for previous kernel panic";
@@ -224,8 +269,8 @@ zx_status_t CrashpadAnalyzerImpl::ProcessKernelPanicCrashlog(
 
   // Prepare annotations and attachments.
   const std::map<std::string, std::string> annotations =
-      MakeAnnotations(/*package_name=*/"kernel");
-  if (WriteKernelPanicAttachments(report.get(), std::move(crashlog)) != ZX_OK) {
+      MakeDefaultAnnotations(/*package_name=*/"kernel");
+  if (AddKernelPanicAttachments(report.get(), std::move(crashlog)) != ZX_OK) {
     FX_LOGS(WARNING) << "error adding attachments to local crash report";
   }
 
@@ -267,10 +312,15 @@ void CrashpadAnalyzerImpl::HandleNativeException(
 
 void CrashpadAnalyzerImpl::HandleManagedRuntimeException(
     ManagedRuntimeLanguage language, fidl::StringPtr component_url,
-    fidl::StringPtr exception, fuchsia::mem::Buffer stackTrace,
+    fidl::StringPtr exception, fuchsia::mem::Buffer stack_trace,
     HandleManagedRuntimeExceptionCallback callback) {
-  // TODO(DX-246): to be implemented.
-  callback(ZX_ERR_NOT_SUPPORTED);
+  const zx_status_t status = HandleManagedRuntimeException(
+      language, component_url, exception, std::move(stack_trace));
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR)
+        << "failed to handle managed runtime exception. Won't retry.";
+  }
+  callback(status);
 }
 
 void CrashpadAnalyzerImpl::ProcessKernelPanicCrashlog(

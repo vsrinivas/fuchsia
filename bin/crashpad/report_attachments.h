@@ -9,6 +9,7 @@
 #include <memory>
 #include <string>
 
+#include <fuchsia/crash/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
 #include <sys/types.h>
 #include <third_party/crashpad/client/crash_report_database.h>
@@ -26,11 +27,19 @@ namespace crash {
 std::map<std::string, ScopedUnlink> MakeNativeExceptionAttachments(
     const std::string& tmp_dir);
 
-// Writes the set of file attachments we want in a crash report for kernel
-// panics.
+// Adds the set of file attachments we want in a crash report for managed
+// runtime exceptions for the given |language| to the |report|.
+//
+// Today, we only attach the |stack_trace| VMO as a text file attachment.
+zx_status_t AddManagedRuntimeExceptionAttachments(
+    crashpad::CrashReportDatabase::NewReport* report,
+    ManagedRuntimeLanguage language, fuchsia::mem::Buffer stack_trace);
+
+// Adds the set of file attachments we want in a crash report for kernel
+// panics to the |report|.
 //
 // Today, we only attach the |crashlog| VMO as a text file attachment.
-zx_status_t WriteKernelPanicAttachments(
+zx_status_t AddKernelPanicAttachments(
     crashpad::CrashReportDatabase::NewReport* report,
     fuchsia::mem::Buffer crashlog);
 
