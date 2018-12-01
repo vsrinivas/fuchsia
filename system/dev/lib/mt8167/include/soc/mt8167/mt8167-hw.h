@@ -56,6 +56,12 @@
 #define MT8167_AP_MIXED_SYS_BASE                            0x10018000
 #define MT8167_AP_MIXED_SYS_SIZE                            0x714
 
+#define MT8167_THERMAL_BASE                                 0x1100d000
+#define MT8167_THERMAL_SIZE                                 0x510
+
+#define MT8167_FUSE_BASE                                    0x10009000
+#define MT8167_FUSE_SIZE                                    0x1000
+
 // Display Subsystem
 #define MT8167_DISP_OVL_BASE                                0x14007000
 #define MT8167_DISP_OVL_SIZE                                0x1000

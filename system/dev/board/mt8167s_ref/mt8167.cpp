@@ -95,6 +95,10 @@ int Mt8167::Thread() {
         zxlogf(ERROR, "UsbInit() failed\n");
         return -1;
     }
+    if (ThermalInit() != ZX_OK) {
+        zxlogf(ERROR, "ThermalInit() failed\n");
+        return -1;
+    }
 
     return 0;
 }

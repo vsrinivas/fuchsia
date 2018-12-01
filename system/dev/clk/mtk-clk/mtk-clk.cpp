@@ -27,16 +27,18 @@ struct MtkClkGate {
 };
 
 constexpr MtkClkGateRegs kClkGatingCtrl0 = {.set = 0x50, .clr = 0x80};
-constexpr MtkClkGateRegs kClkGatingCtrl1 = { .set = 0x54, .clr = 0x84 };
+constexpr MtkClkGateRegs kClkGatingCtrl1 = {.set = 0x54, .clr = 0x84};
 constexpr MtkClkGateRegs kClkGatingCtrl8 = {.set = 0xa0, .clr = 0xb0};
 
 constexpr MtkClkGate kMtkClkGates[] = {
-        [board_mt8167::kClkI2c0] = {.regs = kClkGatingCtrl1, .bit = 3},
-        [board_mt8167::kClkI2c1] = {.regs = kClkGatingCtrl1, .bit = 4},
-        [board_mt8167::kClkI2c2] = {.regs = kClkGatingCtrl1, .bit = 16},
-        [board_mt8167::kClkSlowMfg] = {.regs = kClkGatingCtrl8, .bit = 7},
-        [board_mt8167::kClkAxiMfg] = {.regs = kClkGatingCtrl8, .bit = 6},
-        [board_mt8167::kClkMfgMm] = {.regs = kClkGatingCtrl0, .bit = 2},
+    [board_mt8167::kClkThermal] = {.regs = kClkGatingCtrl1, .bit = 1},
+    [board_mt8167::kClkI2c0] = {.regs = kClkGatingCtrl1, .bit = 3},
+    [board_mt8167::kClkI2c1] = {.regs = kClkGatingCtrl1, .bit = 4},
+    [board_mt8167::kClkI2c2] = {.regs = kClkGatingCtrl1, .bit = 16},
+    [board_mt8167::kClkAuxAdc] = {.regs = kClkGatingCtrl1, .bit = 30},
+    [board_mt8167::kClkSlowMfg] = {.regs = kClkGatingCtrl8, .bit = 7},
+    [board_mt8167::kClkAxiMfg] = {.regs = kClkGatingCtrl8, .bit = 6},
+    [board_mt8167::kClkMfgMm] = {.regs = kClkGatingCtrl0, .bit = 2},
 };
 struct clock_info {
     uint32_t idx;
@@ -87,8 +89,7 @@ zx_status_t MtkClk::Bind() {
     pbus_protocol_t pbus;
     status = device_get_protocol(parent(), ZX_PROTOCOL_PBUS, &pbus);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "MtkClk: failed to get ZX_PROTOCOL_PBUS, st = %d\n",
-               status);
+        zxlogf(ERROR, "MtkClk: failed to get ZX_PROTOCOL_PBUS, st = %d\n", status);
         return status;
     }
 

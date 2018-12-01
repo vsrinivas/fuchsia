@@ -52,6 +52,7 @@ private:
     zx_status_t ButtonsInit();
     zx_status_t ClkInit();
     zx_status_t UsbInit();
+    zx_status_t ThermalInit();
     int Thread();
 
     ddk::PBusProtocolProxy pbus_;

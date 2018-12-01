@@ -8,19 +8,9 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := driver
 
-MODULE_SRCS := \
-    $(LOCAL_DIR)/mt8167.cpp \
-    $(LOCAL_DIR)/mt8167-emmc.cpp \
-    $(LOCAL_DIR)/mt8167-sdio.cpp \
-    $(LOCAL_DIR)/mt8167-soc.cpp \
-    $(LOCAL_DIR)/mt8167-gpio.cpp \
-    $(LOCAL_DIR)/mt8167-gpu.cpp \
-    $(LOCAL_DIR)/mt8167-display.cpp \
-    $(LOCAL_DIR)/mt8167-i2c.cpp \
-    $(LOCAL_DIR)/mt8167-buttons.cpp \
-    $(LOCAL_DIR)/mt8167-clk.cpp \
-    $(LOCAL_DIR)/mt8167-usb.cpp \
-    $(LOCAL_DIR)/mt8167-thermal.cpp \
+MODULE_SRCS += \
+    $(LOCAL_DIR)/binding.c \
+    $(LOCAL_DIR)/mtk-thermal.cpp \
 
 MODULE_STATIC_LIBS := \
     system/dev/lib/mt8167 \
@@ -28,18 +18,20 @@ MODULE_STATIC_LIBS := \
     system/ulib/ddktl \
     system/ulib/fbl \
     system/ulib/hwreg \
+    system/ulib/sync \
     system/ulib/zx \
     system/ulib/zxcpp \
 
 MODULE_LIBS := \
     system/ulib/driver \
-    system/ulib/zircon \
     system/ulib/c \
+    system/ulib/zircon \
 
 MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-clk \
     system/banjo/ddk-protocol-gpio \
-    system/banjo/ddk-protocol-gpio-impl \
-    system/banjo/ddk-protocol-platform-bus \
+    system/banjo/ddk-protocol-i2c \
     system/banjo/ddk-protocol-platform-device \
+    system/banjo/ddk-protocol-scpi \
 
 include make/module.mk

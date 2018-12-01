@@ -7,9 +7,11 @@
 namespace board_mt8167 {
 
 enum Mt8167Clk {
+    kClkThermal,
     kClkI2c0,
     kClkI2c1,
     kClkI2c2,
+    kClkAuxAdc,
     kClkSlowMfg,
     kClkAxiMfg,
     kClkMfgMm,
