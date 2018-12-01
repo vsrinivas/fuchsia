@@ -89,7 +89,7 @@ package("nonhardware-tests") {
   }
 }
 
-package("tests") {
+package("magma-intel-gen-tests") {
   testonly = true
   deprecated_system_image = true
 
@@ -100,18 +100,10 @@ package("tests") {
       "//garnet/drivers/gpu/msd-intel-gen/tests/integration",
     ]
 
-    # Target environments with an Intel GPU.
-    intel_gpu_envs = [
-      {
-        dimensions = {
-          device_type = "Intel NUC Kit NUC7i5DNHE"
-        }
-      },
-    ]
-
     tests = [
       {
         name = "test_wsi_magma"
+        disabled = true
         environments = intel_gpu_envs
       },
       {

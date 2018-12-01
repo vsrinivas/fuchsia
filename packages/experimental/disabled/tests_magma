@@ -4,9 +4,7 @@
         "garnet/packages/testing/run_test_component"
     ],
     "packages": [
-        "//garnet/lib/magma/tests:magma_abi_conformance_tests",
         "//garnet/lib/magma/tests:vulkan-tests",
-        "//garnet/lib/magma/gnbuild/magma-intel-gen:tests",
         "//garnet/lib/magma/gnbuild/magma-arm-mali:msd-arm-mali-integration-tests",
         "//garnet/lib/magma/gnbuild/magma-arm-mali:autorun"
     ]

@@ -69,6 +69,7 @@ test_package("magma_abi_conformance_tests") {
   tests = [
     {
       name = "magma_abi_conformance_tests"
+      environments = magma_hardware_envs
     },
   ]
 }
