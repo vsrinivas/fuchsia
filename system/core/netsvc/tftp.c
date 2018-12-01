@@ -74,12 +74,18 @@ static file_info_t file_info;
 static transport_info_t transport_info;
 
 atomic_bool paving_in_progress = false;
+atomic_int paver_exit_code = 0;
 zx_time_t tftp_next_timeout = ZX_TIME_INFINITE;
 
 static ssize_t file_open_read(const char* filename, void* cookie) {
     // Make sure all in-progress paving options have completed
     if (atomic_load(&paving_in_progress) == true) {
         return TFTP_ERR_SHOULD_WAIT;
+    }
+    if (atomic_load(&paver_exit_code) != 0) {
+        printf("paver exited with error: %d\n", atomic_load(&paver_exit_code));
+        atomic_store(&paver_exit_code, 0);
+        return TFTP_ERR_IO;
     }
     file_info_t* file_info = cookie;
     file_info->is_write = false;
@@ -191,13 +197,23 @@ done:
     if (refcount == 1) {
         dealloc_paver_buffer(file_info);
     }
-    // If all of the data has been written out to the paver process wait for it to complete
-    if (result == 0) {
-        zx_signals_t signals;
-        zx_object_wait_one(file_info->paver.process, ZX_TASK_TERMINATED,
-                           zx_deadline_after(ZX_SEC(10)), &signals);
-    }
+
+    // wait for the paver to complete, as executing the paver concurrently has
+    // undefined behavior.
+    zx_signals_t signals;
+    zx_object_wait_one(file_info->paver.process, ZX_TASK_TERMINATED,
+                        zx_deadline_after(ZX_SEC(10)), &signals);
+
+    zx_info_process_t proc_info;
+    zx_object_get_info(file_info->paver.process, ZX_INFO_PROCESS,
+                       &proc_info, sizeof(proc_info), NULL, NULL);
+
+    atomic_store(&paver_exit_code, proc_info.return_code);
     zx_handle_close(file_info->paver.process);
+
+    if (result != 0) {
+        printf("netsvc: copy exited prematurely (%d): expect paver errors\n", result);
+    }
 
     // Extra protection against double-close.
     file_info->filename[0] = '\0';
@@ -294,6 +310,7 @@ static tftp_status paver_open_write(const char* filename, size_t size, file_info
     // may be done with it first so we use a refcount to decide when to deallocate it
     atomic_store(&file_info->paver.buf_refcount, 2);
     atomic_store(&file_info->paver.offset, 0);
+    atomic_store(&paver_exit_code, 0);
     atomic_store(&paving_in_progress, true);
 
     if ((thrd_create(&file_info->paver.buf_copy_thrd, paver_copy_buffer, (void*)file_info))
@@ -321,6 +338,11 @@ static tftp_status file_open_write(const char* filename, size_t size,
     if (atomic_load(&paving_in_progress) == true) {
         return TFTP_ERR_SHOULD_WAIT;
     }
+    if (atomic_load(&paver_exit_code) != 0) {
+        atomic_store(&paver_exit_code, 0);
+        return TFTP_ERR_IO;
+    }
+
     file_info_t* file_info = cookie;
     file_info->is_write = true;
     strncpy(file_info->filename, filename, PATH_MAX);
@@ -376,7 +398,8 @@ static tftp_status file_write(const void* data, size_t* length, off_t offset, vo
         return TFTP_NO_ERROR;
     } else if (file_info->type == paver) {
         if (!atomic_load(&paving_in_progress)) {
-          printf("netsvc: paver exited prematurely\n");
+          printf("netsvc: paver exited prematurely with %d\n", atomic_load(&paver_exit_code));
+          atomic_store(&paver_exit_code, 0);
           return TFTP_ERR_IO;
         }
 

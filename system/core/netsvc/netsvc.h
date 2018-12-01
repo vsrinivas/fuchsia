@@ -58,6 +58,7 @@ void netboot_run_cmd(const char* cmd);
 // TFTP interface
 extern zx_time_t tftp_next_timeout;
 extern atomic_bool paving_in_progress;
+extern atomic_int paver_exit_code;
 
 void tftp_recv(void *data, size_t len,
                const ip6_addr_t* daddr, uint16_t dport,

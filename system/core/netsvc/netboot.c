@@ -340,19 +340,29 @@ static void bootloader_recv(void* data, size_t len,
         }
         break;
     case NB_BOOT:
-        do_boot = true;
         // Wait for the paver to complete
         while (atomic_load(&paving_in_progress)) {
             thrd_yield();
         }
+        if (atomic_load(&paver_exit_code) != 0) {
+            printf("netboot: detected paver error: %d\n", atomic_load(&paver_exit_code));
+            atomic_store(&paver_exit_code, 0);
+            break;
+        }
+        do_boot = true;
         printf("netboot: Boot Kernel...\n");
         break;
     case NB_REBOOT:
-        do_reboot = true;
         // Wait for the paver to complete
         while (atomic_load(&paving_in_progress)) {
             thrd_yield();
         }
+        if (atomic_load(&paver_exit_code) != 0) {
+            printf("netboot: detected paver error: %d\n", atomic_load(&paver_exit_code));
+            atomic_store(&paver_exit_code, 0);
+            break;
+        }
+        do_reboot = true;
         printf("netboot: Reboot ...\n");
         break;
     default:
