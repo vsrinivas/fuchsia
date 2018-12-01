@@ -302,11 +302,11 @@ void BasemgrImpl::GetUserProvider(
 
 void BasemgrImpl::Shutdown() {
   // Prevent the shutdown sequence from running twice.
-  if (state_ == State::TERMINATING) {
+  if (state_ == State::SHUTTING_DOWN) {
     return;
   }
 
-  state_ = State::TERMINATING;
+  state_ = State::SHUTTING_DOWN;
 
   FXL_DLOG(INFO) << "fuchsia::modular::BaseShellContext::Shutdown()";
 

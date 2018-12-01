@@ -183,7 +183,7 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
     // normal mode of operation
     RUNNING,
     // basemgr is shutting down.
-    TERMINATING
+    SHUTTING_DOWN
   };
 
   State state_ = State::RUNNING;
