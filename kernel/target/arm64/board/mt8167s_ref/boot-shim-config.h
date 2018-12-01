@@ -78,7 +78,9 @@ static const dcfg_soc_uart_t uart_driver = {
 static const dcfg_arm_gicv2_driver_t gicv2_driver = {
     .mmio_phys = 0x10310000,
     .gicd_offset = 0x00000,
-    .gicc_offset = 0x10000,
+    .gicc_offset = 0x1f000,
+    .gich_offset = 0x30000,
+    .gicv_offset = 0x50000,
     .ipi_base = 5,
 };
 

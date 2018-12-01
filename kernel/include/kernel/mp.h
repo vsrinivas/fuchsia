@@ -20,10 +20,10 @@ __BEGIN_CDECLS
 
 // NOTE(abdulla): This is located here to break a circular dependency.
 enum interrupt_eoi {
-    // Issue an EOI and deactivate the interrupt.
-    IRQ_EOI_ISSUE = 0,
-    // Do not issue an EOI, allow the interrupt to be deactivated elsewhere.
-    IRQ_EOI_SKIP = 1,
+    // Deactivate and drop priority of the interrupt.
+    IRQ_EOI_DEACTIVATE = 0,
+    // Only drop priority of the interrupt.
+    IRQ_EOI_PRIORITY_DROP = 1,
 };
 
 typedef void (*mp_ipi_task_func_t)(void* context);

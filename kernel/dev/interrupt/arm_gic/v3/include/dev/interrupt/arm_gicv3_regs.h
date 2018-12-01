@@ -56,7 +56,7 @@ extern uint64_t arm_gicv3_gicr_stride;
 
 /* GICD_CTLR bit definitions */
 
-#define CTLR_ENALBE_G0 BIT_32(0)
+#define CTLR_ENABLE_G0 BIT_32(0)
 #define CTLR_ENABLE_G1NS BIT_32(1)
 #define CTLR_ENABLE_G1S BIT_32(2)
 #define CTLR_RES0 BIT_32(3)

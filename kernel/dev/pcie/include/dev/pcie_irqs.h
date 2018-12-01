@@ -150,7 +150,7 @@ private:
     static interrupt_eoi HandlerThunk(void *arg) {
         DEBUG_ASSERT(arg);
         reinterpret_cast<SharedLegacyIrqHandler*>(arg)->Handler();
-        return IRQ_EOI_ISSUE;
+        return IRQ_EOI_DEACTIVATE;
     }
 
     void Handler();

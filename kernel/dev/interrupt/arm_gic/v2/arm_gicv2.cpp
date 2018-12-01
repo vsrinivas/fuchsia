@@ -58,7 +58,7 @@ static zx_status_t gic_configure_interrupt(unsigned int vector,
 static void suspend_resume_fiq(bool resume_gicc, bool resume_gicd) {
 }
 
-static bool gic_is_valid_interrupt(unsigned int vector, uint32_t flags) {
+static bool gic_is_valid_interrupt(uint vector, uint32_t flags) {
     return (vector < max_irqs);
 }
 
@@ -84,8 +84,8 @@ static void gic_set_enable(uint vector, bool enable) {
 }
 
 static void gic_init_percpu_early() {
-    GICREG(0, GICC_CTLR) = 1;   // enable GIC0
-    GICREG(0, GICC_PMR) = 0xFF; // unmask interrupts at all priority levels
+    GICREG(0, GICC_CTLR) = 0x201;   // EnableGrp1 and EOImodeNS
+    GICREG(0, GICC_PMR) = 0xff;     // unmask interrupts at all priority levels
 }
 
 static void arm_gic_suspend_cpu(uint level) {
@@ -281,12 +281,13 @@ static void gic_handle_irq(struct iframe* frame) {
 
     // deliver the interrupt
     struct int_handler_struct* handler = pdev_get_int_handler(vector);
-    interrupt_eoi eoi = IRQ_EOI_ISSUE;
+    interrupt_eoi eoi = IRQ_EOI_DEACTIVATE;
     if (handler->handler) {
         eoi = handler->handler(handler->arg);
     }
-    if (eoi == IRQ_EOI_ISSUE) {
-        GICREG(0, GICC_EOIR) = iar;
+    GICREG(0, GICC_EOIR) = iar;
+    if (eoi == IRQ_EOI_DEACTIVATE) {
+        GICREG(0, GICC_DIR) = iar;
     }
 
     LTRACEF_LEVEL(2, "cpu %u exit\n", cpu);
@@ -318,7 +319,7 @@ static interrupt_eoi arm_ipi_halt_handler(void*) {
     while (true) {
     }
 
-    return IRQ_EOI_ISSUE;
+    return IRQ_EOI_DEACTIVATE;
 }
 
 static void gic_init_percpu() {
@@ -423,7 +424,7 @@ static void arm_gic_v2_init(const void* driver_data, uint32_t length) {
         return;
     }
 
-    dprintf(SPEW, "detected GICv2\n");
+    dprintf(SPEW, "detected GICv2 (ID %#x)\n", GICREG(0, GICC_IIDR));
 
     // pass the list of physical and virtual addresses for the GICv2m register apertures
     if (driver->msi_frame_phys) {
@@ -438,11 +439,9 @@ static void arm_gic_v2_init(const void* driver_data, uint32_t length) {
     }
     pdev_register_interrupts(&gic_ops);
 
-    zx_status_t status =
-        gic_register_sgi_handler(MP_IPI_GENERIC + ipi_base, &mp_mbx_generic_irq);
+    zx_status_t status = gic_register_sgi_handler(MP_IPI_GENERIC + ipi_base, &mp_mbx_generic_irq);
     DEBUG_ASSERT(status == ZX_OK);
-    status =
-        gic_register_sgi_handler(MP_IPI_RESCHEDULE + ipi_base, &mp_mbx_reschedule_irq);
+    status = gic_register_sgi_handler(MP_IPI_RESCHEDULE + ipi_base, &mp_mbx_reschedule_irq);
     DEBUG_ASSERT(status == ZX_OK);
     status = gic_register_sgi_handler(MP_IPI_INTERRUPT + ipi_base, &mp_mbx_interrupt_irq);
     DEBUG_ASSERT(status == ZX_OK);
