@@ -117,18 +117,16 @@ test_package("vmm_tests") {
       name = "vmm_unittests"
     },
   ]
-  if (target_cpu == "x64") {
-    tests += [
-      {
-        name = "device_tests"
-        environments = [
-          {
-            dimensions = {
-              device_type = "Intel NUC Kit NUC7i5DNHE"
-            }
-          },
-        ]
-      },
-    ]
-  }
+  tests += [
+    {
+      name = "device_tests"
+      environments = [
+        {
+          dimensions = {
+            device_type = "Intel NUC Kit NUC7i5DNHE"
+          }
+        },
+      ]
+    },
+  ]
 }
