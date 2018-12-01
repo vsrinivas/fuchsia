@@ -17,7 +17,6 @@ echo [UNIT TEST START=]
 /pkgfs/packages/magma_intel_gen_nonhardware_tests/0/test/state_pool
 /pkgfs/packages/magma_intel_gen_nonhardware_tests/0/test/state_pool_free_list_only
 /pkgfs/packages/magma_intel_gen_nonhardware_tests/0/test/state_pool_no_free
-/system/test/test_wsi_magma
 echo [UNIT TEST END===]
 echo [INTEGRATION TEST START=]
 run_test_component magma_abi_conformance_tests $gtest_output_arg

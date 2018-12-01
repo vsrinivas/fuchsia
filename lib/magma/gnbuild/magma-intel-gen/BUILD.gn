@@ -102,11 +102,6 @@ package("magma-intel-gen-tests") {
 
     tests = [
       {
-        name = "test_wsi_magma"
-        disabled = true
-        environments = intel_gpu_envs
-      },
-      {
         name = "msd_intel_gen_integration_tests"
         environments = intel_gpu_envs
       },
