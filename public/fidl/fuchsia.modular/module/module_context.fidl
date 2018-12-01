@@ -61,9 +61,8 @@ interface ModuleContext {
                              vector<ContainerRelationEntry> relationships,
                              vector<ContainerNode> nodes);
 
-    /// Gets the ComponentContext instance associated with this Module instance.
-    /// This ComponentContext instance is unique to this particular Module
-    /// instance.
+    /// DEPRECATED: ComponentContext is now available in the
+    /// namespace/environment for Modules.
     7: GetComponentContext(request<ComponentContext> request);
 
     /// Gets the id for this story which may be used to create a suggestion

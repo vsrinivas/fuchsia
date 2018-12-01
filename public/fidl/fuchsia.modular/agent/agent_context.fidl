@@ -13,7 +13,8 @@ using fuchsia.modular.auth;
 /// MessageQueue.
 [Discoverable]
 interface AgentContext {
-    /// Connects to the ComponentContext which this AgentContext is a part of.
+    /// DEPRECATED: ComponentContext is now available in the
+    /// namespace/environment for Modules.
     1: GetComponentContext(request<ComponentContext> request);
 
     /// The auth token provider this Agent may use for accessing external services.
