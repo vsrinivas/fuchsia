@@ -21,12 +21,26 @@
 #include <string.h>
 #include <sys/stat.h>
 
-static const char* const DEV_FX3_DIR = "/dev/class/usb-test-fwloader";
-static const char* const DEV_USB_TESTER_DIR = "/dev/class/usb-tester";
+namespace {
 
-static const int ENUMERATION_WAIT_SECS = 5;
+constexpr char kFx3DevDir[] = "/dev/class/usb-test-fwloader";
+constexpr char kUsbTesterDevDir[] = "/dev/class/usb-tester";
 
-static constexpr uint32_t BUFFER_SIZE = 8 * 1024;
+constexpr int kEnumerationWaitSecs = 5;
+
+constexpr uint32_t kBufferSize = 8 * 1024;
+
+void usage(const char* prog_name) {
+    printf("usage:\n");
+    printf("%s [options]\n", prog_name);
+    printf("\nOptions\n");
+    printf("  -t                   : Load test firmware mode.\n"
+           "                         This is the default if no mode is specified.\n"
+           "  -b                   : Flash bootloader mode.\n"
+           "  -f <firmware_path>   : Firmware to load.\n"
+           "  -p <flash_prog_path> : Firmware image for the flash programmer.\n"
+           "                         This is required when flashing a new bootloader.\n");
+}
 
 zx_status_t watch_dir_cb(int dirfd, int event, const char* filename, void* cookie) {
     if (event != WATCH_EVENT_ADD_FILE) {
@@ -51,7 +65,7 @@ zx_status_t wait_dev_enumerate(const char* dir, fbl::unique_fd* out_fd) {
     auto close_dir = fbl::MakeAutoCall([&] { closedir(d); });
     int fd = 0;
     zx_status_t status = fdio_watch_directory(dirfd(d), watch_dir_cb,
-                                              zx_deadline_after(ZX_SEC(ENUMERATION_WAIT_SECS)),
+                                              zx_deadline_after(ZX_SEC(kEnumerationWaitSecs)),
                                               reinterpret_cast<void*>(&fd));
     if (status == ZX_ERR_STOP) {
         out_fd->reset(fd);
@@ -84,14 +98,14 @@ zx_status_t open_dev(const char* dir, fbl::unique_fd* out_fd) {
 }
 
 zx_status_t open_fwloader_dev(fbl::unique_fd* out_fd) {
-    return open_dev(DEV_FX3_DIR, out_fd);
+    return open_dev(kFx3DevDir, out_fd);
 }
 
 zx_status_t open_usb_tester_dev(fbl::unique_fd* out_fd) {
-    return open_dev(DEV_USB_TESTER_DIR, out_fd);
+    return open_dev(kUsbTesterDevDir, out_fd);
 }
 // Reads the firmware file and populates the provided vmo with the contents.
-static zx_status_t read_firmware(fbl::unique_fd& file_fd, zx::vmo& vmo) {
+zx_status_t read_firmware(fbl::unique_fd& file_fd, zx::vmo& vmo) {
     struct stat s;
     if (fstat(file_fd.get(), &s) < 0) {
         fprintf(stderr, "could not get size of file, err: %s\n", strerror(errno));
@@ -102,11 +116,11 @@ static zx_status_t read_firmware(fbl::unique_fd& file_fd, zx::vmo& vmo) {
         return status;
     }
 
-    fbl::unique_ptr<unsigned char[]> buf(new unsigned char[BUFFER_SIZE]);
+    fbl::unique_ptr<unsigned char[]> buf(new unsigned char[kBufferSize]);
     ssize_t res;
     off_t total_read = 0;
     while ((total_read < s.st_size) &&
-           ((res = read(file_fd.get(), buf.get(), BUFFER_SIZE)) != 0)) {
+           ((res = read(file_fd.get(), buf.get(), kBufferSize)) != 0)) {
         if (res < 0) {
             fprintf(stderr, "Fatal read error: %s\n", strerror(errno));
             return ZX_ERR_IO;
@@ -124,23 +138,19 @@ static zx_status_t read_firmware(fbl::unique_fd& file_fd, zx::vmo& vmo) {
     return ZX_OK;
 }
 
-int main(int argc, char** argv) {
-    if (argc > 2) {
-        printf("Usage: %s [<firmware_image_path>]\n", argv[0]);
-        return -1;
-    }
+// Loads the firmware image to the FX3 device RAM.
+zx_status_t load_to_ram(const char* firmware_path) {
     zx::vmo fw_vmo;
-    if (argc == 2) {
-        const char* filename = argv[1];
-        fbl::unique_fd file_fd(open(filename, O_RDONLY));
+    if (firmware_path) {
+        fbl::unique_fd file_fd(open(firmware_path, O_RDONLY));
         if (!file_fd) {
-            fprintf(stderr, "Failed to open \"%s\", err: %s\n", filename, strerror(errno));
-            return -1;
+            fprintf(stderr, "Failed to open \"%s\", err: %s\n", firmware_path, strerror(errno));
+            return ZX_ERR_IO;
         }
         zx_status_t status = read_firmware(file_fd, fw_vmo);
         if (status != ZX_OK) {
             fprintf(stderr, "Failed to read firmware file, err: %d\n", status);
-            return -1;
+            return status;
         }
     }
     fbl::unique_fd fd;
@@ -151,14 +161,14 @@ int main(int argc, char** argv) {
         status = open_usb_tester_dev(&usb_tester_fd);
         if (status != ZX_OK) {
             fprintf(stderr, "No usb test fwloader or tester device found, err: %d\n", status);
-            return -1;
+            return status;
         }
         zx::channel usb_tester_svc;
         status = fdio_get_service_handle(usb_tester_fd.release(),
                                          usb_tester_svc.reset_and_get_address());
         if (status != ZX_OK) {
             fprintf(stderr, "Failed to get usb tester device service handle, err : %d\n", status);
-            return -1;
+            return status;
         }
         printf("Switching usb tester device to fwloader mode\n");
         zx_status_t res = zircon_usb_tester_DeviceSetModeFwloader(usb_tester_svc.get(), &status);
@@ -167,19 +177,19 @@ int main(int argc, char** argv) {
         }
         if (res != ZX_OK) {
             fprintf(stderr, "Failed to switch usb test device to fwloader mode, err: %d\n", res);
-            return -1;
+            return res;
         }
-        status = wait_dev_enumerate(DEV_FX3_DIR, &fd);
+        status = wait_dev_enumerate(kFx3DevDir, &fd);
         if (status != ZX_OK) {
             fprintf(stderr, "Failed to wait for fwloader to re-enumerate, err: %d\n", status);
-            return -1;
+            return status;
         }
     }
     zx::channel svc;
     status = fdio_get_service_handle(fd.release(), svc.reset_and_get_address());
     if (status != ZX_OK) {
         fprintf(stderr, "Failed to get fwloader service handle, err : %d\n", status);
-        return -1;
+        return status;
     }
     if (fw_vmo.is_valid()) {
         zx_handle_t handle = fw_vmo.release();
@@ -190,7 +200,7 @@ int main(int argc, char** argv) {
         }
         if (res != ZX_OK) {
             fprintf(stderr, "Failed to load firmware, err: %d\n", res);
-            return -1;
+            return res;
         }
     } else {
         zx_status_t status;
@@ -200,27 +210,93 @@ int main(int argc, char** argv) {
         }
         if (res != ZX_OK) {
             fprintf(stderr, "Failed to load prebuilt firmware, err: %d\n", res);
-            return -1;
+            return res;
         }
     }
+    return ZX_OK;
+}
+
+zx_status_t load_test_firmware(const char* firmware_path) {
+    zx_status_t status = load_to_ram(firmware_path);
+    if (status != ZX_OK) {
+        return status;
+    }
     fbl::unique_fd updated_dev;
-    status = wait_dev_enumerate(DEV_USB_TESTER_DIR, &updated_dev);
+    status = wait_dev_enumerate(kUsbTesterDevDir, &updated_dev);
     if (status != ZX_OK) {
         fprintf(stderr, "Failed to wait for updated usb tester to enumerate, err: %d\n", status);
-        return -1;
+        return status;
     }
+    zx::channel svc;
     status = fdio_get_service_handle(updated_dev.release(), svc.reset_and_get_address());
     if (status != ZX_OK) {
         fprintf(stderr, "Failed to get updated device service handle, err : %d\n", status);
-        return -1;
+        return status;
     }
     uint8_t major_version;
     uint8_t minor_version;
     status = zircon_usb_tester_DeviceGetVersion(svc.get(), &major_version, &minor_version);
     if (status != ZX_OK) {
         fprintf(stderr, "Failed to get updated device version, err: %d\n", status);
-        return -1;
+        return status;
     }
     printf("Updated usb tester firmware to v%x.%x\n", major_version, minor_version);
-    return 0;
+    return ZX_OK;
+}
+
+zx_status_t load_bootloader(const char* flash_prog_image_path, const char* firmware_path) {
+    zx_status_t status = load_to_ram(flash_prog_image_path);
+    if (status != ZX_OK) {
+        return status;
+    }
+    // TODO(jocelyndang): load firmware to I2C EEPROM.
+    return ZX_OK;
+}
+
+}  // namespace
+
+int main(int argc, char** argv) {
+    auto print_usage = fbl::MakeAutoCall([prog_name = argv[0]]() { usage(prog_name); });
+
+    bool load_test_firmware_mode = true;
+    const char* firmware_path = nullptr;
+    const char* flash_prog_path = nullptr;
+
+    int opt;
+    while ((opt = getopt(argc, argv, "tbf:p:")) != -1) {
+        switch (opt) {
+        case 't':
+            load_test_firmware_mode = true;
+            break;
+        case 'b':
+            load_test_firmware_mode = false;
+            break;
+        case 'f':
+            firmware_path = optarg;
+            break;
+        case 'p':
+            flash_prog_path = optarg;
+            break;
+        default:
+            fprintf(stderr, "Invalid option\n");
+            return -1;
+        }
+    }
+
+    // TODO(jocelyndang): for now we require the user specify both files, but we should
+    // be able to load them automatically instead.
+    if (!load_test_firmware_mode && (!flash_prog_path || !firmware_path)) {
+        fprintf(stderr, "Missing flash programmer or bootloader image.\n");
+        return -1;
+    }
+
+    print_usage.cancel();
+
+    zx_status_t status;
+    if (load_test_firmware_mode) {
+        status = load_test_firmware(firmware_path);
+    } else {
+        status = load_bootloader(flash_prog_path, firmware_path);
+    }
+    return status == ZX_OK ? 0 : -1;
 }
