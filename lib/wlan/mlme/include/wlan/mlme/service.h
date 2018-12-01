@@ -59,7 +59,6 @@ template <typename M> class MlmeMsg;
 
 class BaseMlmeMsg {
    public:
-    BaseMlmeMsg() = default;
     virtual ~BaseMlmeMsg() = default;
 
     template <typename M> const MlmeMsg<M>* As() const {
@@ -72,6 +71,7 @@ class BaseMlmeMsg {
 
    protected:
     BaseMlmeMsg(uint32_t ordinal, zx_txid_t txid) : ordinal_(ordinal), txid_(txid) {}
+    BaseMlmeMsg(BaseMlmeMsg&&) = default;
     virtual const void* get_type_id() const = 0;
 
     uint32_t ordinal_ = 0;
@@ -85,41 +85,42 @@ class BaseMlmeMsg {
 template <typename M> class MlmeMsg : public BaseMlmeMsg {
    public:
     static const uint8_t kTypeId = 0;
-    MlmeMsg() = default;
     MlmeMsg(M&& msg, uint32_t ordinal, zx_txid_t txid = 0)
         : BaseMlmeMsg(ordinal, txid), msg_(std::move(msg)) {}
+    MlmeMsg(MlmeMsg&&) = default;
     ~MlmeMsg() override = default;
 
-    static zx_status_t Decode(Span<uint8_t> span, MlmeMsg<M>* out_msg) {
-        ZX_ASSERT(out_msg != nullptr);
-
+    static constexpr uint32_t kNoOrdinal = 0;  // Not applicable or does not matter
+    static std::optional<MlmeMsg<M>> Decode(Span<uint8_t> span, uint32_t ordinal = kNoOrdinal) {
         BufferReader reader(span);
         auto h = reader.Read<fidl_message_header_t>();
         if (h == nullptr) {
             errorf("MLME message too short\n");
-            return ZX_ERR_INVALID_ARGS;
+            return {};
         }
 
-        out_msg->ordinal_ = h->ordinal;
-        out_msg->txid_ = h->txid;
+        if (ordinal != kNoOrdinal && ordinal != h->ordinal) {
+            // Generated code uses hexadecimal to represent ordinal
+            warnf("Mismatched ordinal: expected: 0x%0x, actual: 0x%0x\n", ordinal, h->ordinal);
+            return {};
+        }
 
         // Extract the message contents and decode in-place (i.e., fixup all the out-of-line
         // pointers to be offsets into the span).
         auto payload = span.subspan(reader.ReadBytes());
         const char* err_msg = nullptr;
-        zx_status_t status =
+        auto status =
             fidl_decode(M::FidlType, payload.data(), payload.size(), nullptr, 0, &err_msg);
         if (status != ZX_OK) {
             errorf("could not decode received message: %s\n", err_msg);
-            return status;
+            return {};
         }
 
         // Construct a fidl Message and decode it into M.
         fidl::Message msg(fidl::BytePart(payload.data(), payload.size(), payload.size()),
                           fidl::HandlePart());
         fidl::Decoder decoder(std::move(msg));
-        out_msg->msg_ = std::move(fidl::DecodeAs<M>(&decoder, 0));
-        return ZX_OK;
+        return {{fidl::DecodeAs<M>(&decoder, 0), h->ordinal, h->txid}};
     }
 
     const M* body() const { return &msg_; }

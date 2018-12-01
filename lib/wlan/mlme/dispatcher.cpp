@@ -180,13 +180,12 @@ zx_status_t Dispatcher::HandleAnyMlmeMessage(Span<uint8_t> span) {
 
 template <typename Message>
 zx_status_t Dispatcher::HandleMlmeMessage(Span<uint8_t> span, uint32_t ordinal) {
-    MlmeMsg<Message> msg;
-    auto status = MlmeMsg<Message>::Decode(span, &msg);
-    if (status != ZX_OK) {
+    auto msg = MlmeMsg<Message>::Decode(span, ordinal);
+    if (!msg.has_value()) {
         errorf("could not deserialize MLME primitive %d: \n", ordinal);
-        return status;
+        return ZX_ERR_INVALID_ARGS;
     }
-    return mlme_->HandleMlmeMsg(msg);
+    return mlme_->HandleMlmeMsg(*msg);
 }
 
 zx_status_t Dispatcher::HandleQueryDeviceInfo(zx_txid_t txid) {
@@ -254,16 +253,12 @@ zx_status_t Dispatcher::HandleQueryDeviceInfo(zx_txid_t txid) {
 
 zx_status_t Dispatcher::HandleMlmeStats(uint32_t ordinal) const {
     debugfn();
-    ZX_DEBUG_ASSERT(ordinal == fuchsia_wlan_mlme_MLMEStatsQueryReqOrdinal);
-
     wlan_mlme::StatsQueryResponse resp = GetStatsToFidl();
     return SendServiceMsg(device_, &resp, fuchsia_wlan_mlme_MLMEStatsQueryRespOrdinal);
 }
 
 zx_status_t Dispatcher::HandleMinstrelPeerList(uint32_t ordinal, zx_txid_t txid) const {
     debugfn();
-    ZX_DEBUG_ASSERT(ordinal == fuchsia_wlan_mlme_MLMEListMinstrelPeersOrdinal);
-
     wlan_mlme::MinstrelListResponse resp{};
     zx_status_t status = device_->GetMinstrelPeers(&resp.peers);
     if (status != ZX_OK) {
@@ -276,20 +271,17 @@ zx_status_t Dispatcher::HandleMinstrelPeerList(uint32_t ordinal, zx_txid_t txid)
 zx_status_t Dispatcher::HandleMinstrelTxStats(Span<uint8_t> span, uint32_t ordinal,
                                               zx_txid_t txid) const {
     debugfn();
-    ZX_DEBUG_ASSERT(ordinal == fuchsia_wlan_mlme_MLMEGetMinstrelStatsOrdinal);
-
     wlan_mlme::MinstrelStatsResponse resp{};
-    MlmeMsg<wlan_mlme::MinstrelStatsRequest> req;
-    zx_status_t status = MlmeMsg<wlan_mlme::MinstrelStatsRequest>::Decode(span, &req);
-    if (status != ZX_OK) {
-        errorf("could not deserialize MLME primitive %d: %s\n", ordinal,
-               zx_status_get_string(status));
-        return status;
+    auto req = MlmeMsg<wlan_mlme::MinstrelStatsRequest>::Decode(
+        span, fuchsia_wlan_mlme_MLMEGetMinstrelStatsOrdinal);
+    if (!req.has_value()) {
+        errorf("could not deserialize MLME primitive %d\n", ordinal);
+        return ZX_ERR_INVALID_ARGS;
     }
-    common::MacAddr addr(req.body()->mac_addr);
+    common::MacAddr addr(req->body()->mac_addr);
 
     wlan_minstrel::Peer peer;
-    status = device_->GetMinstrelStats(addr, &peer);
+    auto status = device_->GetMinstrelStats(addr, &peer);
     if (status == ZX_OK) {
         resp.peer = std::make_unique<wlan_minstrel::Peer>(std::move(peer));
     } else {

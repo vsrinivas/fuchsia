@@ -34,11 +34,9 @@ TEST(MlmeMsg, General) {
     SerializeServiceMsg(&enc, fidl_msg.get());
 
     // Verify correctness.
-    MlmeMsg<wlan_mlme::DeauthenticateRequest> mlme_msg;
-    auto status =
-        MlmeMsg<wlan_mlme::DeauthenticateRequest>::Decode(enc.GetMessage().bytes(), &mlme_msg);
-    ASSERT_EQ(status, ZX_OK);
-    auto deauth_conf = mlme_msg.body();
+    auto mlme_msg = MlmeMsg<wlan_mlme::DeauthenticateRequest>::Decode(enc.GetMessage().bytes(), 0);
+    ASSERT_TRUE(mlme_msg.has_value());
+    auto deauth_conf = mlme_msg->body();
     ASSERT_NE(deauth_conf, nullptr);
     ASSERT_EQ(memcmp(deauth_conf->peer_sta_address.data(), common::kBcastMac.byte, 6), 0);
 }
@@ -50,13 +48,11 @@ TEST(MlmeMsg, Generalize) {
     fidl::Encoder enc(42);
     SerializeServiceMsg(&enc, fidl_msg.get());
 
-    MlmeMsg<wlan_mlme::DeauthenticateRequest> mlme_msg;
-    auto status =
-        MlmeMsg<wlan_mlme::DeauthenticateRequest>::Decode(enc.GetMessage().bytes(), &mlme_msg);
-    ASSERT_EQ(status, ZX_OK);
+    auto mlme_msg = MlmeMsg<wlan_mlme::DeauthenticateRequest>::Decode(enc.GetMessage().bytes(), 0);
+    ASSERT_TRUE(mlme_msg.has_value());
 
     // Generalize message and attempt to specialize to wrong type.
-    auto& generic_mlme_msg = static_cast<BaseMlmeMsg&>(mlme_msg);
+    auto& generic_mlme_msg = static_cast<BaseMlmeMsg&>(*mlme_msg);
     ASSERT_EQ(generic_mlme_msg.As<wlan_mlme::ScanRequest>(), nullptr);
 
     // Specialize message to correct type.
@@ -75,9 +71,19 @@ TEST(MlmeMsg, CorruptedPacket) {
     Span<uint8_t> invalid_span(span.data(), span.size() - 1);
 
     // Verify correctness.
-    MlmeMsg<wlan_mlme::DeauthenticateRequest> mlme_msg;
-    auto status = MlmeMsg<wlan_mlme::DeauthenticateRequest>::Decode(invalid_span, &mlme_msg);
-    ASSERT_NE(status, ZX_OK);
+    auto mlme_msg = MlmeMsg<wlan_mlme::DeauthenticateRequest>::Decode(invalid_span, 0);
+    ASSERT_FALSE(mlme_msg.has_value());
+}
+
+TEST(MlmeMsg, MismatchingOrdinal) {
+    auto fidl_msg = wlan_mlme::DeauthenticateRequest::New();
+    fidl::Encoder enc(42);
+    SerializeServiceMsg(&enc, fidl_msg.get());
+
+    // Type is correct but ordinal does not match
+    auto mlme_msg = MlmeMsg<wlan_mlme::DeauthenticateRequest>::Decode(
+        enc.GetMessage().bytes(), fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal);
+    ASSERT_FALSE(mlme_msg.has_value());
 }
 
 TEST_F(ServiceTest, SendAuthInd) {
@@ -87,14 +93,12 @@ TEST_F(ServiceTest, SendAuthInd) {
     service::SendAuthIndication(&device, peer_sta, auth_type);
 
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
-    auto inds = device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAuthenticateIndOrdinal>);
-    ASSERT_EQ(inds.size(), static_cast<size_t>(1));
-    MlmeMsg<wlan_mlme::AuthenticateIndication> msg;
-    auto status = MlmeMsg<wlan_mlme::AuthenticateIndication>::Decode(inds[0], &msg);
-    ASSERT_EQ(status, ZX_OK);
+    auto msgs = device.GetServiceMsgs<wlan_mlme::AuthenticateIndication>(
+        fuchsia_wlan_mlme_MLMEAuthenticateIndOrdinal);
+    ASSERT_EQ(msgs.size(), 1ULL);
 
-    ASSERT_EQ(std::memcmp(msg.body()->peer_sta_address.data(), peer_sta.byte, 6), 0);
-    ASSERT_EQ(msg.body()->auth_type, wlan_mlme::AuthenticationTypes::OPEN_SYSTEM);
+    ASSERT_EQ(std::memcmp(msgs[0].body()->peer_sta_address.data(), peer_sta.byte, 6), 0);
+    ASSERT_EQ(msgs[0].body()->auth_type, wlan_mlme::AuthenticationTypes::OPEN_SYSTEM);
 }
 
 TEST_F(ServiceTest, SendAssocInd) {
@@ -111,17 +115,15 @@ TEST_F(ServiceTest, SendAssocInd) {
 
     // -- verify
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
-    auto inds = device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAssociateIndOrdinal>);
-    ASSERT_EQ(inds.size(), static_cast<size_t>(1));
-    MlmeMsg<wlan_mlme::AssociateIndication> msg;
-    auto status = MlmeMsg<wlan_mlme::AssociateIndication>::Decode(inds[0], &msg);
-    ASSERT_EQ(status, ZX_OK);
+    auto msgs = device.GetServiceMsgs<wlan_mlme::AssociateIndication>(
+        fuchsia_wlan_mlme_MLMEAssociateIndOrdinal);
+    ASSERT_EQ(msgs.size(), 1ULL);
 
-    ASSERT_EQ(std::memcmp(msg.body()->peer_sta_address.data(), peer_sta.byte, 6), 0);
-    ASSERT_EQ(msg.body()->listen_interval, 100);
-    ASSERT_TRUE(std::equal(msg.body()->ssid->begin(), msg.body()->ssid->end(), std::begin(ssid),
-                           std::end(ssid)));
-    ASSERT_EQ(std::memcmp(msg.body()->rsn->data(), expected_rsne, sizeof(expected_rsne)), 0);
+    ASSERT_EQ(std::memcmp(msgs[0].body()->peer_sta_address.data(), peer_sta.byte, 6), 0);
+    ASSERT_EQ(msgs[0].body()->listen_interval, 100);
+    ASSERT_TRUE(std::equal(msgs[0].body()->ssid->begin(), msgs[0].body()->ssid->end(),
+                           std::begin(ssid), std::end(ssid)));
+    ASSERT_EQ(std::memcmp(msgs[0].body()->rsn->data(), expected_rsne, sizeof(expected_rsne)), 0);
 }
 
 TEST_F(ServiceTest, SendAssocInd_EmptyRsne) {
@@ -135,17 +137,15 @@ TEST_F(ServiceTest, SendAssocInd_EmptyRsne) {
 
     // -- verify
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
-    auto inds = device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAssociateIndOrdinal>);
-    ASSERT_EQ(inds.size(), static_cast<size_t>(1));
-    MlmeMsg<wlan_mlme::AssociateIndication> msg;
-    auto status = MlmeMsg<wlan_mlme::AssociateIndication>::Decode(inds[0], &msg);
-    ASSERT_EQ(status, ZX_OK);
+    auto msgs = device.GetServiceMsgs<wlan_mlme::AssociateIndication>(
+        fuchsia_wlan_mlme_MLMEAssociateIndOrdinal);
+    ASSERT_EQ(msgs.size(), 1ULL);
 
-    ASSERT_EQ(std::memcmp(msg.body()->peer_sta_address.data(), peer_sta.byte, 6), 0);
-    ASSERT_EQ(msg.body()->listen_interval, 100);
-    ASSERT_TRUE(std::equal(msg.body()->ssid->begin(), msg.body()->ssid->end(), std::begin(ssid),
-                           std::end(ssid)));
-    ASSERT_TRUE(msg.body()->rsn.is_null());
+    ASSERT_EQ(std::memcmp(msgs[0].body()->peer_sta_address.data(), peer_sta.byte, 6), 0);
+    ASSERT_EQ(msgs[0].body()->listen_interval, 100);
+    ASSERT_TRUE(std::equal(msgs[0].body()->ssid->begin(), msgs[0].body()->ssid->end(),
+                           std::begin(ssid), std::end(ssid)));
+    ASSERT_TRUE(msgs[0].body()->rsn.is_null());
 }
 
 }  // namespace

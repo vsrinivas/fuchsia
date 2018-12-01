@@ -44,18 +44,17 @@ TEST(MeshMlme, HandleMpmOpen) {
 
     ASSERT_EQ(mlme.HandleFramePacket(MakeWlanPacket(frame)), ZX_OK);
 
-    MlmeMsg<wlan_mlme::MeshPeeringOpenAction> msg;
-    ASSERT_EQ(device.GetQueuedServiceMsg(fuchsia_wlan_mlme_MLMEIncomingMpOpenActionOrdinal, &msg),
-              ZX_OK);
+    auto msgs = device.GetServiceMsgs<wlan_mlme::MeshPeeringOpenAction>();
+    ASSERT_EQ(msgs.size(), 1ULL);
 
     {
         const uint8_t expected[] = {'f', 'o', 'o'};
-        EXPECT_RANGES_EQ(*msg.body()->common.mesh_id, expected);
+        EXPECT_RANGES_EQ(*msgs[0].body()->common.mesh_id, expected);
     }
 
     {
         const uint8_t expected[] = {0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff};
-        EXPECT_RANGES_EQ(msg.body()->common.peer_sta_address, expected);
+        EXPECT_RANGES_EQ(msgs[0].body()->common.peer_sta_address, expected);
     }
 }
 

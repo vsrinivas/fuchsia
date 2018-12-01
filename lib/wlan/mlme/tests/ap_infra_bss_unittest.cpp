@@ -145,29 +145,18 @@ struct Context {
             CreateSetKeysRequest(client_addr, key_data, wlan_mlme::KeyType::PAIRWISE));
     }
 
-    void AssertAuthInd(std::vector<uint8_t> vec) {
-        MlmeMsg<wlan_mlme::AuthenticateIndication> msg;
-        auto status = MlmeMsg<wlan_mlme::AuthenticateIndication>::Decode(vec, &msg);
-        ASSERT_EQ(status, ZX_OK);
-
+    void AssertAuthInd(MlmeMsg<wlan_mlme::AuthenticateIndication> msg) {
         EXPECT_EQ(std::memcmp(msg.body()->peer_sta_address.data(), client_addr.byte, 6), 0);
         EXPECT_EQ(msg.body()->auth_type, wlan_mlme::AuthenticationTypes::OPEN_SYSTEM);
     }
 
-    void AssertDeauthInd(std::vector<uint8_t> vec, wlan_mlme::ReasonCode reason_code) {
-        MlmeMsg<wlan_mlme::DeauthenticateIndication> msg;
-        auto status = MlmeMsg<wlan_mlme::DeauthenticateIndication>::Decode(vec, &msg);
-        ASSERT_EQ(status, ZX_OK);
-
+    void AssertDeauthInd(MlmeMsg<wlan_mlme::DeauthenticateIndication> msg,
+                         wlan_mlme::ReasonCode reason_code) {
         EXPECT_EQ(std::memcmp(msg.body()->peer_sta_address.data(), client_addr.byte, 6), 0);
         EXPECT_EQ(msg.body()->reason_code, reason_code);
     }
 
-    void AssertAssocInd(std::vector<uint8_t> vec, bool rsn = true) {
-        MlmeMsg<wlan_mlme::AssociateIndication> msg;
-        auto status = MlmeMsg<wlan_mlme::AssociateIndication>::Decode(vec, &msg);
-        ASSERT_EQ(status, ZX_OK);
-
+    void AssertAssocInd(MlmeMsg<wlan_mlme::AssociateIndication> msg, bool rsn = true) {
         EXPECT_EQ(std::memcmp(msg.body()->peer_sta_address.data(), client_addr.byte, 6), 0);
         EXPECT_EQ(msg.body()->listen_interval, kListenInterval);
         EXPECT_EQ(std::memcmp(msg.body()->ssid->data(), kSsid, msg.body()->ssid->size()), 0);
@@ -178,11 +167,7 @@ struct Context {
         }
     }
 
-    void AssertDisassocInd(std::vector<uint8_t> vec) {
-        MlmeMsg<wlan_mlme::DisassociateIndication> msg;
-        auto status = MlmeMsg<wlan_mlme::DisassociateIndication>::Decode(vec, &msg);
-        ASSERT_EQ(status, ZX_OK);
-
+    void AssertDisassocInd(MlmeMsg<wlan_mlme::DisassociateIndication> msg) {
         EXPECT_EQ(std::memcmp(msg.body()->peer_sta_address.data(), client_addr.byte, 6), 0);
         EXPECT_EQ(msg.body()->reason_code,
                   static_cast<uint16_t>(wlan_mlme::ReasonCode::LEAVING_NETWORK_DISASSOC));
@@ -253,9 +238,10 @@ TEST_F(ApInfraBssTest, Authenticate_Success) {
     // Verify that an Authentication.indication msg is sent out (to SME)
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
     ASSERT_TRUE(device.wlan_queue.empty());
-    auto auth_inds = device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAuthenticateIndOrdinal>);
-    ASSERT_FALSE(auth_inds.empty());
-    ctx.AssertAuthInd(auth_inds[0]);
+    auto auth_inds = device.GetServiceMsgs<wlan_mlme::AuthenticateIndication>(
+        fuchsia_wlan_mlme_MLMEAuthenticateIndOrdinal);
+    ASSERT_EQ(auth_inds.size(), 1ULL);
+    ctx.AssertAuthInd(std::move(auth_inds[0]));
 
     // Simulate SME sending MLME-AUTHENTICATE.response msg with a success code
     ctx.bss->HandleMlmeMsg(
@@ -315,9 +301,10 @@ TEST_F(ApInfraBssTest, Authenticate_Timeout) {
     ctx.SendClientAuthReqFrame();
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
     EXPECT_TRUE(device.wlan_queue.empty());
-    auto auth_inds = device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAuthenticateIndOrdinal>);
-    ASSERT_FALSE(auth_inds.empty());
-    ctx.AssertAuthInd(auth_inds[0]);
+    auto auth_inds = device.GetServiceMsgs<wlan_mlme::AuthenticateIndication>(
+        fuchsia_wlan_mlme_MLMEAuthenticateIndOrdinal);
+    ASSERT_EQ(auth_inds.size(), 1ULL);
+    ctx.AssertAuthInd(std::move(auth_inds[0]));
 }
 
 TEST_F(ApInfraBssTest, DeauthenticateWhileAuthenticated) {
@@ -328,10 +315,10 @@ TEST_F(ApInfraBssTest, DeauthenticateWhileAuthenticated) {
     ctx.SendClientDeauthFrame();
 
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
-    auto deauth_inds =
-        device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal>);
-    ASSERT_FALSE(deauth_inds.empty());
-    ctx.AssertDeauthInd(deauth_inds[0], wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
+    auto deauth_inds = device.GetServiceMsgs<wlan_mlme::DeauthenticateIndication>(
+        fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal);
+    ASSERT_EQ(deauth_inds.size(), 1ULL);
+    ctx.AssertDeauthInd(std::move(deauth_inds[0]), wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
 
     // Expect association context is still blank.
     wlan_assoc_ctx_t expected_ctx = {};
@@ -349,9 +336,10 @@ TEST_F(ApInfraBssTest, Associate_Success) {
     // Verify that an Association.indication msg is sent out (to SME)
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
     ASSERT_TRUE(device.wlan_queue.empty());
-    auto assoc_inds = device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAssociateIndOrdinal>);
-    ASSERT_FALSE(assoc_inds.empty());
-    ctx.AssertAssocInd(assoc_inds[0]);
+    auto assoc_inds = device.GetServiceMsgs<wlan_mlme::AssociateIndication>(
+        fuchsia_wlan_mlme_MLMEAssociateIndOrdinal);
+    ASSERT_EQ(assoc_inds.size(), 1ULL);
+    ctx.AssertAssocInd(std::move(assoc_inds[0]));
 
     // Simulate SME sending MLME-ASSOCIATE.response msg with a success code
     ctx.bss->HandleMlmeMsg(
@@ -495,9 +483,10 @@ TEST_F(ApInfraBssTest, Associate_Timeout) {
     ctx.SendClientAssocReqFrame();
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
     EXPECT_TRUE(device.wlan_queue.empty());
-    auto assoc_inds = device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAssociateIndOrdinal>);
-    ASSERT_FALSE(assoc_inds.empty());
-    ctx.AssertAssocInd(assoc_inds[0]);
+    auto assoc_inds = device.GetServiceMsgs<wlan_mlme::AssociateIndication>(
+        fuchsia_wlan_mlme_MLMEAssociateIndOrdinal);
+    ASSERT_EQ(assoc_inds.size(), 1ULL);
+    ctx.AssertAssocInd(std::move(assoc_inds[0]));
 
     // Expect association context has been cleared.
     wlan_assoc_ctx_t expected_ctx = {};
@@ -523,9 +512,10 @@ TEST_F(ApInfraBssTest, Associate_EmptySsid) {
     // Verify that an Association.indication msg is sent out (to SME)
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
     ASSERT_TRUE(device.wlan_queue.empty());
-    auto assoc_inds = device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAssociateIndOrdinal>);
-    ASSERT_FALSE(assoc_inds.empty());
-    ctx.AssertAssocInd(assoc_inds[0]);
+    auto assoc_inds = device.GetServiceMsgs<wlan_mlme::AssociateIndication>(
+        fuchsia_wlan_mlme_MLMEAssociateIndOrdinal);
+    ASSERT_EQ(assoc_inds.size(), 1ULL);
+    ctx.AssertAssocInd(std::move(assoc_inds[0]));
 }
 
 TEST_F(ApInfraBssTest, Associate_EmptyRsn) {
@@ -538,9 +528,10 @@ TEST_F(ApInfraBssTest, Associate_EmptyRsn) {
     // Verify that an Association.indication msg is sent out (to SME)
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
     ASSERT_TRUE(device.wlan_queue.empty());
-    auto assoc_inds = device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAssociateIndOrdinal>);
-    ASSERT_FALSE(assoc_inds.empty());
-    ctx.AssertAssocInd(assoc_inds[0], false);
+    auto assoc_inds = device.GetServiceMsgs<wlan_mlme::AssociateIndication>(
+        fuchsia_wlan_mlme_MLMEAssociateIndOrdinal);
+    ASSERT_EQ(assoc_inds.size(), 1ULL);
+    ctx.AssertAssocInd(std::move(assoc_inds[0]), false);
 }
 
 TEST_F(ApInfraBssTest, DeauthenticateWhileAssociated) {
@@ -551,10 +542,10 @@ TEST_F(ApInfraBssTest, DeauthenticateWhileAssociated) {
     ctx.SendClientDeauthFrame();
 
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
-    auto deauth_inds =
-        device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal>);
-    ASSERT_FALSE(deauth_inds.empty());
-    ctx.AssertDeauthInd(deauth_inds[0], wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
+    auto deauth_inds = device.GetServiceMsgs<wlan_mlme::DeauthenticateIndication>(
+        fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal);
+    ASSERT_EQ(deauth_inds.size(), 1ULL);
+    ctx.AssertDeauthInd(std::move(deauth_inds[0]), wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
 
     // Expect association context has been cleared.
     wlan_assoc_ctx_t expected_ctx = {};
@@ -570,10 +561,10 @@ TEST_F(ApInfraBssTest, Disassociate) {
     ctx.SendClientDisassocFrame();
 
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
-    auto disassoc_inds =
-        device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDisassociateIndOrdinal>);
-    ASSERT_FALSE(disassoc_inds.empty());
-    ctx.AssertDisassocInd(disassoc_inds[0]);
+    auto disassoc_inds = device.GetServiceMsgs<wlan_mlme::DisassociateIndication>(
+        fuchsia_wlan_mlme_MLMEDisassociateIndOrdinal);
+    ASSERT_EQ(disassoc_inds.size(), 1ULL);
+    ctx.AssertDisassocInd(std::move(disassoc_inds[0]));
 
     // Expect association context has been cleared.
     wlan_assoc_ctx_t expected_ctx = {};
@@ -590,12 +581,10 @@ TEST_F(ApInfraBssTest, Exchange_Eapol_Frames) {
 
     // Verify MLME-EAPOL.confirm message was sent.
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
-    auto eapol_conf = device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEEapolConfOrdinal>);
-    ASSERT_FALSE(eapol_conf.empty());
-    MlmeMsg<wlan_mlme::EapolConfirm> msg;
-    auto status = MlmeMsg<wlan_mlme::EapolConfirm>::Decode(eapol_conf[0], &msg);
-    ASSERT_EQ(status, ZX_OK);
-    EXPECT_EQ(msg.body()->result_code, wlan_mlme::EapolResultCodes::SUCCESS);
+    auto msgs =
+        device.GetServiceMsgs<wlan_mlme::EapolConfirm>(fuchsia_wlan_mlme_MLMEEapolConfOrdinal);
+    ASSERT_EQ(msgs.size(), 1ULL);
+    EXPECT_EQ(msgs[0].body()->result_code, wlan_mlme::EapolResultCodes::SUCCESS);
 
     // Verify EAPOL frame was sent.
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
@@ -662,12 +651,9 @@ TEST_F(ApInfraBssTest, MlmeDeauthReqWhileAssociated) {
 
     // Verify MLME-DEAUTHENTICATE.confirm message was sent
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
-    auto deauth_conf =
-        device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDeauthenticateConfOrdinal>);
-    ASSERT_FALSE(deauth_conf.empty());
-    MlmeMsg<wlan_mlme::DeauthenticateConfirm> msg;
-    auto status = MlmeMsg<wlan_mlme::DeauthenticateConfirm>::Decode(deauth_conf[0], &msg);
-    ASSERT_EQ(status, ZX_OK);
+    auto msgs = device.GetServiceMsgs<wlan_mlme::DeauthenticateConfirm>(
+        fuchsia_wlan_mlme_MLMEDeauthenticateConfOrdinal);
+    ASSERT_EQ(msgs.size(), 1ULL);
 
     // Verify deauthenticate frame was sent
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));

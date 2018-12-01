@@ -26,13 +26,6 @@ namespace wlan {
 
 static constexpr uint8_t kClientAddress[] = {0x94, 0x3C, 0x49, 0x49, 0x9F, 0x2D};
 
-template <uint32_t ordinal> bool IsMlmeMsg(Span<const uint8_t> span) {
-    auto hdr = FromBytes<fidl_message_header_t>(span);
-    if (hdr == nullptr) { return 0; }
-
-    return hdr->ordinal == ordinal;
-}
-
 namespace {
 
 // TODO(hahnr): Support for failing various device calls.
@@ -40,7 +33,6 @@ struct MockDevice : public DeviceInterface {
    public:
     using PacketList = std::vector<fbl::unique_ptr<Packet>>;
     using KeyList = std::vector<wlan_key_config_t>;
-    typedef bool (*SpanPredicate)(Span<const uint8_t>);
 
     MockDevice() : sta_assoc_ctx_{} {
         state = fbl::AdoptRef(new DeviceState);
@@ -167,17 +159,21 @@ struct MockDevice : public DeviceInterface {
 
     uint16_t GetChannelNumber() { return state->channel().primary; }
 
-    template <typename T> zx_status_t GetQueuedServiceMsg(uint32_t ordinal, MlmeMsg<T>* out) {
-        if (svc_queue.empty()) { return ZX_ERR_NOT_FOUND; }
-        auto iter = svc_queue.begin();
-        auto span = *iter;
-        svc_queue.erase(iter);
-        return MlmeMsg<T>::Decode(span, out);
-    }
-
-    std::vector<std::vector<uint8_t>> GetServiceMsgs(SpanPredicate predicate = nullptr) {
-        return GetSvcMsgs(
-            &svc_queue, predicate ? predicate : [](auto span) { return true; });
+    // kNoOrdinal means return the first message as <T> even though it might not be of type T.
+    template <typename T>
+    std::vector<MlmeMsg<T>> GetServiceMsgs(uint32_t ordinal = MlmeMsg<T>::kNoOrdinal) {
+        std::vector<MlmeMsg<T>> ret;
+        for (auto iter = svc_queue.begin(); iter != svc_queue.end(); ++iter) {
+            auto msg = MlmeMsg<T>::Decode(*iter, ordinal);
+            if (msg.has_value()) {
+                ret.emplace_back(std::move(msg.value()));
+                iter->clear();
+            }
+        }
+        svc_queue.erase(
+            std::remove_if(svc_queue.begin(), svc_queue.end(), [](auto& i) { return i.empty(); }),
+            svc_queue.end());
+        return ret;
     }
 
     std::vector<std::vector<uint8_t>> GetEthPackets() {
@@ -204,16 +200,6 @@ struct MockDevice : public DeviceInterface {
     wlan_assoc_ctx_t sta_assoc_ctx_;
 
    private:
-    std::vector<std::vector<uint8_t>> GetSvcMsgs(std::vector<std::vector<uint8_t>>* lst,
-                                                 SpanPredicate predicate) {
-        std::vector<std::vector<uint8_t>> matches;
-        for (auto msg : *lst) {
-            if (predicate(msg)) { matches.push_back(msg); }
-        }
-        lst->erase(std::remove_if(lst->begin(), lst->end(), predicate), lst->end());
-        return matches;
-    }
-
     timekeeper::TestClock clock_;
 };
 }  // namespace
