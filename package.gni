@@ -175,11 +175,10 @@ template("pm_build_package") {
 #         [list of scopes] Target device environments in which the test will
 #         run. The scopes dimensions field must be a subscope of the full platform
 #         dimensions given in //build/testing/platforms.gni.
-#
-#       label (optional)
-#         [string] A label on which tests may be grouped to be run in a _custom_
-#         builder. NOTE: If set, then the test will be run only with special
-#         support from the Infrastructure team.
+#         A `label` may also be specified in a given environment, on which tests
+#         may be grouped to be run in a _custom_ builder. NOTE: If set, then the
+#         test will only be run in that environment with special support from
+#         the Infrastructure team.
 #
 #       disabled (optional)
 #         [bool] Whether to disable the test on continuous integration

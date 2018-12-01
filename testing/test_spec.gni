@@ -20,10 +20,10 @@ import("//build/testing/platforms.gni")
 #     Optional: Target device environments in which the test should run. Valid
 #       environments are element-wise subsets of the full platform environments
 #       specified in //build/testing/platforms.gni.
-#   label
-#     Optional: A label on which tests may be grouped to be run in a _custom_
-#       builder. NOTE: If set, then the test will be run only with special
-#       support from the Infrastructure team.
+#       A `label` may also be specified in a given environment, on which tests
+#       may be grouped to be run in a _custom_ builder. NOTE: If set, then the
+#       test will only be run in that environment with special support from the
+#       Infrastructure team.
 #
 template("test_spec") {
   assert(defined(invoker.path), "path must be defined.")
@@ -60,9 +60,6 @@ template("test_spec") {
       location = invoker.path
     }
     environments = []
-    if (defined(invoker.label)) {
-      invoker = invoker.label
-    }
   }
 
   # Call "expanding" the operation that takes a scope
