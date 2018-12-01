@@ -102,7 +102,6 @@ struct PartitionInfo {
 
     fvm::partition_descriptor_t* pd;
     fbl::unique_fd new_part;
-    fbl::unique_fd old_part; // Or '-1' if this is a new partition
 };
 
 inline fvm::extent_descriptor_t* GetExtent(fvm::partition_descriptor_t* pd, size_t extent) {
@@ -547,14 +546,46 @@ void RecommendWipe(const char* problem) {
     Warn(problem, "Please run 'install-disk-image wipe' to wipe your partitions");
 }
 
+// Deletes all partitions within the FVM with a type GUID matching |type_guid|
+// until there are none left.
+zx_status_t WipeAllFvmPartitionsWithGUID(const fbl::unique_fd& fvm_fd, const uint8_t type_guid[]) {
+    fbl::unique_fd old_part;
+    while ((old_part.reset(open_partition(nullptr, type_guid, ZX_MSEC(500), nullptr))), old_part) {
+        bool is_vpartition;
+        if (FvmIsVirtualPartition(old_part, &is_vpartition) != ZX_OK) {
+            ERROR("Couldn't confirm old vpartition type\n");
+            return ZX_ERR_IO;
+        }
+        if (FvmPartitionIsChild(fvm_fd, old_part) != ZX_OK) {
+            RecommendWipe("Streaming a partition type which also exists outside the target FVM");
+            return ZX_ERR_BAD_STATE;
+        }
+        if (!is_vpartition) {
+            RecommendWipe("Streaming a partition type which also exists in a GPT");
+            return ZX_ERR_BAD_STATE;
+        }
+
+        // We're paving a partition that already exists within the FVM: let's
+        // destroy it before we pave anew.
+        ssize_t r = ioctl_block_fvm_destroy_partition(old_part.get());
+        if (r < 0) {
+            ERROR("Couldn't destroy partition: %ld\n", r);
+            return static_cast<zx_status_t>(r);
+        }
+    }
+
+    return ZX_OK;
+}
+
 // Calculate the amount of space necessary for the incoming partitions,
-// validating the header along the way.
+// validating the header along the way. Additionally, deletes any old partitions
+// which match the type GUID of the provided partition.
 //
 // Parses the information from the |reader| into |parts|.
-zx_status_t ValidatePartitions(const fbl::unique_fd& fvm_fd,
-                               const fbl::unique_ptr<fvm::SparseReader>& reader,
-                               const fbl::Array<PartitionInfo>& parts,
-                               size_t* out_requested_slices) {
+zx_status_t PreProcessPartitions(const fbl::unique_fd& fvm_fd,
+                                 const fbl::unique_ptr<fvm::SparseReader>& reader,
+                                 const fbl::Array<PartitionInfo>& parts,
+                                 size_t* out_requested_slices) {
     fvm::partition_descriptor_t* part = reader->Partitions();
     fvm::sparse_image_t* hdr = reader->Image();
 
@@ -568,21 +599,10 @@ zx_status_t ValidatePartitions(const fbl::unique_fd& fvm_fd,
             return ZX_ERR_IO;
         }
 
-        parts[p].old_part.reset(open_partition(nullptr, parts[p].pd->type, ZX_SEC(2), nullptr));
-        if (parts[p].old_part) {
-            bool is_vpartition;
-            if (FvmIsVirtualPartition(parts[p].old_part, &is_vpartition) != ZX_OK) {
-                ERROR("Couldn't confirm old vpartition type\n");
-                return ZX_ERR_IO;
-            }
-            if (FvmPartitionIsChild(fvm_fd, parts[p].old_part) != ZX_OK) {
-                RecommendWipe("Streaming a partition type which also exists outside FVM");
-                return ZX_ERR_BAD_STATE;
-            }
-            if (!is_vpartition) {
-                RecommendWipe("Streaming a partition type which also exists in a GPT");
-                return ZX_ERR_BAD_STATE;
-            }
+        zx_status_t status = WipeAllFvmPartitionsWithGUID(fvm_fd, parts[p].pd->type);
+        if (status != ZX_OK) {
+            ERROR("Failure wiping old partitions matching this GUID\n");
+            return status;
         }
 
         fvm::extent_descriptor_t* ext = GetExtent(parts[p].pd, 0);
@@ -716,8 +736,10 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_
                                     hdr->partition_count);
 
     // Parse the incoming image and calculate its size.
+    //
+    // Additionally, delete the old versions of any new partitions.
     size_t requested_slices = 0;
-    if ((status = ValidatePartitions(fvm_fd, reader, parts, &requested_slices)) != ZX_OK) {
+    if ((status = PreProcessPartitions(fvm_fd, reader, parts, &requested_slices)) != ZX_OK) {
         ERROR("Failed to validate partitions: %s\n", zx_status_get_string(status));
         return status;
     }
@@ -742,12 +764,6 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_
     if (free_slices < requested_slices) {
         Warn("Not enough space to non-destructively pave",
              "Automatically reinitializing FVM; Expect data loss");
-        // Shut down the connections to the old partitions; they will
-        // become defunct when the FVM is re-initialized.
-        for (size_t p = 0; p < parts.size(); p++) {
-            parts[p].old_part.reset();
-        }
-
         fvm_fd = FvmPartitionFormat(std::move(partition_fd), hdr->slice_size,
                                     BindOption::Reformat);
         if (!fvm_fd) {
@@ -816,17 +832,9 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_
 
     for (size_t p = 0; p < parts.size(); p++) {
         // Upgrade the old partition (currently active) to the new partition (currently
-        // inactive), so when the new partition becomes active, the old
-        // partition is destroyed.
+        // inactive) so the new partition persists.
         upgrade_req_t upgrade;
         memset(&upgrade, 0, sizeof(upgrade));
-        if (parts[p].old_part) {
-            if (ioctl_block_get_partition_guid(parts[p].old_part.get(), &upgrade.old_guid,
-                                               GUID_LEN) < 0) {
-                ERROR("Failed to get unique GUID of old partition\n");
-                return ZX_ERR_BAD_STATE;
-            }
-        }
         if (ioctl_block_get_partition_guid(parts[p].new_part.get(), &upgrade.new_guid,
                                            GUID_LEN) < 0) {
             ERROR("Failed to get unique GUID of new partition\n");
@@ -836,17 +844,6 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_
         if (ioctl_block_fvm_upgrade(fvm_fd.get(), &upgrade) < 0) {
             ERROR("Failed to upgrade partition\n");
             return ZX_ERR_IO;
-        }
-
-        if (parts[p].old_part) {
-            // This would fail if the old part was on GPT, not FVM. However,
-            // we checked earlier and verified that parts[p].old_part, if it exists,
-            // is a vpartition.
-            ssize_t r = ioctl_block_fvm_destroy_partition(parts[p].old_part.get());
-            if (r < 0) {
-                ERROR("Couldn't destroy partition: %ld\n", r);
-                return static_cast<zx_status_t>(r);
-            }
         }
     }
 
