@@ -5,6 +5,10 @@ fuchsia/clang/linux-amd64
 	git_revision:e4ba76b2e98c9d4b41c82a37ec894d8c7f67b160
 	ApcAnrDFC1_0v-5lfZvQ188rQKr4UX50sVHkHiFOhHkC
 
+fuchsia/clang/linux-arm64
+	git_revision:e4ba76b2e98c9d4b41c82a37ec894d8c7f67b160
+	suMs12wwKuChnGoJqQSR9UhXK38EHmncwfuw5mDX3pIC
+
 fuchsia/clang/mac-amd64
 	git_revision:e4ba76b2e98c9d4b41c82a37ec894d8c7f67b160
 	SIFCth7Wt7sKeJFwFqiNA-R98YeGkntbU-HfMmEIbTMC
@@ -21,6 +25,10 @@ fuchsia/qemu/linux-amd64
 	git_revision:0f0027d617976b4cbb7b937d5836f8ef0ac25ba1
 	9cc486c5b18a0be515c39a280ca9a309c54cf994
 
+fuchsia/qemu/linux-arm64
+	git_revision:0f0027d617976b4cbb7b937d5836f8ef0ac25ba1
+	b1b61a39e3ab0935cd030f27e01740578b04b967
+
 fuchsia/qemu/mac-amd64
 	git_revision:0f0027d617976b4cbb7b937d5836f8ef0ac25ba1
 	2d3358ae9a569b2d4a474f498b32b202a152134f
@@ -29,9 +37,17 @@ fuchsia/sysroot/linux-amd64
 	git_revision:a96053c799a0f1ad0b7e8ab8199edbfa18adcbb6
 	ae0677829357edb199c21e76b1ea31eb8ef62817
 
+fuchsia/sysroot/linux-arm64
+	git_revision:a96053c799a0f1ad0b7e8ab8199edbfa18adcbb6
+	f116a841ddf6d1755bde918b8f07763bdee5e06d
+
 fuchsia/tools/symbolize/linux-amd64
 	git_revision:7140d924a314402c36bae66f34d0e77587ffb825
 	SwHX3C5v2LnsRsgyeDIWzYFqEtZuCDMEZLMijVEq-LYC
+
+fuchsia/tools/symbolize/linux-arm64
+	git_revision:7140d924a314402c36bae66f34d0e77587ffb825
+	Exa4kWl84z96Z6I-8_Gextd6SFCh24YK5KE-zxVSVg0C
 
 fuchsia/tools/symbolize/mac-amd64
 	git_revision:7140d924a314402c36bae66f34d0e77587ffb825

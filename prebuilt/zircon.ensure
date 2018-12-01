@@ -19,6 +19,7 @@ $ParanoidMode CheckPresence
 
 # This tells CIPD to complain if ${...} references can't cover all of these.
 $VerifiedPlatform linux-amd64
+$VerifiedPlatform linux-arm64
 $VerifiedPlatform mac-amd64
 
 # Clang
@@ -27,7 +28,7 @@ fuchsia/clang/${platform} git_revision:e4ba76b2e98c9d4b41c82a37ec894d8c7f67b160
 
 # GCC
 @Subdir gcc
-fuchsia/gcc/${platform} git_revision:fb02152947d8ef666961e3b8b6527ed39de18334,653a4ab26cb08800c45b8c3446c3753d6f2102df
+fuchsia/gcc/${os}-${arch=amd64} git_revision:fb02152947d8ef666961e3b8b6527ed39de18334,653a4ab26cb08800c45b8c3446c3753d6f2102df
 
 # sysroot
 @Subdir sysroot
