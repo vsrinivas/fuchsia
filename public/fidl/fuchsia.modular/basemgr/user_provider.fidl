@@ -59,10 +59,6 @@ struct UserLoginParams {
 
     // If login fails, |user_controller| is closed.
     request<UserController> user_controller;
-
-    // Configuration of the session shell to run. It can be NULL which means that
-    // this configuration is picked up from command-line arguments to basemgr.
-    AppConfig? session_shell_config;
 };
 
 // Provided by the |Basemgr| to the |BaseShell| when it authenticates a
