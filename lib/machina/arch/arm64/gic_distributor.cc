@@ -71,10 +71,10 @@ static zx_status_t get_gic_version(GicVersion* version) {
 // For arm64, memory addresses must be in a 36-bit range. This is due to limits
 // placed within the MMU code based on the limits of a Cortex-A53.
 //
-//See ARM DDI 0487B.b, Table D4-25 for the maximum IPA range that can be used.
+// See ARM DDI 0487B.b, Table D4-25 for the maximum IPA range that can be used.
 
 // GIC v2 distributor memory range.
-static constexpr uint64_t kGicv2DistributorPhysBase      = 0x800001000;
+static constexpr uint64_t kGicv2DistributorPhysBase      = 0x800000000;
 static constexpr uint64_t kGicv2DistributorSize          = 0x1000;
 
 // GIC v3 distributor memory range.
