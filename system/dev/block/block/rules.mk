@@ -11,6 +11,7 @@ MODULE_TYPE := driver
 MODULE_SRCS := \
     $(LOCAL_DIR)/block.cpp \
     $(LOCAL_DIR)/server.cpp \
+    $(LOCAL_DIR)/server-manager.cpp \
     $(LOCAL_DIR)/txn-group.cpp \
 
 MODULE_STATIC_LIBS := \

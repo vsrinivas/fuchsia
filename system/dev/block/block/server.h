@@ -8,6 +8,7 @@
 #include <stdlib.h>
 
 #include <atomic>
+#include <new>
 #include <utility>
 
 #include <ddk/protocol/block.h>

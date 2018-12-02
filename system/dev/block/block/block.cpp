@@ -23,7 +23,7 @@
 #include <ddktl/protocol/block.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
-#include <lib/sync/completion.h>
+#include <lib/zx/fifo.h>
 #include <lib/zx/vmo.h>
 #include <zircon/boot/image.h>
 #include <zircon/device/block.h>
@@ -31,6 +31,7 @@
 #include <zircon/thread_annotations.h>
 
 #include "server.h"
+#include "server-manager.h"
 
 class BlockDevice;
 
@@ -43,6 +44,8 @@ public:
         block_protocol_t self { &ops_, this };
         self_protocol_ = ddk::BlockProtocolProxy(&self);
     };
+
+    static zx_status_t Bind(void* ctx, zx_device_t* dev);
 
     void DdkUnbind();
     void DdkRelease();
@@ -57,17 +60,14 @@ public:
     zx_status_t GetStats(const void* cmd, size_t cmd_len, void* reply, size_t reply_len,
                          size_t* out_actual);
 
-    static zx_status_t Bind(void* ctx, zx_device_t* dev);
-
+private:
     static int ServerThread(void* arg);
     zx_status_t GetFifos(zx_handle_t* out_buf, size_t out_len, size_t* out_actual);
     zx_status_t AttachVmo(const void* in_buf, size_t in_len, vmoid_t* out_buf,
                           size_t out_len, size_t* out_actual);
-    zx_status_t FifoCloseLocked() TA_REQ(lock_);
     zx_status_t Rebind();
     zx_status_t DoIo(void* buf, size_t buf_len, zx_off_t off, bool write);
 
-private:
     // The block protocol of the device we are binding against.
     ddk::BlockImplProtocolProxy parent_protocol_;
     // The block protocol for ourselves, which redirects to the parent protocol,
@@ -78,12 +78,8 @@ private:
     // True if we have metadata for a ZBI partition map.
     bool has_bootpart_ = false;
 
-    fbl::Mutex lock_;
-    sync_completion_t lock_signal_ TA_GUARDED(lock_);
-    uint32_t thread_count_ TA_GUARDED(lock_) = 0;
-    BlockServer* server_ TA_GUARDED(lock_) = nullptr;
-    // Release has been called; we should free memory and leave.
-    bool dead_ TA_GUARDED(lock_) = false;
+    // Manages the background FIFO server.
+    ServerManager server_manager_;
 
     fbl::Mutex io_lock_;
     zx::vmo io_vmo_ TA_GUARDED(io_lock_);
@@ -91,85 +87,24 @@ private:
     sync_completion_t io_signal_;
     std::unique_ptr<uint8_t[]> io_op_;
 
-    bool enable_stats_ = false;
     fbl::Mutex stat_lock_;
+    // TODO(kmerrick) have this start as false and create IOCTL to toggle it.
+    bool enable_stats_ TA_GUARDED(stat_lock_) = true;
     block_stats_t stats_ TA_GUARDED(stat_lock_) = {};
 };
-
-int BlockDevice::ServerThread(void* arg) {
-    BlockDevice* device = reinterpret_cast<BlockDevice*>(arg);
-    device->lock_.Acquire();
-    // Signal when the blockserver_thread has successfully acquired the lock.
-    sync_completion_signal(&device->lock_signal_);
-
-    BlockServer* server = device->server_;
-    if (!device->dead_ && (server != nullptr)) {
-        device->lock_.Release();
-        blockserver_serve(server);
-        device->lock_.Acquire();
-    }
-
-    if (device->server_ == server) {
-        // Only nullify 'server' if no one has replaced it yet. This is the
-        // case when the blockserver shuts itself down because the fifo
-        // has closed.
-        device->server_ = nullptr;
-    }
-    device->thread_count_--;
-    bool cleanup = device->dead_ && (device->thread_count_ == 0);
-    device->lock_.Release();
-
-    if (server != nullptr) {
-        blockserver_free(server);
-    }
-    if (cleanup) {
-        delete device;
-    }
-    return 0;
-}
 
 zx_status_t BlockDevice::GetFifos(zx_handle_t* out_buf, size_t out_len, size_t* out_actual) {
     if (out_len < sizeof(zx_handle_t)) {
         return ZX_ERR_INVALID_ARGS;
     }
-    zx_status_t status;
-
-    BlockServer* server;
-    {
-        fbl::AutoLock lock(&lock_);
-        if (server_ != nullptr) {
-            return ZX_ERR_ALREADY_BOUND;
-        }
-
-        if ((status = blockserver_create(&self_protocol_, out_buf, &server)) != ZX_OK) {
-            return status;
-        }
-        server_ = server;
-
-        // Bump the thread count for the thread to be created
-        thread_count_++;
+    zx::fifo fifo;
+    zx_status_t status = server_manager_.StartServer(&self_protocol_, &fifo);
+    if (status != ZX_OK) {
+        return status;
     }
-
-    // Use this completion to ensure the block server doesn't race initializing
-    // with a call to teardown.
-    sync_completion_reset(&lock_signal_);
-
-    thrd_t thread;
-    if (thrd_create(&thread, &BlockDevice::ServerThread, this) == thrd_success) {
-        thrd_detach(thread);
-        sync_completion_wait(&lock_signal_, ZX_TIME_INFINITE);
-        *out_actual = sizeof(zx_handle_t);
-        return ZX_OK;
-    }
-
-    {
-        fbl::AutoLock lock(&lock_);
-        thread_count_--;
-        server_ = nullptr;
-    }
-
-    blockserver_free(server);
-    return ZX_ERR_NO_MEMORY;
+    *out_buf = fifo.release();
+    *out_actual = sizeof(zx_handle_t);
+    return ZX_OK;
 }
 
 zx_status_t BlockDevice::AttachVmo(const void* in_buf, size_t in_len, vmoid_t* out_buf,
@@ -178,27 +113,13 @@ zx_status_t BlockDevice::AttachVmo(const void* in_buf, size_t in_len, vmoid_t* o
         return ZX_ERR_INVALID_ARGS;
     }
 
-    zx_status_t status;
-    fbl::AutoLock lock(&lock_);
-    if (server_ == nullptr) {
-        return ZX_ERR_BAD_STATE;
-    }
-
-    zx_handle_t h = *(zx_handle_t*)in_buf;
-    if ((status = blockserver_attach_vmo(server_, h, out_buf)) != ZX_OK) {
+    zx::vmo vmo(*reinterpret_cast<const zx_handle_t*>(in_buf));
+    zx_status_t status = server_manager_.AttachVmo(std::move(vmo),
+                                                   reinterpret_cast<vmoid_t*>(out_buf));
+    if (status != ZX_OK) {
         return status;
     }
     *out_actual = sizeof(vmoid_t);
-    return status;
-}
-
-zx_status_t BlockDevice::FifoCloseLocked() {
-    if (server_ != nullptr) {
-        blockserver_shutdown(server_);
-        // Ensure that the next thread to call "get_fifos" will
-        // not see the previous block server.
-        server_ = nullptr;
-    }
     return ZX_OK;
 }
 
@@ -215,8 +136,7 @@ zx_status_t BlockDevice::DdkIoctl(uint32_t op, const void* cmd, size_t cmd_len, 
     case IOCTL_BLOCK_ATTACH_VMO:
         return AttachVmo(cmd, cmd_len, reinterpret_cast<vmoid_t*>(reply), reply_len, out_actual);
     case IOCTL_BLOCK_FIFO_CLOSE: {
-        fbl::AutoLock lock(&lock_);
-        return FifoCloseLocked();
+        return server_manager_.CloseFifoServer();
     }
     case IOCTL_BLOCK_RR_PART:
         return Rebind();
@@ -346,21 +266,7 @@ void BlockDevice::DdkUnbind() {
 }
 
 void BlockDevice::DdkRelease() {
-    bool bg_thread_running;
-    {
-        fbl::AutoLock lock(&lock_);
-        bg_thread_running = (thread_count_ != 0);
-        FifoCloseLocked();
-        dead_ = true;
-    }
-
-    if (!bg_thread_running) {
-        // If it isn't running, we need to clean up.
-        // Otherwise, it'll free blkdev's memory when it's done,
-        // since (1) no one else can call get_fifos anymore, and
-        // (2) it'll clean up when it sees that blkdev is dead.
-        delete this;
-    }
+    delete this;
 }
 
 void BlockDevice::BlockQuery(block_info_t* block_info, size_t* op_size) {
@@ -389,15 +295,16 @@ void BlockDevice::BlockQueue(block_op_t* op, block_impl_queue_callback completio
 
 zx_status_t BlockDevice::GetStats(const void* cmd, size_t cmd_len, void* reply,
                                   size_t reply_len, size_t* out_actual) {
+    if (cmd_len != sizeof(bool)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    block_stats_t* out = reinterpret_cast<block_stats_t*>(reply);
+    if (reply_len < sizeof(*out)) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+    }
+
+    fbl::AutoLock lock(&stat_lock_);
     if (enable_stats_) {
-        if (cmd_len != sizeof(bool)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        block_stats_t* out = reinterpret_cast<block_stats_t*>(reply);
-        if (reply_len < sizeof(*out)) {
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        }
-        fbl::AutoLock lock(&stat_lock_);
         out->total_ops = stats_.total_ops;
         out->total_blocks = stats_.total_blocks;
         out->total_reads = stats_.total_reads;
@@ -433,8 +340,6 @@ zx_status_t BlockDevice::Bind(void* ctx, zx_device_t* dev) {
     bdev->parent_protocol_ = std::move(proxy);
 
     bdev->parent_protocol_.Query(&bdev->info_, &bdev->block_op_size_);
-    // TODO(kmerrick) have this start as false and create IOCTL to toggle it
-    bdev->enable_stats_ = true;
 
     if (bdev->info_.max_transfer_size < bdev->info_.block_size) {
         printf("ERROR: block device '%s': has smaller max xfer (0x%x) than block size (0x%x)\n",
