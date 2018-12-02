@@ -123,13 +123,7 @@ int fuchsia_starter(void* arg) {
     bool autorun_started = false;
     bool drivers_loaded = false;
 
-    size_t appmgr_timeout = 10;
-    if (getenv_bool("zircon.system.filesystem-check", false)) {
-        // This command line option can slow the booting process, so increase
-        // the timeout here to compensate.
-        appmgr_timeout *= 2;
-    }
-
+    size_t appmgr_timeout = 20;
     zx::time deadline = zx::deadline_after(zx::sec(appmgr_timeout));
 
     do {
@@ -138,7 +132,8 @@ int fuchsia_starter(void* arg) {
         if (status == ZX_ERR_TIMED_OUT) {
             if (g_handles.appmgr_server.is_valid()) {
                 if (require_system) {
-                    printf("devmgr: appmgr not launched in 10s, closing appmgr handle\n");
+                    printf("devmgr: appmgr not launched in %zus, closing appmgr handle\n",
+                           appmgr_timeout);
                 }
                 g_handles.appmgr_server.reset();
             }
