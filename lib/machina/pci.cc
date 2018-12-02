@@ -237,13 +237,7 @@ zx_status_t PciBus::Connect(PciDevice* device, bool skip_bell) {
   device->command_ = kPciCommandIoEnable | kPciCommandMemEnable;
   device->global_irq_ = kPciGlobalIrqAssigments[slot];
   device_[slot] = device;
-
-  zx_status_t status = device->SetupBarTraps(guest_, skip_bell);
-  if (status == ZX_OK) {
-    FXL_LOG(INFO) << "PCI bus connected device " << slot << " to device ID 0x"
-                  << std::hex << device->attrs_.device_id;
-  }
-  return status;
+  return device->SetupBarTraps(guest_, skip_bell);
 }
 
 // PCI LOCAL BUS SPECIFICATION, REV. 3.0 Section 6.1: All PCI devices must
