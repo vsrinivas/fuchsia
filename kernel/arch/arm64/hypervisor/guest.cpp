@@ -12,7 +12,7 @@
 
 #include "el2_cpu_state_priv.h"
 
-static constexpr zx_gpaddr_t kGicvAddress = 0x800002000;
+static constexpr zx_gpaddr_t kGicvAddress = 0x800001000;
 static constexpr size_t kGicvSize = 0x2000;
 
 // static
