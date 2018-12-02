@@ -18,11 +18,8 @@ zx_status_t GuestWaitForSystemReady(EnclosedGuest& enclosed_guest) {
     if (status != ZX_OK) {
       return status;
     }
-    auto pkgfs = ps.find("pkgfs");
     auto appmgr = ps.find("appmgr");
-    auto sysmgr = ps.find("sysmgr");
-    if (pkgfs == std::string::npos || appmgr == std::string::npos ||
-        sysmgr == std::string::npos) {
+    if (appmgr == std::string::npos) {
       zx::nanosleep(zx::deadline_after(kStepSleep));
       continue;
     }
