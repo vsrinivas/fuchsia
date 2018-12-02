@@ -29,7 +29,7 @@ executable("bin") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/svc/cpp",
     "//third_party/googletest:gmock",
-    "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
+    "//third_party/googletest:gtest_main",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fs-management",
   ]
