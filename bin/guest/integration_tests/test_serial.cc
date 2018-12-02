@@ -4,22 +4,18 @@
 
 #include "garnet/bin/guest/integration_tests/test_serial.h"
 
-#include <iostream>
-#include <sstream>
-
 #include <lib/fxl/logging.h>
+#include <lib/fxl/strings/string_printf.h>
 #include <lib/zx/time.h>
+#include <iostream>
 
 static constexpr bool kGuestOutput = false;
 static constexpr size_t kSerialBufferSize = 1024;
 static constexpr zx::duration kTestTimeout = zx::sec(15);
 
 static std::string command_hash(const std::string& command) {
-  size_t hash = std::hash<std::string>{}(command);
-  std::stringstream hash_ss;
-  hash_ss << hash;
-
-  return hash_ss.str();
+  std::hash<std::string> hash;
+  return fxl::StringPrintf("%zu", hash(command));
 }
 
 zx_status_t TestSerial::Start(zx::socket socket) {
@@ -96,7 +92,7 @@ zx_status_t TestSerial::SendBlocking(const std::string& message) {
     if (status == ZX_OK && actual < len) {
       data += actual;
       len -= actual;
-      status = ZX_ERR_SHOULD_WAIT;
+      continue;
     }
   } while (status == ZX_ERR_SHOULD_WAIT);
 
