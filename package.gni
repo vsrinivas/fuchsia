@@ -435,7 +435,7 @@ template("package") {
               # during post-processing - cross-referencing with packages.json -
               # whether a given test spec came from a package that was actually
               # included in the build.
-              output_dir = "$target_out_dir/${pkg.package_name}"
+              output_dir = "$target_out_dir/$pkg_target_name"
               if (defined(test.environments)) {
                 environments = test.environments
               }

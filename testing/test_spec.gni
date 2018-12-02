@@ -140,5 +140,10 @@ template("test_spec") {
     }
   }
 
-  write_file("${invoker.output_dir}/$target_name.spec.json", test_spec, "json")
+  # In the case that target_name is given by a path (e.g., a rebase_path()
+  # value), give the test spec its basename.
+  target_base_name = get_path_info(target_name, "name")
+  write_file("${invoker.output_dir}/$target_base_name.spec.json",
+             test_spec,
+             "json")
 }
