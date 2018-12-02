@@ -66,7 +66,7 @@
     b el2_gicv3_done
 .endm
 
-.macro invalid_write
+.macro invalid_entry
     b el2_gicv3_done
     nop
 .endm
@@ -90,7 +90,7 @@ FUNCTION_LABEL(el2_hvc_sysreg)
 
 .Lread_sys:
     read_sysreg ICH_AP0R0_EL2
-    read_sysreg ICH_HCR_EL2
+    invalid_entry   // ICH_HCR_EL2 is write-only.
     read_sysreg ICH_VTR_EL2
     read_sysreg ICH_MISR_EL2
     read_sysreg ICH_ELRSR_EL2
@@ -103,9 +103,9 @@ FUNCTION_LABEL(el2_hvc_sysreg)
 .Lwrite_sys:
     write_sysreg ICH_AP0R0_EL2
     write_sysreg ICH_HCR_EL2
-    invalid_write // ICH_VTR_EL2 is readonly
-    invalid_write // ICH_MISR_EL2 is readonly
-    invalid_write // ICH_ELRSR_EL2 is readonly
+    invalid_entry   // ICH_VTR_EL2 is read-only.
+    invalid_entry   // ICH_MISR_EL2 is read-only.
+    invalid_entry   // ICH_ELRSR_EL2 is read-only.
     write_sysreg ICH_VMCR_EL2
     b el2_gicv3_write_lr
 

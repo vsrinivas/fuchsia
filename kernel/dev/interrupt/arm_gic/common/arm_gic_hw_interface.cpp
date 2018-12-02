@@ -23,10 +23,6 @@ bool arm_gic_is_registered() {
     return gic_ops == nullptr ? false : true;
 }
 
-uint32_t gic_read_gich_hcr() {
-    return gic_ops->read_gich_hcr();
-}
-
 void gic_write_gich_hcr(uint32_t val) {
     return gic_ops->write_gich_hcr(val);
 }
@@ -81,10 +77,6 @@ uint64_t gic_get_lr_from_vector(bool hw, uint8_t prio, uint32_t vector) {
 
 uint32_t gic_get_vector_from_lr(uint64_t lr) {
     return gic_ops->get_vector_from_lr(lr);
-}
-
-bool gic_get_pending_from_lr(uint64_t lr) {
-    return gic_ops->get_pending_from_lr(lr);
 }
 
 uint32_t gic_get_num_lrs() {

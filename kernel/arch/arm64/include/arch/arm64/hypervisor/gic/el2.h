@@ -12,7 +12,6 @@
 
 __BEGIN_CDECLS
 
-extern uint32_t arm64_el2_gicv3_read_gich_hcr();
 extern void arm64_el2_gicv3_write_gich_hcr(uint32_t val);
 extern uint32_t arm64_el2_gicv3_read_gich_vtr();
 extern uint32_t arm64_el2_gicv3_read_gich_vmcr();

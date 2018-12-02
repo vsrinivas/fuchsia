@@ -4,8 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <dev/interrupt/arm_gic_hw_interface.h>
 #include <arch/arm64/hypervisor/gic/gicv2.h>
+#include <dev/interrupt/arm_gic_hw_interface.h>
 #include <dev/interrupt/arm_gicv2_regs.h>
 
 // Representation of GICH registers. For details please refer to ARM Generic Interrupt
@@ -41,10 +41,6 @@ static_assert(__offsetof(Gich, apr) == 0xf0, "");
 static_assert(__offsetof(Gich, lr) == 0x100, "");
 
 static volatile Gich* gich = NULL;
-
-static uint32_t gicv2_read_gich_hcr() {
-    return gich->hcr;
-}
 
 static void gicv2_write_gich_hcr(uint32_t val) {
     gich->hcr = val;
@@ -120,16 +116,11 @@ static uint32_t gicv2_get_vector_from_lr(uint64_t lr) {
     return lr & GICH_LR_VIRTUAL_ID(UINT64_MAX);
 }
 
-static bool gicv2_get_pending_from_lr(uint64_t lr) {
-    return !(lr & GICH_LR_HARDWARE) && (lr & GICH_LR_PENDING);
-}
-
 static uint32_t gicv2_get_num_lrs() {
     return (gicv2_read_gich_vtr() & GICH_VTR_LIST_REGS_MASK) + 1;
 }
 
 static const struct arm_gic_hw_interface_ops gic_hw_register_ops = {
-    .read_gich_hcr = gicv2_read_gich_hcr,
     .write_gich_hcr = gicv2_write_gich_hcr,
     .read_gich_vtr = gicv2_read_gich_vtr,
     .default_gich_vmcr = gicv2_default_gich_vmcr,
@@ -144,7 +135,6 @@ static const struct arm_gic_hw_interface_ops gic_hw_register_ops = {
     .get_gicv = gicv2_get_gicv,
     .get_lr_from_vector = gicv2_get_lr_from_vector,
     .get_vector_from_lr = gicv2_get_vector_from_lr,
-    .get_pending_from_lr = gicv2_get_pending_from_lr,
     .get_num_lrs = gicv2_get_num_lrs,
 };
 

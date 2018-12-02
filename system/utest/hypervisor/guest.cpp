@@ -26,8 +26,10 @@
 static constexpr uint32_t kGuestMapFlags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE |
                                            ZX_VM_PERM_EXECUTE | ZX_VM_SPECIFIC;
 static constexpr uint32_t kHostMapFlags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
+// Inject an interrupt with vector 32, the first user defined interrupt vector.
+static constexpr uint32_t kInterruptVector = 32;
 static constexpr uint64_t kTrapKey = 0x1234;
-static constexpr char kResourcePath[] = "/dev/misc/sysinfo";
+static constexpr char kSysInfoPath[] = "/dev/misc/sysinfo";
 
 extern const char vcpu_resume_start[];
 extern const char vcpu_resume_end[];
@@ -89,8 +91,9 @@ static bool teardown(test_t* test) {
     END_HELPER;
 }
 
-static zx_status_t guest_get_resource(zx::resource* resource) {
-    fbl::unique_fd fd(open(kResourcePath, O_RDWR));
+template <zx_status_t (*GetResource)(zx_handle_t, zx_status_t*, zx_handle_t*)>
+static zx_status_t get_resource(zx::resource* resource) {
+    fbl::unique_fd fd(open(kSysInfoPath, O_RDWR));
     if (!fd) {
         return ZX_ERR_IO;
     }
@@ -101,12 +104,11 @@ static zx_status_t guest_get_resource(zx::resource* resource) {
         return status;
     }
 
-    zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetHypervisorResource(
-            channel.get(), &status, resource->reset_and_get_address());
+    zx_status_t fidl_status =
+        GetResource(channel.get(), &status, resource->reset_and_get_address());
     if (fidl_status != ZX_OK) {
         return fidl_status;
     }
-
     return status;
 }
 
@@ -117,8 +119,9 @@ static bool setup(test_t* test, const char* start, const char* end) {
               ZX_OK);
 
     zx::resource resource;
-    ASSERT_EQ(guest_get_resource(&resource), ZX_OK);
-    zx_status_t status = zx::guest::create(resource, 0, &test->guest, &test->vmar);
+    zx_status_t status = get_resource<fuchsia_sysinfo_DeviceGetHypervisorResource>(&resource);
+    ASSERT_EQ(status, ZX_OK);
+    status = zx::guest::create(resource, 0, &test->guest, &test->vmar);
     test->supported = status != ZX_ERR_NOT_SUPPORTED;
     if (!test->supported) {
         fprintf(stderr, "Guest creation not supported\n");
@@ -168,8 +171,7 @@ static bool setup_and_interrupt(test_t* test, const char* start, const char* end
     thrd_t thread;
     int ret = thrd_create(&thread, [](void* ctx) -> int {
         test_t* test = static_cast<test_t*>(ctx);
-        // Inject an interrupt with vector 32, the first user defined interrupt vector.
-        return test->vcpu.interrupt(32) == ZX_OK ? thrd_success : thrd_error;
+        return test->vcpu.interrupt(kInterruptVector) == ZX_OK ? thrd_success : thrd_error;
     },
                           test);
     ASSERT_EQ(ret, thrd_success);
@@ -207,6 +209,7 @@ static inline bool exception_thrown(const zx_packet_guest_mem_t& guest_mem,
 
 static inline bool resume_and_clean_exit(test_t* test) {
     BEGIN_HELPER;
+
     zx_port_packet_t packet = {};
     ASSERT_EQ(test->vcpu.resume(&packet), ZX_OK);
     EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
@@ -217,7 +220,7 @@ static inline bool resume_and_clean_exit(test_t* test) {
     if (test->interrupts_enabled) {
         ASSERT_FALSE(exception_thrown(packet.guest_mem, test->vcpu));
     }
-    return true;
+
     END_HELPER;
 }
 
@@ -241,12 +244,14 @@ static bool vcpu_interrupt() {
     BEGIN_TEST;
 
     test_t test;
-    ASSERT_TRUE(setup_and_interrupt(&test, vcpu_interrupt_start, vcpu_interrupt_end));
+    ASSERT_TRUE(setup(&test, vcpu_interrupt_start, vcpu_interrupt_end));
     if (!test.supported) {
         // The hypervisor isn't supported, so don't run the test.
         return true;
     }
+    test.interrupts_enabled = true;
 
+    ASSERT_EQ(test.vcpu.interrupt(kInterruptVector), ZX_OK);
     ASSERT_TRUE(resume_and_clean_exit(&test));
     ASSERT_TRUE(teardown(&test));
 

@@ -10,10 +10,6 @@
 #include <dev/interrupt/arm_gic_hw_interface.h>
 #include <dev/interrupt/arm_gicv3_regs.h>
 
-static uint32_t gicv3_read_gich_hcr() {
-    return arm64_el2_gicv3_read_gich_hcr();
-}
-
 static void gicv3_write_gich_hcr(uint32_t val) {
     arm64_el2_gicv3_write_gich_hcr(val);
 }
@@ -95,16 +91,11 @@ static uint32_t gicv3_get_vector_from_lr(uint64_t lr) {
     return lr & ICH_LR_VIRTUAL_ID(UINT64_MAX);
 }
 
-static bool gicv3_get_pending_from_lr(uint64_t lr) {
-    return !(lr & ICH_LR_HARDWARE) && (lr & ICH_LR_PENDING);
-}
-
 static uint32_t gicv3_get_num_lrs() {
     return (gicv3_read_gich_vtr() & ICH_VTR_LIST_REGS_MASK) + 1;
 }
 
 static const struct arm_gic_hw_interface_ops gic_hw_register_ops = {
-    .read_gich_hcr = gicv3_read_gich_hcr,
     .write_gich_hcr = gicv3_write_gich_hcr,
     .read_gich_vtr = gicv3_read_gich_vtr,
     .default_gich_vmcr = gicv3_default_gich_vmcr,
@@ -119,7 +110,6 @@ static const struct arm_gic_hw_interface_ops gic_hw_register_ops = {
     .get_gicv = gicv3_get_gicv,
     .get_lr_from_vector = gicv3_get_lr_from_vector,
     .get_vector_from_lr = gicv3_get_vector_from_lr,
-    .get_pending_from_lr = gicv3_get_pending_from_lr,
     .get_num_lrs = gicv3_get_num_lrs,
 };
 

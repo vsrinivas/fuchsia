@@ -74,7 +74,7 @@ struct GichState {
 // Loads a GICH within a given scope.
 class AutoGich {
 public:
-    AutoGich(GichState* gich_state, uint64_t* curr_hcr);
+    AutoGich(GichState* gich_state);
     ~AutoGich();
 
 private:

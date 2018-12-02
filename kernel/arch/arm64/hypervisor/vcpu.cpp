@@ -85,7 +85,7 @@ static VcpuExit vmexit_interrupt_ktrace_meta() {
     return VCPU_PHYSICAL_INTERRUPT;
 }
 
-AutoGich::AutoGich(GichState* gich_state, uint64_t* curr_hcr)
+AutoGich::AutoGich(GichState* gich_state)
     : gich_state_(gich_state) {
     DEBUG_ASSERT(!arch_ints_disabled());
     arch_disable_ints();
@@ -96,9 +96,6 @@ AutoGich::AutoGich(GichState* gich_state, uint64_t* curr_hcr)
     for (uint32_t i = 0; i < gich_state_->num_lrs; i++) {
         uint64_t lr = gich_state->lr[i];
         gic_write_gich_lr(i, lr);
-        if (gic_get_pending_from_lr(lr)) {
-            *curr_hcr |= HCR_EL2_VI;
-        }
     }
 
     // Underflow maintenance interrupt is signalled if there is one or no free
@@ -205,13 +202,12 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
     do {
         timer_maybe_interrupt(guest_state, &gich_state_);
         gich_maybe_interrupt(&gich_state_);
-        uint64_t curr_hcr = hcr_;
         {
-            AutoGich auto_gich(&gich_state_, &curr_hcr);
+            AutoGich auto_gich(&gich_state_);
 
             ktrace(TAG_VCPU_ENTER, 0, 0, 0, 0);
             running_.store(true);
-            status = arm64_el2_resume(vttbr, el2_state_.PhysicalAddress(), curr_hcr);
+            status = arm64_el2_resume(vttbr, el2_state_.PhysicalAddress(), hcr_);
             running_.store(false);
         }
         gich_active_interrupts(&gich_state_);

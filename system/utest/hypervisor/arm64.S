@@ -6,6 +6,8 @@
 
 #include "constants_priv.h"
 
+#define ICC_PMR_EL1          S3_0_C4_C6_0
+
 .set CPACR_EL1_FPEN_NO_TRAP, (3 << 20)
 
 // See ARM ARM Table D1.10.2 for more details.
@@ -19,6 +21,19 @@
 .set SERROR_EXC_OFFSET,      0x180
 
 .set SPSR_M_BIT_ARCH32,      0x010
+
+.macro movlit reg, literal
+mov \reg, #((\literal) & 0xffff)
+.ifne (((\literal) >> 16) & 0xffff)
+movk \reg, #(((\literal) >> 16) & 0xffff), lsl #16
+.endif
+.ifne (((\literal) >> 32) & 0xffff)
+movk \reg, #(((\literal) >> 32) & 0xffff), lsl #32
+.endif
+.ifne (((\literal) >> 48) & 0xffff)
+movk \reg, #(((\literal) >> 48) & 0xffff), lsl #48
+.endif
+.endm
 
 // Define new function 'name'.
 // Local label '1:' used by other macros to compute offsets.
