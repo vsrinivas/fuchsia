@@ -22,9 +22,8 @@ App::App(async::Loop* loop, component::StartupContext* app_context,
 App::~App() = default;
 
 void App::NewImagePipeShadertoy(
-    ::fidl::InterfaceRequest<fuchsia::examples::shadertoy::Shadertoy>
-        toy_request,
-    ::fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe) {
+    fidl::InterfaceRequest<fuchsia::examples::shadertoy::Shadertoy> toy_request,
+    fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe) {
   shadertoy_bindings_.AddBinding(
       std::make_unique<ShadertoyImpl>(
           ShadertoyState::NewForImagePipe(this, std::move(image_pipe))),
@@ -32,14 +31,11 @@ void App::NewImagePipeShadertoy(
 }
 
 void App::NewViewShadertoy(
-    ::fidl::InterfaceRequest<fuchsia::examples::shadertoy::Shadertoy>
-        toy_request,
-    ::fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-        view_owner_request,
-    bool handle_input_events) {
+    fidl::InterfaceRequest<fuchsia::examples::shadertoy::Shadertoy> toy_request,
+    zx::eventpair view_token, bool handle_input_events) {
   shadertoy_bindings_.AddBinding(
       std::make_unique<ShadertoyImpl>(ShadertoyState::NewForView(
-          this, std::move(view_owner_request), handle_input_events)),
+          this, std::move(view_token), handle_input_events)),
       std::move(toy_request));
 }
 

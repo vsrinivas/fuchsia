@@ -7,7 +7,9 @@
 
 #include <fuchsia/examples/shadertoy/cpp/fidl.h>
 #include <fuchsia/images/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
+
+#include <zx/eventpair.h>
+
 #include "garnet/examples/ui/shadertoy/service/glm_hack.h"
 #include "lib/escher/escher.h"
 #include "lib/escher/resources/resource.h"
@@ -29,14 +31,12 @@ class ShadertoyState : public escher::Resource {
  public:
   // Factory constructor.
   static fxl::RefPtr<ShadertoyState> NewForImagePipe(
-      App* app, ::fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe);
+      App* app, fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe);
 
   // Factory constructor.
-  static fxl::RefPtr<ShadertoyState> NewForView(
-      App* app,
-      ::fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-          view_owner_request,
-      bool handle_input_events);
+  static fxl::RefPtr<ShadertoyState> NewForView(App* app,
+                                                zx::eventpair view_token,
+                                                bool handle_input_events);
 
   virtual ~ShadertoyState();
 
@@ -51,7 +51,7 @@ class ShadertoyState : public escher::Resource {
   void SetMouse(glm::vec4 i_mouse);
 
   void SetImage(uint32_t channel,
-                ::fidl::InterfaceRequest<fuchsia::images::ImagePipe> request);
+                fidl::InterfaceRequest<fuchsia::images::ImagePipe> request);
 
  protected:
   explicit ShadertoyState(App* app);

@@ -14,11 +14,8 @@ namespace shadertoy {
 // use the Shadertoy API.
 class ShadertoyStateForView : public ShadertoyState {
  public:
-  ShadertoyStateForView(
-      App* app,
-      ::fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-          view_owner_request,
-      bool handle_input_events);
+  ShadertoyStateForView(App* app, zx::eventpair view_token,
+                        bool handle_input_events);
 
  private:
   void OnSetResolution() override;

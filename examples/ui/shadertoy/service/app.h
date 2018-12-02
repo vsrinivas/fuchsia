@@ -6,7 +6,9 @@
 #define GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_APP_H_
 
 #include <fuchsia/examples/shadertoy/cpp/fidl.h>
+
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/zx/eventpair.h>
 
 #include "garnet/examples/ui/shadertoy/service/shadertoy_impl.h"
 #include "lib/component/cpp/startup_context.h"
@@ -44,17 +46,15 @@ class App : public fuchsia::examples::shadertoy::ShadertoyFactory {
 
   // |ShadertoyFactory|
   void NewImagePipeShadertoy(
-      ::fidl::InterfaceRequest<fuchsia::examples::shadertoy::Shadertoy>
+      fidl::InterfaceRequest<fuchsia::examples::shadertoy::Shadertoy>
           toy_request,
-      ::fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe) override;
+      fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe) override;
 
   // |ShadertoyFactory|
   void NewViewShadertoy(
-      ::fidl::InterfaceRequest<fuchsia::examples::shadertoy::Shadertoy>
+      fidl::InterfaceRequest<fuchsia::examples::shadertoy::Shadertoy>
           toy_request,
-      ::fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-          view_owner_request,
-      bool handle_input_events) override;
+      zx::eventpair view_token, bool handle_input_events) override;
 
   fidl::BindingSet<fuchsia::examples::shadertoy::ShadertoyFactory>
       factory_bindings_;

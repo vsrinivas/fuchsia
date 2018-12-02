@@ -82,11 +82,10 @@ class MediaPlayerTests : public component::testing::TestWithEnvironment {
 
   // Creates a view.
   void CreateView() {
-    fuchsia::ui::viewsv1::ViewManagerPtr fake_view_manager_ptr;
-    fake_scenic_.view_manager().Bind(fake_view_manager_ptr.NewRequest());
-
-    player_->CreateView(std::move(fake_view_manager_ptr),
-                        view_owner_ptr_.NewRequest());
+    zx::eventpair view_token;
+    if (zx::eventpair::create(0u, &view_token, &view_holder_token_) != ZX_OK)
+      FXL_NOTREACHED() << "Failed to create view tokens";
+    player_->CreateView2(std::move(view_token));
   }
 
   fuchsia::mediaplayer::PlayerPtr player_;
@@ -95,7 +94,7 @@ class MediaPlayerTests : public component::testing::TestWithEnvironment {
   FakeWavReader fake_reader_;
   FakeAudio fake_audio_;
   FakeScenic fake_scenic_;
-  fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner_ptr_;
+  zx::eventpair view_holder_token_;
   std::unique_ptr<component::testing::EnclosingEnvironment> environment_;
   bool sink_connection_closed_ = false;
   SinkFeeder sink_feeder_;

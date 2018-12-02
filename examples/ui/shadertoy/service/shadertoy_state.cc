@@ -14,21 +14,18 @@
 namespace shadertoy {
 
 fxl::RefPtr<ShadertoyState> ShadertoyState::NewForImagePipe(
-    App* app, ::fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe) {
+    App* app, fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe) {
   return fxl::AdoptRef(
       new ShadertoyStateForImagePipe(app, std::move(image_pipe)));
 }
 
 fxl::RefPtr<ShadertoyState> ShadertoyState::NewForView(
-    App* app,
-    ::fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-        view_owner_request,
-    bool handle_input_events) {
+    App* app, zx::eventpair view_token, bool handle_input_events) {
   FXL_CHECK(false) << "unimplemented.";
   return fxl::RefPtr<ShadertoyState>();
 #if 0
   return fxl::AdoptRef(new ShadertoyStateForView(
-      app, std::move(view_owner_request), handle_input_events));
+      app, std::move(view_token), handle_input_events));
 #endif
 }
 
@@ -106,7 +103,7 @@ void ShadertoyState::SetMouse(glm::vec4 i_mouse) {
 
 void ShadertoyState::SetImage(
     uint32_t channel,
-    ::fidl::InterfaceRequest<fuchsia::images::ImagePipe> request) {
+    fidl::InterfaceRequest<fuchsia::images::ImagePipe> request) {
   FXL_CHECK(false) << "unimplemented";
 }
 
