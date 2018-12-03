@@ -47,6 +47,14 @@ RUN_TEST_PERFORMANCE(widget_benchmark)
 The legacy `RUN_TEST(widget_test)` is aliased to mean the same thing as
 `RUN_TEST_SMALL`.
 
+## Zircon Kernel Tests (kernel/lib/unittest)
+
+For tests compiled into the kernel itself you can call them from the shell with
+`k ut`. `k ut all` will run all tests or you can use `k ut $TEST_NAME` to run a
+specific test.
+
+The output from these tests will only be shown on the serial console.
+
 ## Fuchsia Tests (not using ulib/unittest)
 
 The environment variable `RUNTESTS_TEST_CLASS` will still be available to all
