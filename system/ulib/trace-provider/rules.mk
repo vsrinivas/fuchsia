@@ -93,34 +93,6 @@ MODULE_PACKAGE := static
 # libtrace-engine.so, e.g., because it is unavailable.
 # N.B. Please verify that you really need this before using it.
 # Generally you DO NOT want to use this.
-# TODO(dje): Delete this version once garnet is updated.
-
-MODULE := $(LOCAL_DIR).static
-MODULE_NAME := trace-provider-static
-
-MODULE_TYPE := userlib
-MODULE_COMPILEFLAGS += -fvisibility=hidden
-
-MODULE_SRCS := $(LOCAL_SRCS)
-
-MODULE_HEADER_DEPS := \
-    system/ulib/trace-engine \
-
-MODULE_STATIC_LIBS := \
-    $(LOCAL_STATIC_LIBS) \
-    system/ulib/trace.static \
-    system/ulib/trace-engine.static
-
-MODULE_LIBS := $(LOCAL_LIBS)
-
-MODULE_PACKAGE := static
-
-include make/module.mk
-
-# A special version for programs and shared libraries that can't use
-# libtrace-engine.so, e.g., because it is unavailable.
-# N.B. Please verify that you really need this before using it.
-# Generally you DO NOT want to use this.
 
 MODULE := $(LOCAL_DIR).with-static-engine
 MODULE_NAME := trace-provider-with-static-engine
