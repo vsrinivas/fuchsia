@@ -2285,10 +2285,6 @@ void coordinator(DevmgrArgs args) {
     for (const char* driver : args.load_drivers) {
         load_driver(driver, fit::bind_member(&g_coordinator, &Coordinator::DriverAddedInit));
     }
-    // TODO(teisenbe): Remove /boot/driver/test once we start running these against
-    // test instances of devmgr
-    find_loadable_drivers("/boot/driver/test",
-                          fit::bind_member(&g_coordinator, &Coordinator::DriverAddedInit));
 
     // Special case early handling for the ramdisk boot
     // path where /system is present before the coordinator
