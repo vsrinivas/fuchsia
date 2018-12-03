@@ -134,7 +134,7 @@ int main(int argc, char** argv) {
   std::vector<machina::PlatformDevice*> platform_devices;
 
   // Setup UARTs.
-  machina::Uart uart;
+  machina::Uart uart(instance_controller.SerialSocket());
   status = uart.Init(&guest);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create UART at " << status;
@@ -262,7 +262,7 @@ int main(int argc, char** argv) {
     if (status != ZX_OK) {
       return status;
     }
-    status = console.Start(*guest.object(), instance_controller.TakeSocket(),
+    status = console.Start(*guest.object(), instance_controller.SerialSocket(),
                            launcher.get(), guest.device_dispatcher());
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to start console device " << status;

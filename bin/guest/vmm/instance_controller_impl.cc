@@ -6,6 +6,13 @@
 
 #include <lib/fxl/logging.h>
 
+static zx::socket duplicate(const zx::socket& socket) {
+  zx::socket dup;
+  zx_status_t status = socket.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
+  FXL_CHECK(status == ZX_OK) << "Failed to duplicate socket " << status;
+  return dup;
+}
+
 InstanceControllerImpl::InstanceControllerImpl() {
   zx_status_t status = zx::socket::create(0, &socket_, &remote_socket_);
   FXL_CHECK(status == ZX_OK) << "Failed to create socket";
@@ -16,14 +23,8 @@ zx_status_t InstanceControllerImpl::AddPublicService(
   return context->outgoing().AddPublicService(bindings_.GetHandler(this));
 }
 
-zx::socket InstanceControllerImpl::TakeSocket() { return std::move(socket_); }
+zx::socket InstanceControllerImpl::SerialSocket() { return duplicate(socket_); }
 
 void InstanceControllerImpl::GetSerial(GetSerialCallback callback) {
-  zx::socket dup;
-  zx_status_t status = remote_socket_.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to duplicate socket";
-    return;
-  }
-  callback(std::move(dup));
+  callback(duplicate(remote_socket_));
 }

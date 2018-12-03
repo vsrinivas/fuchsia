@@ -20,7 +20,7 @@ class InstanceControllerImpl : public fuchsia::guest::InstanceController {
   // Extracts the socket handle to be used for the host end of serial
   // communication. The other end of this socket will be provided to clients
   // via |GetSerial|.
-  zx::socket TakeSocket();
+  zx::socket SerialSocket();
 
   // |fuchsia::guest::InstanceController|
   void GetSerial(GetSerialCallback callback) override;

@@ -6,6 +6,7 @@
 #define GARNET_LIB_MACHINA_ARCH_ARM64_PL011_H_
 
 #include <mutex>
+#include <zx/socket.h>
 
 #include "garnet/lib/machina/io.h"
 #include "garnet/lib/machina/platform_device.h"
@@ -17,6 +18,7 @@ class Guest;
 // Implements the PL011 UART.
 class Pl011 : public IoHandler, public PlatformDevice {
  public:
+  Pl011(zx::socket socket);
   zx_status_t Init(Guest* guest);
 
   // IoHandler interface.
@@ -30,6 +32,7 @@ class Pl011 : public IoHandler, public PlatformDevice {
  private:
   static constexpr size_t kBufferSize = 128;
   mutable std::mutex mutex_;
+  zx::socket socket_;
 
   uint8_t tx_buffer_[kBufferSize] __TA_GUARDED(mutex_) = {};
   uint16_t tx_offset_ __TA_GUARDED(mutex_) = 0;

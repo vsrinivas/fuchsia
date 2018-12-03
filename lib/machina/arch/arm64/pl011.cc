@@ -39,6 +39,8 @@ static constexpr uint64_t kPl011Size     = 0x1000;
 
 // clang-format on
 
+Pl011::Pl011(zx::socket socket) : socket_(std::move(socket)) {}
+
 zx_status_t Pl011::Init(Guest* guest) {
   return guest->CreateMapping(TrapType::MMIO_SYNC, kPl011PhysBase, kPl011Size, 0, this);
 }
@@ -48,8 +50,8 @@ zx_status_t Pl011::Read(uint64_t addr, IoValue* value) const {
     case Pl011Register::CR: {
       std::lock_guard<std::mutex> lock(mutex_);
       value->u16 = control_;
-    }
       return ZX_OK;
+    }
     case Pl011Register::FR:
     case Pl011Register::IMSC:
       value->u16 = 0;
@@ -65,8 +67,8 @@ zx_status_t Pl011::Write(uint64_t addr, const IoValue& value) {
     case Pl011Register::CR: {
       std::lock_guard<std::mutex> lock(mutex_);
       control_ = value.u16;
-    }
       return ZX_OK;
+    }
     case Pl011Register::DR:
       Print(value.u8);
       return ZX_OK;
@@ -84,16 +86,17 @@ zx_status_t Pl011::Write(uint64_t addr, const IoValue& value) {
 }
 
 void Pl011::Print(uint8_t ch) {
-  {
-    std::lock_guard<std::mutex> lock(mutex_);
-    tx_buffer_[tx_offset_++] = ch;
-    if (tx_offset_ < kBufferSize && ch != '\r') {
-      return;
-    }
-    fprintf(stdout, "%.*s", tx_offset_, tx_buffer_);
-    tx_offset_ = 0;
+  std::lock_guard<std::mutex> lock(mutex_);
+  tx_buffer_[tx_offset_++] = ch;
+  if (tx_offset_ < kBufferSize && ch != '\r') {
+    return;
   }
-  fflush(stdout);
+  size_t actual;
+  zx_status_t status = socket_.write(0, tx_buffer_, tx_offset_, &actual);
+  if (status != ZX_OK || actual != tx_offset_) {
+    FXL_LOG(WARNING) << "PL011 output partial or dropped";
+  }
+  tx_offset_ = 0;
 }
 
 zx_status_t Pl011::ConfigureZbi(void* zbi_base, size_t zbi_max) const {

@@ -15,13 +15,13 @@ namespace machina {
 static constexpr uint64_t kI8250LineStatusEmpty = 1u << 5;
 static constexpr uint64_t kI8250LineStatusIdle = 1u << 6;
 
-// clang-format off
-
 static constexpr uint64_t kI8250Base0 = 0x3f8;
 static constexpr uint64_t kI8250Base1 = 0x2f8;
 static constexpr uint64_t kI8250Base2 = 0x3e8;
 static constexpr uint64_t kI8250Base3 = 0x2e8;
-static constexpr uint64_t kI8250Size  = 0x8;
+static constexpr uint64_t kI8250Size = 0x8;
+
+// clang-format off
 
 // I8250 registers.
 enum class I8250Register : uint64_t {
@@ -38,7 +38,8 @@ enum class I8250Register : uint64_t {
 
 // clang-format on
 
-zx_status_t I8250::Init(Guest* guest, uint64_t addr) {
+zx_status_t I8250::Init(Guest* guest, zx::socket* socket, uint64_t addr) {
+  socket_ = socket;
   return guest->CreateMapping(TrapType::PIO_SYNC, addr, kI8250Size, 0, this);
 }
 
@@ -110,14 +111,20 @@ zx_status_t I8250::Write(uint64_t addr, const IoValue& io) {
 }
 
 void I8250::Print(uint8_t ch) {
+  std::lock_guard<std::mutex> lock(mutex_);
   tx_buffer_[tx_offset_++] = ch;
   if (tx_offset_ < kBufferSize && ch != '\r') {
     return;
   }
-  fprintf(stdout, "%.*s", tx_offset_, tx_buffer_);
-  fflush(stdout);
+  size_t actual;
+  zx_status_t status = socket_->write(0, tx_buffer_, tx_offset_, &actual);
+  if (status != ZX_OK || actual != tx_offset_) {
+    FXL_LOG(WARNING) << "I8250 output partial or dropped";
+  }
   tx_offset_ = 0;
 }
+
+I8250Group::I8250Group(zx::socket socket) : socket_(std::move(socket)) {}
 
 zx_status_t I8250Group::Init(Guest* guest) {
   const uint64_t kUartBases[kNumUarts] = {
@@ -127,7 +134,7 @@ zx_status_t I8250Group::Init(Guest* guest) {
       machina::kI8250Base3,
   };
   for (size_t i = 0; i < kNumUarts; i++) {
-    zx_status_t status = uarts_[i].Init(guest, kUartBases[i]);
+    zx_status_t status = uarts_[i].Init(guest, &socket_, kUartBases[i]);
     if (status != ZX_OK) {
       return status;
     }
