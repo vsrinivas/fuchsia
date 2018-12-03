@@ -14,6 +14,7 @@
 #include <utility>
 
 #include <fbl/unique_fd.h>
+#include <fbl/vector.h>
 #include <fuchsia/crash/c/fidl.h>
 #include <launchpad/launchpad.h>
 #include <loader-service/loader-service.h>
@@ -616,19 +617,15 @@ void fetch_root_resource() {
 
 namespace {
 
-// Values parsed out of argv
-struct DevmgrArgs {
-    const char* driver_search_path = nullptr;
-    const char* sys_device_driver = nullptr;
-};
-
 void ParseArgs(int argc, char** argv, DevmgrArgs* out) {
     enum {
         kDriverSearchPath,
+        kLoadDriver,
         kSysDeviceDriver,
     };
     option options[] = {
         { "driver-search-path", required_argument, nullptr, kDriverSearchPath },
+        { "load-driver", required_argument, nullptr, kLoadDriver },
         { "sys-device-driver", required_argument, nullptr, kSysDeviceDriver },
     };
 
@@ -654,8 +651,10 @@ void ParseArgs(int argc, char** argv, DevmgrArgs* out) {
     while ((opt = getopt_long(argc, argv, "", options, nullptr)) != -1) {
         switch (opt) {
             case kDriverSearchPath:
-                check_not_duplicated(out->driver_search_path);
-                out->driver_search_path = optarg;
+                out->driver_search_paths.push_back(optarg);
+                break;
+            case kLoadDriver:
+                out->load_drivers.push_back(optarg);
                 break;
             case kSysDeviceDriver:
                 check_not_duplicated(out->sys_device_driver);
@@ -734,7 +733,7 @@ int main(int argc, char** argv) {
         thrd_detach(t);
     }
 
-    coordinator(args.driver_search_path, args.sys_device_driver);
+    coordinator(std::move(args));
     printf("devmgr: coordinator exited?!\n");
     return 0;
 }

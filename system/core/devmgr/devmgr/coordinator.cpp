@@ -2238,20 +2238,20 @@ void load_system_drivers() {
     control_handler.QueuePacket(DcAsyncLoop()->dispatcher(), &pkt);
 }
 
-void coordinator(const char* driver_search_path, const char* sys_device_driver) {
+void coordinator(DevmgrArgs args) {
     log(INFO, "devmgr: coordinator()\n");
 
     // Set up the default values for our arguments if they weren't given.
-    if (driver_search_path == nullptr) {
-        driver_search_path = "/boot/driver";
+    if (args.driver_search_paths.size() == 0) {
+        args.driver_search_paths.push_back("/boot/driver");
     }
-    if (sys_device_driver == nullptr) {
+    if (args.sys_device_driver == nullptr) {
     // x86 platforms use acpi as the system device
     // all other platforms use the platform bus
 #if defined(__x86_64__)
-        sys_device_driver = "/boot/driver/bus-acpi.so";
+        args.sys_device_driver = "/boot/driver/bus-acpi.so";
 #else
-        sys_device_driver = "/boot/driver/platform-bus.so";
+        args.sys_device_driver = "/boot/driver/platform-bus.so";
 #endif
     }
 
@@ -2274,7 +2274,12 @@ void coordinator(const char* driver_search_path, const char* sys_device_driver) 
     devfs_publish(&g_coordinator.root_device, &g_coordinator.sys_device);
     devfs_publish(&g_coordinator.root_device, &g_coordinator.test_device);
 
-    find_loadable_drivers(driver_search_path, dc_driver_added_init);
+    for (const char* path : args.driver_search_paths) {
+        find_loadable_drivers(path, dc_driver_added_init);
+    }
+    for (const char* driver : args.load_drivers) {
+        load_driver(driver, dc_driver_added_init);
+    }
     // TODO(teisenbe): Remove /boot/driver/test once we start running these against
     // test instances of devmgr
     find_loadable_drivers("/boot/driver/test", dc_driver_added_init);
@@ -2288,7 +2293,7 @@ void coordinator(const char* driver_search_path, const char* sys_device_driver) 
         dc_scan_system();
     }
 
-    g_coordinator.sys_device.libname = sys_device_driver;
+    g_coordinator.sys_device.libname = args.sys_device_driver;
     dc_prepare_proxy(&g_coordinator.sys_device);
     dc_prepare_proxy(&g_coordinator.test_device);
 

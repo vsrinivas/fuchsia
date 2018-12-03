@@ -10,6 +10,7 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/string.h>
 #include <fbl/unique_ptr.h>
+#include <fbl/vector.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/zx/channel.h>
@@ -384,11 +385,21 @@ void devfs_advertise_modified(Device* dev);
 
 Device* coordinator_init(const zx::job& root_job);
 
+// Values parsed out of argv.  All paths described below are absolute paths.
+struct DevmgrArgs {
+    // Load drivers from these directories.  If this is empty, the default will
+    // be used.
+    fbl::Vector<const char*> driver_search_paths;
+    // Load the drivers with these paths.  The specified drivers do not need to
+    // be in directories in |driver_search_paths|.
+    fbl::Vector<const char*> load_drivers;
+    // Use this driver as the sys_device driver.  If nullptr, the default will
+    // be used.
+    const char* sys_device_driver = nullptr;
+};
+
 // Setup and begin executing the coordinator's loop.
-// |driver_search_path| specifies which directory drivers should be loaded from
-// |sys_device_driver| specifies which driver should be used for the sys device.
-// Either may be nullptr, in which case default values will be used.
-void coordinator(const char* driver_search_path, const char* sys_device_driver);
+void coordinator(DevmgrArgs args);
 
 void load_driver(const char* path,
                  void (*func)(Driver* drv, const char* version));
