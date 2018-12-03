@@ -66,7 +66,7 @@ include make/module.mk
 # And again using libtrace-engine-static.a.
 
 MODULE := $(LOCAL_DIR).static
-MODULE_NAME := trace-static-test
+MODULE_NAME := trace-static-engine-test
 
 MODULE_TYPE := usertest
 
@@ -79,7 +79,7 @@ MODULE_HEADER_DEPS := \
 
 MODULE_STATIC_LIBS := \
     $(LOCAL_STATIC_LIBS) \
-    system/ulib/trace.static \
+    system/ulib/trace.with-static-engine \
     system/ulib/trace-engine.static
 
 MODULE_LIBS := $(LOCAL_LIBS)

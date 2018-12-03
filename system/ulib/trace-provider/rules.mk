@@ -2,13 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Two copies of libtrace-provider are built:
+# Three copies of libtrace-provider are built:
 # (1) libtrace-provider.a: Static copy that uses libtrace-engine.so
 #     (or libdriver.so for DDK).
 # (2) libtrace-provider.without-fdio.a: Static copy that uses
 #     libtrace-engine.so but does not contain fdio support for connect to
 #     trace-manager; instead the client must make its own connection.
-# (3) libtrace-provider.static.a: Static copy that uses
+# (3) libtrace-provider.with-static-engine.a: Static copy that uses
 #     libtrace-engine.static.a.
 #
 # N.B. Please DO NOT use (3) unless you KNOW you need to. Generally you do not.
@@ -93,6 +93,7 @@ MODULE_PACKAGE := static
 # libtrace-engine.so, e.g., because it is unavailable.
 # N.B. Please verify that you really need this before using it.
 # Generally you DO NOT want to use this.
+# TODO(dje): Delete this version once garnet is updated.
 
 MODULE := $(LOCAL_DIR).static
 MODULE_NAME := trace-provider-static
@@ -108,6 +109,33 @@ MODULE_HEADER_DEPS := \
 MODULE_STATIC_LIBS := \
     $(LOCAL_STATIC_LIBS) \
     system/ulib/trace.static \
+    system/ulib/trace-engine.static
+
+MODULE_LIBS := $(LOCAL_LIBS)
+
+MODULE_PACKAGE := static
+
+include make/module.mk
+
+# A special version for programs and shared libraries that can't use
+# libtrace-engine.so, e.g., because it is unavailable.
+# N.B. Please verify that you really need this before using it.
+# Generally you DO NOT want to use this.
+
+MODULE := $(LOCAL_DIR).with-static-engine
+MODULE_NAME := trace-provider-with-static-engine
+
+MODULE_TYPE := userlib
+MODULE_COMPILEFLAGS += -fvisibility=hidden
+
+MODULE_SRCS := $(LOCAL_SRCS)
+
+MODULE_HEADER_DEPS := \
+    system/ulib/trace-engine \
+
+MODULE_STATIC_LIBS := \
+    $(LOCAL_STATIC_LIBS) \
+    system/ulib/trace.with-static-engine \
     system/ulib/trace-engine.static
 
 MODULE_LIBS := $(LOCAL_LIBS)
