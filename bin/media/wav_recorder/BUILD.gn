@@ -1,0 +1,40 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+package("wav_recorder") {
+  deps = [
+    ":bin",
+  ]
+
+  # Because this utility uses stdin, it must use deprecated_system_image rather
+  # than be a separate component with a cmx.
+  deprecated_system_image = true
+  binaries = [
+    {
+      name = "wav_recorder"
+    },
+  ]
+}
+
+executable("bin") {
+  output_name = "wav_recorder"
+
+  sources = [
+    "main.cc",
+    "wav_recorder.cc",
+    "wav_recorder.h",
+  ]
+
+  deps = [
+    "//garnet/lib/media/wav_writer",
+    "//garnet/public/fidl/fuchsia.media",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/media/audio",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fit",
+  ]
+}

@@ -1,6 +1,6 @@
-# Wave File Recorder Example App
+# Wave File Recorder Utility App
 
-This directory contains an example application that uses the AudioCapturer
+This directory contains a utility application that uses the AudioCapturer
 interface and the WavWriter class to record a waveform audio file.
 
 ### USAGE

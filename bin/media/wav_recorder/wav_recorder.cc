@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/examples/media/wav_recorder/wav_recorder.h"
+#include "garnet/bin/media/wav_recorder/wav_recorder.h"
 
 #include <lib/async-loop/loop.h>
 #include <lib/fit/defer.h>
@@ -11,7 +11,8 @@
 #include "lib/fxl/logging.h"
 #include "lib/media/audio/types.h"
 
-namespace examples {
+namespace media {
+namespace tools {
 
 // TODO(mpuryear): make these constexpr char[] and eliminate c_str() usage later
 static const std::string kLoopbackOption = "loopback";
@@ -501,4 +502,5 @@ void WavRecorder::OnQuit() {
   }
 }
 
-}  // namespace examples
+}  // namespace tools
+}  // namespace media

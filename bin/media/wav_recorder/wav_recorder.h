@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_MEDIA_WAV_RECORDER_WAV_RECORDER_H_
-#define GARNET_EXAMPLES_MEDIA_WAV_RECORDER_WAV_RECORDER_H_
+#ifndef GARNET_BIN_MEDIA_WAV_RECORDER_WAV_RECORDER_H_
+#define GARNET_BIN_MEDIA_WAV_RECORDER_WAV_RECORDER_H_
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fit/function.h>
@@ -14,7 +14,8 @@
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 
-namespace examples {
+namespace media {
+namespace tools {
 
 class WavRecorder {
  public:
@@ -66,6 +67,7 @@ class WavRecorder {
   uint32_t outstanding_capture_jobs_ = 0;
 };
 
-}  // namespace examples
+}  // namespace tools
+}  // namespace media
 
-#endif  // GARNET_EXAMPLES_MEDIA_WAV_RECORDER_WAV_RECORDER_H_
+#endif  // GARNET_BIN_MEDIA_WAV_RECORDER_WAV_RECORDER_H_
