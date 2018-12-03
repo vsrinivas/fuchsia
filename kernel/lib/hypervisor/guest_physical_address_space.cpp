@@ -112,7 +112,7 @@ zx_status_t GuestPhysicalAddressSpace::GetPage(zx_gpaddr_t guest_paddr, zx_paddr
 
     // Lookup the physical address of this page in the VMO.
     zx_gpaddr_t offset = guest_paddr - mapping->base();
-    return mapping->vmo()->GetPage(offset, kPfFlags, nullptr, nullptr, host_paddr);
+    return mapping->vmo()->GetPage(offset, kPfFlags, nullptr, nullptr, nullptr, host_paddr);
 }
 
 zx_status_t GuestPhysicalAddressSpace::PageFault(zx_gpaddr_t guest_paddr) {
@@ -133,7 +133,7 @@ zx_status_t GuestPhysicalAddressSpace::PageFault(zx_gpaddr_t guest_paddr) {
         pf_flags |= VMM_PF_FLAG_INSTRUCTION;
     }
     Guard<fbl::Mutex> guard{guest_aspace_->lock()};
-    return mapping->PageFault(guest_paddr, pf_flags);
+    return mapping->PageFault(guest_paddr, pf_flags, nullptr);
 }
 
 zx_status_t GuestPhysicalAddressSpace::CreateGuestPtr(zx_gpaddr_t guest_paddr, size_t len,

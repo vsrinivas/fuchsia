@@ -33,6 +33,8 @@ static_assert(sizeof(zx_packet_guest_mem_t) == 32, "incorrect size for zx_packet
 static_assert(sizeof(zx_packet_guest_io_t) == 32, "incorrect size for zx_packet_guest_io_t");
 static_assert(sizeof(zx_packet_guest_vcpu_t) == 32, "incorrect size for zx_packet_guest_vcpu_t");
 static_assert(sizeof(zx_packet_interrupt_t) == 32, "incorrect size for zx_packet_interrupt_t");
+static_assert(sizeof(zx_packet_page_request_t) == 32,
+              "incorrect size for zx_packet_page_request_t");
 
 KCOUNTER(port_arena_count, "kernel.port.arena.count");
 KCOUNTER(port_full_count, "kernel.port.full.count");
@@ -433,6 +435,20 @@ bool PortDispatcher::CancelQueued(const void* handle, uint64_t key) {
     }
 
     return packet_removed;
+}
+
+bool PortDispatcher::CancelQueued(PortPacket* port_packet) {
+    canary_.Assert();
+
+    Guard<fbl::Mutex> guard{get_lock()};
+
+    if (port_packet->InContainer()) {
+        packets_.erase(*port_packet)->observer.reset();
+        --num_packets_;
+        return true;
+    }
+
+    return false;
 }
 
 void PortDispatcher::LinkExceptionPort(ExceptionPort* eport) {

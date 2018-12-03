@@ -820,6 +820,9 @@ zx_status_t ThreadDispatcher::GetInfoForUserspace(zx_info_thread_t* info) {
         case Blocked::INTERRUPT:
             info->state = ZX_THREAD_STATE_BLOCKED_INTERRUPT;
             break;
+        case Blocked::PAGER:
+            info->state = ZX_THREAD_STATE_BLOCKED_PAGER;
+            break;
         default:
             DEBUG_ASSERT_MSG(false, "unexpected blocked reason: %d",
                              static_cast<int>(blocked_reason));

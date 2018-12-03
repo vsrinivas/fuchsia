@@ -69,3 +69,45 @@ zx_status_t sys_pager_create_vmo(zx_handle_t pager, zx_handle_t port, uint64_t k
 
     return out->make(ktl::move(dispatcher), rights);
 }
+
+// zx_status_t zx_pager_supply_pages
+zx_status_t sys_pager_supply_pages(zx_handle_t pager, zx_handle_t pager_vmo,
+                                   uint64_t offset, uint64_t size,
+                                   zx_handle_t aux_vmo_handle, uint64_t aux_offset) {
+    auto up = ProcessDispatcher::GetCurrent();
+    fbl::RefPtr<PagerDispatcher> pager_dispatcher;
+    zx_status_t status = up->GetDispatcher(pager, &pager_dispatcher);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    fbl::RefPtr<VmObjectDispatcher> pager_vmo_dispatcher;
+    status = up->GetDispatcherWithRights(pager_vmo,
+                                         ZX_RIGHT_READ | ZX_RIGHT_WRITE, &pager_vmo_dispatcher);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    if (pager_vmo_dispatcher->vmo()->get_page_source_id() != pager_dispatcher->get_koid()) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    if (!IS_PAGE_ALIGNED(offset) || !IS_PAGE_ALIGNED(size) || !IS_PAGE_ALIGNED(aux_offset)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    fbl::RefPtr<VmObjectDispatcher> aux_vmo_dispatcher;
+    status = up->GetDispatcherWithRights(aux_vmo_handle,
+                                         ZX_RIGHT_READ | ZX_RIGHT_WRITE, &aux_vmo_dispatcher);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    VmPageSpliceList pages;
+    status = aux_vmo_dispatcher->vmo()->TakePages(aux_offset, size, &pages);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    return pager_vmo_dispatcher->vmo()->SupplyPages(offset, size, &pages);
+}

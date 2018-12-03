@@ -194,6 +194,10 @@ public:
     // When |handle| is null, ephemeral PortPackets are removed from the queue but not freed.
     bool CancelQueued(const void* handle, uint64_t key);
 
+    // Removes |port_packet| from this port's queue. Returns false if the packet was
+    // not in this queue. It is undefined to call this with a packet queued in another port.
+    bool CancelQueued(PortPacket* port_packet);
+
 private:
     friend class ExceptionPort;
 

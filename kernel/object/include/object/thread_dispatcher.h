@@ -65,6 +65,8 @@ public:
         WAIT_MANY,
         // zx_interrupt_wait
         INTERRUPT,
+        // pager
+        PAGER,
     };
 
     static zx_status_t Create(fbl::RefPtr<ProcessDispatcher> process, uint32_t flags,

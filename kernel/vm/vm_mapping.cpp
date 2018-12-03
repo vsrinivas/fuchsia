@@ -508,7 +508,7 @@ zx_status_t VmMapping::MapRange(size_t offset, size_t len, bool commit) {
 
         zx_status_t status;
         paddr_t pa;
-        status = object_->GetPageLocked(vmo_offset, pf_flags, nullptr, nullptr, &pa);
+        status = object_->GetPageLocked(vmo_offset, pf_flags, nullptr, nullptr, nullptr, &pa);
         if (status != ZX_OK) {
             // no page to map
             if (commit) {
@@ -597,7 +597,7 @@ zx_status_t VmMapping::DestroyLocked() {
     return ZX_OK;
 }
 
-zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags) {
+zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, PageRequest* page_request) {
     canary_.Assert();
     DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
 
@@ -647,7 +647,8 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags) {
     // fault in or grab an existing page
     paddr_t new_pa;
     vm_page_t* page;
-    zx_status_t status = object_->GetPageLocked(vmo_offset, pf_flags, nullptr, &page, &new_pa);
+    zx_status_t status = object_->GetPageLocked(
+        vmo_offset, pf_flags, nullptr, page_request, &page, &new_pa);
     if (status != ZX_OK) {
         // TODO(cpu): This trace was originally TRACEF() always on, but it fires if the
         // VMO was resized, rather than just when the system is running out of memory.

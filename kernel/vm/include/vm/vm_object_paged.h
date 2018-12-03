@@ -37,6 +37,15 @@ public:
                               uint32_t options,
                               uint64_t size, fbl::RefPtr<VmObject>* vmo);
 
+    // Gets the raw VmObjectPaged pointer, or null if the VmObject is not paged.
+    static VmObjectPaged* AsVmObjectPaged(const fbl::RefPtr<VmObject>& vmo) {
+        if (vmo->is_paged()) {
+            return static_cast<VmObjectPaged*>(vmo.get());
+        } else {
+            return nullptr;
+        }
+    }
+
     // Create a VMO backed by a contiguous range of physical memory.  The
     // returned vmo has all of its pages committed, and does not allow
     // decommitting them.
@@ -75,6 +84,9 @@ public:
     zx_status_t ReadUser(user_out_ptr<void> ptr, uint64_t offset, size_t len) override;
     zx_status_t WriteUser(user_in_ptr<const void> ptr, uint64_t offset, size_t len) override;
 
+    zx_status_t TakePages(uint64_t offset, uint64_t len, VmPageSpliceList* pages) override;
+    zx_status_t SupplyPages(uint64_t offset, uint64_t len, VmPageSpliceList* pages) override;
+
     void Dump(uint depth, bool verbose) override;
 
     zx_status_t InvalidateCache(const uint64_t offset, const uint64_t len) override;
@@ -83,7 +95,7 @@ public:
     zx_status_t SyncCache(const uint64_t offset, const uint64_t len) override;
 
     zx_status_t GetPageLocked(uint64_t offset, uint pf_flags, list_node* free_list,
-                              vm_page_t**, paddr_t*) override
+                              PageRequest* page_request, vm_page_t**, paddr_t*) override
         // Calls a Locked method of the parent, which confuses analysis.
         TA_NO_THREAD_SAFETY_ANALYSIS;
 
@@ -98,6 +110,13 @@ public:
 
     uint32_t GetMappingCachePolicy() const override;
     zx_status_t SetMappingCachePolicy(const uint32_t cache_policy) override;
+
+    uint64_t get_page_source_id() const override {
+        if (page_source_) {
+            return page_source_->get_page_source_id();
+        }
+        return 0;
+    }
 
     // maximum size of a VMO is one page less than the full 64bit range
     static const uint64_t MAX_SIZE = ROUNDDOWN(UINT64_MAX, PAGE_SIZE);
@@ -132,8 +151,15 @@ private:
     zx_status_t PinLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
     void UnpinLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
 
+    fbl::RefPtr<PageSource> GetRootPageSourceLocked()
+        // Walks the clone chain to get the root page source, which confuses analysis.
+        TA_NO_THREAD_SAFETY_ANALYSIS;
+
     // internal check if any pages in a range are pinned
     bool AnyPagesPinnedLocked(uint64_t offset, size_t len) TA_REQ(lock_);
+
+    // see AllocatedPagesInRange
+    size_t AllocatedPagesInRangeLocked(uint64_t offset, uint64_t len) const TA_REQ(lock_);
 
     // internal read/write routine that takes a templated copy function to help share some code
     template <typename T>

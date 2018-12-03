@@ -26,25 +26,30 @@ __BEGIN_CDECLS
 #define ZX_PKT_TYPE_GUEST_VCPU      ((uint8_t)0x06u)
 #define ZX_PKT_TYPE_INTERRUPT       ((uint8_t)0x07u)
 #define ZX_PKT_TYPE_EXCEPTION(n)    ((uint32_t)(0x08u | (((n) & 0xFFu) << 8)))
+#define ZX_PKT_TYPE_PAGE_REQUEST    ((uint8_t)0x09u)
 
 // For options passed to port_create
 #define ZX_PORT_BIND_TO_INTERRUPT   ((uint32_t)(0x1u << 0))
 
 #define ZX_PKT_TYPE_MASK            ((uint32_t)0x000000FFu)
 
-#define ZX_PKT_IS_USER(type)        ((type) == ZX_PKT_TYPE_USER)
-#define ZX_PKT_IS_SIGNAL_ONE(type)  ((type) == ZX_PKT_TYPE_SIGNAL_ONE)
-#define ZX_PKT_IS_SIGNAL_REP(type)  ((type) == ZX_PKT_TYPE_SIGNAL_REP)
-#define ZX_PKT_IS_GUEST_BELL(type)  ((type) == ZX_PKT_TYPE_GUEST_BELL)
-#define ZX_PKT_IS_GUEST_MEM(type)   ((type) == ZX_PKT_TYPE_GUEST_MEM)
-#define ZX_PKT_IS_GUEST_IO(type)    ((type) == ZX_PKT_TYPE_GUEST_IO)
-#define ZX_PKT_IS_GUEST_VCPU(type)  ((type) == ZX_PKT_TYPE_GUEST_VCPU)
-#define ZX_PKT_IS_INTERRUPT(type)   ((type) == ZX_PKT_TYPE_INTERRUPT)
-#define ZX_PKT_IS_EXCEPTION(type)   (((type) & ZX_PKT_TYPE_MASK) == ZX_PKT_TYPE_EXCEPTION(0))
+#define ZX_PKT_IS_USER(type)          ((type) == ZX_PKT_TYPE_USER)
+#define ZX_PKT_IS_SIGNAL_ONE(type)    ((type) == ZX_PKT_TYPE_SIGNAL_ONE)
+#define ZX_PKT_IS_SIGNAL_REP(type)    ((type) == ZX_PKT_TYPE_SIGNAL_REP)
+#define ZX_PKT_IS_GUEST_BELL(type)    ((type) == ZX_PKT_TYPE_GUEST_BELL)
+#define ZX_PKT_IS_GUEST_MEM(type)     ((type) == ZX_PKT_TYPE_GUEST_MEM)
+#define ZX_PKT_IS_GUEST_IO(type)      ((type) == ZX_PKT_TYPE_GUEST_IO)
+#define ZX_PKT_IS_GUEST_VCPU(type)    ((type) == ZX_PKT_TYPE_GUEST_VCPU)
+#define ZX_PKT_IS_INTERRUPT(type)     ((type) == ZX_PKT_TYPE_INTERRUPT)
+#define ZX_PKT_IS_EXCEPTION(type)     (((type) & ZX_PKT_TYPE_MASK) == ZX_PKT_TYPE_EXCEPTION(0))
+#define ZX_PKT_IS_PAGE_REQUEST(type)  ((type) == ZX_PKT_TYPE_PAGE_REQUEST)
 
 // zx_packet_guest_vcpu_t::type
 #define ZX_PKT_GUEST_VCPU_INTERRUPT  ((uint8_t)0)
 #define ZX_PKT_GUEST_VCPU_STARTUP    ((uint8_t)1)
+
+// zx_packet_page_request_t::command
+#define ZX_PAGER_VMO_READ ((uint16_t) 0)
 // clang-format on
 
 // port_packet_t::type ZX_PKT_TYPE_USER.
@@ -134,6 +139,15 @@ typedef struct zx_packet_interrupt {
     uint64_t reserved2;
 } zx_packet_interrupt_t;
 
+typedef struct zx_packet_page_request {
+    uint16_t command;
+    uint16_t flags;
+    uint32_t reserved0;
+    uint64_t offset;
+    uint64_t length;
+    uint64_t reserved1;
+} zx_packet_page_request_t;
+
 typedef struct zx_port_packet {
     uint64_t key;
     uint32_t type;
@@ -147,6 +161,7 @@ typedef struct zx_port_packet {
         zx_packet_guest_io_t guest_io;
         zx_packet_guest_vcpu_t guest_vcpu;
         zx_packet_interrupt_t interrupt;
+        zx_packet_page_request_t page_request;
     };
 } zx_port_packet_t;
 

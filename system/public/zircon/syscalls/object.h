@@ -449,6 +449,7 @@ typedef struct zx_info_resource {
 #define ZX_THREAD_STATE_BLOCKED_WAIT_ONE    ((zx_thread_state_t) 0x0603u)
 #define ZX_THREAD_STATE_BLOCKED_WAIT_MANY   ((zx_thread_state_t) 0x0703u)
 #define ZX_THREAD_STATE_BLOCKED_INTERRUPT   ((zx_thread_state_t) 0x0803u)
+#define ZX_THREAD_STATE_BLOCKED_PAGER       ((zx_thread_state_t) 0x0903u)
 
 // Reduce possibly-more-precise state to a basic state.
 // Useful if, for example, you want to check for BLOCKED on anything.

@@ -55,6 +55,8 @@ class VmAspace;
 class VmAddressRegion;
 class VmMapping;
 
+class PageRequest;
+
 // Interface for walking a VmAspace-rooted VmAddressRegion/VmMapping tree.
 // Override this class and pass an instance to VmAspace::EnumerateChildren().
 class VmEnumerator {
@@ -117,7 +119,9 @@ public:
 
     // Page fault in an address within the region.  Recursively traverses
     // the regions to find the target mapping, if it exists.
-    virtual zx_status_t PageFault(vaddr_t va, uint pf_flags) = 0;
+    // If this returns ZX_ERR_SHOULD_WAIT, then the caller should wait on |page_request|
+    // and try again.
+    virtual zx_status_t PageFault(vaddr_t va, uint pf_flags, PageRequest* page_request) = 0;
 
     // WAVL tree key function
     vaddr_t GetKey() const { return base(); }
@@ -243,7 +247,7 @@ public:
     bool has_parent() const;
 
     void Dump(uint depth, bool verbose) const override;
-    zx_status_t PageFault(vaddr_t va, uint pf_flags) override;
+    zx_status_t PageFault(vaddr_t va, uint pf_flags, PageRequest* page_request) override;
 
 protected:
     // constructor for use in creating a VmAddressRegionDummy
@@ -384,7 +388,7 @@ public:
         return;
     }
 
-    zx_status_t PageFault(vaddr_t va, uint pf_flags) override {
+    zx_status_t PageFault(vaddr_t va, uint pf_flags, PageRequest* page_request) override {
         // We should never be trying to page fault on this...
         ASSERT(false);
         return ZX_ERR_BAD_STATE;
@@ -448,7 +452,7 @@ public:
     bool is_mapping() const override { return true; }
 
     void Dump(uint depth, bool verbose) const override;
-    zx_status_t PageFault(vaddr_t va, uint pf_flags) override;
+    zx_status_t PageFault(vaddr_t va, uint pf_flags, PageRequest* page_request) override;
 
 protected:
     ~VmMapping() override;

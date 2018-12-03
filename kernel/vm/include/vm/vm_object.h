@@ -26,6 +26,7 @@
 #include <zircon/types.h>
 
 class VmMapping;
+class PageRequest;
 
 typedef zx_status_t (*vmo_lookup_fn_t)(void* context, size_t offset, size_t index, paddr_t pa);
 
@@ -113,6 +114,20 @@ public:
         return ZX_ERR_NOT_SUPPORTED;
     }
 
+    // Removes the pages from this vmo in the range [offset, offset + len) and returns
+    // them in pages.  This vmo must be a paged vmo with no parent, and it cannot have any
+    // pinned pages in the source range.
+    virtual zx_status_t TakePages(uint64_t offset, uint64_t len, VmPageSpliceList* pages) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    // Supplies this vmo with pages for the range [offset, offset + len). If this vmo
+    // already has pages in the target range, the corresponding pages in |pages| will be
+    // freed, instead of being moved into this vmo.
+    virtual zx_status_t SupplyPages(uint64_t offset, uint64_t len, VmPageSpliceList* pages) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
     // The associated VmObjectDispatcher will set an observer to notify user mode.
     void SetChildObserver(VmObjectChildObserver* child_observer);
 
@@ -169,16 +184,26 @@ public:
     // returns an enum rather than adding a new method for each clone type.
     bool is_cow_clone() const;
 
-    // get a pointer to the page structure and/or physical address at the specified offset.
-    // valid flags are VMM_PF_FLAG_*
+    // Get a pointer to the page structure and/or physical address at the specified offset.
+    // valid flags are VMM_PF_FLAG_*.
+    //
+    // |page_request| must be non-null if any flags in VMM_PF_FLAG_FAULT_MASK are set, unless
+    // the caller knows that the vm object is not paged.
+    //
+    // Returns ZX_ERR_SHOULD_WAIT if the caller should try again after waiting on the
+    // PageRequest.
+    //
+    // TODO: Currently the caller can also pass null if it knows that the vm object has no
+    // page source. This will no longer be the case once page allocations can be delayed.
     zx_status_t GetPage(uint64_t offset, uint pf_flags, list_node* free_list,
-                        vm_page_t** page, paddr_t* pa) {
+                        PageRequest* page_request, vm_page_t** page, paddr_t* pa) {
         Guard<fbl::Mutex> guard{&lock_};
-        return GetPageLocked(offset, pf_flags, free_list, page, pa);
+        return GetPageLocked(offset, pf_flags, free_list, page_request, page, pa);
     }
 
     // See VmObject::GetPage
     virtual zx_status_t GetPageLocked(uint64_t offset, uint pf_flags, list_node* free_list,
+                                      PageRequest* page_request,
                                       vm_page_t** page, paddr_t* pa) TA_REQ(lock_) {
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -216,6 +241,8 @@ public:
         }
         return ZX_OK;
     }
+
+    virtual uint64_t get_page_source_id() const { return 0; }
 
 protected:
     // private constructor (use Create())

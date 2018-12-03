@@ -550,12 +550,27 @@ zx_status_t VmAspace::PageFault(vaddr_t va, uint flags) {
         flags |= VMM_PF_FLAG_GUEST;
     }
 
-    // for now, hold the aspace lock across the page fault operation,
-    // which stops any other operations on the address space from moving
-    // the region out from underneath it
-    Guard<fbl::Mutex> guard{&lock_};
+    zx_status_t status = ZX_OK;
+    PageRequest page_request;
+    do {
+        {
+            // for now, hold the aspace lock across the page fault operation,
+            // which stops any other operations on the address space from moving
+            // the region out from underneath it
+            Guard<fbl::Mutex> guard{&lock_};
 
-    return root_vmar_->PageFault(va, flags);
+            status = root_vmar_->PageFault(va, flags, &page_request);
+        }
+
+        if (status == ZX_ERR_SHOULD_WAIT) {
+            zx_status_t st = page_request.Wait();
+            if (st != ZX_OK) {
+                return st;
+            }
+        }
+    } while (status == ZX_ERR_SHOULD_WAIT);
+
+    return status;
 }
 
 void VmAspace::Dump(bool verbose) const {
