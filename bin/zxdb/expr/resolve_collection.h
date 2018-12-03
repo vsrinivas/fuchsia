@@ -5,17 +5,32 @@
 #pragma once
 
 #include <functional>
+#include <optional>
 #include <string>
 
 #include "garnet/bin/zxdb/common/err.h"
+#include "garnet/bin/zxdb/expr/found_member.h"
+#include "garnet/bin/zxdb/expr/found_variable.h"
 #include "lib/fxl/memory/ref_ptr.h"
 
 namespace zxdb {
 
+class CodeBlock;
 class DataMember;
 class ExprEvalContext;
 class ExprValue;
 class InheritedFrom;
+
+// Searches for the given variable name on the given collection. This is the
+// lower-level function and assumes a valid object.
+std::optional<FoundMember> FindMember(const Collection* object,
+                                      const std::string& member_name);
+
+// Attempts the resolve the given named member variable on the "this" pointer
+// associated with the given code block. Fails if the function has no "this"
+// pointer or the member isn't found.
+std::optional<FoundVariable> FindMemberOnThis(const CodeBlock* block,
+                                              const std::string& member_name);
 
 // Resolves a DataMember given a collection (class/struct/union) and a record
 // for a variable within that collection. The data member must be on the class
@@ -38,7 +53,8 @@ Err ResolveMember(const ExprValue& base, const std::string& member_name,
 // The variant takes an ExprValue which is a pointer to the base/struct or
 // class. Because it fetches memory it is asynchronous.
 void ResolveMemberByPointer(fxl::RefPtr<ExprEvalContext> context,
-                            const ExprValue& base_ptr, const DataMember* member,
+                            const ExprValue& base_ptr,
+                            const FoundMember& found_member,
                             std::function<void(const Err&, ExprValue)> cb);
 
 // Same as previous version but takes the name of the member to find.

@@ -4,9 +4,11 @@
 
 #pragma once
 
+#include <optional>
 #include <vector>
 
 #include "garnet/bin/zxdb/expr/expr_eval_context.h"
+#include "garnet/bin/zxdb/expr/found_variable.h"
 #include "garnet/bin/zxdb/expr/symbol_variable_resolver.h"
 #include "garnet/bin/zxdb/symbols/symbol.h"
 #include "garnet/bin/zxdb/symbols/symbol_context.h"
@@ -75,21 +77,9 @@ class SymbolEvalContext : public ExprEvalContext {
     fxl::RefPtr<Symbol> symbol;
   };
 
-  // Searches the local scopes for a match on the variable
-  const Variable* GetLocalVariable(const std::string& name) const;
-
-  // Searches for a variable with the given name on a potential |this| object
-  // from the current code block. This may be asynchronous. Issues the callback
-  // on completion (could be from within the call stack of this function or
-  // in the future from the message loop).
-  void GetImplictVariableOnThis(
-      const std::string& name,
-      std::function<void(SearchResult, ExprValue)> cb) const;
-
-  // Searches global variables for the given name and issues the callback
-  // with the result.
-  void GetNamedValueFromGlobals(const std::string& name,
-                                ValueCallback cb) const;
+  // TODO(brettw) move this out into a separate standalone function with other
+  // Find* functions.
+  std::optional<FoundVariable> FindLocalVariable(const std::string& name) const;
 
   // Searches the given vector of values for one with the given name. If found,
   // returns it, otherwise returns null.
@@ -98,17 +88,7 @@ class SymbolEvalContext : public ExprEvalContext {
 
   // Computes the value of the given variable and issues the callback (possibly
   // asynchronously, possibly not).
-  void DoResolve(const Variable* variable, ValueCallback cb) const;
-
-  // Searches the locations (assuming they're matching the name already) and
-  // finds if there is a clear result which should be used. The result could
-  // also be ambiguous in which case an error will be returned.
-  //
-  // This is a separate static function so the tricky prioritization logic can
-  // be unit tested more easily. Logically it's part of
-  // GetNamedValueFromGlobals().
-  static SearchResult SearchMatchingLocations(
-      const std::vector<Location>& locations, const CodeBlock* source);
+  void DoResolve(FoundVariable found, ValueCallback cb) const;
 
   fxl::WeakPtr<const ProcessSymbols> process_symbols_;  // Possibly null.
   SymbolContext symbol_context_;
