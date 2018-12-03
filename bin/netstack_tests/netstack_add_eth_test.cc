@@ -257,7 +257,8 @@ TEST_F(NetstackLaunchTest, DHCPRequestSent) {
                          zx::clock::get_monotonic() + zx::msec(500), &pending);
 
   ASSERT_EQ(ZX_OK, status) << zx_status_get_string(status);
-  ASSERT_GT((pending & ZX_SOCKET_READABLE), 0u) << "socket was not readable; signals: " << pending;
+  ASSERT_GT((pending & ZX_SOCKET_READABLE), 0u)
+      << "socket was not readable; signals: " << pending;
   status = sock.read(0, buf, attempt_to_read, &read);
 
   ASSERT_EQ(ZX_OK, status) << zx_status_get_string(status);
