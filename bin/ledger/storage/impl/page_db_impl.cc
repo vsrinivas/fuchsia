@@ -5,7 +5,6 @@
 #include "peridot/bin/ledger/storage/impl/page_db_impl.h"
 
 #include <algorithm>
-#include <mutex>
 #include <string>
 
 #include <lib/fxl/strings/concatenate.h>

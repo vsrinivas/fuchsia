@@ -4,6 +4,8 @@
 
 #include "peridot/bin/ledger/storage/impl/leveldb_factory.h"
 
+#include <mutex>
+
 #include <lib/async/cpp/task.h>
 #include <lib/callback/scoped_callback.h>
 #include <lib/fxl/files/directory.h>
@@ -11,6 +13,7 @@
 #include <lib/fxl/memory/ref_counted.h>
 #include <lib/fxl/memory/ref_ptr.h>
 #include <lib/fxl/strings/string_view.h>
+#include <lib/fxl/synchronization/thread_annotations.h>
 
 #include "peridot/lib/convert/convert.h"
 
@@ -44,27 +47,32 @@ enum class LevelDbFactory::CreateInStagingPath : bool {
   YES,
 };
 
-// Holds information on the initialization state of the LevelDb object, allowing
-// the coordination between the main and the I/O thread for the creation of new
-// LevelDb objects.
-struct LevelDbFactory::DbInitializationState
-    : public fxl::RefCountedThreadSafe<LevelDbFactory::DbInitializationState> {
+// Holds the LevelDb object together with the information on its initialization
+// state, allowing the coordination between the main and the I/O thread for
+// the creation of new LevelDb objects.
+struct LevelDbFactory::DbWithInitializationState
+    : public fxl::RefCountedThreadSafe<
+          LevelDbFactory::DbWithInitializationState> {
  public:
+  // The mutex used to avoid concurrency issues during initialization.
+  std::mutex mutex;
+
   // Whether the initialization has been cancelled. This information is known on
   // the main thread, which is the only one that should update this field if
   // needed. The I/O thread should read |cancelled| to know whether to proceed
   // with completing the requested initialization.
-  bool cancelled = false;
+  bool cancelled FXL_GUARDED_BY(mutex) = false;
 
-  // The mutex used to avoid concurrency issues during initialization.
-  std::mutex mutex;
+  // The LevelDb object itself should only be initialized while holding the
+  // mutex, to prevent a race condition when cancelling from the main thread.
+  std::unique_ptr<LevelDb> db FXL_GUARDED_BY(mutex) = nullptr;
 
  private:
-  FRIEND_REF_COUNTED_THREAD_SAFE(DbInitializationState);
-  FRIEND_MAKE_REF_COUNTED(DbInitializationState);
+  FRIEND_REF_COUNTED_THREAD_SAFE(DbWithInitializationState);
+  FRIEND_MAKE_REF_COUNTED(DbWithInitializationState);
 
-  DbInitializationState() {}
-  ~DbInitializationState() {}
+  DbWithInitializationState() {}
+  ~DbWithInitializationState() {}
 };
 
 LevelDbFactory::LevelDbFactory(ledger::Environment* environment,
@@ -124,32 +132,33 @@ void LevelDbFactory::GetOrCreateDbAtPath(
       [this, db_path = std::move(db_path), create_in_staging_path](
           coroutine::CoroutineHandler* handler,
           fit::function<void(Status, std::unique_ptr<Db>)> callback) {
-        auto db_initialization_state =
-            fxl::MakeRefCounted<DbInitializationState>();
+        auto db_with_initialization_state =
+            fxl::MakeRefCounted<DbWithInitializationState>();
         Status status;
-        std::unique_ptr<Db> db;
         if (coroutine::SyncCall(
                 handler,
-                [&](fit::function<void(Status, std::unique_ptr<Db>)> callback) {
+                [&](fit::function<void(Status)> callback) {
                   async::PostTask(
                       environment_->io_dispatcher(),
                       [this, db_path = std::move(db_path),
-                       create_in_staging_path, db_initialization_state,
+                       create_in_staging_path, db_with_initialization_state,
                        callback = std::move(callback)]() mutable {
                         GetOrCreateDbAtPathOnIOThread(
                             std::move(db_path), create_in_staging_path,
-                            std::move(db_initialization_state),
+                            std::move(db_with_initialization_state),
                             std::move(callback));
                       });
                 },
-                &status, &db) == coroutine::ContinuationStatus::OK) {
+                &status) == coroutine::ContinuationStatus::OK) {
           // The coroutine returned normally, the initialization was done
-          // completely on the IO thread, return normally.
-          callback(status, std::move(db));
+          // completely on the I/O thread, return normally.
+          std::lock_guard<std::mutex> guard(
+              db_with_initialization_state->mutex);
+          callback(status, std::move(db_with_initialization_state->db));
           return;
         }
         // The coroutine is interrupted, but the initialization has been posted
-        // on the io thread. The lock must be acquired and |cancelled| must be
+        // on the I/O thread. The lock must be acquired and |cancelled| must be
         // set to |true|.
         //
         // There are 3 cases to consider:
@@ -165,39 +174,38 @@ void LevelDbFactory::GetOrCreateDbAtPath(
         //    will block until |GetOrCreateDbAtPathOnIOThread| is executed, and
         //    the case is the same as 2.
 
-        std::lock_guard<std::mutex> guard(db_initialization_state->mutex);
-        db_initialization_state->cancelled = true;
-        callback(Status::INTERRUPTED, std::move(db));
+        std::lock_guard<std::mutex> guard(db_with_initialization_state->mutex);
+        db_with_initialization_state->cancelled = true;
+        db_with_initialization_state->db.reset();
+        callback(Status::INTERRUPTED, nullptr);
       });
 }
 
 void LevelDbFactory::GetOrCreateDbAtPathOnIOThread(
     ledger::DetachedPath db_path, CreateInStagingPath create_in_staging_path,
-    fxl::RefPtr<DbInitializationState> initialization_state,
-    fit::function<void(Status, std::unique_ptr<Db>)> callback) {
-  std::lock_guard<std::mutex> guard(initialization_state->mutex);
-  if (initialization_state->cancelled) {
+    fxl::RefPtr<DbWithInitializationState> db_with_initialization_state,
+    fit::function<void(Status)> callback) {
+  std::lock_guard<std::mutex> guard(db_with_initialization_state->mutex);
+  if (db_with_initialization_state->cancelled) {
     return;
   }
   Status status;
-  std::unique_ptr<LevelDb> db;
   if (create_in_staging_path == CreateInStagingPath::YES) {
-    status = CreateDbThroughStagingPathOnIOThread(std::move(db_path), &db);
+    status = CreateDbThroughStagingPathOnIOThread(
+        std::move(db_path), &db_with_initialization_state->db);
   } else {
     FXL_DCHECK(files::IsDirectoryAt(db_path.root_fd(), db_path.path()));
-    db = std::make_unique<LevelDb>(environment_->dispatcher(),
-                                   std::move(db_path));
-    status = db->Init();
+    db_with_initialization_state->db = std::make_unique<LevelDb>(
+        environment_->dispatcher(), std::move(db_path));
+    status = db_with_initialization_state->db->Init();
   }
   if (status != Status::OK) {
     // Don't return the created db instance if initialization failed.
-    db.reset();
+    db_with_initialization_state->db.reset();
   }
   async::PostTask(
       environment_->dispatcher(),
-      [status, db = std::move(db), callback = std::move(callback)]() mutable {
-        callback(status, std::move(db));
-      });
+      [status, callback = std::move(callback)]() mutable { callback(status); });
 }
 
 Status LevelDbFactory::CreateDbThroughStagingPathOnIOThread(

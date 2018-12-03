@@ -40,7 +40,7 @@ class LevelDbFactory : public DbFactory {
       fit::function<void(Status, std::unique_ptr<Db>)> callback) override;
 
  private:
-  struct DbInitializationState;
+  struct DbWithInitializationState;
   enum class CreateInStagingPath : bool;
 
   // Gets or creates a new LevelDb instance in the given |db_path|,
@@ -52,19 +52,20 @@ class LevelDbFactory : public DbFactory {
 
   // Gets or creates a new LevelDb instance. This method should be
   // called from the I/O thread. When initialization is complete, it makes sure
-  // to call the |callback| with the computed result from the main thread.
+  // to update the |db_with_initialization_state| with the created LevelDb
+  // instance, and then call the |callback| from the main thread.
   void GetOrCreateDbAtPathOnIOThread(
       ledger::DetachedPath db_path, CreateInStagingPath create_in_staging_path,
-      fxl::RefPtr<DbInitializationState> initialization_state,
-      fit::function<void(Status, std::unique_ptr<Db>)> callback);
+      fxl::RefPtr<DbWithInitializationState> db_with_initialization_state,
+      fit::function<void(Status)> callback);
 
   // Synchronously creates and initializes a new LevelDb instance in a two-step
   // process: the new instance is created in a temporary directory under the
   // staging path and, if successful, it is then moved to the given |db_path|.
   // This way, if initialization is interrupted, the potentially corrupted
   // database will be in the staging area.
-  Status CreateDbThroughStagingPathOnIOThread(
-      ledger::DetachedPath db_path, std::unique_ptr<LevelDb>* db);
+  Status CreateDbThroughStagingPathOnIOThread(ledger::DetachedPath db_path,
+                                              std::unique_ptr<LevelDb>* db);
 
   // Asynchronously creates and initializes a new LevelDb instance. Once done,
   // if there is a pending request, it responds to it.
