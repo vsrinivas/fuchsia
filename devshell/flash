@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### Run fastboot to flash zedboot to device.
+### run fastboot to flash zedboot to device
 
 ## usage: fx flash [-a|-b|-r] [-s <serial>] [--pave] <BOARD>
 ##   <BOARD>   Board to flash.

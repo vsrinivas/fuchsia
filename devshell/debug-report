@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### Generate a report with component exposed data.
+### generate a report with component exposed data
 
 ## usage: fx debug-report [f|--format <FORMAT>]
 ##                        [-s|--system-objects]

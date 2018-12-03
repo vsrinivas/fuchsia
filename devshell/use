@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### Re-use a previous build directory set up by `fx set`.
+### re-use a previous build directory set up by `fx set`
 
 ## usage: fx use DIR
 ##

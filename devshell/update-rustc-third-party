@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### Updates rustc_library and rustc_binary third_party dependencies
+### updates rustc_library and rustc_binary third_party dependencies
 
 ## usage: fx update-rustc-third-party
 ## Updates third_party/rust-crates/rustc_deps based on the contents of

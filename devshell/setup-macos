@@ -6,7 +6,7 @@
 # Run this command in Fuchsia development environment, or at minimum,
 # source ${FUCHSIA_DIR}/scripts/devshell/lib/vars.sh
 
-### Register Zircon tools at MacOS Application Firewall
+### register Zircon tools at MacOS Application Firewall
 
 FIREWALL_CMD="/usr/libexec/ApplicationFirewall/socketfilterfw"
 

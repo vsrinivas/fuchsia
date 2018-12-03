@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### Run Fuchsia on QEMU in background and runs SSH command after netstack runs.
+### run Fuchsia on QEMU in background and runs SSH command after netstack runs
 
 ## Run Fuchsia on QEMU (using standard fx setup) in background and pings the
 ## target until netstack is up running. If successful, issues the given SSH

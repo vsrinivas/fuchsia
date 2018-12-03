@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### Runs a single remote test target through //scripts/run-dart-action.py
+### runs a single remote test target through //scripts/run-dart-action.py
 
 ## usage: fx dart-remote-test
 ##            [-h|--help] <target-pattern>

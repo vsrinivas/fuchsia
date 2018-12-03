@@ -5,8 +5,8 @@
 
 # Keep the usage info below in sync with //zircon/ulib/fuzz-utils/fuzzer.cpp!
 
-### Run a fuzz test on target a device
-## Run a fuzz test on target a device
+### run a fuzz test on target a device
+
 ##
 ## Usage: fx fuzz [options] [command] [command-arguments]
 ##

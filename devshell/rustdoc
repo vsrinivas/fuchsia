@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### Generates documentation for a Rust target
+### generates documentation for a Rust target
 
 import argparse
 import os
