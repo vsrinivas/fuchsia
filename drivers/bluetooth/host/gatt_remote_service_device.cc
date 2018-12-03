@@ -21,7 +21,7 @@ void CopyUUIDBytes(bt_gatt_uuid_t* dest, const common::UUID source) {
   memcpy(dest->bytes, source.value().data(), sizeof(dest->bytes));
 }
 
-bt_gatt_err_t ATTErrorToDDKError(btlib::att::ErrorCode error) {
+bt_gatt_err_t AttErrorToDdkError(btlib::att::ErrorCode error) {
   // Both of these enums *should* be identical and values.
   // Being explict so we get compiler warnings if either changes.
   switch (error) {
@@ -63,6 +63,43 @@ bt_gatt_err_t ATTErrorToDDKError(btlib::att::ErrorCode error) {
       return BT_GATT_ERR_INSUFFICIENT_RESOURCES;
   }
   return BT_GATT_ERR_NO_ERROR;
+}
+
+zx_status_t HostErrorToZxError(btlib::common::HostError error) {
+  switch (error) {
+    case btlib::common::HostError::kNoError:
+      return ZX_OK;
+    case btlib::common::HostError::kNotFound:
+      return ZX_ERR_NOT_FOUND;
+    case btlib::common::HostError::kNotReady:
+      return ZX_ERR_SHOULD_WAIT;
+    case btlib::common::HostError::kTimedOut:
+      return ZX_ERR_TIMED_OUT;
+    case btlib::common::HostError::kInvalidParameters:
+      return ZX_ERR_INVALID_ARGS;
+    case btlib::common::HostError::kCanceled:
+      return ZX_ERR_CANCELED;
+    case btlib::common::HostError::kNotSupported:
+      return ZX_ERR_NOT_SUPPORTED;
+    case btlib::common::HostError::kLinkDisconnected:
+      return ZX_ERR_CONNECTION_ABORTED;
+    case btlib::common::HostError::kOutOfMemory:
+      return ZX_ERR_NO_MEMORY;
+    default:
+      return ZX_ERR_INTERNAL;
+  }
+}
+
+bt_gatt_status_t AttStatusToDdkStatus(const btlib::att::Status& status) {
+  bt_gatt_status_t ddk_status = {
+      .status = HostErrorToZxError(status.error()),
+      .att_ecode = BT_GATT_ERR_NO_ERROR,
+  };
+
+  if (status.is_protocol_error()) {
+    ddk_status.att_ecode = AttErrorToDdkError(status.protocol_error());
+  }
+  return ddk_status;
 }
 
 }  // namespace
@@ -229,11 +266,7 @@ void GattRemoteServiceDevice::ReadCharacteristic(
     bt_gatt_id_t id, bt_gatt_svc_read_characteristic_callback read_cb, void* cookie) {
   auto read_callback = [id, cookie, read_cb](att::Status status,
                                              const common::ByteBuffer& buff) {
-    bt_gatt_err_t error_code = ATTErrorToDDKError(status.protocol_error());
-    bt_gatt_status_t ddk_status = {
-        .status = ZX_OK,
-        .att_ecode = error_code,
-    };
+    bt_gatt_status_t ddk_status = AttStatusToDdkStatus(status);
     read_cb(cookie, &ddk_status, id, buff.data(), buff.size());
   };
   service_->ReadCharacteristic(static_cast<btlib::gatt::IdType>(id),
@@ -247,11 +280,7 @@ void GattRemoteServiceDevice::ReadLongCharacteristic(
     bt_gatt_svc_read_characteristic_callback read_cb, void* cookie) {
   auto read_callback = [id, cookie, read_cb](att::Status status,
                                              const common::ByteBuffer& buff) {
-    bt_gatt_err_t error_code = ATTErrorToDDKError(status.protocol_error());
-    bt_gatt_status_t ddk_status = {
-        .status = ZX_OK,
-        .att_ecode = error_code,
-    };
+    bt_gatt_status_t ddk_status = AttStatusToDdkStatus(status);
     read_cb(cookie, &ddk_status, id, buff.data(), buff.size());
   };
   service_->ReadLongCharacteristic(static_cast<btlib::gatt::IdType>(id), offset,
@@ -271,11 +300,7 @@ void GattRemoteServiceDevice::WriteCharacteristic(
         static_cast<btlib::gatt::IdType>(id), std::move(data));
   } else {
     auto status_callback = [cookie, id, write_cb](btlib::att::Status status) {
-      bt_gatt_err_t error_code = ATTErrorToDDKError(status.protocol_error());
-      bt_gatt_status_t ddk_status = {
-          .status = ZX_OK,
-          .att_ecode = error_code,
-      };
+      bt_gatt_status_t ddk_status = AttStatusToDdkStatus(status);
       write_cb(cookie, &ddk_status, id);
     };
 
@@ -297,11 +322,7 @@ void GattRemoteServiceDevice::EnableNotifications(
   auto status_callback = [cookie, id, status_cb](
                              btlib::att::Status status,
                              btlib::gatt::IdType handler_id) {
-    bt_gatt_err_t error_code = ATTErrorToDDKError(status.protocol_error());
-    bt_gatt_status_t ddk_status = {
-        .status = ZX_OK,
-        .att_ecode = error_code,
-    };
+    bt_gatt_status_t ddk_status = AttStatusToDdkStatus(status);
     status_cb(cookie, &ddk_status, id);
   };
 
