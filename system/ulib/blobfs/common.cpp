@@ -16,13 +16,10 @@
 #include <digest/merkle-tree.h>
 #include <fs/block-txn.h>
 #include <fs/trace.h>
-#include <lib/fdio/debug.h>
 
 #ifdef __Fuchsia__
 #include <fs/fvm.h>
 #endif
-
-#define ZXDEBUG 0
 
 #include <blobfs/common.h>
 
@@ -43,21 +40,21 @@ uint32_t MerkleTreeBlocks(const Inode& blobNode) {
 zx_status_t CheckSuperblock(const Superblock* info, uint64_t max) {
     if ((info->magic0 != kBlobfsMagic0) ||
         (info->magic1 != kBlobfsMagic1)) {
-        fprintf(stderr, "blobfs: bad magic\n");
+        FS_TRACE_ERROR("blobfs: bad magic\n");
         return ZX_ERR_INVALID_ARGS;
     }
     if (info->version != kBlobfsVersion) {
-        fprintf(stderr, "blobfs: FS Version: %08x. Driver version: %08x\n", info->version,
-                kBlobfsVersion);
+        FS_TRACE_ERROR("blobfs: FS Version: %08x. Driver version: %08x\n", info->version,
+                       kBlobfsVersion);
         return ZX_ERR_INVALID_ARGS;
     }
     if (info->block_size != kBlobfsBlockSize) {
-        fprintf(stderr, "blobfs: bsz %u unsupported\n", info->block_size);
+        FS_TRACE_ERROR("blobfs: bsz %u unsupported\n", info->block_size);
         return ZX_ERR_INVALID_ARGS;
     }
     if ((info->flags & kBlobFlagFVM) == 0) {
         if (TotalBlocks(*info) > max) {
-            fprintf(stderr, "blobfs: too large for device\n");
+            FS_TRACE_ERROR("blobfs: too large for device\n");
             return ZX_ERR_INVALID_ARGS;
         }
     } else {
@@ -98,7 +95,7 @@ zx_status_t CheckSuperblock(const Superblock* info, uint64_t max) {
         }
     }
     if (info->blob_header_next != 0) {
-        fprintf(stderr, "blobfs: linked blob headers not yet supported\n");
+        FS_TRACE_ERROR("blobfs: linked blob headers not yet supported\n");
         return ZX_ERR_INVALID_ARGS;
     }
     return ZX_OK;
@@ -125,11 +122,11 @@ zx_status_t GetBlockCount(int fd, uint64_t* out) {
 zx_status_t readblk(int fd, uint64_t bno, void* data) {
     off_t off = bno * kBlobfsBlockSize;
     if (lseek(fd, off, SEEK_SET) < 0) {
-        fprintf(stderr, "blobfs: cannot seek to block %" PRIu64 "\n", bno);
+        FS_TRACE_ERROR("blobfs: cannot seek to block %" PRIu64 "\n", bno);
         return ZX_ERR_IO;
     }
     if (read(fd, data, kBlobfsBlockSize) != kBlobfsBlockSize) {
-        fprintf(stderr, "blobfs: cannot read block %" PRIu64 "\n", bno);
+        FS_TRACE_ERROR("blobfs: cannot read block %" PRIu64 "\n", bno);
         return ZX_ERR_IO;
     }
     return ZX_OK;
@@ -138,11 +135,11 @@ zx_status_t readblk(int fd, uint64_t bno, void* data) {
 zx_status_t writeblk(int fd, uint64_t bno, const void* data) {
     off_t off = bno * kBlobfsBlockSize;
     if (lseek(fd, off, SEEK_SET) < 0) {
-        fprintf(stderr, "blobfs: cannot seek to block %" PRIu64 "\n", bno);
+        FS_TRACE_ERROR("blobfs: cannot seek to block %" PRIu64 "\n", bno);
         return ZX_ERR_IO;
     }
     if (write(fd, data, kBlobfsBlockSize) != kBlobfsBlockSize) {
-        fprintf(stderr, "blobfs: cannot write block %" PRIu64 "\n", bno);
+        FS_TRACE_ERROR("blobfs: cannot write block %" PRIu64 "\n", bno);
         return ZX_ERR_IO;
     }
     return ZX_OK;
@@ -206,12 +203,12 @@ int Mkfs(int fd, uint64_t block_count) {
         info.flags |= kBlobFlagFVM;
 
         if (info.slice_size % kBlobfsBlockSize) {
-            fprintf(stderr, "blobfs mkfs: Slice size not multiple of blobfs block\n");
+            FS_TRACE_ERROR("blobfs mkfs: Slice size not multiple of blobfs block\n");
             return -1;
         }
 
         if (fs::fvm_reset_volume_slices(fd) != ZX_OK) {
-            fprintf(stderr, "blobfs mkfs: Failed to reset slices\n");
+            FS_TRACE_ERROR("blobfs mkfs: Failed to reset slices\n");
             return -1;
         }
 
@@ -221,13 +218,13 @@ int Mkfs(int fd, uint64_t block_count) {
         request.length = 1;
         request.offset = kFVMBlockMapStart / kBlocksPerSlice;
         if (ioctl_block_fvm_extend(fd, &request) < 0) {
-            fprintf(stderr, "blobfs mkfs: Failed to allocate block map\n");
+            FS_TRACE_ERROR("blobfs mkfs: Failed to allocate block map\n");
             return -1;
         }
 
         request.offset = kFVMNodeMapStart / kBlocksPerSlice;
         if (ioctl_block_fvm_extend(fd, &request) < 0) {
-            fprintf(stderr, "blobfs mkfs: Failed to allocate node map\n");
+            FS_TRACE_ERROR("blobfs mkfs: Failed to allocate node map\n");
             return -1;
         }
 
@@ -236,7 +233,7 @@ int Mkfs(int fd, uint64_t block_count) {
         request.length = fbl::round_up(kDefaultJournalBlocks, kBlocksPerSlice) / kBlocksPerSlice;
         info.journal_slices = static_cast<uint32_t>(request.length);
         if (ioctl_block_fvm_extend(fd, &request) < 0) {
-            fprintf(stderr, "blobfs mkfs: Failed to allocate journal blocks\n");
+            FS_TRACE_ERROR("blobfs mkfs: Failed to allocate journal blocks\n");
             return -1;
         }
 
@@ -245,7 +242,7 @@ int Mkfs(int fd, uint64_t block_count) {
         request.length = fbl::round_up(kMinimumDataBlocks, kBlocksPerSlice) / kBlocksPerSlice;
         info.dat_slices = static_cast<uint32_t>(request.length);
         if (ioctl_block_fvm_extend(fd, &request) < 0) {
-            fprintf(stderr, "blobfs mkfs: Failed to allocate data blocks\n");
+            FS_TRACE_ERROR("blobfs mkfs: Failed to allocate data blocks\n");
             return -1;
         }
 
@@ -265,20 +262,20 @@ int Mkfs(int fd, uint64_t block_count) {
     }
 #endif
 
-    xprintf("Blobfs Mkfs\n");
-    xprintf("Disk size  : %" PRIu64 "\n", block_count * kBlobfsBlockSize);
-    xprintf("Block Size : %u\n", kBlobfsBlockSize);
-    xprintf("Block Count: %" PRIu64 "\n", TotalBlocks(info));
-    xprintf("Inode Count: %" PRIu64 "\n", inodes);
-    xprintf("FVM-aware: %s\n", (info.flags & kBlobFlagFVM) ? "YES" : "NO");
+    FS_TRACE_DEBUG("Blobfs Mkfs\n");
+    FS_TRACE_DEBUG("Disk size  : %" PRIu64 "\n", block_count * kBlobfsBlockSize);
+    FS_TRACE_DEBUG("Block Size : %u\n", kBlobfsBlockSize);
+    FS_TRACE_DEBUG("Block Count: %" PRIu64 "\n", TotalBlocks(info));
+    FS_TRACE_DEBUG("Inode Count: %" PRIu64 "\n", inodes);
+    FS_TRACE_DEBUG("FVM-aware: %s\n", (info.flags & kBlobFlagFVM) ? "YES" : "NO");
 
     if (info.data_block_count < kMinimumDataBlocks) {
-        fprintf(stderr, "blobfs mkfs: Not enough space for minimum data partition\n");
+        FS_TRACE_ERROR("blobfs mkfs: Not enough space for minimum data partition\n");
         return -1;
     }
 
     if (info.journal_block_count < kMinimumJournalBlocks) {
-        fprintf(stderr, "blobfs mkfs: Not enough space for minimum journal partition\n");
+        FS_TRACE_ERROR("blobfs mkfs: Not enough space for minimum journal partition\n");
         return -1;
     }
 
@@ -288,10 +285,10 @@ int Mkfs(int fd, uint64_t block_count) {
 
     RawBitmap abm;
     if (abm.Reset(bbm_blocks * kBlobfsBlockBits)) {
-        fprintf(stderr, "Couldn't allocate blobfs block map\n");
+        FS_TRACE_ERROR("Couldn't allocate blobfs block map\n");
         return -1;
     } else if (abm.Shrink(info.data_block_count)) {
-        fprintf(stderr, "Couldn't shrink blobfs block map\n");
+        FS_TRACE_ERROR("Couldn't shrink blobfs block map\n");
         return -1;
     }
 
@@ -300,7 +297,7 @@ int Mkfs(int fd, uint64_t block_count) {
     info.alloc_block_count += kStartBlockMinimum;
 
     if (info.inode_count * sizeof(Inode) != nbm_blocks * kBlobfsBlockSize) {
-        fprintf(stderr, "For simplicity, inode table block must be entirely filled\n");
+        FS_TRACE_ERROR("For simplicity, inode table block must be entirely filled\n");
         return -1;
     }
 
@@ -312,7 +309,7 @@ int Mkfs(int fd, uint64_t block_count) {
     JournalInfo* journal_info = reinterpret_cast<JournalInfo*>(block);
     journal_info->magic = kJournalMagic;
     if ((status = writeblk(fd, JournalStartBlock(info), block)) != ZX_OK) {
-        fprintf(stderr, "Failed to write journal block\n");
+        FS_TRACE_ERROR("Failed to write journal block\n");
         return status;
     }
 
@@ -320,7 +317,7 @@ int Mkfs(int fd, uint64_t block_count) {
     memset(block, 0, sizeof(journal_info));
     memcpy(block, &info, sizeof(info));
     if ((status = writeblk(fd, 0, block)) != ZX_OK) {
-        fprintf(stderr, "Failed to write root block\n");
+        FS_TRACE_ERROR("Failed to write root block\n");
         return status;
     }
 
@@ -328,7 +325,7 @@ int Mkfs(int fd, uint64_t block_count) {
     for (uint64_t n = 0; n < bbm_blocks; n++) {
         void* bmdata = GetRawBitmapData(abm, n);
         if ((status = writeblk(fd, BlockMapStartBlock(info) + n, bmdata)) < 0) {
-            fprintf(stderr, "Failed to write blockmap block %" PRIu64 "\n", n);
+            FS_TRACE_ERROR("Failed to write blockmap block %" PRIu64 "\n", n);
             return status;
         }
     }
@@ -337,12 +334,12 @@ int Mkfs(int fd, uint64_t block_count) {
     for (uint64_t n = 0; n < nbm_blocks; n++) {
         memset(block, 0, sizeof(block));
         if (writeblk(fd, NodeMapStartBlock(info) + n, block)) {
-            fprintf(stderr, "blobfs: failed writing inode map\n");
+            FS_TRACE_ERROR("blobfs: failed writing inode map\n");
             return ZX_ERR_IO;
         }
     }
 
-    xprintf("BLOBFS: mkfs success\n");
+    FS_TRACE_DEBUG("BLOBFS: mkfs success\n");
     return 0;
 }
 

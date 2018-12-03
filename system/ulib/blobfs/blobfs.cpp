@@ -411,7 +411,7 @@ zx_status_t VnodeBlob::SpaceAllocate(uint64_t size_data) {
         }
         SetState(kBlobStateDataWrite);
         if ((status = WriteMetadata()) != ZX_OK) {
-            fprintf(stderr, "Null blob metadata fail: %d\n", status);
+            FS_TRACE_ERROR("Null blob metadata fail: %d\n", status);
             return status;
         }
         return ZX_OK;
@@ -426,8 +426,8 @@ zx_status_t VnodeBlob::SpaceAllocate(uint64_t size_data) {
         return status;
     }
     if (extents.size() > kMaxBlobExtents) {
-        fprintf(stderr, "Error: Block reservation requires too many extents (%zu vs %zu max)\n",
-                extents.size(), kMaxBlobExtents);
+        FS_TRACE_ERROR("Error: Block reservation requires too many extents (%zu vs %zu max)\n",
+                       extents.size(), kMaxBlobExtents);
         return ZX_ERR_BAD_STATE;
     }
     const ExtentCountType extent_count = static_cast<ExtentCountType>(extents.size());
@@ -448,7 +448,7 @@ zx_status_t VnodeBlob::SpaceAllocate(uint64_t size_data) {
         status = write_info->compressor.Initialize(write_info->compressed_blob.start(),
                                                    write_info->compressed_blob.size());
         if (status != ZX_OK) {
-            fprintf(stderr, "blobfs: Failed to initialize compressor: %d\n", status);
+            FS_TRACE_ERROR("blobfs: Failed to initialize compressor: %d\n", status);
             return status;
         }
     }
@@ -1253,7 +1253,7 @@ zx_status_t Blobfs::AddInodes(fzl::ResizeableVmoMapper* node_map) {
     request.length = 1;
     request.offset = (kFVMNodeMapStart / kBlocksPerSlice) + info_.ino_slices;
     if (ioctl_block_fvm_extend(Fd(), &request) < 0) {
-        fprintf(stderr, "Blobfs::AddInodes fvm_extend failure");
+        FS_TRACE_ERROR("Blobfs::AddInodes fvm_extend failure");
         return ZX_ERR_NO_SPACE;
     }
 
@@ -1313,12 +1313,12 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks, RawBitmap* block_map) {
 
     if (abmblks > kBlocksPerSlice) {
         //TODO(planders): Allocate more slices for the block bitmap.
-        fprintf(stderr, "Blobfs::AddBlocks needs to increase block bitmap size\n");
+        FS_TRACE_ERROR("Blobfs::AddBlocks needs to increase block bitmap size\n");
         return ZX_ERR_NO_SPACE;
     }
 
     if (ioctl_block_fvm_extend(Fd(), &request) < 0) {
-        fprintf(stderr, "Blobfs::AddBlocks FVM Extend failure\n");
+        FS_TRACE_ERROR("Blobfs::AddBlocks FVM Extend failure\n");
         return ZX_ERR_NO_SPACE;
     }
 
@@ -1452,7 +1452,7 @@ zx_status_t Blobfs::Create(fbl::unique_fd fd, const MountOptions& options,
     TRACE_DURATION("blobfs", "Blobfs::Create");
     zx_status_t status = CheckSuperblock(info, TotalBlocks(*info));
     if (status < 0) {
-        fprintf(stderr, "blobfs: Check info failure\n");
+        FS_TRACE_ERROR("blobfs: Check info failure\n");
         return status;
     }
 
@@ -1471,7 +1471,7 @@ zx_status_t Blobfs::Create(fbl::unique_fd fd, const MountOptions& options,
     } else if (kBlobfsBlockSize % fs->block_info_.block_size != 0) {
         return ZX_ERR_IO;
     } else if ((r = ioctl_block_get_fifos(fs->Fd(), fifo.reset_and_get_address())) < 0) {
-        fprintf(stderr, "Failed to mount blobfs: Someone else is using the block device\n");
+        FS_TRACE_ERROR("Failed to mount blobfs: Someone else is using the block device\n");
         return static_cast<zx_status_t>(r);
     }
 
@@ -1482,10 +1482,10 @@ zx_status_t Blobfs::Create(fbl::unique_fd fd, const MountOptions& options,
     RawBitmap block_map;
     // Keep the block_map aligned to a block multiple
     if ((status = block_map.Reset(BlockMapBlocks(fs->info_) * kBlobfsBlockBits)) < 0) {
-        fprintf(stderr, "blobfs: Could not reset block bitmap\n");
+        FS_TRACE_ERROR("blobfs: Could not reset block bitmap\n");
         return status;
     } else if ((status = block_map.Shrink(fs->info_.data_block_count)) < 0) {
-        fprintf(stderr, "blobfs: Could not shrink block bitmap\n");
+        FS_TRACE_ERROR("blobfs: Could not shrink block bitmap\n");
         return status;
     }
     fzl::ResizeableVmoMapper node_map;
@@ -1499,23 +1499,23 @@ zx_status_t Blobfs::Create(fbl::unique_fd fd, const MountOptions& options,
     fs->allocator_ = fbl::make_unique<Allocator>(fs.get(), std::move(block_map),
                                                  std::move(node_map));
     if ((status = fs->allocator_->ResetFromStorage(fs::ReadTxn(fs.get()))) != ZX_OK) {
-        fprintf(stderr, "blobfs: Failed to load bitmaps: %d\n", status);
+        FS_TRACE_ERROR("blobfs: Failed to load bitmaps: %d\n", status);
         return status;
     }
 
     if ((status = fs->info_mapping_.CreateAndMap(kBlobfsBlockSize,
                                                  "blobfs-superblock")) != ZX_OK) {
-        fprintf(stderr, "blobfs: Failed to create info vmo: %d\n", status);
+        FS_TRACE_ERROR("blobfs: Failed to create info vmo: %d\n", status);
         return status;
     } else if ((status = fs->AttachVmo(fs->info_mapping_.vmo(),
                                        &fs->info_vmoid_)) != ZX_OK) {
-        fprintf(stderr, "blobfs: Failed to attach info vmo: %d\n", status);
+        FS_TRACE_ERROR("blobfs: Failed to attach info vmo: %d\n", status);
         return status;
     } else if ((status = fs->CreateFsId()) != ZX_OK) {
-        fprintf(stderr, "blobfs: Failed to create fs_id: %d\n", status);
+        FS_TRACE_ERROR("blobfs: Failed to create fs_id: %d\n", status);
         return status;
     } else if ((status = fs->InitializeVnodes() != ZX_OK)) {
-        fprintf(stderr, "blobfs: Failed to initialize Vnodes\n");
+        FS_TRACE_ERROR("blobfs: Failed to initialize Vnodes\n");
         return status;
     }
 
@@ -1550,8 +1550,8 @@ zx_status_t Blobfs::InitializeVnodes() {
             if (status != ZX_OK) {
                 char name[digest::Digest::kLength * 2 + 1];
                 digest.ToString(name, sizeof(name));
-                fprintf(stderr, "blobfs: CORRUPTED FILESYSTEM: Duplicate node: "
-                        "%s @ index %u\n", name, i);
+                FS_TRACE_ERROR("blobfs: CORRUPTED FILESYSTEM: Duplicate node: "
+                               "%s @ index %u\n", name, i);
                 return status;
             }
             UpdateLookupMetrics(size);
@@ -1580,13 +1580,13 @@ zx_status_t Blobfs::Reload() {
     zx_status_t status;
     char block[kBlobfsBlockSize];
     if ((status = readblk(Fd(), 0, block)) != ZX_OK) {
-        fprintf(stderr, "blobfs: could not read info block\n");
+        FS_TRACE_ERROR("blobfs: could not read info block\n");
         return status;
     }
 
     Superblock* info = reinterpret_cast<Superblock*>(&block[0]);
     if ((status = CheckSuperblock(info, TotalBlocks(*info))) != ZX_OK) {
-        fprintf(stderr, "blobfs: Check info failure\n");
+        FS_TRACE_ERROR("blobfs: Check info failure\n");
         return status;
     }
 
@@ -1606,13 +1606,13 @@ zx_status_t Blobfs::Reload() {
 
     // Load the bitmaps from disk.
     if ((status = allocator_->ResetFromStorage(fs::ReadTxn(this))) != ZX_OK) {
-        fprintf(stderr, "blobfs: Failed to load bitmaps: %d\n", status);
+        FS_TRACE_ERROR("blobfs: Failed to load bitmaps: %d\n", status);
         return status;
     }
 
     // Load the vnodes from disk.
     if ((status = InitializeVnodes() != ZX_OK)) {
-        fprintf(stderr, "blobfs: Failed to initialize Vnodes\n");
+        FS_TRACE_ERROR("blobfs: Failed to initialize Vnodes\n");
         return status;
     }
 
@@ -1680,7 +1680,7 @@ zx_status_t Initialize(fbl::unique_fd blockfd, const MountOptions& options,
 
     char block[kBlobfsBlockSize];
     if ((status = readblk(blockfd.get(), 0, (void*)block)) < 0) {
-        fprintf(stderr, "blobfs: could not read info block\n");
+        FS_TRACE_ERROR("blobfs: could not read info block\n");
         return status;
     }
 
@@ -1688,17 +1688,17 @@ zx_status_t Initialize(fbl::unique_fd blockfd, const MountOptions& options,
 
     uint64_t blocks;
     if ((status = GetBlockCount(blockfd.get(), &blocks)) != ZX_OK) {
-        fprintf(stderr, "blobfs: cannot find end of underlying device\n");
+        FS_TRACE_ERROR("blobfs: cannot find end of underlying device\n");
         return status;
     }
 
     if ((status = CheckSuperblock(info, blocks)) != ZX_OK) {
-        fprintf(stderr, "blobfs: Info check failed\n");
+        FS_TRACE_ERROR("blobfs: Info check failed\n");
         return status;
     }
 
     if ((status = Blobfs::Create(std::move(blockfd), options, info, out)) != ZX_OK) {
-        fprintf(stderr, "blobfs: mount failed; could not create blobfs\n");
+        FS_TRACE_ERROR("blobfs: mount failed; could not create blobfs\n");
         return status;
     }
     return ZX_OK;
@@ -1722,7 +1722,7 @@ zx_status_t Mount(async_dispatcher_t* dispatcher, fbl::unique_fd blockfd,
     }
 
     if ((status = CheckFvmConsistency(&fs->Info(), fs->Fd())) != ZX_OK) {
-        fprintf(stderr, "blobfs: FVM info check failed\n");
+        FS_TRACE_ERROR("blobfs: FVM info check failed\n");
         return status;
     }
 
@@ -1731,12 +1731,12 @@ zx_status_t Mount(async_dispatcher_t* dispatcher, fbl::unique_fd blockfd,
 
     fbl::RefPtr<VnodeBlob> vn;
     if ((status = fs->OpenRootNode(&vn)) != ZX_OK) {
-        fprintf(stderr, "blobfs: mount failed; could not get root blob\n");
+        FS_TRACE_ERROR("blobfs: mount failed; could not get root blob\n");
         return status;
     }
 
     if ((status = fs->ServeDirectory(std::move(vn), std::move(root))) != ZX_OK) {
-        fprintf(stderr, "blobfs: mount failed; could not serve root directory\n");
+        FS_TRACE_ERROR("blobfs: mount failed; could not serve root directory\n");
         return status;
     }
 

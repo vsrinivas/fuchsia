@@ -122,7 +122,7 @@ zx_status_t Journal::Create(Blobfs* blobfs, uint64_t journal_blocks, uint64_t st
 
     // Load contents of journal from disk.
     if ((status = journal->Load()) != ZX_OK) {
-        fprintf(stderr, "Journal: Failed to load from disk: %d\n", status);
+        FS_TRACE_ERROR("Journal: Failed to load from disk: %d\n", status);
         return status;
     }
 
@@ -170,7 +170,7 @@ zx_status_t Journal::Load() {
 
     // Verify the journal magic matches.
     if (info->magic != kJournalMagic) {
-        fprintf(stderr, "Journal info bad magic\n");
+        FS_TRACE_ERROR("Journal info bad magic\n");
         return ZX_ERR_BAD_STATE;
     }
 
@@ -183,7 +183,7 @@ zx_status_t Journal::Load() {
         info->checksum = crc32(0, info_ptr, sizeof(JournalInfo));
 
         if (old_checksum != info->checksum) {
-            fprintf(stderr, "Journal info checksum corrupt\n");
+            FS_TRACE_ERROR("Journal info checksum corrupt\n");
             return ZX_ERR_BAD_STATE;
         }
     }
@@ -254,13 +254,13 @@ zx_status_t Journal::InitWriteback() {
     ZX_DEBUG_ASSERT(state_ == WritebackState::kReady);
 
     if (entries_->start() > 0 || entries_->length() > 0) {
-        fprintf(stderr, "Cannot initialize journal writeback - entries may still exist.\n");
+        FS_TRACE_ERROR("Cannot initialize journal writeback - entries may still exist.\n");
         return ZX_ERR_BAD_STATE;
     }
 
     if (thrd_create_with_name(&thread_, JournalThread, this, "blobfs-journal") !=
         thrd_success) {
-        fprintf(stderr, "Failed to create journal thread.\n");
+        FS_TRACE_ERROR("Failed to create journal thread.\n");
         return ZX_ERR_NO_RESOURCES;
     }
 
@@ -473,7 +473,7 @@ bool Journal::VerifyEntryMetadata(size_t header_index, uint64_t last_timestamp, 
         // should not be replayed. This is only a journal replay "error" if, according to the
         // journal super block, we still have some entries left to process (i.e. length_ > 0).
         if (expect_valid) {
-            fprintf(stderr, "Journal Replay Error: invalid header found.\n");
+            FS_TRACE_ERROR("Journal Replay Error: invalid header found.\n");
         }
 
         return false;
@@ -483,12 +483,12 @@ bool Journal::VerifyEntryMetadata(size_t header_index, uint64_t last_timestamp, 
     CommitBlock* commit = GetCommitBlock(commit_index);
 
     if (commit->magic != kEntryCommitMagic) {
-        fprintf(stderr, "Journal Replay Error: commit magic does not match expected\n");
+        FS_TRACE_ERROR("Journal Replay Error: commit magic does not match expected\n");
         return false;
     }
 
     if (commit->timestamp != header->timestamp) {
-        fprintf(stderr, "Journal Replay Error: commit timestamp does not match expected\n");
+        FS_TRACE_ERROR("Journal Replay Error: commit timestamp does not match expected\n");
         return false;
     }
 
@@ -498,7 +498,7 @@ bool Journal::VerifyEntryMetadata(size_t header_index, uint64_t last_timestamp, 
     // Since we already found a valid header, we expect this to be a valid entry. If something
     // in the commit block does not match what we expect, this is an error.
     if (commit->checksum != checksum) {
-        fprintf(stderr, "Journal Replay Error: commit checksum does not match expected\n");
+        FS_TRACE_ERROR("Journal Replay Error: commit checksum does not match expected\n");
         return false;
     }
 
@@ -535,7 +535,7 @@ zx_status_t Journal::ReplayEntry(size_t header_index, size_t remaining_length,
     // do not reset the journal metadata in this failure case).
     zx_status_t status = EnqueueEntryWork(std::move(work));
     if (status != ZX_OK) {
-        fprintf(stderr, "Journal replay failed with status %d\n", status);
+        FS_TRACE_ERROR("Journal replay failed with status %d\n", status);
     }
 
     return status;
@@ -554,13 +554,13 @@ zx_status_t Journal::CommitReplay() {
 
     zx_status_t status;
     if ((status = EnqueueEntryWork(std::move(work))) != ZX_OK) {
-        fprintf(stderr, "Journal replay failed with status %d\n", status);
+        FS_TRACE_ERROR("Journal replay failed with status %d\n", status);
         return status;
     }
 
     // Write out the updated info block to disk.
     if ((status = WriteInfo(entries_->start(), entries_->length())) != ZX_OK) {
-        fprintf(stderr, "Journal replay failed with status %d\n", status);
+        FS_TRACE_ERROR("Journal replay failed with status %d\n", status);
         return status;
     }
 
@@ -575,7 +575,7 @@ zx_status_t Journal::CommitReplay() {
     });
 
     if ((status = EnqueueEntryWork(std::move(work))) != ZX_OK) {
-        fprintf(stderr, "Journal replay failed with status %d\n", status);
+        FS_TRACE_ERROR("Journal replay failed with status %d\n", status);
         return status;
     }
 

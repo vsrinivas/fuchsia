@@ -180,14 +180,14 @@ zx_status_t Buffer::Create(Blobfs* blobfs, size_t blocks, const char* label,
     fzl::OwnedVmoMapper mapper;
     zx_status_t status = mapper.CreateAndMap(blocks * kBlobfsBlockSize, "blob-writeback");
     if (status != ZX_OK) {
-        fprintf(stderr, "Buffer: Failed to create vmo\n");
+        FS_TRACE_ERROR("Buffer: Failed to create vmo\n");
         return status;
     }
 
     fbl::unique_ptr<Buffer> buffer(new Buffer(blobfs, std::move(mapper)));
     if ((status = buffer->blobfs_->AttachVmo(buffer->mapper_.vmo(), &buffer->vmoid_))
         != ZX_OK) {
-        fprintf(stderr, "Buffer: Failed to attach vmo\n");
+        FS_TRACE_ERROR("Buffer: Failed to attach vmo\n");
         return status;
     }
 
@@ -457,8 +457,8 @@ int WritebackQueue::WritebackThread(void* arg) {
                 ZX_DEBUG_ASSERT(work->IsBuffered());
                 zx_status_t status;
                 if ((status = work->Complete()) != ZX_OK) {
-                    fprintf(stderr, "Work failed with status %d - "
-                                    "converting writeback to read only state.\n", status);
+                    FS_TRACE_ERROR("Work failed with status %d - "
+                                   "converting writeback to read only state.\n", status);
                     // If work completion failed, set the buffer to an error state.
                     error = true;
                 }

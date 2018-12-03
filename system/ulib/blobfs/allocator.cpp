@@ -455,14 +455,14 @@ void Allocator::LogAllocationFailure(uint64_t num_blocks) const {
         return;
     }
 
-    fprintf(stderr, "Blobfs has run out of space on persistent storage.\n");
-    fprintf(stderr, "    Could not allocate %" PRIu64 " bytes\n", requested_bytes);
-    fprintf(stderr, "    Total data bytes  : %" PRIu64 "\n", total_bytes);
-    fprintf(stderr, "    Used data bytes   : %" PRIu64 "\n", persisted_used_bytes);
-    fprintf(stderr, "    Preallocated bytes: %" PRIu64 "\n", pending_used_bytes);
-    fprintf(stderr, "    Free data bytes   : %" PRIu64 "\n", free_bytes);
-    fprintf(stderr, "    This allocation failure is the result of %s.\n",
-            requested_bytes <= free_bytes ? "fragmentation" : "over-allocation");
+    FS_TRACE_ERROR("Blobfs has run out of space on persistent storage.\n");
+    FS_TRACE_ERROR("    Could not allocate %" PRIu64 " bytes\n", requested_bytes);
+    FS_TRACE_ERROR("    Total data bytes  : %" PRIu64 "\n", total_bytes);
+    FS_TRACE_ERROR("    Used data bytes   : %" PRIu64 "\n", persisted_used_bytes);
+    FS_TRACE_ERROR("    Preallocated bytes: %" PRIu64 "\n", pending_used_bytes);
+    FS_TRACE_ERROR("    Free data bytes   : %" PRIu64 "\n", free_bytes);
+    FS_TRACE_ERROR("    This allocation failure is the result of %s.\n",
+                   requested_bytes <= free_bytes ? "fragmentation" : "over-allocation");
 }
 
 } // namespace blobfs
