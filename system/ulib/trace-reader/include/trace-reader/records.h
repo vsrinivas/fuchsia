@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef TRACE_READER_RECORDS_H_
+#define TRACE_READER_RECORDS_H_
 
 #include <new>
 #include <stdint.h>
@@ -663,3 +664,5 @@ private:
 };
 
 } // namespace trace
+
+#endif  // TRACE_READER_RECORDS_H_

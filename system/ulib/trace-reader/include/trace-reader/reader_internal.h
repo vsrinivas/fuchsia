@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef TRACE_READER_READER_INTERNAL_H_
+#define TRACE_READER_READER_INTERNAL_H_
 
 #include <fbl/string.h>
 #include <fbl/unique_ptr.h>
@@ -31,7 +32,9 @@ public:
     static int GetBufferNumber(uint32_t wrapped_count) {
         static_assert(fbl::count_of(
                           static_cast<trace_buffer_header*>(
-                              nullptr)->rolling_data_end) == 2, "");
+                              nullptr)
+                              ->rolling_data_end) == 2,
+                      "");
         return wrapped_count & 1;
     }
 
@@ -159,3 +162,5 @@ private:
 
 } // namespace internal
 } // namespace trace
+
+#endif  // TRACE_READER_READER_INTERNAL_H_

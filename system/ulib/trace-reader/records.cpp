@@ -118,7 +118,7 @@ fbl::String FormatArgumentList(const fbl::Vector<trace::Argument>& args) {
 
 fbl::String ProcessThread::ToString() const {
     return fbl::StringPrintf("%" PRIu64 "/%" PRIu64,
-                              process_koid_, thread_koid_);
+                             process_koid_, thread_koid_);
 }
 
 void ArgumentValue::Destroy() {
@@ -233,10 +233,10 @@ fbl::String MetadataContent::ToString() const {
     switch (type_) {
     case MetadataType::kProviderInfo:
         return fbl::StringPrintf("ProviderInfo(id: %" PRId32 ", name: \"%s\")",
-                                  provider_info_.id, provider_info_.name.c_str());
+                                 provider_info_.id, provider_info_.name.c_str());
     case MetadataType::kProviderSection:
         return fbl::StringPrintf("ProviderSection(id: %" PRId32 ")",
-                                  provider_section_.id);
+                                 provider_section_.id);
     case MetadataType::kProviderEvent: {
         fbl::String name;
         ProviderEventType type = provider_event_.event;
@@ -331,32 +331,32 @@ fbl::String EventData::ToString() const {
     switch (type_) {
     case EventType::kInstant:
         return fbl::StringPrintf("Instant(scope: %s)",
-                                  EventScopeToString(instant_.scope));
+                                 EventScopeToString(instant_.scope));
     case EventType::kCounter:
         return fbl::StringPrintf("Counter(id: %" PRIu64 ")",
-                                  counter_.id);
+                                 counter_.id);
     case EventType::kDurationBegin:
         return "DurationBegin";
     case EventType::kDurationEnd:
         return "DurationEnd";
     case EventType::kAsyncBegin:
         return fbl::StringPrintf("AsyncBegin(id: %" PRIu64 ")",
-                                  async_begin_.id);
+                                 async_begin_.id);
     case EventType::kAsyncInstant:
         return fbl::StringPrintf("AsyncInstant(id: %" PRIu64 ")",
-                                  async_instant_.id);
+                                 async_instant_.id);
     case EventType::kAsyncEnd:
         return fbl::StringPrintf("AsyncEnd(id: %" PRIu64 ")",
-                                  async_end_.id);
+                                 async_end_.id);
     case EventType::kFlowBegin:
         return fbl::StringPrintf("FlowBegin(id: %" PRIu64 ")",
-                                  flow_begin_.id);
+                                 flow_begin_.id);
     case EventType::kFlowStep:
         return fbl::StringPrintf("FlowStep(id: %" PRIu64 ")",
-                                  flow_step_.id);
+                                 flow_step_.id);
     case EventType::kFlowEnd:
         return fbl::StringPrintf("FlowEnd(id: %" PRIu64 ")",
-                                  flow_end_.id);
+                                 flow_end_.id);
     }
     ZX_ASSERT(false);
 }
@@ -430,22 +430,22 @@ fbl::String Record::ToString() const {
     switch (type_) {
     case RecordType::kMetadata:
         return fbl::StringPrintf("Metadata(content: %s)",
-                                  metadata_.content.ToString().c_str());
+                                 metadata_.content.ToString().c_str());
     case RecordType::kInitialization:
         return fbl::StringPrintf("Initialization(ticks_per_second: %" PRIu64 ")",
-                                  initialization_.ticks_per_second);
+                                 initialization_.ticks_per_second);
     case RecordType::kString:
         return fbl::StringPrintf("String(index: %" PRIu32 ", \"%s\")",
-                                  string_.index, string_.string.c_str());
+                                 string_.index, string_.string.c_str());
     case RecordType::kThread:
         return fbl::StringPrintf("Thread(index: %" PRIu32 ", %s)",
-                                  thread_.index, thread_.process_thread.ToString().c_str());
+                                 thread_.index, thread_.process_thread.ToString().c_str());
     case RecordType::kEvent:
         return fbl::StringPrintf("Event(ts: %" PRIu64 ", pt: %s, category: \"%s\", name: \"%s\", %s, %s)",
-                                  event_.timestamp, event_.process_thread.ToString().c_str(),
-                                  event_.category.c_str(), event_.name.c_str(),
-                                  event_.data.ToString().c_str(),
-                                  FormatArgumentList(event_.arguments).c_str());
+                                 event_.timestamp, event_.process_thread.ToString().c_str(),
+                                 event_.category.c_str(), event_.name.c_str(),
+                                 event_.data.ToString().c_str(),
+                                 FormatArgumentList(event_.arguments).c_str());
         break;
     case RecordType::kBlob:
         // TODO(dje): Could print something like the first 16 bytes of the
@@ -454,26 +454,26 @@ fbl::String Record::ToString() const {
                                  blob_.name.c_str(), blob_.blob_size);
     case RecordType::kKernelObject:
         return fbl::StringPrintf("KernelObject(koid: %" PRIu64 ", type: %s, name: \"%s\", %s)",
-                                  kernel_object_.koid,
-                                  ObjectTypeToString(kernel_object_.object_type),
-                                  kernel_object_.name.c_str(),
-                                  FormatArgumentList(kernel_object_.arguments).c_str());
+                                 kernel_object_.koid,
+                                 ObjectTypeToString(kernel_object_.object_type),
+                                 kernel_object_.name.c_str(),
+                                 FormatArgumentList(kernel_object_.arguments).c_str());
         break;
     case RecordType::kContextSwitch:
         return fbl::StringPrintf("ContextSwitch(ts: %" PRIu64 ", cpu: %" PRIu32
-                                  ", os: %s, opt: %s, ipt: %s"
-                                  ", oprio: %" PRIu32 ", iprio: %" PRIu32 ")",
-                                  context_switch_.timestamp,
-                                  context_switch_.cpu_number,
-                                  ThreadStateToString(context_switch_.outgoing_thread_state),
-                                  context_switch_.outgoing_thread.ToString().c_str(),
-                                  context_switch_.incoming_thread.ToString().c_str(),
-                                  context_switch_.outgoing_thread_priority,
-                                  context_switch_.incoming_thread_priority);
+                                 ", os: %s, opt: %s, ipt: %s"
+                                 ", oprio: %" PRIu32 ", iprio: %" PRIu32 ")",
+                                 context_switch_.timestamp,
+                                 context_switch_.cpu_number,
+                                 ThreadStateToString(context_switch_.outgoing_thread_state),
+                                 context_switch_.outgoing_thread.ToString().c_str(),
+                                 context_switch_.incoming_thread.ToString().c_str(),
+                                 context_switch_.outgoing_thread_priority,
+                                 context_switch_.incoming_thread_priority);
     case RecordType::kLog:
         return fbl::StringPrintf("Log(ts: %" PRIu64 ", pt: %s, \"%s\")",
-                                  log_.timestamp, log_.process_thread.ToString().c_str(),
-                                  log_.message.c_str());
+                                 log_.timestamp, log_.process_thread.ToString().c_str(),
+                                 log_.message.c_str());
     }
     ZX_ASSERT(false);
 }
