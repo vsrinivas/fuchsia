@@ -581,11 +581,9 @@ static const fuchsia_io_File_ops_t kFileOps = []() {
 }();
 
 static zx_status_t fidl_node_sync(void* ctx, fidl_txn_t* txn) {
-    auto conn = static_cast<DevfsConnection*>(ctx);
-    size_t actual;
-    ssize_t r = do_ioctl(conn->dev, IOCTL_DEVICE_SYNC, nullptr, 0, nullptr, 0, &actual);
-    auto status = static_cast<zx_status_t>(r);
-    return fuchsia_io_NodeSync_reply(txn, status);
+    // TODO(smklein): Integrate with the block protocol? This used to forward IOCTL_DEVICE_SYNC,
+    // which was implemented as a no-op in all drivers.
+    return fuchsia_io_NodeSync_reply(txn, ZX_OK);
 }
 
 static zx_status_t fidl_node_getattr(void* ctx, fidl_txn_t* txn) {

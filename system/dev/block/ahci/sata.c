@@ -199,10 +199,6 @@ static zx_status_t sata_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cm
         *out_actual = sizeof(*info);
         return ZX_OK;
     }
-    case IOCTL_DEVICE_SYNC: {
-        zxlogf(TRACE, "sata: IOCTL_DEVICE_SYNC\n");
-        return ZX_OK;
-    }
     default:
         return ZX_ERR_NOT_SUPPORTED;
     }

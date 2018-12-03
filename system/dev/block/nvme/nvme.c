@@ -590,9 +590,6 @@ static zx_status_t nvme_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cm
         *out_actual = sizeof(block_info_t);
         return ZX_OK;
     }
-    case IOCTL_DEVICE_SYNC: {
-        return ZX_OK;
-    }
     default:
         return ZX_ERR_NOT_SUPPORTED;
     }

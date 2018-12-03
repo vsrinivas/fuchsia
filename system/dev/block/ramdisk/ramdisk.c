@@ -304,10 +304,6 @@ static zx_status_t ramdisk_ioctl(void* ctx, uint32_t op, const void* cmd, size_t
         *out_actual = sizeof(ramdev->type_guid);
         return ZX_OK;
     }
-    case IOCTL_DEVICE_SYNC: {
-        // Wow, we sync so quickly!
-        return ZX_OK;
-    }
     default:
         return ZX_ERR_NOT_SUPPORTED;
     }

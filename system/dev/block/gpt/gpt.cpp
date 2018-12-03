@@ -148,10 +148,6 @@ zx_status_t gpt_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmdlen,
         *out_actual = strnlen(name, GPT_NAME_LEN / 2);
         return ZX_OK;
     }
-    case IOCTL_DEVICE_SYNC: {
-        // Propagate sync to parent device
-        return device_ioctl(device->parent, IOCTL_DEVICE_SYNC, NULL, 0, NULL, 0, NULL);
-    }
     default:
         return ZX_ERR_NOT_SUPPORTED;
     }

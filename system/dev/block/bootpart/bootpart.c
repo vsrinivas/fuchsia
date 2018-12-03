@@ -86,10 +86,6 @@ static zx_status_t bootpart_ioctl(void* ctx, uint32_t op, const void* cmd, size_
         *out_actual = strlen(name) + 1;
         return ZX_OK;
     }
-    case IOCTL_DEVICE_SYNC: {
-        // Propagate sync to parent device
-        return device_ioctl(device->parent, IOCTL_DEVICE_SYNC, NULL, 0, NULL, 0, NULL);
-    }
     default:
         return ZX_ERR_NOT_SUPPORTED;
     }

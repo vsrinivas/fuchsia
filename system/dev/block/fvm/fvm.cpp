@@ -483,15 +483,6 @@ zx_status_t VPartitionManager::FreeSlicesLocked(VPartition* vp, size_t vslice_st
         if (vp->IsKilledLocked())
             return ZX_ERR_BAD_STATE;
 
-        // TODO: use block protocol
-        // Sync first, before removing slices, so iotxns in-flight cannot
-        // operate on 'unowned' slices.
-        zx_status_t status;
-        status = device_ioctl(parent(), IOCTL_DEVICE_SYNC, nullptr, 0, nullptr, 0, nullptr);
-        if (status != ZX_OK) {
-            return status;
-        }
-
         if (vslice_start == 0) {
             // Special case: Freeing entire VPartition
             for (auto extent = vp->ExtentBegin(); extent.IsValid(); extent = vp->ExtentBegin()) {

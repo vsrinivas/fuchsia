@@ -94,8 +94,6 @@ zx_status_t BlockDevice::virtio_block_ioctl(void* ctx, uint32_t op, const void* 
         *out_actual = sizeof(*info);
         return ZX_OK;
     }
-    case IOCTL_DEVICE_SYNC:
-        return ZX_OK;
     default:
         return ZX_ERR_NOT_SUPPORTED;
     }

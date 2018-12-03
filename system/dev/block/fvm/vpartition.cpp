@@ -256,10 +256,6 @@ zx_status_t VPartition::DdkIoctl(uint32_t op, const void* cmd, size_t cmdlen, vo
         *out_actual = strlen(name);
         return ZX_OK;
     }
-    case IOCTL_DEVICE_SYNC: {
-        // Propagate sync to parent device
-        return device_ioctl(GetParent(), IOCTL_DEVICE_SYNC, nullptr, 0, nullptr, 0, nullptr);
-    }
     case IOCTL_BLOCK_FVM_EXTEND: {
         if (cmdlen < sizeof(extend_request_t))
             return ZX_ERR_BUFFER_TOO_SMALL;
