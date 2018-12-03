@@ -186,7 +186,7 @@ class Pipe : public VirtioWl::Vfd {
 
 }  // namespace
 
-#define VIRTIO_WL_F_MAGMA (1u << 1)
+#define VIRTIO_WL_F_MAGMA (1u << 2)
 
 VirtioWl::VirtioWl(const PhysMem& phys_mem, zx::vmar vmar,
                    async_dispatcher_t* dispatcher,
