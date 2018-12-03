@@ -72,10 +72,11 @@ end of symbolized stack
 Akin to printf debugging, one can request crashlogger print a
 backtrace at a particular point in your code.
 
-Include this header:
+Include this header from zircon's backtrace-request library, which you
+must depend on in your target's BUILD.gn rules:
 
 ```
-#include <zircon/crashlogger.h>
+#include <lib/backtrace-request/backtrace-request.h>
 ```
 
 and then add the following where you want the backtrace printed:
@@ -83,7 +84,7 @@ and then add the following where you want the backtrace printed:
 ```
 void my_function() {
   ...
-  crashlogger_request_backtrace();
+  backtrace_request();
   ...
 }
 ```
