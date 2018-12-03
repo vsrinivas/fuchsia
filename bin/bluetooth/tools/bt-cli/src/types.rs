@@ -117,17 +117,17 @@ impl fmt::Display for RemoteDevice {
         writeln!(fmt, "\tAddress:\t{}", self.0.address)?;
         writeln!(fmt, "\tTechnology:\t{:?}", self.0.technology)?;
         if let Some(name) = &self.0.name {
-            writeln!(fmt, "\tName:\t{}", name)?;
+            writeln!(fmt, "\tName:\t\t{}", name)?;
         }
         writeln!(fmt, "\tAppearance:\t{:?}", self.0.appearance)?;
         if let Some(rssi) = &self.0.rssi {
-            writeln!(fmt, "\tRSSI:\t{}", rssi.value)?;
+            writeln!(fmt, "\tRSSI:\t\t{}", rssi.value)?;
         }
         if let Some(tx_power) = &self.0.tx_power {
             writeln!(fmt, "\tTX Power:\t{}", tx_power.value)?;
         }
         writeln!(fmt, "\tConnected:\t{}", self.0.connected)?;
-        writeln!(fmt, "\tBonded:\t{}", self.0.bonded)?;
+        writeln!(fmt, "\tBonded:\t\t{}", self.0.bonded)?;
         writeln!(
             fmt,
             "\tServices:\t{:?}",
