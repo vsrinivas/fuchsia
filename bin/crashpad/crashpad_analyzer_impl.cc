@@ -10,22 +10,14 @@
 
 #include <fuchsia/crash/cpp/fidl.h>
 #include <inspector/inspector.h>
-#include <lib/fdio/io.h>
 #include <lib/fxl/files/directory.h>
 #include <lib/fxl/files/file.h>
-#include <lib/fxl/files/path.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/strings/concatenate.h>
 #include <lib/syslog/cpp/logger.h>
-#include <lib/zx/log.h>
-#include <lib/zx/time.h>
-#include <lib/zx/vmo.h>
 #include <stdio.h>
 #include <third_party/crashpad/client/crash_report_database.h>
 #include <third_party/crashpad/client/settings.h>
 #include <third_party/crashpad/handler/fuchsia/crash_report_exception_handler.h>
 #include <third_party/crashpad/handler/minidump_to_upload_parameters.h>
-#include <third_party/crashpad/minidump/minidump_file_writer.h>
 #include <third_party/crashpad/snapshot/minidump/process_snapshot_minidump.h>
 #include <third_party/crashpad/third_party/mini_chromium/mini_chromium/base/files/file_path.h>
 #include <third_party/crashpad/third_party/mini_chromium/mini_chromium/base/files/scoped_file.h>
@@ -41,10 +33,10 @@
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
-#include <zircon/syscalls/log.h>
 #include <zircon/syscalls/object.h>
 
 #include "report_annotations.h"
+#include "report_attachments.h"
 
 namespace fuchsia {
 namespace crash {
@@ -52,51 +44,6 @@ namespace {
 
 const char kLocalCrashDatabase[] = "/data/crashes";
 const char kURL[] = "https://clients2.google.com/cr/report";
-
-class ScopedUnlink {
- public:
-  ScopedUnlink(const std::string& filename) : filename_(filename) {}
-  ~ScopedUnlink() { unlink(filename_.c_str()); }
-
-  bool is_valid() const { return !filename_.empty(); }
-  const std::string& get() const { return filename_; }
-
- private:
-  std::string filename_;
-  DISALLOW_COPY_AND_ASSIGN(ScopedUnlink);
-};
-
-std::string WriteKernelLogToFile() {
-  std::string filename = files::SimplifyPath(
-      fxl::Concatenate({kLocalCrashDatabase, "/kernel_log.XXXXXX"}));
-  base::ScopedFD fd(mkstemp(filename.data()));
-  if (fd.get() < 0) {
-    FX_LOGS(ERROR) << "could not create temp file";
-    return std::string();
-  }
-
-  zx::log log;
-  zx_status_t status = zx::log::create(ZX_LOG_FLAG_READABLE, &log);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "zx::log::create failed " << status;
-    return std::string();
-  }
-
-  char buf[ZX_LOG_RECORD_MAX + 1];
-  zx_log_record_t* rec = (zx_log_record_t*)buf;
-  while (log.read(ZX_LOG_RECORD_MAX, rec, 0) > 0) {
-    if (rec->datalen && (rec->data[rec->datalen - 1] == '\n')) {
-      rec->datalen--;
-    }
-    rec->data[rec->datalen] = 0;
-
-    dprintf(fd.get(), "[%05d.%03d] %05" PRIu64 ".%05" PRIu64 "> %s\n",
-            (int)(rec->timestamp / 1000000000ULL),
-            (int)((rec->timestamp / 1000000ULL) % 1000ULL), rec->pid, rec->tid,
-            rec->data);
-  }
-  return filename;
-}
 
 std::string GetPackageName(const zx::process& process) {
   char name[ZX_MAX_NAME_LEN];
@@ -192,10 +139,14 @@ zx_status_t CrashpadAnalyzerImpl::HandleNativeException(
   // Prepare annotations and attachments.
   const std::map<std::string, std::string> annotations =
       MakeAnnotations(package_name);
-  std::map<std::string, base::FilePath> attachments;
-  ScopedUnlink temp_kernel_log_file(WriteKernelLogToFile());
-  if (temp_kernel_log_file.is_valid()) {
-    attachments["kernel_log"] = base::FilePath(temp_kernel_log_file.get());
+  // The Crashpad exception handler expects filepaths for the passed
+  // attachments, not file objects, but we need the underlying files
+  // to still be there.
+  const std::map<std::string, ScopedUnlink> attachments =
+      MakeNativeExceptionAttachments(kLocalCrashDatabase);
+  std::map<std::string, base::FilePath> attachment_paths;
+  for (const auto& key_file : attachments) {
+    attachment_paths[key_file.first] = base::FilePath(key_file.second.get());
   }
 
   // Set minidump and create local crash report.
@@ -205,7 +156,8 @@ zx_status_t CrashpadAnalyzerImpl::HandleNativeException(
   // We don't pass an upload_thread so we can do the upload ourselves
   // synchronously.
   crashpad::CrashReportExceptionHandler exception_handler(
-      database_.get(), /*upload_thread=*/nullptr, &annotations, &attachments,
+      database_.get(), /*upload_thread=*/nullptr, &annotations,
+      &attachment_paths,
       /*user_stream_data_sources=*/nullptr);
   crashpad::UUID local_report_id;
   if (!exception_handler.HandleExceptionHandles(
@@ -273,19 +225,9 @@ zx_status_t CrashpadAnalyzerImpl::ProcessKernelPanicCrashlog(
   // Prepare annotations and attachments.
   const std::map<std::string, std::string> annotations =
       MakeAnnotations(/*package_name=*/"kernel");
-  crashpad::FileWriter* writer = report->AddAttachment("log");
-  if (!writer) {
-    return ZX_ERR_INTERNAL;
+  if (WriteKernelPanicAttachments(report.get(), std::move(crashlog)) != ZX_OK) {
+    FX_LOGS(WARNING) << "error adding attachments to local crash report";
   }
-  // TODO(frousseau): make crashpad::FileWriter VMO-aware.
-  std::unique_ptr<void, decltype(&free)> buffer(malloc(crashlog.size), &free);
-  zx_status_t status = crashlog.vmo.read(buffer.get(), 0u, crashlog.size);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "error writing kernel panic crashlog to buffer: "
-                   << zx_status_get_string(status);
-    return ZX_ERR_INTERNAL;
-  }
-  writer->Write(buffer.get(), crashlog.size);
 
   // Finish new local crash report.
   crashpad::UUID local_report_id;
