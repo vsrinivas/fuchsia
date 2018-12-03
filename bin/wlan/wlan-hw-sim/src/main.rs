@@ -357,8 +357,6 @@ mod simulation_tests {
     const BSS_BAZ: [u8; 6] = [0x62, 0x73, 0x73, 0x62, 0x61, 0x7a];
     const SSID_BAZ: &[u8] = b"baz";
 
-    // TODO(NET-1885) - removed #[allow(dead_code)] once `connecting_to_ap` test is fixed
-    #[allow(dead_code)]
     const CHANNEL: wlan_mlme::WlanChan = wlan_mlme::WlanChan {
         primary: 6,
         secondary80: 0,
@@ -368,12 +366,11 @@ mod simulation_tests {
     // Temporary workaround to run tests synchronously. This is because wlan service only works with
     // one PHY, so having tests with multiple PHYs running in parallel make them flaky.
     #[test]
-    fn ethernet_then_scan_then_txrx_then_minstrel() {
+    fn ethernet_then_scan_then_connect_then_txrx_then_minstrel() {
         let mut ok = true;
         ok = run_test("verify_ethernet", verify_ethernet) && ok;
         ok = run_test("simulate_scan", simulate_scan) && ok;
-        // TODO(NET-1885) - commenting out due to flake
-        // ok = run_test("connecting_to_ap", connecting_to_ap) && ok;
+        ok = run_test("connecting_to_ap", connecting_to_ap) && ok;
         ok = run_test("ethernet_tx_rx", ethernet_tx_rx) && ok;
         ok = run_test("verify_rate_selection", verify_rate_selection) && ok;
         assert!(ok);
@@ -443,8 +440,6 @@ mod simulation_tests {
         assert_eq!(&expected_aps, &aps[..]);
     }
 
-    // TODO(NET-1885) - removed #[allow(dead_code)] once test is fixed
-    #[allow(dead_code)]
     // test
     fn connecting_to_ap() {
         let mut exec = fasync::Executor::new().expect("Failed to create an executor");
