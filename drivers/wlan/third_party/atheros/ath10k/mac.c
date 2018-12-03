@@ -4352,14 +4352,13 @@ zx_status_t ath10k_start(struct ath10k* ar, wlanmac_ifc_t* ifc, void* cookie) {
         goto err;
     }
 
-#if 0   // NEEDS PORTING
-    param = ar->wmi.pdev_param->pmf_qos;
-    ret = ath10k_wmi_pdev_set_param(ar, param, 1);
-    if (ret) {
-        ath10k_warn("failed to enable PMF QOS: %d\n", ret);
+    ret = ath10k_wmi_pdev_set_param(ar, ar->wmi.pdev_param->pmf_qos, 1);
+    if (ret != ZX_OK) {
+        ath10k_warn("failed to enable PMF QOS: %s\n", zx_status_get_string(ret));
         goto err_core_stop;
     }
 
+#if 0   // NEEDS PORTING
     param = ar->wmi.pdev_param->dynamic_bw;
     ret = ath10k_wmi_pdev_set_param(ar, param, 1);
     if (ret) {
