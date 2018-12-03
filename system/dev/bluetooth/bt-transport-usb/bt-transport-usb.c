@@ -91,7 +91,6 @@ static void queue_acl_read_requests_locked(hci_t* hci) {
 static void queue_interrupt_requests_locked(hci_t* hci) {
     usb_request_t* req = NULL;
     while ((req = usb_req_list_remove_head(&hci->free_event_reqs, hci->parent_req_size)) != NULL) {
-        zxlogf(ERROR, "MINE : queue_interrupt_requests_locked: Queueing req from free_event_reqs: %p\n", req);
         usb_request_queue(&hci->usb, req);
     }
 }
@@ -639,14 +638,12 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* device) {
 
     hci->parent_req_size = usb_get_request_size(&hci->usb);
     size_t req_size = hci->parent_req_size + sizeof(usb_req_internal_t);
-    zxlogf(ERROR, "MINE req_size:%lu\n", req_size);
     for (int i = 0; i < EVENT_REQ_COUNT; i++) {
         usb_request_t* req;
         status = usb_request_alloc(&req, intr_max_packet, intr_addr, req_size);
         if (status != ZX_OK) {
             goto fail;
         }
-        zxlogf(ERROR, "MINE Allocated req of size:%lu\n", req->alloc_size);
         req->complete_cb = hci_event_complete;
         req->cookie = hci;
         status = usb_req_list_add_head(&hci->free_event_reqs, req, hci->parent_req_size);
@@ -658,7 +655,6 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* device) {
         if (status != ZX_OK) {
             goto fail;
         }
-        zxlogf(ERROR, "MINE Allocated req of size:%lu\n", req->alloc_size);
         req->complete_cb = hci_acl_read_complete;
         req->cookie = hci;
         status = usb_req_list_add_head(&hci->free_acl_read_reqs, req, hci->parent_req_size);
