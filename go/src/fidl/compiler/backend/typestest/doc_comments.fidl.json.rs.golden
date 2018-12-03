@@ -54,6 +54,26 @@ fidl_struct! {
   align: 4,
 }
 
+/// table comment #1
+///
+/// table comment #3
+pub struct Table {
+  /// table field comment #1
+  ///
+  /// table field comment #3
+  pub field: Option<i32>,
+}
+
+fidl_table! {
+  name: Table,
+  members: {
+    field: {
+      ty: i32,
+      ordinal: 1,
+    },
+  },
+}
+
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct InterfaceMarker;

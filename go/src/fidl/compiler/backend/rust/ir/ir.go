@@ -74,6 +74,19 @@ type StructMember struct {
 	LargeArray   bool
 }
 
+type Table struct {
+	types.Attributes
+	Name    string
+	Members []TableMember
+}
+
+type TableMember struct {
+	types.Attributes
+	Type    string
+	Name    string
+	Ordinal int
+}
+
 type Interface struct {
 	types.Attributes
 	Name        string
@@ -106,6 +119,7 @@ type Root struct {
 	Enums        []Enum
 	Structs      []Struct
 	Unions       []Union
+	Tables       []Table
 	Interfaces   []Interface
 }
 
@@ -618,6 +632,26 @@ func (c *compiler) compileUnion(val types.Union) Union {
 	return r
 }
 
+func (c *compiler) compileTable(table types.Table) Table {
+	var members []TableMember
+	for _, member := range table.Members {
+		if member.Reserved {
+			continue
+		}
+		members = append(members, TableMember{
+			Attributes: member.Attributes,
+			Type:       c.compileType(member.Type, false).Decl,
+			Name:       compileSnakeIdentifier(member.Name),
+			Ordinal:    member.Ordinal,
+		})
+	}
+	return Table{
+		Attributes: table.Attributes,
+		Name:       c.compileCamelCompoundIdentifier(table.Name),
+		Members:    members,
+	}
+}
+
 func Compile(r types.Root) Root {
 	root := Root{}
 	thisLibParsed := types.ParseLibraryName(r.Name)
@@ -641,6 +675,10 @@ func Compile(r types.Root) Root {
 
 	for _, v := range r.Unions {
 		root.Unions = append(root.Unions, c.compileUnion(v))
+	}
+
+	for _, v := range r.Tables {
+		root.Tables = append(root.Tables, c.compileTable(v))
 	}
 
 	thisLibCompiled := compileLibraryName(thisLibParsed)

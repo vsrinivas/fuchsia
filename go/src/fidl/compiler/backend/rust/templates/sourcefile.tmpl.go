@@ -37,6 +37,9 @@ use std::ops::Deref;
 {{ range $struct := .Structs -}}
 {{ template "StructDeclaration" $struct }}
 {{ end -}}
+{{ range $table := .Tables -}}
+{{ template "TableDeclaration" $table }}
+{{ end -}}
 {{ range $interface := .Interfaces -}}
 {{ template "InterfaceDeclaration" $interface }}
 {{ end -}}
