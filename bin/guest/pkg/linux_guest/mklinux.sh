@@ -34,6 +34,9 @@ shift $((OPTIND - 1))
 declare -r LINUX_DIR=${LINUX_DIR:-/tmp/linux}
 declare -r LINUX_DEFCONFIG=${LINUX_DEFCONFIG:-machina_defconfig}
 
+declare -rx KBUILD_BUILD_USER="machina"
+declare -rx KBUILD_BUILD_HOST="fuchsia.com"
+
 case "${1}" in
 arm64)
   type aarch64-linux-gnu-gcc ||
