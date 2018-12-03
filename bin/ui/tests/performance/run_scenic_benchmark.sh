@@ -6,6 +6,7 @@
 #          --benchmark_label <benchmark label>
 #          --cmd <cmd to benchmark>
 #          (optional) --flutter_app_name <flutter application name>
+#          (optional) --sleep_before_trace <duration>
 #          [renderer_params...]
 #
 # See renderer_params.cc for more arguments.
@@ -14,6 +15,10 @@
 # By default, there is no flutter app name (process_scenic_trace.go interprets
 # the empty string as no flutter app).
 FLUTTER_APP_NAME=''
+
+# How long to sleep before starting the trace.  See usage below for further
+# details on why this is sometimes required.
+SLEEP_BEFORE_TRACE=''
 
 while [ "$1" != "" ]; do
   case "$1" in
@@ -35,6 +40,10 @@ while [ "$1" != "" ]; do
       ;;
     --flutter_app_name)
       FLUTTER_APP_NAME="$2"
+      shift
+      ;;
+    --sleep_before_trace)
+      SLEEP_BEFORE_TRACE="$2"
       shift
       ;;
     *)
@@ -60,9 +69,18 @@ echo $TRACE_FILE
 # Use `run` to ensure the command has the proper environment.
 /pkgfs/packages/run/0/bin/run $CMD &
 
-# Only trace 'gfx' events which reduces trace size and prevents trace buffer overflow.
-# TODO(ZX-1107): Overflow might be fixed with continuous tracing.
-trace record --categories=gfx --duration=10 --buffer-size=12 --output-file=$TRACE_FILE
+# For certain benchmarks (such as ones that depend on Flutter events), we need
+# to sleep a bit here to let the Flutter processes start before we begin
+# tracing, so that thread/process names will be present.  TODO(ZX-2706): This
+# sleep can be removed once ZX-2706 is resolved.
+if [ "${SLEEP_BEFORE_TRACE}" != '' ]; then
+  sleep "${SLEEP_BEFORE_TRACE}"
+fi
+
+# Only trace required events, which reduces trace size and prevents trace
+# buffer overflow. TODO(ZX-1107): Overflow might be fixed with continuous
+# tracing.
+trace record --categories='gfx,flutter,kernel:meta' --duration=10 --buffer-size=12 --output-file=$TRACE_FILE
 
 echo "== $BENCHMARK_LABEL: Processing trace..."
 /pkgfs/packages/scenic_benchmarks/0/bin/process_scenic_trace \
