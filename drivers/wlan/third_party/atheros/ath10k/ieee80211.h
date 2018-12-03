@@ -79,9 +79,11 @@ enum nl80211_band {
     NL80211_BAND_60GHZ,
 };
 
-#define IEEE80211_FRAME_TYPE_MASK      0x000c
-#define IEEE80211_FRAME_SUBTYPE_MASK   0x00f0
-#define IEEE80211_FRAME_PROTECTED_MASK 0x4000
+#define IEEE80211_FRAME_TYPE_MASK           0x000c
+#define IEEE80211_FRAME_SUBTYPE_MASK        0x00f0
+#define IEEE80211_FRAME_CTRL_TO_DS_MASK     0x0100
+#define IEEE80211_FRAME_CTRL_FROM_DS_MASK   0x0200
+#define IEEE80211_FRAME_PROTECTED_MASK      0x4000
 
 static inline enum ieee80211_frame_type
 ieee80211_get_frame_type(const struct ieee80211_frame_header* fh) {
