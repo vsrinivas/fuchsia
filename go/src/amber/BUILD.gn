@@ -8,7 +8,7 @@ import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 import("//build/host.gni")
 import("//build/package.gni")
-import("//third_party/cobalt_config/cobalt_config.gni")
+import("//third_party/cobalt_config/metrics_registry.gni")
 
 go_library("amber_lib") {
   name = "amber"
@@ -55,7 +55,7 @@ foreach(tgt, amber_target_binaries) {
   }
 }
 
-cobalt_config("cobalt_sw_delivery_registry") {
+metrics_registry("cobalt_sw_delivery_registry") {
   project_id = 108
   use_target_name = true
 }
