@@ -26,7 +26,10 @@ struct ClientSettings {
     static const char* kFilters;
   };
 
-  struct Target {};
+  struct Target {
+    static const char* kPauseNewProcess;
+  };
+
   struct Thread {};
 };
 

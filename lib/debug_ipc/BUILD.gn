@@ -14,8 +14,13 @@ static_library("shared") {
     "protocol.h",
     "protocol_helpers.cc",
     "protocol_helpers.h",
+    "records.cc",
     "records.h",
     "message_writer.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fxl",
   ]
 }
 

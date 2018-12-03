@@ -480,4 +480,19 @@ void MessageLoopZircon::OnSocketSignal(int watch_id, const WatchInfo& info,
     info.socket_watcher->OnSocketWritable(info.socket_handle);
 }
 
+const char* MessageLoopZircon::WatchTypeToString(WatchType type) {
+  switch (type) {
+    case WatchType::kFdio:
+      return "FDIO";
+    case WatchType::kJobExceptions:
+      return "Job";
+    case WatchType::kProcessExceptions:
+      return "Process";
+    case WatchType::kSocket:
+      return "Socket";
+  }
+  FXL_NOTREACHED();
+  return "";
+}
+
 }  // namespace debug_ipc

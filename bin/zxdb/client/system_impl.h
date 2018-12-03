@@ -61,7 +61,6 @@ class SystemImpl final : public System, public SettingStoreObserver {
   BreakpointImpl* BreakpointImplForId(uint32_t id);
 
   // SettingStoreObserver implementation.
-
   void OnSettingChanged(const SettingStore&,
                         const std::string& setting_name) override;
 

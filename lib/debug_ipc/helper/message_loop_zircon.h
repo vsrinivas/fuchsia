@@ -60,6 +60,7 @@ class MessageLoopZircon : public MessageLoop {
 
  private:
   enum class WatchType { kFdio, kProcessExceptions, kJobExceptions, kSocket };
+  const char* WatchTypeToString(WatchType);
   struct WatchInfo;
 
   // MessageLoop protected implementation.

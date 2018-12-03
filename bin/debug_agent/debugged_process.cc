@@ -214,9 +214,8 @@ void DebuggedProcess::OnThreadStarting(zx_koid_t process_koid,
   ThreadCreationOption option = ThreadCreationOption::kSuspendedShouldRun;
   if (waiting_for_initial_thread_) {
     waiting_for_initial_thread_ = false;
-    if (!resume_initial_thread_) {
+    if (!resume_initial_thread_)
       option = ThreadCreationOption::kSuspendedKeepSuspended;
-    }
   }
   auto added = threads_.emplace(
       thread_koid, std::make_unique<DebuggedThread>(this, std::move(thread),

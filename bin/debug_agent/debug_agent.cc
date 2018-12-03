@@ -118,7 +118,7 @@ void DebugAgent::OnAttach(std::vector<char> serialized) {
   debug_ipc::AttachRequest request;
   uint32_t transaction_id = 0;
   if (!debug_ipc::ReadRequest(&reader, &request, &transaction_id)) {
-    fprintf(stderr, "Got bad debugger attach request, ignoring.\n");
+    FXL_LOG(WARNING) << "Got bad debugger attach request, ignoring.";
     return;
   }
 
@@ -176,13 +176,13 @@ void DebugAgent::OnAttach(std::vector<char> serialized) {
     std::string koid_str;
     bool file_read = files::ReadFileToString("/hub/job-id", &koid_str);
     if (!file_read) {
-      fprintf(stderr, "Not able to read job-id(%s).\n", strerror(errno));
+      FXL_LOG(ERROR) << "Not able to read job-id: " << strerror(errno);
       reply.status = ZX_ERR_INTERNAL;
     } else {
       char* end = NULL;
       uint64_t koid = strtoul(koid_str.c_str(), &end, 10);
       if (*end) {
-        fprintf(stderr, "Invalid job-id: %s.\n", koid_str.c_str());
+        FXL_LOG(ERROR) << "Invalid job-id: " << koid_str.c_str();
         reply.status = ZX_ERR_INTERNAL;
       } else {
         zx::job job = GetJobFromKoid(koid);
@@ -201,7 +201,7 @@ void DebugAgent::OnAttach(std::vector<char> serialized) {
     debug_ipc::WriteReply(reply, transaction_id, &writer);
     stream()->Write(writer.MessageComplete());
   } else {
-    fprintf(stderr, "Got bad debugger attach request type, ignoring.\n");
+    FXL_LOG(WARNING) << "Got bad debugger attach request type, ignoring.";
     return;
   }
 }
@@ -239,8 +239,7 @@ void DebugAgent::OnPause(const debug_ipc::PauseRequest& request,
   if (request.process_koid) {
     // Single process.
     DebuggedProcess* proc = GetDebuggedProcess(request.process_koid);
-    if (proc)
-      proc->OnPause(request);
+    if (proc) proc->OnPause(request);
   } else {
     // All debugged processes.
     for (const auto& pair : procs_)

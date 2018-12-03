@@ -55,6 +55,7 @@ struct ThreadRecord {
 
     kLast  // Not an actual thread state, for range checking.
   };
+  static const char* StateToString(State);
 
   enum class BlockedReason : uint32_t {
     kNotBlocked = 0,  // Used when State isn't kBlocked.
@@ -70,6 +71,7 @@ struct ThreadRecord {
 
     kLast  // Not an actual blocked reason, for range checking.
   };
+  static const char* BlockedReasonToString(BlockedReason);
 
   // Indicates how much of the stack was attempted to be retrieved in this
   // call. This doesn't indicate how many stack frames were actually retrieved.

@@ -358,4 +358,17 @@ void DebuggedThread::SetSingleStep(bool single_step) {
   thread_.write_state(ZX_THREAD_STATE_SINGLE_STEP, &value, sizeof(value));
 }
 
+const char* DebuggedThread::SuspendReasonToString(SuspendReason reason) {
+  switch (reason) {
+    case SuspendReason::kNone:
+      return "None";
+    case SuspendReason::kException:
+      return "Exception";
+    case SuspendReason::kOther:
+      return "Other";
+  }
+  FXL_NOTREACHED();
+  return "";
+}
+
 }  // namespace debug_agent

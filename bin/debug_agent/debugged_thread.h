@@ -46,6 +46,7 @@ class DebuggedThread {
     // Anything else.
     kOther
   };
+  const char* SuspendReasonToString(SuspendReason);
 
   // When a thread is first created and we get a notification about it, it
   // will be suspended, but when we attach to a process with existing threads

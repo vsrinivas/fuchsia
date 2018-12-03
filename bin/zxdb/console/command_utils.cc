@@ -246,57 +246,16 @@ std::string JobContextStateToString(JobContext::State state) {
 std::string ThreadStateToString(
     debug_ipc::ThreadRecord::State state,
     debug_ipc::ThreadRecord::BlockedReason blocked_reason) {
-  switch (state) {
-    case debug_ipc::ThreadRecord::State::kNew:
-      return "New";
-    case debug_ipc::ThreadRecord::State::kRunning:
-      return "Running";
-    case debug_ipc::ThreadRecord::State::kSuspended:
-      return "Suspended";
-    case debug_ipc::ThreadRecord::State::kBlocked: {
-      const char* reason;
-      switch (blocked_reason) {
-        case debug_ipc::ThreadRecord::BlockedReason::kException:
-          reason = "exception";
-          break;
-        case debug_ipc::ThreadRecord::BlockedReason::kSleeping:
-          reason = "sleeping";
-          break;
-        case debug_ipc::ThreadRecord::BlockedReason::kFutex:
-          reason = "futex";
-          break;
-        case debug_ipc::ThreadRecord::BlockedReason::kPort:
-          reason = "port";
-          break;
-        case debug_ipc::ThreadRecord::BlockedReason::kChannel:
-          reason = "channel";
-          break;
-        case debug_ipc::ThreadRecord::BlockedReason::kWaitOne:
-          reason = "wait_one";
-          break;
-        case debug_ipc::ThreadRecord::BlockedReason::kWaitMany:
-          reason = "wait_many";
-          break;
-        case debug_ipc::ThreadRecord::BlockedReason::kInterrupt:
-          reason = "interrupt";
-          break;
-        default:
-          reason = "unknown";
-          break;
-      }
-      return fxl::StringPrintf("Blocked (%s)", reason);
-    }
-    case debug_ipc::ThreadRecord::State::kDying:
-      return "Dying";
-    case debug_ipc::ThreadRecord::State::kDead:
-      return "Dead";
-    case debug_ipc::ThreadRecord::State::kCoreDump:
-      return "Core Dump";
-    case debug_ipc::ThreadRecord::State::kLast:
-      break;  // Fall through to assertion, this value shouldn't be used.
-  }
-  FXL_NOTREACHED();
-  return std::string();
+  // Blocked can have many cases, so we handle it separatedly.
+  if (state != debug_ipc::ThreadRecord::State::kBlocked)
+    return debug_ipc::ThreadRecord::StateToString(state);
+
+  FXL_DCHECK(blocked_reason !=
+             debug_ipc::ThreadRecord::BlockedReason::kNotBlocked)
+      << "A blocked thread has to have a valid reason.";
+  return fxl::StringPrintf(
+      "Blocked (%s)",
+      debug_ipc::ThreadRecord::BlockedReasonToString(blocked_reason));
 }
 
 std::string BreakpointScopeToString(const ConsoleContext* context,

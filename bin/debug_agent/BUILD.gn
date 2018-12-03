@@ -148,11 +148,17 @@ package("debug_agent_tests") {
     ":unittests",
     "//garnet/bin/debug_agent/test_data:debug_agent_so_test_exe",
     "//garnet/bin/debug_agent/test_data:debug_agent_test_so",
+    "//garnet/bin/debug_agent/test_data:process_loop",
+    "//garnet/bin/debug_agent/test_data:process_spawner",
   ]
 
   binaries = [{
     shell = true
     name = "debug_agent_so_test"
+  }, {
+    name = "process_spawner"
+  }, {
+    name = "process_loop"
   }]
 
   loadable_modules = [{

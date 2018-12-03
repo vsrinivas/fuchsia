@@ -78,7 +78,6 @@ StoredSetting SettingStore::GetSetting(const std::string& key,
   // Check if it already exists. If so, return it.
   auto it = settings_.find(key);
   if (it != settings_.end()) {
-
     // We found it. We check to see if is within the schema.
     auto schema_item = schema_->GetItem(key);
     if (schema_item.value().is_null())

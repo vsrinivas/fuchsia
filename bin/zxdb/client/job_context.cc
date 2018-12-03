@@ -11,7 +11,7 @@ namespace zxdb {
 // Schema Definition -----------------------------------------------------------
 
 const char* ClientSettings::Job::kFilters = "filters";
-const char* kFiltersDescription = 1 + R"(
+static const char* kFiltersDescription = 1 + R"(
   List of filters to be applied to a job. Filters are used against each new
   process being spawned under the attached job. If there is match, zxdb will
   automatically attach to the process.)";
@@ -23,7 +23,6 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
       fxl::MakeRefCounted<SettingSchema>(SettingSchema::Level::kJob);
 
   schema->AddList(ClientSettings::Job::kFilters, kFiltersDescription, {});
-
   return schema;
 }
 

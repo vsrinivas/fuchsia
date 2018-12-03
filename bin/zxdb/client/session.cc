@@ -19,6 +19,8 @@
 #include "garnet/bin/zxdb/client/minidump_remote_api.h"
 #include "garnet/bin/zxdb/client/process_impl.h"
 #include "garnet/bin/zxdb/client/remote_api_impl.h"
+#include "garnet/bin/zxdb/client/setting_schema_definition.h"
+#include "garnet/bin/zxdb/client/target_impl.h"
 #include "garnet/bin/zxdb/client/thread_impl.h"
 #include "garnet/lib/debug_ipc/client_protocol.h"
 #include "garnet/lib/debug_ipc/helper/buffered_fd.h"
@@ -503,10 +505,19 @@ void Session::DispatchNotifyThread(debug_ipc::MsgHeader::Type type,
                                    const debug_ipc::NotifyThread& notify) {
   ProcessImpl* process = system_.ProcessImplFromKoid(notify.process_koid);
   if (process) {
-    if (type == debug_ipc::MsgHeader::Type::kNotifyThreadStarting)
+    if (type == debug_ipc::MsgHeader::Type::kNotifyThreadStarting) {
       process->OnThreadStarting(notify.record);
-    else
+
+      // If this is the initial thread, we need to check if we need to resume it
+      // depending on the user defined setting for new processes.
+      auto threads = process->GetThreads();
+      bool pause_new_process = process->target()->settings().GetBool(
+          ClientSettings::Target::kPauseNewProcess);
+      if (threads.size() == 1u && !pause_new_process)
+        threads.front()->Continue();
+    } else {
       process->OnThreadExiting(notify.record);
+    }
   } else {
     fprintf(stderr,
             "Warning: received thread notification for an "
@@ -596,6 +607,21 @@ void Session::DispatchNotification(const debug_ipc::MsgHeader& header,
       debug_ipc::NotifyProcessStarting notify;
       if (!debug_ipc::ReadNotifyProcessStarting(&reader, &notify))
         return;
+
+      // We search the targets to see if there is a non-attached one. Normally
+      // this would be the initial empty one, so we attach to it.
+      bool found_target = false;
+      for (Target* target : system_.GetTargets()) {
+        if (target->GetState() == Target::State::kNone) {
+          target->AttachToProcess(notify.koid, notify.name);
+          found_target = true;
+          break;
+        }
+      }
+      if (found_target)
+        break;
+
+      // We didn't find an empty slot, create a new target for this new process.
       Target* new_target = system_.CreateNewTarget(nullptr);
       new_target->AttachToProcess(notify.koid, notify.name);
       break;

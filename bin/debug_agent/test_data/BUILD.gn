@@ -4,17 +4,34 @@
 
 import("//build/package.gni")
 
+# Targets meant for helping zxdb development. See README.md
+
+# .so Test ---------------------------------------------------------------------
+
 source_set("debug_agent_test_source_set") {
   testonly = true
+
   sources = [
     "debug_agent_test_so.cc",
     "debug_agent_test_so.h",
   ]
 }
 
+loadable_module("debug_agent_test_so") {
+  testonly = true
+
+  sources = [
+    "debug_agent_test_so.cc",
+    "debug_agent_test_so.h",
+  ]
+}
+
+# Executables ------------------------------------------------------------------
+
 executable("debug_agent_so_test_exe") {
   testonly = true
   output_name = "debug_agent_so_test"
+
   sources = [
     "debug_agent_so_test_exe.cc",
   ]
@@ -24,29 +41,26 @@ executable("debug_agent_so_test_exe") {
   ]
 }
 
-loadable_module("debug_agent_test_so") {
+executable("process_spawner") {
   testonly = true
+  output_name = "process_spawner"
+
   sources = [
-    "debug_agent_test_so.cc",
-    "debug_agent_test_so.h",
+    "process_spawner.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
   ]
 }
 
-
-
-package("debug_agent_so_test") {
+executable("process_loop") {
   testonly = true
+  output_name = "process_loop"
 
-  deps = [
-    ":debug_agent_so_test_exe",
-    ":debug_agent_test_so",
+  sources = [
+    "process_loop.cc"
   ]
-
-  binaries = [{
-    name = "debug_agent_so_test"
-  }]
-
-  loadable_modules = [{
-    name = "debug_agent_test_so.so"
-  }]
 }
