@@ -5,6 +5,11 @@
 use fidl_fuchsia_net as fidl;
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
+// TODO(tamird): this really wants to just be |std::net::IpAddr| but: it is not possible to impl
+// traits on a type we don't own. If it is ever possible to extend FIDL-generated types, we could
+// |impl Into<std::net::IpAddr> for fidl::IpAddress|, which would make this cleaner. Until then, we
+// leave the tuple field |pub| to allow construction via the std::net::IpAddr type rather than the
+// FIDL type.
 pub struct IpAddress(pub std::net::IpAddr);
 
 impl std::fmt::Display for IpAddress {
