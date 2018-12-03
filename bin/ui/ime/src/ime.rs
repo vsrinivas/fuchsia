@@ -19,11 +19,11 @@ use std::sync::{Arc, Weak};
 use unicode_segmentation::GraphemeCursor;
 
 // TODO(lard): move constants into common, centralized location?
-const HID_USAGE_KEY_BACKSPACE: u32 = 0x2a;
-const HID_USAGE_KEY_RIGHT: u32 = 0x4f;
-const HID_USAGE_KEY_LEFT: u32 = 0x50;
-const HID_USAGE_KEY_ENTER: u32 = 0x28;
-const HID_USAGE_KEY_DELETE: u32 = 0x2e;
+pub const HID_USAGE_KEY_BACKSPACE: u32 = 0x2a;
+pub const HID_USAGE_KEY_RIGHT: u32 = 0x4f;
+pub const HID_USAGE_KEY_LEFT: u32 = 0x50;
+pub const HID_USAGE_KEY_ENTER: u32 = 0x28;
+pub const HID_USAGE_KEY_DELETE: u32 = 0x2e;
 
 /// The internal state of the IME, usually held within the IME behind an Arc<Mutex>
 /// so it can be accessed from multiple places.
@@ -350,38 +350,10 @@ impl ImeState {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::test_helpers::{clone_state, default_state};
     use fidl;
     use fuchsia_zircon as zx;
     use std::sync::mpsc::{channel, Receiver, Sender};
-
-    pub fn default_state() -> uii::TextInputState {
-        uii::TextInputState {
-            revision: 1,
-            text: "".to_string(),
-            selection: uii::TextSelection {
-                base: -1,
-                extent: -1,
-                affinity: uii::TextAffinity::Upstream,
-            },
-            composing: uii::TextRange { start: -1, end: -1 },
-        }
-    }
-
-    pub fn clone_state(state: &uii::TextInputState) -> uii::TextInputState {
-        uii::TextInputState {
-            revision: state.revision,
-            text: state.text.clone(),
-            selection: uii::TextSelection {
-                base: state.selection.base,
-                extent: state.selection.extent,
-                affinity: state.selection.affinity,
-            },
-            composing: uii::TextRange {
-                start: state.composing.start,
-                end: state.composing.end,
-            },
-        }
-    }
 
     fn set_up(
         text: &str, base: i64, extent: i64,

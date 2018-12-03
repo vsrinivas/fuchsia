@@ -2,10 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await, await_macro, futures_api, pin)]
+#![deny(warnings)]
 
 mod ime;
 mod ime_service;
+#[cfg(test)]
+mod test_helpers;
 
 use failure::{Error, ResultExt};
 use fidl::endpoints::ServiceMarker;
@@ -23,9 +26,11 @@ fn main() -> Result<(), Error> {
     let done = ServicesServer::new()
         .add_service((ImeServiceMarker::NAME, move |chan| {
             ime_service1.bind_ime_service(chan);
-        })).add_service((ImeVisibilityServiceMarker::NAME, move |chan| {
+        }))
+        .add_service((ImeVisibilityServiceMarker::NAME, move |chan| {
             ime_service2.bind_ime_visibility_service(chan);
-        })).start()
+        }))
+        .start()
         .context("Creating ServicesServer for IME service failed")?;
     executor
         .run_singlethreaded(done)
