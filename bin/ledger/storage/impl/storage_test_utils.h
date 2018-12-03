@@ -20,7 +20,7 @@ namespace storage {
 
 // A sufficiently large delay, such that if a storagemethod posts a delayed
 // task, the task will be due after associated amount of time.
-constexpr zx::duration kSufficientDelay = zx::hour(1);
+inline constexpr zx::duration kSufficientDelay = zx::hour(1);
 
 // Enum describing the expected behavior for identifier, allowing or preventing
 // to be inlined values.

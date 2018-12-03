@@ -48,7 +48,7 @@ enum Register {
   REG_SP = REG_RSP,
 };
 
-constexpr size_t kAdditionalStackAlignment = 8;
+inline constexpr size_t kAdditionalStackAlignment = 8;
 
 struct InternalContext {
   uint64_t registers[NUM_REGISTERS];

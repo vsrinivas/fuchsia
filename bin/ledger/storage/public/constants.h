@@ -12,13 +12,10 @@
 namespace storage {
 
 // The size of a commit id in number of bytes.
-constexpr uint64_t kCommitIdSize = 32;
+inline constexpr uint64_t kCommitIdSize = 32;
 
-// The id of the first commit of a page.
-constexpr char kFirstPageCommitIdArray[kCommitIdSize] = {0};
-constexpr fxl::StringView kFirstPageCommitId(kFirstPageCommitIdArray,
-                                             kCommitIdSize);
-
+// The ID of the first commit of a page.
+extern const fxl::StringView kFirstPageCommitId;
 }  // namespace storage
 
 #endif  // PERIDOT_BIN_LEDGER_STORAGE_PUBLIC_CONSTANTS_H_

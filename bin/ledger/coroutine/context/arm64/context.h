@@ -73,7 +73,7 @@ enum Register {
   REG_LR = REG_X30,
 };
 
-constexpr size_t kAdditionalStackAlignment = 0;
+inline constexpr size_t kAdditionalStackAlignment = 0;
 
 struct InternalContext {
   uint64_t registers[NUM_REGISTERS];

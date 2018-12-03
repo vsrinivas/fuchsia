@@ -12,17 +12,17 @@
 namespace ledger {
 
 // The maximum key size.
-constexpr size_t kMaxKeySize = 256;
+inline constexpr size_t kMaxKeySize = 256;
 
 // The root Page ID.
 extern const fxl::StringView kRootPageId;
 
 // Filename under which the server id used to sync a given user is stored within
 // the repository dir of that user.
-constexpr fxl::StringView kServerIdFilename = "server_id";
+inline constexpr fxl::StringView kServerIdFilename = "server_id";
 
 // The serialization version of PageUsage DB.
-constexpr fxl::StringView kPageUsageDbSerializationVersion = "1";
+inline constexpr fxl::StringView kPageUsageDbSerializationVersion = "1";
 
 }  // namespace ledger
 

@@ -5,11 +5,13 @@
 #ifndef PERIDOT_BIN_LEDGER_APP_SERIALIZATION_VERSION_H_
 #define PERIDOT_BIN_LEDGER_APP_SERIALIZATION_VERSION_H_
 
+#include <lib/fxl/strings/string_view.h>
+
 namespace ledger {
 
 // The serialization version of anything Ledger stores on local storage
 // (directory structure, object/LevelDb serialization).
-constexpr fxl::StringView kSerializationVersion = "29";
+inline constexpr fxl::StringView kSerializationVersion = "29";
 
 }  // namespace ledger
 

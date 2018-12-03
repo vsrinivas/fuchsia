@@ -10,7 +10,7 @@
 namespace cloud_sync {
 
 // Key for the timestamp metadata in the SyncMetadata KV store.
-constexpr fxl::StringView kTimestampKey = "timestamp";
+inline constexpr fxl::StringView kTimestampKey = "timestamp";
 
 }  // namespace cloud_sync
 

@@ -13,7 +13,7 @@
 
 namespace encryption {
 
-constexpr static size_t kHashSize = 32;
+inline constexpr size_t kHashSize = 32;
 
 std::string SHA256WithLengthHash(fxl::StringView data);
 
