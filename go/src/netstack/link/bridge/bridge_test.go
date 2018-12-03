@@ -114,52 +114,56 @@ func TestBridge(t *testing.T) {
 		go link(s2ep, ep2, nil)
 	}
 
-	wq := new(waiter.Queue)
-	s1txep, err := s1.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, wq)
+	senderWaitQueue := new(waiter.Queue)
+	sender, err := s1.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, senderWaitQueue)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer s1txep.Close()
-	s2txep, err := s2.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, wq)
+	defer sender.Close()
+	receiverWaitQueue := new(waiter.Queue)
+	receiver, err := s2.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, receiverWaitQueue)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer s2txep.Close()
+	defer receiver.Close()
 
 	s2fulladdr := tcpip.FullAddress{Addr: s2addr, Port: 8080}
-	if err := s2txep.Bind(s2fulladdr, nil); err != nil {
+	if err := receiver.Bind(s2fulladdr, nil); err != nil {
 		t.Fatal(err)
 	}
-	if err := s2txep.Listen(1); err != nil {
+	if err := receiver.Listen(1); err != nil {
 		t.Fatal(err)
 	}
 
 	// Wait for the inbound TCP connection.
 	{
-		waitEntry, notifyCh := waiter.NewChannelEntry(nil)
-		wq.EventRegister(&waitEntry, waiter.EventIn)
-		if err := s1txep.Connect(s2fulladdr); err != tcpip.ErrConnectStarted {
+		sendReadyWaitEntry, sendReadyNotifyCh := waiter.NewChannelEntry(nil)
+		senderWaitQueue.EventRegister(&sendReadyWaitEntry, waiter.EventOut)
+		receiveReadyWaitEntry, receiveReadyNotifyCh := waiter.NewChannelEntry(nil)
+		receiverWaitQueue.EventRegister(&receiveReadyWaitEntry, waiter.EventIn)
+		if err := sender.Connect(s2fulladdr); err != tcpip.ErrConnectStarted {
 			t.Logf("s1.Stats() = %+v", s1.Stats())
 			t.Fatal(err)
 		}
-		<-notifyCh
-		wq.EventUnregister(&waitEntry)
+		<-sendReadyNotifyCh
+		<-receiveReadyNotifyCh
+		senderWaitQueue.EventUnregister(&sendReadyWaitEntry)
+		receiverWaitQueue.EventUnregister(&receiveReadyWaitEntry)
 	}
-	ep, wq, err := s2txep.Accept()
+	ep, wq, err := receiver.Accept()
 	if err != nil {
 		t.Logf("s2.Stats() = %+v", s1.Stats())
 		t.Fatal(err)
 	}
-	// Wait for the inbound packet.
 	{
-		waitEntry, notifyCh := waiter.NewChannelEntry(nil)
-		wq.EventRegister(&waitEntry, waiter.EventIn)
-		if _, _, err := s1txep.Write(tcpip.SlicePayload(payload), tcpip.WriteOptions{To: &s2fulladdr}); err != nil {
+		payloadReceivedWaitEntry, payloadReceivedNotifyCh := waiter.NewChannelEntry(nil)
+		wq.EventRegister(&payloadReceivedWaitEntry, waiter.EventIn)
+		if _, _, err := sender.Write(tcpip.SlicePayload(payload), tcpip.WriteOptions{To: &s2fulladdr}); err != nil {
 			t.Logf("s1.Stats() = %+v", s1.Stats())
 			t.Fatal(err)
 		}
-		<-notifyCh
-		wq.EventUnregister(&waitEntry)
+		<-payloadReceivedNotifyCh
+		wq.EventUnregister(&payloadReceivedWaitEntry)
 	}
 	recvd, _, err := ep.Read(nil)
 	if err != nil {
