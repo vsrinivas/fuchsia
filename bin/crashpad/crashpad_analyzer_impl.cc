@@ -111,6 +111,18 @@ std::string GetPackageName(const zx::process& process) {
 zx_status_t CrashpadAnalyzerImpl::UploadReport(
     std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport> report,
     const std::map<std::string, std::string>& annotations) {
+  bool uploads_enabled;
+  if ((!database_->GetSettings()->GetUploadsEnabled(&uploads_enabled) ||
+       !uploads_enabled)) {
+    FX_LOGS(INFO)
+        << "upload to remote crash server disabled. Local crash report, ID "
+        << report->uuid.ToString() << ", available under "
+        << kLocalCrashDatabase;
+    database_->SkipReportUpload(
+        report->uuid, crashpad::Metrics::CrashSkippedReason::kUploadsDisabled);
+    return ZX_OK;
+  }
+
   // We have to build the MIME multipart message ourselves as all the public
   // Crashpad helpers are asynchronous and we won't be able to know the upload
   // status nor the server report ID.
@@ -345,7 +357,8 @@ std::unique_ptr<CrashpadAnalyzerImpl> CrashpadAnalyzerImpl::TryCreate() {
 
   // Today we enable uploads here. In the future, this will most likely be set
   // in some external settings.
-  database->GetSettings()->SetUploadsEnabled(true);
+  // TODO(DX-714): re-enable upload once configurable.
+  database->GetSettings()->SetUploadsEnabled(false);
 
   return std::unique_ptr<CrashpadAnalyzerImpl>(
       new CrashpadAnalyzerImpl(std::move(database)));
