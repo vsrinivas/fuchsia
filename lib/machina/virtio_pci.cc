@@ -66,6 +66,8 @@ static constexpr uint32_t virtio_pci_class_code(uint16_t virtio_id) {
       return 0x01800000;
     case VIRTIO_ID_CONSOLE:
       return 0x07020000;
+    case VIRTIO_ID_RNG:
+      return 0xff000000;
     case VIRTIO_ID_GPU:
       return 0x03808000;
     case VIRTIO_ID_INPUT:
