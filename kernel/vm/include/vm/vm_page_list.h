@@ -101,6 +101,40 @@ private:
     vm_page* pages_[kPageFanOut] = {};
 };
 
+class VmPageList;
+
+// Class which holds the list of vm_page structs removed from a VmPageList
+// by TakePages. The list include information about uncommitted pages.
+class VmPageSpliceList final {
+public:
+    VmPageSpliceList();
+    VmPageSpliceList(VmPageSpliceList&& other);
+    VmPageSpliceList& operator=(VmPageSpliceList&& other_tree);
+    ~VmPageSpliceList();
+
+    // Pops the next page off of the splice. If the next page was
+    // not commited, returns null.
+    vm_page* Pop();
+
+    // Returns true after the whole collection has been processed by Pop.
+    bool IsDone() const { return pos_ >= length_; }
+
+    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(VmPageSpliceList);
+private:
+    VmPageSpliceList(uint64_t offset, uint64_t length);
+    void FreeAllPages();
+
+    uint64_t offset_;
+    uint64_t length_;
+    uint64_t pos_ = 0;
+
+    VmPageListNode head_ = VmPageListNode(0);
+    fbl::WAVLTree<uint64_t, ktl::unique_ptr<VmPageListNode>> middle_;
+    VmPageListNode tail_ = VmPageListNode(0);
+
+    friend VmPageList;
+};
+
 class VmPageList final {
 public:
     VmPageList();
@@ -190,9 +224,15 @@ public:
 
     zx_status_t AddPage(vm_page*, uint64_t offset);
     vm_page* GetPage(uint64_t offset);
-    zx_status_t FreePage(uint64_t offset);
+    // Removes the page at |offset| from the list. Returns true if a page
+    // was present, false otherwise.  If |page| is non-null, returns the
+    // physical page in it, otherwise frees the page.
+    bool RemovePage(uint64_t offset, vm_page** page);
     size_t FreeAllPages();
     bool IsEmpty();
+
+    // Takes the pages in the range [offset, length) out of this page list.
+    VmPageSpliceList TakePages(uint64_t offset, uint64_t length);
 
 private:
     fbl::WAVLTree<uint64_t, ktl::unique_ptr<VmPageListNode>> list_;

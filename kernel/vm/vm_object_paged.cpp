@@ -681,7 +681,7 @@ zx_status_t VmObjectPaged::DecommitRange(uint64_t offset, uint64_t len) {
     // iterate through the pages, freeing them
     // TODO: use page_list iterator, move pages to list, free at once
     while (start < end) {
-        page_list_.FreePage(start);
+        page_list_.RemovePage(start, nullptr);
         start += PAGE_SIZE;
     }
 
@@ -839,7 +839,7 @@ zx_status_t VmObjectPaged::ResizeLocked(uint64_t s) {
         // iterate through the pages, freeing them
         // TODO: use page_list iterator, move pages to list, free at once
         while (start < end) {
-            page_list_.FreePage(start);
+            page_list_.RemovePage(start, nullptr);
             start += PAGE_SIZE;
         }
     } else if (s > size_) {

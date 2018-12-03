@@ -1038,6 +1038,180 @@ static bool arch_noncontiguous_map() {
     END_TEST;
 }
 
+// Basic test that checks adding/removing a page
+static bool vmpl_add_remove_page_test() {
+    BEGIN_TEST;
+
+    VmPageList pl;
+    vm_page_t test_page{};
+    pl.AddPage(&test_page, 0);
+
+    EXPECT_EQ(&test_page, pl.GetPage(0), "unexpected page\n");
+
+    vm_page* remove_page;
+    EXPECT_TRUE(pl.RemovePage(0, &remove_page), "remove failure\n");
+    EXPECT_EQ(&test_page, remove_page, "unexpected page\n");
+
+    END_TEST;
+}
+
+// Tests taking a page from the start of a VmPageListNode
+static bool vmpl_take_single_page_even_test() {
+    BEGIN_TEST;
+
+    VmPageList pl;
+    vm_page_t test_page{};
+    vm_page_t test_page2{};
+    pl.AddPage(&test_page, 0);
+    pl.AddPage(&test_page2, PAGE_SIZE);
+
+    VmPageSpliceList splice = pl.TakePages(0, PAGE_SIZE);
+
+    EXPECT_EQ(&test_page, splice.Pop(), "wrong page\n");
+    EXPECT_TRUE(splice.IsDone(), "extra page\n");
+    EXPECT_NULL(pl.GetPage(0), "duplicate page\n");
+
+    vm_page* remove_page;
+    EXPECT_TRUE(pl.RemovePage(PAGE_SIZE, &remove_page), "remove failure\n");
+    EXPECT_EQ(&test_page2, remove_page, "unexpected page\n");
+
+    END_TEST;
+}
+
+// Tests taking a page from the middle of a VmPageListNode
+static bool vmpl_take_single_page_odd_test() {
+    BEGIN_TEST;
+
+    VmPageList pl;
+    vm_page_t test_page{};
+    vm_page_t test_page2{};
+    pl.AddPage(&test_page, 0);
+    pl.AddPage(&test_page2, PAGE_SIZE);
+
+    VmPageSpliceList splice = pl.TakePages(PAGE_SIZE, PAGE_SIZE);
+
+    EXPECT_EQ(&test_page2, splice.Pop(), "wrong page\n");
+    EXPECT_TRUE(splice.IsDone(), "extra page\n");
+    EXPECT_NULL(pl.GetPage(PAGE_SIZE), "duplicate page\n");
+
+    vm_page* remove_page;
+    EXPECT_TRUE(pl.RemovePage(0, &remove_page), "remove failure\n");
+    EXPECT_EQ(&test_page, remove_page, "unexpected page\n");
+
+    END_TEST;
+}
+
+// Tests taking all the pages from a range of VmPageListNodes
+static bool vmpl_take_all_pages_test() {
+    BEGIN_TEST;
+
+    VmPageList pl;
+    constexpr uint32_t kCount = 3 * VmPageListNode::kPageFanOut;
+    vm_page_t test_pages[VmPageListNode::kPageFanOut] = {};
+    for (uint32_t i = 0; i < kCount; i++) {
+        pl.AddPage(test_pages + i, i * PAGE_SIZE);
+    }
+
+    VmPageSpliceList splice = pl.TakePages(0, kCount * PAGE_SIZE);
+    EXPECT_TRUE(pl.IsEmpty(), "non-empty list\n");
+
+    for (uint32_t i = 0; i < kCount; i++) {
+        EXPECT_EQ(test_pages + i, splice.Pop(), "wrong page\n");
+    }
+    EXPECT_TRUE(splice.IsDone(), "extra pages\n");
+
+    END_TEST;
+}
+
+// Tests taking the middle pages from a range of VmPageListNodes
+static bool vmpl_take_middle_pages_test() {
+    BEGIN_TEST;
+
+    VmPageList pl;
+    constexpr uint32_t kCount = 3 * VmPageListNode::kPageFanOut;
+    vm_page_t test_pages[VmPageListNode::kPageFanOut] = {};
+    for (uint32_t i = 0; i < kCount; i++) {
+        pl.AddPage(test_pages + i, i * PAGE_SIZE);
+    }
+
+    constexpr uint32_t kTakeOffset = VmPageListNode::kPageFanOut - 1;
+    constexpr uint32_t kTakeCount = VmPageListNode::kPageFanOut + 2;
+    VmPageSpliceList splice = pl.TakePages(kTakeOffset * PAGE_SIZE, kTakeCount * PAGE_SIZE);
+    EXPECT_FALSE(pl.IsEmpty(), "non-empty list\n");
+
+    for (uint32_t i = 0; i < kCount; i++) {
+        if (kTakeOffset <= i && i < kTakeOffset + kTakeCount) {
+            EXPECT_EQ(test_pages + i, splice.Pop(), "wrong page\n");
+        } else {
+            vm_page* remove_page;
+            EXPECT_TRUE(pl.RemovePage(i * PAGE_SIZE, &remove_page), "remove failure\n");
+            EXPECT_EQ(test_pages + i, remove_page, "wrong page\n");
+        }
+    }
+    EXPECT_TRUE(splice.IsDone(), "extra pages\n");
+
+    END_TEST;
+}
+
+// Tests that gaps are preserved in the list
+static bool vmpl_take_gap_test() {
+    BEGIN_TEST;
+
+    VmPageList pl;
+    constexpr uint32_t kCount = VmPageListNode::kPageFanOut;
+    constexpr uint32_t kGapSize = 2;
+    vm_page_t test_pages[VmPageListNode::kPageFanOut] = {};
+    for (uint32_t i = 0; i < kCount; i++) {
+        uint64_t offset = (i * (kGapSize + 1)) * PAGE_SIZE;
+        pl.AddPage(test_pages + i, offset);
+    }
+
+    constexpr uint32_t kListStart = PAGE_SIZE;
+    constexpr uint32_t kListLen = (kCount * (kGapSize + 1) - 2) * PAGE_SIZE;
+    VmPageSpliceList splice = pl.TakePages(kListStart, kListLen);
+
+    vm_page* page;
+    EXPECT_TRUE(pl.RemovePage(0, &page), "wrong page\n");
+    EXPECT_EQ(test_pages, page, "wrong page\n");
+    EXPECT_FALSE(pl.RemovePage(kListLen, &page), "wrong page\n");
+
+    for (uint64_t offset = kListStart; offset < kListStart + kListLen; offset += PAGE_SIZE) {
+        auto page_idx = offset / PAGE_SIZE;
+        if (page_idx % (kGapSize + 1) == 0) {
+            EXPECT_EQ(test_pages + (page_idx / (kGapSize + 1)), splice.Pop(), "wrong page\n");
+        } else {
+            EXPECT_NULL(splice.Pop(), "wrong page\n");
+        }
+    }
+    EXPECT_TRUE(splice.IsDone(), "extra pages\n");
+
+    END_TEST;
+}
+
+// Tests that cleaning up a splice list doesn't blow up
+static bool vmpl_take_cleanup_test() {
+    BEGIN_TEST;
+
+    paddr_t pa;
+    vm_page_t* page;
+
+    zx_status_t status = pmm_alloc_page(0, &page, &pa);
+    ASSERT_EQ(ZX_OK, status, "pmm_alloc single page");
+    ASSERT_NONNULL(page, "pmm_alloc single page");
+    ASSERT_NE(0u, pa, "pmm_alloc single page");
+
+    page->state = VM_PAGE_STATE_OBJECT;
+    page->object.pin_count = 0;
+
+    VmPageList pl;
+    pl.AddPage(page, 0);
+
+    VmPageSpliceList splice = pl.TakePages(0, PAGE_SIZE);
+    EXPECT_TRUE(!splice.IsDone(), "missing page\n");
+
+    END_TEST;
+}
+
 // Use the function name as the test name
 #define VM_UNITTEST(fname) UNITTEST(#fname, fname)
 
@@ -1079,3 +1253,13 @@ VM_UNITTEST(pmm_multi_alloc_test)
 // runs the system out of memory, uncomment for debugging
 //VM_UNITTEST(pmm_oversized_alloc_test)
 UNITTEST_END_TESTCASE(pmm_tests, "pmm", "Physical memory manager tests");
+
+UNITTEST_START_TESTCASE(vm_page_list_tests)
+VM_UNITTEST(vmpl_add_remove_page_test)
+VM_UNITTEST(vmpl_take_single_page_even_test)
+VM_UNITTEST(vmpl_take_single_page_odd_test)
+VM_UNITTEST(vmpl_take_all_pages_test)
+VM_UNITTEST(vmpl_take_middle_pages_test)
+VM_UNITTEST(vmpl_take_gap_test)
+VM_UNITTEST(vmpl_take_cleanup_test)
+UNITTEST_END_TESTCASE(vm_page_list_tests, "vmpl", "VmPageList tests");
