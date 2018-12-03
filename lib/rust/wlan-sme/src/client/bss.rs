@@ -35,7 +35,7 @@ pub fn convert_bss_description(bss: &BssDescription) -> BssInfo {
         ssid: bss.ssid.clone(),
         rx_dbm: get_rx_dbm(bss),
         channel: bss.chan.primary,
-        protected: bss.rsn.is_some(),
+        protected: bss.cap.privacy,
         compatible: is_bss_compatible(bss),
     }
 }
@@ -56,12 +56,17 @@ fn get_rx_dbm(bss: &BssDescription) -> i8 {
 }
 
 fn is_bss_compatible(bss: &BssDescription) -> bool {
+    // See IEEE Std 802.11-2016, 9.4.1.4
     match bss.rsn.as_ref() {
-        None => true,
-        Some(rsn) => match rsne::from_bytes(&rsn[..]).to_full_result() {
+        // Incompatible if the privacy bit is set without an RSNE (WEP, WPA1).
+        None => !bss.cap.privacy,
+        // If the BSS is an RSN, require the privacy bit to be set and verify the RSNE's
+        // compatiblity.
+        Some(rsn) if bss.cap.privacy => match rsne::from_bytes(&rsn[..]).to_full_result() {
             Ok(a_rsne) => is_rsn_compatible(&a_rsne),
             _ => false
-        }
+        },
+        Some(_) => false
     }
 }
 
@@ -135,21 +140,29 @@ mod tests {
 
     use crate::client::test_utils::fake_bss_with_bssid;
 
+    enum ProtectionCfg {
+        Open,
+        Wep,
+        Wpa1,
+        Wpa2,
+        Wpa2NoPrivacy,
+    }
+
     #[test]
     fn compare() {
-        // Identical BSSes should be ranked equal
-        assert_eq!(Ordering::Equal,
-                   compare_bss(&bss(-10, -30, true), &bss(-10, -30, true)));
+        //  BSSes with the same RCPI, RSSI, and protection are equivalent.
+        assert_eq!(Ordering::Equal, compare_bss(
+            &bss(-10, -30, ProtectionCfg::Wpa2), &bss(-10, -30, ProtectionCfg::Wpa2)));
         // Compatibility takes priority over everything else
-        assert_bss_cmp(&bss(-10, -10, false), &bss(-50, -50, true));
-        // RCPI takes priority over RSSI
-        assert_bss_cmp(&bss(-20, -30, true), &bss(-30, -20, true));
+        assert_bss_cmp(&bss(-10, -10, ProtectionCfg::Wep), &bss(-50, -50, ProtectionCfg::Wpa2));
+        // RCPI in dBmh takes priority over RSSI in dBmh
+        assert_bss_cmp(&bss(-20, -30, ProtectionCfg::Wpa2), &bss(-30, -20, ProtectionCfg::Wpa2));
         // Compare RSSI if RCPI is absent
-        assert_bss_cmp(&bss(-30, 0, true), &bss(-20, 0, true));
+        assert_bss_cmp(&bss(-30, 0, ProtectionCfg::Wpa2), &bss(-20, 0, ProtectionCfg::Wpa2));
         // Having an RCPI measurement is always better than not having any measurement
-        assert_bss_cmp(&bss(0, 0, true), &bss(0, -200, true));
+        assert_bss_cmp(&bss(0, 0, ProtectionCfg::Wpa2), &bss(0, -200, ProtectionCfg::Wpa2));
         // Having an RSSI measurement is always better than not having any measurement
-        assert_bss_cmp(&bss(0, 0, true), &bss(-100, 0, true));
+        assert_bss_cmp(&bss(0, 0, ProtectionCfg::Wpa2), &bss(-100, 0, ProtectionCfg::Wpa2));
     }
 
     #[test]
@@ -159,12 +172,46 @@ mod tests {
 
     #[test]
     fn get_best_bss_nonempty_list() {
-        let bss1 = bss(-30, -10, false);
-        let bss2 = bss(-20, -10, true);
-        let bss3 = bss(-80, -80, true);
+        let bss1 = bss(-30, -10, ProtectionCfg::Wep);
+        let bss2 = bss(-20, -10, ProtectionCfg::Wpa2);
+        let bss3 = bss(-80, -80, ProtectionCfg::Wpa2);
         let bss_list = vec![bss1, bss2, bss3];
         assert_eq!(get_best_bss(&bss_list), Some(&bss_list[1]));
     }
+
+    #[test]
+    fn verify_compatibility() {
+        // Compatible:
+        assert!(is_bss_compatible(&bss(-30, -10, ProtectionCfg::Open)));
+        assert!(is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wpa2)));
+
+        // Not compatible:
+        assert!(!is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wep)));
+        assert!(!is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wpa1)));
+        assert!(!is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wpa2NoPrivacy)));
+    }
+
+    #[test]
+    fn convert_bss() {
+        assert_eq!(convert_bss_description(&bss(-30, -10, ProtectionCfg::Wpa2)), BssInfo {
+            bssid: [0u8; 6],
+            ssid: vec![],
+            rx_dbm: -5,
+            channel: 1,
+            protected: true,
+            compatible: true,
+        });
+
+        assert_eq!(convert_bss_description(&bss(-30, -10, ProtectionCfg::Wep)), BssInfo {
+            bssid: [0u8; 6],
+            ssid: vec![],
+            rx_dbm: -5,
+            channel: 1,
+            protected: true,
+            compatible: false,
+        });
+    }
+
 
     #[test]
     fn group_networks_by_ssid() {
@@ -183,7 +230,7 @@ mod tests {
         assert_eq!(Ordering::Greater, compare_bss(better, worse));
     }
 
-    fn bss(_rssi_dbm: i8, _rcpi_dbmh: i16, compatible: bool) -> fidl_mlme::BssDescription {
+    fn bss(_rssi_dbm: i8, _rcpi_dbmh: i16, protection: ProtectionCfg) -> fidl_mlme::BssDescription {
         let ret = fidl_mlme::BssDescription {
             bssid: [0, 0, 0, 0, 0, 0],
             ssid: vec![],
@@ -199,7 +246,10 @@ mod tests {
                 ibss: false,
                 cf_pollable: false,
                 cf_poll_req: false,
-                privacy: false,
+                privacy: match protection {
+                    ProtectionCfg::Open | ProtectionCfg::Wpa2NoPrivacy => false,
+                    _ => true,
+                },
                 short_preamble: false,
                 spectrum_mgmt: false,
                 qos: false,
@@ -212,7 +262,37 @@ mod tests {
             basic_rate_set: vec![],
             op_rate_set: vec![],
             country: None,
-            rsn: if compatible { None } else { Some(Vec::new()) },
+            rsn: match protection {
+                ProtectionCfg::Wpa2 | ProtectionCfg::Wpa2NoPrivacy => Some(
+                    vec![
+                        // Element header
+                        48, 18,
+                        // Version
+                        1, 0,
+                        // Group Cipher: CCMP-128
+                        0x00, 0x0F, 0xAC, 4,
+                        // 1 Pairwise Cipher: CCMP-128
+                        1, 0, 0x00, 0x0F, 0xAC, 4,
+                        // 1 AKM: PSK
+                        1, 0, 0x00, 0x0F, 0xAC, 2
+                    ]
+                ),
+                ProtectionCfg::Wpa1 => Some(
+                    vec![
+                        // Element header
+                        48, 18,
+                        // Version
+                        1, 0,
+                        // Group Cipher: TKIP
+                        0x00, 0x0F, 0xAC, 2,
+                        // 1 Pairwise Cipher: TKIP
+                        1, 0, 0x00, 0x0F, 0xAC, 2,
+                        // 1 AKM: PSK
+                        1, 0, 0x00, 0x0F, 0xAC, 2
+                    ]
+                ),
+                _ => None,
+            },
 
             rcpi_dbmh: _rcpi_dbmh,
             rsni_dbh: 0,
@@ -225,7 +305,6 @@ mod tests {
             chan: fidl_mlme::WlanChan { primary: 1, secondary80: 0, cbw: fidl_mlme::Cbw::Cbw20 },
             rssi_dbm: _rssi_dbm,
         };
-        assert_eq!(compatible, is_bss_compatible(&ret));
         ret
     }
 
