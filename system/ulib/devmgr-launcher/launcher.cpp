@@ -27,8 +27,7 @@ constexpr const char* kDevmgrPath = "/boot/bin/devmgr";
 
 namespace devmgr_launcher {
 
-zx_status_t Launch(const char* driver_search_path, const char* sys_device_path,
-                   zx::job* devmgr_job, zx::channel* devfs_root) {
+zx_status_t Launch(const Args& args, zx::job* devmgr_job, zx::channel* devfs_root) {
     zx::job job, job_copy;
     zx_status_t status = zx::job::create(*zx::job::default_job(), 0, &job);
     if (status != ZX_OK) {
@@ -44,20 +43,21 @@ zx_status_t Launch(const char* driver_search_path, const char* sys_device_path,
     launchpad_load_from_file(lp, kDevmgrPath);
     launchpad_clone(lp, LP_CLONE_FDIO_STDIO);
 
-    int argc = 1;
-    const char* argv[5] = {
-        kDevmgrPath,
-    };
-    if (driver_search_path != nullptr) {
-        argv[argc++] = "--driver-search-path";
-        argv[argc++] = driver_search_path;
+    fbl::Vector<const char*> argv;
+    argv.push_back(kDevmgrPath);
+    for (const char* path : args.driver_search_paths) {
+        argv.push_back("--driver-search-path");
+        argv.push_back(path);
     }
-    if (sys_device_path != nullptr) {
-        argv[argc++] = "--sys-device-driver";
-        argv[argc++] = sys_device_path;
+    for (const char* path : args.load_drivers) {
+        argv.push_back("--load-driver");
+        argv.push_back(path);
     }
-    ZX_DEBUG_ASSERT(static_cast<size_t>(argc) <= fbl::count_of(argv));
-    launchpad_set_args(lp, argc, argv);
+    if (args.sys_device_driver != nullptr) {
+        argv.push_back("--sys-device-driver");
+        argv.push_back(args.sys_device_driver);
+    }
+    launchpad_set_args(lp, static_cast<int>(argv.size()), argv.get());
 
     const char* nametable[1] = { };
     uint32_t count = 0;
