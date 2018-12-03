@@ -46,8 +46,8 @@ void BlobfsChecker::TraverseInodeBitmap() {
                 uint64_t end_block = extent->Start() + extent->Length();
                 uint64_t first_unset = 0;
                 if (!blobfs_->CheckBlocksAllocated(start_block, end_block, &first_unset)) {
-                    FS_TRACE_ERROR("check: ino %u using blocks [%zu, %zu). "
-                                   "Not fully allocated in block bitmap; first unset @%zu\n",
+                    FS_TRACE_ERROR("check: ino %u using blocks [%" PRIu64 ", %" PRIu64 "). "
+                                   "Not fully allocated in block bitmap; first unset @%" PRIu64 "\n",
                                    n, start_block, end_block, first_unset);
                     valid = false;
                 }
