@@ -3,6 +3,6 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "services": [ ]
+        "services": []
     }
 }

@@ -7,6 +7,7 @@ executable("codec_runner_sw_ffmpeg") {
     "//garnet/bin/media/codec_factory",
     "//garnet/bin/media:codec_runner_sw_ffmpeg",
     "//garnet/bin/media:codec_runner_sw_ffmpeg.manifest",
+    "//garnet/bin/media/*",  # TODO(CF-235): Dep shouldn' be needed
   ]
 
   sources = [

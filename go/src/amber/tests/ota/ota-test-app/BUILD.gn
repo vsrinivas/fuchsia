@@ -12,28 +12,34 @@ go_library("ota-test-app_lib") {
 
 go_binary("ota-test-app") {
   gopackage = "ota-test-app"
-  deps = [ ":ota-test-app_lib" ]
+  deps = [
+    ":ota-test-app_lib",
+  ]
 }
 
 package("ota-test-package") {
   package_name = "ota-test-package"
 
-  deps = [ ":ota-test-app" ]
+  deps = [
+    ":ota-test-app",
+  ]
 
   binary = "ota-test-app"
 
   meta = [
     {
-      path = rebase_path("meta/ota-test.cmx")
-      dest = "ota-test.cmx"
-    }
+      path = rebase_path("meta/ota-test-package.cmx")
+      dest = "ota-test-package.cmx"
+    },
   ]
 }
 
 package("ota-test-system") {
   deprecated_system_image = true
   package_name = "ota-test-system"
-  deps = [ ":ota-test-app" ]
+  deps = [
+    ":ota-test-app",
+  ]
   binaries = [
     {
       name = "ota-test-app"

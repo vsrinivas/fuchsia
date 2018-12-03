@@ -6,6 +6,7 @@ loadable_module("libcodec_sw_omx_dec_aac") {
   visibility = [
     "//garnet/bin/media:codec_runner_sw_omx",
     "//garnet/bin/media:codec_runner_sw_omx.manifest",
+    "//garnet/bin/media/*",  # TODO(CF-235): Dep shouldn' be needed
   ]
   sources = [
     # The AOSP OMX SW AAC decoder code:

@@ -13,7 +13,7 @@ go_binary("compatibility_test_server_go_bin") {
   output_name = "compatibility_test_server_go"
 
   deps = [
-    ":lib"
+    ":lib",
   ]
 }
 
@@ -22,10 +22,10 @@ go_binary("compatibility_test_server_go_bin") {
 go_library("lib") {
   name = "compatibility_test"
   deps = [
-    "//garnet/public/lib/fidl/compatibility_test:compatibility_test_service($go_toolchain)",
-    "//garnet/public/lib/component/go/src/app",
-    "//garnet/public/lib/svc/go/src/svc",
     "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
+    "//garnet/public/lib/component/go/src/app",
+    "//garnet/public/lib/fidl/compatibility_test:compatibility_test_service($go_toolchain)",
+    "//garnet/public/lib/svc/go/src/svc",
   ]
 }
 
@@ -35,8 +35,14 @@ package("fidl_compatibility_test_server_go") {
     ":compatibility_test_server_go_bin",
   ]
   binary = "compatibility_test_server_go"
-  meta = [ {
-    path = rebase_path("//garnet/bin/appmgr/legacy_flat_exported_dir")
-    dest = "legacy_flat_exported_dir"
-  } ]
+  meta = [
+    {
+      path = rebase_path("//garnet/bin/appmgr/legacy_flat_exported_dir")
+      dest = "legacy_flat_exported_dir"
+    },
+    {
+      path = "meta/fidl_compatibility_test_server_go.cmx"
+      dest = "fidl_compatibility_test_server_go.cmx"
+    },
+  ]
 }

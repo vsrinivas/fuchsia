@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_binary.gni")
 import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
 
 executable("fidl_compatibility_test") {
   testonly = true
@@ -56,13 +56,24 @@ rustc_binary("compatibility_test_server_rust_bin") {
 }
 
 copy("run_fidl_compatibility_test_garnet_sh") {
-  sources = [ "run_fidl_compatibility_test_garnet.sh" ]
-  outputs = [ "${root_build_dir}/run_fidl_compatibility_test_garnet.sh" ]
+  sources = [
+    "run_fidl_compatibility_test_garnet.sh",
+  ]
+  outputs = [
+    "${root_build_dir}/run_fidl_compatibility_test_garnet.sh",
+  ]
 }
 
 package("fidl_compatibility_test_server_cpp") {
   deps = [
     ":compatibility_test_server_cpp_bin",
+  ]
+
+  meta = [
+    {
+      path = "meta/fidl_compatibility_test_server_cpp.cmx"
+      dest = "fidl_compatibility_test_server_cpp.cmx"
+    },
   ]
 
   testonly = true
@@ -73,6 +84,13 @@ package("fidl_compatibility_test_server_cpp") {
 package("fidl_compatibility_test_server_rust") {
   deps = [
     ":compatibility_test_server_rust_bin",
+  ]
+
+  meta = [
+    {
+      path = "meta/fidl_compatibility_test_server_rust.cmx"
+      dest = "fidl_compatibility_test_server_rust.cmx"
+    },
   ]
 
   testonly = true
@@ -100,7 +118,7 @@ package("package") {
   package_name = "fidl_compatibility_test"
 
   deps = [
-    ":run_fidl_compatibility_test_garnet_sh"
+    ":run_fidl_compatibility_test_garnet_sh",
   ]
 
   testonly = true

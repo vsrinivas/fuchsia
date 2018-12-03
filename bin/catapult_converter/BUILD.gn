@@ -50,9 +50,18 @@ package("catapult_converter") {
     ":unittest",
   ]
 
+  meta = [
+    {
+      path = "meta/catapult_converter.cmx"
+      dest = "catapult_converter.cmx"
+    },
+  ]
+
   binary = "catapult_converter"
 
-  tests = [ {
-        name = "catapult_converter_test"
-      } ]
+  tests = [
+    {
+      name = "catapult_converter_test"
+    },
+  ]
 }
