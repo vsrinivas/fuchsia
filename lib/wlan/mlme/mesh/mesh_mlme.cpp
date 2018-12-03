@@ -89,6 +89,9 @@ zx_status_t MeshMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
     } else if (auto mp_confirm = msg.As<wlan_mlme::MeshPeeringConfirmAction>()) {
         SendPeeringConfirm(*mp_confirm);
         return ZX_OK;
+    } else if (auto params = msg.As<wlan_mlme::MeshPeeringParams>()) {
+        ConfigurePeering(*params);
+        return ZX_OK;
     } else {
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -144,6 +147,21 @@ void MeshMlme::SendPeeringConfirm(const MlmeMsg<wlan_mlme::MeshPeeringConfirmAct
     BufferWriter w(*packet);
     WriteMpConfirmActionFrame(&w, CreateMacHeaderWriter(), *req.body());
     SendMgmtFrame(std::move(packet));
+}
+
+void MeshMlme::ConfigurePeering(const MlmeMsg<wlan_mlme::MeshPeeringParams>& req) {
+    wlan_assoc_ctx ctx = {
+        .aid = req.body()->local_aid,
+        .qos = true, // all mesh nodes are expected to support QoS frames
+        .rates_cnt = static_cast<uint16_t>(std::min(req.body()->rates->size(), sizeof(ctx.rates))),
+    };
+    memcpy(ctx.bssid, req.body()->peer_sta_address.data(), sizeof(ctx.bssid));
+    memcpy(ctx.rates, req.body()->rates->data(), ctx.rates_cnt);
+    auto status = device_->ConfigureAssoc(&ctx);
+    if (status != ZX_OK) {
+        errorf("[mesh-mlme] failed to configure association for mesh peer %s: %s",
+               MACSTR(common::MacAddr(req.body()->peer_sta_address)), zx_status_get_string(status));
+    }
 }
 
 void MeshMlme::SendMgmtFrame(fbl::unique_ptr<Packet> packet) {

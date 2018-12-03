@@ -20,6 +20,7 @@ use {
         sync::{Arc, Mutex},
     },
     wlan_sme::{
+        DeviceInfo,
         mesh::{self as mesh_sme, UserEvent},
         timer::TimeEntry,
     },
@@ -39,13 +40,14 @@ pub type Endpoint = fidl::endpoints::ServerEnd<fidl_sme::MeshSmeMarker>;
 type Sme = mesh_sme::MeshSme<Tokens>;
 
 pub async fn serve<S>(proxy: MlmeProxy,
+                      device_info: DeviceInfo,
                       event_stream: MlmeEventStream,
                       new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
                       stats_requests: S)
                       -> Result<(), failure::Error>
     where S: Stream<Item = StatsRequest> + Send + Unpin
 {
-    let (sme, mlme_stream, user_stream) = Sme::new();
+    let (sme, mlme_stream, user_stream) = Sme::new(device_info);
     let sme = Arc::new(Mutex::new(sme));
     let time_stream = stream::poll_fn::<TimeEntry<()>, _>(|_| Poll::Pending);
     let mlme_sme = super::serve_mlme_sme(

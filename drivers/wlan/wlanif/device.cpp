@@ -609,6 +609,10 @@ void Device::SendMpConfirmAction(wlan_mlme::MeshPeeringConfirmAction req) {
     errorf("SendMpConfirmAction is not implemented\n");
 }
 
+void Device::MeshPeeringEstablished(wlan_mlme::MeshPeeringParams params) {
+    errorf("MeshPeeringEstablished is not implemented\n");
+}
+
 void Device::OnScanResult(wlanif_scan_result_t* result) {
     std::lock_guard<std::mutex> lock(lock_);
     if (!binding_.is_bound()) {

@@ -8,7 +8,9 @@ use {
     log::{error},
     crate::{
         clone_utils,
+        DeviceInfo,
         MlmeRequest,
+        phy_selection::get_device_band_info,
         sink::MlmeSink,
         timer::TimedEvent,
     },
@@ -47,6 +49,7 @@ pub struct MeshSme<T: Tokens> {
     mlme_sink: MlmeSink,
     user_sink: UserSink<T>,
     state: Option<State<T>>,
+    device_info: DeviceInfo,
 }
 
 pub type MeshId = Vec<u8>;
@@ -127,24 +130,31 @@ impl<T: Tokens> super::Station for MeshSme<T> {
                     println!("received an MPM Open action: {:?}", action);
                     if mesh_profile_matches(&config.mesh_id, &get_mesh_config(),
                                             &action.common.mesh_id, &action.common.mesh_config) {
-                        // TODO(gbonik): actually fill out the data correctly
-                        // instead of being a copycat
-                        let open = fidl_mlme::MeshPeeringOpenAction {
-                            common: fidl_mlme::MeshPeeringCommon {
-                                local_link_id: 0,
-                                .. clone_utils::clone_mesh_peering_common(&action.common)
-                            },
-                        };
-                        self.mlme_sink.send(MlmeRequest::SendMpOpenAction(open));
-                        let conf = fidl_mlme::MeshPeeringConfirmAction {
-                            common: fidl_mlme::MeshPeeringCommon {
-                                local_link_id: 0,
-                                .. action.common
-                            },
-                            peer_link_id: action.common.local_link_id,
-                            aid: 1,
-                        };
-                        self.mlme_sink.send(MlmeRequest::SendMpConfirmAction(conf));
+                        let aid = 1;
+                        if let Some(params) = create_peering_params(
+                                    &self.device_info, &config, &action.common, aid)
+                        {
+                            self.mlme_sink.send(MlmeRequest::MeshPeeringEstablished(params));
+
+                            // TODO(gbonik): actually fill out the data correctly
+                            // instead of being a copycat
+                            let open = fidl_mlme::MeshPeeringOpenAction {
+                                common: fidl_mlme::MeshPeeringCommon {
+                                    local_link_id: 0,
+                                    .. clone_utils::clone_mesh_peering_common(&action.common)
+                                },
+                            };
+                            self.mlme_sink.send(MlmeRequest::SendMpOpenAction(open));
+                            let conf = fidl_mlme::MeshPeeringConfirmAction {
+                                common: fidl_mlme::MeshPeeringCommon {
+                                    local_link_id: 0,
+                                    .. action.common
+                                },
+                                peer_link_id: action.common.local_link_id,
+                                aid,
+                            };
+                            self.mlme_sink.send(MlmeRequest::SendMpConfirmAction(conf));
+                        }
                     }
                     State::Joined { config }
                 },
@@ -158,6 +168,27 @@ impl<T: Tokens> super::Station for MeshSme<T> {
     }
 }
 
+fn create_peering_params(device_info: &DeviceInfo,
+                         config: &Config,
+                         peer: &fidl_mlme::MeshPeeringCommon,
+                         local_aid: u16)
+    -> Option<fidl_mlme::MeshPeeringParams>
+{
+    let band_caps = match get_device_band_info(device_info, config.channel) {
+        Some(x) => x,
+        None => {
+            error!("Failed to find band capabilities for channel {}", config.channel);
+            return None;
+        }
+    };
+    let rates = peer.rates.iter().filter(|x| band_caps.basic_rates.contains(x)).cloned().collect();
+    Some(fidl_mlme::MeshPeeringParams {
+        peer_sta_address: peer.peer_sta_address,
+        local_aid,
+        rates
+    })
+}
+
 fn report_join_finished<T: Tokens>(user_sink: &UserSink<T>, token: T::JoinToken,
                                    result: JoinMeshResult)
 {
@@ -165,13 +196,14 @@ fn report_join_finished<T: Tokens>(user_sink: &UserSink<T>, token: T::JoinToken,
 }
 
 impl<T: Tokens> MeshSme<T> {
-    pub fn new() -> (Self, crate::MlmeStream, UserStream<T>) {
+    pub fn new(device_info: DeviceInfo) -> (Self, crate::MlmeStream, UserStream<T>) {
         let (mlme_sink, mlme_stream) = mpsc::unbounded();
         let (user_sink, user_stream) = mpsc::unbounded();
         let sme = MeshSme {
             mlme_sink: MlmeSink::new(mlme_sink),
             user_sink: UserSink::new(user_sink),
             state: Some(State::Idle),
+            device_info,
         };
         (sme, mlme_stream, user_stream)
     }

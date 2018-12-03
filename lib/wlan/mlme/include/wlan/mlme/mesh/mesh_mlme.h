@@ -33,6 +33,7 @@ class MeshMlme : public Mlme {
         const MlmeMsg<::fuchsia::wlan::mlme::StartRequest>& req);
     void SendPeeringOpen(const MlmeMsg<::fuchsia::wlan::mlme::MeshPeeringOpenAction>& req);
     void SendPeeringConfirm(const MlmeMsg<::fuchsia::wlan::mlme::MeshPeeringConfirmAction>& req);
+    void ConfigurePeering(const MlmeMsg<::fuchsia::wlan::mlme::MeshPeeringParams>& params);
 
     void SendDataFrame(fbl::unique_ptr<Packet> packet);
     void SendMgmtFrame(fbl::unique_ptr<Packet> packet);

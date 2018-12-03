@@ -842,6 +842,13 @@ struct MeshPeeringConfirmAction {
     uint16 peer_link_id;
 };
 
+struct MeshPeeringParams {
+    array<uint8>:6 peer_sta_address;
+    uint16 local_aid;
+    vector<uint8> rates;
+    // TODO(gbonik): HT/VHT caps
+};
+
 // Because these methods rely on an external entity to provide a response, events are used instead
 // of return values.
 interface MLME {
@@ -913,12 +920,15 @@ interface MLME {
     26: EapolReq(EapolRequest req);
     27: -> EapolConf(EapolConfirm resp);
 
+    // The following are extensions to the 802.11 MLME SAP interface.
+
     // ==== 90xxxx: Mesh ===
     900000: -> IncomingMpOpenAction(MeshPeeringOpenAction action);
     900100: SendMpOpenAction(MeshPeeringOpenAction action);
     900300: SendMpConfirmAction(MeshPeeringConfirmAction action);
 
-    // The following are extensions to the 802.11 MLME SAP interface.
+    900500: MeshPeeringEstablished(MeshPeeringParams peering);
+
 
     0x1001: -> SignalReport(SignalReportIndication ind);
 

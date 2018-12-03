@@ -172,6 +172,8 @@ zx_status_t Dispatcher::HandleAnyMlmeMessage(Span<uint8_t> span) {
         return HandleMlmeMessage<wlan_mlme::MeshPeeringOpenAction>(span, hdr->ordinal);
     case fuchsia_wlan_mlme_MLMESendMpConfirmActionOrdinal:
         return HandleMlmeMessage<wlan_mlme::MeshPeeringConfirmAction>(span, hdr->ordinal);
+    case fuchsia_wlan_mlme_MLMEMeshPeeringEstablishedOrdinal:
+        return HandleMlmeMessage<wlan_mlme::MeshPeeringParams>(span, hdr->ordinal);
     default:
         warnf("unknown MLME method %u\n", hdr->ordinal);
         return ZX_ERR_NOT_SUPPORTED;

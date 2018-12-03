@@ -78,11 +78,10 @@ fn get_band_id(primary_chan: u8) -> fidl_mlme::Band {
     }
 }
 
-fn get_device_band_info<'a>(device_info: &'a DeviceInfo,
-                            chan: &fidl_mlme::WlanChan)
+pub fn get_device_band_info<'a>(device_info: &'a DeviceInfo, channel: u8)
     -> Option<&'a fidl_mlme::BandCapabilities>
 {
-    let target = get_band_id(chan.primary);
+    let target = get_band_id(channel);
     device_info.bands.iter().find(|b| b.band_id == target)
 }
 
@@ -91,7 +90,7 @@ pub fn derive_phy_cbw(bss: &fidl_mlme::BssDescription,
                       params: &ConnectPhyParams)
     -> (fidl_mlme::Phy, fidl_mlme::Cbw)
 {
-    let band_cap = match get_device_band_info(device_info, &bss.chan) {
+    let band_cap = match get_device_band_info(device_info, bss.chan.primary) {
         None => {
             error!("Could not find the device capability corresponding to the \
                    channel {} of the selected AP {:?} \
@@ -143,7 +142,7 @@ pub fn derive_phy_cbw(bss: &fidl_mlme::BssDescription,
 mod tests {
     use super::*;
     use fidl_fuchsia_wlan_mlme as fidl_mlme;
-    use crate::client::test_utils::{fake_5ghz_band_capabilities, fake_chan, fake_ht_capabilities,
+    use crate::client::test_utils::{fake_5ghz_band_capabilities, fake_ht_capabilities,
                                     fake_ht_operation, fake_vht_bss_description,
                                     fake_vht_capabilities, fake_vht_operation};
     use crate::client::{ConnectPhyParams};
@@ -246,7 +245,7 @@ mod tests {
     fn test_get_device_band_info() {
         assert_eq!(fidl_mlme::Band::WlanBand5Ghz,
             get_device_band_info(&fake_device_info_ht(fidl_mlme::ChanWidthSet::TwentyForty),
-                                 &fake_chan(36)).unwrap().band_id);
+                                 36).unwrap().band_id);
     }
 
     #[test]

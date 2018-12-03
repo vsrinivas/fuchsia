@@ -36,7 +36,7 @@ enum MacRole {
 // This grouping is the industry's de factor standard.
 struct BandCapabilities {
     Band band_id;
-    vector<uint16> basic_rates;
+    vector<uint8> basic_rates;
     uint16 base_frequency;
     vector<uint8> channels;
 
