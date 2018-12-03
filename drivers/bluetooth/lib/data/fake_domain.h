@@ -54,14 +54,18 @@ class FakeDomain final : public Domain {
   void AddACLConnection(hci::ConnectionHandle handle,
                         hci::Connection::Role role,
                         l2cap::LinkErrorCallback link_error_callback,
+                        l2cap::SecurityUpgradeCallback security_callback,
                         async_dispatcher_t* dispatcher) override;
   void AddLEConnection(
       hci::ConnectionHandle handle, hci::Connection::Role role,
       l2cap::LinkErrorCallback link_error_callback,
-      l2cap::LEFixedChannelsCallback channel_callback,
       l2cap::LEConnectionParameterUpdateCallback conn_param_callback,
+      l2cap::LEFixedChannelsCallback channel_callback,
+      l2cap::SecurityUpgradeCallback security_callback,
       async_dispatcher_t* dispatcher) override;
   void RemoveConnection(hci::ConnectionHandle handle) override;
+  void AssignLinkSecurityProperties(hci::ConnectionHandle handle,
+                                    sm::SecurityProperties security) override;
   void OpenL2capChannel(hci::ConnectionHandle handle, l2cap::PSM psm,
                         l2cap::ChannelCallback cb,
                         async_dispatcher_t* dispatcher) override;

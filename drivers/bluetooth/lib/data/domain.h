@@ -52,11 +52,16 @@ class Domain : public fbl::RefCounted<Domain> {
   // |link_error_callback| will be used to notify when a channel signals a link
   // error. It will be posted onto |dispatcher|.
   //
+  // |security_callback| will be used to request an upgrade to the link security
+  // level. This can be triggered by dynamic L2CAP channel creation or by a
+  // service-level client via Channel::UpgradeSecurity().
+  //
   // Has no effect if this Domain is uninitialized or shut down.
-  virtual void AddACLConnection(hci::ConnectionHandle handle,
-                                hci::Connection::Role role,
-                                l2cap::LinkErrorCallback link_error_callback,
-                                async_dispatcher_t* dispatcher) = 0;
+  virtual void AddACLConnection(
+      hci::ConnectionHandle handle, hci::Connection::Role role,
+      l2cap::LinkErrorCallback link_error_callback,
+      l2cap::SecurityUpgradeCallback security_callback,
+      async_dispatcher_t* dispatcher) = 0;
 
   // Registers an LE connection with the L2CAP layer. L2CAP channels can be
   // opened on the logical link represented by |handle| after a call to this
@@ -68,6 +73,10 @@ class Domain : public fbl::RefCounted<Domain> {
   // |link_error_callback| will be used to notify when a channel signals a link
   // error.
   //
+  // |security_callback| will be used to request an upgrade to the link security
+  // level. This can be triggered by dynamic L2CAP channel creation or by a
+  // service-level client via Channel::UpgradeSecurity().
+  //
   // Upon successful registration of the link, |channel_callback| will be called
   // with the ATT and SMP fixed channels.
   //
@@ -75,8 +84,9 @@ class Domain : public fbl::RefCounted<Domain> {
   virtual void AddLEConnection(
       hci::ConnectionHandle handle, hci::Connection::Role role,
       l2cap::LinkErrorCallback link_error_callback,
-      l2cap::LEFixedChannelsCallback channel_callback,
       l2cap::LEConnectionParameterUpdateCallback conn_param_callback,
+      l2cap::LEFixedChannelsCallback channel_callback,
+      l2cap::SecurityUpgradeCallback security_callback,
       async_dispatcher_t* dispatcher) = 0;
 
   // Removes a previously registered connection. All corresponding Channels will
@@ -89,6 +99,11 @@ class Domain : public fbl::RefCounted<Domain> {
   //
   // Has no effect if this Domain is uninitialized or shut down.
   virtual void RemoveConnection(hci::ConnectionHandle handle) = 0;
+
+  // Assigns the security level of a logical link. Has no effect if |handle| has
+  // not been previously registered or the link is closed.
+  virtual void AssignLinkSecurityProperties(
+      hci::ConnectionHandle handle, sm::SecurityProperties security) = 0;
 
   // Open an outbound dynamic channel against a peer's Protocol/Service
   // Multiplexing (PSM) code |psm| on a link identified by |handle|.

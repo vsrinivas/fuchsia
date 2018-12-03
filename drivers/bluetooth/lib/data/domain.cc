@@ -65,17 +65,13 @@ class Impl final : public Domain, public common::TaskDomain<Impl, Domain> {
   void AddACLConnection(hci::ConnectionHandle handle,
                         hci::Connection::Role role,
                         l2cap::LinkErrorCallback link_error_callback,
+                        l2cap::SecurityUpgradeCallback security_callback,
                         async_dispatcher_t* dispatcher) override {
     PostMessage([this, handle, role, lec = std::move(link_error_callback),
-                 dispatcher]() mutable {
+                 suc = std::move(security_callback), dispatcher]() mutable {
       if (l2cap_) {
-        // TODO(NET-1151): Pass security upgrade callback from an argument.
-        l2cap_->RegisterACL(
-            handle, role, std::move(lec),
-            [](auto, auto, auto) {
-              bt_log(TRACE, "data-domain", "not implemented: L2CAP security");
-            },
-            dispatcher);
+        l2cap_->RegisterACL(handle, role, std::move(lec), std::move(suc),
+                            dispatcher);
       }
     });
   }
@@ -83,27 +79,24 @@ class Impl final : public Domain, public common::TaskDomain<Impl, Domain> {
   void AddLEConnection(
       hci::ConnectionHandle handle, hci::Connection::Role role,
       l2cap::LinkErrorCallback link_error_callback,
-      l2cap::LEFixedChannelsCallback channel_callback,
       l2cap::LEConnectionParameterUpdateCallback conn_param_callback,
+      l2cap::LEFixedChannelsCallback channel_callback,
+      l2cap::SecurityUpgradeCallback security_callback,
       async_dispatcher_t* dispatcher) override {
-    PostMessage([this, handle, role, cp_cb = std::move(conn_param_callback),
-                 link_err_cb = std::move(link_error_callback),
-                 chan_cb = std::move(channel_callback), dispatcher]() mutable {
+    PostMessage([this, handle, role, cpc = std::move(conn_param_callback),
+                 lec = std::move(link_error_callback),
+                 suc = std::move(security_callback),
+                 cc = std::move(channel_callback), dispatcher]() mutable {
       if (l2cap_) {
-        // TODO(NET-1151): Pass security upgrade callback from an argument.
-        l2cap_->RegisterLE(
-            handle, role, std::move(cp_cb), std::move(link_err_cb),
-            [](auto, auto, auto) {
-              bt_log(TRACE, "data-domain", "not implemented: L2CAP security");
-            },
-            dispatcher);
+        l2cap_->RegisterLE(handle, role, std::move(cpc), std::move(lec),
+                           std::move(suc), dispatcher);
 
         auto att = l2cap_->OpenFixedChannel(handle, l2cap::kATTChannelId);
         auto smp = l2cap_->OpenFixedChannel(handle, l2cap::kLESMPChannelId);
         ZX_DEBUG_ASSERT(att);
         ZX_DEBUG_ASSERT(smp);
         async::PostTask(dispatcher, [att = std::move(att), smp = std::move(smp),
-                                     cb = std::move(chan_cb)]() mutable {
+                                     cb = std::move(cc)]() mutable {
           cb(std::move(att), std::move(smp));
         });
       }
@@ -114,6 +107,15 @@ class Impl final : public Domain, public common::TaskDomain<Impl, Domain> {
     PostMessage([this, handle] {
       if (l2cap_) {
         l2cap_->Unregister(handle);
+      }
+    });
+  }
+
+  void AssignLinkSecurityProperties(hci::ConnectionHandle handle,
+                                    sm::SecurityProperties security) override {
+    PostMessage([this, handle, security] {
+      if (l2cap_) {
+        l2cap_->AssignLinkSecurityProperties(handle, security);
       }
     });
   }

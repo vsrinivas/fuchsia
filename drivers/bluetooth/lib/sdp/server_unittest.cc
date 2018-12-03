@@ -44,9 +44,9 @@ class SDP_ServerTest : public TestingBase {
         [this](auto fake_chan) { channel_ = std::move(fake_chan); });
     l2cap_->Initialize();
     l2cap_->AddACLConnection(kTestHandle1, hci::Connection::Role::kSlave,
-                             nullptr, nullptr);
+                             nullptr, nullptr, nullptr);
     l2cap_->AddACLConnection(kTestHandle2, hci::Connection::Role::kSlave,
-                             nullptr, nullptr);
+                             nullptr, nullptr, nullptr);
     server_ = std::make_unique<Server>(l2cap_);
   }
 
@@ -834,7 +834,8 @@ TEST_F(SDP_ServerTest, BrowseGroup) {
   ASSERT_EQ(DataElement::Type::kSequence, group_attr_it->second.type());
   ASSERT_EQ(DataElement::Type::kUuid, group_attr_it->second.At(0)->type());
   EXPECT_NE(attributes.end(), group_attr_it);
-  EXPECT_EQ(kPublicBrowseRootUuid, *group_attr_it->second.At(0)->Get<common::UUID>());
+  EXPECT_EQ(kPublicBrowseRootUuid,
+            *group_attr_it->second.At(0)->Get<common::UUID>());
 }
 
 #undef SDP_ERROR_RSP

@@ -37,19 +37,30 @@ class LowEnergyConnection final : public sm::PairingState::Delegate {
   LowEnergyConnection(const std::string& id,
                       std::unique_ptr<hci::Connection> link,
                       async_dispatcher_t* dispatcher,
-                      fxl::WeakPtr<LowEnergyConnectionManager> conn_mgr)
+                      fxl::WeakPtr<LowEnergyConnectionManager> conn_mgr,
+                      fbl::RefPtr<data::Domain> data_domain,
+                      fbl::RefPtr<gatt::GATT> gatt)
       : id_(id),
         link_(std::move(link)),
         dispatcher_(dispatcher),
         conn_mgr_(conn_mgr),
+        data_domain_(data_domain),
+        gatt_(gatt),
         weak_ptr_factory_(this) {
     ZX_DEBUG_ASSERT(!id_.empty());
     ZX_DEBUG_ASSERT(link_);
     ZX_DEBUG_ASSERT(dispatcher_);
     ZX_DEBUG_ASSERT(conn_mgr_);
+    ZX_DEBUG_ASSERT(data_domain_);
+    ZX_DEBUG_ASSERT(gatt_);
   }
 
   ~LowEnergyConnection() override {
+    // Unregister this link from the GATT profile and the L2CAP plane. This
+    // invalidates all L2CAP channels that are associated with this link.
+    gatt_->RemoveConnection(id());
+    data_domain_->RemoveConnection(link_->handle());
+
     // Tell the controller to disconnect the link if it is marked as open.
     link_->Close();
 
@@ -83,63 +94,23 @@ class LowEnergyConnection final : public sm::PairingState::Delegate {
 
   // Registers this connection with L2CAP and initializes the fixed channel
   // protocols.
-  void InitializeFixedChannels(fbl::RefPtr<data::Domain> data_domain,
-                               fbl::RefPtr<gatt::GATT> gatt,
-                               l2cap::LEConnectionParameterUpdateCallback cp_cb,
+  void InitializeFixedChannels(l2cap::LEConnectionParameterUpdateCallback cp_cb,
                                l2cap::LinkErrorCallback link_error_cb) {
     auto self = weak_ptr_factory_.GetWeakPtr();
-    auto channels_cb = [self, gatt](fbl::RefPtr<l2cap::Channel> att,
-                                    fbl::RefPtr<l2cap::Channel> smp) {
-      if (!self || !att || !smp) {
-        bt_log(TRACE, "gap-le",
-               "link was closed before opening fixed channels");
-        return;
-      }
-
-      // Obtain existing pairing data, if any.
-      std::optional<sm::LTK> ltk;
-      auto* dev = self->conn_mgr_->device_cache()->FindDeviceById(self->id_);
-      ZX_DEBUG_ASSERT_MSG(dev, "connected device must be present in cache!");
-
-      if (dev->le() && dev->le()->bond_data() && dev->le()->bond_data()->ltk) {
-        ltk = *dev->le()->bond_data()->ltk;
-      }
-
-      // Obtain the local I/O capabilities from the delegate. Default to
-      // NoInputNoOutput if no delegate is available.
-      auto io_cap = sm::IOCapability::kNoInputNoOutput;
-      if (self->conn_mgr_->pairing_delegate()) {
-        io_cap = self->conn_mgr_->pairing_delegate()->io_capability();
-      }
-      auto pairing = std::make_unique<sm::PairingState>(
-          self->link_->WeakPtr(), std::move(smp), io_cap, self);
-
-      // TODO(NET-1151): We register the connection with GATT but don't perform
-      // service discovery until after pairing has completed. Fix this so that
-      // services are discovered immediately and pairing happens in response to
-      // a service request unless the peer is already paired.
-      gatt->AddConnection(self->id(), std::move(att));
-
-      if (ltk) {
-        bt_log(INFO, "gap-le", "encrypting link with existing LTK");
-        pairing->SetCurrentSecurity(*ltk);
-        gatt->DiscoverServices(self->id_);
-      } else {
-        bt_log(INFO, "gap-le", "pairing with device");
-        pairing->UpgradeSecurity(
-            sm::SecurityLevel::kEncrypted,
-            [gatt, id = self->id()](sm::Status status, const auto& props) {
-              bt_log(INFO, "gap-le", "pairing status: %s, properties: %s",
-                     status.ToString().c_str(), props.ToString().c_str());
-              gatt->DiscoverServices(id);
-            });
-      }
-      self->pairing_ = std::move(pairing);
-    };
-
-    data_domain->AddLEConnection(
+    data_domain_->AddLEConnection(
         link_->handle(), link_->role(), std::move(link_error_cb),
-        std::move(channels_cb), std::move(cp_cb), dispatcher_);
+        std::move(cp_cb),
+        [self](auto att, auto smp) {
+          if (self) {
+            self->OnL2capFixedChannelsOpened(std::move(att), std::move(smp));
+          }
+        },
+        [self](auto handle, auto level, auto cb) {
+          if (self) {
+            self->OnSecurityUpgradeRequest(handle, level, std::move(cb));
+          }
+        },
+        dispatcher_);
   }
 
   // Cancels any on-going pairing procedures and sets up SMP to use the provided
@@ -153,6 +124,68 @@ class LowEnergyConnection final : public sm::PairingState::Delegate {
   hci::Connection* link() const { return link_.get(); }
 
  private:
+  // Called by the L2CAP layer once the link has been registered and the fixed
+  // channels have been opened.
+  void OnL2capFixedChannelsOpened(fbl::RefPtr<l2cap::Channel> att,
+                                  fbl::RefPtr<l2cap::Channel> smp) {
+    if (!att || !smp) {
+      bt_log(TRACE, "gap-le", "link was closed before opening fixed channels");
+      return;
+    }
+
+    bt_log(TRACE, "gap-le", "ATT and SMP fixed channels open");
+
+    // Obtain existing pairing data, if any.
+    std::optional<sm::LTK> ltk;
+    auto* dev = conn_mgr_->device_cache()->FindDeviceById(id());
+    ZX_DEBUG_ASSERT_MSG(dev, "connected device must be present in cache!");
+
+    if (dev->le() && dev->le()->bond_data()) {
+      // |ltk| will remain as std::nullopt if bonding data contains no LTK.
+      ltk = dev->le()->bond_data()->ltk;
+    }
+
+    // Obtain the local I/O capabilities from the delegate. Default to
+    // NoInputNoOutput if no delegate is available.
+    auto io_cap = sm::IOCapability::kNoInputNoOutput;
+    if (conn_mgr_->pairing_delegate()) {
+      io_cap = conn_mgr_->pairing_delegate()->io_capability();
+    }
+
+    pairing_ = std::make_unique<sm::PairingState>(
+        link_->WeakPtr(), std::move(smp), io_cap,
+        weak_ptr_factory_.GetWeakPtr());
+
+    // Encrypt the link with the current LTK if it exists.
+    if (ltk) {
+      bt_log(INFO, "gap-le", "encrypting link with existing LTK");
+      pairing_->SetCurrentSecurity(*ltk);
+    }
+
+    // Initialize the GATT layer.
+    gatt_->AddConnection(id(), std::move(att));
+    gatt_->DiscoverServices(id());
+  }
+
+  // Handles a security upgrade request received from the L2CAP layer.
+  void OnSecurityUpgradeRequest(hci::ConnectionHandle handle,
+                                sm::SecurityLevel level,
+                                sm::StatusCallback callback) {
+    ZX_DEBUG_ASSERT(link_->handle() == handle);
+    ZX_DEBUG_ASSERT(pairing_);
+
+    bt_log(TRACE, "gap-le", "received security upgrade request");
+
+    pairing_->UpgradeSecurity(
+        level, [handle, dd = data_domain_, cb = std::move(callback)](
+                   sm::Status status, const auto& sp) {
+          bt_log(INFO, "gap-le", "pairing status: %s, properties: %s",
+                 status.ToString().c_str(), sp.ToString().c_str());
+          dd->AssignLinkSecurityProperties(handle, sp);
+          cb(status);
+        });
+  }
+
   // sm::PairingState::Delegate override:
   void OnNewPairingData(const sm::PairingData& pairing_data) override {
     // Consider the pairing temporary if no link key was received. This
@@ -176,6 +209,11 @@ class LowEnergyConnection final : public sm::PairingState::Delegate {
                : "",
            pairing_data.csrk ? "csrk " : "", id().c_str());
 
+    // Update the data plane with the correct link security level.
+    ZX_DEBUG_ASSERT(pairing_);
+    data_domain_->AssignLinkSecurityProperties(link_->handle(),
+                                               pairing_->security());
+
     if (!conn_mgr_->device_cache()->StoreLowEnergyBond(id_, pairing_data)) {
       bt_log(ERROR, "gap-le", "failed to cache bonding data (id: %s)",
              id().c_str());
@@ -185,6 +223,7 @@ class LowEnergyConnection final : public sm::PairingState::Delegate {
   // sm::PairingState::Delegate override:
   void OnPairingComplete(sm::Status status) override {
     bt_log(TRACE, "gap-le", "pairing complete: %s", status.ToString().c_str());
+
     auto delegate = conn_mgr_->pairing_delegate();
     if (delegate) {
       delegate->CompletePairing(id_, status);
@@ -197,6 +236,13 @@ class LowEnergyConnection final : public sm::PairingState::Delegate {
     // stored link key is not valid.
     bt_log(ERROR, "gap-le", "link layer authentication failed: %s",
            status.ToString().c_str());
+
+    // Report the link to be non-secure.
+    // TODO(armansito): sm::PairingState::security() should accurately reflect
+    // the link security properties. It can currently contain a stale value
+    // following authentication failures.
+    data_domain_->AssignLinkSecurityProperties(link_->handle(),
+                                               sm::SecurityProperties());
   }
 
   // sm::PairingState::Delegate override:
@@ -262,6 +308,14 @@ class LowEnergyConnection final : public sm::PairingState::Delegate {
   std::unique_ptr<hci::Connection> link_;
   async_dispatcher_t* dispatcher_;
   fxl::WeakPtr<LowEnergyConnectionManager> conn_mgr_;
+
+  // Reference to the data plane is used to update the L2CAP layer to
+  // reflect the correct link security level.
+  fbl::RefPtr<data::Domain> data_domain_;
+
+  // Reference to the GATT profile layer is used to initiate service discovery
+  // and register the link.
+  fbl::RefPtr<gatt::GATT> gatt_;
 
   // SMP pairing manager.
   std::unique_ptr<sm::PairingState> pairing_;
@@ -646,9 +700,9 @@ LowEnergyConnectionRefPtr LowEnergyConnectionManager::InitializeConnection(
 
   // Initialize connection.
   auto conn = std::make_unique<internal::LowEnergyConnection>(
-      device_id, std::move(link), dispatcher_, weak_ptr_factory_.GetWeakPtr());
-  conn->InitializeFixedChannels(data_domain_, gatt_,
-                                std::move(conn_param_update_cb),
+      device_id, std::move(link), dispatcher_, weak_ptr_factory_.GetWeakPtr(),
+      data_domain_, gatt_);
+  conn->InitializeFixedChannels(std::move(conn_param_update_cb),
                                 std::move(link_error_cb));
 
   auto first_ref = conn->AddRef();
@@ -686,13 +740,6 @@ void LowEnergyConnectionManager::CleanUpConnection(
   ZX_DEBUG_ASSERT(peer);
   peer->MutLe().SetConnectionState(
       RemoteDevice::ConnectionState::kNotConnected);
-
-  // Clean up GATT profile.
-  gatt_->RemoveConnection(conn->id());
-
-  // Remove the connection from L2CAP. This will invalidate all channels that
-  // are associated with this link.
-  data_domain_->RemoveConnection(conn->handle());
 
   if (!close_link) {
     // Mark the connection as already closed so that hci::Connection::Close()

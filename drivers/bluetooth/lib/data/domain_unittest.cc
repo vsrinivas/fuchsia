@@ -198,7 +198,8 @@ TEST_F(DATA_DomainTest, InboundL2capSocket) {
 
   // Register a fake link.
   domain()->AddACLConnection(
-      kLinkHandle, hci::Connection::Role::kMaster, [] {}, dispatcher());
+      kLinkHandle, hci::Connection::Role::kMaster, [] {},
+      [](auto, auto, auto) {}, dispatcher());
 
   zx::socket sock;
   ASSERT_FALSE(sock);
@@ -244,7 +245,8 @@ TEST_F(DATA_DomainTest, OutboundL2apSocket) {
 
   // Register a fake link.
   domain()->AddACLConnection(
-      kLinkHandle, hci::Connection::Role::kMaster, [] {}, dispatcher());
+      kLinkHandle, hci::Connection::Role::kMaster, [] {},
+      [](auto, auto, auto) {}, dispatcher());
 
   zx::socket sock;
   ASSERT_FALSE(sock);

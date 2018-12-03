@@ -16,6 +16,8 @@
 namespace btlib {
 namespace gap {
 
+using common::HostError;
+
 namespace {
 
 void SetPageScanEnabled(bool enabled, fxl::RefPtr<hci::Transport> hci,
@@ -327,6 +329,14 @@ void BrEdrConnectionManager::OnConnectionComplete(
           return;
         }
 
+        // TODO(armansito): Implement this callback.
+        auto security_callback = [](hci::ConnectionHandle handle,
+                                    sm::SecurityLevel level, auto cb) {
+          bt_log(INFO, "gap-bredr",
+                 "Ignoring security upgrade request; not implemented");
+          cb(sm::Status(HostError::kNotSupported));
+        };
+
         // Register with L2CAP to handle services on the ACL signaling channel.
         self->data_domain_->AddACLConnection(
             conn_ptr->handle(), conn_ptr->role(),
@@ -343,7 +353,7 @@ void BrEdrConnectionManager::OnConnectionComplete(
               // TODO(NET-1442): Test link error behavior using FakeDevice.
               conn_ptr->Close();
             },
-            self->dispatcher_);
+            std::move(security_callback), self->dispatcher_);
 
         self->connections_.emplace(conn_ptr->handle(), std::move(conn_ptr));
         device->MutBrEdr().SetConnectionState(

@@ -87,6 +87,7 @@ void FakeDomain::ShutDown() { initialized_ = false; }
 void FakeDomain::AddACLConnection(hci::ConnectionHandle handle,
                                   hci::Connection::Role role,
                                   l2cap::LinkErrorCallback link_error_cb,
+                                  l2cap::SecurityUpgradeCallback security_cb,
                                   async_dispatcher_t* dispatcher) {
   if (!initialized_)
     return;
@@ -98,8 +99,9 @@ void FakeDomain::AddACLConnection(hci::ConnectionHandle handle,
 void FakeDomain::AddLEConnection(
     hci::ConnectionHandle handle, hci::Connection::Role role,
     l2cap::LinkErrorCallback link_error_cb,
-    l2cap::LEFixedChannelsCallback channel_cb,
     l2cap::LEConnectionParameterUpdateCallback conn_param_cb,
+    l2cap::LEFixedChannelsCallback channel_cb,
+    l2cap::SecurityUpgradeCallback security_cb,
     async_dispatcher_t* dispatcher) {
   if (!initialized_)
     return;
@@ -120,6 +122,11 @@ void FakeDomain::AddLEConnection(
 
 void FakeDomain::RemoveConnection(hci::ConnectionHandle handle) {
   links_.erase(handle);
+}
+
+void FakeDomain::AssignLinkSecurityProperties(hci::ConnectionHandle handle,
+                                              sm::SecurityProperties security) {
+  // TODO(armansito): implement
 }
 
 void FakeDomain::OpenL2capChannel(hci::ConnectionHandle handle, l2cap::PSM psm,
