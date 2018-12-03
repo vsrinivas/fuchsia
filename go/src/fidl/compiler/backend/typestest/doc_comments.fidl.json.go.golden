@@ -123,7 +123,6 @@ func (u *Table) ClearField() {
 const (
 	InterfaceMethodOrdinal uint32 = 1
 )
-// Request for Method.
 
 type InterfaceMethodRequest struct {
 	_ struct{} `fidl2:"s,0,0"`
@@ -144,10 +143,13 @@ func (_ *InterfaceMethodRequest) InlineAlignment() int {
 func (_ *InterfaceMethodRequest) InlineSize() int {
 	return 0
 }
-// Method has no response.
 
 type InterfaceInterface _bindings.Proxy
 
+
+// method comment #1
+//
+// method comment #3
 func (p *InterfaceInterface) Method() error {
 	req_ := InterfaceMethodRequest{
 	}

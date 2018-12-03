@@ -14,22 +14,19 @@ const (
 )
 
 {{- range .Methods }}
-// Request for {{ .Name }}.
 {{- if .Request }}
 {{ template "StructDefinition" .Request }}
-{{- else }}
-// {{ .Name }} has no request.
 {{- end }}
 {{- if .Response }}
-// Response for {{ .Name }}.
 {{ template "StructDefinition" .Response }}
-{{- else }}
-// {{ .Name }} has no response.
 {{- end }}
 {{- end }}
 
 type {{ .ProxyName }} _bindings.Proxy
 {{ range .Methods }}
+{{range .DocComments}}
+//{{ . }}
+{{- end}}
 func (p *{{ $.ProxyName }}) {{ if .IsEvent -}}
 		{{ .EventExpectName }}
 	{{- else -}}
