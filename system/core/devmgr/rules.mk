@@ -54,6 +54,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/memfs \
     system/ulib/fs \
     system/ulib/fbl \
+    system/ulib/fit \
     system/ulib/zx \
     system/ulib/zxcpp \
 

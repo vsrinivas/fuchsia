@@ -25,8 +25,7 @@ namespace {
 
 struct AddContext {
     const char* libname;
-    using Func = void(*)(Driver* drv, const char* version);
-    Func func;
+    DriverLoadCallback func;
 };
 
 bool is_driver_disabled(const char* name) {
@@ -95,13 +94,14 @@ void found_driver(zircon_driver_note_payload_t* note,
 
 } // namespace
 
-void find_loadable_drivers(const char* path,
-                           void (*func)(Driver* drv, const char* version)) {
+void find_loadable_drivers(const char* path, DriverLoadCallback func) {
 
     DIR* dir = opendir(path);
     if (dir == nullptr) {
         return;
     }
+    AddContext context = { "", std::move(func) };
+
     struct dirent* de;
     while ((de = readdir(dir)) != nullptr) {
         if (de->d_name[0] == '.') {
@@ -115,12 +115,12 @@ void find_loadable_drivers(const char* path,
         if ((r < 0) || (r >= (int)sizeof(libname))) {
             continue;
         }
+        context.libname = libname;
 
         int fd;
         if ((fd = openat(dirfd(dir), de->d_name, O_RDONLY)) < 0) {
             continue;
         }
-        AddContext context = { libname, func };
         zx_status_t status = di_read_driver_info(fd, &context, found_driver);
         close(fd);
 
@@ -135,8 +135,7 @@ void find_loadable_drivers(const char* path,
     closedir(dir);
 }
 
-void load_driver(const char* path,
-                 void (*func)(Driver* drv, const char* version)) {
+void load_driver(const char* path, DriverLoadCallback func) {
     //TODO: check for duplicate driver add
     int fd;
     if ((fd = open(path, O_RDONLY)) < 0) {
@@ -144,7 +143,7 @@ void load_driver(const char* path,
         return;
     }
 
-    AddContext context = { path, func };
+    AddContext context = { path, std::move(func) };
     zx_status_t status = di_read_driver_info(fd, &context, found_driver);
     close(fd);
 

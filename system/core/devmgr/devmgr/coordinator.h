@@ -13,6 +13,7 @@
 #include <fbl/vector.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
@@ -25,6 +26,7 @@
 
 namespace devmgr {
 
+struct Coordinator;
 struct Device;
 struct Devhost;
 struct Devnode;
@@ -251,11 +253,13 @@ public:
     SuspendContext() {
     }
 
-    SuspendContext(Flags flags, uint32_t sflags, zx::socket socket,
+    SuspendContext(Coordinator* coordinator,
+                   Flags flags, uint32_t sflags, zx::socket socket,
                    zx::vmo kernel = zx::vmo(),
                    zx::vmo bootdata = zx::vmo()) :
-        flags_(flags), sflags_(sflags), socket_(std::move(socket)),
-        kernel_(std::move(kernel)), bootdata_(std::move(bootdata)) {
+        coordinator_(coordinator), flags_(flags), sflags_(sflags),
+        socket_(std::move(socket)), kernel_(std::move(kernel)),
+        bootdata_(std::move(bootdata)) {
     }
 
     ~SuspendContext() {
@@ -264,6 +268,8 @@ public:
 
     SuspendContext(SuspendContext&&) = default;
     SuspendContext& operator=(SuspendContext&&) = default;
+
+    Coordinator* coordinator() { return coordinator_; }
 
     zx_status_t status() const { return status_; }
     void set_status(zx_status_t status) { status_ = status; }
@@ -299,6 +305,8 @@ public:
     }
 
 private:
+    Coordinator* coordinator_ = nullptr;
+
     zx_status_t status_ = ZX_OK;
     Flags flags_ = Flags::kRunning;
 
@@ -401,10 +409,10 @@ struct DevmgrArgs {
 // Setup and begin executing the coordinator's loop.
 void coordinator(DevmgrArgs args);
 
-void load_driver(const char* path,
-                 void (*func)(Driver* drv, const char* version));
-void find_loadable_drivers(const char* path,
-                           void (*func)(Driver* drv, const char* version));
+using DriverLoadCallback = fit::function<void(Driver* driver, const char* version)>;
+
+void load_driver(const char* path, DriverLoadCallback func);
+void find_loadable_drivers(const char* path, DriverLoadCallback func);
 
 bool dc_is_bindable(const Driver* drv, uint32_t protocol_id,
                     zx_device_prop_t* props, size_t prop_count,
