@@ -27,17 +27,12 @@ struct Partition {
     // A string would break the current requirement for a simple C binding.
     array<uint8>:NAME_LEN name;
 
-    // TODO(FIDL-300): Remove all padding fields.
-    uint32 padding;
-
     bool hidden;    // Not a user-visible partition.
     bool bbt;       // Contains a legacy bad block table.
 };
 
 struct PartitionMap {
     array<uint8>:GUID_LEN device_guid;
-
-    uint32 padding;
 
     // Number of partitions in the map.
     uint32 partition_count;
@@ -50,8 +45,6 @@ struct RamNandInfo {
     // If a vmo is not provided, the device will create its own buffer and initialize it to be
     // empty (all 1s).
     handle<vmo>? vmo;
-
-    uint32 padding;
 
     // The desired "chip" configuration.
     Info nand_info;

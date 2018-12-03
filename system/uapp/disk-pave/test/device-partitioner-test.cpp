@@ -43,7 +43,6 @@ constexpr uint32_t kPagesPerBlock = 16;
 constexpr uint32_t kNumBlocks = 18;
 constexpr zircon_nand_RamNandInfo kNandInfo = {
     .vmo = ZX_HANDLE_INVALID,
-    .padding = 0,
     .nand_info = {
         .page_size = kPageSize,
         .pages_per_block = kPagesPerBlock,
@@ -55,7 +54,6 @@ constexpr zircon_nand_RamNandInfo kNandInfo = {
     },
     .partition_map = {
         .device_guid = {},
-        .padding = 0,
         .partition_count = 7,
         .partitions = {
             {
@@ -66,7 +64,6 @@ constexpr zircon_nand_RamNandInfo kNandInfo = {
                 .copy_count = 0,
                 .copy_byte_offset = 0,
                 .name = {},
-                .padding = 0,
                 .hidden = true,
                 .bbt = true,
             },
@@ -78,7 +75,6 @@ constexpr zircon_nand_RamNandInfo kNandInfo = {
                 .copy_count = 0,
                 .copy_byte_offset = 0,
                 .name = {'b', 'o', 'o', 't', 'l', 'o', 'a', 'd', 'e', 'r'},
-                .padding = 0,
                 .hidden = false,
                 .bbt = false,
             },
@@ -90,7 +86,6 @@ constexpr zircon_nand_RamNandInfo kNandInfo = {
                 .copy_count = 0,
                 .copy_byte_offset = 0,
                 .name = {'z', 'i', 'r', 'c', 'o', 'n', '-', 'a'},
-                .padding = 0,
                 .hidden = false,
                 .bbt = false,
             },
@@ -102,7 +97,6 @@ constexpr zircon_nand_RamNandInfo kNandInfo = {
                 .copy_count = 0,
                 .copy_byte_offset = 0,
                 .name = {'z', 'i', 'r', 'c', 'o', 'n', '-', 'b'},
-                .padding = 0,
                 .hidden = false,
                 .bbt = false,
             },
@@ -114,7 +108,6 @@ constexpr zircon_nand_RamNandInfo kNandInfo = {
                 .copy_count = 0,
                 .copy_byte_offset = 0,
                 .name = {'z', 'i', 'r', 'c', 'o', 'n', '-', 'r'},
-                .padding = 0,
                 .hidden = false,
                 .bbt = false,
             },
@@ -126,7 +119,6 @@ constexpr zircon_nand_RamNandInfo kNandInfo = {
                 .copy_count = 0,
                 .copy_byte_offset = 0,
                 .name = {'v', 'b', 'm', 'e', 't', 'a', '-', 'a'},
-                .padding = 0,
                 .hidden = false,
                 .bbt = false,
             },
@@ -138,7 +130,6 @@ constexpr zircon_nand_RamNandInfo kNandInfo = {
                 .copy_count = 0,
                 .copy_byte_offset = 0,
                 .name = {'v', 'b', 'm', 'e', 't', 'a', '-', 'b'},
-                .padding = 0,
                 .hidden = false,
                 .bbt = false,
             },

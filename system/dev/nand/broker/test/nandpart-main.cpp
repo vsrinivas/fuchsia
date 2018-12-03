@@ -19,7 +19,6 @@ constexpr zircon_nand_Info kNandInfo = {
 
 constexpr zircon_nand_PartitionMap kPartitionMap = {
     .device_guid = {},
-    .padding = 0,
     .partition_count = 1,
     .partitions = {
         {
@@ -30,7 +29,6 @@ constexpr zircon_nand_PartitionMap kPartitionMap = {
             .copy_count = 0,
             .copy_byte_offset = 0,
             .name = {'t', 'e', 's', 't'},
-            .padding = 0,
             .hidden = false,
             .bbt = false,
         },
