@@ -9,8 +9,9 @@ use std::sync::Arc;
 
 use failure::{Error, ResultExt};
 use fidl::endpoints::{RequestStream, ServiceMarker};
-use fidl_fuchsia_guest::{WaylandDispatcherMarker, WaylandDispatcherRequest,
-                         WaylandDispatcherRequestStream};
+use fidl_fuchsia_guest::{
+    WaylandDispatcherMarker, WaylandDispatcherRequest, WaylandDispatcherRequestStream,
+};
 use fuchsia_app::server::{ServiceFactory, ServicesServer};
 use fuchsia_async as fasync;
 use fuchsia_wayland_core as wl;

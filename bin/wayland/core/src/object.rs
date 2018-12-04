@@ -22,8 +22,10 @@ use std::marker::PhantomData;
 
 use failure::{format_err, Error, Fail};
 
-use crate::{Arg, Client, FromArgs, Interface, MessageGroupSpec, MessageHeader, MessageSpec,
-            MessageType, ObjectId};
+use crate::{
+    Arg, Client, FromArgs, Interface, MessageGroupSpec, MessageHeader, MessageSpec, MessageType,
+    ObjectId,
+};
 
 /// The |ObjectMap| holds the state of active objects for a single connection.
 ///
@@ -401,11 +403,9 @@ mod tests {
         // Send a message to an empty map.
         let mut client = create_client()?;
 
-        assert!(
-            client
-                .receive_message(TestMessage::Message1.into_message(0)?)
-                .is_err()
-        );
+        assert!(client
+            .receive_message(TestMessage::Message1.into_message(0)?)
+            .is_err());
         Ok(())
     }
 }

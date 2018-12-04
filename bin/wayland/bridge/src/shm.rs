@@ -49,7 +49,12 @@ impl wl::RequestReceiver<WlShm> for Shm {
     ) -> Result<(), Error> {
         let WlShmRequest::CreatePool { id, fd, size } = request;
         let scenic = this.get(client)?.scenic.clone();
-        let memory = scenic::Memory::new(scenic.clone(), fd.into(), size as u64, images::MemoryType::HostMemory);
+        let memory = scenic::Memory::new(
+            scenic.clone(),
+            fd.into(),
+            size as u64,
+            images::MemoryType::HostMemory,
+        );
         id.implement(
             client,
             ShmPool {

@@ -4,8 +4,10 @@
 
 use failure::Error;
 use fuchsia_wayland_core as wl;
-use wayland::{wl_seat, WlKeyboard, WlKeyboardRequest, WlPointer, WlPointerRequest, WlSeat,
-              WlSeatEvent, WlSeatRequest, WlTouch, WlTouchRequest};
+use wayland::{
+    wl_seat, WlKeyboard, WlKeyboardRequest, WlPointer, WlPointerRequest, WlSeat, WlSeatEvent,
+    WlSeatRequest, WlTouch, WlTouchRequest,
+};
 
 /// An implementation of the wl_seat global.
 pub struct Seat;

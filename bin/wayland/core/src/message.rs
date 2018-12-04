@@ -78,8 +78,7 @@ impl Arg {
 #[derive(Debug, Fail)]
 #[fail(
     display = "Argument is not of the required type: expected {:?}, found {:?}",
-    expected,
-    found
+    expected, found
 )]
 pub struct MismatchedArgKind {
     pub expected: ArgKind,
@@ -358,16 +357,12 @@ mod tests {
         assert!(message.write_arg(Arg::Fixed(FIXED_VALUE)).is_ok());
         assert!(message.write_arg(Arg::Object(OBJECT_VALUE)).is_ok());
         assert!(message.write_arg(Arg::NewId(NEW_ID_VALUE)).is_ok());
-        assert!(
-            message
-                .write_arg(Arg::String(STRING_VALUE.to_owned()))
-                .is_ok()
-        );
-        assert!(
-            message
-                .write_arg(Arg::Array(ARRAY_VALUE.to_owned()))
-                .is_ok()
-        );
+        assert!(message
+            .write_arg(Arg::String(STRING_VALUE.to_owned()))
+            .is_ok());
+        assert!(message
+            .write_arg(Arg::Array(ARRAY_VALUE.to_owned()))
+            .is_ok());
         assert!(message.write_arg(Arg::Handle(h1.into())).is_ok());
 
         let (bytes, handles) = message.take();

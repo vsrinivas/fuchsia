@@ -14,8 +14,10 @@ use futures::select;
 
 use parking_lot::Mutex;
 
-use crate::{Interface, IntoMessage, Message, MessageGroupSpec, MessageReceiver, ObjectId,
-            ObjectLookupError, ObjectMap, ObjectRef, Registry, RequestReceiver};
+use crate::{
+    Interface, IntoMessage, Message, MessageGroupSpec, MessageReceiver, ObjectId,
+    ObjectLookupError, ObjectMap, ObjectRef, Registry, RequestReceiver,
+};
 
 type Task = Box<FnMut(&mut Client) -> Result<(), Error> + 'static>;
 type ObjectDeleter = fn(&mut Client, ObjectId) -> Result<(), Error>;

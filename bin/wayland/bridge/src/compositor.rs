@@ -214,15 +214,14 @@ impl wl::RequestReceiver<WlSurface> for Surface {
 /// `SurfaceRole` holds the set of every role that can be assigned to a
 /// wl_surface. Each variant will hold an `ObjectRef` to the role object.
 #[derive(Copy, Clone, Debug)]
-pub enum SurfaceRole {
-}
+pub enum SurfaceRole {}
 
 impl SurfaceRole {
     /// Dispatches a commit command to the concrete role objects.
     fn commit(
         &self, _client: &mut wl::Client, _frame: Option<wl::ObjectRef<Callback>>,
     ) -> Result<(), Error> {
-        match *self { }
+        match *self {}
     }
 }
 
