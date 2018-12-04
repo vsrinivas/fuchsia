@@ -71,6 +71,4 @@ bool getenv_bool(const char* key, bool default_value);
 // This function is implemented by both devmgr and fshost.
 zx::channel fs_clone(const char* path);
 
-zx_status_t copy_vmo(zx_handle_t src, zx_off_t offset, size_t length, zx_handle_t* out_dest);
-
 } // namespace devmgr

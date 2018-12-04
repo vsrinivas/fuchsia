@@ -174,34 +174,6 @@ zx_status_t devmgr_launch_cmdline(
     return status;
 }
 
-zx_status_t copy_vmo(zx_handle_t src, zx_off_t offset, size_t length, zx_handle_t* out_dest) {
-    zx::vmo dest;
-    zx_status_t status = zx::vmo::create(length, 0, &dest);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    char buffer[PAGE_SIZE];
-    zx_off_t src_offset = offset;
-    zx_off_t dest_offset = 0;
-
-    while (length > 0) {
-        size_t copy = (length > sizeof(buffer) ? sizeof(buffer) : length);
-        if ((status = zx_vmo_read(src, buffer, src_offset, copy)) != ZX_OK) {
-            return status;
-        }
-        if ((status = dest.write(buffer, dest_offset, copy)) != ZX_OK) {
-            return status;
-        }
-        src_offset += copy;
-        dest_offset += copy;
-        length -= copy;
-    }
-
-    *out_dest = dest.release();
-    return ZX_OK;
-}
-
 bool getenv_bool(const char* key, bool default_value) {
     const char* value = getenv(key);
     if (value == nullptr) {
