@@ -47,6 +47,9 @@ pub struct Client {
     /// application to send the wl_display::delete_id event
     object_deleter: Option<ObjectDeleter>,
 
+    /// A monotonically increasing value that can be embedded in certain events.
+    next_event_serial: u32,
+
     protocol_logging: bool,
 }
 
@@ -61,8 +64,15 @@ impl Client {
             tasks: receiver,
             task_queue: TaskQueue(sender),
             object_deleter: None,
+            next_event_serial: 0,
             protocol_logging: false,
         }
+    }
+
+    pub fn next_event_serial(&mut self) -> u32 {
+        let serial = self.next_event_serial;
+        self.next_event_serial += 1;
+        serial
     }
 
     /// Enables or disables protocol message logging.

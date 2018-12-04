@@ -121,3 +121,24 @@ impl wl::RequestReceiver<WlRegistry> for RegistryReceiver {
         Ok(())
     }
 }
+
+/// An implementation of wl_callback.
+pub struct Callback;
+
+impl Callback {
+    /// Posts the `done` event for this callback.
+    #[allow(dead_code)]
+    pub fn done(
+        this: wl::ObjectRef<Self>, client: &mut wl::Client, callback_data: u32,
+    ) -> Result<(), Error> {
+        client.post(this.id(), WlCallbackEvent::Done { callback_data })
+    }
+}
+
+impl wl::RequestReceiver<WlCallback> for Callback {
+    fn receive(
+        _this: wl::ObjectRef<Self>, request: WlCallbackRequest, _client: &mut wl::Client,
+    ) -> Result<(), Error> {
+        match request {}
+    }
+}

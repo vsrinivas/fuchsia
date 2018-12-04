@@ -22,6 +22,8 @@ mod compositor;
 use crate::compositor::*;
 mod display;
 use crate::display::*;
+mod frontend;
+use crate::frontend::*;
 mod shm;
 use crate::shm::*;
 
@@ -34,21 +36,30 @@ struct WaylandDispatcher {
 }
 
 impl WaylandDispatcher {
-    pub fn new() -> Self {
-        let registry = wl::RegistryBuilder::new()
-            .add_global(WlCompositor, move |_, _| {
-                Ok(Box::new(wl::RequestDispatcher::new(Compositor::new())))
-            })
-            .add_global(WlShm, move |id, client| {
-                let shm = Shm::new();
+    pub fn new() -> Result<Self, Error> {
+        let view_sink = TileViewSink::new()?;
+        let scenic = view_sink.scenic_session();
+        let mut registry = wl::RegistryBuilder::new();
+        {
+            let scenic = scenic.clone();
+            registry.add_global(WlCompositor, move |_, _| {
+                Ok(Box::new(wl::RequestDispatcher::new(Compositor::new(
+                    scenic.clone(),
+                ))))
+            });
+        }
+        {
+            let scenic = scenic.clone();
+            registry.add_global(WlShm, move |id, client| {
+                let shm = Shm::new(scenic.clone());
                 // announce the set of supported shm pixel formats.
                 shm.post_formats(id, client)?;
                 Ok(Box::new(wl::RequestDispatcher::new(shm)))
-            })
-            .build();
-        WaylandDispatcher {
-            display: Arc::new(Mutex::new(Display::new(registry))),
+            });
         }
+        Ok(WaylandDispatcher {
+            display: Arc::new(Mutex::new(Display::new(registry.build()))),
+        })
     }
 }
 
@@ -83,7 +94,7 @@ impl ServiceFactory for WaylandDispatcher {
 fn main() -> Result<(), Error> {
     let mut exec = fasync::Executor::new()?;
     let fut = ServicesServer::new()
-        .add_service(WaylandDispatcher::new())
+        .add_service(WaylandDispatcher::new()?)
         .start()
         .context("Error starting wayland bridge services server")?;
     exec.run_singlethreaded(fut)
