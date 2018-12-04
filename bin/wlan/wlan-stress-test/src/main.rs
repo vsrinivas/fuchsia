@@ -99,11 +99,22 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
 
         // now that we have interfaces...  let's try to use them!
         for (_iface_id, wlaniface) in test_results.iface_objects.iter_mut() {
+            let mut total_scan_time_ms = 0;
             let mut total_connect_time_ms = 0;
             let mut total_disconnect_time_ms = 0;
             for i in 0..opt.repetitions {
                 if opt.scan_test_enabled {
-                    // TODO(NET-1817): Fill this when scan test api is available
+                    let start = Instant::now();
+                    let result = await!(wlan_service_util::perform_scan(&wlaniface.sme_proxy));
+                    match result {
+                        Ok(_ess_info) => {
+                            total_scan_time_ms +=
+                                duration_to_ms(Instant::now().duration_since(start));
+                            wlaniface.report.num_successful_scans += 1;
+                            wlaniface.report.last_successful_scan_attempt = i + 1;
+                        }
+                        _ => {}
+                    };
                 }
 
                 if opt.connect_test_enabled {
@@ -140,6 +151,10 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                     };
                 }
                 sleep(Duration::from_millis(opt.wait_time_ms));
+            }
+            if wlaniface.report.num_successful_scans > 0 {
+                wlaniface.report.average_scan_time_ms =
+                    total_scan_time_ms / wlaniface.report.num_successful_scans;
             }
             if wlaniface.report.num_successful_connects > 0 {
                 wlaniface.report.average_connect_time_ms =
@@ -192,6 +207,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
 struct TestReport {
     num_successful_scans: u128,
     last_successful_scan_attempt: u128,
+    average_scan_time_ms: u128,
 
     num_successful_connects: u128,
     last_successful_connection_attempt: u128,
@@ -207,6 +223,7 @@ impl TestReport {
         TestReport {
             num_successful_scans: 0,
             last_successful_scan_attempt: 0,
+            average_scan_time_ms: 0,
 
             num_successful_connects: 0,
             last_successful_connection_attempt: 0,
