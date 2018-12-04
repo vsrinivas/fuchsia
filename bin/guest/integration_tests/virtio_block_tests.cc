@@ -8,7 +8,6 @@
 #include <string>
 
 #include <fbl/unique_fd.h>
-#include <fs-management/ramdisk.h>
 #include <garnet/bin/guest/vmm/device/qcow.h>
 #include <garnet/bin/guest/vmm/device/qcow_test_data.h>
 #include <garnet/lib/machina/device/block.h>
@@ -28,37 +27,46 @@ static constexpr uint32_t kVirtioBlockCount = 32;
 static constexpr uint32_t kVirtioQcowBlockCount = 4 * 1024 * 1024 * 2;
 static constexpr uint32_t kVirtioTestStep = 8;
 
-static fidl::VectorPtr<fuchsia::guest::BlockDevice> ramdisk_device(
-    fuchsia::guest::BlockMode mode, char* ramdisk_path) {
-  zx_status_t status =
-      create_ramdisk(kBlockSectorSize, kVirtioBlockCount, ramdisk_path);
-  FXL_CHECK(status == ZX_OK) << "Failed to create ramdisk";
-  int fd = open(ramdisk_path, O_RDWR);
-  FXL_CHECK(fd >= 0) << "Failed to open ramdisk";
+static fidl::VectorPtr<fuchsia::guest::BlockDevice> block_device(
+    fuchsia::guest::BlockMode mode, fuchsia::guest::BlockFormat format,
+    char* path) {
+  fbl::unique_fd fd(mkstemp(path));
+  FXL_CHECK(fd) << "Failed to create temporary file";
+
   zx_handle_t handle;
-  status = fdio_get_service_handle(fd, &handle);
-  FXL_CHECK(status == ZX_OK) << "Failed to get ramdisk file handle";
+  zx_status_t status = fdio_get_service_handle(fd.release(), &handle);
+  FXL_CHECK(status == ZX_OK) << "Failed to get temporary file handle";
 
   fidl::VectorPtr<fuchsia::guest::BlockDevice> block_devices;
   block_devices.push_back({
       "test_device",
       mode,
-      fuchsia::guest::BlockFormat::RAW,
+      format,
       fidl::InterfaceHandle<fuchsia::io::File>(zx::channel(handle)).Bind(),
   });
   return block_devices;
 }
 
-class ZirconReadOnlyRamdiskGuestTest
-    : public GuestTest<ZirconReadOnlyRamdiskGuestTest> {
+static bool write_raw_file(const char* path) {
+  fbl::unique_fd fd(open(path, O_RDWR));
+  if (!fd) {
+    return false;
+  }
+  int ret = ftruncate(fd.get(), kVirtioBlockCount * kBlockSectorSize);
+  return ret == 0;
+}
+
+class ZirconReadOnlyRawGuestTest
+    : public GuestTest<ZirconReadOnlyRawGuestTest> {
  public:
   static bool LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) {
     launch_info->url = kZirconGuestUrl;
     launch_info->args.push_back("--virtio-gpu=false");
     launch_info->args.push_back("--cmdline-add=kernel.serial=none");
     launch_info->block_devices =
-        ramdisk_device(fuchsia::guest::BlockMode::READ_ONLY, ramdisk_path_);
-    return true;
+        block_device(fuchsia::guest::BlockMode::READ_ONLY,
+                     fuchsia::guest::BlockFormat::RAW, file_path_);
+    return write_raw_file(file_path_);
   }
 
   static bool SetUpGuest() {
@@ -69,12 +77,13 @@ class ZirconReadOnlyRamdiskGuestTest
     return true;
   }
 
-  static char ramdisk_path_[PATH_MAX];
+  static char file_path_[PATH_MAX];
 };
 
-char ZirconReadOnlyRamdiskGuestTest::ramdisk_path_[PATH_MAX] = "";
+char ZirconReadOnlyRawGuestTest::file_path_[PATH_MAX] =
+    "/tmp/guest-test.XXXXXX";
 
-TEST_F(ZirconReadOnlyRamdiskGuestTest, BlockDeviceExists) {
+TEST_F(ZirconReadOnlyRawGuestTest, BlockDeviceExists) {
   std::string args =
       fxl::StringPrintf("%lu %u check", kBlockSectorSize, kVirtioBlockCount);
   std::string result;
@@ -82,8 +91,8 @@ TEST_F(ZirconReadOnlyRamdiskGuestTest, BlockDeviceExists) {
   EXPECT_THAT(result, HasSubstr("PASS"));
 }
 
-TEST_F(ZirconReadOnlyRamdiskGuestTest, Read) {
-  fbl::unique_fd fd(open(ramdisk_path_, O_RDWR));
+TEST_F(ZirconReadOnlyRawGuestTest, Read) {
+  fbl::unique_fd fd(open(file_path_, O_RDWR));
   ASSERT_TRUE(fd);
 
   uint8_t data[kBlockSectorSize];
@@ -102,8 +111,8 @@ TEST_F(ZirconReadOnlyRamdiskGuestTest, Read) {
   }
 }
 
-TEST_F(ZirconReadOnlyRamdiskGuestTest, Write) {
-  fbl::unique_fd fd(open(ramdisk_path_, O_RDWR));
+TEST_F(ZirconReadOnlyRawGuestTest, Write) {
+  fbl::unique_fd fd(open(file_path_, O_RDWR));
   ASSERT_TRUE(fd);
 
   uint8_t data[kBlockSectorSize];
@@ -129,7 +138,7 @@ TEST_F(ZirconReadOnlyRamdiskGuestTest, Write) {
     EXPECT_EQ(Run(kVirtioBlockUtilCmx, args, &result), ZX_OK);
     EXPECT_THAT(result, HasSubstr("PASS"));
 
-    // Check that the ramdisk block contains only zero.
+    // Check that the host block contains only zero.
     ASSERT_EQ(
         pread(fd.get(), &data, kBlockSectorSize, offset * kBlockSectorSize),
         static_cast<ssize_t>(kBlockSectorSize));
@@ -139,16 +148,17 @@ TEST_F(ZirconReadOnlyRamdiskGuestTest, Write) {
   }
 }
 
-class ZirconReadWriteRamdiskGuestTest
-    : public GuestTest<ZirconReadWriteRamdiskGuestTest> {
+class ZirconReadWriteRawGuestTest
+    : public GuestTest<ZirconReadWriteRawGuestTest> {
  public:
   static bool LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) {
     launch_info->url = kZirconGuestUrl;
     launch_info->args.push_back("--virtio-gpu=false");
     launch_info->args.push_back("--cmdline-add=kernel.serial=none");
     launch_info->block_devices =
-        ramdisk_device(fuchsia::guest::BlockMode::READ_WRITE, ramdisk_path_);
-    return true;
+        block_device(fuchsia::guest::BlockMode::READ_WRITE,
+                     fuchsia::guest::BlockFormat::RAW, file_path_);
+    return write_raw_file(file_path_);
   }
 
   static bool SetUpGuest() {
@@ -159,12 +169,13 @@ class ZirconReadWriteRamdiskGuestTest
     return true;
   }
 
-  static char ramdisk_path_[PATH_MAX];
+  static char file_path_[PATH_MAX];
 };
 
-char ZirconReadWriteRamdiskGuestTest::ramdisk_path_[PATH_MAX] = "";
+char ZirconReadWriteRawGuestTest::file_path_[PATH_MAX] =
+    "/tmp/guest-test.XXXXXX";
 
-TEST_F(ZirconReadWriteRamdiskGuestTest, BlockDeviceExists) {
+TEST_F(ZirconReadWriteRawGuestTest, BlockDeviceExists) {
   std::string args =
       fxl::StringPrintf("%lu %u check", kBlockSectorSize, kVirtioBlockCount);
   std::string result;
@@ -172,8 +183,8 @@ TEST_F(ZirconReadWriteRamdiskGuestTest, BlockDeviceExists) {
   EXPECT_THAT(result, HasSubstr("PASS"));
 }
 
-TEST_F(ZirconReadWriteRamdiskGuestTest, Read) {
-  fbl::unique_fd fd(open(ramdisk_path_, O_RDWR));
+TEST_F(ZirconReadWriteRawGuestTest, Read) {
+  fbl::unique_fd fd(open(file_path_, O_RDWR));
   ASSERT_TRUE(fd);
 
   uint8_t data[kBlockSectorSize];
@@ -192,8 +203,8 @@ TEST_F(ZirconReadWriteRamdiskGuestTest, Read) {
   }
 }
 
-TEST_F(ZirconReadWriteRamdiskGuestTest, Write) {
-  fbl::unique_fd fd(open(ramdisk_path_, O_RDWR));
+TEST_F(ZirconReadWriteRawGuestTest, Write) {
+  fbl::unique_fd fd(open(file_path_, O_RDWR));
   ASSERT_TRUE(fd);
 
   uint8_t data[kBlockSectorSize];
@@ -219,7 +230,7 @@ TEST_F(ZirconReadWriteRamdiskGuestTest, Write) {
     EXPECT_EQ(Run(kVirtioBlockUtilCmx, args, &result), ZX_OK);
     EXPECT_THAT(result, HasSubstr("PASS"));
 
-    // Check that the ramdisk block contains the written bytes.
+    // Check that the host block contains the written bytes.
     ASSERT_EQ(
         pread(fd.get(), &data, kBlockSectorSize, offset * kBlockSectorSize),
         static_cast<ssize_t>(kBlockSectorSize));
@@ -229,16 +240,17 @@ TEST_F(ZirconReadWriteRamdiskGuestTest, Write) {
   }
 }
 
-class ZirconVolatileRamdiskGuestTest
-    : public GuestTest<ZirconVolatileRamdiskGuestTest> {
+class ZirconVolatileRawGuestTest
+    : public GuestTest<ZirconVolatileRawGuestTest> {
  public:
   static bool LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) {
     launch_info->url = kZirconGuestUrl;
     launch_info->args.push_back("--virtio-gpu=false");
     launch_info->args.push_back("--cmdline-add=kernel.serial=none");
-    launch_info->block_devices = ramdisk_device(
-        fuchsia::guest::BlockMode::VOLATILE_WRITE, ramdisk_path_);
-    return true;
+    launch_info->block_devices =
+        block_device(fuchsia::guest::BlockMode::VOLATILE_WRITE,
+                     fuchsia::guest::BlockFormat::RAW, file_path_);
+    return write_raw_file(file_path_);
   }
 
   static bool SetUpGuest() {
@@ -249,12 +261,13 @@ class ZirconVolatileRamdiskGuestTest
     return true;
   }
 
-  static char ramdisk_path_[PATH_MAX];
+  static char file_path_[PATH_MAX];
 };
 
-char ZirconVolatileRamdiskGuestTest::ramdisk_path_[PATH_MAX] = "";
+char ZirconVolatileRawGuestTest::file_path_[PATH_MAX] =
+    "/tmp/guest-test.XXXXXX";
 
-TEST_F(ZirconVolatileRamdiskGuestTest, BlockDeviceExists) {
+TEST_F(ZirconVolatileRawGuestTest, BlockDeviceExists) {
   std::string args =
       fxl::StringPrintf("%lu %u check", kBlockSectorSize, kVirtioBlockCount);
   std::string result;
@@ -262,8 +275,8 @@ TEST_F(ZirconVolatileRamdiskGuestTest, BlockDeviceExists) {
   EXPECT_THAT(result, HasSubstr("PASS"));
 }
 
-TEST_F(ZirconVolatileRamdiskGuestTest, Read) {
-  fbl::unique_fd fd(open(ramdisk_path_, O_RDWR));
+TEST_F(ZirconVolatileRawGuestTest, Read) {
+  fbl::unique_fd fd(open(file_path_, O_RDWR));
   ASSERT_TRUE(fd);
 
   uint8_t data[kBlockSectorSize];
@@ -282,8 +295,8 @@ TEST_F(ZirconVolatileRamdiskGuestTest, Read) {
   }
 }
 
-TEST_F(ZirconVolatileRamdiskGuestTest, Write) {
-  fbl::unique_fd fd(open(ramdisk_path_, O_RDWR));
+TEST_F(ZirconVolatileRawGuestTest, Write) {
+  fbl::unique_fd fd(open(file_path_, O_RDWR));
   ASSERT_TRUE(fd);
 
   uint8_t data[kBlockSectorSize];
@@ -309,7 +322,7 @@ TEST_F(ZirconVolatileRamdiskGuestTest, Write) {
     EXPECT_EQ(Run(kVirtioBlockUtilCmx, args, &result), ZX_OK);
     EXPECT_THAT(result, HasSubstr("PASS"));
 
-    // Check that the ramdisk block contains only zero (i.e. was not written).
+    // Check that the host block contains only zero (i.e. was not written).
     ASSERT_EQ(
         pread(fd.get(), &data, kBlockSectorSize, offset * kBlockSectorSize),
         static_cast<ssize_t>(kBlockSectorSize));
@@ -332,13 +345,14 @@ static bool write_at(int fd, const T* ptr, size_t len, off_t off) {
   return written == static_cast<ssize_t>(len * sizeof(T));
 }
 
-static bool write_qcow_file(int fd) {
+static bool write_qcow_file(const char* path) {
+  fbl::unique_fd fd(open(path, O_RDWR));
   if (!fd) {
     return false;
   }
 
   QcowHeader header = kDefaultHeaderV2.HostToBigEndian();
-  bool write_success = write_at(fd, &header, 0);
+  bool write_success = write_at(fd.get(), &header, 0);
   if (!write_success) {
     return false;
   }
@@ -350,15 +364,16 @@ static bool write_qcow_file(int fd) {
   }
 
   // Write L1 table.
-  write_success = write_at(fd, be_table, arraysize(kL2TableClusterOffsets),
-                           kDefaultHeaderV2.l1_table_offset);
+  write_success =
+      write_at(fd.get(), be_table, arraysize(kL2TableClusterOffsets),
+               kDefaultHeaderV2.l1_table_offset);
   if (!write_success) {
     return false;
   }
 
   // Initialize empty L2 tables.
   for (size_t i = 0; i < arraysize(kL2TableClusterOffsets); ++i) {
-    write_success = write_at(fd, kZeroCluster, sizeof(kZeroCluster),
+    write_success = write_at(fd.get(), kZeroCluster, sizeof(kZeroCluster),
                              kL2TableClusterOffsets[i]);
     if (!write_success) {
       return false;
@@ -369,7 +384,7 @@ static bool write_qcow_file(int fd) {
   uint64_t l2_offset = kL2TableClusterOffsets[0];
   uint64_t data_cluster_offset = ClusterOffset(kFirstDataCluster);
   uint64_t l2_entry = HostToBigEndianTraits::Convert(data_cluster_offset);
-  write_success = write_at(fd, &l2_entry, l2_offset);
+  write_success = write_at(fd.get(), &l2_entry, l2_offset);
   if (!write_success) {
     return false;
   }
@@ -377,31 +392,13 @@ static bool write_qcow_file(int fd) {
   // Write data to cluster.
   uint8_t cluster_data[kClusterSize];
   memset(cluster_data, 0xab, sizeof(cluster_data));
-  write_success = write_at(fd, cluster_data, kClusterSize, data_cluster_offset);
+  write_success =
+      write_at(fd.get(), cluster_data, kClusterSize, data_cluster_offset);
   if (!write_success) {
     return false;
   }
 
   return true;
-}
-
-static fidl::VectorPtr<fuchsia::guest::BlockDevice> qcow_device(
-    fuchsia::guest::BlockMode mode, char* qcow_path) {
-  fbl::unique_fd fd(mkstemp(qcow_path));
-  FXL_CHECK(fd) << "Failed to open qcow file";
-  FXL_CHECK(write_qcow_file(fd.get()));
-
-  zx_handle_t handle;
-  zx_status_t status = fdio_get_service_handle(fd.release(), &handle);
-  FXL_CHECK(status == ZX_OK) << "Failed to get qcow file handle";
-  fidl::VectorPtr<fuchsia::guest::BlockDevice> block_devices;
-  block_devices.push_back({
-      "qcow_device",
-      mode,
-      fuchsia::guest::BlockFormat::QCOW,
-      fidl::InterfaceHandle<fuchsia::io::File>(zx::channel(handle)).Bind(),
-  });
-  return block_devices;
 }
 
 class ZirconReadOnlyQcowGuestTest
@@ -412,8 +409,9 @@ class ZirconReadOnlyQcowGuestTest
     launch_info->args.push_back("--virtio-gpu=false");
     launch_info->args.push_back("--cmdline-add=kernel.serial=none");
     launch_info->block_devices =
-        qcow_device(fuchsia::guest::BlockMode::READ_ONLY, qcow_path_);
-    return true;
+        block_device(fuchsia::guest::BlockMode::READ_ONLY,
+                     fuchsia::guest::BlockFormat::QCOW, file_path_);
+    return write_qcow_file(file_path_);
   }
 
   static bool SetUpGuest() {
@@ -424,10 +422,10 @@ class ZirconReadOnlyQcowGuestTest
     return true;
   }
 
-  static char qcow_path_[PATH_MAX];
+  static char file_path_[PATH_MAX];
 };
 
-char ZirconReadOnlyQcowGuestTest::qcow_path_[PATH_MAX] =
+char ZirconReadOnlyQcowGuestTest::file_path_[PATH_MAX] =
     "/tmp/guest-test.XXXXXX";
 
 TEST_F(ZirconReadOnlyQcowGuestTest, BlockDeviceExists) {
@@ -494,8 +492,9 @@ class ZirconVolatileQcowGuestTest
     launch_info->args.push_back("--virtio-gpu=false");
     launch_info->args.push_back("--cmdline-add=kernel.serial=none");
     launch_info->block_devices =
-        qcow_device(fuchsia::guest::BlockMode::VOLATILE_WRITE, qcow_path_);
-    return true;
+        block_device(fuchsia::guest::BlockMode::VOLATILE_WRITE,
+                     fuchsia::guest::BlockFormat::QCOW, file_path_);
+    return write_qcow_file(file_path_);
   }
 
   static bool SetUpGuest() {
@@ -506,10 +505,10 @@ class ZirconVolatileQcowGuestTest
     return true;
   }
 
-  static char qcow_path_[PATH_MAX];
+  static char file_path_[PATH_MAX];
 };
 
-char ZirconVolatileQcowGuestTest::qcow_path_[PATH_MAX] =
+char ZirconVolatileQcowGuestTest::file_path_[PATH_MAX] =
     "/tmp/guest-test.XXXXXX";
 
 TEST_F(ZirconVolatileQcowGuestTest, BlockDeviceExists) {

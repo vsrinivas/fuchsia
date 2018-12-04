@@ -3,9 +3,6 @@
         "binary": "test/guest_integration_tests"
     },
     "sandbox": {
-        "dev": [
-            "misc"
-        ],
         "features": [
             "system-temp"
         ],

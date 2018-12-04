@@ -31,7 +31,6 @@ executable("bin") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest_main",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fs-management",
   ]
 }
 
