@@ -9,10 +9,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/google/netstack/tcpip"
-
 	"app/context"
+	"netstack/fidlconv"
 
+	"fidl/fuchsia/net"
 	"fidl/fuchsia/netstack"
 )
 
@@ -160,16 +160,16 @@ func dumpRouteTables(a *netstatApp) {
 	}
 }
 
-func netAddressZero(addr netstack.NetAddress) bool {
-	switch addr.Family {
-	case netstack.NetAddressFamilyIpv4:
+func netAddressZero(addr net.IpAddress) bool {
+	switch addr.Which() {
+	case net.IpAddressIpv4:
 		for _, b := range addr.Ipv4.Addr {
 			if b != 0 {
 				return false
 			}
 		}
 		return true
-	case netstack.NetAddressFamilyIpv6:
+	case net.IpAddressIpv6:
 		for _, b := range addr.Ipv6.Addr {
 			if b != 0 {
 				return false
@@ -180,16 +180,9 @@ func netAddressZero(addr netstack.NetAddress) bool {
 	return true
 }
 
-func netAddressToString(addr netstack.NetAddress) string {
-	switch addr.Family {
-	case netstack.NetAddressFamilyIpv4:
-		a := tcpip.Address(addr.Ipv4.Addr[:])
-		return fmt.Sprintf("%s", a)
-	case netstack.NetAddressFamilyIpv6:
-		a := tcpip.Address(addr.Ipv6.Addr[:])
-		return fmt.Sprintf("%s", a)
-	}
-	return ""
+// TODO(tamird): this is the same as netAddrToString in ifconfig.
+func netAddressToString(addr net.IpAddress) string {
+	return fidlconv.ToTCPIPAddress(addr).String()
 }
 
 func usage() {

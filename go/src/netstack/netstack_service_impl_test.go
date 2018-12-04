@@ -6,14 +6,17 @@ package main
 
 import (
 	"net"
+	"netstack/fidlconv"
 	"syscall/zx"
 	"syscall/zx/fidl"
 	"testing"
 
+	netfidl "fidl/fuchsia/net"
 	"fidl/fuchsia/netstack"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/stack"
 )
 
@@ -24,22 +27,9 @@ func AssertNoError(t *testing.T, err error) {
 	}
 }
 
-func isIPv4(ip net.IP) bool {
-	return ip.DefaultMask() != nil
-}
-
-func toNetAddress(addr net.IP) netstack.NetAddress {
-	out := netstack.NetAddress{Family: netstack.NetAddressFamilyUnspecified}
-	if isIPv4(addr) {
-		out.Family = netstack.NetAddressFamilyIpv4
-		out.Ipv4 = &netstack.Ipv4Address{Addr: [4]uint8{}}
-		copy(out.Ipv4.Addr[:], addr[len(addr)-4:])
-	} else {
-		out.Family = netstack.NetAddressFamilyIpv6
-		out.Ipv6 = &netstack.Ipv6Address{Addr: [16]uint8{}}
-		copy(out.Ipv6.Addr[:], addr[:])
-	}
-	return out
+// TODO(tamird): this exact function exists in ifconfig.
+func toIpAddress(addr net.IP) netfidl.IpAddress {
+	return fidlconv.ToNetIpAddress(tcpip.Address(addr))
 }
 
 // ifconfig route add 1.2.3.4/14 gateway 9.8.7.6 iface lo
@@ -74,9 +64,9 @@ func TestRouteTableTransactions(t *testing.T) {
 		AssertNoError(t, err)
 		gatewayAddress, _, err := net.ParseCIDR("5.6.7.8/32")
 		newRouteTableEntry := netstack.RouteTableEntry{
-			Destination: toNetAddress(destinationAddress),
-			Netmask:     toNetAddress(net.IP(destinationSubnet.Mask)),
-			Gateway:     toNetAddress(gatewayAddress),
+			Destination: toIpAddress(destinationAddress),
+			Netmask:     toIpAddress(net.IP(destinationSubnet.Mask)),
+			Gateway:     toIpAddress(gatewayAddress),
 		}
 
 		newRouteTable := append(rs, newRouteTableEntry)

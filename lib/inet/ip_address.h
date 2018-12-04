@@ -9,11 +9,7 @@
 
 #include "lib/fxl/logging.h"
 
-namespace fuchsia {
-namespace netstack {
-class NetAddress;
-}
-}  // namespace fuchsia
+#include <fuchsia/net/cpp/fidl.h>
 
 namespace inet {
 
@@ -57,8 +53,8 @@ class IpAddress {
   // Creates an address from a sockaddr_storage struct.
   explicit IpAddress(const sockaddr_storage& addr);
 
-  // Creates an address from a NetAddress struct.
-  explicit IpAddress(const fuchsia::netstack::NetAddress* addr);
+  // Creates an address from an IpAddress struct.
+  explicit IpAddress(const fuchsia::net::IpAddress* addr);
 
   bool is_valid() const { return family_ != AF_UNSPEC; }
 

@@ -8,11 +8,11 @@ fidl("fuchsia.netstack") {
   sdk_category = "partner"
 
   sources = [
-    "net_address.fidl",
     "netstack.fidl",
   ]
 
   public_deps = [
+    "//zircon/public/fidl/fuchsia-net",
     "//zircon/public/fidl/zircon-ethernet",
   ]
 }

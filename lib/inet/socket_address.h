@@ -14,11 +14,7 @@
 #include "garnet/lib/inet/ip_port.h"
 #include "lib/fxl/logging.h"
 
-namespace fuchsia {
-namespace netstack {
-class SocketAddress;
-}
-}  // namespace fuchsia
+#include <fuchsia/netstack/cpp/fidl.h>
 
 namespace inet {
 

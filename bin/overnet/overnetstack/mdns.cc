@@ -149,31 +149,31 @@ class MdnsIntroducer : public fbl::RefCounted<MdnsIntroducer> {
 
   static overnet::StatusOr<UdpAddr> ToUdpAddr(
       const fuchsia::netstack::SocketAddress& sock_addr) {
-    const fuchsia::netstack::NetAddress& net_addr = sock_addr.addr;
+    const fuchsia::net::IpAddress& net_addr = sock_addr.addr;
     UdpAddr udp_addr;
     memset(&udp_addr, 0, sizeof(udp_addr));
-    switch (net_addr.family) {
-      case fuchsia::netstack::NetAddressFamily::UNSPECIFIED:
+    switch (net_addr.Which()) {
+      case fuchsia::net::IpAddress::Tag::Invalid:
         return overnet::Status(overnet::StatusCode::INVALID_ARGUMENT,
                                "unknown address type");
-      case fuchsia::netstack::NetAddressFamily::IPV4:
-        if (!net_addr.ipv4) {
+      case fuchsia::net::IpAddress::Tag::kIpv4:
+        if (!net_addr.is_ipv4()) {
           return overnet::Status(overnet::StatusCode::INVALID_ARGUMENT,
                                  "bad ipv4 address");
         }
         udp_addr.ipv4.sin_family = AF_INET;
         udp_addr.ipv4.sin_port = htons(sock_addr.port);
-        memcpy(&udp_addr.ipv4.sin_addr, net_addr.ipv4->addr.data(),
+        memcpy(&udp_addr.ipv4.sin_addr, net_addr.ipv4().addr.data(),
                sizeof(udp_addr.ipv4.sin_addr));
         return udp_addr;
-      case fuchsia::netstack::NetAddressFamily::IPV6:
-        if (!net_addr.ipv6) {
+      case fuchsia::net::IpAddress::Tag::kIpv6:
+        if (!net_addr.is_ipv6()) {
           return overnet::Status(overnet::StatusCode::INVALID_ARGUMENT,
                                  "bad ipv6 address");
         }
         udp_addr.ipv6.sin6_family = AF_INET6;
         udp_addr.ipv6.sin6_port = htons(sock_addr.port);
-        memcpy(&udp_addr.ipv6.sin6_addr, net_addr.ipv6->addr.data(),
+        memcpy(&udp_addr.ipv6.sin6_addr, net_addr.ipv6().addr.data(),
                sizeof(udp_addr.ipv6.sin6_addr));
         return udp_addr;
     }

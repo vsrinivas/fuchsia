@@ -171,10 +171,10 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
     auto deferred = fit::defer(std::move(callback));
     PrepStart(std::move(start_info));
 
-    fuchsia::netstack::Subnet subnet;
-    subnet.addr.family = fuchsia::netstack::NetAddressFamily::IPV4;
-    subnet.addr.ipv4 = fuchsia::netstack::Ipv4Address::New();
-    memcpy(subnet.addr.ipv4->addr.data(), kIpv4Address, 4);
+    fuchsia::net::Subnet subnet;
+    fuchsia::net::IPv4Address ipv4;
+    memcpy(ipv4.addr.data(), kIpv4Address, 4);
+    subnet.addr.set_ipv4(ipv4);
     subnet.prefix_len = 24;
 
     fuchsia::netstack::InterfaceConfig config;

@@ -6,56 +6,93 @@ use fidl_fuchsia_net_stack as fidl;
 
 use bitflags::bitflags;
 
-pub struct InterfaceAddress<'a>(&'a fidl::InterfaceAddress);
+pub struct InterfaceAddress {
+    ip_address: fidl_fuchsia_net_ext::IpAddress,
+    prefix_len: u8,
+    peer_address: Option<Box<fidl_fuchsia_net::IpAddress>>,
+}
 
-impl<'a> From<&'a fidl::InterfaceAddress> for InterfaceAddress<'a> {
-    fn from(a: &'a fidl::InterfaceAddress) -> Self {
-        InterfaceAddress(a)
+impl From<fidl::InterfaceAddress> for InterfaceAddress {
+    fn from(interface_address: fidl::InterfaceAddress) -> Self {
+        let fidl::InterfaceAddress {
+            ip_address,
+            prefix_len,
+            peer_address,
+        } = interface_address;
+        let ip_address = ip_address.into();
+        Self {
+            ip_address,
+            prefix_len,
+            peer_address,
+        }
     }
 }
 
-impl<'a> std::fmt::Display for InterfaceAddress<'a> {
+impl std::fmt::Display for InterfaceAddress {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        let InterfaceAddress(fidl::InterfaceAddress {
+        let Self {
             ip_address,
             prefix_len,
             peer_address: _,
-        }) = self;
-        write!(
-            f,
-            "{}/{}",
-            fidl_fuchsia_net_ext::IpAddress(ip_address),
-            prefix_len
-        )
+        } = self;
+        write!(f, "{}/{}", ip_address, prefix_len)
     }
 }
 
-pub struct ForwardingEntry(fidl::ForwardingEntry);
+pub enum ForwardingDestination {
+    DeviceId(u64),
+    NextHop(fidl_fuchsia_net_ext::IpAddress),
+}
+
+impl From<fidl::ForwardingDestination> for ForwardingDestination {
+    fn from(forwarding_destination: fidl::ForwardingDestination) -> Self {
+        match forwarding_destination {
+            fidl::ForwardingDestination::DeviceId(id) => ForwardingDestination::DeviceId(id),
+            fidl::ForwardingDestination::NextHop(ip_address) => {
+                ForwardingDestination::NextHop(ip_address.into())
+            }
+        }
+    }
+}
+
+impl std::fmt::Display for ForwardingDestination {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        match self {
+            ForwardingDestination::DeviceId(id) => write!(f, "device id {}", id),
+            ForwardingDestination::NextHop(nh) => write!(f, "next hop {}", nh),
+        }
+    }
+}
+
+pub struct ForwardingEntry {
+    subnet: fidl_fuchsia_net_ext::Subnet,
+    destination: ForwardingDestination,
+}
 
 impl From<fidl::ForwardingEntry> for ForwardingEntry {
-    fn from(e: fidl::ForwardingEntry) -> Self {
-        ForwardingEntry(e)
+    fn from(forwarding_entry: fidl::ForwardingEntry) -> Self {
+        let fidl::ForwardingEntry {
+            subnet,
+            destination,
+        } = forwarding_entry;
+        let subnet = subnet.into();
+        let destination = destination.into();
+        Self {
+            subnet,
+            destination,
+        }
     }
 }
 
 impl std::fmt::Display for ForwardingEntry {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        let ForwardingEntry(fidl::ForwardingEntry {
+        let Self {
             subnet,
             destination,
-        }) = self;
-        write!(
-            f,
-            "{}/{}: ",
-            fidl_fuchsia_net_ext::IpAddress(&subnet.addr),
-            subnet.prefix_len
-        )?;
-        match destination {
-            fidl::ForwardingDestination::DeviceId(id) => write!(f, "device id {}", id),
-            fidl::ForwardingDestination::NextHop(ref nh) => {
-                write!(f, "next hop {}", fidl_fuchsia_net_ext::IpAddress(&nh))
-            }
-        }
+        } = self;
+        write!(f, "{}", subnet)?;
+        write!(f, "{}", destination)?;
+        Ok(())
     }
 }
 
@@ -75,7 +112,7 @@ pub struct InterfaceInfo {
     mtu: u32,
     features: fidl_zircon_ethernet_ext::EthernetFeatures,
     status: InterfaceStatus,
-    addresses: Vec<fidl::InterfaceAddress>,
+    addresses: Vec<InterfaceAddress>,
 }
 
 impl From<fidl::InterfaceInfo> for InterfaceInfo {
@@ -93,6 +130,7 @@ impl From<fidl::InterfaceInfo> for InterfaceInfo {
         let mac = mac.map(|mac| (*mac).into());
         let features = fidl_zircon_ethernet_ext::EthernetFeatures::from_bits_truncate(features);
         let status = InterfaceStatus::from_bits_truncate(status);
+        let addresses = addresses.into_iter().map(Into::into).collect();
         Self {
             id,
             path,
@@ -126,8 +164,8 @@ impl std::fmt::Display for InterfaceInfo {
         write!(f, "  features:\n    {:?}\n", features)?;
         write!(f, "  status:\n    {:?}\n", status)?;
         write!(f, "  Addresses:")?;
-        for addr in addresses {
-            write!(f, "\n    {}", InterfaceAddress(addr))?;
+        for address in addresses {
+            write!(f, "\n    {}", address)?;
         }
         Ok(())
     }
@@ -147,10 +185,10 @@ fn test_display_interfaceinfo() {
                 mtu: 1500,
                 features: fidl_zircon_ethernet_ext::EthernetFeatures::all(),
                 status: InterfaceStatus::all(),
-                addresses: vec![fidl_fuchsia_net_stack::InterfaceAddress {
-                    ip_address: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::IPv4Address {
-                        addr: [255, 255, 255, 0]
-                    }),
+                addresses: vec![InterfaceAddress {
+                    ip_address: fidl_fuchsia_net_ext::IpAddress(std::net::IpAddr::V4(
+                        std::net::Ipv4Addr::new(255, 255, 255, 0),
+                    ),),
                     prefix_len: 4,
                     peer_address: None,
                 }],

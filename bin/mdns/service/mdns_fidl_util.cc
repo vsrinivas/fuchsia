@@ -67,14 +67,14 @@ fuchsia::netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv4(
 
   FXL_DCHECK(ip_address.is_v4());
 
+  fuchsia::net::IPv4Address ipv4;
+  FXL_DCHECK(ipv4.addr.count() == ip_address.byte_count());
+  std::memcpy(ipv4.addr.mutable_data(), ip_address.as_bytes(),
+              ipv4.addr.count());
+
   fuchsia::netstack::SocketAddressPtr result =
       fuchsia::netstack::SocketAddress::New();
-  result->addr.family = fuchsia::netstack::NetAddressFamily::IPV4;
-  result->addr.ipv4 = fuchsia::netstack::Ipv4Address::New();
-
-  FXL_DCHECK(result->addr.ipv4->addr.count() == ip_address.byte_count());
-  std::memcpy(result->addr.ipv4->addr.mutable_data(), ip_address.as_bytes(),
-              result->addr.ipv4->addr.count());
+  result->addr.set_ipv4(ipv4);
 
   return result;
 }
@@ -88,14 +88,14 @@ fuchsia::netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv6(
 
   FXL_DCHECK(ip_address.is_v6());
 
+  fuchsia::net::IPv6Address ipv6;
+  FXL_DCHECK(ipv6.addr.count() == ip_address.byte_count());
+  std::memcpy(ipv6.addr.mutable_data(), ip_address.as_bytes(),
+              ipv6.addr.count());
+
   fuchsia::netstack::SocketAddressPtr result =
       fuchsia::netstack::SocketAddress::New();
-  result->addr.family = fuchsia::netstack::NetAddressFamily::IPV6;
-  result->addr.ipv6 = fuchsia::netstack::Ipv6Address::New();
-
-  FXL_DCHECK(result->addr.ipv6->addr.count() == ip_address.byte_count());
-  std::memcpy(result->addr.ipv6->addr.mutable_data(), ip_address.as_bytes(),
-              result->addr.ipv6->addr.count());
+  result->addr.set_ipv6(ipv6);
 
   return result;
 }
@@ -136,25 +136,25 @@ fuchsia::netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv6(
 
 // static
 inet::IpAddress MdnsFidlUtil::IpAddressFrom(
-    const fuchsia::netstack::NetAddress* addr) {
+    const fuchsia::net::IpAddress* addr) {
   FXL_DCHECK(addr != nullptr);
-  switch (addr->family) {
-    case fuchsia::netstack::NetAddressFamily::IPV4:
-      if (!addr->ipv4) {
+  switch (addr->Which()) {
+    case fuchsia::net::IpAddress::Tag::kIpv4:
+      if (!addr->is_ipv4()) {
         return inet::IpAddress();
       }
 
-      FXL_DCHECK(addr->ipv4->addr.count() == sizeof(in_addr));
+      FXL_DCHECK(addr->ipv4().addr.count() == sizeof(in_addr));
       return inet::IpAddress(
-          *reinterpret_cast<const in_addr*>(addr->ipv4->addr.data()));
-    case fuchsia::netstack::NetAddressFamily::IPV6:
-      if (!addr->ipv6) {
+          *reinterpret_cast<const in_addr*>(addr->ipv4().addr.data()));
+    case fuchsia::net::IpAddress::Tag::kIpv6:
+      if (!addr->is_ipv6()) {
         return inet::IpAddress();
       }
 
-      FXL_DCHECK(addr->ipv6->addr.count() == sizeof(in6_addr));
+      FXL_DCHECK(addr->ipv6().addr.count() == sizeof(in6_addr));
       return inet::IpAddress(
-          *reinterpret_cast<const in6_addr*>(addr->ipv6->addr.data()));
+          *reinterpret_cast<const in6_addr*>(addr->ipv6().addr.data()));
     default:
       return inet::IpAddress();
   }

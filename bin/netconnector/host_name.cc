@@ -55,13 +55,11 @@ inet::IpAddress GetHostAddress() {
   NetstackClient::GetInterfaces(
       [](const fidl::VectorPtr<fuchsia::netstack::NetInterface>& interfaces) {
         for (const auto& interface : *interfaces) {
-          if (interface.addr.family ==
-              fuchsia::netstack::NetAddressFamily::IPV4) {
+          if (interface.addr.Which() == fuchsia::net::IpAddress::Tag::kIpv4) {
             ip_address = inet::IpAddress(&interface.addr);
             break;
           }
-          if (interface.addr.family ==
-              fuchsia::netstack::NetAddressFamily::IPV6) {
+          if (interface.addr.Which() == fuchsia::net::IpAddress::Tag::kIpv6) {
             ip_address = inet::IpAddress(&interface.addr);
             // Keep looking...v4 is preferred.
           }

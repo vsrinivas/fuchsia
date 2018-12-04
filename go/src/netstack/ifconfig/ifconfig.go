@@ -12,7 +12,9 @@ import (
 	"syscall/zx"
 
 	"app/context"
+	"netstack/fidlconv"
 
+	netfidl "fidl/fuchsia/net"
 	"fidl/fuchsia/netstack"
 	"fidl/fuchsia/wlan/service"
 	"fidl/zircon/ethernet"
@@ -115,7 +117,7 @@ func (a *netstackClientApp) parseRouteAttribute(in *netstack.RouteTableEntry, ar
 	var attr, val string
 	switch attr, val, remaining = args[0], args[1], args[2:]; attr {
 	case "gateway":
-		in.Gateway = toNetAddress(net.ParseIP(val))
+		in.Gateway = toIpAddress(net.ParseIP(val))
 	case "iface":
 		ifaces, err := a.netstack.GetInterfaces()
 		if err != nil {
@@ -144,8 +146,8 @@ func (a *netstackClientApp) newRouteFromArgs(args []string) (route netstack.Rout
 		return route, fmt.Errorf("invalid destination (destination must be provided in CIDR format): %s", destination)
 	}
 
-	route.Destination = toNetAddress(dstAddr)
-	route.Netmask = toNetAddress(net.IP(dstSubnet.Mask))
+	route.Destination = toIpAddress(dstAddr)
+	route.Netmask = toIpAddress(net.IP(dstSubnet.Mask))
 
 	for len(remaining) > 0 {
 		remaining, err = a.parseRouteAttribute(&route, remaining)
@@ -162,7 +164,7 @@ func (a *netstackClientApp) newRouteFromArgs(args []string) (route netstack.Rout
 }
 
 func (a *netstackClientApp) addRoute(r netstack.RouteTableEntry) error {
-	if (r.Gateway == netstack.NetAddress{}) && r.Nicid == 0 {
+	if (r.Gateway == netfidl.IpAddress{}) && r.Nicid == 0 {
 		return fmt.Errorf("either gateway or iface must be provided when adding a route")
 	}
 	req, transactionInterface, err := netstack.NewRouteTableTransactionInterfaceRequest()
@@ -189,14 +191,14 @@ func (a *netstackClientApp) addRoute(r netstack.RouteTableEntry) error {
 	return nil
 }
 
-func equalNetAddress(a netstack.NetAddress, b netstack.NetAddress) bool {
-	if a.Family != b.Family {
+func equalIpAddress(a netfidl.IpAddress, b netfidl.IpAddress) bool {
+	if a.Which() != b.Which() {
 		return false
 	}
-	switch a.Family {
-	case netstack.NetAddressFamilyIpv4:
+	switch a.Which() {
+	case netfidl.IpAddressIpv4:
 		return a.Ipv4.Addr == b.Ipv4.Addr
-	case netstack.NetAddressFamilyIpv6:
+	case netfidl.IpAddressIpv6:
 		return a.Ipv6.Addr == b.Ipv6.Addr
 	default:
 		return false
@@ -207,14 +209,14 @@ func equalNetAddress(a netstack.NetAddress, b netstack.NetAddress) bool {
 // missing the gateway or nicid then those are considered to be
 // matching.
 func matchRoute(target netstack.RouteTableEntry, source netstack.RouteTableEntry) bool {
-	if !equalNetAddress(target.Destination, source.Destination) {
+	if !equalIpAddress(target.Destination, source.Destination) {
 		return false
 	}
-	if !equalNetAddress(target.Netmask, source.Netmask) {
+	if !equalIpAddress(target.Netmask, source.Netmask) {
 		return false
 	}
-	if target.Gateway.Family != netstack.NetAddressFamilyUnspecified &&
-		!equalNetAddress(source.Gateway, target.Gateway) {
+	if target.Gateway.Which() != 0 &&
+		!equalIpAddress(source.Gateway, target.Gateway) {
 		// The gateway is neither wildcard nor a match.
 		return false
 	}
@@ -262,10 +264,10 @@ func routeTableEntryToString(r netstack.RouteTableEntry, ifaces []netstack.NetIn
 		ifaceName = iface.Name
 	}
 	var netAndMask net.IPNet
-	switch r.Destination.Family {
-	case netstack.NetAddressFamilyIpv4:
+	switch r.Destination.Which() {
+	case netfidl.IpAddressIpv4:
 		netAndMask = net.IPNet{IP: r.Destination.Ipv4.Addr[:], Mask: r.Netmask.Ipv4.Addr[:]}
-	case netstack.NetAddressFamilyIpv6:
+	case netfidl.IpAddressIpv6:
 		netAndMask = net.IPNet{IP: r.Destination.Ipv6.Addr[:], Mask: r.Netmask.Ipv6.Addr[:]}
 	}
 	return fmt.Sprintf("%s via %s %s", netAndMask.String(), netAddrToString(r.Gateway), ifaceName)
@@ -379,14 +381,8 @@ func hwAddrToString(hwaddr []uint8) string {
 	return b.String()
 }
 
-func netAddrToString(addr netstack.NetAddress) string {
-	switch addr.Family {
-	case netstack.NetAddressFamilyIpv4:
-		return tcpip.Address(addr.Ipv4.Addr[:]).String()
-	case netstack.NetAddressFamilyIpv6:
-		return tcpip.Address(addr.Ipv6.Addr[:]).String()
-	}
-	return ""
+func netAddrToString(addr netfidl.IpAddress) string {
+	return fidlconv.ToTCPIPAddress(addr).String()
 }
 
 func flagsToString(flags uint32) string {
@@ -397,25 +393,15 @@ func flagsToString(flags uint32) string {
 	return b.String()
 }
 
-func isIPv4(ip net.IP) bool {
-	return ip.DefaultMask() != nil
-}
-
-func toNetAddress(addr net.IP) netstack.NetAddress {
-	out := netstack.NetAddress{Family: netstack.NetAddressFamilyUnspecified}
-	if isIPv4(addr) {
-		out.Family = netstack.NetAddressFamilyIpv4
-		out.Ipv4 = &netstack.Ipv4Address{Addr: [4]uint8{}}
-		copy(out.Ipv4.Addr[:], addr[len(addr)-4:])
-	} else {
-		out.Family = netstack.NetAddressFamilyIpv6
-		out.Ipv6 = &netstack.Ipv6Address{Addr: [16]uint8{}}
-		copy(out.Ipv6.Addr[:], addr[:])
+func toIpAddress(addr net.IP) netfidl.IpAddress {
+	// TODO(eyalsoha): this doesn't correctly handle IPv6-mapped IPv4 addresses.
+	if ipv4 := addr.To4(); ipv4 != nil {
+		addr = ipv4
 	}
-	return out
+	return fidlconv.ToNetIpAddress(tcpip.Address(addr))
 }
 
-func validateCidr(cidr string) (address netstack.NetAddress, prefixLength uint8) {
+func validateCidr(cidr string) (address netfidl.IpAddress, prefixLength uint8) {
 	netAddr, netSubnet, err := net.ParseCIDR(cidr)
 	if err != nil {
 		fmt.Printf("Error parsing CIDR notation: %s, error: %v\n", cidr, err)
@@ -423,7 +409,7 @@ func validateCidr(cidr string) (address netstack.NetAddress, prefixLength uint8)
 	}
 	prefixLen, _ := netSubnet.Mask.Size()
 
-	return toNetAddress(netAddr), uint8(prefixLen)
+	return toIpAddress(netAddr), uint8(prefixLen)
 }
 
 func isWLAN(features uint32) bool {

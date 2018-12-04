@@ -4,6 +4,7 @@
 
 library fuchsia.netstack;
 
+using fuchsia.net;
 using zircon.ethernet;
 using zx;
 
@@ -92,7 +93,7 @@ struct InterfaceConfig {
 };
 
 union IpAddressConfig {
-    Subnet static_ip;
+    fuchsia.net.Subnet static_ip;
     bool dhcp;
 };
 
@@ -103,10 +104,10 @@ struct NetInterface {
     uint32 features;
     uint32 configuration;
     string name;
-    NetAddress addr;
-    NetAddress netmask;
-    NetAddress broadaddr;
-    vector<Subnet> ipv6addrs;
+    fuchsia.net.IpAddress addr;
+    fuchsia.net.IpAddress netmask;
+    fuchsia.net.IpAddress broadaddr;
+    vector<fuchsia.net.Subnet> ipv6addrs;
     vector<uint8> hwaddr;
 };
 
@@ -115,10 +116,15 @@ const uint32 NetInterfaceFlagUp = 0x01; // Set if the interface is up.
 const uint32 NetInterfaceFlagDhcp = 0x02; // Set if DHCP is enabled.
 
 struct RouteTableEntry {
-    NetAddress destination;
-    NetAddress netmask;
-    NetAddress gateway;
+    fuchsia.net.IpAddress destination;
+    fuchsia.net.IpAddress netmask;
+    fuchsia.net.IpAddress gateway;
     uint32 nicid;
+};
+
+struct SocketAddress {
+    fuchsia.net.IpAddress addr;
+    uint16 port;
 };
 
 [Discoverable]
@@ -157,18 +163,18 @@ interface Netstack {
 
     // Sets the address for the interface with the given nicid.
     // Masks off addr.PrefixLen bits from addr.Addr to set the subnet.
-    10: SetInterfaceAddress(uint32 nicid, NetAddress addr, uint8 prefixLen) -> (NetErr result);
+    10: SetInterfaceAddress(uint32 nicid, fuchsia.net.IpAddress addr, uint8 prefixLen) -> (NetErr result);
 
     // Removes the address for the interface with the given nicid.
     // Masks off addr.PrefixLen bits from addr.Addr to set the subnet.
-    15: RemoveInterfaceAddress(uint32 nicid, NetAddress addr, uint8 prefixLen) -> (NetErr result);
+    15: RemoveInterfaceAddress(uint32 nicid, fuchsia.net.IpAddress addr, uint8 prefixLen) -> (NetErr result);
 
     11: SetDhcpClientStatus(uint32 nicid, bool enabled) -> (NetErr result);
 
     12: BridgeInterfaces(vector<uint32> nicids) -> (NetErr result);
 
     // TODO(NET-1263): remove once we can use the ResolverAdmin interface
-    16: SetNameServers(vector<NetAddress> servers);
+    16: SetNameServers(vector<fuchsia.net.IpAddress> servers);
 
     17: AddEthernetDevice(string topological_path, InterfaceConfig interfaceConfig, zircon.ethernet.Device device);
 

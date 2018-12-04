@@ -7,7 +7,6 @@
 #include <sstream>
 
 #include <endian.h>
-#include <fuchsia/netstack/cpp/fidl.h>
 
 namespace inet {
 

@@ -194,20 +194,6 @@ func (ns *Netstack) getForwardingTable() []stack.ForwardingEntry {
 	return entries
 }
 
-func equalNetAddress(a netstack.NetAddress, b netstack.NetAddress) bool {
-	if a.Family != b.Family {
-		return false
-	}
-	switch a.Family {
-	case netstack.NetAddressFamilyIpv4:
-		return a.Ipv4.Addr == b.Ipv4.Addr
-	case netstack.NetAddressFamilyIpv6:
-		return a.Ipv6.Addr == b.Ipv6.Addr
-	default:
-		return false
-	}
-}
-
 // equalSubnetAndRoute returns true if and only if the route matches
 // the subnet.  Only the the ip and subnet are compared and must be
 // exact.

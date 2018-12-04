@@ -8,7 +8,6 @@
 
 #include <arpa/inet.h>
 #include <endian.h>
-#include <fuchsia/netstack/cpp/fidl.h>
 #include <netdb.h>
 #include <sys/socket.h>
 
@@ -141,16 +140,16 @@ IpAddress::IpAddress(const sockaddr_storage& addr) {
   }
 }
 
-IpAddress::IpAddress(const fuchsia::netstack::NetAddress* addr) {
+IpAddress::IpAddress(const fuchsia::net::IpAddress* addr) {
   FXL_DCHECK(addr != nullptr);
-  switch (addr->family) {
-    case fuchsia::netstack::NetAddressFamily::IPV4:
+  switch (addr->Which()) {
+    case fuchsia::net::IpAddress::Tag::kIpv4:
       family_ = AF_INET;
-      memcpy(&v4_, addr->ipv4->addr.data(), 4);
+      memcpy(&v4_, addr->ipv4().addr.data(), 4);
       break;
-    case fuchsia::netstack::NetAddressFamily::IPV6:
+    case fuchsia::net::IpAddress::Tag::kIpv6:
       family_ = AF_INET6;
-      memcpy(&v6_, addr->ipv6->addr.data(), 16);
+      memcpy(&v6_, addr->ipv6().addr.data(), 16);
       break;
     default:
       FXL_DCHECK(false);

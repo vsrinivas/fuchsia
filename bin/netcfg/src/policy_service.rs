@@ -2,29 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {fidl::endpoints::RequestStream,
-     fidl_fuchsia_netstack::NetstackProxy,
-     fidl_fuchsia_net_policy::{DnsConfig, NetError, PolicyRequest,
-                                   PolicyRequestStream, Status},
-     fuchsia_async as fasync,
-     futures::{prelude::*,TryFutureExt},
+use {
+    fidl::endpoints::RequestStream,
+    fidl_fuchsia_net_policy::{DnsConfig, NetError, PolicyRequest, PolicyRequestStream, Status},
+    fidl_fuchsia_netstack::NetstackProxy,
+    fuchsia_async as fasync,
+    futures::{prelude::*, TryFutureExt},
 };
 
 pub fn spawn_netpolicy_fidl_server(netstack: NetstackProxy, channel: fasync::Channel) {
-     let stream = PolicyRequestStream::from_channel(channel);
-     let fut = serve_fidl_requests(netstack, stream).unwrap_or_else(|e| eprintln!("Error serving netpolicy FIDL call: {}", e));;
-     fasync::spawn(fut);
+    let stream = PolicyRequestStream::from_channel(channel);
+    let fut = serve_fidl_requests(netstack, stream)
+        .unwrap_or_else(|e| eprintln!("Error serving netpolicy FIDL call: {}", e));;
+    fasync::spawn(fut);
 }
 
-async fn serve_fidl_requests(netstack: NetstackProxy, stream: PolicyRequestStream) -> Result<(), fidl::Error> {
-    await!(stream.try_for_each(|req| {
-        handle_request(&netstack, req)
-    }))
-}
-
-async fn handle_request(
-    netstack: &NetstackProxy, req: PolicyRequest,
+async fn serve_fidl_requests(
+    netstack: NetstackProxy, stream: PolicyRequestStream,
 ) -> Result<(), fidl::Error> {
+    await!(stream.try_for_each(|req| handle_request(&netstack, req)))
+}
+
+async fn handle_request(netstack: &NetstackProxy, req: PolicyRequest) -> Result<(), fidl::Error> {
     match req {
         PolicyRequest::SetDnsConfig { config, responder } => {
             let mut r = set_dns_config(netstack, config);
@@ -38,12 +37,8 @@ async fn handle_request(
 }
 
 fn set_dns_config(netstack: &NetstackProxy, config: DnsConfig) -> NetError {
-    let mut parse_results: Vec<fidl_fuchsia_netstack::NetAddress> = config
-        .dns_servers
-        .into_iter()
-        .map(fidl_fuchsia_netstack_ext::NetAddress::from)
-        .map(Into::into)
-        .collect();
+    let mut parse_results: Vec<fidl_fuchsia_net::IpAddress> =
+        config.dns_servers.into_iter().map(Into::into).collect();
 
     if let Err(e) = netstack.set_name_servers(&mut parse_results.iter_mut()) {
         eprintln!("Error setting DNS server for netstack: {}", e);
@@ -52,41 +47,32 @@ fn set_dns_config(netstack: &NetstackProxy, config: DnsConfig) -> NetError {
         };
     }
 
-    NetError {
-        status: Status::Ok,
-    }
+    NetError { status: Status::Ok }
 }
 
 fn get_dns_config() -> DnsConfig {
     // TODO(NET-1430): Add FIDL getters for current netcfg DNS server IP addresses.
     eprintln!("netpolicy: unimplemented get_dns_config called!");
     DnsConfig {
-        dns_servers: vec![
-            fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::IPv4Address {
-                addr: [0, 0, 0, 0]
-            }),
-        ],
+        dns_servers: vec![fidl_fuchsia_net::IpAddress::Ipv4(
+            fidl_fuchsia_net::IPv4Address { addr: [0, 0, 0, 0] },
+        )],
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {fidl::endpoints::create_proxy,
-         fidl_fuchsia_netstack::{NetstackMarker, NetstackRequest, NetAddress},
-         fidl_fuchsia_net_policy::PolicyMarker,
-         futures::task::Poll,
-         pin_utils::pin_mut};
+    use {
+        fidl::endpoints::create_proxy,
+        fidl_fuchsia_net_policy::PolicyMarker,
+        fidl_fuchsia_netstack::{NetstackMarker, NetstackRequest},
+        futures::task::Poll,
+        pin_utils::pin_mut,
+    };
 
-    fn build_net_address() -> fidl_fuchsia_net::IpAddress {
-        fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::IPv4Address {
-            addr: [1, 1, 1, 1]
-        })
-     }
-
-    fn ip_as_net_address(addr: fidl_fuchsia_net::IpAddress) -> NetAddress {
-       let addr = fidl_fuchsia_netstack_ext::NetAddress::from(addr);
-       addr.into()
+    fn build_address() -> fidl_fuchsia_net::IpAddress {
+        fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::IPv4Address { addr: [1, 1, 1, 1] })
     }
 
     #[test]
@@ -112,7 +98,7 @@ mod tests {
 
         // Call netpolicy FIDL call.
         let mut config = DnsConfig {
-            dns_servers: vec![build_net_address()],
+            dns_servers: vec![build_address()],
         };
         let client_fut = netpolicy_proxy.set_dns_config(&mut config);
 
@@ -122,7 +108,9 @@ mod tests {
 
         // Let netpolicy server run to stall.
         pin_mut!(netpolicy_service_task);
-        assert!(exec.run_until_stalled(&mut netpolicy_service_task).is_pending());
+        assert!(exec
+            .run_until_stalled(&mut netpolicy_service_task)
+            .is_pending());
 
         // Let netstack server run to stall and check that we got an appropriate FIDL call.
         let event = match exec.run_until_stalled(&mut netstack_stream.next()) {
@@ -135,8 +123,7 @@ mod tests {
                 servers,
                 control_handle: _,
             } => {
-                let expected_servers =
-                    vec![ip_as_net_address(build_net_address())];
+                let expected_servers = vec![build_address()];
                 assert_eq!(expected_servers, servers);
             }
             _ => panic!("Unexpected netstack call!"),
@@ -148,6 +135,6 @@ mod tests {
             _ => panic!("Expected a response from netpolicy fidl call, but there is none!"),
         };
 
-        assert_eq!(NetError{ status: Status::Ok}, response);
+        assert_eq!(NetError { status: Status::Ok }, response);
     }
 }

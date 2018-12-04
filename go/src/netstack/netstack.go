@@ -22,6 +22,7 @@ import (
 	"netstack/util"
 
 	"fidl/fuchsia/devicesettings"
+	"fidl/fuchsia/net"
 	"fidl/fuchsia/netstack"
 	"fidl/zircon/ethernet"
 
@@ -262,8 +263,8 @@ func (ifs *ifState) stateChange(s eth.State) {
 
 		ifs.ns.mu.Lock()
 		ifs.nic.Routes = nil
-		ifs.nic.Netmask = ""
-		ifs.nic.Addr = ""
+		ifs.nic.Netmask = "\xff\xff\xff\xff"
+		ifs.nic.Addr = "\x00\x00\x00\x00"
 		ifs.nic.DNSServers = nil
 		ifs.ns.mu.Unlock()
 
@@ -380,7 +381,7 @@ func (ns *Netstack) addLoopback() error {
 	nic := &netiface.NIC{
 		ID:       nicid,
 		Addr:     ipv4Loopback,
-		Netmask:  tcpip.AddressMask(strings.Repeat("\xff", 4)),
+		Netmask:  tcpip.AddressMask(strings.Repeat("\xff", len(ipv4Loopback))),
 		Features: ethernet.InfoFeatureLoopback,
 		Routes: []tcpip.Route{
 			{
@@ -473,7 +474,7 @@ func (ns *Netstack) addEth(topological_path string, config netstack.InterfaceCon
 	}, func(ifs *ifState) error {
 		if len(ifs.nic.Name) == 0 {
 			ifs.nic.Name = fmt.Sprintf("eth%d", ifs.nic.ID)
-    }
+		}
 		// TODO(NET-298): Delete this condition after enabling multiple concurrent DHCP clients
 		// in third_party/netstack.
 		if client.Info.Features&ethernet.InfoFeatureWlan != 0 {
@@ -511,8 +512,11 @@ func (ns *Netstack) addEndpoint(makeEndpoint func(*ifState) (stack.LinkEndpoint,
 		ns:     ns,
 		ctx:    ctx,
 		cancel: cancel,
-		nic:    &netiface.NIC{},
-		state:  eth.StateUnknown,
+		nic: &netiface.NIC{
+			Addr:    "\x00\x00\x00\x00",
+			Netmask: "\xff\xff\xff\xff",
+		},
+		state: eth.StateUnknown,
 	}
 	ifs.statsEP.Nic = ifs.nic
 
@@ -571,16 +575,16 @@ func (ns *Netstack) addEndpoint(makeEndpoint func(*ifState) (stack.LinkEndpoint,
 	return ifs, finalize(ifs)
 }
 
-func (ns *Netstack) validateInterfaceAddress(address netstack.NetAddress, prefixLen uint8) (tcpip.NetworkProtocolNumber, tcpip.Address, netstack.NetErr) {
+func (ns *Netstack) validateInterfaceAddress(address net.IpAddress, prefixLen uint8) (tcpip.NetworkProtocolNumber, tcpip.Address, netstack.NetErr) {
 	var protocol tcpip.NetworkProtocolNumber
-	switch address.Family {
-	case netstack.NetAddressFamilyIpv4:
+	switch address.Which() {
+	case net.IpAddressIpv4:
 		protocol = ipv4.ProtocolNumber
-	case netstack.NetAddressFamilyIpv6:
+	case net.IpAddressIpv6:
 		return 0, "", netstack.NetErr{Status: netstack.StatusIpv4Only, Message: "IPv6 not yet supported"}
 	}
 
-	addr := fidlconv.NetAddressToTCPIPAddress(address)
+	addr := fidlconv.ToTCPIPAddress(address)
 
 	if (8 * len(addr)) < int(prefixLen) {
 		return 0, "", netstack.NetErr{Status: netstack.StatusParseError, Message: "prefix length exceeds address length"}

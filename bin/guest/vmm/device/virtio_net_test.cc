@@ -37,12 +37,12 @@ class VirtioNetTest : public TestWithDevice,
 
   void SetInterfaceStatus(uint32_t nicid, bool enabled) override {}
 
-  void SetInterfaceAddress(uint32_t nicid, fuchsia::netstack::NetAddress addr,
+  void SetInterfaceAddress(uint32_t nicid, fuchsia::net::IpAddress addr,
                            uint8_t prefixLen,
                            SetInterfaceAddressCallback callback) override {}
 
   void RemoveInterfaceAddress(
-      uint32_t nicid, fuchsia::netstack::NetAddress addr, uint8_t prefixLen,
+      uint32_t nicid, fuchsia::net::IpAddress addr, uint8_t prefixLen,
       RemoveInterfaceAddressCallback callback) override {}
 
   void SetDhcpClientStatus(uint32_t nicid, bool enabled,
@@ -52,7 +52,7 @@ class VirtioNetTest : public TestWithDevice,
                         BridgeInterfacesCallback callback) override {}
 
   void SetNameServers(
-      ::fidl::VectorPtr<fuchsia::netstack::NetAddress> servers) override {}
+      ::fidl::VectorPtr<fuchsia::net::IpAddress> servers) override {}
 
   void AddEthernetDevice(
       ::fidl::StringPtr topological_path,

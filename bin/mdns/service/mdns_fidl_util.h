@@ -7,7 +7,6 @@
 
 #include <fuchsia/mdns/cpp/fidl.h>
 
-#include <fuchsia/mdns/cpp/fidl.h>
 #include "garnet/bin/mdns/service/mdns.h"
 #include "garnet/lib/inet/socket_address.h"
 
@@ -42,8 +41,7 @@ class MdnsFidlUtil {
   static fuchsia::netstack::SocketAddressPtr CreateSocketAddressIPv6(
       const inet::SocketAddress& socket_address);
 
-  static inet::IpAddress IpAddressFrom(
-      const fuchsia::netstack::NetAddress* addr);
+  static inet::IpAddress IpAddressFrom(const fuchsia::net::IpAddress* addr);
 
   static std::unique_ptr<Mdns::Publication> Convert(
       const fuchsia::mdns::MdnsPublicationPtr& publication_ptr);

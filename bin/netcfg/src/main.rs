@@ -11,11 +11,11 @@ use std::os::unix::io::AsRawFd;
 use std::path;
 
 use failure::{self, ResultExt};
+use fidl::endpoints::ServiceMarker;
+use fidl_fuchsia_net_policy::PolicyMarker;
+use fuchsia_app::server::ServicesServer;
 use futures::{self, StreamExt, TryFutureExt, TryStreamExt};
 use serde_derive::Deserialize;
-use fuchsia_app::server::ServicesServer;
-use fidl_fuchsia_net_policy::PolicyMarker;
-use fidl::endpoints::ServiceMarker;
 
 mod device_id;
 mod interface;
@@ -80,9 +80,9 @@ fn main() -> Result<(), failure::Error> {
 
     let mut servers = servers
         .into_iter()
-        .map(fidl_fuchsia_netstack_ext::NetAddress)
+        .map(fidl_fuchsia_net_ext::IpAddress)
         .map(Into::into)
-        .collect::<Vec<fidl_fuchsia_netstack::NetAddress>>();
+        .collect::<Vec<fidl_fuchsia_net::IpAddress>>();
 
     let () = netstack
         .set_name_servers(&mut servers.iter_mut())

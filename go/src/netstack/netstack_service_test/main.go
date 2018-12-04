@@ -12,10 +12,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/netstack/tcpip"
-
 	"app/context"
+	"netstack/fidlconv"
 
+	"fidl/fuchsia/net"
 	"fidl/fuchsia/netstack"
 )
 
@@ -92,16 +92,9 @@ func printIface(iface netstack.NetInterface) {
 	fmt.Printf("%s: addr=%s [%s]\n", iface.Name, netAddrToString(iface.Addr), flagsToString(iface.Flags))
 }
 
-func netAddrToString(addr netstack.NetAddress) string {
-	switch addr.Family {
-	case netstack.NetAddressFamilyIpv4:
-		a := tcpip.Address(addr.Ipv4.Addr[:])
-		return fmt.Sprintf("%s", a)
-	case netstack.NetAddressFamilyIpv6:
-		a := tcpip.Address(addr.Ipv6.Addr[:])
-		return fmt.Sprintf("%s", a)
-	}
-	return ""
+// TODO(tamird): this exact function exists in ifconfig.
+func netAddrToString(addr net.IpAddress) string {
+	return fidlconv.ToTCPIPAddress(addr).String()
 }
 
 func flagsToString(flags uint32) string {

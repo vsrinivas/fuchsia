@@ -15,6 +15,7 @@ import (
 	"netstack/fidlconv"
 	"netstack/link/eth"
 
+	"fidl/fuchsia/net"
 	"fidl/fuchsia/netstack"
 	"fidl/zircon/ethernet"
 
@@ -27,11 +28,11 @@ type netstackImpl struct {
 	ns *Netstack
 }
 
-func toSubnets(addrs []tcpip.Address) []netstack.Subnet {
-	out := make([]netstack.Subnet, len(addrs))
+func toSubnets(addrs []tcpip.Address) []net.Subnet {
+	out := make([]net.Subnet, len(addrs))
 	for i := range addrs {
 		// TODO: prefix len?
-		out[i] = netstack.Subnet{Addr: fidlconv.ToNetAddress(addrs[i]), PrefixLen: 64}
+		out[i] = net.Subnet{Addr: fidlconv.ToNetIpAddress(addrs[i]), PrefixLen: 64}
 	}
 	return out
 }
@@ -69,9 +70,9 @@ func getInterfaces(ns *Netstack) (out []netstack.NetInterface) {
 			Flags:     flags,
 			Features:  ifs.nic.Features,
 			Name:      ifs.nic.Name,
-			Addr:      fidlconv.ToNetAddress(ifs.nic.Addr),
-			Netmask:   fidlconv.ToNetAddress(tcpip.Address(ifs.nic.Netmask)),
-			Broadaddr: fidlconv.ToNetAddress(tcpip.Address(broadaddr)),
+			Addr:      fidlconv.ToNetIpAddress(ifs.nic.Addr),
+			Netmask:   fidlconv.ToNetIpAddress(tcpip.Address(ifs.nic.Netmask)),
+			Broadaddr: fidlconv.ToNetIpAddress(tcpip.Address(broadaddr)),
 			Hwaddr:    mac,
 			Ipv6addrs: toSubnets(ifs.nic.Ipv6addrs),
 		}
@@ -111,7 +112,7 @@ func (ni *netstackImpl) GetAddress(name string, port uint16) ([]netstack.SocketA
 	out := make([]netstack.SocketAddress, 0, len(addrs))
 	for _, addr := range addrs {
 		out = append(out, netstack.SocketAddress{
-			Addr: fidlconv.ToNetAddress(addr),
+			Addr: fidlconv.ToNetIpAddress(addr),
 			Port: port,
 		})
 	}
@@ -131,8 +132,8 @@ func (ni *netstackImpl) GetRouteTable() (out []netstack.RouteTableEntry, err err
 
 func nsToRouteTable(table []tcpip.Route) (out []netstack.RouteTableEntry, err error) {
 	for _, route := range table {
-		// Ensure that if any of the returned addresss are "empty",
-		// they still have the appropriate NetAddressFamily.
+		// Ensure that if any of the returned addresses are "empty",
+		// they still have the appropriate length.
 		l := 0
 		if len(route.Destination) > 0 {
 			l = len(route.Destination)
@@ -155,9 +156,9 @@ func nsToRouteTable(table []tcpip.Route) (out []netstack.RouteTableEntry, err er
 		}
 
 		out = append(out, netstack.RouteTableEntry{
-			Destination: fidlconv.ToNetAddress(dest),
-			Netmask:     fidlconv.ToNetAddress(tcpip.Address(mask)),
-			Gateway:     fidlconv.ToNetAddress(gateway),
+			Destination: fidlconv.ToNetIpAddress(dest),
+			Netmask:     fidlconv.ToNetIpAddress(tcpip.Address(mask)),
+			Gateway:     fidlconv.ToNetIpAddress(gateway),
 			Nicid:       uint32(route.NIC),
 		})
 	}
@@ -168,9 +169,9 @@ func routeTableToNs(rt []netstack.RouteTableEntry) []tcpip.Route {
 	routes := make([]tcpip.Route, 0, len(rt))
 	for _, r := range rt {
 		routes = append(routes, tcpip.Route{
-			Destination: fidlconv.NetAddressToTCPIPAddress(r.Destination),
-			Mask:        tcpip.AddressMask(fidlconv.NetAddressToTCPIPAddress(r.Netmask)),
-			Gateway:     fidlconv.NetAddressToTCPIPAddress(r.Gateway),
+			Destination: fidlconv.ToTCPIPAddress(r.Destination),
+			Mask:        tcpip.AddressMask(fidlconv.ToTCPIPAddress(r.Netmask)),
+			Gateway:     fidlconv.ToTCPIPAddress(r.Gateway),
 			NIC:         tcpip.NICID(r.Nicid),
 		})
 	}
@@ -239,7 +240,7 @@ func (ni *netstackImpl) StartRouteTableTransaction(req netstack.RouteTableTransa
 }
 
 // Add address to the given network interface.
-func (ni *netstackImpl) SetInterfaceAddress(nicid uint32, address netstack.NetAddress, prefixLen uint8) (result netstack.NetErr, endService error) {
+func (ni *netstackImpl) SetInterfaceAddress(nicid uint32, address net.IpAddress, prefixLen uint8) (result netstack.NetErr, endService error) {
 	log.Printf("net address %+v", address)
 
 	nic := tcpip.NICID(nicid)
@@ -254,7 +255,7 @@ func (ni *netstackImpl) SetInterfaceAddress(nicid uint32, address netstack.NetAd
 	return netstack.NetErr{Status: netstack.StatusOk, Message: ""}, nil
 }
 
-func (ni *netstackImpl) RemoveInterfaceAddress(nicid uint32, address netstack.NetAddress, prefixLen uint8) (result netstack.NetErr, endService error) {
+func (ni *netstackImpl) RemoveInterfaceAddress(nicid uint32, address net.IpAddress, prefixLen uint8) (result netstack.NetErr, endService error) {
 	nic := tcpip.NICID(nicid)
 	protocol, addr, neterr := ni.ns.validateInterfaceAddress(address, prefixLen)
 
@@ -349,7 +350,7 @@ func (ni *netstackImpl) SetDhcpClientStatus(nicid uint32, enabled bool) (result 
 
 // TODO(NET-1263): Remove once clients registering with the ResolverAdmin interface
 // does not crash netstack.
-func (ni *netstackImpl) SetNameServers(servers []netstack.NetAddress) error {
+func (ni *netstackImpl) SetNameServers(servers []net.IpAddress) error {
 	d := dnsImpl{ns: ni.ns}
 	return d.SetNameServers(servers)
 }
@@ -358,23 +359,23 @@ type dnsImpl struct {
 	ns *Netstack
 }
 
-func (dns *dnsImpl) SetNameServers(servers []netstack.NetAddress) error {
+func (dns *dnsImpl) SetNameServers(servers []net.IpAddress) error {
 	ss := make([]tcpip.Address, len(servers))
 
 	for i, s := range servers {
-		ss[i] = fidlconv.NetAddressToTCPIPAddress(s)
+		ss[i] = fidlconv.ToTCPIPAddress(s)
 	}
 
 	dns.ns.dnsClient.SetDefaultServers(ss)
 	return nil
 }
 
-func (dns *dnsImpl) GetNameServers() ([]netstack.NetAddress, error) {
+func (dns *dnsImpl) GetNameServers() ([]net.IpAddress, error) {
 	servers := dns.ns.getDNSServers()
-	out := make([]netstack.NetAddress, len(servers))
+	out := make([]net.IpAddress, len(servers))
 
 	for i, s := range servers {
-		out[i] = fidlconv.ToNetAddress(s)
+		out[i] = fidlconv.ToNetIpAddress(s)
 	}
 
 	return out, nil

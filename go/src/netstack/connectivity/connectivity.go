@@ -54,7 +54,7 @@ func InferAndNotify(ifs []netstack.NetInterface) {
 }
 
 func hasDHCPAddress(nic netstack.NetInterface) bool {
-	return nic.Flags&netstack.NetInterfaceFlagDhcp != 0 && nic.Flags&netstack.NetInterfaceFlagUp != 0 && !netiface.IsAny(fidlconv.NetAddressToTCPIPAddress(nic.Addr))
+	return nic.Flags&netstack.NetInterfaceFlagDhcp != 0 && nic.Flags&netstack.NetInterfaceFlagUp != 0 && !netiface.IsAny(fidlconv.ToTCPIPAddress(nic.Addr))
 }
 
 func inferReachability(ifs []netstack.NetInterface) bool {

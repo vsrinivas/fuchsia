@@ -4,11 +4,6 @@
 
 import("//garnet/public/build/fostr/fostr_fidl.gni")
 
-fostr_fidl("fuchsia.netstack") {
-  fidl_target = "//garnet/public/fidl/fuchsia.netstack"
-
-  deps = [
-    "//garnet/public/lib/fostr/fidl/fuchsia.net",
-    "//garnet/public/lib/fostr/fidl/zircon.ethernet",
-  ]
+fostr_fidl("fuchsia.net") {
+  fidl_target = "//zircon/public/fidl/fuchsia-net"
 }

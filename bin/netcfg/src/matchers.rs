@@ -33,9 +33,10 @@ fn matches_info<'a>(
         InterfaceMatcher::All => true,
         InterfaceMatcher::TopoPath(path) => path == topological_path,
         InterfaceMatcher::MacAddress(address) => {
-            address == &fidl_zircon_ethernet_ext::MacAddress {
-                octets: info.mac.octets,
-            }
+            address
+                == &fidl_zircon_ethernet_ext::MacAddress {
+                    octets: info.mac.octets,
+                }
         }
         InterfaceMatcher::Feature(matcher_features) => info.features.contains(*matcher_features),
     };
@@ -87,7 +88,7 @@ impl ConfigOption {
             ("ip_address", static_ip) => Ok(ConfigOption::IpConfig(
                 fidl_fuchsia_netstack_ext::IpAddressConfig::StaticIp(
                     static_ip
-                        .parse::<fidl_fuchsia_netstack_ext::Subnet>()
+                        .parse::<fidl_fuchsia_net_ext::Subnet>()
                         .expect("subnet parse should succeed"),
                 ),
             )),
@@ -174,7 +175,7 @@ mod tests {
         assert_eq!(
             ConfigOption::IpConfig(fidl_fuchsia_netstack_ext::IpAddressConfig::StaticIp(
                 "192.168.42.10/32"
-                    .parse::<fidl_fuchsia_netstack_ext::Subnet>()
+                    .parse::<fidl_fuchsia_net_ext::Subnet>()
                     .expect("subnet parse should succeed")
             )),
             ConfigOption::parse_as_tuple(("ip_address", "192.168.42.10"))
@@ -204,7 +205,7 @@ mod tests {
                     config: ConfigOption::IpConfig(
                         fidl_fuchsia_netstack_ext::IpAddressConfig::StaticIp(
                             "127.0.0.1/32"
-                                .parse::<fidl_fuchsia_netstack_ext::Subnet>()
+                                .parse::<fidl_fuchsia_net_ext::Subnet>()
                                 .expect("subnet parse should succeed"),
                         ),
                     ),
@@ -216,7 +217,7 @@ mod tests {
             Into::<fidl_fuchsia_netstack::IpAddressConfig>::into(
                 fidl_fuchsia_netstack_ext::IpAddressConfig::StaticIp(
                     "127.0.0.1/32"
-                        .parse::<fidl_fuchsia_netstack_ext::Subnet>()
+                        .parse::<fidl_fuchsia_net_ext::Subnet>()
                         .expect("subnet parse should succeed")
                 )
             ),

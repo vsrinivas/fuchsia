@@ -5,6 +5,7 @@
 package netiface_test
 
 import (
+	"net"
 	"sort"
 	"strings"
 	"testing"
@@ -13,7 +14,7 @@ import (
 	"netstack/netiface"
 	"netstack/util"
 
-	"fidl/fuchsia/netstack"
+	netfidl "fidl/fuchsia/net"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/netstack/tcpip"
@@ -392,27 +393,27 @@ func TestSpecificMaskFirst(t *testing.T) {
 	}
 }
 
-func NewV4Address(b [4]uint8) netstack.NetAddress {
-	return netstack.NetAddress{Family: netstack.NetAddressFamilyIpv4, Ipv4: &netstack.Ipv4Address{Addr: b}}
+func newV4Address(a, b, c, d uint8) netfidl.IpAddress {
+	return fidlconv.ToNetIpAddress(tcpip.Address(net.IPv4(a, b, c, d).To4()))
 }
 
 var isAnyTests = []struct {
-	addr netstack.NetAddress
+	addr netfidl.IpAddress
 	res  bool
 }{
 	{
-		addr: NewV4Address([4]uint8{0, 0, 0, 0}),
+		addr: newV4Address(0, 0, 0, 0),
 		res:  true,
 	},
 	{
-		addr: NewV4Address([4]uint8{127, 0, 0, 1}),
+		addr: newV4Address(127, 0, 0, 1),
 		res:  false,
 	},
 }
 
 func TestIsAny(t *testing.T) {
 	for _, tst := range isAnyTests {
-		if res := netiface.IsAny(fidlconv.NetAddressToTCPIPAddress(tst.addr)); res != tst.res {
+		if res := netiface.IsAny(fidlconv.ToTCPIPAddress(tst.addr)); res != tst.res {
 			t.Errorf("expected netiface.IsAny(%+v) to be %v, got %v", tst.addr, tst.res, res)
 		}
 	}

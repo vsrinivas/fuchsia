@@ -26,6 +26,7 @@ func RunExpectingError(t *testing.T, cmd0 string, cmd ...string) {
 }
 
 func RunQuietly(t *testing.T, cmd0 string, cmd ...string) {
+	t.Helper()
 	out := Run(t, cmd0, cmd...)
 	if len(out) > 0 {
 		t.Errorf("Expected '%s %s' to have no output but output was '%s'", cmd0, cmd, out)

@@ -110,7 +110,7 @@ async fn do_if(cmd: opts::IfCmd, stack: StackProxy) -> Result<(), Error> {
             } else {
                 println!(
                     "Address {} added to interface {}",
-                    pretty::InterfaceAddress::from(&fidl_addr),
+                    pretty::InterfaceAddress::from(fidl_addr),
                     id
                 )
             }

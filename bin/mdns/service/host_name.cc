@@ -57,8 +57,7 @@ inet::IpAddress GetHostAddress() {
   NetstackClient::GetInterfaces(
       [](const fidl::VectorPtr<fuchsia::netstack::NetInterface>& interfaces) {
         for (const auto& interface : *interfaces) {
-          if (interface.addr.family ==
-              fuchsia::netstack::NetAddressFamily::IPV4) {
+          if (interface.addr.Which() == fuchsia::net::IpAddress::Tag::kIpv4) {
             ip_address = MdnsFidlUtil::IpAddressFrom(&interface.addr);
             if (ip_address.is_loopback() ||
                 ip_address == inet::IpAddress(0, 0, 0, 0)) {
@@ -67,8 +66,7 @@ inet::IpAddress GetHostAddress() {
               break;
             }
           }
-          if (interface.addr.family ==
-              fuchsia::netstack::NetAddressFamily::IPV6) {
+          if (interface.addr.Which() == fuchsia::net::IpAddress::Tag::kIpv6) {
             ip_address = MdnsFidlUtil::IpAddressFrom(&interface.addr);
             if (ip_address.is_loopback()) {
               ip_address = inet::IpAddress::kInvalid;
