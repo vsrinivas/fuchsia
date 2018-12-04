@@ -14,6 +14,7 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
 #include <inttypes.h>
+#include <ktl/move.h>
 #include <lib/console.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,7 +31,7 @@ VmObject::GlobalList VmObject::all_vmos_ = {};
 
 VmObject::VmObject(fbl::RefPtr<VmObject> parent)
     : lock_(parent ? parent->lock_ref() : local_lock_),
-      parent_(fbl::move(parent)) {
+      parent_(ktl::move(parent)) {
     LTRACEF("%p\n", this);
 
     // Add ourself to the global VMO list, newer VMOs at the end.

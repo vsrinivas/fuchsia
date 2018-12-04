@@ -12,6 +12,7 @@
 #include <err.h>
 #include <fbl/alloc_checker.h>
 #include <inttypes.h>
+#include <ktl/move.h>
 #include <lib/console.h>
 #include <stdlib.h>
 #include <string.h>
@@ -53,7 +54,7 @@ zx_status_t VmObjectPhysical::Create(paddr_t base, uint64_t size, fbl::RefPtr<Vm
     // Physical VMOs should default to uncached access.
     vmo->SetMappingCachePolicy(ARCH_MMU_FLAG_UNCACHED);
 
-    *obj = fbl::move(vmo);
+    *obj = ktl::move(vmo);
 
     return ZX_OK;
 }

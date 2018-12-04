@@ -93,7 +93,7 @@ zx_status_t InterruptEventDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher
 
     // Transfer control of the new dispatcher to the creator and we are done.
     *rights = default_rights();
-    *dispatcher = fbl::move(disp_ref);
+    *dispatcher = ktl::move(disp_ref);
 
     return ZX_OK;
 }
@@ -117,7 +117,7 @@ zx_status_t InterruptEventDispatcher::BindVcpu(fbl::RefPtr<VcpuDispatcher> vcpu_
     }
 
     fbl::AllocChecker ac;
-    vcpus_.push_back(fbl::move(vcpu_dispatcher), &ac);
+    vcpus_.push_back(ktl::move(vcpu_dispatcher), &ac);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }

@@ -64,13 +64,13 @@ zx_status_t SocketDispatcher::Create(uint32_t flags,
         return ZX_ERR_NO_MEMORY;
     auto holder1 = holder0;
 
-    auto socket0 = fbl::AdoptRef(new (&ac) SocketDispatcher(fbl::move(holder0), starting_signals,
-                                                            flags, fbl::move(control0)));
+    auto socket0 = fbl::AdoptRef(new (&ac) SocketDispatcher(ktl::move(holder0), starting_signals,
+                                                            flags, ktl::move(control0)));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
-    auto socket1 = fbl::AdoptRef(new (&ac) SocketDispatcher(fbl::move(holder1), starting_signals,
-                                                            flags, fbl::move(control1)));
+    auto socket1 = fbl::AdoptRef(new (&ac) SocketDispatcher(ktl::move(holder1), starting_signals,
+                                                            flags, ktl::move(control1)));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
@@ -78,17 +78,17 @@ zx_status_t SocketDispatcher::Create(uint32_t flags,
     socket1->Init(socket0);
 
     *rights = default_rights();
-    *dispatcher0 = fbl::move(socket0);
-    *dispatcher1 = fbl::move(socket1);
+    *dispatcher0 = ktl::move(socket0);
+    *dispatcher1 = ktl::move(socket1);
     return ZX_OK;
 }
 
 SocketDispatcher::SocketDispatcher(fbl::RefPtr<PeerHolder<SocketDispatcher>> holder,
                                    zx_signals_t starting_signals, uint32_t flags,
                                    fbl::unique_ptr<ControlMsg> control_msg)
-    : PeeredDispatcher(fbl::move(holder), starting_signals),
+    : PeeredDispatcher(ktl::move(holder), starting_signals),
       flags_(flags),
-      control_msg_(fbl::move(control_msg)),
+      control_msg_(ktl::move(control_msg)),
       control_msg_len_(0),
       read_threshold_(0),
       write_threshold_(0),
@@ -101,7 +101,7 @@ SocketDispatcher::~SocketDispatcher() {
 // This is called before either SocketDispatcher is accessible from threads other than the one
 // initializing the socket, so it does not need locking.
 void SocketDispatcher::Init(fbl::RefPtr<SocketDispatcher> other) TA_NO_THREAD_SAFETY_ANALYSIS {
-    peer_ = fbl::move(other);
+    peer_ = ktl::move(other);
     peer_koid_ = peer_->get_koid();
 }
 
@@ -400,7 +400,7 @@ zx_status_t SocketDispatcher::Share(HandleOwner h) TA_NO_THREAD_SAFETY_ANALYSIS 
     if (!peer_)
         return ZX_ERR_PEER_CLOSED;
 
-    return peer_->ShareSelfLocked(fbl::move(h));
+    return peer_->ShareSelfLocked(ktl::move(h));
 }
 
 zx_status_t SocketDispatcher::ShareSelfLocked(HandleOwner h) TA_NO_THREAD_SAFETY_ANALYSIS {
@@ -409,7 +409,7 @@ zx_status_t SocketDispatcher::ShareSelfLocked(HandleOwner h) TA_NO_THREAD_SAFETY
     if (accept_queue_)
         return ZX_ERR_SHOULD_WAIT;
 
-    accept_queue_ = fbl::move(h);
+    accept_queue_ = ktl::move(h);
 
     UpdateStateLocked(0, ZX_SOCKET_ACCEPT);
     if (peer_)
@@ -429,7 +429,7 @@ zx_status_t SocketDispatcher::Accept(HandleOwner* h) TA_NO_THREAD_SAFETY_ANALYSI
     if (!accept_queue_)
         return ZX_ERR_SHOULD_WAIT;
 
-    *h = fbl::move(accept_queue_);
+    *h = ktl::move(accept_queue_);
 
     UpdateStateLocked(ZX_SOCKET_ACCEPT, 0);
     if (peer_)

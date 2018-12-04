@@ -66,7 +66,7 @@ zx_status_t sys_vmar_allocate(zx_handle_t parent_vmar_handle,
     uintptr_t base = new_vmar->vmar()->base();
 
     // Create a handle and attach the dispatcher to it
-    status = child_vmar->make(fbl::move(new_vmar), new_rights);
+    status = child_vmar->make(ktl::move(new_vmar), new_rights);
 
     if (status == ZX_OK)
         status = child_addr.copy_to_user(base);

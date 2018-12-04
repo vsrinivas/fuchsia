@@ -80,7 +80,7 @@ static zx_status_t identity_page_allocate(fbl::RefPtr<VmAspace>* new_aspace,
     if (result != ZX_OK)
         return result;
 
-    *new_aspace = fbl::move(identity_aspace);
+    *new_aspace = ktl::move(identity_aspace);
     *result_addr = identity_address;
 
     return ZX_OK;
@@ -146,7 +146,7 @@ static zx_status_t vmo_coalesce_pages(zx_handle_t vmo_hdl, const size_t extra_by
 
 static fbl::RefPtr<VmObject> stashed_crashlog;
 void mexec_stash_crashlog(fbl::RefPtr<VmObject> vmo) {
-    stashed_crashlog = fbl::move(vmo);
+    stashed_crashlog = ktl::move(vmo);
 }
 
 // zx_status_t zx_system_mexec_payload_get

@@ -16,6 +16,7 @@
 #include <bits.h>
 #include <err.h>
 #include <kernel/mp.h>
+#include <ktl/move.h>
 #include <string.h>
 #include <trace.h>
 #include <vm/fault.h>
@@ -156,7 +157,7 @@ void gdt_setup() {
 
     fbl::RefPtr<VmMapping> mapping;
     status = vmar->CreateVmMapping(
-        /*mapping_offset*/0u, gdt_real_size, PAGE_SIZE_SHIFT, VMAR_FLAG_SPECIFIC, fbl::move(vmo),
+        /*mapping_offset*/0u, gdt_real_size, PAGE_SIZE_SHIFT, VMAR_FLAG_SPECIFIC, ktl::move(vmo),
         /*vmo_offset*/0u, mmu_flags, "gdt", &mapping);
     ASSERT(status == ZX_OK);
 

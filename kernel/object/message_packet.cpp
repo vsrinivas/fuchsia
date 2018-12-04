@@ -84,7 +84,7 @@ zx_status_t MessagePacket::Create(user_in_ptr<const void> data, uint32_t data_si
     if (unlikely(status != ZX_OK)) {
         return status;
     }
-    *msg = fbl::move(new_msg);
+    *msg = ktl::move(new_msg);
     return ZX_OK;
 }
 
@@ -100,7 +100,7 @@ zx_status_t MessagePacket::Create(const void* data, uint32_t data_size, uint32_t
     if (unlikely(status != ZX_OK)) {
         return status;
     }
-    *msg = fbl::move(new_msg);
+    *msg = ktl::move(new_msg);
     return ZX_OK;
 }
 

@@ -12,6 +12,7 @@
 #include <dev/interrupt.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
+#include <ktl/move.h>
 #include <hypervisor/cpu.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
@@ -112,7 +113,7 @@ zx_status_t El2CpuState::Create(fbl::unique_ptr<El2CpuState>* out) {
             return status;
         }
     }
-    cpu_state->stacks_ = fbl::move(el2_stacks);
+    cpu_state->stacks_ = ktl::move(el2_stacks);
 
     // Setup EL2 for all online CPUs.
     cpu_state->cpu_mask_ = percpu_exec(OnTask, cpu_state.get());
@@ -120,7 +121,7 @@ zx_status_t El2CpuState::Create(fbl::unique_ptr<El2CpuState>* out) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    *out = fbl::move(cpu_state);
+    *out = ktl::move(cpu_state);
     return ZX_OK;
 }
 

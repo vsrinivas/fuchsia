@@ -137,7 +137,7 @@ zx_status_t sys_event_create(uint32_t options, user_out_handle* event_out) {
 
     zx_status_t result = EventDispatcher::Create(options, &dispatcher, &rights);
     if (result == ZX_OK)
-        result = event_out->make(fbl::move(dispatcher), rights);
+        result = event_out->make(ktl::move(dispatcher), rights);
     return result;
 }
 
@@ -158,9 +158,9 @@ zx_status_t sys_eventpair_create(uint32_t options,
     zx_status_t result = EventPairDispatcher::Create(&epd0, &epd1, &rights);
 
     if (result == ZX_OK)
-        result = out0->make(fbl::move(epd0), rights);
+        result = out0->make(ktl::move(epd0), rights);
     if (result == ZX_OK)
-        result = out1->make(fbl::move(epd1), rights);
+        result = out1->make(ktl::move(epd1), rights);
 
     return result;
 }
@@ -192,7 +192,7 @@ zx_status_t sys_debuglog_create(zx_handle_t rsrc, uint32_t options,
     }
 
     // create a handle and attach the dispatcher to it
-    return out->make(fbl::move(dispatcher), rights);
+    return out->make(ktl::move(dispatcher), rights);
 }
 
 // zx_status_t zx_debuglog_write

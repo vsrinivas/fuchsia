@@ -86,7 +86,7 @@ public:
 
             // Map the vDSO right after it.
             *vdso_base = vmar->vmar()->base() + RoDso::size();
-            status = vdso_->Map(fbl::move(vmar), RoDso::size());
+            status = vdso_->Map(ktl::move(vmar), RoDso::size());
         }
         return status;
     }
@@ -107,14 +107,14 @@ static zx_status_t get_vmo_handle(fbl::RefPtr<VmObject> vmo, bool readonly,
     zx_rights_t rights;
     fbl::RefPtr<Dispatcher> dispatcher;
     zx_status_t result = VmObjectDispatcher::Create(
-        fbl::move(vmo), &dispatcher, &rights);
+        ktl::move(vmo), &dispatcher, &rights);
     if (result == ZX_OK) {
         if (disp_ptr)
             *disp_ptr = fbl::RefPtr<VmObjectDispatcher>::Downcast(dispatcher);
         if (readonly)
             rights &= ~ZX_RIGHT_WRITE;
         if (ptr)
-            *ptr = Handle::Make(fbl::move(dispatcher), rights).release();
+            *ptr = Handle::Make(ktl::move(dispatcher), rights).release();
     }
     return result;
 }
@@ -125,7 +125,7 @@ static zx_status_t get_job_handle(Handle** ptr) {
     zx_status_t result = JobDispatcher::Create(
         0u, GetRootJobDispatcher(), &dispatcher, &rights);
     if (result == ZX_OK)
-        *ptr = Handle::Make(fbl::move(dispatcher), rights).release();
+        *ptr = Handle::Make(ktl::move(dispatcher), rights).release();
     return result;
 }
 
@@ -155,17 +155,17 @@ static zx_status_t make_bootstrap_channel(
         zx_status_t status = ChannelDispatcher::Create(&mpd0, &mpd1, &rights);
         if (status != ZX_OK)
             return status;
-        user_channel_handle = Handle::Make(fbl::move(mpd0), rights);
+        user_channel_handle = Handle::Make(ktl::move(mpd0), rights);
         kernel_channel = DownCastDispatcher<ChannelDispatcher>(&mpd1);
     }
 
     // Here it goes!
-    zx_status_t status = kernel_channel->Write(ZX_KOID_INVALID, fbl::move(msg));
+    zx_status_t status = kernel_channel->Write(ZX_KOID_INVALID, ktl::move(msg));
     if (status != ZX_OK)
         return status;
 
     zx_handle_t hv = process->MapHandleToValue(user_channel_handle);
-    process->AddHandle(fbl::move(user_channel_handle));
+    process->AddHandle(ktl::move(user_channel_handle));
 
     *out = hv;
     return ZX_OK;
@@ -280,7 +280,7 @@ static zx_status_t crashlog_to_vmo(fbl::RefPtr<VmObject>* out) {
     platform_recover_crashlog(size, crashlog_vmo.get(), clog_to_vmo);
     crashlog_vmo->set_name(CRASHLOG_VMO_NAME, sizeof(CRASHLOG_VMO_NAME) - 1);
     mexec_stash_crashlog(crashlog_vmo);
-    *out = fbl::move(crashlog_vmo);
+    *out = ktl::move(crashlog_vmo);
     return ZX_OK;
 }
 
@@ -379,7 +379,7 @@ static zx_status_t attempt_userboot() {
     // Map the stack anywhere.
     fbl::RefPtr<VmMapping> stack_mapping;
     status = vmar->Map(0,
-                       fbl::move(stack_vmo), 0, stack_size,
+                       ktl::move(stack_vmo), 0, stack_size,
                        ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
                        &stack_mapping);
     if (status != ZX_OK)
@@ -404,7 +404,7 @@ static zx_status_t attempt_userboot() {
 
     // All the handles are in place, so we can send the bootstrap message.
     zx_handle_t hv;
-    status = make_bootstrap_channel(proc, fbl::move(msg), &hv);
+    status = make_bootstrap_channel(proc, ktl::move(msg), &hv);
     if (status != ZX_OK)
         return status;
 

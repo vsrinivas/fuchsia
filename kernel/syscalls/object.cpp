@@ -579,7 +579,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
             return status;
 
         zx_info_handle_count_t info = {
-            .handle_count = Handle::Count(fbl::move(dispatcher))};
+            .handle_count = Handle::Count(ktl::move(dispatcher))};
 
         return single_record_result(
             _buffer, buffer_size, _actual, _avail, &info, sizeof(info));
@@ -880,17 +880,17 @@ zx_status_t sys_object_get_child(zx_handle_t handle, uint64_t koid,
         auto thread = process->LookupThreadById(koid);
         if (!thread)
             return ZX_ERR_NOT_FOUND;
-        return out->make(fbl::move(thread), rights);
+        return out->make(ktl::move(thread), rights);
     }
 
     auto job = DownCastDispatcher<JobDispatcher>(&dispatcher);
     if (job) {
         auto child = job->LookupJobById(koid);
         if (child)
-            return out->make(fbl::move(child), rights);
+            return out->make(ktl::move(child), rights);
         auto proc = job->LookupProcessById(koid);
         if (proc)
-            return out->make(fbl::move(proc), rights);
+            return out->make(ktl::move(proc), rights);
         return ZX_ERR_NOT_FOUND;
     }
 

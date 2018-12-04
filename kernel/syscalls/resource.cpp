@@ -75,5 +75,5 @@ zx_status_t sys_resource_create(zx_handle_t parent_rsrc,
     }
 
     // Create a handle for the child
-    return resource_out->make(fbl::move(child), rights);
+    return resource_out->make(ktl::move(child), rights);
 }

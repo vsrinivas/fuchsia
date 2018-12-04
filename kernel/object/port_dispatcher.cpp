@@ -91,7 +91,7 @@ PortObserver::PortObserver(uint32_t type, const Handle* handle, fbl::RefPtr<Port
     : type_(type),
       trigger_(signals),
       packet_(handle, nullptr),
-      port_(fbl::move(port)) {
+      port_(ktl::move(port)) {
 
     DEBUG_ASSERT(handle != nullptr);
 
@@ -321,7 +321,7 @@ zx_status_t PortDispatcher::Dequeue(zx_time_t deadline, zx_port_packet_t* out_pa
 
 void PortDispatcher::FreePacket(PortPacket* port_packet) {
     // We need to move the observer pointer out, as it's potentially containing us.
-    fbl::unique_ptr<const PortObserver> observer = fbl::move(port_packet->observer);
+    fbl::unique_ptr<const PortObserver> observer = ktl::move(port_packet->observer);
 
     if (observer) {
         // Deleting the observer under |get_lock()| is fine because the
@@ -341,7 +341,7 @@ fbl::unique_ptr<PortObserver> PortDispatcher::MaybeReap(fbl::unique_ptr<PortObse
     if (port_packet->InContainer()) {
         // The destruction will happen when the packet is dequeued or in CancelQueued()
         DEBUG_ASSERT(port_packet->observer == nullptr);
-        port_packet->observer = fbl::move(observer);
+        port_packet->observer = ktl::move(observer);
     }
     return observer;
 }
@@ -410,7 +410,7 @@ bool PortDispatcher::CancelQueued(const void* handle, uint64_t key) {
             auto to_remove = it++;
             // Destroyed as we go around the loop.
             fbl::unique_ptr<const PortObserver> observer =
-                fbl::move(packets_.erase(to_remove)->observer);
+                ktl::move(packets_.erase(to_remove)->observer);
             --num_packets_;
             packet_removed = true;
         } else {
@@ -427,7 +427,7 @@ void PortDispatcher::LinkExceptionPort(ExceptionPort* eport) {
     Guard<fbl::Mutex> guard{get_lock()};
     DEBUG_ASSERT_COND(eport->PortMatches(this, /* allow_null */ false));
     DEBUG_ASSERT(!eport->InContainer());
-    eports_.push_back(fbl::move(AdoptRef(eport)));
+    eports_.push_back(ktl::move(AdoptRef(eport)));
 }
 
 void PortDispatcher::UnlinkExceptionPort(ExceptionPort* eport) {

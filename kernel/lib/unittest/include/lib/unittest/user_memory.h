@@ -7,6 +7,7 @@
 #pragma once
 
 #include <fbl/unique_ptr.h>
+#include <ktl/move.h>
 #include <lib/user_copy/user_ptr.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>
@@ -31,7 +32,7 @@ public:
 
 private:
     UserMemory(fbl::RefPtr<VmMapping> mapping)
-        : mapping_(fbl::move(mapping)) {}
+        : mapping_(ktl::move(mapping)) {}
 
     fbl::RefPtr<VmMapping> mapping_;
 };

@@ -24,7 +24,7 @@ zx_status_t VcpuDispatcher::Create(fbl::RefPtr<GuestDispatcher> guest_dispatcher
         return status;
 
     fbl::AllocChecker ac;
-    auto disp = new (&ac) VcpuDispatcher(guest_dispatcher, fbl::move(vcpu));
+    auto disp = new (&ac) VcpuDispatcher(guest_dispatcher, ktl::move(vcpu));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
@@ -34,7 +34,7 @@ zx_status_t VcpuDispatcher::Create(fbl::RefPtr<GuestDispatcher> guest_dispatcher
 }
 
 VcpuDispatcher::VcpuDispatcher(fbl::RefPtr<GuestDispatcher> guest, fbl::unique_ptr<Vcpu> vcpu)
-    : guest_(guest), vcpu_(fbl::move(vcpu)) {}
+    : guest_(guest), vcpu_(ktl::move(vcpu)) {}
 
 VcpuDispatcher::~VcpuDispatcher() {}
 

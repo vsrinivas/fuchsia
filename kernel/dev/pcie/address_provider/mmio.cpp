@@ -6,6 +6,7 @@
 
 #include <trace.h>
 
+#include <ktl/move.h>
 #include <fbl/auto_lock.h>
 
 #include <dev/address_provider/address_provider.h>
@@ -102,7 +103,7 @@ zx_status_t MmioPcieAddressProvider::AddEcamRegion(const PciEcamRegion& ecam) {
     }
 
     // Everything checks out.  Add the new region to our set of regions and we are done.
-    ecam_regions_.insert(fbl::move(region));
+    ecam_regions_.insert(ktl::move(region));
     return ZX_OK;
 }
 

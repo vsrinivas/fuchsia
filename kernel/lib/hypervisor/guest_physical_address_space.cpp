@@ -8,6 +8,7 @@
 
 #include <fbl/alloc_checker.h>
 #include <kernel/range_check.h>
+#include <ktl/move.h>
 #include <vm/fault.h>
 #include <vm/vm_object_physical.h>
 
@@ -42,7 +43,7 @@ zx_status_t GuestPhysicalAddressSpace::Create(
 #if ARCH_ARM64
     gpas->arch_aspace()->arch_set_asid(vmid);
 #endif
-    *_gpas = fbl::move(gpas);
+    *_gpas = ktl::move(gpas);
     return ZX_OK;
 }
 
@@ -172,7 +173,7 @@ zx_status_t GuestPhysicalAddressSpace::CreateGuestPtr(zx_gpaddr_t guest_paddr, s
         return status;
     }
 
-    *guest_ptr = GuestPtr(fbl::move(host_mapping), guest_paddr - begin);
+    *guest_ptr = GuestPtr(ktl::move(host_mapping), guest_paddr - begin);
     return ZX_OK;
 }
 

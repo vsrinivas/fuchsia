@@ -24,7 +24,7 @@ zx_status_t VmObjectDispatcher::Create(fbl::RefPtr<VmObject> vmo,
                                        fbl::RefPtr<Dispatcher>* dispatcher,
                                        zx_rights_t* rights) {
     fbl::AllocChecker ac;
-    auto disp = new (&ac) VmObjectDispatcher(fbl::move(vmo));
+    auto disp = new (&ac) VmObjectDispatcher(ktl::move(vmo));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 

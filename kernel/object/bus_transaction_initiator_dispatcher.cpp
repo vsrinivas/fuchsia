@@ -22,7 +22,7 @@ zx_status_t BusTransactionInitiatorDispatcher::Create(fbl::RefPtr<Iommu> iommu, 
     }
 
     fbl::AllocChecker ac;
-    auto disp = new (&ac) BusTransactionInitiatorDispatcher(fbl::move(iommu), bti_id);
+    auto disp = new (&ac) BusTransactionInitiatorDispatcher(ktl::move(iommu), bti_id);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -34,7 +34,7 @@ zx_status_t BusTransactionInitiatorDispatcher::Create(fbl::RefPtr<Iommu> iommu, 
 
 BusTransactionInitiatorDispatcher::BusTransactionInitiatorDispatcher(fbl::RefPtr<Iommu> iommu,
                                                                      uint64_t bti_id)
-        : iommu_(fbl::move(iommu)), bti_id_(bti_id), zero_handles_(false) {}
+        : iommu_(ktl::move(iommu)), bti_id_(bti_id), zero_handles_(false) {}
 
 BusTransactionInitiatorDispatcher::~BusTransactionInitiatorDispatcher() {
     DEBUG_ASSERT(pinned_memory_.is_empty());
@@ -63,7 +63,7 @@ zx_status_t BusTransactionInitiatorDispatcher::Pin(fbl::RefPtr<VmObject> vmo, ui
         return ZX_ERR_BAD_STATE;
     }
 
-    return PinnedMemoryTokenDispatcher::Create(fbl::WrapRefPtr(this), fbl::move(pinned_vmo),
+    return PinnedMemoryTokenDispatcher::Create(fbl::WrapRefPtr(this), ktl::move(pinned_vmo),
                                                perms, pmt, pmt_rights);
 }
 
@@ -110,7 +110,7 @@ void BusTransactionInitiatorDispatcher::Quarantine(fbl::RefPtr<PinnedMemoryToken
     Guard<fbl::Mutex> guard{get_lock()};
 
     DEBUG_ASSERT(pmt->dll_pmt_.InContainer());
-    quarantine_.push_back(fbl::move(pmt));
+    quarantine_.push_back(ktl::move(pmt));
 
     if (zero_handles_) {
         // If we quarantine when at zero handles, this PMT will be leaked.  See

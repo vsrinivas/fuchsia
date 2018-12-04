@@ -69,9 +69,9 @@ zx_status_t sys_channel_create(uint32_t options,
     uint64_t id0 = mpd0->get_koid();
     uint64_t id1 = mpd1->get_koid();
 
-    result = out0->make(fbl::move(mpd0), rights);
+    result = out0->make(ktl::move(mpd0), rights);
     if (result == ZX_OK)
-        result = out1->make(fbl::move(mpd1), rights);
+        result = out1->make(ktl::move(mpd1), rights);
     if (result == ZX_OK)
         ktrace(TAG_CHANNEL_CREATE, (uint32_t)id0, (uint32_t)id1, options, 0);
     return result;
@@ -108,7 +108,7 @@ static void msg_get_handles(ProcessDispatcher* up, MessagePacket* msg,
             handle_list[i]->dispatcher()->Cancel(handle_list[i]);
         HandleOwner handle(handle_list[i]);
         // TODO(ZX-969): This takes a lock per call. Consider doing these in a batch.
-        up->AddHandle(fbl::move(handle));
+        up->AddHandle(ktl::move(handle));
     }
 }
 
@@ -229,7 +229,7 @@ static zx_status_t channel_call_epilogue(ProcessDispatcher* up,
                                          user_out_ptr<uint32_t> actual_bytes,
                                          user_out_ptr<uint32_t> actual_handles) {
     auto bytes = reply? reply->data_size() : 0u;
-    zx_status_t status = channel_read_out(up, fbl::move(reply), args, actual_bytes, actual_handles);
+    zx_status_t status = channel_read_out(up, ktl::move(reply), args, actual_bytes, actual_handles);
     if (status != ZX_OK)
         return status;
     record_recv_msg_sz(bytes);
@@ -315,7 +315,7 @@ zx_status_t sys_channel_write(zx_handle_t handle_value, uint32_t options,
             return status;
     }
 
-    status = channel->Write(up->get_koid(), fbl::move(msg));
+    status = channel->Write(up->get_koid(), ktl::move(msg));
     if (status != ZX_OK)
         return status;
 
@@ -377,10 +377,10 @@ zx_status_t sys_channel_call_noretry(zx_handle_t handle_value, uint32_t options,
 
     // Write message and wait for reply, deadline, or cancelation
     fbl::unique_ptr<MessagePacket> reply;
-    status = channel->Call(up->get_koid(), fbl::move(msg), deadline, &reply);
+    status = channel->Call(up->get_koid(), ktl::move(msg), deadline, &reply);
     if (status != ZX_OK)
         return status;
-    return channel_call_epilogue(up, fbl::move(reply), &args, actual_bytes, actual_handles);
+    return channel_call_epilogue(up, ktl::move(reply), &args, actual_bytes, actual_handles);
 }
 
 // zx_status_t zx_channel_call_finish
@@ -405,6 +405,6 @@ zx_status_t sys_channel_call_finish(zx_time_t deadline,
     status = channel->ResumeInterruptedCall(waiter, deadline, &reply);
     if (status != ZX_OK)
         return status;
-    return channel_call_epilogue(up, fbl::move(reply), &args, actual_bytes, actual_handles);
+    return channel_call_epilogue(up, ktl::move(reply), &args, actual_bytes, actual_handles);
 
 }

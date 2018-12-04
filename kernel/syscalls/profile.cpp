@@ -47,7 +47,7 @@ zx_status_t sys_profile_create(zx_handle_t resource,
     if (status != ZX_OK)
         return status;
 
-    return out->make(fbl::move(dispatcher), rights);
+    return out->make(ktl::move(dispatcher), rights);
 }
 
 // zx_status_t zx_object_set_profile
@@ -69,5 +69,5 @@ zx_status_t sys_object_set_profile(zx_handle_t handle,
     if (result != ZX_OK)
         return result;
 
-    return profile->ApplyProfile(fbl::move(thread));
+    return profile->ApplyProfile(ktl::move(thread));
 }

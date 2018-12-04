@@ -36,7 +36,7 @@ zx_status_t VirtualInterruptDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatch
 
     // Transfer control of the new dispatcher to the creator and we are done.
     *rights = default_rights();
-    *dispatcher = fbl::move(disp_ref);
+    *dispatcher = ktl::move(disp_ref);
 
     return ZX_OK;
 }

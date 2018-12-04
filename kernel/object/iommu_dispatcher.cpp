@@ -31,11 +31,11 @@ zx_status_t IommuDispatcher::Create(uint32_t type, fbl::unique_ptr<const uint8_t
     zx_status_t status;
     switch (type) {
         case ZX_IOMMU_TYPE_DUMMY:
-            status = DummyIommu::Create(fbl::move(desc), desc_len, &iommu);
+            status = DummyIommu::Create(ktl::move(desc), desc_len, &iommu);
             break;
 #if ARCH_X86
         case ZX_IOMMU_TYPE_INTEL:
-            status = IntelIommu::Create(fbl::move(desc), desc_len, &iommu);
+            status = IntelIommu::Create(ktl::move(desc), desc_len, &iommu);
             break;
 #endif
         default:
@@ -46,7 +46,7 @@ zx_status_t IommuDispatcher::Create(uint32_t type, fbl::unique_ptr<const uint8_t
     }
 
     fbl::AllocChecker ac;
-    auto disp = new (&ac) IommuDispatcher(fbl::move(iommu));
+    auto disp = new (&ac) IommuDispatcher(ktl::move(iommu));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 

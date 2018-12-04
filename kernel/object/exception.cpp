@@ -100,7 +100,7 @@ public:
             previous_type_ = expected_type;
             if (eport) {
                 DEBUG_ASSERT(eport->type() == expected_type);
-                *out_eport = fbl::move(eport);
+                *out_eport = ktl::move(eport);
                 return true;
             }
         }

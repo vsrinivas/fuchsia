@@ -8,6 +8,7 @@
 
 #include <err.h>
 #include <fbl/ref_ptr.h>
+#include <ktl/move.h>
 #include <new>
 #include <vm/vm.h>
 
@@ -27,7 +28,7 @@ zx_status_t DummyIommu::Create(fbl::unique_ptr<const uint8_t[]> desc, size_t des
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
-    *out = fbl::move(instance);
+    *out = ktl::move(instance);
     return ZX_OK;
 }
 

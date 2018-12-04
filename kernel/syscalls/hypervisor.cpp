@@ -35,10 +35,10 @@ zx_status_t sys_guest_create(zx_handle_t resource, uint32_t options, user_out_ha
     if (status != ZX_OK)
         return status;
 
-    status = guest_handle->make(fbl::move(guest_dispatcher), guest_rights);
+    status = guest_handle->make(ktl::move(guest_dispatcher), guest_rights);
     if (status != ZX_OK)
         return status;
-    return vmar_handle->make(fbl::move(vmar_dispatcher), vmar_rights);
+    return vmar_handle->make(ktl::move(vmar_dispatcher), vmar_rights);
 }
 
 // zx_status_t zx_guest_set_trap
@@ -58,7 +58,7 @@ zx_status_t sys_guest_set_trap(zx_handle_t guest_handle, uint32_t kind, zx_vaddr
             return status;
     }
 
-    return guest->SetTrap(kind, addr, len, fbl::move(port), key);
+    return guest->SetTrap(kind, addr, len, ktl::move(port), key);
 }
 
 // zx_status_t zx_vcpu_create
@@ -79,7 +79,7 @@ zx_status_t sys_vcpu_create(zx_handle_t guest_handle, uint32_t options,
     if (status != ZX_OK)
         return status;
 
-    return out->make(fbl::move(dispatcher), rights);
+    return out->make(ktl::move(dispatcher), rights);
 }
 
 // zx_status_t zx_vcpu_resume

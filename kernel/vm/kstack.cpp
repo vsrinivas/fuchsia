@@ -21,6 +21,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
+#include <ktl/move.h>
 
 #define LOCAL_TRACE 0
 
@@ -74,7 +75,7 @@ static zx_status_t allocate_vmar(bool unsafe,
     fbl::RefPtr<VmMapping> kstack_mapping;
     status = kstack_vmar->CreateVmMapping(padding_size, DEFAULT_STACK_SIZE, 0,
                                           VMAR_FLAG_SPECIFIC,
-                                          fbl::move(stack_vmo), 0,
+                                          ktl::move(stack_vmo), 0,
                                           ARCH_MMU_FLAG_PERM_READ |
                                               ARCH_MMU_FLAG_PERM_WRITE,
                                           unsafe ? "unsafe_kstack" : "kstack",
@@ -95,8 +96,8 @@ static zx_status_t allocate_vmar(bool unsafe,
     // Cancel the cleanup handler on the vmar since we're about to save a
     // reference to it.
     vmar_cleanup.cancel();
-    *out_kstack_mapping = fbl::move(kstack_mapping);
-    *out_kstack_vmar = fbl::move(kstack_vmar);
+    *out_kstack_mapping = ktl::move(kstack_mapping);
+    *out_kstack_vmar = ktl::move(kstack_vmar);
 
     return ZX_OK;
 }

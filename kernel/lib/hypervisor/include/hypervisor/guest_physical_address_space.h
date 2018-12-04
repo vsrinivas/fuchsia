@@ -6,10 +6,11 @@
 
 #pragma once
 
-#include <vm/vm_aspace.h>
-#include <vm/vm_object.h>
 #include <fbl/limits.h>
 #include <fbl/unique_ptr.h>
+#include <ktl/move.h>
+#include <vm/vm_aspace.h>
+#include <vm/vm_object.h>
 
 namespace hypervisor {
 
@@ -20,14 +21,14 @@ class GuestPtr {
 public:
     GuestPtr() = default;
     GuestPtr(fbl::RefPtr<VmMapping> mapping, zx_vaddr_t offset)
-        : mapping_(fbl::move(mapping)), offset_(offset) {}
+        : mapping_(ktl::move(mapping)), offset_(offset) {}
     GuestPtr(GuestPtr&& o)
-        : mapping_(fbl::move(o.mapping_)), offset_(o.offset_) {}
+        : mapping_(ktl::move(o.mapping_)), offset_(o.offset_) {}
     ~GuestPtr() { reset(); }
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(GuestPtr);
 
     GuestPtr& operator=(GuestPtr&& o) {
-        mapping_ = fbl::move(o.mapping_);
+        mapping_ = ktl::move(o.mapping_);
         offset_ = o.offset_;
         return *this;
     }

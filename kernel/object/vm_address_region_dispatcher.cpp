@@ -109,7 +109,7 @@ zx_status_t VmAddressRegionDispatcher::Create(fbl::RefPtr<VmAddressRegion> vmar,
     }
 
     fbl::AllocChecker ac;
-    auto disp = new (&ac) VmAddressRegionDispatcher(fbl::move(vmar), base_arch_mmu_flags);
+    auto disp = new (&ac) VmAddressRegionDispatcher(ktl::move(vmar), base_arch_mmu_flags);
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
@@ -120,7 +120,7 @@ zx_status_t VmAddressRegionDispatcher::Create(fbl::RefPtr<VmAddressRegion> vmar,
 
 VmAddressRegionDispatcher::VmAddressRegionDispatcher(fbl::RefPtr<VmAddressRegion> vmar,
                                                      uint base_arch_mmu_flags)
-    : vmar_(fbl::move(vmar)), base_arch_mmu_flags_(base_arch_mmu_flags) {}
+    : vmar_(ktl::move(vmar)), base_arch_mmu_flags_(base_arch_mmu_flags) {}
 
 VmAddressRegionDispatcher::~VmAddressRegionDispatcher() {}
 
@@ -150,7 +150,7 @@ zx_status_t VmAddressRegionDispatcher::Allocate(
 
     // Create the dispatcher.
     fbl::RefPtr<Dispatcher> dispatcher;
-    status = VmAddressRegionDispatcher::Create(fbl::move(new_vmar),
+    status = VmAddressRegionDispatcher::Create(ktl::move(new_vmar),
                                                base_arch_mmu_flags_,
                                                &dispatcher, new_rights);
     if (status != ZX_OK)
@@ -190,14 +190,14 @@ zx_status_t VmAddressRegionDispatcher::Map(size_t vmar_offset, fbl::RefPtr<VmObj
 
     fbl::RefPtr<VmMapping> result(nullptr);
     status = vmar_->CreateVmMapping(vmar_offset, len, /* align_pow2 */ 0,
-                                    vmar_flags, fbl::move(vmo), vmo_offset,
+                                    vmar_flags, ktl::move(vmo), vmo_offset,
                                     arch_mmu_flags, "useralloc",
                                     &result);
     if (status != ZX_OK) {
         return status;
     }
 
-    *out = fbl::move(result);
+    *out = ktl::move(result);
     return ZX_OK;
 }
 

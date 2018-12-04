@@ -9,6 +9,7 @@
 #include <err.h>
 #include <fbl/alloc_checker.h>
 #include <inttypes.h>
+#include <ktl/move.h>
 #include <trace.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>
@@ -92,7 +93,7 @@ zx_status_t VmPageList::AddPage(vm_page* p, uint64_t offset) {
         __UNUSED auto status = pl->AddPage(p, index);
         DEBUG_ASSERT(status == ZX_OK);
 
-        list_.insert(fbl::move(pl));
+        list_.insert(ktl::move(pl));
         return ZX_OK;
     } else {
         return pln->AddPage(p, index);

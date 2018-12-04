@@ -214,7 +214,7 @@ fbl::RefPtr<VmAspace> VmAspace::Create(uint32_t flags, const char* name) {
     }
 
     // return a ref pointer to the aspace
-    return fbl::move(aspace);
+    return ktl::move(aspace);
 }
 
 void VmAspace::Rename(const char* name) {
@@ -248,7 +248,7 @@ VmAspace::~VmAspace() {
 fbl::RefPtr<VmAddressRegion> VmAspace::RootVmar() {
     Guard<fbl::Mutex> guard{&lock_};
     fbl::RefPtr<VmAddressRegion> ref(root_vmar_);
-    return fbl::move(ref);
+    return ktl::move(ref);
 }
 
 zx_status_t VmAspace::Destroy() {
@@ -395,7 +395,7 @@ zx_status_t VmAspace::ReserveSpace(const char* name, size_t size, vaddr_t vaddr)
 
     // map it, creating a new region
     void* ptr = reinterpret_cast<void*>(vaddr);
-    return MapObjectInternal(fbl::move(vmo), name, 0, size, &ptr, 0, VMM_FLAG_VALLOC_SPECIFIC,
+    return MapObjectInternal(ktl::move(vmo), name, 0, size, &ptr, 0, VMM_FLAG_VALLOC_SPECIFIC,
                              arch_mmu_flags);
 }
 
@@ -434,7 +434,7 @@ zx_status_t VmAspace::AllocPhysical(const char* name, size_t size, void** ptr, u
     }
 
     arch_mmu_flags &= ~ARCH_MMU_FLAG_CACHE_MASK;
-    return MapObjectInternal(fbl::move(vmo), name, 0, size, ptr, align_pow2, vmm_flags,
+    return MapObjectInternal(ktl::move(vmo), name, 0, size, ptr, align_pow2, vmm_flags,
                              arch_mmu_flags);
 }
 
@@ -462,7 +462,7 @@ zx_status_t VmAspace::AllocContiguous(const char* name, size_t size, void** ptr,
     }
     vmo->set_name(name, strlen(name));
 
-    return MapObjectInternal(fbl::move(vmo), name, 0, size, ptr, align_pow2, vmm_flags,
+    return MapObjectInternal(ktl::move(vmo), name, 0, size, ptr, align_pow2, vmm_flags,
                              arch_mmu_flags);
 }
 
@@ -495,7 +495,7 @@ zx_status_t VmAspace::Alloc(const char* name, size_t size, void** ptr, uint8_t a
     }
 
     // map it, creating a new region
-    return MapObjectInternal(fbl::move(vmo), name, 0, size, ptr, align_pow2, vmm_flags,
+    return MapObjectInternal(ktl::move(vmo), name, 0, size, ptr, align_pow2, vmm_flags,
                              arch_mmu_flags);
 }
 

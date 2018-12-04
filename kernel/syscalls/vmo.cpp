@@ -62,12 +62,12 @@ zx_status_t sys_vmo_create(uint64_t size, uint32_t options,
     // create a Vm Object dispatcher
     fbl::RefPtr<Dispatcher> dispatcher;
     zx_rights_t rights;
-    zx_status_t result = VmObjectDispatcher::Create(fbl::move(vmo), &dispatcher, &rights);
+    zx_status_t result = VmObjectDispatcher::Create(ktl::move(vmo), &dispatcher, &rights);
     if (result != ZX_OK)
         return result;
 
     // create a handle and attach the dispatcher to it
-    return out->make(fbl::move(dispatcher), rights);
+    return out->make(ktl::move(dispatcher), rights);
 }
 
 // zx_status_t zx_vmo_read
@@ -258,7 +258,7 @@ zx_status_t sys_vmo_clone(zx_handle_t handle, uint32_t options,
     // create a Vm Object dispatcher
     fbl::RefPtr<Dispatcher> dispatcher;
     zx_rights_t default_rights;
-    zx_status_t result = VmObjectDispatcher::Create(fbl::move(clone_vmo), &dispatcher, &default_rights);
+    zx_status_t result = VmObjectDispatcher::Create(ktl::move(clone_vmo), &dispatcher, &default_rights);
     if (result != ZX_OK)
         return result;
 
@@ -274,7 +274,7 @@ zx_status_t sys_vmo_clone(zx_handle_t handle, uint32_t options,
     DEBUG_ASSERT((default_rights & rights) == rights);
 
     // create a handle and attach the dispatcher to it
-    return out_handle->make(fbl::move(dispatcher), rights);
+    return out_handle->make(ktl::move(dispatcher), rights);
 }
 
 // zx_status_t zx_vmo_replace_as_executable

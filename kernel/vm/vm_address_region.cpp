@@ -150,7 +150,7 @@ zx_status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, u
     }
 
     // Notice if this is an executable mapping from the vDSO VMO
-    // before we lose the VMO reference via fbl::move(vmo).
+    // before we lose the VMO reference via ktl::move(vmo).
     const bool is_vdso_code = (vmo &&
                                (arch_mmu_flags & ARCH_MMU_FLAG_PERM_EXECUTE) &&
                                VDso::vmo_is_vdso(vmo));
@@ -160,7 +160,7 @@ zx_status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, u
     if (vmo) {
         vmar = fbl::AdoptRef(new (&ac)
                                  VmMapping(*this, new_base, size, vmar_flags,
-                                           fbl::move(vmo), vmo_offset, arch_mmu_flags));
+                                           ktl::move(vmo), vmo_offset, arch_mmu_flags));
     } else {
         vmar = fbl::AdoptRef(new (&ac)
                                  VmAddressRegion(*this, new_base, size, vmar_flags, name));
@@ -181,7 +181,7 @@ zx_status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, u
     }
 
     vmar->Activate();
-    *out = fbl::move(vmar);
+    *out = ktl::move(vmar);
     return ZX_OK;
 }
 
@@ -251,7 +251,7 @@ zx_status_t VmAddressRegion::CreateVmMapping(size_t mapping_offset, size_t size,
 
     fbl::RefPtr<VmAddressRegionOrMapping> res;
     zx_status_t status =
-        CreateSubVmarInternal(mapping_offset, size, align_pow2, vmar_flags, fbl::move(vmo),
+        CreateSubVmarInternal(mapping_offset, size, align_pow2, vmar_flags, ktl::move(vmo),
                               vmo_offset, arch_mmu_flags, name, &res);
     if (status != ZX_OK) {
         return status;
@@ -275,7 +275,7 @@ zx_status_t VmAddressRegion::OverwriteVmMapping(
     fbl::RefPtr<VmAddressRegionOrMapping> vmar;
     vmar = fbl::AdoptRef(new (&ac)
                              VmMapping(*this, base, size, vmar_flags,
-                                       fbl::move(vmo), vmo_offset, arch_mmu_flags));
+                                       ktl::move(vmo), vmo_offset, arch_mmu_flags));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -287,7 +287,7 @@ zx_status_t VmAddressRegion::OverwriteVmMapping(
     }
 
     vmar->Activate();
-    *out = fbl::move(vmar);
+    *out = ktl::move(vmar);
     return ZX_OK;
 }
 
@@ -841,7 +841,7 @@ zx_status_t VmAddressRegion::Protect(vaddr_t base, size_t size, uint new_arch_mm
             return status;
         }
 
-        itr = fbl::move(next);
+        itr = ktl::move(next);
     }
 
     return ZX_OK;

@@ -679,7 +679,7 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, fbl::unique_ptr<Vcpu>* 
     if (status != ZX_OK)
         return status;
 
-    *out = fbl::move(vcpu);
+    *out = ktl::move(vcpu);
     return ZX_OK;
 }
 

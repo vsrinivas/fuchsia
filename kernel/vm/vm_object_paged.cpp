@@ -14,6 +14,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <inttypes.h>
+#include <ktl/move.h>
 #include <lib/console.h>
 #include <stdlib.h>
 #include <string.h>
@@ -65,7 +66,7 @@ zx_status_t RoundSize(uint64_t size, uint64_t* out_size) {
 
 VmObjectPaged::VmObjectPaged(
     uint32_t options, uint32_t pmm_alloc_flags, uint64_t size, fbl::RefPtr<VmObject> parent)
-    : VmObject(fbl::move(parent)),
+    : VmObject(ktl::move(parent)),
       options_(options),
       size_(size),
       pmm_alloc_flags_(pmm_alloc_flags) {
@@ -113,7 +114,7 @@ zx_status_t VmObjectPaged::Create(uint32_t pmm_alloc_flags,
         return ZX_ERR_NO_MEMORY;
     }
 
-    *obj = fbl::move(vmo);
+    *obj = ktl::move(vmo);
 
     return ZX_OK;
 }
@@ -135,7 +136,7 @@ zx_status_t VmObjectPaged::CreateContiguous(uint32_t pmm_alloc_flags, uint64_t s
     }
 
     if (size == 0) {
-        *obj = fbl::move(vmo);
+        *obj = ktl::move(vmo);
         return ZX_OK;
     }
 
@@ -180,7 +181,7 @@ zx_status_t VmObjectPaged::CreateContiguous(uint32_t pmm_alloc_flags, uint64_t s
     }
 
     cleanup_phys_pages.cancel();
-    *obj = fbl::move(vmo);
+    *obj = ktl::move(vmo);
     return ZX_OK;
 }
 
@@ -230,7 +231,7 @@ zx_status_t VmObjectPaged::CreateFromROData(const void* data, size_t size, fbl::
         }
     }
 
-    *obj = fbl::move(vmo);
+    *obj = ktl::move(vmo);
 
     return ZX_OK;
 }
@@ -278,7 +279,7 @@ zx_status_t VmObjectPaged::CloneCOW(bool resizable, uint64_t offset, uint64_t si
         vmo->name_ = name_;
     }
 
-    *clone_vmo = fbl::move(vmo);
+    *clone_vmo = ktl::move(vmo);
 
     return ZX_OK;
 }

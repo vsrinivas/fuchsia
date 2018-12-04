@@ -31,7 +31,7 @@ RoDso::RoDso(const char* name, const void* image, size_t size,
 
     // build and point a dispatcher at it
     status = VmObjectDispatcher::Create(
-        fbl::move(vmo),
+        ktl::move(vmo),
         &dispatcher, &vmo_rights_);
     ASSERT(status == ZX_OK);
 
@@ -90,7 +90,7 @@ zx_status_t RoDso::Map(fbl::RefPtr<VmAddressRegionDispatcher> vmar,
                        size_t offset) const {
     zx_status_t status = MapSegment(vmar, false, offset, 0, code_start_);
     if (status == ZX_OK)
-        status = MapSegment(fbl::move(vmar), true,
+        status = MapSegment(ktl::move(vmar), true,
                             offset + code_start_, code_start_, size_);
     return status;
 }

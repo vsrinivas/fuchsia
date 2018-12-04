@@ -46,7 +46,7 @@ static PortPacket* MakePacket(uint64_t key, uint32_t type, zx_koid_t pid, zx_koi
 zx_status_t ExceptionPort::Create(Type type, fbl::RefPtr<PortDispatcher> port, uint64_t port_key,
                                   fbl::RefPtr<ExceptionPort>* out_eport) {
     fbl::AllocChecker ac;
-    auto eport = new (&ac) ExceptionPort(type, fbl::move(port), port_key);
+    auto eport = new (&ac) ExceptionPort(type, ktl::move(port), port_key);
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 

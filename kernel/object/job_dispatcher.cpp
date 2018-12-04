@@ -96,7 +96,7 @@ JobDispatcher::LiveRefsArray JobDispatcher::ForEachChildInLocked(
         // we keep the reference alive in the |refs| array and pass
         // the responsibility of releasing them outside the lock to
         // the caller.
-        refs[ix++] = fbl::move(cref);
+        refs[ix++] = ktl::move(cref);
 
         if (*result != ZX_OK)
             break;
@@ -134,7 +134,7 @@ zx_status_t JobDispatcher::Create(uint32_t flags,
     }
 
     *rights = default_rights();
-    *dispatcher = fbl::move(job);
+    *dispatcher = ktl::move(job);
     return ZX_OK;
 }
 
@@ -142,7 +142,7 @@ JobDispatcher::JobDispatcher(uint32_t /*flags*/,
                              fbl::RefPtr<JobDispatcher> parent,
                              pol_cookie_t policy)
     : SoloDispatcher(ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS),
-      parent_(fbl::move(parent)),
+      parent_(ktl::move(parent)),
       max_height_(parent_ ? parent_->max_height() - 1 : kRootJobMaxHeight),
       state_(State::READY),
       process_count_(0u),
@@ -323,11 +323,11 @@ bool JobDispatcher::Kill() {
 
         // Safely gather refs to the children.
         jobs_refs = ForEachChildInLocked(jobs_, &result, [&](fbl::RefPtr<JobDispatcher> job) {
-            jobs_to_kill.push_front(fbl::move(job));
+            jobs_to_kill.push_front(ktl::move(job));
             return ZX_OK;
         });
         proc_refs = ForEachChildInLocked(procs_, &result, [&](fbl::RefPtr<ProcessDispatcher> proc) {
-            procs_to_kill.push_front(fbl::move(proc));
+            procs_to_kill.push_front(ktl::move(proc));
             return ZX_OK;
         });
     }
@@ -413,7 +413,7 @@ JobDispatcher::LookupProcessById(zx_koid_t koid) {
 
         proc_refs = ForEachChildInLocked(procs_, &result, [&](fbl::RefPtr<ProcessDispatcher> proc) {
             if (proc->get_koid() == koid) {
-                found_proc = fbl::move(proc);
+                found_proc = ktl::move(proc);
                 return ZX_ERR_STOP;
             }
             return ZX_OK;
@@ -435,7 +435,7 @@ JobDispatcher::LookupJobById(zx_koid_t koid) {
 
         jobs_refs = ForEachChildInLocked(jobs_, &result, [&](fbl::RefPtr<JobDispatcher> job) {
             if (job->get_koid() == koid) {
-                found_job = fbl::move(job);
+                found_job = ktl::move(job);
                 return ZX_ERR_STOP;
             }
             return ZX_OK;
@@ -478,11 +478,11 @@ zx_status_t JobDispatcher::SetExceptionPort(fbl::RefPtr<ExceptionPort> eport) {
     if (debugger) {
         if (debugger_exception_port_)
             return ZX_ERR_ALREADY_BOUND;
-        debugger_exception_port_ = fbl::move(eport);
+        debugger_exception_port_ = ktl::move(eport);
     } else {
         if (exception_port_)
             return ZX_ERR_ALREADY_BOUND;
-        exception_port_ = fbl::move(eport);
+        exception_port_ = ktl::move(eport);
     }
     return ZX_OK;
 }
@@ -490,7 +490,7 @@ zx_status_t JobDispatcher::SetExceptionPort(fbl::RefPtr<ExceptionPort> eport) {
 class OnExceptionPortRemovalEnumerator final : public JobEnumerator {
 public:
     OnExceptionPortRemovalEnumerator(fbl::RefPtr<ExceptionPort> eport)
-        : eport_(fbl::move(eport)) {}
+        : eport_(ktl::move(eport)) {}
     OnExceptionPortRemovalEnumerator(const OnExceptionPortRemovalEnumerator&) = delete;
 
 private:

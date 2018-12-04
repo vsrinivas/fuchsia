@@ -79,7 +79,7 @@ zx_status_t mtrace_cpuperf_control(uint32_t action, uint32_t options,
         if (status != ZX_OK)
             return status;
 
-        return arch_perfmon_assign_buffer(cpu, fbl::move(vmo->vmo()));
+        return arch_perfmon_assign_buffer(cpu, ktl::move(vmo->vmo()));
     }
 
     case MTRACE_CPUPERF_STAGE_CONFIG: {

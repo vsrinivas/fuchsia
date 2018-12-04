@@ -11,6 +11,7 @@
 #include <err.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
+#include <ktl/move.h>
 #include <inttypes.h>
 #include <trace.h>
 #include <vm/fault.h>
@@ -25,7 +26,7 @@ VmMapping::VmMapping(VmAddressRegion& parent, vaddr_t base, size_t size, uint32_
                      fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset, uint arch_mmu_flags)
     : VmAddressRegionOrMapping(base, size, vmar_flags,
                                parent.aspace_.get(), &parent),
-      object_(fbl::move(vmo)), object_offset_(vmo_offset), arch_mmu_flags_(arch_mmu_flags) {
+      object_(ktl::move(vmo)), object_offset_(vmo_offset), arch_mmu_flags_(arch_mmu_flags) {
 
     LTRACEF("%p aspace %p base %#" PRIxPTR " size %#zx offset %#" PRIx64 "\n",
             this, aspace_.get(), base_, size_, vmo_offset);
@@ -281,7 +282,7 @@ zx_status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
             fbl::RefPtr<VmAddressRegionOrMapping> ref(parent_->subregions_.erase(*this));
             base_ += size;
             object_offset_ += size;
-            parent_->subregions_.insert(fbl::move(ref));
+            parent_->subregions_.insert(ktl::move(ref));
         }
         size_ -= size;
 

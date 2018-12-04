@@ -119,7 +119,7 @@ HandleOwner Handle::Make(fbl::RefPtr<Dispatcher> dispatcher,
         return nullptr;
     kcounter_add(handle_count_made, 1);
     kcounter_add(handle_count_live, 1);
-    return HandleOwner(new (addr) Handle(fbl::move(dispatcher),
+    return HandleOwner(new (addr) Handle(ktl::move(dispatcher),
                                          rights, base_value));
 }
 
@@ -127,7 +127,7 @@ HandleOwner Handle::Make(fbl::RefPtr<Dispatcher> dispatcher,
 Handle::Handle(fbl::RefPtr<Dispatcher> dispatcher, zx_rights_t rights,
                uint32_t base_value)
     : process_id_(0u),
-      dispatcher_(fbl::move(dispatcher)),
+      dispatcher_(ktl::move(dispatcher)),
       rights_(rights),
       base_value_(base_value) {
 }

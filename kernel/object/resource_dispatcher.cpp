@@ -112,7 +112,7 @@ zx_status_t ResourceDispatcher::Create(fbl::RefPtr<ResourceDispatcher>* dispatch
     // necessary.
     fbl::AllocChecker ac;
     auto disp = fbl::AdoptRef(new (&ac) ResourceDispatcher(kind, base, size, flags,
-                                                           fbl::move(region_uptr),
+                                                           ktl::move(region_uptr),
                                                            rallocs, resource_list));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
@@ -123,7 +123,7 @@ zx_status_t ResourceDispatcher::Create(fbl::RefPtr<ResourceDispatcher>* dispatch
     }
 
     *rights = default_rights();
-    *dispatcher = fbl::move(disp);
+    *dispatcher = ktl::move(disp);
 
     LTRACEF("%s [%u, %#lx, %zu] resource created.\n", kLogTag, kind, base, size);
     return ZX_OK;
@@ -139,7 +139,7 @@ ResourceDispatcher::ResourceDispatcher(uint32_t kind,
     : kind_(kind), base_(base), size_(size), flags_(flags),
       resource_list_(resource_list) {
     if (flags_ & ZX_RSRC_FLAG_EXCLUSIVE) {
-        exclusive_region_ = fbl::move(region);
+        exclusive_region_ = ktl::move(region);
     }
 
     switch (kind_) {

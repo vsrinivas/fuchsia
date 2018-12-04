@@ -21,11 +21,11 @@ zx_status_t EventPairDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher0,
         return ZX_ERR_NO_MEMORY;
     auto holder1 = holder0;
 
-    auto disp0 = fbl::AdoptRef(new (&ac) EventPairDispatcher(fbl::move(holder0)));
+    auto disp0 = fbl::AdoptRef(new (&ac) EventPairDispatcher(ktl::move(holder0)));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
-    auto disp1 = fbl::AdoptRef(new (&ac) EventPairDispatcher(fbl::move(holder1)));
+    auto disp1 = fbl::AdoptRef(new (&ac) EventPairDispatcher(ktl::move(holder1)));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
@@ -33,8 +33,8 @@ zx_status_t EventPairDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher0,
     disp1->Init(disp0);
 
     *rights = default_rights();
-    *dispatcher0 = fbl::move(disp0);
-    *dispatcher1 = fbl::move(disp1);
+    *dispatcher0 = ktl::move(disp0);
+    *dispatcher1 = ktl::move(disp1);
 
     return ZX_OK;
 }
@@ -51,7 +51,7 @@ void EventPairDispatcher::OnPeerZeroHandlesLocked() {
 }
 
 EventPairDispatcher::EventPairDispatcher(fbl::RefPtr<PeerHolder<EventPairDispatcher>> holder)
-    : PeeredDispatcher(fbl::move(holder))
+    : PeeredDispatcher(ktl::move(holder))
 {}
 
 // This is called before either EventPairDispatcher is accessible from threads other than the one
@@ -61,5 +61,5 @@ void EventPairDispatcher::Init(fbl::RefPtr<EventPairDispatcher> other) TA_NO_THR
     // No need to take |lock_| here.
     DEBUG_ASSERT(!peer_);
     peer_koid_ = other->get_koid();
-    peer_ = fbl::move(other);
+    peer_ = ktl::move(other);
 }

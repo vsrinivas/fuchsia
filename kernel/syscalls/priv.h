@@ -28,7 +28,7 @@ class user_out_handle;
 class user_out_handle final {
 public:
     zx_status_t make(fbl::RefPtr<Dispatcher> dispatcher, zx_rights_t rights) {
-        h_ = Handle::Make(fbl::move(dispatcher), rights);
+        h_ = Handle::Make(ktl::move(dispatcher), rights);
         return h_ ? ZX_OK : ZX_ERR_NO_MEMORY;
     }
 
@@ -54,7 +54,7 @@ public:
 
     void finish_copyout(ProcessDispatcher* current_process) {
         if (h_)
-            current_process->AddHandle(fbl::move(h_));
+            current_process->AddHandle(ktl::move(h_));
     }
 
 private:

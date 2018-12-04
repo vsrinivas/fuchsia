@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <dev/udisplay.h>
+#include <ktl/move.h>
 #include <lib/crashlog.h>
 #include <lib/debuglog.h>
 #include <lib/gfxconsole.h>
@@ -59,7 +60,7 @@ zx_status_t udisplay_set_framebuffer(fbl::RefPtr<VmObject> vmo) {
     fbl::RefPtr<VmMapping> mapping;
     zx_status_t status = VmAspace::kernel_aspace()->RootVmar()->CreateVmMapping(
         0 /* ignored */, size, 0 /* align pow2 */, 0 /* vmar flags */,
-        fbl::move(vmo), 0, kFramebufferArchMmuFlags, "framebuffer_vmo", &mapping);
+        ktl::move(vmo), 0, kFramebufferArchMmuFlags, "framebuffer_vmo", &mapping);
     if (status != ZX_OK)
         return status;
 

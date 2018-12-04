@@ -39,9 +39,9 @@ zx_status_t sys_socket_create(uint32_t options,
     zx_status_t result = SocketDispatcher::Create(options, &socket0, &socket1, &rights);
 
     if (result == ZX_OK)
-        result = out0->make(fbl::move(socket0), rights);
+        result = out0->make(ktl::move(socket0), rights);
     if (result == ZX_OK)
-        result = out1->make(fbl::move(socket1), rights);
+        result = out1->make(ktl::move(socket1), rights);
     return result;
 }
 
@@ -148,7 +148,7 @@ zx_status_t sys_socket_share(zx_handle_t handle, zx_handle_t other) {
         return status;
     }
 
-    return socket->Share(fbl::move(other_handle));
+    return socket->Share(ktl::move(other_handle));
 }
 
 // zx_status_t zx_socket_accept
@@ -165,7 +165,7 @@ zx_status_t sys_socket_accept(zx_handle_t handle, user_out_handle* out) {
     if (status != ZX_OK)
         return status;
 
-    return out->transfer(fbl::move(outhandle));
+    return out->transfer(ktl::move(outhandle));
 }
 
 // zx_status_t zx_socket_shutdown

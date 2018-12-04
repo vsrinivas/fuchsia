@@ -166,7 +166,7 @@ zx_status_t InterruptDispatcher::Bind(fbl::RefPtr<PortDispatcher> port_dispatche
         return ZX_ERR_ALREADY_BOUND;
     }
 
-    port_dispatcher_ = fbl::move(port_dispatcher);
+    port_dispatcher_ = ktl::move(port_dispatcher);
     port_packet_.key = key;
     return ZX_OK;
 }

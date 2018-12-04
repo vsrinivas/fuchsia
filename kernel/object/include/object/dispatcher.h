@@ -20,6 +20,7 @@
 #include <fbl/ref_counted_upgradeable.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
+#include <ktl/move.h>
 
 #include <kernel/lockdep.h>
 #include <kernel/spinlock.h>
@@ -316,7 +317,7 @@ public:
     explicit PeeredDispatcher(fbl::RefPtr<PeerHolder<Self>> holder,
                               zx_signals_t signals = 0u)
         : Dispatcher(signals),
-          holder_(fbl::move(holder)) {}
+          holder_(ktl::move(holder)) {}
     virtual ~PeeredDispatcher() = default;
 
     zx_koid_t get_related_koid() const final TA_REQ(get_lock()) { return peer_koid_; }
@@ -353,7 +354,7 @@ public:
     // (i.e. the peer zeroing) is centralized here.
     void on_zero_handles() final TA_NO_THREAD_SAFETY_ANALYSIS {
         Guard<fbl::Mutex> guard{get_lock()};
-        auto peer = fbl::move(peer_);
+        auto peer = ktl::move(peer_);
         static_cast<Self*>(this)->on_zero_handles_locked();
 
         // This is needed to avoid leaks, and to ensure that
@@ -389,14 +390,14 @@ private:
 template <typename T>
 fbl::RefPtr<T> DownCastDispatcher(fbl::RefPtr<Dispatcher>* disp) {
     return (likely(DispatchTag<T>::ID == (*disp)->get_type())) ?
-            fbl::RefPtr<T>::Downcast(fbl::move(*disp)) :
+            fbl::RefPtr<T>::Downcast(ktl::move(*disp)) :
             nullptr;
 }
 
 // Dispatcher -> Dispatcher
 template <>
 inline fbl::RefPtr<Dispatcher> DownCastDispatcher(fbl::RefPtr<Dispatcher>* disp) {
-    return fbl::move(*disp);
+    return ktl::move(*disp);
 }
 
 // const Dispatcher -> const FooDispatcher
@@ -404,14 +405,14 @@ template <typename T>
 fbl::RefPtr<T> DownCastDispatcher(fbl::RefPtr<const Dispatcher>* disp) {
     static_assert(fbl::is_const<T>::value, "");
     return (likely(DispatchTag<typename fbl::remove_const<T>::type>::ID == (*disp)->get_type())) ?
-            fbl::RefPtr<T>::Downcast(fbl::move(*disp)) :
+            fbl::RefPtr<T>::Downcast(ktl::move(*disp)) :
             nullptr;
 }
 
 // const Dispatcher -> const Dispatcher
 template <>
 inline fbl::RefPtr<const Dispatcher> DownCastDispatcher(fbl::RefPtr<const Dispatcher>* disp) {
-    return fbl::move(*disp);
+    return ktl::move(*disp);
 }
 
 // The same, but for Dispatcher* and FooDispatcher* instead of RefPtr.

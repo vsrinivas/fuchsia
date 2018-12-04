@@ -60,7 +60,7 @@ zx_status_t Guest::Create(fbl::unique_ptr<Guest>* out) {
         return status;
     }
 
-    *out = fbl::move(guest);
+    *out = ktl::move(guest);
     return ZX_OK;
 }
 
@@ -99,7 +99,7 @@ zx_status_t Guest::SetTrap(uint32_t kind, zx_gpaddr_t addr, size_t len,
     if (status != ZX_OK) {
         return status;
     }
-    return traps_.InsertTrap(kind, addr, len, fbl::move(port), key);
+    return traps_.InsertTrap(kind, addr, len, ktl::move(port), key);
 }
 
 zx_status_t Guest::AllocVpid(uint8_t* vpid) {

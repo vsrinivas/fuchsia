@@ -6,6 +6,7 @@
 
 #include "vm/pinned_vm_object.h"
 
+#include <ktl/move.h>
 #include <trace.h>
 
 #include "vm/vm.h"
@@ -32,7 +33,7 @@ zx_status_t PinnedVmObject::Create(fbl::RefPtr<VmObject> vmo, size_t offset, siz
         }
     }
 
-    out_pinned_vmo->vmo_ = fbl::move(vmo);
+    out_pinned_vmo->vmo_ = ktl::move(vmo);
     out_pinned_vmo->offset_ = offset;
     out_pinned_vmo->size_ = size;
 

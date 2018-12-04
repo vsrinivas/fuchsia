@@ -18,7 +18,7 @@ zx_status_t SuspendTokenDispatcher::Create(fbl::RefPtr<ThreadDispatcher> thread,
                                            zx_rights_t* rights) {
     fbl::AllocChecker ac;
     fbl::unique_ptr<SuspendTokenDispatcher> disp(
-        new (&ac) SuspendTokenDispatcher(fbl::move(thread)));
+        new (&ac) SuspendTokenDispatcher(ktl::move(thread)));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
@@ -32,7 +32,7 @@ zx_status_t SuspendTokenDispatcher::Create(fbl::RefPtr<ThreadDispatcher> thread,
 }
 
 SuspendTokenDispatcher::SuspendTokenDispatcher(fbl::RefPtr<ThreadDispatcher> thread)
-    : thread_(fbl::move(thread)) {}
+    : thread_(ktl::move(thread)) {}
 
 SuspendTokenDispatcher::~SuspendTokenDispatcher() {}
 

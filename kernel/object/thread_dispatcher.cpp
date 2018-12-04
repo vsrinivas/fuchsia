@@ -45,7 +45,7 @@ zx_status_t ThreadDispatcher::Create(fbl::RefPtr<ProcessDispatcher> process, uin
                                      fbl::RefPtr<Dispatcher>* out_dispatcher,
                                      zx_rights_t* out_rights) {
     fbl::AllocChecker ac;
-    auto disp = fbl::AdoptRef(new (&ac) ThreadDispatcher(fbl::move(process), flags));
+    auto disp = fbl::AdoptRef(new (&ac) ThreadDispatcher(ktl::move(process), flags));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
@@ -54,13 +54,13 @@ zx_status_t ThreadDispatcher::Create(fbl::RefPtr<ProcessDispatcher> process, uin
         return result;
 
     *out_rights = default_rights();
-    *out_dispatcher = fbl::move(disp);
+    *out_dispatcher = ktl::move(disp);
     return ZX_OK;
 }
 
 ThreadDispatcher::ThreadDispatcher(fbl::RefPtr<ProcessDispatcher> process,
                                    uint32_t flags)
-    : process_(fbl::move(process)) {
+    : process_(ktl::move(process)) {
     LTRACE_ENTRY_OBJ;
 }
 

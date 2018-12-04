@@ -21,6 +21,7 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
+#include <ktl/move.h>
 
 void x86_reset_tss_io_bitmap(void) {
     DEBUG_ASSERT(arch_ints_disabled());
@@ -137,7 +138,7 @@ int IoBitmap::SetIoBitmap(uint32_t port, uint32_t len, bool enable) {
         AutoSpinLockNoIrqSave guard(&lock_);
 
         if (!bitmap_) {
-            bitmap_ = fbl::move(optimistic_bitmap);
+            bitmap_ = ktl::move(optimistic_bitmap);
         }
         DEBUG_ASSERT(bitmap_);
 

@@ -63,7 +63,7 @@ zx_status_t PciInterruptDispatcher::Create(
     if (maskable) {
         device->UnmaskIrq(irq_id);
     }
-    *out_interrupt = fbl::move(dispatcher);
+    *out_interrupt = ktl::move(dispatcher);
     *out_rights    = ZX_DEFAULT_PCI_INTERRUPT_RIGHTS;
     return ZX_OK;
 }

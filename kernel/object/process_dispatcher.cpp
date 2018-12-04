@@ -85,7 +85,7 @@ zx_status_t ProcessDispatcher::Create(
     }
 
     *rights = default_rights();
-    *dispatcher = fbl::move(process);
+    *dispatcher = ktl::move(process);
     *root_vmar_disp = DownCastDispatcher<VmAddressRegionDispatcher>(
             &new_vmar_dispatcher);
 
@@ -95,7 +95,7 @@ zx_status_t ProcessDispatcher::Create(
 ProcessDispatcher::ProcessDispatcher(fbl::RefPtr<JobDispatcher> job,
                                      fbl::StringPiece name,
                                      uint32_t flags)
-  : job_(fbl::move(job)), policy_(job_->GetPolicy()),
+  : job_(ktl::move(job)), policy_(job_->GetPolicy()),
     name_(name.data(), name.length()) {
     LTRACE_ENTRY_OBJ;
 
@@ -411,7 +411,7 @@ Handle* ProcessDispatcher::GetHandleLocked(zx_handle_t handle_value,
 
 void ProcessDispatcher::AddHandle(HandleOwner handle) {
     Guard<fbl::Mutex> guard{&handle_table_lock_};
-    AddHandleLocked(fbl::move(handle));
+    AddHandleLocked(ktl::move(handle));
 }
 
 void ProcessDispatcher::AddHandleLocked(HandleOwner handle) {
@@ -607,7 +607,7 @@ zx_status_t ProcessDispatcher::GetThreads(fbl::Array<zx_koid_t>* out_threads) {
         ++i;
     }
     DEBUG_ASSERT(i == n);
-    *out_threads = fbl::move(threads);
+    *out_threads = ktl::move(threads);
     return ZX_OK;
 }
 

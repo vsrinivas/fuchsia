@@ -172,7 +172,7 @@ zx_status_t sys_thread_create(zx_handle_t process_handle,
     // create the thread dispatcher
     fbl::RefPtr<Dispatcher> thread_dispatcher;
     zx_rights_t thread_rights;
-    result = ThreadDispatcher::Create(fbl::move(process), options, sp,
+    result = ThreadDispatcher::Create(ktl::move(process), options, sp,
                                       &thread_dispatcher, &thread_rights);
     if (result != ZX_OK)
         return result;
@@ -181,7 +181,7 @@ zx_status_t sys_thread_create(zx_handle_t process_handle,
     ktrace(TAG_THREAD_CREATE, tid, pid, 0, 0);
     ktrace_name(TAG_THREAD_NAME, tid, pid, buf);
 
-    return out->make(fbl::move(thread_dispatcher), thread_rights);
+    return out->make(ktl::move(thread_dispatcher), thread_rights);
 }
 
 // zx_status_t zx_thread_start
@@ -309,9 +309,9 @@ zx_status_t sys_task_suspend(zx_handle_t task_handle, user_out_handle* token) {
 
     fbl::RefPtr<Dispatcher> suspend_token;
     zx_rights_t rights;
-    status = SuspendTokenDispatcher::Create(fbl::move(thread), &suspend_token, &rights);
+    status = SuspendTokenDispatcher::Create(ktl::move(thread), &suspend_token, &rights);
     if (status == ZX_OK)
-        status = token->make(fbl::move(suspend_token), rights);
+        status = token->make(ktl::move(suspend_token), rights);
     return status;
 }
 
@@ -367,7 +367,7 @@ zx_status_t sys_process_create(zx_handle_t job_handle,
     fbl::RefPtr<Dispatcher> proc_dispatcher;
     fbl::RefPtr<VmAddressRegionDispatcher> vmar_dispatcher;
     zx_rights_t proc_rights, vmar_rights;
-    result = ProcessDispatcher::Create(fbl::move(job), sp, options,
+    result = ProcessDispatcher::Create(ktl::move(job), sp, options,
                                        &proc_dispatcher, &proc_rights,
                                        &vmar_dispatcher, &vmar_rights);
     if (result != ZX_OK)
@@ -380,9 +380,9 @@ zx_status_t sys_process_create(zx_handle_t job_handle,
     // Give arch-specific tracing a chance to record process creation.
     arch_trace_process_create(koid, vmar_dispatcher->vmar()->aspace()->arch_aspace().arch_table_phys());
 
-    result = proc_handle->make(fbl::move(proc_dispatcher), proc_rights);
+    result = proc_handle->make(ktl::move(proc_dispatcher), proc_rights);
     if (result == ZX_OK)
-        result = vmar_handle->make(fbl::move(vmar_dispatcher), vmar_rights);
+        result = vmar_handle->make(ktl::move(vmar_dispatcher), vmar_rights);
     return result;
 }
 
@@ -433,7 +433,7 @@ zx_status_t sys_process_start(zx_handle_t process_handle, zx_handle_t thread_han
         return ZX_ERR_ACCESS_DENIED;
 
     auto arg_nhv = process->MapHandleToValue(arg_handle);
-    process->AddHandle(fbl::move(arg_handle));
+    process->AddHandle(ktl::move(arg_handle));
 
     status = thread->Start(pc, sp, static_cast<uintptr_t>(arg_nhv),
                            arg2, /* initial_thread */ true);
@@ -618,11 +618,11 @@ zx_status_t sys_task_kill(zx_handle_t task_handle) {
     // see if it's a process or thread and dispatch accordingly
     switch (dispatcher->get_type()) {
     case ZX_OBJ_TYPE_PROCESS:
-        return kill_task<ProcessDispatcher>(fbl::move(dispatcher));
+        return kill_task<ProcessDispatcher>(ktl::move(dispatcher));
     case ZX_OBJ_TYPE_THREAD:
-        return kill_task<ThreadDispatcher>(fbl::move(dispatcher));
+        return kill_task<ThreadDispatcher>(ktl::move(dispatcher));
     case ZX_OBJ_TYPE_JOB:
-        return kill_task<JobDispatcher>(fbl::move(dispatcher));
+        return kill_task<JobDispatcher>(ktl::move(dispatcher));
     default:
         return ZX_ERR_WRONG_TYPE;
     }
@@ -651,9 +651,9 @@ zx_status_t sys_job_create(zx_handle_t parent_job, uint32_t options,
 
     fbl::RefPtr<Dispatcher> job;
     zx_rights_t rights;
-    status = JobDispatcher::Create(options, fbl::move(parent), &job, &rights);
+    status = JobDispatcher::Create(options, ktl::move(parent), &job, &rights);
     if (status == ZX_OK)
-        status = out->make(fbl::move(job), rights);
+        status = out->make(ktl::move(job), rights);
     return status;
 }
 

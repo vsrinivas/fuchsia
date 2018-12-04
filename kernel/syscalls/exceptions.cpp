@@ -76,7 +76,7 @@ static zx_status_t task_bind_exception_port(zx_handle_t obj_handle, zx_handle_t 
         else
             type = ExceptionPort::Type::JOB;
         status = ExceptionPort::Create(type,
-                                       fbl::move(port), key, &eport);
+                                       ktl::move(port), key, &eport);
         if (status != ZX_OK)
             return status;
         status = job->SetExceptionPort(eport);
@@ -94,7 +94,7 @@ static zx_status_t task_bind_exception_port(zx_handle_t obj_handle, zx_handle_t 
             type = ExceptionPort::Type::DEBUGGER;
         else
             type = ExceptionPort::Type::PROCESS;
-        status = ExceptionPort::Create(type, fbl::move(port), key, &eport);
+        status = ExceptionPort::Create(type, ktl::move(port), key, &eport);
         if (status != ZX_OK)
             return status;
         status = process->SetExceptionPort(eport);
@@ -110,7 +110,7 @@ static zx_status_t task_bind_exception_port(zx_handle_t obj_handle, zx_handle_t 
         if (debugger)
             return ZX_ERR_INVALID_ARGS;
         status = ExceptionPort::Create(ExceptionPort::Type::THREAD,
-                                       fbl::move(port), key, &eport);
+                                       ktl::move(port), key, &eport);
         if (status != ZX_OK)
             return status;
         status = thread->SetExceptionPort(eport);

@@ -33,7 +33,7 @@ zx_status_t PciDeviceDispatcher::Create(uint32_t                  index,
         return ZX_ERR_OUT_OF_RANGE;
 
     fbl::AllocChecker ac;
-    auto disp = new (&ac) PciDeviceDispatcher(fbl::move(device), out_info);
+    auto disp = new (&ac) PciDeviceDispatcher(ktl::move(device), out_info);
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 

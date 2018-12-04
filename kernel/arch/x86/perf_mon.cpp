@@ -53,6 +53,7 @@
 #include <kernel/mutex.h>
 #include <kernel/stats.h>
 #include <kernel/thread.h>
+#include <ktl/move.h>
 #include <lib/ktrace.h>
 #include <lib/pci/pio.h>
 #include <lib/zircon-internal/device/cpu-trace/cpu-perf.h>
@@ -379,7 +380,7 @@ zx_status_t PerfmonState::Create(unsigned n_cpus, fbl::unique_ptr<PerfmonState>*
     }
 
     state->cpu_data = cpu_data;
-    *out_state = fbl::move(state);
+    *out_state = ktl::move(state);
     return ZX_OK;
 }
 
@@ -703,7 +704,7 @@ zx_status_t arch_perfmon_init() {
     if (status != ZX_OK)
         return status;
 
-    perfmon_state = fbl::move(state);
+    perfmon_state = ktl::move(state);
     return ZX_OK;
 }
 
@@ -1467,7 +1468,7 @@ static zx_status_t x86_map_mchbar_stat_registers(PerfmonState* state) {
     uint32_t arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ;
     fbl::RefPtr<VmMapping> mapping;
     status = vmar->CreateVmMapping(0, PAGE_SIZE, /*align_pow2*/0,
-                                   vmar_flags, fbl::move(vmo),
+                                   vmar_flags, ktl::move(vmo),
                                    0, arch_mmu_flags, name,
                                    &mapping);
     if (status != ZX_OK)

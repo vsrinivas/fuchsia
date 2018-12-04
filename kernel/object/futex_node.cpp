@@ -150,7 +150,7 @@ zx_status_t FutexNode::BlockThread(Guard<fbl::Mutex>&& adopt_guard, zx_time_t de
     // Adopt the guarded lock from the caller. This could happen before or after
     // the following locks because the underlying lock is held from the caller's
     // frame. The runtime validator state is not affected by the adoption.
-    Guard<fbl::Mutex> guard{AdoptLock, fbl::move(adopt_guard)};
+    Guard<fbl::Mutex> guard{AdoptLock, ktl::move(adopt_guard)};
 
     Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
     ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::FUTEX);

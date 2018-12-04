@@ -81,13 +81,13 @@ zx_status_t sys_vmo_create_contiguous(zx_handle_t bti, size_t size, uint32_t ali
     // create a Vm Object dispatcher
     fbl::RefPtr<Dispatcher> dispatcher;
     zx_rights_t rights;
-    zx_status_t result = VmObjectDispatcher::Create(fbl::move(vmo), &dispatcher, &rights);
+    zx_status_t result = VmObjectDispatcher::Create(ktl::move(vmo), &dispatcher, &rights);
     if (result != ZX_OK) {
         return result;
     }
 
     // create a handle and attach the dispatcher to it
-    return out->make(fbl::move(dispatcher), rights);
+    return out->make(ktl::move(dispatcher), rights);
 }
 
 // zx_status_t zx_vmo_create_physical
@@ -115,13 +115,13 @@ zx_status_t sys_vmo_create_physical(zx_handle_t hrsrc, zx_paddr_t paddr, size_t 
     // create a Vm Object dispatcher
     fbl::RefPtr<Dispatcher> dispatcher;
     zx_rights_t rights;
-    result = VmObjectDispatcher::Create(fbl::move(vmo), &dispatcher, &rights);
+    result = VmObjectDispatcher::Create(ktl::move(vmo), &dispatcher, &rights);
     if (result != ZX_OK) {
         return result;
     }
 
     // create a handle and attach the dispatcher to it
-    return out->make(fbl::move(dispatcher), rights);
+    return out->make(ktl::move(dispatcher), rights);
 }
 
 // zx_status_t zx_framebuffer_get_info
@@ -223,7 +223,7 @@ zx_status_t sys_iommu_create(zx_handle_t rsrc_handle, uint32_t type,
         }
     }
 
-    return out->make(fbl::move(dispatcher), rights);
+    return out->make(ktl::move(dispatcher), rights);
 }
 
 #if ARCH_X86
@@ -296,7 +296,7 @@ zx_status_t sys_bti_create(zx_handle_t iommu, uint32_t options, uint64_t bti_id,
         return status;
     }
 
-    return out->make(fbl::move(dispatcher), rights);
+    return out->make(ktl::move(dispatcher), rights);
 }
 
 // zx_status_t zx_bti_pin
@@ -393,7 +393,7 @@ zx_status_t sys_bti_pin(zx_handle_t bti, uint32_t options, zx_handle_t vmo, uint
         return status;
     }
 
-    return pmt->make(fbl::move(new_pmt), new_pmt_rights);
+    return pmt->make(ktl::move(new_pmt), new_pmt_rights);
 }
 
 // zx_status_t zx_bti_release_quarantine
@@ -457,7 +457,7 @@ zx_status_t sys_interrupt_create(zx_handle_t src_obj, uint32_t src_num,
     if (result != ZX_OK)
         return result;
 
-    return out_handle->make(fbl::move(dispatcher), rights);
+    return out_handle->make(ktl::move(dispatcher), rights);
 }
 
 // zx_status_t zx_interrupt_bind
@@ -484,7 +484,7 @@ zx_status_t sys_interrupt_bind(zx_handle_t inth, zx_handle_t porth,
         return ZX_ERR_WRONG_TYPE;
     }
 
-    return interrupt->Bind(fbl::move(port), key);
+    return interrupt->Bind(ktl::move(port), key);
 }
 
 // zx_status_t zx_interrupt_bind_vcpu
@@ -505,7 +505,7 @@ zx_status_t sys_interrupt_bind_vcpu(zx_handle_t handle, zx_handle_t vcpu,
         return status;
     }
 
-    return interrupt_dispatcher->BindVcpu(fbl::move(vcpu_dispatcher));
+    return interrupt_dispatcher->BindVcpu(ktl::move(vcpu_dispatcher));
 }
 
 // zx_status_t zx_interrupt_ack

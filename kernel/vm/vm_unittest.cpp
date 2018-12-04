@@ -8,6 +8,7 @@
 #include <err.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
+#include <ktl/move.h>
 #include <lib/unittest/unittest.h>
 #include <vm/physmap.h>
 #include <vm/vm.h>
@@ -636,7 +637,7 @@ static bool vmo_dropped_ref_test() {
 
     auto ka = VmAspace::kernel_aspace();
     void* ptr;
-    auto ret = ka->MapObjectInternal(fbl::move(vmo), "test", 0, alloc_size, &ptr,
+    auto ret = ka->MapObjectInternal(ktl::move(vmo), "test", 0, alloc_size, &ptr,
                                      0, VmAspace::VMM_FLAG_COMMIT, kArchRwFlags);
     ASSERT_EQ(ret, ZX_OK, "mapping object");
 

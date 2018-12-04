@@ -9,6 +9,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
 #include <kernel/range_check.h>
+#include <ktl/move.h>
 #include <new>
 #include <trace.h>
 #include <vm/vm.h>
@@ -77,7 +78,7 @@ zx_status_t DeviceContext::InitCommon() {
     if (region_pool == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
-    status = region_alloc_.SetRegionPool(fbl::move(region_pool));
+    status = region_alloc_.SetRegionPool(ktl::move(region_pool));
     if (status != ZX_OK) {
         return status;
     }
@@ -121,7 +122,7 @@ zx_status_t DeviceContext::Create(ds::Bdf bdf, uint32_t domain_id, IommuImpl* pa
 
     entry.WriteTo(context_entry);
 
-    *device = fbl::move(dev);
+    *device = ktl::move(dev);
     return ZX_OK;
 }
 
@@ -170,7 +171,7 @@ zx_status_t DeviceContext::Create(ds::Bdf bdf, uint32_t domain_id, IommuImpl* pa
 
     entry.WriteTo(context_entry);
 
-    *device = fbl::move(dev);
+    *device = ktl::move(dev);
     return ZX_OK;
 }
 
@@ -274,7 +275,7 @@ zx_status_t DeviceContext::SecondLevelMapDiscontiguous(const fbl::RefPtr<VmObjec
     *virt_paddr = region->base;
     *mapped_len = size;
 
-    allocated_regions_.push_back(fbl::move(region), &ac);
+    allocated_regions_.push_back(ktl::move(region), &ac);
     // Check shouldn't be able to fail, since we reserved the capacity already
     ASSERT(ac.check());
 
@@ -331,7 +332,7 @@ zx_status_t DeviceContext::SecondLevelMapContiguous(const fbl::RefPtr<VmObject>&
     *virt_paddr = region->base;
     *mapped_len = map_len * PAGE_SIZE;
 
-    allocated_regions_.push_back(fbl::move(region), &ac);
+    allocated_regions_.push_back(ktl::move(region), &ac);
     // Check shouldn't be able to fail, since we reserved the capacity already
     ASSERT(ac.check());
 
@@ -368,7 +369,7 @@ zx_status_t DeviceContext::SecondLevelMapIdentity(paddr_t base, size_t size, uin
     }
     ASSERT(mapped == map_len);
 
-    allocated_regions_.push_back(fbl::move(region), &ac);
+    allocated_regions_.push_back(ktl::move(region), &ac);
     ASSERT(ac.check());
     return ZX_OK;
 }

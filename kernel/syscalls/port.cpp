@@ -40,7 +40,7 @@ zx_status_t sys_port_create(uint32_t options, user_out_handle* out) {
 
     uint32_t koid = (uint32_t)dispatcher->get_koid();
 
-    result = out->make(fbl::move(dispatcher), rights);
+    result = out->make(ktl::move(dispatcher), rights);
 
     ktrace(TAG_PORT_CREATE, koid, 0, 0, 0);
     return result;

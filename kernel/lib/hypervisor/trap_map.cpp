@@ -44,7 +44,7 @@ void BlockingPortAllocator::Free(PortPacket* port_packet) {
 
 Trap::Trap(uint32_t kind, zx_gpaddr_t addr, size_t len, fbl::RefPtr<PortDispatcher> port,
                      uint64_t key)
-    : kind_(kind), addr_(addr), len_(len), port_(fbl::move(port)), key_(key) {
+    : kind_(kind), addr_(addr), len_(len), port_(ktl::move(port)), key_(key) {
     (void) key_;
 }
 
@@ -92,7 +92,7 @@ zx_status_t TrapMap::InsertTrap(uint32_t kind, zx_gpaddr_t addr, size_t len,
         return ZX_ERR_ALREADY_EXISTS;
     }
     fbl::AllocChecker ac;
-    fbl::unique_ptr<Trap> range(new (&ac) Trap(kind, addr, len, fbl::move(port), key));
+    fbl::unique_ptr<Trap> range(new (&ac) Trap(kind, addr, len, ktl::move(port), key));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -102,7 +102,7 @@ zx_status_t TrapMap::InsertTrap(uint32_t kind, zx_gpaddr_t addr, size_t len,
     }
     {
         fbl::AutoLock lock(&mutex_);
-        traps->insert(fbl::move(range));
+        traps->insert(ktl::move(range));
     }
     return ZX_OK;
 }

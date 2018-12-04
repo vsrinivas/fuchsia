@@ -7,6 +7,7 @@
 #include "priv.h"
 
 #include <fbl/ref_ptr.h>
+#include <ktl/move.h>
 #include <object/pager_dispatcher.h>
 
 // zx_status_t zx_pager_create
@@ -22,5 +23,5 @@ zx_status_t sys_pager_create(uint32_t options, user_out_handle* out) {
         return result;
     }
 
-    return out->make(fbl::move(dispatcher), rights);
+    return out->make(ktl::move(dispatcher), rights);
 }

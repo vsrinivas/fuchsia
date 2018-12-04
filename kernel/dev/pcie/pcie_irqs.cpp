@@ -24,6 +24,7 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
+#include <ktl/move.h>
 
 using fbl::AutoLock;
 
@@ -816,7 +817,7 @@ zx_status_t PcieDevice::MapPinToIrqLocked(fbl::RefPtr<PcieUpstreamNode>&& upstre
         // 2) Wait until GCC becomes smart enough to figure this out.
         // 3) Switch completely to clang (assuming that clang does not have
         //    similar problems).
-        auto bridge = fbl::RefPtr<PcieBridge>::Downcast(fbl::move(upstream));
+        auto bridge = fbl::RefPtr<PcieBridge>::Downcast(ktl::move(upstream));
         if (bridge == nullptr)
             return ZX_ERR_INTERNAL;
 
@@ -851,7 +852,7 @@ zx_status_t PcieDevice::MapPinToIrqLocked(fbl::RefPtr<PcieUpstreamNode>&& upstre
         }
 
         // Climb one branch higher up the tree
-        dev = fbl::move(bridge);
+        dev = ktl::move(bridge);
         upstream = dev->GetUpstream();
     }
 
@@ -874,7 +875,7 @@ zx_status_t PcieDevice::MapPinToIrqLocked(fbl::RefPtr<PcieUpstreamNode>&& upstre
 
     // TODO(johngro) : Eliminate the null-check of root below.  See the TODO for
     // the downcast of upstream -> bridge above for details.
-    auto root = fbl::RefPtr<PcieRoot>::Downcast(fbl::move(upstream));
+    auto root = fbl::RefPtr<PcieRoot>::Downcast(ktl::move(upstream));
     if (root == nullptr)
         return ZX_ERR_INTERNAL;
     return root->Swizzle(dev->dev_id(), dev->func_id(), pin, &irq_.legacy.irq_id);

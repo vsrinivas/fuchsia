@@ -37,8 +37,8 @@ zx_status_t FifoDispatcher::Create(size_t count, size_t elemsize, uint32_t optio
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
-    auto fifo0 = fbl::AdoptRef(new (&ac) FifoDispatcher(fbl::move(holder0), options, static_cast<uint32_t>(count),
-                                                        static_cast<uint32_t>(elemsize), fbl::move(data0)));
+    auto fifo0 = fbl::AdoptRef(new (&ac) FifoDispatcher(ktl::move(holder0), options, static_cast<uint32_t>(count),
+                                                        static_cast<uint32_t>(elemsize), ktl::move(data0)));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
@@ -46,8 +46,8 @@ zx_status_t FifoDispatcher::Create(size_t count, size_t elemsize, uint32_t optio
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
-    auto fifo1 = fbl::AdoptRef(new (&ac) FifoDispatcher(fbl::move(holder1), options, static_cast<uint32_t>(count),
-                                                        static_cast<uint32_t>(elemsize), fbl::move(data1)));
+    auto fifo1 = fbl::AdoptRef(new (&ac) FifoDispatcher(ktl::move(holder1), options, static_cast<uint32_t>(count),
+                                                        static_cast<uint32_t>(elemsize), ktl::move(data1)));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
@@ -55,17 +55,17 @@ zx_status_t FifoDispatcher::Create(size_t count, size_t elemsize, uint32_t optio
     fifo1->Init(fifo0);
 
     *rights = default_rights();
-    *dispatcher0 = fbl::move(fifo0);
-    *dispatcher1 = fbl::move(fifo1);
+    *dispatcher0 = ktl::move(fifo0);
+    *dispatcher1 = ktl::move(fifo1);
     return ZX_OK;
 }
 
 FifoDispatcher::FifoDispatcher(fbl::RefPtr<PeerHolder<FifoDispatcher>> holder,
                                uint32_t /*options*/, uint32_t count, uint32_t elem_size,
                                fbl::unique_ptr<uint8_t[]> data)
-    : PeeredDispatcher(fbl::move(holder), ZX_FIFO_WRITABLE),
+    : PeeredDispatcher(ktl::move(holder), ZX_FIFO_WRITABLE),
       elem_count_(count), elem_size_(elem_size), mask_(count - 1),
-      head_(0u), tail_(0u), data_(fbl::move(data)) {
+      head_(0u), tail_(0u), data_(ktl::move(data)) {
 }
 
 FifoDispatcher::~FifoDispatcher() {
@@ -74,7 +74,7 @@ FifoDispatcher::~FifoDispatcher() {
 // Thread safety analysis disabled as this happens during creation only,
 // when no other thread could be accessing the object.
 void FifoDispatcher::Init(fbl::RefPtr<FifoDispatcher> other) TA_NO_THREAD_SAFETY_ANALYSIS {
-    peer_ = fbl::move(other);
+    peer_ = ktl::move(other);
     peer_koid_ = peer_->get_koid();
 }
 

@@ -13,6 +13,7 @@
 #include <fbl/limits.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
+#include <ktl/move.h>
 #include <new>
 #include <platform.h>
 #include <trace.h>
@@ -31,7 +32,7 @@ namespace intel_iommu {
 
 IommuImpl::IommuImpl(volatile void* register_base,
                      fbl::unique_ptr<const uint8_t[]> desc, size_t desc_len)
-        : desc_(fbl::move(desc)), desc_len_(desc_len), mmio_(register_base) {
+        : desc_(ktl::move(desc)), desc_len_(desc_len), mmio_(register_base) {
           memset(&irq_block_, 0, sizeof(irq_block_));
     // desc_len_ is currently unused, but we stash it so we can use the length
     // of it later in case we need it.  This silences a warning in Clang.
@@ -63,7 +64,7 @@ zx_status_t IommuImpl::Create(fbl::unique_ptr<const uint8_t[]> desc_bytes, size_
     }
 
     fbl::AllocChecker ac;
-    auto instance = fbl::AdoptRef<IommuImpl>(new (&ac) IommuImpl(vaddr, fbl::move(desc_bytes),
+    auto instance = fbl::AdoptRef<IommuImpl>(new (&ac) IommuImpl(vaddr, ktl::move(desc_bytes),
                                                                  desc_len));
     if (!ac.check()) {
         kernel_aspace->FreeRegion(reinterpret_cast<vaddr_t>(vaddr));
@@ -75,7 +76,7 @@ zx_status_t IommuImpl::Create(fbl::unique_ptr<const uint8_t[]> desc_bytes, size_
         return status;
     }
 
-    *out = fbl::move(instance);
+    *out = ktl::move(instance);
     return ZX_OK;
 }
 
@@ -754,7 +755,7 @@ zx_status_t IommuImpl::GetOrCreateContextTableLocked(ds::Bdf bdf, ContextTableSt
     }
 
     *tbl = table.get();
-    context_tables_.push_back(fbl::move(table));
+    context_tables_.push_back(ktl::move(table));
 
     return ZX_OK;
 }

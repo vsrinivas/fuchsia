@@ -7,14 +7,15 @@
 #include <platform/pc/smbios.h>
 
 #include <fbl/auto_call.h>
+#include <ktl/move.h>
 #include <lib/console.h>
 #include <lib/smbios/smbios.h>
 #include <platform/pc/bootloader.h>
 #include <stdint.h>
 #include <string.h>
 #include <vm/physmap.h>
-#include <vm/vm_aspace.h>
 #include <vm/vm_address_region.h>
+#include <vm/vm_aspace.h>
 #include <vm/vm_object_physical.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -76,14 +77,14 @@ zx_status_t MapStructs2_1(const smbios::EntryPoint2_1* ep,
         return status;
     }
     fbl::RefPtr<VmMapping> m;
-    status = vmar->CreateVmMapping(0, len, 0, 0 /* vmar_flags */, fbl::move(vmo), 0,
+    status = vmar->CreateVmMapping(0, len, 0, 0 /* vmar_flags */, ktl::move(vmo), 0,
                                    ARCH_MMU_FLAG_CACHED | ARCH_MMU_FLAG_PERM_READ,
                                    "smbios", &m);
     if (status != ZX_OK) {
         return status;
     }
     *struct_table_virt = m->base() + subpage_offset;
-    *mapping = fbl::move(m);
+    *mapping = ktl::move(m);
     return ZX_OK;
 }
 

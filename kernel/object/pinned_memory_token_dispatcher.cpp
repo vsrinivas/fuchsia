@@ -38,9 +38,9 @@ zx_status_t PinnedMemoryTokenDispatcher::Create(fbl::RefPtr<BusTransactionInitia
         return ZX_ERR_NO_MEMORY;
     }
 
-    auto pmo = fbl::AdoptRef(new (&ac) PinnedMemoryTokenDispatcher(fbl::move(bti),
-                                                                   fbl::move(pinned_vmo),
-                                                                   fbl::move(addr_array)));
+    auto pmo = fbl::AdoptRef(new (&ac) PinnedMemoryTokenDispatcher(ktl::move(bti),
+                                                                   ktl::move(pinned_vmo),
+                                                                   ktl::move(addr_array)));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -57,7 +57,7 @@ zx_status_t PinnedMemoryTokenDispatcher::Create(fbl::RefPtr<BusTransactionInitia
         pmo->bti_->AddPmoLocked(pmo.get());
     }();
 
-    *dispatcher = fbl::move(pmo);
+    *dispatcher = ktl::move(pmo);
     *rights = default_rights();
     return ZX_OK;
 }
@@ -222,8 +222,8 @@ PinnedMemoryTokenDispatcher::PinnedMemoryTokenDispatcher(
     fbl::RefPtr<BusTransactionInitiatorDispatcher> bti,
     PinnedVmObject pinned_vmo,
     fbl::Array<dev_vaddr_t> mapped_addrs)
-    : pinned_vmo_(fbl::move(pinned_vmo)),
-      bti_(fbl::move(bti)), mapped_addrs_(fbl::move(mapped_addrs)) {
+    : pinned_vmo_(ktl::move(pinned_vmo)),
+      bti_(ktl::move(bti)), mapped_addrs_(ktl::move(mapped_addrs)) {
     DEBUG_ASSERT(pinned_vmo_.vmo() != nullptr);
     InvalidateMappedAddrsLocked();
 }

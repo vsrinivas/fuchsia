@@ -82,7 +82,7 @@ zx_status_t Guest::Create(fbl::unique_ptr<Guest>* out) {
         return status;
     }
 
-    *out = fbl::move(guest);
+    *out = ktl::move(guest);
     return ZX_OK;
 }
 
@@ -115,7 +115,7 @@ zx_status_t Guest::SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
         } else if (addr + len > UINT16_MAX) {
             return ZX_ERR_OUT_OF_RANGE;
         }
-        return traps_.InsertTrap(kind, addr, len, fbl::move(port), key);
+        return traps_.InsertTrap(kind, addr, len, ktl::move(port), key);
     default:
         return ZX_ERR_INVALID_ARGS;
     }
@@ -128,7 +128,7 @@ zx_status_t Guest::SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
     if (status != ZX_OK) {
         return status;
     }
-    return traps_.InsertTrap(kind, addr, len, fbl::move(port), key);
+    return traps_.InsertTrap(kind, addr, len, ktl::move(port), key);
 }
 
 zx_status_t Guest::AllocVpid(uint16_t* vpid) {

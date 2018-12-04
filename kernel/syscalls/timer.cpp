@@ -38,7 +38,7 @@ zx_status_t sys_timer_create(uint32_t options, zx_clock_t clock_id,
     result = TimerDispatcher::Create(options, &dispatcher, &rights);
 
     if (result == ZX_OK)
-        result = out->make(fbl::move(dispatcher), rights);
+        result = out->make(ktl::move(dispatcher), rights);
     return result;
 }
 

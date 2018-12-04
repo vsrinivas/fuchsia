@@ -13,6 +13,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_single_list.h>
+#include <ktl/move.h>
 #include <lib/user_copy/user_ptr.h>
 #include <vm/page.h>
 #include <vm/physmap.h>
@@ -118,7 +119,7 @@ public:
     // Frees |chain| and its buffers.
     static void Free(BufferChain* chain) {
         // Remove the buffers and vm_page_t's from the chain *before* destroying it.
-        BufferChain::BufferList buffers(fbl::move(*chain->buffers()));
+        BufferChain::BufferList buffers(ktl::move(*chain->buffers()));
         list_node pages = LIST_INITIAL_VALUE(pages);
         list_move(&chain->pages_, &pages);
 
