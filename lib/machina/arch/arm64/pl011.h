@@ -5,8 +5,8 @@
 #ifndef GARNET_LIB_MACHINA_ARCH_ARM64_PL011_H_
 #define GARNET_LIB_MACHINA_ARCH_ARM64_PL011_H_
 
-#include <mutex>
 #include <zx/socket.h>
+#include <mutex>
 
 #include "garnet/lib/machina/io.h"
 #include "garnet/lib/machina/platform_device.h"
@@ -21,11 +21,11 @@ class Pl011 : public IoHandler, public PlatformDevice {
   Pl011(zx::socket socket);
   zx_status_t Init(Guest* guest);
 
-  // IoHandler interface.
+  // |IoHandler|
   zx_status_t Read(uint64_t addr, IoValue* value) const override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
 
-  // PlatformDevice interface.
+  // |PlatformDevice|
   zx_status_t ConfigureZbi(void* zbi_base, size_t zbi_max) const override;
   zx_status_t ConfigureDtb(void* dtb) const override;
 

@@ -5,8 +5,8 @@
 #ifndef GARNET_LIB_MACHINA_ARCH_X86_I8250_H_
 #define GARNET_LIB_MACHINA_ARCH_X86_I8250_H_
 
-#include <mutex>
 #include <zx/socket.h>
+#include <mutex>
 
 #include "garnet/lib/machina/io.h"
 #include "garnet/lib/machina/platform_device.h"
@@ -20,7 +20,7 @@ class I8250 : public IoHandler {
  public:
   zx_status_t Init(Guest* guest, zx::socket* socket, uint64_t addr);
 
-  // IoHandler interface.
+  // |IoHandler|
   zx_status_t Read(uint64_t addr, IoValue* io) const override;
   zx_status_t Write(uint64_t addr, const IoValue& io) override;
 
@@ -42,6 +42,9 @@ class I8250Group : public PlatformDevice {
  public:
   I8250Group(zx::socket socket);
   zx_status_t Init(Guest* guest);
+
+  // |PlatformDevice|
+  zx_status_t ConfigureZbi(void* zbi_base, size_t zbi_max) const override;
 
  private:
   static constexpr size_t kNumUarts = 4;

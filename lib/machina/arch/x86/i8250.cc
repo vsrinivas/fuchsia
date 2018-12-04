@@ -4,7 +4,9 @@
 
 #include "garnet/lib/machina/arch/x86/i8250.h"
 
+#include <libzbi/zbi.h>
 #include <stdio.h>
+#include <zircon/boot/image.h>
 
 #include "garnet/lib/machina/guest.h"
 #include "lib/fxl/logging.h"
@@ -140,6 +142,17 @@ zx_status_t I8250Group::Init(Guest* guest) {
     }
   }
   return ZX_OK;
+}
+
+zx_status_t I8250Group::ConfigureZbi(void* zbi_base, size_t zbi_max) const {
+  zbi_uart_t zbi_uart = {
+      .base = machina::kI8250Base0,
+      .type = ZBI_UART_PC_PORT,
+      .irq = 4,
+  };
+  zbi_result_t res = zbi_append_section(zbi_base, zbi_max, sizeof(zbi_uart),
+                                        ZBI_TYPE_DEBUG_UART, 0, 0, &zbi_uart);
+  return res == ZBI_RESULT_OK ? ZX_OK : ZX_ERR_INTERNAL;
 }
 
 }  // namespace machina
