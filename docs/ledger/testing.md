@@ -143,9 +143,29 @@ You can run the tests from the host as follows:
 fx shell "run fuchsia-pkg://fuchsia.com/ledger_tests#meta/ledger_e2e_sync.cmx"
 ```
 
+## Performance tests
+
+For performance tests, see [benchmarks].
+
+## Fuzz tests
+
+Ledger uses LibFuzzer for fuzz tests. We have a single fuzz package called `ledger_fuzzers`. It can be built as follows:
+
+```sh
+fx set x64 --monolith peridot/packages/tests/ledger --fuzz-with asan
+fx full-build
+```
+
+And then run:
+
+```sh
+fx fuzz start ledger
+```
+
+You can refer to the full [fuzzing] instructions for details.
+
 ## See also
 
- - [benchmarks] contains performance tests for Ledger
  - [Firestore cloud provider] has its own suite of tests, including unit tests
    and end-to-end validation tests
 
@@ -160,3 +180,4 @@ fx shell "run fuchsia-pkg://fuchsia.com/ledger_tests#meta/ledger_e2e_sync.cmx"
 [testing abstractions]: /bin/ledger/testing/ledger_app_instance_factory.h
 [benchmarks]: /bin/ledger/tests/benchmark/README.md
 [Firestore cloud provider]: /bin/cloud_provider_firestore/README.md
+[fuzzing]: https://fuchsia.googlesource.com/docs/+/master/development/workflows/libfuzzer.md
