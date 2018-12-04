@@ -151,8 +151,10 @@ zx_status_t ClientMlme::HandleFramePacket(fbl::unique_ptr<Packet> pkt) {
         // For outbound frame (Ethernet frame), hand to station directly so
         // station sends frame to device when on channel, or buffers it when
         // off channel.
-        if (auto eth_frame = EthFrameView::CheckType(pkt.get()).CheckLength()) {
-            sta_->HandleEthFrame(eth_frame.IntoOwned(std::move(pkt)));
+        if (sta_ != nullptr) {
+            if (auto eth_frame = EthFrameView::CheckType(pkt.get()).CheckLength()) {
+                sta_->HandleEthFrame(eth_frame.IntoOwned(std::move(pkt)));
+            }
         }
         break;
     }

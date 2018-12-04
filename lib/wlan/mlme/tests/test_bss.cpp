@@ -58,7 +58,7 @@ void WriteCountry(BufferWriter* w, const wlan_channel_t chan) {
     common::WriteCountry(w, kCountry, subbands);
 }
 
-wlan_mlme::BSSDescription CreateBssDescription() {
+wlan_mlme::BSSDescription CreateBssDescription(bool rsn) {
     common::MacAddr bssid(kBssid1);
 
     wlan_mlme::BSSDescription bss_desc;
@@ -78,7 +78,11 @@ wlan_mlme::BSSDescription CreateBssDescription() {
     cap.short_preamble = true;
     bss_desc.cap = cap;
 
-    bss_desc.rsn.reset();
+    if (rsn) {
+        bss_desc.rsn.reset(std::vector<uint8_t>(kRsne, kRsne + sizeof(kRsne)));
+    } else {
+        bss_desc.rsn.reset();
+    }
     bss_desc.rcpi_dbmh = 0;
     bss_desc.rsni_dbh = 0;
 
@@ -123,14 +127,14 @@ MlmeMsg<wlan_mlme::StartRequest> CreateStartRequest(bool protected_ap) {
     return {std::move(*req), fuchsia_wlan_mlme_MLMEStartReqOrdinal};
 }
 
-MlmeMsg<wlan_mlme::JoinRequest> CreateJoinRequest() {
+MlmeMsg<wlan_mlme::JoinRequest> CreateJoinRequest(bool rsn) {
     auto req = wlan_mlme::JoinRequest::New();
     req->join_failure_timeout = kJoinTimeout;
     req->nav_sync_delay = 20;
     req->op_rate_set.reset({10, 22, 34});
     req->phy = wlan_mlme::PHY::HR;
     req->cbw = wlan_mlme::CBW::CBW20;
-    req->selected_bss = CreateBssDescription();
+    req->selected_bss = CreateBssDescription(rsn);
 
     return {std::move(*req), fuchsia_wlan_mlme_MLMEJoinReqOrdinal};
 }
@@ -187,26 +191,25 @@ MlmeMsg<wlan_mlme::AssociateResponse> CreateAssocResponse(
     return {std::move(*resp), fuchsia_wlan_mlme_MLMEAssociateRespOrdinal};
 }
 
-MlmeMsg<wlan_mlme::EapolRequest> CreateEapolRequest(common::MacAddr client_addr) {
-    common::MacAddr bssid(kBssid1);
-
+MlmeMsg<wlan_mlme::EapolRequest> CreateEapolRequest(common::MacAddr src_addr,
+                                                    common::MacAddr dst_addr) {
     auto req = wlan_mlme::EapolRequest::New();
-    std::memcpy(req->dst_addr.mutable_data(), client_addr.byte, common::kMacAddrLen);
-    std::memcpy(req->src_addr.mutable_data(), bssid.byte, common::kMacAddrLen);
+    std::memcpy(req->src_addr.mutable_data(), src_addr.byte, common::kMacAddrLen);
+    std::memcpy(req->dst_addr.mutable_data(), dst_addr.byte, common::kMacAddrLen);
     std::vector<uint8_t> eapol_pdu(kEapolPdu, kEapolPdu + sizeof(kEapolPdu));
     req->data.reset(std::move(eapol_pdu));
 
     return {std::move(*req), fuchsia_wlan_mlme_MLMEEapolReqOrdinal};
 }
 
-MlmeMsg<wlan_mlme::SetKeysRequest> CreateSetKeysRequest(common::MacAddr client_addr,
+MlmeMsg<wlan_mlme::SetKeysRequest> CreateSetKeysRequest(common::MacAddr addr,
                                                         std::vector<uint8_t> key_data,
                                                         wlan_mlme::KeyType key_type) {
     wlan_mlme::SetKeyDescriptor key;
     key.key.reset(key_data);
     key.key_id = 1;
     key.key_type = key_type;
-    std::memcpy(key.address.mutable_data(), client_addr.byte, sizeof(client_addr));
+    std::memcpy(key.address.mutable_data(), addr.byte, sizeof(addr));
     std::memcpy(key.cipher_suite_oui.mutable_data(), kCipherOui, sizeof(kCipherOui));
     key.cipher_suite_type = kCipherSuiteType;
 

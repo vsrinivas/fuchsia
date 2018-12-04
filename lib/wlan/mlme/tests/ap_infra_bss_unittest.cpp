@@ -577,7 +577,7 @@ TEST_F(ApInfraBssTest, Exchange_Eapol_Frames) {
     ctx.AuthenticateAndAssociateClient(kAid);
 
     // Send MLME-EAPOL.request.
-    ctx.bss->HandleMlmeMsg(CreateEapolRequest(ctx.client_addr));
+    ctx.bss->HandleMlmeMsg(CreateEapolRequest(ctx.bss->bssid(), ctx.client_addr));
 
     // Verify MLME-EAPOL.confirm message was sent.
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));

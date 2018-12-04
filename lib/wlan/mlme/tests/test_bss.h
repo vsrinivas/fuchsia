@@ -61,10 +61,10 @@ static constexpr uint8_t kRsne[] = {
 static constexpr uint8_t kCipherOui[3] = {0x96, 0x85, 0x74};
 static constexpr uint8_t kCipherSuiteType = 0x11;
 
-::fuchsia::wlan::mlme::BSSDescription CreateBssDescription();
+::fuchsia::wlan::mlme::BSSDescription CreateBssDescription(bool rsn);
 MlmeMsg<::fuchsia::wlan::mlme::ScanRequest> CreateScanRequest(uint32_t max_channel_time);
 MlmeMsg<::fuchsia::wlan::mlme::StartRequest> CreateStartRequest(bool protected_ap);
-MlmeMsg<::fuchsia::wlan::mlme::JoinRequest> CreateJoinRequest();
+MlmeMsg<::fuchsia::wlan::mlme::JoinRequest> CreateJoinRequest(bool rsn);
 MlmeMsg<::fuchsia::wlan::mlme::AuthenticateRequest> CreateAuthRequest();
 MlmeMsg<::fuchsia::wlan::mlme::AuthenticateResponse> CreateAuthResponse(
     common::MacAddr client_addr, ::fuchsia::wlan::mlme::AuthenticateResultCodes result_code);
@@ -74,8 +74,9 @@ MlmeMsg<::fuchsia::wlan::mlme::AssociateRequest> CreateAssocRequest(bool rsn);
 MlmeMsg<::fuchsia::wlan::mlme::AssociateResponse> CreateAssocResponse(
     common::MacAddr client_addr, ::fuchsia::wlan::mlme::AssociateResultCodes result_code,
     uint16_t aid);
-MlmeMsg<::fuchsia::wlan::mlme::EapolRequest> CreateEapolRequest(common::MacAddr client_addr);
-MlmeMsg<::fuchsia::wlan::mlme::SetKeysRequest> CreateSetKeysRequest(common::MacAddr client_addr,
+MlmeMsg<::fuchsia::wlan::mlme::EapolRequest> CreateEapolRequest(common::MacAddr src_addr,
+                                                                common::MacAddr dst_addr);
+MlmeMsg<::fuchsia::wlan::mlme::SetKeysRequest> CreateSetKeysRequest(common::MacAddr addr,
                                                                     std::vector<uint8_t> key_data,
                                                                     ::fuchsia::wlan::mlme::KeyType);
 fbl::unique_ptr<Packet> CreateAuthReqFrame(common::MacAddr client_addr);

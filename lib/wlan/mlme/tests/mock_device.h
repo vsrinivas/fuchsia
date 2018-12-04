@@ -188,6 +188,8 @@ struct MockDevice : public DeviceInterface {
 
     const wlan_assoc_ctx_t* GetStationAssocContext(void) { return &sta_assoc_ctx_; }
 
+    bool AreQueuesEmpty() { return wlan_queue.empty() && svc_queue.empty() && eth_queue.empty(); }
+
     fbl::RefPtr<DeviceState> state;
     wlanmac_info_t wlanmac_info;
     PacketList wlan_queue;
