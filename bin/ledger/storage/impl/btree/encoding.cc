@@ -25,6 +25,11 @@ KeyPriority ToKeyPriority(KeyPriorityStorage priority_storage) {
   }
 }
 
+bool IsKeyPriorityStorageValid(KeyPriorityStorage priority_storage) {
+  return priority_storage == KeyPriorityStorage_EAGER ||
+    priority_storage == KeyPriorityStorage_LAZY;
+}
+
 KeyPriorityStorage ToKeyPriorityStorage(KeyPriority priority) {
   switch (priority) {
     case KeyPriority::EAGER:
@@ -36,7 +41,8 @@ KeyPriorityStorage ToKeyPriorityStorage(KeyPriority priority) {
 
 bool IsTreeNodeEntryValid(const EntryStorage* entry) {
   return entry && entry->key() &&
-         IsObjectIdentifierStorageValid(entry->object_id());
+         IsObjectIdentifierStorageValid(entry->object_id()) &&
+         IsKeyPriorityStorageValid(entry->priority());
 }
 
 Entry ToEntry(const EntryStorage* entry_storage) {
