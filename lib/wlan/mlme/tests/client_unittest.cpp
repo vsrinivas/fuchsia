@@ -79,7 +79,7 @@ struct ClientTest : public ::testing::Test {
     void SendBeaconFrame(common::MacAddr bssid = common::MacAddr(kBssid1)) {
         client.HandleFramePacket(CreateBeaconFrame(bssid));
     }
-    
+
     void TriggerTimeout(ObjectTarget target) {
         ObjectId timer_id;
         timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
@@ -420,6 +420,31 @@ TEST_F(ClientTest, SetKeys) {
     EXPECT_EQ(key_config.cipher_type, kCipherSuiteType);
 }
 
+TEST_F(ClientTest, ConstructAssociateContext) {
+    Join();
+    Authenticate();
+
+    // Send ASSOCIATE.request. Verify that no confirmation was sent yet.
+    ASSERT_EQ(ZX_OK, client.HandleMlmeMsg(CreateAssocRequest(false)));
+    // Respond with a Association Response frame and verify a ASSOCIATE.confirm message was sent.
+    auto ap_assoc_ctx = wlan::test_utils::FakeAssocCtx();
+    ap_assoc_ctx.vht_cap = {};
+    ap_assoc_ctx.vht_op = {};
+    ASSERT_EQ(ZX_OK, client.HandleFramePacket(CreateAssocRespFrame(ap_assoc_ctx)));
+    auto sta_assoc_ctx = device.GetStationAssocContext();
+
+    ASSERT_TRUE(sta_assoc_ctx != nullptr);
+    EXPECT_EQ(sta_assoc_ctx->aid, kAid);
+    EXPECT_EQ(sta_assoc_ctx->listen_interval, 0);
+    EXPECT_EQ(sta_assoc_ctx->phy, WLAN_PHY_HT);
+    EXPECT_EQ(sta_assoc_ctx->chan.primary, 36);
+    EXPECT_EQ(sta_assoc_ctx->chan.cbw, CBW40);
+    EXPECT_TRUE(sta_assoc_ctx->has_ht_cap);
+    EXPECT_TRUE(sta_assoc_ctx->has_ht_op);
+    EXPECT_FALSE(sta_assoc_ctx->has_vht_cap);
+    EXPECT_FALSE(sta_assoc_ctx->has_vht_op);
+}
+
 TEST_F(ClientTest, AuthTimeout) {
     Join();
 
@@ -724,7 +749,7 @@ TEST_F(ClientTest, AutoDeauth_InterleavingBeaconsAndChannelSwitches) {
     GoOnChannel();
 
     // Got beacon frame, which should reset the timeout.
-    IncreaseTimeByBeaconPeriods(3);                   // -- On-channel time without beacon  -- //
+    IncreaseTimeByBeaconPeriods(3);  // -- On-channel time without beacon  -- //
     SendBeaconFrame();               // -- Beacon timeout refresh -- ///
 
     // No deauth since beacon was received not too long ago.

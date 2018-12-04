@@ -38,8 +38,8 @@ static constexpr uint16_t kBeaconPeriodTu = 100;
 static constexpr uint16_t kDtimPeriodTu = 2;
 static constexpr uint8_t kListenInterval = 10;  // Beacon Periods
 static constexpr wlan_channel_t kBssChannel = {
-    .cbw = CBW20,
-    .primary = 11,
+    .primary = 36,
+    .cbw = CBW40,
 };
 static constexpr PHY kBssPhy = PHY::WLAN_PHY_HT;
 static constexpr uint8_t kSsid[] = {'F', 'u', 'c', 'h', 's', 'i', 'a', '-', 'A', 'P'};

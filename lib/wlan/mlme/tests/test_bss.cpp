@@ -132,8 +132,8 @@ MlmeMsg<wlan_mlme::JoinRequest> CreateJoinRequest(bool rsn) {
     req->join_failure_timeout = kJoinTimeout;
     req->nav_sync_delay = 20;
     req->op_rate_set.reset({12, 24, 48});
-    req->phy = wlan_mlme::PHY::HR;
-    req->cbw = wlan_mlme::CBW::CBW20;
+    req->phy = wlan::common::ToFidl(kBssPhy);
+    req->cbw = wlan::common::ToFidl(kBssChannel).cbw;
     req->selected_bss = CreateBssDescription(rsn);
     req->selected_bss.op_rate_set.reset({12, 24, 48});
 
