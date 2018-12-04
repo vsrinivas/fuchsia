@@ -16,6 +16,7 @@
 #include <blobfs/extent-reserver.h>
 #include <blobfs/lz4.h>
 #include <blobfs/node-reserver.h>
+#include <cobalt-client/cpp/collector.h>
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
 #include <fbl/auto_call.h>
@@ -39,6 +40,39 @@ using digest::MerkleTree;
 
 namespace blobfs {
 namespace {
+
+cobalt_client::CollectorOptions MakeCollectorOptions() {
+    cobalt_client::CollectorOptions options = cobalt_client::CollectorOptions::Debug();
+#ifdef __Fuchsia__
+    // Reads from boot the cobalt_filesystem.pb
+    options.load_config = [](zx::vmo* out_vmo, size_t* out_size) -> bool {
+        fbl::unique_fd config_fd(open("/boot/config/cobalt_filesystem.pb", O_RDONLY));
+        if (!config_fd) {
+            return false;
+        }
+        *out_size = lseek(config_fd.get(), 0L, SEEK_END);
+        if (*out_size <= 0) {
+            return false;
+        }
+        zx_status_t result = zx::vmo::create(*out_size, 0, out_vmo);
+        if (result != ZX_OK) {
+            return false;
+        }
+        fbl::Array<uint8_t> buffer(new uint8_t[*out_size], *out_size);
+        memset(buffer.get(), 0, *out_size);
+        if (lseek(config_fd.get(), 0L, SEEK_SET) < 0) {
+            return false;
+        }
+        if (static_cast<uint32_t>(read(config_fd.get(), buffer.get(), buffer.size())) < *out_size) {
+            return false;
+        }
+        return out_vmo->write(buffer.get(), 0, *out_size) == ZX_OK;
+    };
+    options.initial_response_deadline = zx::usec(0);
+    options.response_deadline = zx::nsec(0);
+#endif // __Fuchsia__
+    return options;
+}
 
 zx_status_t CheckFvmConsistency(const Superblock* info, int block_fd) {
     if ((info->flags & kBlobFlagFVM) == 0) {
@@ -611,7 +645,9 @@ void Blobfs::Sync(SyncCallback closure) {
     status = EnqueueWork(std::move(wb), EnqueueType::kJournal);
 }
 
-Blobfs::Blobfs(fbl::unique_fd fd, const Superblock* info) : blockfd_(std::move(fd)) {
+Blobfs::Blobfs(fbl::unique_fd fd, const Superblock* info)
+    : blockfd_(std::move(fd)), metrics_(),
+      cobalt_metrics_(MakeCollectorOptions(), false, "blobfs") {
     memcpy(&info_, info, sizeof(Superblock));
 }
 

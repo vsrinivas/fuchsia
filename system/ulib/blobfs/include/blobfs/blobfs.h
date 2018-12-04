@@ -28,6 +28,7 @@
 #include <fbl/vector.h>
 #include <fs/block-txn.h>
 #include <fs/managed-vfs.h>
+#include <fs/metrics.h>
 #include <fs/trace.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
@@ -110,8 +111,10 @@ struct MountOptions {
     CachePolicy cache_policy = CachePolicy::EvictImmediately;
 };
 
-class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>,
-               public fs::TransactionHandler, public SpaceManager {
+class Blobfs : public fs::ManagedVfs,
+               public fbl::RefCounted<Blobfs>,
+               public fs::TransactionHandler,
+               public SpaceManager {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Blobfs);
 
@@ -123,13 +126,9 @@ public:
     ////////////////
     // fs::TransactionHandler interface.
 
-    uint32_t FsBlockSize() const final {
-        return kBlobfsBlockSize;
-    }
+    uint32_t FsBlockSize() const final { return kBlobfsBlockSize; }
 
-    uint32_t DeviceBlockSize() const final {
-        return block_info_.block_size;
-    }
+    uint32_t DeviceBlockSize() const final { return block_info_.block_size; }
 
     groupid_t BlockGroupID() final {
         thread_local groupid_t group_ = next_group_.fetch_add(1);
@@ -150,13 +149,10 @@ public:
     zx_status_t AddInodes(fzl::ResizeableVmoMapper* node_map) final;
     zx_status_t AddBlocks(size_t nblocks, RawBitmap* block_map) final;
 
-
     ////////////////
     // Other methods.
 
-    uint64_t DataStart() const {
-        return DataStartBlock(info_);
-    }
+    uint64_t DataStart() const { return DataStartBlock(info_); }
 
     bool CheckBlocksAllocated(uint64_t start_block, uint64_t end_block,
                               uint64_t* first_unset = nullptr) const {
@@ -166,13 +162,9 @@ public:
         return AllocatedExtentIterator(allocator_.get(), node_index);
     }
 
-    Allocator* GetAllocator() {
-        return allocator_.get();
-    }
+    Allocator* GetAllocator() { return allocator_.get(); }
 
-    Inode* GetNode(uint32_t node_index) {
-        return allocator_->GetNode(node_index);
-    }
+    Inode* GetNode(uint32_t node_index) { return allocator_->GetNode(node_index); }
     zx_status_t ReserveBlocks(size_t num_blocks, fbl::Vector<ReservedExtent>* out_extents) {
         return allocator_->ReserveBlocks(num_blocks, out_extents);
     }
@@ -184,13 +176,25 @@ public:
                               const Superblock* info, fbl::unique_ptr<Blobfs>* out);
 
     void SetCachePolicy(CachePolicy policy) { cache_policy_ = policy; }
-    BlobfsMetrics& LocalMetrics() {
-        return metrics_;
+
+    BlobfsMetrics& LocalMetrics() { return metrics_; }
+
+    void CollectMetrics() {
+        collecting_metrics_ = true;
+        cobalt_metrics_.EnableMetrics(true);
+    }
+    bool CollectingMetrics() const { return cobalt_metrics_.IsEnabled(); }
+    void DisableMetrics() {
+        cobalt_metrics_.EnableMetrics(false);
+        collecting_metrics_ = false;
+    }
+    void DumpMetrics() const {
+        if (collecting_metrics_) {
+            metrics_.Dump();
+        }
     }
 
-    void SetUnmountCallback(fbl::Closure closure) {
-        on_unmount_ = std::move(closure);
-    }
+    void SetUnmountCallback(fbl::Closure closure) { on_unmount_ = std::move(closure); }
 
     // Initializes the WritebackQueue and Journal (if enabled in |options|),
     // replaying any existing journal entries.
@@ -228,9 +232,7 @@ public:
 
     zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len, size_t* out_actual);
 
-    int Fd() const {
-        return blockfd_.get();
-    }
+    int Fd() const { return blockfd_.get(); }
 
     const Superblock& Info() const { return info_; }
 
@@ -245,8 +247,8 @@ public:
     // Enqueues |work| to the appropriate buffer. If |journal| is true and the journal is enabled,
     // the transaction(s) will first be written to the journal. Otherwise, they will be sent
     // straight to the writeback buffer.
-    zx_status_t EnqueueWork(fbl::unique_ptr<WritebackWork> work, EnqueueType type)
-        __WARN_UNUSED_RESULT;
+    zx_status_t EnqueueWork(fbl::unique_ptr<WritebackWork> work,
+                            EnqueueType type) __WARN_UNUSED_RESULT;
 
     // Does a single pass of all blobs, creating uninitialized Vnode
     // objects for them all.
@@ -275,6 +277,8 @@ public:
 
     // Adds reserved blocks to allocated bitmap and writes the bitmap out to disk.
     void PersistBlocks(WritebackWork* wb, const ReservedExtent& extent);
+
+    fs::VnodeMetrics* GetMutableVnodeMetrics() { return cobalt_metrics_.mutable_vnode_metrics(); }
 
 private:
     friend class BlobfsChecker;
@@ -336,10 +340,8 @@ private:
 
     // VnodeBlobs exist in the WAVLTree as long as one or more reference exists;
     // when the Vnode is deleted, it is immediately removed from the WAVL tree.
-    using WAVLTreeByMerkle = fbl::WAVLTree<const uint8_t*,
-                                           VnodeBlob*,
-                                           MerkleRootTraits,
-                                           VnodeBlob::TypeWavlTraits>;
+    using WAVLTreeByMerkle =
+        fbl::WAVLTree<const uint8_t*, VnodeBlob*, MerkleRootTraits, VnodeBlob::TypeWavlTraits>;
     fbl::unique_ptr<WritebackQueue> writeback_;
     fbl::unique_ptr<Journal> journal_;
     Superblock info_;
@@ -365,12 +367,14 @@ private:
 
     CachePolicy cache_policy_;
     fbl::Closure on_unmount_ = {};
+
+    // TODO(gevalentino): clean up old metrics and update this to inspect API.
+    fs::Metrics cobalt_metrics_;
 };
 
 zx_status_t Initialize(fbl::unique_fd blockfd, const MountOptions& options,
                        fbl::unique_ptr<Blobfs>* out);
 zx_status_t Mount(async_dispatcher_t* dispatcher, fbl::unique_fd blockfd,
-                  const MountOptions& options, zx::channel root,
-                  fbl::Closure on_unmount);
+                  const MountOptions& options, zx::channel root, fbl::Closure on_unmount);
 
 } // namespace blobfs

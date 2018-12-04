@@ -44,6 +44,7 @@ TARGET_MODULE_STATIC_LIBS := \
     system/ulib/async-loop.cpp \
     system/ulib/bitmap \
     system/ulib/block-client \
+    system/ulib/cobalt-client \
     system/ulib/digest \
     system/ulib/fbl \
     system/ulib/fs \
@@ -64,7 +65,9 @@ TARGET_MODULE_LIBS := \
     system/ulib/zircon \
 
 TARGET_MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-cobalt \
     system/fidl/fuchsia-io \
+    system/fidl/fuchsia-mem \
 
 # target blobfs lib
 MODULE_SRCS := \
@@ -130,6 +133,7 @@ MODULE_COMPILEFLAGS := \
     -Isystem/ulib/digest/include \
     -Ithird_party/ulib/lz4/include \
     -Ithird_party/ulib/uboringssl/include \
+    -Isystem/ulib/cobalt-client/include \
     -Isystem/ulib/fbl/include \
     -Isystem/ulib/fs/include \
     -Isystem/ulib/fdio/include \

@@ -23,6 +23,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/bitmap \
     system/ulib/blobfs \
     system/ulib/block-client \
+    system/ulib/cobalt-client \
     system/ulib/digest \
     system/ulib/fbl \
     system/ulib/fvm \
@@ -48,6 +49,8 @@ MODULE_LIBS := \
     system/ulib/zircon \
 
 MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-cobalt \
     system/fidl/fuchsia-io \
+    system/fidl/fuchsia-mem \
 
 include make/module.mk

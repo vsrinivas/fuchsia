@@ -15,9 +15,11 @@
 #include <zircon/device/device.h>
 #include <zircon/device/vfs.h>
 
+#include <cobalt-client/cpp/timer.h>
 #include <fbl/auto_call.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string_piece.h>
+#include <fs/metrics.h>
 #include <lib/fdio/debug.h>
 #include <lib/fdio/vfs.h>
 #include <lib/sync/completion.h>
@@ -36,11 +38,31 @@
 #include <utility>
 
 namespace blobfs {
-
 namespace {
 
 using digest::Digest;
 using digest::MerkleTree;
+
+// RAII interface for registering latency events.
+class LatencyEvent {
+public:
+    LatencyEvent(cobalt_client::Histogram<fs::VnodeMetrics::kHistogramBuckets>* histogram,
+                 bool collect)
+        : timer_(collect), histogram_(histogram) {}
+    LatencyEvent(LatencyEvent&& rhs)
+        : timer_(std::move(rhs.timer_)), histogram_(std::move(rhs.histogram_)) {}
+    ~LatencyEvent() {
+        zx::duration latency = timer_.End();
+        if (latency.get() > 0) {
+            ZX_DEBUG_ASSERT(histogram_ != nullptr);
+            histogram_->Add(latency.get());
+        }
+    }
+
+private:
+    cobalt_client::Timer timer_;
+    cobalt_client::Histogram<fs::VnodeMetrics::kHistogramBuckets>* histogram_;
+};
 
 // A wrapper around "Enqueue" for content which risks being larger
 // than the writeback buffer.
@@ -238,8 +260,7 @@ zx_status_t VnodeBlob::InitCompressed() {
     }
 
     blobfs_->LocalMetrics().UdpateMerkleDecompress(compressed_blocks * kBlobfsBlockSize,
-                                                   inode_.blob_size, read_time,
-                                                   ticker.End());
+                                                   inode_.blob_size, read_time, ticker.End());
     return ZX_OK;
 }
 
@@ -843,6 +864,7 @@ zx_status_t VnodeBlob::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t l
 
 zx_status_t VnodeBlob::Read(void* data, size_t len, size_t off, size_t* out_actual) {
     TRACE_DURATION("blobfs", "VnodeBlob::Read", "len", len, "off", off);
+    LatencyEvent event(&blobfs_->GetMutableVnodeMetrics()->read, blobfs_->CollectingMetrics());
 
     if (IsDirectory()) {
         return ZX_ERR_NOT_FILE;
@@ -853,6 +875,7 @@ zx_status_t VnodeBlob::Read(void* data, size_t len, size_t off, size_t* out_actu
 
 zx_status_t VnodeBlob::Write(const void* data, size_t len, size_t offset, size_t* out_actual) {
     TRACE_DURATION("blobfs", "VnodeBlob::Write", "len", len, "off", offset);
+    LatencyEvent event(&blobfs_->GetMutableVnodeMetrics()->write, blobfs_->CollectingMetrics());
     if (IsDirectory()) {
         return ZX_ERR_NOT_FILE;
     }
@@ -860,6 +883,7 @@ zx_status_t VnodeBlob::Write(const void* data, size_t len, size_t offset, size_t
 }
 
 zx_status_t VnodeBlob::Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) {
+    LatencyEvent event(&blobfs_->GetMutableVnodeMetrics()->append, blobfs_->CollectingMetrics());
     zx_status_t status = WriteInternal(data, len, out_actual);
     if (GetState() == kBlobStateDataWrite) {
         ZX_DEBUG_ASSERT(write_info_ != nullptr);
@@ -872,6 +896,7 @@ zx_status_t VnodeBlob::Append(const void* data, size_t len, size_t* out_end, siz
 
 zx_status_t VnodeBlob::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) {
     TRACE_DURATION("blobfs", "VnodeBlob::Lookup", "name", name);
+    LatencyEvent event(&blobfs_->GetMutableVnodeMetrics()->look_up, blobfs_->CollectingMetrics());
     assert(memchr(name.data(), '/', name.length()) == nullptr);
     if (name == "." && IsDirectory()) {
         // Special case: Accessing root directory via '.'
@@ -897,6 +922,7 @@ zx_status_t VnodeBlob::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name
 }
 
 zx_status_t VnodeBlob::Getattr(vnattr_t* a) {
+    LatencyEvent event(&blobfs_->GetMutableVnodeMetrics()->get_attr, blobfs_->CollectingMetrics());
     memset(a, 0, sizeof(vnattr_t));
     a->mode = (IsDirectory() ? V_TYPE_DIR : V_TYPE_FILE) | V_IRUSR;
     a->inode = fuchsia_io_INO_UNKNOWN;
@@ -911,6 +937,7 @@ zx_status_t VnodeBlob::Getattr(vnattr_t* a) {
 
 zx_status_t VnodeBlob::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name, uint32_t mode) {
     TRACE_DURATION("blobfs", "VnodeBlob::Create", "name", name, "mode", mode);
+    LatencyEvent event(&blobfs_->GetMutableVnodeMetrics()->create, blobfs_->CollectingMetrics());
     assert(memchr(name.data(), '/', name.length()) == nullptr);
 
     if (!IsDirectory()) {
@@ -933,6 +960,7 @@ zx_status_t VnodeBlob::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name
 
 zx_status_t VnodeBlob::Truncate(size_t len) {
     TRACE_DURATION("blobfs", "VnodeBlob::Truncate", "len", len);
+    LatencyEvent event(&blobfs_->GetMutableVnodeMetrics()->truncate, blobfs_->CollectingMetrics());
 
     if (IsDirectory()) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -974,6 +1002,7 @@ zx_status_t VnodeBlob::GetDevicePath(size_t buffer_len, char* out_name, size_t* 
 
 zx_status_t VnodeBlob::Unlink(fbl::StringPiece name, bool must_be_dir) {
     TRACE_DURATION("blobfs", "VnodeBlob::Unlink", "name", name, "must_be_dir", must_be_dir);
+    LatencyEvent event(&blobfs_->GetMutableVnodeMetrics()->unlink, blobfs_->CollectingMetrics());
     assert(memchr(name.data(), '/', name.length()) == nullptr);
 
     if (!IsDirectory()) {
@@ -1014,8 +1043,9 @@ zx_status_t VnodeBlob::GetVmo(int flags, zx_handle_t* out) {
 }
 
 void VnodeBlob::Sync(SyncCallback closure) {
+    LatencyEvent event(&blobfs_->GetMutableVnodeMetrics()->sync, blobfs_->CollectingMetrics());
     if (atomic_load(&syncing_)) {
-        blobfs_->Sync([this, cb = std::move(closure)](zx_status_t status) {
+        blobfs_->Sync([this, evt = std::move(event), cb = std::move(closure)](zx_status_t status) {
             if (status != ZX_OK) {
                 cb(status);
                 return;
@@ -1051,6 +1081,7 @@ zx_status_t VnodeBlob::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
 }
 
 zx_status_t VnodeBlob::Close() {
+    LatencyEvent event(&blobfs_->GetMutableVnodeMetrics()->close, blobfs_->CollectingMetrics());
     ZX_DEBUG_ASSERT_MSG(fd_count_ > 0, "Closing blob with no fds open");
     fd_count_--;
     // Attempt purge in case blob was unlinked prior to close
