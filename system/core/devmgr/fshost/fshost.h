@@ -104,7 +104,7 @@ private:
                            fbl::RefPtr<memfs::VnodeDir>& subtree);
 
     static constexpr const char* kMountPoints[] = {
-        "/data", "/volume", "/system", "/install", "/blob", "/pkgfs"
+        "/bin", "/data", "/volume", "/system", "/install", "/blob", "/pkgfs"
     };
     fbl::RefPtr<fs::Vnode> mount_nodes[fbl::count_of(kMountPoints)];
 

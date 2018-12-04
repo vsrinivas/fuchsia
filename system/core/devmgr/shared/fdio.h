@@ -27,6 +27,7 @@ namespace devmgr {
 #define FS_INSTALL  0x0200
 #define FS_TMP      0x0400
 #define FS_HUB      0x0800
+#define FS_BIN      0x1000
 #define FS_ALL      0xFFFF
 
 #define FS_FOR_FSPROC  (FS_SVC)

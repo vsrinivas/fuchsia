@@ -105,22 +105,37 @@ void pkgfs_finish(BlockWatcher* watcher, zx::process proc, zx::channel pkgfs_roo
         return;
     }
     // re-export /pkgfs/system as /system
-    zx::channel h0, h1;
-    if (zx::channel::create(0, &h0, &h1) != ZX_OK) {
+    zx::channel systemChan, systemReq;
+    if (zx::channel::create(0, &systemChan, &systemReq) != ZX_OK) {
         return;
     }
-    if (fdio_open_at(pkgfs_root.get(), "system", FS_DIR_FLAGS, h1.release()) != ZX_OK) {
+    if (fdio_open_at(pkgfs_root.get(), "system", FS_DIR_FLAGS, systemReq.release()) != ZX_OK) {
         return;
     }
+    // re-export /pkgfs/packages/shell-commands/0/bin as /bin
+    zx::channel binChan, binReq;
+    if (zx::channel::create(0, &binChan, &binReq) != ZX_OK) {
+        return;
+    }
+    if (fdio_open_at(pkgfs_root.get(), "packages/shell-commands/0/bin", FS_DIR_FLAGS, binReq.release()) != ZX_OK) {
+        // non-fatal.
+        printf("fshost: failed to install /bin (could not open shell-commands)\n");
+    }
+
 
     if (watcher->InstallFs("/pkgfs", std::move(pkgfs_root)) != ZX_OK) {
         printf("fshost: failed to install /pkgfs\n");
         return;
     }
 
-    if (watcher->InstallFs("/system", std::move(h0)) != ZX_OK) {
+    if (watcher->InstallFs("/system", std::move(systemChan)) != ZX_OK) {
         printf("fshost: failed to install /system\n");
         return;
+    }
+
+    // as above, failure of /bin export is non-fatal.
+    if (watcher->InstallFs("/bin", std::move(binChan)) != ZX_OK) {
+        printf("fshost: failed to install /bin\n");
     }
 
     // start the appmgr

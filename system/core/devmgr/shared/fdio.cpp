@@ -42,6 +42,7 @@ static struct {
 } FSTAB[] = {
     { "/svc",       "svc",       FS_SVC },
     { "/hub",       "hub",       FS_HUB },
+    { "/bin",       "bin",       FS_BIN },
     { "/dev",       "dev",       FS_DEV },
     { "/boot",      "boot",      FS_BOOT },
     { "/data",      "data",      FS_DATA },
