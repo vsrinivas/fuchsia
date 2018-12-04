@@ -179,7 +179,7 @@ func Run(cfg *build.Config, args []string) error {
 			ID:          repoUrl,
 			RepoURL:     repoUrl,
 			BlobRepoURL: repoUrl + "/blobs",
-			RatePeriod:  0,
+			RatePeriod:  60,
 			StatusConfig: struct {
 				Enabled bool
 			}{
