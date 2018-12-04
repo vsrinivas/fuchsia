@@ -10,17 +10,17 @@ package(default_visibility = ["//visibility:public"])
 
 dart_fidl_library(
     name = "simple",
-    library = "//fidl:simple",
+    deps = ["//fidl:simple"],
 )
 
 dart_fidl_library(
     name = "local_deps",
-    library = "//fidl:local_deps",
+    deps = ["//fidl:local_deps"],
 )
 
 dart_fidl_library(
     name = "fuchsia_deps",
-    library = "//fidl:fuchsia_deps",
+    deps = ["//fidl:fuchsia_deps"],
 )
 
 dart_app(
