@@ -5,9 +5,8 @@
 use fidl_zircon_ethernet as fidl;
 
 use bitflags::bitflags;
-use serde_derive::{Deserialize, Serialize};
 
-#[derive(PartialEq, Eq, Serialize, Deserialize, Debug, Clone, Copy, Hash)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy, Hash)]
 pub struct MacAddress {
     pub octets: [u8; 6],
 }
@@ -35,6 +34,19 @@ impl std::fmt::Display for MacAddress {
             write!(f, "{:02x}", byte)?;
         }
         Ok(())
+    }
+}
+
+impl serde::Serialize for MacAddress {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.collect_str(&self)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for MacAddress {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(deserializer)?;
+        <Self as std::str::FromStr>::from_str(&s).map_err(serde::de::Error::custom)
     }
 }
 
@@ -142,5 +154,101 @@ bitflags! {
         ///
         /// This bit is only set after `tx_listen_start` is called.
         const TX_ECHO = fidl::FIFO_RX_TX as u16;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+    use std::collections::HashMap;
+    use std::str::FromStr;
+
+    #[test]
+    fn mac_addr_from_str_with_valid_str_returns_mac_addr() {
+        let result = MacAddress::from_str("AA:BB:CC:DD:EE:FF").unwrap();
+        let expected = MacAddress {
+            octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF],
+        };
+
+        assert_eq!(expected, result);
+    }
+
+    #[test]
+    fn mac_addr_from_str_with_invalid_digit_returns_err() {
+        let result = MacAddress::from_str("11:22:33:44:55:GG");
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn mac_addr_from_str_with_invalid_format_returns_err() {
+        let result = MacAddress::from_str("11-22-33-44-55-66");
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn mac_addr_from_str_with_empty_string_returns_err() {
+        let result = MacAddress::from_str("");
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn mac_addr_from_str_with_extra_quotes_returns_err() {
+        let result = MacAddress::from_str("\"11:22:33:44:55:66\"");
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn valid_mac_addr_array_deserializes_to_vec_of_mac_addrs() {
+        let result: Vec<MacAddress> =
+            serde_json::from_str("[\"11:11:11:11:11:11\", \"AA:AA:AA:AA:AA:AA\"]").unwrap();
+        let expected = vec![
+            MacAddress {
+                octets: [0x11, 0x11, 0x11, 0x11, 0x11, 0x11],
+            },
+            MacAddress {
+                octets: [0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA],
+            },
+        ];
+
+        assert_eq!(expected, result);
+    }
+
+    #[test]
+    fn mac_addr_to_mac_addr_map_deserializes_to_hashmap() {
+        let result: HashMap<MacAddress, MacAddress> =
+            serde_json::from_str("{\"11:22:33:44:55:66\": \"AA:BB:CC:DD:EE:FF\"}").unwrap();
+        let mut expected = HashMap::new();
+        expected.insert(
+            MacAddress {
+                octets: [0x11, 0x22, 0x33, 0x44, 0x55, 0x66],
+            },
+            MacAddress {
+                octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF],
+            },
+        );
+
+        assert_eq!(expected, result);
+    }
+
+    #[test]
+    fn mac_addr_to_mac_addr_map_serializes_to_valid_json() {
+        let mut mac_addr_map = HashMap::new();
+        mac_addr_map.insert(
+            MacAddress {
+                octets: [0x11, 0x22, 0x33, 0x44, 0x55, 0x66],
+            },
+            MacAddress {
+                octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF],
+            },
+        );
+
+        let result = serde_json::to_string(&mac_addr_map).unwrap();
+
+        assert_eq!("{\"11:22:33:44:55:66\":\"aa:bb:cc:dd:ee:ff\"}", result);
     }
 }
