@@ -13,6 +13,7 @@ use {
     },
     failure::{Error, Fail, ResultExt},
     fuchsia_async::{net::UdpSocket, Executor, Interval},
+    fuchsia_syslog::{self as fx_log},
     fuchsia_zircon::{self as zx, DurationNum},
     futures::{Future, StreamExt, TryFutureExt, TryStreamExt},
     getopts::Options,
@@ -22,6 +23,7 @@ use {
         sync::Mutex,
     },
 };
+#[macro_use] extern crate fuchsia_syslog;
 
 /// A buffer size in excess of the maximum allowable DHCP message size.
 const BUF_SZ: usize = 1024;
@@ -32,6 +34,9 @@ const DEFAULT_CONFIG_PATH: &str = "/pkg/data/config.json";
 const EXPIRATION_INTERVAL_SECS: i64 = 5;
 
 fn main() -> Result<(), Error> {
+    fx_log::init()?;
+    fx_log::set_severity(fx_log::levels::INFO);
+
     let mut exec = Executor::new().context("error creating executor")?;
     let path = get_server_config_file_path()?;
     let config = configuration::load_server_config_from_file(path)?;
@@ -44,10 +49,10 @@ fn main() -> Result<(), Error> {
     let msg_handling_loop = define_msg_handling_loop_future(udp_socket, &server);
     let lease_expiration_handler = define_lease_expiration_handler_future(&server);
 
-    println!("dhcpd: starting server");
+    fx_log_info!(tag: "dhcpd", "starting server");
     exec.run_singlethreaded(msg_handling_loop.try_join(lease_expiration_handler))
         .map_err(|e| e.context("failed to start event loop"))?;
-    println!("dhcpd: server shutting down");
+    fx_log_info!(tag: "dhcpd", "server shutting down");
     Ok(())
 }
 
@@ -78,23 +83,20 @@ async fn define_msg_handling_loop_future<F: Fn() -> i64>(
     loop {
         let (received, addr) = await!(sock.recv_from(&mut *buf))
             .map_err(|_e| failure::err_msg("unable to receive buffer"))?;
-        println!("dhcpd: received {} bytes", received);
+        fx_log_info!(tag: "dhcpd", "received {} bytes", received);
         let msg = Message::from_buffer(&buf[0..received])
             .ok_or_else(|| failure::err_msg("unable to parse buffer"))?;
-        println!("dhcpd: msg parsed {:?}", msg);
-
+        fx_vlog!(tag: "dhcpd", 1, "msg parsed {:?}", msg);
         // This call should not block because the server is single-threaded.
         let response = server
             .lock()
             .unwrap()
             .dispatch(msg)
             .ok_or_else(|| failure::err_msg("invalid message"))?;
-        println!("dhcpd: msg dispatched to server {:?}", response);
+        fx_vlog!(tag: "dhcpd", 1, "msg dispatched to server {:?}", response);
         let response_buffer = response.serialize();
-        println!("dhcpd: response serialized");
         await!(sock.send_to(&response_buffer, addr)).context("unable to send response")?;
-        println!("dhcpd: response sent");
-        println!("dhcpd: continuing event loop");
+        fx_log_info!(tag: "dhcpd", "response sent");
     }
 }
 
