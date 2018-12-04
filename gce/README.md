@@ -27,10 +27,10 @@ Fuchsia instance:
 cd $FUCHSIA_ROOT
 fx set x64 --release
 fx full-build
-gce create-fuchsia-image
-gce create-instance
+fx gce create-fuchsia-image
+fx gce create-instance
 sleep 60
-gce serial
+fx gce serial
 ```
 
 ## How the sausage is made
