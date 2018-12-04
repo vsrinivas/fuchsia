@@ -5,7 +5,6 @@
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
 fit_srcs := \
-    $(LOCAL_DIR)/empty.c \
     $(LOCAL_DIR)/promise.cpp \
     $(LOCAL_DIR)/scheduler.cpp \
     $(LOCAL_DIR)/sequencer.cpp \
