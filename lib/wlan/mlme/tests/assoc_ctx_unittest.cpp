@@ -21,6 +21,8 @@
 #include <optional>
 #include <vector>
 
+#include "test_utils.h"
+
 namespace wlan {
 namespace {
 
@@ -54,46 +56,6 @@ void TestOnce(const TestVector& tv) {
     for (size_t i = 0; i < got_rates->size(); ++i) {
         EXPECT_EQ(tv.want_rates.value()[i].val(), got_rates.value()[i].val());
     }
-}
-
-AssocContext BuildSampleCtx() {
-    wlan_ht_caps_t ht_cap_ddk{
-        .ht_capability_info = 0x016e,
-        .ampdu_params = 0x17,
-        .mcs_set.rx_mcs_head = 0x00000001000000ff,
-        .mcs_set.rx_mcs_tail = 0x01000000,
-        .mcs_set.tx_mcs = 0x00000000,
-        .ht_ext_capabilities = 0x1234,
-        .tx_beamforming_capabilities = 0x12345678,
-        .asel_capabilities = 0xff,
-    };
-    wlan_ht_op_t ht_op_ddk{
-        .primary_chan = 123,
-        .head = 0x01020304,
-        .tail = 0x05,
-        .basic_mcs_set.rx_mcs_head = 0x00000001000000ff,
-        .basic_mcs_set.rx_mcs_tail = 0x01000000,
-        .basic_mcs_set.tx_mcs = 0x00000000,
-    };
-    wlan_vht_caps_t vht_cap_ddk{
-        .vht_capability_info = 0xaabbccdd,
-        .supported_vht_mcs_and_nss_set = 0x0011223344556677,
-    };
-
-    wlan_vht_op_t vht_op_ddk{
-        .vht_cbw = 0x01,
-        .center_freq_seg0 = 42,
-        .center_freq_seg1 = 106,
-        .basic_mcs = 0x1122,
-    };
-
-    AssocContext ctx{};
-    ctx.ht_cap = HtCapabilities::FromDdk(ht_cap_ddk);
-    ctx.ht_op = HtOperation::FromDdk(ht_op_ddk);
-    ctx.vht_cap = VhtCapabilities::FromDdk(vht_cap_ddk);
-    ctx.vht_op = VhtOperation::FromDdk(vht_op_ddk);
-
-    return ctx;
 }
 
 AssociationResponse* WriteAssocRespHdr(BufferWriter* w) {
@@ -213,14 +175,14 @@ TEST(ParseAssocRespIe, Parse) {
 
 TEST(AssocContext, IntersectHtNoVht) {
     // Constructing client and BSS sample association context without VHT.
-    auto bss_ctx = BuildSampleCtx();
+    auto bss_ctx = test_utils::FakeAssocCtx();
     bss_ctx.ht_cap->ht_cap_info.set_chan_width_set(HtCapabilityInfo::TWENTY_FORTY);
     bss_ctx.ht_cap->ht_cap_info.set_rx_stbc(1);
     bss_ctx.ht_cap->ht_cap_info.set_tx_stbc(0);
     bss_ctx.vht_cap = {};
     bss_ctx.vht_op = {};
 
-    auto client_ctx = BuildSampleCtx();
+    auto client_ctx = test_utils::FakeAssocCtx();
     client_ctx.ht_cap->ht_cap_info.set_chan_width_set(HtCapabilityInfo::TWENTY_FORTY);
     client_ctx.ht_cap->ht_cap_info.set_rx_stbc(1);
     client_ctx.ht_cap->ht_cap_info.set_tx_stbc(0);
@@ -241,10 +203,10 @@ TEST(AssocContext, IntersectHtNoVht) {
 }
 
 TEST(AssocContext, IntersectClientNoHT) {
-    auto bss_ctx = BuildSampleCtx();
+    auto bss_ctx = test_utils::FakeAssocCtx();
     bss_ctx.ht_cap->ht_cap_info.set_chan_width_set(HtCapabilityInfo::TWENTY_FORTY);
 
-    auto client_ctx = BuildSampleCtx();
+    auto client_ctx = test_utils::FakeAssocCtx();
     client_ctx.ht_cap = {};
     client_ctx.vht_cap = {};
     client_ctx.vht_op = {};
@@ -256,10 +218,10 @@ TEST(AssocContext, IntersectClientNoHT) {
 }
 
 TEST(AssocContext, IntersectHtVht) {
-    auto bss_ctx = BuildSampleCtx();
+    auto bss_ctx = test_utils::FakeAssocCtx();
     bss_ctx.ht_cap->ht_cap_info.set_chan_width_set(HtCapabilityInfo::TWENTY_FORTY);
 
-    auto client_ctx = BuildSampleCtx();
+    auto client_ctx = test_utils::FakeAssocCtx();
     client_ctx.ht_cap->ht_cap_info.set_chan_width_set(HtCapabilityInfo::TWENTY_FORTY);
 
     auto ctx = IntersectAssocCtx(bss_ctx, client_ctx);
@@ -268,10 +230,10 @@ TEST(AssocContext, IntersectHtVht) {
 }
 
 TEST(AssocContext, IntersectClientNoVht) {
-    auto bss_ctx = BuildSampleCtx();
+    auto bss_ctx = test_utils::FakeAssocCtx();
     bss_ctx.ht_cap->ht_cap_info.set_chan_width_set(HtCapabilityInfo::TWENTY_FORTY);
 
-    auto client_ctx = BuildSampleCtx();
+    auto client_ctx = test_utils::FakeAssocCtx();
     client_ctx.ht_cap->ht_cap_info.set_chan_width_set(HtCapabilityInfo::TWENTY_FORTY);
     client_ctx.vht_cap = {};
 
@@ -283,13 +245,13 @@ TEST(AssocContext, IntersectClientNoVht) {
 }
 
 TEST(AssocContext, IntersectBssNoHT) {
-    auto bss_ctx = BuildSampleCtx();
+    auto bss_ctx = test_utils::FakeAssocCtx();
     bss_ctx.ht_cap = {};
     bss_ctx.ht_op = {};
     bss_ctx.vht_cap = {};
     bss_ctx.vht_op = {};
 
-    auto client_ctx = BuildSampleCtx();
+    auto client_ctx = test_utils::FakeAssocCtx();
     client_ctx.ht_cap->ht_cap_info.set_chan_width_set(HtCapabilityInfo::TWENTY_FORTY);
 
     auto ctx = IntersectAssocCtx(bss_ctx, client_ctx);
@@ -300,12 +262,12 @@ TEST(AssocContext, IntersectBssNoHT) {
 }
 
 TEST(AssocContext, IntersectBssNoVht) {
-    auto bss_ctx = BuildSampleCtx();
+    auto bss_ctx = test_utils::FakeAssocCtx();
     bss_ctx.ht_cap->ht_cap_info.set_chan_width_set(HtCapabilityInfo::TWENTY_FORTY);
     bss_ctx.vht_cap = {};
     bss_ctx.vht_op = {};
 
-    auto client_ctx = BuildSampleCtx();
+    auto client_ctx = test_utils::FakeAssocCtx();
     client_ctx.ht_cap->ht_cap_info.set_chan_width_set(HtCapabilityInfo::TWENTY_FORTY);
 
     auto ctx = IntersectAssocCtx(bss_ctx, client_ctx);
@@ -334,7 +296,7 @@ TEST(AssocContext, MakeBssAssocCtx) {
 TEST(AssocContext, ToDdk) {
     // TODO(NET-1959): Test more fields.
 
-    auto ctx = BuildSampleCtx();
+    auto ctx = test_utils::FakeAssocCtx();
     ctx.vht_cap = {};
     ctx.vht_op = {};
 

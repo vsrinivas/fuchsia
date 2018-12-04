@@ -35,6 +35,8 @@ source_set("test_main") {
     "test_main.cpp",
     "test_timer.cpp",
     "test_timer.h",
+    "test_utils.cpp",
+    "test_utils.h",
   ]
 
   public_deps = [

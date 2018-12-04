@@ -6,9 +6,11 @@
 #define GARNET_LIB_WLAN_MLME_TESTS_TEST_UTILS_H_
 
 #include <gtest/gtest.h>
-#include <algorithm>
 #include <lib/fidl/cpp/array.h>
+#include <wlan/mlme/assoc_context.h>
 #include <wlan/mlme/packet.h>
+#include <wlan/protocol/info.h>
+#include <algorithm>
 
 namespace wlan {
 namespace test_utils {
@@ -53,6 +55,9 @@ static inline fbl::unique_ptr<Packet> MakeWlanPacket(std::initializer_list<uint8
     packet->set_len(bytes.size());
     return packet;
 }
+
+AssocContext FakeAssocCtx();
+wlan_band_info_t FakeBandInfo(Band band);
 
 }  // namespace test_utils
 }  // namespace wlan

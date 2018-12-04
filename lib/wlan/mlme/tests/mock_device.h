@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "test_timer.h"
+#include "test_utils.h"
 
 namespace wlan {
 
@@ -41,19 +42,12 @@ struct MockDevice : public DeviceInterface {
 
         auto info = &wlanmac_info.ifc_info;
         memcpy(info->mac_addr, kClientAddress, 6);
-        info->driver_features = 0;
         info->mac_role = WLAN_MAC_ROLE_CLIENT;
-        info->num_bands = 1;
-        info->bands[0] = {
-            .basic_rates = {12, 24, 48, 54, 96, 108},
-            .supported_channels =
-                {
-                    .base_freq = 2407,
-                    .channels = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14},
-                },
-            .ht_supported = false,
-            .vht_supported = false,
-        };
+        info->supported_phys = WLAN_PHY_OFDM | WLAN_PHY_HT | WLAN_PHY_VHT;
+        info->driver_features = 0;
+        info->num_bands = 2;
+        info->bands[0] = test_utils::FakeBandInfo(WLAN_BAND_2GHZ);
+        info->bands[1] = test_utils::FakeBandInfo(WLAN_BAND_5GHZ);
         state->set_channel(wlan_channel_t{.cbw = CBW20, .primary = 1});
     }
 
@@ -204,6 +198,7 @@ struct MockDevice : public DeviceInterface {
    private:
     timekeeper::TestClock clock_;
 };
+
 }  // namespace
 }  // namespace wlan
 
