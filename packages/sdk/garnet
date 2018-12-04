@@ -1,5 +1,6 @@
 {
     "imports": [
+        "garnet/packages/config/amber",
         "garnet/packages/config/network",
         "garnet/packages/prod/amber",
         "garnet/packages/prod/bluetooth",
