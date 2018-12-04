@@ -66,12 +66,12 @@ class TestEvalContext : public ExprEvalContext {
 
   // ExprEvalContext implementation.
   void GetNamedValue(
-      const std::string& name,
+      const Identifier& ident,
       std::function<void(const Err&, fxl::RefPtr<Symbol>, ExprValue)> cb)
       override {
     // Can ignore the symbol output for this test, it's not needed by the
     // expression evaluation system.
-    auto found = values_.find(name);
+    auto found = values_.find(ident.GetFullName());
     if (found == values_.end())
       cb(Err("Not found"), nullptr, ExprValue());
     else

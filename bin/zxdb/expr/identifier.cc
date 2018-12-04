@@ -4,10 +4,33 @@
 
 #include "garnet/bin/zxdb/expr/identifier.h"
 
+#include "garnet/bin/zxdb/expr/expr_node.h"
+#include "garnet/bin/zxdb/expr/expr_parser.h"
+#include "garnet/bin/zxdb/expr/expr_tokenizer.h"
+
 namespace zxdb {
 
 Identifier::Identifier(ExprToken name) {
   components_.emplace_back(ExprToken(), std::move(name));
+}
+
+// static
+Err Identifier::FromString(const std::string& input, Identifier* out) {
+  ExprTokenizer tokenizer(input);
+  if (!tokenizer.Tokenize())
+    return tokenizer.err();
+
+  ExprParser parser(tokenizer.TakeTokens());
+  auto root = parser.Parse();
+  if (!root)
+    return parser.err();
+
+  auto identifier_node = root->AsIdentifier();
+  if (!identifier_node)
+    return Err("Input did not parse as an identifier.");
+
+  *out = const_cast<IdentifierExprNode*>(identifier_node)->TakeIdentifier();
+  return Err();
 }
 
 void Identifier::AppendComponent(Component c) {
@@ -33,6 +56,14 @@ std::string Identifier::GetFullName() const {
 
 std::string Identifier::GetDebugName() const {
   return GetName(true);
+}
+
+const std::string* Identifier::GetSingleComponentName() const {
+  if (components_.size() != 1)
+    return nullptr;
+  if (components_[0].has_separator() || components_[0].has_template())
+    return nullptr;
+  return &components_[0].name().value();
 }
 
 std::string Identifier::GetName(bool include_debug) const {

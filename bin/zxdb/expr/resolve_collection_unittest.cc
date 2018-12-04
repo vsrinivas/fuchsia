@@ -5,6 +5,7 @@
 #include "garnet/bin/zxdb/expr/resolve_collection.h"
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
+#include "garnet/bin/zxdb/expr/identifier.h"
 #include "garnet/bin/zxdb/symbols/base_type.h"
 #include "garnet/bin/zxdb/symbols/collection.h"
 #include "garnet/bin/zxdb/symbols/data_member.h"
@@ -28,6 +29,18 @@ fxl::RefPtr<Collection> GetTestClassType(const DataMember** member_a,
   *member_a = sc->data_members()[0].Get()->AsDataMember();
   *member_b = sc->data_members()[1].Get()->AsDataMember();
   return sc;
+}
+
+// Helper function that calls ResolveMember with an identifier with the
+// containing value.
+Err ResolveMemberFromString(const ExprValue& base, const std::string& name,
+                            ExprValue* out) {
+  Identifier ident;
+  Err err = Identifier::FromString(name, &ident);
+  if (err.has_error())
+    return err;
+
+  return ResolveMember(base, ident, out);
 }
 
 }  // namespace
@@ -59,7 +72,7 @@ TEST(ResolveCollection, GoodMemberAccess) {
 
   // Resolve A by name.
   ExprValue out_by_name;
-  err = ResolveMember(base, "a", &out_by_name);
+  err = ResolveMemberFromString(base, "a", &out_by_name);
   EXPECT_EQ(out, out_by_name);
 
   // Resolve B.
@@ -73,7 +86,7 @@ TEST(ResolveCollection, GoodMemberAccess) {
 
   // Resolve B by name.
   out_by_name = ExprValue();
-  err = ResolveMember(base, "b", &out_by_name);
+  err = ResolveMemberFromString(base, "b", &out_by_name);
   EXPECT_EQ(out, out_by_name);
 }
 
@@ -110,7 +123,7 @@ TEST(ResolveCollection, BadMemberAccess) {
 
   // Lookup by name that doesn't exist.
   ExprValue out;
-  Err err = ResolveMember(base, "c", &out);
+  Err err = ResolveMemberFromString(base, "c", &out);
   EXPECT_TRUE(err.has_error());
   EXPECT_EQ("No member 'c' in struct 'Foo'.", err.msg());
 
@@ -149,7 +162,7 @@ TEST(ResolveCollection, DerivedClass) {
 
   // Resolve B by name.
   ExprValue out;
-  Err err = ResolveMember(value, "b", &out);
+  Err err = ResolveMemberFromString(value, "b", &out);
   EXPECT_FALSE(err.has_error()) << err.msg();
   EXPECT_EQ("int32_t", out.type()->GetAssignedName());
   EXPECT_EQ(4u, out.data().size());

@@ -25,6 +25,7 @@
 #include "garnet/bin/zxdb/console/string_util.h"
 #include "garnet/bin/zxdb/expr/expr_eval_context.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
+#include "garnet/bin/zxdb/expr/identifier.h"
 #include "garnet/bin/zxdb/symbols/collection.h"
 #include "garnet/bin/zxdb/symbols/data_member.h"
 #include "garnet/bin/zxdb/symbols/location.h"
@@ -94,8 +95,8 @@ void DumpDataMemberInfo(const DataMember* data_member, OutputBuffer* out) {
   out->Append("Data member: " + data_member->GetFullName() + "\n");
   const Symbol* parent = data_member->parent().Get();
   out->Append("Contained in: " + parent->GetFullName() + "\n");
-  out->Append(fxl::StringPrintf("Type: %s\n",
-                                GetTypeDescription(data_member->type()).c_str()));
+  out->Append(fxl::StringPrintf(
+      "Type: %s\n", GetTypeDescription(data_member->type()).c_str()));
   out->Append(fxl::StringPrintf("Offset within container: %" PRIu32 "\n",
                                 data_member->member_location()));
   out->Append(fxl::StringPrintf("DWARF tag: 0x%x\n",
@@ -342,34 +343,39 @@ Err DoSymInfo(ConsoleContext* context, const Command& cmd) {
         "sym-info expects exactly one argument that's the name of the "
         "symbol to look up.");
   }
-  const std::string& symbol_name = cmd.args()[0];
+
+  Identifier identifier;
+  Err err = Identifier::FromString(cmd.args()[0], &identifier);
+  if (err.has_error())
+    return err;
 
   if (cmd.frame()) {
     const Location& location = cmd.frame()->GetLocation();
     fxl::RefPtr<ExprEvalContext> eval_context =
         cmd.frame()->GetExprEvalContext();
-    eval_context->GetNamedValue(symbol_name,
-      [location](const Err& err, fxl::RefPtr<Symbol> symbol, ExprValue value) {
-        // Expression evaluation could fail but there still could be a symbol.
-        OutputBuffer out;
-        if (!symbol) {
-          FXL_DCHECK(err.has_error());
-          out.Append(err);
-        } else if (auto variable = symbol->AsVariable()) {
-          DumpVariableInfo(location.symbol_context(), variable, &out);
-        } else if (auto data_member = symbol->AsDataMember()) {
-          DumpDataMemberInfo(data_member, &out);
-        } else {
-          out.Append("TODO: support this command for non-Variables.");
-        }
-        Console::get()->Output(std::move(out));
-        return Err();
-      });
+    eval_context->GetNamedValue(
+        identifier, [location](const Err& err, fxl::RefPtr<Symbol> symbol,
+                               ExprValue value) {
+          // Expression evaluation could fail but there still could be a symbol.
+          OutputBuffer out;
+          if (!symbol) {
+            FXL_DCHECK(err.has_error());
+            out.Append(err);
+          } else if (auto variable = symbol->AsVariable()) {
+            DumpVariableInfo(location.symbol_context(), variable, &out);
+          } else if (auto data_member = symbol->AsDataMember()) {
+            DumpDataMemberInfo(data_member, &out);
+          } else {
+            out.Append("TODO: support this command for non-Variables.");
+          }
+          Console::get()->Output(std::move(out));
+          return Err();
+        });
     return Err();  // Will complete asynchronously.
   }
 
   return Err(fxl::StringPrintf("No symbol \"%s\" found in the current context.",
-                               symbol_name.c_str()));
+                               identifier.GetFullName().c_str()));
 }
 
 // sym-stat --------------------------------------------------------------------
@@ -451,8 +457,9 @@ Err DoSymStat(ConsoleContext* context, const Command& cmd) {
   auto index_status = system_symbols->build_id_index().GetStatus();
   if (index_status.empty()) {
     out.Append(Syntax::kError, "  No symbol locations are indexed.");
-    out.Append("\n\n  Use the command-line switch \"zxdb -s <path>\" to "
-               "specify the location of\n  your symbols.\n\n");
+    out.Append(
+        "\n\n  Use the command-line switch \"zxdb -s <path>\" to "
+        "specify the location of\n  your symbols.\n\n");
   } else {
     for (const auto& pair : index_status) {
       auto& row = table.emplace_back();

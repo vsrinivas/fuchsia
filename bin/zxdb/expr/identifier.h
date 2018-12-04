@@ -7,12 +7,17 @@
 #include <string>
 #include <vector>
 
+#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/expr/expr_token.h"
 
 namespace zxdb {
 
 // An identifier is a sequence of names. Currently this handles C++ and Rust,
 // but could be enhanced in the future for other languages.
+//
+// This is used for variable names and function names. If you type a class
+// name or a typedef, the parser will also parse it as an identifier. What
+// the identifier actually means will depend on the context in which it's used.
 //
 // One component can consist of a name and a template part (note currently the
 // parser doesn't support the template part, but this class does in expectation
@@ -80,6 +85,10 @@ class Identifier {
   // Makes a simple identifier with a standalone name.
   Identifier(ExprToken name);
 
+  // Attempts to parse the given string as an identifier and fills the out
+  // parameter on success.
+  static Err FromString(const std::string& input, Identifier* out);
+
   std::vector<Component>& components() { return components_; }
   const std::vector<Component>& components() const { return components_; }
 
@@ -94,6 +103,15 @@ class Identifier {
 
   // Returns a form for debugging where the parsing is more visible.
   std::string GetDebugName() const;
+
+  // In many contexts (like function parameters and local variables) the name
+  // can't have any :: or template parameters and can have only one component.
+  // If this identifier satisfies this requirement, a pointer to the single
+  // string is returned. If there is zero or more than one component or any
+  // template specs, returns null.
+  //
+  // The returned pointer will be invalidated if the Identifier is mutated.
+  const std::string* GetSingleComponentName() const;
 
  private:
   // Backend for the name getters.

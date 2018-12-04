@@ -48,7 +48,7 @@ class SymbolEvalContext : public ExprEvalContext {
   ~SymbolEvalContext() override;
 
   // ExprEvalContext implementation.
-  void GetNamedValue(const std::string& name, ValueCallback cb) override;
+  void GetNamedValue(const Identifier& name, ValueCallback cb) override;
   SymbolVariableResolver& GetVariableResolver() override;
   fxl::RefPtr<SymbolDataProvider> GetDataProvider() override;
 
@@ -76,15 +76,6 @@ class SymbolEvalContext : public ExprEvalContext {
     Err err;
     fxl::RefPtr<Symbol> symbol;
   };
-
-  // TODO(brettw) move this out into a separate standalone function with other
-  // Find* functions.
-  std::optional<FoundVariable> FindLocalVariable(const std::string& name) const;
-
-  // Searches the given vector of values for one with the given name. If found,
-  // returns it, otherwise returns null.
-  const Variable* SearchVariableVector(const std::vector<LazySymbol>& vect,
-                                       const std::string& search_for) const;
 
   // Computes the value of the given variable and issues the callback (possibly
   // asynchronously, possibly not).

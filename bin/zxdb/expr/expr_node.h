@@ -165,6 +165,9 @@ class IdentifierExprNode : public ExprNode {
   Identifier& ident() { return ident_; }
   const Identifier& ident() const { return ident_; }
 
+  // Destructively moves the identifier out of this class.
+  Identifier TakeIdentifier() { return std::move(ident_); }
+
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(IdentifierExprNode);
   FRIEND_MAKE_REF_COUNTED(IdentifierExprNode);

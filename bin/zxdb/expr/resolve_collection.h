@@ -19,18 +19,8 @@ class CodeBlock;
 class DataMember;
 class ExprEvalContext;
 class ExprValue;
+class Identifier;
 class InheritedFrom;
-
-// Searches for the given variable name on the given collection. This is the
-// lower-level function and assumes a valid object.
-std::optional<FoundMember> FindMember(const Collection* object,
-                                      const std::string& member_name);
-
-// Attempts the resolve the given named member variable on the "this" pointer
-// associated with the given code block. Fails if the function has no "this"
-// pointer or the member isn't found.
-std::optional<FoundVariable> FindMemberOnThis(const CodeBlock* block,
-                                              const std::string& member_name);
 
 // Resolves a DataMember given a collection (class/struct/union) and a record
 // for a variable within that collection. The data member must be on the class
@@ -47,7 +37,7 @@ Err ResolveMember(const ExprValue& base, const DataMember* member,
 // matches.
 //
 // Returns an error if the name isn't found.
-Err ResolveMember(const ExprValue& base, const std::string& member_name,
+Err ResolveMember(const ExprValue& base, const Identifier& identifier,
                   ExprValue* out);
 
 // The variant takes an ExprValue which is a pointer to the base/struct or
@@ -62,7 +52,7 @@ void ResolveMemberByPointer(fxl::RefPtr<ExprEvalContext> context,
 // matched.
 void ResolveMemberByPointer(
     fxl::RefPtr<ExprEvalContext> context, const ExprValue& base_ptr,
-    const std::string& member_name,
+    const Identifier& identifier,
     std::function<void(const Err&, fxl::RefPtr<DataMember>, ExprValue)> cb);
 
 // Takes a Collection value and a base class inside of it, computes the value

@@ -4,6 +4,7 @@
 
 #include "garnet/bin/zxdb/symbols/type_utils.h"
 
+#include "garnet/bin/zxdb/symbols/collection.h"
 #include "garnet/bin/zxdb/symbols/modified_type.h"
 #include "garnet/bin/zxdb/symbols/type.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -25,6 +26,22 @@ Err GetPointedToType(const Type* input, const Type** pointed_to) {
   *pointed_to = mod_type->modified().Get()->AsType();
   if (!*pointed_to)
     return Err("Missing pointer type info, please file a bug with a repro.");
+  return Err();
+}
+
+Err GetPointedToCollection(const Type* type, const Collection** coll) {
+  const Type* pointed_to = nullptr;
+  Err err = GetPointedToType(type, &pointed_to);
+  if (err.has_error())
+    return err;
+
+  *coll = pointed_to->GetConcreteType()->AsCollection();
+  if (!coll) {
+    return Err(
+        "Attempting to dereference a pointer to '%s' which "
+        "is not a class or a struct.",
+        pointed_to->GetFullName().c_str());
+  }
   return Err();
 }
 

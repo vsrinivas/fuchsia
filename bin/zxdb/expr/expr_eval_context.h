@@ -12,6 +12,7 @@ namespace zxdb {
 
 class Err;
 class ExprValue;
+class Identifier;
 class Symbol;
 class SymbolDataProvider;
 class SymbolVariableResolver;
@@ -38,7 +39,8 @@ class ExprEvalContext : public fxl::RefCountedThreadSafe<ExprEvalContext> {
   // The callback may be issued asynchronously in the future if communication
   // with the remote debugged application is required. The callback may be
   // issued reentrantly for synchronously available data.
-  virtual void GetNamedValue(const std::string& name, ValueCallback cb) = 0;
+  virtual void GetNamedValue(const Identifier& identifier,
+                             ValueCallback cb) = 0;
 
   // Returns the SymbolVariableResolver used to create variables from
   // memory for this context.
