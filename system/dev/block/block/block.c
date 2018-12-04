@@ -186,6 +186,9 @@ static zx_status_t blkdev_rebind(blkdev_t* bdev) {
     return device_rebind(bdev->zxdev);
 }
 
+static zx_status_t handle_stats(void* ctx, const void* cmd,
+                                size_t cmdlen, void* reply, size_t max, size_t* out_actual);
+
 static zx_status_t blkdev_ioctl(void* ctx, uint32_t op, const void* cmd,
                                 size_t cmdlen, void* reply, size_t max, size_t* out_actual) {
     blkdev_t* blkdev = ctx;
@@ -222,7 +225,7 @@ static zx_status_t blkdev_ioctl(void* ctx, uint32_t op, const void* cmd,
         return status;
     }
     case IOCTL_BLOCK_GET_STATS: {
-        return blkdev->self_protocol.ops->get_stats(blkdev, cmd, cmdlen, reply, max, out_actual);
+        return handle_stats(blkdev, cmd, cmdlen, reply, max, out_actual);
     }
     default:
         // TODO: this may no longer be necessary now that we handle IOCTL_BLOCK_GET_INFO here
@@ -420,7 +423,6 @@ static zx_status_t handle_stats(void* ctx, const void* cmd,
 static block_impl_protocol_ops_t block_ops = {
     .query = blkdev_query,
     .queue = blkdev_queue,
-    .get_stats = handle_stats,
 };
 
 static zx_protocol_device_t blkdev_ops = {

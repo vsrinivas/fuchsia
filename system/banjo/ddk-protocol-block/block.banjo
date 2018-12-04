@@ -81,5 +81,4 @@ interface BlockImpl {
   /// before the queue() method returns.
   [Async]
   2: Queue(BlockOp? txn) -> (zx.status status, BlockOp? op);
-  3: GetStats(vector<voidptr> cmd) -> (zx.status s, vector<voidptr> reply);
 };
