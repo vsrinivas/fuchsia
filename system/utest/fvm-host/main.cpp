@@ -5,7 +5,7 @@
 #include <blobfs/lz4.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
-#include <fvm/container.h>
+#include <fvm-host/container.h>
 #include <minfs/host.h>
 #include <unittest/unittest.h>
 

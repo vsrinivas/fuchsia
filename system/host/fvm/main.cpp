@@ -7,8 +7,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
 #include <fvm/fvm-lz4.h>
-
-#include "fvm/container.h"
+#include <fvm-host/container.h>
 
 #define DEFAULT_SLICE_SIZE (8lu * (1 << 20))
 
@@ -198,12 +197,8 @@ int main(int argc, char** argv) {
             return -1;
         }
     } else if (!strcmp(command, "add")) {
-        fbl::AllocChecker ac;
-        fbl::unique_ptr<FvmContainer> fvmContainer(new (&ac) FvmContainer(path, slice_size, offset,
-                                                                          length));
-        if (!ac.check()) {
-            return ZX_ERR_NO_MEMORY;
-        }
+        fbl::unique_ptr<FvmContainer> fvmContainer(new FvmContainer(path, slice_size, offset,
+                                                                    length));
 
         if (add_partitions(fvmContainer.get(), argc - i, argv + i) < 0) {
             return -1;
@@ -225,12 +220,8 @@ int main(int argc, char** argv) {
             usage();
         }
 
-        fbl::AllocChecker ac;
-        fbl::unique_ptr<FvmContainer> fvmContainer(new (&ac) FvmContainer(path, slice_size, offset,
-                                                                          disk_size));
-        if (!ac.check()) {
-            return ZX_ERR_NO_MEMORY;
-        }
+        fbl::unique_ptr<FvmContainer> fvmContainer(new FvmContainer(path, slice_size, offset,
+                                                                    disk_size));
 
         if (fvmContainer->Extend(length) != ZX_OK) {
             return -1;

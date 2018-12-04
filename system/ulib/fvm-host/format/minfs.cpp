@@ -7,7 +7,7 @@
 
 #include <utility>
 
-#include "fvm/format.h"
+#include "fvm-host/format.h"
 
 MinfsFormat::MinfsFormat(fbl::unique_fd fd, const char* type)
     : Format() {

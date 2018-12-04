@@ -10,7 +10,7 @@
 #include <lib/fit/defer.h>
 #include <sys/ioctl.h>
 
-#include "fvm/container.h"
+#include "fvm-host/container.h"
 
 #if defined(__APPLE__)
 #include <sys/disk.h>
@@ -190,12 +190,8 @@ zx_status_t FvmInfo::Write(const fbl::unique_fd& fd, size_t disk_offset, size_t 
 
 zx_status_t FvmContainer::Create(const char* path, size_t slice_size, off_t offset, off_t length,
                                  fbl::unique_ptr<FvmContainer>* out) {
-    fbl::AllocChecker ac;
-    fbl::unique_ptr<FvmContainer> fvmContainer(new (&ac) FvmContainer(path, slice_size, offset,
-                                                                      length));
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
+    fbl::unique_ptr<FvmContainer> fvmContainer(new FvmContainer(path, slice_size, offset,
+                                                                length));
 
     zx_status_t status;
     if ((status = fvmContainer->Init()) != ZX_OK) {
@@ -407,12 +403,7 @@ zx_status_t FvmContainer::Extend(size_t disk_size) {
             continue;
         }
 
-        fbl::AllocChecker ac;
-        fbl::Array<uint8_t> data(new (&ac) uint8_t[slice_size_], slice_size_);
-
-        if (!ac.check()) {
-            return ZX_ERR_NO_MEMORY;
-        }
+        fbl::Array<uint8_t> data(new uint8_t[slice_size_], slice_size_);
 
         if (lseek(fd_.get(), fvm::SliceStart(disk_size_, slice_size_, index), SEEK_SET) < 0) {
             fprintf(stderr, "Cannot seek to slice %u in current FVM\n", index);
@@ -647,12 +638,7 @@ zx_status_t FvmInfo::Grow(size_t new_size) {
     }
 
     xprintf("Growing metadata from %zu to %zu\n", metadata_size_, new_size);
-    fbl::AllocChecker ac;
-    fbl::unique_ptr<uint8_t[]> new_metadata(new (&ac) uint8_t[new_size * 2]);
-    if (!ac.check()) {
-        fprintf(stderr, "Unable to acquire resources for new metadata\n");
-        return ZX_ERR_NO_MEMORY;
-    }
+    fbl::unique_ptr<uint8_t[]> new_metadata(new uint8_t[new_size * 2]);
 
     memcpy(new_metadata.get(), metadata_.get(), metadata_size_);
     memset(new_metadata.get() + metadata_size_, 0, new_size - metadata_size_);

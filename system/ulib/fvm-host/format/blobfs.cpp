@@ -6,7 +6,7 @@
 
 #include <utility>
 
-#include "fvm/format.h"
+#include "fvm-host/format.h"
 
 BlobfsFormat::BlobfsFormat(fbl::unique_fd fd, const char* type)
     : Format(), fd_(std::move(fd)) {

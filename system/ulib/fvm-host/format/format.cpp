@@ -4,7 +4,7 @@
 
 #include <utility>
 
-#include "fvm/format.h"
+#include "fvm-host/format.h"
 
 Format::Format() : fvm_ready_(false), vpart_index_(0),  flags_(0) {}
 
@@ -44,23 +44,14 @@ zx_status_t Format::Create(const char* path, const char* type, fbl::unique_ptr<F
         return status;
     }
 
-    fbl::AllocChecker ac;
     if (part == DISK_FORMAT_MINFS) {
         // Found minfs partition
-        fbl::unique_ptr<Format> minfsFormat(new (&ac) MinfsFormat(std::move(fd), type));
-        if (!ac.check()) {
-            return ZX_ERR_NO_MEMORY;
-        }
-
+        fbl::unique_ptr<Format> minfsFormat(new MinfsFormat(std::move(fd), type));
         *out = std::move(minfsFormat);
         return ZX_OK;
     } else if (part == DISK_FORMAT_BLOBFS) {
         // Found blobfs partition
-        fbl::unique_ptr<Format> blobfsFormat(new (&ac) BlobfsFormat(std::move(fd), type));
-        if (!ac.check()) {
-            return ZX_ERR_NO_MEMORY;
-        }
-
+        fbl::unique_ptr<Format> blobfsFormat(new  BlobfsFormat(std::move(fd), type));
         *out = std::move(blobfsFormat);
         return ZX_OK;
     }

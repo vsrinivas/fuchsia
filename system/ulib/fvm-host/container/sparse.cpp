@@ -5,7 +5,7 @@
 #include <inttypes.h>
 #include <utility>
 
-#include "fvm/container.h"
+#include "fvm-host/container.h"
 
 constexpr size_t kLz4HeaderSize = 15;
 
@@ -231,13 +231,8 @@ zx_status_t SparsePaver::WriteSlice(size_t* bytes_left, fvm::SparseReader* reade
 
 zx_status_t SparseContainer::Create(const char* path, size_t slice_size, uint32_t flags,
                                     fbl::unique_ptr<SparseContainer>* out) {
-    fbl::AllocChecker ac;
-    fbl::unique_ptr<SparseContainer> sparseContainer(new (&ac) SparseContainer(path, slice_size,
-                                                                               flags));
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
-
+    fbl::unique_ptr<SparseContainer> sparseContainer(new SparseContainer(path, slice_size,
+                                                                         flags));
     zx_status_t status;
     if ((status = sparseContainer->Init()) != ZX_OK) {
         return status;

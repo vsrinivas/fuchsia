@@ -8,7 +8,7 @@
 
 #include <utility>
 
-#include "fvm/container.h"
+#include "fvm-host/container.h"
 
 zx_status_t Container::Create(const char* path, off_t offset, off_t length,
                               uint32_t flags, fbl::unique_ptr<Container>* container) {
@@ -34,16 +34,12 @@ zx_status_t Container::Create(const char* path, off_t offset, off_t length,
         return -1;
     }
 
-    fbl::AllocChecker ac;
     if (!memcmp(data, fvm_magic, sizeof(fvm_magic))) {
         fvm::fvm_t* sb = reinterpret_cast<fvm::fvm_t*>(data);
 
         // Found fvm container
-        fbl::unique_ptr<Container> fvmContainer(new (&ac) FvmContainer(path, sb->slice_size,
-                                                                       offset, length));
-        if (!ac.check()) {
-            return ZX_ERR_NO_MEMORY;
-        }
+        fbl::unique_ptr<Container> fvmContainer(new FvmContainer(path, sb->slice_size,
+                                                                 offset, length));
         *container = std::move(fvmContainer);
         return ZX_OK;
     }
@@ -56,13 +52,8 @@ zx_status_t Container::Create(const char* path, off_t offset, off_t length,
         }
 
         // Found sparse container
-        fbl::unique_ptr<Container> sparseContainer(new (&ac) SparseContainer(path,
-                                                                             image->slice_size,
-                                                                             flags));
-        if (!ac.check()) {
-            return ZX_ERR_NO_MEMORY;
-        }
-
+        fbl::unique_ptr<Container> sparseContainer(new SparseContainer(path, image->slice_size,
+                                                                       flags));
         *container = std::move(sparseContainer);
         return ZX_OK;
     }
