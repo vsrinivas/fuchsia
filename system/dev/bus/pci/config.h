@@ -4,10 +4,9 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef ZIRCON_SYSTEM_DEV_BUS_PCI_CONFIG_H_
-#define ZIRCON_SYSTEM_DEV_BUS_PCI_CONFIG_H_
-
-#include <ddk/protocol/pciroot.h>
+#pragma once
+#include <ddktl/protocol/pciroot.h>
+#include <ddk/mmio-buffer.h>
 #include <endian.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/ref_counted.h>
@@ -126,6 +125,10 @@ public:
     inline pci_bdf_t bdf() const { return bdf_; }
     virtual const char* type(void) const = 0;
 
+    // Convenience
+    uint16_t vendor_id() const { return Read(kVendorId); }
+    uint16_t device_id() const { return Read(kDeviceId); }
+
     // Virtuals
     void DumpConfig(uint16_t len) const;
     virtual uint8_t Read(const PciReg8 addr) const = 0;
@@ -147,7 +150,11 @@ protected:
 // ecam and can be directly accessed with standard IO operations.t
 class MmioConfig final : public Config {
 public:
-    static fbl::RefPtr<Config> Create(pci_bdf_t bdf, void* ecam_base, uint8_t bus_base);
+    static zx_status_t Create(pci_bdf_t bdf,
+                       mmio_buffer_t* ecam_,
+                       uint8_t start_bus,
+                       uint8_t end_bus,
+                       fbl::RefPtr<Config>* config);
     uint8_t Read(const PciReg8 addr) const final;
     uint16_t Read(const PciReg16 addr) const final;
     uint32_t Read(const PciReg32 addr) const final;
@@ -164,15 +171,17 @@ private:
 
 // ProxyConfig is used with PCI buses that do not support MMIO config space,
 // or require special controller configuration before config access. Examples
-// of this are IO config on x64 due to needing to asynchronize CF8/CFC with
+// of this are IO config on x64 due to needing to synchronize CF8/CFC with
 // ACPI, and Designware on ARM where the controller needs to be configured to
 // map a given device's configuration space in before access.
 //
-// For proxy configuration access all operatiosn are passed to the pciroot
+// For proxy configuration access all operations are passed to the pciroot
 // protocol implementation hosted in the same devhost as the pci bus driver.
 class ProxyConfig final : public Config {
 public:
-    static fbl::RefPtr<Config> Create(pci_bdf_t bdf, pciroot_protocol_t* proto);
+    static zx_status_t Create(pci_bdf_t bdf,
+                              ddk::PcirootProtocolProxy* proto,
+                              fbl::RefPtr<Config>* config);
     uint8_t Read(const PciReg8 addr) const final;
     uint16_t Read(const PciReg16 addr) const final;
     uint32_t Read(const PciReg32 addr) const final;
@@ -182,13 +191,10 @@ public:
     const char* type(void) const final;
 
 private:
-    ProxyConfig(pci_bdf_t bdf, pciroot_protocol_t* proto)
-        : Config(bdf), ops_(proto->ops), ctx_(proto->ctx) {}
-    // These ops are owned by the bus driver and will outlive any config
-    // class instances
-    const pciroot_protocol_ops_t* ops_;
-    void* ctx_;
+    ProxyConfig(pci_bdf_t bdf, ddk::PcirootProtocolProxy* proto)
+        : Config(bdf), pciroot_(proto) {}
+    // The bus driver outlives config objects.
+    ddk::PcirootProtocolProxy* const pciroot_;
 };
 
 } // namespace pci
-#endif // ZIRCON_SYSTEM_DEV_BUS_PCI_CONFIG_H_

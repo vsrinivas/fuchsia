@@ -39,7 +39,7 @@ zx_status_t Bus::Create(zx_device_t* parent) {
     // Grab the info beforehand so we can get segment/bus information from it
     // and appropriately name our DDK device.
     pci_platform_info_t info;
-    status = bus->GetPciPlatformInfo(&info);
+    status = bus->pciroot().GetPciPlatformInfo(&info);
     if (status != ZX_OK) {
         pci_errorf("failed to obtain platform information: %d!\n", status);
         return status;
@@ -52,6 +52,24 @@ zx_status_t Bus::Create(zx_device_t* parent) {
              info.end_bus_num);
 
     return bus->DdkAdd(name);
+}
+
+zx_status_t Bus::Initialize() {
+    zx_status_t status = pciroot_.GetPciPlatformInfo(&info_);
+    if (status != ZX_OK) {
+        pci_errorf("failed to obtain platform information: %d!\n", status);
+        return status;
+    }
+
+    if (info_.ecam_vmo != ZX_HANDLE_INVALID) {
+        if ((status = MapEcam()) != ZX_OK) {
+            pci_errorf("failed to map ecam: %d!\n", status);
+            return status;
+        }
+    }
+
+    ScanDownstream();
+    return ZX_OK;
 }
 
 // Maps a vmo as an mmio_buffer to be used as this Bus driver's ECAM region
@@ -74,32 +92,37 @@ zx_status_t Bus::MapEcam(void) {
 
     pci_infof("ecam for segment %u mapped at %p (size: %#zx)\n", info_.segment_group,
               ecam_.vaddr, ecam_.size);
+    has_ecam_ = true;
     return ZX_OK;
 }
 
-zx_status_t Bus::Initialize() {
-    // Temporarily dump the config of bdf 00:00.0 to show proxy config
-    // is working properly.
-    pci_bdf_t bdf = {0, 0, 0};
-
-    zx_status_t status = GetPciPlatformInfo(&info_);
-    if (status != ZX_OK) {
-        pci_errorf("failed to obtain platform information: %d!\n", status);
-        return status;
-    }
-
-    if (info_.ecam_vmo != ZX_HANDLE_INVALID) {
-        if ((status = MapEcam()) != ZX_OK) {
-            return status;
-        }
-
-        // Temporary code to demonstrate MMIO works
-        auto cfg = MmioConfig::Create(bdf, ecam_.vaddr, info_.start_bus_num);
-        if (cfg) {
-            cfg->DumpConfig(PCI_BASE_CONFIG_SIZE);
-        }
+zx_status_t Bus::MakeConfig(pci_bdf_t bdf, fbl::RefPtr<Config>* config) {
+    if (has_ecam_) {
+        return MmioConfig::Create(bdf, &ecam_, info_.start_bus_num, info_.end_bus_num, config);
     } else {
-        pci_errorf("couldn't find vmo for ecam!\n");
+        return ProxyConfig::Create(bdf, &pciroot_, config);
+    }
+}
+
+// Scan downstream starting at the start bus number provided to use by the platform.
+// In the process of scanning, take note of bridges found and configure any that are
+// unconfigured. In the end the Bus should have a list of all devides, and all bridges
+// should have a list of references to their own downstream devices.
+zx_status_t Bus::ScanDownstream(void) {
+    pci_infof("ScanDownstream %u:%u\n", info_.start_bus_num, info_.end_bus_num);
+    for (uint16_t bus_id = info_.start_bus_num; bus_id <= info_.end_bus_num; bus_id++) {
+        for (uint8_t dev_id = 0; dev_id < PCI_MAX_DEVICES_PER_BUS; dev_id++) {
+            for (uint8_t func_id = 0; func_id < PCI_MAX_FUNCTIONS_PER_DEVICE; func_id++) {
+                fbl::RefPtr<Config> config;
+                pci_bdf_t bdf = { static_cast<uint8_t>(bus_id), dev_id, func_id };
+                zx_status_t status = MakeConfig(bdf, &config);
+                if (status == ZX_OK) {
+                    if (config->vendor_id() != 0xFFFF) {
+                        pci_infof("found device at %02x:%02x.%1x\n", bus_id, dev_id, func_id);
+                    }
+                }
+            }
+        }
     }
 
     return ZX_OK;
