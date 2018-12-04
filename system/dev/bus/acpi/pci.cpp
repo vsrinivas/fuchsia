@@ -406,8 +406,9 @@ zx_status_t pci_init(zx_device_t* parent,
         pinfo.start_bus_num = mcfg_alloc.start_bus_num;
         pinfo.end_bus_num = mcfg_alloc.end_bus_num;
 
-        // The bus driver needs a VMO representing the entire ecam region so it can map it in
-        size_t ecam_size = (pinfo.end_bus_num - pinfo.start_bus_num) * PCIE_ECAM_BYTES_PER_BUS;
+        // The bus driver needs a VMO representing the entire ecam region so it can map it in.
+        // The range from start_bus_num to end_bus_num is inclusive.
+        size_t ecam_size = (pinfo.end_bus_num - pinfo.start_bus_num + 1) * PCIE_ECAM_BYTES_PER_BUS;
         zx_paddr_t vmo_base = mcfg_alloc.base_address +
                               (pinfo.start_bus_num * PCIE_ECAM_BYTES_PER_BUS);
         status = zx_vmo_create_physical(get_root_resource(), vmo_base, ecam_size, &pinfo.ecam_vmo);
