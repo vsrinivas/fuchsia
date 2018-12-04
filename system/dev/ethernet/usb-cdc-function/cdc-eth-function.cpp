@@ -60,6 +60,8 @@ typedef struct {
     uint8_t bulk_in_addr;
     uint8_t intr_addr;
     uint16_t bulk_max_packet;
+
+    size_t parent_req_size;
 } usb_cdc_t;
 
 typedef struct txn_info {
@@ -224,7 +226,7 @@ static zx_status_t cdc_send_locked(usb_cdc_t* cdc, ethmac_netbuf_t* netbuf) {
     size_t length = netbuf->data_size;
 
     // Make sure that we can get all of the tx buffers we need to use
-    usb_request_t* tx_req = list_remove_head_type(&cdc->bulk_in_reqs, usb_request_t, node);
+    usb_request_t* tx_req = usb_req_list_remove_head(&cdc->bulk_in_reqs, cdc->parent_req_size);
     if (tx_req == NULL) {
         return ZX_ERR_SHOULD_WAIT;
     }
@@ -236,7 +238,9 @@ static zx_status_t cdc_send_locked(usb_cdc_t* cdc, ethmac_netbuf_t* netbuf) {
     if (bytes_copied < 0) {
         zxlogf(LERROR, "%s: failed to copy data into send req (error %zd)\n", __func__,
                 bytes_copied);
-        list_add_tail(&cdc->bulk_in_reqs, &tx_req->node);
+        zx_status_t status = usb_req_list_add_tail(&cdc->bulk_in_reqs, tx_req,
+                                                   cdc->parent_req_size);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
         return ZX_ERR_INTERNAL;
     }
 
@@ -293,7 +297,8 @@ static void cdc_intr_complete(usb_request_t* req, void* cookie) {
     zxlogf(LTRACE, "%s %d %ld\n", __func__, req->response.status, req->response.actual);
 
     mtx_lock(&cdc->intr_mutex);
-    list_add_tail(&cdc->intr_reqs, &req->node);
+    zx_status_t status = usb_req_list_add_tail(&cdc->intr_reqs, req, cdc->parent_req_size);
+    ZX_DEBUG_ASSERT(status == ZX_OK);
     mtx_unlock(&cdc->intr_mutex);
 }
 
@@ -333,7 +338,7 @@ static void cdc_send_notifications(usb_cdc_t* cdc) {
     }
 
     mtx_lock(&cdc->intr_mutex);
-    req = list_remove_head_type(&cdc->intr_reqs, usb_request_t, node);
+    req = usb_req_list_remove_head(&cdc->intr_reqs, cdc->parent_req_size);
     mtx_unlock(&cdc->intr_mutex);
     if (!req) {
         zxlogf(ERROR, "%s: no interrupt request available\n", __func__);
@@ -345,7 +350,7 @@ static void cdc_send_notifications(usb_cdc_t* cdc) {
     usb_function_queue(&cdc->function, req);
 
     mtx_lock(&cdc->intr_mutex);
-    req = list_remove_head_type(&cdc->intr_reqs, usb_request_t, node);
+    req = usb_req_list_remove_head(&cdc->intr_reqs, cdc->parent_req_size);
     mtx_unlock(&cdc->intr_mutex);
     if (!req) {
         zxlogf(ERROR, "%s: no interrupt request available\n", __func__);
@@ -364,7 +369,8 @@ static void cdc_rx_complete(usb_request_t* req, void* cookie) {
 
     if (req->response.status == ZX_ERR_IO_NOT_PRESENT) {
         mtx_lock(&cdc->rx_mutex);
-        list_add_head(&cdc->bulk_out_reqs, &req->node);
+        zx_status_t status = usb_req_list_add_head(&cdc->bulk_out_reqs, req, cdc->parent_req_size);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
         mtx_unlock(&cdc->rx_mutex);
         return;
     }
@@ -392,7 +398,8 @@ static void cdc_tx_complete(usb_request_t* req, void* cookie) {
     zxlogf(LTRACE, "%s %d %ld\n", __func__, req->response.status, req->response.actual);
 
     mtx_lock(&cdc->tx_mutex);
-    list_add_tail(&cdc->bulk_in_reqs, &req->node);
+    zx_status_t status = usb_req_list_add_tail(&cdc->bulk_in_reqs, req, cdc->parent_req_size);
+    ZX_DEBUG_ASSERT(status == ZX_OK);
 
     bool additional_tx_queued = false;
     txn_info_t* txn;
@@ -497,7 +504,8 @@ static zx_status_t cdc_set_interface(void* ctx, unsigned interface, unsigned alt
         // queue our OUT reqs
         mtx_lock(&cdc->rx_mutex);
         usb_request_t* req;
-        while ((req = list_remove_head_type(&cdc->bulk_out_reqs, usb_request_t, node)) != NULL) {
+        while ((req = usb_req_list_remove_head(&cdc->bulk_out_reqs,
+                                               cdc->parent_req_size)) != NULL) {
             usb_function_queue(&cdc->function, req);
         }
         mtx_unlock(&cdc->rx_mutex);
@@ -546,13 +554,13 @@ static void usb_cdc_release(void* ctx) {
     auto* cdc = static_cast<usb_cdc_t*>(ctx);
     usb_request_t* req;
 
-    while ((req = list_remove_head_type(&cdc->bulk_out_reqs, usb_request_t, node)) != NULL) {
+    while ((req = usb_req_list_remove_head(&cdc->bulk_out_reqs, cdc->parent_req_size)) != NULL) {
         usb_request_release(req);
     }
-    while ((req = list_remove_head_type(&cdc->bulk_in_reqs, usb_request_t, node)) != NULL) {
+    while ((req = usb_req_list_remove_head(&cdc->bulk_in_reqs, cdc->parent_req_size)) != NULL) {
         usb_request_release(req);
     }
-    while ((req = list_remove_head_type(&cdc->intr_reqs, usb_request_t, node)) != NULL) {
+    while ((req = usb_req_list_remove_head(&cdc->intr_reqs, cdc->parent_req_size)) != NULL) {
         usb_request_release(req);
     }
     mtx_destroy(&cdc->ethmac_mutex);
@@ -600,7 +608,8 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
     intf.ctx = cdc;
 
     cdc->bulk_max_packet = BULK_MAX_PACKET; // FIXME(voydanoff) USB 3.0 support
-    size_t parent_req_size = usb_function_get_request_size(&cdc->function);
+    cdc->parent_req_size = usb_function_get_request_size(&cdc->function);
+    uint64_t req_size = cdc->parent_req_size + sizeof(usb_req_internal_t);
 
     status = usb_function_alloc_interface(&cdc->function, &descriptors.comm_intf.bInterfaceNumber);
     if (status != ZX_OK) {
@@ -644,17 +653,18 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
     // allocate bulk out usb requests
     usb_request_t* req;
     for (int i = 0; i < BULK_TX_COUNT; i++) {
-        status = usb_request_alloc(&req, BULK_REQ_SIZE, cdc->bulk_out_addr, parent_req_size);
+        status = usb_request_alloc(&req, BULK_REQ_SIZE, cdc->bulk_out_addr, req_size);
         if (status != ZX_OK) {
             goto fail;
         }
         req->complete_cb = cdc_rx_complete;
         req->cookie = cdc;
-        list_add_head(&cdc->bulk_out_reqs, &req->node);
+        status = usb_req_list_add_head(&cdc->bulk_out_reqs, req, cdc->parent_req_size);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
     }
     // allocate bulk in usb requests
     for (int i = 0; i < BULK_RX_COUNT; i++) {
-        status = usb_request_alloc(&req, BULK_REQ_SIZE, cdc->bulk_in_addr, parent_req_size);
+        status = usb_request_alloc(&req, BULK_REQ_SIZE, cdc->bulk_in_addr, req_size);
         if (status != ZX_OK) {
             goto fail;
         }
@@ -665,19 +675,21 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
 
         req->complete_cb = cdc_tx_complete;
         req->cookie = cdc;
-        list_add_head(&cdc->bulk_in_reqs, &req->node);
+        status = usb_req_list_add_head(&cdc->bulk_in_reqs, req, cdc->parent_req_size);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
     }
 
     // allocate interrupt requests
     for (int i = 0; i < INTR_COUNT; i++) {
-        status = usb_request_alloc(&req, INTR_MAX_PACKET, cdc->intr_addr, parent_req_size);
+        status = usb_request_alloc(&req, INTR_MAX_PACKET, cdc->intr_addr, req_size);
         if (status != ZX_OK) {
             goto fail;
         }
 
         req->complete_cb = cdc_intr_complete;
         req->cookie = cdc;
-        list_add_head(&cdc->intr_reqs, &req->node);
+        status = usb_req_list_add_head(&cdc->intr_reqs, req, cdc->parent_req_size);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
     }
 
     args.version = DEVICE_ADD_ARGS_VERSION;

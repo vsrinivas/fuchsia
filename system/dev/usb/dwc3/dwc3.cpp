@@ -331,7 +331,9 @@ static zx_status_t dwc3_get_bti(void* ctx, zx_handle_t* out_handle) {
 }
 
 static size_t dwc3_get_request_size(void* ctx) {
-    return sizeof(usb_request_t);
+    //Allocate usb_req_internal_t after usb_request_t, to accommodate queueing in
+    //the dwc3 layer.
+    return sizeof(usb_request_t) + sizeof(usb_req_internal_t);
 }
 
 usb_dci_protocol_ops_t dwc_dci_ops = {

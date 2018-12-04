@@ -114,7 +114,7 @@ static void dwc3_ep_queue_next_locked(dwc3_t* dwc, dwc3_endpoint_t* ep) {
     usb_request_t* req;
 
     if (ep->current_req == nullptr && ep->got_not_ready &&
-        (req = list_remove_head_type(&ep->queued_reqs, usb_request_t, node)) != nullptr) {
+        (req = usb_req_list_remove_head(&ep->queued_reqs, sizeof(usb_request_t))) != nullptr) {
         ep->current_req = req;
         ep->got_not_ready = false;
         if (EP_IN(ep->ep_num)) {
@@ -212,7 +212,8 @@ void dwc3_ep_queue(dwc3_t* dwc, unsigned ep_num, usb_request_t* req) {
         return;
     }
 
-    list_add_tail(&ep->queued_reqs, &req->node);
+    zx_status_t status = usb_req_list_add_tail(&ep->queued_reqs, req, sizeof(usb_request_t));
+    ZX_DEBUG_ASSERT(status == ZX_OK);
 
     if (dwc->configured) {
         dwc3_ep_queue_next_locked(dwc, ep);
@@ -353,7 +354,7 @@ void dwc3_ep_end_transfers(dwc3_t* dwc, unsigned ep_num, zx_status_t reason) {
     }
 
     usb_request_t* req;
-    while ((req = list_remove_head_type(&ep->queued_reqs, usb_request_t, node)) != nullptr) {
+    while ((req = usb_req_list_remove_head(&ep->queued_reqs, sizeof(usb_request_t))) != nullptr) {
         usb_request_complete(req, reason, 0, req->complete_cb, req->cookie);
     }
 }

@@ -54,6 +54,7 @@ struct usb_test_t {
     uint8_t bulk_out_addr;
     uint8_t bulk_in_addr;
     uint8_t intr_addr;
+    size_t parent_req_size;
 };
 
 namespace {
@@ -107,7 +108,8 @@ void test_intr_complete(usb_request_t* req, void* cookie) {
     zxlogf(LTRACE, "%s %d %ld\n", __func__, req->response.status, req->response.actual);
 
     fbl::AutoLock lock(&test->lock);
-    list_add_tail(&test->intr_reqs, &req->node);
+    zx_status_t status = usb_req_list_add_tail(&test->intr_reqs, req, test->parent_req_size);
+    ZX_DEBUG_ASSERT(status == ZX_OK);
 }
 
 void test_bulk_out_complete(usb_request_t* req, void* cookie) {
@@ -117,12 +119,15 @@ void test_bulk_out_complete(usb_request_t* req, void* cookie) {
 
     if (req->response.status == ZX_ERR_IO_NOT_PRESENT) {
         fbl::AutoLock lock(&test->lock);
-        list_add_head(&test->bulk_out_reqs, &req->node);
+        zx_status_t status = usb_req_list_add_head(&test->bulk_out_reqs, req,
+                                                   test->parent_req_size);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
         return;
     }
     if (req->response.status == ZX_OK) {
         test->lock.Acquire();
-        usb_request_t* in_req = list_remove_head_type(&test->bulk_in_reqs, usb_request_t, node);
+        usb_request_t* in_req = usb_req_list_remove_head(&test->bulk_in_reqs,
+                                                         test->parent_req_size);
         test->lock.Release();
         if (in_req) {
             // Send data back to host.
@@ -149,7 +154,8 @@ void test_bulk_in_complete(usb_request_t* req, void* cookie) {
     zxlogf(LTRACE, "%s %d %ld\n", __func__, req->response.status, req->response.actual);
 
     fbl::AutoLock lock(&test->lock);
-    list_add_tail(&test->bulk_in_reqs, &req->node);
+    zx_status_t status = usb_req_list_add_tail(&test->bulk_in_reqs, req, test->parent_req_size);
+    ZX_DEBUG_ASSERT(status == ZX_OK);
 }
 
 const usb_descriptor_header_t* test_get_descriptors(void* ctx, size_t* out_length) {
@@ -187,7 +193,7 @@ zx_status_t test_control(void* ctx, const usb_setup_t* setup, void* buffer,
     } else if (setup->bmRequestType == (USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_INTERFACE) &&
         setup->bRequest == USB_PERIPHERAL_TEST_SEND_INTERUPT) {
         test->lock.Acquire();
-        usb_request_t* req = list_remove_head_type(&test->intr_reqs, usb_request_t, node);
+        usb_request_t* req = usb_req_list_remove_head(&test->intr_reqs, test->parent_req_size);
         test->lock.Release();
         if (!req) {
             zxlogf(ERROR, "%s: no interrupt request available\n", __func__);
@@ -229,7 +235,7 @@ zx_status_t test_set_configured(void* ctx, bool configured, usb_speed_t speed) {
     if (configured) {
         // Queue our OUT requests.
         usb_request_t* req;
-        while ((req = list_remove_head_type(&test->bulk_out_reqs, usb_request_t, node)) != NULL) {
+        while ((req = usb_req_list_remove_head(&test->bulk_out_reqs, test->parent_req_size)) != NULL) {
             usb_function_queue(&test->function, req);
         }
     }
@@ -260,13 +266,13 @@ void usb_test_release(void* ctx) {
     auto* test = static_cast<usb_test_t*>(ctx);
     usb_request_t* req;
 
-    while ((req = list_remove_head_type(&test->bulk_out_reqs, usb_request_t, node)) != NULL) {
+    while ((req = usb_req_list_remove_head(&test->bulk_out_reqs, test->parent_req_size)) != NULL) {
         usb_request_release(req);
     }
-    while ((req = list_remove_head_type(&test->bulk_in_reqs, usb_request_t, node)) != NULL) {
+    while ((req = usb_req_list_remove_head(&test->bulk_in_reqs, test->parent_req_size)) != NULL) {
         usb_request_release(req);
     }
-    while ((req = list_remove_head_type(&test->intr_reqs, usb_request_t, node)) != NULL) {
+    while ((req = usb_req_list_remove_head(&test->intr_reqs, test->parent_req_size)) != NULL) {
         usb_request_release(req);
     }
     free(test);
@@ -296,7 +302,8 @@ zx_status_t usb_test_bind(void* ctx, zx_device_t* parent) {
         return status;
     }
 
-    size_t parent_req_size = usb_function_get_request_size(&test->function);
+    test->parent_req_size = usb_function_get_request_size(&test->function);
+    uint64_t req_size = test->parent_req_size + sizeof(usb_req_internal_t);
 
     list_initialize(&test->bulk_out_reqs);
     list_initialize(&test->bulk_in_reqs);
@@ -336,36 +343,39 @@ zx_status_t usb_test_bind(void* ctx, zx_device_t* parent) {
     // Allocate bulk out usb requests.
     usb_request_t* req;
     for (size_t i = 0; i < BULK_TX_COUNT; i++) {
-        status = usb_request_alloc(&req, BULK_REQ_SIZE, test->bulk_out_addr, parent_req_size);
+        status = usb_request_alloc(&req, BULK_REQ_SIZE, test->bulk_out_addr, req_size);
         if (status != ZX_OK) {
             goto fail;
         }
         req->complete_cb = test_bulk_out_complete;
         req->cookie = test;
-        list_add_head(&test->bulk_out_reqs, &req->node);
+        status = usb_req_list_add_head(&test->bulk_out_reqs, req, test->parent_req_size);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
     }
     // Allocate bulk in usb requests.
     for (size_t i = 0; i < BULK_RX_COUNT; i++) {
-        status = usb_request_alloc(&req, BULK_REQ_SIZE, test->bulk_in_addr, parent_req_size);
+        status = usb_request_alloc(&req, BULK_REQ_SIZE, test->bulk_in_addr, req_size);
         if (status != ZX_OK) {
             goto fail;
         }
 
         req->complete_cb = test_bulk_in_complete;
         req->cookie = test;
-        list_add_head(&test->bulk_in_reqs, &req->node);
+        status = usb_req_list_add_head(&test->bulk_in_reqs, req, test->parent_req_size);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
     }
 
     // Allocate interrupt requests.
     for (size_t i = 0; i < INTR_COUNT; i++) {
-        status = usb_request_alloc(&req, INTR_REQ_SIZE, test->intr_addr, parent_req_size);
+        status = usb_request_alloc(&req, INTR_REQ_SIZE, test->intr_addr, req_size);
         if (status != ZX_OK) {
             goto fail;
         }
 
         req->complete_cb = test_intr_complete;
         req->cookie = test;
-        list_add_head(&test->intr_reqs, &req->node);
+        status = usb_req_list_add_head(&test->intr_reqs, req, test->parent_req_size);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
     }
 
     args.version = DEVICE_ADD_ARGS_VERSION;
