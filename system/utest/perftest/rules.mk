@@ -20,6 +20,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/runner-test.cpp \
     $(LOCAL_DIR)/sleep-test.cpp \
     $(LOCAL_DIR)/syscalls-test.cpp \
+    $(LOCAL_DIR)/timer-test.cpp \
 
 MODULE_NAME := perf-test
 
