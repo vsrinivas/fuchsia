@@ -30,6 +30,11 @@ mod fifo;
 pub use self::fifo::{Fifo, FifoEntry, FifoReadable, FifoWritable, ReadEntry, WriteEntry};
 pub mod net;
 
+// Rexport pin_mut as its used by the async proc macros
+pub use pin_utils::pin_mut;
+
+pub use fuchsia_async_macro::{run, run_singlethreaded, run_until_stalled};
+
 // TODO(cramertj) remove once async/awaitification has occurred
 pub mod temp;
 
