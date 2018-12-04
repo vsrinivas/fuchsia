@@ -31,6 +31,7 @@ fx gce create-fuchsia-image
 fx gce create-instance
 sleep 60
 fx gce serial
+fx gce delete-instance
 ```
 
 ## How the sausage is made
@@ -62,3 +63,6 @@ finds one, it shifts the first argument and execs that script.
    have an appropriately configured compute engine ssh key for this to work. If
    you have a more tuned ssh configuration, you may need to add
    `~/.ssh/google_compute_engine` to your `ssh-agent`.
+ * create-instance - create a GCE instance running fuchsia based on the most
+   recently created fuchsia image.
+ * delete-instance - deletes a GCE instance created by `create-instance`.
