@@ -323,7 +323,6 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
         common::WriteVhtCapabilities(&elem_w, vht_cap);
     }
 
-    ZX_DEBUG_ASSERT(assoc->Validate(elem_w.WrittenData()));
     packet->set_len(w.WrittenBytes() + elem_w.WrittenBytes());
 
     finspect("Outbound Mgmt Frame (AssocReq): %s\n", debug::Describe(*mgmt_hdr).c_str());

@@ -80,48 +80,6 @@ static fbl::unique_ptr<Packet> GetPacket(size_t len) {
 using DefaultTripleHdrFrame = TripleHdrFrame<0, 10>;
 using PaddedTripleHdrFrame = TripleHdrFrame<4, 10>;
 
-TEST(ProbeRequest, Validate) {
-    uint8_t buf[128];
-    BufferWriter writer(buf);
-
-    const uint8_t ssid[] = {'t', 'e', 's', 't', ' ', 's', 's', 'i', 'd'};
-    common::WriteSsid(&writer, ssid);
-
-    std::vector<SupportedRate> rates{SupportedRate(2), SupportedRate(4), SupportedRate(11),
-                                     SupportedRate(22)};
-    common::WriteSupportedRates(&writer, rates);
-
-    auto probe_request = FromBytes<ProbeRequest>(buf, writer.WrittenBytes());
-    EXPECT_TRUE(probe_request->Validate(writer.WrittenData()));
-}
-
-TEST(ProbeRequest, OutOfOrderElements) {
-    uint8_t buf[128];
-    BufferWriter writer(buf);
-
-    std::vector<SupportedRate> rates{SupportedRate(2), SupportedRate(4), SupportedRate(11),
-                                     SupportedRate(22)};
-    common::WriteSupportedRates(&writer, rates);
-
-    const uint8_t ssid[] = {'t', 'e', 's', 't', ' ', 's', 's', 'i', 'd'};
-    common::WriteSsid(&writer, ssid);
-
-    auto probe_request = FromBytes<ProbeRequest>(buf, writer.WrittenBytes());
-    EXPECT_FALSE(probe_request->Validate(writer.WrittenData()));
-}
-
-TEST(ProbeRequest, InvalidElement) {
-    uint8_t buf[128];
-    BufferWriter writer(buf);
-
-    const uint8_t ssid[] = {'t', 'e', 's', 't', ' ', 's', 's', 'i', 'd'};
-    common::WriteSsid(&writer, ssid);
-    common::WriteCfParamSet(&writer, {1, 2, 3, 4});
-
-    auto probe_request = FromBytes<ProbeRequest>(buf, writer.WrittenBytes());
-    EXPECT_FALSE(probe_request->Validate(writer.WrittenData()));
-}
-
 TEST(Frame, General) {
     // Construct initial frame
     auto pkt = GetPacket(DefaultTripleHdrFrame::len());

@@ -10,6 +10,7 @@
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/service.h>
 #include <wlan/mlme/timer.h>
+#include <wlan/mlme/validate_frame.h>
 
 #include <fbl/unique_ptr.h>
 #include <fuchsia/wlan/mlme/c/fidl.h>
@@ -188,7 +189,7 @@ struct ClientTest : public ::testing::Test {
         ASSERT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
         auto assoc_req_frame = frame.NextFrame();
         Span<const uint8_t> ie_chain{assoc_req_frame.body()->data, assoc_req_frame.body_len()};
-        ASSERT_TRUE(frame.body()->Validate(ie_chain));
+        ASSERT_TRUE(ValidateFrame("invalid assoc request", *pkt));
 
         bool has_ssid = false;
         bool has_rsne = false;

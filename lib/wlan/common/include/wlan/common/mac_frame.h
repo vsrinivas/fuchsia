@@ -477,8 +477,6 @@ struct Beacon {
     static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kBeacon; }
     static constexpr size_t max_len() { return sizeof(Beacon); }
 
-    bool Validate(Span<const uint8_t> ie_chain) const;
-
     // 9.4.1.10
     uint64_t timestamp;
     // 9.4.1.3
@@ -494,8 +492,6 @@ struct ProbeRequest {
     static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kProbeRequest; }
     static constexpr size_t max_len() { return sizeof(ProbeRequest); }
 
-    bool Validate(Span<const uint8_t> ie_chain) const;
-
     size_t hdr_len() { return 0; }
 
     constexpr size_t len() const { return sizeof(*this); }
@@ -505,8 +501,6 @@ struct ProbeRequest {
 struct ProbeResponse {
     static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kProbeResponse; }
     static constexpr size_t max_len() { return sizeof(ProbeResponse); }
-
-    bool Validate(Span<const uint8_t> ie_chain) const;
 
     // 9.4.1.10
     uint64_t timestamp;
@@ -532,10 +526,6 @@ enum AuthAlgorithm : uint16_t {
 struct Authentication {
     static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kAuthentication; }
     static constexpr size_t max_len() { return sizeof(Authentication); }
-
-    // TODO(tkilbourn): bool Validate(Span<const uint8_t> ie_chain)
-    // Authentication frames are complicated, so when we need more than Open
-    // System auth, figure out how to proceed.
 
     // 9.4.1.1
     uint16_t auth_algorithm_number;
@@ -563,8 +553,6 @@ struct AssociationRequest {
     static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kAssociationRequest; }
     static constexpr size_t max_len() { return sizeof(AssociationRequest); }
 
-    bool Validate(Span<const uint8_t> ie_chain) const;
-
     // 9.4.1.4
     CapabilityInfo cap;
     // 9.4.1.6
@@ -579,8 +567,6 @@ constexpr uint16_t kAidMask = (1 << 11) - 1;
 struct AssociationResponse {
     static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kAssociationResponse; }
     static constexpr size_t max_len() { return sizeof(AssociationResponse); }
-
-    bool Validate(Span<const uint8_t> ie_chain) const;
 
     // 9.4.1.4
     CapabilityInfo cap;

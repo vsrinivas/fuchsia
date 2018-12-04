@@ -131,10 +131,11 @@ MlmeMsg<wlan_mlme::JoinRequest> CreateJoinRequest(bool rsn) {
     auto req = wlan_mlme::JoinRequest::New();
     req->join_failure_timeout = kJoinTimeout;
     req->nav_sync_delay = 20;
-    req->op_rate_set.reset({10, 22, 34});
+    req->op_rate_set.reset({12, 24, 48});
     req->phy = wlan_mlme::PHY::HR;
     req->cbw = wlan_mlme::CBW::CBW20;
     req->selected_bss = CreateBssDescription(rsn);
+    req->selected_bss.op_rate_set.reset({12, 24, 48});
 
     return {std::move(*req), fuchsia_wlan_mlme_MLMEJoinReqOrdinal};
 }
@@ -249,7 +250,6 @@ fbl::unique_ptr<Packet> CreateBeaconFrame(common::MacAddr bssid) {
     WriteCountry(&elem_w, kBssChannel);
     rates_writer.WriteExtendedSupportedRates(&elem_w);
 
-    ZX_DEBUG_ASSERT(bcn->Validate(elem_w.WrittenData()));
     packet->set_len(w.WrittenBytes() + elem_w.WrittenBytes());
 
     wlan_rx_info_t rx_info{.rx_flags = 0};
@@ -275,7 +275,7 @@ fbl::unique_ptr<Packet> CreateProbeRequest() {
     mgmt_hdr->addr2 = bssid;
     mgmt_hdr->addr3 = bssid;
 
-    auto probereq = w.Write<ProbeRequest>();
+    w.Write<ProbeRequest>();
     BufferWriter elem_w(w.RemainingBuffer());
     common::WriteSsid(&elem_w, kSsid);
 
@@ -284,7 +284,6 @@ fbl::unique_ptr<Packet> CreateProbeRequest() {
     rates_writer.WriteExtendedSupportedRates(&elem_w);
     common::WriteDsssParamSet(&elem_w, kBssChannel.primary);
 
-    ZX_DEBUG_ASSERT(probereq->Validate(elem_w.WrittenData()));
     packet->set_len(w.WrittenBytes() + elem_w.WrittenBytes());
 
     wlan_rx_info_t rx_info{.rx_flags = 0};
@@ -403,7 +402,6 @@ fbl::unique_ptr<Packet> CreateAssocReqFrame(common::MacAddr client_addr, Span<co
     BufferWriter elem_w(w.RemainingBuffer());
     if (!ssid.empty()) { common::WriteSsid(&w, ssid); }
     if (rsn) { w.Write(kRsne); }
-    ZX_DEBUG_ASSERT(assoc->Validate(elem_w.WrittenData()));
 
     packet->set_len(w.WrittenBytes() + elem_w.WrittenBytes());
 

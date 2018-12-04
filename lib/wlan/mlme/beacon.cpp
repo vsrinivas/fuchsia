@@ -149,7 +149,6 @@ static zx_status_t BuildBeaconOrProbeResponse(const BeaconConfig& config,
     BufferWriter elem_w(w.RemainingBuffer());
     size_t rel_tim_ele_offset = SIZE_MAX;
     WriteElements(&elem_w, config, &rel_tim_ele_offset);
-    ZX_DEBUG_ASSERT(bcn->Validate(elem_w.WrittenData()));
 
     // Update packet's final length and tx_info.
     packet->set_len(w.WrittenBytes() + elem_w.WrittenBytes());

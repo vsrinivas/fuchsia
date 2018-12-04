@@ -833,9 +833,6 @@ zx_status_t RemoteClient::SendAssociationResponse(aid_t aid, status_code::Status
         common::WriteHtOperation(&elem_w, BuildHtOperation(bss_->Chan()));
     }
 
-    // Validate the request in debug mode.
-    ZX_DEBUG_ASSERT(assoc->Validate(elem_w.WrittenData()));
-
     packet->set_len(w.WrittenBytes() + elem_w.WrittenBytes());
 
     auto status = bss_->SendMgmtFrame(MgmtFrame<>(std::move(packet)));
