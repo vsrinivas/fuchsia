@@ -167,6 +167,8 @@ const map<string, Generator&>& get_type_to_generator() {
 bool AbigenGenerator::AddSyscall(Syscall&& syscall) {
     if (!syscall.validate())
         return false;
+    syscall.reqs = pending_reqs_;
+    pending_reqs_.clear();
     syscall.assign_index(&next_index_);
     calls_.emplace_back(std::move(syscall));
     return true;
@@ -182,6 +184,10 @@ bool AbigenGenerator::Generate(const map<string, string>& type_to_filename) {
 
 bool AbigenGenerator::verbose() const {
     return verbose_;
+}
+
+void AbigenGenerator::AppendReq(Req&& req) {
+    pending_reqs_.emplace_back(req);
 }
 
 bool AbigenGenerator::generate_one(

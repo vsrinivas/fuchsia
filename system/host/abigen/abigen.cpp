@@ -15,7 +15,7 @@
 using std::string;
 
 constexpr Dispatch<AbigenGenerator> abigen_table[] = {
-    // comments start with '#' and terminate at the end of line.
+    // comments start with '#' and terminate at the end of line. this also handles #! reqs.
     {"#", nullptr, process_comment},
     // sycalls start with 'syscall' and terminate with ';'.
     {"syscall", ";", process_syscall},

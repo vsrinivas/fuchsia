@@ -50,6 +50,9 @@ struct TypeSpec {
     std::string as_cpp_cast(const std::string& arg) const;
 };
 
+// The tokens of a line of requirements.
+using Req = std::vector<std::string>;
+
 struct Syscall {
     // Move-only.
     Syscall(Syscall&&) = default;
@@ -62,6 +65,7 @@ struct Syscall {
     std::vector<TypeSpec> ret_spec;
     std::vector<TypeSpec> arg_spec;
     std::vector<std::string> attributes;
+    std::vector<Req> reqs;
 
     Syscall(const FileCtx& sc_fc, const std::string& sc_name)
         : fc(sc_fc), name(sc_name) {}

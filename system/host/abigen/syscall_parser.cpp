@@ -165,6 +165,16 @@ bool parse_argpack(TokenStream* ts, vector<TypeSpec>* v) {
 }
 
 bool process_comment(AbigenGenerator* parser, TokenStream& ts) {
+    if (ts.peek_next() == "!") {
+        ts.next();  // '!'
+        Req req;
+        for (;;) {
+            req.emplace_back(ts.next());
+            if (ts.peek_next() == std::string())
+                break;
+        }
+        parser->AppendReq(std::move(req));
+    }
     return true;
 }
 
