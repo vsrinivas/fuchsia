@@ -46,6 +46,7 @@ class SessionCtlApp {
   std::string ExecuteAddModCommand(const fxl::CommandLine& command_line);
   std::string ExecuteRemoveModCommand(const fxl::CommandLine& command_line);
   std::string ExecuteDeleteStoryCommand(const fxl::CommandLine& command_line);
+  std::string ExecuteListStoriesCommand();
 
  private:
   // Focus the story to which the mod we are adding belongs.

@@ -10,6 +10,10 @@ namespace modular {
 const char kSuccessString[] = "success";
 const char kCommandString[] = "command";
 
+// Key strings for JSON output.
+const char kParamsKeyString[] = "params";
+const char kStoriesKeyString[] = "stories";
+
 Logger::Logger(bool json_out) : json_out_(json_out) {}
 
 void Logger::LogError(const std::string& command,
@@ -29,6 +33,25 @@ void Logger::LogError(const std::string& command,
 }
 
 void Logger::Log(const std::string& command,
+                 const fidl::VectorPtr<fidl::StringPtr>& params) const {
+  std::stringstream output;
+
+  if (json_out_) {
+    std::cout << GenerateJsonLogString(command, params) << std::endl;
+  } else {
+    if (command == kListStoriesCommandString) {
+      output << "Stories in this session:" << std::endl;
+    }
+
+    for (auto& param : *params) {
+      output << param << std::endl;
+    }
+
+    std::cout << output.str() << std::endl;
+  }
+}
+
+void Logger::Log(const std::string& command,
                  const std::map<std::string, std::string>& params) const {
   if (json_out_) {
     std::cout << GenerateJsonLogString(command, params) << std::endl;
@@ -39,14 +62,36 @@ void Logger::Log(const std::string& command,
 
 std::string Logger::GenerateJsonLogString(
     const std::string& command,
-    const std::map<std::string, std::string>& params) const {
-  rapidjson::Document document;
-  document.SetObject();
-  document.AddMember(kSuccessString, true, document.GetAllocator());
-  document.AddMember(kCommandString, command, document.GetAllocator());
+    const fidl::VectorPtr<fidl::StringPtr>& params) const {
+  rapidjson::Document document = GetDocument(command);
 
-  // Generate params string. Ex. "mod_name": "mod1", "story_name": "story1"
-  // std::string params_string;
+  // Generate array of |params| strings.
+  rapidjson::Document stories;
+  stories.SetArray();
+  for (auto& param : *params) {
+    rapidjson::Value story;
+    story.SetString(param.get().data(), param.get().size());
+    stories.PushBack(story, stories.GetAllocator());
+  }
+
+  // Determine what the strings in |params| represent.
+  rapidjson::Value key;
+  if (command == kListStoriesCommandString) {
+    key.SetString(kStoriesKeyString);
+  } else {
+    key.SetString(kParamsKeyString);
+  }
+
+  document.AddMember(key, stories, document.GetAllocator());
+  return JsonValueToPrettyString(document);
+}
+
+std::string Logger::GenerateJsonLogString(
+    const std::string& command,
+    const std::map<std::string, std::string>& params) const {
+  rapidjson::Document document = GetDocument(command);
+
+  // Generate a document containing |params| keys and values.
   rapidjson::Document paramsJson;
   paramsJson.SetObject();
   for (const auto& p : params) {
@@ -58,8 +103,16 @@ std::string Logger::GenerateJsonLogString(
     paramsJson.AddMember(name, value, paramsJson.GetAllocator());
   }
 
-  document.AddMember("params", paramsJson, document.GetAllocator());
+  document.AddMember(kParamsKeyString, paramsJson, document.GetAllocator());
   return JsonValueToPrettyString(document);
+}
+
+rapidjson::Document Logger::GetDocument(const std::string& command) const {
+  rapidjson::Document document;
+  document.SetObject();
+  document.AddMember(kSuccessString, true, document.GetAllocator());
+  document.AddMember(kCommandString, command, document.GetAllocator());
+  return document;
 }
 
 std::string Logger::GenerateLogString(

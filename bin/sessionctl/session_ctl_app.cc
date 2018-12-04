@@ -24,6 +24,8 @@ std::string SessionCtlApp::ExecuteCommand(
     return ExecuteRemoveModCommand(command_line);
   } else if (cmd == kDeleteStoryCommandString) {
     return ExecuteDeleteStoryCommand(command_line);
+  } else if (cmd == kListStoriesCommandString) {
+    return ExecuteListStoriesCommand();
   } else {
     return kGetUsageErrorString;
   }
@@ -147,6 +149,18 @@ std::string SessionCtlApp::ExecuteDeleteStoryCommand(
   });
 
   return parsing_error;
+}
+
+std::string SessionCtlApp::ExecuteListStoriesCommand() {
+  async::PostTask(dispatcher_, [this]() mutable {
+    puppet_master_->GetStories(
+        [this](fidl::VectorPtr<fidl::StringPtr> story_names) {
+          logger_.Log(kListStoriesCommandString, std::move(story_names));
+          on_command_executed_();
+        });
+  });
+
+  return "";
 }
 
 fuchsia::modular::StoryCommand SessionCtlApp::MakeFocusStoryCommand() {

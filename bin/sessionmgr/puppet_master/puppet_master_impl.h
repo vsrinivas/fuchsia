@@ -35,14 +35,11 @@ class PuppetMasterImpl : public fuchsia::modular::PuppetMaster {
                         request) override;
 
   // |PuppetMaster|
-  void WatchSession(
-      fidl::InterfaceHandle<fuchsia::modular::SessionWatcher> session_watcher,
-      fuchsia::modular::WatchSessionOptionsPtr options,
-      WatchSessionCallback done) override;
-
-  // |PuppetMaster|
   void DeleteStory(fidl::StringPtr story_name,
                    DeleteStoryCallback done) override;
+
+  // |PuppetMaster|
+  void GetStories(GetStoriesCallback done) override;
 
   SessionStorage* const session_storage_;  // Not owned.
   StoryCommandExecutor* const executor_;   // Not owned.

@@ -303,5 +303,27 @@ TEST_F(PuppetMasterTest, DeleteStory) {
   RunLoopUntil([&] { return done; });
 }
 
+TEST_F(PuppetMasterTest, GetStories) {
+  // Zero stories to should exist.
+  bool done{};
+  ptr_->GetStories([&](fidl::VectorPtr<fidl::StringPtr> story_names) {
+    EXPECT_EQ(0u, story_names->size());
+    done = true;
+  });
+  RunLoopUntil([&] { return done; });
+
+  // Create a story.
+  storage_->CreateStory("foo", {} /* extra_info */, {} /* story_options */);
+
+  // "foo" should be listed.
+  done = false;
+  ptr_->GetStories([&](fidl::VectorPtr<fidl::StringPtr> story_names) {
+    ASSERT_EQ(1u, story_names->size());
+    EXPECT_EQ("foo", story_names->at(0));
+    done = true;
+  });
+  RunLoopUntil([&] { return done; });
+}
+
 }  // namespace
 }  // namespace modular

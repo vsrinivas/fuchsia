@@ -102,7 +102,10 @@ std::string GetUsage() {
     delete_story
       Delete the story.
         required: --story_name
-        optional: --json_out)";
+        optional: --json_out
+    
+    list_stories
+      List all the stories in the current session.)";
 }
 
 PuppetMasterPtr ConnectToPuppetMaster(const ActiveSession& session) {

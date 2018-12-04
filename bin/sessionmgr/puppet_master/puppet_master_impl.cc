@@ -4,6 +4,7 @@
 
 #include "peridot/bin/sessionmgr/puppet_master/puppet_master_impl.h"
 
+#include <lib/fxl/functional/make_copyable.h>
 #include <lib/fxl/logging.h>
 
 #include "peridot/bin/sessionmgr/puppet_master/story_puppet_master_impl.h"
@@ -33,18 +34,25 @@ void PuppetMasterImpl::ControlStory(
   story_puppet_masters_.AddBinding(std::move(controller), std::move(request));
 }
 
-void PuppetMasterImpl::WatchSession(
-    fidl::InterfaceHandle<fuchsia::modular::SessionWatcher> session_watcher,
-    fuchsia::modular::WatchSessionOptionsPtr options,
-    WatchSessionCallback done) {
-  FXL_NOTIMPLEMENTED();
-}
-
 void PuppetMasterImpl::DeleteStory(fidl::StringPtr story_name,
                                    DeleteStoryCallback done) {
   session_storage_->DeleteStory(story_name)->Then([done = std::move(done)] {
     done();
   });
+}
+
+void PuppetMasterImpl::GetStories(GetStoriesCallback done) {
+  session_storage_->GetAllStoryData()->Then(
+      [done = std::move(done)](
+          fidl::VectorPtr<fuchsia::modular::internal::StoryData>
+              all_story_data) {
+        auto result = fidl::VectorPtr<fidl::StringPtr>::New(0);
+        for (auto& story : *all_story_data) {
+          result.push_back(std::move(story.story_info.id));
+        }
+
+        done(std::move(result));
+      });
 }
 
 }  // namespace modular

@@ -55,17 +55,13 @@ interface PuppetMaster {
     // |request| is closed if control cannot be granted.
     //
     // TODO(thatguy): We want story names to be scoped to the client's namespace.
-    1: ControlStory(string story_name, request<StoryPuppetMaster> request);
-
-    // Events on the session will be sent to |watcher| as long as |watcher| is
-    // alive. |options| specifies filters and policy about which events are sent
-    // to |watcher|.
-    //
-    // NOTE: Not implemented yet, pending MF-85.
-    2: WatchSession(SessionWatcher watcher, WatchSessionOptions? options) -> ();
+    ControlStory(string story_name, request<StoryPuppetMaster> request);
 
     // Deletes a story associated to |story_name|.
-    3: DeleteStory(string story_name) -> ();
+    DeleteStory(string story_name) -> ();
+
+    // Returns a list of all the names of stories in the session.
+    GetStories() -> (vector<string> story_names);
 };
 
 struct WatchSessionOptions {
@@ -74,40 +70,25 @@ struct WatchSessionOptions {
     int32 placeholder;
 };
 
-interface SessionWatcher {
-    // Some events, in particular those that represent changes to internal
-    // modular framework state, or those that do not pertain to a single story,
-    // are not represented as commands.
-    1: OnStoryRuntimeState(StoryState state);
-
-    // Indicates the story record was permanently deleted from storage.
-    2: OnStoryDeleted(string story_name);
-
-    // Notifies of StoryCommands. If |is_last| == false, more StoryCommands
-    // were executed in a single batch than can be fit into one message and the
-    // client should expect further calls to OnStoryCommands() immediately.
-    3: OnStoryCommands(string story_name, vector<StoryCommand> commands, bool is_last);
-};
-
 interface StoryPuppetMaster {
     // Enqueues the given |commands| in the order they are given.
     // Can be called as many times as necessary to specify the full
     // set of changes to the story.
     //
     // To execute all enqueued commands, call Execute().
-    1: Enqueue(vector<StoryCommand> commands);
+    Enqueue(vector<StoryCommand> commands);
 
     // Executes the commands enqueued so far by Enqueue() in order and as
     // a batch: no other commands from other clients will be interleaved.
     //
     // If an error occurs, execution is stopped and an error code
     // and message are returned in |result|.
-    2: Execute() -> (ExecuteResult result);
+    Execute() -> (ExecuteResult result);
 
     // If this story is new, sets the options for its creation. Must be called
     // before the first call to Execute(). Any subsequent calls (either on the
     // same channel or on a new StoryPuppetMaster for an existing story) are
     // ignored. Some StoryOptions can be changed through specific story commands.
     // See story_command.fidl for details.
-    3: SetCreateOptions(StoryOptions story_options);
+    SetCreateOptions(StoryOptions story_options);
 };

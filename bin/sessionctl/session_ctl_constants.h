@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_SESSIONCTL_COMMAND_NAMES_H_
-#define PERIDOT_BIN_SESSIONCTL_COMMAND_NAMES_H_
+#ifndef PERIDOT_BIN_SESSIONCTL_SESSION_CTL_CONSTANTS_H_
+#define PERIDOT_BIN_SESSIONCTL_SESSION_CTL_CONSTANTS_H_
 
 namespace modular {
 
@@ -11,6 +11,7 @@ namespace modular {
 constexpr char kAddModCommandString[] = "add_mod";
 constexpr char kDeleteStoryCommandString[] = "delete_story";
 constexpr char kRemoveModCommandString[] = "remove_mod";
+constexpr char kListStoriesCommandString[] = "list_stories";
 
 // Flags to pass to SessionCtlApp.
 constexpr char kJsonOutFlagString[] = "json_out";
@@ -26,4 +27,4 @@ constexpr char kStoryNameFlagString[] = "story_name";
 constexpr char kGetUsageErrorString[] = "GetUsage";
 }  // namespace modular
 
-#endif  // PERIDOT_BIN_SESSIONCTL_COMMAND_NAMES_H_
+#endif  // PERIDOT_BIN_SESSIONCTL_SESSION_CTL_CONSTANTS_H_

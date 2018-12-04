@@ -26,6 +26,9 @@ class Logger {
   void LogError(const std::string& command, const std::string& error) const;
 
   void Log(const std::string& command,
+           const fidl::VectorPtr<fidl::StringPtr>& params) const;
+
+  void Log(const std::string& command,
            const std::map<std::string, std::string>& params) const;
 
  private:
@@ -33,7 +36,13 @@ class Logger {
   // |params| to be logged.
   std::string GenerateJsonLogString(
       const std::string& command,
+      const fidl::VectorPtr<fidl::StringPtr>& params) const;
+
+  std::string GenerateJsonLogString(
+      const std::string& command,
       const std::map<std::string, std::string>& params) const;
+
+  rapidjson::Document GetDocument(const std::string& command) const;
 
   // Returns a string of the executed |command| with respective |params| to be
   // logged.
