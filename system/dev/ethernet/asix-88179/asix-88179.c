@@ -340,7 +340,9 @@ static void ax88179_read_complete(usb_request_t* request, void* cookie) {
         zx_nanosleep(zx_deadline_after(ZX_USEC(eth->rx_endpoint_delay)));
         usb_request_queue(&eth->usb, request);
     } else {
-        list_add_head(&eth->free_read_reqs, &request->node);
+        zx_status_t status = usb_req_list_add_head(&eth->free_read_reqs, request,
+                                                   eth->parent_req_size);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
     }
     mtx_unlock(&eth->mutex);
 }
@@ -369,6 +371,7 @@ static void ax88179_write_complete(usb_request_t* request, void* cookie) {
         return;
     }
 
+    zx_status_t status;
     mtx_lock(&eth->tx_lock);
     ZX_DEBUG_ASSERT(eth->usb_tx_in_flight <= MAX_TX_IN_FLIGHT);
 
@@ -386,9 +389,11 @@ static void ax88179_write_complete(usb_request_t* request, void* cookie) {
             mtx_unlock(&eth->mutex);
             next_txn = list_peek_head_type(&eth->pending_netbuf, txn_info_t, node);
         }
-        list_add_tail(&eth->pending_usb_tx, &request->node);
+        status = usb_req_list_add_tail(&eth->pending_usb_tx, request, eth->parent_req_size);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
     } else {
-        list_add_tail(&eth->free_write_reqs, &request->node);
+        status = usb_req_list_add_tail(&eth->free_write_reqs, request, eth->parent_req_size);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
     }
 
     if (request->response.status == ZX_ERR_IO_REFUSED) {
@@ -402,7 +407,7 @@ static void ax88179_write_complete(usb_request_t* request, void* cookie) {
         }
         usb_reset_endpoint(&eth->usb, eth->bulk_out_addr);
     }
-    usb_request_t* next = list_remove_head_type(&eth->pending_usb_tx, usb_request_t, node);
+    usb_request_t* next = usb_req_list_remove_head(&eth->pending_usb_tx, eth->parent_req_size);
     if (next == NULL) {
         eth->usb_tx_in_flight--;
         zxlogf(DEBUG1, "ax88179: no pending write reqs, %u outstanding\n", eth->usb_tx_in_flight);
@@ -439,10 +444,13 @@ static void ax88179_handle_interrupt(ax88179_t* eth, usb_request_t* request) {
             if (online && !was_online) {
                 ax88179_configure_medium_mode(eth);
                 // Now that we are online, queue all our read requests
+                usb_req_internal_t* req_int;
+                usb_req_internal_t* prev;
                 usb_request_t* req;
-                usb_request_t* prev;
-                list_for_every_entry_safe (&eth->free_read_reqs, req, prev, usb_request_t, node) {
-                    list_delete(&req->node);
+                list_for_every_entry_safe (&eth->free_read_reqs, req_int, prev, usb_req_internal_t,
+                                           node) {
+                    list_delete(&req_int->node);
+                    req = REQ_INTERNAL_TO_USB_REQ(req_int, eth->parent_req_size);
                     usb_request_queue(&eth->usb, req);
                 }
                 zxlogf(TRACE, "ax88179 now online\n");
@@ -483,15 +491,17 @@ static zx_status_t ax88179_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t
     }
 
     // Find the last entry in the pending_usb_tx list
+    zx_status_t status;
     usb_request_t* req = NULL;
     if (list_is_empty(&eth->pending_usb_tx)) {
         zxlogf(DEBUG1, "ax88179: no pending reqs, getting free write req\n");
-        req = list_remove_head_type(&eth->free_write_reqs, usb_request_t, node);
+        req = usb_req_list_remove_head(&eth->free_write_reqs, eth->parent_req_size);
         if (req == NULL) {
             goto bufs_full;
         }
         req->header.length = 0;
-        list_add_tail(&eth->pending_usb_tx, &req->node);
+        status = usb_req_list_add_tail(&eth->pending_usb_tx, req, eth->parent_req_size);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
     } else {
         req = list_peek_tail_type(&eth->pending_usb_tx, usb_request_t, node);
         zxlogf(DEBUG1, "ax88179: got tail req (%p)\n", req);
@@ -503,12 +513,14 @@ static zx_status_t ax88179_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t
     if (ax88179_append_to_tx_req(&eth->usb, req, netbuf) == ZX_ERR_BUFFER_TOO_SMALL) {
         // Our data won't fit - grab a new request
         zxlogf(DEBUG1, "ax88179: getting new write req\n");
-        req = list_remove_head_type(&eth->free_write_reqs, usb_request_t, node);
+        req = usb_req_list_remove_head(&eth->free_write_reqs, eth->parent_req_size);
         if (req == NULL) {
             goto bufs_full;
         }
         req->header.length = 0;
-        list_add_tail(&eth->pending_usb_tx, &req->node);
+        status = usb_req_list_add_tail(&eth->pending_usb_tx, req, eth->parent_req_size);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
+
         ax88179_append_to_tx_req(&eth->usb, req, netbuf);
     } else if (options & ETHMAC_TX_OPT_MORE) {
         // Don't send data if we have more coming that might fit into the current request. If we
@@ -523,7 +535,7 @@ static zx_status_t ax88179_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t
         mtx_unlock(&eth->tx_lock);
         return ZX_OK;
     }
-    req = list_remove_head_type(&eth->pending_usb_tx, usb_request_t, node);
+    req = usb_req_list_remove_head(&eth->pending_usb_tx, eth->parent_req_size);
     zxlogf(DEBUG1, "ax88179: queuing request (%p) of length %lu, %u outstanding\n",
              req, req->header.length, eth->usb_tx_in_flight);
     usb_request_queue(&eth->usb, req);
@@ -547,13 +559,13 @@ static void ax88179_unbind(void* ctx) {
 
 static void ax88179_free(ax88179_t* eth) {
     usb_request_t* req;
-    while ((req = list_remove_head_type(&eth->free_read_reqs, usb_request_t, node)) != NULL) {
+    while ((req = usb_req_list_remove_head(&eth->free_read_reqs, eth->parent_req_size)) != NULL) {
         usb_request_release(req);
     }
-    while ((req = list_remove_head_type(&eth->free_write_reqs, usb_request_t, node)) != NULL) {
+    while ((req = usb_req_list_remove_head(&eth->free_write_reqs, eth->parent_req_size)) != NULL) {
         usb_request_release(req);
     }
-    while ((req = list_remove_head_type(&eth->pending_usb_tx, usb_request_t, node)) != NULL) {
+    while ((req = usb_req_list_remove_head(&eth->pending_usb_tx, eth->parent_req_size)) != NULL) {
         usb_request_release(req);
     }
     usb_request_release(eth->interrupt_req);
@@ -956,32 +968,35 @@ static zx_status_t ax88179_bind(void* ctx, zx_device_t* device) {
     eth->bulk_out_addr = bulk_out_addr;
 
     eth->parent_req_size = usb_get_request_size(&eth->usb);
+    uint64_t req_size = eth->parent_req_size + sizeof(usb_req_internal_t);
 
     eth->rx_endpoint_delay = ETHMAC_INITIAL_RECV_DELAY;
     eth->tx_endpoint_delay = ETHMAC_INITIAL_TRANSMIT_DELAY;
     zx_status_t status = ZX_OK;
     for (int i = 0; i < READ_REQ_COUNT; i++) {
         usb_request_t* req;
-        status = usb_request_alloc(&req, USB_BUF_SIZE, bulk_in_addr, eth->parent_req_size);
+        status = usb_request_alloc(&req, USB_BUF_SIZE, bulk_in_addr, req_size);
         if (status != ZX_OK) {
             goto fail;
         }
         req->complete_cb = ax88179_read_complete;
         req->cookie = eth;
-        list_add_head(&eth->free_read_reqs, &req->node);
+        status = usb_req_list_add_head(&eth->free_read_reqs, req, eth->parent_req_size);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
     }
     for (int i = 0; i < WRITE_REQ_COUNT; i++) {
         usb_request_t* req;
-        status = usb_request_alloc(&req, USB_BUF_SIZE, bulk_out_addr, eth->parent_req_size);
+        status = usb_request_alloc(&req, USB_BUF_SIZE, bulk_out_addr, req_size);
         if (status != ZX_OK) {
             goto fail;
         }
         req->complete_cb = ax88179_write_complete;
         req->cookie = eth;
-        list_add_head(&eth->free_write_reqs, &req->node);
+        status = usb_req_list_add_head(&eth->free_write_reqs, req, eth->parent_req_size);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
     }
     usb_request_t* int_req;
-    status = usb_request_alloc(&int_req, INTR_REQ_SIZE, intr_addr, eth->parent_req_size);
+    status = usb_request_alloc(&int_req, INTR_REQ_SIZE, intr_addr, req_size);
     if (status != ZX_OK) {
         goto fail;
     }

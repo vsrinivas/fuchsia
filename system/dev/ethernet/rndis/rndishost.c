@@ -209,16 +209,18 @@ static void rndis_write_complete(usb_request_t* request, void* cookie) {
         usb_reset_endpoint(&eth->usb, eth->bulk_out_addr);
     }
 
-    list_add_tail(&eth->free_write_reqs, &request->node);
+    zx_status_t status = usb_req_list_add_tail(&eth->free_write_reqs, request,
+                                               eth->parent_req_size);
+    ZX_DEBUG_ASSERT(status == ZX_OK);
     mtx_unlock(&eth->mutex);
 }
 
 static void rndishost_free(rndishost_t* eth) {
     usb_request_t* txn;
-    while ((txn = list_remove_head_type(&eth->free_read_reqs, usb_request_t, node)) != NULL) {
+    while ((txn = usb_req_list_remove_head(&eth->free_read_reqs, eth->parent_req_size)) != NULL) {
         usb_request_release(txn);
     }
-    while ((txn = list_remove_head_type(&eth->free_write_reqs, usb_request_t, node)) != NULL) {
+    while ((txn = usb_req_list_remove_head(&eth->free_write_reqs, eth->parent_req_size)) != NULL) {
         usb_request_release(txn);
     }
     free(eth);
@@ -271,7 +273,7 @@ static zx_status_t rndishost_queue_tx(void* ctx, uint32_t options, ethmac_netbuf
 
     mtx_lock(&eth->mutex);
 
-    usb_request_t* req = list_remove_head_type(&eth->free_write_reqs, usb_request_t, node);
+    usb_request_t* req = usb_req_list_remove_head(&eth->free_write_reqs, eth->parent_req_size);
     if (req == NULL) {
         zxlogf(TRACE, "rndishost dropped a packet\n");
         status = ZX_ERR_NO_RESOURCES;
@@ -280,7 +282,8 @@ static zx_status_t rndishost_queue_tx(void* ctx, uint32_t options, ethmac_netbuf
 
     if (length + sizeof(rndis_packet_header) > RNDIS_MAX_XFER_SIZE) {
         zxlogf(TRACE, "rndishost attempted to send a packet that's too large.\n");
-        list_add_tail(&eth->free_write_reqs, &req->node);
+        status = usb_req_list_add_tail(&eth->free_write_reqs, req, eth->parent_req_size);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
         status = ZX_ERR_INVALID_ARGS;
         goto done;
     }
@@ -301,7 +304,8 @@ static zx_status_t rndishost_queue_tx(void* ctx, uint32_t options, ethmac_netbuf
     req->header.length = sizeof(rndis_packet_header) + length;
     if (bytes_copied < 0) {
         printf("rndishost: failed to copy data into send txn (error %zd)\n", bytes_copied);
-        list_add_tail(&eth->free_write_reqs, &req->node);
+        status = usb_req_list_add_tail(&eth->free_write_reqs, req, eth->parent_req_size);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
         goto done;
     }
     zx_nanosleep(zx_deadline_after(ZX_USEC(eth->tx_endpoint_delay)));
@@ -451,7 +455,7 @@ static int rndis_start_thread(void* arg) {
     // Queue read requests
     mtx_lock(&eth->mutex);
     usb_request_t* txn;
-    while ((txn = list_remove_head_type(&eth->free_read_reqs, usb_request_t, node)) != NULL) {
+    while ((txn = usb_req_list_remove_head(&eth->free_read_reqs, eth->parent_req_size)) != NULL) {
         usb_request_queue(&eth->usb, txn);
     }
     mtx_unlock(&eth->mutex);
@@ -554,31 +558,34 @@ static zx_status_t rndishost_bind(void* ctx, zx_device_t* device) {
     memcpy(&eth->usb, &usb, sizeof(eth->usb));
 
     eth->parent_req_size = usb_get_request_size(&eth->usb);
+    uint64_t req_size = eth->parent_req_size + sizeof(usb_req_internal_t);
 
     for (int i = 0; i < READ_REQ_COUNT; i++) {
         usb_request_t* req;
         zx_status_t alloc_result = usb_request_alloc(&req, RNDIS_BUFFER_SIZE, bulk_in_addr,
-                                                     eth->parent_req_size);
+                                                     req_size);
         if (alloc_result != ZX_OK) {
             status = alloc_result;
             goto fail;
         }
         req->complete_cb = rndis_read_complete;
         req->cookie = eth;
-        list_add_head(&eth->free_read_reqs, &req->node);
+        status = usb_req_list_add_head(&eth->free_read_reqs, req, eth->parent_req_size);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
     }
     for (int i = 0; i < WRITE_REQ_COUNT; i++) {
         usb_request_t* req;
         // TODO: Allocate based on mtu.
         zx_status_t alloc_result = usb_request_alloc(&req, RNDIS_BUFFER_SIZE, bulk_out_addr,
-                                                     eth->parent_req_size);
+                                                     req_size);
         if (alloc_result != ZX_OK) {
             status = alloc_result;
             goto fail;
         }
         req->complete_cb = rndis_write_complete;
         req->cookie = eth;
-        list_add_head(&eth->free_write_reqs, &req->node);
+        status = usb_req_list_add_head(&eth->free_write_reqs, req, eth->parent_req_size);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
     }
 
     device_add_args_t args = {

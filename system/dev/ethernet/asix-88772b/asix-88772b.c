@@ -152,9 +152,8 @@ static zx_status_t ax88772b_wait_for_phy(ax88772b_t* eth) {
 }
 
 static void queue_interrupt_requests_locked(ax88772b_t* eth) {
-    list_node_t* node;
-    while ((node = list_remove_head(&eth->free_intr_reqs)) != NULL) {
-        usb_request_t* req = containerof(node, usb_request_t, node);
+    usb_request_t* req;
+    while ((req = usb_req_list_remove_head(&eth->free_intr_reqs, eth->parent_req_size)) != NULL) {
         usb_request_queue(&eth->usb, req);
     }
 }
@@ -252,7 +251,9 @@ static void ax88772b_read_complete(usb_request_t* request, void* cookie) {
         zx_nanosleep(zx_deadline_after(ZX_USEC(eth->rx_endpoint_delay)));
         usb_request_queue(&eth->usb, request);
     } else {
-        list_add_head(&eth->free_read_reqs, &request->node);
+        zx_status_t status = usb_req_list_add_head(&eth->free_read_reqs, request,
+                                                   eth->parent_req_size);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
     }
     mtx_unlock(&eth->mutex);
 }
@@ -274,7 +275,9 @@ static void ax88772b_write_complete(usb_request_t* request, void* cookie) {
             ethmac_ifc_complete_tx(&eth->ifc, &txn->netbuf, send_result);
         }
     } else {
-        list_add_tail(&eth->free_write_reqs, &request->node);
+        zx_status_t status = usb_req_list_add_tail(&eth->free_write_reqs, request,
+                                                   eth->parent_req_size);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
     }
 
     if (request->response.status == ZX_ERR_IO_REFUSED) {
@@ -320,10 +323,13 @@ static void ax88772b_interrupt_complete(usb_request_t* request, void* cookie) {
                 }
 
                 // Now that we are online, queue all our read requests
+                usb_req_internal_t* req_int;
+                usb_req_internal_t* prev;
                 usb_request_t* req;
-                usb_request_t* prev;
-                list_for_every_entry_safe (&eth->free_read_reqs, req, prev, usb_request_t, node) {
-                    list_delete(&req->node);
+                list_for_every_entry_safe (&eth->free_read_reqs, req_int, prev, usb_req_internal_t,
+                                           node) {
+                    list_delete(&req_int->node);
+                    req = REQ_INTERNAL_TO_USB_REQ(req_int, eth->parent_req_size);
                     usb_request_queue(&eth->usb, req);
                 }
             } else if (!online && was_online) {
@@ -334,7 +340,9 @@ static void ax88772b_interrupt_complete(usb_request_t* request, void* cookie) {
         }
     }
 
-    list_add_head(&eth->free_intr_reqs, &request->node);
+    zx_status_t status = usb_req_list_add_head(&eth->free_intr_reqs, request,
+                                               eth->parent_req_size);
+    ZX_DEBUG_ASSERT(status == ZX_OK);
     queue_interrupt_requests_locked(eth);
 
     mtx_unlock(&eth->mutex);
@@ -358,7 +366,8 @@ static zx_status_t ax88772b_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_
         status = ZX_ERR_SHOULD_WAIT;
         goto out;
     }
-    usb_request_t* request = containerof(node, usb_request_t, node);
+    usb_req_internal_t* req_int = containerof(node, usb_req_internal_t, node);
+    usb_request_t* request = REQ_INTERNAL_TO_USB_REQ(req_int, eth->parent_req_size);
 
     status = ax88772b_send(eth, request, netbuf);
 
@@ -380,13 +389,13 @@ static void ax88772b_unbind(void* ctx) {
 
 static void ax88772b_free(ax88772b_t* eth) {
     usb_request_t* req;
-    while ((req = list_remove_head_type(&eth->free_read_reqs, usb_request_t, node)) != NULL) {
+    while ((req = usb_req_list_remove_head(&eth->free_read_reqs, eth->parent_req_size)) != NULL) {
         usb_request_release(req);
     }
-    while ((req = list_remove_head_type(&eth->free_write_reqs, usb_request_t, node)) != NULL) {
+    while ((req = usb_req_list_remove_head(&eth->free_write_reqs, eth->parent_req_size)) != NULL) {
         usb_request_release(req);
     }
-    while ((req = list_remove_head_type(&eth->free_intr_reqs, usb_request_t, node)) != NULL) {
+    while ((req = usb_req_list_remove_head(&eth->free_intr_reqs, eth->parent_req_size)) != NULL) {
         usb_request_release(req);
     }
     free(eth);
@@ -661,6 +670,7 @@ static zx_status_t ax88772b_bind(void* ctx, zx_device_t* device) {
     memcpy(&eth->usb, &usb, sizeof(eth->usb));
 
     eth->parent_req_size = usb_get_request_size(&eth->usb);
+    uint64_t req_size = eth->parent_req_size + sizeof(usb_req_internal_t);
 
     eth->bulk_in_addr = bulk_in_addr;
     eth->bulk_out_addr = bulk_out_addr;
@@ -670,33 +680,36 @@ static zx_status_t ax88772b_bind(void* ctx, zx_device_t* device) {
     zx_status_t status = ZX_OK;
     for (int i = 0; i < READ_REQ_COUNT; i++) {
         usb_request_t* req;
-        status = usb_request_alloc(&req, USB_BUF_IN_SIZE, bulk_in_addr, eth->parent_req_size);
+        status = usb_request_alloc(&req, USB_BUF_IN_SIZE, bulk_in_addr, req_size);
         if (status != ZX_OK) {
             goto fail;
         }
         req->complete_cb = ax88772b_read_complete;
         req->cookie = eth;
-        list_add_head(&eth->free_read_reqs, &req->node);
+        status = usb_req_list_add_head(&eth->free_read_reqs, req, eth->parent_req_size);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
     }
     for (int i = 0; i < WRITE_REQ_COUNT; i++) {
         usb_request_t* req;
-        status = usb_request_alloc(&req, USB_BUF_OUT_SIZE, bulk_out_addr, eth->parent_req_size);
+        status = usb_request_alloc(&req, USB_BUF_OUT_SIZE, bulk_out_addr, req_size);
         if (status != ZX_OK) {
             goto fail;
         }
         req->complete_cb = ax88772b_write_complete;
         req->cookie = eth;
-        list_add_head(&eth->free_write_reqs, &req->node);
+        status = usb_req_list_add_head(&eth->free_write_reqs, req, eth->parent_req_size);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
     }
     for (int i = 0; i < INTR_REQ_COUNT; i++) {
         usb_request_t* req;
-        status = usb_request_alloc(&req, INTR_REQ_SIZE, intr_addr, eth->parent_req_size);
+        status = usb_request_alloc(&req, INTR_REQ_SIZE, intr_addr, req_size);
         if (status != ZX_OK) {
             goto fail;
         }
         req->complete_cb = ax88772b_interrupt_complete;
         req->cookie = eth;
-        list_add_head(&eth->free_intr_reqs, &req->node);
+        status = usb_req_list_add_head(&eth->free_intr_reqs, req, eth->parent_req_size);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
     }
 
     thrd_t thread;
