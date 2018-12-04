@@ -39,6 +39,7 @@
 #include "garnet/lib/ui/gfx/resources/variable.h"
 #include "garnet/lib/ui/gfx/resources/view.h"
 #include "garnet/lib/ui/gfx/resources/view_holder.h"
+#include "garnet/lib/ui/gfx/swapchain/swapchain_factory.h"
 #include "garnet/lib/ui/gfx/util/time.h"
 #include "garnet/lib/ui/gfx/util/unwrap.h"
 #include "garnet/lib/ui/gfx/util/wrap.h"
@@ -81,25 +82,34 @@ fidl::VectorPtr<::fuchsia::ui::gfx::Hit> WrapHits(
 }
 }  // anonymous namespace
 
-Session::Session(SessionId id, Engine* engine, EventReporter* event_reporter,
-                 ErrorReporter* error_reporter)
+Session::Session(SessionId id, SessionContext session_context,
+                 EventReporter* event_reporter, ErrorReporter* error_reporter)
     : id_(id),
-      engine_(engine),
       error_reporter_(error_reporter),
       event_reporter_(event_reporter),
+      session_context_(std::move(session_context)),
+      resource_context_({session_context_.vk_device,
+                         session_context_.escher != nullptr
+                             ? session_context_.escher->device()->caps()
+                             : escher::VulkanDeviceQueues::Caps(),
+                         session_context_.imported_memory_type_index,
+                         session_context_.escher_resource_recycler,
+                         session_context_.escher_image_factory,
+                         session_context_.escher_gpu_uploader}),
       resources_(error_reporter),
       weak_factory_(this) {
-  FXL_DCHECK(engine);
   FXL_DCHECK(error_reporter);
 }
 
 Session::~Session() { FXL_DCHECK(!is_valid_); }
 
-bool Session::ApplyCommand(::fuchsia::ui::gfx::Command command) {
+bool Session::ApplyCommand(CommandContext* command_context,
+                           ::fuchsia::ui::gfx::Command command) {
   TRACE_DURATION("gfx", "Session::ApplyCommand");
   switch (command.Which()) {
     case ::fuchsia::ui::gfx::Command::Tag::kCreateResource:
-      return ApplyCreateResourceCmd(std::move(command.create_resource()));
+      return ApplyCreateResourceCmd(command_context,
+                                    std::move(command.create_resource()));
     case ::fuchsia::ui::gfx::Command::Tag::kReleaseResource:
       return ApplyReleaseResourceCmd(std::move(command.release_resource()));
     case ::fuchsia::ui::gfx::Command::Tag::kExportResource:
@@ -212,9 +222,11 @@ bool Session::ApplyCommand(::fuchsia::ui::gfx::Command command) {
 }
 
 bool Session::ApplyCreateResourceCmd(
+    CommandContext* command_context,
     ::fuchsia::ui::gfx::CreateResourceCmd command) {
   const ResourceId id = command.id;
   if (id == 0) {
+    using ::operator<<;  // From print_commands.h
     error_reporter_->ERROR()
         << "scenic_impl::gfx::Session::ApplyCreateResourceCmd(): invalid ID: "
         << command;
@@ -249,7 +261,7 @@ bool Session::ApplyCreateResourceCmd(
       return ApplyCreateRectangle(id, std::move(command.resource.rectangle()));
     case ::fuchsia::ui::gfx::ResourceArgs::Tag::kRoundedRectangle:
       return ApplyCreateRoundedRectangle(
-          id, std::move(command.resource.rounded_rectangle()));
+          command_context, id, std::move(command.resource.rounded_rectangle()));
     case ::fuchsia::ui::gfx::ResourceArgs::Tag::kCircle:
       return ApplyCreateCircle(id, std::move(command.resource.circle()));
     case ::fuchsia::ui::gfx::ResourceArgs::Tag::kMesh:
@@ -307,8 +319,8 @@ bool Session::ApplyExportResourceCmd(
     return false;
   }
   if (auto resource = resources_.FindResource<Resource>(command.id)) {
-    return engine_->resource_linker()->ExportResource(resource.get(),
-                                                      std::move(command.token));
+    return session_context_.resource_linker->ExportResource(
+        resource.get(), std::move(command.token));
   }
   return false;
 }
@@ -321,10 +333,11 @@ bool Session::ApplyImportResourceCmd(
            "no token provided.";
     return false;
   }
-  ImportPtr import =
-      fxl::MakeRefCounted<Import>(this, command.id, command.spec);
-  return engine_->resource_linker()->ImportResource(import.get(), command.spec,
-                                                    std::move(command.token)) &&
+  ImportPtr import = fxl::MakeRefCounted<Import>(
+      this, command.id, command.spec,
+      session_context_.resource_linker->GetWeakPtr());
+  return session_context_.resource_linker->ImportResource(
+             import.get(), command.spec, std::move(command.token)) &&
          resources_.AddResource(command.id, std::move(import));
 }
 
@@ -374,13 +387,20 @@ bool Session::ApplyTakeSnapshotCmdHACK(
           return;
         }
 
-        auto engine = weak->engine_;
+        const auto& context = weak->session_context_;
         Resource* resource = nullptr;
         if (auto node = weak->resources_.FindResource<Node>(command.node_id)) {
           resource = node.get();
         } else if (command.node_id == 0) {
-          resource = engine->GetFirstCompositor();
-        } else {
+          // TODO(SCN-1170): get rid of SceneGraph::first_compositor().
+          const auto& first_compositor_weak =
+              context.scene_graph->first_compositor();
+          if (first_compositor_weak) {
+            resource = first_compositor_weak.get();
+          }
+        }
+
+        if (resource == nullptr) {
           if (auto callback = command.callback.Bind()) {
             callback->OnData(fuchsia::mem::Buffer{});
           }
@@ -388,7 +408,7 @@ bool Session::ApplyTakeSnapshotCmdHACK(
         }
 
         auto gpu_uploader =
-            escher::BatchGpuUploader::New(engine->GetEscherWeakPtr());
+            escher::BatchGpuUploader::New(context.escher->GetWeakPtr());
         Snapshotter snapshotter(gpu_uploader);
         // Take a snapshot and return the data in callback. The closure does
         // not need the snapshotter instance and is invoked after the instance
@@ -688,7 +708,9 @@ bool Session::ApplySetRendererParamCmd(
       case ::fuchsia::ui::gfx::RendererParam::Tag::kShadowTechnique:
         return renderer->SetShadowTechnique(command.param.shadow_technique());
       case ::fuchsia::ui::gfx::RendererParam::Tag::kRenderFrequency:
-        renderer->SetRenderContinuously(
+        // TODO(SCN-1169): SetRenderContinuously should only affect the
+        // compositor that has the renderer attached to it.
+        session_context_.frame_scheduler->SetRenderContinuously(
             command.param.render_frequency() ==
             ::fuchsia::ui::gfx::RenderFrequency::CONTINUOUSLY);
         return true;
@@ -894,7 +916,8 @@ bool Session::ApplyCreateImage(ResourceId id,
 bool Session::ApplyCreateImagePipe(ResourceId id,
                                    ::fuchsia::ui::gfx::ImagePipeArgs args) {
   auto image_pipe = fxl::MakeRefCounted<ImagePipe>(
-      this, id, std::move(args.image_pipe_request));
+      this, id, std::move(args.image_pipe_request),
+      session_context_.update_scheduler);
   return resources_.AddResource(id, image_pipe);
 }
 
@@ -966,7 +989,8 @@ bool Session::ApplyCreateRectangle(ResourceId id,
 }
 
 bool Session::ApplyCreateRoundedRectangle(
-    ResourceId id, ::fuchsia::ui::gfx::RoundedRectangleArgs args) {
+    CommandContext* command_context, ResourceId id,
+    ::fuchsia::ui::gfx::RoundedRectangleArgs args) {
   if (!AssertValueIsOfType(args.width, kFloatValueTypes) ||
       !AssertValueIsOfType(args.height, kFloatValueTypes) ||
       !AssertValueIsOfType(args.top_left_radius, kFloatValueTypes) ||
@@ -994,9 +1018,9 @@ bool Session::ApplyCreateRoundedRectangle(
   const float bottom_right_radius = args.bottom_right_radius.vector1();
   const float bottom_left_radius = args.bottom_left_radius.vector1();
 
-  auto rectangle = CreateRoundedRectangle(id, width, height, top_left_radius,
-                                          top_right_radius, bottom_right_radius,
-                                          bottom_left_radius);
+  auto rectangle = CreateRoundedRectangle(
+      command_context, id, width, height, top_left_radius, top_right_radius,
+      bottom_right_radius, bottom_left_radius);
   return rectangle ? resources_.AddResource(id, std::move(rectangle)) : false;
 }
 
@@ -1189,7 +1213,7 @@ ResourcePtr Session::CreateDirectionalLight(ResourceId id) {
 
 ResourcePtr Session::CreateView(ResourceId id,
                                 ::fuchsia::ui::gfx::ViewArgs args) {
-  ViewLinker* view_linker = engine()->view_linker();
+  ViewLinker* view_linker = session_context_.view_linker;
   ViewLinker::ImportLink link =
       view_linker->CreateImport(std::move(args.token), error_reporter());
 
@@ -1202,7 +1226,7 @@ ResourcePtr Session::CreateView(ResourceId id,
 
 ResourcePtr Session::CreateViewHolder(ResourceId id,
                                       ::fuchsia::ui::gfx::ViewHolderArgs args) {
-  ViewLinker* view_linker = engine()->view_linker();
+  ViewLinker* view_linker = session_context_.view_linker;
   ViewLinker::ExportLink link =
       view_linker->CreateExport(std::move(args.token), error_reporter());
 
@@ -1237,12 +1261,12 @@ ResourcePtr Session::CreateShapeNode(ResourceId id,
 
 ResourcePtr Session::CreateCompositor(ResourceId id,
                                       ::fuchsia::ui::gfx::CompositorArgs args) {
-  return Compositor::New(this, id);
+  return Compositor::New(this, id, session_context_.scene_graph);
 }
 
 ResourcePtr Session::CreateDisplayCompositor(
     ResourceId id, ::fuchsia::ui::gfx::DisplayCompositorArgs args) {
-  Display* display = engine()->display_manager()->default_display();
+  Display* display = session_context_.display_manager->default_display();
   if (!display) {
     error_reporter_->ERROR() << "There is no default display available.";
     return nullptr;
@@ -1253,8 +1277,12 @@ ResourcePtr Session::CreateDisplayCompositor(
                                 "by another compositor.";
     return nullptr;
   }
-  return fxl::MakeRefCounted<DisplayCompositor>(
-      this, id, display, engine()->CreateDisplaySwapchain(display));
+
+  return fxl::AdoptRef(new DisplayCompositor(
+      this, id, session_context_.scene_graph, display,
+      SwapchainFactory::CreateDisplaySwapchain(
+          display, session_context_.display_manager,
+          session_context_.event_timestamper, session_context_.escher)));
 }
 
 ResourcePtr Session::CreateImagePipeCompositor(
@@ -1327,12 +1355,13 @@ ResourcePtr Session::CreateRectangle(ResourceId id, float width, float height) {
   return fxl::MakeRefCounted<RectangleShape>(this, id, width, height);
 }
 
-ResourcePtr Session::CreateRoundedRectangle(ResourceId id, float width,
+ResourcePtr Session::CreateRoundedRectangle(CommandContext* command_context,
+                                            ResourceId id, float width,
                                             float height, float top_left_radius,
                                             float top_right_radius,
                                             float bottom_right_radius,
                                             float bottom_left_radius) {
-  auto factory = engine()->escher_rounded_rect_factory();
+  auto factory = session_context_.escher_rounded_rect_factory;
   if (!factory) {
     error_reporter_->ERROR()
         << "scenic_impl::gfx::Session::CreateRoundedRectangle(): "
@@ -1366,9 +1395,8 @@ ResourcePtr Session::CreateRoundedRectangle(ResourceId id, float width,
 
   return fxl::MakeRefCounted<RoundedRectangleShape>(
       this, id, rect_spec,
-      factory->NewRoundedRect(
-          rect_spec, mesh_spec,
-          engine()->GetCommandContext()->batch_gpu_uploader()));
+      factory->NewRoundedRect(rect_spec, mesh_spec,
+                              command_context->batch_gpu_uploader()));
 }
 
 ResourcePtr Session::CreateMesh(ResourceId id) {
@@ -1399,7 +1427,7 @@ void Session::TearDown() {
 
   if (resource_count_ != 0) {
     auto exported_count =
-        engine()->resource_linker()->NumExportsForSession(this);
+        session_context_.resource_linker->NumExportsForSession(this);
     FXL_CHECK(resource_count_ == 0)
         << "Session::TearDown(): Not all resources have been collected. "
            "Exported resources: "
@@ -1468,15 +1496,17 @@ bool Session::ScheduleUpdate(
 
     // If we're not running headless, warn if the requested presesentation time
     // is not reasonable.
-    if (engine()->frame_scheduler() &&
-        engine()->display_manager()->default_display()) {
+    if (session_context_.frame_scheduler &&
+        session_context_.display_manager->default_display()) {
       std::pair<zx_time_t, zx_time_t> target_times =
-          engine()->frame_scheduler()->ComputeTargetPresentationAndWakeupTimes(
-              requested_presentation_time);
+          session_context_.frame_scheduler
+              ->ComputeTargetPresentationAndWakeupTimes(
+                  requested_presentation_time);
       uint64_t target_presentation_time = target_times.first;
 
       zx_time_t vsync_interval =
-          engine()->display_manager()->default_display()->GetVsyncInterval();
+          session_context_.display_manager->default_display()
+              ->GetVsyncInterval();
       // TODO(SCN-723): Re-enable warning when requested_presentation_time == 0
       // after Flutter engine is fixed.
       if (requested_presentation_time != 0 &&
@@ -1496,12 +1526,13 @@ bool Session::ScheduleUpdate(
     // acquire_fence_set is already ready (which is the case if there are
     // zero acquire fences).
 
-    acquire_fence_set->WaitReadyAsync([weak = weak_factory_.GetWeakPtr(),
-                                       requested_presentation_time] {
-      if (weak)
-        weak->engine_->session_manager()->ScheduleUpdateForSession(
-            weak->engine_, requested_presentation_time, SessionPtr(weak.get()));
-    });
+    acquire_fence_set->WaitReadyAsync(
+        [weak = weak_factory_.GetWeakPtr(), requested_presentation_time] {
+          if (weak)
+            weak->session_context_.session_manager->ScheduleUpdateForSession(
+                weak->session_context_.update_scheduler,
+                requested_presentation_time, SessionPtr(weak.get()));
+        });
 
     scheduled_updates_.push(
         Update{requested_presentation_time, std::move(commands),
@@ -1513,16 +1544,18 @@ bool Session::ScheduleUpdate(
 
 void Session::ScheduleImagePipeUpdate(uint64_t presentation_time,
                                       ImagePipePtr image_pipe) {
+  FXL_DCHECK(image_pipe);
   if (is_valid()) {
     scheduled_image_pipe_updates_.push(
         {presentation_time, std::move(image_pipe)});
 
-    engine_->session_manager()->ScheduleUpdateForSession(
-        engine_, presentation_time, SessionPtr(this));
+    session_context_.session_manager->ScheduleUpdateForSession(
+        session_context_.update_scheduler, presentation_time, SessionPtr(this));
   }
 }
 
-bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
+bool Session::ApplyScheduledUpdates(CommandContext* command_context,
+                                    uint64_t presentation_time,
                                     uint64_t presentation_interval) {
   TRACE_DURATION("gfx", "Session::ApplyScheduledUpdates", "session_id", id_,
                  "session_debug_name", debug_name_, "time", presentation_time,
@@ -1549,7 +1582,8 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
                     scheduled_updates_.front().presentation_time / 1000);
       break;
     }
-    if (ApplyUpdate(std::move(scheduled_updates_.front().commands))) {
+    if (ApplyUpdate(command_context,
+                    std::move(scheduled_updates_.front().commands))) {
       needs_render = true;
       auto info = fuchsia::images::PresentationInfo();
       info.presentation_time = presentation_time;
@@ -1562,7 +1596,7 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
           scheduled_updates_.front().presentation_time;
 
       for (size_t i = 0; i < fences_to_release_on_next_update_->size(); ++i) {
-        engine()->release_fence_signaller()->AddCPUReleaseFence(
+        session_context_.release_fence_signaller->AddCPUReleaseFence(
             std::move(fences_to_release_on_next_update_->at(i)));
       }
       fences_to_release_on_next_update_ =
@@ -1594,8 +1628,11 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
              presentation_time) {
     // The bool returned from Update() is 0 or 1, and needs_render is 0 or 1, so
     // bitwise |= is used which doesn't short-circuit.
-    needs_render |= scheduled_image_pipe_updates_.top().image_pipe->Update(
-        presentation_time, presentation_interval);
+    if (scheduled_image_pipe_updates_.top().image_pipe) {
+      needs_render |= scheduled_image_pipe_updates_.top().image_pipe->Update(
+          session_context_.release_fence_signaller, presentation_time,
+          presentation_interval);
+    }
     scheduled_image_pipe_updates_.pop();
   }
 
@@ -1616,11 +1653,13 @@ void Session::EnqueueEvent(::fuchsia::ui::input::InputEvent event) {
   event_reporter_->EnqueueEvent(std::move(event));
 }
 
-bool Session::ApplyUpdate(std::vector<::fuchsia::ui::gfx::Command> commands) {
+bool Session::ApplyUpdate(CommandContext* command_context,
+                          std::vector<::fuchsia::ui::gfx::Command> commands) {
   TRACE_DURATION("gfx", "Session::ApplyUpdate");
   if (is_valid()) {
     for (auto& command : commands) {
-      if (!ApplyCommand(std::move(command))) {
+      if (!ApplyCommand(command_context, std::move(command))) {
+        using ::operator<<;  // From print_commands.h
         error_reporter_->ERROR() << "scenic_impl::gfx::Session::ApplyCommand() "
                                     "failed to apply Command: "
                                  << command;
@@ -1662,14 +1701,16 @@ void Session::HitTestDeviceRay(
   // The layer stack expects the input to the hit test to be in unscaled device
   // coordinates.
   SessionHitTester hit_tester(this);
+  // TODO(SCN-1170): get rid of SceneGraph::first_compositor().
   std::vector<Hit> layer_stack_hits =
-      engine_->GetFirstCompositor()->layer_stack()->HitTest(ray, &hit_tester);
+      session_context_.scene_graph->first_compositor()->layer_stack()->HitTest(
+          ray, &hit_tester);
 
   callback(WrapHits(layer_stack_hits));
 }
 
 void Session::BeginTearDown() {
-  engine()->session_manager()->TearDownSession(id());
+  session_context_.session_manager->TearDownSession(id());
 }
 
 }  // namespace gfx

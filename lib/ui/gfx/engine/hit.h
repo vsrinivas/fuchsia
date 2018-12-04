@@ -7,6 +7,7 @@
 
 #include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/gfx/id.h"
+#include "garnet/lib/ui/gfx/resources/nodes/node.h"
 #include "lib/escher/geometry/types.h"
 
 namespace scenic_impl {

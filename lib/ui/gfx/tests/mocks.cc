@@ -10,19 +10,21 @@ namespace scenic_impl {
 namespace gfx {
 namespace test {
 
-SessionForTest::SessionForTest(SessionId id, Engine* engine,
+SessionForTest::SessionForTest(SessionId id, SessionContext context,
                                EventReporter* event_reporter,
                                ErrorReporter* error_reporter)
-    : Session(id, engine, event_reporter, error_reporter) {}
+    : Session(id, std::move(context), event_reporter, error_reporter) {}
 
 void SessionForTest::TearDown() { Session::TearDown(); }
 
 SessionHandlerForTest::SessionHandlerForTest(CommandDispatcherContext context,
-                                             Engine* engine,
+                                             SessionManager* session_manager,
+                                             SessionContext session_context,
                                              SessionId session_id,
                                              EventReporter* event_reporter,
                                              ErrorReporter* error_reporter)
-    : SessionHandler(std::move(context), engine, session_id, event_reporter,
+    : SessionHandler(std::move(context), session_manager,
+                     std::move(session_context), session_id, event_reporter,
                      error_reporter),
       command_count_(0),
       present_count_(0) {}
@@ -58,7 +60,8 @@ std::unique_ptr<SessionHandler> SessionManagerForTest::CreateSessionHandler(
     CommandDispatcherContext context, Engine* engine, SessionId session_id,
     EventReporter* event_reporter, ErrorReporter* error_reporter) const {
   return std::make_unique<SessionHandlerForTest>(
-      std::move(context), engine, session_id, event_reporter, error_reporter);
+      std::move(context), engine->session_manager(), engine->session_context(),
+      session_id, event_reporter, error_reporter);
 }
 
 EngineForTest::EngineForTest(DisplayManager* display_manager,

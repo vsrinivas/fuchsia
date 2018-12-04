@@ -12,11 +12,12 @@
 #include "garnet/lib/ui/gfx/id.h"
 #include "garnet/lib/ui/gfx/resources/resource_type_info.h"
 #include "lib/fxl/memory/ref_counted.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 namespace scenic_impl {
 class ErrorReporter;
 class EventReporter;
-}
+}  // namespace scenic_impl
 
 namespace scenic_impl {
 namespace gfx {
@@ -98,8 +99,7 @@ class Resource : public fxl::RefCountedThreadSafe<Resource> {
   virtual bool Detach();
 
  protected:
-  Resource(Session* session, ResourceId id,
-           const ResourceTypeInfo& type_info);
+  Resource(Session* session, ResourceId id, const ResourceTypeInfo& type_info);
 
   friend class ResourceLinker;
   friend class ResourceMap;
@@ -113,7 +113,8 @@ class Resource : public fxl::RefCountedThreadSafe<Resource> {
   // Sets a flag that indicates if this resource is exported in ResourceLinker.
   // If so, this resource is responsible for notifying ResourceLinker when it
   // dies.
-  void SetExported(bool exported);
+  void SetExported(bool exported,
+                   const fxl::WeakPtr<ResourceLinker>& resource_linker_weak);
 
  private:
   Session* const session_;
@@ -125,6 +126,7 @@ class Resource : public fxl::RefCountedThreadSafe<Resource> {
   // If true, ResourceLinker  must be called back before this resource is
   // destroyed.
   bool exported_ = false;
+  fxl::WeakPtr<ResourceLinker> resource_linker_weak_;
 };
 
 using ResourcePtr = fxl::RefPtr<Resource>;

@@ -29,9 +29,10 @@ class SceneManagerImpl;
 // TODO(SCN-709): Unify SessionHandler and Session.
 class SessionHandler : public TempSessionDelegate {
  public:
-  SessionHandler(CommandDispatcherContext context, Engine* engine,
-                 SessionId session_id, EventReporter* event_reporter,
-                 ErrorReporter* error_reporter);
+  SessionHandler(CommandDispatcherContext context,
+                 SessionManager* session_manager,
+                 SessionContext session_context, SessionId session_id,
+                 EventReporter* event_reporter, ErrorReporter* error_reporter);
   virtual ~SessionHandler();
 
   scenic_impl::gfx::Session* session() const { return session_.get(); }

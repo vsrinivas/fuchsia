@@ -17,7 +17,7 @@ namespace test {
 
 class SessionForTest : public Session {
  public:
-  SessionForTest(SessionId id, Engine* engine,
+  SessionForTest(SessionId id, SessionContext context,
                  EventReporter* event_reporter = EventReporter::Default(),
                  ErrorReporter* error_reporter = ErrorReporter::Default());
 
@@ -27,7 +27,8 @@ class SessionForTest : public Session {
 class SessionHandlerForTest : public SessionHandler {
  public:
   SessionHandlerForTest(
-      CommandDispatcherContext context, Engine* engine, SessionId session_id,
+      CommandDispatcherContext context, SessionManager* session_manager,
+      SessionContext session_context, SessionId session_id,
       EventReporter* event_reporter = EventReporter::Default(),
       ErrorReporter* error_reporter = ErrorReporter::Default());
 

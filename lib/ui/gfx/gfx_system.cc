@@ -318,8 +318,8 @@ VkBool32 GfxSystem::HandleDebugReport(VkDebugReportFlagsEXT flags_in,
   return false;
 }
 
-Compositor* GfxSystem::GetCompositor(GlobalId compositor_id) const {
-  return engine_->GetCompositor(compositor_id);
+CompositorWeakPtr GfxSystem::GetCompositor(GlobalId compositor_id) const {
+  return engine_->scene_graph()->GetCompositor(compositor_id);
 }
 
 gfx::Session* GfxSystem::GetSession(SessionId session_id) const {

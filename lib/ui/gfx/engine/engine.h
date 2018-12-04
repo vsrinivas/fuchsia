@@ -13,7 +13,6 @@
 #include "lib/escher/escher.h"
 #include "lib/escher/flib/release_fence_signaller.h"
 #include "lib/escher/impl/gpu_uploader.h"
-#include "lib/escher/renderer/batch_gpu_uploader.h"
 #include "lib/escher/resources/resource_recycler.h"
 #include "lib/escher/shape/rounded_rect_factory.h"
 #include "lib/escher/vk/image_factory.h"
@@ -22,6 +21,8 @@
 #include "garnet/lib/ui/gfx/engine/frame_scheduler.h"
 #include "garnet/lib/ui/gfx/engine/object_linker.h"
 #include "garnet/lib/ui/gfx/engine/resource_linker.h"
+#include "garnet/lib/ui/gfx/engine/scene_graph.h"
+#include "garnet/lib/ui/gfx/engine/session_context.h"
 #include "garnet/lib/ui/gfx/engine/session_manager.h"
 #include "garnet/lib/ui/gfx/engine/update_scheduler.h"
 #include "garnet/lib/ui/gfx/id.h"
@@ -39,26 +40,8 @@ class Session;
 class SessionHandler;
 class View;
 class ViewHolder;
-class Swapchain;
 
 using ViewLinker = ObjectLinker<ViewHolder, View>;
-
-// Graphical context for a set of session updates.
-class CommandContext {
- public:
-  CommandContext(escher::BatchGpuUploaderPtr uploader);
-
-  escher::BatchGpuUploader* batch_gpu_uploader() const {
-    FXL_DCHECK(batch_gpu_uploader_.get());
-    return batch_gpu_uploader_.get();
-  }
-
-  // Flush any work accumulated during command processing.
-  void Flush();
-
- private:
-  escher::BatchGpuUploaderPtr batch_gpu_uploader_;
-};
 
 // Owns a group of sessions which can share resources with one another
 // using the same resource linker and which coexist within the same timing
@@ -80,6 +63,68 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
 
   bool has_vulkan() const { return has_vulkan_; }
 
+  ResourceLinker* resource_linker() { return &resource_linker_; }
+  ViewLinker* view_linker() { return &view_linker_; }
+
+  SessionManager* session_manager() { return session_manager_.get(); }
+
+  EngineRenderer* renderer() { return engine_renderer_.get(); }
+
+  // TODO(SCN-1151)
+  // Instead of a set of Compositors, we should probably root at a set of
+  // Displays. Or, we might not even need to store this set, and Displays (or
+  // Compositors) would just be able to schedule a frame for themselves.
+  SceneGraphWeakPtr scene_graph() { return scene_graph_.GetWeakPtr(); }
+
+  SessionContext session_context() {
+    return SessionContext{vk_device(),
+                          escher(),
+                          imported_memory_type_index(),
+                          escher_resource_recycler(),
+                          escher_image_factory(),
+                          escher_gpu_uploader(),
+                          escher_rounded_rect_factory(),
+                          release_fence_signaller(),
+                          event_timestamper(),
+                          session_manager(),
+                          frame_scheduler(),
+                          static_cast<UpdateScheduler*>(this),
+                          display_manager(),
+                          scene_graph(),
+                          resource_linker(),
+                          view_linker()};
+  }
+
+  // |UpdateScheduler|
+  //
+  // Tell the FrameScheduler to schedule a frame. This is also used for
+  // updates triggered by something other than a Session update i.e. an
+  // ImagePipe with a new Image to present.
+  void ScheduleUpdate(uint64_t presentation_time) override;
+
+  // Dumps the contents of all scene graphs.
+  std::string DumpScenes() const;
+
+  // Invoke Escher::Cleanup().  If more work remains afterward, post a delayed
+  // task to try again; this is typically because cleanup couldn't finish due
+  // to unfinished GPU work.
+  void CleanupEscher();
+
+ protected:
+  // Only used by subclasses used in testing.
+  Engine(DisplayManager* display_manager,
+         std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller,
+         std::unique_ptr<SessionManager> session_manager,
+         escher::EscherWeakPtr escher);
+
+ private:
+  // Used by GpuMemory to import VMOs from clients.
+  uint32_t imported_memory_type_index() const {
+    return imported_memory_type_index_;
+  }
+  EventTimestamper* event_timestamper() { return &event_timestamper_; }
+  FrameScheduler* frame_scheduler() { return frame_scheduler_.get(); }
+
   escher::ResourceRecycler* escher_resource_recycler() {
     return escher_ ? escher_->resource_recycler() : nullptr;
   }
@@ -98,69 +143,6 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
     return release_fence_signaller_.get();
   }
 
-  ResourceLinker* resource_linker() { return &resource_linker_; }
-  ViewLinker* view_linker() { return &view_linker_; }
-
-  EventTimestamper* event_timestamper() { return &event_timestamper_; }
-
-  SessionManager* session_manager() { return session_manager_.get(); }
-
-  FrameScheduler* frame_scheduler() { return frame_scheduler_.get(); }
-
-  EngineRenderer* renderer() { return engine_renderer_.get(); }
-
-  // |UpdateScheduler|
-  //
-  // Tell the FrameScheduler to schedule a frame. This is also used for updates
-  // triggered by something other than a Session update i.e. an ImagePipe with
-  // a new Image to present.
-  void ScheduleUpdate(uint64_t presentation_time) override;
-
-  // Create a swapchain for the specified display.  The display must not already
-  // be claimed by another swapchain.
-  std::unique_ptr<Swapchain> CreateDisplaySwapchain(Display* display);
-
-  // Returns the first compositor in the current compositors, or nullptr if no
-  // compositor exists.
-  Compositor* GetFirstCompositor() const;
-
-  // Returns the compositor requested, or nullptr if it does not exist.
-  Compositor* GetCompositor(scenic_impl::GlobalId compositor_id) const;
-
-  // Dumps the contents of all scene graphs.
-  std::string DumpScenes() const;
-
-  // Used by GpuMemory to import VMOs from clients.
-  uint32_t imported_memory_type_index() const {
-    return imported_memory_type_index_;
-  }
-
-  // The CommandContext is only valid during RenderFrame() and should not be
-  // accessed outside of that.
-  const CommandContext* GetCommandContext() {
-    FXL_DCHECK(command_context_);
-    return command_context_.get();
-  }
-
-  // Invoke Escher::Cleanup().  If more work remains afterward, post a delayed
-  // task to try again; this is typically because cleanup couldn't finish due to
-  // unfinished GPU work.
-  void CleanupEscher();
-
- protected:
-  // Only used by subclasses used in testing.
-  Engine(DisplayManager* display_manager,
-         std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller,
-         std::unique_ptr<SessionManager> session_manager,
-         escher::EscherWeakPtr escher);
-
- private:
-  friend class Compositor;
-
-  // Compositors register/unregister themselves upon creation/destruction.
-  void AddCompositor(Compositor* compositor);
-  void RemoveCompositor(Compositor* compositor);
-
   // |FrameSchedulerDelegate|:
   bool RenderFrame(const FrameTimingsPtr& frame, uint64_t presentation_time,
                    uint64_t presentation_interval, bool force_render) override;
@@ -174,7 +156,8 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
                       uint64_t presentation_interval,
                       uint64_t frame_number_for_tracing);
 
-  // Update and deliver metrics for all nodes which subscribe to metrics events.
+  // Update and deliver metrics for all nodes which subscribe to metrics
+  // events.
   void UpdateAndDeliverMetrics(uint64_t presentation_time);
 
   // Update reported metrics for nodes which subscribe to metrics events.
@@ -182,10 +165,6 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
   void UpdateMetrics(Node* node,
                      const ::fuchsia::ui::gfx::Metrics& parent_metrics,
                      std::vector<Node*>* updated_nodes);
-
-  // Set up and tear down a CommandContext for use in UpdateSessions().
-  void InitializeCommandContext(uint64_t frame_number_for_tracing);
-  void FlushAndInvalidateCommandContext();
 
   DisplayManager* const display_manager_;
   const escher::EscherWeakPtr escher_;
@@ -201,9 +180,7 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
   std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller_;
   std::unique_ptr<SessionManager> session_manager_;
   std::unique_ptr<FrameScheduler> frame_scheduler_;
-  std::set<Compositor*> compositors_;
-
-  std::unique_ptr<CommandContext> command_context_;
+  SceneGraph scene_graph_;
 
   bool escher_cleanup_scheduled_ = false;
 

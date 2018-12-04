@@ -48,7 +48,7 @@ ImagePtr HostImage::New(Session* session, ResourceId id, MemoryPtr memory,
     return nullptr;
   }
 
-  auto& caps = session->engine()->escher()->device()->caps();
+  auto& caps = session->resource_context().vk_device_queues_capabilities;
   if (image_info.width > caps.max_image_width) {
     error_reporter->ERROR()
         << "Image::CreateFromMemory(): image width exceeds maximum ("
@@ -108,7 +108,7 @@ ImagePtr HostImage::New(Session* session, ResourceId id, MemoryPtr memory,
   }
 
   auto escher_image = escher::image_utils::NewImage(
-      session->engine()->escher_image_factory(), gpu_image_pixel_format,
+      session->resource_context().escher_image_factory, gpu_image_pixel_format,
       image_info.width, image_info.height);
 
   auto host_image = fxl::AdoptRef(new HostImage(session, id, std::move(memory),
@@ -121,9 +121,9 @@ bool HostImage::UpdatePixels() {
   TRACE_DURATION("gfx", "UpdatePixels");
 
   // TODO(SCN-844): Migrate this over to using the batch gpu uploader.
-  if (session()->engine()->escher_gpu_uploader()) {
+  if (session()->resource_context().escher_gpu_uploader) {
     escher::image_utils::WritePixelsToImage(
-        session()->engine()->escher_gpu_uploader(),
+        session()->resource_context().escher_gpu_uploader,
         static_cast<uint8_t*>(memory_->host_ptr()) + memory_offset_, image_,
         image_conversion_function_);
     return false;

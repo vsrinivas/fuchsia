@@ -17,14 +17,15 @@ static zx_signals_t kEventPairDeathSignals = ZX_EVENTPAIR_PEER_CLOSED;
   FXL_DCHECK(exported_resources_to_import_koids_.size() == \
              export_entries_.size());
 
-ResourceLinker::ResourceLinker() : unresolved_imports_(this){};
+ResourceLinker::ResourceLinker()
+    : unresolved_imports_(this), weak_factory_(this){};
 
 ResourceLinker::~ResourceLinker() {
   for (const auto& item : export_entries_) {
     // Resource could be null if ExportResource() were called, but the
     // import tokens weren't all released yet.
     if (item.second.resource != nullptr) {
-      item.second.resource->SetExported(false);
+      item.second.resource->SetExported(false, fxl::WeakPtr<ResourceLinker>());
     }
   }
 }
@@ -67,7 +68,7 @@ bool ResourceLinker::ExportResource(Resource* resource,
   };
   exported_resources_to_import_koids_.insert({resource, import_koid});
   exported_resources_.insert(resource);
-  resource->SetExported(true);
+  resource->SetExported(true, GetWeakPtr());
 
   ASSERT_INTERNAL_EXPORTS_CONSISTENCY;
 
@@ -130,7 +131,7 @@ void ResourceLinker::RemoveExportedResourceIfUnbound(
 
   // Mark the resource as not exported, so it doesn't have to
   // call back to us when it dies.
-  exported_resource->SetExported(false);
+  exported_resource->SetExported(false, fxl::WeakPtr<ResourceLinker>());
 
   InvokeExpirationCallback(exported_resource, ExpirationCause::kNoImportsBound);
 }
@@ -216,7 +217,7 @@ void ResourceLinker::OnExportedResourceDestroyed(Resource* resource) {
 
   // Mark the resource as not exported, so it doesn't have to
   // call back to us when it dies.
-  resource->SetExported(false);
+  resource->SetExported(false, fxl::WeakPtr<ResourceLinker>());
 
   // Remove from |resources_|.
   size_t num_removed = exported_resources_.erase(resource);

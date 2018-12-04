@@ -71,6 +71,7 @@ executable("unittests") {
     "pose_buffer_unit_test.cc",
     "resource_linker_unittest.cc",
     "run_all_unittests.cc",
+    "scene_graph_unittest.cc",
     "session_unittest.cc",
     "shape_unittest.cc",
     "size_change_hint_unittest.cc",

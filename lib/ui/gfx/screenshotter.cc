@@ -76,9 +76,10 @@ void Screenshotter::TakeScreenshot(
     Engine* engine,
     fuchsia::ui::scenic::Scenic::TakeScreenshotCallback done_callback) {
   auto* escher = engine->escher();
-  Compositor* compositor = engine->GetFirstCompositor();
+  const CompositorWeakPtr& compositor =
+      engine->scene_graph()->first_compositor();
 
-  if (compositor->GetNumDrawableLayers() == 0) {
+  if (!compositor || compositor->GetNumDrawableLayers() == 0) {
     FXL_LOG(ERROR) << "No drawable layers.";
     done_callback(fuchsia::ui::scenic::ScreenshotData{}, false);
     return;

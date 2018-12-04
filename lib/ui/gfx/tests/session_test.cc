@@ -10,21 +10,51 @@ namespace scenic_impl {
 namespace gfx {
 namespace test {
 
-void SessionTest::SetUp() {
-  engine_ = std::unique_ptr<Engine>(CreateEngine());
-  session_ = fxl::MakeRefCounted<SessionForTest>(1, engine_.get(), this,
-                                                 error_reporter());
+FakeUpdateScheduler::FakeUpdateScheduler(SessionManager* session_manager)
+    : session_manager_(session_manager) {}
+
+void FakeUpdateScheduler::ScheduleUpdate(uint64_t presentation_time) {
+  CommandContext empty_command_context(nullptr);
+  session_manager_->ApplyScheduledSessionUpdates(&empty_command_context,
+                                                 presentation_time, 0);
 }
+
+void SessionTest::SetUp() { session_ = CreateSession(); }
 
 void SessionTest::TearDown() {
   session_->TearDown();
   session_ = nullptr;
-  engine_.reset();
   events_.clear();
 }
 
-std::unique_ptr<Engine> SessionTest::CreateEngine() {
-  return std::make_unique<EngineForTest>(&display_manager_, nullptr);
+SessionContext SessionTest::CreateBarebonesSessionContext() {
+  session_manager_ = std::make_unique<SessionManager>();
+  update_scheduler_ =
+      std::make_unique<FakeUpdateScheduler>(session_manager_.get());
+  SessionContext session_context{
+      vk::Device(),
+      nullptr,                  // escher::Escher*
+      0,                        // imported_memory_type_index;
+      nullptr,                  // escher::ResourceRecycler
+      nullptr,                  // escher::ImageFactory*
+      nullptr,                  // escher::impl::GpuUploader*
+      nullptr,                  // escher::RoundedRectFactory*
+      nullptr,                  // escher::ReleaseFenceSignaller*
+      nullptr,                  // EventTimestamper*
+      session_manager_.get(),   // SessionManager*
+      nullptr,                  // FrameScheduler*
+      update_scheduler_.get(),  // UpdateScheduler*
+      nullptr,                  // DisplayManager*
+      SceneGraphWeakPtr(),      // SceneGraphWeakPtr
+      nullptr,                  // ResourceLinker*
+      nullptr                   // ViewLinker*
+  };
+  return session_context;
+}
+
+fxl::RefPtr<SessionForTest> SessionTest::CreateSession() {
+  return fxl::MakeRefCounted<SessionForTest>(1, CreateBarebonesSessionContext(),
+                                             this, error_reporter());
 }
 
 void SessionTest::EnqueueEvent(fuchsia::ui::gfx::Event event) {

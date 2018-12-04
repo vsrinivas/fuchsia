@@ -14,7 +14,22 @@ namespace scenic_impl {
 namespace gfx {
 namespace test {
 
-using ImportTest = SessionTest;
+class ImportTest : public SessionTest {
+ public:
+  ImportTest() {}
+
+  fxl::RefPtr<SessionForTest> CreateSession() override {
+    SessionContext session_context = CreateBarebonesSessionContext();
+
+    resource_linker_ = std::make_unique<ResourceLinker>();
+    session_context.resource_linker = resource_linker_.get();
+
+    return fxl::MakeRefCounted<SessionForTest>(1, std::move(session_context),
+                                               this, error_reporter());
+  }
+
+  std::unique_ptr<ResourceLinker> resource_linker_;
+};
 
 TEST_F(ImportTest, ExportsResourceViaCmd) {
   // Create the event pair.
@@ -231,7 +246,7 @@ TEST_F(ImportTest, ImportingNodeAfterDestroyingExportedResourceSendsEvent) {
 
 TEST_F(ImportTest, KillingImportedResourceEvictsFromResourceLinker) {
   bool called = false;
-  engine_->resource_linker()->SetOnExpiredCallback(
+  resource_linker_->SetOnExpiredCallback(
       [this, &called](Resource*, ResourceLinker::ExpirationCause cause) {
         ASSERT_EQ(ResourceLinker::ExpirationCause::kResourceDestroyed, cause);
         called = true;
@@ -257,7 +272,7 @@ TEST_F(ImportTest, KillingImportedResourceEvictsFromResourceLinker) {
 
     // Assert that the resource linker is ready to potentially link the
     // resource.
-    ASSERT_EQ(1u, engine_->resource_linker()->NumUnresolvedImports());
+    ASSERT_EQ(1u, resource_linker_->NumUnresolvedImports());
 
     // Assert that the import node was setup with the correct properties.
     auto import_node = FindResource<Import>(1);
@@ -282,7 +297,7 @@ TEST_F(ImportTest, KillingImportedResourceEvictsFromResourceLinker) {
   // Assert that the resource linker has removed the unresolved import
   // registration. We have already asserted that the unresolved import was
   // registered in the initial post task.
-  ASSERT_EQ(engine_->resource_linker()->NumUnresolvedImports(), 0u);
+  ASSERT_EQ(resource_linker_->NumUnresolvedImports(), 0u);
 }
 
 // For a given resource, export it and bind a node to it. Additionally, keep
@@ -295,11 +310,11 @@ TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie1) {
   bool destination_handle_released = false;
   bool import_node_released = false;
   bool called = false;
-  engine_->resource_linker()->SetOnExpiredCallback(
+  resource_linker_->SetOnExpiredCallback(
       [&](Resource*, ResourceLinker::ExpirationCause cause) {
         ASSERT_EQ(ResourceLinker::ExpirationCause::kNoImportsBound, cause);
-        ASSERT_EQ(0u, engine_->resource_linker()->NumExports());
-        ASSERT_EQ(0u, engine_->resource_linker()->NumUnresolvedImports());
+        ASSERT_EQ(0u, resource_linker_->NumExports());
+        ASSERT_EQ(0u, resource_linker_->NumUnresolvedImports());
 
         // Ensure that our export was unbound after all the necessary
         // preconditions were met.
@@ -345,7 +360,7 @@ TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie1) {
     ASSERT_EQ(exported_node.get(), import_node->imported_resource());
     ASSERT_EQ(true, exported_node->is_exported());
     ASSERT_EQ(1u, exported_node->imports().size());
-    ASSERT_EQ(1u, engine_->resource_linker()->NumExports());
+    ASSERT_EQ(1u, resource_linker_->NumExports());
 
     async::PostTask(dispatcher(), [&]() {
       // Release the only import bound to the exported node.
@@ -383,11 +398,11 @@ TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie2) {
   bool destination_handle_released = false;
   bool import_node_released = false;
   bool called = false;
-  engine_->resource_linker()->SetOnExpiredCallback(
+  resource_linker_->SetOnExpiredCallback(
       [&](Resource*, ResourceLinker::ExpirationCause cause) {
         ASSERT_EQ(ResourceLinker::ExpirationCause::kNoImportsBound, cause);
-        ASSERT_EQ(0u, engine_->resource_linker()->NumExports());
-        ASSERT_EQ(0u, engine_->resource_linker()->NumUnresolvedImports());
+        ASSERT_EQ(0u, resource_linker_->NumExports());
+        ASSERT_EQ(0u, resource_linker_->NumUnresolvedImports());
 
         // Ensure that our export was unbound after all the necessary
         // preconditions were met.
@@ -434,7 +449,7 @@ TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie2) {
     ASSERT_EQ(exported_node.get(), import_node->imported_resource());
     ASSERT_EQ(true, exported_node->is_exported());
     ASSERT_EQ(1u, exported_node->imports().size());
-    ASSERT_EQ(1u, engine_->resource_linker()->NumExports());
+    ASSERT_EQ(1u, resource_linker_->NumExports());
 
     async::PostTask(dispatcher(), [&]() {
       // Reset the only import handle.
@@ -472,11 +487,11 @@ TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie3) {
   bool import_node_released = false;
   bool called = false;
 
-  engine_->resource_linker()->SetOnExpiredCallback(
+  resource_linker_->SetOnExpiredCallback(
       [&](Resource*, ResourceLinker::ExpirationCause cause) {
         ASSERT_EQ(ResourceLinker::ExpirationCause::kNoImportsBound, cause);
-        ASSERT_EQ(0u, engine_->resource_linker()->NumExports());
-        ASSERT_EQ(0u, engine_->resource_linker()->NumUnresolvedImports());
+        ASSERT_EQ(0u, resource_linker_->NumExports());
+        ASSERT_EQ(0u, resource_linker_->NumUnresolvedImports());
 
         // Ensure that our export was unbound after all the necessary
         // preconditions were met.
@@ -525,7 +540,7 @@ TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie3) {
     ASSERT_EQ(exported_node.get(), import_node->imported_resource());
     ASSERT_EQ(true, exported_node->is_exported());
     ASSERT_EQ(1u, exported_node->imports().size());
-    ASSERT_EQ(1u, engine_->resource_linker()->NumExports());
+    ASSERT_EQ(1u, resource_linker_->NumExports());
 
     // Post three tasks in the future. We assume the export will be released
     // after the second one. Post tasks with a slight delay so we can identify
@@ -581,11 +596,11 @@ TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie4) {
   bool import_node2_released = false;
   bool called = false;
 
-  engine_->resource_linker()->SetOnExpiredCallback(
+  resource_linker_->SetOnExpiredCallback(
       [&](Resource*, ResourceLinker::ExpirationCause cause) {
         ASSERT_EQ(ResourceLinker::ExpirationCause::kNoImportsBound, cause);
-        ASSERT_EQ(0u, engine_->resource_linker()->NumExports());
-        ASSERT_EQ(0u, engine_->resource_linker()->NumUnresolvedImports());
+        ASSERT_EQ(0u, resource_linker_->NumExports());
+        ASSERT_EQ(0u, resource_linker_->NumUnresolvedImports());
 
         // Ensure that our export was unbound after all the necessary
         // preconditions were met.
@@ -642,7 +657,7 @@ TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie4) {
     ASSERT_EQ(exported_node.get(), import_node2->imported_resource());
     ASSERT_EQ(true, exported_node->is_exported());
     ASSERT_EQ(2u, exported_node->imports().size());
-    ASSERT_EQ(1u, engine_->resource_linker()->NumExports());
+    ASSERT_EQ(1u, resource_linker_->NumExports());
 
     // Post three tasks in the future. We assume the export will be released
     // after the second one. Post tasks with a slight delay so we can identify
@@ -893,7 +908,7 @@ TEST_F(ImportTest, EmbedderCanEmbedNodesFromElsewhere) {
     // Export.
     ASSERT_TRUE(
         Apply(scenic::NewExportResourceCmd(1, std::move(export_token))));
-    ASSERT_EQ(1u, engine_->resource_linker()->NumExports());
+    ASSERT_EQ(1u, resource_linker_->NumExports());
   }
 
   // Embeddee.

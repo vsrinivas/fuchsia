@@ -16,7 +16,8 @@ Buffer::Buffer(Session* session, ResourceId id, escher::GpuMemPtr gpu_mem,
     : Resource(session, id, Buffer::kTypeInfo),
       backing_resource_(std::move(backing_resource)),
       escher_buffer_(escher::Buffer::New(
-          session->escher()->resource_recycler(), std::move(gpu_mem),
+          session->resource_context().escher_resource_recycler,
+          std::move(gpu_mem),
           vk::BufferUsageFlagBits::eTransferSrc |
               vk::BufferUsageFlagBits::eTransferDst |
               vk::BufferUsageFlagBits::eStorageTexelBuffer |

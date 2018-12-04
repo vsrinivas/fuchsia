@@ -4,6 +4,7 @@
 
 #include "garnet/lib/ui/gfx/resources/compositor/compositor.h"
 
+#include "garnet/lib/ui/gfx/engine/scene_graph.h"
 #include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/gfx/resources/compositor/layer.h"
 #include "garnet/lib/ui/gfx/resources/compositor/layer_stack.h"
@@ -15,20 +16,31 @@ namespace gfx {
 
 const ResourceTypeInfo Compositor::kTypeInfo = {ResourceType::kCompositor,
                                                 "Compositor"};
+const CompositorWeakPtr Compositor::kNullWeakPtr = CompositorWeakPtr();
 
-CompositorPtr Compositor::New(Session* session, ResourceId id) {
+CompositorPtr Compositor::New(Session* session, ResourceId id,
+                              SceneGraphWeakPtr scene_graph) {
   return fxl::AdoptRef(
-      new Compositor(session, id, Compositor::kTypeInfo, nullptr));
+      new Compositor(session, id, Compositor::kTypeInfo, scene_graph, nullptr));
 }
 
 Compositor::Compositor(Session* session, ResourceId id,
                        const ResourceTypeInfo& type_info,
+                       SceneGraphWeakPtr scene_graph,
                        std::unique_ptr<Swapchain> swapchain)
-    : Resource(session, id, type_info), swapchain_(std::move(swapchain)) {
-  session->engine()->AddCompositor(this);
+    : Resource(session, id, type_info),
+      scene_graph_(scene_graph),
+      swapchain_(std::move(swapchain)),
+      weak_factory_(this) {
+  FXL_DCHECK(scene_graph_);
+  scene_graph_->AddCompositor(GetWeakPtr());
 }
 
-Compositor::~Compositor() { session()->engine()->RemoveCompositor(this); }
+Compositor::~Compositor() {
+  if (scene_graph_) {
+    scene_graph_->RemoveCompositor(GetWeakPtr());
+  }
+}
 
 void Compositor::CollectScenes(std::set<Scene*>* scenes_out) {
   if (layer_stack_) {

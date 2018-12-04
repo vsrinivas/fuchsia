@@ -27,8 +27,10 @@ Resource::~Resource() {
   for (auto& import : imports_) {
     import->UnbindImportedResource();
   }
-  if (exported_) {
-    session_->engine()->resource_linker()->OnExportedResourceDestroyed(this);
+  FXL_DCHECK((exported_ && resource_linker_weak_) ||
+             (!exported_ && !resource_linker_weak_));
+  if (resource_linker_weak_ && exported_) {
+    resource_linker_weak_->OnExportedResourceDestroyed(this);
   }
   session_->DecrementResourceCount();
 }
@@ -78,7 +80,13 @@ Resource* Resource::GetDelegate(const ResourceTypeInfo& type_info) {
   return type_info_.IsKindOf(type_info) ? this : nullptr;
 }
 
-void Resource::SetExported(bool exported) { exported_ = exported; }
+void Resource::SetExported(
+    bool exported, const fxl::WeakPtr<ResourceLinker>& resource_linker_weak) {
+  FXL_DCHECK((exported && resource_linker_weak) ||
+             (!exported && !resource_linker_weak));
+  exported_ = exported;
+  resource_linker_weak_ = resource_linker_weak;
+}
 
 }  // namespace gfx
 }  // namespace scenic_impl

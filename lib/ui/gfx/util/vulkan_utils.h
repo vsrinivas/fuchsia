@@ -12,6 +12,10 @@ namespace gfx {
 
 vk::SurfaceKHR CreateVulkanMagmaSurface(const vk::Instance& instance);
 
+// Determine a plausible memory type index for importing memory from VMOs.
+uint32_t GetImportedMemoryTypeIndex(vk::PhysicalDevice physical_device,
+                                    vk::Device device);
+
 }  // namespace gfx
 }  // namespace scenic_impl
 

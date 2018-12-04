@@ -35,7 +35,6 @@ source_set("common_gfx_config_source_set") {
     ":gfx_always_optimized",
     ":gfx",
   ]
-
 }
 
 # These sources (all part of :gfx) are especially performance-sensitive, so we
@@ -76,8 +75,8 @@ source_set("gfx") {
     "engine/frame_scheduler.h",
     "engine/frame_timings.cc",
     "engine/frame_timings.h",
-    "engine/hardware_layer_assignment.h",
     "engine/hardware_layer_assignment.cc",
+    "engine/hardware_layer_assignment.h",
     "engine/hit.h",
     "engine/hit_tester.cc",
     "engine/hit_tester.h",
@@ -85,6 +84,8 @@ source_set("gfx") {
     "engine/resource_linker.h",
     "engine/resource_map.cc",
     "engine/resource_map.h",
+    "engine/scene_graph.cc",
+    "engine/scene_graph.h",
     "engine/session.cc",
     "engine/session.h",
     "engine/session_handler.cc",
@@ -153,6 +154,7 @@ source_set("gfx") {
     "resources/renderers/renderer.h",
     "resources/resource.cc",
     "resources/resource.h",
+    "resources/resource_context.h",
     "resources/resource_type_info.h",
     "resources/resource_visitor.cc",
     "resources/resource_visitor.h",
@@ -185,6 +187,8 @@ source_set("gfx") {
     "swapchain/display_swapchain.cc",
     "swapchain/display_swapchain.h",
     "swapchain/swapchain.h",
+    "swapchain/swapchain_factory.cc",
+    "swapchain/swapchain_factory.h",
     "swapchain/vulkan_display_swapchain.cc",
     "swapchain/vulkan_display_swapchain.h",
     "util/event_timestamper.cc",

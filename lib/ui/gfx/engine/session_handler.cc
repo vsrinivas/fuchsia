@@ -11,16 +11,19 @@ namespace scenic_impl {
 namespace gfx {
 
 SessionHandler::SessionHandler(CommandDispatcherContext dispatcher_context,
-                               Engine* engine, SessionId session_id,
+                               SessionManager* session_manager,
+                               SessionContext session_context,
+                               SessionId session_id,
                                EventReporter* event_reporter,
                                ErrorReporter* error_reporter)
     : TempSessionDelegate(std::move(dispatcher_context)),
-      session_manager_(engine->session_manager()),
+      session_manager_(session_manager),
       event_reporter_(event_reporter),
       error_reporter_(error_reporter),
       session_(::fxl::MakeRefCounted<scenic_impl::gfx::Session>(
-          session_id, engine, event_reporter, error_reporter)) {
-  FXL_DCHECK(engine);
+          session_id, std::move(session_context), event_reporter,
+          error_reporter)) {
+  FXL_DCHECK(session_manager_);
 }
 
 SessionHandler::~SessionHandler() {

@@ -1,9 +1,10 @@
+
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/ui/gfx/resources/nodes/entity_node.h"
 #include "garnet/lib/ui/gfx/resources/view.h"
+#include "garnet/lib/ui/gfx/resources/nodes/entity_node.h"
 #include "garnet/lib/ui/gfx/resources/view_holder.h"
 
 #include <lib/async/cpp/task.h>
@@ -18,7 +19,22 @@ namespace gfx {
 
 namespace test {
 
-using ViewTest = SessionTest;
+class ViewTest : public SessionTest {
+ public:
+  ViewTest() {}
+
+  fxl::RefPtr<SessionForTest> CreateSession() override {
+    SessionContext session_context = CreateBarebonesSessionContext();
+
+    view_linker_ = std::make_unique<ViewLinker>();
+    session_context.view_linker = view_linker_.get();
+
+    return fxl::MakeRefCounted<SessionForTest>(1, std::move(session_context),
+                                               this, error_reporter());
+  }
+
+  std::unique_ptr<ViewLinker> view_linker_;
+};
 
 TEST_F(ViewTest, CreateViewWithBadTokenDies) {
   EXPECT_DEATH_IF_SUPPORTED(
@@ -89,10 +105,10 @@ TEST_F(ViewTest, ExportsViewHolderViaCmd) {
   EXPECT_TRUE(view_holder);
   EXPECT_EQ(nullptr, view_holder->view());
   EXPECT_EQ(1u, session_->GetMappedResourceCount());
-  EXPECT_EQ(1u, engine_->view_linker()->ExportCount());
-  EXPECT_EQ(1u, engine_->view_linker()->UnresolvedExportCount());
-  EXPECT_EQ(0u, engine_->view_linker()->ImportCount());
-  EXPECT_EQ(0u, engine_->view_linker()->UnresolvedImportCount());
+  EXPECT_EQ(1u, view_linker_->ExportCount());
+  EXPECT_EQ(1u, view_linker_->UnresolvedExportCount());
+  EXPECT_EQ(0u, view_linker_->ImportCount());
+  EXPECT_EQ(0u, view_linker_->UnresolvedImportCount());
 }
 
 TEST_F(ViewTest, ImportsViewViaCmd) {
@@ -108,10 +124,10 @@ TEST_F(ViewTest, ImportsViewViaCmd) {
   EXPECT_TRUE(view);
   EXPECT_EQ(nullptr, view->view_holder());
   EXPECT_EQ(1u, session_->GetMappedResourceCount());
-  EXPECT_EQ(0u, engine_->view_linker()->ExportCount());
-  EXPECT_EQ(0u, engine_->view_linker()->UnresolvedExportCount());
-  EXPECT_EQ(1u, engine_->view_linker()->ImportCount());
-  EXPECT_EQ(1u, engine_->view_linker()->UnresolvedImportCount());
+  EXPECT_EQ(0u, view_linker_->ExportCount());
+  EXPECT_EQ(0u, view_linker_->UnresolvedExportCount());
+  EXPECT_EQ(1u, view_linker_->ImportCount());
+  EXPECT_EQ(1u, view_linker_->UnresolvedImportCount());
 }
 
 TEST_F(ViewTest, PairedViewAndHolderAreLinked) {
@@ -127,10 +143,10 @@ TEST_F(ViewTest, PairedViewAndHolderAreLinked) {
   EXPECT_TRUE(view_holder);
   EXPECT_EQ(nullptr, view_holder->view());
   EXPECT_EQ(1u, session_->GetMappedResourceCount());
-  EXPECT_EQ(1u, engine_->view_linker()->ExportCount());
-  EXPECT_EQ(1u, engine_->view_linker()->UnresolvedExportCount());
-  EXPECT_EQ(0u, engine_->view_linker()->ImportCount());
-  EXPECT_EQ(0u, engine_->view_linker()->UnresolvedImportCount());
+  EXPECT_EQ(1u, view_linker_->ExportCount());
+  EXPECT_EQ(1u, view_linker_->UnresolvedExportCount());
+  EXPECT_EQ(0u, view_linker_->ImportCount());
+  EXPECT_EQ(0u, view_linker_->UnresolvedImportCount());
 
   const ResourceId view_id = 2u;
   EXPECT_TRUE(
@@ -142,10 +158,10 @@ TEST_F(ViewTest, PairedViewAndHolderAreLinked) {
   EXPECT_EQ(view.get(), view_holder->view());
   EXPECT_EQ(view_holder.get(), view->view_holder());
   EXPECT_EQ(2u, session_->GetMappedResourceCount());
-  EXPECT_EQ(1u, engine_->view_linker()->ExportCount());
-  EXPECT_EQ(0u, engine_->view_linker()->UnresolvedExportCount());
-  EXPECT_EQ(1u, engine_->view_linker()->ImportCount());
-  EXPECT_EQ(0u, engine_->view_linker()->UnresolvedImportCount());
+  EXPECT_EQ(1u, view_linker_->ExportCount());
+  EXPECT_EQ(0u, view_linker_->UnresolvedExportCount());
+  EXPECT_EQ(1u, view_linker_->ImportCount());
+  EXPECT_EQ(0u, view_linker_->UnresolvedImportCount());
 
   EXPECT_NE(0u, events_.size());
   const fuchsia::ui::scenic::Event& event = events_[0];
@@ -170,10 +186,10 @@ TEST_F(ViewTest, ExportViewHolderWithDeadHandleFails) {
   auto view_holder = FindResource<ViewHolder>(view_holder_id);
   EXPECT_FALSE(view_holder);
   EXPECT_EQ(0u, session_->GetMappedResourceCount());
-  EXPECT_EQ(0u, engine_->view_linker()->ExportCount());
-  EXPECT_EQ(0u, engine_->view_linker()->UnresolvedExportCount());
-  EXPECT_EQ(0u, engine_->view_linker()->ImportCount());
-  EXPECT_EQ(0u, engine_->view_linker()->UnresolvedImportCount());
+  EXPECT_EQ(0u, view_linker_->ExportCount());
+  EXPECT_EQ(0u, view_linker_->UnresolvedExportCount());
+  EXPECT_EQ(0u, view_linker_->ImportCount());
+  EXPECT_EQ(0u, view_linker_->UnresolvedImportCount());
 }
 
 TEST_F(ViewTest, ViewHolderDestroyedBeforeView) {
@@ -392,7 +408,7 @@ TEST_F(ViewTest, RenderStateFalseWhenViewDisconnects) {
     view->SignalRender();
     RunLoopUntilIdle();
     events_.clear();
-  } // Exit scope should destroy the view and disconnect the link.
+  }  // Exit scope should destroy the view and disconnect the link.
   Apply(scenic::NewReleaseResourceCmd(view_id));
 
   EXPECT_EQ(2u, events_.size());

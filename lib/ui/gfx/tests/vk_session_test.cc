@@ -9,7 +9,9 @@ namespace scenic_impl {
 namespace gfx {
 namespace test {
 
-std::unique_ptr<Engine> VkSessionTest::CreateEngine() {
+fxl::RefPtr<SessionForTest> VkSessionTest::CreateSession() {
+  SessionContext session_context = CreateBarebonesSessionContext();
+
   // Initialize Vulkan.
   escher::VulkanInstance::Params instance_params(
       {{}, {VK_EXT_DEBUG_REPORT_EXTENSION_NAME}, false});
@@ -22,9 +24,21 @@ std::unique_ptr<Engine> VkSessionTest::CreateEngine() {
       {{VK_KHR_EXTERNAL_SEMAPHORE_FUCHSIA_EXTENSION_NAME}, vk::SurfaceKHR()});
 
   escher_ = std::make_unique<escher::Escher>(vulkan_device);
+  release_fence_signaller_ = std::make_unique<escher::ReleaseFenceSignaller>(
+      escher_->command_buffer_sequencer());
+  image_factory_ = std::make_unique<escher::ImageFactoryAdapter>(
+      escher_->gpu_allocator(), escher_->resource_recycler());
 
-  return std::make_unique<EngineForTest>(&display_manager_, nullptr,
-                                         escher_->GetWeakPtr());
+  session_context.vk_device = escher_->vk_device();
+  session_context.escher = escher_.get();
+  session_context.imported_memory_type_index = GetImportedMemoryTypeIndex(
+      escher_->vk_physical_device(), escher_->vk_device());
+  session_context.escher_resource_recycler = escher_->resource_recycler();
+  session_context.escher_image_factory = image_factory_.get();
+  session_context.release_fence_signaller = release_fence_signaller_.get();
+
+  return fxl::MakeRefCounted<SessionForTest>(1, std::move(session_context),
+                                             this, error_reporter());
 }
 
 }  // namespace test

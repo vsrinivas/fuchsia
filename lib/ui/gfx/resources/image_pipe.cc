@@ -7,6 +7,7 @@
 #include <trace/event.h>
 
 #include "garnet/lib/ui/gfx/engine/session.h"
+#include "garnet/lib/ui/gfx/engine/update_scheduler.h"
 #include "garnet/lib/ui/gfx/resources/memory.h"
 #include "lib/escher/flib/fence.h"
 
@@ -16,15 +17,24 @@ namespace gfx {
 const ResourceTypeInfo ImagePipe::kTypeInfo = {
     ResourceType::kImagePipe | ResourceType::kImageBase, "ImagePipe"};
 
-ImagePipe::ImagePipe(Session* session, ResourceId id)
-    : ImageBase(session, id, ImagePipe::kTypeInfo), weak_ptr_factory_(this) {}
+ImagePipe::ImagePipe(Session* session, ResourceId id,
+                     UpdateScheduler* update_scheduler)
+    : ImageBase(session, id, ImagePipe::kTypeInfo),
+      update_scheduler_(update_scheduler),
+      weak_ptr_factory_(this) {
+  FXL_DCHECK(update_scheduler);
+}
 
 ImagePipe::ImagePipe(
     Session* session, ResourceId id,
-    ::fidl::InterfaceRequest<fuchsia::images::ImagePipe> request)
+    ::fidl::InterfaceRequest<fuchsia::images::ImagePipe> request,
+    UpdateScheduler* update_scheduler)
     : ImageBase(session, id, ImagePipe::kTypeInfo),
-      weak_ptr_factory_(this),
-      handler_(std::make_unique<ImagePipeHandler>(std::move(request), this)) {}
+      handler_(std::make_unique<ImagePipeHandler>(std::move(request), this)),
+      update_scheduler_(update_scheduler),
+      weak_ptr_factory_(this) {
+  FXL_DCHECK(update_scheduler);
+}
 
 void ImagePipe::AddImage(uint32_t image_id,
                          fuchsia::images::ImageInfo image_info, zx::vmo vmo,
@@ -77,7 +87,7 @@ void ImagePipe::CloseConnectionAndCleanUp() {
   images_.clear();
 
   // Schedule a new frame.
-  session()->engine()->ScheduleUpdate(0);
+  update_scheduler_->ScheduleUpdate(0);
 }
 
 void ImagePipe::OnConnectionError() { CloseConnectionAndCleanUp(); }
@@ -141,8 +151,11 @@ void ImagePipe::PresentImage(
                      std::move(release_fences), std::move(callback)});
 };
 
-bool ImagePipe::Update(uint64_t presentation_time,
+bool ImagePipe::Update(escher::ReleaseFenceSignaller* release_fence_signaller,
+                       uint64_t presentation_time,
                        uint64_t presentation_interval) {
+  FXL_DCHECK(release_fence_signaller);
+
   TRACE_DURATION("gfx", "ImagePipe::Update", "session_id", session()->id(),
                  "id", id(), "time", presentation_time, "interval",
                  presentation_interval);
@@ -202,7 +215,7 @@ bool ImagePipe::Update(uint64_t presentation_time,
   // fence to the |ReleaseFenceSignaller|, which will signal it as soon as
   // all work previously submitted to the GPU is finished.
   if (current_release_fences_) {
-    session()->engine()->release_fence_signaller()->AddCPUReleaseFences(
+    release_fence_signaller->AddCPUReleaseFences(
         std::move(current_release_fences_));
   }
   current_release_fences_ = std::move(next_release_fences);

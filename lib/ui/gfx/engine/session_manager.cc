@@ -16,6 +16,18 @@
 namespace scenic_impl {
 namespace gfx {
 
+CommandContext::CommandContext(escher::BatchGpuUploaderPtr uploader)
+    : batch_gpu_uploader_(std::move(uploader)) {}
+
+void CommandContext::Flush() {
+  if (batch_gpu_uploader_) {
+    // Submit regardless of whether or not there are updates to release the
+    // underlying CommandBuffer so the pool and sequencer don't stall out.
+    // TODO(ES-115) to remove this restriction.
+    batch_gpu_uploader_->Submit(escher::SemaphorePtr());
+  }
+}
+
 SessionHandler* SessionManager::FindSession(SessionId id) {
   auto it = session_manager_.find(id);
   if (it != session_manager_.end()) {
@@ -28,7 +40,8 @@ std::unique_ptr<SessionHandler> SessionManager::CreateSessionHandler(
     CommandDispatcherContext context, Engine* engine, SessionId session_id,
     EventReporter* event_reporter, ErrorReporter* error_reporter) const {
   return std::make_unique<SessionHandler>(
-      std::move(context), engine, session_id, event_reporter, error_reporter);
+      std::move(context), engine->session_manager(), engine->session_context(),
+      session_id, event_reporter, error_reporter);
 }
 
 std::unique_ptr<CommandDispatcher> SessionManager::CreateCommandDispatcher(
@@ -55,7 +68,8 @@ void SessionManager::ScheduleUpdateForSession(UpdateScheduler* update_scheduler,
 }
 
 bool SessionManager::ApplyScheduledSessionUpdates(
-    uint64_t presentation_time, uint64_t presentation_interval) {
+    CommandContext* command_context, uint64_t presentation_time,
+    uint64_t presentation_interval) {
   TRACE_DURATION("gfx", "ApplyScheduledSessionUpdates", "time",
                  presentation_time, "interval", presentation_interval);
 
@@ -67,8 +81,8 @@ bool SessionManager::ApplyScheduledSessionUpdates(
     auto session = std::move(top->second);
     updatable_sessions_.erase(top);
     if (session) {
-      needs_render |= session->ApplyScheduledUpdates(presentation_time,
-                                                     presentation_interval);
+      needs_render |= session->ApplyScheduledUpdates(
+          command_context, presentation_time, presentation_interval);
     } else {
       // Corresponds to a call to ScheduleUpdate(), which always triggers a
       // render.

@@ -11,7 +11,24 @@ namespace scenic_impl {
 namespace gfx {
 namespace test {
 
-TEST_F(SessionTest, SendingSizeChangeEventWorks) {
+class SizeChangeHintTest : public SessionTest {
+ public:
+  SizeChangeHintTest() {}
+
+  fxl::RefPtr<SessionForTest> CreateSession() override {
+    SessionContext session_context = CreateBarebonesSessionContext();
+
+    resource_linker_ = std::make_unique<ResourceLinker>();
+    session_context.resource_linker = resource_linker_.get();
+
+    return fxl::MakeRefCounted<SessionForTest>(1, std::move(session_context),
+                                               this, error_reporter());
+  }
+
+  std::unique_ptr<ResourceLinker> resource_linker_;
+};
+
+TEST_F(SizeChangeHintTest, SendingSizeChangeEventWorks) {
   zx::eventpair source;
   zx::eventpair destination;
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));

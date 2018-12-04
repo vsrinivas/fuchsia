@@ -41,7 +41,7 @@ class VulkanDeviceQueues
   struct Caps {
     uint32_t max_image_width = 0;
     uint32_t max_image_height = 0;
-
+    Caps() {}
     Caps(vk::PhysicalDeviceProperties props);
   };
 

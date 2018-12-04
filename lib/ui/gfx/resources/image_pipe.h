@@ -28,9 +28,10 @@ class ImagePipe : public ImageBase {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  ImagePipe(Session* session, ResourceId id);
+  ImagePipe(Session* session, ResourceId id, UpdateScheduler* update_scheduler);
   ImagePipe(Session* session, ResourceId id,
-            ::fidl::InterfaceRequest<fuchsia::images::ImagePipe> request);
+            ::fidl::InterfaceRequest<fuchsia::images::ImagePipe> request,
+            UpdateScheduler* update_scheduler);
 
   // Called by |ImagePipeHandler|, part of |ImagePipe| interface.
   void AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_info,
@@ -49,7 +50,12 @@ class ImagePipe : public ImageBase {
   // Called before rendering a frame using this ImagePipe.  Return true if the
   // current Image changed since the last time Update() was called, and false
   // otherwise.
-  bool Update(uint64_t presentation_time, uint64_t presentation_interval);
+  //
+  // |release_fence_signaller| is a dependency required for signalling
+  // release fences correctly, since it has knowledge of when command buffers
+  // are released. Cannot be null.
+  bool Update(escher::ReleaseFenceSignaller* release_fence_signaller,
+              uint64_t presentation_time, uint64_t presentation_interval);
 
   // Returns the image that should be presented at the current time. Can be
   // null.
@@ -75,8 +81,6 @@ class ImagePipe : public ImageBase {
                                uint64_t memory_offset,
                                ErrorReporter* error_reporter);
 
-  fxl::WeakPtrFactory<ImagePipe> weak_ptr_factory_;
-
   // A |Frame| stores the arguments passed to a particular invocation of
   // Present().
   struct Frame {
@@ -98,6 +102,10 @@ class ImagePipe : public ImageBase {
 
   std::unordered_map<ResourceId, ImagePtr> images_;
   bool is_valid_ = true;
+
+  UpdateScheduler* update_scheduler_;
+
+  fxl::WeakPtrFactory<ImagePipe> weak_ptr_factory_;  // must be last
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ImagePipe);
 };

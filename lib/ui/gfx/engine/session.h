@@ -8,11 +8,15 @@
 #include <vector>
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>
+#include <fuchsia/ui/scenic/cpp/fidl.h>
 
-#include "garnet/lib/ui/gfx/engine/engine.h"
 #include "garnet/lib/ui/gfx/engine/resource_map.h"
+#include "garnet/lib/ui/gfx/engine/session_context.h"
 #include "garnet/lib/ui/gfx/id.h"
 #include "garnet/lib/ui/gfx/resources/memory.h"
+#include "garnet/lib/ui/gfx/resources/resource.h"
+#include "garnet/lib/ui/gfx/resources/resource_context.h"
+#include "garnet/lib/ui/scenic/event_reporter.h"
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
 #include "garnet/lib/ui/scenic/util/print_command.h"
 #include "lib/escher/flib/fence_set_listener.h"
@@ -34,6 +38,7 @@ using ImagePipePtr = ::fxl::RefPtr<ImagePipe>;
 class Session;
 using SessionPtr = ::fxl::RefPtr<Session>;
 
+class CommandContext;
 class Engine;
 class Resource;
 class SessionHandler;
@@ -42,7 +47,7 @@ class SessionHandler;
 // guarantees that this is safe).
 class Session : public fxl::RefCountedThreadSafe<Session> {
  public:
-  Session(SessionId id, Engine* engine,
+  Session(SessionId id, SessionContext context,
           EventReporter* event_reporter = EventReporter::Default(),
           ErrorReporter* error_reporter = ErrorReporter::Default());
   virtual ~Session();
@@ -50,11 +55,12 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   // Apply the operation to the current session state.  Return true if
   // successful, and false if the op is somehow invalid.  In the latter case,
   // the Session is left unchanged.
-  bool ApplyCommand(::fuchsia::ui::gfx::Command command);
+  bool ApplyCommand(CommandContext* command_context,
+                    ::fuchsia::ui::gfx::Command command);
 
   SessionId id() const { return id_; }
-  Engine* engine() const { return engine_; }
-  escher::Escher* escher() const { return engine_->escher(); }
+
+  const ResourceContext& resource_context() const { return resource_context_; }
 
   // Return the total number of existing resources associated with this Session.
   size_t GetTotalResourceCount() const { return resource_count_; }
@@ -89,7 +95,8 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   // Called by Engine() when it is notified by the FrameScheduler that
   // a frame should be rendered for the specified |presentation_time|.  Return
   // true if any updates were applied, and false otherwise.
-  bool ApplyScheduledUpdates(uint64_t presentation_time,
+  bool ApplyScheduledUpdates(CommandContext* command_context,
+                             uint64_t presentation_time,
                              uint64_t presentation_interval);
 
   // Convenience.  Forwards an event to the EventReporter.
@@ -128,7 +135,8 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   void BeginTearDown();
 
   // Cmderation application functions, called by ApplyCommand().
-  bool ApplyCreateResourceCmd(::fuchsia::ui::gfx::CreateResourceCmd command);
+  bool ApplyCreateResourceCmd(CommandContext* command_context,
+                              ::fuchsia::ui::gfx::CreateResourceCmd command);
   bool ApplyReleaseResourceCmd(::fuchsia::ui::gfx::ReleaseResourceCmd command);
   bool ApplyExportResourceCmd(::fuchsia::ui::gfx::ExportResourceCmd command);
   bool ApplyImportResourceCmd(::fuchsia::ui::gfx::ImportResourceCmd command);
@@ -201,7 +209,8 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   bool ApplyCreateRectangle(ResourceId id,
                             ::fuchsia::ui::gfx::RectangleArgs args);
   bool ApplyCreateRoundedRectangle(
-      ResourceId id, ::fuchsia::ui::gfx::RoundedRectangleArgs args);
+      CommandContext* command_context, ResourceId id,
+      ::fuchsia::ui::gfx::RoundedRectangleArgs args);
   bool ApplyCreateCircle(ResourceId id, ::fuchsia::ui::gfx::CircleArgs args);
   bool ApplyCreateMesh(ResourceId id, ::fuchsia::ui::gfx::MeshArgs args);
   bool ApplyCreateMaterial(ResourceId id,
@@ -271,7 +280,8 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   ResourcePtr CreateLayer(ResourceId id, ::fuchsia::ui::gfx::LayerArgs args);
   ResourcePtr CreateCircle(ResourceId id, float initial_radius);
   ResourcePtr CreateRectangle(ResourceId id, float width, float height);
-  ResourcePtr CreateRoundedRectangle(ResourceId id, float width, float height,
+  ResourcePtr CreateRoundedRectangle(CommandContext* command_context,
+                                     ResourceId id, float width, float height,
                                      float top_left_radius,
                                      float top_right_radius,
                                      float bottom_right_radius,
@@ -310,7 +320,8 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
     // an invocation of |Session.Present()|.
     fuchsia::ui::scenic::Session::PresentCallback present_callback;
   };
-  bool ApplyUpdate(std::vector<::fuchsia::ui::gfx::Command> commands);
+  bool ApplyUpdate(CommandContext* command_context,
+                   std::vector<::fuchsia::ui::gfx::Command> commands);
   std::queue<Update> scheduled_updates_;
   ::fidl::VectorPtr<zx::event> fences_to_release_on_next_update_;
 
@@ -332,9 +343,13 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
 
   const SessionId id_;
   std::string debug_name_;
-  Engine* const engine_;
   ErrorReporter* error_reporter_ = nullptr;
   EventReporter* event_reporter_ = nullptr;
+
+  // Context objects should be above ResourceMap so they are destroyed after
+  // Resources; their lifecycle must exceed that of the Resources.
+  SessionContext session_context_;
+  ResourceContext resource_context_;
 
   ResourceMap resources_;
 

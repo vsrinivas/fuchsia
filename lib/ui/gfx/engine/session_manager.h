@@ -9,6 +9,7 @@
 #include <unordered_map>
 
 #include "garnet/lib/ui/scenic/command_dispatcher.h"
+#include "lib/escher/renderer/batch_gpu_uploader.h"
 
 namespace scenic_impl {
 class EventReporter;
@@ -24,6 +25,25 @@ class SessionHandler;
 class Session;
 class Engine;
 class UpdateScheduler;
+
+// Graphical context for a set of session updates.
+// The CommandContext is only valid during RenderFrame() and should not be
+// accessed outside of that.
+class CommandContext {
+ public:
+  CommandContext(escher::BatchGpuUploaderPtr uploader);
+
+  escher::BatchGpuUploader* batch_gpu_uploader() const {
+    FXL_DCHECK(batch_gpu_uploader_.get());
+    return batch_gpu_uploader_.get();
+  }
+
+  // Flush any work accumulated during command processing.
+  void Flush();
+
+ private:
+  escher::BatchGpuUploaderPtr batch_gpu_uploader_;
+};
 
 // Manages a collection of SessionHandlers.
 // Tracks future updates requested by Sessions, and executes updates for a
@@ -52,7 +72,8 @@ class SessionManager {
 
   // Executes updates that are schedule up to and including a given presentation
   // time. Returns true if rendering is needed.
-  bool ApplyScheduledSessionUpdates(uint64_t presentation_time,
+  bool ApplyScheduledSessionUpdates(CommandContext* command_context,
+                                    uint64_t presentation_time,
                                     uint64_t presentation_interval);
 
  private:

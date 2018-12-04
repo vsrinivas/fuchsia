@@ -80,33 +80,16 @@ class ResourceLinker {
 
   size_t NumExportsForSession(Session* session);
 
+  // To prevent making any requirements about the lifecycle of ResourceLinker
+  // compared to resources, always refer to ResourceLinker with a weak pointer.
+  fxl::WeakPtr<ResourceLinker> GetWeakPtr() {
+    return weak_factory_.GetWeakPtr();
+  }
+
  private:
   friend class UnresolvedImports;
   friend class Resource;
   friend class Import;
-
-  struct ExportEntry {
-    zx::eventpair export_token;
-    std::unique_ptr<async::Wait> token_peer_death_waiter;
-    Resource* resource;
-  };
-
-  using ImportKoid = zx_koid_t;
-  using KoidsToExportsMap = std::unordered_map<ImportKoid, ExportEntry>;
-  using ResourcesToKoidsMap = std::multimap<Resource*, ImportKoid>;
-
-  OnExpiredCallback expiration_callback_;
-  OnImportResolvedCallback import_resolved_callback_;
-
-  KoidsToExportsMap export_entries_;
-  ResourcesToKoidsMap exported_resources_to_import_koids_;
-
-  // |exported_resources_| can contain resources that are not included in the
-  // maps above. Even if all the import tokens for a given export are destroyed,
-  // the associated resource could still be exported because it's already been
-  // bound to an import.
-  std::unordered_set<Resource*> exported_resources_;
-  UnresolvedImports unresolved_imports_;
 
   // Remove exports for this resource. Called when the resource is being
   // destroyed.
@@ -133,6 +116,31 @@ class ResourceLinker {
   // Helper method to remove |import_koid| from |resources_to_import_koids_|.
   void RemoveFromExportedResourceToImportKoidsMap(Resource* resource,
                                                   zx_koid_t import_koid);
+
+  struct ExportEntry {
+    zx::eventpair export_token;
+    std::unique_ptr<async::Wait> token_peer_death_waiter;
+    Resource* resource;
+  };
+
+  using ImportKoid = zx_koid_t;
+  using KoidsToExportsMap = std::unordered_map<ImportKoid, ExportEntry>;
+  using ResourcesToKoidsMap = std::multimap<Resource*, ImportKoid>;
+
+  OnExpiredCallback expiration_callback_;
+  OnImportResolvedCallback import_resolved_callback_;
+
+  KoidsToExportsMap export_entries_;
+  ResourcesToKoidsMap exported_resources_to_import_koids_;
+
+  // |exported_resources_| can contain resources that are not included in the
+  // maps above. Even if all the import tokens for a given export are destroyed,
+  // the associated resource could still be exported because it's already been
+  // bound to an import.
+  std::unordered_set<Resource*> exported_resources_;
+  UnresolvedImports unresolved_imports_;
+
+  fxl::WeakPtrFactory<ResourceLinker> weak_factory_;  // must be last
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ResourceLinker);
 };

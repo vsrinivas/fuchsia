@@ -136,7 +136,7 @@ std::vector<gfx::Hit> PerformGlobalHitTest(gfx::GfxSystem* gfx_system,
   FXL_VLOG(1) << "HitTest: device point (" << ray.origin.x << ", "
               << ray.origin.y << ")";
 
-  gfx::Compositor* compositor = gfx_system->GetCompositor(compositor_id);
+  gfx::CompositorWeakPtr compositor = gfx_system->GetCompositor(compositor_id);
   FXL_DCHECK(compositor) << "No compositor, violated invariant.";
 
   gfx::LayerStackPtr layer_stack = compositor->layer_stack();
@@ -263,7 +263,8 @@ void InputCommandDispatcher::DispatchCommand(ScenicCommand command) {
     // Compositor and layer stack required for dispatch.
     GlobalId compositor_id(context()->session_id(),
                            input.send_pointer_input().compositor_id);
-    gfx::Compositor* compositor = gfx_system_->GetCompositor(compositor_id);
+    gfx::CompositorWeakPtr compositor =
+        gfx_system_->GetCompositor(compositor_id);
     if (!compositor)
       return;  // It's legal to race against GFX's compositor setup.
 

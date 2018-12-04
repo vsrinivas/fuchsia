@@ -18,9 +18,9 @@ const ResourceTypeInfo GpuImage::kTypeInfo = {
 GpuImage::GpuImage(Session* session, ResourceId id, escher::GpuMemPtr gpu_mem,
                    escher::ImageInfo image_info, vk::Image vk_image)
     : Image(session, id, GpuImage::kTypeInfo) {
-  image_ =
-      escher::Image::AdoptVkImage(session->engine()->escher_resource_recycler(),
-                                  image_info, vk_image, std::move(gpu_mem));
+  image_ = escher::Image::AdoptVkImage(
+      session->resource_context().escher_resource_recycler, image_info,
+      vk_image, std::move(gpu_mem));
   FXL_CHECK(image_);
 }
 
@@ -56,7 +56,7 @@ GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
     return nullptr;
   }
 
-  auto& caps = session->engine()->escher()->device()->caps();
+  auto& caps = session->resource_context().vk_device_queues_capabilities;
   if (image_info.width > caps.max_image_width) {
     error_reporter->ERROR()
         << "GpuImage::CreateFromMemory(): image width exceeds maximum ("
@@ -82,7 +82,7 @@ GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
   // object once we support a bitmask instead of an enum.
   escher_image_info.memory_flags = vk::MemoryPropertyFlagBits::eDeviceLocal;
 
-  vk::Device vk_device = session->engine()->vk_device();
+  vk::Device vk_device = session->resource_context().vk_device;
   vk::Image vk_image =
       escher::image_utils::CreateVkImage(vk_device, escher_image_info);
 

@@ -63,11 +63,6 @@ bool Renderer::SetShadowTechnique(
   return true;
 }
 
-void Renderer::SetRenderContinuously(bool render_continuously) {
-  session()->engine()->frame_scheduler()->SetRenderContinuously(
-      render_continuously);
-}
-
 void Renderer::DisableClipping(bool disable_clipping) {
   disable_clipping_ = disable_clipping;
 }

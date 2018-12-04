@@ -13,11 +13,13 @@ namespace test {
 
 class VkSessionTest : public SessionTest {
  public:
-  // SessionTest virtual method.
-  std::unique_ptr<Engine> CreateEngine() override;
+  // |SessionTest|
+  fxl::RefPtr<SessionForTest> CreateSession() override;
 
  private:
   std::unique_ptr<escher::Escher> escher_;
+  std::unique_ptr<escher::ImageFactoryAdapter> image_factory_;
+  std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller_;
 };
 
 }  // namespace test

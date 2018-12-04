@@ -20,6 +20,16 @@ namespace scenic_impl {
 namespace gfx {
 namespace test {
 
+class FakeUpdateScheduler : public UpdateScheduler {
+ public:
+  FakeUpdateScheduler(SessionManager* session_manager);
+
+  void ScheduleUpdate(uint64_t presentation_time) override;
+
+ private:
+  SessionManager* session_manager_ = nullptr;
+};
+
 class SessionTest : public ErrorReportingTest, public EventReporter {
  protected:
   // | ::testing::Test |
@@ -31,13 +41,18 @@ class SessionTest : public ErrorReportingTest, public EventReporter {
   void EnqueueEvent(fuchsia::ui::input::InputEvent event) override;
   void EnqueueEvent(fuchsia::ui::scenic::Command unhandled) override;
 
-  // Subclasses should override to provide their own Engine.
-  virtual std::unique_ptr<Engine> CreateEngine();
+  // Subclasses should override to provide their own Session.
+  virtual fxl::RefPtr<SessionForTest> CreateSession();
+
+  // Creates a SessionContext with only a SessionManager and a
+  // FakeUpdateScheduler.
+  SessionContext CreateBarebonesSessionContext();
 
   // Apply the specified Command.  Return true if it was applied successfully,
   // and false if an error occurred.
   bool Apply(::fuchsia::ui::gfx::Command command) {
-    return session_->ApplyCommand(std::move(command));
+    CommandContext empty_command_context(nullptr);
+    return session_->ApplyCommand(&empty_command_context, std::move(command));
   }
 
   template <class ResourceT>
@@ -45,8 +60,8 @@ class SessionTest : public ErrorReportingTest, public EventReporter {
     return session_->resources()->FindResource<ResourceT>(id);
   }
 
-  DisplayManager display_manager_;
-  std::unique_ptr<Engine> engine_;
+  std::unique_ptr<SessionManager> session_manager_;
+  std::unique_ptr<UpdateScheduler> update_scheduler_;
   fxl::RefPtr<SessionForTest> session_;
   std::vector<fuchsia::ui::scenic::Event> events_;
 };

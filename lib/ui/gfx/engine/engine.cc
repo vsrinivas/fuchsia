@@ -22,56 +22,12 @@
 #include "garnet/lib/ui/gfx/resources/compositor/compositor.h"
 #include "garnet/lib/ui/gfx/resources/dump_visitor.h"
 #include "garnet/lib/ui/gfx/resources/nodes/traversal.h"
-#include "garnet/lib/ui/gfx/swapchain/display_swapchain.h"
-#include "garnet/lib/ui/gfx/swapchain/vulkan_display_swapchain.h"
+#include "garnet/lib/ui/gfx/util/vulkan_utils.h"
 #include "garnet/lib/ui/scenic/session.h"
-#include "lib/escher/impl/vulkan_utils.h"
 #include "lib/escher/renderer/batch_gpu_uploader.h"
 
 namespace scenic_impl {
 namespace gfx {
-
-// Determine a plausible memory type index for importing memory from VMOs.
-static uint32_t GetImportedMemoryTypeIndex(vk::PhysicalDevice physical_device,
-                                           vk::Device device) {
-  // Is there a better way to get the memory type bits than creating and
-  // immediately destroying a buffer?
-  // TODO(SCN-79): Use sysmem for this when it's available.
-  constexpr vk::DeviceSize kUnimportantBufferSize = 30000;
-  vk::BufferCreateInfo buffer_create_info;
-  buffer_create_info.size = kUnimportantBufferSize;
-  buffer_create_info.usage = vk::BufferUsageFlagBits::eTransferSrc |
-                             vk::BufferUsageFlagBits::eTransferDst |
-                             vk::BufferUsageFlagBits::eStorageTexelBuffer |
-                             vk::BufferUsageFlagBits::eStorageBuffer |
-                             vk::BufferUsageFlagBits::eIndexBuffer |
-                             vk::BufferUsageFlagBits::eVertexBuffer;
-  buffer_create_info.sharingMode = vk::SharingMode::eExclusive;
-  auto vk_buffer =
-      escher::ESCHER_CHECKED_VK_RESULT(device.createBuffer(buffer_create_info));
-
-  vk::MemoryRequirements reqs = device.getBufferMemoryRequirements(vk_buffer);
-  device.destroyBuffer(vk_buffer);
-
-  // TODO(SCN-998): Decide how to determine if we're on an UMA platform
-  // or not.
-  return escher::impl::GetMemoryTypeIndex(
-      physical_device, reqs.memoryTypeBits,
-      vk::MemoryPropertyFlagBits::eDeviceLocal |
-          vk::MemoryPropertyFlagBits::eHostVisible);
-}
-
-CommandContext::CommandContext(escher::BatchGpuUploaderPtr uploader)
-    : batch_gpu_uploader_(std::move(uploader)) {}
-
-void CommandContext::Flush() {
-  if (batch_gpu_uploader_) {
-    // Submit regardless of whether or not there are updates to release the
-    // underlying CommandBuffer so the pool and sequencer don't stall out.
-    // TODO(ES-115) to remove this restriction.
-    batch_gpu_uploader_->Submit(escher::SemaphorePtr());
-  }
-}
 
 Engine::Engine(DisplayManager* display_manager,
                escher::EscherWeakPtr weak_escher)
@@ -141,39 +97,24 @@ void Engine::ScheduleUpdate(uint64_t presentation_time) {
   }
 }
 
-std::unique_ptr<Swapchain> Engine::CreateDisplaySwapchain(Display* display) {
-  FXL_DCHECK(!display->is_claimed());
-#if SCENIC_VULKAN_SWAPCHAIN
-  return std::make_unique<VulkanDisplaySwapchain>(display, event_timestamper(),
-                                                  escher());
-#else
-  return std::make_unique<DisplaySwapchain>(display_manager_, display,
-                                            event_timestamper(), escher());
-#endif
-}
-
-void Engine::InitializeCommandContext(uint64_t frame_number_for_tracing) {
-  FXL_DCHECK(!command_context_) << "CommandContext already exists.";
-  command_context_ = std::make_unique<CommandContext>(
-      has_vulkan()
-          ? escher::BatchGpuUploader::New(escher_, frame_number_for_tracing)
-          : escher::BatchGpuUploaderPtr());
-}
-
-void Engine::FlushAndInvalidateCommandContext() {
-  FXL_DCHECK(command_context_) << "CommandContext does not exist.";
-  command_context_->Flush();
-  command_context_ = nullptr;
+CommandContext InitializeCommandContext(bool has_vulkan,
+                                        escher::EscherWeakPtr escher,
+                                        uint64_t frame_number_for_tracing) {
+  return CommandContext(has_vulkan ? escher::BatchGpuUploader::New(
+                                         escher, frame_number_for_tracing)
+                                   : escher::BatchGpuUploaderPtr());
 }
 
 bool Engine::UpdateSessions(uint64_t presentation_time,
                             uint64_t presentation_interval,
                             uint64_t frame_number_for_tracing) {
-  InitializeCommandContext(frame_number_for_tracing);
+  CommandContext command_context =
+      InitializeCommandContext(has_vulkan(), escher_, frame_number_for_tracing);
   bool any_updates_were_applied =
-      session_manager_->ApplyScheduledSessionUpdates(presentation_time,
-                                                     presentation_interval);
-  FlushAndInvalidateCommandContext();
+      session_manager_->ApplyScheduledSessionUpdates(
+          &command_context, presentation_time, presentation_interval);
+  command_context.Flush();
+
   return any_updates_were_applied;
 }
 
@@ -227,10 +168,10 @@ bool Engine::RenderFrame(const FrameTimingsPtr& timings,
   // TODO(SCN-1089): the FrameTimings are passed to the Compositor's swapchain
   // to notify when the frame is finished rendering, presented, dropped, etc.
   // This doesn't make any sense if there are multiple compositors.
-  FXL_DCHECK(compositors_.size() <= 1);
+  FXL_DCHECK(scene_graph_.compositors().size() <= 1);
 
   std::vector<HardwareLayerAssignment> hlas;
-  for (auto& compositor : compositors_) {
+  for (auto& compositor : scene_graph_.compositors()) {
     if (auto hla = GetHardwareLayerAssignment(*compositor)) {
       hlas.push_back(std::move(hla.value()));
 
@@ -290,42 +231,12 @@ bool Engine::RenderFrame(const FrameTimingsPtr& timings,
   return true;
 }
 
-void Engine::AddCompositor(Compositor* compositor) {
-  FXL_DCHECK(compositor);
-  FXL_DCHECK(compositor->session()->engine() == this);
-
-  bool success = compositors_.insert(compositor).second;
-  FXL_DCHECK(success);
-}
-
-void Engine::RemoveCompositor(Compositor* compositor) {
-  FXL_DCHECK(compositor);
-  FXL_DCHECK(compositor->session()->engine() == this);
-
-  size_t count = compositors_.erase(compositor);
-  FXL_DCHECK(count == 1);
-}
-
-Compositor* Engine::GetFirstCompositor() const {
-  FXL_DCHECK(!compositors_.empty());
-  return compositors_.empty() ? nullptr : *compositors_.begin();
-}
-
-Compositor* Engine::GetCompositor(scenic_impl::GlobalId compositor_id) const {
-  for (Compositor* compositor : compositors_) {
-    if (compositor->global_id() == compositor_id) {
-      return compositor;
-    }
-  }
-  return nullptr;
-}
-
 void Engine::UpdateAndDeliverMetrics(uint64_t presentation_time) {
   TRACE_DURATION("gfx", "UpdateAndDeliverMetrics", "time", presentation_time);
 
   // Gather all of the scene which might need to be updated.
   std::set<Scene*> scenes;
-  for (auto compositor : compositors_) {
+  for (auto compositor : scene_graph_.compositors()) {
     compositor->CollectScenes(&scenes);
   }
   if (scenes.empty())
@@ -416,7 +327,7 @@ std::string Engine::DumpScenes() const {
   DumpVisitor visitor(output);
 
   bool first = true;
-  for (auto compositor : compositors_) {
+  for (auto compositor : scene_graph_.compositors()) {
     if (first)
       first = false;
     else

@@ -37,22 +37,29 @@ class DummyImage : public Image {
 
 class ImagePipeTest : public SessionTest, public escher::ResourceManager {
  public:
-  ImagePipeTest()
-      : escher::ResourceManager(escher::EscherWeakPtr()),
-        command_buffer_sequencer_() {}
+  ImagePipeTest() : escher::ResourceManager(escher::EscherWeakPtr()) {}
 
-  std::unique_ptr<Engine> CreateEngine() override {
-    auto r = std::make_unique<ReleaseFenceSignallerForTest>(
-        &command_buffer_sequencer_);
-    mock_release_fence_signaller_ = r.get();
-    return std::make_unique<EngineForTest>(&display_manager_, std::move(r));
+  fxl::RefPtr<SessionForTest> CreateSession() override {
+    SessionContext session_context = CreateBarebonesSessionContext();
+
+    command_buffer_sequencer_ =
+        std::make_unique<escher::impl::CommandBufferSequencer>();
+
+    mock_release_fence_signaller_ =
+        std::make_unique<ReleaseFenceSignallerForTest>(
+            command_buffer_sequencer_.get());
+    session_context.release_fence_signaller =
+        mock_release_fence_signaller_.get();
+
+    return fxl::MakeRefCounted<SessionForTest>(1, std::move(session_context),
+                                               this, error_reporter());
   }
 
   void OnReceiveOwnable(std::unique_ptr<escher::Resource> resource) override {}
 
-  DisplayManager display_manager_;
-  escher::impl::CommandBufferSequencer command_buffer_sequencer_;
-  ReleaseFenceSignallerForTest* mock_release_fence_signaller_;
+  std::unique_ptr<escher::impl::CommandBufferSequencer>
+      command_buffer_sequencer_;
+  std::unique_ptr<ReleaseFenceSignallerForTest> mock_release_fence_signaller_;
 };
 
 fxl::RefPtr<fsl::SharedVmo> CreateVmoWithBuffer(
@@ -89,9 +96,12 @@ fxl::RefPtr<fsl::SharedVmo> CreateVmoWithGradientPixels(size_t w, size_t h) {
 class ImagePipeThatCreatesDummyImages : public ImagePipe {
  public:
   ImagePipeThatCreatesDummyImages(
-      Session* session, escher::ResourceManager* dummy_resource_manager)
-      : ImagePipe(session, 0u),
-        dummy_resource_manager_(dummy_resource_manager) {}
+      Session* session, escher::ResourceManager* dummy_resource_manager,
+      UpdateScheduler* update_scheduler)
+      : ImagePipe(session, 0u, update_scheduler),
+        dummy_resource_manager_(dummy_resource_manager) {
+    FXL_CHECK(update_scheduler);
+  }
 
   std::vector<fxl::RefPtr<DummyImage>> dummy_images_;
 
@@ -119,8 +129,8 @@ class ImagePipeThatCreatesDummyImages : public ImagePipe {
 // Present an image with an Id of zero, and expect an error.
 TEST_F(ImagePipeTest, ImagePipeImageIdMustNotBeZero) {
   ImagePipePtr image_pipe =
-      fxl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(session_.get(),
-                                                           this);
+      fxl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(
+          session_.get(), this, update_scheduler_.get());
 
   uint32_t image1_id = 0;
   // Create a checkerboard image and copy it into a vmo.
@@ -143,8 +153,8 @@ TEST_F(ImagePipeTest, ImagePipeImageIdMustNotBeZero) {
 // Call Present with out-of-order presentation times, and expect an error.
 TEST_F(ImagePipeTest, PresentImagesOutOfOrder) {
   ImagePipePtr image_pipe =
-      fxl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(session_.get(),
-                                                           this);
+      fxl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(
+          session_.get(), this, update_scheduler_.get());
 
   uint32_t image1_id = 1;
   // Create a checkerboard image and copy it into a vmo.
@@ -176,8 +186,8 @@ TEST_F(ImagePipeTest, PresentImagesOutOfOrder) {
 // Call Present with in-order presentation times, and expect no error.
 TEST_F(ImagePipeTest, PresentImagesInOrder) {
   ImagePipePtr image_pipe =
-      fxl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(session_.get(),
-                                                           this);
+      fxl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(
+          session_.get(), this, update_scheduler_.get());
 
   uint32_t image1_id = 1;
   // Create a checkerboard image and copy it into a vmo.
@@ -208,8 +218,8 @@ TEST_F(ImagePipeTest, PresentImagesInOrder) {
 // error.
 TEST_F(ImagePipeTest, PresentImagesWithOffset) {
   ImagePipePtr image_pipe =
-      fxl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(session_.get(),
-                                                           this);
+      fxl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(
+          session_.get(), this, update_scheduler_.get());
 
   uint32_t image1_id = 1;
   // Create a checkerboard image and copy it into a vmo.
@@ -247,8 +257,8 @@ TEST_F(ImagePipeTest, PresentImagesWithOffset) {
 // being listened to and release fences are signalled.
 TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
   ImagePipePtr image_pipe =
-      fxl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(session_.get(),
-                                                           this);
+      fxl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(
+          session_.get(), this, update_scheduler_.get());
 
   uint32_t image1_id = 1;
 
@@ -337,7 +347,7 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
 // called on images that are acquired and used.
 TEST_F(ImagePipeTest, ImagePipeUpdateTwoFrames) {
   auto image_pipe = fxl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(
-      session_.get(), this);
+      session_.get(), this, update_scheduler_.get());
 
   // Image A is a 2x2 image with id=2.
   // Image B is a 4x4 image with id=4.
@@ -362,6 +372,7 @@ TEST_F(ImagePipeTest, ImagePipeUpdateTwoFrames) {
   auto image_out = image_pipe->GetEscherImage();
   // We should get the second image in the queue, since both should have been
   // ready.
+  ASSERT_TRUE(image_out);
   ASSERT_EQ(image_out->width(), imageIdB);
   ASSERT_EQ(image_pipe->dummy_images_.size(), 2u);
   ASSERT_EQ(image_pipe->dummy_images_[0]->update_count_, 0u);
@@ -391,8 +402,8 @@ TEST_F(ImagePipeTest, ImagePipeUpdateTwoFrames) {
 // cause any errors.
 TEST_F(ImagePipeTest, ImagePipeRemoveImageThatIsPendingPresent) {
   ImagePipePtr image_pipe =
-      fxl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(session_.get(),
-                                                           this);
+      fxl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(
+          session_.get(), this, update_scheduler_.get());
 
   uint32_t image1_id = 1;
 

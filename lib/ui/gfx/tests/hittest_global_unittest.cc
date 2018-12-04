@@ -45,9 +45,9 @@ namespace test {
 // triggered by Engine::RenderFrame, and we don't need that here.
 class CustomSession {
  public:
-  CustomSession(SessionId id, Engine* engine) {
-    FXL_CHECK(engine);
-    session_ = fxl::MakeRefCounted<SessionForTest>(id, engine);
+  CustomSession(SessionId id, SessionContext session_context) {
+    session_ =
+        fxl::MakeRefCounted<SessionForTest>(id, std::move(session_context));
   }
 
   ~CustomSession() {
@@ -56,7 +56,9 @@ class CustomSession {
   }
 
   void Apply(::fuchsia::ui::gfx::Command command) {
-    bool result = session_->ApplyCommand(std::move(command));
+    CommandContext empty_command_context(nullptr);
+    bool result =
+        session_->ApplyCommand(&empty_command_context, std::move(command));
     ASSERT_TRUE(result) << "Failed to apply: " << command;  // Fail fast.
   }
 
@@ -89,7 +91,7 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
   }
 
   // Root session sets up the scene and two view holders.
-  CustomSession s_r(0, engine.get());
+  CustomSession s_r(0, engine->session_context());
   {
     const uint32_t kCompositorId = 1001;
     const uint32_t kLayerStackId = 1002;
@@ -128,7 +130,7 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
   }
 
   // Two sessions (s_1 and s_2) create an overlapping and hittable surface.
-  CustomSession s_1(1, engine.get());
+  CustomSession s_1(1, engine->session_context());
   {
     const uint32_t kViewId = 2001;
     s_1.Apply(scenic::NewCreateViewCmd(kViewId, std::move(token_v1), "view_1"));
@@ -149,7 +151,7 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
     s_1.Apply(scenic::NewSetShapeCmd(kChildId, kShapeId));
   }
 
-  CustomSession s_2(2, engine.get());
+  CustomSession s_2(2, engine->session_context());
   {
     const uint32_t kViewId = 3001;
     s_2.Apply(scenic::NewCreateViewCmd(kViewId, std::move(token_v2), "view_2"));
@@ -178,8 +180,9 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
   {
     // Models input subsystem's access to Engine internals.
     // For simplicity, we use the first (and only) compositor and layer stack.
-    Compositor* compositor = engine->GetFirstCompositor();
-    ASSERT_NE(compositor, nullptr);
+    const CompositorWeakPtr& compositor =
+        engine->scene_graph()->first_compositor();
+    ASSERT_TRUE(compositor);
     LayerStackPtr layer_stack = compositor->layer_stack();
     ASSERT_NE(layer_stack.get(), nullptr);
 

@@ -45,8 +45,6 @@ class Renderer : public Resource {
   // the scene.
   bool SetShadowTechnique(::fuchsia::ui::gfx::ShadowTechnique technique);
 
-  void SetRenderContinuously(bool render_continuously);
-
   // Set whether clipping is disabled; false by default.
   void DisableClipping(bool disable_clipping);
 

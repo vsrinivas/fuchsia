@@ -11,6 +11,7 @@
 
 #include "garnet/lib/ui/gfx/resources/resource.h"
 #include "lib/fxl/macros.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -40,7 +41,8 @@ class Import final : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  Import(Session* session, ResourceId id, ::fuchsia::ui::gfx::ImportSpec spec);
+  Import(Session* session, ResourceId id, ::fuchsia::ui::gfx::ImportSpec spec,
+         const fxl::WeakPtr<ResourceLinker>& resource_linker_weak);
 
   ~Import() override;
 
@@ -74,6 +76,8 @@ class Import final : public Resource {
   Resource* imported_resource_ = nullptr;
   // TODO(SCN-1026): Remove this.
   bool focusable_ = true;
+
+  fxl::WeakPtr<ResourceLinker> resource_linker_weak_;
 
   // |Resource|.
   Resource* GetDelegate(const ResourceTypeInfo& type_info) override;

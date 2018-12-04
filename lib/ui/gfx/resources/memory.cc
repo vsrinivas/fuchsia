@@ -79,12 +79,11 @@ escher::GpuMemPtr Memory::ImportGpuMemory() {
       vk::ExternalMemoryHandleTypeFlagBits::eFuchsiaVmoKHR,
       DuplicateVmo().release());
 
-  uint32_t memory_type_index =
-      session()->engine()->imported_memory_type_index();
-  vk::MemoryAllocateInfo memory_allocate_info(size(), memory_type_index);
+  vk::MemoryAllocateInfo memory_allocate_info(
+      size(), session()->resource_context().imported_memory_type_index);
   memory_allocate_info.setPNext(&memory_import_info);
 
-  vk::Result err = session()->engine()->vk_device().allocateMemory(
+  vk::Result err = session()->resource_context().vk_device.allocateMemory(
       &memory_allocate_info, nullptr, &memory);
   if (err != vk::Result::eSuccess) {
     error_reporter()->ERROR() << "scenic_impl::gfx::Memory::ImportGpuMemory(): "
@@ -97,7 +96,7 @@ escher::GpuMemPtr Memory::ImportGpuMemory() {
   // and rely on its mapped pointer accessor instead of storing our own local
   // uint8_t*.
   return escher::GpuMem::AdoptVkMemory(
-      session()->engine()->vk_device(), vk::DeviceMemory(memory),
+      session()->resource_context().vk_device, vk::DeviceMemory(memory),
       vk::DeviceSize(size()), is_host_ /* needs_mapped_ptr */);
 }
 

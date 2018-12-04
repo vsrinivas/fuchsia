@@ -15,10 +15,11 @@ const ResourceTypeInfo DisplayCompositor::kTypeInfo = {
     "DisplayCompositor"};
 
 DisplayCompositor::DisplayCompositor(Session* session, ResourceId id,
+                                     SceneGraphWeakPtr scene_graph,
                                      Display* display,
                                      std::unique_ptr<Swapchain> swapchain)
     : Compositor(session, id, DisplayCompositor::kTypeInfo,
-                 std::move(swapchain)),
+                 std::move(scene_graph), std::move(swapchain)),
       display_(display) {
   FXL_DCHECK(display_);
 }

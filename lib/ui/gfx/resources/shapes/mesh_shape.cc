@@ -72,10 +72,9 @@ bool MeshShape::BindBuffers(
           << "MeshShape::BindBuffers(): bad vertex tex-coord format.";
       return false;
   }
-  auto escher = session()->escher();
   mesh_ = fxl::MakeRefCounted<escher::Mesh>(
-      escher->resource_recycler(), spec, bounding_box, vertex_count,
-      index_count, vertex_buffer->escher_buffer(),
+      session()->resource_context().escher_resource_recycler, spec,
+      bounding_box, vertex_count, index_count, vertex_buffer->escher_buffer(),
       index_buffer->escher_buffer(), vertex_offset, index_offset);
 
   bounding_box_ = bounding_box;
