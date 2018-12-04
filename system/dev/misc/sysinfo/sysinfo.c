@@ -88,8 +88,9 @@ static zx_status_t fidl_get_board_name(void* ctx, fidl_txn_t* txn) {
     }
     mtx_unlock(&sysinfo->lock);
 
+    size_t board_name_len = strnlen(sysinfo->board_name, sizeof(sysinfo->board_name));
     return fuchsia_sysinfo_DeviceGetBoardName_reply(txn, status, sysinfo->board_name,
-                                                   sizeof(sysinfo->board_name));
+                                                    board_name_len);
 }
 
 static zx_status_t fidl_get_interrupt_controller_info(void* ctx, fidl_txn_t* txn) {

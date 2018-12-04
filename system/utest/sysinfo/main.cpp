@@ -67,7 +67,6 @@ bool get_board_name_succeeds() {
     ASSERT_EQ(status, ZX_OK, "Failed to get board name");
     ASSERT_LE(actual_size, sizeof(board_name), "GetBoardName returned too much data");
     EXPECT_NE(0, board_name[0], "board name is empty");
-    EXPECT_EQ(0, board_name[actual_size - 1], "board name is not zero terminated");
 
     END_TEST;
 }
