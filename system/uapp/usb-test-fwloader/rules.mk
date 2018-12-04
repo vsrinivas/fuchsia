@@ -13,12 +13,13 @@ MODULE_SRCS += \
 MODULE_STATIC_LIBS := \
     system/ulib/zx \
     system/ulib/zxcpp \
-    system/ulib/fbl
+    system/ulib/fbl \
+    system/ulib/fzl \
 
 MODULE_LIBS := \
     system/ulib/fdio \
     system/ulib/zircon \
-    system/ulib/c
+    system/ulib/c \
 
 MODULE_FIDL_LIBS := \
     system/fidl/zircon-usb-test-fwloader \

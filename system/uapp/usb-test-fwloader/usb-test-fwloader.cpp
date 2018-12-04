@@ -7,8 +7,10 @@
 #include <fbl/unique_ptr.h>
 #include <lib/fdio/util.h>
 #include <lib/fdio/watcher.h>
+#include <lib/fzl/fdio.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
+#include <zircon/device/device.h>
 #include <zircon/hw/usb.h>
 #include <zircon/types.h>
 #include <zircon/usb/test/fwloader/c/fidl.h>
@@ -23,8 +25,16 @@
 
 namespace {
 
-constexpr char kFx3DevDir[] = "/dev/class/usb-test-fwloader";
+struct WatchDirData {
+    const char* dev_name;
+    int fd;
+};
+
+constexpr char kFwLoaderDir[] = "/dev/class/usb-test-fwloader";
 constexpr char kUsbTesterDevDir[] = "/dev/class/usb-tester";
+
+constexpr char kFirmwareLoader[] = "fx3";
+constexpr char kFlashProgrammer[] = "flash-programmer";
 
 constexpr int kEnumerationWaitSecs = 5;
 
@@ -50,25 +60,34 @@ zx_status_t watch_dir_cb(int dirfd, int event, const char* filename, void* cooki
     if (fd < 0) {
         return ZX_OK;
     }
-    auto out_fd = reinterpret_cast<int*>(cookie);
-    *out_fd = fd;
+    auto data = reinterpret_cast<WatchDirData*>(cookie);
+    char path[PATH_MAX];
+    const ssize_t r = ioctl_device_get_topo_path(fd, path, sizeof(path));
+    if (r < 0) {
+        return ZX_ERR_IO;
+    }
+    if (data->dev_name && strstr(path, data->dev_name) == nullptr) {
+        close(fd);
+        return ZX_OK;
+    }
+    data->fd = fd;
     return ZX_ERR_STOP;
 }
 
 // Waits for a device to enumerate and be added to the given directory.
-zx_status_t wait_dev_enumerate(const char* dir, fbl::unique_fd* out_fd) {
+zx_status_t wait_dev_enumerate(const char* dir, const char* dev_name, fbl::unique_fd* out_fd) {
     DIR* d = opendir(dir);
     if (d == nullptr) {
         fprintf(stderr, "Could not open dir: \"%s\"\n", dir);
         return ZX_ERR_BAD_STATE;
     }
     auto close_dir = fbl::MakeAutoCall([&] { closedir(d); });
-    int fd = 0;
+    WatchDirData data = { .dev_name = dev_name, .fd = 0 };
     zx_status_t status = fdio_watch_directory(dirfd(d), watch_dir_cb,
                                               zx_deadline_after(ZX_SEC(kEnumerationWaitSecs)),
-                                              reinterpret_cast<void*>(&fd));
+                                              reinterpret_cast<void*>(&data));
     if (status == ZX_ERR_STOP) {
-        out_fd->reset(fd);
+        out_fd->reset(data.fd);
         return ZX_OK;
     } else {
         return status;
@@ -98,7 +117,7 @@ zx_status_t open_dev(const char* dir, fbl::unique_fd* out_fd) {
 }
 
 zx_status_t open_fwloader_dev(fbl::unique_fd* out_fd) {
-    return open_dev(kFx3DevDir, out_fd);
+    return open_dev(kFwLoaderDir, out_fd);
 }
 
 zx_status_t open_usb_tester_dev(fbl::unique_fd* out_fd) {
@@ -179,7 +198,7 @@ zx_status_t load_to_ram(const char* firmware_path) {
             fprintf(stderr, "Failed to switch usb test device to fwloader mode, err: %d\n", res);
             return res;
         }
-        status = wait_dev_enumerate(kFx3DevDir, &fd);
+        status = wait_dev_enumerate(kFwLoaderDir, kFirmwareLoader, &fd);
         if (status != ZX_OK) {
             fprintf(stderr, "Failed to wait for fwloader to re-enumerate, err: %d\n", status);
             return status;
@@ -222,7 +241,7 @@ zx_status_t load_test_firmware(const char* firmware_path) {
         return status;
     }
     fbl::unique_fd updated_dev;
-    status = wait_dev_enumerate(kUsbTesterDevDir, &updated_dev);
+    status = wait_dev_enumerate(kUsbTesterDevDir, nullptr, &updated_dev);
     if (status != ZX_OK) {
         fprintf(stderr, "Failed to wait for updated usb tester to enumerate, err: %d\n", status);
         return status;
@@ -249,6 +268,13 @@ zx_status_t load_bootloader(const char* flash_prog_image_path, const char* firmw
     if (status != ZX_OK) {
         return status;
     }
+    fbl::unique_fd updated_dev;
+    status = wait_dev_enumerate(kFwLoaderDir, kFlashProgrammer, &updated_dev);
+    if (status != ZX_OK) {
+        fprintf(stderr, "Failed to wait for flash programmer to enumerate, err: %d\n", status);
+        return status;
+    }
+    printf("Loaded flash programmer.\n");
     // TODO(jocelyndang): load firmware to I2C EEPROM.
     return ZX_OK;
 }

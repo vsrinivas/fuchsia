@@ -5,5 +5,6 @@
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULES += \
+    $(LOCAL_DIR)/flash-programmer \
     $(LOCAL_DIR)/fx3 \
     $(LOCAL_DIR)/usb-tester \
