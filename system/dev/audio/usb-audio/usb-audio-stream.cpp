@@ -56,7 +56,7 @@ UsbAudioStream::~UsbAudioStream() {
     ZX_DEBUG_ASSERT(allocated_req_cnt_ == free_req_cnt_);
 
     while (!list_is_empty(&free_req_)) {
-        usb_request_release(list_remove_head_type(&free_req_, usb_request_t, node));
+        usb_request_release(usb_req_list_remove_head(&free_req_, parent_.parent_req_size()));
     }
 }
 
@@ -97,10 +97,11 @@ zx_status_t UsbAudioStream::Bind() {
         free_req_cnt_ = 0;
         allocated_req_cnt_ = 0;
 
+        uint64_t req_size = parent_.parent_req_size() + sizeof(usb_req_internal_t);
         for (uint32_t i = 0; i < MAX_OUTSTANDING_REQ; ++i) {
             usb_request_t* req;
             zx_status_t status = usb_request_alloc(&req, ifc_->max_req_size(),
-                                                   ifc_->ep_addr(), parent_.parent_req_size());
+                                                   ifc_->ep_addr(), req_size);
             if (status != ZX_OK) {
                 LOG(ERROR, "Failed to allocate usb request %u/%u (size %u): %d\n",
                     i + 1, MAX_OUTSTANDING_REQ, ifc_->max_req_size(), status);
@@ -113,7 +114,8 @@ zx_status_t UsbAudioStream::Bind() {
                 reinterpret_cast<UsbAudioStream*>(cookie)->RequestComplete(req);
             };
 
-            list_add_head(&free_req_, &req->node);
+            status = usb_req_list_add_head(&free_req_, req, parent_.parent_req_size());
+            ZX_DEBUG_ASSERT(status == ZX_OK);
             ++free_req_cnt_;
             ++allocated_req_cnt_;
         }
@@ -1094,7 +1096,7 @@ void UsbAudioStream::QueueRequestLocked() {
     }
 
     // Grab a free usb request.
-    auto req = list_remove_head_type(&free_req_, usb_request_t, node);
+    auto req = usb_req_list_remove_head(&free_req_, parent_.parent_req_size());
     ZX_DEBUG_ASSERT(req != nullptr);
     ZX_DEBUG_ASSERT(free_req_cnt_ > 0);
     --free_req_cnt_;
@@ -1169,7 +1171,8 @@ void UsbAudioStream::CompleteRequestLocked(usb_request_t* req) {
     }
 
     // Return the transaction to the free list.
-    list_add_head(&free_req_, &req->node);
+    zx_status_t status = usb_req_list_add_head(&free_req_, req, parent_.parent_req_size());
+    ZX_DEBUG_ASSERT(status == ZX_OK);
     ++free_req_cnt_;
     ZX_DEBUG_ASSERT(free_req_cnt_ <= allocated_req_cnt_);
 }
