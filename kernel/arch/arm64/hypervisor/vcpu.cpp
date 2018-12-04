@@ -7,6 +7,7 @@
 #include <arch/hypervisor.h>
 #include <arch/ops.h>
 #include <bits.h>
+#include <dev/interrupt/arm_gic_common.h>
 #include <dev/interrupt/arm_gic_hw_interface.h>
 #include <fbl/auto_call.h>
 #include <hypervisor/cpu.h>
@@ -36,32 +37,20 @@ static uint64_t vmpidr_of(uint8_t vpid, uint64_t mpidr) {
 }
 
 static void gich_maybe_interrupt(GichState* gich_state) {
-    uint64_t elrsr = gich_state->elrsr;
-    if (elrsr == 0) {
-        // All list registers are in use.
-        return;
-    }
-    uint32_t vector = kTimerVector;
-    hypervisor::InterruptType type = gich_state->interrupt_tracker.TryPop(vector);
-    if (type != hypervisor::InterruptType::INACTIVE) {
-        // We give timer interrupts precedence over all others. If we find a
-        // timer interrupt is pending, process it first.
-        goto has_timer;
-    }
-    while (elrsr != 0) {
-        type = gich_state->interrupt_tracker.Pop(&vector);
+    for (uint64_t elrsr = gich_state->elrsr; elrsr != 0;) {
+        uint32_t vector;
+        hypervisor::InterruptType type = gich_state->interrupt_tracker.Pop(&vector);
         if (type == hypervisor::InterruptType::INACTIVE) {
             // There are no more pending interrupts.
             break;
-        }
-    has_timer:
-        if (gich_state->active_interrupts.GetOne(vector)) {
+        } else if (gich_state->active_interrupts.GetOne(vector)) {
             // Skip an interrupt if it was already active.
             continue;
         }
         uint32_t lr_index = __builtin_ctzl(elrsr);
         bool hw = type == hypervisor::InterruptType::PHYSICAL;
-        uint64_t lr = gic_get_lr_from_vector(hw, 0, vector);
+        uint8_t prio = vector < GIC_BASE_SPI ? 0 : 1;
+        uint64_t lr = gic_get_lr_from_vector(hw, prio, vector);
         gich_state->lr[lr_index] = lr;
         elrsr &= ~(1u << lr_index);
     }

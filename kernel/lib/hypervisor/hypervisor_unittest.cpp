@@ -523,7 +523,7 @@ static bool interrupt_bitmap() {
     ASSERT_EQ(ZX_OK, bitmap.Init(), "");
     EXPECT_EQ(hypervisor::InterruptType::INACTIVE, bitmap.Get(0), "");
     EXPECT_EQ(hypervisor::InterruptType::INACTIVE, bitmap.Get(1), "");
-    EXPECT_EQ(hypervisor::InterruptType::INACTIVE, bitmap.ReverseScan(&vector), "");
+    EXPECT_EQ(hypervisor::InterruptType::INACTIVE, bitmap.Scan(&vector), "");
     EXPECT_EQ(UINT32_MAX, vector, "");
 
     // Index 0.
@@ -531,21 +531,21 @@ static bool interrupt_bitmap() {
     bitmap.Set(0u, hypervisor::InterruptType::VIRTUAL);
     EXPECT_EQ(hypervisor::InterruptType::VIRTUAL, bitmap.Get(0), "");
     EXPECT_EQ(hypervisor::InterruptType::INACTIVE, bitmap.Get(1), "");
-    EXPECT_EQ(hypervisor::InterruptType::VIRTUAL, bitmap.ReverseScan(&vector), "");
+    EXPECT_EQ(hypervisor::InterruptType::VIRTUAL, bitmap.Scan(&vector), "");
     EXPECT_EQ(0u, vector, "");
 
     vector = UINT32_MAX;
     bitmap.Set(0u, hypervisor::InterruptType::PHYSICAL);
     EXPECT_EQ(hypervisor::InterruptType::PHYSICAL, bitmap.Get(0), "");
     EXPECT_EQ(hypervisor::InterruptType::INACTIVE, bitmap.Get(1), "");
-    EXPECT_EQ(hypervisor::InterruptType::PHYSICAL, bitmap.ReverseScan(&vector), "");
+    EXPECT_EQ(hypervisor::InterruptType::PHYSICAL, bitmap.Scan(&vector), "");
     EXPECT_EQ(0u, vector, "");
 
     vector = UINT32_MAX;
     bitmap.Set(0u, hypervisor::InterruptType::INACTIVE);
     EXPECT_EQ(hypervisor::InterruptType::INACTIVE, bitmap.Get(0), "");
     EXPECT_EQ(hypervisor::InterruptType::INACTIVE, bitmap.Get(1), "");
-    EXPECT_EQ(hypervisor::InterruptType::INACTIVE, bitmap.ReverseScan(&vector), "");
+    EXPECT_EQ(hypervisor::InterruptType::INACTIVE, bitmap.Scan(&vector), "");
     EXPECT_EQ(UINT32_MAX, vector, "");
 
     // Index 1.
@@ -553,21 +553,21 @@ static bool interrupt_bitmap() {
     bitmap.Set(1u, hypervisor::InterruptType::VIRTUAL);
     EXPECT_EQ(hypervisor::InterruptType::INACTIVE, bitmap.Get(0), "");
     EXPECT_EQ(hypervisor::InterruptType::VIRTUAL, bitmap.Get(1), "");
-    EXPECT_EQ(hypervisor::InterruptType::VIRTUAL, bitmap.ReverseScan(&vector), "");
+    EXPECT_EQ(hypervisor::InterruptType::VIRTUAL, bitmap.Scan(&vector), "");
     EXPECT_EQ(1u, vector, "");
 
     vector = UINT32_MAX;
     bitmap.Set(1u, hypervisor::InterruptType::PHYSICAL);
     EXPECT_EQ(hypervisor::InterruptType::INACTIVE, bitmap.Get(0), "");
     EXPECT_EQ(hypervisor::InterruptType::PHYSICAL, bitmap.Get(1), "");
-    EXPECT_EQ(hypervisor::InterruptType::PHYSICAL, bitmap.ReverseScan(&vector), "");
+    EXPECT_EQ(hypervisor::InterruptType::PHYSICAL, bitmap.Scan(&vector), "");
     EXPECT_EQ(1u, vector, "");
 
     vector = UINT32_MAX;
     bitmap.Set(1u, hypervisor::InterruptType::INACTIVE);
     EXPECT_EQ(hypervisor::InterruptType::INACTIVE, bitmap.Get(0), "");
     EXPECT_EQ(hypervisor::InterruptType::INACTIVE, bitmap.Get(1), "");
-    EXPECT_EQ(hypervisor::InterruptType::INACTIVE, bitmap.ReverseScan(&vector), "");
+    EXPECT_EQ(hypervisor::InterruptType::INACTIVE, bitmap.Scan(&vector), "");
     EXPECT_EQ(UINT32_MAX, vector, "");
 
     END_TEST;

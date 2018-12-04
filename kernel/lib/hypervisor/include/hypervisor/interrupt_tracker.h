@@ -39,10 +39,13 @@ public:
             DEBUG_ASSERT(false);
             return InterruptType::INACTIVE;
         }
-        size_t first_unset;
         size_t bitoff = vector * 2;
-        bitmap_.Get(bitoff, bitoff + 2, &first_unset);
-        return static_cast<InterruptType>(first_unset - bitoff);
+        size_t first;
+        bool inactive = bitmap_.Scan(bitoff, bitoff + 2, false, &first);
+        if (inactive) {
+            return InterruptType::INACTIVE;
+        }
+        return bitoff == first ? InterruptType::VIRTUAL : InterruptType::PHYSICAL;
     }
 
     void Set(uint32_t vector, InterruptType type) {
@@ -53,14 +56,18 @@ public:
         size_t bitoff = vector * 2;
         bitmap_.Clear(bitoff, bitoff + 2);
         if (type != InterruptType::INACTIVE) {
-            auto state_bit = static_cast<size_t>(type);
-            bitmap_.Set(bitoff, bitoff + state_bit);
+            auto state_bit = static_cast<size_t>(type) - 1;
+            bitmap_.SetOne(bitoff + state_bit);
         }
     }
 
-    InterruptType ReverseScan(uint32_t* vector) {
+    InterruptType Scan(uint32_t* vector) {
         size_t bitoff;
+#if ARCH_ARM64
+        bool is_empty = bitmap_.Scan(0, kNumBits, false, &bitoff);
+#elif ARCH_X86
         bool is_empty = bitmap_.ReverseScan(0, kNumBits, false, &bitoff);
+#endif
         if (is_empty) {
             return InterruptType::INACTIVE;
         }
@@ -91,23 +98,13 @@ public:
     bool Pending() {
         uint32_t vector;
         AutoSpinLock lock(&lock_);
-        return bitmap_.ReverseScan(&vector) != InterruptType::INACTIVE;
-    }
-
-    // Tries to pop the given interrupt.
-    InterruptType TryPop(uint32_t vector) {
-        AutoSpinLock lock(&lock_);
-        InterruptType type = bitmap_.Get(vector);
-        if (type != InterruptType::INACTIVE) {
-            bitmap_.Set(vector, InterruptType::INACTIVE);
-        }
-        return type;
+        return bitmap_.Scan(&vector) != InterruptType::INACTIVE;
     }
 
     // Pops the highest priority interrupt.
     InterruptType Pop(uint32_t* vector) {
         AutoSpinLock lock(&lock_);
-        InterruptType type = bitmap_.ReverseScan(vector);
+        InterruptType type = bitmap_.Scan(vector);
         if (type != InterruptType::INACTIVE) {
             bitmap_.Set(*vector, InterruptType::INACTIVE);
         }
