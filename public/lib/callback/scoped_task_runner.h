@@ -112,7 +112,8 @@ class ScopedTaskRunner {
   // goes out of scope.
   void ShutDown();
 
-  // Posts a task to run as soon as possible.
+  // Posts a task to run as soon as possible on the dispatcher after the current
+  // dispatch cycle.
   void PostTask(fit::closure task);
 
   // Posts a task to run as soon as possible after the specified |target_time|.
@@ -121,9 +122,13 @@ class ScopedTaskRunner {
   // Posts a task to run as soon as possible after the specified |delay|.
   void PostDelayedTask(fit::closure task, zx::duration delay);
 
-  // Convenience function to post a repeating periodic task.
+  // Convenience function to post a repeating periodic task. If |invoke_now| is
+  // true, the task is run as soon as possible on the dispatcher after the
+  // current dispatch cycle as well as periodically. Otherwise, the first
+  // invocation of the task will be as soon as possible after the specified
+  // |interval|.
   void PostPeriodicTask(fit::closure task, zx::duration interval,
-                        bool invoke_immediately = true);
+                        bool invoke_now = true);
 
   // Scopes a task to the current task runner without scheduling it. This means
   // that the given function will be called when the returned function is called

@@ -4,9 +4,12 @@
 
 #include <lib/callback/scoped_task_runner.h>
 
+#include <pthread.h>
+
 #include <gtest/gtest.h>
 #include <lib/async-testutils/test_loop.h>
 #include <lib/fxl/macros.h>
+#include <lib/fxl/threading/thread.h>
 
 namespace callback {
 namespace {
@@ -137,8 +140,40 @@ TEST(ScopedTaskRunnerTest, PostPeriodicTask) {
 
   EXPECT_EQ(4, called);
 
+  called = 0;
   loop.RunFor(kInterval * 4);
-  EXPECT_EQ(4, called);
+  EXPECT_EQ(0, called);
+}
+
+// Verifies that all occurrences of a periodic task posted from a non-dispatch
+// thread execute on the dispatch thread.
+//
+// Example bug:
+// https://fuchsia.googlesource.com/garnet/+/3a8dab9a939efeeb5e18454595a558f9972f7a42/public/lib/callback/scoped_task_runner.cc#47
+TEST(ScopedTaskRunnerTest, PostPeriodicTaskOffThread) {
+  async::TestLoop loop;
+  ScopedTaskRunner tasks(loop.dispatcher());
+
+  pthread_t dispatch_thread = pthread_self();
+
+  int called = 0;
+  fxl::Thread foreign_thread([&] {
+    // test-correctness assertion
+    EXPECT_NE(dispatch_thread, pthread_self());
+
+    tasks.PostPeriodicTask(
+        [&] {
+          ++called;
+          EXPECT_EQ(dispatch_thread, pthread_self()) << "iteration " << called;
+        },
+        kInterval, true);
+  });
+  foreign_thread.Run();
+  foreign_thread.Join();
+
+  loop.RunFor(kInterval * 4);
+
+  EXPECT_EQ(5, called);
 }
 
 }  // namespace

@@ -42,24 +42,22 @@ void ScopedTaskRunner::PostDelayedTask(fit::closure task, zx::duration delay) {
 
 void ScopedTaskRunner::PostPeriodicTask(fit::closure task,
                                         zx::duration interval,
-                                        bool invoke_immediately) {
-  if (invoke_immediately) {
-    // TODO(rosswang): this is actually incorrect as it may execute the first
-    // instance of this task on the wrong thread. Add a test and fix in a
-    // subsequent CL.
-    task();
-  }
-
+                                        bool invoke_now) {
   // We live with re-wrapping this task every iteration to greatly simplify the
   // implementation. It's possible to wrap once, but as the scoped task would
   // then need to capture itself, we'd have to declare a dedicated functor.
   // Since this area is not performance-critical, err on the side of simplicity
   // for now.
-  PostDelayedTask(
-      [this, task = std::move(task), interval]() mutable {
-        PostPeriodicTask(std::move(task), interval, true);
-      },
-      interval);
+  auto task_iteration = [this, task = std::move(task), interval]() mutable {
+    task();
+    PostPeriodicTask(std::move(task), interval, false);
+  };
+
+  if (invoke_now) {
+    PostTask(std::move(task_iteration));
+  } else {
+    PostDelayedTask(std::move(task_iteration), interval);
+  }
 }
 
 }  // namespace callback
