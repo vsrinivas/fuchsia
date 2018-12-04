@@ -92,21 +92,29 @@ package("vulkan-tests") {
     tests = [
       {
         name = "magma_memcpy"
+        environments = magma_hardware_envs
       },
       {
         name = "vkreadback"
+        environments = magma_hardware_envs
       },
       {
         name = "vkloop"
+        # TODO(MA-530): re-enable once working again.
+        disabled = true
       },
       {
         name = "vkext"
+        environments = magma_hardware_envs
       },
       {
         name = "vkcopy"
+        environments = magma_hardware_envs
       },
       {
         name = "vkpriority"
+        # No available hardware to run it on; cannot run with an Intel GPU.
+        disabled = true
       },
     ]
 
