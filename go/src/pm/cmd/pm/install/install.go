@@ -74,6 +74,10 @@ func Run(cfg *build.Config, args []string) error {
 	_, err = f.Write(b)
 	if err != nil {
 		f.Close()
+		if os.IsExist(err) {
+			log.Printf("package already exists")
+			return nil
+		}
 		return err
 	}
 	if err := f.Close(); err != nil {
