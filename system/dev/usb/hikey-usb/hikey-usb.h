@@ -46,7 +46,3 @@ private:
 };
 
 } // namespace hikey_usb
-
-__BEGIN_CDECLS
-zx_status_t hikey_usb_bind(void* ctx, zx_device_t* parent);
-__END_CDECLS

@@ -260,7 +260,3 @@ void xhci_remove_device(xhci_t* xhci, int slot_id);
 
 void xhci_request_queue(xhci_t* xhci, usb_request_t* req, usb_request_complete_cb cb,
                         void* cookie);
-
-__BEGIN_CDECLS
-zx_status_t usb_xhci_bind(void* ctx, zx_device_t* parent);
-__END_CDECLS

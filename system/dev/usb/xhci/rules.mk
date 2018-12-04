@@ -9,7 +9,6 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS := \
-    $(LOCAL_DIR)/bind.c \
     $(LOCAL_DIR)/usb-xhci.cpp \
     $(LOCAL_DIR)/xdc.cpp \
     $(LOCAL_DIR)/xdc-transfer.cpp \

@@ -9,7 +9,6 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/bind.c \
     $(LOCAL_DIR)/dwc3.cpp \
     $(LOCAL_DIR)/dwc3-commands.cpp \
     $(LOCAL_DIR)/dwc3-endpoints.cpp \
