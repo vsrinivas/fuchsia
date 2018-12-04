@@ -15,8 +15,8 @@ constexpr uint32_t kBaseBufferPower = 10;
 namespace sketchy_service {
 
 SharedBufferPool::SharedBufferPool(scenic::Session* session,
-                                   escher::ResourceRecycler* recycler)
-    : session_(session), recycler_(recycler), weak_factory_(this) {}
+                                   escher::BufferFactory* factory)
+    : session_(session), buffer_factory_(factory), weak_factory_(this) {}
 
 SharedBufferPtr SharedBufferPool::GetBuffer(vk::DeviceSize capacity_req) {
   SharedBufferPtr buffer;
@@ -25,7 +25,7 @@ SharedBufferPtr SharedBufferPool::GetBuffer(vk::DeviceSize capacity_req) {
     buffer = std::move(free_buffers_[capacity].back());
     free_buffers_[capacity].pop_back();
   } else {
-    buffer = SharedBuffer::New(session_, recycler_, capacity);
+    buffer = SharedBuffer::New(session_, buffer_factory_, capacity);
   }
   used_buffers_.insert(buffer);
   return buffer;

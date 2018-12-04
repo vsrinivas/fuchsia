@@ -343,7 +343,7 @@ void Snapshotter::ReadImage(
   region.imageExtent.width = image->width();
   region.imageExtent.height = image->height();
   region.imageExtent.depth = 1;
-  region.bufferOffset = image->memory_offset();
+  region.bufferOffset = image->memory()->offset();
 
   auto reader = gpu_uploader_->AcquireReader(image->memory()->size());
   reader->ReadImage(image, region, escher::SemaphorePtr());

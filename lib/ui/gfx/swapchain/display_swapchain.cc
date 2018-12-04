@@ -179,9 +179,9 @@ bool DisplaySwapchain::InitializeFramebuffers(
     }
 
     Framebuffer buffer;
-    buffer.device_memory =
-        escher::GpuMem::New(device_, mem_result.value, memory_requirements.size,
-                            false /* needs_mapped_ptr */, memory_type_index);
+    buffer.device_memory = escher::GpuMem::AdoptVkMemory(
+        device_, mem_result.value, memory_requirements.size,
+        false /* needs_mapped_ptr */);
     FXL_CHECK(buffer.device_memory);
 
     // Wrap the image and device memory in a escher::Image.
@@ -191,10 +191,10 @@ bool DisplaySwapchain::InitializeFramebuffers(
     image_info.height = height_in_px;
     image_info.usage = image_usage;
 
-    // escher::Image::New() binds the memory to the image.
+    // escher::Image::AdoptVkImage() binds the memory to the image.
     buffer.escher_image =
-        escher::Image::New(resource_recycler, image_info, image_result.value,
-                           buffer.device_memory);
+        escher::Image::AdoptVkImage(resource_recycler, image_info,
+                                    image_result.value, buffer.device_memory);
 
     if (!buffer.escher_image) {
       FXL_LOG(ERROR) << "Creating escher::EscherImage failed.";

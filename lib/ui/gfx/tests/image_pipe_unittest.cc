@@ -104,8 +104,8 @@ class ImagePipeThatCreatesDummyImages : public ImagePipe {
     escher::ImageInfo escher_info;
     escher_info.width = image_info.width;
     escher_info.height = image_info.height;
-    escher::ImagePtr escher_image = escher::Image::New(
-        dummy_resource_manager_, escher_info, vk::Image(), nullptr);
+    escher::ImagePtr escher_image = escher::Image::WrapVkImage(
+        dummy_resource_manager_, escher_info, vk::Image());
     FXL_CHECK(escher_image);
     auto image = fxl::AdoptRef(new DummyImage(session, id, escher_image));
 

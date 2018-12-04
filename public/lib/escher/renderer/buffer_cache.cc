@@ -66,8 +66,8 @@ BufferPtr BufferCache::NewHostBuffer(vk::DeviceSize vk_size) {
     free_buffers_by_id_.erase(info_itr);
   } else {
     // Construct a new buffer of the requested size.
-    buffer = Buffer::New(this, gpu_allocator_.get(), vk_size, kUsageFlags,
-                         kMemoryPropertyFlags);
+    buffer = gpu_allocator_->AllocateBuffer(this, vk_size, kUsageFlags,
+                                            kMemoryPropertyFlags);
   }
 
   return buffer;

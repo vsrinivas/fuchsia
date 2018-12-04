@@ -14,7 +14,8 @@ namespace escher {
 
 RoundedRectFactory::RoundedRectFactory(EscherWeakPtr weak_escher)
     : ResourceRecycler(std::move(weak_escher)),
-      buffer_factory_(std::make_unique<BufferFactory>(GetEscherWeakPtr())) {}
+      buffer_factory_(GetEscherWeakPtr()->gpu_allocator(),
+                      GetEscherWeakPtr()->resource_recycler()) {}
 
 RoundedRectFactory::~RoundedRectFactory() {}
 
@@ -35,10 +36,10 @@ MeshPtr RoundedRectFactory::NewRoundedRect(
       vertex_count * (primary_buffer_stride + secondary_buffer_stride);
 
   auto vertex_buffer =
-      buffer_factory_->NewBuffer(vertex_buffer_size,
-                                 vk::BufferUsageFlagBits::eVertexBuffer |
-                                     vk::BufferUsageFlagBits::eTransferDst,
-                                 vk::MemoryPropertyFlagBits::eDeviceLocal);
+      buffer_factory_.NewBuffer(vertex_buffer_size,
+                                vk::BufferUsageFlagBits::eVertexBuffer |
+                                    vk::BufferUsageFlagBits::eTransferDst,
+                                vk::MemoryPropertyFlagBits::eDeviceLocal);
 
   const auto bounding_box =
       BoundingBox::NewChecked(-0.5f * vec3(spec.width, spec.height, 0),
@@ -92,10 +93,10 @@ BufferPtr RoundedRectFactory::GetIndexBuffer(
     size_t index_buffer_size = index_count * sizeof(MeshSpec::IndexType);
 
     index_buffer_ =
-        buffer_factory_->NewBuffer(index_buffer_size,
-                                   vk::BufferUsageFlagBits::eIndexBuffer |
-                                       vk::BufferUsageFlagBits::eTransferDst,
-                                   vk::MemoryPropertyFlagBits::eDeviceLocal);
+        buffer_factory_.NewBuffer(index_buffer_size,
+                                  vk::BufferUsageFlagBits::eIndexBuffer |
+                                      vk::BufferUsageFlagBits::eTransferDst,
+                                  vk::MemoryPropertyFlagBits::eDeviceLocal);
 
     auto writer = batch_gpu_uploader->AcquireWriter(index_buffer_size);
     GenerateRoundedRectIndices(spec, mesh_spec, writer->host_ptr(),

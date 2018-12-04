@@ -11,6 +11,7 @@
 #include "lib/escher/impl/vulkan_utils.h"
 #include "lib/escher/resources/resource_recycler.h"
 #include "lib/escher/vk/buffer.h"
+#include "lib/escher/vk/gpu_allocator.h"
 #include "lib/escher/vk/vulkan_context.h"
 
 namespace escher {
@@ -114,18 +115,18 @@ MeshPtr MeshManager::MeshBuilder::Build() {
   GpuAllocator* allocator = manager_->allocator_;
 
   // TODO: use eTransferDstOptimal instead of eTransferDst?
-  auto vertex_buffer = Buffer::New(manager_->resource_recycler(), allocator,
-                                   vertex_count_ * vertex_stride_,
-                                   vk::BufferUsageFlagBits::eVertexBuffer |
-                                       vk::BufferUsageFlagBits::eTransferSrc |
-                                       vk::BufferUsageFlagBits::eTransferDst,
-                                   vk::MemoryPropertyFlagBits::eDeviceLocal);
-  auto index_buffer = Buffer::New(manager_->resource_recycler(), allocator,
-                                  index_count_ * sizeof(uint32_t),
-                                  vk::BufferUsageFlagBits::eIndexBuffer |
-                                      vk::BufferUsageFlagBits::eTransferSrc |
-                                      vk::BufferUsageFlagBits::eTransferDst,
-                                  vk::MemoryPropertyFlagBits::eDeviceLocal);
+  auto vertex_buffer = allocator->AllocateBuffer(
+      manager_->resource_recycler(), vertex_count_ * vertex_stride_,
+      vk::BufferUsageFlagBits::eVertexBuffer |
+          vk::BufferUsageFlagBits::eTransferSrc |
+          vk::BufferUsageFlagBits::eTransferDst,
+      vk::MemoryPropertyFlagBits::eDeviceLocal);
+  auto index_buffer = allocator->AllocateBuffer(
+      manager_->resource_recycler(), index_count_ * sizeof(uint32_t),
+      vk::BufferUsageFlagBits::eIndexBuffer |
+          vk::BufferUsageFlagBits::eTransferSrc |
+          vk::BufferUsageFlagBits::eTransferDst,
+      vk::MemoryPropertyFlagBits::eDeviceLocal);
 
   vertex_writer_.WriteBuffer(vertex_buffer, {0, 0, vertex_buffer->size()},
                              Semaphore::New(device));

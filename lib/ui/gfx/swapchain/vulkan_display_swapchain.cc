@@ -226,7 +226,9 @@ void VulkanDisplaySwapchain::InitializeVulkanSwapchain(
       image_info.width = swapchain_extent.width;
       image_info.height = swapchain_extent.height;
       image_info.usage = vk::ImageUsageFlagBits::eColorAttachment;
-      auto escher_image = escher::Image::New(recycler, image_info, im, nullptr);
+      // The swapchain maintains ownership of the vk::Image objects in the
+      // images array, so we only wrap them here, instead of adopting them.
+      auto escher_image = escher::Image::WrapVkImage(recycler, image_info, im);
       FXL_CHECK(escher_image);
       escher_images.push_back(escher_image);
     }

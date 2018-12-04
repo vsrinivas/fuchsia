@@ -19,8 +19,7 @@ namespace sketchy_service {
 // management and multi-buffering.
 class SharedBufferPool final {
  public:
-  SharedBufferPool(scenic::Session* session,
-                   escher::ResourceRecycler* recycler);
+  SharedBufferPool(scenic::Session* session, escher::BufferFactory* factory);
 
   // Gets a buffer with at least |capacity_req|.
   SharedBufferPtr GetBuffer(vk::DeviceSize capacity_req);
@@ -42,7 +41,7 @@ class SharedBufferPool final {
   void RecycleBuffer(SharedBufferPtr buffer);
 
   scenic::Session* const session_;
-  escher::ResourceRecycler* const recycler_;
+  escher::BufferFactory* const buffer_factory_;
   std::set<SharedBufferPtr> used_buffers_;
   // Groups free buffers into lists that contain buffers that have the same
   // capacity.

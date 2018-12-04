@@ -170,9 +170,8 @@ void GpuUploader::PrepareForWriterOfSize(vk::DeviceSize size) {
   size = std::max(kMinBufferSize, size * kOverAllocationFactor);
   auto memory_properties = vk::MemoryPropertyFlagBits::eHostVisible |
                            vk::MemoryPropertyFlagBits::eHostCoherent;
-  current_buffer_ =
-      Buffer::New(this, allocator_, size, vk::BufferUsageFlagBits::eTransferSrc,
-                  memory_properties);
+  current_buffer_ = allocator_->AllocateBuffer(
+      this, size, vk::BufferUsageFlagBits::eTransferSrc, memory_properties);
 }
 
 void GpuUploader::RecycleResource(std::unique_ptr<Resource> resource) {

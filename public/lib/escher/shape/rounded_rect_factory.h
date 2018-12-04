@@ -7,11 +7,11 @@
 
 #include "lib/escher/resources/resource_recycler.h"
 #include "lib/escher/shape/rounded_rect.h"
+#include "lib/escher/vk/buffer_factory.h"
 
 namespace escher {
 
 class BatchGpuUploader;
-class BufferFactory;
 
 class RoundedRectFactory : private ResourceRecycler {
  public:
@@ -26,8 +26,7 @@ class RoundedRectFactory : private ResourceRecycler {
                            const MeshSpec& mesh_spec,
                            BatchGpuUploader* gpu_uploader);
 
-  std::unique_ptr<BufferFactory> buffer_factory_;
-
+  BufferFactoryAdapter buffer_factory_;
   BufferPtr index_buffer_;
 };
 

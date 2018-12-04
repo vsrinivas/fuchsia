@@ -46,7 +46,7 @@ class Memory : public Resource {
     // don't need additional logic here.
     return shared_vmo_->Map();
   }
-  const escher::GpuMemPtr& gpu_mem() {
+  const escher::GpuMemPtr& GetGpuMem() {
     // TODO(SCN-999): Passive lazy instantiation may not be ideal, either from a
     // performance standpoint, or from an external logic standpoint. Consider
     // acquire/release semantics. This would also map well to vkCopyBuffer

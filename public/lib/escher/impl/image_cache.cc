@@ -29,9 +29,10 @@ ImagePtr ImageCache::NewImage(const ImageInfo& info) {
 
   // Allocate memory and bind it to the image.
   vk::MemoryRequirements reqs = vk_device().getImageMemoryRequirements(image);
-  GpuMemPtr memory = allocator_->Allocate(reqs, info.memory_flags);
+  GpuMemPtr memory = allocator_->AllocateMemory(reqs, info.memory_flags);
 
-  ImagePtr escher_image = Image::New(this, info, image, std::move(memory));
+  ImagePtr escher_image =
+      Image::AdoptVkImage(this, info, image, std::move(memory));
   FXL_CHECK(escher_image);
 
   return escher_image;

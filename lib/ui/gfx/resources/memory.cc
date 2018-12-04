@@ -92,11 +92,13 @@ escher::GpuMemPtr Memory::ImportGpuMemory() {
     return nullptr;
   }
 
-  // TODO(SCN-1115): This currently does not request a mapped ptr, as it gets
-  // the uint8_t* directly from the VMO.
-  return escher::GpuMem::New(session()->engine()->vk_device(),
-                             vk::DeviceMemory(memory), vk::DeviceSize(size()),
-                             false /* needs_mapped_ptr */, memory_type_index);
+  // TODO(SCN-1115): If we can rely on all memory being importable into Vulkan
+  // (either as host or device memory), then we can always make a GpuMem object,
+  // and rely on its mapped pointer accessor instead of storing our own local
+  // uint8_t*.
+  return escher::GpuMem::AdoptVkMemory(
+      session()->engine()->vk_device(), vk::DeviceMemory(memory),
+      vk::DeviceSize(size()), is_host_ /* needs_mapped_ptr */);
 }
 
 zx::vmo Memory::DuplicateVmo() {

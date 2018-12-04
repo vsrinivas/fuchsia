@@ -12,41 +12,31 @@
 
 namespace escher {
 
-class GpuAllocator;
+class NaiveGpuAllocator;
 
 namespace impl {
 
 class GpuMemSlab;
 typedef fxl::RefPtr<GpuMemSlab> GpuMemSlabPtr;
 
-// GpuMemSlab represents a single Vulkan memory allocation, which a GpuAllocator
-// may use to sub-allocate multiple GpuMem instances.  It can only be created
-// via GpuMem::New() and GpuAllocator::AllocateSlab().  See class comment of
-// GpuAllocator for more details.
+// GpuMemSlab represents a single Vulkan memory allocation, created directly
+// through a vkDevice. It should only be created via specific subclasses of
+// GpuAllocator, or through GpuMem::AdoptMemory when transferring ownership of a
+// existing vk::DeviceMemory object.
 class GpuMemSlab final : public GpuMem {
  public:
   ~GpuMemSlab() override;
 
  private:
-  // Instances of GpuMemSlab may only be created by GpuAllocator::AllocateSlab()
-  // and GpuMem::New().
-  friend class ::escher::GpuAllocator;
+  // Instances of GpuMemSlab may only be created by
+  // NaiveGpuAllocator::AllocateMemory() and GpuMem::AdoptMemory.
+  friend class ::escher::NaiveGpuAllocator;
   friend class ::escher::GpuMem;
-  static GpuMemSlabPtr New(vk::Device device,
-                           vk::PhysicalDevice physical_device,
-                           vk::MemoryRequirements reqs,
-                           vk::MemoryPropertyFlags flags,
-                           GpuAllocator* allocator);
   GpuMemSlab(vk::Device device, vk::DeviceMemory base, vk::DeviceSize size,
-             bool needs_mapped_ptr, uint32_t memory_type_index,
-             GpuAllocator* allocator);
-
-  void OnAllocationDestroyed(vk::DeviceSize size,
-                             vk::DeviceSize offset) override;
+             bool needs_mapped_ptr, NaiveGpuAllocator* allocator);
 
   vk::Device device_;
-  uint32_t memory_type_index_;
-  GpuAllocator* allocator_;
+  NaiveGpuAllocator* allocator_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(GpuMemSlab);
 };

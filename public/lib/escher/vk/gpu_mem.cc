@@ -15,20 +15,13 @@ GpuMem::GpuMem(vk::DeviceMemory base, vk::DeviceSize size,
 
 GpuMem::~GpuMem() {}
 
-GpuMemPtr GpuMem::New(vk::Device device, vk::PhysicalDevice physical_device,
-                      vk::MemoryRequirements reqs,
-                      vk::MemoryPropertyFlags flags) {
-  return impl::GpuMemSlab::New(device, physical_device, reqs, flags, nullptr);
+GpuMemPtr GpuMem::AdoptVkMemory(vk::Device device, vk::DeviceMemory mem,
+                                vk::DeviceSize size, bool needs_mapped_ptr) {
+  return fxl::AdoptRef(
+      new impl::GpuMemSlab(device, mem, size, needs_mapped_ptr, nullptr));
 }
 
-GpuMemPtr GpuMem::New(vk::Device device, vk::DeviceMemory mem,
-                      vk::DeviceSize size, bool needs_mapped_ptr,
-                      uint32_t memory_type_index) {
-  return fxl::AdoptRef(new impl::GpuMemSlab(device, mem, size, needs_mapped_ptr,
-                                            memory_type_index, nullptr));
-}
-
-GpuMemPtr GpuMem::Allocate(vk::DeviceSize size, vk::DeviceSize offset) {
+GpuMemPtr GpuMem::Suballocate(vk::DeviceSize size, vk::DeviceSize offset) {
   if (offset + size > size_) {
     return GpuMemPtr();
   }

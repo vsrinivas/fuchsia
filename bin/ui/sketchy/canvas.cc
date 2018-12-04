@@ -16,8 +16,9 @@ CanvasImpl::CanvasImpl(async::Loop* loop, scenic::Session* session,
     : loop_(loop),
       session_(session),
       escher_(weak_escher),
-      shared_buffer_pool_(session, weak_escher->resource_recycler()),
-      unshared_buffer_factory_(weak_escher),
+      buffer_factory_(weak_escher->gpu_allocator(),
+                      weak_escher->resource_recycler()),
+      shared_buffer_pool_(session, &buffer_factory_),
       stroke_manager_(std::move(weak_escher)) {}
 
 void CanvasImpl::Init(
@@ -67,8 +68,7 @@ void CanvasImpl::RequestScenicPresent(uint64_t presentation_time) {
   };
   callbacks_.clear();
 
-  auto frame =
-      Frame(escher_.get(), &shared_buffer_pool_, &unshared_buffer_factory_);
+  auto frame = Frame(escher_.get(), &shared_buffer_pool_, &buffer_factory_);
   if (frame.init_failed()) {
     session_->Present(presentation_time, std::move(session_callback));
     return;
@@ -130,7 +130,7 @@ bool CanvasImpl::CreateStroke(ResourceId id,
                               ::fuchsia::ui::sketchy::Stroke stroke) {
   return resource_map_.AddResource(
       id, fxl::MakeRefCounted<Stroke>(stroke_manager_.stroke_tessellator(),
-                                      &unshared_buffer_factory_));
+                                      &buffer_factory_));
 }
 
 bool CanvasImpl::CreateStrokeGroup(

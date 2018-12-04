@@ -10,13 +10,10 @@
 namespace escher {
 namespace impl {
 
-// Helper class for GpuMem::Allocate(), which returns an instance of this class.
-// When the instance is destroyed, it notifies the GpuMem that it was allocated
-// from.
+// Helper class for GpuMem::Suballocate(), which returns an instance of this
+// class. When this instance is destroyed, it releases its strong reference on
+// the backing memory object.
 class GpuMemSuballocation final : public GpuMem {
- public:
-  ~GpuMemSuballocation() override;
-
  private:
   friend class ::escher::GpuMem;
   GpuMemSuballocation(GpuMemPtr mem, vk::DeviceSize size,

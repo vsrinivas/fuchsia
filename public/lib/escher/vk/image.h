@@ -48,19 +48,16 @@ class Image : public WaitableResource {
   static const ResourceTypeInfo kTypeInfo;
   const ResourceTypeInfo& type_info() const override { return kTypeInfo; }
 
-  // Constructor.  In some cases it is necessary to wrap an un-owned vk::Image,
-  // which should not be destroyed when this Image is destroyed (e.g. when
-  // working with images associated with a vk::SwapchainKHR); this is done by
-  // passing nullptr as the |mem| argument.
-  // If |mem| is passed and |bind_image_memory| is true, this method also binds
-  // the memory to the image. |mem_offset| is the offset of the image's memory
-  // within |mem|.
-  static ImagePtr New(ResourceManager* image_owner, ImageInfo info, vk::Image,
-                      GpuMemPtr mem, vk::DeviceSize mem_offset = 0,
-                      bool bind_image_memory = true);
+  // Constructor. Claims ownership of the vk::Image, and binds it to the
+  // provided GpuMemPtr.
+  static ImagePtr AdoptVkImage(ResourceManager* image_owner, ImageInfo info,
+                               vk::Image image, GpuMemPtr mem);
 
-  static ImagePtr New(ResourceManager* image_owner, const ImageInfo& info,
-                      GpuAllocator* allocator);
+  // Constructor. Wraps an existing image without claiming ownership. Useful
+  // when the image is owned/maintained by another system (e.g.,
+  // vk::SwapchainKHR).
+  static ImagePtr WrapVkImage(ResourceManager* image_owner, ImageInfo info,
+                              vk::Image image);
 
   // Returns image_ and mem_ to the owner.
   ~Image() override;
@@ -76,8 +73,6 @@ class Image : public WaitableResource {
   bool has_stencil() const { return has_stencil_; }
   bool is_transient() const { return info_.is_transient(); }
   const GpuMemPtr& memory() const { return mem_; }
-  // Offset of the Image within its GpuMem.
-  vk::DeviceSize memory_offset() const { return mem_offset_; }
 
   // TODO(ES-83): how does this interact with swapchain_layout_?
   // Should this be automatically set when various transitions are made, e.g.
@@ -101,15 +96,13 @@ class Image : public WaitableResource {
   // which should not be destroyed when this Image is destroyed (e.g. when
   // working with images associated with a vk::SwapchainKHR); this is done by
   // passing nullptr as the |mem| argument.
-  // |mem_offset| is the offset of the image's memory within |mem|.
-  Image(ResourceManager* image_owner, ImageInfo info, vk::Image, GpuMemPtr mem,
-        vk::DeviceSize mem_offset);
+  Image(ResourceManager* image_owner, ImageInfo info, vk::Image image,
+        GpuMemPtr mem);
 
  private:
   const ImageInfo info_;
   const vk::Image image_;
   GpuMemPtr mem_;
-  const vk::DeviceSize mem_offset_ = 0;
   bool has_depth_;
   bool has_stencil_;
 

@@ -47,24 +47,20 @@ std::unique_ptr<scenic::Buffer> NewScenicBufferFromEscherBuffer(
 namespace sketchy_service {
 
 SharedBufferPtr SharedBuffer::New(scenic::Session* session,
-                                  escher::ResourceRecycler* recycler,
+                                  escher::BufferFactory* factory,
                                   vk::DeviceSize capacity) {
-  return fxl::AdoptRef(new SharedBuffer(session, recycler, capacity));
+  return fxl::AdoptRef(new SharedBuffer(session, factory, capacity));
 }
 
 SharedBuffer::SharedBuffer(scenic::Session* session,
-                           escher::ResourceRecycler* recycler,
+                           escher::BufferFactory* factory,
                            vk::DeviceSize capacity) {
-  // Normally, this code might use a buffer factory or a gpu_allocator
-  // to construct its buffer. However, if we did that, then we might not have a
-  // unique VMO just for this one resource. Instead, we might get a VMO for a
-  // managed pool or a circular buffer. Therefore, we go through the steps here
-  // to create our own fresh slab, to make sure that the VMO is isolated in its
-  // contents.
+  // By passing an empty GpuMemPtr into NewBuffer, we are signalling to the
+  // factory that we want a dedicated allocation. This gives us the guarantees
+  // for VMO extraction described above.
   escher::GpuMemPtr mem;
-  escher_buffer_ =
-      escher::Buffer::New(recycler, nullptr, capacity, kBufferUsageFlags,
-                          kMemoryPropertyFlags, &mem);
+  escher_buffer_ = factory->NewBuffer(capacity, kBufferUsageFlags,
+                                      kMemoryPropertyFlags, &mem);
   scenic_buffer_ =
       NewScenicBufferFromEscherBuffer(escher_buffer_, session, mem);
 }

@@ -1134,14 +1134,6 @@ ResourcePtr Session::CreateImage(ResourceId id, MemoryPtr memory,
 
 ResourcePtr Session::CreateBuffer(ResourceId id, MemoryPtr memory,
                                   uint32_t memory_offset, uint32_t num_bytes) {
-  // TODO(SCN-273): host memory should also be supported.
-  if (memory->is_host()) {
-    error_reporter_->ERROR() << "scenic_impl::gfx::Session::CreateBuffer(): "
-                                "memory must be of type "
-                                "ui.gfx.MemoryType.VK_DEVICE_MEMORY";
-    return ResourcePtr();
-  }
-
   if (memory_offset + num_bytes > memory->size()) {
     error_reporter_->ERROR() << "scenic_impl::gfx::Session::CreateBuffer(): "
                                 "buffer does not fit within memory (buffer "
@@ -1154,8 +1146,8 @@ ResourcePtr Session::CreateBuffer(ResourceId id, MemoryPtr memory,
   // Make a pointer to a subregion of the memory, if necessary.
   escher::GpuMemPtr gpu_mem =
       (memory_offset > 0 || num_bytes < memory->size())
-          ? memory->gpu_mem()->Allocate(num_bytes, memory_offset)
-          : memory->gpu_mem();
+          ? memory->GetGpuMem()->Suballocate(num_bytes, memory_offset)
+          : memory->GetGpuMem();
 
   return fxl::MakeRefCounted<Buffer>(this, id, std::move(gpu_mem),
                                      std::move(memory));

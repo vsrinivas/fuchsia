@@ -121,11 +121,9 @@ VK_TEST_F(BufferSessionTest, BufferAliasing) {
   status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
   EXPECT_TRUE(status == ZX_OK);
 
-  // TODO(SCN-273): When VK_HOST_MEMORY is supported, this test should be
-  // converted over. It only works now because we test on UMA platforms.
-  EXPECT_TRUE(Apply(scenic::NewCreateMemoryCmd(
-      1, std::move(dup_vmo), vmo_size,
-      fuchsia::images::MemoryType::VK_DEVICE_MEMORY)));
+  EXPECT_TRUE(Apply(
+      scenic::NewCreateMemoryCmd(1, std::move(dup_vmo), vmo_size,
+                                 fuchsia::images::MemoryType::HOST_MEMORY)));
   EXPECT_TRUE(Apply(scenic::NewCreateBufferCmd(2, 1, 0, vmo_size)));
   EXPECT_TRUE(
       Apply(scenic::NewCreateBufferCmd(3, 1, offset, vmo_size - offset)));

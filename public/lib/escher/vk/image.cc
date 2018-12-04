@@ -17,40 +17,33 @@ const ResourceTypeInfo Image::kTypeInfo("Image", ResourceType::kResource,
                                         ResourceType::kWaitableResource,
                                         ResourceType::kImage);
 
-ImagePtr Image::New(ResourceManager* image_owner, ImageInfo info,
-                    vk::Image vk_image, GpuMemPtr mem,
-                    vk::DeviceSize mem_offset, bool bind_image_memory) {
-  TRACE_DURATION("gfx", "escher::Image::New (from VkImage)");
-  if (mem && bind_image_memory) {
-    auto bind_result = image_owner->vk_device().bindImageMemory(
-        vk_image, mem->base(), mem->offset() + mem_offset);
-    if (bind_result != vk::Result::eSuccess) {
-      FXL_DLOG(ERROR) << "vkBindImageMemory failed: "
-                      << vk::to_string(bind_result);
-      return nullptr;
-    }
+ImagePtr Image::AdoptVkImage(ResourceManager* image_owner, ImageInfo info,
+                             vk::Image vk_image, GpuMemPtr mem) {
+  TRACE_DURATION("gfx", "escher::Image::AdoptImage (from VkImage)");
+  FXL_CHECK(vk_image);
+  FXL_CHECK(mem);
+  auto bind_result = image_owner->vk_device().bindImageMemory(
+      vk_image, mem->base(), mem->offset());
+  if (bind_result != vk::Result::eSuccess) {
+    FXL_DLOG(ERROR) << "vkBindImageMemory failed: "
+                    << vk::to_string(bind_result);
+    return nullptr;
   }
-  return fxl::AdoptRef(new Image(image_owner, info, vk_image, mem, mem_offset));
+
+  return fxl::AdoptRef(new Image(image_owner, info, vk_image, mem));
 }
 
-ImagePtr Image::New(ResourceManager* image_owner, const ImageInfo& info,
-                    GpuAllocator* allocator) {
-  TRACE_DURATION("gfx", "escher::Image::New (from ImageInfo)");
-
-  auto vk_device = image_owner->vk_device();
-  vk::Image image = image_utils::CreateVkImage(vk_device, info);
-  vk::MemoryRequirements reqs = vk_device.getImageMemoryRequirements(image);
-  return Image::New(image_owner, info, image,
-                    allocator->Allocate(reqs, info.memory_flags));
+ImagePtr Image::WrapVkImage(ResourceManager* image_owner, ImageInfo info,
+                            vk::Image vk_image) {
+  return fxl::AdoptRef(new Image(image_owner, info, vk_image, nullptr));
 }
 
-Image::Image(ResourceManager* image_owner, ImageInfo info, vk::Image vk_image,
-             GpuMemPtr mem, vk::DeviceSize mem_offset)
+Image::Image(ResourceManager* image_owner, ImageInfo info, vk::Image image,
+             GpuMemPtr mem)
     : WaitableResource(image_owner),
       info_(info),
-      image_(vk_image),
-      mem_(std::move(mem)),
-      mem_offset_(mem_offset) {
+      image_(image),
+      mem_(std::move(mem)) {
   auto is_depth_stencil = image_utils::IsDepthStencilFormat(info.format);
   has_depth_ = is_depth_stencil.first;
   has_stencil_ = is_depth_stencil.second;

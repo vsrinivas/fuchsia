@@ -15,13 +15,12 @@ const ResourceTypeInfo GpuImage::kTypeInfo = {
     ResourceType::kGpuImage | ResourceType::kImage | ResourceType::kImageBase,
     "GpuImage"};
 
-GpuImage::GpuImage(Session* session, ResourceId id, MemoryPtr memory,
-                   uint64_t memory_offset, escher::ImageInfo image_info,
-                   vk::Image vk_image)
-    : Image(session, id, GpuImage::kTypeInfo), memory_(std::move(memory)) {
-  image_ = escher::Image::New(session->engine()->escher_resource_recycler(),
-                              image_info, vk_image, memory_->gpu_mem(),
-                              memory_offset);
+GpuImage::GpuImage(Session* session, ResourceId id, escher::GpuMemPtr gpu_mem,
+                   escher::ImageInfo image_info, vk::Image vk_image)
+    : Image(session, id, GpuImage::kTypeInfo) {
+  image_ =
+      escher::Image::AdoptVkImage(session->engine()->escher_resource_recycler(),
+                                  image_info, vk_image, std::move(gpu_mem));
   FXL_CHECK(image_);
 }
 
@@ -105,9 +104,14 @@ GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
     return nullptr;
   }
 
-  return fxl::AdoptRef(new GpuImage(session, id, std::move(memory),
-                                    memory_offset, escher_image_info,
-                                    vk_image));
+  // Make a pointer to a subregion of the memory, if necessary.
+  escher::GpuMemPtr gpu_mem =
+      (memory_offset > 0 || memory_reqs.size < memory->size())
+          ? memory->GetGpuMem()->Suballocate(memory_reqs.size, memory_offset)
+          : memory->GetGpuMem();
+
+  return fxl::AdoptRef(new GpuImage(session, id, std::move(gpu_mem),
+                                    escher_image_info, vk_image));
 }
 
 bool GpuImage::UpdatePixels() { return false; }

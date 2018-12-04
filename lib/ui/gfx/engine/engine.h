@@ -16,7 +16,7 @@
 #include "lib/escher/renderer/batch_gpu_uploader.h"
 #include "lib/escher/resources/resource_recycler.h"
 #include "lib/escher/shape/rounded_rect_factory.h"
-#include "lib/escher/vk/simple_image_factory.h"
+#include "lib/escher/vk/image_factory.h"
 
 #include "garnet/lib/ui/gfx/displays/display_manager.h"
 #include "garnet/lib/ui/gfx/engine/frame_scheduler.h"
@@ -196,7 +196,7 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
   ViewLinker view_linker_;
 
   EventTimestamper event_timestamper_;
-  std::unique_ptr<escher::SimpleImageFactory> image_factory_;
+  std::unique_ptr<escher::ImageFactoryAdapter> image_factory_;
   std::unique_ptr<escher::RoundedRectFactory> rounded_rect_factory_;
   std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller_;
   std::unique_ptr<SessionManager> session_manager_;

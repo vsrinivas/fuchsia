@@ -7,8 +7,8 @@
 
 #include <vulkan/vulkan.hpp>
 
+#include "lib/escher/impl/gpu_mem_slab.h"
 #include "lib/escher/vk/gpu_allocator.h"
-#include "lib/escher/vk/gpu_mem.h"
 #include "lib/escher/vk/vulkan_context.h"
 
 namespace escher {
@@ -19,15 +19,35 @@ namespace escher {
 class NaiveGpuAllocator : public GpuAllocator {
  public:
   NaiveGpuAllocator(const VulkanContext& context);
+  ~NaiveGpuAllocator();
 
-  GpuMemPtr Allocate(vk::MemoryRequirements reqs,
-                     vk::MemoryPropertyFlags flags) override;
+  // |GpuAllocator|
+  GpuMemPtr AllocateMemory(vk::MemoryRequirements reqs,
+                           vk::MemoryPropertyFlags flags) override;
+
+  // |GpuAllocator|
+  BufferPtr AllocateBuffer(ResourceManager* manager, vk::DeviceSize size,
+                           vk::BufferUsageFlags usage_flags,
+                           vk::MemoryPropertyFlags memory_property_flags,
+                           GpuMemPtr* out_ptr) override;
+
+  // |GpuAllocator|
+  ImagePtr AllocateImage(ResourceManager* manager,
+                         const escher::ImageInfo& info) override;
+
+  // |GpuAllocator|
+  uint32_t GetTotalBytesAllocated() const override;
 
  private:
-  // No-op, because NaiveGpuAllocator does not perform sub-allocation.  This
-  // can only be called if a client manually sub-allocates from the allocation.
-  void OnSuballocationDestroyed(GpuMem* slab, vk::DeviceSize size,
-                                vk::DeviceSize offset) override;
+  // Callbacks to allow a GpuMemSlab to notify its GpuAllocator of changes.
+  friend class impl::GpuMemSlab;
+  void OnSlabCreated(vk::DeviceSize slab_size);
+  void OnSlabDestroyed(vk::DeviceSize slab_size);
+
+  vk::PhysicalDevice physical_device_;
+  vk::Device device_;
+  vk::DeviceSize total_slab_bytes_ = 0;
+  size_t slab_count_ = 0;
 };
 
 }  // namespace escher

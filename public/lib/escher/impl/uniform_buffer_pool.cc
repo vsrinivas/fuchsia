@@ -58,7 +58,7 @@ void UniformBufferPool::InternalAllocate() {
 
   // Allocate enough memory for all of the buffers.
   reqs.size *= kBufferBatchSize;
-  auto batch_mem = allocator_->Allocate(reqs, flags_);
+  auto batch_mem = allocator_->AllocateMemory(reqs, flags_);
 
   // See below: when OnReceiveOwnable() receives the newly-allocated buffer we
   // need to know that it is new and can therefore be used immediately instead
@@ -73,7 +73,7 @@ void UniformBufferPool::InternalAllocate() {
     vk_device().getBufferMemoryRequirements(new_buffers[i]);
 
     // Sub-allocate memory for each buffer.
-    auto mem = batch_mem->Allocate(buffer_size_, i * buffer_size_);
+    auto mem = batch_mem->Suballocate(buffer_size_, i * buffer_size_);
 
     // Workaround for dealing with RefPtr/Reffable Adopt() semantics.  Let the
     // RefPtr go out of scope immediately; the Buffer will be added to

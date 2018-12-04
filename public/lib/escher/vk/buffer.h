@@ -20,11 +20,6 @@ class Buffer : public WaitableResource {
   static const ResourceTypeInfo kTypeInfo;
   const ResourceTypeInfo& type_info() const override { return kTypeInfo; }
 
-  static BufferPtr New(ResourceManager* manager, GpuAllocator* allocator,
-                       vk::DeviceSize size, vk::BufferUsageFlags usage_flags,
-                       vk::MemoryPropertyFlags memory_property_flags,
-                       GpuMemPtr* out_ptr = nullptr);
-
   static BufferPtr New(ResourceManager* manager, GpuMemPtr mem,
                        vk::BufferUsageFlags usage_flags);
 

@@ -13,9 +13,5 @@ GpuMemSuballocation::GpuMemSuballocation(GpuMemPtr mem, vk::DeviceSize size,
              mem->mapped_ptr() ? mem->mapped_ptr() + offset : nullptr),
       mem_(std::move(mem)) {}
 
-GpuMemSuballocation::~GpuMemSuballocation() {
-  mem_->OnAllocationDestroyed(size(), offset());
-}
-
 }  // namespace impl
 }  // namespace escher

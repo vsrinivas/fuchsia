@@ -6,6 +6,7 @@
 #include "lib/escher/escher.h"
 #include "lib/escher/impl/command_buffer_pool.h"
 #include "lib/escher/resources/resource_recycler.h"
+#include "lib/escher/vk/gpu_allocator.h"
 
 namespace escher {
 namespace impl {
@@ -131,11 +132,11 @@ void WobbleModifierAbsorber::AbsorbWobbleIfAny(Model* model) {
 
     auto& vertex_buffer = object.shape().mesh()->attribute_buffer(0).buffer;
     auto compute_buffer =
-        Buffer::New(recycler_, allocator_, vertex_buffer->size(),
-                    vk::BufferUsageFlagBits::eVertexBuffer |
-                        vk::BufferUsageFlagBits::eStorageBuffer |
-                        vk::BufferUsageFlagBits::eTransferDst,
-                    vk::MemoryPropertyFlagBits::eDeviceLocal);
+        allocator_->AllocateBuffer(recycler_, vertex_buffer->size(),
+                                   vk::BufferUsageFlagBits::eVertexBuffer |
+                                       vk::BufferUsageFlagBits::eStorageBuffer |
+                                       vk::BufferUsageFlagBits::eTransferDst,
+                                   vk::MemoryPropertyFlagBits::eDeviceLocal);
     // TODO(longqic): Do not allocate a new uniform buffer for each new object.
     // See ModelDisplayListBuilder::PrepareUniformBufferForWriteOfSize().
     auto per_object_uniform_buffer =
@@ -212,9 +213,9 @@ std::unique_ptr<ComputeShader> WobbleModifierAbsorber::NewKernel() {
 }
 
 BufferPtr WobbleModifierAbsorber::NewUniformBuffer(vk::DeviceSize size) {
-  return Buffer::New(recycler_, allocator_, size,
-                     vk::BufferUsageFlagBits::eUniformBuffer,
-                     vk::MemoryPropertyFlagBits::eHostVisible);
+  return allocator_->AllocateBuffer(recycler_, size,
+                                    vk::BufferUsageFlagBits::eUniformBuffer,
+                                    vk::MemoryPropertyFlagBits::eHostVisible);
 }
 
 void WobbleModifierAbsorber::ApplyBarrierForUniformBuffer(

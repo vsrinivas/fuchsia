@@ -122,7 +122,8 @@ VK_TEST(BatchGpuUploader, WriteBuffer) {
   const size_t buffer_size = 3 * sizeof(vec3);
   auto writer = uploader->AcquireWriter(buffer_size);
   // Create buffer to write to.
-  BufferFactory buffer_factory(escher);
+  BufferFactoryAdapter buffer_factory(escher->gpu_allocator(),
+                                      escher->resource_recycler());
   BufferPtr vertex_buffer =
       buffer_factory.NewBuffer(buffer_size,
                                vk::BufferUsageFlagBits::eVertexBuffer |
@@ -189,7 +190,7 @@ VK_TEST(BatchGpuUploader, ReadImageTest) {
   region.imageExtent.width = image->width();
   region.imageExtent.height = image->height();
   region.imageExtent.depth = 1;
-  region.bufferOffset = image->memory_offset();
+  region.bufferOffset = image->memory()->offset();
 
   BatchGpuUploaderPtr uploader = BatchGpuUploader::New(escher, 0);
   auto reader = uploader->AcquireReader(image->memory()->size());
@@ -210,7 +211,8 @@ VK_TEST(BatchGpuUploader, ReadBufferTest) {
   auto escher = test::GetEscher()->GetWeakPtr();
   // Create buffer to read from.
   const size_t buffer_size = 3 * sizeof(vec3);
-  BufferFactory buffer_factory(escher);
+  BufferFactoryAdapter buffer_factory(escher->gpu_allocator(),
+                                      escher->resource_recycler());
   BufferPtr vertex_buffer =
       buffer_factory.NewBuffer(buffer_size,
                                vk::BufferUsageFlagBits::eVertexBuffer |

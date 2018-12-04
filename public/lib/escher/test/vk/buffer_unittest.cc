@@ -23,19 +23,19 @@ VK_TEST(BufferTest, CreateWithPreExistingMemory) {
 
   // This is silly, but without creating a buffer, I don't understand how to
   // populate vk::MemoryRequirements::memoryTypeBits.
-  auto dummy_buffer = Buffer::New(recycler, allocator, kDummyBufferSize,
-                                  kBufferUsageFlags, kMemoryPropertyFlags);
+  auto dummy_buffer = allocator->AllocateBuffer(
+      recycler, kDummyBufferSize, kBufferUsageFlags, kMemoryPropertyFlags);
   vk::MemoryRequirements reqs =
       escher->vk_device().getBufferMemoryRequirements(dummy_buffer->vk());
 
   // Now that we have the memory requirements, we can allocate some memory, so
   // that we can test creating a buffer with pre-existing memory.
-  auto mem1 = allocator->Allocate(reqs, kMemoryPropertyFlags);
+  auto mem1 = allocator->AllocateMemory(reqs, kMemoryPropertyFlags);
 
   // Suballocate some memory.
   constexpr vk::DeviceSize kBufferSize = 1000;
   constexpr vk::DeviceSize kOffset = 512;
-  auto mem2 = mem1->Allocate(kBufferSize, kOffset);
+  auto mem2 = mem1->Suballocate(kBufferSize, kOffset);
   EXPECT_EQ(mem1->mapped_ptr() + kOffset, mem2->mapped_ptr());
 
   // Allocate 2 buffers, one from the original allocation, and one from the

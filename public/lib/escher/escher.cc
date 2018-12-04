@@ -196,8 +196,8 @@ BufferPtr Escher::NewBuffer(vk::DeviceSize size,
                             vk::BufferUsageFlags usage_flags,
                             vk::MemoryPropertyFlags memory_property_flags) {
   TRACE_DURATION("gfx", "Escher::NewBuffer");
-  return Buffer::New(resource_recycler(), gpu_allocator(), size, usage_flags,
-                     memory_property_flags);
+  return gpu_allocator()->AllocateBuffer(resource_recycler(), size, usage_flags,
+                                         memory_property_flags);
 }
 
 TexturePtr Escher::NewTexture(vk::Format format, uint32_t width,
@@ -212,7 +212,8 @@ TexturePtr Escher::NewTexture(vk::Format format, uint32_t width,
                        .height = height,
                        .sample_count = sample_count,
                        .usage = usage_flags};
-  ImagePtr image = Image::New(resource_recycler(), image_info, gpu_allocator());
+  ImagePtr image =
+      gpu_allocator()->AllocateImage(resource_recycler(), image_info);
   return fxl::MakeRefCounted<Texture>(resource_recycler(), std::move(image),
                                       filter, aspect_flags,
                                       use_unnormalized_coordinates);
@@ -274,7 +275,7 @@ FramePtr Escher::NewFrame(const char* trace_literal, uint64_t frame_number,
 }
 
 uint64_t Escher::GetNumGpuBytesAllocated() {
-  return gpu_allocator()->total_slab_bytes();
+  return gpu_allocator()->GetTotalBytesAllocated();
 }
 
 uint32_t Escher::GetNumOutstandingFrames() const {

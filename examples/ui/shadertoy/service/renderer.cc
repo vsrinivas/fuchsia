@@ -13,7 +13,7 @@
 #include "lib/escher/util/image_utils.h"
 #include "lib/escher/vk/framebuffer.h"
 #include "lib/escher/vk/image.h"
-#include "lib/escher/vk/simple_image_factory.h"
+#include "lib/escher/vk/image_factory.h"
 #include "lib/escher/vk/texture.h"
 
 namespace shadertoy {
@@ -196,8 +196,8 @@ escher::TexturePtr Renderer::CreateWhiteTexture() {
   uint8_t channels[4];
   channels[0] = channels[1] = channels[2] = channels[3] = 255;
 
-  escher::SimpleImageFactory image_factory(escher()->resource_recycler(),
-                                           escher()->gpu_allocator());
+  escher::ImageFactoryAdapter image_factory(escher()->gpu_allocator(),
+                                            escher()->resource_recycler());
 
   auto image = escher::image_utils::NewRgbaImage(
       &image_factory, escher()->gpu_uploader(), 1, 1, channels);

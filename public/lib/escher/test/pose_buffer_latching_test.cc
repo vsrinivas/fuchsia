@@ -3,15 +3,16 @@
 // found in the LICENSE file.
 
 #include "garnet/public/lib/escher/escher.h"
+#include "garnet/public/lib/escher/hmd/pose_buffer.h"
 #include "garnet/public/lib/escher/hmd/pose_buffer_latching_shader.h"
 #include "garnet/public/lib/escher/renderer/frame.h"
 #include "garnet/public/lib/escher/resources/resource_recycler.h"
 #include "garnet/public/lib/escher/scene/camera.h"
 #include "garnet/public/lib/escher/test/gtest_vulkan.h"
+#include "garnet/public/lib/escher/util/epsilon_compare.h"
 #include "garnet/public/lib/escher/vk/buffer.h"
+#include "garnet/public/lib/escher/vk/gpu_allocator.h"
 #include "gtest/gtest.h"
-#include "lib/escher/hmd/pose_buffer.h"
-#include "lib/escher/util/epsilon_compare.h"
 
 #include <glm/gtc/type_ptr.hpp>
 
@@ -79,11 +80,10 @@ VK_TEST(PoseBuffer, ComputeShaderLatching) {
       vk::BufferUsageFlagBits::eStorageBuffer;
 
   // Create the shader.
-  hmd::PoseBuffer pose_buffer(
-      escher::Buffer::New(escher->resource_recycler(), frame->gpu_allocator(),
-                          pose_buffer_size, buffer_usage_flags,
-                          memory_property_flags),
-      num_entries, base_time, time_interval);
+  hmd::PoseBuffer pose_buffer(escher->gpu_allocator()->AllocateBuffer(
+                                  escher->resource_recycler(), pose_buffer_size,
+                                  buffer_usage_flags, memory_property_flags),
+                              num_entries, base_time, time_interval);
 
   hmd::PoseBufferLatchingShader test_shader(escher->GetWeakPtr());
 

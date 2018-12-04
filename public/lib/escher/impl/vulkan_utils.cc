@@ -55,7 +55,8 @@ uint32_t GetMemoryTypeIndex(vk::PhysicalDevice device, uint32_t type_bits,
     }
     type_bits >>= 1;
   }
-  FXL_CHECK(false);
+  FXL_CHECK(false) << "Could not find memory with properties "
+                   << (VkMemoryPropertyFlags)required_properties;
   return 0;
 }
 

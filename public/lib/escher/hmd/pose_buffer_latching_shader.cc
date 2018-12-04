@@ -10,6 +10,7 @@
 #include "garnet/public/lib/escher/resources/resource_recycler.h"
 #include "garnet/public/lib/escher/scene/camera.h"
 #include "garnet/public/lib/escher/vk/buffer.h"
+#include "garnet/public/lib/escher/vk/gpu_allocator.h"
 #include "garnet/public/lib/escher/vk/texture.h"
 
 namespace escher {
@@ -126,9 +127,9 @@ BufferPtr PoseBufferLatchingShader::LatchStereoPose(
       vk::BufferUsageFlagBits::eUniformBuffer |
       vk::BufferUsageFlagBits::eStorageBuffer;
 
-  auto output_buffer = Buffer::New(
-      escher_->resource_recycler(), frame->gpu_allocator(), buffer_size,
-      kOutputBufferUsageFlags, kOutputMemoryPropertyFlags);
+  auto output_buffer = frame->gpu_allocator()->AllocateBuffer(
+      escher_->resource_recycler(), buffer_size, kOutputBufferUsageFlags,
+      kOutputMemoryPropertyFlags);
 
   const vk::MemoryPropertyFlags kVpMemoryPropertyFlags =
       vk::MemoryPropertyFlagBits::eHostVisible |
@@ -136,9 +137,9 @@ BufferPtr PoseBufferLatchingShader::LatchStereoPose(
   const vk::BufferUsageFlags kVpBufferUsageFlags =
       vk::BufferUsageFlagBits::eUniformBuffer;
 
-  auto vp_matrices_buffer = Buffer::New(
-      escher_->resource_recycler(), frame->gpu_allocator(), 4 * k4x4MatrixSize,
-      kVpBufferUsageFlags, kVpMemoryPropertyFlags);
+  auto vp_matrices_buffer = frame->gpu_allocator()->AllocateBuffer(
+      escher_->resource_recycler(), 4 * k4x4MatrixSize, kVpBufferUsageFlags,
+      kVpMemoryPropertyFlags);
 
   auto command_buffer = frame->command_buffer();
 

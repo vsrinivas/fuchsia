@@ -6,11 +6,12 @@
 
 #include "garnet/examples/ui/shadertoy/service/renderer.h"
 #include "lib/escher/flib/fence.h"
+#include "lib/escher/resources/resource_recycler.h"
 #include "lib/escher/util/fuchsia_utils.h"
 #include "lib/escher/vk/framebuffer.h"
 #include "lib/escher/vk/gpu_mem.h"
 #include "lib/escher/vk/image.h"
-#include "lib/escher/vk/simple_image_factory.h"
+#include "lib/escher/vk/image_factory.h"
 
 namespace shadertoy {
 
@@ -52,8 +53,8 @@ void ShadertoyStateForImagePipe::OnSetResolution() {
   escher_image_info.sample_count = 1;
   escher_image_info.usage = vk::ImageUsageFlagBits::eColorAttachment;
 
-  escher::SimpleImageFactory factory(escher()->resource_recycler(),
-                                     escher()->gpu_allocator());
+  escher::ImageFactoryAdapter factory(escher()->gpu_allocator(),
+                                      escher()->resource_recycler());
   for (size_t i = 0; i < kNumFramebuffers; ++i) {
     auto& fb = framebuffers_[i];
 
@@ -95,7 +96,7 @@ void ShadertoyStateForImagePipe::OnSetResolution() {
     image_info.tiling = fuchsia::images::Tiling::GPU_OPTIMAL;
 
     image_pipe_->AddImage(fb.image_pipe_id, std::move(image_info),
-                          std::move(vmo), image->memory_offset(),
+                          std::move(vmo), image->memory()->offset(),
                           image->memory()->size(),
                           fuchsia::images::MemoryType::VK_DEVICE_MEMORY);
   }

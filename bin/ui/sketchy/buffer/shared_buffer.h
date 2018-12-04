@@ -7,7 +7,7 @@
 
 #include "garnet/public/lib/escher/impl/compute_shader.h"
 #include "lib/escher/resources/resource_recycler.h"
-#include "lib/escher/vk/buffer.h"
+#include "lib/escher/vk/buffer_factory.h"
 #include "lib/ui/scenic/cpp/resources.h"
 #include "lib/ui/scenic/cpp/session.h"
 
@@ -25,7 +25,7 @@ using SharedBufferPtr = fxl::RefPtr<SharedBuffer>;
 class SharedBuffer final : public fxl::RefCountedThreadSafe<SharedBuffer> {
  public:
   static SharedBufferPtr New(scenic::Session* session,
-                             escher::ResourceRecycler* recycler,
+                             escher::BufferFactory* factory,
                              vk::DeviceSize capacity);
 
   // Reserve a chunk of |size| for use. The requested |size| MUST fit in the
@@ -49,7 +49,7 @@ class SharedBuffer final : public fxl::RefCountedThreadSafe<SharedBuffer> {
  private:
   friend class SharedBufferPool;
 
-  SharedBuffer(scenic::Session* session, escher::ResourceRecycler* recycler,
+  SharedBuffer(scenic::Session* session, escher::BufferFactory* factory,
                vk::DeviceSize capacity);
 
   escher::BufferPtr escher_buffer_;

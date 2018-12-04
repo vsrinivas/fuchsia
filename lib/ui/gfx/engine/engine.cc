@@ -78,8 +78,8 @@ Engine::Engine(DisplayManager* display_manager,
     : display_manager_(display_manager),
       escher_(std::move(weak_escher)),
       engine_renderer_(std::make_unique<EngineRenderer>(escher_)),
-      image_factory_(std::make_unique<escher::SimpleImageFactory>(
-          escher()->resource_recycler(), escher()->gpu_allocator())),
+      image_factory_(std::make_unique<escher::ImageFactoryAdapter>(
+          escher()->gpu_allocator(), escher()->resource_recycler())),
       rounded_rect_factory_(
           std::make_unique<escher::RoundedRectFactory>(escher_)),
       release_fence_signaller_(std::make_unique<escher::ReleaseFenceSignaller>(

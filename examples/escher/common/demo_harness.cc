@@ -239,8 +239,8 @@ void DemoHarness::CreateSwapchain() {
       image_info.height = swapchain_extent.height;
       image_info.usage = kImageUsageFlags;
 
-      auto escher_image = escher::Image::New(swapchain_image_owner_.get(),
-                                             image_info, im, nullptr);
+      auto escher_image = escher::Image::WrapVkImage(
+          swapchain_image_owner_.get(), image_info, im);
       FXL_CHECK(escher_image);
       escher_images.push_back(escher_image);
     }

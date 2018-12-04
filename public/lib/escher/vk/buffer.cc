@@ -15,50 +15,9 @@ const ResourceTypeInfo Buffer::kTypeInfo("Buffer", ResourceType::kResource,
                                          ResourceType::kWaitableResource,
                                          ResourceType::kBuffer);
 
-BufferPtr Buffer::New(ResourceManager* manager, GpuAllocator* allocator,
-                      vk::DeviceSize size, vk::BufferUsageFlags usage_flags,
-                      vk::MemoryPropertyFlags memory_property_flags,
-                      GpuMemPtr* out_ptr) {
-  TRACE_DURATION("gfx", "escher::Buffer::New[allocator]");
-  FXL_DCHECK(manager);
-
-  auto device = manager->vulkan_context().device;
-  FXL_DCHECK(device);
-
-  // Create buffer.
-  vk::BufferCreateInfo buffer_create_info;
-  buffer_create_info.size = size;
-  buffer_create_info.usage = usage_flags;
-  buffer_create_info.sharingMode = vk::SharingMode::eExclusive;
-  auto vk_buffer =
-      ESCHER_CHECKED_VK_RESULT(device.createBuffer(buffer_create_info));
-
-  auto memory_requirements = device.getBufferMemoryRequirements(vk_buffer);
-
-  // Allocate memory for the buffer.
-  //
-  // Note that while code could use the other factory function to construct an
-  // escher::Buffer object while holding onto the GpuMemPtr, it would result in
-  // duplicate work, as the memory requirements are only known after parsing the
-  // vkBufferCreateInfo struct and producing a valid vkHandle.
-  GpuMemPtr mem;
-  if (allocator) {
-    mem = allocator->Allocate(memory_requirements, memory_property_flags);
-  } else {
-    mem = GpuMem::New(device, manager->vulkan_context().physical_device,
-                      memory_requirements, memory_property_flags);
-  }
-
-  if (out_ptr) {
-    *out_ptr = mem;
-  }
-
-  return fxl::MakeRefCounted<Buffer>(manager, std::move(mem), vk_buffer);
-}
-
 BufferPtr Buffer::New(ResourceManager* manager, GpuMemPtr mem,
                       vk::BufferUsageFlags usage_flags) {
-  TRACE_DURATION("gfx", "escher::Buffer::New[mem]");
+  TRACE_DURATION("gfx", "escher::Buffer::New");
   auto device = manager->vulkan_context().device;
 
   // Create buffer.
