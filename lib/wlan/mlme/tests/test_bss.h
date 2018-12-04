@@ -7,6 +7,7 @@
 
 #include <lib/timekeeper/clock.h>
 #include <wlan/common/macaddr.h>
+#include <wlan/mlme/assoc_context.h>
 #include <wlan/mlme/client/channel_scheduler.h>
 #include <wlan/mlme/client/station.h>
 #include <wlan/mlme/mac_frame.h>
@@ -40,7 +41,7 @@ static constexpr wlan_channel_t kBssChannel = {
     .cbw = CBW20,
     .primary = 11,
 };
-static constexpr PHY kBssPhy = PHY::WLAN_PHY_OFDM;
+static constexpr PHY kBssPhy = PHY::WLAN_PHY_HT;
 static constexpr uint8_t kSsid[] = {'F', 'u', 'c', 'h', 's', 'i', 'a', '-', 'A', 'P'};
 static constexpr uint8_t kEapolPdu[] = {'E', 'A', 'P', 'O', 'L'};
 static constexpr uint8_t kKeyData[] = {0x40, 0x41, 0x42, 0x43, 0x44};
@@ -60,8 +61,10 @@ static constexpr uint8_t kRsne[] = {
 };
 static constexpr uint8_t kCipherOui[3] = {0x96, 0x85, 0x74};
 static constexpr uint8_t kCipherSuiteType = 0x11;
+static const AssocContext kAssocCtx = {};
 
-::fuchsia::wlan::mlme::BSSDescription CreateBssDescription(bool rsn);
+::fuchsia::wlan::mlme::BSSDescription CreateBssDescription(bool rsn,
+                                                           wlan_channel_t chan = kBssChannel);
 MlmeMsg<::fuchsia::wlan::mlme::ScanRequest> CreateScanRequest(uint32_t max_channel_time);
 MlmeMsg<::fuchsia::wlan::mlme::StartRequest> CreateStartRequest(bool protected_ap);
 MlmeMsg<::fuchsia::wlan::mlme::JoinRequest> CreateJoinRequest(bool rsn);
@@ -86,7 +89,7 @@ fbl::unique_ptr<Packet> CreateBeaconFrame(common::MacAddr bssid);
 fbl::unique_ptr<Packet> CreateProbeRequest();
 fbl::unique_ptr<Packet> CreateAssocReqFrame(common::MacAddr client_addr, Span<const uint8_t> ssid,
                                             bool rsn);
-fbl::unique_ptr<Packet> CreateAssocRespFrame();
+fbl::unique_ptr<Packet> CreateAssocRespFrame(const AssocContext& ap_assoc_ctx = kAssocCtx);
 fbl::unique_ptr<Packet> CreateDisassocFrame(common::MacAddr client_addr);
 DataFrame<LlcHeader> CreateDataFrame(const uint8_t* payload, size_t len);
 DataFrame<> CreateNullDataFrame();

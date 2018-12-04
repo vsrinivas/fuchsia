@@ -58,7 +58,7 @@ void WriteCountry(BufferWriter* w, const wlan_channel_t chan) {
     common::WriteCountry(w, kCountry, subbands);
 }
 
-wlan_mlme::BSSDescription CreateBssDescription(bool rsn) {
+wlan_mlme::BSSDescription CreateBssDescription(bool rsn, wlan_channel_t chan) {
     common::MacAddr bssid(kBssid1);
 
     wlan_mlme::BSSDescription bss_desc;
@@ -92,8 +92,8 @@ wlan_mlme::BSSDescription CreateBssDescription(bool rsn) {
     bss_desc.vht_cap.reset();
     bss_desc.vht_op.reset();
 
-    bss_desc.chan.cbw = static_cast<wlan_mlme::CBW>(kBssChannel.cbw);
-    bss_desc.chan.primary = kBssChannel.primary;
+    bss_desc.chan.cbw = static_cast<wlan_mlme::CBW>(chan.cbw);
+    bss_desc.chan.primary = chan.primary;
 
     bss_desc.rssi_dbm = -35;
 
@@ -411,14 +411,17 @@ fbl::unique_ptr<Packet> CreateAssocReqFrame(common::MacAddr client_addr, Span<co
     return packet;
 }
 
-fbl::unique_ptr<Packet> CreateAssocRespFrame() {
+fbl::unique_ptr<Packet> CreateAssocRespFrame(const AssocContext& ap_assoc_ctx) {
     common::MacAddr bssid(kBssid1);
     common::MacAddr client(kClientAddress);
 
-    constexpr size_t max_frame_len = MgmtFrameHeader::max_len() + AssociationResponse::max_len();
+    constexpr size_t reserved_ie_len = 256;
+    constexpr size_t max_frame_len =
+        MgmtFrameHeader::max_len() + AssociationResponse::max_len() + reserved_ie_len;
     auto packet = GetWlanPacket(max_frame_len);
     ZX_DEBUG_ASSERT(packet != nullptr);
 
+    // TODO(NET-2007): Implement a common frame builder
     BufferWriter w(*packet);
     auto mgmt_hdr = w.Write<MgmtFrameHeader>();
     mgmt_hdr->fc.set_type(FrameType::kManagement);
@@ -435,14 +438,27 @@ fbl::unique_ptr<Packet> CreateAssocRespFrame() {
     assoc->cap = cap;
     assoc->status_code = status_code::kSuccess;
 
-    packet->set_len(w.WrittenBytes());
+    BufferWriter elem_w(w.RemainingBuffer());
+    if (ap_assoc_ctx.ht_cap.has_value()) {
+        common::WriteHtCapabilities(&elem_w, ap_assoc_ctx.ht_cap.value());
+    }
+    if (ap_assoc_ctx.ht_op.has_value()) {
+        common::WriteHtOperation(&elem_w, ap_assoc_ctx.ht_op.value());
+    }
+    if (ap_assoc_ctx.vht_cap.has_value()) {
+        common::WriteVhtCapabilities(&elem_w, ap_assoc_ctx.vht_cap.value());
+    }
+    if (ap_assoc_ctx.vht_op.has_value()) {
+        common::WriteVhtOperation(&elem_w, ap_assoc_ctx.vht_op.value());
+    }
+
+    packet->set_len(w.WrittenBytes() + elem_w.WrittenBytes());
 
     wlan_rx_info_t rx_info{.rx_flags = 0};
     packet->CopyCtrlFrom(rx_info);
 
     return packet;
 }
-
 fbl::unique_ptr<Packet> CreateDisassocFrame(common::MacAddr client_addr) {
     common::MacAddr bssid(kBssid1);
 
