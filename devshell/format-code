@@ -144,7 +144,7 @@ declare HOST_PLATFORM="${HOST_OS}-${HOST_ARCH}"
 declare CLANG_CMD="${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/clang/bin/clang-format -style=file -fallback-style=Google -sort-includes -i"
 declare DART_CMD="${FUCHSIA_DIR}/topaz/tools/prebuilt-dart-sdk/${HOST_PLATFORM}/bin/dartfmt -w"
 declare FIDL_BIN="${ZIRCON_TOOLS_DIR}"/fidl-format
-if [[ -n "${REMOVE_ORDINALS}" ]]; then
+if [[ -z "${REMOVE_ORDINALS}" ]]; then
   declare FIDL_CMD="${FIDL_BIN} -i"
 else
   declare FIDL_CMD="${FIDL_BIN} -i --remove-ordinals"
