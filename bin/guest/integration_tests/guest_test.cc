@@ -11,7 +11,24 @@ static constexpr zx::duration kStepSleep = zx::msec(500);
 static constexpr char kTestUtilsUrl[] =
     "fuchsia-pkg://fuchsia.com/guest_integration_tests_utils";
 
-zx_status_t GuestWaitForSystemReady(EnclosedGuest& enclosed_guest) {
+zx_status_t GuestWaitForShellReady(EnclosedGuest& enclosed_guest) {
+  for (size_t i = 0; i != kNumRetries; ++i) {
+    std::string response;
+    zx_status_t status = enclosed_guest.Execute("echo guest ready", &response);
+    if (status != ZX_OK) {
+      return status;
+    }
+    auto ready = response.find("guest ready");
+    if (ready == std::string::npos) {
+      zx::nanosleep(zx::deadline_after(kStepSleep));
+      continue;
+    }
+    return ZX_OK;
+  }
+  return ZX_ERR_TIMED_OUT;
+}
+
+zx_status_t GuestWaitForAppmgrReady(EnclosedGuest& enclosed_guest) {
   for (size_t i = 0; i != kNumRetries; ++i) {
     std::string ps;
     zx_status_t status = enclosed_guest.Execute("ps", &ps);

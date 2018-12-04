@@ -70,8 +70,8 @@ class ZirconReadOnlyRawGuestTest
   }
 
   static bool SetUpGuest() {
-    if (WaitForSystemReady() != ZX_OK) {
-      ADD_FAILURE() << "Failed to wait for system ready";
+    if (WaitForAppmgrReady() != ZX_OK) {
+      ADD_FAILURE() << "Failed to wait for appmgr ready";
       return false;
     }
     return true;
@@ -162,8 +162,8 @@ class ZirconReadWriteRawGuestTest
   }
 
   static bool SetUpGuest() {
-    if (WaitForSystemReady() != ZX_OK) {
-      ADD_FAILURE() << "Failed to wait for systeam ready";
+    if (WaitForAppmgrReady() != ZX_OK) {
+      ADD_FAILURE() << "Failed to wait for appmgr ready";
       return false;
     }
     return true;
@@ -254,8 +254,8 @@ class ZirconVolatileRawGuestTest
   }
 
   static bool SetUpGuest() {
-    if (WaitForSystemReady() != ZX_OK) {
-      ADD_FAILURE() << "Failed to wait for system ready";
+    if (WaitForAppmgrReady() != ZX_OK) {
+      ADD_FAILURE() << "Failed to wait for appmgr ready";
       return false;
     }
     return true;
@@ -415,8 +415,8 @@ class ZirconReadOnlyQcowGuestTest
   }
 
   static bool SetUpGuest() {
-    if (WaitForSystemReady() != ZX_OK) {
-      ADD_FAILURE() << "Failed to wait for system ready";
+    if (WaitForAppmgrReady() != ZX_OK) {
+      ADD_FAILURE() << "Failed to wait for appmgr ready";
       return false;
     }
     return true;
@@ -498,8 +498,8 @@ class ZirconVolatileQcowGuestTest
   }
 
   static bool SetUpGuest() {
-    if (WaitForSystemReady() != ZX_OK) {
-      ADD_FAILURE() << "Failed to wait for system ready";
+    if (WaitForAppmgrReady() != ZX_OK) {
+      ADD_FAILURE() << "Failed to wait for appmgr ready";
       return false;
     }
     return true;

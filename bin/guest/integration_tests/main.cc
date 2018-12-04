@@ -25,8 +25,8 @@ class ZirconGuestTest : public GuestTest<ZirconGuestTest> {
   }
 
   static bool SetUpGuest() {
-    if (WaitForSystemReady() != ZX_OK) {
-      ADD_FAILURE() << "Failed to wait for system ready";
+    if (WaitForAppmgrReady() != ZX_OK) {
+      ADD_FAILURE() << "Failed to wait for appmgr";
       return false;
     }
     return true;
@@ -70,6 +70,14 @@ class LinuxGuestTest : public GuestTest<LinuxGuestTest> {
     launch_info->args.push_back("--cpus=1");
     launch_info->args.push_back(
         "--cmdline=loglevel=0 console=hvc0 root=/dev/vda rw");
+    return true;
+  }
+
+  static bool SetUpGuest() {
+    if (WaitForShellReady() != ZX_OK) {
+      ADD_FAILURE() << "Failed to wait for shell";
+      return false;
+    }
     return true;
   }
 };

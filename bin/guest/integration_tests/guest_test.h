@@ -10,7 +10,8 @@
 static constexpr char kZirconGuestUrl[] = "zircon_guest";
 static constexpr char kLinuxGuestUrl[] = "linux_guest";
 
-zx_status_t GuestWaitForSystemReady(EnclosedGuest& enclosed_guest);
+zx_status_t GuestWaitForShellReady(EnclosedGuest& enclosed_guest);
+zx_status_t GuestWaitForAppmgrReady(EnclosedGuest& enclosed_guest);
 zx_status_t GuestRun(EnclosedGuest& enclosed_guest, const std::string& cmx,
                      const std::string& args, std::string* result);
 
@@ -33,8 +34,12 @@ class GuestTest : public ::testing::Test {
     delete enclosed_guest_;
   }
 
-  static zx_status_t WaitForSystemReady() {
-    return GuestWaitForSystemReady(*enclosed_guest_);
+  static zx_status_t WaitForShellReady() {
+    return GuestWaitForShellReady(*enclosed_guest_);
+  }
+
+  static zx_status_t WaitForAppmgrReady() {
+    return GuestWaitForAppmgrReady(*enclosed_guest_);
   }
 
   void SetUp() {
