@@ -15,8 +15,16 @@ namespace crash {
 
 class ScopedUnlink {
  public:
-  ScopedUnlink(const std::string& filename) : filename_(filename) {}
-  ~ScopedUnlink() { unlink(filename_.c_str()); }
+  ScopedUnlink() = default;
+  explicit ScopedUnlink(const std::string& filename) : filename_(filename) {}
+  ~ScopedUnlink() {
+    if (is_valid()) {
+      unlink(filename_.c_str());
+    }
+  }
+
+  ScopedUnlink(ScopedUnlink&&) = default;
+  ScopedUnlink& operator=(ScopedUnlink&&) = default;
 
   bool is_valid() const { return !filename_.empty(); }
   const std::string& get() const { return filename_; }

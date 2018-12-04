@@ -72,7 +72,7 @@ std::map<std::string, ScopedUnlink> MakeNativeExceptionAttachments(
   std::map<std::string, ScopedUnlink> attachments;
   const std::string tmp_kernel_log_filename = WriteKernelLogToFile(tmp_dir);
   if (!tmp_kernel_log_filename.empty()) {
-    attachments.emplace("kernel_log", tmp_kernel_log_filename);
+    attachments["kernel_log"] = ScopedUnlink(tmp_kernel_log_filename);
   }
   // TODO(DX-581): attach syslog as well.
   return attachments;
