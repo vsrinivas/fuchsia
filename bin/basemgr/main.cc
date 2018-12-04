@@ -34,21 +34,30 @@ int main(int argc, const char** argv) {
     return 0;
   }
 
-  modular::BasemgrSettings settings(command_line);
-  auto session_shell_settings =
-      modular::SessionShellSettings::GetSystemSettings();
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProvider trace_provider(loop.dispatcher());
   auto context = std::shared_ptr<component::StartupContext>(
       component::StartupContext::CreateFromStartupInfo());
+  if (!context->has_environment_services()) {
+    FXL_LOG(ERROR) << "Failed to receive services from the environment.";
+    return 1;
+  }
+
+  modular::BasemgrSettings settings(command_line);
+  auto session_shell_settings =
+      modular::SessionShellSettings::GetSystemSettings();
+
   fit::deferred_action<fit::closure> cobalt_cleanup =
       SetupCobalt(settings, std::move(loop.dispatcher()), context.get());
 
-  // TODO(MF-98): Assess feasibility of injecting the service dependencies
-  // explicitly rather than passing the entire startup context, for easier
-  // testing.
-  modular::BasemgrImpl basemgr(settings, session_shell_settings, context,
-                               [&loop, &cobalt_cleanup] {
+  fuchsia::modular::BasemgrMonitorPtr monitor;
+  context->ConnectToEnvironmentService(monitor.NewRequest());
+  fuchsia::ui::policy::PresenterPtr presenter;
+  context->ConnectToEnvironmentService(presenter.NewRequest());
+
+  modular::BasemgrImpl basemgr(settings, session_shell_settings,
+                               context->launcher().get(), std::move(monitor),
+                               std::move(presenter), [&loop, &cobalt_cleanup] {
                                  cobalt_cleanup.call();
                                  loop.Quit();
                                });

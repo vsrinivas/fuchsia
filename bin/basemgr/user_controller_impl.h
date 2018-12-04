@@ -40,7 +40,8 @@ class UserControllerImpl : fuchsia::modular::UserController,
   using DoneCallback = std::function<void(UserControllerImpl*)>;
 
   UserControllerImpl(
-      fuchsia::sys::Launcher* launcher, fuchsia::modular::AppConfig sessionmgr,
+      fuchsia::sys::Launcher* const launcher,
+      fuchsia::modular::AppConfig sessionmgr,
       fuchsia::modular::AppConfig session_shell,
       fuchsia::modular::AppConfig story_shell,
       fidl::InterfaceHandle<fuchsia::modular::auth::TokenProviderFactory>

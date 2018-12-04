@@ -43,10 +43,22 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
                     fuchsia::ui::policy::KeyboardCaptureListenerHACK,
                     modular::UserProviderImpl::Delegate {
  public:
+  // Initializes as BasemgrImpl instance with the given parameters:
+  //
+  // |settings| Settings that are parsed from command line. Used to configure
+  // the modular framework environment.
+  // |session_shell_settings| Settings relevant to session shells. Used to
+  // configure session shells that are launched.
+  // |launcher| Environment service for creating component instances.
+  // |monitor| Service that monitors how many basemgr instances are active.
+  // |presenter| Service to initialize the presentation.
+  // |on_shutdown| Callback invoked when this basemgr instance is shutdown.
   explicit BasemgrImpl(
       const modular::BasemgrSettings& settings,
       const std::vector<modular::SessionShellSettings>& session_shell_settings,
-      std::shared_ptr<component::StartupContext> context,
+      fuchsia::sys::Launcher* const launcher,
+      fuchsia::modular::BasemgrMonitorPtr monitor,
+      fuchsia::ui::policy::PresenterPtr presenter,
       std::function<void()> on_shutdown);
 
   ~BasemgrImpl() override;
@@ -141,11 +153,15 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   std::vector<SessionShellSettings>::size_type
       active_session_shell_settings_index_{};
 
-  AsyncHolder<UserProviderImpl> user_provider_impl_;
-
-  std::shared_ptr<component::StartupContext> const context_;
+  // Used to launch component instances, such as the base shell.
+  fuchsia::sys::Launcher* const launcher_;  // Not owned.
+  // Used to report this basemgr instance to the BasemgrMonitor.
   fuchsia::modular::BasemgrMonitorPtr monitor_;
+  // Used to initialize the presentation.
+  fuchsia::ui::policy::PresenterPtr presenter_;
   std::function<void()> on_shutdown_;
+
+  AsyncHolder<UserProviderImpl> user_provider_impl_;
 
   fidl::Binding<fuchsia::modular::BaseShellContext> base_shell_context_binding_;
   fidl::Binding<fuchsia::modular::auth::AccountProviderContext>

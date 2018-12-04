@@ -57,7 +57,7 @@ class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
 
   // |account_provider| and |delegate| must outlive UserProviderImpl.
   UserProviderImpl(
-      std::shared_ptr<component::StartupContext> context,
+      fuchsia::sys::Launcher* const launcher,
       const fuchsia::modular::AppConfig& sessionmgr,
       const fuchsia::modular::AppConfig& session_shell,
       const fuchsia::modular::AppConfig& story_shell,
@@ -129,7 +129,7 @@ class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
 
   fidl::BindingSet<fuchsia::modular::UserProvider> bindings_;
 
-  std::shared_ptr<component::StartupContext> context_;
+  fuchsia::sys::Launcher* const launcher_;         // Not owned.
   const fuchsia::modular::AppConfig& sessionmgr_;  // Neither owned nor copied.
   const fuchsia::modular::AppConfig&
       session_shell_;                               // Neither owned nor copied.

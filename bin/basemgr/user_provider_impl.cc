@@ -109,7 +109,7 @@ fidl::VectorPtr<fuchsia::auth::AuthProviderConfig> GetAuthProviderConfigs() {
 }  // namespace
 
 UserProviderImpl::UserProviderImpl(
-    std::shared_ptr<component::StartupContext> context,
+    fuchsia::sys::Launcher* const launcher,
     const fuchsia::modular::AppConfig& sessionmgr,
     const fuchsia::modular::AppConfig& session_shell,
     const fuchsia::modular::AppConfig& story_shell,
@@ -118,7 +118,7 @@ UserProviderImpl::UserProviderImpl(
     fuchsia::auth::AuthenticationContextProviderPtr
         authentication_context_provider,
     bool use_token_manager_factory, Delegate* const delegate)
-    : context_(std::move(context)),
+    : launcher_(launcher),
       sessionmgr_(sessionmgr),
       session_shell_(session_shell),
       story_shell_(story_shell),
@@ -583,12 +583,11 @@ void UserProviderImpl::LoginInternal(fuchsia::modular::auth::AccountPtr account,
       delegate_->GetSessionShellServiceProvider(std::move(params.services));
 
   auto controller = std::make_unique<UserControllerImpl>(
-      context_->launcher().get(), CloneStruct(sessionmgr_),
-      CloneStruct(session_shell_), CloneStruct(story_shell_),
-      std::move(token_provider_factory), std::move(ledger_token_manager),
-      std::move(agent_token_manager), std::move(account), std::move(view_owner),
-      std::move(service_provider), std::move(params.user_controller),
-      [this](UserControllerImpl* c) {
+      launcher_, CloneStruct(sessionmgr_), CloneStruct(session_shell_),
+      CloneStruct(story_shell_), std::move(token_provider_factory),
+      std::move(ledger_token_manager), std::move(agent_token_manager),
+      std::move(account), std::move(view_owner), std::move(service_provider),
+      std::move(params.user_controller), [this](UserControllerImpl* c) {
         user_controllers_.erase(c);
         delegate_->DidLogout();
       });

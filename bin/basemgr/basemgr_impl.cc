@@ -36,22 +36,21 @@ namespace modular {
 BasemgrImpl::BasemgrImpl(
     const modular::BasemgrSettings& settings,
     const std::vector<SessionShellSettings>& session_shell_settings,
-    std::shared_ptr<component::StartupContext> const context,
+    fuchsia::sys::Launcher* const launcher,
+    fuchsia::modular::BasemgrMonitorPtr monitor,
+    fuchsia::ui::policy::PresenterPtr presenter,
     std::function<void()> on_shutdown)
     : settings_(settings),
       session_shell_settings_(session_shell_settings),
-      user_provider_impl_("UserProviderImpl"),
-      context_(std::move(context)),
+      launcher_(launcher),
+      monitor_(std::move(monitor)),
+      presenter_(std::move(presenter)),
       on_shutdown_(std::move(on_shutdown)),
+      user_provider_impl_("UserProviderImpl"),
       base_shell_context_binding_(this),
       account_provider_context_binding_(this),
       authentication_context_provider_binding_(this) {
   update_session_shell_config();
-
-  if (!context_->has_environment_services()) {
-    FXL_LOG(ERROR) << "Failed to receive services from the environment.";
-    exit(1);
-  }
 
   // TODO(SCN-595): Presentation is now discoverable, so we don't need
   // kPresentationService anymore.
@@ -63,8 +62,6 @@ BasemgrImpl::BasemgrImpl(
     Start();
     return;
   }
-
-  context_->ConnectToEnvironmentService(monitor_.NewRequest());
 
   monitor_.set_error_handler([](zx_status_t status) {
     FXL_LOG(ERROR) << "No basemgr monitor found.";
@@ -95,9 +92,8 @@ void BasemgrImpl::InitializePresentation(
           ? presentation_state_.presentation.Unbind().NewRequest()
           : presentation_state_.presentation.NewRequest();
 
-  context_->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>()
-      ->Present2(zx::eventpair(view_owner.TakeChannel().release()),
-                 std::move(presentation_request));
+  presenter_->Present2(zx::eventpair(view_owner.TakeChannel().release()),
+                       std::move(presentation_request));
 
   AddGlobalKeyboardShortcuts(presentation_state_.presentation);
 
@@ -143,7 +139,7 @@ void BasemgrImpl::StartBaseShell() {
   }
 
   base_shell_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-      context_->launcher().get(), CloneStruct(settings_.base_shell));
+      launcher_, CloneStruct(settings_.base_shell));
   base_shell_app_->services().ConnectToService(base_shell_.NewRequest());
 
   fuchsia::ui::viewsv1::ViewProviderPtr base_shell_view_provider;
@@ -249,7 +245,7 @@ void BasemgrImpl::Start() {
     FXL_DLOG(INFO) << "Initialzing token_manager_factory_app()";
     token_manager_factory_app_ =
         std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-            context_->launcher().get(), CloneStruct(token_manager_config));
+            launcher_, CloneStruct(token_manager_config));
     token_manager_factory_app_->services().ConnectToService(
         token_manager_factory_.NewRequest());
   } else {
@@ -259,7 +255,7 @@ void BasemgrImpl::Start() {
 
   account_provider_ =
       std::make_unique<AppClient<fuchsia::modular::auth::AccountProvider>>(
-          context_->launcher().get(), std::move(token_manager_config),
+          launcher_, std::move(token_manager_config),
           "/data/modular/ACCOUNT_MANAGER");
   account_provider_->SetAppErrorHandler(
       [] { FXL_CHECK(false) << "Token manager crashed. Stopping basemgr."; });
@@ -267,7 +263,7 @@ void BasemgrImpl::Start() {
       account_provider_context_binding_.NewBinding());
 
   user_provider_impl_.reset(new UserProviderImpl(
-      context_, settings_.sessionmgr, session_shell_config_,
+      launcher_, settings_.sessionmgr, session_shell_config_,
       settings_.story_shell, account_provider_->primary_service().get(),
       token_manager_factory_.get(),
       authentication_context_provider_binding_.NewBinding().Bind(),
