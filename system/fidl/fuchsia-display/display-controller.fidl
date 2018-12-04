@@ -39,10 +39,6 @@ struct CursorInfo {
     uint32 height;
 
     uint32 pixel_format;
-
-    // TODO(FIDL-204): Pad to 16 bytes - remove this when fidl alignment
-    // issues are resolved
-    uint32 unused;
 };
 
 const uint32 identifierMaxLen = 128;
@@ -97,8 +93,7 @@ struct ImageConfig {
 const uint32 typeSimple = 0;
 
 // Rotations are applied counter-clockwise, and are applied before reflections.
-// TODO(FIDL-204): Make this a uint8 again after alignment issues are resolved.
-enum Transform : uint64 {
+enum Transform : uint8 {
     IDENTITY = 0;
     REFLECT_X = 1;
     REFLECT_Y = 2;
