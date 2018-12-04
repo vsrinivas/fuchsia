@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fit/defer.h>
 #include <trace-provider/provider.h>
 #include <virtio/balloon.h>
 
@@ -165,7 +166,9 @@ class VirtioBalloonImpl : public DeviceBase<VirtioBalloonImpl>,
 
  private:
   // |fuchsia::guest::device::VirtioBalloon|
-  void Start(fuchsia::guest::device::StartInfo start_info) override {
+  void Start(fuchsia::guest::device::StartInfo start_info,
+             StartCallback callback) override {
+    auto deferred = fit::defer(std::move(callback));
     PrepStart(std::move(start_info));
     inflate_stream_.Init(phys_mem_, fit::bind_member<zx_status_t, DeviceBase>(
                                         this, &VirtioBalloonImpl::Interrupt));
@@ -187,7 +190,9 @@ class VirtioBalloonImpl : public DeviceBase<VirtioBalloonImpl>,
 
   // |fuchsia::guest::device::VirtioDevice|
   void ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
-                      zx_gpaddr_t avail, zx_gpaddr_t used) override {
+                      zx_gpaddr_t avail, zx_gpaddr_t used,
+                      ConfigureQueueCallback callback) override {
+    auto deferred = fit::defer(std::move(callback));
     switch (static_cast<Queue>(queue)) {
       case Queue::INFLATE:
         inflate_stream_.Configure(size, desc, avail, used);
@@ -205,8 +210,9 @@ class VirtioBalloonImpl : public DeviceBase<VirtioBalloonImpl>,
   }
 
   // |fuchsia::guest::device::VirtioDevice|
-  void Ready(uint32_t negotiated_features) override {
+  void Ready(uint32_t negotiated_features, ReadyCallback callback) override {
     negotiated_features_ = negotiated_features;
+    callback();
   }
 
   uint32_t negotiated_features_;

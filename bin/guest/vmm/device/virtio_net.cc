@@ -7,7 +7,7 @@
 
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/startup_context.h>
+#include <lib/fit/defer.h>
 #include <trace-provider/provider.h>
 #include <virtio/net.h>
 #include <zx/fifo.h>
@@ -166,7 +166,9 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
 
  private:
   // |fuchsia::guest::device::VirtioNet|
-  void Start(fuchsia::guest::device::StartInfo start_info) override {
+  void Start(fuchsia::guest::device::StartInfo start_info,
+             StartCallback callback) override {
+    auto deferred = fit::defer(std::move(callback));
     PrepStart(std::move(start_info));
 
     fuchsia::netstack::Subnet subnet;
@@ -191,7 +193,9 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
 
   // |fuchsia::guest::device::VirtioDevice|
   void ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
-                      zx_gpaddr_t avail, zx_gpaddr_t used) override {
+                      zx_gpaddr_t avail, zx_gpaddr_t used,
+                      ConfigureQueueCallback callback) override {
+    auto deferred = fit::defer(std::move(callback));
     switch (static_cast<Queue>(queue)) {
       case Queue::RECEIVE:
         rx_stream_.Configure(size, desc, avail, used);
@@ -206,8 +210,9 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
   }
 
   // |fuchsia::guest::device::VirtioDevice|
-  void Ready(uint32_t negotiated_features) override {
+  void Ready(uint32_t negotiated_features, ReadyCallback callback) override {
     negotiated_features_ = negotiated_features;
+    callback();
   }
 
   component::StartupContext& context_;

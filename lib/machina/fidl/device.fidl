@@ -41,76 +41,73 @@ struct StartInfo {
 interface VirtioDevice {
     // Configure a |queue| for the device. This specifies the |size| and the
     // guest physical addresses of the queue: |desc|, |avail|, and |used|.
-    0x80000001: ConfigureQueue(uint16 queue, uint16 size, zx.gpaddr desc,
-                               zx.gpaddr avail, zx.gpaddr used);
+    ConfigureQueue(uint16 queue, uint16 size, zx.gpaddr desc, zx.gpaddr avail,
+                   zx.gpaddr used) -> ();
 
     // Notify a |queue| for the device. Primarily used for black-box testing.
-    0x80000002: NotifyQueue(uint16 queue);
+    NotifyQueue(uint16 queue);
 
     // Ready a device. This provides the set of |negotiated_features| that the
     // driver and device have agreed upon.
-    0x80000003: Ready(uint32 negotiated_features);
+    Ready(uint32 negotiated_features) -> ();
 };
 
 [Discoverable]
 interface VirtioBalloon : VirtioDevice {
     // Start the balloon device.
-    0x81000001: Start(StartInfo start_info);
+    Start(StartInfo start_info) -> ();
 
     // Get memory statistics from the balloon device.
-    0x81000002: GetMemStats()
-                    -> (zx.status status,
-                        vector<fuchsia.guest.MemStat>? mem_stats);
+    GetMemStats() -> (zx.status status,
+                      vector<fuchsia.guest.MemStat>? mem_stats);
 };
 
 [Discoverable]
 interface VirtioBlock : VirtioDevice {
     // Start the block device.
-    0x81000001: Start(StartInfo start_info, string:fuchsia.guest.MAX_BLOCK_DEVICE_ID_SIZE id,
-                      fuchsia.guest.BlockMode mode,
-                      fuchsia.guest.BlockFormat format,
-                      fuchsia.io.File file)
-                    -> (uint64 size);
+    Start(StartInfo start_info,
+          string:fuchsia.guest.MAX_BLOCK_DEVICE_ID_SIZE id,
+          fuchsia.guest.BlockMode mode, fuchsia.guest.BlockFormat format,
+          fuchsia.io.File file) -> (uint64 size);
 };
 
 [Discoverable]
 interface VirtioConsole : VirtioDevice {
     // Start the console device. This uses |socket| to handle input and output.
-    0x81000001: Start(StartInfo start_info, handle<socket> socket);
+    Start(StartInfo start_info, handle<socket> socket) -> ();
 };
 
 // Provides a way for VirtioInput to listen to changes to a View.
 [Discoverable]
 interface ViewListener {
     // Called when a View's size is changed.
-    1: OnSizeChanged(fuchsia.math.SizeF size);
+    OnSizeChanged(fuchsia.math.SizeF size);
 };
 
 [Discoverable]
 interface VirtioGpu : VirtioDevice {
     // Start the GPU device.
-    0x81000001: Start(StartInfo start_info,
-                      fuchsia.ui.input.InputListener? input_listener,
-                      ViewListener? view_listener);
+    Start(StartInfo start_info, fuchsia.ui.input.InputListener? input_listener,
+          ViewListener? view_listener) -> ();
 
     // Called when a device's configuration is changed.
-    0x81000002: -> OnConfigChanged();
+    -> OnConfigChanged();
 };
 
 [Discoverable]
 interface VirtioInput : VirtioDevice {
     // Start the input device.
-    0x81000001: Start(StartInfo start_info);
+    Start(StartInfo start_info) -> ();
 };
 
 [Discoverable]
 interface VirtioNet : VirtioDevice {
     // Start the net device.
-    0x81000001: Start(StartInfo start_info);
+    Start(StartInfo start_info) -> ();
 };
 
 [Discoverable]
 interface VirtioRng : VirtioDevice {
     // Start the RNG device.
-    0x81000001: Start(StartInfo start_info);
+    Start(StartInfo start_info) -> ();
 };

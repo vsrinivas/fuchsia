@@ -4,6 +4,7 @@
 
 #include <fbl/ref_counted.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fit/defer.h>
 #include <trace-provider/provider.h>
 #include <virtio/block.h>
 
@@ -239,7 +240,9 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
 
   // |fuchsia::guest::device::VirtioDevice|
   void ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
-                      zx_gpaddr_t avail, zx_gpaddr_t used) override {
+                      zx_gpaddr_t avail, zx_gpaddr_t used,
+                      ConfigureQueueCallback callback) override {
+    auto deferred = fit::defer(std::move(callback));
     switch (static_cast<Queue>(queue)) {
       case Queue::REQUEST:
         request_stream_.Configure(size, desc, avail, used);
@@ -251,7 +254,9 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
   }
 
   // |fuchsia::guest::device::VirtioDevice|
-  void Ready(uint32_t negotiated_features) override { }
+  void Ready(uint32_t negotiated_features, ReadyCallback callback) override {
+    callback();
+  }
 
   bool read_only_;
   RequestStream request_stream_;
