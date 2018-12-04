@@ -38,14 +38,14 @@ std::string GetBoardName() {
   }
 
   char board_name[ZBI_BOARD_NAME_LEN];
-  size_t actual_size;
+  size_t actual_size = 0;
   zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetBoardName(
       channel.get(), &status, board_name, sizeof(board_name), &actual_size);
   if (fidl_status != ZX_OK || status != ZX_OK) {
     FX_LOGS(ERROR) << "failed to get board name";
     return "unknown";
   }
-  return std::string(board_name);
+  return std::string(board_name, actual_size);
 }
 
 std::string GetVersion() {
