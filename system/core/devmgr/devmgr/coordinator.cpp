@@ -114,9 +114,6 @@ struct Coordinator {
 
     zx_status_t GetTopoPath(const Device* dev, char* out, size_t max) const;
 
-    zx_status_t Notify(const Device* dev, uint32_t op);
-    void Watch(zx::channel h);
-
     zx_status_t NewDevhost(const char* name, Devhost* parent, Devhost** out);
     void ReleaseDevhost(Devhost* dh);
     void ReleaseDevice(Device* dev);
@@ -379,8 +376,6 @@ zx_status_t Coordinator::HandleDmctlWrite(size_t len, const char* cmd) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx::channel dc_watch_channel;
-
 static zx::job devhost_job;
 
 const Driver* Coordinator::LibnameToDriver(const char* libname) const {
@@ -641,62 +636,6 @@ zx_status_t Coordinator::GetTopoPath(const Device* dev, char* out, size_t max) c
 
     memcpy(out, path, total);
     return ZX_OK;
-}
-
-//TODO: use a better device identifier
-zx_status_t Coordinator::Notify(const Device* dev, uint32_t op) {
-    if (!dc_watch_channel.is_valid()) {
-        return ZX_ERR_BAD_STATE;
-    }
-    zx_status_t r;
-    if (op == DEVMGR_OP_DEVICE_ADDED) {
-        size_t propslen = sizeof(zx_device_prop_t) * dev->prop_count;
-        size_t len = sizeof(devmgr_event_t) + propslen;
-        char msg[len + fuchsia_device_manager_PATH_MAX];
-        auto evt = reinterpret_cast<devmgr_event_t*>(msg);
-        memset(evt, 0, sizeof(devmgr_event_t));
-        memcpy(msg + sizeof(devmgr_event_t), dev->props.get(), propslen);
-        if (GetTopoPath(dev, msg + len, fuchsia_device_manager_PATH_MAX) < 0) {
-            return ZX_OK;
-        }
-        size_t pathlen = strlen(msg + len);
-        len += pathlen;
-        evt->opcode = op;
-        if (dev->flags & DEV_CTX_BOUND) {
-            evt->flags |= DEVMGR_FLAGS_BOUND;
-        }
-        evt->id = (uintptr_t) dev;
-        evt->u.add.protocol_id = dev->protocol_id;
-        evt->u.add.props_len = static_cast<uint32_t>(propslen);
-        evt->u.add.path_len = static_cast<uint32_t>(pathlen);
-        r = dc_watch_channel.write(0, msg, static_cast<uint32_t>(len), nullptr, 0);
-    } else {
-        devmgr_event_t evt;
-        memset(&evt, 0, sizeof(evt));
-        evt.opcode = op;
-        if (dev->flags & DEV_CTX_BOUND) {
-            evt.flags |= DEVMGR_FLAGS_BOUND;
-        }
-        evt.id = (uintptr_t) dev;
-        r = dc_watch_channel.write(0, &evt, sizeof(evt), nullptr, 0);
-    }
-    if (r != ZX_OK) {
-        dc_watch_channel.reset();
-    }
-    return r;
-}
-
-void Coordinator::Watch(zx::channel h) {
-    dc_watch_channel = std::move(h);
-    for (const auto& dev : devices) {
-        if (dev.flags & (DEV_CTX_DEAD | DEV_CTX_ZOMBIE)) {
-            // if device is dead, ignore it
-            continue;
-        }
-        if (Notify(&dev, DEVMGR_OP_DEVICE_ADDED) < 0) {
-            break;
-        }
-    }
 }
 
 static zx_status_t dc_launch_devhost(Devhost* host,
@@ -972,7 +911,6 @@ zx_status_t Coordinator::AddDevice(Device* parent, zx::channel rpc,
         dev.get(), dev->name, dev->prop_count, dev->args.get(), dev->parent);
 
     if (!invisible) {
-        Notify(dev.get(), DEVMGR_OP_DEVICE_ADDED);
         QueueWork(&dev->work, Work::Op::kDeviceAdded, 0);
     }
     // TODO(teisenbe/kulakowski): This should go away once we switch to refptrs
@@ -988,7 +926,6 @@ zx_status_t Coordinator::MakeVisible(Device* dev) {
     if (dev->flags & DEV_CTX_INVISIBLE) {
         dev->flags &= ~DEV_CTX_INVISIBLE;
         devfs_advertise(dev);
-        Notify(dev, DEVMGR_OP_DEVICE_ADDED);
         QueueWork(&dev->work, Work::Op::kDeviceAdded, 0);
     }
     return ZX_OK;
@@ -1103,7 +1040,6 @@ zx_status_t Coordinator::RemoveDevice(Device* dev, bool forced) {
     if (!(dev->flags & DEV_CTX_PROXY)) {
         // remove from list of all devices
         devices.erase(*dev);
-        Notify(dev, DEVMGR_OP_DEVICE_REMOVED);
     }
 
     if (forced) {
@@ -1453,13 +1389,6 @@ static zx_status_t fidl_DmOpenVirtcon(void* ctx, zx_handle_t raw_vc_receiver) {
     return ZX_OK;
 }
 
-static zx_status_t fidl_DmWatch(void* ctx, zx_handle_t raw_watcher) {
-    zx::channel watcher(raw_watcher);
-
-    g_coordinator.Watch(std::move(watcher));
-    return ZX_OK;
-}
-
 static zx_status_t fidl_DmMexec(void* ctx, zx_handle_t raw_kernel, zx_handle_t raw_bootdata) {
     zx::vmo kernel(raw_kernel);
     zx::vmo bootdata(raw_bootdata);
@@ -1481,7 +1410,6 @@ static fuchsia_device_manager_Coordinator_ops_t fidl_ops = {
     .PublishMetadata = fidl_PublishMetadata,
     .DmCommand = fidl_DmCommand,
     .DmOpenVirtcon = fidl_DmOpenVirtcon,
-    .DmWatch = fidl_DmWatch,
     .DmMexec = fidl_DmMexec,
 };
 
@@ -1552,8 +1480,6 @@ zx_status_t Coordinator::HandleDeviceRead(Device* dev) {
                     fidl_msg.bytes);
             if (resp->status != ZX_OK) {
                 log(ERROR, "devcoord: rpc: bind-driver '%s' status %d\n", dev->name, resp->status);
-            } else {
-                Notify(dev, DEVMGR_OP_DEVICE_CHANGED);
             }
             //TODO: try next driver, clear BOUND flag
             break;

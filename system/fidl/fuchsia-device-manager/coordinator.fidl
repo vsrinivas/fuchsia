@@ -150,11 +150,6 @@ interface Coordinator {
     /// Opens a new virtual console and transfers a handle to it over |vc_receiver|.
     0x10000021: DmOpenVirtcon(handle<channel> vc_receiver);
 
-    /// Register a watcher with the system for device lifecycle changes.  There
-    /// can only be one watcher.  Any subsequent calls will close the previous
-    /// channel.
-    0x10000022: DmWatch(handle<channel> watcher);
-
     /// Perform an mexec with the given kernel and bootdata.
     /// See ZX-2069 for the thoughts on deprecating mexec.
     0x10000023: DmMexec(handle<vmo> kernel, handle<vmo> bootdata);

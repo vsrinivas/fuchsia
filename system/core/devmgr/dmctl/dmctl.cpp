@@ -104,12 +104,6 @@ zx_status_t Dmctl::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
         }
         return fuchsia_device_manager_CoordinatorDmOpenVirtcon(rpc.get(), *(zx_handle_t*)in_buf);
     }
-    case IOCTL_DMCTL_WATCH_DEVMGR: {
-        if (in_len != sizeof(zx_handle_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        return fuchsia_device_manager_CoordinatorDmWatch(rpc.get(), *(zx_handle_t*)in_buf);
-    }
     case IOCTL_DMCTL_MEXEC: {
         if (in_len != sizeof(dmctl_mexec_args_t)) {
             return ZX_ERR_INVALID_ARGS;
