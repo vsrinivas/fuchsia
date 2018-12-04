@@ -943,14 +943,14 @@ EXPORT void trace_context_write_duration_event_record(
     const trace_string_ref_t* category_ref,
     const trace_string_ref_t* name_ref,
     const trace_arg_t* args, size_t num_args) {
-    trace_context_write_duration_begin_event_record(
-        context, start_time,
+    const size_t content_size = trace::WordsToBytes(1);
+    trace::Payload payload = trace::WriteEventRecordBase(
+        context, trace::EventType::kDurationComplete, start_time,
         thread_ref, category_ref, name_ref,
-        args, num_args);
-    trace_context_write_duration_end_event_record(
-        context, end_time,
-        thread_ref, category_ref, name_ref,
-        nullptr, 0u);
+        args, num_args, content_size);
+    if (payload) {
+        payload.WriteUint64(end_time);
+    }
 }
 
 EXPORT void trace_context_write_duration_begin_event_record(
