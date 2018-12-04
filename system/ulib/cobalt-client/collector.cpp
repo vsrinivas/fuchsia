@@ -2,29 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <threads.h>
-
-#include <cobalt-client/cpp/collector-internal.h>
 #include <cobalt-client/cpp/collector.h>
 #include <cobalt-client/cpp/counter-internal.h>
 #include <cobalt-client/cpp/histogram-internal.h>
 #include <cobalt-client/cpp/metric-options.h>
 #include <cobalt-client/cpp/types-internal.h>
 
+#ifdef __Fuchsia__
+#include <cobalt-client/cpp/collector-internal.h>
+
 #include <fuchsia/cobalt/c/fidl.h>
 #include <lib/fdio/util.h>
 #include <lib/fidl/cpp/vector_view.h>
 #include <lib/zx/channel.h>
+#endif
 
 #include <utility>
 
 namespace cobalt_client {
+namespace internal {
 namespace {
 
-using internal::Logger;
-using internal::RemoteCounter;
-using internal::RemoteHistogram;
-
+#ifdef __Fuchsia__
 internal::CobaltOptions MakeCobaltOptions(CollectorOptions options) {
     ZX_DEBUG_ASSERT_MSG(options.load_config, "Must define a load_config function.");
     internal::CobaltOptions cobalt_options;
@@ -39,15 +38,37 @@ internal::CobaltOptions MakeCobaltOptions(CollectorOptions options) {
     cobalt_options.release_stage = static_cast<internal::ReleaseStage>(options.release_stage);
     return cobalt_options;
 }
+#else
+// Host side implementation, which does nothing, just provides safety that all methods wont
+// fault.
+class HostLogger : public internal::Logger {
+public:
+    ~HostLogger() override = default;
 
+    bool Log(const RemoteMetricInfo& remote_info, const HistogramBucket* buckets,
+             size_t num_buckets) override {
+        return true;
+    };
+
+    bool Log(const RemoteMetricInfo& remote_info, int64_t count) override { return true; };
+};
+#endif // __Fuchsia__
 } // namespace
+} // namespace internal
 
+#ifdef __Fuchsia__
 Collector::Collector(CollectorOptions options)
-    : logger_(fbl::make_unique<internal::CobaltLogger>(MakeCobaltOptions(std::move(options)))) {
+    : logger_(std::make_unique<internal::CobaltLogger>(
+          internal::MakeCobaltOptions(std::move(options)))) {
     flushing_.store(false);
 }
+#else
+Collector::Collector(CollectorOptions options) : logger_(std::make_unique<internal::HostLogger>()) {
+    flushing_.store(false);
+}
+#endif // __Fuchsia__
 
-Collector::Collector(fbl::unique_ptr<internal::Logger> logger) : logger_(std::move(logger)) {
+Collector::Collector(std::unique_ptr<internal::Logger> logger) : logger_(std::move(logger)) {
     flushing_.store(false);
 }
 

@@ -8,7 +8,6 @@
 
 #include <fbl/function.h>
 #include <fbl/string.h>
-#include <zircon/compiler.h>
 
 namespace cobalt_client {
 

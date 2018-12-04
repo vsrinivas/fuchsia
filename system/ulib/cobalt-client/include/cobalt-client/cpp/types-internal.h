@@ -11,15 +11,21 @@
 
 #include <fbl/string.h>
 #include <fbl/vector.h>
+// TODO(gevalentino): Remove when host code diverges from target code in filesystems,
+// and host/target compatibility is not required.
+#ifdef __Fuchsia__
 #include <fuchsia/cobalt/c/fidl.h>
-#include <lib/fidl/cpp/string_view.h>
+#endif
 
 namespace cobalt_client {
 namespace internal {
 // Note: Everything on this namespace is internal, no external users should rely
 // on the behaviour of any of these classes.
-
 // A value pair which represents a bucket index and the count for such index.
+
+// TODO(gevalentino): Remove when host code diverges from target code in filesystems,
+// and host/target compatibility is not required.
+#ifdef __Fuchsia__
 using HistogramBucket = fuchsia_cobalt_HistogramBucket;
 
 enum class ReleaseStage : fuchsia_cobalt_ReleaseStage {
@@ -28,6 +34,19 @@ enum class ReleaseStage : fuchsia_cobalt_ReleaseStage {
     kFishfood = fuchsia_cobalt_ReleaseStage_FISHFOOD,
     kDebug = fuchsia_cobalt_ReleaseStage_DEBUG,
 };
+#else
+struct HistogramBucket {
+    uint32_t index;
+    int64_t count;
+};
+
+enum class ReleaseStage {
+    kGa,
+    kDogfood,
+    kFishfood,
+    kDebug,
+};
+#endif
 
 struct RemoteMetricInfo {
     // Generates |name| from the contents of metric options.

@@ -7,18 +7,19 @@
 #include <stdint.h>
 #include <unistd.h>
 
-#include <cobalt-client/cpp/collector-internal.h>
 #include <cobalt-client/cpp/metric-options.h>
 #include <cobalt-client/cpp/types-internal.h>
 
 #include <fbl/function.h>
 #include <fbl/string.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
+#ifdef __Fuchsia__
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
+#endif
 
 #include <atomic>
+#include <memory>
 
 namespace cobalt_client {
 
@@ -36,6 +37,7 @@ struct CollectorOptions {
     // Returns a |Collector| whose data will be logged for Debug release stage.
     static CollectorOptions Debug();
 
+#ifdef __Fuchsia__
     // Callback used when reading the config to create a cobalt logger.
     // Returns true when the write was successful. The VMO will be transferred
     // to the cobalt service.
@@ -51,7 +53,7 @@ struct CollectorOptions {
     // When registering with cobalt, will block for this amount of time, the first
     // time we need to wait for a response.
     zx::duration initial_response_deadline = zx::duration(0);
-
+#endif
     // This is set internally by factory functions.
     uint32_t release_stage = 0;
 };
@@ -69,7 +71,7 @@ struct CollectorOptions {
 class Collector {
 public:
     Collector(CollectorOptions options);
-    Collector(fbl::unique_ptr<internal::Logger> logger);
+    Collector(std::unique_ptr<internal::Logger> logger);
     Collector(const Collector&) = delete;
     Collector(Collector&&) = delete;
     Collector& operator=(const Collector&) = delete;
@@ -90,7 +92,7 @@ private:
     // Convert this into a HashTable.
     fbl::Vector<internal::FlushInterface*> flushables_;
 
-    fbl::unique_ptr<internal::Logger> logger_ = nullptr;
+    std::unique_ptr<internal::Logger> logger_ = nullptr;
     std::atomic<bool> flushing_ = false;
 };
 

@@ -10,11 +10,14 @@ MODULE_TYPE := userlib
 
 MODULE_COMPILEFLAGS += -fvisibility=hidden
 
-MODULE_SRCS += \
+COMMON_SRCS := \
     $(LOCAL_DIR)/counter.cpp \
     $(LOCAL_DIR)/metric_info.cpp \
     $(LOCAL_DIR)/histogram.cpp \
     $(LOCAL_DIR)/collector.cpp \
+
+MODULE_SRCS += \
+    $(COMMON_SRCS)\
     $(LOCAL_DIR)/cobalt_logger.cpp \
 
 MODULE_STATIC_LIBS := \
@@ -35,5 +38,22 @@ MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-mem \
 
 MODULE_PACKAGE := src
+
+include make/module.mk
+
+# Make a hostlib for libraries that are built for host and target host.
+# The target library is a dummy, replacing the logger with a dummy logger
+# that does nothing. This should remove once there is a clear separation
+# on host and client code in FS.
+
+MODULE := $(LOCAL_DIR).hostlib
+
+MODULE_TYPE := hostlib
+
+MODULE_SRCS += \
+	$(COMMON_SRCS)\
+
+MODULE_COMPILEFLAGS := \
+	-Isystem/ulib/fbl/include \
 
 include make/module.mk

@@ -11,11 +11,11 @@
 #include <cobalt-client/cpp/collector.h>
 #include <cobalt-client/cpp/counter.h>
 #include <cobalt-client/cpp/histogram.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <lib/sync/completion.h>
 #include <unittest/unittest.h>
 
+#include <memory>
 #include <utility>
 
 #include "fake_logger.h"
@@ -132,7 +132,7 @@ bool ConstructFromOptionsTest() {
 
 bool AddCounterTest() {
     BEGIN_TEST;
-    fbl::unique_ptr<FakeLogger> logger = fbl::make_unique<FakeLogger>();
+    std::unique_ptr<FakeLogger> logger = std::make_unique<FakeLogger>();
     Collector collector(std::move(logger));
     auto counter = Counter(MakeMetricOptions(), &collector);
     counter.Increment(5);
@@ -143,7 +143,7 @@ bool AddCounterTest() {
 // Sanity check that different counters do not interfere with each other.
 bool AddCounterMultipleTest() {
     BEGIN_TEST;
-    fbl::unique_ptr<FakeLogger> logger = fbl::make_unique<FakeLogger>();
+    std::unique_ptr<FakeLogger> logger = std::make_unique<FakeLogger>();
     Collector collector(std::move(logger));
 
     auto counter = Counter(MakeMetricOptions(1, 1), &collector);
@@ -160,7 +160,7 @@ bool AddCounterMultipleTest() {
 
 bool AddHistogramTest() {
     BEGIN_TEST;
-    fbl::unique_ptr<FakeLogger> logger = fbl::make_unique<FakeLogger>();
+    std::unique_ptr<FakeLogger> logger = std::make_unique<FakeLogger>();
     Collector collector(std::move(logger));
 
     auto histogram = Histogram<kBuckets>(MakeHistogramOptions(), &collector);
@@ -173,7 +173,7 @@ bool AddHistogramTest() {
 // Sanity check that different histograms do not interfere with each other.
 bool AddHistogramMultipleTest() {
     BEGIN_TEST;
-    fbl::unique_ptr<FakeLogger> logger = fbl::make_unique<FakeLogger>();
+    std::unique_ptr<FakeLogger> logger = std::make_unique<FakeLogger>();
     Collector collector(std::move(logger));
 
     auto histogram =
@@ -197,7 +197,7 @@ bool AddHistogramMultipleTest() {
 bool FlushTest() {
     BEGIN_TEST;
     HistogramOptions options = MakeHistogramOptions();
-    fbl::unique_ptr<FakeLogger> logger = fbl::make_unique<FakeLogger>();
+    std::unique_ptr<FakeLogger> logger = std::make_unique<FakeLogger>();
     FakeLogger* logger_ptr = logger.get();
     Collector collector(std::move(logger));
 
@@ -241,7 +241,7 @@ bool FlushTest() {
 bool FlushFailTest() {
     BEGIN_TEST;
     HistogramOptions options = MakeHistogramOptions();
-    fbl::unique_ptr<FakeLogger> logger = fbl::make_unique<FakeLogger>();
+    std::unique_ptr<FakeLogger> logger = std::make_unique<FakeLogger>();
     FakeLogger* logger_ptr = logger.get();
     Collector collector(std::move(logger));
 
@@ -291,10 +291,10 @@ bool FlushFailTest() {
 struct ObserveFnArgs {
 
     // List of histograms to operate on.
-    fbl::Vector<fbl::unique_ptr<Histogram<kBuckets>>>* histograms;
+    fbl::Vector<std::unique_ptr<Histogram<kBuckets>>>* histograms;
 
     // List of counters to operate on.
-    fbl::Vector<fbl::unique_ptr<Counter>>* counters;
+    fbl::Vector<std::unique_ptr<Counter>>* counters;
 
     // Number of observations to register.
     size_t count;
@@ -360,12 +360,12 @@ bool FlushMultithreadTest() {
     BEGIN_TEST;
     HistogramOptions options = MakeHistogramOptions();
     // Preallocate with the number of logs to prevent realloc problems.
-    fbl::unique_ptr<FakeLogger> logger = fbl::make_unique<FakeLogger>();
+    std::unique_ptr<FakeLogger> logger = std::make_unique<FakeLogger>();
     FakeLogger* logger_ptr = logger.get();
     Collector collector(std::move(logger));
     logger_ptr->set_should_fail(should_fail);
-    fbl::Vector<fbl::unique_ptr<Histogram<kBuckets>>> histograms;
-    fbl::Vector<fbl::unique_ptr<Counter>> counters;
+    fbl::Vector<std::unique_ptr<Histogram<kBuckets>>> histograms;
+    fbl::Vector<std::unique_ptr<Counter>> counters;
     fbl::Vector<ObserveFnArgs> observe_args;
     fbl::Vector<thrd_t> thread_ids;
     FlushFnArgs flush_args;
@@ -376,9 +376,9 @@ bool FlushMultithreadTest() {
     // follows: index = 3 * metric_id + event_code - 1.
     for (uint32_t metric_id = 0; metric_id < 4; ++metric_id) {
         for (uint32_t event_code = 0; event_code < 3; ++event_code) {
-            histograms.push_back(fbl::make_unique<Histogram<kBuckets>>(
+            histograms.push_back(std::make_unique<Histogram<kBuckets>>(
                 MakeHistogramOptions(metric_id, event_code), &collector));
-            counters.push_back(fbl::make_unique<Counter>(MakeMetricOptions(metric_id, event_code)));
+            counters.push_back(std::make_unique<Counter>(MakeMetricOptions(metric_id, event_code)));
         }
     }
     // Instantiate threads to operate in the given structures.

@@ -11,7 +11,6 @@
 
 #include <cobalt-client/cpp/histogram-internal.h>
 #include <cobalt-client/cpp/metric-options.h>
-#include <fuchsia/cobalt/c/fidl.h>
 
 namespace cobalt_client {
 namespace internal {

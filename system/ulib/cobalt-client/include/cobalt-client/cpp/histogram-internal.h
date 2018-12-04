@@ -12,7 +12,6 @@
 #include <fbl/function.h>
 #include <fbl/string.h>
 #include <fbl/vector.h>
-#include <lib/fidl/cpp/vector_view.h>
 
 namespace cobalt_client {
 namespace internal {
