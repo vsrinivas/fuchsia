@@ -70,6 +70,15 @@ zx_status_t Bus::Initialize() {
         }
     }
 
+    // Stash the ops/ctx pointers for the pciroot protocol so we can pass
+    // them to the allocators provided by Pci(e)Root
+    fbl::AllocChecker ac;
+    root_ = fbl::unique_ptr<PciRoot>(new (&ac) PciRoot(0, &pciroot_));
+    if (!ac.check()) {
+        pci_errorf("failed to allocate root bookkeeping!\n");
+        return ZX_ERR_NO_MEMORY;
+    }
+
     ScanDownstream();
     return ZX_OK;
 }
@@ -119,7 +128,7 @@ zx_status_t Bus::ScanDownstream(void) {
                 pci_bdf_t bdf = { static_cast<uint8_t>(bus_id), dev_id, func_id };
                 zx_status_t status = MakeConfig(bdf, &config);
                 if (status == ZX_OK) { 
-                    if (config->Read(Config::kVendorId) == PCI_INVALID_VENDOR_ID) {
+                    if (config->Read(Config::kVendorId) != PCI_INVALID_VENDOR_ID) {
                         pci_infof("found device at %02x:%02x.%1x\n", bus_id, dev_id, func_id);
                     }
                 }

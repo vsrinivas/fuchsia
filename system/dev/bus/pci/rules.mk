@@ -12,7 +12,9 @@ MODULE_TYPE := driver
 MODULE_NAME := bus-pci
 MODULE_SRCS := \
     $(LOCAL_DIR)/bus.cpp \
-    $(LOCAL_DIR)/config.cpp
+    $(LOCAL_DIR)/config.cpp \
+    $(LOCAL_DIR)/root.cpp \
+    $(LOCAL_DIR)/upstream_node.cpp
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-pci \

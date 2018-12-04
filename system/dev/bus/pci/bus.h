@@ -1,14 +1,16 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#ifndef ZIRCON_SYSTEM_DEV_BUS_PCI_BUS_H_
-#define ZIRCON_SYSTEM_DEV_BUS_PCI_BUS_H_
+#pragma once
+
 #include "config.h"
+#include "root.h"
 
 #include <ddk/device.h>
 #include <ddk/mmio-buffer.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/pciroot.h>
+#include <fbl/unique_ptr.h>
 
 namespace pci {
 
@@ -32,14 +34,13 @@ private:
     // Our constructor exists to fulfill the mixin constructors
     Bus(zx_device_t* parent, const pciroot_protocol_t* proto)
         : PciBusType(parent), pciroot_(proto) {}
-    
+
     // members
     ddk::PcirootProtocolClient pciroot_;
     pci_platform_info_t info_;
     mmio_buffer_t ecam_;
     bool has_ecam_;
+    fbl::unique_ptr<PciRoot> root_;
 };
 
 } // namespace pci
-
-#endif // ZIRCON_SYSTEM_DEV_BUS_PCI_BUS_H_
