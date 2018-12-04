@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"fuchsia.googlesource.com/pm/build"
+	"fuchsia.googlesource.com/pm/repo"
 	"fuchsia.googlesource.com/sse"
 )
 
@@ -40,7 +41,11 @@ var (
 
 func Run(cfg *build.Config, args []string) error {
 	fs := flag.NewFlagSet("serve", flag.ExitOnError)
-	repoDir := fs.String("d", "", "The path to the file repository to serve.")
+	repoDir := fs.String("d", "", "(deprecated, use -repo) path to the repository")
+
+	config := &repo.Config{}
+	config.Vars(fs)
+
 	listen := fs.String("l", ":8083", "HTTP listen address")
 	auto := fs.Bool("a", true, "Host auto endpoint for realtime client updates")
 	autoRate := fs.Duration("auto-rate", time.Second, "rate at which to poll filesystem if realtime watch is not available")
@@ -55,13 +60,10 @@ func Run(cfg *build.Config, args []string) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
+	config.ApplyDefaults()
 
 	if *repoDir == "" {
-		if buildDir, ok := os.LookupEnv("FUCHSIA_BUILD_DIR"); ok {
-			*repoDir = filepath.Join(buildDir, "amber-files", "repository")
-		} else {
-			return fmt.Errorf("the FUCHSIA_BUILD_DIR environment variable should be set or supply a path with -d")
-		}
+		*repoDir = config.RepoDir
 	}
 
 	fi, err := os.Stat(*repoDir)
