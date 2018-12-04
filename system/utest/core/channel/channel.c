@@ -1025,6 +1025,29 @@ static bool channel_write_different_sizes(void) {
     END_TEST;
 }
 
+static bool channel_write_takes_all_handles(void) {
+    BEGIN_TEST;
+
+    zx_handle_t channel[2];
+    ASSERT_EQ(zx_channel_create(0, &channel[0], &channel[1]), ZX_OK, "");
+
+#define TOO_MANY_HANDLES 2000
+    zx_handle_t handles[TOO_MANY_HANDLES];
+    for (size_t i = 0; i < TOO_MANY_HANDLES; ++i) {
+        ASSERT_EQ(zx_event_create(0, &handles[i]), ZX_OK, "");
+    }
+
+    char bytes[1] = {5};
+    ASSERT_EQ(zx_channel_write(channel[0], 0, bytes, 1, handles, TOO_MANY_HANDLES),
+              ZX_ERR_OUT_OF_RANGE, "write didn't fail");
+
+    for (size_t i = 0; i < TOO_MANY_HANDLES; ++i) {
+        ASSERT_EQ(zx_handle_close(handles[i]), ZX_ERR_BAD_HANDLE, "handle not closed");
+    }
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(channel_tests)
 RUN_TEST(channel_test)
 RUN_TEST(channel_read_error_test)
@@ -1042,6 +1065,7 @@ RUN_TEST(channel_nest)
 RUN_TEST(channel_disallow_write_to_self)
 RUN_TEST(channel_read_etc)
 RUN_TEST(channel_write_different_sizes)
+RUN_TEST(channel_write_takes_all_handles)
 END_TEST_CASE(channel_tests)
 
 #ifndef BUILD_COMBINED_TESTS
