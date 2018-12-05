@@ -1,0 +1,18 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/public/build/fostr/fostr_fidl.gni")
+
+fostr_fidl("fuchsia.modular.internal") {
+  fidl_target = "//peridot/public/fidl/fuchsia.modular.internal"
+
+  deps = [
+    "//garnet/public/lib/fostr/fidl/fuchsia.mem",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.viewsv1token",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.policy",
+    "//garnet/public/lib/fostr/fidl/fuchsia.auth",
+    "//peridot/public/lib/fostr/fidl/fuchsia.ledger",
+    "//peridot/public/lib/fostr/fidl/fuchsia.modular",
+  ]
+}
