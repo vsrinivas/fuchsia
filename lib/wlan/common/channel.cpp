@@ -72,6 +72,12 @@ bool IsValidChan2Ghz(const wlan_channel_t& chan) {
 
 bool IsValidChan5Ghz(const wlan_channel_t& chan) {
     uint8_t p = chan.primary;
+    uint8_t s = chan.secondary80;
+
+    // See IEEE Std 802.11-2016, Table 9-252, 9-253
+    // TODO(porce): Augment wlan_channel_t to carry
+    // "channel width" subfield of VHT Operation Info of VHT Operation IE.
+    // Test the validity of CCFS1, and the relation to the CCFS0.
 
     if (p < 36 || p > 173) { return false; }
     if (p > 64 && p < 100) { return false; }
@@ -93,6 +99,19 @@ bool IsValidChan5Ghz(const wlan_channel_t& chan) {
     case CBW80:
         if (p == 165) { return false; }
         break;
+    case CBW80P80: {
+        if (!(s == 42 || s == 58 || s == 106 || s == 122 || s == 138 || s == 155)) { return false; }
+
+        uint8_t ccfs0 = GetCenterChanIdx(chan);
+        uint8_t ccfs1 = s;
+        uint8_t gap = (ccfs0 >= ccfs1) ? (ccfs0 - ccfs1) : (ccfs1 - ccfs0);
+        if (gap <= 16) { return false; }
+        break;
+    }
+    case CBW160: {
+        if (p >= 132) { return false; }
+        break;
+    }
     default:
         return false;
     }
@@ -117,26 +136,55 @@ Mhz GetCenterFreq(const wlan_channel_t& chan) {
     if (Is2Ghz(chan)) {
         channel_starting_frequency = kBaseFreq2Ghz;
     } else {
-        // 5Ghz
+        // 5 GHz
         channel_starting_frequency = kBaseFreq5Ghz;
     }
 
     // IEEE Std 802.11-2016, 21.3.14
-    return channel_starting_frequency + spacing * chan.primary;
+    return channel_starting_frequency + spacing * GetCenterChanIdx(chan);
 }
 
+// Returns the channel index corresponding to the first frequency segment's center frequency
 uint8_t GetCenterChanIdx(const wlan_channel_t& chan) {
-    ZX_DEBUG_ASSERT(IsValidChan(chan));
-
+    uint8_t p = chan.primary;
     switch (chan.cbw) {
     case CBW20:
-        return chan.primary;
+        return p;
     case CBW40ABOVE:
-        return chan.primary + 2;
+        return p + 2;
     case CBW40BELOW:
-        return chan.primary - 2;
+        return p - 2;
+    case CBW80:
+    case CBW80P80:
+        if (p <= 48) {
+            return 42;
+        } else if (p <= 64) {
+            return 58;
+        } else if (p <= 112) {
+            return 106;
+        } else if (p <= 128) {
+            return 122;
+        } else if (p <= 144) {
+            return 138;
+        } else if (p <= 161) {
+            return 155;
+        } else {
+            // Not reachable
+            return p;
+        }
+    case CBW160:
+        // See IEEE Std 802.11-2016 Table 9-252 and 9-253.
+        // Note CBW160 has only one frequency segment, regardless of
+        // encodings on CCFS0 and CCFS1 in VHT Operation Information IE.
+        if (p <= 64) {
+            return 50;
+        } else if (p <= 128) {
+            return 114;
+        } else {
+            // Not reachable
+            return p;
+        }
     default:
-        // TODO(porce): Support CBW80 and beyond
         return chan.primary;
     }
 }

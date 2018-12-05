@@ -17,50 +17,38 @@ class ChannelTest : public ::testing::Test {
    protected:
 };
 
-struct TestVector {
-    uint8_t primary;
-    uint8_t cbw;
-    bool want;
-};
-
-struct TestVectorCbw {
-    uint8_t primary;
-    uint8_t cbw;
-    uint8_t want;
-};
-
 TEST_F(ChannelTest, ValidCombo) {
-    TestVector tvs[] = {
+    std::vector<wlan_channel_t> tvs = {
         // clang-format off
-        {1, CBW20, true},
-        {11, CBW20, true},
-        {1, CBW40ABOVE, true},
-        {6, CBW40ABOVE, true},
-        {6, CBW40BELOW, true},
-        {11, CBW40BELOW, true},
-        {36, CBW40ABOVE, true},
-        {40, CBW40BELOW, true},
-        {100, CBW40ABOVE, true},
-        {104, CBW40BELOW, true},
-        {149, CBW40ABOVE, true},
-        {153, CBW40BELOW, true},
-        {36, CBW80, true},
-        {40, CBW80, true},
-        {100, CBW80, true},
-        {149, CBW80, true},
-        {161, CBW80, true},
-        // Add more interesting cases
+        {  1, CBW20,        0},
+        { 11, CBW20,        0},
+        {  1, CBW40ABOVE,   0},
+        {  6, CBW40ABOVE,   0},
+        {  6, CBW40BELOW,   0},
+        { 11, CBW40BELOW,   0},
+        { 36, CBW40ABOVE,   0},
+        { 40, CBW40BELOW,   0},
+        {100, CBW40ABOVE,   0},
+        {104, CBW40BELOW,   0},
+        {149, CBW40ABOVE,   0},
+        {153, CBW40BELOW,   0},
+        { 36, CBW80,        0},
+        { 40, CBW80,        0},
+        {100, CBW80,        0},
+        {149, CBW80,        0},
+        {161, CBW80,        0},
+        { 36, CBW80P80,   106},
+        { 52, CBW80P80,   106},
+        {100, CBW80P80,    42},
+        {149, CBW80P80,    42},
+        {161, CBW80P80,    42},
+        { 36, CBW160,       0},
+        {100, CBW160,       0},
         // clang-format on
     };
 
-    for (uint32_t i = 0; i < sizeof(tvs) / sizeof(TestVector); i++) {
-        wlan_channel_t chan = {
-            .primary = tvs[i].primary,
-            .cbw = tvs[i].cbw,
-        };
-        bool want = tvs[i].want;
-
-        EXPECT_EQ(want, IsValidChan(chan));
+    for (auto tv : tvs) {
+        EXPECT_TRUE(IsValidChan(tv));
     }
 }
 
@@ -90,38 +78,46 @@ TEST_F(ChannelTest, Equality) {
 }
 
 TEST_F(ChannelTest, InvalidCombo) {
-    std::vector<TestVector> tvs = {
+    std::vector<wlan_channel_t> tvs = {
         // clang-format off
-        {0, CBW20, false},
-        {15, CBW20, false},
-        {8, CBW40ABOVE, false},
-        {4, CBW40BELOW, false},
-        {32, CBW20, false},
-        {68, CBW20, false},
-        {96, CBW20, false},
-        {148, CBW20, false},
-        {169, CBW20, true},
-        {183, CBW20, false},
-        {36, CBW40BELOW, false},
-        {40, CBW40ABOVE, false},
-        {149, CBW40BELOW, false},
-        {153, CBW40ABOVE, false},
-        {165, CBW80, false},
+        {  0, CBW20,        0},
+        { 15, CBW20,        0},
+        {  8, CBW40ABOVE,   0},
+        {  4, CBW40BELOW,   0},
+        { 32, CBW20,        0},
+        { 68, CBW20,        0},
+        { 96, CBW20,        0},
+        {148, CBW20,        0},
+        {183, CBW20,        0},
+        { 36, CBW40BELOW,   0},
+        { 40, CBW40ABOVE,   0},
+        {149, CBW40BELOW,   0},
+        {153, CBW40ABOVE,   0},
+        {165, CBW80,        0},
+        { 36, CBW80P80,     0},
+        { 48, CBW80P80,    42},
+        {149, CBW80P80,   155},
+        {132, CBW160,      50},
         // Add more interesting cases
         // clang-format on
     };
 
-    for (TestVector tv : tvs) {
-        wlan_channel_t chan = {
-            .primary = tv.primary,
-            .cbw = tv.cbw,
-        };
-
-        EXPECT_EQ(tv.want, IsValidChan(chan));
+    for (auto tv : tvs) {
+        if (IsValidChan(tv)) {
+            printf("Test failed: Should treat this channel invalid:: %s\n",
+                   wlan::common::ChanStrLong(tv).c_str());
+        }
+        EXPECT_FALSE(IsValidChan(tv));
     }
 }
 
 TEST_F(ChannelTest, GetValidCbw) {
+    struct TestVectorCbw {
+        uint8_t primary;
+        uint8_t cbw;
+        uint8_t want;
+    };
+
     std::vector<TestVectorCbw> tvs = {
         // clang-format off
         {1, CBW20, CBW20},
@@ -176,6 +172,65 @@ TEST_F(ChannelTest, Conversion) {
 
         auto got_ddk = FromFidl(tv.fidl);
         EXPECT_EQ(tv.is_same, tv.ddk == got_ddk);
+    }
+}
+
+TEST_F(ChannelTest, GetCenterChanIdx) {
+    struct TestVector {
+        wlan_channel_t ddk;
+        uint8_t want;
+    };
+
+    std::vector<TestVector> tvs = {
+        // clang-format off
+        {{  1, CBW20,      0},   1},
+        {{ 11, CBW20,      0},  11},
+        {{ 36, CBW20,      0},  36},
+        {{161, CBW20,      0}, 161},
+        {{  1, CBW40ABOVE, 0},   3},
+        {{  5, CBW40ABOVE, 0},   7},
+        {{  5, CBW40BELOW, 0},   3},
+        {{ 11, CBW40BELOW, 0},   9},
+        {{ 36, CBW40ABOVE, 0},  38},
+        {{ 36, CBW80,      0},  42},
+        {{104, CBW80,      0}, 106},
+        {{ 36, CBW80P80, 122},  42},
+        {{ 36, CBW160,     0},  50},
+        {{100, CBW160,     0}, 114}
+        // clang-format on
+    };
+
+    for (auto tv : tvs) {
+        auto got = GetCenterChanIdx(tv.ddk);
+        EXPECT_EQ(tv.want, got);
+    }
+}
+
+TEST_F(ChannelTest, GetCenterFreq) {
+    struct TestVector {
+        wlan_channel_t ddk;
+        Mhz want;
+    };
+
+    std::vector<TestVector> tvs = {
+        // clang-format off
+        {{  1, CBW20,      0}, 2412},
+        {{  1, CBW40ABOVE, 0}, 2422},
+        {{  6, CBW40ABOVE, 0}, 2447},
+        {{  6, CBW40BELOW, 0}, 2427},
+        {{ 11, CBW20,      0}, 2462},
+        {{ 11, CBW40BELOW, 0}, 2452},
+        {{ 36, CBW20,      0}, 5180},
+        {{ 36, CBW40ABOVE, 0}, 5190},
+        {{ 36, CBW80,      0}, 5210},
+        {{ 36, CBW160,     0}, 5250},
+        {{161, CBW20,      0}, 5805},
+        // clang-format on
+    };
+
+    for (auto tv : tvs) {
+        auto got = GetCenterFreq(tv.ddk);
+        EXPECT_EQ(tv.want, got);
     }
 }
 
