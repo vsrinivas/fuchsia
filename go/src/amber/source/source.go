@@ -411,23 +411,62 @@ func newHTTPClient(cfg *amber.TransportConfig) (*http.Client, error) {
 		return nil, err
 	}
 
+	// Create our transport with default settings copied from Go's
+	// `http.DefaultTransport`. We can't just copy the default because it
+	// contains some mutexes, and copying it may leave the transport in an
+	// inconsistent state.
 	t := &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+			DualStack: true,
+		}).DialContext,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		TLSClientConfig:       tlsClientConfig,
+	}
+
+	if cfg.ConnectTimeout != 0 || cfg.KeepAlive != 0 {
+		t.DialContext = (&net.Dialer{
 			Timeout:   time.Duration(cfg.ConnectTimeout) * time.Millisecond,
 			KeepAlive: time.Duration(cfg.KeepAlive) * time.Millisecond,
-		}).DialContext,
-		MaxIdleConns:          int(cfg.MaxIdleConns),
-		MaxIdleConnsPerHost:   int(cfg.MaxIdleConnsPerHost),
-		IdleConnTimeout:       time.Duration(cfg.IdleConnTimeout) * time.Millisecond,
-		ResponseHeaderTimeout: time.Duration(cfg.ResponseHeaderTimeout) * time.Millisecond,
-		ExpectContinueTimeout: time.Duration(cfg.ExpectContinueTimeout) * time.Millisecond,
-		TLSClientConfig:       tlsClientConfig,
+			DualStack: true,
+		}).DialContext
+	}
+
+	if cfg.MaxIdleConns != 0 {
+		t.MaxIdleConns = int(cfg.MaxIdleConns)
+	}
+
+	if cfg.MaxIdleConnsPerHost != 0 {
+		t.MaxIdleConnsPerHost = int(cfg.MaxIdleConnsPerHost)
+	}
+
+	if cfg.IdleConnTimeout != 0 {
+		t.IdleConnTimeout = time.Duration(cfg.IdleConnTimeout) * time.Millisecond
+	}
+
+	if cfg.ResponseHeaderTimeout != 0 {
+		t.ResponseHeaderTimeout = time.Duration(cfg.ResponseHeaderTimeout) * time.Millisecond
+	}
+
+	if cfg.TlsHandshakeTimeout != 0 {
+		t.TLSHandshakeTimeout = time.Duration(cfg.TlsHandshakeTimeout) * time.Millisecond
+	}
+
+	if cfg.ExpectContinueTimeout != 0 {
+		t.ExpectContinueTimeout = time.Duration(cfg.ExpectContinueTimeout) * time.Millisecond
 	}
 
 	c := &http.Client{
 		Transport: t,
-		Timeout:   time.Duration(cfg.RequestTimeout) * time.Millisecond,
+	}
+
+	if cfg.RequestTimeout != 0 {
+		c.Timeout = time.Duration(cfg.RequestTimeout) * time.Millisecond
 	}
 
 	return c, nil
