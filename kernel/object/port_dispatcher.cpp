@@ -209,8 +209,21 @@ void PortDispatcher::on_zero_handles() {
 
     // Free any queued packets.
     while (!packets_.is_empty()) {
-        FreePacket(packets_.pop_front());
+        auto packet = packets_.pop_front();
         --num_packets_;
+
+        // If the packet is ephemeral, free it outside of the lock. Otherwise,
+        // reset the observer if it is present.
+        if (packet->is_ephemeral()) {
+            guard.CallUnlocked([packet]() {
+                    packet->Free();
+            });
+        } else {
+            // The reference to the port that the observer holds cannot be the last one
+            // because another reference was used to call on_zero_handles, so we don't
+            // need to worry about destroying ourselves.
+            packet->observer.reset();
+        }
     }
 }
 
@@ -305,7 +318,20 @@ zx_status_t PortDispatcher::Dequeue(zx_time_t deadline, zx_port_packet_t* out_pa
             if (port_packet != nullptr) {
                 --num_packets_;
                 *out_packet = port_packet->packet;
-                FreePacket(port_packet);
+
+                bool is_ephemeral = port_packet->is_ephemeral();
+                // The reference to the port that the observer holds cannot be the last one
+                // because another reference was used to call Dequeue, so we don't need to
+                // worry about destroying ourselves.
+                port_packet->observer.reset();
+                guard.Release();
+
+                // If the packet is ephemeral, free it outside of the lock. We need to read
+                // is_ephemeral inside the lock because it's possible for a non-ephemeral packet
+                // to get deleted after a call to |MaybeReap| as soon as we release the lock.
+                if (is_ephemeral) {
+                    port_packet->Free();
+                }
                 return ZX_OK;
             }
         }
@@ -319,23 +345,10 @@ zx_status_t PortDispatcher::Dequeue(zx_time_t deadline, zx_port_packet_t* out_pa
     }
 }
 
-void PortDispatcher::FreePacket(PortPacket* port_packet) {
-    // We need to move the observer pointer out, as it's potentially containing us.
-    ktl::unique_ptr<const PortObserver> observer = ktl::move(port_packet->observer);
-
-    if (observer) {
-        // Deleting the observer under |get_lock()| is fine because the
-        // reference that holds to this PortDispatcher is by construction
-        // not the last one. We need to do this under |get_lock()| because
-        // another thread can call MaybeReap().
-    } else if (port_packet->is_ephemeral()) {
-        port_packet->Free();
-    }
-}
-
 ktl::unique_ptr<PortObserver> PortDispatcher::MaybeReap(ktl::unique_ptr<PortObserver> observer,
                                                         PortPacket* port_packet) {
     canary_.Assert();
+    DEBUG_ASSERT(!port_packet->is_ephemeral());
 
     Guard<fbl::Mutex> guard{get_lock()};
     if (port_packet->InContainer()) {
