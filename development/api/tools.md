@@ -5,5 +5,5 @@ For information on *existing* tools, please refer to documentation for those
 tools.
 
 - [Command-line tool requirements](cli.md)
-    - CLI --help requirements
+    - [CLI --help requirements](cli_help.md)
 - GUI Tool requirements
