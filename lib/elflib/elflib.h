@@ -9,10 +9,12 @@
 #include <memory>
 #include <vector>
 
-#include "garnet/lib/elflib/third_party/musl/include/elf.h"
+#include "garnet/third_party/llvm/include/llvm/BinaryFormat/ELF.h"
 #include "garnet/public/lib/fxl/macros.h"
 
 namespace elflib {
+
+using namespace llvm::ELF;
 
 class ElfLib {
  public:
