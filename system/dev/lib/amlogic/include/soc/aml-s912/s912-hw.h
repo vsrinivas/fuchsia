@@ -27,7 +27,7 @@
 
 #define S912_GPIO_BASE                  0xc8834400
 #define S912_GPIO_LENGTH                0x1C00
-#define S912_GPIO_A0_BASE               0xc8100000
+#define S912_GPIO_AO_BASE               0xc8100000
 #define S912_GPIO_AO_LENGTH             0x1000
 #define S912_GPIO_INTERRUPT_BASE        0xC1100000
 #define S912_GPIO_INTERRUPT_LENGTH      0x10000
@@ -92,8 +92,8 @@
 #define S912_MALI_IRQ_GPMMU             193
 #define S912_MALI_IRQ_PP                194
 #define S912_UART_AO_B_IRQ              229
-#define S912_A0_GPIO_IRQ_0              232
-#define S912_A0_GPIO_IRQ_1              233
+#define S912_AO_GPIO_IRQ_0              232
+#define S912_AO_GPIO_IRQ_1              233
 #define S912_MBOX_IRQ_RECEIV0           240
 #define S912_MBOX_IRQ_RECEIV1           241
 #define S912_MBOX_IRQ_RECEIV2           242

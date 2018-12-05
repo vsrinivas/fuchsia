@@ -22,7 +22,7 @@ static const pbus_mmio_t gpio_mmios[] = {
         .length = S912_GPIO_LENGTH,
     },
     {
-        .base = S912_GPIO_A0_BASE,
+        .base = S912_GPIO_AO_BASE,
         .length = S912_GPIO_AO_LENGTH,
     },
     {
@@ -58,10 +58,10 @@ static const pbus_irq_t gpio_irqs[] = {
         .irq = S912_GPIO_IRQ_7,
     },
     {
-        .irq = S912_A0_GPIO_IRQ_0,
+        .irq = S912_AO_GPIO_IRQ_0,
     },
     {
-        .irq = S912_A0_GPIO_IRQ_1,
+        .irq = S912_AO_GPIO_IRQ_1,
     },
 };
 
