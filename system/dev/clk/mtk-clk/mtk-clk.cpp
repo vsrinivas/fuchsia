@@ -35,6 +35,8 @@ constexpr MtkClkGate kMtkClkGates[] = {
     [board_mt8167::kClkI2c0] = {.regs = kClkGatingCtrl1, .bit = 3},
     [board_mt8167::kClkI2c1] = {.regs = kClkGatingCtrl1, .bit = 4},
     [board_mt8167::kClkI2c2] = {.regs = kClkGatingCtrl1, .bit = 16},
+    [board_mt8167::kClkPmicWrapAp] = {.regs = kClkGatingCtrl1, .bit = 20},
+    [board_mt8167::kClkPmicWrap26M] = {.regs = kClkGatingCtrl1, .bit = 29},
     [board_mt8167::kClkAuxAdc] = {.regs = kClkGatingCtrl1, .bit = 30},
     [board_mt8167::kClkSlowMfg] = {.regs = kClkGatingCtrl8, .bit = 7},
     [board_mt8167::kClkAxiMfg] = {.regs = kClkGatingCtrl8, .bit = 6},

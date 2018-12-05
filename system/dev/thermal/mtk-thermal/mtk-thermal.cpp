@@ -8,7 +8,6 @@
 #include <ddktl/pdev.h>
 #include <fbl/unique_ptr.h>
 #include <soc/mt8167/mt8167-hw.h>
-#include <zircon/device/thermal.h>
 
 #include "mtk-thermal-reg.h"
 
@@ -70,19 +69,41 @@ zx_status_t MtkThermal::Create(zx_device_t* parent) {
 
     std::optional<ddk::MmioBuffer> mmio;
     if ((status = pdev.MapMmio(0, &mmio)) != ZX_OK) {
-        zxlogf(ERROR, "%s: pdev_map_mmio_buffer2 failed\n", __FILE__);
+        zxlogf(ERROR, "%s: MapMmio failed\n", __FILE__);
         return status;
     }
 
     std::optional<ddk::MmioBuffer> fuse_mmio;
     if ((status = pdev.MapMmio(1, &fuse_mmio)) != ZX_OK) {
-        zxlogf(ERROR, "%s: pdev_map_mmio_buffer2 failed\n", __FILE__);
+        zxlogf(ERROR, "%s: MapMmio failed\n", __FILE__);
         return status;
+    }
+
+    std::optional<ddk::MmioBuffer> pll_mmio;
+    if ((status = pdev.MapMmio(2, &pll_mmio)) != ZX_OK) {
+        zxlogf(ERROR, "%s: MapMmio failed\n", __FILE__);
+        return status;
+    }
+
+    std::optional<ddk::MmioBuffer> pmic_mmio;
+    if ((status = pdev.MapMmio(3, &pmic_mmio)) != ZX_OK) {
+        zxlogf(ERROR, "%s: MapMmio failed\n", __FILE__);
+        return status;
+    }
+
+    thermal_device_info_t thermal_info;
+    size_t actual;
+    status = device_get_metadata(parent, THERMAL_CONFIG_METADATA, &thermal_info,
+                                 sizeof(thermal_info), &actual);
+    if (status != ZX_OK || actual != sizeof(thermal_info)) {
+        zxlogf(ERROR, "%s: device_get_metadata failed\n", __FILE__);
+        return status == ZX_OK ? ZX_ERR_INTERNAL : status;
     }
 
     fbl::AllocChecker ac;
     fbl::unique_ptr<MtkThermal> device(
-        new (&ac) MtkThermal(parent, std::move(*mmio), std::move(*fuse_mmio), clk, info));
+        new (&ac) MtkThermal(parent, std::move(*mmio), std::move(*fuse_mmio), std::move(*pll_mmio),
+                             std::move(*pmic_mmio), clk, info, thermal_info));
     if (!ac.check()) {
         zxlogf(ERROR, "%s: MtkThermal alloc failed\n", __FILE__);
         return ZX_ERR_NO_MEMORY;
@@ -109,6 +130,17 @@ zx_status_t MtkThermal::Init() {
             zxlogf(ERROR, "%s: Failed to enable clock %u\n", __FILE__, i);
             return status;
         }
+    }
+
+    // Set the initial DVFS operating point. The bootloader sets it to 1.001 GHz @ 1.2 V.
+    constexpr dvfs_info_t dvfs_info = {
+        .op_idx = 0,
+        .power_domain = BIG_CLUSTER_POWER_DOMAIN
+    };
+
+    zx_status_t status = SetDvfsOpp(&dvfs_info);
+    if (status != ZX_OK) {
+        return status;
     }
 
     TempMonCtl0::Get().ReadFrom(&mmio_).disable_all().WriteTo(&mmio_);
@@ -190,6 +222,26 @@ zx_status_t MtkThermal::Init() {
     return ZX_OK;
 }
 
+uint16_t MtkThermal::PmicRead(uint32_t addr) {
+    while (PmicReadData::Get().ReadFrom(&pmic_mmio_).status() != PmicReadData::kStateIdle) {}
+
+    PmicCmd::Get().FromValue(0).set_write(0).set_addr(addr).WriteTo(&pmic_mmio_);
+
+    auto pmic_read = PmicReadData::Get().FromValue(0);
+    while (pmic_read.ReadFrom(&pmic_mmio_).status() != PmicReadData::kStateValid) {}
+
+    uint16_t ret = static_cast<uint16_t>(pmic_read.data());
+
+    PmicValidClear::Get().ReadFrom(&pmic_mmio_).set_valid_clear(1).WriteTo(&pmic_mmio_);
+
+    return ret;
+}
+
+void MtkThermal::PmicWrite(uint16_t data, uint32_t addr) {
+    while (PmicReadData::Get().ReadFrom(&pmic_mmio_).status() != PmicReadData::kStateIdle) {}
+    PmicCmd::Get().FromValue(0).set_write(1).set_addr(addr).set_data(data).WriteTo(&pmic_mmio_);
+}
+
 uint32_t MtkThermal::RawToTemperature(uint32_t raw, int sensor) {
     auto cal0 = TempCalibration0::Get().ReadFrom(&fuse_mmio_);
     auto cal1 = TempCalibration1::Get().ReadFrom(&fuse_mmio_);
@@ -230,6 +282,45 @@ zx_status_t MtkThermal::GetTemperature(uint32_t* temp) {
     return ZX_OK;
 }
 
+zx_status_t MtkThermal::SetDvfsOpp(const dvfs_info_t* opp) {
+    if (opp->power_domain >= MAX_DVFS_DOMAINS) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    const scpi_opp_t& opps = thermal_info_.opps[opp->power_domain];
+    if (opp->op_idx >= opps.count) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    uint32_t new_freq = opps.opp[opp->op_idx].freq_hz;
+    uint32_t new_volt = opps.opp[opp->op_idx].volt_mv;
+
+    if (new_volt > VprocCon10::kMaxVoltageUv || new_volt < VprocCon10::kMinVoltageUv) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    auto armpll = ArmPllCon1::Get().ReadFrom(&pll_mmio_);
+    uint32_t old_freq = armpll.frequency();
+
+    auto vproc = VprocCon10::Get().FromValue(0).set_voltage(new_volt);
+    if (vproc.voltage() != new_volt) {
+        // The requested voltage is not a multiple of the voltage step.
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    if (new_freq > old_freq) {
+        PmicWrite(vproc.reg_value(), vproc.reg_addr());
+        armpll.set_frequency(new_freq).WriteTo(&pll_mmio_);
+    } else {
+        armpll.set_frequency(new_freq).WriteTo(&pll_mmio_);
+        PmicWrite(vproc.reg_value(), vproc.reg_addr());
+    }
+
+    current_opp_idx_ = opp->op_idx;
+
+    return ZX_OK;
+}
+
 zx_status_t MtkThermal::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
                                  size_t out_len, size_t* actual) {
     switch (op) {
@@ -240,16 +331,61 @@ zx_status_t MtkThermal::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
 
         *actual = sizeof(uint32_t);
         return GetTemperature(reinterpret_cast<uint32_t*>(out_buf));
+
+    case IOCTL_THERMAL_GET_DEVICE_INFO:
+        if (out_len != sizeof(thermal_info_)) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+
+        memcpy(out_buf, &thermal_info_, sizeof(thermal_info_));
+        *actual = sizeof(thermal_info_);
+        return ZX_OK;
+
+    case IOCTL_THERMAL_SET_DVFS_OPP:
+        if (in_len != sizeof(dvfs_info_t)) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+
+        return SetDvfsOpp(reinterpret_cast<const dvfs_info_t*>(in_buf));
+
+    case IOCTL_THERMAL_GET_DVFS_INFO: {
+        if (in_len != sizeof(uint32_t) || out_len != sizeof(thermal_info_.opps[0])) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+
+        uint32_t domain = *reinterpret_cast<const uint32_t*>(in_buf);
+        if (domain >= MAX_DVFS_DOMAINS) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+
+        memcpy(out_buf, &thermal_info_.opps[domain], sizeof(thermal_info_.opps[0]));
+        *actual = sizeof(thermal_info_.opps[0]);
+        return ZX_OK;
+    }
+
+    case IOCTL_THERMAL_GET_DVFS_OPP: {
+        if (in_len != sizeof(uint32_t) || out_len != sizeof(uint32_t)) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+
+        uint32_t domain = *reinterpret_cast<const uint32_t*>(in_buf);
+        if (domain != BIG_CLUSTER_POWER_DOMAIN) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+
+        uint32_t* opp_idx = reinterpret_cast<uint32_t*>(out_buf);
+
+        *opp_idx = current_opp_idx_;
+        *actual = sizeof(*opp_idx);
+        return ZX_OK;
+    }
+
     // TODO(bradenkell): Implement the rest of these.
     case IOCTL_THERMAL_GET_INFO:
     case IOCTL_THERMAL_SET_TRIP:
     case IOCTL_THERMAL_GET_STATE_CHANGE_EVENT:
     case IOCTL_THERMAL_GET_STATE_CHANGE_PORT:
-    case IOCTL_THERMAL_GET_DEVICE_INFO:
     case IOCTL_THERMAL_SET_FAN_LEVEL:
-    case IOCTL_THERMAL_SET_DVFS_OPP:
-    case IOCTL_THERMAL_GET_DVFS_INFO:
-    case IOCTL_THERMAL_GET_DVFS_OPP:
     case IOCTL_THERMAL_GET_FAN_LEVEL:
     default:
         break;

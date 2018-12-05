@@ -11,6 +11,8 @@ enum Mt8167Clk {
     kClkI2c0,
     kClkI2c1,
     kClkI2c2,
+    kClkPmicWrapAp,
+    kClkPmicWrap26M,
     kClkAuxAdc,
     kClkSlowMfg,
     kClkAxiMfg,

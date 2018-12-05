@@ -62,6 +62,9 @@
 #define MT8167_FUSE_BASE                                    0x10009000
 #define MT8167_FUSE_SIZE                                    0x1000
 
+#define MT8167_PMIC_WRAP_BASE                               0x1000f000
+#define MT8167_PMIC_WRAP_SIZE                               0x1000
+
 // Display Subsystem
 #define MT8167_DISP_OVL_BASE                                0x14007000
 #define MT8167_DISP_OVL_SIZE                                0x1000

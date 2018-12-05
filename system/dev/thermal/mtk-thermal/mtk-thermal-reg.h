@@ -8,6 +8,65 @@
 
 namespace thermal {
 
+class ArmPllCon1 : public hwreg::RegisterBase<ArmPllCon1, uint32_t> {
+public:
+    static constexpr uint32_t kDiv1  = 0;
+    static constexpr uint32_t kDiv2  = 1;
+    static constexpr uint32_t kDiv4  = 2;
+    static constexpr uint32_t kDiv8  = 3;
+    static constexpr uint32_t kDiv16 = 4;
+
+    static constexpr uint32_t kPcwFracBits = 14;
+
+    static constexpr uint32_t kPllSrcClk = 26000000;
+
+    static auto Get() { return hwreg::RegisterAddr<ArmPllCon1>(0x104); }
+
+    uint32_t frequency() const {
+        uint64_t freq = static_cast<uint64_t>(pcw()) * kPllSrcClk;
+        return static_cast<uint32_t>(freq >> (kPcwFracBits + div()));
+    }
+
+    ArmPllCon1& set_frequency(uint32_t freq_hz) {
+        set_change(1);
+        set_div(kDiv1);
+        uint64_t pcw_value = static_cast<uint64_t>(freq_hz) << (kPcwFracBits + div());
+        set_pcw(static_cast<uint32_t>(pcw_value / kPllSrcClk));
+        return *this;
+    }
+
+    DEF_BIT(31, change);
+    DEF_FIELD(26, 24, div);
+    DEF_FIELD(20, 0, pcw);
+};
+
+class PmicCmd : public hwreg::RegisterBase<PmicCmd, uint32_t> {
+public:
+    static auto Get() { return hwreg::RegisterAddr<PmicCmd>(0xa0); }
+
+    DEF_BIT(31, write);
+    DEF_FIELD(30, 16, addr);
+    DEF_FIELD(15, 0, data);
+};
+
+class PmicReadData : public hwreg::RegisterBase<PmicReadData, uint32_t> {
+public:
+    static constexpr uint32_t kStateIdle  = 0;
+    static constexpr uint32_t kStateValid = 6;
+
+    static auto Get() { return hwreg::RegisterAddr<PmicReadData>(0xa4); }
+
+    DEF_FIELD(18, 16, status);
+    DEF_FIELD(15, 0, data);
+};
+
+class PmicValidClear : public hwreg::RegisterBase<PmicValidClear, uint32_t> {
+public:
+    static auto Get() { return hwreg::RegisterAddr<PmicValidClear>(0xa8); }
+
+    DEF_BIT(0, valid_clear);
+};
+
 class TempMonCtl0 : public hwreg::RegisterBase<TempMonCtl0, uint32_t> {
 public:
     static auto Get() { return hwreg::RegisterAddr<TempMonCtl0>(0x00); }
@@ -218,6 +277,30 @@ public:
 
 private:
     static constexpr uint32_t kVtsOffset = 3350;
+};
+
+// The following classes represent registers on the MT6392 PMIC.
+class VprocCon10 : public hwreg::RegisterBase<VprocCon10, uint16_t> {
+private:
+    static constexpr uint16_t kMaxVoltageStep = 0x7f;
+    static constexpr uint32_t kVoltageStepUv = 6250;
+
+public:
+    static constexpr uint32_t kMinVoltageUv = 700000;
+    static constexpr uint32_t kMaxVoltageUv = kMinVoltageUv + (kVoltageStepUv * kMaxVoltageStep);
+
+    static auto Get() { return hwreg::RegisterAddr<VprocCon10>(0x110); }
+
+    uint32_t voltage() const {
+        return (voltage_step() * kVoltageStepUv) + kMinVoltageUv;
+    }
+
+    VprocCon10& set_voltage(uint32_t volt_uv) {
+        set_voltage_step(static_cast<uint16_t>((volt_uv - kMinVoltageUv) / kVoltageStepUv));
+        return *this;
+    }
+
+    DEF_FIELD(6, 0, voltage_step);
 };
 
 }  // namespace thermal
