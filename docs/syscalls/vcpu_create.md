@@ -32,17 +32,17 @@ N.B. VCPU is an abbreviation of virtual CPU.
 
 The following rights will be set on the handle *out* by default:
 
-**ZX_RIGHT_DUPLICATE** — *out* may be duplicated.
+**ZX_RIGHT_DUPLICATE** &mdash; *out* may be duplicated.
 
-**ZX_RIGHT_TRANSFER** — *out* may be transferred over a channel.
+**ZX_RIGHT_TRANSFER** &mdash; *out* may be transferred over a channel.
 
-**ZX_RIGHT_EXECUTE** — *out* may have its execution resumed (or begun)
+**ZX_RIGHT_EXECUTE** &mdash; *out* may have its execution resumed (or begun)
 
-**ZX_RIGHT_SIGNAL** — *out* may be interrupted
+**ZX_RIGHT_SIGNAL** &mdash; *out* may be interrupted
 
-**ZX_RIGHT_READ** — *out* may have its state read
+**ZX_RIGHT_READ** &mdash; *out* may have its state read
 
-**ZX_RIGHT_WRITE** — *out* may have its state written
+**ZX_RIGHT_WRITE** &mdash; may have its state written
 
 ## RIGHTS
 

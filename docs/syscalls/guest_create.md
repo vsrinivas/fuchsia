@@ -31,13 +31,13 @@ physical memory.
 
 The following rights will be set on the handle *guest_handle* by default:
 
-**ZX_RIGHT_TRANSFER** — *guest_handle* may be transferred over a channel.
+**ZX_RIGHT_TRANSFER** &mdash; *guest_handle* may be transferred over a channel.
 
-**ZX_RIGHT_DUPLICATE** — *guest_handle* may be duplicated.
+**ZX_RIGHT_DUPLICATE** &mdash; *guest_handle* may be duplicated.
 
-**ZX_RIGHT_WRITE** — A trap to be may be set using **guest_set_trap**().
+**ZX_RIGHT_WRITE** &mdash; A trap to be may be set using **guest_set_trap**().
 
-**ZX_RIGHT_MANAGE_PROCESS** — A VCPU may be created using **vcpu_create**().
+**ZX_RIGHT_MANAGE_PROCESS** &mdash; A VCPU may be created using **vcpu_create**().
 
 See [vmar_create](vmar_create.md) for the set of rights applied to
 *vmar_handle*.
