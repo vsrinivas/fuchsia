@@ -65,8 +65,7 @@ const Elf64_Shdr* ElfLib::GetSectionHeader(size_t section) {
   return &sections_[section];
 }
 
-template <typename T>
-const std::vector<T>* ElfLib::GetSectionData(size_t section) {
+const std::vector<uint8_t>* ElfLib::GetSectionData(size_t section) {
   const auto& iter = section_data_.find(section);
   if (iter != section_data_.end()) {
     return &iter->second;
@@ -78,8 +77,8 @@ const std::vector<T>* ElfLib::GetSectionData(size_t section) {
     return nullptr;
   }
 
-  size_t count = header->sh_size / sizeof(T);
-  std::vector<T> data;
+  size_t count = header->sh_size;
+  std::vector<uint8_t> data;
   data.resize(count);
 
   if (!GetData(header->sh_offset, count, &data)) {
@@ -94,7 +93,7 @@ const std::vector<T>* ElfLib::GetSectionData(size_t section) {
 bool ElfLib::GetSectionOffsetFromName(const std::string& name, size_t* out) {
   if (section_names_.size() == 0) {
     const std::vector<uint8_t>* section_name_data =
-        GetSectionData<uint8_t>(header_.e_shstrndx);
+        GetSectionData(header_.e_shstrndx);
 
     if (!section_name_data) {
       return false;
@@ -140,19 +139,14 @@ const Elf64_Shdr* ElfLib::GetSectionHeader(const std::string& name) {
   return GetSectionHeader(off);
 }
 
-template <typename T>
-const std::vector<T>* ElfLib::GetSectionData(const std::string& name) {
+const std::vector<uint8_t>* ElfLib::GetSectionData(const std::string& name) {
   size_t off;
 
   if (!GetSectionOffsetFromName(name, &off)) {
     return nullptr;
   }
 
-  return GetSectionData<T>(off);
+  return GetSectionData(off);
 }
-
-// TODO: Move the template stuff to the header so we don't need this
-template const std::vector<uint8_t>* ElfLib::GetSectionData(
-  const std::string& name);
 
 }  // namespace elflib

@@ -95,7 +95,7 @@ TEST(ElfLib, GetSection) {
 
   ASSERT_NE(elf.get(), nullptr);
 
-  auto data = elf->GetSectionData<uint8_t>(".stuff");
+  auto data = elf->GetSectionData(".stuff");
   const uint8_t* expected_content =
     reinterpret_cast<const uint8_t*>("This is a test.");
   auto test = std::vector<uint8_t>(expected_content, expected_content + 15);

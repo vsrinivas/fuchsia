@@ -33,9 +33,9 @@ class ElfLib {
 
   virtual ~ElfLib();
 
-  // Get the header for a section by its name.
-  template <typename T>
-  const std::vector<T>* GetSectionData(const std::string& name);
+  // Get the contents of a section by its name. Return nullptr if there is no
+  // section by that name.
+  const std::vector<uint8_t>* GetSectionData(const std::string& name);
 
   // Create a new ElfLib object.
   static std::unique_ptr<ElfLib> Create(
@@ -50,17 +50,19 @@ class ElfLib {
   template <typename T>
   bool GetData(uint64_t offset, size_t count, std::vector<T>* out);
 
-  // Get the header for a section by its index.
+  // Get the header for a section by its index. Return nullptr if the index is
+  // invalid.
   const Elf64_Shdr* GetSectionHeader(size_t section);
 
-  // Get the contents of a section by its index.
-  template <typename T>
-  const std::vector<T>* GetSectionData(size_t section);
+  // Get the contents of a section by its index. Return nullptr if the index is
+  // invalid.
+  const std::vector<uint8_t>* GetSectionData(size_t section);
 
   // Get the section offset from the name. Returns true unless a lookup failed.
   bool GetSectionOffsetFromName(const std::string& name, size_t* out);
 
-  // Get the header for a section by its name.
+  // Get the header for a section by its name. Return nullptr if there is no
+  // section by that name.
   const Elf64_Shdr* GetSectionHeader(const std::string& name);
 
   std::unique_ptr<MemoryAccessor> memory_;
