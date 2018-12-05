@@ -173,6 +173,25 @@ struct Context {
                   static_cast<uint16_t>(wlan_mlme::ReasonCode::LEAVING_NETWORK_DISASSOC));
     }
 
+    void AssertAuthFrame(fbl::unique_ptr<Packet> pkt) {
+        auto frame = TypeCheckWlanFrame<MgmtFrameView<Authentication>>(pkt.get());
+        EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, client_addr.byte, 6), 0);
+        EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
+        EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
+        EXPECT_EQ(frame.body()->auth_algorithm_number, AuthAlgorithm::kOpenSystem);
+        EXPECT_EQ(frame.body()->auth_txn_seq_number, 2);
+        EXPECT_EQ(frame.body()->status_code, status_code::kSuccess);
+    }
+
+    void AssertAssocFrame(fbl::unique_ptr<Packet> pkt) {
+        auto frame = TypeCheckWlanFrame<MgmtFrameView<AssociationResponse>>(pkt.get());
+        EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, client_addr.byte, 6), 0);
+        EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
+        EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
+        EXPECT_EQ(frame.body()->status_code, status_code::kSuccess);
+        EXPECT_EQ(frame.body()->aid, kAid);
+    }
+
     struct DataFrameAssert {
         unsigned char protected_frame = 0;
         unsigned char more_data = 0;
@@ -246,17 +265,10 @@ TEST_F(ApInfraBssTest, Authenticate_Success) {
     // Simulate SME sending MLME-AUTHENTICATE.response msg with a success code
     ctx.bss->HandleMlmeMsg(
         CreateAuthResponse(ctx.client_addr, wlan_mlme::AuthenticateResultCodes::SUCCESS));
-    ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
-    fbl::unique_ptr<Packet> pkt = std::move(*device.wlan_queue.begin());
-    auto frame = ctx.TypeCheckWlanFrame<MgmtFrameView<Authentication>>(pkt.get());
 
     // Verify authentication response frame for the client
-    EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, ctx.client_addr.byte, 6), 0);
-    EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
-    EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
-    EXPECT_EQ(frame.body()->auth_algorithm_number, AuthAlgorithm::kOpenSystem);
-    EXPECT_EQ(frame.body()->auth_txn_seq_number, 2);
-    EXPECT_EQ(frame.body()->status_code, status_code::kSuccess);
+    ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
+    ctx.AssertAuthFrame(std::move(*device.wlan_queue.begin()));
 }
 
 TEST_F(ApInfraBssTest, Authenticate_SmeRefuses) {
@@ -307,6 +319,30 @@ TEST_F(ApInfraBssTest, Authenticate_Timeout) {
     ctx.AssertAuthInd(std::move(auth_inds[0]));
 }
 
+TEST_F(ApInfraBssTest, ReauthenticateWhileAuthenticated) {
+    ctx.StartAp();
+    ctx.AuthenticateClient();
+
+    // Send authentication request frame
+    ctx.SendClientAuthReqFrame();
+
+    // Verify that an Authentication.indication msg is sent out (to SME)
+    ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
+    ASSERT_TRUE(device.wlan_queue.empty());
+    auto auth_inds = device.GetServiceMsgs<wlan_mlme::AuthenticateIndication>(
+        fuchsia_wlan_mlme_MLMEAuthenticateIndOrdinal);
+    ASSERT_EQ(auth_inds.size(), 1ULL);
+    ctx.AssertAuthInd(std::move(auth_inds[0]));
+
+    // Simulate SME sending MLME-AUTHENTICATE.response msg with a success code
+    ctx.bss->HandleMlmeMsg(
+        CreateAuthResponse(ctx.client_addr, wlan_mlme::AuthenticateResultCodes::SUCCESS));
+
+    // Verify authentication response frame for the client
+    ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
+    ctx.AssertAuthFrame(std::move(*device.wlan_queue.begin()));
+}
+
 TEST_F(ApInfraBssTest, DeauthenticateWhileAuthenticated) {
     ctx.StartAp();
     ctx.AuthenticateClient();
@@ -348,13 +384,7 @@ TEST_F(ApInfraBssTest, Associate_Success) {
     // Verify association response frame for the client
     // WLAN queue should have AssociateResponse and BlockAck request
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(2));
-    auto pkt = std::move(*device.wlan_queue.begin());
-    auto frame = ctx.TypeCheckWlanFrame<MgmtFrameView<AssociationResponse>>(pkt.get());
-    EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, ctx.client_addr.byte, 6), 0);
-    EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
-    EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
-    EXPECT_EQ(frame.body()->status_code, status_code::kSuccess);
-    EXPECT_EQ(frame.body()->aid, kAid);
+    ctx.AssertAssocFrame(std::move(*device.wlan_queue.begin()));
 
     device.wlan_queue.clear();
     ctx.SendEthFrame(kTestPayload);
@@ -534,6 +564,62 @@ TEST_F(ApInfraBssTest, Associate_EmptyRsn) {
     ctx.AssertAssocInd(std::move(assoc_inds[0]), false);
 }
 
+TEST_F(ApInfraBssTest, ReauthenticateWhileAssociated) {
+    ctx.StartAp();
+    ctx.AuthenticateAndAssociateClient(kAid);
+
+    // Send authentication request frame
+    ctx.SendClientAuthReqFrame();
+
+    // Verify that an Authentication.indication msg is sent out (to SME)
+    ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
+    ASSERT_TRUE(device.wlan_queue.empty());
+    auto auth_inds = device.GetServiceMsgs<wlan_mlme::AuthenticateIndication>(
+        fuchsia_wlan_mlme_MLMEAuthenticateIndOrdinal);
+    ASSERT_EQ(auth_inds.size(), 1ULL);
+    ctx.AssertAuthInd(std::move(auth_inds[0]));
+
+    // Simulate SME sending MLME-AUTHENTICATE.response msg with a success code
+    ctx.bss->HandleMlmeMsg(
+        CreateAuthResponse(ctx.client_addr, wlan_mlme::AuthenticateResultCodes::SUCCESS));
+
+    // Verify authentication response frame for the client
+    ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
+    ctx.AssertAuthFrame(std::move(*device.wlan_queue.begin()));
+}
+
+TEST_F(ApInfraBssTest, ReassociationFlowWhileAssociated) {
+    ctx.StartAp();
+    ctx.AuthenticateAndAssociateClient(kAid);
+
+    // Reauthenticate
+    ctx.AuthenticateClient();
+
+    // Send association request frame
+    ctx.SendClientAssocReqFrame();
+
+    // Verify that an Association.indication msg is sent out (to SME)
+    ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
+    ASSERT_TRUE(device.wlan_queue.empty());
+    auto assoc_inds = device.GetServiceMsgs<wlan_mlme::AssociateIndication>(
+        fuchsia_wlan_mlme_MLMEAssociateIndOrdinal);
+    ASSERT_EQ(assoc_inds.size(), 1ULL);
+    ctx.AssertAssocInd(std::move(assoc_inds[0]));
+
+    // Simulate SME sending MLME-ASSOCIATE.response msg with a success code
+    ctx.bss->HandleMlmeMsg(
+        CreateAssocResponse(ctx.client_addr, wlan_mlme::AssociateResultCodes::SUCCESS, kAid));
+
+    // Verify association response frame for the client
+    // WLAN queue should have AssociateResponse and BlockAck request
+    ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(2));
+    ctx.AssertAssocFrame(std::move(*device.wlan_queue.begin()));
+
+    device.wlan_queue.clear();
+    ctx.SendEthFrame(kTestPayload);
+    ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
+}
+
 TEST_F(ApInfraBssTest, DeauthenticateWhileAssociated) {
     ctx.StartAp();
     ctx.AuthenticateAndAssociateClient(kAid);
@@ -709,7 +795,7 @@ TEST_F(ApInfraBssTest, PowerSaving_IgnoredBeforeControlledPortOpens) {
     // not change client's status to dozing
     std::vector<uint8_t> payload2 = {'m', 's', 'g', '2'};
     ctx.SendEthFrame(kTestPayload);
-    EXPECT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
+    ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     auto pkt = std::move(*device.wlan_queue.begin());
     ctx.AssertDataFrameSentToClient(std::move(pkt), kTestPayload);
 }

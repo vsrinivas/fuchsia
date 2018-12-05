@@ -38,13 +38,28 @@ void DeauthenticatingState::OnEnter() {
     debugfn();
     service::SendDeauthIndication(client_->device(), client_->addr(), reason_code_);
     if (send_deauth_frame_) { client_->SendDeauthentication(reason_code_); }
-    MoveToState<DeauthenticatedState>();
-    client_->ReportDeauthentication();
+    MoveToState<DeauthenticatedState>(DeauthenticatedState::MoveReason::EXPLICIT_DEAUTH);
 }
 
 // DeauthenticatedState implementation.
 
-DeauthenticatedState::DeauthenticatedState(RemoteClient* client) : BaseState(client) {}
+DeauthenticatedState::DeauthenticatedState(RemoteClient* client,
+                                           DeauthenticatedState::MoveReason move_reason)
+    : BaseState(client), move_reason_(move_reason) {}
+
+void DeauthenticatedState::OnEnter() {
+    switch (move_reason_) {
+    case DeauthenticatedState::MoveReason::INIT:
+    case DeauthenticatedState::MoveReason::REAUTH:
+        break;  // nothing to do
+    case DeauthenticatedState::MoveReason::EXPLICIT_DEAUTH:
+        client_->ReportDeauthentication();
+        break;
+    case DeauthenticatedState::MoveReason::FAILED_AUTH:
+        client_->ReportFailedAuth();
+        break;
+    }
+}
 
 void DeauthenticatedState::HandleAnyMgmtFrame(MgmtFrame<>&& frame) {
     if (auto auth_frame = frame.View().CheckBodyType<Authentication>().CheckLength()) {
@@ -96,8 +111,7 @@ void AuthenticatingState::HandleTimeout(zx::time now) {
     if (auth_timeout_.Triggered(now)) {
         auth_timeout_.Cancel();
         warnf("[client] [%s] timed out authenticating\n", client_->addr().ToString().c_str());
-        MoveToState<DeauthenticatedState>();
-        client_->ReportFailedAuth();
+        MoveToState<DeauthenticatedState>(DeauthenticatedState::MoveReason::FAILED_AUTH);
     }
 }
 
@@ -124,8 +138,7 @@ zx_status_t AuthenticatingState::FinalizeAuthenticationAttempt(
     if (auth_success && status == ZX_OK) {
         MoveToState<AuthenticatedState>();
     } else {
-        MoveToState<DeauthenticatedState>();
-        client_->ReportFailedAuth();
+        MoveToState<DeauthenticatedState>(DeauthenticatedState::MoveReason::FAILED_AUTH);
     }
     return status;
 }
@@ -168,8 +181,11 @@ void AuthenticatedState::HandleAuthentication(MgmtFrame<Authentication>&& frame)
         "[client] [%s] received Authentication request while being "
         "authenticated\n",
         client_->addr().ToString().c_str());
-    MoveToState<DeauthenticatedState>();
-    client_->HandleAnyMgmtFrame(MgmtFrame<>(frame.Take()));
+    // After the `MovedToState` call, the memory location for variable `client_` is no longer valid
+    // because current state is destroyed. Thus, save pointer on the stack first.
+    auto saved_client = client_;
+    MoveToState<DeauthenticatedState>(DeauthenticatedState::MoveReason::REAUTH);
+    saved_client->HandleAnyMgmtFrame(MgmtFrame<>(frame.Take()));
 }
 
 void AuthenticatedState::HandleDeauthentication(MgmtFrame<Deauthentication>&& frame) {
@@ -314,10 +330,11 @@ void AssociatedState::HandleAnyCtrlFrame(CtrlFrame<>&& frame) {
 void AssociatedState::HandleAuthentication(MgmtFrame<Authentication>&& frame) {
     debugbss("[client] [%s] received Authentication request while being associated\n",
              client_->addr().ToString().c_str());
-    // Client believes it is not yet authenticated. Thus, there is no need to send
-    // an explicit Deauthentication.
-    MoveToState<DeauthenticatedState>();
-    client_->HandleAnyMgmtFrame(MgmtFrame<>(frame.Take()));
+    // After the `MovedToState` call, the memory location for variable `client_` is no longer valid
+    // because current state is destroyed. Thus, save pointer on the stack first.
+    auto saved_client = client_;
+    MoveToState<DeauthenticatedState>(DeauthenticatedState::MoveReason::REAUTH);
+    saved_client->HandleAnyMgmtFrame(MgmtFrame<>(frame.Take()));
 }
 
 void AssociatedState::HandleAssociationRequest(MgmtFrame<AssociationRequest>&& frame) {
@@ -605,8 +622,7 @@ zx_status_t AssociatedState::HandleMlmeDeauthReq(
     const MlmeMsg<wlan_mlme::DeauthenticateRequest>& req) {
     client_->SendDeauthentication(req.body()->reason_code);
     service::SendDeauthConfirm(client_->device(), client_->addr());
-    MoveToState<DeauthenticatedState>();
-    client_->ReportDeauthentication();
+    MoveToState<DeauthenticatedState>(DeauthenticatedState::MoveReason::EXPLICIT_DEAUTH);
     return ZX_OK;
 }
 
@@ -698,7 +714,8 @@ RemoteClient::RemoteClient(DeviceInterface* device, TimerManager&& timer_mgr, Bs
     ZX_DEBUG_ASSERT(bss_ != nullptr);
     debugbss("[client] [%s] spawned\n", addr_.ToString().c_str());
 
-    MoveToState(fbl::make_unique<DeauthenticatedState>(this));
+    MoveToState(
+        fbl::make_unique<DeauthenticatedState>(this, DeauthenticatedState::MoveReason::INIT));
 }
 
 RemoteClient::~RemoteClient() {

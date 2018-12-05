@@ -22,7 +22,7 @@ namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
 InfraBss::InfraBss(DeviceInterface* device, fbl::unique_ptr<BeaconSender> bcn_sender,
                    const common::MacAddr& bssid)
-    : bssid_(bssid), device_(device), bcn_sender_(std::move(bcn_sender)) {
+    : bssid_(bssid), device_(device), bcn_sender_(std::move(bcn_sender)), started_at_(0) {
     ZX_DEBUG_ASSERT(bcn_sender_ != nullptr);
 }
 

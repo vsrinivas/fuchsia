@@ -122,7 +122,22 @@ class DeauthenticatingState : public BaseState {
 
 class DeauthenticatedState : public BaseState {
    public:
-    DeauthenticatedState(RemoteClient* client);
+    enum class MoveReason {
+        // DeauthenticatedState is created when RemoteClient is first initialized
+        INIT,
+        // RemoteClient moved to DeauthenticatedState due to a deauthenticate request, whether from
+        // the user or due to the AP deciding that the client is inactive
+        EXPLICIT_DEAUTH,
+        // RemoteClient moved to DeauthenticatedState due to a failed authentication attempt
+        FAILED_AUTH,
+        // RemoteClient received an authentication frame while already authenticated or associated,
+        // and moved to DeauthenticatedState to re-authenticate again
+        REAUTH,
+    };
+
+    DeauthenticatedState(RemoteClient* client, DeauthenticatedState::MoveReason move_reason);
+
+    void OnEnter() override;
 
     inline const char* name() const override { return kName; }
 
@@ -131,6 +146,9 @@ class DeauthenticatedState : public BaseState {
 
    private:
     static constexpr const char* kName = "Deauthenticated";
+
+    DeauthenticatedState::MoveReason move_reason_;
+    std::optional<MgmtFrame<Authentication>> reauth_frame_;
 };
 
 class AuthenticatingState : public BaseState {
