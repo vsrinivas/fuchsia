@@ -16,6 +16,8 @@ struct SupportedImageProperties {
   std::vector<VkSurfaceFormatKHR> formats;
 };
 
+// An abstract surface that must implement AddImage, RemoveImage, and PresentImage.
+// These methods are defined as per the ImagePipe fidl interface (see image_pipe.fidl).
 class ImagePipeSurface {
  public:
   ImagePipeSurface() {

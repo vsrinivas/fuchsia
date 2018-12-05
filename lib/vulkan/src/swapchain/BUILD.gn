@@ -17,6 +17,7 @@ source_set("surface_header") {
 loadable_module("swapchain") {
   output_name = "libVkLayer_image_pipe_swapchain"
   sources = [
+    "image_pipe_surface_async.cc",
     "image_pipe_surface_async.h",
     "image_pipe_swapchain_layer.cc",
   ]
@@ -38,6 +39,7 @@ loadable_module("fb") {
   output_name = "libVkLayer_image_pipe_swapchain_fb"
   defines = [ "USE_IMAGEPIPE_SURFACE_FB" ]
   sources = [
+    "image_pipe_surface_fb.cc",
     "image_pipe_surface_fb.h",
     "image_pipe_swapchain_layer.cc",
   ]
