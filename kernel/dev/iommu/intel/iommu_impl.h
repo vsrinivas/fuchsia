@@ -28,7 +28,7 @@ class DeviceContext;
 
 class IommuImpl final : public Iommu {
 public:
-    static zx_status_t Create(fbl::unique_ptr<const uint8_t[]> desc, size_t desc_len,
+    static zx_status_t Create(ktl::unique_ptr<const uint8_t[]> desc, size_t desc_len,
                               fbl::RefPtr<Iommu>* out);
 
     bool IsValidBusTxnId(uint64_t bus_txn_id) const final;
@@ -72,7 +72,7 @@ public:
 
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(IommuImpl);
-    IommuImpl(volatile void* register_base, fbl::unique_ptr<const uint8_t[]> desc,
+    IommuImpl(volatile void* register_base, ktl::unique_ptr<const uint8_t[]> desc,
               size_t desc_len);
 
     static ds::Bdf decode_bus_txn_id(uint64_t bus_txn_id) {
@@ -83,7 +83,7 @@ private:
         return bdf;
     }
 
-    static zx_status_t ValidateIommuDesc(const fbl::unique_ptr<const uint8_t[]>& desc,
+    static zx_status_t ValidateIommuDesc(const ktl::unique_ptr<const uint8_t[]>& desc,
                                          size_t desc_len);
 
     // Set up initial root structures and enable translation
@@ -124,7 +124,7 @@ private:
     fbl::Mutex lock_;
 
     // Descriptor of this hardware unit
-    fbl::unique_ptr<const uint8_t[]> desc_;
+    ktl::unique_ptr<const uint8_t[]> desc_;
     size_t desc_len_;
 
     // Location of the memory-mapped hardware register bank.
@@ -136,7 +136,7 @@ private:
     // In-memory root table
     IommuPage root_table_page_ TA_GUARDED(lock_);
     // List of allocated context tables
-    fbl::DoublyLinkedList<fbl::unique_ptr<ContextTableState>> context_tables_ TA_GUARDED(lock_);
+    fbl::DoublyLinkedList<ktl::unique_ptr<ContextTableState>> context_tables_ TA_GUARDED(lock_);
 
     DomainAllocator domain_allocator_ TA_GUARDED(lock_);
 

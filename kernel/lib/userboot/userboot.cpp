@@ -144,7 +144,7 @@ static zx_status_t get_resource_handle(Handle** ptr) {
 // it, returning the handle to the other side.
 static zx_status_t make_bootstrap_channel(
     fbl::RefPtr<ProcessDispatcher> process,
-    fbl::unique_ptr<MessagePacket> msg,
+    ktl::unique_ptr<MessagePacket> msg,
     zx_handle_t* out) {
     HandleOwner user_channel_handle;
     fbl::RefPtr<ChannelDispatcher> kernel_channel;
@@ -194,7 +194,7 @@ struct bootstrap_message {
     char cmdline[CMDLINE_MAX];
 };
 
-static fbl::unique_ptr<MessagePacket> prepare_bootstrap_message() {
+static ktl::unique_ptr<MessagePacket> prepare_bootstrap_message() {
     const size_t data_size =
         offsetof(struct bootstrap_message, cmdline) +
         __kernel_cmdline_size;
@@ -253,7 +253,7 @@ static fbl::unique_ptr<MessagePacket> prepare_bootstrap_message() {
     }
     memcpy(msg->cmdline, __kernel_cmdline, __kernel_cmdline_size);
 
-    fbl::unique_ptr<MessagePacket> packet;
+    ktl::unique_ptr<MessagePacket> packet;
     uint32_t num_handles = BOOTSTRAP_HANDLES;
     zx_status_t status =
         MessagePacket::Create(msg, static_cast<uint32_t>(data_size), num_handles, &packet);
@@ -310,7 +310,7 @@ static zx_status_t attempt_userboot() {
     // Prepare the bootstrap message packet.  This puts its data (the
     // kernel command line) in place, and allocates space for its handles.
     // We'll fill in the handles as we create things.
-    fbl::unique_ptr<MessagePacket> msg = prepare_bootstrap_message();
+    ktl::unique_ptr<MessagePacket> msg = prepare_bootstrap_message();
     if (!msg)
         return ZX_ERR_NO_MEMORY;
 

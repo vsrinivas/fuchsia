@@ -8,6 +8,7 @@
 #pragma once
 
 #include <fbl/intrusive_wavl_tree.h>
+#include <ktl/unique_ptr.h>
 #include <sys/types.h>
 #include <zircon/types.h>
 
@@ -18,7 +19,7 @@ struct PciEcamRegion {
     uint8_t bus_end;   // Inclusive ID of the last bus controlled by this region.
 };
 
-class MappedEcamRegion : public fbl::WAVLTreeContainable<fbl::unique_ptr<MappedEcamRegion>> {
+class MappedEcamRegion : public fbl::WAVLTreeContainable<ktl::unique_ptr<MappedEcamRegion>> {
 public:
     explicit MappedEcamRegion(const PciEcamRegion& ecam)
         : ecam_(ecam) {}

@@ -43,8 +43,8 @@ zx_status_t SocketDispatcher::Create(uint32_t flags,
     if (flags & ZX_SOCKET_HAS_ACCEPT)
         starting_signals |= ZX_SOCKET_SHARE;
 
-    fbl::unique_ptr<ControlMsg> control0;
-    fbl::unique_ptr<ControlMsg> control1;
+    ktl::unique_ptr<ControlMsg> control0;
+    ktl::unique_ptr<ControlMsg> control1;
 
     // TODO: use mbufs to avoid pinning control buffer memory.
     if (flags & ZX_SOCKET_HAS_CONTROL) {
@@ -85,7 +85,7 @@ zx_status_t SocketDispatcher::Create(uint32_t flags,
 
 SocketDispatcher::SocketDispatcher(fbl::RefPtr<PeerHolder<SocketDispatcher>> holder,
                                    zx_signals_t starting_signals, uint32_t flags,
-                                   fbl::unique_ptr<ControlMsg> control_msg)
+                                   ktl::unique_ptr<ControlMsg> control_msg)
     : PeeredDispatcher(ktl::move(holder), starting_signals),
       flags_(flags),
       control_msg_(ktl::move(control_msg)),

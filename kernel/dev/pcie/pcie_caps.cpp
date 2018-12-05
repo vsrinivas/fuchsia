@@ -330,7 +330,7 @@ zx_status_t PcieDevice::ParseStdCapabilitiesLocked() {
             return ZX_ERR_NO_MEMORY;
         }
 
-        caps_.detected.push_front(fbl::unique_ptr<PciStdCapability>(cap));
+        caps_.detected.push_front(ktl::unique_ptr<PciStdCapability>(cap));
         cap_offset  = cfg_->Read(PciReg8(static_cast<uint16_t>(cap_offset + 0x1))) & 0xFC;
         caps_found++;
     }

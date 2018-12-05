@@ -29,9 +29,9 @@ zx_status_t GuestPhysicalAddressSpace::Create(
 #if ARCH_ARM64
                                               uint8_t vmid,
 #endif
-                                              fbl::unique_ptr<GuestPhysicalAddressSpace>* _gpas) {
+                                              ktl::unique_ptr<GuestPhysicalAddressSpace>* _gpas) {
     fbl::AllocChecker ac;
-    auto gpas = fbl::make_unique_checked<GuestPhysicalAddressSpace>(&ac);
+    auto gpas = ktl::make_unique<GuestPhysicalAddressSpace>(&ac);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }

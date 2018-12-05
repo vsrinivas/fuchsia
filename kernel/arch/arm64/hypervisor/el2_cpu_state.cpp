@@ -19,7 +19,7 @@
 
 static fbl::Mutex guest_mutex;
 static size_t num_guests TA_GUARDED(guest_mutex) = 0;
-static fbl::unique_ptr<El2CpuState> el2_cpu_state TA_GUARDED(guest_mutex);
+static ktl::unique_ptr<El2CpuState> el2_cpu_state TA_GUARDED(guest_mutex);
 
 zx_status_t El2TranslationTable::Init() {
     zx_status_t status = l0_page_.Alloc(0);
@@ -83,9 +83,9 @@ static void el2_off_task(void* arg) {
 }
 
 // static
-zx_status_t El2CpuState::Create(fbl::unique_ptr<El2CpuState>* out) {
+zx_status_t El2CpuState::Create(ktl::unique_ptr<El2CpuState>* out) {
     fbl::AllocChecker ac;
-    fbl::unique_ptr<El2CpuState> cpu_state(new (&ac) El2CpuState);
+    ktl::unique_ptr<El2CpuState> cpu_state(new (&ac) El2CpuState);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }

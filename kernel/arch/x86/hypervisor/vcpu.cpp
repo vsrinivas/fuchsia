@@ -617,7 +617,7 @@ static zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entr
 }
 
 // static
-zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, fbl::unique_ptr<Vcpu>* out) {
+zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* out) {
     hypervisor::GuestPhysicalAddressSpace* gpas = guest->AddressSpace();
     if (entry >= gpas->size())
         return ZX_ERR_INVALID_ARGS;
@@ -645,7 +645,7 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, fbl::unique_ptr<Vcpu>* 
     thread_t* thread = hypervisor::pin_thread(vpid);
 
     fbl::AllocChecker ac;
-    fbl::unique_ptr<Vcpu> vcpu(new (&ac) Vcpu(guest, vpid, thread));
+    ktl::unique_ptr<Vcpu> vcpu(new (&ac) Vcpu(guest, vpid, thread));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 

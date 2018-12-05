@@ -19,7 +19,7 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_counted_upgradeable.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
+#include <ktl/unique_ptr.h>
 #include <ktl/move.h>
 
 #include <kernel/lockdep.h>

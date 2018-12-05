@@ -7,7 +7,7 @@
 #include "tests.h"
 
 #include <fbl/alloc_checker.h>
-#include <fbl/unique_ptr.h>
+#include <ktl/unique_ptr.h>
 #include <object/resource_dispatcher.h>
 #include <lib/unittest/unittest.h>
 

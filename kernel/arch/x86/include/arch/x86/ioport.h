@@ -7,7 +7,7 @@
 #pragma once
 
 #include <kernel/spinlock.h>
-#include <fbl/unique_ptr.h>
+#include <ktl/unique_ptr.h>
 #include <sys/types.h>
 
 #include <bitmap/rle-bitmap.h>
@@ -28,6 +28,6 @@ private:
     friend void x86_set_tss_io_bitmap(IoBitmap& bitmap);
     friend void x86_clear_tss_io_bitmap(IoBitmap& bitmap);
 
-    fbl::unique_ptr<bitmap::RleBitmap> bitmap_;
+    ktl::unique_ptr<bitmap::RleBitmap> bitmap_;
     SpinLock lock_;
 };

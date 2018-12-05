@@ -41,7 +41,7 @@ public:
 private:
     FifoDispatcher(fbl::RefPtr<PeerHolder<FifoDispatcher>> holder,
                    uint32_t options, uint32_t elem_count, uint32_t elem_size,
-                   fbl::unique_ptr<uint8_t[]> data);
+                   ktl::unique_ptr<uint8_t[]> data);
     void Init(fbl::RefPtr<FifoDispatcher> other);
     zx_status_t WriteSelfLocked(size_t elem_size, user_in_ptr<const uint8_t> ptr, size_t count,
                                 size_t* actual) TA_REQ(get_lock());
@@ -54,7 +54,7 @@ private:
 
     uint32_t head_ TA_GUARDED(get_lock());
     uint32_t tail_ TA_GUARDED(get_lock());
-    fbl::unique_ptr<uint8_t[]> data_ TA_GUARDED(get_lock());
+    ktl::unique_ptr<uint8_t[]> data_ TA_GUARDED(get_lock());
 
     static constexpr uint32_t kMaxSizeBytes = PAGE_SIZE;
 };

@@ -11,18 +11,29 @@
 #include <zircon/types.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
+
+#ifdef _KERNEL
+#include <ktl/unique_ptr.h>
+#else
 #include <fbl/unique_ptr.h>
+#endif
 
 namespace bitmap {
 
 struct RleBitmapElement;
+
+#ifdef _KERNEL
+using RleBitmapElementPtr = ktl::unique_ptr<RleBitmapElement>;
+#else
+using RleBitmapElementPtr = fbl::unique_ptr<RleBitmapElement>;
+#endif
 
 // A run-length encoded bitmap.
 class RleBitmap final : public Bitmap {
 private:
     // Private forward-declaration to share the type between the iterator type
     // and the internal list.
-    using ListType = fbl::DoublyLinkedList<fbl::unique_ptr<RleBitmapElement>>;
+    using ListType = fbl::DoublyLinkedList<RleBitmapElementPtr>;
 
 public:
     using const_iterator = ListType::const_iterator;
@@ -106,7 +117,7 @@ private:
 };
 
 // Elements of the bitmap list
-struct RleBitmapElement : public fbl::DoublyLinkedListable<fbl::unique_ptr<RleBitmapElement>> {
+struct RleBitmapElement : public fbl::DoublyLinkedListable<RleBitmapElementPtr> {
     // The start of this run of 1-bits.
     size_t bitoff;
     // The number of 1-bits in this run.

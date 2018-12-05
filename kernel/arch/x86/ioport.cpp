@@ -20,7 +20,7 @@
 #include <zircon/types.h>
 
 #include <fbl/alloc_checker.h>
-#include <fbl/unique_ptr.h>
+#include <ktl/unique_ptr.h>
 #include <ktl/move.h>
 
 void x86_reset_tss_io_bitmap(void) {
@@ -105,7 +105,7 @@ int IoBitmap::SetIoBitmap(uint32_t port, uint32_t len, bool enable) {
     if ((port + len < port) || (port + len > IO_BITMAP_BITS))
         return ZX_ERR_INVALID_ARGS;
 
-    fbl::unique_ptr<bitmap::RleBitmap> optimistic_bitmap;
+    ktl::unique_ptr<bitmap::RleBitmap> optimistic_bitmap;
     if (!bitmap_) {
         // Optimistically allocate a bitmap structure if we don't have one, and
         // we'll see if we actually need this allocation later.  In the common
@@ -124,7 +124,7 @@ int IoBitmap::SetIoBitmap(uint32_t port, uint32_t len, bool enable) {
     // Optimistically allocate an element for the bitmap, in case we need one.
     {
         fbl::AllocChecker ac;
-        bitmap_freelist.push_back(fbl::unique_ptr<bitmap::RleBitmapElement>(new (&ac) bitmap::RleBitmapElement()));
+        bitmap_freelist.push_back(ktl::unique_ptr<bitmap::RleBitmapElement>(new (&ac) bitmap::RleBitmapElement()));
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }

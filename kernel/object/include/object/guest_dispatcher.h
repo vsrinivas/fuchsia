@@ -29,7 +29,7 @@ public:
 
 private:
     fbl::Canary<fbl::magic("GSTD")> canary_;
-    fbl::unique_ptr<Guest> guest_;
+    ktl::unique_ptr<Guest> guest_;
 
-    explicit GuestDispatcher(fbl::unique_ptr<Guest> guest);
+    explicit GuestDispatcher(ktl::unique_ptr<Guest> guest);
 };

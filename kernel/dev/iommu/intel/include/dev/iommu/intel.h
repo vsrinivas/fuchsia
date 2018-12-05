@@ -12,6 +12,6 @@
 
 class IntelIommu {
 public:
-    static zx_status_t Create(fbl::unique_ptr<const uint8_t[]> desc, size_t desc_len,
+    static zx_status_t Create(ktl::unique_ptr<const uint8_t[]> desc, size_t desc_len,
                               fbl::RefPtr<Iommu>* out);
 };

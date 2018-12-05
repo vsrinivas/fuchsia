@@ -8,7 +8,7 @@
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
-#include <fbl/unique_ptr.h>
+#include <ktl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <region-alloc/region-alloc.h>
 #include <vm/vm_object.h>
@@ -20,7 +20,7 @@ namespace intel_iommu {
 
 class IommuImpl;
 
-class DeviceContext : public fbl::DoublyLinkedListable<fbl::unique_ptr<DeviceContext>> {
+class DeviceContext : public fbl::DoublyLinkedListable<ktl::unique_ptr<DeviceContext>> {
 public:
     ~DeviceContext();
 
@@ -28,10 +28,10 @@ public:
     // to try to create a context for a BDF that already has one.
     static zx_status_t Create(ds::Bdf bdf, uint32_t domain_id, IommuImpl* parent,
                               volatile ds::ExtendedContextEntry* context_entry,
-                              fbl::unique_ptr<DeviceContext>* device);
+                              ktl::unique_ptr<DeviceContext>* device);
     static zx_status_t Create(ds::Bdf bdf, uint32_t domain_id, IommuImpl* parent,
                               volatile ds::ContextEntry* context_entry,
-                              fbl::unique_ptr<DeviceContext>* device);
+                              ktl::unique_ptr<DeviceContext>* device);
 
     // Check if this DeviceContext is for the given BDF
     bool is_bdf(ds::Bdf bdf) const {
@@ -102,7 +102,7 @@ private:
     // nodes were intrusive, we wouldn't need to have a resizable array for this
     // and we could have cheaper removal.  We can fix this up when it's a
     // problem though.
-    fbl::Vector<fbl::unique_ptr<const RegionAllocator::Region>> allocated_regions_;
+    fbl::Vector<ktl::unique_ptr<const RegionAllocator::Region>> allocated_regions_;
 
     const ds::Bdf bdf_;
     const bool extended_;

@@ -208,7 +208,7 @@ zx_status_t sys_iommu_create(zx_handle_t rsrc_handle, uint32_t type,
         // Copy the descriptor into the kernel and try to create the dispatcher
         // using it.
         fbl::AllocChecker ac;
-        fbl::unique_ptr<uint8_t[]> copied_desc(new (&ac) uint8_t[desc_len]);
+        ktl::unique_ptr<uint8_t[]> copied_desc(new (&ac) uint8_t[desc_len]);
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
@@ -216,7 +216,7 @@ zx_status_t sys_iommu_create(zx_handle_t rsrc_handle, uint32_t type,
             return status;
         }
         status = IommuDispatcher::Create(type,
-                                         fbl::unique_ptr<const uint8_t[]>(copied_desc.release()),
+                                         ktl::unique_ptr<const uint8_t[]>(copied_desc.release()),
                                          desc_len, &dispatcher, &rights);
         if (status != ZX_OK) {
             return status;

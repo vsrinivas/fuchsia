@@ -8,7 +8,7 @@
 
 #include <arch/arm64/el2_state.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
+#include <ktl/unique_ptr.h>
 #include <hypervisor/guest_physical_address_space.h>
 #include <hypervisor/id_allocator.h>
 #include <hypervisor/interrupt_tracker.h>
@@ -30,7 +30,7 @@ class PortDispatcher;
 
 class Guest {
 public:
-    static zx_status_t Create(fbl::unique_ptr<Guest>* out);
+    static zx_status_t Create(ktl::unique_ptr<Guest>* out);
     ~Guest();
     DISALLOW_COPY_ASSIGN_AND_MOVE(Guest);
 
@@ -45,7 +45,7 @@ public:
     zx_status_t FreeVpid(uint8_t vpid);
 
 private:
-    fbl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas_;
+    ktl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas_;
     hypervisor::TrapMap traps_;
     const uint8_t vmid_;
 
@@ -100,7 +100,7 @@ private:
 
 class Vcpu {
 public:
-    static zx_status_t Create(Guest* guest, zx_vaddr_t entry, fbl::unique_ptr<Vcpu>* out);
+    static zx_status_t Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* out);
     ~Vcpu();
     DISALLOW_COPY_ASSIGN_AND_MOVE(Vcpu);
 

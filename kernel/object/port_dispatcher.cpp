@@ -138,8 +138,8 @@ StateObserver::Flags PortObserver::OnCancelByKey(const Handle* handle, const voi
 void PortObserver::OnRemoved() {
     // If observer ends up being non-null, it is ourself, and thus our
     // responsibility to delete ourself.
-    fbl::unique_ptr<PortObserver> observer =
-        port_->MaybeReap(fbl::unique_ptr<PortObserver>(this), &packet_);
+    ktl::unique_ptr<PortObserver> observer =
+        port_->MaybeReap(ktl::unique_ptr<PortObserver>(this), &packet_);
 }
 
 StateObserver::Flags PortObserver::MaybeQueue(zx_signals_t new_state, uint64_t count) {
@@ -321,7 +321,7 @@ zx_status_t PortDispatcher::Dequeue(zx_time_t deadline, zx_port_packet_t* out_pa
 
 void PortDispatcher::FreePacket(PortPacket* port_packet) {
     // We need to move the observer pointer out, as it's potentially containing us.
-    fbl::unique_ptr<const PortObserver> observer = ktl::move(port_packet->observer);
+    ktl::unique_ptr<const PortObserver> observer = ktl::move(port_packet->observer);
 
     if (observer) {
         // Deleting the observer under |get_lock()| is fine because the
@@ -333,7 +333,7 @@ void PortDispatcher::FreePacket(PortPacket* port_packet) {
     }
 }
 
-fbl::unique_ptr<PortObserver> PortDispatcher::MaybeReap(fbl::unique_ptr<PortObserver> observer,
+ktl::unique_ptr<PortObserver> PortDispatcher::MaybeReap(ktl::unique_ptr<PortObserver> observer,
                                                         PortPacket* port_packet) {
     canary_.Assert();
 
@@ -409,7 +409,7 @@ bool PortDispatcher::CancelQueued(const void* handle, uint64_t key) {
         if ((it->handle == handle) && (it->key() == key)) {
             auto to_remove = it++;
             // Destroyed as we go around the loop.
-            fbl::unique_ptr<const PortObserver> observer =
+            ktl::unique_ptr<const PortObserver> observer =
                 ktl::move(packets_.erase(to_remove)->observer);
             --num_packets_;
             packet_removed = true;

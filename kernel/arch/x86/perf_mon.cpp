@@ -47,7 +47,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
+#include <ktl/unique_ptr.h>
 #include <kernel/align.h>
 #include <kernel/mp.h>
 #include <kernel/mutex.h>
@@ -287,7 +287,7 @@ struct MemoryControllerHubData {
 };
 
 struct PerfmonState {
-    static zx_status_t Create(unsigned n_cpus, fbl::unique_ptr<PerfmonState>* out_state);
+    static zx_status_t Create(unsigned n_cpus, ktl::unique_ptr<PerfmonState>* out_state);
     explicit PerfmonState(unsigned n_cpus);
     ~PerfmonState();
 
@@ -320,7 +320,7 @@ struct PerfmonState {
 
     // An array with one entry for each cpu.
     // TODO(dje): Ideally this would be something like
-    // fbl::unique_ptr<PerfmonCpuData[]> cpu_data;
+    // ktl::unique_ptr<PerfmonCpuData[]> cpu_data;
     // but that will need to wait for a "new" that handles aligned allocs.
     PerfmonCpuData* cpu_data = nullptr;
 
@@ -354,7 +354,7 @@ struct PerfmonState {
 
 static fbl::Mutex perfmon_lock;
 
-static fbl::unique_ptr<PerfmonState> perfmon_state TA_GUARDED(perfmon_lock);
+static ktl::unique_ptr<PerfmonState> perfmon_state TA_GUARDED(perfmon_lock);
 
 // This is accessed atomically as it is also accessed by the PMI handler.
 static int perfmon_active = false;
@@ -363,9 +363,9 @@ static inline bool x86_perfmon_lbr_is_supported() {
     return perfmon_lbr_stack_size > 0;
 }
 
-zx_status_t PerfmonState::Create(unsigned n_cpus, fbl::unique_ptr<PerfmonState>* out_state) {
+zx_status_t PerfmonState::Create(unsigned n_cpus, ktl::unique_ptr<PerfmonState>* out_state) {
     fbl::AllocChecker ac;
-    auto state = fbl::unique_ptr<PerfmonState>(new (&ac) PerfmonState(n_cpus));
+    auto state = ktl::unique_ptr<PerfmonState>(new (&ac) PerfmonState(n_cpus));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
@@ -699,7 +699,7 @@ zx_status_t arch_perfmon_init() {
     if (perfmon_state)
         return ZX_ERR_BAD_STATE;
 
-    fbl::unique_ptr<PerfmonState> state;
+    ktl::unique_ptr<PerfmonState> state;
     auto status = PerfmonState::Create(arch_max_num_cpus(), &state);
     if (status != ZX_OK)
         return status;

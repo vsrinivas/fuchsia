@@ -32,7 +32,7 @@ private:
 };
 
 // Describes a single trap within a guest.
-class Trap : public fbl::WAVLTreeContainable<fbl::unique_ptr<Trap>> {
+class Trap : public fbl::WAVLTreeContainable<ktl::unique_ptr<Trap>> {
 public:
     Trap(uint32_t kind, zx_gpaddr_t addr, size_t len, fbl::RefPtr<PortDispatcher> port,
          uint64_t key);
@@ -67,7 +67,7 @@ public:
     zx_status_t FindTrap(uint32_t kind, zx_gpaddr_t addr, Trap** trap);
 
 private:
-    using TrapTree = fbl::WAVLTree<zx_gpaddr_t, fbl::unique_ptr<Trap>>;
+    using TrapTree = fbl::WAVLTree<zx_gpaddr_t, ktl::unique_ptr<Trap>>;
 
     fbl::Mutex mutex_;
     TrapTree mem_traps_ TA_GUARDED(mutex_);

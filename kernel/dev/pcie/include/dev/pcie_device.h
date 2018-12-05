@@ -22,7 +22,7 @@
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
+#include <ktl/unique_ptr.h>
 #include <sys/types.h>
 
 /* Fwd decls */
@@ -60,7 +60,7 @@ struct pcie_bar_info_t {
  */
 class PcieDevice {
 public:
-    using CapabilityList = fbl::SinglyLinkedList<fbl::unique_ptr<PciStdCapability>>;
+    using CapabilityList = fbl::SinglyLinkedList<ktl::unique_ptr<PciStdCapability>>;
     static fbl::RefPtr<PcieDevice> Create(PcieUpstreamNode& upstream, uint dev_id, uint func_id);
     virtual ~PcieDevice();
 

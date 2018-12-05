@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <fbl/unique_ptr.h>
+#include <ktl/unique_ptr.h>
 #include <ktl/move.h>
 #include <lib/user_copy/user_ptr.h>
 #include <vm/pmm.h>
@@ -25,7 +25,7 @@ namespace testing {
 //
 class UserMemory {
 public:
-    static fbl::unique_ptr<UserMemory> Create(size_t size);
+    static ktl::unique_ptr<UserMemory> Create(size_t size);
     virtual ~UserMemory();
     void* out() { return reinterpret_cast<void*>(mapping_->base()); }
     const void* in() { return reinterpret_cast<void*>(mapping_->base()); }

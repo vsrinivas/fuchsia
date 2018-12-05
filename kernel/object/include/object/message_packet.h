@@ -10,7 +10,7 @@
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_single_list.h>
-#include <fbl/unique_ptr.h>
+#include <ktl/unique_ptr.h>
 #include <lib/user_copy/user_ptr.h>
 #include <object/buffer_chain.h>
 #include <object/handle.h>
@@ -25,7 +25,7 @@ static_assert(ZX_CHANNEL_MAX_MSG_HANDLES == kMaxMessageHandles, "");
 
 class Handle;
 
-class MessagePacket final : public fbl::DoublyLinkedListable<fbl::unique_ptr<MessagePacket>>,
+class MessagePacket final : public fbl::DoublyLinkedListable<ktl::unique_ptr<MessagePacket>>,
                             fbl::Recyclable<MessagePacket> {
 public:
     // Creates a message packet containing the provided data and space for
@@ -33,10 +33,10 @@ public:
     // be completely overwritten by clients.
     static zx_status_t Create(user_in_ptr<const void> data, uint32_t data_size,
                               uint32_t num_handles,
-                              fbl::unique_ptr<MessagePacket>* msg);
+                              ktl::unique_ptr<MessagePacket>* msg);
     static zx_status_t Create(const void* data, uint32_t data_size,
                               uint32_t num_handles,
-                              fbl::unique_ptr<MessagePacket>* msg);
+                              ktl::unique_ptr<MessagePacket>* msg);
 
     uint32_t data_size() const { return data_size_; }
 
@@ -76,7 +76,6 @@ private:
         : buffer_chain_(chain), handles_(handles), data_size_(data_size),
           payload_offset_(payload_offset), num_handles_(num_handles), owns_handles_(false) {}
 
-    friend class fbl::unique_ptr<MessagePacket>;
     ~MessagePacket() {
         DEBUG_ASSERT(!InContainer());
         if (owns_handles_) {
@@ -91,7 +90,7 @@ private:
     void fbl_recycle();
 
     static zx_status_t CreateCommon(uint32_t data_size, uint32_t num_handles,
-                                    fbl::unique_ptr<MessagePacket>* msg);
+                                    ktl::unique_ptr<MessagePacket>* msg);
 
     BufferChain* buffer_chain_;
     Handle** const handles_;

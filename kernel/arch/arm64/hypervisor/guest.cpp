@@ -16,7 +16,7 @@ static constexpr zx_gpaddr_t kGicvAddress = 0x800001000;
 static constexpr size_t kGicvSize = 0x2000;
 
 // static
-zx_status_t Guest::Create(fbl::unique_ptr<Guest>* out) {
+zx_status_t Guest::Create(ktl::unique_ptr<Guest>* out) {
     if (arm64_get_boot_el() < 2) {
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -28,7 +28,7 @@ zx_status_t Guest::Create(fbl::unique_ptr<Guest>* out) {
     }
 
     fbl::AllocChecker ac;
-    fbl::unique_ptr<Guest> guest(new (&ac) Guest(vmid));
+    ktl::unique_ptr<Guest> guest(new (&ac) Guest(vmid));
     if (!ac.check()) {
         free_vmid(vmid);
         return ZX_ERR_NO_MEMORY;

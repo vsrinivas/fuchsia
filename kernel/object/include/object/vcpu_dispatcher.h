@@ -35,7 +35,7 @@ public:
 private:
     fbl::Canary<fbl::magic("VCPD")> canary_;
     fbl::RefPtr<GuestDispatcher> guest_;
-    fbl::unique_ptr<Vcpu> vcpu_;
+    ktl::unique_ptr<Vcpu> vcpu_;
 
-    explicit VcpuDispatcher(fbl::RefPtr<GuestDispatcher> guest, fbl::unique_ptr<Vcpu> vcpu);
+    explicit VcpuDispatcher(fbl::RefPtr<GuestDispatcher> guest, ktl::unique_ptr<Vcpu> vcpu);
 };

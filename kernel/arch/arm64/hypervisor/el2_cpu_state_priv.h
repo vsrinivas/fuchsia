@@ -7,7 +7,7 @@
 #pragma once
 
 #include <fbl/array.h>
-#include <fbl/unique_ptr.h>
+#include <ktl/unique_ptr.h>
 #include <hypervisor/id_allocator.h>
 #include <hypervisor/page.h>
 #include <kernel/mp.h>
@@ -35,7 +35,7 @@ private:
 // Maintains the EL2 state for each CPU.
 class El2CpuState : public hypervisor::IdAllocator<uint8_t, 64> {
 public:
-    static zx_status_t Create(fbl::unique_ptr<El2CpuState>* out);
+    static zx_status_t Create(ktl::unique_ptr<El2CpuState>* out);
     ~El2CpuState();
 
 private:

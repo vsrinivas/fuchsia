@@ -17,7 +17,7 @@
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
+#include <ktl/unique_ptr.h>
 #include <kernel/spinlock.h>
 
 #include <sys/types.h>
@@ -92,7 +92,7 @@ struct PortAllocator {
 struct PortPacket final : public fbl::DoublyLinkedListable<PortPacket*> {
     zx_port_packet_t packet;
     const void* const handle;
-    fbl::unique_ptr<const PortObserver> observer;
+    ktl::unique_ptr<const PortObserver> observer;
     PortAllocator* const allocator;
 
     PortPacket(const void* handle, PortAllocator* allocator);
@@ -183,7 +183,7 @@ public:
     // Decides who is going to destroy the observer. If it returns the
     // observer back if it is the duty of the caller. It returns
     // nullptr if it is the duty of the port.
-    fbl::unique_ptr<PortObserver> MaybeReap(fbl::unique_ptr<PortObserver> observer,
+    ktl::unique_ptr<PortObserver> MaybeReap(ktl::unique_ptr<PortObserver> observer,
                                             PortPacket* port_packet);
 
     // Called under the handle table lock.

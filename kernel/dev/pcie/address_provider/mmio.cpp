@@ -88,7 +88,7 @@ zx_status_t MmioPcieAddressProvider::AddEcamRegion(const PciEcamRegion& ecam) {
 
     // Looks good.  Attempt to allocate and map this ECAM region.
     fbl::AllocChecker ac;
-    fbl::unique_ptr<MappedEcamRegion> region(new (&ac) MappedEcamRegion(ecam));
+    ktl::unique_ptr<MappedEcamRegion> region(new (&ac) MappedEcamRegion(ecam));
     if (!ac.check()) {
         TRACEF("Failed to allocate ECAM region for bus range [0x%02x, 0x%02x]\n",
                ecam.bus_start, ecam.bus_end);

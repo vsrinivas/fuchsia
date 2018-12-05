@@ -19,12 +19,12 @@ namespace {
 
 // Allocate a new bitmap element.  If *free_list* is null, allocate one using
 // new.  If *free_list* is not null, take one from *free_list*.
-fbl::unique_ptr<RleBitmapElement> AllocateElement(RleBitmap::FreeList* free_list) {
+RleBitmapElementPtr AllocateElement(RleBitmap::FreeList* free_list) {
     if (!free_list) {
         fbl::AllocChecker ac;
-        fbl::unique_ptr<RleBitmapElement> new_elem(new (&ac) RleBitmapElement());
+        RleBitmapElementPtr new_elem(new (&ac) RleBitmapElement());
         if (!ac.check()) {
-            return fbl::unique_ptr<RleBitmapElement>();
+            return RleBitmapElementPtr();
         }
         return new_elem;
     } else {
@@ -34,7 +34,7 @@ fbl::unique_ptr<RleBitmapElement> AllocateElement(RleBitmap::FreeList* free_list
 
 // Release the element *elem*.  If *free_list* is null, release the element
 // with delete.  If *free_list* is not null, append it to *free_list*.
-void ReleaseElement(RleBitmap::FreeList* free_list, fbl::unique_ptr<RleBitmapElement>&& elem) {
+void ReleaseElement(RleBitmap::FreeList* free_list, RleBitmapElementPtr&& elem) {
     if (free_list) {
         free_list->push_back(std::move(elem));
     }
@@ -156,7 +156,7 @@ zx_status_t RleBitmap::SetInternal(size_t bitoff, size_t bitmax, FreeList* free_
         return ZX_OK;
     }
 
-    fbl::unique_ptr<RleBitmapElement> new_elem = AllocateElement(free_list);
+    RleBitmapElementPtr new_elem = AllocateElement(free_list);
     if (!new_elem) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -236,7 +236,7 @@ zx_status_t RleBitmap::ClearInternal(size_t bitoff, size_t bitmax, FreeList* fre
                 continue;
             } else {
                 // '*itr' contains [bitoff, bitmax), and we need to split it.
-                fbl::unique_ptr<RleBitmapElement> new_elem = AllocateElement(free_list);
+                RleBitmapElementPtr new_elem = AllocateElement(free_list);
                 if (!new_elem) {
                     return ZX_ERR_NO_MEMORY;
                 }

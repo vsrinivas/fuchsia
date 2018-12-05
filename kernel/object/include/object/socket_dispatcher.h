@@ -76,7 +76,7 @@ private:
     // |control_msg| may be null.
     SocketDispatcher(fbl::RefPtr<PeerHolder<SocketDispatcher>> holder,
                      zx_signals_t starting_signals, uint32_t flags,
-                     fbl::unique_ptr<ControlMsg> control_msg);
+                     ktl::unique_ptr<ControlMsg> control_msg);
     void Init(fbl::RefPtr<SocketDispatcher> other);
     zx_status_t WriteSelfLocked(user_in_ptr<const void> src, size_t len, size_t* nwritten) TA_REQ(get_lock());
     zx_status_t WriteControlSelfLocked(user_in_ptr<const void> src, size_t len) TA_REQ(get_lock());
@@ -93,7 +93,7 @@ private:
 
     // The shared |get_lock()| protects all members below.
     MBufChain data_ TA_GUARDED(get_lock());
-    fbl::unique_ptr<ControlMsg> control_msg_ TA_GUARDED(get_lock());
+    ktl::unique_ptr<ControlMsg> control_msg_ TA_GUARDED(get_lock());
     size_t control_msg_len_ TA_GUARDED(get_lock());
     HandleOwner accept_queue_ TA_GUARDED(get_lock());
     size_t read_threshold_;

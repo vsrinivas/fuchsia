@@ -10,13 +10,13 @@
 #include <fbl/canary.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/macros.h>
-#include <fbl/unique_ptr.h>
+#include <ktl/unique_ptr.h>
 #include <vm/vm.h>
 #include <zircon/types.h>
 
 struct vm_page;
 
-class VmPageListNode final : public fbl::WAVLTreeContainable<fbl::unique_ptr<VmPageListNode>> {
+class VmPageListNode final : public fbl::WAVLTreeContainable<ktl::unique_ptr<VmPageListNode>> {
 public:
     explicit VmPageListNode(uint64_t offset);
     ~VmPageListNode();
@@ -195,5 +195,5 @@ public:
     bool IsEmpty();
 
 private:
-    fbl::WAVLTree<uint64_t, fbl::unique_ptr<VmPageListNode>> list_;
+    fbl::WAVLTree<uint64_t, ktl::unique_ptr<VmPageListNode>> list_;
 };

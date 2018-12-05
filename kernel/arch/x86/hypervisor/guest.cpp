@@ -32,7 +32,7 @@ static void ignore_msr(VmxPage* msr_bitmaps_page, bool ignore_writes, uint32_t m
 }
 
 // static
-zx_status_t Guest::Create(fbl::unique_ptr<Guest>* out) {
+zx_status_t Guest::Create(ktl::unique_ptr<Guest>* out) {
     // Check that the CPU supports VMX.
     if (!x86_feature_test(X86_FEATURE_VMX)) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -44,7 +44,7 @@ zx_status_t Guest::Create(fbl::unique_ptr<Guest>* out) {
     }
 
     fbl::AllocChecker ac;
-    fbl::unique_ptr<Guest> guest(new (&ac) Guest);
+    ktl::unique_ptr<Guest> guest(new (&ac) Guest);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }

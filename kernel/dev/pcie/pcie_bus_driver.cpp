@@ -94,7 +94,7 @@ zx_status_t PcieBusDriver::AddRoot(fbl::RefPtr<PcieRoot>&& root) {
     return ZX_OK;
 }
 
-zx_status_t PcieBusDriver::SetAddressTranslationProvider(fbl::unique_ptr<PcieAddressProvider> provider) {
+zx_status_t PcieBusDriver::SetAddressTranslationProvider(ktl::unique_ptr<PcieAddressProvider> provider) {
     if (!IsNotStarted()) {
         TRACEF("Cannot set an address provider if the driver is already running\n");
         return ZX_ERR_BAD_STATE;

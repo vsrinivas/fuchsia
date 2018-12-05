@@ -7,7 +7,7 @@
 #pragma once
 
 #include <fbl/limits.h>
-#include <fbl/unique_ptr.h>
+#include <ktl/unique_ptr.h>
 #include <ktl/move.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
@@ -59,7 +59,7 @@ public:
 #ifdef ARCH_ARM64
                               uint8_t vmid,
 #endif
-                              fbl::unique_ptr<GuestPhysicalAddressSpace>* gpas);
+                              ktl::unique_ptr<GuestPhysicalAddressSpace>* gpas);
 
     ~GuestPhysicalAddressSpace();
 

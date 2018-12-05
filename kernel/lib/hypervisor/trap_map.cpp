@@ -92,7 +92,7 @@ zx_status_t TrapMap::InsertTrap(uint32_t kind, zx_gpaddr_t addr, size_t len,
         return ZX_ERR_ALREADY_EXISTS;
     }
     fbl::AllocChecker ac;
-    fbl::unique_ptr<Trap> range(new (&ac) Trap(kind, addr, len, ktl::move(port), key));
+    ktl::unique_ptr<Trap> range(new (&ac) Trap(kind, addr, len, ktl::move(port), key));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }

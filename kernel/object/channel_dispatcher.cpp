@@ -168,7 +168,7 @@ void ChannelDispatcher::OnPeerZeroHandlesLocked() {
 zx_status_t ChannelDispatcher::Read(zx_koid_t owner,
                                     uint32_t* msg_size,
                                     uint32_t* msg_handle_count,
-                                    fbl::unique_ptr<MessagePacket>* msg,
+                                    ktl::unique_ptr<MessagePacket>* msg,
                                     bool may_discard) {
     canary_.Assert();
 
@@ -201,7 +201,7 @@ zx_status_t ChannelDispatcher::Read(zx_koid_t owner,
     return rv;
 }
 
-zx_status_t ChannelDispatcher::Write(zx_koid_t owner, fbl::unique_ptr<MessagePacket> msg) {
+zx_status_t ChannelDispatcher::Write(zx_koid_t owner, ktl::unique_ptr<MessagePacket> msg) {
     canary_.Assert();
 
     AutoReschedDisable resched_disable; // Must come before the lock guard.
@@ -223,8 +223,8 @@ zx_status_t ChannelDispatcher::Write(zx_koid_t owner, fbl::unique_ptr<MessagePac
 }
 
 zx_status_t ChannelDispatcher::Call(zx_koid_t owner,
-                                    fbl::unique_ptr<MessagePacket> msg,
-                                    zx_time_t deadline, fbl::unique_ptr<MessagePacket>* reply) {
+                                    ktl::unique_ptr<MessagePacket> msg,
+                                    zx_time_t deadline, ktl::unique_ptr<MessagePacket>* reply) {
     canary_.Assert();
 
     auto waiter = ThreadDispatcher::GetCurrent()->GetMessageWaiter();
@@ -283,7 +283,7 @@ alloc_txid:
 
 zx_status_t ChannelDispatcher::ResumeInterruptedCall(MessageWaiter* waiter,
                                                      zx_time_t deadline,
-                                                     fbl::unique_ptr<MessagePacket>* reply) {
+                                                     ktl::unique_ptr<MessagePacket>* reply) {
     canary_.Assert();
 
     // (2) Wait for notification via waiter's event or for the
@@ -320,7 +320,7 @@ zx_status_t ChannelDispatcher::ResumeInterruptedCall(MessageWaiter* waiter,
     }
 }
 
-void ChannelDispatcher::WriteSelf(fbl::unique_ptr<MessagePacket> msg) {
+void ChannelDispatcher::WriteSelf(ktl::unique_ptr<MessagePacket> msg) {
     canary_.Assert();
 
     if (!waiters_.is_empty()) {
@@ -372,7 +372,7 @@ zx_status_t ChannelDispatcher::MessageWaiter::BeginWait(fbl::RefPtr<ChannelDispa
     return ZX_OK;
 }
 
-void ChannelDispatcher::MessageWaiter::Deliver(fbl::unique_ptr<MessagePacket> msg) {
+void ChannelDispatcher::MessageWaiter::Deliver(ktl::unique_ptr<MessagePacket> msg) {
     DEBUG_ASSERT(channel_);
 
     msg_ = ktl::move(msg);
@@ -395,7 +395,7 @@ zx_status_t ChannelDispatcher::MessageWaiter::Wait(zx_time_t deadline) {
 }
 
 // Returns any delivered message via out and the status.
-zx_status_t ChannelDispatcher::MessageWaiter::EndWait(fbl::unique_ptr<MessagePacket>* out) {
+zx_status_t ChannelDispatcher::MessageWaiter::EndWait(ktl::unique_ptr<MessagePacket>* out) {
     if (unlikely(!channel_)) {
         return ZX_ERR_BAD_STATE;
     }

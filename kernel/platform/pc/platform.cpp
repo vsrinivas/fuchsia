@@ -804,8 +804,8 @@ static void platform_init_smp(void) {
 
     // allocate 2x the table for temporary work
     fbl::AllocChecker ac;
-    fbl::unique_ptr<uint32_t[]> apic_ids =
-        fbl::unique_ptr<uint32_t[]>(new (&ac) uint32_t[num_cpus * 2]);
+    ktl::unique_ptr<uint32_t[]> apic_ids =
+        ktl::unique_ptr<uint32_t[]>(new (&ac) uint32_t[num_cpus * 2]);
     if (!ac.check()) {
         TRACEF("failed to allocate apic_ids table, disabling SMP\n");
         return;

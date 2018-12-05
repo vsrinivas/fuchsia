@@ -54,7 +54,7 @@ public:
 
 private:
     mutable fbl::Mutex ecam_region_lock_;
-    fbl::WAVLTree<uint8_t, fbl::unique_ptr<MappedEcamRegion>> ecam_regions_;
+    fbl::WAVLTree<uint8_t, ktl::unique_ptr<MappedEcamRegion>> ecam_regions_;
 };
 
 // Systems that have PIO mapped Config Spaces
@@ -81,6 +81,6 @@ class DesignWarePcieAddressProvider : public PcieAddressProvider {
     fbl::RefPtr<PciConfig> CreateConfig(const uintptr_t addr) override;
 
   private:
-    fbl::unique_ptr<MappedEcamRegion> root_bridge_region_;
-    fbl::unique_ptr<MappedEcamRegion> downstream_region_;
+    ktl::unique_ptr<MappedEcamRegion> root_bridge_region_;
+    ktl::unique_ptr<MappedEcamRegion> downstream_region_;
 };

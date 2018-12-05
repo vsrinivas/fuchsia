@@ -18,7 +18,7 @@ zx_status_t VcpuDispatcher::Create(fbl::RefPtr<GuestDispatcher> guest_dispatcher
                                    fbl::RefPtr<Dispatcher>* dispatcher, zx_rights_t* rights) {
     Guest* guest = guest_dispatcher->guest();
 
-    fbl::unique_ptr<Vcpu> vcpu;
+    ktl::unique_ptr<Vcpu> vcpu;
     zx_status_t status = Vcpu::Create(guest, entry, &vcpu);
     if (status != ZX_OK)
         return status;
@@ -33,7 +33,7 @@ zx_status_t VcpuDispatcher::Create(fbl::RefPtr<GuestDispatcher> guest_dispatcher
     return ZX_OK;
 }
 
-VcpuDispatcher::VcpuDispatcher(fbl::RefPtr<GuestDispatcher> guest, fbl::unique_ptr<Vcpu> vcpu)
+VcpuDispatcher::VcpuDispatcher(fbl::RefPtr<GuestDispatcher> guest, ktl::unique_ptr<Vcpu> vcpu)
     : guest_(guest), vcpu_(ktl::move(vcpu)) {}
 
 VcpuDispatcher::~VcpuDispatcher() {}

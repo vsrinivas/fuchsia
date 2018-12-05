@@ -33,7 +33,7 @@ zx_status_t FifoDispatcher::Create(size_t count, size_t elemsize, uint32_t optio
         return ZX_ERR_NO_MEMORY;
     auto holder1 = holder0;
 
-    auto data0 = fbl::unique_ptr<uint8_t[]>(new (&ac) uint8_t[count * elemsize]);
+    auto data0 = ktl::unique_ptr<uint8_t[]>(new (&ac) uint8_t[count * elemsize]);
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
@@ -42,7 +42,7 @@ zx_status_t FifoDispatcher::Create(size_t count, size_t elemsize, uint32_t optio
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
-    auto data1 = fbl::unique_ptr<uint8_t[]>(new (&ac) uint8_t[count * elemsize]);
+    auto data1 = ktl::unique_ptr<uint8_t[]>(new (&ac) uint8_t[count * elemsize]);
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
@@ -62,7 +62,7 @@ zx_status_t FifoDispatcher::Create(size_t count, size_t elemsize, uint32_t optio
 
 FifoDispatcher::FifoDispatcher(fbl::RefPtr<PeerHolder<FifoDispatcher>> holder,
                                uint32_t /*options*/, uint32_t count, uint32_t elem_size,
-                               fbl::unique_ptr<uint8_t[]> data)
+                               ktl::unique_ptr<uint8_t[]> data)
     : PeeredDispatcher(ktl::move(holder), ZX_FIFO_WRITABLE),
       elem_count_(count), elem_size_(elem_size), mask_(count - 1),
       head_(0u), tail_(0u), data_(ktl::move(data)) {

@@ -239,7 +239,12 @@ __END_CDECLS
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/slab_allocator.h>
+
+#ifdef _KERNEL
+#include <ktl/unique_ptr.h>
+#else
 #include <fbl/unique_ptr.h>
+#endif
 
 #include <utility>
 
@@ -253,7 +258,11 @@ public:
                    public fbl::SlabAllocated<RegionSlabTraits>,
                    public fbl::Recyclable<Region> {
     public:
+#ifdef _KERNEL
+        using UPtr = ktl::unique_ptr<const Region>;
+#else
         using UPtr = fbl::unique_ptr<const Region>;
+#endif
 
     private:
         using WAVLTreeNodeState   = fbl::WAVLTreeNodeState<Region*>;
@@ -292,7 +301,9 @@ public:
         // So many friends!  I'm the most popular class in the build!!
         friend class  RegionAllocator;
         friend class  RegionPool;
+#ifndef _KERNEL
         friend class  fbl::unique_ptr<const Region>;
+#endif
         friend class  fbl::Recyclable<Region>;
         friend        KeyTraitsSortByBase;
         friend struct KeyTraitsSortBySize;

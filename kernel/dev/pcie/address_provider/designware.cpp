@@ -49,13 +49,13 @@ zx_status_t DesignWarePcieAddressProvider::Init(const PciEcamRegion& root_bridge
         return ZX_ERR_INVALID_ARGS;
     }
 
-    root_bridge_region_ = fbl::make_unique_checked<MappedEcamRegion>(&ac, root_bridge);
+    root_bridge_region_ = ktl::make_unique<MappedEcamRegion>(&ac, root_bridge);
     if (!ac.check()) {
         TRACEF("Failed to allocate root_bridge ECAM region\n");
         return ZX_ERR_NO_MEMORY;
     }
 
-    downstream_region_ = fbl::make_unique_checked<MappedEcamRegion>(&ac, downstream_device);
+    downstream_region_ = ktl::make_unique<MappedEcamRegion>(&ac, downstream_device);
     if (!ac.check()) {
         TRACEF("Failed to allocate downstream ECAM region\n");
         return ZX_ERR_NO_MEMORY;

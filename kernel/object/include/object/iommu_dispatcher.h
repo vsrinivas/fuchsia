@@ -16,7 +16,7 @@
 
 class IommuDispatcher final : public SoloDispatcher<IommuDispatcher, ZX_DEFAULT_IOMMU_RIGHTS> {
 public:
-    static zx_status_t Create(uint32_t type, fbl::unique_ptr<const uint8_t[]> desc,
+    static zx_status_t Create(uint32_t type, ktl::unique_ptr<const uint8_t[]> desc,
                               size_t desc_len, fbl::RefPtr<Dispatcher>* dispatcher,
                               zx_rights_t* rights);
 

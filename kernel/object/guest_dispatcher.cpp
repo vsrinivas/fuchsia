@@ -16,7 +16,7 @@ zx_status_t GuestDispatcher::Create(fbl::RefPtr<Dispatcher>* guest_dispatcher,
                                     zx_rights_t* guest_rights,
                                     fbl::RefPtr<Dispatcher>* vmar_dispatcher,
                                     zx_rights_t* vmar_rights) {
-    fbl::unique_ptr<Guest> guest;
+    ktl::unique_ptr<Guest> guest;
     zx_status_t status = Guest::Create(&guest);
     if (status != ZX_OK) {
         return status;
@@ -39,7 +39,7 @@ zx_status_t GuestDispatcher::Create(fbl::RefPtr<Dispatcher>* guest_dispatcher,
     return ZX_OK;
 }
 
-GuestDispatcher::GuestDispatcher(fbl::unique_ptr<Guest> guest)
+GuestDispatcher::GuestDispatcher(ktl::unique_ptr<Guest> guest)
     : guest_(ktl::move(guest)) {}
 
 GuestDispatcher::~GuestDispatcher() {}

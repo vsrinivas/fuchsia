@@ -6,7 +6,7 @@
 
 #include "context_table_state.h"
 
-#include <fbl/unique_ptr.h>
+#include <ktl/unique_ptr.h>
 #include <ktl/move.h>
 #include <new>
 
@@ -40,7 +40,7 @@ ContextTableState::~ContextTableState() {
 
 zx_status_t ContextTableState::Create(uint8_t bus, bool extended, bool upper,
                                       IommuImpl* parent, volatile ds::RootEntrySubentry* root_entry,
-                                      fbl::unique_ptr<ContextTableState>* table) {
+                                      ktl::unique_ptr<ContextTableState>* table) {
     ds::RootEntrySubentry entry;
     entry.ReadFrom(root_entry);
     DEBUG_ASSERT(!entry.present());
@@ -52,7 +52,7 @@ zx_status_t ContextTableState::Create(uint8_t bus, bool extended, bool upper,
     }
 
     fbl::AllocChecker ac;
-    fbl::unique_ptr<ContextTableState> tbl(new (&ac) ContextTableState(bus, extended, upper,
+    ktl::unique_ptr<ContextTableState> tbl(new (&ac) ContextTableState(bus, extended, upper,
                                                                        parent, root_entry,
                                                                        ktl::move(page)));
     if (!ac.check()) {
@@ -71,7 +71,7 @@ zx_status_t ContextTableState::CreateDeviceContext(ds::Bdf bdf, uint32_t domain_
                                                    DeviceContext** context) {
     DEBUG_ASSERT(bus_ == bdf.bus());
 
-    fbl::unique_ptr<DeviceContext> dev;
+    ktl::unique_ptr<DeviceContext> dev;
     zx_status_t status;
     if (extended_) {
         DEBUG_ASSERT(upper_ == (bdf.dev() >= 16));

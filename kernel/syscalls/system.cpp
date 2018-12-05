@@ -165,7 +165,7 @@ zx_status_t sys_system_mexec_payload_get(zx_handle_t resource,
     }
 
     fbl::AllocChecker ac;
-    fbl::unique_ptr<uint8_t[]> buffer;
+    ktl::unique_ptr<uint8_t[]> buffer;
     buffer.reset(new (&ac) uint8_t[len]);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;

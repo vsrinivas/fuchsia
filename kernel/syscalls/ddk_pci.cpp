@@ -26,7 +26,7 @@
 #include <fbl/limits.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_free_ptr.h>
-#include <fbl/unique_ptr.h>
+#include <ktl/unique_ptr.h>
 #include <zircon/syscalls/pci.h>
 
 #include "priv.h"
@@ -306,7 +306,7 @@ zx_status_t sys_pci_init(zx_handle_t handle, user_in_ptr<const zx_pci_init_arg_t
         ASSERT(arg->addr_windows[0].base < fbl::numeric_limits<paddr_t>::max());
 
         fbl::AllocChecker ac;
-        auto addr_provider = fbl::make_unique_checked<MmioPcieAddressProvider>(&ac);
+        auto addr_provider = ktl::make_unique<MmioPcieAddressProvider>(&ac);
         if (!ac.check()) {
             TRACEF("Failed to allocate PCIe Address Provider\n");
             return ZX_ERR_NO_MEMORY;
@@ -337,7 +337,7 @@ zx_status_t sys_pci_init(zx_handle_t handle, user_in_ptr<const zx_pci_init_arg_t
         // Create a PIO address provider.
         fbl::AllocChecker ac;
 
-        auto addr_provider = fbl::make_unique_checked<PioPcieAddressProvider>(&ac);
+        auto addr_provider = ktl::make_unique<PioPcieAddressProvider>(&ac);
         if (!ac.check()) {
             TRACEF("Failed to allocate PCIe address provider\n");
             return ZX_ERR_NO_MEMORY;
@@ -356,7 +356,7 @@ zx_status_t sys_pci_init(zx_handle_t handle, user_in_ptr<const zx_pci_init_arg_t
             return ZX_ERR_INVALID_ARGS;
         }
 
-        auto addr_provider = fbl::make_unique_checked<DesignWarePcieAddressProvider>(&ac);
+        auto addr_provider = ktl::make_unique<DesignWarePcieAddressProvider>(&ac);
         if (!ac.check()) {
             TRACEF("Failed to allocate PCIe address provider\n");
             return ZX_ERR_NO_MEMORY;

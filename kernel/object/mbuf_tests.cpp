@@ -6,7 +6,7 @@
 
 #include <object/mbuf.h>
 
-#include <fbl/unique_ptr.h>
+#include <ktl/unique_ptr.h>
 #include <lib/unittest/unittest.h>
 #include <lib/unittest/user_memory.h>
 
@@ -26,7 +26,7 @@ static bool initial_state() {
 // Tests reading a stream when the chain is empty.
 static bool stream_read_empty() {
     BEGIN_TEST;
-    fbl::unique_ptr<UserMemory> mem = UserMemory::Create(1);
+    ktl::unique_ptr<UserMemory> mem = UserMemory::Create(1);
     auto mem_out = make_user_out_ptr(mem->out());
 
     MBufChain chain;
@@ -37,7 +37,7 @@ static bool stream_read_empty() {
 // Tests reading a stream with a zero-length buffer.
 static bool stream_read_zero() {
     BEGIN_TEST;
-    fbl::unique_ptr<UserMemory> mem = UserMemory::Create(1);
+    ktl::unique_ptr<UserMemory> mem = UserMemory::Create(1);
     auto mem_in = make_user_in_ptr(mem->in());
     auto mem_out = make_user_out_ptr(mem->out());
 
@@ -56,7 +56,7 @@ static bool stream_write_basic() {
     constexpr size_t kWriteLen = 1024;
     constexpr int kNumWrites = 5;
 
-    fbl::unique_ptr<UserMemory> mem = UserMemory::Create(kWriteLen);
+    ktl::unique_ptr<UserMemory> mem = UserMemory::Create(kWriteLen);
     auto mem_in = make_user_in_ptr(mem->in());
     auto mem_out = make_user_out_ptr(mem->out());
 
@@ -77,7 +77,7 @@ static bool stream_write_basic() {
     // Read it all back in one call.
     constexpr size_t kTotalLen = kWriteLen * kNumWrites;
     ASSERT_EQ(kTotalLen, chain.size(), "");
-    fbl::unique_ptr<UserMemory> read_buf = UserMemory::Create(kTotalLen);
+    ktl::unique_ptr<UserMemory> read_buf = UserMemory::Create(kTotalLen);
     auto read_buf_in = make_user_in_ptr(read_buf->in());
     auto read_buf_out = make_user_out_ptr(read_buf->out());
     size_t result = chain.Read(read_buf_out, kTotalLen, false);
@@ -88,12 +88,12 @@ static bool stream_write_basic() {
 
     // Verify result.
     fbl::AllocChecker ac;
-    auto expected_buf = fbl::unique_ptr<char[]>(new (&ac) char[kTotalLen]);
+    auto expected_buf = ktl::unique_ptr<char[]>(new (&ac) char[kTotalLen]);
     ASSERT_TRUE(ac.check(), "");
     for (int i = 0; i < kNumWrites; ++i) {
         memset(static_cast<void*>(expected_buf.get() + i * kWriteLen), 'A' + i, kWriteLen);
     }
-    auto actual_buf = fbl::unique_ptr<char[]>(new (&ac) char[kTotalLen]);
+    auto actual_buf = ktl::unique_ptr<char[]>(new (&ac) char[kTotalLen]);
     ASSERT_TRUE(ac.check(), "");
     ASSERT_EQ(ZX_OK, read_buf_in.copy_array_from_user(actual_buf.get(), kTotalLen), "");
     EXPECT_EQ(0, memcmp(static_cast<void*>(expected_buf.get()),
@@ -104,7 +104,7 @@ static bool stream_write_basic() {
 // Tests writing a stream with a zero-length buffer.
 static bool stream_write_zero() {
     BEGIN_TEST;
-    fbl::unique_ptr<UserMemory> mem = UserMemory::Create(1);
+    ktl::unique_ptr<UserMemory> mem = UserMemory::Create(1);
     auto mem_in = make_user_in_ptr(mem->in());
     size_t written = 7;
     MBufChain chain;
@@ -121,7 +121,7 @@ static bool stream_write_zero() {
 static bool stream_write_too_much() {
     BEGIN_TEST;
     constexpr size_t kWriteLen = 65536;
-    fbl::unique_ptr<UserMemory> mem = UserMemory::Create(kWriteLen);
+    ktl::unique_ptr<UserMemory> mem = UserMemory::Create(kWriteLen);
     auto mem_in = make_user_in_ptr(mem->in());
     auto mem_out = make_user_out_ptr(mem->out());
     size_t written = 0;
@@ -151,7 +151,7 @@ static bool stream_write_too_much() {
 // Tests reading a datagram when chain is empty.
 static bool datagram_read_empty() {
     BEGIN_TEST;
-    fbl::unique_ptr<UserMemory> mem = UserMemory::Create(1);
+    ktl::unique_ptr<UserMemory> mem = UserMemory::Create(1);
     auto mem_out = make_user_out_ptr(mem->out());
 
     MBufChain chain;
@@ -163,7 +163,7 @@ static bool datagram_read_empty() {
 // Tests reading a datagram with a zero-length buffer.
 static bool datagram_read_zero() {
     BEGIN_TEST;
-    fbl::unique_ptr<UserMemory> mem = UserMemory::Create(1);
+    ktl::unique_ptr<UserMemory> mem = UserMemory::Create(1);
     auto mem_in = make_user_in_ptr(mem->in());
     auto mem_out = make_user_out_ptr(mem->out());
 
@@ -180,7 +180,7 @@ static bool datagram_read_zero() {
 static bool datagram_read_buffer_too_small() {
     BEGIN_TEST;
     constexpr size_t kWriteLen = 32;
-    fbl::unique_ptr<UserMemory> mem = UserMemory::Create(kWriteLen);
+    ktl::unique_ptr<UserMemory> mem = UserMemory::Create(kWriteLen);
     auto mem_in = make_user_in_ptr(mem->in());
     auto mem_out = make_user_out_ptr(mem->out());
     size_t written = 0;
@@ -235,7 +235,7 @@ static bool datagram_write_basic() {
     size_t written = 0;
     size_t total_written = 0;
 
-    fbl::unique_ptr<UserMemory> mem = UserMemory::Create(kMaxLength);
+    ktl::unique_ptr<UserMemory> mem = UserMemory::Create(kMaxLength);
     auto mem_in = make_user_in_ptr(mem->in());
     auto mem_out = make_user_out_ptr(mem->out());
 
@@ -275,7 +275,7 @@ static bool datagram_write_basic() {
 // Tests writing a zero-length datagram to the chain.
 static bool datagram_write_zero() {
     BEGIN_TEST;
-    fbl::unique_ptr<UserMemory> mem = UserMemory::Create(1);
+    ktl::unique_ptr<UserMemory> mem = UserMemory::Create(1);
     auto mem_in = make_user_in_ptr(mem->in());
 
     size_t written = 7;
@@ -293,7 +293,7 @@ static bool datagram_write_zero() {
 static bool datagram_write_too_much() {
     BEGIN_TEST;
     constexpr size_t kWriteLen = 65536;
-    fbl::unique_ptr<UserMemory> mem = UserMemory::Create(kWriteLen);
+    ktl::unique_ptr<UserMemory> mem = UserMemory::Create(kWriteLen);
     auto mem_in = make_user_in_ptr(mem->in());
     auto mem_out = make_user_out_ptr(mem->out());
 
@@ -325,7 +325,7 @@ static bool datagram_write_huge_packet() {
     MBufChain chain;
 
     const size_t kHugePacketSize = chain.max_size() + 1;
-    fbl::unique_ptr<UserMemory> mem = UserMemory::Create(kHugePacketSize);
+    ktl::unique_ptr<UserMemory> mem = UserMemory::Create(kHugePacketSize);
     auto mem_in = make_user_in_ptr(mem->in());
 
     size_t written;

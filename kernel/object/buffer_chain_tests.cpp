@@ -61,9 +61,9 @@ static bool copy_in_copy_out() {
 
     constexpr size_t kSize = BufferChain::kContig + 2 * BufferChain::kRawDataSize;
     fbl::AllocChecker ac;
-    auto buf = fbl::unique_ptr<char[]>(new (&ac) char[kSize]);
+    auto buf = ktl::unique_ptr<char[]>(new (&ac) char[kSize]);
     ASSERT_TRUE(ac.check(), "");
-    fbl::unique_ptr<UserMemory> mem = UserMemory::Create(kSize);
+    ktl::unique_ptr<UserMemory> mem = UserMemory::Create(kSize);
     auto mem_in = make_user_in_ptr(mem->in());
     auto mem_out = make_user_out_ptr(mem->out());
 

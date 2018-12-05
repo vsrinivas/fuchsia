@@ -44,7 +44,7 @@ static inline uint32_t PayloadOffset(uint32_t num_handles) {
 //
 // static
 inline zx_status_t MessagePacket::CreateCommon(uint32_t data_size, uint32_t num_handles,
-                                               fbl::unique_ptr<MessagePacket>* msg) {
+                                               ktl::unique_ptr<MessagePacket>* msg) {
     if (unlikely(data_size > kMaxMessageSize || num_handles > kMaxMessageHandles)) {
         return ZX_ERR_OUT_OF_RANGE;
     }
@@ -74,8 +74,8 @@ inline zx_status_t MessagePacket::CreateCommon(uint32_t data_size, uint32_t num_
 
 // static
 zx_status_t MessagePacket::Create(user_in_ptr<const void> data, uint32_t data_size,
-                                  uint32_t num_handles, fbl::unique_ptr<MessagePacket>* msg) {
-    fbl::unique_ptr<MessagePacket> new_msg;
+                                  uint32_t num_handles, ktl::unique_ptr<MessagePacket>* msg) {
+    ktl::unique_ptr<MessagePacket> new_msg;
     zx_status_t status = CreateCommon(data_size, num_handles, &new_msg);
     if (unlikely(status != ZX_OK)) {
         return status;
@@ -90,8 +90,8 @@ zx_status_t MessagePacket::Create(user_in_ptr<const void> data, uint32_t data_si
 
 // static
 zx_status_t MessagePacket::Create(const void* data, uint32_t data_size, uint32_t num_handles,
-                                  fbl::unique_ptr<MessagePacket>* msg) {
-    fbl::unique_ptr<MessagePacket> new_msg;
+                                  ktl::unique_ptr<MessagePacket>* msg) {
+    ktl::unique_ptr<MessagePacket> new_msg;
     zx_status_t status = CreateCommon(data_size, num_handles, &new_msg);
     if (unlikely(status != ZX_OK)) {
         return status;

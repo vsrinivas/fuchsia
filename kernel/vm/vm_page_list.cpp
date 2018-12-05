@@ -83,8 +83,8 @@ zx_status_t VmPageList::AddPage(vm_page* p, uint64_t offset) {
     auto pln = list_.find(node_offset);
     if (!pln.IsValid()) {
         fbl::AllocChecker ac;
-        fbl::unique_ptr<VmPageListNode> pl =
-            fbl::unique_ptr<VmPageListNode>(new (&ac) VmPageListNode(node_offset));
+        ktl::unique_ptr<VmPageListNode> pl =
+            ktl::unique_ptr<VmPageListNode>(new (&ac) VmPageListNode(node_offset));
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }

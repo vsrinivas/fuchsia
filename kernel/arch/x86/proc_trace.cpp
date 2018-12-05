@@ -36,7 +36,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
+#include <ktl/unique_ptr.h>
 #include <kernel/mp.h>
 #include <kernel/thread.h>
 #include <lib/ktrace.h>

@@ -48,7 +48,7 @@ static zx_status_t commit_vmo(fbl::RefPtr<VmObject> vmo) {
     return ZX_OK;
 }
 
-static zx_status_t create_gpas(fbl::unique_ptr<hypervisor::GuestPhysicalAddressSpace>* gpas) {
+static zx_status_t create_gpas(ktl::unique_ptr<hypervisor::GuestPhysicalAddressSpace>* gpas) {
 #if ARCH_ARM64
     return hypervisor::GuestPhysicalAddressSpace::Create(1 /* vmid */, gpas);
 #elif ARCH_X86
@@ -77,7 +77,7 @@ static bool guest_physical_address_space_unmap_range() {
     }
 
     // Setup.
-    fbl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;
+    ktl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;
     zx_status_t status = create_gpas(&gpas);
     EXPECT_EQ(ZX_OK, status, "Failed to create GuestPhysicalAddressSpace\n");
     fbl::RefPtr<VmObject> vmo;
@@ -107,7 +107,7 @@ static bool guest_physical_address_space_unmap_range_outside_of_mapping() {
     }
 
     // Setup.
-    fbl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;
+    ktl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;
     zx_status_t status = create_gpas(&gpas);
     EXPECT_EQ(ZX_OK, status, "Failed to create GuestPhysicalAddressSpace\n");
     fbl::RefPtr<VmObject> vmo;
@@ -131,7 +131,7 @@ static bool guest_physical_address_space_unmap_range_multiple_mappings() {
     }
 
     // Setup.
-    fbl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;
+    ktl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;
     zx_status_t status = create_gpas(&gpas);
     EXPECT_EQ(ZX_OK, status, "Failed to create GuestPhysicalAddressSpace\n");
 
@@ -176,7 +176,7 @@ static bool guest_physical_address_space_unmap_range_sub_region() {
     }
 
     // Setup.
-    fbl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;
+    ktl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;
     zx_status_t status = create_gpas(&gpas);
     EXPECT_EQ(ZX_OK, status, "Failed to create GuestPhysicalAddressSpace\n");
     fbl::RefPtr<VmAddressRegion> root_vmar = gpas->RootVmar();
@@ -243,7 +243,7 @@ static bool guest_physical_address_space_get_page() {
     }
 
     // Setup.
-    fbl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;
+    ktl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;
     zx_status_t status = create_gpas(&gpas);
     EXPECT_EQ(ZX_OK, status, "Failed to create GuestPhysicalAddressSpace\n");
     fbl::RefPtr<VmObject> vmo;
@@ -303,7 +303,7 @@ static bool guest_physical_address_space_get_page_complex() {
     fbl::RefPtr<VmObject> vmo1;
     zx_status_t status = create_vmo(ROOT_VMO_SIZE, &vmo1);
     EXPECT_EQ(ZX_OK, status, "Failed to create VMO\n");
-    fbl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;
+    ktl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;
     status = create_gpas(&gpas);
     EXPECT_EQ(ZX_OK, status, "Failed to create GuestPhysicalAddressSpace\n");
     fbl::RefPtr<VmAddressRegion> root_vmar = gpas->RootVmar();
@@ -356,7 +356,7 @@ static bool guest_physical_address_space_get_page_not_present() {
     }
 
     // Setup.
-    fbl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;
+    ktl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;
     zx_status_t status = create_gpas(&gpas);
     EXPECT_EQ(ZX_OK, status, "Failed to create GuestPhysicalAddressSpace\n");
     fbl::RefPtr<VmObject> vmo;
@@ -386,7 +386,7 @@ static bool guest_physical_address_space_page_fault() {
     }
 
     // Setup.
-    fbl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;
+    ktl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;
     zx_status_t status = create_gpas(&gpas);
     EXPECT_EQ(ZX_OK, status, "Failed to create GuestPhysicalAddressSpace\n");
     fbl::RefPtr<VmObject> vmo;
@@ -420,7 +420,7 @@ static bool guest_physical_address_space_map_interrupt_controller() {
     }
 
     // Setup.
-    fbl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;
+    ktl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;
     zx_status_t status = create_gpas(&gpas);
     EXPECT_EQ(ZX_OK, status, "Failed to create GuestPhysicalAddressSpace\n");
     fbl::RefPtr<VmObject> vmo;
@@ -459,7 +459,7 @@ static bool guest_physical_address_space_uncached() {
     status = vmo->SetMappingCachePolicy(ZX_CACHE_POLICY_UNCACHED);
     EXPECT_EQ(ZX_OK, status, "Failed to set cache policy\n");
 
-    fbl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;
+    ktl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;
     status = create_gpas(&gpas);
     EXPECT_EQ(ZX_OK, status, "Failed to create GuestPhysicalAddressSpace\n");
     status = create_mapping(gpas->RootVmar(), vmo, 0);
@@ -482,7 +482,7 @@ static bool guest_physical_address_space_uncached_device() {
     status = vmo->SetMappingCachePolicy(ZX_CACHE_POLICY_UNCACHED_DEVICE);
     EXPECT_EQ(ZX_OK, status, "Failed to set cache policy\n");
 
-    fbl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;
+    ktl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;
     status = create_gpas(&gpas);
     EXPECT_EQ(ZX_OK, status, "Failed to create GuestPhysicalAddressSpace\n");
     status = create_mapping(gpas->RootVmar(), vmo, 0);
@@ -505,7 +505,7 @@ static bool guest_physical_address_space_write_combining() {
     status = vmo->SetMappingCachePolicy(ZX_CACHE_POLICY_WRITE_COMBINING);
     EXPECT_EQ(ZX_OK, status, "Failed to set cache policy\n");
 
-    fbl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;
+    ktl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;
     status = create_gpas(&gpas);
     EXPECT_EQ(ZX_OK, status, "Failed to create GuestPhysicalAddressSpace\n");
     status = create_mapping(gpas->RootVmar(), vmo, 0);

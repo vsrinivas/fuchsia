@@ -91,7 +91,7 @@ public:
 
     // A PcieAddressProvider translates a BDF address to an address that the
     // system can use to access ECAMs.
-    zx_status_t SetAddressTranslationProvider(fbl::unique_ptr<PcieAddressProvider> provider);
+    zx_status_t SetAddressTranslationProvider(ktl::unique_ptr<PcieAddressProvider> provider);
 
     // Start the driver
     //
@@ -209,7 +209,7 @@ private:
     RegionAllocator                     mmio_hi_regions_;
     RegionAllocator                     pio_regions_;
 
-    fbl::unique_ptr<PcieAddressProvider>    addr_provider_;
+    ktl::unique_ptr<PcieAddressProvider>    addr_provider_;
 
     fbl::Mutex                         legacy_irq_list_lock_;
     fbl::SinglyLinkedList<fbl::RefPtr<SharedLegacyIrqHandler>> legacy_irq_list_;

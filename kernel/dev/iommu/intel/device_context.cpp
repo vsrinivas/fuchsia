@@ -7,7 +7,7 @@
 #include "device_context.h"
 
 #include <fbl/auto_call.h>
-#include <fbl/unique_ptr.h>
+#include <ktl/unique_ptr.h>
 #include <kernel/range_check.h>
 #include <ktl/move.h>
 #include <new>
@@ -93,7 +93,7 @@ zx_status_t DeviceContext::InitCommon() {
 
 zx_status_t DeviceContext::Create(ds::Bdf bdf, uint32_t domain_id, IommuImpl* parent,
                                   volatile ds::ContextEntry* context_entry,
-                                  fbl::unique_ptr<DeviceContext>* device) {
+                                  ktl::unique_ptr<DeviceContext>* device) {
     ds::ContextEntry entry;
     entry.ReadFrom(context_entry);
 
@@ -101,7 +101,7 @@ zx_status_t DeviceContext::Create(ds::Bdf bdf, uint32_t domain_id, IommuImpl* pa
     ASSERT(!entry.present());
 
     fbl::AllocChecker ac;
-    fbl::unique_ptr<DeviceContext> dev(new (&ac) DeviceContext(bdf, domain_id, parent,
+    ktl::unique_ptr<DeviceContext> dev(new (&ac) DeviceContext(bdf, domain_id, parent,
                                                                context_entry));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
@@ -128,7 +128,7 @@ zx_status_t DeviceContext::Create(ds::Bdf bdf, uint32_t domain_id, IommuImpl* pa
 
 zx_status_t DeviceContext::Create(ds::Bdf bdf, uint32_t domain_id, IommuImpl* parent,
                                   volatile ds::ExtendedContextEntry* context_entry,
-                                  fbl::unique_ptr<DeviceContext>* device) {
+                                  ktl::unique_ptr<DeviceContext>* device) {
 
     ds::ExtendedContextEntry entry;
     entry.ReadFrom(context_entry);
@@ -137,7 +137,7 @@ zx_status_t DeviceContext::Create(ds::Bdf bdf, uint32_t domain_id, IommuImpl* pa
     ASSERT(!entry.present());
 
     fbl::AllocChecker ac;
-    fbl::unique_ptr<DeviceContext> dev(new (&ac) DeviceContext(bdf, domain_id,
+    ktl::unique_ptr<DeviceContext> dev(new (&ac) DeviceContext(bdf, domain_id,
                                                                parent, context_entry));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
@@ -224,7 +224,7 @@ zx_status_t DeviceContext::SecondLevelMapDiscontiguous(const fbl::RefPtr<VmObjec
         return ZX_OK;
     };
 
-    fbl::unique_ptr<const RegionAllocator::Region> region;
+    ktl::unique_ptr<const RegionAllocator::Region> region;
     zx_status_t status = region_alloc_.GetRegion(size, min_contig, region);
     if (status != ZX_OK) {
         return status;
@@ -306,7 +306,7 @@ zx_status_t DeviceContext::SecondLevelMapContiguous(const fbl::RefPtr<VmObject>&
     }
     DEBUG_ASSERT(paddr != UINT64_MAX);
 
-    fbl::unique_ptr<const RegionAllocator::Region> region;
+    ktl::unique_ptr<const RegionAllocator::Region> region;
     uint64_t min_contig = minimum_contiguity();
     status = region_alloc_.GetRegion(size, min_contig, region);
     if (status != ZX_OK) {
@@ -347,7 +347,7 @@ zx_status_t DeviceContext::SecondLevelMapIdentity(paddr_t base, size_t size, uin
 
     uint flags = perms_to_arch_mmu_flags(perms);
 
-    fbl::unique_ptr<const RegionAllocator::Region> region;
+    ktl::unique_ptr<const RegionAllocator::Region> region;
     zx_status_t status = region_alloc_.GetRegion({ base, size }, region);
     if (status != ZX_OK) {
         return status;
