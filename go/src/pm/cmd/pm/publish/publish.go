@@ -122,7 +122,7 @@ func Run(cfg *build.Config, args []string) error {
 	// make sure the key directory exists and is actually a directory.
 	fi, err = os.Stat(config.KeyDir)
 	if err != nil {
-		return fmt.Errorf("key path %q is not not valid: %s", config.KeyDir, err)
+		return fmt.Errorf("key path %q is not valid: %s", config.KeyDir, err)
 	}
 
 	if !fi.IsDir() {
