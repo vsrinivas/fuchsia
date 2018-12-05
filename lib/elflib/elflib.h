@@ -25,7 +25,7 @@ class ElfLib {
     // Get memory from the process relative to the base of this lib. That means
     // offset 0 should point to the Elf64_Ehdr. The vector should be sized to
     // the amount of data you want to read.
-    virtual bool GetMemory(uint64_t offset, std::vector<uint8_t>* out);
+    virtual bool GetMemory(uint64_t offset, std::vector<uint8_t>* out) = 0;
   };
 
   // Do not use. See Create.
@@ -37,11 +37,11 @@ class ElfLib {
   template <typename T>
   const std::vector<T>* GetSectionData(const std::string& name);
 
- private:
   // Create a new ElfLib object.
-  static bool Create(std::unique_ptr<MemoryAccessor>&& memory,
-                     std::unique_ptr<ElfLib> out);
+  static std::unique_ptr<ElfLib> Create(
+    std::unique_ptr<MemoryAccessor>&& memory);
 
+ private:
   // Get memory and cast it to a struct.
   template <typename T>
   bool GetDatum(uint64_t offset, T* out);

@@ -13,11 +13,15 @@ ElfLib::ElfLib(std::unique_ptr<MemoryAccessor>&& memory)
 
 ElfLib::~ElfLib() = default;
 
-bool ElfLib::Create(std::unique_ptr<MemoryAccessor>&& memory,
-                    std::unique_ptr<ElfLib> out) {
-  std::make_unique<ElfLib>(std::move(memory));
+std::unique_ptr<ElfLib> ElfLib::Create(
+    std::unique_ptr<MemoryAccessor>&& memory) {
+  std::unique_ptr<ElfLib> out = std::make_unique<ElfLib>(std::move(memory));
 
-  return out->GetDatum(0, &out->header_);
+  if (!out->GetDatum(0, &out->header_)) {
+    return std::unique_ptr<ElfLib>();
+  }
+
+  return out;
 }
 
 template <typename T>
@@ -96,8 +100,8 @@ bool ElfLib::GetSectionOffsetFromName(const std::string& name, size_t* out) {
       return false;
     }
 
-    const auto* data = section_name_data->data();
-    const auto* end = data + section_name_data->size();
+    const uint8_t* data = section_name_data->data();
+    const uint8_t* end = data + section_name_data->size();
     std::vector<std::string> strings;
 
     while (data != end) {
@@ -146,5 +150,9 @@ const std::vector<T>* ElfLib::GetSectionData(const std::string& name) {
 
   return GetSectionData<T>(off);
 }
+
+// TODO: Move the template stuff to the header so we don't need this
+template const std::vector<uint8_t>* ElfLib::GetSectionData(
+  const std::string& name);
 
 }  // namespace elflib
