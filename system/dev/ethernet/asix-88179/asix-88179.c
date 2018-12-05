@@ -493,6 +493,7 @@ static zx_status_t ax88179_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t
     // Find the last entry in the pending_usb_tx list
     zx_status_t status;
     usb_request_t* req = NULL;
+    usb_req_internal_t* req_int = NULL;
     if (list_is_empty(&eth->pending_usb_tx)) {
         zxlogf(DEBUG1, "ax88179: no pending reqs, getting free write req\n");
         req = usb_req_list_remove_head(&eth->free_write_reqs, eth->parent_req_size);
@@ -503,7 +504,8 @@ static zx_status_t ax88179_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t
         status = usb_req_list_add_tail(&eth->pending_usb_tx, req, eth->parent_req_size);
         ZX_DEBUG_ASSERT(status == ZX_OK);
     } else {
-        req = list_peek_tail_type(&eth->pending_usb_tx, usb_request_t, node);
+        req_int = list_peek_tail_type(&eth->pending_usb_tx, usb_req_internal_t, node);
+        req = REQ_INTERNAL_TO_USB_REQ(req_int, eth->parent_req_size);
         zxlogf(DEBUG1, "ax88179: got tail req (%p)\n", req);
     }
 
