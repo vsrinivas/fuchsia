@@ -60,7 +60,7 @@ static int vim_start_thread(void* arg) {
     }
 
     // Start protocol drivers before adding platform devices.
-    if ((status = vim_gpio_init(bus)) != ZX_OK) {
+    if ((status = vim_gpio_init(bus, info.pid == PDEV_PID_VIM2)) != ZX_OK) {
         zxlogf(ERROR, "vim_gpio_init failed: %d\n", status);
         goto fail;
     }
