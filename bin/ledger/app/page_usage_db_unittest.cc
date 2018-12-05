@@ -10,22 +10,20 @@
 #include "gtest/gtest.h"
 #include "lib/callback/capture.h"
 #include "lib/callback/set_when_called.h"
-#include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/macros.h"
-#include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/app/constants.h"
-#include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
-#include "peridot/bin/ledger/app/ledger_repository_impl.h"
+#include "peridot/bin/ledger/storage/fake/fake_db.h"
 #include "peridot/bin/ledger/storage/public/types.h"
 #include "peridot/bin/ledger/testing/test_with_environment.h"
-#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 namespace ledger {
 namespace {
 
 class PageUsageDbTest : public TestWithEnvironment {
  public:
-  PageUsageDbTest() : db_(&environment_, DetachedPath(tmpfs_.root_fd())) {}
+  PageUsageDbTest()
+      : db_(environment_.clock(), std::make_unique<storage::fake::FakeDb>(
+                                      environment_.dispatcher())) {}
 
   ~PageUsageDbTest() override {}
 
@@ -37,21 +35,17 @@ class PageUsageDbTest : public TestWithEnvironment {
   }
 
  protected:
-  scoped_tmpfs::ScopedTmpFS tmpfs_;
   PageUsageDb db_;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(PageUsageDbTest);
 };
 
-TEST_F(PageUsageDbTest, Init) { EXPECT_EQ(Status::OK, db_.Init()); }
-
 TEST_F(PageUsageDbTest, GetPagesEmpty) {
   RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
     std::string ledger_name = "ledger_name";
     std::string page_id(::fuchsia::ledger::kPageIdSize, 'p');
 
-    EXPECT_EQ(Status::OK, db_.Init());
     std::unique_ptr<storage::Iterator<const PageInfo>> pages;
     EXPECT_EQ(Status::OK, db_.GetPages(handler, &pages));
 
@@ -65,7 +59,6 @@ TEST_F(PageUsageDbTest, MarkPageOpened) {
     std::string ledger_name = "ledger_name";
     std::string page_id(::fuchsia::ledger::kPageIdSize, 'p');
 
-    EXPECT_EQ(Status::OK, db_.Init());
     // Open the same page.
     EXPECT_EQ(Status::OK, db_.MarkPageOpened(handler, ledger_name, page_id));
 
@@ -90,7 +83,6 @@ TEST_F(PageUsageDbTest, MarkPageOpenedAndClosed) {
     std::string ledger_name = "ledger_name";
     std::string page_id(::fuchsia::ledger::kPageIdSize, 'p');
 
-    EXPECT_EQ(Status::OK, db_.Init());
     // Open and close the same page.
     EXPECT_EQ(Status::OK, db_.MarkPageOpened(handler, ledger_name, page_id));
     EXPECT_EQ(Status::OK, db_.MarkPageClosed(handler, ledger_name, page_id));
@@ -121,7 +113,6 @@ TEST_F(PageUsageDbTest, MarkAllPagesClosed) {
       page_ids[i] = RandomString(::fuchsia::ledger::kPageIdSize);
     }
 
-    EXPECT_EQ(Status::OK, db_.Init());
     // Open 5 pages.
     for (int i = 0; i < N; ++i) {
       EXPECT_EQ(Status::OK,

@@ -36,6 +36,8 @@ class LedgerRepositoryImpl
       public ledger_internal::LedgerRepositoryDebug,
       public PageEvictionManager::Delegate {
  public:
+  // Creates a new LedgerRepositoryImpl object. Guarantees that |db_factory|
+  // will outlive the given |disk_cleanup_manager|.
   LedgerRepositoryImpl(component::ExposedObject exposed_object,
                        DetachedPath content_path, Environment* environment,
                        std::unique_ptr<storage::DbFactory> db_factory,

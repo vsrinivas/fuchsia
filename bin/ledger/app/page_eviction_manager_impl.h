@@ -7,6 +7,7 @@
 
 #include "peridot/bin/ledger/app/page_eviction_manager.h"
 
+#include <memory>
 #include <utility>
 
 #include <lib/fit/defer.h>
@@ -17,13 +18,16 @@
 #include "peridot/bin/ledger/app/page_utils.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/coroutine/coroutine_manager.h"
+#include "peridot/bin/ledger/environment/environment.h"
+#include "peridot/bin/ledger/storage/public/db_factory.h"
 
 namespace ledger {
 
 class PageEvictionManagerImpl : public PageEvictionManager,
                                 public PageEvictionDelegate {
  public:
-  PageEvictionManagerImpl(Environment* environment, DetachedPath db_path);
+  PageEvictionManagerImpl(Environment* environment,
+                          storage::DbFactory* db_factory, DetachedPath db_path);
   ~PageEvictionManagerImpl() override;
 
   // Initializes this PageEvictionManager. |IO_ERROR| will be returned in case
@@ -127,7 +131,11 @@ class PageEvictionManagerImpl : public PageEvictionManager,
   fit::closure on_empty_callback_;
   ssize_t pending_operations_ = 0;
   PageEvictionManager::Delegate* delegate_ = nullptr;
-  PageUsageDb db_;
+  // |db_factory_| and |db_path_| should only be used during initialization.
+  // After Init() has been called their contents are no longer valid.
+  storage::DbFactory* db_factory_;
+  DetachedPath db_path_;
+  std::unique_ptr<PageUsageDb> db_;
   coroutine::CoroutineManager coroutine_manager_;
 
   // Must be the last member.

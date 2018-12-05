@@ -9,7 +9,6 @@
 
 #include "lib/fxl/strings/concatenate.h"
 #include "peridot/bin/ledger/app/constants.h"
-#include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/lock/lock.h"
 #include "peridot/bin/ledger/storage/impl/data_serialization.h"
 #include "peridot/bin/ledger/storage/public/iterator.h"
@@ -92,13 +91,11 @@ class PageInfoIterator final : public storage::Iterator<const PageInfo> {
 };
 }  // namespace
 
-PageUsageDb::PageUsageDb(Environment* environment, DetachedPath db_path)
-    : environment_(environment),
-      db_(environment_->dispatcher(), std::move(db_path)) {}
+PageUsageDb::PageUsageDb(timekeeper::Clock* clock,
+                         std::unique_ptr<storage::Db> db)
+    : clock_(clock), db_(std::move(db)) {}
 
 PageUsageDb::~PageUsageDb() {}
-
-Status PageUsageDb::Init() { return PageUtils::ConvertStatus(db_.Init()); }
 
 Status PageUsageDb::MarkPageOpened(coroutine::CoroutineHandler* handler,
                                    fxl::StringView ledger_name,
@@ -112,7 +109,7 @@ Status PageUsageDb::MarkPageClosed(coroutine::CoroutineHandler* handler,
                                    storage::PageIdView page_id) {
   FXL_DCHECK(page_id.size() == ::fuchsia::ledger::kPageIdSize);
   zx::time_utc now;
-  if (environment_->clock()->Now(&now) != ZX_OK) {
+  if (clock_->Now(&now) != ZX_OK) {
     return Status::IO_ERROR;
   }
   return Put(handler, GetKeyForOpenedPage(ledger_name, page_id),
@@ -127,7 +124,7 @@ Status PageUsageDb::MarkPageEvicted(coroutine::CoroutineHandler* handler,
 
 Status PageUsageDb::MarkAllPagesClosed(coroutine::CoroutineHandler* handler) {
   zx::time_utc now;
-  if (environment_->clock()->Now(&now) != ZX_OK) {
+  if (clock_->Now(&now) != ZX_OK) {
     return Status::IO_ERROR;
   }
 
@@ -135,7 +132,7 @@ Status PageUsageDb::MarkAllPagesClosed(coroutine::CoroutineHandler* handler) {
       convert::ExtendedStringView, convert::ExtendedStringView>>>
       rows;
   storage::Status db_status =
-      db_.GetIteratorAtPrefix(handler, kOpenedPagePrefix, &rows);
+      db_->GetIteratorAtPrefix(handler, kOpenedPagePrefix, &rows);
   if (db_status != storage::Status::OK) {
     return PageUtils::ConvertStatus(db_status);
   }
@@ -160,7 +157,7 @@ Status PageUsageDb::GetPages(
       convert::ExtendedStringView, convert::ExtendedStringView>>>
       it;
   storage::Status status =
-      db_.GetIteratorAtPrefix(handler, kOpenedPagePrefix, &it);
+      db_->GetIteratorAtPrefix(handler, kOpenedPagePrefix, &it);
   if (status != storage::Status::OK) {
     return PageUtils::ConvertStatus(status);
   }
@@ -177,7 +174,7 @@ Status PageUsageDb::Put(coroutine::CoroutineHandler* handler,
       coroutine::ContinuationStatus::INTERRUPTED) {
     return Status::INTERNAL_ERROR;
   }
-  storage::Status status = db_.StartBatch(handler, &batch);
+  storage::Status status = db_->StartBatch(handler, &batch);
   if (status != storage::Status::OK) {
     return PageUtils::ConvertStatus(status);
   }
@@ -197,7 +194,7 @@ Status PageUsageDb::Delete(coroutine::CoroutineHandler* handler,
       coroutine::ContinuationStatus::INTERRUPTED) {
     return Status::INTERNAL_ERROR;
   }
-  storage::Status status = db_.StartBatch(handler, &batch);
+  storage::Status status = db_->StartBatch(handler, &batch);
   if (status != storage::Status::OK) {
     return PageUtils::ConvertStatus(status);
   }

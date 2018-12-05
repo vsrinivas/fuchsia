@@ -9,12 +9,12 @@
 #include <memory>
 
 #include <lib/callback/operation_serializer.h>
+#include <lib/timekeeper/clock.h>
 
 #include "lib/fxl/strings/concatenate.h"
 #include "peridot/bin/ledger/app/page_utils.h"
 #include "peridot/bin/ledger/app/types.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
-#include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/storage/impl/leveldb.h"
 #include "peridot/bin/ledger/storage/public/db.h"
 #include "peridot/bin/ledger/storage/public/iterator.h"
@@ -33,12 +33,8 @@ namespace ledger {
 // - Value: "<timestamp>" or timestamp 0 for open pages
 class PageUsageDb {
  public:
-  PageUsageDb(Environment* environment, DetachedPath db_path);
+  PageUsageDb(timekeeper::Clock* clock, std::unique_ptr<storage::Db> db);
   ~PageUsageDb();
-
-  // Initializes the underlying database. Init should be called before any other
-  // operation is performed.
-  Status Init();
 
   // Marks the page with the given id as opened. |INTERNAL_ERROR| is returned if
   // the operation is interrupted.
@@ -75,8 +71,8 @@ class PageUsageDb {
   // Deletes the row with the given |key| in the underlying database.
   Status Delete(coroutine::CoroutineHandler* handler, fxl::StringView key);
 
-  Environment* environment_;
-  storage::LevelDb db_;
+  timekeeper::Clock* clock_;
+  std::unique_ptr<storage::Db> db_;
 
   // A serializer used for Put and Delete. Both these operations need to be
   // serialized to guarantee that consecutive calls to update the contents of a

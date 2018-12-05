@@ -284,8 +284,12 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
   LedgerRepositoryContainer* container = &ret.first->second;
   container->BindRepository(std::move(repository_request), std::move(callback));
 
+  auto db_factory = std::make_unique<storage::LevelDbFactory>(
+      environment_, repository_information.cache_path);
+  db_factory->Init();
   auto disk_cleanup_manager = std::make_unique<DiskCleanupManagerImpl>(
-      environment_, repository_information.page_usage_db_path);
+      environment_, db_factory.get(),
+      repository_information.page_usage_db_path);
   Status status = disk_cleanup_manager->Init();
   if (status != Status::OK) {
     container->SetRepository(status, nullptr);
@@ -303,9 +307,6 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
   }
 
   DiskCleanupManagerImpl* disk_cleanup_manager_ptr = disk_cleanup_manager.get();
-  auto db_factory = std::make_unique<storage::LevelDbFactory>(
-      environment_, repository_information.cache_path);
-  db_factory->Init();
   component::ExposedObject repository_exposed_object(
       convert::ToHex(repository_information.name));
   repository_exposed_object.set_parent(

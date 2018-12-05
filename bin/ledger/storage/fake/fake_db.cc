@@ -95,6 +95,70 @@ class FakeBatch : public Db::Batch {
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeBatch);
 };
 
+// A wrapper storage::Iterator for the elements of an std::map that start with a
+// given prefix.
+class PrefixIterator
+    : public storage::Iterator<const std::pair<convert::ExtendedStringView,
+                                               convert::ExtendedStringView>> {
+ public:
+  PrefixIterator(const std::map<std::string, std::string>& key_value_store,
+                 convert::ExtendedStringView prefix)
+      : prefix_(prefix.ToString()),
+        it_(key_value_store.lower_bound(prefix_)),
+        end_(key_value_store.end()) {
+    UpdateCurrentElement();
+  }
+
+  ~PrefixIterator() {}
+
+  storage::Iterator<const std::pair<convert::ExtendedStringView,
+                                    convert::ExtendedStringView>>&
+  Next() override {
+    ++it_;
+    UpdateCurrentElement();
+    return *this;
+  }
+
+  bool Valid() const override {
+    return current_.has_value() &&
+           current_.value().first.substr(0, prefix_.size()) ==
+               convert::ExtendedStringView(prefix_);
+  }
+
+  storage::Status GetStatus() const override { return storage::Status::OK; }
+
+  const std::pair<convert::ExtendedStringView, convert::ExtendedStringView>&
+  operator*() const override {
+    FXL_DCHECK(current_.has_value());
+    return current_.value();
+  }
+
+  const std::pair<convert::ExtendedStringView, convert::ExtendedStringView>*
+  operator->() const override {
+    FXL_DCHECK(current_.has_value());
+    return &current_.value();
+  }
+
+ private:
+  void UpdateCurrentElement() {
+    if (it_ != end_) {
+      current_ = {convert::ExtendedStringView(it_->first),
+                  convert::ExtendedStringView(it_->second)};
+    } else {
+      current_.reset();
+    }
+  }
+
+  std::string prefix_;
+  std::optional<
+      std::pair<convert::ExtendedStringView, convert::ExtendedStringView>>
+      current_;
+  std::map<std::string, std::string>::const_iterator it_;
+  std::map<std::string, std::string>::const_iterator end_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(PrefixIterator);
+};
+
 }  // namespace
 
 FakeDb::FakeDb(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
@@ -161,13 +225,11 @@ Status FakeDb::GetEntriesByPrefix(
 }
 
 Status FakeDb::GetIteratorAtPrefix(
-    coroutine::CoroutineHandler* /*handler*/,
-    convert::ExtendedStringView /*prefix*/,
-    std::unique_ptr<
-        Iterator<const std::pair<convert::ExtendedStringView,
-                                 convert::ExtendedStringView>>>* /*iterator*/) {
-  FXL_NOTIMPLEMENTED();
-  return Status::NOT_IMPLEMENTED;
+    coroutine::CoroutineHandler* handler, convert::ExtendedStringView prefix,
+    std::unique_ptr<Iterator<const std::pair<
+        convert::ExtendedStringView, convert::ExtendedStringView>>>* iterator) {
+  *iterator = std::make_unique<PrefixIterator>(key_value_store_, prefix);
+  return MakeEmptySyncCallAndCheck(dispatcher_, handler);
 }
 
 }  // namespace fake

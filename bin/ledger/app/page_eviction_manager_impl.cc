@@ -9,6 +9,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
+#include <lib/fxl/files/directory.h>
 #include <lib/fxl/strings/concatenate.h>
 #include <zx/time.h>
 
@@ -103,27 +104,50 @@ void PageEvictionManagerImpl::Completer::CallCallbacks(Status status) {
 }
 
 PageEvictionManagerImpl::PageEvictionManagerImpl(Environment* environment,
+                                                 storage::DbFactory* db_factory,
                                                  DetachedPath db_path)
     : environment_(environment),
-      db_(environment, db_path.SubPath(kPageUsageDbSerializationVersion)),
+      db_factory_(db_factory),
+      db_path_(db_path.SubPath(kPageUsageDbSerializationVersion)),
       coroutine_manager_(environment_->coroutine_service()),
       weak_factory_(this) {}
 
 PageEvictionManagerImpl::~PageEvictionManagerImpl() {}
 
 Status PageEvictionManagerImpl::Init() {
-  Status status = db_.Init();
-  if (status != Status::OK) {
-    return status;
-  }
-
-  // Marking pages as closed is a slow operation and we shouldn't wait for it to
-  // return from initialization: Start marking the open pages as closed and
-  // finalize the initialization completer when done.
+  // Initializing the DB and marking pages as closed are slow operations and we
+  // shouldn't wait for them to finish, before returning from initialization:
+  // Start these operations and finalize the initialization completer when done.
   coroutine_manager_.StartCoroutine(
       [this](coroutine::CoroutineHandler* handler) {
         ExpiringToken token = NewExpiringToken();
-        Status status = db_.MarkAllPagesClosed(handler);
+        if (!files::CreateDirectoryAt(db_path_.root_fd(), db_path_.path())) {
+          initialization_completer_.Complete(Status::IO_ERROR);
+          return;
+        }
+        storage::Status storage_status;
+        std::unique_ptr<storage::Db> db_instance;
+        if (coroutine::SyncCall(
+                handler,
+                [this](fit::function<void(storage::Status,
+                                          std::unique_ptr<storage::Db>)>
+                           callback) {
+                  db_factory_->GetOrCreateDb(std::move(db_path_),
+                                             std::move(callback));
+                },
+                &storage_status,
+                &db_instance) == coroutine::ContinuationStatus::INTERRUPTED) {
+          initialization_completer_.Complete(Status::INTERNAL_ERROR);
+          return;
+        }
+        if (storage_status != storage::Status::OK) {
+          initialization_completer_.Complete(
+              PageUtils::ConvertStatus(storage_status));
+          return;
+        }
+        db_ = std::make_unique<PageUsageDb>(environment_->clock(),
+                                            std::move(db_instance));
+        Status status = db_->MarkAllPagesClosed(handler);
         initialization_completer_.Complete(status);
       });
   return Status::OK;
@@ -155,7 +179,7 @@ void PageEvictionManagerImpl::TryEvictPages(
           return;
         }
         std::unique_ptr<storage::Iterator<const PageInfo>> pages_it;
-        status = db_.GetPages(handler, &pages_it);
+        status = db_->GetPages(handler, &pages_it);
         if (status != Status::OK) {
           callback(status);
           return;
@@ -174,7 +198,7 @@ void PageEvictionManagerImpl::MarkPageOpened(fxl::StringView ledger_name,
     if (LogOnInitializationError("MarkPageOpened", status)) {
       return;
     }
-    status = db_.MarkPageOpened(handler, ledger_name, page_id);
+    status = db_->MarkPageOpened(handler, ledger_name, page_id);
     LogOnPageUpdateError("mark page as opened", status, ledger_name, page_id);
   });
 }
@@ -189,7 +213,7 @@ void PageEvictionManagerImpl::MarkPageClosed(fxl::StringView ledger_name,
     if (LogOnInitializationError("MarkPageClosed", status)) {
       return;
     }
-    status = db_.MarkPageClosed(handler, ledger_name, page_id);
+    status = db_->MarkPageClosed(handler, ledger_name, page_id);
     LogOnPageUpdateError("mark page as closed", status, ledger_name, page_id);
   });
 }
@@ -307,7 +331,7 @@ void PageEvictionManagerImpl::MarkPageEvicted(std::string ledger_name,
   coroutine_manager_.StartCoroutine([this, ledger_name = std::move(ledger_name),
                                      page_id = std::move(page_id)](
                                         coroutine::CoroutineHandler* handler) {
-    Status status = db_.MarkPageEvicted(handler, ledger_name, page_id);
+    Status status = db_->MarkPageEvicted(handler, ledger_name, page_id);
     LogOnPageUpdateError("mark page as evicted", status, ledger_name, page_id);
   });
 }

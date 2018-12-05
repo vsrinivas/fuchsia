@@ -10,6 +10,7 @@
 #include "gtest/gtest.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
+#include "peridot/bin/ledger/storage/fake/fake_db_factory.h"
 #include "peridot/bin/ledger/testing/test_with_environment.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
@@ -48,7 +49,9 @@ class FakeDelegate : public PageEvictionManager::Delegate {
 class DiskCleanupManagerTest : public TestWithEnvironment {
  public:
   DiskCleanupManagerTest()
-      : disk_cleanup_manager_(&environment_, DetachedPath(tmpfs_.root_fd())) {}
+      : db_factory_(environment_.dispatcher()),
+        disk_cleanup_manager_(&environment_, &db_factory_,
+                              DetachedPath(tmpfs_.root_fd())) {}
 
   // gtest::TestLoopFixture:
   void SetUp() override {
@@ -60,6 +63,7 @@ class DiskCleanupManagerTest : public TestWithEnvironment {
  private:
   scoped_tmpfs::ScopedTmpFS tmpfs_;
   coroutine::CoroutineServiceImpl coroutine_service_;
+  storage::fake::FakeDbFactory db_factory_;
 
  protected:
   FakeDelegate delegate_;

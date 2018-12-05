@@ -7,8 +7,9 @@
 namespace ledger {
 
 DiskCleanupManagerImpl::DiskCleanupManagerImpl(Environment* environment,
+                                               storage::DbFactory* db_factory,
                                                DetachedPath db_path)
-    : page_eviction_manager_(environment, std::move(db_path)),
+    : page_eviction_manager_(environment, db_factory, std::move(db_path)),
       policy_(NewLeastRecentyUsedPolicy(environment->coroutine_service(),
                                         &page_eviction_manager_)) {}
 

@@ -9,14 +9,17 @@
 #include "peridot/bin/ledger/app/page_eviction_manager_impl.h"
 #include "peridot/bin/ledger/app/page_usage_listener.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
+#include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/filesystem/detached_path.h"
+#include "peridot/bin/ledger/storage/public/db_factory.h"
 
 namespace ledger {
 
 class DiskCleanupManagerImpl : public DiskCleanupManager,
                                public PageUsageListener {
  public:
-  DiskCleanupManagerImpl(Environment* environment, DetachedPath db_path);
+  DiskCleanupManagerImpl(Environment* environment,
+                         storage::DbFactory* db_factory, DetachedPath db_path);
   ~DiskCleanupManagerImpl() override;
 
   // Initializes this DiskCleanupManagerImpl.

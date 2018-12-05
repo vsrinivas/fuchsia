@@ -13,6 +13,7 @@
 #include "gtest/gtest.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
+#include "peridot/bin/ledger/storage/fake/fake_db_factory.h"
 #include "peridot/bin/ledger/testing/test_with_environment.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
@@ -54,7 +55,9 @@ class FakeDelegate : public PageEvictionManager::Delegate {
 class PageEvictionManagerTest : public TestWithEnvironment {
  public:
   PageEvictionManagerTest()
-      : page_eviction_manager_(&environment_, DetachedPath(tmpfs_.root_fd())),
+      : db_factory_(environment_.dispatcher()),
+        page_eviction_manager_(&environment_, &db_factory_,
+                               DetachedPath(tmpfs_.root_fd())),
         policy_(NewLeastRecentyUsedPolicy(environment_.coroutine_service(),
                                           &page_eviction_manager_)) {}
 
@@ -67,6 +70,7 @@ class PageEvictionManagerTest : public TestWithEnvironment {
 
  private:
   scoped_tmpfs::ScopedTmpFS tmpfs_;
+  storage::fake::FakeDbFactory db_factory_;
 
  protected:
   FakeDelegate delegate_;
