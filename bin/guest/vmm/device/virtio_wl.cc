@@ -7,6 +7,7 @@
 #include <vector>
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fit/defer.h>
 #include <lib/fxl/logging.h>
 #include <lib/zx/socket.h>
 #include <trace-provider/provider.h>
@@ -189,7 +190,9 @@ VirtioWl::VirtioWl(component::StartupContext* context) : DeviceBase(context) {}
 
 void VirtioWl::Start(
     fuchsia::guest::device::StartInfo start_info, zx::vmar vmar,
-    fidl::InterfaceHandle<fuchsia::guest::WaylandDispatcher> dispatcher) {
+    fidl::InterfaceHandle<fuchsia::guest::WaylandDispatcher> dispatcher,
+    StartCallback callback) {
+  auto deferred = fit::defer(std::move(callback));
   PrepStart(std::move(start_info));
   vmar_ = std::move(vmar);
   dispatcher_ = dispatcher.Bind();
@@ -203,16 +206,17 @@ void VirtioWl::Start(
 }
 
 void VirtioWl::Ready(uint32_t negotiated_features, ReadyCallback callback) {
+  auto deferred = fit::defer(std::move(callback));
   if (negotiated_features & VIRTIO_WL_F_MAGMA) {
     magma_ = std::make_unique<VirtioMagma>(&vmar_, magma_in_queue(),
                                            magma_out_queue());
   }
-  callback();
 }
 
 void VirtioWl::ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
                               zx_gpaddr_t avail, zx_gpaddr_t used,
                               ConfigureQueueCallback callback) {
+  auto deferred = fit::defer(std::move(callback));
   switch (queue) {
     case VIRTWL_VQ_IN:
     case VIRTWL_VQ_OUT:
@@ -224,7 +228,6 @@ void VirtioWl::ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
       FXL_LOG(ERROR) << "ConfigureQueue on non-existent queue " << queue;
       break;
   }
-  callback();
 }
 
 void VirtioWl::NotifyQueue(uint16_t queue) {

@@ -112,11 +112,10 @@ interface VirtioRng : VirtioDevice {
     Start(StartInfo start_info) -> ();
 };
 
-
 [Discoverable]
-interface VirtioWayland: VirtioDevice {
+interface VirtioWayland : VirtioDevice {
     // Start the wayland device.
-    0x81000001: Start(StartInfo start_info,
-                      handle<vmar> vmar,
-                      fuchsia.guest.WaylandDispatcher dispatcher);
+    Start(StartInfo start_info,
+          handle<vmar> vmar,
+          fuchsia.guest.WaylandDispatcher dispatcher) -> ();
 };

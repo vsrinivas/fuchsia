@@ -105,9 +105,10 @@ class VirtioWl : public DeviceBase<VirtioWl>,
   void NotifyQueue(uint16_t queue) override;
 
   // |fuchsia::guest::device::VirtioWayland|
-  void Start(fuchsia::guest::device::StartInfo start_info, zx::vmar vmar,
-             fidl::InterfaceHandle<fuchsia::guest::WaylandDispatcher>
-                 dispatcher) override;
+  void Start(
+      fuchsia::guest::device::StartInfo start_info, zx::vmar vmar,
+      fidl::InterfaceHandle<fuchsia::guest::WaylandDispatcher> dispatcher,
+      StartCallback callback) override;
 
  private:
   void HandleCommand(machina::VirtioChain* chain);
