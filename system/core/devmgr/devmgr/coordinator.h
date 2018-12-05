@@ -26,7 +26,7 @@
 
 namespace devmgr {
 
-struct Coordinator;
+class Coordinator;
 struct Device;
 class Devhost;
 struct Devnode;
