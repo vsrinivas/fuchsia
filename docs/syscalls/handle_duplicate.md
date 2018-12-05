@@ -23,6 +23,8 @@ to specify no rights by using 0.
 
 ## RIGHTS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 *handle* must have **ZX_RIGHT_DUPLICATE**.
 
 ## RETURN VALUE

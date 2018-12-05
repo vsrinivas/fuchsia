@@ -22,7 +22,11 @@ failure, *socket_to_send* is discarded rather than transferred.
 
 ## RIGHTS
 
-TODO(ZX-2399)
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+*handle* must be of type **ZX_OBJ_TYPE_SOCKET** and have **ZX_RIGHT_WRITE**.
+
+*socket_to_share* must be of type **ZX_OBJ_TYPE_SOCKET** and have **ZX_RIGHT_TRANSFER**.
 
 ## RETURN VALUE
 

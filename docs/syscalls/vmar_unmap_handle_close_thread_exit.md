@@ -32,6 +32,8 @@ fails, then the thread takes a trap (as if by `__builtin_trap();`).
 
 ## RIGHTS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 TODO(ZX-2399)
 
 ## RETURN VALUE

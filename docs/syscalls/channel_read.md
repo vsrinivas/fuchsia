@@ -56,7 +56,9 @@ are validated against the expected values.
 
 ## RIGHTS
 
-*handle* must have **ZX_RIGHT_READ**.
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+*handle* must be of type **ZX_OBJ_TYPE_CHANNEL** and have **ZX_RIGHT_READ**.
 
 ## RETURN VALUE
 

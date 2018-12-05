@@ -22,7 +22,9 @@ to a port, or **interrupt_wait**() to return if it is waiting on this interrupt.
 
 ## RIGHTS
 
-TODO(ZX-2399)
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+*handle* must be of type **ZX_OBJ_TYPE_INTERRUPT** and have **ZX_RIGHT_SIGNAL**.
 
 ## RETURN VALUE
 

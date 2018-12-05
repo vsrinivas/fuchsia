@@ -35,7 +35,13 @@ be a bitwise-or of one or more of the following:
 
 ## RIGHTS
 
-TODO(ZX-2399)
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+If *options* & **ZX_VM_PERM_READ**, *handle* must be of type **ZX_OBJ_TYPE_VMAR** and have **ZX_RIGHT_READ**.
+
+If *options* & **ZX_VM_PERM_WRITE**, *handle* must be of type **ZX_OBJ_TYPE_VMAR** and have **ZX_RIGHT_WRITE**.
+
+If *options* & **ZX_VM_PERM_EXECUTE**, *handle* must be of type **ZX_OBJ_TYPE_VMAR** and have **ZX_RIGHT_EXECUTE**.
 
 ## RETURN VALUE
 

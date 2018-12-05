@@ -22,6 +22,8 @@ bytes to seed a user-space random number generator for better performance.
 
 ## RIGHTS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 TODO(ZX-2399)
 
 ## NOTES

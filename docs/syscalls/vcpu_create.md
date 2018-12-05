@@ -46,7 +46,9 @@ The following rights will be set on the handle *out* by default:
 
 ## RIGHTS
 
-TODO(ZX-2399)
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+*guest* must be of type **ZX_OBJ_TYPE_GUEST** and have **ZX_RIGHT_MANAGE_PROCESS**.
 
 ## RETURN VALUE
 

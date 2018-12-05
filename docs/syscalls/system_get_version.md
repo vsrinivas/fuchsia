@@ -27,6 +27,8 @@ returned is "git-8a07d52603404521038d8866b297f99de36f9162".
 
 ## RIGHTS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 TODO(ZX-2399)
 
 ## RETURN VALUE

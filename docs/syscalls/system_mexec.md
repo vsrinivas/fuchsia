@@ -31,7 +31,13 @@ to the new kernel.
 
 ## RIGHTS
 
-TODO(ZX-2399)
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+*resource* must have resource kind **ZX_RSRC_KIND_ROOT**.
+
+*kernel* must be of type **ZX_OBJ_TYPE_VMO** and have **ZX_RIGHT_READ**.
+
+*bootimage* must be of type **ZX_OBJ_TYPE_VMO** and have **ZX_RIGHT_READ**.
 
 ## RETURN VALUE
 

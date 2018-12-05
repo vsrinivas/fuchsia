@@ -19,7 +19,9 @@ called from any thread.
 
 ## RIGHTS
 
-TODO(ZX-2399)
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+*handle* must be of type **ZX_OBJ_TYPE_VCPU** and have **ZX_RIGHT_SIGNAL**.
 
 ## RETURN VALUE
 

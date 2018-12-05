@@ -89,7 +89,9 @@ implies **ZX_POL_ACTION_DENY**.
 
 ## RIGHTS
 
-TODO(ZX-2399)
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+*job* must be of type **ZX_OBJ_TYPE_JOB** and have **ZX_RIGHT_SET_POLICY**.
 
 ## RETURN VALUE
 

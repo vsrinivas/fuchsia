@@ -29,7 +29,9 @@ Job handles may be waited on (TODO(cpu): expand this)
 
 ## RIGHTS
 
-TODO(ZX-2399)
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+*parent_job* must be of type **ZX_OBJ_TYPE_JOB** and have **ZX_RIGHT_MANAGE_JOB**.
 
 ## RETURN VALUE
 

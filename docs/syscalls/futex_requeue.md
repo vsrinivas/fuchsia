@@ -63,8 +63,9 @@ results in the owner of the futex being set to the thread referenced by the
 
 ## RIGHTS
 
-Futexes have no rights associated with them.  See *Rights* in [futex
-objects](../objects/futex.md) for details.
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+None.
 
 ## RETURN VALUE
 

@@ -32,6 +32,8 @@ to be read from them).
 
 ## RIGHTS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 TODO(ZX-2399)
 
 ## RETURN VALUE

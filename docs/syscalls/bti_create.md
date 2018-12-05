@@ -27,7 +27,9 @@ Upon success a handle for the new BTI is returned.  This handle will have rights
 
 ## RIGHTS
 
-TODO(ZX-2399)
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+*iommu* must be of type **ZX_OBJ_TYPE_IOMMU** and have **ZX_RIGHT_NONE**.
 
 ## RETURN VALUE
 

@@ -31,6 +31,8 @@ that the packet has been read but the interrupt has not been re-armed by calling
 
 ## RIGHTS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 TODO(ZX-2399)
 
 ## RETURN VALUE

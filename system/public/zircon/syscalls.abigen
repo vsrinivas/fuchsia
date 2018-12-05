@@ -61,6 +61,7 @@ syscall clock_get_monotonic
     ()
     returns (zx_time_t);
 
+#! None.
 syscall nanosleep blocking
     (deadline: zx_time_t)
     returns (zx_status_t);
@@ -112,10 +113,12 @@ syscall cache_flush vdsocall
 
 # Generic handle operations
 
+#! None.
 syscall handle_close
     (handle: zx_handle_t handle_release_always)
     returns (zx_status_t);
 
+#! None.
 syscall handle_close_many
     (handles: zx_handle_t[num_handles] IN, num_handles: size_t)
     returns (zx_status_t);
@@ -125,6 +128,7 @@ syscall handle_duplicate
     (handle: zx_handle_t, rights: zx_rights_t)
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 
+#! None.
 syscall handle_replace
     (handle: zx_handle_t handle_release_always, rights: zx_rights_t)
     returns (zx_status_t, out: zx_handle_t handle_acquire);
@@ -136,7 +140,7 @@ syscall object_wait_one blocking
     (handle: zx_handle_t, signals: zx_signals_t, deadline: zx_time_t)
     returns (zx_status_t, observed: zx_signals_t optional);
 
-#! All items[].handle must have ZX_RIGHT_WAIT.
+# TODO(ZX-2399): All items[].handle must have ZX_RIGHT_WAIT.
 syscall object_wait_many blocking
     (items: zx_wait_item_t[count] INOUT, count: size_t, deadline: zx_time_t)
     returns (zx_status_t);
@@ -161,8 +165,8 @@ syscall object_signal_peer
 #! handle must have ZX_RIGHT_GET_PROPERTY.
 #! If property is ZX_PROP_PROCESS_DEBUG_ADDR, handle must be of type ZX_OBJ_TYPE_PROCESS.
 #! If property is ZX_PROP_PROCESS_VDSO_BASE_ADDRESS, handle must be of type ZX_OBJ_TYPE_PROCESS.
-#! if property is ZX_PROP_SOCKET_RX_THRESHOLD, handle must be of type ZX_OBJ_TYPE_SOCKET.
-#! if property is ZX_PROP_SOCKET_TX_THRESHOLD, handle must be of type ZX_OBJ_TYPE_SOCKET.
+#! If property is ZX_PROP_SOCKET_RX_THRESHOLD, handle must be of type ZX_OBJ_TYPE_SOCKET.
+#! If property is ZX_PROP_SOCKET_TX_THRESHOLD, handle must be of type ZX_OBJ_TYPE_SOCKET.
 syscall object_get_property
     (handle: zx_handle_t, property: uint32_t, value: any[value_size] OUT, value_size: size_t)
     returns (zx_status_t);
@@ -189,7 +193,7 @@ syscall object_get_cookie
 
 #! If topic is ZX_INFO_PROCESS, handle must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_INSPECT.
 #! If topic is ZX_INFO_PROCESS_THREADS, handle must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_ENUMERATE.
-#! If topic is ZX_INFO_JOB_CHILDREN, handle must be of type ZX_OBJ_TYPE_JOB and have have ZX_RIGHT_ENUMERATE.
+#! If topic is ZX_INFO_JOB_CHILDREN, handle must be of type ZX_OBJ_TYPE_JOB and have ZX_RIGHT_ENUMERATE.
 #! If topic is ZX_INFO_JOB_PROCESSES, handle must be of type ZX_OBJ_TYPE_JOB and have ZX_RIGHT_ENUMERATE.
 #! If topic is ZX_INFO_THREAD, handle must be of type ZX_OBJ_TYPE_THREAD and have ZX_RIGHT_INSPECT.
 #! If topic is ZX_INFO_THREAD_EXCEPTION_REPORT, handle must be of type ZX_OBJ_TYPE_THREAD and have ZX_RIGHT_INSPECT.
@@ -249,7 +253,7 @@ syscall channel_read_etc
     returns (zx_status_t, actual_bytes: uint32_t optional, actual_handles: uint32_t optional);
 
 #! handle must be of type ZX_OBJ_TYPE_CHANNEL and have ZX_RIGHT_WRITE.
-#! All handles[] must have ZX_RIGHT_TRANSFER.
+# TODO(ZX-2399): All handles[] must have ZX_RIGHT_TRANSFER.
 syscall channel_write
     (handle: zx_handle_t, options: uint32_t,
         bytes: any[num_bytes] IN, num_bytes: uint32_t,
@@ -292,7 +296,7 @@ syscall socket_read
     returns (zx_status_t, actual: size_t optional);
 
 #! handle must be of type ZX_OBJ_TYPE_SOCKET and have ZX_RIGHT_WRITE.
-#! socket_to_share must be of ZX_OBJ_TYPE_SOCKET and have ZX_RIGHT_TRANSFER.
+#! socket_to_share must be of type ZX_OBJ_TYPE_SOCKET and have ZX_RIGHT_TRANSFER.
 syscall socket_share
     (handle: zx_handle_t, socket_to_share: zx_handle_t)
     returns (zx_status_t);
@@ -354,7 +358,7 @@ syscall process_create
 
 #! handle must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_WRITE.
 #! thread must be of type ZX_OBJ_TYPE_THREAD and have ZX_RIGHT_WRITE.
-#! handle_release_always must be of type Dispatcher and have ZX_RIGHT_TRANSFER.
+#! arg1 must have ZX_RIGHT_TRANSFER.
 syscall process_start
     (handle: zx_handle_t, thread: zx_handle_t, entry: zx_vaddr_t,
     stack: zx_vaddr_t, arg1: zx_handle_t handle_release_always, arg2: uintptr_t)
@@ -424,37 +428,45 @@ syscall eventpair_create
     returns (zx_status_t,
         out0: zx_handle_t handle_acquire, out1: zx_handle_t handle_acquire);
 
+#! None.
 syscall futex_wait blocking
     (value_ptr: zx_futex_t[1] IN, current_value: zx_futex_t, new_futex_owner: zx_handle_t,
         deadline: zx_time_t)
     returns (zx_status_t);
 
+#! None.
 syscall futex_wake
     (value_ptr: zx_futex_t[1] IN, count: uint32_t)
     returns (zx_status_t);
 
+#! None.
 syscall futex_requeue
     (wake_ptr: zx_futex_t[1] IN, wake_count: uint32_t, current_value: zx_futex_t,
         requeue_ptr: zx_futex_t[1] IN, requeue_count: uint32_t, new_requeue_owner: zx_handle_t)
     returns (zx_status_t);
 
+#! None.
 syscall futex_wake_single_owner
     (value_ptr: zx_futex_t[1] IN)
     returns (zx_status_t);
 
+#! None.
 syscall futex_requeue_single_owner
     (wake_ptr: zx_futex_t[1] IN, current_value: zx_futex_t,
         requeue_ptr: zx_futex_t[1] IN, requeue_count: uint32_t, new_requeue_owner: zx_handle_t)
     returns (zx_status_t);
 
+#! None.
 syscall futex_get_owner
     (value_ptr: zx_futex_t[1] IN, koid: zx_koid_t[1] OUT)
     returns (zx_status_t);
 
+#! None.
 syscall futex_wait_deprecated blocking
     (value_ptr: zx_futex_t[1] IN, current_value: int32_t, deadline: zx_time_t)
     returns (zx_status_t);
 
+#! None.
 syscall futex_requeue_deprecated
     (wake_ptr: zx_futex_t[1] IN, wake_count: uint32_t, current_value: int32_t,
         requeue_ptr: zx_futex_t[1] IN, requeue_count: uint32_t)
@@ -544,7 +556,7 @@ syscall vmo_set_cache_policy
     (handle: zx_handle_t, cache_policy: uint32_t)
     returns (zx_status_t);
 
-#! hand must be of type ZX_OBJ_TYPE_VMO.
+#! handle must be of type ZX_OBJ_TYPE_VMO.
 # TODO(ZX-2967): handle: No rights required, ZX_RIGHT_EXECUTE added to dup out
 #! vmex must have resource kind ZX_RSRC_KIND_VMEX.
 # TODO(ZX-2967): vmex == ZX_HANDLE_INVALID also accepted.
@@ -573,9 +585,9 @@ syscall vmar_protect_old
     (handle: zx_handle_t, addr: zx_vaddr_t, len: uint64_t, prot_flags: uint32_t)
     returns (zx_status_t);
 
-#! If options & ZX_VM_CAN_MAP_READ, parent_vmar must have type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_READ.
-#! If options & ZX_VM_CAN_MAP_WRITE, parent_vmar must have type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_WRITE.
-#! If options & ZX_VM_CAN_MAP_EXECUTE, parent_vmar must have type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_EXECUTE.
+#! If options & ZX_VM_CAN_MAP_READ, parent_vmar must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_READ.
+#! If options & ZX_VM_CAN_MAP_WRITE, parent_vmar must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_WRITE.
+#! If options & ZX_VM_CAN_MAP_EXECUTE, parent_vmar must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_EXECUTE.
 syscall vmar_allocate
     (parent_vmar: zx_handle_t, options: zx_vm_option_t, offset: uint64_t, size: uint64_t)
     returns (zx_status_t,
@@ -586,8 +598,8 @@ syscall vmar_destroy
     (handle: zx_handle_t)
     returns (zx_status_t);
 
-#! handle must have type ZX_OBJ_TYPE_VMAR.
-#! vmo must have type ZX_OBJ_TYPE_VMO.
+#! handle must be of type ZX_OBJ_TYPE_VMAR.
+#! vmo must be of type ZX_OBJ_TYPE_VMO.
 # TODO(ZX-2399): TODO handle and vmo and options must all match, and options can't specify them.
 syscall vmar_map
     (handle: zx_handle_t, options: zx_vm_option_t, vmar_offset: uint64_t,
@@ -788,7 +800,7 @@ syscall iommu_create
     (resource: zx_handle_t, type: uint32_t, desc: any[desc_size] IN, desc_size: size_t)
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 
-#! iommu must be of type IommuDispatcher and have ZX_RIGHT_NONE.
+#! iommu must be of type ZX_OBJ_TYPE_IOMMU and have ZX_RIGHT_NONE.
 # TODO(ZX-2967): This is unusual.
 syscall bti_create
     (iommu: zx_handle_t, options: uint32_t, bti_id: uint64_t)
@@ -908,7 +920,7 @@ syscall smc_call
 
 # Resources
 
-#! parent_rsrc must be of type ResourceDispatcher and have ZX_RIGHT_WRITE.
+#! parent_rsrc must be of type ZX_OBJ_TYPE_RESOURCE and have ZX_RIGHT_WRITE.
 syscall resource_create
     (parent_rsrc: zx_handle_t, options: uint32_t, base: uint64_t, size: size_t,
         name: char[name_size] IN, name_size: size_t)

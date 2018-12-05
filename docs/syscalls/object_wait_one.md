@@ -36,7 +36,9 @@ forever.
 
 ## RIGHTS
 
-TODO(ZX-2399)
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+*handle* must have **ZX_RIGHT_WAIT**.
 
 ## RETURN VALUE
 

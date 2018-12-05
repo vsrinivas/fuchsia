@@ -24,7 +24,9 @@ N.B. Execution of a *vcpu* must be resumed on the same thread it was created on.
 
 ## RIGHTS
 
-TODO(ZX-2399)
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+*handle* must be of type **ZX_OBJ_TYPE_VCPU** and have **ZX_RIGHT_EXECUTE**.
 
 ## RETURN VALUE
 

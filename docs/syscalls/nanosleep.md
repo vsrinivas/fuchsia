@@ -43,7 +43,9 @@ recommended to use a timer.
 
 ## RIGHTS
 
-No rights are required.
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+None.
 
 ## RETURN VALUE
 

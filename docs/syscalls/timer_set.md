@@ -44,7 +44,9 @@ late firing with an effective interval of *deadline* - *slack* to
 
 ## RIGHTS
 
-*handle* must have **ZX_RIGHT_WRITE**.
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+*handle* must be of type **ZX_OBJ_TYPE_TIMER** and have **ZX_RIGHT_WRITE**.
 
 ## RETURN VALUE
 

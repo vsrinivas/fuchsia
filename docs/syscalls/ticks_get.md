@@ -21,6 +21,8 @@ They are not guaranteed to continue advancing when the system is asleep.
 
 ## RIGHTS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 TODO(ZX-2399)
 
 ## RETURN VALUE

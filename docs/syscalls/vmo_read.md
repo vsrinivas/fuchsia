@@ -24,7 +24,9 @@ enough for at least this many bytes.
 
 ## RIGHTS
 
-TODO(ZX-2399)
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+*handle* must be of type **ZX_OBJ_TYPE_VMO** and have **ZX_RIGHT_READ**.
 
 ## RETURN VALUE
 

@@ -45,7 +45,9 @@ Interrupts cannot be waited on with the **object_wait_** family of calls.
 
 ## RIGHTS
 
-TODO(ZX-2399)
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+*src_obj* must have resource kind **ZX_RSRC_KIND_IRQ**.
 
 ## RETURN VALUE
 

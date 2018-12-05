@@ -33,7 +33,13 @@ than transferred to the process being started.
 
 ## RIGHTS
 
-TODO(ZX-2399)
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+*handle* must be of type **ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_WRITE**.
+
+*thread* must be of type **ZX_OBJ_TYPE_THREAD** and have **ZX_RIGHT_WRITE**.
+
+*arg1* must have **ZX_RIGHT_TRANSFER**.
 
 ## RETURN VALUE
 

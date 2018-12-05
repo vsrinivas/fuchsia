@@ -54,7 +54,9 @@ The VMOs created by this syscall are not usable with **vmo_read**() and
 
 ## RIGHTS
 
-TODO(ZX-2399)
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+*resource* must have resource kind **ZX_RSRC_KIND_MMIO**.
 
 ## RETURN VALUE
 

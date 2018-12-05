@@ -22,6 +22,8 @@ VMAR will remain valid handles, but all VMAR operations on them will fail.
 
 ## RIGHTS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 TODO(ZX-2399)
 
 ## RETURN VALUE

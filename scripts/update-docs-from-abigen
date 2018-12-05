@@ -1,0 +1,291 @@
+#!/usr/bin/env python
+
+# Copyright 2018 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+"""
+This tool uses the contents of the abigen-generated syscalls/definitions.json
+to update docs/syscalls/.
+
+It is not run automatically as part of the build for now (to allow confirmation
+of what it does). So it should be run manually after updating syscalls.abigen
+and building zircon, followed by uploading the changes to docs/ as a CL.
+
+Currently, it only updates the rights annotations, but in the future it should
+update the signature, arguments, etc. too.
+"""
+
+import argparse
+import json
+import sys
+import os
+
+SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument(
+        '--json',
+        default=os.path.normpath(
+            os.path.join(SCRIPT_DIR, os.pardir, 'build-x64', 'gen', 'global',
+                         'include', 'zircon', 'syscalls', 'definitions.json')),
+        help='path to abigen .json output')
+    parser.add_argument(
+        '--docroot',
+        default=os.path.normpath(
+            os.path.join(SCRIPT_DIR, os.pardir, 'docs', 'syscalls')),
+        help='root of docs/syscalls/ to be updated')
+    return parser.parse_args()
+
+
+def break_into_sentences(stream):
+    """Partition on '.' to break into chunks. '.' can't appear elsewhere
+    in the input stream."""
+    sentences = []
+    cur = []
+    for tok in stream:
+        cur.append(tok)
+        if tok == '.':
+            sentences.append(cur)
+            cur = []
+    assert not cur, cur
+    return sentences
+
+
+def match_sentence_form(sentence, arg_names):
+    """Matches a known sentence form, returning a format string and a dict for
+    substitution. The values in dict are converted to markdown format.
+
+    Certain TERMINALS are special:
+    - ARG must appear in arg_names
+    - RIGHT must be a valid ZX_RIGHT_
+    - TYPE must be a valid ZX_OBJ_TYPE_
+    - RSRC must be a valid ZX_RSRC_KIND_
+
+    VALUE is a generic unchecked value type, used for masks, options, etc.
+    """
+    sentence_forms = [
+        ['None', '.'],
+        ['ARG', 'must', 'have', 'RIGHT', '.'],
+        ['ARG', 'must', 'have', 'resource', 'kind', 'RSRC', '.'],
+        ['ARG', 'must', 'be', 'of', 'type', 'TYPE', '.'],
+        [
+            'ARG', 'must', 'be', 'of', 'type', 'TYPE', 'and', 'have', 'RIGHT1',
+            'and', 'have', 'RIGHT2', '.'
+        ],
+        [
+            'ARG', 'must', 'be', 'of', 'type', 'TYPE', 'and', 'have', 'RIGHT',
+            '.'
+        ],
+        [
+            'If', 'ARG1', 'is', 'VALUE', ',', 'ARG2', 'must', 'have', 'RIGHT',
+            '.'
+        ],
+        [
+            'If', 'ARG1', 'is', 'VALUE', ',', 'ARG2', 'must', 'have',
+            'resource', 'kind', 'RSRC', '.'
+        ],
+        [
+            'If', 'ARG1', 'is', 'VALUE', ',', 'ARG2', 'must', 'be', 'of',
+            'type', 'TYPE', '.'
+        ],
+        [
+            'If', 'ARG1', 'is', 'VALUE', ',', 'ARG2', 'must', 'be', 'of',
+            'type', 'TYPE', 'and', 'have', 'RIGHT', '.'
+        ],
+        [
+            'If', 'ARG1', '&', 'VALUE', ',', 'ARG2', 'must', 'be', 'of', 'type',
+            'TYPE', 'and', 'have', 'RIGHT', '.'
+        ],
+    ]
+
+    all_rights = set([
+        'ZX_RIGHT_NONE',
+        'ZX_RIGHT_DUPLICATE',
+        'ZX_RIGHT_TRANSFER',
+        'ZX_RIGHT_READ',
+        'ZX_RIGHT_WRITE',
+        'ZX_RIGHT_EXECUTE',
+        'ZX_RIGHT_MAP',
+        'ZX_RIGHT_GET_PROPERTY',
+        'ZX_RIGHT_SET_PROPERTY',
+        'ZX_RIGHT_ENUMERATE',
+        'ZX_RIGHT_DESTROY',
+        'ZX_RIGHT_SET_POLICY',
+        'ZX_RIGHT_GET_POLICY',
+        'ZX_RIGHT_SIGNAL',
+        'ZX_RIGHT_SIGNAL_PEER',
+        'ZX_RIGHT_WAIT',
+        'ZX_RIGHT_INSPECT',
+        'ZX_RIGHT_MANAGE_JOB',
+        'ZX_RIGHT_MANAGE_PROCESS',
+        'ZX_RIGHT_MANAGE_THREAD',
+        'ZX_RIGHT_APPLY_PROFILE',
+    ])
+
+    all_types = set([
+        'ZX_OBJ_TYPE_PROCESS',
+        'ZX_OBJ_TYPE_THREAD',
+        'ZX_OBJ_TYPE_VMO',
+        'ZX_OBJ_TYPE_CHANNEL',
+        'ZX_OBJ_TYPE_EVENT',
+        'ZX_OBJ_TYPE_PORT',
+        'ZX_OBJ_TYPE_INTERRUPT',
+        'ZX_OBJ_TYPE_PCI_DEVICE',
+        'ZX_OBJ_TYPE_LOG',
+        'ZX_OBJ_TYPE_SOCKET',
+        'ZX_OBJ_TYPE_RESOURCE',
+        'ZX_OBJ_TYPE_EVENTPAIR',
+        'ZX_OBJ_TYPE_JOB',
+        'ZX_OBJ_TYPE_VMAR',
+        'ZX_OBJ_TYPE_FIFO',
+        'ZX_OBJ_TYPE_GUEST',
+        'ZX_OBJ_TYPE_VCPU',
+        'ZX_OBJ_TYPE_TIMER',
+        'ZX_OBJ_TYPE_IOMMU',
+        'ZX_OBJ_TYPE_BTI',
+        'ZX_OBJ_TYPE_PROFILE',
+        'ZX_OBJ_TYPE_PMT',
+        'ZX_OBJ_TYPE_SUSPEND_TOKEN',
+        'ZX_OBJ_TYPE_PAGER',
+    ])
+
+    all_rsrcs = set([
+        'ZX_RSRC_KIND_MMIO',
+        'ZX_RSRC_KIND_IRQ',
+        'ZX_RSRC_KIND_IOPORT',
+        'ZX_RSRC_KIND_HYPERVISOR',
+        'ZX_RSRC_KIND_ROOT',
+        'ZX_RSRC_KIND_VMEX',
+        'ZX_RSRC_KIND_SMC',
+    ])
+
+    for form in sentence_forms:
+        result_fmt = ''
+        result_values = {}
+        for f, s in zip(form, sentence):
+            # Literal match.
+            if s == f:
+                if f == '.' or f == ',':
+                    result_fmt += f
+                else:
+                    result_fmt += ' ' + f
+            elif f.startswith('ARG'):
+                if s not in arg_names:
+                    break
+                else:
+                    result_values[f] = '*' + s + '*'
+                    result_fmt += ' %(' + f + ')s'
+            elif f.startswith('VALUE'):
+                # TODO(scottmg): Worth checking these in some way?
+                result_fmt += ' %(' + f + ')s'
+                result_values[f] = '**' + s + '**'
+            elif f.startswith('RIGHT'):
+                if s not in all_rights:
+                    break
+                result_fmt += ' %(' + f + ')s'
+                result_values[f] = '**' + s + '**'
+            elif f.startswith('RSRC'):
+                if s not in all_rsrcs:
+                    break
+                result_fmt += ' %(' + f + ')s'
+                result_values[f] = '**' + s + '**'
+            elif f.startswith('TYPE'):
+                if s not in all_types:
+                    break
+                result_fmt += ' %(' + f + ')s'
+                result_values[f] = '**' + s + '**'
+            else:
+                break
+        else:
+            if result_fmt[0] == ' ':
+                result_fmt = result_fmt[1:]
+            return result_fmt, result_values
+    else:
+        return None, None
+
+
+def to_markdown(filename, req, arguments):
+    """Parses a few known forms of rules (see match_sentence_forms).
+
+    Converts |req| to formatted markdown.
+    """
+    sentences = break_into_sentences(req)
+
+    header = [
+        '', '<!-- Updated by scripts/update-docs-from-abigen, '
+        'do not edit this section manually. -->', ''
+    ]
+
+    if not sentences:
+        rights = ['TODO(ZX-2399)', '']
+    else:
+        rights = []
+    for sentence in sentences:
+        match_fmt, match_values = match_sentence_form(
+            sentence, [x['name'] for x in arguments])
+        if not match_fmt:
+            print >> sys.stderr, 'warning: for %s, failed to parse:\n%s' % (
+                filename, repr(sentence))
+            raise SystemExit(1)
+        else:
+            rights.append(match_fmt % match_values)
+            rights.append('')
+
+    return header + rights
+
+
+def update_rights(filename, syscall_data):
+    with open(filename, 'rb') as f:
+        source_lines = f.read().splitlines()
+
+    rights_start_index = -1
+    rights_end_index = -1
+    for i, line in enumerate(source_lines):
+        if line == '## RIGHTS':
+            rights_start_index = i + 1
+        elif rights_start_index >= 0 and line.startswith('## '):
+            rights_end_index = i
+            break
+
+    if rights_start_index == -1 or rights_end_index == -1:
+        print >> sys.stderr, (
+            'warning: did not find RIGHTS section in %s, skipping update' %
+            filename)
+        return
+
+    source_lines[rights_start_index:rights_end_index] = to_markdown(
+        filename, syscall_data['requirements'], syscall_data['arguments'])
+
+    with open(filename, 'wb') as f:
+        updated_data = f.write('\n'.join(source_lines) + '\n')
+
+
+def main():
+    args = parse_args()
+    inf = os.path.relpath(args.json)
+    outf = os.path.relpath(args.docroot)
+    print 'using %s as input and updating %s...' % (inf, outf)
+    data = json.loads(open(inf, 'rb').read())
+    missing_count = 0
+    for syscall in data['syscalls']:
+        name = syscall['name']
+        md = os.path.join(outf, name + '.md')
+        if not os.path.exists(md):
+            print >> sys.stderr, (
+                'warning: %s not found for updating, skipping update' % md)
+            missing_count += 1
+        else:
+            update_rights(md, syscall)
+    if missing_count > 0:
+        print >> sys.stderr, 'warning: %d missing .md files' % missing_count
+    return missing_count
+
+
+if __name__ == '__main__':
+    sys.exit(main())

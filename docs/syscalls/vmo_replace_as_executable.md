@@ -20,12 +20,16 @@ to the same underlying VM object, adding the right **ZX_RIGHT_EXECUTE**.
 
 *vmo* is always invalidated.
 
+*vmex* may currently be **ZX_HANDLE_INVALID** to ease migration of new code,
+this is TODO(SEC-42) and will be removed.
+
 ## RIGHTS
 
-*vmex* must be a valid **ZX_RSRC_KIND_VMEX** resource handle,
-or **ZX_HANDLE_INVALID** (to ease migration of old code).
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
 
-TODO(SEC-42): Disallow **ZX_HANDLE_INVALID**.
+*handle* must be of type **ZX_OBJ_TYPE_VMO**.
+
+*vmex* must have resource kind **ZX_RSRC_KIND_VMEX**.
 
 ## RETURN VALUE
 

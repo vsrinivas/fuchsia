@@ -64,7 +64,17 @@ that the hardware bus transaction initiator will be allowed to use.
 
 ## RIGHTS
 
-TODO(ZX-2399)
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+*handle* must be of type **ZX_OBJ_TYPE_BTI** and have **ZX_RIGHT_MAP**.
+
+*vmo* must be of type **ZX_OBJ_TYPE_VMO** and have **ZX_RIGHT_MAP**.
+
+If *options* & **ZX_BTI_PERM_READ**, *vmo* must be of type **ZX_OBJ_TYPE_VMO** and have **ZX_RIGHT_READ**.
+
+If *options* & **ZX_BTI_PERM_WRITE**, *vmo* must be of type **ZX_OBJ_TYPE_VMO** and have **ZX_RIGHT_WRITE**.
+
+If *options* & **ZX_BTI_PERM_EXECUTE**, *vmo* must be of type **ZX_OBJ_TYPE_VMO** and have **ZX_RIGHT_READ**.
 
 ## RETURN VALUE
 

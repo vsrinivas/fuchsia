@@ -39,9 +39,9 @@ The maximum number of bytes which may be sent in a message is
 
 ## RIGHTS
 
-*handle* must have **ZX_RIGHT_WRITE**.
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
 
-Each of the handles in *handles* must have **ZX_RIGHT_TRANSFER**.
+*handle* must be of type **ZX_OBJ_TYPE_CHANNEL** and have **ZX_RIGHT_WRITE**.
 
 ## RETURN VALUE
 

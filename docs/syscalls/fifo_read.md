@@ -35,7 +35,9 @@ It is not legal to read zero elements.
 
 ## RIGHTS
 
-*handle* must have **ZX_RIGHT_READ**.
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+*handle* must be of type **ZX_OBJ_TYPE_FIFO** and have **ZX_RIGHT_READ**.
 
 ## RETURN VALUE
 

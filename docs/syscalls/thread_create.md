@@ -34,7 +34,9 @@ For thread lifecycle details see [thread object](../objects/thread.md).
 
 ## RIGHTS
 
-TODO(ZX-2399)
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+*process* must be of type **ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_WRITE**.
 
 ## RETURN VALUE
 

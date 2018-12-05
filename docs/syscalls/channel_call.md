@@ -63,7 +63,9 @@ As with **zx_channel_write**(), the handles in *handles* are always consumed by
 
 ## RIGHTS
 
-TODO(ZX-2399)
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+*handle* must be of type **ZX_OBJ_TYPE_CHANNEL** and have **ZX_RIGHT_READ** and have **ZX_RIGHT_WRITE**.
 
 ## RETURN VALUE
 

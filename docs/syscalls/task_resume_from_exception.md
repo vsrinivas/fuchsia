@@ -47,7 +47,11 @@ zx_status_t status = zx_task_resume_from_exception(thread, port, ZX_RESUME_TRY_N
 
 ## RIGHTS
 
-TODO(ZX-2399)
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+*handle* must be of type **ZX_OBJ_TYPE_THREAD**.
+
+*port* must be of type **ZX_OBJ_TYPE_PORT**.
 
 ## RETURN VALUE
 

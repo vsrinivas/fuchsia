@@ -667,7 +667,45 @@ typedef struct zx_info_bti {
 
 ## RIGHTS
 
-TODO(ZX-2399)
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+If *topic* is **ZX_INFO_PROCESS**, *handle* must be of type **ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_INSPECT**.
+
+If *topic* is **ZX_INFO_PROCESS_THREADS**, *handle* must be of type **ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_ENUMERATE**.
+
+If *topic* is **ZX_INFO_JOB_CHILDREN**, *handle* must be of type **ZX_OBJ_TYPE_JOB** and have **ZX_RIGHT_ENUMERATE**.
+
+If *topic* is **ZX_INFO_JOB_PROCESSES**, *handle* must be of type **ZX_OBJ_TYPE_JOB** and have **ZX_RIGHT_ENUMERATE**.
+
+If *topic* is **ZX_INFO_THREAD**, *handle* must be of type **ZX_OBJ_TYPE_THREAD** and have **ZX_RIGHT_INSPECT**.
+
+If *topic* is **ZX_INFO_THREAD_EXCEPTION_REPORT**, *handle* must be of type **ZX_OBJ_TYPE_THREAD** and have **ZX_RIGHT_INSPECT**.
+
+If *topic* is **ZX_INFO_THREAD_STATS**, *handle* must be of type **ZX_OBJ_TYPE_THREAD** and have **ZX_RIGHT_INSPECT**.
+
+If *topic* is **ZX_INFO_TASK_STATS**, *handle* must be of type **ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_INSPECT**.
+
+If *topic* is **ZX_INFO_PROCESS_MAPS**, *handle* must be of type **ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_INSPECT**.
+
+If *topic* is **ZX_INFO_PROCESS_VMOS**, *handle* must be of type **ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_INSPECT**.
+
+If *topic* is **ZX_INFO_VMO**, *handle* must be of type **ZX_OBJ_TYPE_VMO**.
+
+If *topic* is **ZX_INFO_VMAR**, *handle* must be of type **ZX_OBJ_TYPE_VMAR** and have **ZX_RIGHT_INSPECT**.
+
+If *topic* is **ZX_INFO_CPU_STATS**, *handle* must have resource kind **ZX_RSRC_KIND_ROOT**.
+
+If *topic* is **ZX_INFO_KMEM_STATS**, *handle* must have resource kind **ZX_RSRC_KIND_ROOT**.
+
+If *topic* is **ZX_INFO_RESOURCE**, *handle* must be of type **ZX_OBJ_TYPE_RESOURCE** and have **ZX_RIGHT_INSPECT**.
+
+If *topic* is **ZX_INFO_HANDLE_COUNT**, *handle* must have **ZX_RIGHT_INSPECT**.
+
+If *topic* is **ZX_INFO_BTI**, *handle* must be of type **ZX_OBJ_TYPE_BTI** and have **ZX_RIGHT_INSPECT**.
+
+If *topic* is **ZX_INFO_PROCESS_HANDLE_STATS**, *handle* must be of type **ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_INSPECT**.
+
+If *topic* is **ZX_INFO_SOCKET**, *handle* must be of type **ZX_OBJ_TYPE_SOCKET** and have **ZX_RIGHT_INSPECT**.
 
 ## RETURN VALUE
 
