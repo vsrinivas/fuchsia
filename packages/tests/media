@@ -1,7 +1,7 @@
 {
     "packages": [
-        "//garnet/bin/media/audio_core:audio_fidl_tests",
         "//garnet/bin/media/audio_core/mixer:audio_mixer_tests",
+        "//garnet/bin/media/audio_core/test:audio_fidl_tests",
         "//garnet/examples/media:use_aac_decoder_test",
         "//garnet/public/lib/media/audio_dfx:audio_dfx_tests",
         "//garnet/public/lib/media/timeline:media_lib_timeline_tests",

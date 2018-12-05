@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
+import("//build/package.gni")
 
 action_foreach("generate_schemas") {
   visibility = [ ":*" ]
@@ -94,42 +94,5 @@ executable("audio_core") {
 
   public_deps = [
     "//zircon/public/lib/fit",
-  ]
-}
-
-executable("test_bin") {
-  testonly = true
-  output_name = "audio_fidl_tests"
-
-  sources = [
-    "test/audio_fidl_tests_shared.h",
-    "test/audio_renderer_sync_test.cc",
-    "test/audio_renderer_test.cc",
-    "test/audio_sync_test.cc",
-    "test/audio_test.cc",
-    "test/gain_control_test.cc",
-    "test/gain_control_test.h",
-    "test/main.cc",
-  ]
-
-  deps = [
-    "//garnet/public/fidl/fuchsia.media",
-    "//garnet/public/lib/component/cpp/testing",
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/gtest",
-    "//third_party/googletest:gtest_main",
-  ]
-}
-
-test_package("audio_fidl_tests") {
-  deps = [
-    ":test_bin",
-  ]
-
-  tests = [
-    {
-      name = "audio_fidl_tests"
-    },
   ]
 }
