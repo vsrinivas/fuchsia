@@ -8,6 +8,12 @@ import json
 import os
 import sys
 
+sys.path.append(os.path.join(
+    os.path.dirname(__file__),
+    os.pardir,
+    "images",
+))
+import elfinfo
 
 def main():
     parser = argparse.ArgumentParser('Builds a metadata file')
@@ -33,15 +39,24 @@ def main():
                         help='Name of the target architecture',
                         required=True)
     parser.add_argument('--lib-link',
-                        help='Path to the link-time library',
+                        help='Path to the link-time library in the SDK',
                         required=True)
     parser.add_argument('--lib-dist',
-                        help='Path to the library to add to Fuchsia packages',
+                        help='Path to the library to add to Fuchsia packages in the SDK',
                         required=True)
-    parser.add_argument('--lib-debug',
-                        help='Path to the debug version of the library',
+    parser.add_argument('--lib-debug-file',
+                        help='Path to the source debug version of the library',
+                        required=True)
+    parser.add_argument('--debug-mapping',
+                        help='Path to the file where to write the file mapping for the debug library',
                         required=True)
     args = parser.parse_args()
+
+    # The path of the debug file in the SDK depends on its build id.
+    build_id = elfinfo.get_elf_info(args.lib_debug_file).build_id
+    debug_path = '.build-id/' + build_id[:2] + '/' + build_id[2:] + '.debug'
+    with open(args.debug_mapping, 'w') as mappings_file:
+        mappings_file.write(debug_path + '=' + args.lib_debug_file)
 
     metadata = {
         'type': 'cc_prebuilt_library',
@@ -55,7 +70,7 @@ def main():
         args.arch: {
             'link': args.lib_link,
             'dist': args.lib_dist,
-            'debug': args.lib_debug,
+            'debug': debug_path,
         },
     }
 

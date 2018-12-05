@@ -157,7 +157,6 @@ template("sdk_shared_library") {
   lib_name = "lib$output_name.so"
   link_lib = "$prebuilt_base/lib/$lib_name"
   dist_lib = "$prebuilt_base/dist/$lib_name"
-  debug_lib = "$prebuilt_base/debug/$lib_name"
   sdk_files += [
     {
       # TODO(TO-791): put ABI stubs under lib/, not the full thing.
@@ -168,20 +167,20 @@ template("sdk_shared_library") {
       source = "$shared_out_dir/$lib_name"
       dest = dist_lib
     },
-    {
-      source = "$shared_out_dir/lib.unstripped/$lib_name"
-      dest = debug_lib
-    },
   ]
 
   metadata_file = "$target_gen_dir/$metadata_target_name.sdk_meta.json"
+  debug_mapping_file = "$target_gen_dir/$metadata_target_name.mappings.txt"
 
   action(metadata_target_name) {
     script = "//build/cpp/gen_sdk_prebuilt_meta_file.py"
 
     inputs = sdk_metas
 
-    outputs = [ metadata_file ]
+    outputs = [
+      debug_mapping_file,
+      metadata_file,
+    ]
 
     args = [
       "--out",
@@ -202,11 +201,15 @@ template("sdk_shared_library") {
       link_lib,
       "--lib-dist",
       dist_lib,
-      "--lib-debug",
-      debug_lib,
+      "--lib-debug-file",
+      rebase_path("$shared_out_dir/lib.unstripped/$lib_name"),
+      "--debug-mapping",
+      rebase_path(debug_mapping_file),
     ]
 
-    deps = sdk_deps
+    deps = sdk_deps + [
+      ":$main_target_name",
+    ]
   }
 
   sdk_atom(manifest_target_name) {
@@ -223,6 +226,8 @@ template("sdk_shared_library") {
     }
 
     files = sdk_files
+
+    file_list = debug_mapping_file
 
     deps = sdk_deps
 
