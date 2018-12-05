@@ -211,6 +211,8 @@ template("rustc_artifact") {
       version,
       "--edition",
       edition,
+      "--warnings",
+      rust_warnings,
     ]
 
     args += rust_build_args

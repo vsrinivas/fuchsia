@@ -129,6 +129,10 @@ def main():
                         help="Symbols to include (0=none, 1=minimal, 2=full)",
                         choices=["0", "1", "2"],
                         required=True)
+    parser.add_argument("--warnings",
+                        help="Whether or not to error on warnings (deny=error, allow=ignore)",
+                        choices=["deny", "allow"],
+                        required=True)
 
     parser.add_argument
     args = parser.parse_args()
@@ -144,9 +148,15 @@ def main():
 
     create_base_directory(args.output_file)
 
+    if args.warnings == "allow":
+        warnings_flag = "-Awarnings"
+    else:
+        warnings_flag = "-Dwarnings"
+
     call_args = [
         args.rustc,
         args.crate_root,
+        warnings_flag,
         "--edition=%s" % args.edition,
         "--crate-type=%s" % args.crate_type,
         "--crate-name=%s" % args.crate_name,
