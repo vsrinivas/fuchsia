@@ -4,6 +4,7 @@
 
 library zircon.usb.test.fwloader;
 
+using fuchsia.mem;
 using zx;
 
 [Layout = "Simple"]
@@ -12,5 +13,5 @@ interface Device {
     1: LoadPrebuiltFirmware() -> (zx.status s);
 
     /// Loads the firmware onto the USB test device, and renumerates as the new device.
-    2: LoadFirmware(handle<vmo> firmware_vmo) -> (zx.status s);
+    2: LoadFirmware(fuchsia.mem.Buffer firmware) -> (zx.status s);
 };

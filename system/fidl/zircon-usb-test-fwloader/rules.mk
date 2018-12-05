@@ -12,6 +12,8 @@ MODULE_PACKAGE := fidl
 
 MODULE_FIDL_LIBRARY := zircon.usb.test.fwloader
 
+MODULE_FIDL_DEPS := system/fidl/fuchsia-mem
+
 MODULE_SRCS += $(LOCAL_DIR)/usb-test-fwloader.fidl
 
 include make/module.mk

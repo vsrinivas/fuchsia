@@ -6,6 +6,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/usb/usb.h>
+#include <fuchsia/mem/c/fidl.h>
 #include <zircon/assert.h>
 #include <zircon/usb/test/fwloader/c/fidl.h>
 #include <zircon/hw/usb.h>
@@ -96,11 +97,15 @@ static zx_status_t fx3_write_section(fx3_t* fx3, zx_handle_t fw_vmo, size_t offs
 }
 
 // Writes the firmware to the device RAM and boots it.
-static zx_status_t fx3_load_firmware(fx3_t* fx3, zx_handle_t fw_vmo) {
+static zx_status_t fx3_load_firmware(fx3_t* fx3, zx_handle_t fw_vmo, size_t fw_size) {
     size_t vmo_size;
     zx_status_t status = zx_vmo_get_size(fw_vmo, &vmo_size);
     if (status != ZX_OK) {
         zxlogf(ERROR, "failed to get firmware vmo size, err: %d\n", status);
+        return ZX_ERR_INVALID_ARGS;
+    }
+    if (vmo_size < fw_size) {
+        zxlogf(ERROR, "invalid vmo, vmo size was %lu, fw size was %lu\n", vmo_size, fw_size);
         return ZX_ERR_INVALID_ARGS;
     }
     // The fwloader expects the firmware image file to be in the format shown in
@@ -116,7 +121,7 @@ static zx_status_t fx3_load_firmware(fx3_t* fx3, zx_handle_t fw_vmo) {
     // Section header fields.
     uint32_t len_dwords = 0;
     uint32_t ram_addr = 0;
-    while (offset < vmo_size) {
+    while (offset < fw_size) {
         // Read the section header, containing the section length in long words, and ram address.
         status = zx_vmo_read(fw_vmo, &len_dwords, offset, sizeof(len_dwords));
         if (status != ZX_OK) {
@@ -180,15 +185,16 @@ static zx_status_t fidl_LoadPrebuiltFirmware(void* ctx, fidl_txn_t* txn) {
                FIRMWARE_PATH, status);
         return zircon_usb_test_fwloader_DeviceLoadPrebuiltFirmware_reply(txn, status);
     }
-    status = fx3_load_firmware(fx3, fw_vmo);
+    status = fx3_load_firmware(fx3, fw_vmo, fw_size);
     zx_handle_close(fw_vmo);
     return zircon_usb_test_fwloader_DeviceLoadPrebuiltFirmware_reply(txn, status);
 }
 
-static zx_status_t fidl_LoadFirmware(void* ctx, zx_handle_t fw_vmo, fidl_txn_t* txn) {
+static zx_status_t fidl_LoadFirmware(void* ctx, const fuchsia_mem_Buffer* firmware,
+                                     fidl_txn_t* txn) {
     fx3_t* fx3 = ctx;
-    zx_status_t status = fx3_load_firmware(fx3, fw_vmo);
-    zx_handle_close(fw_vmo);
+    zx_status_t status = fx3_load_firmware(fx3, firmware->vmo, firmware->size);
+    zx_handle_close(firmware->vmo);
     return zircon_usb_test_fwloader_DeviceLoadFirmware_reply(txn, status);
 }
 

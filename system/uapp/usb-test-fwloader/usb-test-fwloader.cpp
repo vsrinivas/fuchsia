@@ -5,6 +5,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
+#include <fuchsia/mem/c/fidl.h>
 #include <lib/fdio/util.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/fdio.h>
@@ -124,7 +125,7 @@ zx_status_t open_usb_tester_dev(fbl::unique_fd* out_fd) {
     return open_dev(kUsbTesterDevDir, out_fd);
 }
 // Reads the firmware file and populates the provided vmo with the contents.
-zx_status_t read_firmware(fbl::unique_fd& file_fd, zx::vmo& vmo) {
+zx_status_t read_firmware(fbl::unique_fd& file_fd, zx::vmo& vmo, size_t* out_fw_size) {
     struct stat s;
     if (fstat(file_fd.get(), &s) < 0) {
         fprintf(stderr, "could not get size of file, err: %s\n", strerror(errno));
@@ -154,18 +155,20 @@ zx_status_t read_firmware(fbl::unique_fd& file_fd, zx::vmo& vmo) {
         fprintf(stderr, "Read %jd bytes, want %jd\n", (intmax_t)total_read, (intmax_t)s.st_size);
         return ZX_ERR_IO;
     }
+    *out_fw_size = total_read;
     return ZX_OK;
 }
 
 zx_status_t device_load_firmware(fbl::unique_fd fd, const char* firmware_path) {
     zx::vmo fw_vmo;
+    size_t fw_size = 0;
     if (firmware_path) {
         fbl::unique_fd file_fd(open(firmware_path, O_RDONLY));
         if (!file_fd) {
             fprintf(stderr, "Failed to open \"%s\", err: %s\n", firmware_path, strerror(errno));
             return ZX_ERR_IO;
         }
-        zx_status_t status = read_firmware(file_fd, fw_vmo);
+        zx_status_t status = read_firmware(file_fd, fw_vmo, &fw_size);
         if (status != ZX_OK) {
             fprintf(stderr, "Failed to read firmware file, err: %d\n", status);
             return status;
@@ -178,9 +181,10 @@ zx_status_t device_load_firmware(fbl::unique_fd fd, const char* firmware_path) {
         return status;
     }
     if (fw_vmo.is_valid()) {
-        zx_handle_t handle = fw_vmo.release();
+        fuchsia_mem_Buffer firmware = { .vmo = fw_vmo.release(), .size = fw_size };
         zx_status_t status;
-        zx_status_t res = zircon_usb_test_fwloader_DeviceLoadFirmware(svc.get(), handle, &status);
+        zx_status_t res = zircon_usb_test_fwloader_DeviceLoadFirmware(svc.get(), &firmware,
+                                                                      &status);
         if (res == ZX_OK) {
             res = status;
         }
@@ -279,7 +283,13 @@ zx_status_t load_bootloader(const char* flash_prog_image_path, const char* firmw
         return status;
     }
     printf("Loaded flash programmer.\n");
-    // TODO(jocelyndang): load firmware to I2C EEPROM.
+    printf("Loading bootloader to device...\n");
+    status = device_load_firmware(std::move(updated_dev), firmware_path);
+    if (status != ZX_OK) {
+        fprintf(stderr, "Failed to write bootloader, err: %d\n", status);
+        return status;
+    }
+    printf("Updated bootloader.\n");
     return ZX_OK;
 }
 

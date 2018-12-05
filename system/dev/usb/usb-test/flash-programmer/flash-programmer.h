@@ -6,6 +6,8 @@
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
+#include <ddk/usb/usb.h>
+#include <lib/zx/vmo.h>
 
 namespace usb {
 
@@ -24,10 +26,24 @@ public:
     void DdkUnbind() { DdkRemove(); }
     void DdkRelease() { delete this; }
 
+    // FIDL message implementation.
+    zx_status_t LoadFirmware(zx::vmo fw_vmo, size_t fw_size);
+
 private:
-    explicit FlashProgrammer(zx_device_t* parent) : FlashProgrammerBase(parent) {}
+    explicit FlashProgrammer(zx_device_t* parent, usb_protocol_t usb)
+        : FlashProgrammerBase(parent),
+          usb_(usb) {}
 
     zx_status_t Bind();
+
+    // Sends a vendor command to write the given buffer to the device I2C EEPROM.
+    zx_status_t DeviceWrite(uint8_t eeprom_slave_addr, uint16_t eeprom_byte_addr,
+                            uint8_t* buf, size_t len);
+    // Writes the VMO starting at |vmo_offset| to a single I2C EEPROM Slave.
+    zx_status_t EEPROMSlaveWrite(uint8_t eeprom_slave_addr,
+                                 const zx::vmo& fw_vmo, size_t vmo_offset, uint16_t len_to_write);
+
+    usb_protocol_t usb_;
 };
 
 }  // namespace usb

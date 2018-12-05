@@ -15,7 +15,9 @@ MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/fidl system/dev/lib/usb
 
 MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/zircon
 
-MODULE_FIDL_LIBS := system/fidl/zircon-usb-test-fwloader
+MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-mem \
+    system/fidl/zircon-usb-test-fwloader \
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-usb-composite \

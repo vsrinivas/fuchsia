@@ -22,6 +22,7 @@ MODULE_LIBS := \
     system/ulib/c \
 
 MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-mem \
     system/fidl/zircon-usb-test-fwloader \
     system/fidl/zircon-usb-tester
 

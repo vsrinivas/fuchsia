@@ -17,10 +17,16 @@ MODULE_STATIC_LIBS := \
     system/ulib/ddktl \
     system/ulib/fbl \
     system/ulib/fidl \
+    system/ulib/zx \
     system/ulib/zxcpp \
 
 MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/zircon
 
-MODULE_FIDL_LIBS := system/fidl/zircon-usb-test-fwloader
+MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-mem \
+    system/fidl/zircon-usb-test-fwloader \
+
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-usb-composite \
 
 include make/module.mk
