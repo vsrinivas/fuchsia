@@ -48,6 +48,7 @@ multiconst!(zx_handle_t, [
 
 multiconst!(zx_time_t, [
     ZX_TIME_INFINITE = ::std::i64::MAX;
+    ZX_TIME_INFINITE_PAST = ::std::i64::MIN;
 ]);
 
 multiconst!(zx_rights_t, [
