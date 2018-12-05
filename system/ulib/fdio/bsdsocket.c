@@ -214,7 +214,7 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
 
     int fd2;
     if ((fd2 = fdio_bind_to_fd(io2, -1, 0)) < 0) {
-        io->ops->close(io2);
+        io2->ops->close(io2);
         fdio_release(io2);
         return ERRNO(EMFILE);
     }
