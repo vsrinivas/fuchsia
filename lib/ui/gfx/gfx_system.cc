@@ -198,7 +198,7 @@ void GfxSystem::Initialize() {
 void GfxSystem::GetDisplayInfoImmediately(
     fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) {
   FXL_DCHECK(initialized_);
-  Display* display = engine_->display_manager()->default_display();
+  Display* display = display_manager_->default_display();
   FXL_CHECK(display) << "There must be a default display.";
 
   auto info = ::fuchsia::ui::gfx::DisplayInfo();
@@ -229,7 +229,7 @@ void GfxSystem::TakeScreenshot(
 void GfxSystem::GetDisplayOwnershipEventImmediately(
     fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) {
   FXL_DCHECK(initialized_);
-  Display* display = engine_->display_manager()->default_display();
+  Display* display = display_manager_->default_display();
 
   // TODO(SCN-1109):VulkanIsSupported() should not be called by production code.
   if (escher::VulkanIsSupported()) {
