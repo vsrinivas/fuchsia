@@ -16,11 +16,26 @@ namespace fidl {
 
 class ErrorReporter {
 public:
+    class Counts {
+    public:
+        Counts(const ErrorReporter* reporter)
+            : reporter_(reporter),
+              num_errors_(reporter->errors().size()),
+              num_warnings_(reporter->warnings().size()) {}
+        bool NoNewErrors() { return num_errors_ == reporter_->errors().size(); }
+        bool NoNewWarning() { return num_warnings_ == reporter_->warnings().size(); }
+    private:
+        const ErrorReporter* reporter_;
+        const size_t num_errors_;
+        const size_t num_warnings_;
+    };
+
     void ReportError(const SourceLocation& location, StringView message);
     void ReportError(const Token& token, StringView message);
     void ReportError(StringView message);
     void ReportWarning(const SourceLocation& location, StringView message);
     void PrintReports();
+    Counts Checkpoint() const { return Counts(this); };
     const std::vector<std::string>& errors() const { return errors_; };
     const std::vector<std::string>& warnings() const { return warnings_; };
 

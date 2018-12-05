@@ -402,6 +402,123 @@ Type* Typespace::Lookup(const flat::Name& name, types::Nullability nullability,
     }
 }
 
+bool NoOpConstraint(ErrorReporter* error_reporter,
+                    const raw::Attribute* attribute,
+                    const Decl* decl) {
+    return true;
+}
+
+AttributeSchema::AttributeSchema(const std::set<Placement>& allowed_placements,
+                                 const std::set<std::string> allowed_values,
+                                 Constraint constraint)
+        : allowed_placements_(allowed_placements),
+          allowed_values_(allowed_values),
+          constraint_(std::move(constraint)) {}
+
+void AttributeSchema::ValidatePlacement(ErrorReporter* error_reporter,
+                                        const raw::Attribute* attribute,
+                                        Placement placement) const {
+    if (allowed_placements_.size() == 0)
+        return;
+    auto iter = allowed_placements_.find(placement);
+    if (iter != allowed_placements_.end())
+        return;
+    std::string message("placement of attribute '");
+    message.append(attribute->name);
+    message.append("' disallowed here");
+    error_reporter->ReportError(attribute->location(), message);
+}
+
+void AttributeSchema::ValidateValue(ErrorReporter* error_reporter,
+                                    const raw::Attribute* attribute) const {
+    if (allowed_values_.size() == 0)
+        return;
+    auto iter = allowed_values_.find(attribute->value);
+    if (iter != allowed_values_.end())
+        return;
+    std::string message("attribute '");
+    message.append(attribute->name);
+    message.append("' has invalid value '");
+    message.append(attribute->value);
+    message.append("', should be one of '");
+    bool first = true;
+    for (const auto& hint : allowed_values_) {
+        if (!first)
+            message.append(", ");
+        message.append(hint);
+        message.append("'");
+        first = false;
+    }
+    error_reporter->ReportError(attribute->location(), message);
+}
+
+void AttributeSchema::ValidateConstraint(ErrorReporter* error_reporter,
+                                         const raw::Attribute* attribute,
+                                         const Decl* decl) const {
+    auto check = error_reporter->Checkpoint();
+    auto passed = constraint_(error_reporter, attribute, decl);
+    if (passed) {
+        assert(check.NoNewErrors() && "cannot add errors and pass");
+    } else if (check.NoNewErrors()) {
+        std::string message("declaration did not satisfy constraint of attribute '");
+        message.append(attribute->name);
+        message.append("' with value '");
+        message.append(attribute->value);
+        message.append("'");
+        // TODO(pascallouis): It would be nicer to use the location of
+        // the declaration, however we do not keep it around today.
+        error_reporter->ReportError(attribute->location(), message);
+    }
+}
+
+bool SimpleLayoutConstraint(ErrorReporter* error_reporter,
+                            const raw::Attribute* attribute,
+                            const Decl* decl) {
+    assert(decl->kind == Decl::Kind::kStruct);
+    auto struct_decl = static_cast<const Struct*>(decl);
+    bool ok = true;
+    for (const auto& member : struct_decl->members) {
+        if (!IsSimple(member.type.get(), member.fieldshape)) {
+            std::string message("member '");
+            message.append(member.name.data());
+            message.append("' is not simple");
+            error_reporter->ReportError(member.name, message);
+            ok = false;
+        }
+    }
+    return ok;
+}
+
+Libraries::Libraries() {
+    AddAttributeSchema("Discoverable", AttributeSchema({
+        AttributeSchema::Placement::kInterfaceDecl,
+    }, {
+        "",
+    }));
+    AddAttributeSchema("Doc", AttributeSchema({
+        /* any placement */
+    }, {
+        /* any value */
+    }));
+    AddAttributeSchema("FragileBase", AttributeSchema({
+        AttributeSchema::Placement::kInterfaceDecl,
+    }, {
+        "",
+    }));
+    AddAttributeSchema("Layout", AttributeSchema({
+        AttributeSchema::Placement::kInterfaceDecl,
+    }, {
+        "Simple",
+    },
+    SimpleLayoutConstraint));
+    AddAttributeSchema("Transport", AttributeSchema({
+        AttributeSchema::Placement::kInterfaceDecl,
+    }, {
+        "Channel",
+        "SocketControl",
+    }));
+}
+
 bool Libraries::Insert(std::unique_ptr<Library> library) {
     std::vector<fidl::StringView> library_name = library->name();
     auto iter = all_libraries_.emplace(library_name, std::move(library));
@@ -417,6 +534,58 @@ bool Libraries::Lookup(const std::vector<StringView>& library_name,
 
     *out_library = iter->second.get();
     return true;
+}
+
+size_t EditDistance(const std::string& sequence1, const std::string& sequence2) {
+    size_t s1_length = sequence1.length();
+    size_t s2_length = sequence2.length();
+    size_t row1[s1_length+1];
+    size_t row2[s1_length+1];
+    size_t* last_row = row1;
+    size_t* this_row = row2;
+    for (size_t i = 0; i <= s1_length; i++)
+        last_row[i] = i;
+    for (size_t j = 0; j < s2_length; j++) {
+        this_row[0] = j + 1;
+        auto s2c = sequence2[j];
+        for (size_t i = 1; i <= s1_length; i++) {
+            auto s1c = sequence1[i - 1];
+            this_row[i] = std::min(std::min(
+                last_row[i] + 1, this_row[i - 1] + 1), last_row[i - 1] + (s1c == s2c ? 0 : 1));
+        }
+        std::swap(last_row, this_row);
+    }
+    return last_row[s1_length];
+}
+
+const AttributeSchema* Libraries::RetrieveAttributeSchema(ErrorReporter* error_reporter,
+                                                          const raw::Attribute* attribute) const {
+    const auto& attribute_name = attribute->name;
+    auto iter = attribute_schemas_.find(attribute_name);
+    if (iter != attribute_schemas_.end()) {
+        const auto& schema = iter->second;
+        return &schema;
+    }
+
+    // Skip typo check?
+    if (error_reporter == nullptr)
+        return nullptr;
+
+    // Match against all known attributes.
+    for (const auto& name_and_schema : attribute_schemas_) {
+        auto edit_distance = EditDistance(name_and_schema.first, attribute_name);
+        if (0 < edit_distance && edit_distance < 2) {
+            std::string message("suspect attribute with name '");
+            message.append(attribute_name);
+            message.append("'; did you mean '");
+            message.append(name_and_schema.first);
+            message.append("'?");
+            error_reporter->ReportWarning(attribute->location(), message);
+            return nullptr;
+        }
+    }
+
+    return nullptr;
 }
 
 bool Dependencies::Register(StringView filename, Library* dep_library,
@@ -491,11 +660,28 @@ bool Library::Fail(const SourceLocation& location, StringView message) {
     return false;
 }
 
-void Library::ValidateAttributesPlacement(AttributePlacement placement,
+void Library::ValidateAttributesPlacement(AttributeSchema::Placement placement,
                                           const raw::AttributeList* attributes) {
     if (attributes == nullptr)
         return;
-    AttributesBuilder::ValidatePlacement(error_reporter_, placement, attributes->attributes);
+    for (const auto& attribute : attributes->attributes) {
+        auto schema = all_libraries_->RetrieveAttributeSchema(error_reporter_, attribute.get());
+        if (schema != nullptr) {
+            schema->ValidatePlacement(error_reporter_, attribute.get(), placement);
+            schema->ValidateValue(error_reporter_, attribute.get());
+        }
+    }
+}
+
+void Library::ValidateAttributesConstraints(const Decl* decl,
+                                            const raw::AttributeList* attributes) {
+    if (attributes == nullptr)
+        return;
+    for (const auto& attribute : attributes->attributes) {
+        auto schema = all_libraries_->RetrieveAttributeSchema(nullptr, attribute.get());
+        if (schema != nullptr)
+            schema->ValidateConstraint(error_reporter_, attribute.get(), decl);
+    }
 }
 
 Name Library::NextAnonymousName() {
@@ -734,7 +920,6 @@ bool Library::ConsumeTypeAlias(std::unique_ptr<raw::Using> using_directive) {
 
 bool Library::ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const_declaration) {
     auto attributes = std::move(const_declaration->attributes);
-    ValidateAttributesPlacement(AttributePlacement::kConstDecl, attributes.get());
     auto location = const_declaration->identifier->location();
     auto name = Name(this, location);
     std::unique_ptr<Type> type;
@@ -760,7 +945,6 @@ bool Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_
         if (!ConsumeConstant(std::move(member->value), location, &value))
             return false;
         auto attributes = std::move(member->attributes);
-        ValidateAttributesPlacement(AttributePlacement::kEnumMember, attributes.get());
         members.emplace_back(location, std::move(value), std::move(attributes));
     }
     auto type = types::PrimitiveSubtype::kUint32;
@@ -781,7 +965,6 @@ bool Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_
     }
 
     auto attributes = std::move(enum_declaration->attributes);
-    ValidateAttributesPlacement(AttributePlacement::kEnumDecl, attributes.get());
     auto name = Name(this, enum_declaration->identifier->location());
 
     enum_declarations_.push_back(
@@ -804,7 +987,6 @@ bool Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_
 bool Library::ConsumeInterfaceDeclaration(
     std::unique_ptr<raw::InterfaceDeclaration> interface_declaration) {
     auto attributes = std::move(interface_declaration->attributes);
-    ValidateAttributesPlacement(AttributePlacement::kInterfaceDecl, attributes.get());
     auto name = Name(this, interface_declaration->identifier->location());
 
     std::vector<Name> superinterfaces;
@@ -823,7 +1005,6 @@ bool Library::ConsumeInterfaceDeclaration(
             std::make_unique<raw::Ordinal>(fidl::ordinals::GetOrdinal(library_name_, name.name_part(), *method));
 
         auto attributes = std::move(method->attributes);
-        ValidateAttributesPlacement(AttributePlacement::kMethod, attributes.get());
         SourceLocation method_name = method->identifier->location();
 
         Struct* maybe_request = nullptr;
@@ -880,7 +1061,6 @@ bool Library::ConsumeParameterList(std::unique_ptr<raw::ParameterList> parameter
 
 bool Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> struct_declaration) {
     auto attributes = std::move(struct_declaration->attributes);
-    ValidateAttributesPlacement(AttributePlacement::kStructDecl, attributes.get());
     auto name = Name(this, struct_declaration->identifier->location());
 
     std::vector<Struct::Member> members;
@@ -896,7 +1076,6 @@ bool Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> s
                 return false;
         }
         auto attributes = std::move(member->attributes);
-        ValidateAttributesPlacement(AttributePlacement::kStructMember, attributes.get());
         members.emplace_back(std::move(type), member->identifier->location(),
                              std::move(maybe_default_value), std::move(attributes));
     }
@@ -908,7 +1087,6 @@ bool Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> s
 
 bool Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> table_declaration) {
     auto attributes = std::move(table_declaration->attributes);
-    ValidateAttributesPlacement(AttributePlacement::kTableDecl, attributes.get());
     auto name = Name(this, table_declaration->identifier->location());
 
     std::vector<Table::Member> members;
@@ -929,7 +1107,6 @@ bool Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> tab
                 return Fail(member->location(), "Table members cannot be nullable");
             }
             auto attributes = std::move(member->maybe_used->attributes);
-            ValidateAttributesPlacement(AttributePlacement::kTableMember, attributes.get());
             members.emplace_back(std::move(ordinal_literal), std::move(type),
                                  member->maybe_used->identifier->location(),
                                  std::move(maybe_default_value), std::move(attributes));
@@ -951,12 +1128,10 @@ bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
         if (!ConsumeType(std::move(member->type), location, &type))
             return false;
         auto attributes = std::move(member->attributes);
-        ValidateAttributesPlacement(AttributePlacement::kUnionMember, attributes.get());
         members.emplace_back(std::move(type), location, std::move(attributes));
     }
 
     auto attributes = std::move(union_declaration->attributes);
-    ValidateAttributesPlacement(AttributePlacement::kUnionDecl, attributes.get());
     auto name = Name(this, union_declaration->identifier->location());
 
     union_declarations_.push_back(
@@ -966,7 +1141,7 @@ bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
 
 bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
     if (file->attributes) {
-        ValidateAttributesPlacement(AttributePlacement::kLibrary, file->attributes.get());
+        ValidateAttributesPlacement(AttributeSchema::Placement::kLibrary, file->attributes.get());
         if (!attributes_) {
             attributes_ = std::move(file->attributes);
         } else {
@@ -1652,6 +1827,10 @@ bool Library::CompileConst(Const* const_declaration) {
     if (!ResolveConstant(const_declaration->value.get(), const_type))
         return Fail(*const_declaration, "unable to resolve constant value");
 
+    // Attributes: for const declarations, we only check placement.
+    ValidateAttributesPlacement(
+        AttributeSchema::Placement::kConstDecl, const_declaration->attributes.get());
+
     return true;
 }
 
@@ -1698,6 +1877,24 @@ bool Library::CompileEnum(Enum* enum_declaration) {
     }
 
     enum_declaration->typeshape = PrimitiveTypeShape(enum_declaration->type->subtype);
+
+    auto placement_ok = error_reporter_->Checkpoint();
+    // Attributes: check placement.
+    ValidateAttributesPlacement(
+        AttributeSchema::Placement::kEnumDecl,
+        enum_declaration->attributes.get());
+    for (const auto& member : enum_declaration->members) {
+        ValidateAttributesPlacement(
+            AttributeSchema::Placement::kEnumMember,
+            member.attributes.get());
+    }
+    if (placement_ok.NoNewErrors()) {
+        // Attributes: check constraints.
+        ValidateAttributesConstraints(
+            enum_declaration,
+            enum_declaration->attributes.get());
+    }
+
     return true;
 }
 
@@ -1798,22 +1995,34 @@ bool Library::CompileInterface(Interface* interface_declaration) {
         }
     }
 
-    if (HasSimpleLayout(interface_declaration)) {
-        for (const auto& method_pointer : interface_declaration->all_methods) {
-            auto CheckSimpleMessage = [&](const Struct* struct_decl) -> bool {
-                for (const auto& parameter : struct_decl->members) {
-                    if (!IsSimple(parameter.type.get(), parameter.fieldshape))
-                        return Fail(parameter.name, "Non-simple parameter in interface with [Layout=\"Simple\"]");
-                }
-                return true;
-            };
-            if (method_pointer->maybe_request) {
-                if (!CheckSimpleMessage(method_pointer->maybe_request))
-                    return false;
+    auto placement_ok = error_reporter_->Checkpoint();
+    // Attributes: check placement.
+    ValidateAttributesPlacement(
+        AttributeSchema::Placement::kInterfaceDecl,
+        interface_declaration->attributes.get());
+    for (const auto& method : interface_declaration->methods) {
+        ValidateAttributesPlacement(
+            AttributeSchema::Placement::kMethod,
+            method.attributes.get());
+    }
+    if (placement_ok.NoNewErrors()) {
+        // Attributes: check constraints.
+        for (const auto& method : interface_declaration->methods) {
+            if (method.maybe_request) {
+                ValidateAttributesConstraints(
+                    method.maybe_request,
+                    interface_declaration->attributes.get());
+                ValidateAttributesConstraints(
+                    method.maybe_request,
+                    method.attributes.get());
             }
-            if (method_pointer->maybe_response) {
-                if (!CheckSimpleMessage(method_pointer->maybe_response))
-                    return false;
+            if (method.maybe_response) {
+                ValidateAttributesConstraints(
+                    method.maybe_response,
+                    interface_declaration->attributes.get());
+                ValidateAttributesConstraints(
+                    method.maybe_response,
+                    method.attributes.get());
             }
         }
     }
@@ -1846,6 +2055,23 @@ bool Library::CompileStruct(Struct* struct_declaration) {
     }
 
     struct_declaration->typeshape = CStructTypeShape(&fidl_struct, max_member_handles);
+
+    auto placement_ok = error_reporter_->Checkpoint();
+    // Attributes: check placement.
+    ValidateAttributesPlacement(
+        AttributeSchema::Placement::kStructDecl,
+        struct_declaration->attributes.get());
+    for (const auto& member : struct_declaration->members) {
+        ValidateAttributesPlacement(
+            AttributeSchema::Placement::kStructMember,
+            member.attributes.get());
+    }
+    if (placement_ok.NoNewErrors()) {
+        // Attributes: check constraint.
+        ValidateAttributesConstraints(
+            struct_declaration,
+            struct_declaration->attributes.get());
+    }
 
     return true;
 }
@@ -1898,6 +2124,25 @@ bool Library::CompileTable(Table* table_declaration) {
 
     table_declaration->typeshape = CTableTypeShape(&fields, max_member_handles);
 
+    // Attributes: check placement.
+    auto placement_ok = error_reporter_->Checkpoint();
+    ValidateAttributesPlacement(
+        AttributeSchema::Placement::kTableDecl,
+        table_declaration->attributes.get());
+    for (const auto& member : table_declaration->members) {
+        if (member.maybe_used) {
+            ValidateAttributesPlacement(
+                AttributeSchema::Placement::kTableMember,
+                member.maybe_used->attributes.get());
+        }
+    }
+    if (placement_ok.NoNewErrors()) {
+        // Attributes: check constraint.
+        ValidateAttributesConstraints(
+            table_declaration,
+            table_declaration->attributes.get());
+    }
+
     return true;
 }
 
@@ -1928,6 +2173,23 @@ bool Library::CompileUnion(Union* union_declaration) {
     auto offset = union_declaration->membershape.Offset();
     for (auto& member : union_declaration->members) {
         member.fieldshape.SetOffset(offset);
+    }
+
+    auto placement_ok = error_reporter_->Checkpoint();
+    // Attributes: check placement.
+    ValidateAttributesPlacement(
+        AttributeSchema::Placement::kUnionDecl,
+        union_declaration->attributes.get());
+    for (const auto& member : union_declaration->members) {
+        ValidateAttributesPlacement(
+            AttributeSchema::Placement::kUnionMember,
+            member.attributes.get());
+    }
+    if (placement_ok.NoNewErrors()) {
+        // Attributes: check constraint.
+        ValidateAttributesConstraints(
+            union_declaration,
+            union_declaration->attributes.get());
     }
 
     return true;

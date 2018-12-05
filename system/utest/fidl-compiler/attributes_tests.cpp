@@ -115,7 +115,7 @@ interface A {
     EXPECT_FALSE(library.Compile());
     auto errors = library.errors();
     ASSERT_EQ(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "invalid attribute value");
+    ASSERT_STR_STR(errors[0].c_str(), "invalid value");
 
     END_TEST;
 }
@@ -135,7 +135,7 @@ interface A {
     EXPECT_FALSE(library.Compile());
     auto errors = library.errors();
     ASSERT_EQ(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "invalid attribute value");
+    ASSERT_STR_STR(errors[0].c_str(), "invalid value");
 
     END_TEST;
 }
@@ -182,39 +182,39 @@ bool incorrect_placement_layout() {
     BEGIN_TEST;
 
     TestLibrary library(R"FIDL(
-[Layout]
+[Layout = "Simple"]
 library fidl.test;
 
-[Layout]
+[Layout = "Simple"]
 const int32 MyConst = 0;
 
-[Layout]
+[Layout = "Simple"]
 enum MyEnum {
-    [Layout]
+    [Layout = "Simple"]
     MyMember = 5;
 };
 
-[Layout]
+[Layout = "Simple"]
 struct MyStruct {
-    [Layout]
+    [Layout = "Simple"]
     int32 MyMember;
 };
 
-[Layout]
+[Layout = "Simple"]
 union MyUnion {
-    [Layout]
+    [Layout = "Simple"]
     int32 MyMember;
 };
 
-[Layout]
+[Layout = "Simple"]
 table MyTable {
-    [Layout]
+    [Layout = "Simple"]
     1: int32 MyMember;
 };
 
-[Layout]
+[Layout = "Simple"]
 interface MyInterface {
-    [Layout]
+    [Layout = "Simple"]
     1: MyMethod();
 };
 
@@ -223,6 +223,49 @@ interface MyInterface {
     auto errors = library.errors();
     ASSERT_EQ(errors.size(), 11);
     ASSERT_STR_STR(errors[0].c_str(), "placement of attribute 'Layout' disallowed here");
+
+    END_TEST;
+}
+
+bool MustHaveThreeMembers(fidl::ErrorReporter* error_reporter,
+                          const fidl::raw::Attribute* attribute,
+                          const fidl::flat::Decl* decl) {
+    switch (decl->kind) {
+    case fidl::flat::Decl::Kind::kStruct: {
+        auto struct_decl = static_cast<const fidl::flat::Struct*>(decl);
+        return struct_decl->members.size() == 3;
+    }
+    default:
+        return false;
+    }
+}
+
+bool constraint_only_three_members() {
+    BEGIN_TEST;
+
+    TestLibrary library(R"FIDL(
+library fidl.test;
+
+[MustHaveThreeMembers]
+struct MyStruct {
+    int64 one;
+    int64 two;
+    int64 three;
+    int64 oh_no_four;
+};
+
+)FIDL");
+    library.AddAttributeSchema("MustHaveThreeMembers", fidl::flat::AttributeSchema({
+        fidl::flat::AttributeSchema::Placement::kStructDecl,
+    }, {
+        "",
+    },
+    MustHaveThreeMembers));
+    EXPECT_FALSE(library.Compile());
+    auto errors = library.errors();
+    ASSERT_EQ(errors.size(), 1);
+    ASSERT_STR_STR(errors[0].c_str(),
+        "declaration did not satisfy constraint of attribute 'MustHaveThreeMembers' with value ''");
 
     END_TEST;
 }
@@ -239,4 +282,5 @@ RUN_TEST(bogus_transport);
 RUN_TEST(channel_transport);
 RUN_TEST(socket_control_transport);
 RUN_TEST(incorrect_placement_layout);
+RUN_TEST(constraint_only_three_members);
 END_TEST_CASE(attributes_tests);

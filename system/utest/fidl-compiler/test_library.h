@@ -42,6 +42,10 @@ public:
         return true;
     }
 
+    void AddAttributeSchema(const std::string& name, fidl::flat::AttributeSchema schema) {
+        all_libraries_.AddAttributeSchema(name, std::move(schema));
+    }
+
     bool Parse(std::unique_ptr<fidl::raw::File>& ast_ptr) {
         ast_ptr.reset(parser_.Parse().release());
         return parser_.Ok();

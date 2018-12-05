@@ -47,9 +47,11 @@ std::string JsonSchema::schema_ = " >> $@ && \
 ;\n" >> $@ \
 
 MODULE_HOST_LIBS := \
+    system/ulib/fit.hostlib \
     third_party/ulib/uboringssl.hostlib \
 
 MODULE_COMPILEFLAGS := \
+    -Isystem/ulib/fit/include \
     -Ithird_party/ulib/uboringssl/include \
 
 include make/module.mk

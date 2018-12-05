@@ -18,6 +18,8 @@
 #include <type_traits>
 #include <vector>
 
+#include <lib/fit/function.h>
+
 #include "attributes.h"
 #include "error_reporter.h"
 #include "raw_ast.h"
@@ -923,8 +925,70 @@ private:
     std::vector<std::unique_ptr<Name>> owned_names_;
 };
 
+// AttributeSchema defines a schema for attributes. This includes:
+// - The allowed placement of an attribute (e.g. on a method, on a struct
+//   declaration);
+// - The allowed values which an attribute can take.
+// For attributes which may be placed on declarations (e.g. interface, struct,
+// union, table), a schema may additionally include:
+// - A constraint which must be met by the declaration.
+class AttributeSchema {
+public:
+    using Constraint = fit::function<bool(ErrorReporter* error_reporter,
+                                          const raw::Attribute* attribute,
+                                          const Decl* decl)>;
+
+    // Placement indicates the placement of an attribute, e.g. whether an
+    // attribute is placed on an enum declaration, method, or union
+    // member.
+    enum class Placement {
+        kConstDecl,
+        kEnumDecl,
+        kEnumMember,
+        kInterfaceDecl,
+        kLibrary,
+        kMethod,
+        kStructDecl,
+        kStructMember,
+        kTableDecl,
+        kTableMember,
+        kUnionDecl,
+        kUnionMember,
+    };
+
+    AttributeSchema(const std::set<Placement>& allowed_placements,
+                    const std::set<std::string> allowed_values,
+                    Constraint constraint = NoOpConstraint);
+
+    AttributeSchema(AttributeSchema&& schema) = default;
+
+    void ValidatePlacement(ErrorReporter* error_reporter,
+                           const raw::Attribute* attribute,
+                           Placement placement) const;
+
+    void ValidateValue(ErrorReporter* error_reporter,
+                       const raw::Attribute* attribute) const;
+
+    void ValidateConstraint(ErrorReporter* error_reporter,
+                            const raw::Attribute* attribute,
+                            const Decl* decl) const;
+
+private:
+    static bool NoOpConstraint(ErrorReporter* error_reporter,
+                               const raw::Attribute* attribute,
+                               const Decl* decl) {
+        return true;
+    }
+
+    std::set<Placement> allowed_placements_;
+    std::set<std::string> allowed_values_;
+    Constraint constraint_;
+};
+
 class Libraries {
 public:
+    Libraries();
+
     // Insert |library|.
     bool Insert(std::unique_ptr<Library> library);
 
@@ -932,8 +996,17 @@ public:
     bool Lookup(const std::vector<StringView>& library_name,
                 Library** out_library) const;
 
+    void AddAttributeSchema(const std::string& name, AttributeSchema schema) {
+        auto iter = attribute_schemas_.emplace(name, std::move(schema));
+        assert(iter.second && "do not add schemas twice");
+    }
+
+    const AttributeSchema* RetrieveAttributeSchema(ErrorReporter* error_reporter,
+                                                   const raw::Attribute* attribute) const;
+
 private:
     std::map<std::vector<StringView>, std::unique_ptr<Library>> all_libraries_;
+    std::map<std::string, AttributeSchema> attribute_schemas_;
 };
 
 class Dependencies {
@@ -983,8 +1056,10 @@ private:
     }
     bool Fail(const Decl& decl, StringView message) { return Fail(decl.name, message); }
 
-    void ValidateAttributesPlacement(AttributePlacement placement,
+    void ValidateAttributesPlacement(AttributeSchema::Placement placement,
                                      const raw::AttributeList* attributes);
+    void ValidateAttributesConstraints(const Decl* decl,
+                                       const raw::AttributeList* attributes);
 
     Name NextAnonymousName();
 

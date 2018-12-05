@@ -13,24 +13,6 @@
 
 namespace fidl {
 
-// AttributePlacement indicates the placement of an attribute list, e.g.
-// whether that list will be placed on an enum declaration, method, or
-// union member.
-enum AttributePlacement {
-    kConstDecl,
-    kEnumDecl,
-    kEnumMember,
-    kInterfaceDecl,
-    kLibrary,
-    kMethod,
-    kStructDecl,
-    kStructMember,
-    kTableDecl,
-    kTableMember,
-    kUnionDecl,
-    kUnionMember,
-};
-
 class AttributesBuilder {
 public:
     AttributesBuilder(ErrorReporter* error_reporter)
@@ -47,17 +29,11 @@ public:
     bool Insert(std::unique_ptr<raw::Attribute> attribute);
     std::vector<std::unique_ptr<raw::Attribute>> Done();
 
-    static void ValidatePlacement(
-        ErrorReporter* error_reporter, AttributePlacement placement,
-        const std::vector<std::unique_ptr<raw::Attribute>>& attributes);
-
 private:
     struct InsertResult {
         enum Kind {
             kOk,
             kDuplicate,
-            kInvalidValue,
-            kTypoOnKey,
         };
 
         InsertResult(Kind kind, std::string message_fragment)

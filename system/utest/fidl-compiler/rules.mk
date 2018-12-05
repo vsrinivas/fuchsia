@@ -83,12 +83,14 @@ MODULE_SRCS := \
     $(BUILDGEN_DIR)/examples.cpp \
 
 MODULE_COMPILEFLAGS := \
+    -Isystem/ulib/fit/include \
     -Isystem/ulib/unittest/include \
     -Isystem/utest/fidl-compiler \
     -Ithird_party/ulib/uboringssl/include \
 
 MODULE_HOST_LIBS := \
     system/host/fidl \
+    system/ulib/fit.hostlib \
     system/ulib/pretty.hostlib \
     system/ulib/unittest.hostlib \
     third_party/ulib/uboringssl.hostlib \

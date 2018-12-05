@@ -15,6 +15,7 @@ MODULE_SRCS := \
 
 MODULE_HOST_LIBS := \
     system/host/fidl \
+    system/ulib/fit.hostlib \
     third_party/ulib/uboringssl.hostlib \
 
 MODULE_PACKAGE := bin
