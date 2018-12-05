@@ -26,6 +26,7 @@ struct Base2 {
 struct Struct : public Base1, private Base2 {
   int member_a;
   Struct* member_b;
+  const void* v;
 
   int MyFunc(char p) { return 1; }
 };

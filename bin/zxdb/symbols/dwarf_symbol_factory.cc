@@ -604,8 +604,8 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunctionType(
   if (return_type)
     lazy_return_type = MakeLazy(return_type);
 
-  auto function = fxl::MakeRefCounted<FunctionType>(
-      lazy_return_type, std::move(parameters));
+  auto function = fxl::MakeRefCounted<FunctionType>(lazy_return_type,
+                                                    std::move(parameters));
   return function;
 }
 
@@ -678,8 +678,8 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeMemberPtr(
   if (!decoder.Decode(die) || !container_type || !type)
     return fxl::MakeRefCounted<Symbol>();
 
-  auto member_ptr = fxl::MakeRefCounted<MemberPtr>(
-      MakeLazy(container_type), MakeLazy(type));
+  auto member_ptr =
+      fxl::MakeRefCounted<MemberPtr>(MakeLazy(container_type), MakeLazy(type));
   return member_ptr;
 }
 
@@ -693,11 +693,16 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeModifiedType(
   llvm::DWARFDie modified;
   decoder.AddReference(llvm::dwarf::DW_AT_type, &modified);
 
-  if (!decoder.Decode(die) || !modified.isValid())
+  if (!decoder.Decode(die))
     return fxl::MakeRefCounted<Symbol>();
 
+  // Modified type may be null for "void*".
+  LazySymbol lazy_modified;
+  if (modified)
+    lazy_modified = MakeLazy(modified);
+
   auto result =
-      fxl::MakeRefCounted<ModifiedType>(die.getTag(), MakeLazy(modified));
+      fxl::MakeRefCounted<ModifiedType>(die.getTag(), std::move(lazy_modified));
   if (name)
     result->set_assigned_name(*name);
 
@@ -721,8 +726,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeNamespace(
 }
 
 fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeVariable(
-    const llvm::DWARFDie& die,
-    bool is_specification) {
+    const llvm::DWARFDie& die, bool is_specification) {
   DwarfDieDecoder decoder(symbols_->context(), die.getDwarfUnit());
 
   llvm::DWARFDie specification;

@@ -258,8 +258,8 @@ TEST(DwarfSymbolFactory, Collection) {
   ASSERT_TRUE(struct_type);
   EXPECT_EQ("my_ns::Struct", struct_type->GetFullName());
 
-  // The struct has two data members and two base classes.
-  ASSERT_EQ(2u, struct_type->data_members().size());
+  // The struct has three data members and two base classes.
+  ASSERT_EQ(3u, struct_type->data_members().size());
   ASSERT_EQ(2u, struct_type->inherited_from().size());
 
   // The first thing should be Base1 at offset 0.
@@ -294,6 +294,15 @@ TEST(DwarfSymbolFactory, Collection) {
   EXPECT_EQ("my_ns::Struct*", member_b_type->GetFullName());
   EXPECT_LT(member_a->member_location(), member_b->member_location());
   EXPECT_TRUE(member_b->member_location() % 4 == 0);
+
+  // The third data member is "const void* v". Void is weird because it will
+  // be represented as a modified pointer type of nothing.
+  auto* member_v = struct_type->data_members()[2].Get()->AsDataMember();
+  ASSERT_TRUE(member_v);
+  auto* member_v_type = member_v->type().Get()->AsType();
+  EXPECT_EQ("const void*", member_v_type->GetFullName());
+  EXPECT_LT(member_b->member_location(), member_v->member_location());
+  EXPECT_TRUE(member_v->member_location() % 4 == 0);
 }
 
 // Tests nested code blocks, variables, and parameters.
