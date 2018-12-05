@@ -63,6 +63,8 @@ static zx_status_t xdc_schedule_transfer_locked(xdc_t* xdc, xdc_endpoint_t* ep,
 // Schedules any queued requests on the endpoint's transfer ring, until we fill our
 // transfer ring or have no more requests.
 void xdc_process_transactions_locked(xdc_t* xdc, xdc_endpoint_t* ep) __TA_REQUIRES(xdc->lock) {
+    uint64_t usb_req_size = sizeof(usb_request_t);
+    zx_status_t status;
     while (1) {
         if (xhci_transfer_ring_free_trbs(&ep->transfer_ring) == 0) {
             // No available TRBs - need to wait for some to complete.
@@ -71,19 +73,20 @@ void xdc_process_transactions_locked(xdc_t* xdc, xdc_endpoint_t* ep) __TA_REQUIR
 
         if (!ep->current_req) {
             // Start the next transaction in the queue.
-            usb_request_t* req = list_remove_head_type(&ep->queued_reqs, usb_request_t, node);
+            usb_request_t* req = xdc_req_list_remove_head(&ep->queued_reqs, usb_req_size);
             if (!req) {
                 // No requests waiting.
                 return;
             }
             xhci_transfer_state_init(&ep->transfer_state, req,
                                      USB_ENDPOINT_BULK, EP_CTX_MAX_PACKET_SIZE);
-            list_add_tail(&ep->pending_reqs, &req->node);
+            status = xdc_req_list_add_tail(&ep->pending_reqs, req, usb_req_size);
+            ZX_DEBUG_ASSERT(status == ZX_OK);
             ep->current_req = req;
         }
 
         usb_request_t* req = ep->current_req;
-        zx_status_t status = xdc_schedule_transfer_locked(xdc, ep, req);
+        status = xdc_schedule_transfer_locked(xdc, ep, req);
         if (status == ZX_ERR_SHOULD_WAIT) {
             // No available TRBs - need to wait for some to complete.
             return;
@@ -113,7 +116,8 @@ zx_status_t xdc_queue_transfer(xdc_t* xdc, usb_request_t* req, bool in, bool is_
         }
     }
 
-    list_add_tail(&ep->queued_reqs, &req->node);
+    zx_status_t status = xdc_req_list_add_tail(&ep->queued_reqs, req, sizeof(usb_request_t));
+    ZX_DEBUG_ASSERT(status == ZX_OK);
 
     // We can still queue requests for later while waiting for the xdc device to be configured,
     // or while the endpoint is halted. Before scheduling the TRBs however, we should wait
@@ -181,8 +185,10 @@ zx_status_t xdc_restart_transfer_ring_locked(xdc_t* xdc, xdc_endpoint_t* ep) {
 
     // Requeue and reschedule the requests.
     usb_request_t* req;
-    while ((req = list_remove_tail_type(&ep->pending_reqs, usb_request_t, node)) != nullptr) {
-        list_add_head(&ep->queued_reqs, &req->node);
+    uint64_t usb_req_size = sizeof(usb_request_t);
+    while ((req = xdc_req_list_remove_tail(&ep->pending_reqs, usb_req_size)) != nullptr) {
+        status = xdc_req_list_add_head(&ep->queued_reqs, req, usb_req_size);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
     }
     xdc_process_transactions_locked(xdc, ep);
     return ZX_OK;
@@ -195,6 +201,7 @@ void xdc_handle_transfer_event_locked(xdc_t* xdc, xdc_poll_state_t* poll_state, 
     uint8_t xdc_ep_idx = ep_dev_ctx_idx == EP_IN_DEV_CTX_IDX ? IN_EP_IDX : OUT_EP_IDX;
     xdc_endpoint_t* ep = &xdc->eps[xdc_ep_idx];
     xhci_transfer_ring_t* ring = &ep->transfer_ring;
+    uint64_t usb_req_size = sizeof(usb_request_t);
 
     uint32_t cc = READ_FIELD(status, EVT_TRB_CC_START, EVT_TRB_CC_BITS);
     uint32_t length = READ_FIELD(status, EVT_TRB_XFER_LENGTH_START, EVT_TRB_XFER_LENGTH_BITS);
@@ -264,7 +271,9 @@ void xdc_handle_transfer_event_locked(xdc_t* xdc, xdc_poll_state_t* poll_state, 
     // Find the usb request in the pending list.
     bool found_req = false;
     usb_request_t* test;
-    list_for_every_entry(&ep->pending_reqs, test, usb_request_t, node) {
+    xdc_req_internal_t* test_int;
+    list_for_every_entry(&ep->pending_reqs, test_int, xdc_req_internal_t, node) {
+        test = XDC_INTERNAL_TO_USB_REQ(test_int, usb_req_size);
         if (test == req) {
             found_req = true;
             break;
@@ -275,7 +284,7 @@ void xdc_handle_transfer_event_locked(xdc_t* xdc, xdc_poll_state_t* poll_state, 
         return;
     }
     // Remove request from pending_reqs.
-    list_delete(&req->node);
+    list_delete(&test_int->node);
 
     // Update our copy of the dequeue_ptr to the TRB following this transaction.
     xhci_set_dequeue_ptr(ring, static_cast<xhci_trb_t*>(req->context));
@@ -284,5 +293,6 @@ void xdc_handle_transfer_event_locked(xdc_t* xdc, xdc_poll_state_t* poll_state, 
     // Save the request to be completed later out of the lock.
     req->response.status = ZX_OK;
     req->response.actual = length;
-    list_add_tail(&poll_state->completed_reqs, &req->node);
+    status = xdc_req_list_add_tail(&poll_state->completed_reqs, req, usb_req_size);
+    ZX_DEBUG_ASSERT(status == ZX_OK);
 }

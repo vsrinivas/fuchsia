@@ -72,6 +72,43 @@ typedef struct {
     list_node_t node;
 } xdc_host_stream_t;
 
+
+zx_status_t xdc_req_list_add_head(list_node_t* list, usb_request_t* req,
+                                  size_t parent_req_size) {
+   if (req->alloc_size < parent_req_size + sizeof(list_node_t)) {
+      return ZX_ERR_INVALID_ARGS;
+   }
+   xdc_req_internal_t* req_int = USB_REQ_TO_XDC_INTERNAL(req, parent_req_size);
+   list_add_head(list, &req_int->node);
+   return ZX_OK;
+}
+
+zx_status_t xdc_req_list_add_tail(list_node_t* list, usb_request_t* req,
+                                  size_t parent_req_size) {
+   if (req->alloc_size < parent_req_size + sizeof(list_node_t)) {
+      return ZX_ERR_INVALID_ARGS;
+   }
+   xdc_req_internal_t* req_int = USB_REQ_TO_XDC_INTERNAL(req, parent_req_size);
+   list_add_tail(list, &req_int->node);
+   return ZX_OK;
+}
+
+usb_request_t* xdc_req_list_remove_head(list_node_t* list, size_t parent_req_size) {
+   xdc_req_internal_t* req_int = list_remove_head_type(list, xdc_req_internal_t, node);
+   if (req_int) {
+       return XDC_INTERNAL_TO_USB_REQ(req_int, parent_req_size);
+   }
+   return NULL;
+}
+
+usb_request_t* xdc_req_list_remove_tail(list_node_t* list, size_t parent_req_size) {
+   xdc_req_internal_t* req_int = list_remove_tail_type(list, xdc_req_internal_t, node);
+   if (req_int) {
+       return XDC_INTERNAL_TO_USB_REQ(req_int, parent_req_size);
+   }
+   return NULL;
+}
+
 static zx_status_t xdc_write(xdc_t* xdc, uint32_t stream_id, const void* buf, size_t count,
                              size_t* actual, bool is_ctrl_msg);
 
@@ -385,7 +422,8 @@ static void xdc_queue_read_locked(xdc_t* xdc, usb_request_t* req) __TA_REQUIRES(
     zx_status_t status = xdc_queue_transfer(xdc, req, true /** in **/, false /* is_ctrl_msg */);
     if (status != ZX_OK) {
         zxlogf(ERROR, "xdc_read failed to re-queue request %d\n", status);
-        list_add_tail(&xdc->free_read_reqs, &req->node);
+        status = xdc_req_list_add_tail(&xdc->free_read_reqs, req, sizeof(usb_request_t));
+        ZX_DEBUG_ASSERT(status == ZX_OK);
     }
 }
 
@@ -459,8 +497,8 @@ static zx_status_t xdc_read_instance(void* ctx, void* buf, size_t count,
         // Finished copying all the available bytes from this usb request buffer.
         if (inst->cur_req_read_offset >= req->response.actual) {
             list_remove_head(&inst->completed_reads);
-            list_add_tail(&done_reqs, &req->node);
-
+            zx_status_t status = xdc_req_list_add_tail(&done_reqs, req, sizeof(usb_request_t));
+            ZX_DEBUG_ASSERT(status == ZX_OK);
             inst->cur_req_read_offset = 0;
         }
     }
@@ -730,7 +768,7 @@ static zx_status_t xdc_write(xdc_t* xdc, uint32_t stream_id, const void* buf, si
     usb_request_t* req = usb_request_pool_get(&xdc->free_write_reqs, header.total_length);
     if (!req) {
         zx_status_t status = usb_request_alloc(&req, header.total_length, OUT_EP_ADDR,
-                                               sizeof(usb_request_t));
+                                               sizeof(usb_request_t) + sizeof(xdc_req_internal_t));
         if (status != ZX_OK) {
             goto out;
         }
@@ -823,7 +861,9 @@ static void xdc_read_complete(usb_request_t* req, void* cookie) {
     mtx_lock(&xdc->read_lock);
 
     if (req->response.status == ZX_ERR_IO_NOT_PRESENT) {
-        list_add_tail(&xdc->free_read_reqs, &req->node);
+        zx_status_t status = xdc_req_list_add_tail(&xdc->free_read_reqs, req,
+                                                   sizeof(usb_request_t));
+        ZX_DEBUG_ASSERT(status == ZX_OK);
         goto out;
     }
 
@@ -878,7 +918,8 @@ static void xdc_read_complete(usb_request_t* req, void* cookie) {
         mtx_lock(&inst->lock);
         if (inst->has_stream_id && !inst->dead &&
             (inst->stream_id == xdc->cur_read_packet.header.stream_id)) {
-            list_add_tail(&inst->completed_reads, &req->node);
+            status = xdc_req_list_add_tail(&inst->completed_reads, req, sizeof(usb_request_t));
+            ZX_DEBUG_ASSERT(status == ZX_OK);
             xdc_update_instance_read_signal_locked(inst);
             found = true;
             mtx_unlock(&inst->lock);
@@ -1165,8 +1206,8 @@ zx_status_t xdc_poll(xdc_t* xdc) {
             // Call complete callbacks out of the lock.
             // TODO(jocelyndang): might want a separate thread for this.
             usb_request_t* req;
-            while ((req = list_remove_head_type(&poll_state.completed_reqs,
-                                                usb_request_t, node)) != nullptr) {
+            while ((req = xdc_req_list_remove_head(&poll_state.completed_reqs,
+                                                    sizeof(usb_request_t))) != nullptr) {
                 usb_request_complete(req, req->response.status, req->response.actual,
                                      req->complete_cb, req->cookie);
             }
@@ -1195,7 +1236,10 @@ static zx_status_t xdc_init_internal(xdc_t* xdc) {
 
     sync_completion_reset(&xdc->has_instance_completion);
 
-    usb_request_pool_init(&xdc->free_write_reqs, offsetof(usb_request_t, node));
+    uint64_t usb_req_size = sizeof(usb_request_t);
+    uint64_t total_req_size = usb_req_size + sizeof(xdc_req_internal_t);
+    usb_request_pool_init(&xdc->free_write_reqs, usb_req_size +
+                          offsetof(xdc_req_internal_t, node));
     mtx_init(&xdc->write_lock, mtx_plain);
 
     list_initialize(&xdc->free_read_reqs);
@@ -1204,8 +1248,7 @@ static zx_status_t xdc_init_internal(xdc_t* xdc) {
     // Allocate the usb requests for write / read.
     for (int i = 0; i < MAX_REQS; i++) {
         usb_request_t* req;
-        zx_status_t status = usb_request_alloc(&req, MAX_REQ_SIZE, OUT_EP_ADDR,
-                                               sizeof(usb_request_t));
+        zx_status_t status = usb_request_alloc(&req, MAX_REQ_SIZE, OUT_EP_ADDR, total_req_size);
         if (status != ZX_OK) {
             zxlogf(ERROR, "xdc failed to alloc write usb requests, err: %d\n", status);
             return status;
@@ -1216,15 +1259,15 @@ static zx_status_t xdc_init_internal(xdc_t* xdc) {
     }
     for (int i = 0; i < MAX_REQS; i++) {
         usb_request_t* req;
-        zx_status_t status = usb_request_alloc(&req, MAX_REQ_SIZE, IN_EP_ADDR,
-                                               sizeof(usb_request_t));
+        zx_status_t status = usb_request_alloc(&req, MAX_REQ_SIZE, IN_EP_ADDR, total_req_size);
         if (status != ZX_OK) {
             zxlogf(ERROR, "xdc failed to alloc read usb requests, err: %d\n", status);
             return status;
         }
         req->complete_cb = xdc_read_complete;
         req->cookie = xdc;
-        list_add_head(&xdc->free_read_reqs, &req->node);
+        status = xdc_req_list_add_head(&xdc->free_read_reqs, req, usb_req_size);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
     }
     return ZX_OK;
 }
