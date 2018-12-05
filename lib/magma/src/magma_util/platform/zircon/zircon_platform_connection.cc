@@ -4,6 +4,7 @@
 
 #include "zircon_platform_connection.h"
 
+#include "platform_connection.h"
 #include "zircon_platform_event.h"
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/task.h>

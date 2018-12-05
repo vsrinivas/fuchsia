@@ -4,6 +4,7 @@
 
 #include "zircon_platform_connection.h"
 
+#include "platform_connection_client.h"
 #include <fuchsia/gpu/magma/c/fidl.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/unsafe.h>
@@ -11,9 +12,9 @@
 
 namespace magma {
 
-class ZirconPlatformIpcConnection : public PlatformIpcConnection {
+class ZirconPlatformConnectionClient : public PlatformConnectionClient {
 public:
-    ZirconPlatformIpcConnection(zx::channel channel, zx::channel notification_channel)
+    ZirconPlatformConnectionClient(zx::channel channel, zx::channel notification_channel)
         : channel_(std::move(channel)), notification_channel_(std::move(notification_channel))
     {
     }
@@ -225,7 +226,7 @@ public:
     void SetError(magma_status_t error)
     {
         if (!error_)
-            error_ = DRET_MSG(error, "ZirconPlatformIpcConnection encountered dispatcher error");
+            error_ = DRET_MSG(error, "ZirconPlatformConnectionClient encountered dispatcher error");
     }
 
     magma_status_t WaitError(magma_status_t* error_out)
@@ -312,14 +313,14 @@ private:
     magma_status_t error_{};
 };
 
-std::unique_ptr<PlatformIpcConnection>
-PlatformIpcConnection::Create(uint32_t device_handle, uint32_t device_notification_handle)
+std::unique_ptr<PlatformConnectionClient>
+PlatformConnectionClient::Create(uint32_t device_handle, uint32_t device_notification_handle)
 {
-    return std::unique_ptr<ZirconPlatformIpcConnection>(new ZirconPlatformIpcConnection(
+    return std::unique_ptr<ZirconPlatformConnectionClient>(new ZirconPlatformConnectionClient(
         zx::channel(device_handle), zx::channel(device_notification_handle)));
 }
 
-bool PlatformIpcConnection::Query(int fd, uint64_t query_id, uint64_t* result_out)
+bool PlatformConnectionClient::Query(int fd, uint64_t query_id, uint64_t* result_out)
 {
     fdio_t* fdio = fdio_unsafe_fd_to_io(fd);
     if (!fdio)
@@ -335,8 +336,8 @@ bool PlatformIpcConnection::Query(int fd, uint64_t query_id, uint64_t* result_ou
     return true;
 }
 
-bool PlatformIpcConnection::GetHandles(int fd, uint32_t* device_handle_out,
-                                       uint32_t* device_notification_handle_out)
+bool PlatformConnectionClient::GetHandles(int fd, uint32_t* device_handle_out,
+                                          uint32_t* device_notification_handle_out)
 {
     fdio_t* fdio = fdio_unsafe_fd_to_io(fd);
     if (!fdio)

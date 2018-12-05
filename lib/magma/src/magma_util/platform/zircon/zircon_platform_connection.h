@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_PLATFORM_CONNECTION_H_
-#define ZIRCON_PLATFORM_CONNECTION_H_
+#ifndef GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_ZIRCON_ZIRCON_PLATFORM_CONNECTION_H_
+#define GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_ZIRCON_ZIRCON_PLATFORM_CONNECTION_H_
 
-#include "platform_connection.h"
+#include <stddef.h>
+#include <stdint.h>
 
 namespace magma {
 
@@ -118,4 +119,4 @@ struct CommitBufferOp {
 
 } // namespace magma
 
-#endif // ZIRCON_PLATFORM_CONNECTION_H_
+#endif  // GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_ZIRCON_ZIRCON_PLATFORM_CONNECTION_H_

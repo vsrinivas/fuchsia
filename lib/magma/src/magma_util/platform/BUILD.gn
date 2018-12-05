@@ -156,7 +156,7 @@ source_set("connection_header") {
   public_configs = [ "$magma_build_root:magma_src_include_config" ]
 
   sources = [
-    "platform_connection.h",
+    "platform_connection_client.h",
   ]
 
   public_deps = [

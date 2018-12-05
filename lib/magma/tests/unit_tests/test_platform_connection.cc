@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "platform_connection.h"
+#include "platform_connection_client.h"
 #include "gtest/gtest.h"
 #include <chrono>
 #include <poll.h>
@@ -16,17 +17,17 @@ class TestPlatformConnection {
 public:
     static std::unique_ptr<TestPlatformConnection> Create();
 
-    TestPlatformConnection(std::unique_ptr<magma::PlatformIpcConnection> ipc_connection,
+    TestPlatformConnection(std::unique_ptr<magma::PlatformConnectionClient> client_connection,
                            std::thread ipc_thread,
                            std::shared_ptr<magma::PlatformConnection> connection)
-        : ipc_connection_(std::move(ipc_connection)), ipc_thread_(std::move(ipc_thread)),
+        : client_connection_(std::move(client_connection)), ipc_thread_(std::move(ipc_thread)),
           connection_(std::move(connection))
     {
     }
 
     ~TestPlatformConnection()
     {
-        ipc_connection_.reset();
+        client_connection_.reset();
         connection_.reset();
         if (ipc_thread_.joinable())
             ipc_thread_.join();
@@ -37,16 +38,16 @@ public:
     {
         auto buf = magma::PlatformBuffer::Create(1, "test");
         test_buffer_id = buf->id();
-        EXPECT_EQ(ipc_connection_->ImportBuffer(buf.get()), 0);
-        EXPECT_EQ(ipc_connection_->GetError(), 0);
+        EXPECT_EQ(client_connection_->ImportBuffer(buf.get()), 0);
+        EXPECT_EQ(client_connection_->GetError(), 0);
     }
     void TestReleaseBuffer()
     {
         auto buf = magma::PlatformBuffer::Create(1, "test");
         test_buffer_id = buf->id();
-        EXPECT_EQ(ipc_connection_->ImportBuffer(buf.get()), 0);
-        EXPECT_EQ(ipc_connection_->ReleaseBuffer(test_buffer_id), 0);
-        EXPECT_EQ(ipc_connection_->GetError(), 0);
+        EXPECT_EQ(client_connection_->ImportBuffer(buf.get()), 0);
+        EXPECT_EQ(client_connection_->ReleaseBuffer(test_buffer_id), 0);
+        EXPECT_EQ(client_connection_->GetError(), 0);
     }
 
     void TestImportObject()
@@ -55,8 +56,8 @@ public:
         test_semaphore_id = semaphore->id();
         uint32_t handle;
         EXPECT_TRUE(semaphore->duplicate_handle(&handle));
-        EXPECT_EQ(ipc_connection_->ImportObject(handle, magma::PlatformObject::SEMAPHORE), 0);
-        EXPECT_EQ(ipc_connection_->GetError(), 0);
+        EXPECT_EQ(client_connection_->ImportObject(handle, magma::PlatformObject::SEMAPHORE), 0);
+        EXPECT_EQ(client_connection_->GetError(), 0);
     }
     void TestReleaseObject()
     {
@@ -64,23 +65,24 @@ public:
         test_semaphore_id = semaphore->id();
         uint32_t handle;
         EXPECT_TRUE(semaphore->duplicate_handle(&handle));
-        EXPECT_EQ(ipc_connection_->ImportObject(handle, magma::PlatformObject::SEMAPHORE), 0);
+        EXPECT_EQ(client_connection_->ImportObject(handle, magma::PlatformObject::SEMAPHORE), 0);
         EXPECT_EQ(
-            ipc_connection_->ReleaseObject(test_semaphore_id, magma::PlatformObject::SEMAPHORE), 0);
-        EXPECT_EQ(ipc_connection_->GetError(), 0);
+            client_connection_->ReleaseObject(test_semaphore_id, magma::PlatformObject::SEMAPHORE),
+            0);
+        EXPECT_EQ(client_connection_->GetError(), 0);
     }
 
     void TestCreateContext()
     {
         uint32_t context_id;
-        ipc_connection_->CreateContext(&context_id);
-        EXPECT_EQ(ipc_connection_->GetError(), 0);
+        client_connection_->CreateContext(&context_id);
+        EXPECT_EQ(client_connection_->GetError(), 0);
         EXPECT_EQ(test_context_id, context_id);
     }
     void TestDestroyContext()
     {
-        ipc_connection_->DestroyContext(test_context_id);
-        EXPECT_EQ(ipc_connection_->GetError(), 0);
+        client_connection_->DestroyContext(test_context_id);
+        EXPECT_EQ(client_connection_->GetError(), 0);
     }
 
     void TestExecuteCommandBuffer()
@@ -89,13 +91,13 @@ public:
         test_buffer_id = buf->id();
         uint32_t handle;
         EXPECT_TRUE(buf->duplicate_handle(&handle));
-        ipc_connection_->ExecuteCommandBuffer(handle, test_context_id);
-        EXPECT_EQ(ipc_connection_->GetError(), 0);
+        client_connection_->ExecuteCommandBuffer(handle, test_context_id);
+        EXPECT_EQ(client_connection_->GetError(), 0);
     }
 
     void TestGetError()
     {
-        EXPECT_EQ(ipc_connection_->GetError(), 0);
+        EXPECT_EQ(client_connection_->GetError(), 0);
         test_complete = true;
     }
 
@@ -103,16 +105,16 @@ public:
     {
         auto buf = magma::PlatformBuffer::Create(1, "test");
         test_buffer_id = buf->id();
-        EXPECT_EQ(ipc_connection_->ImportBuffer(buf.get()), 0);
-        EXPECT_EQ(ipc_connection_->MapBufferGpu(buf->id(), PAGE_SIZE * 1000, 1u, 2u, 5), 0);
-        EXPECT_EQ(ipc_connection_->UnmapBufferGpu(buf->id(), PAGE_SIZE * 1000), 0);
-        EXPECT_EQ(ipc_connection_->CommitBuffer(buf->id(), 1000, 2000), 0);
-        EXPECT_EQ(ipc_connection_->GetError(), 0);
+        EXPECT_EQ(client_connection_->ImportBuffer(buf.get()), 0);
+        EXPECT_EQ(client_connection_->MapBufferGpu(buf->id(), PAGE_SIZE * 1000, 1u, 2u, 5), 0);
+        EXPECT_EQ(client_connection_->UnmapBufferGpu(buf->id(), PAGE_SIZE * 1000), 0);
+        EXPECT_EQ(client_connection_->CommitBuffer(buf->id(), 1000, 2000), 0);
+        EXPECT_EQ(client_connection_->GetError(), 0);
     }
 
     void TestNotificationChannel()
     {
-        pollfd pfd = {.fd = ipc_connection_->GetNotificationChannelFd(), .events = POLLIN};
+        pollfd pfd = {.fd = client_connection_->GetNotificationChannelFd(), .events = POLLIN};
 
         int poll_status = poll(&pfd, 1, 5000);
         EXPECT_EQ(1, poll_status);
@@ -121,8 +123,8 @@ public:
         uint64_t out_data_size;
         // Data was written when the channel was created, so it should be
         // available.
-        magma_status_t status =
-            ipc_connection_->ReadNotificationChannel(&out_data, sizeof(out_data), &out_data_size);
+        magma_status_t status = client_connection_->ReadNotificationChannel(
+            &out_data, sizeof(out_data), &out_data_size);
         EXPECT_EQ(MAGMA_STATUS_OK, status);
         EXPECT_EQ(sizeof(out_data), out_data_size);
         EXPECT_EQ(5u, out_data);
@@ -131,8 +133,8 @@ public:
         poll_status = poll(&pfd, 1, 0);
         EXPECT_EQ(0, poll_status);
 
-        status =
-            ipc_connection_->ReadNotificationChannel(&out_data, sizeof(out_data), &out_data_size);
+        status = client_connection_->ReadNotificationChannel(&out_data, sizeof(out_data),
+                                                             &out_data_size);
         EXPECT_EQ(MAGMA_STATUS_OK, status);
         EXPECT_EQ(0u, out_data_size);
 
@@ -145,8 +147,8 @@ public:
         poll_status = poll(&pfd, 1, 5000);
         EXPECT_EQ(1, poll_status);
 
-        status =
-            ipc_connection_->ReadNotificationChannel(&out_data, sizeof(out_data), &out_data_size);
+        status = client_connection_->ReadNotificationChannel(&out_data, sizeof(out_data),
+                                                             &out_data_size);
         EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST, status);
     }
 
@@ -164,8 +166,8 @@ public:
             commands[i].semaphores = semaphore_ids;
         }
 
-        ipc_connection_->ExecuteImmediateCommands(test_context_id, 128, commands);
-        EXPECT_EQ(ipc_connection_->GetError(), 0);
+        client_connection_->ExecuteImmediateCommands(test_context_id, 128, commands);
+        EXPECT_EQ(client_connection_->GetError(), 0);
     }
 
     static uint64_t test_buffer_id;
@@ -182,7 +184,7 @@ private:
             ;
     }
 
-    std::unique_ptr<magma::PlatformIpcConnection> ipc_connection_;
+    std::unique_ptr<magma::PlatformConnectionClient> client_connection_;
     std::thread ipc_thread_;
     std::shared_ptr<magma::PlatformConnection> connection_;
 };
@@ -323,14 +325,14 @@ std::unique_ptr<TestPlatformConnection> TestPlatformConnection::Create()
     auto connection = magma::PlatformConnection::Create(std::move(delegate));
     if (!connection)
         return DRETP(nullptr, "failed to create PlatformConnection");
-    auto ipc_connection = magma::PlatformIpcConnection::Create(
+    auto client_connection = magma::PlatformConnectionClient::Create(
         connection->GetHandle(), connection->GetNotificationChannel());
-    if (!ipc_connection)
-        return DRETP(nullptr, "failed to create PlatformIpcConnection");
+    if (!client_connection)
+        return DRETP(nullptr, "failed to create PlatformConnectionClient");
 
     auto ipc_thread = std::thread(IpcThreadFunc, connection);
 
-    return std::make_unique<TestPlatformConnection>(std::move(ipc_connection),
+    return std::make_unique<TestPlatformConnection>(std::move(client_connection),
                                                     std::move(ipc_thread), connection);
 }
 

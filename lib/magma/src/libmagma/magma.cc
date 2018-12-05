@@ -6,6 +6,7 @@
 #include "magma_util/command_buffer.h"
 #include "magma_util/macros.h"
 #include "platform_connection.h"
+#include "platform_connection_client.h"
 #include "platform_port.h"
 #include "platform_semaphore.h"
 #include "platform_thread.h"
@@ -18,22 +19,23 @@ magma_connection_t* magma_create_connection(int fd, uint32_t capabilities)
     // Here we release ownership of the connection to the client
     uint32_t device_handle;
     uint32_t device_notification_handle;
-    if (!magma::PlatformIpcConnection::GetHandles(fd, &device_handle, &device_notification_handle))
+    if (!magma::PlatformConnectionClient::GetHandles(fd, &device_handle,
+                                                     &device_notification_handle))
         return DRETP(nullptr, "couldn't get handles from fd");
 
-    return magma::PlatformIpcConnection::Create(device_handle, device_notification_handle)
+    return magma::PlatformConnectionClient::Create(device_handle, device_notification_handle)
         .release();
 }
 
 void magma_release_connection(magma_connection_t* connection)
 {
     // TODO(MA-109): close the connection
-    delete magma::PlatformIpcConnection::cast(connection);
+    delete magma::PlatformConnectionClient::cast(connection);
 }
 
 magma_status_t magma_get_error(magma_connection_t* connection)
 {
-    return magma::PlatformIpcConnection::cast(connection)->GetError();
+    return magma::PlatformConnectionClient::cast(connection)->GetError();
 }
 
 magma_status_t magma_query(int fd, uint64_t id, uint64_t* value_out)
@@ -41,8 +43,9 @@ magma_status_t magma_query(int fd, uint64_t id, uint64_t* value_out)
     if (!value_out)
         return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "bad value_out address");
 
-    if (!magma::PlatformIpcConnection::Query(fd, id, value_out))
-        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "magma::PlatformIpcConnection::Query failed");
+    if (!magma::PlatformConnectionClient::Query(fd, id, value_out))
+        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR,
+                        "magma::PlatformConnectionClient::Query failed");
 
     DLOG("magma_query id %" PRIu64 " returned 0x%" PRIx64, id, *value_out);
     return MAGMA_STATUS_OK;
@@ -50,12 +53,12 @@ magma_status_t magma_query(int fd, uint64_t id, uint64_t* value_out)
 
 void magma_create_context(magma_connection_t* connection, uint32_t* context_id_out)
 {
-    magma::PlatformIpcConnection::cast(connection)->CreateContext(context_id_out);
+    magma::PlatformConnectionClient::cast(connection)->CreateContext(context_id_out);
 }
 
 void magma_release_context(magma_connection_t* connection, uint32_t context_id)
 {
-    magma::PlatformIpcConnection::cast(connection)->DestroyContext(context_id);
+    magma::PlatformConnectionClient::cast(connection)->DestroyContext(context_id);
 }
 
 magma_status_t magma_create_buffer(magma_connection_t* connection, uint64_t size,
@@ -66,7 +69,7 @@ magma_status_t magma_create_buffer(magma_connection_t* connection, uint64_t size
         return DRET(MAGMA_STATUS_MEMORY_ERROR);
 
     magma_status_t result =
-        magma::PlatformIpcConnection::cast(connection)->ImportBuffer(platform_buffer.get());
+        magma::PlatformConnectionClient::cast(connection)->ImportBuffer(platform_buffer.get());
     if (result != MAGMA_STATUS_OK)
         return DRET(result);
 
@@ -80,7 +83,7 @@ magma_status_t magma_create_buffer(magma_connection_t* connection, uint64_t size
 void magma_release_buffer(magma_connection_t* connection, magma_buffer_t buffer)
 {
     auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
-    magma::PlatformIpcConnection::cast(connection)->ReleaseBuffer(platform_buffer->id());
+    magma::PlatformConnectionClient::cast(connection)->ReleaseBuffer(platform_buffer->id());
     delete platform_buffer;
 }
 
@@ -102,13 +105,13 @@ uint64_t magma_get_buffer_size(magma_buffer_t buffer)
 
 int magma_get_notification_channel_fd(magma_connection_t* connection)
 {
-    return magma::PlatformIpcConnection::cast(connection)->GetNotificationChannelFd();
+    return magma::PlatformConnectionClient::cast(connection)->GetNotificationChannelFd();
 }
 
 magma_status_t magma_read_notification_channel(magma_connection_t* connection, void* buffer,
                                                uint64_t buffer_size, uint64_t* buffer_size_out)
 {
-    return magma::PlatformIpcConnection::cast(connection)
+    return magma::PlatformConnectionClient::cast(connection)
         ->ReadNotificationChannel(buffer, buffer_size, buffer_size_out);
 }
 
@@ -140,7 +143,7 @@ magma_status_t magma_import(magma_connection_t* connection, uint32_t buffer_hand
         return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "PlatformBuffer::Import failed");
 
     magma_status_t result =
-        magma::PlatformIpcConnection::cast(connection)->ImportBuffer(platform_buffer.get());
+        magma::PlatformConnectionClient::cast(connection)->ImportBuffer(platform_buffer.get());
     if (result != MAGMA_STATUS_OK)
         return DRET_MSG(result, "ImportBuffer failed");
 
@@ -208,7 +211,7 @@ void magma_map_buffer_gpu(struct magma_connection_t* connection, magma_buffer_t 
 {
     auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
     uint64_t buffer_id = platform_buffer->id();
-    magma::PlatformIpcConnection::cast(connection)
+    magma::PlatformConnectionClient::cast(connection)
         ->MapBufferGpu(buffer_id, gpu_va, page_offset, page_count, map_flags);
 }
 
@@ -217,7 +220,7 @@ void magma_unmap_buffer_gpu(struct magma_connection_t* connection, magma_buffer_
 {
     auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
     uint64_t buffer_id = platform_buffer->id();
-    magma::PlatformIpcConnection::cast(connection)->UnmapBufferGpu(buffer_id, gpu_va);
+    magma::PlatformConnectionClient::cast(connection)->UnmapBufferGpu(buffer_id, gpu_va);
 }
 
 void magma_commit_buffer(struct magma_connection_t* connection, magma_buffer_t buffer,
@@ -225,7 +228,7 @@ void magma_commit_buffer(struct magma_connection_t* connection, magma_buffer_t b
 {
     auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
     uint64_t buffer_id = platform_buffer->id();
-    magma::PlatformIpcConnection::cast(connection)
+    magma::PlatformConnectionClient::cast(connection)
         ->CommitBuffer(buffer_id, page_offset, page_count);
 }
 
@@ -291,7 +294,8 @@ void magma_submit_command_buffer(magma_connection_t* connection, magma_buffer_t 
         interpreter.resource(interpreter.batch_buffer_resource_index()).buffer_id();
     TRACE_FLOW_BEGIN("magma", "command_buffer", batch_buffer_id);
 
-    magma::PlatformIpcConnection::cast(connection)->ExecuteCommandBuffer(buffer_handle, context_id);
+    magma::PlatformConnectionClient::cast(connection)
+        ->ExecuteCommandBuffer(buffer_handle, context_id);
 
     delete platform_buffer;
 }
@@ -300,7 +304,7 @@ void magma_execute_immediate_commands(magma_connection_t* connection, uint32_t c
                                       uint64_t command_count,
                                       magma_system_inline_command_buffer* command_buffers)
 {
-    magma::PlatformIpcConnection::cast(connection)
+    magma::PlatformConnectionClient::cast(connection)
         ->ExecuteImmediateCommands(context_id, command_count, command_buffers);
 }
 
@@ -315,7 +319,7 @@ magma_status_t magma_create_semaphore(magma_connection_t* connection,
     if (!semaphore->duplicate_handle(&handle))
         return DRET_MSG(MAGMA_STATUS_ACCESS_DENIED, "failed to duplicate handle");
 
-    magma_status_t result = magma::PlatformIpcConnection::cast(connection)
+    magma_status_t result = magma::PlatformConnectionClient::cast(connection)
                                 ->ImportObject(handle, magma::PlatformObject::SEMAPHORE);
     if (result != MAGMA_STATUS_OK)
         return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "failed to ImportObject");
@@ -327,7 +331,7 @@ magma_status_t magma_create_semaphore(magma_connection_t* connection,
 void magma_release_semaphore(magma_connection_t* connection, magma_semaphore_t semaphore)
 {
     auto platform_semaphore = reinterpret_cast<magma::PlatformSemaphore*>(semaphore);
-    magma::PlatformIpcConnection::cast(connection)
+    magma::PlatformConnectionClient::cast(connection)
         ->ReleaseObject(platform_semaphore->id(), magma::PlatformObject::SEMAPHORE);
     delete platform_semaphore;
 }
@@ -405,7 +409,7 @@ magma_status_t magma_import_semaphore(magma_connection_t* connection, uint32_t s
     if (!platform_semaphore->duplicate_handle(&handle))
         return DRET_MSG(MAGMA_STATUS_ACCESS_DENIED, "failed to duplicate handle");
 
-    magma_status_t result = magma::PlatformIpcConnection::cast(connection)
+    magma_status_t result = magma::PlatformConnectionClient::cast(connection)
                                 ->ImportObject(handle, magma::PlatformObject::SEMAPHORE);
     if (result != MAGMA_STATUS_OK)
         return DRET_MSG(result, "ImportObject failed: %d", result);
