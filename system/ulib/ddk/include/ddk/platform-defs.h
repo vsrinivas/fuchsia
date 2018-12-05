@@ -30,6 +30,8 @@ __BEGIN_CDECLS;
 #define PDEV_DID_ETH_PHY            17  // Ethernet PHY
 #define PDEV_DID_CAMERA_SENSOR      18  // Camera Sensor
 #define PDEV_DID_HID_BUTTONS        19  // HID Buttons
+#define PDEV_DID_MUSB_PERIPHERAL    20  // MUSB in peripheral role
+#define PDEV_DID_MUSB_HOST          21  // MUSB in host role
 
 // QEMU emulator
 #define PDEV_VID_QEMU               1
@@ -146,8 +148,7 @@ __BEGIN_CDECLS;
 #define PDEV_DID_MEDIATEK_SDIO      5
 #define PDEV_DID_MEDIATEK_GPU       6
 #define PDEV_DID_MEDIATEK_CLK       7
-#define PDEV_DID_MEDIATEK_USB       8
-#define PDEV_DID_MEDIATEK_THERMAL   9
+#define PDEV_DID_MEDIATEK_THERMAL   8
 
 // Sony
 #define PDEV_VID_SONY               14

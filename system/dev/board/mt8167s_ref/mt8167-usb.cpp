@@ -44,7 +44,7 @@ static pbus_dev_t usb_dev = [](){
     pbus_dev_t dev;
     dev.name = "mt-usb";
     dev.vid = PDEV_VID_MEDIATEK;
-    dev.did = PDEV_DID_MEDIATEK_USB;
+    dev.did = PDEV_DID_MUSB_PERIPHERAL;
     dev.mmio_list = usb_mmios;
     dev.mmio_count = countof(usb_mmios);
     dev.irq_list = usb_irqs;
