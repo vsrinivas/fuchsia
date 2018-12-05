@@ -65,7 +65,7 @@ zx_status_t dh_send_create_device(Device* dev, Devhost* dh, zx::channel rpc, zx:
     }
 
     fidl::Message msg(builder.Finalize(), fidl::HandlePart(handles, num_handles, num_handles));
-    return msg.Write(dh->hrpc, 0);
+    return msg.Write(dh->hrpc(), 0);
 }
 
 zx_status_t dh_send_create_device_stub(Devhost* dh, zx::channel rpc, uint32_t protocol_id) {
@@ -84,7 +84,7 @@ zx_status_t dh_send_create_device_stub(Devhost* dh, zx::channel rpc, uint32_t pr
     zx_handle_t handles[] = { rpc.release() };
     fidl::Message msg(builder.Finalize(),
                       fidl::HandlePart(handles, fbl::count_of(handles), fbl::count_of(handles)));
-    return msg.Write(dh->hrpc, 0);
+    return msg.Write(dh->hrpc(), 0);
 }
 
 zx_status_t dh_send_bind_driver(Device* dev, const char* libname, zx::vmo driver) {

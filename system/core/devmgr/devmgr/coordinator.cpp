@@ -440,7 +440,7 @@ void devmgr_set_bootdata(const zx::unowned_vmo vmo) {
 }
 
 void Coordinator::DumpDevice(const Device* dev, size_t indent) const {
-    zx_koid_t pid = dev->host ? dev->host->koid : 0;
+    zx_koid_t pid = dev->host ? dev->host->koid() : 0;
     char extra[256];
     if (log_flags & LOG_DEVLC) {
         snprintf(extra, sizeof(extra), " dev=%p ref=%d", dev, dev->refcount_);
@@ -680,18 +680,21 @@ static zx_status_t dc_launch_devhost(Devhost* host,
                          PA_HND(PA_USER0, kIdHJobRoot));
 
     const char* errmsg;
-    zx_status_t status = launchpad_go(lp, host->proc.reset_and_get_address(), &errmsg);
+    zx_handle_t proc;
+    zx_status_t status = launchpad_go(lp, &proc, &errmsg);
     if (status < 0) {
         log(ERROR, "devcoord: launch devhost '%s': failed: %d: %s\n",
             name, status, errmsg);
         return status;
     }
+    host->set_proc(proc);
+
     zx_info_handle_basic_t info;
-    if (host->proc.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr) == ZX_OK) {
-        host->koid = info.koid;
+    if (host->proc()->get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr) == ZX_OK) {
+        host->set_koid(info.koid);
     }
     log(INFO, "devcoord: launch devhost '%s': pid=%zu\n",
-        name, host->koid);
+        name, host->koid());
 
     dc_launched_first_devhost = true;
 
@@ -699,8 +702,8 @@ static zx_status_t dc_launch_devhost(Devhost* host,
 }
 
 Devhost::Devhost()
-    : hrpc(ZX_HANDLE_INVALID), proc(ZX_HANDLE_INVALID), koid(0), refcount_(0),
-      flags(0), parent(nullptr), anode({}), snode({}), node({}) {
+    : hrpc_(ZX_HANDLE_INVALID), proc_(ZX_HANDLE_INVALID), koid_(0), refcount_(0),
+      flags_(0), parent_(nullptr) {
 }
 
 zx_status_t Coordinator::NewDevhost(const char* name, Devhost* parent, Devhost** out) {
@@ -709,21 +712,22 @@ zx_status_t Coordinator::NewDevhost(const char* name, Devhost* parent, Devhost**
         return ZX_ERR_NO_MEMORY;
     }
 
-    zx_handle_t hrpc;
+    zx_handle_t hrpc, dh_hrpc;
     zx_status_t r;
-    if ((r = zx_channel_create(0, &hrpc, &dh->hrpc)) < 0) {
+    if ((r = zx_channel_create(0, &hrpc, &dh_hrpc)) < 0) {
         return r;
     }
+    dh->set_hrpc(dh_hrpc);
 
     if ((r = dc_launch_devhost(dh.get(), name, hrpc)) < 0) {
-        zx_handle_close(dh->hrpc);
+        zx_handle_close(dh->hrpc());
         return r;
     }
 
     if (parent) {
-        dh->parent = parent;
-        dh->parent->AddRef();
-        dh->parent->children.push_back(dh.get());
+        dh->set_parent(parent);
+        dh->parent()->AddRef();
+        dh->parent()->children().push_back(dh.get());
     }
     devhosts.push_back(dh.get());
 
@@ -738,15 +742,15 @@ void Coordinator::ReleaseDevhost(Devhost* dh) {
         return;
     }
     log(INFO, "devcoord: destroy host %p\n", dh);
-    Devhost* parent = dh->parent;
+    Devhost* parent = dh->parent();
     if (parent != nullptr) {
-        dh->parent->children.erase(*dh);
-        dh->parent = nullptr;
+        dh->parent()->children().erase(*dh);
+        dh->set_parent(nullptr);
         ReleaseDevhost(parent);
     }
     devhosts.erase(*dh);
-    zx_handle_close(dh->hrpc);
-    dh->proc.kill();
+    zx_handle_close(dh->hrpc());
+    dh->proc()->kill();
     delete dh;
 }
 
@@ -896,7 +900,7 @@ zx_status_t Coordinator::AddDevice(Device* parent, zx::channel rpc,
     if (dev->host) {
         //TODO host == nullptr should be impossible
         dev->host->AddRef();
-        dev->host->devices.push_back(dev.get());
+        dev->host->devices().push_back(dev.get());
     }
     dev->AddRef();
     parent->children.push_back(dev.get());
@@ -971,7 +975,7 @@ zx_status_t Coordinator::RemoveDevice(Device* dev, bool forced) {
     // detach from devhost
     Devhost* dh = dev->host;
     if (dh != nullptr) {
-        dev->host->devices.erase(*dev);
+        dev->host->devices().erase(*dev);
         dev->host = nullptr;
 
         // If we are responding to a disconnect,
@@ -979,12 +983,12 @@ zx_status_t Coordinator::RemoveDevice(Device* dev, bool forced) {
         // A side-effect of this is that the devhost will be released,
         // as well as any proxy devices.
         if (forced) {
-            dh->flags |= DEV_HOST_DYING;
+            dh->flags() |= DEV_HOST_DYING;
 
             Device* next;
             Device* last = nullptr;
-            while (!dh->devices.is_empty()) {
-                next = &dh->devices.front();
+            while (!dh->devices().is_empty()) {
+                next = &dh->devices().front();
                 if (last == next) {
                     // This shouldn't be possbile, but let's not infinite-loop if it happens
                     log(ERROR, "devcoord: fatal: failed to remove dev %p from devhost\n", next);
@@ -1024,7 +1028,7 @@ zx_status_t Coordinator::RemoveDevice(Device* dev, bool forced) {
                 // THEN we will want to rebind our parent
                 if (!(parent->flags & DEV_CTX_DEAD) &&
                     (parent->flags & DEV_CTX_MUST_ISOLATE) &&
-                    ((parent->host == nullptr) || !(parent->host->flags & DEV_HOST_DYING))) {
+                    ((parent->host == nullptr) || !(parent->host->flags() & DEV_HOST_DYING))) {
 
                     log(DEVLC, "devcoord: bus device %p name='%s' is unbound\n",
                         parent, parent->name);
@@ -1591,7 +1595,7 @@ static zx_status_t dh_create_device(Device* dev, Devhost* dh,
     }
     dev->host = dh;
     dh->AddRef();
-    dh->devices.push_back(dev);
+    dh->devices().push_back(dev);
     return ZX_OK;
 }
 
@@ -1799,10 +1803,10 @@ static void dc_suspend_fallback(uint32_t flags) {
 }
 
 static zx_status_t dc_suspend_devhost(Devhost* dh, SuspendContext* ctx) {
-    if (dh->devices.is_empty()) {
+    if (dh->devices().is_empty()) {
         return ZX_OK;
     }
-    Device* dev = &dh->devices.front();
+    Device* dev = &dh->devices().front();
 
     if (!(dev->flags & DEV_CTX_PROXY)) {
         log(INFO, "devcoord: devhost root '%s' (%p) is not a proxy\n",
@@ -1818,7 +1822,7 @@ static zx_status_t dc_suspend_devhost(Devhost* dh, SuspendContext* ctx) {
         return r;
     }
 
-    dh->flags |= DEV_HOST_SUSPEND;
+    dh->flags() |= DEV_HOST_SUSPEND;
 
     auto pending = fbl::make_unique<PendingOperation>(PendingOperation::Op::kSuspend, ctx);
     if (pending == nullptr) {
@@ -1834,10 +1838,10 @@ static zx_status_t dc_suspend_devhost(Devhost* dh, SuspendContext* ctx) {
 
 static void append_suspend_list(SuspendContext* ctx, Devhost* dh) {
     // suspend order is children first
-    for (auto& child : dh->children) {
+    for (auto& child : dh->children()) {
         ctx->devhosts().push_front(&child);
     }
-    for (auto& child : dh->children) {
+    for (auto& child : dh->children()) {
         append_suspend_list(ctx, &child);
     }
 }
@@ -1864,11 +1868,11 @@ static void process_suspend_list(SuspendContext* ctx) {
     auto dh = ctx->devhosts().make_iterator(*ctx->dh());
     Devhost* parent = nullptr;
     do {
-        if (!parent || (dh->parent == parent)) {
+        if (!parent || (dh->parent() == parent)) {
             // send Message::Op::kSuspend each set of children of a devhost at a time,
             // since they can run in parallel
             dc_suspend_devhost(dh.CopyPointer(), &g_coordinator.suspend_context);
-            parent = dh->parent;
+            parent = dh->parent();
         } else {
             // if the parent is different than the previous devhost's
             // parent, either this devhost is the parent, a child of

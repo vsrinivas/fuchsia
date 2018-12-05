@@ -28,7 +28,7 @@ namespace devmgr {
 
 struct Coordinator;
 struct Device;
-struct Devhost;
+class Devhost;
 struct Devnode;
 class SuspendContext;
 
@@ -186,49 +186,41 @@ struct Device {
     }
 };
 
-struct Devhost {
-    Devhost();
-
-    async::Wait wait;
-    zx_handle_t hrpc;
-    zx::process proc;
-    zx_koid_t koid;
-    mutable int32_t refcount_;
-    uint32_t flags;
-    Devhost* parent;
-
-    // list of all devices on this devhost
-    fbl::DoublyLinkedList<Device*, Device::DevhostNode> devices;
-
-    // listnode for this devhost in the all devhosts list
-    fbl::DoublyLinkedListNodeState<Devhost*> anode;
+class Devhost {
+public:
     struct AllDevhostsNode {
         static fbl::DoublyLinkedListNodeState<Devhost*>& node_state(
             Devhost& obj) {
-            return obj.anode;
+            return obj.anode_;
         }
     };
-
-    // listnode for this devhost in the order-to-suspend list
-    fbl::DoublyLinkedListNodeState<Devhost*> snode;
     struct SuspendNode {
         static fbl::DoublyLinkedListNodeState<Devhost*>& node_state(
             Devhost& obj) {
-            return obj.snode;
+            return obj.snode_;
         }
     };
-
-    // listnode for this devhost in its parent devhost's list-of-children
-    fbl::DoublyLinkedListNodeState<Devhost*> node;
     struct Node {
         static fbl::DoublyLinkedListNodeState<Devhost*>& node_state(
             Devhost& obj) {
-            return obj.node;
+            return obj.node_;
         }
     };
 
-    // list of all child devhosts of this devhost
-    fbl::DoublyLinkedList<Devhost*, Node> children;
+    Devhost();
+
+    zx_handle_t hrpc() const { return hrpc_; }
+    void set_hrpc(zx_handle_t hrpc) { hrpc_ = hrpc; }
+    zx::unowned_process proc() const { return zx::unowned_process(proc_); }
+    void set_proc(zx_handle_t proc) { proc_.reset(proc); }
+    zx_koid_t koid() const { return koid_; }
+    void set_koid(zx_koid_t koid) { koid_ = koid; }
+    // Note: this is a non-const reference to make |= etc. ergonomic.
+    uint32_t& flags() { return flags_; }
+    Devhost* parent() const { return parent_; }
+    void set_parent(Devhost* parent) { parent_ = parent; }
+    fbl::DoublyLinkedList<Device*, Device::DevhostNode>& devices() { return devices_; }
+    fbl::DoublyLinkedList<Devhost*, Node>& children() { return children_; }
 
     // The AddRef and Release functions follow the contract for fbl::RefPtr.
     void AddRef() const {
@@ -241,6 +233,30 @@ struct Devhost {
         --refcount_;
         return rc == 1;
     }
+
+private:
+    async::Wait wait_;
+    zx_handle_t hrpc_;
+    zx::process proc_;
+    zx_koid_t koid_;
+    mutable int32_t refcount_;
+    uint32_t flags_;
+    Devhost* parent_;
+
+    // list of all devices on this devhost
+    fbl::DoublyLinkedList<Device*, Device::DevhostNode> devices_;
+
+    // listnode for this devhost in the all devhosts list
+    fbl::DoublyLinkedListNodeState<Devhost*> anode_;
+
+    // listnode for this devhost in the order-to-suspend list
+    fbl::DoublyLinkedListNodeState<Devhost*> snode_;
+
+    // listnode for this devhost in its parent devhost's list-of-children
+    fbl::DoublyLinkedListNodeState<Devhost*> node_;
+
+    // list of all child devhosts of this devhost
+    fbl::DoublyLinkedList<Devhost*, Node> children_;
 };
 
 class SuspendContext {
