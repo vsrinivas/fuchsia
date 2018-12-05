@@ -101,7 +101,7 @@ func (c *ControlServer) GetUpdateComplete(name string, ver, mer *string) (zx.Cha
 
 		root, length, err := c.daemon.MerkleFor(name, version, merkle)
 		if err != nil {
-			log.Printf("control_server: error getting update for %s: %s", filepath.Join(name, version, merkle), err)
+			log.Printf("control_server: could not get update for %s: %s", filepath.Join(name, version, merkle), err)
 			ch.Handle().SignalPeer(0, zx.SignalUser0)
 			ch.Write([]byte(err.Error()), []zx.Handle{}, 0)
 			ch.Close()
