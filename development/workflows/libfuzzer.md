@@ -449,6 +449,35 @@ it.  Subsequently running `fx fuzz store [package]/[target]` will store this cor
 you need to submit this corpus back upstream, you can save a local copy by explicitly setting the
 local "staging" directory, e.g. `fx fuzz -s <source-path> store [package]/[target]`.
 
+## Q: Can I run my fuzzer on host?
+
+A: Yes, although the extra tooling of `fx fuzz` is not currently supported.  This means you can
+build host fuzzers with the GN templates, but you'll need to manually run them, reproduce the bugs
+they find, and manage their corpus data.
+
+If your fuzzers don't have Fuchsia dependencies, you can build host versions simply by setting
+`fuzz_host=true` in the `fuzz_package`:
+
+```python
+fuzz_package("overnet_fuzzers") {
+  targets = [ "packet_protocol:packet_protocol_fuzzer" ]
+  sanitizers = [ "asan" ]
+  fuzz_host = true
+}
+```
+
+You will also need to edit the package manifest and add an explicit label for the host fuzzers.  The
+`fuzz_package` template will automatically name the target `host_${target_name}`:
+
+```json
+    "labels": [
+        "//garnet/lib/overnet:host_overnet_fuzzers"
+    ]
+```
+
+Upon building, the host fuzzers can be found in in the host variant output directory, e.g.
+`//out/x64/host_x64-asan-fuzzer`.
+
 ## Q: How do make my fuzzer better?
 
 A: Once crashes begin to become infrequent, it may be because almost all the bugs have been
