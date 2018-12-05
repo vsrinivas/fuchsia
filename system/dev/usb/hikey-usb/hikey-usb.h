@@ -7,7 +7,7 @@
 #include <ddk/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/gpio.h>
-#include <ddktl/protocol/usb-mode-switch.h>
+#include <ddktl/protocol/usb/modeswitch.h>
 #include <fbl/macros.h>
 
 namespace hikey_usb {
@@ -16,7 +16,7 @@ class HikeyUsb;
 using HikeyUsbType = ddk::Device<HikeyUsb>;
 
 // This is the main class for the platform bus driver.
-class HikeyUsb : public HikeyUsbType, public ddk::UmsProtocol<HikeyUsb> {
+class HikeyUsb : public HikeyUsbType, public ddk::UsbModeSwitchProtocol<HikeyUsb> {
 public:
     explicit HikeyUsb(zx_device_t* parent)
         : HikeyUsbType(parent), usb_mode_(USB_MODE_NONE) {}
@@ -27,7 +27,7 @@ public:
     void DdkRelease();
 
     // USB mode switch protocol implementation.
-    zx_status_t UmsSetMode(usb_mode_t mode);
+    zx_status_t UsbModeSwitchSetMode(usb_mode_t mode);
 
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(HikeyUsb);

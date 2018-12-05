@@ -5,7 +5,7 @@
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/usb-mode-switch.h>
+#include <ddk/protocol/usb/modeswitch.h>
 #include <soc/hi3660/hi3660-hw.h>
 
 #include <stdio.h>

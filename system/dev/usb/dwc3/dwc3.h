@@ -9,7 +9,7 @@
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/usb-dci.h>
-#include <ddk/protocol/usb-mode-switch.h>
+#include <ddk/protocol/usb/modeswitch.h>
 #include <ddktl/mmio.h>
 #include <fbl/mutex.h>
 #include <lib/zx/handle.h>

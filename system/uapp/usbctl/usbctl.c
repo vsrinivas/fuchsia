@@ -9,6 +9,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <lib/fdio/util.h>
+#include <ddk/protocol/usb/modeswitch.h>
 #include <zircon/device/usb-peripheral.h>
 #include <zircon/hw/usb.h>
 #include <zircon/hw/usb-cdc.h>

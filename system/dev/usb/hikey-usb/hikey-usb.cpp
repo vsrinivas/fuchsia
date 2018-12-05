@@ -75,7 +75,7 @@ zx_status_t HikeyUsb::Init() {
     return pdev_device_add(&pdev, 0, &args, &zxdev_);
 }
 
-zx_status_t HikeyUsb::UmsSetMode(usb_mode_t mode) {
+zx_status_t HikeyUsb::UsbModeSwitchSetMode(usb_mode_t mode) {
     if (mode == usb_mode_) {
         return ZX_OK;
     }
