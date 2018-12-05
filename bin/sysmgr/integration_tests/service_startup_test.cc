@@ -29,13 +29,13 @@ TEST_F(TestSysmgr, ServiceStartup) {
 {
   "services": {
     "test.sysmgr.Interface": "fuchsia-pkg://fuchsia.com/sysmgr_integration_tests#meta/test_sysmgr_service.cmx",
-    "fuchsia.amber.Control": "fuchsia-pkg://fuchsia.com/sysmgr_integration_tests#meta/mock_amber.cmx"
+    "fuchsia.pkg.PackageResolver": "fuchsia-pkg://fuchsia.com/sysmgr_integration_tests#meta/mock_resolver.cmx"
   },
   "startup_services": [
-    "fuchsia.amber.Control"
+    "fuchsia.pkg.PackageResolver"
   ],
   "update_dependencies": [
-    "fuchsia.amber.Control"
+    "fuchsia.pkg.PackageResolver"
   ]
 })";
   sysmgr_args.push_back(kSysmgrConfig);

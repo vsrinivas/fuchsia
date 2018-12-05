@@ -10,7 +10,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include <fuchsia/amber/cpp/fidl.h>
+#include <fuchsia/pkg/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include "garnet/bin/sysmgr/config.h"
 #include "garnet/bin/sysmgr/package_updating_loader.h"
@@ -33,19 +33,19 @@ class DelegatingLoader : public fuchsia::sys::Loader {
   static std::unique_ptr<DelegatingLoader> MakeWithPackageUpdatingFallback(
       Config::ServiceMap delegates, fuchsia::sys::Launcher* delegate_launcher,
       std::unordered_set<std::string> update_dependency_urls,
-      fuchsia::amber::ControlPtr amber_ctl);
+      fuchsia::pkg::PackageResolverPtr resolver);
   ~DelegatingLoader() override;
 
   // |Loader|:
   void LoadUrl(fidl::StringPtr url, LoadUrlCallback callback) override;
 
  private:
-  // |fallback| xor |amber_ctl| is set.
+  // |fallback| xor |resolver| is set.
   DelegatingLoader(Config::ServiceMap delegates,
                    fuchsia::sys::Launcher* delegate_launcher,
                    fuchsia::sys::LoaderPtr fallback,
                    std::unordered_set<std::string> update_dependency_urls,
-                   fuchsia::amber::ControlPtr amber_ctl);
+                   fuchsia::pkg::PackageResolverPtr resolver);
 
   struct LoaderRecord {
     fuchsia::sys::LaunchInfoPtr launch_info;

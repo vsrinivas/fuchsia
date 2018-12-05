@@ -29,18 +29,18 @@ executable("test_sysmgr_service") {
   ]
 }
 
-executable("mock_amber") {
+executable("mock_resolver") {
   testonly = true
 
   sources = [
-    "mock_amber.cc",
+    "mock_resolver.cc",
   ]
 
   deps = [
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
-    "//garnet/public/fidl/fuchsia.amber",
+    "//garnet/public/fidl/fuchsia.pkg",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/zx",
@@ -90,7 +90,7 @@ package("integration_tests") {
   package_name = "sysmgr_integration_tests"
 
   deps = [
-    ":mock_amber",
+    ":mock_resolver",
     ":test_sysmgr_service",
     ":service_startup_test",
     ":package_updating_loader_test",
@@ -98,7 +98,7 @@ package("integration_tests") {
 
   binaries = [
     {
-      name = "mock_amber"
+      name = "mock_resolver"
     },
     {
       name = "test_sysmgr_service"
@@ -120,8 +120,8 @@ package("integration_tests") {
       dest = "test_sysmgr_service.cmx"
     },
     {
-      path = rebase_path("meta/mock_amber.cmx")
-      dest = "mock_amber.cmx"
+      path = rebase_path("meta/mock_resolver.cmx")
+      dest = "mock_resolver.cmx"
     },
     {
       path = rebase_path("meta/service_startup_test.cmx")

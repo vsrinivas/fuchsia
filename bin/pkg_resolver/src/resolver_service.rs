@@ -52,7 +52,7 @@ async fn resolve<'a>(
     fx_log_info!("resolving {:?} with the selectors {:?}", pkg_uri, selectors);
 
     let uri = PackageUri::parse(&pkg_uri).map_err(|err| {
-        fx_log_err!("failed to parse package uri: {}", err);
+        fx_log_err!("failed to parse package uri {:?}: {}", pkg_uri, err);
         Err(Status::INVALID_ARGS)
     })?;
 

@@ -32,12 +32,14 @@ class FuchsiaPkgUrl {
 
   const std::string& package_name() const { return package_name_; }
   const std::string& resource_path() const { return resource_path_; }
+  std::string package_path() const;
   std::string pkgfs_dir_path() const;
 
   const std::string& ToString() const;
 
  private:
   std::string url_;
+  std::string repo_name_;
   std::string package_name_;
   std::string resource_path_;
 };

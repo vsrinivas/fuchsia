@@ -4,13 +4,11 @@
 
 #include "garnet/bin/sysmgr/app.h"
 
-#include <zircon/process.h>
-#include <zircon/processargs.h>
-
 #include <fs/managed-vfs.h>
-#include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fdio/util.h>
+#include <zircon/process.h>
+#include <zircon/processargs.h>
 #include "lib/component/cpp/connect.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -56,17 +54,18 @@ App::App(Config config)
   env_->GetLauncher(env_launcher_.NewRequest());
   env_->GetServices(env_services_.NewRequest());
 
-  // Register the app loaders. First initialize and pass the amber client if
+  // Register the app loaders. First initialize and pass the resolver client if
   // auto_update_packages is enabled. Note that we have to do this after
   // |env_services_| is initialized.
-  fuchsia::amber::ControlPtr amber_ctl;
+  fuchsia::pkg::PackageResolverPtr resolver;
   if (kAutoUpdatePackages) {
-    static const char* const kAmberName = fuchsia::amber::Control::Name_;
-    bool amber_missing =
+    static const char* const kResolverName = fuchsia::pkg::PackageResolver::Name_;
+    const bool resolver_missing =
         std::find(update_dependencies.begin(), update_dependencies.end(),
-                  kAmberName) == update_dependencies.end();
+                  kResolverName) == update_dependencies.end();
     // Check if any component urls that are excluded (dependencies of
-    // Amber/startup) were not registered from the above configuration.
+    // PackageResolver/startup) were not registered from the above
+    // configuration.
     bool missing_services = false;
     for (auto& dep : update_dependencies) {
       if (std::find(svc_names_->begin(), svc_names_->end(), dep) ==
@@ -75,17 +74,17 @@ App::App(Config config)
         missing_services = true;
       }
     }
-    if (amber_missing || missing_services) {
+    if (resolver_missing || missing_services) {
       FXL_LOG(WARNING) << "auto_update_packages = true but some update "
                           "dependencies are missing in the sys environment. "
                           "Disabling auto-updates.";
     } else {
-      env_services_->ConnectToService(kAmberName,
-                                      amber_ctl.NewRequest().TakeChannel());
+      env_services_->ConnectToService(kResolverName,
+                                      resolver.NewRequest().TakeChannel());
     }
   }
   RegisterAppLoaders(config.TakeAppLoaders(), std::move(update_dependency_urls),
-                     std::move(amber_ctl));
+                     std::move(resolver));
 
   // Set up environment for the programs we will run.
   fuchsia::sys::ServiceListPtr service_list(new fuchsia::sys::ServiceList);
@@ -167,13 +166,14 @@ void App::RegisterSingleton(std::string service_name,
   svc_root_->AddEntry(service_name, std::move(child));
 }
 
-void App::RegisterAppLoaders(Config::ServiceMap app_loaders,
-                             std::unordered_set<std::string> update_dependency_urls,
-                             fuchsia::amber::ControlPtr amber_ctl) {
-  if (amber_ctl) {
+void App::RegisterAppLoaders(
+    Config::ServiceMap app_loaders,
+    std::unordered_set<std::string> update_dependency_urls,
+    fuchsia::pkg::PackageResolverPtr resolver) {
+  if (resolver) {
     app_loader_ = DelegatingLoader::MakeWithPackageUpdatingFallback(
-        std::move(app_loaders), env_launcher_.get(), std::move(update_dependency_urls),
-        std::move(amber_ctl));
+        std::move(app_loaders), env_launcher_.get(),
+        std::move(update_dependency_urls), std::move(resolver));
   } else {
     app_loader_ = DelegatingLoader::MakeWithParentFallback(
         std::move(app_loaders), env_launcher_.get(),

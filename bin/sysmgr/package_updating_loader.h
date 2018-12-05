@@ -8,7 +8,7 @@
 #include <string>
 #include <unordered_set>
 
-#include <fuchsia/amber/cpp/fidl.h>
+#include <fuchsia/pkg/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
@@ -19,33 +19,22 @@
 namespace sysmgr {
 
 // A component loader that updates a package (or installs it for the first time)
-// before running a component in it. Requires a connection to the amber service.
+// before running a component in it. Requires a connection to the package
+// resolver.
 class PackageUpdatingLoader final : public component::PackageLoader {
  public:
   typedef fit::function<void(std::string)> DoneCallback;
 
   PackageUpdatingLoader(std::unordered_set<std::string> update_dependency_urls,
-                        fuchsia::amber::ControlPtr amber_ctl,
+                        fuchsia::pkg::PackageResolverPtr resolver,
                         async_dispatcher_t* dispatcher);
   ~PackageUpdatingLoader() override;
 
   void LoadUrl(fidl::StringPtr url, LoadUrlCallback callback) override;
 
  private:
-  void StartUpdatePackage(const component::FuchsiaPkgUrl url,
-                          DoneCallback done_cb);
-  void ListenForPackage(zx::channel reply_chan, DoneCallback done_cb);
-  static void WaitForUpdateDone(async_dispatcher_t* dispatcher,
-                                async::Wait* wait, zx_status_t status,
-                                const zx_packet_signal_t* signal,
-                                DoneCallback done_cb);
-  static void FinishWaitForUpdate(async_dispatcher_t* dispatcher,
-                                  async::Wait* wait, zx_status_t status,
-                                  const zx_packet_signal_t* signal,
-                                  bool daemon_err, DoneCallback done_cb);
-
   const std::unordered_set<std::string> update_dependency_urls_;
-  fuchsia::amber::ControlPtr amber_ctl_;
+  fuchsia::pkg::PackageResolverPtr resolver_;
   async_dispatcher_t* const dispatcher_;  // Not owned.
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PackageUpdatingLoader);

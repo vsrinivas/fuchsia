@@ -12,7 +12,7 @@
 #include <unordered_set>
 
 #include <fs/managed-vfs.h>
-#include <fuchsia/amber/cpp/fidl.h>
+#include <fuchsia/pkg/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include "garnet/bin/sysmgr/delegating_loader.h"
 #include "lib/component/cpp/startup_context.h"
@@ -42,7 +42,7 @@ class App {
   void RegisterDefaultServiceConnector();
   void RegisterAppLoaders(Config::ServiceMap app_loaders,
                           std::unordered_set<std::string> update_dependency_urls,
-                          fuchsia::amber::ControlPtr amber_ctl);
+                          fuchsia::pkg::PackageResolverPtr resolver);
   void LaunchApplication(fuchsia::sys::LaunchInfo launch_info);
 
   std::unique_ptr<component::StartupContext> startup_context_;

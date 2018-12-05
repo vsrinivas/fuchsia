@@ -13,7 +13,7 @@ use url::Url;
 pub use crate::errors::ParseError;
 
 lazy_static! {
-    static ref NAME_RE: Regex = Regex::new(r"^[0-9a-z\-\.]{1,100}$").unwrap();
+    static ref NAME_RE: Regex = Regex::new(r"^[0-9a-z\-\._]{1,100}$").unwrap();
     static ref HASH_RE: Regex = Regex::new(r"^[0-9a-z]{64}$").unwrap();
 }
 
@@ -257,6 +257,14 @@ mod tests {
             uri = "fuchsia-pkg://fuchsia.com/fonts",
             host = "fuchsia.com".to_string(),
             name = Some("fonts".to_string()),
+            variant = None,
+            hash = None,
+            path = None,
+        }
+        test_parse_host_name_special_chars => {
+            uri = "fuchsia-pkg://fuchsia.com/abc123-._",
+            host = "fuchsia.com".to_string(),
+            name = Some("abc123-._".to_string()),
             variant = None,
             hash = None,
             path = None,

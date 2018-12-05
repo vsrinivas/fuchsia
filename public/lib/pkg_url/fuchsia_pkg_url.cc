@@ -45,6 +45,7 @@ bool FuchsiaPkgUrl::Parse(const std::string& url) {
 
   url_ = match_data[0].str();
 
+  repo_name_ = match_data[1].str();
   package_name_ = match_data[2].str();
   // TODO(CP-110): variant_ = match_data[3].str();
   resource_path_ = match_data[4].str();
@@ -55,7 +56,13 @@ bool FuchsiaPkgUrl::Parse(const std::string& url) {
 std::string FuchsiaPkgUrl::pkgfs_dir_path() const {
   // TODO(CP-105): We're currently hardcoding version 0 of the package,
   // but we'll eventually need to do something smarter.
-  return fxl::Concatenate({"/pkgfs/packages/", package_name(), "/0"});
+  return fxl::Substitute("/pkgfs/packages/$0/0", package_name_);
+}
+
+std::string FuchsiaPkgUrl::package_path() const {
+  // TODO(CP-105): We're currently hardcoding version 0 of the package,
+  // but we'll eventually need to do something smarter.
+  return fxl::Substitute("fuchsia-pkg://$0/$1/0", repo_name_, package_name_);
 }
 
 const std::string& FuchsiaPkgUrl::ToString() const { return url_; }
