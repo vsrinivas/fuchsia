@@ -194,12 +194,16 @@ set_defaults("fuzz_target") {
 #   resources (optional)
 #     Passed through to the normal package template.
 #
+#   fuzz_host (optional)
+#     [boolean] Indicates whether to also build fuzzer binaries on host.
+#     Defaults to false.
+#
 #   omit_binaries (optional)
 #     [bool] If true, indicates the fuzz target binaries will be provided by
 #     a non-GN build, e.g. the Zircon build.  The package will contain the
 #     resources needed by the fuzzer, but no binaries or component manifests.
 #     Defaults to false.
-
+#
 template("fuzz_package") {
   assert(defined(invoker.targets), "targets must be defined for $target_name}")
   assert(defined(invoker.sanitizers),
@@ -212,6 +216,8 @@ template("fuzz_package") {
       deps = []
       resources = []
       meta = []
+      host = false
+      host_binaries = []
       omit_binaries = false
       forward_variables_from(invoker,
                              [
@@ -226,6 +232,9 @@ template("fuzz_package") {
                                "targets",
                                "sanitizers",
                              ])
+    }
+    if (defined(invoker.fuzz_host)) {
+      fuzz.host = invoker.fuzz_host
     }
     if (defined(invoker.omit_binaries)) {
       fuzz.omit_binaries = invoker.omit_binaries
@@ -242,6 +251,7 @@ template("fuzz_package") {
       # Find the executable variant for the sanitized fuzzer
       selected = false
       sanitized_target = ""
+      host_target = ""
       foreach(sanitizer, fuzz.sanitizers) {
         if (!selected) {
           foreach(selector, select_variant_canonical) {
@@ -269,6 +279,8 @@ template("fuzz_package") {
               }
               if (selected) {
                 sanitized_target = "${fuzz_target}(${toolchain_variant.base}-${sanitizer}-fuzzer)"
+                host_target =
+                    "${fuzz_target}(${host_toolchain}-${sanitizer}-fuzzer)"
               }
             }
           }
@@ -299,6 +311,8 @@ template("fuzz_package") {
               dest = "${fuzz_name}.cmx"
             },
           ]
+
+          fuzz.host_binaries += [ "$host_target" ]
         }
 
         fuzz.deps += [
@@ -321,8 +335,18 @@ template("fuzz_package") {
           },
         ]
       } else {
-        not_needed([ "fuzz_name" ])
+        not_needed([
+                     "fuzz_name",
+                     "host_target",
+                   ])
         not_needed(fuzz, "*")
+      }
+    }
+
+    group("host_${target_name}") {
+      testonly = true
+      if (fuzz.host) {
+        deps = fuzz.host_binaries
       }
     }
 
@@ -334,6 +358,8 @@ template("fuzz_package") {
                              [
                                "targets",
                                "sanitizers",
+                               "host",
+                               "host_binaries",
                                "omit_binaries",
                              ])
     }
