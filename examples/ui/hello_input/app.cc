@@ -56,6 +56,7 @@ App::App(async::Loop* loop)
   FXL_LOG(INFO) << "HelloInput - scenic connection";
 
   session_ = std::make_unique<scenic::Session>(scenic_.get());
+  session_->SetDebugName("Hello Input");
   session_->set_error_handler(
       [this](zx_status_t status) { this->OnSessionError(); });
   session_->set_event_handler(fit::bind_member(this, &App::OnSessionEvents));

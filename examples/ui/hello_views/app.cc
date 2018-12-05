@@ -108,6 +108,7 @@ App::App(async::Loop* loop, AppType type)
   });
   FXL_LOG(INFO) << AppTypeString(type_) << "Creating new session.";
   session_ = std::make_unique<scenic::Session>(scenic_.get());
+  session_->SetDebugName("Hello Views");
   session_->set_error_handler([this](zx_status_t status) {
     FXL_LOG(INFO) << AppTypeString(type_)
                   << "Session error.  Connection dropped.";

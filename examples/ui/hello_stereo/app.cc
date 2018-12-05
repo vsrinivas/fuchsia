@@ -39,6 +39,7 @@ App::App(async::Loop* loop)
   // Connect to the SceneManager service.
   scenic_ = startup_context_
                 ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+  session_->SetDebugName("Hello Stereo");
   scenic_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(INFO) << "Lost connection to Scenic service.";
     loop_->Quit();

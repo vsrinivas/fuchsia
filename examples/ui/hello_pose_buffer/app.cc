@@ -155,6 +155,7 @@ void App::Init(fuchsia::ui::gfx::DisplayInfo display_info) {
 
   // TODO: set up SessionListener.
   session_ = std::make_unique<scenic::Session>(scenic_.get());
+  session_->SetDebugName("Hello Pose Buffer");
   session_->set_error_handler([this](zx_status_t status) {
     FXL_LOG(INFO) << "Session terminated.";
     loop_->Quit();

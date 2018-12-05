@@ -1532,8 +1532,9 @@ void Session::ScheduleImagePipeUpdate(uint64_t presentation_time,
 
 bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
                                     uint64_t presentation_interval) {
-  TRACE_DURATION("gfx", "Session::ApplyScheduledUpdates", "id", id_, "time",
-                 presentation_time, "interval", presentation_interval);
+  TRACE_DURATION("gfx", "Session::ApplyScheduledUpdates", "session_id", id_,
+                 "session_debug_name", debug_name_, "time", presentation_time,
+                 "interval", presentation_interval);
 
   if (presentation_time < last_presentation_time_) {
     error_reporter_->ERROR()

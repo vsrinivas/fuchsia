@@ -26,6 +26,8 @@ V1BaseView::V1BaseView(scenic::ViewContext context,
       parent_node_(&session_) {
   FXL_DCHECK(context.view_token);
 
+  session_.SetDebugName(debug_name);
+
   zx::eventpair parent_export_token;
   parent_node_.BindAsRequest(&parent_export_token);
 

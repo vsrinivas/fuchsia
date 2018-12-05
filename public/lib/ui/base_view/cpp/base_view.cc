@@ -18,6 +18,8 @@ BaseView::BaseView(ViewContext context, const std::string& debug_name)
                         std::move(context.session_and_listener_request.second)),
       session_(std::move(context.session_and_listener_request.first)),
       view_(&session_, std::move(context.view_token), debug_name) {
+  session_.SetDebugName(debug_name);
+
   // We must immediately invalidate the scene, otherwise we wouldn't ever hook
   // the View up to the ViewHolder.  An alternative would be to require
   // subclasses to call an Init() method to set up the initial connection.
