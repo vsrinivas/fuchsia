@@ -157,8 +157,7 @@ zx_status_t read_firmware(fbl::unique_fd& file_fd, zx::vmo& vmo) {
     return ZX_OK;
 }
 
-// Loads the firmware image to the FX3 device RAM.
-zx_status_t load_to_ram(const char* firmware_path) {
+zx_status_t device_load_firmware(fbl::unique_fd fd, const char* firmware_path) {
     zx::vmo fw_vmo;
     if (firmware_path) {
         fbl::unique_fd file_fd(open(firmware_path, O_RDONLY));
@@ -172,6 +171,39 @@ zx_status_t load_to_ram(const char* firmware_path) {
             return status;
         }
     }
+    zx::channel svc;
+    zx_status_t status = fdio_get_service_handle(fd.release(), svc.reset_and_get_address());
+    if (status != ZX_OK) {
+        fprintf(stderr, "Failed to get fwloader service handle, err : %d\n", status);
+        return status;
+    }
+    if (fw_vmo.is_valid()) {
+        zx_handle_t handle = fw_vmo.release();
+        zx_status_t status;
+        zx_status_t res = zircon_usb_test_fwloader_DeviceLoadFirmware(svc.get(), handle, &status);
+        if (res == ZX_OK) {
+            res = status;
+        }
+        if (res != ZX_OK) {
+            fprintf(stderr, "Failed to load firmware, err: %d\n", res);
+            return res;
+        }
+    } else {
+        zx_status_t status;
+        zx_status_t res = zircon_usb_test_fwloader_DeviceLoadPrebuiltFirmware(svc.get(), &status);
+        if (res == ZX_OK) {
+            res = status;
+        }
+        if (res != ZX_OK) {
+            fprintf(stderr, "Failed to load prebuilt firmware, err: %d\n", res);
+            return res;
+        }
+    }
+    return ZX_OK;
+}
+
+// Loads the firmware image to the FX3 device RAM.
+zx_status_t load_to_ram(const char* firmware_path) {
     fbl::unique_fd fd;
     zx_status_t status = open_fwloader_dev(&fd);
     if (status != ZX_OK) {
@@ -204,35 +236,7 @@ zx_status_t load_to_ram(const char* firmware_path) {
             return status;
         }
     }
-    zx::channel svc;
-    status = fdio_get_service_handle(fd.release(), svc.reset_and_get_address());
-    if (status != ZX_OK) {
-        fprintf(stderr, "Failed to get fwloader service handle, err : %d\n", status);
-        return status;
-    }
-    if (fw_vmo.is_valid()) {
-        zx_handle_t handle = fw_vmo.release();
-        zx_status_t status;
-        zx_status_t res = zircon_usb_test_fwloader_DeviceLoadFirmware(svc.get(), handle, &status);
-        if (res == ZX_OK) {
-            res = status;
-        }
-        if (res != ZX_OK) {
-            fprintf(stderr, "Failed to load firmware, err: %d\n", res);
-            return res;
-        }
-    } else {
-        zx_status_t status;
-        zx_status_t res = zircon_usb_test_fwloader_DeviceLoadPrebuiltFirmware(svc.get(), &status);
-        if (res == ZX_OK) {
-            res = status;
-        }
-        if (res != ZX_OK) {
-            fprintf(stderr, "Failed to load prebuilt firmware, err: %d\n", res);
-            return res;
-        }
-    }
-    return ZX_OK;
+    return device_load_firmware(std::move(fd), firmware_path);
 }
 
 zx_status_t load_test_firmware(const char* firmware_path) {
