@@ -24,9 +24,16 @@
 // Kernel counters public API:
 // 1- define a new counter.
 //      KCOUNTER(counter_name, "<counter name>");
+//      KCOUNTER_MAX(counter_name, "<counter name>");
 //
 // 2- counters start at zero, increment the counter:
 //      kcounter_add(counter_name, 1);
+//    or
+//      kcounter_max(counter_name, value);
+//
+// By default with KCOUNTER, the `k counters` presentation will calculate a
+// sum() across cores rather than summing. KCOUNTER_MAX() calculates the max()
+// of the counters across cores.
 //
 //
 // Naming the counters
@@ -40,12 +47,19 @@
 // operations are never used to set their value so they are both
 // imprecise and reflect only the operations on a particular core.
 
+enum class k_counter_type : uint64_t {
+    sum = 1,
+    min = 2,
+    max = 3,
+};
+
 struct k_counter_desc {
     const char* name;
+    k_counter_type type;
 };
-static_assert(sizeof(struct k_counter_desc) ==
-              sizeof(((struct percpu){}).counters[0]),
-              "the kernel.ld ASSERT knows that these sizes match");
+static_assert(
+    sizeof(struct k_counter_desc) == 16,
+    "kernel.ld uses this size to ASSERT that enough space has been reserved in the counters arena");
 
 // Define the descriptor and reserve the arena space for the counters.
 // Because of -fdata-sections, each kcounter_arena_* array will be
@@ -55,11 +69,15 @@ static_assert(sizeof(struct k_counter_desc) ==
 // slots used for this particular counter (that would have terrible
 // cache effects); it just reserves enough space for counters_init() to
 // dole out in per-CPU chunks.
-#define KCOUNTER(var, name)                                         \
-    __USED int64_t kcounter_arena_##var[SMP_MAX_CPUS]               \
-        __asm__("kcounter." name);                                  \
-    __USED __SECTION("kcountdesc." name)                            \
-    static const struct k_counter_desc var[] = { { name } }
+#define KCOUNTER(var, name)                                                                        \
+    __USED int64_t kcounter_arena_##var[SMP_MAX_CPUS] __asm__("kcounter." name);                   \
+    __USED __SECTION("kcountdesc." name) static const struct k_counter_desc var[] = {              \
+        {name, k_counter_type::sum}}
+
+#define KCOUNTER_MAX(var, name)                                                                    \
+    __USED int64_t kcounter_arena_##var[SMP_MAX_CPUS] __asm__("kcounter." name);                   \
+    __USED __SECTION("kcountdesc." name) static const struct k_counter_desc var[] = {              \
+        {name, k_counter_type::max}}
 
 // Via magic in kernel.ld, all the descriptors wind up in a contiguous
 // array bounded by these two symbols, sorted by name.
@@ -88,4 +106,16 @@ static inline void kcounter_add(const struct k_counter_desc* var,
     // of a preemption in the middle of this sequence is fairly minimal.
     *kcounter_slot(var) += add;
 #endif
+}
+
+// TODO(travisg|scottmg): Revisit, consider more efficient arm-specific
+// instruction sequence here.
+static inline void kcounter_max(const struct k_counter_desc* var, int64_t value) {
+    int64_t prev_value = atomic_load_64_relaxed(kcounter_slot(var));
+    while (prev_value < value && !atomic_cmpxchg_64_relaxed(kcounter_slot(var), &prev_value, value))
+        ;
+}
+
+static inline void kcounter_max_counter(const struct k_counter_desc* var, const struct k_counter_desc* other_var) {
+    kcounter_max(var, *kcounter_slot(other_var));
 }

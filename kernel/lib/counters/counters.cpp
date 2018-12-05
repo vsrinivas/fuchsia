@@ -147,17 +147,29 @@ bool counters_has_outlier(const uint64_t* values_in) {
 static void dump_counter(const k_counter_desc* desc, bool verbose) {
     size_t counter_index = kcounter_index(desc);
 
-    uint64_t sum = 0;
+    uint64_t summary = 0;
     uint64_t values[SMP_MAX_CPUS];
-    for (size_t ix = 0; ix != SMP_MAX_CPUS; ++ix) {
-        // This value is not atomically consistent, therefore is just
-        // an approximation. TODO(cpu): for ARM this might need some magic.
-        values[ix] = percpu[ix].counters[counter_index];
-        sum += values[ix];
+
+    if (desc->type == k_counter_type::max) {
+        for (size_t ix = 0; ix != SMP_MAX_CPUS; ++ix) {
+            // This value is not atomically consistent, therefore is just
+            // an approximation. TODO(cpu): for ARM this might need some magic.
+            values[ix] = percpu[ix].counters[counter_index];
+            if (values[ix] > summary) {
+                summary = values[ix];
+            }
+        }
+    } else {
+        for (size_t ix = 0; ix != SMP_MAX_CPUS; ++ix) {
+            // This value is not atomically consistent, therefore is just
+            // an approximation. TODO(cpu): for ARM this might need some magic.
+            values[ix] = percpu[ix].counters[counter_index];
+            summary += values[ix];
+        }
     }
 
-    printf("[%.2zu] %s = %lu\n", counter_index, desc->name, sum);
-    if (sum == 0u) {
+    printf("[%.2zu] %s = %lu\n", counter_index, desc->name, summary);
+    if (summary == 0u) {
         return;
     }
 

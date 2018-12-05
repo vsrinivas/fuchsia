@@ -221,13 +221,12 @@ SECTIONS
         KEEP(*(SORT_BY_NAME(.bss.kcounter.*)))
 
         /*
-         * Sanity check that the aggregate size of kcounters_arena
-         * SMP_MAX_CPUS slots for each counter.  The k_counter_desc structs
-         * in .kcounter.desc are 8 bytes each, which matches the size of a
-         * single counter.  (It's only for this sanity check that we need
-         * to care how big k_counter_desc is.)
+         * Sanity check that the aggregate size of kcounters_arena SMP_MAX_CPUS
+         * slots for each counter.  The k_counter_desc structs in .kcounter.desc
+         * are 16 bytes each. (It's only for this sanity check that we need to
+         * care how big k_counter_desc is.)
          */
-        ASSERT(. - kcounters_arena == SIZEOF(.kcounter.desc) * SMP_MAX_CPUS,
+        ASSERT(. - kcounters_arena == SIZEOF(.kcounter.desc) * 8 * SMP_MAX_CPUS / 16,
                "kcounters_arena size mismatch");
 
         *(.bss*)
