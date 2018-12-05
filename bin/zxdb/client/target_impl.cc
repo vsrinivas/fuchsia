@@ -48,7 +48,7 @@ void TargetImpl::CreateProcessForTesting(uint64_t koid,
 
 void TargetImpl::ImplicitlyDetach() {
   if (GetProcess())
-    OnKillOrDetachReply(Err(), 0, Callback());
+    OnKillOrDetachReply(Err(), 0, [](fxl::WeakPtr<Target>, const Err&) {});
 }
 
 Target::State TargetImpl::GetState() const { return state_; }
@@ -280,8 +280,7 @@ void TargetImpl::OnKillOrDetachReply(const Err& err, uint32_t status,
     }
   }
 
-  if (callback)
-    callback(GetWeakPtr(), issue_err);
+  callback(GetWeakPtr(), issue_err);
 }
 
 }  // namespace zxdb
