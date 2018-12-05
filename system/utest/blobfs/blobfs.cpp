@@ -2620,10 +2620,21 @@ static bool TestFailedWrite(BlobfsTest* blobfsTest) {
     // Truncate before sleeping the ramdisk. This is so potential FVM updates
     // do not interfere with the ramdisk block count.
     ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);
-    // Sleep after |kMaxEntryDataBlocks| blocks. This is 1 less than will be needed to write out the
-    // entire blob. This ensures that writing the blob will ultimately fail, but the write
-    // operation will return a successful response.
-    ASSERT_TRUE(blobfsTest->ToggleSleep(kDiskBlocksPerBlobfsBlock * blobfs::kMaxEntryDataBlocks));
+
+    // Journal:
+    // - One Superblock block
+    // - One Inode table block
+    // - One Bitmap block
+    //
+    // Non-journal:
+    // - One Inode table block
+    // - One Data block
+    constexpr uint64_t kBlockCountToWrite = 5;
+    // Sleep after |kBlockCountToWrite - 1| blocks. This is 1 less than will be
+    // needed to write out the entire blob. This ensures that writing the blob
+    // will ultimately fail, but the write operation will return a successful
+    // response.
+    ASSERT_TRUE(blobfsTest->ToggleSleep(kDiskBlocksPerBlobfsBlock * (kBlockCountToWrite - 1)));
     ASSERT_EQ(write(fd.get(), info->data.get(), info->size_data),
               static_cast<ssize_t>(info->size_data));
 

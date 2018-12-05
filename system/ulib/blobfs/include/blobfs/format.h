@@ -17,6 +17,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include <algorithm>
+
 #ifdef __Fuchsia__
 #include <zircon/syscalls.h>
 #endif
@@ -42,17 +44,21 @@ constexpr size_t kFVMNodeMapStart   = 0x20000;
 constexpr size_t kFVMJournalStart   = 0x30000;
 constexpr size_t kFVMDataStart      = 0x40000;
 
-// Number of metadata blocks allocated for the whole journal - 1 info block.
+// Number of metadata blocks allocated for the whole journal: 1 info block.
 constexpr uint32_t kJournalMetadataBlocks = 1;
-// Number of metadata blocks allocated for each entry - 2 (header block, commit block).
+// Number of metadata blocks allocated for each entry: 2 (header block, commit block).
 constexpr uint32_t kEntryMetadataBlocks = 2;
-// Maximum number of data blocks possible for a single entry - 4
-// (blobfs superblock, inode table, block bitmap (up to 2)).
-constexpr uint32_t kMaxEntryDataBlocks = 4;
+// Maximum number of data blocks possible for a single entry:
+// - Blobfs Superblock
+// - Inode Table Blocks
+// - Block Bitmap Blocks
+// TODO(ZX-3076): Calculate the actual upper bound here; this number is not
+// necessarily considering the worst cases of fragmentation.
+constexpr uint32_t kMaxEntryDataBlocks = 64;
 // Minimum possible size for the journal, allowing the maximum size for one entry.
 constexpr size_t kMinimumJournalBlocks = kJournalMetadataBlocks + kEntryMetadataBlocks +
                                          kMaxEntryDataBlocks;
-constexpr size_t kDefaultJournalBlocks = 256;
+constexpr size_t kDefaultJournalBlocks = std::max(kMinimumJournalBlocks, static_cast<size_t>(256));
 
 constexpr uint64_t kBlobfsDefaultInodeCount = 32768;
 
