@@ -26,6 +26,10 @@ MODULE_LIBS := \
     system/ulib/zircon \
     system/ulib/c \
 
-MODULE_FIDL_LIBS := system/fidl/zircon-usb-device
+MODULE_FIDL_LIBS := \
+    system/fidl/zircon-usb-device \
+
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-usb-hub \
 
 include make/module.mk

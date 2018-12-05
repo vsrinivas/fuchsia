@@ -10,7 +10,7 @@
 #include <zircon/types.h>
 #include <zircon/hw/usb.h>
 #include <zircon/hw/usb-hub.h>
-#include <ddk/protocol/usb-hub.h>
+#include <ddk/protocol/usb/hub.h>
 
 __BEGIN_CDECLS;
 

@@ -51,7 +51,7 @@ static void bus_reset_hub_port(void* ctx, uint32_t hub_id, uint32_t port) {
         zxlogf(ERROR, "hub interface not set in usb_bus_reset_hub_port\n");
         return;
     }
-    usb_hub_reset_port(&device->hub_intf, port);
+    usb_hub_interface_reset_port(&device->hub_intf, port);
 }
 
 static usb_bus_interface_ops_t _bus_interface = {
@@ -97,7 +97,8 @@ static zx_status_t bus_device_removed(void* ctx, zx_device_t* hub_device, int po
     return usb_hci_hub_device_removed(&bus->hci, hub_id, port);
 }
 
-static zx_status_t bus_set_hub_interface(void* ctx, zx_device_t* usb_device, usb_hub_interface_t* hub) {
+static zx_status_t bus_set_hub_interface(void* ctx, zx_device_t* usb_device,
+                                         usb_hub_interface_t* hub) {
     usb_bus_t* bus = ctx;
     uint32_t usb_device_id;
     if (bus_get_device_id(usb_device, &usb_device_id) != ZX_OK) {
