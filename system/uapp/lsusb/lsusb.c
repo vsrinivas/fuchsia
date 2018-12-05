@@ -65,10 +65,8 @@ static int do_list_device(zx_handle_t svc, int configuration, bool verbose, cons
     char product[zircon_usb_device_MAX_STRING_DESC_SIZE];;
     ssize_t ret = 0;
 
-    size_t actual;
-    ret = zircon_usb_device_DeviceGetDeviceDescriptor(svc, (uint8_t*)&device_desc,
-                                                      sizeof(device_desc), &actual);
-    if (ret != ZX_OK || actual != sizeof(device_desc)) {
+    ret = zircon_usb_device_DeviceGetDeviceDescriptor(svc, (uint8_t*)&device_desc);
+    if (ret != ZX_OK) {
         printf("DeviceGetDeviceDescriptor failed for %s/%s\n", DEV_USB, devname);
         return ret;
     }
@@ -136,6 +134,7 @@ static int do_list_device(zx_handle_t svc, int configuration, bool verbose, cons
             return ret;
         }
 
+        size_t actual;
         ret = zircon_usb_device_DeviceGetConfigurationDescriptor(svc, configuration, &status, desc,
                                                                  desc_size, &actual);
         if (ret == ZX_OK) ret = status;

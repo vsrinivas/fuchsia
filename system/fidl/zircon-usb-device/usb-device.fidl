@@ -16,7 +16,7 @@ interface Device {
     1: GetDeviceSpeed() -> (uint32 speed);
 
     /// Returns the device's USB device descriptor.
-    2: GetDeviceDescriptor() -> (vector<uint8>:DEVICE_DESC_SIZE desc);
+    2: GetDeviceDescriptor() -> (array<uint8>:DEVICE_DESC_SIZE desc);
 
     /// Returns the total size of the USB configuration descriptor for the given configuration.
     3: GetConfigurationDescriptorSize(uint8 config) -> (zx.status s, uint16 size);

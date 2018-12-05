@@ -409,10 +409,8 @@ static zx_status_t fidl_GetDeviceSpeed(void* ctx, fidl_txn_t* txn) {
 
 static zx_status_t fidl_GetDeviceDescriptor(void* ctx, fidl_txn_t* txn) {
     usb_device_t* dev = ctx;
-    return zircon_usb_device_DeviceGetDeviceDescriptor_reply(txn, (uint8_t*)&dev->device_desc,
-                                                             sizeof(dev->device_desc));
+    return zircon_usb_device_DeviceGetDeviceDescriptor_reply(txn, (uint8_t*)&dev->device_desc);
 }
-
 
 static zx_status_t fidl_GetConfigurationDescriptorSize(void* ctx, uint8_t config, fidl_txn_t* txn) {
     usb_device_t* dev = ctx;
@@ -425,7 +423,6 @@ static zx_status_t fidl_GetConfigurationDescriptorSize(void* ctx, uint8_t config
     size_t length = le16toh(descriptor->wTotalLength);
     return zircon_usb_device_DeviceGetConfigurationDescriptorSize_reply(txn, ZX_OK, length);
 }
-
 
 static zx_status_t fidl_GetConfigurationDescriptor(void* ctx, uint8_t config, fidl_txn_t* txn) {
     usb_device_t* dev = ctx;
