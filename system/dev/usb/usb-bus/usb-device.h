@@ -69,7 +69,7 @@ typedef struct usb_device_req_internal {
     list_node_t node;
 } usb_device_req_internal_t;
 
-void usb_device_set_hub_interface(usb_device_t* dev, usb_hub_interface_t* hub_intf);
+void usb_device_set_hub_interface(usb_device_t* dev, const usb_hub_interface_t* hub_intf);
 
 zx_status_t usb_device_add(usb_bus_t* bus, uint32_t device_id, uint32_t hub_id,
                            usb_speed_t speed, usb_device_t** out_device);

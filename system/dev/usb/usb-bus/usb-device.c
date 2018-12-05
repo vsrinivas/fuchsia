@@ -106,7 +106,7 @@ static void request_complete(usb_request_t* req, void* cookie) {
     sync_completion_signal(&dev->callback_thread_completion);
 }
 
-void usb_device_set_hub_interface(usb_device_t* device, usb_hub_interface_t* hub_intf) {
+void usb_device_set_hub_interface(usb_device_t* device, const usb_hub_interface_t* hub_intf) {
     if (hub_intf) {
         memcpy(&device->hub_intf, hub_intf, sizeof(device->hub_intf));
     } else {

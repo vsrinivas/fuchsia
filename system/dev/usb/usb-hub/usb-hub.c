@@ -7,7 +7,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/usb.h>
-#include <ddk/protocol/usb-bus.h>
+#include <ddk/protocol/usb/bus.h>
 #include <ddk/protocol/usb/hub.h>
 #include <ddk/usb/usb.h>
 #include <usb/usb-request.h>
@@ -197,7 +197,7 @@ static void usb_hub_port_enabled(usb_hub_t* hub, int port) {
     }
 
     zxlogf(TRACE, "call hub_device_added for port %d\n", port);
-    usb_bus_hub_device_added(&hub->bus, hub->usb_device, port, speed);
+    usb_bus_device_added(&hub->bus, hub->usb_device, port, speed);
     usb_hub_set_port_attached(hub, port, true);
 }
 
@@ -236,7 +236,7 @@ static usb_hub_interface_ops_t _hub_interface = {
 
 static void usb_hub_port_disconnected(usb_hub_t* hub, int port) {
     zxlogf(TRACE, "port %d usb_hub_port_disconnected\n", port);
-    usb_bus_hub_device_removed(&hub->bus, hub->usb_device, port);
+    usb_bus_device_removed(&hub->bus, hub->usb_device, port);
     usb_hub_set_port_attached(hub, port, false);
 }
 
@@ -329,7 +329,7 @@ static int usb_hub_thread(void* arg) {
         goto fail;
     }
 
-    result = usb_bus_configure_hub(&hub->bus, hub->usb_device, hub->hub_speed, &desc);
+    result = usb_bus_configure_hub(&hub->bus, hub->usb_device, hub->hub_speed, (uint8_t*)&desc);
     if (result < 0) {
         zxlogf(ERROR, "configure_hub failed: %d\n", result);
         goto fail;

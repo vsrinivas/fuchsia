@@ -183,7 +183,7 @@ static zx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
         if (status == ZX_OK) {
             break;
         } else if (status != ZX_ERR_TIMED_OUT) {
-            usb_bus_reset_hub_port(&xhci->bus, hub_address, port);
+            usb_bus_interface_reset_port(&xhci->bus, hub_address, port);
             status = xhci_send_command(xhci, TRB_CMD_ADDRESS_DEVICE, icc_phys,
                                       ((slot_id << TRB_SLOT_ID_START) | TRB_ADDRESS_DEVICE_BSR));
             if (status != ZX_OK) {

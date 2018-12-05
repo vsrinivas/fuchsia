@@ -4,7 +4,7 @@
 
 #include <ddk/debug.h>
 #include <ddk/protocol/usb.h>
-#include <ddk/protocol/usb-bus.h>
+#include <ddk/protocol/usb/bus.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -23,41 +23,43 @@ static zx_status_t bus_add_device(void* ctx, uint32_t device_id, uint32_t hub_id
     return usb_device_add(bus, device_id, hub_id, speed, &bus->devices[device_id]);
 }
 
-static void bus_remove_device(void* ctx, uint32_t device_id) {
+static zx_status_t bus_remove_device(void* ctx, uint32_t device_id) {
     usb_bus_t* bus = ctx;
     if (device_id >= bus->max_device_count) {
         zxlogf(ERROR, "device_id out of range in usb_bus_remove_device\n");
-        return;
+        return ZX_ERR_INVALID_ARGS;
     }
     usb_device_t* device = bus->devices[device_id];
-    if (device) {
-        device_remove(device->zxdev);
-        bus->devices[device_id] = NULL;
+    if (!device) {
+        return ZX_ERR_BAD_STATE;
     }
+    device_remove(device->zxdev);
+    bus->devices[device_id] = NULL;
+    return ZX_OK;
 }
 
-static void bus_reset_hub_port(void* ctx, uint32_t hub_id, uint32_t port) {
+static zx_status_t bus_reset_hub_port(void* ctx, uint32_t hub_id, uint32_t port) {
     usb_bus_t* bus = ctx;
     if (hub_id >= bus->max_device_count) {
         zxlogf(ERROR, "hub_id out of range in usb_bus_reset_hub_port\n");
-        return;
+        return ZX_ERR_INVALID_ARGS;
     }
     usb_device_t* device = bus->devices[hub_id];
     if (!device) {
         zxlogf(ERROR, "hub not found in usb_bus_reset_hub_port\n");
-        return;
+        return ZX_ERR_INVALID_ARGS;
     }
     if (device->hub_intf.ops == NULL) {
         zxlogf(ERROR, "hub interface not set in usb_bus_reset_hub_port\n");
-        return;
+        return ZX_ERR_BAD_STATE;
     }
-    usb_hub_interface_reset_port(&device->hub_intf, port);
+    return usb_hub_interface_reset_port(&device->hub_intf, port);
 }
 
 static usb_bus_interface_ops_t _bus_interface = {
     .add_device = bus_add_device,
     .remove_device = bus_remove_device,
-    .reset_hub_port = bus_reset_hub_port,
+    .reset_port = bus_reset_hub_port,
 };
 
 static zx_status_t bus_get_device_id(zx_device_t* device, uint32_t* out) {
@@ -70,8 +72,9 @@ static zx_status_t bus_get_device_id(zx_device_t* device, uint32_t* out) {
 }
 
 static zx_status_t bus_configure_hub(void* ctx, zx_device_t* hub_device, usb_speed_t speed,
-                                         usb_hub_descriptor_t* descriptor) {
+                                     const uint8_t desc[15]) {
     usb_bus_t* bus = ctx;
+    usb_hub_descriptor_t* descriptor = (usb_hub_descriptor_t*)desc;
     uint32_t hub_id;
     if (bus_get_device_id(hub_device, &hub_id) != ZX_OK) {
         return ZX_ERR_INTERNAL;
@@ -79,7 +82,8 @@ static zx_status_t bus_configure_hub(void* ctx, zx_device_t* hub_device, usb_spe
     return usb_hci_configure_hub(&bus->hci, hub_id, speed, descriptor);
 }
 
-static zx_status_t bus_device_added(void* ctx, zx_device_t* hub_device, int port, usb_speed_t speed) {
+static zx_status_t bus_device_added(void* ctx, zx_device_t* hub_device, uint32_t port,
+                                    usb_speed_t speed) {
     usb_bus_t* bus = ctx;
     uint32_t hub_id;
     if (bus_get_device_id(hub_device, &hub_id) != ZX_OK) {
@@ -88,7 +92,7 @@ static zx_status_t bus_device_added(void* ctx, zx_device_t* hub_device, int port
     return usb_hci_hub_device_added(&bus->hci, hub_id, port, speed);
 }
 
-static zx_status_t bus_device_removed(void* ctx, zx_device_t* hub_device, int port) {
+static zx_status_t bus_device_removed(void* ctx, zx_device_t* hub_device, uint32_t port) {
     usb_bus_t* bus = ctx;
     uint32_t hub_id;
     if (bus_get_device_id(hub_device, &hub_id) != ZX_OK) {
@@ -98,7 +102,7 @@ static zx_status_t bus_device_removed(void* ctx, zx_device_t* hub_device, int po
 }
 
 static zx_status_t bus_set_hub_interface(void* ctx, zx_device_t* usb_device,
-                                         usb_hub_interface_t* hub) {
+                                         const usb_hub_interface_t* hub) {
     usb_bus_t* bus = ctx;
     uint32_t usb_device_id;
     if (bus_get_device_id(usb_device, &usb_device_id) != ZX_OK) {
@@ -115,8 +119,8 @@ static zx_status_t bus_set_hub_interface(void* ctx, zx_device_t* usb_device,
 
 static usb_bus_protocol_ops_t _bus_protocol = {
     .configure_hub = bus_configure_hub,
-    .hub_device_added = bus_device_added,
-    .hub_device_removed = bus_device_removed,
+    .device_added = bus_device_added,
+    .device_removed = bus_device_removed,
     .set_hub_interface = bus_set_hub_interface,
 };
 

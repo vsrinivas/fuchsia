@@ -43,7 +43,7 @@ zx_status_t xhci_add_device(xhci_t* xhci, int slot_id, int hub_address, int spee
         return ZX_ERR_INTERNAL;
     }
 
-    return usb_bus_add_device(&xhci->bus, slot_id, hub_address, speed);
+    return usb_bus_interface_add_device(&xhci->bus, slot_id, hub_address, speed);
 }
 
 void xhci_remove_device(xhci_t* xhci, int slot_id) {
@@ -54,7 +54,7 @@ void xhci_remove_device(xhci_t* xhci, int slot_id) {
         return;
     }
 
-    usb_bus_remove_device(&xhci->bus, slot_id);
+    usb_bus_interface_remove_device(&xhci->bus, slot_id);
 }
 
 static void xhci_hci_request_queue(void* ctx, usb_request_t* req, usb_request_complete_cb cb,
