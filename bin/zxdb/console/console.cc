@@ -66,7 +66,7 @@ void Console::Output(const std::string& s) {
 
 void Console::Output(const Err& err) {
   OutputBuffer buffer;
-  buffer.OutputErr(err);
+  buffer.Append(err);
   Output(std::move(buffer));
 }
 
@@ -111,7 +111,7 @@ Console::Result Console::DispatchInputLine(const std::string& line,
 
   if (err.has_error()) {
     OutputBuffer out;
-    out.OutputErr(err);
+    out.Append(err);
     Output(std::move(out));
   }
   return Result::kContinue;

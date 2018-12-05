@@ -45,7 +45,7 @@ void OnListProcessesComplete(const Err& err,
                              debug_ipc::ProcessTreeReply reply) {
   OutputBuffer out;
   if (err.has_error())
-    out.OutputErr(err);
+    out.Append(err);
   else
     OutputProcessTreeRecord(reply.root, 0, &out);
   Console::get()->Output(std::move(out));

@@ -354,7 +354,7 @@ Err DoSymInfo(ConsoleContext* context, const Command& cmd) {
         OutputBuffer out;
         if (!symbol) {
           FXL_DCHECK(err.has_error());
-          out.OutputErr(err);
+          out.Append(err);
         } else if (auto variable = symbol->AsVariable()) {
           DumpVariableInfo(location.symbol_context(), variable, &out);
         } else if (auto data_member = symbol->AsDataMember()) {

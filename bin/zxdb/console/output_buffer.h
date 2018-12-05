@@ -94,16 +94,14 @@ class OutputBuffer {
   static OutputBuffer WithContents(std::string str);
   static OutputBuffer WithContents(Syntax syntax, std::string str);
 
-  // Appends a string or another OutputBuffer.
+  // Appends the given type.
   void Append(std::string str);
   void Append(Syntax syntax, std::string str);
   void Append(OutputBuffer buffer);
+  void Append(const Err& err);
 
   // Outputs the given help string, applying help-style formatting.
   void FormatHelp(const std::string& str);
-
-  // Writes the given error.
-  void OutputErr(const Err& err);
 
   // Writes the current contents of this OutputBuffer to stdout.
   void WriteToStdout() const;

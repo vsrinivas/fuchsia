@@ -137,8 +137,8 @@ Err DoHelp(ConsoleContext* context, const Command& cmd) {
       help = verbs.find(found_string_verb->second)->second.help;
     } else {
       // Not a valid command.
-      out.OutputErr(Err("\"" + on_what + "\" is not a valid command.\n"
-                                         "Try just \"help\" to get a list."));
+      out.Append(Err("\"" + on_what + "\" is not a valid command.\n"
+                                      "Try just \"help\" to get a list."));
       Console::get()->Output(std::move(out));
       return Err();
     }

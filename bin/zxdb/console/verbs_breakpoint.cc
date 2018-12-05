@@ -34,9 +34,8 @@ void CreateOrEditBreakpointComplete(fxl::WeakPtr<Breakpoint> breakpoint,
 
   Console* console = Console::get();
   if (err.has_error()) {
-    OutputBuffer out;
-    out.Append("Error setting breakpoint: ");
-    out.OutputErr(err);
+    OutputBuffer out("Error setting breakpoint: ");
+    out.Append(err);
     console->Output(std::move(out));
     return;
   }

@@ -73,7 +73,7 @@ void JobCommandCallback(const char* verb, fxl::WeakPtr<JobContext> job_context,
           "Job %d %s failed.\n",
           console->context().IdForJobContext(job_context.get()), verb));
     }
-    out.OutputErr(err);
+    out.Append(err);
   } else if (job_context) {
     out.Append(DescribeJobContext(&console->context(), job_context.get()));
   }
@@ -105,7 +105,7 @@ void ProcessCommandCallback(const char* verb, fxl::WeakPtr<Target> target,
                                    console->context().IdForTarget(target.get()),
                                    verb));
     }
-    out.OutputErr(err);
+    out.Append(err);
   } else if (target) {
     out.Append(DescribeTarget(&console->context(), target.get()));
   }

@@ -216,6 +216,10 @@ void OutputBuffer::Append(OutputBuffer buf) {
     spans_.push_back(std::move(span));
 }
 
+void OutputBuffer::Append(const Err& err) {
+  spans_.push_back(Span(Syntax::kNormal, err.msg()));
+}
+
 void OutputBuffer::FormatHelp(const std::string& str) {
   for (fxl::StringView line :
        fxl::SplitString(str, "\n", fxl::kKeepWhitespace, fxl::kSplitWantAll)) {
@@ -230,10 +234,6 @@ void OutputBuffer::FormatHelp(const std::string& str) {
     spans_.push_back(Span(syntax, line.ToString()));
     spans_.push_back(Span(Syntax::kNormal, "\n"));
   }
-}
-
-void OutputBuffer::OutputErr(const Err& err) {
-  spans_.push_back(Span(Syntax::kNormal, err.msg()));
 }
 
 void OutputBuffer::WriteToStdout() const {

@@ -181,7 +181,7 @@ Err DoStack(ConsoleContext* context, const Command& cmd) {
                                                            OutputBuffer output,
                                                            uint64_t next_addr) {
     if (err.has_error()) {
-      output.OutputErr(err);
+      output.Append(err);
     } else {
       // Help text for continuation.
       output.Append(
@@ -266,7 +266,7 @@ Err DoMemAnalyze(ConsoleContext* context, const Command& cmd) {
                                                            OutputBuffer output,
                                                            uint64_t next_addr) {
     if (err.has_error()) {
-      output.OutputErr(err);
+      output.Append(err);
     } else {
       // Help text for continuation.
       output.Append(
@@ -285,7 +285,7 @@ Err DoMemAnalyze(ConsoleContext* context, const Command& cmd) {
 void MemoryReadComplete(const Err& err, MemoryDump dump) {
   OutputBuffer out;
   if (err.has_error()) {
-    out.OutputErr(err);
+    out.Append(err);
   } else {
     MemoryFormatOptions opts;
     opts.show_addrs = true;
