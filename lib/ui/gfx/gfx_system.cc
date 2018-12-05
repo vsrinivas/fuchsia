@@ -59,6 +59,13 @@ std::unique_ptr<Engine> GfxSystem::InitializeEngine() {
 }
 
 std::unique_ptr<escher::Escher> GfxSystem::InitializeEscher() {
+  // TODO(SCN-1109): VulkanIsSupported() should not be used in production.
+  // It tries to create a VkInstance and VkDevice, and immediately deletes them
+  // regardless of success/failure.
+  if (!escher::VulkanIsSupported()) {
+    return nullptr;
+  }
+
   // Initialize Vulkan.
 #if SCENIC_VULKAN_SWAPCHAIN
   constexpr bool kRequiresSurface = true;
