@@ -43,5 +43,5 @@ underlying layers. Topaz contains four major categories of software: modules,
 agents, shells, and runners.
 
 For example, modules include the calendar, email, and terminal modules, shells
-include the base shell and the user shell, agents include the email and chat
+include the base shell and the session shell, agents include the email and chat
 content providers, and runners include the Web, Dart, and Flutter runners.

@@ -54,9 +54,9 @@ Adding a new user is done using an Account Manager service that can talk to an
 identity provider to get an id token to access the user's
 [Ledger](https://fuchsia.googlesource.com/peridot/+/master/bin/ledger/).
 
-Logging-in as an existing user starts an instance of `user_runner` with that
+Logging-in as an existing user starts an instance of `sessionmgr` with that
 user's id token and with a namespace that is mapped within and managed by
 `basemgr`'s namespace.
 
 Logging-in as a guest user (in incognito mode) starts an instance of
-`user_runner` but without an id token and a temporary namespace.
+`sessionmgr` but without an id token and a temporary namespace.
