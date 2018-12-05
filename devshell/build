@@ -57,6 +57,7 @@ function main {
   # when TMPDIR="" - it is deliberately unquoted and using the ${+} expansion
   # expression).
   fx-try-locked env -i TERM="${TERM}" PATH="${PATH}" \
+    ${NINJA_STATUS+"NINJA_STATUS=${NINJA_STATUS}"} \
     ${TMPDIR+"TMPDIR=$TMPDIR"} \
     "${FUCHSIA_DIR}/buildtools/ninja" -C "${FUCHSIA_BUILD_DIR}" "${args[@]}"
 }
