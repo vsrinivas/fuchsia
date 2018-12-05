@@ -24,8 +24,6 @@ use fidl_fuchsia_devicesettings::{DeviceSettingsManagerMarker, DeviceSettingsMan
                                   DeviceSettingsManagerRequestStream, DeviceSettingsWatcherProxy,
                                   Status, ValueType};
 
-enum Never {}
-
 type Watchers = Arc<Mutex<HashMap<String, Vec<DeviceSettingsWatcherProxy>>>>;
 
 struct DeviceSettingsManagerServer {
@@ -154,7 +152,7 @@ fn spawn_device_settings_server(state: DeviceSettingsManagerServer, chan: fasync
                     } => {
                         fx_log_info!("setting string key: {:?}, val: {:?}", key, val);
                         match state.set_key(&key, val.as_bytes(), ValueType::Text) {
-                            Ok(mut r) => responder.send(r),
+                            Ok(r) => responder.send(r),
                             Err(e) => {
                                 fx_log_err!("setting string: {:?}", e);
                                 responder.send(false)

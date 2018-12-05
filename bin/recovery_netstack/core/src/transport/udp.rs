@@ -235,7 +235,7 @@ pub fn send_udp_listener<D: EventDispatcher, A: IpAddr>(
                         None
                     }
                 })
-                .ok_or(unimplemented!())
+                .ok_or_else(|| unimplemented!())
         })
         .or_else(|| {
             // We didn't find the listener in state.listeners. Maybe it's a

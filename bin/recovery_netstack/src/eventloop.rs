@@ -4,6 +4,8 @@
 
 //! The special-purpose event loop used by the recovery netstack.
 
+#![allow(unused)]
+
 use ethernet as eth;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
@@ -54,7 +56,7 @@ impl EventLoop {
         let mac = await!(eth_client.info())?.mac;
         let mut state = StackState::default();
         let eth_id = state.add_ethernet_device(Mac::new(mac.octets));
-        let mut event_loop = EventLoop {
+        let event_loop = EventLoop {
             ctx: Arc::new(Mutex::new(Context::new(
                 state,
                 EventLoopInner {

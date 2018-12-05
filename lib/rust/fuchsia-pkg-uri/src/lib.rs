@@ -188,7 +188,6 @@ fn check_path(input: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET};
 
     macro_rules! test_parse_ok {
         (

@@ -408,7 +408,7 @@ fn trim_to_last_char_boundary(string: &str, max_len: usize) -> &[u8] {
 // translated from trace-engine/types.h for inlining
 // The resulting `trace_string_ref_t` only lives as long as the input `string`.
 fn trace_make_inline_string_ref(string: &str) -> sys::trace_string_ref_t {
-    let mut len = string.len() as u32;
+    let len = string.len() as u32;
     if len == 0 {
         return trace_make_empty_string_ref();
     }

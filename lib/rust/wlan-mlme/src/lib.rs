@@ -2,6 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-fn hello() {
+pub extern "C" fn hello() {
     println!("Rusty MLME says hello!");
 }

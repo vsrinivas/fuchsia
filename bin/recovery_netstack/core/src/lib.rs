@@ -4,6 +4,7 @@
 
 //! A networking stack.
 
+
 #![feature(async_await, await_macro)]
 #![feature(const_fn)]
 #![feature(iterator_find_map)]
@@ -21,6 +22,8 @@
 #![deny(safe_packed_borrows)]
 #![deny(missing_docs)]
 #![deny(unreachable_patterns)]
+// FIXME(joshlf)
+#![allow(warnings)]
 
 #[macro_use]
 mod macros;

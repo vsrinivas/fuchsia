@@ -245,7 +245,7 @@ impl ImeState {
             if let HorizontalMotion::GraphemeLeft(GraphemeTraversal::CombiningCharacters) = motion {
                 let grapheme_str = &self.text_state.text[offset..start];
                 let last_char_str = match grapheme_str.char_indices().last() {
-                    Some((last_char_offset, c)) => Some(&grapheme_str[last_char_offset..]),
+                    Some((last_char_offset, _c)) => Some(&grapheme_str[last_char_offset..]),
                     None => None,
                 };
                 if let Some(last_char_str) = last_char_str {
@@ -674,7 +674,6 @@ mod test {
     fn test_delete_forward_flag() {
         // French flag
         let text = "abcdefghi🇫🇷";
-        let len = text.len() as i64;
         let (mut ime, statechan, _actionchan) = set_up(text, 9, 9);
 
         simulate_keypress(&mut ime, HID_USAGE_KEY_DELETE, true, false);

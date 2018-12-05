@@ -32,7 +32,7 @@ fn sleep() -> () {
 // Tests that creating and destroying a fake HCI device binds and unbinds the bt-host driver.
 fn lifecycle_test() -> Result<(), Error> {
     let original_hosts = host::list_host_devices();
-    let mut fake_hci = Some(FakeHciDevice::new()?);
+    let fake_hci = FakeHciDevice::new()?;
 
     // TODO(armansito): Use a device watcher instead of polling.
 
@@ -74,10 +74,10 @@ fn lifecycle_test() -> Result<(), Error> {
     }
 
     // Remove the bt-hci device
-    fake_hci = None;
+    drop(fake_hci);
 
     // Check the host driver is also destroyed
-    let post_destroy_hosts = host::list_host_devices();
+    let _post_destroy_hosts = host::list_host_devices();
     let mut device_found = true;
     let mut retry = 0;
     while retry < ITERATIONS {

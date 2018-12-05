@@ -8,7 +8,6 @@ use failure::{Error, ResultExt};
 use fidl_fidl_examples_echo::EchoMarker;
 use fuchsia_app::client::Launcher;
 use fuchsia_async as fasync;
-use futures::prelude::*;
 use structopt::StructOpt;
 
 fn main() -> Result<(), Error> {

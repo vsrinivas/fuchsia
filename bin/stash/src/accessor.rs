@@ -4,7 +4,6 @@
 
 use failure::{err_msg, Error};
 use fidl::endpoints::{RequestStream, ServerEnd};
-use fidl::client::QueryResponseFut;
 use fidl_fuchsia_stash::{
     GetIteratorMarker, GetIteratorRequest, GetIteratorRequestStream, ListIteratorMarker,
     ListIteratorRequest, ListIteratorRequestStream, Value, MAX_KEY_SIZE, MAX_STRING_SIZE,
@@ -130,7 +129,7 @@ impl Accessor {
     pub fn list_prefix(
         &mut self,
         prefix: String,
-        serverEnd: ServerEnd<ListIteratorMarker>,
+        server_end: ServerEnd<ListIteratorMarker>,
     ) {
         let mut list_results = self
             .store_manager
@@ -166,8 +165,8 @@ impl Accessor {
         }
 
         fasync::spawn(async move {
-            let serverChan = fasync::Channel::from_channel(serverEnd.into_channel())?;
-            let mut stream = ListIteratorRequestStream::from_channel(serverChan);
+            let server_chan = fasync::Channel::from_channel(server_end.into_channel())?;
+            let mut stream = ListIteratorRequestStream::from_channel(server_chan);
             while let Some(ListIteratorRequest::GetNext{ responder })
                 = await!(stream.try_next())?
             {
@@ -184,7 +183,7 @@ impl Accessor {
     pub fn get_prefix(
         &mut self,
         prefix: String,
-        serverEnd: ServerEnd<GetIteratorMarker>,
+        server_end: ServerEnd<GetIteratorMarker>,
     ) -> Result<(), Error> {
 
         let mut get_results = self
@@ -223,8 +222,8 @@ impl Accessor {
         let enable_bytes = self.enable_bytes;
 
         fasync::spawn(async move {
-            let serverChan = fasync::Channel::from_channel(serverEnd.into_channel())?;
-            let mut stream = GetIteratorRequestStream::from_channel(serverChan);
+            let server_chan = fasync::Channel::from_channel(server_end.into_channel())?;
+            let mut stream = GetIteratorRequestStream::from_channel(server_chan);
             while let Some(GetIteratorRequest::GetNext{ responder })
                 = await!(stream.try_next())?
             {
@@ -321,7 +320,7 @@ impl Accessor {
                         &self.client_name,
                         key.clone(),
                         store::clone_value(val)?,
-                    );
+                    )?;
                 }
                 None => {
                     store_manager.delete_value(&self.client_name, key)?;
@@ -348,6 +347,7 @@ fn field_has_been_deleted<T>(f: Option<&Option<T>>) -> bool {
 mod tests {
     use crate::accessor::*;
     use crate::store;
+    use fidl::client::QueryResponseFut;
     use fidl::endpoints::create_proxy;
     use fidl_fuchsia_stash::{ListItem, Value};
     use fuchsia_async as fasync;
@@ -381,7 +381,7 @@ mod tests {
 
         let tmp_dir = TempDir::new().unwrap();
         let sm = Arc::new(Mutex::new(get_tmp_store_manager(&tmp_dir)));
-        let mut acc = Accessor::new(sm.clone(), true, false, test_client_name.clone());
+        let acc = Accessor::new(sm.clone(), true, false, test_client_name.clone());
 
         sm.lock()
             .set_value(&test_client_name, test_key.clone(), Value::Boolval(true))
@@ -557,11 +557,11 @@ mod tests {
 
         let mut run_test = |prefix: &str, mut expected: Vec<(String, bool)>| {
             let (get_iterator, server_end) = create_proxy().unwrap();
-            acc.get_prefix(prefix.to_string(), server_end);
+            acc.get_prefix(prefix.to_string(), server_end).unwrap();
 
             let mut actual = Vec::new();
-            while true {
-                let mut subset = executor
+            loop {
+                let subset = executor
                     .run_singlethreaded(get_iterator.get_next())
                     .unwrap();
                 if subset.len() == 0 {
@@ -639,20 +639,20 @@ mod tests {
         assert_eq!(&None, acc.fields_updated.lock().get("a/b").unwrap());
         assert_eq!(&None, acc.fields_updated.lock().get("a/a/b").unwrap());
         assert_eq!(4, acc.fields_updated.lock().len());
-        acc.commit();
+        acc.commit().unwrap();
 
         let (list_iterator, server_end) = create_proxy().unwrap();
         acc.list_prefix("".to_string(), server_end);
 
         let mut actual = Vec::new();
-        while true {
-            let mut subset = executor
+        loop {
+            let subset = executor
                 .run_singlethreaded(list_iterator.get_next())
                 .unwrap();
             if subset.len() == 0 {
                 break;
             }
-            for ListItem { key, type_ } in subset.iter() {
+            for ListItem { key, type_: _ } in subset.iter() {
                 actual.push(key.clone());
             }
         }
@@ -663,7 +663,6 @@ mod tests {
     #[test]
     fn test_commit_different_accessors() {
         let test_client_name = "test_client".to_string();
-        let test_key = "test_key".to_string();
 
         let tmp_dir = TempDir::new().unwrap();
         let sm = Arc::new(Mutex::new(get_tmp_store_manager(&tmp_dir)));
@@ -709,7 +708,6 @@ mod tests {
     #[test]
     fn test_commit_reuse_accessor() {
         let test_client_name = "test_client".to_string();
-        let test_key = "test_key".to_string();
 
         let tmp_dir = TempDir::new().unwrap();
         let sm = Arc::new(Mutex::new(get_tmp_store_manager(&tmp_dir)));
@@ -752,7 +750,6 @@ mod tests {
     #[test]
     fn test_delete_prefix_considers_current_commit() {
         let test_client_name = "test_client".to_string();
-        let test_key = "test_key".to_string();
 
         let tmp_dir = TempDir::new().unwrap();
         let sm = Arc::new(Mutex::new(get_tmp_store_manager(&tmp_dir)));
@@ -781,7 +778,6 @@ mod tests {
         let mut executor = fasync::Executor::new().unwrap();
 
         let test_client_name = "test_client".to_string();
-        let test_key = "test_key".to_string();
 
         let tmp_dir = TempDir::new().unwrap();
         let sm = Arc::new(Mutex::new(get_tmp_store_manager(&tmp_dir)));
@@ -810,7 +806,6 @@ mod tests {
         let mut executor = fasync::Executor::new().unwrap();
 
         let test_client_name = "test_client".to_string();
-        let test_key = "test_key".to_string();
 
         let tmp_dir = TempDir::new().unwrap();
         let sm = Arc::new(Mutex::new(get_tmp_store_manager(&tmp_dir)));
@@ -825,7 +820,7 @@ mod tests {
         }
 
         let (get_iterator, server_end) = create_proxy().unwrap();
-        acc.get_prefix("".to_string(), server_end);
+        acc.get_prefix("".to_string(), server_end).unwrap();
 
         let res = executor.run_singlethreaded(drain_stash_iterator(|| get_iterator.get_next()));
         let mut res : Vec<String> = res.iter().map(|kv| kv.key.clone()).collect();

@@ -164,7 +164,7 @@ impl Store {
                 cursor.read(&mut key_bytes[..])?;
 
                 let mut val_type = [0; 1];
-                cursor.read(&mut val_type[..]);
+                cursor.read(&mut val_type[..])?;
                 let val_type = val_type[0];
 
                 let val_length = cursor.read_u64::<LittleEndian>()?;
@@ -417,7 +417,7 @@ mod tests {
         sm.store.data.insert(test_client_name.clone(), client_data);
         sm.save_store().unwrap();
 
-        let mut res = sm.list_prefix(&test_client_name, &"a".to_string());
+        let res = sm.list_prefix(&test_client_name, &"a".to_string());
         assert_eq!(2, res.len());
         assert_eq!(
             true,
@@ -451,7 +451,7 @@ mod tests {
         sm.store.data.insert(test_client_name.clone(), client_data);
         sm.save_store().unwrap();
 
-        let mut res = sm.get_prefix(&test_client_name, &"a".to_string()).unwrap();
+        let res = sm.get_prefix(&test_client_name, &"a".to_string()).unwrap();
         assert_eq!(2, res.len());
         assert_eq!(
             true,
@@ -508,7 +508,7 @@ mod tests {
         // Value::Bytesval can't be tested here because the vmo handle number changes during the
         // clone operation, making the assert_eq! below fail.
 
-        let clone_store = |data: &Store| {
+        let clone_store = |_data: &Store| {
             let mut res = HashMap::new();
             for (client_name, client_fields) in store.data.iter() {
                 let mut client_data = HashMap::new();
@@ -523,7 +523,7 @@ mod tests {
         let mut sm_writer = StoreManager::new(backing_file.clone())
             .expect("couldn't make store manager for writing");
         sm_writer.store = clone_store(&store);
-        sm_writer.save_store();
+        sm_writer.save_store().expect("couldn't save store");
 
         let sm_reader = StoreManager::new(backing_file.clone())
             .expect("couldn't make store manager from pre-populated file");
@@ -588,7 +588,7 @@ mod tests {
         let file_path = sm.backing_file.clone();
 
         let mut curr_file_size = 0;
-        let mut new_file_size = 0;
+        let mut new_file_size;
 
         // File shouldn't exist when we start
         assert_eq!(fs::metadata(&file_path).unwrap_err().kind(), io::ErrorKind::NotFound);

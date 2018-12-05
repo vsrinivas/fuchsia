@@ -2,14 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![cfg(test)]
+
 use pretty_assertions::assert_eq;
 use qmigen_lib::{ast, codegen};
-use std::env;
-use std::fs;
-use std::io::BufRead;
-use std::io::Read;
 
-use crate::macros::*;
 mod macros;
 
 #[test]
@@ -84,7 +81,7 @@ fn string_request_decode() {
 fn simple_response() {
     let mut code_gen = generate_source_code!(include_str!("simple_response.test.json"));
     let mut err_body = consume_header!(code_gen);
-    let mut body = consume_empty_err!(err_body);
+    let body = consume_empty_err!(err_body);
     assert_eq!(body, include_str!("simple_response.test.rs"))
 }
 
@@ -92,7 +89,7 @@ fn simple_response() {
 fn simple_request() {
     let mut code_gen = generate_source_code!(include_str!("simple_request.test.json"));
     let mut err_body = consume_header!(code_gen);
-    let mut body = consume_empty_err!(err_body);
+    let body = consume_empty_err!(err_body);
     assert_eq!(body, include_str!("simple_request.test.rs"));
 }
 
@@ -117,7 +114,7 @@ fn generate_service_stub() {
     );
 
     let mut err_body = consume_header!(code_gen);
-    let mut body = consume_empty_err!(err_body);
+    let body = consume_empty_err!(err_body);
 
     assert_eq!(
         body,

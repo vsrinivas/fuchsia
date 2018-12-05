@@ -808,7 +808,7 @@ mod tests {
             let mut expected = LogListenerOptions::default();
             expected.filter.min_severity = LogLevelFilter::None;
             for s in vec!["INFO", "WARN", "ERROR", "FATAL"] {
-                let mut args = vec!["--severity".to_string(), s.to_string()];
+                let args = vec!["--severity".to_string(), s.to_string()];
                 expected.filter.min_severity = LogLevelFilter::from_primitive(
                     expected.filter.min_severity.into_primitive() + 1,
                 ).unwrap();

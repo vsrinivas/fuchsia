@@ -4,7 +4,7 @@
 
 use fuchsia_async as fasync;
 
-use fuchsia_syslog::{fx_log, fx_log_err};
+use fuchsia_syslog::fx_log_err;
 use failure::{err_msg, Error};
 use fidl::encoding::OutOfLine;
 use fidl::endpoints::{RequestStream, ServerEnd};
@@ -26,22 +26,6 @@ macro_rules! shutdown_on_error {
             }
         }
     };
-}
-
-fn send_result_or_shutdown_on_error<V, F, G>(res: Result<V, Error>, on_success: F, on_error: G)
-where
-    F: FnOnce(V),
-    G: FnOnce(),
-{
-    match res {
-        Ok(v) => {
-            on_success(v);
-        }
-        Err(e) => {
-            fx_log_err!("error encountered: {:?}", e);
-            on_error();
-        }
-    }
 }
 
 /// Instance represents a single instance of the stash service, handling requests from a single
@@ -70,7 +54,7 @@ impl Instance {
     pub fn create_accessor(
         &mut self,
         read_only: bool,
-        serverEnd: ServerEnd<StoreAccessorMarker>,
+        server_end: ServerEnd<StoreAccessorMarker>,
     ) -> Result<(), Error> {
         let mut acc = accessor::Accessor::new(
             self.store_manager.clone(),
@@ -81,10 +65,10 @@ impl Instance {
                 .ok_or(err_msg("identify has not been called"))?,
         );
 
-        let serverChan = fasync::Channel::from_channel(serverEnd.into_channel())?;
+        let server_chan = fasync::Channel::from_channel(server_end.into_channel())?;
 
         fasync::spawn(async move {
-            let mut stream = StoreAccessorRequestStream::from_channel(serverChan);
+            let mut stream = StoreAccessorRequestStream::from_channel(server_chan);
             while let Some(req) = await!(stream.try_next())? {
                 match req {
                     StoreAccessorRequest::GetValue { key, responder } => {

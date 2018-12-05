@@ -34,6 +34,7 @@ impl<W: io::Write> Codegen<W> {
         writeln!(
             self.w,
             "
+#![allow(warnings)]
 use bitflags::*;
 use failure;
 use fuchsia_wayland_core::{{ArgKind, Arg, Enum, FromArgs, IntoMessage, Message,

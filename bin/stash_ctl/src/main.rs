@@ -26,22 +26,22 @@ fn main() -> Result<(), Error> {
         let stashserver = connect_to_service::<SecureStoreMarker>()?;
 
         // Identify
-        let fut = stashserver.identify("stash_ctl")?;
+        stashserver.identify("stash_ctl")?;
 
         // Create an accessor
-        let (acc, serverEnd) = create_proxy()?;
-        stashserver.create_accessor(false, serverEnd)?;
+        let (acc, server_end) = create_proxy()?;
+        stashserver.create_accessor(false, server_end)?;
 
         acc
     } else {
         let stashserver = connect_to_service::<StoreMarker>()?;
 
         // Identify
-        let fut = stashserver.identify("stash_ctl")?;
+        stashserver.identify("stash_ctl")?;
 
         // Create an accessor
-        let (acc, serverEnd) = create_proxy()?;
-        stashserver.create_accessor(false, serverEnd)?;
+        let (acc, server_end) = create_proxy()?;
+        stashserver.create_accessor(false, server_end)?;
 
         acc
     };
@@ -122,7 +122,7 @@ enum StashOperation {
 
 impl TryFrom<env::Args> for StashCtlConfig {
     type Error = Error;
-    fn try_from(mut args: env::Args) -> Result<StashCtlConfig, Error> {
+    fn try_from(args: env::Args) -> Result<StashCtlConfig, Error> {
         let mut args = args.peekable();
         // ignore arg[0]
         let _ = args.next();

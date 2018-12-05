@@ -4,6 +4,8 @@
 
 //! Messages used for NDP (ICMPv6).
 
+#![allow(unused)] // FIXME(joshlf)
+
 use std::marker::PhantomData;
 use std::ops::Range;
 
@@ -186,7 +188,7 @@ pub mod options {
                     NdpOption::TargetLinkLayerAddress(data)
                 }
                 Some(NdpOptionType::PrefixInformation) => {
-                    if (data.len() < 14) {
+                    if data.len() < 14 {
                         // Data should always be 14 octets long
                         return Err("BadData".to_string());
                     }
