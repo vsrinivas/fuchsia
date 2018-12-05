@@ -18,12 +18,13 @@ using AppmgrTest = ::gtest::RealLoopFixture;
 
 TEST_F(AppmgrTest, RunUntilIdle) {
   auto services = std::make_shared<component::Services>();
-  AppmgrArgs args{.pa_directory_request = ZX_HANDLE_INVALID,
-                  .environment_services = services,
-                  .sysmgr_url = "sysmgr",
-                  .sysmgr_args = {},
-                  .run_virtual_console = false,
-                  .retry_sysmgr_crash = false};
+  AppmgrArgs args{
+      .pa_directory_request = ZX_HANDLE_INVALID,
+      .environment_services = services,
+      .sysmgr_url = "fuchsia-pkg://fuchsia.com/sysmgr#meta/sysmgr.cmx",
+      .sysmgr_args = {},
+      .run_virtual_console = false,
+      .retry_sysmgr_crash = false};
   Appmgr appmgr(dispatcher(), std::move(args));
   bool called;
   async::PostTask(dispatcher(), [&called] { called = true; });

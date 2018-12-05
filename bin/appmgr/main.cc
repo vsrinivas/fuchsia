@@ -18,12 +18,13 @@ int main(int argc, char** argv) {
 
   trace::TraceProvider trace_provider(loop.dispatcher());
 
-  component::AppmgrArgs args{.pa_directory_request = std::move(request),
-                             .environment_services = environment_services,
-                             .sysmgr_url = "sysmgr",
-                             .sysmgr_args = {},
-                             .run_virtual_console = true,
-                             .retry_sysmgr_crash = true};
+  component::AppmgrArgs args{
+      .pa_directory_request = std::move(request),
+      .environment_services = environment_services,
+      .sysmgr_url = "fuchsia-pkg://fuchsia.com/sysmgr#meta/sysmgr.cmx",
+      .sysmgr_args = {},
+      .run_virtual_console = true,
+      .retry_sysmgr_crash = true};
   component::Appmgr appmgr(loop.dispatcher(), std::move(args));
 
   loop.Run();

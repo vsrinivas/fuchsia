@@ -45,7 +45,7 @@ TEST_F(TestSysmgr, ServiceStartup) {
   component::AppmgrArgs args{
       .pa_directory_request = h2.release(),
       .environment_services = context->incoming_services(),
-      .sysmgr_url = "sysmgr",
+      .sysmgr_url = "fuchsia-pkg://fuchsia.com/sysmgr#meta/sysmgr.cmx",
       .sysmgr_args = std::move(sysmgr_args),
       .run_virtual_console = false,
       .retry_sysmgr_crash = false};

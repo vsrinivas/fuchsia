@@ -5,6 +5,9 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/default.h>
 
+#include "garnet/bin/sysmgr/config.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 #include "lib/component/cpp/testing/test_util.h"
 #include "lib/component/cpp/testing/test_with_environment.h"
 #include "lib/fxl/files/directory.h"
@@ -14,9 +17,6 @@
 #include "lib/fxl/strings/join_strings.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/svc/cpp/services.h"
-#include "garnet/bin/sysmgr/config.h"
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
 
 namespace component {
 namespace {
@@ -46,8 +46,7 @@ class HubTest : public component::testing::TestWithEnvironment {
 
     int64_t return_code = INT64_MIN;
     controller.events().OnTerminated =
-        [&return_code](int64_t code,
-                       fuchsia::sys::TerminationReason reason) {
+        [&return_code](int64_t code, fuchsia::sys::TerminationReason reason) {
           return_code = code;
         };
     ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
@@ -61,7 +60,7 @@ class HubTest : public component::testing::TestWithEnvironment {
 };
 
 TEST(ProbeHub, Component) {
-  constexpr char kGlob[] = "/hub/c/sysmgr/*/out/debug";
+  constexpr char kGlob[] = "/hub/c/sysmgr.cmx/*/out/debug";
   files::Glob glob(kGlob);
   EXPECT_EQ(glob.size(), 1u) << kGlob << " expected to match once.";
 }
@@ -135,7 +134,7 @@ TEST_F(HubTest, ScopePolicy) {
   RunComponent(launcher_ptr(), kGlobUrl, {"/hub/r/hubscopepolicytest/"}, 0);
 
   // test that we cannot see nested env using its own launcher
-  RunComponent(nested_env->launcher_ptr(), kGlobUrl, 
+  RunComponent(nested_env->launcher_ptr(), kGlobUrl,
                {"/hub/r/hubscopepolicytest"}, 1);
 
   // test that we can see check_hub_path
