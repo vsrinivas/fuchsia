@@ -244,7 +244,8 @@ added there:
 ```json
 {
     "imports": [
-        "garnet/packages/prod/boringssl"
+        "garnet/packages/prod/boringssl",
+        "garnet/packages/prod/run"
     ],
     "packages": [
         "//third_party/boringssl:boringssl_tests",
@@ -252,6 +253,8 @@ added there:
     ]
 }
 ```
+
+Note that the fuzzing framework needs `run` to be able to run fuzz targets.
 
 __IMPORTANT__: The build system will build the fuzz targets __only__ if it is explicitly told to
 instrument them for fuzzing with an appropriate sanitizer.  The easiest way to achieve this is using
