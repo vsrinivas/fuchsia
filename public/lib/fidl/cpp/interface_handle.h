@@ -149,7 +149,7 @@ bool operator!=(const InterfaceHandle<T>& lhs, const InterfaceHandle<T>& rhs) {
   return !(lhs == rhs);
 }
 
-// Comparaisons.
+// Comparisons.
 template <typename T>
 bool operator<(const InterfaceHandle<T>& lhs, const InterfaceHandle<T>& rhs) {
   return lhs.channel() < rhs.channel();
