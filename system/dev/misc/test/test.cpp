@@ -25,7 +25,7 @@ typedef struct test_root {
 } test_root_t;
 
 static void test_device_set_output_socket(void* ctx, zx_handle_t handle) {
-    test_device_t* device = ctx;
+    auto device = static_cast<test_device_t*>(ctx);
     if (device->output != ZX_HANDLE_INVALID) {
         zx_handle_close(device->output);
     }
@@ -33,12 +33,12 @@ static void test_device_set_output_socket(void* ctx, zx_handle_t handle) {
 }
 
 static zx_handle_t test_device_get_output_socket(void* ctx) {
-    test_device_t* device = ctx;
+    auto device = static_cast<test_device_t*>(ctx);
     return device->output;
 }
 
 static void test_device_set_control_channel(void* ctx, zx_handle_t handle) {
-    test_device_t* device = ctx;
+    auto device = static_cast<test_device_t*>(ctx);
     if (device->control != ZX_HANDLE_INVALID) {
         zx_handle_close(device->control);
     }
@@ -46,18 +46,18 @@ static void test_device_set_control_channel(void* ctx, zx_handle_t handle) {
 }
 
 static zx_handle_t test_device_get_control_channel(void* ctx) {
-    test_device_t* device = ctx;
+    auto device = static_cast<test_device_t*>(ctx);
     return device->control;
 }
 
 static void test_device_set_test_func(void* ctx, const test_func_t* func) {
-    test_device_t* device = ctx;
+    auto device = static_cast<test_device_t*>(ctx);
     device->test_func = *func;
 }
 
 static zx_status_t test_device_run_tests(void *ctx, const void* arg, size_t arglen,
                                          test_report_t* report) {
-    test_device_t* device = ctx;
+    auto device = static_cast<test_device_t*>(ctx);
     if (device->test_func.callback != NULL) {
         return device->test_func.callback(device->test_func.ctx, arg, arglen, report);
     } else {
@@ -66,7 +66,7 @@ static zx_status_t test_device_run_tests(void *ctx, const void* arg, size_t argl
 }
 
 static void test_device_destroy(void *ctx) {
-    test_device_t* device = ctx;
+    auto device = static_cast<test_device_t*>(ctx);
     device_remove(device->zxdev);
 }
 
@@ -82,7 +82,7 @@ static test_protocol_ops_t test_test_proto = {
 
 static zx_status_t test_device_ioctl(void* ctx, uint32_t op, const void* in, size_t inlen, void* out,
                                     size_t outlen, size_t* out_actual) {
-    test_device_t* dev = ctx;
+    auto dev = static_cast<test_device_t*>(ctx);
     switch (op) {
     case IOCTL_TEST_SET_OUTPUT_SOCKET:
         if (inlen != sizeof(zx_handle_t)) {
@@ -98,13 +98,14 @@ static zx_status_t test_device_ioctl(void* ctx, uint32_t op, const void* in, siz
         test_device_set_control_channel(dev, *(zx_handle_t*)in);
         return ZX_OK;
 
-    case IOCTL_TEST_RUN_TESTS:
+    case IOCTL_TEST_RUN_TESTS: {
         if (outlen != sizeof(test_report_t)) {
             return ZX_ERR_BUFFER_TOO_SMALL;
         }
         zx_status_t status = test_device_run_tests(dev, in, inlen, (test_report_t*)out);
         *out_actual = sizeof(test_report_t);
         return status;
+    }
 
     case IOCTL_TEST_DESTROY_DEVICE:
         device_remove(dev->zxdev);
@@ -116,26 +117,28 @@ static zx_status_t test_device_ioctl(void* ctx, uint32_t op, const void* in, siz
 }
 
 static void test_device_release(void* ctx) {
-    test_device_t* device = ctx;
+    auto device = static_cast<test_device_t*>(ctx);
     if (device->output != ZX_HANDLE_INVALID) {
         zx_handle_close(device->output);
     }
     if (device->control != ZX_HANDLE_INVALID) {
         zx_handle_close(device->control);
     }
-    free(device);
+    delete device;
 }
 
-static zx_protocol_device_t test_device_proto = {
-    .version = DEVICE_OPS_VERSION,
-    .ioctl = test_device_ioctl,
-    .release = test_device_release,
-};
+static zx_protocol_device_t test_device_proto = []() {
+    zx_protocol_device_t proto = {};
+    proto.version = DEVICE_OPS_VERSION;
+    proto.ioctl = test_device_ioctl;
+    proto.release = test_device_release;
+    return proto;
+}();
 
 
 static zx_status_t test_ioctl(void* ctx, uint32_t op, const void* in, size_t inlen,
                               void* out, size_t outlen, size_t* out_actual) {
-    test_root_t* root = ctx;
+    auto root = static_cast<test_root_t*>(ctx);
 
     if (op != IOCTL_TEST_CREATE_DEVICE) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -143,7 +146,7 @@ static zx_status_t test_ioctl(void* ctx, uint32_t op, const void* in, size_t inl
 
     char devname[ZX_DEVICE_NAME_MAX + 1];
     if (inlen > 0) {
-        strncpy(devname, in, sizeof(devname) - 1);
+        strncpy(devname, static_cast<const char*>(in), sizeof(devname) - 1);
     } else {
         strncpy(devname, "testdev", sizeof(devname) - 1);
     }
@@ -157,55 +160,52 @@ static zx_status_t test_ioctl(void* ctx, uint32_t op, const void* in, size_t inl
         return ZX_ERR_BUFFER_TOO_SMALL;
     }
 
-    test_device_t* device = calloc(1, sizeof(test_device_t));
-    if (device == NULL) {
-        return ZX_ERR_NO_MEMORY;
-    }
+    test_device_t* device = new test_device_t();
 
-    device_add_args_t args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = devname,
-        .ctx = device,
-        .ops = &test_device_proto,
-        .proto_id = ZX_PROTOCOL_TEST,
-        .proto_ops = &test_test_proto,
-    };
+    device_add_args_t args = {};
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.name = devname;
+    args.ctx = device;
+    args.ops = &test_device_proto;
+    args.proto_id = ZX_PROTOCOL_TEST;
+    args.proto_ops = &test_test_proto;
 
     zx_status_t status;
     if ((status = device_add(root->zxdev, &args, &device->zxdev)) != ZX_OK) {
-        free(device);
+        delete device;
         return status;
     }
 
-    int length = snprintf(out, outlen,"%s/%s", TEST_CONTROL_DEVICE, devname) + 1;
+    int length = snprintf(static_cast<char*>(out), outlen,"%s/%s", TEST_CONTROL_DEVICE, devname)
+            + 1;
     *out_actual = length;
     return ZX_OK;
 }
 
-static zx_protocol_device_t test_root_proto = {
-    .version = DEVICE_OPS_VERSION,
-    .ioctl = test_ioctl,
-};
+static zx_protocol_device_t test_root_proto = []() {
+    zx_protocol_device_t proto = {};
+    proto.version = DEVICE_OPS_VERSION;
+    proto.ioctl = test_ioctl;
+    return proto;
+}();
 
 static zx_status_t test_bind(void* ctx, zx_device_t* dev) {
-    test_root_t* root = calloc(1, sizeof(test_root_t));
-    if (!root) {
-        return ZX_ERR_NO_MEMORY;
-    }
-    device_add_args_t args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "test",
-        .ctx = root,
-        .ops = &test_root_proto,
-    };
+    test_root_t* root = new test_root_t();
+    device_add_args_t args = {};
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.name = "test";
+    args.ctx = root;
+    args.ops = &test_root_proto;
 
     return device_add(dev, &args, &root->zxdev);
 }
 
-static zx_driver_ops_t test_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .bind = test_bind,
-};
+static zx_driver_ops_t test_driver_ops = []() {
+    zx_driver_ops_t driver;
+    driver.version = DRIVER_OPS_VERSION;
+    driver.bind = test_bind;
+    return driver;
+}();
 
 ZIRCON_DRIVER_BEGIN(test, test_driver_ops, "zircon", "0.1", 1)
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST_PARENT),

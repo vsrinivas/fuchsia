@@ -8,11 +8,16 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := driver
 
-MODULE_SRCS := $(LOCAL_DIR)/test.c
+MODULE_SRCS := $(LOCAL_DIR)/test.cpp
 
-MODULE_STATIC_LIBS := system/ulib/ddk
+MODULE_STATIC_LIBS := \
+	system/ulib/ddk \
+	system/ulib/zxcpp \
 
-MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
+MODULE_LIBS := \
+	system/ulib/driver \
+	system/ulib/zircon \
+	system/ulib/c
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-test \
