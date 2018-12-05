@@ -374,18 +374,16 @@ void Connection::Terminate(bool call_close) {
 }
 
 zx_status_t Connection::CallHandler() {
-    return vfs_handler(channel_.get(), &Connection::HandleMessageThunk, this);
+    return ReadMessage(channel_.get(), [this] (fidl_msg_t* msg, FidlConnection* txn) {
+        return HandleMessage(msg, txn->Txn());
+    });
 }
 
 void Connection::CallClose() {
-    channel_.reset();
-    CallHandler();
+    CloseMessage([this] (fidl_msg_t* msg, FidlConnection* txn) {
+        return HandleMessage(msg, txn->Txn());
+    });
     set_closed();
-}
-
-zx_status_t Connection::HandleMessageThunk(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie) {
-    Connection* connection = static_cast<Connection*>(cookie);
-    return connection->HandleMessage(msg, txn);
 }
 
 // Flags which can be modified by SetFlags.
@@ -456,9 +454,9 @@ zx_status_t Connection::NodeSync(fidl_txn_t* txn) {
     if (IsPathOnly(flags_)) {
         return fuchsia_io_NodeSync_reply(txn, ZX_ERR_BAD_HANDLE);
     }
-    Vnode::SyncCallback closure([this, ctxn = vfs_txn_copy(txn)]
+    Vnode::SyncCallback closure([this, ctxn = FidlConnection::CopyTxn(txn)]
                                 (zx_status_t status) mutable {
-        fuchsia_io_NodeSync_reply(&ctxn.txn, status);
+        fuchsia_io_NodeSync_reply(ctxn.Txn(), status);
 
         // Try to reset the wait object
         ZX_ASSERT_MSG(wait_.Begin(vfs_->dispatcher()) == ZX_OK,
@@ -800,9 +798,9 @@ zx_status_t Connection::DirectoryAdminUnmount(fidl_txn_t* txn) {
 
     // Unmount is fatal to the requesting connections.
     Vfs::ShutdownCallback closure([ch = std::move(channel_),
-                                   ctxn = vfs_txn_copy(txn)]
+                                   ctxn = FidlConnection::CopyTxn(txn)]
                                   (zx_status_t status) mutable {
-        fuchsia_io_DirectoryAdminUnmount_reply(&ctxn.txn, status);
+        fuchsia_io_DirectoryAdminUnmount_reply(ctxn.Txn(), status);
     });
     Vfs* vfs = vfs_;
     Terminate(/* call_close= */ true);

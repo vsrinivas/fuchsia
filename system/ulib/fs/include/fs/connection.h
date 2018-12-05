@@ -153,7 +153,6 @@ private:
     //
     // By default, handles the Node, File, Directory and DirectoryAdmin
     // protocols, dispatching to |HandleFsSpecificMessage| if the ordinal is not recognized.
-    static zx_status_t HandleMessageThunk(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie);
     zx_status_t HandleMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
     bool is_open() const { return wait_.object() != ZX_HANDLE_INVALID; }

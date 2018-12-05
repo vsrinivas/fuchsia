@@ -659,12 +659,17 @@ void DevfsConnection::HandleRpc(fbl::unique_ptr<DevfsConnection> conn,
     }
 
     if (signal->observed & ZX_CHANNEL_READABLE) {
-        if (vfs_handler(wait->object(), devhost_fidl_handler, conn.get()) == ZX_OK) {
+        status = fs::ReadMessage(wait->object(), [&conn](fidl_msg_t* msg, fs::FidlConnection* txn) {
+            return devhost_fidl_handler(msg, txn->Txn(), conn.get());
+        });
+        if (status == ZX_OK) {
             BeginWait(std::move(conn), dispatcher);
             return;
         }
     } else if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
-        vfs_handler(ZX_HANDLE_INVALID, devhost_fidl_handler, conn.get());
+        fs::CloseMessage([&conn](fidl_msg_t* msg, fs::FidlConnection* txn) {
+            return devhost_fidl_handler(msg, txn->Txn(), conn.get());
+        });
     } else {
         printf("dh_handle_fidl_rpc: invalid signals %x\n", signal->observed);
         exit(0);

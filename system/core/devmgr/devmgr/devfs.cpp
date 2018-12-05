@@ -828,12 +828,17 @@ void DcIostate::HandleRpc(fbl::unique_ptr<DcIostate> ios, async_dispatcher_t* di
     }
 
     if (signal->observed & ZX_CHANNEL_READABLE) {
-        if (vfs_handler(wait->object(), DcIostate::DevfsFidlHandler, ios.get()) == ZX_OK) {
+        status = fs::ReadMessage(wait->object(), [&ios](fidl_msg_t* msg, fs::FidlConnection* txn) {
+            return DcIostate::DevfsFidlHandler(msg, txn->Txn(), ios.get());
+        });
+        if (status == ZX_OK) {
             ios->BeginWait(std::move(ios), dispatcher);
             return;
         }
     } else if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
-        vfs_handler(ZX_HANDLE_INVALID, DcIostate::DevfsFidlHandler, ios.get());
+        fs::CloseMessage([&ios](fidl_msg_t* msg, fs::FidlConnection* txn) {
+            return DcIostate::DevfsFidlHandler(msg, txn->Txn(), ios.get());
+        });
     } else {
         log(ERROR, "devcoord: DcIostate::HandleRpc: invalid signals %x\n", signal->observed);
         exit(0);

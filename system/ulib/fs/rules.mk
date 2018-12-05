@@ -19,7 +19,7 @@ MODULE_SRCS += \
     $(COMMON_SRCS) \
     $(LOCAL_DIR)/connection.cpp \
     $(LOCAL_DIR)/fvm.cpp \
-    $(LOCAL_DIR)/handler.c \
+    $(LOCAL_DIR)/handler.cpp \
     $(LOCAL_DIR)/lazy-dir.cpp \
     $(LOCAL_DIR)/managed-vfs.cpp \
     $(LOCAL_DIR)/metrics.cpp \
