@@ -44,11 +44,12 @@ const size_t kBacklog = 32;
 // Specifies the maximum transfer unit we support and the maximum layer 1
 // Ethernet packet header length.
 const size_t kVirtioMtu = 1500;
-const size_t kL1EthHdrLen = 26;
+const size_t kEthHeaderSizeBytes = 14;
+const size_t kEthFrameSize = kVirtioMtu + kEthHeaderSizeBytes;
 
 // Other constants determined by the values above and the memory architecture.
 // The goal here is to allocate single-page I/O buffers.
-const size_t kFrameSize = sizeof(virtio_net_hdr_t) + kL1EthHdrLen + kVirtioMtu;
+const size_t kFrameSize = sizeof(virtio_net_hdr_t) + kEthFrameSize;
 const size_t kFramesInBuf = PAGE_SIZE / kFrameSize;
 const size_t kNumIoBufs = fbl::round_up(kBacklog * 2, kFramesInBuf) / kFramesInBuf;
 
@@ -404,8 +405,8 @@ zx_status_t EthernetDevice::QueueTx(uint32_t options, ethmac_netbuf_t* netbuf) {
     const void* data = netbuf->data_buffer;
     size_t length = netbuf->data_size;
     // First, validate the packet
-    if (!data || length > virtio_hdr_len_ + kVirtioMtu) {
-        LTRACEF("dropping packet; invalid packet\n");
+    if (!data || length > kEthFrameSize) {
+        zxlogf(ERROR, "dropping packet; invalid packet\n");
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -429,7 +430,7 @@ zx_status_t EthernetDevice::QueueTx(uint32_t options, ethmac_netbuf_t* netbuf) {
         desc = tx_.AllocDescChain(1, &id);
     }
     if (!desc) {
-        LTRACEF("dropping packet; out of descriptors\n");
+        zxlogf(ERROR, "dropping packet; out of descriptors\n");
         return ZX_ERR_NO_RESOURCES;
     }
 
