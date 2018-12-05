@@ -134,57 +134,6 @@ func TestNewManifest_withManifest(t *testing.T) {
 	validateMapping(t, m, wantPaths)
 }
 
-func TestNewManifest_withManifest_withDuplicates(t *testing.T) {
-	f, wantPaths := makeTestManifestFile(t)
-	defer os.Remove(f)
-
-	file, err := os.OpenFile(f, os.O_APPEND|os.O_WRONLY, 0600)
-	if err != nil {
-		panic(err)
-	}
-
-	//duplicate all entires
-	for k, v := range wantPaths {
-		if _, err := fmt.Fprintf(file, "%s=%s\n", k, v); err != nil {
-			file.Close()
-			t.Fatal(err)
-		}
-	}
-
-	file.Close()
-
-	m, err := NewManifest([]string{f})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	validateMapping(t, m, wantPaths)
-}
-
-func TestNewManifest_withManifest_withDuplicateSrcInconsistentDests(t *testing.T) {
-	f, wantPaths := makeTestManifestFile(t)
-	defer os.Remove(f)
-
-	file, err := os.OpenFile(f, os.O_APPEND|os.O_WRONLY, 0600)
-	if err != nil {
-		panic(err)
-	}
-
-	// duplicate all entires and put a different unique source
-	for k, _ := range wantPaths {
-		if _, err := fmt.Fprintf(file, "%s=junk\n", k); err != nil {
-			file.Close()
-			t.Fatal(err)
-		}
-	}
-
-	file.Close()
-
-	if m, err := NewManifest([]string{f}); err == nil {
-		t.Fatalf("should have thrown error, got %v:", m)
-	}
-}
-
 func TestManifestMeta(t *testing.T) {
 	m := &Manifest{
 		Paths: map[string]string{
