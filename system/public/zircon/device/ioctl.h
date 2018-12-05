@@ -43,7 +43,6 @@
 // 0x12 unused
 #define IOCTL_FAMILY_BLOCK          0x13
 #define IOCTL_FAMILY_I2C            0x14
-#define IOCTL_FAMILY_TPM            0x15
 #define IOCTL_FAMILY_USB_DEVICE     0x16
 #define IOCTL_FAMILY_HID            0x17
 // 0x18 unused

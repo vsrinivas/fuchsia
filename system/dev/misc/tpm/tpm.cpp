@@ -22,7 +22,6 @@
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/unique_free_ptr.h>
-#include <zircon/device/tpm.h>
 #include <zircon/types.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -121,18 +120,6 @@ zx_status_t Device::ExecuteCmdLocked(Locality loc, const uint8_t* cmd, size_t le
 
 void Device::DdkRelease() {
     delete this;
-}
-
-zx_status_t Device::DdkIoctl(uint32_t op,
-                             const void* in_buf, size_t in_len,
-                             void* out_buf, size_t out_len, size_t* out_actual) {
-    switch (op) {
-        case IOCTL_TPM_SAVE_STATE: {
-            fbl::AutoLock guard(&lock_);
-            return ShutdownLocked(TPM_SU_STATE);
-        }
-    }
-    return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t Device::DdkSuspend(uint32_t flags) {
