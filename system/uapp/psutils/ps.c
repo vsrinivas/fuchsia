@@ -7,6 +7,7 @@
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/object.h>
 #include <pretty/sizes.h>
+#include <task-utils/get.h>
 #include <task-utils/walker.h>
 
 #include <assert.h>
@@ -276,6 +277,8 @@ static void print_help(FILE* f) {
     fprintf(f, " -T             Include threads in the output\n");
     fprintf(f, " --units=?      Fix all sizes to the named unit\n");
     fprintf(f, "                where ? is one of [BkMGTPE]\n");
+    fprintf(f, " --job=?        Show the the given job and subjobs\n");
+    fprintf(f, "                where ? is the job id.\n");
 }
 
 int main(int argc, char** argv) {
@@ -284,6 +287,8 @@ int main(int argc, char** argv) {
         .only_show_jobs = false,
         .format_unit = 0
     };
+    zx_status_t status;
+    zx_handle_t target_job = ZX_HANDLE_INVALID;
 
     for (int i = 1; i < argc; ++i) {
         const char* arg = argv[i];
@@ -297,6 +302,21 @@ int main(int argc, char** argv) {
             options.also_show_threads = true;
         } else if (!strncmp(arg, "--units=", sizeof("--units=") - 1)) {
             options.format_unit = arg[sizeof("--units=") - 1];
+        } else if (!strncmp(arg, "--job=", sizeof("--job=") - 1)) {
+            int jobid = atoi(arg + sizeof("--job=") - 1);
+            zx_obj_type_t type;
+            status = get_task_by_koid(jobid, &type, &target_job);
+            if (status != ZX_OK) {
+                fprintf(stderr, "ERROR: get_task_by_koid failed: %s (%d)\n",
+                        zx_status_get_string(status), status);
+                return 1;
+            }
+            if (type != ZX_OBJ_TYPE_JOB) {
+                fprintf(stderr, "ERROR: object with koid %d is not a job\n",
+                        jobid);
+                return 1;
+
+            }
         } else {
             fprintf(stderr, "Unknown option: %s\n", arg);
             print_help(stderr);
@@ -305,10 +325,17 @@ int main(int argc, char** argv) {
     }
 
     int ret = 0;
-    zx_status_t status =
-        walk_root_job_tree(job_callback, process_callback, thread_callback, &options);
+    // If we have a target job, only walk the target subtree. Otherwise walk from root.
+    if (target_job != ZX_HANDLE_INVALID) {
+        status =
+            walk_job_tree(target_job, job_callback, process_callback, thread_callback, &options);
+        zx_handle_close(target_job);
+    } else {
+        status =
+            walk_root_job_tree(job_callback, process_callback, thread_callback, &options);
+    }
     if (status != ZX_OK) {
-        fprintf(stderr, "WARNING: walk_root_job_tree failed: %s (%d)\n",
+        fprintf(stderr, "WARNING: failed to walk the job tree: %s (%d)\n",
                 zx_status_get_string(status), status);
         ret = 1;
     }
