@@ -33,6 +33,11 @@ class Buffer {
     virtual uint8_t* ctrl() = 0;
     virtual size_t capacity() const = 0;
     virtual void clear(size_t len) = 0;
+    enum Size {
+        kSmall,
+        kLarge,
+        kHuge,
+    };
 };
 
 // Huge buffers are used for sending lots of data between drivers and the wlanstack.
@@ -56,33 +61,59 @@ template <typename, typename, typename, bool> class BufferDebugger;
 template <typename SmallSlabAllocator, typename LargeSlabAllocator, typename HugeSlabAllocator>
 class BufferDebugger<SmallSlabAllocator, LargeSlabAllocator, HugeSlabAllocator, true> {
    public:
-    static void Fail(const std::string& buffer_name) {
+    static void Fail(Buffer::Size size) {
         // TODO(eyw): Use a timer to throttle logging
-        if (!is_logging_) { return; }
-        debugbuf("%s buffer exhausted.\n", buffer_name.c_str());
+        switch (size) {
+        case Buffer::Size::kSmall:
+            if (is_exhausted_small_) { return; }
+            is_exhausted_small_ = true;
+            debugbuf("Small buffer exhausted.\n");
+            break;
+        case Buffer::Size::kLarge:
+            if (is_exhausted_large_) { return; }
+            is_exhausted_large_ = true;
+            debugbuf("Large buffer exhausted.\n");
+            break;
+        case Buffer::Size::kHuge:
+            if (is_exhausted_huge_) { return; }
+            is_exhausted_huge_ = true;
+            debugbuf("Huge buffer exhausted.\n");
+            break;
+        }
         PrintCounters();
-        is_logging_ = false;
     }
     static void PrintCounters() {
         // 4 numbers for each allocator:
         // current buffers in use / historical maximum buffers in use /
         // current allocator capacity / maximum allocator capacity
-        debugbuf("usage: Small: %zu/%zu/%zu/%zu, Large: %zu/%zu/%zu/%zu, Huge: %zu/%zu/%zu/%zu\n",
-                 SmallSlabAllocator::obj_count(), SmallSlabAllocator::max_obj_count(),
-                 SmallSlabAllocator::slab_count() * kSmallBuffers, kSmallSlabs * kSmallBuffers,
-                 LargeSlabAllocator::obj_count(), LargeSlabAllocator::max_obj_count(),
-                 LargeSlabAllocator::slab_count() * kLargeBuffers, kLargeSlabs * kLargeBuffers,
-                 HugeSlabAllocator::obj_count(), HugeSlabAllocator::max_obj_count(),
-                 HugeSlabAllocator::slab_count() * kHugeBuffers, kHugeSlabs * kHugeBuffers);
+        debugbuf(
+            "usage(in_use/in_use_max/current_capacity/max_capacity)\n Small: %zu/%zu/%zu/%zu, "
+            "Large: %zu/%zu/%zu/%zu, Huge: %zu/%zu/%zu/%zu\n",
+            SmallSlabAllocator::obj_count(), SmallSlabAllocator::max_obj_count(),
+            SmallSlabAllocator::slab_count() * kSmallBuffers, kSmallSlabs * kSmallBuffers,
+            LargeSlabAllocator::obj_count(), LargeSlabAllocator::max_obj_count(),
+            LargeSlabAllocator::slab_count() * kLargeBuffers, kLargeSlabs * kLargeBuffers,
+            HugeSlabAllocator::obj_count(), HugeSlabAllocator::max_obj_count(),
+            HugeSlabAllocator::slab_count() * kHugeBuffers, kHugeSlabs * kHugeBuffers);
     }
 
    private:
-    static bool is_logging_;
+    static bool is_exhausted_small_;
+    static bool is_exhausted_large_;
+    static bool is_exhausted_huge_;
 };
 
 template <typename SmallSlabAllocator, typename LargeSlabAllocator, typename HugeSlabAllocator>
-bool BufferDebugger<SmallSlabAllocator, LargeSlabAllocator, HugeSlabAllocator, true>::is_logging_ =
-    true;
+bool BufferDebugger<SmallSlabAllocator, LargeSlabAllocator, HugeSlabAllocator,
+                    true>::is_exhausted_small_ = false;
+
+template <typename SmallSlabAllocator, typename LargeSlabAllocator, typename HugeSlabAllocator>
+bool BufferDebugger<SmallSlabAllocator, LargeSlabAllocator, HugeSlabAllocator,
+                    true>::is_exhausted_large_ = false;
+
+template <typename SmallSlabAllocator, typename LargeSlabAllocator, typename HugeSlabAllocator>
+bool BufferDebugger<SmallSlabAllocator, LargeSlabAllocator, HugeSlabAllocator,
+                    true>::is_exhausted_huge_ = false;
 
 template <typename SmallSlabAllocator, typename LargeSlabAllocator, typename HugeSlabAllocator>
 class BufferDebugger<SmallSlabAllocator, LargeSlabAllocator, HugeSlabAllocator, false> {

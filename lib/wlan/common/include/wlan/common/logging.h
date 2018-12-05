@@ -43,7 +43,7 @@ LOG_CATEGORY(kLogMinstrel, 28);
 #undef LOG_CATEGORY
 
 // Set this to tune log output
-constexpr uint64_t kLogLevel = kLogInfos;
+constexpr uint64_t kLogLevel = kLogInfos | kLogBuffer;
 constexpr bool kFinspectEnabled = kLogLevel & kLogFinspect;
 constexpr bool kBufferDebugEnabled = kLogLevel & kLogBuffer;
 
