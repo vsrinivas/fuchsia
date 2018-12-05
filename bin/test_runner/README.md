@@ -14,12 +14,12 @@ The JSON file specified by `--test_file` parameter looks similar to this:
 {
   "tests":[
     {
-      "name":"dummy_user_shell",
-      "exec":"basemgr --ledger_repository_for_testing --base_shell=dummy_base_shell --user_shell=dummy_user_shell"
+      "name":"dummy_session_shell",
+      "exec":"basemgr --ledger_repository_for_testing --base_shell=dummy_base_shell --session_shell=dummy_session_shell"
     },
     {
       "name":"parent_child",
-      "exec":"basemgr --ledger_repository_for_testing --base_shell=dummy_base_shell --user_shell=dev_user_shell --user_shell_args=--root_module=/system/test/modular_tests/parent_module"
+      "exec":"basemgr --ledger_repository_for_testing --base_shell=dummy_base_shell --session_shell=dev_session_shell --session_shell_args=--root_module=/system/test/modular_tests/parent_module"
     }
 }
 ```
