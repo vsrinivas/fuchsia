@@ -65,21 +65,10 @@ int fdio_bind_to_fd(fdio_t* io, int fd, int starting_fd) {
     mtx_lock(&fdio_lock);
     LOG(1, "fdio: bind_to_fd(%p, %d, %d)\n", io, fd, starting_fd);
     if (fd < 0) {
-        // If we are not given an |fd|, the |starting_fd| must be non-negative.
-        if (starting_fd < 0) {
-            errno = EINVAL;
-            mtx_unlock(&fdio_lock);
-            return -1;
+        fd = fdio_find_free_fd(starting_fd);
+        if (fd >= starting_fd) {
+            goto free_fd_found;
         }
-
-        // A negative fd implies that any free fd value can be used
-        //TODO: bitmap, ffs, etc
-        for (fd = starting_fd; fd < FDIO_MAX_FD; fd++) {
-            if (fdio_fdtab[fd] == NULL) {
-                goto free_fd_found;
-            }
-        }
-        errno = EMFILE;
         mtx_unlock(&fdio_lock);
         return -1;
     } else if (fd >= FDIO_MAX_FD) {
@@ -101,9 +90,7 @@ int fdio_bind_to_fd(fdio_t* io, int fd, int starting_fd) {
     }
 
 free_fd_found:
-    LOG(1, "fdio: bind_to_fd() OK fd=%d\n", fd);
-    io->dupcount++;
-    fdio_fdtab[fd] = io;
+    fdio_allocate_fd(fd, io);
     mtx_unlock(&fdio_lock);
 
     if (io_to_close) {

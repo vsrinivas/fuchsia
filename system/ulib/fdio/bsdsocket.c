@@ -188,19 +188,35 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
         return ERROR(ZX_ERR_BAD_STATE);
     }
 
+    // An |fd| must be reserved before we accept the socket, otherwise the
+    // application may be pulling streams from the listen socket that it can not
+    // service, which is unusual behavior that breaks load balancing type cases
+    // and causes excessive resource pressure under high load. Instead, we take
+    // a lock on the fd table, find a free fd, and hold it until we get the
+    // stream or discover an error.
+    mtx_lock(&fdio_lock);
+    int fd2 = fdio_find_free_fd(0);
+    if (fd2 < 0) {
+        mtx_unlock(&fdio_lock);
+        return -1;
+    }
+
     size_t actual = 0u;
     zxs_socket_t accepted;
     memset(&accepted, 0, sizeof(accepted));
     zx_status_t status = zxs_accept(socket, addr, len ? *len : 0u, &actual, &accepted);
     fdio_release(io);
     if (status == ZX_ERR_SHOULD_WAIT) {
+        mtx_unlock(&fdio_lock);
         return ERRNO(EWOULDBLOCK);
     } else if (status != ZX_OK) {
+        mtx_unlock(&fdio_lock);
         return ERROR(status);
     }
 
     fdio_t* io2 = NULL;
     if ((io2 = fdio_socket_create_stream(accepted.socket, IOFLAG_SOCKET_CONNECTED)) == NULL) {
+        mtx_unlock(&fdio_lock);
         return ERROR(ZX_ERR_NO_RESOURCES);
     }
 
@@ -212,12 +228,8 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
         *len = actual;
     }
 
-    int fd2;
-    if ((fd2 = fdio_bind_to_fd(io2, -1, 0)) < 0) {
-        io2->ops->close(io2);
-        fdio_release(io2);
-        return ERRNO(EMFILE);
-    }
+    fdio_allocate_fd(fd2, io2);
+    mtx_unlock(&fdio_lock);
     return fd2;
 }
 
