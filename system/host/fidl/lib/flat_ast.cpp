@@ -511,6 +511,11 @@ Libraries::Libraries() {
         "Simple",
     },
     SimpleLayoutConstraint));
+    AddAttributeSchema("Selector", AttributeSchema({
+        AttributeSchema::Placement::kMethod,
+    }, {
+        /* any value */
+    }));
     AddAttributeSchema("Transport", AttributeSchema({
         AttributeSchema::Placement::kInterfaceDecl,
     }, {
