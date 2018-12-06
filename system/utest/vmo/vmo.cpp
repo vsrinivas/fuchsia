@@ -644,7 +644,7 @@ bool vmo_rights_test() {
     if (!rights_test_map_helper(vmo, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_PERM_EXECUTE, true, 0, "map_readwriteexec")) return false;
     if (!rights_test_map_helper(vmo, len, ZX_VM_PERM_READ | ZX_VM_PERM_EXECUTE, true, 0, "map_readexec")) return false;
 
-    // try most of the permuations of mapping a vmo with various rights dropped
+    // try most of the permutations of mapping a vmo with various rights dropped
     vmo2 = ZX_HANDLE_INVALID;
     zx_handle_duplicate(vmo, ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_EXECUTE, &vmo2);
     if (!rights_test_map_helper(vmo2, len, 0, false, ZX_ERR_ACCESS_DENIED, "map_noperms")) return false;
@@ -1086,7 +1086,7 @@ bool vmo_clone_test_3() {
     END_TEST;
 }
 
-// verify that the parent is visible through decommited pages
+// verify that the parent is visible through decommitted pages
 bool vmo_clone_decommit_test() {
     BEGIN_TEST;
 
@@ -1135,7 +1135,7 @@ bool vmo_clone_decommit_test() {
     EXPECT_EQ(99, cp[0], "read back from clone");
     EXPECT_EQ(99, p[0], "read back from original");
 
-    // make sure the decommited page still has COW semantics
+    // make sure the decommitted page still has COW semantics
     cp[0] = 100;
     EXPECT_EQ(100, cp[0], "read back from clone");
     EXPECT_EQ(99, p[0], "read back from original");
