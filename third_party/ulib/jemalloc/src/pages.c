@@ -95,7 +95,15 @@ static void* fuchsia_pages_map(void* start, size_t len) {
 
 static zx_status_t fuchsia_pages_free(void* addr, size_t size) {
 	uintptr_t ptr = (uintptr_t)addr;
-	return _zx_vmar_unmap(pages_vmar, ptr, size);
+	uintptr_t offset = ptr - pages_base;
+
+	zx_status_t status = _zx_vmar_unmap(pages_vmar, ptr, size);
+	if (status != ZX_OK)
+		return status;
+	/*
+	 * Decommit after unmapping to avoid modifying the page mapping twice.
+	 */
+	return _zx_vmo_op_range(pages_vmo, ZX_VMO_OP_DECOMMIT, offset, size, NULL, 0);
 }
 
 static void* fuchsia_pages_trim(void* ret, void* addr, size_t size,
@@ -291,6 +299,10 @@ pages_purge_forced(void *addr, size_t size)
 
 #if defined(JEMALLOC_PURGE_MADVISE_DONTNEED)
 	return (madvise(addr, size, MADV_DONTNEED) != 0);
+#elif __Fuchsia__
+	uintptr_t offset = (uintptr_t)addr - pages_base;
+
+	return _zx_vmo_op_range(pages_vmo, ZX_VMO_OP_DECOMMIT, offset, size, NULL, 0) != ZX_OK;
 #else
 	not_reached();
 #endif
