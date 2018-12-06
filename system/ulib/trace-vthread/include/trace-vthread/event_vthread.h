@@ -34,13 +34,15 @@
 // null-terminated static string constants.
 // |vthread_id| is the correlation id of the virtual thread.
 //              Must be unique for a given process.
+// |timestamp| is the tick that the duration event begins.
 // |args| is the list of argument key/value pairs.
 //
 // Usage:
 //
 //     trace_vthread_id_t vthread_id = 444;
+//     zx_ticks_t curr_ticks = zx_ticks_get();
 //     TRACE_VTHREAD_DURATION_BEGIN("category", "name", "vthread", vthread_id,
-//                                  "x", TA_INT32(42));
+//                                  curr_ticks, "x", TA_INT32(42));
 //
 #define TRACE_VTHREAD_DURATION_BEGIN(category_literal, name_literal,       \
                                          vthread_literal, vthread_id,      \
@@ -65,13 +67,15 @@
 // null-terminated static string constants.
 // |vthread_id| is the correlation id of the virtual thread.
 //              Must be unique for a given process.
+// |timestamp| is the tick that the duration event ends.
 // |args| is the list of argument key/value pairs.
 //
 // Usage:
 //
 //     trace_vthread_id_t vthread_id = 444;
+//     zx_ticks_t curr_ticks = zx_ticks_get();
 //     TRACE_VTHREAD_DURATION_END("category", "name", "vthread", vthread_id,
-//                                "x", TA_INT32(42));
+//                                curr_ticks, "x", TA_INT32(42));
 //
 #define TRACE_VTHREAD_DURATION_END(category_literal, name_literal,         \
                                        vthread_literal, vthread_id,        \
@@ -106,14 +110,16 @@
 //              Must be unique for a given process.
 // |flow_id| is the correlation id of the flow.
 //           Must be unique for a given category and name combination.
+// |timestamp| is the tick that the flow begins.
 // |args| is the list of argument key/value pairs.
 //
 // Usage:
 //
 //     trace_vthread_id_t vthread_id = 444;
 //     trace_flow_id_t flow_id = 555;
+//     zx_ticks_t curr_ticks = zx_ticks_get();
 //     TRACE_VTHREAD_FLOW_BEGIN("category", "name", "vthread", vthread_id,
-//                              flow_id, "x", TA_INT32(42));
+//                              flow_id, curr_ticks, "x", TA_INT32(42));
 //
 #define TRACE_VTHREAD_FLOW_BEGIN(category_literal, name_literal,           \
                                      vthread_literal, vthread_id, flow_id, \
@@ -146,14 +152,16 @@
 //              Must be unique for a given process.
 // |flow_id| is the correlation id of the flow.
 //           Must be unique for a given category and name combination.
+// |timestamp| is the tick that the flow steps.
 // |args| is the list of argument key/value pairs.
 //
 // Usage:
 //
 //     trace_vthread_id_t vthread_id = 444;
 //     trace_flow_id_t flow_id = 555;
+//     zx_ticks_t curr_ticks = zx_ticks_get();
 //     TRACE_VTHREAD_FLOW_STEP("category", "name", "vthread", vthread_id,
-//                              flow_id, "x", TA_INT32(42));
+//                             flow_id, curr_ticks, "x", TA_INT32(42));
 //
 #define TRACE_VTHREAD_FLOW_STEP(category_literal, name_literal,            \
                                     vthread_literal, vthread_id, flow_id,  \
@@ -186,14 +194,16 @@
 //              Must be unique for a given process.
 // |flow_id| is the correlation id of the flow.
 //           Must be unique for a given category and name combination.
+// |timestamp| is the tick that the flow ends.
 // |args| is the list of argument key/value pairs.
 //
 // Usage:
 //
 //     trace_vthread_id_t vthread_id = 444;
 //     trace_flow_id_t flow_id = 555;
+//     zx_ticks_t curr_ticks = zx_ticks_get();
 //     TRACE_VTHREAD_FLOW_END("category", "name", "vthread", vthread_id,
-//                            flow_id, "x", TA_INT32(42));
+//                            flow_id, curr_ticks, "x", TA_INT32(42));
 //
 #define TRACE_VTHREAD_FLOW_END(category_literal, name_literal,             \
                                    vthread_literal, vthread_id, flow_id,   \
