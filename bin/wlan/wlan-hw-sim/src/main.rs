@@ -342,7 +342,7 @@ mod simulation_tests {
     use super::*;
     use {
         fidl_fuchsia_wlan_service as fidl_wlan_service,
-        failure::format_err,
+        failure::{ensure, format_err},
         fuchsia_app as app,
         fuchsia_zircon as zx,
         futures::{channel::mpsc, poll, select},
@@ -805,6 +805,7 @@ mod simulation_tests {
 
     async fn send_and_receive<'a>(client: &'a mut ethernet::Client, buf: &'a Vec<u8>)
         -> Result<(eth_frames::EthHeader, Vec<u8>), failure::Error> {
+        use fidl_zircon_ethernet_ext::EthernetQueueFlags;
         let mut client_stream = client.get_stream();
         client.send(&buf);
         loop {
@@ -814,7 +815,8 @@ mod simulation_tests {
                 ethernet::Event::StatusChanged => {
                     await!(client.get_status()).expect("getting status");
                 },
-                ethernet::Event::Receive(buffer) => {
+                ethernet::Event::Receive(buffer, flags) => {
+                    ensure!(flags.intersects(EthernetQueueFlags::RX_OK), "RX_OK not set");
                     let mut eth_frame = vec![0u8; buffer.len()];
                     buffer.read(&mut eth_frame);
                     let mut cursor = io::Cursor::new(&eth_frame);

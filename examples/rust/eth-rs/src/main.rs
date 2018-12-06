@@ -5,6 +5,7 @@
 #![feature(async_await, await_macro)]
 
 use failure::{Error, ResultExt};
+use fidl_zircon_ethernet_ext::EthernetQueueFlags;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::prelude::*;
@@ -36,10 +37,12 @@ fn main() -> Result<(), Error> {
 
         let mut events = client.get_stream();
         while let Some(evt) = await!(events.try_next())? {
-            if let ethernet::Event::Receive(rx) = evt {
+            if let ethernet::Event::Receive(rx, flags) = evt {
                 let mut buf = [0; 64];
                 let r = rx.read(&mut buf);
-                println!("first {} bytes: {:02x?}", r, &buf[0..r]);
+                let is_tx_echo = flags.intersects(EthernetQueueFlags::TX_ECHO);
+                println!("{} first {} bytes:\n{:02x?}", if is_tx_echo {"TX_ECHO"} else {"RX     "},
+                         r, &buf[0..r]);
             }
         }
         Ok(())

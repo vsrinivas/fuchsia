@@ -95,7 +95,7 @@ impl EventLoop {
                     let status = await!(ctx.dispatcher().eth_client.get_status())?;
                     println!("ethernet status: {:?}", status);
                 }
-                eth::Event::Receive(rx) => {
+                eth::Event::Receive(rx, _flags) => {
                     let len = rx.read(&mut buf);
                     receive_frame(&mut event_loop.ctx.lock().unwrap(), eth_id, &mut buf[..len]);
                 }

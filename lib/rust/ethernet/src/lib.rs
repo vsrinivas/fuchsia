@@ -171,7 +171,8 @@ impl Client {
     }
 
     /// Poll the Ethernet client to receive a packet from the Ethernet device.
-    pub fn poll_complete_rx(&self, cx: &LocalWaker) -> Poll<Result<buffer::RxBuffer, zx::Status>> {
+    pub fn poll_complete_rx(&self, cx: &LocalWaker)
+        -> Poll<Result<(buffer::RxBuffer, EthernetQueueFlags), zx::Status>> {
         self.inner.poll_complete_rx(cx)
     }
 }
@@ -191,7 +192,7 @@ pub enum Event {
     /// The `get_status` method may be used to retrieve the current status.
     StatusChanged,
     /// A RxBuffer was received from the Ethernet device.
-    Receive(buffer::RxBuffer),
+    Receive(buffer::RxBuffer, EthernetQueueFlags),
 }
 
 impl Stream for EventStream {
@@ -229,8 +230,8 @@ impl EventStream {
                 progress = true;
             }
 
-            if let Poll::Ready(buf) = self.inner.poll_complete_rx(lw)? {
-                return Poll::Ready(Ok(Event::Receive(buf)));
+            if let Poll::Ready((buf, flags)) = self.inner.poll_complete_rx(lw)? {
+                return Poll::Ready(Ok(Event::Receive(buf, flags)));
             }
 
             if !progress {
@@ -338,12 +339,13 @@ impl ClientInner {
     }
 
     /// Receive a buffer from the Ethernet device representing a packet from the network.
-    fn poll_complete_rx(&self, lw: &LocalWaker) -> Poll<Result<buffer::RxBuffer, zx::Status>> {
+    fn poll_complete_rx(&self, lw: &LocalWaker)
+        -> Poll<Result<(buffer::RxBuffer, EthernetQueueFlags), zx::Status>> {
         Poll::Ready(match try_ready!(self.rx_fifo.try_read(lw)) {
             Some(entry) => {
                 let mut pool_guard = self.pool.lock().unwrap();
                 let buf = pool_guard.map_rx_buffer(entry.offset as usize, entry.length as usize);
-                Ok(buf)
+                Ok((buf, EthernetQueueFlags::from_bits_truncate(entry.flags)))
             }
             None => Err(zx::Status::PEER_CLOSED),
         })

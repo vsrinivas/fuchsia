@@ -9,6 +9,7 @@ rustc_binary("bin") {
   name = "eth_rs"
   edition = "2018"
   deps = [
+    "//garnet/lib/rust/fidl_zircon_ethernet_ext",
     "//garnet/lib/rust/ethernet",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-zircon",
