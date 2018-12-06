@@ -100,8 +100,7 @@ zx_status_t CrashpadAnalyzerImpl::UploadReport(
   std::string server_report_id;
   if (!http_transport->ExecuteSynchronously(&server_report_id)) {
     database_->SkipReportUpload(
-        report->uuid,
-        crashpad::Metrics::CrashSkippedReason::kPrepareForUploadFailed);
+        report->uuid, crashpad::Metrics::CrashSkippedReason::kUploadFailed);
     FX_LOGS(ERROR) << "error uploading local crash report, ID "
                    << report->uuid.ToString();
     return ZX_ERR_INTERNAL;
