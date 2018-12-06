@@ -1,13 +1,18 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
 import("//build/json/validate_json.gni")
 
-# Given a .cmx file, validates it.
+# Given a .cmx file, validates the module facet of it
 #
 # Parameters
 #   cmx (required)
 #     This is the .cmx file that wants to be validated.
 #
 #   deps (optional)
-template("validate_cmx") {
+template("cmx_module_validate") {
   module_facet_validation = target_name + "_module_facet"
 
   # Validate the |fuchsia.module| facet schema.
@@ -23,17 +28,178 @@ template("validate_cmx") {
     data = invoker.cmx
     schema = "//build/cmx/facets/module_facet_schema.json"
   }
+}
 
-  # Validate the entire cmx schema.
-  validate_json(target_name) {
+# Validates a cmx file
+#
+# The cmx_validate template will ensure that a given cmx file is conformant to
+# the cmx schema, as defined by //build/tools/cmx/schema.json. A stamp file is
+# generated to mark that a given cmx file has passed.
+#
+# Parameters
+#
+#   data (required)
+#     [file] The path to the cmx file that is to be validated
+#
+#   deps (optional)
+#   public_deps (optional)
+#   testonly (optional)
+#   visibility (optional)
+#     Standard GN meaning.
+#
+# Example of usage:
+#
+#   cmx_validate(format) {
+#     data = meta.path
+#   }
+template("cmx_validate") {
+  compiled_action(target_name) {
     forward_variables_from(invoker,
                            [
+                             "deps",
+                             "sources",
+                             "public_deps",
                              "testonly",
                              "visibility",
                            ])
 
-    data = invoker.cmx
-    schema = "//build/cmx/cmx_schema.json"
-    deps = invoker.deps + [":$module_facet_validation"]
+    tool = "//build/tools/cmx:cmx_bin_test_rustc"
+    tool_output_name = "cmx"
+
+    stamp_file = "$target_gen_dir/$target_name.verified"
+
+    inputs = [
+      invoker.data,
+    ]
+
+    outputs = [
+      stamp_file,
+    ]
+
+    args = [
+      "--stamp",
+      rebase_path(stamp_file),
+      "validate",
+      rebase_path(invoker.data),
+    ]
+  }
+  cmx_module_validate("module_" + target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                             "visibility",
+                           ])
+    cmx = invoker.data
+  }
+}
+
+# Merges together cmx files
+#
+# The cmx_merge template will combine the given cmx files into a single cmx
+# file.
+#
+# Parameters
+#
+#   sources (required)
+#     [list of files] A list of cmx files that are to be merged.
+#
+#   deps (optional)
+#   public_deps (optional)
+#   testonly (optional)
+#   visibility (optional)
+#     Standard GN meaning.
+#
+# Example of usage:
+#
+#   cmx_merge(format) {
+#     sources = [
+#       rebase_path(meta.path),
+#       rebase_path(
+#           "//topaz/runtime/dart_runner/meta/aot${product_suffix}_runtime"),
+#     ]
+#   }
+template("cmx_merge") {
+  compiled_action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "sources",
+                             "public_deps",
+                             "testonly",
+                             "visibility",
+                           ])
+
+    tool = "//build/tools/cmx:cmx_bin_test_rustc"
+    tool_output_name = "cmx"
+
+    merged_output = "$target_out_dir/$target_name"
+    outputs = [
+      merged_output,
+    ]
+
+    args = [
+      "merge",
+      "--output",
+      rebase_path(merged_output),
+    ]
+
+    foreach(source, sources) {
+      args += [
+        rebase_path(source, root_build_dir),
+      ]
+    }
+  }
+}
+
+# Formats a cmx file
+#
+# The cmx_format template will minify the given cmx file if is_debug is set to
+# false, and will pretty-print the given cmx file if is_debug is set to true.
+#
+# Parameters
+#
+#   data (required)
+#     [file] The path to the cmx file that is to be formatted
+#
+#   deps (optional)
+#   public_deps (optional)
+#   testonly (optional)
+#   visibility (optional)
+#     Standard GN meaning.
+#
+# Example of usage:
+#
+#   cmx_format(format) {
+#     data = rebase_path(meta.path)
+#   }
+template("cmx_format") {
+  compiled_action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "public_deps",
+                             "testonly",
+                             "visibility",
+                           ])
+
+    tool = "//build/tools/cmx:cmx_bin_test_rustc"
+    tool_output_name = "cmx"
+
+    formatted_output = "$target_out_dir/$target_name"
+    outputs = [
+      formatted_output,
+    ]
+
+    args = [
+      "format",
+      "--output",
+      rebase_path(formatted_output),
+      invoker.data
+    ]
+
+    if (is_debug) {
+        args += [ "--pretty" ]
+    }
   }
 }

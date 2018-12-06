@@ -1,0 +1,5 @@
+{
+    "host_tests": [
+        "//build/tools/cmx:cmx_bin_test_rustc"
+    ]
+}
