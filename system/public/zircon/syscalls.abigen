@@ -738,9 +738,9 @@ syscall fifo_write
 
 # Profiles
 
-#! handle must have resource kind ZX_RSRC_KIND_ROOT.
+#! root_handle must be of type ZX_OBJ_TYPE_JOB and have ZX_RIGHT_MANAGE_PROCESS.
 syscall profile_create
-    (resource: zx_handle_t, profile: zx_profile_info_t[1] IN)
+    (root_job: zx_handle_t, profile: zx_profile_info_t[1] IN)
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 
 # Multi-function

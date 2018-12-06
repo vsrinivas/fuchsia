@@ -11,12 +11,10 @@
 #include <lib/ktrace.h>
 
 #include <object/handle.h>
+#include <object/job_dispatcher.h>
 #include <object/profile_dispatcher.h>
 
-#include <zircon/syscalls/resource.h>
 #include <zircon/types.h>
-
-#include <object/resource.h>
 
 #include <fbl/ref_ptr.h>
 
@@ -27,14 +25,23 @@ KCOUNTER(profile_set,    "kernel.profile.set");
 
 
 // zx_status_t zx_profile_create
-zx_status_t sys_profile_create(zx_handle_t resource,
+zx_status_t sys_profile_create(zx_handle_t root_job,
                                user_in_ptr<const zx_profile_info_t> user_profile_info,
                                user_out_handle* out) {
     // TODO(cpu): check job policy.
 
-    zx_status_t status = validate_resource(resource, ZX_RSRC_KIND_ROOT);
+    auto up = ProcessDispatcher::GetCurrent();
+
+    fbl::RefPtr<JobDispatcher> job;
+    auto status = up->GetDispatcherWithRights(root_job, ZX_RIGHT_MANAGE_PROCESS, &job);
     if (status != ZX_OK)
         return status;
+
+    // Validate that the job is in fact the first usermode job (aka root job).
+    if (GetRootJobDispatcher() != job->parent()) {
+        // TODO(cpu): consider a better error code.
+        return ZX_ERR_ACCESS_DENIED;
+    }
 
     zx_profile_info_t profile_info;
     status = user_profile_info.copy_from_user(&profile_info);

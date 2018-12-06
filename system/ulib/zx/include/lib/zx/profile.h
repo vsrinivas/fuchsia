@@ -6,8 +6,8 @@
 #define LIB_ZX_PROFILE_H_
 
 #include <lib/zx/handle.h>
+#include <lib/zx/job.h>
 #include <lib/zx/object.h>
-#include <lib/zx/resource.h>
 
 namespace zx {
 
@@ -28,7 +28,7 @@ public:
         return *this;
     }
 
-    static zx_status_t create(const resource& resource, const zx_profile_info_t* info, profile* result);
+    static zx_status_t create(const job& job, const zx_profile_info_t* info, profile* result);
 };
 
 using unowned_profile = unowned<profile>;
