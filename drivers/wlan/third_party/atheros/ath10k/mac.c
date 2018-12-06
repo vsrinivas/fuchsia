@@ -2566,31 +2566,14 @@ static void ath10k_peer_assoc_h_qos(struct ath10k* ar,
                                     wlan_assoc_ctx_t* assoc,
                                     struct wmi_peer_assoc_complete_arg* arg) {
     struct ath10k_vif* arvif = &ar->arvif;
+    if (assoc->qos) {
+        arg->peer_flags |= arvif->ar->wmi.peer_flags->qos;
+    }
 
 #if 0  // NEEDS PORTING
-    switch (arvif->vdev_type) {
-    case WMI_VDEV_TYPE_AP:
-        if (sta->wme) {
-            arg->peer_flags |= arvif->ar->wmi.peer_flags->qos;
-        }
-
-        if (sta->wme && sta->uapsd_queues) {
-            arg->peer_flags |= arvif->ar->wmi.peer_flags->apsd;
-            arg->peer_rate_caps |= WMI_RC_UAPSD_FLAG;
-        }
-        break;
-    case WMI_VDEV_TYPE_STA:
-        if (vif->bss_conf.qos) {
-            arg->peer_flags |= arvif->ar->wmi.peer_flags->qos;
-        }
-        break;
-    case WMI_VDEV_TYPE_IBSS:
-        if (sta->wme) {
-            arg->peer_flags |= arvif->ar->wmi.peer_flags->qos;
-        }
-        break;
-    default:
-        break;
+    if (arvif->vdev_type == WMI_VDEV_TYPE_AP && assoc->qos && sta->uapsd_queues) {
+        arg->peer_flags |= arvif->ar->wmi.peer_flags->apsd;
+        arg->peer_rate_caps |= WMI_RC_UAPSD_FLAG;
     }
 #endif  // NEEDS PORTING
 

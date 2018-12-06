@@ -249,6 +249,7 @@ typedef struct wlan_assoc_ctx {
     uint16_t listen_interval;
     uint8_t phy;  // a single enumerator from enum PHY.
     wlan_channel_t chan;
+    bool qos;
 
     // Coincatenation of SupportedRates and ExtendedSupportedRates
     // IEEE Std 802.11-2016, 9.4.2.3 & 9.4.2.13
