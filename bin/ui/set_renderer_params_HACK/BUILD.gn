@@ -13,6 +13,7 @@ executable("set_renderer_params") {
     "//garnet/public/lib/fsl",
     "//garnet/public/fidl/fuchsia.ui.gfx",
     "//garnet/public/fidl/fuchsia.ui.policy",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

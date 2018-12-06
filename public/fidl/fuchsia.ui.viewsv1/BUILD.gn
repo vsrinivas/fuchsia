@@ -23,7 +23,6 @@ fidl("fuchsia.ui.viewsv1") {
     "//garnet/public/fidl/fuchsia.math",
     "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/fidl/fuchsia.ui.gfx",
-    "//garnet/public/fidl/fuchsia.ui.input",
     "//garnet/public/fidl/fuchsia.ui.scenic",
     "//garnet/public/fidl/fuchsia.ui.viewsv1token",
     "//zircon/public/fidl/fuchsia-mem",
