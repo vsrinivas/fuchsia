@@ -9,8 +9,6 @@
 
 #include "../shared/log.h"
 
-using namespace devmgr;
-
 zx_status_t devhost_start_trace_provider() {
     async_loop_t* loop;
     zx_status_t status = async_loop_create(&kAsyncLoopConfigNoAttachToThread, &loop);

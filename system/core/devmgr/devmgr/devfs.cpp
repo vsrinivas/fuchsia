@@ -27,9 +27,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-// This is temporary while we rearrange things into anonymous
-// namespaces or classes.
-using namespace devmgr;
+namespace devmgr {
 
 namespace {
 
@@ -55,8 +53,6 @@ const char* proto_name(uint32_t id, char buf[PNMAX]) {
 zx::channel g_devfs_root;
 
 } // namespace
-
-namespace devmgr {
 
 struct Watcher : fbl::DoublyLinkedListable<fbl::unique_ptr<Watcher>> {
     Watcher(Devnode* dn, zx::channel ch, uint32_t mask);
@@ -149,8 +145,6 @@ struct Devnode {
     // for class device links
     uint32_t seqcount = 0;
 };
-
-} // namespace devmgr
 
 namespace {
 
@@ -546,8 +540,6 @@ void devfs_remove(Devnode* dn) {
 }
 
 } // namespace
-
-namespace devmgr {
 
 Devnode::Devnode(fbl::String name)
     : name(std::move(name)) {

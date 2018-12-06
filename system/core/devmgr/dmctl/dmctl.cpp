@@ -15,8 +15,6 @@
 
 #include "../devhost/device-internal.h"
 
-using namespace devmgr;
-
 namespace {
 
 class Dmctl;

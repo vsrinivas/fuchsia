@@ -44,10 +44,6 @@
 #include "devmgr.h"
 #include "../shared/fdio.h"
 
-// This is temporary while we rearrange things into anonymous
-// namespaces or classes.
-using namespace devmgr;
-
 namespace {
 
 struct {
@@ -113,9 +109,9 @@ zx_status_t wait_for_file(const char* path, zx::time deadline) {
 void do_autorun(const char* name, const char* env) {
     const char* cmd = getenv(env);
     if (cmd != nullptr) {
-        devmgr_launch_cmdline(env, g_handles.svc_job, name,
-                              &devmgr_launch_load, nullptr, cmd,
-                              nullptr, nullptr, 0, nullptr, FS_ALL);
+        devmgr::devmgr_launch_cmdline(env, g_handles.svc_job, name,
+                                      &devmgr::devmgr_launch_load, nullptr, cmd,
+                                      nullptr, nullptr, 0, nullptr, FS_ALL);
     }
 }
 
@@ -132,7 +128,7 @@ int fuchsia_starter(void* arg) {
                                                              nullptr);
         if (status == ZX_ERR_TIMED_OUT) {
             if (g_handles.appmgr_server.is_valid()) {
-                if (require_system) {
+                if (devmgr::require_system) {
                     printf("devmgr: appmgr not launched in %zus, closing appmgr handle\n",
                            appmgr_timeout);
                 }
@@ -151,7 +147,7 @@ int fuchsia_starter(void* arg) {
             // we're starting the appmgr because /system is present
             // so we also signal the device coordinator that those
             // drivers are now loadable
-            load_system_drivers();
+            devmgr::load_system_drivers();
             drivers_loaded = true;
         }
 
@@ -167,11 +163,11 @@ int fuchsia_starter(void* arg) {
                 appmgr_ids[appmgr_hnd_count] = PA_DIRECTORY_REQUEST;
                 appmgr_hnd_count++;
             }
-            devmgr_launch(g_handles.fuchsia_job, "appmgr",
-                          &devmgr_launch_load, nullptr,
-                          fbl::count_of(argv_appmgr), argv_appmgr, nullptr, -1,
-                          appmgr_hnds, appmgr_ids, appmgr_hnd_count,
-                          nullptr, FS_FOR_APPMGR);
+            devmgr::devmgr_launch(g_handles.fuchsia_job, "appmgr",
+                                  &devmgr::devmgr_launch_load, nullptr,
+                                  fbl::count_of(argv_appmgr), argv_appmgr, nullptr, -1,
+                                  appmgr_hnds, appmgr_ids, appmgr_hnd_count,
+                                  nullptr, FS_FOR_APPMGR);
             appmgr_started = true;
         }
         if (!autorun_started) {
@@ -217,10 +213,10 @@ int console_starter(void* arg) {
     }
 
     const char* argv_sh[] = {"/boot/bin/sh"};
-    devmgr_launch(g_handles.svc_job, "sh:console",
-                  &devmgr_launch_load, nullptr,
-                  fbl::count_of(argv_sh), argv_sh, envp, fd.release(), nullptr, nullptr, 0,
-                  nullptr, FS_ALL);
+    devmgr::devmgr_launch(g_handles.svc_job, "sh:console",
+                          &devmgr::devmgr_launch_load, nullptr,
+                          fbl::count_of(argv_sh), argv_sh, envp, fd.release(), nullptr, nullptr, 0,
+                          nullptr, FS_ALL);
     return 0;
 }
 
@@ -240,7 +236,7 @@ int pwrbtn_monitor_starter(void* arg) {
     launchpad_t* lp;
     launchpad_create(job_copy.get(), name, &lp);
 
-    status = devmgr_launch_load(nullptr, lp, argv[0]);
+    status = devmgr::devmgr_launch_load(nullptr, lp, argv[0]);
     if (status != ZX_OK) {
         launchpad_abort(lp, status, "cannot load file");
     }
@@ -249,7 +245,7 @@ int pwrbtn_monitor_starter(void* arg) {
     // create a namespace containing /dev/class/input and /dev/misc
     const char* nametable[2] = {};
     uint32_t count = 0;
-    zx::channel fs_handle = fs_clone("dev/class/input");
+    zx::channel fs_handle = devmgr::fs_clone("dev/class/input");
     if (fs_handle.is_valid()) {
         nametable[count] = "/input";
         launchpad_add_handle(lp, fs_handle.release(), PA_HND(PA_NS_DIR, count++));
@@ -259,7 +255,7 @@ int pwrbtn_monitor_starter(void* arg) {
 
     // Ideally we'd only expose /dev/misc/dmctl, but we do not support exposing
     // single files
-    fs_handle = fs_clone("dev/misc");
+    fs_handle = devmgr::fs_clone("dev/misc");
     if (fs_handle.is_valid()) {
         nametable[count] = "/misc";
         launchpad_add_handle(lp, fs_handle.release(), PA_HND(PA_NS_DIR, count++));
@@ -287,7 +283,7 @@ int pwrbtn_monitor_starter(void* arg) {
 
 void start_console_shell() {
     // start a shell on the kernel console if it isn't already running a shell
-    if (!getenv_bool("kernel.shell", false)) {
+    if (!devmgr::getenv_bool("kernel.shell", false)) {
         thrd_t t;
         if ((thrd_create_with_name(&t, console_starter, nullptr, "console-starter")) == thrd_success) {
             thrd_detach(t);
@@ -617,7 +613,7 @@ void fetch_root_resource() {
 
 namespace {
 
-void ParseArgs(int argc, char** argv, DevmgrArgs* out) {
+void ParseArgs(int argc, char** argv, devmgr::DevmgrArgs* out) {
     enum {
         kDriverSearchPath,
         kLoadDriver,
@@ -645,7 +641,7 @@ void ParseArgs(int argc, char** argv, DevmgrArgs* out) {
     };
 
     // Reset the args state
-    *out = DevmgrArgs();
+    *out = devmgr::DevmgrArgs();
 
     int opt;
     while ((opt = getopt_long(argc, argv, "", options, nullptr)) != -1) {
@@ -669,24 +665,22 @@ void ParseArgs(int argc, char** argv, DevmgrArgs* out) {
 } // namespace
 
 int main(int argc, char** argv) {
-    using namespace devmgr;
-
     printf("devmgr: main()\n");
 
-    DevmgrArgs args;
+    devmgr::DevmgrArgs args;
     ParseArgs(argc, argv, &args);
 
-    fetch_root_resource();
+    devmgr::fetch_root_resource();
 
     g_handles.root_job = zx::job::default_job();
 
-    devfs_init(*g_handles.root_job);
+    devmgr::devfs_init(*g_handles.root_job);
 
     // Check if whatever launched devmgr gave a channel to be connected to /dev.
     // This is for use in tests to let the test environment see devfs.
     zx::channel devfs_client(zx_take_startup_handle(DEVMGR_LAUNCHER_DEVFS_ROOT_HND));
     if (devfs_client.is_valid()) {
-        fdio_service_clone_to(devfs_root_borrow()->get(), devfs_client.release());
+        fdio_service_clone_to(devmgr::devfs_root_borrow()->get(), devfs_client.release());
     }
 
     g_handles.root_job->set_property(ZX_PROP_NAME, "root", 4);
@@ -708,16 +702,16 @@ int main(int argc, char** argv) {
         printf("cmdline: %s\n", *e++);
     }
 
-    require_system = getenv_bool("devmgr.require-system", false);
+    devmgr::require_system = devmgr::getenv_bool("devmgr.require-system", false);
 
-    devmgr_svc_init();
-    devmgr_vfs_init();
+    devmgr::devmgr_svc_init();
+    devmgr::devmgr_vfs_init();
 
     // if we're not a full fuchsia build, no point to set up appmgr services
     // which will just cause things attempting to access it to block until
     // we give up on the appmgr 10s later
-    if (!require_system) {
-        devmgr_disable_appmgr_services();
+    if (!devmgr::require_system) {
+        devmgr::devmgr_disable_appmgr_services();
     }
 
     thrd_t t;
@@ -728,7 +722,7 @@ int main(int argc, char** argv) {
 
     start_console_shell();
 
-    if ((thrd_create_with_name(&t, service_starter, nullptr, "service-starter")) ==
+    if ((thrd_create_with_name(&t, devmgr::service_starter, nullptr, "service-starter")) ==
         thrd_success) {
         thrd_detach(t);
     }
