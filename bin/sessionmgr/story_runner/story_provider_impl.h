@@ -210,7 +210,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
                              fuchsia::modular::internal::StoryData story_data);
 
   void NotifyStoryWatchers(
-      const fuchsia::modular::internal::StoryData* const story_data,
+      const fuchsia::modular::internal::StoryData* story_data,
       fuchsia::modular::StoryState story_state,
       fuchsia::modular::StoryVisibilityState story_visibility_state);
 
@@ -247,14 +247,13 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   // Only user logout or delete story calls ever remove story controllers from
   // this collection, but controllers for stopped stories stay in it.
   //
-  // Also keeps a cached version of the fuchsia::modular::StoryInfo for every
-  // story, to send it to newly registered story provider watchers, and to story
-  // provider watchers when only the story state changes.
+  // Also keeps a cached version of the StoryData for every story so it does
+  // not have to be loaded from disk when querying about this story.
   struct StoryRuntimeContainer {
     std::unique_ptr<StoryControllerImpl> controller_impl;
     std::unique_ptr<StoryStorage> storage;
     std::unique_ptr<StoryEntityProvider> entity_provider;
-    fuchsia::modular::StoryInfoPtr current_info;
+    fuchsia::modular::internal::StoryDataPtr current_data;
   };
   std::map<std::string, StoryRuntimeContainer> story_runtime_containers_;
 

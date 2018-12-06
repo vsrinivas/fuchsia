@@ -132,33 +132,34 @@ class StoryProviderImpl::LoadStoryRuntimeCall
             return;
             // Operation finishes since |flow| goes out of scope.
           }
-          story_info_ = CloneOptional(story_data->story_info);
-          Cont(flow);
+          Cont(std::move(story_data), flow);
         });
   }
 
-  void Cont(FlowToken flow) {
+  void Cont(fuchsia::modular::internal::StoryDataPtr story_data,
+            FlowToken flow) {
     session_storage_->GetStoryStorage(story_id_)->WeakThen(
         GetWeakPtr(),
-        [this, flow](std::unique_ptr<StoryStorage> story_storage) {
-          struct StoryRuntimeContainer container;
-          container.storage = std::move(story_storage);
-          container.controller_impl = std::make_unique<StoryControllerImpl>(
-              story_id_, session_storage_, container.storage.get(),
-              story_provider_impl_);
-          container.current_info = std::move(story_info_);
-          container.entity_provider =
-              std::make_unique<StoryEntityProvider>(container.storage.get());
-          auto it = story_provider_impl_->story_runtime_containers_.emplace(
-              story_id_, std::move(container));
-          story_controller_container_ = &it.first->second;
-        });
+        fxl::MakeCopyable(
+            [this, story_data = std::move(story_data),
+             flow](std::unique_ptr<StoryStorage> story_storage) mutable {
+              struct StoryRuntimeContainer container;
+              container.storage = std::move(story_storage);
+              container.controller_impl = std::make_unique<StoryControllerImpl>(
+                  story_id_, session_storage_, container.storage.get(),
+                  story_provider_impl_);
+              container.current_data = std::move(story_data);
+              container.entity_provider = std::make_unique<StoryEntityProvider>(
+                  container.storage.get());
+              auto it = story_provider_impl_->story_runtime_containers_.emplace(
+                  story_id_, std::move(container));
+              story_controller_container_ = &it.first->second;
+            }));
   }
 
   StoryProviderImpl* const story_provider_impl_;  // not owned
   SessionStorage* const session_storage_;         // not owned
   const fidl::StringPtr story_id_;
-  fuchsia::modular::StoryInfoPtr story_info_;
 
   StoryRuntimeContainer* story_controller_container_ = nullptr;
 
@@ -348,7 +349,7 @@ void StoryProviderImpl::Watch(
   auto watcher_ptr = watcher.Bind();
   for (const auto& item : story_runtime_containers_) {
     const auto& container = item.second;
-    watcher_ptr->OnChange(CloneStruct(*container.current_info),
+    watcher_ptr->OnChange(CloneStruct(container.current_data->story_info),
                           container.controller_impl->GetStoryState(),
                           container.controller_impl->GetStoryVisibilityState());
   }
@@ -450,27 +451,15 @@ void StoryProviderImpl::RequestStoryFocus(fidl::StringPtr story_id) {
 void StoryProviderImpl::NotifyStoryStateChange(
     fidl::StringPtr story_id, const fuchsia::modular::StoryState story_state,
     const fuchsia::modular::StoryVisibilityState story_visibility_state) {
-  auto on_run =
-      Future<>::Create("StoryProviderImpl.NotifyStoryStateChange.on_run");
-  auto done = on_run
-                  ->AsyncMap([this, story_id] {
-                    return session_storage_->GetStoryData(story_id);
-                  })
-                  ->Then([this, story_id, story_state, story_visibility_state](
-                             fuchsia::modular::internal::StoryDataPtr data) {
-                    auto it = story_runtime_containers_.find(story_id);
-                    if (it == story_runtime_containers_.end()) {
-                      // If this call arrives while DeleteStory() is in
-                      // progress, the story controller might already be gone
-                      // from here.
-                      return;
-                    }
-                    NotifyStoryWatchers(data.get(), story_state,
-                                        story_visibility_state);
-                  });
-  std::function<void()> callback = [] {};
-  operation_queue_.Add(WrapFutureAsOperation(
-      "StoryProviderImpl::NotifyStoryStateChange", on_run, done, callback));
+  auto it = story_runtime_containers_.find(story_id);
+  if (it == story_runtime_containers_.end()) {
+    // If this call arrives while DeleteStory() is in
+    // progress, the story controller might already be gone
+    // from here.
+    return;
+  }
+  NotifyStoryWatchers(it->second.current_data.get(), story_state,
+                      story_visibility_state);
 }
 
 void StoryProviderImpl::NotifyStoryActivityChange(
@@ -569,12 +558,10 @@ void StoryProviderImpl::RunningStories(RunningStoriesCallback callback) {
 void StoryProviderImpl::OnStoryStorageUpdated(
     fidl::StringPtr story_id,
     fuchsia::modular::internal::StoryData story_data) {
-  // HACK(jimbe) We don't have the page and it's expensive to get it, so
-  // just mark it as STOPPED. We know it's not running or we'd have a
-  // fuchsia::modular::StoryController.
+  // If we have a StoryRuntimeContainer for this story id, update our cached
+  // StoryData and get runtime state available from it.
   //
-  // If we have a StoryControllerImpl for this story id, update our cached
-  // fuchsia::modular::StoryInfo.
+  // Otherwise, use defaults for an unloaded story.
   fuchsia::modular::StoryState state = fuchsia::modular::StoryState::STOPPED;
   fuchsia::modular::StoryVisibilityState visibility_state =
       fuchsia::modular::StoryVisibilityState::DEFAULT;
@@ -582,9 +569,8 @@ void StoryProviderImpl::OnStoryStorageUpdated(
   if (i != story_runtime_containers_.end()) {
     state = i->second.controller_impl->GetStoryState();
     visibility_state = i->second.controller_impl->GetStoryVisibilityState();
-    i->second.current_info = CloneOptional(story_data.story_info);
+    i->second.current_data = CloneOptional(story_data);
   }
-
   NotifyStoryWatchers(&story_data, state, visibility_state);
 }
 
@@ -632,7 +618,7 @@ void StoryProviderImpl::OnFocusChange(fuchsia::modular::FocusInfoPtr info) {
 }
 
 void StoryProviderImpl::NotifyStoryWatchers(
-    const fuchsia::modular::internal::StoryData* const story_data,
+    const fuchsia::modular::internal::StoryData* story_data,
     const fuchsia::modular::StoryState story_state,
     const fuchsia::modular::StoryVisibilityState story_visibility_state) {
   if (!story_data || story_data->story_options.kind_of_proto_story) {
