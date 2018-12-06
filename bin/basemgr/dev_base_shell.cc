@@ -124,15 +124,6 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell>,
   }
 
   // |fuchsia::modular::BaseShell|
-  void GetAuthenticationContext(
-      fidl::StringPtr /*username*/,
-      fidl::InterfaceRequest<
-          fuchsia::modular::auth::AuthenticationContext> /*request*/) override {
-    FXL_LOG(INFO) << "fuchsia::modular::BaseShell::GetAuthenticationContext()"
-                     " is unimplemented.";
-  }
-
-  // |fuchsia::modular::BaseShell|
   void GetAuthenticationUIContext(
       fidl::InterfaceRequest<
           fuchsia::auth::AuthenticationUIContext> /*request*/) override {

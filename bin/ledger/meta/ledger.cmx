@@ -5,7 +5,6 @@
     "sandbox": {
         "features": [],
         "services": [
-            "fuchsia.modular.auth.TokenProvider",
             "fuchsia.netconnector.NetConnector",
             "fuchsia.tracelink.Registry",
             "fuchsia.net.LegacySocketProvider",

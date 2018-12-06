@@ -186,15 +186,13 @@ void SessionmgrImpl::Initialize(
     fuchsia::modular::auth::AccountPtr account,
     fuchsia::modular::AppConfig session_shell,
     fuchsia::modular::AppConfig story_shell,
-    fidl::InterfaceHandle<fuchsia::modular::auth::TokenProviderFactory>
-        token_provider_factory,
     fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager,
     fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
     fidl::InterfaceHandle<fuchsia::modular::internal::UserContext> user_context,
     fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request) {
-  InitializeUser(std::move(account), std::move(token_provider_factory),
-                 std::move(agent_token_manager), std::move(user_context));
+  InitializeUser(std::move(account), std::move(agent_token_manager),
+                 std::move(user_context));
   InitializeLedger(std::move(ledger_token_manager));
   InitializeDeviceMap();
   InitializeMessageQueueManager();
@@ -209,18 +207,11 @@ void SessionmgrImpl::Initialize(
 
 void SessionmgrImpl::InitializeUser(
     fuchsia::modular::auth::AccountPtr account,
-    fidl::InterfaceHandle<fuchsia::modular::auth::TokenProviderFactory>
-        token_provider_factory,
     fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
     fidl::InterfaceHandle<fuchsia::modular::internal::UserContext>
         user_context) {
-  if (token_provider_factory.is_valid()) {
-    token_provider_factory_ = token_provider_factory.Bind();
-    AtEnd(Reset(&token_provider_factory_));
-  } else {
     agent_token_manager_ = agent_token_manager.Bind();
     AtEnd(Reset(&agent_token_manager_));
-  }
 
   user_context_ = user_context.Bind();
   AtEnd(Reset(&user_context_));
@@ -268,23 +259,10 @@ void SessionmgrImpl::InitializeLedger(
   fuchsia::modular::AppConfig ledger_config;
   ledger_config.url = kLedgerAppUrl;
 
-  fuchsia::sys::ServiceListPtr service_list = nullptr;
-  if (account_) {
-    service_list = fuchsia::sys::ServiceList::New();
-    service_list->names.push_back(fuchsia::modular::auth::TokenProvider::Name_);
-    ledger_service_provider_.AddService<fuchsia::modular::auth::TokenProvider>(
-        [this](fidl::InterfaceRequest<fuchsia::modular::auth::TokenProvider>
-                   request) {
-          token_provider_factory_->GetTokenProvider(kLedgerAppUrl,
-                                                    std::move(request));
-        });
-    ledger_service_provider_.AddBinding(service_list->provider.NewRequest());
-  }
-
   ledger_app_ =
       std::make_unique<AppClient<fuchsia::ledger::internal::LedgerController>>(
           user_environment_->GetLauncher(), std::move(ledger_config), "",
-          std::move(service_list));
+          nullptr);
   ledger_app_->SetAppErrorHandler([this] {
     FXL_LOG(ERROR) << "Ledger seems to have crashed unexpectedly." << std::endl
                    << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
@@ -451,10 +429,8 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
   agent_runner_.reset(new AgentRunner(
       user_environment_->GetLauncher(), message_queue_manager_.get(),
       ledger_repository_.get(), agent_runner_storage_.get(),
-      token_provider_factory_.is_bound() ? token_provider_factory_.get()
-                                         : nullptr,
-      agent_token_manager_.is_bound() ? agent_token_manager_.get() : nullptr,
-      user_intelligence_provider_impl_.get(), entity_provider_runner_.get()));
+      agent_token_manager_.get(), user_intelligence_provider_impl_.get(),
+      entity_provider_runner_.get()));
   AtEnd(Teardown(kAgentRunnerTimeout, "AgentRunner", &agent_runner_));
 
   maxwell_component_context_bindings_ = std::make_unique<
@@ -879,32 +855,19 @@ void SessionmgrImpl::ConnectToStoryEntityProvider(
 
 fuchsia::ledger::cloud::CloudProviderPtr SessionmgrImpl::GetCloudProvider(
     fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager) {
+  FXL_CHECK(ledger_token_manager);
+
   fuchsia::ledger::cloud::CloudProviderPtr cloud_provider;
   auto cloud_provider_config = GetLedgerFirestoreConfig();
 
-  if (ledger_token_manager.is_valid()) {
-    cloud_provider_factory_->GetCloudProviderV2(
-        std::move(cloud_provider_config), std::move(ledger_token_manager),
-        cloud_provider.NewRequest(), [](fuchsia::ledger::cloud::Status status) {
-          if (status != fuchsia::ledger::cloud::Status::OK) {
-            FXL_LOG(ERROR) << "Failed to create a cloud provider: "
-                           << fidl::ToUnderlying(status);
-          }
-        });
-  } else {
-    fidl::InterfaceHandle<fuchsia::modular::auth::TokenProvider>
-        ledger_token_provider;
-    token_provider_factory_->GetTokenProvider(
-        kLedgerAppUrl, ledger_token_provider.NewRequest());
-    cloud_provider_factory_->GetCloudProvider(
-        std::move(cloud_provider_config), std::move(ledger_token_provider),
-        cloud_provider.NewRequest(), [](fuchsia::ledger::cloud::Status status) {
-          if (status != fuchsia::ledger::cloud::Status::OK) {
-            FXL_LOG(ERROR) << "Failed to create a cloud provider: "
-                           << fidl::ToUnderlying(status);
-          }
-        });
-  }
+  cloud_provider_factory_->GetCloudProvider(
+      std::move(cloud_provider_config), std::move(ledger_token_manager),
+      cloud_provider.NewRequest(), [](fuchsia::ledger::cloud::Status status) {
+        if (status != fuchsia::ledger::cloud::Status::OK) {
+          FXL_LOG(ERROR) << "Failed to create a cloud provider: "
+                         << fidl::ToUnderlying(status);
+        }
+      });
   return cloud_provider;
 }
 

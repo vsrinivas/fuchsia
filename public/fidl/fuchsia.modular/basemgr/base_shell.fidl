@@ -5,7 +5,6 @@
 library fuchsia.modular;
 
 using fuchsia.auth;
-using fuchsia.modular.auth;
 using fuchsia.ui.policy;
 
 // This interface is implemented by a base shell. Dependencies and parameters
@@ -23,17 +22,6 @@ using fuchsia.ui.policy;
 interface BaseShell {
     1: Initialize(BaseShellContext base_shell_context,
                   BaseShellParams base_shell_params);
-
-    // This method may be invoked by the basemgr to request an
-    // AuthenticationContext associated with |username|. |request| will then be
-    // used to request the base shell to show login screen during a
-    // UserProvider.AddUser() or if a token needs to be refreshed.
-    //
-    // A |request| is tied to a |username| because the basemgr allows
-    // multiple users to be logged in at the same time.
-    // Deprecated
-    2: GetAuthenticationContext(string username,
-                                request<fuchsia.modular.auth.AuthenticationContext> request);
 
     // This method may be invoked by the basemgr to request an
     // AuthenticationUIContext. |request| will then be used to request the base

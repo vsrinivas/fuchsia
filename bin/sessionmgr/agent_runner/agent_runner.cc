@@ -28,7 +28,6 @@ AgentRunner::AgentRunner(
     MessageQueueManager* const message_queue_manager,
     fuchsia::ledger::internal::LedgerRepository* const ledger_repository,
     AgentRunnerStorage* const agent_runner_storage,
-    fuchsia::modular::auth::TokenProviderFactory* const token_provider_factory,
     fuchsia::auth::TokenManager* const token_manager,
     fuchsia::modular::UserIntelligenceProvider* const
         user_intelligence_provider,
@@ -37,7 +36,6 @@ AgentRunner::AgentRunner(
       message_queue_manager_(message_queue_manager),
       ledger_repository_(ledger_repository),
       agent_runner_storage_(agent_runner_storage),
-      token_provider_factory_(token_provider_factory),
       token_manager_(token_manager),
       user_intelligence_provider_(user_intelligence_provider),
       entity_provider_runner_(entity_provider_runner),
@@ -120,8 +118,8 @@ void AgentRunner::RunAgent(const std::string& agent_url) {
   ComponentContextInfo component_info = {message_queue_manager_, this,
                                          ledger_repository_,
                                          entity_provider_runner_};
-  AgentContextInfo info = {component_info, launcher_, token_provider_factory_,
-                           token_manager_, user_intelligence_provider_};
+  AgentContextInfo info = {component_info, launcher_, token_manager_,
+                           user_intelligence_provider_};
   fuchsia::modular::AppConfig agent_config;
   agent_config.url = agent_url;
 

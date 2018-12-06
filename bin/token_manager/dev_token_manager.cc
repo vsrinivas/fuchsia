@@ -24,24 +24,16 @@ class AccountProviderImpl : AccountProvider {
 
  private:
   // |AccountProvider| implementation:
-  void Initialize(
-      fidl::InterfaceHandle<fuchsia::modular::auth::AccountProviderContext>
-          provider) override;
   void Terminate() override;
   void AddAccount(fuchsia::modular::auth::IdentityProvider identity_provider,
                   AddAccountCallback callback) override;
   void RemoveAccount(fuchsia::modular::auth::Account account, bool revoke_all,
                      RemoveAccountCallback callback) override;
-  void GetTokenProviderFactory(
-      fidl::StringPtr account_id,
-      fidl::InterfaceRequest<fuchsia::modular::auth::TokenProviderFactory>
-          request) override;
 
   std::string GenerateAccountId();
 
   async::Loop* const loop_;
   std::shared_ptr<component::StartupContext> startup_context_;
-  fuchsia::modular::auth::AccountProviderContextPtr account_provider_context_;
   fidl::Binding<AccountProvider> binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AccountProviderImpl);
@@ -56,12 +48,6 @@ AccountProviderImpl::AccountProviderImpl(async::Loop* loop)
       [this](fidl::InterfaceRequest<AccountProvider> request) {
         binding_.Bind(std::move(request));
       });
-}
-
-void AccountProviderImpl::Initialize(
-    fidl::InterfaceHandle<fuchsia::modular::auth::AccountProviderContext>
-        provider) {
-  account_provider_context_.Bind(std::move(provider));
 }
 
 void AccountProviderImpl::Terminate() { loop_->Quit(); }
@@ -94,11 +80,6 @@ void AccountProviderImpl::AddAccount(
 void AccountProviderImpl::RemoveAccount(fuchsia::modular::auth::Account account,
                                         bool revoke_all,
                                         RemoveAccountCallback callback) {}
-
-void AccountProviderImpl::GetTokenProviderFactory(
-    fidl::StringPtr account_id,
-    fidl::InterfaceRequest<fuchsia::modular::auth::TokenProviderFactory>
-        request) {}
 
 }  // namespace auth
 }  // namespace modular

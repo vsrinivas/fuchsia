@@ -14,8 +14,6 @@ source_set("impl") {
     "remote_connection.h",
     "static_user_id_provider.cc",
     "static_user_id_provider.h",
-    "user_id_provider_impl.cc",
-    "user_id_provider_impl.h",
   ]
 
   public_deps = [

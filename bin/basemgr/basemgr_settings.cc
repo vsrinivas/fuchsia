@@ -25,13 +25,12 @@ BasemgrSettings::BasemgrSettings(const fxl::CommandLine& command_line) {
   session_shell.url = command_line.GetOptionValueWithDefault(
       "session_shell", "ermine_session_shell");
   account_provider.url = command_line.GetOptionValueWithDefault(
-      "account_provider", "oauth_token_manager");
+      "account_provider", "token_manager_factory");
 
   disable_statistics = command_line.HasOption("disable_statistics");
   no_minfs = command_line.HasOption("no_minfs");
   test = command_line.HasOption("test");
   enable_presenter = command_line.HasOption("enable_presenter");
-  enable_garnet_token_manager = true;
 
   ParseShellArgs(command_line.GetOptionValueWithDefault("base_shell_args", ""),
                  &base_shell.args);
@@ -70,7 +69,6 @@ std::string BasemgrSettings::GetUsage() {
       --no_minfs
       --test
       --enable_presenter
-      --enable_garnet_token_manager
     DEVICE_NAME: Name which session shell uses to identify this device.
     BASE_SHELL:  URL of the base shell to run.
                 Defaults to "userpicker_base_shell".

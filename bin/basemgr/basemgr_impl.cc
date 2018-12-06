@@ -48,7 +48,6 @@ BasemgrImpl::BasemgrImpl(
       on_shutdown_(std::move(on_shutdown)),
       user_provider_impl_("UserProviderImpl"),
       base_shell_context_binding_(this),
-      account_provider_context_binding_(this),
       authentication_context_provider_binding_(this) {
   UpdateSessionShellConfig();
 
@@ -164,25 +163,6 @@ FuturePtr<> BasemgrImpl::StopBaseShell() {
   return did_stop;
 }
 
-FuturePtr<> BasemgrImpl::StopAccountProvider() {
-  if (!account_provider_) {
-    FXL_DLOG(INFO) << "StopAccountProvider() called when already stopped";
-
-    return Future<>::CreateCompleted("StopAccountProvider::Completed");
-  }
-
-  auto did_stop = Future<>::Create("StopAccountProvider");
-
-  account_provider_->Teardown(kBasicTimeout, [did_stop, this] {
-    FXL_DLOG(INFO) << "- fuchsia::modular::auth::AccountProvider down";
-
-    account_provider_.release();
-    did_stop->Complete();
-  });
-
-  return did_stop;
-}
-
 FuturePtr<> BasemgrImpl::StopTokenManagerFactoryApp() {
   if (!token_manager_factory_app_) {
     FXL_DLOG(INFO)
@@ -221,35 +201,19 @@ void BasemgrImpl::Start() {
   }
 
   // Start OAuth Token Manager App.
+  token_manager_factory_app_.release();
   fuchsia::modular::AppConfig token_manager_config;
-  if (settings_.enable_garnet_token_manager) {
-    token_manager_config.url = "token_manager_factory";
-    FXL_DLOG(INFO) << "Initialzing token_manager_factory_app()";
-    token_manager_factory_app_ =
-        std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-            launcher_, CloneStruct(token_manager_config));
-    token_manager_factory_app_->services().ConnectToService(
-        token_manager_factory_.NewRequest());
-  } else {
-    token_manager_config.url = settings_.account_provider.url;
-    token_manager_factory_app_.release();
-  }
-
-  account_provider_ =
-      std::make_unique<AppClient<fuchsia::modular::auth::AccountProvider>>(
-          launcher_, std::move(token_manager_config),
-          "/data/modular/ACCOUNT_MANAGER");
-  account_provider_->SetAppErrorHandler(
-      [] { FXL_CHECK(false) << "Token manager crashed. Stopping basemgr."; });
-  account_provider_->primary_service()->Initialize(
-      account_provider_context_binding_.NewBinding());
+  token_manager_config.url = settings_.account_provider.url;
+  token_manager_factory_app_ =
+      std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
+          launcher_, CloneStruct(token_manager_config));
+  token_manager_factory_app_->services().ConnectToService(
+      token_manager_factory_.NewRequest());
 
   user_provider_impl_.reset(new UserProviderImpl(
       launcher_, settings_.sessionmgr, session_shell_config_,
-      settings_.story_shell, account_provider_->primary_service().get(),
-      token_manager_factory_.get(),
-      authentication_context_provider_binding_.NewBinding().Bind(),
-      settings_.enable_garnet_token_manager, this));
+      settings_.story_shell, token_manager_factory_.get(),
+      authentication_context_provider_binding_.NewBinding().Bind(), this));
 
   ShowSetupOrLogin();
 
@@ -287,8 +251,6 @@ void BasemgrImpl::Shutdown() {
   // to.
   user_provider_impl_.Teardown(kUserProviderTimeout, [this] {
     FXL_DLOG(INFO) << "- fuchsia::modular::UserProvider down";
-    StopAccountProvider()->Then([this] {
-      FXL_DLOG(INFO) << "- fuchsia::modular::auth::AccountProvider down";
       StopTokenManagerFactoryApp()->Then([this] {
         FXL_DLOG(INFO) << "- fuchsia::auth::TokenManagerFactory down";
         StopBaseShell()->Then([this] {
@@ -296,19 +258,7 @@ void BasemgrImpl::Shutdown() {
           on_shutdown_();
         });
       });
-    });
   });
-}
-
-void BasemgrImpl::GetAuthenticationContext(
-    fidl::StringPtr account_id,
-    fidl::InterfaceRequest<fuchsia::modular::auth::AuthenticationContext>
-        request) {
-  // TODO(MI4-1107): Basemgr needs to implement AuthenticationContext
-  // itself, and proxy calls for StartOverlay & StopOverlay to BaseShell,
-  // starting it if it's not running yet.
-  FXL_CHECK(base_shell_);
-  base_shell_->GetAuthenticationContext(account_id, std::move(request));
 }
 
 void BasemgrImpl::GetAuthenticationUIContext(

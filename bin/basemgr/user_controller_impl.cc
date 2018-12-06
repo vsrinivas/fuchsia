@@ -21,8 +21,6 @@ UserControllerImpl::UserControllerImpl(
     fuchsia::modular::AppConfig sessionmgr,
     fuchsia::modular::AppConfig session_shell,
     fuchsia::modular::AppConfig story_shell,
-    fidl::InterfaceHandle<fuchsia::modular::auth::TokenProviderFactory>
-        token_provider_factory,
     fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager,
     fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
     fuchsia::modular::auth::AccountPtr account,
@@ -61,9 +59,8 @@ UserControllerImpl::UserControllerImpl(
   sessionmgr_app_->services().ConnectToService(sessionmgr_.NewRequest());
   sessionmgr_->Initialize(
       std::move(account), std::move(session_shell), std::move(story_shell),
-      std::move(token_provider_factory), std::move(ledger_token_manager),
-      std::move(agent_token_manager), user_context_binding_.NewBinding(),
-      std::move(view_owner_request));
+      std::move(ledger_token_manager), std::move(agent_token_manager),
+      user_context_binding_.NewBinding(), std::move(view_owner_request));
 
   sessionmgr_app_->SetAppErrorHandler([this] {
     FXL_LOG(ERROR) << "Sessionmgr seems to have crashed unexpectedly. "

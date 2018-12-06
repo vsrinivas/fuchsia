@@ -61,10 +61,9 @@ class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
       const fuchsia::modular::AppConfig& sessionmgr,
       const fuchsia::modular::AppConfig& session_shell,
       const fuchsia::modular::AppConfig& story_shell,
-      fuchsia::modular::auth::AccountProvider* account_provider,
       fuchsia::auth::TokenManagerFactory* token_manager_factory,
       fuchsia::auth::AuthenticationContextProviderPtr auth_context_provider,
-      bool use_token_manager_factory, Delegate* const delegate);
+      Delegate* const delegate);
 
   void Connect(fidl::InterfaceRequest<fuchsia::modular::UserProvider> request);
 
@@ -96,24 +95,6 @@ class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
       fidl::InterfaceRequest<fuchsia::auth::AuthenticationUIContext> request)
       override;
 
-  // Add user using |fuchsia::modular::auth::AccountProvider| interface.
-  void AddUserV1(
-      const fuchsia::modular::auth::IdentityProvider identity_provider,
-      AddUserCallback callback);
-
-  // Add user using |fuchsia::auth::TokenManagerFactory| interface.
-  void AddUserV2(
-      const fuchsia::modular::auth::IdentityProvider identity_provider,
-      AddUserCallback callback);
-
-  // Remove user using |fuchsia::modular::auth::AccountProvider| interface.
-  void RemoveUserV1(fuchsia::modular::auth::AccountPtr account,
-                    RemoveUserCallback callback);
-
-  // Remove user using |fuchsia::auth::TokenManagerFactory| interface.
-  void RemoveUserV2(fuchsia::modular::auth::AccountPtr account,
-                    RemoveUserCallback callback);
-
   // Returns a new |fuchsia::auth::TokenManager| handle for the given user
   // account |account_id|.
   fuchsia::auth::TokenManagerPtr CreateTokenManager(fidl::StringPtr account_id);
@@ -123,7 +104,8 @@ class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
   bool RemoveUserFromAccountsDB(fidl::StringPtr account_id, std::string* error);
   bool WriteUsersDb(const std::string& serialized_users, std::string* error);
   bool Parse(const std::string& serialized_users);
-
+  void RemoveUserInternal(fuchsia::modular::auth::AccountPtr account,
+                          RemoveUserCallback callback);
   void LoginInternal(fuchsia::modular::auth::AccountPtr account,
                      fuchsia::modular::UserLoginParams params);
 
@@ -134,11 +116,8 @@ class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
   const fuchsia::modular::AppConfig&
       session_shell_;                               // Neither owned nor copied.
   const fuchsia::modular::AppConfig& story_shell_;  // Neither owned nor copied.
-  fuchsia::modular::auth::AccountProvider* const
-      account_provider_;  // Neither owned nor copied.
   fuchsia::auth::TokenManagerFactory* const
       token_manager_factory_;  // Neither owned nor copied.
-  bool use_token_manager_factory_ = false;
   fuchsia::auth::AuthenticationContextProviderPtr
       authentication_context_provider_;
   Delegate* const delegate_;  // Neither owned nor copied.

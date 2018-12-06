@@ -8,7 +8,6 @@
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.modular.ComponentContext",
             "fuchsia.modular.ModuleContext",
-            "fuchsia.modular.auth.TokenProvider",
             "fuchsia.modular.AgentContext",
             "fuchsia.net.LegacySocketProvider",
             "fuchsia.net.oldhttp.HttpService",

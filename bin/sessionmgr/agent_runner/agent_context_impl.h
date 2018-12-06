@@ -27,7 +27,6 @@ class AgentRunner;
 struct AgentContextInfo {
   const ComponentContextInfo component_context_info;
   fuchsia::sys::Launcher* const launcher;
-  fuchsia::modular::auth::TokenProviderFactory* const token_provider_factory;
   fuchsia::auth::TokenManager* const token_manager;
   fuchsia::modular::UserIntelligenceProvider* const user_intelligence_provider;
 };
@@ -82,10 +81,6 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
   // |fuchsia::modular::AgentContext|
   void GetComponentContext(
       fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request)
-      override;
-  // |fuchsia::modular::AgentContext|
-  void GetTokenProvider(
-      fidl::InterfaceRequest<fuchsia::modular::auth::TokenProvider> request)
       override;
   // |fuchsia::modular::AgentContext|
   void GetTokenManager(
@@ -144,7 +139,6 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
 
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> app_client_;
   fuchsia::modular::AgentPtr agent_;
-  fuchsia::modular::auth::TokenProviderPtr token_provider_;
   fidl::BindingSet<fuchsia::modular::AgentContext> agent_context_bindings_;
   fidl::BindingSet<fuchsia::modular::AgentController>
       agent_controller_bindings_;
@@ -158,8 +152,6 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
   // application's namespace.
   component::ServiceProviderImpl service_provider_impl_;
 
-  fuchsia::modular::auth::TokenProviderFactory* const
-      token_provider_factory_;                          // Not owned.
   fuchsia::auth::TokenManager* const token_manager_;    // Not owned.
   EntityProviderRunner* const entity_provider_runner_;  // Not owned.
   fuchsia::modular::UserIntelligenceProvider* const

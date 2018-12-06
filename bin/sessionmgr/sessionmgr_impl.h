@@ -88,8 +88,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
       fuchsia::modular::auth::AccountPtr account,
       fuchsia::modular::AppConfig session_shell,
       fuchsia::modular::AppConfig story_shell,
-      fidl::InterfaceHandle<fuchsia::modular::auth::TokenProviderFactory>
-          token_provider_factory,
       fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager,
       fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
       fidl::InterfaceHandle<fuchsia::modular::internal::UserContext>
@@ -104,8 +102,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   // Sequence of Initialize() broken up into steps for clarity.
   void InitializeUser(
       fuchsia::modular::auth::AccountPtr account,
-      fidl::InterfaceHandle<fuchsia::modular::auth::TokenProviderFactory>
-          token_provider_factory,
       fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
       fidl::InterfaceHandle<fuchsia::modular::internal::UserContext>
           user_context);
@@ -213,7 +209,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   fidl::BindingSet<fuchsia::modular::SessionShellContext>
       session_shell_context_bindings_;
 
-  fuchsia::modular::auth::TokenProviderFactoryPtr token_provider_factory_;
   fuchsia::auth::TokenManagerPtr agent_token_manager_;
   fuchsia::modular::internal::UserContextPtr user_context_;
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> cloud_provider_app_;

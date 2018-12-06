@@ -6,18 +6,48 @@ library fuchsia.modular.auth;
 
 using fuchsia.ui.viewsv1token;
 
+// Authentication errors returned by AccountProvider. It contains error status
+// code along with a detailed error message.
+struct AuthErr {
+    Status status;
+    string message;
+};
+
+// Specifies the success/failure status.
+enum Status {
+    // Success
+    OK = 0;
+    // A problem with client configuration such as invalid_client, missing params
+    // etc. This should happen only in development not at run-time, unless
+    // user/developer changes any of this config. No retry is required.
+    BAD_REQUEST = 1;
+    // Unable to parse the server side response. Retry is optional, this error
+    // should be extremely rare.
+    BAD_RESPONSE = 2;
+    // Server is reachable and propagated an error returned by OAuth Server
+    // backends.  That kind of error cannot be fixed on retries, and has some
+    // root cause that needs to be addressed either in the client's configuration
+    // or because the user explicitly revoked access to the client app.  For
+    // instance: invalid_token, expired_token, invalid_client_id, invalid_user,
+    // invalid_args, etc.
+    OAUTH_SERVER_ERROR = 3;
+    // User cancelled the flow, no need to retry.
+    USER_CANCELLED = 4;
+    // Network error, eg. unreachable. This may be temporary, a retry is
+    // recommended.
+    NETWORK_ERROR = 5;
+    // Internal error. Retry is optional, this error should be rare.
+    INTERNAL_ERROR = 6;
+};
+
 // An interface that allows the Framework to talk to the token manager service
-// to add new accounts or be able to get a |TokenProviderFactory| that can be
-// used to provide specialized instances of |TokenProvider| to third party
-// agents.
+// to add new accounts and be able to mint the corresponding |TokenManager|
+// specialized instances for thid party agents and first party ledger client.
 //
-// This is only meant to be used by the Framework.
+// This is only meant to be used by the Framework and will be replaced with
+// |AccountManager| in the near future.
 [Discoverable]
 interface AccountProvider {
-    // Called by the Framework once, right after starting up a token manager
-    // application.
-    1: Initialize(AccountProviderContext account_provider_context);
-
     // Adds a new user account. This involves talking to the identity provider and
     // fetching profile attributes.
     2: AddAccount(IdentityProvider identity_provider)
@@ -39,38 +69,8 @@ interface AccountProvider {
     // device.
     3: RemoveAccount(Account account, bool revoke_all) -> (AuthErr status);
 
-    // Get a |TokenProviderFactory| associated with an |account_id|. It is used by
-    // the Framework to provide instances of |TokenProvider| to third party
-    // Agents.
-    4: GetTokenProviderFactory(string account_id,
-                               request<TokenProviderFactory> request);
-
     // This signals |AccountProvider| to teardown itself. After the
     // AccountProvider responds by closing its handle, the caller may terminate
     // the |AccountProvider| application if it hasn't already exited.
     5: Terminate();
-};
-
-interface TokenProviderFactory {
-    1: GetTokenProvider(string application_url, request<TokenProvider> request);
-};
-
-// Implemented by basemgr and provided to AccountProvider.Initialize().
-interface AccountProviderContext {
-    // Used by the token mangager application to request the Framework to display
-    // a view to the user.
-    1: GetAuthenticationContext(string account_id, request<AuthenticationContext> request);
-};
-
-// This interface is implemented by base shell. It is used to notify the
-// base shell that a view for login needs to be started or stopped. The base
-// shell can close this connection if it wants to cancel the current
-// authentication flow.
-interface AuthenticationContext {
-    // Requests base shell to display |view_owner| for authentication. No other
-    // call to StartOverlay() must be made until StopOverlay() has been called.
-    1: StartOverlay(fuchsia.ui.viewsv1token.ViewOwner view_owner);
-
-    // Requests base shell to stop displaying the auth view.
-    2: StopOverlay();
 };

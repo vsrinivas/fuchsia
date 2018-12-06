@@ -32,7 +32,6 @@ class BasemgrSettings {
   bool no_minfs;
   bool test;
   bool enable_presenter;
-  bool enable_garnet_token_manager;
 
  private:
   void ParseShellArgs(const std::string& value,

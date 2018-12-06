@@ -37,7 +37,6 @@ source_set("unittests") {
 
   sources = [
     "firebase_auth_impl_unittest.cc",
-    "firebase_auth_v2_impl_unittest.cc",
   ]
 
   deps = [

@@ -5,7 +5,6 @@
 library fuchsia.modular;
 
 using fuchsia.auth;
-using fuchsia.modular.auth;
 
 /// An instance of this service is exposed to agents in their namespace.
 /// |AgentContext| allows an agent to schedule tasks which run in response to
@@ -16,10 +15,6 @@ interface AgentContext {
     /// DEPRECATED: ComponentContext is now available in the
     /// namespace/environment for Modules.
     1: GetComponentContext(request<ComponentContext> request);
-
-    /// The auth token provider this Agent may use for accessing external services.
-    /// @Deprecated
-    2: GetTokenProvider(request<fuchsia.modular.auth.TokenProvider> request);
 
     /// Connects to an EntityReferenceFactory for this Agent. Entity references
     /// obtained from this EntityReferenceFactory will be resolved back to this

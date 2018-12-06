@@ -10,7 +10,6 @@
 #include <string>
 
 #include <fuchsia/auth/cpp/fidl.h>
-#include <fuchsia/modular/auth/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/backoff/backoff.h>
 #include <lib/callback/cancellable.h>
@@ -28,16 +27,16 @@ namespace firebase_auth {
 // system token provider.
 //
 // If configured with an empty |api_key|, doesn't attempt to use
-// |token_provider| and yields empty Firebase tokens and user ids. This allows
+// |token_manager| and yields empty Firebase tokens and user ids. This allows
 // the code to work without auth against public instances (e.g. for running
 // benchmarks).
 //
 // If configured with an empty |cobalt_client_name| or null |startup_context|,
 // disables statistics collection about failures.
 //
-// *Warning*: if |token_provider| disconnects, all requests in progress are
+// *Warning*: if |token_manager| disconnects, all requests in progress are
 // dropped on the floor. TODO(ppi): keep track of pending requests and call the
-// callbacks with status TOKEN_PROVIDER_DISCONNECTED when this happens.
+// callbacks with status TOKEN_MANAGER_DISCONNECTED when this happens.
 class FirebaseAuthImpl : public FirebaseAuth {
  public:
   struct Config {
@@ -51,12 +50,10 @@ class FirebaseAuthImpl : public FirebaseAuth {
 
   FirebaseAuthImpl(Config config, async_dispatcher_t* dispatcher,
                    rng::Random* random,
-                   fuchsia::modular::auth::TokenProviderPtr token_provider,
                    fuchsia::auth::TokenManagerPtr token_manager,
                    component::StartupContext* startup_context);
   // For tests.
   FirebaseAuthImpl(Config config, async_dispatcher_t* dispatcher,
-                   fuchsia::modular::auth::TokenProviderPtr token_provider,
                    fuchsia::auth::TokenManagerPtr token_manager,
                    std::unique_ptr<backoff::Backoff> backoff,
                    std::unique_ptr<cobalt::CobaltLogger> cobalt_logger);
@@ -73,28 +70,19 @@ class FirebaseAuthImpl : public FirebaseAuth {
       override;
 
  private:
-  // Retrieves the Firebase token from the token provider, transparently
-  // retrying the request up to |max_retries| times in case of non-fatal
-  // errors.
-  void GetToken(int max_retries,
-                fit::function<void(firebase_auth::AuthStatus,
-                                   fuchsia::modular::auth::FirebaseTokenPtr)>
-                    callback);
-
   // Retrieves the Firebase token from the fuchsia::auth::TokenManager,
   // transparently retrying the request up to |max_retries| times in case of
   // non-fatal errors.
-  void GetTokenV2(int max_retries,
-                  fit::function<void(firebase_auth::AuthStatus,
-                                     fuchsia::auth::FirebaseTokenPtr)>
-                      callback);
+  void GetToken(int max_retries,
+                fit::function<void(firebase_auth::AuthStatus,
+                                   fuchsia::auth::FirebaseTokenPtr)>
+                    callback);
 
   // Sends a Cobalt event for metric |metric_id| counting the error code
   // |status|, unless |cobalt_client_name_| is empty.
   void ReportError(int32_t metric_id, uint32_t status);
 
   const Config config_;
-  fuchsia::modular::auth::TokenProviderPtr token_provider_;
   fuchsia::auth::TokenManagerPtr token_manager_;
   const std::unique_ptr<backoff::Backoff> backoff_;
   const int max_retries_;

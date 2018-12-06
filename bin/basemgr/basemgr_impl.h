@@ -40,7 +40,6 @@ namespace modular {
 // 3) Manages the lifecycle of sessions, represented as |sessionmgr| processes.
 class BasemgrImpl : fuchsia::modular::BaseShellContext,
                     fuchsia::auth::AuthenticationContextProvider,
-                    fuchsia::modular::auth::AccountProviderContext,
                     fuchsia::ui::policy::KeyboardCaptureListenerHACK,
                     modular::UserProviderImpl::Delegate {
  public:
@@ -73,8 +72,6 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
 
   FuturePtr<> StopBaseShell();
 
-  FuturePtr<> StopAccountProvider();
-
   FuturePtr<> StopTokenManagerFactoryApp();
 
   void Start();
@@ -85,12 +82,6 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
 
   // |fuchsia::modular::BaseShellContext|
   void Shutdown() override;
-
-  // |AccountProviderContext|
-  void GetAuthenticationContext(
-      fidl::StringPtr account_id,
-      fidl::InterfaceRequest<fuchsia::modular::auth::AuthenticationContext>
-          request) override;
 
   // |AuthenticationContextProvider|
   void GetAuthenticationUIContext(
@@ -155,13 +146,9 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   AsyncHolder<UserProviderImpl> user_provider_impl_;
 
   fidl::Binding<fuchsia::modular::BaseShellContext> base_shell_context_binding_;
-  fidl::Binding<fuchsia::modular::auth::AccountProviderContext>
-      account_provider_context_binding_;
   fidl::Binding<fuchsia::auth::AuthenticationContextProvider>
       authentication_context_provider_binding_;
 
-  std::unique_ptr<AppClient<fuchsia::modular::auth::AccountProvider>>
-      account_provider_;
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>>
       token_manager_factory_app_;
   fuchsia::auth::TokenManagerFactoryPtr token_manager_factory_;

@@ -113,18 +113,15 @@ UserProviderImpl::UserProviderImpl(
     const fuchsia::modular::AppConfig& sessionmgr,
     const fuchsia::modular::AppConfig& session_shell,
     const fuchsia::modular::AppConfig& story_shell,
-    fuchsia::modular::auth::AccountProvider* account_provider,
     fuchsia::auth::TokenManagerFactory* token_manager_factory,
     fuchsia::auth::AuthenticationContextProviderPtr
         authentication_context_provider,
-    bool use_token_manager_factory, Delegate* const delegate)
+    Delegate* const delegate)
     : launcher_(launcher),
       sessionmgr_(sessionmgr),
       session_shell_(session_shell),
       story_shell_(story_shell),
-      account_provider_(account_provider),
       token_manager_factory_(token_manager_factory),
-      use_token_manager_factory_(use_token_manager_factory),
       authentication_context_provider_(
           std::move(authentication_context_provider)),
       delegate_(delegate),
@@ -230,63 +227,6 @@ void UserProviderImpl::PreviousUsers(PreviousUsersCallback callback) {
 void UserProviderImpl::AddUser(
     fuchsia::modular::auth::IdentityProvider identity_provider,
     AddUserCallback callback) {
-  if (!use_token_manager_factory_) {
-    AddUserV1(identity_provider, std::move(callback));
-  } else {
-    AddUserV2(identity_provider, std::move(callback));
-  }
-}
-
-void UserProviderImpl::RemoveUser(fidl::StringPtr account_id,
-                                  RemoveUserCallback callback) {
-  fuchsia::modular::auth::AccountPtr account;
-  if (users_storage_) {
-    for (const auto* user : *users_storage_->users()) {
-      if (user->id()->str() == account_id) {
-        account = Convert(user);
-      }
-    }
-  }
-
-  if (!account) {
-    callback("User not found.");
-    return;
-  }
-
-  if (!use_token_manager_factory_) {
-    RemoveUserV1(std::move(account), std::move(callback));
-  } else {
-    RemoveUserV2(std::move(account), std::move(callback));
-  }
-}
-
-void UserProviderImpl::AddUserV1(
-    const fuchsia::modular::auth::IdentityProvider identity_provider,
-    AddUserCallback callback) {
-  FXL_DCHECK(account_provider_);
-
-  account_provider_->AddAccount(
-      identity_provider, [this, identity_provider, callback](
-                             fuchsia::modular::auth::AccountPtr account,
-                             fidl::StringPtr error_code) {
-        if (!account) {
-          callback(nullptr, error_code);
-          return;
-        }
-
-        std::string error;
-        if (!AddUserToAccountsDB(account.get(), &error)) {
-          callback(nullptr, error);
-          return;
-        }
-
-        callback(std::move(account), error_code);
-      });
-}
-
-void UserProviderImpl::AddUserV2(
-    const fuchsia::modular::auth::IdentityProvider identity_provider,
-    AddUserCallback callback) {
   FXL_DCHECK(token_manager_factory_);
 
   // Creating a new user, the initial bootstrapping will be done by
@@ -350,6 +290,25 @@ void UserProviderImpl::AddUserV2(
       });
 }
 
+void UserProviderImpl::RemoveUser(fidl::StringPtr account_id,
+                                  RemoveUserCallback callback) {
+  fuchsia::modular::auth::AccountPtr account;
+  if (users_storage_) {
+    for (const auto* user : *users_storage_->users()) {
+      if (user->id()->str() == account_id) {
+        account = Convert(user);
+      }
+    }
+  }
+
+  if (!account) {
+    callback("User not found.");
+    return;
+  }
+
+  RemoveUserInternal(std::move(account), std::move(callback));
+}
+
 bool UserProviderImpl::AddUserToAccountsDB(
     const fuchsia::modular::auth::Account* account, std::string* error) {
   FXL_DCHECK(account);
@@ -401,36 +360,8 @@ bool UserProviderImpl::AddUserToAccountsDB(
   return WriteUsersDb(new_serialized_users, error);
 }
 
-void UserProviderImpl::RemoveUserV1(fuchsia::modular::auth::AccountPtr account,
-                                    RemoveUserCallback callback) {
-  FXL_DCHECK(account);
-  FXL_DCHECK(account_provider_);
-
-  FXL_DLOG(INFO) << "Removing user account :" << account->id;
-
-  auto account_id = account->id;
-  account_provider_->RemoveAccount(
-      std::move(*account), false /* disable single logout*/,
-      [this, account_id, callback](fuchsia::modular::auth::AuthErr auth_err) {
-        if (auth_err.status != fuchsia::modular::auth::Status::OK) {
-          FXL_LOG(ERROR) << "Error from RemoveAccount(): " << auth_err.message;
-          callback(auth_err.message);
-          return;
-        }
-
-        std::string error;
-        if (!RemoveUserFromAccountsDB(account_id, &error)) {
-          FXL_LOG(ERROR) << "Error in updating user database: " << error;
-          callback(error);
-          return;
-        }
-
-        callback("");  // success
-      });
-}
-
-void UserProviderImpl::RemoveUserV2(fuchsia::modular::auth::AccountPtr account,
-                                    RemoveUserCallback callback) {
+void UserProviderImpl::RemoveUserInternal(
+    fuchsia::modular::auth::AccountPtr account, RemoveUserCallback callback) {
   FXL_DCHECK(account);
   auto account_id = account->id;
 
@@ -561,21 +492,14 @@ void UserProviderImpl::LoginInternal(fuchsia::modular::auth::AccountPtr account,
   auto account_id = account ? account->id.get() : GetRandomId();
   FXL_DLOG(INFO) << "Login() User:" << account_id;
 
-  fuchsia::modular::auth::TokenProviderFactoryPtr token_provider_factory;
-  fuchsia::auth::TokenManagerPtr ledger_token_manager;
-  fuchsia::auth::TokenManagerPtr agent_token_manager;
-  if (!use_token_manager_factory_) {
-    // Get |fuchsia::modular::auth::TokenProviderFactory| for this user.
-    account_provider_->GetTokenProviderFactory(
-        account_id, token_provider_factory.NewRequest());
-  } else {
     // Instead of passing token_manager_factory all the way to agents and
     // runners with all auth provider configurations, send two
     // |fuchsia::auth::TokenManager| handles, one for ledger and one for agents
     // for the given user account |account_id|.
-    ledger_token_manager = CreateTokenManager(account_id);
-    agent_token_manager = CreateTokenManager(account_id);
-  }
+  fuchsia::auth::TokenManagerPtr ledger_token_manager =
+      CreateTokenManager(account_id);
+  fuchsia::auth::TokenManagerPtr agent_token_manager =
+      CreateTokenManager(account_id);
 
   auto view_owner =
       delegate_->GetSessionShellViewOwner(std::move(params.view_owner));
@@ -584,7 +508,7 @@ void UserProviderImpl::LoginInternal(fuchsia::modular::auth::AccountPtr account,
 
   auto controller = std::make_unique<UserControllerImpl>(
       launcher_, CloneStruct(sessionmgr_), CloneStruct(session_shell_),
-      CloneStruct(story_shell_), std::move(token_provider_factory),
+      CloneStruct(story_shell_),
       std::move(ledger_token_manager), std::move(agent_token_manager),
       std::move(account), std::move(view_owner), std::move(service_provider),
       std::move(params.user_controller), [this](UserControllerImpl* c) {

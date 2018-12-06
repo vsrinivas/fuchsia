@@ -14,7 +14,7 @@ using fuchsia.ledger.cloud;
 interface LedgerRepositoryFactory : fuchsia.ledger.ErrorNotifier {
     // Binds to the directory referenced by |repository|. If this is called
     // multiple times for the same directory, only the first instance of
-    // |server_id| / |token_provider| will be used. Any subsequent ones will
+    // |server_id| / |cloud_provider| will be used. Any subsequent ones will
     // simply be ignored.
     //
     // Parameters:
@@ -29,8 +29,7 @@ interface LedgerRepositoryFactory : fuchsia.ledger.ErrorNotifier {
     // |user_id| is a unique, not device local, user identifier. It will be
     //     used to enable Peer to Peer over NetConnector, and will be removed
     //     once Ledger uses Overnet for Peer to Peer communication. If it is
-    //     empty, Ledger will try to retrieve a TokenProvider in the
-    //     environment to fetch the identifier.
+    //     empty, Ledger will not synchronize using Peer to Peer communication.
     1: GetRepository(handle<channel> repository_directory,
                      fuchsia.ledger.cloud.CloudProvider? cloud_provider,
                      string user_id,

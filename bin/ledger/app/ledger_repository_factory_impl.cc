@@ -30,7 +30,6 @@
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/p2p_provider/impl/p2p_provider_impl.h"
 #include "peridot/bin/ledger/p2p_provider/impl/static_user_id_provider.h"
-#include "peridot/bin/ledger/p2p_provider/impl/user_id_provider_impl.h"
 #include "peridot/bin/ledger/p2p_sync/impl/user_communicator_impl.h"
 #include "peridot/bin/ledger/storage/impl/leveldb_factory.h"
 #include "peridot/bin/ledger/sync_coordinator/impl/user_sync_impl.h"
@@ -357,21 +356,12 @@ LedgerRepositoryFactoryImpl::CreateP2PSync(
     return nullptr;
   }
 
-  std::unique_ptr<p2p_provider::UserIdProvider> user_id_provider;
-  if (!repository_information.user_id.empty()) {
-    user_id_provider = std::make_unique<p2p_provider::StaticUserIdProvider>(
-        repository_information.user_id);
-  } else {
-    fuchsia::modular::auth::TokenProviderPtr token_provider =
-        environment_->startup_context()
-            ->ConnectToEnvironmentService<
-                fuchsia::modular::auth::TokenProvider>();
-
-    user_id_provider = std::make_unique<p2p_provider::UserIdProviderImpl>(
-        environment_, repository_information.content_path,
-        std::move(token_provider),
-        environment_->disable_statistics() ? "" : "ledger_p2p");
+  if (repository_information.user_id.empty()) {
+    return nullptr;
   }
+
+  auto user_id_provider = std::make_unique<p2p_provider::StaticUserIdProvider>(
+      repository_information.user_id);
 
   return user_communicator_factory_->GetUserCommunicator(
       std::move(user_id_provider));

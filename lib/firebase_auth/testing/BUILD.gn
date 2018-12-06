@@ -13,21 +13,16 @@ source_set("testing") {
   sources = [
     "fake_token_manager.cc",
     "fake_token_manager.h",
-    "fake_token_provider.cc",
-    "fake_token_provider.h",
     "test_firebase_auth.cc",
     "test_firebase_auth.h",
     "test_token_manager.cc",
     "test_token_manager.h",
-    "test_token_provider.cc",
-    "test_token_provider.h",
   ]
 
   public_deps = [
     "//garnet/public/fidl/fuchsia.auth",
     "//peridot/lib/firebase_auth",
     "//peridot/lib/rng",
-    "//peridot/public/fidl/fuchsia.modular.auth",
   ]
 
   deps = [
@@ -45,8 +40,6 @@ source_set("service_account_provider") {
   sources = [
     "service_account_token_minter.cc",
     "service_account_token_minter.h",
-    "service_account_token_provider.cc",
-    "service_account_token_provider.h",
     "service_account_token_manager.cc",
     "service_account_token_manager.h",
   ]
@@ -57,7 +50,6 @@ source_set("service_account_provider") {
     "//garnet/public/lib/callback",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/network_wrapper",
-    "//peridot/public/fidl/fuchsia.modular.auth",
   ]
 
   deps = [
@@ -122,7 +114,6 @@ source_set("unittests") {
     "service_account_test_util.h",
     "service_account_test_util.cc",
     "service_account_token_minter_unittest.cc",
-    "service_account_token_provider_unittest.cc",
     "service_account_token_manager_unittest.cc",
   ]
 
