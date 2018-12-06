@@ -5,10 +5,7 @@
 //! A networking stack.
 
 #![feature(async_await, await_macro)]
-#![feature(const_fn)]
-#![feature(iterator_find_map)]
 #![feature(never_type)]
-#![feature(nll)]
 #![feature(specialization)]
 #![feature(try_from)]
 // In case we roll the toolchain and something we're using as a feature has been
