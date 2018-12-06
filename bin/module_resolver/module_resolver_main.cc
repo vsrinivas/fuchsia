@@ -43,18 +43,6 @@ class ModuleResolverApp : fuchsia::modular::ContextListener {
     // Set up |resolver_impl_|.
     resolver_impl_->AddSource("module_package",
                               std::make_unique<ModulePackageSource>(context));
-    if (!is_test) {
-      resolver_impl_->AddSource(
-          "firebase_mods",
-          std::make_unique<FirebaseModuleManifestSource>(
-              async_get_default_dispatcher(),
-              [context]() {
-                http::HttpServicePtr http_service;
-                context->ConnectToEnvironmentService(http_service.NewRequest());
-                return http_service;
-              },
-              "cloud-mods", "" /* prefix */));
-    }
 
     // Make |resolver_impl_| a query (ask) handler.
     fidl::InterfaceHandle<fuchsia::modular::QueryHandler> query_handler;
