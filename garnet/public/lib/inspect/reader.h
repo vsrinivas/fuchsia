@@ -80,6 +80,11 @@ class ObjectHierarchy {
  public:
   ObjectHierarchy() = default;
 
+  // Directly construct an object hierarchy consisting of an object and a list
+  // of children.
+  ObjectHierarchy(fuchsia::inspect::Object object,
+                  std::vector<ObjectHierarchy> children);
+
   // Allow moving, disallow copying.
   ObjectHierarchy(ObjectHierarchy&&) = default;
   ObjectHierarchy(const ObjectHierarchy&) = delete;
@@ -112,9 +117,6 @@ class ObjectHierarchy {
   const ObjectHierarchy* GetByPath(std::vector<std::string> path) const;
 
  private:
-  ObjectHierarchy(fuchsia::inspect::Object object,
-                  std::vector<ObjectHierarchy> children);
-
   static ObjectHierarchy Make(std::shared_ptr<component::Object> object_root,
                               int depth);
 

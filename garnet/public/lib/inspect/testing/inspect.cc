@@ -50,8 +50,8 @@ namespace inspect {
 
 void PrintTo(const ::inspect::ObjectHierarchy& hierarchy, std::ostream* os) {
   *os << "ObjectHierarchy(" << ::testing::PrintToString(hierarchy.object())
-      << ", "
-      << ::testing::PrintToString(hierarchy.children().size()) << " children)";
+      << ", " << ::testing::PrintToString(hierarchy.children().size())
+      << " children)";
 }
 
 namespace testing {

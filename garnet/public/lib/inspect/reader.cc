@@ -17,13 +17,13 @@ ObjectReader::ObjectReader(
 fit::promise<fuchsia::inspect::Object> ObjectReader::Read() const {
   fit::bridge<fuchsia::inspect::Object> bridge;
   state_->inspect_ptr_->ReadData(bridge.completer.bind());
-  return bridge.consumer.promise();
+  return bridge.consumer.promise_or(fit::error());
 }
 
 fit::promise<ChildNameVector> ObjectReader::ListChildren() const {
   fit::bridge<ChildNameVector> bridge;
   state_->inspect_ptr_->ListChildren(bridge.completer.bind());
-  return bridge.consumer.promise();
+  return bridge.consumer.promise_or(fit::error());
 }
 
 fit::promise<ObjectReader> ObjectReader::OpenChild(
@@ -36,9 +36,9 @@ fit::promise<ObjectReader> ObjectReader::OpenChild(
                                   bridge.completer.bind());
 
   ObjectReader reader(child_ptr.Unbind());
-  return bridge.consumer.promise().and_then(
-      [ret = std::move(reader)](
-          bool success) mutable -> fit::result<ObjectReader> {
+  return bridge.consumer.promise_or(fit::error())
+      .and_then([ret = std::move(reader)](
+                    bool success) mutable -> fit::result<ObjectReader> {
         if (success) {
           return fit::ok(ObjectReader(std::move(ret)));
         } else {
@@ -122,13 +122,16 @@ fit::promise<ObjectHierarchy> ObjectHierarchy::Make(ObjectReader reader,
 
     return fit::join_promises(std::move(reader_promise),
                               std::move(children_promise))
-        .and_then(
-            [reader](std::tuple<fit::result<fuchsia::inspect::Object>,
-                                fit::result<std::vector<ObjectHierarchy>>>&
-                         result) mutable -> fit::result<ObjectHierarchy> {
-              return fit::ok(ObjectHierarchy(std::get<0>(result).take_value(),
-                                             std::get<1>(result).take_value()));
-            });
+        .and_then([reader](
+                      std::tuple<fit::result<fuchsia::inspect::Object>,
+                                 fit::result<std::vector<ObjectHierarchy>>>&
+                          result) mutable -> fit::result<ObjectHierarchy> {
+          if (!std::get<0>(result).is_ok() || !std::get<0>(result).is_ok()) {
+            return fit::error();
+          }
+          return fit::ok(ObjectHierarchy(std::get<0>(result).take_value(),
+                                         std::get<1>(result).take_value()));
+        });
   }
 }
 
