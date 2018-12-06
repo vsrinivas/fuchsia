@@ -38,7 +38,7 @@ other, or use the `manual_player` script to play against an AI by yourself.
 Set your packages to include Tennis:
 
 ```
-fx set x64 --packages garnet/packages/all,garnet/packages/experimental/tennis
+fx set x64 --packages garnet/packages/all,garnet/packages/experimental/disabled/tennis
 fx build
 ```
 
@@ -53,7 +53,7 @@ folder. It's not very good, so you should be able to beat it! To make your own
 AI using the base as an example, you can copy the `example_ai` folder to your
 own, taking care to rename `meta/tennis_example_ai.cmx` and the various rules in
 your bot's `BUILD.gn` file to create a new package. You'll also want to add your
-bot to the list at `garnet/packages/experimental/tennis` and rerun `fx set` so
+bot to the list at `garnet/packages/experimental/disabled/tennis` and rerun `fx set` so
 it will build.
 
 The example is in Rust, but you can definitely build an AI in any FIDL-supported

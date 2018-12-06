@@ -4,14 +4,14 @@
 
 use crate::game::{Game, PlayerState};
 use failure::ResultExt;
-use fidl::endpoints::{ClientEnd, RequestStream, ServerEnd};
+use fidl::endpoints::RequestStream;
 use fidl_fuchsia_game_tennis as fidl_tennis;
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
 use fuchsia_zircon::DurationNum;
 use futures::prelude::*;
 use parking_lot::Mutex;
-use std::sync::{Arc, Weak};
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct TennisService(Arc<Mutex<Game>>);
@@ -22,7 +22,7 @@ impl TennisService {
     }
 
     pub fn bind(&self, chan: fuchsia_async::Channel) {
-        let mut self_clone = self.clone();
+        let self_clone = self.clone();
         let mut stream = fidl_tennis::TennisServiceRequestStream::from_channel(chan);
         fuchsia_async::spawn(
             async move {
@@ -32,7 +32,8 @@ impl TennisService {
                     match msg {
                         fidl_tennis::TennisServiceRequest::GetState { responder, .. } => {
                             let TennisService(game_arc) = &self_clone;
-                            responder.send(&mut game_arc.lock().state());
+                            responder.send(&mut game_arc.lock().state())
+                                .context("error sending GetState response")?;
                         }
                         fidl_tennis::TennisServiceRequest::RegisterPaddle {
                             player_name,
@@ -56,7 +57,7 @@ impl TennisService {
     ) {
         let TennisService(game_arc) = self.clone();
         let mut game = game_arc.lock();
-        let mut paddle_proxy = paddle.into_proxy().unwrap();
+        let paddle_proxy = paddle.into_proxy().unwrap();
         let mut stream = paddle_proxy.take_event_stream(); // TODO(lard): remove unwrap
         let player_state = game.register_new_paddle(player_name.clone(), paddle_proxy);
         fasync::spawn(

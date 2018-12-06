@@ -8,10 +8,9 @@ use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_game_tennis::{PaddleRequest, TennisServiceMarker};
 use fuchsia_app::client::connect_to_service;
 use fuchsia_async as fasync;
-use fuchsia_zircon::DurationNum;
 use futures::TryStreamExt;
 use parking_lot::Mutex;
-use std::io::{self, Read, Write};
+use std::io::{self, Read};
 use std::sync::Arc;
 fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("Error creating executor")?;

@@ -6,11 +6,9 @@ use core::f64::consts::PI;
 use fidl_fuchsia_game_tennis as fidl_tennis;
 use fidl_fuchsia_game_tennis::{GameState, PaddleProxy};
 use fuchsia_syslog::fx_log_info;
-use futures::prelude::*;
 use parking_lot::Mutex;
-use rand::random;
 use std::f64;
-use std::sync::{Arc, Weak};
+use std::sync::Arc;
 
 const TIME_SCALE_FACTOR: f64 = 0.02; // Time scale factor: scales all movements/speeds by this amount.
 const BOARD_HEIGHT: f64 = 10.0;
@@ -19,6 +17,7 @@ const PADDLE_SPEED: f64 = 0.4 * TIME_SCALE_FACTOR; // distance paddle travels pe
 const PADDLE_SIZE: f64 = 1.0; // vertical height of paddle
 const PADDLE_MAX_ANGLE: f64 = std::f64::consts::PI / 4.0; // Maximum paddle angle
 const BALL_SPEEDUP_MULTIPLIER: f64 = 1.05; // speed multiplier applied on every paddle bounce
+#[allow(unused)]
 const MAX_BOUNCE_ANGLE: f64 = 1.3; // in radians, bounce angle when hitting very top edge of paddle
 
 pub struct Game {
@@ -266,11 +265,11 @@ impl Game {
     fn new_game(&mut self) {
         self.player_1.as_mut().map(|player| {
             *player.state.lock() = PlayerState::Stop;
-            player.proxy.new_game(false);
+            let _ = player.proxy.new_game(false);
         });
         self.player_2.as_mut().map(|player| {
             *player.state.lock() = PlayerState::Stop;
-            player.proxy.new_game(true);
+            let _ = player.proxy.new_game(true);
         });
 
         self.ball_dx = 0.0;
