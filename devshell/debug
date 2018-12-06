@@ -8,19 +8,22 @@
 ## Starts the debug agent on the proposed target and automatically connect zxdb
 ## to it. Will close the debug agent on exit.
 ##
-## Usage: fx debug [(--port|-p) <PORT>] [(--verbose-agent|-va)] [--] [TARGET]
+## TROUBLESHOOTING TIPS:
+##
+## - Remember to use "fx set-device" when working with multiple devices.
+## - This scripts by default will mute the SSH connection stdout/stderr, so any
+##   errors triggered by it won't appear. Use the --verbose-agent flag to see
+##   the output.
+## - This scripts uses the tool "nc" for testing TCP connections. Check that it
+##   is in $PATH and that it works.
+##
+## Usage: fx debug [(--port|-p) <PORT>] [(--verbose-agent|-va)]
 ##
 ##    --port            Port the debug agent will be listening on. Will use 2345
 ##                      by default.
 ##    --verbose-agent   Whether the debug agent's stdout/stderr should be shown.
 ##                      Useful for debugging the debugger. Yo' dawg.
 ##
-##    TARGET            The hostname of the target to connect to. Initially, it
-##                      will attempt to pass it to netaddr to check if it is a
-##                      fuchsia IP word encoding. If not, it will attempt to use
-##                      it directly as a hostname.
-##                      Can be ommited if there is only one target.
-
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
@@ -45,37 +48,24 @@ while [[ "$1" =~ ^- ]]; do
       agent_out=""
       break
       ;;
-    --)
-      break
-      ;;
     *)
       break
   esac
   shift
 done
 
-# The target is the first non-flag argument.
-target="$1"
-
-# Initially,  We attempt to see if this is a netaddr target name. If not, we're
-# going to try it directly as a hostname.
-netaddr_target=$(fx-command-run "netaddr" "--fuchsia" "${target}")
-if [[ -z ${netaddr_target} ]]; then
-  # No valid netaddr and no explicit target.
-  if [[ -z ${target} ]]; then
-    echo -e "Could not get a valid target. Exiting."
-    exit 1
-  fi
-  echo "Target is not a Fuchsia target name. Attempting to use it as hostname."
-else
-  # netaddr generated a valid target. Using that one.
-  target="${netaddr_target}"
+# Get the defaulted device address.
+target=$(fx-command-run "netaddr" "--fuchsia" "$(get-device-name)")
+if [[ -z "${target}" ]]; then
+  # netaddr will have put the correct error message by now.
+  echo -e "Could not get a valid target. Run \"fx set-device\""
+  exit 1
 fi
 
 # Leave the SSH connection open. Will be closed on script end.
 # We branch out on whether the user used the verbose-agent flag. If so, we
 # redirect the debug agent output to /dev/null.
-echo "Attempting to start the Debug Agent."
+echo -e "Attempting to start the Debug Agent."
 if [[ -z "${agent_out}" ]]; then
   (fx-command-run "ssh" "${target}" "run debug_agent --port=${port}" &) &
 else
@@ -89,7 +79,7 @@ fx_ssh_pid="$!"
 # close the connection and receive the actual client's connection and work fine.
 try_count=0
 max_tries=10
-echo "Waiting for the Debug Agent to start."
+echo -e "Waiting for the Debug Agent to start."
 while true; do
   # Use NC to test if the port is open and the debug agent is listening.
   nc -w5 -6 -z ${target} ${port}
@@ -111,5 +101,5 @@ done
 
 # We start the client with the flag that tells it to quit the agent when zxdb
 # quits.
-echo "Connection found. Starting ZXDB."
+echo -e "Connection found. Starting zxdb."
 "${FUCHSIA_BUILD_DIR}/host_x64/zxdb" "--connect" "[${target}]:${port}" "--quit-agent-on-exit"
