@@ -26,8 +26,9 @@ FutexContext::~FutexContext() {
     DEBUG_ASSERT(futex_table_.is_empty());
 }
 
-zx_status_t FutexContext::FutexWait(user_in_ptr<const zx_futex_t> value_ptr, int current_value,
-                                    zx_handle_t new_futex_owner, zx_time_t deadline) {
+zx_status_t FutexContext::FutexWait(user_in_ptr<const zx_futex_t> value_ptr,
+                                    zx_futex_t current_value, zx_handle_t new_futex_owner,
+                                    zx_time_t deadline) {
     LTRACE_ENTRY;
 
     uintptr_t futex_key = reinterpret_cast<uintptr_t>(value_ptr.get());
