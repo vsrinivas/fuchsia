@@ -423,6 +423,7 @@ func newHTTPClient(cfg *amber.TransportConfig) (*http.Client, error) {
 			DualStack: true,
 		}).DialContext,
 		MaxIdleConns:          100,
+		MaxConnsPerHost:       50,
 		IdleConnTimeout:       90 * time.Second,
 		TLSHandshakeTimeout:   10 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
