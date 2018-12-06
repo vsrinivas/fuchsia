@@ -36,19 +36,16 @@ bool TestFidlBasic() {
     fbl::unique_fd fd(open("/fidltmp", O_DIRECTORY | O_RDONLY));
     ASSERT_GE(fd.get(), 0);
 
-    // Access files within the filesystem.
-    DIR* d = fdopendir(fd.release());
-
     // Create a file
     const char* filename = "file-a";
-    fd.reset(openat(dirfd(d), filename, O_CREAT | O_RDWR));
+    fd.reset(openat(fd.get(), filename, O_CREAT | O_RDWR));
     ASSERT_GE(fd.get(), 0);
     const char* data = "hello";
     ssize_t datalen = strlen(data);
     ASSERT_EQ(write(fd.get(), data, datalen), datalen);
     fd.reset();
 
-    zx_handle_t h, request = ZX_HANDLE_INVALID;
+    zx_handle_t h, request;
     ASSERT_EQ(zx_channel_create(0, &h, &request), ZX_OK);
     ASSERT_EQ(fdio_service_connect("/fidltmp/file-a", request), ZX_OK);
 
@@ -57,7 +54,40 @@ bool TestFidlBasic() {
     ASSERT_EQ(info.tag, fuchsia_io_NodeInfoTag_file);
     ASSERT_EQ(info.file.event, ZX_HANDLE_INVALID);
     zx_handle_close(h);
-    closedir(d);
+
+    loop.Shutdown();
+
+    // No way to clean up the namespace entry. See ZX-2013 for more details.
+
+    END_TEST;
+}
+
+bool TestFidlOpenReadOnly() {
+    BEGIN_TEST;
+
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+    ASSERT_EQ(loop.StartThread(), ZX_OK);
+
+    ASSERT_EQ(memfs_install_at(loop.dispatcher(), "/fidltmp-ro"), ZX_OK);
+    fbl::unique_fd fd(open("/fidltmp-ro", O_DIRECTORY | O_RDONLY));
+    ASSERT_GE(fd.get(), 0);
+
+    // Create a file
+    const char* filename = "file-ro";
+    fd.reset(openat(fd.get(), filename, O_CREAT | O_RDWR));
+    ASSERT_GE(fd.get(), 0);
+    fd.reset();
+
+    zx_handle_t h, request;
+    ASSERT_EQ(zx_channel_create(0, &h, &request), ZX_OK);
+    ASSERT_EQ(fdio_open("/fidltmp-ro/file-ro", ZX_FS_RIGHT_READABLE, request), ZX_OK);
+
+    zx_status_t status;
+    uint32_t flags;
+    ASSERT_EQ(fuchsia_io_FileGetFlags(h, &status, &flags), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
+    ASSERT_EQ(flags, ZX_FS_RIGHT_READABLE);
+    zx_handle_close(h);
 
     loop.Shutdown();
 
@@ -164,5 +194,6 @@ bool TestFidlQueryFilesystem() {
 
 BEGIN_TEST_CASE(fidl_tests)
 RUN_TEST(TestFidlBasic)
+RUN_TEST(TestFidlOpenReadOnly)
 RUN_TEST(TestFidlQueryFilesystem)
 END_TEST_CASE(fidl_tests)

@@ -270,6 +270,21 @@ zx_status_t fdio_service_connect_at(zx_handle_t dir, const char* path, zx_handle
 }
 
 __EXPORT
+zx_status_t fdio_open(const char* path, uint32_t flags, zx_handle_t h) {
+    if (path == NULL) {
+        zx_handle_close(h);
+        return ZX_ERR_INVALID_ARGS;
+    }
+    // Otherwise attempt to connect through the root namespace
+    if (fdio_root_ns != NULL) {
+        return fdio_ns_connect(fdio_root_ns, path, flags, h);
+    }
+    // Otherwise we fail
+    zx_handle_close(h);
+    return ZX_ERR_NOT_FOUND;
+}
+
+__EXPORT
 zx_status_t fdio_open_at(zx_handle_t dir, const char* path, uint32_t flags, zx_handle_t h) {
     if (path == NULL) {
         zx_handle_close(h);
