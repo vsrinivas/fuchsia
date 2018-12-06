@@ -346,7 +346,7 @@ fbl::String EventData::ToString() const {
     case EventType::kDurationEnd:
         return "DurationEnd";
     case EventType::kDurationComplete:
-        return fbl::StringPrintf("DurationComplete(end_time: %" PRIu64 ")",
+        return fbl::StringPrintf("DurationComplete(end_ts: %" PRIu64 ")",
                                  duration_complete_.end_time);
     case EventType::kAsyncBegin:
         return fbl::StringPrintf("AsyncBegin(id: %" PRIu64 ")",
