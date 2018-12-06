@@ -627,13 +627,16 @@ func errStatus(err error) zx.Status {
 	return zx.ErrInternal
 }
 
-func mxNetError(e *tcpip.Error) zx.Status {
+func zxNetError(e *tcpip.Error) zx.Status {
 	switch e {
 	case tcpip.ErrUnknownProtocol:
 		return zx.ErrProtocolNotSupported
-	case tcpip.ErrDuplicateAddress, tcpip.ErrPortInUse:
+	case tcpip.ErrDuplicateAddress,
+		tcpip.ErrPortInUse:
 		return zx.ErrAddressInUse
-	case tcpip.ErrNoRoute:
+	case tcpip.ErrNoRoute,
+		tcpip.ErrNetworkUnreachable,
+		tcpip.ErrNoLinkAddress:
 		return zx.ErrAddressUnreachable
 	case tcpip.ErrAlreadyBound:
 		// Note that tcpip.ErrAlreadyBound and zx.ErrAlreadyBound correspond to different
@@ -641,13 +644,24 @@ func mxNetError(e *tcpip.Error) zx.Status {
 		// it's already bound. zx.ErrAlreadyBound is used to indicate that the local
 		// address is already used by someone else.
 		return zx.ErrInvalidArgs
-	case tcpip.ErrInvalidEndpointState, tcpip.ErrAlreadyConnecting, tcpip.ErrAlreadyConnected:
+	case tcpip.ErrInvalidEndpointState,
+		tcpip.ErrAlreadyConnecting,
+		tcpip.ErrAlreadyConnected:
 		return zx.ErrBadState
-	case tcpip.ErrNoPortAvailable:
+	case tcpip.ErrNoPortAvailable,
+		tcpip.ErrNoBufferSpace:
 		return zx.ErrNoResources
-	case tcpip.ErrUnknownProtocolOption, tcpip.ErrBadLocalAddress, tcpip.ErrDestinationRequired:
+	case tcpip.ErrUnknownProtocolOption,
+		tcpip.ErrBadLocalAddress,
+		tcpip.ErrDestinationRequired,
+		tcpip.ErrBadAddress,
+		tcpip.ErrInvalidOptionValue,
+		tcpip.ErrDuplicateNICID,
+		tcpip.ErrBadLinkEndpoint:
 		return zx.ErrInvalidArgs
-	case tcpip.ErrClosedForSend, tcpip.ErrClosedForReceive, tcpip.ErrConnectionReset:
+	case tcpip.ErrClosedForSend,
+		tcpip.ErrClosedForReceive,
+		tcpip.ErrConnectionReset:
 		return zx.ErrConnectionReset
 	case tcpip.ErrWouldBlock:
 		return zx.ErrShouldWait
@@ -657,16 +671,25 @@ func mxNetError(e *tcpip.Error) zx.Status {
 		return zx.ErrTimedOut
 	case tcpip.ErrConnectStarted:
 		return zx.ErrShouldWait
-	case tcpip.ErrNotSupported, tcpip.ErrQueueSizeNotSupported:
+	case tcpip.ErrNotSupported,
+		tcpip.ErrQueueSizeNotSupported:
 		return zx.ErrNotSupported
 	case tcpip.ErrNotConnected:
 		return zx.ErrNotConnected
 	case tcpip.ErrConnectionAborted:
 		return zx.ErrConnectionAborted
-	}
 
-	log.Printf("%v", e)
-	return zx.ErrInternal
+	case tcpip.ErrUnknownNICID,
+		tcpip.ErrNoSuchFile:
+		return zx.ErrNotFound
+	case tcpip.ErrAborted:
+		return zx.ErrCanceled
+	case tcpip.ErrMessageTooLong:
+		return zx.ErrOutOfRange
+	default:
+		log.Printf("Mapping unknown netstack error to zx.ErrInternal: %v", e)
+		return zx.ErrInternal
+	}
 }
 
 func (s *socketServer) opGetSockOpt(ios *iostate, msg *zxsocket.Msg) zx.Status {
@@ -692,7 +715,7 @@ func (s *socketServer) opGetSockOpt(ios *iostate, msg *zxsocket.Msg) zx.Status {
 			errno := uint32(0)
 			if err != nil {
 				// TODO: should this be a unix errno?
-				errno = uint32(mxNetError(err))
+				errno = uint32(zxNetError(err))
 			}
 			binary.LittleEndian.PutUint32(val.optval[:], errno)
 			val.optlen = c_socklen(4)
@@ -775,7 +798,7 @@ func (s *socketServer) opSetSockOpt(ios *iostate, msg *zxsocket.Msg) zx.Status {
 	}
 	if opt := val.Unpack(); opt != nil {
 		if err := ios.ep.SetSockOpt(opt); err != nil {
-			return mxNetError(err)
+			return zxNetError(err)
 		}
 	}
 	msg.Datalen = 0
@@ -798,7 +821,7 @@ func (s *socketServer) opBind(ios *iostate, msg *zxsocket.Msg) (status zx.Status
 	}
 
 	if err := ios.ep.Bind(*addr, nil); err != nil {
-		return mxNetError(err)
+		return zxNetError(err)
 	}
 
 	if logListen {
@@ -917,7 +940,7 @@ func fdioSockAddrReply(a tcpip.FullAddress, msg *zxsocket.Msg) zx.Status {
 func (s *socketServer) opGetSockName(ios *iostate, msg *zxsocket.Msg) zx.Status {
 	a, err := ios.ep.GetLocalAddress()
 	if err != nil {
-		return mxNetError(err)
+		return zxNetError(err)
 	}
 	if debug {
 		log.Printf("getsockname(): %v", a)
@@ -928,7 +951,7 @@ func (s *socketServer) opGetSockName(ios *iostate, msg *zxsocket.Msg) zx.Status 
 func (s *socketServer) opGetPeerName(ios *iostate, msg *zxsocket.Msg) (status zx.Status) {
 	a, err := ios.ep.GetRemoteAddress()
 	if err != nil {
-		return mxNetError(err)
+		return zxNetError(err)
 	}
 	return fdioSockAddrReply(a, msg)
 }
@@ -1023,7 +1046,7 @@ func (s *socketServer) opListen(ios *iostate, msg *zxsocket.Msg) (status zx.Stat
 		if debug {
 			log.Printf("listen: %v", err)
 		}
-		return mxNetError(err)
+		return zxNetError(err)
 	}
 
 	if logListen {
@@ -1120,7 +1143,7 @@ func (s *socketServer) opConnect(ios *iostate, msg *zxsocket.Msg) (status zx.Sta
 		if debug {
 			log.Printf("connect: addr=%v, %v", *addr, e)
 		}
-		return mxNetError(e)
+		return zxNetError(e)
 	}
 	if debug {
 		log.Printf("connect: connected")
