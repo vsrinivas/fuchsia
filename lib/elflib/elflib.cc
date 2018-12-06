@@ -16,46 +16,36 @@ ElfLib::~ElfLib() = default;
 std::unique_ptr<ElfLib> ElfLib::Create(
     std::unique_ptr<MemoryAccessor>&& memory) {
   std::unique_ptr<ElfLib> out = std::make_unique<ElfLib>(std::move(memory));
+  std::vector<uint8_t> header_data;
+  header_data.resize(sizeof(Elf64_Ehdr));
 
-  if (!out->GetDatum(0, &out->header_)) {
+  if (!out->memory_->GetMemory(0, &header_data)) {
+    return std::unique_ptr<ElfLib>();
+  }
+
+  out->header_ = *reinterpret_cast<Elf64_Ehdr*>(header_data.data());
+
+  // We don't support non-standard section header sizes.
+  if (out->header_.e_shentsize != sizeof(Elf64_Shdr)) {
     return std::unique_ptr<ElfLib>();
   }
 
   return out;
 }
 
-template <typename T>
-bool ElfLib::GetDatum(uint64_t offset, T* out) {
-  std::vector<uint8_t> data;
-  data.resize(sizeof(T));
-
-  if (!memory_->GetMemory(offset, &data)) {
-    return false;
-  }
-
-  *out = *reinterpret_cast<T*>(data.data());
-  return true;
-}
-
-template <typename T>
-bool ElfLib::GetData(uint64_t offset, size_t count, std::vector<T>* out) {
-  std::vector<uint8_t> data;
-  data.resize(sizeof(T) * count);
-
-  if (!memory_->GetMemory(offset, &data)) {
-    return false;
-  }
-
-  T* out_array = reinterpret_cast<T*>(data.data());
-
-  *out = std::vector(out_array, out_array + count);
-  return true;
-}
-
 const Elf64_Shdr* ElfLib::GetSectionHeader(size_t section) {
-  if (sections_.empty() &&
-      !GetData(header_.e_shoff, header_.e_shnum, &sections_)) {
-    return nullptr;
+  if (sections_.empty()) {
+    std::vector<uint8_t> data;
+    data.resize(sizeof(Elf64_Shdr) * header_.e_shnum);
+
+    if (!memory_->GetMemory(header_.e_shoff, &data)) {
+      return nullptr;
+    }
+
+    Elf64_Shdr* header_array = reinterpret_cast<Elf64_Shdr*>(data.data());
+
+    std::copy(header_array, header_array + header_.e_shnum,
+              std::back_inserter(sections_));
   }
 
   if (section >= sections_.size()) {
@@ -81,7 +71,7 @@ const std::vector<uint8_t>* ElfLib::GetSectionData(size_t section) {
   std::vector<uint8_t> data;
   data.resize(count);
 
-  if (!GetData(header->sh_offset, count, &data)) {
+  if (!memory_->GetMappedMemory(header->sh_offset, header->sh_addr, &data)) {
     return nullptr;
   }
 
@@ -90,13 +80,13 @@ const std::vector<uint8_t>* ElfLib::GetSectionData(size_t section) {
   return &section_data_[section];
 }
 
-bool ElfLib::GetSectionOffsetFromName(const std::string& name, size_t* out) {
+const std::vector<uint8_t>* ElfLib::GetSectionData(const std::string& name) {
   if (section_names_.size() == 0) {
     const std::vector<uint8_t>* section_name_data =
         GetSectionData(header_.e_shstrndx);
 
     if (!section_name_data) {
-      return false;
+      return nullptr;
     }
 
     const uint8_t* data = section_name_data->data();
@@ -122,31 +112,10 @@ bool ElfLib::GetSectionOffsetFromName(const std::string& name, size_t* out) {
   const auto& iter = section_names_.find(name);
 
   if (iter == section_names_.end()) {
-    return false;
-  }
-
-  *out = iter->second;
-  return true;
-}
-
-const Elf64_Shdr* ElfLib::GetSectionHeader(const std::string& name) {
-  size_t off;
-
-  if (!GetSectionOffsetFromName(name, &off)) {
     return nullptr;
   }
 
-  return GetSectionHeader(off);
-}
-
-const std::vector<uint8_t>* ElfLib::GetSectionData(const std::string& name) {
-  size_t off;
-
-  if (!GetSectionOffsetFromName(name, &off)) {
-    return nullptr;
-  }
-
-  return GetSectionData(off);
+  return GetSectionData(iter->second);
 }
 
 }  // namespace elflib

@@ -26,6 +26,15 @@ class ElfLib {
     // offset 0 should point to the Elf64_Ehdr. The vector should be sized to
     // the amount of data you want to read.
     virtual bool GetMemory(uint64_t offset, std::vector<uint8_t>* out) = 0;
+
+    // Get memory for a mapped area. This is the same as GetMemory except we
+    // are also given the target address of the memory we want according to the
+    // ELF file. If we're reading ELF structures that have been mapped into a
+    // running process already we may want to check the mapped address instead.
+    virtual bool GetMappedMemory(uint64_t offset, uint64_t mapped_address,
+                                 std::vector<uint8_t>* out) {
+      return GetMemory(offset, out);
+    }
   };
 
   // Do not use. See Create.
@@ -42,14 +51,6 @@ class ElfLib {
     std::unique_ptr<MemoryAccessor>&& memory);
 
  private:
-  // Get memory and cast it to a struct.
-  template <typename T>
-  bool GetDatum(uint64_t offset, T* out);
-
-  // Get memory and cast it to a series of structs.
-  template <typename T>
-  bool GetData(uint64_t offset, size_t count, std::vector<T>* out);
-
   // Get the header for a section by its index. Return nullptr if the index is
   // invalid.
   const Elf64_Shdr* GetSectionHeader(size_t section);
@@ -57,13 +58,6 @@ class ElfLib {
   // Get the contents of a section by its index. Return nullptr if the index is
   // invalid.
   const std::vector<uint8_t>* GetSectionData(size_t section);
-
-  // Get the section offset from the name. Returns true unless a lookup failed.
-  bool GetSectionOffsetFromName(const std::string& name, size_t* out);
-
-  // Get the header for a section by its name. Return nullptr if there is no
-  // section by that name.
-  const Elf64_Shdr* GetSectionHeader(const std::string& name);
 
   std::unique_ptr<MemoryAccessor> memory_;
   Elf64_Ehdr header_;

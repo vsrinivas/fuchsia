@@ -12,6 +12,8 @@
 namespace elflib {
 namespace {
 
+constexpr uint64_t kAddrPoison = 0xdeadb33ff00db4b3;
+
 class TestMemoryAccessor : public ElfLib::MemoryAccessor {
  public:
   TestMemoryAccessor() {
@@ -29,11 +31,13 @@ class TestMemoryAccessor : public ElfLib::MemoryAccessor {
       .sh_name = 1,
       .sh_type = SHT_SYMTAB,
       .sh_size = 18,
+      .sh_addr = kAddrPoison,
     });
     size_t stuff_hdr = PushData(Elf64_Shdr {
       .sh_name = 2,
       .sh_type = SHT_LOUSER,
       .sh_size = 15,
+      .sh_addr = kAddrPoison,
     });
 
     DataAt<Elf64_Shdr>(shsymtab_hdr)->sh_offset = content_.size();
@@ -74,6 +78,15 @@ class TestMemoryAccessor : public ElfLib::MemoryAccessor {
 
     std::copy(start_iter, start_iter + out->size(), out->begin());
     return true;
+  }
+
+  bool GetMappedMemory(uint64_t offset, uint64_t address,
+                       std::vector<uint8_t>* out) {
+    if (address != kAddrPoison) {
+      return false;
+    }
+
+    return GetMemory(offset, out);
   }
 
  private:
