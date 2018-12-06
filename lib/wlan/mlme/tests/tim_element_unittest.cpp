@@ -42,9 +42,10 @@ TEST(TimElement, IsTrafficBuffered) {
 
 TEST(TimElement, FindAndParseOk) {
     // Present & valid TIM
-    auto tim = FindAndParseTim(std::vector<uint8_t>({ 0, 3, 'f', 'o', 'o', // SSID
-                                                      5, 5, 1, 2, 3, 10, 20, // TIM
-                                                      7, 3, 'A', 'B', 'C' })); // Country
+    std::vector<uint8_t> buf({ 0, 3, 'f', 'o', 'o', // SSID
+                               5, 5, 1, 2, 3, 10, 20, // TIM
+                               7, 3, 'A', 'B', 'C' }); // Country
+    auto tim = FindAndParseTim(buf);
     ASSERT_TRUE(tim);
     EXPECT_EQ(tim->header.dtim_count, 1);
     EXPECT_EQ(tim->header.dtim_period, 2);
