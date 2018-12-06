@@ -79,6 +79,11 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
   // Returns the correct minimum ATT_MTU based on the underlying link type.
   uint16_t min_mtu() const { return min_mtu_; }
 
+  // Returns the current link security properties.
+  const sm::SecurityProperties security() const {
+    return chan_ ? chan_->security() : sm::SecurityProperties();
+  }
+
   // Sets a callback to be invoked invoked when the underlying channel has
   // closed. |callback| should disconnect the underlying logical link.
   void set_closed_callback(fit::closure callback) {

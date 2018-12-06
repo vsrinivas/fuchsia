@@ -18,40 +18,48 @@ namespace btlib {
 namespace gatt {
 namespace {
 
-// TODO(armansito): Compare against the actual connection security level. For
-// now, we return an error if any security is required.
 att::ErrorCode CheckSecurity(const att::AccessRequirements& reqs,
+                             const sm::SecurityProperties& security,
                              bool read_or_write) {
   if (!reqs.allowed()) {
     return read_or_write ? att::ErrorCode::kReadNotPermitted
                          : att::ErrorCode::kWriteNotPermitted;
   }
 
-  if (reqs.encryption_required()) {
-    return att::ErrorCode::kInsufficientEncryption;
-  }
-
-  // TODO(armansito): If authentication is required, then so is encryption. The
-  // error reporting should reflect that. We may also want to consider
-  // collapsing the three separate security levels down to one that includes all
-  // (at least at FIDL level).
-  if (reqs.authentication_required()) {
+  if (reqs.encryption_required() &&
+      security.level() < sm::SecurityLevel::kEncrypted) {
+    // If the peer is bonded but the link is not encrypted the "Insufficient
+    // Encryption" error should be sent. Our GAP layer always keeps the link
+    // encrypted so the authentication procedure needs to fail during
+    // connection. We don't distinguish this from the un-paired state.
+    // (NOTE: It is possible for the link to be authenticated without encryption
+    // in LE Security Mode 2, which we do not support).
     return att::ErrorCode::kInsufficientAuthentication;
   }
 
-  if (reqs.authorization_required()) {
-    return att::ErrorCode::kInsufficientAuthorization;
+  if ((reqs.authentication_required() || reqs.authorization_required()) &&
+      security.level() < sm::SecurityLevel::kAuthenticated) {
+    return att::ErrorCode::kInsufficientAuthentication;
   }
 
-  // TODO(armansito): Handle kInsufficientEncryptionSize.
+  // TODO(armansito): Handle kInsufficientEncryptionKeySize.
 
   return att::ErrorCode::kNoError;
 }
 
+att::ErrorCode CheckReadPermissions(const att::AccessRequirements& reqs,
+                                    const sm::SecurityProperties& security) {
+  return CheckSecurity(reqs, security, true);
+}
+
+att::ErrorCode CheckWritePermissions(const att::AccessRequirements& reqs,
+                                     const sm::SecurityProperties& security) {
+  return CheckSecurity(reqs, security, false);
+}
+
 }  // namespace
 
-Server::Server(const std::string& peer_id,
-               fxl::RefPtr<att::Database> database,
+Server::Server(const std::string& peer_id, fxl::RefPtr<att::Database> database,
                fxl::RefPtr<att::Bearer> bearer)
     : peer_id_(peer_id), db_(database), att_(bearer), weak_ptr_factory_(this) {
   ZX_DEBUG_ASSERT(db_);
@@ -73,8 +81,9 @@ Server::Server(const std::string& peer_id,
       att::kWriteRequest, fit::bind_member(this, &Server::OnWriteRequest));
   write_cmd_id_ = att_->RegisterHandler(
       att::kWriteCommand, fit::bind_member(this, &Server::OnWriteCommand));
-  read_blob_req_id_ = att_->RegisterHandler(
-      att::kReadBlobRequest, fit::bind_member(this, &Server::OnReadBlobRequest));
+  read_blob_req_id_ =
+      att_->RegisterHandler(att::kReadBlobRequest,
+                            fit::bind_member(this, &Server::OnReadBlobRequest));
   find_by_type_value_ = att_->RegisterHandler(
       att::kFindByTypeValueRequest,
       fit::bind_member(this, &Server::OnFindByTypeValueRequest));
@@ -92,8 +101,7 @@ Server::~Server() {
 }
 
 void Server::SendNotification(att::Handle handle,
-                              const common::ByteBuffer& value,
-                              bool indicate) {
+                              const common::ByteBuffer& value, bool indicate) {
   auto buffer = common::NewSlabBuffer(sizeof(att::Header) + sizeof(handle) +
                                       value.size());
   ZX_ASSERT(buffer);
@@ -508,10 +516,10 @@ void Server::OnReadBlobRequest(att::Bearer::TransactionId tid,
     return;
   }
 
-  // TODO(armansito): Check against the connection security level here and
-  // succeed if it is sufficient.
-  if (!attr->read_reqs().allowed_without_security()) {
-    att_->ReplyWithError(tid, handle, att::ErrorCode::kReadNotPermitted);
+  att::ErrorCode ecode =
+      CheckReadPermissions(attr->read_reqs(), att_->security());
+  if (ecode != att::ErrorCode::kNoError) {
+    att_->ReplyWithError(tid, handle, ecode);
     return;
   }
 
@@ -520,7 +528,8 @@ void Server::OnReadBlobRequest(att::Bearer::TransactionId tid,
   auto self = weak_ptr_factory_.GetWeakPtr();
   auto callback = [self, tid, offset, handle](att::ErrorCode ecode,
                                               const auto& value) {
-    if (!self) return;
+    if (!self)
+      return;
 
     if (ecode != att::ErrorCode::kNoError) {
       self->att_->ReplyWithError(tid, handle, ecode);
@@ -573,10 +582,10 @@ void Server::OnReadRequest(att::Bearer::TransactionId tid,
     return;
   }
 
-  // TODO(armansito): Check against the connection security level here and
-  // succeed if it is sufficient.
-  if (!attr->read_reqs().allowed_without_security()) {
-    att_->ReplyWithError(tid, handle, att::ErrorCode::kReadNotPermitted);
+  att::ErrorCode ecode =
+      CheckReadPermissions(attr->read_reqs(), att_->security());
+  if (ecode != att::ErrorCode::kNoError) {
+    att_->ReplyWithError(tid, handle, ecode);
     return;
   }
 
@@ -631,9 +640,9 @@ void Server::OnWriteCommand(att::Bearer::TransactionId tid,
     return;
   }
 
-  // TODO(armansito): Check against the connection security level here and
-  // succeed if it is sufficient.
-  if (!attr->write_reqs().allowed_without_security()) {
+  att::ErrorCode ecode =
+      CheckWritePermissions(attr->write_reqs(), att_->security());
+  if (ecode != att::ErrorCode::kNoError) {
     return;
   }
 
@@ -669,10 +678,10 @@ void Server::OnWriteRequest(att::Bearer::TransactionId tid,
     return;
   }
 
-  // TODO(armansito): Check against the connection security level here and
-  // succeed if it is sufficient.
-  if (!attr->write_reqs().allowed_without_security()) {
-    att_->ReplyWithError(tid, handle, att::ErrorCode::kWriteNotPermitted);
+  att::ErrorCode ecode =
+      CheckWritePermissions(attr->write_reqs(), att_->security());
+  if (ecode != att::ErrorCode::kNoError) {
+    att_->ReplyWithError(tid, handle, ecode);
     return;
   }
 
@@ -710,14 +719,9 @@ void Server::OnWriteRequest(att::Bearer::TransactionId tid,
 }
 
 att::ErrorCode Server::ReadByTypeHelper(
-    att::Handle start,
-    att::Handle end,
-    const common::UUID& type,
-    bool group_type,
-    size_t max_data_list_size,
-    size_t max_value_size,
-    size_t entry_prefix_size,
-    size_t* out_value_size,
+    att::Handle start, att::Handle end, const common::UUID& type,
+    bool group_type, size_t max_data_list_size, size_t max_value_size,
+    size_t entry_prefix_size, size_t* out_value_size,
     std::list<const att::Attribute*>* out_results) {
   ZX_DEBUG_ASSERT(out_results);
   ZX_DEBUG_ASSERT(out_value_size);
@@ -740,14 +744,14 @@ att::ErrorCode Server::ReadByTypeHelper(
     const auto* attr = iter.get();
     ZX_DEBUG_ASSERT(attr);
 
-    auto sec_result =
-        CheckSecurity(attr->read_reqs(), true /* read_or_write */);
-    if (sec_result != att::ErrorCode::kNoError) {
+    att::ErrorCode security_result = CheckSecurity(
+        attr->read_reqs(), att_->security(), true /* read_or_write */);
+    if (security_result != att::ErrorCode::kNoError) {
       // Return error only if this is the first result that matched. We simply
       // stop the search otherwise.
-      if (results.empty())
-        return sec_result;
-
+      if (results.empty()) {
+        return security_result;
+      }
       break;
     }
 

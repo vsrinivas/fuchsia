@@ -16,6 +16,9 @@ namespace btlib {
 namespace gatt {
 namespace {
 
+using common::LowerBits;
+using common::UpperBits;
+
 constexpr char kTestDeviceId[] = "11223344-1122-1122-1122-112233445566";
 constexpr common::UUID kTestType16((uint16_t)0xBEEF);
 constexpr common::UUID kTestType128({0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
@@ -1060,84 +1063,6 @@ TEST_F(GATT_ServerTest, ReadByTypeSingleTruncated) {
   EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
 }
 
-TEST_F(GATT_ServerTest, ReadByTypeErrorSecurity) {
-  auto* grp = db()->NewGrouping(types::kPrimaryService, 4, kTestValue1);
-
-  // Reads not allowed (handle: 2)
-  grp->AddAttribute(kTestType16)->SetValue(kTestValue2);
-
-  // Requires encryption (handle: 3)
-  grp->AddAttribute(kTestType16, att::AccessRequirements(true, false, false))
-      ->SetValue(kTestValue2);
-
-  // Requires authentication (handle: 4)
-  grp->AddAttribute(kTestType16, att::AccessRequirements(false, true, false))
-      ->SetValue(kTestValue2);
-
-  // Requires authorization (handle: 5)
-  grp->AddAttribute(kTestType16, att::AccessRequirements(false, false, true))
-      ->SetValue(kTestValue2);
-
-  grp->set_active(true);
-
-  // clang-format off
-  const auto kRequest1 = common::CreateStaticByteBuffer(
-      0x08,        // opcode: read by type
-      0x02, 0x00,  // start: 0x0002
-      0x02, 0x00,  // end: 0x0002
-      0xEF, 0xBE   // type: 0xBEEF
-  );
-  const auto kRequest2 = common::CreateStaticByteBuffer(
-      0x08,        // opcode: read by type
-      0x03, 0x00,  // start: 0x0003
-      0x03, 0x00,  // end: 0x0003
-      0xEF, 0xBE   // type: 0xBEEF
-  );
-  const auto kRequest3 = common::CreateStaticByteBuffer(
-      0x08,        // opcode: read by type
-      0x04, 0x00,  // start: 0x0004
-      0x04, 0x00,  // end: 0x0004
-      0xEF, 0xBE   // type: 0xBEEF
-  );
-  const auto kRequest4 = common::CreateStaticByteBuffer(
-      0x08,        // opcode: read by type
-      0x05, 0x00,  // start: 0x0005
-      0x05, 0x00,  // end: 0x0005
-      0xEF, 0xBE   // type: 0xBEEF
-  );
-
-  const auto kExpected1 = common::CreateStaticByteBuffer(
-      0x01,        // opcode: error response
-      0x08,        // request: read by type
-      0x02, 0x00,  // handle: 0x0002
-      0x02         // error: read not permitted
-  );
-  const auto kExpected2 = common::CreateStaticByteBuffer(
-      0x01,        // opcode: error response
-      0x08,        // request: read by type
-      0x03, 0x00,  // handle: 0x0003
-      0x0F         // error: insuff. encryption
-  );
-  const auto kExpected3 = common::CreateStaticByteBuffer(
-      0x01,        // opcode: error response
-      0x08,        // request: read by type
-      0x04, 0x00,  // handle: 0x0004
-      0x05         // error: insuff. authentication
-  );
-  const auto kExpected4 = common::CreateStaticByteBuffer(
-      0x01,        // opcode: error response
-      0x08,        // request: read by type
-      0x05, 0x00,  // handle: 0x0005
-      0x08         // error: insuff. authorization
-  );
-  // clang-format on
-
-  EXPECT_TRUE(ReceiveAndExpect(kRequest1, kExpected1));
-  EXPECT_TRUE(ReceiveAndExpect(kRequest2, kExpected2));
-  EXPECT_TRUE(ReceiveAndExpect(kRequest3, kExpected3));
-  EXPECT_TRUE(ReceiveAndExpect(kRequest4, kExpected4));
-}
-
 // When there are more than one matching attributes, the list should end at the
 // first attribute that causes an error.
 TEST_F(GATT_ServerTest, ReadByTypeMultipleExcludeFirstError) {
@@ -1423,7 +1348,7 @@ TEST_F(GATT_ServerTest, WriteRequestSecurity) {
       0x01,        // opcode: error response
       0x12,        // request: write request
       0x02, 0x00,  // handle: 0x0002
-      0x03         // error: write not permitted
+      0x05         // error: insufficient authentication
   );
   // clang-format on
 
@@ -1612,7 +1537,7 @@ TEST_F(GATT_ServerTest, ReadRequestSecurity) {
       0x01,        // opcode: error response
       0x0A,        // request: read request
       0x02, 0x00,  // handle: 0x0002
-      0x02         // error: read not permitted
+      0x05         // error: insufficient authentication
   );
   // clang-format on
 
@@ -2049,6 +1974,280 @@ TEST_F(GATT_ServerTest, SendIndication) {
   });
 
   EXPECT_TRUE(Expect(kExpected));
+}
+
+class GATT_ServerTest_Security : public GATT_ServerTest {
+ protected:
+  void InitializeAttributesForReading() {
+    auto* grp = db()->NewGrouping(types::kPrimaryService, 4, kTestValue1);
+
+    const att::AccessRequirements encryption(true, false, false);
+    const att::AccessRequirements authentication(false, true, false);
+    const att::AccessRequirements authorization(false, false, true);
+
+    not_permitted_attr_ = grp->AddAttribute(kTestType16);
+    encryption_required_attr_ = grp->AddAttribute(kTestType16, encryption);
+    authentication_required_attr_ =
+        grp->AddAttribute(kTestType16, authentication);
+    authorization_required_attr_ =
+        grp->AddAttribute(kTestType16, authorization);
+
+    // Assigns all tests attributes a static value. Intended to be used by read
+    // requests. (Note: assigning a static value makes an attribute
+    // non-writable). All attributes are assigned kTestValue1 as their static
+    // value.
+    not_permitted_attr_->SetValue(kTestValue1);
+    encryption_required_attr_->SetValue(kTestValue1);
+    authentication_required_attr_->SetValue(kTestValue1);
+    authorization_required_attr_->SetValue(kTestValue1);
+
+    grp->set_active(true);
+  }
+
+  void InitializeAttributesForWriting() {
+    auto* grp = db()->NewGrouping(types::kPrimaryService, 4, kTestValue1);
+
+    const att::AccessRequirements encryption(true, false, false);
+    const att::AccessRequirements authentication(false, true, false);
+    const att::AccessRequirements authorization(false, false, true);
+
+    auto write_handler = [this](const auto&, att::Handle, uint16_t,
+                                const auto& value, auto responder) {
+      write_count_++;
+      if (responder) {
+        responder(att::ErrorCode::kNoError);
+      }
+    };
+
+    not_permitted_attr_ = grp->AddAttribute(kTestType16);
+    not_permitted_attr_->set_write_handler(write_handler);
+
+    encryption_required_attr_ =
+        grp->AddAttribute(kTestType16, att::AccessRequirements(), encryption);
+    encryption_required_attr_->set_write_handler(write_handler);
+
+    authentication_required_attr_ = grp->AddAttribute(
+        kTestType16, att::AccessRequirements(), authentication);
+    authentication_required_attr_->set_write_handler(write_handler);
+
+    authorization_required_attr_ = grp->AddAttribute(
+        kTestType16, att::AccessRequirements(), authorization);
+    authorization_required_attr_->set_write_handler(write_handler);
+
+    grp->set_active(true);
+  }
+
+  // Blocks until an ATT Error Response PDU with the given parameters is
+  // received from the fake channel (i.e. received FROM the ATT bearer).
+  bool ExpectAttError(att::OpCode request, att::Handle handle,
+                      att::ErrorCode ecode) {
+    return Expect(common::CreateStaticByteBuffer(
+        0x01,                                  // opcode: error response
+        request,                               // request opcode
+        LowerBits(handle), UpperBits(handle),  // handle
+        ecode                                  // error code
+        ));
+  }
+
+  // Helpers for emulating the receipt of an ATT read/write request PDU and
+  // expecting back a security error. Expects a valid response if
+  // |expected_ecode| is att::ErrorCode::kNoError.
+  bool EmulateReadByTypeRequest(att::Handle handle,
+                                att::ErrorCode expected_ecode) {
+    fake_chan()->Receive(common::CreateStaticByteBuffer(
+        0x08,                                  // opcode: read by type
+        LowerBits(handle), UpperBits(handle),  // start handle
+        LowerBits(handle), UpperBits(handle),  // end handle
+        0xEF, 0xBE                             // type: 0xBEEF, i.e. kTestType16
+        ));
+    if (expected_ecode == att::ErrorCode::kNoError) {
+      return Expect(common::CreateStaticByteBuffer(
+          0x09,  // opcode: read by type response
+          0x05,  // length: 5 (strlen("foo") + 2)
+          LowerBits(handle), UpperBits(handle),  // handle
+          'f', 'o', 'o'  // value: "foo", i.e. kTestValue1
+          ));
+    } else {
+      return ExpectAttError(0x08, handle, expected_ecode);
+    }
+  }
+
+  bool EmulateReadBlobRequest(att::Handle handle,
+                              att::ErrorCode expected_ecode) {
+    fake_chan()->Receive(common::CreateStaticByteBuffer(
+        0x0C,                                  // opcode: read blob
+        LowerBits(handle), UpperBits(handle),  // handle
+        0x00, 0x00                             // offset: 0
+        ));
+    if (expected_ecode == att::ErrorCode::kNoError) {
+      return Expect(common::CreateStaticByteBuffer(
+          0x0D,          // opcode: read blob response
+          'f', 'o', 'o'  // value: "foo", i.e. kTestValue1
+          ));
+    } else {
+      return ExpectAttError(0x0C, handle, expected_ecode);
+    }
+  }
+
+  bool EmulateReadRequest(att::Handle handle, att::ErrorCode expected_ecode) {
+    fake_chan()->Receive(common::CreateStaticByteBuffer(
+        0x0A,                                 // opcode: read request
+        LowerBits(handle), UpperBits(handle)  // handle
+        ));
+    if (expected_ecode == att::ErrorCode::kNoError) {
+      return Expect(common::CreateStaticByteBuffer(
+          0x0B,          // opcode: read response
+          'f', 'o', 'o'  // value: "foo", i.e. kTestValue1
+          ));
+    } else {
+      return ExpectAttError(0x0A, handle, expected_ecode);
+    }
+  }
+
+  bool EmulateWriteRequest(att::Handle handle, att::ErrorCode expected_ecode) {
+    fake_chan()->Receive(common::CreateStaticByteBuffer(
+        0x12,                                  // opcode: write request
+        LowerBits(handle), UpperBits(handle),  // handle
+        't', 'e', 's', 't'                     // value: "test"
+        ));
+    if (expected_ecode == att::ErrorCode::kNoError) {
+      return Expect(common::CreateStaticByteBuffer(0x13  // write response
+                                                   ));
+    } else {
+      return ExpectAttError(0x12, handle, expected_ecode);
+    }
+  }
+
+  // Emulates the receipt of a Write Command. The expected error code parameter
+  // is unused since ATT commands do not have a response.
+  bool EmulateWriteCommand(att::Handle handle, att::ErrorCode) {
+    fake_chan()->Receive(common::CreateStaticByteBuffer(
+        0x52,                                  // opcode: write command
+        LowerBits(handle), UpperBits(handle),  // handle
+        't', 'e', 's', 't'                     // value: "test"
+        ));
+    RunLoopUntilIdle();
+    return true;
+  }
+
+  template <bool (GATT_ServerTest_Security::*EmulateMethod)(att::Handle,
+                                                            att::ErrorCode),
+            bool IsWrite>
+  void RunTest() {
+    const att::ErrorCode kNotPermittedError =
+        IsWrite ? att::ErrorCode::kWriteNotPermitted
+                : att::ErrorCode::kReadNotPermitted;
+
+    // No security.
+    EXPECT_TRUE((this->*EmulateMethod)(not_permitted_attr()->handle(),
+                                       kNotPermittedError));
+    EXPECT_TRUE(
+        (this->*EmulateMethod)(encryption_required_attr()->handle(),
+                               att::ErrorCode::kInsufficientAuthentication));
+    EXPECT_TRUE(
+        (this->*EmulateMethod)(authentication_required_attr()->handle(),
+                               att::ErrorCode::kInsufficientAuthentication));
+    EXPECT_TRUE(
+        (this->*EmulateMethod)(authorization_required_attr()->handle(),
+                               att::ErrorCode::kInsufficientAuthentication));
+
+    // Link encrypted.
+    fake_chan()->set_security(
+        sm::SecurityProperties(sm::SecurityLevel::kEncrypted, 16, false));
+    EXPECT_TRUE((this->*EmulateMethod)(not_permitted_attr()->handle(),
+                                       kNotPermittedError));
+    EXPECT_TRUE((this->*EmulateMethod)(encryption_required_attr()->handle(),
+                                       att::ErrorCode::kNoError));  // success
+    EXPECT_TRUE(
+        (this->*EmulateMethod)(authentication_required_attr()->handle(),
+                               att::ErrorCode::kInsufficientAuthentication));
+    EXPECT_TRUE(
+        (this->*EmulateMethod)(authorization_required_attr()->handle(),
+                               att::ErrorCode::kInsufficientAuthentication));
+
+    // Link encrypted w/ MITM.
+    fake_chan()->set_security(
+        sm::SecurityProperties(sm::SecurityLevel::kAuthenticated, 16, false));
+    EXPECT_TRUE((this->*EmulateMethod)(not_permitted_attr()->handle(),
+                                       kNotPermittedError));
+    EXPECT_TRUE((this->*EmulateMethod)(encryption_required_attr()->handle(),
+                                       att::ErrorCode::kNoError));  // success
+    EXPECT_TRUE((this->*EmulateMethod)(authentication_required_attr()->handle(),
+                                       att::ErrorCode::kNoError));  // success
+    EXPECT_TRUE((this->*EmulateMethod)(authorization_required_attr()->handle(),
+                                       att::ErrorCode::kNoError));  // success
+  }
+
+  void RunReadByTypeTest() {
+    RunTest<&GATT_ServerTest_Security::EmulateReadByTypeRequest, false>();
+  }
+  void RunReadBlobTest() {
+    RunTest<&GATT_ServerTest_Security::EmulateReadBlobRequest, false>();
+  }
+  void RunReadRequestTest() {
+    RunTest<&GATT_ServerTest_Security::EmulateReadRequest, false>();
+  }
+  void RunWriteRequestTest() {
+    RunTest<&GATT_ServerTest_Security::EmulateWriteRequest, true>();
+  }
+  void RunWriteCommandTest() {
+    RunTest<&GATT_ServerTest_Security::EmulateWriteCommand, true>();
+  }
+
+  const att::Attribute* not_permitted_attr() const {
+    return not_permitted_attr_;
+  }
+  const att::Attribute* encryption_required_attr() const {
+    return encryption_required_attr_;
+  }
+  const att::Attribute* authentication_required_attr() const {
+    return authentication_required_attr_;
+  }
+  const att::Attribute* authorization_required_attr() const {
+    return authorization_required_attr_;
+  }
+
+  size_t write_count() const { return write_count_; }
+
+ private:
+  att::Attribute* not_permitted_attr_ = nullptr;
+  att::Attribute* encryption_required_attr_ = nullptr;
+  att::Attribute* authentication_required_attr_ = nullptr;
+  att::Attribute* authorization_required_attr_ = nullptr;
+
+  size_t write_count_ = 0u;
+};
+
+// Tests receiving a Read By Type error under 3 possible link security levels.
+TEST_F(GATT_ServerTest_Security, ReadByTypeErrorSecurity) {
+  InitializeAttributesForReading();
+  RunReadByTypeTest();
+}
+
+TEST_F(GATT_ServerTest_Security, ReadBlobErrorSecurity) {
+  InitializeAttributesForReading();
+  RunReadBlobTest();
+}
+
+TEST_F(GATT_ServerTest_Security, ReadErrorSecurity) {
+  InitializeAttributesForReading();
+  RunReadRequestTest();
+}
+
+TEST_F(GATT_ServerTest_Security, WriteErrorSecurity) {
+  InitializeAttributesForWriting();
+  RunWriteRequestTest();
+
+  // Only 4 writes should have gone through.
+  EXPECT_EQ(4u, write_count());
+}
+
+TEST_F(GATT_ServerTest_Security, WriteCommandErrorSecurity) {
+  InitializeAttributesForWriting();
+  RunWriteCommandTest();
+
+  // Only 4 writes should have gone through.
+  EXPECT_EQ(4u, write_count());
 }
 
 }  // namespace
