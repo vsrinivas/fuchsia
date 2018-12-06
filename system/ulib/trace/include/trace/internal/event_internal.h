@@ -11,6 +11,7 @@
 #define TRACE_INTERNAL_EVENT_INTERNAL_H_
 
 #include <zircon/compiler.h>
+#include <zircon/syscalls.h>
 
 #include <trace-engine/instrumentation.h>
 #include <trace/internal/event_args.h>
@@ -75,6 +76,9 @@ __BEGIN_CDECLS
 #define TRACE_INTERNAL_SCOPE_LABEL_(token) TRACE_INTERNAL_SCOPE_LABEL__(token)
 #define TRACE_INTERNAL_SCOPE_LABEL__(token) __trace_scope_##token
 
+#define TRACE_INTERNAL_SCOPE_ARGS_LABEL(scope) TRACE_INTERNAL_SCOPE_ARGS_LABEL_(scope)
+#define TRACE_INTERNAL_SCOPE_ARGS_LABEL_(scope) scope##_args
+
 // Scaffolding for a trace macro that does not have a category.
 #ifndef NTRACE
 #define TRACE_INTERNAL_SIMPLE_RECORD(stmt, args...)                 \
@@ -104,19 +108,19 @@ __BEGIN_CDECLS
 // Scaffolding for a trace macro that has a category (such as a trace event).
 #ifndef NTRACE
 #define TRACE_INTERNAL_EVENT_RECORD(category_literal, stmt, args...) \
-    do {                                                                \
-        static trace_site_t TRACE_INTERNAL_SITE_STATE;                  \
-        trace_string_ref_t TRACE_INTERNAL_CATEGORY_REF;                 \
-        trace_context_t* TRACE_INTERNAL_CONTEXT =                       \
-            trace_acquire_context_for_category_cached(                  \
-                (category_literal), &TRACE_INTERNAL_SITE_STATE,         \
-                &TRACE_INTERNAL_CATEGORY_REF);                          \
-        if (unlikely(TRACE_INTERNAL_CONTEXT)) {                         \
-            TRACE_INTERNAL_NEW_DECLARE_ARGS(TRACE_INTERNAL_CONTEXT,     \
-                                            TRACE_INTERNAL_ARGS,        \
-                                            args);                      \
-            stmt;                                                       \
-        }                                                               \
+    do {                                                             \
+        static trace_site_t TRACE_INTERNAL_SITE_STATE;               \
+        trace_string_ref_t TRACE_INTERNAL_CATEGORY_REF;              \
+        trace_context_t* TRACE_INTERNAL_CONTEXT =                    \
+            trace_acquire_context_for_category_cached(               \
+                (category_literal), &TRACE_INTERNAL_SITE_STATE,      \
+                &TRACE_INTERNAL_CATEGORY_REF);                       \
+        if (unlikely(TRACE_INTERNAL_CONTEXT)) {                      \
+            TRACE_INTERNAL_NEW_DECLARE_ARGS(TRACE_INTERNAL_CONTEXT,  \
+                                            TRACE_INTERNAL_ARGS,     \
+                                            args);                   \
+            stmt;                                                    \
+        }                                                            \
     } while (0)
 #else
 #define TRACE_INTERNAL_EVENT_RECORD(category_literal, stmt, args...) \
@@ -177,13 +181,33 @@ __BEGIN_CDECLS
     } while (0)
 
 #ifndef NTRACE
-#define TRACE_INTERNAL_DECLARE_DURATION_SCOPE(variable, category_literal, name_literal) \
-    __attribute__((cleanup(trace_internal_cleanup_duration_scope)))                     \
-        trace_internal_duration_scope_t variable;                                       \
-    trace_internal_make_duration_scope(&variable, (category_literal), (name_literal))
-#define TRACE_INTERNAL_DURATION_(scope_label, scope_category_literal, scope_name_literal, args...)  \
-    TRACE_INTERNAL_DECLARE_DURATION_SCOPE(scope_label, scope_category_literal, scope_name_literal); \
-    TRACE_INTERNAL_DURATION_BEGIN(scope_label.category_literal, scope_label.name_literal, args)
+// TODO(fmeawad): The generated code for this macro is too big (PT-87)
+#define TRACE_INTERNAL_DECLARE_DURATION_SCOPE(variable, args_variable, category_literal,          \
+                                              name_literal, args...)                              \
+    TRACE_INTERNAL_ALLOCATE_ARGS(args_variable, args);                                            \
+    __attribute__((cleanup(trace_internal_cleanup_duration_scope)))                               \
+        trace_internal_duration_scope_t variable;                                                 \
+    do {                                                                                          \
+        static trace_site_t TRACE_INTERNAL_SITE_STATE;                                            \
+        trace_string_ref_t TRACE_INTERNAL_CATEGORY_REF;                                           \
+        trace_context_t* TRACE_INTERNAL_CONTEXT =                                                 \
+            trace_acquire_context_for_category_cached((category_literal),                         \
+                                                      &TRACE_INTERNAL_SITE_STATE,                 \
+                                                      &TRACE_INTERNAL_CATEGORY_REF);              \
+        if (unlikely(TRACE_INTERNAL_CONTEXT)) {                                                   \
+            TRACE_INTERNAL_INIT_ARGS(args_variable, args);                                        \
+            trace_release_context(TRACE_INTERNAL_CONTEXT);                                        \
+            trace_internal_make_duration_scope(&variable, (category_literal), (name_literal),     \
+                                               args_variable,                                     \
+                                               sizeof(args_variable) / sizeof(args_variable[0])); \
+        } else {                                                                                  \
+            variable.start_time = 0;                                                              \
+        }                                                                                         \
+    } while (0)
+
+#define TRACE_INTERNAL_DURATION_(scope_label, scope_category_literal, scope_name_literal, args...)   \
+    TRACE_INTERNAL_DECLARE_DURATION_SCOPE(scope_label, TRACE_INTERNAL_SCOPE_ARGS_LABEL(scope_label), \
+                                          scope_category_literal, scope_name_literal, args)
 #define TRACE_INTERNAL_DURATION(category_literal, name_literal, args...) \
     TRACE_INTERNAL_DURATION_(TRACE_INTERNAL_SCOPE_LABEL(), (category_literal), (name_literal), args)
 #else
@@ -279,6 +303,15 @@ __BEGIN_CDECLS
 
 ///////////////////////////////////////////////////////////////////////////////
 
+// When "destroyed" (by the cleanup attribute), writes a duration event.
+typedef struct trace_internal_duration_scope {
+    const char* category_literal;
+    const char* name_literal;
+    trace_ticks_t start_time;
+    trace_arg_t* args;
+    size_t num_args;
+} trace_internal_duration_scope_t;
+
 void trace_internal_write_instant_event_record_and_release_context(
     trace_context_t* context,
     const trace_string_ref_t* category_ref,
@@ -304,6 +337,9 @@ void trace_internal_write_duration_end_event_record_and_release_context(
     const trace_string_ref_t* category_ref,
     const char* name_literal,
     trace_arg_t* args, size_t num_args);
+
+void trace_internal_write_duration_event_record(
+    const trace_internal_duration_scope_t* scope);
 
 void trace_internal_write_async_begin_event_record_and_release_context(
     trace_context_t* context,
@@ -359,22 +395,25 @@ void trace_internal_write_blob_record_and_release_context(
     const void* blob, size_t blob_size);
 
 #ifndef NTRACE
-// When "destroyed" (by the cleanup attribute), writes a duration end event.
-typedef struct {
-    const char* category_literal;
-    const char* name_literal;
-} trace_internal_duration_scope_t;
 
 static inline void trace_internal_make_duration_scope(
     trace_internal_duration_scope_t* scope,
-    const char* category_literal, const char* name_literal) {
+    const char* category_literal, const char* name_literal,
+    trace_arg_t* args, size_t num_args) {
     scope->category_literal = category_literal;
     scope->name_literal = name_literal;
+    scope->start_time = zx_ticks_get();
+    scope->args = args;
+    scope->num_args = num_args;
 }
 
 static inline void trace_internal_cleanup_duration_scope(
     trace_internal_duration_scope_t* scope) {
-    TRACE_INTERNAL_DURATION_END(scope->category_literal, scope->name_literal);
+    // Check if the scope has been initialized. It can be un-initialized if
+    // tracing started after the scope was created or tracing is off.
+    if (likely(scope->start_time == 0))
+        return;
+    trace_internal_write_duration_event_record(scope);
 }
 #endif // NTRACE
 

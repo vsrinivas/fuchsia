@@ -433,7 +433,7 @@ bool event_data_test() {
         EXPECT_EQ(trace::EventType::kDurationComplete, d.type());
         EXPECT_EQ(123, d.GetDurationComplete().end_time);
 
-        EXPECT_STR_EQ("DurationComplete(end_time: 123)", d.ToString().c_str());
+        EXPECT_STR_EQ("DurationComplete(end_ts: 123)", d.ToString().c_str());
     }
 
     // async begin

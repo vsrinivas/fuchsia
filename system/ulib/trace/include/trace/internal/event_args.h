@@ -29,6 +29,11 @@
 // where we store the string in |name_ref.inline_string|. The second step is
 // done by |trace_internal_complete_args()| which is normally called by the
 // helper routines that finish recording the event.
+#define TRACE_INTERNAL_COUNT_ARGS(...) \
+    TRACE_INTERNAL_COUNT_PAIRS(__VA_ARGS__)
+#define TRACE_INTERNAL_ALLOCATE_ARGS(var_name, args...)    \
+    trace_arg_t var_name[TRACE_INTERNAL_COUNT_ARGS(args)]; \
+    static_assert(TRACE_INTERNAL_NEW_NUM_ARGS(var_name) <= TRACE_MAX_ARGS, "too many args")
 
 #ifdef __cplusplus
 
@@ -49,6 +54,15 @@
                                           var_name, args)};                    \
     static_assert(TRACE_INTERNAL_NEW_NUM_ARGS(var_name) <= TRACE_MAX_ARGS, "too many args")
 
+#define TRACE_INTERNAL_ASSIGN_ARG(var_name, idx, name_literal, arg_value) \
+    var_name[idx - 1].name_ref.encoded_value = 0;                         \
+    var_name[idx - 1].name_ref.inline_string = (name_literal);            \
+    var_name[idx - 1].value = ::trace::internal::MakeArgumentValue(       \
+        TRACE_INTERNAL_NEW_SCOPE_ARG_LABEL(var_name, idx));
+#define TRACE_INTERNAL_INIT_ARGS(var_name, args...)                            \
+    TRACE_INTERNAL_APPLY_PAIRWISE(TRACE_INTERNAL_NEW_HOLD_ARG, var_name, args) \
+    TRACE_INTERNAL_APPLY_PAIRWISE(TRACE_INTERNAL_ASSIGN_ARG, var_name, args)
+
 #else
 
 #define TRACE_INTERNAL_NEW_MAKE_ARG(var_name, idx, name_literal, arg_value) \
@@ -61,6 +75,12 @@
                                           var_name, args)};            \
     static_assert(TRACE_INTERNAL_NEW_NUM_ARGS(var_name) <= TRACE_MAX_ARGS, "too many args")
 
+#define TRACE_INTERNAL_ASSIGN_ARG(var_name, idx, name_literal, arg_value) \
+    var_name[idx - 1].name_ref.encoded_value = 0;                         \
+    var_name[idx - 1].name_ref.inline_string = (name_literal);            \
+    var_name[idx - 1].value = (arg_value);
+#define TRACE_INTERNAL_INIT_ARGS(var_name, args...) \
+    TRACE_INTERNAL_APPLY_PAIRWISE(TRACE_INTERNAL_ASSIGN_ARG, var_name, args)
 #endif // __cplusplus
 
 __BEGIN_CDECLS
