@@ -36,10 +36,23 @@ in which those components run. It is the first process started in the `fuchsia` 
 An implementation of a [session shell](#SessionShell).
 - [Source](https://fuchsia.googlesource.com/topaz/+/master/shell/armadillo/)
 
+### **Banjo**
+
+Banjo is a language for defining protocols that are used to communicate between
+[drivers](#Driver).  It is different from [FIDL](#FIDL) in that it specifies an
+ABI for drivers to use to call into each other, rather than an IPC protocol.
+
 #### **Base shell**
 
 The platform-guaranteed set of software functionality which provides a basic user-facing interface
 for boot, first-use, authentication, escape from and selection of session shells, and device recovery.
+
+### **Bus Driver**
+
+A [driver](#Driver) for a device that has multiple children.  For example,
+hardware interfaces like PCI specify specify a topology in which a single controller
+is used to interface with multiple devices connected to it.  In that situation, the driver
+for the controller would be a bus driver.
 
 #### **Component**
 
@@ -65,6 +78,23 @@ A channel is an IPC primitive provided by Zircon.  It is a bidirectional, datagr
 transport that can transfer small messages including [Handles](#Handle).  [FIDL](#FIDL)
 protocols typically use channels as their underlying transport.
 - [Channel Overview](https://fuchsia.googlesource.com/zircon/+/master/docs/objects/channel.md)
+
+### **Concurrent Device Driver**
+
+A concurrent device driver is a [hardware driver](#Hardware-Driver) that supports
+multiple concurrent operations.  This may be, for example, via a hardware command queue
+or multiple device channels.  From the perspective of the [core driver](#Core-Driver),
+the device has multiple pending operations, each of which completes or fails independently.
+If the driven device can internally parallelize an operation, but can only have one operation
+outstanding at a time, it may be better implemented with a
+[sequential device driver](#Sequential-Device-Driver).
+
+###  **Core Driver**
+
+A core driver is a [driver](#Driver) that implements the application-facing RPC
+interface for a class of drivers (e.g. block drivers, ethernet drivers).  It is
+hardware-agnostic.  It communicates with a [hardware driver](#Hardware-Driver)
+via [banjo](#Banjo) to service its requests.
 
 #### **DevHost**
 
@@ -173,6 +203,17 @@ A Handle is how a userspace process refers to a [kernel object](#Kernel-Object).
 to other processes over [Channel](#Channel)s.
 - [Reference](https://fuchsia.googlesource.com/zircon/+/HEAD/docs/handles.md)
 
+###  **Hardware Driver**
+
+A hardware driver is a [driver](#Driver) that controls a device.  It receives
+requests from its [core driver](#Core-Driver) and translates them into
+hardware-specific operations.  Hardware drivers strive to be as thin as
+possible.  They do not support RPC interfaces, ideally have no local worker
+threads (though that is not a strict requirement), and some will have interrupt
+handling threads.  They may be further classified into
+[sequential device drivers](#Sequential-Device-Driver) and
+[concurrent device drivers](#Concurrent-Device-Driver).
+
 #### **Hub**
 
 The hub is a portal for introspection.  It enables tools to access detailed structural information
@@ -278,6 +319,11 @@ Peridot is one of the four layers of the Fuchsia codebase.
 
 Synonym for [environment](#environment).
 
+### **Sequential Device Driver**
+
+A sequential device driver is a [hardware driver](#Hardware-Driver) that will only service a
+single request at a time.  The [core driver](#Core-Driver) synchronizes and serializes all requests.
+
 #### **Service**
 
 A service is an implementation of a [FIDL](#FIDL) interface. Components can offer their creator a
@@ -299,12 +345,6 @@ having to imagine all those ways ahead of time.
 The system responsible for the visual presentation of a story. Includes the presenter component,
 plus structure and state information read from each story.
 
-#### **Topaz**
-
-Topaz is one of the four layers of the Fuchsia codebase.
-- [The Fuchsia layer cake](development/source_code/layers.md)
-- [Source](https://fuchsia.googlesource.com/topaz/+/master)
-
 #### **Session**
 
 An interactive session with one or more users. Has a [session shell](#SessionShell), which manages
@@ -315,6 +355,12 @@ terminals.
 #### **Session Shell**
 
 The replaceable set of software functionality that works in conjunction with devices to create an environment in which people can interact with mods, agents and suggestions.
+
+#### **Topaz**
+
+Topaz is one of the four layers of the Fuchsia codebase.
+- [The Fuchsia layer cake](development/source_code/layers.md)
+- [Source](https://fuchsia.googlesource.com/topaz/+/master)
 
 #### **VDSO**
 
