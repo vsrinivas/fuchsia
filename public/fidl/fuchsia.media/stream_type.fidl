@@ -29,12 +29,14 @@ const string MEDIA_ENCODING_UNSUPPORTED = "fuchsia.media.unsupported";
 const string AUDIO_ENCODING_AAC = "fuchsia.media.aac";
 const string AUDIO_ENCODING_AMRNB = "fuchsia.media.amrnb";
 const string AUDIO_ENCODING_AMRWB = "fuchsia.media.amrwb";
+const string AUDIO_ENCODING_APTX = "fuchsia.media.aptx";
 const string AUDIO_ENCODING_FLAC = "fuchsia.media.flac";
 const string AUDIO_ENCODING_GSMMS = "fuchsia.media.gsmms";
 const string AUDIO_ENCODING_LPCM = "fuchsia.media.lpcm";
 const string AUDIO_ENCODING_MP3 = "fuchsia.media.mp3";
 const string AUDIO_ENCODING_PCMALAW = "fuchsia.media.pcmalaw";
 const string AUDIO_ENCODING_PCMMULAW = "fuchsia.media.pcmmulaw";
+const string AUDIO_ENCODING_SBC = "fuchsia.media.sbc";
 const string AUDIO_ENCODING_VORBIS = "fuchsia.media.vorbis";
 
 const string VIDEO_ENCODING_H263 = "fuchsia.media.h263";
