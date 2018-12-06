@@ -15,7 +15,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include <fbl/unique_fd.h>
 #include <fuchsia/guest/vmm/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -204,30 +203,27 @@ int main(int argc, char** argv) {
   std::vector<fuchsia::guest::BlockDevice> block_infos;
   for (size_t i = 0; i < cfg.block_devices().size(); i++) {
     const auto& block_spec = cfg.block_devices()[i];
-    int flags = block_spec.mode == fuchsia::guest::BlockMode::READ_WRITE
-                    ? O_RDWR
-                    : O_RDONLY;
-    fbl::unique_fd fd;
-    if (!block_spec.path.empty()) {
-      fd = fbl::unique_fd(open(block_spec.path.c_str(), flags));
-    } else {
+    if (block_spec.path.empty()) {
       FXL_LOG(ERROR) << "Block spec missing path attribute " << status;
       return ZX_ERR_INVALID_ARGS;
     }
-    if (!fd) {
-      FXL_LOG(ERROR) << "Failed to open file for block device";
-      return status;
+    uint32_t flags = ZX_FS_RIGHT_READABLE;
+    if (block_spec.mode == fuchsia::guest::BlockMode::READ_WRITE) {
+      flags |= ZX_FS_RIGHT_WRITABLE;
     }
-    zx_handle_t handle;
-    status = fdio_get_service_handle(fd.release(), &handle);
+    fidl::InterfaceHandle<fuchsia::io::File> file;
+    status = fdio_open(block_spec.path.c_str(), flags,
+                       file.NewRequest().TakeChannel().release());
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Unabled to extract handle from FD: " << status;
+      FXL_LOG(ERROR) << "Failed to open " << block_spec.path << " " << status;
       return status;
     }
-    std::string id = fxl::StringPrintf("block-%zu", i);
-    auto file = fidl::InterfaceHandle<fuchsia::io::File>(zx::channel(handle));
-    block_infos.push_back(
-        {std::move(id), block_spec.mode, block_spec.format, std::move(file)});
+    block_infos.push_back({
+        .id = fxl::StringPrintf("block-%zu", i),
+        .mode = block_spec.mode,
+        .format = block_spec.format,
+        .file = std::move(file),
+    });
   }
   if (launch_info.block_devices) {
     block_infos.insert(
