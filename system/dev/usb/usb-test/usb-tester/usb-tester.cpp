@@ -7,7 +7,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <ddk/protocol/usb-composite.h>
+#include <ddk/protocol/usb/composite.h>
 #include <ddk/usb/usb.h>
 #include <fbl/algorithm.h>
 #include <fbl/unique_ptr.h>

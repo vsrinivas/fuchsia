@@ -14,6 +14,9 @@ MODULE_SRCS := \
 MODULE_STATIC_LIBS := system/ulib/ddk
 MODULE_LIBS := system/ulib/c
 
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-usb-composite \
+
 MODULE_PACKAGE := src
 
 include make/module.mk

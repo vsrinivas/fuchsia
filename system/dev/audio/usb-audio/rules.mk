@@ -42,4 +42,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/zxcpp \
     third_party/ulib/uboringssl \
 
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-usb-composite \
+
 include make/module.mk

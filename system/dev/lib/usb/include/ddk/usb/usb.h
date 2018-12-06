@@ -5,7 +5,7 @@
 #pragma once
 
 #include <ddk/protocol/usb.h>
-#include <ddk/protocol/usb-composite.h>
+#include <ddk/protocol/usb/composite.h>
 #include <zircon/compiler.h>
 #include <zircon/hw/usb.h>
 
@@ -14,9 +14,8 @@ __BEGIN_CDECLS;
 // helper function for claiming additional interfaces that satisfy the want_interface predicate,
 // want_interface will be passed the supplied arg
 zx_status_t usb_claim_additional_interfaces(usb_composite_protocol_t* comp,
-                                            bool (*want_interface)(usb_interface_descriptor_t*,
-                                                                   void*),
-                                            void* arg);
+    bool (*want_interface)(usb_interface_descriptor_t*, void*),
+    void* arg);
 
 // Utilities for iterating through descriptors within a device's USB configuration descriptor
 typedef struct {

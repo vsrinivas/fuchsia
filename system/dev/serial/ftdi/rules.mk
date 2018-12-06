@@ -16,5 +16,6 @@ MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-serial \
     system/banjo/ddk-protocol-serial-impl \
+    system/banjo/ddk-protocol-usb-composite \
 
 include make/module.mk

@@ -17,6 +17,9 @@ MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/zircon
 
 MODULE_FIDL_LIBS := system/fidl/zircon-usb-test-fwloader
 
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-usb-composite \
+
 ifeq ($(call TOBOOL,$(INTERNAL_ACCESS)),true)
 MODULE_FIRMWARE := usb-testing/fx3/fx3.img
 endif

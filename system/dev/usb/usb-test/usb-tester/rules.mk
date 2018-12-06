@@ -24,4 +24,7 @@ MODULE_FIDL_LIBS := system/fidl/zircon-usb-tester
 
 MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/zircon
 
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-usb-composite \
+
 include make/module.mk

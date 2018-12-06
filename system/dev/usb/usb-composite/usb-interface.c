@@ -5,7 +5,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/protocol/usb.h>
-#include <ddk/protocol/usb-composite.h>
+#include <ddk/protocol/usb/composite.h>
 #include <usb/usb-request.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -209,8 +209,7 @@ static zx_status_t usb_interface_get_descriptor_list(void* ctx, void** out_descr
     return ZX_OK;
 }
 
-static zx_status_t usb_interface_get_additional_descriptor_list(void* ctx, void** out_descriptors,
-                                                                size_t* out_length) {
+static uint32_t usb_interface_get_additional_descriptor_length(void* ctx) {
     usb_interface_t* intf = ctx;
 
     usb_composite_t* comp = intf->comp;
@@ -234,20 +233,46 @@ static zx_status_t usb_interface_get_additional_descriptor_list(void* ctx, void*
         header = NEXT_DESCRIPTOR(header);
     }
     if (!result) {
-        *out_descriptors = NULL;
-        *out_length = 0;
+        return 0;
+    }
+    return (uint8_t*)end - (uint8_t*)result;
+}
+
+static zx_status_t usb_interface_get_additional_descriptor_list(void* ctx, uint8_t* out_desc_list,
+                                                                size_t desc_count,
+                                                                size_t* out_desc_actual) {
+    usb_interface_t* intf = ctx;
+    *out_desc_actual = 0;
+
+    usb_composite_t* comp = intf->comp;
+    usb_configuration_descriptor_t* config = comp->config_desc;
+    usb_descriptor_header_t* header = NEXT_DESCRIPTOR(config);
+    usb_descriptor_header_t* end = (usb_descriptor_header_t*)((void*)config +
+                                                              le16toh(config->wTotalLength));
+
+    usb_interface_descriptor_t* result = NULL;
+    while (header < end) {
+        if (header->bDescriptorType == USB_DT_INTERFACE) {
+            usb_interface_descriptor_t* test_intf = (usb_interface_descriptor_t*)header;
+            // We are only interested in descriptors past the last stored descriptor
+            // for the current interface.
+            if (test_intf->bAlternateSetting == 0 &&
+                test_intf->bInterfaceNumber > intf->last_interface_id) {
+                result = test_intf;
+                break;
+            }
+        }
+        header = NEXT_DESCRIPTOR(header);
+    }
+    if (!result) {
         return ZX_OK;
     }
     size_t length = (void*)end - (void*)result;
-    void* descriptors = malloc(length);
-    if (!descriptors) {
-        *out_descriptors = NULL;
-        *out_length = 0;
-        return ZX_ERR_NO_MEMORY;
+    if (length > desc_count) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
     }
-    memcpy(descriptors, result, length);
-    *out_descriptors = descriptors;
-    *out_length = length;
+    memcpy(out_desc_list, result, length);
+    *out_desc_actual = length;
     return ZX_OK;
 }
 
@@ -259,10 +284,10 @@ zx_status_t usb_interface_get_string_descriptor(void* ctx, uint8_t desc_id, uint
                                      out_actual_lang_id);
 }
 
-static zx_status_t usb_interface_claim_device_interface(void* ctx,
-                                                        usb_interface_descriptor_t* claim_intf,
-                                                        size_t claim_length) {
+static zx_status_t usb_interface_claim_device_interface(void* ctx, const uint8_t desc[9],
+                                                        uint32_t claim_length) {
     usb_interface_t* intf = ctx;
+    usb_interface_descriptor_t* claim_intf = (usb_interface_descriptor_t*)desc;
 
     zx_status_t status = usb_composite_do_claim_interface(intf->comp, claim_intf->bInterfaceNumber);
     if (status != ZX_OK) {
@@ -321,6 +346,7 @@ usb_protocol_ops_t usb_device_protocol = {
 };
 
 usb_composite_protocol_ops_t usb_composite_device_protocol = {
+    .get_additional_descriptor_length = usb_interface_get_additional_descriptor_length,
     .get_additional_descriptor_list = usb_interface_get_additional_descriptor_list,
     .claim_interface = usb_interface_claim_device_interface,
 };

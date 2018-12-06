@@ -1,0 +1,21 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.usb.composite;
+
+using zx;
+
+/// sizeof(usb_interface_descriptor_t)
+const uint32 INTERFACE_DESC_SIZE = 9;
+
+[Layout="ddk-protocol"]
+interface UsbComposite {
+    /// Returns the length of the additional descriptor list.
+    1: GetAdditionalDescriptorLength() -> (uint32 length);
+    /// Returns the USB descriptors following the interface's existing descriptors.
+    2: GetAdditionalDescriptorList() -> (zx.status s, vector<uint8> desc);
+    /// Marks the interface as claimed and appends the interface descriptor to the
+    /// interface's existing descriptors.
+    3: ClaimInterface(array<uint8>:INTERFACE_DESC_SIZE desc, uint32 length) -> (zx.status s);
+};

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <ddk/usb/usb.h>
-#include <ddk/protocol/usb-composite.h>
 #include <zircon/compiler.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,9 +13,14 @@ static zx_status_t usb_desc_iter_additional_init(usb_composite_protocol_t* comp,
                                                  usb_desc_iter_t* iter) {
     memset(iter, 0, sizeof(*iter));
 
-    void* descriptors;
-    size_t length;
-    zx_status_t status = usb_composite_get_additional_descriptor_list(comp, &descriptors, &length);
+    size_t length = usb_composite_get_additional_descriptor_length(comp);
+    uint8_t* descriptors = malloc(length);
+    if (!descriptors) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    size_t actual;
+    zx_status_t status = usb_composite_get_additional_descriptor_list(comp, descriptors, length,
+                                                                      &actual);
     if (status != ZX_OK) {
         return status;
     }
@@ -30,8 +34,8 @@ static zx_status_t usb_desc_iter_additional_init(usb_composite_protocol_t* comp,
 // helper function for claiming additional interfaces that satisfy the want_interface predicate,
 // want_interface will be passed the supplied arg
 __EXPORT zx_status_t usb_claim_additional_interfaces(usb_composite_protocol_t* comp,
-                                                     bool (*want_interface)(usb_interface_descriptor_t*, void*),
-                                                     void* arg) {
+    bool (*want_interface)(usb_interface_descriptor_t*, void*),
+    void* arg) {
     usb_desc_iter_t iter;
     zx_status_t status = usb_desc_iter_additional_init(comp, &iter);
     if (status != ZX_OK) {
@@ -47,7 +51,7 @@ __EXPORT zx_status_t usb_claim_additional_interfaces(usb_composite_protocol_t* c
         void* intf_end = next ? next : (void*)iter.desc_end;
         size_t length = intf_end - (void*)intf;
 
-        status = usb_composite_claim_interface(comp, intf, length);
+        status = usb_composite_claim_interface(comp, (uint8_t*)intf, length);
         if (status != ZX_OK) {
             break;
         }
