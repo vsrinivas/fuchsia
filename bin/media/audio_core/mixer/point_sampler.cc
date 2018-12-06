@@ -114,10 +114,12 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
   // Source offset can be negative, but within the bounds of pos_filter_width.
   // PointSampler has no memory: input frames only affect present/future output.
   // That is: its "positive filter width" is zero.
-  FXL_DCHECK(src_off >= 0);
+  FXL_DCHECK(src_off >= 0) << std::hex << "src_off: 0x" << src_off;
+
   // Source offset must also be within neg_filter_width of our last sample.
   // Neg_filter_width is just shy of FRAC_ONE; src_off can't exceed the buf.
-  FXL_DCHECK(src_off < static_cast<int32_t>(frac_src_frames));
+  FXL_DCHECK(src_off < static_cast<int32_t>(frac_src_frames))
+      << std::hex << "src_off: 0x" << src_off;
 
   // If we are not attenuated to the point of being muted, go ahead and perform
   // the mix.  Otherwise, just update the source and dest offsets.
@@ -153,8 +155,7 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
     }
   } else {
     if (dest_off < dest_frames) {
-      // Calc how many samples we would've produced; update src_off &
-      // dest_off.
+      // Calc how much we would've produced; update src_off & dest_off.
       uint32_t src_avail =
           ((frac_src_frames - src_off) + step_size - 1) / step_size;
       uint32_t dest_avail = (dest_frames - dest_off);

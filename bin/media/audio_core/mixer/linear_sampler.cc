@@ -141,12 +141,17 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
   // Otherwise, all these samples are in the future and irrelevant here. Callers
   // explicitly avoid calling Mix in this case, so we have detected an error.
   // For linear_sampler it implies a requirement that src_off > -FRAC_ONE.
-  FXL_DCHECK(src_off + static_cast<int32_t>(pos_filter_width()) >= 0);
+  FXL_DCHECK(src_off + static_cast<int32_t>(pos_filter_width()) >= 0)
+      << std::hex << "min allowed: 0x" << -pos_filter_width() << ", src_off: 0x"
+      << src_off;
   // Source offset must also be within neg_filter_width of our last sample.
   // Otherwise, all these samples are in the past and irrelevant here. Callers
   // explicitly avoid calling Mix in this case, so we have detected an error.
   // For linear_sampler this implies that src_off < frac_src_frames.
-  FXL_DCHECK(src_off + FRAC_ONE <= frac_src_frames + neg_filter_width());
+  FXL_DCHECK(src_off + FRAC_ONE <= frac_src_frames + neg_filter_width())
+      << std::hex << "max allowed: 0x"
+      << frac_src_frames + neg_filter_width() - FRAC_ONE << ", src_off: 0x"
+      << src_off;
 
   Gain::AScale amplitude_scale;
   if constexpr (ScaleType != ScalerType::RAMPING) {
