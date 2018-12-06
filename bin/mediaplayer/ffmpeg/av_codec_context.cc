@@ -334,6 +334,23 @@ AvCodecContextPtr AVCodecContextFromAudioStreamType(
     codec_id = AV_CODEC_ID_PCM_MULAW;
   } else if (stream_type.encoding() == StreamType::kAudioEncodingSbc) {
     codec_id = AV_CODEC_ID_SBC;
+    switch (stream_type.sample_format()) {
+      case AudioStreamType::SampleFormat::kUnsigned8:
+        sample_format = AV_SAMPLE_FMT_U8P;
+        break;
+      case AudioStreamType::SampleFormat::kSigned16:
+        sample_format = AV_SAMPLE_FMT_S16P;
+        break;
+      case AudioStreamType::SampleFormat::kSigned24In32:
+        sample_format = AV_SAMPLE_FMT_S32P;
+        break;
+      case AudioStreamType::SampleFormat::kFloat:
+        sample_format = AV_SAMPLE_FMT_FLTP;
+        break;
+      default:
+        FXL_LOG(ERROR) << "unsupported sample format";
+        abort();
+    }
   } else if (stream_type.encoding() == StreamType::kAudioEncodingVorbis) {
     codec_id = AV_CODEC_ID_VORBIS;
   } else if (stream_type.encoding() == StreamType::kMediaEncodingUnsupported) {
