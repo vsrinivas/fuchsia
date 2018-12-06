@@ -38,8 +38,8 @@ fuchsia/swift/linux-amd64
 	7885c81bdbd778d0f3ffb7b4d28f22bf6f21a53e
 
 fuchsia/sysroot/linux-amd64
-	git_revision:3a257b6f56d9f934e852c84c5b82f6c6b71a6182
-	IiFVaKmy2J6nGBAa91I2LqanvcDAUPjUpakpxSp4thEC
+	git_revision:a96053c799a0f1ad0b7e8ab8199edbfa18adcbb6
+	ae0677829357edb199c21e76b1ea31eb8ef62817
 
 fuchsia/tools/breakpad/linux-amd64
 	git_revision:9eac2058b70615519b2c4d8c6bdbfca1bd079e39
