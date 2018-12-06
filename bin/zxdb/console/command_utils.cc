@@ -481,4 +481,50 @@ std::string DescribeFileLine(const FileLine& file_line, bool show_path) {
   return result;
 }
 
+Err SetElementsToAdd(const std::vector<std::string>& args, AssignType* assign_type,
+                     std::vector<std::string>* elements_to_set) {
+  if (args.size() < 2u)
+    return Err("Expected at least two arguments.");
+
+  elements_to_set->clear();
+
+  // Validation.
+  auto& token = args[1];
+  if (token == "=" || token == "+=" || token == "-=") {
+    if (args.size() < 3)
+      return Err("Expected a value after \"=\"");
+    elements_to_set->insert(elements_to_set->end(), args.begin() + 2,
+                            args.end());
+    if (token == "=") {
+      *assign_type = AssignType::kAssign;
+    } else if (token == "+=") {
+      *assign_type = AssignType::kAppend;
+    }
+    if (token == "-=") {
+      *assign_type = AssignType::kRemove;
+    }
+  } else {
+    *assign_type = AssignType::kAssign;
+    // We just append everything after the setting name.
+    elements_to_set->insert(elements_to_set->end(), args.begin() + 1,
+                            args.end());
+  }
+
+  return Err();
+}
+
+const char* AssignTypeToString(AssignType assign_type) {
+  switch (assign_type) {
+    case AssignType::kAssign:
+      return "Assign";
+    case AssignType::kAppend:
+      return "Append";
+    case AssignType::kRemove:
+      return "Remove";
+  }
+
+  FXL_NOTREACHED();
+  return "";
+}
+
 }  // namespace zxdb

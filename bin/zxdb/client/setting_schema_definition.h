@@ -20,15 +20,14 @@ class SettingSchema;
 struct ClientSettings {
   struct System {
     static const char* kSymbolPaths;
+    static const char* kPauseNewProcesses;
   };
 
   struct Job {
     static const char* kFilters;
   };
 
-  struct Target {
-    static const char* kPauseNewProcess;
-  };
+  struct Target {};
 
   struct Thread {};
 };

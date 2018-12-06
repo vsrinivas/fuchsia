@@ -21,7 +21,6 @@ namespace {
 fxl::RefPtr<SettingSchema> CreateSchema() {
   auto schema =
       fxl::MakeRefCounted<SettingSchema>(SettingSchema::Level::kJob);
-
   schema->AddList(ClientSettings::Job::kFilters, kFiltersDescription, {});
   return schema;
 }

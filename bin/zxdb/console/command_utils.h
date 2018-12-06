@@ -107,6 +107,21 @@ std::string DescribeLocation(const Location& loc, bool always_show_address);
 // the last file component will be printed.
 std::string DescribeFileLine(const FileLine& file_line, bool show_path = false);
 
+// The setting "set" command has different modification modes, which depend on
+// the setting type being modified.
+enum class AssignType {
+  kAssign,  // =    Sets a complete value for the setting.
+  kAppend,  // +=   Appends values to the setting (list only).
+  kRemove,  // -=   Removes values from the list (list only).
+};
+const char* AssignTypeToString(AssignType);
+
+// Parse the arguments for the set command and find out which assignment
+// operation it is and what are the actual elements to set.
+Err SetElementsToAdd(const std::vector<std::string>& args,
+                     AssignType* assign_type,
+                     std::vector<std::string>* elements_to_set);
+
 }  // namespace zxdb
 
 #endif  // GARNET_BIN_ZXDB_CONSOLE_COMMAND_UTILS_H_

@@ -471,6 +471,10 @@ Err DoGet(ConsoleContext* context, const Command& cmd) {
   Err err;
   OutputBuffer out;
   if (setting_name.empty()) {
+    out.Append({Syntax::kComment,
+                R"(Run "get <option>" to see detailed information. )"
+                R"(eg. "get symbol-paths").)"
+                "\n"});
     FormatSettings(cmd, &out);
   } else {
     err = FormatSetting(cmd, setting_name, &out);
@@ -573,6 +577,26 @@ Examples
         that doesn't make sense system-wide, but rather only per job.
 )";
 
+// Struct to represents all the context needed to correctly reason about the
+// set command.
+struct SetContext {
+  SettingStore* store = nullptr;
+  JobContext* job_context = nullptr;
+  Target* target = nullptr;
+  Thread* thread = nullptr;
+
+  SettingSchemaItem schema_item;    // What kind of setting this is.
+  std::string setting_name;         // The setting that was set.
+  // At what level the setting was applied.
+  SettingSchema::Level level = SettingSchema::Level::kDefault;
+  // What kind of operation this is.
+  AssignType assign_type = AssignType::kAssign;
+
+  // On append, it is the elements added.
+  // On remove, it is the elements removed.
+  std::vector<std::string> elements_changed;
+};
+
 Err SetBool(SettingStore* store, const std::string& setting_name,
             const std::string& value) {
   if (value == "0" || value == "false") {
@@ -598,59 +622,122 @@ Err SetInt(SettingStore* store, const std::string& setting_name,
   return store->SetInt(setting_name, out);
 }
 
-Err SetSetting(const std::string& setting_name, const std::string& value,
-               SettingStore* store, StoredSetting* out) {
-  if (!store->HasSetting(setting_name))
-    return Err("Could not find setting %s", setting_name.data());
+Err SetList(const SetContext& context,
+            const std::vector<std::string>& elements_to_set,
+            SettingStore* store, std::vector<std::string>* elements_changed) {
+  if (context.assign_type == AssignType::kAssign)
+    return store->SetList(context.setting_name, elements_to_set);
 
+  if (context.assign_type == AssignType::kAppend) {
+    auto list = store->GetList(context.setting_name);
+    list.insert(list.end(), elements_to_set.begin(), elements_to_set.end());
+    *elements_changed = elements_to_set;
+    return store->SetList(context.setting_name, list);
+  }
+
+  if (context.assign_type == AssignType::kRemove) {
+    // We search for the elements to remove.
+    auto list = store->GetList(context.setting_name);
+
+    std::vector<std::string> list_after_remove;
+    for (auto& elem : list) {
+      // If the element to change is within the list, means that we remove it.
+      auto it = std::find(elements_to_set.begin(), elements_to_set.end(), elem);
+      if (it == elements_to_set.end()) {
+        list_after_remove.push_back(elem);
+      } else {
+        elements_changed->push_back(elem);
+      }
+    }
+
+    // If none, were removed, we error so that the user can check why.
+    if (list.size() == list_after_remove.size())
+      return Err("Could not find any elements to remove.");
+    return store->SetList(context.setting_name, list_after_remove);
+  }
+
+  FXL_NOTREACHED();
+  return Err();
+}
+
+// Will run the sets against the correct SettingStore:
+// |context| represents the required context needed to reason about the command.
+// |elements_changed| are all the values that changed. This is used afterwards
+// for user feedback.
+// |out| is the resultant setting, which is used for user feedback.
+Err SetSetting(const SetContext& context,
+               const std::vector<std::string>& elements_to_set,
+               SettingStore* store, std::vector<std::string>* elements_changed,
+               StoredSetting* out) {
   Err err;
-  switch (store->GetSetting(setting_name).value.type()) {
+  if (context.assign_type != AssignType::kAssign &&
+      !context.schema_item.value().is_list())
+    return Err("Appending/removing only works for list options.");
+
+  switch (context.schema_item.type()) {
     case SettingType::kBoolean:
-      err = SetBool(store, setting_name, value);
+      err = SetBool(store, context.setting_name, elements_to_set[0]);
       break;
     case SettingType::kInteger:
-      err = SetInt(store, setting_name, value);
+      err = SetInt(store, context.setting_name, elements_to_set[0]);
       break;
     case SettingType::kString:
-      err = store->SetString(setting_name, value);
+      err = store->SetString(context.setting_name, elements_to_set[0]);
       break;
     case SettingType::kList:
-      err = store->SetList(
-          setting_name, fxl::SplitStringCopy(value, ":", fxl::kKeepWhitespace,
-                                             fxl::kSplitWantNonEmpty));
+      err = SetList(context, elements_to_set, store, elements_changed);
       break;
     case SettingType::kNull:
       return Err("Unknown type for setting %s. Please file a bug with repro.",
-                 setting_name.data());
+                 context.setting_name.data());
   }
 
   if (!err.ok())
     return err;
 
-  *out = store->GetSetting(setting_name);
+  *out = store->GetSetting(context.setting_name);
   return Err();
 }
 
-OutputBuffer FormatSetFeedback(const std::string& setting_name,
-                               SettingSchema::Level level, int target_id,
-                               int element_id = 0) {
+OutputBuffer FormatSetFeedback(ConsoleContext* context,
+                               const SetContext& set_context) {
+  std::string verb;
+  switch (set_context.assign_type) {
+    case AssignType::kAssign:
+      verb = "Set value(s)";
+      break;
+    case AssignType::kAppend:
+      verb = "Added value(s)";
+      break;
+    case AssignType::kRemove:
+      verb = "Removed the following value(s)";
+      break;
+  }
+  FXL_DCHECK(!verb.empty());
+
   std::string message;
-  switch (level) {
+  switch (set_context.level) {
     case SettingSchema::Level::kSystem:
-      message = fxl::StringPrintf("Set %s system wide:\n", setting_name.data());
+      message = fxl::StringPrintf("%s system wide:\n", verb.data());
       break;
-    case SettingSchema::Level::kJob:
-      message = fxl::StringPrintf("Set %s for job %d:\n", setting_name.data(),
-                                  element_id);
+    case SettingSchema::Level::kJob: {
+      int job_id = context->IdForJobContext(set_context.job_context);
+      message = fxl::StringPrintf("%s for job %d:\n", verb.data(), job_id);
       break;
-    case SettingSchema::Level::kTarget:
-      message = fxl::StringPrintf("Set %s for process %d:\n",
-                                  setting_name.data(), element_id);
+    }
+    case SettingSchema::Level::kTarget: {
+      int target_id = context->IdForTarget(set_context.target);
+      message =
+          fxl::StringPrintf("%s for process %d:\n", verb.data(), target_id);
       break;
-    case SettingSchema::Level::kThread:
-      message = fxl::StringPrintf("Set %s for thread %d of process %d:\n",
-                                  setting_name.data(), target_id, element_id);
+    }
+    case SettingSchema::Level::kThread: {
+      int target_id = context->IdForTarget(set_context.target);
+      int thread_id = context->IdForThread(set_context.thread);
+      message = fxl::StringPrintf("%s for thread %d of process %d:\n",
+                                  verb.data(), thread_id, target_id);
       break;
+    }
     default:
       FXL_NOTREACHED() << "Should not receive a default setting.";
   }
@@ -658,24 +745,12 @@ OutputBuffer FormatSetFeedback(const std::string& setting_name,
   return OutputBuffer(std::move(message));
 }
 
-Err DoSet(ConsoleContext* context, const Command& cmd) {
-  if (cmd.args().size() < 2) {
-    return Err("Wrong amount of Arguments. See \"help set\".");
-  }
-  const std::string& setting_name = cmd.args()[0];
-  // TODO(donosoc): Support multi word strings.
-  const std::string& value = cmd.args()[1];
-
-  // We lookup which SettingStore should respond to this query.
-  Console* console = Console::get();
+Err GetSetContext(const Command& cmd, const std::string& setting_name,
+                  SetContext* out) {
   SettingStore* store = nullptr;
-  Thread* thread = cmd.thread();
-  Target* target = cmd.target();
   JobContext* job_context = cmd.job_context();
-
-  // These indices are for giving better feedback to the user.
-  int target_id = console->context().IdForTarget(target);
-  int element_id = -1;  // ID of the element whose setting was set.
+  Target* target = cmd.target();
+  Thread* thread = cmd.thread();
 
   if (!target)
     return Err("No target found. Please file a bug with a repro.");
@@ -685,27 +760,19 @@ Err DoSet(ConsoleContext* context, const Command& cmd) {
   // to less specific.
   if (cmd.HasNoun(Noun::kThread)) {
     store = thread ? &thread->settings() : nullptr;
-    element_id = cmd.GetNounIndex(Noun::kThread);
   } else if (cmd.HasNoun(Noun::kProcess)) {
     store = &target->settings();
-    element_id = cmd.GetNounIndex(Noun::kProcess);
   } else if (cmd.HasNoun(Noun::kJob)) {
     store = job_context ? &job_context->settings() : nullptr;
-    element_id = cmd.GetNounIndex(Noun::kJob);
   }
 
   if (!store) {
     // We didn't found an explicit specified store, so we lookup in the current
     // context. We look from less specific to more specific in terms of stores,
     // so that the setting will be set for a biggest setting as it can.
-    // NOTE(donosoc): Some settings are replicated upwards, even to the system
-    //                level, as they make sense (eg. pause on attach). But
-    //                others only make sense locally (eg. job filters).
-    // TODO(donosoc): This works as long as the settings are not ambiguous. We
-    //                should add a way to desambiguate the setting.
-    if (!target)
-      return Err("No target found. Please file a bug with a repro.");
-
+    // NOTE): Some settings are replicated upwards, even to the system level,
+    //        as they make sense (eg. pause on attach). But others only make
+    //        sense locally (eg. job filters).
     System& system = target->session()->system();
 
     if (system.settings().schema()->HasSetting(setting_name)) {
@@ -713,33 +780,82 @@ Err DoSet(ConsoleContext* context, const Command& cmd) {
     } else if (job_context &&
                job_context->settings().schema()->HasSetting(setting_name)) {
       store = &job_context->settings();
-      element_id = console->context().IdForJobContext(job_context);
     } else if (target->settings().schema()->HasSetting(setting_name)) {
       store = &target->settings();
-      element_id = console->context().IdForTarget(target);
     } else if (thread &&
                thread->settings().schema()->HasSetting(setting_name)) {
       store = &thread->settings();
-      element_id = console->context().IdForThread(thread);
     }
   }
 
-  if (!store)
+  if (!store || !store->schema()->HasSetting(setting_name))
     return Err("Could not find setting \"%s\".", setting_name.data());
 
+  out->job_context = job_context;
+  out->target = target;
+  out->thread = thread;
+  out->store = store;
+  out->schema_item = store->schema()->GetItem(setting_name);
+
+  return Err();
+}
+
+Err DoSet(ConsoleContext* context, const Command& cmd) {
+  if (cmd.args().size() < 2)
+    return Err("Wrong amount of Arguments. See \"help set\".");
+
+  // Expected format is <option_name> [(=|+=|-=)] <value> [<value> ...]
+
+  Err err;
+  const std::string& setting_name = cmd.args()[0];
+
+  // See where this setting would be stored.
+  SetContext set_context;
+  set_context.setting_name = setting_name;
+  err = GetSetContext(cmd, setting_name, &set_context);
+  if (err.has_error())
+    return err;
+
+  // See what kind of assignment this is (whether it has =|+=|-=).
+  AssignType assign_type;
+  std::vector<std::string> elements_to_set;
+  err = SetElementsToAdd(cmd.args(), &assign_type, &elements_to_set);
+  if (err.has_error())
+    return err;
+
+  set_context.assign_type = assign_type;
+
+  // Validate that the operations makes sense.
+  if (assign_type != AssignType::kAssign &&
+      !set_context.schema_item.value().is_list())
+    return Err("List assignment (+=, -=) used on a non-list option.");
+
+  if (elements_to_set.size() > 1u && !set_context.schema_item.value().is_list())
+    return Err("Multiple values on a non-list option.");
+
   StoredSetting out;  // Used for showing the new value.
-  Err err = SetSetting(setting_name, value, store, &out);
+  err = SetSetting(set_context, elements_to_set, set_context.store,
+                   &set_context.elements_changed, &out);
   if (!err.ok())
     return err;
 
   // Should never override default (schema) values.
   FXL_DCHECK(out.level != SettingSchema::Level::kDefault);
+  set_context.level = out.level;
 
   // We output the new value.
 
-  Console::get()->Output(
-      FormatSetFeedback(setting_name, out.level, target_id, element_id));
-  Console::get()->Output(FormatSettingValue(out));
+  Console::get()->Output(FormatSetFeedback(context, set_context));
+
+  // For removed values, we show which ones were removed.
+  if (set_context.assign_type != AssignType::kRemove) {
+    Console::get()->Output(FormatSettingValue(out));
+  } else {
+    StoredSetting setting;
+    setting.value = SettingValue(set_context.elements_changed);
+    Console::get()->Output(FormatSettingValue(std::move(setting)));
+  }
+
   return Err();
 }
 

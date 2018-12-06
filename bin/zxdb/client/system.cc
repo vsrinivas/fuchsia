@@ -18,6 +18,10 @@ const char* kSymbolPathsDescription = 1 + R"(
   it will be treated as a mapping database from build ID to file path.
   Otherwise, the path will be loaded as an ELF file.)";
 
+const char* ClientSettings::System::kPauseNewProcesses = "pause-new-processes";
+static const char* kPauseNewProcessDescription = 1 + R"(
+  Whether a process should pause the initial thread on startup.)";
+
 namespace {
 
 fxl::RefPtr<SettingSchema> CreateSchema() {
@@ -26,6 +30,8 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
 
   schema->AddList(ClientSettings::System::kSymbolPaths, kSymbolPathsDescription,
                   {});
+  schema->AddBool(ClientSettings::System::kPauseNewProcesses,
+                  kPauseNewProcessDescription, true);
 
   return schema;
 }

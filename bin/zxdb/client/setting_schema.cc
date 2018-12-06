@@ -118,4 +118,22 @@ SettingValue SettingSchema::GetDefault(const std::string& key) const {
   return it->second.value();
 }
 
+const char* SettingSchema::LevelToString(SettingSchema::Level level) {
+  switch (level) {
+    case SettingSchema::Level::kSystem:
+      return "System";
+    case SettingSchema::Level::kJob:
+      return "Job";
+    case SettingSchema::Level::kTarget:
+      return "Target";
+    case SettingSchema::Level::kThread:
+      return "Thread";
+    case SettingSchema::Level::kDefault:
+      return "Default";
+  }
+
+  FXL_NOTREACHED();
+  return "";
+}
+
 }  // namespace zxdb

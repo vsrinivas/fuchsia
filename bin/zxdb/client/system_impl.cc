@@ -19,6 +19,8 @@ namespace zxdb {
 
 SystemImpl::SystemImpl(Session* session)
     : System(session), weak_factory_(this) {
+  // Create the default job and target.
+  AddNewJobContext(std::make_unique<JobContextImpl>(this, true));
   AddNewTarget(std::make_unique<TargetImpl>(this));
 
   // Forward all messages from the symbol index to our observers. It's OK to
@@ -204,6 +206,7 @@ void SystemImpl::DidConnect() {
       break;
     }
   }
+
   if (!implicit_job) {
     // No previous one, create a new implicit job.
     auto new_job = std::make_unique<JobContextImpl>(this, true);

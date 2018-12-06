@@ -30,6 +30,7 @@ class SettingSchema : public fxl::RefCountedThreadSafe<SettingSchema> {
     kThread,
     kDefault,  // Means no override, so value is the schema's default.
   };
+  static const char* LevelToString(Level);
 
   explicit SettingSchema(Level);
 
@@ -108,6 +109,7 @@ class SettingSchemaItem {
   const std::string& description() const { return description_; }
   bool overriden() const { return overriden_; }
   void set_overriden(bool overriden) { overriden_ = overriden; }
+  bool valid() const { return default_value_.valid(); }
 
   SettingType type() const { return default_value_.type(); }
   const SettingValue& value() const { return default_value_; }

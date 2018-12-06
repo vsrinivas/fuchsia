@@ -102,4 +102,4 @@ struct StoredSetting {
   SettingSchema::Level level = SettingSchema::Level::kDefault;
 };
 
-}  // namespace zxdg
+}  // namespace zxdb

@@ -131,15 +131,11 @@ OutputBuffer FormatSchema(const SettingSchema& schema) {
 }  // namespace
 
 void FormatSettings(const Command& cmd, OutputBuffer* out) {
-  OutputBuffer current;
-  out->Append(
-      {Syntax::kComment, "Run get <option> to see detailed information.\n"});
-
-
   // We print each setting
   out->Append({Syntax::kHeading, "\nSystem\n"});
   out->Append(FormatSettingStore(cmd.target()->session()->system().settings()));
 
+  OutputBuffer current;
   JobContext* job = cmd.job_context();
   current = job ? FormatSettingStore(job->settings())
                 : FormatSchema(*JobContext::GetSchema());

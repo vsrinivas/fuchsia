@@ -11,17 +11,11 @@ namespace zxdb {
 
 // Schema Definition -----------------------------------------------------------
 
-const char* ClientSettings::Target::kPauseNewProcess = "pause-new-process";
-static const char* kPauseNewProcessDescription = 1 + R"(
-  Whether a process should be pause the initial thread on startup.)";
-
 namespace {
 
 fxl::RefPtr<SettingSchema> CreateSchema() {
   auto schema =
       fxl::MakeRefCounted<SettingSchema>(SettingSchema::Level::kTarget);
-  schema->AddBool(ClientSettings::Target::kPauseNewProcess,
-                  kPauseNewProcessDescription, true);
   return schema;
 }
 

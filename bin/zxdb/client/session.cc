@@ -511,8 +511,8 @@ void Session::DispatchNotifyThread(debug_ipc::MsgHeader::Type type,
       // If this is the initial thread, we need to check if we need to resume it
       // depending on the user defined setting for new processes.
       auto threads = process->GetThreads();
-      bool pause_new_process = process->target()->settings().GetBool(
-          ClientSettings::Target::kPauseNewProcess);
+      bool pause_new_process = process->target()->system()->settings().GetBool(
+          ClientSettings::System::kPauseNewProcesses);
       if (threads.size() == 1u && !pause_new_process)
         threads.front()->Continue();
     } else {
