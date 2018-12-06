@@ -43,24 +43,24 @@ __BEGIN_CDECLS
 #ifdef __cplusplus
 #define TRACE_INTERNAL_HOLD_ARG(var_name, idx, name_literal, arg_value) \
     const auto& arg##idx = (arg_value);
-#define TRACE_INTERNAL_MAKE_ARG(var_name, idx, name_literal, arg_value) \
-    { .name_ref = { .encoded_value = 0, .inline_string = (name_literal) }, \
+#define TRACE_INTERNAL_MAKE_ARG(var_name, idx, name_literal, arg_value)  \
+    { .name_ref = {.encoded_value = 0, .inline_string = (name_literal)}, \
       .value = ::trace::internal::MakeArgumentValue(arg##idx) }
 #else
-#define TRACE_INTERNAL_MAKE_ARG(var_name, idx, name_literal, arg_value) \
-    { .name_ref = { .encoded_value = 0, .inline_string = (name_literal) }, \
+#define TRACE_INTERNAL_MAKE_ARG(var_name, idx, name_literal, arg_value)  \
+    { .name_ref = {.encoded_value = 0, .inline_string = (name_literal)}, \
       .value = (arg_value) }
 #endif // __cplusplus
 
 #ifdef __cplusplus
-#define TRACE_INTERNAL_DECLARE_ARGS(args...)                               \
-    TRACE_INTERNAL_APPLY_PAIRWISE(TRACE_INTERNAL_HOLD_ARG, ignore, args)   \
-    trace_arg_t TRACE_INTERNAL_ARGS[] = {                                  \
+#define TRACE_INTERNAL_DECLARE_ARGS(args...)                                       \
+    TRACE_INTERNAL_APPLY_PAIRWISE(TRACE_INTERNAL_HOLD_ARG, ignore, args)           \
+    trace_arg_t TRACE_INTERNAL_ARGS[] = {                                          \
         TRACE_INTERNAL_APPLY_PAIRWISE_CSV(TRACE_INTERNAL_MAKE_ARG, ignore, args)}; \
     static_assert(TRACE_INTERNAL_NUM_ARGS <= TRACE_MAX_ARGS, "too many args")
 #else
-#define TRACE_INTERNAL_DECLARE_ARGS(args...)                               \
-    trace_arg_t TRACE_INTERNAL_ARGS[] = {                                  \
+#define TRACE_INTERNAL_DECLARE_ARGS(args...)                                       \
+    trace_arg_t TRACE_INTERNAL_ARGS[] = {                                          \
         TRACE_INTERNAL_APPLY_PAIRWISE_CSV(TRACE_INTERNAL_MAKE_ARG, ignore, args)}; \
     static_assert(TRACE_INTERNAL_NUM_ARGS <= TRACE_MAX_ARGS, "too many args")
 #endif // __cplusplus
@@ -74,7 +74,7 @@ __BEGIN_CDECLS
 
 // Scaffolding for a trace macro that does not have a category.
 #ifndef NTRACE
-#define TRACE_INTERNAL_SIMPLE_RECORD(stmt, args...) \
+#define TRACE_INTERNAL_SIMPLE_RECORD(stmt, args...)                 \
     do {                                                            \
         trace_context_t* TRACE_INTERNAL_CONTEXT =                   \
             trace_acquire_context();                                \
@@ -86,7 +86,7 @@ __BEGIN_CDECLS
         }                                                           \
     } while (0)
 #else
-#define TRACE_INTERNAL_SIMPLE_RECORD(stmt, args...) \
+#define TRACE_INTERNAL_SIMPLE_RECORD(stmt, args...)                 \
     do {                                                            \
         if (0) {                                                    \
             trace_context_t* TRACE_INTERNAL_CONTEXT = 0;            \
@@ -128,7 +128,7 @@ __BEGIN_CDECLS
     } while (0)
 #endif // NTRACE
 
-#define TRACE_INTERNAL_INSTANT(category_literal, name_literal, scope, args...) \
+#define TRACE_INTERNAL_INSTANT(category_literal, name_literal, scope, args...)          \
     do {                                                                                \
         TRACE_INTERNAL_EVENT_RECORD(                                                    \
             (category_literal),                                                         \
@@ -139,7 +139,7 @@ __BEGIN_CDECLS
             args);                                                                      \
     } while (0)
 
-#define TRACE_INTERNAL_COUNTER(category_literal, name_literal, counter_id, args...) \
+#define TRACE_INTERNAL_COUNTER(category_literal, name_literal, counter_id, args...)          \
     do {                                                                                     \
         TRACE_INTERNAL_EVENT_RECORD(                                                         \
             (category_literal),                                                              \
@@ -150,26 +150,26 @@ __BEGIN_CDECLS
             args);                                                                           \
     } while (0)
 
-#define TRACE_INTERNAL_DURATION_BEGIN(category_literal, name_literal, args...) \
-    do {                                                                           \
-        TRACE_INTERNAL_EVENT_RECORD(                                               \
-            (category_literal),                                                    \
-            trace_internal_write_duration_begin_event_record_and_release_context(  \
-                TRACE_INTERNAL_CONTEXT,                                            \
-                &TRACE_INTERNAL_CATEGORY_REF,                                      \
-                (name_literal), TRACE_INTERNAL_ARGS, TRACE_INTERNAL_NUM_ARGS),     \
-            args);                                                                 \
+#define TRACE_INTERNAL_DURATION_BEGIN(category_literal, name_literal, args...)    \
+    do {                                                                          \
+        TRACE_INTERNAL_EVENT_RECORD(                                              \
+            (category_literal),                                                   \
+            trace_internal_write_duration_begin_event_record_and_release_context( \
+                TRACE_INTERNAL_CONTEXT,                                           \
+                &TRACE_INTERNAL_CATEGORY_REF,                                     \
+                (name_literal), TRACE_INTERNAL_ARGS, TRACE_INTERNAL_NUM_ARGS),    \
+            args);                                                                \
     } while (0)
 
-#define TRACE_INTERNAL_DURATION_END(category_literal, name_literal, args...) \
-    do {                                                                         \
-        TRACE_INTERNAL_EVENT_RECORD(                                             \
-            (category_literal),                                                  \
-            trace_internal_write_duration_end_event_record_and_release_context(  \
-                TRACE_INTERNAL_CONTEXT,                                          \
-                &TRACE_INTERNAL_CATEGORY_REF,                                    \
-                (name_literal), TRACE_INTERNAL_ARGS, TRACE_INTERNAL_NUM_ARGS),   \
-            args);                                                               \
+#define TRACE_INTERNAL_DURATION_END(category_literal, name_literal, args...)    \
+    do {                                                                        \
+        TRACE_INTERNAL_EVENT_RECORD(                                            \
+            (category_literal),                                                 \
+            trace_internal_write_duration_end_event_record_and_release_context( \
+                TRACE_INTERNAL_CONTEXT,                                         \
+                &TRACE_INTERNAL_CATEGORY_REF,                                   \
+                (name_literal), TRACE_INTERNAL_ARGS, TRACE_INTERNAL_NUM_ARGS),  \
+            args);                                                              \
     } while (0)
 
 #ifndef NTRACE
@@ -187,7 +187,7 @@ __BEGIN_CDECLS
     TRACE_INTERNAL_DURATION_BEGIN((category_literal), (name_literal), args)
 #endif // NTRACE
 
-#define TRACE_INTERNAL_ASYNC_BEGIN(category_literal, name_literal, async_id, args...) \
+#define TRACE_INTERNAL_ASYNC_BEGIN(category_literal, name_literal, async_id, args...)      \
     do {                                                                                   \
         TRACE_INTERNAL_EVENT_RECORD(                                                       \
             (category_literal),                                                            \
@@ -198,18 +198,18 @@ __BEGIN_CDECLS
             args);                                                                         \
     } while (0)
 
-#define TRACE_INTERNAL_ASYNC_INSTANT(category_literal, name_literal, async_id, args...) \
-    do {                                                                                    \
-        TRACE_INTERNAL_EVENT_RECORD(                                                        \
-            (category_literal),                                                             \
-            trace_internal_write_async_instant_event_record_and_release_context(            \
-                TRACE_INTERNAL_CONTEXT,                                                     \
-                &TRACE_INTERNAL_CATEGORY_REF,                                               \
-                (name_literal), (async_id), TRACE_INTERNAL_ARGS, TRACE_INTERNAL_NUM_ARGS),  \
-            args);                                                                          \
+#define TRACE_INTERNAL_ASYNC_INSTANT(category_literal, name_literal, async_id, args...)    \
+    do {                                                                                   \
+        TRACE_INTERNAL_EVENT_RECORD(                                                       \
+            (category_literal),                                                            \
+            trace_internal_write_async_instant_event_record_and_release_context(           \
+                TRACE_INTERNAL_CONTEXT,                                                    \
+                &TRACE_INTERNAL_CATEGORY_REF,                                              \
+                (name_literal), (async_id), TRACE_INTERNAL_ARGS, TRACE_INTERNAL_NUM_ARGS), \
+            args);                                                                         \
     } while (0)
 
-#define TRACE_INTERNAL_ASYNC_END(category_literal, name_literal, async_id, args...) \
+#define TRACE_INTERNAL_ASYNC_END(category_literal, name_literal, async_id, args...)        \
     do {                                                                                   \
         TRACE_INTERNAL_EVENT_RECORD(                                                       \
             (category_literal),                                                            \
@@ -220,7 +220,7 @@ __BEGIN_CDECLS
             args);                                                                         \
     } while (0)
 
-#define TRACE_INTERNAL_FLOW_BEGIN(category_literal, name_literal, flow_id, args...) \
+#define TRACE_INTERNAL_FLOW_BEGIN(category_literal, name_literal, flow_id, args...)       \
     do {                                                                                  \
         TRACE_INTERNAL_EVENT_RECORD(                                                      \
             (category_literal),                                                           \
@@ -231,7 +231,7 @@ __BEGIN_CDECLS
             args);                                                                        \
     } while (0)
 
-#define TRACE_INTERNAL_FLOW_STEP(category_literal, name_literal, flow_id, args...) \
+#define TRACE_INTERNAL_FLOW_STEP(category_literal, name_literal, flow_id, args...)        \
     do {                                                                                  \
         TRACE_INTERNAL_EVENT_RECORD(                                                      \
             (category_literal),                                                           \
@@ -242,7 +242,7 @@ __BEGIN_CDECLS
             args);                                                                        \
     } while (0)
 
-#define TRACE_INTERNAL_FLOW_END(category_literal, name_literal, flow_id, args...) \
+#define TRACE_INTERNAL_FLOW_END(category_literal, name_literal, flow_id, args...)         \
     do {                                                                                  \
         TRACE_INTERNAL_EVENT_RECORD(                                                      \
             (category_literal),                                                           \
@@ -253,7 +253,7 @@ __BEGIN_CDECLS
             args);                                                                        \
     } while (0)
 
-#define TRACE_INTERNAL_KERNEL_OBJECT(handle, args...) \
+#define TRACE_INTERNAL_KERNEL_OBJECT(handle, args...)                                 \
     do {                                                                              \
         TRACE_INTERNAL_SIMPLE_RECORD(                                                 \
             trace_internal_write_kernel_object_record_for_handle_and_release_context( \
@@ -262,7 +262,7 @@ __BEGIN_CDECLS
             args);                                                                    \
     } while (0)
 
-#define TRACE_INTERNAL_BLOB(type, name, blob, blob_size) \
+#define TRACE_INTERNAL_BLOB(type, name, blob, blob_size)          \
     do {                                                          \
         trace_context_t* TRACE_INTERNAL_CONTEXT =                 \
             trace_acquire_context();                              \

@@ -49,6 +49,7 @@
     (fn, vn, __VA_ARGS__)
 #define TRACE_INTERNAL_APPLY_PAIRWISE_(n) TRACE_INTERNAL_APPLY_PAIRWISE__(n)
 #define TRACE_INTERNAL_APPLY_PAIRWISE__(n) TRACE_INTERNAL_APPLY_PAIRWISE##n
+// clang-format off
 #define TRACE_INTERNAL_APPLY_PAIRWISE0(fn, vn, ...)
 #define TRACE_INTERNAL_APPLY_PAIRWISE1(fn, vn, k1, v1) \
     fn(vn, 1, k1, v1)
@@ -98,30 +99,31 @@
     fn(vn, 1, k1, v1) fn(vn, 2, k2, v2) fn(vn, 3, k3, v3) fn(vn, 4, k4, v4)     \
     fn(vn, 5, k5, v5) fn(vn, 6, k6, v6) fn(vn, 7, k7, v7) fn(vn, 8, k8, v8)     \
     fn(vn, 9, k9, v9) fn(vn, 10, k10, v10) fn(vn, 11, k11, v11) fn(vn, 12, k12, v12)
-#define TRACE_INTERNAL_APPLY_PAIRWISE13(fn, vn, k1, v1, k2, v2, k3, v3, k4, v4, \
-                                        k5, v5, k6, v6, k7, v7, k8, v8,         \
-                                        k9, v9, k10, v10, k11, v11, k12, v12,   \
-                                        k13, v13)                               \
-    fn(vn, 1, k1, v1) fn(vn, 2, k2, v2) fn(vn, 3, k3, v3) fn(vn, 4, k4, v4)     \
-    fn(vn, 5, k5, v5) fn(vn, 6, k6, v6) fn(vn, 7, k7, v7) fn(vn, 8, k8, v8)     \
+#define TRACE_INTERNAL_APPLY_PAIRWISE13(fn, vn, k1, v1, k2, v2, k3, v3, k4, v4,      \
+                                        k5, v5, k6, v6, k7, v7, k8, v8,              \
+                                        k9, v9, k10, v10, k11, v11, k12, v12,        \
+                                        k13, v13)                                    \
+    fn(vn, 1, k1, v1) fn(vn, 2, k2, v2) fn(vn, 3, k3, v3) fn(vn, 4, k4, v4)          \
+    fn(vn, 5, k5, v5) fn(vn, 6, k6, v6) fn(vn, 7, k7, v7) fn(vn, 8, k8, v8)          \
     fn(vn, 9, k9, v9) fn(vn, 10, k10, v10) fn(vn, 11, k11, v11) fn(vn, 12, k12, v12) \
     fn(vn, 13, k13, v13)
-#define TRACE_INTERNAL_APPLY_PAIRWISE14(fn, vn, k1, v1, k2, v2, k3, v3, k4, v4, \
-                                        k5, v5, k6, v6, k7, v7, k8, v8,         \
-                                        k9, v9, k10, v10, k11, v11, k12, v12,   \
-                                        k13, v13, k14, v14)                     \
-    fn(vn, 1, k1, v1) fn(vn, 2, k2, v2) fn(vn, 3, k3, v3) fn(vn, 4, k4, v4)     \
-    fn(vn, 5, k5, v5) fn(vn, 6, k6, v6) fn(vn, 7, k7, v7) fn(vn, 8, k8, v8)     \
+#define TRACE_INTERNAL_APPLY_PAIRWISE14(fn, vn, k1, v1, k2, v2, k3, v3, k4, v4,      \
+                                        k5, v5, k6, v6, k7, v7, k8, v8,              \
+                                        k9, v9, k10, v10, k11, v11, k12, v12,        \
+                                        k13, v13, k14, v14)                          \
+    fn(vn, 1, k1, v1) fn(vn, 2, k2, v2) fn(vn, 3, k3, v3) fn(vn, 4, k4, v4)          \
+    fn(vn, 5, k5, v5) fn(vn, 6, k6, v6) fn(vn, 7, k7, v7) fn(vn, 8, k8, v8)          \
     fn(vn, 9, k9, v9) fn(vn, 10, k10, v10) fn(vn, 11, k11, v11) fn(vn, 12, k12, v12) \
     fn(vn, 13, k13, v13) fn(vn, 14, k14, v14)
-#define TRACE_INTERNAL_APPLY_PAIRWISE15(fn, vn, k1, v1, k2, v2, k3, v3, k4, v4, \
-                                        k5, v5, k6, v6, k7, v7, k8, v8,         \
-                                        k9, v9, k10, v10, k11, v11, k12, v12,   \
-                                        k13, v13, k14, v14, k15, v15)           \
-    fn(vn, 1, k1, v1) fn(vn, 2, k2, v2) fn(vn, 3, k3, v3) fn(vn, 4, k4, v4)     \
-    fn(vn, 5, k5, v5) fn(vn, 6, k6, v6) fn(vn, 7, k7, v7) fn(vn, 8, k8, v8)     \
+#define TRACE_INTERNAL_APPLY_PAIRWISE15(fn, vn, k1, v1, k2, v2, k3, v3, k4, v4,      \
+                                        k5, v5, k6, v6, k7, v7, k8, v8,              \
+                                        k9, v9, k10, v10, k11, v11, k12, v12,        \
+                                        k13, v13, k14, v14, k15, v15)                \
+    fn(vn, 1, k1, v1) fn(vn, 2, k2, v2) fn(vn, 3, k3, v3) fn(vn, 4, k4, v4)          \
+    fn(vn, 5, k5, v5) fn(vn, 6, k6, v6) fn(vn, 7, k7, v7) fn(vn, 8, k8, v8)          \
     fn(vn, 9, k9, v9) fn(vn, 10, k10, v10) fn(vn, 11, k11, v11) fn(vn, 12, k12, v12) \
     fn(vn, 13, k13, v13) fn(vn, 14, k14, v14) fn(vn, 15, k15, v15)
+// clang-format on
 
 // Applies a function or macro to each pair of arguments to produce a
 // comma-separated result.  Works with 0 to 15 pairs.
@@ -134,6 +136,7 @@
     (fn, vn, __VA_ARGS__)
 #define TRACE_INTERNAL_APPLY_PAIRWISE_CSV_(n) TRACE_INTERNAL_APPLY_PAIRWISE_CSV__(n)
 #define TRACE_INTERNAL_APPLY_PAIRWISE_CSV__(n) TRACE_INTERNAL_APPLY_PAIRWISE_CSV##n
+// clang-format off
 #define TRACE_INTERNAL_APPLY_PAIRWISE_CSV0(fn, vn, ...)
 #define TRACE_INTERNAL_APPLY_PAIRWISE_CSV1(fn, vn, k1, v1) \
     fn(vn, 1, k1, v1)
@@ -183,29 +186,30 @@
     fn(vn, 1, k1, v1), fn(vn, 2, k2, v2), fn(vn, 3, k3, v3), fn(vn, 4, k4, v4),     \
     fn(vn, 5, k5, v5), fn(vn, 6, k6, v6), fn(vn, 7, k7, v7), fn(vn, 8, k8, v8),     \
     fn(vn, 9, k9, v9), fn(vn, 10, k10, v10), fn(vn, 11, k11, v11), fn(vn, 12, k12, v12)
-#define TRACE_INTERNAL_APPLY_PAIRWISE_CSV13(fn, vn, k1, v1, k2, v2, k3, v3, k4, v4, \
-                                            k5, v5, k6, v6, k7, v7, k8, v8,         \
-                                            k9, v9, k10, v10, k11, v11, k12, v12,   \
-                                            k13, v13)                               \
-    fn(vn, 1, k1, v1), fn(vn, 2, k2, v2), fn(vn, 3, k3, v3), fn(vn, 4, k4, v4),     \
-    fn(vn, 5, k5, v5), fn(vn, 6, k6, v6), fn(vn, 7, k7, v7), fn(vn, 8, k8, v8),     \
+#define TRACE_INTERNAL_APPLY_PAIRWISE_CSV13(fn, vn, k1, v1, k2, v2, k3, v3, k4, v4,      \
+                                            k5, v5, k6, v6, k7, v7, k8, v8,              \
+                                            k9, v9, k10, v10, k11, v11, k12, v12,        \
+                                            k13, v13)                                    \
+    fn(vn, 1, k1, v1), fn(vn, 2, k2, v2), fn(vn, 3, k3, v3), fn(vn, 4, k4, v4),          \
+    fn(vn, 5, k5, v5), fn(vn, 6, k6, v6), fn(vn, 7, k7, v7), fn(vn, 8, k8, v8),          \
     fn(vn, 9, k9, v9), fn(vn, 10, k10, v10), fn(vn, 11, k11, v11), fn(vn, 12, k12, v12), \
     fn(vn, 13, k13, v13)
-#define TRACE_INTERNAL_APPLY_PAIRWISE_CSV14(fn, vn, k1, v1, k2, v2, k3, v3, k4, v4, \
-                                            k5, v5, k6, v6, k7, v7, k8, v8,         \
-                                            k9, v9, k10, v10, k11, v11, k12, v12,   \
-                                            k13, v13, k14, v14)                     \
-    fn(vn, 1, k1, v1), fn(vn, 2, k2, v2), fn(vn, 3, k3, v3), fn(vn, 4, k4, v4),     \
-    fn(vn, 5, k5, v5), fn(vn, 6, k6, v6), fn(vn, 7, k7, v7), fn(vn, 8, k8, v8),     \
+#define TRACE_INTERNAL_APPLY_PAIRWISE_CSV14(fn, vn, k1, v1, k2, v2, k3, v3, k4, v4,      \
+                                            k5, v5, k6, v6, k7, v7, k8, v8,              \
+                                            k9, v9, k10, v10, k11, v11, k12, v12,        \
+                                            k13, v13, k14, v14)                          \
+    fn(vn, 1, k1, v1), fn(vn, 2, k2, v2), fn(vn, 3, k3, v3), fn(vn, 4, k4, v4),          \
+    fn(vn, 5, k5, v5), fn(vn, 6, k6, v6), fn(vn, 7, k7, v7), fn(vn, 8, k8, v8),          \
     fn(vn, 9, k9, v9), fn(vn, 10, k10, v10), fn(vn, 11, k11, v11), fn(vn, 12, k12, v12), \
     fn(vn, 13, k13, v13), fn(vn, 14, k14, v14)
-#define TRACE_INTERNAL_APPLY_PAIRWISE_CSV15(fn, vn, k1, v1, k2, v2, k3, v3, k4, v4, \
-                                            k5, v5, k6, v6, k7, v7, k8, v8,         \
-                                            k9, v9, k10, v10, k11, v11, k12, v12,   \
-                                            k13, v13, k14, v14, k15, v15)           \
-    fn(vn, 1, k1, v1), fn(vn, 2, k2, v2), fn(vn, 3, k3, v3), fn(vn, 4, k4, v4),     \
-    fn(vn, 5, k5, v5), fn(vn, 6, k6, v6), fn(vn, 7, k7, v7), fn(vn, 8, k8, v8),     \
+#define TRACE_INTERNAL_APPLY_PAIRWISE_CSV15(fn, vn, k1, v1, k2, v2, k3, v3, k4, v4,      \
+                                            k5, v5, k6, v6, k7, v7, k8, v8,              \
+                                            k9, v9, k10, v10, k11, v11, k12, v12,        \
+                                            k13, v13, k14, v14, k15, v15)                \
+    fn(vn, 1, k1, v1), fn(vn, 2, k2, v2), fn(vn, 3, k3, v3), fn(vn, 4, k4, v4),          \
+    fn(vn, 5, k5, v5), fn(vn, 6, k6, v6), fn(vn, 7, k7, v7), fn(vn, 8, k8, v8),          \
     fn(vn, 9, k9, v9), fn(vn, 10, k10, v10), fn(vn, 11, k11, v11), fn(vn, 12, k12, v12), \
     fn(vn, 13, k13, v13), fn(vn, 14, k14, v14), fn(vn, 15, k15, v15)
+// clang-format on
 
 #endif // TRACE_INTERNAL_PAIRS_INTERNAL_H_

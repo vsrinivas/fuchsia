@@ -10,7 +10,8 @@
 // documentation.
 //
 
-#pragma once
+#ifndef TRACE_OBSERVER_H_
+#define TRACE_OBSERVER_H_
 
 #include <trace-engine/instrumentation.h>
 
@@ -53,3 +54,5 @@ private:
 } // namespace trace
 
 #endif // __cplusplus
+
+#endif // TRACE_OBSERVER_H_

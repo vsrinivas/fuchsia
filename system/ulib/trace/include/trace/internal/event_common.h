@@ -4,8 +4,8 @@
 
 // This file contains definitions common to userspace and DDK tracing.
 
-#ifndef TRACE_COMMON_EVENT_H_
-#define TRACE_COMMON_EVENT_H_
+#ifndef TRACE_INTERNAL_EVENT_COMMON_H_
+#define TRACE_INTERNAL_EVENT_COMMON_H_
 
 #include <trace/event_args.h>
 #include <trace/internal/event_internal.h>
@@ -366,4 +366,4 @@
 #define TRACE_BLOB(type, name, blob, blob_size) \
     TRACE_INTERNAL_BLOB((type), (name), (blob), (blob_size))
 
-#endif // TRACE_COMMON_EVENT_H_
+#endif // TRACE_INTERNAL_EVENT_COMMON_H_

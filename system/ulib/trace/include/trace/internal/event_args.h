@@ -16,9 +16,9 @@
 
 #include <zircon/compiler.h>
 
-#include <trace/internal/pairs_internal.h>
 #include <trace-engine/context.h>
 #include <trace-engine/types.h>
+#include <trace/internal/pairs_internal.h>
 
 // TODO(dje): Remove "NEW_". It exists for now to minimize changes to
 // internal/event_internal.h.
@@ -28,32 +28,32 @@
 #ifdef __cplusplus
 
 #define TRACE_INTERNAL_NEW_SCOPE_ARG_LABEL(var_name, idx) \
-    __trace_arg_ ## var_name ## idx
+    __trace_arg_##var_name##idx
 
 #define TRACE_INTERNAL_NEW_HOLD_ARG(var_name, idx, name_literal, arg_value) \
     const auto& TRACE_INTERNAL_NEW_SCOPE_ARG_LABEL(var_name, idx) = (arg_value);
 #define TRACE_INTERNAL_NEW_MAKE_ARG(var_name, idx, name_literal, arg_value) \
-    { .name_ref = { .encoded_value = 0, .inline_string = (name_literal) }, \
-      .value = ::trace::internal::MakeArgumentValue(                       \
+    { .name_ref = {.encoded_value = 0, .inline_string = (name_literal)},    \
+      .value = ::trace::internal::MakeArgumentValue(                        \
           TRACE_INTERNAL_NEW_SCOPE_ARG_LABEL(var_name, idx)) }
 
-#define TRACE_INTERNAL_NEW_DECLARE_ARGS(context, var_name, args...) \
+#define TRACE_INTERNAL_NEW_DECLARE_ARGS(context, var_name, args...)            \
     TRACE_INTERNAL_APPLY_PAIRWISE(TRACE_INTERNAL_NEW_HOLD_ARG, var_name, args) \
-    trace_arg_t var_name[] = {                                             \
-        TRACE_INTERNAL_APPLY_PAIRWISE_CSV(TRACE_INTERNAL_NEW_MAKE_ARG,     \
-                                          var_name, args) };               \
+    trace_arg_t var_name[] = {                                                 \
+        TRACE_INTERNAL_APPLY_PAIRWISE_CSV(TRACE_INTERNAL_NEW_MAKE_ARG,         \
+                                          var_name, args)};                    \
     static_assert(TRACE_INTERNAL_NEW_NUM_ARGS(var_name) <= TRACE_MAX_ARGS, "too many args")
 
 #else
 
 #define TRACE_INTERNAL_NEW_MAKE_ARG(var_name, idx, name_literal, arg_value) \
-    { .name_ref = { .encoded_value = 0, .inline_string = (name_literal) }, \
+    { .name_ref = {.encoded_value = 0, .inline_string = (name_literal)},    \
       .value = (arg_value) }
 
-#define TRACE_INTERNAL_NEW_DECLARE_ARGS(context, var_name, args...) \
-    trace_arg_t var_name[] = {                                      \
+#define TRACE_INTERNAL_NEW_DECLARE_ARGS(context, var_name, args...)    \
+    trace_arg_t var_name[] = {                                         \
         TRACE_INTERNAL_APPLY_PAIRWISE_CSV(TRACE_INTERNAL_NEW_MAKE_ARG, \
-                                          var_name, args) };        \
+                                          var_name, args)};            \
     static_assert(TRACE_INTERNAL_NEW_NUM_ARGS(var_name) <= TRACE_MAX_ARGS, "too many args")
 
 #endif // __cplusplus
@@ -63,7 +63,7 @@ void trace_internal_complete_args(trace_context_t* context,
                                   trace_arg_t* args, size_t num_args);
 __END_CDECLS
 
-#define TRACE_INTERNAL_COMPLETE_ARGS(context, args, num_args) \
+#define TRACE_INTERNAL_COMPLETE_ARGS(context, args, num_args)        \
     do {                                                             \
         trace_internal_complete_args((context), (args), (num_args)); \
     } while (0)
