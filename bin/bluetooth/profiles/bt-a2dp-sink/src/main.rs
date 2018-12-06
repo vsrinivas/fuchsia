@@ -3,12 +3,13 @@
 // found in the LICENSE file.
 
 #![feature(futures_api, async_await, await_macro)]
-#![recursion_limit = "128"]
+#![recursion_limit = "256"]
 
 use {
     bt_avdtp as avdtp,
     failure::{format_err, Error, ResultExt},
     fidl_fuchsia_bluetooth_bredr::*,
+    fidl_fuchsia_media::AUDIO_ENCODING_SBC,
     fuchsia_async as fasync,
     fuchsia_syslog::{self, fx_log_info, fx_log_warn},
     fuchsia_zircon as zx,
@@ -19,6 +20,8 @@ use {
     parking_lot::RwLock,
     std::{collections::hash_map::Entry, collections::HashMap, string::String, sync::Arc},
 };
+
+mod player;
 
 /// When true, the service will display a byte count while streaming.
 const DEBUG_STREAM_STATS: bool = false;
@@ -71,15 +74,20 @@ const SBC_SEID: u8 = 6;
 struct Stream {
     /// The AVDTP endpoint that this stream is associated with.
     endpoint: avdtp::StreamEndpoint,
+    /// The encoding that media sent to this endpoint should be encoded with.
+    /// This should be an encoding constant from fuchsia.media like AUDIO_ENCODING_SBC.
+    /// See //garnet/public/fidl/fuchsia.media/stream_type.fidl for valid encodings.
+    encoding: String,
     /// Some(sender) when a stream task is started.  Signaling on this sender will
     /// end the media streaming task.
     suspend_sender: Option<Sender<()>>,
 }
 
 impl Stream {
-    fn new(endpoint: avdtp::StreamEndpoint) -> Stream {
+    fn new(endpoint: avdtp::StreamEndpoint, encoding: String) -> Stream {
         Stream {
             endpoint,
+            encoding,
             suspend_sender: None,
         }
     }
@@ -91,8 +99,9 @@ impl Stream {
         }
         let (send, receive) = mpsc::channel(1);
         self.suspend_sender = Some(send);
-        fuchsia_async::spawn(discard_media_stream(
+        fuchsia_async::spawn(decode_media_stream(
             self.endpoint.take_transport(),
+            self.encoding.clone(),
             receive,
         ));
         Ok(())
@@ -145,15 +154,15 @@ impl Streams {
                 },
             ],
         )?;
-        s.insert(sbc_stream);
+        s.insert(sbc_stream, AUDIO_ENCODING_SBC.to_string());
         Ok(s)
     }
 
     /// Adds a stream, indexing it by the endoint id, associated with an encoding,
     /// replacing any other stream with the same endpoint id.
-    fn insert(&mut self, stream: avdtp::StreamEndpoint) {
+    fn insert(&mut self, stream: avdtp::StreamEndpoint, codec: String) {
         self.0
-            .insert(stream.local_id().clone(), Stream::new(stream));
+            .insert(stream.local_id().clone(), Stream::new(stream, codec));
     }
 
     /// Retrievees a mutable reference to the endpoint with the `id`.
@@ -382,9 +391,20 @@ impl RemotePeer {
     }
 }
 
-// TODO(BT-628): deliver these packets to Media player instead of just discarding them.
-async fn discard_media_stream(mut stream: avdtp::MediaStream, mut end_signal: Receiver<()>) -> () {
+/// Decodes a media stream by starting a Player and transferring media stream packets from AVDTP
+/// to the player.  Restarts the player on player errors.
+/// Ends when signaled from `end_signal`, or when the media transport stream is closed.
+async fn decode_media_stream(
+    mut stream: avdtp::MediaStream, encoding: String, mut end_signal: Receiver<()>,
+) -> () {
     let mut total_bytes = 0;
+    let mut player = match await!(player::Player::new(encoding.clone())) {
+        Ok(v) => v,
+        Err(e) => {
+            fx_log_info!("Can't setup stream source for Media: {:?}", e);
+            return;
+        }
+    };
     loop {
         select! {
             item = stream.next().fuse() => {
@@ -394,14 +414,23 @@ async fn discard_media_stream(mut stream: avdtp::MediaStream, mut end_signal: Re
                 }
                 match item.unwrap() {
                     Ok(pkt) => {
+                        match player.push_payload(&pkt.as_slice()) {
+                            Err(e) => {
+                                fx_log_info!("can't push packet: {:?}", e);
+                            }
+                            _ => (),
+                        };
                         total_bytes += pkt.len();
+                        if !player.playing() {
+                            player.play().unwrap_or_else(|e| fx_log_info!("Problem playing: {:}", e));
+                        }
                         // TODO(BT-696): Report rx stats to the hub.
                         if DEBUG_STREAM_STATS {
                             eprint!(
                                 "Media Packet received: +{} bytes = {} \r",
                                 pkt.len(),
                                 total_bytes
-                            );
+                                );
                         }
                     }
                     Err(e) => {
@@ -410,6 +439,20 @@ async fn discard_media_stream(mut stream: avdtp::MediaStream, mut end_signal: Re
                     }
                 }
             },
+            evt = player.next_event().fuse() => {
+                fx_log_info!("Player Event happened: {:?}", evt);
+                if evt.is_none() {
+                    fx_log_info!("Rebuilding Player: {:?}", evt);
+                    // The player died somehow? Attempt to rebuild the player.
+                    player = match await!(player::Player::new(encoding.clone())) {
+                        Ok(v) => v,
+                        Err(e) => {
+                            fx_log_info!("Can't rebuild player: {:?}", e);
+                            return;
+                        }
+                    };
+                }
+            }
             _ = end_signal.next().fuse() => {
                 fx_log_info!("Stream ending on end signal");
                 return;
@@ -504,6 +547,7 @@ mod tests {
 
         let id = s.local_id().clone();
         let information = s.information();
+        let encoding = AUDIO_ENCODING_SBC.to_string();
 
         assert!(streams.get_endpoint(&id).is_none());
 
@@ -512,7 +556,7 @@ mod tests {
         assert!(res.is_err());
         assert_eq!(avdtp::ErrorCode::BadAcpSeid, res.err().unwrap());
 
-        streams.insert(s);
+        streams.insert(s, encoding.clone());
 
         assert!(streams.get_endpoint(&id).is_some());
         assert_eq!(&id, streams.get_endpoint(&id).unwrap().local_id());
@@ -521,6 +565,7 @@ mod tests {
 
         let res = streams.get_mut(&id);
 
-        assert!(res.unwrap().suspend_sender.is_none());
+        assert!(res.as_ref().unwrap().suspend_sender.is_none());
+        assert_eq!(encoding, res.as_ref().unwrap().encoding);
     }
 }
