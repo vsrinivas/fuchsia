@@ -26,21 +26,24 @@ def main():
                         required=True)
     parser.add_argument('--lib-debug-file',
                         help='Path to the source debug version of the library',
-                        required=True)
+                        action='append')
     parser.add_argument('--debug-mapping',
                         help='Path to the file where to write the file mapping for the debug library',
                         required=True)
     args = parser.parse_args()
 
-    # The path of the debug file in the SDK depends on its build id.
-    debug_path = binaries.get_sdk_debug_path(args.lib_debug_file)
+    debug_files = []
+
     with open(args.debug_mapping, 'w') as mappings_file:
-        mappings_file.write(debug_path + '=' + args.lib_debug_file + '\n')
+        for debug_file in args.lib_debug_file:
+            debug_path = binaries.get_sdk_debug_path(debug_file)
+            mappings_file.write(debug_path + '=' + debug_file + '\n')
+            debug_files.append(debug_path)
 
     with open(args.base, 'r') as base_file:
         metadata = json.load(base_file)
 
-    metadata['binaries'].values()[0]['debug'] = debug_path
+    metadata['versions'].values()[0]['debug_libs'] = debug_files
 
     with open(args.out, 'w') as out_file:
         json.dump(metadata, out_file, indent=2, sort_keys=True)

@@ -47,11 +47,6 @@ version_content = {
   % for lib in sorted(data.dist_libs):
   dist_libs += [ "$file_base/${lib}" ]
   % endfor
-
-  debug_libs = []
-  % for lib in sorted(data.debug_libs):
-  debug_libs += [ "$file_base/${lib}" ]
-  % endfor
 }
 metadata = {
   type = "sysroot"
@@ -67,6 +62,43 @@ metadata = {
   }
 }
 
+base_meta_file = "$target_gen_dir/sysroot.base_meta.json"
+write_file(base_meta_file, metadata, "json")
+augmented_meta_file = "$target_gen_dir/sysroot.full_meta.json"
+debug_mapping_file = "$target_gen_dir/sysroot.mapping.txt"
+
+action("sysroot_meta") {
+  script = "//build/zircon/add_sysroot_debug_data.py"
+
+  inputs = [
+    base_meta_file,
+    % for lib in sorted(data.debug_source_libs):
+    "${lib}",
+    % endfor
+  ]
+
+  outputs = [
+    augmented_meta_file,
+  ]
+
+  args = [
+    "--base",
+    rebase_path(base_meta_file),
+    "--out",
+    rebase_path(augmented_meta_file),
+    "--debug-mapping",
+    rebase_path(debug_mapping_file),
+    % for lib in sorted(data.debug_source_libs):
+    "--lib-debug-file",
+    rebase_path("${lib}"),
+    % endfor
+  ]
+
+  deps = [
+    ":sysroot",
+  ]
+}
+
 sdk_atom("sysroot_sdk") {
   id = "sdk://pkg/sysroot"
   category = "partner"
@@ -74,7 +106,7 @@ sdk_atom("sysroot_sdk") {
   meta = {
     dest = "pkg/sysroot/meta.json"
     schema = "sysroot"
-    value = metadata
+    source = augmented_meta_file
   }
 
   files = [
@@ -84,5 +116,12 @@ sdk_atom("sysroot_sdk") {
       dest = "$file_base/${path}"
     },
     % endfor
+  ]
+
+  file_list = debug_mapping_file
+
+  non_sdk_deps = [
+    ":sysroot",
+    ":sysroot_meta",
   ]
 }

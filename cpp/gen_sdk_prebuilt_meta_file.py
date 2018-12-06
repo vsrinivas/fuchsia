@@ -56,7 +56,7 @@ def main():
     # The path of the debug file in the SDK depends on its build id.
     debug_path = binaries.get_sdk_debug_path(args.lib_debug_file)
     with open(args.debug_mapping, 'w') as mappings_file:
-        mappings_file.write(debug_path + '=' + args.lib_debug_file)
+        mappings_file.write(debug_path + '=' + args.lib_debug_file + '\n')
 
     metadata = {
         'type': 'cc_prebuilt_library',
