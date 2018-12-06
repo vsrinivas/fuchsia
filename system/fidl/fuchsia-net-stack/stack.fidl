@@ -13,6 +13,17 @@ const uint32 interfaceStatusEnabled = 0x01;
 // The interface has a physical link.
 const uint32 interfaceStatusLinkUp = 0x02;
 
+struct InterfaceAddress {
+    // The IP address of the interface.
+    fuchsia.net.IpAddress ipAddress;
+
+    // The length of the network portion of the interface IP address.
+    uint8 prefixLen;
+
+    // For point-to-point interfaces, the address of the remote peer.
+    fuchsia.net.IpAddress? peerAddress;
+};
+
 struct InterfaceInfo {
     // An opaque identifier for the interface, assigned by the stack.
     // This identifier will never be 0, and will not be reused even if the device is removed and
@@ -38,7 +49,7 @@ struct InterfaceInfo {
     uint32 status;
 
     // The list of addresses currently assigned to the interface.
-    vector<fuchsia.net.Subnet> addresses;
+    vector<InterfaceAddress> addresses;
 };
 
 // A ForwardingDestination represents either the device that should transmit a packet or the address
@@ -89,8 +100,8 @@ struct InterfaceStatusChange {
 };
 
 union InterfaceAddressChangeEvent {
-    fuchsia.net.Subnet added;
-    fuchsia.net.Subnet removed;
+    InterfaceAddress added;
+    InterfaceAddress removed;
 };
 
 struct InterfaceAddressChange {
@@ -139,7 +150,7 @@ interface Stack {
 
     // Add an address to the interface. If the interface already has an address of a given type that
     // does not allow duplicates, this method will return an error.
-    0x104: AddInterfaceAddress(uint64 id, fuchsia.net.Subnet addr) -> (Error? err);
+    0x104: AddInterfaceAddress(uint64 id, InterfaceAddress addr) -> (Error? err);
 
     // Remove the address from the interface. If the address is not assigned to the interface, an
     // error is returned.
