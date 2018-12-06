@@ -24,6 +24,18 @@ often these are built from third party projects, such as third_party/mesa.
 * Use the **[Google style guide](https://google.github.io/styleguide/cppguide.html)** for source code (except 4 spaces for indent).
 * Run **clang-format** on your changes to maintain consistent formatting.
 
+### Build Configuration for Testing
+
+To expedite the build, instead of specifying the default garnet product at garnet/products/default.gni, build with garnet/products/graphics-dev.gni.
+
+Packages used for testing:
+* garnet/packages/tests/magma
+* garnet/packages/experimental/disabled/tests_magma
+* garnet/packages/tests/image_pipe_swapchain
+* garnet/packages/examples/vkcube_on_scenic
+* garnet/packages/examples/vkcube_on_fb
+* garnet/packages/prod/magma_tools
+
 ### Testing Pre-Submit
 
 For details on the testing strategy for magma, see [test_strategy.md](test_strategy.md).
