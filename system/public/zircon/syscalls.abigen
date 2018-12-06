@@ -140,7 +140,7 @@ syscall object_wait_one blocking
     (handle: zx_handle_t, signals: zx_signals_t, deadline: zx_time_t)
     returns (zx_status_t, observed: zx_signals_t optional);
 
-# TODO(ZX-2399): All items[].handle must have ZX_RIGHT_WAIT.
+#! Every entry of items must have a handle field with ZX_RIGHT_TRANSFER.
 syscall object_wait_many blocking
     (items: zx_wait_item_t[count] INOUT, count: size_t, deadline: zx_time_t)
     returns (zx_status_t);
@@ -253,7 +253,7 @@ syscall channel_read_etc
     returns (zx_status_t, actual_bytes: uint32_t optional, actual_handles: uint32_t optional);
 
 #! handle must be of type ZX_OBJ_TYPE_CHANNEL and have ZX_RIGHT_WRITE.
-# TODO(ZX-2399): All handles[] must have ZX_RIGHT_TRANSFER.
+#! Every entry of handles must have ZX_RIGHT_TRANSFER.
 syscall channel_write
     (handle: zx_handle_t, options: uint32_t,
         bytes: any[num_bytes] IN, num_bytes: uint32_t,
@@ -261,7 +261,7 @@ syscall channel_write
     returns (zx_status_t);
 
 #! handle must be of type ZX_OBJ_TYPE_CHANNEL and have ZX_RIGHT_READ and have ZX_RIGHT_WRITE.
-# TODO(ZX-2399): args.wr_handles[] Dispatcher ZX_RIGHT_TRANSFER
+#! All wr_handles of args must have ZX_RIGHT_TRANSFER.
 syscall channel_call_noretry internal
     (handle: zx_handle_t, options: uint32_t, deadline: zx_time_t,
         args: zx_channel_call_args_t[1] IN)
@@ -272,7 +272,7 @@ syscall channel_call_finish internal
     returns (zx_status_t, actual_bytes: uint32_t, actual_handles: uint32_t);
 
 #! handle must be of type ZX_OBJ_TYPE_CHANNEL and have ZX_RIGHT_READ and have ZX_RIGHT_WRITE.
-# TODO(ZX-2399): args.wr_handles[] Dispatcher ZX_RIGHT_TRANSFER
+#! All wr_handles of args must have ZX_RIGHT_TRANSFER.
 syscall channel_call blocking vdsocall
     (handle: zx_handle_t, options: uint32_t, deadline: zx_time_t,
         args: zx_channel_call_args_t[1] IN)
@@ -682,8 +682,8 @@ syscall log_read
     (handle: zx_handle_t, len: uint32_t, buffer: any[len] OUT, options: uint32_t)
     returns (zx_status_t);
 
-# TODO(ZX-2399): handle resource kind ZX_RSRC_KIND_ROOT or handle == ZX_HANDLE_INVALID.
 # TODO(ZX-2967): handle == ZX_HANDLE_INVALID accepted.
+#! handle must have resource kind ZX_RSRC_KIND_ROOT.
 syscall debuglog_create
     (resource: zx_handle_t, options: uint32_t)
     returns (zx_status_t, out: zx_handle_t handle_acquire);

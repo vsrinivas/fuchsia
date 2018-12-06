@@ -43,6 +43,8 @@ The maximum number of bytes which may be sent in a message is
 
 *handle* must be of type **ZX_OBJ_TYPE_CHANNEL** and have **ZX_RIGHT_WRITE**.
 
+Every entry of *handles* must have **ZX_RIGHT_TRANSFER**.
+
 ## RETURN VALUE
 
 **channel_write**() returns **ZX_OK** on success.

@@ -48,7 +48,7 @@ which is 8.  To wait on more things at once use [Ports](../objects/port.md).
 
 <!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
 
-TODO(ZX-2399)
+Every entry of *items* must have a *handle* field with **ZX_RIGHT_TRANSFER**.
 
 ## RETURN VALUE
 

@@ -102,6 +102,19 @@ def match_sentence_form(sentence, arg_names):
             'If', 'ARG1', '&', 'VALUE', ',', 'ARG2', 'must', 'be', 'of', 'type',
             'TYPE', 'and', 'have', 'RIGHT', '.'
         ],
+        ['Every', 'entry', 'of', 'ARG', 'must', 'have', 'RIGHT', '.'],
+        [
+            'Every', 'entry', 'of', 'ARG', 'must', 'have', 'a',
+            'WAITITEMMEMBER', 'field', 'with', 'RIGHT', '.'
+        ],
+
+        # TODO(ZX-2399) TODO(scottmg): This is a hack specifically for
+        # zx_channel_call_args_t. Trying to make a pseudo-generic case (that
+        # handles the length from wr_num_handles, etc.) for this doesn't seem
+        # worth the trouble at the moment, since it's only checking that the
+        # handles have TRANSFER anyway. Revisit if/when there's more instances
+        # like this.
+        ['All', 'wr_handles', 'of', 'ARG', 'must', 'have', 'RIGHT', '.'],
     ]
 
     all_rights = set([
@@ -165,14 +178,24 @@ def match_sentence_form(sentence, arg_names):
         'ZX_RSRC_KIND_SMC',
     ])
 
+    # There's only two structs in zircon/types.h, so hardcoding this here is
+    # a bit stinky, but probably OK.
+    members_of_zx_wait_item_t = set([
+        'handle',
+        'waitfor',
+        'pending',
+    ])
+
     for form in sentence_forms:
         result_fmt = ''
         result_values = {}
         for f, s in zip(form, sentence):
             # Literal match.
             if s == f:
-                if f == '.' or f == ',':
+                if f == '.' or f == ',' or f == '->':
                     result_fmt += f
+                elif f == '[':
+                    result_fmt += '\['
                 else:
                     result_fmt += ' ' + f
             elif f.startswith('ARG'):
@@ -200,6 +223,11 @@ def match_sentence_form(sentence, arg_names):
                     break
                 result_fmt += ' %(' + f + ')s'
                 result_values[f] = '**' + s + '**'
+            elif f.startswith('WAITITEMMEMBER'):
+                if s not in members_of_zx_wait_item_t:
+                    break
+                result_fmt += ' %(' + f + ')s'
+                result_values[f] = '*' + s + '*'
             else:
                 break
         else:

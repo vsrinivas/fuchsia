@@ -67,6 +67,8 @@ As with **zx_channel_write**(), the handles in *handles* are always consumed by
 
 *handle* must be of type **ZX_OBJ_TYPE_CHANNEL** and have **ZX_RIGHT_READ** and have **ZX_RIGHT_WRITE**.
 
+All wr_handles of *args* must have **ZX_RIGHT_TRANSFER**.
+
 ## RETURN VALUE
 
 **channel_call**() returns **ZX_OK** on success and the number of bytes and
