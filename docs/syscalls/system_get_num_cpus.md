@@ -1,4 +1,4 @@
-# zx_system_num_cpus
+# zx_system_get_num_cpus
 
 ## NAME
 

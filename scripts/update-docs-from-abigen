@@ -241,6 +241,8 @@ def to_markdown(filename, req, arguments):
 
 
 def update_rights(filename, syscall_data):
+    """Updates the RIGHTS block of the .md file given by |filename|.
+    """
     with open(filename, 'rb') as f:
         source_lines = f.read().splitlines()
 
@@ -266,6 +268,27 @@ def update_rights(filename, syscall_data):
         updated_data = f.write('\n'.join(source_lines) + '\n')
 
 
+def update_title(filename, syscall_data):
+    """Updates the main title of the .md file given by |filename|.
+    """
+    name = syscall_data['name']
+    # TODO(ZX-2399): These files multiplex multiple functions into one doc. I'm
+    # not sure if this is worth it, but don't break them for now.
+    if name in ('channel_read', 'object_get_property', 'object_signal'):
+        print >> sys.stderr, 'not updating title for special file', name
+        return
+
+    with open(filename, 'rb') as f:
+        source_lines = f.read().splitlines()
+
+    correct_title = '# zx_' + name
+    if source_lines[0] != correct_title:
+        source_lines[0] = correct_title
+
+    with open(filename, 'wb') as f:
+        updated_data = f.write('\n'.join(source_lines) + '\n')
+
+
 def main():
     args = parse_args()
     inf = os.path.relpath(args.json)
@@ -281,6 +304,7 @@ def main():
                 'warning: %s not found for updating, skipping update' % md)
             missing_count += 1
         else:
+            update_title(md, syscall)
             update_rights(md, syscall)
     if missing_count > 0:
         print >> sys.stderr, 'warning: %d missing .md files' % missing_count

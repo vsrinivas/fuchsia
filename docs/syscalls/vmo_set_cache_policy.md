@@ -1,4 +1,4 @@
-# zx_set_cache_policy
+# zx_vmo_set_cache_policy
 
 ## NAME
 

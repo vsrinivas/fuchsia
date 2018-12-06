@@ -1,4 +1,4 @@
-# zx_task_suspend
+# zx_task_suspend_token
 
 This function replaces [task_suspend](task_suspend.md). When all callers are
 updated, **task_suspend** will be deleted and this function will be renamed
