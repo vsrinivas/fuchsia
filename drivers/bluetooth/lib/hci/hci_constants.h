@@ -731,7 +731,10 @@ enum class ReadTransmitPowerType : uint8_t {
 };
 
 // HCI command timeout interval (milliseconds)
-constexpr int64_t kCommandTimeoutMs = 2000;
+// TODO(BT-603/BT-604) This was increased to handle flaking integration tests.
+// We may want to reduce this to something lower again once we have a better 
+// resolution to this issue.
+constexpr int64_t kCommandTimeoutMs = 10000;
 
 // The minimum and maximum range values for the LE advertising interval
 // parameters.

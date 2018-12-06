@@ -940,15 +940,15 @@ TEST_F(HCI_CommandChannelTest, TransportClosedCallback) {
 }
 
 TEST_F(HCI_CommandChannelTest, CommandTimeout) {
-  constexpr uint32_t kCommandTimeoutMs = 5000;
+  constexpr uint32_t kCommandTimeoutMs = 12000;
 
   auto req_reset = common::CreateStaticByteBuffer(
       LowerBits(kReset), UpperBits(kReset),  // HCI_Reset opcode
       0x00                                   // parameter_total_size
   );
 
-  // Expect the HCI_Reset command but send a reply back to make the command time
-  // out.
+  // Expect the HCI_Reset command but dont send a reply back to make the command
+  // time out.
   test_device()->QueueCommandTransaction(CommandTransaction(req_reset, {}));
   StartTestDevice();
 
