@@ -23,6 +23,6 @@ namespace devmgr {
 
 extern uint32_t log_flags;
 
-#define log(flag, fmt...) do { if (LOG_##flag & log_flags) printf(fmt); } while (0)
+#define log(flag, fmt...) do { if (LOG_##flag & ::devmgr::log_flags) printf(fmt); } while (0)
 
 } // namespace devmgr
