@@ -49,7 +49,7 @@ async fn resolve<'a>(
     amber: &'a AmberProxy, pkgfs: &'a DirectoryProxy, pkg_uri: String, selectors: Vec<String>,
     _update_policy: UpdatePolicy, dir_request: ServerEnd<DirectoryMarker>,
 ) -> Result<(), Status> {
-    fx_log_info!("resolving {} with the selectors {:?}", pkg_uri, selectors);
+    fx_log_info!("resolving {:?} with the selectors {:?}", pkg_uri, selectors);
 
     let uri = PackageUri::parse(&pkg_uri).map_err(|err| {
         fx_log_err!("failed to parse package uri: {}", err);
