@@ -123,9 +123,28 @@ $(BUILDDIR)/%.debug.lst: $(BUILDDIR)/%
 	$(call BUILDECHO,generating debug listing $@)
 	$(NOECHO)$(OBJDUMP) $(OBJDUMP_LIST_FLAGS) -S $< | $(CPPFILT) > $@
 
+BUILD_ID_DIR = $(BUILDDIR)/.build-id
+ifeq ($(call TOBOOL,$(USE_CLANG)),true)
+define strip-command
+$(STRIP) --build-id-link-dir=$(BUILD_ID_DIR) \
+	 --build-id-link-input=.debug --build-id-link-output= \
+	 $< $@
+endef
+else
+define strip-command
+$(STRIP) $< $@ && \
+eval $$("$(READELF)" -n $< | \
+        sed -n 's/.*Build ID: \(..\)\(.*\)$$/id0=\1 id1=\2/p') && \
+{ test -z "$$id0" || \
+  { mkdir -p "$(BUILD_ID_DIR)/$$id0" && \
+    ln -f $< "$(BUILD_ID_DIR)/$$id0/$$id1.debug" && \
+    ln -f $@ "$(BUILD_ID_DIR)/$$id0/$$id1" ; } ; }
+endef
+endif
+
 $(BUILDDIR)/%.strip: $(BUILDDIR)/%
 	$(call BUILDECHO,generating $@)
-	$(NOECHO)$(STRIP) $< $@
+	$(NOECHO)$(strip-command)
 
 $(BUILDDIR)/%.sym: $(BUILDDIR)/%
 	$(call BUILDECHO,generating symbols $@)
