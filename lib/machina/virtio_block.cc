@@ -10,7 +10,7 @@
 
 namespace machina {
 
-static constexpr char kVirtioBlockUrl[] = "virtio_block";
+static constexpr char kVirtioBlockUrl[] = "fuchsia-pkg://fuchsia.com/virtio_block#meta/virtio_block.cmx";
 
 static bool read_only(fuchsia::guest::BlockMode mode) {
   return mode == fuchsia::guest::BlockMode::READ_ONLY;

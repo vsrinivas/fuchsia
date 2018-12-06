@@ -9,7 +9,7 @@
 
 namespace machina {
 
-static constexpr char kVirtioBalloonUrl[] = "virtio_balloon";
+static constexpr char kVirtioBalloonUrl[] = "fuchsia-pkg://fuchsia.com/virtio_balloon#meta/virtio_balloon.cmx";
 
 VirtioBalloon::VirtioBalloon(const PhysMem& phys_mem)
     : VirtioComponentDevice(

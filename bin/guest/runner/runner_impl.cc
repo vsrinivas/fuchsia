@@ -24,7 +24,7 @@ void RunnerImpl::StartComponent(
   fuchsia::sys::LaunchInfo launch_info;
 
   // Pass-through our arguments directly to the vmm package.
-  launch_info.url = "vmm";
+  launch_info.url = "fuchsia-pkg://fuchsia.com/vmm#meta/vmm.cmx";
   launch_info.arguments = std::move(startup_info.launch_info.arguments);
   launch_info.directory_request =
       std::move(startup_info.launch_info.directory_request);

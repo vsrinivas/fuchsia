@@ -6,7 +6,7 @@
 
 #include <lib/fxl/logging.h>
 
-static constexpr char kWaylandDispatcherPackage[] = "wayland_bridge";
+static constexpr char kWaylandDispatcherPackage[] = "fuchsia-pkg://fuchsia.com/wayland_bridge#meta/wayland_bridge.cmx";
 
 void WaylandDispatcherImpl::OnNewConnection(zx::channel channel) {
   std::lock_guard lock(mutex_);

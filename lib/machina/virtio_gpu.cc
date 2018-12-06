@@ -6,7 +6,7 @@
 
 namespace machina {
 
-static constexpr char kVirtioGpuUrl[] = "virtio_gpu";
+static constexpr char kVirtioGpuUrl[] = "fuchsia-pkg://fuchsia.com/virtio_gpu#meta/virtio_gpu.cmx";
 
 VirtioGpu::VirtioGpu(const PhysMem& phys_mem)
     : VirtioComponentDevice(phys_mem, 0 /* device_features */,

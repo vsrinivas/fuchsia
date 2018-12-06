@@ -77,7 +77,7 @@ impl TileViewSink {
         // Spawn a tiles process. We'll forward our |ViewProvider|s here to be
         // presented.
         let launcher = Launcher::new()?;
-        let app = launcher.launch("tiles".to_string(), None)?;
+        let app = launcher.launch("fuchsia-pkg://fuchsia.com/tiles#meta/tiles.cmx".to_string(), None)?;
         let tiles_controller = app.connect_to_service(tiles::ControllerMarker)?;
         Ok(Arc::new(Box::new(TileViewSink {
             _app: app,

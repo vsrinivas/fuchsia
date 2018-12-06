@@ -8,7 +8,7 @@
 
 namespace machina {
 
-static constexpr char kVirtioConsoleUrl[] = "virtio_console";
+static constexpr char kVirtioConsoleUrl[] = "fuchsia-pkg://fuchsia.com/virtio_console#meta/virtio_console.cmx";
 
 VirtioConsole::VirtioConsole(const PhysMem& phys_mem)
     : VirtioComponentDevice(

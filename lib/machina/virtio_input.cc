@@ -11,7 +11,7 @@
 
 namespace machina {
 
-static constexpr char kVirtioInputUrl[] = "virtio_input";
+static constexpr char kVirtioInputUrl[] = "fuchsia-pkg://fuchsia.com/virtio_input#meta/virtio_input.cmx";
 
 static constexpr char kDeviceName[] = "machina-input";
 static_assert(sizeof(kDeviceName) - 1 < sizeof(virtio_input_config_t::u),

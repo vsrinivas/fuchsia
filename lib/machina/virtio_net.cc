@@ -8,7 +8,7 @@
 
 namespace machina {
 
-static constexpr char kVirtioNetUrl[] = "virtio_net";
+static constexpr char kVirtioNetUrl[] = "fuchsia-pkg://fuchsia.com/virtio_net#meta/virtio_net.cmx";
 
 // This is a locally administered MAC address (first byte 0x02) mixed with the
 // Google Organizationally Unique Identifier (00:1a:11). The host gets ff:ff:ff

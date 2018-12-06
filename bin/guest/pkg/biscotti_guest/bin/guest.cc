@@ -32,7 +32,7 @@ namespace biscotti {
 static constexpr bool kBootToContainer = true;
 
 static constexpr const char* kLinuxEnvirionmentName = "biscotti";
-static constexpr const char* kLinuxGuestPackage = "biscotti_guest";
+static constexpr const char* kLinuxGuestPackage = "fuchsia-pkg://fuchsia.com/biscotti_guest#meta/biscotti_guest.cmx";
 static constexpr uint32_t kStartupListenerPort = 7777;
 static constexpr uint32_t kTremplinListenerPort = 7778;
 static constexpr uint32_t kMaitredPort = 8888;

@@ -8,7 +8,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/svc/cpp/services.h"
 
-static constexpr char kVirtioWlUrl[] = "virtio_wl";
+static constexpr char kVirtioWlUrl[] = "fuchsia-pkg://fuchsia.com/virtio_wl#meta/virtio_wl.cmx";
 
 namespace machina {
 

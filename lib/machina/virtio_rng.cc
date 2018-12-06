@@ -8,7 +8,7 @@
 
 namespace machina {
 
-static constexpr char kVirtioRngUrl[] = "virtio_rng";
+static constexpr char kVirtioRngUrl[] = "fuchsia-pkg://fuchsia.com/virtio_rng#meta/virtio_rng.cmx";
 
 VirtioRng::VirtioRng(const PhysMem& phys_mem)
     : VirtioComponentDevice(phys_mem, 0 /* device_features */,
