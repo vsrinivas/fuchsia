@@ -165,19 +165,19 @@ impl EthernetDeviceState {
 
 /// An extension trait adding IP-related functionality to `Ipv4` and `Ipv6`.
 trait EthernetIpExt: Ip {
-    const EtherType: EtherType;
+    const ETHER_TYPE: EtherType;
 }
 
 impl<I: Ip> EthernetIpExt for I {
-    default const EtherType: EtherType = EtherType::Ipv4;
+    default const ETHER_TYPE: EtherType = EtherType::Ipv4;
 }
 
 impl EthernetIpExt for Ipv4 {
-    const EtherType: EtherType = EtherType::Ipv4;
+    const ETHER_TYPE: EtherType = EtherType::Ipv4;
 }
 
 impl EthernetIpExt for Ipv6 {
-    const EtherType: EtherType = EtherType::Ipv6;
+    const ETHER_TYPE: EtherType = EtherType::Ipv6;
 }
 
 /// Send an IP packet in an Ethernet frame.
@@ -219,7 +219,7 @@ pub fn send_ip_frame<D: EventDispatcher, A, S>(
             .encapsulate(EthernetFrameSerializer::new(
                 src_mac,
                 dst_mac,
-                A::Version::EtherType,
+                A::Version::ETHER_TYPE,
             ))
             .serialize_outer();
         ctx.dispatcher()

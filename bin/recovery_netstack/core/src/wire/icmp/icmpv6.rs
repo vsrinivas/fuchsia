@@ -132,7 +132,7 @@ impl_icmp_message!(
 #[derive(Copy, Clone)]
 #[repr(C, packed)]
 pub struct Icmpv6PacketTooBig {
-    MTU: [u8; 4],
+    mtu: [u8; 4],
 }
 
 impl_from_bytes_as_bytes_unaligned!(Icmpv6PacketTooBig);
