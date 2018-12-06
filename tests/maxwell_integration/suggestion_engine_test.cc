@@ -210,7 +210,7 @@ class SuggestionEngineTest : public ContextEngineTestBase,
     ContextEngineTestBase::SetUp();
 
     component::Services suggestion_services =
-        StartServices("suggestion_engine");
+        StartServices("fuchsia-pkg://fuchsia.com/suggestion_engine#meta/suggestion_engine.cmx");
     suggestion_engine_ =
         suggestion_services
             .ConnectToService<fuchsia::modular::SuggestionEngine>();
