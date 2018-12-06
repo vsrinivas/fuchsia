@@ -6,8 +6,18 @@ library fuchsia.modular;
 
 using fuchsia.sys;
 
-/// This service is implemented by an application that is meant to be run as an
-/// Agent.
+/// An agent is a component whose lifecycle is not tied to any Story.
+///
+/// - An agent is a singleton instance.
+/// - Components can connect to an Agent using the
+///   fuchsia.modular.ComponentContext capability.
+/// - An agent vends services to components that connect to it over a
+///   ServiceProvider.
+/// - An agent is started when someone wants to connect to it, or when a task it
+///   has scheduled has triggered.
+///
+/// This FIDL interface should be implemented by a component that is meant to be
+/// run as an Agent.
 ///
 /// When an agent application implements the |Lifecycle| interface, it can
 /// receive a signal for when it should stop. An agent may be stopped for the
@@ -19,6 +29,11 @@ using fuchsia.sys;
 ///
 /// Once the framework delivers a |Lifecycle.Terminate()|, the agent application
 /// may exit itself, or is killed by framework after a timeout.
+///
+/// For more info see:
+/// - fuchsia.modular.AgentContext and fuchsia.modular.ComponentContext for
+///   capabilities an agent has.
+/// - fuchsia.modular.Lifecycle for how Components get lifecycle events.
 [Discoverable] // Created by each agent.
 interface Agent {
     /// Called when some component tries to connect to this agent. |requestor_url|
