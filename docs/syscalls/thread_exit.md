@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 thread_exit - terminate the current running thread
 
 ## SYNOPSIS

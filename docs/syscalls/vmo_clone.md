@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 vmo_clone - create a clone of a VM Object
 
 ## SYNOPSIS

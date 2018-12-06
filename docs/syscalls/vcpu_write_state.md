@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 vcpu_write_state - write the state of a VCPU
 
 ## SYNOPSIS

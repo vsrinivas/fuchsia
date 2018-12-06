@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 system_get_physmem - get amount of physical memory on the system
 
 ## SYNOPSIS

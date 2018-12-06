@@ -167,8 +167,13 @@ const map<string, Generator&>& get_type_to_generator() {
 bool AbigenGenerator::AddSyscall(Syscall&& syscall) {
     if (!syscall.validate())
         return false;
-    syscall.reqs = pending_reqs_;
-    pending_reqs_.clear();
+
+    syscall.requirements = pending_requirements_;
+    pending_requirements_.clear();
+
+    syscall.top_description = pending_top_description_;
+    pending_top_description_ = TopDescription();
+
     syscall.assign_index(&next_index_);
     calls_.emplace_back(std::move(syscall));
     return true;
@@ -186,8 +191,12 @@ bool AbigenGenerator::verbose() const {
     return verbose_;
 }
 
-void AbigenGenerator::AppendReq(Req&& req) {
-    pending_reqs_.emplace_back(req);
+void AbigenGenerator::AppendRequirement(Requirement&& req) {
+    pending_requirements_.emplace_back(req);
+}
+
+void AbigenGenerator::SetTopDescription(TopDescription&& td) {
+    pending_top_description_ = std::move(td);
 }
 
 bool AbigenGenerator::generate_one(

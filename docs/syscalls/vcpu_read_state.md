@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 vcpu_read_state - read the state of a VCPU
 
 ## SYNOPSIS

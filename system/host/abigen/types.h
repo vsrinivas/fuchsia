@@ -51,7 +51,10 @@ struct TypeSpec {
 };
 
 // The tokens of a line of requirements.
-using Req = std::vector<std::string>;
+using Requirement = std::vector<std::string>;
+
+// The tokens of a line of top-of-md description in the "NAME" block.
+using TopDescription = std::vector<std::string>;
 
 struct Syscall {
     // Move-only.
@@ -65,7 +68,8 @@ struct Syscall {
     std::vector<TypeSpec> ret_spec;
     std::vector<TypeSpec> arg_spec;
     std::vector<std::string> attributes;
-    std::vector<Req> reqs;
+    std::vector<Requirement> requirements;
+    TopDescription top_description;
 
     Syscall(const FileCtx& sc_fc, const std::string& sc_name)
         : fc(sc_fc), name(sc_name) {}

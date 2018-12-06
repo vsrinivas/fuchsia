@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 vmar_protect - set protection of virtual memory pages
 
 ## SYNOPSIS

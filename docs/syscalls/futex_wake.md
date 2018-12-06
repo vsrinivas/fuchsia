@@ -2,8 +2,9 @@
 
 ## NAME
 
-futex_wake - Wake some number of threads waiting on a futex, optionally
-transferring ownership to the thread which was woken in the process.
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+futex_wake - Wake some number of threads waiting on a futex, optionally transferring ownership to the thread which was woken in the process.
 
 ## SYNOPSIS
 

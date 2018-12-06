@@ -2,7 +2,9 @@
 
 ## NAME
 
-zx_cprng_add_entropy - Add entropy to the kernel CPRNG
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+cprng_add_entropy - Add entropy to the kernel CPRNG
 
 ## SYNOPSIS
 

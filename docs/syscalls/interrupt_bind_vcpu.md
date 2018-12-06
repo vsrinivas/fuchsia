@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 interrupt_bind_vcpu - bind an interrupt object to a VCPU
 
 ## SYNOPSIS

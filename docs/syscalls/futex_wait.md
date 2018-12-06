@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 futex_wait - Wait on a futex.
 
 ## SYNOPSIS

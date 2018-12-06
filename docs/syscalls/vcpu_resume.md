@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 vcpu_resume - resume execution of a VCPU
 
 ## SYNOPSIS

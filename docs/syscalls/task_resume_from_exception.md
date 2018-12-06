@@ -2,8 +2,9 @@
 
 ## NAME
 
-task_resume_from_exception - resume the given task after an exception has been
-reported
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+task_resume_from_exception - resume the given task after an exception has been reported
 
 ## SYNOPSIS
 

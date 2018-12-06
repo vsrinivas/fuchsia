@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 vmo_set_cache_policy - set the caching policy for pages held by a VMO.
 
 ## SYNOPSIS

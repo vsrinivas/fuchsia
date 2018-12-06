@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 interrupt_wait - wait for an interrupt
 
 ## SYNOPSIS

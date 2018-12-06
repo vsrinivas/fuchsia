@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 bti_pin - pin pages and grant devices access to them
 
 ## SYNOPSIS

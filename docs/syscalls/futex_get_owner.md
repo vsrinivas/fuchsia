@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 futex_get_owner - Fetch the koid current owner of a futex, if any.
 
 ## SYNOPSIS

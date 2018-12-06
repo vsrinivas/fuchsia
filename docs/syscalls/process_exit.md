@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 process_exit - Exits the currently running process.
 
 ## SYNOPSIS

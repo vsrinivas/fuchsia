@@ -38,17 +38,28 @@ bool JsonGenerator::syscall(std::ofstream& os, const Syscall& sc) {
     }
     os << "      ],\n";
 
+    // Top description.
+    os << "      \"top_description\": [\n";
+    os << "        ";
+    for (size_t i = 0; i < sc.top_description.size(); ++i) {
+        os << "\"" << sc.top_description[i] << "\"";
+        if (i < sc.top_description.size() - 1) {
+            os << ", ";
+        }
+    }
+    os << "\n      ],\n";
+
     // Requirements.
     os << "      \"requirements\": [\n";
-    for (size_t i = 0; i < sc.reqs.size(); ++i) {
+    for (size_t i = 0; i < sc.requirements.size(); ++i) {
         os << "        ";
-        for (size_t j = 0; j < sc.reqs[i].size(); ++j) {
-            os << "\"" << sc.reqs[i][j] << "\"";
-            if (j < sc.reqs[i].size() - 1) {
+        for (size_t j = 0; j < sc.requirements[i].size(); ++j) {
+            os << "\"" << sc.requirements[i][j] << "\"";
+            if (j < sc.requirements[i].size() - 1) {
                 os << ", ";
             }
         }
-        if (i < sc.reqs.size() - 1) {
+        if (i < sc.requirements.size() - 1) {
             os << ",";
         }
         os << "\n";

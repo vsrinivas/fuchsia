@@ -1,5 +1,9 @@
 # zx_socket_share
 
+## NAME
+
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 socket_share - send another socket object via a socket
 
 ## SYNOPSIS

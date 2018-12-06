@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 task_kill - Kill the provided task (job, process, or thread).
 
 ## SYNOPSIS

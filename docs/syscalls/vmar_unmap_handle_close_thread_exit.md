@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 vmar_unmap_handle_close_thread_exit - unmap memory, close handle, exit
 
 ## SYNOPSIS

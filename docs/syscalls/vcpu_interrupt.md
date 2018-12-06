@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 vcpu_interrupt - raise an interrupt on a VCPU
 
 ## SYNOPSIS

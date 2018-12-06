@@ -2,7 +2,9 @@
 
 ## NAME
 
-zx_cprng_draw - Draw from the kernel's CPRNG
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+cprng_draw - Draw from the kernel's CPRNG
 
 ## SYNOPSIS
 

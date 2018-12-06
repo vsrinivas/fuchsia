@@ -238,7 +238,17 @@ def match_sentence_form(sentence, arg_names):
         return None, None
 
 
-def to_markdown(filename, req, arguments):
+def is_special_and_warn(syscall_data, what, warn):
+    name = syscall_data['name']
+    # TODO(ZX-2399): These files multiplex multiple functions into one doc. I'm
+    # not sure if this is worth it, but don't break them for now.
+    if name in ('channel_read', 'object_get_property', 'object_signal'):
+        warn('not updating ' + what + ' for special file')
+        return True
+    return False
+
+
+def to_markdown(req, arguments, warn):
     """Parses a few known forms of rules (see match_sentence_forms).
 
     Converts |req| to formatted markdown.
@@ -258,8 +268,7 @@ def to_markdown(filename, req, arguments):
         match_fmt, match_values = match_sentence_form(
             sentence, [x['name'] for x in arguments])
         if not match_fmt:
-            print >> sys.stderr, 'warning: for %s, failed to parse:\n%s' % (
-                filename, repr(sentence))
+            warn('failed to parse: ' + repr(sentence))
             raise SystemExit(1)
         else:
             rights.append(match_fmt % match_values)
@@ -268,53 +277,76 @@ def to_markdown(filename, req, arguments):
     return header + rights
 
 
-def update_rights(filename, syscall_data):
-    """Updates the RIGHTS block of the .md file given by |filename|.
+def find_block(lines, name):
+    """Finds a .md block with the given name, and returns (start, end) line
+    indices.
     """
-    with open(filename, 'rb') as f:
-        source_lines = f.read().splitlines()
-
-    rights_start_index = -1
-    rights_end_index = -1
-    for i, line in enumerate(source_lines):
-        if line == '## RIGHTS':
-            rights_start_index = i + 1
-        elif rights_start_index >= 0 and line.startswith('## '):
-            rights_end_index = i
+    start_index = -1
+    end_index = -1
+    for i, line in enumerate(lines):
+        if line == '## ' + name:
+            start_index = i + 1
+        elif start_index >= 0 and line.startswith('## '):
+            end_index = i
             break
+    return start_index, end_index
 
+
+def update_rights(lines, syscall_data, warn):
+    """Updates the RIGHTS block of the .md file in lines.
+    """
+    rights_start_index, rights_end_index = find_block(lines, 'RIGHTS')
     if rights_start_index == -1 or rights_end_index == -1:
-        print >> sys.stderr, (
-            'warning: did not find RIGHTS section in %s, skipping update' %
-            filename)
+        warn('did not find RIGHTS section, skipping update')
         return
 
-    source_lines[rights_start_index:rights_end_index] = to_markdown(
-        filename, syscall_data['requirements'], syscall_data['arguments'])
-
-    with open(filename, 'wb') as f:
-        updated_data = f.write('\n'.join(source_lines) + '\n')
+    lines[rights_start_index:rights_end_index] = to_markdown(
+        syscall_data['requirements'], syscall_data['arguments'], warn)
 
 
-def update_title(filename, syscall_data):
+def make_name_block(syscall_data):
+    header = [
+        '', '<!-- Updated by scripts/update-docs-from-abigen, '
+        'do not edit this section manually. -->', ''
+    ]
+    start = syscall_data['name'] + ' - '
+    desc = ''
+    for x in syscall_data['top_description']:
+        # TODO(scottmg): This is gross, we should change the abigen parser to
+        # give us a string instead of tokens.
+        if x in (',', '.', '-', '/', '\'', ')'):
+            desc += x
+        else:
+            if desc and desc[-1] not in ('-', '/', '\'', '('):
+                desc += ' '
+            desc += x
+    return header + [start + desc, '']
+
+
+def update_name(lines, syscall_data, warn):
+    """Updates the NAME block of the .md file given by |filename|. Does nothing
+    if no 'top_description' is specified in syscall_data.
+    """
+    if is_special_and_warn(syscall_data, 'name', warn):
+        return
+
+    name_start_index, name_end_index = find_block(lines, 'NAME')
+    if name_start_index == -1 or name_end_index == -1:
+        warn('did not find NAME section, skipping update')
+        return
+
+    lines[name_start_index:name_end_index] = make_name_block(syscall_data)
+
+
+def update_title(lines, syscall_data, warn):
     """Updates the main title of the .md file given by |filename|.
     """
-    name = syscall_data['name']
-    # TODO(ZX-2399): These files multiplex multiple functions into one doc. I'm
-    # not sure if this is worth it, but don't break them for now.
-    if name in ('channel_read', 'object_get_property', 'object_signal'):
-        print >> sys.stderr, 'not updating title for special file', name
+    if is_special_and_warn(syscall_data, 'title', warn):
         return
 
-    with open(filename, 'rb') as f:
-        source_lines = f.read().splitlines()
-
-    correct_title = '# zx_' + name
-    if source_lines[0] != correct_title:
-        source_lines[0] = correct_title
-
-    with open(filename, 'wb') as f:
-        updated_data = f.write('\n'.join(source_lines) + '\n')
+    correct_title = '# zx_' + syscall_data['name']
+    if lines[0] != correct_title:
+        lines[0] = correct_title
 
 
 def main():
@@ -332,8 +364,20 @@ def main():
                 'warning: %s not found for updating, skipping update' % md)
             missing_count += 1
         else:
-            update_title(md, syscall)
-            update_rights(md, syscall)
+            with open(md, 'rb') as f:
+                lines = f.read().splitlines()
+
+            assert(lines)
+
+            def warn(msg):
+                print >>sys.stderr, 'warning: %s: %s' % (md, msg)
+            update_title(lines, syscall, warn)
+            update_name(lines, syscall, warn)
+            update_rights(lines, syscall, warn)
+
+            with open(md, 'wb') as f:
+                f.write('\n'.join(lines) + '\n')
+
     if missing_count > 0:
         print >> sys.stderr, 'warning: %d missing .md files' % missing_count
     return missing_count

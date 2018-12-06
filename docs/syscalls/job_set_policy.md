@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 job_set_policy - Set job security and resource policies.
 
 ## SYNOPSIS

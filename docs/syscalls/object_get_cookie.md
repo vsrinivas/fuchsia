@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 object_get_cookie - Get an object's cookie.
 
 ## SYNOPSIS

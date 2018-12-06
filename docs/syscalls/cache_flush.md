@@ -2,7 +2,9 @@
 
 ## NAME
 
-zx_cache_flush - Flush CPU data and/or instruction caches
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+cache_flush - Flush CPU data and/or instruction caches
 
 ## SYNOPSIS
 

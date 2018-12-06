@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 guest_set_trap - sets a trap within a guest
 
 ## SYNOPSIS

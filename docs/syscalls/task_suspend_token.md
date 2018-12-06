@@ -6,8 +6,9 @@ updated, **task_suspend** will be deleted and this function will be renamed
 
 ## NAME
 
-task_suspend_token - suspend the given task. Currently only thread handles may
-be suspended.
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+task_suspend_token - suspend the given task. Currently only thread handles may be suspended.
 
 ## SYNOPSIS
 

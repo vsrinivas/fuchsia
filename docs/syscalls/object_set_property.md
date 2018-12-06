@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 object_set_property - Set various properties of various kernel objects.
 
 ## SYNOPSIS

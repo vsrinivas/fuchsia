@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 interrupt_ack - Acknowledge an interrupt and re-arm it.
 
 ## SYNOPSIS

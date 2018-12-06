@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ticks_get - Read the number of high-precision timer ticks since boot.
 
 ## SYNOPSIS

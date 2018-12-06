@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 iommu_create - create a new IOMMU object in the kernel
 
 ## SYNOPSIS

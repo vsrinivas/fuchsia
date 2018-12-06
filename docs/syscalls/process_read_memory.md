@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 process_read_memory - Read from the given process's address space.
 
 ## SYNOPSIS

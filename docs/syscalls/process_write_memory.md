@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 process_write_memory - Write into the given process's address space.
 
 ## SYNOPSIS

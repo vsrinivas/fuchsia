@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 deadline_after - Convert a time relative to now to an absolute deadline
 
 ## SYNOPSIS

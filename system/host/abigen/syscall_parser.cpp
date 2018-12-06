@@ -167,13 +167,22 @@ bool parse_argpack(TokenStream* ts, vector<TypeSpec>* v) {
 bool process_comment(AbigenGenerator* parser, TokenStream& ts) {
     if (ts.peek_next() == "!") {
         ts.next();  // '!'
-        Req req;
+        Requirement req;
         for (;;) {
             req.emplace_back(ts.next());
             if (ts.peek_next() == std::string())
                 break;
         }
-        parser->AppendReq(std::move(req));
+        parser->AppendRequirement(std::move(req));
+    } else if (ts.peek_next() == "^") {
+        ts.next();  // '^'
+        TopDescription td;
+        for (;;) {
+            td.emplace_back(ts.next());
+            if (ts.peek_next() == std::string())
+                break;
+        }
+        parser->SetTopDescription(std::move(td));
     }
     return true;
 }

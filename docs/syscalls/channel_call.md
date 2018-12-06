@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 channel_call - send a message to a channel and await a reply
 
 ## SYNOPSIS

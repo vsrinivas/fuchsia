@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 system_mexec_payload_get - Return a ZBI containing ZBI entries necessary to boot this system
 
 ## SYNOPSIS

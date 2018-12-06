@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 vmo_replace_as_executable - add execute rights to a vmo
 
 ## SYNOPSIS

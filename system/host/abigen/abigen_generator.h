@@ -24,7 +24,8 @@ public:
     bool AddSyscall(Syscall&& syscall);
     bool Generate(const std::map<std::string, std::string>& type_to_filename);
     bool verbose() const;
-    void AppendReq(Req&& req);
+    void AppendRequirement(Requirement&& req);
+    void SetTopDescription(TopDescription&& td);
 
 private:
     bool generate_one(const std::string& output_file,
@@ -32,7 +33,8 @@ private:
     void print_error(const char* what, const std::string& file);
 
     std::list<Syscall> calls_;
-    std::vector<Req> pending_reqs_;
+    std::vector<Requirement> pending_requirements_;
+    TopDescription pending_top_description_;
     int next_index_ = 0;
     const bool verbose_;
 };

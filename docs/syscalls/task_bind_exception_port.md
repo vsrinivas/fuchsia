@@ -2,8 +2,9 @@
 
 ## NAME
 
-task_bind_exception_port - Bind to, or unbind from, the exception port
-corresponding to a given job, process, or thread.
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+task_bind_exception_port - Bind to, or unbind from, the exception port corresponding to a given job, process, or thread.
 
 ## SYNOPSIS
 

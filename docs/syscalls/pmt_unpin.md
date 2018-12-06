@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 pmt_unpin - unpin pages and revoke device access to them
 
 ## SYNOPSIS

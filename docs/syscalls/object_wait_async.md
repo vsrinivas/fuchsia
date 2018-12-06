@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 object_wait_async - subscribe for signals on an object
 
 ## SYNOPSIS

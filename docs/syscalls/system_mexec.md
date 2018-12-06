@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 system_mexec - Soft reboot the system with a new kernel and bootimage
 
 ## SYNOPSIS

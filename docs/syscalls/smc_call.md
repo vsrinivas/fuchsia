@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 smc_call - Make Secure Monitor Call (SMC) from user space
 
 ## SYNOPSIS

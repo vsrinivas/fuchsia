@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 vmo_op_range - perform an operation on a range of a VMO
 
 ## SYNOPSIS

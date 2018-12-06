@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ticks_per_second - Read the number of high-precision timer ticks in a second.
 
 ## SYNOPSIS

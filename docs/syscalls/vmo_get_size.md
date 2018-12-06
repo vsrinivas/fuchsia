@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 vmo_get_size - read the current size of a VMO object
 
 ## SYNOPSIS

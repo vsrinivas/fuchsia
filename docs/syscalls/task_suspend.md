@@ -2,8 +2,9 @@
 
 ## NAME
 
-task_suspend - suspend the given task. Currently only thread handles
-may be suspended.
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+task_suspend - suspend the given task. Currently only thread handles may be suspended.
 
 ## SYNOPSIS
 

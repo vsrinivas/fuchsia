@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 futex_wake_handle_close_thread_exit - write to futex, wake futex, close handle, exit
 
 ## SYNOPSIS

@@ -2,6 +2,8 @@
 
 ## NAME
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 port_wait - wait for a packet arrival in a port
 
 ## SYNOPSIS
