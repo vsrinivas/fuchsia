@@ -19,8 +19,10 @@ import("//build/images/manifest.gni")
 #
 #     If not provided, defaults to $target_name
 #
-#   manifest (required)
+#   manifest (optional)
 #     [path] Defines the manifest source path for this component.
+#
+#     By default it would look for meta/$name.cmx file relative to your BUILD.gn.
 #
 #   binary (required)
 #     [path] The path to the the primary binary for the component.
@@ -106,8 +108,9 @@ template("fuchsia_component") {
       if (!defined(loadable_modules)) {
         loadable_modules = []
       }
-      assert(defined(manifest),
-             "Component $component_label should define manifest file")
+      if (!defined(manifest)) {
+        manifest = rebase_path("meta/${name}.cmx")
+      }
       if (!defined(resources)) {
         resources = []
       }
