@@ -20,7 +20,9 @@ MODULE_LIBS := \
 MODULE_STATIC_LIBS := \
     system/ulib/fidl \
 
-MODULE_FIDL_LIBS := system/fidl/fuchsia-hardware-usb-peripheral
+MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-hardware-usb-peripheral \
+    system/fidl/fuchsia-hardware-usb-virtual-bus \
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-usb-modeswitch \

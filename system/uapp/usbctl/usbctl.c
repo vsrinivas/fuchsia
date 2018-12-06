@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/protocol/usb/modeswitch.h>
 #include <dirent.h>
 #include <fcntl.h>
 #include <fuchsia/hardware/usb/peripheral/c/fidl.h>
@@ -11,6 +10,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+#include <lib/fdio/util.h>
+#include <ddk/protocol/usb/modeswitch.h>
+#include <fuchsia/usb/virtualbus/c/fidl.h>
+
 #include <zircon/device/usb-peripheral.h>
 #include <zircon/hw/usb.h>
 #include <zircon/hw/usb/cdc.h>
@@ -20,6 +24,7 @@
 #include <zircon/types.h>
 
 #define DEV_USB_PERIPHERAL_DIR  "/dev/class/usb-peripheral"
+#define DEV_VIRTUAL_USB "/dev/test/usb-virtual-bus"
 
 #define MANUFACTURER_STRING "Zircon"
 #define CDC_PRODUCT_STRING  "CDC Ethernet"
@@ -46,7 +51,6 @@ const usb_function_descriptor_t test_function_desc = {
     .interface_subclass = 0,
     .interface_protocol = 0,
 };
-
 
 typedef struct {
     const usb_function_descriptor_t* desc;
@@ -88,7 +92,7 @@ static fuchsia_hardware_usb_peripheral_DeviceDescriptor device_desc = {
     .bNumConfigurations = 1,
 };
 
-static int open_usb_device(void) {
+static int open_usb_device(int* out_fd, zx_handle_t* out_svc) {
     struct dirent* de;
     DIR* dir = opendir(DEV_USB_PERIPHERAL_DIR);
     if (!dir) {
@@ -107,11 +111,39 @@ static int open_usb_device(void) {
         }
 
         closedir(dir);
-        return fd;
+
+        zx_status_t status = fdio_get_service_handle(fd, out_svc);
+        if (status != ZX_OK) {
+            close(fd);
+            return status;
+        }
+        *out_fd = fd;
+        return ZX_OK;
     }
 
     closedir(dir);
-    return -1;
+    return ZX_ERR_NOT_FOUND;
+}
+
+static int open_usb_virtual_bus(int* out_fd, zx_handle_t* out_svc) {
+    int fd = open(DEV_VIRTUAL_USB, O_RDWR);
+    if (fd < 0) {
+        printf("Error opening %s\n", DEV_VIRTUAL_USB);
+        return ZX_ERR_NOT_FOUND;
+    }
+
+    zx_status_t status = fdio_get_service_handle(fd, out_svc);
+    if (status != ZX_OK) {
+        close(fd);
+        return status;
+    }
+    *out_fd = fd;
+    return ZX_OK;
+}
+
+static void close_device(int fd, zx_handle_t svc) {
+    zx_handle_close(svc);
+    close(fd);
 }
 
 static zx_status_t device_init(zx_handle_t svc, const usb_function_t* function) {
@@ -173,8 +205,15 @@ static zx_status_t device_init(zx_handle_t svc, const usb_function_t* function) 
     return status;
 }
 
-static int ums_command(zx_handle_t svc, int argc, const char* argv[]) {
-    zx_status_t status, status2;
+static int ums_command(int argc, const char* argv[]) {
+    int fd;
+    zx_handle_t svc;
+    zx_status_t status = open_usb_device(&fd, &svc);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    zx_status_t status2;
 
     status = fuchsia_hardware_usb_peripheral_DeviceClearFunctions(svc, &status2);
     if (status == ZX_OK) status = status2;
@@ -182,11 +221,19 @@ static int ums_command(zx_handle_t svc, int argc, const char* argv[]) {
         status = device_init(svc, &ums_function);
     }
 
+    close_device(fd, svc);
     return status == ZX_OK ? 0 : -1;
 }
 
-static int cdc_command(zx_handle_t svc, int argc, const char* argv[]) {
-    zx_status_t status, status2;
+static int cdc_command(int argc, const char* argv[]) {
+    int fd;
+    zx_handle_t svc;
+    zx_status_t status = open_usb_device(&fd, &svc);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    zx_status_t status2;
 
     status = fuchsia_hardware_usb_peripheral_DeviceClearFunctions(svc, &status2);
     if (status == ZX_OK) status = status2;
@@ -194,11 +241,19 @@ static int cdc_command(zx_handle_t svc, int argc, const char* argv[]) {
         status = device_init(svc, &cdc_function);
     }
 
+    close_device(fd, svc);
     return status == ZX_OK ? 0 : -1;
 }
 
-static int test_command(zx_handle_t svc, int argc, const char* argv[]) {
-    zx_status_t status, status2;
+static int test_command(int argc, const char* argv[]) {
+    int fd;
+    zx_handle_t svc;
+    zx_status_t status = open_usb_device(&fd, &svc);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    zx_status_t status2;
 
     status = fuchsia_hardware_usb_peripheral_DeviceClearFunctions(svc, &status2);
     if (status == ZX_OK) status = status2;
@@ -206,11 +261,18 @@ static int test_command(zx_handle_t svc, int argc, const char* argv[]) {
         status = device_init(svc, &test_function);
     }
 
+    close_device(fd, svc);
     return status == ZX_OK ? 0 : -1;
 }
 
-static int mode_command(zx_handle_t svc, int argc, const char* argv[]) {
-    zx_status_t status = ZX_OK;
+static int mode_command(int argc, const char* argv[]) {
+    int fd;
+    zx_handle_t svc;
+    zx_status_t status = open_usb_device(&fd, &svc);
+    if (status != ZX_OK) {
+        return status;
+    }
+
     zx_status_t status2;
 
     if (argc == 1) {
@@ -264,12 +326,52 @@ static int mode_command(zx_handle_t svc, int argc, const char* argv[]) {
         }
     }
 
+    close_device(fd, svc);
     return status;
+}
+
+
+static int virtual_command(int argc, const char* argv[]) {
+    int fd;
+    zx_handle_t svc;
+    zx_status_t status = open_usb_virtual_bus(&fd, &svc);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    zx_status_t status2;
+
+    if (argc != 2) {
+        goto usage;
+    }
+
+    const char* command = argv[1];
+    if (!strcmp(command, "enable")) {
+        status = fuchsia_usb_virtualbus_BusEnable(svc, &status2);
+    } else if (!strcmp(command, "disable")) {
+        status = fuchsia_usb_virtualbus_BusDisable(svc, &status2);
+    } else if (!strcmp(command, "connect")) {
+        status = fuchsia_usb_virtualbus_BusConnect(svc, &status2);
+    } else if (!strcmp(command, "disconnect")) {
+        status = fuchsia_usb_virtualbus_BusDisconnect(svc, &status2);
+    } else {
+        goto usage;
+    }
+
+    if (status == ZX_OK) status = status2;
+
+    close_device(fd, svc);
+    return status;
+
+usage:
+    close_device(fd, svc);
+    fprintf(stderr, "usage: usbctl virtual [enable|disable|connect|disconnect]\n");
+    return -1;
 }
 
 typedef struct {
     const char* name;
-    int (*command)(zx_handle_t svc, int argc, const char* argv[]);
+    int (*command)(int argc, const char* argv[]);
     const char* description;
 } usbctl_command_t;
 
@@ -295,6 +397,11 @@ static usbctl_command_t commands[] = {
         "mode [none|host|peripheral|otg] - sets the current USB mode. "
         "Returns the current mode if no additional arugment is provided."
     },
+    {
+        "virtual",
+        virtual_command,
+        "virtual [enable|disable|connect|disconnect] - controls USB virtual bus"
+    },
     { NULL, NULL, NULL },
 };
 
@@ -314,24 +421,12 @@ int main(int argc, const char** argv) {
         return -1;
     }
 
-    int fd = open_usb_device();
-    if (fd < 0) {
-        fprintf(stderr, "could not find a device in %s\n", DEV_USB_PERIPHERAL_DIR);
-        return fd;
-    }
-
-    zx_handle_t svc;
-    zx_status_t status = fdio_get_service_handle(fd, &svc);
-    if (status != ZX_OK) {
-        close(fd);
-        return status;
-    }
-
     const char* command_name = argv[1];
     usbctl_command_t* command = commands;
+    zx_status_t status;
     while (command->name) {
         if (!strcmp(command_name, command->name)) {
-            status = command->command(svc, argc - 1, argv + 1);
+            status = command->command(argc - 1, argv + 1);
             goto done;
         }
         command++;
@@ -341,7 +436,5 @@ int main(int argc, const char** argv) {
     status = ZX_ERR_INVALID_ARGS;
 
 done:
-    zx_handle_close(svc);
-    close(fd);
     return status;
 }
