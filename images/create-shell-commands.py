@@ -36,7 +36,7 @@ def main():
             return 1
         path = os.path.join(args.trampoline_dir, name)
         with open(path, 'w') as f:
-            f.write('#!resolve %s' % uri)
+            f.write('#!resolve %s\n' % uri)
         commands[name] = path
 
     with open(args.output_manifest, 'w') as output:
