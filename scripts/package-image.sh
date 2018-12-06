@@ -41,7 +41,7 @@ function HELP {
     echo "-M                                : membase for mkbootimg (default ${MEMBASE})"
     echo "-o                                : output boot.img file (defaults to <build-dir>/<board>-boot.img)"
     echo "-v                                : output vbmeta.img file (defaults to <build-dir>/<board>-vbmeta.img)"
-    echo "-z                                : input zircon ZBI file (defaults to <build-dir>/<board>-vbmeta.img)"
+    echo "-z                                : input zircon ZBI file (defaults to <build-dir>/<board>-boot.img)"
     exit 1
 }
 
