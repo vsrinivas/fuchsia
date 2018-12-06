@@ -43,7 +43,7 @@ nuc,vim2:go/magma-tps#P0
 
 Includes all unit tests and integration tests.  There are 2 steps at this tps level:
 
-1. Build with --arg magma_enable_developer_mode=true; this will run unit tests that require hardware,
+1. Build with --args magma_enable_developer_mode=true; this will run unit tests that require hardware,
 then present the device as usual for general applications.  Inspect the syslog for test results.
 
 2. Run the test script [lib/magma/scripts/test.sh](../../../lib/magma/scripts/test.sh) and inspect the test results.
