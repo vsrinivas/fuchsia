@@ -486,6 +486,166 @@ TEST(ParseElement, MpmCloseGoodWithLinkIdWithPmk) {
     EXPECT_EQ(static_cast<const void*>(mpm->pmk), data + 8);
 }
 
+TEST(ParseElement, PreqMinimal) {
+    // clang-format off
+    const uint8_t data[17 + 9] = {
+        0x00, // flags
+        0x02, // hop count
+        0x03, // element ttl
+        0x04, 0x05, 0x06, 0x07, // path discovery ID
+        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, // originator addr
+        0x0e, 0x0f, 0x10, 0x11, // originator hwmp seqno
+        0x18, 0x19, 0x1a, 0x1b, // lifetime
+        0x1c, 0x1d, 0x1e, 0x1f, // metric
+        // Target count. Having no targets probably doesn't make sense,
+        // but we test this code path anyway.
+        0,
+    };
+    // clang-format on
+    auto preq = ParsePreq(data);
+    ASSERT_TRUE(preq);
+
+    EXPECT_EQ(data, reinterpret_cast<const uint8_t*>(preq->header));
+    EXPECT_EQ(0x02u, preq->header->hop_count);
+
+    EXPECT_EQ(nullptr, preq->originator_external_addr);
+    EXPECT_EQ(0x1b1a1918u, preq->middle->lifetime);
+    EXPECT_EQ(0u, preq->per_target.size());
+}
+
+TEST(ParseElement, PreqFull) {
+    // clang-format off
+    const uint8_t data[17 + 9 + 6 + 2*11] = {
+        0x40, // flags: address extension = true
+        0x02, // hop count
+        0x03, // element ttl
+        0x04, 0x05, 0x06, 0x07, // path discovery ID
+        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, // originator addr
+        0x0e, 0x0f, 0x10, 0x11, // originator hwmp seqno
+        0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, // originator external address
+        0x18, 0x19, 0x1a, 0x1b, // lifetime
+        0x1c, 0x1d, 0x1e, 0x1f, // metric
+        2, // target count
+        // Target 1
+        0x00, // target flags
+        0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, // target address
+        0xa1, 0xa2, 0xa3, 0xa4, // target hwmp seqno
+        // Target 2
+        0x00, // target flags
+        0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, // target address
+        0xb1, 0xb2, 0xb3, 0xb4, // target hwmp seqno
+    };
+    // clang-format on
+    auto preq = ParsePreq(data);
+    ASSERT_TRUE(preq);
+
+    EXPECT_EQ(data, reinterpret_cast<const uint8_t*>(preq->header));
+    EXPECT_EQ(0x02u, preq->header->hop_count);
+
+    ASSERT_NE(nullptr, preq->originator_external_addr);
+    EXPECT_EQ(MacAddr("16:17:18:19:1a:1b"), *preq->originator_external_addr);
+
+    EXPECT_EQ(0x1b1a1918u, preq->middle->lifetime);
+
+    ASSERT_EQ(2u, preq->per_target.size());
+    ASSERT_EQ(MacAddr("bb:bb:bb:bb:bb:bb"), preq->per_target[1].target_addr);
+}
+
+TEST(ParseElement, PreqTooLong) {
+    // clang-format off
+    const uint8_t data[17 + 9 + 1] = {
+        0x00, // flags
+        0x02, // hop count
+        0x03, // element ttl
+        0x04, 0x05, 0x06, 0x07, // path discovery ID
+        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, // originator addr
+        0x0e, 0x0f, 0x10, 0x11, // originator hwmp seqno
+        0x18, 0x19, 0x1a, 0x1b, // lifetime
+        0x1c, 0x1d, 0x1e, 0x1f, // metric
+        0, // target count
+        1 // extra byte
+    };
+    // clang-format on
+    auto preq = ParsePreq(data);
+    ASSERT_FALSE(preq);
+}
+
+TEST(ParseElement, PreqTooShort_Header) {
+    // clang-format off
+    const uint8_t data[17 - 1] = {
+        0x00, // flags
+        0x02, // hop count
+        0x03, // element ttl
+        0x04, 0x05, 0x06, 0x07, // path discovery ID
+        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, // originator addr
+        0x0e, 0x0f, 0x10, // one byte missing from originator hwmp seqno
+    };
+    // clang-format on
+    auto preq = ParsePreq(data);
+    ASSERT_FALSE(preq);
+}
+
+TEST(ParseElement, PreqTooShort_OrigExtAddr) {
+    // clang-format off
+    const uint8_t data[17 + 6 - 1] = {
+        0x40, // flags: address extension = true
+        0x02, // hop count
+        0x03, // element ttl
+        0x04, 0x05, 0x06, 0x07, // path discovery ID
+        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, // originator addr
+        0x0e, 0x0f, 0x10, 0x11, // originator hwmp seqno
+        0x16, 0x17, 0x18, 0x19, 0x1a, // one byte missing from originator external address
+    };
+    // clang-format on
+    auto preq = ParsePreq(data);
+    ASSERT_FALSE(preq);
+}
+
+TEST(ParseElement, PreqTooShort_Middle) {
+    // clang-format off
+    const uint8_t data[17 + 9 - 1] = {
+        0x00, // flags
+        0x02, // hop count
+        0x03, // element ttl
+        0x04, 0x05, 0x06, 0x07, // path discovery ID
+        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, // originator addr
+        0x0e, 0x0f, 0x10, 0x11, // originator hwmp seqno
+        0x18, 0x19, 0x1a, 0x1b, // lifetime
+        0x1c, 0x1d, 0x1e, 0x1f, // metric
+        // Target count missing
+    };
+    // clang-format on
+    auto preq = ParsePreq(data);
+    ASSERT_FALSE(preq);
+}
+
+TEST(ParseElement, PreqTooShort_PerTarget) {
+    // clang-format off
+    const uint8_t data[26 + 6 + 2*11 - 1] = {
+        0x40, // flags: address extension = true
+        0x02, // hop count
+        0x03, // element ttl
+        0x04, 0x05, 0x06, 0x07, // path discovery ID
+        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, // originator addr
+        0x0e, 0x0f, 0x10, 0x11, // originator hwmp seqno
+        0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, // originator external address
+        0x18, 0x19, 0x1a, 0x1b, // lifetime
+        0x1c, 0x1d, 0x1e, 0x1f, // metric
+        2, // target count
+        // Target 1
+        0x00, // target flags
+        0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, // target address
+        0xa1, 0xa2, 0xa3, 0xa4, // target hwmp seqno
+        // Target 2
+        0x00, // target flags
+        0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, // target address
+        0xb1, 0xb2, 0xb3, // one byte missing from target hwmp seqno
+    };
+    // clang-format on
+    auto preq = ParsePreq(data);
+    ASSERT_FALSE(preq);
+}
+
 } // namespace common
 } // namespace wlan
 

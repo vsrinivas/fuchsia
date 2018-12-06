@@ -187,6 +187,59 @@ struct MeshConfiguration {
 
 constexpr size_t kMaxMeshIdLen = 32;
 
+// IEEE Std 802.11-2016, 9.4.2.113, Figure 9-478
+struct PreqFlags : public common::BitField<uint8_t> {
+    WLAN_BIT_FIELD(gate_announcement, 0, 1);
+    WLAN_BIT_FIELD(addressing_mode, 1, 1);
+    WLAN_BIT_FIELD(proactive, 2, 1);
+    // bits 3-5 reserved
+    WLAN_BIT_FIELD(addr_ext, 6, 1);
+    // bit 7 reserved
+};
+
+// Fixed-length fields of the PREQ element that precede
+// the optional Originator External Address field.
+// IEEE Std 802.11-2016, 9.4.2.113, Figure 9-477
+struct PreqHeader {
+    PreqFlags flags;
+    uint8_t hop_count;
+    uint8_t element_ttl;
+    uint32_t path_discovery_id;
+    common::MacAddr originator_addr;
+    uint32_t originator_hwmp_seqno;
+} __PACKED;
+
+static_assert(sizeof(PreqHeader) == 17);
+
+// Fixed-length fields of the PREQ elements that follow the optional Originator External Address
+// field and precede the variable length per-target fields.
+// IEEE Std 802.11-2016, 9.4.2.113, Figure 9-477
+struct PreqMiddle {
+    uint32_t lifetime;
+    uint32_t metric;
+    uint8_t target_count;
+} __PACKED;
+
+static_assert(sizeof(PreqMiddle) == 9);
+
+// IEEE Std 802.11-2016, 9.4.2.113, Figure 9-479
+struct PreqPerTargetFlags : public common::BitField<uint8_t> {
+    WLAN_BIT_FIELD(target_only, 0, 1);
+    // bit 1 reserved
+    WLAN_BIT_FIELD(usn, 2, 1);
+    // bits 3-7 reserved
+};
+
+// An entry of the variable-length part of PREQ
+// IEEE Std 802.11-2016, 9.4.2.113, Figure 9-477
+struct PreqPerTarget {
+    PreqPerTargetFlags flags;
+    common::MacAddr target_addr;
+    uint32_t target_hwmp_seqno;
+} __PACKED;
+
+static_assert(sizeof(PreqPerTarget) == 11);
+
 // IEEE Std 802.11-2016, 9.4.1.17
 class QosInfo : public common::BitField<uint8_t> {
    public:

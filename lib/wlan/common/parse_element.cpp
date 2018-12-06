@@ -156,5 +156,27 @@ std::optional<ParsedMpmClose> ParseMpmClose(Span<const uint8_t> raw_body) {
     return {{ *header, peer_link_id, *reason_code, pmk }};
 }
 
+std::optional<ParsedPreq> ParsePreq(Span<const uint8_t> raw_body) {
+    ParsedPreq ret {};
+    auto r = BufferReader { raw_body };
+    ret.header = r.Read<PreqHeader>();
+    if (ret.header == nullptr) { return {}; }
+
+    if (ret.header->flags.addr_ext()) {
+        ret.originator_external_addr = r.Read<common::MacAddr>();
+        if (ret.originator_external_addr == nullptr) { return {}; }
+    }
+
+    ret.middle = r.Read<PreqMiddle>();
+    if (ret.middle == nullptr) { return {}; }
+
+    ret.per_target = r.ReadArray<PreqPerTarget>(ret.middle->target_count);
+    if (ret.per_target.size() != ret.middle->target_count) { return {}; }
+
+    if (r.RemainingBytes() > 0) { return {}; }
+
+    return { ret };
+}
+
 } // namespace common
 } // namespace wlan
