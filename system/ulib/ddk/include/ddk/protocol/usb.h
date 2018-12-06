@@ -98,13 +98,6 @@ typedef struct usb_request {
 
     usb_response_t response;
 
-    // list node and context
-    // the current "owner" of the usb_request may use these however desired
-    // (eg, the requestor may use node to hold the usb_request on a free list
-    // and when it's queued the processor may use node to hold the usb_request
-    // in a transaction queue)
-    list_node_t node;
-
     void *context;
 
     // The release_cb() callback is set by the allocator and is
