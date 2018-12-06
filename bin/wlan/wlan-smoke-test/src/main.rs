@@ -15,7 +15,7 @@ use connectivity_testing::wlan_service_util;
 use crate::opts::Opt;
 use failure::{bail, Error, ResultExt};
 use fidl_fuchsia_net_oldhttp::{self as http, HttpServiceProxy};
-use fidl_fuchsia_net_stack::{StackMarker, StackProxy};
+use fidl_fuchsia_net_stack::{self as netstack, StackMarker, StackProxy};
 use fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy};
 use fidl_fuchsia_wlan_sme as fidl_sme;
 use fuchsia_app::client::connect_to_service;
@@ -107,8 +107,8 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                             wlan_iface.scan_found_target_ssid = true;
                         }
                     }
-                }
-                _ => println!("scan failed"),
+                },
+                _ => println!("scan failed")
             };
 
             let mut requires_disconnect = false;
@@ -332,7 +332,7 @@ async fn fetch_and_discard_url(
 
 async fn get_ip_addrs_for_wlan_iface<'a>(
     wlan_svc: &'a DeviceServiceProxy, network_svc: &'a StackProxy, wlan_iface_id: u16,
-) -> Result<Vec<fidl_fuchsia_net::Subnet>, Error> {
+) -> Result<Vec<netstack::InterfaceAddress>, Error> {
     // temporary implementation for getting the ip addrs for a wlan iface.  A more robust
     // lookup will be designed and implemented in the future (TODO: <bug already filed?>)
 
@@ -376,11 +376,11 @@ async fn get_ip_addrs_for_wlan_iface<'a>(
     Ok(wlan_iface_ip_addrs)
 }
 
-fn check_dhcp_complete(ip_addrs: Vec<fidl_fuchsia_net::Subnet>) -> bool {
+fn check_dhcp_complete(ip_addrs: Vec<netstack::InterfaceAddress>) -> bool {
     for ip_addr in ip_addrs {
         // for now, assume a valid address if we see anything that isn't a 0
-        fx_log_info!("checking validity of ip address: {:?}", ip_addr.addr);
-        match ip_addr.addr {
+        fx_log_info!("checking validity of ip address: {:?}", ip_addr.ip_address);
+        match ip_addr.ip_address {
             fidl_fuchsia_net::IpAddress::Ipv4(address) => {
                 for &a in address.addr.iter() {
                     if a != 0 as u8 {

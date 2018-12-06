@@ -42,10 +42,11 @@ func getInterfaceInfo(nicid tcpip.NICID, ifs *ifState) *stack.InterfaceInfo {
 		status |= stack.InterfaceStatusEnabled
 	}
 
-	addrs := make([]net.Subnet, 0, 1)
+	// TODO(tkilbourn): implement interface addresses
+	addrs := make([]stack.InterfaceAddress, 0, 1)
 	if len(ifs.nic.Addr) > 0 {
-		addrs = append(addrs, net.Subnet{
-			Addr:      fidlconv.ToNetIpAddress(ifs.nic.Addr),
+		addrs = append(addrs, stack.InterfaceAddress{
+			IpAddress: fidlconv.ToNetIpAddress(ifs.nic.Addr),
 			PrefixLen: fidlconv.GetPrefixLen(ifs.nic.Netmask),
 		})
 	}
@@ -143,7 +144,7 @@ func (ns *Netstack) setInterfaceState(id uint64, enabled bool) *stack.Error {
 	return nil
 }
 
-func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr net.Subnet) *stack.Error {
+func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr stack.InterfaceAddress) *stack.Error {
 	// The ns mutex is held in the setInterfaceAddress call below so release it
 	// after we find the right ifState.
 	ns.mu.Lock()
@@ -161,7 +162,7 @@ func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr net.Subnet) *stack.Error 
 	}
 
 	var protocol tcpip.NetworkProtocolNumber
-	switch ifAddr.Addr.Which() {
+	switch ifAddr.IpAddress.Which() {
 	case net.IpAddressIpv4:
 		if len(ifs.nic.Addr) > 0 {
 			return &stack.Error{Type: stack.ErrorTypeAlreadyExists}
@@ -173,7 +174,7 @@ func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr net.Subnet) *stack.Error 
 	}
 
 	nic := ifs.nic.ID
-	addr := fidlconv.ToTCPIPAddress(ifAddr.Addr)
+	addr := fidlconv.ToTCPIPAddress(ifAddr.IpAddress)
 	if err := ns.setInterfaceAddress(nic, protocol, addr, ifAddr.PrefixLen); err != nil {
 		log.Printf("(*Netstack).setInterfaceAddress(...) failed: %v", err)
 		return &stack.Error{Type: stack.ErrorTypeBadState}
@@ -291,7 +292,7 @@ func (ni *stackImpl) DisableInterface(id uint64) (*stack.Error, error) {
 	return ni.ns.setInterfaceState(id, false), nil
 }
 
-func (ni *stackImpl) AddInterfaceAddress(id uint64, addr net.Subnet) (*stack.Error, error) {
+func (ni *stackImpl) AddInterfaceAddress(id uint64, addr stack.InterfaceAddress) (*stack.Error, error) {
 	return ni.ns.addInterfaceAddr(id, addr), nil
 }
 

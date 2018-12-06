@@ -8,7 +8,7 @@
 use failure::{Error, ResultExt};
 use fdio;
 use fidl_fuchsia_net as net;
-use fidl_fuchsia_net_stack::{StackMarker, StackProxy};
+use fidl_fuchsia_net_stack::{self as netstack, StackMarker, StackProxy};
 use fidl_fuchsia_net_stack_ext as pretty;
 use fidl_zircon_ethernet as zx_eth;
 use fuchsia_app::client::connect_to_service;
@@ -98,9 +98,10 @@ async fn do_if(cmd: opts::IfCmd, stack: StackProxy) -> Result<(), Error> {
         }
         IfCmd::Addr(AddrCmd::Add { id, addr, prefix }) => {
             let parsed_addr = parse_ip_addr(&addr)?;
-            let mut fidl_addr = net::Subnet {
-                addr: parsed_addr,
+            let mut fidl_addr = netstack::InterfaceAddress {
+                ip_address: parsed_addr,
                 prefix_len: prefix,
+                peer_address: None,
             };
             let response = await!(stack.add_interface_address(id, &mut fidl_addr))
                 .context("error setting interface address")?;
@@ -109,7 +110,7 @@ async fn do_if(cmd: opts::IfCmd, stack: StackProxy) -> Result<(), Error> {
             } else {
                 println!(
                     "Address {} added to interface {}",
-                    fidl_fuchsia_net_ext::Subnet::from(fidl_addr),
+                    pretty::InterfaceAddress::from(fidl_addr),
                     id
                 )
             }

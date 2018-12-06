@@ -6,6 +6,39 @@ use fidl_fuchsia_net_stack as fidl;
 
 use bitflags::bitflags;
 
+pub struct InterfaceAddress {
+    ip_address: fidl_fuchsia_net_ext::IpAddress,
+    prefix_len: u8,
+    peer_address: Option<Box<fidl_fuchsia_net::IpAddress>>,
+}
+
+impl From<fidl::InterfaceAddress> for InterfaceAddress {
+    fn from(interface_address: fidl::InterfaceAddress) -> Self {
+        let fidl::InterfaceAddress {
+            ip_address,
+            prefix_len,
+            peer_address,
+        } = interface_address;
+        let ip_address = ip_address.into();
+        Self {
+            ip_address,
+            prefix_len,
+            peer_address,
+        }
+    }
+}
+
+impl std::fmt::Display for InterfaceAddress {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        let Self {
+            ip_address,
+            prefix_len,
+            peer_address: _,
+        } = self;
+        write!(f, "{}/{}", ip_address, prefix_len)
+    }
+}
+
 pub enum ForwardingDestination {
     DeviceId(u64),
     NextHop(fidl_fuchsia_net_ext::IpAddress),
@@ -79,7 +112,7 @@ pub struct InterfaceInfo {
     mtu: u32,
     features: fidl_zircon_ethernet_ext::EthernetFeatures,
     status: InterfaceStatus,
-    addresses: Vec<fidl_fuchsia_net_ext::Subnet>,
+    addresses: Vec<InterfaceAddress>,
 }
 
 impl From<fidl::InterfaceInfo> for InterfaceInfo {
@@ -152,14 +185,13 @@ fn test_display_interfaceinfo() {
                 mtu: 1500,
                 features: fidl_zircon_ethernet_ext::EthernetFeatures::all(),
                 status: InterfaceStatus::all(),
-                addresses: vec![fidl_fuchsia_net::Subnet {
-                    addr: fidl_fuchsia_net_ext::IpAddress(std::net::IpAddr::V4(
+                addresses: vec![InterfaceAddress {
+                    ip_address: fidl_fuchsia_net_ext::IpAddress(std::net::IpAddr::V4(
                         std::net::Ipv4Addr::new(255, 255, 255, 0),
-                    ))
-                    .into(),
+                    ),),
                     prefix_len: 4,
-                }
-                .into()],
+                    peer_address: None,
+                }],
             }
         ),
         r#"Interface Info
