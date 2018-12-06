@@ -181,19 +181,24 @@ TEST_F(LevelDbFactoryTest, InitWithCachedDbAvailable) {
   // one directly.
   scoped_tmpfs::ScopedTmpFS tmpfs;
   ledger::DetachedPath cache_path(tmpfs.root_fd(), "cache");
+  // Must be the same as |kCachedDbPath| in leveldb_factory.cc.
+  ledger::DetachedPath cached_db_path = cache_path.SubPath("cached_db");
+
   auto db_factory = std::make_unique<LevelDbFactory>(&environment_, cache_path);
 
-  // The cache directory should not be created, yet.
-  EXPECT_FALSE(files::IsDirectoryAt(cache_path.root_fd(), cache_path.path()));
+  // The cached db directory should not be created, yet.
+  EXPECT_FALSE(
+      files::IsDirectoryAt(cached_db_path.root_fd(), cached_db_path.path()));
 
   // Initialize and wait for the cached instance to be created.
   db_factory->Init();
   RunLoopUntilIdle();
 
   // Close the factory. This will not affect the created cached instance, which
-  // was created under |cache_path|.
+  // was created under |cached_db_path|.
   db_factory.reset();
-  EXPECT_TRUE(files::IsDirectoryAt(cache_path.root_fd(), cache_path.path()));
+  EXPECT_TRUE(
+      files::IsDirectoryAt(cached_db_path.root_fd(), cached_db_path.path()));
 
   // Reset and re-initialize the factory object. It should now use the
   // previously created instance.

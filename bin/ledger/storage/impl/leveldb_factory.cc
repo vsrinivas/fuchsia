@@ -40,6 +40,16 @@ constexpr fxl::StringView kCachedDbPath = "cached_db";
 
 constexpr size_t kRandomBytesCount = 16;
 
+// Returns whether the parent directory of |path| exists. If it is not possible
+// to access the parent directory, returns whether the given |path| exists.
+bool ParentDirectoryExists(ledger::DetachedPath path) {
+  size_t last_slash = path.path().find_last_of('/');
+  return files::IsDirectoryAt(path.root_fd(),
+                              last_slash == std::string::npos
+                                  ? path.path()
+                                  : path.path().substr(0, last_slash));
+}
+
 }  // namespace
 
 enum class LevelDbFactory::CreateInStagingPath : bool {
@@ -221,6 +231,15 @@ Status LevelDbFactory::CreateDbThroughStagingPathOnIOThread(
   if (status != Status::OK) {
     return status;
   }
+  // If the parent directory doesn't exist, renameat will fail.
+  // Note that |cached_db_path_| will also be created throught the staging path
+  // and thus, this code path will be reached. Its parent directory is lazily
+  // created when result->Init() (see code above) is called:
+  // - |staging_path_| and |cached_db_path_| share the same parent (the
+  //   |cache_path| given on the constructor), and
+  // - in LevelDb initialization, the directories up to the db path are created.
+  FXL_DCHECK(ParentDirectoryExists(db_path))
+      << "Parent directory does not exit for path: " << db_path.path();
   // Move it to the final destination.
   if (renameat(tmp_destination.root_fd(), tmp_destination.path().c_str(),
                db_path.root_fd(), db_path.path().c_str()) != 0) {
