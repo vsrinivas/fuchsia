@@ -1676,13 +1676,13 @@ bool Library::CompileInterface(Interface* interface_declaration) {
                 return Fail(method.ordinal->location(), "Ordinal value 0 disallowed.");
             if (!ordinal_result.ok()) {
                 std::string replacement_method(
-                    fidl::ordinals::GetOrdinalName(method.attributes.get(), method.name));
+                    fidl::ordinals::GetSelector(method.attributes.get(), method.name));
                 replacement_method.push_back('_');
                 return Fail(method.ordinal->location(),
                             "Multiple methods with the same ordinal in an interface; previous was at " +
                                 ordinal_result.previous_occurance().position() + ". If these " +
                                 "were automatically generated, consider using attribute " +
-                                "[OrdinalName=\"" + replacement_method + "\"] to change the " +
+                                "[Selector=\"" + replacement_method + "\"] to change the " +
                                 "name used to calculate the ordinal.");
             }
 

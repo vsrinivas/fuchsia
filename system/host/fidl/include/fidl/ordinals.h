@@ -10,9 +10,9 @@
 namespace fidl {
 namespace ordinals {
 
-// Returns the OrdinalName. If the OrdinalName attribute is present, the
+// Returns the Selector. If the Selector attribute is present, the
 // function returns its value; otherwise, it returns the name parameter.
-std::string GetOrdinalName(const raw::AttributeList* attributes,
+std::string GetSelector(const raw::AttributeList* attributes,
                            SourceLocation name);
 
 // Retrieves the correct ordinal for this method per the FIDL spec.
@@ -20,7 +20,7 @@ std::string GetOrdinalName(const raw::AttributeList* attributes,
 // If |method.ordinal| is not null, this method will return |method.ordinal|.
 // Otherwise, the ordinal value is equal to
 //    *((int32_t *)sha256(library_name + "." + interface_name + "/" + method_name)) & 0x7fffffff;
-// If |method| has an OrdinalName attribute, that value will be used as the
+// If |method| has an Selector attribute, that value will be used as the
 // method_name.
 raw::Ordinal GetOrdinal(const std::vector<StringView>& library_name,
                         const StringView& interface_name,

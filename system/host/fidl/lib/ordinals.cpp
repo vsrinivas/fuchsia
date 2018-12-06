@@ -12,11 +12,11 @@
 namespace fidl {
 namespace ordinals {
 
-std::string GetOrdinalName(const raw::AttributeList* attributes, SourceLocation name) {
+std::string GetSelector(const raw::AttributeList* attributes, SourceLocation name) {
     if (attributes != nullptr) {
         const size_t size = attributes->attributes.size();
         for (int i = 0; i < size; i++) {
-            if (attributes->attributes[i]->name == "OrdinalName") {
+            if (attributes->attributes[i]->name == "Selector") {
                 return attributes->attributes[i]->value;
             }
         }
@@ -30,7 +30,7 @@ raw::Ordinal GetOrdinal(const std::vector<StringView>& library_name,
     if (method.ordinal != nullptr)
         return *method.ordinal;
 
-    std::string method_name = GetOrdinalName(method.attributes.get(), method.identifier->location());
+    std::string method_name = GetSelector(method.attributes.get(), method.identifier->location());
     std::string full_name;
     bool once = false;
     for (StringView id : library_name) {

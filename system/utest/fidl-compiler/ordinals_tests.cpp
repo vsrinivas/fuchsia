@@ -100,10 +100,10 @@ interface b {
     ASSERT_EQ(1, errors.size());
 
     // The FTP requires the error message as follows
-    const std::regex pattern(R"REGEX(\[\s*OrdinalName\s*=\s*"(ljz|clgn)_"\s*\])REGEX");
+    const std::regex pattern(R"REGEX(\[\s*Selector\s*=\s*"(ljz|clgn)_"\s*\])REGEX");
     std::smatch sm;
     ASSERT_TRUE(std::regex_search(errors[0], sm, pattern),
-                ("OrdinalName pattern not found in error: " + errors[0]).c_str());
+                ("Selector pattern not found in error: " + errors[0]).c_str());
 
     END_TEST;
 }
@@ -117,9 +117,9 @@ library a;
 // The first 32 bits of the SHA256 hash of a.b/ljz and a.b/clgn are
 // the same.  This will trigger an error when ordinals are generated.
 interface b {
-    [OrdinalName = "ljz"]
+    [Selector = "ljz"]
     foo(string s, bool b) -> (int32 i);
-    [OrdinalName = "clgn"]
+    [Selector = "clgn"]
     bar(string s) -> (handle<channel> r);
 };
 
@@ -129,10 +129,10 @@ interface b {
     ASSERT_EQ(1, errors.size());
 
     // The FTP requires the error message as follows
-    const std::regex pattern(R"REGEX(\[\s*OrdinalName\s*=\s*"(ljz|clgn)_"\s*\])REGEX");
+    const std::regex pattern(R"REGEX(\[\s*Selector\s*=\s*"(ljz|clgn)_"\s*\])REGEX");
     std::smatch sm;
     ASSERT_TRUE(std::regex_search(errors[0], sm, pattern),
-                ("OrdinalName pattern not found in error: " + errors[0]).c_str());
+                ("Selector pattern not found in error: " + errors[0]).c_str());
 
     END_TEST;
 }
@@ -146,7 +146,7 @@ library a;
 // The first 32 bits of the SHA256 hash of a.b/ljz and a.b/clgn are
 // the same.  This will trigger an error when ordinals are generated.
 interface b {
-    [OrdinalName = "ljz_"]
+    [Selector = "ljz_"]
     ljz(string s, bool b) -> (int32 i);
     clgn(string s) -> (handle<channel> r);
 };
