@@ -171,11 +171,14 @@ template("sdk_shared_library") {
 
   metadata_file = "$target_gen_dir/$metadata_target_name.sdk_meta.json"
   debug_mapping_file = "$target_gen_dir/$metadata_target_name.mappings.txt"
+  debug_lib_file = "$shared_out_dir/lib.unstripped/$lib_name"
 
   action(metadata_target_name) {
     script = "//build/cpp/gen_sdk_prebuilt_meta_file.py"
 
-    inputs = sdk_metas
+    inputs = sdk_metas + [
+      debug_lib_file,
+    ]
 
     outputs = [
       debug_mapping_file,
@@ -202,7 +205,7 @@ template("sdk_shared_library") {
       "--lib-dist",
       dist_lib,
       "--lib-debug-file",
-      rebase_path("$shared_out_dir/lib.unstripped/$lib_name"),
+      rebase_path(debug_lib_file),
       "--debug-mapping",
       rebase_path(debug_mapping_file),
     ]

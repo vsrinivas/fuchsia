@@ -11,9 +11,10 @@ import sys
 sys.path.append(os.path.join(
     os.path.dirname(__file__),
     os.pardir,
-    "images",
+    "cpp",
 ))
-import elfinfo
+import binaries
+
 
 def main():
     parser = argparse.ArgumentParser('Builds a metadata file')
@@ -53,8 +54,7 @@ def main():
     args = parser.parse_args()
 
     # The path of the debug file in the SDK depends on its build id.
-    build_id = elfinfo.get_elf_info(args.lib_debug_file).build_id
-    debug_path = '.build-id/' + build_id[:2] + '/' + build_id[2:] + '.debug'
+    debug_path = binaries.get_sdk_debug_path(args.lib_debug_file)
     with open(args.debug_mapping, 'w') as mappings_file:
         mappings_file.write(debug_path + '=' + args.lib_debug_file)
 
