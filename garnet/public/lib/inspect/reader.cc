@@ -35,7 +35,7 @@ fit::promise<ObjectReader> ObjectReader::OpenChild(
   state_->inspect_ptr_->OpenChild(child_name, child_ptr.NewRequest(),
                                   bridge.completer.bind());
 
-  ObjectReader reader = MakeChild(std::move(child_name), child_ptr.Unbind());
+  ObjectReader reader(child_ptr.Unbind());
   return bridge.consumer.promise().and_then(
       [ret = std::move(reader)](
           bool success) mutable -> fit::result<ObjectReader> {
@@ -67,33 +67,9 @@ fit::promise<std::vector<ObjectReader>> ObjectReader::OpenChildren() const {
       });
 }
 
-ObjectReader ObjectReader::MakeChild(
-    std::string name,
-    fidl::InterfaceHandle<fuchsia::inspect::Inspect> handle) const {
-  ObjectReader ret(std::move(handle));
-  ret.state_->prefix_path_ = state_->prefix_path_;
-  ret.state_->prefix_path_.emplace_back(std::move(name));
-  return ret;
-}
-
 ObjectHierarchy::ObjectHierarchy(fuchsia::inspect::Object object,
-                                 std::vector<std::string> prefix_path,
                                  std::vector<ObjectHierarchy> children)
-    : object_(std::move(object)),
-      prefix_path_(std::move(prefix_path)),
-      children_(std::move(children)) {}
-
-const fuchsia::inspect::Object& ObjectHierarchy::object() const {
-  return object_;
-}
-
-const std::vector<std::string>& ObjectHierarchy::GetPrefixPath() const {
-  return prefix_path_;
-}
-
-const std::vector<ObjectHierarchy>& ObjectHierarchy::children() const {
-  return children_;
-}
+    : object_(std::move(object)), children_(std::move(children)) {}
 
 const ObjectHierarchy* ObjectHierarchy::GetByPath(
     std::vector<std::string> path) const {
@@ -114,28 +90,12 @@ const ObjectHierarchy* ObjectHierarchy::GetByPath(
   return current;
 }
 
-std::string ObjectHierarchy::MakeFormattedPath(
-    const std::string& prefix) const {
-  std::string ret = prefix;
-
-  bool first = true;
-  for (const auto& element : prefix_path_) {
-    if (!first) {
-      ret.push_back('/');
-    }
-    ret.append(element);
-    first = false;
-  }
-  return ret;
-}
-
 fit::promise<ObjectHierarchy> ObjectHierarchy::Make(ObjectReader reader,
                                                     int depth) {
   auto reader_promise = reader.Read();
   if (depth == 0) {
     return reader_promise.and_then([reader](fuchsia::inspect::Object& obj) {
-      return fit::ok(
-          ObjectHierarchy(std::move(obj), reader.GetPrefixPath(), {}));
+      return fit::ok(ObjectHierarchy(std::move(obj), {}));
     });
   } else {
     auto children_promise =
@@ -167,37 +127,31 @@ fit::promise<ObjectHierarchy> ObjectHierarchy::Make(ObjectReader reader,
                                 fit::result<std::vector<ObjectHierarchy>>>&
                          result) mutable -> fit::result<ObjectHierarchy> {
               return fit::ok(ObjectHierarchy(std::get<0>(result).take_value(),
-                                             reader.GetPrefixPath(),
                                              std::get<1>(result).take_value()));
             });
   }
 }
 
-ObjectHierarchy ObjectHierarchy::Make(const inspect::Object& object_root,
+ObjectHierarchy ObjectHierarchy::Make(const inspect::Object& object,
                                       int depth) {
-  std::vector<std::string> prefix_path_holder;
-  return Make(object_root.object_dir().object(), depth, &prefix_path_holder);
+  return Make(object.object_dir().object(), depth);
 }
 
 ObjectHierarchy ObjectHierarchy::Make(
-    std::shared_ptr<::component::Object> object_root, int depth,
-    std::vector<std::string>* prefix_path_holder) {
+    std::shared_ptr<component::Object> object_root, int depth) {
   auto obj = object_root->ToFidl();
   if (depth == 0) {
-    return ObjectHierarchy(std::move(obj), *prefix_path_holder, {});
+    return ObjectHierarchy(std::move(obj), {});
   } else {
     std::vector<ObjectHierarchy> children;
     auto child_names = object_root->GetChildren();
     for (auto& child_name : *child_names) {
       auto child_obj = object_root->GetChild(child_name);
       if (child_obj) {
-        prefix_path_holder->push_back(std::move(child_name));
-        children.emplace_back(Make(child_obj, depth - 1, prefix_path_holder));
-        prefix_path_holder->pop_back();
+        children.emplace_back(Make(child_obj, depth - 1));
       }
     }
-    return ObjectHierarchy(std::move(obj), *prefix_path_holder,
-                           std::move(children));
+    return ObjectHierarchy(std::move(obj), std::move(children));
   }
 }
 

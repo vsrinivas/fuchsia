@@ -17,9 +17,6 @@ using ChildNameVector = fidl::VectorPtr<std::string>;
 namespace internal {
 // Wraps the state of the ObjectReader so that ObjectReader remains copyable.
 struct ObjectReaderState {
-  // The base path that got us to the connected Object.
-  std::vector<std::string> prefix_path_;
-
   // The interface used to communicate with Inspect.
   fuchsia::inspect::InspectPtr inspect_ptr_;
 };
@@ -34,6 +31,12 @@ class ObjectReader {
   // Construct a new Reader that wraps the given handle.
   explicit ObjectReader(
       fidl::InterfaceHandle<fuchsia::inspect::Inspect> inspect_handle);
+
+  // Allow moving and copying.
+  ObjectReader(ObjectReader&&) = default;
+  ObjectReader(const ObjectReader&) = default;
+  ObjectReader& operator=(ObjectReader&&) = default;
+  ObjectReader& operator=(const ObjectReader&) = default;
 
   ~ObjectReader() = default;
 
@@ -56,13 +59,6 @@ class ObjectReader {
   // the opened list.
   fit::promise<std::vector<ObjectReader>> OpenChildren() const;
 
-  // Get the base path for the object being read.
-  // The base path is the path, in terms of calling OpenChild, from an original
-  // reader to this reader.
-  const std::vector<std::string>& GetPrefixPath() const {
-    return state_->prefix_path_;
-  }
-
   // Take the channel from this reader and return it.
   // This will unbind the interface being used by this reader, and future
   // operations using the reader will fail.
@@ -71,13 +67,6 @@ class ObjectReader {
   }
 
  private:
-  // Create a new ObjectReader that is a child of this one with the given name.
-  // This will set the prefix_path of the new ObjectReader to have name appended
-  // to the current path.
-  ObjectReader MakeChild(
-      std::string name,
-      fidl::InterfaceHandle<fuchsia::inspect::Inspect> handle) const;
-
   // Shared pointer to the state for this reader, allowing ObjectReaders to be
   // copied. ObjectReader needs to be copyable to allow keeping the ObjectReader
   // (including its wrapped connection) alive while promises are evaluated.
@@ -90,6 +79,12 @@ class ObjectReader {
 class ObjectHierarchy {
  public:
   ObjectHierarchy() = default;
+
+  // Allow moving, disallow copying.
+  ObjectHierarchy(ObjectHierarchy&&) = default;
+  ObjectHierarchy(const ObjectHierarchy&) = delete;
+  ObjectHierarchy& operator=(ObjectHierarchy&&) = default;
+  ObjectHierarchy& operator=(const ObjectHierarchy&) = delete;
 
   // Construct a new object hierarchy by asynchronously reading objects from the
   // given reader.
@@ -105,35 +100,25 @@ class ObjectHierarchy {
   static ObjectHierarchy Make(const Object& object_root, int depth = -1);
 
   // Gets the FIDL representation of the Object.
-  const fuchsia::inspect::Object& object() const;
-
-  // Gets the base path from the root to this child, if this ObjectHierarchy was
-  // recursed into from a parent.
-  const std::vector<std::string>& GetPrefixPath() const;
+  const fuchsia::inspect::Object& object() const { return object_; };
+  fuchsia::inspect::Object& object() { return object_; };
 
   // Gets the children of this object in the hierarchy.
-  const std::vector<ObjectHierarchy>& children() const;
-
-  // Print a formatted path from the root up to and including this child, with
-  // the given prefix prepended.
-  // Note that space characters are escaped with a backslash in the output.
-  std::string MakeFormattedPath(const std::string& prefix) const;
+  const std::vector<ObjectHierarchy>& children() const { return children_; };
+  std::vector<ObjectHierarchy>& children() { return children_; };
 
   // Gets a child in this ObjectHierarchy by path.
   // Returns NULL if the requested child could not be found.
   const ObjectHierarchy* GetByPath(std::vector<std::string> path) const;
 
  private:
-  static ObjectHierarchy Make(std::shared_ptr<::component::Object> object_root,
-                              int depth,
-                              std::vector<std::string>* prefix_path_holder);
-
   ObjectHierarchy(fuchsia::inspect::Object object,
-                  std::vector<std::string> prefix_path,
                   std::vector<ObjectHierarchy> children);
 
+  static ObjectHierarchy Make(std::shared_ptr<component::Object> object_root,
+                              int depth);
+
   fuchsia::inspect::Object object_;
-  std::vector<std::string> prefix_path_;
   std::vector<ObjectHierarchy> children_;
 };
 

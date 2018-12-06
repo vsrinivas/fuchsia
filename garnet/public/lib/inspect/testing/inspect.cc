@@ -50,7 +50,7 @@ namespace inspect {
 
 void PrintTo(const ::inspect::ObjectHierarchy& hierarchy, std::ostream* os) {
   *os << "ObjectHierarchy(" << ::testing::PrintToString(hierarchy.object())
-      << ", " << ::testing::PrintToString(hierarchy.GetPrefixPath()) << ", "
+      << ", "
       << ::testing::PrintToString(hierarchy.children().size()) << " children)";
 }
 
@@ -211,12 +211,6 @@ void internal::PropertyListMatcher::DescribeNegationTo(
 ::testing::Matcher<const ObjectHierarchy&> ObjectMatches(
     ObjectMatcher matcher) {
   return ::testing::Property(&ObjectHierarchy::object, std::move(matcher));
-}
-
-::testing::Matcher<const ObjectHierarchy&> PrefixPathMatches(
-    PrefixPathMatcher matcher) {
-  return ::testing::Property(&ObjectHierarchy::GetPrefixPath,
-                             std::move(matcher));
 }
 
 ::testing::Matcher<const ObjectHierarchy&> ChildrenMatch(

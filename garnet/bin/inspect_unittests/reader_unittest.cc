@@ -134,16 +134,13 @@ TEST_F(TestReader, OpenChild) {
 
   inspect::ObjectReader reader(std::move(client_));
   fit::result<fuchsia::inspect::Object> result;
-  std::vector<std::string> child_prefix_path;
-  SchedulePromise(
-      reader.OpenChild("child a")
-          .and_then([&child_prefix_path](inspect::ObjectReader& child_reader) {
-            child_prefix_path = child_reader.GetPrefixPath();
-            return child_reader.Read();
-          })
-          .then([&](fit::result<fuchsia::inspect::Object>& res) {
-            result = std::move(res);
-          }));
+  SchedulePromise(reader.OpenChild("child a")
+                      .and_then([](inspect::ObjectReader& child_reader) {
+                        return child_reader.Read();
+                      })
+                      .then([&](fit::result<fuchsia::inspect::Object>& res) {
+                        result = std::move(res);
+                      }));
 
   ASSERT_TRUE(RunLoopUntil([&] { return !!result; }));
 
@@ -151,7 +148,6 @@ TEST_F(TestReader, OpenChild) {
   EXPECT_THAT(child_value,
               AllOf(NameMatches("child a"),
                     MetricList(UnorderedElementsAre(IntMetricIs("value", 1)))));
-  EXPECT_THAT(child_prefix_path, testing::ElementsAre("child a"));
 }
 
 TEST_F(TestReader, OpenChildren) {
@@ -162,20 +158,17 @@ TEST_F(TestReader, OpenChildren) {
 
   inspect::ObjectReader reader(std::move(client_));
   std::vector<fit::result<fuchsia::inspect::Object>> result;
-  std::vector<std::string> child_paths;
   SchedulePromise(
       reader.OpenChildren()
-          .and_then(
-              [&child_paths](std::vector<inspect::ObjectReader>& child_reader) {
-                std::vector<fit::promise<fuchsia::inspect::Object>> promises;
+          .and_then([](std::vector<inspect::ObjectReader>& child_reader) {
+            std::vector<fit::promise<fuchsia::inspect::Object>> promises;
 
-                for (auto& child : child_reader) {
-                  child_paths.push_back(child.GetPrefixPath().at(0));
-                  promises.emplace_back(child.Read());
-                }
+            for (auto& child : child_reader) {
+              promises.emplace_back(child.Read());
+            }
 
-                return fit::join_promise_vector(std::move(promises));
-              })
+            return fit::join_promise_vector(std::move(promises));
+          })
           .and_then(
               [&](std::vector<fit::result<fuchsia::inspect::Object>>& res) {
                 for (auto& r : res) {
@@ -185,14 +178,14 @@ TEST_F(TestReader, OpenChildren) {
 
   ASSERT_TRUE(RunLoopUntil([&] { return result.size() == 2; }));
 
+  std::vector<std::string> names;
   for (size_t i = 0; i < result.size(); i++) {
     ASSERT_TRUE(result[i].is_ok());
-    EXPECT_STRNE("", child_paths[i].c_str());
-    EXPECT_THAT(
-        result[i].take_value(),
-        AllOf(NameMatches(child_paths[i].c_str()),
-              MetricList(UnorderedElementsAre(IntMetricIs("value", 1)))));
+    auto obj = result[i].take_value();
+    EXPECT_THAT(obj, MetricList(UnorderedElementsAre(IntMetricIs("value", 1))));
+    names.push_back(obj.name);
   }
+  EXPECT_THAT(names, UnorderedElementsAre("child a", "child b"));
 }
 
 // Construct and expect this hierarchy for the following tests:
@@ -217,30 +210,23 @@ class TestHierarchy : public TestReader {
 
   void ExpectHierarchy(const inspect::ObjectHierarchy& hierarchy) {
     EXPECT_THAT(hierarchy.object(), AllOf(NameMatches(kObjectsName)));
-    EXPECT_THAT(hierarchy.GetPrefixPath(), IsEmpty());
     EXPECT_THAT(
         hierarchy.children(),
         UnorderedElementsAre(
             AllOf(ObjectMatches(AllOf(NameMatches("child a"),
                                       MetricList(UnorderedElementsAre(
                                           IntMetricIs("value", 1))))),
-                  PrefixPathMatches(ElementsAre("child a")),
                   ChildrenMatch(IsEmpty())),
             AllOf(ObjectMatches(AllOf(NameMatches("child b"),
                                       MetricList(UnorderedElementsAre(
                                           UIntMetricIs("value", 2))))),
-                  PrefixPathMatches(ElementsAre("child b")),
                   ChildrenMatch(UnorderedElementsAre(AllOf(
                       ObjectMatches(AllOf(NameMatches("child c"),
                                           MetricList(UnorderedElementsAre(
                                               DoubleMetricIs("value", 3))))),
-                      PrefixPathMatches(ElementsAre("child b", "child c")),
                       ChildrenMatch(IsEmpty())))))));
     auto* hierarchy_c = hierarchy.GetByPath({"child b", "child c"});
     ASSERT_THAT(hierarchy_c, ::testing::NotNull());
-    EXPECT_THAT(
-        hierarchy_c->MakeFormattedPath("/hub/r/sys/1000/c/test/100/"),
-        ::testing::StrEq("/hub/r/sys/1000/c/test/100/child b/child c"));
   };
 
  private:
