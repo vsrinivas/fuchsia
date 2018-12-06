@@ -185,7 +185,7 @@ static zx_status_t send_locked(qmi_ctx_t* ctx, ethmac_netbuf_t* netbuf) {
 
   // Make sure that we can get all of the tx buffers we need to use
   usb_request_t* tx_req =
-      list_remove_head_type(&ctx->tx_txn_bufs, usb_request_t, node);
+      usb_req_list_remove_head(&ctx->tx_txn_bufs, ctx->parent_req_size);
   if (tx_req == NULL) {
     return ZX_ERR_SHOULD_WAIT;
   }
@@ -193,7 +193,8 @@ static zx_status_t send_locked(qmi_ctx_t* ctx, ethmac_netbuf_t* netbuf) {
   zx_nanosleep(zx_deadline_after(ZX_USEC(ctx->tx_endpoint_delay)));
   zx_status_t status;
   if ((status = queue_request(ctx, byte_data, length, tx_req)) != ZX_OK) {
-    list_add_tail(&ctx->tx_txn_bufs, &tx_req->node);
+    zx_status_t add_status = usb_req_list_add_tail(&ctx->tx_txn_bufs, tx_req, ctx->parent_req_size);
+    ZX_DEBUG_ASSERT(add_status == ZX_OK);
     return status;
   }
 
@@ -582,7 +583,8 @@ static void usb_write_complete(usb_request_t* request, void* cookie) {
   mtx_lock(&ctx->tx_mutex);
 
   // Return transmission buffer to pool
-  list_add_tail(&ctx->tx_txn_bufs, &request->node);
+  zx_status_t status = usb_req_list_add_tail(&ctx->tx_txn_bufs, request, ctx->parent_req_size);
+  ZX_DEBUG_ASSERT(status == ZX_OK);
 
   if (request->response.status == ZX_ERR_IO_REFUSED) {
     zxlogf(ERROR, "qmi-usb-transport: resetting transmit endpoint\n");
@@ -649,6 +651,7 @@ static zx_status_t qmi_bind(void* ctx, zx_device_t* device) {
   mtx_init(&qmi_ctx->tx_mutex, mtx_plain);
 
   qmi_ctx->parent_req_size = usb_get_request_size(&qmi_ctx->usb);
+  uint64_t req_size = qmi_ctx->parent_req_size + sizeof(usb_req_internal_t);
   ZX_DEBUG_ASSERT(qmi_ctx->parent_req_size != 0);
 
   // find our endpoints
@@ -723,7 +726,7 @@ static zx_status_t qmi_bind(void* ctx, zx_device_t* device) {
   usb_set_interface(&usb, 8, 0);
 
   // set up interrupt
-  status = usb_request_alloc(&int_buf, intr_max_packet, intr_addr, qmi_ctx->parent_req_size);
+  status = usb_request_alloc(&int_buf, intr_max_packet, intr_addr, req_size);
   qmi_ctx->max_packet_size = bulk_max_packet;
   if (status != ZX_OK) {
     zxlogf(ERROR, "qmi-usb-transport: failed to allocate for usb request: %s\n",
@@ -765,7 +768,9 @@ static zx_status_t qmi_bind(void* ctx, zx_device_t* device) {
 
     tx_buf->complete_cb = usb_write_complete;
     tx_buf->cookie = qmi_ctx;
-    list_add_head(&qmi_ctx->tx_txn_bufs, &tx_buf->node);
+    zx_status_t status = usb_req_list_add_head(&qmi_ctx->tx_txn_bufs, tx_buf,
+                                               qmi_ctx->parent_req_size);
+    ZX_DEBUG_ASSERT(status == ZX_OK);
     tx_buf_remain -= tx_buf_sz;
   }
 
@@ -776,7 +781,7 @@ static zx_status_t qmi_bind(void* ctx, zx_device_t* device) {
   while (rx_buf_remain >= rx_buf_sz) {
     usb_request_t* rx_buf;
     zx_status_t alloc_result = usb_request_alloc(
-        &rx_buf, rx_buf_sz, qmi_ctx->rx_endpoint_addr, qmi_ctx->parent_req_size);
+        &rx_buf, rx_buf_sz, qmi_ctx->rx_endpoint_addr, req_size);
     if (alloc_result != ZX_OK) {
       result = alloc_result;
       goto fail;
