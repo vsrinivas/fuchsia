@@ -322,7 +322,17 @@ void EthernetDevice::IrqRingUpdate() {
             desc_t* desc = rx_.DescFromIndex(id);
 
             // Transitional driver does not merge rx buffers.
-            assert(used_elem->len < desc->len);
+            if ((desc->flags & VRING_DESC_F_NEXT) != 0) {
+                zxlogf(ERROR, "dropping rx packet; do not support descriptor chaining");
+                while((desc->flags & VRING_DESC_F_NEXT)) {
+                    uint16_t next_id = desc->next;
+                    rx_.FreeDesc(id);
+                    id = next_id;
+                    desc = rx_.DescFromIndex(id);
+                }
+                return;
+            }
+            assert(used_elem->len <= desc->len);
             uint8_t* data = GetFrameData(bufs_.get(), kRxId, id, virtio_hdr_len_);
             size_t len = used_elem->len - virtio_hdr_len_;
             LTRACEF("Receiving %zu bytes:\n", len);
@@ -330,7 +340,6 @@ void EthernetDevice::IrqRingUpdate() {
 
             // Pass the data up the stack to the generic Ethernet driver
             ethmac_ifc_recv(&ifc_, data, len, 0);
-            assert((desc->flags & VRING_DESC_F_NEXT) == 0);
             LTRACE_DO(virtio_dump_desc(desc));
             rx_.FreeDesc(id);
         });
