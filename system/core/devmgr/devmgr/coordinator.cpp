@@ -40,10 +40,6 @@
 #include "../shared/fidl_txn.h"
 #include "../shared/log.h"
 
-// This is temporary while we rearrange things into anonymous
-// namespaces or classes.
-using namespace devmgr;
-
 namespace devmgr {
 
 class Coordinator {
@@ -182,22 +178,20 @@ private:
     bool system_loaded_ = false;
 };
 
-} // namespace devmgr
-
 namespace {
 
 Coordinator g_coordinator;
 
-} // namespace
-
 // Handle ID to use for the root job when spawning devhosts.  This number must match the
 // value used in system/dev/misc/sysinfo/sysinfo.c
-static constexpr uint32_t kIdHJobRoot = 4;
+constexpr uint32_t kIdHJobRoot = 4;
 
-namespace devmgr {
+constexpr char kBootFirmwareDir[] = "/boot/lib/firmware";
+constexpr char kSystemFirmwareDir[] = "/system/lib/firmware";
 
-static constexpr char kBootFirmwareDir[] = "/boot/lib/firmware";
-static constexpr char kSystemFirmwareDir[] = "/system/lib/firmware";
+zx::vmo bootdata_vmo;
+
+} // namespace
 
 extern zx_handle_t virtcon_open;
 
@@ -205,8 +199,6 @@ uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
 bool dc_asan_drivers = false;
 bool dc_launched_first_devhost = false;
-
-static zx::vmo bootdata_vmo;
 
 // Access the devcoordinator's async event loop
 async::Loop* DcAsyncLoop() {
