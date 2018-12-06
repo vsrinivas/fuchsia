@@ -48,7 +48,14 @@ raw::Ordinal GetOrdinal(const std::vector<StringView>& library_name,
 
     uint8_t digest[SHA256_DIGEST_LENGTH];
     SHA256(reinterpret_cast<const uint8_t*>(full_name.data()), full_name.size(), digest);
-    uint32_t ordinal = *(reinterpret_cast<uint32_t*>(digest)) & 0x7fffffff;
+    // The following dance ensures that we treat the bytes as a little-endian
+    // int32 regardless of host byte order.
+    uint32_t ordinal = static_cast<uint32_t>(digest[0]) |
+        static_cast<uint32_t>(digest[1]) << 8 |
+        static_cast<uint32_t>(digest[2]) << 16 |
+        static_cast<uint32_t>(digest[3]) << 24;
+
+    ordinal &= 0x7fffffff;
     return raw::Ordinal(*method.identifier, ordinal);
 }
 
