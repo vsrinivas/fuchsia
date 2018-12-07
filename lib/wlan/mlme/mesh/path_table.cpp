@@ -8,7 +8,7 @@ namespace wlan {
 
 std::optional<MeshPath> PathTable::GetPath(const common::MacAddr& target) {
     // TODO(gbonik): implement an actual path table & HWMP
-    return {{ target, target }};
+    return {{target, target}};
 }
 
-} // namespace wlan
+}  // namespace wlan

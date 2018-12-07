@@ -23,10 +23,8 @@ struct RequiredIes {
     }
 };
 
-static void HandleCommonMpElement(element_id::ElementId id,
-                                  Span<const uint8_t> raw_body,
-                                  wlan_mlme::MeshPeeringCommon* out,
-                                  RequiredIes* required_ies) {
+static void HandleCommonMpElement(element_id::ElementId id, Span<const uint8_t> raw_body,
+                                  wlan_mlme::MeshPeeringCommon* out, RequiredIes* required_ies) {
     switch (id) {
     case element_id::kSuppRates:
         if (auto rates = common::ParseSupportedRates(raw_body)) {
@@ -80,9 +78,7 @@ static void HandleCommonMpElement(element_id::ElementId id,
 // IEEE Std 802.11-2016, 9.6.16.2.2
 bool ParseMpOpenAction(BufferReader* r, wlan_mlme::MeshPeeringOpenAction* out) {
     auto cap_info = r->Read<CapabilityInfo>();
-    if (cap_info == nullptr) {
-        return false;
-    }
+    if (cap_info == nullptr) { return false; }
 
     RequiredIes required_ies;
     for (auto [id, raw_body] : common::ElementSplitter(r->ReadRemaining())) {
@@ -101,4 +97,4 @@ bool ParseMpOpenAction(BufferReader* r, wlan_mlme::MeshPeeringOpenAction* out) {
     return required_ies.have_all();
 }
 
-} // namespace wlan
+}  // namespace wlan

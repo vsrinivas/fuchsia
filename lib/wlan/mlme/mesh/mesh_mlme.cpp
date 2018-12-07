@@ -180,11 +180,9 @@ zx_status_t MeshMlme::HandleFramePacket(fbl::unique_ptr<Packet> pkt) {
 }
 
 static constexpr size_t GetDataFrameBufferSize(size_t eth_payload_len) {
-    return DataFrameHeader::max_len()
-            + sizeof(MeshControl)
-            + 2 * common::kMacAddrLen // optional address extension
-            + LlcHeader::max_len()
-            + eth_payload_len;
+    return DataFrameHeader::max_len() + sizeof(MeshControl) +
+           2 * common::kMacAddrLen  // optional address extension
+           + LlcHeader::max_len() + eth_payload_len;
 }
 
 void MeshMlme::HandleEthTx(EthFrame&& frame) {
@@ -194,8 +192,8 @@ void MeshMlme::HandleEthTx(EthFrame&& frame) {
     constexpr uint8_t ttl = 32;
 
     if (frame.hdr()->dest.IsGroupAddr()) {
-        CreateMacHeaderWriter().WriteMeshDataHeaderGroupAddressed(
-                &w, frame.hdr()->dest, self_addr());
+        CreateMacHeaderWriter().WriteMeshDataHeaderGroupAddressed(&w, frame.hdr()->dest,
+                                                                  self_addr());
         auto mesh_ctl = w.Write<MeshControl>();
         mesh_ctl->ttl = ttl;
         mesh_ctl->seq = mesh_seq_++;
@@ -209,8 +207,8 @@ void MeshMlme::HandleEthTx(EthFrame&& frame) {
             // TODO(gbonik): buffer the frame and initiate path discovery
             return;
         }
-        CreateMacHeaderWriter().WriteMeshDataHeaderIndivAddressed(
-                &w, path->next_hop, path->mesh_target, self_addr());
+        CreateMacHeaderWriter().WriteMeshDataHeaderIndivAddressed(&w, path->next_hop,
+                                                                  path->mesh_target, self_addr());
         auto mesh_ctl = w.Write<MeshControl>();
         mesh_ctl->ttl = ttl;
         mesh_ctl->seq = mesh_seq_++;
@@ -253,9 +251,7 @@ zx_status_t MeshMlme::HandleAnyMgmtFrame(MgmtFrame<>&& frame) {
 
 zx_status_t MeshMlme::HandleActionFrame(common::MacAddr src_addr, BufferReader* r) {
     auto action_header = r->Read<ActionFrame>();
-    if (action_header == nullptr) {
-        return ZX_OK;
-    }
+    if (action_header == nullptr) { return ZX_OK; }
 
     switch (action_header->category) {
     case to_enum_type(action::kSelfProtected):
@@ -267,9 +263,7 @@ zx_status_t MeshMlme::HandleActionFrame(common::MacAddr src_addr, BufferReader* 
 
 zx_status_t MeshMlme::HandleSelfProtectedAction(common::MacAddr src_addr, BufferReader* r) {
     auto self_prot_header = r->Read<SelfProtectedActionHeader>();
-    if (self_prot_header == nullptr) {
-        return ZX_OK;
-    }
+    if (self_prot_header == nullptr) { return ZX_OK; }
 
     switch (self_prot_header->self_prot_action) {
     case action::kMeshPeeringOpen:
@@ -281,9 +275,7 @@ zx_status_t MeshMlme::HandleSelfProtectedAction(common::MacAddr src_addr, Buffer
 
 zx_status_t MeshMlme::HandleMpmOpenAction(common::MacAddr src_addr, BufferReader* r) {
     wlan_mlme::MeshPeeringOpenAction action;
-    if (!ParseMpOpenAction(r, &action)) {
-        return ZX_OK;
-    }
+    if (!ParseMpOpenAction(r, &action)) { return ZX_OK; }
 
     src_addr.CopyTo(action.common.peer_sta_address.data());
     return SendServiceMsg(device_, &action, fuchsia_wlan_mlme_MLMEIncomingMpOpenActionOrdinal);
@@ -391,7 +383,7 @@ zx_status_t MeshMlme::HandleTimeout(const ObjectId id) {
 }
 
 MacHeaderWriter MeshMlme::CreateMacHeaderWriter() {
-    return MacHeaderWriter { self_addr(), &seq_ };
+    return MacHeaderWriter{self_addr(), &seq_};
 }
 
 }  // namespace wlan

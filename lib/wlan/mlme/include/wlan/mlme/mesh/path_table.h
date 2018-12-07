@@ -5,7 +5,8 @@
 #include <wlan/common/macaddr.h>
 #include <optional>
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_MESH_PATH_TABLE_H_
+#define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_MESH_PATH_TABLE_H_
 
 namespace wlan {
 
@@ -17,8 +18,10 @@ struct MeshPath {
 };
 
 class PathTable {
- public:
+   public:
     std::optional<MeshPath> GetPath(const common::MacAddr& target);
 };
 
-} // namespace wlan
+}  // namespace wlan
+
+#endif  // GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_MESH_PATH_TABLE_H_

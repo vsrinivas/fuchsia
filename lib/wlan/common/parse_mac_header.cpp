@@ -28,7 +28,7 @@ std::optional<ParsedDataFrameHeader> ParseDataFrameHeader(BufferReader* r) {
         if (ret.ht_ctrl == nullptr) { return {}; }
     }
 
-    return { ret };
+    return {ret};
 }
 
 std::optional<ParsedMeshDataHeader> ParseMeshDataHeader(BufferReader* r) {
@@ -63,8 +63,8 @@ std::optional<ParsedMeshDataHeader> ParseMeshDataHeader(BufferReader* r) {
     ret.llc = r->Read<LlcHeader>();
     if (ret.llc == nullptr) { return {}; }
 
-    return { ret };
+    return {ret};
 }
 
-} // namespace common
-} // namespace wlan
+}  // namespace common
+}  // namespace wlan

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <wlan/common/parse_mac_header.h>
 #include <gtest/gtest.h>
+#include <wlan/common/parse_mac_header.h>
 
 #include "test_utils.h"
 
@@ -11,6 +11,7 @@ namespace wlan {
 namespace common {
 
 TEST(ParseDataFrameHeader, Minimal) {
+    // clang-format off
     const uint8_t data[] = {
         0x08, 0x00, // fc: non-qos data, 3-address, no ht ctl
         0x00, 0x00, // duration
@@ -19,6 +20,7 @@ TEST(ParseDataFrameHeader, Minimal) {
         0x33, 0x33, 0x33, 0x33, 0x33, 0x33, // addr3
         0x00, 0x00, // seq ctl
     };
+    // clang-format on
     BufferReader r(data);
     auto parsed = ParseDataFrameHeader(&r);
     ASSERT_TRUE(parsed);
@@ -31,6 +33,7 @@ TEST(ParseDataFrameHeader, Minimal) {
 }
 
 TEST(ParseDataFrameHeader, Full) {
+    // clang-format off
     const uint8_t data[] = {
         0x88, 0x83, // fc: non-qos data, 4-address, ht ctl
         0x00, 0x00, // duration
@@ -42,6 +45,7 @@ TEST(ParseDataFrameHeader, Full) {
         0x55, 0x66, // qos ctl
         0x77, 0x88, 0x99, 0xaa, // ht ctl
     };
+    // clang-format on
     BufferReader r(data);
     auto parsed = ParseDataFrameHeader(&r);
     ASSERT_TRUE(parsed);
@@ -60,6 +64,7 @@ TEST(ParseDataFrameHeader, Full) {
 }
 
 TEST(ParseDataFrameHeader, FixedPartTooShort) {
+    // clang-format off
     const uint8_t data[] = {
         0x08, 0x00, // fc: non-qos data, 3-address, no ht ctl
         0x00, 0x00, // duration
@@ -68,12 +73,14 @@ TEST(ParseDataFrameHeader, FixedPartTooShort) {
         0x33, 0x33, 0x33, 0x33, 0x33, 0x33, // addr3
         0x00, // one byte missing seq ctl
     };
+    // clang-format on
     BufferReader r(data);
     auto parsed = ParseDataFrameHeader(&r);
     ASSERT_FALSE(parsed);
 }
 
 TEST(ParseDataFrameHeader, Addr4TooShort) {
+    // clang-format off
     const uint8_t data[] = {
         0x88, 0x83, // fc: non-qos data, 4-address, ht ctl
         0x00, 0x00, // duration
@@ -83,12 +90,14 @@ TEST(ParseDataFrameHeader, Addr4TooShort) {
         0x00, 0x00, // seq ctl
         0x44, 0x44, 0x44, 0x44, 0x44, // one byte missing from addr4
     };
+    // clang-format on
     BufferReader r(data);
     auto parsed = ParseDataFrameHeader(&r);
     ASSERT_FALSE(parsed);
 }
 
 TEST(ParseDataFrameHeader, QosControlTooShort) {
+    // clang-format off
     const uint8_t data[] = {
         0x88, 0x83, // fc: non-qos data, 4-address, ht ctl
         0x00, 0x00, // duration
@@ -99,12 +108,14 @@ TEST(ParseDataFrameHeader, QosControlTooShort) {
         0x44, 0x44, 0x44, 0x44, 0x44, 0x44, // addr4
         0x55, // one byte missing from qos ctl
     };
+    // clang-format on
     BufferReader r(data);
     auto parsed = ParseDataFrameHeader(&r);
     ASSERT_FALSE(parsed);
 }
 
 TEST(ParseDataFrameHeader, HtControlTooShort) {
+    // clang-format off
     const uint8_t data[] = {
         0x88, 0x83, // fc: non-qos data, 4-address, ht ctl
         0x00, 0x00, // duration
@@ -116,12 +127,14 @@ TEST(ParseDataFrameHeader, HtControlTooShort) {
         0x55, 0x66, // qos ctl
         0x77, 0x88, 0x99, // one byte missing from ht ctl
     };
+    // clang-format on
     BufferReader r(data);
     auto parsed = ParseDataFrameHeader(&r);
     ASSERT_FALSE(parsed);
 }
 
 TEST(ParseMeshDataHeader, NoAddrExt) {
+    // clang-format off
     const uint8_t data[] = {
         0x88, 0x02, // fc: qos data, 3-address, no ht ctl
         0x00, 0x00, // duration
@@ -139,6 +152,7 @@ TEST(ParseMeshDataHeader, NoAddrExt) {
         0x00, 0x00, 0x00, // oui
         0x12, 0x34, // protocol id
     };
+    // clang-format on
     BufferReader r(data);
     auto parsed = ParseMeshDataHeader(&r);
     ASSERT_TRUE(parsed);
@@ -154,6 +168,7 @@ TEST(ParseMeshDataHeader, NoAddrExt) {
 }
 
 TEST(ParseMeshDataHeader, Addr4Ext) {
+    // clang-format off
     const uint8_t data[] = {
         0x88, 0x02, // fc: qos data, 3-address, no ht ctl
         0x00, 0x00, // duration
@@ -172,6 +187,7 @@ TEST(ParseMeshDataHeader, Addr4Ext) {
         0x00, 0x00, 0x00, // oui
         0x12, 0x34, // protocol id
     };
+    // clang-format on
     BufferReader r(data);
     auto parsed = ParseMeshDataHeader(&r);
     ASSERT_TRUE(parsed);
@@ -180,13 +196,14 @@ TEST(ParseMeshDataHeader, Addr4Ext) {
     EXPECT_NE(nullptr, parsed->mac_header.qos_ctrl);
     EXPECT_EQ(nullptr, parsed->mac_header.ht_ctrl);
 
-    EXPECT_RANGES_EQ(std::vector<MacAddr>({ MacAddr("44:44:44:44:44:44") }), parsed->addr_ext);
+    EXPECT_RANGES_EQ(std::vector<MacAddr>({MacAddr("44:44:44:44:44:44")}), parsed->addr_ext);
     EXPECT_EQ(0xddccbbaau, parsed->mesh_ctrl->seq);
     EXPECT_EQ(0x3412u, parsed->llc->protocol_id);
     EXPECT_EQ(0u, r.RemainingBytes());
 }
 
 TEST(ParseMeshDataHeader, Addr56Ext) {
+    // clang-format off
     const uint8_t data[] = {
         0x88, 0x03, // fc: qos data, 4-address, no ht ctl
         0x00, 0x00, // duration
@@ -207,6 +224,7 @@ TEST(ParseMeshDataHeader, Addr56Ext) {
         0x00, 0x00, 0x00, // oui
         0x12, 0x34, // protocol id
     };
+    // clang-format on
     BufferReader r(data);
     auto parsed = ParseMeshDataHeader(&r);
     ASSERT_TRUE(parsed);
@@ -216,21 +234,22 @@ TEST(ParseMeshDataHeader, Addr56Ext) {
     EXPECT_EQ(nullptr, parsed->mac_header.ht_ctrl);
 
     EXPECT_RANGES_EQ(
-            std::vector<MacAddr>({ MacAddr("55:55:55:55:55:55"), MacAddr("66:66:66:66:66:66") }),
-            parsed->addr_ext);
+        std::vector<MacAddr>({MacAddr("55:55:55:55:55:55"), MacAddr("66:66:66:66:66:66")}),
+        parsed->addr_ext);
     EXPECT_EQ(0xddccbbaau, parsed->mesh_ctrl->seq);
     EXPECT_EQ(0x3412u, parsed->llc->protocol_id);
     EXPECT_EQ(0u, r.RemainingBytes());
 }
 
 TEST(ParseMeshDataHeader, TooShort_MacHeader) {
-    const uint8_t data[] = { 0x88, 0x02 };
+    const uint8_t data[] = {0x88, 0x02};
     BufferReader r(data);
     auto parsed = ParseMeshDataHeader(&r);
     ASSERT_FALSE(parsed);
 }
 
 TEST(ParseMeshDataHeader, TooShort_MeshControl) {
+    // clang-format off
     const uint8_t data[] = {
         0x88, 0x02, // fc: qos data, 3-address, no ht ctl
         0x00, 0x00, // duration
@@ -244,12 +263,14 @@ TEST(ParseMeshDataHeader, TooShort_MeshControl) {
         0x20, // ttl
         0xaa, 0xbb, 0xcc, // one byte missing from seq
     };
+    // clang-format on
     BufferReader r(data);
     auto parsed = ParseMeshDataHeader(&r);
     ASSERT_FALSE(parsed);
 }
 
 TEST(ParseMeshDataHeader, TooShort_AddrExt) {
+    // clang-format off
     const uint8_t data[] = {
         0x88, 0x03, // fc: qos data, 4-address, no ht ctl
         0x00, 0x00, // duration
@@ -266,12 +287,14 @@ TEST(ParseMeshDataHeader, TooShort_AddrExt) {
         0x55, 0x55, 0x55, 0x55, 0x55, 0x55, // addr5
         0x66, 0x66, 0x66, 0x66, 0x66, // one byte missing from addr6
     };
+    // clang-format on
     BufferReader r(data);
     auto parsed = ParseMeshDataHeader(&r);
     ASSERT_FALSE(parsed);
 }
 
 TEST(ParseMeshDataHeader, TooShort_Llc) {
+    // clang-format off
     const uint8_t data[] = {
         0x88, 0x02, // fc: qos data, 3-address, no ht ctl
         0x00, 0x00, // duration
@@ -289,12 +312,14 @@ TEST(ParseMeshDataHeader, TooShort_Llc) {
         0x00, 0x00, 0x00, // oui
         0x12, // one byte missing from protocol id
     };
+    // clang-format on
     BufferReader r(data);
     auto parsed = ParseMeshDataHeader(&r);
     ASSERT_FALSE(parsed);
 }
 
 TEST(ParseMeshDataHeader, MissingQosBit) {
+    // clang-format off
     const uint8_t data[] = {
         0x08, 0x02, // fc: non-qos data, 3-address, no ht ctl
         0x00, 0x00, // duration
@@ -312,12 +337,14 @@ TEST(ParseMeshDataHeader, MissingQosBit) {
         0x00, 0x00, 0x00, // oui
         0x12, 0x34, // protocol id
     };
+    // clang-format on
     BufferReader r(data);
     auto parsed = ParseMeshDataHeader(&r);
     ASSERT_FALSE(parsed);
 }
 
 TEST(ParseMeshDataHeader, MissingMeshControlPresentBit) {
+    // clang-format off
     const uint8_t data[] = {
         0x88, 0x02, // fc: non-qos data, 3-address, no ht ctl
         0x00, 0x00, // duration
@@ -335,12 +362,14 @@ TEST(ParseMeshDataHeader, MissingMeshControlPresentBit) {
         0x00, 0x00, 0x00, // oui
         0x12, 0x34, // protocol id
     };
+    // clang-format on
     BufferReader r(data);
     auto parsed = ParseMeshDataHeader(&r);
     ASSERT_FALSE(parsed);
 }
 
 TEST(ParseMeshDataHeader, InvalidAddrExt) {
+    // clang-format off
     const uint8_t data[] = {
         0x88, 0x02, // fc: non-qos data, 3-address, no ht ctl
         0x00, 0x00, // duration
@@ -361,10 +390,11 @@ TEST(ParseMeshDataHeader, InvalidAddrExt) {
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     };
+    // clang-format on
     BufferReader r(data);
     auto parsed = ParseMeshDataHeader(&r);
     ASSERT_FALSE(parsed);
 }
 
-} // namespace common
-} // namespace wlan
+}  // namespace common
+}  // namespace wlan
