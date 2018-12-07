@@ -29,4 +29,8 @@ MODULE_FIDL_LIBS := \
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-usb-composite \
 
+ifeq ($(call TOBOOL,$(INTERNAL_ACCESS)),true)
+MODULE_FIRMWARE := fx3-boot/Fx3BootAppGcc.img
+endif
+
 include make/module.mk

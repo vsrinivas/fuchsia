@@ -18,6 +18,8 @@
 
 namespace {
 
+constexpr char kBootFirmwarePath[] = "Fx3BootAppGcc.img";
+
 // The expected image format is detailed in EZ-USB/FX3 Boot Options, Table 19.
 constexpr uint32_t kImageHeaderSize = 4;
 
@@ -72,9 +74,11 @@ zx_status_t ParseImageHeader(const zx::vmo& fw_vmo, uint32_t* out_i2c_size) {
     return ZX_OK;
 }
 
-zx_status_t fidl_LoadPrebuiltFirmware(void* ctx, fidl_txn_t* txn) {
-    // TODO(jocelyndang): implement this.
-    return zircon_usb_test_fwloader_DeviceLoadPrebuiltFirmware_reply(txn, ZX_ERR_NOT_SUPPORTED);
+zx_status_t fidl_LoadPrebuiltFirmware(void* ctx, zircon_usb_test_fwloader_PrebuiltType type,
+                                      fidl_txn_t* txn) {
+    auto fp = static_cast<usb::FlashProgrammer*>(ctx);
+    zx_status_t status = fp->LoadPrebuiltFirmware(type);
+    return zircon_usb_test_fwloader_DeviceLoadPrebuiltFirmware_reply(txn, status);
 }
 
 zx_status_t fidl_LoadFirmware(void* ctx, const fuchsia_mem_Buffer* firmware, fidl_txn_t* txn) {
@@ -145,6 +149,28 @@ zx_status_t FlashProgrammer::EEPROMSlaveWrite(uint8_t eeprom_slave_addr,
         vmo_offset += req_write_len;
     }
     return ZX_OK;
+}
+
+zx_status_t FlashProgrammer::LoadPrebuiltFirmware(zircon_usb_test_fwloader_PrebuiltType type) {
+    const char* fw_path = nullptr;
+    switch (type) {
+    case zircon_usb_test_fwloader_PrebuiltType_BOOT:
+        fw_path = kBootFirmwarePath;
+        break;
+    default:
+        zxlogf(ERROR, "unsupported firmware type: %u\n", type);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    zx::vmo fw_vmo;
+    size_t fw_size;
+    zx_status_t status = load_firmware(zxdev(), fw_path, fw_vmo.reset_and_get_address(), &fw_size);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "failed to load firmware at path ""%s"", err: %d\n",
+               fw_path, status);
+        return status;
+    }
+    return LoadFirmware(std::move(fw_vmo), fw_size);
 }
 
 zx_status_t FlashProgrammer::LoadFirmware(zx::vmo fw_vmo, size_t fw_size) {

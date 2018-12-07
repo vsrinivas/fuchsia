@@ -16,7 +16,8 @@
 
 #include "fx3.h"
 
-#define FIRMWARE_PATH "fx3.img"
+#define FLASH_FIRMWARE_PATH  "cyfxflashprog.img"
+#define TESTER_FIRMWARE_PATH "fx3.img"
 
 // The header contains the 2 byte "CY" signature, and 2 byte image metadata.
 #define IMAGE_HEADER_SIZE 4
@@ -174,15 +175,28 @@ static zx_status_t fx3_load_firmware(fx3_t* fx3, zx_handle_t fw_vmo, size_t fw_s
     }
 }
 
-static zx_status_t fidl_LoadPrebuiltFirmware(void* ctx, fidl_txn_t* txn) {
+static zx_status_t fidl_LoadPrebuiltFirmware(void* ctx, zircon_usb_test_fwloader_PrebuiltType type,
+                                             fidl_txn_t* txn) {
     fx3_t* fx3 = ctx;
+
+    const char* fw_path = NULL;
+    switch (type) {
+    case zircon_usb_test_fwloader_PrebuiltType_FLASH:
+        fw_path = FLASH_FIRMWARE_PATH;
+        break;
+    case zircon_usb_test_fwloader_PrebuiltType_TESTER:
+        fw_path = TESTER_FIRMWARE_PATH;
+        break;
+    default:
+        zxlogf(ERROR, "unsupported firmware type: %u\n", type);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
 
     zx_handle_t fw_vmo;
     size_t fw_size;
-    zx_status_t status = load_firmware(fx3->zxdev, FIRMWARE_PATH, &fw_vmo, &fw_size);
+    zx_status_t status = load_firmware(fx3->zxdev, fw_path, &fw_vmo, &fw_size);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "failed to load firmware at path ""%s"", err: %d\n",
-               FIRMWARE_PATH, status);
+        zxlogf(ERROR, "failed to load firmware at path ""%s"", err: %d\n", fw_path, status);
         return zircon_usb_test_fwloader_DeviceLoadPrebuiltFirmware_reply(txn, status);
     }
     status = fx3_load_firmware(fx3, fw_vmo, fw_size);

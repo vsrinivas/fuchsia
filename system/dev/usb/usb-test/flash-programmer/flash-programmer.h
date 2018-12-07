@@ -8,6 +8,7 @@
 #include <ddktl/protocol/empty-protocol.h>
 #include <ddk/usb/usb.h>
 #include <lib/zx/vmo.h>
+#include <zircon/usb/test/fwloader/c/fidl.h>
 
 namespace usb {
 
@@ -27,6 +28,7 @@ public:
     void DdkRelease() { delete this; }
 
     // FIDL message implementation.
+    zx_status_t LoadPrebuiltFirmware(zircon_usb_test_fwloader_PrebuiltType type);
     zx_status_t LoadFirmware(zx::vmo fw_vmo, size_t fw_size);
 
 private:

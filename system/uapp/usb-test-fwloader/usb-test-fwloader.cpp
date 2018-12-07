@@ -24,6 +24,8 @@
 #include <string.h>
 #include <sys/stat.h>
 
+#include <variant>
+
 namespace {
 
 struct WatchDirData {
@@ -159,13 +161,24 @@ zx_status_t read_firmware(fbl::unique_fd& file_fd, zx::vmo& vmo, size_t* out_fw_
     return ZX_OK;
 }
 
-zx_status_t device_load_firmware(fbl::unique_fd fd, const char* firmware_path) {
+// Loads the given firmware onto the device.
+// |firmware| should either be the firmware file path, or a prebuilt type.
+zx_status_t device_load_firmware(
+    fbl::unique_fd fd, std::variant<const char*, zircon_usb_test_fwloader_PrebuiltType> firmware) {
+
+    zx::channel svc;
+    zx_status_t status = fdio_get_service_handle(fd.release(), svc.reset_and_get_address());
+    if (status != ZX_OK) {
+        fprintf(stderr, "Failed to get fwloader service handle, err : %d\n", status);
+        return status;
+    }
+
     zx::vmo fw_vmo;
     size_t fw_size = 0;
-    if (firmware_path) {
-        fbl::unique_fd file_fd(open(firmware_path, O_RDONLY));
+    if (auto firmware_path = std::get_if<const char*>(&firmware)) {
+        fbl::unique_fd file_fd(open(*firmware_path, O_RDONLY));
         if (!file_fd) {
-            fprintf(stderr, "Failed to open \"%s\", err: %s\n", firmware_path, strerror(errno));
+            fprintf(stderr, "Failed to open \"%s\", err: %s\n", *firmware_path, strerror(errno));
             return ZX_ERR_IO;
         }
         zx_status_t status = read_firmware(file_fd, fw_vmo, &fw_size);
@@ -173,16 +186,7 @@ zx_status_t device_load_firmware(fbl::unique_fd fd, const char* firmware_path) {
             fprintf(stderr, "Failed to read firmware file, err: %d\n", status);
             return status;
         }
-    }
-    zx::channel svc;
-    zx_status_t status = fdio_get_service_handle(fd.release(), svc.reset_and_get_address());
-    if (status != ZX_OK) {
-        fprintf(stderr, "Failed to get fwloader service handle, err : %d\n", status);
-        return status;
-    }
-    if (fw_vmo.is_valid()) {
         fuchsia_mem_Buffer firmware = { .vmo = fw_vmo.release(), .size = fw_size };
-        zx_status_t status;
         zx_status_t res = zircon_usb_test_fwloader_DeviceLoadFirmware(svc.get(), &firmware,
                                                                       &status);
         if (res == ZX_OK) {
@@ -192,9 +196,11 @@ zx_status_t device_load_firmware(fbl::unique_fd fd, const char* firmware_path) {
             fprintf(stderr, "Failed to load firmware, err: %d\n", res);
             return res;
         }
-    } else {
+    } else if (auto type = std::get_if<zircon_usb_test_fwloader_PrebuiltType>(&firmware)) {
         zx_status_t status;
-        zx_status_t res = zircon_usb_test_fwloader_DeviceLoadPrebuiltFirmware(svc.get(), &status);
+        zx_status_t res = zircon_usb_test_fwloader_DeviceLoadPrebuiltFirmware(svc.get(),
+                                                                              *type,
+                                                                              &status);
         if (res == ZX_OK) {
             res = status;
         }
@@ -202,12 +208,19 @@ zx_status_t device_load_firmware(fbl::unique_fd fd, const char* firmware_path) {
             fprintf(stderr, "Failed to load prebuilt firmware, err: %d\n", res);
             return res;
         }
+    } else {
+        fprintf(stderr, "Firmware not specified\n");
+        return ZX_ERR_INVALID_ARGS;
     }
     return ZX_OK;
 }
 
 // Loads the firmware image to the FX3 device RAM.
-zx_status_t load_to_ram(const char* firmware_path) {
+// |firmware| should either be the firmware file path, or a prebuilt type.
+zx_status_t load_to_ram(
+    const char* firmware_path,
+    std::variant<const char*, zircon_usb_test_fwloader_PrebuiltType> firmware) {
+
     fbl::unique_fd fd;
     zx_status_t status = open_fwloader_dev(&fd);
     if (status != ZX_OK) {
@@ -240,11 +253,17 @@ zx_status_t load_to_ram(const char* firmware_path) {
             return status;
         }
     }
-    return device_load_firmware(std::move(fd), firmware_path);
+    return device_load_firmware(std::move(fd), firmware);
 }
 
 zx_status_t load_test_firmware(const char* firmware_path) {
-    zx_status_t status = load_to_ram(firmware_path);
+    std::variant<const char*, zircon_usb_test_fwloader_PrebuiltType> firmware;
+    if (firmware_path) {
+        firmware = firmware_path;
+    } else {
+        firmware = zircon_usb_test_fwloader_PrebuiltType_TESTER;
+    }
+    zx_status_t status = load_to_ram(firmware_path, firmware);
     if (status != ZX_OK) {
         return status;
     }
@@ -272,7 +291,14 @@ zx_status_t load_test_firmware(const char* firmware_path) {
 }
 
 zx_status_t load_bootloader(const char* flash_prog_image_path, const char* firmware_path) {
-    zx_status_t status = load_to_ram(flash_prog_image_path);
+    std::variant<const char*, zircon_usb_test_fwloader_PrebuiltType> firmware;
+    if (flash_prog_image_path) {
+        firmware = flash_prog_image_path;
+    } else {
+        firmware = zircon_usb_test_fwloader_PrebuiltType_FLASH;
+    }
+
+    zx_status_t status = load_to_ram(flash_prog_image_path, firmware);
     if (status != ZX_OK) {
         return status;
     }
@@ -284,7 +310,12 @@ zx_status_t load_bootloader(const char* flash_prog_image_path, const char* firmw
     }
     printf("Loaded flash programmer.\n");
     printf("Loading bootloader to device...\n");
-    status = device_load_firmware(std::move(updated_dev), firmware_path);
+    if (firmware_path) {
+        firmware = firmware_path;
+    } else {
+        firmware = zircon_usb_test_fwloader_PrebuiltType_BOOT;
+    }
+    status = device_load_firmware(std::move(updated_dev), firmware);
     if (status != ZX_OK) {
         fprintf(stderr, "Failed to write bootloader, err: %d\n", status);
         return status;
@@ -322,14 +353,6 @@ int main(int argc, char** argv) {
             return -1;
         }
     }
-
-    // TODO(jocelyndang): for now we require the user specify both files, but we should
-    // be able to load them automatically instead.
-    if (!load_test_firmware_mode && (!flash_prog_path || !firmware_path)) {
-        fprintf(stderr, "Missing flash programmer or bootloader image.\n");
-        return -1;
-    }
-
     print_usage.cancel();
 
     zx_status_t status;

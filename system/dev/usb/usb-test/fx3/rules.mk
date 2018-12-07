@@ -23,7 +23,9 @@ MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-usb-composite \
 
 ifeq ($(call TOBOOL,$(INTERNAL_ACCESS)),true)
-MODULE_FIRMWARE := usb-testing/fx3/fx3.img
+MODULE_FIRMWARE := \
+    fx3-flash/cyfxflashprog.img \
+    usb-testing/fx3/fx3.img
 endif
 
 include make/module.mk
