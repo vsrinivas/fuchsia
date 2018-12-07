@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <pretty/sizes.h>
+#include <task-utils/get.h>
 #include <task-utils/walker.h>
 #include <zircon/listnode.h>
 #include <zircon/status.h>
@@ -207,6 +208,7 @@ static void print_help(FILE* f) {
     fprintf(f, " -a              Print all threads, even if inactive\n");
     fprintf(f, " -c <count>      Print the first count threads (default infinity)\n");
     fprintf(f, " -d <delay>      Delay in seconds (default 1 second)\n");
+    fprintf(f, " -j <jobid>      Show only threads that belong to a given jobid\n");
     fprintf(f, " -n <times>      Run this many times and then exit\n");
     fprintf(f, " -o <sort field> Sort by different fields (default is time)\n");
     fprintf(f, " -r              Print raw time in nanoseconds\n");
@@ -216,6 +218,8 @@ static void print_help(FILE* f) {
 }
 
 int main(int argc, char** argv) {
+    zx_handle_t target_job = ZX_HANDLE_INVALID;
+
     int num_loops = -1;
     for (int i = 1; i < argc; ++i) {
         const char* arg = argv[i];
@@ -275,6 +279,26 @@ int main(int argc, char** argv) {
             i++;
         } else if (!strcmp(arg, "-r")) {
             raw_time = true;
+        } else if (!strcmp(arg, "-j")) {
+            if (i + 1 >= argc) {
+                fprintf(stderr, "Bad job field\n");
+                print_help(stderr);
+                return 1;
+            }
+            int jobid = atoi(argv[i + 1]);
+            zx_obj_type_t type;
+            zx_status_t status = get_task_by_koid(jobid, &type, &target_job);
+            if (status != ZX_OK) {
+                fprintf(stderr, "ERROR: get_task_by_koid failed: %s (%d)\n",
+                        zx_status_get_string(status), status);
+                return 1;
+            }
+            if (type != ZX_OBJ_TYPE_JOB) {
+                fprintf(stderr, "ERROR: object with koid %d is not a job\n",
+                        jobid);
+                return 1;
+            }
+            i++;
         } else {
             fprintf(stderr, "Unknown option: %s\n", arg);
             print_help(stderr);
@@ -296,13 +320,18 @@ int main(int argc, char** argv) {
             e->scanned = false;
         }
 
-        // iterate the entire job tree
-        zx_status_t status =
-            walk_root_job_tree(NULL, process_callback, thread_callback, NULL);
+        // If we have a target job, only walk the target subtree. Otherwise walk from root.
+        zx_status_t status;
+        if (target_job != ZX_HANDLE_INVALID) {
+            status = walk_job_tree(target_job, NULL, process_callback, thread_callback, NULL);
+        } else {
+            status = walk_root_job_tree(NULL, process_callback, thread_callback, NULL);
+        }
         if (status != ZX_OK) {
-            fprintf(stderr, "WARNING: walk_root_job_tree failed: %s (%d)\n",
+            fprintf(stderr, "WARNING: walking the job tree failed: %s (%d)\n",
                     zx_status_get_string(status), status);
             ret = 1;
+            goto finish;
         }
 
         // remove every entry that hasn't been scanned this pass
@@ -336,13 +365,19 @@ int main(int argc, char** argv) {
             char c;
             int err;
             while ((err = read(STDIN_FILENO, &c, 1)) > 0) {
-                if (c == 0x3)
-                    return 0;
+                if (c == 0x3) {
+                    ret = 0;
+                    goto finish;
+                }
             }
         }
 
         zx_nanosleep(next_deadline);
     }
 
+finish:
+    if (target_job != ZX_HANDLE_INVALID) {
+        zx_handle_close(target_job);
+    }
     return ret;
 }
