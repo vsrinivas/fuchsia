@@ -15,11 +15,13 @@ namespace modular {
 
 BasemgrSettings::BasemgrSettings(const fxl::CommandLine& command_line) {
   base_shell.url = command_line.GetOptionValueWithDefault(
-      "base_shell", "userpicker_base_shell");
+      "base_shell",
+      "fuchsia-pkg://fuchsia.com/userpicker_base_shell#meta/userpicker_base_shell.cmx");
   story_shell.url =
       command_line.GetOptionValueWithDefault("story_shell", "mondrian");
-  sessionmgr.url =
-      command_line.GetOptionValueWithDefault("sessionmgr", "sessionmgr");
+  sessionmgr.url = command_line.GetOptionValueWithDefault(
+      "sessionmgr",
+      "fuchsia-pkg://fuchsia.com/sessionmgr#meta/sessionmgr.cmx");
   session_shell.url = command_line.GetOptionValueWithDefault(
       "session_shell", "ermine_session_shell");
   account_provider.url = command_line.GetOptionValueWithDefault(

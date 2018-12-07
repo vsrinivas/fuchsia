@@ -8,8 +8,9 @@
 namespace modular {
 
 inline constexpr char kCloudProviderFirestoreAppUrl[] =
-    "cloud_provider_firestore";
-inline constexpr char kLedgerAppUrl[] = "ledger";
+    "fuchsia-pkg://fuchsia.com/cloud_provider_firestore#meta/cloud_provider_firestore.cmx";
+inline constexpr char kLedgerAppUrl[] =
+    "fuchsia-pkg://fuchsia.com/ledger#meta/ledger.cmx";
 
 // Hard-coded communal Ledger instance.
 inline constexpr char kFirebaseProjectId[] = "fuchsia-ledger";

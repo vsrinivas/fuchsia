@@ -54,18 +54,30 @@ namespace modular {
 namespace {
 
 constexpr char kAppId[] = "modular_sessionmgr";
+
 constexpr char kMaxwellComponentNamespace[] = "maxwell";
 constexpr char kMaxwellUrl[] = "maxwell";
-constexpr char kContextEngineUrl[] = "context_engine";
+
+constexpr char kContextEngineUrl[] =
+    "fuchsia-pkg://fuchsia.com/context_engine#meta/context_engine.cmx";
 constexpr char kContextEngineComponentNamespace[] = "context_engine";
-constexpr char kModuleResolverUrl[] = "module_resolver";
+
+constexpr char kModuleResolverUrl[] =
+    "fuchsia-pkg://fuchsia.com/module_resolver#meta/module_resolver.cmx";
+
 constexpr char kUserEnvironmentLabelPrefix[] = "user-";
+
 constexpr char kMessageQueuePath[] = "/data/MESSAGE_QUEUES/v1/";
+
 constexpr char kSessionShellComponentNamespace[] = "user-shell-namespace";
 constexpr char kSessionShellLinkName[] = "user-shell-link";
+
 constexpr char kLedgerDashboardUrl[] = "ledger_dashboard";
 constexpr char kLedgerDashboardEnvLabel[] = "ledger-dashboard";
-constexpr char kClipboardAgentUrl[] = "clipboard_agent";
+
+constexpr char kClipboardAgentUrl[] =
+    "fuchsia-pkg://fuchsia.com/clipboard_agent#meta/clipboard_agent.cmx";
+
 constexpr char kLedgerRepositoryDirectory[] = "/data/LEDGER";
 
 // The name in the outgoing debug directory (hub) for developer session control

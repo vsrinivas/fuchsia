@@ -21,7 +21,8 @@ namespace {
 
 constexpr char kUsageLogUrl[] = "usage_log";
 constexpr char kKronkUrl[] = "kronk";
-constexpr char kStoryInfoAgentUrl[] = "story_info";
+constexpr char kStoryInfoAgentUrl[] =
+    "fuchsia-pkg://fuchsia.com/story_info#meta/story_info.cmx";
 static constexpr modular::RateLimitedRetry::Threshold kSessionAgentRetryLimit =
     {3, zx::sec(45)};
 
