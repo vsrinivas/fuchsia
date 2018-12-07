@@ -8,6 +8,22 @@
 
 namespace elflib {
 
+namespace {
+
+// Load the standard ELF string table format
+void LoadStringTable(const std::vector<uint8_t>& content,
+                     std::vector<std::string>* strings) {
+  const uint8_t* data = content.data();
+  const uint8_t* end = data + content.size();
+
+  while (data != end) {
+    strings->emplace_back(reinterpret_cast<const char*>(data));
+    data += strings->back().size() + 1;
+  }
+}
+
+}  // namespace
+
 ElfLib::ElfLib(std::unique_ptr<MemoryAccessor>&& memory)
     : memory_(std::move(memory)) {}
 
@@ -89,14 +105,8 @@ const std::vector<uint8_t>* ElfLib::GetSectionData(const std::string& name) {
       return nullptr;
     }
 
-    const uint8_t* data = section_name_data->data();
-    const uint8_t* end = data + section_name_data->size();
     std::vector<std::string> strings;
-
-    while (data != end) {
-      strings.emplace_back(reinterpret_cast<const char*>(data));
-      data += strings.back().size() + 1;
-    }
+    LoadStringTable(*section_name_data, &strings);
 
     size_t idx = 0;
     // We know sections_ is populated from the GetSectionData above
@@ -116,6 +126,59 @@ const std::vector<uint8_t>* ElfLib::GetSectionData(const std::string& name) {
   }
 
   return GetSectionData(iter->second);
+}
+
+const std::string* ElfLib::GetString(size_t index) {
+  if (strings_.empty()) {
+    const std::vector<uint8_t>* string_data = GetSectionData(".strtab");
+
+    if (!string_data) {
+      return nullptr;
+    }
+
+    LoadStringTable(*string_data, &strings_);
+  }
+
+  if (index >= strings_.size()) {
+    return nullptr;
+  }
+
+  return &strings_[index];
+}
+
+const Elf64_Sym* ElfLib::GetSymbol(const std::string& name) {
+  if (symbols_.empty()) {
+    const std::vector<uint8_t>* symbol_data = GetSectionData(".symtab");
+
+    if (!symbol_data) {
+      return nullptr;
+    }
+
+    const Elf64_Sym* start =
+        reinterpret_cast<const Elf64_Sym*>(symbol_data->data());
+    const Elf64_Sym* end = start + (symbol_data->size() / sizeof(Elf64_Sym));
+    std::copy(start, end, std::back_inserter(symbols_));
+  }
+
+  for (const auto& symbol : symbols_) {
+    const std::string* got_name = GetString(symbol.st_name);
+
+    if (got_name != nullptr && *got_name == name) {
+      return &symbol;
+    }
+  }
+
+  return nullptr;
+}
+
+bool ElfLib::GetSymbolValue(const std::string& name, uint64_t* out) {
+  const Elf64_Sym* sym = GetSymbol(name);
+
+  if (sym) {
+    *out = sym->st_value;
+  }
+
+  return sym != nullptr;
 }
 
 }  // namespace elflib

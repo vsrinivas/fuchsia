@@ -13,6 +13,7 @@ namespace elflib {
 namespace {
 
 constexpr uint64_t kAddrPoison = 0xdeadb33ff00db4b3;
+constexpr uint64_t kSymbolPoison = 0xb0bab0ba;
 
 class TestMemoryAccessor : public ElfLib::MemoryAccessor {
  public:
@@ -23,14 +24,14 @@ class TestMemoryAccessor : public ElfLib::MemoryAccessor {
       .e_shoff = sizeof(Elf64_Ehdr),
       .e_ehsize = sizeof(Elf64_Ehdr),
       .e_shentsize = sizeof(Elf64_Shdr),
-      .e_shnum = 2,
+      .e_shnum = 4,
       .e_shstrndx = 0,
     });
 
-    size_t shsymtab_hdr = PushData(Elf64_Shdr {
+    size_t shstrtab_hdr = PushData(Elf64_Shdr {
       .sh_name = 1,
-      .sh_type = SHT_SYMTAB,
-      .sh_size = 18,
+      .sh_type = SHT_STRTAB,
+      .sh_size = 34,
       .sh_addr = kAddrPoison,
     });
     size_t stuff_hdr = PushData(Elf64_Shdr {
@@ -39,11 +40,24 @@ class TestMemoryAccessor : public ElfLib::MemoryAccessor {
       .sh_size = 15,
       .sh_addr = kAddrPoison,
     });
+    size_t strtab_hdr = PushData(Elf64_Shdr {
+      .sh_name = 3,
+      .sh_type = SHT_STRTAB,
+      .sh_size = 16,
+      .sh_addr = kAddrPoison,
+    });
+    size_t symtab_hdr = PushData(Elf64_Shdr {
+      .sh_name = 4,
+      .sh_type = SHT_SYMTAB,
+      .sh_size = sizeof(Elf64_Sym),
+      .sh_addr = kAddrPoison,
+    });
 
-    DataAt<Elf64_Shdr>(shsymtab_hdr)->sh_offset = content_.size();
-    const uint8_t* shsymtab_content =
-      reinterpret_cast<const uint8_t*>("\0.shsymtab\0.stuff\0");
-    std::copy(shsymtab_content, shsymtab_content + 18,
+    DataAt<Elf64_Shdr>(shstrtab_hdr)->sh_offset = content_.size();
+    const uint8_t* shstrtab_content =
+      reinterpret_cast<const uint8_t*>(
+        "\0.shstrtab\0.stuff\0.strtab\0.symtab\0");
+    std::copy(shstrtab_content, shstrtab_content + 34,
               std::back_inserter(content_));
 
     DataAt<Elf64_Shdr>(stuff_hdr)->sh_offset = content_.size();
@@ -51,6 +65,20 @@ class TestMemoryAccessor : public ElfLib::MemoryAccessor {
       reinterpret_cast<const uint8_t*>("This is a test.");
     std::copy(stuff_content, stuff_content + 15,
               std::back_inserter(content_));
+
+    DataAt<Elf64_Shdr>(strtab_hdr)->sh_offset = content_.size();
+    const uint8_t* strtab_content =
+      reinterpret_cast<const uint8_t*>("\0zx_frob_handle\0");
+    std::copy(strtab_content, strtab_content + 16,
+              std::back_inserter(content_));
+
+    DataAt<Elf64_Shdr>(symtab_hdr)->sh_offset = content_.size();
+    PushData(Elf64_Sym {
+      .st_name = 1,
+      .st_shndx = SHN_COMMON,
+      .st_value = kSymbolPoison,
+      .st_size = 0,
+    });
   }
 
   template<typename T>
@@ -115,6 +143,17 @@ TEST(ElfLib, GetSection) {
 
   ASSERT_NE(data, nullptr);
   EXPECT_EQ(test, *data);
+}
+
+TEST(ElfLib, GetSymbolValue) {
+  std::unique_ptr<ElfLib> elf =
+    ElfLib::Create(std::make_unique<TestMemoryAccessor>());
+
+  ASSERT_NE(elf.get(), nullptr);
+
+  uint64_t data;
+  ASSERT_TRUE(elf->GetSymbolValue("zx_frob_handle", &data));
+  EXPECT_EQ(kSymbolPoison, data);
 }
 
 }  // namespace elflib

@@ -46,6 +46,10 @@ class ElfLib {
   // section by that name.
   const std::vector<uint8_t>* GetSectionData(const std::string& name);
 
+  // Get the stored value of a given symbol. Returns true unless the lookup
+  // failed.
+  bool GetSymbolValue(const std::string& name, uint64_t* out);
+
   // Create a new ElfLib object.
   static std::unique_ptr<ElfLib> Create(
     std::unique_ptr<MemoryAccessor>&& memory);
@@ -59,9 +63,19 @@ class ElfLib {
   // invalid.
   const std::vector<uint8_t>* GetSectionData(size_t section);
 
+  // Get a string from the .strtab section. Return nullptr if the index is
+  // invalid.
+  const std::string* GetString(size_t index);
+
+  // Get a symbol from the symbol table. Return nullptr if there is no such
+  // symbol.
+  const Elf64_Sym* GetSymbol(const std::string& name);
+
   std::unique_ptr<MemoryAccessor> memory_;
   Elf64_Ehdr header_;
   std::vector<Elf64_Shdr> sections_;
+  std::vector<Elf64_Sym> symbols_;
+  std::vector<std::string> strings_;
   std::map<size_t, std::vector<uint8_t>> section_data_;
   std::map<std::string, size_t> section_names_;
 
