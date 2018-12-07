@@ -2,21 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/binding.h>
 #include <ddk/protocol/test.h>
-
-#include <stdlib.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/socket.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <zircon/device/test.h>
-#include <zircon/listnode.h>
 
 typedef struct test_device {
     zx_device_t* zxdev;
-    zx_handle_t output;
-    zx_handle_t control;
+    zx::socket output;
+    zx::channel control;
     test_func_t test_func;
 } test_device_t;
 
@@ -26,28 +26,22 @@ typedef struct test_root {
 
 static void test_device_set_output_socket(void* ctx, zx_handle_t handle) {
     auto device = static_cast<test_device_t*>(ctx);
-    if (device->output != ZX_HANDLE_INVALID) {
-        zx_handle_close(device->output);
-    }
-    device->output = handle;
+    device->output.reset(handle);
 }
 
 static zx_handle_t test_device_get_output_socket(void* ctx) {
     auto device = static_cast<test_device_t*>(ctx);
-    return device->output;
+    return device->output.get();
 }
 
 static void test_device_set_control_channel(void* ctx, zx_handle_t handle) {
     auto device = static_cast<test_device_t*>(ctx);
-    if (device->control != ZX_HANDLE_INVALID) {
-        zx_handle_close(device->control);
-    }
-    device->control = handle;
+    device->control.reset(handle);
 }
 
 static zx_handle_t test_device_get_control_channel(void* ctx) {
     auto device = static_cast<test_device_t*>(ctx);
-    return device->control;
+    return device->control.get();
 }
 
 static void test_device_set_test_func(void* ctx, const test_func_t* func) {
@@ -118,12 +112,6 @@ static zx_status_t test_device_ioctl(void* ctx, uint32_t op, const void* in, siz
 
 static void test_device_release(void* ctx) {
     auto device = static_cast<test_device_t*>(ctx);
-    if (device->output != ZX_HANDLE_INVALID) {
-        zx_handle_close(device->output);
-    }
-    if (device->control != ZX_HANDLE_INVALID) {
-        zx_handle_close(device->control);
-    }
     delete device;
 }
 
