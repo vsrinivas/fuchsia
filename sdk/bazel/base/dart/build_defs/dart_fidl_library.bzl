@@ -101,14 +101,9 @@ _dart_codegen = aspect(
 )
 
 def _dart_fidl_library_impl(context):
-    if hasattr(context.attr, "library") and context.attr.library:
-        library = context.attr.library
-    elif hasattr(context.attr, "deps") and context.attr.deps:
-        if len(context.attr.deps) != 1:
-            fail("'deps' attribute must have exactly one element.", "deps")
-        library = context.attr.deps[0]
-    else:
-        fail("Must pass either 'library' or 'deps'")
+    if len(context.attr.deps) != 1:
+        fail("'deps' attribute must have exactly one element.", "deps")
+    library = context.attr.deps[0]
     return struct(
         dart = library.dart,
         files = library.files_provider,
@@ -117,18 +112,10 @@ def _dart_fidl_library_impl(context):
 dart_fidl_library = rule(
     implementation = _dart_fidl_library_impl,
     attrs = {
-        # TODO(DX-384): remove library and make deps mandatory (and disallow empty).
-        "library": attr.label(
-            doc = "The FIDL library to generate code for (deprecated, use 'deps' instead)",
-            mandatory = False,
-            allow_files = False,
-            providers = [FidlLibraryInfo],
-            aspects = [_dart_codegen],
-        ),
         "deps": attr.label_list(
             doc = "The FIDL library to generate code for",
-            mandatory = False,
-            allow_empty = True,
+            mandatory = True,
+            allow_empty = False,
             allow_files = False,
             providers = [FidlLibraryInfo],
             aspects = [_dart_codegen],

@@ -40,6 +40,6 @@ load("//build_defs:dart_fidl_library.bzl", "dart_fidl_library")
 
 dart_fidl_library(
     name = "${data.name}_dart",
-    library = ":${data.name}",
+    deps = [":${data.name}"],
 )
 % endif
