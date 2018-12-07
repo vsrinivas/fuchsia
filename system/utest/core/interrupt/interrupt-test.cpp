@@ -189,8 +189,8 @@ static bool interrupt_bind_vcpu_test() {
     ASSERT_EQ(zx::vcpu::create(guest, 0, 0, &vcpu1), ZX_OK);
     ASSERT_EQ(zx::vcpu::create(guest, 0, 0, &vcpu2), ZX_OK);
 
-    ASSERT_EQ(zx_interrupt_bind_vcpu(interrupt.get(), vcpu1.get(), 0), ZX_OK);
-    ASSERT_EQ(zx_interrupt_bind_vcpu(interrupt.get(), vcpu2.get(), 0), ZX_OK);
+    ASSERT_EQ(interrupt.bind_vcpu(vcpu1, 0), ZX_OK);
+    ASSERT_EQ(interrupt.bind_vcpu(vcpu2, 0), ZX_OK);
 
     END_TEST;
 }
@@ -218,7 +218,7 @@ static bool interrupt_bind_vcpu_not_supported_test() {
     ASSERT_EQ(zx::vcpu::create(guest, 0, 0, &vcpu), ZX_OK);
 
     ASSERT_EQ(interrupt.bind(port, 0, 0), ZX_OK);
-    ASSERT_EQ(zx_interrupt_bind_vcpu(interrupt.get(), vcpu.get(), 0), ZX_ERR_NOT_SUPPORTED);
+    ASSERT_EQ(interrupt.bind_vcpu(vcpu, 0), ZX_ERR_NOT_SUPPORTED);
 
     END_TEST;
 }
@@ -246,7 +246,7 @@ static bool interrupt_bind_vcpu_already_bound_test() {
     ASSERT_EQ(zx::vcpu::create(guest, 0, 0, &vcpu), ZX_OK);
 
     ASSERT_EQ(interrupt.bind(port, 0, 0), ZX_OK);
-    ASSERT_EQ(zx_interrupt_bind_vcpu(interrupt.get(), vcpu.get(), 0), ZX_ERR_ALREADY_BOUND);
+    ASSERT_EQ(interrupt.bind_vcpu(vcpu, 0), ZX_ERR_ALREADY_BOUND);
 
     END_TEST;
 }
@@ -276,8 +276,8 @@ static bool interrupt_bind_vcpu_multiple_guests_test() {
     ASSERT_EQ(zx::guest::create(*resource, 0, &guest2, &vmar2), ZX_OK);
     ASSERT_EQ(zx::vcpu::create(guest2, 0, 0, &vcpu2), ZX_OK);
 
-    ASSERT_EQ(zx_interrupt_bind_vcpu(interrupt.get(), vcpu1.get(), 0), ZX_OK);
-    ASSERT_EQ(zx_interrupt_bind_vcpu(interrupt.get(), vcpu2.get(), 0), ZX_ERR_INVALID_ARGS);
+    ASSERT_EQ(interrupt.bind_vcpu(vcpu1, 0), ZX_OK);
+    ASSERT_EQ(interrupt.bind_vcpu(vcpu2, 0), ZX_ERR_INVALID_ARGS);
 
     END_TEST;
 }

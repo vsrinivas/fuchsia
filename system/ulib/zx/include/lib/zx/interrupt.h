@@ -10,6 +10,7 @@
 #include <lib/zx/port.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/time.h>
+#include <lib/zx/vcpu.h>
 
 namespace zx {
 
@@ -47,6 +48,10 @@ public:
 
     zx_status_t bind(const zx::port& port, uint64_t key, uint32_t options) {
         return zx_interrupt_bind(get(), port.get(), key, options);
+    }
+
+    zx_status_t bind_vcpu(const zx::vcpu& vcpu, uint32_t options) {
+        return zx_interrupt_bind_vcpu(get(), vcpu.get(), options);
     }
 
     zx_status_t ack() {
