@@ -8,12 +8,12 @@ must implement and users must follow.
 ## Overview
 
 Audio streams are device nodes published by driver services intended to be used
-by applications in order to capture and/or render audio in a Zircon device.
+by applications in order to capture and/or render audio on a Zircon device.
 Each stream in the system (input or output) represents a stream of digital audio
 information which may be either received or transmitted by device.  Streams are
 dynamic and may created or destroyed by the system at any time.  Which streams
 exist at any given point in time, and what controls their lifecycles are
-consider to be issues of audio policy and codec management and are not discussed
+considered to be issues of audio policy and codec management and are not discussed
 in this document.  Additionally, the information present in audio outputs
 streams is exclusive to the application owner of the stream.  Mixing of audio is
 _not_ a service provided by the audio stream interface.
@@ -30,6 +30,7 @@ LPCM | Linear pulse code modulation.  The specific representation of audio sampl
 Channel | Within an audio stream, the subset of information which will be rendered by a single speaker, or which was captured by a single microphone in a stream.
 Frame | A set of audio samples for every channel of a audio stream captured/rendered at a single instant in time.
 Frame Rate | a.k.a. "Sample Rate".  The rate (in Hz) at which audio frames are produced or consumed.  Common sample rates include 44.1 KHz, 48 KHz, 96 KHz, and so on.
+Client or User or Application | These terms are used interchangeably in this document. They refer to modules that use these interfaces to communicate with an audio driver/device.
 
 > TODO: do we need to extend this interface to support non-linear audio sample
 > encodings?  This may be important for telephony oriented microphones which
@@ -43,19 +44,19 @@ stream and obtain a channel by issuing an ioctl.  After obtaining the channel,
 the device node may be closed.  All subsequent communication with the stream
 will occur using channels.
 
-The "stream" channel will then be used for most command and control tasks
-including.
+The "stream" channel will then be used for most command and control tasks,
+including:
  * Capability interrogation
  * Format negotiation
  * Hardware gain control
- * Determining outboard latency.
- * Plug detection notification.
+ * Determining outboard latency
+ * Plug detection notification
  * Access control capability detection and signalling
  * Policy level stream purpose indication/Stream Association (TBD)
 
 > TODO: Should plug/unplug detection be done by sending notifications over the
-> stream channel, or by publishing/unpublishing the device nodes (and closing
-> all channels in the case of unpublished channels)
+> stream channel (as it is today), or by publishing/unpublishing the device
+> nodes (and closing all channels in the case of unpublished channels)?
 
 In order to actually send or receive audio information on the stream, the
 specific format to be used must first be set.  The response to a successful
@@ -175,10 +176,12 @@ and **must** close the channel, terminating any operations which happen to be in
 flight at the time.  Additionally, they **may** log a message to a central
 logging service to assist in application developers in debugging the cause of
 the protocol violation.  Examples of protocol violation include...
- * Using `AUDIO_INVALID_TRANSACTION_ID` as the value of `message.hdr.transaction_id`
- * Using a value not present in the `audio_cmd_t` enumeration as the value of `message.hdr.cmd`
- * Supplying a payload whose size does not match the size of the request payload for a given
-   command.
+ * Using `AUDIO_INVALID_TRANSACTION_ID` as the value of
+   `message.hdr.transaction_id`
+ * Using a value not present in the `audio_cmd_t` enumeration as the value of
+   `message.hdr.cmd`
+ * Supplying a payload whose size does not match the size of the request
+   payload for a given command.
 
 ## Format Negotiation
 
@@ -213,8 +216,8 @@ Notes
  * When used to set formats, exactly one non-flag bit **must** be set.
  * When used to describe supported formats, any number of non-flag bits **may**
    be set.  Flags (when present) apply to all of the relevant non-flag bits in
-   the bitfield.  eg.  If a stream supports COMPRESSED, 16BIT and 32BIT_FLOAT, and
-   the UNSIGNED bit is set, it applies only to the 16BIT format.
+   the bitfield.  eg.  If a stream supports COMPRESSED, 16BIT and 32BIT_FLOAT,
+   and the UNSIGNED bit is set, it applies only to the 16BIT format.
  * When encoding a smaller sample size in a larger container (eg 20 or 24bit
    in 32), the most significant bits of the 32 bit container are used while
    the least significant bits should be zero.  eg. a 20 bit sample would be
@@ -353,10 +356,11 @@ Drivers **may** choose to always send an entire
 `audio_stream_cmd_get_formats_resp_t` message, or to send a truncated message
 which ends after the last valid range structure in the `format_ranges` array.
 Applications **must** be prepared to receive up to
-`sizeof(audio_stream_cmd_get_formats_resp_t) bytes for each message, but also
-accept messages as short as `offsetof(audio_stream_cmd_get_formats_resp_t, format_ranges)`
+`sizeof(audio_stream_cmd_get_formats_resp_t)` bytes for each message, but also
+accept messages as short as
+`offsetof(audio_stream_cmd_get_formats_resp_t, format_ranges)`
 
-> TODO: how do devices signal a change of supported formats (think, HDMI hotplug
+> TODO: how do devices signal a change of supported formats (e.g., HDMI hot-plug
 > event)?  Are such devices required to simply remove and republish the device?
 
 > TODO: define how to enumerate supported compressed bitstream formats.
@@ -366,8 +370,8 @@ accept messages as short as `offsetof(audio_stream_cmd_get_formats_resp_t, forma
 In order to select a stream format, applications send an
 `AUDIO_STREAM_CMD_SET_FORMAT` message over the stream channel.  In the message,
 for uncompressed audio streams, the application specifies
- * The frame rate of the stream in Hz using the `frames_per_second` field (in the
-   case of an uncompressed audio stream).
+ * The frame rate of the stream in Hz using the `frames_per_second` field (in
+   the case of an uncompressed audio stream).
  * The number of channels packed into each frame using the `channels` field.
  * The format of the samples in the frame using the `sample_format` field (see
    Sample Formats, above)
@@ -482,11 +486,11 @@ DisplayPort interconnects.
 In addition to streams being published/unpublished in response to being
 connected or disconnected to/from their bus, streams may have the ability to be
 plugged or unplugged at any given point in time.  For example, a set of USB
-headphones publish a new output stream when connected to USB, but be "hardwired"
-from a plug detection standpoint.  A different USB audio adapter with a standard
-3.5mm phono jack might publish an output stream when connected via USB, but
-might change its plugged/unplugged state as the user plugs/unplugs devices via
-the 3.5mm jack.
+headphones may publish a new output stream when connected to USB, but choose to
+be "hardwired" from a plug detection standpoint.  A different USB audio adapter
+with a standard 3.5mm phono jack might publish an output stream when connected
+via USB, but choose to change its plugged/unplugged state as the user plugs and
+unplugs an analog device via the 3.5mm jack.
 
 The ability to query the currently plugged or unplugged state of a stream, and
 to register for asynchonous notifications of plug state changes (if supported)
@@ -494,24 +498,24 @@ is handled via plug detection messages.
 
 ### AUDIO_STREAM_CMD_PLUG_DETECT
 
-In order to determine a stream's plug detection capabilities, current plug
+In order to determine a stream's plug detection capabilities and current plug
 state, and to enable or disable for asynchronous plug detection notifications,
 applications send a `AUDIO_STREAM_CMD_PLUG_DETECT` command over the stream
 channel.  Drivers respond with a set of `audio_pd_notify_flags_t`, along with a
 timestamp referenced from `ZX_CLOCK_MONOTONIC` indicating the last time the plug
 state changed.
 
-Three valid flags are currently defined.
- * `AUDIO_PDNF_HARDWIRED`.  Set when the stream hardware is considered to be
+Three valid plug-detect notification flags (PDNF) are currently defined:
+ * `AUDIO_PDNF_HARDWIRED` Set when the stream hardware is considered to be
    "hardwired".  In other words, the stream is considered to be connected as
-   long as the device is published.  Examples include a set of built in
-   speakers, a pair of USB headphones, or a plug-able audio device with no plug
-   detect functionality.
- * `AUDIO_PDNF_CAN_NOTIFY`.  Set when the stream hardware is capable of
-   asynchronously detecting that a device's plug state has changed and sending a
-   notification message if requested by the application.
- * `AUDIO_PDNF_PLUGGED`  Set when the stream hardware considers the
-   stream to be currently in the "plugged-in" state.
+   long as the device is published.  Examples include a set of built-in
+   speakers, a pair of USB headphones, or a pluggable audio device with no plug
+   detection functionality.
+ * `AUDIO_PDNF_CAN_NOTIFY` Set when the stream hardware is capable of
+   asynchronously detecting that a device's plug state has changed, then sending
+   a notification message if requested by the client.
+ * `AUDIO_PDNF_PLUGGED` Set when the stream hardware considers the stream to be
+   currently in the "plugged-in" state.
 
 Drivers for "hardwired" streams **must not** set the `CAN_NOTIFY` flag, and
 **must** set the `PLUGGED` flag.  In addition, the plug state time of the
@@ -528,29 +532,33 @@ interested in the current plugged/unplugged state of the stream.
 ### AUDIO_STREAM_PLUG_DETECT_NOTIFY
 
 Applications may request that streams send them asynchronous notifications of
-plug state changes using the flags field of the `AUDIO_STREAM_CMD_PLUG_DETECT`
+plug state changes, using the flags field of the `AUDIO_STREAM_CMD_PLUG_DETECT`
 command.
 
-Two valid flags are currently defined.
- * `AUDIO_PDF_ENABLE NOTIFICATIONS` Set by applications in order to
-   request that `AUDIO_STREAM_PLUG_DETECT_NOTIFY`
- * `AUDIO_PDF_DISABLE_NOTIFICATIONS` Set by applications in order to
-   stop new `AUDIO_STREAM_PLUG_DETECT_NOTIFY` messages from being sent.
+Two valid flags are currently defined:
+ * `AUDIO_PDF_ENABLE NOTIFICATIONS` Set by clients in order to request that the
+   stream proactively generate `AUDIO_STREAM_PLUG_DETECT_NOTIFY` messages when
+   its plug state changes, if the stream has this capability.
+ * `AUDIO_PDF_DISABLE_NOTIFICATIONS` Set by clients in order to request that NO
+   subsequent `AUDIO_STREAM_PLUG_DETECT_NOTIFY` messages should be sent,
+   regardless of the stream's ability to generate them.
 
 In order to request the current plug state without altering the current
-notification enable/disable state, clients simply set neither flag by passing
-either 0, or the value `AUDIO_PDF_NONE`.  Clients **should** not set both flags
-at the same time.  If they do, drivers **must** interpret this to mean that the
-final state of the system should be disabled.
+notification behavior, clients simply set neither `ENABLE` nor `DISABLE` --
+passing either 0, or the value `AUDIO_PDF_NONE`.  Clients **should** not set
+both flags at the same time.  If they do, drivers **must** interpret this to
+mean that the final state of the system should be _disabled_.
 
-Applications which request asynchronous notifications of plug state changes
+Clients which request asynchronous notifications of plug state changes
 **should** always check the `CAN_NOTIFY` flag in the driver response.  Streams
-may be capable of plug detection (`HARDWIRED` is not set), but may not be
-capable of detecting plug state changes asynchronously.  Applications may still
-learn of plug state changes, but will need to do so by polling with repeated
+may be capable of plug detection (i.e. if `HARDWIRED` is not set), yet be
+incapable of detecting plug state changes asynchronously.  Clients may still
+learn of plug state changes, but only by periodically polling the state with
 `PLUG_DETECT` commands.  Drivers for streams which do not set the `CAN_NOTIFY`
 flag are free to ignore enable/disable notification requests from applications,
-and **must** not ever send an `AUDIO_STREAM_PLUG_DETECT_NOTIFY` message.
+and **must** not ever send an `AUDIO_STREAM_PLUG_DETECT_NOTIFY` message. Note
+that even such a driver must always respond to a `AUDIO_STREAM_CMD_PLUG_DETECT`
+message.
 
 ## Access control capability detection and signaling
 
@@ -620,14 +628,14 @@ parameters when requesting a ring buffer.
 #### `min_ring_buffer_frames`
 The minimum number of frames of audio the client need allocated for the ring
 buffer.  Drivers may need to make this buffer larger in order to meet hardware
-requirement.  Clients **must** use the returned VMOs size (in bytes) to determine
-the actual size of the ring buffer may not assume that the size of the buffer
-(as determined by the driver) is exactly the size they requested.  Drivers
-**must** ensure that the size of the ring buffer is an integral number of audio
-frames.
+requirement.  Clients **must** use the returned VMOs size (in bytes) to
+determine the actual size of the ring buffer may not assume that the size of
+the buffer (as determined by the driver) is exactly the size they requested.
+Drivers **must** ensure that the size of the ring buffer is an integral number
+of audio frames.
 
-> TODO : Is it reasonable to require that driver produce buffers which are an
-> integral number of audio frames in length.  It certainly makes the audio
+> TODO : Is it reasonable to require that drivers produce buffers which are an
+> integral number of audio frames in length?  It certainly makes the audio
 > client's life easier (client code never needs to split or re-assemble a frame
 > before processing), but it might make it difficult for some audio hardware to
 > meet its requirements without making the buffer significantly larger than the
@@ -756,10 +764,10 @@ loop.
 
 > TODO: define a way that clock recovery information can be sent to clients in
 > the case that the audio output oscillator is not derived from the
-> `ZX_CLOCK_MONOTONIC` oscillator.  In addition, if the oscillator is slew-able in
-> hardware, provide the ability to discover this capability and control the slew
-> rate.  Given the fact that this oscillator is likely to be shared by multiple
-> streams, it might be best to return some form of system wide clock identifier
-> and provide the ability to obtain a channel on which clock recovery notifications
-> can be delivered to clients and HW slewing command can be sent from clients to
-> the clock.
+> `ZX_CLOCK_MONOTONIC` oscillator.  In addition, if the oscillator is slew-able
+> in hardware, provide the ability to discover this capability and control the
+> slew rate.  Given the fact that this oscillator is likely to be shared by
+> multiple streams, it might be best to return some form of system wide clock
+> identifier and provide the ability to obtain a channel on which clock
+> recovery notifications can be delivered to clients and HW slewing command can
+> be sent from clients to the clock.

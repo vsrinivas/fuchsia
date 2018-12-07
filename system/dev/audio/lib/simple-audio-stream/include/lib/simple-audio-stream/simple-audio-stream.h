@@ -102,7 +102,7 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
     // Called once during device creation, before the execution domain has been
     // created and before any device node has been published.
     //
-    // During Init devices *must*
+    // During Init, devices *must*
     // 1) Populate the supported_formats_ vector with at least one valid format
     //    range.
     // 2) Report the stream's gain control capabilities and current gain control
@@ -110,8 +110,10 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
     // 3) Supply a valid, null-terminated, device node name in the device_name_
     //    member.
     // 4) Supply a persistent unique ID in the unique_id_ member.
+    // 5) Call SetInitialPlugState to declare its plug detection capabilities
+    //    and initial plug state, if the device is not exclusively hardwired.
     //
-    // During Init devices *should*
+    // During Init, devices *should*
     // 1) Supply a valid null-terminated UTF-8 encoded manufacturer name in the
     //    mfr_name_ member.
     // 2) Supply a valid null-terminated UTF-8 encoded product name in the
@@ -143,15 +145,24 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
     // the ring buffer is in the stopped state.  Implementations may release
     // their VMO and perform additional hardware shutdown tasks as needed here.
     //
-    virtual void RingBufferShutdown() __TA_REQUIRES(domain_->token()) { }
+    virtual void RingBufferShutdown() __TA_REQUIRES(domain_->token()) {}
 
-    // RingBufferShutdown - General hook
+    // ShutdownHook - general hook
     //
     // Called during final shutdown, after the execution domain has been
     // shutdown.  All execution domain event sources have been deactivated and
     // any callbacks have been completed.  Implementations should finish
     // completely shutting down all hardware and prepare for destruction.
-    virtual void ShutdownHook() __TA_REQUIRES(domain_->token()) { }
+    virtual void ShutdownHook() __TA_REQUIRES(domain_->token()) {}
+
+    // EnableAsyncNotification - general hook
+    //
+    // Called whenever a client enables or disables notification of plug events.
+    // Subclass can override this, to remain aware of these requests.
+    virtual void EnableAsyncNotification(bool enable) __TA_REQUIRES(domain_->token()) {}
+
+    // Stream interface methods
+    //
 
     // ChangeFormat - Stream interface method
     //
@@ -189,8 +200,8 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    // TODO(johngro): Add hooks for plug state reporting if needed.  Right now,
-    // simple drivers are all assumed to have hardwired plug state.
+    // RingBuffer interface methods
+    //
 
     // GetBuffer - RingBuffer interface method
     //
@@ -205,7 +216,6 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
     virtual zx_status_t GetBuffer(const audio_proto::RingBufGetBufferReq& req,
                                   uint32_t* out_num_rb_frames,
                                   zx::vmo* out_buffer) __TA_REQUIRES(domain_->token()) = 0;
-
 
     // Start - RingBuffer interface method
     //
@@ -227,6 +237,9 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
     //
     virtual zx_status_t Stop() __TA_REQUIRES(domain_->token()) = 0;
 
+    // RingBuffer interface events
+    //
+
     // NotifyPosition - RingBuffer interface event
     //
     // Send a position notification to the client over the ring buffer channel,
@@ -243,13 +256,30 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
     // channel.
     zx_status_t NotifyPosition(const audio_proto::RingBufPositionNotify& notif);
 
+    // Incoming interfaces (callable from child classes into this class)
+    //
+
+    // SetInitialPlugState
+    //
+    // Must be called by child class during Init(), so that the device's Plug
+    // capabilities are correctly understood (and published) by the base class.
+    void SetInitialPlugState(audio_pd_notify_flags_t initial_state) __TA_REQUIRES(domain_->token());
+
+    // SetPlugState - asynchronous hook for child class
+    //
+    // Callable at any time after InitPost, if the device is not hardwired.
+    // Must be called from the same execution domain as other hooks listed here.
+    zx_status_t SetPlugState(bool plugged) __TA_REQUIRES(domain_->token());
+
+    // Callable any time after SetFormat while the RingBuffer channel is active,
+    // but only valid after GetBuffer is called. Can be called from any context.
+    uint32_t LoadNotificationsPerRing() const { return expected_notifications_per_ring_.load(); };
+
     // The execution domain
     fbl::RefPtr<dispatcher::ExecutionDomain> domain_;
 
-    uint32_t LoadNotificationsPerRing() const { return expected_notifications_per_ring_.load();};
-
     // State and capabilities which need to be established and maintained by the
-    // driver implementation..
+    // driver implementation.
     fbl::Vector<audio_stream_format_range_t> supported_formats_ __TA_GUARDED(domain_->token());
     audio_proto::GetGainResp cur_gain_state_ __TA_GUARDED(domain_->token());
     audio_stream_unique_id_t unique_id_ __TA_GUARDED(domain_->token()) = {};
@@ -262,6 +292,17 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
     uint64_t external_delay_nsec_ __TA_GUARDED(domain_->token()) = 0;
 
   private:
+    // Private subclass of dispatcher::Channel that adds DoublyLinkedListable for accounting
+    class AudioStreamChannel : public dispatcher::Channel,
+                            public fbl::DoublyLinkedListable<fbl::RefPtr<AudioStreamChannel>> {
+      private:
+        friend class dispatcher::Channel;
+        friend class fbl::RefPtr<AudioStreamChannel>;
+
+        AudioStreamChannel() = default;
+        ~AudioStreamChannel() = default;
+    };
+
     // Internal method; called by the general Create template method.
     zx_status_t CreateInternal();
 
@@ -302,6 +343,7 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
                             const audio_proto::GetStringReq& req) const
         __TA_REQUIRES(domain_->token());
 
+    zx_status_t NotifyPlugDetect() __TA_REQUIRES(domain_->token());
 
     // Ring buffer interface
     zx_status_t ProcessRingBufferChannel(dispatcher::Channel* channel)
@@ -328,6 +370,14 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
     fbl::Mutex channel_lock_ __TA_ACQUIRED_AFTER(domain_->token());
     fbl::RefPtr<dispatcher::Channel> stream_channel_ __TA_GUARDED(channel_lock_);
     fbl::RefPtr<dispatcher::Channel> rb_channel_ __TA_GUARDED(channel_lock_);
+
+    fbl::DoublyLinkedList<fbl::RefPtr<AudioStreamChannel>> plug_notify_channels_
+        __TA_GUARDED(domain_->token());
+
+    // Plug capabilities default to hardwired, if not changed by a child class.
+    audio_pd_notify_flags_t pd_flags_ __TA_GUARDED(domain_->token())
+        = AUDIO_PDNF_HARDWIRED | AUDIO_PDNF_PLUGGED;
+    zx_time_t plug_time_ __TA_GUARDED(domain_->token()) = 0;
 
     // State used for protocol enforcement.
     bool rb_started_ __TA_GUARDED(domain_->token()) = false;

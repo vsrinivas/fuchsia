@@ -15,17 +15,6 @@
 
 namespace dispatcher {
 
-// static
-fbl::RefPtr<dispatcher::Channel> dispatcher::Channel::Create() {
-    fbl::AllocChecker ac;
-
-    auto ptr = new (&ac) dispatcher::Channel();
-    if (!ac.check())
-        return nullptr;
-
-    return fbl::AdoptRef(ptr);
-}
-
 zx_status_t Channel::Activate(zx::channel* client_channel_out,
                               fbl::RefPtr<ExecutionDomain> domain,
                               ProcessHandler process_handler,
