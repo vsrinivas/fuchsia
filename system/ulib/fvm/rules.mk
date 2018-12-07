@@ -13,7 +13,7 @@ MODULE_COMPILEFLAGS += -fvisibility=hidden
 MODULE_SRCS += \
     $(LOCAL_DIR)/fvm.cpp \
     $(LOCAL_DIR)/fvm-check.cpp \
-    $(LOCAL_DIR)/fvm-lz4.cpp \
+    $(LOCAL_DIR)/sparse-reader.cpp \
 
 MODULE_STATIC_LIBS := \
     system/ulib/digest \
@@ -41,7 +41,7 @@ MODULE_TYPE := hostlib
 MODULE_SRCS := \
     $(LOCAL_DIR)/fvm.cpp \
     $(LOCAL_DIR)/fvm-check.cpp \
-    $(LOCAL_DIR)/fvm-lz4.cpp \
+    $(LOCAL_DIR)/sparse-reader.cpp \
 
 MODULE_COMPILEFLAGS := \
     -Werror-implicit-function-declaration \

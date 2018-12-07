@@ -15,6 +15,8 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/format/blobfs.cpp \
     $(LOCAL_DIR)/format/format.cpp \
     $(LOCAL_DIR)/format/minfs.cpp \
+    $(LOCAL_DIR)/fvm-info.cpp \
+    $(LOCAL_DIR)/sparse-paver.cpp \
 
 MODULE_COMPILEFLAGS := \
     -Werror-implicit-function-declaration \

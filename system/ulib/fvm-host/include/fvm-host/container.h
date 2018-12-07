@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#pragma once
+
 #include <fcntl.h>
 #include <lz4/lz4frame.h>
 #include <string.h>
@@ -10,10 +12,12 @@
 #include <fbl/string_buffer.h>
 #include <fbl/vector.h>
 #include <fbl/unique_fd.h>
-#include <fvm/fvm-lz4.h>
+#include <fvm/sparse-reader.h>
 #include <fvm/fvm-sparse.h>
 
 #include "format.h"
+#include "fvm-info.h"
+#include "sparse-paver.h"
 
 // The number of additional slices a partition will need to become zxcrypt'd.
 // TODO(planders): Replace this with a value supplied by ulib/zxcrypt.
@@ -64,74 +68,13 @@ protected:
     uint32_t flags_;
 };
 
-// Wrapper around FVM metadata which attempts to read existing metadata from disk, allows
-// new partitions and slices to be allocated, and writes updated metadata back to disk.
-class FvmInfo {
-public:
-    FvmInfo() : valid_(false), dirty_(false), metadata_size_(0), vpart_hint_(1), pslice_hint_(1) {}
-
-    // Resets the metadata to default values.
-    zx_status_t Reset(size_t disk_size, size_t slice_size);
-
-    // Loads and validates metadata from disk. If invalid metadata is found a success status is
-    // returned, but valid_ is marked false.
-    zx_status_t Load(const fbl::unique_fd& fd, uint64_t disk_offset, uint64_t disk_size);
-
-    // Validates the loaded metadata.
-    zx_status_t Validate() const;
-
-    // Grows in-memory metadata representation to the specified size.
-    zx_status_t Grow(size_t metadata_size);
-
-    // Grows in-memory metadata representation to account for |slice_count| additional slices.
-    zx_status_t GrowForSlices(size_t slice_count);
-
-    // Writes metadata to the partition described by |fd| of size |disk_size|, starting at offset
-    // |disk_offset|.
-    zx_status_t Write(const fbl::unique_fd& fd, size_t disk_offset, size_t disk_size);
-
-    // Allocates new partition (in memory) with a single slice.
-    zx_status_t AllocatePartition(const fvm::partition_descriptor_t* partition, uint8_t* guid,
-                                  uint32_t* vpart_index);
-
-    // Allocates new slice for given partition (in memory).
-    zx_status_t AllocateSlice(uint32_t vpart, uint32_t vslice, uint32_t* pslice);
-
-    // Helpers to grab reference to partition/slice from metadata
-    zx_status_t GetPartition(size_t index, fvm::vpart_entry_t** out) const;
-    zx_status_t GetSlice(size_t index, fvm::slice_entry_t** out) const;
-
-    fvm::fvm_t* SuperBlock() const;
-    size_t MetadataSize() const { return metadata_size_; }
-    size_t DiskSize() const { return SuperBlock()->fvm_partition_size; }
-    size_t SliceSize() const { return SuperBlock()->slice_size; }
-
-    // Returns true if the in-memory metadata has been changed from the original values (i.e.
-    // partitions/slices have been allocated since initialization).
-    bool IsDirty() const { return dirty_; }
-
-    // Returns true if metadata_ contains valid FVM metadata.
-    bool IsValid() const { return valid_; }
-
-    // Checks whether the metadata is valid, and immediately exits the process if it isn't.
-    void CheckValid() const;
-
-private:
-    bool valid_;
-    bool dirty_;
-    size_t metadata_size_;
-    uint32_t vpart_hint_;
-    uint32_t pslice_hint_;
-    fbl::unique_ptr<uint8_t[]> metadata_;
-};
-
 class FvmContainer final : public Container {
-    typedef struct {
+    struct FvmPartitionInfo {
         uint32_t vpart_index;
         uint32_t pslice_start;
         uint32_t slice_count;
         fbl::unique_ptr<Format> format;
-    } partition_info_t;
+    };
 
 public:
     // Creates an FVM container at the given path, creating a new file if one does not already
@@ -159,7 +102,7 @@ public:
 private:
     uint64_t disk_offset_;
     uint64_t disk_size_;
-    fbl::Vector<partition_info_t> partitions_;
+    fbl::Vector<FvmPartitionInfo> partitions_;
     FvmInfo info_;
 
     // Write the |part_index|th partition to disk
@@ -208,49 +151,6 @@ private:
     size_t offset_ = 0;
 };
 
-typedef struct {
-    fvm::partition_descriptor_t descriptor;
-    fbl::Vector<fvm::extent_descriptor_t> extents;
-    fbl::unique_ptr<Format> format;
-} partition_info_t;
-
-// Given a target path and partition data from a SparseReader, generates a full FVM image.
-class SparsePaver {
-public:
-    // Creates a SparsePaver with the given attributes.
-    static zx_status_t Create(const char* path, size_t slice_size, size_t disk_offset,
-                              size_t disk_size, fbl::unique_ptr<SparsePaver>* out);
-
-    // Allocates the partition and slices described by |partition| to info_, and writes out
-    // corresponding data from |reader| to the FVM. |partition| will not be modified.
-    zx_status_t AddPartition(const partition_info_t* partition, fvm::SparseReader* reader);
-
-    // Commits the FVM image by writing the metadata to disk.
-    zx_status_t Commit();
-private:
-    SparsePaver(size_t disk_offset, size_t disk_size) : disk_offset_(disk_offset),
-                                                        disk_size_(disk_size) {}
-
-    // Initializes the FVM metadata.
-    zx_status_t Init(const char* path, size_t slice_size);
-
-    // Allocates the extent described by |extent| to the partition at |vpart_index|, as well as
-    // allocating its slices and persisting all associated data.
-    zx_status_t AddExtent(uint32_t vpart_index, fvm::extent_descriptor_t* extent,
-                          fvm::SparseReader* reader);
-
-    // Writes the next slice out to disk, reading as many of |bytes_left| as possible from |reader|
-    // and appending zeroes if necessary.
-    zx_status_t WriteSlice(size_t* bytes_left, fvm::SparseReader* reader);
-
-    FvmInfo info_;
-    fbl::unique_fd fd_;
-    size_t disk_offset_; // Offset into fd_ at which to create FVM.
-    size_t disk_size_; // Number of bytes allocated for the FVM.
-    size_t disk_ptr_; // Marks the current offset within the target image.
-    fbl::unique_ptr<uint8_t[]> data_; // Buffer to hold data to be written to disk.
-};
-
 class SparseContainer final : public Container {
 public:
     static zx_status_t Create(const char* path, size_t slice_size, uint32_t flags,
@@ -281,7 +181,7 @@ private:
     size_t disk_size_;
     size_t extent_size_;
     fvm::sparse_image_t image_;
-    fbl::Vector<partition_info_t> partitions_;
+    fbl::Vector<SparsePartitionInfo> partitions_;
     CompressionContext compression_;
     fbl::unique_ptr<fvm::SparseReader> reader_;
 

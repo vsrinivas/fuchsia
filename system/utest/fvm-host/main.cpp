@@ -9,7 +9,7 @@
 #include <minfs/host.h>
 #include <unittest/unittest.h>
 
-#include <fvm/fvm-lz4.h>
+#include <fvm/sparse-reader.h>
 
 #include <utility>
 

@@ -6,7 +6,7 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
-#include <fvm/fvm-lz4.h>
+#include <fvm/sparse-reader.h>
 #include <fvm-host/container.h>
 
 #define DEFAULT_SLICE_SIZE (8lu * (1 << 20))

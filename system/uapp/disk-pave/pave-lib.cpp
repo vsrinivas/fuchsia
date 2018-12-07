@@ -19,7 +19,7 @@
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
 #include <fs-management/ramdisk.h>
-#include <fvm/fvm-lz4.h>
+#include <fvm/sparse-reader.h>
 #include <fvm/fvm-sparse.h>
 #include <lib/cksum.h>
 #include <lib/fzl/fdio.h>
