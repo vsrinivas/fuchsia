@@ -86,4 +86,5 @@ interface Wlan {
   5: StartBss(BssConfig cfg) -> (Error error);
   6: StopBss() -> (Error error);
   7: Stats() -> (WlanStats stats);
+  8: ClearSavedNetworks() -> ();
 };

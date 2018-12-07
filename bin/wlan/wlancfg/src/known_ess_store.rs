@@ -95,6 +95,12 @@ impl KnownEssStore {
         self.write(guard)
     }
 
+    pub fn clear(&self) -> Result<(), failure::Error> {
+        let mut guard = self.ess_by_ssid.lock();
+        guard.clear();
+        self.write(guard)
+    }
+
     pub fn known_network_count(&self) -> usize {
         self.ess_by_ssid.lock().len()
     }
@@ -219,6 +225,24 @@ mod tests {
             Err(e) => assert!(e.to_string().contains("Failed to open /dev/null/foo"),
                               format!("error message was: {}", e))
         }
+    }
+
+    #[test]
+    fn clear() {
+        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
+
+        // Expect the store to be constructed successfully even if the file doesn't exist yet
+        let store = create_ess_store(temp_dir.path());
+
+        store.store(b"foo".to_vec(), ess(b"qwerty")).expect("storing 'foo' failed");
+        assert_eq!(Some(ess(b"qwerty")), store.lookup(b"foo"));
+        assert_eq!(1, store.known_network_count());
+        store.clear().expect("clearing store failed");
+        assert_eq!(0, store.known_network_count());
+
+        // Load store from the file to verify it is also gone from persistent storage
+        let store = create_ess_store(temp_dir.path());
+        assert_eq!(0, store.known_network_count());
     }
 
     fn create_ess_store(path: &Path) -> KnownEssStore {

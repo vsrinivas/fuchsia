@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::client;
+use crate::{
+    client,
+    known_ess_store::KnownEssStore,
+};
 
-use {
+use{
     fidl_fuchsia_wlan_device_service as wlan_service,
     fidl_fuchsia_wlan_mlme as fidl_mlme,
     fidl_fuchsia_wlan_service as legacy,
@@ -61,14 +64,16 @@ impl ClientRef {
 
 const MAX_CONCURRENT_WLAN_REQUESTS: usize = 1000;
 
-pub async fn serve_legacy(requests: legacy::WlanRequestStream, client: ClientRef)
+pub async fn serve_legacy(requests: legacy::WlanRequestStream, client: ClientRef,
+                          ess_store: Arc<KnownEssStore>)
     -> Result<(), fidl::Error>
 {
     await!(requests.try_for_each_concurrent(MAX_CONCURRENT_WLAN_REQUESTS,
-                                     |req| handle_request(&client, req)))
+                                     |req| handle_request(&client, req, Arc::clone(&ess_store))))
 }
 
-async fn handle_request(client: &ClientRef, req: legacy::WlanRequest) -> Result<(), fidl::Error> {
+async fn handle_request(client: &ClientRef, req: legacy::WlanRequest, ess_store: Arc<KnownEssStore>)
+    -> Result<(), fidl::Error> {
     match req {
         legacy::WlanRequest::Scan { req, responder } => {
             let mut r = await!(scan(client, req));
@@ -98,6 +103,10 @@ async fn handle_request(client: &ClientRef, req: legacy::WlanRequest) -> Result<
             let mut r = await!(stats(client));
             responder.send(&mut r)
         },
+        legacy::WlanRequest::ClearSavedNetworks { responder } => {
+            if let Err(e) = ess_store.clear() { eprintln !("Error clearing known ESS: {}", e); }
+            responder.send()
+        }
     }
 }
 
