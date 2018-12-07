@@ -247,7 +247,7 @@ zx_status_t Mt8167GpioDevice::Bind() {
         return status;
     }
 
-    status = int_.bind(port_.get(), 0, 0 /*options*/);
+    status = int_.bind(port_, 0, 0 /*options*/);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s zx_interrupt_bind failed %d\n", __FUNCTION__, status);
         return status;

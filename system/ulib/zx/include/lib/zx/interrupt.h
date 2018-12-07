@@ -7,6 +7,7 @@
 
 #include <lib/zx/handle.h>
 #include <lib/zx/object.h>
+#include <lib/zx/port.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/time.h>
 
@@ -44,8 +45,8 @@ public:
         return zx_interrupt_trigger(get(), options, timestamp.get());
     }
 
-    zx_status_t bind(zx_handle_t porth, uint64_t key, uint32_t options) {
-        return zx_interrupt_bind(get(), porth, key, options);
+    zx_status_t bind(const zx::port& port, uint64_t key, uint32_t options) {
+        return zx_interrupt_bind(get(), port.get(), key, options);
     }
 
     zx_status_t ack() {

@@ -44,7 +44,7 @@ static bool interrupt_port_non_bindable_test() {
     ASSERT_EQ(zx::interrupt::create(*resource, 0, ZX_INTERRUPT_VIRTUAL, &interrupt), ZX_OK);
     ASSERT_EQ(zx::port::create(0, &port), ZX_OK);
 
-    ASSERT_EQ(interrupt.bind(port.get(), key, 0), ZX_ERR_WRONG_TYPE);
+    ASSERT_EQ(interrupt.bind(port, key, 0), ZX_ERR_WRONG_TYPE);
 
     END_TEST;
 }
@@ -65,7 +65,7 @@ static bool interrupt_port_bound_test() {
     ASSERT_EQ(zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port), ZX_OK);
 
     // Test port binding
-    ASSERT_EQ(interrupt.bind(port.get(), key, 0), ZX_OK);
+    ASSERT_EQ(interrupt.bind(port, key, 0), ZX_OK);
     ASSERT_EQ(interrupt.trigger(0, signaled_timestamp_1), ZX_OK);
     ASSERT_EQ(port.wait(zx::time::infinite(), &out), ZX_OK);
     ASSERT_EQ(out.interrupt.timestamp, signaled_timestamp_1.get());
@@ -217,7 +217,7 @@ static bool interrupt_bind_vcpu_not_supported_test() {
     ASSERT_EQ(zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port), ZX_OK);
     ASSERT_EQ(zx::vcpu::create(guest, 0, 0, &vcpu), ZX_OK);
 
-    ASSERT_EQ(interrupt.bind(port.get(), 0, 0), ZX_OK);
+    ASSERT_EQ(interrupt.bind(port, 0, 0), ZX_OK);
     ASSERT_EQ(zx_interrupt_bind_vcpu(interrupt.get(), vcpu.get(), 0), ZX_ERR_NOT_SUPPORTED);
 
     END_TEST;
@@ -245,7 +245,7 @@ static bool interrupt_bind_vcpu_already_bound_test() {
     ASSERT_EQ(zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port), ZX_OK);
     ASSERT_EQ(zx::vcpu::create(guest, 0, 0, &vcpu), ZX_OK);
 
-    ASSERT_EQ(interrupt.bind(port.get(), 0, 0), ZX_OK);
+    ASSERT_EQ(interrupt.bind(port, 0, 0), ZX_OK);
     ASSERT_EQ(zx_interrupt_bind_vcpu(interrupt.get(), vcpu.get(), 0), ZX_ERR_ALREADY_BOUND);
 
     END_TEST;

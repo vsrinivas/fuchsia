@@ -16,6 +16,7 @@
 #include <hid/buttons.h>
 
 #include <lib/zx/interrupt.h>
+#include <lib/zx/port.h>
 
 #include <zircon/thread_annotations.h>
 
@@ -64,7 +65,7 @@ private:
     bool MatrixScan(uint32_t row, uint32_t col, zx_duration_t delay);
 
     thrd_t thread_;
-    zx_handle_t port_handle_;
+    zx::port port_;
     fbl::Mutex proxy_lock_;
     ddk::HidbusIfcProxy proxy_ TA_GUARDED(proxy_lock_);
     fbl::Array<buttons_button_config_t> buttons_;

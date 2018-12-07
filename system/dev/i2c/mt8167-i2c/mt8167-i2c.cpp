@@ -267,7 +267,7 @@ zx_status_t Mt8167I2c::Bind() {
         if (status != ZX_OK) {
             return status;
         }
-        status = keys_[id].irq.bind(irq_port_.get(), id, 0); // id is the port key used.
+        status = keys_[id].irq.bind(irq_port_, id, 0); // id is the port key used.
         if (status != ZX_OK) {
             return status;
         }

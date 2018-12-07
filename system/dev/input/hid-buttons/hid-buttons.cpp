@@ -36,7 +36,7 @@ namespace buttons {
 int HidButtonsDevice::Thread() {
     while (1) {
         zx_port_packet_t packet;
-        zx_status_t status = zx_port_wait(port_handle_, ZX_TIME_INFINITE, &packet);
+        zx_status_t status = port_.wait(zx::time::infinite(), &packet);
         zxlogf(TRACE, "%s msg received on port key %lu\n", __FUNCTION__, packet.key);
         if (status != ZX_OK) {
             zxlogf(ERROR, "%s port wait failed %d\n", __FUNCTION__, status);
@@ -247,7 +247,7 @@ zx_status_t HidButtonsDevice::ConfigureInterrupt(uint32_t idx, uint64_t int_port
         zxlogf(ERROR, "%s gpio_get_interrupt failed %d\n", __FUNCTION__, status);
         return status;
     }
-    status = gpios_[idx].irq.bind(port_handle_, int_port, 0);
+    status = gpios_[idx].irq.bind(port_, int_port, 0);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s zx_interrupt_bind failed %d\n", __FUNCTION__, status);
         return status;
@@ -260,7 +260,7 @@ zx_status_t HidButtonsDevice::ConfigureInterrupt(uint32_t idx, uint64_t int_port
 zx_status_t HidButtonsDevice::Bind() {
     zx_status_t status;
 
-    status = zx_port_create(ZX_PORT_BIND_TO_INTERRUPT, &port_handle_);
+    status = zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s port_create failed %d\n", __FUNCTION__, status);
         return status;
@@ -400,7 +400,7 @@ zx_status_t HidButtonsDevice::Bind() {
 
 void HidButtonsDevice::ShutDown() {
     zx_port_packet packet = {PORT_KEY_SHUTDOWN, ZX_PKT_TYPE_USER, ZX_OK, {}};
-    zx_status_t status = zx_port_queue(port_handle_, &packet);
+    zx_status_t status = port_.queue(&packet);
     ZX_ASSERT(status == ZX_OK);
     thrd_join(thread_, NULL);
     for (uint32_t i = 0; i < gpios_.size(); ++i) {
