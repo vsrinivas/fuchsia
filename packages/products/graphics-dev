@@ -1,5 +1,6 @@
 {
   "imports": [
+    "garnet/packages/prod/crashpad",
     "garnet/packages/prod/runtime",
     "garnet/packages/prod/vboot_reference",
     "garnet/packages/prod/scenic_tools",
