@@ -41,7 +41,7 @@ class BazelBuilder(Frontend):
         self.workspace_info = SdkWorkspaceInfo()
 
 
-    def _copy_file(self, file, root, destination, result=[]):
+    def _copy_file(self, file, root='', destination='', result=[]):
         '''Copies the file from a given root directory and writes the
         resulting relative paths to a list.
         '''
@@ -53,7 +53,7 @@ class BazelBuilder(Frontend):
         result.append(relative_path)
 
 
-    def _copy_files(self, files, root, destination, result=[]):
+    def _copy_files(self, files, root='', destination='', result=[]):
         '''Copies some files from a given root directory and writes the
         resulting relative paths to a list.
         '''
@@ -197,6 +197,9 @@ class BazelBuilder(Frontend):
                 prebuilt_set.dist_lib = _copy_prebuilt(dist, 'dist')
                 prebuilt_set.dist_path = 'lib/' + os.path.basename(dist)
 
+            if 'debug' in binaries:
+                self._copy_file(binaries['debug'])
+
             library.prebuilts[arch] = prebuilt_set
 
         for dep in atom['deps']:
@@ -242,7 +245,8 @@ class BazelBuilder(Frontend):
             arch_data = atom['versions'][arch]
             self._copy_files(arch_data['headers'], arch_data['root'], base)
             self._copy_files(arch_data['link_libs'], arch_data['root'], base)
-            self._copy_files(arch_data['debug_libs'], arch_data['root'], base)
+            # We maintain debug files in their original location.
+            self._copy_files(arch_data['debug_libs'])
             dist_libs = []
             self._copy_files(arch_data['dist_libs'], arch_data['root'], base,
                              dist_libs)
