@@ -198,6 +198,86 @@ TEST_F(MediaPlayerTests, StreamSource) {
   EXPECT_FALSE(sink_connection_closed_);
 }
 
+// Opens an SBC elementary stream using |StreamSource|.
+TEST_F(MediaPlayerTests, StreamSourceWithSBC) {
+  fuchsia::mediaplayer::StreamSourcePtr stream_source;
+  player_->CreateStreamSource(1, false, false, nullptr,
+                              stream_source.NewRequest());
+
+  fuchsia::media::AudioStreamType audio_stream_type;
+  audio_stream_type.sample_format =
+      fuchsia::media::AudioSampleFormat::SIGNED_16;
+  audio_stream_type.channels = kSamplesPerFrame;
+  audio_stream_type.frames_per_second = kFramesPerSecond;
+  fuchsia::media::StreamType stream_type;
+  stream_type.medium_specific.set_audio(std::move(audio_stream_type));
+  stream_type.encoding = fuchsia::media::AUDIO_ENCODING_SBC;
+
+  fuchsia::media::SimpleStreamSinkPtr sink;
+  stream_source->AddStream(std::move(stream_type), kFramesPerSecond, 1,
+                           sink.NewRequest());
+  sink.set_error_handler([this](zx_status_t status) {
+    FXL_LOG(ERROR) << "SimpleStreamSink connection closed.";
+    sink_connection_closed_ = true;
+    QuitLoop();
+  });
+
+  // Here we're upcasting from a
+  // |fidl::InterfaceHandle<fuchsia::mediaplayer::StreamSource>| to a
+  // |fidl::InterfaceHandle<fuchsia::mediaplayer::Source>| the only way we
+  // currently can. The compiler has no way of knowing whether this is
+  // legit.
+  // TODO(dalesat): Do this safely once FIDL-329 is fixed.
+  player_->SetSource(fidl::InterfaceHandle<fuchsia::mediaplayer::Source>(
+      stream_source.Unbind().TakeChannel()));
+
+  commands_.WaitForAudioConnected();
+  commands_.Invoke([this]() { QuitLoop(); });
+
+  Execute();
+  EXPECT_FALSE(sink_connection_closed_);
+}
+
+// Tries to open a bogus elementary stream using |StreamSource|.
+TEST_F(MediaPlayerTests, StreamSourceWithBogus) {
+  fuchsia::mediaplayer::StreamSourcePtr stream_source;
+  player_->CreateStreamSource(1, false, false, nullptr,
+                              stream_source.NewRequest());
+
+  fuchsia::media::AudioStreamType audio_stream_type;
+  audio_stream_type.sample_format =
+      fuchsia::media::AudioSampleFormat::SIGNED_16;
+  audio_stream_type.channels = kSamplesPerFrame;
+  audio_stream_type.frames_per_second = kFramesPerSecond;
+  fuchsia::media::StreamType stream_type;
+  stream_type.medium_specific.set_audio(std::move(audio_stream_type));
+  stream_type.encoding = "bogus encoding";
+
+  fuchsia::media::SimpleStreamSinkPtr sink;
+  stream_source->AddStream(std::move(stream_type), kFramesPerSecond, 1,
+                           sink.NewRequest());
+  sink.set_error_handler([this](zx_status_t status) {
+    FXL_LOG(ERROR) << "SimpleStreamSink connection closed.";
+    sink_connection_closed_ = true;
+    QuitLoop();
+  });
+
+  // Here we're upcasting from a
+  // |fidl::InterfaceHandle<fuchsia::mediaplayer::StreamSource>| to a
+  // |fidl::InterfaceHandle<fuchsia::mediaplayer::Source>| the only way we
+  // currently can. The compiler has no way of knowing whether this is
+  // legit.
+  // TODO(dalesat): Do this safely once FIDL-329 is fixed.
+  player_->SetSource(fidl::InterfaceHandle<fuchsia::mediaplayer::Source>(
+      stream_source.Unbind().TakeChannel()));
+
+  commands_.WaitForProblem();
+  commands_.Invoke([this]() { QuitLoop(); });
+
+  Execute();
+  EXPECT_FALSE(sink_connection_closed_);
+}
+
 // Play a real A/V file from beginning to end.
 TEST_F(MediaPlayerTests, PlayBear) {
   // TODO(dalesat): Use ExpectPackets for audio.
