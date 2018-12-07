@@ -146,7 +146,8 @@ zx_status_t Device::LoadNVM(const qca_version& version) {
   sent += size;
   while (count) {
     size = std::min(count, DFU_PACKET_LEN);
-
+    req->size = size;
+    req->header.length = size;
     usb_request_copy_to(req, file.view(sent, size).data(), size, 0);
     req->complete_cb = interrupt_complete;
     req->cookie = &completion_;
@@ -200,7 +201,8 @@ zx_status_t Device::LoadRAM(const qca_version& version) {
   sent += size;
   while (count) {
     size = std::min(count, DFU_PACKET_LEN);
-
+    req->size = size;
+    req->header.length = size;
     usb_request_copy_to(req, file.view(sent, size).data(), size, 0);
     req->complete_cb = interrupt_complete;
     req->cookie = &completion_;
