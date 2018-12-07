@@ -21,6 +21,13 @@
 namespace trace {
 namespace {
 
+// Zircon defines all koids with bit 63 set as being artificial.
+constexpr uint64_t kArtificialKoidFlag = 1ul << 63;
+
+zx_koid_t MakeArtificialKoid(trace_vthread_id_t id) {
+    return id | kArtificialKoidFlag;
+}
+
 // The cached koid of this process.
 // Initialized on first use.
 std::atomic<uint64_t> g_process_koid{ZX_KOID_INVALID};
@@ -671,11 +678,7 @@ EXPORT void trace_context_register_vthread(
     const char* vthread_literal,
     trace_vthread_id_t vthread_id,
     trace_thread_ref_t* out_ref) {
-    // This flag is used to avoid collisions with regular threads. This is not
-    // guaranteed to work but is sufficient until we have koid range that can
-    // never be used by regular threads.
-    constexpr zx_koid_t kVirtualThreadIdFlag = 0x100000000;
-    zx_koid_t vthread_koid = kVirtualThreadIdFlag | vthread_id;
+    zx_koid_t vthread_koid = trace::MakeArtificialKoid(vthread_id);
 
     trace::ThreadEntry* entry = trace::CacheThreadEntry(context->generation(), vthread_koid);
     if (likely(entry && !trace_is_unknown_thread_ref(&entry->thread_ref))) {
