@@ -54,11 +54,15 @@ class CrashpadAnalyzerImpl : public Analyzer {
                                             fuchsia::mem::Buffer stack_trace);
   zx_status_t ProcessKernelPanicCrashlog(fuchsia::mem::Buffer crashlog);
 
+  // Uploads local crash report of ID |local_report_id|, attaching either the
+  // passed |annotations| or reading the annotations from its minidump.
+  //
+  // Either |annotations| or |read_annotations_from_minidump| must be set, but
+  // only one of them.
   zx_status_t UploadReport(
-      std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport> report,
-      const std::map<std::string, std::string>& annotations);
-  std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport>
-  GetUploadReport(const crashpad::UUID& local_report_id);
+      const crashpad::UUID& local_report_id,
+      const std::map<std::string, std::string>* annotations,
+      bool read_annotations_from_minidump);
 
   const std::unique_ptr<crashpad::CrashReportDatabase> database_;
 

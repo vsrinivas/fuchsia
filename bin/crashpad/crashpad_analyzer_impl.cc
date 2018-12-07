@@ -12,6 +12,7 @@
 #include <inspector/inspector.h>
 #include <lib/fxl/files/directory.h>
 #include <lib/fxl/files/file.h>
+#include <lib/fxl/logging.h>
 #include <lib/syslog/cpp/logger.h>
 #include <stdio.h>
 #include <third_party/crashpad/client/crash_report_database.h>
@@ -56,18 +57,60 @@ std::string GetPackageName(const zx::process& process) {
 }  // namespace
 
 zx_status_t CrashpadAnalyzerImpl::UploadReport(
-    std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport> report,
-    const std::map<std::string, std::string>& annotations) {
+    const crashpad::UUID& local_report_id,
+    const std::map<std::string, std::string>* annotations,
+    bool read_annotations_from_minidump) {
   bool uploads_enabled;
   if ((!database_->GetSettings()->GetUploadsEnabled(&uploads_enabled) ||
        !uploads_enabled)) {
     FX_LOGS(INFO)
         << "upload to remote crash server disabled. Local crash report, ID "
-        << report->uuid.ToString() << ", available under "
+        << local_report_id.ToString() << ", available under "
         << kLocalCrashDatabase;
     database_->SkipReportUpload(
-        report->uuid, crashpad::Metrics::CrashSkippedReason::kUploadsDisabled);
+        local_report_id,
+        crashpad::Metrics::CrashSkippedReason::kUploadsDisabled);
     return ZX_OK;
+  }
+
+  // Read local crash report as an "upload" report.
+  std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport> report;
+  const crashpad::CrashReportDatabase::OperationStatus database_status =
+      database_->GetReportForUploading(local_report_id, &report);
+  if (database_status != crashpad::CrashReportDatabase::kNoError) {
+    FX_LOGS(ERROR) << "error loading local crash report, ID "
+                   << local_report_id.ToString() << " (" << database_status
+                   << ")";
+    return ZX_ERR_INTERNAL;
+  }
+
+  // Set annotations, either from argument or from minidump.
+  FXL_CHECK((annotations != nullptr) ^ read_annotations_from_minidump);
+  const std::map<std::string, std::string>* final_annotations = annotations;
+  std::map<std::string, std::string> minidump_annotations;
+  if (read_annotations_from_minidump) {
+    crashpad::FileReader* reader = report->Reader();
+    crashpad::FileOffset start_offset = reader->SeekGet();
+    crashpad::ProcessSnapshotMinidump minidump_process_snapshot;
+    if (!minidump_process_snapshot.Initialize(reader)) {
+      database_->SkipReportUpload(
+          report->uuid,
+          crashpad::Metrics::CrashSkippedReason::kPrepareForUploadFailed);
+      FX_LOGS(ERROR) << "error processing minidump for local crash report, ID "
+                     << local_report_id.ToString();
+      return ZX_ERR_INTERNAL;
+    }
+    minidump_annotations = crashpad::BreakpadHTTPFormParametersFromMinidump(
+        &minidump_process_snapshot);
+    final_annotations = &minidump_annotations;
+    if (!reader->SeekSet(start_offset)) {
+      database_->SkipReportUpload(
+          report->uuid,
+          crashpad::Metrics::CrashSkippedReason::kPrepareForUploadFailed);
+      FX_LOGS(ERROR) << "error processing minidump for local crash report, ID "
+                     << local_report_id.ToString();
+      return ZX_ERR_INTERNAL;
+    }
   }
 
   // We have to build the MIME multipart message ourselves as all the public
@@ -75,7 +118,7 @@ zx_status_t CrashpadAnalyzerImpl::UploadReport(
   // status nor the server report ID.
   crashpad::HTTPMultipartBuilder http_multipart_builder;
   http_multipart_builder.SetGzipEnabled(true);
-  for (const auto& kv : annotations) {
+  for (const auto& kv : *final_annotations) {
     http_multipart_builder.SetFormData(kv.first, kv.second);
   }
   for (const auto& kv : report->GetAttachments()) {
@@ -111,20 +154,6 @@ zx_status_t CrashpadAnalyzerImpl::UploadReport(
                 << server_report_id;
 
   return ZX_OK;
-}
-
-std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport>
-CrashpadAnalyzerImpl::GetUploadReport(const crashpad::UUID& local_report_id) {
-  std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport> report;
-  const crashpad::CrashReportDatabase::OperationStatus database_status =
-      database_->GetReportForUploading(local_report_id, &report);
-  if (database_status != crashpad::CrashReportDatabase::kNoError) {
-    FX_LOGS(ERROR) << "error loading local crash report, ID "
-                   << local_report_id.ToString() << " (" << database_status
-                   << ")";
-    return nullptr;
-  }
-  return report;
 }
 
 zx_status_t CrashpadAnalyzerImpl::HandleNativeException(
@@ -170,40 +199,11 @@ zx_status_t CrashpadAnalyzerImpl::HandleNativeException(
     return ZX_ERR_INTERNAL;
   }
 
-  // Read local crash report as an "upload" report.
-  std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport> report =
-      GetUploadReport(local_report_id);
-  if (!report) {
-    return ZX_ERR_INTERNAL;
-  }
-
   // For userspace, we read back the annotations from the minidump instead of
   // passing them as argument like for kernel crashes because the Crashpad
   // handler augmented them with the modules' annotations.
-  crashpad::FileReader* reader = report->Reader();
-  crashpad::FileOffset start_offset = reader->SeekGet();
-  crashpad::ProcessSnapshotMinidump minidump_process_snapshot;
-  if (!minidump_process_snapshot.Initialize(reader)) {
-    database_->SkipReportUpload(
-        report->uuid,
-        crashpad::Metrics::CrashSkippedReason::kPrepareForUploadFailed);
-    FX_LOGS(ERROR) << "error processing minidump for local crash report, ID "
-                   << local_report_id.ToString();
-    return ZX_ERR_INTERNAL;
-  }
-  const std::map<std::string, std::string> augmented_annotations =
-      crashpad::BreakpadHTTPFormParametersFromMinidump(
-          &minidump_process_snapshot);
-  if (!reader->SeekSet(start_offset)) {
-    database_->SkipReportUpload(
-        report->uuid,
-        crashpad::Metrics::CrashSkippedReason::kPrepareForUploadFailed);
-    FX_LOGS(ERROR) << "error processing minidump for local crash report, ID "
-                   << local_report_id.ToString();
-    return ZX_ERR_INTERNAL;
-  }
-
-  return UploadReport(std::move(report), augmented_annotations);
+  return UploadReport(local_report_id, /*annotations=*/nullptr,
+                      /*read_annotations_from_minidump=*/true);
 }
 
 zx_status_t CrashpadAnalyzerImpl::HandleManagedRuntimeException(
@@ -242,13 +242,8 @@ zx_status_t CrashpadAnalyzerImpl::HandleManagedRuntimeException(
     return ZX_ERR_INTERNAL;
   }
 
-  // Read local crash report as an "upload" report and upload it.
-  std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport>
-      upload_report = GetUploadReport(local_report_id);
-  if (!upload_report) {
-    return ZX_ERR_INTERNAL;
-  }
-  return UploadReport(std::move(upload_report), annotations);
+  return UploadReport(local_report_id, &annotations,
+                      /*read_annotations_from_minidump=*/false);
 }
 
 zx_status_t CrashpadAnalyzerImpl::ProcessKernelPanicCrashlog(
@@ -283,13 +278,8 @@ zx_status_t CrashpadAnalyzerImpl::ProcessKernelPanicCrashlog(
     return ZX_ERR_INTERNAL;
   }
 
-  // Read local crash report as an "upload" report and upload it.
-  std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport>
-      upload_report = GetUploadReport(local_report_id);
-  if (!upload_report) {
-    return ZX_ERR_INTERNAL;
-  }
-  return UploadReport(std::move(upload_report), annotations);
+  return UploadReport(local_report_id, &annotations,
+                      /*read_annotations_from_minidump=*/false);
 }
 
 CrashpadAnalyzerImpl::CrashpadAnalyzerImpl(
