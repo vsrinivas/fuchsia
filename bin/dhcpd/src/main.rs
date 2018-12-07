@@ -13,7 +13,7 @@ use {
     },
     failure::{Error, Fail, ResultExt},
     fuchsia_async::{net::UdpSocket, Executor, Interval},
-    fuchsia_syslog::{self as fx_log},
+    fuchsia_syslog::{self as fx_log, fx_log_info, fx_vlog},
     fuchsia_zircon::{self as zx, DurationNum},
     futures::{Future, StreamExt, TryFutureExt, TryStreamExt},
     getopts::Options,
@@ -23,7 +23,6 @@ use {
         sync::Mutex,
     },
 };
-#[macro_use] extern crate fuchsia_syslog;
 
 /// A buffer size in excess of the maximum allowable DHCP message size.
 const BUF_SZ: usize = 1024;
