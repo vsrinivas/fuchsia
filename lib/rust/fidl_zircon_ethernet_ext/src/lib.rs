@@ -18,6 +18,13 @@ impl From<fidl::MacAddress> for MacAddress {
     }
 }
 
+impl Into<fidl::MacAddress> for MacAddress {
+    fn into(self) -> fidl::MacAddress {
+        let Self { octets } = self;
+        fidl::MacAddress { octets }
+    }
+}
+
 impl std::fmt::Display for MacAddress {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let Self { octets } = self;
