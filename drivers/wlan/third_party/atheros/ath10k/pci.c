@@ -3066,8 +3066,8 @@ static zx_status_t ath10k_pci_set_channel(void* ctx, uint32_t options, wlan_chan
     struct ath10k* ar = ctx;
     if (!verify_started(ar)) { return ZX_ERR_BAD_STATE; }
 
-    ath10k_trace("setting channel (pri: %d, sec: %d, bw: %s)\n", chan->primary, chan->secondary80,
-                 cbw_as_str(chan->cbw));
+    ath10k_info("setting channel (pri: %d, sec: %d, bw: %s)\n", chan->primary, chan->secondary80,
+                cbw_as_str(chan->cbw));
     memcpy(&ar->rx_channel, chan, sizeof(wlan_channel_t));
     return ath10k_mac_assign_vif_chanctx(ar, chan);
 }

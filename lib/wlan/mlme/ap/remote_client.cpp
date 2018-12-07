@@ -1018,6 +1018,7 @@ wlan_assoc_ctx_t RemoteClient::BuildAssocContext(uint16_t aid) {
                                 // AP role). The field is mainly for client role. (Maybe we need it
                                 // in the future for Mesh role. Don't know yet) Thus, hard-code a
                                 // number here for ath10k AP mode only. See NET-1816.
+    assoc.phy = WLAN_PHY_ERP;   // Default vlaue. Will be overwritten below.
     assoc.chan = bss_->Chan();
 
     auto rates = bss_->Rates();
@@ -1031,6 +1032,7 @@ wlan_assoc_ctx_t RemoteClient::BuildAssocContext(uint16_t aid) {
     auto ht = bss_->Ht();
     if (ht.ready) {
         assoc.has_ht_cap = true;
+        assoc.phy = WLAN_PHY_HT;
         HtCapabilities ht_cap = BuildHtCapabilities(ht);
 
         assoc.ht_cap = ht_cap.ToDdk();

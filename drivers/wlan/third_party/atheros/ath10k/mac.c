@@ -142,6 +142,24 @@ static const struct ath10k_band ath10k_supported_bands[] = {
     },
 };
 
+// Gets the band ID from |channel| number.
+//
+// Returns: WLAN_BAND_COUNT if |channel| is not found in the band info.
+static enum Band chan_to_band(uint8_t channel) {
+    for(size_t band_idx = 0; band_idx < countof(ath10k_supported_bands); band_idx++) {
+        const struct ath10k_band* band = &ath10k_supported_bands[band_idx];
+
+        for(size_t chan_idx = 0; chan_idx < band->n_channels; chan_idx++) {
+            if (channel == band->channels[chan_idx].hw_value) {
+                return band->band_id;
+            }
+        }
+    }
+
+    ZX_DEBUG_ASSERT(false);  // This should not happen since MLME should honor what ath10k reports.
+    return WLAN_BAND_COUNT;  // Not found
+}
+
 static zx_status_t ath10k_add_interface(struct ath10k* ar, uint32_t vif_role);
 
 /*********/
@@ -515,50 +533,6 @@ static int ath10k_clear_vdev_key(struct ath10k_vif* arvif,
 /*********************/
 /* General utilities */
 /*********************/
-
-static inline enum wmi_phy_mode chan_to_phymode(wlan_channel_t* wlan_chan) {
-    enum wmi_phy_mode phymode = MODE_UNKNOWN;
-
-    if (wlan_chan->primary <= 14) {
-        switch (wlan_chan->cbw) {
-        case CBW20:
-            phymode = MODE_11NG_HT20;
-            break;
-        case CBW40ABOVE:
-        case CBW40BELOW:
-            phymode = MODE_11NG_HT40;
-            break;
-        default:
-            phymode = MODE_UNKNOWN;
-            break;
-        }
-    } else {
-        switch (wlan_chan->cbw) {
-        case CBW20:
-            phymode = MODE_11NA_HT20;
-            break;
-        case CBW40ABOVE:
-        case CBW40BELOW:
-            phymode = MODE_11NA_HT40;
-            break;
-        case CBW80:
-            phymode = MODE_11AC_VHT80;
-            break;
-        case CBW160:
-            phymode = MODE_11AC_VHT160;
-            break;
-        case CBW80P80:
-            phymode = MODE_11AC_VHT80_80;
-            break;
-        default:
-            phymode = MODE_UNKNOWN;
-            break;
-        }
-    }
-
-    COND_WARN(phymode == MODE_UNKNOWN);
-    return phymode;
-}
 
 static uint8_t ath10k_parse_mpdudensity(uint8_t mpdudensity) {
     /*
@@ -1377,6 +1351,82 @@ static zx_status_t ath10k_lookup_chan(uint8_t wlan_chan, const struct ath10k_cha
     return ZX_ERR_NOT_FOUND;
 }
 
+// Helper function to fill new center freq and phymode.
+// This is the original Linux's chan_to_phymode() plus the new center freq calculation.
+//
+// Note for the types of freq in this function. Actually uint16_t is large enough (see 'Mhz' in
+// garnet/lib/wlan/common/include/wlan/common/channel.h). However, wmi_channel_arg.band_center_freq1
+// is defined as uint32_t. So, |ptr_center_freq| is 'uint32_t*'.
+static inline zx_status_t set_center_freq_and_phymode(const wlan_channel_t* chandef,
+                                                      const uint16_t center_freq,
+                                                      uint32_t* ptr_center_freq,
+                                                      enum wmi_phy_mode* ptr_phymode) {
+    uint8_t primary_chan = chandef->primary;
+    enum Band band = chan_to_band(primary_chan);
+    enum CBW cbw = chandef->cbw;
+    uint16_t new_center_freq = 0;
+    enum wmi_phy_mode phymode = MODE_UNKNOWN;
+
+    switch (band) {
+    case WLAN_BAND_2GHZ:
+        switch (cbw) {
+        case CBW20:
+            new_center_freq = center_freq;
+            phymode = MODE_11NG_HT20;
+            break;
+        case CBW40ABOVE:
+            new_center_freq = center_freq + 10;
+            phymode = MODE_11NG_HT40;
+            break;
+        case CBW40BELOW:
+            new_center_freq = center_freq - 10;
+            phymode = MODE_11NG_HT40;
+            break;
+        default:
+            ath10k_err("attempt to start with invalid CBW %d at 2 GHz band\n", cbw);
+            return ZX_ERR_INVALID_ARGS;
+        }
+        break;
+
+    case WLAN_BAND_5GHZ:
+        switch (cbw) {
+        case CBW20:
+            new_center_freq = center_freq;
+            phymode = MODE_11NA_HT20;
+            break;
+        case CBW40ABOVE:
+            new_center_freq = center_freq + 10;
+            phymode = MODE_11NA_HT40;
+            break;
+        case CBW40BELOW:
+            new_center_freq = center_freq - 10;
+            phymode = MODE_11NA_HT40;
+            break;
+        case CBW80:
+        case CBW160:
+            // TODO(WLAN-834): Add support for VHT
+            return ZX_ERR_NOT_SUPPORTED;
+        case CBW80P80:
+            // TODO(WLAN-837): Returns 2 center freqs.
+            return ZX_ERR_NOT_SUPPORTED;
+        default:
+            ath10k_err("attempt to start with invalid CBW %d at 5 GHz band\n", cbw);
+            return ZX_ERR_INVALID_ARGS;
+        }
+        break;
+
+    default:
+        ath10k_err("Unsupported band %d\n", band);
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    ath10k_info("basic setting: phymode %s center_freq=%d-->%d\n",
+                ath10k_wmi_phymode_str(phymode),
+                center_freq, new_center_freq);
+    *ptr_center_freq = new_center_freq;
+    *ptr_phymode = phymode;
+    return ZX_OK;
+}
 static zx_status_t ath10k_vdev_start_restart(struct ath10k_vif* arvif, wlan_channel_t* chandef,
                                              bool restart) {
     struct ath10k* ar = arvif->ar;
@@ -1411,30 +1461,19 @@ static zx_status_t ath10k_vdev_start_restart(struct ath10k_vif* arvif, wlan_chan
 
     arg.channel.freq = primary_chan->center_freq;
 
-    switch (chandef->cbw) {
-    case CBW20:
-        arg.channel.band_center_freq1 = primary_chan->center_freq;
-        break;
-    case CBW40ABOVE:
-        arg.channel.band_center_freq1 = primary_chan->center_freq + 10;
-        break;
-    case CBW40BELOW:
-        arg.channel.band_center_freq1 = primary_chan->center_freq - 10;
-        break;
-    case CBW80:
-    case CBW80P80:
-        arg.channel.band_center_freq1 = primary_chan->center_freq + 30;
-        break;
-    case CBW160:
-        arg.channel.band_center_freq1 = primary_chan->center_freq + 70;
-        break;
-    default:
-        ZX_DEBUG_ASSERT(0);
-        ath10k_err("attempt to start vdev %d with invalid CBW %d\n", arvif->vdev_id, chandef->cbw);
-        return ZX_ERR_INVALID_ARGS;
+    // Set the default PHY mode for basic mode.
+    //
+    // For client role, the real phymode will be determined once we get association context.
+    //
+    // For AP role, this will be used for management frames only. For each client associated, the
+    // corresponding phymode will be specified in the association context.
+    status = set_center_freq_and_phymode(chandef,
+                                         primary_chan->center_freq,
+                                         &arg.channel.band_center_freq1,
+                                         &arg.channel.mode);
+    if (status != ZX_OK) {
+        return status;
     }
-
-    arg.channel.mode = chan_to_phymode(chandef);
 
     arg.channel.min_power = 0;
     arg.channel.max_power = primary_chan->max_power * 2;
@@ -2490,7 +2529,7 @@ static void ath10k_peer_assoc_h_vht(struct ath10k* ar,
     arg->peer_flags |= ar->wmi.peer_flags->vht;
 
 #if 0  // NEEDS PORTING
-    // TODO(NET-1973): 2GHz band supports VHT
+    // TODO(NET-1973): 2 GHz band supports VHT
     enum nl80211_band band = NL80211_BAND_2GHZ;
     if (band == NL80211_BAND_2GHZ) {
         arg->peer_flags |= ar->wmi.peer_flags->vht_2g;
@@ -2581,54 +2620,76 @@ static void ath10k_peer_assoc_h_qos(struct ath10k* ar,
                assoc->bssid, !!(arg->peer_flags & arvif->ar->wmi.peer_flags->qos));
 }
 
-#if 0  // NEEDS PORTING
-static bool ath10k_mac_sta_has_ofdm_only(struct ieee80211_sta* sta) {
-    return sta->supp_rates[NL80211_BAND_2GHZ] >>
-           ATH10K_MAC_FIRST_OFDM_RATE_IDX;
-}
-
-static enum wmi_phy_mode ath10k_mac_get_phymode_vht(struct ath10k* ar,
-        struct ieee80211_sta* sta) {
-    if (sta->bandwidth == IEEE80211_STA_RX_BW_160) {
-        switch (sta->vht_cap.cap & IEEE80211_VHT_CAP_SUPP_CHAN_WIDTH_MASK) {
-        case IEEE80211_VHT_CAP_SUPP_CHAN_WIDTH_160MHZ:
-                    return MODE_11AC_VHT160;
-        case IEEE80211_VHT_CAP_SUPP_CHAN_WIDTH_160_80PLUS80MHZ:
-            return MODE_11AC_VHT80_80;
-        default:
-            /* not sure if this is a valid case? */
-            return MODE_11AC_VHT160;
-        }
-    }
-
-    if (sta->bandwidth == IEEE80211_STA_RX_BW_80) {
+static enum wmi_phy_mode ath10k_mac_get_phymode_vht(enum CBW cbw) {
+    if (cbw == CBW160) {
+        return MODE_11AC_VHT160;
+    } else if (cbw == CBW80P80) {
+        return MODE_11AC_VHT80_80;
+    } else if (cbw == CBW80) {
         return MODE_11AC_VHT80;
-    }
-
-    if (sta->bandwidth == IEEE80211_STA_RX_BW_40) {
+    } else if (cbw == CBW40) {
         return MODE_11AC_VHT40;
-    }
-
-    if (sta->bandwidth == IEEE80211_STA_RX_BW_20) {
+    } else if (cbw == CBW20) {
         return MODE_11AC_VHT20;
     }
-
     return MODE_UNKNOWN;
 }
-#endif  // NEEDS PORTING
 
-static void ath10k_peer_assoc_h_phymode(struct ath10k* ar,
-                                        wlan_assoc_ctx_t* assoc,
-                                        struct wmi_peer_assoc_complete_arg* arg) {
-    enum wmi_phy_mode phymode = chan_to_phymode(&assoc->chan);
+static enum wmi_phy_mode ath10k_peer_assoc_h_phymode(wlan_assoc_ctx_t* assoc) {
+    enum wmi_phy_mode phymode = MODE_UNKNOWN;
+    enum Band band = chan_to_band(assoc->chan.primary);
+    enum CBW cbw = assoc->chan.cbw;
+
+    COND_WARN(__builtin_popcount(assoc->phy) != 1);  // Assume only one bit asserted.
+
+    switch (band) {
+    case WLAN_BAND_2GHZ:
+        if ((assoc->phy == WLAN_PHY_VHT) && assoc->has_vht_cap) {
+            if (cbw == CBW40ABOVE || cbw == CBW40BELOW) {
+                phymode = MODE_11AC_VHT40;
+            } else {
+                phymode = MODE_11AC_VHT20;
+            }
+        } else if ((assoc->phy == WLAN_PHY_HT) && assoc->has_ht_cap) {
+            if (cbw == CBW40ABOVE || cbw == CBW40BELOW) {
+                phymode = MODE_11NG_HT40;
+            } else {
+                phymode = MODE_11NG_HT20;
+            }
+        } else if (assoc->phy == WLAN_PHY_OFDM) {  // Has OFDM ONLY.
+            phymode = MODE_11G;
+        } else {
+            phymode = MODE_11B;
+        }
+        break;
+
+    case WLAN_BAND_5GHZ:
+        /*
+         * Check VHT first.
+         */
+        if ((assoc->phy == WLAN_PHY_VHT) && assoc->has_vht_cap) {
+            phymode = ath10k_mac_get_phymode_vht(assoc->chan.cbw);
+        } else if ((assoc->phy == WLAN_PHY_HT) && assoc->has_ht_cap) {
+            if (cbw == CBW40ABOVE || cbw == CBW40BELOW) {
+                phymode = MODE_11NA_HT40;
+            } else {
+                phymode = MODE_11NA_HT20;
+            }
+        } else {
+            phymode = MODE_11A;
+        }
+        break;
+
+    default:
+        ath10k_err("Unsupported WLAN band: %d\n", band);
+    }
 
     char ethaddr_str[ETH_ALEN * 3];
     ethaddr_sprintf(ethaddr_str, assoc->bssid);
-    ath10k_dbg(ar, ATH10K_DBG_MAC, "mac peer %s phymode %s\n",
-               ethaddr_str, ath10k_wmi_phymode_str(phymode));
+    ath10k_info("mac peer %s phymode %s\n", ethaddr_str, ath10k_wmi_phymode_str(phymode));
 
-    arg->peer_phymode = phymode;
     COND_WARN(phymode == MODE_UNKNOWN);
+    return phymode;
 }
 
 static zx_status_t ath10k_peer_assoc_prepare(struct ath10k* ar,
@@ -2645,7 +2706,7 @@ static zx_status_t ath10k_peer_assoc_prepare(struct ath10k* ar,
     ath10k_peer_assoc_h_ht(ar, assoc, arg);
     ath10k_peer_assoc_h_vht(ar, assoc, arg);
     ath10k_peer_assoc_h_qos(ar, assoc, arg);
-    ath10k_peer_assoc_h_phymode(ar, assoc, arg);
+    arg->peer_phymode = ath10k_peer_assoc_h_phymode(assoc);
 
     return 0;
 }
@@ -2867,7 +2928,6 @@ zx_status_t ath10k_mac_bss_assoc(struct ath10k* ar, wlan_assoc_ctx_t* assoc_ctx)
     }
 
     peer_arg.peer_flags |= ar->wmi.peer_flags->qos;
-    peer_arg.peer_phymode = chan_to_phymode(&ar->rx_channel);
 
     ret = ath10k_wmi_peer_create(ar, arvif->vdev_id, assoc_ctx->bssid, WMI_PEER_TYPE_BSS);
     if (ret != ZX_OK) {

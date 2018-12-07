@@ -38,7 +38,7 @@ enum CBW {
 
 typedef struct wlan_channel {
     uint8_t primary;
-    uint8_t cbw;  // Channel Bandwidth
+    uint8_t cbw;  // Channel band width. See enum CBW.
     uint8_t secondary80;
 } wlan_channel_t;
 
@@ -53,8 +53,8 @@ enum {
     // Bits 7-31 reserved
 };
 
-// PHY values may be used in a bitfield (e.g., device capabilities) or as a value (e.g., rx or tx
-// info).
+// PHY values may be used in a bitfield (e.g., device capabilities) or as a value (e.g., rx/tx
+// info and association context).
 enum PHY {
     WLAN_PHY_DSSS = (1 << 0),  // IEEE 802.11 for 1, 2 Mbps
     WLAN_PHY_CCK = (1 << 1),   // IEEE 802.11 for 5.5, 11 Mbps. ERP-CCK.
@@ -242,7 +242,7 @@ typedef struct wlan_info {
 // Some parameters are distinctively for Rx only, and some are Tx only.
 #define WLAN_MAC_MAX_SUPP_RATES 8
 #define WLAN_MAC_MAX_EXT_RATES 255
-#define WLAN_MAC_MAX_RATES 8 + 255
+#define WLAN_MAC_MAX_RATES (8 + 255)
 typedef struct wlan_assoc_ctx {
     uint8_t bssid[6];
     uint16_t aid;
