@@ -24,6 +24,7 @@ class GainControlTestBase : public gtest::RealLoopFixture {
   // Always augmented by child implementations that set up the API interface.
   virtual void SetUp() override;
   virtual bool ApiIsNull() = 0;
+  bool AudioIsBound() { return audio_.is_bound(); }
 
   void TearDown() final;
 

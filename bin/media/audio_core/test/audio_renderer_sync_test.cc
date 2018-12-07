@@ -30,11 +30,11 @@ class AudioRendererSyncTest : public gtest::RealLoopFixture {
 
     environment_services_ = component::GetEnvironmentServices();
     environment_services_->ConnectToService(audio_sync_.NewRequest());
-    ASSERT_TRUE(audio_sync_);
+    ASSERT_TRUE(audio_sync_.is_bound());
 
     ASSERT_EQ(ZX_OK, audio_sync_->CreateAudioRenderer(
                          audio_renderer_sync_.NewRequest()));
-    ASSERT_TRUE(audio_renderer_sync_);
+    ASSERT_TRUE(audio_renderer_sync_.is_bound());
   }
 
   std::shared_ptr<component::Services> environment_services_;
@@ -95,27 +95,33 @@ TEST_F(AudioRendererSyncTest, SetPcmFormat) {
 // Before setting format, PlayNoReply should cause a Disconnect.
 // GetMinLeadTime is our way of verifying whether the connection survived.
 TEST_F(AudioRendererSyncTest_Negative, PlayNoReplyNoFormatCausesDisconnect) {
+  int64_t min_lead_time = -1;
+  // First, make sure we still have a renderer at all.
+  ASSERT_EQ(ZX_OK, audio_renderer_sync_->GetMinLeadTime(&min_lead_time));
+
   EXPECT_EQ(ZX_OK,
             audio_renderer_sync_->PlayNoReply(fuchsia::media::NO_TIMESTAMP,
                                               fuchsia::media::NO_TIMESTAMP));
 
-  int64_t min_lead_time = -1;
   EXPECT_EQ(ZX_ERR_PEER_CLOSED,
             audio_renderer_sync_->GetMinLeadTime(&min_lead_time));
   // Although the connection has disconnected, the proxy should still exist.
-  EXPECT_TRUE(audio_renderer_sync_);
+  EXPECT_TRUE(audio_renderer_sync_.is_bound());
 }
 
 // Before setting format, PauseNoReply should cause a Disconnect.
 // GetMinLeadTime is our way of verifying whether the connection survived.
 TEST_F(AudioRendererSyncTest_Negative, PauseNoReplyWithoutFormat) {
+  int64_t min_lead_time = -1;
+  // First, make sure we still have a renderer at all.
+  ASSERT_EQ(ZX_OK, audio_renderer_sync_->GetMinLeadTime(&min_lead_time));
+
   EXPECT_EQ(ZX_OK, audio_renderer_sync_->PauseNoReply());
 
-  int64_t min_lead_time = -1;
   EXPECT_EQ(ZX_ERR_PEER_CLOSED,
             audio_renderer_sync_->GetMinLeadTime(&min_lead_time));
   // Although the connection has disconnected, the proxy should still exist.
-  EXPECT_TRUE(audio_renderer_sync_);
+  EXPECT_TRUE(audio_renderer_sync_.is_bound());
 }
 
 }  // namespace test

@@ -59,16 +59,17 @@ void AudioTest::SetUp() {
 
   environment_services_ = component::GetEnvironmentServices();
   environment_services_->ConnectToService(audio_.NewRequest());
-  ASSERT_TRUE(audio_);
-
   audio_.set_error_handler([this](zx_status_t error) {
     error_occurred_ = true;
     QuitLoop();
   });
+
+  ASSERT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected)) << kConnectionErr;
+  ASSERT_TRUE(audio_.is_bound());
 }
 
 void AudioTest::TearDown() {
-  EXPECT_FALSE(error_occurred_);
+  ASSERT_FALSE(error_occurred_);
 
   ::gtest::RealLoopFixture::TearDown();
 }
@@ -88,7 +89,14 @@ bool AudioTest::ReceiveNoDisconnectCallback() {
 // Register for notification of SystemGainMute changes; receive initial values
 // and set the system to a known baseline for gain/mute testing.
 void SystemGainMuteTest::SetUp() {
-  AudioTest::SetUp();
+  ::gtest::RealLoopFixture::SetUp();
+
+  environment_services_ = component::GetEnvironmentServices();
+  environment_services_->ConnectToService(audio_.NewRequest());
+  audio_.set_error_handler([this](zx_status_t error) {
+    error_occurred_ = true;
+    QuitLoop();
+  });
 
   audio_.events().SystemGainMuteChanged = [this](float gain_db, bool muted) {
     received_gain_db_ = gain_db;
@@ -108,6 +116,7 @@ void SystemGainMuteTest::SetUp() {
   // registering for the event the client has no way of learning the current
   // Gain|Mute settings until they are changed.
   bool timed_out = RunLoopWithTimeout(kDurationResponseExpected);
+  ASSERT_TRUE(audio_.is_bound());
 
   // Bail before the actual test cases, if we have no connection to service.
   ASSERT_FALSE(error_occurred_) << kConnectionErr;
@@ -189,21 +198,21 @@ TEST_F(AudioTest, CreateAudioRenderer) {
   audio_->CreateAudioRenderer(audio_renderer_.NewRequest());
   // Give time for Disconnect to occur, if it must.
   ASSERT_TRUE(ReceiveNoDisconnectCallback()) << kConnectionErr;
-  EXPECT_TRUE(audio_);
-  EXPECT_TRUE(audio_renderer_);
+  EXPECT_TRUE(audio_.is_bound());
+  EXPECT_TRUE(audio_renderer_.is_bound());
 
   // Validate that Audio persists without AudioRenderer.
   audio_renderer_.Unbind();
-  EXPECT_FALSE(audio_renderer_);
-  EXPECT_TRUE(ReceiveNoDisconnectCallback()) << kConnectionErr;
-  EXPECT_TRUE(audio_);
+  EXPECT_FALSE(audio_renderer_.is_bound());
+  EXPECT_TRUE(ReceiveNoDisconnectCallback());
+  EXPECT_TRUE(audio_.is_bound());
 
   // Validate AudioRenderer persists after Audio is unbound.
   audio_->CreateAudioRenderer(audio_renderer_.NewRequest());
   audio_.Unbind();
-  EXPECT_FALSE(audio_);
-  EXPECT_TRUE(ReceiveNoDisconnectCallback()) << kConnectionErr;
-  EXPECT_TRUE(audio_renderer_);
+  EXPECT_FALSE(audio_.is_bound());
+  EXPECT_TRUE(ReceiveNoDisconnectCallback());
+  EXPECT_TRUE(audio_renderer_.is_bound());
 }
 
 // Test creation and interface independence of AudioCapturer.
@@ -211,21 +220,21 @@ TEST_F(AudioTest, CreateAudioCapturer) {
   // Validate Audio can create AudioCapturer interface.
   audio_->CreateAudioCapturer(audio_capturer_.NewRequest(), false);
   ASSERT_TRUE(ReceiveNoDisconnectCallback()) << kConnectionErr;
-  EXPECT_TRUE(audio_) << kConnectionErr;
-  EXPECT_TRUE(audio_capturer_);
+  EXPECT_TRUE(audio_.is_bound());
+  EXPECT_TRUE(audio_capturer_.is_bound());
 
   // Validate that Audio persists without AudioCapturer.
   audio_capturer_.Unbind();
-  EXPECT_FALSE(audio_capturer_);
-  EXPECT_TRUE(ReceiveNoDisconnectCallback()) << kConnectionErr;
-  EXPECT_TRUE(audio_);
+  EXPECT_FALSE(audio_capturer_.is_bound());
+  EXPECT_TRUE(ReceiveNoDisconnectCallback());
+  EXPECT_TRUE(audio_.is_bound());
 
   // Validate AudioCapturer persists after Audio is unbound.
   audio_->CreateAudioCapturer(audio_capturer_.NewRequest(), true);
   audio_.Unbind();
-  EXPECT_FALSE(audio_);
-  EXPECT_TRUE(ReceiveNoDisconnectCallback()) << kConnectionErr;
-  EXPECT_TRUE(audio_capturer_);
+  EXPECT_FALSE(audio_.is_bound());
+  EXPECT_TRUE(ReceiveNoDisconnectCallback());
+  EXPECT_TRUE(audio_capturer_.is_bound());
 }
 
 // Test setting (and re-setting) the audio output routing policy.
@@ -233,19 +242,19 @@ TEST_F(AudioTest, SetRoutingPolicy) {
   audio_->SetRoutingPolicy(
       fuchsia::media::AudioOutputRoutingPolicy::ALL_PLUGGED_OUTPUTS);
   ASSERT_TRUE(ReceiveNoDisconnectCallback()) << kConnectionErr;
-  EXPECT_TRUE(audio_);
+  EXPECT_TRUE(audio_.is_bound());
 
   // Setting policy again should have no effect.
   audio_->SetRoutingPolicy(
       fuchsia::media::AudioOutputRoutingPolicy::ALL_PLUGGED_OUTPUTS);
-  EXPECT_TRUE(ReceiveNoDisconnectCallback()) << kConnectionErr;
-  EXPECT_TRUE(audio_);
+  EXPECT_TRUE(ReceiveNoDisconnectCallback());
+  EXPECT_TRUE(audio_.is_bound());
 
   // Setting policy to different mode.
   audio_->SetRoutingPolicy(
       fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT);
-  EXPECT_TRUE(ReceiveNoDisconnectCallback()) << kConnectionErr;
-  EXPECT_TRUE(audio_);
+  EXPECT_TRUE(ReceiveNoDisconnectCallback());
+  EXPECT_TRUE(audio_.is_bound());
 }
 
 //

@@ -28,7 +28,8 @@ class AudioSyncTest : public gtest::RealLoopFixture {
 
     environment_services_ = component::GetEnvironmentServices();
     environment_services_->ConnectToService(audio_sync_.NewRequest());
-    ASSERT_TRUE(audio_sync_) << "Unable to bind to AudioSync interface";
+    ASSERT_TRUE(audio_sync_.is_bound())
+        << "Unable to bind to AudioSync interface";
   }
 
   std::shared_ptr<component::Services> environment_services_;
@@ -51,17 +52,20 @@ TEST_F(AudioSyncTest, CreateAudioRenderer) {
   // Validate Audio can create AudioRenderer interface.
   EXPECT_EQ(ZX_OK, audio_sync_->CreateAudioRenderer(
                        audio_renderer_sync_.NewRequest()));
-  EXPECT_TRUE(audio_renderer_sync_);
+  EXPECT_TRUE(audio_renderer_sync_.is_bound());
+  EXPECT_TRUE(audio_sync_.is_bound());
 
   // Validate that Audio persists without AudioRenderer.
-  audio_renderer_sync_ = nullptr;
-  ASSERT_TRUE(audio_sync_);
+  audio_renderer_sync_.Unbind();
+  EXPECT_TRUE(audio_sync_.is_bound());
+  EXPECT_FALSE(audio_renderer_sync_.is_bound());
 
   // Validate AudioRenderer persists after Audio is unbound.
   EXPECT_EQ(ZX_OK, audio_sync_->CreateAudioRenderer(
                        audio_renderer_sync_.NewRequest()));
-  audio_sync_ = nullptr;
-  EXPECT_TRUE(audio_renderer_sync_);
+  audio_sync_.Unbind();
+  EXPECT_TRUE(audio_renderer_sync_.is_bound());
+  EXPECT_FALSE(audio_sync_.is_bound());
 }
 
 // Test creation and interface independence of AudioCapturer.
@@ -69,16 +73,19 @@ TEST_F(AudioSyncTest, CreateAudioCapturer) {
   // Validate Audio can create AudioCapturer interface.
   EXPECT_EQ(ZX_OK, audio_sync_->CreateAudioCapturer(
                        audio_capturer_sync_.NewRequest(), true));
-  EXPECT_TRUE(audio_capturer_sync_);
+  EXPECT_TRUE(audio_capturer_sync_.is_bound());
+  EXPECT_TRUE(audio_sync_.is_bound());
 
   // Validate that Audio persists without AudioCapturer.
-  audio_capturer_sync_ = nullptr;
-  ASSERT_TRUE(audio_sync_);
+  audio_capturer_sync_.Unbind();
+  EXPECT_TRUE(audio_sync_.is_bound());
+  EXPECT_FALSE(audio_capturer_sync_.is_bound());
 
   // Validate AudioCapturer persists after Audio is unbound.
   audio_sync_->CreateAudioCapturer(audio_capturer_sync_.NewRequest(), false);
-  audio_sync_ = nullptr;
-  EXPECT_TRUE(audio_capturer_sync_);
+  audio_sync_.Unbind();
+  EXPECT_TRUE(audio_capturer_sync_.is_bound());
+  EXPECT_FALSE(audio_sync_.is_bound());
 }
 
 // Test the setting of audio output routing policy.

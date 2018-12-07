@@ -48,27 +48,29 @@ class AudioRendererTest_Negative : public AudioRendererTest {
 void AudioRendererTest::SetUp() {
   ::gtest::RealLoopFixture::SetUp();
 
-  environment_services_ = component::GetEnvironmentServices();
-  environment_services_->ConnectToService(audio_.NewRequest());
-  ASSERT_TRUE(audio_);
-
   auto err_handler = [this](zx_status_t error) {
     error_occurred_ = true;
     QuitLoop();
   };
 
+  environment_services_ = component::GetEnvironmentServices();
+  environment_services_->ConnectToService(audio_.NewRequest());
   audio_.set_error_handler(err_handler);
 
-  audio_->CreateAudioRenderer(audio_renderer_.NewRequest());
-  ASSERT_TRUE(audio_renderer_);
+  ASSERT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected)) << kConnectionErr;
+  ASSERT_TRUE(audio_.is_bound());
 
+  audio_->CreateAudioRenderer(audio_renderer_.NewRequest());
   audio_renderer_.set_error_handler(err_handler);
+
+  ASSERT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected)) << kConnectionErr;
+  ASSERT_TRUE(audio_renderer_.is_bound());
 }
 
 void AudioRendererTest::TearDown() {
+  ASSERT_TRUE(audio_.is_bound());
   EXPECT_EQ(expect_error_, error_occurred_);
-  EXPECT_EQ(expect_renderer_, static_cast<bool>(audio_renderer_));
-  EXPECT_TRUE(audio_);
+  EXPECT_EQ(expect_renderer_, audio_renderer_.is_bound());
 
   ::gtest::RealLoopFixture::TearDown();
 }
@@ -230,7 +232,7 @@ TEST_F(AudioRendererTest, BindGainControl) {
   // Validate that AudioRenderer persists without GainControl.
   gain_control_.Unbind();
   EXPECT_FALSE(gain_control_);
-  EXPECT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected)) << kConnectionErr;
+  EXPECT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected));
   EXPECT_TRUE(audio_renderer_);
 
   // Validate GainControl persists after AudioRenderer is unbound.
@@ -241,7 +243,7 @@ TEST_F(AudioRendererTest, BindGainControl) {
   EXPECT_TRUE(gain_control_);
 
   // ...give GainControl interface a chance to disconnect...
-  EXPECT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected)) << kConnectionErr;
+  EXPECT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected));
   // ... and by now, it should be gone.
   EXPECT_FALSE(gain_control_);
 }

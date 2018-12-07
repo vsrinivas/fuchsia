@@ -20,18 +20,23 @@ namespace test {
 void GainControlTestBase::SetUp() {
   ::gtest::RealLoopFixture::SetUp();
 
-  environment_services_ = component::GetEnvironmentServices();
-  environment_services_->ConnectToService(audio_.NewRequest());
-  ASSERT_TRUE(audio_.is_bound());
-
   auto err_handler = [this](zx_status_t error) {
     error_occurred_ = true;
     QuitLoop();
   };
+
+  environment_services_ = component::GetEnvironmentServices();
+  environment_services_->ConnectToService(audio_.NewRequest());
   audio_.set_error_handler(err_handler);
+
+  ASSERT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected));
+  ASSERT_TRUE(AudioIsBound());
 }
 
 void GainControlTestBase::TearDown() {
+  // Base Audio interface should still survive even when the others are reset.
+  ASSERT_TRUE(AudioIsBound());
+
   // These expect_ vars indicate negative cases where we expect failure.
   EXPECT_EQ(ApiIsNull(), expect_null_api_);
 
@@ -40,9 +45,6 @@ void GainControlTestBase::TearDown() {
 
   EXPECT_EQ(error_occurred_2_, expect_error_2_);
   EXPECT_EQ(!gain_control_2_.is_bound(), expect_null_gain_control_2_);
-
-  // Base Audio interface should still survive even when the others are reset.
-  EXPECT_TRUE(audio_.is_bound());
 }
 
 void GainControlTestBase::SetUpRenderer() {
@@ -52,9 +54,10 @@ void GainControlTestBase::SetUpRenderer() {
   };
 
   audio_->CreateAudioRenderer(audio_renderer_.NewRequest());
-  ASSERT_TRUE(audio_renderer_.is_bound());
-
   audio_renderer_.set_error_handler(err_handler);
+
+  ASSERT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected));
+  ASSERT_TRUE(audio_renderer_.is_bound());
 }
 
 void GainControlTestBase::SetUpCapturer() {
@@ -64,9 +67,10 @@ void GainControlTestBase::SetUpCapturer() {
   };
 
   audio_->CreateAudioCapturer(audio_capturer_.NewRequest(), false);
-  ASSERT_TRUE(audio_capturer_.is_bound());
-
   audio_capturer_.set_error_handler(err_handler);
+
+  ASSERT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected));
+  ASSERT_TRUE(audio_capturer_.is_bound());
 }
 
 void GainControlTestBase::SetUpRenderer2() {
@@ -76,9 +80,10 @@ void GainControlTestBase::SetUpRenderer2() {
   };
 
   audio_->CreateAudioRenderer(audio_renderer_2_.NewRequest());
-  ASSERT_TRUE(audio_renderer_2_.is_bound());
-
   audio_renderer_2_.set_error_handler(err_handler);
+
+  ASSERT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected));
+  ASSERT_TRUE(audio_renderer_2_.is_bound());
 }
 
 void GainControlTestBase::SetUpCapturer2() {
@@ -88,18 +93,21 @@ void GainControlTestBase::SetUpCapturer2() {
   };
 
   audio_->CreateAudioCapturer(audio_capturer_2_.NewRequest(), false);
-  ASSERT_TRUE(audio_capturer_2_.is_bound());
-
   audio_capturer_2_.set_error_handler(err_handler);
+
+  ASSERT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected));
+  ASSERT_TRUE(audio_capturer_2_.is_bound());
 }
 
 void GainControlTestBase::SetUpGainControl() {
-  ASSERT_TRUE(gain_control_.is_bound());
   auto err_handler = [this](zx_status_t error) {
     error_occurred_ = true;
     QuitLoop();
   };
   gain_control_.set_error_handler(err_handler);
+
+  ASSERT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected));
+  ASSERT_TRUE(gain_control_.is_bound());
 
   gain_control_.events().OnGainMuteChanged = [this](float gain_db, bool muted) {
     received_gain_callback_ = true;
@@ -122,12 +130,14 @@ void GainControlTestBase::SetUpGainControlOnCapturer() {
 }
 
 void GainControlTestBase::SetUpGainControl2() {
-  ASSERT_TRUE(gain_control_2_.is_bound());
   auto err_handler = [this](zx_status_t error) {
     error_occurred_2_ = true;
     QuitLoop();
   };
   gain_control_2_.set_error_handler(err_handler);
+
+  ASSERT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected));
+  ASSERT_TRUE(gain_control_2_.is_bound());
 
   gain_control_2_.events().OnGainMuteChanged = [this](float gain_db,
                                                       bool muted) {
@@ -340,6 +350,8 @@ void GainControlTestBase::TestSetGainTooLow() {
 //
 void RenderGainControlTest::SetUp() {
   GainControlTestBase::SetUp();
+  if (!AudioIsBound())
+    return;
 
   SetUpRenderer();
   SetUpGainControlOnRenderer();
@@ -363,6 +375,8 @@ TEST_F(RenderGainControlTest, DuplicateSetMute) { TestDuplicateSetMute(); }
 //
 void CaptureGainControlTest::SetUp() {
   GainControlTestBase::SetUp();
+  if (!AudioIsBound())
+    return;
 
   SetUpCapturer();
   SetUpGainControlOnCapturer();
@@ -385,6 +399,8 @@ TEST_F(CaptureGainControlTest, DuplicateSetMute) { TestDuplicateSetMute(); }
 //
 void RenderGainControlTest_Negative::SetUp() {
   RenderGainControlTest::SetUp();
+  if (!AudioIsBound())
+    return;
 
   expect_null_api_ = true;
   expect_error_ = true;
@@ -400,6 +416,8 @@ TEST_F(RenderGainControlTest_Negative, SetGainTooLow) { TestSetGainTooLow(); }
 //
 void CaptureGainControlTest_Negative::SetUp() {
   CaptureGainControlTest::SetUp();
+  if (!AudioIsBound())
+    return;
 
   expect_null_api_ = true;
   expect_error_ = true;
@@ -531,6 +549,8 @@ bool SiblingGainControlsTest::ReceiveDisconnectCallback() {
 //
 void RendererTwoGainControlsTest::SetUp() {
   SiblingGainControlsTest::SetUp();
+  if (!AudioIsBound())
+    return;
 
   SetUpRenderer();
   SetUpGainControlOnRenderer();
@@ -555,6 +575,8 @@ TEST_F(RendererTwoGainControlsTest, DuplicateSetMute) {
 //
 void CapturerTwoGainControlsTest::SetUp() {
   SiblingGainControlsTest::SetUp();
+  if (!AudioIsBound())
+    return;
 
   SetUpCapturer();
   SetUpGainControlOnCapturer();
@@ -579,6 +601,8 @@ TEST_F(CapturerTwoGainControlsTest, DuplicateSetMute) {
 //
 void RendererTwoGainControlsTest_Negative::SetUp() {
   RendererTwoGainControlsTest::SetUp();
+  if (!AudioIsBound())
+    return;
 
   expect_null_api_ = true;
   expect_null_gain_control_ = true;
@@ -599,6 +623,8 @@ TEST_F(RendererTwoGainControlsTest_Negative, SetGainTooLow) {
 //
 void CapturerTwoGainControlsTest_Negative::SetUp() {
   CapturerTwoGainControlsTest::SetUp();
+  if (!AudioIsBound())
+    return;
 
   expect_null_api_ = true;
   expect_null_gain_control_ = true;
@@ -667,6 +693,8 @@ bool IndependentGainControlsTest::ReceiveDisconnectCallback() {
 //
 void TwoRenderersGainControlsTest::SetUp() {
   IndependentGainControlsTest::SetUp();
+  if (!AudioIsBound())
+    return;
 
   SetUpRenderer();
   SetUpGainControlOnRenderer();
@@ -687,6 +715,8 @@ TEST_F(TwoRenderersGainControlsTest, OtherInstanceReceivesNoMuteNotification) {
 //
 void RendererCapturerGainControlsTest::SetUp() {
   IndependentGainControlsTest::SetUp();
+  if (!AudioIsBound())
+    return;
 
   SetUpRenderer();
   SetUpGainControlOnRenderer();
@@ -709,6 +739,8 @@ TEST_F(RendererCapturerGainControlsTest,
 //
 void CapturerRendererGainControlsTest::SetUp() {
   IndependentGainControlsTest::SetUp();
+  if (!AudioIsBound())
+    return;
 
   SetUpCapturer();
   SetUpGainControlOnCapturer();
@@ -731,6 +763,8 @@ TEST_F(CapturerRendererGainControlsTest,
 //
 void TwoCapturersGainControlsTest::SetUp() {
   IndependentGainControlsTest::SetUp();
+  if (!AudioIsBound())
+    return;
 
   SetUpCapturer();
   SetUpGainControlOnCapturer();
@@ -751,6 +785,8 @@ TEST_F(TwoCapturersGainControlsTest, OtherInstanceReceivesNoMuteNotification) {
 //
 void TwoRenderersGainControlsTest_Negative::SetUp() {
   TwoRenderersGainControlsTest::SetUp();
+  if (!AudioIsBound())
+    return;
 
   expect_null_api_ = true;
   expect_error_ = true;
@@ -769,6 +805,8 @@ TEST_F(TwoRenderersGainControlsTest_Negative, SetGainTooLow) {
 //
 void RendererCapturerGainControlsTest_Negative::SetUp() {
   RendererCapturerGainControlsTest::SetUp();
+  if (!AudioIsBound())
+    return;
 
   expect_null_api_ = true;
   expect_error_ = true;
@@ -787,6 +825,8 @@ TEST_F(RendererCapturerGainControlsTest_Negative, SetGainTooLow) {
 //
 void CapturerRendererGainControlsTest_Negative::SetUp() {
   CapturerRendererGainControlsTest::SetUp();
+  if (!AudioIsBound())
+    return;
 
   expect_null_api_ = true;
   expect_error_ = true;
@@ -805,6 +845,8 @@ TEST_F(CapturerRendererGainControlsTest_Negative, SetGainTooLow) {
 //
 void TwoCapturersGainControlsTest_Negative::SetUp() {
   TwoCapturersGainControlsTest::SetUp();
+  if (!AudioIsBound())
+    return;
 
   expect_null_api_ = true;
   expect_error_ = true;
