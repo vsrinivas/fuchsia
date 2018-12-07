@@ -7,11 +7,32 @@ library fuchsia.net.stack;
 using fuchsia.net;
 using zircon.ethernet;
 
-/// Status constants
-/// The interface is enabled.
-const uint32 interfaceStatusEnabled = 0x01;
-/// The interface has a physical link.
-const uint32 interfaceStatusLinkUp = 0x02;
+enum PresenceStatus {
+    /// The interface is added.
+    ADDED = 1;
+    /// The interface is removed.
+    REMOVED = 2;
+};
+
+enum PhysicalStatus {
+    /// The link is not attached to the medium.
+    DOWN = 1;
+    /// The link is attached to the medium.
+    UP = 2;
+};
+
+enum EnablementStatus {
+    /// The interface is administratively disabled.
+    DISABLED = 1;
+    /// The interface is administratively enabled.
+    ENABLED = 2;
+};
+
+union InterfaceStatus {
+    PresenceStatus presence;
+    PhysicalStatus physical;
+    EnablementStatus enablement;
+};
 
 struct InterfaceAddress {
     /// The IP address of the interface.
@@ -19,9 +40,6 @@ struct InterfaceAddress {
 
     /// The length of the network portion of the interface IP address.
     uint8 prefixLen;
-
-    /// For point-to-point interfaces, the address of the remote peer.
-    fuchsia.net.IpAddress? peerAddress;
 };
 
 struct InterfaceInfo {
@@ -30,6 +48,11 @@ struct InterfaceInfo {
     /// subsequently re-added. It is not stable across netstack instances.
     uint64 id;
 
+    /// All info of an interface except the interface name.
+    InterfaceProperties properties;
+};
+
+struct InterfaceProperties {
     /// The topological path to the device, representing a stable identifier for the interface
     /// hardware.
     string path;
@@ -44,9 +67,11 @@ struct InterfaceInfo {
     /// zircon.ethernet.INFO_FEATURE_*.
     uint32 features;
 
-    /// The status of the interface. This is a bitfield containing the "Status constants" in this
-    /// file.
-    uint32 status;
+    /// The enablement status of the interface.
+    EnablementStatus enablementStatus;
+
+    /// The physcial link status of the interface.
+    PhysicalStatus physicalStatus;
 
     /// The list of addresses currently assigned to the interface.
     vector<InterfaceAddress> addresses;
@@ -71,35 +96,15 @@ struct ForwardingEntry {
     ForwardingDestination destination;
 };
 
-enum InterfaceChangeEvent {
-    /// The device was added to the system.
-    added = 1;
-
-    /// The device was removed from the system.
-    removed = 2;
-
-    /// The device was enabled.
-    enabled = 3;
-
-    /// The device was disabled.
-    disabled = 4;
-
-    /// The device has a link to the medium on which it is attached.
-    linkUp = 5;
-
-    /// The device does not have a link to the medium on which it is attached.
-    linkDown = 6;
-};
-
 struct InterfaceStatusChange {
     /// The opaque identifier of the device that had its status change.
     uint64 id;
 
-    /// The event representing the status change.
-    InterfaceChangeEvent event;
+    /// The new status.
+    InterfaceStatus status;
 };
 
-union InterfaceAddressChangeEvent {
+union InterfaceAddressDiff {
     InterfaceAddress added;
     InterfaceAddress removed;
 };
@@ -108,19 +113,19 @@ struct InterfaceAddressChange {
     /// The opaque identifier of the device that had its address change.
     uint64 id;
 
-    /// The event representing the address change.
-    InterfaceAddressChangeEvent event;
+    /// The diff representing the address change.
+    InterfaceAddressDiff diff;
 };
 
 enum ErrorType {
-    internal = 1;
-    notSupported = 2;
-    invalidArgs = 10;
-    badState = 20;
-    timedOut = 21;
-    notFound = 25;
-    alreadyExists = 26;
-    io = 40;
+    INTERNAL = 1;
+    NOT_SUPPORTED = 2;
+    INVALID_ARGS = 3;
+    BAD_STATE = 4;
+    TIME_OUT = 5;
+    NOT_FOUND = 6;
+    ALREADY_EXISTS = 7;
+    IO = 8;
 };
 
 struct Error {
@@ -169,6 +174,7 @@ interface Stack {
     DelForwardingEntry(fuchsia.net.Subnet subnet) -> (Error? err);
 
     /// Events
+
     /// A status change event is triggered whenever an interface's status changes.
     -> OnInterfaceStatusChange(InterfaceStatusChange info);
 
