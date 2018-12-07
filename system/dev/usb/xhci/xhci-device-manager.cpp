@@ -430,12 +430,12 @@ static zx_status_t xhci_stop_endpoint(xhci_t* xhci, uint32_t slot_id, int ep_ind
     xhci_usb_request_internal_t* req_int = nullptr;
     while ((req_int = list_remove_head_type(&ep->pending_reqs,
                                             xhci_usb_request_internal_t, node)) != nullptr) {
-        req = XHCI_INTERNAL_TO_USB_REQ(req_int, xhci->req_int_off);
+        req = XHCI_INTERNAL_TO_USB_REQ(req_int);
         usb_request_complete(req, complete_status, 0, req_int->complete_cb, req_int->cookie);
     }
     while ((req_int = list_remove_head_type(&ep->queued_reqs,
                                             xhci_usb_request_internal_t, node)) != nullptr) {
-        req = XHCI_INTERNAL_TO_USB_REQ(req_int, xhci->req_int_off);
+        req = XHCI_INTERNAL_TO_USB_REQ(req_int);
         usb_request_complete(req, complete_status, 0, req_int->complete_cb, req_int->cookie);
     }
 

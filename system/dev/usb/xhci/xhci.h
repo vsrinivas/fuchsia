@@ -90,9 +90,9 @@ typedef struct xhci_usb_request_internal {
      list_node_t node;
 } xhci_usb_request_internal_t;
 
-#define USB_REQ_TO_XHCI_INTERNAL(req, size) \
-    ((xhci_usb_request_internal_t *)((uintptr_t)(req) + (size)))
-#define XHCI_INTERNAL_TO_USB_REQ(ctx, size) ((usb_request_t *)((uintptr_t)(ctx) - (size)))
+#define USB_REQ_TO_XHCI_INTERNAL(req) \
+    ((xhci_usb_request_internal_t *)((uintptr_t)(req) + sizeof(usb_request_t)))
+#define XHCI_INTERNAL_TO_USB_REQ(ctx) ((usb_request_t *)((uintptr_t)(ctx) - sizeof(usb_request_t)))
 
 typedef struct xhci xhci_t;
 
@@ -188,9 +188,6 @@ struct xhci {
     list_node_t command_queue;
     mtx_t command_queue_mutex;
     sync_completion_t command_queue_completion;
-
-    //offset of xhci internal in usb_request_t.
-    uint32_t req_int_off;
 
     // DMA buffers used by xhci_device_thread in xhci-device-manager.c
     uint8_t* input_context;

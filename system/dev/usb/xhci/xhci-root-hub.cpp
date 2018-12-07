@@ -318,7 +318,7 @@ void xhci_stop_root_hubs(xhci_t* xhci) {
         xhci_root_hub_t* rh = &xhci->root_hubs[i];
         while ((req_int = list_remove_tail_type(&rh->pending_intr_reqs,
                                                 xhci_usb_request_internal_t, node)) != nullptr) {
-            req = XHCI_INTERNAL_TO_USB_REQ(req_int, xhci->req_int_off);
+            req = XHCI_INTERNAL_TO_USB_REQ(req_int);
             usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0, req_int->complete_cb,
                                  req_int->cookie);
         }
@@ -330,7 +330,7 @@ static zx_status_t xhci_rh_get_descriptor(xhci_t* xhci, uint8_t request_type, xh
                                           usb_request_t* req) {
     uint8_t type = request_type & USB_TYPE_MASK;
     uint8_t recipient = request_type & USB_RECIP_MASK;
-    xhci_usb_request_internal_t* req_int = USB_REQ_TO_XHCI_INTERNAL(req, xhci->req_int_off);
+    xhci_usb_request_internal_t* req_int = USB_REQ_TO_XHCI_INTERNAL(req);
 
     if (type == USB_TYPE_STANDARD && recipient == USB_RECIP_DEVICE) {
         auto desc_type = static_cast<uint8_t>(value >> 8);
@@ -387,7 +387,7 @@ static zx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_
     uint8_t request = setup->bRequest;
     uint16_t value = le16toh(setup->wValue);
     uint16_t index = le16toh(setup->wIndex);
-    xhci_usb_request_internal_t* req_int = USB_REQ_TO_XHCI_INTERNAL(req, xhci->req_int_off);
+    xhci_usb_request_internal_t* req_int = USB_REQ_TO_XHCI_INTERNAL(req);
 
     zxlogf(SPEW, "xhci_rh_control type: 0x%02X req: %d value: %d index: %d length: %d\n",
             request_type, request, value, index, le16toh(setup->wLength));
@@ -484,7 +484,7 @@ static void xhci_rh_handle_intr_req(xhci_t* xhci, xhci_root_hub_t* rh, usb_reque
 
     if (have_status) {
         size_t length = req->header.length;
-        xhci_usb_request_internal_t* req_int = USB_REQ_TO_XHCI_INTERNAL(req, xhci->req_int_off);
+        xhci_usb_request_internal_t* req_int = USB_REQ_TO_XHCI_INTERNAL(req);
         if (length > sizeof(status_bits)) length = sizeof(status_bits);
         usb_request_copy_to(req, status_bits, length, 0);
         usb_request_complete(req, ZX_OK, length, req_int->complete_cb, req_int->cookie);
@@ -498,7 +498,7 @@ zx_status_t xhci_rh_usb_request_queue(xhci_t* xhci, usb_request_t* req, int rh_i
     zxlogf(SPEW, "xhci_rh_usb_request_queue rh_index: %d\n", rh_index);
 
     xhci_root_hub_t* rh = &xhci->root_hubs[rh_index];
-    xhci_usb_request_internal_t* req_int = USB_REQ_TO_XHCI_INTERNAL(req, xhci->req_int_off);
+    xhci_usb_request_internal_t* req_int = USB_REQ_TO_XHCI_INTERNAL(req);
 
     uint8_t ep_index = xhci_endpoint_index(req->header.ep_address);
     if (ep_index == 0) {

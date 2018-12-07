@@ -154,8 +154,7 @@ zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
     mtx_init(&xhci->input_context_lock, mtx_plain);
     sync_completion_reset(&xhci->command_queue_completion);
 
-    xhci->req_int_off = sizeof(usb_request_t);
-    usb_request_pool_init(&xhci->free_reqs, xhci->req_int_off +
+    usb_request_pool_init(&xhci->free_reqs, sizeof(usb_request_t) +
                           offsetof(xhci_usb_request_internal_t, node));
 
     xhci->cap_regs = (xhci_cap_regs_t*)xhci->mmio.vaddr;
@@ -483,14 +482,14 @@ static void xhci_slot_stop(xhci_slot_t* slot, xhci_t* xhci) {
             while ((req_int = list_remove_head_type(&ep->pending_reqs,
                                                     xhci_usb_request_internal_t,
                                                     node)) != nullptr) {
-                req = XHCI_INTERNAL_TO_USB_REQ(req_int, xhci->req_int_off);
+                req = XHCI_INTERNAL_TO_USB_REQ(req_int);
                 usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0, req_int->complete_cb,
                                      req_int->cookie);
             }
             while ((req_int = list_remove_head_type(&ep->queued_reqs,
                                                     xhci_usb_request_internal_t,
                                                     node)) != nullptr) {
-                req = XHCI_INTERNAL_TO_USB_REQ(req_int, xhci->req_int_off);
+                req = XHCI_INTERNAL_TO_USB_REQ(req_int);
                 usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0, req_int->complete_cb,
                                      req_int->cookie);
             }
@@ -669,19 +668,19 @@ void xhci_handle_interrupt(xhci_t* xhci, uint32_t interrupter) {
 }
 
 bool xhci_add_to_list_tail(xhci_t* xhci, list_node_t* list, usb_request_t* req) {
-    uint64_t node_offset = xhci->req_int_off + offsetof(xhci_usb_request_internal_t, node);
+    uint64_t node_offset = sizeof(usb_request_t) + offsetof(xhci_usb_request_internal_t, node);
     list_add_tail(list, (list_node_t*)((uintptr_t)req + node_offset));
     return true;
 }
 
 bool xhci_add_to_list_head(xhci_t* xhci, list_node_t* list, usb_request_t* req) {
-    uint64_t node_offset = xhci->req_int_off + offsetof(xhci_usb_request_internal_t, node);
+    uint64_t node_offset = sizeof(usb_request_t) + offsetof(xhci_usb_request_internal_t, node);
     list_add_head(list, (list_node_t*)((uintptr_t)req + node_offset));
     return true;
 }
 
 bool xhci_remove_from_list_head(xhci_t* xhci, list_node_t* list, usb_request_t** req) {
-    uint64_t node_offset = xhci->req_int_off + offsetof(xhci_usb_request_internal_t, node);
+    uint64_t node_offset = sizeof(usb_request_t) + offsetof(xhci_usb_request_internal_t, node);
     list_node_t* node = list_remove_head(list);
     if (!node) {
       *req = NULL;
@@ -692,7 +691,7 @@ bool xhci_remove_from_list_head(xhci_t* xhci, list_node_t* list, usb_request_t**
 }
 
 bool xhci_remove_from_list_tail(xhci_t* xhci, list_node_t* list, usb_request_t** req) {
-    uint64_t node_offset = xhci->req_int_off + offsetof(xhci_usb_request_internal_t, node);
+    uint64_t node_offset = sizeof(usb_request_t) + offsetof(xhci_usb_request_internal_t, node);
     list_node_t* node = list_remove_tail(list);
     if (!node) {
       *req = NULL;
@@ -703,7 +702,7 @@ bool xhci_remove_from_list_tail(xhci_t* xhci, list_node_t* list, usb_request_t**
 }
 
 void xhci_delete_req_node(xhci_t* xhci, usb_request_t* req) {
-    uint64_t node_offset = xhci->req_int_off + offsetof(xhci_usb_request_internal_t, node);
+    uint64_t node_offset = sizeof(usb_request_t) + offsetof(xhci_usb_request_internal_t, node);
     list_node_t* node = (list_node_t*)((uintptr_t)req + node_offset);
     list_delete(node);
 }

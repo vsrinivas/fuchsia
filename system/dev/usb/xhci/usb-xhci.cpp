@@ -165,7 +165,7 @@ void xhci_request_queue(xhci_t* xhci, usb_request_t* req, usb_request_complete_c
                         void* cookie) {
     zx_status_t status;
 
-    xhci_usb_request_internal_t* req_int = USB_REQ_TO_XHCI_INTERNAL(req, xhci->req_int_off);
+    xhci_usb_request_internal_t* req_int = USB_REQ_TO_XHCI_INTERNAL(req);
     req_int->complete_cb = cb;
     req_int->cookie = cookie;
     if (req->header.length > xhci_get_max_transfer_size(xhci->zxdev, req->header.device_id,

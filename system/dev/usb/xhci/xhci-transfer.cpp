@@ -156,7 +156,7 @@ zx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint8_t ep_addre
     // call complete callbacks out of the lock
     while ((req_int = list_remove_head_type(&completed_reqs,
                                             xhci_usb_request_internal_t, node)) != nullptr) {
-        req = XHCI_INTERNAL_TO_USB_REQ(req_int, xhci->req_int_off);
+        req = XHCI_INTERNAL_TO_USB_REQ(req_int);
         usb_request_complete(req, req->response.status, req->response.actual,
                              req_int->complete_cb, req_int->cookie);
     }
@@ -430,7 +430,7 @@ zx_status_t xhci_queue_transfer(xhci_t* xhci, usb_request_t* req) {
     // call complete callbacks out of the lock
     while ((req_int = list_remove_head_type(&completed_reqs,
                                             xhci_usb_request_internal_t, node)) != nullptr) {
-        req = XHCI_INTERNAL_TO_USB_REQ(req_int, xhci->req_int_off);
+        req = XHCI_INTERNAL_TO_USB_REQ(req_int);
         usb_request_complete(req, req->response.status, req->response.actual,
                              req_int->complete_cb, req_int->cookie);
     }
@@ -516,7 +516,7 @@ zx_status_t xhci_cancel_transfers(xhci_t* xhci, uint32_t slot_id, uint32_t ep_in
     // call complete callbacks out of the lock
     while ((req_int = list_remove_head_type(&completed_reqs,
                                             xhci_usb_request_internal_t, node)) != NULL) {
-        req = XHCI_INTERNAL_TO_USB_REQ(req_int, xhci->req_int_off);
+        req = XHCI_INTERNAL_TO_USB_REQ(req_int);
         usb_request_complete(req, req->response.status, req->response.actual,
                              req_int->complete_cb, req_int->cookie);
     }
@@ -772,7 +772,7 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
     usb_request_t* test;
     xhci_usb_request_internal_t* req_int = nullptr;
     list_for_every_entry(&ep->pending_reqs, req_int, xhci_usb_request_internal_t, node) {
-        test = XHCI_INTERNAL_TO_USB_REQ(req_int, xhci->req_int_off);
+        test = XHCI_INTERNAL_TO_USB_REQ(req_int);
         if (test == req) {
             found_req = true;
             break;
@@ -816,7 +816,7 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
     // call complete callbacks out of the lock
     while ((req_int = list_remove_head_type(&completed_reqs,
                                              xhci_usb_request_internal_t, node)) != NULL) {
-        req = XHCI_INTERNAL_TO_USB_REQ(req_int, xhci->req_int_off);
+        req = XHCI_INTERNAL_TO_USB_REQ(req_int);
         usb_request_complete(req, req->response.status, req->response.actual,
                              req_int->complete_cb, req_int->cookie);
     }
