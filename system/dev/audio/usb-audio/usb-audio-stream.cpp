@@ -138,6 +138,11 @@ zx_status_t UsbAudioStream::Bind() {
     return status;
 }
 
+void UsbAudioStream::RequestCompleteCallback(usb_request_t* request, void* cookie) {
+    ZX_DEBUG_ASSERT(cookie != nullptr);
+    reinterpret_cast<UsbAudioStream*>(cookie)->RequestComplete(request);
+}
+
 void UsbAudioStream::ComputePersistentUniqueId() {
     // Do the best that we can to generate a persistent ID unique to this audio
     // stream by blending information from a number of sources.  In particular,
@@ -1123,7 +1128,8 @@ void UsbAudioStream::QueueRequestLocked() {
 
     req->header.frame = usb_frame_num_++;
     req->header.length = todo;
-    usb_request_queue(&parent_.usb_proto(), req);
+    usb_request_queue(&parent_.usb_proto(), req,
+                      UsbAudioStream::RequestCompleteCallback, this);
 }
 
 void UsbAudioStream::CompleteRequestLocked(usb_request_t* req) {

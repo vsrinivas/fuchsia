@@ -90,6 +90,11 @@ TestRequest::~TestRequest() {
     }
 }
 
+void TestRequest::RequestCompleteCallback(usb_request_t* request, void* cookie) {
+    ZX_DEBUG_ASSERT(cookie != nullptr);
+    sync_completion_signal(reinterpret_cast<sync_completion_t*>(cookie));
+}
+
 zx_status_t TestRequest::WaitComplete(usb_protocol_t* usb) {
     usb_request_t* req = Get();
     zx_status_t status = sync_completion_wait(&completion_, ZX_SEC(kReqTimeoutSecs));
@@ -200,7 +205,8 @@ void UsbTester::QueueTestReqs(const fbl::Vector<TestRequest>& test_reqs,
             usb_req->header.frame = start_frame;
             first = false;
         }
-        usb_request_queue(&usb_, usb_req);
+        usb_request_queue(&usb_, usb_req, test_req.GetCompleteCb(),
+                          test_req.GetCompletionEvent());
     }
 }
 
@@ -270,8 +276,10 @@ zx_status_t UsbTester::BulkLoopback(const zircon_usb_tester_TestParams* params,
     if (status != ZX_OK) {
         return status;
     }
-    usb_request_queue(&usb_, out_req->Get());
-    usb_request_queue(&usb_, in_req->Get());
+    usb_request_queue(&usb_, out_req->Get(), out_req->GetCompleteCb(),
+                      out_req->GetCompletionEvent());
+    usb_request_queue(&usb_, in_req->Get(), in_req->GetCompleteCb(),
+                      in_req->GetCompletionEvent());
 
     zx_status_t out_status = out_req->WaitComplete(&usb_);
     zx_status_t in_status = in_req->WaitComplete(&usb_);

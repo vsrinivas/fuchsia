@@ -161,7 +161,7 @@ static zx_status_t usb_midi_sink_write(void* ctx, const void* data, size_t lengt
 
         usb_request_copy_to(req, buffer, 4, 0);
         req->header.length = 4;
-        usb_request_queue(&sink->usb, req);
+        usb_request_queue(&sink->usb, req, usb_midi_sink_write_complete, sink);
 
         src += message_length;
         length -= message_length;

@@ -77,6 +77,9 @@ typedef struct txn_info {
     list_node_t node;
 } txn_info_t;
 
+static void ax88772b_interrupt_complete(usb_request_t* request, void* cookie);
+static void ax88772b_write_complete(usb_request_t* request, void* cookie);
+
 static zx_status_t ax88772b_set_value(ax88772b_t* eth, uint8_t request, uint16_t value) {
     return usb_control(&eth->usb, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
                        request, value, 0, NULL, 0, ZX_TIME_INFINITE, NULL);
@@ -154,7 +157,7 @@ static zx_status_t ax88772b_wait_for_phy(ax88772b_t* eth) {
 static void queue_interrupt_requests_locked(ax88772b_t* eth) {
     usb_request_t* req;
     while ((req = usb_req_list_remove_head(&eth->free_intr_reqs, eth->parent_req_size)) != NULL) {
-        usb_request_queue(&eth->usb, req);
+        usb_request_queue(&eth->usb, req, ax88772b_interrupt_complete, eth);
     }
 }
 
@@ -220,7 +223,7 @@ static zx_status_t ax88772b_send(ax88772b_t* eth, usb_request_t* request, ethmac
     request->header.length = length + ETH_HEADER_SIZE;
 
     zx_nanosleep(zx_deadline_after(ZX_USEC(eth->tx_endpoint_delay)));
-    usb_request_queue(&eth->usb, request);
+    usb_request_queue(&eth->usb, request, ax88772b_write_complete, eth);
     return ZX_OK;
 }
 
@@ -249,7 +252,7 @@ static void ax88772b_read_complete(usb_request_t* request, void* cookie) {
 
     if (eth->online) {
         zx_nanosleep(zx_deadline_after(ZX_USEC(eth->rx_endpoint_delay)));
-        usb_request_queue(&eth->usb, request);
+        usb_request_queue(&eth->usb, request, ax88772b_read_complete, eth);
     } else {
         zx_status_t status = usb_req_list_add_head(&eth->free_read_reqs, request,
                                                    eth->parent_req_size);
@@ -330,7 +333,7 @@ static void ax88772b_interrupt_complete(usb_request_t* request, void* cookie) {
                                            node) {
                     list_delete(&req_int->node);
                     req = REQ_INTERNAL_TO_USB_REQ(req_int, eth->parent_req_size);
-                    usb_request_queue(&eth->usb, req);
+                    usb_request_queue(&eth->usb, req, ax88772b_read_complete, eth);
                 }
             } else if (!online && was_online) {
                 if (eth->ifc.ops) {
