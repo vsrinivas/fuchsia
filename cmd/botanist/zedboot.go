@@ -273,26 +273,46 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, nodename string, cmdlin
 	}
 	log.Printf("copying test output\n")
 
-	// Copy test output from the node.
-	for _, output := range result.Outputs {
-		if err = botanist.WriteFileToTar(client, tftpAddr, tw, cmd.testResultsDir, output); err != nil {
-			return err
+	// Tar in a subroutine while busy-printing so that we do not hit an i/o timeout when
+	// dealing with large files.
+	c := make(chan error)
+	go func() {
+		// Copy test output from the node.
+		for _, output := range result.Outputs {
+			if err = botanist.WriteFileToTar(client, tftpAddr, tw, cmd.testResultsDir, output); err != nil {
+				c <- err
+				return
+			}
 		}
-	}
-	for _, test := range result.Tests {
-		if err = botanist.WriteFileToTar(client, tftpAddr, tw, cmd.testResultsDir, test.OutputFile); err != nil {
-			return err
-		}
-		// Copy data sinks if any are present.
-		for _, sinks := range test.DataSinks {
-			for _, sink := range sinks {
-				if err = botanist.WriteFileToTar(client, tftpAddr, tw, cmd.testResultsDir, sink.File); err != nil {
-					return err
+		for _, test := range result.Tests {
+			if err = botanist.WriteFileToTar(client, tftpAddr, tw, cmd.testResultsDir, test.OutputFile); err != nil {
+				c <- err
+				return
+			}
+			// Copy data sinks if any are present.
+			for _, sinks := range test.DataSinks {
+				for _, sink := range sinks {
+					if err = botanist.WriteFileToTar(client, tftpAddr, tw, cmd.testResultsDir, sink.File); err != nil {
+						c <- err
+						return
+					}
 				}
 			}
 		}
+		c <- nil
+	}()
+
+	log.Printf("tarring test output...")
+	ticker := time.NewTicker(5 * time.Second)
+	for {
+		select {
+		case err := <-c:
+			ticker.Stop()
+			return err
+		case <-ticker.C:
+			log.Printf("...")
+		}
 	}
-	return nil
 }
 
 func (cmd *ZedbootCommand) fastbootToZedboot(ctx context.Context) error {
