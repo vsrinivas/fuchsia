@@ -87,12 +87,15 @@ compile flag to enable it: `ENABLE_DRIVER_TRACING=true`,
 it also requires an extra kernel command line flag to enable it:
 `driver.tracing.enable=1`
 
+`ENABLE_DRIVER_TRACING=true` is now the default. To disable driver tracing,
+pass `ENABLE_DRIVER_TRACING=false` to make.
+
 Example:
 
-First build with driver tracing enabled:
+First build:
 
 ```sh
-$ fx set $arch --zircon-arg ENABLE_DRIVER_TRACING=true
+$ fx set $arch
 $ fx build-zircon
 $ fx build
 ```
