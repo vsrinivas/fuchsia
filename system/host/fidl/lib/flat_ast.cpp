@@ -951,41 +951,19 @@ bool Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_
             return false;
         auto attributes = std::move(member->attributes);
         members.emplace_back(location, std::move(value), std::move(attributes));
-    }
-    auto type = types::PrimitiveSubtype::kUint32;
-    if (enum_declaration->maybe_subtype) {
-        auto location = enum_declaration->maybe_subtype->location();
-        Name subtype_name;
-        if (!CompileCompoundIdentifier(enum_declaration->maybe_subtype->identifier.get(),
-                                       location, &subtype_name)) {
-            return false;
-        }
-        auto primitive_type = LookupPrimitiveType(subtype_name);
-        if (primitive_type == nullptr) {
-            std::string message("enums may only be of primitive types, found ");
-            message += NameName(subtype_name, ".", "/");
-            return Fail(location, message);
-        }
-        type = primitive_type->subtype;
+        // TODO(pascallouis): right now, members are not registered. Look into
+        // registering them, potentially under the enum name qualifier such as
+        // <name_of_enum>.<name_of_member>.
     }
 
-    auto attributes = std::move(enum_declaration->attributes);
-    auto name = Name(this, enum_declaration->identifier->location());
-
-    enum_declarations_.push_back(
-        std::make_unique<Enum>(std::move(attributes), std::move(name), type, std::move(members)));
+    enum_declarations_.push_back(std::make_unique<Enum>(
+        std::move(enum_declaration->attributes),
+        Name(this, enum_declaration->identifier->location()),
+        std::move(enum_declaration->maybe_subtype),
+        std::move(members)));
     if (!RegisterDecl(enum_declarations_.back().get()))
         return false;
 
-    // TODO(pascallouis): right now, members are not registered. Look into
-    // registering them, potentially under the enum name qualifier such as
-    // <name_of_enum>.<name_of_member>.
-    //
-    // When doing this, change type ownership to be at library level, rather
-    // than node level, and change references from std::unique_ptr<Type> to
-    // const Type* throughout raw and flat nodes. Otherwhise, it's that much
-    // harder to create inferred types, and share types, e.g. here between the
-    // enum decl and the multiple const decl for each member.
     return true;
 }
 
@@ -1228,6 +1206,7 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
 
 bool Library::ResolveConstant(Constant* constant, const Type* type) {
     assert(constant != nullptr);
+
     if (constant->IsResolved())
         return true;
 
@@ -1509,7 +1488,7 @@ const Type* Library::TypeResolve(const Type* type) {
         // forbidding that out-of-range values be assignable to this enum in
         // const declarations.
         auto enum_decl = static_cast<const flat::Enum*>(decl);
-        return enum_decl->type.get();
+        return enum_decl->type;
     }
     default:
         return type;
@@ -1841,7 +1820,28 @@ bool Library::CompileConst(Const* const_declaration) {
 
 bool Library::CompileEnum(Enum* enum_declaration) {
     Compiling guard(enum_declaration);
-    switch (enum_declaration->type->subtype) {
+
+    Name subtype_name(nullptr, "uint32");
+    if (enum_declaration->maybe_subtype) {
+        auto location = enum_declaration->maybe_subtype->location();
+        if (!CompileCompoundIdentifier(enum_declaration->maybe_subtype->identifier.get(),
+                                       location, &subtype_name)) {
+            return false;
+        }
+    }
+
+    auto primitive_type = LookupPrimitiveType(subtype_name);
+    if (primitive_type == nullptr) {
+        std::string message("enums may only be of integral primitive type, found ");
+        message += NameName(subtype_name, ".", "/");
+        return Fail(*enum_declaration, message);
+    }
+
+    enum_declaration->type = primitive_type;
+    enum_declaration->typeshape = PrimitiveTypeShape(primitive_type->subtype);
+
+    // Validate constants.
+    switch (primitive_type->subtype) {
     case types::PrimitiveSubtype::kInt8:
         if (!ValidateEnumMembers<int8_t>(enum_declaration))
             return false;
@@ -1877,11 +1877,10 @@ bool Library::CompileEnum(Enum* enum_declaration) {
     case types::PrimitiveSubtype::kBool:
     case types::PrimitiveSubtype::kFloat32:
     case types::PrimitiveSubtype::kFloat64:
-        // These are not allowed as enum subtypes.
-        return Fail(*enum_declaration, "Enums cannot be bools, statuses, or floats");
+        std::string message("enums may only be of integral primitive type, found ");
+        message += NameName(subtype_name, ".", "/");
+        return Fail(*enum_declaration, message);
     }
-
-    enum_declaration->typeshape = PrimitiveTypeShape(enum_declaration->type->subtype);
 
     auto placement_ok = error_reporter_->Checkpoint();
     // Attributes: check placement.
@@ -2494,7 +2493,7 @@ bool Library::ValidateEnumMembers(Enum* enum_decl) {
     for (auto& member : enum_decl->members) {
         assert(member.value != nullptr && "Compiler bug: enum member value is null!");
 
-        if (!ResolveConstant(member.value.get(), enum_decl->type.get()))
+        if (!ResolveConstant(member.value.get(), enum_decl->type))
             return Fail(member.name, "unable to resolve struct member");
 
         // Check that the enum member identifier hasn't been used yet

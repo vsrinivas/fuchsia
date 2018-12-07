@@ -666,14 +666,19 @@ struct Enum : public Decl {
         std::unique_ptr<raw::AttributeList> attributes;
     };
 
-    Enum(std::unique_ptr<raw::AttributeList> attributes, Name name, types::PrimitiveSubtype subtype,
+    Enum(std::unique_ptr<raw::AttributeList> attributes, Name name,
+         std::unique_ptr<raw::IdentifierType> maybe_subtype,
          std::vector<Member> members)
         : Decl(Kind::kEnum, std::move(attributes), std::move(name)),
-          type(std::make_unique<PrimitiveType>(subtype)),
+          maybe_subtype(std::move(maybe_subtype)),
           members(std::move(members)) {}
 
-    std::unique_ptr<PrimitiveType> type;
+    // Set during construction.
+    std::unique_ptr<raw::IdentifierType> maybe_subtype;
     std::vector<Member> members;
+
+    // Set during compilation.
+    const PrimitiveType* type = nullptr;
     TypeShape typeshape;
 };
 
