@@ -19,34 +19,12 @@
 #include <zircon/syscalls/port.h>
 #include <zircon/threads.h>
 
+#include "garnet/lib/machina/sysinfo.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
-static constexpr char kSysInfoPath[] = "/dev/misc/sysinfo";
 // Number of threads reading from the async device port.
 static constexpr size_t kNumAsyncWorkers = 2;
-
-template <zx_status_t (*GetResource)(zx_handle_t, zx_status_t*, zx_handle_t*)>
-static zx_status_t get_resource(zx::resource* resource) {
-  fbl::unique_fd fd(open(kSysInfoPath, O_RDWR));
-  if (!fd) {
-    return ZX_ERR_IO;
-  }
-
-  zx::channel channel;
-  zx_status_t status =
-      fdio_get_service_handle(fd.release(), channel.reset_and_get_address());
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  zx_status_t fidl_status =
-      GetResource(channel.get(), &status, resource->reset_and_get_address());
-  if (fidl_status != ZX_OK) {
-    return fidl_status;
-  }
-  return status;
-}
 
 static constexpr uint32_t trap_kind(machina::TrapType type) {
   switch (type) {
@@ -65,14 +43,16 @@ static constexpr uint32_t trap_kind(machina::TrapType type) {
 namespace machina {
 
 zx_status_t Guest::Init(size_t mem_size, bool host_memory) {
+  auto sysinfo = get_sysinfo();
   zx::vmo vmo;
   if (host_memory) {
+    zx_status_t fidl_status;
     zx::resource resource;
-    zx_status_t status =
-        get_resource<fuchsia_sysinfo_DeviceGetRootResource>(&resource);
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to get root resource " << status;
-      return status;
+    zx_status_t status = sysinfo->GetRootResource(&fidl_status, &resource);
+    if (status != ZX_OK || fidl_status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to get root resource " << status << " "
+                     << fidl_status;
+      return status != ZX_OK ? status : fidl_status;
     }
     status = zx::vmo::create_physical(resource, 0, mem_size, &vmo);
     if (status != ZX_OK) {
@@ -98,11 +78,13 @@ zx_status_t Guest::Init(size_t mem_size, bool host_memory) {
     return status;
   }
 
+  zx_status_t fidl_status;
   zx::resource resource;
-  status = get_resource<fuchsia_sysinfo_DeviceGetHypervisorResource>(&resource);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to get hypervisor resource " << status;
-    return status;
+  status = sysinfo->GetHypervisorResource(&fidl_status, &resource);
+  if (status != ZX_OK || fidl_status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to get hypervisor resource " << status << " "
+                   << fidl_status;
+    return status != ZX_OK ? status : fidl_status;
   }
 
   status = zx::guest::create(resource, 0, &guest_, &vmar_);

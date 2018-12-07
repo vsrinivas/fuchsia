@@ -16,6 +16,7 @@
 
 #include "garnet/lib/machina/bits.h"
 #include "garnet/lib/machina/guest.h"
+#include "garnet/lib/machina/sysinfo.h"
 #include "garnet/lib/machina/vcpu.h"
 #include "lib/fxl/logging.h"
 
@@ -25,7 +26,6 @@ __END_CDECLS;
 
 namespace machina {
 
-static constexpr char kSysInfoPath[] = "/dev/misc/sysinfo";
 static constexpr uint32_t kGicv2Revision = 2;
 static constexpr uint32_t kGicv3Revision = 3;
 static constexpr uint32_t kGicdCtlr = 0x7;
@@ -33,32 +33,19 @@ static constexpr uint32_t kGicdCtlrARENSMask = 1u << 5;
 static constexpr uint32_t kGicdIrouteIRMMask = 1u << 31;
 
 static zx_status_t get_gic_version(GicVersion* version) {
-  fbl::unique_fd fd(open(kSysInfoPath, O_RDWR));
-  if (!fd) {
-    return ZX_ERR_IO;
+  auto sysinfo = get_sysinfo();
+  zx_status_t fidl_status;
+  fuchsia::sysinfo::InterruptControllerInfoPtr info;
+  zx_status_t status = sysinfo->GetInterruptControllerInfo(&fidl_status, &info);
+  if (status != ZX_OK || fidl_status != ZX_OK) {
+    return status != ZX_OK ? status : fidl_status;
   }
 
-  zx::channel channel;
-  zx_status_t status =
-      fdio_get_service_handle(fd.release(), channel.reset_and_get_address());
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  fuchsia_sysinfo_InterruptControllerInfo info;
-  zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetInterruptControllerInfo(
-      channel.get(), &status, &info);
-  if (fidl_status != ZX_OK) {
-    return fidl_status;
-  } else if (status != ZX_OK) {
-    return status;
-  }
-
-  switch (info.type) {
-    case fuchsia_sysinfo_InterruptControllerType_GIC_V2:
+  switch (info->type) {
+    case fuchsia::sysinfo::InterruptControllerType::GIC_V2:
       *version = GicVersion::V2;
       return ZX_OK;
-    case fuchsia_sysinfo_InterruptControllerType_GIC_V3:
+    case fuchsia::sysinfo::InterruptControllerType::GIC_V3:
       *version = GicVersion::V3;
       return ZX_OK;
     default:
