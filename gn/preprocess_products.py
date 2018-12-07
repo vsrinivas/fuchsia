@@ -66,9 +66,6 @@ files_read - a list of files used to compute all of the above
     parser.add_argument("--available",
                         help="List of package definitions for available packages",
                         required=True)
-    parser.add_argument("--packages",
-                        help="JSON list of additional packages",
-                        required=False)
     parser.add_argument("--legacy-products",
                         help="List of legacy product definitions",
                         required=False)
@@ -90,10 +87,6 @@ files_read - a list of files used to compute all of the above
     # Merge in the legacy product configurations, if set
     [parse_product(product, build_packages) for product in
             json.loads(args.legacy_products)]
-
-    # Merge the extra packages into the monolith set (these will move to preinstall in the future):
-    if args.packages:
-        build_packages["monolith"].update(json.loads(args.packages))
 
     try:
         monolith_results = preprocess_packages(list(build_packages["monolith"]))

@@ -28,8 +28,9 @@ declare_args() {
   board_packages = []
 
   # List of packages (a GN list of strings).
-  # This list of packages is added to the set of "available" packages, see
-  # `products` for more information.
+  # This list of packages is currently added to the set of "monolith" packages,
+  # see `products` for more information; in the future, these packages will be
+  # added to the "preinstall".
   # If unset, layer will be guessed using //.jiri_manifest and
   # //{layer}/products/default.gni will be used.
   fuchsia_packages = []
@@ -52,6 +53,7 @@ declare_args() {
 }
 
 monolith += board_packages
+monolith += fuchsia_packages
 
 # Print a warning message if the legacy fuchsia_products field is set.
 # Only print in the default toolchain so the warning only shows up once.
@@ -87,7 +89,6 @@ _preprocessed_products = exec_script("preprocess_products.py",
                                        "--monolith=$monolith",
                                        "--preinstall=$preinstall",
                                        "--available=$available",
-                                       "--packages=$fuchsia_packages",
                                        "--legacy-products=$fuchsia_products",
                                      ],
                                      "json")
