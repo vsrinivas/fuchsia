@@ -76,6 +76,29 @@ MODULE_FIDL_LIBS := \
 include make/module.mk
 
 
+MODULE := $(LOCAL_DIR).signal
+
+MODULE_TYPE := userapp
+MODULE_GROUP := core
+
+MODULE_SRCS += $(LOCAL_DIR)/signal.c
+
+MODULE_NAME := signal
+
+MODULE_LIBS := \
+    system/ulib/fdio \
+    system/ulib/zircon \
+    system/ulib/c
+
+MODULE_STATIC_LIBS := \
+    system/ulib/task-utils
+
+MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-sysinfo
+
+include make/module.mk
+
+
 MODULE := $(LOCAL_DIR).killall
 
 MODULE_TYPE := userapp
