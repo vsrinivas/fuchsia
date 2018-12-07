@@ -6,7 +6,7 @@ library fuchsia.sysinfo;
 
 using zx;
 
-const uint8 ZBI_BOARD_NAME_LEN = 32;
+const uint8 SYSINFO_BOARD_NAME_LEN = 32;
 
 enum InterruptControllerType {
     UNKNOWN = 0;
@@ -31,7 +31,7 @@ interface Device {
     3: GetHypervisorResource() -> (zx.status status, handle<resource>? resource);
 
     // Return the board name for the platform we are running on.
-    4: GetBoardName() -> (zx.status status, string:ZBI_BOARD_NAME_LEN? name);
+    4: GetBoardName() -> (zx.status status, string:SYSINFO_BOARD_NAME_LEN? name);
 
     // Return interrupt controller information.
     5: GetInterruptControllerInfo() -> (zx.status status, InterruptControllerInfo? info);
