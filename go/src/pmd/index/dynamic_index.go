@@ -174,9 +174,15 @@ func (idx *DynamicIndex) AddNeeds(root string, needs map[string]struct{}) error 
 	// system at the time of import.
 	idx.waiting[root] = needs
 
-	log.Printf("asking amber to fetch %d needed blobs", len(needs))
+	// create a copy of the needs so we're concurrency safe
+	cn := make([]string, 0, len(needs))
+	for root := range needs {
+		cn = append(cn, root)
+	}
+
+	log.Printf("asking amber to fetch %d needed blobs", len(cn))
 	go func() {
-		for root := range needs {
+		for _, root := range cn {
 			amberer.GetBlob(root)
 		}
 	}()
