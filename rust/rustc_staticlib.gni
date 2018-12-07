@@ -51,10 +51,15 @@ template("rustc_staticlib") {
   rustc_target = "_${target_name}_rustc_artifact"
   group_target = "${target_name}"
 
+  if (defined(invoker.name)) {
+    rustc_artifact_name = invoker.name
+  } else {
+    rustc_artifact_name = target_name
+  }
+
   rustc_artifact(rustc_target) {
     forward_variables_from(invoker,
                            [
-                             "name",
                              "version",
                              "deps",
                              "edition",
@@ -64,6 +69,7 @@ template("rustc_staticlib") {
                              "source_root",
                              "testonly",
                            ])
+    name = rustc_artifact_name
     type = "staticlib"
   }
 
@@ -80,8 +86,12 @@ template("rustc_staticlib") {
     visibility = [ ":$group_target" ]
   }
 
+  first_party_crate_root = "${root_out_dir}/rust_crates"
+  crate_name = string_replace(rustc_artifact_name, "-", "_")
+  build_output = "${first_party_crate_root}/staticlib${crate_name}.a"
+
   config(config_target) {
-    libs = get_target_outputs(":${rustc_target}_build")
+    libs = [build_output]
     visibility = [ ":$group_target" ]
   }
 
