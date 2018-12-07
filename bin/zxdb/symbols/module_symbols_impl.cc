@@ -11,6 +11,7 @@
 #include "garnet/bin/zxdb/symbols/function.h"
 #include "garnet/bin/zxdb/symbols/input_location.h"
 #include "garnet/bin/zxdb/symbols/line_details.h"
+#include "garnet/bin/zxdb/symbols/line_table_impl.h"
 #include "garnet/bin/zxdb/symbols/resolve_options.h"
 #include "garnet/bin/zxdb/symbols/symbol_context.h"
 #include "garnet/bin/zxdb/symbols/symbol_data_provider.h"
@@ -78,20 +79,16 @@ struct LineMatch {
   uint32_t function_die_offset = 0;
 };
 
+// TODO(brettw) move to a separate source file and unit test separately.
 std::vector<LineMatch> GetBestLineTableMatchesInUnit(
-    llvm::DWARFContext* context, llvm::DWARFUnit* unit,
+    const LineTable& line_table, llvm::DWARFUnit* unit,
     const std::string& full_path, int line) {
   std::vector<LineMatch> result;
-
-  const llvm::DWARFDebugLine::LineTable* line_table =
-      context->getLineTableForUnit(unit);
-  const char* compilation_dir = unit->getCompilationDir();
 
   // The file table usually has a bunch of entries not referenced by the line
   // table (these are usually for declarations of things).
   std::vector<FileChecked> checked;
-  checked.resize(line_table->Prologue.FileNames.size(),
-                 FileChecked::kUnchecked);
+  checked.resize(line_table.GetNumFileNames(), FileChecked::kUnchecked);
 
   // Once we find a match, assume there aren't any others so we don't need to
   // keep looking up file names.
@@ -103,9 +100,7 @@ std::vector<LineMatch> GetBestLineTableMatchesInUnit(
   int prev_line_matching_file = -1;
 
   // Rows in the line table.
-  std::string file_name;
-  for (size_t i = 0; i < line_table->Rows.size(); i++) {
-    const llvm::DWARFDebugLine::Row& row = line_table->Rows[i];
+  for (const llvm::DWARFDebugLine::Row& row : line_table.GetRows()) {
     // EndSequence doesn't correspond to a line. Its purpose is to mark invalid
     // code regions (say, padding between functions). Because of the format
     // of the table, it will duplicate the line and column numbers from the
@@ -119,11 +114,8 @@ std::vector<LineMatch> GetBestLineTableMatchesInUnit(
     auto file_index = file_id - 1;  // 0-based for indexing into array.
     if (!file_match_found && checked[file_index] == FileChecked::kUnchecked) {
       // Look up effective file name and see if it's a match.
-      if (line_table->getFileNameByIndex(
-              file_id, compilation_dir,
-              llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
-              file_name)) {
-        if (full_path == file_name) {
+      if (auto file_name = line_table.GetFileNameByIndex(file_id)) {
+        if (full_path == *file_name) {
           file_match_found = true;
           checked[file_index] = FileChecked::kMatch;
         } else {
@@ -516,10 +508,11 @@ void ModuleSymbolsImpl::ResolveLineInputLocationForFile(
   std::vector<LineMatch> matches;
   for (unsigned index : *units) {
     llvm::DWARFUnit* unit = context_->getUnitAtIndex(index);
+    LineTableImpl line_table(context_.get(), unit);
 
     // Complication 1 above: find all matches for this line in the unit.
     std::vector<LineMatch> unit_matches = GetBestLineTableMatchesInUnit(
-        context_.get(), unit, canonical_file, line_number);
+        line_table, unit, canonical_file, line_number);
 
     // Complication 2 above: Only want one entry for each function or inline.
     std::vector<LineMatch> per_fn = GetFirstEntryForEachInline(unit_matches);

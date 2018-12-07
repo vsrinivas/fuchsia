@@ -73,6 +73,9 @@ static_library("symbols") {
     "inherited_from.cc",
     "lazy_symbol.cc",
     "line_details.cc",
+    "line_table.h",
+    "line_table_impl.cc",
+    "line_table_impl.h",
     "loaded_module_symbols.cc",
     "location.cc",
     "member_ptr.cc",
@@ -132,6 +135,8 @@ static_library("test_support") {
   testonly = true
 
   sources = [
+    "mock_line_table.cc",
+    "mock_line_table.h",
     "mock_module_symbols.cc",
     "mock_module_symbols.h",
     "mock_process_symbols.cc",
@@ -146,6 +151,7 @@ static_library("test_support") {
 
   deps = [
     ":symbols",
+    "//garnet/third_party/llvm:LLVMDebugInfoDWARF",
   ]
 }
 
