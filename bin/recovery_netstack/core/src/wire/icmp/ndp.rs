@@ -21,7 +21,7 @@ use super::{IcmpIpExt, IcmpUnusedCode};
 pub type Options<B> = util::Options<B, options::NdpOptionImpl>;
 
 /// An NDP Router Solicitation.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 #[repr(C, packed)]
 pub struct RouterSolicitation {
     _reserved: [u8; 4],
@@ -36,7 +36,7 @@ impl_icmp_message!(
 );
 
 /// An NDP Router Advertisment.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 #[repr(C, packed)]
 pub struct RouterAdvertisment {
     current_hop_limit: u8,
@@ -69,7 +69,7 @@ impl RouterAdvertisment {
 }
 
 /// An NDP Neighbor Solicitation.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 #[repr(C, packed)]
 pub struct NeighborSolicitation {
     _reserved: [u8; 4],
@@ -85,7 +85,7 @@ impl_icmp_message!(
 );
 
 /// An NDP Neighbor Advertisment.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 #[repr(C, packed)]
 pub struct NeighborAdvertisment {
     flags_rso: u8,
@@ -102,7 +102,7 @@ impl_icmp_message!(
 );
 
 /// An ICMPv6 Redirect Message.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 #[repr(C, packed)]
 pub struct Redirect {
     _reserved: [u8; 4],
@@ -163,6 +163,7 @@ pub mod options {
         MTU { mtu: &'a [u8] },
     }
 
+    #[derive(Debug)]
     pub struct NdpOptionImpl;
 
     impl OptionImplErr for NdpOptionImpl {

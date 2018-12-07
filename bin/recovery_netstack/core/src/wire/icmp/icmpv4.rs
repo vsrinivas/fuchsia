@@ -4,6 +4,7 @@
 
 //! ICMP v4
 
+use std::fmt;
 use std::ops::Range;
 
 use byteorder::{ByteOrder, NetworkEndian};
@@ -32,6 +33,22 @@ pub enum Packet<B> {
     ParameterProblem(IcmpPacket<Ipv4, B, Icmpv4ParameterProblem>),
     TimestampRequest(IcmpPacket<Ipv4, B, Icmpv4TimestampRequest>),
     TimestampReply(IcmpPacket<Ipv4, B, Icmpv4TimestampReply>),
+}
+
+impl<B: ByteSlice + fmt::Debug> fmt::Debug for Packet<B> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use self::Packet::*;
+        match self {
+            DestUnreachable(ref p) => f.debug_tuple("DestUnreachable").field(p).finish(),
+            EchoReply(ref p) => f.debug_tuple("EchoReply").field(p).finish(),
+            EchoRequest(ref p) => f.debug_tuple("EchoRequest").field(p).finish(),
+            ParameterProblem(ref p) => f.debug_tuple("ParameterProblem").field(p).finish(),
+            Redirect(ref p) => f.debug_tuple("Redirect").field(p).finish(),
+            TimeExceeded(ref p) => f.debug_tuple("TimeExceeded").field(p).finish(),
+            TimestampReply(ref p) => f.debug_tuple("TimestampReply").field(p).finish(),
+            TimestampRequest(ref p) => f.debug_tuple("TimestampRequest").field(p).finish(),
+        }
+    }
 }
 
 create_net_enum! {
@@ -135,7 +152,7 @@ create_net_enum! {
 }
 
 /// An ICMPv4 Redirect Message.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 #[repr(C, packed)]
 pub struct Icmpv4Redirect {
     gateway: Ipv4Addr,
@@ -165,7 +182,7 @@ impl_icmp_message!(
     OriginalPacket<B>
 );
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 #[repr(C, packed)]
 struct IcmpTimestampData {
     origin_timestamp: [u8; 4],
@@ -201,7 +218,7 @@ impl IcmpTimestampData {
 
 impl_from_bytes_as_bytes_unaligned!(IcmpTimestampData);
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 #[repr(C, packed)]
 struct Timestamp {
     id_seq: IdAndSeq,
@@ -209,12 +226,12 @@ struct Timestamp {
 }
 
 /// An ICMPv4 Timestamp Request message.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 #[repr(transparent)]
 pub struct Icmpv4TimestampRequest(Timestamp);
 
 /// An ICMPv4 Timestamp Reply message.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 #[repr(transparent)]
 pub struct Icmpv4TimestampReply(Timestamp);
 
@@ -237,7 +254,7 @@ create_net_enum! {
 }
 
 /// An ICMPv4 Parameter Problem message.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 #[repr(C, packed)]
 pub struct Icmpv4ParameterProblem {
     pointer: u8,

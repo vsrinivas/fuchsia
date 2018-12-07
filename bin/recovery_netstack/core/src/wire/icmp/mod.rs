@@ -19,6 +19,7 @@ pub use self::icmpv6::Packet as Icmpv6Packet;
 
 use std::cmp;
 use std::convert::TryFrom;
+use std::fmt;
 use std::marker::PhantomData;
 use std::mem;
 use std::ops::{Deref, Range};
@@ -51,7 +52,7 @@ use crate::wire::util::{BufferAndRange, Checksum, OptionImpl, Options, PacketSer
 //     as a u16 or other multi-byte number would not necessarily be correct.
 //     Instead, we use the NetworkEndian type and its reader and writer methods
 //     to correctly access these fields.
-#[derive(Default)]
+#[derive(Default, Debug)]
 #[repr(C, packed)]
 struct Header {
     msg_type: u8,
@@ -214,6 +215,7 @@ impl<B> MessageBody<B> for () {
 }
 
 /// A thin wrapper around B which implements `MessageBody`.
+#[derive(Debug)]
 pub struct OriginalPacket<B>(B);
 
 impl<B: Deref<Target = [u8]>> OriginalPacket<B> {
@@ -303,6 +305,22 @@ pub struct IcmpPacket<I: IcmpIpExt, B, M: IcmpMessage<I, B>> {
     message: LayoutVerified<B, M>,
     message_body: M::Body,
     _marker: PhantomData<I>,
+}
+
+impl<
+        I: IcmpIpExt,
+        B: ByteSlice,
+        MB: fmt::Debug + MessageBody<B>,
+        M: IcmpMessage<I, B, Body = MB> + fmt::Debug,
+    > fmt::Debug for IcmpPacket<I, B, M>
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("IcmpPacket")
+            .field("header", &self.header)
+            .field("message", &self.message)
+            .field("message_body", &self.message_body)
+            .finish()
+    }
 }
 
 impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> IcmpPacket<I, B, M> {
@@ -520,7 +538,7 @@ impl<I: IcmpIpExt, B, M: IcmpMessage<I, B>> PacketSerializer for IcmpPacketSeria
 /// Some ICMP messages do not use codes. In Rust, the `IcmpMessage::Code` type
 /// associated with these messages is `IcmpUnusedCode`. The only valid numerical
 /// value for this code is 0.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct IcmpUnusedCode;
 
 impl Into<u8> for IcmpUnusedCode {
@@ -529,7 +547,7 @@ impl Into<u8> for IcmpUnusedCode {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 #[repr(C, packed)]
 struct IdAndSeq {
     id: [u8; 2],

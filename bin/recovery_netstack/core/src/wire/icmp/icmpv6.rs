@@ -4,6 +4,7 @@
 
 //! ICMPv6
 
+use std::fmt;
 use std::ops::Range;
 
 use zerocopy::ByteSlice;
@@ -34,6 +35,25 @@ pub enum Packet<B> {
     NeighborSolicitation(IcmpPacket<Ipv6, B, ndp::NeighborSolicitation>),
     NeighborAdvertisment(IcmpPacket<Ipv6, B, ndp::NeighborAdvertisment>),
     Redirect(IcmpPacket<Ipv6, B, ndp::Redirect>),
+}
+
+impl<B: ByteSlice + fmt::Debug> fmt::Debug for Packet<B> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use self::Packet::*;
+        match self {
+            DestUnreachable(ref p) => f.debug_tuple("DestUnreachable").field(p).finish(),
+            PacketTooBig(ref p) => f.debug_tuple("PacketTooBig").field(p).finish(),
+            TimeExceeded(ref p) => f.debug_tuple("TimeExceeded").field(p).finish(),
+            ParameterProblem(ref p) => f.debug_tuple("ParameterProblem").field(p).finish(),
+            EchoRequest(ref p) => f.debug_tuple("EchoRequest").field(p).finish(),
+            EchoReply(ref p) => f.debug_tuple("EchoReply").field(p).finish(),
+            RouterSolicitation(ref p) => f.debug_tuple("RouterSolicitation").field(p).finish(),
+            RouterAdvertisment(ref p) => f.debug_tuple("RouterAdvertisment").field(p).finish(),
+            NeighborSolicitation(ref p) => f.debug_tuple("NeighborSolicitation").field(p).finish(),
+            NeighborAdvertisment(ref p) => f.debug_tuple("NeighborAdvertisment").field(p).finish(),
+            Redirect(ref p) => f.debug_tuple("Redirect").field(p).finish(),
+        }
+    }
 }
 
 impl<B: ByteSlice> Packet<B> {
@@ -129,7 +149,7 @@ impl_icmp_message!(
     OriginalPacket<B>
 );
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 #[repr(C, packed)]
 pub struct Icmpv6PacketTooBig {
     mtu: [u8; 4],
@@ -166,7 +186,7 @@ create_net_enum! {
 }
 
 /// An ICMPv6 Parameter Problem message.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 #[repr(C, packed)]
 pub struct Icmpv6ParameterProblem {
     pointer: [u8; 4],
