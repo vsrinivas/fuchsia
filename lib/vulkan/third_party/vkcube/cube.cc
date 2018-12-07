@@ -2245,9 +2245,9 @@ static void demo_init_vk(struct demo* demo) {
 
 #if VK_USE_PLATFORM_MAGMA_KHR
 #if CUBE_USE_IMAGE_PIPE
-  const char* kMagmaLayer = "VK_LAYER_GOOGLE_image_pipe_swapchain";
+  const char* kMagmaLayer = "VK_LAYER_FUCHSIA_imagepipe_swapchain";
 #else
-  const char* kMagmaLayer = "VK_LAYER_GOOGLE_image_pipe_swapchain_fb";
+  const char* kMagmaLayer = "VK_LAYER_FUCHSIA_imagepipe_swapchain_fb";
 #endif
 #endif
 
@@ -2346,11 +2346,11 @@ static void demo_init_vk(struct demo* demo) {
       }
 #endif
 #if defined(VK_USE_PLATFORM_MAGMA_KHR)
-      if (!strcmp(VK_KHR_MAGMA_SURFACE_EXTENSION_NAME,
+      if (!strcmp(VK_FUCHSIA_IMAGEPIPE_SURFACE_EXTENSION_NAME,
                   instance_extensions[i].extensionName)) {
         platformSurfaceExtFound = 1;
         demo->extension_names[demo->enabled_extension_count++] =
-            VK_KHR_MAGMA_SURFACE_EXTENSION_NAME;
+            VK_FUCHSIA_IMAGEPIPE_SURFACE_EXTENSION_NAME;
       }
 #endif
       if (!strcmp(VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
@@ -2384,11 +2384,11 @@ static void demo_init_vk(struct demo* demo) {
               VK_KHR_SURFACE_EXTENSION_NAME;
           demo->enabled_layers[demo->enabled_layer_count++] = kMagmaLayer;
         }
-        if (!strcmp(VK_KHR_MAGMA_SURFACE_EXTENSION_NAME,
+        if (!strcmp(VK_FUCHSIA_IMAGEPIPE_SURFACE_EXTENSION_NAME,
                     extensions[i].extensionName)) {
           platformSurfaceExtFound = 1;
           demo->extension_names[demo->enabled_extension_count++] =
-              VK_KHR_MAGMA_SURFACE_EXTENSION_NAME;
+              VK_FUCHSIA_IMAGEPIPE_SURFACE_EXTENSION_NAME;
           demo->enabled_layers[demo->enabled_layer_count++] = kMagmaLayer;
         }
       }
@@ -2420,7 +2420,7 @@ static void demo_init_vk(struct demo* demo) {
 #if defined(VK_USE_PLATFORM_MAGMA_KHR)
     ERR_EXIT(
         "vkEnumerateInstanceExtensionProperties failed to find "
-        "the " VK_KHR_MAGMA_SURFACE_EXTENSION_NAME
+        "the " VK_FUCHSIA_IMAGEPIPE_SURFACE_EXTENSION_NAME
         " extension.\n\nDo you have a compatible "
         "Vulkan installable client driver (ICD) installed?\nPlease "
         "look at the Getting Started guide for additional "
@@ -2756,16 +2756,16 @@ void demo_init_vk_swapchain(struct demo* demo) {
 
     err = vkCreateXcbSurfaceKHR(demo->inst, &createInfo, NULL, &demo->surface);
 #elif defined(VK_USE_PLATFORM_MAGMA_KHR)
-    VkMagmaSurfaceCreateInfoKHR createInfo = {
-      .sType = VK_STRUCTURE_TYPE_MAGMA_SURFACE_CREATE_INFO_KHR,
+    VkImagePipeSurfaceCreateInfoFUCHSIA createInfo = {
+      .sType = VK_STRUCTURE_TYPE_IMAGEPIPE_SURFACE_CREATE_INFO_FUCHSIA,
 #if defined(CUBE_USE_IMAGE_PIPE)
       .imagePipeHandle = demo->fuchsia_state->image_pipe_handle,
 #endif
       .pNext = nullptr,
     };
-    err = vkCreateMagmaSurfaceKHR(demo->inst, &createInfo, nullptr,
-                                  &demo->surface);
-#endif
+    err = vkCreateImagePipeSurfaceFUCHSIA(demo->inst, &createInfo, nullptr,
+                                          &demo->surface);
+#endif  // VK_USE_PLATFORM_MAGMA_KHR
   }
   assert(!err);
 

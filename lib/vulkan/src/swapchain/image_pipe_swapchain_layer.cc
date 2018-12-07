@@ -40,7 +40,7 @@ static const VkExtensionProperties instance_extensions[] = {
         .specVersion = 25,
     },
     {
-        .extensionName = VK_KHR_MAGMA_SURFACE_EXTENSION_NAME,
+        .extensionName = VK_FUCHSIA_IMAGEPIPE_SURFACE_EXTENSION_NAME,
         .specVersion = 1,
     }};
 
@@ -50,7 +50,11 @@ static const VkExtensionProperties device_extensions[] = {{
 }};
 
 constexpr VkLayerProperties swapchain_layer = {
-    "VK_LAYER_GOOGLE_image_pipe_swapchain",
+#if USE_IMAGEPIPE_SURFACE_FB
+    "VK_LAYER_FUCHSIA_imagepipe_swapchain_fb",
+#else
+    "VK_LAYER_FUCHSIA_imagepipe_swapchain",
+#endif
     VK_LAYER_API_VERSION,
     1,
     "Image Pipe Swapchain",
@@ -493,8 +497,8 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceSupportKHR(
   return VK_SUCCESS;
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL CreateMagmaSurfaceKHR(
-    VkInstance instance, const VkMagmaSurfaceCreateInfoKHR* pCreateInfo,
+VKAPI_ATTR VkResult VKAPI_CALL CreateImagePipeSurfaceFUCHSIA(
+    VkInstance instance, const VkImagePipeSurfaceCreateInfoFUCHSIA* pCreateInfo,
     const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface) {
   *pSurface = reinterpret_cast<VkSurfaceKHR>(
 #if USE_IMAGEPIPE_SURFACE_FB
@@ -510,11 +514,6 @@ VKAPI_ATTR void VKAPI_CALL
 DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR surface,
                   const VkAllocationCallbacks* pAllocator) {
   delete reinterpret_cast<ImagePipeSurface*>(surface);
-}
-
-VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceMagmaPresentationSupportKHR(
-    VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex) {
-  return VK_TRUE;
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceCapabilitiesKHR(
@@ -832,8 +831,8 @@ static inline PFN_vkVoidFunction layer_intercept_instance_proc(
   if (!strcmp("GetPhysicalDeviceSurfacePresentModesKHR", name))
     return reinterpret_cast<PFN_vkVoidFunction>(
         GetPhysicalDeviceSurfacePresentModesKHR);
-  if (!strcmp("CreateMagmaSurfaceKHR", name))
-    return reinterpret_cast<PFN_vkVoidFunction>(CreateMagmaSurfaceKHR);
+  if (!strcmp("CreateImagePipeSurfaceFUCHSIA", name))
+    return reinterpret_cast<PFN_vkVoidFunction>(CreateImagePipeSurfaceFUCHSIA);
   if (!strcmp("DestroySurfaceKHR", name))
     return reinterpret_cast<PFN_vkVoidFunction>(DestroySurfaceKHR);
   return NULL;
