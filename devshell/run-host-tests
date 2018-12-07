@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### run host tests
+### build and run tests on host
 
 ##
 ## Usage: fx run-host-tests [-z] [host test names ...]
@@ -46,7 +46,7 @@ function main {
     # everything under the GN 'host_tests' label.
     if [[ -n "$TEST_NAMES" ]]; then
       build_targets=(${TEST_NAMES[@]/#/host_tests/})
-    else 
+    else
       build_targets=("./build/gn:host_tests")
     fi
     fx-command-run build "${build_targets[@]}"
