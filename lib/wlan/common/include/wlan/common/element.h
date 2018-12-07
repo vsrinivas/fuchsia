@@ -240,6 +240,40 @@ struct PreqPerTarget {
 
 static_assert(sizeof(PreqPerTarget) == 11);
 
+// IEEE Std 802.11-2016, 9.4.2.114, Figure 9-481
+struct PrepFlags : public common::BitField<uint8_t> {
+    explicit PrepFlags(uint8_t raw_value) : common::BitField<uint8_t>(raw_value) {}
+
+    // bits 0-5 reserved
+    WLAN_BIT_FIELD(addr_ext, 6, 1);
+    // bit 7 reserved
+};
+
+// Fixed-length fields of the PREP element that precede
+// the optional Target External Address field.
+// IEEE Std 802.11-2016, 9.4.2.114, Figure 9-480
+struct PrepHeader {
+    PrepFlags flags;
+    uint8_t hop_count;
+    uint8_t element_ttl;
+    common::MacAddr target_addr;
+    uint32_t target_hwmp_seqno;
+} __PACKED;
+
+static_assert(sizeof(PrepHeader) == 13);
+
+// Fixed-length fields of the PREP element that follow
+// the optional Target External Address field.
+// IEEE Std 802.11-2016, 9.4.2.114, Figure 9-480
+struct PrepTail {
+    uint32_t lifetime;
+    uint32_t metric;
+    common::MacAddr originator_addr;
+    uint32_t originator_hwmp_seqno;
+} __PACKED;
+
+static_assert(sizeof(PrepTail) == 18);
+
 // IEEE Std 802.11-2016, 9.4.1.17
 class QosInfo : public common::BitField<uint8_t> {
    public:

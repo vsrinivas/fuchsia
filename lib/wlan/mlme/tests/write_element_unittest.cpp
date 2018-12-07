@@ -240,5 +240,71 @@ TEST(WriteElement, MpmConfirmWithPmk) {
     EXPECT_RANGES_EQ(expected, buf.w.WrittenData());
 }
 
+TEST(WriteElement, PrepNoExtAddr) {
+    Buf buf;
+    const PrepHeader header = {
+        .flags = PrepFlags(0x00),
+        .hop_count = 0x01,
+        .element_ttl = 0x02,
+        .target_addr = MacAddr("03:04:05:06:07:08"),
+        .target_hwmp_seqno = 0x0c0b0a09u,
+    };
+    const PrepTail tail = {
+        .lifetime = 0x100f0e0du,
+        .metric = 0x14131211u,
+        .originator_addr = MacAddr("15:16:17:18:19:1a"),
+        .originator_hwmp_seqno = 0x1e1d1c1bu,
+    };
+    WritePrep(&buf.w, header, nullptr, tail);
+
+    // clang-format off
+    const uint8_t expected[33] = {
+        131, 31,
+        0x00, 0x01, 0x02, // flags, hop count, elem ttl
+        0x03, 0x04, 0x05, 0x06, 0x07, 0x08, // target addr
+        0x09, 0x0a, 0x0b, 0x0c, // target hwmp seqno
+        0x0d, 0x0e, 0x0f, 0x10, // lifetime
+        0x11, 0x12, 0x13, 0x14, // metric
+        0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, // originator addr
+        0x1b, 0x1c, 0x1d, 0x1e, // originator hwmp seqno
+    };
+    // clang-format on
+    EXPECT_RANGES_EQ(expected, buf.w.WrittenData());
+}
+
+TEST(WriteElement, PrepWithExtAddr) {
+    Buf buf;
+    const PrepHeader header = {
+        .flags = PrepFlags(0x00),
+        .hop_count = 0x01,
+        .element_ttl = 0x02,
+        .target_addr = MacAddr("03:04:05:06:07:08"),
+        .target_hwmp_seqno = 0x0c0b0a09u,
+    };
+    common::MacAddr ext_addr("44:55:66:77:88:99");
+    const PrepTail tail = {
+        .lifetime = 0x100f0e0du,
+        .metric = 0x14131211u,
+        .originator_addr = MacAddr("15:16:17:18:19:1a"),
+        .originator_hwmp_seqno = 0x1e1d1c1bu,
+    };
+    WritePrep(&buf.w, header, &ext_addr, tail);
+
+    // clang-format off
+    const uint8_t expected[39] = {
+        131, 37,
+        0x00, 0x01, 0x02, // flags, hop count, elem ttl
+        0x03, 0x04, 0x05, 0x06, 0x07, 0x08, // target addr
+        0x09, 0x0a, 0x0b, 0x0c, // target hwmp seqno
+        0x44, 0x55, 0x66, 0x77, 0x88, 0x99, // target external addr
+        0x0d, 0x0e, 0x0f, 0x10, // lifetime
+        0x11, 0x12, 0x13, 0x14, // metric
+        0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, // originator addr
+        0x1b, 0x1c, 0x1d, 0x1e, // originator hwmp seqno
+    };
+    // clang-format on
+    EXPECT_RANGES_EQ(expected, buf.w.WrittenData());
+}
+
 } // namespace common
 } // namespace wlan

@@ -29,6 +29,8 @@ void WriteVhtOperation(BufferWriter* w, const VhtOperation& vht_op);
 void WriteMpmOpen(BufferWriter* w, MpmHeader mpm_header, const MpmPmk* pmk);
 void WriteMpmConfirm(BufferWriter* w, MpmHeader mpm_header, uint16_t peer_link_id,
                      const MpmPmk* pmk);
+void WritePrep(BufferWriter* w, const PrepHeader& header,
+               const common::MacAddr* target_external_addr, const PrepTail& tail);
 
 } // namespace common
 } // namespace wlan
