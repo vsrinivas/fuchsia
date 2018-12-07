@@ -8,13 +8,17 @@ vmo_op_range - perform an operation on a range of a VMO
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_vmo_op_range(zx_handle_t handle, uint32_t op,
-                            uint64_t offset, uint64_t size,
-                            void* buffer, size_t buffer_size);
-
+zx_status_t zx_vmo_op_range(zx_handle_t handle,
+                            uint32_t op,
+                            uint64_t offset,
+                            uint64_t size,
+                            void* buffer,
+                            size_t buffer_size);
 ```
 
 ## DESCRIPTION

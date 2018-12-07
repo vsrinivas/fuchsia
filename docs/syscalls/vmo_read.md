@@ -8,11 +8,15 @@ vmo_read - read bytes from the VMO
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_vmo_read(zx_handle_t handle, void* buffer, uint64_t offset, size_t buffer_size);
-
+zx_status_t zx_vmo_read(zx_handle_t handle,
+                        void* buffer,
+                        uint64_t offset,
+                        size_t buffer_size);
 ```
 
 ## DESCRIPTION

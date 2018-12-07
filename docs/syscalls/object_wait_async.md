@@ -8,6 +8,8 @@ object_wait_async - subscribe for signals on an object
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 

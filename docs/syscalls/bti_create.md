@@ -8,11 +8,15 @@ bti_create - create a new bus transaction initiator
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_bti_create(zx_handle_t iommu, uint32_t options, uint64_t bti_id, zx_handle_t* out);
-
+zx_status_t zx_bti_create(zx_handle_t iommu,
+                          uint32_t options,
+                          uint64_t bti_id,
+                          zx_handle_t* out);
 ```
 
 ## DESCRIPTION

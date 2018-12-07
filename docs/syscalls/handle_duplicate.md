@@ -8,10 +8,14 @@ handle_duplicate - duplicate a handle
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_handle_duplicate(zx_handle_t handle, zx_rights_t rights, zx_handle_t* out);
+zx_status_t zx_handle_duplicate(zx_handle_t handle,
+                                zx_rights_t rights,
+                                zx_handle_t* out);
 ```
 
 ## DESCRIPTION

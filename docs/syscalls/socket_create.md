@@ -8,12 +8,14 @@ socket_create - create a socket
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
 zx_status_t zx_socket_create(uint32_t options,
-                             zx_handle_t* out0, zx_handle_t* out1);
-
+                             zx_handle_t* out0,
+                             zx_handle_t* out1);
 ```
 
 ## DESCRIPTION

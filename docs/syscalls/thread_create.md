@@ -8,12 +8,16 @@ thread_create - create a thread
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_thread_create(zx_handle_t process, const char* name, size_t name_size,
-                             uint32_t options, zx_handle_t* out);
-
+zx_status_t zx_thread_create(zx_handle_t process,
+                             const char* name,
+                             size_t name_size,
+                             uint32_t options,
+                             zx_handle_t* out);
 ```
 
 ## DESCRIPTION

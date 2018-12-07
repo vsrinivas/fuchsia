@@ -8,11 +8,16 @@ vmo_clone - create a clone of a VM Object
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_vmo_clone(zx_handle_t handle, uint32_t options, uint64_t offset, uint64_t size, zx_handle_t* out);
-
+zx_status_t zx_vmo_clone(zx_handle_t handle,
+                         uint32_t options,
+                         uint64_t offset,
+                         uint64_t size,
+                         zx_handle_t* out);
 ```
 
 ## DESCRIPTION

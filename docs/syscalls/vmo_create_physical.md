@@ -8,11 +8,15 @@ vmo_create_physical - create a VM object referring to a specific contiguous rang
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_vmo_create_physical(zx_handle_t resource, zx_paddr_t paddr,
-                                   size_t size, zx_handle_t* out);
+zx_status_t zx_vmo_create_physical(zx_handle_t resource,
+                                   zx_paddr_t paddr,
+                                   size_t size,
+                                   zx_handle_t* out);
 ```
 
 ## DESCRIPTION

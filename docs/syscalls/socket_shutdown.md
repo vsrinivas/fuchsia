@@ -8,6 +8,8 @@ socket_shutdown - prevent reading or writing
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 

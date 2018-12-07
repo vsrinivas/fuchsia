@@ -8,12 +8,14 @@ timer_set - start a timer
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_timer_set(zx_handle_t handle, zx_time_t deadline,
+zx_status_t zx_timer_set(zx_handle_t handle,
+                         zx_time_t deadline,
                          zx_duration_t slack);
-
 ```
 
 ## DESCRIPTION

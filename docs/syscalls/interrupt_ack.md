@@ -8,11 +8,12 @@ interrupt_ack - Acknowledge an interrupt and re-arm it.
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
 zx_status_t zx_interrupt_ack(zx_handle_t handle);
-
 ```
 
 ## DESCRIPTION

@@ -8,11 +8,15 @@ socket_write - write data to a socket
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_socket_write(zx_handle_t handle, uint32_t options,
-                            const void* buffer, size_t buffer_size,
+zx_status_t zx_socket_write(zx_handle_t handle,
+                            uint32_t options,
+                            const void* buffer,
+                            size_t buffer_size,
                             size_t* actual);
 ```
 

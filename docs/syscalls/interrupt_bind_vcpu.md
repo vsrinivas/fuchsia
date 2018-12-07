@@ -8,10 +8,13 @@ interrupt_bind_vcpu - bind an interrupt object to a VCPU
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_interrupt_bind_vcpu(zx_handle_t handle, zx_handle_t vcpu,
+zx_status_t zx_interrupt_bind_vcpu(zx_handle_t handle,
+                                   zx_handle_t vcpu,
                                    uint32_t options);
 ```
 

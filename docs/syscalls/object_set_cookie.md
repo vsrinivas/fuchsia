@@ -8,11 +8,14 @@ object_set_cookie - Set an object's cookie.
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_object_set_cookie(zx_handle_t handle, zx_handle_t scope, uint64_t cookie);
-
+zx_status_t zx_object_set_cookie(zx_handle_t handle,
+                                 zx_handle_t scope,
+                                 uint64_t cookie);
 ```
 
 ## DESCRIPTION

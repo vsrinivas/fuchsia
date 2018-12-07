@@ -8,12 +8,15 @@ object_get_child - Given a kernel object with children objects, obtain a handle 
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_object_get_child(zx_handle_t handle, uint64_t koid,
-                                zx_rights_t rights, zx_handle_t* out);
-
+zx_status_t zx_object_get_child(zx_handle_t handle,
+                                uint64_t koid,
+                                zx_rights_t rights,
+                                zx_handle_t* out);
 ```
 
 ## DESCRIPTION

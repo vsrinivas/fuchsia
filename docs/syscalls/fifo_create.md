@@ -8,13 +8,16 @@ fifo_create - create a fifo
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_fifo_create(size_t elem_count, size_t elem_size,
+zx_status_t zx_fifo_create(size_t elem_count,
+                           size_t elem_size,
                            uint32_t options,
-                           zx_handle_t* out0, zx_handle_t* out1);
-
+                           zx_handle_t* out0,
+                           zx_handle_t* out1);
 ```
 
 ## DESCRIPTION

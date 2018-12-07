@@ -8,11 +8,12 @@ vmo_create - create a VM object
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
 zx_status_t zx_vmo_create(uint64_t size, uint32_t options, zx_handle_t* out);
-
 ```
 
 ## DESCRIPTION

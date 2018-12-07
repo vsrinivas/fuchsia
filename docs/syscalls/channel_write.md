@@ -8,12 +8,17 @@ channel_write - write a message to a channel
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_channel_write(zx_handle_t handle, uint32_t options,
-                             void* bytes, uint32_t num_bytes,
-                             zx_handle_t* handles, uint32_t num_handles);
+zx_status_t zx_channel_write(zx_handle_t handle,
+                             uint32_t options,
+                             const void* bytes,
+                             uint32_t num_bytes,
+                             const zx_handle_t* handles,
+                             uint32_t num_handles);
 ```
 
 ## DESCRIPTION

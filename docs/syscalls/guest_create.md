@@ -8,10 +8,13 @@ guest_create - create a guest
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_guest_create(zx_handle_t resource, uint32_t options,
+zx_status_t zx_guest_create(zx_handle_t resource,
+                            uint32_t options,
                             zx_handle_t* guest_handle,
                             zx_handle_t* vmar_handle);
 ```

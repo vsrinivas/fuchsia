@@ -8,10 +8,12 @@ deadline_after - Convert a time relative to now to an absolute deadline
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_time_t zx_deadline_after(zx_duration_t nanoseconds)
+zx_time_t zx_deadline_after(zx_duration_t nanoseconds);
 ```
 
 ## DESCRIPTION

@@ -8,10 +8,14 @@ interrupt_trigger - triggers a virtual interrupt object
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_interrupt_trigger(zx_handle_t handle, uint32_t options, zx_time_t timestamp);
+zx_status_t zx_interrupt_trigger(zx_handle_t handle,
+                                 uint32_t options,
+                                 zx_time_t timestamp);
 ```
 
 ## DESCRIPTION

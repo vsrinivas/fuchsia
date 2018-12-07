@@ -8,12 +8,15 @@ eventpair_create - create an event pair
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_eventpair_create(uint32_t options, zx_handle_t* out0, zx_handle_t* out1);
+zx_status_t zx_eventpair_create(uint32_t options,
+                                zx_handle_t* out0,
+                                zx_handle_t* out1);
 ```
-
 
 ## DESCRIPTION
 

@@ -19,10 +19,16 @@ update the signature, arguments, etc. too.
 
 import argparse
 import json
-import sys
 import os
+import subprocess
+import sys
 
 SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
+
+STANDARD_BLOCK_HEADER = [
+    '', '<!-- Updated by scripts/update-docs-from-abigen, '
+    'do not edit this section manually. -->', ''
+]
 
 
 def parse_args():
@@ -255,11 +261,6 @@ def to_markdown(req, arguments, warn):
     """
     sentences = break_into_sentences(req)
 
-    header = [
-        '', '<!-- Updated by scripts/update-docs-from-abigen, '
-        'do not edit this section manually. -->', ''
-    ]
-
     if not sentences:
         rights = ['TODO(ZX-2399)', '']
     else:
@@ -274,7 +275,7 @@ def to_markdown(req, arguments, warn):
             rights.append(match_fmt % match_values)
             rights.append('')
 
-    return header + rights
+    return STANDARD_BLOCK_HEADER + rights
 
 
 def find_block(lines, name):
@@ -305,10 +306,6 @@ def update_rights(lines, syscall_data, warn):
 
 
 def make_name_block(syscall_data):
-    header = [
-        '', '<!-- Updated by scripts/update-docs-from-abigen, '
-        'do not edit this section manually. -->', ''
-    ]
     start = syscall_data['name'] + ' - '
     desc = ''
     for x in syscall_data['top_description']:
@@ -320,12 +317,11 @@ def make_name_block(syscall_data):
             if desc and desc[-1] not in ('-', '/', '\'', '('):
                 desc += ' '
             desc += x
-    return header + [start + desc, '']
+    return STANDARD_BLOCK_HEADER + [start + desc, '']
 
 
 def update_name(lines, syscall_data, warn):
-    """Updates the NAME block of the .md file given by |filename|. Does nothing
-    if no 'top_description' is specified in syscall_data.
+    """Updates the NAME block of the .md file in lines.
     """
     if is_special_and_warn(syscall_data, 'name', warn):
         return
@@ -336,6 +332,125 @@ def update_name(lines, syscall_data, warn):
         return
 
     lines[name_start_index:name_end_index] = make_name_block(syscall_data)
+
+
+def make_synopsis_block(syscall_data, warn):
+    header = [
+        '```',
+        '#include <zircon/syscalls.h>',
+        '',
+    ]
+
+    def format_arg(x):
+        ret = ''
+        if 'IN' in x['attributes']:
+            ret += 'const '
+        if x['type'] == 'any':
+            ret += 'void '
+        else:
+            ret += x['type'] + ' '
+        if x['is_array']:
+            ret += ' * '
+        ret += ' ' + x['name']
+        return ret
+
+    to_format = (
+        syscall_data['return_type'] + ' zx_' + syscall_data['name'] + '(')
+    args = ','.join(format_arg(x) for x in syscall_data['arguments'])
+    if not args:
+        args = 'void'
+    to_format += args + ');'
+
+    CLANG_FORMAT_PATH = os.path.join(SCRIPT_DIR, os.pardir, 'prebuilt',
+                                     'downloads', 'clang', 'bin',
+                                     'clang-format')
+    clang_format = subprocess.Popen([
+        CLANG_FORMAT_PATH,
+        '-style={BasedOnStyle: Google, BinPackParameters: false}'
+    ],
+                                    stdin=subprocess.PIPE,
+                                    stdout=subprocess.PIPE)
+    formatted, _ = clang_format.communicate(to_format)
+    if clang_format.returncode != 0:
+        warn('formatting synopsis failed, skipping update')
+        return None
+
+    footer = [
+        '```',
+        '',
+    ]
+    return STANDARD_BLOCK_HEADER + header + [formatted] + footer
+
+
+# TODO(ZX-2399): This is a temporary worklist as each is manually audited. Many
+# argument names between syscalls.abigen and the existing documentation differ,
+# which makes the hand written DESCRIPTION block wrong if they're changed. This
+# will be deleted once all can be generated.
+synopsis_whitelist = (
+    'bti_create',
+    'channel_create',
+    'channel_write',
+    'clock_get_monotonic',
+    'cprng_draw',
+    'deadline_after',
+    'event_create',
+    'eventpair_create',
+    'fifo_create',
+    'guest_create',
+    'handle_close',
+    'handle_close_many',
+    'handle_duplicate',
+    'handle_replace',
+    'interrupt_ack',
+    'interrupt_bind_vcpu',
+    'interrupt_destroy',
+    'interrupt_trigger',
+    'interrupt_wait',
+    'nanosleep',
+    'object_get_child',
+    'object_get_cookie',
+    'object_set_cookie',
+    'object_set_property',
+    'object_wait_async',
+    'object_wait_one',
+    'port_create',
+    'process_create',
+    'process_start',
+    'socket_create',
+    'socket_read',
+    'socket_shutdown',
+    'socket_write',
+    'system_get_num_cpus',
+    'system_get_version',
+    'task_kill',
+    'thread_create',
+    'timer_cancel',
+    'timer_set',
+    'vmar_allocate',
+    'vmo_clone',
+    'vmo_create',
+    'vmo_create_physical',
+    'vmo_get_size',
+    'vmo_op_range',
+    'vmo_read',
+    'vmo_set_cache_policy',
+    'vmo_set_size',
+    'vmo_write',
+)
+
+
+def update_synopsis(lines, syscall_data, warn):
+    """Updates the SYNOPSIS block of the .md file in lines.
+    """
+    start_index, end_index = find_block(lines, 'SYNOPSIS')
+    if start_index == -1 or end_index == -1:
+        warn('did not find SYNOPSIS section, skipping update')
+        return
+
+    syn = make_synopsis_block(syscall_data, warn)
+    if not syn:
+        return
+    lines[start_index:end_index] = syn
 
 
 def update_title(lines, syscall_data, warn):
@@ -367,12 +482,17 @@ def main():
             with open(md, 'rb') as f:
                 lines = f.read().splitlines()
 
-            assert(lines)
+            assert (lines)
 
             def warn(msg):
-                print >>sys.stderr, 'warning: %s: %s' % (md, msg)
+                print >> sys.stderr, 'warning: %s: %s' % (md, msg)
+
             update_title(lines, syscall, warn)
             update_name(lines, syscall, warn)
+            if name in synopsis_whitelist:
+                update_synopsis(lines, syscall, warn)
+            else:
+                warn('not in synopsis_whitelist')
             update_rights(lines, syscall, warn)
 
             with open(md, 'wb') as f:

@@ -8,12 +8,15 @@ vmo_write - write bytes to the VMO
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_vmo_write(zx_handle_t handle, const void* buffer,
-                         uint64_t offset, size_t buffer_size);
-
+zx_status_t zx_vmo_write(zx_handle_t handle,
+                         const void* buffer,
+                         uint64_t offset,
+                         size_t buffer_size);
 ```
 
 ## DESCRIPTION

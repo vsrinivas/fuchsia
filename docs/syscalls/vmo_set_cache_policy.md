@@ -8,11 +8,12 @@ vmo_set_cache_policy - set the caching policy for pages held by a VMO.
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t vmo_set_cache_policy(zx_handle_t handle, uint32_t cache_policy);
-
+zx_status_t zx_vmo_set_cache_policy(zx_handle_t handle, uint32_t cache_policy);
 ```
 
 ## DESCRIPTION

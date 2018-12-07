@@ -8,10 +8,13 @@ handle_close_many - close a number of handles
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_handle_close_many(const zx_handle_t* handles, size_t num_handles);
+zx_status_t zx_handle_close_many(const zx_handle_t* handles,
+                                 size_t num_handles);
 ```
 
 ## DESCRIPTION

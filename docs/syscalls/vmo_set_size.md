@@ -8,11 +8,12 @@ vmo_set_size - resize a VMO object
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
 zx_status_t zx_vmo_set_size(zx_handle_t handle, uint64_t size);
-
 ```
 
 ## DESCRIPTION
