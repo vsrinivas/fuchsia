@@ -63,7 +63,7 @@ const_declarations      | A list of consts
 enum_declarations       | A list of enums
 interface_declarations  | A list of interfaces provided
 struct_declarations     | A list of structs
-table_declarations      | A list of tables (reserved for future use)
+table_declarations      | A list of tables
 union_declarations      | A list of unions
 declaration_order       | A list of the object declarations, in order of declaration
 declarations            | A list of declarations and their types

@@ -67,7 +67,7 @@ compound-identifier = IDENTIFIER ( "." , IDENTIFIER )* ;
 using = "using" , compound-identifier , ( "as" , IDENTIFIER ) , ";" ;
 
 declaration = const-declaration | enum-declaration | interface-declaration |
-              struct-declaration | union-declaration ;
+              struct-declaration | union-declaration | table-declaration ;
 
 const-declaration = ( attribute-list ) , "const" , type , IDENTIFIER , "=" , constant ;
 
@@ -102,6 +102,14 @@ struct-field = type , IDENTIFIER , ( "=" , constant ) ;
 union-declaration = ( attribute-list ) , "union" , IDENTIFIER , "{" , ( union-field , ";" )+ , "}" ;
 
 union-field = type , IDENTIFIER ;
+
+table-declaration = ( attribute-list ) , "table" , IDENTIFIER , "{" , ( table-field , ";" )* , "}" ;
+
+table-field = table-field-ordinal , table-field-declaration ;
+
+table-field-ordinal = ordinal , ":" ;
+
+table-field-declaration = struct-field | "reserved" ;
 
 attribute-list = "[" , attributes, "]" ;
 

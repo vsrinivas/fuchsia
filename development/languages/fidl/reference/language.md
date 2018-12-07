@@ -13,7 +13,7 @@ You can find a modified [EBNF description of the FIDL grammar here](grammar.md).
 ## Syntax
 
 FIDL provides a syntax for declaring named
-constants, enums, structs, unions, and interfaces. These declarations are
+constants, enums, structs, tables, unions, and interfaces. These declarations are
 collected into libraries for distribution.
 
 FIDL declarations are stored in plain text UTF-8 files. Each file consists of a
@@ -48,8 +48,8 @@ The following are keywords in FIDL.
 
 ```
 array, as, bool, const, enum, float32, float64, handle, int8, int16,
-int32, int64, interface, library, request, string, struct, uint8, uint16,
-uint32, uint64, union, using, vector
+int32, int64, interface, library, request, string, struct, table, uint8,
+uint16, uint32, uint64, union, using, vector
 ```
 
 #### Identifiers
@@ -273,7 +273,7 @@ struct Order {
 
 *   Fixed-length sequences of homogeneous elements.
 *   Elements can be of any type including: primitives, enums, arrays, strings,
-    vectors, handles, structs, unions.
+    vectors, handles, structs, tables, unions.
 *   Not nullable themselves; may contain nullable types.
 
 ##### Use
@@ -435,6 +435,48 @@ struct Circle {
     Color? color;    // Color will be stored out-of-line
     bool dashed;
 };
+```
+#### Tables
+
+*   Record type consisting of a sequence of typed fields with ordinals.
+*   Declaration is intended for forward and backward compatibility in the face of schema changes.
+*   Reference may be nullable.
+*   Tables contain zero or more members.
+
+##### Declaration
+
+```fidl
+// original definiton has id and data
+table OriginalIdentifier {
+    1: int64    id;
+    2: int64    data;
+};
+
+// some time later, we added refinement
+table UpdatedIdentifier {
+    1: int64    id;
+    2: int64    data;
+    3: int64    refinement;
+};
+
+// later still, we removed refinement in favor of description
+table NewestIdentifier {
+    1: int64    id;
+    2: int64    data;
+    3: reserved;
+    4: string   description;
+};
+```
+
+#### Use
+
+Tables are denoted by their declared name (eg. **OriginalIdentifier**) and nullability:
+
+*   **`OriginalIdentifier`** : non-nullable OriginalIdentifier
+*   **`OriginalIdentifier?`** : nullable OriginalIdentifier
+
+```fidl
+@@@ example please
 ```
 
 #### Unions
