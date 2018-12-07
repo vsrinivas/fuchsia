@@ -386,7 +386,7 @@ mod tests {
 
         lookup::<DummyEventDispatcher, Ipv4Addr, EthernetArpDevice>(
             &mut ctx,
-            0,
+            1,
             TEST_LOCAL_MAC,
             TEST_REMOTE_IPV4,
         );
@@ -446,7 +446,7 @@ mod tests {
 
         receive_arp_packet::<DummyEventDispatcher, Ipv4Addr, EthernetArpDevice, _>(
             &mut ctx,
-            0,
+            1,
             TEST_REMOTE_MAC,
             TEST_LOCAL_MAC,
             BufferAndRange::new_from(&mut buf, ..),
@@ -455,7 +455,7 @@ mod tests {
         assert_eq!(
             lookup::<DummyEventDispatcher, Ipv4Addr, EthernetArpDevice>(
                 &mut ctx,
-                0,
+                1,
                 TEST_LOCAL_MAC,
                 TEST_REMOTE_IPV4
             )

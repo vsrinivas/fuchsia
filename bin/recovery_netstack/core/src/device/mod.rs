@@ -68,7 +68,6 @@ impl Display for DeviceProtocol {
 }
 
 /// The state associated with the device layer.
-#[derive(Default)]
 pub struct DeviceLayerState {
     // Invariant: even though each protocol has its own hash map, IDs (used as
     // keys in the hash maps) are unique across all hash maps. This is
@@ -90,6 +89,17 @@ impl DeviceLayerState {
         let id = self.next_id;
         self.next_id += 1;
         id
+    }
+}
+
+// `next_id` starts at 1 for compatiblity with the fuchsia.net.stack.Stack
+// interface, which does not allow for IDs of zero.
+impl Default for DeviceLayerState {
+    fn default() -> DeviceLayerState {
+        DeviceLayerState {
+            next_id: 1,
+            ethernet: HashMap::new(),
+        }
     }
 }
 
