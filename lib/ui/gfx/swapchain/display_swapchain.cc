@@ -460,8 +460,8 @@ namespace {
 
 vk::ImageUsageFlags GetFramebufferImageUsage() {
   uint32_t instance_extension_count;
-  vk::Result enumerate_result =
-      vk::enumerateInstanceLayerProperties(&instance_extension_count, nullptr);
+  vk::Result enumerate_result = vk::enumerateInstanceLayerProperties(
+      &instance_extension_count, static_cast<vk::LayerProperties*>(nullptr));
   if (enumerate_result != vk::Result::eSuccess) {
     FXL_DLOG(ERROR) << "vkEnumerateInstanceLayerProperties failed: "
                     << vk::to_string(enumerate_result);
