@@ -17,6 +17,12 @@
 #include "lib/fxl/type_converter.h"
 
 namespace mdns {
+namespace {
+
+static const std::string kPublishAs = "_fuchsia._udp.";
+static constexpr uint64_t kPublishPort = 5353;
+
+}  // namespace
 
 MdnsServiceImpl::MdnsServiceImpl(component::StartupContext* startup_context)
     : startup_context_(startup_context) {
@@ -37,6 +43,18 @@ void MdnsServiceImpl::Start() {
   mdns_.Start(startup_context_
                   ->ConnectToEnvironmentService<fuchsia::netstack::Netstack>(),
               GetHostName());
+
+  // Publish this device as "_fuchsia._udp.".
+  // TODO(dalesat): Make this a config item or delegate to another party.
+  PublishServiceInstance(kPublishAs, GetHostName(), kPublishPort,
+                         fidl::VectorPtr<fidl::StringPtr>(),
+                         [this](fuchsia::mdns::MdnsResult result) {
+                           if (result != fuchsia::mdns::MdnsResult::OK) {
+                             FXL_LOG(ERROR) << "Failed to publish as "
+                                            << kPublishAs << ", result "
+                                            << static_cast<uint32_t>(result);
+                           }
+                         });
 }
 
 void MdnsServiceImpl::ResolveHostName(fidl::StringPtr host_name,
