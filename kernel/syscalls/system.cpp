@@ -184,6 +184,25 @@ zx_status_t sys_system_mexec_payload_get(zx_handle_t resource,
         return result;
     }
 
+    if (stashed_crashlog && stashed_crashlog->size() <= UINT32_MAX) {
+        size_t crashlog_len = stashed_crashlog->size();
+        uint8_t* bootdata_section;
+
+        zbi_result_t res = image.CreateSection(static_cast<uint32_t>(crashlog_len),
+                                               ZBI_TYPE_CRASHLOG, 0, 0,
+                                               reinterpret_cast<void**>(&bootdata_section));
+
+        if (res != ZBI_RESULT_OK) {
+            printf("mexec: could not append crashlog\n");
+            return ZX_ERR_INTERNAL;
+        }
+
+        result = stashed_crashlog->Read(bootdata_section, 0, crashlog_len);
+        if (result != ZX_OK) {
+            return result;
+        }
+    }
+
     return user_buffer.copy_array_to_user(buffer.get(), buffer_size);
 }
 
@@ -217,34 +236,6 @@ zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vmo, zx_ha
                                 &new_bootimage_len);
     if (result != ZX_OK) {
         return result;
-    }
-
-    // Allow the platform to patch the bootdata with any platform specific
-    // sections before mexecing.
-    result = platform_mexec_patch_zbi(bootimage_buffer, new_bootimage_len);
-    if (result != ZX_OK) {
-        printf("mexec: could not patch bootdata\n");
-        return result;
-    }
-
-    if (stashed_crashlog && stashed_crashlog->size() <= UINT32_MAX) {
-        size_t crashlog_len = stashed_crashlog->size();
-        uint8_t* bootdata_section;
-        zbi::Zbi image(bootimage_buffer, new_bootimage_len);
-
-        zbi_result_t res = image.CreateSection(static_cast<uint32_t>(crashlog_len),
-                                               ZBI_TYPE_CRASHLOG, 0, 0,
-                                               reinterpret_cast<void**>(&bootdata_section));
-
-        if (res != ZBI_RESULT_OK) {
-            printf("mexec: could not append crashlog\n");
-            return ZX_ERR_INTERNAL;
-        }
-
-        result = stashed_crashlog->Read(bootdata_section, 0, crashlog_len);
-        if (result != ZX_OK) {
-            return result;
-        }
     }
 
     void* id_page_addr = 0x0;

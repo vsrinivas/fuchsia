@@ -53,6 +53,8 @@ MODULE_STATIC_LIBS := \
     system/ulib/fs \
     system/ulib/fbl \
     system/ulib/fit \
+    system/ulib/fzl \
+    system/ulib/libzbi \
     system/ulib/zx \
     system/ulib/zxcpp \
 

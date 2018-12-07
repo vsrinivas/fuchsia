@@ -19,15 +19,17 @@
 #include <fuchsia/device/manager/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <launchpad/launchpad.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/receiver.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
-#include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/io.h>
 #include <lib/fidl/coding.h>
+#include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/zircon-internal/ktrace.h>
 #include <lib/zx/job.h>
 #include <lib/zx/socket.h>
+#include <libzbi/zbi-cpp.h>
 #include <zircon/assert.h>
 #include <zircon/boot/bootdata.h>
 #include <zircon/processargs.h>
@@ -1420,8 +1422,69 @@ static zx_status_t fidl_DmOpenVirtcon(void* ctx, zx_handle_t raw_vc_receiver) {
 }
 
 static zx_status_t fidl_DmMexec(void* ctx, zx_handle_t raw_kernel, zx_handle_t raw_bootdata) {
+    zx_status_t st;
+    constexpr size_t kBootdataExtraSz = PAGE_SIZE * 4;
+
     zx::vmo kernel(raw_kernel);
-    zx::vmo bootdata(raw_bootdata);
+    zx::vmo original_bootdata(raw_bootdata);
+    zx::vmo bootdata;
+
+    zx::vmar root_vmar(zx_vmar_root_self());
+    fzl::OwnedVmoMapper mapper;
+
+    uint8_t* buffer = new uint8_t[kBootdataExtraSz];
+    memset(buffer, 0, kBootdataExtraSz);
+    fbl::unique_ptr<uint8_t[]> deleter;
+    deleter.reset(buffer);
+
+    size_t original_size;
+    st = original_bootdata.get_size(&original_size);
+    if (st != ZX_OK) {
+        log(ERROR, "dm_mexec: could not get bootdata vmo size, st = %d\n", st);
+        return st;
+    }
+
+    st = original_bootdata.clone(ZX_VMO_CLONE_COPY_ON_WRITE, 0, original_size + PAGE_SIZE * 4, &bootdata);
+    if (st != ZX_OK) {
+        log(ERROR, "dm_mexec: failed to clone bootdata st = %d\n", st);
+        return st;
+    }
+
+    size_t vmo_size;
+    st = bootdata.get_size(&vmo_size);
+    if (st != ZX_OK) {
+        log(ERROR, "dm_mexec: failed to get new bootdata size, st = %d\n", st);
+        return st;
+    }
+
+    st = zx_system_mexec_payload_get(devmgr::get_root_resource(), buffer, kBootdataExtraSz);
+    if (st != ZX_OK) {
+        log(ERROR, "dm_mexec: mexec get payload returned %d\n", st);
+        return st;
+    }
+
+    zx::vmo mapped_bootdata;
+    st = bootdata.duplicate(ZX_RIGHT_SAME_RIGHTS, &mapped_bootdata);
+    if (st != ZX_OK) {
+        log(ERROR, "dm_mexec: failed to duplicate bootdata handle, st = %d\n", st);
+        return st;
+    }
+
+    st = mapper.Map(std::move(mapped_bootdata));
+    if (st != ZX_OK) {
+        log(ERROR, "dm_mexec: failed to map bootdata vmo, st = %d\n", st);
+        return st;
+    }
+
+    void* bootdata_ptr = mapper.start(); 
+    zbi::Zbi bootdata_zbi(static_cast<uint8_t*>(bootdata_ptr), vmo_size);
+    zbi::Zbi mexec_payload_zbi(buffer);
+
+    zbi_result_t zbi_st = bootdata_zbi.Extend(mexec_payload_zbi);
+    if (zbi_st != ZBI_RESULT_OK) {
+        log(ERROR, "dm_mexec: failed to extend bootdata zbi, st = %d\n", zbi_st);
+        return ZX_ERR_INTERNAL;
+    }
 
     g_coordinator.Mexec(std::move(kernel), std::move(bootdata));
     return ZX_OK;
