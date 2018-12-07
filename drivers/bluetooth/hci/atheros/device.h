@@ -53,11 +53,6 @@ class Device {
   // Returns |status|.
   zx_status_t Remove(zx_status_t status, const char* note);
 
-  // Build a synchronous USB Request packet
-  // |req| lifetime needs to be as long as the underlying
-  // usb_request_t.
-  zx_status_t UsbRequest(usb_request_t** req);
-
   // Load the Qualcomm firmware in RAM
   zx_status_t LoadRAM(const qca_version& ver);
 
@@ -89,6 +84,7 @@ class Device {
   usb_protocol_t usb_;
 
   size_t parent_req_size_ = 0;
+  uint8_t bulk_out_addr_ = 0;
 
   bool firmware_loaded_ __TA_GUARDED(mutex_);
 };

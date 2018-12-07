@@ -68,49 +68,6 @@ static void interrupt_complete(usb_request_t* req, void* cookie) {
   }
 }
 
-zx_status_t Device::UsbRequest(usb_request_t** reqptr) {
-  usb_desc_iter_t iter;
-
-  zx_status_t result = usb_desc_iter_init(&usb_, &iter);
-  if (result < 0) {
-    errorf("usb iterator failed: %s\n", zx_status_get_string(result));
-    return result;
-  }
-
-  usb_interface_descriptor_t* intf = usb_desc_iter_next_interface(&iter, true);
-  if (!intf || intf->bNumEndpoints != 3) {
-    usb_desc_iter_release(&iter);
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  uint8_t bulk_out_addr = 0;
-
-  usb_endpoint_descriptor_t* endp = usb_desc_iter_next_endpoint(&iter);
-  while (endp) {
-    if (usb_ep_direction(endp) == USB_ENDPOINT_OUT) {
-      if (usb_ep_type(endp) == USB_ENDPOINT_BULK) {
-        bulk_out_addr = endp->bEndpointAddress;
-      }
-    }
-    endp = usb_desc_iter_next_endpoint(&iter);
-  }
-  usb_desc_iter_release(&iter);
-
-  if (!bulk_out_addr) {
-    errorf("bind could not find bulk out endpoint\n");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  result = usb_request_alloc(reqptr, DFU_PACKET_LEN, bulk_out_addr, parent_req_size_);
-  if (result != ZX_OK) {
-      return result;
-  }
-  usb_request_t* req = *reqptr;
-  req->complete_cb = interrupt_complete;
-  req->cookie = &completion_;
-  return result;
-}
-
 zx_status_t Device::LoadNVM(const qca_version& version) {
   zx_status_t result = 0;
   zx::vmo fw_vmo;
@@ -136,10 +93,11 @@ zx_status_t Device::LoadNVM(const qca_version& version) {
     return result;
   }
 
-  usb_request_t* req = NULL;
-  result = UsbRequest(&req);
+  usb_request_t* req;
+  result = usb_request_alloc(&req, size, bulk_out_addr_, parent_req_size_);
   if (result != ZX_OK) {
-    return result;
+      zxlogf(ERROR, "LoadNVM: Failed to allocate usb request: %d\n", result);
+      return result;
   }
 
   count -= size;
@@ -190,11 +148,11 @@ zx_status_t Device::LoadRAM(const qca_version& version) {
   result = usb_control(&usb_, USB_TYPE_VENDOR, DFU_DOWNLOAD, 0, 0,
                        (void*)file.view(0, size).data(), size, ZX_TIME_INFINITE,
                        NULL);
-
   usb_request_t* req;
-  result = UsbRequest(&req);
+  result = usb_request_alloc(&req, size, bulk_out_addr_, parent_req_size_);
   if (result != ZX_OK) {
-    return result;
+      zxlogf(ERROR, "LoadRAM: Failed to allocate usb request: %d\n", result);
+      return result;
   }
 
   count -= size;
@@ -245,6 +203,35 @@ zx_status_t Device::LoadFirmware() {
   uint8_t status;
   result = usb_control(&usb_, USB_TYPE_VENDOR | USB_DIR_IN, GET_STATUS, 0, 0,
                        &status, sizeof(status), ZX_TIME_INFINITE, NULL);
+
+  usb_desc_iter_t iter;
+  result = usb_desc_iter_init(&usb_, &iter);
+  if (result < 0) {
+    errorf("usb iterator failed: %s\n", zx_status_get_string(result));
+    return result;
+  }
+
+  usb_interface_descriptor_t* intf = usb_desc_iter_next_interface(&iter, true);
+  if (!intf || intf->bNumEndpoints != 3) {
+    usb_desc_iter_release(&iter);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  usb_endpoint_descriptor_t* endp = usb_desc_iter_next_endpoint(&iter);
+  while (endp) {
+    if (usb_ep_direction(endp) == USB_ENDPOINT_OUT) {
+      if (usb_ep_type(endp) == USB_ENDPOINT_BULK) {
+        bulk_out_addr_ = endp->bEndpointAddress;
+      }
+    }
+    endp = usb_desc_iter_next_endpoint(&iter);
+  }
+  usb_desc_iter_release(&iter);
+
+  if (!bulk_out_addr_) {
+    errorf("bind could not find bulk out endpoint\n");
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
   if (!(status & PATCH_UPDATED)) {
     result = LoadRAM(ver);
