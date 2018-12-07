@@ -8,10 +8,11 @@
 #include <utility>
 
 #include <fbl/algorithm.h>
-#include <launchpad/launchpad.h>
 #include <lib/fdio/namespace.h>
+#include <lib/fdio/spawn.h>
 #include <lib/fdio/util.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/process.h>
 #include <zircon/assert.h>
 #include <zircon/device/vfs.h>
 #include <zircon/processargs.h>
@@ -28,6 +29,7 @@ constexpr const char* kDevmgrPath = "/boot/bin/devmgr";
 namespace devmgr_launcher {
 
 zx_status_t Launch(const Args& args, zx::job* devmgr_job, zx::channel* devfs_root) {
+    // Create containing job (and copy to send to devmgr)
     zx::job job, job_copy;
     zx_status_t status = zx::job::create(*zx::job::default_job(), 0, &job);
     if (status != ZX_OK) {
@@ -38,10 +40,32 @@ zx_status_t Launch(const Args& args, zx::job* devmgr_job, zx::channel* devfs_roo
         return status;
     }
 
-    launchpad_t* lp;
-    launchpad_create_with_jobs(job.get(), job_copy.release(), "test-devmgr", &lp);
-    launchpad_load_from_file(lp, kDevmgrPath);
-    launchpad_clone(lp, LP_CLONE_FDIO_STDIO);
+    // Create a new client to /boot to give to devmgr
+    zx::channel bootfs_client;
+    {
+        zx::channel bootfs_server;
+        status = zx::channel::create(0, &bootfs_client, &bootfs_server);
+        if (status != ZX_OK) {
+            return status;
+        }
+
+        fdio_ns_t* ns;
+        status = fdio_ns_get_installed(&ns);
+        if (status != ZX_OK) {
+            return status;
+        }
+        status = fdio_ns_connect(ns, "/boot", ZX_FS_RIGHT_READABLE, bootfs_server.release());
+        if (status != ZX_OK) {
+            return status;
+        }
+    }
+
+    // Create channel to connect to devfs
+    zx::channel devfs_client, devfs_server;
+    status = zx::channel::create(0, &devfs_client, &devfs_server);
+    if (status != ZX_OK) {
+        return status;
+    }
 
     fbl::Vector<const char*> argv;
     argv.push_back(kDevmgrPath);
@@ -57,51 +81,43 @@ zx_status_t Launch(const Args& args, zx::job* devmgr_job, zx::channel* devfs_roo
         argv.push_back("--sys-device-driver");
         argv.push_back(args.sys_device_driver);
     }
-    launchpad_set_args(lp, static_cast<int>(argv.size()), argv.get());
+    argv.push_back(nullptr);
 
-    const char* nametable[1] = { };
-    uint32_t count = 0;
+    fdio_spawn_action_t actions[] = {
+        {
+            .action = FDIO_SPAWN_ACTION_SET_NAME,
+            .name = { .data = "test-devmgr" },
+        },
+        {
+            .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+            .h = { .id = PA_HND(PA_JOB_DEFAULT, 0), .handle = job_copy.release() },
+        },
+        {
+            .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+            .h = { .id = DEVMGR_LAUNCHER_DEVFS_ROOT_HND, .handle = devfs_server.release() },
+        },
+        {
+            .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+            .ns = { .prefix = "/boot", .handle = bootfs_client.release() },
+        },
+    };
 
-    // Pass /boot to the new devmgr
-    {
-        zx::channel client, server;
-        status = zx::channel::create(0, &client, &server);
-        if (status != ZX_OK) {
-            return status;
-        }
-
-        fdio_ns_t* ns;
-        status = fdio_ns_get_installed(&ns);
-        if (status != ZX_OK) {
-            return status;
-        }
-
-        status = fdio_ns_connect(ns, "/boot", ZX_FS_RIGHT_READABLE, server.release());
-        if (status != ZX_OK) {
-            return status;
-        }
-        launchpad_add_handle(lp, client.release(), PA_HND(PA_NS_DIR, count));
-        nametable[count++] = "/boot";
-    }
-
-    ZX_DEBUG_ASSERT(count <= fbl::count_of(nametable));
-    launchpad_set_nametable(lp, count, nametable);
-
-    zx::channel devfs, devfs_server;
-    status = zx::channel::create(0, &devfs, &devfs_server);
-    if (status != ZX_OK) {
-        return status;
-    }
-    launchpad_add_handle(lp, devfs_server.release(), DEVMGR_LAUNCHER_DEVFS_ROOT_HND);
-
-    const char* errmsg;
-    status = launchpad_go(lp, nullptr, &errmsg);
+    zx::process new_process;
+    status = fdio_spawn_etc(job.get(),
+                            FDIO_SPAWN_DEFAULT_LDSVC | FDIO_SPAWN_CLONE_STDIO,
+                            kDevmgrPath,
+                            argv.get(),
+                            nullptr /* environ */,
+                            fbl::count_of(actions),
+                            actions,
+                            new_process.reset_and_get_address(),
+                            nullptr /* err_msg */);
     if (status != ZX_OK) {
         return status;
     }
 
     *devmgr_job = std::move(job);
-    *devfs_root = std::move(devfs);
+    *devfs_root = std::move(devfs_client);
     return ZX_OK;
 }
 

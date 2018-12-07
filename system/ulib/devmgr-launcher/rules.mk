@@ -16,7 +16,6 @@ MODULE_SRCS += \
 MODULE_LIBS := \
     system/ulib/c \
     system/ulib/fdio \
-    system/ulib/launchpad \
     system/ulib/zircon \
 
 MODULE_STATIC_LIBS := \
