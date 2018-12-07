@@ -30,7 +30,7 @@ public:
         return fzl::TicksToNs(Clock::now() - start_);
     }
 
-    // Reserts the timer. If |is_collecting| is false, has no effect.
+    // Resets the timer. If |is_collecting| is false, has no effect.
     void Reset() {
         if (start_.get() == 0) {
             return;

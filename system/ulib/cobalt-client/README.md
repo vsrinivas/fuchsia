@@ -129,6 +129,6 @@ your cobalt project configuration.
 
 ## Remote Vs Local values
 
-Eventually the library will provide the ability to instatiate local version of
-the metrics for the Instrospection API.  So GetRemoteCount methods, reference
+Eventually the library will provide the ability to instantiate local version of
+the metrics for the Introspection API.  So GetRemoteCount methods, reference
 the values that have not yet been sent to Cobalt.

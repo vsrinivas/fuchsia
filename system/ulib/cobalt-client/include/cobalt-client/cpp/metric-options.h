@@ -20,7 +20,7 @@ struct MetricOptions {
         kLazy,
         // Metric is aggregated locally and published via collector interface.
         kLocal,
-        // Metric deltas are aggregated locally, and sent for global agreggation to a remote
+        // Metric deltas are aggregated locally, and sent for global aggregation to a remote
         // service.
         kRemote,
         // Combination of kLocal and kRemote.
@@ -50,11 +50,11 @@ struct MetricOptions {
     fbl::String component;
 
     // Function that translates |metric_id| to a human readable name.
-    // If returns |nullptr| or is unset, the stringfied version of |uint32_t| will be used.
+    // If returns |nullptr| or is unset, the stringified version of |uint32_t| will be used.
     const char* (*get_metric_name)(uint32_t);
 
     // Function that translates |event_code| to a human readable name.
-    // If returns |nullptr| or is unset, the stringfied version of |uint32_t| will be used.
+    // If returns |nullptr| or is unset, the stringified version of |uint32_t| will be used.
     const char* (*get_event_name)(uint32_t);
 
     // Used by remote metrics to match with the respective unique id for the projects defined
@@ -62,7 +62,7 @@ struct MetricOptions {
     uint32_t metric_id;
 
     // Provides refined metric collection for |kRemote| and |kLocal| metrics.
-    // |event_code| 0 is reserved for Unkown events.
+    // |event_code| 0 is reserved for Unknown events.
     // Warning: |event_code| is not yet supported in the backend, so it will be set to 0.
     uint32_t event_code;
 

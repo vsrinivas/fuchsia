@@ -392,7 +392,7 @@ private:
         // Set of in process FIDL services.
         Services services;
 
-        // Set of channels extracted to allow communication with with other in process
+        // Set of channels extracted to allow communication with other in process
         // services.
         Channels channels;
     };

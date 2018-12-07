@@ -105,7 +105,7 @@ class FlushInterface {
 public:
     virtual ~FlushInterface() = default;
 
-    // Returns true if the data was added to the logger succesfully.
+    // Returns true if the data was added to the logger successfully.
     // Returns false if logger failed to flush the data.
     virtual bool Flush(Logger* logger) = 0;
 

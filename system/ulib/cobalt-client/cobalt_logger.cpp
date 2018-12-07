@@ -94,7 +94,7 @@ bool CobaltLogger::Log(const RemoteMetricInfo& metric_info, const HistogramBucke
     };
     fuchsia_cobalt_Status cobalt_status;
     // TODO(gevalentino): Use RemoteMetricInfo::event_cote and RemoteMetricInfo::component once
-    // availbale.
+    // available.
     zx_status_t result = fuchsia_cobalt_LoggerSimpleLogIntHistogram(
         logger_.get(), metric_info.metric_id, 0, nullptr, 0, indexes, bucket_count, counts,
         bucket_count, &cobalt_status);
@@ -109,7 +109,7 @@ bool CobaltLogger::Log(const RemoteMetricInfo& metric_info, RemoteCounter::Type 
 
     fuchsia_cobalt_Status cobalt_status;
     // TODO(gevalentino): Use RemoteMetricInfo::event_cote and RemoteMetricInfo::component once
-    // availbale.
+    // available.
     zx_status_t result = fuchsia_cobalt_LoggerBaseLogEventCount(
         logger_.get(), metric_info.metric_id, 0, nullptr, 0, 0, count, &cobalt_status);
     HandleChannelStatus(&logger_, result);
