@@ -39,4 +39,6 @@ Each test is an object with the following fields:
     all following elements are the args given to the component. Must not be the
     empty array. The first element must not be the empty string.
 - `disabled`
-  - If this field is present, the test is not executed.
+  - Optional.
+  - Must be a boolean.
+  - If the boolean is true, the test is not executed.

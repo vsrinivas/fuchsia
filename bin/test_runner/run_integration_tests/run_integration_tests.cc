@@ -68,6 +68,9 @@ void PrintKnownTests(const TestRunnerConfig& config) {
   for (auto& test_name : config.test_names()) {
     std::cerr << " " << test_name << std::endl;
   }
+  for (auto& test_name : config.disabled_test_names()) {
+    std::cerr << " " << test_name << " (disabled)" << std::endl;
+  }
 }
 
 int RunIntegrationTestsMain(int argc, char** argv) {

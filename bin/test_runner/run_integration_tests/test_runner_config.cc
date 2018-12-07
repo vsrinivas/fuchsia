@@ -35,13 +35,16 @@ TestRunnerConfig::TestRunnerConfig(const std::string& json_path) {
     FXL_CHECK(test["name"].IsString());
     FXL_CHECK(test.HasMember("exec"));
     FXL_CHECK(test["exec"].IsString() || test["exec"].IsArray());
-
-    if (test.HasMember("disabled"))
-      continue;
+    FXL_CHECK(!test.HasMember("disabled") || test["disabled"].IsBool());
 
     std::string test_name = test["name"].GetString();
+    bool test_is_disabled = test.HasMember("disabled") &&
+                            test["disabled"].GetBool();
+    if (test_is_disabled) {
+      disabled_test_names_.push_back(test_name);
+      continue;
+    }
     test_names_.push_back(test_name);
-
     if (test["exec"].IsString()) {
       std::string test_exec = test["exec"].GetString();
       std::vector<std::string> test_exec_args = fxl::SplitStringCopy(

@@ -16,11 +16,15 @@ class TestRunnerConfig {
  public:
   explicit TestRunnerConfig(const std::string& json_path);
   const std::vector<std::string>& test_names() const { return test_names_; }
+  const std::vector<std::string>& disabled_test_names() const {
+    return disabled_test_names_;
+  }
   bool HasTestNamed(const std::string& test_name) const;
   const std::vector<std::string>& GetTestCommand(const std::string& test_name) const;
 
  private:
   std::vector<std::string> test_names_;
+  std::vector<std::string> disabled_test_names_;
   std::map<std::string, std::vector<std::string>> test_commands_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestRunnerConfig);
