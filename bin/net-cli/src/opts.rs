@@ -86,10 +86,23 @@ pub enum AddrCmd {
     },
 }
 
-#[derive(StructOpt, Copy, Clone, Debug)]
+#[derive(StructOpt, Clone, Debug)]
 pub enum FwdCmd {
     #[structopt(name = "list")]
     /// lists forwarding table entries
     List,
-    // TODO: add/del
+    #[structopt(name = "add-device")]
+    /// adds a forwarding table entry
+    AddDevice {
+        #[structopt(raw(required = "true"))]
+        /// address portion of the subnet for this forwarding rule
+        addr: String,
+        #[structopt(raw(required = "true"))]
+        /// routing prefix for this forwarding rule
+        prefix: u8,
+        #[structopt(raw(required = "true"))]
+        /// id of the network interface to route to
+        id: u64,
+    },
+    // TODO add-hop, del
 }

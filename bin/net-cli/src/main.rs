@@ -131,6 +131,26 @@ async fn do_fwd(cmd: opts::FwdCmd, stack: StackProxy) -> Result<(), Error> {
                 println!("{}", pretty::ForwardingEntry::from(entry));
             }
         }
+        FwdCmd::AddDevice { addr, prefix, id } => {
+            let response = await!(stack.add_forwarding_entry(
+                &mut fidl_fuchsia_net_stack::ForwardingEntry {
+                    subnet: net::Subnet {
+                        addr: parse_ip_addr(&addr)?,
+                        prefix_len: prefix,
+                    },
+                    destination: fidl_fuchsia_net_stack::ForwardingDestination::DeviceId(id),
+                }
+            ))
+            .context("error adding forwarding entry")?;
+            if let Some(e) = response {
+                println!("Error adding forwarding entry: {:?}", e);
+            } else {
+                println!(
+                    "Added forwarding entry for {}/{} to device {}",
+                    addr, prefix, id
+                );
+            }
+        }
     }
     Ok(())
 }
