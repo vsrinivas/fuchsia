@@ -35,13 +35,12 @@ struct MockDevice : public DeviceInterface {
     using PacketList = std::vector<fbl::unique_ptr<Packet>>;
     using KeyList = std::vector<wlan_key_config_t>;
 
-    MockDevice() : sta_assoc_ctx_{} {
+    MockDevice(common::MacAddr addr = common::MacAddr(kClientAddress)) : sta_assoc_ctx_{} {
         state = fbl::AdoptRef(new DeviceState);
-        common::MacAddr addr(kClientAddress);
         state->set_address(addr);
 
         auto info = &wlanmac_info.ifc_info;
-        memcpy(info->mac_addr, kClientAddress, 6);
+        memcpy(info->mac_addr, addr.byte, 6);
         info->mac_role = WLAN_MAC_ROLE_CLIENT;
         info->supported_phys = WLAN_PHY_OFDM | WLAN_PHY_HT | WLAN_PHY_VHT;
         info->driver_features = 0;

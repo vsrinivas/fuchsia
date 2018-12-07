@@ -67,6 +67,7 @@ static const AssocContext kAssocCtx = {};
                                                            wlan_channel_t chan = kBssChannel);
 MlmeMsg<::fuchsia::wlan::mlme::ScanRequest> CreateScanRequest(uint32_t max_channel_time);
 MlmeMsg<::fuchsia::wlan::mlme::StartRequest> CreateStartRequest(bool protected_ap);
+MlmeMsg<::fuchsia::wlan::mlme::StopRequest> CreateStopRequest();
 MlmeMsg<::fuchsia::wlan::mlme::JoinRequest> CreateJoinRequest(bool rsn);
 MlmeMsg<::fuchsia::wlan::mlme::AuthenticateRequest> CreateAuthRequest();
 MlmeMsg<::fuchsia::wlan::mlme::AuthenticateResponse> CreateAuthResponse(

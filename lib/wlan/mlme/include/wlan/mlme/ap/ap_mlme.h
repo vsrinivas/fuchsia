@@ -31,6 +31,10 @@ class ApMlme : public Mlme {
     zx_status_t HandleTimeout(const ObjectId id) override;
     void HwIndication(uint32_t ind) override;
 
+    // Visible for tests only
+    HtConfig Ht() const;
+    const Span<const SupportedRate> Rates() const;
+
    private:
     zx_status_t HandleMlmeStartReq(const MlmeMsg<::fuchsia::wlan::mlme::StartRequest>& req);
     zx_status_t HandleMlmeStopReq(const MlmeMsg<::fuchsia::wlan::mlme::StopRequest>& req);

@@ -127,6 +127,12 @@ MlmeMsg<wlan_mlme::StartRequest> CreateStartRequest(bool protected_ap) {
     return {std::move(*req), fuchsia_wlan_mlme_MLMEStartReqOrdinal};
 }
 
+MlmeMsg<wlan_mlme::StopRequest> CreateStopRequest() {
+    auto req = wlan_mlme::StopRequest::New();
+    req->ssid.reset(std::vector<uint8_t>(kSsid, kSsid + sizeof(kSsid)));
+    return {std::move(*req), fuchsia_wlan_mlme_MLMEStopReqOrdinal};
+}
+
 MlmeMsg<wlan_mlme::JoinRequest> CreateJoinRequest(bool rsn) {
     auto req = wlan_mlme::JoinRequest::New();
     req->join_failure_timeout = kJoinTimeout;

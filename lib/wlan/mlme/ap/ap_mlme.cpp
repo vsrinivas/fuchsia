@@ -107,4 +107,12 @@ void ApMlme::HwIndication(uint32_t ind) {
     }
 }
 
+HtConfig ApMlme::Ht() const {
+    return bss_->Ht();
+}
+
+const Span<const SupportedRate> ApMlme::Rates() const {
+    return bss_->Rates();
+}
+
 }  // namespace wlan
