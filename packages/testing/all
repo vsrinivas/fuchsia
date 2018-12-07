@@ -1,5 +1,6 @@
 {
     "imports": [
-        "garnet/packages/testing/run_test_component"
+        "garnet/packages/testing/run_test_component",
+        "garnet/packages/testing/netemul_runner"
     ]
 }
