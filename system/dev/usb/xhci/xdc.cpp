@@ -439,6 +439,7 @@ static void xdc_update_instance_read_signal_locked(xdc_instance_t* inst)
 static zx_status_t xdc_read_instance(void* ctx, void* buf, size_t count,
                                      zx_off_t off, size_t* actual) {
     auto* inst = static_cast<xdc_instance_t*>(ctx);
+    uint64_t usb_req_size = sizeof(usb_request_t);
 
     mtx_lock(&inst->lock);
 
@@ -463,8 +464,13 @@ static zx_status_t xdc_read_instance(void* ctx, void* buf, size_t count,
     size_t copied = 0;
     usb_request_t* req;
     // Copy up to the requested amount, or until we have no completed read buffers left.
-    while ((copied < count) &&
-           (req = list_peek_head_type(&inst->completed_reads, usb_request_t, node)) != nullptr) {
+    while (copied < count) {
+        xdc_req_internal_t* req_int = list_peek_head_type(&inst->completed_reads,
+                                                          xdc_req_internal_t, node);
+        if (req_int == nullptr) {
+            continue;
+        }
+        req = XDC_INTERNAL_TO_USB_REQ(req_int, sizeof(usb_request_t));
         if (inst->cur_req_read_offset == 0) {
             bool is_new_packet;
             void* data;
@@ -497,7 +503,7 @@ static zx_status_t xdc_read_instance(void* ctx, void* buf, size_t count,
         // Finished copying all the available bytes from this usb request buffer.
         if (inst->cur_req_read_offset >= req->response.actual) {
             list_remove_head(&inst->completed_reads);
-            zx_status_t status = xdc_req_list_add_tail(&done_reqs, req, sizeof(usb_request_t));
+            zx_status_t status = xdc_req_list_add_tail(&done_reqs, req, usb_req_size);
             ZX_DEBUG_ASSERT(status == ZX_OK);
             inst->cur_req_read_offset = 0;
         }
@@ -508,7 +514,7 @@ static zx_status_t xdc_read_instance(void* ctx, void* buf, size_t count,
 
     xdc_t* xdc = inst->parent;
     mtx_lock(&xdc->read_lock);
-    while ((req = list_remove_tail_type(&done_reqs, usb_request_t, node)) != nullptr) {
+    while ((req = xdc_req_list_remove_tail(&done_reqs, usb_req_size)) != nullptr) {
         xdc_queue_read_locked(xdc, req);
     }
     mtx_unlock(&xdc->read_lock);
@@ -548,7 +554,8 @@ static zx_status_t xdc_close_instance(void* ctx, uint32_t flags) {
     // Return any unprocessed requests back to the read queue to be reused.
     mtx_lock(&xdc->read_lock);
     usb_request_t* req;
-    while ((req = list_remove_tail_type(&free_reqs, usb_request_t, node)) != nullptr) {
+    uint64_t usb_req_size = sizeof(usb_request_t);
+    while ((req = xdc_req_list_remove_tail(&free_reqs, usb_req_size)) != nullptr) {
         xdc_queue_read_locked(xdc, req);
     }
     mtx_unlock(&xdc->read_lock);
@@ -620,6 +627,7 @@ static zx_status_t xdc_open(void* ctx, zx_device_t** dev_out, uint32_t flags) {
 
 static void xdc_shutdown(xdc_t* xdc) {
     zxlogf(TRACE, "xdc_shutdown\n");
+    uint64_t usb_req_size = sizeof(usb_request_t);
 
     xdc->suspended.store(true);
     // The poll thread will be waiting on this completion if no instances are open.
@@ -642,10 +650,10 @@ static void xdc_shutdown(xdc_t* xdc) {
         ep->state = XDC_EP_STATE_DEAD;
 
         usb_request_t* req;
-        while ((req = list_remove_tail_type(&ep->pending_reqs, usb_request_t, node)) != nullptr) {
+        while ((req = xdc_req_list_remove_tail(&ep->pending_reqs, usb_req_size)) != nullptr) {
             usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0, req->complete_cb, req->cookie);
         }
-        while ((req = list_remove_tail_type(&ep->queued_reqs, usb_request_t, node)) != nullptr) {
+        while ((req = xdc_req_list_remove_tail(&ep->queued_reqs, usb_req_size)) != nullptr) {
             usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0, req->complete_cb, req->cookie);
         }
     }
@@ -657,6 +665,7 @@ static void xdc_shutdown(xdc_t* xdc) {
 
 static void xdc_free(xdc_t* xdc) {
     zxlogf(INFO, "xdc_free\n");
+    uint64_t usb_req_size = sizeof(usb_request_t);
 
     io_buffer_release(&xdc->erst_buffer);
     io_buffer_release(&xdc->context_str_descs_buffer);
@@ -671,7 +680,7 @@ static void xdc_free(xdc_t* xdc) {
     usb_request_pool_release(&xdc->free_write_reqs);
 
     usb_request_t* req;
-    while ((req = list_remove_tail_type(&xdc->free_read_reqs, usb_request_t, node)) != nullptr) {
+    while ((req = xdc_req_list_remove_tail(&xdc->free_read_reqs, usb_req_size)) != nullptr) {
         usb_request_release(req);
     }
     free(xdc);
@@ -1156,6 +1165,7 @@ void xdc_update_endpoint_state(xdc_t* xdc, xdc_poll_state_t* poll_state, xdc_end
 zx_status_t xdc_poll(xdc_t* xdc) {
     xdc_poll_state_t poll_state;
     list_initialize(&poll_state.completed_reqs);
+    uint64_t usb_req_size = sizeof(usb_request_t);
 
     for (;;) {
         zxlogf(TRACE, "xdc_poll: waiting for a new instance\n");
@@ -1192,8 +1202,8 @@ zx_status_t xdc_poll(xdc_t* xdc) {
             if (entered_configured) {
                 mtx_lock(&xdc->read_lock);
                 usb_request_t* req;
-                while ((req = list_remove_tail_type(&xdc->free_read_reqs,
-                                                    usb_request_t, node)) != nullptr) {
+                while ((req = xdc_req_list_remove_tail(&xdc->free_read_reqs,
+                                                       usb_req_size)) != nullptr) {
                     xdc_queue_read_locked(xdc, req);
                 }
                 mtx_unlock(&xdc->read_lock);

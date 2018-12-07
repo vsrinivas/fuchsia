@@ -79,16 +79,17 @@ static bool test_pool(void) {
     ASSERT_EQ(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
                               &iommu_handle), ZX_OK, "");
     usb_request_t* req;
-    ASSERT_EQ(usb_request_alloc(&req, 8u, 1, sizeof(usb_request_t)), ZX_OK, "");
+    uint64_t req_size = sizeof(usb_request_t) + sizeof(usb_req_internal_t);
+    ASSERT_EQ(usb_request_alloc(&req, 8u, 1, req_size), ZX_OK, "");
     ASSERT_NONNULL(req, "");
     ASSERT_TRUE((req->vmo_handle != ZX_HANDLE_INVALID), "");
 
     usb_request_t* zero_req;
-    ASSERT_EQ(usb_request_alloc(&zero_req, 0, 1, sizeof(usb_request_t)), ZX_OK, "");
+    ASSERT_EQ(usb_request_alloc(&zero_req, 0, 1, req_size), ZX_OK, "");
     ASSERT_NONNULL(zero_req, "");
 
     usb_request_pool_t pool;
-    usb_request_pool_init(&pool, offsetof(usb_request_t, node));
+    usb_request_pool_init(&pool, sizeof(usb_request_t) + offsetof(usb_req_internal_t, node));
 
     ASSERT_EQ(usb_request_pool_add(&pool, req), ZX_OK, "");
     ASSERT_EQ(usb_request_pool_add(&pool, zero_req), ZX_OK, "");
