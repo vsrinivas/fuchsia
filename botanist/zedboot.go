@@ -45,7 +45,7 @@ func (f *TFTPFiles) ForEach(cb func(remote, local string) error) error {
 
 // Transfer sends the files over TFTP to a node at a given address.
 func (f *TFTPFiles) Transfer(ctx context.Context, client *tftp.Client, addr *net.UDPAddr) error {
-	type file struct{
+	type file struct {
 		*os.File
 		os.FileInfo
 	}
@@ -131,7 +131,7 @@ func TransferCmdlineArgs(client *tftp.Client, addr *net.UDPAddr, cmdlineArgs []s
 	return nil
 }
 
-func WriteFileToTar(client *tftp.Client, tftpAddr *net.UDPAddr, tw *tar.Writer, testResultsDir string, outputFile string) error {
+func TransferAndWriteFileToTar(client *tftp.Client, tftpAddr *net.UDPAddr, tw *tar.Writer, testResultsDir string, outputFile string) error {
 	writer, err := client.Receive(tftpAddr, path.Join(testResultsDir, outputFile))
 	if err != nil {
 		return fmt.Errorf("failed to receive file %s: %v\n", outputFile, err)
