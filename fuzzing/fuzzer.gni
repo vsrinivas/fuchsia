@@ -167,7 +167,8 @@ template("fuzz_target") {
 }
 
 set_defaults("fuzz_target") {
-  configs = default_executable_configs
+  configs = default_executable_configs +
+            [ "//build/fuzzing:fuzzing_build_mode_unsafe_for_production" ]
 }
 
 # Defines a package of fuzz target binaries
