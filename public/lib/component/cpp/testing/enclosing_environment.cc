@@ -115,14 +115,14 @@ EnclosingEnvironment::EnclosingEnvironment(
                                       env_controller_.NewRequest(), label_,
                                       std::move(service_list), options);
   env_controller_.set_error_handler(
-      [this](zx_status_t status) { running_ = false; });
+      [this](zx_status_t status) { SetRunning(false); });
   // Connect to launcher
   env->GetLauncher(launcher_.NewRequest());
 
   // Connect to service
   env->GetServices(service_provider_.NewRequest());
 
-  env_controller_.events().OnCreated = [this]() { running_ = true; };
+  env_controller_.events().OnCreated = [this]() { SetRunning(true); };
 }
 
 // static
@@ -180,6 +180,15 @@ EnclosingEnvironment::CreateComponentFromUrl(std::string component_url) {
   launch_info.url = component_url;
 
   return CreateComponent(std::move(launch_info));
+}
+
+void EnclosingEnvironment::SetRunning(bool running) {
+  if (running_ != running) {
+    running_ = running;
+    if (running_changed_callback_) {
+      running_changed_callback_(running_);
+    }
+  }
 }
 
 }  // namespace testing

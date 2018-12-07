@@ -193,11 +193,18 @@ class EnclosingEnvironment {
     ConnectToService(service_name, request.TakeChannel());
   }
 
+  // Sets a listener for changes in the running status
+  void SetRunningChangedCallback(fit::function<void(bool)> cb) {
+    running_changed_callback_ = std::move(cb);
+  }
+
  private:
   EnclosingEnvironment(const std::string& label,
                        const fuchsia::sys::EnvironmentPtr& parent_env,
                        std::unique_ptr<EnvironmentServices> services,
                        const fuchsia::sys::EnvironmentOptions& options);
+
+  void SetRunning(bool running);
 
   bool running_ = false;
   const std::string label_;
@@ -205,6 +212,7 @@ class EnclosingEnvironment {
   fuchsia::sys::ServiceProviderPtr service_provider_;
   LauncherImpl launcher_;
   std::unique_ptr<EnvironmentServices> services_;
+  fit::function<void(bool)> running_changed_callback_;
 };
 
 }  // namespace testing
