@@ -18,9 +18,12 @@ interface RemoveMethod {
 
 interface AddEvent {
     1: ExistingMethod();
+    [Transitional]
     2: -> NewEvent();
 };
 
 interface RemoveEvent {
     1: ExistingMethod();
+    [Transitional]
+    2: -> OldEvent();
 };
