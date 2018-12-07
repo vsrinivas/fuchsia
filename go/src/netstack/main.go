@@ -35,7 +35,7 @@ var OnInterfacesChanged func()
 
 func main() {
 	flag.Parse()
-	log.SetFlags(0)
+	log.SetFlags(log.Lshortfile)
 	log.SetPrefix("netstack: ")
 	log.Print("started")
 
