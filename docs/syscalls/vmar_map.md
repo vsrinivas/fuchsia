@@ -97,7 +97,7 @@ In a future build this error will no longer occur.
 ## NOTES
 
 The VMO that backs a memory mapping can be resized to a smaller size. This can cause the
-thread is reading or writting to the VMAR region to fault. To avoid this hazard, services
+thread is reading or writing to the VMAR region to fault. To avoid this hazard, services
 that receive VMOs from clients should use **ZX_VM_REQUIRE_NON_RESIZABLE** when mapping
 the VMO.
 

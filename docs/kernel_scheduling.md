@@ -129,7 +129,7 @@ When selecting a CPU for a thread the scheduler will choose, in order:
 6.  Any active CPU in the affinity mask.
 
 If the thread is running on a CPU not in its affinity mask (due to case
-5 above) the scheduler will try to rectify this everytime the thread is
+5 above) the scheduler will try to rectify this every time the thread is
 preempted, yields, or voluntarily reschedules. Also if the thread
 changes its affinity mask the scheduler may migrate it.
 
@@ -164,5 +164,5 @@ each CPU and it lives outside of the priority queues, but effectively in
 a priority queue of -1. It is used to track idle time and can be used by
 platform implementations for a low power wait mode.
 
-Realtime threads (marked with THREAD_FLAG_REAL_TIME) are allowed to run without
+Realtime threads (marked with `THREAD_FLAG_REAL_TIME`) are allowed to run without
 preemption and will run until they block, yield, or manually reschedule.

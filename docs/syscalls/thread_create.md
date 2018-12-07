@@ -25,7 +25,7 @@ will not start executing until *thread_start()* is called.
 
 Thread handles may be waited on and will assert the signal
 *ZX_THREAD_TERMINATED* when the thread stops executing (due to
-*thread_exit**() being called).
+**thread_exit**() being called).
 
 *process* is the controlling [process object](../objects/process.md) for the
 new thread, which will become a child of that process.

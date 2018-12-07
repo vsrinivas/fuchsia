@@ -31,7 +31,7 @@ None.
 
 ## RETURN VALUE
 
-**handle_replace**() returns ZX_OK and the replacement handle (via *out)
+**handle_replace**() returns **ZX_OK** and the replacement handle (via *out*)
 on success.
 
 ## ERRORS

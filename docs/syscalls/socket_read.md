@@ -57,7 +57,7 @@ disabled for this socket endpoint.
 
 **ZX_ERR_INVALID_ARGS** If any of *buffer* or *actual* are non-NULL
 but invalid pointers, or if *buffer* is NULL, or if *options* is not either zero
-or **ZX_SOCKET_CONTROL*.
+or **ZX_SOCKET_CONTROL**.
 
 **ZX_ERR_ACCESS_DENIED**  *handle* does not have **ZX_RIGHT_READ**.
 

@@ -52,7 +52,7 @@ port install autoconf automake libtool libpixman pkgconfig glib2
 
 ## Install Toolchains
 
-If you're developing on Linux or macOS, there are prebuilt toolchain binaries avaiable.
+If you're developing on Linux or macOS, there are prebuilt toolchain binaries available.
 Just run this script from your Zircon working directory:
 
 ```
@@ -255,7 +255,7 @@ $BUILDDIR/tools/bootserver $BUILDDIR/zircon.bin
 $BUILDDIR/tools/bootserver $BUILDDIR/zircon.bin /path/to/extra.bootfs
 ```
 
-By default bootserver will continue to run and every time it obsveres a netboot
+By default bootserver will continue to run and every time it observes a netboot
 beacon it will send the kernel (and bootfs if provided) to that device.  If you
 pass the -1 option, bootserver will exit after a successful boot instead.
 

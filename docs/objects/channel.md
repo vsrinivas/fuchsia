@@ -43,7 +43,7 @@ Furthermore, when ownership of a channel endpoint goes from one process to
 another, even if a write was in progress, the ordering of messages is guaranteed
 to be parsimonious; packets before the transfer event originate from the
 previous owner and packets after the transfer belong to the new owner. The same
-applies if a read was in progress when the endpoint was transfered.
+applies if a read was in progress when the endpoint was transferred.
 
 The above sequential guarantee is not provided for other kernel objects, even if
 the last remaining handle is stripped of the **ZX_RIGHT_DUPLICATE** right.

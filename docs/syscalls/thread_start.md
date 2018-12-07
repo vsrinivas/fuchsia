@@ -25,7 +25,7 @@ When the last handle to a thread is closed, the thread is destroyed.
 
 Thread handles may be waited on and will assert the signal
 *ZX_THREAD_TERMINATED* when the thread stops executing (due to
-*thread_exit**() being called.
+**thread_exit**() being called.
 
 *entry* shall point to a function that must call **thread_exit**() or
 **futex_wake_handle_close_thread_exit**() or
