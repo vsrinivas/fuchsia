@@ -251,22 +251,6 @@ class TestApp : public modular::testing::ComponentBase<void> {
 
   void TestStory1_GetController(fidl::StringPtr story_id) {
     story_provider_->GetController(story_id, story_controller_.NewRequest());
-
-    const std::string initial_json = R"({"created-with-info": true})";
-
-    fuchsia::modular::Intent intent;
-    intent.handler = kCommonActiveModule;
-    intent.action = kCommonActiveAction;
-    fuchsia::modular::IntentParameter param;
-    param.name = nullptr;
-    fuchsia::mem::Buffer buf;
-    FXL_CHECK(fsl::VmoFromString(initial_json, &buf));
-    param.data.set_json(std::move(buf));
-    intent.parameters.push_back(std::move(param));
-
-    story_controller_->AddModule(nullptr, "root_module_name", std::move(intent),
-                                 nullptr);
-
     story_controller_->GetInfo([this](fuchsia::modular::StoryInfo story_info,
                                       fuchsia::modular::StoryState state) {
       story1_get_controller_.Pass();
