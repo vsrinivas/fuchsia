@@ -325,6 +325,7 @@ struct demo {
     PFN_vkGetSwapchainImagesKHR fpGetSwapchainImagesKHR;
     PFN_vkAcquireNextImageKHR fpAcquireNextImageKHR;
     PFN_vkQueuePresentKHR fpQueuePresentKHR;
+    PFN_vkGetDeviceQueue2 fpGetDeviceQueue2;
     uint32_t swapchainImageCount;
     VkSwapchainKHR swapchain;
     SwapchainBuffers *buffers;
@@ -390,6 +391,7 @@ struct demo {
 
     uint32_t current_buffer;
     uint32_t queue_family_count;
+    bool protected_output = false;
 };
 
 VKAPI_ATTR VkBool32 VKAPI_CALL
@@ -482,8 +484,13 @@ static void demo_flush_init_cmd(struct demo *demo) {
                                   .flags = 0};
     vkCreateFence(demo->device, &fence_ci, NULL, &fence);
     const VkCommandBuffer cmd_bufs[] = {demo->cmd};
+    VkProtectedSubmitInfo protected_submit_info = {
+        .sType = VK_STRUCTURE_TYPE_PROTECTED_SUBMIT_INFO,
+        .pNext = nullptr,
+        .protectedSubmit = VK_TRUE,
+    };
     VkSubmitInfo submit_info = {.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-                                .pNext = NULL,
+                                .pNext = demo->protected_output ? &protected_submit_info : nullptr,
                                 .waitSemaphoreCount = 0,
                                 .pWaitSemaphores = NULL,
                                 .pWaitDstStageMask = NULL,
@@ -491,7 +498,6 @@ static void demo_flush_init_cmd(struct demo *demo) {
                                 .pCommandBuffers = cmd_bufs,
                                 .signalSemaphoreCount = 0,
                                 .pSignalSemaphores = NULL};
-
     err = vkQueueSubmit(demo->graphics_queue, 1, &submit_info, fence);
     assert(!err);
 
@@ -743,9 +749,14 @@ static void demo_draw(struct demo *demo) {
     // okay to render to the image.
     VkFence nullFence = VK_NULL_HANDLE;
     VkPipelineStageFlags pipe_stage_flags;
+    VkProtectedSubmitInfo protected_submit_info = {
+        .sType = VK_STRUCTURE_TYPE_PROTECTED_SUBMIT_INFO,
+        .pNext = nullptr,
+        .protectedSubmit = VK_TRUE,
+    };
     VkSubmitInfo submit_info;
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submit_info.pNext = NULL;
+    submit_info.pNext = demo->protected_output ? &protected_submit_info : nullptr;
     submit_info.pWaitDstStageMask = &pipe_stage_flags;
     pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     submit_info.waitSemaphoreCount = 1;
@@ -923,13 +934,15 @@ static void demo_prepare_buffers(struct demo *demo) {
     VkSwapchainCreateInfoKHR swapchain_ci = {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
         .pNext = NULL,
+        .flags = demo->protected_output ? VK_SWAPCHAIN_CREATE_PROTECTED_BIT_KHR
+                                        : static_cast<VkSwapchainCreateFlagsKHR>(0),
         .surface = demo->surface,
         .minImageCount = desiredNumOfSwapchainImages,
         .imageFormat = demo->format,
         .imageColorSpace = demo->color_space,
         .imageExtent =
             {
-             .width = swapchainExtent.width, .height = swapchainExtent.height,
+                .width = swapchainExtent.width, .height = swapchainExtent.height,
             },
         .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
         .preTransform = preTransform,
@@ -1789,7 +1802,8 @@ static void demo_prepare(struct demo *demo) {
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
         .pNext = NULL,
         .queueFamilyIndex = demo->graphics_queue_family_index,
-        .flags = 0,
+        .flags = demo->protected_output ? VK_COMMAND_POOL_CREATE_PROTECTED_BIT
+                                        : static_cast<VkCommandPoolCreateFlags>(0),
     };
     err = vkCreateCommandPool(demo->device, &cmd_pool_info, NULL,
                               &demo->cmd_pool);
@@ -2301,6 +2315,11 @@ static void demo_init_vk(struct demo *demo) {
         "VK_LAYER_LUNARG_object_tracker",  "VK_LAYER_LUNARG_core_validation",
         "VK_LAYER_LUNARG_swapchain",       "VK_LAYER_GOOGLE_unique_objects"
     };
+    uint32_t apiVersion = 0;
+    vkEnumerateInstanceVersion(&apiVersion);
+    if (demo->protected_output && apiVersion < VK_MAKE_VERSION(1, 1, 0)) {
+        ERR_EXIT("Need vulkan 1.1 for protected output.", "vkCreateInstance Failure");
+    }
 
     /* Look for validation layers */
     VkBool32 validation_found = 0;
@@ -2455,6 +2474,7 @@ static void demo_init_vk(struct demo *demo) {
                  "vkCreateInstance Failure");
     }
 #endif
+    apiVersion = demo->protected_output ? VK_MAKE_VERSION(1, 1, 0) : VK_MAKE_VERSION(1, 0, 0);
     const VkApplicationInfo app = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
         .pNext = NULL,
@@ -2462,7 +2482,7 @@ static void demo_init_vk(struct demo *demo) {
         .applicationVersion = 0,
         .pEngineName = APP_SHORT_NAME,
         .engineVersion = 0,
-        .apiVersion = VK_API_VERSION_1_0,
+        .apiVersion = apiVersion,
     };
     VkInstanceCreateInfo inst_info = {
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
@@ -2651,19 +2671,24 @@ static void demo_create_device(struct demo *demo) {
     queues[0].queueFamilyIndex = demo->graphics_queue_family_index;
     queues[0].queueCount = 1;
     queues[0].pQueuePriorities = queue_priorities;
-    queues[0].flags = 0;
+    queues[0].flags = demo->protected_output ? VK_DEVICE_QUEUE_CREATE_PROTECTED_BIT : 0;
+
+    VkPhysicalDeviceProtectedMemoryFeatures protected_memory = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROTECTED_MEMORY_FEATURES,
+        .pNext = nullptr,
+        .protectedMemory = VK_TRUE,
+    };
 
     VkDeviceCreateInfo device = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-        .pNext = NULL,
+        .pNext = demo->protected_output ? &protected_memory : nullptr,
         .queueCreateInfoCount = 1,
         .pQueueCreateInfos = queues,
         .enabledLayerCount = 0,
         .ppEnabledLayerNames = NULL,
         .enabledExtensionCount = demo->enabled_extension_count,
-        .ppEnabledExtensionNames = (const char *const *)demo->extension_names,
-        .pEnabledFeatures =
-            NULL, // If specific features are required, pass them in here
+        .ppEnabledExtensionNames = (const char* const*)demo->extension_names,
+        .pEnabledFeatures = NULL, // If specific features are required, pass them in here
     };
     if (demo->separate_present_queue) {
         queues[1].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -2773,9 +2798,19 @@ static void demo_init_vk_swapchain(struct demo *demo) {
     GET_DEVICE_PROC_ADDR(demo->device, GetSwapchainImagesKHR);
     GET_DEVICE_PROC_ADDR(demo->device, AcquireNextImageKHR);
     GET_DEVICE_PROC_ADDR(demo->device, QueuePresentKHR);
+    GET_DEVICE_PROC_ADDR(demo->device, GetDeviceQueue2);
 
-    vkGetDeviceQueue(demo->device, demo->graphics_queue_family_index, 0,
-                     &demo->graphics_queue);
+    if (demo->protected_output) {
+        VkDeviceQueueInfo2 queue_info2 = {.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_INFO_2,
+                                          .pNext = nullptr,
+                                          .flags = VK_DEVICE_QUEUE_CREATE_PROTECTED_BIT,
+                                          .queueFamilyIndex = demo->graphics_queue_family_index,
+                                          .queueIndex = 0};
+        demo->graphics_queue = nullptr;
+        demo->fpGetDeviceQueue2(demo->device, &queue_info2, &demo->graphics_queue);
+    } else {
+        vkGetDeviceQueue(demo->device, demo->graphics_queue_family_index, 0, &demo->graphics_queue);
+    }
 
     if (!demo->separate_present_queue) {
         demo->present_queue = demo->graphics_queue;
@@ -2915,6 +2950,10 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
             demo->suppress_popups = true;
             continue;
         }
+        if (strcmp(argv[i], "--protected_output") == 0) {
+            demo->protected_output = true;
+            continue;
+        }
         if ((strcmp(argv[i], "--size") == 0 || strcmp(argv[i], "--res") == 0) &&
             (i < argc - 2) && sscanf(argv[i + 1], "%u", &demo->width) == 1 &&
             sscanf(argv[i + 2], "%u", &demo->height) == 1) {
@@ -2922,15 +2961,18 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
             continue;
         }
 
-        fprintf(stderr, "Usage:\n  %s [--use_staging] [--validate] [--break] "
+        fprintf(stderr,
+                "Usage:\n  %s [--use_staging] [--validate] [--break] "
 #if defined(VK_USE_PLATFORM_XLIB_KHR)
-                        "[--xlib] "
+                "[--xlib] "
 #endif
-                        "[--c <framecount>] [--suppress_popups] [--present_mode <present mode enum>] [--res width height]\n"
-                        "VK_PRESENT_MODE_IMMEDIATE_KHR = %d\n"
-                        "VK_PRESENT_MODE_MAILBOX_KHR = %d\n"
-                        "VK_PRESENT_MODE_FIFO_KHR = %d\n"
-                        "VK_PRESENT_MODE_FIFO_RELAXED_KHR = %d\n",
+                "[--protected_output] "
+                "[--c <framecount>] [--suppress_popups] [--present_mode <present mode enum>] "
+                "[--res width height]\n"
+                "VK_PRESENT_MODE_IMMEDIATE_KHR = %d\n"
+                "VK_PRESENT_MODE_MAILBOX_KHR = %d\n"
+                "VK_PRESENT_MODE_FIFO_KHR = %d\n"
+                "VK_PRESENT_MODE_FIFO_RELAXED_KHR = %d\n",
                 APP_SHORT_NAME, VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_MAILBOX_KHR,
                 VK_PRESENT_MODE_FIFO_KHR, VK_PRESENT_MODE_FIFO_RELAXED_KHR);
         fflush(stderr);
