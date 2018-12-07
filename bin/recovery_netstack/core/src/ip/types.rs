@@ -192,6 +192,12 @@ impl IpAddr for Ipv4Addr {
     }
 }
 
+impl From<std::net::Ipv4Addr> for Ipv4Addr {
+    fn from(ip: std::net::Ipv4Addr) -> Self {
+        Ipv4Addr::new(ip.octets())
+    }
+}
+
 impl Display for Ipv4Addr {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         write!(f, "{}.{}.{}.{}", self.0[0], self.0[1], self.0[2], self.0[3])
@@ -246,6 +252,12 @@ impl IpAddr for Ipv6Addr {
 
     fn bytes(&self) -> &[u8] {
         &self.0
+    }
+}
+
+impl From<std::net::Ipv6Addr> for Ipv6Addr {
+    fn from(ip: std::net::Ipv6Addr) -> Self {
+        Ipv6Addr::new(ip.octets())
     }
 }
 

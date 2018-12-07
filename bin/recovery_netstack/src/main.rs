@@ -4,7 +4,7 @@
 
 //! A networking stack.
 
-#![feature(async_await, await_macro, futures_api)]
+#![feature(async_await, await_macro, futures_api, pin)]
 // In case we roll the toolchain and something we're using as a feature has been
 // stabilized.
 #![allow(stable_features)]
@@ -12,20 +12,17 @@
 #![deny(unreachable_patterns)]
 
 mod eventloop;
+mod fuchsia_net_stack;
 
 use crate::eventloop::EventLoop;
-use std::env;
 
 fn main() -> Result<(), failure::Error> {
     fuchsia_syslog::init()?;
     // Severity is set to debug during development.
     fuchsia_syslog::set_severity(-1);
 
-    let path = env::args()
-        .nth(1)
-        .unwrap_or_else(|| String::from(eventloop::DEFAULT_ETH));
-    let eth_future = EventLoop::run_ethernet(&path);
-
     let mut executor = fuchsia_async::Executor::new()?;
-    executor.run_singlethreaded(eth_future)
+
+    let eventloop = EventLoop::new();
+    executor.run_singlethreaded(eventloop.run())
 }

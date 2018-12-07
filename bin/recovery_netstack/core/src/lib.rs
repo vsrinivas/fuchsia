@@ -18,7 +18,6 @@
 #![deny(safe_packed_borrows)]
 #![deny(missing_docs)]
 #![deny(unreachable_patterns)]
-
 // TODO(joshlf): Remove this once all of the elements in the crate are actually
 // used.
 #![allow(unused)]
@@ -34,13 +33,13 @@ mod testutil;
 mod transport;
 mod wire;
 
-pub use crate::device::{
-    ethernet::Mac, receive_frame, set_ip_addr, DeviceId, DeviceLayerEventDispatcher,
-    DeviceLayerTimerId,
+pub mod types;
+
+use crate::device::{
+    ethernet::Mac, receive_frame, DeviceId, DeviceLayerEventDispatcher, DeviceLayerTimerId,
 };
-pub use crate::ip::{Ipv4Addr, Subnet, add_device_route};
-pub use crate::transport::udp::UdpEventDispatcher;
-pub use crate::transport::{TransportLayerEventDispatcher, TransportLayerTimerId};
+use crate::transport::udp::UdpEventDispatcher;
+use crate::transport::{TransportLayerEventDispatcher, TransportLayerTimerId};
 
 use crate::device::DeviceLayerState;
 use crate::ip::IpLayerState;
@@ -169,4 +168,61 @@ pub trait EventDispatcher: DeviceLayerEventDispatcher + TransportLayerEventDispa
     /// Returns true if the timeout was cancelled, false if there was no timeout
     /// for the given ID.
     fn cancel_timeout(&mut self, id: TimerId) -> Option<std::time::Instant>;
+}
+
+/// Set the IP address for a device.
+// TODO(wesleyac): A real error type
+pub fn set_ip_addr<D: EventDispatcher>(
+    ctx: &mut Context<D>, device: DeviceId, addr: std::net::IpAddr, subnet: types::Subnet,
+) -> Result<(), ()> {
+    match (addr, subnet.addr(), subnet.prefix_len()) {
+        (std::net::IpAddr::V4(ip), std::net::IpAddr::V4(subnet_addr), prefix_len) => {
+            crate::device::set_ip_addr(
+                ctx,
+                device,
+                crate::ip::Ipv4Addr::new(ip.octets()),
+                crate::ip::Subnet::new(crate::ip::Ipv4Addr::new(subnet_addr.octets()), prefix_len),
+            );
+            Ok(())
+        }
+        (std::net::IpAddr::V6(ip), std::net::IpAddr::V6(subnet_addr), prefix_len) => {
+            crate::device::set_ip_addr(
+                ctx,
+                device,
+                crate::ip::Ipv6Addr::new(ip.octets()),
+                crate::ip::Subnet::new(crate::ip::Ipv6Addr::new(subnet_addr.octets()), prefix_len),
+            );
+            Ok(())
+        }
+        _ => Err(()),
+    }
+}
+
+/// Get the IP addresses for a device.
+pub fn get_ip_addr<D: EventDispatcher>(
+    ctx: &mut Context<D>, device: DeviceId,
+) -> (Option<std::net::Ipv4Addr>, Option<std::net::Ipv6Addr>) {
+    unimplemented!();
+}
+
+/// Add a route to send all packets addressed to a specific subnet to a specific device.
+pub fn add_device_route<D: EventDispatcher>(
+    ctx: &mut Context<D>, subnet: types::Subnet, device: DeviceId,
+) {
+    match subnet.addr() {
+        std::net::IpAddr::V4(addr) => {
+            ip::add_device_route(
+                ctx,
+                ip::Subnet::new(ip::Ipv4Addr::from(addr), subnet.prefix_len()),
+                device,
+            );
+        }
+        std::net::IpAddr::V6(addr) => {
+            ip::add_device_route(
+                ctx,
+                ip::Subnet::new(ip::Ipv6Addr::from(addr), subnet.prefix_len()),
+                device,
+            );
+        }
+    }
 }
