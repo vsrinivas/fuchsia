@@ -237,7 +237,7 @@ zx_status_t VnodeBlob::InitCompressed() {
         return ZX_ERR_IO_DATA_INTEGRITY;
     }
 
-    blobfs_->UpdateMerkleDecompressMetrics((compressed_blocks)*kBlobfsBlockSize, inode_.blob_size,
+    blobfs_->UpdateMerkleDecompressMetrics(compressed_blocks * kBlobfsBlockSize, inode_.blob_size,
                                            read_time, ticker.End());
     return ZX_OK;
 }
