@@ -203,7 +203,7 @@ zx_status_t CrashpadAnalyzerImpl::HandleNativeException(
     return ZX_ERR_INTERNAL;
   }
 
-  return UploadReport(std::move(report), annotations);
+  return UploadReport(std::move(report), augmented_annotations);
 }
 
 zx_status_t CrashpadAnalyzerImpl::HandleManagedRuntimeException(
