@@ -8,6 +8,7 @@
 #include <lib/async/cpp/task.h>
 #include <iostream>
 #include "garnet/bin/mediaplayer/graph/formatting.h"
+#include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/io/fd.h"
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/type_converters.h"
@@ -34,11 +35,9 @@ CommandQueue::~CommandQueue() {}
 
 void CommandQueue::NotifyStatusChanged(
     const fuchsia::mediaplayer::PlayerStatus& status) {
-  // Process status received from the player.
-  if (status.duration_ns != 0) {
-    content_loaded_ = true;
-    MaybeFinishWaitingForContentLoaded();
-  }
+  status_ = fidl::MakeOptional(fidl::Clone(status));
+
+  MaybeFinishWaitingForStatusCondition();
 
   if (status.timeline_function) {
     timeline_function_ =
@@ -46,26 +45,11 @@ void CommandQueue::NotifyStatusChanged(
     MaybeScheduleWaitForPositionTask();
     MaybeFinishWaitingForSeekCompletion();
   }
-
-  at_end_of_stream_ = status.end_of_stream;
-  MaybeFinishWaitingForEndOfStream();
 }
 
 void CommandQueue::NotifyViewReady() {
   view_ready_ = true;
   MaybeFinishWaitingForViewReady();
-}
-
-void CommandQueue::MaybeFinishWaitingForContentLoaded() {
-  if (content_loaded_ && wait_for_content_loaded_) {
-    wait_for_content_loaded_ = false;
-
-    if (verbose_) {
-      std::cerr << "WaitForContentLoaded done\n";
-    }
-
-    ExecuteNextCommand();
-  }
 }
 
 void CommandQueue::MaybeFinishWaitingForViewReady() {
@@ -76,6 +60,17 @@ void CommandQueue::MaybeFinishWaitingForViewReady() {
       std::cerr << "WaitForViewReady done\n";
     }
 
+    ExecuteNextCommand();
+  }
+}
+
+void CommandQueue::MaybeFinishWaitingForStatusCondition() {
+  if (status_ && wait_for_status_condition_ &&
+      wait_for_status_condition_(*status_)) {
+    // We have status from the player, are waiting for a condition relating to
+    // status to become true and have detected that, indeed, that condition has
+    // become true. Clear the condition and continue command execution.
+    wait_for_status_condition_ = nullptr;
     ExecuteNextCommand();
   }
 }
@@ -100,18 +95,6 @@ void CommandQueue::MaybeFinishWaitingForSeekCompletion() {
 
     if (verbose_) {
       std::cerr << "WaitForSeekCompletion done\n";
-    }
-
-    ExecuteNextCommand();
-  }
-}
-
-void CommandQueue::MaybeFinishWaitingForEndOfStream() {
-  if (at_end_of_stream_ && wait_for_end_of_stream_) {
-    wait_for_end_of_stream_ = false;
-
-    if (verbose_) {
-      std::cerr << "WaitForEndOfStream done\n";
     }
 
     ExecuteNextCommand();
@@ -151,7 +134,7 @@ void CommandQueue::SetUrlCommand::Execute(CommandQueue* command_queue) {
   }
 
   command_queue->prev_seek_position_ = 0;
-  command_queue->at_end_of_stream_ = false;
+  command_queue->status_ = nullptr;
   command_queue->ExecuteNextCommand();
 }
 
@@ -165,7 +148,7 @@ void CommandQueue::SetFileCommand::Execute(CommandQueue* command_queue) {
   command_queue->player_->SetFileSource(
       fsl::CloneChannelFromFileDescriptor(fd.get()));
   command_queue->prev_seek_position_ = 0;
-  command_queue->at_end_of_stream_ = false;
+  command_queue->status_ = nullptr;
   command_queue->ExecuteNextCommand();
 }
 
@@ -194,7 +177,7 @@ void CommandQueue::SeekCommand::Execute(CommandQueue* command_queue) {
 
   command_queue->player_->Seek(position_.get());
   command_queue->prev_seek_position_ = position_.get();
-  command_queue->at_end_of_stream_ = false;
+  command_queue->status_ = nullptr;
   command_queue->ExecuteNextCommand();
 }
 
@@ -208,14 +191,16 @@ void CommandQueue::InvokeCommand::Execute(CommandQueue* command_queue) {
   command_queue->ExecuteNextCommand();
 }
 
-void CommandQueue::WaitForContentLoadedCommand::Execute(
+void CommandQueue::WaitForStatusConditionCommand::Execute(
     CommandQueue* command_queue) {
   if (command_queue->verbose_) {
-    std::cerr << "WaitForContentLoaded\n";
+    std::cerr << "WaitForStatusConditionCommand\n";
   }
 
-  command_queue->wait_for_content_loaded_ = true;
-  command_queue->MaybeFinishWaitingForContentLoaded();
+  command_queue->wait_for_status_condition_ = std::move(condition_);
+  // |ExecuteNextCommand| will be called when |wait_for_status_condition_|
+  // returns true.
+  command_queue->MaybeFinishWaitingForStatusCondition();
 }
 
 void CommandQueue::WaitForViewReadyCommand::Execute(
@@ -225,6 +210,7 @@ void CommandQueue::WaitForViewReadyCommand::Execute(
   }
 
   command_queue->wait_for_view_ready_ = true;
+  // |ExecuteNextCommand| will be called when the view is ready.
   command_queue->MaybeFinishWaitingForViewReady();
 }
 
@@ -235,6 +221,7 @@ void CommandQueue::WaitForPositionCommand::Execute(
   }
 
   command_queue->wait_for_position_ = position_.get();
+  // |ExecuteNextCommand| will be called when the position has been reached.
   command_queue->MaybeScheduleWaitForPositionTask();
 }
 
@@ -246,17 +233,8 @@ void CommandQueue::WaitForSeekCompletionCommand::Execute(
 
   command_queue->wait_for_seek_completion_position_ =
       command_queue->prev_seek_position_;
+  // |ExecuteNextCommand| will be called when the seek has completed.
   command_queue->MaybeFinishWaitingForSeekCompletion();
-}
-
-void CommandQueue::WaitForEndOfStreamCommand::Execute(
-    CommandQueue* command_queue) {
-  if (command_queue->verbose_) {
-    std::cerr << "WaitForEndOfStream\n";
-  }
-
-  command_queue->wait_for_end_of_stream_ = true;
-  command_queue->MaybeFinishWaitingForEndOfStream();
 }
 
 void CommandQueue::SleepCommand::Execute(CommandQueue* command_queue) {

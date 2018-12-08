@@ -18,15 +18,16 @@ namespace test {
 
 class CommandQueue {
  public:
+  using StatusCondition =
+      fit::function<bool(const fuchsia::mediaplayer::PlayerStatus&)>;
+
   CommandQueue();
 
   ~CommandQueue();
 
   void Init(fuchsia::mediaplayer::Player* player) { player_ = player; }
 
-  void SetVerbose(bool verbose) {
-    verbose_ = verbose;
-  }
+  void SetVerbose(bool verbose) { verbose_ = verbose; }
 
   // Executes the commands in the queue.
   void Execute() { ExecuteNextCommand(); }
@@ -34,7 +35,8 @@ class CommandQueue {
   // Clears the command queue.
   void Clear() {
     wait_for_position_ = fuchsia::media::NO_TIMESTAMP;
-    wait_for_end_of_stream_ = false;
+    wait_for_status_condition_ = nullptr;
+    status_ = nullptr;
 
     while (!command_queue_.empty()) {
       command_queue_.pop();
@@ -70,8 +72,41 @@ class CommandQueue {
     AddCommand(new InvokeCommand(std::move(action)));
   }
 
+  void WaitForStatusCondition(StatusCondition condition) {
+    AddCommand(new WaitForStatusConditionCommand(std::move(condition)));
+  }
+
   // Queues a command that waits until content is loaded.
-  void WaitForContentLoaded() { AddCommand(new WaitForContentLoadedCommand()); }
+  void WaitForContentLoaded() {
+    WaitForStatusCondition(
+        [](const fuchsia::mediaplayer::PlayerStatus& status) {
+          return status.duration_ns != 0;
+        });
+  }
+
+  // Queues a command that waits until audio is connected.
+  void WaitForAudioConnected() {
+    WaitForStatusCondition(
+        [](const fuchsia::mediaplayer::PlayerStatus& status) {
+          return status.audio_connected;
+        });
+  }
+
+  // Queues a command that waits until video is connected.
+  void WaitForVideoConnected() {
+    WaitForStatusCondition(
+        [](const fuchsia::mediaplayer::PlayerStatus& status) {
+          return status.video_connected;
+        });
+  }
+
+  // Queues a command that waits until a problem is indicated.
+  void WaitForProblem() {
+    WaitForStatusCondition(
+        [](const fuchsia::mediaplayer::PlayerStatus& status) {
+          return status.problem != nullptr;
+        });
+  }
 
   // Queues a command that waits util the view is ready.
   void WaitForViewReady() { AddCommand(new WaitForViewReadyCommand()); }
@@ -90,7 +125,12 @@ class CommandQueue {
   }
 
   // Queues a command that waits until end of stream is reached.
-  void WaitForEndOfStream() { AddCommand(new WaitForEndOfStreamCommand()); }
+  void WaitForEndOfStream() {
+    WaitForStatusCondition(
+        [](const fuchsia::mediaplayer::PlayerStatus& status) {
+          return status.end_of_stream;
+        });
+  }
 
   // Queues a command that sleeps for the specified duration.
   void Sleep(zx::duration duration) { AddCommand(new SleepCommand(duration)); }
@@ -137,8 +177,13 @@ class CommandQueue {
     fit::closure action_;
   };
 
-  struct WaitForContentLoadedCommand : public Command {
+  struct WaitForStatusConditionCommand : public Command {
+    WaitForStatusConditionCommand(StatusCondition condition)
+        : condition_(std::move(condition)) {
+      FXL_DCHECK(condition_);
+    }
     void Execute(CommandQueue* command_queue) override;
+    StatusCondition condition_;
   };
 
   struct WaitForViewReadyCommand : public Command {
@@ -155,19 +200,14 @@ class CommandQueue {
     void Execute(CommandQueue* command_queue) override;
   };
 
-  struct WaitForEndOfStreamCommand : public Command {
-    void Execute(CommandQueue* command_queue) override;
-  };
-
   struct SleepCommand : public Command {
     SleepCommand(zx::duration duration) : duration_(duration) {}
     void Execute(CommandQueue* command_queue) override;
     zx::duration duration_;
   };
 
-  // Finishes waiting for content loaded if we're waiting for content loaded and
-  // if the content is loaded.
-  void MaybeFinishWaitingForContentLoaded();
+  // Finishes waiting for |wait_for_status_condition_| to succeed.
+  void MaybeFinishWaitingForStatusCondition();
 
   // Finishes waiting for view ready if we're waiting for view ready and
   // if the view is ready.
@@ -194,15 +234,14 @@ class CommandQueue {
   fuchsia::mediaplayer::Player* player_;
   std::queue<std::unique_ptr<Command>> command_queue_;
   media::TimelineFunction timeline_function_;
+  std::unique_ptr<fuchsia::mediaplayer::PlayerStatus> status_;
 
-  bool content_loaded_ = false;
-  bool wait_for_content_loaded_ = false;
+  // This condition is polled in |NotifyStatusChanged| to determine if command
+  // execution should be continued.
+  StatusCondition wait_for_status_condition_;
 
   bool view_ready_ = false;
   bool wait_for_view_ready_ = false;
-
-  bool at_end_of_stream_ = false;
-  bool wait_for_end_of_stream_ = false;
 
   int64_t prev_seek_position_ = fuchsia::media::NO_TIMESTAMP;
   int64_t wait_for_seek_completion_position_ = fuchsia::media::NO_TIMESTAMP;
