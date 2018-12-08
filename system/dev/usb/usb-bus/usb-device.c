@@ -68,8 +68,8 @@ static int callback_thread(void* arg) {
         usb_device_req_internal_t* req_int;
         while ((req_int = list_remove_head_type(&temp_list, usb_device_req_internal_t, node))) {
             req = DEV_INTERNAL_TO_USB_REQ(req_int, dev->parent_req_size);
-            usb_request_complete(req, req->response.status, req->response.actual, req->complete_cb,
-                                 req->cookie);
+            usb_request_complete(req, req->response.status, req->response.actual,
+                                 req_int->complete_cb, req_int->cookie);
         }
     }
 
@@ -236,6 +236,10 @@ static zx_status_t usb_device_control(void* ctx, uint8_t request_type, uint8_t r
 static void usb_device_request_queue(void* ctx, usb_request_t* req, usb_request_complete_cb cb,
                                      void* cookie) {
     usb_device_t* dev = ctx;
+
+    usb_device_req_internal_t* req_int = USB_REQ_TO_DEV_INTERNAL(req, dev->parent_req_size);
+    req_int->complete_cb = cb;
+    req_int->cookie = cookie;
 
     req->header.device_id = dev->device_id;
     // save the existing callback and cookie, so we can replace them
