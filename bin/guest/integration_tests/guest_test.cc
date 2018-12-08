@@ -16,7 +16,7 @@ zx_status_t GuestWaitForShellReady(EnclosedGuest& enclosed_guest) {
     std::string response;
     zx_status_t status = enclosed_guest.Execute("echo guest ready", &response);
     if (status != ZX_OK) {
-      return status;
+      continue;
     }
     auto ready = response.find("guest ready");
     if (ready == std::string::npos) {
