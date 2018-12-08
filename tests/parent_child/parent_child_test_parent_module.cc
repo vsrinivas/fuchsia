@@ -27,7 +27,7 @@ using modular::testing::TestPoint;
 
 namespace {
 
-void StartModuleWithHandler(
+void AddModuleToStoryWithHandler(
     fuchsia::modular::ModuleContext* const module_context,
     fidl::InterfaceRequest<fuchsia::modular::ModuleController> request,
     fidl::StringPtr handler) {
@@ -35,7 +35,8 @@ void StartModuleWithHandler(
   intent.handler = handler;
   intent.action = kChildModuleAction;
   module_context->AddModuleToStory(
-      kChildModuleName, std::move(intent), std::move(request), nullptr,
+      kChildModuleName, std::move(intent), std::move(request),
+      nullptr /* surface_relation */,
       [](const fuchsia::modular::StartModuleStatus) {});
 }
 
@@ -73,8 +74,8 @@ class TestModule {
       "Second child module controller closed"};
 
   void StartChildModuleTwice() {
-    StartModuleWithHandler(module_host_->module_context(),
-                           child_module_.NewRequest(), kChildModuleUrl1);
+    AddModuleToStoryWithHandler(module_host_->module_context(),
+                                child_module_.NewRequest(), kChildModuleUrl1);
     child_module_.set_error_handler(
         [this](zx_status_t status) { OnFirstChildModuleStopped(); });
 
@@ -82,14 +83,15 @@ class TestModule {
     // Intent, and then again but with a different Intent.handler. The second
     // call stops the previous module instance and starts a new one.
     Await("child_module_1_init", [this] {
-      StartModuleWithHandler(module_host_->module_context(),
-                             child_module_again_.NewRequest(),
-                             kChildModuleUrl1);
+      AddModuleToStoryWithHandler(module_host_->module_context(),
+                                  child_module_again_.NewRequest(),
+                                  kChildModuleUrl1);
       child_module_again_.set_error_handler([this](zx_status_t status) {
         second_child_module_controller_closed_.Pass();
       });
-      StartModuleWithHandler(module_host_->module_context(),
-                             child_module2_.NewRequest(), kChildModuleUrl2);
+      AddModuleToStoryWithHandler(module_host_->module_context(),
+                                  child_module2_.NewRequest(),
+                                  kChildModuleUrl2);
     });
   }
 
@@ -108,16 +110,39 @@ class TestModule {
   }
 
   TestPoint child_module2_stopped_{"Second child module stopped"};
-
   void OnChildModule2Stopped() {
     child_module2_stopped_.Pass();
-    Signal(modular::testing::kTestShutdown);
+
+    TestPipelinedAddAndStop();
+  }
+
+  TestPoint child_module_3_started_{"Third child module started"};
+  TestPoint child_module_3_stopped_{"Third child module stopped"};
+  void TestPipelinedAddAndStop() {
+    // New test case: start a third child module, and immediately stop it.
+    // We expect that the child module will go through its full lifecycle,
+    // since we serialize these requests in sessionmgr.
+    AddModuleToStoryWithHandler(module_host_->module_context(),
+                                child_module3_.NewRequest(), kChildModuleUrl1);
+    child_module3_->Stop([this] { /* do nothing */ });
+    child_module3_.events().OnStateChange =
+        [this](fuchsia::modular::ModuleState module_state) {
+          FXL_LOG(INFO) << "XXX SDLFKJSDFLKJ " << static_cast<int>(module_state);
+          if (module_state == fuchsia::modular::ModuleState::RUNNING) {
+            child_module_3_started_.Pass();
+          }
+          if (module_state == fuchsia::modular::ModuleState::STOPPED) {
+            child_module_3_stopped_.Pass();
+            Signal(modular::testing::kTestShutdown);
+          }
+        };
   }
 
   modular::ModuleHost* module_host_;
   fuchsia::modular::ModuleControllerPtr child_module_;
   fuchsia::modular::ModuleControllerPtr child_module_again_;
   fuchsia::modular::ModuleControllerPtr child_module2_;
+  fuchsia::modular::ModuleControllerPtr child_module3_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestModule);
 };

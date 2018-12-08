@@ -627,11 +627,10 @@ class StoryControllerImpl::OnModuleDataUpdatedCall : public Operation<> {
  private:
   void Run() override {
     FlowToken flow{this};
-    if (!story_controller_impl_->IsRunning() ||
-        module_data_.module_source !=
-            fuchsia::modular::ModuleSource::EXTERNAL) {
+    if (!story_controller_impl_->IsRunning()) {
       return;
     }
+
     // Check for existing module at the given path.
     auto* const running_mod_info =
         story_controller_impl_->FindRunningModInfo(module_data_.module_path);
@@ -641,6 +640,19 @@ class StoryControllerImpl::OnModuleDataUpdatedCall : public Operation<> {
         operation_queue_.Add(new KillModuleCall(
             story_controller_impl_, std::move(module_data_), [flow] {}));
       }
+      return;
+    }
+
+    // We do not auto-start Modules that were added through ModuleContext on
+    // other devices.
+    //
+    // TODO(thatguy): Revisit this decision. It seems wrong: we do not want
+    // to auto-start mods added through ModuleContext.EmbedModule(), because
+    // we do not have the necessary capabilities (the ViewOwner). However,
+    // mods added through ModuleContext.AddModuleToStory() can be started
+    // automatically.
+    if (module_data_.module_source !=
+        fuchsia::modular::ModuleSource::EXTERNAL) {
       return;
     }
 
@@ -1169,6 +1181,7 @@ void StoryControllerImpl::DefocusModule(
 void StoryControllerImpl::StopModule(
     const fidl::VectorPtr<fidl::StringPtr>& module_path,
     const std::function<void()>& done) {
+  FXL_LOG(INFO) << "XXX StopModule() " << PathString(module_path);
   operation_queue_.Add(new StopModuleCall(story_storage_, module_path, done));
 }
 
