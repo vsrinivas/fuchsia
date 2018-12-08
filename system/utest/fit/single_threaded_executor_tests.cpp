@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <future> // for std::async
+#include <thread>
 
 #include <lib/fit/defer.h>
 #include <lib/fit/single_threaded_executor.h>
@@ -48,7 +48,6 @@ bool suspending_and_resuming_tasks() {
     fit::single_threaded_executor executor;
     uint64_t run_count[5] = {};
     uint64_t resume_count[5] = {};
-    uint64_t resume_count4b = 0;
 
     // Schedule a task that suspends itself and immediately resumes.
     executor.schedule_task(fit::make_promise([&](fit::context& context)
@@ -79,10 +78,10 @@ bool suspending_and_resuming_tasks() {
                                                  -> fit::result<> {
         if (++run_count[2] == 100)
             return fit::ok();
-        std::async(std::launch::async, [&, s = context.suspend_task()]() mutable {
+        std::thread([&, s = context.suspend_task()]() mutable {
             resume_count[2]++;
             s.resume_task();
-        });
+        }).detach();
         return fit::pending();
     }));
 
@@ -101,14 +100,16 @@ bool suspending_and_resuming_tasks() {
                                                  -> fit::result<> {
         if (++run_count[4] == 100)
             return fit::ok();
-        std::async(std::launch::async, [&, s = context.suspend_task()]() mutable {
-            resume_count[4]++;
+
+        // Race two threads to resume the task.  Either can win.
+        // This is safe because these threads don't capture references to
+        // local variables that might go out of scope when the test exits.
+        std::thread([s = context.suspend_task()]() mutable {
             s.resume_task();
-        });
-        std::async(std::launch::async, [&, s = context.suspend_task()]() mutable {
-            resume_count4b++; // use a different variable to avoid data races
+        }).detach();
+        std::thread([s = context.suspend_task()]() mutable {
             s.resume_task();
-        });
+        }).detach();
         return fit::pending();
     }));
 
@@ -123,8 +124,6 @@ bool suspending_and_resuming_tasks() {
     EXPECT_EQ(1, run_count[3]);
     EXPECT_EQ(0, resume_count[3]);
     EXPECT_EQ(100, run_count[4]);
-    EXPECT_EQ(99, resume_count[4]);
-    EXPECT_EQ(99, resume_count4b);
 
     END_TEST;
 }
@@ -160,7 +159,7 @@ bool abandoning_tasks() {
         [&, d = fit::defer([&] { destruction[2]++; })](fit::context& context)
             -> fit::result<> {
             run_count[2]++;
-            std::async(std::launch::async, [s = context.suspend_task()] {});
+            std::thread([s = context.suspend_task()] {}).detach();
             return fit::pending();
         }));
 

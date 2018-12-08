@@ -4,9 +4,10 @@
 
 #include <unistd.h>
 
-#include <future> // for std::async
 #include <string>
+#include <thread>
 
+#include <lib/fit/bridge.h>
 #include <lib/fit/sequencer.h>
 #include <lib/fit/single_threaded_executor.h>
 #include <unittest/unittest.h>
@@ -86,19 +87,30 @@ bool thread_safety() {
     uint64_t run_count = 0;
 
     // Schedule work from a few threads, just to show that we can.
-    for (int i = 0; i < 4; i++) {
-        std::async(std::launch::async, [&]() mutable {
-            for (int j = 0; j < 100; j++) {
-                executor.schedule_task(
-                    fit::make_promise([&] { run_count++; }).wrap_with(seq));
-                sleep(0);
-            }
-        });
+    constexpr int num_threads = 4;
+    constexpr int num_tasks_per_thread = 100;
+    std::thread threads[num_threads];
+    for (int i = 0; i < num_threads; i++) {
+        fit::bridge bridge;
+        threads[i] =
+            std::thread([&, completer = std::move(bridge.completer())]() mutable {
+                for (int j = 0; j < num_tasks_per_thread; j++) {
+                    executor.schedule_task(
+                        fit::make_promise([&] { run_count++; }).wrap_with(seq));
+                    usleep(1);
+                }
+                completer.complete_ok();
+            });
+        executor.schedule_task(bridge.consumer().promise());
     }
 
     // Run the tasks.
     executor.run();
-    EXPECT_EQ(4 * 100, run_count);
+    for (int i = 0; i < num_threads; i++)
+        threads[i].join();
+
+    // We expect all tasks to have run.
+    EXPECT_EQ(num_threads * num_tasks_per_thread, run_count);
 
     END_TEST;
 }

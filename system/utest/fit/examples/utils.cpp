@@ -9,7 +9,6 @@
 // You do not need to include these headers just to use |fit::promise|
 // or |fit::future|.
 #include <chrono>
-#include <future>
 #include <thread>
 
 namespace utils {
@@ -26,10 +25,10 @@ fit::promise<> sleep_for_a_little_while() {
 }
 
 void resume_in_a_little_while(fit::suspended_task task) {
-    std::async(std::launch::async, [task]() mutable {
+    std::thread([task]() mutable {
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
         task.resume_task();
-    });
+    }).detach();
 }
 
 } // namespace utils
