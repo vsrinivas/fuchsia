@@ -23,16 +23,43 @@ TEST(DeviceClassTest, CastFromBytes) {
   EXPECT_EQ(10, test_payload->arg0);
   EXPECT_EQ(DeviceClass::MajorClass::kPhone,
             test_payload->class_of_device.major_class());
+  std::unordered_set<DeviceClass::ServiceClass> srvs_expected = {
+      DeviceClass::ServiceClass::kNetworking};
+  EXPECT_EQ(srvs_expected, test_payload->class_of_device.GetServiceClasses());
+
+  // Computer -- Laptop with no Serivces.
+  std::array<uint8_t, 4> no_srv_bytes{{0xBA, 0x0C, 0x01, 0x00}};
+  EXPECT_EQ(no_srv_bytes.size(), sizeof(TestPayload));
+
+  test_payload = reinterpret_cast<TestPayload*>(no_srv_bytes.data());
+  EXPECT_EQ(0xBA, test_payload->arg0);
+  EXPECT_EQ(DeviceClass::MajorClass::kComputer,
+            test_payload->class_of_device.major_class());
+  srvs_expected = {};
+  EXPECT_EQ(srvs_expected, test_payload->class_of_device.GetServiceClasses());
+
+  // Wearable -- watch with Location and Audio services
+  std::array<uint8_t, 4> two_srv_bytes{{0xA0, 0x04, 0x07, 0x21}};
+  EXPECT_EQ(two_srv_bytes.size(), sizeof(TestPayload));
+
+  test_payload = reinterpret_cast<TestPayload*>(two_srv_bytes.data());
+  EXPECT_EQ(0xA0, test_payload->arg0);
+  EXPECT_EQ(DeviceClass::MajorClass::kWearable,
+            test_payload->class_of_device.major_class());
+  srvs_expected = {DeviceClass::ServiceClass::kAudio,
+                   DeviceClass::ServiceClass::kPositioning};
+  EXPECT_EQ(srvs_expected, test_payload->class_of_device.GetServiceClasses());
 }
 
 TEST(DeviceClassTest, ToString) {
   DeviceClass device;
-
   EXPECT_EQ("Unspecified", device.ToString());
 
   device = DeviceClass({0x06, 0x02, 0x02});
+  EXPECT_EQ("Phone (Networking)", device.ToString());
 
-  EXPECT_EQ("Phone", device.ToString());
+  device = DeviceClass({0x06, 0x02, 0x60});
+  EXPECT_EQ("Phone (Telephony, Audio)", device.ToString());
 }
 
 TEST(DeviceClassTest, Comparison) {

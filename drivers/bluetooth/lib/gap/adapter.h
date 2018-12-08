@@ -133,9 +133,7 @@ class Adapter final {
   }
 
   // Returns this Adapter's remote device cache.
-  RemoteDeviceCache* remote_device_cache() {
-    return &device_cache_;
-  }
+  RemoteDeviceCache* remote_device_cache() { return &device_cache_; }
 
   // Add a previously bonded device to the device cache and set it up for
   // auto-connect procedures.
@@ -155,6 +153,10 @@ class Adapter final {
   // Sets the Local Name of this adapter, for both BR/EDR discoverability and
   // public LE services.
   void SetLocalName(std::string name, hci::StatusCallback callback);
+
+  // Sets the Device Class of this adapter.
+  void SetClassOfDevice(common::DeviceClass dev_class,
+                        hci::StatusCallback callback);
 
   // Assign a callback to be notified when a connection is automatically
   // established to a bonded LE device in the directed connectable mode (Vol 3,

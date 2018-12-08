@@ -162,18 +162,19 @@ bool Adapter::Initialize(InitializeCallback callback,
         state_.controller_address_ = params->bd_addr;
       });
 
-  init_seq_runner_->RunCommands([callback = std::move(callback), this](hci::Status status) mutable {
-    if (!status) {
-      bt_log(ERROR, "gap",
-             "Failed to obtain initial controller information: %s",
-             status.ToString().c_str());
-      CleanUp();
-      callback(false);
-      return;
-    }
+  init_seq_runner_->RunCommands(
+      [callback = std::move(callback), this](hci::Status status) mutable {
+        if (!status) {
+          bt_log(ERROR, "gap",
+                 "Failed to obtain initial controller information: %s",
+                 status.ToString().c_str());
+          CleanUp();
+          callback(false);
+          return;
+        }
 
-    InitializeStep2(std::move(callback));
-  });
+        InitializeStep2(std::move(callback));
+      });
 
   return true;
 }
@@ -232,6 +233,21 @@ void Adapter::SetLocalName(std::string name, hci::StatusCallback callback) {
         if (!hci_is_error(event, WARN, "gap", "set local name failed")) {
           state_.local_name_ = std::move(name);
         }
+        cb(event.ToStatus());
+      });
+}
+
+void Adapter::SetClassOfDevice(common::DeviceClass dev_class,
+                               hci::StatusCallback callback) {
+  auto write_dev_class = hci::CommandPacket::New(
+      hci::kWriteClassOfDevice, sizeof(hci::WriteClassOfDeviceCommandParams));
+  write_dev_class->mutable_view()
+      ->mutable_payload<hci::WriteClassOfDeviceCommandParams>()
+      ->class_of_device = dev_class;
+  hci_->command_channel()->SendCommand(
+      std::move(write_dev_class), dispatcher_,
+      [this, cb = std::move(callback)](auto, const hci::EventPacket& event) {
+        hci_is_error(event, WARN, "gap", "set device class failed");
         cb(event.ToStatus());
       });
 }
@@ -577,6 +593,12 @@ void Adapter::InitializeStep4(InitializeCallback callback) {
     local_name += " " + nodename;
   }
   SetLocalName(local_name, [](const auto&) {});
+
+  // Set the default device class - a computer with audio.
+  // TODO(BT-641): set this from a platform configuration file
+  common::DeviceClass dev_class(common::DeviceClass::MajorClass::kComputer);
+  dev_class.SetServiceClasses({common::DeviceClass::ServiceClass::kAudio});
+  SetClassOfDevice(dev_class, [](const auto&) {});
 
   // This completes the initialization sequence.
   self->init_state_ = State::kInitialized;
