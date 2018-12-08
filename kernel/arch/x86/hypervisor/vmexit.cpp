@@ -144,7 +144,7 @@ static void next_rip(const ExitInfo& exit_info, AutoVmcs* vmcs) {
     }
 }
 
-static zx_status_t handle_external_interrupt(AutoVmcs* vmcs, LocalApicState* local_apic_state) {
+static zx_status_t handle_external_interrupt(AutoVmcs* vmcs) {
     ExitInterruptionInformation int_info(*vmcs);
     DEBUG_ASSERT(int_info.valid);
     DEBUG_ASSERT(int_info.interruption_type == InterruptionType::EXTERNAL_INTERRUPT);
@@ -1051,7 +1051,7 @@ zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
     switch (exit_info.exit_reason) {
     case ExitReason::EXTERNAL_INTERRUPT:
         ktrace_vcpu_exit(VCPU_EXTERNAL_INTERRUPT, exit_info.guest_rip);
-        status = handle_external_interrupt(vmcs, local_apic_state);
+        status = handle_external_interrupt(vmcs);
         break;
     case ExitReason::INTERRUPT_WINDOW:
         LTRACEF("handling interrupt window\n\n");

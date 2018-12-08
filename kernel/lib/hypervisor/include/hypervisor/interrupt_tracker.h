@@ -61,6 +61,14 @@ public:
         }
     }
 
+    void Clear(uint32_t min, uint32_t max) {
+        if (max < min || max >= N) {
+            DEBUG_ASSERT(false);
+            return;
+        }
+        bitmap_.Clear(min * 2, max * 2);
+    }
+
     InterruptType Scan(uint32_t* vector) {
         size_t bitoff;
 #if ARCH_ARM64
@@ -99,6 +107,22 @@ public:
         uint32_t vector;
         AutoSpinLock lock(&lock_);
         return bitmap_.Scan(&vector) != InterruptType::INACTIVE;
+    }
+
+    // Clears all vectors in the range [min, max).
+    void Clear(uint32_t min, uint32_t max) {
+        AutoSpinLock lock(&lock_);
+        bitmap_.Clear(min, max);
+    }
+
+    // Pops the specified vector, if it is pending.
+    InterruptType TryPop(uint32_t vector) {
+        AutoSpinLock lock(&lock_);
+        InterruptType type = bitmap_.Get(vector);
+        if (type != InterruptType::INACTIVE) {
+            bitmap_.Set(vector, InterruptType::INACTIVE);
+        }
+        return type;
     }
 
     // Pops the highest priority interrupt.

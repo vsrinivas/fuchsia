@@ -27,7 +27,9 @@ static constexpr uint32_t kGuestMapFlags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE |
                                            ZX_VM_PERM_EXECUTE | ZX_VM_SPECIFIC;
 static constexpr uint32_t kHostMapFlags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
 // Inject an interrupt with vector 32, the first user defined interrupt vector.
-static constexpr uint32_t kInterruptVector = 32;
+static constexpr uint32_t kInterruptVector = 32u;
+static constexpr uint32_t kNmiVector = 2u;
+static constexpr uint32_t kExceptionVector = 16u;
 static constexpr uint64_t kTrapKey = 0x1234;
 static constexpr char kSysInfoPath[] = "/dev/misc/sysinfo";
 
@@ -251,8 +253,136 @@ static bool vcpu_interrupt() {
     }
     test.interrupts_enabled = true;
 
+#if __x86_64__
+    // Resume once and wait for the guest to set up an IDT.
+    ASSERT_TRUE(resume_and_clean_exit(&test));
+#endif
+
     ASSERT_EQ(test.vcpu.interrupt(kInterruptVector), ZX_OK);
     ASSERT_TRUE(resume_and_clean_exit(&test));
+
+#if __x86_64__
+    zx_vcpu_state_t vcpu_state;
+    ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
+    EXPECT_EQ(vcpu_state.rax, kInterruptVector);
+#endif
+
+    ASSERT_TRUE(teardown(&test));
+
+    END_TEST;
+}
+
+static bool vcpu_interrupt_priority() {
+    BEGIN_TEST;
+
+    test_t test;
+    ASSERT_TRUE(setup(&test, vcpu_interrupt_start, vcpu_interrupt_end));
+    if (!test.supported) {
+        // The hypervisor isn't supported, so don't run the test.
+        return true;
+    }
+    test.interrupts_enabled = true;
+
+    // Resume once and wait for the guest to set up an IDT.
+    ASSERT_TRUE(resume_and_clean_exit(&test));
+
+    // Check that interrupts have higher priority than exceptions.
+    ASSERT_EQ(test.vcpu.interrupt(kExceptionVector), ZX_OK);
+    ASSERT_EQ(test.vcpu.interrupt(kInterruptVector), ZX_OK);
+    ASSERT_TRUE(resume_and_clean_exit(&test));
+#if __x86_64__
+    zx_vcpu_state_t vcpu_state;
+    ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
+    EXPECT_EQ(vcpu_state.rax, kInterruptVector);
+#endif
+
+    // TODO(MAC-225): Check that the exception is cleared.
+
+    ASSERT_TRUE(teardown(&test));
+
+    END_TEST;
+}
+
+static bool vcpu_nmi() {
+    BEGIN_TEST;
+
+    test_t test;
+    ASSERT_TRUE(setup(&test, vcpu_interrupt_start, vcpu_interrupt_end));
+    if (!test.supported) {
+        // The hypervisor isn't supported, so don't run the test.
+        return true;
+    }
+    test.interrupts_enabled = true;
+
+    // Resume once and wait for the guest to set up an IDT.
+    ASSERT_TRUE(resume_and_clean_exit(&test));
+
+    // Check that NMIs are handled.
+    ASSERT_EQ(test.vcpu.interrupt(kNmiVector), ZX_OK);
+    ASSERT_TRUE(resume_and_clean_exit(&test));
+#if __x86_64__
+    zx_vcpu_state_t vcpu_state;
+    ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
+    EXPECT_EQ(vcpu_state.rax, kNmiVector);
+#endif
+    ASSERT_TRUE(teardown(&test));
+
+    END_TEST;
+}
+
+static bool vcpu_nmi_priority() {
+    BEGIN_TEST;
+
+    test_t test;
+    ASSERT_TRUE(setup(&test, vcpu_interrupt_start, vcpu_interrupt_end));
+    if (!test.supported) {
+        // The hypervisor isn't supported, so don't run the test.
+        return true;
+    }
+    test.interrupts_enabled = true;
+
+    // Resume once and wait for the guest to set up an IDT.
+    ASSERT_TRUE(resume_and_clean_exit(&test));
+
+    // Check that NMIs have higher priority than interrupts.
+    ASSERT_EQ(test.vcpu.interrupt(kInterruptVector), ZX_OK);
+    ASSERT_EQ(test.vcpu.interrupt(kNmiVector), ZX_OK);
+    ASSERT_TRUE(resume_and_clean_exit(&test));
+#if __x86_64__
+    zx_vcpu_state_t vcpu_state;
+    ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
+    EXPECT_EQ(vcpu_state.rax, kNmiVector);
+#endif
+
+    // TODO(MAC-225): Check that the interrupt is queued.
+
+    ASSERT_TRUE(teardown(&test));
+
+    END_TEST;
+}
+
+static bool vcpu_exception() {
+    BEGIN_TEST;
+
+    test_t test;
+    ASSERT_TRUE(setup(&test, vcpu_interrupt_start, vcpu_interrupt_end));
+    if (!test.supported) {
+        // The hypervisor isn't supported, so don't run the test.
+        return true;
+    }
+    test.interrupts_enabled = true;
+
+    // Resume once and wait for the guest to set up an IDT.
+    ASSERT_TRUE(resume_and_clean_exit(&test));
+
+    // Check that exceptions are handled.
+    ASSERT_EQ(test.vcpu.interrupt(kExceptionVector), ZX_OK);
+    ASSERT_TRUE(resume_and_clean_exit(&test));
+#if __x86_64__
+    zx_vcpu_state_t vcpu_state;
+    ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
+    EXPECT_EQ(vcpu_state.rax, kExceptionVector);
+#endif
     ASSERT_TRUE(teardown(&test));
 
     END_TEST;
@@ -696,6 +826,10 @@ RUN_TEST(vcpu_fp)
 RUN_TEST(vcpu_fp_aarch32)
 #elif __x86_64__
 RUN_TEST(guest_set_trap_with_io)
+RUN_TEST(vcpu_interrupt_priority)
+RUN_TEST(vcpu_nmi)
+RUN_TEST(vcpu_nmi_priority)
+RUN_TEST(vcpu_exception)
 RUN_TEST(vcpu_hlt)
 RUN_TEST(vcpu_pause)
 RUN_TEST(vcpu_write_cr0)
