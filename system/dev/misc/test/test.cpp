@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 #include <ddk/binding.h>
-#include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/test.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/test.h>
+#include <fbl/unique_ptr.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/socket.h>
 #include <stdio.h>
@@ -13,96 +14,110 @@
 #include <string.h>
 #include <zircon/device/test.h>
 
-typedef struct test_device {
-    zx_device_t* zxdev;
-    zx::socket output;
-    zx::channel control;
-    test_func_t test_func;
-} test_device_t;
+namespace {
 
-typedef struct test_root {
-    zx_device_t* zxdev;
-} test_root_t;
+class TestDevice;
+using TestDeviceType = ddk::Device<TestDevice, ddk::Ioctlable>;
 
-static void test_device_set_output_socket(void* ctx, zx_handle_t handle) {
-    auto device = static_cast<test_device_t*>(ctx);
-    device->output.reset(handle);
-}
+class TestDevice : public TestDeviceType,
+                   public ddk::TestProtocol<TestDevice> {
+public:
+    TestDevice(zx_device_t* parent) : TestDeviceType(parent) { }
 
-static zx_handle_t test_device_get_output_socket(void* ctx) {
-    auto device = static_cast<test_device_t*>(ctx);
-    return device->output.get();
-}
+    // Methods required by the ddk mixins
+    zx_status_t DdkIoctl(uint32_t op, const void* in, size_t inlen, void* out,
+                         size_t outlen, size_t* out_actual);
+    void DdkRelease();
 
-static void test_device_set_control_channel(void* ctx, zx_handle_t handle) {
-    auto device = static_cast<test_device_t*>(ctx);
-    device->control.reset(handle);
-}
-
-static zx_handle_t test_device_get_control_channel(void* ctx) {
-    auto device = static_cast<test_device_t*>(ctx);
-    return device->control.get();
-}
-
-static void test_device_set_test_func(void* ctx, const test_func_t* func) {
-    auto device = static_cast<test_device_t*>(ctx);
-    device->test_func = *func;
-}
-
-static zx_status_t test_device_run_tests(void *ctx, const void* arg, size_t arglen,
-                                         test_report_t* report) {
-    auto device = static_cast<test_device_t*>(ctx);
-    if (device->test_func.callback != NULL) {
-        return device->test_func.callback(device->test_func.ctx, arg, arglen, report);
-    } else {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-}
-
-static void test_device_destroy(void *ctx) {
-    auto device = static_cast<test_device_t*>(ctx);
-    device_remove(device->zxdev);
-}
-
-static test_protocol_ops_t test_test_proto = {
-    .set_output_socket = test_device_set_output_socket,
-    .get_output_socket = test_device_get_output_socket,
-    .set_control_channel = test_device_set_control_channel,
-    .get_control_channel = test_device_get_control_channel,
-    .set_test_func = test_device_set_test_func,
-    .run_tests = test_device_run_tests,
-    .destroy = test_device_destroy,
+    // Methods required by the TestProtocol mixin
+    void TestSetOutputSocket(zx_handle_t handle);
+    zx_handle_t TestGetOutputSocket();
+    void TestSetControlChannel(zx_handle_t handle);
+    zx_handle_t TestGetControlChannel();
+    void TestSetTestFunc(const test_func_t* func);
+    zx_status_t TestRunTests(const void* arg_buffer, size_t arg_size, test_report_t* out_report);
+    void TestDestroy();
+private:
+    zx::socket output_;
+    zx::channel control_;
+    test_func_t test_func_;
 };
 
-static zx_status_t test_device_ioctl(void* ctx, uint32_t op, const void* in, size_t inlen, void* out,
-                                    size_t outlen, size_t* out_actual) {
-    auto dev = static_cast<test_device_t*>(ctx);
+class TestRootDevice;
+using TestRootDeviceType = ddk::Device<TestRootDevice, ddk::Ioctlable>;
+
+class TestRootDevice : public TestRootDeviceType {
+public:
+    TestRootDevice(zx_device_t* parent) : TestRootDeviceType(parent) { }
+
+    zx_status_t Bind() {
+        return DdkAdd("test");
+    }
+
+    // Methods required by the ddk mixins
+    zx_status_t DdkIoctl(uint32_t op, const void* in, size_t inlen, void* out,
+                         size_t outlen, size_t* out_actual);
+    void DdkRelease() { ZX_ASSERT_MSG(false, "TestRootDevice::DdkRelease() not supported\n"); }
+};
+
+void TestDevice::TestSetOutputSocket(zx_handle_t handle) {
+    output_.reset(handle);
+}
+
+zx_handle_t TestDevice::TestGetOutputSocket() {
+    return output_.get();
+}
+
+void TestDevice::TestSetControlChannel(zx_handle_t handle) {
+    control_.reset(handle);
+}
+
+zx_handle_t TestDevice::TestGetControlChannel() {
+    return control_.get();
+}
+
+void TestDevice::TestSetTestFunc(const test_func_t* func) {
+    test_func_ = *func;
+}
+
+zx_status_t TestDevice::TestRunTests(const void* arg, size_t arglen, test_report_t* report) {
+    if (test_func_.callback == NULL) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    return test_func_.callback(test_func_.ctx, arg, arglen, report);
+}
+
+void TestDevice::TestDestroy() {
+    DdkRemove();
+}
+
+zx_status_t TestDevice::DdkIoctl(uint32_t op, const void* in, size_t inlen, void* out,
+                                 size_t outlen, size_t* out_actual) {
     switch (op) {
     case IOCTL_TEST_SET_OUTPUT_SOCKET:
         if (inlen != sizeof(zx_handle_t)) {
             return ZX_ERR_INVALID_ARGS;
         }
-        test_device_set_output_socket(dev, *(zx_handle_t*)in);
+        TestSetOutputSocket(*(zx_handle_t*)in);
         return ZX_OK;
 
     case IOCTL_TEST_SET_CONTROL_CHANNEL:
         if (inlen != sizeof(zx_handle_t)) {
             return ZX_ERR_INVALID_ARGS;
         }
-        test_device_set_control_channel(dev, *(zx_handle_t*)in);
+        TestSetControlChannel(*(zx_handle_t*)in);
         return ZX_OK;
 
     case IOCTL_TEST_RUN_TESTS: {
         if (outlen != sizeof(test_report_t)) {
             return ZX_ERR_BUFFER_TOO_SMALL;
         }
-        zx_status_t status = test_device_run_tests(dev, in, inlen, (test_report_t*)out);
         *out_actual = sizeof(test_report_t);
-        return status;
+        return TestRunTests(in, inlen, (test_report_t*)out);
     }
 
     case IOCTL_TEST_DESTROY_DEVICE:
-        device_remove(dev->zxdev);
+        TestDestroy();
         return 0;
 
     default:
@@ -110,24 +125,12 @@ static zx_status_t test_device_ioctl(void* ctx, uint32_t op, const void* in, siz
     }
 }
 
-static void test_device_release(void* ctx) {
-    auto device = static_cast<test_device_t*>(ctx);
-    delete device;
+void TestDevice::DdkRelease() {
+    delete this;
 }
 
-static zx_protocol_device_t test_device_proto = []() {
-    zx_protocol_device_t proto = {};
-    proto.version = DEVICE_OPS_VERSION;
-    proto.ioctl = test_device_ioctl;
-    proto.release = test_device_release;
-    return proto;
-}();
-
-
-static zx_status_t test_ioctl(void* ctx, uint32_t op, const void* in, size_t inlen,
-                              void* out, size_t outlen, size_t* out_actual) {
-    auto root = static_cast<test_root_t*>(ctx);
-
+zx_status_t TestRootDevice::DdkIoctl(uint32_t op, const void* in, size_t inlen,
+                                     void* out, size_t outlen, size_t* out_actual) {
     if (op != IOCTL_TEST_CREATE_DEVICE) {
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -148,21 +151,13 @@ static zx_status_t test_ioctl(void* ctx, uint32_t op, const void* in, size_t inl
         return ZX_ERR_BUFFER_TOO_SMALL;
     }
 
-    test_device_t* device = new test_device_t();
-
-    device_add_args_t args = {};
-    args.version = DEVICE_ADD_ARGS_VERSION;
-    args.name = devname;
-    args.ctx = device;
-    args.ops = &test_device_proto;
-    args.proto_id = ZX_PROTOCOL_TEST;
-    args.proto_ops = &test_test_proto;
-
-    zx_status_t status;
-    if ((status = device_add(root->zxdev, &args, &device->zxdev)) != ZX_OK) {
-        delete device;
+    auto device = fbl::make_unique<TestDevice>(zxdev());
+    zx_status_t status = device->DdkAdd(devname);
+    if (status != ZX_OK) {
         return status;
     }
+    // devmgr now owns this
+    __UNUSED auto ptr = device.release();
 
     int length = snprintf(static_cast<char*>(out), outlen,"%s/%s", TEST_CONTROL_DEVICE, devname)
             + 1;
@@ -170,31 +165,26 @@ static zx_status_t test_ioctl(void* ctx, uint32_t op, const void* in, size_t inl
     return ZX_OK;
 }
 
-static zx_protocol_device_t test_root_proto = []() {
-    zx_protocol_device_t proto = {};
-    proto.version = DEVICE_OPS_VERSION;
-    proto.ioctl = test_ioctl;
-    return proto;
-}();
-
-static zx_status_t test_bind(void* ctx, zx_device_t* dev) {
-    test_root_t* root = new test_root_t();
-    device_add_args_t args = {};
-    args.version = DEVICE_ADD_ARGS_VERSION;
-    args.name = "test";
-    args.ctx = root;
-    args.ops = &test_root_proto;
-
-    return device_add(dev, &args, &root->zxdev);
+zx_status_t TestDriverBind(void* ctx, zx_device_t* dev) {
+    auto root = fbl::make_unique<TestRootDevice>(dev);
+    zx_status_t status = root->Bind();
+    if (status != ZX_OK) {
+        return status;
+    }
+    // devmgr now owns root
+    __UNUSED auto ptr = root.release();
+    return ZX_OK;
 }
 
-static zx_driver_ops_t test_driver_ops = []() {
+const zx_driver_ops_t kTestDriverOps = []() {
     zx_driver_ops_t driver;
     driver.version = DRIVER_OPS_VERSION;
-    driver.bind = test_bind;
+    driver.bind = TestDriverBind;
     return driver;
 }();
 
-ZIRCON_DRIVER_BEGIN(test, test_driver_ops, "zircon", "0.1", 1)
+} // namespace
+
+ZIRCON_DRIVER_BEGIN(test, kTestDriverOps, "zircon", "0.1", 1)
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST_PARENT),
 ZIRCON_DRIVER_END(test)

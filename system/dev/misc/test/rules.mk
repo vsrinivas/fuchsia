@@ -12,6 +12,8 @@ MODULE_SRCS := $(LOCAL_DIR)/test.cpp
 
 MODULE_STATIC_LIBS := \
 	system/ulib/ddk \
+	system/ulib/ddktl \
+	system/ulib/fbl \
 	system/ulib/zx \
 	system/ulib/zxcpp \
 
