@@ -9,8 +9,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"strconv"
-	"os"
 
 	"fuchsia.googlesource.com/tools/digest"
 	"github.com/google/uuid"
@@ -18,13 +16,13 @@ import (
 
 const (
 	// https://software.intel.com/en-us/node/645995
-	PowerStateOn = 2
-	PowerStateLightSleep = 3
-	PowerStateDeepSleep = 4
+	PowerStateOn             = 2
+	PowerStateLightSleep     = 3
+	PowerStateDeepSleep      = 4
 	PowerStatePowerCycleSoft = 5
-	PowerStateOffHard = 6
-	PowerStateHibernate = 7
-	PowerStateOffSoft = 8
+	PowerStateOffHard        = 6
+	PowerStateHibernate      = 7
+	PowerStateOffSoft        = 8
 	PowerStatePowerCycleHard = 9
 	PowerStateMasterBusReset = 10
 )
@@ -73,8 +71,7 @@ func Reboot(host, username, password string) error {
 	}
 	// Generate MessageID
 	uuid := uuid.New()
-	i, _ := strconv.Atoi(os.Args[4])
-	payload := fmt.Sprintf(payloadTmpl, uri.String(), uuid, i)
+	payload := fmt.Sprintf(payloadTmpl, uri.String(), uuid, PowerStateMasterBusReset)
 
 	t := digest.NewTransport(username, password)
 	req, err := http.NewRequest("POST", uri.String(), strings.NewReader(payload))
