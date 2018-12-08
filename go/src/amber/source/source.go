@@ -83,7 +83,7 @@ func LoadSourceConfigs(dir string) ([]*amber.SourceConfig, error) {
 		p := filepath.Join(dir, file.Name(), configFileName)
 		log.Printf("loading source config %s", p)
 
-		cfg, err := LoadConfigFromDir(p)
+		cfg, err := LoadSourceConfigFromPath(p)
 		if err != nil {
 			return nil, err
 		}
@@ -93,7 +93,7 @@ func LoadSourceConfigs(dir string) ([]*amber.SourceConfig, error) {
 	return configs, nil
 }
 
-func LoadConfigFromDir(path string) (*amber.SourceConfig, error) {
+func LoadSourceConfigFromPath(path string) (*amber.SourceConfig, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -163,6 +163,9 @@ type Source struct {
 	// TODO(raggi): can optimize startup by persisting this information, or by
 	// loading the tuf metadata and inspecting the timestamp metadata.
 	lastUpdate time.Time
+
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 type custom struct {
@@ -187,9 +190,13 @@ func NewSource(dir string, c *amber.SourceConfig) (*Source, error) {
 		return nil, err
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+
 	src := Source{
-		cfg: cfg,
-		dir: dir,
+		cfg:    cfg,
+		dir:    dir,
+		ctx:    ctx,
+		cancel: cancel,
 	}
 
 	if err := src.initSource(); err != nil {
@@ -240,9 +247,13 @@ func LoadSourceFromPath(dir string) (*Source, error) {
 
 	dirty := setEnabledStatus(&cfg)
 
+	ctx, cancel := context.WithCancel(context.Background())
+
 	src := Source{
-		cfg: cfg,
-		dir: dir,
+		cfg:    cfg,
+		dir:    dir,
+		ctx:    ctx,
+		cancel: cancel,
 	}
 
 	if dirty {
@@ -290,11 +301,15 @@ func (f *Source) initSource() error {
 	}
 	f.mu.Unlock()
 
-	f.AutoWatch()
-
-	f.updateRefreshToken()
-
 	return nil
+}
+
+// Start starts background operations associated with this Source, such as
+// token fetching and update source monitoring. This method should only be
+// called once per active source.
+func (f *Source) Start() {
+	f.AutoWatch()
+	f.updateRefreshToken()
 }
 
 func (f *Source) processTokenUpdate(clientId, token string) {
@@ -542,10 +557,6 @@ func (f *Source) SetEnabled(enabled bool) {
 	f.mu.Lock()
 	f.cfg.Status.Enabled = &enabled
 	f.mu.Unlock()
-	if enabled {
-		f.AutoWatch()
-		f.updateRefreshToken()
-	}
 }
 
 // try to start a refresh token update. This should not be called while holding
@@ -764,6 +775,7 @@ func (f *Source) Delete() error {
 }
 
 func (f *Source) Close() {
+	f.cancel()
 	f.closeIdleConnections()
 }
 
@@ -922,8 +934,13 @@ func (f *Source) AutoWatch() {
 				time.Sleep(time.Minute)
 				continue
 			}
-			r, err := cli.Do(req)
+			r, err := cli.Do(req.WithContext(f.ctx))
 			if err != nil {
+				if e, ok := err.(*url.Error); ok {
+					if e.Err == context.Canceled {
+						break
+					}
+				}
 				log.Printf("autowatch error for %q: %s", f.cfg.Config.RepoUrl, err)
 				time.Sleep(time.Minute)
 				continue

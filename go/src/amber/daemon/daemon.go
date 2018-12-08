@@ -105,6 +105,7 @@ func (d *Daemon) addToActiveSrcs(s *source.Source) {
 		oldSource.Close()
 	}
 
+	s.Start()
 	d.srcs[id] = s
 
 	log.Printf("added source: %s", id)
@@ -133,7 +134,10 @@ func (d *Daemon) AddSource(cfg *amber.SourceConfig) error {
 
 	if !src.Enabled() {
 		d.muSrcs.Lock()
-		delete(d.srcs, cfg.Id)
+		if oldSource, ok := d.srcs[cfg.Id]; ok {
+			oldSource.Close()
+			delete(d.srcs, cfg.Id)
+		}
 		d.muSrcs.Unlock()
 		return nil
 	}
@@ -145,10 +149,18 @@ func (d *Daemon) DisableSource(srcID string) error {
 	d.muSrcs.Lock()
 	defer d.muSrcs.Unlock()
 
+	// Nothing to do if the source is already disabled.
+	if _, ok := d.srcs[srcID]; !ok {
+		return nil
+	}
+
+	// Persist the disabled bit.
 	if _, err := d.setSrcEnablementLocked(srcID, false); err != nil {
 		return err
 	}
 
+	// Remove the source from the running service.
+	d.srcs[srcID].Close()
 	delete(d.srcs, srcID)
 
 	return nil
@@ -158,11 +170,22 @@ func (d *Daemon) EnableSource(srcID string) error {
 	d.muSrcs.Lock()
 	defer d.muSrcs.Unlock()
 
-	src, err := d.setSrcEnablementLocked(srcID, true)
-	if err == nil {
-		d.srcs[srcID] = src
+	// Nothing to do if the source is already enabled.
+	if _, ok := d.srcs[srcID]; ok {
+		return nil
 	}
-	return err
+
+	// Persist the enabled bit.
+	src, err := d.setSrcEnablementLocked(srcID, true)
+	if err != nil {
+		return err
+	}
+
+	// Add the source to the running service.
+	src.Start()
+	d.srcs[srcID] = src
+
+	return nil
 }
 
 func (d *Daemon) setSrcEnablementLocked(srcID string, enabled bool) (*source.Source, error) {
