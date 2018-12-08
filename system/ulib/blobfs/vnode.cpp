@@ -187,8 +187,8 @@ zx_status_t VnodeBlob::InitCompressed() {
     auto detach =
         fbl::MakeAutoCall([this, &compressed_vmoid]() { blobfs_->DetachVmo(compressed_vmoid); });
 
-    const uint64_t kDataStart = DataStartBlock(blobfs_->info_);
-    AllocatedExtentIterator extent_iter(blobfs_->allocator_.get(), GetMapIndex());
+    const uint64_t kDataStart = DataStartBlock(blobfs_->Info());
+    AllocatedExtentIterator extent_iter(blobfs_->GetAllocator(), GetMapIndex());
     BlockIterator block_iter(&extent_iter);
 
     // Read the uncompressed merkle tree into the start of the blob's VMO.
@@ -248,7 +248,7 @@ zx_status_t VnodeBlob::InitUncompressed() {
                    inode_.block_count);
     fs::Ticker ticker(blobfs_->LocalMetrics().Collecting());
     fs::ReadTxn txn(blobfs_);
-    AllocatedExtentIterator extent_iter(blobfs_->allocator_.get(), GetMapIndex());
+    AllocatedExtentIterator extent_iter(blobfs_->GetAllocator(), GetMapIndex());
     BlockIterator block_iter(&extent_iter);
     // Read both the uncompressed merkle tree and data.
     const uint64_t blob_data_blocks = BlobDataBlocks(inode_);
@@ -257,7 +257,7 @@ zx_status_t VnodeBlob::InitUncompressed() {
         return ZX_ERR_IO_DATA_INTEGRITY;
     }
     const uint32_t length = static_cast<uint32_t>(blob_data_blocks + merkle_blocks);
-    const uint64_t data_start = DataStartBlock(blobfs_->info_);
+    const uint64_t data_start = DataStartBlock(blobfs_->Info());
     zx_status_t status = StreamBlocks(
         &block_iter, length, [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
             txn.Enqueue(vmoid_, vmo_offset, dev_offset + data_start, length);
@@ -465,7 +465,7 @@ zx_status_t VnodeBlob::WriteMetadata() {
 
         Inode* mapped_inode = blobfs_->GetNode(map_index_);
         *mapped_inode = inode_;
-        NodePopulator populator(blobfs_->allocator_.get(), std::move(write_info_->extents),
+        NodePopulator populator(blobfs_->GetAllocator(), std::move(write_info_->extents),
                                 std::move(write_info_->node_indices));
         ZX_ASSERT(populator.Walk(on_node, on_extent) == ZX_OK);
 
@@ -475,7 +475,7 @@ zx_status_t VnodeBlob::WriteMetadata() {
         // Special case: Empty node.
         ZX_DEBUG_ASSERT(write_info_->node_indices.size() == 1);
         const ReservedNode& node = write_info_->node_indices[0];
-        blobfs_->allocator_->MarkInodeAllocated(node);
+        blobfs_->GetAllocator()->MarkInodeAllocated(node);
         blobfs_->PersistNode(wb.get(), node.index());
     }
 
@@ -954,10 +954,10 @@ zx_status_t VnodeBlob::QueryFilesystem(fuchsia_io_FilesystemInfo* info) {
     info->max_filename_size = Digest::kLength * 2;
     info->fs_type = VFS_TYPE_BLOBFS;
     info->fs_id = blobfs_->GetFsId();
-    info->total_bytes = blobfs_->info_.data_block_count * blobfs_->info_.block_size;
-    info->used_bytes = blobfs_->info_.alloc_block_count * blobfs_->info_.block_size;
-    info->total_nodes = blobfs_->info_.inode_count;
-    info->used_nodes = blobfs_->info_.alloc_inode_count;
+    info->total_bytes = blobfs_->Info().data_block_count * blobfs_->Info().block_size;
+    info->used_bytes = blobfs_->Info().alloc_block_count * blobfs_->Info().block_size;
+    info->total_nodes = blobfs_->Info().inode_count;
+    info->used_nodes = blobfs_->Info().alloc_inode_count;
     strlcpy(reinterpret_cast<char*>(info->name), kFsName, fuchsia_io_MAX_FS_NAME_BUFFER);
     return ZX_OK;
 }

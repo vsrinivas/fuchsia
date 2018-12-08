@@ -114,7 +114,6 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>,
                public fs::TransactionHandler, public SpaceManager {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Blobfs);
-    friend class VnodeBlob;
 
     ////////////////
     // fs::ManagedVfs interface.
@@ -165,6 +164,10 @@ public:
     }
     AllocatedExtentIterator GetExtents(uint32_t node_index) {
         return AllocatedExtentIterator(allocator_.get(), node_index);
+    }
+
+    Allocator* GetAllocator() {
+        return allocator_.get();
     }
 
     Inode* GetNode(uint32_t node_index) {
@@ -267,6 +270,12 @@ public:
     // no strong references.
     void VnodeReleaseSoft(VnodeBlob* vn) __TA_EXCLUDES(hash_lock_);
 
+    // Writes node data to the inode table and updates disk.
+    void PersistNode(WritebackWork* wb, uint32_t node_index);
+
+    // Adds reserved blocks to allocated bitmap and writes the bitmap out to disk.
+    void PersistBlocks(WritebackWork* wb, const ReservedExtent& extent);
+
 private:
     friend class BlobfsChecker;
 
@@ -294,9 +303,6 @@ private:
     // Precondition: The Vnode must not exist in |open_hash_|.
     fbl::RefPtr<VnodeBlob> VnodeUpgradeLocked(const uint8_t* key) __TA_REQUIRES(hash_lock_);
 
-    // Adds reserved blocks to allocated bitmap and writes the bitmap out to disk.
-    void PersistBlocks(WritebackWork* wb, const ReservedExtent& extent);
-
     // Frees blocks from the allocated map (if allocated) and updates disk if necessary.
     void FreeExtent(WritebackWork* wb, const Extent& extent);
 
@@ -308,9 +314,6 @@ private:
     // inode was allocated in the inode table, write the deleted inode out to
     // disk.
     void FreeInode(WritebackWork* wb, uint32_t node_index);
-
-    // Writes node data to the inode table and updates disk.
-    void PersistNode(WritebackWork* wb, uint32_t node_index);
 
     // Given a contiguous number of blocks after a starting block,
     // write out the bitmap to disk for the corresponding blocks.
