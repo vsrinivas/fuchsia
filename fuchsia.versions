@@ -33,10 +33,6 @@ fuchsia/rust/mac-amd64
 	git_revision:4bd4e4130ed531a644263db26bf8461704215c77
 	ts21AaYMglYQ7MfEe_ERv4Aj7vanqRXrqzr8V6EXdxwC
 
-fuchsia/swift/linux-amd64
-	git_revision:d4943f3da1ae8b69fba21fa359b62f25d74a6b14
-	7885c81bdbd778d0f3ffb7b4d28f22bf6f21a53e
-
 fuchsia/sysroot/linux-amd64
 	git_revision:a96053c799a0f1ad0b7e8ab8199edbfa18adcbb6
 	ae0677829357edb199c21e76b1ea31eb8ef62817
