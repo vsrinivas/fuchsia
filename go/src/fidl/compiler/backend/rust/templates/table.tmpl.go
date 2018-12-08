@@ -22,7 +22,7 @@ fidl_table! {
   name: {{ .Name }},
   members: {
     {{- range .Members }}
-    {{ .Name }}: {
+    {{ .Name }} {
       ty: {{ .Type }},
       ordinal: {{ .Ordinal }},
     },

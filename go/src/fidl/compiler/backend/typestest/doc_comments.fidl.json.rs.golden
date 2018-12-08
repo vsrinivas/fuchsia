@@ -67,7 +67,7 @@ pub struct Table {
 fidl_table! {
   name: Table,
   members: {
-    field: {
+    field {
       ty: i32,
       ordinal: 1,
     },

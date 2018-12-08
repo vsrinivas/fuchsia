@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
+import("//build/package.gni")
 
 rustc_library("fidl") {
   with_unit_tests = true
@@ -15,5 +16,17 @@ rustc_library("fidl") {
     "//third_party/rust-crates/rustc_deps:futures-preview",
     "//third_party/rust-crates/rustc_deps:parking_lot",
     "//third_party/rust-crates/rustc_deps:slab",
+  ]
+}
+
+package("rust_fidl_tests") {
+  testonly = true
+  deps = [
+    ":fidl",
+  ]
+  tests = [
+    {
+      name = "fidl_lib_test_rustc"
+    },
   ]
 }

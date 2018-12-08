@@ -22,11 +22,11 @@ pub struct SimpleTable {
 fidl_table! {
   name: SimpleTable,
   members: {
-    x: {
+    x {
       ty: i64,
       ordinal: 1,
     },
-    y: {
+    y {
       ty: i64,
       ordinal: 5,
     },
@@ -40,7 +40,7 @@ pub struct OlderSimpleTable {
 fidl_table! {
   name: OlderSimpleTable,
   members: {
-    x: {
+    x {
       ty: i64,
       ordinal: 1,
     },
@@ -56,15 +56,15 @@ pub struct NewerSimpleTable {
 fidl_table! {
   name: NewerSimpleTable,
   members: {
-    x: {
+    x {
       ty: i64,
       ordinal: 1,
     },
-    y: {
+    y {
       ty: i64,
       ordinal: 5,
     },
-    z: {
+    z {
       ty: i64,
       ordinal: 6,
     },

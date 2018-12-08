@@ -4,6 +4,7 @@
     ],
     "packages": [
         "//garnet/public/lib/fidl/cpp:fidl_tests",
+        "//garnet/public/lib/fidl/rust/fidl:rust_fidl_tests",
         "//garnet/examples/fidl/echo2_server_cpp:echo2_server_cpp_tests"
     ],
     "host_tests": [

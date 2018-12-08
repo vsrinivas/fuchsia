@@ -25,12 +25,10 @@ package("rust-crates-tests") {
     "packet",
     "shared-buffer",
     "zerocopy",
-    "//garnet/public/lib/fidl/rust/fidl",
   ]
 
   tests = [
     { name = "fdio_lib_test_rustc" },
-    { name = "fidl_lib_test_rustc" },
     { name = "fuchsia_async_lib_test_rustc" },
     { name = "fuchsia_cobalt_lib_test_rustc" },
     { name = "fuchsia_hyper_lib_test_rustc" },
