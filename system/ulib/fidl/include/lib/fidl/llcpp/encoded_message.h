@@ -16,6 +16,7 @@
 #include <zircon/fidl.h>
 
 #ifdef __Fuchsia__
+#include <lib/zx/channel.h>
 #include <zircon/syscalls.h>
 #endif
 
@@ -34,7 +35,12 @@ namespace fidl {
 template <typename FidlType>
 class EncodedMessage final {
     static_assert(IsFidlType<FidlType>::value, "Only FIDL types allowed here");
-    static_assert(FidlType::MaxSize > 0, "Positive message size");
+    static_assert(FidlType::PrimarySize > 0, "Positive message size");
+
+    constexpr static uint32_t kResolvedNumHandles =
+        FidlType::MaxNumHandles > ZX_CHANNEL_MAX_MSG_HANDLES
+            ? ZX_CHANNEL_MAX_MSG_HANDLES
+            : FidlType::MaxNumHandles;
 
 public:
     // Instantiates an empty buffer with no bytes or handles.
@@ -122,8 +128,8 @@ private:
     }
 
     BytePart bytes_;
-    zx_handle_t handle_storage_[FidlType::MaxNumHandles];
-    HandlePart handles_{handle_storage_, FidlType::MaxNumHandles};
+    zx_handle_t handle_storage_[kResolvedNumHandles];
+    HandlePart handles_{handle_storage_, kResolvedNumHandles};
 };
 
 }

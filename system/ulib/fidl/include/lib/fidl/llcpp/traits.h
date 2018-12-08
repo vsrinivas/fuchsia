@@ -17,9 +17,10 @@
 // |IsFidlType<T>| resolves to std::true_type.
 // |IsFidlMessage<T>| resolves to std::true_type iff |T| is a transactional message.
 // |T::MaxNumHandles| is an uint32_t specifying the upper bound on the number of contained handles.
-// |T::MaxSize| is an uint32_t specifying the upper bound on the message byte size.
-//              It is std::numeric_limits<uint32_t>::max() if |T| is unbounded.
-// |T::type| is a fidl_type_t* pointing to the corresponding encoding table, if any.
+// |T::PrimarySize| is an uint32_t specifying the size in bytes of the inline part of the message.
+// |T::MaxOutOfLine| is an uint32_t specifying the upper bound on the out-of-line message size.
+//                   It is std::numeric_limits<uint32_t>::max() if |T| is unbounded.
+// |T::Type| is a fidl_type_t* pointing to the corresponding encoding table, if any.
 //
 
 namespace fidl {

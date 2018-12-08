@@ -8,8 +8,7 @@
 
 #include <lib/fidl/internal.h>
 #include <lib/fidl/llcpp/array_wrapper.h>
-#include <lib/fidl/llcpp/encoded_message.h>
-#include <lib/fidl/llcpp/decoded_message.h>
+#include <lib/fidl/llcpp/coding.h>
 #include <lib/zx/channel.h>
 
 #include <unittest/unittest.h>
@@ -28,10 +27,13 @@ struct NonnullableChannelMessage {
 
     static constexpr uint32_t MaxNumHandles = 1;
 
-    static constexpr uint32_t MaxSize =
+    static constexpr uint32_t PrimarySize =
         FIDL_ALIGN(sizeof(fidl_message_header_t)) + FIDL_ALIGN(sizeof(zx::channel));
 
-    static constexpr const fidl_type_t* type = &NonnullableChannelMessageType;
+    [[maybe_unused]]
+    static constexpr uint32_t MaxOutOfLine = 0;
+
+    static constexpr const fidl_type_t* Type = &NonnullableChannelMessageType;
 };
 
 const fidl_type_t NonnullableChannelType =
@@ -201,11 +203,10 @@ bool RoundTripTest() {
     EXPECT_TRUE(HelperExpectPeerValid(channel_1));
 
     // Decode
-    fidl::DecodedMessage<NonnullableChannelMessage> decoded_message;
-    const char* decode_error = nullptr;
-    zx_status_t status = decoded_message.DecodeFrom(encoded_message, &decode_error);
-    EXPECT_EQ(status, ZX_OK);
-    EXPECT_NULL(decode_error, decode_error);
+    auto decode_result = fidl::Decode(std::move(*encoded_message));
+    auto& decoded_message = decode_result.message;
+    EXPECT_EQ(decode_result.status, ZX_OK);
+    EXPECT_NULL(decode_result.error, decode_result.error);
     EXPECT_EQ(decoded_message.message()->header.txid, 10);
     EXPECT_EQ(decoded_message.message()->header.ordinal, 42);
     EXPECT_EQ(decoded_message.message()->channel.get(), unsafe_handle_backup);
@@ -217,22 +218,23 @@ bool RoundTripTest() {
     EXPECT_TRUE(HelperExpectPeerValid(channel_1));
 
     // Encode
-    encoded_message = new fidl::EncodedMessage<NonnullableChannelMessage>();
-    const char* encode_error = nullptr;
-    status = decoded_message.EncodeTo(encoded_message, &encode_error);
-    EXPECT_EQ(status, ZX_OK);
-    EXPECT_NULL(encode_error, encode_error);
-    // decoded_message should be consumed
-    EXPECT_EQ(decoded_message.message(), nullptr);
+    {
+        auto encode_result = fidl::Encode(std::move(decoded_message));
+        auto& encoded_message = encode_result.message;
+        EXPECT_EQ(encode_result.status, ZX_OK);
+        EXPECT_NULL(encode_result.error, encode_result.error);
+        // decoded_message should be consumed
+        EXPECT_EQ(decoded_message.message(), nullptr);
 
-    // Byte-level comparison
-    EXPECT_EQ(encoded_message->bytes().actual(), sizeof(buf));
-    EXPECT_EQ(encoded_message->handles().actual(), 1);
-    EXPECT_EQ(encoded_message->handles().data()[0], unsafe_handle_backup);
-    EXPECT_EQ(memcmp(golden_encoded, encoded_message->bytes().data(), sizeof(buf)), 0);
+        // Byte-level comparison
+        EXPECT_EQ(encoded_message.bytes().actual(), sizeof(buf));
+        EXPECT_EQ(encoded_message.handles().actual(), 1);
+        EXPECT_EQ(encoded_message.handles().data()[0], unsafe_handle_backup);
+        EXPECT_EQ(memcmp(golden_encoded, encoded_message.bytes().data(), sizeof(buf)), 0);
 
-    EXPECT_TRUE(HelperExpectPeerValid(channel_1));
-    delete encoded_message;
+        EXPECT_TRUE(HelperExpectPeerValid(channel_1));
+    }
+    // Encoded message was destroyed, bringing down the handle with it
     EXPECT_TRUE(HelperExpectPeerInvalid(channel_1));
 
     END_TEST;
@@ -243,7 +245,7 @@ bool ArrayLayoutTest() {
 
     static_assert(sizeof(fidl::ArrayWrapper<uint8_t, 3>) == sizeof(uint8_t[3]));
     static_assert(sizeof(fidl::ArrayWrapper<fidl::ArrayWrapper<uint8_t, 7>, 3>)
-                      == sizeof(uint8_t[3][7]));
+                  == sizeof(uint8_t[3][7]));
 
     constexpr fidl::ArrayWrapper<uint8_t, 3> a = {1, 2, 3};
     constexpr uint8_t b[3] = {1, 2, 3};

@@ -1,0 +1,25 @@
+library fidl.test.llcpp.basictypes;
+
+using zx;
+
+struct SimpleStruct {
+    int32 field;
+    handle<eventpair> ep;
+    array<array<handle<eventpair>>:4>:5 arr;
+};
+
+union SimpleUnion {
+    int32 field_a;
+    int32 field_b;
+};
+
+/// Test interface implemented by both C and LLCPP
+[Layout = "Simple"]
+interface TestInterface {
+    /// Verifies that all the handles are valid channels, then returns
+    /// ZX_OK and loops back the field member. Otherwise, returns an error.
+    ConsumeSimpleStruct(SimpleStruct arg) -> (zx.status status, int32 field);
+
+    /// Loops back the field which is set, along with its index.
+    ConsumeSimpleUnion(SimpleUnion arg) -> (uint32 index, int32 field);
+};

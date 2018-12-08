@@ -105,7 +105,7 @@ public:
     }
 };
 
-static bool spaceship_test(void) {
+bool spaceship_test(void) {
     BEGIN_TEST;
 
     zx::channel client, server;
@@ -309,7 +309,7 @@ private:
     fidl::AsyncTransaction async_txn_;
 };
 
-static bool spaceship_async_test(void) {
+bool spaceship_async_test(void) {
     BEGIN_TEST;
 
     zx::channel client, server;

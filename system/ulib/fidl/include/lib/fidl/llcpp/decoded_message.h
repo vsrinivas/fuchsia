@@ -13,13 +13,28 @@
 
 namespace fidl {
 
+template<typename FidlType>
+struct DecodeResult;
+
+template <typename FidlType>
+DecodeResult<FidlType> Decode(EncodedMessage<FidlType> msg);
+
+template<typename FidlType>
+struct EncodeResult;
+
+template <typename FidlType>
+class DecodedMessage;
+
+template <typename FidlType>
+EncodeResult<FidlType> Encode(DecodedMessage<FidlType> msg);
+
 // `DecodedMessage` manages a linearized FIDL message in decoded form.
 // It takes care of releasing all handles which were not consumed
 // (std::moved from the decoded FIDL struct) when it goes out of scope.
 template <typename FidlType>
 class DecodedMessage final {
     static_assert(IsFidlType<FidlType>::value, "Only FIDL types allowed here");
-    static_assert(FidlType::MaxSize > 0, "Positive message size");
+    static_assert(FidlType::PrimarySize > 0, "Positive message size");
 
 public:
     // Instantiates an empty message.
@@ -54,58 +69,28 @@ public:
         bytes_ = std::move(bytes);
     }
 
-    // Consumes an encoded message object containing FIDL encoded bytes and handles.
-    // The current buffer region in DecodedMessage is always released.
-    // Uses the FIDL encoding tables to deserialize the message in-place.
-    // If the message is invalid, discards the buffer and returns an error.
-    zx_status_t DecodeFrom(EncodedMessage<FidlType>* msg, const char** out_error_msg) {
-        // Clear any existing message.
-        CloseHandles();
-        bytes_ = BytePart();
-        zx_status_t status = fidl_decode(FidlType::type,
-                                         msg->bytes().data(), msg->bytes().actual(),
-                                         msg->handles().data(), msg->handles().actual(),
-                                         out_error_msg);
-        // Clear out |msg| independent of success or failure
-        BytePart bytes = msg->ReleaseBytesAndHandles();
-        if (status == ZX_OK) {
-            Reset(std::move(bytes));
-        } else {
-            Reset(BytePart());
-        }
-        return status;
-    }
-
-    // Serializes the content of the message in-place and stores the result
-    // in |out_msg|. The message's contents are always consumed by this
-    // operation, even in case of an error.
-    zx_status_t EncodeTo(EncodedMessage<FidlType>* out_msg, const char** out_error_msg) {
-        return out_msg->Initialize([this, &out_error_msg] (BytePart& msg_bytes,
-                                                           HandlePart& msg_handles) {
-            msg_bytes = std::move(bytes_);
-            uint32_t actual_handles = 0;
-            zx_status_t status = fidl_encode(FidlType::type,
-                                             msg_bytes.data(), msg_bytes.actual(),
-                                             msg_handles.data(), msg_handles.capacity(),
-                                             &actual_handles, out_error_msg);
-            msg_handles.set_actual(actual_handles);
-            return status;
-        });
-    }
-
     // Accesses the FIDL message by reinterpreting the buffer pointer.
     // Returns nullptr if there is no message.
     FidlType* message() const {
         return reinterpret_cast<FidlType*>(bytes_.data());
     }
 
+    // Returns true iff the DecodedMessage has a valid message, i.e. non-NULL buffer pointer.
+    bool is_valid() const {
+        return bytes_.data() != nullptr;
+    }
+
 private:
+    friend DecodeResult<FidlType> Decode<FidlType>(EncodedMessage<FidlType> msg);
+
+    friend EncodeResult<FidlType> Encode<FidlType>(DecodedMessage<FidlType> msg);
+
     // Use the FIDL encoding tables for |FidlType| to walk the message and
     // destroy the handles it contains.
     void CloseHandles() {
 #ifdef __Fuchsia__
         if (bytes_.data()) {
-            fidl_close_handles(FidlType::type, bytes_.data(), nullptr);
+            fidl_close_handles(FidlType::Type, bytes_.data(), nullptr);
         }
 #endif
     }
