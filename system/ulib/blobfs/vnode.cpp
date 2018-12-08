@@ -81,7 +81,7 @@ zx_status_t EnqueuePaginated(fbl::unique_ptr<WritebackWork>* work, Blobfs* blobf
 
 zx_status_t VnodeBlob::Verify() const {
     TRACE_DURATION("blobfs", "Blobfs::Verify");
-    fs::Ticker ticker(blobfs_->CollectingMetrics());
+    fs::Ticker ticker(blobfs_->LocalMetrics().Collecting());
 
     const void* data = inode_.blob_size ? GetData() : nullptr;
     const void* tree = inode_.blob_size ? GetMerkle() : nullptr;
@@ -95,7 +95,7 @@ zx_status_t VnodeBlob::Verify() const {
     digest = reinterpret_cast<const uint8_t*>(&digest_[0]);
     zx_status_t status =
         MerkleTree::Verify(data, data_size, tree, merkle_size, 0, data_size, digest);
-    blobfs_->UpdateMerkleVerifyMetrics(data_size, merkle_size, ticker.End());
+    blobfs_->LocalMetrics().UpdateMerkleVerify(data_size, merkle_size, ticker.End());
 
     if (status != ZX_OK) {
         char name[Digest::kLength * 2 + 1];
@@ -161,7 +161,7 @@ zx_status_t VnodeBlob::InitVmos() {
 zx_status_t VnodeBlob::InitCompressed() {
     TRACE_DURATION("blobfs", "Blobfs::InitCompressed", "size", inode_.blob_size, "blocks",
                    inode_.block_count);
-    fs::Ticker ticker(blobfs_->CollectingMetrics());
+    fs::Ticker ticker(blobfs_->LocalMetrics().Collecting());
     fs::ReadTxn txn(blobfs_);
     uint32_t merkle_blocks = MerkleTreeBlocks(inode_);
 
@@ -237,15 +237,16 @@ zx_status_t VnodeBlob::InitCompressed() {
         return ZX_ERR_IO_DATA_INTEGRITY;
     }
 
-    blobfs_->UpdateMerkleDecompressMetrics(compressed_blocks * kBlobfsBlockSize, inode_.blob_size,
-                                           read_time, ticker.End());
+    blobfs_->LocalMetrics().UdpateMerkleDecompress(compressed_blocks * kBlobfsBlockSize,
+                                                   inode_.blob_size, read_time,
+                                                   ticker.End());
     return ZX_OK;
 }
 
 zx_status_t VnodeBlob::InitUncompressed() {
     TRACE_DURATION("blobfs", "Blobfs::InitUncompressed", "size", inode_.blob_size, "blocks",
                    inode_.block_count);
-    fs::Ticker ticker(blobfs_->CollectingMetrics());
+    fs::Ticker ticker(blobfs_->LocalMetrics().Collecting());
     fs::ReadTxn txn(blobfs_);
     AllocatedExtentIterator extent_iter(blobfs_->allocator_.get(), GetMapIndex());
     BlockIterator block_iter(&extent_iter);
@@ -271,7 +272,7 @@ zx_status_t VnodeBlob::InitUncompressed() {
     if (status != ZX_OK) {
         return status;
     }
-    blobfs_->UpdateMerkleDiskReadMetrics(length * kBlobfsBlockSize, ticker.End());
+    blobfs_->LocalMetrics().UpdateMerkleDiskRead(length * kBlobfsBlockSize, ticker.End());
     return status;
 }
 
@@ -306,7 +307,7 @@ void VnodeBlob::BlobCloseHandles() {
 
 zx_status_t VnodeBlob::SpaceAllocate(uint64_t size_data) {
     TRACE_DURATION("blobfs", "Blobfs::SpaceAllocate", "size_data", size_data);
-    fs::Ticker ticker(blobfs_->CollectingMetrics());
+    fs::Ticker ticker(blobfs_->LocalMetrics().Collecting());
 
     if (GetState() != kBlobStateEmpty) {
         return ZX_ERR_BAD_STATE;
@@ -391,7 +392,7 @@ zx_status_t VnodeBlob::SpaceAllocate(uint64_t size_data) {
     write_info_ = std::move(write_info);
 
     SetState(kBlobStateDataWrite);
-    blobfs_->UpdateAllocationMetrics(size_data, ticker.End());
+    blobfs_->LocalMetrics().UpdateAllocation(size_data, ticker.End());
     return ZX_OK;
 }
 
@@ -559,7 +560,8 @@ zx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actua
             Digest digest;
             void* merkle_data = GetMerkle();
             const void* blob_data = GetData();
-            fs::Ticker ticker(blobfs_->CollectingMetrics()); // Tracking generation time.
+            // Tracking generation time.
+            fs::Ticker ticker(blobfs_->LocalMetrics().Collecting());
 
             if ((status = MerkleTree::Create(blob_data, inode_.blob_size, merkle_data, merkle_size,
                                              &digest)) != ZX_OK) {
@@ -633,12 +635,13 @@ zx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actua
         }
 
         // No more data to write. Flush to disk.
-        fs::Ticker ticker(blobfs_->CollectingMetrics()); // Tracking enqueue time.
+        fs::Ticker ticker(blobfs_->LocalMetrics().Collecting()); // Tracking enqueue time.
         if ((status = WriteMetadata()) != ZX_OK) {
             return status;
         }
 
-        blobfs_->UpdateClientWriteMetrics(to_write, merkle_size, ticker.End(), generation_time);
+        blobfs_->LocalMetrics().UpdateClientWrite(to_write, merkle_size, ticker.End(),
+                                                  generation_time);
         set_error.cancel();
         return ZX_OK;
     }

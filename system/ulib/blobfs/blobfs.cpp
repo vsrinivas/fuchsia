@@ -259,7 +259,7 @@ void Blobfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
                     // after completing, scope it here to be extra cautious.
                 }
 
-                DumpMetrics();
+                metrics_.Dump();
 
                 auto on_unmount = std::move(on_unmount_);
 
@@ -452,7 +452,7 @@ zx_status_t Blobfs::LookupBlob(const Digest& digest, fbl::RefPtr<VnodeBlob>* out
     }
 
     if (vn != nullptr) {
-        UpdateLookupMetrics(vn->SizeData());
+        LocalMetrics().UpdateLookup(vn->SizeData());
         if (out != nullptr) {
             *out = std::move(vn);
         }
@@ -611,67 +611,6 @@ void Blobfs::Sync(SyncCallback closure) {
     status = EnqueueWork(std::move(wb), EnqueueType::kJournal);
 }
 
-void Blobfs::UpdateAllocationMetrics(uint64_t size_data, const fs::Duration& duration) {
-    if (CollectingMetrics()) {
-        metrics_.blobs_created++;
-        metrics_.blobs_created_total_size += size_data;
-        metrics_.total_allocation_time_ticks += duration;
-    }
-}
-
-void Blobfs::UpdateLookupMetrics(uint64_t size) {
-    if (CollectingMetrics()) {
-        metrics_.blobs_opened++;
-        metrics_.blobs_opened_total_size += size;
-    }
-}
-
-void Blobfs::UpdateClientWriteMetrics(uint64_t data_size, uint64_t merkle_size,
-                                      const fs::Duration& enqueue_duration,
-                                      const fs::Duration& generate_duration) {
-    if (CollectingMetrics()) {
-        metrics_.data_bytes_written += data_size;
-        metrics_.merkle_bytes_written += merkle_size;
-        metrics_.total_write_enqueue_time_ticks += enqueue_duration;
-        metrics_.total_merkle_generation_time_ticks += generate_duration;
-    }
-}
-
-void Blobfs::UpdateWritebackMetrics(uint64_t size, const fs::Duration& duration) {
-    if (CollectingMetrics()) {
-        metrics_.total_writeback_time_ticks += duration;
-        metrics_.total_writeback_bytes_written += size;
-    }
-}
-
-void Blobfs::UpdateMerkleDiskReadMetrics(uint64_t size, const fs::Duration& duration) {
-    if (CollectingMetrics()) {
-        metrics_.total_read_from_disk_time_ticks += duration;
-        metrics_.bytes_read_from_disk += size;
-    }
-}
-
-void Blobfs::UpdateMerkleDecompressMetrics(uint64_t size_compressed, uint64_t size_uncompressed,
-                                           const fs::Duration& read_duration,
-                                           const fs::Duration& decompress_duration) {
-    if (CollectingMetrics()) {
-        metrics_.bytes_compressed_read_from_disk += size_compressed;
-        metrics_.bytes_decompressed_from_disk += size_uncompressed;
-        metrics_.total_read_compressed_time_ticks += read_duration;
-        metrics_.total_decompress_time_ticks += decompress_duration;
-    }
-}
-
-void Blobfs::UpdateMerkleVerifyMetrics(uint64_t size_data, uint64_t size_merkle,
-                                       const fs::Duration& duration) {
-    if (CollectingMetrics()) {
-        metrics_.blobs_verified++;
-        metrics_.blobs_verified_total_size_data += size_data;
-        metrics_.blobs_verified_total_size_merkle += size_merkle;
-        metrics_.total_verification_time_ticks += duration;
-    }
-}
-
 Blobfs::Blobfs(fbl::unique_fd fd, const Superblock* info) : blockfd_(std::move(fd)) {
     memcpy(&info_, info, sizeof(Superblock));
 }
@@ -704,7 +643,7 @@ zx_status_t Blobfs::Create(fbl::unique_fd fd, const MountOptions& options, const
     fs->SetReadonly(options.readonly);
     fs->SetCachePolicy(options.cache_policy);
     if (options.metrics) {
-        fs->CollectMetrics();
+        fs->LocalMetrics().Collect();
     }
 
     zx::fifo fifo;
@@ -796,7 +735,7 @@ zx_status_t Blobfs::InitializeVnodes() {
                                name, i);
                 return status;
             }
-            UpdateLookupMetrics(size);
+            LocalMetrics().UpdateLookup(size);
         }
     }
     return ZX_OK;

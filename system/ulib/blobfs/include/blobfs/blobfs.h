@@ -28,7 +28,6 @@
 #include <fbl/vector.h>
 #include <fs/block-txn.h>
 #include <fs/managed-vfs.h>
-#include <fs/ticker.h>
 #include <fs/trace.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
@@ -182,13 +181,8 @@ public:
                               const Superblock* info, fbl::unique_ptr<Blobfs>* out);
 
     void SetCachePolicy(CachePolicy policy) { cache_policy_ = policy; }
-    void CollectMetrics() { collecting_metrics_ = true; }
-    bool CollectingMetrics() const { return collecting_metrics_; }
-    void DisableMetrics() { collecting_metrics_ = false; }
-    void DumpMetrics() const {
-        if (collecting_metrics_) {
-            metrics_.Dump();
-        }
+    BlobfsMetrics& LocalMetrics() {
+        return metrics_;
     }
 
     void SetUnmountCallback(fbl::Closure closure) {
@@ -242,39 +236,6 @@ public:
 
     using SyncCallback = fs::Vnode::SyncCallback;
     void Sync(SyncCallback closure);
-
-    // Updates aggregate information about the total number of created
-    // blobs since mounting.
-    void UpdateAllocationMetrics(uint64_t size_data, const fs::Duration& duration);
-
-    // Updates aggregate information about the number of blobs opened
-    // since mounting.
-    void UpdateLookupMetrics(uint64_t size);
-
-    // Updates aggregates information about blobs being written back
-    // to blobfs since mounting.
-    void UpdateClientWriteMetrics(uint64_t data_size, uint64_t merkle_size,
-                                  const fs::Duration& enqueue_duration,
-                                  const fs::Duration& generate_duration);
-
-    // Updates aggregate information about flushing bits down
-    // to the underlying storage driver.
-    void UpdateWritebackMetrics(uint64_t size, const fs::Duration& duration);
-
-    // Updates aggregate information about reading blobs from storage
-    // since mounting.
-    void UpdateMerkleDiskReadMetrics(uint64_t size, const fs::Duration& duration);
-
-    // Updates aggregate information about decompressing blobs from storage
-    // since mounting.
-    void UpdateMerkleDecompressMetrics(uint64_t size_compressed, uint64_t size_uncompressed,
-                                       const fs::Duration& read_duration,
-                                       const fs::Duration& decompress_duration);
-
-    // Updates aggregate information about general verification info
-    // since mounting.
-    void UpdateMerkleVerifyMetrics(uint64_t size_data, uint64_t size_merkle,
-                                   const fs::Duration& duration);
 
     zx_status_t CreateWork(fbl::unique_ptr<WritebackWork>* out, VnodeBlob* vnode);
 
