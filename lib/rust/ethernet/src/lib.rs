@@ -12,7 +12,7 @@ use fidl_fuchsia_hardware_ethernet_ext::{EthernetInfo, EthernetQueueFlags, Ether
 use fidl_fuchsia_hardware_ethernet as sys;
 use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, AsHandleRef};
-use futures::{ready, task::LocalWaker, try_ready, FutureExt, Poll, Stream};
+use futures::{ready, task::LocalWaker, task::Waker, try_ready, FutureExt, Poll, Stream};
 
 use std::fs::File;
 use std::marker::Unpin;
@@ -144,7 +144,7 @@ impl Client {
             None => (),
             Some(mut t) => {
                 t.write(buf);
-                self.inner.tx_pending.lock().unwrap().push(t.entry());
+                self.inner.push_tx(t.entry());
             }
         }
     }
@@ -251,7 +251,7 @@ struct ClientInner {
     tx_fifo: fasync::Fifo<buffer::FifoEntry>,
     rx_depth: u32,
     tx_depth: u32,
-    tx_pending: Mutex<Vec<buffer::FifoEntry>>,
+    tx_pending: Mutex<(Vec<buffer::FifoEntry>, Option<Waker>)>,
     signals: Mutex<fasync::OnSignals>,
 }
 
@@ -275,9 +275,17 @@ impl ClientInner {
             tx_fifo,
             rx_depth,
             tx_depth,
-            tx_pending: Mutex::new(vec![]),
+            tx_pending: Mutex::new((vec![], None)),
             signals,
         })
+    }
+
+    fn push_tx(&self, entry: buffer::FifoEntry) {
+        let mut tx_guard = self.tx_pending.lock().unwrap();
+        tx_guard.0.push(entry);
+        if let Some(waker) = &tx_guard.1 {
+            waker.wake();
+        }
     }
 
     fn register_signals(&self) {
@@ -296,14 +304,17 @@ impl ClientInner {
     /// Write any pending transmits to the tx fifo.
     fn poll_queue_tx(&self, lw: &LocalWaker) -> Poll<Result<usize, zx::Status>> {
         let mut tx_guard = self.tx_pending.lock().unwrap();
-        if tx_guard.len() > 0 {
-            let result = self.tx_fifo.try_write(&tx_guard[..], lw)?;
+        if tx_guard.0.len() > 0 {
+            let result = self.tx_fifo.try_write(&tx_guard.0[..], lw)?;
             // It's possible that only some of the entries were queued, so split those off the
             // pending queue and save the rest for later.
             if let Poll::Ready(n) = result {
-                *tx_guard = tx_guard.split_off(n);
+                tx_guard.0 = tx_guard.0.split_off(n);
                 return Poll::Ready(Ok(n));
             }
+        } else {
+            // We want to wake up when something gets queued for transmit.
+            tx_guard.1 = Some(lw.clone().into_waker());
         }
         Poll::Pending
     }
