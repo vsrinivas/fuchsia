@@ -230,8 +230,6 @@ zx_status_t usb_midi_sink_create(zx_device_t* device, usb_protocol_t* usb, int i
             return ZX_ERR_NO_MEMORY;
         }
         req->header.length = packet_size;
-        req->complete_cb = usb_midi_sink_write_complete;
-        req->cookie = sink;
         status = usb_req_list_add_head(&sink->free_write_reqs, req, parent_req_size);
         ZX_DEBUG_ASSERT(status == ZX_OK);
     }

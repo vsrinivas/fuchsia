@@ -40,7 +40,6 @@ public:
     void MoveHelper(TestRequest& other) {
         if (usb_req_) { usb_request_release(usb_req_); }
         usb_req_ = other.usb_req_;
-        usb_req_->cookie = &completion_;
         other.usb_req_ = nullptr;
     }
 

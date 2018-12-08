@@ -688,8 +688,6 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
         goto fail;
     }
 
-    int_buf->complete_cb = ecm_interrupt_complete;
-    int_buf->cookie = ecm_ctx;
     ecm_ctx->int_txn_buf = int_buf;
 
     // Allocate tx transaction buffers
@@ -714,8 +712,6 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
         // transmission when the endpoint max packet size is a factor of the total transmission size
         tx_buf->header.send_zlp = true;
 
-        tx_buf->complete_cb = usb_write_complete;
-        tx_buf->cookie = ecm_ctx;
         zx_status_t add_result = usb_req_list_add_head(&ecm_ctx->tx_txn_bufs, tx_buf,
                                                        ecm_ctx->parent_req_size);
         ZX_DEBUG_ASSERT(add_result == ZX_OK);
@@ -742,8 +738,6 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
             goto fail;
         }
 
-        rx_buf->complete_cb = usb_read_complete;
-        rx_buf->cookie = ecm_ctx;
         usb_request_queue(&ecm_ctx->usb, rx_buf, usb_read_complete, ecm_ctx);
         rx_buf_remain -= rx_buf_sz;
     }

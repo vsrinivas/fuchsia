@@ -568,8 +568,6 @@ static zx_status_t rndishost_bind(void* ctx, zx_device_t* device) {
             status = alloc_result;
             goto fail;
         }
-        req->complete_cb = rndis_read_complete;
-        req->cookie = eth;
         status = usb_req_list_add_head(&eth->free_read_reqs, req, eth->parent_req_size);
         ZX_DEBUG_ASSERT(status == ZX_OK);
     }
@@ -582,8 +580,6 @@ static zx_status_t rndishost_bind(void* ctx, zx_device_t* device) {
             status = alloc_result;
             goto fail;
         }
-        req->complete_cb = rndis_write_complete;
-        req->cookie = eth;
         status = usb_req_list_add_head(&eth->free_write_reqs, req, eth->parent_req_size);
         ZX_DEBUG_ASSERT(status == ZX_OK);
     }

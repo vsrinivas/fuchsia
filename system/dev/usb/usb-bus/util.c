@@ -56,8 +56,6 @@ zx_status_t usb_util_control(usb_device_t* dev, uint8_t request_type, uint8_t re
     sync_completion_t completion = SYNC_COMPLETION_INIT;
 
     req->header.length = length;
-    req->complete_cb = usb_util_control_complete;
-    req->cookie = &completion;
 
     usb_hci_request_queue(&dev->hci, req, usb_util_control_complete, &completion);
     zx_status_t status = sync_completion_wait(&completion, ZX_SEC(1));

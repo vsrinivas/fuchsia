@@ -305,8 +305,6 @@ static zx_status_t usb_hid_bind(void* ctx, zx_device_t* dev) {
         status = ZX_ERR_NO_MEMORY;
         goto fail;
     }
-    usbhid->req->complete_cb = usb_interrupt_callback;
-    usbhid->req->cookie = usbhid;
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,

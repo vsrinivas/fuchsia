@@ -475,8 +475,6 @@ static zx_status_t usb_hub_bind(void* ctx, zx_device_t* device) {
         usb_hub_free(hub);
         return status;
     }
-    req->complete_cb = usb_hub_interrupt_complete;
-    req->cookie = hub;
     hub->status_request = req;
 
     status = usb_enable_endpoint(&usb, endp, ss_comp_desc, true);

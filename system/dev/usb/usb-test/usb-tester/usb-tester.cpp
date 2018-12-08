@@ -77,11 +77,6 @@ std::optional<TestRequest> TestRequest::Create(const zircon_usb_tester_SgList& s
 }
 
 TestRequest::TestRequest(usb_request_t* usb_req) : usb_req_(usb_req) {
-    usb_req->cookie = &completion_;
-    usb_req->complete_cb = [](usb_request_t* req, void* cookie) -> void {
-        ZX_DEBUG_ASSERT(cookie != nullptr);
-        sync_completion_signal(reinterpret_cast<sync_completion_t*>(cookie));
-    };
 }
 
 TestRequest::~TestRequest() {

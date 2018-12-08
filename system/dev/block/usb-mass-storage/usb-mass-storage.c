@@ -91,7 +91,6 @@ static void ums_send_cbw(ums_t* ums, uint8_t lun, uint32_t transfer_length, uint
     memcpy(cbw->CBWCB, command, command_len);
 
     sync_completion_t completion = SYNC_COMPLETION_INIT;
-    req->cookie = &completion;
     usb_request_queue(&ums->usb, req, ums_req_complete, &completion);
     sync_completion_wait(&completion, ZX_TIME_INFINITE);
 }
@@ -99,7 +98,6 @@ static void ums_send_cbw(ums_t* ums, uint8_t lun, uint32_t transfer_length, uint
 static zx_status_t ums_read_csw(ums_t* ums, uint32_t* out_residue) {
     sync_completion_t completion = SYNC_COMPLETION_INIT;
     usb_request_t* csw_request = ums->csw_req;
-    csw_request->cookie = &completion;
     usb_request_queue(&ums->usb, csw_request, ums_req_complete, &completion);
     sync_completion_wait(&completion, ZX_TIME_INFINITE);
 
@@ -150,7 +148,6 @@ static void ums_queue_read(ums_t* ums, uint16_t transfer_length) {
     // read request sense response
     usb_request_t* read_request = ums->data_req;
     read_request->header.length = transfer_length;
-    read_request->cookie = NULL;
     usb_request_queue(&ums->usb, read_request, ums_req_complete, NULL);
 }
 
@@ -268,10 +265,8 @@ static zx_status_t ums_data_transfer(ums_t* ums, ums_txn_t* txn, zx_off_t offset
     if (status != ZX_OK) {
         return status;
     }
-    req->complete_cb = ums_req_complete;
 
     sync_completion_t completion = SYNC_COMPLETION_INIT;
-    req->cookie = &completion;
     usb_request_queue(&ums->usb, req, ums_req_complete, &completion);
     sync_completion_wait(&completion, ZX_TIME_INFINITE);
 
@@ -783,10 +778,6 @@ static zx_status_t ums_bind(void* ctx, zx_device_t* device) {
     if (status != ZX_OK) {
         goto fail;
     }
-    ums->cbw_req->complete_cb = ums_req_complete;
-    ums->data_req->complete_cb = ums_req_complete;
-    ums->csw_req->complete_cb = ums_req_complete;
-    ums->data_transfer_req->complete_cb = ums_req_complete;
 
     ums->tag_send = ums->tag_receive = 8;
 

@@ -228,8 +228,6 @@ zx_status_t usb_midi_source_create(zx_device_t* device, usb_protocol_t* usb, int
             return ZX_ERR_NO_MEMORY;
         }
         req->header.length = packet_size;
-        req->complete_cb = usb_midi_source_read_complete;
-        req->cookie = source;
         status = usb_req_list_add_head(&source->free_read_reqs, req, parent_req_size);
         ZX_DEBUG_ASSERT(status == ZX_OK);
     }

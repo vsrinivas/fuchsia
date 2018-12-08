@@ -97,9 +97,6 @@ static void request_complete(usb_request_t* req, void* cookie) {
 
     mtx_lock(&dev->callback_lock);
     // move original request to completed_reqs list so it can be completed on the callback_thread
-    req->complete_cb = req->saved_complete_cb;
-    req->cookie = req->saved_cookie;
-
     usb_device_req_internal_t* req_int = USB_REQ_TO_DEV_INTERNAL(req, dev->parent_req_size);
     list_add_tail(&dev->completed_reqs, &req_int->node);
     mtx_unlock(&dev->callback_lock);
@@ -194,8 +191,6 @@ static zx_status_t usb_device_control(void* ctx, uint8_t request_type, uint8_t r
 
     req->header.device_id = dev->device_id;
     req->header.length = length;
-    req->complete_cb = usb_control_complete;
-    req->cookie = &completion;
     // We call this directly instead of via hci_queue, as it's safe to call our
     // own completion callback, and prevents clients getting into odd deadlocks.
     usb_hci_request_queue(&dev->hci, req, usb_control_complete, &completion);
@@ -244,13 +239,6 @@ static void usb_device_request_queue(void* ctx, usb_request_t* req, usb_request_
     req->header.device_id = dev->device_id;
     // save the existing callback and cookie, so we can replace them
     // with our own before passing the request to the HCI driver.
-    req->saved_complete_cb = req->complete_cb;
-    req->saved_cookie = req->cookie;
-
-    req->complete_cb = request_complete;
-    // set device as the cookie so we can get at it in request_complete()
-    req->cookie = dev;
-
     usb_hci_request_queue(&dev->hci, req, request_complete, dev);
 }
 

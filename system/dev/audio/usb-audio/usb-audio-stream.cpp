@@ -108,12 +108,6 @@ zx_status_t UsbAudioStream::Bind() {
                 return status;
             }
 
-            req->cookie = this;
-            req->complete_cb = [](usb_request_t* req, void* cookie) -> void {
-                ZX_DEBUG_ASSERT(cookie != nullptr);
-                reinterpret_cast<UsbAudioStream*>(cookie)->RequestComplete(req);
-            };
-
             status = usb_req_list_add_head(&free_req_, req, parent_.parent_req_size());
             ZX_DEBUG_ASSERT(status == ZX_OK);
             ++free_req_cnt_;

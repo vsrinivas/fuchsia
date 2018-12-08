@@ -562,8 +562,6 @@ zx_status_t xhci_control_request(xhci_t* xhci, uint32_t slot_id, uint8_t request
     sync_completion_t completion;
 
     req->header.length = length;
-    req->complete_cb = xhci_control_complete;
-    req->cookie = &completion;
     xhci_request_queue(xhci, req, xhci_control_complete, &completion);
     auto status = sync_completion_wait(&completion, ZX_SEC(1));
     if (status == ZX_OK) {

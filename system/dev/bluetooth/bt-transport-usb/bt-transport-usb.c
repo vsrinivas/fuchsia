@@ -647,8 +647,6 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* device) {
         if (status != ZX_OK) {
             goto fail;
         }
-        req->complete_cb = hci_event_complete;
-        req->cookie = hci;
         status = usb_req_list_add_head(&hci->free_event_reqs, req, hci->parent_req_size);
         ZX_DEBUG_ASSERT(status == ZX_OK);
     }
@@ -658,8 +656,6 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* device) {
         if (status != ZX_OK) {
             goto fail;
         }
-        req->complete_cb = hci_acl_read_complete;
-        req->cookie = hci;
         status = usb_req_list_add_head(&hci->free_acl_read_reqs, req, hci->parent_req_size);
         ZX_DEBUG_ASSERT(status == ZX_OK);
     }
@@ -669,8 +665,6 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* device) {
         if (status != ZX_OK) {
             goto fail;
         }
-        req->complete_cb = hci_acl_write_complete;
-        req->cookie = hci;
         status = usb_req_list_add_head(&hci->free_acl_write_reqs, req, hci->parent_req_size);
         ZX_DEBUG_ASSERT(status == ZX_OK);
     }

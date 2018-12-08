@@ -981,8 +981,6 @@ static zx_status_t ax88179_bind(void* ctx, zx_device_t* device) {
         if (status != ZX_OK) {
             goto fail;
         }
-        req->complete_cb = ax88179_read_complete;
-        req->cookie = eth;
         status = usb_req_list_add_head(&eth->free_read_reqs, req, eth->parent_req_size);
         ZX_DEBUG_ASSERT(status == ZX_OK);
     }
@@ -992,8 +990,6 @@ static zx_status_t ax88179_bind(void* ctx, zx_device_t* device) {
         if (status != ZX_OK) {
             goto fail;
         }
-        req->complete_cb = ax88179_write_complete;
-        req->cookie = eth;
         status = usb_req_list_add_head(&eth->free_write_reqs, req, eth->parent_req_size);
         ZX_DEBUG_ASSERT(status == ZX_OK);
     }
@@ -1002,8 +998,6 @@ static zx_status_t ax88179_bind(void* ctx, zx_device_t* device) {
     if (status != ZX_OK) {
         goto fail;
     }
-    int_req->complete_cb = ax88179_interrupt_complete;
-    int_req->cookie = eth;
     eth->interrupt_req = int_req;
 
     /* This is not needed, as long as the xhci stack does it for us.
