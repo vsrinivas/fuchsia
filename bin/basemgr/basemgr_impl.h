@@ -130,20 +130,7 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
 
   // Updates the session shell app config to the active session shell. Done once
   // on initialization and every time the session shells are swapped.
-  void update_session_shell_config() {
-    // The session shell settings overrides the session_shell flag passed via
-    // command line. TODO(MF-113): Consolidate the session shell settings.
-    fuchsia::modular::AppConfig session_shell_config;
-    if (session_shell_settings_.empty()) {
-      session_shell_config = CloneStruct(settings_.session_shell);
-    } else {
-      const auto& settings =
-          session_shell_settings_[active_session_shell_settings_index_];
-      session_shell_config.url = settings.name;
-    }
-
-    session_shell_config_ = std::move(session_shell_config);
-  }
+  void UpdateSessionShellConfig();
 
   const modular::BasemgrSettings& settings_;  // Not owned nor copied.
   const std::vector<SessionShellSettings>& session_shell_settings_;

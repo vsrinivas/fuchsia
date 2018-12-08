@@ -50,7 +50,7 @@ BasemgrImpl::BasemgrImpl(
       base_shell_context_binding_(this),
       account_provider_context_binding_(this),
       authentication_context_provider_binding_(this) {
-  update_session_shell_config();
+  UpdateSessionShellConfig();
 
   // TODO(SCN-595): Presentation is now discoverable, so we don't need
   // kPresentationService anymore.
@@ -460,7 +460,7 @@ void BasemgrImpl::SwapSessionShell() {
   active_session_shell_settings_index_ =
       (active_session_shell_settings_index_ + 1) % shell_count;
 
-  update_session_shell_config();
+  UpdateSessionShellConfig();
 
   user_provider_impl_->SwapSessionShell(CloneStruct(session_shell_config_))
       ->Then([] { FXL_DLOG(INFO) << "Swapped session shell"; });
@@ -520,6 +520,21 @@ void BasemgrImpl::ToggleClipping() {
   presentation_state_.clipping_enabled = !presentation_state_.clipping_enabled;
   presentation_state_.presentation->EnableClipping(
       presentation_state_.clipping_enabled);
+}
+
+void BasemgrImpl::UpdateSessionShellConfig() {
+  // The session shell settings overrides the session_shell flag passed via
+  // command line. TODO(MF-113): Consolidate the session shell settings.
+  fuchsia::modular::AppConfig session_shell_config;
+  if (session_shell_settings_.empty()) {
+    session_shell_config = CloneStruct(settings_.session_shell);
+  } else {
+    const auto& settings =
+        session_shell_settings_[active_session_shell_settings_index_];
+    session_shell_config.url = settings.name;
+  }
+
+  session_shell_config_ = std::move(session_shell_config);
 }
 
 }  // namespace modular
