@@ -35,7 +35,7 @@ public:
     void DdkRelease();
 
     // USB DCI protocol implementation.
-     void UsbDciRequestQueue(usb_request_t* req);
+     void UsbDciRequestQueue(usb_request_t* req, usb_request_complete_cb cb, void* cookie);
      zx_status_t UsbDciSetInterface(const usb_dci_interface_t* interface);
      zx_status_t UsbDciConfigEp(const usb_endpoint_descriptor_t* ep_desc, const
                                 usb_ss_ep_comp_descriptor_t* ss_comp_desc);

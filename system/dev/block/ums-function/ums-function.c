@@ -92,16 +92,20 @@ typedef struct {
     size_t parent_req_size;
 } usb_ums_t;
 
+static void ums_cbw_complete(usb_request_t* req, void* cookie);
+static void ums_data_complete(usb_request_t* req, void* cookie);
+static void ums_csw_complete(usb_request_t* req, void* cookie);
+
 static void ums_function_queue_data(usb_ums_t* ums, usb_request_t* req) {
     ums->data_length += req->header.length;
     req->header.ep_address = ums->current_cbw.bmCBWFlags & USB_DIR_IN ?
         ums->bulk_in_addr : ums->bulk_out_addr;
-    usb_function_queue(&ums->function, req);
+    usb_function_queue(&ums->function, req, ums_data_complete, ums);
 }
 
 static void ums_queue_csw(usb_ums_t* ums, uint8_t status) {
     // first queue next cbw so it is ready to go
-    usb_function_queue(&ums->function, ums->cbw_req);
+    usb_function_queue(&ums->function, ums->cbw_req, ums_cbw_complete, ums);
 
     usb_request_t* req = ums->csw_req;
     ums_csw_t* csw;
@@ -114,7 +118,7 @@ static void ums_queue_csw(usb_ums_t* ums, uint8_t status) {
     csw->bmCSWStatus = status;
 
     req->header.length = sizeof(ums_csw_t);
-    usb_function_queue(&ums->function, ums->csw_req);
+    usb_function_queue(&ums->function, ums->csw_req, ums_csw_complete, ums);
 }
 
 static void ums_continue_transfer(usb_ums_t* ums) {
@@ -449,7 +453,7 @@ static zx_status_t ums_set_configured(void* ctx, bool configured, usb_speed_t sp
 
     if (configured && status == ZX_OK) {
         // queue first read on OUT endpoint
-        usb_function_queue(&ums->function, ums->cbw_req);
+        usb_function_queue(&ums->function, ums->cbw_req, ums_cbw_complete, ums);
     }
     return status;
 }
@@ -563,12 +567,6 @@ zx_status_t usb_ums_bind(void* ctx, zx_device_t* parent) {
     }
 
     ums->csw_req->header.length = sizeof(ums_csw_t);
-    ums->cbw_req->complete_cb = ums_cbw_complete;
-    ums->data_req->complete_cb = ums_data_complete;
-    ums->csw_req->complete_cb = ums_csw_complete;
-    ums->cbw_req->cookie = ums;
-    ums->data_req->cookie = ums;
-    ums->csw_req->cookie = ums;
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,

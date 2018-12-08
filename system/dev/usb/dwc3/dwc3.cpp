@@ -283,14 +283,18 @@ void dwc3_reset_configuration(dwc3_t* dwc) {
     }
 }
 
-static void dwc3_request_queue(void* ctx, usb_request_t* req) {
+static void dwc3_request_queue(void* ctx, usb_request_t* req, usb_request_complete_cb cb,
+                               void* cookie) {
     auto* dwc = static_cast<dwc3_t*>(ctx);
+    auto* req_int = USB_REQ_TO_INTERNAL(req);
+    req_int->complete_cb = cb;
+    req_int->cookie = cookie;
 
     zxlogf(LTRACE, "dwc3_request_queue ep: %u\n", req->header.ep_address);
     unsigned ep_num = dwc3_ep_num(req->header.ep_address);
     if (ep_num < 2 || ep_num >= countof(dwc->eps)) {
         zxlogf(ERROR, "dwc3_request_queue: bad ep address 0x%02X\n", req->header.ep_address);
-        usb_request_complete(req, ZX_ERR_INVALID_ARGS, 0, req->complete_cb, req->cookie);
+        usb_request_complete(req, ZX_ERR_INVALID_ARGS, 0, cb, cookie);
         return;
     }
 
@@ -331,9 +335,9 @@ static zx_status_t dwc3_get_bti(void* ctx, zx_handle_t* out_handle) {
 }
 
 static size_t dwc3_get_request_size(void* ctx) {
-    //Allocate usb_req_internal_t after usb_request_t, to accommodate queueing in
+    //Allocate dwc_usb_req_internal_t after usb_request_t, to accommodate queueing in
     //the dwc3 layer.
-    return sizeof(usb_request_t) + sizeof(usb_req_internal_t);
+    return sizeof(usb_request_t) + sizeof(dwc_usb_req_internal_t);
 }
 
 usb_dci_protocol_ops_t dwc_dci_ops = {

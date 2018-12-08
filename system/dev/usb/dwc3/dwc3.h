@@ -118,6 +118,19 @@ typedef struct {
     bool configured;
 } dwc3_t;
 
+// Internal context for USB requests
+typedef struct {
+     // callback to the upper layer
+     usb_request_complete_cb complete_cb;
+     // context for the callback
+     void* cookie;
+     // for queueing requests internally
+     list_node_t node;
+} dwc_usb_req_internal_t;
+
+#define USB_REQ_TO_INTERNAL(req) \
+    ((dwc_usb_req_internal_t *)((uintptr_t)(req) + sizeof(usb_request_t)))
+#define INTERNAL_TO_USB_REQ(ctx) ((usb_request_t *)((uintptr_t)(ctx) - sizeof(usb_request_t)))
 
 static inline ddk::MmioBuffer* dwc3_mmio(dwc3_t* dwc) {
     return &*dwc->mmio;

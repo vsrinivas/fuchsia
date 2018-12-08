@@ -370,9 +370,10 @@ static zx_status_t usb_func_alloc_string_desc(void* ctx, const char* string, uin
     return usb_device_alloc_string_desc(function->dev, string, out_index);
 }
 
-static void usb_func_queue(void* ctx, usb_request_t* req) {
+static void usb_func_queue(void* ctx, usb_request_t* req, usb_request_complete_cb cb,
+                           void* cookie) {
     usb_function_t* function = ctx;
-    usb_dci_request_queue(&function->dev->usb_dci, req);
+    usb_dci_request_queue(&function->dev->usb_dci, req, cb, cookie);
 }
 
 static zx_status_t usb_func_ep_set_stall(void* ctx, uint8_t ep_address) {

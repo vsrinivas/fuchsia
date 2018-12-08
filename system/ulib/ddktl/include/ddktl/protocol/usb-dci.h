@@ -40,7 +40,7 @@
 //     UsbDciDevice(zx_device_t* parent)
 //         : UsbDciDeviceType("my-usb-dci-protocol-device", parent) {}
 //
-//     void UsbDciRequestQueue(usb_request_t* req);
+//     void UsbDciRequestQueue(usb_request_t* req, usb_request_complete_cb cb, void* cookie);
 //
 //     zx_status_t UsbDciSetInterface(const usb_dci_interface_t* interface);
 //
@@ -144,8 +144,9 @@ protected:
     usb_dci_protocol_ops_t ops_ = {};
 
 private:
-    static void UsbDciRequestQueue(void* ctx, usb_request_t* req) {
-        static_cast<D*>(ctx)->UsbDciRequestQueue(req);
+    static void UsbDciRequestQueue(void* ctx, usb_request_t* req, usb_request_complete_cb cb,
+                            void* cookie) {
+        static_cast<D*>(ctx)->UsbDciRequestQueue(req, cb, cookie);
     }
     // Registers callback interface with the controller driver.
     static zx_status_t UsbDciSetInterface(void* ctx, const usb_dci_interface_t* interface) {
@@ -187,7 +188,9 @@ public:
         ctx_ = nullptr;
         ops_ = nullptr;
     }
-    void RequestQueue(usb_request_t* req) { ops_->request_queue(ctx_, req); }
+    void Queue(usb_request_t* req, usb_request_complete_cb cb, void* cookie) {
+        ops_->request_queue(ctx_, req, cb, cookie);
+    }
     // Registers callback interface with the controller driver.
     zx_status_t SetInterface(const usb_dci_interface_t* interface) {
         return ops_->set_interface(ctx_, interface);

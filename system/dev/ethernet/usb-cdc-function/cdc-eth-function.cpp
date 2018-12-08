@@ -162,6 +162,8 @@ typedef struct txn_info {
     },
 };
 
+static void cdc_tx_complete(usb_request_t* req, void* cookie);
+
 static zx_status_t cdc_generate_mac_address(usb_cdc_t* cdc) {
     zx_cprng_draw(cdc->mac_addr, sizeof(cdc->mac_addr));
 
@@ -244,7 +246,7 @@ static zx_status_t cdc_send_locked(usb_cdc_t* cdc, ethmac_netbuf_t* netbuf) {
         return ZX_ERR_INTERNAL;
     }
 
-    usb_function_queue(&cdc->function, tx_req);
+    usb_function_queue(&cdc->function, tx_req, cdc_tx_complete, cdc);
 
     return ZX_OK;
 }
@@ -347,7 +349,7 @@ static void cdc_send_notifications(usb_cdc_t* cdc) {
 
     usb_request_copy_to(req, &network_notification, sizeof(network_notification), 0);
     req->header.length = sizeof(network_notification);
-    usb_function_queue(&cdc->function, req);
+    usb_function_queue(&cdc->function, req, cdc_intr_complete, cdc);
 
     mtx_lock(&cdc->intr_mutex);
     req = usb_req_list_remove_head(&cdc->intr_reqs, cdc->parent_req_size);
@@ -359,7 +361,7 @@ static void cdc_send_notifications(usb_cdc_t* cdc) {
 
     usb_request_copy_to(req, &speed_notification, sizeof(speed_notification), 0);
     req->header.length = sizeof(speed_notification);
-    usb_function_queue(&cdc->function, req);
+    usb_function_queue(&cdc->function, req, cdc_intr_complete, cdc);
 }
 
 static void cdc_rx_complete(usb_request_t* req, void* cookie) {
@@ -389,7 +391,7 @@ static void cdc_rx_complete(usb_request_t* req, void* cookie) {
         mtx_unlock(&cdc->ethmac_mutex);
     }
 
-    usb_function_queue(&cdc->function, req);
+    usb_function_queue(&cdc->function, req, cdc_rx_complete, cdc);
 }
 
 static void cdc_tx_complete(usb_request_t* req, void* cookie) {
@@ -506,7 +508,7 @@ static zx_status_t cdc_set_interface(void* ctx, unsigned interface, unsigned alt
         usb_request_t* req;
         while ((req = usb_req_list_remove_head(&cdc->bulk_out_reqs,
                                                cdc->parent_req_size)) != NULL) {
-            usb_function_queue(&cdc->function, req);
+            usb_function_queue(&cdc->function, req, cdc_rx_complete, cdc);
         }
         mtx_unlock(&cdc->rx_mutex);
     }
@@ -657,8 +659,6 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
         if (status != ZX_OK) {
             goto fail;
         }
-        req->complete_cb = cdc_rx_complete;
-        req->cookie = cdc;
         status = usb_req_list_add_head(&cdc->bulk_out_reqs, req, cdc->parent_req_size);
         ZX_DEBUG_ASSERT(status == ZX_OK);
     }
@@ -673,8 +673,6 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
         // transmission when the endpoint max packet size is a factor of the total transmission size
         req->header.send_zlp = true;
 
-        req->complete_cb = cdc_tx_complete;
-        req->cookie = cdc;
         status = usb_req_list_add_head(&cdc->bulk_in_reqs, req, cdc->parent_req_size);
         ZX_DEBUG_ASSERT(status == ZX_OK);
     }
@@ -686,8 +684,6 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
             goto fail;
         }
 
-        req->complete_cb = cdc_intr_complete;
-        req->cookie = cdc;
         status = usb_req_list_add_head(&cdc->intr_reqs, req, cdc->parent_req_size);
         ZX_DEBUG_ASSERT(status == ZX_OK);
     }

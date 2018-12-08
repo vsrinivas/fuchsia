@@ -104,17 +104,20 @@ void dwc3_ep_start_transfer(dwc3_t* dwc, unsigned ep_num, unsigned type, zx_padd
         zlp_trb->ptr_high = 0;
         zlp_trb->status = TRB_BUFSIZ(0);
         zlp_trb->control = type | TRB_LST | TRB_IOC | TRB_HWO;
-        io_buffer_cache_flush(&ep->fifo.buffer, (zlp_trb - ep->fifo.first) * sizeof(*trb), sizeof(*trb));
+        io_buffer_cache_flush(&ep->fifo.buffer, (zlp_trb - ep->fifo.first) * sizeof(*trb),
+                              sizeof(*trb));
     }
 
     dwc3_cmd_ep_start_transfer(dwc, ep_num, dwc3_ep_trb_phys(ep, trb));
 }
 
 static void dwc3_ep_queue_next_locked(dwc3_t* dwc, dwc3_endpoint_t* ep) {
-    usb_request_t* req;
+    dwc_usb_req_internal_t* req_int;
 
     if (ep->current_req == nullptr && ep->got_not_ready &&
-        (req = usb_req_list_remove_head(&ep->queued_reqs, sizeof(usb_request_t))) != nullptr) {
+        (req_int = list_remove_head_type(&ep->queued_reqs, dwc_usb_req_internal_t, node))
+            != nullptr) {
+        usb_request_t* req = INTERNAL_TO_USB_REQ(req_int);
         ep->current_req = req;
         ep->got_not_ready = false;
         if (EP_IN(ep->ep_num)) {
@@ -195,12 +198,14 @@ zx_status_t dwc3_ep_disable(dwc3_t* dwc, uint8_t ep_addr) {
 
 void dwc3_ep_queue(dwc3_t* dwc, unsigned ep_num, usb_request_t* req) {
     dwc3_endpoint_t* ep = &dwc->eps[ep_num];
+    auto* req_int = USB_REQ_TO_INTERNAL(req);
 
     // OUT transactions must have length > 0 and multiple of max packet size
     if (EP_OUT(ep_num)) {
         if (req->header.length == 0 || req->header.length % ep->max_packet_size != 0) {
             zxlogf(ERROR, "dwc3_ep_queue: OUT transfers must be multiple of max packet size\n");
-            usb_request_complete(req, ZX_ERR_INVALID_ARGS, 0, req->complete_cb, req->cookie);
+            usb_request_complete(req, ZX_ERR_INVALID_ARGS, 0, req_int->complete_cb,
+                                 req_int->cookie);
             return;
         }
     }
@@ -208,12 +213,11 @@ void dwc3_ep_queue(dwc3_t* dwc, unsigned ep_num, usb_request_t* req) {
     fbl::AutoLock lock(&ep->lock);
 
     if (!ep->enabled) {
-        usb_request_complete(req, ZX_ERR_BAD_STATE, 0, req->complete_cb, req->cookie);
+        usb_request_complete(req, ZX_ERR_BAD_STATE, 0, req_int->complete_cb, req_int->cookie);
         return;
     }
 
-    zx_status_t status = usb_req_list_add_tail(&ep->queued_reqs, req, sizeof(usb_request_t));
-    ZX_DEBUG_ASSERT(status == ZX_OK);
+    list_add_tail(&ep->queued_reqs, &req_int->node);
 
     if (dwc->configured) {
         dwc3_ep_queue_next_locked(dwc, ep);
@@ -313,7 +317,8 @@ void dwc3_ep_xfer_complete(dwc3_t* dwc, unsigned ep_num) {
 
             ep->lock.Release();
 
-            usb_request_complete(req, ZX_OK, actual, req->complete_cb, req->cookie);
+            auto* req_int = USB_REQ_TO_INTERNAL(req);
+            usb_request_complete(req, ZX_OK, actual, req_int->complete_cb, req_int->cookie);
         } else {
             ep->lock.Release();
             zxlogf(ERROR, "dwc3_ep_xfer_complete: no usb request found to complete!\n");
@@ -348,13 +353,16 @@ void dwc3_ep_end_transfers(dwc3_t* dwc, unsigned ep_num, zx_status_t reason) {
 
     if (ep->current_req) {
         dwc3_cmd_ep_end_transfer(dwc, ep_num);
-        usb_request_complete(ep->current_req, reason, 0, ep->current_req->complete_cb,
-                             ep->current_req->cookie);
+        auto* req_int = USB_REQ_TO_INTERNAL(ep->current_req);
+        usb_request_complete(ep->current_req, reason, 0, req_int->complete_cb,
+                             req_int->cookie);
         ep->current_req = nullptr;
     }
 
-    usb_request_t* req;
-    while ((req = usb_req_list_remove_head(&ep->queued_reqs, sizeof(usb_request_t))) != nullptr) {
-        usb_request_complete(req, reason, 0, req->complete_cb, req->cookie);
+    dwc_usb_req_internal_t* req_int;
+    while ((req_int = list_remove_head_type(&ep->queued_reqs, dwc_usb_req_internal_t, node))
+                != nullptr) {
+        usb_request_t* req = INTERNAL_TO_USB_REQ(req_int);
+        usb_request_complete(req, reason, 0, req_int->complete_cb, req_int->cookie);
     }
 }

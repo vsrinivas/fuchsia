@@ -54,7 +54,8 @@ static inline void usb_dci_interface_set_speed(const usb_dci_interface_t* proto,
 }
 
 typedef struct usb_dci_protocol_ops {
-    void (*request_queue)(void* ctx, usb_request_t* req);
+    void (*request_queue)(void* ctx, usb_request_t* req, usb_request_complete_cb complete_cb,
+                          void* complete_cb_cookie);
     zx_status_t (*set_interface)(void* ctx, const usb_dci_interface_t* interface);
     zx_status_t (*config_ep)(void* ctx, const usb_endpoint_descriptor_t* ep_desc,
                              const usb_ss_ep_comp_descriptor_t* ss_comp_desc);
@@ -70,8 +71,9 @@ struct usb_dci_protocol {
     void* ctx;
 };
 
-static inline void usb_dci_request_queue(const usb_dci_protocol_t* proto, usb_request_t* req) {
-    proto->ops->request_queue(proto->ctx, req);
+static inline void usb_dci_request_queue(const usb_dci_protocol_t* proto, usb_request_t* req,
+                                 usb_request_complete_cb complete_cb, void* complete_cb_cookie) {
+    proto->ops->request_queue(proto->ctx, req, complete_cb, complete_cb_cookie);
 }
 // Registers callback interface with the controller driver.
 static inline zx_status_t usb_dci_set_interface(const usb_dci_protocol_t* proto,

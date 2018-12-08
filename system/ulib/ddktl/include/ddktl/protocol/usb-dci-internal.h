@@ -38,7 +38,8 @@ constexpr void CheckUsbDciInterfaceSubclass() {
 }
 
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_usb_dci_protocol_request_queue, UsbDciRequestQueue,
-                                     void (C::*)(usb_request_t* req));
+                                     void (C::*)(usb_request_t* req, usb_request_complete_cb cb,
+                                                 void* cookie));
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_usb_dci_protocol_set_interface, UsbDciSetInterface,
                                      zx_status_t (C::*)(const usb_dci_interface_t* interface));
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(
@@ -60,7 +61,8 @@ template <typename D>
 constexpr void CheckUsbDciProtocolSubclass() {
     static_assert(internal::has_usb_dci_protocol_request_queue<D>::value,
                   "UsbDciProtocol subclasses must implement "
-                  "void UsbDciRequestQueue(usb_request_t* req");
+                  "void UsbDciRequestQueue(usb_request_t* req, usb_request_complete_cb cb, "
+                  "void* cookie");
     static_assert(internal::has_usb_dci_protocol_set_interface<D>::value,
                   "UsbDciProtocol subclasses must implement "
                   "zx_status_t UsbDciSetInterface(const usb_dci_interface_t* interface");
