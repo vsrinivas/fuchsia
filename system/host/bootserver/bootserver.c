@@ -9,6 +9,7 @@
 #include <inttypes.h>
 #include <libgen.h>
 #include <limits.h>
+#include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -57,7 +58,10 @@ static size_t total_file_size;
 static bool file_info_printed;
 static int progress_reported;
 static int packets_sent;
+static float percent_last;
+static size_t bytes_so_far_last;
 static char filename_in_flight[PATH_MAX];
+static bool is_log_stale = false;
 static struct timeval start_time, end_time;
 static bool is_redirected;
 static const char spinner[] = {'|', '/', '-', '\\'};
@@ -84,7 +88,9 @@ char* sockaddr_str(struct sockaddr_in6* addr) {
 void initialize_status(const char* name, size_t size) {
     total_file_size = size;
     progress_reported = 0;
+    bytes_so_far_last = 0;
     packets_sent = 0;
+    percent_last = 0.0;
     snprintf(filename_in_flight, sizeof(filename_in_flight),
              "%s%s%s", ANSI(GREEN), name, ANSI(RESET));
 }
@@ -100,9 +106,11 @@ void update_status(size_t bytes_so_far) {
         }                                                                       \
     } while (false)
 
-    packets_sent++;
+    if (bytes_so_far > bytes_so_far_last) {
+        bytes_so_far_last = bytes_so_far;
+        packets_sent++;
+    }
 
-    bool is_last_piece = (bytes_so_far == total_file_size);
     if (total_file_size == 0) {
         return;
     }
@@ -114,13 +122,26 @@ void update_status(size_t bytes_so_far) {
             progress_reported = percent_sent;
         }
     } else {
-        if (packets_sent > 1024 || is_last_piece) {
-            packets_sent = 0;
-            static int spin = 0;
+        static int spin = 0;
 
-            size_t divider = (total_file_size > 0) ? total_file_size : 1;
-            UPDATE_LOG("[%c] %4.01f%% of ", spinner[(spin++) % 4],
-                       100.0 * (float)bytes_so_far / (float)divider);
+        bool to_show = false;
+        bool is_beginning = (packets_sent == 1);
+        bool is_last_piece = (bytes_so_far == total_file_size);
+        size_t divider = (total_file_size > 0) ? total_file_size : 1;
+        float percent = 100.0 * (float)bytes_so_far / (float)divider;
+
+        // log_stale check is done only when update_status() is called.
+        // The callers of update_status() needs to implement its logic to call
+        // this function if log needs to be updated.
+        if (is_beginning || is_last_piece || is_log_stale || packets_sent >= 1024 || percent >= (percent_last + 0.1)) {
+            is_log_stale = false;
+            packets_sent = 0;
+            percent_last = percent;
+            to_show = true;
+        }
+
+        if (to_show) {
+            UPDATE_LOG("[%c] %4.01f%% of ", spinner[(spin++) % 4], percent);
             if (total_file_size < 1024) {
                 UPDATE_LOG(" %3zu.0  B", total_file_size);
             } else if (total_file_size < 1024 * 1024) {
@@ -285,6 +306,19 @@ int send_reboot_command(struct sockaddr_in6* ra) {
     close(s);
     log("failure sending reboot command to %s", sockaddr_str(ra));
     return -1;
+}
+
+void refresh_alarm(int sig) {
+    // Note this assists to logging, rather than enforcing logging.
+    // The logic to decide to log is handled outside the alarm.
+    is_log_stale = true;
+    alarm(1);
+}
+
+// Time tick in every sec from the beginning of the process
+void start_alarm() {
+    signal(SIGALRM, refresh_alarm);
+    alarm(1);
 }
 
 int main(int argc, char** argv) {
@@ -536,6 +570,7 @@ int main(int argc, char** argv) {
 
     log("listening on %s", sockaddr_str(&addr));
 
+    start_alarm();
     for (;;) {
         struct sockaddr_in6 ra;
         socklen_t rlen;
