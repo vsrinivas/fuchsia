@@ -693,17 +693,14 @@ if (custom_signing_script != "") {
 ###
 
 declare_args() {
-  # The size of the minfs data partition image to create. Normally this image
-  # is added to FVM, and can therefore expand as needed. It must be at least
-  # 10mb (the default) in order to be succesfully initialized.
-  data_image_size = "10m"
-
   # Build boot images that prefer Zedboot over local boot (only for EFI).
   always_zedboot = false
 }
 
 # data.blk creates minfs data partition containing the preinstall package
 # index. The partition is included in fvm.blk and fvm.sparse.blk.
+# To increase the size of the data partition, increase the total size of the
+# fvm images using |fvm_image_size|.
 zircon_tool_action("data.blk") {
   testonly = true
   tool = "minfs"
