@@ -18,6 +18,8 @@ public:
     Ring(Device* device);
     ~Ring();
 
+    // Initialize ring |index| with default (device-offered) size.
+    zx_status_t Init(uint16_t index);
     zx_status_t Init(uint16_t index, uint16_t count);
 
     void FreeDesc(uint16_t desc_index);

@@ -39,6 +39,10 @@ Ring::~Ring() {
     io_buffer_release(&ring_buf_);
 }
 
+zx_status_t Ring::Init(uint16_t index) {
+  return Init(/*index=*/index, /*count=*/device_->GetRingSize(index));
+}
+
 zx_status_t Ring::Init(uint16_t index, uint16_t count) {
     LTRACEF("index %u, count %u\n", index, count);
 
