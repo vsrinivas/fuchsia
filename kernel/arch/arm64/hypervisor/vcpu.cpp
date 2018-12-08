@@ -37,6 +37,13 @@ static uint64_t vmpidr_of(uint8_t vpid, uint64_t mpidr) {
 }
 
 static void gich_maybe_interrupt(GichState* gich_state) {
+    // From ARM GIC v3/v4, Section 4.8: If, on a particular CPU interface,
+    // multiple pending interrupts have the same priority, and have sufficient
+    // priority for the interface to signal them to the PE, it is IMPLEMENTATION
+    // DEFINED how the interface selects which interrupt to signal.
+    //
+    // If interrupts are of the same priority, we can choose whatever ordering
+    // we prefer when populating the LRs.
     for (uint64_t elrsr = gich_state->elrsr; elrsr != 0;) {
         uint32_t vector;
         hypervisor::InterruptType type = gich_state->interrupt_tracker.Pop(&vector);
@@ -49,7 +56,15 @@ static void gich_maybe_interrupt(GichState* gich_state) {
         }
         uint32_t lr_index = __builtin_ctzl(elrsr);
         bool hw = type == hypervisor::InterruptType::PHYSICAL;
-        uint8_t prio = vector < GIC_BASE_SPI ? 0 : 1;
+        // From ARM GIC v3/v4, Section 4.8: If the GIC implements fewer than 256
+        // priority levels, the low-order bits of the priority fields are
+        // RAZ/WI.
+        // ...
+        // In the GIC prioritization scheme, lower numbers have higher priority.
+        //
+        // We may have as few as 16 priority levels, so step by 16 to the next
+        // lowest priority in order to prioritise SGIs and PPIs over SPIs.
+        uint8_t prio = vector < GIC_BASE_SPI ? 0 : 0x10;
         uint64_t lr = gic_get_lr_from_vector(hw, prio, vector);
         gich_state->lr[lr_index] = lr;
         elrsr &= ~(1u << lr_index);
