@@ -41,10 +41,10 @@ COLORS = {
     'BLACK': '\033[30;1m',
     'RED': '\033[31;1m',
     'GREEN': '\033[32;1m',
-    'YELLOW': '\033[33m',
+    'YELLOW': '\033[33;1m',
     'BLUE': '\033[34;1m',
     'MAGENTA': '\033[35;1m',
-    'CYAN': '\033[36m',
+    'CYAN': '\033[36m;1m',
 }
 
 FIRST_LOG_AFTER_BOOTUP = '[00000.000] 00000.00000> bootdata:'
