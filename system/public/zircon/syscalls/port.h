@@ -129,6 +129,9 @@ typedef struct zx_packet_guest_vcpu {
 
 typedef struct zx_packet_interrupt {
     zx_time_t timestamp;
+    uint64_t reserved0;
+    uint64_t reserved1;
+    uint64_t reserved2;
 } zx_packet_interrupt_t;
 
 typedef struct zx_port_packet {

@@ -23,16 +23,15 @@
 #include <zircon/syscalls/port.h>
 #include <zircon/types.h>
 
-static_assert(sizeof(zx_packet_signal_t) == sizeof(zx_packet_user_t),
-              "size of zx_packet_signal_t must match zx_packet_user_t");
-static_assert(sizeof(zx_packet_exception_t) == sizeof(zx_packet_user_t),
-              "size of zx_packet_exception_t must match zx_packet_user_t");
-static_assert(sizeof(zx_packet_guest_mem_t) == sizeof(zx_packet_user_t),
-              "size of zx_packet_guest_mem_t must match zx_packet_user_t");
-static_assert(sizeof(zx_packet_guest_io_t) == sizeof(zx_packet_user_t),
-              "size of zx_packet_guest_io_t must match zx_packet_user_t");
-static_assert(sizeof(zx_packet_guest_vcpu_t) == sizeof(zx_packet_user_t),
-              "size of zx_packet_guest_vcpu_t must match zx_packet_user_t");
+// All port sub-packets must be exactly 32 bytes
+static_assert(sizeof(zx_packet_user_t) == 32, "incorrect size for zx_packet_signal_t");
+static_assert(sizeof(zx_packet_signal_t) == 32, "incorrect size for zx_packet_signal_t");
+static_assert(sizeof(zx_packet_exception_t) == 32, "incorrect size for zx_packet_exception_t");
+static_assert(sizeof(zx_packet_guest_bell_t) == 32, "incorrect size for zx_packet_guest_bell_t");
+static_assert(sizeof(zx_packet_guest_mem_t) == 32, "incorrect size for zx_packet_guest_mem_t");
+static_assert(sizeof(zx_packet_guest_io_t) == 32, "incorrect size for zx_packet_guest_io_t");
+static_assert(sizeof(zx_packet_guest_vcpu_t) == 32, "incorrect size for zx_packet_guest_vcpu_t");
+static_assert(sizeof(zx_packet_interrupt_t) == 32, "incorrect size for zx_packet_interrupt_t");
 
 KCOUNTER(port_arena_count, "kernel.port.arena.count");
 KCOUNTER(port_full_count, "kernel.port.full.count");
