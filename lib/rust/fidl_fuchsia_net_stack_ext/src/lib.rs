@@ -4,13 +4,9 @@
 
 use fidl_fuchsia_net_stack as fidl;
 
-use bitflags::bitflags;
-
 pub struct InterfaceAddress {
     ip_address: fidl_fuchsia_net_ext::IpAddress,
     prefix_len: u8,
-    #[allow(unused)]
-    peer_address: Option<Box<fidl_fuchsia_net::IpAddress>>,
 }
 
 impl From<fidl::InterfaceAddress> for InterfaceAddress {
@@ -18,13 +14,11 @@ impl From<fidl::InterfaceAddress> for InterfaceAddress {
         let fidl::InterfaceAddress {
             ip_address,
             prefix_len,
-            peer_address,
         } = interface_address;
         let ip_address = ip_address.into();
         Self {
             ip_address,
             prefix_len,
-            peer_address,
         }
     }
 }
@@ -34,7 +28,6 @@ impl std::fmt::Display for InterfaceAddress {
         let Self {
             ip_address,
             prefix_len,
-            peer_address: _,
         } = self;
         write!(f, "{}/{}", ip_address, prefix_len)
     }
@@ -97,77 +90,138 @@ impl std::fmt::Display for ForwardingEntry {
     }
 }
 
-bitflags! {
-    /// Status flags for an interface.
-    #[repr(transparent)]
-    pub struct InterfaceStatus: u32 {
-        const ENABLED = fidl::INTERFACE_STATUS_ENABLED;
-        const LINK_UP = fidl::INTERFACE_STATUS_LINK_UP;
+pub enum EnablementStatus {
+    DISABLED,
+    ENABLED,
+}
+
+impl From<fidl::EnablementStatus> for EnablementStatus {
+    fn from(enablement_status: fidl::EnablementStatus) -> Self {
+        match enablement_status {
+            fidl::EnablementStatus::Disabled => EnablementStatus::DISABLED,
+            fidl::EnablementStatus::Enabled => EnablementStatus::ENABLED,
+        }
     }
 }
 
-pub struct InterfaceInfo {
-    id: u64,
+impl std::fmt::Display for EnablementStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        match self {
+            EnablementStatus::DISABLED => write!(f, "DISABLED"),
+            EnablementStatus::ENABLED => write!(f, "ENABLED"),
+        }
+    }
+}
+
+pub enum PhysicalStatus {
+    UP,
+    DOWN,
+}
+
+impl From<fidl::PhysicalStatus> for PhysicalStatus {
+    fn from(physical_status: fidl::PhysicalStatus) -> Self {
+        match physical_status {
+            fidl::PhysicalStatus::Down => PhysicalStatus::DOWN,
+            fidl::PhysicalStatus::Up => PhysicalStatus::UP,
+        }
+    }
+}
+
+impl std::fmt::Display for PhysicalStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        match self {
+            PhysicalStatus::DOWN => write!(f, "LINK_DOWN"),
+            PhysicalStatus::UP => write!(f, "LINK_UP"),
+        }
+    }
+}
+
+pub struct InterfaceProperties {
     path: String,
     mac: Option<fidl_zircon_ethernet_ext::MacAddress>,
     mtu: u32,
     features: fidl_zircon_ethernet_ext::EthernetFeatures,
-    status: InterfaceStatus,
+    enablement_status: EnablementStatus,
+    physical_status: PhysicalStatus,
     addresses: Vec<InterfaceAddress>,
 }
 
-impl From<fidl::InterfaceInfo> for InterfaceInfo {
+impl From<fidl::InterfaceProperties> for InterfaceProperties {
     fn from(
-        fidl::InterfaceInfo {
-            id,
+        fidl::InterfaceProperties {
             path,
             mac,
             mtu,
             features,
-            status,
+            enablement_status,
+            physical_status,
             addresses,
-        }: fidl::InterfaceInfo,
+        }: fidl::InterfaceProperties,
     ) -> Self {
         let mac = mac.map(|mac| (*mac).into());
         let features = fidl_zircon_ethernet_ext::EthernetFeatures::from_bits_truncate(features);
-        let status = InterfaceStatus::from_bits_truncate(status);
+        let enablement_status = EnablementStatus::from(enablement_status);
+        let physical_status = PhysicalStatus::from(physical_status);
         let addresses = addresses.into_iter().map(Into::into).collect();
         Self {
-            id,
             path,
             mac,
             mtu,
             features,
-            status,
+            enablement_status,
+            physical_status,
             addresses,
         }
     }
 }
 
-impl std::fmt::Display for InterfaceInfo {
+impl std::fmt::Display for InterfaceProperties {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        let InterfaceInfo {
-            id,
+        let InterfaceProperties {
             path,
             mac,
             mtu,
             features,
-            status,
+            enablement_status,
+            physical_status,
             addresses,
         } = self;
-        write!(f, "Interface Info\n")?;
-        write!(f, "  id: {}\n", id)?;
         write!(f, "  path: {}\n", path)?;
         if let Some(mac) = mac {
             write!(f, "  mac: {}\n", mac)?;
         }
         write!(f, "  mtu: {}\n", mtu)?;
         write!(f, "  features:\n    {:?}\n", features)?;
-        write!(f, "  status:\n    {:?}\n", status)?;
+        write!(
+            f,
+            "  status:\n    {} | {}\n",
+            enablement_status, physical_status
+        )?;
         write!(f, "  Addresses:")?;
         for address in addresses {
             write!(f, "\n    {}", address)?;
         }
+        Ok(())
+    }
+}
+pub struct InterfaceInfo {
+    id: u64,
+    properties: InterfaceProperties,
+}
+
+impl From<fidl::InterfaceInfo> for InterfaceInfo {
+    fn from(fidl::InterfaceInfo { id, properties }: fidl::InterfaceInfo) -> Self {
+        let properties = InterfaceProperties::from(properties);
+        Self { id, properties }
+    }
+}
+
+impl std::fmt::Display for InterfaceInfo {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        let InterfaceInfo { id, properties } = self;
+        write!(f, "Interface Info\n")?;
+        write!(f, "  id: {}\n", id)?;
+        write!(f, "{}", properties)?;
         Ok(())
     }
 }
@@ -179,20 +233,22 @@ fn test_display_interfaceinfo() {
             "{}",
             InterfaceInfo {
                 id: 1,
-                path: "/all/the/way/home".to_owned(),
-                mac: Some(fidl_zircon_ethernet_ext::MacAddress {
-                    octets: [0, 1, 2, 255, 254, 253]
-                }),
-                mtu: 1500,
-                features: fidl_zircon_ethernet_ext::EthernetFeatures::all(),
-                status: InterfaceStatus::all(),
-                addresses: vec![InterfaceAddress {
-                    ip_address: fidl_fuchsia_net_ext::IpAddress(std::net::IpAddr::V4(
-                        std::net::Ipv4Addr::new(255, 255, 255, 0),
-                    ),),
-                    prefix_len: 4,
-                    peer_address: None,
-                }],
+                properties: InterfaceProperties {
+                    path: "/all/the/way/home".to_owned(),
+                    mac: Some(fidl_zircon_ethernet_ext::MacAddress {
+                        octets: [0, 1, 2, 255, 254, 253]
+                    }),
+                    mtu: 1500,
+                    features: fidl_zircon_ethernet_ext::EthernetFeatures::all(),
+                    enablement_status: EnablementStatus::ENABLED,
+                    physical_status: PhysicalStatus::UP,
+                    addresses: vec![InterfaceAddress {
+                        ip_address: fidl_fuchsia_net_ext::IpAddress(std::net::IpAddr::V4(
+                            std::net::Ipv4Addr::new(255, 255, 255, 0),
+                        ),),
+                        prefix_len: 4,
+                    }],
+                }
             }
         ),
         r#"Interface Info

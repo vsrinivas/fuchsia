@@ -155,7 +155,7 @@ TEST_F(NetstackLaunchTest, AddEthernetInterface) {
   stack->ListInterfaces(
       [&](::fidl::VectorPtr<::fuchsia::net::stack::InterfaceInfo> interfaces) {
         for (const auto& iface : *interfaces) {
-          ASSERT_TRUE(iface.features &
+          ASSERT_TRUE(iface.properties.features &
                       ::zircon::ethernet::INFO_FEATURE_LOOPBACK);
         }
         list_ifs = true;
@@ -182,7 +182,8 @@ TEST_F(NetstackLaunchTest, AddEthernetInterface) {
   stack->ListInterfaces(
       [&](::fidl::VectorPtr<::fuchsia::net::stack::InterfaceInfo> interfaces) {
         for (const auto& iface : *interfaces) {
-          if (iface.features & ::zircon::ethernet::INFO_FEATURE_LOOPBACK) {
+          if (iface.properties.features &
+              ::zircon::ethernet::INFO_FEATURE_LOOPBACK) {
             continue;
           }
           ASSERT_EQ(eth_id, iface.id);

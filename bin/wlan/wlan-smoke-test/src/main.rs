@@ -108,7 +108,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                         }
                     }
                 },
-                _ => println!("scan failed")
+                _ => println!("scan failed"),
             };
 
             let mut requires_disconnect = false;
@@ -358,14 +358,14 @@ async fn get_ip_addrs_for_wlan_iface<'a>(
     let mut wlan_iface_ip_addrs = Vec::new();
 
     for net_iface in net_iface_response.iter_mut() {
-        if net_iface.path.is_empty() {
+        if net_iface.properties.path.is_empty() {
             continue;
         }
         // trim off any leading '@'s
-        let net_path = net_iface.path.trim_left_matches('@').to_string();
+        let net_path = net_iface.properties.path.trim_left_matches('@').to_string();
         if net_path.starts_with(&iface_path) {
             // now get the ip addrs
-            wlan_iface_ip_addrs.append(&mut net_iface.addresses);
+            wlan_iface_ip_addrs.append(&mut net_iface.properties.addresses);
 
             // Note: Until proper interface mappings between wlanstack and netstack,
             // we return all ip_addrs that match the device path to handle

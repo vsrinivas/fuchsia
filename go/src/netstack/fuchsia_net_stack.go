@@ -37,9 +37,11 @@ func getInterfaceInfo(nicid tcpip.NICID, ifs *ifState) *stack.InterfaceInfo {
 	}
 
 	// TODO(tkilbourn): distinguish between enabled and link up
-	var status uint32
+	enablementStatus := stack.EnablementStatusDisabled
+	physicalStatus := stack.PhysicalStatusDown
 	if ifs.state == eth.StateStarted {
-		status |= stack.InterfaceStatusEnabled
+		enablementStatus = stack.EnablementStatusEnabled
+		physicalStatus = stack.PhysicalStatusUp
 	}
 
 	// TODO(tkilbourn): implement interface addresses
@@ -60,13 +62,16 @@ func getInterfaceInfo(nicid tcpip.NICID, ifs *ifState) *stack.InterfaceInfo {
 	}
 
 	return &stack.InterfaceInfo{
-		Id:        uint64(nicid),
-		Path:      path,
-		Mac:       mac,
-		Mtu:       uint32(ifs.statsEP.MTU()),
-		Status:    status,
-		Features:  ifs.nic.Features,
-		Addresses: addrs,
+		Id: uint64(nicid),
+		Properties: stack.InterfaceProperties{
+			Path:             path,
+			Mac:              mac,
+			Mtu:              uint32(ifs.statsEP.MTU()),
+			EnablementStatus: enablementStatus,
+			PhysicalStatus:   physicalStatus,
+			Features:         ifs.nic.Features,
+			Addresses:        addrs,
+		},
 	}
 
 }

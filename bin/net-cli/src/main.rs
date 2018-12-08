@@ -101,7 +101,6 @@ async fn do_if(cmd: opts::IfCmd, stack: StackProxy) -> Result<(), Error> {
             let mut fidl_addr = netstack::InterfaceAddress {
                 ip_address: parsed_addr,
                 prefix_len: prefix,
-                peer_address: None,
             };
             let response = await!(stack.add_interface_address(id, &mut fidl_addr))
                 .context("error setting interface address")?;
