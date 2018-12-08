@@ -199,6 +199,10 @@ A `LayerStack` resource consists of an ordered list of `Layers`.  Each layer
 can contain either an `Image` (perhaps transformed by a matrix), or a
 `Camera` that points at a `Scene` to be rendered (as described above).
 
+### Scenic Resource Graph
+
+![Scenic Resource Graph](scenic_resource_graph.png)
+
 ### TODO: More Resources
 
 Add sections to discuss all other kinds of resources: shapes, materials,
