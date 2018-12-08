@@ -64,7 +64,12 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
 
   void Connect(fidl::InterfaceRequest<fuchsia::modular::StoryProvider> request);
 
+  // Used when the session shell is swapped.
   void StopAllStories(const std::function<void()>& callback);
+
+  // The session shell to send story views to. It is not a constructor argument
+  // because it is updated when the session shell is swapped.
+  void SetSessionShell(fuchsia::modular::SessionShellPtr session_shell);
 
   // Stops serving the fuchsia::modular::StoryProvider interface and stops all
   // stories.
@@ -119,6 +124,16 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   // Called by StoryControllerImpl. Sends request to
   // fuchsia::modular::FocusProvider
   void RequestStoryFocus(fidl::StringPtr story_id);
+
+  // Called by StoryControllerImpl. Sends, using AttachView(), the view of the
+  // story identified by |story_id| to the current session shell.
+  void AttachView(
+      fidl::StringPtr story_id, fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner);
+
+  // Called by StoryControllerImpl. Notifies, using DetachView(), the current
+  // session shell that the view of the story identified by |story_id| is about
+  // to close.
+  void DetachView(fidl::StringPtr story_id, std::function<void()> done);
 
   // Called by StoryControllerImpl.
   void NotifyStoryStateChange(
@@ -221,6 +236,10 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   Environment* const user_environment_;
 
   SessionStorage* session_storage_;  // Not owned.
+
+  // The service from the session shell run by the sessionmgr. Owned here
+  // because only used from here.
+  fuchsia::modular::SessionShellPtr session_shell_;
 
   // Unique ID generated for this user/device combination.
   const std::string device_id_;

@@ -174,6 +174,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   void GetInfo(GetInfoCallback callback) override;
   void Start(fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
                  request) override;
+  void RequestStart() override;
   void TakeAndLoadSnapshot(
       fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> request,
       TakeAndLoadSnapshotCallback done) override;
@@ -193,9 +194,10 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   void GetLink(fuchsia::modular::LinkPath link_path,
                fidl::InterfaceRequest<fuchsia::modular::Link> request) override;
 
-  // Phases of Start() broken out into separate methods.
+  // Communicates with SessionShell.
   void StartStoryShell(
       fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> request);
+  void DetachView(std::function<void()> done);
 
   // Called whenever |story_storage_| sees an updated ModuleData from another
   // device.
@@ -225,6 +227,11 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   // The ID of the story, its state and the context to obtain it from and
   // persist it to.
   const fidl::StringPtr story_id_;
+
+  // True once AttachView() was called. Temporarily needed during transition
+  // from Start() to RequestStart(), will be removed once Start() is removed.
+  // Cf. MF-121.
+  bool needs_detach_view_{};
 
   // This is the canonical source for state. This state is per device and only
   // kept in memory.

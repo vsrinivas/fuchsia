@@ -680,7 +680,7 @@ void SessionmgrImpl::InitializeSessionShell(
 }
 
 void SessionmgrImpl::RunSessionShell(
-    fuchsia::modular::AppConfig session_shell) {
+    fuchsia::modular::AppConfig session_shell_config) {
   // |session_shell_services_| is a ServiceProvider (aka a Directory) that will
   // be used to augment the session shell's namespace.
   session_shell_services_.AddService<fuchsia::modular::SessionShellContext>(
@@ -715,7 +715,7 @@ void SessionmgrImpl::RunSessionShell(
   service_list->provider = std::move(session_shell_service_provider_ptr_);
 
   session_shell_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-      user_environment_->GetLauncher(), std::move(session_shell),
+      user_environment_->GetLauncher(), std::move(session_shell_config),
       /* data_origin = */ "", std::move(service_list));
 
   session_shell_app_->SetAppErrorHandler([this] {
@@ -729,6 +729,10 @@ void SessionmgrImpl::RunSessionShell(
   session_shell_app_->services().ConnectToService(view_provider.NewRequest());
   view_provider->CreateView(view_owner.NewRequest(), nullptr);
   session_shell_view_host_->ConnectView(std::move(view_owner));
+
+  fuchsia::modular::SessionShellPtr session_shell;
+  session_shell_app_->services().ConnectToService(session_shell.NewRequest());
+  story_provider_impl_->SetSessionShell(std::move(session_shell));
 }
 
 void SessionmgrImpl::TerminateSessionShell(const std::function<void()>& done) {

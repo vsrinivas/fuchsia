@@ -15,6 +15,8 @@ interface StoryController {
     // Gets information associated with the story.
     1: GetInfo() -> (StoryInfo info, StoryState state);
 
+    // DEPRECATED in favor of RequestStart().
+    //
     // Runs the story controlled by this |StoryController| instance if not yet
     // running or requested to start, else does nothing. |view_owner| is an
     // interface request for the view of the story shell of this story. If the
@@ -22,6 +24,11 @@ interface StoryController {
     // requests are pending when this request is issued, the request is queued
     // until the Stop() requests complete.
     3: Start(request<fuchsia.ui.viewsv1token.ViewOwner> view_owner);
+
+    // Requests to runsthe story controlled by this |StoryController| instance.
+    // When the story starts, if not yet running, the view of the newly started
+    // story shell will be passed in a call to SessionShell.AttachView().
+    14: RequestStart();
 
     // Requests to stop the story controlled by this |StoryController|. If Start()
     // requests are pending when this request is issued, the request is queued

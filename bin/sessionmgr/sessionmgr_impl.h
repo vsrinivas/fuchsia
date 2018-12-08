@@ -209,6 +209,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
 
   fidl::BindingSet<fuchsia::modular::internal::Sessionmgr> bindings_;
   component::ServiceProviderImpl session_shell_services_;
+
   fidl::BindingSet<fuchsia::modular::SessionShellContext>
       session_shell_context_bindings_;
 

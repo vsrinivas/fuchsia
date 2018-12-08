@@ -504,6 +504,14 @@ class StoryControllerImpl::StopCall : public Operation<> {
     }
     story_controller_impl_->SetState(fuchsia::modular::StoryState::STOPPING);
 
+    story_controller_impl_->DetachView([this, weak_this = GetWeakPtr()] {
+                                         if (weak_this) {
+                                           StopStory();
+                                         }
+                                       });
+  }
+
+  void StopStory() {
     std::vector<FuturePtr<>> did_teardowns;
     did_teardowns.reserve(story_controller_impl_->running_mod_infos_.size());
 
@@ -957,12 +965,13 @@ class StoryControllerImpl::StartCall : public Operation<> {
   void Run() override {
     FlowToken flow{this};
 
-    // If the story is running, we do nothing and close the view owner request.
+    // If the story is running, we do nothing.
     if (story_controller_impl_->IsRunning()) {
       FXL_LOG(INFO)
           << "StoryControllerImpl::StartCall() while already running: ignored.";
       return;
     }
+
     story_controller_impl_->StartStoryShell(std::move(request_));
 
     // Start all modules that were not themselves explicitly started by another
@@ -1421,6 +1430,11 @@ void StoryControllerImpl::Start(
   operation_queue_.Add(new StartCall(this, story_storage_, std::move(request)));
 }
 
+void StoryControllerImpl::RequestStart() {
+  operation_queue_.Add(new StartCall(this, story_storage_,
+                                     nullptr /* ViewOwner request */));
+}
+
 void StoryControllerImpl::Stop(StopCallback done) {
   operation_queue_.Add(new StopCall(this, done));
 }
@@ -1544,6 +1558,14 @@ void StoryControllerImpl::AddModule(
 
 void StoryControllerImpl::StartStoryShell(
     fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> request) {
+  if (!request) {
+    // The start call originated in RequestStart() rather than Start().
+    fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner;
+    request = view_owner.NewRequest();
+    story_provider_impl_->AttachView(story_id_, std::move(view_owner));
+    needs_detach_view_ = true;
+  }
+
   story_shell_app_ =
       story_provider_impl_->StartStoryShell(story_id_, std::move(request));
   story_shell_app_->services().ConnectToService(story_shell_.NewRequest());
@@ -1552,6 +1574,15 @@ void StoryControllerImpl::StartStoryShell(
   story_shell_->Initialize(std::move(story_shell_context));
   story_shell_.events().OnSurfaceFocused =
       fit::bind_member(this, &StoryControllerImpl::OnSurfaceFocused);
+}
+
+void StoryControllerImpl::DetachView(std::function<void()> done) {
+  if (needs_detach_view_) {
+    story_provider_impl_->DetachView(story_id_, std::move(done));
+    needs_detach_view_ = false;
+  } else {
+    done();
+  }
 }
 
 void StoryControllerImpl::SetState(

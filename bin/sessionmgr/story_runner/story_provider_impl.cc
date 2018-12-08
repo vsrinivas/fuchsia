@@ -333,6 +333,22 @@ void StoryProviderImpl::StopAllStories(const std::function<void()>& callback) {
   operation_queue_.Add(new StopAllStoriesCall(this, callback));
 }
 
+void StoryProviderImpl::SetSessionShell(
+    fuchsia::modular::SessionShellPtr session_shell) {
+  // Not on operation queue, because it's called only after all stories have
+  // been stopped or none are running yet, i.e. when no Operations that would
+  // call this interface are scheduled. If there is an operation pending here,
+  // then it would pertain to a story running in the new session shell started
+  // by puppet master or an agent, so we must assign this now.
+  //
+  // TODO(mesch): It may well be that we need to revisit this when we support
+  // starting stories, or swapping session shells, through puppet master, i.e.
+  // from outside the session shell.
+  //
+  // TODO(mesch): Add a WARNING log if the operation is not empty.
+  session_shell_ = std::move(session_shell);
+}
+
 void StoryProviderImpl::Teardown(const std::function<void()>& callback) {
   // Closing all binding to this instance ensures that no new messages come
   // in, though previous messages need to be processed. The stopping of
@@ -446,6 +462,22 @@ void StoryProviderImpl::GetStoryInfo(fidl::StringPtr story_id,
 void StoryProviderImpl::RequestStoryFocus(fidl::StringPtr story_id) {
   FXL_LOG(INFO) << "RequestStoryFocus() " << story_id;
   focus_provider_->Request(story_id);
+}
+
+void StoryProviderImpl::AttachView(
+    fidl::StringPtr story_id, fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner) {
+  FXL_CHECK(session_shell_);
+  fuchsia::modular::ViewIdentifier view_id;
+  view_id.story_id = std::move(story_id);
+  session_shell_->AttachView(std::move(view_id), std::move(view_owner));
+}
+
+void StoryProviderImpl::DetachView(fidl::StringPtr story_id,
+                                   std::function<void()> done) {
+  FXL_CHECK(session_shell_);
+  fuchsia::modular::ViewIdentifier view_id;
+  view_id.story_id = std::move(story_id);
+  session_shell_->DetachView(std::move(view_id), std::move(done));
 }
 
 void StoryProviderImpl::NotifyStoryStateChange(

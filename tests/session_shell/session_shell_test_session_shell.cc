@@ -13,6 +13,7 @@
 #include <lib/async/default.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/fidl/cpp/binding_set.h>
 #include <lib/fsl/vmo/sized_vmo.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/command_line.h>
@@ -28,8 +29,12 @@
 #include "peridot/tests/session_shell/defs.h"
 
 using modular::testing::Await;
+using modular::testing::Fail;
 using modular::testing::Signal;
 using modular::testing::TestPoint;
+
+using fuchsia::modular::SessionShell;
+using fuchsia::modular::ViewIdentifier;
 
 namespace {
 
@@ -135,9 +140,54 @@ class StoryProviderStateWatcherImpl : fuchsia::modular::StoryProviderWatcher {
 
 // Cf. README.md for what this test does in general and how. The test cases are
 // described in detail in comments below.
+class SessionShellImpl : fuchsia::modular::SessionShell {
+ public:
+  SessionShellImpl() = default;
+  ~SessionShellImpl() = default;
+
+  using ViewId = fuchsia::modular::ViewIdentifier;
+
+  fidl::InterfaceRequestHandler<fuchsia::modular::SessionShell> GetHandler() {
+    return bindings_.GetHandler(this);
+  }
+
+  void set_on_attach_view(std::function<void(ViewId view_id)> callback) {
+    on_attach_view_ = callback;
+  }
+
+  void set_on_detach_view(std::function<void(ViewId view_id)> callback) {
+    on_detach_view_ = callback;
+  }
+
+ private:
+  // |SessionShell|
+  void AttachView(fuchsia::modular::ViewIdentifier view_id,
+                  fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner>
+                  view_owner) override {
+    on_attach_view_(std::move(view_id));
+  }
+
+  // |SessionShell|
+  void DetachView(fuchsia::modular::ViewIdentifier view_id,
+                  std::function<void()> done) override {
+    on_detach_view_(std::move(view_id));
+    done();
+  }
+
+  fidl::BindingSet<fuchsia::modular::SessionShell> bindings_;
+  std::function<void(ViewId view_id)> on_attach_view_{[](ViewId) {}};
+  std::function<void(ViewId view_id)> on_detach_view_{[](ViewId) {}};
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(SessionShellImpl);
+};
+
+
+// Cf. README.md for what this test does and how.
 class TestApp : public modular::testing::ComponentBase<void>
 {
  public:
+  using ViewId = fuchsia::modular::ViewIdentifier;
+
   explicit TestApp(component::StartupContext* const startup_context)
       : ComponentBase(startup_context) {
     TestInit(__FILE__);
@@ -148,6 +198,20 @@ class TestApp : public modular::testing::ComponentBase<void>
 
     session_shell_context_->GetStoryProvider(story_provider_.NewRequest());
     story_provider_state_watcher_.Watch(&story_provider_);
+
+    startup_context->outgoing().AddPublicService(
+        session_shell_impl_.GetHandler());
+
+    // Until we use RequestStart() for the first time, there must be no calls on
+    // the SessionShell service.
+    session_shell_impl_.set_on_attach_view(
+        [](ViewId view_id) {
+          Fail("AttachView() called without RequestStart().");
+        });
+    session_shell_impl_.set_on_detach_view(
+        [](ViewId view_id) {
+          Fail("DetachView() called without RequestStart().");
+        });
 
     TestStoryProvider_GetStoryInfo_Null();
   }
@@ -502,11 +566,106 @@ class TestApp : public modular::testing::ComponentBase<void>
       story3_info_after_delete_.Pass();
     }
 
+    TestStory4();
+  }
+
+  // Test Case Story4:
+  //
+  // Create a story and start it with RequestStart() rather than Start().
+  //
+  // Verify the view is received through SessionShell.AttachView().
+  //
+  // Verify that, when the story is stopped, a request for
+  // SessionShell.DetachView() is received.
+
+  TestPoint story4_create_{"Story4 Create"};
+
+  void TestStory4() {
+    puppet_master_->ControlStory("story4", story_puppet_master_.NewRequest());
+
+    fuchsia::modular::AddMod add_mod;
+    add_mod.mod_name.push_back("mod1");
+    add_mod.intent.handler = kCommonNullModule;
+
+    fuchsia::modular::StoryCommand command;
+    command.set_add_mod(std::move(add_mod));
+
+    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+    commands.push_back(std::move(command));
+
+    story_puppet_master_->Enqueue(std::move(commands));
+    story_puppet_master_->Execute(
+        [this](fuchsia::modular::ExecuteResult result) {
+          story4_create_.Pass();
+          TestStory4_Run();
+        });
+  }
+
+  TestPoint story4_state_before_run_{"Story4 State before Run"};
+  TestPoint story4_state_after_run_{"Story4 State after Run"};
+
+  TestPoint story4_attach_view_{"Story4 attach View"};
+  TestPoint story4_detach_view_{"Story4 detach View"};
+
+  void TestStory4_Run() {
+    story_provider_->GetController("story4", story_controller_.NewRequest());
+
+    story_controller_->GetInfo([this](fuchsia::modular::StoryInfo info,
+                                      fuchsia::modular::StoryState state) {
+      story_info_ = std::move(info);
+      if (state == fuchsia::modular::StoryState::STOPPED) {
+        story4_state_before_run_.Pass();
+      }
+    });
+
+    // Start and show the new story using RequestStart().
+    story_controller_->RequestStart();
+
+    session_shell_impl_.set_on_attach_view(
+        [this](ViewId) {
+          story4_attach_view_.Pass();
+        });
+
+    story_controller_->GetInfo([this](fuchsia::modular::StoryInfo info,
+                                      fuchsia::modular::StoryState state) {
+      if (state == fuchsia::modular::StoryState::RUNNING) {
+        story4_state_after_run_.Pass();
+        TestStory4_DeleteStory();
+      }
+    });
+  }
+
+  TestPoint story4_delete_{"Story4 Delete"};
+
+  void TestStory4_DeleteStory() {
+    puppet_master_->DeleteStory(story_info_.id,
+                                [this] { story4_delete_.Pass(); });
+
+    session_shell_impl_.set_on_detach_view(
+        [this](ViewId) {
+          story4_detach_view_.Pass();
+        });
+
+    story_provider_->GetStoryInfo(
+        story_info_.id, [this](fuchsia::modular::StoryInfoPtr info) {
+          TestStory4_InfoAfterDeleteIsNull(std::move(info));
+        });
+
+  }
+
+  TestPoint story4_info_after_delete_{"Story4 Info after Delete is null"};
+
+  void TestStory4_InfoAfterDeleteIsNull(fuchsia::modular::StoryInfoPtr info) {
+    if (!info) {
+      story4_info_after_delete_.Pass();
+    }
+
     Signal(modular::testing::kTestShutdown);
   }
 
   void TeardownStoryController() { story_controller_.Unbind(); }
 
+  SessionShellImpl session_shell_impl_;
   StoryProviderStateWatcherImpl story_provider_state_watcher_;
 
   fuchsia::modular::SessionShellContextPtr session_shell_context_;
