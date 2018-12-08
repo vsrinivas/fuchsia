@@ -81,8 +81,7 @@ zx_status_t buffer_create_merkle(const FileMapping& mapping, MerkleInfo* out_inf
 }
 
 zx_status_t buffer_compress(const FileMapping& mapping, MerkleInfo* out_info) {
-    Compressor compressor;
-    size_t max = compressor.BufferMax(mapping.length());
+    size_t max = Compressor::BufferMax(mapping.length());
     out_info->compressed_data.reset(new uint8_t[max]);
     out_info->compressed = false;
 
@@ -91,6 +90,7 @@ zx_status_t buffer_compress(const FileMapping& mapping, MerkleInfo* out_info) {
     }
 
     zx_status_t status;
+    Compressor compressor;
     if ((status = compressor.Initialize(out_info->compressed_data.get(), max)) != ZX_OK) {
         FS_TRACE_ERROR("Failed to initialize blobfs compressor: %d\n", status);
         return status;

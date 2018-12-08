@@ -19,7 +19,7 @@ namespace blobfs {
 
 constexpr size_t kLz4HeaderSize = 15;
 
-Compressor::Compressor() : buf_(nullptr) {}
+Compressor::Compressor() {}
 
 Compressor::~Compressor() {
     Reset();
@@ -30,6 +30,8 @@ void Compressor::Reset() {
         LZ4F_freeCompressionContext(ctx_);
     }
     buf_ = nullptr;
+    buf_max_ = 0;
+    buf_used_ = 0;
 }
 
 zx_status_t Compressor::Initialize(void* buf, size_t buf_max) {
@@ -51,11 +53,12 @@ zx_status_t Compressor::Initialize(void* buf, size_t buf_max) {
     return ZX_OK;
 }
 
-size_t Compressor::BufferMax(size_t blob_size) const {
+size_t Compressor::BufferMax(size_t blob_size) {
     return kLz4HeaderSize + LZ4F_compressBound(blob_size, nullptr);
 }
 
 zx_status_t Compressor::Update(const void* data, size_t length) {
+    ZX_DEBUG_ASSERT(Compressing());
     size_t r = LZ4F_compressUpdate(ctx_, Buffer(), buf_remaining(), data, length, nullptr);
     if (LZ4F_isError(r)) {
         return ZX_ERR_IO_DATA_INTEGRITY;
@@ -65,6 +68,7 @@ zx_status_t Compressor::Update(const void* data, size_t length) {
 }
 
 zx_status_t Compressor::End() {
+    ZX_DEBUG_ASSERT(Compressing());
     size_t r = LZ4F_compressEnd(ctx_, Buffer(), buf_remaining(), nullptr);
     if (LZ4F_isError(r)) {
         return ZX_ERR_IO_DATA_INTEGRITY;

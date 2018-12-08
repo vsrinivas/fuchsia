@@ -92,6 +92,7 @@ MODULE_SRCS := \
     $(COMMON_TARGET_SRCS) \
     $(TEST_DIR)/allocated-extent-iterator-test.cpp \
     $(TEST_DIR)/allocator-test.cpp \
+    $(TEST_DIR)/compressor-test.cpp \
     $(TEST_DIR)/extent-reserver-test.cpp \
     $(TEST_DIR)/journal-test.cpp \
     $(TEST_DIR)/main.cpp \

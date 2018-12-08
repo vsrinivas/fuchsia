@@ -2456,35 +2456,6 @@ static bool CreateWriteReopen(BlobfsTest* blobfsTest) {
     END_HELPER;
 }
 
-// Ensure Compressor returns an error if we try to compress more data than the buffer can hold.
-static bool TestCompressorBufferTooSmall(void) {
-    BEGIN_TEST;
-    blobfs::Compressor c;
-
-    // Pretend we're going to compress only one byte of data.
-    const size_t buf_size = c.BufferMax(1);
-    fbl::AllocChecker ac;
-    fbl::unique_ptr<char[]> buf(new (&ac) char[buf_size]);
-    EXPECT_EQ(ac.check(), true);
-    ASSERT_EQ(c.Initialize(buf.get(), buf_size), ZX_OK);
-
-    // Create data that is just too big to fit within this buffer size.
-    size_t data_size = 0;
-    while (c.BufferMax(++data_size) <= buf_size) {}
-    ASSERT_GT(data_size, 0);
-
-    unsigned int seed = 0;
-    fbl::unique_ptr<char[]> data(new (&ac) char[data_size]);
-    EXPECT_EQ(ac.check(), true);
-
-    for (size_t i = 0; i < data_size; i++) {
-        data[i] = static_cast<char>(rand_r(&seed));
-    }
-
-    ASSERT_EQ(c.Update(&data, data_size), ZX_ERR_IO_DATA_INTEGRITY);
-    END_TEST;
-}
-
 static bool TestCreateFailure(void) {
     BEGIN_TEST;
     BlobfsTest blobfsTest(FsTestType::kNormal);
@@ -2768,7 +2739,6 @@ RUN_TESTS(MEDIUM, TestReadOnly)
 RUN_TEST_FVM(MEDIUM, ResizePartition)
 RUN_TEST_FVM(MEDIUM, CorruptAtMount)
 RUN_TESTS(LARGE, CreateWriteReopen)
-RUN_TEST(TestCompressorBufferTooSmall)
 RUN_TEST_MEDIUM(TestCreateFailure)
 RUN_TEST_MEDIUM(TestExtendFailure)
 RUN_TEST_LARGE(TestLargeBlob)

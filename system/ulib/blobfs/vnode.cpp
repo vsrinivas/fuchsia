@@ -362,7 +362,7 @@ zx_status_t VnodeBlob::SpaceAllocate(uint64_t size_data) {
     }
 
     if (inode_.blob_size >= kCompressionMinBytesSaved) {
-        size_t max = write_info->compressor.BufferMax(inode_.blob_size);
+        size_t max = Compressor::BufferMax(inode_.blob_size);
         status = write_info->compressed_blob.CreateAndMap(max, "compressed-blob");
         if (status != ZX_OK) {
             return status;

@@ -18,6 +18,12 @@ public:
 
     ~Compressor();
 
+    // Returns the maximum possible size a buffer would need to be
+    // in order to compress a blob of size |blob_size|.
+    //
+    // Typically used in conjunction with |Initialize()|.
+    static size_t BufferMax(size_t blob_size);
+
     // Identifies if compression is underway.
     bool Compressing() const {
         return buf_ != nullptr;
@@ -26,27 +32,23 @@ public:
     // Resets the compression process.
     void Reset();
 
-    // Returns the compressed size of the blob so far.
-    size_t Size() const;
-
-    // Initializes the compression object with a provided
-    // buffer of a specified size.
+    // Initializes the compression object with a provided buffer of a specified size.
     //
     // Although Compressor uses this buffer, it does not own the buffer,
     // assuming that a parent object is responsible for the lifetime.
     zx_status_t Initialize(void* buf, size_t buf_max);
 
-    // Returns the maximum possible size a buffer would need to be
-    // in order to compress a blob of size |blob_size|.
-    //
-    // Typically used in conjunction with |Initialize()|.
-    size_t BufferMax(size_t blob_size) const;
+    // The following functions are only safe to call after |Initialize()|.
+
+    // Returns the compressed size of the blob so far. Simply starting initialization
+    // may result in a nonzero |Size()|.
+    size_t Size() const;
 
     // Continues the compression after initialization.
     zx_status_t Update(const void* data, size_t length);
 
-    // Finishes the compression process. Must be called
-    // before compression is considered complete.
+    // Finishes the compression process.
+    // Must be called before compression is considered complete.
     zx_status_t End();
 
 private:
@@ -58,10 +60,10 @@ private:
 
     size_t buf_remaining() const { return buf_max_ - buf_used_; }
 
-    LZ4F_compressionContext_t ctx_;
-    void* buf_;
-    size_t buf_max_;
-    size_t buf_used_;
+    LZ4F_compressionContext_t ctx_ = {};
+    void* buf_ = nullptr;
+    size_t buf_max_ = 0;
+    size_t buf_used_ = 0;
 };
 
 // A Decompressor is used to decompress a blob transparently before it is
