@@ -13,9 +13,9 @@ namespace fit {
 // by the association of two distinct participants: a completer and a consumer.
 //
 // - The completer is responsible for reporting completion of an asynchronous
-//   task and providing its result.  See |completer()| and |fit::completer|.
+//   task and providing its result.  See |completer| and |fit::completer|.
 // - The consumer is responsible for consuming the result of the asynchronous
-//   task.  See |consumer()| and |fit::consumer|.
+//   task.  See |consumer| and |fit::consumer|.
 //
 // This class is often used for binding a |fit::promise| to a callback,
 // facilitating interoperation of promises with functions that asynchronously
@@ -50,7 +50,7 @@ namespace fit {
 //
 // DECOUPLING
 //
-// See |fit::schedule_for_consumer()| for a helper which uses a bridge to
+// See |fit::schedule_for_consumer| for a helper which uses a bridge to
 // decouple completion and consumption of a task's result so they can be
 // performed on different executors.
 //
@@ -79,8 +79,8 @@ namespace fit {
 //
 //     fit::promise<size_t> promise_read(uint8_t* buffer, size_t num_bytes) {
 //         fit::bridge<size_t> bridge;
-//         read_async(num_bytes, buffer, bridge.completer().bind());
-//         return bridge.consumer().promise_or(::fit::error());
+//         read_async(num_bytes, buffer, bridge.completer.bind());
+//         return bridge.consumer.promise_or(::fit::error());
 //     }
 //
 // Finally we can chain additional asynchronous tasks to be performed upon
@@ -109,14 +109,14 @@ namespace fit {
 //     fit::promise<size_t, int> promise_write(uint8_t* buffer, size_t num_bytes) {
 //         fit::bridge<size_t, int> bridge;
 //         write_async(num_bytes, buffer,
-//             [completer = std::move(bridge.completer())](size_t bytes_written, int error) {
+//             [completer = std::move(bridge.completer)](size_t bytes_written, int error) {
 //             if (bytes_written == 0) {
 //                 completer.complete_error(error);
 //                 return;
 //             }
 //             completer.complete_ok(bytes_written);
 //         });
-//         return bridge.consumer().promise_or(::fit::error(ERR_ABANDONED));
+//         return bridge.consumer.promise_or(::fit::error(ERR_ABANDONED));
 //     }
 //
 //     uint8_t buffer[4096];
@@ -134,8 +134,6 @@ namespace fit {
 // See documentation of |fit::promise| for more information.
 template <typename V, typename E>
 class bridge final {
-    using bridge_state = ::fit::internal::bridge_state<V, E>;
-
 public:
     using value_type = V;
     using error_type = E;
@@ -146,30 +144,22 @@ public:
     // Creates a bridge representing a new asynchronous task formed by the
     // association of a completer and consumer.
     bridge() {
-        bridge_state::create(&completer_.completion_ref_,
-                             &consumer_.consumption_ref_);
+        ::fit::internal::bridge_state<V, E>::create(
+            &completer.completion_ref_,
+            &consumer.consumption_ref_);
     }
     bridge(bridge&& other) = default;
+    bridge(const bridge& other) = delete;
     ~bridge() = default;
 
     bridge& operator=(bridge&& other) = default;
-
-    // Gets a reference to the bridge's completer capability.
-    // The completer can be moved out of the bridge, if desired.
-    completer_type& completer() { return completer_; }
-    const completer_type& completer() const { return completer_; }
-
-    // Gets a reference to the bridge's consumer capability.
-    // The consumer can be moved out of the bridge, if desired.
-    consumer_type& consumer() { return consumer_; }
-    const consumer_type& consumer() const { return consumer_; }
-
-    bridge(const bridge& other) = delete;
     bridge& operator=(const bridge& other) = delete;
 
-private:
-    completer_type completer_;
-    consumer_type consumer_;
+    // The bridge's completer capability.
+    completer_type completer;
+
+    // The bridge's consumer capability.
+    consumer_type consumer;
 };
 
 // Provides a result upon completion of an asynchronous task.
@@ -476,11 +466,11 @@ schedule_for_consumer(fit::executor* executor, Promise promise) {
                 typename Promise::error_type>
         bridge;
     executor->schedule_task(
-        promise.then([completer = std::move(bridge.completer())](
+        promise.then([completer = std::move(bridge.completer)](
                          typename Promise::result_type& result) mutable {
             completer.complete_or_abandon(std::move(result));
         }));
-    return std::move(bridge.consumer());
+    return std::move(bridge.consumer);
 }
 
 } // namespace fit

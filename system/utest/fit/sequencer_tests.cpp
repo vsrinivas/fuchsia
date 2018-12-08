@@ -93,7 +93,7 @@ bool thread_safety() {
     for (int i = 0; i < num_threads; i++) {
         fit::bridge bridge;
         threads[i] =
-            std::thread([&, completer = std::move(bridge.completer())]() mutable {
+            std::thread([&, completer = std::move(bridge.completer)]() mutable {
                 for (int j = 0; j < num_tasks_per_thread; j++) {
                     executor.schedule_task(
                         fit::make_promise([&] { run_count++; }).wrap_with(seq));
@@ -101,7 +101,7 @@ bool thread_safety() {
                 }
                 completer.complete_ok();
             });
-        executor.schedule_task(bridge.consumer().promise());
+        executor.schedule_task(bridge.consumer.promise());
     }
 
     // Run the tasks.

@@ -52,10 +52,10 @@ public:
         assert(promise);
 
         fit::bridge<> bridge;
-        fit::consumer<> prior = swap_prior(std::move(bridge.consumer()));
+        fit::consumer<> prior = swap_prior(std::move(bridge.consumer));
         return prior.promise_or(fit::ok())
             .then([promise = std::move(promise),
-                   completer = std::move(bridge.completer())](
+                   completer = std::move(bridge.completer)](
                       fit::context& context, fit::result<>) mutable {
                 // This handler will run once the completer associated
                 // with the |prior| promise is abandoned.  Once the promise

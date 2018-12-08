@@ -14,7 +14,7 @@ sequencer::sequencer() {
     // completer so that a promise chained onto the consumer using
     // |promise_or()| will become immediately runnable.
     fit::bridge<> bridge;
-    prior_ = std::move(bridge.consumer());
+    prior_ = std::move(bridge.consumer);
 }
 
 sequencer::~sequencer() = default;
