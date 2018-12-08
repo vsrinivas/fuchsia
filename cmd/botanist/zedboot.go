@@ -151,6 +151,29 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, nodename string, cmdlin
 
 	var addr *net.UDPAddr
 	var err error
+
+	// Set up log listener and dump kernel output to stdout.
+	l, err := netboot.NewLogListener(nodename)
+	if err != nil {
+		return fmt.Errorf("cannot listen: %v\n", err)
+	}
+	go func() {
+		defer l.Close()
+		log.Printf("starting log listener\n")
+		for {
+			data, err := l.Listen()
+			if err != nil {
+				continue
+			}
+			fmt.Print(data)
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
+		}
+	}()
+
 	// We need to retry here because botanist might try to discover before
 	// zedboot is fully ready, so the packet that's sent out doesn't result
 	// in any reply. We don't need to wait between calls because Discover
@@ -196,28 +219,6 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, nodename string, cmdlin
 	if err := botanist.TransferCmdlineArgs(client, tftpAddr, cmdlineArgs); err != nil {
 		return fmt.Errorf("cannot transer command-line arguments: %v\n", cmdlineArgs)
 	}
-
-	// Set up log listener and dump kernel output to stdout.
-	l, err := netboot.NewLogListener(nodename)
-	if err != nil {
-		return fmt.Errorf("cannot listen: %v\n", err)
-	}
-	go func() {
-		defer l.Close()
-		log.Printf("starting log listener\n")
-		for {
-			data, err := l.Listen()
-			if err != nil {
-				continue
-			}
-			fmt.Print(data)
-			select {
-			case <-ctx.Done():
-				return
-			default:
-			}
-		}
-	}()
 
 	log.Printf("sending boot command\n")
 
