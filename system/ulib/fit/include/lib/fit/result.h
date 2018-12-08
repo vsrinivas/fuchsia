@@ -257,6 +257,11 @@ public:
         return *this;
     }
 
+    // Swaps results.
+    void swap(result& other) {
+        state_.swap(other.state_);
+    }
+
 private:
     void reset() { state_.template emplace<0>(); }
 
@@ -264,6 +269,11 @@ private:
         ::fit::internal::monostate, ok_result<V>, error_result<E>>
         state_;
 };
+
+template <typename V, typename E>
+void swap(result<V, E>& a, result<V, E>& b) {
+    a.swap(b);
+}
 
 } // namespace fit
 

@@ -243,6 +243,27 @@ bool moveonly_error() {
     END_TEST;
 }
 
+bool swapping() {
+    BEGIN_TEST;
+
+    fit::result<int, char> a, b, c;
+    a = fit::ok(42);
+    b = fit::error('x');
+
+    a.swap(b);
+    EXPECT_EQ('x', a.error());
+    EXPECT_EQ(42, b.value());
+
+    swap(b, c);
+    EXPECT_EQ(42, c.value());
+    EXPECT_TRUE(b.is_pending());
+
+    swap(c, c);
+    EXPECT_EQ(42, c.value());
+
+    END_TEST;
+}
+
 // Test constexpr behavior.
 namespace constexpr_test {
 static_assert(fit::ok(1).value == 1, "");
@@ -331,5 +352,6 @@ RUN_TEST(copyable_value)
 RUN_TEST(copyable_error)
 RUN_TEST(moveonly_value)
 RUN_TEST(moveonly_error)
+RUN_TEST(swapping)
 RUN_TEST(example::test)
 END_TEST_CASE(result_tests)

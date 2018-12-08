@@ -18,29 +18,26 @@ namespace {
 
 void async_invoke_callback_no_args(
     uint64_t* run_count, fit::function<void()> callback) {
-    std::async(std::launch::async,
-               [run_count, callback = std::move(callback)]() mutable {
-                   (*run_count)++;
-                   callback();
-               });
+    std::thread([run_count, callback = std::move(callback)]() mutable {
+        (*run_count)++;
+        callback();
+    }).detach();
 }
 
 void async_invoke_callback_one_arg(
     uint64_t* run_count, fit::function<void(std::string)> callback) {
-    std::async(std::launch::async,
-               [run_count, callback = std::move(callback)]() mutable {
-                   (*run_count)++;
-                   callback("Hippopotamus");
-               });
+    std::thread([run_count, callback = std::move(callback)]() mutable {
+        (*run_count)++;
+        callback("Hippopotamus");
+    }).detach();
 }
 
 void async_invoke_callback_two_args(
     uint64_t* run_count, fit::function<void(std::string, int)> callback) {
-    std::async(std::launch::async,
-               [run_count, callback = std::move(callback)]() mutable {
-                   (*run_count)++;
-                   callback("What do you get when you multiply six by nine?", 42);
-               });
+    std::thread([run_count, callback = std::move(callback)]() mutable {
+        (*run_count)++;
+        callback("What do you get when you multiply six by nine?", 42);
+    }).detach();
 }
 
 bool bridge_construction_and_assignment() {
@@ -547,7 +544,7 @@ bool schedule_for_consumer() {
                 }));
         EXPECT_EQ(0, run_count[0]);
 
-        std::async(std::launch::async, [&] { executor.run(); });
+        auto t = std::thread([&] { executor.run(); });
         fit::run_single_threaded(
             consumer.promise()
                 .then([&](fit::context& context, fit::result<int> result) {
@@ -557,6 +554,7 @@ bool schedule_for_consumer() {
                 }));
         EXPECT_EQ(1, run_count[0]);
         EXPECT_EQ(1, run_count[1]);
+        t.join();
     }
 
     // Promise abandons its task so the consumer is abandoned too.
@@ -570,12 +568,12 @@ bool schedule_for_consumer() {
                     ASSERT_CRITICAL(context.executor() == &executor);
                     run_count[0]++;
                     // The task will be abandoned after we return since
-                    // we not acquire a susended task token for it.
+                    // we do not acquire a susended task token for it.
                     return fit::pending();
                 }));
         EXPECT_EQ(0, run_count[0]);
 
-        std::async(std::launch::async, [&] { executor.run(); });
+        auto t = std::thread([&] { executor.run(); });
         fit::run_single_threaded(
             consumer.promise()
                 .then([&](fit::context& context, fit::result<int> result) {
@@ -584,6 +582,7 @@ bool schedule_for_consumer() {
                 }));
         EXPECT_EQ(1, run_count[0]);
         EXPECT_EQ(0, run_count[1]);
+        t.join();
     }
 
     // Promise abandons its task so the consumer is abandoned too
@@ -603,7 +602,7 @@ bool schedule_for_consumer() {
                 }));
         EXPECT_EQ(0, run_count[0]);
 
-        std::async(std::launch::async, [&] { executor.run(); });
+        auto t = std::thread([&] { executor.run(); });
         fit::run_single_threaded(
             consumer.promise_or(fit::error())
                 .then([&](fit::context& context, fit::result<int> result) {
@@ -613,6 +612,7 @@ bool schedule_for_consumer() {
                 }));
         EXPECT_EQ(1, run_count[0]);
         EXPECT_EQ(1, run_count[1]);
+        t.join();
     }
 
     END_TEST;

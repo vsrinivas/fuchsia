@@ -149,8 +149,57 @@ bool test() {
     END_TEST;
 }
 
+bool swapping() {
+    BEGIN_TEST;
+
+    fake_resolver resolver;
+    {
+        fit::suspended_task a(&resolver, resolver.obtain_ticket());
+        fit::suspended_task b(&resolver, resolver.obtain_ticket());
+        fit::suspended_task c;
+        EXPECT_EQ(2, resolver.num_tickets_issued());
+        EXPECT_EQ(disposition::pending, resolver.get_disposition(1));
+        EXPECT_EQ(disposition::pending, resolver.get_disposition(2));
+
+        a.swap(c);
+        EXPECT_FALSE(a);
+        EXPECT_TRUE(c);
+        EXPECT_EQ(disposition::pending, resolver.get_disposition(1));
+        EXPECT_EQ(disposition::pending, resolver.get_disposition(2));
+
+        a.swap(a);
+        EXPECT_FALSE(a);
+        EXPECT_EQ(disposition::pending, resolver.get_disposition(1));
+        EXPECT_EQ(disposition::pending, resolver.get_disposition(2));
+
+        swap(c, b);
+        EXPECT_TRUE(c);
+        EXPECT_TRUE(b);
+        EXPECT_EQ(disposition::pending, resolver.get_disposition(1));
+        EXPECT_EQ(disposition::pending, resolver.get_disposition(2));
+
+        swap(c, c);
+        EXPECT_TRUE(c);
+        EXPECT_EQ(disposition::pending, resolver.get_disposition(1));
+        EXPECT_EQ(disposition::pending, resolver.get_disposition(2));
+
+        c.resume_task();
+        EXPECT_FALSE(c);
+        EXPECT_EQ(disposition::pending, resolver.get_disposition(1));
+        EXPECT_EQ(disposition::resumed, resolver.get_disposition(2));
+
+        b.reset();
+        EXPECT_FALSE(b);
+        EXPECT_EQ(disposition::released, resolver.get_disposition(1));
+        EXPECT_EQ(disposition::resumed, resolver.get_disposition(2));
+    }
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(suspended_task_tests)
 RUN_TEST(test)
+RUN_TEST(swapping)
 END_TEST_CASE(suspended_task_tests)

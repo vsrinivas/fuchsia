@@ -1505,6 +1505,9 @@ public:
     // Does nothing if this object does not hold a ticket.
     void reset() { resolve(false); }
 
+    // Swaps suspended tasks.
+    void swap(suspended_task& other);
+
     suspended_task& operator=(const suspended_task& other);
     suspended_task& operator=(suspended_task&& other);
 
@@ -1514,6 +1517,10 @@ private:
     resolver* resolver_;
     ticket ticket_;
 };
+
+inline void swap(suspended_task& a, suspended_task& b) {
+    a.swap(b);
+}
 
 } // namespace fit
 

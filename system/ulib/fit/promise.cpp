@@ -52,6 +52,14 @@ suspended_task& suspended_task::operator=(suspended_task&& other) {
     return *this;
 }
 
+void suspended_task::swap(suspended_task& other) {
+    if (this != &other) {
+        using std::swap;
+        swap(resolver_, other.resolver_);
+        swap(ticket_, other.ticket_);
+    }
+}
+
 } // namespace fit
 
 #endif // FIT_NO_STD_FOR_ZIRCON_USERSPACE

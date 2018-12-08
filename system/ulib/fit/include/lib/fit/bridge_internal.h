@@ -73,7 +73,6 @@ private:
     void drop_ref_and_maybe_delete_self();
     void set_result_if_abandoned(result_type result_if_abandoned);
     result_type await_result(consumption_ref* ref, ::fit::context& context);
-    void deliver_result() FIT_REQUIRES(mutex_);
 
     mutable std::mutex mutex_;
 
@@ -82,6 +81,10 @@ private:
     std::atomic<uint32_t> ref_count_{2};
 
     // The disposition of the bridge.
+    // TODO(CF-246): It should be possible to implement a lock-free algorithm
+    // so as to eliminate the re-entrance hazards by introducing additional
+    // intermediate dispositions such that |task_| and |result| could be
+    // safely accessed while in those states.
     disposition disposition_ FIT_GUARDED(mutex_) = {disposition::pending};
 
     // The suspended task.
@@ -279,6 +282,8 @@ bool bridge_state<V, E>::was_abandoned() const {
 
 template <typename V, typename E>
 void bridge_state<V, E>::drop_completion_ref(bool was_completed) {
+    suspended_task task_to_notify;
+    bool should_resume_task = false;
     if (!was_completed) {
         // The task was abandoned.
         std::lock_guard<std::mutex> lock(mutex_);
@@ -286,14 +291,24 @@ void bridge_state<V, E>::drop_completion_ref(bool was_completed) {
                disposition_ == disposition::canceled);
         if (disposition_ == disposition::pending) {
             disposition_ = disposition::abandoned;
-            deliver_result();
+            task_to_notify.swap(task_);
+            should_resume_task = !result_.is_pending();
         }
+    }
+
+    // Drop or resume |task_to_notify| and drop the ref outside of the lock.
+    // This guards against re-entrance in case the consumption ref is
+    // dropped as a side-effect of these operations.
+    if (task_to_notify && should_resume_task) {
+        task_to_notify.resume_task();
     }
     drop_ref_and_maybe_delete_self();
 }
 
 template <typename V, typename E>
 void bridge_state<V, E>::drop_consumption_ref(bool was_consumed) {
+    suspended_task task_to_drop;
+    result_type result_to_drop;
     if (!was_consumed) {
         // The task was canceled.
         std::lock_guard<std::mutex> lock(mutex_);
@@ -302,10 +317,15 @@ void bridge_state<V, E>::drop_consumption_ref(bool was_consumed) {
                disposition_ == disposition::abandoned);
         if (disposition_ == disposition::pending) {
             disposition_ = disposition::canceled;
-            result_ = ::fit::pending();
-            task_.reset(); // there is no task to wake up anymore
+            task_to_drop.swap(task_);
+            result_to_drop.swap(result_);
         }
     }
+
+    // Drop |task_to_drop|, drop |result_to_drop|, and drop the ref
+    // outside of the lock.
+    // This guards against re-entrance in case the completion ref is
+    // dropped as a side-effect of these operations.
     drop_ref_and_maybe_delete_self();
 }
 
@@ -326,17 +346,27 @@ void bridge_state<V, E>::complete_or_abandon(completion_ref ref,
     if (result.is_pending())
         return; // let the ref go out of scope to abandon the task
 
+    suspended_task task_to_notify;
+    bool should_resume_task = false;
     {
         std::lock_guard<std::mutex> lock(mutex_);
         assert(disposition_ == disposition::pending ||
                disposition_ == disposition::canceled);
         if (disposition_ == disposition::pending) {
             disposition_ = disposition::completed;
-            result_ = std::move(result);
-            deliver_result();
+            result.swap(result_);
+            task_to_notify.swap(task_);
+            should_resume_task = !result_.is_pending();
         }
     }
-    // drop the reference ouside of the lock
+
+    // Drop or resume |task_to_notify|, drop any prior result that
+    // was swapped into |result|, and drop the ref outside of the lock.
+    // This guards against re-entrance in case the consumption ref is
+    // dropped as a side-effect of these operations.
+    if (task_to_notify && should_resume_task) {
+        task_to_notify.resume_task();
+    }
     ref.drop_after_completion();
 }
 
@@ -352,14 +382,18 @@ void bridge_state<V, E>::set_result_if_abandoned(
            disposition_ == disposition::abandoned);
     if (disposition_ == disposition::pending ||
         disposition_ == disposition::abandoned) {
-        result_ = std::move(result_if_abandoned);
+        result_if_abandoned.swap(result_);
     }
+
+    // Drop any prior value that was swapped into |result_if_abandoned|
+    // outside of the lock.
 }
 
 template <typename V, typename E>
 typename bridge_state<V, E>::result_type bridge_state<V, E>::await_result(
     consumption_ref* ref, ::fit::context& context) {
     assert(ref->get() == this);
+    suspended_task task_to_drop;
     result_type result;
     {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -367,24 +401,17 @@ typename bridge_state<V, E>::result_type bridge_state<V, E>::await_result(
                disposition_ == disposition::completed ||
                disposition_ == disposition::abandoned);
         if (disposition_ == disposition::pending) {
-            task_ = context.suspend_task();
+            task_to_drop.swap(task_);
+            task_ = context.suspend_task(); // assuming this isn't re-entrant
             return ::fit::pending();
         }
         disposition_ = disposition::returned;
         result = std::move(result_);
     }
-    // drop the reference ouside of the lock
+
+    // Drop |task_to_drop| and the ref outside of the lock.
     ref->drop_after_consumption();
     return result;
-}
-
-template <typename V, typename E>
-void bridge_state<V, E>::deliver_result() {
-    if (result_.is_pending()) {
-        task_.reset(); // the task has been canceled
-    } else {
-        task_.resume_task(); // we have a result so wake up the task
-    }
 }
 
 } // namespace internal
