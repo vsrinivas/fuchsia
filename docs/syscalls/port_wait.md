@@ -46,6 +46,11 @@ struct zx_port_packet_t {
         zx_packet_user_t user;
         zx_packet_signal_t signal;
         zx_packet_exception_t exception;
+        zx_packet_guest_bell_t guest_bell;
+        zx_packet_guest_mem_t guest_mem;
+        zx_packet_guest_io_t guest_io;
+        zx_packet_guest_vcpu_t guest_vcpu;
+        zx_packet_interrupt_t interrupt;
     };
 };
 ```
@@ -82,6 +87,8 @@ of pending operations. Use *key* to track what object this packet corresponds to
 therefore match *count* with the operation.
 
 See [object_wait_async](object_wait_async.md) for more details.
+
+TODO(ZX-3134) Discuss all the other port packet types.
 
 ## RIGHTS
 
