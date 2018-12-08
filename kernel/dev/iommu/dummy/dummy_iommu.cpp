@@ -65,8 +65,7 @@ zx_status_t DummyIommu::Map(uint64_t bus_txn_id, const fbl::RefPtr<VmObject>& vm
     };
 
     paddr_t paddr = INVALID_PADDR;
-    zx_status_t status = vmo->Lookup(offset, fbl::min<size_t>(PAGE_SIZE, size), 0, lookup_fn,
-                                     &paddr);
+    zx_status_t status = vmo->Lookup(offset, fbl::min<size_t>(PAGE_SIZE, size), lookup_fn, &paddr);
     if (status != ZX_OK) {
         return status;
     }
@@ -115,7 +114,7 @@ zx_status_t DummyIommu::MapContiguous(uint64_t bus_txn_id, const fbl::RefPtr<VmO
     };
 
     paddr_t paddr = INVALID_PADDR;
-    zx_status_t status = vmo->Lookup(offset, PAGE_SIZE, 0, lookup_fn, &paddr);
+    zx_status_t status = vmo->Lookup(offset, PAGE_SIZE, lookup_fn, &paddr);
     if (status != ZX_OK) {
         return status;
     }

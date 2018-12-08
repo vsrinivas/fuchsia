@@ -92,7 +92,7 @@ zx_status_t VmObjectPhysical::GetPageLocked(uint64_t offset, uint pf_flags, list
     return ZX_OK;
 }
 
-zx_status_t VmObjectPhysical::Lookup(uint64_t offset, uint64_t len, uint pf_flags,
+zx_status_t VmObjectPhysical::Lookup(uint64_t offset, uint64_t len,
                                      vmo_lookup_fn_t lookup_fn, void* context) {
     canary_.Assert();
 

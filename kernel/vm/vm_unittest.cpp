@@ -537,7 +537,7 @@ static bool vmo_create_contiguous_test() {
         *last_pa = pa;
         return ZX_OK;
     };
-    status = vmo->Lookup(0, alloc_size, 0, lookup_func, &last_pa);
+    status = vmo->Lookup(0, alloc_size, lookup_func, &last_pa);
     EXPECT_EQ(status, ZX_OK, "vmo lookup\n");
 
     END_TEST;
@@ -570,7 +570,7 @@ static bool vmo_contiguous_decommit_test() {
         *last_pa = pa;
         return ZX_OK;
     };
-    status = vmo->Lookup(0, alloc_size, 0, lookup_func, &last_pa);
+    status = vmo->Lookup(0, alloc_size, lookup_func, &last_pa);
     ASSERT_EQ(status, ZX_OK, "vmo lookup\n");
 
     END_TEST;
@@ -922,7 +922,7 @@ static bool vmo_lookup_test() {
         (*pages_seen)++;
         return ZX_OK;
     };
-    status = vmo->Lookup(0, alloc_size, 0, lookup_fn, &pages_seen);
+    status = vmo->Lookup(0, alloc_size, lookup_fn, &pages_seen);
     EXPECT_EQ(ZX_ERR_NO_MEMORY, status, "lookup on uncommitted pages\n");
     EXPECT_EQ(0u, pages_seen, "lookup on uncommitted pages\n");
     pages_seen = 0;
@@ -933,19 +933,19 @@ static bool vmo_lookup_test() {
                "committing vm object\n");
 
     // Should fail, since first page isn't mapped
-    status = vmo->Lookup(0, alloc_size, 0, lookup_fn, &pages_seen);
+    status = vmo->Lookup(0, alloc_size, lookup_fn, &pages_seen);
     EXPECT_EQ(ZX_ERR_NO_MEMORY, status, "lookup on partially committed pages\n");
     EXPECT_EQ(0u, pages_seen, "lookup on partially committed pages\n");
     pages_seen = 0;
 
     // Should fail, but see the mapped page
-    status = vmo->Lookup(PAGE_SIZE, alloc_size - PAGE_SIZE, 0, lookup_fn, &pages_seen);
+    status = vmo->Lookup(PAGE_SIZE, alloc_size - PAGE_SIZE, lookup_fn, &pages_seen);
     EXPECT_EQ(ZX_ERR_NO_MEMORY, status, "lookup on partially committed pages\n");
     EXPECT_EQ(1u, pages_seen, "lookup on partially committed pages\n");
     pages_seen = 0;
 
     // Should succeed
-    status = vmo->Lookup(PAGE_SIZE, PAGE_SIZE, 0, lookup_fn, &pages_seen);
+    status = vmo->Lookup(PAGE_SIZE, PAGE_SIZE, lookup_fn, &pages_seen);
     EXPECT_EQ(ZX_OK, status, "lookup on partially committed pages\n");
     EXPECT_EQ(1u, pages_seen, "lookup on partially committed pages\n");
     pages_seen = 0;
@@ -955,7 +955,7 @@ static bool vmo_lookup_test() {
     EXPECT_EQ(ZX_OK, status, "committing vm object\n");
     EXPECT_EQ(alloc_size, PAGE_SIZE * vmo->AllocatedPages(), "committing vm object\n");
 
-    status = vmo->Lookup(0, alloc_size, 0, lookup_fn, &pages_seen);
+    status = vmo->Lookup(0, alloc_size, lookup_fn, &pages_seen);
     EXPECT_EQ(ZX_OK, status, "lookup on partially committed pages\n");
     EXPECT_EQ(alloc_size / PAGE_SIZE, pages_seen, "lookup on partially committed pages\n");
 

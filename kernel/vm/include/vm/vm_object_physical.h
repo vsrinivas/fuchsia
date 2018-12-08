@@ -31,7 +31,7 @@ public:
 
     uint64_t size() const override { return size_; }
 
-    zx_status_t Lookup(uint64_t offset, uint64_t len, uint pf_flags,
+    zx_status_t Lookup(uint64_t offset, uint64_t len,
                        vmo_lookup_fn_t lookup_fn, void* context) override;
 
     void Dump(uint depth, bool verbose) override;

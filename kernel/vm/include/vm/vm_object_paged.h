@@ -69,7 +69,7 @@ public:
 
     zx_status_t Read(void* ptr, uint64_t offset, size_t len) override;
     zx_status_t Write(const void* ptr, uint64_t offset, size_t len) override;
-    zx_status_t Lookup(uint64_t offset, uint64_t len, uint pf_flags,
+    zx_status_t Lookup(uint64_t offset, uint64_t len,
                        vmo_lookup_fn_t lookup_fn, void* context) override;
 
     zx_status_t ReadUser(user_out_ptr<void> ptr, uint64_t offset, size_t len) override;

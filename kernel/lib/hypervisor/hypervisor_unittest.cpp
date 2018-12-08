@@ -258,7 +258,7 @@ static bool guest_physical_address_space_get_page() {
 
     // Read expected physical address from the VMO.
     zx_paddr_t vmo_paddr = 0;
-    status = vmo->Lookup(0, PAGE_SIZE, 0, get_paddr, &vmo_paddr);
+    status = vmo->Lookup(0, PAGE_SIZE, get_paddr, &vmo_paddr);
     EXPECT_EQ(ZX_OK, status, "Failed to lookup physical address of VMO\n");
     EXPECT_NE(0u, vmo_paddr, "Failed to lookup physical address of VMO\n");
 
@@ -335,7 +335,7 @@ static bool guest_physical_address_space_get_page_complex() {
 
     // Read expected physical address from the VMO.
     zx_paddr_t vmo_paddr = 0;
-    status = vmo2->Lookup(0, PAGE_SIZE, 0, get_paddr, &vmo_paddr);
+    status = vmo2->Lookup(0, PAGE_SIZE, get_paddr, &vmo_paddr);
     EXPECT_EQ(ZX_OK, status, "Failed to lookup physical address of VMO\n");
     EXPECT_NE(0u, vmo_paddr, "Failed to lookup physical address of VMO\n");
 

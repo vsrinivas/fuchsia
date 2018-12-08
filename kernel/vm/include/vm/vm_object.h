@@ -100,7 +100,7 @@ public:
     }
 
     // execute lookup_fn on a given range of physical addresses within the vmo
-    virtual zx_status_t Lookup(uint64_t offset, uint64_t len, uint pf_flags,
+    virtual zx_status_t Lookup(uint64_t offset, uint64_t len,
                                vmo_lookup_fn_t lookup_fn, void* context) {
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -171,6 +171,13 @@ public:
 
     // get a pointer to the page structure and/or physical address at the specified offset.
     // valid flags are VMM_PF_FLAG_*
+    zx_status_t GetPage(uint64_t offset, uint pf_flags, list_node* free_list,
+                        vm_page_t** page, paddr_t* pa) {
+        Guard<fbl::Mutex> guard{&lock_};
+        return GetPageLocked(offset, pf_flags, free_list, page, pa);
+    }
+
+    // See VmObject::GetPage
     virtual zx_status_t GetPageLocked(uint64_t offset, uint pf_flags, list_node* free_list,
                                       vm_page_t** page, paddr_t* pa) TA_REQ(lock_) {
         return ZX_ERR_NOT_SUPPORTED;

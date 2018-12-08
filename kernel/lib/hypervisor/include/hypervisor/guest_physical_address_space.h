@@ -78,10 +78,4 @@ private:
     fbl::RefPtr<VmAspace> guest_aspace_;
 };
 
-static inline zx_status_t guest_lookup_page(void* context, size_t offset, size_t index,
-                                            zx_paddr_t pa) {
-    *static_cast<zx_paddr_t*>(context) = pa;
-    return ZX_OK;
-}
-
 } // namespace hypervisor

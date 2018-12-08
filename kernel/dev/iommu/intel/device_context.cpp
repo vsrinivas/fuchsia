@@ -252,7 +252,7 @@ zx_status_t DeviceContext::SecondLevelMapDiscontiguous(const fbl::RefPtr<VmObjec
         const size_t kNumEntriesPerLookup = 32;
         size_t chunk_size = fbl::min(remaining, kNumEntriesPerLookup * PAGE_SIZE);
         paddr_t paddrs[kNumEntriesPerLookup] = {};
-        status = vmo->Lookup(offset, chunk_size, 0, lookup_fn, &paddrs);
+        status = vmo->Lookup(offset, chunk_size, lookup_fn, &paddrs);
         if (status != ZX_OK) {
             return status;
         }
@@ -300,7 +300,7 @@ zx_status_t DeviceContext::SecondLevelMapContiguous(const fbl::RefPtr<VmObject>&
     // contiguous, we can just extrapolate the rest of the addresses from the
     // first.
     paddr_t paddr = UINT64_MAX;
-    zx_status_t status = vmo->Lookup(offset, PAGE_SIZE, 0, lookup_fn, &paddr);
+    zx_status_t status = vmo->Lookup(offset, PAGE_SIZE, lookup_fn, &paddr);
     if (status != ZX_OK) {
         return status;
     }

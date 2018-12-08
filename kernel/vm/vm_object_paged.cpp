@@ -974,7 +974,7 @@ zx_status_t VmObjectPaged::Write(const void* _ptr, uint64_t offset, size_t len) 
     return ReadWriteInternal(offset, len, true, write_routine);
 }
 
-zx_status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len, uint pf_flags,
+zx_status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len,
                                   vmo_lookup_fn_t lookup_fn, void* context) {
     canary_.Assert();
     if (unlikely(len == 0)) {
@@ -993,7 +993,7 @@ zx_status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len, uint pf_flags,
 
     uint64_t expected_next_off = start_page_offset;
     zx_status_t status = page_list_.ForEveryPageInRange(
-        [&expected_next_off, this, pf_flags, lookup_fn, context,
+        [&expected_next_off, this, lookup_fn, context,
          start_page_offset](const auto p, uint64_t off) {
 
             // If some page was missing from our list, run the more expensive
@@ -1002,7 +1002,7 @@ zx_status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len, uint pf_flags,
                  missing_off += PAGE_SIZE) {
 
                 paddr_t pa;
-                zx_status_t status = this->GetPageLocked(missing_off, pf_flags, nullptr,
+                zx_status_t status = this->GetPageLocked(missing_off, 0, nullptr,
                                                          nullptr, &pa);
                 if (status != ZX_OK) {
                     return ZX_ERR_NO_MEMORY;
@@ -1038,7 +1038,7 @@ zx_status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len, uint pf_flags,
     // If expected_next_off isn't at the end, there's a gap to process
     for (uint64_t off = expected_next_off; off < end_page_offset; off += PAGE_SIZE) {
         paddr_t pa;
-        zx_status_t status = GetPageLocked(off, pf_flags, nullptr, nullptr, &pa);
+        zx_status_t status = GetPageLocked(off, 0, nullptr, nullptr, &pa);
         if (status != ZX_OK) {
             return ZX_ERR_NO_MEMORY;
         }
