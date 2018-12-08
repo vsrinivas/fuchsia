@@ -509,9 +509,10 @@ void BasemgrImpl::ToggleClipping() {
 
 void BasemgrImpl::UpdateSessionShellConfig() {
   // The session shell settings overrides the session_shell flag passed via
-  // command line. TODO(MF-113): Consolidate the session shell settings.
+  // command line, except in integration tests. TODO(MF-113): Consolidate
+  // the session shell settings.
   fuchsia::modular::AppConfig session_shell_config;
-  if (session_shell_settings_.empty()) {
+  if (settings_.test || session_shell_settings_.empty()) {
     session_shell_config = CloneStruct(settings_.session_shell);
   } else {
     const auto& settings =
