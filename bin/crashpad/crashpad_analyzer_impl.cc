@@ -126,8 +126,8 @@ zx_status_t CrashpadAnalyzerImpl::UploadReport(
                                              "application/octet-stream");
   }
   http_multipart_builder.SetFileAttachment(
-      "upload_file_minidump", report->uuid.ToString() + ".dmp",
-      report->Reader(), "application/octet-stream");
+      "uploadFileMinidump", report->uuid.ToString() + ".dmp", report->Reader(),
+      "application/octet-stream");
 
   std::unique_ptr<crashpad::HTTPTransport> http_transport(
       crashpad::HTTPTransport::Create());
