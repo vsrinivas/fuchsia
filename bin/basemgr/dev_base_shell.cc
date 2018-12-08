@@ -73,12 +73,14 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell>,
       testing::Await(testing::kTestShutdown,
                      [this] { base_shell_context_->Shutdown(); });
 
-      // Start a timer to quit in case a test component misbehaves and hangs.
+      // Start a timer to quit in case a test component misbehaves and hangs. If
+      // we hit the timeout, this is a test failure.
       async::PostDelayedTask(
           async_get_default_dispatcher(),
           callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
                                [this] {
                                  FXL_LOG(WARNING) << "DevBaseShell timed out";
+                                 testing::Fail("DevBaseShell timed out");
                                  base_shell_context_->Shutdown();
                                }),
           zx::msec(settings_.test_timeout_ms));
