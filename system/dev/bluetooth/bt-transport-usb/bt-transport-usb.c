@@ -81,20 +81,17 @@ typedef struct {
     size_t parent_req_size;
 } hci_t;
 
-static void hci_event_complete(usb_request_t* req, void* cookie);
-static void hci_acl_read_complete(usb_request_t* req, void* cookie);
-
 static void queue_acl_read_requests_locked(hci_t* hci) {
     usb_request_t* req = NULL;
     while ((req = usb_req_list_remove_head(&hci->free_acl_read_reqs, hci->parent_req_size)) != NULL) {
-        usb_request_queue(&hci->usb, req, hci_acl_read_complete, hci);
+        usb_request_queue(&hci->usb, req);
     }
 }
 
 static void queue_interrupt_requests_locked(hci_t* hci) {
     usb_request_t* req = NULL;
     while ((req = usb_req_list_remove_head(&hci->free_event_reqs, hci->parent_req_size)) != NULL) {
-        usb_request_queue(&hci->usb, req, hci_event_complete, hci);
+        usb_request_queue(&hci->usb, req);
     }
 }
 
@@ -356,7 +353,7 @@ static void hci_handle_acl_read_events(hci_t* hci, zx_wait_item_t* acl_item) {
         usb_request_t* req = REQ_INTERNAL_TO_USB_REQ(req_int, hci->parent_req_size);
         usb_request_copy_to(req, buf, length, 0);
         req->header.length = length;
-        usb_request_queue(&hci->usb, req, hci_acl_write_complete, hci);
+        usb_request_queue(&hci->usb, req);
     }
 
     return;

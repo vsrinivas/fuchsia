@@ -92,7 +92,7 @@ static void ums_send_cbw(ums_t* ums, uint8_t lun, uint32_t transfer_length, uint
 
     sync_completion_t completion = SYNC_COMPLETION_INIT;
     req->cookie = &completion;
-    usb_request_queue(&ums->usb, req, ums_req_complete, &completion);
+    usb_request_queue(&ums->usb, req);
     sync_completion_wait(&completion, ZX_TIME_INFINITE);
 }
 
@@ -100,7 +100,7 @@ static zx_status_t ums_read_csw(ums_t* ums, uint32_t* out_residue) {
     sync_completion_t completion = SYNC_COMPLETION_INIT;
     usb_request_t* csw_request = ums->csw_req;
     csw_request->cookie = &completion;
-    usb_request_queue(&ums->usb, csw_request, ums_req_complete, &completion);
+    usb_request_queue(&ums->usb, csw_request);
     sync_completion_wait(&completion, ZX_TIME_INFINITE);
 
     csw_status_t csw_error = ums_verify_csw(ums, csw_request, out_residue);
@@ -151,7 +151,7 @@ static void ums_queue_read(ums_t* ums, uint16_t transfer_length) {
     usb_request_t* read_request = ums->data_req;
     read_request->header.length = transfer_length;
     read_request->cookie = NULL;
-    usb_request_queue(&ums->usb, read_request, ums_req_complete, NULL);
+    usb_request_queue(&ums->usb, read_request);
 }
 
 static zx_status_t ums_inquiry(ums_t* ums, uint8_t lun, uint8_t* out_data) {
@@ -272,7 +272,7 @@ static zx_status_t ums_data_transfer(ums_t* ums, ums_txn_t* txn, zx_off_t offset
 
     sync_completion_t completion = SYNC_COMPLETION_INIT;
     req->cookie = &completion;
-    usb_request_queue(&ums->usb, req, ums_req_complete, &completion);
+    usb_request_queue(&ums->usb, req);
     sync_completion_wait(&completion, ZX_TIME_INFINITE);
 
     status = req->response.status;

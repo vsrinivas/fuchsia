@@ -121,8 +121,7 @@ typedef struct {
                            uint16_t index, void* data, size_t length, zx_time_t timeout,
                            size_t* out_length);
     // queues a USB request
-    void (*request_queue)(void* ctx, usb_request_t* usb_request, usb_request_complete_cb,
-                          void* cookie);
+    void (*request_queue)(void* ctx, usb_request_t* usb_request);
 
     zx_status_t (*configure_batch_callback)(void* ctx, uint8_t ep_address,
                                             usb_batch_complete_cb cb, void* cookie);
@@ -188,9 +187,8 @@ static inline zx_status_t usb_clear_feature(const usb_protocol_t* usb, uint8_t r
                        NULL);
 }
 
-static inline void usb_request_queue(const usb_protocol_t* usb, usb_request_t* usb_request,
-                                     usb_request_complete_cb cb, void* cookie) {
-    return usb->ops->request_queue(usb->ctx, usb_request, cb, cookie);
+static inline void usb_request_queue(const usb_protocol_t* usb, usb_request_t* usb_request) {
+    return usb->ops->request_queue(usb->ctx, usb_request);
 }
 
 // Configures an endpoint to batch multiple requests to a single callback.

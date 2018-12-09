@@ -363,7 +363,7 @@ static int usb_hub_thread(void* arg) {
     // This loop handles events from our interrupt endpoint
     while (1) {
         sync_completion_reset(&hub->completion);
-        usb_request_queue(&hub->usb, req, usb_hub_interrupt_complete, hub);
+        usb_request_queue(&hub->usb, req);
         sync_completion_wait(&hub->completion, ZX_TIME_INFINITE);
         if (req->response.status != ZX_OK || atomic_load(&hub->thread_done)) {
             break;

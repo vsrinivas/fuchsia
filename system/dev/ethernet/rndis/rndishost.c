@@ -181,7 +181,7 @@ static void rndis_read_complete(usb_request_t* request, void* cookie) {
 
     // TODO: Only usb_request_queue if the device is online.
     zx_nanosleep(zx_deadline_after(ZX_USEC(eth->rx_endpoint_delay)));
-    usb_request_queue(&eth->usb, request, rndis_read_complete, eth);
+    usb_request_queue(&eth->usb, request);
 
     mtx_unlock(&eth->mutex);
 }
@@ -309,7 +309,7 @@ static zx_status_t rndishost_queue_tx(void* ctx, uint32_t options, ethmac_netbuf
         goto done;
     }
     zx_nanosleep(zx_deadline_after(ZX_USEC(eth->tx_endpoint_delay)));
-    usb_request_queue(&eth->usb, req, rndis_write_complete, eth);
+    usb_request_queue(&eth->usb, req);
 
 done:
     mtx_unlock(&eth->mutex);
@@ -456,7 +456,7 @@ static int rndis_start_thread(void* arg) {
     mtx_lock(&eth->mutex);
     usb_request_t* txn;
     while ((txn = usb_req_list_remove_head(&eth->free_read_reqs, eth->parent_req_size)) != NULL) {
-        usb_request_queue(&eth->usb, txn, rndis_read_complete, eth);
+        usb_request_queue(&eth->usb, txn);
     }
     mtx_unlock(&eth->mutex);
 

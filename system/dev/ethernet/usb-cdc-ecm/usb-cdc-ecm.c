@@ -83,8 +83,6 @@ typedef struct txn_info {
     list_node_t node;
 } txn_info_t;
 
-static void usb_write_complete(usb_request_t* request, void* cookie);
-
 static void ecm_unbind(void* cookie) {
     zxlogf(TRACE, "%s: unbinding\n", module_name);
     ecm_ctx_t* ctx = cookie;
@@ -210,7 +208,7 @@ static zx_status_t queue_request(ecm_ctx_t* ctx, const uint8_t* data, size_t len
         zxlogf(ERROR, "%s: failed to copy data into send txn (error %zd)\n", module_name, bytes_copied);
         return ZX_ERR_IO;
     }
-    usb_request_queue(&ctx->usb, req, usb_write_complete, ctx);
+    usb_request_queue(&ctx->usb, req);
     return ZX_OK;
 }
 
@@ -337,7 +335,7 @@ static void usb_read_complete(usb_request_t* request, void* cookie) {
     }
 
     zx_nanosleep(zx_deadline_after(ZX_USEC(ctx->rx_endpoint_delay)));
-    usb_request_queue(&ctx->usb, request, usb_read_complete, ctx);
+    usb_request_queue(&ctx->usb, request);
 }
 
 static zx_status_t ecm_ethmac_queue_tx(void* cookie, uint32_t options, ethmac_netbuf_t* netbuf) {
@@ -433,7 +431,7 @@ static int ecm_int_handler_thread(void* cookie) {
 
     while (true) {
         sync_completion_reset(&ctx->completion);
-        usb_request_queue(&ctx->usb, txn, ecm_interrupt_complete, ctx);
+        usb_request_queue(&ctx->usb, txn);
         sync_completion_wait(&ctx->completion, ZX_TIME_INFINITE);
         if (txn->response.status == ZX_OK) {
             ecm_handle_interrupt(ctx, txn);
@@ -744,7 +742,7 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
 
         rx_buf->complete_cb = usb_read_complete;
         rx_buf->cookie = ecm_ctx;
-        usb_request_queue(&ecm_ctx->usb, rx_buf, usb_read_complete, ecm_ctx);
+        usb_request_queue(&ecm_ctx->usb, rx_buf);
         rx_buf_remain -= rx_buf_sz;
     }
 

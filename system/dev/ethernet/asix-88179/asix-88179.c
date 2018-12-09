@@ -338,7 +338,7 @@ static void ax88179_read_complete(usb_request_t* request, void* cookie) {
 
     if (eth->online) {
         zx_nanosleep(zx_deadline_after(ZX_USEC(eth->rx_endpoint_delay)));
-        usb_request_queue(&eth->usb, request, ax88179_read_complete, eth);
+        usb_request_queue(&eth->usb, request);
     } else {
         zx_status_t status = usb_req_list_add_head(&eth->free_read_reqs, request,
                                                    eth->parent_req_size);
@@ -415,7 +415,7 @@ static void ax88179_write_complete(usb_request_t* request, void* cookie) {
         zxlogf(DEBUG1, "ax88179: queuing request (%p) of length %lu, %u outstanding\n",
                  next, next->header.length, eth->usb_tx_in_flight);
         zx_nanosleep(zx_deadline_after(ZX_USEC(eth->tx_endpoint_delay)));
-        usb_request_queue(&eth->usb, next, ax88179_write_complete, eth);
+        usb_request_queue(&eth->usb, next);
     }
     ZX_DEBUG_ASSERT(eth->usb_tx_in_flight <= MAX_TX_IN_FLIGHT);
     mtx_unlock(&eth->tx_lock);
@@ -451,7 +451,7 @@ static void ax88179_handle_interrupt(ax88179_t* eth, usb_request_t* request) {
                                            node) {
                     list_delete(&req_int->node);
                     req = REQ_INTERNAL_TO_USB_REQ(req_int, eth->parent_req_size);
-                    usb_request_queue(&eth->usb, req, ax88179_read_complete, eth);
+                    usb_request_queue(&eth->usb, req);
                 }
                 zxlogf(TRACE, "ax88179 now online\n");
                 if (eth->ifc.ops) {
@@ -540,7 +540,7 @@ static zx_status_t ax88179_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t
     req = usb_req_list_remove_head(&eth->pending_usb_tx, eth->parent_req_size);
     zxlogf(DEBUG1, "ax88179: queuing request (%p) of length %lu, %u outstanding\n",
              req, req->header.length, eth->usb_tx_in_flight);
-    usb_request_queue(&eth->usb, req, ax88179_write_complete, eth);
+    usb_request_queue(&eth->usb, req);
     eth->usb_tx_in_flight++;
     ZX_DEBUG_ASSERT(eth->usb_tx_in_flight <= MAX_TX_IN_FLIGHT);
     mtx_unlock(&eth->tx_lock);
@@ -886,7 +886,7 @@ static int ax88179_thread(void* arg) {
     usb_request_t* req = eth->interrupt_req;
     while (true) {
         sync_completion_reset(&eth->completion);
-        usb_request_queue(&eth->usb, req, ax88179_interrupt_complete, eth);
+        usb_request_queue(&eth->usb, req);
         sync_completion_wait(&eth->completion, ZX_TIME_INFINITE);
         if (req->response.status != ZX_OK) {
             return req->response.status;

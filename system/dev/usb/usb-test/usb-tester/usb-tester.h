@@ -63,11 +63,10 @@ public:
 
     // Returns the underlying usb request.
     usb_request_t* Get() const { return usb_req_; }
-    sync_completion_t* GetCompletionEvent() { return &completion_; }
-    usb_request_complete_cb GetCompleteCb() { return &RequestCompleteCallback; }
+
 private:
     explicit TestRequest(usb_request_t* usb_req);
-    static void RequestCompleteCallback(usb_request_t* request, void* cookie);
+
     usb_request_t* usb_req_;
     sync_completion_t completion_;
 };

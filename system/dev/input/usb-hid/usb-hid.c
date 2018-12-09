@@ -79,7 +79,7 @@ static void usb_interrupt_callback(usb_request_t* req, void* cookie) {
     }
 
     if (requeue) {
-        usb_request_queue(&hid->usb, req, usb_interrupt_callback, hid);
+        usb_request_queue(&hid->usb, req);
     } else {
         hid->req_queued = false;
     }
@@ -106,7 +106,7 @@ static zx_status_t usb_hid_start(void* ctx, const hidbus_ifc_t* ifc) {
     hid->ifc = *ifc;
     if (!hid->req_queued) {
         hid->req_queued = true;
-        usb_request_queue(&hid->usb, hid->req, usb_interrupt_callback, hid);
+        usb_request_queue(&hid->usb, hid->req);
     }
     mtx_unlock(&hid->lock);
     return ZX_OK;
