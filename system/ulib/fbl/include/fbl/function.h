@@ -325,7 +325,7 @@ private:
 
 // The default size allowance for callable objects which can be inlined within
 // a function object.  This default allows for inline storage of callables
-// consiting of a function pointer and an object pointer (or similar callables
+// consisting of a function pointer and an object pointer (or similar callables
 // of the same size).
 constexpr size_t kDefaultInlineCallableSize = sizeof(void*) * 2;
 

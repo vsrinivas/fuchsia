@@ -431,7 +431,7 @@ T atomic_fetch_xor(volatile atomic<T>* atomic_ptr, T value, memory_order order =
 // This function is _not_ a substitute for constructing the atomic<T>:
 // it does not begin the lifetime of an atomic<T> object.
 //
-// Using the value constructors is preferrable to using this
+// Using the value constructors is preferable to using this
 // function. This function exists because calling the value
 // constructor is occasionally more awkward than separating
 // construction from initializing.
@@ -456,7 +456,7 @@ void atomic_init(volatile atomic<T>* atomic_ptr, T value) {
 // Because the barrier applies to all memory rather than a particular
 // location, it is a strong guarantee for the given memory order than
 // the corresponding atomic operation on a memory location, and may be
-// more expenisve.
+// more expensive.
 inline void atomic_thread_fence(memory_order order = memory_order_seq_cst) {
     __atomic_thread_fence(order);
 }

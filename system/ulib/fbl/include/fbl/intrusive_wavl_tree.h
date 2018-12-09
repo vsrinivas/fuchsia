@@ -636,10 +636,10 @@ private:
         void advance() {
             ZX_DEBUG_ASSERT(internal::valid_sentinel_ptr(node_));
 
-            // Find the next node in the ordered sequecnce.
+            // Find the next node in the ordered sequence.
             // key.  This will be either...
             // 1) The RL-most child of our LR-hand sub-tree.
-            // 2) Our first ancestor for which we are a LR-hand descendent.
+            // 2) Our first ancestor for which we are a LR-hand descendant.
             auto ns = &NodeTraits::node_state(*node_);
             auto rl_child = LRTraits::RLChild(*ns);
             if (rl_child != nullptr) {
@@ -724,9 +724,9 @@ private:
         while (true) {
             auto parent_key = KeyTraits::GetKey(*parent);
 
-            // Looks like we collided with an object in the colleciton which has
+            // Looks like we collided with an object in the collection which has
             // the same key as the object being inserted.  This is only allowed
-            // during an insert_or_find opertaion (collision is non-null).
+            // during an insert_or_find operation (collision is non-null).
             // Assert this in debug builds.  If this is an insert_or_find
             // operation, fill out the collision [out] parameter so the called
             // knows which object he/she collided with.  Either way, do not

@@ -451,7 +451,7 @@ struct StructType   {
 
 static void SomeStaticFunc() { }
 void SomeGlobalFunc() {
-    // Force an artifical use of SomeStaticFunc to avoid warnings.
+    // Force an artificial use of SomeStaticFunc to avoid warnings.
     SomeStaticFunc();
 }
 

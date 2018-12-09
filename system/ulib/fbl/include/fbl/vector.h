@@ -387,7 +387,7 @@ private:
         }
     }
 
-    // Forces capacity to become newCapcity.
+    // Forces capacity to become newCapacity.
     // Returns true on success, false on failure.
     // If reallocate fails, the old "ptr_" array is unmodified.
     bool reallocate(size_t newCapacity, AllocChecker* ac) {

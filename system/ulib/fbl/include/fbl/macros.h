@@ -37,7 +37,7 @@
 // Example:
 //
 // DECLARE_HAS_MEMBER_FN(has_bar, Bar);
-// template <typname T>
+// template <typename T>
 // class Foo {
 //   static_assert(has_bar<T>::value, "Foo classes must implement Bar()!");
 //   // TODO: use 'if constexpr' to avoid this next static_assert once c++17

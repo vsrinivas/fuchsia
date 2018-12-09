@@ -12,7 +12,7 @@
 // Notes about class Mutex
 //
 // Mutex is a C++ helper class intended to wrap a mutex-style synchronization
-// primative and provide a common interface for library code which is intended
+// primitive and provide a common interface for library code which is intended
 // to be shared between user-mode and kernel code.  It is also responsible for
 // automatically initializing and destroying the internal mutex object.
 #if _KERNEL

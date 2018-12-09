@@ -114,7 +114,7 @@ protected:
     // Note:
     //
     // The PreAdoptSentinel value is chosen specifically to be negative when
-    // stored as an int32_t, and as far away from becoming positiive (via either
+    // stored as an int32_t, and as far away from becoming positive (via either
     // addition or subtraction) as possible.  These properties allow us to
     // combine the debug-build adopt sanity checks and the lifecycle sanity
     // checks into a single debug assert.
