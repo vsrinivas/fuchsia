@@ -475,7 +475,7 @@ template <typename RawBitmap> static bool GrowAcrossPage(void) {
     EXPECT_EQ(bitmap.SetOne(16 * PAGE_SIZE - 1), ZX_OK);
     EXPECT_TRUE(bitmap.GetOne(16 * PAGE_SIZE - 1));
 
-    // But our orignal 'set bit' is still set
+    // But our original 'set bit' is still set
     EXPECT_TRUE(bitmap.GetOne(100), "Growing should not unset bits");
 
     // If we shrink and re-expand the bitmap, it should
