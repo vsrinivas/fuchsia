@@ -5,11 +5,26 @@ troubleshooting guide](debugger.md) to get running.
 
 ## Quick start
 
+### debug process
+
 ```
 connect 192.168.3.1:2345
 break main
 run /system/bin/cowsay moo
 next
+print argv[1]
+continue
+quit
+```
+
+### debug component
+
+```
+connect 192.168.3.1:2345
+set filter echo2
+run fuchsia-pkg://fuchsia.com/echo2_client_cpp#meta/echo2_client_cpp.cmx
+break main
+p continue
 print argv[1]
 continue
 quit
@@ -40,6 +55,7 @@ will be covered in the “Task guide” section below.
 The possible nouns (and their abbreviations) are:
 
   * `process` (`pr`)
+  * `job` (`j`)
   * `thread` (`t`)
   * `frame` (`f`)
   * `breakpoint` (`bp`)
@@ -54,6 +70,14 @@ List attached processes
 [zxdb] process
   # State       Koid Name
 ▶ 1 Not running 3471 /pkgfs/packages/debug_agent_tests/0/test/zxdb_test_app
+```
+
+List attached jobs
+
+```
+[zxdb] job
+  # State   Koid Name
+▶ 1 running 3471 sys
 ```
 
 List threads in the current process:
@@ -147,19 +171,6 @@ Use `disconnect` to close the connection, or `quit` to disconnect and close the
 frontend. Note that currently you may need to also exit the debug agent before
 reconnecting ([DX-517](https://fuchsia.atlassian.net/browse/DX-517)).
 
-### Debugging modules
-
-Debugging processes started by the application manager is currently only
-possible by attaching to them once they’re started (see “Attaching to an
-existing process” below). Work on a better experience is ongoing
-[DX-322](https://fuchsia.atlassian.net/browse/DX-322).
-
-If necessary you can hack something by busy-looping for 30 seconds or something
-at the beginning of your application to give you time to attach. Unfortunately
-zxdb can not currently set variables
-([DX-597](https://fuchsia.atlassian.net/browse/DX-597)) which makes it
-impossible to busy-loop on a variable.
-
 ### Debugging drivers
 
 Debugging driver start-up is not currently possible
@@ -174,6 +185,36 @@ not debug any network-related drivers.
 
 Work on this capability is ongoing
 ([DX-603](https://fuchsia.atlassian.net/browse/DX-603)).
+
+### Debugging a component
+
+Components are launched by appmgr, so they're always launched in a job that's a
+child of appmgr's job. When zxdb is connected, it attaches itself to appmgr's
+job. To debug a new component you need to add filters to attached jobs.
+
+To add filter
+```
+[zxdb] set filter echo2 # attaches to any component starting with echo2.
+```
+Now run the component
+```
+[zxdb] run fuchsia-pkg://fuchsia.com/echo2_client_cpp#meta/echo2_client_cpp.cmx
+```
+
+Now you can see it in attached process list
+```
+[zxdb] process
+# State       Koid Name
+▶ 1 Running 3471 echo2_client_cpp.cmx
+
+
+```
+
+Now you can attach breakpoints and start debugging your component. Look at
+[Working with breakpoints](#working-with-breakpoints) for breakpoints and
+[Directly running a new process](#directly-running-a-new-process) for debugging
+attached processes below.
+
 
 ### Directly running a new process
 
@@ -308,7 +349,7 @@ use the `break` command (`b` for short) and give it a location:
 ```
 [zxdb] break main
 Breakpoint 3 (Software) on Global, Enabled, stop=All, @ main
-   180 
+   180
  ◉ 181 int main(int argc, char**argv) {
    182     fbl::unique_fd dirfd;
 ```
