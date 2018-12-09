@@ -34,7 +34,7 @@ public:
                               guest* guest, vmar* vmar);
 
     zx_status_t set_trap(uint32_t kind, zx_gpaddr_t addr, size_t len,
-                         const port& port, uint64_t key) {
+                         const port& port, uint64_t key) const {
         return zx_guest_set_trap(get(), kind, addr, len, port.get(), key);
     }
 };
