@@ -52,7 +52,7 @@ void UnmountHandle(zx_handle_t root, bool wait_until_ready) {
     // chance to shutdown properly.
     //
     // The unmount process is a little atypical, since we're just sending a signal over a handle,
-    // rather than detaching the mounted filesytem from the "parent" filesystem.
+    // rather than detaching the mounted filesystem from the "parent" filesystem.
     vfs_unmount_handle(root, wait_until_ready ? ZX_TIME_INFINITE : 0);
 }
 
