@@ -7,8 +7,8 @@ import("//build/testing/platforms.gni")
 # Extension identifying a test spec JSON file.
 _test_spec_ext = "spec.json"
 
-# TODO(joshuaseaton): Only used in package() today; consider a scheme in which
-#   test specs are re-used for host tests.
+# Extension identifying the runtime dependencies of a test.
+test_data_ext = "spec.data"
 
 # Describes the target device environment in which a test should run. This
 # specification is written in JSON to the build directory, to be aggregated
@@ -16,14 +16,17 @@ _test_spec_ext = "spec.json"
 #
 # Parameters
 #
+#   name (required)
+#     [string] The test's name.
+#
 #   location (required)
 #     [string]: Unique reference to a test, e.g., a filesystem path or a
 #     fuchsia URI.
 #
-#   output_dir (required)
+#   output_dir (required for fuchsia; else is optional)
 #     [string]: Directory where the test spec will be written.
 #
-#   environments (required)
+#   environments (optional, default: QEMU for fuchsia; else a VM)
 #     [list of scopes] Device environments in which the test should run.
 #
 #     Each scope in $environments contains:
@@ -40,12 +43,87 @@ _test_spec_ext = "spec.json"
 #         default testing pipeline for special tests or environments.
 #
 template("test_spec") {
-  assert(defined(invoker.location), "location must be defined.")
-  assert(defined(invoker.output_dir), "output_dir must be defined.")
-  assert(defined(invoker.environments) && invoker.environments != [],
-         "environments must be defined.")
+  # A canonical target name is the name of the test itself; however that name
+  # must be reserved for the actual test target in the expansion of other
+  # templates that give both a test and its spec. With that in mind,
+  # `test_name` is provided as a parameter, and the choice of an alternative
+  # target name does not ultimately matter.
+  not_needed([ "target_name" ])
 
-  foreach(env, invoker.environments) {
+  assert(defined(invoker.name), "name must be defined.")
+  assert(defined(invoker.location), "location must be defined.")
+  forward_variables_from(invoker,
+                         [
+                           "environments",
+                           "output_dir",
+                         ])
+
+  # Set default environments: QEMU for a fuchsia test, and VMs for linux and mac
+  # tests.
+  if (is_fuchsia) {
+    assert(defined(invoker.output_dir), "output_dir must be defined.")
+    envs_specified = defined(environments)
+
+    if (!envs_specified) {
+      environments = [
+        {
+          dimensions = {
+            device_type = "QEMU"
+          }
+        },
+      ]
+    }
+
+    if (current_cpu == "x64" && !envs_specified) {
+      # TODO(joshuaseaton): This is temporary until we are confident that all
+      # tests that need to specify hardware are doing so.
+      environments += [
+        {
+          dimensions = {
+            device_type = "Intel NUC Kit NUC7i5DNHE"
+          }
+        },
+      ]
+    } else if (current_cpu == "arm64" && !envs_specified) {
+      # TODO(IN-571): Remove after vim2s are ready to be targeted.
+      environments += [
+        {
+          dimensions = {
+            device_type = "Khadas Vim2 Max"
+          }
+          label = "vim2"
+        },
+      ]
+    }
+  } else if (is_linux || is_mac) {
+    if (defined(output_dir)) {
+      assert(output_dir == target_out_dir,
+             "tests specs must be written to target_out_dir")
+    } else {
+      output_dir = target_out_dir
+    }
+
+    if (!defined(environments)) {
+      environments = [
+        {
+          dimensions = {
+            if (is_linux) {
+              os = "Linux"  # Used to target a Linux VM.
+            } else if (is_mac) {
+              os = "Mac"  # Used to target a Mac VM.
+            }
+          }
+
+          # TODO(IN-819) Use this label only for bring-up; delete afterward.
+          label = "host"
+        },
+      ]
+    }
+  } else {
+    assert(false, "$current_os not supported")
+  }
+
+  foreach(env, environments) {
     empty_scope = {  # Clear from previous iteration
     }
     assert(defined(env.dimensions) && env.dimensions != empty_scope,
@@ -76,7 +154,15 @@ template("test_spec") {
       ]
     }
 
-    if (platform.cpu == current_cpu) {
+    # Empty scopes may have been introduced to platform_dims, corresponding to
+    # non-existent keys;
+    # Add and then subtract an empty scope to remove them.
+    empty_dim = {  # Clear from previous iteration.
+    }
+    platform_dims += [ empty_dim ]
+    platform_dims -= [ empty_dim ]
+
+    if (!defined(platform.cpu) || platform.cpu == current_cpu) {
       target_platform_dims += [ platform_dims ]
     } else {
       other_platform_dims += [ platform_dims ]
@@ -84,7 +170,7 @@ template("test_spec") {
   }
 
   target_envs = []
-  foreach(env, invoker.environments) {
+  foreach(env, environments) {
     dims = []  # Clear from previous iteration.
     if (defined(env.dimensions)) {
       foreach(key, all_dimension_keys) {
@@ -95,9 +181,6 @@ template("test_spec") {
         ]
       }
     }
-
-    # Empty scopes may have been introduced to dims, corresponding to unset keys;
-    # Add and then subtract an empty scope to remove them.
     empty_dim = {  # Clear from previous iteration.
     }
     dims += [ empty_dim ]
@@ -133,28 +216,35 @@ template("test_spec") {
 
   test_spec = {
     test = {
-      name = get_label_info(":$target_name", "label_no_toolchain")
+      name = get_label_info(":${invoker.name}", "label_no_toolchain")
       location = invoker.location
       os = current_os
       cpu = current_cpu
     }
+    environments = []  # Clear from above.
     environments = target_envs
   }
 
-  # TODO(IN-571): Delete this block once vim2s are ready to be targeted.
   foreach(env, target_envs) {
     dims = []  # Clear from previous iteration.
     dims = env.dimensions
+
+    # TODO(IN-571): Delete this block once vim2s are ready to be targeted.
     if (defined(dims.device_type) && dims.device_type == "Khadas Vim2 Max") {
       assert(defined(env.label) && env.label == "vim2",
              "vim2s may not yet be targeted.")
+    }
+
+    # TODO(IN-819): Delete this block once Linux VMs and Macs are ready to be
+    # targeted.
+    if (defined(dims.os)) {
+      assert(defined(env.label) && env.label == "host",
+             "Linux VMs or Macs may not yet be targeted for tests.")
     }
   }
 
   # We take the basename just to make sure no other path components are given
   # in the name, for which we have no guarantees.
-  target_base_name = get_path_info(target_name, "name")
-  write_file("${invoker.output_dir}/${target_base_name}.${_test_spec_ext}",
-             test_spec,
-             "json")
+  test_name = get_path_info(invoker.name, "name")
+  write_file("${output_dir}/${test_name}.${_test_spec_ext}", test_spec, "json")
 }

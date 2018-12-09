@@ -20,6 +20,7 @@
 all_dimension_keys = [
   "device_type",
   "cpu",
+  "os",
 ]
 
 # Scopes of dimensions for every available platform.
@@ -37,9 +38,17 @@ test_platforms = [
     cpu = "x64"
   },
 
-  # Experimental. May not yet be targeted. See IN-571.
+  # The platforms below are experimental and may not yet be targeted.
+  # See IN-571.
   {
     device_type = "Khadas Vim2 Max"
     cpu = "arm64"
+  },
+  # See IN-819.
+  {
+    os = "Linux"
+  },
+  {
+    os = "Mac"
   },
 ]

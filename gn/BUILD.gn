@@ -37,6 +37,8 @@ foreach(pkg, synthesize_packages) {
 }
 
 # Copy host test binaries to $root_build_dir/host_tests.
+# TODO(IN-819): Delete this copy target once host tests are no longer run out
+# of a single directory.
 if (package_host_tests != []) {
   copy("host_tests") {
     deps = []
@@ -60,6 +62,21 @@ if (package_host_tests != []) {
   group("host_tests") {
   }
 }
+
+# Write a JSON metadata file about the host tests in the build.
+host_tests = []
+foreach(label, package_host_tests) {
+  host_label = "$label($host_toolchain)"
+  host_tests += [
+    {
+      dir = get_label_info(host_label, "dir")
+      name = get_label_info(host_label, "name")
+      build_dir = rebase_path(get_label_info(host_label, "target_out_dir"),
+                              root_build_dir)
+    },
+  ]
+}
+write_file("$root_build_dir/host_tests.json", host_tests, "json")
 
 # Collect the source files that are dependencies of the create_gn_rules.py
 # script, below.  Unfortunately, exec_script cannot use a depfile produced
@@ -170,7 +187,7 @@ action("breakpad_symbols") {
 # their properties.
 target_platforms = []
 foreach(platform, test_platforms) {
-  if (platform.cpu == current_cpu) {
+  if (!defined(platform.cpu) || platform.cpu == current_cpu) {
     target_platforms += [ platform ]
   }
 }
