@@ -5,10 +5,10 @@
 import("//build/assert_cmx.gni")
 import("//build/cmx/cmx.gni")
 import("//build/compiled_action.gni")
-import("//build/package/component.gni")
 import("//build/gn/packages.gni")
 import("//build/images/manifest.gni")
 import("//build/json/validate_json.gni")
+import("//build/package/component.gni")
 import("//build/packages/package_internal.gni")
 import("//build/testing/test_spec.gni")
 
@@ -178,20 +178,27 @@ template("pm_build_package") {
 #       dest (optional)
 #         [path] Location the binary will be placed within `test/`.
 #
-#       environments (optional, default: [ { dimensions = { device_type = "QEMU" } } ]):
-#         [list of scopes] Target device environments in which the test will
-#         run. The scopes dimensions field must be a subscope of the full platform
-#         dimensions given in //build/testing/platforms.gni.
-#         A `label` may also be specified in a given environment, on which tests
-#         may be grouped to be run in a _custom_ builder. NOTE: If set, then the
-#         test will only be run in that environment with special support from
-#         the Infrastructure team.
-#
 #       disabled (optional)
 #         [bool] Whether to disable the test on continuous integration
 #         jobs. This can be used when a test is temporarily broken, or if
 #         it is too flaky or slow for CI. The test will also be skipped by
 #         the `runtests` command.
+#
+#       environments (optional, default: [ { dimensions = { device_type = "QEMU" } } ])
+#         [list of scopes] Device environments in which the test should run.
+#
+#         Each scope in $environments contains:
+#
+#           dimensions (required)
+#             [scope] Dimensions of bots to target. Valid dimensions are
+#             element-wise subsets of the test platform entries defined in
+#             //build/testing/platforms.gni.
+#
+#           label (optional)
+#             [string] A key on which tests may be grouped. Tests with a given
+#             label will be run (1) together, and (2) only with support from
+#             the Infrastructure team. Labels are used as an escape hatch from
+#             the default testing pipeline for special tests or environments.
 #
 #   drivers (optional)
 #     [list of scopes] Defines the drivers in the package. A driver is
@@ -463,9 +470,9 @@ template("package") {
           if (!is_disabled) {
             test_spec(test.name) {
               if (pkg.deprecated_system_image) {
-                path = "/system/$dest"
+                location = "/system/$dest"
               } else {
-                path = "/pkgfs/packages/${pkg.package_name}/${pkg.package_version}/$dest"
+                location = "/pkgfs/packages/${pkg.package_name}/${pkg.package_version}/$dest"
               }
 
               # Encode the package name in the output directory to disambiguate
@@ -475,6 +482,26 @@ template("package") {
               output_dir = "$target_out_dir/$pkg_target_name"
               if (defined(test.environments)) {
                 environments = test.environments
+              } else {
+                environments = [
+                  {
+                    dimensions = {
+                      device_type = "QEMU"
+                    }
+                  },
+                ]
+              }
+
+              # TODO(joshuaseaton): This is temporary until we are confident that all
+              # tests that need to specify hardware are doing so.
+              if (current_cpu == "x64") {
+                environments += [
+                  {
+                    dimensions = {
+                      device_type = "Intel NUC Kit NUC7i5DNHE"
+                    }
+                  },
+                ]
               }
             }
           }

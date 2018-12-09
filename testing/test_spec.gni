@@ -4,62 +4,52 @@
 
 import("//build/testing/platforms.gni")
 
+# Extension identifying a test spec JSON file.
+_test_spec_ext = "spec.json"
+
 # TODO(joshuaseaton): Only used in package() today; consider a scheme in which
 #   test specs are re-used for host tests.
 
-# Describes the target device environment in which a test should run. Associated
-# JSON is written to $target_out_dir with file extension "spec.json".
+# Describes the target device environment in which a test should run. This
+# specification is written in JSON to the build directory, to be aggregated
+# at test-time.
 #
 # Parameters
 #
-#   path
-#     Required: Full path to the the test.
-#   output_dir
-#     Required: Where to write the test spec.
-#   environments
-#     Optional: Target device environments in which the test should run. Valid
-#       environments are element-wise subsets of the full platform environments
-#       specified in //build/testing/platforms.gni.
-#       A `label` may also be specified in a given environment, on which tests
-#       may be grouped to be run in a _custom_ builder. NOTE: If set, then the
-#       test will only be run in that environment with special support from the
-#       Infrastructure team.
+#   location (required)
+#     [string]: Unique reference to a test, e.g., a filesystem path or a
+#     fuchsia URI.
+#
+#   output_dir (required)
+#     [string]: Directory where the test spec will be written.
+#
+#   environments (required)
+#     [list of scopes] Device environments in which the test should run.
+#
+#     Each scope in $environments contains:
+#
+#       dimensions (required)
+#         [scope] Dimensions of bots to target. Valid dimensions are
+#         element-wise subsets of the test platform entries defined in
+#         //build/testing/platforms.gni.
+#
+#       label (optional)
+#         [string] A key on which tests may be grouped. Tests with a given
+#         label will be run (1) together, and (2) only with support from the
+#         Infrastructure team. Labels are used as an escape hatch from the
+#         default testing pipeline for special tests or environments.
 #
 template("test_spec") {
-  assert(defined(invoker.path), "path must be defined.")
+  assert(defined(invoker.location), "location must be defined.")
   assert(defined(invoker.output_dir), "output_dir must be defined.")
+  assert(defined(invoker.environments) && invoker.environments != [],
+         "environments must be defined.")
 
-  if (defined(invoker.environments)) {
-    environments = invoker.environments
-  } else {
-    environments = [
-      {
-        dimensions = {
-          device_type = "QEMU"
-        }
-      },
-    ]
-
-    # TODO(joshuaseaton): This is temporary until we are confident that all
-    # tests that need to specify hardware are doing so; then the default can
-    # return to being QEMU alone.
-    if (current_cpu == "x64") {
-      environments += [
-        {
-          dimensions = {
-            device_type = "Intel NUC Kit NUC7i5DNHE"
-          }
-        },
-      ]
+  foreach(env, invoker.environments) {
+    empty_scope = {  # Clear from previous iteration
     }
-  }
-
-  test_spec = {
-    test = {
-      name = get_label_info(":$target_name", "label_no_toolchain")
-      location = invoker.path
-    }
-    environments = []
+    assert(defined(env.dimensions) && env.dimensions != empty_scope,
+           "each environment must specify dimensions")
   }
 
   # Call "expanding" the operation that takes a scope
@@ -72,7 +62,8 @@ template("test_spec") {
   # and converts it to a list [{x=a}, {y=b}, {z=c},...].
   #
   # Expand each scope of test platform dimensions and group them by architecture
-  # (i.e., cpu).
+  # (i.e., cpu). The same thing is done below with each environment's dimensions
+  # scope to more easily compare.
   target_platform_dims = []
   other_platform_dims = []
   foreach(platform, test_platforms) {
@@ -92,8 +83,8 @@ template("test_spec") {
     }
   }
 
-  foreach(env, environments) {
-    # Likewise, expand each environment's dimensions.
+  target_envs = []
+  foreach(env, invoker.environments) {
     dims = []  # Clear from previous iteration.
     if (defined(env.dimensions)) {
       foreach(key, all_dimension_keys) {
@@ -120,7 +111,7 @@ template("test_spec") {
     foreach(platform_dims, target_platform_dims) {
       if (dims + platform_dims - platform_dims == []) {
         match = true
-        test_spec.environments += [ env ]
+        target_envs += [ env ]
       }
     }
 
@@ -140,10 +131,18 @@ template("test_spec") {
     }
   }
 
-  # In the case that target_name is given by a path (e.g., a rebase_path()
-  # value), give the test spec its basename.
+  test_spec = {
+    test = {
+      name = get_label_info(":$target_name", "label_no_toolchain")
+      location = invoker.location
+    }
+    environments = target_envs
+  }
+
+  # We take the basename just to make sure no other path components are given
+  # in the name, for which we have no guarantees.
   target_base_name = get_path_info(target_name, "name")
-  write_file("${invoker.output_dir}/$target_base_name.spec.json",
+  write_file("${invoker.output_dir}/${target_base_name}.${_test_spec_ext}",
              test_spec,
              "json")
 }
