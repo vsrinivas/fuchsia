@@ -21,11 +21,9 @@
 // virtio-console).
 class InputReader {
  public:
-  InputReader() : dispatcher_(async_get_default_dispatcher()) {}
-
-  void Start(zx_handle_t socket) {
-    socket_ = socket;
-    wait_.set_object(socket_);
+  void Start(zx::unowned_socket socket) {
+    socket_ = std::move(socket);
+    wait_.set_object(socket_->get());
     wait_.set_trigger(ZX_SOCKET_WRITABLE | ZX_SOCKET_WRITE_DISABLED |
                       ZX_SOCKET_PEER_CLOSED);
     WaitForKeystroke();
@@ -33,50 +31,51 @@ class InputReader {
 
  private:
   void WaitForKeystroke() {
-    if (!std::cin.eof()) {
+    if (std::cin.good()) {
       fd_waiter_.Wait(fit::bind_member(this, &InputReader::HandleKeystroke),
                       STDIN_FILENO, POLLIN);
     }
+  }
+
+  void SendKeyToGuest() {
+    zx_status_t status = socket_->write(0, &pending_key_, 1, nullptr);
+    if (status == ZX_ERR_SHOULD_WAIT) {
+      wait_.Begin(async_get_default_dispatcher());  // ignore errors
+      return;
+    } else if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Error " << status << " writing to socket";
+      return;
+    }
+    WaitForKeystroke();
   }
 
   void HandleKeystroke(zx_status_t status, uint32_t events) {
     if (status != ZX_OK) {
       return;
     }
-    int res = std::cin.get();
-    if (res < 0) {
-      return;
+    pending_key_ = std::cin.get();
+    switch (pending_key_) {
+      case '\b':
+        pending_key_ = 0x7f;
+        break;
+      case '\r':
+        pending_key_ = '\n';
+        break;
     }
-
-    // Treat backspace as DEL to play nicely with terminal emulation.
-    pending_key_ = res == '\b' ? 0x7f : static_cast<char>(res);
     SendKeyToGuest();
   }
-
-  void SendKeyToGuest() { OnSocketReady(dispatcher_, &wait_, ZX_OK, nullptr); }
 
   void OnSocketReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                      zx_status_t status, const zx_packet_signal_t* signal) {
     if (status != ZX_OK) {
       return;
     }
-    status = zx_socket_write(socket_, 0, &pending_key_, 1, nullptr);
-    if (status == ZX_ERR_SHOULD_WAIT) {
-      wait->Begin(dispatcher);  // ignore errors
-      return;
-    }
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Error " << status << " writing to socket";
-      return;
-    }
-    pending_key_ = 0;
-    WaitForKeystroke();
+    SendKeyToGuest();
   }
 
-  zx_handle_t socket_ = ZX_HANDLE_INVALID;
+  zx::unowned_socket socket_;
   fsl::FDWaiter fd_waiter_;
   char pending_key_;
-  async_dispatcher_t* dispatcher_;
   async::WaitMethod<InputReader, &InputReader::OnSocketReady> wait_{this};
 };
 
@@ -85,7 +84,7 @@ class InputReader {
 // virtio-console).
 class OutputWriter : public fsl::SocketDrainer::Client {
  public:
-  OutputWriter(async::Loop* loop) : loop_(loop), socket_drainer_(this) {}
+  OutputWriter(async::Loop* loop) : loop_(loop) {}
 
   void Start(zx::socket socket) { socket_drainer_.Start(std::move(socket)); }
 
@@ -99,7 +98,7 @@ class OutputWriter : public fsl::SocketDrainer::Client {
 
  private:
   async::Loop* loop_;
-  fsl::SocketDrainer socket_drainer_;
+  fsl::SocketDrainer socket_drainer_{this};
 };
 
 SerialConsole::SerialConsole(async::Loop* loop)
@@ -115,7 +114,7 @@ SerialConsole::SerialConsole(SerialConsole&& o)
 SerialConsole::~SerialConsole() = default;
 
 void SerialConsole::Start(zx::socket socket) {
-  input_reader_->Start(socket.get());
+  input_reader_->Start(zx::unowned_socket(socket));
   output_writer_->Start(std::move(socket));
 }
 
