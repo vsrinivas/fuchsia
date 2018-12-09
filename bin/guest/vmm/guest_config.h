@@ -14,6 +14,8 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include "garnet/lib/machina/interrupt_controller.h"
+
 struct BlockSpec {
   std::string path;
   fuchsia::guest::BlockFormat format = fuchsia::guest::BlockFormat::RAW;
@@ -33,6 +35,7 @@ class GuestConfig {
   const std::string& cmdline() const { return cmdline_; }
   const std::string& dtb_overlay_path() const { return dtb_overlay_path_; }
   const std::vector<BlockSpec>& block_devices() const { return block_specs_; }
+  const std::vector<InterruptSpec>& interrupts() const { return interrupts_; }
   uint8_t cpus() const { return cpus_; }
   size_t memory() const { return memory_; }
   size_t wl_memory() const { return wl_memory_; }
@@ -54,6 +57,7 @@ class GuestConfig {
   std::string cmdline_;
   std::string dtb_overlay_path_;
   std::vector<BlockSpec> block_specs_;
+  std::vector<InterruptSpec> interrupts_;
   uint8_t cpus_ = zx_system_get_num_cpus();
   size_t memory_ = 1 << 30;
   size_t wl_memory_ = 1 << 30;

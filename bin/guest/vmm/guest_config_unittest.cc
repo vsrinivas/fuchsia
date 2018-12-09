@@ -51,12 +51,9 @@ TEST(GuestConfigParserTest, ParseArgs) {
   GuestConfig config;
   GuestConfigParser parser(&config);
 
-  const char* argv[] = {"exe_name",
-                        "--linux=linux_path",
-                        "--ramdisk=ramdisk_path",
-                        "--cpus=4",
-                        "--block=/pkg/data/block_path",
-                        "--cmdline=kernel_cmdline"};
+  const char* argv[] = {
+      "exe_name", "--linux=linux_path",           "--ramdisk=ramdisk_path",
+      "--cpus=4", "--block=/pkg/data/block_path", "--cmdline=kernel_cmdline"};
   ASSERT_EQ(ZX_OK,
             parser.ParseArgcArgv(arraysize(argv), const_cast<char**>(argv)));
   ASSERT_EQ(Kernel::LINUX, config.kernel());
@@ -147,29 +144,70 @@ TEST(GuestConfigParserTest, BlockSpecJson) {
   ASSERT_EQ("/dev/class/block/001", spec1.path);
 }
 
-#define TEST_PARSE_MEM_SIZE(string, result)                                   \
-  TEST(GuestConfigParserTest, MemSizeTest_##string) {                         \
-    GuestConfig config;                                                       \
-    GuestConfigParser parser(&config);                                        \
-                                                                              \
-    const char* argv[] = {"exe_name", "--memory=" #string};                   \
-    ASSERT_EQ(ZX_OK,                                                          \
-              parser.ParseArgcArgv(arraysize(argv), const_cast<char**>(argv))); \
-    ASSERT_EQ((result), config.memory());                                     \
+TEST(GuestConfigParserTest, InterruptSpecArg) {
+  GuestConfig config;
+  GuestConfigParser parser(&config);
+
+  const char* argv[] = {"exe_name", "--interrupt=32,2", "--interrupt=33,4"};
+  ASSERT_EQ(ZX_OK,
+            parser.ParseArgcArgv(arraysize(argv), const_cast<char**>(argv)));
+  ASSERT_EQ(2, config.interrupts().size());
+
+  const InterruptSpec& spec0 = config.interrupts()[0];
+  ASSERT_EQ(32, spec0.vector);
+  ASSERT_EQ(ZX_INTERRUPT_MODE_EDGE_LOW, spec0.options);
+
+  const InterruptSpec& spec1 = config.interrupts()[1];
+  ASSERT_EQ(33, spec1.vector);
+  ASSERT_EQ(ZX_INTERRUPT_MODE_EDGE_HIGH, spec1.options);
+}
+
+TEST(GuestConfigParserTest, InterruptSpecJson) {
+  GuestConfig config;
+  GuestConfigParser parser(&config);
+
+  ASSERT_EQ(ZX_OK, parser.ParseConfig(
+                       R"JSON({
+          "interrupt": [
+            "32,2",
+            "33,4"
+          ]
+        })JSON"));
+  ASSERT_EQ(2, config.interrupts().size());
+
+  const InterruptSpec& spec0 = config.interrupts()[0];
+  ASSERT_EQ(32, spec0.vector);
+  ASSERT_EQ(ZX_INTERRUPT_MODE_EDGE_LOW, spec0.options);
+
+  const InterruptSpec& spec1 = config.interrupts()[1];
+  ASSERT_EQ(33, spec1.vector);
+  ASSERT_EQ(ZX_INTERRUPT_MODE_EDGE_HIGH, spec1.options);
+}
+
+#define TEST_PARSE_MEM_SIZE(string, result)                           \
+  TEST(GuestConfigParserTest, MemSizeTest_##string) {                 \
+    GuestConfig config;                                               \
+    GuestConfigParser parser(&config);                                \
+                                                                      \
+    const char* argv[] = {"exe_name", "--memory=" #string};           \
+    ASSERT_EQ(ZX_OK, parser.ParseArgcArgv(arraysize(argv),            \
+                                          const_cast<char**>(argv))); \
+    ASSERT_EQ((result), config.memory());                             \
   }
 
 TEST_PARSE_MEM_SIZE(1024k, 1u << 20);
 TEST_PARSE_MEM_SIZE(2M, 2ul << 20);
 TEST_PARSE_MEM_SIZE(4G, 4ul << 30);
 
-#define TEST_PARSE_MEM_SIZE_ERROR(name, string)                               \
-  TEST(GuestConfigParserTest, MemSizeTest_##name) {                           \
-    GuestConfig config;                                                       \
-    GuestConfigParser parser(&config);                                        \
-                                                                              \
-    const char* argv[] = {"exe_name", "--memory=" #string};                   \
-    ASSERT_EQ(ZX_ERR_INVALID_ARGS,                                            \
-              parser.ParseArgcArgv(arraysize(argv), const_cast<char**>(argv))); \
+#define TEST_PARSE_MEM_SIZE_ERROR(name, string)                           \
+  TEST(GuestConfigParserTest, MemSizeTest_##name) {                       \
+    GuestConfig config;                                                   \
+    GuestConfigParser parser(&config);                                    \
+                                                                          \
+    const char* argv[] = {"exe_name", "--memory=" #string};               \
+    ASSERT_EQ(                                                            \
+        ZX_ERR_INVALID_ARGS,                                              \
+        parser.ParseArgcArgv(arraysize(argv), const_cast<char**>(argv))); \
   }
 
 TEST_PARSE_MEM_SIZE_ERROR(TooSmall, 1024);

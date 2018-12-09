@@ -5,6 +5,7 @@
 #ifndef GARNET_LIB_MACHINA_GUEST_H_
 #define GARNET_LIB_MACHINA_GUEST_H_
 
+#include <array>
 #include <forward_list>
 #include <shared_mutex>
 
@@ -26,6 +27,8 @@ enum class TrapType {
 
 class Guest {
  public:
+  static constexpr size_t kMaxVcpus = 16u;
+  using VcpuArray = std::array<std::unique_ptr<Vcpu>, kMaxVcpus>;
   using IoMappingList = std::forward_list<IoMapping>;
 
   zx_status_t Init(size_t mem_size, bool host_memory);
@@ -53,22 +56,17 @@ class Guest {
   // Creates a vmar for a specific region of guest memory.
   zx_status_t CreateSubVmar(uint64_t addr, size_t size, zx::vmar* vmar);
 
-  IoMappingList::const_iterator mappings_begin() const {
-    return mappings_.begin();
-  }
-  IoMappingList::const_iterator mappings_end() const { return mappings_.end(); }
+  const IoMappingList& mappings() const { return mappings_; }
+  const VcpuArray& vcpus() const { return vcpus_; }
 
  private:
-  // TODO(alexlegg): Consolidate this constant with other definitions in Garnet.
-  static constexpr size_t kMaxVcpus = 16u;
-
   zx::guest guest_;
   zx::vmar vmar_;
   PhysMem phys_mem_;
   IoMappingList mappings_;
 
   std::shared_mutex mutex_;
-  std::unique_ptr<Vcpu> vcpus_[kMaxVcpus] = {};
+  VcpuArray vcpus_;
 
   async::Loop device_loop_{&kAsyncLoopConfigNoAttachToThread};
 };

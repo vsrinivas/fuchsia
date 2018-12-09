@@ -31,6 +31,7 @@ class Vcpu {
   zx_status_t Interrupt(uint32_t vector);
 
   uint64_t id() const { return id_; }
+  const zx::vcpu& object() { return vcpu_; }
 
   static Vcpu* GetCurrent();
 

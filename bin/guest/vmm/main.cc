@@ -143,7 +143,7 @@ int main(int argc, char** argv) {
   // Setup interrupt controller.
   machina::InterruptController interrupt_controller(&guest);
 #if __aarch64__
-  status = interrupt_controller.Init(cfg.cpus());
+  status = interrupt_controller.Init(cfg.cpus(), cfg.interrupts());
 #elif __x86_64__
   status = interrupt_controller.Init();
 #endif
@@ -374,8 +374,7 @@ int main(int argc, char** argv) {
       return status;
     }
     status = wl.Start(*guest.object(), std::move(wl_vmar),
-                      wl_dispatcher.NewBinding(),
-                      launcher.get(),
+                      wl_dispatcher.NewBinding(), launcher.get(),
                       guest.device_dispatcher());
     if (status != ZX_OK) {
       FXL_LOG(INFO) << "Could not start wayland device";
@@ -404,9 +403,10 @@ int main(int argc, char** argv) {
 #endif  // __x86_64__
 
   // Add any trap ranges as device memory.
-  for (auto it = guest.mappings_begin(); it != guest.mappings_end(); it++) {
-    if (it->kind() == ZX_GUEST_TRAP_MEM || it->kind() == ZX_GUEST_TRAP_BELL) {
-      if (!dev_mem.AddRange(it->base(), it->size())) {
+  for (const machina::IoMapping& mapping : guest.mappings()) {
+    if (mapping.kind() == ZX_GUEST_TRAP_MEM ||
+        mapping.kind() == ZX_GUEST_TRAP_BELL) {
+      if (!dev_mem.AddRange(mapping.base(), mapping.size())) {
         FXL_LOG(ERROR) << "Failed to add trap range as device memory";
         return ZX_ERR_INTERNAL;
       }

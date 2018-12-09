@@ -20,7 +20,7 @@ static void print_usage(fxl::CommandLine& cl) {
   std::cerr << "usage: " << cl.argv0() << " [OPTIONS]\n";
   std::cerr << "\n";
   std::cerr << "OPTIONS:\n";
-  std::cerr << "\t--block=[block_spec]    Adds a block device with the given parameters\n";
+  std::cerr << "\t--block=[spec]          Adds a block device with the given parameters\n";
   std::cerr << "\t--cmdline-add=[string]  Adds 'string' to the existing kernel command line.\n";
   std::cerr << "\t                        This will overwrite any existing command line created\n";
   std::cerr << "\t                        using --cmdline or --cmdline-add\n";
@@ -32,6 +32,7 @@ static void print_usage(fxl::CommandLine& cl) {
   std::cerr << "\t--legacy-net            Enable legacy virtio-net (uses host interface)\n";
   std::cerr << "\t--memory=[bytes]        Allocate 'bytes' of memory for the guest.\n";
   std::cerr << "\t                        The suffixes 'k', 'M', and 'G' are accepted\n";
+  std::cerr << "\t--interrupt=[spec]      Adds a hardware interrupt mapping to the guest\n";
   std::cerr << "\t--ramdisk=[path]        Load 'path' as an initial RAM disk\n";
   std::cerr << "\t--virtio-balloon        Enable virtio-balloon (default)\n";
   std::cerr << "\t--virtio-console        Enable virtio-console (default)\n";
@@ -87,9 +88,9 @@ using OptionTransform =
     std::function<zx_status_t(const std::string& arg, T* out)>;
 
 // Handles an option by transforming the value and adding it to the vector.
-template <typename T>
+template <typename T, typename C>
 static GuestConfigParser::OptionHandler add_option(
-    std::vector<T>* out, OptionTransform<T> transform) {
+    C* out, OptionTransform<T> transform) {
   return [out, transform](const std::string& key, const std::string& value) {
     if (value.empty()) {
       FXL_LOG(ERROR) << "Option: '" << key << "' expects a value (--" << key
@@ -102,7 +103,7 @@ static GuestConfigParser::OptionHandler add_option(
       FXL_LOG(ERROR) << "Failed to parse option string '" << value << "'";
       return status;
     }
-    out->push_back(t);
+    out->insert(out->end(), t);
     return ZX_OK;
   };
 }
@@ -166,19 +167,23 @@ static GuestConfigParser::OptionHandler parse_mem_size(size_t* out) {
 }
 
 template <typename NumberType>
-static GuestConfigParser::OptionHandler parse_number(NumberType* out,
-                                                     fxl::Base base) {
-  return [out, base](const std::string& key, const std::string& value) {
+static zx_status_t transform_number(const std::string& value, NumberType* out) {
+  if (!fxl::StringToNumberWithError(value, out)) {
+    FXL_LOG(ERROR) << "Unable to convert '" << value << "' into a number";
+    return ZX_ERR_INVALID_ARGS;
+  }
+  return ZX_OK;
+}
+
+template <typename NumberType>
+static GuestConfigParser::OptionHandler parse_number(NumberType* out) {
+  return [out](const std::string& key, const std::string& value) {
     if (value.empty()) {
       FXL_LOG(ERROR) << "Option: '" << key << "' expects a value (--" << key
                      << "=<value>)";
       return ZX_ERR_INVALID_ARGS;
     }
-    if (!fxl::StringToNumberWithError(value, out, base)) {
-      FXL_LOG(ERROR) << "Unable to convert '" << value << "' into a number";
-      return ZX_ERR_INVALID_ARGS;
-    }
-    return ZX_OK;
+    return transform_number(value, out);
   };
 }
 
@@ -208,10 +213,11 @@ static GuestConfigParser::OptionHandler set_flag(bool* out,
   };
 }
 
-static zx_status_t parse_block_spec(const std::string& spec, BlockSpec* out) {
+static zx_status_t transform_block_spec(const std::string& spec,
+                                        BlockSpec* out) {
   std::string token;
-  std::istringstream tokenStream(spec);
-  while (std::getline(tokenStream, token, ',')) {
+  std::istringstream token_stream(spec);
+  while (std::getline(token_stream, token, ',')) {
     if (token == "fdio") {
       out->format = fuchsia::guest::BlockFormat::RAW;
     } else if (token == "qcow") {
@@ -232,6 +238,19 @@ static zx_status_t parse_block_spec(const std::string& spec, BlockSpec* out) {
   return ZX_OK;
 }
 
+static zx_status_t transform_interrupt_spec(const std::string& spec,
+                                            InterruptSpec* out) {
+  auto pos = spec.find(',');
+  if (pos == std::string::npos) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  zx_status_t status = transform_number(spec.substr(0, pos), &out->vector);
+  if (status != ZX_OK) {
+    return status;
+  }
+  return transform_number(spec.substr(pos + 1), &out->options);
+}
+
 static GuestConfigParser::OptionHandler save_kernel(std::string* out,
                                                     Kernel* kernel,
                                                     Kernel set_kernel) {
@@ -249,12 +268,14 @@ GuestConfigParser::GuestConfigParser(GuestConfig* cfg)
     : cfg_(cfg),
       opts_{
           {"block",
-           add_option<BlockSpec>(&cfg_->block_specs_, parse_block_spec)},
+           add_option<BlockSpec>(&cfg_->block_specs_, transform_block_spec)},
           {"cmdline-add", append_string(&cfg_->cmdline_, " ")},
           {"cmdline", save_option(&cfg_->cmdline_)},
-          {"cpus", parse_number(&cfg_->cpus_, fxl::Base::k10)},
+          {"cpus", parse_number(&cfg_->cpus_)},
           {"dtb-overlay", save_option(&cfg_->dtb_overlay_path_)},
           {"host-memory", set_flag(&cfg_->host_memory_, true)},
+          {"interrupt", add_option<InterruptSpec>(&cfg_->interrupts_,
+                                                  transform_interrupt_spec)},
           {"legacy-net", set_flag(&cfg_->legacy_net_, true)},
           {"linux",
            save_kernel(&cfg_->kernel_path_, &cfg_->kernel_, Kernel::LINUX)},
