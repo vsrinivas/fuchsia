@@ -39,7 +39,7 @@
         },
         "return_type": {
           "description": "Return type of the method",
-          "$ref": "#/defintions/objectType"
+          "$ref": "#/definitions/objectType"
         }
       },
       "required": [
