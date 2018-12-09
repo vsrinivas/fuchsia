@@ -127,6 +127,13 @@ zx_status_t Guest::CreateMapping(TrapType type, uint64_t addr, size_t size,
   return ZX_OK;
 }
 
+zx_status_t Guest::CreateSubVmar(uint64_t addr, size_t size, zx::vmar* vmar) {
+  uintptr_t guest_addr;
+  return vmar_.allocate(
+      addr, size, ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_SPECIFIC,
+      vmar, &guest_addr);
+}
+
 zx_status_t Guest::StartVcpu(uint64_t id, zx_gpaddr_t entry,
                              zx_gpaddr_t boot_ptr) {
   if (id >= kMaxVcpus) {
@@ -182,13 +189,6 @@ zx_status_t Guest::Join() {
   }
 
   return status;
-}
-
-zx_status_t Guest::CreateSubVmar(uint64_t addr, size_t size, zx::vmar* vmar) {
-  uintptr_t guest_addr;
-  return vmar_.allocate(
-      addr, size, ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_SPECIFIC,
-      vmar, &guest_addr);
 }
 
 }  // namespace machina

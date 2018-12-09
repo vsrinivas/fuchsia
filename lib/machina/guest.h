@@ -34,7 +34,7 @@ class Guest {
   zx_status_t Init(size_t mem_size, bool host_memory);
 
   const PhysMem& phys_mem() const { return phys_mem_; }
-  zx::guest* object() { return &guest_; }
+  const zx::guest& object() { return guest_; }
   async_dispatcher_t* device_dispatcher() const {
     return device_loop_.dispatcher();
   }
@@ -43,8 +43,10 @@ class Guest {
   zx_status_t CreateMapping(TrapType type, uint64_t addr, size_t size,
                             uint64_t offset, IoHandler* handler);
 
-  // Initializes a VCPU by calling the VCPU factory. The first VCPU must have id
-  // 0.
+  // Creates a VMAR for a specific region of guest memory.
+  zx_status_t CreateSubVmar(uint64_t addr, size_t size, zx::vmar* vmar);
+
+  // Starts a VCPU. The first VCPU must have an |id| of 0.
   zx_status_t StartVcpu(uint64_t id, zx_gpaddr_t entry, zx_gpaddr_t boot_ptr);
 
   // Signals an interrupt to the VCPUs indicated by |mask|.
@@ -52,9 +54,6 @@ class Guest {
 
   // Waits for all VCPUs associated with the guest to finish executing.
   zx_status_t Join();
-
-  // Creates a vmar for a specific region of guest memory.
-  zx_status_t CreateSubVmar(uint64_t addr, size_t size, zx::vmar* vmar);
 
   const IoMappingList& mappings() const { return mappings_; }
   const VcpuArray& vcpus() const { return vcpus_; }

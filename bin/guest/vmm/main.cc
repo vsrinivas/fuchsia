@@ -188,7 +188,7 @@ int main(int argc, char** argv) {
     if (status != ZX_OK) {
       return status;
     }
-    status = balloon.Start(*guest.object(), launcher.get(),
+    status = balloon.Start(guest.object(), launcher.get(),
                            guest.device_dispatcher());
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to start balloon device " << status;
@@ -241,7 +241,7 @@ int main(int argc, char** argv) {
     if (status != ZX_OK) {
       return status;
     }
-    status = block->Start(*guest.object(), std::move(block_device.id),
+    status = block->Start(guest.object(), std::move(block_device.id),
                           block_device.format, block_device.file.Bind(),
                           launcher.get(), guest.device_dispatcher());
     if (status != ZX_OK) {
@@ -258,7 +258,7 @@ int main(int argc, char** argv) {
     if (status != ZX_OK) {
       return status;
     }
-    status = console.Start(*guest.object(), instance_controller.SerialSocket(),
+    status = console.Start(guest.object(), instance_controller.SerialSocket(),
                            launcher.get(), guest.device_dispatcher());
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to start console device " << status;
@@ -276,7 +276,7 @@ int main(int argc, char** argv) {
     }
     fidl::InterfaceHandle<fuchsia::ui::input::InputListener> input_listener;
     fidl::InterfaceHandle<fuchsia::guest::device::ViewListener> view_listener;
-    status = input.Start(*guest.object(), input_listener.NewRequest(),
+    status = input.Start(guest.object(), input_listener.NewRequest(),
                          view_listener.NewRequest(), launcher.get(),
                          guest.device_dispatcher());
     if (status != ZX_OK) {
@@ -288,7 +288,7 @@ int main(int argc, char** argv) {
     if (status != ZX_OK) {
       return status;
     }
-    status = gpu.Start(*guest.object(), std::move(input_listener),
+    status = gpu.Start(guest.object(), std::move(input_listener),
                        std::move(view_listener), launcher.get(),
                        guest.device_dispatcher());
     if (status != ZX_OK) {
@@ -317,7 +317,7 @@ int main(int argc, char** argv) {
         return status;
       }
       status =
-          net.Start(*guest.object(), launcher.get(), guest.device_dispatcher());
+          net.Start(guest.object(), launcher.get(), guest.device_dispatcher());
       if (status != ZX_OK) {
         FXL_LOG(INFO) << "Could not open Ethernet device";
         return status;
@@ -333,7 +333,7 @@ int main(int argc, char** argv) {
       return status;
     }
     status =
-        rng.Start(*guest.object(), launcher.get(), guest.device_dispatcher());
+        rng.Start(guest.object(), launcher.get(), guest.device_dispatcher());
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to start RNG device" << status;
       return status;
@@ -373,9 +373,9 @@ int main(int argc, char** argv) {
       FXL_LOG(INFO) << "Could not connect wayland device";
       return status;
     }
-    status = wl.Start(*guest.object(), std::move(wl_vmar),
-                      wl_dispatcher.NewBinding(), launcher.get(),
-                      guest.device_dispatcher());
+    status =
+        wl.Start(guest.object(), std::move(wl_vmar), wl_dispatcher.NewBinding(),
+                 launcher.get(), guest.device_dispatcher());
     if (status != ZX_OK) {
       FXL_LOG(INFO) << "Could not start wayland device";
       return status;
