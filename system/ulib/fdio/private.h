@@ -7,7 +7,6 @@
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/limits.h>
 #include <lib/fdio/vfs.h>
-#include <errno.h>
 #include <stdarg.h>
 #include <stdatomic.h>
 #include <stdbool.h>
@@ -267,33 +266,6 @@ void fdio_lldebug_printf(unsigned level, const char* fmt, ...);
 
 void fdio_set_debug_level(unsigned level);
 
-// Find a free fd larger than |starting_fd| in the fd table and return it, or
-// -1. Must be called while |fdio_lock| is held. If starting_fd is less than 0,
-// errno is set to EINVAL. If no free fd is found, errno is set to EMFILE.
-static inline int fdio_find_free_fd(int starting_fd) {
-    // If we are not given an |fd|, the |starting_fd| must be non-negative.
-    if (starting_fd < 0) {
-        errno = EINVAL;
-        return -1;
-    }
-
-    // A negative fd implies that any free fd value can be used
-    //TODO: bitmap, ffs, etc
-    for (int fd = starting_fd; fd < FDIO_MAX_FD; fd++) {
-        if (fdio_fdtab[fd] == NULL) {
-            return fd;
-        }
-    }
-    errno = EMFILE;
-    return -1;
-}
-
-// Assign |io| to |fd|. Must bec alled while |fdio_lock| is held.
-static inline void fdio_allocate_fd(int fd, fdio_t *io) {
-    LOG(1, "fdio: allocate_fd() OK fd=%d\n", fd);
-    io->dupcount++;
-    fdio_fdtab[fd] = io;
-}
 
 // Enable intrusive allocation debugging
 //
