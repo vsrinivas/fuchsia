@@ -270,7 +270,7 @@ zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
 
     size_t array_bytes;
     array_bytes = ERST_ARRAY_SIZE * sizeof(erst_entry_t);
-    // MSI only supports up to 32 interupts, so the required ERST arrays will fit
+    // MSI only supports up to 32 interrupts, so the required ERST arrays will fit
     // within the page. Potentially more pages will need to be allocated for MSI-X.
     for (uint32_t i = 0; i < xhci->num_interrupts; i++) {
         // Ran out of space in page.
