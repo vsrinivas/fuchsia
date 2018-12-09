@@ -309,7 +309,8 @@ int main(int argc, char** argv) {
     printf("bootsvc: Processing bootdata...\n");
     fbl::Vector<zx::vmo> bootdata = bootsvc::RetrieveBootdata();
     status = ProcessBootdata(bootfs_svc, bootdata);
-    ZX_ASSERT_MSG(status == ZX_OK, "Procesing bootdata failed: %s\n", zx_status_get_string(status));
+    ZX_ASSERT_MSG(status == ZX_OK, "Processing bootdata failed: %s\n",
+                  zx_status_get_string(status));
 
     // Apply any cmdline overrides from bootfs
     printf("bootsvc: Loading boot cmdline overrides...\n");
