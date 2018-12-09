@@ -38,7 +38,7 @@ public:
     // Called once to start the test. Must return immediately.
     virtual zx_status_t Start() = 0;
 
-    // Called to stop the inividual test. Must wait until test has
+    // Called to stop the individual test. Must wait until test has
     // been shut down.
     virtual zx_status_t Stop() = 0;
 

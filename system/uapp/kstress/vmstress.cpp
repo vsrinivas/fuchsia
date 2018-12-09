@@ -57,7 +57,7 @@ VmStressTest vmstress;
 // the vmo asynchronously. Intended to pick out any internal races with a single VMO and
 // with the VMAR mapping/unmapping system.
 //
-// Currently does not validate that any given operation was sucessfully performed, only
+// Currently does not validate that any given operation was successfully performed, only
 // that the apis do not return an error.
 //
 // Will evolve over time to use multiple VMOs simultaneously along with cloned vmos.
