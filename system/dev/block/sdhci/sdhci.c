@@ -659,7 +659,7 @@ static zx_status_t sdhci_set_signal_voltage(void* ctx, sdmmc_voltage_t voltage) 
         break;
     }
 
-    // Make sure our changes are acknolwedged.
+    // Make sure our changes are acknowledged.
     uint32_t expected_mask = SDHCI_PWRCTRL_SD_BUS_POWER;
     switch (voltage) {
     case SDMMC_VOLTAGE_V180:
@@ -950,7 +950,7 @@ static zx_status_t sdhci_controller_init(sdhci_device_t* dev) {
     // Write the register back to the device.
     dev->regs->ctrl1 = ctrl1;
 
-    // Wait for reset to take place. The reset is comleted when all three
+    // Wait for reset to take place. The reset is completed when all three
     // of the following flags are reset.
     const uint32_t target_mask = (SDHCI_SOFTWARE_RESET_ALL |
                                   SDHCI_SOFTWARE_RESET_CMD |
