@@ -18,8 +18,6 @@
 #include <block-client/cpp/client.h>
 #include <digest/digest.h>
 #include <fbl/algorithm.h>
-#include <fbl/intrusive_double_list.h>
-#include <fbl/intrusive_wavl_tree.h>
 #include <fbl/macros.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
@@ -41,6 +39,7 @@
 #include <trace/event.h>
 
 #include <blobfs/allocator.h>
+#include <blobfs/blob-cache.h>
 #include <blobfs/common.h>
 #include <blobfs/extent-reserver.h>
 #include <blobfs/format.h>
@@ -69,38 +68,6 @@ using digest::Digest;
 enum class EnqueueType {
     kJournal,
     kData,
-};
-
-// We need to define this structure to allow the Blob to be indexable by a key
-// which is larger than a primitive type: the keys are 'Digest::kLength'
-// bytes long.
-struct MerkleRootTraits {
-    static const uint8_t* GetKey(const VnodeBlob& obj) { return obj.GetKey(); }
-    static bool LessThan(const uint8_t* k1, const uint8_t* k2) {
-        return memcmp(k1, k2, Digest::kLength) < 0;
-    }
-    static bool EqualTo(const uint8_t* k1, const uint8_t* k2) {
-        return memcmp(k1, k2, Digest::kLength) == 0;
-    }
-};
-
-// CachePolicy describes the techniques used to cache blobs in memory, avoiding
-// re-reading and re-verifying them from disk.
-enum class CachePolicy {
-    // When all references to a blob are closed, the blob is evicted from
-    // memory. On re-acquisition, the blob is read from disk and re-verified.
-    //
-    // This option avoids using memory for any longer than it needs to, but
-    // may result in higher performance penalties for blobfs that are frequently
-    // opened and closed.
-    EvictImmediately,
-
-    // The blob is never evicted from memory, unless it has been fully deleted
-    // and there are no additional references.
-    //
-    // This option costs a significant amount of memory, but it results in high
-    // performance.
-    NeverEvict,
 };
 
 // Toggles that may be set on blobfs during initialization.
@@ -175,9 +142,9 @@ public:
     static zx_status_t Create(fbl::unique_fd blockfd, const MountOptions& options,
                               const Superblock* info, fbl::unique_ptr<Blobfs>* out);
 
-    void SetCachePolicy(CachePolicy policy) { cache_policy_ = policy; }
-
-    BlobfsMetrics& LocalMetrics() { return metrics_; }
+    BlobfsMetrics& LocalMetrics() {
+        return metrics_;
+    }
 
     void CollectMetrics() {
         collecting_metrics_ = true;
@@ -209,26 +176,10 @@ public:
     // Acts as a special-case to bootstrap filesystem mounting.
     zx_status_t OpenRootNode(fbl::RefPtr<VnodeBlob>* out);
 
-    // Searches for a blob by name.
-    // - If a readable blob with the same name exists, return it.
-    // - If a blob with the same name exists, but it is not readable,
-    //   ZX_ERR_BAD_STATE is returned.
-    //
-    // 'out' may be null -- the same error code will be returned as if it
-    // was a valid pointer.
-    //
-    // If 'out' is not null, then the blob's  will be added to the
-    // "quick lookup" map if it was not there already.
-    zx_status_t LookupBlob(const Digest& digest, fbl::RefPtr<VnodeBlob>* out);
 
-    // Creates a new blob in-memory, with no backing disk storage (yet).
-    // If a blob with the name already exists, this function fails.
-    //
-    // Adds Blob to the "quick lookup" map.
-    zx_status_t NewBlob(const Digest& digest, fbl::RefPtr<VnodeBlob>* out);
-
-    // Removes blob from 'active' hashmap and deletes all metadata associated with it.
-    zx_status_t PurgeBlob(VnodeBlob* blob);
+    BlobCache& Cache() {
+        return blob_cache_;
+    }
 
     zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len, size_t* out_actual);
 
@@ -250,27 +201,18 @@ public:
     zx_status_t EnqueueWork(fbl::unique_ptr<WritebackWork> work,
                             EnqueueType type) __WARN_UNUSED_RESULT;
 
+    // Frees an inode, from both the reserved map and the inode table. If the
+    // inode was allocated in the inode table, write the deleted inode out to
+    // disk.
+    void FreeInode(WritebackWork* wb, uint32_t node_index);
+
     // Does a single pass of all blobs, creating uninitialized Vnode
     // objects for them all.
     //
     // By executing this function at mount, we can quickly assert
     // either the presence or absence of a blob on the system without
     // further scanning.
-    zx_status_t InitializeVnodes() __TA_EXCLUDES(hash_lock_);
-
-    // Remove the Vnode without storing it in the closed Vnode cache. This
-    // function should be used when purging a blob, as it will prevent
-    // additional lookups of VnodeBlob from being made.
-    //
-    // Precondition: The blob must exist in |open_hash_|.
-    void VnodeReleaseHard(VnodeBlob* vn) __TA_EXCLUDES(hash_lock_);
-
-    // Resurrect a Vnode with no strong references, and relocate
-    // it from |open_hash_| into |closed_hash_|.
-    //
-    // Precondition: The blob must exist in the |open_hash_| with
-    // no strong references.
-    void VnodeReleaseSoft(VnodeBlob* vn) __TA_EXCLUDES(hash_lock_);
+    zx_status_t InitializeVnodes();
 
     // Writes node data to the inode table and updates disk.
     void PersistNode(WritebackWork* wb, uint32_t node_index);
@@ -289,35 +231,12 @@ private:
     // may have changed due to journal playback.
     zx_status_t Reload();
 
-    // Inserts a Vnode into the |closed_hash_|, tears down
-    // cache Vnode state, and leaks a reference to the Vnode
-    // if it was added to the cache successfully.
-    //
-    // This prevents the vnode from ever being torn down, unless
-    // it is re-acquired from |closed_hash_| and released manually
-    // (with an identifier to not relocate the Vnode into the cache).
-    //
-    // Returns an error if the Vnode already exists in the cache.
-    zx_status_t VnodeInsertClosedLocked(fbl::RefPtr<VnodeBlob> vn) __TA_REQUIRES(hash_lock_);
-
-    // Upgrades a Vnode which exists in the |closed_hash_| into |open_hash_|,
-    // and acquire the strong reference the Vnode which was leaked by
-    // |VnodeInsertClosedLocked()|, if it exists.
-    //
-    // Precondition: The Vnode must not exist in |open_hash_|.
-    fbl::RefPtr<VnodeBlob> VnodeUpgradeLocked(const uint8_t* key) __TA_REQUIRES(hash_lock_);
-
     // Frees blocks from the allocated map (if allocated) and updates disk if necessary.
     void FreeExtent(WritebackWork* wb, const Extent& extent);
 
     // Free a single node. Doesn't attempt to parse the type / traverse nodes;
     // this function just deletes a single node.
     void FreeNode(WritebackWork* wb, uint32_t node_index);
-
-    // Frees an inode, from both the reserved map and the inode table. If the
-    // inode was allocated in the inode table, write the deleted inode out to
-    // disk.
-    void FreeInode(WritebackWork* wb, uint32_t node_index);
 
     // Given a contiguous number of blocks after a starting block,
     // write out the bitmap to disk for the corresponding blocks.
@@ -338,17 +257,11 @@ private:
     // Verifies that the contents of a blob are valid.
     zx_status_t VerifyBlob(uint32_t node_index);
 
-    // VnodeBlobs exist in the WAVLTree as long as one or more reference exists;
-    // when the Vnode is deleted, it is immediately removed from the WAVL tree.
-    using WAVLTreeByMerkle =
-        fbl::WAVLTree<const uint8_t*, VnodeBlob*, MerkleRootTraits, VnodeBlob::TypeWavlTraits>;
     fbl::unique_ptr<WritebackQueue> writeback_;
     fbl::unique_ptr<Journal> journal_;
     Superblock info_;
 
-    fbl::Mutex hash_lock_;
-    WAVLTreeByMerkle open_hash_ __TA_GUARDED(hash_lock_){};   // All 'in use' blobs.
-    WAVLTreeByMerkle closed_hash_ __TA_GUARDED(hash_lock_){}; // All 'closed' blobs.
+    BlobCache blob_cache_;
 
     fbl::unique_fd blockfd_;
     block_info_t block_info_ = {};
@@ -365,7 +278,6 @@ private:
     bool collecting_metrics_ = false;
     BlobfsMetrics metrics_ = {};
 
-    CachePolicy cache_policy_;
     fbl::Closure on_unmount_ = {};
 
     // TODO(gevalentino): clean up old metrics and update this to inspect API.

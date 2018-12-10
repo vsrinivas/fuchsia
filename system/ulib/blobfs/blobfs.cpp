@@ -267,19 +267,10 @@ void Blobfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
     // 1) Shutdown all external connections to blobfs.
     ManagedVfs::Shutdown([this, cb = std::move(cb)](zx_status_t status) mutable {
         // 2a) Shutdown all internal connections to blobfs.
-        // Store the Vnodes in a vector to avoid destroying
-        // them while holding the hash lock.
-        fbl::Vector<fbl::RefPtr<VnodeBlob>> internal_references;
-        {
-            fbl::AutoLock lock(&hash_lock_);
-            for (auto& blob : open_hash_) {
-                auto vn = blob.CloneWatcherTeardown();
-                if (vn != nullptr) {
-                    internal_references.push_back(std::move(vn));
-                }
-            }
-        }
-        internal_references.reset();
+        Cache().ForAllOpenNodes([](fbl::RefPtr<CacheNode> cache_node) {
+            auto vnode = fbl::RefPtr<VnodeBlob>::Downcast(std::move(cache_node));
+            vnode->CloneWatcherTeardown();
+        });
 
         // 2b) Flush all pending work to blobfs to the underlying storage.
         Sync([this, cb = std::move(cb)](zx_status_t status) mutable {
@@ -330,60 +321,6 @@ void Blobfs::WriteNode(WritebackWork* wb, uint32_t map_index) {
     TRACE_DURATION("blobfs", "Blobfs::WriteNode", "map_index", map_index);
     uint64_t b = (map_index * sizeof(Inode)) / kBlobfsBlockSize;
     wb->Enqueue(allocator_->GetNodeMapVmo(), b, NodeMapStartBlock(info_) + b, 1);
-}
-
-zx_status_t Blobfs::NewBlob(const Digest& digest, fbl::RefPtr<VnodeBlob>* out) {
-    TRACE_DURATION("blobfs", "Blobfs::NewBlob");
-    zx_status_t status;
-    // If the blob already exists (or we're having trouble looking up the blob),
-    // return an error.
-    if ((status = LookupBlob(digest, nullptr)) != ZX_ERR_NOT_FOUND) {
-        return (status == ZX_OK) ? ZX_ERR_ALREADY_EXISTS : status;
-    }
-
-    fbl::AllocChecker ac;
-    *out = fbl::AdoptRef(new (&ac) VnodeBlob(this, digest));
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
-
-    fbl::AutoLock lock(&hash_lock_);
-    open_hash_.insert(out->get());
-    return ZX_OK;
-}
-
-// If no client references to the blob still exist and the blob is either queued for deletion or
-// not in a readable state, purge all traces of the blob from blobfs.
-// This is only called when we do not expect the blob to be accessed again.
-zx_status_t Blobfs::PurgeBlob(VnodeBlob* vn) {
-    TRACE_DURATION("blobfs", "Blobfs::PurgeBlob");
-
-    switch (vn->GetState()) {
-    case kBlobStateEmpty:
-    case kBlobStateDataWrite:
-    case kBlobStateError: {
-        VnodeReleaseHard(vn);
-        return ZX_OK;
-    }
-    case kBlobStateReadable: {
-        // A readable blob should only be purged if it has been unlinked.
-        ZX_ASSERT(vn->DeletionQueued());
-        uint32_t node_index = vn->GetMapIndex();
-        zx_status_t status;
-        fbl::unique_ptr<WritebackWork> wb;
-        if ((status = CreateWork(&wb, vn)) != ZX_OK) {
-            return status;
-        }
-
-        FreeInode(wb.get(), node_index);
-        VnodeReleaseHard(vn);
-        return EnqueueWork(std::move(wb), EnqueueType::kJournal);
-    }
-    default: {
-        assert(false);
-    }
-    }
-    return ZX_ERR_NOT_SUPPORTED;
 }
 
 void Blobfs::WriteInfo(WritebackWork* wb) {
@@ -444,56 +381,6 @@ zx_status_t Blobfs::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
 
     *out_actual = df.BytesFilled();
     return ZX_OK;
-}
-
-zx_status_t Blobfs::LookupBlob(const Digest& digest, fbl::RefPtr<VnodeBlob>* out) {
-    TRACE_DURATION("blobfs", "Blobfs::LookupBlob");
-    const uint8_t* key = digest.AcquireBytes();
-    auto release = fbl::MakeAutoCall([&digest]() { digest.ReleaseBytes(); });
-
-    // Look up the blob in the maps.
-    fbl::RefPtr<VnodeBlob> vn;
-    while (true) {
-        // Avoid releasing a reference to |vn| while holding |hash_lock_|.
-        fbl::AutoLock lock(&hash_lock_);
-        auto raw_vn = open_hash_.find(key).CopyPointer();
-        if (raw_vn != nullptr) {
-            vn = fbl::MakeRefPtrUpgradeFromRaw(raw_vn, hash_lock_);
-            if (vn == nullptr) {
-                // This condition is only possible if:
-                // - The raw pointer to the Vnode exists in the open map,
-                // with refcount == 0.
-                // - Another thread is fbl_recycling this Vnode, but has not
-                // yet resurrected it.
-                // - The vnode is being moved to the close cache, and is
-                // not yet purged.
-                //
-                // It is not safe for us to attempt to Resurrect the Vnode. If
-                // we do so, then the caller of LookupBlob may unlink, purge, and
-                // destroy the Vnode concurrently before the original caller of
-                // "fbl_recycle" completes.
-                //
-                // Since the window of time for this condition is extremely
-                // small (between Release and the resurrection of the Vnode),
-                // and only contains a single flag check, we unlock and try
-                // again.
-                continue;
-            }
-        } else {
-            vn = VnodeUpgradeLocked(key);
-        }
-        break;
-    }
-
-    if (vn != nullptr) {
-        LocalMetrics().UpdateLookup(vn->SizeData());
-        if (out != nullptr) {
-            *out = std::move(vn);
-        }
-        return ZX_OK;
-    }
-
-    return ZX_ERR_NOT_FOUND;
 }
 
 zx_status_t Blobfs::AttachVmo(const zx::vmo& vmo, vmoid_t* out) {
@@ -657,8 +544,7 @@ Blobfs::~Blobfs() {
     journal_.reset();
     writeback_.reset();
 
-    ZX_ASSERT(open_hash_.is_empty());
-    closed_hash_.clear();
+    Cache().Reset();
 
     if (blockfd_) {
         ioctl_block_fifo_close(Fd());
@@ -677,7 +563,7 @@ zx_status_t Blobfs::Create(fbl::unique_fd fd, const MountOptions& options, const
     fbl::AllocChecker ac;
     auto fs = fbl::unique_ptr<Blobfs>(new Blobfs(std::move(fd), info));
     fs->SetReadonly(options.readonly);
-    fs->SetCachePolicy(options.cache_policy);
+    fs->Cache().SetCachePolicy(options.cache_policy);
     if (options.metrics) {
         fs->LocalMetrics().Collect();
     }
@@ -746,48 +632,34 @@ zx_status_t Blobfs::Create(fbl::unique_fd fd, const MountOptions& options, const
 }
 
 zx_status_t Blobfs::InitializeVnodes() {
-    fbl::AutoLock lock(&hash_lock_);
-    closed_hash_.clear();
-    for (uint32_t i = 0; i < info_.inode_count; ++i) {
-        const Inode* inode = GetNode(i);
-        if (inode->header.IsAllocated() && !inode->header.IsExtentContainer()) {
-            fbl::AllocChecker ac;
-            Digest digest(inode->merkle_root_hash);
-            fbl::RefPtr<VnodeBlob> vn = fbl::AdoptRef(new (&ac) VnodeBlob(this, digest));
-            if (!ac.check()) {
-                return ZX_ERR_NO_MEMORY;
-            }
-            vn->SetState(kBlobStateReadable);
-            vn->PopulateInode(i);
+    Cache().Reset();
 
-            // Delay reading any data from disk until read.
-            size_t size = vn->SizeData();
-            zx_status_t status = VnodeInsertClosedLocked(std::move(vn));
+    for (uint32_t node_index = 0; node_index < info_.inode_count; node_index++) {
+        const Inode* inode = GetNode(node_index);
+        if (inode->header.IsAllocated() && !inode->header.IsExtentContainer()) {
+            Digest digest(inode->merkle_root_hash);
+            fbl::RefPtr<VnodeBlob> vnode = fbl::AdoptRef(new VnodeBlob(this, digest));
+            vnode->SetState(kBlobStateReadable);
+            vnode->PopulateInode(node_index);
+
+            // This blob is added to the cache, where it will quickly be relocated into the "closed
+            // set" once we drop our reference to |vnode|. Although we delay reading any of the
+            // contents of the blob from disk until requested, this pre-caching scheme allows us to
+            // quickly verify or deny the presence of a blob during blob lookup and creation.
+            zx_status_t status = Cache().Add(vnode);
             if (status != ZX_OK) {
+                Digest digest(vnode->GetNode().merkle_root_hash);
                 char name[digest::Digest::kLength * 2 + 1];
                 digest.ToString(name, sizeof(name));
-                FS_TRACE_ERROR("blobfs: CORRUPTED FILESYSTEM: Duplicate node: "
-                               "%s @ index %u\n",
-                               name, i);
+                FS_TRACE_ERROR("blobfs: CORRUPTED FILESYSTEM: Duplicate node: %s @ index %u\n",
+                               name, node_index - 1);
                 return status;
             }
-            LocalMetrics().UpdateLookup(size);
+            LocalMetrics().UpdateLookup(vnode->SizeData());
         }
     }
+
     return ZX_OK;
-}
-
-void Blobfs::VnodeReleaseHard(VnodeBlob* vn) {
-    fbl::AutoLock lock(&hash_lock_);
-    ZX_ASSERT(open_hash_.erase(vn->GetKey()) != nullptr);
-}
-
-void Blobfs::VnodeReleaseSoft(VnodeBlob* raw_vn) {
-    fbl::AutoLock lock(&hash_lock_);
-    raw_vn->ResurrectRef();
-    fbl::RefPtr<VnodeBlob> vn = fbl::internal::MakeRefPtrNoAdopt(raw_vn);
-    ZX_ASSERT(open_hash_.erase(raw_vn->GetKey()) != nullptr);
-    ZX_ASSERT(VnodeInsertClosedLocked(std::move(vn)) == ZX_OK);
 }
 
 zx_status_t Blobfs::Reload() {
@@ -834,43 +706,6 @@ zx_status_t Blobfs::Reload() {
     }
 
     return ZX_OK;
-}
-
-zx_status_t Blobfs::VnodeInsertClosedLocked(fbl::RefPtr<VnodeBlob> vn) {
-    // To exist in the closed_hash_, this RefPtr must be leaked.
-    if (!closed_hash_.insert_or_find(vn.get())) {
-        // Set blob state to "Purged" so we do not try to add it to the cached map on recycle.
-        vn->SetState(kBlobStatePurged);
-        return ZX_ERR_ALREADY_EXISTS;
-    }
-
-    // While in the closed cache, the blob may either be destroyed or in an
-    // inactive state. The toggles here make tradeoffs between memory usage
-    // and performance.
-    switch (cache_policy_) {
-    case CachePolicy::EvictImmediately:
-        vn->TearDown();
-        break;
-    case CachePolicy::NeverEvict:
-        break;
-    default:
-        ZX_ASSERT_MSG(false, "Unexpected cache policy");
-    }
-
-    __UNUSED auto leak = vn.leak_ref();
-    return ZX_OK;
-}
-
-fbl::RefPtr<VnodeBlob> Blobfs::VnodeUpgradeLocked(const uint8_t* key) {
-    ZX_DEBUG_ASSERT(open_hash_.find(key).CopyPointer() == nullptr);
-    VnodeBlob* raw_vn = closed_hash_.erase(key);
-    if (raw_vn == nullptr) {
-        return nullptr;
-    }
-    open_hash_.insert(raw_vn);
-    // To have existed in the closed_hash_, this RefPtr must have
-    // been leaked.
-    return fbl::internal::MakeRefPtrNoAdopt(raw_vn);
 }
 
 zx_status_t Blobfs::OpenRootNode(fbl::RefPtr<VnodeBlob>* out) {

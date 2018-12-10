@@ -26,6 +26,7 @@
 #include <lib/zx/event.h>
 
 #include <blobfs/allocator.h>
+#include <blobfs/blob-cache.h>
 #include <blobfs/common.h>
 #include <blobfs/extent-reserver.h>
 #include <blobfs/format.h>
@@ -64,21 +65,30 @@ constexpr BlobFlags kBlobOtherMask        = 0x0000FF00;
 
 // clang-format on
 
-class VnodeBlob final : public fs::Vnode, public fbl::Recyclable<VnodeBlob> {
+class VnodeBlob final : public CacheNode, fbl::Recyclable<VnodeBlob> {
 public:
-    // Intrusive methods and structures
-    using WAVLTreeNodeState = fbl::WAVLTreeNodeState<VnodeBlob*>;
-    struct TypeWavlTraits {
-        static WAVLTreeNodeState& node_state(VnodeBlob& b) { return b.type_wavl_state_; }
-    };
-    const uint8_t* GetKey() const {
-        return &digest_[0];
-    };
+    ////////////////
+    // fs::Vnode interface.
+
+    zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) final;
+    zx_status_t Close() final;
+
+    ////////////////
+    // fbl::Recyclable interface.
+
+    void fbl_recycle() final {
+        CacheNode::fbl_recycle();
+    }
+
+    ////////////////
+    // Other methods.
 
     BlobFlags GetState() const {
         return flags_ & kBlobStateMask;
     }
 
+    // Identifies if we can safely remove all on-disk and in-memory storage used
+    // by this blob.
     bool Purgeable() const {
         return fd_count_ == 0 && (DeletionQueued() || !(GetState() & kBlobStateReadable));
     }
@@ -110,12 +120,8 @@ public:
     // Constructs actual blobs
     VnodeBlob(Blobfs* bs, const Digest& digest);
 
-    zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) final;
-    zx_status_t Close() final;
-
-    void fbl_recycle() final;
-    void TearDown();
     virtual ~VnodeBlob();
+
     void CompleteSync();
 
     // When blob VMOs are cloned and returned to clients, blobfs watches
@@ -135,9 +141,40 @@ public:
     static zx_status_t VerifyBlob(Blobfs* bs, uint32_t node_index);
 
 private:
-    friend struct TypeWavlTraits;
-
     DISALLOW_COPY_ASSIGN_AND_MOVE(VnodeBlob);
+
+    ////////////////
+    // fs::Vnode interface.
+
+    zx_status_t GetHandles(uint32_t flags, fuchsia_io_NodeInfo* info) final;
+    zx_status_t ValidateFlags(uint32_t flags) final;
+    zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
+                        size_t* out_actual) final;
+    zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
+    zx_status_t Write(const void* data, size_t len, size_t offset,
+                      size_t* out_actual) final;
+    zx_status_t Append(const void* data, size_t len, size_t* out_end,
+                       size_t* out_actual) final;
+    zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
+    zx_status_t Getattr(vnattr_t* a) final;
+    zx_status_t Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name,
+                       uint32_t mode) final;
+    zx_status_t Truncate(size_t len) final;
+    zx_status_t QueryFilesystem(fuchsia_io_FilesystemInfo* out) final;
+    zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) final;
+    zx_status_t Unlink(fbl::StringPiece name, bool must_be_dir) final;
+    zx_status_t GetVmo(int flags, zx_handle_t* out) final;
+    void Sync(SyncCallback closure) final;
+
+    ////////////////
+    // blobfs::CacheNode interface.
+
+    BlobCache& Cache() final;
+    bool ShouldCache() const final;
+    void ActivateLowMemory() final;
+
+    ////////////////
+    // Other methods.
 
     void BlobCloseHandles();
 
@@ -148,7 +185,7 @@ private:
     // Otherwise, returns size of the handle.
     zx_status_t GetReadableEvent(zx_handle_t* out);
 
-    // Return a clone of the blobfs VMO.
+    // Returns a clone of the blobfs VMO.
     //
     // Monitors the current VMO, keeping a reference to the Vnode
     // alive while the |out| VMO (and any clones it may have) are open.
@@ -156,17 +193,13 @@ private:
     void HandleNoClones(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                         zx_status_t status, const zx_packet_signal_t* signal);
 
+    // Marks the blob as deletable, and attempt to purge it.
     zx_status_t QueueUnlink();
 
-    zx_status_t TryPurge() {
-        if (Purgeable()) {
-            return Purge();
-        }
+    // Invokes |Purge()| if the vnode is purgeable.
+    zx_status_t TryPurge();
 
-        return ZX_OK;
-    }
-
-    // Verify that the blob is purgeable and remove all traces of the blob from blobfs.
+    // Removes all traces of the vnode from blobfs.
     // The blob is not expected to be accessed again after this is called.
     zx_status_t Purge();
 
@@ -189,28 +222,7 @@ private:
     // Requires: kBlobStateReadable
     zx_status_t ReadInternal(void* data, size_t len, size_t off, size_t* actual);
 
-    // Vnode I/O operations
-    zx_status_t GetHandles(uint32_t flags, fuchsia_io_NodeInfo* info) final;
-    zx_status_t ValidateFlags(uint32_t flags) final;
-    zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
-                        size_t* out_actual) final;
-    zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
-    zx_status_t Write(const void* data, size_t len, size_t offset,
-                      size_t* out_actual) final;
-    zx_status_t Append(const void* data, size_t len, size_t* out_end,
-                       size_t* out_actual) final;
-    zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
-    zx_status_t Getattr(vnattr_t* a) final;
-    zx_status_t Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name,
-                       uint32_t mode) final;
-    zx_status_t Truncate(size_t len) final;
-    zx_status_t QueryFilesystem(fuchsia_io_FilesystemInfo* out) final;
-    zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) final;
-    zx_status_t Unlink(fbl::StringPiece name, bool must_be_dir) final;
-    zx_status_t GetVmo(int flags, zx_handle_t* out) final;
-    void Sync(SyncCallback closure) final;
-
-    // Read both VMOs into memory, if we haven't already.
+    // Reads both VMOs into memory, if we haven't already.
     //
     // TODO(ZX-1481): When we have can register the Blob Store as a pager
     // service, and it can properly handle pages faults on a vnode's contents,
@@ -218,16 +230,16 @@ private:
     // the contents of a VMO into memory when it is opened.
     zx_status_t InitVmos();
 
-    // Initialize a compressed blob by reading it from disk and decompressing
+    // Initializes a compressed blob by reading it from disk and decompressing
     // it.
     // Does not verify the blob.
     zx_status_t InitCompressed();
 
-    // Initialize a decompressed blob by reading it from disk.
+    // Initializes a decompressed blob by reading it from disk.
     // Does not verify the blob.
     zx_status_t InitUncompressed();
 
-    // Verify the integrity of the in-memory Blob.
+    // Verifies the integrity of the in-memory Blob.
     // InitVmos() must have already been called for this blob.
     zx_status_t Verify() const;
 
@@ -235,11 +247,9 @@ private:
     // on-disk metadata.
     zx_status_t WriteMetadata();
 
-    // Acquire a pointer to the mapped data or merkle tree
+    // Acquires a pointer to the mapped data or merkle tree
     void* GetData() const;
     void* GetMerkle() const;
-
-    WAVLTreeNodeState type_wavl_state_ = {};
 
     Blobfs* const blobfs_;
     BlobFlags flags_ = {};
@@ -262,7 +272,6 @@ private:
     fbl::RefPtr<VnodeBlob> clone_ref_ = {};
 
     zx::event readable_event_ = {};
-    uint8_t digest_[Digest::kLength] = {};
 
     uint32_t fd_count_ = {};
     uint32_t map_index_ = {};

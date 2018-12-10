@@ -113,8 +113,7 @@ zx_status_t VnodeBlob::Verify() const {
     // we could fault in pages on-demand.
     //
     // For now, we aggressively verify the entire VMO up front.
-    Digest digest;
-    digest = reinterpret_cast<const uint8_t*>(&digest_[0]);
+    Digest digest(GetKey());
     zx_status_t status =
         MerkleTree::Verify(data, data_size, tree, merkle_size, 0, data_size, digest);
     blobfs_->LocalMetrics().UpdateMerkleVerify(data_size, merkle_size, ticker.End());
@@ -313,9 +312,8 @@ uint64_t VnodeBlob::SizeData() const {
 }
 
 VnodeBlob::VnodeBlob(Blobfs* bs, const Digest& digest)
-    : blobfs_(bs), flags_(kBlobStateEmpty), syncing_(false), clone_watcher_(this) {
-    digest.CopyTo(digest_, sizeof(digest_));
-}
+    : CacheNode(digest), blobfs_(bs), flags_(kBlobStateEmpty), syncing_(false),
+      clone_watcher_(this) {}
 
 VnodeBlob::VnodeBlob(Blobfs* bs)
     : blobfs_(bs), flags_(kBlobStateEmpty | kBlobFlagDirectory), syncing_(false),
@@ -436,7 +434,7 @@ zx_status_t VnodeBlob::WriteMetadata() {
     }
 
     // Update the on-disk hash.
-    memcpy(inode_.merkle_root_hash, &digest_[0], Digest::kLength);
+    memcpy(inode_.merkle_root_hash, GetKey(), Digest::kLength);
 
     // All data has been written to the containing VMO.
     SetState(kBlobStateReadable);
@@ -587,7 +585,7 @@ zx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actua
             if ((status = MerkleTree::Create(blob_data, inode_.blob_size, merkle_data, merkle_size,
                                              &digest)) != ZX_OK) {
                 return status;
-            } else if (digest != digest_) {
+            } else if (digest != GetKey()) {
                 // Downloaded blob did not match provided digest.
                 return ZX_ERR_IO_DATA_INTEGRITY;
             }
@@ -771,8 +769,7 @@ zx_status_t VnodeBlob::ReadInternal(void* data, size_t len, size_t off, size_t* 
         return status;
     }
 
-    Digest d;
-    d = reinterpret_cast<const uint8_t*>(&digest_[0]);
+    Digest d(GetKey());
 
     if (off >= inode_.blob_size) {
         *actual = 0;
@@ -808,25 +805,27 @@ zx_status_t VnodeBlob::VerifyBlob(Blobfs* bs, uint32_t node_index) {
 
     vn->PopulateInode(node_index);
 
-    // Set blob state to "Purged" so we do not try to add it to the cached map on recycle.
-    vn->SetState(kBlobStatePurged);
-
     // If we are unable to read in the blob from disk, this should also be a VerifyBlob error.
     // Since InitVmos calls Verify as its final step, we can just return its result here.
     return vn->InitVmos();
 }
 
-void VnodeBlob::fbl_recycle() {
-    if (GetState() != kBlobStatePurged && !IsDirectory()) {
-        // Relocate blobs which haven't been deleted to the closed cache.
-        blobfs_->VnodeReleaseSoft(this);
-    } else {
-        // Destroy blobs which have been purged.
-        delete this;
+BlobCache& VnodeBlob::Cache() {
+    return blobfs_->Cache();
+}
+
+bool VnodeBlob::ShouldCache() const {
+    switch (GetState()) {
+    // All "Valid", cacheable states, where the blob still exists on storage.
+    case kBlobStateReadable:
+        return true;
+    default:
+        return false;
     }
 }
 
-void VnodeBlob::TearDown() {
+void VnodeBlob::ActivateLowMemory() {
+    // We shouldn't be putting the blob into a low-memory state while it is still mapped.
     ZX_ASSERT(clone_watcher_.object() == ZX_HANDLE_INVALID);
     if (mapping_.vmo()) {
         blobfs_->DetachVmo(vmoid_);
@@ -835,7 +834,7 @@ void VnodeBlob::TearDown() {
 }
 
 VnodeBlob::~VnodeBlob() {
-    TearDown();
+    ActivateLowMemory();
 }
 
 zx_status_t VnodeBlob::ValidateFlags(uint32_t flags) {
@@ -913,11 +912,13 @@ zx_status_t VnodeBlob::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name
     if ((status = digest.Parse(name.data(), name.length())) != ZX_OK) {
         return status;
     }
-    fbl::RefPtr<VnodeBlob> vn;
-    if ((status = blobfs_->LookupBlob(digest, &vn)) < 0) {
+    fbl::RefPtr<CacheNode> cache_node;
+    if ((status = Cache().Lookup(digest, &cache_node)) != ZX_OK) {
         return status;
     }
-    *out = std::move(vn);
+    auto vnode = fbl::RefPtr<VnodeBlob>::Downcast(std::move(cache_node));
+    blobfs_->LocalMetrics().UpdateLookup(vnode->SizeData());
+    *out = std::move(vnode);
     return ZX_OK;
 }
 
@@ -949,8 +950,9 @@ zx_status_t VnodeBlob::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name
     if ((status = digest.Parse(name.data(), name.length())) != ZX_OK) {
         return status;
     }
-    fbl::RefPtr<VnodeBlob> vn;
-    if ((status = blobfs_->NewBlob(digest, &vn)) != ZX_OK) {
+
+    fbl::RefPtr<VnodeBlob> vn = fbl::AdoptRef(new VnodeBlob(blobfs_, std::move(digest)));
+    if ((status = Cache().Add(vn)) != ZX_OK) {
         return status;
     }
     vn->fd_count_ = 1;
@@ -1011,13 +1013,16 @@ zx_status_t VnodeBlob::Unlink(fbl::StringPiece name, bool must_be_dir) {
 
     zx_status_t status;
     Digest digest;
-    fbl::RefPtr<VnodeBlob> out;
     if ((status = digest.Parse(name.data(), name.length())) != ZX_OK) {
         return status;
-    } else if ((status = blobfs_->LookupBlob(digest, &out)) < 0) {
+    }
+    fbl::RefPtr<CacheNode> cache_node;
+    if ((status = Cache().Lookup(digest, &cache_node)) != ZX_OK) {
         return status;
     }
-    return out->QueueUnlink();
+    auto vnode = fbl::RefPtr<VnodeBlob>::Downcast(std::move(cache_node));
+    blobfs_->LocalMetrics().UpdateLookup(vnode->SizeData());
+    return vnode->QueueUnlink();
 }
 
 zx_status_t VnodeBlob::GetVmo(int flags, zx_handle_t* out) {
@@ -1088,12 +1093,35 @@ zx_status_t VnodeBlob::Close() {
     return TryPurge();
 }
 
+zx_status_t VnodeBlob::TryPurge() {
+    if (Purgeable()) {
+        return Purge();
+    }
+    return ZX_OK;
+}
+
 zx_status_t VnodeBlob::Purge() {
     ZX_DEBUG_ASSERT(fd_count_ == 0);
     ZX_DEBUG_ASSERT(Purgeable());
-    zx_status_t status = blobfs_->PurgeBlob(this);
+
+    if (GetState() == kBlobStateReadable) {
+        // A readable blob should only be purged if it has been unlinked.
+        ZX_ASSERT(DeletionQueued());
+        fbl::unique_ptr<WritebackWork> wb;
+        zx_status_t status = blobfs_->CreateWork(&wb, this);
+        if (status != ZX_OK) {
+            return status;
+        }
+
+        blobfs_->FreeInode(wb.get(), GetMapIndex());
+        status = blobfs_->EnqueueWork(std::move(wb), EnqueueType::kJournal);
+        if (status != ZX_OK) {
+            return status;
+        }
+    }
+    ZX_ASSERT(Cache().Evict(fbl::WrapRefPtr(this)) == ZX_OK);
     SetState(kBlobStatePurged);
-    return status;
+    return ZX_OK;
 }
 
 } // namespace blobfs

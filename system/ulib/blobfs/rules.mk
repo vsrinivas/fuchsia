@@ -29,7 +29,9 @@ COMMON_SRCS := \
 COMMON_TARGET_SRCS := \
     $(COMMON_SRCS) \
     $(LOCAL_DIR)/allocator.cpp \
+    $(LOCAL_DIR)/blob-cache.cpp \
     $(LOCAL_DIR)/blobfs.cpp \
+    $(LOCAL_DIR)/cache-node.cpp \
     $(LOCAL_DIR)/iterator/node-populator.cpp \
     $(LOCAL_DIR)/journal.cpp \
     $(LOCAL_DIR)/metrics.cpp \
@@ -95,6 +97,7 @@ MODULE_SRCS := \
     $(COMMON_TARGET_SRCS) \
     $(TEST_DIR)/allocated-extent-iterator-test.cpp \
     $(TEST_DIR)/allocator-test.cpp \
+    $(TEST_DIR)/blob-cache-test.cpp \
     $(TEST_DIR)/compressor-test.cpp \
     $(TEST_DIR)/extent-reserver-test.cpp \
     $(TEST_DIR)/journal-test.cpp \

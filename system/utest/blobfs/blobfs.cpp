@@ -731,6 +731,26 @@ static bool TestBasic(BlobfsTest* blobfsTest) {
     END_HELPER;
 }
 
+static bool TestUnallocatedBlob(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
+    fbl::unique_ptr<blob_info_t> info;
+    ASSERT_TRUE(GenerateRandomBlob(1 << 10, &info));
+
+    // We can create a blob with a name.
+    ASSERT_TRUE(fbl::unique_fd(open(info->path, O_CREAT | O_EXCL | O_RDWR)));
+    // It won't exist if we close it before allocating space.
+    ASSERT_FALSE(fbl::unique_fd(open(info->path, O_RDWR)));
+    ASSERT_FALSE(fbl::unique_fd(open(info->path, O_RDONLY)));
+    // We can "re-use" the name.
+    {
+        fbl::unique_fd fd(open(info->path, O_CREAT | O_EXCL | O_RDWR));
+        ASSERT_TRUE(fd);
+        ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);
+    }
+
+    END_HELPER;
+}
+
 static bool TestNullBlob(BlobfsTest* blobfsTest) {
     BEGIN_HELPER;
     fbl::unique_ptr<blob_info_t> info;
@@ -1000,7 +1020,6 @@ static bool TestDiskTooSmall(BlobfsTest* blobfsTest) {
     ASSERT_TRUE(blobfsTest->ToggleSleep());
     END_TEST;
 }
-
 
 static bool TestQueryInfo(BlobfsTest* blobfsTest) {
     BEGIN_HELPER;
@@ -2700,6 +2719,7 @@ static bool TestLargeBlob() {
 
 BEGIN_TEST_CASE(blobfs_tests)
 RUN_TESTS(MEDIUM, TestBasic)
+RUN_TESTS(MEDIUM, TestUnallocatedBlob)
 RUN_TESTS(MEDIUM, TestNullBlob)
 RUN_TESTS(MEDIUM, TestCompressibleBlob)
 RUN_TESTS(MEDIUM, TestMmap)
