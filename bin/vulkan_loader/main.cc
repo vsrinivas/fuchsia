@@ -45,6 +45,10 @@ class LoaderImpl : public fuchsia::vulkan::loader::Loader {
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Could not clone vmo: " << status;
     }
+    status = vmo.replace_as_executable(zx::handle(), &vmo);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Could not make vmo executable: " << status;
+    }
     callback(std::move(vmo));
   }
 

@@ -110,6 +110,12 @@ zx_status_t Guest::Init(const std::vector<MemorySpec>& memory) {
         return ZX_ERR_INVALID_ARGS;
     }
 
+    status = vmo.replace_as_executable(zx::handle(), &vmo);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to make VMO executable " << status;
+      return status;
+    }
+
     zx_gpaddr_t addr;
     status = vmar_.map(spec.base, vmo, 0, spec.size,
                        ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_PERM_EXECUTE |
