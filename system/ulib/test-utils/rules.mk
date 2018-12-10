@@ -16,6 +16,7 @@ MODULE_SO_NAME := test-utils
 
 # elfload, runtime are static as they currently aren't built as sos.
 MODULE_STATIC_LIBS := \
+    system/ulib/backtrace-request \
     system/ulib/elfload \
     system/ulib/runtime \
     system/ulib/zircon-internal

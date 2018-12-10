@@ -6,6 +6,7 @@
 #include <string.h>
 #include <launchpad/launchpad.h>
 #include <launchpad/vmo.h>
+#include <lib/backtrace-request/backtrace-request.h>
 #include <lib/zircon-internal/crashlogger.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
@@ -68,7 +69,7 @@ void tu_fatal(const char *what, zx_status_t status)
     // Request a backtrace to assist debugging.
     unittest_printf_critical("FATAL: backtrace follows:\n");
     unittest_printf_critical("       (using sw breakpoint request to crashlogger)\n");
-    zx_crashlogger_request_backtrace();
+    backtrace_request();
 
     unittest_printf_critical("FATAL: exiting process\n");
     exit(TU_FAIL_ERRCODE);
