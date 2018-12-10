@@ -735,8 +735,6 @@ static zx_status_t qmi_bind(void* ctx, zx_device_t* device) {
            zx_status_get_string(status));
     goto fail;
   }
-  int_buf->complete_cb = qmi_interrupt_cb;
-  int_buf->cookie = qmi_ctx;
   qmi_ctx->int_txn_buf = int_buf;
 
   // create port to watch for interrupts and channel messages
@@ -768,8 +766,6 @@ static zx_status_t qmi_bind(void* ctx, zx_device_t* device) {
     // the total transmission size
     tx_buf->header.send_zlp = true;
 
-    tx_buf->complete_cb = usb_write_complete;
-    tx_buf->cookie = qmi_ctx;
     zx_status_t status = usb_req_list_add_head(&qmi_ctx->tx_txn_bufs, tx_buf,
                                                qmi_ctx->parent_req_size);
     ZX_DEBUG_ASSERT(status == ZX_OK);
@@ -789,8 +785,6 @@ static zx_status_t qmi_bind(void* ctx, zx_device_t* device) {
       goto fail;
     }
 
-    rx_buf->complete_cb = usb_read_complete;
-    rx_buf->cookie = qmi_ctx;
     usb_request_queue(&qmi_ctx->usb, rx_buf, usb_read_complete, qmi_ctx);
     rx_buf_remain -= rx_buf_sz;
   }

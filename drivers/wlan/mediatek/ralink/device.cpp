@@ -3652,8 +3652,6 @@ zx_status_t Device::WlanmacStart(wlanmac_ifc_t* ifc, void* cookie) {
             errorf("failed to allocate rx usb request\n");
             return status;
         }
-        req->complete_cb = &Device::ReadRequestComplete;
-        req->cookie = this;
         usb_request_queue(&usb_, req, &Device::ReadRequestComplete, this);
     }
     // Only one TX queue for now
@@ -3666,8 +3664,6 @@ zx_status_t Device::WlanmacStart(wlanmac_ifc_t* ifc, void* cookie) {
             errorf("failed to allocate tx usb request\n");
             return status;
         }
-        req->complete_cb = &Device::WriteRequestComplete;
-        req->cookie = this;
         free_write_reqs_.push_back(req);
     }
 

@@ -230,8 +230,6 @@ static void brcmf_usb_init_urb(struct brcmf_urb* urb, struct brcmf_usbdev_info* 
     }
     urb->context = context;
     urb->devinfo = devinfo;
-    zxurb->cookie = urb;
-    zxurb->complete_cb = complete;
     zxurb->header.length = size;
     zxurb->header.ep_address = ep_address;
     zxurb->header.send_zlp = zero_packet;

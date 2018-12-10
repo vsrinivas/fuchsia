@@ -172,11 +172,6 @@ zx_status_t UsbVideoStream::AllocUsbRequestsLocked(uint64_t size) {
       return status;
     }
 
-    req->cookie = this;
-    req->complete_cb = [](usb_request_t* req, void* cookie) -> void {
-      ZX_DEBUG_ASSERT(cookie != nullptr);
-      reinterpret_cast<UsbVideoStream*>(cookie)->RequestComplete(req);
-    };
     status = usb_req_list_add_head(&free_reqs_, req, parent_req_size_);
     ZX_DEBUG_ASSERT(status == ZX_OK);
     num_free_reqs_++;
