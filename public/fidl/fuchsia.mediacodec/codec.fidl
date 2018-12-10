@@ -850,7 +850,7 @@ interface Codec {
     //
     // If the server hasn't seen this message by the time a stream fails, the
     // server will close the Codec channel instead of sending OnStreamFailed().
-    1: EnableOnStreamFailed();
+    EnableOnStreamFailed();
 
     // OnStreamFailed()
     //
@@ -883,7 +883,7 @@ interface Codec {
     // zx_status_t, though that might tend to encourage mis-use of zx_status_t so
     // maybe just error_message for quicker debugging on the client side.  Also
     // plumb from CodecAdapterH264 and similar.
-    2: -> OnStreamFailed(uint64 stream_lifetime_ordinal);
+    -> OnStreamFailed(uint64 stream_lifetime_ordinal);
 
     // OnInputConstraints()
     //
@@ -926,7 +926,7 @@ interface Codec {
     // "recommended" values for input, maybe only on request rather than via this
     // event, to keep things simpler for simpler clients.  Maybe separate the
     // recommendations from the constraints.
-    3: -> OnInputConstraints(CodecBufferConstraints input_constraints);
+    -> OnInputConstraints(CodecBufferConstraints input_constraints);
 
     // SetInputBufferSettings() and AddInputBuffer()
     //
@@ -953,7 +953,7 @@ interface Codec {
     // low-level buffers is outside the scope of this interface.
     //
     // This call ends any previous buffer_lifetime_ordinal, and starts a new one.
-    4: SetInputBufferSettings(CodecPortBufferSettings input_settings);
+    SetInputBufferSettings(CodecPortBufferSettings input_settings);
 
     // The client is required to add all the input buffers before sending any
     // message that starts a new stream else the codec will close the Codec
@@ -964,7 +964,7 @@ interface Codec {
     // will not generate an OnFreeInputPacket() for each new input packet.  The
     // client can immediately start sending QueueInputPacket() after sending the
     // last AddInputBuffer().
-    5: AddInputBuffer(CodecBuffer buffer);
+    AddInputBuffer(CodecBuffer buffer);
 
     // OnOutputConfig()
     //
@@ -983,7 +983,7 @@ interface Codec {
     // config changes.
     //
     // For more on OnOutputConfig(), see cocec.md.
-    6: -> OnOutputConfig(CodecOutputConfig output_config);
+    -> OnOutputConfig(CodecOutputConfig output_config);
 
     // SetOutputBufferSettings() and AddOutputBuffer()
     //
@@ -1004,8 +1004,8 @@ interface Codec {
     // _permitted_ any time there is no current stream.
     //
     // For more on SetOutputBufferSettings() and AddOutputBuffer(), see codec.md.
-    7: SetOutputBufferSettings(CodecPortBufferSettings output_settings);
-    8: AddOutputBuffer(CodecBuffer buffer);
+    SetOutputBufferSettings(CodecPortBufferSettings output_settings);
+    AddOutputBuffer(CodecBuffer buffer);
 
     // FlushEndOfStreamAndCloseStream()
     //
@@ -1049,7 +1049,7 @@ interface Codec {
     // OnOutputEndOfStream(), OnStreamFailed(), or the Codec channel closes.
     //
     // For more on FlushEndOfStreamAndCloseStream(), see codec.md.
-    9: FlushEndOfStreamAndCloseStream(uint64 stream_lifetime_ordinal);
+    FlushEndOfStreamAndCloseStream(uint64 stream_lifetime_ordinal);
 
     // CloseCurrentStream()
     //
@@ -1074,10 +1074,10 @@ interface Codec {
     // See also Sync().
     //
     // For more on CloseCurrentStream(), see codec.md.
-    10: CloseCurrentStream(
-            uint64 stream_lifetime_ordinal,
-            bool release_input_buffers,
-            bool release_output_buffers);
+    CloseCurrentStream(
+        uint64 stream_lifetime_ordinal,
+        bool release_input_buffers,
+        bool release_output_buffers);
 
     // Sync() -> ()
     //
@@ -1108,7 +1108,7 @@ interface Codec {
     // SetInputBufferSettings() and the like, a client that spams the channel
     // can expect that the channel will just close if the server or the channel
     // itself gets too far behind.
-    11: Sync() -> ();
+    Sync() -> ();
 
     // OnOutputPacket()
     //
@@ -1148,10 +1148,10 @@ interface Codec {
     //
     // The scope of error_detected_during is from the start to the end of this
     // output_packet.
-    12: -> OnOutputPacket(
-            CodecPacket output_packet,
-            bool error_detected_before,
-            bool error_detected_during);
+    -> OnOutputPacket(
+        CodecPacket output_packet,
+        bool error_detected_before,
+        bool error_detected_during);
 
     // RecycleOutputPacket()
     //
@@ -1166,7 +1166,7 @@ interface Codec {
     // A server must ignore any such stale RecycleOutputPacket() calls.
     //
     // For more on RecycleOutputPacket(), see codec.md.
-    13: RecycleOutputPacket(CodecPacketHeader available_output_packet);
+    RecycleOutputPacket(CodecPacketHeader available_output_packet);
 
     // OnOutputEndOfStream()
     //
@@ -1195,9 +1195,9 @@ interface Codec {
     //
     // The error_detected_before bool has the same semantics as the
     // error_detected_before bool in OnOutputPacket().
-    14: -> OnOutputEndOfStream(
-            uint64 stream_lifetime_ordinal,
-            bool error_detected_before);
+    -> OnOutputEndOfStream(
+        uint64 stream_lifetime_ordinal,
+        bool error_detected_before);
 
     //
     // Stream specific messages:
@@ -1229,8 +1229,8 @@ interface Codec {
     // the start of any stream).  The format specified need not match what was
     // specified during codec creation, but if it doesn't match, the Codec channel
     // might close as described above.
-    15: QueueInputFormatDetails(
-            uint64 stream_lifetime_ordinal, CodecFormatDetails format_details);
+    QueueInputFormatDetails(
+        uint64 stream_lifetime_ordinal, CodecFormatDetails format_details);
 
     // QueueInputPacket()
     //
@@ -1250,7 +1250,7 @@ interface Codec {
     // OnOutputConfig().
     //
     // For more on QueueInputPacket(), see codec.md.
-    16: QueueInputPacket(CodecPacket packet);
+    QueueInputPacket(CodecPacket packet);
 
     // OnFreeInputPacket()
     //
@@ -1273,7 +1273,7 @@ interface Codec {
     // the order vs. QueueInputPacket(), to make it easier to feed input from a
     // ring buffer or similar.  For audio encoders it might still make sense.  For
     // video encoders probably not.
-    17: -> OnFreeInputPacket(CodecPacketHeader free_input_packet);
+    -> OnFreeInputPacket(CodecPacketHeader free_input_packet);
 
     // Inform the server that all QueueInputPacket() messages for this stream
     // have been sent.
@@ -1311,5 +1311,5 @@ interface Codec {
     // QueueInputEndOfStream() for this stream after the first
     // QueueInputEndOfStream() for this stream, a server should close the Codec
     // channel.
-    18: QueueInputEndOfStream(uint64 stream_lifetime_ordinal);
+    QueueInputEndOfStream(uint64 stream_lifetime_ordinal);
 };

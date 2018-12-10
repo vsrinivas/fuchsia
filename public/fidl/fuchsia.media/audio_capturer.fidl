@@ -251,34 +251,33 @@ library fuchsia.media;
 //    sensitive content.  Enforce using the policy manager.
 // ++ Consider allowing the mixer to produce compressed audio.
 //
-// Ordinal range: 0x0500-0x5ff
 [FragileBase]
 interface AudioCapturer : StreamBufferSet, StreamSource {
     // Sets the stream type of the stream to be delivered.  Causes the source
     // material to be reformatted/resampled if needed in order to produce the
     // requested stream type.  Note that the stream type may not be changed after
     // the payload buffer has been established.
-    0x0501: SetPcmStreamType(AudioStreamType stream_type);
+    SetPcmStreamType(AudioStreamType stream_type);
 
     // Explicitly specify a region of the shared payload buffer for the audio
     // input to capture into.
-    0x0502: CaptureAt(uint32 payload_buffer_id, uint32 payload_offset,
-                      uint32 frames) -> (StreamPacket captured_packet);
+    CaptureAt(uint32 payload_buffer_id, uint32 payload_offset,
+              uint32 frames) -> (StreamPacket captured_packet);
 
     // Place the AudioCapturer into 'async' capture mode and begin to produce packets
     // of exactly 'frames_per_packet' number of frames each. The
     // OnPacketProduced event (of StreamSink) will be used to inform the client of
     // produced packets.
-    0x0503: StartAsyncCapture(uint32 frames_per_packet);
+    StartAsyncCapture(uint32 frames_per_packet);
 
     // Stop capturing in 'async' capture mode and (optionally) deliver a
     // callback that may be used by the client if explicit synchronization
     // is needed.
-    0x0504: StopAsyncCapture() -> ();
-    0x0505: StopAsyncCaptureNoReply();
+    StopAsyncCapture() -> ();
+    StopAsyncCaptureNoReply();
 
     // Binds to the gain control for this AudioCapturer.
-    0x0506: BindGainControl(request<GainControl> gain_control_request);
+    BindGainControl(request<GainControl> gain_control_request);
 
     /////////////////////////////////////////////////////////////////////////////
     // StreamBufferSet methods
@@ -303,5 +302,5 @@ interface AudioCapturer : StreamBufferSet, StreamSource {
     // enumerate the configuration of these bind-able endpoints (and perhaps to
     // exercise control over them), but it will be the user of the AudioCapturer's job
     // to specify the format they want.
-    0xffff: GetStreamType() -> (StreamType stream_type);
+    GetStreamType() -> (StreamType stream_type);
 };

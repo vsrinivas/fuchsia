@@ -4,10 +4,9 @@
 
 library fuchsia.media;
 
-// Ordinal range: 0x0700-0x7ff
 [Discoverable]
 interface Audio {
-    0x0701: CreateAudioRenderer(request<AudioRenderer> audio_renderer_request);
+    CreateAudioRenderer(request<AudioRenderer> audio_renderer_request);
 
     // Create an AudioCapturer which either captures from the current default
     // audio input device, or loops-back from the current default audio output
@@ -19,8 +18,8 @@ interface Audio {
     // Eventually, I suspect that all of this will move up into the audio policy
     // manager and application clients will obtain AudioCapturers from and control
     // through the policy manager.
-    0x0702: CreateAudioCapturer(request<AudioCapturer> audio_capturer_request,
-                                bool loopback);
+    CreateAudioCapturer(request<AudioCapturer> audio_capturer_request,
+                        bool loopback);
 
     // System Gain and Mute
     // TODO(mpuryear): remove this systemwide setting once device-centric settings
@@ -41,12 +40,12 @@ interface Audio {
     // -160db to 0db, inclusive. This setting is applied to all audio output
     // devices. Audio input devices are unaffected. System Gain changes do not
     // affect the System Mute state.
-    0x0703: SetSystemGain(float32 gain_db);
+    SetSystemGain(float32 gain_db);
 
     // Sets/clears the systemwide 'Mute' state for audio output devices. Audio
     // input devices are unaffected. Changes to the System Mute state do not
     // affect the value of System Gain.
-    0x0704: SetSystemMute(bool muted);
+    SetSystemMute(bool muted);
 
     // Provides current values for the systemwide Gain and Mute.
     // When a client connects to Audio, the system enqueues an action (to be
@@ -68,9 +67,9 @@ interface Audio {
     // from a FIDL message dispatch (returning control to the FIDL dispatcher),
     // then that client subsequently registers this callback, the client has no
     // way to learn the current Gain|Mute settings until they actually change.
-    0x0705: -> SystemGainMuteChanged(float32 gain_db, bool muted);
+    -> SystemGainMuteChanged(float32 gain_db, bool muted);
 
-    0x0706: SetRoutingPolicy(AudioOutputRoutingPolicy policy);
+    SetRoutingPolicy(AudioOutputRoutingPolicy policy);
 };
 
 // A placeholder for various types of simple routing policies. This should be

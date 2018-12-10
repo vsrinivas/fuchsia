@@ -8,59 +8,56 @@ using fuchsia.media;
 using fuchsia.net.oldhttp;
 
 // Manages sources on behalf of a Player.
-// Ordinal range: 0x1101-11ff
 [FragileBase]
 interface SourceManager {
     // Creates a source that reads from a URL.
-    0x1101: CreateHttpSource(string http_url,
-                             vector<fuchsia.net.oldhttp.HttpHeader>? headers,
-                             request<Source> source_request);
+    CreateHttpSource(string http_url,
+                     vector<fuchsia.net.oldhttp.HttpHeader>? headers,
+                     request<Source> source_request);
 
     // Creates a source that reads from a file.
-    0x1102: CreateFileSource(handle<channel> file_channel,
-                             request<Source> source_request);
+    CreateFileSource(handle<channel> file_channel,
+                     request<Source> source_request);
 
     // Creates a source that reads from a SeekingReader.
-    0x1103: CreateReaderSource(SeekingReader seeking_reader,
-                               request<Source> source_request);
+    CreateReaderSource(SeekingReader seeking_reader,
+                       request<Source> source_request);
 
     // Creates a source that allows the client to provide independent elementary
     // streams to the player. duration_ns, can_pause, can_seek and metadata are
     // all included in the SourceStatus and, when the StreamSource is used by
     // the player, in the PlayerStatus as well. can_pause and can_seek, when
     // false, constrain the capabilities of the player.
-    0x1104: CreateStreamSource(int64 duration_ns, bool can_pause, bool can_seek,
-                               Metadata? metadata,
-                               request<StreamSource> source_request);
+    CreateStreamSource(int64 duration_ns, bool can_pause, bool can_seek,
+                       Metadata? metadata,
+                       request<StreamSource> source_request);
 
     // Sets the source for this player to use. If source is null, the player
     // becomes idle.
-    0x1105: SetSource(Source? source);
+    SetSource(Source? source);
 
     // Transitions to the specified source when playback of the current source
     // reaches transition_pts. The new source starts playback at start_pts. If
     // a transition is already pending, it will be discarded in favor of the new
     // transition.
     // NOT CURRENTLY IMPLEMENTED.
-    0x1106: TransitionToSource(Source source, int64 transition_pts,
-                               int64 start_pts);
+    TransitionToSource(Source source, int64 transition_pts,
+                       int64 start_pts);
 
     // Cancels a pending transition, returning the source. If no transition is
     // pending, the request channel is closed.
     // NOT CURRENTLY IMPLEMENTED.
-    0x1107: CancelSourceTransition(request<Source> returned_source_request);
+    CancelSourceTransition(request<Source> returned_source_request);
 };
 
-// Ordinal range: 0x1201-12ff
 [FragileBase]
 interface Source {
     // Provides current status immediately after binding and whenever status
     // changes thereafter.
-    0x1201: -> OnStatusChanged(SourceStatus source_status);
+    -> OnStatusChanged(SourceStatus source_status);
 };
 
 // Source variant for providing elementary streams directly.
-// Ordinal range: 0x1301-13ff
 interface StreamSource : Source {
     // Adds an elementary stream. The elementary stream can be removed by
     // closing the SimpleStreamSink. ticks_per_second_numerator and
@@ -74,11 +71,11 @@ interface StreamSource : Source {
     // SimpleStreamSink methods not currently implemented:
     //     DiscardAllPackets
     //     DiscardAllPacketsNoReply
-    0x1301: AddStream(
-                fuchsia.media.StreamType type,
-                uint32 ticks_per_second_numerator,
-                uint32 ticks_per_second_denominator,
-                request<fuchsia.media.SimpleStreamSink> stream_source_sink_request);
+    AddStream(
+        fuchsia.media.StreamType type,
+        uint32 ticks_per_second_numerator,
+        uint32 ticks_per_second_denominator,
+        request<fuchsia.media.SimpleStreamSink> stream_source_sink_request);
 
     // Adds a new binding to this StreamSource. By using this method, the client
     // can obtain an additional channel through which to communicate to this
@@ -91,7 +88,7 @@ interface StreamSource : Source {
     // original CreateStreamSource call. That is, a connection established
     // using AddBinding cannot be passed to SourceManager.SetSource.
     // TODO(dalesat): Remove this limitation.
-    0x1302: AddBinding(request<StreamSource> stream_source_request);
+    AddBinding(request<StreamSource> stream_source_request);
 
     ////////////////////////////////////////////////////////////////////////////
     // Source methods

@@ -7,21 +7,19 @@ library fuchsia.mediaplayer;
 using fuchsia.media;
 
 // Manages sinks on behalf of a Player.
-// Ordinal range: 0x1501-15ff
 interface SinkManager {
     // Creates a sink that renders audio using an AudioRenderer.
-    0x1501: CreateAudioRendererSink(fuchsia.media.AudioRenderer audio_renderer,
-                                    request<Sink> sink_request);
+    CreateAudioRendererSink(fuchsia.media.AudioRenderer audio_renderer,
+                            request<Sink> sink_request);
 
     // Adds a sink.
-    0x1502: AddSink(uint32 id, Sink sink);
+    AddSink(uint32 id, Sink sink);
 
     // Removes a sink.
-    0x1503: RemoveSink(uint32 id, request<Sink> removed_sink);
+    RemoveSink(uint32 id, request<Sink> removed_sink);
 
     // TODO(dalesat): Many features to add here.
 };
 
-// Ordinal range: 0x1601-16ff
 interface Sink {
 };

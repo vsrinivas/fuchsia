@@ -12,10 +12,9 @@ enum AudioRamp : uint16 {
     // including logarithmic (i.e. linear wrt dB), cubic (in/out/inout) or others.
 };
 
-// Ordinal range: 0x0100-0x1ff
 interface GainControl {
     // Sets the gain in decibels.
-    0x0101: SetGain(float32 gain_db);
+    SetGain(float32 gain_db);
 
     // Smoothly change gain from its current value to specified value, over the
     // specified duration (in milliseconds). If 'duration_ns' is 0, gain changes
@@ -50,13 +49,13 @@ interface GainControl {
     // Time 8: Ramp 3 replaces Ramp 2 and starts from current scale (approx 0.5).
     // Time 9: Ramp 3 completes; current scale value is now 0.0 (MUTED_GAIN_DB).
     //
-    0x0102: SetGainWithRamp(float32 gain_db,
-                            int64 duration_ns,
-                            AudioRamp rampType);
+    SetGainWithRamp(float32 gain_db,
+                    int64 duration_ns,
+                    AudioRamp rampType);
 
     // Sets the mute value. Ramping and Mute are fully independent, although of
     // course they both affect the scalingthat is applied to the audio stream(s).
-    0x0103: SetMute(bool muted);
+    SetMute(bool muted);
 
     // Provides current gain/mute values to those who register for notification.
     //
@@ -64,7 +63,7 @@ interface GainControl {
     //
     // TODO(mpuryear): notify upon ramp milestones (not just SetGain/Mute) --
     // upon the start/pause/restart/completion of an active ramp?
-    0x0104: -> OnGainMuteChanged(float32 gain_db, bool muted);
+    -> OnGainMuteChanged(float32 gain_db, bool muted);
 };
 
 const float32 MUTED_GAIN_DB = -160.0;

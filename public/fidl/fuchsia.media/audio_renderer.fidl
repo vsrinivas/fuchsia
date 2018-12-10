@@ -17,22 +17,21 @@ library fuchsia.media;
 // `DiscardAllPackets` on the AudioRenderer, before starting to reconfigure it.
 //
 
-// Ordinal range: 0x0600-0x6ff
 [FragileBase]
 interface AudioRenderer : StreamBufferSet, StreamSink {
     // Sets the type of the stream to be delivered by the client. Using this
     // method implies that the stream encoding is AUDIO_ENCODING_LPCM.
-    0x0601: SetPcmStreamType(AudioStreamType type);
+    SetPcmStreamType(AudioStreamType type);
 
     // Sets the stream type to be delivered by the client. This method is used for
     // compressed pass-through. The media_specific field must be of type audio.
     // NOTE: Not currently implemented.
-    0x0602: SetStreamType(StreamType type);
+    SetStreamType(StreamType type);
 
     // Sets the units used by the presentation (media) timeline. By default, PTS
     // units are nanoseconds (as if this were called with values of 1e9 and 1).
-    0x0603: SetPtsUnits(uint32 tick_per_second_numerator,
-                        uint32 tick_per_second_denominator);
+    SetPtsUnits(uint32 tick_per_second_numerator,
+                uint32 tick_per_second_denominator);
 
     // Sets the maximum threshold (in frames) between an explicit PTS (user-
     // provided) and an expected PTS (determined using interpolation). Beyond this
@@ -90,14 +89,14 @@ interface AudioRenderer : StreamBufferSet, StreamSink {
     // previously delivered packets. Conversely, users who wish to *always*
     // explicitly schedule their audio packets exactly may specify a CT of 0.
     //
-    0x0604: SetPtsContinuityThreshold(float32 threshold_seconds);
+    SetPtsContinuityThreshold(float32 threshold_seconds);
 
     // Set the reference clock used to control playback rate.
     //
     // TODO(mpuryear): refine this type when we solidly define what a clock handle
     // is/looks like. Also should we allow users to lock their rates to CLOCK_MONO
     // instead of following the default (perhaps dynamic) system rate?
-    0x0605: SetReferenceClock(handle reference_clock);
+    SetReferenceClock(handle reference_clock);
 
     // Immediately put the AudioRenderer into a playing state. Start the advance
     // of the media timeline, using specific values provided by the caller (or
@@ -205,9 +204,9 @@ interface AudioRenderer : StreamBufferSet, StreamSink {
     // relationship), in which case we should introduce a discontinuity.
     //
     // TODO(mpuryear): Collapse these if we ever have optional retvals in FIDL
-    0x0606: Play(int64 reference_time, int64 media_time)
-                -> (int64 reference_time, int64 media_time);
-    0x0607: PlayNoReply(int64 reference_time, int64 media_time);
+    Play(int64 reference_time, int64 media_time)
+        -> (int64 reference_time, int64 media_time);
+    PlayNoReply(int64 reference_time, int64 media_time);
 
     // Immediately put the AudioRenderer into the paused state and then report the
     // relationship between the media and reference timelines which was
@@ -218,8 +217,8 @@ interface AudioRenderer : StreamBufferSet, StreamSink {
     // but provide a valid correspondence pair in response.
     //
     // TODO(mpuryear): Collapse these if we ever have optional retvals in FIDL
-    0x0608: Pause() -> (int64 reference_time, int64 media_time);
-    0x0609: PauseNoReply();
+    Pause() -> (int64 reference_time, int64 media_time);
+    PauseNoReply();
 
     // Enable or disable notifications about changes to the minimum clock lead
     // time (in nanoseconds) for this AudioRenderer. Calling this method with
@@ -256,15 +255,15 @@ interface AudioRenderer : StreamBufferSet, StreamSink {
     // draining and dropping any lead time changed events that were already in
     // flight when the disable message was sent.
     //
-    0x060a: EnableMinLeadTimeEvents(bool enabled);
-    0x060b: -> OnMinLeadTimeChanged(int64 min_lead_time_nsec);
+    EnableMinLeadTimeEvents(bool enabled);
+    -> OnMinLeadTimeChanged(int64 min_lead_time_nsec);
 
     // TODO(mpuryear): Eliminate this method when possible. Right now, it is used
     // by code requiring synchronous FIDL interfaces to talk to AudioRenderers.
-    0x060c: GetMinLeadTime() -> (int64 min_lead_time_nsec);
+    GetMinLeadTime() -> (int64 min_lead_time_nsec);
 
     // Binds to the gain control for this AudioRenderer.
-    0x060d: BindGainControl(request<GainControl> gain_control_request);
+    BindGainControl(request<GainControl> gain_control_request);
 
     /////////////////////////////////////////////////////////////////////////////
     // StreamBufferSet methods

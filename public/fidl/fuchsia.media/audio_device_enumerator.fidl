@@ -36,7 +36,7 @@ const uint32 SetAudioGainFlag_AgcValid = 0x04;
 [Discoverable]
 interface AudioDeviceEnumerator {
     // Obtain the list of currently active audio devices.
-    100: GetDevices() -> (vector<AudioDeviceInfo> devices);
+    GetDevices() -> (vector<AudioDeviceInfo> devices);
 
     // Events sent when devices are added or removed, or when properties of a
     // device change.
@@ -51,11 +51,11 @@ interface AudioDeviceEnumerator {
     //
     // Con: Having filters like this means that the server needs to maintain a bit
     // more per-client state.
-    110: -> OnDeviceAdded(AudioDeviceInfo device);
-    111: -> OnDeviceRemoved(uint64 device_token);
-    112: -> OnDeviceGainChanged(uint64 device_token, AudioGainInfo gain_info);
-    113: -> OnDefaultDeviceChanged(uint64 old_default_token,
-                                   uint64 new_default_token);
+    -> OnDeviceAdded(AudioDeviceInfo device);
+    -> OnDeviceRemoved(uint64 device_token);
+    -> OnDeviceGainChanged(uint64 device_token, AudioGainInfo gain_info);
+    -> OnDefaultDeviceChanged(uint64 old_default_token,
+                              uint64 new_default_token);
 
     // Gain/Mute/AGC control
     //
@@ -75,11 +75,11 @@ interface AudioDeviceEnumerator {
     // call to care only about the mute setting in the gain_info structure, while
     // passing (SetAudioGainFlag_GainValid | SetAudioGainFlag_MuteValid) will
     // cause both the mute and the gain status to be changed simultaneously.
-    200: GetDeviceGain(uint64 device_token)
-             -> (uint64 device_token, AudioGainInfo gain_info);
-    201: SetDeviceGain(uint64 device_token,
-                       AudioGainInfo gain_info,
-                       uint32 set_flags);
+    GetDeviceGain(uint64 device_token)
+        -> (uint64 device_token, AudioGainInfo gain_info);
+    SetDeviceGain(uint64 device_token,
+                  AudioGainInfo gain_info,
+                  uint32 set_flags);
 
     // Default Device
     //
@@ -98,6 +98,6 @@ interface AudioDeviceEnumerator {
     // plugged input/output". As the human level logic which drives the audio
     // routing policy evolves and becomes more complicated, this will probably
     // change.
-    300: GetDefaultInputDevice() -> (uint64 device_token);
-    301: GetDefaultOutputDevice() -> (uint64 device_token);
+    GetDefaultInputDevice() -> (uint64 device_token);
+    GetDefaultOutputDevice() -> (uint64 device_token);
 };

@@ -11,7 +11,6 @@ using fuchsia.ui.viewsv1;
 using fuchsia.ui.viewsv1token;
 
 // Plays media.
-// Ordinal range: 0x1001-10ff
 [Discoverable]
 interface Player : SourceManager {
     /////////////////////////////////////////////////////////////////////////////
@@ -21,40 +20,40 @@ interface Player : SourceManager {
 
     // Sets an HTTP URL to read from. The provided headers are added to each
     // HTTP request issued to the URL.
-    0x1001: SetHttpSource(string http_url,
-                          vector<fuchsia.net.oldhttp.HttpHeader>? headers);
+    SetHttpSource(string http_url,
+                  vector<fuchsia.net.oldhttp.HttpHeader>? headers);
 
     // Sets a file channel to read from.
-    0x1002: SetFileSource(handle<channel> file_channel);
+    SetFileSource(handle<channel> file_channel);
 
     // Starts playback.
-    0x1003: Play();
+    Play();
 
     // Pauses playback.
-    0x1004: Pause();
+    Pause();
 
     // Provides current status immediately after binding and whenever status
     // changes thereafter.
-    0x1005: -> OnStatusChanged(PlayerStatus player_status);
+    -> OnStatusChanged(PlayerStatus player_status);
 
     // Seeks to the specified position, specified in nanoseconds.
-    0x1006: Seek(int64 position);
+    Seek(int64 position);
 
     // Creates a video view.
     // DEPRECATED
-    0x1007: CreateView(fuchsia.ui.viewsv1.ViewManager view_manager,
-                       request<fuchsia.ui.viewsv1token.ViewOwner> view_owner_request);
+    CreateView(fuchsia.ui.viewsv1.ViewManager view_manager,
+               request<fuchsia.ui.viewsv1token.ViewOwner> view_owner_request);
 
     // Creates a video view.
     // Temporary, in use for V2 transition.
-    0x1601: CreateView2(handle<eventpair> view_owner_token);
+    CreateView2(handle<eventpair> view_owner_token);
 
     // Binds to the gain control for this player.
-    0x1008: BindGainControl(
-                request<fuchsia.media.GainControl> gain_control_request);
+    BindGainControl(
+        request<fuchsia.media.GainControl> gain_control_request);
 
     // Adds a new binding to this player.
-    0x1009: AddBinding(request<Player> player_request);
+    AddBinding(request<Player> player_request);
 
     /////////////////////////////////////////////////////////////////////////////
     // SourceManager methods
