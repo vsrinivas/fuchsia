@@ -55,6 +55,9 @@ bool Timezone::UpdateSystemTime(int tries) {
       if (i != tries - 1) {
         FX_VLOGS(1) << "Can't get time, sleeping for 1 sec";
         sleep(1);
+      } else {
+        FX_VLOGS(1) << "Can't get time after " << tries << " attempts, abort";
+        return false;
       }
       continue;
     } else if (ret != OK) {
