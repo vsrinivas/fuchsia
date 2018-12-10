@@ -269,9 +269,10 @@ start() {
 
 monitor() {
   # Wait for completion
+  query "${fuzzer}"
   while [[ "${status}" == "RUNNING" ]] ; do
-    query "${fuzzer}"
     sleep 2
+    query "${fuzzer}"
   done
   if [[ ${fg} -eq 0 ]] ; then
     fx-command-run scp "[${device}]:${data_path}/fuzz-*.log" .
