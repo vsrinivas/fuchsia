@@ -4,7 +4,7 @@
         "garnet/packages/config/network",
         "garnet/packages/config/openssh_keys",
         "garnet/packages/config/router",
-        "garnet/packages/config/wlan_ap",
+        "garnet/packages/config/wlan",
         "garnet/packages/prod/amber",
         "garnet/packages/prod/auth",
         "garnet/packages/prod/boringssl_tool",

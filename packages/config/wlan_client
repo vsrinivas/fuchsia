@@ -1,5 +1,0 @@
-{
-    "packages": [
-        "//garnet/bin/wlan/wlancfg:client_config"
-    ]
-}

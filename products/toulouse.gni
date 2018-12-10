@@ -7,3 +7,5 @@ monolith = [ "garnet/packages/products/toulouse" ]
 preinstall = []
 
 available = []
+
+wlancfg_config_type = "ap"

@@ -5,6 +5,14 @@
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 
+declare_args() {
+  # Selects the wlan configuration type to use. Choices:
+  #   "client" - client mode
+  #   "ap" - access point mode
+  #   "" (empty string) - no configuration
+  wlancfg_config_type = "client"
+}
+
 rustc_binary("bin") {
   name = "wlancfg"
   with_unit_tests = true
@@ -48,24 +56,24 @@ package("wlancfg") {
   ]
 }
 
-package("ap_config") {
+package("config") {
   deprecated_system_image = true
-  resources = [
-    {
-      path = rebase_path("config/ap.json")
-      dest = "wlan/default.json"
-    },
-  ]
-}
 
-package("client_config") {
-  deprecated_system_image = true
-  resources = [
-    {
-      path = rebase_path("config/client.json")
-      dest = "wlan/default.json"
-    },
-  ]
+  if (wlancfg_config_type == "ap") {
+    resources = [
+      {
+        path = rebase_path("config/ap.json")
+        dest = "wlan/default.json"
+      },
+    ]
+  } else if (wlancfg_config_type == "client") {
+    resources = [
+      {
+        path = rebase_path("config/client.json")
+        dest = "wlan/default.json"
+      },
+    ]
+  }
 }
 
 package("wlancfg-tests") {

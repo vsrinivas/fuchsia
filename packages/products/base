@@ -7,7 +7,7 @@
     "garnet/packages/config/network",
     "garnet/packages/config/openssh_keys",
     "garnet/packages/config/thermd",
-    "garnet/packages/config/wlan_client",
+    "garnet/packages/config/wlan",
     "garnet/packages/prod/amber",
     "garnet/packages/prod/auth",
     "garnet/packages/prod/bluetooth",
