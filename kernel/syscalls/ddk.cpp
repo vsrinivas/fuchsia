@@ -417,13 +417,13 @@ zx_status_t sys_bti_release_quarantine(zx_handle_t handle) {
 // of something external to the process model (external hardware DMA
 // capabilities).
 // zx_status_t zx_pmt_unpin
-zx_status_t sys_pmt_unpin(zx_handle_t pmt) {
+zx_status_t sys_pmt_unpin(zx_handle_t handle) {
     auto up = ProcessDispatcher::GetCurrent();
 
-    HandleOwner handle = up->RemoveHandle(pmt);
-    if (!handle)
+    HandleOwner handle_owner = up->RemoveHandle(handle);
+    if (!handle_owner)
         return ZX_ERR_BAD_HANDLE;
-    fbl::RefPtr<Dispatcher> dispatcher = handle->dispatcher();
+    fbl::RefPtr<Dispatcher> dispatcher = handle_owner->dispatcher();
     auto pmt_dispatcher = DownCastDispatcher<PinnedMemoryTokenDispatcher>(&dispatcher);
     if (!pmt_dispatcher)
         return ZX_ERR_WRONG_TYPE;

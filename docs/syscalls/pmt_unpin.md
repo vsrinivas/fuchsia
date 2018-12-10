@@ -8,10 +8,12 @@ pmt_unpin - unpin pages and revoke device access to them
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_pmt_unpin(zx_handle_t pmt);
+zx_status_t zx_pmt_unpin(zx_handle_t handle);
 ```
 
 ## DESCRIPTION
@@ -19,8 +21,8 @@ zx_status_t zx_pmt_unpin(zx_handle_t pmt);
 **pmt_unpin**() unpins pages that were previously pinned by **bti_pin**(),
 and revokes the access that was granted by the pin call.
 
-Always consumes the handle *pmt*. It is invalid to use *pmt* afterwards,
-including to call **handle_close**() on it.
+Always consumes *handle*. It is invalid to use *handle* afterwards, including
+to call **handle_close**() on it.
 
 ## RIGHTS
 
@@ -35,9 +37,9 @@ In the event of failure, a negative error value is returned.
 
 ## ERRORS
 
-**ZX_ERR_BAD_HANDLE**  *pmt* is not a valid handle.
+**ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
 
-**ZX_ERR_WRONG_TYPE**  *pmt* is not a PMT handle.
+**ZX_ERR_WRONG_TYPE**  *handle* is not a PMT handle.
 
 ## SEE ALSO
 

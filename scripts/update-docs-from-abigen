@@ -415,6 +415,7 @@ synopsis_whitelist = (
     'object_set_property',
     'object_wait_async',
     'object_wait_one',
+    'pmt_unpin',
     'port_create',
     'process_create',
     'process_start',
