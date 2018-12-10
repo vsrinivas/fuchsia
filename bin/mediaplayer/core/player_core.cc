@@ -46,9 +46,16 @@ void PlayerCore::SetSourceSegment(std::unique_ptr<SourceSegment> source_segment,
           OnStreamRemoved(index);
         }
 
-        if (!more) {
-          MaybeCompleteSetSourceSegment();
+        if (more) {
+          return;
         }
+
+        if (set_source_segment_callback_) {
+          MaybeCompleteSetSourceSegment();
+          return;
+        }
+
+        NotifyUpdate();
       });
 
   // Account for the streams that have already been enumerated.

@@ -47,7 +47,7 @@ void RendererSinkSegment::Connect(const StreamType& type, OutputRef output,
   FXL_DCHECK(renderer_);
   FXL_DCHECK(renderer_node_);
 
-  connected_output_ = output;
+  connected_output_ = nullptr;
 
   BuildConversionPipeline(
       type, renderer_->GetSupportedStreamTypes(), &graph(), decoder_factory_,
@@ -61,12 +61,12 @@ void RendererSinkSegment::Connect(const StreamType& type, OutputRef output,
                   ? fuchsia::mediaplayer::kProblemAudioEncodingNotSupported
                   : fuchsia::mediaplayer::kProblemVideoEncodingNotSupported,
               "");
-          connected_output_ = nullptr;
           callback(Result::kUnsupportedOperation);
           return;
         }
 
         graph().ConnectOutputToNode(output, renderer_node_);
+        connected_output_ = output;
         renderer_->SetStreamType(*stream_type);
         callback(Result::kOk);
       });
