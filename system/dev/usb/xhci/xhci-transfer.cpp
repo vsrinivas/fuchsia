@@ -296,9 +296,10 @@ static zx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_slot_t* slot
         state->needs_status = false;
     }
 
+    xhci_usb_request_internal_t* req_int = USB_REQ_TO_XHCI_INTERNAL(req);
     // if we get here, then we are ready to ring the doorbell
     // update dequeue_ptr to TRB following this transaction
-    req->context = (void *)ring->current;
+    req_int->context = (void *)ring->current;
 
     XHCI_WRITE32(&xhci->doorbells[header->device_id], ep_index + 1);
     // it seems we need to ring the doorbell a second time when transitioning from STOPPED
@@ -785,7 +786,7 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
     }
 
     // update dequeue_ptr to TRB following this transaction
-    xhci_set_dequeue_ptr(ring, static_cast<xhci_trb_t*>(req->context));
+    xhci_set_dequeue_ptr(ring, static_cast<xhci_trb_t*>(req_int->context));
 
     // remove request from pending_reqs
     xhci_delete_req_node(xhci, req);

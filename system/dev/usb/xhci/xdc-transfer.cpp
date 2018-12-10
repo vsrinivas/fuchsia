@@ -54,7 +54,8 @@ static zx_status_t xdc_schedule_transfer_locked(xdc_t* xdc, xdc_endpoint_t* ep,
 
     // If we get here, then we are ready to ring the doorbell.
     // Save the ring position so we can update the ring dequeue ptr once the transfer completes.
-    req->context = ring->current;
+    xdc_req_internal_t* req_int = USB_REQ_TO_XDC_INTERNAL(req, sizeof(usb_request_t));
+    req_int->context = ring->current;
     xdc_ring_doorbell(xdc, ep);
 
     return ZX_OK;
@@ -287,7 +288,7 @@ void xdc_handle_transfer_event_locked(xdc_t* xdc, xdc_poll_state_t* poll_state, 
     list_delete(&test_int->node);
 
     // Update our copy of the dequeue_ptr to the TRB following this transaction.
-    xhci_set_dequeue_ptr(ring, static_cast<xhci_trb_t*>(req->context));
+    xhci_set_dequeue_ptr(ring, static_cast<xhci_trb_t*>(test_int->context));
     xdc_process_transactions_locked(xdc, ep);
 
     // Save the request to be completed later out of the lock.

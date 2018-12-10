@@ -88,6 +88,7 @@ typedef struct xhci_usb_request_internal {
      void* cookie;
      // for queueing request at xhci level
      list_node_t node;
+     void* context;
 } xhci_usb_request_internal_t;
 
 #define USB_REQ_TO_XHCI_INTERNAL(req) \

@@ -139,6 +139,7 @@ typedef struct {
     list_node_t node;
     usb_request_complete_cb complete_cb;
     void* cookie;
+    void* context;
 } xdc_req_internal_t;
 
 #define USB_REQ_TO_XDC_INTERNAL(req, size) \

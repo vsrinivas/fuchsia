@@ -98,8 +98,6 @@ typedef struct usb_request {
 
     usb_response_t response;
 
-    void *context;
-
     // The release_cb() callback is set by the allocator and is
     // invoked by the 'usb_request_release' method when it is called
     // by the requestor.
