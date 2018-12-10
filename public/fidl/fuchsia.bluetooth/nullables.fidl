@@ -7,13 +7,13 @@ library fuchsia.bluetooth;
 // Nullable primitive types:
 
 struct Bool {
-  bool value;
+    bool value;
 };
 
 struct Int8 {
-  int8 value;
+    int8 value;
 };
 
 struct UInt16 {
-  uint16 value;
+    uint16 value;
 };
