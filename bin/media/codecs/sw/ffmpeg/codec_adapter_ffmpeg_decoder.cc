@@ -29,9 +29,9 @@ static constexpr uint32_t kPacketCount = kPacketCountForClientForced + 16;
 CodecAdapterFfmpegDecoder::CodecAdapterFfmpegDecoder(
     std::mutex& lock, CodecAdapterEvents* codec_adapter_events)
     : CodecAdapter(lock, codec_adapter_events),
-      input_queue_(lock),
-      free_output_buffers_(lock),
-      free_output_packets_(lock),
+      input_queue_(),
+      free_output_buffers_(),
+      free_output_packets_(),
       input_processing_loop_(&kAsyncLoopConfigNoAttachToThread) {
   ZX_DEBUG_ASSERT(codec_adapter_events);
 }
@@ -62,12 +62,9 @@ void CodecAdapterFfmpegDecoder::CoreCodecInit(
 
 void CodecAdapterFfmpegDecoder::CoreCodecStartStream() {
   ZX_DEBUG_ASSERT(avcodec_context_ == nullptr);
-  // The input_queue_ starts empty, and StopStream also empties input_queue_, so
-  // input_queue_ will always be empty here.
-  ZX_DEBUG_ASSERT(input_queue_.Empty());
   // It's ok for RecycleInputPacket to make a packet free anywhere in this
-  // sequence of lock_ acquisitions and releases. Nothing else ought to be
-  // happening during CoreCodecStartStream (in this or any other thread).
+  // sequence. Nothing else ought to be happening during CoreCodecStartStream
+  // (in this or any other thread).
   input_queue_.Reset();
   free_output_buffers_.Reset(/*keep_data=*/true);
   free_output_packets_.Reset(/*keep_data=*/true);
@@ -108,7 +105,7 @@ void CodecAdapterFfmpegDecoder::CoreCodecStopStream() {
   avcodec_context_ = nullptr;
 
   auto queued_input_items =
-      SyncQueue<CodecInputItem>::Extract(std::move(input_queue_));
+      BlockingMpscQueue<CodecInputItem>::Extract(std::move(input_queue_));
   while (!queued_input_items.empty()) {
     CodecInputItem input_item = std::move(queued_input_items.front());
     queued_input_items.pop();
@@ -123,7 +120,7 @@ void CodecAdapterFfmpegDecoder::CoreCodecAddBuffer(CodecPort port,
   if (port != kOutputPort) {
     return;
   }
-  free_output_buffers_.Push(buffer);
+  free_output_buffers_.Push(std::move(buffer));
 }
 
 void CodecAdapterFfmpegDecoder::CoreCodecConfigureBuffers(
@@ -144,7 +141,7 @@ void CodecAdapterFfmpegDecoder::CoreCodecRecycleOutputPacket(
     // ~ frame, which may trigger our buffer free callback.
   }
 
-  free_output_packets_.Push(packet);
+  free_output_packets_.Push(std::move(packet));
 }
 
 void CodecAdapterFfmpegDecoder::CoreCodecEnsureBuffersNotConfigured(
@@ -276,7 +273,7 @@ void CodecAdapterFfmpegDecoder::BufferFreeHandler(uint8_t* data) {
     in_use_by_decoder_.erase(data);
     buffer = buffer_iter->second.buffer;
   }
-  free_output_buffers_.Push(buffer);
+  free_output_buffers_.Push(std::move(buffer));
 }
 
 void CodecAdapterFfmpegDecoder::ProcessInputLoop() {

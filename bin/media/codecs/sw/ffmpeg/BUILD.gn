@@ -2,6 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+
 executable("codec_runner_sw_ffmpeg") {
   visibility = [
     "//garnet/bin/media/codec_factory",
@@ -20,6 +23,7 @@ executable("codec_runner_sw_ffmpeg") {
     "local_single_codec_factory.cc",
     "local_single_codec_factory.h",
     "main.cc",
+    "mpsc_queue.h",
   ]
 
   deps = [
@@ -28,5 +32,46 @@ executable("codec_runner_sw_ffmpeg") {
     "//garnet/public/fidl/fuchsia.mediacodec",
     "//garnet/public/lib/component/cpp",
     "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+source_set("mpsc_queue") {
+  visibility = [ "//garnet/bin/media/codecs/sw/ffmpeg/*" ]
+
+  public = [
+    "mpsc_queue.h",
+  ]
+
+  public_deps = [
+    "//zircon/public/lib/fit",
+  ]
+}
+
+executable("codec_runner_sw_ffmpeg_test_bin") {
+  output_name = "codec_runner_sw_ffmpeg_tests"
+
+  testonly = true
+
+  sources = [
+    "test/codec_runner_sw_ffmpeg_tests.cc",
+  ]
+
+  deps = [
+    ":mpsc_queue",
+    "//garnet/public/lib/fsl",
+    "//third_party/googletest:gtest_main",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+test_package("codec_runner_sw_ffmpeg_tests") {
+  deps = [
+    ":codec_runner_sw_ffmpeg_test_bin",
+  ]
+
+  tests = [
+    {
+      name = "codec_runner_sw_ffmpeg_tests"
+    },
   ]
 }

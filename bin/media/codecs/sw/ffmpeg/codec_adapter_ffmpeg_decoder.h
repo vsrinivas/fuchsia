@@ -15,6 +15,7 @@
 #include <lib/media/codec_impl/codec_input_item.h>
 
 #include "avcodec_context.h"
+#include "mpsc_queue.h"
 
 class CodecAdapterFfmpegDecoder : public CodecAdapter {
  public:
@@ -53,84 +54,6 @@ class CodecAdapterFfmpegDecoder : public CodecAdapter {
     size_t bytes_used;
   };
 
-  // SyncQueue is safe for use where any number of threads push elements and one
-  // thread takes the elements.
-  //
-  // Methods should not be called while holding lock.
-  //
-  // By default WaitForElement will block until StopAllWaits is called. To
-  // block again, call Reset.
-  template <typename T>
-  class SyncQueue {
-   public:
-    // Extracts the values from the SyncQueue and destroys the SyncQueue.
-    static std::queue<T> Extract(SyncQueue&& source) {
-      std::lock_guard<std::mutex> lock(source.lock_);
-      return std::move(source.queue_);
-    }
-
-    explicit SyncQueue(std::mutex& lock) : lock_(lock), should_wait_(true) {}
-
-    // Returns true iff the queue is empty.
-    bool Empty() {
-      std::lock_guard<std::mutex> lock(lock_);
-      return queue_.empty();
-    }
-
-    // Adds a new element to the queue and notifies any threads waiting on a
-    // new element.
-    void Push(T element) {
-      {
-        std::lock_guard<std::mutex> lock(lock_);
-        queue_.push(std::move(element));
-      }
-      should_wait_condition_.notify_all();
-    }
-
-    // Get an element or block until one is available if the queue is empty.
-    // If a thread calls StopAllWaits(), std::nullopt is returned.
-    std::optional<T> WaitForElement() {
-      std::unique_lock<std::mutex> lock(lock_);
-      should_wait_condition_.wait(
-          lock, [this] { return !queue_.empty() || !should_wait_; });
-
-      if (!should_wait_) {
-        return std::nullopt;
-      }
-
-      T element = std::move(queue_.front());
-      queue_.pop();
-      return element;
-    }
-
-    // Stops all waiting threads. We call this when a stream is stopped to abort
-    // the input processing loop.
-    void StopAllWaits() {
-      {
-        std::lock_guard<std::mutex> lock(lock_);
-        should_wait_ = false;
-      }
-      should_wait_condition_.notify_all();
-    }
-
-    // Resets the queue to its default state.
-    void Reset(bool keep_data = false) {
-      std::lock_guard<std::mutex> lock(lock_);
-      should_wait_ = true;
-      if (!keep_data) {
-        queue_ = std::queue<T>();
-      }
-    }
-
-   private:
-    std::condition_variable should_wait_condition_;
-    std::mutex& lock_;
-    std::queue<T> queue_ FXL_GUARDED_BY(lock_);
-    bool should_wait_ FXL_GUARDED_BY(lock_);
-
-    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(SyncQueue);
-  };
-
   // Reads the opaque pointer from our free callback and routes it to our
   // instance. The opaque pointer is provided when we set up a free callback
   // when providing buffers to the decoder in GetBuffer.
@@ -154,9 +77,9 @@ class CodecAdapterFfmpegDecoder : public CodecAdapter {
 
   void WaitForInputProcessingLoopToEnd();
 
-  SyncQueue<CodecInputItem> input_queue_;
-  SyncQueue<const CodecBuffer*> free_output_buffers_;
-  SyncQueue<CodecPacket*> free_output_packets_;
+  BlockingMpscQueue<CodecInputItem> input_queue_;
+  BlockingMpscQueue<const CodecBuffer*> free_output_buffers_;
+  BlockingMpscQueue<CodecPacket*> free_output_packets_;
   std::optional<AvCodecContext::DecodedOutputInfo> decoded_output_info_
       FXL_GUARDED_BY(lock_);
 
