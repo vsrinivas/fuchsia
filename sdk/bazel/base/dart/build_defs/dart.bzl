@@ -9,7 +9,6 @@ load(
 )
 load(
     "@io_bazel_rules_dart//dart/build_rules/internal:common.bzl",
-    "layout_action",
     "package_spec_action",
 )
 
@@ -89,25 +88,15 @@ def compile_kernel_action(
     )
 
     # 1. Create the .packages file.
-    package_spec_path = context.label.package + "/" + context.label.name + ".packages"
-    package_spec = context.new_file(build_dir + package_spec_path)
+    package_spec_path = context.label.name + ".packages"
+    package_spec = context.new_file(package_spec_path)
     package_spec_action(
         ctx = context,
         output = package_spec,
         dart_ctx = dart_ctx,
     )
 
-    # 2. Layout the dependencies into the *.build directory.
-    if len(dart_ctx.transitive_srcs.files) > 0:
-        build_dir_files = layout_action(
-            ctx = context,
-            srcs = dart_ctx.transitive_srcs.files,
-            output_dir = build_dir,
-        )
-    else:
-        build_dir_files = {}
-
-    # 3. Declare *.dilp files for all dependencies.
+    # 2. Declare *.dilp files for all dependencies.
     data_root = "data/%s/" % component_name
     mappings = {}
     dart_ctxs = collect_dart_context(dart_ctx).values()
@@ -121,7 +110,7 @@ def compile_kernel_action(
         )
         mappings[data_root + dc.package + ".dilp"] = dilp_file
 
-    # 4. Create a wrapper script around the kernel compiler.
+    # 3. Create a wrapper script around the kernel compiler.
     #    The kernel compiler only generates .dilp files for libraries that are
     #    actually used by app. However, we declare a .dilp file for all packages
     #    in the dependency graph: not creating that file would yield a Bazel error.
@@ -141,9 +130,30 @@ def compile_kernel_action(
         is_executable = True,
     )
 
+    # 4. Find all possible roots for multi-root scheme
+    roots_dict = {}
+    for dc in dart_ctxs:
+        dart_srcs = list(dc.dart_srcs)
+        if len(dart_srcs) == 0:
+            continue
+        src = dart_srcs[0]
+        index = src.path.find(dc.lib_root)
+        if index > 0:
+            root = src.path[:index]
+            roots_dict[root] = True
+
+    # Include the root for package spec file
+    roots_dict[package_spec.root.path] = True
+
+    # And current directory as it was ignored in the previous logic
+    roots_dict["."] = True
+
+    roots_param = []
+    for root in roots_dict.keys():
+        roots_param += ["--multi-root", root]
+
     # 5. Compile the kernel.
     multi_root_scheme = "main-root"
-    multi_root_base = "."
     context.actions.run(
         executable = kernel_script,
         arguments = [
@@ -156,17 +166,16 @@ def compile_kernel_action(
             sdk_root.dirname,
             "--multi-root-scheme",
             multi_root_scheme,
-            "--multi-root",
-            multi_root_base,
+        ] + roots_param + [
             "--packages",
-            package_spec.path,
+            "%s:///%s" % (multi_root_scheme, package_spec.short_path),
             "--manifest",
             manifest_file.path,
             "--output",
             kernel_snapshot_file.path,
-            "%s:///%s" % (multi_root_scheme, main.path),
+            "%s:///%s" % (multi_root_scheme, main.short_path),
         ],
-        inputs = dart_ctx.transitive_srcs.files + build_dir_files.values() + srcs + [
+        inputs = dart_ctx.transitive_srcs.files + srcs + [
             kernel_compiler,
             sdk_root,
             package_spec,
