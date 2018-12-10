@@ -41,7 +41,11 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer,
   }
 
   // Returns true if everything has gone as expected so far.
-  bool expected() { return expected_; }
+  bool expected() {
+    return expected_ &&
+           (expected_packets_info_.empty() ||
+            expected_packets_info_iter_ == expected_packets_info_.end());
+  }
 
   // AudioRenderer implementation.
   void SetPcmStreamType(fuchsia::media::AudioStreamType format) override;
