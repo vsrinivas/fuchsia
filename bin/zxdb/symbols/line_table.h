@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
+#include "llvm/DebugInfo/DWARF/DWARFDie.h"
 
 namespace zxdb {
 
@@ -32,6 +33,12 @@ class LineTable {
   // on failure.
   virtual std::optional<std::string> GetFileNameByIndex(
       uint64_t file_id) const = 0;
+
+  // Returns the DIE associated with the subroutine for the given row. This may
+  // be an invalid DIE if there is no subroutine for this code (could be
+  // compiler-generated).
+  virtual llvm::DWARFDie GetSubroutineForRow(
+      const llvm::DWARFDebugLine::Row& row) const = 0;
 };
 
 }  // namespace zxdb

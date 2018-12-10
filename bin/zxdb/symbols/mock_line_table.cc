@@ -25,4 +25,10 @@ std::optional<std::string> MockLineTable::GetFileNameByIndex(
   return file_names_[file_id - 1];
 }
 
+llvm::DWARFDie MockLineTable::GetSubroutineForRow(
+    const llvm::DWARFDebugLine::Row& row) const {
+  // For now, don't support subroutine lookup in the mock.
+  return llvm::DWARFDie();
+}
+
 }  // namespace zxdb

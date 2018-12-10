@@ -68,6 +68,8 @@ static_library("symbols") {
     "dwarf_symbol_factory.h",
     "enumeration.cc",
     "file_line.cc",
+    "find_line.cc",
+    "find_line.h",
     "function.cc",
     "function_type.cc",
     "inherited_from.cc",

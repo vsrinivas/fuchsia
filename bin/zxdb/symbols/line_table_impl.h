@@ -20,8 +20,12 @@ class LineTableImpl : public LineTable {
   const std::vector<llvm::DWARFDebugLine::Row>& GetRows() const override;
   std::optional<std::string> GetFileNameByIndex(
       uint64_t file_id) const override;
+  llvm::DWARFDie GetSubroutineForRow(
+      const llvm::DWARFDebugLine::Row& row) const override;
 
  private:
+  llvm::DWARFUnit* unit_;
+
   const char* compilation_dir_;  // Pointer owned by the DWARFUnit.
 
   const llvm::DWARFDebugLine::LineTable* line_table_;

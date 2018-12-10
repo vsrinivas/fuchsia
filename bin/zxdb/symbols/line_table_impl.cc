@@ -9,7 +9,8 @@
 namespace zxdb {
 
 LineTableImpl::LineTableImpl(llvm::DWARFContext* context, llvm::DWARFUnit* unit)
-    : compilation_dir_(unit->getCompilationDir()),
+    : unit_(unit),
+      compilation_dir_(unit->getCompilationDir()),
       line_table_(context->getLineTableForUnit(unit)) {}
 
 LineTableImpl::~LineTableImpl() = default;
@@ -31,6 +32,11 @@ std::optional<std::string> LineTableImpl::GetFileNameByIndex(
           result))
     return std::optional<std::string>(std::move(result));
   return std::nullopt;
+}
+
+llvm::DWARFDie LineTableImpl::GetSubroutineForRow(
+    const llvm::DWARFDebugLine::Row& row) const {
+  return unit_->getSubroutineForAddress(row.Address);
 }
 
 }  // namespace zxdb
