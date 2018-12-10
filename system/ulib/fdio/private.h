@@ -7,6 +7,7 @@
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/limits.h>
 #include <lib/fdio/vfs.h>
+#include <errno.h>
 #include <stdarg.h>
 #include <stdatomic.h>
 #include <stdbool.h>
@@ -232,6 +233,9 @@ typedef struct {
     mode_t umask;
     fdio_t* root;
     fdio_t* cwd;
+    // fdtab contains either NULL, or a reference to fdio_reserved_io, or a
+    // valid fdio_t pointer. fdio_reserved_io must never be returned for
+    // operations.
     fdio_t* fdtab[FDIO_MAX_FD];
     fdio_ns_t* ns;
     char cwd_path[PATH_MAX];
@@ -266,7 +270,6 @@ void fdio_lldebug_printf(unsigned level, const char* fmt, ...);
 
 void fdio_set_debug_level(unsigned level);
 
-
 // Enable intrusive allocation debugging
 //
 //#define FDIO_ALLOCDEBUG
@@ -292,3 +295,18 @@ static inline void* fdio_alloc(size_t sz) {
     return ptr;
 }
 #endif
+
+// Returns an fd number greater than or equal to |starting_fd|, following the
+// same rules as fdio_bind_fd. If there are no free file descriptors, -1 is
+// returned and |errno| is set to EMFILE. The returned |fd| is bound to
+// fdio_reserved_io that has no ops table, and must not be consumed outside of
+// fdio, nor allowed to be used for operations.
+int fdio_reserve_fd(int starting_fd);
+
+// Assign the given |io| to the reserved |fd|. If |fd| is not reserved, then -1
+// is returned and errno is set to EINVAL.
+int fdio_assign_reserved(int fd, fdio_t *io);
+
+// Unassign the reservation at |fd|. If |fd| does not resolve to a reservation
+// then -1 is returned and errno is set to EINVAL, otherwise |fd| is returned.
+int fdio_release_reserved(int fd);

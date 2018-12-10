@@ -188,19 +188,27 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
         return ERROR(ZX_ERR_BAD_STATE);
     }
 
+    int nfd = fdio_reserve_fd(0);
+    if (nfd < 0) {
+        return nfd;
+    }
+
     size_t actual = 0u;
     zxs_socket_t accepted;
     memset(&accepted, 0, sizeof(accepted));
     zx_status_t status = zxs_accept(socket, addr, len ? *len : 0u, &actual, &accepted);
     fdio_release(io);
     if (status == ZX_ERR_SHOULD_WAIT) {
+        fdio_release_reserved(nfd);
         return ERRNO(EWOULDBLOCK);
     } else if (status != ZX_OK) {
+        fdio_release_reserved(nfd);
         return ERROR(status);
     }
 
     fdio_t* io2 = NULL;
     if ((io2 = fdio_socket_create_stream(accepted.socket, IOFLAG_SOCKET_CONNECTED)) == NULL) {
+        fdio_release_reserved(nfd);
         return ERROR(ZX_ERR_NO_RESOURCES);
     }
 
@@ -212,13 +220,12 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
         *len = actual;
     }
 
-    int fd2;
-    if ((fd2 = fdio_bind_to_fd(io2, -1, 0)) < 0) {
+    if ((nfd = fdio_assign_reserved(nfd, io2)) < 0) {
         io2->ops->close(io2);
         fdio_release(io2);
-        return ERRNO(EMFILE);
+        return -1;
     }
-    return fd2;
+    return nfd;
 }
 
 static int addrinfo_status_to_eai(int32_t status) {

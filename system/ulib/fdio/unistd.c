@@ -55,6 +55,81 @@ fdio_state_t __fdio_global_state = {
     .cwd_path = "/",
 };
 
+// fdio_reserved_io is a globally shared fdio_t that is used to represent a
+// reservation in the fdtab. If a user observes fdio_reserved_io there is a race
+// condition in their code or they are looking up fd's by number.
+// fdio_reserved_io is used in the time between a user requesting an operation
+// that creates and fd, and the time when a remote operation to create the
+// backing fdio_t is created, without holding the fdtab lock. Examples include
+// open() of a file, or accept() on a socket.
+static fdio_t fdio_reserved_io = {
+    // TODO(raggi): It may be ideal to replace these operations with ones that
+    // more directly encode the result that a user must have implemented a race
+    // in order to invoke them.
+    .ops = NULL,
+    .magic = FDIO_MAGIC,
+    .refcount = 1,
+    .dupcount = 1,
+    .ioflag = 0,
+};
+
+
+static bool fdio_is_reserved_or_null(fdio_t *io) {
+    if (io == NULL || io == &fdio_reserved_io) {
+        return true;
+    }
+    return false;
+}
+
+int fdio_reserve_fd(int starting_fd) {
+    if ((starting_fd < 0) || (starting_fd >= FDIO_MAX_FD)) {
+        errno = EINVAL;
+        return -1;
+    }
+    mtx_lock(&fdio_lock);
+    for (int fd = starting_fd; fd < FDIO_MAX_FD; fd++) {
+        if (fdio_fdtab[fd] == NULL) {
+            fdio_fdtab[fd] = &fdio_reserved_io;
+            mtx_unlock(&fdio_lock);
+            return fd;
+        }
+    }
+    mtx_unlock(&fdio_lock);
+    errno = EMFILE;
+    return -1;
+}
+
+int fdio_assign_reserved(int fd, fdio_t *io) {
+    mtx_lock(&fdio_lock);
+    fdio_t *res = fdio_fdtab[fd];
+    if (res != &fdio_reserved_io) {
+        mtx_unlock(&fdio_lock);
+        errno = EINVAL;
+        return -1;
+    }
+    io->dupcount++;
+    fdio_fdtab[fd] = io;
+    mtx_unlock(&fdio_lock);
+    return fd;
+}
+
+int fdio_release_reserved(int fd) {
+    if ((fd < 0) || (fd >= FDIO_MAX_FD)) {
+        errno = EINVAL;
+        return -1;
+    }
+    mtx_lock(&fdio_lock);
+    fdio_t *res = fdio_fdtab[fd];
+    if (res != &fdio_reserved_io) {
+        mtx_unlock(&fdio_lock);
+        errno = EINVAL;
+        return -1;
+    }
+    fdio_fdtab[fd] = NULL;
+    mtx_unlock(&fdio_lock);
+    return fd;
+}
+
 // Attaches an fdio to an fdtab slot.
 // The fdio must have been upref'd on behalf of the
 // fdtab prior to binding.
@@ -127,7 +202,7 @@ zx_status_t fdio_unbind_from_fd(int fd, fdio_t** out) {
         goto done;
     }
     fdio_t* io = fdio_fdtab[fd];
-    if (io == NULL) {
+    if (fdio_is_reserved_or_null(io)) {
         status = ZX_ERR_INVALID_ARGS;
         goto done;
     }
@@ -155,7 +230,11 @@ fdio_t* fdio_unsafe_fd_to_io(int fd) {
     }
     fdio_t* io = NULL;
     mtx_lock(&fdio_lock);
-    if ((io = fdio_fdtab[fd]) != NULL) {
+    io = fdio_fdtab[fd];
+    if (fdio_is_reserved_or_null(io)) {
+        // Never hand back the reserved io as it does not have an ops table.
+        io = NULL;
+    } else {
         fdio_acquire(io);
     }
     mtx_unlock(&fdio_lock);
