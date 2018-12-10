@@ -9,6 +9,7 @@ use bitflags::bitflags;
 pub struct InterfaceAddress {
     ip_address: fidl_fuchsia_net_ext::IpAddress,
     prefix_len: u8,
+    #[allow(unused)]
     peer_address: Option<Box<fidl_fuchsia_net::IpAddress>>,
 }
 
