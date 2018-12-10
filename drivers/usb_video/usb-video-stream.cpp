@@ -59,6 +59,11 @@ UsbVideoStream::~UsbVideoStream() {
   }
 }
 
+void UsbVideoStream::RequestCompleteCallback(usb_request_t* request, void* cookie) {
+    ZX_DEBUG_ASSERT(cookie != nullptr);
+    reinterpret_cast<UsbVideoStream*>(cookie)->RequestComplete(request);
+}
+
 // static
 zx_status_t UsbVideoStream::Create(
     zx_device_t* device, usb_protocol_t* usb, int index,
@@ -418,7 +423,7 @@ void UsbVideoStream::QueueRequestLocked() {
   ZX_DEBUG_ASSERT(req != nullptr);
   num_free_reqs_--;
   req->header.length = send_req_size_;
-  usb_request_queue(&usb_, req);
+  usb_request_queue(&usb_, req, &UsbVideoStream::RequestCompleteCallback, this);
 }
 
 void UsbVideoStream::RequestComplete(usb_request_t* req) {

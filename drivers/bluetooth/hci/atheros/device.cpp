@@ -110,7 +110,7 @@ zx_status_t Device::LoadNVM(const qca_version& version) {
     req->complete_cb = interrupt_complete;
     req->cookie = &completion_;
     sync_completion_reset(&completion_);
-    usb_request_queue(&usb_, req);
+    usb_request_queue(&usb_, req, interrupt_compelete, &completion_);
     sync_completion_wait(&completion_, ZX_TIME_INFINITE);
 
     if (req->response.status != ZX_OK) {
@@ -165,7 +165,7 @@ zx_status_t Device::LoadRAM(const qca_version& version) {
     req->complete_cb = interrupt_complete;
     req->cookie = &completion_;
     sync_completion_reset(&completion_);
-    usb_request_queue(&usb_, req);
+    usb_request_queue(&usb_, req, interrupt_complete, &completion_);
     sync_completion_wait(&completion_, ZX_TIME_INFINITE);
 
     if (req->response.status != ZX_OK) {

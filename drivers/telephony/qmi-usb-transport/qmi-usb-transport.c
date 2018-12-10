@@ -90,6 +90,8 @@ typedef struct qmi_ctx {
   uint64_t rx_endpoint_delay;  // wait time between 2 recv requests
 } qmi_ctx_t;
 
+static void usb_write_complete(usb_request_t* request, void* cookie);
+
 static zx_status_t get_channel(void* ctx, zx_handle_t* out_channel) {
   ZX_DEBUG_ASSERT(ctx);
   zxlogf(INFO, "qmi-usb-transport: getting channel from transport\n");
@@ -175,7 +177,7 @@ static zx_status_t queue_request(qmi_ctx_t* ctx, const uint8_t* data, size_t len
     return ZX_ERR_IO;
   }
 
-  usb_request_queue(&ctx->usb, req);
+  usb_request_queue(&ctx->usb, req, usb_write_complete, ctx);
   return ZX_OK;
 }
 
@@ -441,7 +443,7 @@ static int qmi_transport_thread(void* cookie) {
   qmi_ctx_t* ctx = cookie;
   usb_request_t* txn = ctx->int_txn_buf;
 
-  usb_request_queue(&ctx->usb, txn);
+  usb_request_queue(&ctx->usb, txn, qmi_interrupt_cb, ctx);
   if (ctx->max_packet_size > 2048) {
     zxlogf(ERROR, "qmi-usb-transport: packet too big: %d\n",
            ctx->max_packet_size);
@@ -482,7 +484,7 @@ static int qmi_transport_thread(void* cookie) {
       } else if (packet.key == INTERRUPT_MSG) {
         if (txn->response.status == ZX_OK) {
           qmi_handle_interrupt(ctx, txn);
-          usb_request_queue(&ctx->usb, txn);
+          usb_request_queue(&ctx->usb, txn, qmi_interrupt_cb, ctx);
         } else if (txn->response.status == ZX_ERR_PEER_CLOSED ||
                    txn->response.status == ZX_ERR_IO_NOT_PRESENT) {
           zxlogf(INFO,
@@ -569,7 +571,7 @@ static void usb_read_complete(usb_request_t* request, void* cookie) {
   }
 
   zx_nanosleep(zx_deadline_after(ZX_USEC(ctx->rx_endpoint_delay)));
-  usb_request_queue(&ctx->usb, request);
+  usb_request_queue(&ctx->usb, request, usb_read_complete, ctx);
 }
 
 static void usb_write_complete(usb_request_t* request, void* cookie) {
@@ -789,7 +791,7 @@ static zx_status_t qmi_bind(void* ctx, zx_device_t* device) {
 
     rx_buf->complete_cb = usb_read_complete;
     rx_buf->cookie = qmi_ctx;
-    usb_request_queue(&qmi_ctx->usb, rx_buf);
+    usb_request_queue(&qmi_ctx->usb, rx_buf, usb_read_complete, qmi_ctx);
     rx_buf_remain -= rx_buf_sz;
   }
 

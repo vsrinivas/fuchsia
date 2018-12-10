@@ -110,6 +110,7 @@ class UsbVideoStream : public UsbVideoStreamBase, public VideoStreamProtocol {
   void QueueRequestLocked() __TA_REQUIRES(lock_);
   void RequestComplete(usb_request_t* req);
 
+  static void RequestCompleteCallback(usb_request_t* request, void* cookie);
   void ParseHeaderTimestamps(usb_request_t* req);
   // Notifies the client regarding the status of the completed frame.
   // If the frame was completed successfully, it will also be locked until the

@@ -3273,7 +3273,8 @@ void Device::HandleRxComplete(usb_request_t* request) {
         usb_reset_endpoint(&usb_, rx_endpt_);
     }
     std::lock_guard<std::mutex> guard(lock_);
-    auto ac = fit::defer([&]() { usb_request_queue(&usb_, request); });
+    auto ac = fit::defer([&]() { usb_request_queue(&usb_, request, &Device::ReadRequestComplete,
+                                                   this); });
 
     if (request->response.status == ZX_OK) {
         // Total bytes received is (request->response.actual) bytes
@@ -3653,7 +3654,7 @@ zx_status_t Device::WlanmacStart(wlanmac_ifc_t* ifc, void* cookie) {
         }
         req->complete_cb = &Device::ReadRequestComplete;
         req->cookie = this;
-        usb_request_queue(&usb_, req);
+        usb_request_queue(&usb_, req, &Device::ReadRequestComplete, this);
     }
     // Only one TX queue for now
     auto tx_endpt = tx_endpts_.front();
@@ -4173,7 +4174,7 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* wlan_pkt)
 
     // Send the whole thing
     req->header.length = usb_request_len;
-    usb_request_queue(&usb_, req);
+    usb_request_queue(&usb_, req, &Device::WriteRequestComplete, this);
 
 #if RALINK_DUMP_TX
     debugf("[Ralink] Outbound WLAN packet meta info\n");
