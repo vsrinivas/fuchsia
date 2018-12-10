@@ -19,8 +19,8 @@ namespace iquery {
 namespace {
 
 std::set<std::string> kKnownOptions = {
-    "cat",        "absolute_paths", "find", "format",
-    "full_paths", "help",           "ls",   "recursive",
+    "cat", "absolute_paths", "find",    "format", "full_paths", "help",
+    "ls",  "recursive",      "verbose", "quiet",  "log-file",
 };
 
 // Validate whether the option is within the defined ones.

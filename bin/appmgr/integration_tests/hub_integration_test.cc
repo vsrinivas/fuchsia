@@ -141,7 +141,7 @@ TEST_F(HubTest, ScopePolicy) {
   RunComponent(nested_env->launcher_ptr(), kGlobUrl, {"/hub/c/glob"}, 0);
 }
 
-TEST_F(HubTest, ThreadFiles) {
+TEST_F(HubTest, SystemObjects) {
   std::string glob_url = "glob";
 
   auto nested_env =
@@ -149,9 +149,9 @@ TEST_F(HubTest, ThreadFiles) {
   ASSERT_TRUE(WaitForEnclosingEnvToStart(nested_env.get()));
   RunComponent(launcher_ptr(), glob_url, {"/hub/r/hubscopepolicytest/"}, 0);
 
-  // test that we can see threads for the new component
+  // test that we can see system objects
   RunComponent(nested_env->launcher_ptr(), glob_url,
-               {"/hub/c/glob/*/system_objects/threads/*"}, 0);
+               {"/hub/c/glob/*/system_objects"}, 0);
 }
 
 }  // namespace

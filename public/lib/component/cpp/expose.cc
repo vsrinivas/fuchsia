@@ -231,65 +231,6 @@ bool Object::SetMetric(const std::string& name, Metric metric) {
   return true;
 }
 
-void Object::GetContents(LazyEntryVector* out_vector) {
-  fbl::AutoLock lock(&mutex_);
-  out_vector->push_back({kChanId, ".channel", V_TYPE_FILE});
-  uint64_t index = kSpecialIdMax;
-
-  // Each child gets a unique ID, which is just its index in the directory.
-  // If the set of children changes between successive calls to readdir(3), it
-  // is possible we will miss children.
-  //
-  // This behavior is documented at the declaration point.
-  for (const auto& it : children_) {
-    out_vector->push_back({index++, it.second->name_, V_TYPE_DIR});
-  }
-  if (lazy_object_callback_) {
-    ObjectVector lazy_objects;
-    lazy_object_callback_(&lazy_objects);
-    for (const auto& obj : lazy_objects) {
-      out_vector->push_back({index++, obj->name(), V_TYPE_DIR});
-    }
-  }
-}
-
-zx_status_t Object::GetFile(fbl::RefPtr<Vnode>* out_vnode, uint64_t id,
-                            fbl::String name) {
-  fbl::AutoLock lock(&mutex_);
-  if (id == kChanId) {
-    // `.channel` is a Service file that binds incoming channels to this
-    // Inspect implementation.
-    auto ref = fbl::WrapRefPtr(this);
-    *out_vnode = fbl::MakeRefCounted<fs::Service>([ref](zx::channel chan) {
-      fbl::AutoLock lock(&ref->mutex_);
-      ref->bindings_.AddBinding(
-          ref, fidl::InterfaceRequest<Inspect>(std::move(chan)));
-      return ZX_OK;
-    });
-    return ZX_OK;
-  }
-
-  // If the file isn't a special file, search for the name as a child object.
-  auto it = children_.find(name.c_str());
-  if (it == children_.end()) {
-    // If the named child is not found, search through the lazy objects if the
-    // callback is set.
-    if (lazy_object_callback_) {
-      ObjectVector lazy_objects;
-      lazy_object_callback_(&lazy_objects);
-      for (const auto& obj : lazy_objects) {
-        if (obj->name() == name.c_str()) {
-          *out_vnode = obj;
-          return ZX_OK;
-        }
-      }
-    }
-    return ZX_ERR_NOT_FOUND;
-  }
-  *out_vnode = it->second;
-  return ZX_OK;
-}
-
 void Object::PopulateChildVector(StringOutputVector* out_vector)
     __TA_EXCLUDES(mutex_) {
   // Lock the local child vector. No need to lock children since we are only

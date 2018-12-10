@@ -7,9 +7,9 @@
 
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
 #include <fbl/string.h>
-#include <fs/lazy-dir.h>
-#include <fs/pseudo-file.h>
 #include <fuchsia/inspect/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
@@ -180,7 +180,8 @@ Metric CallbackMetric(Metric::ValueCallback callback);
 // utilities must communicate over the FIDL interface.
 //
 // This class is thread safe.
-class Object : public fuchsia::inspect::Inspect, public fs::LazyDir {
+class Object : public fuchsia::inspect::Inspect,
+               public fbl::RefCounted<Object> {
  public:
   using ObjectVector = std::vector<fbl::RefPtr<Object>>;
   using ChildrenCallback = fit::function<void(ObjectVector*)>;
@@ -260,25 +261,7 @@ class Object : public fuchsia::inspect::Inspect, public fs::LazyDir {
                  ::fidl::InterfaceRequest<Inspect> child_channel,
                  OpenChildCallback callback) override;
 
-  // |LazyDir| implementation
-
-  // Gets contents for directory listing.
-  // WARNING: Changes to the set of children, including dynamic children, is
-  // logically a removal of all directory contents followed by a repopulation of
-  // the contents. This means that readdir(3) operations may give inconsistent
-  // results in the face of rapid content changes. Use |Inspect|
-  // implementation to avoid this.
-  void GetContents(LazyEntryVector* out_vector) override;
-
-  // Gets a reference to a child object or special file as a Vnode.
-  // IMPLEMENTATION NOTE: This is safe to use even if contents change rapidly,
-  // so long as the requested |name| is present at the time it is requested.
-  zx_status_t GetFile(fbl::RefPtr<Vnode>* out_vnode, uint64_t id,
-                      fbl::String name) override;
-
  private:
-  enum { kChanId = 1, kSpecialIdMax };
-
   // Helper function to populate an output vector of children objects.
   void PopulateChildVector(StringOutputVector* out_vector)
       __TA_EXCLUDES(mutex_);

@@ -54,21 +54,34 @@ class InspectTest : public component::testing::TestWithEnvironment {
         RunLoopWithTimeoutOrUntil([&done] { return done; }, zx::sec(10)));
   }
 
-  std::string GetObjectPath(const std::string& relative_path) {
+  // Open the root object connection on the given sync pointer.
+  // Returns ZX_OK on success.
+  zx_status_t GetInspectConnection(fuchsia::inspect::InspectSyncPtr* out_ptr) {
     files::Glob glob(
         Substitute("/hub/r/test/*/c/$0/*/out/objects", kTestComponent));
     if (glob.size() == 0) {
-      return "";
+      return ZX_ERR_NOT_FOUND;
     }
 
-    std::string path = *glob.begin();
+    std::string path = Substitute("$0/.inspect", std::string(*glob.begin()));
 
-    return Substitute("$0/$1", path, relative_path);
+    return fdio_service_connect(path.c_str(),
+                                out_ptr->NewRequest().TakeChannel().release());
   }
 
-  std::vector<std::string> GetGlob(const std::string& path) {
-    files::Glob glob(GetObjectPath("*"));
-    return std::vector<std::string>{glob.begin(), glob.end()};
+  // Traverse from the current location of ptr down the object tree to a child
+  // with the given name.
+  // Returns true on success, otherwise false is returned and ptr is not
+  // changed.
+  bool Traverse(fuchsia::inspect::InspectSyncPtr* ptr,
+                const std::string& name) {
+    fuchsia::inspect::InspectSyncPtr child;
+    bool ret;
+    (*ptr)->OpenChild(name, child.NewRequest(), &ret);
+    if (ret) {
+      *ptr = std::move(child);
+    }
+    return ret;
   }
 
  private:
@@ -77,10 +90,13 @@ class InspectTest : public component::testing::TestWithEnvironment {
 };
 
 TEST_F(InspectTest, InspectTopLevel) {
-  EXPECT_THAT(
-      GetGlob(GetObjectPath("*")),
-      ElementsAre(GetObjectPath("lazy_child"), GetObjectPath("table-t1"),
-                  GetObjectPath("table-t2")));
+  fuchsia::inspect::InspectSyncPtr inspect;
+  ASSERT_EQ(ZX_OK, GetInspectConnection(&inspect));
+
+  fidl::VectorPtr<fidl::StringPtr> children;
+  inspect->ListChildren(&children);
+  EXPECT_THAT(*children,
+              UnorderedElementsAre("table-t1", "table-t2", "lazy_child"));
 }
 
 MATCHER_P2(StringProperty, name, value, "") {
@@ -104,9 +120,8 @@ MATCHER_P2(IntMetric, name, value, "") {
 TEST_F(InspectTest, InspectOpenRead) {
   fuchsia::inspect::InspectSyncPtr inspect;
 
-  ASSERT_EQ(ZX_OK,
-            fdio_service_connect(GetObjectPath("table-t1/.channel").c_str(),
-                                 inspect.NewRequest().TakeChannel().release()));
+  ASSERT_EQ(ZX_OK, GetInspectConnection(&inspect));
+  ASSERT_TRUE(Traverse(&inspect, "table-t1"));
 
   fidl::VectorPtr<fidl::StringPtr> children;
   ASSERT_EQ(ZX_OK, inspect->ListChildren(&children));
@@ -123,9 +138,9 @@ TEST_F(InspectTest, InspectOpenRead) {
   EXPECT_THAT(*obj.metrics, UnorderedElementsAre(UIntMetric("item_size", 32),
                                                  IntMetric("\x10", -10)));
 
-  ASSERT_EQ(ZX_OK,
-            fdio_service_connect(GetObjectPath("table-t2/.channel").c_str(),
-                                 inspect.NewRequest().TakeChannel().release()));
+  ASSERT_EQ(ZX_OK, GetInspectConnection(&inspect));
+  ASSERT_TRUE(Traverse(&inspect, "table-t2"));
+
   children->clear();
   ASSERT_EQ(ZX_OK, inspect->ListChildren(&children));
   EXPECT_THAT(*children, UnorderedElementsAre("item-0x2", "table-subtable"));
@@ -148,9 +163,7 @@ TEST_F(InspectTest, InspectOpenRead) {
               UnorderedElementsAre(UIntMetric("item_size", 16),
                                    IntMetric("\x10", -10)));
 
-  ASSERT_EQ(ZX_OK,
-            fdio_service_connect(GetObjectPath(".channel").c_str(),
-                                 inspect.NewRequest().TakeChannel().release()));
+  ASSERT_EQ(ZX_OK, GetInspectConnection(&inspect));
   fuchsia::inspect::InspectSyncPtr lazy_child;
   bool open_ok;
   inspect->OpenChild("lazy_child", lazy_child.NewRequest(), &open_ok);

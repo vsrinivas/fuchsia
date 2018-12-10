@@ -195,6 +195,9 @@ class ComponentControllerImpl : public ComponentControllerBase {
 
   TerminationCallback termination_callback_;
 
+  fidl::BindingSet<fuchsia::inspect::Inspect,
+                   fbl::RefPtr<component::Object>>
+      debug_directory_bindings_;
   DebugDirectory debug_directory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ComponentControllerImpl);

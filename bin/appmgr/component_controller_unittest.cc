@@ -5,6 +5,7 @@
 #include "garnet/bin/appmgr/component_controller_impl.h"
 
 #include <fs/pseudo-dir.h>
+#include <fs/pseudo-file.h>
 #include <fs/remote-dir.h>
 #include <fs/synchronous-vfs.h>
 #include <lib/fdio/spawn.h>
