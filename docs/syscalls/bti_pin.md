@@ -8,12 +8,18 @@ bti_pin - pin pages and grant devices access to them
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_bti_pin(zx_handle_t bti, uint32_t options,
-                       zx_handle_t vmo, uint64_t offset, uint64_t size,
-                       zx_paddr_t* addrs, size_t addrs_count,
+zx_status_t zx_bti_pin(zx_handle_t handle,
+                       uint32_t options,
+                       zx_handle_t vmo,
+                       uint64_t offset,
+                       uint64_t size,
+                       zx_paddr_t* addrs,
+                       size_t addrs_count,
                        zx_handle_t* pmt);
 ```
 
@@ -89,11 +95,11 @@ In the event of failure, a negative error value is returned.
 
 ## ERRORS
 
-**ZX_ERR_BAD_HANDLE**  *bti* or *vmo* is not a valid handle.
+**ZX_ERR_BAD_HANDLE**  *handle* or *vmo* is not a valid handle.
 
-**ZX_ERR_WRONG_TYPE**  *bti* is not a BTI handle or *vmo* is not a VMO handle.
+**ZX_ERR_WRONG_TYPE**  *handle* is not a BTI handle or *vmo* is not a VMO handle.
 
-**ZX_ERR_ACCESS_DENIED** *bti* or *vmo* does not have the *ZX_RIGHT_MAP*, or
+**ZX_ERR_ACCESS_DENIED** *handle* or *vmo* does not have the *ZX_RIGHT_MAP*, or
 *options* contained a permissions flag corresponding to a right that *vmo* does not have.
 
 **ZX_ERR_INVALID_ARGS** *options* is 0 or contains an undefined flag, either *addrs* or *pmt*

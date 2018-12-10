@@ -8,11 +8,12 @@ bti_release_quarantine - releases all quarantined PMTs
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_bti_release_quarantine(zx_handle_t bti);
-
+zx_status_t zx_bti_release_quarantine(zx_handle_t handle);
 ```
 
 ## DESCRIPTION
@@ -35,11 +36,11 @@ In the event of failure, a negative error value is returned.
 
 ## ERRORS
 
-**ZX_ERR_BAD_HANDLE**  *bti* is not a valid handle.
+**ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
 
-**ZX_ERR_WRONG_TYPE**  *bti* is not a BTI handle.
+**ZX_ERR_WRONG_TYPE**  *handle* is not a BTI handle.
 
-**ZX_ERR_ACCESS_DENIED** *bti* does not have the *ZX_RIGHT_WRITE* right.
+**ZX_ERR_ACCESS_DENIED** *handle* does not have the *ZX_RIGHT_WRITE* right.
 
 ## SEE ALSO
 

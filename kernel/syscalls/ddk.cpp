@@ -300,12 +300,12 @@ zx_status_t sys_bti_create(zx_handle_t iommu, uint32_t options, uint64_t bti_id,
 }
 
 // zx_status_t zx_bti_pin
-zx_status_t sys_bti_pin(zx_handle_t bti, uint32_t options, zx_handle_t vmo, uint64_t offset,
+zx_status_t sys_bti_pin(zx_handle_t handle, uint32_t options, zx_handle_t vmo, uint64_t offset,
                         uint64_t size, user_out_ptr<zx_paddr_t> addrs, size_t addrs_count,
                         user_out_handle* pmt) {
     auto up = ProcessDispatcher::GetCurrent();
     fbl::RefPtr<BusTransactionInitiatorDispatcher> bti_dispatcher;
-    zx_status_t status = up->GetDispatcherWithRights(bti, ZX_RIGHT_MAP, &bti_dispatcher);
+    zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_MAP, &bti_dispatcher);
     if (status != ZX_OK) {
         return status;
     }
@@ -397,11 +397,11 @@ zx_status_t sys_bti_pin(zx_handle_t bti, uint32_t options, zx_handle_t vmo, uint
 }
 
 // zx_status_t zx_bti_release_quarantine
-zx_status_t sys_bti_release_quarantine(zx_handle_t bti) {
+zx_status_t sys_bti_release_quarantine(zx_handle_t handle) {
     auto up = ProcessDispatcher::GetCurrent();
     fbl::RefPtr<BusTransactionInitiatorDispatcher> bti_dispatcher;
 
-    zx_status_t status = up->GetDispatcherWithRights(bti, ZX_RIGHT_WRITE, &bti_dispatcher);
+    zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &bti_dispatcher);
     if (status != ZX_OK) {
         return status;
     }

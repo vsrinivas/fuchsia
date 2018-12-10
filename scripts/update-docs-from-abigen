@@ -388,6 +388,8 @@ def make_synopsis_block(syscall_data, warn):
 # will be deleted once all can be generated.
 synopsis_whitelist = (
     'bti_create',
+    'bti_pin',
+    'bti_release_quarantine',
     'channel_create',
     'channel_write',
     'clock_get_monotonic',
