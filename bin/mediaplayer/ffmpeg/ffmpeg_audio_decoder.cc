@@ -27,9 +27,10 @@ FfmpegAudioDecoder::FfmpegAudioDecoder(AvCodecContextPtr av_codec_context)
   set_pts_rate(
       media::TimelineRate(stream_type->audio()->frames_per_second(), 1));
 
+  stream_type_ = std::move(stream_type);
+
   if (av_sample_fmt_is_planar(context()->sample_fmt)) {
     // Prepare for interleaving.
-    stream_type_ = std::move(stream_type);
     lpcm_util_ = LpcmUtil::Create(*stream_type_->audio());
   }
 }
@@ -146,6 +147,9 @@ PacketPtr FfmpegAudioDecoder::CreateOutputPacket(
 
   set_next_pts(pts + av_frame.nb_samples);
 
+  FXL_DCHECK(stream_type_);
+  FXL_DCHECK(stream_type_->audio());
+
   uint64_t payload_size =
       stream_type_->audio()->min_buffer_size(av_frame.nb_samples);
 
@@ -154,9 +158,6 @@ PacketPtr FfmpegAudioDecoder::CreateOutputPacket(
     // |payload_buffer|, which was allocated from system memory. That buffer
     // will get released later in ReleaseBufferForAvFrame. We need a new
     // buffer for the interleaved frames, which we get from the stage.
-    FXL_DCHECK(stream_type_);
-    FXL_DCHECK(stream_type_->audio());
-
     auto new_payload_buffer = stage()->AllocatePayloadBuffer(payload_size);
     if (!new_payload_buffer) {
       // TODO(dalesat): Renderer VMO is full. What can we do about this?
