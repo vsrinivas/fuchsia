@@ -14,7 +14,7 @@ mod test {
     use fuchsia_wayland_core::{self as wl, Interface};
     use fuchsia_zircon as zx;
     use fuchsia_zircon::prelude::*;
-    use wayland::{WlCompositor, WlOutput, WlSeat, WlShm};
+    use wayland::{WlCompositor, WlOutput, WlSeat, WlShm, WlSubcompositor};
 
     async fn expect_global_with_name<I: Interface>(
         expect_name: u32, client_channel: &fasync::Channel,
@@ -77,9 +77,10 @@ mod test {
         // be reported right now.
         let receiver = async move {
             await!(expect_global_with_name::<WlCompositor>(0, &client_channel));
-            await!(expect_global_with_name::<WlOutput>(1, &client_channel));
-            await!(expect_global_with_name::<WlSeat>(2, &client_channel));
-            await!(expect_global_with_name::<WlShm>(3, &client_channel));
+            await!(expect_global_with_name::<WlSubcompositor>(1, &client_channel));
+            await!(expect_global_with_name::<WlOutput>(2, &client_channel));
+            await!(expect_global_with_name::<WlSeat>(3, &client_channel));
+            await!(expect_global_with_name::<WlShm>(4, &client_channel));
 
             // Expect callback::done for the sync
             let mut buffer = zx::MessageBuf::new();

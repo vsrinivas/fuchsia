@@ -16,7 +16,7 @@ use fuchsia_app::server::{ServiceFactory, ServicesServer};
 use fuchsia_async as fasync;
 use futures::prelude::*;
 use parking_lot::Mutex;
-use wayland::{WlCompositor, WlOutput, WlSeat, WlShm};
+use wayland::{WlCompositor, WlOutput, WlSeat, WlShm, WlSubcompositor};
 
 mod client;
 mod object;
@@ -35,6 +35,8 @@ mod seat;
 use crate::seat::*;
 mod shm;
 use crate::shm::*;
+mod subcompositor;
+use crate::subcompositor::*;
 
 #[cfg(test)]
 mod test_protocol;
@@ -58,6 +60,11 @@ impl WaylandDispatcher {
                 Ok(Box::new(RequestDispatcher::new(Compositor::new(
                     scenic.clone(),
                 ))))
+            });
+        }
+        {
+            registry.add_global(WlSubcompositor, move |_, _| {
+                Ok(Box::new(RequestDispatcher::new(Subcompositor::new())))
             });
         }
         {
