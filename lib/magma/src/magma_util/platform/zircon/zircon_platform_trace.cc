@@ -42,6 +42,8 @@ void ZirconPlatformTrace::SetObserver(std::function<void(bool)> callback)
     });
 }
 
+zx_ticks_t ZirconPlatformTrace::GetCurrentTicks() { return zx_ticks_get(); }
+
 PlatformTrace* PlatformTrace::Get()
 {
     if (!g_platform_trace)

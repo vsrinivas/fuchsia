@@ -9,6 +9,8 @@
 
 class FifoScheduler : public Scheduler {
 public:
+    FifoScheduler() : gpu_vthread_id_(TRACE_NONCE()) {}
+
     void CommandBufferQueued(std::weak_ptr<MsdIntelContext> context) override;
     void CommandBufferCompleted(std::shared_ptr<MsdIntelContext> context) override;
 
@@ -18,7 +20,7 @@ private:
     std::queue<std::weak_ptr<MsdIntelContext>> fifo_;
     std::shared_ptr<MsdIntelContext> current_context_;
     uint32_t current_count_{};
-    uint32_t nonce_;
+    const uint64_t gpu_vthread_id_;
 };
 
 void FifoScheduler::CommandBufferQueued(std::weak_ptr<MsdIntelContext> context)
@@ -50,9 +52,11 @@ std::shared_ptr<MsdIntelContext> FifoScheduler::ScheduleContext()
     if (current_context_ == nullptr || current_context_ == context) {
         if (current_context_ == nullptr) {
             auto connection = context->connection().lock();
-            uint64_t id = connection ? connection->client_id() : 0;
-            nonce_ = TRACE_NONCE();
-            TRACE_ASYNC_BEGIN("magma", "Context Exec", nonce_, "id", id);
+            uint64_t current_id = connection ? connection->client_id() : 0;
+            uint64_t current_ticks = magma::PlatformTrace::Get()->GetCurrentTicks();
+
+            TRACE_VTHREAD_DURATION_BEGIN("magma", "Context Exec", "GPU", gpu_vthread_id_,
+                                         current_ticks, "id", current_id);
         }
 
         fifo_.pop();
@@ -68,7 +72,12 @@ void FifoScheduler::CommandBufferCompleted(std::shared_ptr<MsdIntelContext> cont
 {
     DASSERT(current_count_);
     if (--current_count_ == 0) {
-        TRACE_ASYNC_END("magma", "Context Exec", nonce_);
+        auto connection = context->connection().lock();
+        uint64_t current_id = connection ? connection->client_id() : 0;
+        uint64_t current_ticks = magma::PlatformTrace::Get()->GetCurrentTicks();
+
+        TRACE_VTHREAD_DURATION_END("magma", "Context Exec", "GPU", gpu_vthread_id_, current_ticks,
+                                   "id", current_id);
         current_context_.reset();
     }
 }

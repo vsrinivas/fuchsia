@@ -8,6 +8,7 @@
 #include <functional>
 
 #if MAGMA_ENABLE_TRACING
+#include "trace-vthread/event_vthread.h"
 #include <trace/event.h>
 #define TRACE_NONCE_DECLARE(x) uint64_t x = TRACE_NONCE()
 #else
@@ -23,6 +24,8 @@
 #define TRACE_FLOW_BEGIN(category, name, id, args...)
 #define TRACE_FLOW_STEP(category, name, id, args...)
 #define TRACE_FLOW_END(category, name, id, args...)
+#define TRACE_VTHREAD_DURATION_BEGIN(category, name, vthread_name, vthread_id, timestamp, args...)
+#define TRACE_VTHREAD_DURATION_END(category, name, vthread_name, vthread_id, timestamp, args...)
 #endif
 
 namespace magma {
@@ -36,7 +39,10 @@ public:
     // Invokes the given |callback| (on a different thread) when the tracing state changes.
     virtual void SetObserver(std::function<void(bool trace_enabled)> callback) = 0;
 
-    // Returns null if tracing is not enabled
+    // Returns the current time in ticks.
+    virtual uint64_t GetCurrentTicks() = 0;
+
+    // Returns null if tracing is not enabled.
     static PlatformTrace* Get();
 };
 

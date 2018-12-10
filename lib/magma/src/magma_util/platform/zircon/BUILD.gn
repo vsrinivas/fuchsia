@@ -244,6 +244,7 @@ source_set("trace") {
       "$zircon_build_root/public/lib/async-loop-cpp",
       "$zircon_build_root/public/lib/trace",
       "$zircon_build_root/public/lib/trace-provider",
+      "$zircon_build_root/public/lib/trace-vthread",
     ]
   }
 }

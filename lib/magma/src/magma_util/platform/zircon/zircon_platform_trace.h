@@ -26,6 +26,8 @@ public:
     // Can only have one observer
     void SetObserver(std::function<void(bool)> callback) override;
 
+    zx_ticks_t GetCurrentTicks() override;
+
 private:
     async::Loop loop_;
     trace::TraceProvider trace_provider_;
