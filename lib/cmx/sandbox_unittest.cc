@@ -123,23 +123,12 @@ TEST_F(SandboxMetadataTest, Parse) {
   }
 }
 
-#define SERVICES_INFO                                        \
-  "\nSee "                                                   \
-  "https://fuchsia.googlesource.com/docs/+/master/the-book/" \
-  "package_metadata.md#sandbox"
-
 TEST_F(SandboxMetadataTest, ParseWithErrors) {
   ExpectFailedParse(
       R"JSON({
         "dev": [ "class/input", 3 ]
       })JSON",
       "Entry for 'dev' in sandbox is not a string.");
-  ExpectFailedParse(
-      R"JSON({
-        "features": [ "vulkan", "deprecated-all-services" ]
-      })JSON",
-      "'deprecated-all-services' is no longer supported. Please provide a "
-      "'services' sandbox instead." SERVICES_INFO);
 }
 
 }  // namespace

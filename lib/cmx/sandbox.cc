@@ -14,11 +14,6 @@
 namespace component {
 namespace {
 
-constexpr char kDeprecatedAllServices[] = "deprecated-all-services";
-constexpr char kCmxDocUrl[] =
-    "https://fuchsia.googlesource.com/docs/+/master/the-book/"
-    "package_metadata.md#sandbox";
-
 template <typename Value>
 void CopyArrayToVector(const std::string& name, const Value& value,
                        json::JSONParser* json_parser,
@@ -70,13 +65,6 @@ bool SandboxMetadata::Parse(const rapidjson::Value& sandbox_value,
     if (member != sandbox_value.MemberEnd()) {
       CopyArrayToVector(name, member->value, json_parser, vec);
     }
-  }
-
-  if (HasFeature(kDeprecatedAllServices)) {
-    json_parser->ReportError(fxl::Substitute(
-        "'deprecated-all-services' is no longer supported. Please provide a "
-        "'services' sandbox instead.\nSee $0",
-        kCmxDocUrl));
   }
 
   if (!json_parser->HasError()) {
