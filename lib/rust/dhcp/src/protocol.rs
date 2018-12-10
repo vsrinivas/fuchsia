@@ -376,7 +376,11 @@ fn buf_into_options(buf: &[u8], options: &mut Vec<ConfigOption>) {
     {
         let opt_code = buf[opt_idx];
         let opt_len: usize = match OptionCode::option_code_from_u8(opt_code) {
-            None => continue,                                   // invalid option
+            None => {
+                // Invalid option: increment to next option start
+                opt_idx += (buf[opt_idx + 1] + 2) as usize;
+                continue;
+            }
             Some(OptionCode::Pad) | Some(OptionCode::End) => 1, // fixed length option
             _ => match buf.get(opt_idx + 1) {
                 // variable length option
@@ -686,5 +690,31 @@ mod tests {
         let got = msg.get_dhcp_type();
 
         assert!(got.is_none());
+    }
+
+    #[test]
+    fn test_buf_into_options_with_invalid_option_parses_other_valid_options() {
+        let mut msg = Message::new();
+        msg.options.push(ConfigOption {
+            code: OptionCode::SubnetMask,
+            value: vec![255, 255, 255, 0],
+        });
+        msg.options.push(ConfigOption {
+            code: OptionCode::Router,
+            value: vec![192, 168, 1, 1],
+        });
+        msg.options.push(ConfigOption {
+            code: OptionCode::DhcpMessageType,
+            value: vec![MessageType::DHCPDISCOVER as u8],
+        });
+
+        let mut buf = msg.serialize();
+        // introduce invalid option code in first option
+        buf[OPTIONS_START_IDX + 4] = 99;
+        let result = Message::from_buffer(&buf).unwrap();
+
+        // Expect that everything but the invalid option deserializes.
+        msg.options.remove(0);
+        assert_eq!(msg, result);
     }
 }
