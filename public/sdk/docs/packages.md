@@ -62,4 +62,46 @@ Note that this step needs to be re-run if the contents of the package change.
 
 ## Deploying a package
 
-_To be added..._
+### Publishing a package
+
+First, initialize a directory that will serve as a packages repository:
+```
+pm newrepo -repo $REPO
+```
+This will create a directory structure at `$REPO` that is ready for
+publishing packages.
+
+The next step is to publish packages to that repository:
+```
+pm publish -a -r $REPO -f $PACKAGE_ARCHIVE.far
+```
+This will parse the provided package archive (`.far` file) and publish it in the
+provided `$REPO` directory.
+
+Running this command multiple times with different package archives will publish
+those packages to the same repository. Similarly, new versions of a same package
+can be published using the same command.
+
+Finally, start the amber server with:
+```
+pm serve -repo $REPO
+```
+This will start an amber server on the host machine at port `8083` by default.
+
+### Retrieving/Installing a package
+
+_All commands in this section are executed on the target device._
+
+First, add the new repository as an update source:
+```
+amber_ctl add_src -f http://$HOST_ADDRESS:8083/config.json
+```
+
+Then, run the component exposed by the package:
+```
+run $COMPONENT_URI
+```
+This will:
+1. Install the package providing the component if not already in the system.
+1. Check for updates to the package and install them if available.
+1. Run the requested component.
