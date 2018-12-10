@@ -20,6 +20,7 @@
 #include "garnet/lib/ui/gfx/resources/view_holder.h"
 #include "garnet/lib/ui/gfx/util/unwrap.h"
 #include "garnet/lib/ui/scenic/event_reporter.h"
+#include "garnet/lib/ui/scenic/session.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/escher/geometry/types.h"
 #include "lib/escher/util/type_utils.h"
@@ -121,8 +122,13 @@ glm::mat4 FindGlobalTransform(gfx::ResourcePtr view) {
 //   - must not retain it, or extends its lifetime via Refptr,
 //   - must not write into it,
 //   - may call const functions against it.
+//
+// Only the root presenter creates compositors and sends input commands.
+// This invariant means this dispatcher context's session, handling an input
+// command, also originally created the compositor.
+//
 std::vector<gfx::Hit> PerformGlobalHitTest(gfx::GfxSystem* gfx_system,
-                                           uint32_t compositor_id, float x,
+                                           GlobalId compositor_id, float x,
                                            float y) {
   FXL_DCHECK(gfx_system);
 
@@ -255,8 +261,9 @@ void InputCommandDispatcher::DispatchCommand(ScenicCommand command) {
     DispatchCommand(std::move(input.send_keyboard_input()));
   } else if (input.is_send_pointer_input()) {
     // Compositor and layer stack required for dispatch.
-    gfx::Compositor* compositor =
-        gfx_system_->GetCompositor(input.send_pointer_input().compositor_id);
+    GlobalId compositor_id(context()->session_id(),
+                           input.send_pointer_input().compositor_id);
+    gfx::Compositor* compositor = gfx_system_->GetCompositor(compositor_id);
     if (!compositor)
       return;  // It's legal to race against GFX's compositor setup.
 
@@ -306,8 +313,9 @@ void InputCommandDispatcher::DispatchTouchCommand(
       << "Oops, touch device had unexpected HOVER event.";
 
   if (pointer_phase == Phase::ADD) {
-    const std::vector<gfx::Hit> hits = PerformGlobalHitTest(
-        gfx_system_, command.compositor_id, pointer_x, pointer_y);
+    GlobalId compositor_id(context()->session_id(), command.compositor_id);
+    const std::vector<gfx::Hit> hits =
+        PerformGlobalHitTest(gfx_system_, compositor_id, pointer_x, pointer_y);
 
     // Find input targets.  Honor the "input masking" view property.
     ViewStack hit_views;
@@ -406,8 +414,9 @@ void InputCommandDispatcher::DispatchTouchCommand(
 //    gestures, so there is no parallel dispatch.
 //  - Mouse DOWN triggers a focus change, but honors the no-focus property.
 //  - Mouse UP drops the association between event stream and client.
-//  - For an unassociated MOVE event, we perform a hit test, and send the top-most
-//    client this MOVE event. Focus does not change for unassociated MOVEs.
+//  - For an unassociated MOVE event, we perform a hit test, and send the
+//    top-most client this MOVE event. Focus does not change for unassociated
+//    MOVEs.
 //  - The hit test must account for the mouse cursor itself, which today is
 //    owned by the root presenter. The nodes associated with visible mouse
 //    cursors(!) do not roll up to any View (as expected), but may appear in the
@@ -427,8 +436,9 @@ void InputCommandDispatcher::DispatchMouseCommand(
       << ") had an unexpected event: " << pointer_phase;
 
   if (pointer_phase == Phase::DOWN) {
-    const std::vector<gfx::Hit> hits = PerformGlobalHitTest(
-        gfx_system_, command.compositor_id, pointer_x, pointer_y);
+    GlobalId compositor_id(context()->session_id(), command.compositor_id);
+    const std::vector<gfx::Hit> hits =
+        PerformGlobalHitTest(gfx_system_, compositor_id, pointer_x, pointer_y);
 
     // Find top-hit target and associated properties.
     // NOTE: We may hit various mouse cursors (owned by root presenter), so keep
@@ -500,8 +510,9 @@ void InputCommandDispatcher::DispatchMouseCommand(
 
   // Deal with unassociated MOVE events.
   if (pointer_phase == Phase::MOVE && mouse_targets_.count(device_id) == 0) {
-    const std::vector<gfx::Hit> hits = PerformGlobalHitTest(
-        gfx_system_, command.compositor_id, pointer_x, pointer_y);
+    GlobalId compositor_id(context()->session_id(), command.compositor_id);
+    const std::vector<gfx::Hit> hits =
+        PerformGlobalHitTest(gfx_system_, compositor_id, pointer_x, pointer_y);
     // Find top-hit target and send it this move event.
     // NOTE: We may hit various mouse cursors (owned by root presenter), so keep
     // going until we find a hit with a valid owning View.

@@ -39,7 +39,7 @@ class GfxSystem : public TempSystemDelegate {
       override;
 
   // TODO(SCN-906): Break out Engine, instead of coupling it to GfxSystem.
-  Compositor* GetCompositor(ResourceId compositor_id) const;
+  Compositor* GetCompositor(GlobalId compositor_id) const;
   gfx::Session* GetSession(SessionId session_id) const;
 
   // TODO(SCN-906): Remove this in favor of unified initialization.

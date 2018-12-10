@@ -125,7 +125,7 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
   Compositor* GetFirstCompositor() const;
 
   // Returns the compositor requested, or nullptr if it does not exist.
-  Compositor* GetCompositor(scenic_impl::ResourceId compositor_id) const;
+  Compositor* GetCompositor(scenic_impl::GlobalId compositor_id) const;
 
   // Dumps the contents of all scene graphs.
   std::string DumpScenes() const;

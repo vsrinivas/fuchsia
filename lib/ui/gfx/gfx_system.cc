@@ -318,7 +318,7 @@ VkBool32 GfxSystem::HandleDebugReport(VkDebugReportFlagsEXT flags_in,
   return false;
 }
 
-Compositor* GfxSystem::GetCompositor(ResourceId compositor_id) const {
+Compositor* GfxSystem::GetCompositor(GlobalId compositor_id) const {
   return engine_->GetCompositor(compositor_id);
 }
 
