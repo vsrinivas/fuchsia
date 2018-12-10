@@ -18,6 +18,9 @@ std::string ZxStatusToString(uint32_t status) {
     case kZxErrInternal:
       status_name = "ZX_ERR_INTERNAL";
       break;
+    case kZxErrNotSupported:
+      status_name = "ZX_ERR_NOT_SUPPORTED";
+      break;
     case kZxErrInvalidArgs:
       status_name = "ZX_ERR_INVALID_ARGS";
       break;

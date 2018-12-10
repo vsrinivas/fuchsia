@@ -111,7 +111,7 @@ package("debug_agent") {
   binary = "debug_agent"
 }
 
-executable("unittests") {
+executable("tests") {
   testonly = true
   output_name = "debug_agent_tests"
 
@@ -119,7 +119,6 @@ executable("unittests") {
     "breakpoint_unittest.cc",
     "debugged_job_unittest.cc",
     "debugged_thread_unittest.cc",
-    "integration_tests/breakpoint_test.cc",
     "process_breakpoint_unittest.cc",
     "process_info_unittests.cc",
     "system_info_unittests.cc",
@@ -131,6 +130,7 @@ executable("unittests") {
 
   deps = [
     ":lib",
+    "//garnet/bin/debug_agent/integration_tests",
     "//garnet/lib/debug_ipc:tests",
     "//garnet/public/lib/component/cpp:environment_services",
     "//garnet/public/lib/fxl/test:gtest_main",
@@ -145,7 +145,7 @@ package("debug_agent_tests") {
   package_name = "debug_agent_tests"
 
   deps = [
-    ":unittests",
+    ":tests",
     "//garnet/bin/debug_agent/test_data:debug_agent_so_test_exe",
     "//garnet/bin/debug_agent/test_data:debug_agent_test_so",
     "//garnet/bin/debug_agent/test_data:process_loop",
