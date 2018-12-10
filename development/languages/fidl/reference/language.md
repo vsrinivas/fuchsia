@@ -322,6 +322,13 @@ struct Record {
 };
 ```
 
+> Strings should not be used to pass arbitrary binary data since bindings enforce
+> valid UTF-8. Instead, consider `vector<uint8>` for small data or
+> [`fuchsia.mem.Buffer`](../../../api/fidl.md#consider-using-fuchsia_mem_buffer)
+> for blobs. See
+> [Should I use string or vector?](../../../api/fidl.md#should-i-use-string-or-vector)
+> for details.
+
 #### Vectors
 
 *   Variable-length sequence of homogeneous elements.

@@ -166,8 +166,7 @@ void EchoString(fidl::StringPtr value, EchoStringCallback callback) override {
 Here's what's interesting about this code:
 
 -   The first parameter to `EchoString()` is a `fidl::StringPtr`. As the name
-    suggests, a `fidl::StringPtr` can be null. Strings in FIDL are supposed to
-    be UTF-8.
+    suggests, a `fidl::StringPtr` can be null. Strings in FIDL are UTF-8.
 -   The `EchoString()` function returns void because FIDL calls are
     asynchronous. Any value we might otherwise return wouldn't have anywhere to
     go.

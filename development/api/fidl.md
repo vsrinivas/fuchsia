@@ -548,7 +548,7 @@ Use `string` for text data:
  * Use `string` to represent HTTP methods because HTTP methods are comprised of
    a fixed selection of characters that are always valid UTF-8.
 
-Use `vector` or `array` for non-text data:
+Use `vector` or `array` for small non-text data:
 
  * Use `vector<uint8>` for HTTP header fields because HTTP header fields do not
    specify an encoding and therefore cannot necessarily be represented in UTF-8.
@@ -557,6 +557,14 @@ Use `vector` or `array` for non-text data:
 
  * Use `array<uint8>:16` for UUIDs because UUIDs are (almost!) arbitrary binary
    data.
+
+Use shared-memory primitives for blobs:
+
+ * Use `fuchsia.mem.Buffer` for images and (large) protobufs, when it makes sense
+   to buffer the data completely.
+ * Use `handle<socket>` for audio and video streams because data may arrive over
+   time, or when it makes sense to process data before completely written or
+   available.
 
 ### Should I use vector or array?
 
