@@ -26,6 +26,9 @@ MODULE_LIBS := \
     system/ulib/zircon \
     system/ulib/c \
 
+MODULE_HEADER_DEPS := \
+    system/dev/lib/mt8167 \
+
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-gpio \
     system/banjo/ddk-protocol-i2c \

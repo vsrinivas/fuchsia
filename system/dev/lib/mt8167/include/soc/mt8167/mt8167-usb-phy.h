@@ -7,7 +7,7 @@
 #include <hwreg/bitfields.h>
 #include <zircon/types.h>
 
-namespace mt_usb {
+namespace board_mt8167 {
 
 // USB20 PHYA Common 0 Register
 class USBPHYACR0 : public hwreg::RegisterBase<USBPHYACR0, uint32_t> {
@@ -195,4 +195,4 @@ public:public:
     static auto Get() { return hwreg::RegisterAddr<U2PHYDTM1>(0x6c); }
 };
 
-} // namespace mt_usb
+} // namespace board_mt8167

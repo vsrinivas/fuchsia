@@ -7,7 +7,7 @@
 #include <hwreg/bitfields.h>
 #include <zircon/types.h>
 
-namespace mt_usb {
+namespace board_mt8167 {
 
 // Function Address Register
 class FADDR : public hwreg::RegisterBase<FADDR, uint8_t> {
@@ -543,4 +543,4 @@ public:
     static auto Get() { return hwreg::RegisterAddr<DMA_CONFIG>(0x220); }
 };
 
-} // namespace mt_usb
+} // namespace board_mt8167
