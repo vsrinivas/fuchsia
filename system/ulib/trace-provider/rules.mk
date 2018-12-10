@@ -55,7 +55,6 @@ MODULE_SRCS := \
 
 MODULE_STATIC_LIBS := \
     $(LOCAL_STATIC_LIBS) \
-    system/ulib/trace \
     system/ulib/trace-provider.fdio-connect
 
 MODULE_LIBS := \
@@ -80,8 +79,7 @@ MODULE_COMPILEFLAGS += -fvisibility=hidden
 MODULE_SRCS := $(LOCAL_SRCS)
 
 MODULE_STATIC_LIBS := \
-    $(LOCAL_STATIC_LIBS) \
-    system/ulib/trace
+    $(LOCAL_STATIC_LIBS)
 
 MODULE_LIBS := \
     $(LOCAL_LIBS) \
@@ -107,7 +105,6 @@ MODULE_HEADER_DEPS := \
 
 MODULE_STATIC_LIBS := \
     $(LOCAL_STATIC_LIBS) \
-    system/ulib/trace.with-static-engine \
     system/ulib/trace-engine.static
 
 MODULE_LIBS := $(LOCAL_LIBS)
