@@ -501,7 +501,9 @@ bool InputInterpreter::Read(bool discard) {
   }
 
   if (has_buttons_) {
-    ParseButtonsReport();
+    if (!ParseButtonsReport())
+      return false;
+
     if (!discard) {
       input_device_->DispatchReport(CloneReport(buttons_report_));
     }
