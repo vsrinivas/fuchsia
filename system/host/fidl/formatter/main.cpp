@@ -91,7 +91,7 @@ int main(int argc, char* argv[]) {
 
     if (pos >= args.size()) {
         // TODO: Should probably read a file from stdin, instead.
-        FailWithUsage(args[0], "No files provided");
+        FailWithUsage(args[0], "No files provided\n");
     }
 
     fidl::SourceManager source_manager;
