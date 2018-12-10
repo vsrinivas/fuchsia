@@ -1,3 +1,18 @@
+# _fx_set__board completes a board name
+_fx_set__board() {
+  compadd ${(u)$(cd ${fuchsia_dir};echo */boards/*.gni(N:t:r) vendor/*/boards/*.gni(N:t:r))}
+}
+
+# _fx_set__product completes a product name
+_fx_set__product() {
+  compadd ${(u)$(cd ${fuchsia_dir};echo */products/*.gni(N:t:r) vendor/*/products/*.gni(N:t:r))}
+}
+
+# _fx_set__package completes a package name
+_fx_set__package() {
+  compadd $(cd ${fuchsia_dir} && echo */packages/**/^*.*(.N) vendor/*/packages/**/^*.*(.N))
+}
+
 # _packages completes a comma separated list of packages
 _packages() {
   # packages are files without extensions in */packages/ and vendor/*/packages/
@@ -45,14 +60,24 @@ archs=(
   'arm64:64 bit ARM'
 )
 
+# TODO: --help-args --zircon-arg
+
 # arguments to fx set
 _arguments '1:arch:{_describe "arch" archs}' \
   '2::build_dir:{__fx_build_dir}' \
-  '(:)--release[release build]' \
-  '(:)--packages[packages to build]:packages:_packages' \
-  '(:)--products[products to build]:products:_products' \
-  '(:)--goma[use goma]' "--no-goma[don't use goma]" \
-  "(:)--no-ensure-goma[don't make sure goma is running]" \
-  "(:)--ccache[use ccache]" "--no-ccache[don't use ccache]" \
-  "(:)--args[arguments for gn gen]:args:{_gn_args}" \
-  '(:)--goma-dir[goma directory to use]:directory:_files -/'
+  '(:)--board[Use the listed board configuration]:board:_fx_set__board' \
+  '(:)--product[Include the listed product in the build]:product:_fx_set__product' \
+  '(:)*--available[Package to be available for pushing]:package:_fx_set__package' \
+  '(:)*--preinstall[Package to be included in the system image]:package:_fx_set__package' \
+  '(:)*--monolith[Package to be included in the monolithic system image]:package:_fx_set__package' \
+  '(:)*--variant[Pass a select_variant GN arg]: ' \
+  '(:)*--fuzz-with[A sanitizer name to fuzz with]: ' \
+  '(:)--args[Arguments for GN gen]:args:{_gn_args}' \
+  '(:)--goma[Use GOMA]' \
+  "(:)--no-goma[Don't use GOMA]" \
+  "(:)--no-ensure-goma[Don't make sure GOMA is running]" \
+  '(:)--goma-dir[GOMA directory to use]:directory:_files -/' \
+  "(:)--ccache[Use ccache]" \
+  "(:)--no-ccache[Don't use ccache]" \
+  '(:)--ide[Generate files for an IDE]:ide:(eclipse vs vs2013 vs2015 vs2017 xcode qcreator json)' \
+  '(:)--release[Release build]'

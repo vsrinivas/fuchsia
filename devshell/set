@@ -36,7 +36,7 @@
 ##   --board               Use the listed board target definition.
 ##   --product             Include the listed product in the build. Defaults to
 ##                         the default product for the current layer (e.g.,
-##                         "garnet/packages/default.gni" for the Garnet layer).
+##                         "garnet/products/default.gni" for the Garnet layer).
 ##   --available           Additional packages to be built and included in the
 ##                         set of packages available for pushing dynamically.
 ##                         If the --available argument is given multiple times,
