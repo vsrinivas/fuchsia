@@ -134,7 +134,7 @@ zx_status_t TestFuzzer::Execute() {
     fbl::String package, target;
     const char* s = args_.first();
     executable_.Set(s);
-    if (strcmp(s, "/system/bin/run") != 0) {
+    if (strcmp(s, "/bin/run") != 0) {
         // BootFS path
         // .../boot/test/fuzz/<target>
         package.Set("zircon_fuzzers");

@@ -330,7 +330,7 @@ void Fuzzer::FindFuzzers(const fbl::String& name, StringMap* out) {
 void Fuzzer::GetArgs(StringList* out) {
     out->clear();
     if (strstr(target_.c_str(), "fuchsia-pkg://fuchsia.com/") == target_.c_str()) {
-        out->push_back("/system/bin/run");
+        out->push_back("/bin/run");
     }
     out->push_back(target_);
     const char* key;
@@ -372,7 +372,16 @@ zx_status_t Fuzzer::Execute() {
     // in the correct namespace name, /pkg/bin/<binary>.
     if ((rc = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, argv[0], argv,
                          process_.reset_and_get_address())) != ZX_OK) {
-        fprintf(err_, "Failed to spawn '%s': %s\n", argv[0], zx_status_get_string(rc));
+        Path path;
+        if (strcmp(argv[0], "/bin/run") != 0) {
+            fprintf(err_, "Failed to spawn '%s': %s\n", argv[0], zx_status_get_string(rc));
+        } else if (GetPackagePath("run", &path) != ZX_OK) {
+            fprintf(err_, "Required package 'run' is missing.\n");
+        } else if (argc > 1) {
+            fprintf(err_, "Failed to spawn '%s': %s\n", argv[1], zx_status_get_string(rc));
+        } else {
+            fprintf(err_, "Malformed command line: '%s'\n", argv[0]);
+        }
         return rc;
     }
 
