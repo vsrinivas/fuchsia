@@ -584,8 +584,16 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevcoordinatorConnection* c
     char buffer[512];
     const char* path = mkdevpath(conn->dev, buffer, sizeof(buffer));
 
-    // TODO(ZX-3073): Double-check that Open (the only message we forward)
-    // cannot be mistaken for an internal dev coordinator RPC message
+    // Double-check that Open (the only message we forward) cannot be mistaken for an
+    // internal dev coordinator RPC message.
+    static_assert(
+        fuchsia_device_manager_ControllerCreateDeviceStubOrdinal !=
+            fuchsia_io_DirectoryOpenOrdinal &&
+        fuchsia_device_manager_ControllerCreateDeviceOrdinal != fuchsia_io_DirectoryOpenOrdinal &&
+        fuchsia_device_manager_ControllerBindDriverOrdinal != fuchsia_io_DirectoryOpenOrdinal &&
+        fuchsia_device_manager_ControllerConnectProxyOrdinal != fuchsia_io_DirectoryOpenOrdinal &&
+        fuchsia_device_manager_ControllerSuspendOrdinal != fuchsia_io_DirectoryOpenOrdinal &&
+        fuchsia_device_manager_ControllerRemoveDeviceOrdinal != fuchsia_io_DirectoryOpenOrdinal);
 
     auto hdr = static_cast<fidl_message_header_t*>(fidl_msg.bytes);
     if (hdr->ordinal == fuchsia_io_DirectoryOpenOrdinal) {
