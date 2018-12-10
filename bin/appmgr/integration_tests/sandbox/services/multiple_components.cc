@@ -17,8 +17,8 @@
 // This test runs multiple components in the same environment, and checks that
 // their service sandboxes are isolated.
 TEST_F(NamespaceTest, MultipleComponents) {
-  static const std::vector<const char*> kTests = {"some_services",
-                                                  "no_services"};
+  static const std::vector<const char*> kTests = {"fuchsia-pkg://fuchsia.com/some_services#meta/some_services.cmx",
+                                                  "fuchsia-pkg://fuchsia.com/no_services#meta/no_services.cmx"};
 
   int num_running = kTests.size();
   std::vector<fuchsia::sys::ComponentControllerPtr> controllers;
