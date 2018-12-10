@@ -205,7 +205,7 @@ magma_status_t magma_unmap(magma_connection_t* connection, magma_buffer_t buffer
     return MAGMA_STATUS_OK;
 }
 
-void magma_map_buffer_gpu(struct magma_connection_t* connection, magma_buffer_t buffer,
+void magma_map_buffer_gpu(magma_connection_t* connection, magma_buffer_t buffer,
                           uint64_t page_offset, uint64_t page_count, uint64_t gpu_va,
                           uint64_t map_flags)
 {
@@ -215,15 +215,14 @@ void magma_map_buffer_gpu(struct magma_connection_t* connection, magma_buffer_t 
         ->MapBufferGpu(buffer_id, gpu_va, page_offset, page_count, map_flags);
 }
 
-void magma_unmap_buffer_gpu(struct magma_connection_t* connection, magma_buffer_t buffer,
-                            uint64_t gpu_va)
+void magma_unmap_buffer_gpu(magma_connection_t* connection, magma_buffer_t buffer, uint64_t gpu_va)
 {
     auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
     uint64_t buffer_id = platform_buffer->id();
     magma::PlatformConnectionClient::cast(connection)->UnmapBufferGpu(buffer_id, gpu_va);
 }
 
-void magma_commit_buffer(struct magma_connection_t* connection, magma_buffer_t buffer,
+void magma_commit_buffer(magma_connection_t* connection, magma_buffer_t buffer,
                          uint64_t page_offset, uint64_t page_count)
 {
     auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
@@ -252,8 +251,7 @@ magma_status_t magma_create_command_buffer(magma_connection_t* connection, uint6
     return MAGMA_STATUS_OK;
 }
 
-void magma_release_command_buffer(struct magma_connection_t* connection,
-                                  magma_buffer_t command_buffer)
+void magma_release_command_buffer(magma_connection_t* connection, magma_buffer_t command_buffer)
 {
     delete reinterpret_cast<magma::PlatformBuffer*>(command_buffer);
 }

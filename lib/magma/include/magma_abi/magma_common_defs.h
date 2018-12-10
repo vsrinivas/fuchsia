@@ -59,9 +59,9 @@ typedef uintptr_t magma_buffer_t;
 
 typedef uintptr_t magma_semaphore_t;
 
-struct magma_connection_t {
+typedef struct magma_connection {
     uint32_t magic_;
-};
+} magma_connection_t;
 
 // a relocation entry that informs the system driver how to patch GPU virtual addresses
 // in an exec resource. The 32 bit word at offset in the buffer will be overwritten with

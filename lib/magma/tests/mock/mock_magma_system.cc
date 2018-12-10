@@ -114,22 +114,22 @@ magma_status_t magma_create_command_buffer(magma_connection_t* connection, uint6
     return magma_create_buffer(connection, size, &size_out, buffer_out);
 }
 
-void magma_release_command_buffer(struct magma_connection_t* connection,
-                                  magma_buffer_t command_buffer)
+void magma_release_command_buffer(magma_connection_t* connection, magma_buffer_t command_buffer)
 {
     magma_release_buffer(connection, command_buffer);
 }
 
-void magma_submit_command_buffer(struct magma_connection_t* connection, uint64_t command_buffer_id,
+void magma_submit_command_buffer(magma_connection_t* connection, uint64_t command_buffer_id,
                                  uint32_t context_id)
 {
     DLOG("magma_system submit command buffer - STUB");
 }
 
-void magma_execute_immediate_commands(struct magma_connection_t* connection, uint32_t context_id,
+void magma_execute_immediate_commands(magma_connection_t* connection, uint32_t context_id,
                                       uint64_t command_count,
                                       struct magma_system_inline_command_buffer* command_buffers)
-{}
+{
+}
 
 magma_status_t magma_export(magma_connection_t* connection, magma_buffer_t buffer,
                             uint32_t* buffer_handle_out)
@@ -195,22 +195,20 @@ magma_status_t magma_import_semaphore(magma_connection_t* connection, uint32_t s
     return MAGMA_STATUS_OK;
 }
 
-void magma_map_buffer_gpu(struct magma_connection_t* connection, magma_buffer_t buffer,
-                          uint64_t gpu_va, uint64_t page_offset, uint64_t page_count,
-                          uint64_t map_flags)
+void magma_map_buffer_gpu(magma_connection_t* connection, magma_buffer_t buffer, uint64_t gpu_va,
+                          uint64_t page_offset, uint64_t page_count, uint64_t map_flags)
 {
 }
 
-void magma_unmap_buffer_gpu(struct magma_connection_t* connection, magma_buffer_t buffer,
-                          uint64_t gpu_va)
+void magma_unmap_buffer_gpu(magma_connection_t* connection, magma_buffer_t buffer, uint64_t gpu_va)
 {
 }
 
-int32_t magma_get_notification_channel_fd(struct magma_connection_t* connection) { return 0; }
+int32_t magma_get_notification_channel_fd(magma_connection_t* connection) { return 0; }
 
 // Read a notification from the channel into |buffer|. Sets |*buffer_size_out| to 0 if there are no
 // messages pending.
-magma_status_t magma_read_notification_channel(struct magma_connection_t* connection, void* buffer,
+magma_status_t magma_read_notification_channel(magma_connection_t* connection, void* buffer,
                                                uint64_t buffer_size, uint64_t* buffer_size_out)
 {
     return MAGMA_STATUS_UNIMPLEMENTED;

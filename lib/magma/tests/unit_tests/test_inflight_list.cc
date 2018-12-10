@@ -21,12 +21,12 @@ struct TestConnection : public magma_connection_t {
 
 extern "C" {
 
-int32_t magma_get_notification_channel_fd(struct magma_connection_t* connection)
+int32_t magma_get_notification_channel_fd(magma_connection_t* connection)
 {
     return static_cast<TestConnection*>(connection)->fd;
 }
 
-magma_status_t magma_read_notification_channel(struct magma_connection_t* connection, void* buffer,
+magma_status_t magma_read_notification_channel(magma_connection_t* connection, void* buffer,
                                                uint64_t buffer_size, uint64_t* buffer_size_out)
 {
     uint32_t buffer_actual_size;
@@ -44,7 +44,7 @@ magma_status_t magma_read_notification_channel(struct magma_connection_t* connec
 
 // Read a notification from the channel into |buffer|. Sets |*buffer_size_out| to 0 if there are no
 // messages pending.
-magma_status_t magma_read_notification_channel(struct magma_connection_t* connection, void* buffer,
+magma_status_t magma_read_notification_channel(magma_connection_t* connection, void* buffer,
                                                uint64_t buffer_size, uint64_t* buffer_size_out);
 
 TEST(MagmaUtil, InflightList)
