@@ -4,6 +4,8 @@
 
 #include "zircon_platform_connection.h"
 
+#include <mutex>
+
 #include "platform_connection_client.h"
 #include <fuchsia/gpu/magma/c/fidl.h>
 #include <lib/fdio/io.h>
@@ -163,6 +165,11 @@ public:
 
     magma_status_t GetError() override
     {
+        // We need a lock around the channel write and read, because otherwise it's possible two
+        // threads will send the GetErrorOp, the first WaitError will get a response and read it,
+        // and the second WaitError will wake up because of the first response and error out because
+        // there's no message available to read yet.
+        std::lock_guard<std::mutex> lock(get_error_lock_);
         magma_status_t result = error_;
         error_ = 0;
         if (result != MAGMA_STATUS_OK)
@@ -225,6 +232,7 @@ public:
 
     void SetError(magma_status_t error)
     {
+        std::lock_guard<std::mutex> lock(get_error_lock_);
         if (!error_)
             error_ = DRET_MSG(error, "ZirconPlatformConnectionClient encountered dispatcher error");
     }
@@ -310,7 +318,8 @@ private:
     zx::channel channel_;
     zx::channel notification_channel_;
     uint32_t next_context_id_ = 1;
-    magma_status_t error_{};
+    std::mutex get_error_lock_;
+    MAGMA_GUARDED(get_error_lock_) magma_status_t error_{};
 };
 
 std::unique_ptr<PlatformConnectionClient>

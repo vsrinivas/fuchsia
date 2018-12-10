@@ -170,6 +170,19 @@ public:
         EXPECT_EQ(client_connection_->GetError(), 0);
     }
 
+    void TestMultipleGetError()
+    {
+        std::vector<std::thread> threads;
+        for (uint32_t i = 0; i < 1000; i++) {
+            threads.push_back(std::thread(
+                [this]() { EXPECT_EQ(MAGMA_STATUS_OK, client_connection_->GetError()); }));
+        }
+
+        for (auto& thread : threads) {
+            thread.join();
+        }
+    }
+
     static uint64_t test_buffer_id;
     static uint32_t test_context_id;
     static uint64_t test_semaphore_id;
@@ -411,4 +424,11 @@ TEST(PlatformConnection, ExecuteImmediateCommands)
     auto Test = TestPlatformConnection::Create();
     ASSERT_NE(Test, nullptr);
     Test->TestExecuteImmediateCommands();
+}
+
+TEST(PlatformConnection, MultipleGetError)
+{
+    auto Test = TestPlatformConnection::Create();
+    ASSERT_NE(Test, nullptr);
+    Test->TestMultipleGetError();
 }
