@@ -5,6 +5,12 @@
 import("//build/banjo/toolchain.gni")
 import("//build/fidl/toolchain.gni")
 import("//build/sdk/sdk.gni")
+import("//build/sdk/sdk_documentation.gni")
+
+declare_args() {
+  # Identifier for the Garnet SDK.
+  sdk_id = ""
+}
 
 sdk("zircon_sysroot") {
   category = "partner"
@@ -66,6 +72,26 @@ sdk("ddk") {
     "//zircon/public/tool/fidl-format:fidl-format_sdk($host_toolchain)",
     "//zircon/public/tool/fidlc:fidlc_sdk($host_toolchain)",
   ]
+}
+
+has_sdk_id = sdk_id != ""
+
+if (has_sdk_id) {
+  sdk_id_file = "$target_gen_dir/sdk_id.txt"
+  write_file(sdk_id_file, sdk_id)
+
+  sdk_documentation("sdk_id") {
+    name = "sdk_id"
+
+    category = "partner"
+
+    files = [
+      {
+        source = sdk_id_file
+        dest = "meta/id.txt"
+      }
+    ]
+  }
 }
 
 sdk("garnet") {
@@ -133,6 +159,12 @@ sdk("garnet") {
     "//zircon/public/tool/netruncmd:netruncmd_sdk($host_toolchain)",
     "//zircon/public/tool/zbi:zbi_sdk($host_toolchain)",
   ]
+
+  if (has_sdk_id) {
+    deps += [
+      ":sdk_id",
+    ]
+  }
 
   # We explicitly do not want to pull these dependencies into the SDK.
   #
