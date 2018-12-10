@@ -12,7 +12,7 @@
 
 #include <launchpad/launchpad.h>
 #include <launchpad/vmo.h>
-#include <lib/zircon-internal/crashlogger.h>
+#include <lib/backtrace-request/backtrace-request.h>
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
 #include <zircon/process.h>
@@ -1229,7 +1229,7 @@ int __NO_INLINE test_segfault() {
 // to request a backtrace but not terminate the process.
 int __NO_INLINE test_swbreak() {
     unittest_printf("Invoking s/w breakpoint instruction\n");
-    zx_crashlogger_request_backtrace();
+    backtrace_request();
     unittest_printf("Resumed after s/w breakpoint instruction\n");
     return 0;
 }

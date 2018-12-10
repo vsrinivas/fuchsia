@@ -15,6 +15,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/utils.cpp
 
 MODULE_STATIC_LIBS := \
+    system/ulib/backtrace-request \
     system/ulib/runtime \
     system/ulib/fbl \
     system/ulib/zircon-internal
