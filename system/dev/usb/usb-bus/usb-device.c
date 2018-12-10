@@ -233,7 +233,8 @@ static zx_status_t usb_device_control(void* ctx, uint8_t request_type, uint8_t r
     return status;
 }
 
-static void usb_device_request_queue(void* ctx, usb_request_t* req) {
+static void usb_device_request_queue(void* ctx, usb_request_t* req, usb_request_complete_cb cb,
+                                     void* cookie) {
     usb_device_t* dev = ctx;
 
     req->header.device_id = dev->device_id;

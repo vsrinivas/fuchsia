@@ -129,9 +129,10 @@ static zx_status_t usb_interface_control(void* ctx, uint8_t request_type, uint8_
                               timeout, out_length);
 }
 
-static void usb_interface_request_queue(void* ctx, usb_request_t* usb_request) {
+static void usb_interface_request_queue(void* ctx, usb_request_t* usb_request,
+                                        usb_request_complete_cb cb, void* cookie) {
     usb_interface_t* intf = ctx;
-    usb_request_queue(&intf->comp->usb, usb_request);
+    usb_request_queue(&intf->comp->usb, usb_request, cb, cookie);
 }
 
 static zx_status_t usb_interface_configure_batch_callback(void* ctx, uint8_t ep_address,

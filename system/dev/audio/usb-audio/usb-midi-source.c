@@ -68,7 +68,7 @@ static void usb_midi_source_read_complete(usb_request_t* req, void* cookie) {
                                                    source->parent_req_size);
         ZX_DEBUG_ASSERT(status == ZX_OK);
     } else {
-        usb_request_queue(&source->usb, req);
+        usb_request_queue(&source->usb, req, usb_midi_source_read_complete, source);
     }
     update_signals(source);
     mtx_unlock(&source->mutex);
@@ -115,11 +115,11 @@ static zx_status_t usb_midi_source_open(void* ctx, zx_device_t** dev_out, uint32
     usb_request_t* req;
     while ((req = usb_req_list_remove_head(&source->completed_reads,
                                            source->parent_req_size)) != NULL) {
-        usb_request_queue(&source->usb, req);
+        usb_request_queue(&source->usb, req, usb_midi_source_read_complete, source);
     }
     while ((req = usb_req_list_remove_head(&source->free_read_reqs,
                                            source->parent_req_size)) != NULL) {
-        usb_request_queue(&source->usb, req);
+        usb_request_queue(&source->usb, req, usb_midi_source_read_complete, source);
     }
     mtx_unlock(&source->mutex);
 
@@ -165,7 +165,7 @@ static zx_status_t usb_midi_source_read(void* ctx, void* data, size_t len, zx_of
     ZX_DEBUG_ASSERT(status == ZX_OK);
     while ((req = usb_req_list_remove_head(&source->free_read_reqs,
                                            source->parent_req_size)) != NULL) {
-        usb_request_queue(&source->usb, req);
+        usb_request_queue(&source->usb, req, usb_midi_source_read_complete, source);
     }
 
 out:

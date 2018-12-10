@@ -119,6 +119,7 @@ private:
     void QueueRequestLocked() __TA_REQUIRES(req_lock_);
     void CompleteRequestLocked(usb_request_t* req) __TA_REQUIRES(req_lock_);
 
+    static void RequestCompleteCallback(usb_request_t* request, void* cookie);
     UsbAudioDevice& parent_;
     const fbl::unique_ptr<UsbAudioStreamInterface> ifc_;
     char log_prefix_[LOG_PREFIX_STORAGE] = { 0 };
