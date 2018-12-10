@@ -277,7 +277,7 @@ static void print_help(FILE* f) {
     fprintf(f, " -T             Include threads in the output\n");
     fprintf(f, " --units=?      Fix all sizes to the named unit\n");
     fprintf(f, "                where ? is one of [BkMGTPE]\n");
-    fprintf(f, " --job=?        Show the the given job and subjobs\n");
+    fprintf(f, " --job=?        Show the given job and subjobs\n");
     fprintf(f, "                where ? is the job id.\n");
 }
 
