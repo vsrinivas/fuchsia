@@ -16,7 +16,7 @@ use fuchsia_app::server::{ServiceFactory, ServicesServer};
 use fuchsia_async as fasync;
 use futures::prelude::*;
 use parking_lot::Mutex;
-use wayland::{WlCompositor, WlOutput, WlSeat, WlShm, WlSubcompositor};
+use wayland::{WlCompositor, WlDataDeviceManager, WlOutput, WlSeat, WlShm, WlSubcompositor};
 
 mod client;
 mod object;
@@ -25,6 +25,8 @@ mod registry;
 use crate::registry::*;
 mod compositor;
 use crate::compositor::*;
+mod data_device_manager;
+use crate::data_device_manager::*;
 mod display;
 use crate::display::*;
 mod frontend;
@@ -88,6 +90,11 @@ impl WaylandDispatcher {
                 // announce the set of supported shm pixel formats.
                 shm.post_formats(id, client)?;
                 Ok(Box::new(RequestDispatcher::new(shm)))
+            });
+        }
+        {
+            registry.add_global(WlDataDeviceManager, move |_, _| {
+                Ok(Box::new(RequestDispatcher::new(DataDeviceManager::new())))
             });
         }
         Ok(WaylandDispatcher {
