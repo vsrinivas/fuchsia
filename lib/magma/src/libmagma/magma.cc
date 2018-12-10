@@ -3,12 +3,14 @@
 // found in the LICENSE file.
 
 #include "magma.h"
+#include "magma_sysmem.h"
 #include "magma_util/command_buffer.h"
 #include "magma_util/macros.h"
 #include "platform_connection.h"
 #include "platform_connection_client.h"
 #include "platform_port.h"
 #include "platform_semaphore.h"
+#include "platform_sysmem_connection.h"
 #include "platform_thread.h"
 #include "platform_trace.h"
 #include <chrono>
@@ -414,5 +416,82 @@ magma_status_t magma_import_semaphore(magma_connection_t* connection, uint32_t s
 
     *semaphore_out = reinterpret_cast<magma_semaphore_t>(platform_semaphore.release());
 
+    return MAGMA_STATUS_OK;
+}
+
+magma_status_t magma_sysmem_connection_create(magma_sysmem_connection_t* connection_out)
+{
+    auto platform_connection = magma::PlatformSysmemConnection::Create();
+    if (!platform_connection) {
+        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to create sysmem connection");
+    }
+    *connection_out = reinterpret_cast<magma_sysmem_connection_t>(platform_connection.release());
+    return MAGMA_STATUS_OK;
+}
+
+void magma_sysmem_connection_release(magma_sysmem_connection_t connection)
+{
+    delete reinterpret_cast<magma::PlatformSysmemConnection*>(connection);
+}
+
+magma_status_t magma_sysmem_allocate_buffer(magma_sysmem_connection_t connection, uint32_t flags,
+                                            uint64_t size, uint32_t* buffer_handle_out)
+{
+    std::unique_ptr<magma::PlatformBuffer> buffer;
+    auto sysmem_connection = reinterpret_cast<magma::PlatformSysmemConnection*>(connection);
+
+    magma_status_t result;
+    result = sysmem_connection->AllocateBuffer(flags, size, &buffer);
+    if (result != MAGMA_STATUS_OK) {
+        return DRET_MSG(result, "AllocateBuffer failed: %d", result);
+    }
+
+    if (!buffer->duplicate_handle(buffer_handle_out)) {
+        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "duplicate_handle failed");
+    }
+    return MAGMA_STATUS_OK;
+}
+
+magma_status_t
+magma_sysmem_allocate_texture(magma_sysmem_connection_t connection, uint32_t flags, uint32_t format,
+                              uint32_t width, uint32_t height, uint32_t* buffer_handle_out,
+                              magma_buffer_format_description_t* buffer_format_description_out)
+{
+    std::unique_ptr<magma::PlatformBuffer> buffer;
+    auto sysmem_connection = reinterpret_cast<magma::PlatformSysmemConnection*>(connection);
+
+    *buffer_format_description_out = 0;
+    std::unique_ptr<magma::PlatformSysmemConnection::BufferDescription> description;
+    magma_status_t result;
+    result =
+        sysmem_connection->AllocateTexture(flags, format, width, height, &buffer, &description);
+    if (result != MAGMA_STATUS_OK) {
+        return DRET_MSG(result, "AllocateTexture failed: %d", result);
+    }
+
+    if (!buffer->duplicate_handle(buffer_handle_out)) {
+        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "duplicate_handle failed");
+    }
+
+    *buffer_format_description_out =
+        reinterpret_cast<magma_buffer_format_description_t>(description.release());
+    return MAGMA_STATUS_OK;
+}
+
+void magma_buffer_format_description_release(magma_buffer_format_description_t description)
+{
+    delete reinterpret_cast<magma::PlatformSysmemConnection::BufferDescription*>(description);
+}
+
+// |image_planes_out| must be an array with MAGMA_MAX_IMAGE_PLANES elements.
+magma_status_t magma_get_buffer_format_plane_info(magma_buffer_format_description_t description,
+                                                  magma_image_plane_t* image_planes_out)
+{
+    if (!description) {
+        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Null description");
+    }
+    auto buffer_description =
+        reinterpret_cast<magma::PlatformSysmemConnection::BufferDescription*>(description);
+    memcpy(image_planes_out, buffer_description->planes, sizeof(buffer_description->planes));
     return MAGMA_STATUS_OK;
 }

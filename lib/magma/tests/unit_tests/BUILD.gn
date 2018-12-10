@@ -74,6 +74,7 @@ source_set("magma_platform_tests") {
     "test_platform_port.cc",
     "test_platform_random.cc",
     "test_platform_semaphore.cc",
+    "test_platform_sysmem_connection.cc",
     "test_platform_thread.cc",
   ]
   deps = [
@@ -85,6 +86,7 @@ source_set("magma_platform_tests") {
     "$magma_build_root/src/magma_util/platform:port",
     "$magma_build_root/src/magma_util/platform:random",
     "$magma_build_root/src/magma_util/platform:semaphore",
+    "$magma_build_root/src/magma_util/platform:sysmem_connection",
     "$magma_build_root/src/magma_util/platform:thread",
     "//third_party/googletest:gtest",
   ]

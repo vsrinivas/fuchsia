@@ -46,6 +46,13 @@ extern "C" {
 // Start perf counter recording
 #define MAGMA_DUMP_TYPE_PERF_COUNTER_ENABLE (1 << 2)
 
+#define MAGMA_FORMAT_R8G8B8A8 0
+
+#define MAGMA_SYSMEM_FLAG_PROTECTED (1 << 0)
+#define MAGMA_SYSMEM_FLAG_DISPLAY (1 << 1)
+
+#define MAGMA_MAX_IMAGE_PLANES 4
+
 typedef int32_t magma_status_t;
 
 // Normal bool doesn't have to be a particular size.
@@ -62,6 +69,10 @@ typedef uintptr_t magma_semaphore_t;
 typedef struct magma_connection {
     uint32_t magic_;
 } magma_connection_t;
+
+typedef uintptr_t magma_sysmem_connection_t;
+
+typedef uintptr_t magma_buffer_format_description_t;
 
 // a relocation entry that informs the system driver how to patch GPU virtual addresses
 // in an exec resource. The 32 bit word at offset in the buffer will be overwritten with
@@ -108,6 +119,11 @@ enum MAGMA_GPU_MAP_FLAGS {
 
     MAGMA_GPU_MAP_FLAG_VENDOR_MASK = (0xffff << MAGMA_GPU_MAP_FLAG_VENDOR_SHIFT),
 };
+
+typedef struct magma_image_plane {
+    uint32_t bytes_per_row;
+    uint32_t byte_offset;
+} magma_image_plane_t;
 
 #if defined(__cplusplus)
 }

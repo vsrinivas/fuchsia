@@ -4,7 +4,6 @@
 
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
-
 source_set("address_range") {
   configs += [ "..:platform_include_config" ]
 
@@ -153,6 +152,22 @@ source_set("connection") {
     "$zircon_build_root/public/lib/async-loop-cpp",
     "$zircon_build_root/public/lib/zx",
     "..:connection_header",
+  ]
+}
+
+source_set("sysmem_connection") {
+  configs += [ "..:platform_include_config" ]
+
+  sources = [
+    "zircon_platform_sysmem_connection.cc",
+  ]
+
+  deps = [
+    ":buffer",
+    "..:sysmem_connection_header",
+    "//zircon/public/fidl/fuchsia-sysmem",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
   ]
 }
 

@@ -14,6 +14,7 @@ source_set("magma_abi") {
 
   sources = [
     "magma_abi/magma.h",
+    "magma_abi/magma_sysmem.h",
   ]
 
   public_deps = [

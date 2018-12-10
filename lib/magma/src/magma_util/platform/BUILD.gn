@@ -301,3 +301,26 @@ source_set("trace") {
 
   allow_circular_includes_from = [ "zircon:trace" ]
 }
+
+source_set("sysmem_connection_header") {
+  public_configs = [ "$magma_build_root:magma_src_include_config" ]
+
+  sources = [
+    "platform_sysmem_connection.h",
+  ]
+
+  public_deps = [
+    ":buffer",
+    "$magma_build_root/src/magma_util:common",
+    "//garnet/lib/magma/include:magma_abi",
+  ]
+}
+
+source_set("sysmem_connection") {
+  public_deps = [
+    ":sysmem_connection_header",
+  ]
+  deps = [
+    "zircon:sysmem_connection",
+  ]
+}
