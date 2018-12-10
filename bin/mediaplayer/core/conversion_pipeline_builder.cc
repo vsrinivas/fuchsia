@@ -20,7 +20,7 @@ int Score(const AudioStreamType& in_type,
   // TODO(dalesat): Plenty of room for more subtlety here. Maybe actually
   // measure conversion costs (cpu, quality, etc) and reflect them here.
 
-  int score = 1;  // We can convert anything, so 1 is the minimum score.
+  int score = 0;
 
   if (in_type.sample_format() == out_type_set.sample_format() ||
       out_type_set.sample_format() == AudioStreamType::SampleFormat::kAny) {
@@ -30,19 +30,21 @@ int Score(const AudioStreamType& in_type,
     // Prefer higher-quality formats.
     switch (out_type_set.sample_format()) {
       case AudioStreamType::SampleFormat::kUnsigned8:
-        break;
-      case AudioStreamType::SampleFormat::kSigned16:
         score += 1;
         break;
-      case AudioStreamType::SampleFormat::kSigned24In32:
+      case AudioStreamType::SampleFormat::kSigned16:
         score += 2;
         break;
-      case AudioStreamType::SampleFormat::kFloat:
+      case AudioStreamType::SampleFormat::kSigned24In32:
         score += 3;
+        break;
+      case AudioStreamType::SampleFormat::kFloat:
+        score += 4;
         break;
       default:
         FXL_DCHECK(false) << "unsupported sample format "
                           << out_type_set.sample_format();
+        return 0;
     }
   }
 
@@ -150,8 +152,8 @@ void Builder::Build() {
       }
       break;
     default:
-      FXL_DCHECK(false) << "conversion not supported for medium"
-                        << type_->medium();
+      FXL_DLOG(ERROR) << "conversion not supported for medium"
+                      << type_->medium();
       Fail();
       break;
   }
@@ -228,7 +230,7 @@ void Builder::AddTransformsForLpcm(const AudioStreamType& audio_type,
   if (audio_type.sample_format() != out_type_set.sample_format() &&
       out_type_set.sample_format() != AudioStreamType::SampleFormat::kAny) {
     // TODO(dalesat): Insert sample format converter.
-    FXL_DCHECK(false)
+    FXL_DLOG(ERROR)
         << "conversion requires sample format change - not supported";
     Fail();
     return;
@@ -236,7 +238,7 @@ void Builder::AddTransformsForLpcm(const AudioStreamType& audio_type,
 
   if (!out_type_set.channels().contains(audio_type.channels())) {
     // TODO(dalesat): Insert mixdown/up transform.
-    FXL_DCHECK(false) << "conversion requires mixdown/up - not supported";
+    FXL_DLOG(ERROR) << "conversion requires mixdown/up - not supported";
     Fail();
     return;
   }
@@ -244,7 +246,7 @@ void Builder::AddTransformsForLpcm(const AudioStreamType& audio_type,
   if (!out_type_set.frames_per_second().contains(
           audio_type.frames_per_second())) {
     // TODO(dalesat): Insert resampler.
-    FXL_DCHECK(false) << "conversion requires resampling - not supported";
+    FXL_DLOG(ERROR) << "conversion requires resampling - not supported";
     Fail();
     return;
   }
@@ -265,7 +267,7 @@ void Builder::AddTransformsForLpcm(const AudioStreamType& audio_type) {
       FindBestLpcm(audio_type, out_type_sets_);
   if (best == nullptr) {
     // TODO(dalesat): Support a compressed output type by encoding.
-    FXL_DCHECK(false) << "conversion using encoder not supported";
+    FXL_DLOG(ERROR) << "conversion using encoder not supported";
     Fail();
     return;
   }
