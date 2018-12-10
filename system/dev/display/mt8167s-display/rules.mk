@@ -9,7 +9,6 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/bind.c \
     $(LOCAL_DIR)/mt8167s-display.cpp \
 
 MODULE_STATIC_LIBS := \

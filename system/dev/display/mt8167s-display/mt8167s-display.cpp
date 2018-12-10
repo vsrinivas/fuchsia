@@ -7,7 +7,8 @@
 #include <fbl/auto_call.h>
 #include <lib/zx/pmt.h>
 #include <zircon/pixelformat.h>
-
+#include <ddk/binding.h>
+#include <ddk/platform-defs.h>
 namespace mt8167s_display {
 
 namespace {
@@ -263,10 +264,8 @@ zx_status_t Mt8167sDisplay::Bind() {
     return ZX_OK;
 }
 
-} // namespace mt8167s_display
-
 // main bind function called from dev manager
-extern "C" zx_status_t display_bind(void* ctx, zx_device_t* parent) {
+zx_status_t display_bind(void* ctx, zx_device_t* parent) {
     fbl::AllocChecker ac;
     auto dev = fbl::make_unique_checked<mt8167s_display::Mt8167sDisplay>(&ac, parent, DISPLAY_WIDTH,
                                                                          DISPLAY_HEIGHT);
@@ -280,3 +279,20 @@ extern "C" zx_status_t display_bind(void* ctx, zx_device_t* parent) {
     }
     return status;
 }
+
+static zx_driver_ops_t display_ops = [](){
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = display_bind;
+    return ops;
+}();
+
+} // namespace mt8167s_display
+
+// clang-format off
+ZIRCON_DRIVER_BEGIN(mt8167s_display, mt8167s_display::display_ops, "zircon", "0.1", 4)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MEDIATEK),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_MEDIATEK_8167S_REF),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_DISPLAY),
+ZIRCON_DRIVER_END(mt8167s_display)
