@@ -9,7 +9,7 @@
 #include <vulkan/vulkan.hpp>
 
 #include "lib/escher/resources/resource.h"
-#include "lib/escher/resources/resource_manager.h"
+#include "lib/escher/resources/resource_recycler.h"
 
 namespace escher {
 namespace impl {
@@ -48,7 +48,7 @@ typedef fxl::RefPtr<DescriptorSetAllocation> DescriptorSetAllocationPtr;
 // a particular CommandBuffer.  When that CommandBuffer is retired, all such
 // DescriptorSets are returned to the pool from which they originated, so that
 // they can be reused.
-class DescriptorSetPool : public ResourceManager {
+class DescriptorSetPool : public ResourceRecycler {
  public:
   DescriptorSetPool(EscherWeakPtr escher,
                     const vk::DescriptorSetLayoutCreateInfo& layout_info,
@@ -65,8 +65,8 @@ class DescriptorSetPool : public ResourceManager {
   vk::DescriptorSetLayout layout() const { return layout_; }
 
  private:
-  // Implement Owner::OnReceiveOwnable().
-  void OnReceiveOwnable(std::unique_ptr<Resource> resource) override;
+  // |ResourceRecycler|
+  void RecycleResource(std::unique_ptr<Resource> resource) override;
 
   // Create a new vk::DescriptorPool, and use it to allocate the specified
   // number of vk::DescriptorSets, which are then added to free_sets_.

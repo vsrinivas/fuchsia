@@ -147,8 +147,6 @@ class CommandBuffer {
   const vk::Fence fence_;
   const vk::PipelineStageFlags pipeline_stage_mask_;
 
-  std::vector<ResourcePtr> used_resources_;
-
   std::vector<SemaphorePtr> wait_semaphores_;
   std::vector<vk::PipelineStageFlags> wait_semaphore_stages_;
   std::vector<vk::Semaphore> wait_semaphores_for_submit_;

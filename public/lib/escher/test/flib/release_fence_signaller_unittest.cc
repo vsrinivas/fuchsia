@@ -12,9 +12,17 @@
 namespace escher {
 namespace test {
 
-class ReleaseFenceSignallerTest
-    : public ::testing::Test,
-      protected escher::impl::CommandBufferSequencerController {};
+class ReleaseFenceSignallerTest : public ::testing::Test {
+ public:
+  uint64_t GenerateNextCommandBufferSequenceNumber(
+      impl::CommandBufferSequencer* sequencer) {
+    return sequencer->GenerateNextCommandBufferSequenceNumber();
+  }
+  void CommandBufferFinished(impl::CommandBufferSequencer* sequencer,
+                             uint64_t num) {
+    sequencer->CommandBufferFinished(num);
+  }
+};
 
 TEST_F(ReleaseFenceSignallerTest, FencesSignalledProperly) {
   escher::impl::CommandBufferSequencer sequencer;

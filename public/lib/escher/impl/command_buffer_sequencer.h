@@ -9,9 +9,12 @@
 #include <vector>
 
 namespace escher {
-namespace impl {
 
-class CommandBufferSequencer;
+namespace test {
+class ReleaseFenceSignallerTest;
+}
+
+namespace impl {
 
 // Listener that can be registered with CommandBufferSequencer.
 class CommandBufferSequencerListener {
@@ -21,11 +24,6 @@ class CommandBufferSequencerListener {
   // Notify the listener that all command buffers with seq # <= sequence_number
   // have finished executing on the GPU.
   virtual void OnCommandBufferFinished(uint64_t sequence_number) = 0;
-
- protected:
-  // Allow subclasses to register/unregister themselves.
-  void Register(CommandBufferSequencer* sequencer);
-  void Unregister(CommandBufferSequencer* sequencer);
 };
 
 // CommandBufferSequencer is responsible for global sequencing of CommandBuffers
@@ -41,12 +39,14 @@ class CommandBufferSequencer {
   // monotonically-increasing.
   uint64_t latest_sequence_number() { return latest_sequence_number_; }
 
- private:
-  // Allow listeners to register/unregister themselves.
-  friend class CommandBufferSequencerListener;
+  void AddListener(CommandBufferSequencerListener* listener);
+  void RemoveListener(CommandBufferSequencerListener* listener);
 
-  // Special class to only allow privileged classes to call private methods.
-  friend class CommandBufferSequencerController;
+ private:
+  // Only CommandBufferPool, and unit tests, are allowed to generate and finish
+  // sequences.
+  friend class CommandBufferPool;
+  friend class ::escher::test::ReleaseFenceSignallerTest;
 
   // Obtain a monotonically-increasing sequence number for a CommandBuffer that
   // is about to be obtained from a CommandBufferPool.
@@ -68,9 +68,6 @@ class CommandBufferSequencer {
   // notify all registered listeners.
   void CommandBufferFinished(uint64_t sequence_number);
 
-  void AddListener(CommandBufferSequencerListener* listener);
-  void RemoveListener(CommandBufferSequencerListener* listener);
-
   // The last sequence number returned by GenerateNextSequenceNumber().
   uint64_t latest_sequence_number_ = 0;
   // The highest sequence number where its command-buffer, and all command-
@@ -81,18 +78,6 @@ class CommandBufferSequencer {
   std::vector<uint64_t> out_of_sequence_numbers_;
 
   std::vector<CommandBufferSequencerListener*> listeners_;
-};
-
-// Subclassed to be able to call private methods on CommandBufferSequencer.
-class CommandBufferSequencerController {
- protected:
-  uint64_t GenerateNextCommandBufferSequenceNumber(CommandBufferSequencer* s) {
-    return s->GenerateNextCommandBufferSequenceNumber();
-  }
-  void CommandBufferFinished(CommandBufferSequencer* s,
-                             uint64_t sequence_number) {
-    s->CommandBufferFinished(sequence_number);
-  }
 };
 
 }  // namespace impl

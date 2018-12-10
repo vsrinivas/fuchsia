@@ -20,7 +20,7 @@ class CommandBuffer;
 // Manages the lifecycle of CommandBuffers.
 //
 // Not thread-safe.
-class CommandBufferPool : CommandBufferSequencerController {
+class CommandBufferPool {
  public:
   // The CommandBufferPool does not take ownership of the device and queue.
   CommandBufferPool(vk::Device device, vk::Queue queue,

@@ -9,15 +9,13 @@ namespace escher {
 ReleaseFenceSignaller::ReleaseFenceSignaller(
     escher::impl::CommandBufferSequencer* command_buffer_sequencer)
     : command_buffer_sequencer_(command_buffer_sequencer) {
-  // Register ourselves for sequence number updates. Register() is defined in
-  // our superclass CommandBufferSequenceListener.
-  Register(command_buffer_sequencer_);
+  // Register ourselves for sequence number updates.
+  command_buffer_sequencer_->AddListener(this);
 }
 
 ReleaseFenceSignaller::~ReleaseFenceSignaller() {
-  // Unregister ourselves. Unregister() is defined in our superclass
-  // CommandBufferSequenceListener.
-  Unregister(command_buffer_sequencer_);
+  // Unregister ourselves.
+  command_buffer_sequencer_->RemoveListener(this);
 };
 
 void ReleaseFenceSignaller::AddVulkanReleaseFence(zx::event fence) {

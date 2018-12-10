@@ -106,16 +106,7 @@ void CommandBuffer::KeepAlive(Resource* resource) {
     return;
   }
 
-  if (resource->IsKindOf<DescriptorSetAllocation>()) {
-    // TODO(ES-37): DescriptorSetPool will immediately recycle allocations, even
-    // while they're still in use.  Therefore, we must ref the allocations until
-    // the CommandBuffer has completed.  One way to fix this would be for
-    // DescriptorSetPool to become a CommandBufferSequencerListener, similar to
-    // ResourceRecycler.
-    used_resources_.push_back(ResourcePtr(resource));
-  } else {
-    resource->KeepAlive(sequence_number_);
-  }
+  resource->KeepAlive(sequence_number_);
 }
 
 void CommandBuffer::DrawMesh(const MeshPtr& mesh) {
@@ -375,8 +366,6 @@ bool CommandBuffer::Retire() {
   }
   is_active_ = is_submitted_ = false;
   device_.resetFences(1, &fence_);
-
-  used_resources_.clear();
 
   if (callback_) {
     TRACE_DURATION("gfx", "escher::CommandBuffer::Retire::callback");

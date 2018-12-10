@@ -29,7 +29,7 @@ DescriptorSetAllocation::~DescriptorSetAllocation() {
 DescriptorSetPool::DescriptorSetPool(
     EscherWeakPtr escher, const vk::DescriptorSetLayoutCreateInfo& layout_info,
     uint32_t initial_capacity)
-    : ResourceManager(std::move(escher)),
+    : ResourceRecycler(std::move(escher)),
       layout_(ESCHER_CHECKED_VK_RESULT(
           vk_device().createDescriptorSetLayout(layout_info))) {
   std::map<vk::DescriptorType, uint32_t> descriptor_type_counts;
@@ -112,7 +112,7 @@ void DescriptorSetPool::InternalAllocate(uint32_t descriptor_set_count) {
   }
 }
 
-void DescriptorSetPool::OnReceiveOwnable(std::unique_ptr<Resource> resource) {
+void DescriptorSetPool::RecycleResource(std::unique_ptr<Resource> resource) {
   FXL_DCHECK(resource->IsKindOf<DescriptorSetAllocation>());
   auto& returned = static_cast<DescriptorSetAllocation*>(resource.get())->sets_;
   free_sets_.insert(free_sets_.end(), returned.begin(), returned.end());

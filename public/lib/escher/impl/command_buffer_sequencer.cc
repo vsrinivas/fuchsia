@@ -9,18 +9,6 @@
 namespace escher {
 namespace impl {
 
-void CommandBufferSequencerListener::Register(
-    CommandBufferSequencer* sequencer) {
-  FXL_DCHECK(sequencer);
-  sequencer->AddListener(this);
-}
-
-void CommandBufferSequencerListener::Unregister(
-    CommandBufferSequencer* sequencer) {
-  FXL_DCHECK(sequencer);
-  sequencer->RemoveListener(this);
-}
-
 CommandBufferSequencer::~CommandBufferSequencer() {
   // Ensure clean shutdown.
   FXL_DCHECK(latest_sequence_number_ == last_finished_sequence_number_);
@@ -64,20 +52,17 @@ void CommandBufferSequencer::CommandBufferFinished(uint64_t sequence_number) {
 
 void CommandBufferSequencer::AddListener(
     CommandBufferSequencerListener* listener) {
-  if (listener) {
-    FXL_DCHECK(std::find(listeners_.begin(), listeners_.end(), listener) ==
-               listeners_.end());
-    listeners_.push_back(listener);
-  }
+  FXL_DCHECK(listener);
+  FXL_DCHECK(std::find(listeners_.begin(), listeners_.end(), listener) ==
+             listeners_.end());
+  listeners_.push_back(listener);
 }
 
 void CommandBufferSequencer::RemoveListener(
     CommandBufferSequencerListener* listener) {
-  if (listener) {
-    listeners_.erase(
-        std::remove(listeners_.begin(), listeners_.end(), listener),
-        listeners_.end());
-  }
+  FXL_DCHECK(listener);
+  listeners_.erase(std::remove(listeners_.begin(), listeners_.end(), listener),
+                   listeners_.end());
 }
 
 }  // namespace impl

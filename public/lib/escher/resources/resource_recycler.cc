@@ -12,14 +12,14 @@ ResourceRecycler::ResourceRecycler(EscherWeakPtr escher)
     : ResourceManager(std::move(escher)) {
   // Register ourselves for sequence number updates. Register() is defined in
   // our superclass CommandBufferSequenceListener.
-  Register(this->escher()->command_buffer_sequencer());
+  this->escher()->command_buffer_sequencer()->AddListener(this);
 }
 
 ResourceRecycler::~ResourceRecycler() {
   FXL_DCHECK(unused_resources_.empty());
   // Unregister ourselves. Unregister() is defined in our superclass
   // CommandBufferSequenceListener.
-  Unregister(escher()->command_buffer_sequencer());
+  escher()->command_buffer_sequencer()->RemoveListener(this);
 }
 
 void ResourceRecycler::OnReceiveOwnable(std::unique_ptr<Resource> resource) {

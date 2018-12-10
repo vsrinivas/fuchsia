@@ -31,12 +31,12 @@ class ResourceRecycler : public ResourceManager,
 
   // Implement impl::CommandBufferSequenceListener::CommandBufferFinished().
   // Checks whether it is safe to recycle any of |unused_resources_|.
-  void OnCommandBufferFinished(uint64_t sequence_number) override;
+  void OnCommandBufferFinished(uint64_t sequence_number) final;
 
   // Implement Owner::OnReceiveOwnable().  Call RecycleOwnable() immediately if
   // it is safe to do so.  Otherwise, adds the resource to a set of resources
   // to be recycled later; see CommandBufferFinished().
-  void OnReceiveOwnable(std::unique_ptr<Resource> resource) override;
+  void OnReceiveOwnable(std::unique_ptr<Resource> resource) final;
 
   uint64_t last_finished_sequence_number_ = 0;
 
