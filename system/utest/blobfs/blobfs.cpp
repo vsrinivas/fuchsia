@@ -2707,56 +2707,6 @@ static bool TestLargeBlob() {
     END_TEST;
 }
 
-static bool TestJournalEntryLifetime() {
-    BEGIN_TEST;
-
-    // Create a dummy journal and journal processor.
-    FakeJournal journal;
-    blobfs::JournalProcessor processor(&journal);
-
-    // Create and process a 'work' entry.
-    fbl::unique_ptr<blobfs::JournalEntry> entry(
-        new blobfs::JournalEntry(&journal, blobfs::EntryStatus::kInit, 0, 0,
-                                 journal.CreateBufferedWork(1)));
-    fbl::unique_ptr<blobfs::WritebackWork> first_work = journal.CreateDefaultWork();
-    first_work->SetSyncCallback(entry->CreateSyncCallback());
-    processor.ProcessWorkEntry(std::move(entry));
-
-    // Create and process another 'work' entry.
-    entry.reset(new blobfs::JournalEntry(&journal, blobfs::EntryStatus::kInit, 0, 0,
-                                         journal.CreateBufferedWork(1)));
-    fbl::unique_ptr<blobfs::WritebackWork> second_work = journal.CreateDefaultWork();
-    second_work->SetSyncCallback(entry->CreateSyncCallback());
-    processor.ProcessWorkEntry(std::move(entry));
-
-    // Enqueue the processor's work (this is a no-op).
-    processor.EnqueueWork();
-
-    // Simulate an error in the writeback thread by calling the first entry's callback with an
-    // error status.
-    first_work->Reset(ZX_ERR_BAD_STATE);
-
-    // Process the wait queue.
-    processor.ProcessWaitQueue();
-
-    // Now, attempt to call the second entry's callback with the error. If we are incorrectly
-    // disposing of entries before their callbacks have been invoked, this should trigger a
-    // "use-after-free" asan error, since the JournalEntry referenced by second_work will have
-    // already been deleted (see ZX-2940).
-    second_work->Reset(ZX_ERR_BAD_STATE);
-
-    // Additionally, we should check that the processor queues are not empty - i.e., there is still
-    // one entry waiting to be processed.
-    ASSERT_FALSE(processor.IsEmpty());
-
-    // Process the rest of the queues.
-    processor.ProcessWaitQueue();
-    processor.ProcessDeleteQueue();
-    processor.ProcessSyncQueue();
-
-    END_TEST;
-}
-
 // TODO(ZX-2416): Add tests to manually corrupt journal entries/metadata.
 
 BEGIN_TEST_CASE(blobfs_tests)
@@ -2805,7 +2755,6 @@ RUN_TEST_MEDIUM(TestCreateFailure)
 RUN_TEST_MEDIUM(TestExtendFailure)
 RUN_TEST_LARGE(TestLargeBlob)
 RUN_TESTS(SMALL, TestFailedWrite)
-RUN_TEST_MEDIUM(TestJournalEntryLifetime)
 END_TEST_CASE(blobfs_tests)
 
 // TODO(planders): revamp blobfs test options.

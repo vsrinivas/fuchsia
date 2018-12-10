@@ -93,6 +93,7 @@ MODULE_SRCS := \
     $(TEST_DIR)/allocated-extent-iterator-test.cpp \
     $(TEST_DIR)/allocator-test.cpp \
     $(TEST_DIR)/extent-reserver-test.cpp \
+    $(TEST_DIR)/journal-test.cpp \
     $(TEST_DIR)/main.cpp \
     $(TEST_DIR)/node-populator-test.cpp \
     $(TEST_DIR)/node-reserver-test.cpp \
