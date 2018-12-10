@@ -18,7 +18,6 @@ struct VnodeMetrics {
     VnodeMetrics(cobalt_client::Collector* collector, const fbl::String& fs_name,
                  bool local_metrics);
 
-    cobalt_client::Histogram<kHistogramBuckets> open;
     cobalt_client::Histogram<kHistogramBuckets> close;
     cobalt_client::Histogram<kHistogramBuckets> read;
     cobalt_client::Histogram<kHistogramBuckets> write;

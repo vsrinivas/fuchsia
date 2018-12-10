@@ -15,7 +15,7 @@ struct VnodeCobalt {
     // Maps a vnode operation to a metric_id in filesystem cobalt configuration.
     enum class MetricId : uint32_t {
         kUnknown = 0,
-        kOpen = 1,
+        kLink = 1,
         kClose = 2,
         kRead = 3,
         kWrite = 4,
@@ -28,7 +28,6 @@ struct VnodeCobalt {
         kLookUp = 11,
         kCreate = 12,
         kUnlink = 13,
-        kLink = 14,
     };
 
     // Enum of Vnode related event codes.
@@ -39,8 +38,6 @@ struct VnodeCobalt {
 
 const char* GetMetricName(uint32_t metric_id) {
     switch (static_cast<VnodeCobalt::MetricId>(metric_id)) {
-    case VnodeCobalt::MetricId::kOpen:
-        return "Vnode.Open";
     case VnodeCobalt::MetricId::kClose:
         return "Vnode.Close";
     case VnodeCobalt::MetricId::kRead:
@@ -111,9 +108,6 @@ VnodeMetrics::VnodeMetrics(cobalt_client::Collector* collector, const fbl::Strin
         micro_base.SetMode(cobalt_client::MetricOptions::Mode::kRemote);
     }
 
-    open.Initialize(MakeHistogramOptions(nano_base, VnodeCobalt::MetricId::kOpen,
-                                         VnodeCobalt::EventCode::kUnknown),
-                    collector);
     close.Initialize(MakeHistogramOptions(nano_base, VnodeCobalt::MetricId::kClose,
                                           VnodeCobalt::EventCode::kUnknown),
                      collector);

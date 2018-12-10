@@ -56,10 +56,10 @@ bool TestLogWhileEnabled() {
     fs::VnodeMetrics* vnodes = metrics.mutable_vnode_metrics();
     ASSERT_NE(vnodes, nullptr);
     if (metrics.IsEnabled()) {
-        vnodes->open.Add(kLatencyNs);
+        vnodes->close.Add(kLatencyNs);
     }
     // We should have observed 15 hundred usecs.
-    ASSERT_EQ(vnodes->open.GetRemoteCount(kLatencyNs), 1);
+    ASSERT_EQ(vnodes->close.GetRemoteCount(kLatencyNs), 1);
     END_TEST;
 }
 
@@ -71,9 +71,9 @@ bool TestLogWhileNotEnabled() {
     fs::VnodeMetrics* vnodes = metrics.mutable_vnode_metrics();
     ASSERT_NE(vnodes, nullptr);
     if (metrics.IsEnabled()) {
-        vnodes->open.Add(kLatencyNs);
+        vnodes->close.Add(kLatencyNs);
     }
-    ASSERT_EQ(vnodes->open.GetRemoteCount(kLatencyNs), 0);
+    ASSERT_EQ(vnodes->close.GetRemoteCount(kLatencyNs), 0);
     END_TEST;
 }
 
