@@ -600,17 +600,10 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevcoordinatorConnection* c
         return ZX_OK;
     }
 
-    // Check if we're receiving a Controller request
-    if (hdr->ordinal >= fuchsia_device_manager_ControllerCreateDeviceStubOrdinal &&
-        hdr->ordinal <= fuchsia_device_manager_ControllerRemoveDeviceOrdinal) {
-        FidlTxn txn(zx::unowned_channel(h), hdr->txid);
-        DevhostRpcReadContext read_ctx = { path, conn };
-        return fuchsia_device_manager_Controller_dispatch(&read_ctx, txn.fidl_txn(),
-                                                          &fidl_msg, &fidl_ops);
-    }
-
-    zx_handle_close_many(fidl_msg.handles, fidl_msg.num_handles);
-    return ZX_ERR_NOT_SUPPORTED;
+    FidlTxn txn(zx::unowned_channel(h), hdr->txid);
+    DevhostRpcReadContext read_ctx = { path, conn };
+    return fuchsia_device_manager_Controller_dispatch(&read_ctx, txn.fidl_txn(), &fidl_msg,
+                                                      &fidl_ops);
 }
 
 // handles devcoordinator rpc

@@ -1463,25 +1463,24 @@ zx_status_t Coordinator::HandleDeviceRead(Device* dev) {
 
     auto hdr = static_cast<fidl_message_header_t*>(fidl_msg.bytes);
     // Check if we're receiving a Coordinator request
-    if (hdr->ordinal >= fuchsia_device_manager_CoordinatorAddDeviceOrdinal &&
-        hdr->ordinal <= fuchsia_device_manager_CoordinatorDmMexecOrdinal) {
+    {
         FidlTxn txn(dev->hrpc, hdr->txid);
-        return fuchsia_device_manager_Coordinator_dispatch(dev, txn.fidl_txn(),
-                                                           &fidl_msg, &fidl_ops);
+        r = fuchsia_device_manager_Coordinator_try_dispatch(dev, txn.fidl_txn(), &fidl_msg,
+                                                            &fidl_ops);
+        if (r != ZX_ERR_NOT_SUPPORTED) {
+            return r;
+        }
     }
 
-    // Check if we're receiving a Controller reply
-    if (hdr->ordinal >= fuchsia_device_manager_ControllerCreateDeviceStubOrdinal &&
-        hdr->ordinal <= fuchsia_device_manager_ControllerRemoveDeviceOrdinal) {
+    // This should be a Controller reply then.
+    fbl::unique_ptr<PendingOperation> pending = dev->pending.pop_front();
+    if (pending == nullptr) {
+        log(ERROR, "devcoord: rpc: spurious status message\n");
+        return ZX_OK;
+    }
 
-        fbl::unique_ptr<PendingOperation> pending = dev->pending.pop_front();
-        if (pending == nullptr) {
-            log(ERROR, "devcoord: rpc: spurious status message\n");
-            return ZX_OK;
-        }
-
-        // TODO: Check txid on the message
-        switch (pending->op()) {
+    // TODO: Check txid on the message
+    switch (pending->op()) {
         case PendingOperation::Op::kBind: {
             if (hdr->ordinal != fuchsia_device_manager_ControllerBindDriverOrdinal) {
                 log(ERROR, "devcoord: rpc: bind-driver '%s' received wrong reply ordinal %08x\n",
@@ -1531,15 +1530,10 @@ zx_status_t Coordinator::HandleDeviceRead(Device* dev) {
         default:
             log(ERROR, "devcoord: rpc: dev '%s' received wrong unexpected reply %08x\n",
                 dev->name, hdr->ordinal);
+            zx_handle_close_many(fidl_msg.handles, fidl_msg.num_handles);
             return ZX_ERR_IO;
-        }
-        return ZX_OK;
     }
-
-    log(ERROR, "devcoord: invalid rpc op %08x\n", hdr->ordinal);
-    zx_handle_close_many(fidl_msg.handles, fidl_msg.num_handles);
-    // This will cause the channel to be closed
-    return ZX_ERR_NOT_SUPPORTED;
+    return ZX_OK;
 }
 
 // handle inbound messages from devhost to devices
