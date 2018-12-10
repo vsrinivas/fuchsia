@@ -70,6 +70,9 @@ interface Iface
     104: Nimon(int32 j, string k     )
         -> ( int32 y );
 
+    Mandrel(int32 j, string k     )
+        -> ( int32 y );
+
     6: Cat(string? s) -> (bool b);  102: Karfel(
     int32 x) -> (int y);
 

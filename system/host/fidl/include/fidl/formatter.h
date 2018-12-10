@@ -115,6 +115,7 @@ public:
         OnBlankLineRespectingNode();
         ScopedBool before(blank_space_before_colon_, false);
         ScopedBool mem(is_member_decl_);
+        ScopedBool has_ordinal(has_ordinal_, element->ordinal != nullptr);
         TreeVisitor::OnInterfaceMethod(element);
     }
 
@@ -371,6 +372,9 @@ private:
     }
 
     bool is_member_decl_ = false;
+
+    // Does the current member have an explicit ordinal?
+    bool has_ordinal_ = false;
 
     // str is a gap plus the next meaningful token.
     void TrackInterfaceMethodAlignment(const std::string& str);

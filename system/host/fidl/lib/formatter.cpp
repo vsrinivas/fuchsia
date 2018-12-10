@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // The implementation for the FormattingTreeVisitor that pretty-prints FIDL code.
-
+#include <locale>
 #include <map>
 #include <regex>
 #include <set>
@@ -324,6 +324,7 @@ void FormattingTreeVisitor::Segment::Indent(int& current_nesting) {
 //  - If there is a parameter on the same line after the '(' character,
 //    align at the same vertical column as that parameter.
 void FormattingTreeVisitor::TrackInterfaceMethodAlignment(const std::string& str) {
+    static std::locale c_locale("C");
     if (interface_method_alignment_) {
         for (int i = 0; i < str.size(); i++) {
             MaybeWindPastComment(str, i);
@@ -351,20 +352,32 @@ void FormattingTreeVisitor::TrackInterfaceMethodAlignment(const std::string& str
                 }
             }
 
-            // This tracks the distance from the beginning of the method name,
-            // in case we need it (i.e., in case we don't indent to the '('
-            // character.
-            if (!isspace(ch) && next_nonws_char_is_checkpoint_) {
-                offset_of_first_id_ =
-                    interface_method_alignment_size_ =
-                        distance_from_last_newline_ + kIndentSpaces - 1;
-                next_nonws_char_is_checkpoint_ = false;
-            }
-            if (str[i] == ':' && interface_method_alignment_size_ == -1) {
-                // The first ':' we see - means it is the gap after the ordinal.
-                // The next thing we see is the method name, so that might
-                // become the indentation level.
-                next_nonws_char_is_checkpoint_ = true;
+            if (!has_ordinal_) {
+                if (isalpha(ch, c_locale) &&
+                    interface_method_alignment_size_ == -1) {
+                    // This should be the method identifier.
+                    offset_of_first_id_ =
+                        interface_method_alignment_size_ =
+                            distance_from_last_newline_ + kIndentSpaces - 1;
+                }
+            } else {
+                // TODO(FIDL-372): remove this branch.  It is only relevant when
+                // there are explicit ordinals.
+                // This tracks the distance from the beginning of the method
+                // name, in case we need it (i.e., in case we don't indent to
+                // the '(' character.
+                if (!isspace(ch) && next_nonws_char_is_checkpoint_) {
+                    offset_of_first_id_ =
+                        interface_method_alignment_size_ =
+                            distance_from_last_newline_ + kIndentSpaces - 1;
+                    next_nonws_char_is_checkpoint_ = false;
+                }
+                if (str[i] == ':' && interface_method_alignment_size_ == -1) {
+                    // The first ':' we see - means it is the gap after the
+                    // ordinal.  The next thing we see is the method name, so
+                    // that might become the indentation level.
+                    next_nonws_char_is_checkpoint_ = true;
+                }
             }
         }
     }
