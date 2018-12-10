@@ -50,6 +50,7 @@ fbl_device_tests := $(fbl_common_tests)
 # See: TODO(ZX-1053)
 #
 fbl_device_tests += \
+    $(LOCAL_DIR)/condition_variable_tests.cpp \
     $(LOCAL_DIR)/ref_counted_tests.cpp \
     $(LOCAL_DIR)/ref_counted_upgradeable_tests.cpp \
     $(LOCAL_DIR)/slab_allocator_tests.cpp \
