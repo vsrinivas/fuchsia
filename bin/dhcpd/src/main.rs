@@ -98,10 +98,8 @@ async fn define_msg_handling_loop_future<F: Fn() -> i64>(
         // it from 0.0.0.0. In order to respond with a DHCPOFFER, the server
         // must broadcast the response. See RFC 2131 Section 4.4.1 for further
         // details.
-        let any_subnet: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
-        let broadcast_addr: IpAddr = IpAddr::V4(Ipv4Addr::new(255, 255, 255, 255));
-        if sender.ip() == any_subnet {
-            sender.set_ip(broadcast_addr);
+        if sender.ip() == IpAddr::V4(Ipv4Addr::UNSPECIFIED) {
+            sender.set_ip(IpAddr::V4(Ipv4Addr::BROADCAST));
         }
         await!(sock.send_to(&response_buffer, sender)).context("unable to send response")?;
         fx_log_info!(tag: "dhcpd", "response sent");
