@@ -6,6 +6,9 @@ use bitfield::bitfield;
 use byteorder::{LittleEndian, WriteBytesExt};
 use std::io;
 
+#[cfg(test)]
+use byteorder::ReadBytesExt;
+
 // IEEE Std 802.11-2016, 9.2.4.1.3 Table 9-1
 #[derive(Clone, Copy, Debug)]
 pub enum FrameControlType {
@@ -20,6 +23,12 @@ pub enum MgmtSubtype {
     AssociationResponse = 0b0001,
     Beacon = 0b1000,
     Authentication = 0b1011,
+}
+
+#[cfg(test)]
+#[derive(Clone, Copy, Debug)]
+pub enum DataSubtype {
+    Data = 0b0000,
 }
 
 // IEEE Std 802.11-2016, 9.4.1.9, Table 9-46
@@ -79,11 +88,99 @@ pub struct SeqControl {
 }
 
 impl SeqControl {
+    #[cfg(test)]
+    fn decode(num: u16) -> Self { Self{frag_num: num & 0x0F, seq_num: num >> 4} }
     fn encode(&self) -> u16 {
         self.frag_num | (self.seq_num << 4)
     }
 }
 
+// IEEE Std 802.11-2016, 9.3.2.1
+#[derive(Clone, Copy, Debug)]
+pub struct DataHeader {
+    pub frame_control: FrameControl,
+    pub duration: u16,
+    pub addr1: [u8; 6],
+    pub addr2: [u8; 6],
+    pub addr3: [u8; 6],
+    pub seq_control: SeqControl,
+    pub addr4: Option<[u8; 6]>,
+    pub qos_control: Option<u16>,
+    pub ht_control: Option<u32>,
+}
+
+#[cfg(test)]
+impl DataHeader {
+    pub fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
+        const DATA_SUBTYPE_QOS_BIT:u16 = 0b1000;
+        let frame_control = FrameControl(reader.read_u16::<LittleEndian>()?);
+        let duration = reader.read_u16::<LittleEndian>()?;
+        let mut addr1 = [0u8; 6];
+        reader.read(&mut addr1)?;
+        let mut addr2 = [0u8; 6];
+        reader.read(&mut addr2)?;
+        let mut addr3 = [0u8; 6];
+        reader.read(&mut addr3)?;
+        let seq_control = SeqControl::decode(reader.read_u16::<LittleEndian>()?);
+        let addr4 = match frame_control.to_ds() & frame_control.from_ds() {
+            true => {
+                let mut addr4 = [0u8; 6];
+                reader.read(&mut addr4)?;
+                Some(addr4)
+            },
+            false => None,
+        };
+        let qos_control =
+            if (frame_control.subtype() & DATA_SUBTYPE_QOS_BIT) != 0 {
+            Some(reader.read_u16::<LittleEndian>()?)
+        }
+        else {None};
+        let ht_control = if frame_control.htc_order() {
+            Some(reader.read_u32::<LittleEndian>()?)
+        } else { None };
+        Ok(Self {
+            frame_control,
+            duration,
+            addr1,
+            addr2,
+            addr3,
+            seq_control,
+            addr4,
+            qos_control,
+            ht_control,
+        })
+    }
+}
+
+// IEEE Std 802.2-1998, 3.2
+// IETF RFC 1042
+#[derive(Clone, Copy, Debug)]
+pub struct LlcHeader {
+    dsap: u8,
+    ssap: u8,
+    control: u8,
+    oui: [u8; 3],
+    protocol_id: u16,
+}
+
+#[cfg(test)]
+impl LlcHeader {
+    pub fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
+        let dsap = reader.read_u8()?;
+        let ssap = reader.read_u8()?;
+        let control = reader.read_u8()?;
+        let mut oui = [0u8; 3];
+        reader.read(&mut oui)?;
+        let protocol_id = reader.read_u16::<LittleEndian>()?;
+        Ok(Self {
+            dsap,
+            ssap,
+            control,
+            oui,
+            protocol_id,
+        })
+    }
+}
 // IEEE Std 802.11-2016, 9.3.3.2
 #[derive(Clone, Copy, Debug)]
 pub struct MgmtHeader {
@@ -340,5 +437,40 @@ mod tests {
             0xF6, 0xDE, 0xDE, 0xBC, 0x76, 0x98, 0x43, 0x65,
         ];
         assert_eq!(expected_frame, &frame[..]);
+    }
+
+    #[test]
+    fn parse_data_frame() {
+        let mut bytes = &[
+            8u8, 1, // FrameControl
+            0, 0, // Duration
+            101, 116, 104, 110, 101, 116, // Addr1
+            103, 98, 111, 110, 105, 107,  // Addr2
+            98, 115, 115, 98, 115, 115,   // Addr3
+            48, 0, // SeqControl
+            // LLC Header
+            170, 170, 3, // dsap, ssap and control
+            0, 0, 0, // OUI
+            0, 8, // protocol ID
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 // payload
+        ] as &[u8];
+        let data_header = DataHeader::from_reader(&mut bytes).expect("reading data header");
+        assert_eq!(data_header.frame_control.typ(), FrameControlType::Data as u16);
+        assert_eq!(data_header.frame_control.subtype(), DataSubtype::Data as u16);
+        assert_eq!(data_header.addr1, [0x65, 0x74, 0x68, 0x6e, 0x65, 0x74]);
+        assert_eq!(data_header.addr2, [0x67, 0x62, 0x6f, 0x6e, 0x69, 0x6b]);
+        assert_eq!(data_header.addr3, [0x62, 0x73, 0x73, 0x62, 0x73, 0x73]);
+        assert_eq!(data_header.seq_control.seq_num, 3);
+        assert!(data_header.addr4.is_none());
+        assert!(data_header.qos_control.is_none());
+        assert!(data_header.ht_control.is_none());
+
+        let llc_header = LlcHeader::from_reader(&mut bytes).expect("reading llc header");
+        assert_eq!(llc_header.oui, [0, 0, 0]);
+
+        let mut payload = vec![];
+        let bytes_read = io::Read::read_to_end(&mut bytes, &mut payload).expect("reading payload");
+        assert_eq!(bytes_read, 15);
+        assert_eq!(&payload[..], &[1u8, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
     }
 }

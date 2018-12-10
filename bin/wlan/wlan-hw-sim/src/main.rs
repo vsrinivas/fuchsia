@@ -13,7 +13,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_zircon::prelude::*,
     futures::{prelude::*},
-    std::io::Cursor,
+    std::io,
     std::sync::{Arc, Mutex},
     wlantap_client::Wlantap,
 };
@@ -265,14 +265,14 @@ fn create_rx_info(channel: &wlan_mlme::WlanChan) -> wlantap::WlanRxInfo {
     }
 }
 
-fn get_frame_ctrl(packet_data: Vec<u8>) -> mac_frames::FrameControl {
-    let mut reader = Cursor::new(packet_data);
+fn get_frame_ctrl(packet_data: &Vec<u8>) -> mac_frames::FrameControl {
+    let mut reader = io::Cursor::new(packet_data);
     let frame_ctrl = reader.read_u16::<LittleEndian>().unwrap();
     mac_frames::FrameControl(frame_ctrl)
 }
 
 fn handle_tx(args: wlantap::TxArgs, state: &mut State, proxy: &wlantap::WlantapPhyProxy) {
-    let frame_ctrl = get_frame_ctrl(args.packet.data);
+    let frame_ctrl = get_frame_ctrl(&args.packet.data);
     if frame_ctrl.typ() == mac_frames::FrameControlType::Mgmt as u16 {
         handle_mgmt_tx(frame_ctrl.subtype(), state, proxy);
     }
@@ -374,6 +374,7 @@ mod simulation_tests {
         ok = run_test("simulate_scan", simulate_scan) && ok;
         // TODO(NET-1885) - commenting out due to flake
         // ok = run_test("connecting_to_ap", connecting_to_ap) && ok;
+        ok = run_test("ethernet_tx_rx", ethernet_tx_rx) && ok;
         ok = run_test("verify_rate_selection", verify_rate_selection) && ok;
         assert!(ok);
     }
@@ -556,7 +557,7 @@ mod simulation_tests {
                 }
             }
             wlantap::WlantapPhyEvent::Tx { args } => {
-                let frame_ctrl = get_frame_ctrl(args.packet.data);
+                let frame_ctrl = get_frame_ctrl(&args.packet.data);
                 if frame_ctrl.typ() == mac_frames::FrameControlType::Mgmt as u16 {
                     let subtyp = frame_ctrl.subtype();
                     if subtyp == mac_frames::MgmtSubtype::Authentication as u16 {
@@ -639,7 +640,7 @@ mod simulation_tests {
     where F: Fn(u16) -> bool, G: Fn(&HashMap<u16, u64>) -> bool {
         match event {
             wlantap::WlantapPhyEvent::Tx { args } => {
-                let frame_ctrl = get_frame_ctrl(args.packet.data);
+                let frame_ctrl = get_frame_ctrl(&args.packet.data);
                 if frame_ctrl.typ() == mac_frames::FrameControlType::Data as u16 {
                     let tx_vec_idx = args.packet.info.tx_vector_idx;
                     send_tx_status_report(*bssid, tx_vec_idx, should_succeed(tx_vec_idx), phy)
@@ -754,6 +755,88 @@ mod simulation_tests {
             send_beacon(&mut vec ![], &CHANNEL, bssid, ssid, &phy).unwrap();
         }
         Ok(())
+    }
+
+    const BSS_ETHNET: [u8; 6] = [0x65, 0x74, 0x68, 0x6e, 0x65, 0x74];
+    const SSID_ETHERNET: &[u8] = b"ethernet";
+    const PAYLOAD: &[u8] = &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+    // test
+    fn ethernet_tx_rx() {
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut helper = test_utils::TestHelper::begin_test(&mut exec, create_wlantap_config());
+
+        let wlan_service = app::client::connect_to_service::<fidl_wlan_service::WlanMarker>()
+            .expect("Failed to connect to wlan service");
+        loop_until_iface_is_found(&mut exec, &wlan_service, &mut helper);
+
+        let proxy = helper.proxy();
+        connect(&mut exec, &wlan_service, &proxy, &mut helper, SSID_ETHERNET, &BSS_ETHNET);
+
+        let mut client = exec.run_singlethreaded(create_eth_client(&HW_MAC_ADDR))
+            .expect("cannot create ethernet client")
+            .expect(&format!("ethernet client not found {:?}", &HW_MAC_ADDR));
+
+        verify_tx(&mut client, &mut exec, &mut helper);
+        // TODO(eyw): verify_rx(...)
+    }
+
+    fn verify_tx(client: &mut ethernet::Client, exec: &mut fasync::Executor,
+                 helper: &mut test_utils::TestHelper) {
+        let mut buf: Vec<u8> = Vec::new();
+        eth_frames::write_eth_header(&mut buf, &eth_frames::EthHeader{
+            dst : BSSID,
+            src : HW_MAC_ADDR,
+            eth_type : eth_frames::EtherType::Ipv4 as u16,
+        }).expect("Error creating fake ethernet frame");
+        buf.extend_from_slice(PAYLOAD);
+        println!("{:?}", buf);
+
+        let (sender, receiver) = mpsc::channel(1);
+        let eth_tx_fut = test_eth_tx(client, &buf, receiver);
+        pin_mut!(eth_tx_fut);
+
+        let mut actual = Vec::new();
+        helper.run(exec, 5.seconds(), "verify ethernet_tx is working",
+                   |event| { handle_eth_tx(event, &mut actual, sender.clone()); },
+                   eth_tx_fut).expect("running main future");
+        assert_eq!(&actual[..], PAYLOAD);
+    }
+
+    async fn test_eth_tx<'a>(client: &'a mut ethernet::Client, buf: &'a[u8],
+                             mut receiver: mpsc::Receiver<()>) -> Result<(), failure::Error> {
+        let mut client_stream = client.get_stream();
+        println!("Sending");
+        client.send(&buf);
+        loop {
+            let polled = poll!(client_stream.next());
+            match polled {
+                futures::Poll::Ready(Some(Ok(ethernet::Event::StatusChanged))) => {
+                    await!(client.get_status()).expect("getting status");
+                },
+                _ => { break; }
+            }
+        }
+        await!(receiver.next());
+        Ok(())
+    }
+
+    fn handle_eth_tx(event: wlantap::WlantapPhyEvent, actual: &mut Vec<u8>,
+                     mut sender: mpsc::Sender<()>) {
+        if let wlantap::WlantapPhyEvent::Tx{args}  = event {
+            let frame_ctrl = get_frame_ctrl(&args.packet.data);
+            if frame_ctrl.typ() == mac_frames::FrameControlType::Data as u16 {
+                let mut cursor = io::Cursor::new(args.packet.data);
+                let data_header = mac_frames::DataHeader::from_reader(&mut cursor)
+                    .expect("Getting data frame header");
+                // Ignore DHCP packets sent by netstack.
+                if data_header.addr1 == BSS_ETHNET && data_header.addr2 == HW_MAC_ADDR
+                    && data_header.addr3 == BSSID {
+                    mac_frames::LlcHeader::from_reader(&mut cursor).expect("skipping llc header");
+                    io::Read::read_to_end(&mut cursor, actual).expect("reading payload");
+                    sender.try_send(()).expect("sending result");
+                }
+            }
+        }
     }
 
     fn run_test<F>(name: &str, f: F) -> bool
