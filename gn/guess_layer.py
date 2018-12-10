@@ -44,12 +44,6 @@ def main():
     if tree.find('overrides') is None:
       sys.stderr.write('found no overrides. guessing project from imports\n')
       for elt in tree.iter('import'):
-        # For people that haven't switched to the flower model, keep using the
-        # old method of guessing the import.
-        if print_if_layer_name(elt.attrib['name']):
-          return 0
-        # For people that have switched to the flower model, but don't use any
-        # overrides because they want to be at GI on all layers.
         # manifest can be something like garnet/garnet in which case we want
         # garnet or internal/vendor/foo/bar in which case we want vendor/foo.
         head, name = os.path.split(elt.attrib['manifest'])
