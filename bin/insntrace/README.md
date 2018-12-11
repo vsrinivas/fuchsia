@@ -370,7 +370,7 @@ post-trace access to the binary that was running.
 generated code is not currently supported.]
 
 Paths to these files must be provided via the "--ids=PATH" option.
-Generallly there are two. See the above examples.
+Generally there are two. See the above examples.
 
 Note that it is *critical* that the contents of the files match what
 was running on the target when the trace was generated. Printing a trace
