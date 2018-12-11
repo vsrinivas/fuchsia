@@ -160,10 +160,23 @@ void Object::OpenChild(::fidl::StringPtr name,
 fbl::RefPtr<Object> Object::GetChild(fbl::String name) {
   fbl::AutoLock lock(&mutex_);
   auto it = children_.find(name.data());
-  if (it == children_.end()) {
-    return fbl::RefPtr<Object>();
+  if (it != children_.end()) {
+    return it->second;
   }
-  return it->second;
+
+  // If the child was not found yet, check all lazily initialized children.
+  if (lazy_object_callback_) {
+    ObjectVector lazy_objects;
+    lazy_object_callback_(&lazy_objects);
+    for (auto& obj : lazy_objects) {
+      if (name == obj->name()) {
+        return obj;
+      }
+    }
+  }
+
+  // Child not found.
+  return fbl::RefPtr<Object>();
 }
 
 void Object::SetChild(fbl::RefPtr<Object> child) {

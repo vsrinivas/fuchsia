@@ -79,7 +79,8 @@ class InspectTest : public component::testing::TestWithEnvironment {
 TEST_F(InspectTest, InspectTopLevel) {
   EXPECT_THAT(
       GetGlob(GetObjectPath("*")),
-      ElementsAre(GetObjectPath("table-t1"), GetObjectPath("table-t2")));
+      ElementsAre(GetObjectPath("lazy_child"), GetObjectPath("table-t1"),
+                  GetObjectPath("table-t2")));
 }
 
 MATCHER_P2(StringProperty, name, value, "") {
@@ -146,6 +147,18 @@ TEST_F(InspectTest, InspectOpenRead) {
   EXPECT_THAT(*subtable.metrics,
               UnorderedElementsAre(UIntMetric("item_size", 16),
                                    IntMetric("\x10", -10)));
+
+  ASSERT_EQ(ZX_OK,
+            fdio_service_connect(GetObjectPath(".channel").c_str(),
+                                 inspect.NewRequest().TakeChannel().release()));
+  fuchsia::inspect::InspectSyncPtr lazy_child;
+  bool open_ok;
+  inspect->OpenChild("lazy_child", lazy_child.NewRequest(), &open_ok);
+  ASSERT_TRUE(open_ok);
+  obj = fuchsia::inspect::Object();
+  lazy_child->ReadData(&obj);
+  EXPECT_THAT(*obj.properties,
+              UnorderedElementsAre(StringProperty("version", "1")));
 }
 
 }  // namespace

@@ -93,6 +93,14 @@ int main(int argc, const char** argv) {
   subtable2.set_parent(t1.object_dir());
   subtable2.set_parent(invalid);
 
+  context->outgoing().object_dir()->set_children_callback(
+      [](component::Object::ObjectVector* out) {
+        auto obj = fbl::MakeRefCounted<component::Object>("lazy_child");
+        auto dir = component::ObjectDir::Wrap(obj.get());
+        dir.set_prop("version", "1");
+        out->push_back(obj);
+      });
+
   loop.Run();
   return 0;
 }
