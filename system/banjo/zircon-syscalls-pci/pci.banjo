@@ -4,13 +4,13 @@
 
 library zircon.syscalls.pci;
 
-[repr="C"]
+[repr = "C"]
 union PciField {
     usize addr;
     handle<vmo> @handle;
 };
 
-[repr="C"]
+[repr = "C"]
 struct ZxPciBar {
     uint32 id;
     uint32 type;
@@ -18,26 +18,25 @@ struct ZxPciBar {
     PciField u;
 };
 
-[repr="C"]
+[repr = "C"]
 enum ZxPciIrqMode : uint8 {
     DISABLED = 0;
-    LEGACY   = 1;
-    MSI      = 2;
-    MSI_X    = 3;
+    LEGACY = 1;
+    MSI = 2;
+    MSI_X = 3;
 };
 
-[repr="C"]
+[repr = "C"]
 struct ZxPcieDeviceInfo {
     uint16 vendor_id;
     uint16 device_id;
 
-    uint8  base_class;
-    uint8  sub_class;
-    uint8  program_interface;
-    uint8  revision_id;
+    uint8 base_class;
+    uint8 sub_class;
+    uint8 program_interface;
+    uint8 revision_id;
 
-    uint8  bus_id;
-    uint8  dev_id;
-    uint8  func_id;
+    uint8 bus_id;
+    uint8 dev_id;
+    uint8 func_id;
 };
-

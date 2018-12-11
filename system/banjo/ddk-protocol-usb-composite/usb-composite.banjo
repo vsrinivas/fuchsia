@@ -9,13 +9,13 @@ using zx;
 /// sizeof(usb_interface_descriptor_t)
 const uint32 INTERFACE_DESC_SIZE = 9;
 
-[Layout="ddk-protocol"]
+[Layout = "ddk-protocol"]
 interface UsbComposite {
     /// Returns the length of the additional descriptor list.
-    1: GetAdditionalDescriptorLength() -> (uint32 length);
+    GetAdditionalDescriptorLength() -> (uint32 length);
     /// Returns the USB descriptors following the interface's existing descriptors.
-    2: GetAdditionalDescriptorList() -> (zx.status s, vector<uint8> desc);
+    GetAdditionalDescriptorList() -> (zx.status s, vector<uint8> desc);
     /// Marks the interface as claimed and appends the interface descriptor to the
     /// interface's existing descriptors.
-    3: ClaimInterface(array<uint8>:INTERFACE_DESC_SIZE desc, uint32 length) -> (zx.status s);
+    ClaimInterface(array<uint8>:INTERFACE_DESC_SIZE desc, uint32 length) -> (zx.status s);
 };

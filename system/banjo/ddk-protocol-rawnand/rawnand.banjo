@@ -7,17 +7,17 @@ library ddk.protocol.rawnand;
 using zircon.device.nand;
 using zx;
 
-[Layout="ddk-protocol"]
+[Layout = "ddk-protocol"]
 interface RawNand {
     /// Read one nand page with hwecc.
-    1: ReadPageHwecc(uint32 nandpage) -> (zx.status s, vector<voidptr> data, vector<voidptr> oob,
-                                          uint32 ecc_correct);
+    ReadPageHwecc(uint32 nandpage) -> (zx.status s, vector<voidptr> data, vector<voidptr> oob,
+                                       uint32 ecc_correct);
 
     /// Write one nand page with hwecc.
-    2: WritePageHwecc(vector<voidptr> data, vector<voidptr> oob, uint32 nandpage) -> (zx.status s);
+    WritePageHwecc(vector<voidptr> data, vector<voidptr> oob, uint32 nandpage) -> (zx.status s);
 
     /// Erase nand block.
-    3: EraseBlock(uint32 nandpage) -> (zx.status s);
+    EraseBlock(uint32 nandpage) -> (zx.status s);
 
-    4: GetNandInfo() -> (zx.status s, zircon.device.nand.NandInfo info);
+    GetNandInfo() -> (zx.status s, zircon.device.nand.NandInfo info);
 };

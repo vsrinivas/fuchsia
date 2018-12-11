@@ -323,10 +323,6 @@ void JSONGenerator::Generate(const raw::AttributeList& value) {
     Generate(value.attributes_->attributes_);
 }
 
-void JSONGenerator::Generate(const flat::Ordinal& value) {
-    EmitUint32(&json_file_, value.Value());
-}
-
 void JSONGenerator::Generate(const flat::Name& value) {
     // These look like (when there is a library)
     //     { "LIB.LIB.LIB", "ID" }
@@ -377,7 +373,6 @@ void JSONGenerator::Generate(const flat::Interface::Method* method) {
     assert(method != nullptr);
     const auto& value = *method;
     GenerateObject([&]() {
-        GenerateObjectMember("ordinal", value.ordinal, Position::kFirst);
         GenerateObjectMember("name", value.name);
         GenerateObjectMember("has_request", value.maybe_request != nullptr);
         if (value.attributes)

@@ -55,10 +55,6 @@ void LiteralConstant::Accept(TreeVisitor& visitor) {
     visitor.OnLiteral(literal);
 }
 
-void Ordinal::Accept(TreeVisitor& visitor) {
-    SourceElementMark sem(visitor, *this);
-}
-
 void Attribute::Accept(TreeVisitor& visitor) {
     SourceElementMark sem(visitor, *this);
 }
@@ -179,7 +175,6 @@ void InterfaceMethod::Accept(TreeVisitor& visitor) {
     if (attributes != nullptr) {
         visitor.OnAttributeList(attributes);
     }
-    visitor.OnOrdinal(*ordinal);
     visitor.OnIdentifier(identifier);
     if (maybe_request != nullptr) {
         visitor.OnParameterList(maybe_request);

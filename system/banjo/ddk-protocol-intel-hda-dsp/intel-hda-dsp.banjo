@@ -8,35 +8,36 @@ using zx;
 
 const string MD_KEY_NHLT = "NHLT";
 
-struct ZxPcieDeviceInfo {};
-
-[Layout="ddk-callback"]
-interface IhdaDspIrq {
-    1: Callback() -> ();
+struct ZxPcieDeviceInfo {
 };
 
-[Layout="ddk-protocol"]
+[Layout = "ddk-callback"]
+interface IhdaDspIrq {
+    Callback() -> ();
+};
+
+[Layout = "ddk-protocol"]
 interface IhdaDsp {
     /// Fetch the parent HDA controller's PCI device info.
-    1: GetDevInfo() -> (ZxPcieDeviceInfo out);
+    GetDevInfo() -> (ZxPcieDeviceInfo out);
 
     /// Fetch a VMO that represents the BAR holding the Audio DSP registers.
-    2: GetMmio() -> (zx.status s, handle<vmo> vmo, usize size);
+    GetMmio() -> (zx.status s, handle<vmo> vmo, usize size);
 
     /// Fetch a handle to our bus transaction initiator.
-    3: GetBti() -> (zx.status s, handle<bti> bti);
+    GetBti() -> (zx.status s, handle<bti> bti);
 
     /// Enables DSP
-    4: Enable() -> ();
+    Enable() -> ();
 
     /// Disable DSP
-    5: Disable() -> ();
+    Disable() -> ();
 
     /// Enables DSP interrupts and set a callback to be invoked when an interrupt is
     /// raised.
     /// Returns `ZX_ERR_ALREADY_EXISTS` if a callback is already set.
-    6: IrqEnable(IhdaDspIrq callback) -> (zx.status s);
+    IrqEnable(IhdaDspIrq callback) -> (zx.status s);
 
     /// Disable DSP interrupts and clears the callback.
-    7: IrqDisable() -> ();
+    IrqDisable() -> ();
 };

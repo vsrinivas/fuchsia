@@ -82,32 +82,32 @@ bool parsing_reserved_words_in_interface_test() {
 library example;
 
 interface InInterface {
-    01: as(bool as);
-    02: library(bool library);
-    03: using(bool using);
+    as(bool as);
+    library(bool library);
+    using(bool using);
 
-    11: array(bool array);
-    12: handle(bool handle);
-    13: request(bool request);
-    14: string(bool string);
-    15: vector(bool vector);
+    array(bool array);
+    handle(bool handle);
+    request(bool request);
+    string(bool string);
+    vector(bool vector);
 
-    31: bool(bool bool);
-    32: int8(bool int8);
-    33: int16(bool int16);
-    34: int32(bool int32);
-    35: int64(bool int64);
-    36: uint8(bool uint8);
-    37: uint16(bool uint16);
-    38: uint32(bool uint32);
-    39: uint64(bool uint64);
-    40: float32(bool float32);
-    41: float64(bool float64);
+    bool(bool bool);
+    int8(bool int8);
+    int16(bool int16);
+    int32(bool int32);
+    int64(bool int64);
+    uint8(bool uint8);
+    uint16(bool uint16);
+    uint32(bool uint32);
+    uint64(bool uint64);
+    float32(bool float32);
+    float64(bool float64);
 
-    51: true(bool true);
-    52: false(bool false);
+    true(bool true);
+    false(bool false);
 
-    61: reserved(bool reserved);
+    reserved(bool reserved);
 };
 )BANJO");
     EXPECT_TRUE(library.Compile());

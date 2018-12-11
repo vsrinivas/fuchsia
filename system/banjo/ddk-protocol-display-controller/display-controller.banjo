@@ -8,7 +8,8 @@ using zircon.device.audio;
 using zx;
 
 //using ZxPixelFormat = uint32;
-enum ZxPixelFormat : uint32 {};
+enum ZxPixelFormat : uint32 {
+};
 
 /// The image is linear and VMO backed.
 const uint32 IMAGE_TYPE_SIMPLE = 0;
@@ -112,7 +113,7 @@ struct AddedDisplayInfo {
 
 /// The client will not make any `ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL` calls into the device
 /// during these callbacks.
-[Layout="ddk-interface"]
+[Layout = "ddk-interface"]
 interface DisplayControllerInterface {
     /// Callbacks which are invoked when displays are added or removed. |added_display_list| and
     /// |removed_display_list| point to arrays of the display ids which were added and removed. If
@@ -122,16 +123,16 @@ interface DisplayControllerInterface {
     ///
     /// The driver should call this function when the callback is registered if any displays
     /// are present.
-    1: OnDisplaysChanged(vector<AddedDisplayArgs> added_display,
-                         vector<uint64> removed_display) -> (vector<AddedDisplayInfo> display_info);
+    OnDisplaysChanged(vector<AddedDisplayArgs> added_display,
+                      vector<uint64> removed_display) -> (vector<AddedDisplayInfo> display_info);
 
     /// |timestamp| is the ZX_CLOCK_MONOTONIC timestamp at which the vsync occurred.
     /// |handles| points to an array of image handles of each framebuffer being
     /// displayed, in increasing z-order.
-    2: OnDisplayVsync(uint64 display_id, zx.time timestamp, vector<uint64> @handle) -> ();
+    OnDisplayVsync(uint64 display_id, zx.time timestamp, vector<uint64> @handle) -> ();
 
-    3: GetAudioFormat(uint64 display_id, uint32 fmt_idx)
-           -> (zx.status s, zircon.device.audio.AudioStreamFormatRange fmt);
+    GetAudioFormat(uint64 display_id, uint32 fmt_idx)
+               -> (zx.status s, zircon.device.audio.AudioStreamFormatRange fmt);
 };
 
 enum Alpha : uint8 {
@@ -210,7 +211,6 @@ struct ColorLayer {
 };
 
 /// Types of layers.
-
 enum LayerType : uint32 {
     PRIMARY = 0;
     CURSOR = 1;
@@ -232,11 +232,11 @@ struct Layer {
 
 /// constants for display_config's mode_flags field
 enum ModeFlag : uint32 {
-    VSYNC_POSITIVE     = 0x1;
-    HSYNC_POSITIVE     = 0x2;
-    INTERLACED         = 0x4;
+    VSYNC_POSITIVE = 0x1;
+    HSYNC_POSITIVE = 0x2;
+    INTERLACED = 0x4;
     ALTERNATING_VBLANK = 0x8;
-    DOUBLE_CLOCKED     = 0x10;
+    DOUBLE_CLOCKED = 0x10;
 };
 
 /// The video parameters which specify the display mode.
@@ -325,20 +325,20 @@ enum Client : uint32 {
 
 /// The client guarantees that check_configuration and apply_configuration are always
 /// made from a single thread. The client makes no other threading guarantees.
-[Layout="ddk-protocol", DefaultProtocol, HandleWrappers]
+[Layout = "ddk-protocol", DefaultProtocol, HandleWrappers]
 interface DisplayControllerImpl {
     /// The function will only be called once, and it will be called before any other
     /// functions are called.
-    1: SetDisplayControllerInterface(DisplayControllerInterface intf) -> ();
+    SetDisplayControllerInterface(DisplayControllerInterface intf) -> ();
 
     /// Imports a VMO backed image into the driver. The driver should set image->handle. The
     /// driver does not own the vmo handle passed to this function.
-    2: ImportVmoImage(Image? image, handle<vmo> vmo, usize offset) -> (zx.status s);
+    ImportVmoImage(Image? image, handle<vmo> vmo, usize offset) -> (zx.status s);
 
     /// Releases any driver state associated with the given image. The client guarantees that
     /// any images passed to apply_config will not be released until a vsync occurs with a
     /// more recent image.
-    3: ReleaseImage(Image? image) -> ();
+    ReleaseImage(Image? image) -> ();
 
     /// Validates the given configuration.
     ///
@@ -363,8 +363,8 @@ interface DisplayControllerImpl {
     ///
     /// The driver must not retain references to the configuration after this function returns.
     /// TODO: Fix me...
-    4: CheckConfiguration(vector<DisplayConfig?> display_config)
-           -> (uint32 display_cfg_result, vector<uint32>? layer_cfg_result);
+    CheckConfiguration(vector<DisplayConfig?> display_config)
+                       -> (uint32 display_cfg_result, vector<uint32>? layer_cfg_result);
 
     /// Applies the configuration.
     ///
@@ -382,13 +382,13 @@ interface DisplayControllerImpl {
     /// callback after doing so.
     ///
     /// The driver must not retain references to the configuration after this function returns.
-    5: ApplyConfiguration(vector<DisplayConfig?> display_config) -> ();
+    ApplyConfiguration(vector<DisplayConfig?> display_config) -> ();
 
     /// Computes the stride (in pixels) necessary for a linear image with the given width
     /// and pixel format. Returns 0 on error.
-    6: ComputeLinearStride(uint32 width, ZxPixelFormat pixel_format) -> (uint32 s);
+    ComputeLinearStride(uint32 width, ZxPixelFormat pixel_format) -> (uint32 s);
 
     /// Allocates a VMO of the requested size which can be used for images.
     // TODO: move this functionality into a seperate video buffer management system.
-    7: AllocateVmo(uint64 size) -> (zx.status s, handle<vmo> vmo);
+    AllocateVmo(uint64 size) -> (zx.status s, handle<vmo> vmo);
 };

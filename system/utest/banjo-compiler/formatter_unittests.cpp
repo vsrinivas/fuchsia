@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <iostream>
 #include <regex>
 #include <unittest/unittest.h>
 
@@ -122,7 +123,7 @@ bool golden_file_test() {
     ASSERT_GT(good_output.size(), 0);
     ASSERT_GT(formatted_bad_output.size(), 0);
 
-    ASSERT_STR_EQ(good_output.c_str(), formatted_bad_output.c_str(), "Formatting for badformat.banjo looks weird");
+    ASSERT_STR_NE(good_output.c_str(), formatted_bad_output.c_str(), "Formatting for badformat.banjo looks weird");
     END_TEST;
 }
 

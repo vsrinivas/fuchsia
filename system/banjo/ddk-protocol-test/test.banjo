@@ -12,25 +12,25 @@ struct TestReport {
     uint32 n_failed;
 };
 
-[Layout="ddk-callback"]
+[Layout = "ddk-callback"]
 interface TestFunc {
-    1: Callback() -> (zx.status s, TestReport report);
+    Callback() -> (zx.status s, TestReport report);
 };
 
-[Layout="ddk-protocol", DefaultProtocol]
+[Layout = "ddk-protocol", DefaultProtocol]
 interface Test {
     /// Sets test output socket.
-    1: SetOutputSocket(handle<socket> @handle) -> ();
+    SetOutputSocket(handle<socket> @handle) -> ();
 
     /// Gets test output socket.
-    2: GetOutputSocket() -> (handle<socket> h);
+    GetOutputSocket() -> (handle<socket> h);
 
     /// Sets test function.
-    3: SetTestFunc(TestFunc func) -> ();
+    SetTestFunc(TestFunc func) -> ();
 
     /// Run tests, calls the function set in |SetTestFunc|.
-    4: RunTests() -> (zx.status s, TestReport report);
+    RunTests() -> (zx.status s, TestReport report);
 
     /// Calls `device_remove()`.
-    5: Destroy() -> ();
+    Destroy() -> ();
 };

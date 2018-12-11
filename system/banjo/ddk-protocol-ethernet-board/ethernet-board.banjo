@@ -4,7 +4,7 @@
 
 library ddk.protocol.ethernet.board;
 
-[Layout="ddk-protocol", DefaultProtocol]
+[Layout = "ddk-protocol", DefaultProtocol]
 interface EthBoard {
-    1: ResetPhy() -> ();
+    ResetPhy() -> ();
 };

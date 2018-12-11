@@ -52,53 +52,53 @@ vector<handle<channel > > monoid;
                             [Discoverable]
 interface Iface
 {
-                     1:  Foo()
+                      Foo()
  -> (int i);
 
       [Awesome]
-122: Analyze(handle<process> process, handle<thread> thread)
+Analyze(handle<process> process, handle<thread> thread)
 -> ();
 
     // Figure it out.
-    2: -> Bar         (  int32 i,int32 k);
-    3: Baz(int32 j, string k     ) -> ( int32 y );
-    104: Nimon(int32 j, string k     )
+    -> Bar         (  int32 i,int32 k);
+    Baz(int32 j, string k     ) -> ( int32 y );
+    Nimon(int32 j, string k     )
         -> ( int32 y );
 
-    6: Cat(string? s) -> (bool b);  102: Karfel(
+    Cat(string? s) -> (bool b);  Karfel(
     int32 x) -> (int y);
 
-    10341: Gavrok  // ( heh heh ->
+    Gavrok  // ( heh heh ->
     (  // ( An annoying comment.
     int a, int b) -> ();
 
-    4: ->Goo(int32 p, string  :  32 s);
-    5  : Baz(int32 j, string:40 k
+    ->Goo(int32 p, string  :  32 s);
+    Baz(int32 j, string:40 k
     ) ->(int32 y );
-    7: SomeMethodWithAResponse() -> ();
+    SomeMethodWithAResponse() -> ();
 
     // A comment that isn't so annoying
-    101: MethodResponse(int a, int b, string:40 c,
+    MethodResponse(int a, int b, string:40 c,
 int d, int e) -> (int f, int g,
 int h);
 
-    100: MethodResponse2()
+    MethodResponse2()
     -> ();
 
-    1024: MethodResponse3(int64 a) ->
+    MethodResponse3(int64 a) ->
     ();
 
     /// Doc Comment and
     [Attribute]
-    2048: -> End();
+    -> End();
 
     /// Multiple
     /// Doc Comments and
     [Attribute]
-    2048: -> End();
+    -> End();
 
-    999 :-> End();
-    1000 :   -> End();
+    -> End();
+       -> End();
 
      }
 

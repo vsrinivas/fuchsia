@@ -8,25 +8,25 @@ using zx;
 
 const uint32 MAX_DVFS_OPPS = 16;
 
-[Layout="Packed"]
+[Layout = "Packed"]
 struct ScpiOppEntry {
     uint32 freq_hz;
     uint32 volt_mv;
 };
 
-[Layout="Packed"]
+[Layout = "Packed"]
 struct ScpiOpp {
-   array<ScpiOppEntry>:MAX_DVFS_OPPS opp;
-   /// In usecs.
-   uint32 latency;
-   uint32 count;
+    array<ScpiOppEntry>:MAX_DVFS_OPPS opp;
+    /// In usecs.
+    uint32 latency;
+    uint32 count;
 };
 
-[Layout="ddk-protocol"]
+[Layout = "ddk-protocol"]
 interface Scpi {
-  1: GetSensor(string name) -> (zx.status s, uint32 sensor_id);
-  2: GetSensorValue(uint32 sensor_id) -> (zx.status s, uint32 sensor_value);
-  3: GetDvfsInfo(uint8 power_domain) -> (zx.status s, ScpiOpp opps);
-  4: GetDvfsIdx(uint8 power_domain) -> (zx.status s, uint16 index);
-  5: SetDvfsIdx(uint8 power_domain, uint16 index) -> (zx.status s);
+    GetSensor(string name) -> (zx.status s, uint32 sensor_id);
+    GetSensorValue(uint32 sensor_id) -> (zx.status s, uint32 sensor_value);
+    GetDvfsInfo(uint8 power_domain) -> (zx.status s, ScpiOpp opps);
+    GetDvfsIdx(uint8 power_domain) -> (zx.status s, uint16 index);
+    SetDvfsIdx(uint8 power_domain, uint16 index) -> (zx.status s);
 };

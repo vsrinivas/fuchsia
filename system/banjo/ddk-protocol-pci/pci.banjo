@@ -39,22 +39,22 @@ enum PciCapId : uint8 {
     ENHANCED_ALLOCATION = 0x14;
 };
 
-[Layout="ddk-protocol"]
+[Layout = "ddk-protocol"]
 interface Pci {
-    1: GetBar(uint32 bar_id) -> (zx.status s, zircon.syscalls.pci.ZxPciBar res);
-    2: MapBar(uint32 bar_id, uint32 cache_policy) -> (zx.status s, vector<voidptr>? vaddr,
-                                                      handle<vmo> @handle);
-    3: EnableBusMaster(bool enable) -> (zx.status s);
-    4: ResetDevice() -> (zx.status s);
-    5: MapInterrupt(int32 which_irq) -> (zx.status s, handle<interrupt> @handle);
-    6: QueryIrqMode(zircon.syscalls.pci.ZxPciIrqMode mode) -> (zx.status s, uint32 max_irqs);
-    7: SetIrqMode(zircon.syscalls.pci.ZxPciIrqMode mode, uint32 requested_irq_count) -> (zx.status s);
-    8: GetDeviceInfo() -> (zx.status s, zircon.syscalls.pci.ZxPcieDeviceInfo into);
-    9: ConfigRead(uint16 offset, usize width) -> (zx.status s, uint32 value);
-    10: ConfigWrite(uint16 offset, usize width, uint32 value) -> (zx.status s);
-    11: GetNextCapability(uint8 type, uint8 offset) -> (uint8 cap);
-    12: GetAuxdata(string args) -> (zx.status s, vector<voidptr> data);
-    13: GetBti(uint32 index) -> (zx.status s, handle<bti> bti);
+    GetBar(uint32 bar_id) -> (zx.status s, zircon.syscalls.pci.ZxPciBar res);
+    MapBar(uint32 bar_id, uint32 cache_policy) -> (zx.status s, vector<voidptr>? vaddr,
+                                                   handle<vmo> @handle);
+    EnableBusMaster(bool enable) -> (zx.status s);
+    ResetDevice() -> (zx.status s);
+    MapInterrupt(int32 which_irq) -> (zx.status s, handle<interrupt> @handle);
+    QueryIrqMode(zircon.syscalls.pci.ZxPciIrqMode mode) -> (zx.status s, uint32 max_irqs);
+    SetIrqMode(zircon.syscalls.pci.ZxPciIrqMode mode, uint32 requested_irq_count) -> (zx.status s);
+    GetDeviceInfo() -> (zx.status s, zircon.syscalls.pci.ZxPcieDeviceInfo into);
+    ConfigRead(uint16 offset, usize width) -> (zx.status s, uint32 value);
+    ConfigWrite(uint16 offset, usize width, uint32 value) -> (zx.status s);
+    GetNextCapability(uint8 type, uint8 offset) -> (uint8 cap);
+    GetAuxdata(string args) -> (zx.status s, vector<voidptr> data);
+    GetBti(uint32 index) -> (zx.status s, handle<bti> bti);
 };
 
 // TODO: Implement the following.

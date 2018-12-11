@@ -80,7 +80,6 @@ private:
     void Generate(const raw::Attribute& value);
     void Generate(const raw::AttributeList& value);
 
-    void Generate(const flat::Ordinal& value);
     void Generate(const flat::Name& value);
     void Generate(const flat::Type& value);
     void Generate(const flat::Constant& value);

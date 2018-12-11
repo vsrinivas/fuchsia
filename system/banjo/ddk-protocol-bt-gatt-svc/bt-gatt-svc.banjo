@@ -7,7 +7,8 @@ library ddk.protocol.bt.gattsvc;
 using zx;
 
 //using BtGattId = uint64;
-enum BtGattId : uint64 {};
+enum BtGattId : uint64 {
+};
 
 struct BtGattUuid {
     array<uint8>:16 bytes;
@@ -84,12 +85,12 @@ struct BtGattChr {
 };
 
 /// Value change notification callback of the |EnableNotifications| function.
-[Layout="ddk-callback"]
+[Layout = "ddk-callback"]
 interface BtGattNotificationValue {
-    1: Callback(BtGattId id, vector<voidptr> value) -> ();
+    Callback(BtGattId id, vector<voidptr> value) -> ();
 };
 
-[Layout="ddk-protocol"]
+[Layout = "ddk-protocol"]
 interface BtGattSvc {
     /// Connects to and starts characteristic discovery on the remote service.
     ///
@@ -97,22 +98,22 @@ interface BtGattSvc {
     /// initiated by |connect|. The service will be ready to receive further requests once this
     /// has been called successfully and the |status| callback has been called with success.
     [Async]
-    1: Connect() -> (BtGattStatus status, vector<BtGattChr> characteristic);
+    Connect() -> (BtGattStatus status, vector<BtGattChr> characteristic);
 
     /// Stops this service and unregisters previously registered callbacks.
-    2: Stop() -> ();
+    Stop() -> ();
 
     /// Reads the value of the characteristic with the given ID.
     [Async]
-    3: ReadCharacteristic(BtGattId id) -> (BtGattStatus status, BtGattId id, vector<voidptr> value);
+    ReadCharacteristic(BtGattId id) -> (BtGattStatus status, BtGattId id, vector<voidptr> value);
 
     /// Reads the long value of the characteristic with the given ID.
     [Async]
-    4: ReadLongCharacteristic(BtGattId id, uint16 offset, usize max_bytes)
-           -> (BtGattStatus status, BtGattId id, vector<voidptr> value);
+    ReadLongCharacteristic(BtGattId id, uint16 offset, usize max_bytes)
+                     -> (BtGattStatus status, BtGattId id, vector<voidptr> value);
 
     [Async]
-    5: WriteCharacteristic(BtGattId id, vector<voidptr> buf) -> (BtGattStatus status, BtGattId id);
+    WriteCharacteristic(BtGattId id, vector<voidptr> buf) -> (BtGattStatus status, BtGattId id);
 
     /// Enables notifications from the characteristic with the given ID. Returns
     /// `ZX_ERR_BAD_STATE` if the service has not been started yet.
@@ -122,6 +123,6 @@ interface BtGattSvc {
     /// The async callback will be called to asynchronously report the result
     /// of this operation.
     [Async]
-    6: EnableNotifications(BtGattId id, BtGattNotificationValue value_cb)
-           -> (BtGattStatus status, BtGattId id);
+    EnableNotifications(BtGattId id, BtGattNotificationValue value_cb)
+                     -> (BtGattStatus status, BtGattId id);
 };

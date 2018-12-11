@@ -5,17 +5,20 @@
 library ddk.driver;
 
 // TODO: Not need this anymore.
-[repr="Hidden"]
-struct ZxDevice {};
+[repr = "Hidden"]
+struct ZxDevice {
+};
 
 // TODO: Not need this anymore.
-[repr="C"]
-struct ZxProtocolDevice {};
+[repr = "C"]
+struct ZxProtocolDevice {
+};
 
-[repr="C"]
-struct ZxDeviceProp {};
+[repr = "C"]
+struct ZxDeviceProp {
+};
 
-[repr="C"]
+[repr = "C"]
 struct DeviceAddArgs {
     /// DEVICE_ADD_ARGS_VERSION
     uint64 version;

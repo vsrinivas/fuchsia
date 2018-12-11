@@ -73,7 +73,6 @@ private:
 };
 
 struct MethodScope {
-    Scope<uint32_t> ordinals;
     Scope<StringView> names;
     Scope<const Interface*> interfaces;
 };
@@ -748,13 +747,6 @@ bool Library::ConsumeInterfaceDeclaration(
     std::vector<Interface::Method> methods;
     for (auto& method : interface_declaration->methods) {
         auto attributes = std::move(method->attributes);
-        auto ordinal_literal = std::move(method->ordinal);
-        uint32_t value;
-        if (!ParseOrdinal<decltype(value)>(ordinal_literal.get(), &value))
-            return Fail(ordinal_literal->location(), "Unable to parse ordinal");
-        if (value == 0u)
-            return Fail(ordinal_literal->location(), "Banjo ordinals cannot be 0");
-        Ordinal ordinal(std::move(ordinal_literal), value);
 
         SourceLocation method_name = method->identifier->location();
 
@@ -785,7 +777,6 @@ bool Library::ConsumeInterfaceDeclaration(
         assert(maybe_request != nullptr || maybe_response != nullptr);
 
         methods.emplace_back(std::move(attributes),
-                             std::move(ordinal),
                              std::move(method_name), std::move(maybe_request),
                              std::move(maybe_response));
     }
@@ -1339,11 +1330,6 @@ bool Library::CompileInterface(Interface* interface_declaration) {
                 return Fail(method.name,
                             "Multiple methods with the same name in an interface; last occurance was at " +
                                 name_result.previous_occurance().position());
-            auto ordinal_result = method_scope.ordinals.Insert(method.ordinal.Value(), method.name);
-            if (!ordinal_result.ok())
-                return Fail(method.name,
-                            "Mulitple methods with the same ordinal in an interface; last occurance was at " +
-                                ordinal_result.previous_occurance().position());
 
             // Add a pointer to this method to the interface_declarations list.
             interface_declaration->all_methods.push_back(&method);

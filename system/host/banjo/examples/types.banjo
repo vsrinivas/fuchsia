@@ -13,7 +13,7 @@ union this_is_a_union {
 };
 
 interface this_is_an_interface {
-    23: Copy(string s, uint32 count) -> (string s);
+    Copy(string s, uint32 count) -> (string s);
 };
 
 struct interfaces_and_requests {

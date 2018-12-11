@@ -18,12 +18,12 @@ struct SerialPortInfo {
 /// When used with the platform device protocol, "port" will be relative to
 /// the list of serial ports assigned to your device rather than the global
 /// list of serial ports.
-[Layout="ddk-protocol", DefaultProtocol]
+[Layout = "ddk-protocol", DefaultProtocol]
 interface Serial {
-  1: GetInfo() -> (zx.status s, SerialPortInfo info);
-  /// Configures the given serial port.
-  2: Config(uint32 baud_rate, uint32 flags) -> (zx.status s);
-  /// Returns a socket that can be used for reading and writing data
-  /// from the given serial port.
-  3: OpenSocket() -> (zx.status s, handle<socket> @handle);
+    GetInfo() -> (zx.status s, SerialPortInfo info);
+    /// Configures the given serial port.
+    Config(uint32 baud_rate, uint32 flags) -> (zx.status s);
+    /// Returns a socket that can be used for reading and writing data
+    /// from the given serial port.
+    OpenSocket() -> (zx.status s, handle<socket> @handle);
 };

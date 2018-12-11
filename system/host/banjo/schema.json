@@ -163,7 +163,6 @@
         "interface-method": {
             "type": "object",
             "required": [
-                "ordinal",
                 "name",
                 "has_request",
                 "has_response"
@@ -171,9 +170,6 @@
             "properties": {
                 "maybe_attributes": {
                     "$ref": "#/definitions/attributes-list"
-                },
-                "ordinal": {
-                    "$ref": "#/definitions/ordinal"
                 },
                 "name": {
                     "$ref": "#/definitions/identifier"
@@ -329,7 +325,6 @@
         "table-member": {
             "type": "object",
             "required": [
-                "ordinal",
                 "reserved"
             ],
             "properties": {
@@ -341,9 +336,6 @@
                 },
                 "name": {
                     "$ref": "#/definitions/identifier"
-                },
-                "ordinal": {
-                    "$ref": "#/definitions/ordinal"
                 },
                 "size": {
                     "$ref": "#/definitions/size"
@@ -842,11 +834,6 @@
                 "uint32",
                 "uint64"
             ]
-        },
-        "ordinal": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 4294967295
         },
         "compound-identifier": {
             "type": "string",

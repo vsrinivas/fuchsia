@@ -6,8 +6,8 @@ library ddk.protocol.intelhda.codec;
 
 using zx;
 
-[Layout="ddk-protocol"]
+[Layout = "ddk-protocol"]
 interface IhdaCodec {
-  /// Fetch a zx_handle_t to a channel which can be used to communicate with the codec device.
-  1: GetDriverChannel() -> (zx.status s, handle<channel> channel);
+    /// Fetch a zx_handle_t to a channel which can be used to communicate with the codec device.
+    GetDriverChannel() -> (zx.status s, handle<channel> channel);
 };

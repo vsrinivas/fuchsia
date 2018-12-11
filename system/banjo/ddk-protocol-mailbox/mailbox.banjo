@@ -16,7 +16,7 @@ struct MailboxChannel {
     vector<voidptr> rx;
 };
 
-[Layout="ddk-protocol"]
+[Layout = "ddk-protocol"]
 interface Mailbox {
-  1: SendCommand(MailboxChannel channel, MailboxDataBuf mdata) -> (zx.status s);
+    SendCommand(MailboxChannel channel, MailboxDataBuf mdata) -> (zx.status s);
 };

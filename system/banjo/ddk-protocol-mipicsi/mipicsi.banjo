@@ -54,9 +54,8 @@ struct MipiAdapInfo {
     MipiPath path;
 };
 
-[Layout="ddk-protocol", DefaultProtocol]
+[Layout = "ddk-protocol", DefaultProtocol]
 interface MipiCsi {
-  1: Init(MipiInfo mipi_info, MipiAdapInfo adap_info) -> (zx.status s);
-  2: DeInit() -> (zx.status s);
+    Init(MipiInfo mipi_info, MipiAdapInfo adap_info) -> (zx.status s);
+    DeInit() -> (zx.status s);
 };
-

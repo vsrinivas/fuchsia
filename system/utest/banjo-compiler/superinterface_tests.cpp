@@ -19,19 +19,19 @@ public:
 library banjo.test.superinterfaces;
 
 interface A {
-    1: MethodA();
+    MethodA();
 };
 
 interface B : A {
-    2: MethodB();
+    MethodB();
 };
 
 interface C : A {
-    3: MethodC();
+    MethodC();
 };
 
 interface D: B, C {
-    4: MethodD();
+    MethodD();
 };
 
 )BANJO") {}
@@ -43,45 +43,20 @@ public:
 library banjo.test.superinterfaces;
 
 interface A {
-    1: MethodA();
+    MethodA();
 };
 
 interface B : A {
-    2: MethodB();
+    MethodB();
 };
 
 interface C : A {
-    3: MethodC();
+    MethodC();
 };
 
 interface D: B, C {
-    4: MethodD();
-    5: MethodA();
-};
-
-)BANJO") {}
-};
-
-class InvalidOrdinalSuperinterfaces : public TestLibrary {
-public:
-    InvalidOrdinalSuperinterfaces() : TestLibrary("superinterfaces.banjo", R"BANJO(
-library banjo.test.superinterfaces;
-
-interface A {
-    1: MethodA();
-};
-
-interface B : A {
-    2: MethodB();
-};
-
-interface C : A {
-    3: MethodC();
-};
-
-interface D: B, C {
-    4: MethodD();
-    1: MethodE();
+    MethodD();
+    MethodA();
 };
 
 )BANJO") {}
@@ -93,20 +68,20 @@ public:
 library banjo.test.superinterfaces;
 
 interface A {
-    1: MethodA(vector<uint64>);
+    MethodA(vector<uint64>);
 };
 
 interface B : A {
-    2: MethodB();
+    MethodB();
 };
 
 interface C : A {
-    3: MethodC();
+    MethodC();
 };
 
 [Layout="Simple"]
 interface D: B, C {
-    4: MethodD();
+    MethodD();
 };
 
 )BANJO") {}
@@ -139,17 +114,6 @@ bool invalid_name_superinterface_test() {
     END_TEST;
 }
 
-// Test that an interface with a ordinal collision with a superinterface
-// fails to compile.
-bool invalid_ordinal_superinterface_test() {
-    BEGIN_TEST;
-
-    InvalidOrdinalSuperinterfaces library;
-    EXPECT_FALSE(library.Compile());
-
-    END_TEST;
-}
-
 // Test that an interface with a Simple layout constraint violation in
 // a superinterface's method fails to compile.
 bool invalid_simple_superinterface_test() {
@@ -166,6 +130,5 @@ bool invalid_simple_superinterface_test() {
 BEGIN_TEST_CASE(superinterface_tests);
 RUN_TEST(valid_superinterface_test);
 RUN_TEST(invalid_name_superinterface_test);
-RUN_TEST(invalid_ordinal_superinterface_test);
 RUN_TEST(invalid_simple_superinterface_test);
 END_TEST_CASE(superinterface_tests);

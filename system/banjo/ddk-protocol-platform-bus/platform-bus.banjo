@@ -10,25 +10,25 @@ using zx;
 struct PbusMmio {
     /// Physical address of MMIO region.
     /// Does not need to be page aligned.
-    zx.paddr  base;
+    zx.paddr base;
     /// Length of MMIO region in bytes.
     /// Does not need to be page aligned.
-    usize     length;
+    usize length;
 };
 
 struct PbusIrq {
-    uint32    irq;
+    uint32 irq;
     /// `ZX_INTERRUPT_MODE_*` flags
-    uint32    mode;
+    uint32 mode;
 };
 
 struct PbusGpio {
-    uint32    gpio;
+    uint32 gpio;
 };
 
-struct PbusI2cChannel{
-    uint32    bus_id;
-    uint16    address;
+struct PbusI2cChannel {
+    uint32 bus_id;
+    uint16 address;
 };
 
 struct PbusClk {
@@ -36,21 +36,21 @@ struct PbusClk {
 };
 
 struct PbusBti {
-    uint32    iommu_index;
-    uint32    bti_id;
+    uint32 iommu_index;
+    uint32 bti_id;
 };
 
 struct PbusSmc {
     /// The device is granted the ability to make SMC calls with service call numbers ranging from
     /// service_call_num_base to service_call_num_base + count - 1.
-    uint32    service_call_num_base;
-    uint32    count;
+    uint32 service_call_num_base;
+    uint32 count;
 };
 
 /// Device metadata.
 struct PbusMetadata {
     /// Metadata type.
-    uint32    type;
+    uint32 type;
     /// Pointer to metadata.
     vector<voidptr> data;
 };
@@ -96,33 +96,33 @@ struct PbusBoardInfo {
     uint32 board_revision;
 };
 
-[Layout="ddk-callback"]
+[Layout = "ddk-callback"]
 interface PlatformProxyCb {
-    1: Callback(vector<voidptr> req, vector<handle> req_handle) -> (vector<voidptr> resp,
+    Callback(vector<voidptr> req, vector<handle> req_handle) -> (vector<voidptr> resp,
                                                                  vector<handle> resp_handle);
 };
 
-[Layout="ddk-protocol", DefaultProtocol]
+[Layout = "ddk-protocol", DefaultProtocol]
 interface PBus {
     /// Adds a new platform device to the bus, using configuration provided by |dev|.
     /// Platform devices are created in their own separate devhosts.
-    1: DeviceAdd(PbusDev dev) -> (zx.status s);
+    DeviceAdd(PbusDev dev) -> (zx.status s);
     /// Adds a device for binding a protocol implementation driver.
     /// These devices are added in the same devhost as the platform bus.
     /// After the driver binds to the device it calls `pbus_register_protocol()`
     /// to register its protocol with the platform bus.
     /// `pbus_protocol_device_add()` blocks until the protocol implementation driver
     /// registers its protocol (or times out).
-    2: ProtocolDeviceAdd(uint32 proto_id, PbusDev dev) -> (zx.status s);
+    ProtocolDeviceAdd(uint32 proto_id, PbusDev dev) -> (zx.status s);
     /// Called by protocol implementation drivers to register their protocol
     /// with the platform bus.
-    3: RegisterProtocol(uint32 proto_id, vector<voidptr> protocol, PlatformProxyCb proxy_cb)
-           -> (zx.status s);
+    RegisterProtocol(uint32 proto_id, vector<voidptr> protocol, PlatformProxyCb proxy_cb)
+-> (zx.status s);
     /// Board drivers may use this to get information about the board, and to
     /// differentiate between multiple boards that they support.
-    4: GetBoardInfo() -> (zx.status s, ddk.protocol.platform.device.PdevBoardInfo info);
+    GetBoardInfo() -> (zx.status s, ddk.protocol.platform.device.PdevBoardInfo info);
     /// Board drivers may use this to set information about the board
     /// (like the board revision number).
     /// Platform device drivers can access this via `pdev_get_board_info()`.
-    5: SetBoardInfo(PbusBoardInfo info) -> (zx.status s);
+    SetBoardInfo(PbusBoardInfo info) -> (zx.status s);
 };

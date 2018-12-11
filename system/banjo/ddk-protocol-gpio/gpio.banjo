@@ -6,7 +6,6 @@ library ddk.protocol.gpio;
 
 using zx;
 
-
 /// Flags for `ConfigIn`.
 const uint32 GPIO_PULL_DOWN = 0x0;
 const uint32 GPIO_PULL_UP = 0x1;
@@ -19,23 +18,23 @@ enum GpioPolarity : uint32 {
     HIGH = 0x1;
 };
 
-[Layout="ddk-protocol", HandleWrappers]
+[Layout = "ddk-protocol", HandleWrappers]
 interface Gpio {
     /// Configures a GPIO for input.
-    1: ConfigIn(uint32 flags) -> (zx.status s);
+    ConfigIn(uint32 flags) -> (zx.status s);
     /// Configures a GPIO for output.
-    2: ConfigOut(uint8 initial_value) -> (zx.status s);
+    ConfigOut(uint8 initial_value) -> (zx.status s);
     /// Configures the GPIO pin for an alternate function (I2C, SPI, etc)
     /// the interpretation of "function" is platform dependent.
-    3: SetAltFunction(uint64 function) -> (zx.status s);
+    SetAltFunction(uint64 function) -> (zx.status s);
     /// Reads the current value of a GPIO (0 or 1).
-    4: Read()-> (zx.status s, uint8 value);
+    Read()-> (zx.status s, uint8 value);
     /// Sets the current value of the GPIO (any non-zero value maps to 1).
-    5: Write(uint8 value) -> (zx.status s);
+    Write(uint8 value) -> (zx.status s);
     /// Gets an interrupt object pertaining to a particular GPIO pin.
-    6: GetInterrupt(uint32 flags) -> (zx.status s, handle<interrupt> irq);
+    GetInterrupt(uint32 flags) -> (zx.status s, handle<interrupt> irq);
     /// Release the interrupt.
-    7: ReleaseInterrupt()-> (zx.status s);
+    ReleaseInterrupt()-> (zx.status s);
     /// Set GPIO polarity.
-    8: SetPolarity(GpioPolarity polarity) -> (zx.status s);
+    SetPolarity(GpioPolarity polarity) -> (zx.status s);
 };

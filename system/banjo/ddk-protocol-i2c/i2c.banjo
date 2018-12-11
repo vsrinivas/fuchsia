@@ -10,13 +10,13 @@ const uint32 I2C_10_BIT_ADDR_MASK = 0xF000;
 const uint32 I2C_MAX_RW_OPS = 8;
 
 /// See `Transact` below for usage.
-struct I2cOp{
+struct I2cOp {
     vector<voidptr> data;
     bool is_read;
     bool stop;
 };
 
-[Layout="ddk-protocol"]
+[Layout = "ddk-protocol"]
 interface I2c {
     /// Writes and reads data on an i2c channel. Up to I2C_MAX_RW_OPS operations can be passed in.
     /// For write ops, i2c_op_t.data points to data to write.  The data to write does not need to be
@@ -25,8 +25,8 @@ interface I2c {
     /// The results of the operations are returned asynchronously via the transact_cb.
     /// The cookie parameter can be used to pass your own private data to the transact_cb callback.
     [Async]
-    1: Transact(vector<I2cOp> op) -> (zx.status status, vector<I2cOp> op);
+    Transact(vector<I2cOp> op) -> (zx.status status, vector<I2cOp> op);
     /// Returns the maximum transfer size for read and write operations on the channel.
-    2: GetMaxTransferSize() -> (zx.status s, usize size);
-    3: GetInterrupt(uint32 flags) -> (zx.status s, handle<interrupt> irq);
+    GetMaxTransferSize() -> (zx.status s, usize size);
+    GetInterrupt(uint32 flags) -> (zx.status s, handle<interrupt> irq);
 };

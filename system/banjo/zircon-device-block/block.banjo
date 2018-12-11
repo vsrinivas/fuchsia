@@ -4,7 +4,7 @@
 
 library zircon.device.block;
 
-[repr="C"]
+[repr = "C"]
 struct BlockInfo {
     /// The number of blocks in this block device.
     uint64 block_count;
@@ -17,4 +17,3 @@ struct BlockInfo {
     uint32 flags;
     uint32 reserved;
 };
-

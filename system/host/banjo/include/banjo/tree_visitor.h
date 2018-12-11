@@ -70,10 +70,6 @@ public:
         element.Accept(*this);
     }
 
-    virtual void OnOrdinal(Ordinal& element) {
-        element.Accept(*this);
-    }
-
 #ifdef DISPATCH_TO
 #error "Cannot define macro DISPATCH_TO: already defined"
 #endif

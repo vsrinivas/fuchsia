@@ -65,10 +65,10 @@ struct SdmmcReq {
 
 enum SdmmcHostCap : uint64 {
     BUS_WIDTH_8 = 0x1;
-    ADMA2       = 0x2;
+    ADMA2 = 0x2;
     SIXTY_FOUR_BIT = 0x4;
     VOLTAGE_330 = 0x8;
-    AUTO_CMD12  = 0x10;
+    AUTO_CMD12 = 0x10;
 };
 
 enum SdmmcHostPrefs : uint64 {
@@ -86,22 +86,22 @@ struct SdmmcHostInfo {
     uint64 prefs;
 };
 
-[Layout="ddk-protocol", DefaultProtocol]
+[Layout = "ddk-protocol", DefaultProtocol]
 interface Sdmmc {
     /// Get host info.
-    1: HostInfo() -> (zx.status s, SdmmcHostInfo info);
+    HostInfo() -> (zx.status s, SdmmcHostInfo info);
     /// Set signal voltage.
-    2: SetSignalVoltage(SdmmcVoltage voltage) -> (zx.status s);
+    SetSignalVoltage(SdmmcVoltage voltage) -> (zx.status s);
     /// Set bus width.
-    3: SetBusWidth(SdmmcBusWidth bus_width) -> (zx.status s);
+    SetBusWidth(SdmmcBusWidth bus_width) -> (zx.status s);
     /// Set bus frequency.
-    4: SetBusFreq(uint32 bus_freq) -> (zx.status s);
+    SetBusFreq(uint32 bus_freq) -> (zx.status s);
     /// Set mmc timing.
-    5: SetTiming(SdmmcTiming timing) -> (zx.status s);
+    SetTiming(SdmmcTiming timing) -> (zx.status s);
     /// Issue a hw reset.
-    6: HwReset() -> ();
+    HwReset() -> ();
     /// Perform tuning.
-    7: PerformTuning(uint32 cmd_idx) -> (zx.status s);
+    PerformTuning(uint32 cmd_idx) -> (zx.status s);
     /// Issue a request.
-    8: Request(SdmmcReq? req) -> (zx.status s);
+    Request(SdmmcReq? req) -> (zx.status s);
 };

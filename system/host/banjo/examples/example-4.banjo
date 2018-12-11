@@ -13,5 +13,5 @@ enum Enum {
 };
 
 interface Interface {
-    23: func(bool x) -> ();
+    func(bool x) -> ();
 };

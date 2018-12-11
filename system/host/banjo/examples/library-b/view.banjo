@@ -7,5 +7,5 @@ library banjo.examples.libraryb;
 using banjo.examples.librarya;
 
 interface View {
-    1: MoveTo(banjo.examples.librarya.Point p);
+    MoveTo(banjo.examples.librarya.Point p);
 };

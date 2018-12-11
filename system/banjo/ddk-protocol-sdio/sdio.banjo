@@ -17,35 +17,35 @@ struct SdioFuncHwInfo {
     uint32 product_id;
     uint32 max_blk_size;
     uint32 max_tran_speed;
-    uint8  fn_intf_code;
+    uint8 fn_intf_code;
 };
 
 enum SDIO_CARD : uint32 {
-    MULTI_BLOCK    = 0x1;
-    SRW            = 0x2;
+    MULTI_BLOCK = 0x1;
+    SRW = 0x2;
     DIRECT_COMMAND = 0x4;
     SUSPEND_RESUME = 0x8;
-    LOW_SPEED      = 0x10;
-    HIGH_SPEED     = 0x20;
-    HIGH_POWER     = 0x40;
-    FOUR_BIT_BUS   = 0x80;
-    HS_SDR12       = 0x100;
-    HS_SDR25       = 0x200;
-    UHS_SDR50      = 0x400;
-    UHS_SDR104     = 0x800;
-    UHS_DDR50      = 0x1000;
-    TYPE_A       = 0x2000;
-    TYPE_B       = 0x4000;
-    TYPE_C       = 0x8000;
-    TYPE_D       = 0x10000;
+    LOW_SPEED = 0x10;
+    HIGH_SPEED = 0x20;
+    HIGH_POWER = 0x40;
+    FOUR_BIT_BUS = 0x80;
+    HS_SDR12 = 0x100;
+    HS_SDR25 = 0x200;
+    UHS_SDR50 = 0x400;
+    UHS_SDR104 = 0x800;
+    UHS_DDR50 = 0x1000;
+    TYPE_A = 0x2000;
+    TYPE_B = 0x4000;
+    TYPE_C = 0x8000;
+    TYPE_D = 0x10000;
 };
 
 struct SdioDeviceHwInfo {
     /// number of sdio funcs
-    uint32  num_funcs;
-    uint32  sdio_vsn;
-    uint32  cccr_vsn;
-    uint32  caps;
+    uint32 num_funcs;
+    uint32 sdio_vsn;
+    uint32 cccr_vsn;
+    uint32 caps;
 };
 
 struct SdioHwInfo {
@@ -69,16 +69,15 @@ struct SdioRwTxn {
     uint64 buf_offset;
 };
 
-[Layout="ddk-protocol"]
+[Layout = "ddk-protocol"]
 interface Sdio {
-    1: GetDevHwInfo() -> (zx.status s, SdioHwInfo hw_info);
-    2: EnableFn(uint8 fn_idx) -> (zx.status s);
-    3: DisableFn(uint8 fn_idx) -> (zx.status s);
-    4: EnableFnIntr(uint8 fn_idx) -> (zx.status s);
-    5: DisableFnIntr(uint8 fn_idx) -> (zx.status s);
-    6: UpdateBlockSize(uint8 fn_idx, uint16 blk_sz, bool deflt) -> (zx.status s);
-    7: GetBlockSize(uint8 fn_idx) -> (zx.status s, uint16 cur_blk_size);
-    8: DoRwTxn(uint8 fn_idx, SdioRwTxn? txn) -> (zx.status s);
-    9: DoRwByte(bool write, uint8 fn_idx, uint32 addr, uint8 write_byte) -> (zx.status s, uint8 read_byte);
+    GetDevHwInfo() -> (zx.status s, SdioHwInfo hw_info);
+    EnableFn(uint8 fn_idx) -> (zx.status s);
+    DisableFn(uint8 fn_idx) -> (zx.status s);
+    EnableFnIntr(uint8 fn_idx) -> (zx.status s);
+    DisableFnIntr(uint8 fn_idx) -> (zx.status s);
+    UpdateBlockSize(uint8 fn_idx, uint16 blk_sz, bool deflt) -> (zx.status s);
+    GetBlockSize(uint8 fn_idx) -> (zx.status s, uint16 cur_blk_size);
+    DoRwTxn(uint8 fn_idx, SdioRwTxn? txn) -> (zx.status s);
+    DoRwByte(bool write, uint8 fn_idx, uint32 addr, uint8 write_byte) -> (zx.status s, uint8 read_byte);
 };
-

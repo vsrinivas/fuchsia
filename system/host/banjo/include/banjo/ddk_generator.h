@@ -46,7 +46,6 @@ public:
     };
 
     struct NamedMethod {
-        uint32_t ordinal;
         bool async;
         bool generate_sync_method;
         std::string c_name;

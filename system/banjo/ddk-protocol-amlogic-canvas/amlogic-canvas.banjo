@@ -14,11 +14,11 @@ struct CanvasInfo {
     uint32 endianness;
 };
 
-[Layout="ddk-protocol", DefaultProtocol]
+[Layout = "ddk-protocol", DefaultProtocol]
 interface Canvas {
     /// Configures a canvas.
     /// Adds a framebuffer to the canvas lookup table.
-    1: Config(handle<vmo> vmo, usize offset, CanvasInfo info) -> (zx.status s, uint8 canvas_idx);
+    Config(handle<vmo> vmo, usize offset, CanvasInfo info) -> (zx.status s, uint8 canvas_idx);
     /// Frees up a canvas.
-    2: Free(uint8 canvas_idx) -> (zx.status s);
+    Free(uint8 canvas_idx) -> (zx.status s);
 };

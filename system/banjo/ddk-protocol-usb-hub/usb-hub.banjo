@@ -6,8 +6,8 @@ library ddk.protocol.usb.hub;
 
 using zx;
 
-[Layout="ddk-interface"]
+[Layout = "ddk-interface"]
 interface UsbHubInterface {
     /// Resets the specified port on the hub.
-    1: ResetPort(uint32 port) -> (zx.status s);
+    ResetPort(uint32 port) -> (zx.status s);
 };

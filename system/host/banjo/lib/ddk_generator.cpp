@@ -1185,7 +1185,6 @@ DdkGenerator::NameInterfaces(const std::vector<std::unique_ptr<flat::Interface>>
             const auto& method = *method_pointer;
             std::string c_name = ToSnakeCase(method.name.data());
             NamedMethod named_method = {
-                .ordinal = method.ordinal.Value(),
                 .async = method.HasAttribute("Async"),
                 .generate_sync_method = method.HasAttribute("GenerateSync"),
                 .c_name = c_name,
@@ -1237,7 +1236,6 @@ DdktlGenerator::NameInterfaces(const std::vector<std::unique_ptr<flat::Interface
             std::string c_name = ToSnakeCase(method.name.data());
             std::string proxy_name = NameIdentifier(method.name);
             NamedMethod named_method = {
-                .ordinal = method.ordinal.Value(),
                 .async = method.HasAttribute("Async"),
                 .generate_sync_method = method.HasAttribute("GenerateSync"),
                 .c_name = c_name,

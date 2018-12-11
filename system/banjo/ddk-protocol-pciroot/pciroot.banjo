@@ -38,39 +38,39 @@ enum PciAddressSpace : uint8 {
     IO = 0x1;
 };
 
-[Layout="ddk-protocol"]
+[Layout = "ddk-protocol"]
 interface Pciroot {
     /// Legacy methods
-    1: GetAuxdata(string args) -> (zx.status s, vector<voidptr> data);
-    2: GetBti(uint32 bdf, uint32 index) -> (zx.status s, handle<bti> bti);
+    GetAuxdata(string args) -> (zx.status s, vector<voidptr> data);
+    GetBti(uint32 bdf, uint32 index) -> (zx.status s, handle<bti> bti);
     /// Get the platform information structure from the pciroot protocol to be used for bus init.
-    3: GetPciPlatformInfo() -> (zx.status s, PciPlatformInfo info);
+    GetPciPlatformInfo() -> (zx.status s, PciPlatformInfo info);
     /// Get IRQ information, including the swizzle table.
-    4: GetPciIrqInfo() -> (zx.status s, PciIrqInfo info);
+    GetPciIrqInfo() -> (zx.status s, PciIrqInfo info);
     /// Returns true if the bus driver should proxy all device config access to pciroot. This is
     /// necessary in cases of IO config on x86, or for controllers that require configuration to
     /// map in device config headers.
-    5: DriverShouldProxyConfig() -> (bool use_proxy);
+    DriverShouldProxyConfig() -> (bool use_proxy);
     /// Read 8 bytes from config space for device at bdf address |address|, offset |offset|.
-    6: ConfigRead8(zircon.hw.pci.PciBdf address, uint16 offset) -> (zx.status s, uint8 value);
+    ConfigRead8(zircon.hw.pci.PciBdf address, uint16 offset) -> (zx.status s, uint8 value);
     /// Read 16 bytes from config space for device at bdf address |address|, offset |offset|.
-    7: ConfigRead16(zircon.hw.pci.PciBdf address, uint16 offset) -> (zx.status s, uint16 value);
+    ConfigRead16(zircon.hw.pci.PciBdf address, uint16 offset) -> (zx.status s, uint16 value);
     /// Read 32 bytes from config space for device at bdf address |address|, offset |offset|.
-    8: ConfigRead32(zircon.hw.pci.PciBdf address, uint16 offset) -> (zx.status s, uint32 value);
+    ConfigRead32(zircon.hw.pci.PciBdf address, uint16 offset) -> (zx.status s, uint32 value);
     /// Write 8 bytes to config space for device at bdf |address| offset |offset|.
-    9: ConfigWrite8(zircon.hw.pci.PciBdf address, uint16 offset, uint8 value) -> (zx.status s);
+    ConfigWrite8(zircon.hw.pci.PciBdf address, uint16 offset, uint8 value) -> (zx.status s);
     /// Write 16 bytes to config space for device at bdf |address| offset |offset|.
-    10: ConfigWrite16(zircon.hw.pci.PciBdf address, uint16 offset, uint16 value) -> (zx.status s);
+    ConfigWrite16(zircon.hw.pci.PciBdf address, uint16 offset, uint16 value) -> (zx.status s);
     /// Write 32 bytes to config space for device at bdf |address| offset |offset|.
-    11: ConfigWrite32(zircon.hw.pci.PciBdf address, uint16 offset, uint32 value) -> (zx.status s);
+    ConfigWrite32(zircon.hw.pci.PciBdf address, uint16 offset, uint32 value) -> (zx.status s);
     /// Placeholder methods for MSI configuration. May be removed.
-    12: MsiAllocBlock(uint64 requested_irqs, bool can_target_64bit) -> (zx.status s, MsiBlock block);
-    13: MsiFreeBlock(MsiBlock block) -> (zx.status s);
-    14: MsiMaskUnmask(uint64 msi_id, bool mask) -> (zx.status s);
+    MsiAllocBlock(uint64 requested_irqs, bool can_target_64bit) -> (zx.status s, MsiBlock block);
+    MsiFreeBlock(MsiBlock block) -> (zx.status s);
+    MsiMaskUnmask(uint64 msi_id, bool mask) -> (zx.status s);
     /// Request address space reservations from platform bus to use for mapping bars / bridges
     /// TODO(cja): parameters/return are not finalized.
-    15: GetAddressSpace(usize len, PciAddressSpace type, bool low) -> (zx.status s, zx.paddr base);
+    GetAddressSpace(usize len, PciAddressSpace type, bool low) -> (zx.status s, zx.paddr base);
     /// Free address space reserved via GetAddressSpace from platform bus to use for mapping bars / bridges
     /// TODO(cja): parameters/return are not finalized.
-    16: FreeAddressSpace(zx.paddr base, usize len, PciAddressSpace type) -> (zx.status s);
+    FreeAddressSpace(zx.paddr base, usize len, PciAddressSpace type) -> (zx.status s);
 };

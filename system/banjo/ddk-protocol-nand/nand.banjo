@@ -22,11 +22,10 @@ using zx;
 
 /// NOTE: The protocol can be extended with barriers to support controllers that
 /// may issue multiple simultaneous request to the IO chips.
-
 enum NandOp : uint32 {
-   READ = 0x1;
-   WRITE = 0x2;
-   ERASE = 0x3;
+    READ = 0x1;
+    WRITE = 0x2;
+    ERASE = 0x3;
 };
 
 /// A single operation can read or write an arbitrary number of pages,
@@ -106,22 +105,22 @@ union NandOperation {
     NandErase erase;
 };
 
-[Layout="ddk-protocol", DefaultProtocol]
+[Layout = "ddk-protocol", DefaultProtocol]
 interface Nand {
     /// Obtains the parameters of the nand device and the required
     /// size of |NandOperation|. The |NandOperation| submitted via Queue() must have
     /// `nand_op_size - sizeof(NandOperation)` bytes available at the end of the
     /// structure for the use of the driver.
-    1: Query() -> (zircon.device.nand.NandInfo info, usize nand_op_size);
+    Query() -> (zircon.device.nand.NandInfo info, usize nand_op_size);
 
     /// Submits an IO request for processing. Success or failure will be reported
     /// via the callback. The callback may be called before the Queue() method returns.
     [Async]
-    2: Queue(NandOperation? op) -> (zx.status status, NandOperation? op);
+    Queue(NandOperation? op) -> (zx.status status, NandOperation? op);
 
     /// Gets the list of bad erase blocks, as reported by the nand manufacturer.
     /// This should only be called before writing any data to the nand, and the
     /// returned data should be saved somewhere else, along blocks that become
     /// bad after they've been in use.
-    3: GetFactoryBadBlockList() -> (zx.status status, vector<uint32> bad_blocks);
+    GetFactoryBadBlockList() -> (zx.status status, vector<uint32> bad_blocks);
 };

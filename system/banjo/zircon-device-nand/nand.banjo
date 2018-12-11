@@ -4,7 +4,7 @@
 
 library zircon.device.nand;
 
-[repr="C"]
+[repr = "C"]
 struct NandInfo {
     /// Read/write unit size, in bytes.
     uint32 page_size;

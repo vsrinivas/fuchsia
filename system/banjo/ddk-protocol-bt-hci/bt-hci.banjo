@@ -6,21 +6,21 @@ library ddk.protocol.bt.hci;
 
 using zx;
 
-[Layout="ddk-protocol", DefaultProtocol]
+[Layout = "ddk-protocol", DefaultProtocol]
 interface BtHci {
-  /// Open the two-way HCI command channel for sending HCI commands and
-  /// receiving event packets.  Returns ZX_ERR_ALREADY_BOUND if the channel
-  /// is already open.
-  1: OpenCommandChannel() -> (zx.status s, handle<channel> channel);
-  /// Open the two-way HCI ACL data channel.
-  /// Returns ZX_ERR_ALREADY_BOUND if the channel is already open.
-  2: OpenAclDataChannel() -> (zx.status s, handle<channel> channel);
-  /// Open an output-only channel for monitoring HCI traffic.
-  /// The format of each message is: [1-octet flags] [n-octet payload]
-  /// The flags octet is a bitfield with the following values defined:
-  ///  - 0x00: The payload represents a command packet sent from the host to the
-  ///          controller.
-  ///  - 0x01: The payload represents an event packet sent by the controller.
-  /// Returns ZX_ERR_ALREADY_BOUND if the channel is already open.
-  3: OpenSnoopChannel() -> (zx.status s, handle<channel> channel);
+    /// Open the two-way HCI command channel for sending HCI commands and
+    /// receiving event packets.  Returns ZX_ERR_ALREADY_BOUND if the channel
+    /// is already open.
+    OpenCommandChannel() -> (zx.status s, handle<channel> channel);
+    /// Open the two-way HCI ACL data channel.
+    /// Returns ZX_ERR_ALREADY_BOUND if the channel is already open.
+    OpenAclDataChannel() -> (zx.status s, handle<channel> channel);
+    /// Open an output-only channel for monitoring HCI traffic.
+    /// The format of each message is: [1-octet flags] [n-octet payload]
+    /// The flags octet is a bitfield with the following values defined:
+    ///  - 0x00: The payload represents a command packet sent from the host to the
+    ///          controller.
+    ///  - 0x01: The payload represents an event packet sent by the controller.
+    /// Returns ZX_ERR_ALREADY_BOUND if the channel is already open.
+    OpenSnoopChannel() -> (zx.status s, handle<channel> channel);
 };

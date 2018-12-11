@@ -179,7 +179,6 @@ private:
     std::unique_ptr<raw::TrueLiteral> ParseTrueLiteral();
     std::unique_ptr<raw::FalseLiteral> ParseFalseLiteral();
     std::unique_ptr<raw::Literal> ParseLiteral();
-    std::unique_ptr<raw::Ordinal> ParseOrdinal();
 
     std::unique_ptr<raw::Constant> ParseConstant();
 

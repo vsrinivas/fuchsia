@@ -7,5 +7,5 @@ library banjo.examples.example7;
 // ¡🇷🇸🇷
 
 interface Hello {
-    1: Say(string req) -> (string response);
+    Say(string req) -> (string response);
 };

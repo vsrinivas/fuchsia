@@ -5,7 +5,7 @@
 library banjo.examples.events;
 
 interface AnimalPlanet {
-    1: Dog(string s, bool b);
-    2: Cat(string s) -> (bool b);
-    3: -> Bird(string s, bool b);
+    Dog(string s, bool b);
+    Cat(string s) -> (bool b);
+    -> Bird(string s, bool b);
 };

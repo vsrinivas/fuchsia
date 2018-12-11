@@ -15,14 +15,14 @@ struct I2cImplOp {
 };
 
 /// Low-level protocol for i2c drivers.
-[Layout="ddk-protocol", DefaultProtocol]
+[Layout = "ddk-protocol", DefaultProtocol]
 interface I2cImpl {
-    1: GetBusCount() -> (uint32 count);
-    2: GetMaxTransferSize(uint32 bus_id) -> (zx.status s, usize size);
+    GetBusCount() -> (uint32 count);
+    GetMaxTransferSize(uint32 bus_id) -> (zx.status s, usize size);
     /// Sets the bitrate for the i2c bus in KHz units.
-    3: SetBitrate(uint32 bus_id, uint32 bitrate) -> (zx.status s);
+    SetBitrate(uint32 bus_id, uint32 bitrate) -> (zx.status s);
     /// |Transact| assumes that all ops buf are not null.
     /// |Transact| assumes that all ops length are not zero.
     /// |Transact| assumes that at least the last op has stop set to true.
-    4: Transact(uint32 bus_id, vector<I2cImplOp> op) -> (zx.status status);
+    Transact(uint32 bus_id, vector<I2cImplOp> op) -> (zx.status status);
 };

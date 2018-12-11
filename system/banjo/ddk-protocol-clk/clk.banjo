@@ -6,8 +6,8 @@ library ddk.protocol.clk;
 
 using zx;
 
-[Layout="ddk-protocol", DefaultProtocol]
+[Layout = "ddk-protocol", DefaultProtocol]
 interface Clk {
-  1: Enable(uint32 index) -> (zx.status s);
-  2: Disable(uint32 index) -> (zx.status s);
+    Enable(uint32 index) -> (zx.status s);
+    Disable(uint32 index) -> (zx.status s);
 };
