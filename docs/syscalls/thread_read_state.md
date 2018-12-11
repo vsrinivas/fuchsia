@@ -8,15 +8,15 @@ thread_read_state - Read one aspect of thread state.
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
-#include <zircon/syscalls/debug.h>
 
-zx_status_t zx_thread_read_state(
-    zx_handle_t handle,
-    uint32_t kind,
-    void* buffer,
-    size_t len);
+zx_status_t zx_thread_read_state(zx_handle_t handle,
+                                 uint32_t kind,
+                                 void* buffer,
+                                 size_t buffer_size);
 ```
 
 ## DESCRIPTION
@@ -90,8 +90,8 @@ In the event of failure, a negative error value is returned.
 There is no good way for userspace to handle this (unlikely) error.
 In a future build this error will no longer occur.
 
-**ZX_ERR_BUFFER_TOO_SMALL**  The buffer length *len* is too small to hold
-the data required by *kind*.
+**ZX_ERR_BUFFER_TOO_SMALL**  The buffer length *buffer_size* is too small to
+hold the data required by *kind*.
 
 **ZX_ERR_BAD_STATE**  The thread is not stopped at a point where state
 is available. The thread state may only be read when the thread is stopped due

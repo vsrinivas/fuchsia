@@ -8,11 +8,12 @@ thread_exit - terminate the current running thread
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
 void zx_thread_exit(void);
-
 ```
 
 ## DESCRIPTION

@@ -8,15 +8,15 @@ thread_write_state - Write one aspect of thread state.
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
-#include <zircon/syscalls/debug.h>
 
-zx_status_t zx_thread_write_state(
-    zx_handle_t handle,
-    uint32_t kind,
-    const void* buffer,
-    size_t len);
+zx_status_t zx_thread_write_state(zx_handle_t handle,
+                                  uint32_t kind,
+                                  const void* buffer,
+                                  size_t buffer_size);
 ```
 
 ## DESCRIPTION
@@ -70,8 +70,8 @@ In the event of failure, a negative error value is returned.
 **ZX_ERR_ACCESS_DENIED**  *handle* lacks *ZX_RIGHT_WRITE*.
 
 **ZX_ERR_INVALID_ARGS**  *kind* is not valid, *buffer* is an invalid pointer,
-*len* doesn't match the size of the structure expected for *kind* or the given
-values to set are not valid.
+*buffer_size* doesn't match the size of the structure expected for *kind* or
+the given values to set are not valid.
 
 **ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
 There is no good way for userspace to handle this (unlikely) error.

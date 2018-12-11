@@ -8,20 +8,25 @@ thread_start - start execution on a thread
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_thread_start(zx_handle_t handle, zx_vaddr_t entry, zx_vaddr_t stack,
-                            uintptr_t arg1, uintptr_t arg2);
+zx_status_t zx_thread_start(zx_handle_t handle,
+                            zx_vaddr_t thread_entry,
+                            zx_vaddr_t stack,
+                            uintptr_t arg1,
+                            uintptr_t arg2);
 ```
 
 ## DESCRIPTION
 
-**thread_start**() causes a thread to begin execution at the program
-counter specified by *entry* and with the stack pointer set to *stack*.
-The arguments *arg1* and *arg2* are arranged to be in the architecture
-specific registers used for the first two arguments of a function call
-before the thread is started.  All other registers are zero upon start.
+**thread_start**() causes a thread to begin execution at the program counter
+specified by *thread_entry* and with the stack pointer set to *stack*. The
+arguments *arg1* and *arg2* are arranged to be in the architecture specific
+registers used for the first two arguments of a function call before the thread
+is started.  All other registers are zero upon start.
 
 When the last handle to a thread is closed, the thread is destroyed.
 
@@ -29,10 +34,10 @@ Thread handles may be waited on and will assert the signal
 *ZX_THREAD_TERMINATED* when the thread stops executing (due to
 **thread_exit**() being called.
 
-*entry* shall point to a function that must call **thread_exit**() or
+*thread_entry* shall point to a function that must call **thread_exit**() or
 **futex_wake_handle_close_thread_exit**() or
-**vmar_unmap_handle_close_thread_exit**() before reaching the last
-instruction. Below is an example:
+**vmar_unmap_handle_close_thread_exit**() before reaching the last instruction.
+Below is an example:
 
 ```
 void thread_entry(uintptr_t arg1, uintptr_t arg2) __attribute__((noreturn)) {

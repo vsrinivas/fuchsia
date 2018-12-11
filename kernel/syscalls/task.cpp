@@ -190,27 +190,27 @@ zx_status_t sys_thread_create(zx_handle_t process_handle,
 }
 
 // zx_status_t zx_thread_start
-zx_status_t sys_thread_start(zx_handle_t thread_handle, zx_vaddr_t entry,
+zx_status_t sys_thread_start(zx_handle_t handle, zx_vaddr_t thread_entry,
                              zx_vaddr_t stack, uintptr_t arg1, uintptr_t arg2) {
     LTRACEF("handle %x, entry %#" PRIxPTR ", sp %#" PRIxPTR
             ", arg1 %#" PRIxPTR ", arg2 %#" PRIxPTR "\n",
-            thread_handle, entry, stack, arg1, arg2);
+            handle, thread_entry, stack, arg1, arg2);
 
     auto up = ProcessDispatcher::GetCurrent();
 
     fbl::RefPtr<ThreadDispatcher> thread;
-    zx_status_t status = up->GetDispatcherWithRights(thread_handle, ZX_RIGHT_MANAGE_THREAD,
+    zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_MANAGE_THREAD,
                                                      &thread);
     if (status != ZX_OK) {
         // Try again, but with the WRITE right.
         // TODO(ZX-2967) Remove this when all callers are using MANAGE_THREAD.
-        status = up->GetDispatcherWithRights(thread_handle, ZX_RIGHT_WRITE, &thread);
+        status = up->GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &thread);
         if (status != ZX_OK)
             return status;
     }
 
     ktrace(TAG_THREAD_START, (uint32_t)thread->get_koid(), 0, 0, 0);
-    return thread->Start(entry, stack, arg1, arg2, /* initial_thread= */ false);
+    return thread->Start(thread_entry, stack, arg1, arg2, /* initial_thread= */ false);
 }
 
 void sys_thread_exit() {
@@ -219,9 +219,9 @@ void sys_thread_exit() {
 }
 
 // zx_status_t zx_thread_read_state
-zx_status_t sys_thread_read_state(zx_handle_t handle, uint32_t state_kind,
-                                  user_out_ptr<void> _buffer, size_t buffer_len) {
-    LTRACEF("handle %x, state_kind %u\n", handle, state_kind);
+zx_status_t sys_thread_read_state(zx_handle_t handle, uint32_t kind,
+                                  user_out_ptr<void> buffer, size_t buffer_size) {
+    LTRACEF("handle %x, kind %u\n", handle, kind);
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -233,24 +233,24 @@ zx_status_t sys_thread_read_state(zx_handle_t handle, uint32_t state_kind,
 
     thread_state_local_buffer_t local_buffer;
     size_t local_buffer_len = 0;
-    status = validate_thread_state_input(state_kind, buffer_len, &local_buffer_len);
+    status = validate_thread_state_input(kind, buffer_size, &local_buffer_len);
     if (status != ZX_OK)
         return status;
 
-    status = thread->ReadState(static_cast<zx_thread_state_topic_t>(state_kind), &local_buffer,
+    status = thread->ReadState(static_cast<zx_thread_state_topic_t>(kind), &local_buffer,
                                local_buffer_len);
     if (status != ZX_OK)
         return status;
 
-    if (_buffer.copy_array_to_user(&local_buffer, local_buffer_len) != ZX_OK)
+    if (buffer.copy_array_to_user(&local_buffer, local_buffer_len) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
     return ZX_OK;
 }
 
 // zx_status_t zx_thread_write_state
-zx_status_t sys_thread_write_state(zx_handle_t handle, uint32_t state_kind,
-                                   user_in_ptr<const void> _buffer, size_t buffer_len) {
-    LTRACEF("handle %x, state_kind %u\n", handle, state_kind);
+zx_status_t sys_thread_write_state(zx_handle_t handle, uint32_t kind,
+                                   user_in_ptr<const void> buffer, size_t buffer_size) {
+    LTRACEF("handle %x, kind %u\n", handle, kind);
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -262,20 +262,20 @@ zx_status_t sys_thread_write_state(zx_handle_t handle, uint32_t state_kind,
 
     thread_state_local_buffer_t local_buffer;
     size_t local_buffer_len = 0;
-    status = validate_thread_state_input(state_kind, buffer_len, &local_buffer_len);
+    status = validate_thread_state_input(kind, buffer_size, &local_buffer_len);
     if (status != ZX_OK)
         return status;
 
     // Additionally check that the buffer is the exact size expected (validate only checks it's
     // larger, which is sufficient for reading).
-    if (local_buffer_len != buffer_len)
+    if (local_buffer_len != buffer_size)
         return ZX_ERR_INVALID_ARGS;
 
-    status = _buffer.copy_array_from_user(&local_buffer, local_buffer_len);
+    status = buffer.copy_array_from_user(&local_buffer, local_buffer_len);
     if (status != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
 
-    return thread->WriteState(static_cast<zx_thread_state_topic_t>(state_kind), &local_buffer,
+    return thread->WriteState(static_cast<zx_thread_state_topic_t>(kind), &local_buffer,
                               local_buffer_len);
 }
 
