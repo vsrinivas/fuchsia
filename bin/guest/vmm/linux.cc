@@ -349,11 +349,11 @@ static zx_status_t add_memory_entry(void* dtb, int memory_off, zx_gpaddr_t addr,
 }
 
 static zx_status_t load_device_tree(
-    const int dtb_fd, const machina::PhysMem& phys_mem,
+    const int dtb_fd, const GuestConfig& cfg, const machina::PhysMem& phys_mem,
     const machina::DevMem& dev_mem,
     const std::vector<machina::PlatformDevice*>& devices,
     const std::string& cmdline, const int dtb_overlay_fd,
-    const size_t initrd_size, const GuestConfig& cfg) {
+    const size_t initrd_size) {
   void* dtb;
   size_t dtb_size;
   zx_status_t status = read_device_tree(dtb_fd, phys_mem, kDtbOffset,
@@ -467,9 +467,11 @@ static zx_status_t load_device_tree(
     }
     status = add_memory_entry(dtb, memory_off, range.addr, range.size);
   };
-  dev_mem.YieldInverseRange(0, phys_mem.size(), yield);
-  if (status != ZX_OK) {
-    return status;
+  for (const MemorySpec& spec : cfg.memory()) {
+    dev_mem.YieldInverseRange(spec.addr, spec.len, yield);
+    if (status != ZX_OK) {
+      return status;
+    }
   }
 
   // Add all platform devices to device tree.
@@ -552,8 +554,8 @@ zx_status_t setup_linux(const GuestConfig& cfg,
       FXL_LOG(ERROR) << "Failed to open device tree " << kDtbPath;
       return ZX_ERR_IO;
     }
-    status = load_device_tree(dtb_fd.get(), phys_mem, dev_mem, devices, cmdline,
-                              dtb_overlay_fd.get(), initrd_size, cfg);
+    status = load_device_tree(dtb_fd.get(), cfg, phys_mem, dev_mem, devices,
+                              cmdline, dtb_overlay_fd.get(), initrd_size);
     if (status != ZX_OK) {
       return status;
     }

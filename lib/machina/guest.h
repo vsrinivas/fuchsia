@@ -17,6 +17,23 @@
 #include "garnet/lib/machina/io.h"
 #include "garnet/lib/machina/vcpu.h"
 
+// NOTE(abdulla): Ideally, these should be in guest_config.h
+enum class MemoryPolicy {
+  // Map a VMO as cached memory into the guest physical address space.
+  GUEST_CACHED = 0,
+  // Map a VMO with 1:1 correspondence with host memory as cached memory into
+  // the guest physical address space.
+  HOST_CACHED = 1,
+  // Map a VMO with 1:1 correspondence with host memory as device memory into
+  // the guest physical address space.
+  HOST_DEVICE = 2,
+};
+struct MemorySpec {
+  zx_gpaddr_t addr;
+  size_t len;
+  MemoryPolicy policy;
+};
+
 namespace machina {
 
 enum class TrapType {
@@ -31,7 +48,7 @@ class Guest {
   using VcpuArray = std::array<std::unique_ptr<Vcpu>, kMaxVcpus>;
   using IoMappingList = std::forward_list<IoMapping>;
 
-  zx_status_t Init(size_t mem_size, bool host_memory);
+  zx_status_t Init(const std::vector<MemorySpec>& memory);
 
   const PhysMem& phys_mem() const { return phys_mem_; }
   const zx::guest& object() { return guest_; }

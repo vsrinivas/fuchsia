@@ -14,6 +14,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include "garnet/lib/machina/guest.h"
 #include "garnet/lib/machina/interrupt_controller.h"
 
 struct BlockSpec {
@@ -32,13 +33,12 @@ class GuestConfig {
   Kernel kernel() const { return kernel_; }
   const std::string& kernel_path() const { return kernel_path_; }
   const std::string& ramdisk_path() const { return ramdisk_path_; }
-  const std::string& cmdline() const { return cmdline_; }
   const std::string& dtb_overlay_path() const { return dtb_overlay_path_; }
-  const std::vector<BlockSpec>& block_devices() const { return block_specs_; }
+  const std::string& cmdline() const { return cmdline_; }
+  const std::vector<BlockSpec>& block_devices() const { return block_devices_; }
+  const std::vector<MemorySpec>& memory() const { return memory_; }
   const std::vector<InterruptSpec>& interrupts() const { return interrupts_; }
   uint8_t cpus() const { return cpus_; }
-  size_t memory() const { return memory_; }
-  bool host_memory() const { return host_memory_; }
   bool legacy_net() const { return legacy_net_; }
   bool virtio_balloon() const { return virtio_balloon_; }
   bool virtio_console() const { return virtio_console_; }
@@ -52,13 +52,12 @@ class GuestConfig {
   Kernel kernel_ = Kernel::ZIRCON;
   std::string kernel_path_;
   std::string ramdisk_path_;
-  std::string cmdline_;
   std::string dtb_overlay_path_;
-  std::vector<BlockSpec> block_specs_;
+  std::string cmdline_;
+  std::vector<BlockSpec> block_devices_;
+  std::vector<MemorySpec> memory_;
   std::vector<InterruptSpec> interrupts_;
   uint8_t cpus_ = zx_system_get_num_cpus();
-  size_t memory_ = 1 << 30;
-  bool host_memory_ = false;
   bool legacy_net_ = true;
   bool virtio_balloon_ = true;
   bool virtio_console_ = true;
@@ -73,16 +72,15 @@ class GuestConfigParser {
   using OptionHandler = std::function<zx_status_t(const std::string& name,
                                                   const std::string& value)>;
   GuestConfigParser(GuestConfig* config);
-  ~GuestConfigParser();
 
   zx_status_t ParseArgcArgv(int argc, char** argv);
   zx_status_t ParseConfig(const std::string& data);
 
  private:
   GuestConfig* cfg_;
+  std::unordered_map<std::string, OptionHandler> opts_;
 
-  using OptionMap = std::unordered_map<std::string, OptionHandler>;
-  OptionMap opts_;
+  void SetDefaults();
 };
 
 #endif  // GARNET_BIN_GUEST_VMM_GUEST_CONFIG_H_

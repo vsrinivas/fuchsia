@@ -114,17 +114,17 @@ int main(int argc, char** argv) {
     return status;
   }
 
-  // Having memory overlap with dynamic device assignment will work, as any
-  // devices will get subtracted from the RAM list later. But it will probably
-  // result in much less RAM than expected and so we shall consider it an error.
-  if (cfg.memory() >= kFirstDynamicDeviceAddr) {
-    FXL_LOG(ERROR) << "Requested memory should be less than "
-                   << kFirstDynamicDeviceAddr;
-    return ZX_ERR_INVALID_ARGS;
+  // We want to avoid a collision between static and dynamic address assignment.
+  for (const MemorySpec& spec : cfg.memory()) {
+    if (spec.addr + spec.len > kFirstDynamicDeviceAddr) {
+      FXL_LOG(ERROR) << "Requested memory should be less than "
+                     << kFirstDynamicDeviceAddr;
+      return ZX_ERR_INVALID_ARGS;
+    }
   }
 
   machina::Guest guest;
-  status = guest.Init(cfg.memory(), cfg.host_memory());
+  status = guest.Init(cfg.memory());
   if (status != ZX_OK) {
     return status;
   }

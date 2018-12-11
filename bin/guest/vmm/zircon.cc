@@ -205,14 +205,16 @@ static zx_status_t build_data_zbi(
   }
   // Memory config.
   std::vector<zbi_mem_range_t> mem_config;
-
-  dev_mem.YieldInverseRange(0, cfg.memory(), [&mem_config](auto range) {
+  auto yield = [&mem_config](auto range) {
     mem_config.emplace_back(zbi_mem_range_t{
         .paddr = range.addr,
         .length = range.size,
         .type = ZBI_MEM_RANGE_RAM,
     });
-  });
+  };
+  for (const MemorySpec& spec : cfg.memory()) {
+    dev_mem.YieldInverseRange(spec.addr, spec.len, yield);
+  }
 
   // Zircon only supports a limited number of peripheral ranges so for any
   // dev_mem ranges that are not in the RAM range we will build a single
@@ -220,7 +222,7 @@ static zx_status_t build_data_zbi(
   zbi_mem_range_t periph_range = {
       .paddr = 0, .length = 0, .type = ZBI_MEM_RANGE_PERIPHERAL};
   for (const auto& range : dev_mem) {
-    if (range.addr < cfg.memory()) {
+    if (range.addr < phys_mem.size()) {
       mem_config.emplace_back(zbi_mem_range_t{
           .paddr = range.addr,
           .length = range.size,

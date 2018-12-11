@@ -119,53 +119,10 @@ static GuestConfigParser::OptionHandler append_string(std::string* out,
   };
 }
 
-constexpr size_t kMinMemorySize = 1 << 20;
-
-static GuestConfigParser::OptionHandler parse_mem_size(size_t* out) {
-  return [out](const std::string& key, const std::string& value) {
-    if (value.empty()) {
-      FXL_LOG(ERROR) << "Option: '" << key << "' expects a value (--" << key
-                     << "=<value>)";
-      return ZX_ERR_INVALID_ARGS;
-    }
-    char modifier = 'b';
-    size_t size;
-    int ret = sscanf(value.c_str(), "%zd%c", &size, &modifier);
-    if (ret < 1) {
-      FXL_LOG(ERROR) << "Value is not a size string: " << value;
-      return ZX_ERR_INVALID_ARGS;
-    }
-    switch (modifier) {
-      case 'b':
-        break;
-      case 'k':
-        size *= (1 << 10);
-        break;
-      case 'M':
-        size *= (1 << 20);
-        break;
-      case 'G':
-        size *= (1 << 30);
-        break;
-      default:
-        FXL_LOG(ERROR) << "Invalid size modifier " << modifier;
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    if (size < kMinMemorySize) {
-      FXL_LOG(ERROR) << "Requested memory " << size
-                     << " is less than the minimum supported size "
-                     << kMinMemorySize;
-      return ZX_ERR_INVALID_ARGS;
-    }
-    *out = size;
-    return ZX_OK;
-  };
-}
-
 template <typename NumberType>
-static zx_status_t transform_number(const std::string& value, NumberType* out) {
-  if (!fxl::StringToNumberWithError(value, out)) {
+static zx_status_t parse_number(const std::string& value, NumberType* out,
+                                fxl::Base base) {
+  if (!fxl::StringToNumberWithError(value, out, base)) {
     FXL_LOG(ERROR) << "Unable to convert '" << value << "' into a number";
     return ZX_ERR_INVALID_ARGS;
   }
@@ -173,14 +130,14 @@ static zx_status_t transform_number(const std::string& value, NumberType* out) {
 }
 
 template <typename NumberType>
-static GuestConfigParser::OptionHandler parse_number(NumberType* out) {
+static GuestConfigParser::OptionHandler set_number(NumberType* out) {
   return [out](const std::string& key, const std::string& value) {
     if (value.empty()) {
       FXL_LOG(ERROR) << "Option: '" << key << "' expects a value (--" << key
                      << "=<value>)";
       return ZX_ERR_INVALID_ARGS;
     }
-    return transform_number(value, out);
+    return parse_number(value, out, fxl::Base::k10);
   };
 }
 
@@ -210,10 +167,9 @@ static GuestConfigParser::OptionHandler set_flag(bool* out,
   };
 }
 
-static zx_status_t transform_block_spec(const std::string& spec,
-                                        BlockSpec* out) {
-  std::string token;
+static zx_status_t parse_block_spec(const std::string& spec, BlockSpec* out) {
   std::istringstream token_stream(spec);
+  std::string token;
   while (std::getline(token_stream, token, ',')) {
     if (token == "fdio") {
       out->format = fuchsia::guest::BlockFormat::RAW;
@@ -235,17 +191,94 @@ static zx_status_t transform_block_spec(const std::string& spec,
   return ZX_OK;
 }
 
-static zx_status_t transform_interrupt_spec(const std::string& spec,
-                                            InterruptSpec* out) {
-  auto pos = spec.find(',');
-  if (pos == std::string::npos) {
+static std::vector<std::string> split(const std::string& spec, char delim) {
+  std::istringstream token_stream(spec);
+  std::string token;
+  std::vector<std::string> tokens;
+  while (std::getline(token_stream, token, delim)) {
+    tokens.push_back(token);
+  }
+  return tokens;
+}
+
+static zx_status_t parse_interrupt_spec(const std::string& spec,
+                                        InterruptSpec* out) {
+  std::vector<std::string> tokens = split(spec, ',');
+  if (tokens.size() != 2) {
     return ZX_ERR_INVALID_ARGS;
   }
-  zx_status_t status = transform_number(spec.substr(0, pos), &out->vector);
+  zx_status_t status = parse_number(tokens[0], &out->vector, fxl::Base::k10);
   if (status != ZX_OK) {
     return status;
   }
-  return transform_number(spec.substr(pos + 1), &out->options);
+  return parse_number(tokens[1], &out->options, fxl::Base::k10);
+}
+
+constexpr size_t kMinMemorySize = 1 << 20;
+
+static zx_status_t parse_memory(const std::string& value, size_t* out) {
+  char modifier = 'b';
+  size_t size;
+  int ret = sscanf(value.c_str(), "%zd%c", &size, &modifier);
+  if (ret < 1) {
+    FXL_LOG(ERROR) << "Value is not a size string: " << value;
+    return ZX_ERR_INVALID_ARGS;
+  }
+  switch (modifier) {
+    case 'b':
+      break;
+    case 'k':
+      size *= (1 << 10);
+      break;
+    case 'M':
+      size *= (1 << 20);
+      break;
+    case 'G':
+      size *= (1 << 30);
+      break;
+    default:
+      FXL_LOG(ERROR) << "Invalid size modifier " << modifier;
+      return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (size < kMinMemorySize) {
+    FXL_LOG(ERROR) << "Requested memory " << size
+                   << " is less than the minimum supported size "
+                   << kMinMemorySize;
+    return ZX_ERR_INVALID_ARGS;
+  }
+  *out = size;
+  return ZX_OK;
+}
+
+static zx_status_t parse_memory_spec(const std::string& spec, MemorySpec* out) {
+  out->addr = 0;
+  out->policy = MemoryPolicy::GUEST_CACHED;
+  std::vector<std::string> tokens = split(spec, ',');
+  if (tokens.size() == 1) {
+    return parse_memory(tokens[0], &out->len);
+  }
+  if (tokens.size() > 3) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  zx_status_t status = parse_number(tokens[0], &out->addr, fxl::Base::k16);
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = parse_memory(tokens[1], &out->len);
+  if (status != ZX_OK) {
+    return status;
+  }
+  if (tokens.size() != 3) {
+    return ZX_OK;
+  } else if (tokens[2] == "cached") {
+    out->policy = MemoryPolicy::HOST_CACHED;
+  } else if (tokens[2] == "device") {
+    out->policy = MemoryPolicy::HOST_DEVICE;
+  } else {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  return ZX_OK;
 }
 
 static GuestConfigParser::OptionHandler save_kernel(std::string* out,
@@ -265,18 +298,17 @@ GuestConfigParser::GuestConfigParser(GuestConfig* cfg)
     : cfg_(cfg),
       opts_{
           {"block",
-           add_option<BlockSpec>(&cfg_->block_specs_, transform_block_spec)},
+           add_option<BlockSpec>(&cfg_->block_devices_, parse_block_spec)},
           {"cmdline-add", append_string(&cfg_->cmdline_, " ")},
           {"cmdline", save_option(&cfg_->cmdline_)},
-          {"cpus", parse_number(&cfg_->cpus_)},
+          {"cpus", set_number(&cfg_->cpus_)},
           {"dtb-overlay", save_option(&cfg_->dtb_overlay_path_)},
-          {"host-memory", set_flag(&cfg_->host_memory_, true)},
-          {"interrupt", add_option<InterruptSpec>(&cfg_->interrupts_,
-                                                  transform_interrupt_spec)},
+          {"interrupt",
+           add_option<InterruptSpec>(&cfg_->interrupts_, parse_interrupt_spec)},
           {"legacy-net", set_flag(&cfg_->legacy_net_, true)},
           {"linux",
            save_kernel(&cfg_->kernel_path_, &cfg_->kernel_, Kernel::LINUX)},
-          {"memory", parse_mem_size(&cfg_->memory_)},
+          {"memory", add_option<MemorySpec>(&cfg_->memory_, parse_memory_spec)},
           {"ramdisk", save_option(&cfg_->ramdisk_path_)},
           {"virtio-balloon", set_flag(&cfg_->virtio_balloon_, true)},
           {"virtio-console", set_flag(&cfg_->virtio_console_, true)},
@@ -288,7 +320,11 @@ GuestConfigParser::GuestConfigParser(GuestConfig* cfg)
            save_kernel(&cfg_->kernel_path_, &cfg_->kernel_, Kernel::ZIRCON)},
       } {}
 
-GuestConfigParser::~GuestConfigParser() = default;
+void GuestConfigParser::SetDefaults() {
+  if (cfg_->memory_.empty()) {
+    cfg_->memory_.push_back({.len = 1ul << 30});
+  }
+}
 
 zx_status_t GuestConfigParser::ParseArgcArgv(int argc, char** argv) {
   fxl::CommandLine cl = fxl::CommandLineFromArgcArgv(argc, argv);
@@ -313,6 +349,7 @@ zx_status_t GuestConfigParser::ParseArgcArgv(int argc, char** argv) {
     }
   }
 
+  SetDefaults();
   return ZX_OK;
 }
 
@@ -362,5 +399,6 @@ zx_status_t GuestConfigParser::ParseConfig(const std::string& data) {
     return ZX_ERR_INVALID_ARGS;
   }
 
+  SetDefaults();
   return ZX_OK;
 }

@@ -40,67 +40,95 @@ static constexpr uint32_t trap_kind(machina::TrapType type) {
   }
 }
 
-namespace machina {
-
-zx_status_t Guest::Init(size_t mem_size, bool host_memory) {
-  auto sysinfo = get_sysinfo();
-  zx::vmo vmo;
-  if (host_memory) {
-    zx_status_t fidl_status;
-    zx::resource resource;
-    zx_status_t status = sysinfo->GetRootResource(&fidl_status, &resource);
-    if (status != ZX_OK || fidl_status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to get root resource " << status << " "
-                     << fidl_status;
-      return status != ZX_OK ? status : fidl_status;
-    }
-    status = zx::vmo::create_physical(resource, 0, mem_size, &vmo);
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to create physical VMO " << status;
-      return status;
-    }
-    status = vmo.set_cache_policy(ZX_CACHE_POLICY_CACHED);
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to set cache policy on VMO " << status;
-      return status;
-    }
-  } else {
-    zx_status_t status = zx::vmo::create(mem_size, ZX_VMO_NON_RESIZABLE, &vmo);
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to create VMO " << status;
-      return status;
-    }
-  }
-
-  zx_status_t status = phys_mem_.Init(std::move(vmo));
+static zx_status_t get_hypervisor_resource(
+    const fuchsia::sysinfo::DeviceSyncPtr& sysinfo, zx::resource* resource) {
+  zx_status_t fidl_status;
+  zx_status_t status = sysinfo->GetHypervisorResource(&fidl_status, resource);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to initialize guest physical memory " << status;
     return status;
   }
+  return fidl_status;
+}
 
-  zx_status_t fidl_status;
-  zx::resource resource;
-  status = sysinfo->GetHypervisorResource(&fidl_status, &resource);
-  if (status != ZX_OK || fidl_status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to get hypervisor resource " << status << " "
-                   << fidl_status;
-    return status != ZX_OK ? status : fidl_status;
+static constexpr uint32_t cache_policy(MemoryPolicy policy) {
+  switch (policy) {
+    case MemoryPolicy::HOST_DEVICE:
+      return ZX_CACHE_POLICY_UNCACHED_DEVICE;
+    default:
+      return ZX_CACHE_POLICY_CACHED;
   }
+}
 
-  status = zx::guest::create(resource, 0, &guest_, &vmar_);
+namespace machina {
+
+zx_status_t Guest::Init(const std::vector<MemorySpec>& memory) {
+  fuchsia::sysinfo::DeviceSyncPtr sysinfo = get_sysinfo();
+  zx::resource hypervisor_resource;
+  zx_status_t status = get_hypervisor_resource(sysinfo, &hypervisor_resource);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to get hypervisor resource " << status;
+    return status;
+  }
+  status = zx::guest::create(hypervisor_resource, 0, &guest_, &vmar_);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create guest " << status;
     return status;
   }
 
-  zx_gpaddr_t addr;
-  status = vmar_.map(0, phys_mem_.vmo(), 0, mem_size,
-                     ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_PERM_EXECUTE |
-                         ZX_VM_SPECIFIC | ZX_VM_FLAG_REQUIRE_NON_RESIZABLE,
-                     &addr);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to map guest physical memory " << status;
-    return status;
+  zx::resource root_resource;
+  for (const MemorySpec& spec : memory) {
+    zx::vmo vmo;
+    switch (spec.policy) {
+      case MemoryPolicy::GUEST_CACHED:
+        status = zx::vmo::create(spec.len, ZX_VMO_NON_RESIZABLE, &vmo);
+        if (status != ZX_OK) {
+          FXL_LOG(ERROR) << "Failed to create VMO " << status;
+          return status;
+        }
+        break;
+      case MemoryPolicy::HOST_CACHED:
+      case MemoryPolicy::HOST_DEVICE:
+        if (!root_resource) {
+          status = get_root_resource(sysinfo, &root_resource);
+          if (status != ZX_OK) {
+            FXL_LOG(ERROR) << "Failed to get root resource " << status;
+            return status;
+          }
+        }
+        status = zx::vmo::create_physical(root_resource, 0, spec.len, &vmo);
+        if (status != ZX_OK) {
+          FXL_LOG(ERROR) << "Failed to create physical VMO " << status;
+          return status;
+        }
+        status = vmo.set_cache_policy(cache_policy(spec.policy));
+        if (status != ZX_OK) {
+          FXL_LOG(ERROR) << "Failed to set cache policy on VMO " << status;
+          return status;
+        }
+        break;
+      default:
+        FXL_LOG(ERROR) << "Unknown memory policy "
+                       << static_cast<uint32_t>(spec.policy);
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    zx_gpaddr_t addr;
+    status = vmar_.map(spec.addr, vmo, 0, spec.len,
+                       ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_PERM_EXECUTE |
+                           ZX_VM_SPECIFIC | ZX_VM_FLAG_REQUIRE_NON_RESIZABLE,
+                       &addr);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to map guest physical memory " << status;
+      return status;
+    }
+    if (!phys_mem_.vmo()) {
+      status = phys_mem_.Init(std::move(vmo));
+      if (status != ZX_OK) {
+        FXL_LOG(ERROR) << "Failed to initialize guest physical memory "
+                       << status;
+        return status;
+      }
+    }
   }
 
   for (size_t i = 0; i < kNumAsyncWorkers; ++i) {
