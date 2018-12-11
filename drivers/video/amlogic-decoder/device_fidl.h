@@ -56,7 +56,7 @@ class DeviceFidl {
   // LocalCodecFactory.  That removal happens on shared_fidl_thread(), as does
   // other LocalCodecFactory work.
   //
-  // We allow more than 1 in this set at least to accomodate races if the main
+  // We allow more than 1 in this set at least to accommodate races if the main
   // CodecFactory restarts.  It's also fine if the main CodecFactory wants to
   // use more than one for convenience and/or to get more coverage on the
   // >1 case here.

@@ -83,7 +83,7 @@ class CodecImpl : public fuchsia::mediacodec::Codec,
   // format change it wants to reject.  Before giving up, a client that uses
   // per-stream input format overrides should go around one more time with a
   // freshly created Codec created directly with the new format if the client
-  // gets a Codec failure having overriden the input format on a stream of a
+  // gets a Codec failure having overridden the input format on a stream of a
   // Codec such that the stream's input format doesn't exactly match the Codec's
   // input format (at least for now).
   void SetCoreCodecAdapter(std::unique_ptr<CodecAdapter> codec_adapter);
@@ -218,7 +218,7 @@ class CodecImpl : public fuchsia::mediacodec::Codec,
     bool future_discarded_ = false;
     bool future_flush_end_of_stream_ = false;
     // Starts as nullptr for each new stream with implicit fallback to
-    // initial_input_format_details_, but can be overriden on a per-stream basis
+    // initial_input_format_details_, but can be overridden on a per-stream basis
     // with QueueInputFormatDetails().
     std::unique_ptr<fuchsia::mediacodec::CodecFormatDetails>
         input_format_details_;
@@ -436,7 +436,7 @@ class CodecImpl : public fuchsia::mediacodec::Codec,
   std::unique_ptr<const fuchsia::mediacodec::CodecBufferConstraints>
       input_constraints_;
 
-  // This is the most recent settings recieved from the client and accepted,
+  // This is the most recent settings received from the client and accepted,
   // received via SetInputBufferSettings() or SetOutputBufferSettings().  The
   // settings are as-received from the client.
   std::unique_ptr<const fuchsia::mediacodec::CodecPortBufferSettings>
@@ -499,7 +499,7 @@ class CodecImpl : public fuchsia::mediacodec::Codec,
   uint64_t next_output_format_details_version_ordinal_ = 1;
 
   // Separately from ordinal allocation, we track the most recent ordinal that
-  // we've actually sent to the client, to allow tigher protocol enforcement in
+  // we've actually sent to the client, to allow tighter protocol enforcement in
   // case of a hostile client.
   uint64_t sent_buffer_constraints_version_ordinal_[kPortCount] = {};
   uint64_t sent_format_details_version_ordinal_[kPortCount] = {};
@@ -539,7 +539,7 @@ class CodecImpl : public fuchsia::mediacodec::Codec,
   //
   // More complete protocol validation happens on StreamControl ordering domain.
   // The validation here is just to validate to degree needed to not break our
-  // stream_queue_ and future_stream_lifetime_ordainal_.
+  // stream_queue_ and future_stream_lifetime_ordinal_.
   //
   // Returns true if it worked.  Returns false if FailLocked() has already been
   // called, in which case the caller probably wants to just return.
@@ -551,7 +551,7 @@ class CodecImpl : public fuchsia::mediacodec::Codec,
   //
   // More complete protocol validation happens on StreamControl ordering domain.
   // The validation here is just to validate to degree needed to not break our
-  // stream_queue_ and future_stream_lifetime_ordainal_.
+  // stream_queue_ and future_stream_lifetime_ordinal_.
   //
   // Returns true if it worked.  Returns false if FailLocked() has already been
   // called, in which case the caller probably wants to just return.
@@ -670,7 +670,7 @@ class CodecImpl : public fuchsia::mediacodec::Codec,
 
   // "Mid-stream" can mean at the start of a stream also - it's just required
   // that a stream be active currently.  The core codec must ensure that this
-  // call is propertly ordered with respect to onCoreCodecOutputPacket() and
+  // call is properly ordered with respect to onCoreCodecOutputPacket() and
   // onCoreCodecOutputEndOfStream() calls.
   //
   // A call to onCoreCodecMidStreamOutputConfigChange(true) must not be

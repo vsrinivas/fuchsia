@@ -30,7 +30,7 @@ struct CodecAdapterFactory {
 };
 
 // TODO(dustingreen): Fix up this list to correspond to what
-// CodecImpl+AmlogicVideo can actaully handle so far, once there's at least one
+// CodecImpl+AmlogicVideo can actually handle so far, once there's at least one
 // format in that list.  For now this list is here to allow covering some
 // LocalCodecFactory code.
 const CodecAdapterFactory kCodecFactories[] = {

@@ -73,7 +73,7 @@ class CodecAdapter {
   // different input formats that are better to think of as a completely
   // different Codec.
   //
-  // A client that's using different CodecFormatDetails than the inital
+  // A client that's using different CodecFormatDetails than the initial
   // CodecFormatDetails (to any degree) should try one more time with a fresh
   // Codec before giving up (giving up immediately only if the format details at
   // time of failure match the initial format details specified during Codec
@@ -120,11 +120,11 @@ class CodecAdapter {
 
   // The parameter includes the codec_oob_bytes. The core codec is free to call
   // onCoreCodecFailCodec() (immediately on this stack or async) if the
-  // override input format details can't be accomodated (even in situations
+  // override input format details can't be accommodated (even in situations
   // where the override input format details would be ok as initial input format
   // details, such as when new input buffer config is needed).
   //
-  // That said, the core codec should try to accomodate the change, especially
+  // That said, the core codec should try to accommodate the change, especially
   // if the client has configured adequate input buffers, and the basic type of
   // the input data hasn't changed.
   //
@@ -240,14 +240,14 @@ class CodecAdapter {
   // output buffers (considering separately, width, height, and any other
   // similar parameter like color depth) are already large enough for both the
   // before format and after format.  If this is not the case, a codec is
-  // permitted, but not encouranged, to discard some output frames. A codec is
-  // also permitted to achive a more seamless format switch despite output
+  // permitted, but not encouraged, to discard some output frames. A codec is
+  // also permitted to achieve a more seamless format switch despite output
   // buffer re-config by retaining references to old-format low-level buffers,
   // copying into temporary buffers and back out, or similar. However, core
   // codec implementers should note that the process of re-configuring output
   // buffers is not likely to be super-quick, and other parts of the system may
   // not go to so much effort to achieve seamless-ness across an output buffer
-  // re-config, so ... it's probably best not to spend time trying to achive
+  // re-config, so ... it's probably best not to spend time trying to achieve
   // seamless-ness for a situation which for other reasons might end up being
   // non-seamless at least in terms of timing consistency in any case.
   //

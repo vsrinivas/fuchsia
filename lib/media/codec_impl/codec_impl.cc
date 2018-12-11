@@ -12,8 +12,8 @@
 
 #include <threads.h>
 
-// "is_bound_checks" - In serveral lamdas that just send a message, we check
-// is_bound() first, only becaues of ZX_POL_BAD_HANDLE ZX_POL_ACTION_EXCEPTION.
+// "is_bound_checks" - In several lambdas that just send a message, we check
+// is_bound() first, only because of ZX_POL_BAD_HANDLE ZX_POL_ACTION_EXCEPTION.
 // If it weren't for that, we really wouldn't care about passing
 // ZX_HANDLE_INVALID to zx_channel_write(), since the channel error handling is
 // async (we Unbind(), sweep the in-proc send queue, and only then delete the
@@ -212,7 +212,7 @@ void CodecImpl::BindAsync(fit::closure error_handler) {
       "StreamControl_loop", &stream_control_thread_);
   if (start_thread_result != ZX_OK) {
     // Handle the error async, to be consistent with later errors that must
-    // occur async anyway.  Inability to start StreamControl is tne only case
+    // occur async anyway.  Inability to start StreamControl is the only case
     // where we just allow the owner to "delete this" without using
     // UnbindLocked(), since UnbindLocked() relies on StreamControl.
     PostToSharedFidl(std::move(error_handler));
@@ -595,7 +595,7 @@ void CodecImpl::RecycleOutputPacket(
 
     // Before handing the packet to the core codec, clear some fields that the
     // core codec is expected to set (or optionally set in the case of
-    // timstamp_ish).  In addition to these parameters, a core codec can emit
+    // timestamp_ish).  In addition to these parameters, a core codec can emit
     // output config changes via onCoreCodecMidStreamOutputConfigChange().
     packet = all_packets_[kOutputPort][packet_index].get();
     packet->ClearStartOffset();
@@ -925,7 +925,7 @@ void CodecImpl::UnbindLocked() {
   // Regardless of what thread UnbindLocked() is called on, "this" will remain
   // allocated at least until the caller of UnbindLocked() releases lock_.
   //
-  // The shutdown sequence here is meant to be general enough to accomodate code
+  // The shutdown sequence here is meant to be general enough to accommodate code
   // changes without being super brittle.  Not all the potential cases accounted
   // for in this sequence can necessarily happen currently, but it seems good to
   // stop all activity in a way that'll hold up even if a change posts another
@@ -1041,7 +1041,7 @@ void CodecImpl::UnbindLocked() {
       //
       // For example, any lambdas previously posted to send a message via
       // this->binding_ (which is soon to be deleted) will run before the lambda
-      // postead here.
+      // posted here.
       //
       // This relies on other previously-posted _lambdas_ running on
       // fidl_thread() re. this CodecImpl to not re-post to the fidl_thread().
@@ -1159,7 +1159,7 @@ void CodecImpl::EnsureBuffersNotConfigured(std::unique_lock<std::mutex>& lock,
   // This method can be called on input only if there's no current stream.
   //
   // On output, this method can be called if there's no current stream or if
-  // we're in the middle of an ouput config change.
+  // we're in the middle of an output config change.
   //
   // On input, this can only be called on stream_control_thread_.
   //
@@ -1178,7 +1178,7 @@ void CodecImpl::EnsureBuffersNotConfigured(std::unique_lock<std::mutex>& lock,
   // For mid-stream output config change, the caller is responsible for ensuring
   // that buffers are not with the HW first.
   //
-  // TODO(dustingreen): Check anything relelvant to buffers not presently being
+  // TODO(dustingreen): Check anything relevant to buffers not presently being
   // with the HW.
   // ZX_DEBUG_ASSERT(all_packets_[port].empty() ||
   // !all_packets_[port][0]->is_with_hw());
@@ -1452,7 +1452,7 @@ bool CodecImpl::StartNewStream(std::unique_lock<std::mutex>& lock,
   // Given the above, our *main concern* here is that we get to a state where we
   // *know* the client isn't trying to re-configure output during format
   // detection, which at best would be confusing to allow, so we avoid that
-  // possiblity here by forcing a client to catch up with the server, if there's
+  // possibility here by forcing a client to catch up with the server, if there's
   // *any possibility* that the client might still be working on catching up
   // with the server.
   //
@@ -1602,7 +1602,7 @@ void CodecImpl::EnsureCodecStreamClosedLockedInternal() {
 //
 // More complete protocol validation happens on StreamControl ordering domain.
 // The validation here is just to validate to degree needed to not break our
-// stream_queue_ and future_stream_lifetime_ordainal_.
+// stream_queue_ and future_stream_lifetime_ordinal_.
 bool CodecImpl::EnsureFutureStreamSeenLocked(uint64_t stream_lifetime_ordinal) {
   if (future_stream_lifetime_ordinal_ == stream_lifetime_ordinal) {
     return true;
@@ -1634,7 +1634,7 @@ bool CodecImpl::EnsureFutureStreamSeenLocked(uint64_t stream_lifetime_ordinal) {
 //
 // More complete protocol validation happens on StreamControl ordering domain.
 // The validation here is just to validate to degree needed to not break our
-// stream_queue_ and future_stream_lifetime_ordainal_.
+// stream_queue_ and future_stream_lifetime_ordinal_.
 bool CodecImpl::EnsureFutureStreamCloseSeenLocked(
     uint64_t stream_lifetime_ordinal) {
   if (future_stream_lifetime_ordinal_ % 2 == 0) {
@@ -1675,7 +1675,7 @@ bool CodecImpl::EnsureFutureStreamCloseSeenLocked(
 //
 // More complete protocol validation happens on StreamControl ordering domain.
 // The validation here is just to validate to degree needed to not break our
-// stream_queue_ and future_stream_lifetime_ordainal_.
+// stream_queue_ and future_stream_lifetime_ordinal_.
 bool CodecImpl::EnsureFutureStreamFlushSeenLocked(
     uint64_t stream_lifetime_ordinal) {
   if (stream_lifetime_ordinal != future_stream_lifetime_ordinal_) {
@@ -1879,7 +1879,7 @@ void CodecImpl::MidStreamOutputConfigChange(uint64_t stream_lifetime_ordinal) {
 
     // This is what starts the interval during which
     // OmxTryRecycleOutputPacketLocked() won't call OMX, and the interval during
-    // which we'll ingore any in-progress client output config until the client
+    // which we'll ignore any in-progress client output config until the client
     // catches up.
     StartIgnoringClientOldOutputConfig(lock);
 
@@ -2120,7 +2120,7 @@ void CodecImpl::onCoreCodecFailStream() {
 
     if (stream_->output_end_of_stream()) {
       // Tolerate a CodecAdapter failing the stream after output EndOfStream
-      // seen, and avoid notifying the cient of a stream failure that's too late
+      // seen, and avoid notifying the client of a stream failure that's too late
       // to matter.
       return;
     }

@@ -538,7 +538,7 @@ enum Vp9Command {
   // signals that the previous frame finished decoding.
   kProcessedHeader = 0xf0,
 
-  // Sent from the host to the device to say that the last interupt has been
+  // Sent from the host to the device to say that the last interrupt has been
   // processed.
   kVp9ActionDone = 0xff,
 };

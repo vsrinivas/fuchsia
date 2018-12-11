@@ -30,7 +30,7 @@ config("android_non_media_headers_config") {
 source_set("android_non_media_headers_source_set") {
   visibility = [ ":*" ]
 
-  # Not sure if this actaully limits included headers to only this list, but
+  # Not sure if this actually limits included headers to only this list, but
   # that's the intent.
   public = [
     "//third_party/android/platform/system/core/libutils/include/utils/RefBase.h",

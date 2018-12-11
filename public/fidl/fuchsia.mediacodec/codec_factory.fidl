@@ -120,8 +120,8 @@ struct CreateDecoder_Params {
     // discard damaged data vs. producing corresponding damaged output.  Only that
     // the codec will set error_detected_* bools to true when appropriate.
     //
-    // Regardless of this setting, not all timstamp_ish values provided on input
-    // are guaranteed to show up on ouput.
+    // Regardless of this setting, not all timestamp_ish values provided on input
+    // are guaranteed to show up on output.
     bool require_report_all_detected_errors = false;
 
     // If true, require that the returned codec is HW-accelerated.

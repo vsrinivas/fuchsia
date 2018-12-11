@@ -324,7 +324,7 @@ struct VideoUncompressedFormat {
     uint32 primary_width_pixels;
     uint32 primary_height_pixels;
 
-    // For formats where the seconary planes are the same resolution, these fields
+    // For formats where the secondary planes are the same resolution, these fields
     // will be the same as primary_width_pixels and primary_height_pixels.  For
     // formats with smaller secondary resolutions, these indicate that resolution.
     uint32 secondary_width_pixels;

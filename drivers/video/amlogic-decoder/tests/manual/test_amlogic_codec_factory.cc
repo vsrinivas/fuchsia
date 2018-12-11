@@ -26,7 +26,7 @@ void PostSerial(async_dispatcher_t* dispatcher, fit::closure to_run) {
 }
 
 void test_factory() {
-  // We don't just use Sync FIDL proxies because we might need to recieve events
+  // We don't just use Sync FIDL proxies because we might need to receive events
   // before long.
 
   async::Loop fidl_loop(&kAsyncLoopConfigNoAttachToThread);

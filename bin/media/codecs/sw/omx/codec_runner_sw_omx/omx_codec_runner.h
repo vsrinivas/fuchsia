@@ -83,7 +83,7 @@ namespace codec_runner {
 //     responsiveness benefits to queueing state change work to a separate
 //     state-driving thread, to do with being able to notice that
 //     previously-dequeued messages can be safely ignored/skipped, but at the
-//     moment any such benefits seem unlikely to be signficant enough to justify
+//     moment any such benefits seem unlikely to be significant enough to justify
 //     the complexity increase that would imply.
 //   * "OMX thread" - The OMX codec has its own primary thread.  Calls to
 //     EventHandler() method of this class can come from the OMX thread or from
@@ -103,7 +103,7 @@ namespace codec_runner {
 //     OmxCodecRunner.
 //
 // Queueing of input data and output data helps pipeline and avoids stalling
-// data processing thread(s) unecessarily. Input packets arrive ordered on the
+// data processing thread(s) unnecessarily. Input packets arrive ordered on the
 // channel and we call the OMX codec directly from there to queue those input
 // packets over to the OMX primary thread.  Output data is emitted in order from
 // the OMX codec using the OMX primary thread - we queue first to the async_t
@@ -408,7 +408,7 @@ class OmxCodecRunner : public CodecRunner {
     bool future_discarded_ = false;
     bool future_flush_end_of_stream_ = false;
     // Starts as nullptr for each new stream with implicit fallback to
-    // initial_input_format_details_, but can be overriden on a per-stream basis
+    // initial_input_format_details_, but can be overridden on a per-stream basis
     // with QueueInputFormatDetails().
     std::unique_ptr<fuchsia::mediacodec::CodecFormatDetails>
         input_format_details_;
@@ -486,7 +486,7 @@ class OmxCodecRunner : public CodecRunner {
   // If we find ourselves trying to get rid of as many thread switches as
   // possible, we could refactor this class's implementation of the
   // StreamControl ordering domain to not always use a separate thread (some
-  // complexity cost), or even to never use a separate thread (more complextiy
+  // complexity cost), or even to never use a separate thread (more complexity
   // cost).
   //
   // We also handle OMX_EventPortSettingsChanged on the stream_control_ thread
@@ -582,7 +582,7 @@ class OmxCodecRunner : public CodecRunner {
   std::unique_ptr<fuchsia::mediacodec::CodecFormatDetails>
       initial_input_format_details_;
 
-  // This is the most recent settings recieved from the client and accepted,
+  // This is the most recent settings received from the client and accepted,
   // received via SetInputBufferSettings() or SetOutputBufferSettings().  The
   // settings are as-received from the client.
   std::unique_ptr<const fuchsia::mediacodec::CodecPortBufferSettings>
@@ -601,7 +601,7 @@ class OmxCodecRunner : public CodecRunner {
   // OnOutputConfig() based on current OMX output config.  We do this at next
   // stream start rather than between streams so the client is forced to pay
   // attention to the OnOutputConfig().  The client might de-configure and
-  // re-configure a few times based on the most recent OnOuputConfig(), so we
+  // re-configure a few times based on the most recent OnOutputConfig(), so we
   // need to associate this with the buffer_constraints_ordinal that OMX said
   // meh to.
   //
@@ -626,7 +626,7 @@ class OmxCodecRunner : public CodecRunner {
   uint64_t next_output_format_details_version_ordinal_ = 1;
 
   // Separately from ordinal allocation, we track the most recent ordinal that
-  // we've actually sent to the client, to allow tigher protocol enforcement in
+  // we've actually sent to the client, to allow tighter protocol enforcement in
   // case of a hostile client.
   uint64_t sent_buffer_constraints_version_ordinal_[kPortCount] = {0};
   uint64_t sent_format_details_version_ordinal_[kPortCount] = {0};

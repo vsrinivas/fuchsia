@@ -55,7 +55,7 @@ void CodecPacket::SetTimstampIsh(uint64_t timestamp_ish) {
 }
 
 // 0 is a valid value - it's !has_timestamp_ish_ that actually matters here.
-// However, set timstamp_ish_ to 0 anyway just to make it a little more obvious
+// However, set timestamp_ish_ to 0 anyway just to make it a little more obvious
 // that !has_timestamp_ish_.
 void CodecPacket::ClearTimestampIsh() {
   has_timestamp_ish_ = false;

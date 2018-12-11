@@ -65,7 +65,7 @@ class CodecFactoryApp {
   // binding, which will close the channel and delete the CodecFactory.
   // This is true despite comments in the binding code that constantly say how
   // ImplPtr isn't taking ownership; as long as we use std::unique_ptr as
-  // ImplPtr it actaully willl take ownership.
+  // ImplPtr it actually will take ownership.
   //
   // We create a new instance of CodecFactory for each interface request,
   // because CodecFactory's implementation isn't stateless, by design, for

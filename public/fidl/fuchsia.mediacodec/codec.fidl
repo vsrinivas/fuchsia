@@ -62,7 +62,7 @@ struct CodecBufferConstraints {
     //
     // A buffer_constraints_version_ordinal of 0 is not permitted, to simplify
     // initial state handling.  Other than 0, both odd and even version ordinals
-    // are allowed (in constrast to the stream_lifetime_ordinal, neither the
+    // are allowed (in contrast to the stream_lifetime_ordinal, neither the
     // client nor server ever has a reason to consider the latest version to be
     // stale, so there would be no benefit to disallowing even values).
     uint64 buffer_constraints_version_ordinal;
@@ -99,7 +99,7 @@ struct CodecBufferConstraints {
     // CodecPortBufferSettings.buffer_lifetime_ordinal.
     CodecPortBufferSettings default_settings;
 
-    // For uncompresesd video, separate and complete frames, each in its own
+    // For uncompressed video, separate and complete frames, each in its own
     // separate buffer (buffer-per-packet mode), is always a requirement.
 
     // per_packet_buffer_bytes.*:
@@ -168,7 +168,7 @@ struct CodecBufferConstraints {
 
     // This can be the same as packet_count_for_codec_max or can be lower.
     // Values above this value and <= packet_count_for_codec_max are not
-    // recommended by the codec, but should still work given sufficient resoures
+    // recommended by the codec, but should still work given sufficient resources
     // available to both the client and the codec.
     uint32 packet_count_for_codec_recommended_max;
 
@@ -244,9 +244,9 @@ struct CodecBufferConstraints {
 // hopefully.  It's stuff the codec gets to control, not the client.  It's
 // different than output buffer settings, which the client does get to control
 // to some extent.  It's different than any configurable output settings the
-// client might specifiy for output of an encoder.
+// client might specify for output of an encoder.
 struct CodecOutputConfig {
-    // A client which always immediately re-configures output buffers on reciept
+    // A client which always immediately re-configures output buffers on receipt
     // of OnOutputConfig() with buffer_constraints_action_required true can safely
     // ignore this field.
     //
@@ -256,7 +256,7 @@ struct CodecOutputConfig {
     // stream_lifetime_ordinal or if this stream_lifetime_ordinal field is set to
     // 0.  The server is required to re-send needed output config via
     // OnOutputConfig() with new stream_lifetime_ordinal and
-    // buffer_constraints_action_required true, if the the most recent completed
+    // buffer_constraints_action_required true, if the most recent completed
     // server-side output config isn't what the server wants/needs yet for the
     // new stream.
     uint64 stream_lifetime_ordinal;
@@ -276,7 +276,7 @@ struct CodecOutputConfig {
     // buffer_constraints_version_ordinal.
     //
     // For each configuration, a client must use new buffers, never buffers that
-    // were prevoiusly used for anything else, and never buffers previously used
+    // were previously used for anything else, and never buffers previously used
     // for any other Codec purposes.  This rule exists for multiple good reasons,
     // relevant to both mid-stream changes, and changes on stream boundaries.
     // A client should just use new buffers each time.
@@ -415,7 +415,7 @@ struct CodecPortBufferSettings {
     // only increase (increasing by more than 2 is permitted).
     //
     // A buffer_lifetime_ordinal lifetime starts at SetInputBufferSettings() or
-    // SetOutputBufferSettings(), and ends at the the earlier of
+    // SetOutputBufferSettings(), and ends at the earlier of
     // CloseCurrentStream() with release_input_buffers/release_output_buffers set
     // or SetOutputBufferSettings() with new buffer_lifetime_ordinal in the case
     // of mid-stream output config change.
@@ -446,7 +446,7 @@ struct CodecPortBufferSettings {
     // how many packets are allocated for the server to hold onto for whatever
     // reason.
     //
-    // Extra packets to provide slack for peformance reasons can be in either
+    // Extra packets to provide slack for performance reasons can be in either
     // category, but typically packet_count_for_codec_recommended will already
     // include any performance-relevant slack for the server's benefit.
 
@@ -489,7 +489,7 @@ struct CodecPortBufferSettings {
     // parts of the overall system that will be holding onto packets for any
     // reason.  Those parts of the system should have a documented and possibly
     // queryable defined value to help determine this number.  Setting this value
-    // lower than it actaully needs to be can result in the codec not making
+    // lower than it actually needs to be can result in the codec not making
     // progress as it sits waiting for packets, with the client unable to recycle
     // any more packets to the codec.  That situation can be difficult to
     // diagnose, while excessively-large values here are wasteful, so care is
@@ -622,7 +622,7 @@ struct CodecPacketHeader {
     // For QueueInputPacket(), a server receiving a buffer_lifetime_ordinal that
     // isn't the current input buffer_lifetime_ordinal will close the channel.
     //
-    // For OnFreeInputPacket() and RecycleOutputPacket(), the reciever (client or
+    // For OnFreeInputPacket() and RecycleOutputPacket(), the receiver (client or
     // server) must ignore a message with stale buffer_lifetime_ordinal.
     uint64 buffer_lifetime_ordinal;
 
@@ -698,7 +698,7 @@ struct CodecPacket {
     //
     // For compressed formats and uncompressed audio, the data in
     // [start_offset, start_offset + valid_length_bytes) is the contiguously valid
-    // data refered to by this packet.
+    // data referred to by this packet.
     //
     // For uncompressed video frames, CodecFormatDetails is the primary means of
     // determining which bytes are relevant.  The offsets in CodecFormatDetails
@@ -761,7 +761,7 @@ struct CodecPacket {
     //    any output packet - depending on the characteristics of the input and
     //    output formats, and whether a decoder is willing to join mid-stream, etc
     //    this can be more or less likely to occur, but clients should be written
-    //    to accomodate timestamp_ish values that are fed on input but never show
+    //    to accommodate timestamp_ish values that are fed on input but never show
     //    up on output, at least to a reasonable degree (not crashing, not
     //    treating as an error).
     //
@@ -802,7 +802,7 @@ struct CodecPacket {
 // Codec
 //
 // The Codec interface exists to anchor the configuration of input and output
-// buffers, and depending on Codec server hosting strategy, the Codec inteface
+// buffers, and depending on Codec server hosting strategy, the Codec interface
 // can, in some configurations, be 1:1 with a codec isolate (process),
 // especially when using SW codecs.  The Codec can be used to process up to one
 // stream at a time.
@@ -906,7 +906,7 @@ interface Codec {
     // during or shortly after Codec creation.  Clients should not depend on this
     // being the very first message to arrive at the client.  OnOutputConfig()
     // may be sent first by some codecs that already know their initial output
-    // config without any input data, to encourage (but not stictly require) the
+    // config without any input data, to encourage (but not strictly require) the
     // client to configure output buffers before feeding the first input, to
     // avoid a wasteful OnOutputConfig() being generated for that first stream if
     // the client has started configuring output but isn't done configuring
@@ -1091,7 +1091,7 @@ interface Codec {
     // allocates new buffers and re-sets-up input and/or output buffers.  This
     // de-overlapping of resource usage can be worthwhile for media buffers which
     // can consume resource types whose overall pools aren't necessarily vast in
-    // comparsion to resources consumed.  Especially if a client is reconfiguring
+    // comparison to resources consumed.  Especially if a client is reconfiguring
     // buffers multiple times.
     //
     // Note that Sync() prior to allocating new media buffers is not alone

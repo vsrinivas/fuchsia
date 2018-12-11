@@ -33,7 +33,7 @@
 //     partial input packets to permit large input packets with many AUs in
 //     them.
 //   * At least when promise_separate_access_units_on_input is set, propagate
-//     timstamp_ish values from input AU to correct output video frame (using
+//     timestamp_ish values from input AU to correct output video frame (using
 //     PtsManager).
 //   * Consider if there's a way to get AmlogicVideo to re-use buffers across
 //     a stream switch without over-writing buffers that are still in-use
@@ -353,7 +353,7 @@ void CodecAdapterH264::CoreCodecRecycleOutputPacket(CodecPacket* packet) {
 
   // TODO(dustingreen): Use scrambled free_packet_list_ like for VP9, and put
   // packet back on the free list here (and update comment above re. when re-use
-  // of the paket can happen).  For now for this codec we let packet_index ==
+  // of the packet can happen).  For now for this codec we let packet_index ==
   // buffer_index to split the separation of buffer_index from packet_index into
   // smaller changes.
 

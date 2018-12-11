@@ -262,7 +262,7 @@ bool OmxCodecRunner::Load() {
       }
     } else {
       assert(i == 2);
-      // Avoid caring which specific error is reutrn for port index 2, but it
+      // Avoid caring which specific error is return for port index 2, but it
       // shouldn't succeed.
       if (omx_result == OMX_ErrorNone) {
         // For now, bail out if we don't find exactly two ports.  There might
@@ -512,7 +512,7 @@ void OmxCodecRunner::ComputeInputConstraints() {
 
               // default_settings
               //
-              // Inititial input buffer_lifetime_ordinal of 1 is ok.  It's also
+              // Initial input buffer_lifetime_ordinal of 1 is ok.  It's also
               // ok if it's any larger odd number, but 1 is the best choice.
               .default_settings.buffer_lifetime_ordinal =
                   kBestFirstBufferLifetimeOrdinal,
@@ -939,7 +939,7 @@ void OmxCodecRunner::PopulateFormatDetailsFromOmxOutputFormat_Audio(
     } break;
     case OMX_AUDIO_CodingAAC:
       // TODO(dustingreen): implement, at least for AAC encode
-      // fallthough for now
+      // fallthrough for now
     default:
       Exit("unhandled OMX output format - value: %d",
            omx_audio_param_port_format.eEncoding);
@@ -966,7 +966,7 @@ OmxCodecRunner::OmxGetOutputFormat() {
     // intentional copy
     //
     // We're stashing this structure from here because this method happens to be
-    // the common code path invovled in all OMX updates of the output port
+    // the common code path involved in all OMX updates of the output port
     // definition where constraints might change which we need to pay attention
     // to later.  Mainly we care about nBufferSize.
     omx_port_def_[kOutput] = result->definition;
@@ -1272,7 +1272,7 @@ bool OmxCodecRunner::AddBufferCommon(Port port,
         //
         // We (in general) lie to OMX about the size being at least
         // OMX_PARAM_PORTDEFINITIONTYPE.nBufferSize when allocating an OMX
-        // buffer for this packet, then we don't actaully fill beyond
+        // buffer for this packet, then we don't actually fill beyond
         // kMaxCodecOobBytesSize.
         //
         // We don't really care about OMX_PARAM_PORTDEFINITIONTYPE.nBufferSize
@@ -2719,7 +2719,7 @@ void OmxCodecRunner::onOmxEventPortSettingsChanged(
 
   // This is what starts the interval during which
   // OmxTryRecycleOutputPacketLocked() won't call OMX, and the interval during
-  // which we'll ingore any in-progress client output config until the client
+  // which we'll ignore any in-progress client output config until the client
   // catches up.
   StartIgnoringClientOldOutputConfigLocked();
 
@@ -2848,7 +2848,7 @@ void OmxCodecRunner::OmxFreeAllPortBufferHeaders(
 
 void OmxCodecRunner::OmxWaitForOutputBuffersDoneReturning(
     std::unique_lock<std::mutex>& lock) {
-  // We only actaully call this when !omx_output_enabled_desired_, but there
+  // We only actually call this when !omx_output_enabled_desired_, but there
   // wouldn't be any harm in calling it during move out of executing, so allow
   // that.
   assert(!omx_output_enabled_desired_ ||
@@ -3202,7 +3202,7 @@ void OmxCodecRunner::EnsureBuffersNotConfiguredLocked(Port port) {
   // This method can be called on input only if there's no current stream.
   //
   // On output, this method can be called if there's no current stream or if
-  // we're in the middle of an ouput config change.
+  // we're in the middle of an output config change.
   //
   // On input, this can only be called on stream_control_thread_.
   //
