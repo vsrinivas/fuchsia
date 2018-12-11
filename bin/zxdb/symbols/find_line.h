@@ -34,9 +34,10 @@ struct LineMatch {
   uint64_t address = 0;
   int line = 0;
 
-  // Absolute offset of the DIE containing the function for this address or 0
-  // if there is no function for it. This is used so we don't accidentally
-  // treat duplicate line entries in different functions as the same.
+  // Absolute offset of the DIE containing the most specified inlined
+  // subroutine for this address or 0 if there is no function for it. This is
+  // used so we don't accidentally treat duplicate line entries in different
+  // functions as the same.
   uint32_t function_die_offset = 0;
 };
 
@@ -57,10 +58,17 @@ std::vector<LineMatch> FilterUnitLineMatches(
     const std::vector<LineMatch>& matches);
 
 // Filters the set of matches to get all instances of the closest match for the
-// line. LineMatches are only generated for lines that cross the line in
+// line, with a maximum of one per function. It's assumed that the LineMatches
+// are all for the same file.
+//
+// LineMatches are only generated for lines that cross the line in
 // question, so the closest LineMatch for this function is the one with the
 // smallest line number.
-std::vector<LineMatch> GetClosestLineMatches(
+//
+// The "one per function" rule is because a line can often get broken into
+// muliple line table entries (sometimes disjoint, sometimes not), and when
+// asking for a line we want the one with the lowest address.
+std::vector<LineMatch> GetBestLineMatches(
     const std::vector<LineMatch>& matches);
 
 }  // namespace zxdb

@@ -363,13 +363,7 @@ Location ModuleSymbolsImpl::LocationForVariable(
 // 1. The line might not be an exact match (the user can specify a blank line
 //    or something optimized out). In this case, find the next valid line.
 //
-// 2. Inlining and templates can mean there are multiple matches per
-//    compilation unit, and a single line can have multiple line table entries
-//    even if the code isn't duplicated (the code could be spread out across
-//    multiple disjoint address ranges). Take the first match for each function
-//    implementation or inlined block.
-//
-// 3. The above step can find many different locations. Maybe some code from
+// 2. The above step can find many different locations. Maybe some code from
 //    the file in question is inlined into the compilation unit, but not the
 //    function with the line in it. Or different template instantiations can
 //    mean that a line of code is in some instantiations but don't apply to
@@ -378,6 +372,11 @@ Location ModuleSymbolsImpl::LocationForVariable(
 //    To solve this duplication problem, get the resolved line of each of the
 //    addresses found above and find the best one. Keep only those locations
 //    matching the best one (there can still be multiple).
+//
+// 3. Inlining and templates can mean there can be multiple matches of the
+//    exact same line. Only keep the first match per function or inlined
+//    function to catch the case where a line is spread across multiple line
+//    table entries.
 void ModuleSymbolsImpl::ResolveLineInputLocationForFile(
     const SymbolContext& symbol_context, const std::string& canonical_file,
     int line_number, const ResolveOptions& options,
@@ -396,19 +395,17 @@ void ModuleSymbolsImpl::ResolveLineInputLocationForFile(
     std::vector<LineMatch> unit_matches = GetAllLineTableMatchesInUnit(
         line_table, canonical_file, line_number);
 
-    // Complication 2 above: Only want one entry for each function or inline.
-    std::vector<LineMatch> per_fn = FilterUnitLineMatches(unit_matches);
-
-    matches.insert(matches.end(), per_fn.begin(), per_fn.end());
+    matches.insert(matches.end(), unit_matches.begin(), unit_matches.end());
   }
 
   if (matches.empty())
     return;
 
-  // Complication 3 above: Get all instances of the best match only. The best
-  // match is the one with the lowest line number (found matches should all be
-  // bigger than the input line, so this will be the closest).
-  for (const LineMatch& match : GetClosestLineMatches(matches)) {
+  // Complications 2 & 3 above: Get all instances of the best match only with
+  // a max of one per function. The best match is the one with the lowest line
+  // number (found matches should all be bigger than the input line, so this
+  // will be the closest).
+  for (const LineMatch& match : GetBestLineMatches(matches)) {
     uint64_t abs_addr = symbol_context.RelativeToAbsolute(match.address);
     if (options.symbolize)
       output->push_back(LocationForAddress(symbol_context, abs_addr));

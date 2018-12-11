@@ -81,47 +81,50 @@ std::vector<LineMatch> GetAllLineTableMatchesInUnit(
   return result;
 }
 
-std::vector<LineMatch> FilterUnitLineMatches(
+std::vector<LineMatch> GetBestLineMatches(
     const std::vector<LineMatch>& matches) {
-  // Maps absolute DIE offsets to the index into matches of the match with the
-  // smallest address for this DIE.
-  std::map<uint32_t, size_t> die_to_match_index;
-
-  for (size_t i = 0; i < matches.size(); i++) {
-    const LineMatch& match = matches[i];
-
-    // Although function_die_offset may be 0 to indicate no function, looking
-    // up 0 here is still valid because that will mean "code in this file with
-    // no associated function".
-    auto found = die_to_match_index.find(match.function_die_offset);
-    if (found == die_to_match_index.end()) {
-      // First one for this DIE.
-      die_to_match_index[match.function_die_offset] = i;
-    } else if (match.address < matches[found->second].address) {
-      // New best one.
-      found->second = i;
-    }
-  }
-
-  // Extract the found minimum LineMatch for each DIE.
-  std::vector<LineMatch> result;
-  result.reserve(die_to_match_index.size());
-  for (const auto& pair : die_to_match_index)
-    result.push_back(matches[pair.second]);
-  return result;
-}
-
-std::vector<LineMatch> GetClosestLineMatches(
-    const std::vector<LineMatch>& matches) {
-  std::vector<LineMatch> result;
-
+  // The lowest line is tbe "best" match because GetAllLineTableMatchesInUnit()
+  // returns the next row for all pairs that cross the line in question. The
+  // lowest of the "next" rows will be the closest line.
   auto min_elt_iter = std::min_element(
       matches.begin(), matches.end(),
       [](const LineMatch& a, const LineMatch& b) { return a.line < b.line; });
-  for (const LineMatch& match : matches) {
-    if (match.line == min_elt_iter->line)
-      result.push_back(match);
+
+  // This will be populated with all matches for the line equal to the best
+  // one (one line can match many addresses depending on inlining and code
+  // reodering).
+  //
+  // We only want one per inlined function instance. One function can have a
+  // line split into multiple line entries (possibly disjoint or not) and we
+  // want only the first one (by address). But if the same helper is inlined
+  // into many places (or even twice into the same function), we want to catch
+  // all of those places.
+  //
+  // By indexing by the [inlined] subroutine DIE offset, we can ensure there
+  // is only one match per subroutine, and resolve collisions by address.
+  std::map<uint32_t, size_t> die_to_match_index;
+  for (size_t i = 0; i < matches.size(); i++) {
+    const LineMatch& match = matches[i];
+    if (match.line != min_elt_iter->line)
+      continue;  // Not a match.
+
+    auto existing = die_to_match_index.find(match.function_die_offset);
+    if (existing == die_to_match_index.end()) {
+      // New entry for this function.
+      die_to_match_index[match.function_die_offset] = i;
+    } else {
+      // Duplicate in the same function, pick the lowest address.
+      const LineMatch& existing_match = matches[existing->second];
+      if (match.address < existing_match.address)
+        die_to_match_index[match.function_die_offset] = i;  // New one better.
+    }
   }
+
+  // Convert back to a result vector.
+  std::vector<LineMatch> result;
+  result.reserve(die_to_match_index.size());
+  for (const auto& [die, match_index] : die_to_match_index)
+    result.push_back(matches[match_index]);
   return result;
 }
 

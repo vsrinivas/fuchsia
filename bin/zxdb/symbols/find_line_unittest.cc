@@ -66,25 +66,35 @@ TEST(FindLine, GetAllLineTableMatchesInUnit) {
   EXPECT_TRUE(out.empty());
 }
 
-TEST(FindLine, GetClosestLineMatches) {
+TEST(FindLine, GetBestLineMatches) {
   // Empty input.
-  auto out = GetClosestLineMatches({});
+  auto out = GetBestLineMatches({});
   EXPECT_TRUE(out.empty());
 
   // Should return the smallest line #.
-  out =
-      GetClosestLineMatches({LineMatch(0x1000, 10, 0), LineMatch(0x1001, 7, 0),
-                             LineMatch(0x1002, 100, 0)});
+  out = GetBestLineMatches({LineMatch(0x1000, 10, 0), LineMatch(0x1001, 7, 0),
+                            LineMatch(0x1002, 100, 0)});
   ASSERT_EQ(1u, out.size());
   EXPECT_EQ(LineMatch(0x1001, 7, 0), out[0]);
 
-  // When the smallest match has dupes, all should be returned.
-  out = GetClosestLineMatches(
-      {LineMatch(0x1000, 10, 0), LineMatch(0x1001, 20, 0),
-       LineMatch(0x1002, 10, 0), LineMatch(0x1003, 30, 0)});
+  // When the smallest match has dupes, all should be returned assuming
+  // the functions are different.
+  out =
+      GetBestLineMatches({LineMatch(0x1000, 10, 0), LineMatch(0x1001, 20, 1),
+                          LineMatch(0x1002, 10, 2), LineMatch(0x1003, 30, 3)});
   ASSERT_EQ(2u, out.size());
   EXPECT_EQ(LineMatch(0x1000, 10, 0), out[0]);
-  EXPECT_EQ(LineMatch(0x1002, 10, 0), out[1]);
+  EXPECT_EQ(LineMatch(0x1002, 10, 2), out[1]);
+
+  // Dupes in the same function should return the smallest match.
+  out = GetBestLineMatches(
+      {LineMatch(0x1002, 10, 0),    // Match, discarded due to higher addr.
+       LineMatch(0x1001, 20, 0),    // No line match.
+       LineMatch(0x1000, 10, 0),    // Match, this one last lowest addr.
+       LineMatch(0x1003, 10, 1)});  // Same line, different function.
+  ASSERT_EQ(2u, out.size());
+  EXPECT_EQ(LineMatch(0x1000, 10, 0), out[0]);
+  EXPECT_EQ(LineMatch(0x1003, 10, 1), out[1]);
 }
 
 }  // namespace zxdb
