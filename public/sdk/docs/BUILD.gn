@@ -4,23 +4,24 @@
 
 import("//build/sdk/sdk_documentation.gni")
 
+docs = [
+  "bootserver",
+  "packages",
+  "ssh",
+]
+
 sdk_documentation("docs") {
   name = "low_level"
 
   category = "partner"
 
-  files = [
-    {
-      source = "ssh.md"
-      dest = "docs/ssh.md"
-    },
-    {
-      source = "bootserver.md"
-      dest = "docs/bootserver.md"
-    },
-    {
-      source = "packages.md"
-      dest = "docs/packages.md"
-    },
-  ]
+  files = []
+  foreach(doc, docs) {
+    files += [
+      {
+        source = "$doc.md"
+        dest = "docs/$doc.md"
+      },
+    ]
+  }
 }
