@@ -60,6 +60,8 @@ public:
 
     uint32_t fifo_depth() const { return fifo_depth_; };
 
+    void ConfigPdmIn(uint8_t mask);
+
 private:
     friend class fbl::unique_ptr<AmlPdmDevice>;
 
@@ -106,7 +108,7 @@ private:
     zx_off_t GetToddrOffset(zx_off_t off) {
         return toddr_base_ + off;
     }
-    const uint32_t fifo_depth_;
+    const uint32_t fifo_depth_;  // in bytes.
     const aml_toddr_t toddr_ch_; // fromddr channel used by this instance
     const ee_audio_mclk_src_t clk_src_;
     const uint32_t sysclk_div_;

@@ -13,19 +13,19 @@
 #include <utility>
 
 namespace audio {
-namespace astro {
+namespace sherlock {
 
-// Expects 2 mics.
-constexpr size_t kNumberOfChannels = 2;
+// Expects 4 mics.
+constexpr size_t kNumberOfChannels = 4;
 // Calculate ring buffer size for 1 second of 16-bit, 48kHz.
 constexpr size_t kRingBufferSize = fbl::round_up<size_t, size_t>(48000 * 2 * kNumberOfChannels,
                                                                  ZX_PAGE_SIZE);
 
-AstroAudioStreamIn::AstroAudioStreamIn(zx_device_t* parent)
+SherlockAudioStreamIn::SherlockAudioStreamIn(zx_device_t* parent)
     : SimpleAudioStream(parent, true /* is input */) {
 }
 
-zx_status_t AstroAudioStreamIn::Init() {
+zx_status_t SherlockAudioStreamIn::Init() {
     zx_status_t status;
 
     status = InitPDev();
@@ -47,16 +47,16 @@ zx_status_t AstroAudioStreamIn::Init() {
     cur_gain_state_.can_mute = false;
     cur_gain_state_.can_agc = false;
 
-    snprintf(device_name_, sizeof(device_name_), "astro-audio-in");
-    snprintf(mfr_name_, sizeof(mfr_name_), "Bike Sheds, Inc.");
-    snprintf(prod_name_, sizeof(prod_name_), "astro");
+    snprintf(device_name_, sizeof(device_name_), "sherlock-audio-in");
+    snprintf(mfr_name_, sizeof(mfr_name_), "unknown");
+    snprintf(prod_name_, sizeof(prod_name_), "sherlock");
 
     unique_id_ = AUDIO_STREAM_UNIQUE_ID_BUILTIN_MICROPHONE;
 
     return ZX_OK;
 }
 
-zx_status_t AstroAudioStreamIn::InitPDev() {
+zx_status_t SherlockAudioStreamIn::InitPDev() {
     pdev_protocol_t pdev;
     zx_status_t status = device_get_protocol(parent(), ZX_PROTOCOL_PDEV, &pdev);
     if (status) {
@@ -81,12 +81,15 @@ zx_status_t AstroAudioStreamIn::InitPDev() {
 
     pdm_ = AmlPdmDevice::Create(std::move(*mmio0),
                                 std::move(*mmio1),
-                                HIFI_PLL, 7, 499, TODDR_B);
+                                HIFI_PLL,
+                                7,   // clk_div for mclk = T931_HIFI_PLL_RATE/clk_div = 219.43 MHz.
+                                499, // clk_div for pdm_dclk = T931_HIFI_PLL_RATE/clk_div = 3.07MHz.
+                                TODDR_B);
     if (pdm_ == nullptr) {
         zxlogf(ERROR, "%s failed to create pdm device\n", __func__);
         return ZX_ERR_NO_MEMORY;
     }
-    //Initialize the ring buffer
+
     InitBuffer(kRingBufferSize);
 
     pdm_->SetBuffer(pinned_ring_buffer_.region(0).phys_addr,
@@ -99,7 +102,7 @@ zx_status_t AstroAudioStreamIn::InitPDev() {
     return ZX_OK;
 }
 
-zx_status_t AstroAudioStreamIn::ChangeFormat(const audio_proto::StreamSetFmtReq& req) {
+zx_status_t SherlockAudioStreamIn::ChangeFormat(const audio_proto::StreamSetFmtReq& req) {
     fifo_depth_ = pdm_->fifo_depth();
     external_delay_nsec_ = 0;
 
@@ -108,9 +111,9 @@ zx_status_t AstroAudioStreamIn::ChangeFormat(const audio_proto::StreamSetFmtReq&
     return ZX_OK;
 }
 
-zx_status_t AstroAudioStreamIn::GetBuffer(const audio_proto::RingBufGetBufferReq& req,
-                                          uint32_t* out_num_rb_frames,
-                                          zx::vmo* out_buffer) {
+zx_status_t SherlockAudioStreamIn::GetBuffer(const audio_proto::RingBufGetBufferReq& req,
+                                             uint32_t* out_num_rb_frames,
+                                             zx::vmo* out_buffer) {
     uint32_t rb_frames =
         static_cast<uint32_t>(pinned_ring_buffer_.region(0).size) / frame_size_;
 
@@ -131,7 +134,7 @@ zx_status_t AstroAudioStreamIn::GetBuffer(const audio_proto::RingBufGetBufferReq
     return ZX_OK;
 }
 
-zx_status_t AstroAudioStreamIn::Start(uint64_t* out_start_time) {
+zx_status_t SherlockAudioStreamIn::Start(uint64_t* out_start_time) {
     *out_start_time = pdm_->Start();
 
     uint32_t notifs = LoadNotificationsPerRing();
@@ -145,15 +148,11 @@ zx_status_t AstroAudioStreamIn::Start(uint64_t* out_start_time) {
     return ZX_OK;
 }
 
-//Timer handler for sending out position notifications
-zx_status_t AstroAudioStreamIn::ProcessRingNotification() {
+// Timer handler for sending out position notifications.
+zx_status_t SherlockAudioStreamIn::ProcessRingNotification() {
+    ZX_ASSERT(us_per_notification_ != 0);
 
-    if (us_per_notification_) {
-        notify_timer_->Arm(zx_deadline_after(ZX_USEC(us_per_notification_)));
-    } else {
-        notify_timer_->Cancel();
-        return ZX_OK;
-    }
+    notify_timer_->Arm(zx_deadline_after(ZX_USEC(us_per_notification_)));
 
     audio_proto::RingBufPositionNotify resp = {};
     resp.hdr.cmd = AUDIO_RB_POSITION_NOTIFY;
@@ -162,7 +161,7 @@ zx_status_t AstroAudioStreamIn::ProcessRingNotification() {
     return NotifyPosition(resp);
 }
 
-zx_status_t AstroAudioStreamIn::InitPost() {
+zx_status_t SherlockAudioStreamIn::InitPost() {
 
     notify_timer_ = dispatcher::Timer::Create();
     if (notify_timer_ == nullptr) {
@@ -178,23 +177,22 @@ zx_status_t AstroAudioStreamIn::InitPost() {
     return notify_timer_->Activate(domain_, std::move(thandler));
 }
 
-zx_status_t AstroAudioStreamIn::Stop() {
+zx_status_t SherlockAudioStreamIn::Stop() {
     notify_timer_->Cancel();
     us_per_notification_ = 0;
     pdm_->Stop();
     return ZX_OK;
 }
 
-zx_status_t AstroAudioStreamIn::AddFormats() {
+zx_status_t SherlockAudioStreamIn::AddFormats() {
     fbl::AllocChecker ac;
     supported_formats_.reserve(1, &ac);
     if (!ac.check()) {
         zxlogf(ERROR, "Out of memory, can not create supported formats list\n");
         return ZX_ERR_NO_MEMORY;
     }
-    // Astro only supports stereo, 16-bit, 48k audio in
-    audio_stream_format_range_t range;
 
+    audio_stream_format_range_t range;
     range.min_channels = kNumberOfChannels;
     range.max_channels = kNumberOfChannels;
     range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
@@ -207,10 +205,12 @@ zx_status_t AstroAudioStreamIn::AddFormats() {
     return ZX_OK;
 }
 
-zx_status_t AstroAudioStreamIn::InitBuffer(size_t size) {
-    zx_status_t status;
-    status = zx_vmo_create_contiguous(bti_.get(), size, 0,
-                                      ring_buffer_vmo_.reset_and_get_address());
+zx_status_t SherlockAudioStreamIn::InitBuffer(size_t size) {
+    // TODO(ZX-3149): Per johngro's suggestion preallocate contiguous memory (say in
+    // platform bus) since we are likely to fail after running for a while and we need to
+    // init again (say the devhost is restarted).
+    zx_status_t status = zx_vmo_create_contiguous(bti_.get(), size, 0,
+                                                  ring_buffer_vmo_.reset_and_get_address());
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s failed to allocate ring buffer vmo - %d\n", __func__, status);
         return status;
@@ -229,37 +229,16 @@ zx_status_t AstroAudioStreamIn::InitBuffer(size_t size) {
     return ZX_OK;
 }
 
-} //namespace astro
+} //namespace sherlock
 } //namespace audio
 
-__BEGIN_CDECLS
-
-zx_status_t pdm_audio_bind(void* ctx, zx_device_t* device) {
+extern "C" zx_status_t pdm_audio_bind(void* ctx, zx_device_t* parent) {
 
     auto stream =
-        audio::SimpleAudioStream::Create<audio::astro::AstroAudioStreamIn>(device);
+        audio::SimpleAudioStream::Create<audio::sherlock::SherlockAudioStreamIn>(parent);
     if (stream == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    __UNUSED auto dummy = stream.leak_ref();
-
     return ZX_OK;
 }
-
-static zx_driver_ops_t aml_pdm_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .init = nullptr,
-    .bind = pdm_audio_bind,
-    .create = nullptr,
-    .release = nullptr,
-};
-
-// clang-format off
-ZIRCON_DRIVER_BEGIN(aml_pdm, aml_pdm_driver_ops, "aml-pdm-in", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D2),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_ASTRO_PDM),
-ZIRCON_DRIVER_END(aml_pdm)
-// clang-format on
-__END_CDECLS

@@ -31,6 +31,7 @@ enum {
     BTI_CAMERA,
     BTI_DISPLAY,
     BTI_AUDIO_OUT,
+    BTI_AUDIO_IN,
 };
 
 // MAC address metadata indices

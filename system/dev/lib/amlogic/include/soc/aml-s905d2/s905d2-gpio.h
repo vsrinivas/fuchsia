@@ -129,6 +129,9 @@
 #define S905D2_GPIOA_8_PDM_DIN0_FN           1
 #define S905D2_GPIOA_8_TDMC_D2_FN            2
 #define S905D2_GPIOA_8_TDMC_DIN2_FN          3
+#define S905D2_GPIOA_9_PDM_DIN1_FN           1
+#define S905D2_GPIOA_9_TDMC_D1_FN            2
+#define S905D2_GPIOA_9_TDMC_DIN1_FN          3
 
 #define S905D2_GPIOZ_2_TDMC_D0_FN            4
 #define S905D2_GPIOZ_3_TDMC_D1_FN            4

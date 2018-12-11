@@ -237,6 +237,9 @@
 #define T931_UART_A_RTS                 T931_GPIOX(15)
 #define T931_UART_A_RTS_FN              1
 
+#define T931_EE_PDM_BASE                (0xff640000)
+#define T931_EE_PDM_LENGTH              (0x2000)
+
 #define T931_EE_AUDIO_BASE              (0xff642000)
 #define T931_EE_AUDIO_LENGTH            (0x1000)
 

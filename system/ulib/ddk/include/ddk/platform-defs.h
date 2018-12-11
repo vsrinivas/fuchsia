@@ -103,6 +103,7 @@ __BEGIN_CDECLS;
 #define PDEV_DID_ASTRO_PDM          17
 #define PDEV_DID_AMLOGIC_G12B_CLK   18
 #define PDEV_DID_AMLOGIC_MIPI       19
+#define PDEV_DID_SHERLOCK_PDM       20
 
 
 // Broadcom

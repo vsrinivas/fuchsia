@@ -74,6 +74,36 @@ zx_status_t Sherlock::AudioInit() {
     tdm_dev.bti_list = tdm_btis;
     tdm_dev.bti_count = countof(tdm_btis);
 
+
+    static constexpr pbus_mmio_t pdm_mmios[] = {
+        {
+            .base = T931_EE_PDM_BASE,
+            .length = T931_EE_PDM_LENGTH
+        },
+        {
+            .base = T931_EE_AUDIO_BASE,
+            .length = T931_EE_AUDIO_LENGTH
+        },
+    };
+
+    static constexpr pbus_bti_t pdm_btis[] = {
+        {
+            .iommu_index = 0,
+            .bti_id = BTI_AUDIO_IN,
+        },
+    };
+
+    pbus_dev_t pdm_dev;
+    pdm_dev.name = "SherlockAudioIn";
+    pdm_dev.vid = PDEV_VID_AMLOGIC;
+    pdm_dev.pid = PDEV_PID_AMLOGIC_T931;
+    pdm_dev.did = PDEV_DID_SHERLOCK_PDM;
+    pdm_dev.mmio_list = pdm_mmios;
+    pdm_dev.mmio_count = countof(pdm_mmios);
+    pdm_dev.bti_list = pdm_btis;
+    pdm_dev.bti_count = countof(pdm_btis);
+
+
     aml_hiu_dev_t hiu;
     zx_status_t status = s905d2_hiu_init(&hiu);
     if (status != ZX_OK) {
@@ -98,9 +128,19 @@ zx_status_t Sherlock::AudioInit() {
     gpio_impl_set_alt_function(&gpio_impl_, T931_GPIOZ(3), T931_GPIOZ_3_TDMC_D1_FN);
     gpio_impl_set_alt_function(&gpio_impl_, T931_GPIOAO(9), T931_GPIOAO_9_MCLK_FN);
 
+    // PDM pin assignments.
+    gpio_impl_set_alt_function(&gpio_impl_, T931_GPIOA(7), T931_GPIOA_7_PDM_DCLK_FN);
+    gpio_impl_set_alt_function(&gpio_impl_, T931_GPIOA(8), T931_GPIOA_8_PDM_DIN0_FN);
+    gpio_impl_set_alt_function(&gpio_impl_, T931_GPIOA(9), T931_GPIOA_9_PDM_DIN1_FN);
+
     gpio_impl_config_out(&gpio_impl_, T931_GPIOH(7), 1); // SOC_AUDIO_EN.
 
     status = pbus_.DeviceAdd(&tdm_dev);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s pbus_.DeviceAdd failed %d\n", __FUNCTION__, status);
+        return status;
+    }
+    status = pbus_.DeviceAdd(&pdm_dev);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s pbus_.DeviceAdd failed %d\n", __FUNCTION__, status);
         return status;

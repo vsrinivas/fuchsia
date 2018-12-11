@@ -25,6 +25,10 @@
 
 #define T931_GPIOAO_9_MCLK_FN              S905D2_GPIOAO_9_MCLK_FN
 
+#define T931_GPIOA_7_PDM_DCLK_FN           S905D2_GPIOA_7_PDM_DCLK_FN
+#define T931_GPIOA_8_PDM_DIN0_FN           S905D2_GPIOA_8_PDM_DIN0_FN
+#define T931_GPIOA_9_PDM_DIN1_FN           S905D2_GPIOA_9_PDM_DIN1_FN
+
 #define T931_AO_PAD_DS_A                   S905D2_AO_PAD_DS_A
 #define T931_AO_PAD_DS_B                   S905D2_AO_PAD_DS_B
 #define T931_PAD_DS_REG1A                  S905D2_PAD_DS_REG1A
