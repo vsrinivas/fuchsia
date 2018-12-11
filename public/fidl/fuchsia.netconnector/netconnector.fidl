@@ -31,5 +31,5 @@ interface NetConnector {
     // |GetKnownDeviceNames(kInitialKnownDeviceNames)|. To get updates thereafter,
     // pass the version sent in the previous callback.
     GetKnownDeviceNames(uint64 version_last_seen)
--> (uint64 version, vector<string> devices);
+        -> (uint64 version, vector<string> devices);
 };

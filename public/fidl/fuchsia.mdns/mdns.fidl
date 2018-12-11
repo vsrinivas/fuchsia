@@ -12,7 +12,7 @@ interface MdnsService {
     // Gets the addresses for the specified host name. |host_name| may not end in
     // a '.'.
     ResolveHostName(string host_name, uint32 timeout_ms)
--> (fuchsia.netstack.SocketAddress? v4_address, fuchsia.netstack.SocketAddress? v6_address);
+        -> (fuchsia.netstack.SocketAddress? v4_address, fuchsia.netstack.SocketAddress? v6_address);
 
     // Subscribes to a service. The subscription lasts until |subscription| is
     // unbound. |service_name| must end in '._tcp.' or '._udp.'.
@@ -91,7 +91,7 @@ interface MdnsServiceSubscription {
     // |GetInstances(kInitialInstances)|. To get updates thereafter, pass the
     // version sent in the previous callback.
     GetInstances(uint64 version_last_seen)
--> (uint64 version, vector<MdnsServiceInstance> instances);
+        -> (uint64 version, vector<MdnsServiceInstance> instances);
 };
 
 // Describes a service instance.
@@ -116,7 +116,7 @@ interface MdnsResponder {
     // null. If |publication| is null, no announcement or response is transmitted.
     // Strings in |text| are transmitted in the TXT record.
     GetPublication(bool query, string? subtype)
--> (MdnsPublication? publication);
+        -> (MdnsPublication? publication);
 };
 
 // Describes an initial instance publication or query response. |port| is host-
