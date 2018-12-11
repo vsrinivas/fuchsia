@@ -43,10 +43,30 @@ public:
         ZX_DEBUG_ASSERT(status == ZX_OK);
         status = zx::event::create(0u, &buffer_full_);
         ZX_DEBUG_ASSERT(status == ZX_OK);
+        ResetEngineState();
     }
 
     ~Fixture() {
         StopTracing(false);
+    }
+
+    void ResetEngineState() {
+        // The engine may be started/stopped multiple times between one call
+        // to StartTracing()/StopTracing(). Reset related state tracking vars
+        // each time.
+        disposition_ = ZX_ERR_INTERNAL;
+        buffer_bytes_written_ = 0u;
+        observed_stopped_callback_ = false;
+        ResetBufferFullNotification();
+    }
+
+    void StartEngine() {
+        ResetEngineState();
+
+        zx_status_t status = trace_start_engine(loop_.dispatcher(), this,
+                                                buffering_mode_,
+                                                buffer_.get(), buffer_.size());
+        ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "status=%d", status);
     }
 
     void StartTracing() {
@@ -59,17 +79,30 @@ public:
             loop_.StartThread("trace test");
         }
 
-        // Asynchronously start the engine.
-        zx_status_t status = trace_start_engine(loop_.dispatcher(), this,
-                                                buffering_mode_,
-                                                buffer_.get(), buffer_.size());
-        ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "status=%d", status);
+        StartEngine();
     }
 
     void StopEngine() {
         ZX_DEBUG_ASSERT(trace_running_);
         zx_status_t status = trace_stop_engine(ZX_OK);
         ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "status=%d", status);
+    }
+
+    void WaitEngineStopped() {
+        zx_status_t status;
+        while (trace_state() != TRACE_STOPPED) {
+            if (attach_to_thread_ == kNoAttachToThread) {
+                status = trace_stopped_.wait_one(
+                    ZX_EVENT_SIGNALED, zx::deadline_after(zx::msec(100)),
+                    nullptr);
+                ZX_DEBUG_ASSERT_MSG(status == ZX_OK || status == ZX_ERR_TIMED_OUT,
+                                    "status=%d", status);
+            } else {
+                // Finish up any remaining tasks. The engine may have queued some.
+                status = loop_.RunUntilIdle();
+                ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "status=%d", status);
+            }
+        }
     }
 
     void Shutdown() {
@@ -92,21 +125,7 @@ public:
         // tearing down the loop.  The trace engine should stop itself.
         if (!hard_shutdown) {
             StopEngine();
-
-            zx_status_t status;
-            while (trace_state() != TRACE_STOPPED) {
-                if (attach_to_thread_ == kNoAttachToThread) {
-                    status = trace_stopped_.wait_one(
-                        ZX_EVENT_SIGNALED, zx::deadline_after(zx::msec(100)),
-                        nullptr);
-                    ZX_DEBUG_ASSERT_MSG(status == ZX_OK || status == ZX_ERR_TIMED_OUT,
-                                        "status=%d", status);
-                } else {
-                    // Finish up any remaining tasks. The engine may have queued some.
-                    status = loop_.RunUntilIdle();
-                    ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "status=%d", status);
-                }
-            }
+            WaitEngineStopped();
         }
 
         Shutdown();
@@ -184,14 +203,14 @@ private:
     trace_buffering_mode_t buffering_mode_;
     fbl::Array<uint8_t> buffer_;
     bool trace_running_ = false;
-    zx_status_t disposition_ = ZX_ERR_INTERNAL;
-    size_t buffer_bytes_written_ = 0u;
+    zx_status_t disposition_;
+    size_t buffer_bytes_written_;
     zx::event trace_stopped_;
     zx::event buffer_full_;
-    bool observed_stopped_callback_ = false;
-    bool observed_notify_buffer_full_callback_ = false;
-    uint32_t observed_buffer_full_wrapped_count_ = 0;
-    uint64_t observed_buffer_full_durable_data_end_ = 0;
+    bool observed_stopped_callback_;
+    bool observed_notify_buffer_full_callback_;
+    uint32_t observed_buffer_full_wrapped_count_;
+    uint64_t observed_buffer_full_durable_data_end_;
 };
 
 Fixture* g_fixture{nullptr};
@@ -225,9 +244,19 @@ void fixture_stop_tracing_hard() {
     g_fixture->StopTracing(true);
 }
 
+void fixture_start_engine() {
+    ZX_DEBUG_ASSERT(g_fixture);
+    g_fixture->StartEngine();
+}
+
 void fixture_stop_engine() {
     ZX_DEBUG_ASSERT(g_fixture);
     g_fixture->StopEngine();
+}
+
+void fixture_wait_engine_stopped(void) {
+    ZX_DEBUG_ASSERT(g_fixture);
+    g_fixture->WaitEngineStopped();
 }
 
 void fixture_shutdown() {

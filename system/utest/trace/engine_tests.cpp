@@ -6,6 +6,9 @@
 
 #include <threads.h>
 
+#include <atomic>
+#include <utility>
+
 #include <fbl/function.h>
 #include <fbl/string.h>
 #include <fbl/string_printf.h>
@@ -15,9 +18,21 @@
 #include <trace-provider/handler.h>
 #include <trace-test-utils/squelch.h>
 
-#include <utility>
-
 namespace {
+
+using trace_site_atomic_state_t = std::atomic<trace_site_state_t>;
+
+// These are internal values to the trace engine. They are not exported to any
+// user-visible header, so we define our own copies here.
+constexpr trace_site_state_t kSiteStateDisabled = 1u;
+constexpr trace_site_state_t kSiteStateEnabled = 2u;
+constexpr trace_site_state_t kSiteStateFlagsMask = 3u;
+
+trace_site_state_t get_site_state(trace_site_t& site) {
+    auto state_ptr = reinterpret_cast<trace_site_atomic_state_t*>(&site.state);
+    return state_ptr->load(std::memory_order_relaxed);
+}
+
 int RunClosure(void* arg) {
     auto closure = static_cast<fbl::Closure*>(arg);
     (*closure)();
@@ -66,6 +81,15 @@ bool test_state() {
     fixture_stop_tracing();
     EXPECT_EQ(TRACE_STOPPED, trace_state());
 
+    // Do the test twice so that we test starting again after just having
+    // stopped.
+
+    fixture_start_tracing();
+    EXPECT_EQ(TRACE_STARTED, trace_state());
+
+    fixture_stop_tracing();
+    EXPECT_EQ(TRACE_STOPPED, trace_state());
+
     END_TRACE_TEST;
 }
 
@@ -99,6 +123,136 @@ bool TestIsCategoryEnabled() {
     EXPECT_FALSE(trace_is_category_enabled("+enabled"));
     EXPECT_FALSE(trace_is_category_enabled("-disabled"));
     EXPECT_FALSE(trace_is_category_enabled(""));
+
+    END_TRACE_TEST;
+}
+
+bool TestAcquireContextForCategory() {
+    BEGIN_TRACE_TEST;
+
+    trace_string_ref_t category_ref;
+    trace_context_t* context;
+
+    context = trace_acquire_context_for_category("+enabled", &category_ref);
+    EXPECT_NULL(context);
+    context = trace_acquire_context_for_category("-disabled", &category_ref);
+    EXPECT_NULL(context);
+
+    fixture_start_tracing();
+    context = trace_acquire_context_for_category("+enabled", &category_ref);
+    EXPECT_NONNULL(context);
+    EXPECT_TRUE(trace_is_inline_string_ref(&category_ref) ||
+                trace_is_indexed_string_ref(&category_ref));
+    trace_release_context(context);
+    context = trace_acquire_context_for_category("-disabled", &category_ref);
+    EXPECT_NULL(context);
+
+    fixture_stop_tracing();
+    context = trace_acquire_context_for_category("+enabled", &category_ref);
+    EXPECT_NULL(context);
+    context = trace_acquire_context_for_category("-disabled", &category_ref);
+    EXPECT_NULL(context);
+
+    END_TRACE_TEST;
+}
+
+bool TestAcquireContextForCategoryCached() {
+    BEGIN_TRACE_TEST;
+
+    // Note that this test is also testing internal cache state management.
+
+    trace_string_ref_t category_ref;
+    trace_context_t* context;
+    trace_site_t enabled_category_state{};
+    trace_site_t disabled_category_state{};
+
+    context = trace_acquire_context_for_category_cached(
+        "+enabled", &enabled_category_state, &category_ref);
+    EXPECT_NULL(context);
+    EXPECT_EQ(get_site_state(enabled_category_state) & kSiteStateFlagsMask,
+              kSiteStateDisabled);
+    EXPECT_TRUE(get_site_state(enabled_category_state) & ~kSiteStateFlagsMask);
+
+    context = trace_acquire_context_for_category_cached(
+        "-disabled", &disabled_category_state, &category_ref);
+    EXPECT_NULL(context);
+    EXPECT_EQ(get_site_state(disabled_category_state) & kSiteStateFlagsMask,
+              kSiteStateDisabled);
+    EXPECT_TRUE(get_site_state(disabled_category_state) & ~kSiteStateFlagsMask);
+
+    fixture_start_tracing();
+
+    context = trace_acquire_context_for_category_cached(
+        "+enabled", &enabled_category_state, &category_ref);
+    EXPECT_NONNULL(context);
+    EXPECT_TRUE(trace_is_inline_string_ref(&category_ref) ||
+                trace_is_indexed_string_ref(&category_ref));
+    EXPECT_EQ(get_site_state(enabled_category_state) & kSiteStateFlagsMask,
+              kSiteStateEnabled);
+    EXPECT_TRUE(get_site_state(enabled_category_state) & ~kSiteStateFlagsMask);
+    trace_release_context(context);
+
+    context = trace_acquire_context_for_category_cached(
+        "-disabled", &disabled_category_state, &category_ref);
+    EXPECT_NULL(context);
+    EXPECT_EQ(get_site_state(disabled_category_state) & kSiteStateFlagsMask,
+              kSiteStateDisabled);
+    EXPECT_TRUE(get_site_state(disabled_category_state) & ~kSiteStateFlagsMask);
+
+    // Don't call |fixture_stop_tracing()| here as that shuts down the
+    // async loop.
+    fixture_stop_engine();
+    fixture_wait_engine_stopped();
+
+    // Stopping the engine should have flushed the cache.
+    EXPECT_EQ(get_site_state(enabled_category_state), 0);
+    EXPECT_EQ(get_site_state(disabled_category_state), 0);
+
+    // Put some values back in the cache while we're stopped.
+    context = trace_acquire_context_for_category_cached(
+        "+enabled", &enabled_category_state, &category_ref);
+    EXPECT_NULL(context);
+    EXPECT_EQ(get_site_state(enabled_category_state) & kSiteStateFlagsMask,
+              kSiteStateDisabled);
+    context = trace_acquire_context_for_category_cached(
+        "-disabled", &disabled_category_state, &category_ref);
+    EXPECT_NULL(context);
+    EXPECT_EQ(get_site_state(disabled_category_state) & kSiteStateFlagsMask,
+              kSiteStateDisabled);
+
+    // Starting the engine should have flushed the cache again.
+    fixture_start_engine();
+
+    EXPECT_EQ(get_site_state(enabled_category_state), 0);
+    EXPECT_EQ(get_site_state(disabled_category_state), 0);
+
+    fixture_stop_tracing();
+
+    END_TRACE_TEST;
+}
+
+bool TestFlushCategoryCache() {
+    BEGIN_TRACE_TEST;
+
+    trace_string_ref_t category_ref;
+    trace_context_t* context;
+    trace_site_t disabled_category_state{};
+
+    context = trace_acquire_context_for_category_cached(
+        "-disabled", &disabled_category_state, &category_ref);
+    EXPECT_NULL(context);
+    EXPECT_EQ(get_site_state(disabled_category_state) & kSiteStateFlagsMask,
+              kSiteStateDisabled);
+    EXPECT_TRUE(get_site_state(disabled_category_state) & ~kSiteStateFlagsMask);
+
+    EXPECT_EQ(trace_engine_flush_category_cache(), ZX_OK);
+    EXPECT_EQ(get_site_state(disabled_category_state), 0);
+
+    fixture_start_tracing();
+
+    EXPECT_EQ(trace_engine_flush_category_cache(), ZX_ERR_BAD_STATE);
+
+    fixture_stop_tracing();
 
     END_TRACE_TEST;
 }
@@ -690,6 +844,9 @@ RUN_TEST(TestNormalShutdown)
 RUN_TEST(TestHardShutdown)
 RUN_TEST(TestIsEnabled)
 RUN_TEST(TestIsCategoryEnabled)
+RUN_TEST(TestAcquireContextForCategory)
+RUN_TEST(TestAcquireContextForCategoryCached)
+RUN_TEST(TestFlushCategoryCache)
 RUN_TEST(TestGenerateNonce)
 RUN_TEST(TestObserver)
 RUN_TEST(TestObserverErrors)

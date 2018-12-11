@@ -160,6 +160,166 @@ void notify_engine_all_observers_started_if_needed_locked() __TA_REQUIRES(g_engi
     g_event.signal(0u, SIGNAL_ALL_OBSERVERS_STARTED);
 }
 
+// Table of per-call-site cached category enabled/disabled flags.
+// This is done by chaining all the
+// |trace_acquire_context_for_category_cached()| call sites at runtime,
+// and recording with the pointer the enabled/disabled flag.
+//
+// Operation:
+// 1. When tracing starts each value is zero (kSiteStateUnknown).
+//    The value is generally a static local at the call site.
+//    Note that while tracing was off various call sites may have been cached,
+//    they are all reset to zero.
+// 2. When a TRACE_*() macro is called, it calls
+//    trace_acquire_context_for_category_cached().
+// 3. If the DISABLED bit is set, skip, we're done.
+// 4. Call trace_acquire_context_for_category()
+// 5. If the ENABLED bit is set, return, we're done.
+// 6. Insert the call site to the head of the chain with the
+//    enabled/disabled bits set appropriately.
+// 7. When tracing stops, empty the list. This includes resetting all chained
+//    values to "unknown". We know they're actually disabled, but the important
+//    part here is to flush the cache. A minor improvement would be to keep
+//    the current list.
+//    This is done both when the state transitions to STOPPING and again when
+//    the state transitions to STOPPED.
+// 8. When tracing starts again, reset all chained values to "unknown" and
+//    flush the cache.
+//
+// The trick is doing this in as lock-free way as possible.
+// Atomics are used for accessing the static local at the call site, and when
+// the list needs to be traversed it is first atomically unchained from the
+// main list and then operated on.
+// Generally there aren't that many call sites, and we only need to traverse
+// the list at trace start/stop time; so using a list isn't that much of a
+// performance issue.
+
+using trace_site_atomic_state_t = std::atomic<trace_site_state_t>;
+
+// A sentinel is used so that there is no ambiguity between a null value
+// being the end of the chain and a null value being the initial value of
+// a chain slot.
+trace_site_t g_site_cache_sentinel{};
+
+std::atomic<trace_site_t*> g_site_cache{&g_site_cache_sentinel};
+
+// Extra bits that are combined with the chain pointer to provide
+// the full state.
+constexpr trace_site_state_t kSiteStateUnknown = 0u;
+constexpr trace_site_state_t kSiteStateDisabled = 1u;
+constexpr trace_site_state_t kSiteStateEnabled = 2u;
+constexpr trace_site_state_t kSiteStateFlagsMask = 3u;
+// We don't export this value to the API, the API just says these values
+// must be initialized to zero.
+static_assert(kSiteStateUnknown == 0u);
+
+// For clarity when reading the source.
+using trace_site_flags_t = trace_site_state_t;
+
+trace_site_state_t get_trace_site_raw_successor(trace_site_state_t state) {
+    return state & ~kSiteStateFlagsMask;
+}
+
+trace_site_t* get_trace_site_successor(trace_site_state_t state) {
+    return reinterpret_cast<trace_site_t*>(get_trace_site_raw_successor(state));
+}
+
+trace_site_flags_t get_trace_site_flags(trace_site_state_t state) {
+    return state & kSiteStateFlagsMask;
+}
+
+trace_site_atomic_state_t* get_trace_site_state_as_atomic(trace_site_t* site) {
+    return reinterpret_cast<trace_site_atomic_state_t*>(&site->state);
+}
+
+trace_site_state_t make_trace_site_state(trace_site_state_t successor,
+                                         trace_site_flags_t flags) {
+    return successor | flags;
+}
+
+trace_site_state_t make_trace_site_state(trace_site_t* successor,
+                                         trace_site_flags_t flags) {
+    return reinterpret_cast<trace_site_state_t>(successor) | flags;
+}
+
+trace_site_t* unchain_site_cache() {
+    trace_site_t* empty_cache = &g_site_cache_sentinel;
+    return g_site_cache.exchange(empty_cache, std::memory_order_relaxed);
+}
+
+void flush_site_cache() {
+    // Atomically swap in an empty cache with the current one.
+    trace_site_t* chain_head = unchain_site_cache();
+
+    trace_site_t* chain = chain_head;
+    while (chain != &g_site_cache_sentinel) {
+        trace_site_atomic_state_t* state_ptr = get_trace_site_state_as_atomic(chain);
+        trace_site_state_t curr_state = state_ptr->load(std::memory_order_relaxed);
+        trace_site_state_t new_state = kSiteStateUnknown;
+        state_ptr->store(new_state, std::memory_order_relaxed);
+        chain = get_trace_site_successor(curr_state);
+    }
+}
+
+// Update the state at |*site|.
+// Note that multiple threads may race here for the same site.
+void add_to_site_cache(trace_site_t* site, trace_site_state_t current_state, bool enabled) {
+    trace_site_atomic_state_t* state_ptr = get_trace_site_state_as_atomic(site);
+
+    // Even when tracing is on generally only a subset of categories
+    // are traced, so the test uses "unlikely".
+    trace_site_flags_t new_flags;
+    if (unlikely(enabled)) {
+        new_flags = kSiteStateEnabled;
+    } else {
+        new_flags = kSiteStateDisabled;
+    }
+
+    // At this point the recorded flags are zero. If we're the first to set
+    // them then we're good to add our entry to the cache (if not already in
+    // the cache). Otherwise punt. Note that this first setting of the flags
+    // won't be the last if we need to also chain this entry into the cache.
+    ZX_DEBUG_ASSERT(get_trace_site_flags(current_state) == kSiteStateUnknown);
+
+    trace_site_state_t new_state =
+        make_trace_site_state(get_trace_site_raw_successor(current_state),
+                              new_flags);
+    // If someone else changed our state punt. This can happen when another
+    // thread is tracing and gets there first.
+    if (unlikely(!state_ptr->compare_exchange_strong(current_state, new_state,
+                                                     std::memory_order_acquire,
+                                                     std::memory_order_relaxed))) {
+        return;
+    }
+
+    if (get_trace_site_raw_successor(new_state)) {
+        // Already in chain.
+        return;
+    }
+
+    // Add to chain.
+    trace_site_t* old_cache_ptr =
+        g_site_cache.load(std::memory_order_relaxed);
+    new_state = make_trace_site_state(old_cache_ptr, new_flags);
+    state_ptr->store(new_state, std::memory_order_relaxed);
+
+    // Atomically update both:
+    // - |g_site_cache| to point to |new_cache_ptr| (which is our entry)
+    // - |*state_ptr| (our entry) to point to the old |g_site_cache|
+    // This works because until our entry is live only its flag values
+    // matter to other threads. See the discussion in |trace_stop_engine()|.
+    trace_site_t* new_cache_ptr = site;
+    while (!g_site_cache.compare_exchange_weak(
+               old_cache_ptr, new_cache_ptr,
+               std::memory_order_relaxed,
+               std::memory_order_relaxed)) {
+        // Someone else updated |g_site_cache|. Reset our chain pointer
+        // and try again.
+        new_state = make_trace_site_state(old_cache_ptr, new_flags);
+        state_ptr->store(new_state, std::memory_order_relaxed);
+    }
+}
+
 } // namespace
 
 /*** Trace engine functions ***/
@@ -232,6 +392,12 @@ EXPORT_NO_DDK zx_status_t trace_start_engine(
     // After this point clients can acquire references to the trace context.
     g_context_refs.store(kProlongedCounterIncrement, std::memory_order_release);
 
+    // Flush the call-site cache.
+    // Do this after clients can acquire the trace context so that any cached
+    // values that got recorded prior to this are reset, and any new values
+    // from this point on will see that tracing is on.
+    flush_site_cache();
+
     // Notify observers that the state changed.
     if (g_observers.is_empty()) {
         g_event.signal(0u, SIGNAL_ALL_OBSERVERS_STARTED);
@@ -262,6 +428,19 @@ EXPORT_NO_DDK zx_status_t trace_stop_engine(zx_status_t disposition) {
 
     // Begin stopping the trace.
     g_state.store(TRACE_STOPPING, std::memory_order_relaxed);
+
+    // Flush the call-site cache.
+    // Do this after tracing is marked as stopping so that any cached
+    // values that got recorded prior to this are reset, and any new
+    // values from this point on will see that tracing is stopping.
+    // It's still possible that a cached value could be in the process of
+    // being recorded as being enabled. So we might reset the site's state
+    // and then it gets subsequently marked as enabled by another thread.
+    // This is perhaps clumsy but ok: If the site got marked as enabled then a
+    // trace context was acquired and engine state cannot change to STOPPED
+    // until that context is released after which we will reset the state back
+    // to disabled.
+    flush_site_cache();
 
     // Notify observers that the state changed.
     notify_observers_locked();
@@ -303,7 +482,7 @@ void trace_engine_request_save_buffer(uint32_t wrapped_count,
 // and are passed back to us for sanity checking purposes.
 // thread-safe
 EXPORT_NO_DDK zx_status_t trace_engine_mark_buffer_saved(
-        uint32_t wrapped_count, uint64_t durable_data_end) {
+    uint32_t wrapped_count, uint64_t durable_data_end) {
     auto context = trace_acquire_prolonged_context();
 
     // No point in updating if there's no active trace.
@@ -369,8 +548,20 @@ void handle_context_released(async_dispatcher_t* dispatcher) {
         delete g_context;
         g_context = nullptr;
 
-        // After this point, it's possible for the engine to be restarted.
+        // After this point, it's possible for the engine to be restarted
+        // (once we release the lock).
         g_state.store(TRACE_STOPPED, std::memory_order_relaxed);
+
+        // Flush the call-site cache.
+        // Do this after tracing is marked as stopped so that any cached
+        // values that got recorded prior to this are reset, and any new
+        // values from this point on will see that tracing is stopped.
+        // Any call sites already chained are ok, the concern is with the
+        // timing of call sites about to be added to the chain. We're ok
+        // here because at this point it's impossible to acquire a trace
+        // context, and therefore it's impossible for a category to be
+        // cached as enabled.
+        flush_site_cache();
 
         // Notify observers that the state changed.
         notify_observers_locked();
@@ -481,6 +672,7 @@ EXPORT trace_context_t* trace_acquire_context() {
     return g_context;
 }
 
+// thread-safe, fail-fast, lock-free
 EXPORT trace_context_t* trace_acquire_context_for_category(
         const char* category_literal, trace_string_ref_t* out_ref) {
     // This is marked likely because tracing is usually disabled and we want
@@ -495,6 +687,47 @@ EXPORT trace_context_t* trace_acquire_context_for_category(
     }
 
     return context;
+}
+
+// thread-safe, fail-fast, lock-free
+EXPORT trace_context_t* trace_acquire_context_for_category_cached(
+    const char* category_literal, trace_site_t* site,
+    trace_string_ref_t* out_ref) {
+
+    trace_site_atomic_state_t* state_ptr = get_trace_site_state_as_atomic(site);
+
+    trace_site_state_t current_state =
+        state_ptr->load(std::memory_order_relaxed);
+    if (likely(current_state & kSiteStateDisabled)) {
+        return nullptr;
+    }
+
+    trace_context_t* context =
+        trace_acquire_context_for_category(category_literal, out_ref);
+
+    if (likely((current_state & kSiteStateFlagsMask) != kSiteStateUnknown)) {
+        return context;
+    }
+
+    // First time through for this trace run. Note that multiple threads may
+    // get to this point for the same call-site.
+    add_to_site_cache(site, current_state, context != nullptr);
+
+    return context;
+}
+
+// thread-safe
+EXPORT zx_status_t trace_engine_flush_category_cache(void) {
+    fbl::AutoLock lock(&g_engine_mutex);
+
+    if (g_state.load(std::memory_order_relaxed) != TRACE_STOPPED)
+        return ZX_ERR_BAD_STATE;
+
+    // Empty the site cache. The next time the app tries to emit a trace event
+    // it will get re-added to the cache, but that's ok.
+    flush_site_cache();
+
+    return ZX_OK;
 }
 
 // thread-safe, never-fail, lock-free
@@ -554,6 +787,8 @@ EXPORT_NO_DDK void trace_release_prolonged_context(trace_prolonged_context_t* co
         ZX_DEBUG_ASSERT(status == ZX_OK);
     }
 }
+
+/*** Asynchronous observers ***/
 
 EXPORT zx_status_t trace_register_observer(zx_handle_t event) {
     fbl::AutoLock lock(&g_engine_mutex);

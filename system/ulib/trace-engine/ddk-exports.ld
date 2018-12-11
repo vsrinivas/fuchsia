@@ -18,6 +18,7 @@
 /* Context acquire/release. */
 EXTERN(trace_acquire_context)
 EXTERN(trace_acquire_context_for_category)
+EXTERN(trace_acquire_context_for_category_cached)
 EXTERN(trace_release_context)
 
 /* Basic events. */
@@ -44,6 +45,7 @@ EXTERN(trace_context_write_kernel_object_record_for_handle)
 EXTERN(trace_context_register_current_thread)
 EXTERN(trace_context_register_string_literal)
 EXTERN(trace_context_register_vthread)
+EXTERN(trace_engine_flush_category_cache)
 
 /* The observer API. */
 EXTERN(trace_register_observer)

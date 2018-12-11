@@ -67,7 +67,9 @@ void fixture_start_tracing(void);
 //    quiescence.
 void fixture_stop_tracing(void);
 void fixture_stop_tracing_hard(void);
+void fixture_start_engine(void);
 void fixture_stop_engine(void);
+void fixture_wait_engine_stopped(void);
 void fixture_shutdown(void);
 
 async_loop_t* fixture_async_loop(void);

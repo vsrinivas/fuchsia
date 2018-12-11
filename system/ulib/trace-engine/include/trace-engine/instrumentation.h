@@ -116,16 +116,66 @@ trace_context_t* trace_acquire_context(void);
 // string table.  It releases the context and returns NULL if the category
 // is not enabled.
 //
-// |context| must be a valid trace context reference.
 // |category_literal| must be a null-terminated static string constant.
 // |out_ref| points to where the registered string reference should be returned.
 //
 // Returns a valid trace context if tracing is enabled for the specified category.
 // Returns NULL otherwise.
 //
-// This function is thread-safe.
+// This function is thread-safe and lock-free.
 trace_context_t* trace_acquire_context_for_category(const char* category_literal,
                                                     trace_string_ref_t* out_ref);
+
+// Opaque type that is used to cache category enabled/disabled state.
+// ["opaque" in the sense that client code must not touch it]
+// The term "site" is used because it's relatively unique and because this type
+// is generally used to record category state at TRACE_<event>() call sites.
+typedef uintptr_t trace_site_state_t;
+typedef struct {
+    // "state" is intentionally non-descript
+    trace_site_state_t state;
+} trace_site_t;
+
+// Same as |trace_acquire_context_for_category()| except includes an extra
+// parameter to allow for caching of the category lookup.
+//
+// |category_literal| must be a null-terminated static string constant.
+// |site_ptr| must point to a variable of static storage duration initialized
+//   to zero. A static local variable at the call site of recording a trace
+//   event is the normal solution. The caller must not touch the memory pointed
+//   to by this value, it is for the sole use of the trace engine.
+// |out_ref| points to where the registered string reference should be returned.
+//
+// Returns a valid trace context if tracing is enabled for the specified category.
+// Returns NULL otherwise.
+//
+// This function is thread-safe and lock-free.
+trace_context_t* trace_acquire_context_for_category_cached(
+    const char* category_literal, trace_site_t* site_ptr,
+    trace_string_ref_t* out_ref);
+
+// Flush the cache built up by calls to
+// |trace_acquire_context_for_category_cached()|.
+//
+// The trace engine maintains this cache, but there is one case where it
+// needs help: When a DSO containing cache state is unloaded; that is the
+// |site_ptr| argument to a call to
+// |trace_acquire_context_for_category_cached()| points into the soon to be
+// unloaded DSO.
+// This is normally not a problem as |dlclose()| is basically a nop.
+// However, should a DSO get physically unloaded then this function must be
+// called before the DSO is unloaded. The actual unloading procedure must be:
+// 1) Stop execution in the DSO.
+// 2) Stop tracing.
+// 3) Call |trace_engine_flush_category_cache()|.
+// 4) Unload DSO.
+// (1,2) can be done in either order.
+//
+// Returns ZX_OK on success.
+// Returns ZX_ERR_BAD_STATE if the engine is not stopped.
+//
+// This function is thread-safe.
+zx_status_t trace_engine_flush_category_cache(void);
 
 // Releases a reference to the trace engine's context.
 // Must balance a prior successful call to |trace_acquire_context()|
@@ -207,6 +257,7 @@ void trace_notify_observer_updated(zx_handle_t event);
 __END_CDECLS
 
 #ifdef __cplusplus
+
 #include <fbl/macros.h>
 
 namespace trace {
@@ -322,4 +373,5 @@ private:
 };
 
 } // namespace trace
+
 #endif // __cplusplus

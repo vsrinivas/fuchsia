@@ -20,6 +20,9 @@ __BEGIN_CDECLS
 // Variable used to refer to the current trace context.
 #define TRACE_INTERNAL_CONTEXT __trace_context
 
+// Variable used to hold call-site cache state.
+#define TRACE_INTERNAL_SITE_STATE __trace_site_state
+
 // Variable used to refer to the current trace category's string ref.
 #define TRACE_INTERNAL_CATEGORY_REF __trace_category_ref
 
@@ -101,18 +104,19 @@ __BEGIN_CDECLS
 // Scaffolding for a trace macro that has a category (such as a trace event).
 #ifndef NTRACE
 #define TRACE_INTERNAL_EVENT_RECORD(category_literal, stmt, args...) \
-    do {                                                             \
-        trace_string_ref_t TRACE_INTERNAL_CATEGORY_REF;              \
-        trace_context_t* TRACE_INTERNAL_CONTEXT =                    \
-            trace_acquire_context_for_category(                      \
-                (category_literal),                                  \
-                &TRACE_INTERNAL_CATEGORY_REF);                       \
-        if (unlikely(TRACE_INTERNAL_CONTEXT)) {                      \
-            TRACE_INTERNAL_NEW_DECLARE_ARGS(TRACE_INTERNAL_CONTEXT,  \
-                                            TRACE_INTERNAL_ARGS,     \
-                                            args);                   \
-            stmt;                                                    \
-        }                                                            \
+    do {                                                                \
+        static trace_site_t TRACE_INTERNAL_SITE_STATE;                  \
+        trace_string_ref_t TRACE_INTERNAL_CATEGORY_REF;                 \
+        trace_context_t* TRACE_INTERNAL_CONTEXT =                       \
+            trace_acquire_context_for_category_cached(                  \
+                (category_literal), &TRACE_INTERNAL_SITE_STATE,         \
+                &TRACE_INTERNAL_CATEGORY_REF);                          \
+        if (unlikely(TRACE_INTERNAL_CONTEXT)) {                         \
+            TRACE_INTERNAL_NEW_DECLARE_ARGS(TRACE_INTERNAL_CONTEXT,     \
+                                            TRACE_INTERNAL_ARGS,        \
+                                            args);                      \
+            stmt;                                                       \
+        }                                                               \
     } while (0)
 #else
 #define TRACE_INTERNAL_EVENT_RECORD(category_literal, stmt, args...) \
@@ -272,6 +276,8 @@ __BEGIN_CDECLS
                 (type), (name), (blob), (blob_size));             \
         }                                                         \
     } while (0)
+
+///////////////////////////////////////////////////////////////////////////////
 
 void trace_internal_write_instant_event_record_and_release_context(
     trace_context_t* context,
