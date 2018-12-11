@@ -368,7 +368,7 @@ mod simulation_tests {
     // Temporary workaround to run tests synchronously. This is because wlan service only works with
     // one PHY, so having tests with multiple PHYs running in parallel make them flaky.
     #[test]
-    fn ethernet_and_scan_and_minstrel() {
+    fn ethernet_then_scan_then_txrx_then_minstrel() {
         let mut ok = true;
         ok = run_test("verify_ethernet", verify_ethernet) && ok;
         ok = run_test("simulate_scan", simulate_scan) && ok;
@@ -776,11 +776,10 @@ mod simulation_tests {
             .expect("cannot create ethernet client")
             .expect(&format!("ethernet client not found {:?}", &HW_MAC_ADDR));
 
-        verify_tx(&mut client, &mut exec, &mut helper);
-        // TODO(eyw): verify_rx(...)
+        verify_tx_and_rx(&mut client, &mut exec, &mut helper);
     }
 
-    fn verify_tx(client: &mut ethernet::Client, exec: &mut fasync::Executor,
+    fn verify_tx_and_rx(client: &mut ethernet::Client, exec: &mut fasync::Executor,
                  helper: &mut test_utils::TestHelper) {
         let mut buf: Vec<u8> = Vec::new();
         eth_frames::write_eth_header(&mut buf, &eth_frames::EthHeader{
@@ -789,39 +788,46 @@ mod simulation_tests {
             eth_type : eth_frames::EtherType::Ipv4 as u16,
         }).expect("Error creating fake ethernet frame");
         buf.extend_from_slice(PAYLOAD);
-        println!("{:?}", buf);
 
-        let (sender, receiver) = mpsc::channel(1);
-        let eth_tx_fut = test_eth_tx(client, &buf, receiver);
-        pin_mut!(eth_tx_fut);
+        let eth_tx_rx_fut = send_and_receive(client, &buf);
+        pin_mut!(eth_tx_rx_fut);
 
+        let phy = helper.proxy();
         let mut actual = Vec::new();
-        helper.run(exec, 5.seconds(), "verify ethernet_tx is working",
-                   |event| { handle_eth_tx(event, &mut actual, sender.clone()); },
-                   eth_tx_fut).expect("running main future");
+        let (header, payload) = helper.run(exec, 5.seconds(), "verify ethernet_tx_rx",
+                                           |event| { handle_eth_tx(event, &mut actual, &phy); },
+                                           eth_tx_rx_fut).expect("send and receive eth");
         assert_eq!(&actual[..], PAYLOAD);
+        assert_eq!(header.dst, HW_MAC_ADDR);
+        assert_eq!(header.src, BSSID);
+        assert_eq!(&payload[..], PAYLOAD);
     }
 
-    async fn test_eth_tx<'a>(client: &'a mut ethernet::Client, buf: &'a[u8],
-                             mut receiver: mpsc::Receiver<()>) -> Result<(), failure::Error> {
+    async fn send_and_receive<'a>(client: &'a mut ethernet::Client, buf: &'a Vec<u8>)
+        -> Result<(eth_frames::EthHeader, Vec<u8>), failure::Error> {
         let mut client_stream = client.get_stream();
-        println!("Sending");
         client.send(&buf);
         loop {
-            let polled = poll!(client_stream.next());
-            match polled {
-                futures::Poll::Ready(Some(Ok(ethernet::Event::StatusChanged))) => {
+            let event = await!(client_stream.next())
+                .expect("receiving ethernet event")?;
+            match event {
+                ethernet::Event::StatusChanged => {
                     await!(client.get_status()).expect("getting status");
                 },
-                _ => { break; }
+                ethernet::Event::Receive(buffer) => {
+                    let mut eth_frame = vec![0u8; buffer.len()];
+                    buffer.read(&mut eth_frame);
+                    let mut cursor = io::Cursor::new(&eth_frame);
+                    let header = eth_frames::EthHeader::from_reader(&mut cursor)?;
+                    let payload = eth_frame.split_off(cursor.position() as usize);
+                    return Ok((header, payload));
+                }
             }
         }
-        await!(receiver.next());
-        Ok(())
     }
 
     fn handle_eth_tx(event: wlantap::WlantapPhyEvent, actual: &mut Vec<u8>,
-                     mut sender: mpsc::Sender<()>) {
+                     phy: &wlantap::WlantapPhyProxy) {
         if let wlantap::WlantapPhyEvent::Tx{args}  = event {
             let frame_ctrl = get_frame_ctrl(&args.packet.data);
             if frame_ctrl.typ() == mac_frames::FrameControlType::Data as u16 {
@@ -833,13 +839,47 @@ mod simulation_tests {
                     && data_header.addr3 == BSSID {
                     mac_frames::LlcHeader::from_reader(&mut cursor).expect("skipping llc header");
                     io::Read::read_to_end(&mut cursor, actual).expect("reading payload");
-                    sender.try_send(()).expect("sending result");
+                    rx_wlan_data_frame(&HW_MAC_ADDR, &BSS_ETHNET, &BSSID, &PAYLOAD, phy)
+                        .expect("sending wlan data frame");
                 }
             }
         }
     }
 
-    fn run_test<F>(name: &str, f: F) -> bool
+    fn rx_wlan_data_frame(addr1: &[u8; 6], addr2: &[u8; 6], addr3: &[u8; 6], payload: &[u8],
+                 phy: &wlantap::WlantapPhyProxy) -> Result<(), failure::Error> {
+        let mut buf: Vec<u8> = vec![];
+        mac_frames::MacFrameWriter::<&mut Vec<u8>>::new(&mut buf).data(
+            &mac_frames::DataHeader {
+                frame_control: mac_frames::FrameControl(0), // will be filled automatically
+                duration: 0,
+                addr1: addr1.clone(),
+                addr2: addr2.clone(),
+                addr3: addr3.clone(),
+                seq_control: mac_frames::SeqControl {
+                    frag_num: 0,
+                    seq_num: 3,
+                },
+                addr4: None,
+                qos_control: None,
+                ht_control: None,
+            },
+            &mac_frames::LlcHeader {
+                dsap: 170,
+                ssap: 170,
+                control: 3,
+                oui: [0; 3],
+                protocol_id: eth_frames::EtherType::Ipv4 as u16,
+            },
+            payload
+        )?;
+
+        let rx_info = &mut create_rx_info(&CHANNEL);
+        phy.rx(0, &mut buf.iter().cloned(), rx_info)?;
+        Ok(())
+    }
+
+     fn run_test<F>(name: &str, f: F) -> bool
         where F: FnOnce() + panic::UnwindSafe
     {
         println!("\nTest `{}` started\n", name);

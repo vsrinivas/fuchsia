@@ -156,11 +156,11 @@ impl DataHeader {
 // IETF RFC 1042
 #[derive(Clone, Copy, Debug)]
 pub struct LlcHeader {
-    dsap: u8,
-    ssap: u8,
-    control: u8,
-    oui: [u8; 3],
-    protocol_id: u16,
+    pub dsap: u8,
+    pub ssap: u8,
+    pub control: u8,
+    pub oui: [u8; 3],
+    pub protocol_id: u16,
 }
 
 #[cfg(test)]
@@ -283,6 +283,52 @@ impl<W: io::Write> MacFrameWriter<W> {
             self.w.write_u32::<LittleEndian>(ht_control)?;
         }
         Ok(())
+    }
+
+    #[cfg(test)]
+    pub fn data(mut self, data_header: &DataHeader, llc_header: &LlcHeader, payload: &[u8])
+        -> io::Result<Self> {
+        self.write_data_header(data_header, DataSubtype::Data)?;
+        self.write_llc_header(llc_header)?;
+        self.w.write_all(payload)?;
+        Ok(self)
+    }
+
+    #[cfg(test)]
+    fn write_data_header(&mut self, header: &DataHeader, subtype: DataSubtype) -> io::Result<()> {
+        let mut frame_control = header.frame_control;
+        frame_control.set_typ(FrameControlType::Data as u16);
+        frame_control.set_subtype(subtype as u16);
+        frame_control.set_htc_order(header.ht_control.is_some());
+        self.w.write_u16::<LittleEndian>(frame_control.0)?;
+        self.w.write_u16::<LittleEndian>(header.duration)?;
+        self.w.write_all(&header.addr1)?;
+        self.w.write_all(&header.addr2)?;
+        self.w.write_all(&header.addr3)?;
+        self.w.write_u16::<LittleEndian>(header.seq_control.encode())?;
+        if let Some(addr4) = header.addr4 { self.w.write_all(&addr4)?; }
+        if let Some(qos_control) = header.qos_control{
+            self.w.write_u16::<LittleEndian>(qos_control)?;
+        };
+        if let Some(ht_control) = header.ht_control {
+            self.w.write_u32::<LittleEndian>(ht_control)?;
+        };
+        Ok(())
+    }
+
+    #[cfg(test)]
+    fn write_llc_header(&mut self, header: &LlcHeader) -> io::Result<()> {
+        self.w.write_u8(header.dsap)?;
+        self.w.write_u8(header.ssap)?;
+        self.w.write_u8(header.control)?;
+        self.w.write_all(&header.oui)?;
+        self.w.write_u16::<LittleEndian>(header.protocol_id)?;
+        Ok(())
+    }
+
+    #[cfg(test)]
+    pub fn into_writer(self) -> W {
+        self.w
     }
 }
 
@@ -472,5 +518,51 @@ mod tests {
         let bytes_read = io::Read::read_to_end(&mut bytes, &mut payload).expect("reading payload");
         assert_eq!(bytes_read, 15);
         assert_eq!(&payload[..], &[1u8, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
+    }
+
+    #[test]
+    fn simple_data() {
+        let frame = MacFrameWriter::new(vec![])
+            .data(
+                &DataHeader {
+                    frame_control: FrameControl(0), // will be overwritten
+                    duration: 0x8765,
+                    addr1: [0x01, 0x02, 0x03, 0x04, 0x05, 0x06],
+                    addr2: [0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C],
+                    addr3: [0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12],
+                    seq_control: SeqControl {
+                        frag_num: 6,
+                        seq_num: 0xDEF,
+                    },
+                    addr4: None,
+                    qos_control: None,
+                    ht_control: None,
+                },
+                &LlcHeader {
+                    dsap: 123,
+                    ssap: 234,
+                    control: 111,
+                    oui: [0xff, 0xfe, 0xfd],
+                    protocol_id: 0x3456,
+                },
+                &[11, 12, 13, 14, 15, 16, 17]
+            ).unwrap()
+            .into_writer();
+        #[cfg_attr(rustfmt, rustfmt_skip)]
+        let expected_frame: &[u8] = &[
+            8u8, 0,  // FrameControl (overwritten)
+            0x65, 0x87,  // Duration
+            1, 2, 3, 4, 5, 6,  // Addr1
+            7, 8, 9, 10, 11, 12,  // Addr2
+            13, 14, 15, 16, 17, 18,  // Addr3
+            0xf6, 0xde,  // SeqControl
+            // LLC Header
+            123, 234, 111,  // dsap, ssap and control
+            0xff, 0xfe, 0xfd,  // OUI
+            0x56, 0x34,  // protocol ID
+            // payload
+            11, 12, 13, 14, 15, 16, 17,
+        ];
+        assert_eq!(expected_frame, &frame[..]);
     }
 }
