@@ -170,7 +170,7 @@ func addSource(a *amber.ControlInterface) error {
 		return fmt.Errorf("failed to parse source config: %v", err)
 	}
 
-	if len(*name) != 0 {
+	if *name != "" {
 		cfg.Id = *name
 	}
 
@@ -206,7 +206,7 @@ func addSource(a *amber.ControlInterface) error {
 
 func rmSource(a *amber.ControlInterface) error {
 	name := strings.TrimSpace(*name)
-	if len(name) == 0 {
+	if name == "" {
 		return fmt.Errorf("no source id provided")
 	}
 
@@ -227,6 +227,9 @@ func rmSource(a *amber.ControlInterface) error {
 }
 
 func getUp(a *amber.ControlInterface) error {
+	if *name == "" {
+		return fmt.Errorf("no source id provided")
+	}
 	if *noWait {
 		c, err := a.GetUpdateComplete(*name, version, merkle)
 		if err != nil {
@@ -253,7 +256,7 @@ func getUp(a *amber.ControlInterface) error {
 func listSources(a *amber.ControlInterface) error {
 	srcs, err := a.ListSrcs()
 	if err != nil {
-		fmt.Printf("failed to list sources: %s", err)
+		fmt.Printf("failed to list sources: %s\n", err)
 		return err
 	}
 
@@ -261,7 +264,7 @@ func listSources(a *amber.ControlInterface) error {
 		encoder := json.NewEncoder(os.Stdout)
 		encoder.SetIndent("", "    ")
 		if err := encoder.Encode(src); err != nil {
-			fmt.Printf("failed to encode source into json: %s", err)
+			fmt.Printf("failed to encode source into json: %s\n", err)
 			return err
 		}
 	}
@@ -270,6 +273,9 @@ func listSources(a *amber.ControlInterface) error {
 }
 
 func setSourceEnablement(a *amber.ControlInterface, id string, enabled bool) error {
+	if id == "" {
+		return fmt.Errorf("no source id provided")
+	}
 	status, err := a.SetSrcEnabled(id, enabled)
 	if err != nil {
 		return fmt.Errorf("call failure attempting to change source status: %s", err)
@@ -288,6 +294,10 @@ func do(proxy *amber.ControlInterface) int {
 			return 1
 		}
 	case "get_blob":
+		if *blobID == "" {
+			log.Printf("no blob id provided")
+			return 1
+		}
 		if err := proxy.GetBlob(*blobID); err != nil {
 			log.Printf("error requesting blob fetch: %s", err)
 			return 1
@@ -341,14 +351,14 @@ func do(proxy *amber.ControlInterface) int {
 	case "enable_src":
 		err := setSourceEnablement(proxy, *name, true)
 		if err != nil {
-			fmt.Printf("Error enabling source: %s", err)
+			log.Printf("Error enabling source: %s", err)
 			return 1
 		}
 		fmt.Printf("Source %q enabled\n", *name)
 	case "disable_src":
 		err := setSourceEnablement(proxy, *name, false)
 		if err != nil {
-			fmt.Printf("Error disabling source: %s", err)
+			log.Printf("Error disabling source: %s", err)
 			return 1
 		}
 		fmt.Printf("Source %q disabled\n", *name)
@@ -371,7 +381,7 @@ func do(proxy *amber.ControlInterface) int {
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Printf("Error: no command provided\n%s", usage)
+		fmt.Printf("Error: no command provided\n%s\n", usage)
 		os.Exit(-1)
 	}
 
