@@ -71,12 +71,13 @@ struct TestThunks {
 };
 #undef MAKE_TEST_THUNK
 
-// Macros used to define test object types, test environments, and test thunk structs used for
-// exercising various containers and managed/unmanaged pointer types.
-#define DEFINE_TEST_OBJECT(_container_type, _ptr_type, _ptr_prefix, _ptr_suffix, _base_type) \
+// Macros used to define test object types, test environments, and test thunk
+// structs used for exercising various containers and managed/unmanaged pointer
+// types.
+#define DEFINE_TEST_OBJECT(_container_type, _ptr_type, _base_type) \
 class _ptr_type ## _container_type ## TestObj :                                              \
     public _base_type<_container_type ## Traits<                                             \
-        _ptr_prefix _ptr_type ## _container_type ## TestObj _ptr_suffix>> {                  \
+        typename ptr_type::_ptr_type<_ptr_type ## _container_type ## TestObj>::type>> {      \
 public:                                                                                      \
     explicit _ptr_type ## _container_type ## TestObj(size_t val)                             \
             : _base_type(val) { }                                                            \
@@ -84,14 +85,24 @@ public:                                                                         
 using _ptr_type ## _container_type ## TestTraits =                                           \
     _ptr_type ## TestTraits<_ptr_type ## _container_type ## TestObj>
 
-#define DEFINE_TEST_OBJECTS(_container_type)                                      \
-    DEFINE_TEST_OBJECT(_container_type, Unmanaged,            , *, TestObj);      \
-    DEFINE_TEST_OBJECT(_container_type, UniquePtr, unique_ptr<, >, TestObj);      \
-    DEFINE_TEST_OBJECT(_container_type, RefPtr,        RefPtr<, >, RefedTestObj)
+// Macro which declare static storage for things like custom deleters for each
+// tested container type.  If new static storage is needed for testing custom
+// pointer type or custom deleters, it should be declared here.
+#define DECLARE_TEST_STORAGE(_container_type) \
+    template <> fbl::atomic<size_t> TestCustomDeleter< \
+        StdUniquePtrCustomDeleter ## _container_type ## TestObj \
+    >::delete_count_{0}
+
+#define DEFINE_TEST_OBJECTS(_container_type)                                    \
+    DEFINE_TEST_OBJECT(_container_type, Unmanaged, TestObj);                    \
+    DEFINE_TEST_OBJECT(_container_type, UniquePtr, TestObj);                    \
+    DEFINE_TEST_OBJECT(_container_type, StdUniquePtrDefaultDeleter, TestObj);   \
+    DEFINE_TEST_OBJECT(_container_type, StdUniquePtrCustomDeleter, TestObj);    \
+    DEFINE_TEST_OBJECT(_container_type, RefPtr, RefedTestObj);                  \
+    DECLARE_TEST_STORAGE(_container_type)
 
 #define DEFINE_TEST_THUNK(_env_type, _container_type, _ptr_type) \
     TestThunks<_env_type ## ContainerTestEnvironment<_ptr_type ## _container_type ## TestTraits>>
-
 
 }  // namespace intrusive_containers
 }  // namespace tests

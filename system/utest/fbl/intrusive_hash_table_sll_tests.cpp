@@ -88,60 +88,80 @@ public:
 };
 
 DEFINE_TEST_OBJECTS(HTSLL);
-using UMTE = DEFINE_TEST_THUNK(Associative, HTSLL, Unmanaged);
-using UPTE = DEFINE_TEST_THUNK(Associative, HTSLL, UniquePtr);
-using RPTE = DEFINE_TEST_THUNK(Associative, HTSLL, RefPtr);
+using UMTE    = DEFINE_TEST_THUNK(Associative, HTSLL, Unmanaged);
+using UPTE    = DEFINE_TEST_THUNK(Associative, HTSLL, UniquePtr);
+using SUPDDTE = DEFINE_TEST_THUNK(Associative, HTSLL, StdUniquePtrDefaultDeleter);
+using SUPCDTE = DEFINE_TEST_THUNK(Associative, HTSLL, StdUniquePtrCustomDeleter);
+using RPTE    = DEFINE_TEST_THUNK(Associative, HTSLL, RefPtr);
 
 BEGIN_TEST_CASE(hashtable_sll_tests)
 //////////////////////////////////////////
 // General container specific tests.
 //////////////////////////////////////////
-RUN_NAMED_TEST("Clear (unmanaged)",            UMTE::ClearTest)
-RUN_NAMED_TEST("Clear (unique)",               UPTE::ClearTest)
-RUN_NAMED_TEST("Clear (RefPtr)",               RPTE::ClearTest)
+RUN_NAMED_TEST("Clear (unmanaged)",                        UMTE::ClearTest)
+RUN_NAMED_TEST("Clear (unique)",                           UPTE::ClearTest)
+RUN_NAMED_TEST("Clear (std::uptr)",                        SUPDDTE::ClearTest)
+RUN_NAMED_TEST("Clear (std::uptr<Del>)",                   SUPCDTE::ClearTest)
+RUN_NAMED_TEST("Clear (RefPtr)",                           RPTE::ClearTest)
 
-RUN_NAMED_TEST("ClearUnsafe (unmanaged)",      UMTE::ClearUnsafeTest)
+RUN_NAMED_TEST("ClearUnsafe (unmanaged)",                  UMTE::ClearUnsafeTest)
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_NAMED_TEST("ClearUnsafe (unique)",         UPTE::ClearUnsafeTest)
-RUN_NAMED_TEST("ClearUnsafe (RefPtr)",         RPTE::ClearUnsafeTest)
+RUN_NAMED_TEST("ClearUnsafe (unique)",                     UPTE::ClearUnsafeTest)
+RUN_NAMED_TEST("ClearUnsafe (std::uptr)",                  SUPDDTE::ClearUnsafeTest)
+RUN_NAMED_TEST("ClearUnsafe (std::uptr<Del>)",             SUPCDTE::ClearUnsafeTest)
+RUN_NAMED_TEST("ClearUnsafe (RefPtr)",                     RPTE::ClearUnsafeTest)
 #endif
 
-RUN_NAMED_TEST("IsEmpty (unmanaged)",          UMTE::IsEmptyTest)
-RUN_NAMED_TEST("IsEmpty (unique)",             UPTE::IsEmptyTest)
-RUN_NAMED_TEST("IsEmpty (RefPtr)",             RPTE::IsEmptyTest)
+RUN_NAMED_TEST("IsEmpty (unmanaged)",                      UMTE::IsEmptyTest)
+RUN_NAMED_TEST("IsEmpty (unique)",                         UPTE::IsEmptyTest)
+RUN_NAMED_TEST("IsEmpty (std::uptr)",                      SUPDDTE::IsEmptyTest)
+RUN_NAMED_TEST("IsEmpty (std::uptr<Del>)",                 SUPCDTE::IsEmptyTest)
+RUN_NAMED_TEST("IsEmpty (RefPtr)",                         RPTE::IsEmptyTest)
 
-RUN_NAMED_TEST("Iterate (unmanaged)",          UMTE::IterateTest)
-RUN_NAMED_TEST("Iterate (unique)",             UPTE::IterateTest)
-RUN_NAMED_TEST("Iterate (RefPtr)",             RPTE::IterateTest)
+RUN_NAMED_TEST("Iterate (unmanaged)",                      UMTE::IterateTest)
+RUN_NAMED_TEST("Iterate (unique)",                         UPTE::IterateTest)
+RUN_NAMED_TEST("Iterate (std::uptr)",                      SUPDDTE::IterateTest)
+RUN_NAMED_TEST("Iterate (std::uptr<Del>)",                 SUPCDTE::IterateTest)
+RUN_NAMED_TEST("Iterate (RefPtr)",                         RPTE::IterateTest)
 
 // Hashtables with singly linked list bucket can perform direct
 // iterator/reference erase operations, but the operations will be O(n)
-RUN_NAMED_TEST("IterErase (unmanaged)",        UMTE::IterEraseTest)
-RUN_NAMED_TEST("IterErase (unique)",           UPTE::IterEraseTest)
-RUN_NAMED_TEST("IterErase (RefPtr)",           RPTE::IterEraseTest)
+RUN_NAMED_TEST("IterErase (unmanaged)",                    UMTE::IterEraseTest)
+RUN_NAMED_TEST("IterErase (unique)",                       UPTE::IterEraseTest)
+RUN_NAMED_TEST("IterErase (std::uptr)",                    SUPDDTE::IterEraseTest)
+RUN_NAMED_TEST("IterErase (std::uptr<Del>)",               SUPCDTE::IterEraseTest)
+RUN_NAMED_TEST("IterErase (RefPtr)",                       RPTE::IterEraseTest)
 
-RUN_NAMED_TEST("DirectErase (unmanaged)",      UMTE::DirectEraseTest)
+RUN_NAMED_TEST("DirectErase (unmanaged)",                  UMTE::DirectEraseTest)
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_NAMED_TEST("DirectErase (unique)",         UPTE::DirectEraseTest)
+RUN_NAMED_TEST("DirectErase (unique)",                     UPTE::DirectEraseTest)
+RUN_NAMED_TEST("DirectErase (std::uptr)",                  SUPDDTE::DirectEraseTest)
+RUN_NAMED_TEST("DirectErase (std::uptr<Del>)",             SUPCDTE::DirectEraseTest)
 #endif
-RUN_NAMED_TEST("DirectErase (RefPtr)",         RPTE::DirectEraseTest)
+RUN_NAMED_TEST("DirectErase (RefPtr)",                     RPTE::DirectEraseTest)
 
-RUN_NAMED_TEST("MakeIterator (unmanaged)",     UMTE::MakeIteratorTest)
+RUN_NAMED_TEST("MakeIterator (unmanaged)",                 UMTE::MakeIteratorTest)
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_NAMED_TEST("MakeIterator (unique)",        UPTE::MakeIteratorTest)
+RUN_NAMED_TEST("MakeIterator (unique)",                    UPTE::MakeIteratorTest)
+RUN_NAMED_TEST("MakeIterator (std::uptr)",                 SUPDDTE::MakeIteratorTest)
+RUN_NAMED_TEST("MakeIterator (std::uptr<Del>)",            SUPCDTE::MakeIteratorTest)
 #endif
-RUN_NAMED_TEST("MakeIterator (RefPtr)",        RPTE::MakeIteratorTest)
+RUN_NAMED_TEST("MakeIterator (RefPtr)",                    RPTE::MakeIteratorTest)
 
 // HashTables with SinglyLinkedList buckets cannot iterate backwards (because
 // their buckets cannot iterate backwards)
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_NAMED_TEST("ReverseIterErase (unmanaged)", UMTE::ReverseIterEraseTest)
-RUN_NAMED_TEST("ReverseIterErase (unique)",    UPTE::ReverseIterEraseTest)
-RUN_NAMED_TEST("ReverseIterErase (RefPtr)",    RPTE::ReverseIterEraseTest)
+RUN_NAMED_TEST("ReverseIterErase (unmanaged)",             UMTE::ReverseIterEraseTest)
+RUN_NAMED_TEST("ReverseIterErase (unique)",                UPTE::ReverseIterEraseTest)
+RUN_NAMED_TEST("ReverseIterErase (std::uptr)",             SUPDDTE::ReverseIterEraseTest)
+RUN_NAMED_TEST("ReverseIterErase (std::uptr<Del>)",        SUPCDTE::ReverseIterEraseTest)
+RUN_NAMED_TEST("ReverseIterErase (RefPtr)",                RPTE::ReverseIterEraseTest)
 
-RUN_NAMED_TEST("ReverseIterate (unmanaged)",   UMTE::ReverseIterateTest)
-RUN_NAMED_TEST("ReverseIterate (unique)",      UPTE::ReverseIterateTest)
-RUN_NAMED_TEST("ReverseIterate (RefPtr)",      RPTE::ReverseIterateTest)
+RUN_NAMED_TEST("ReverseIterate (unmanaged)",               UMTE::ReverseIterateTest)
+RUN_NAMED_TEST("ReverseIterate (unique)",                  UPTE::ReverseIterateTest)
+RUN_NAMED_TEST("ReverseIterate (std::uptr)",               SUPDDTE::ReverseIterateTest)
+RUN_NAMED_TEST("ReverseIterate (std::uptr<Del>)",          SUPCDTE::ReverseIterateTest)
+RUN_NAMED_TEST("ReverseIterate (RefPtr)",                  RPTE::ReverseIterateTest)
 #endif
 
 // Hash tables do not support swapping or Rvalue operations (Assignment or
@@ -150,58 +170,80 @@ RUN_NAMED_TEST("ReverseIterate (RefPtr)",      RPTE::ReverseIterateTest)
 #if TEST_WILL_NOT_COMPILE || 0
 RUN_NAMED_TEST("Swap (unmanaged)",             UMTE::SwapTest)
 RUN_NAMED_TEST("Swap (unique)",                UPTE::SwapTest)
+RUN_NAMED_TEST("Swap (std::uptr)",             SUPDDTE::SwapTest)
+RUN_NAMED_TEST("Swap (std::uptr<Del>)",        SUPCDTE::SwapTest)
 RUN_NAMED_TEST("Swap (RefPtr)",                RPTE::SwapTest)
 
 RUN_NAMED_TEST("Rvalue Ops (unmanaged)",       UMTE::RvalueOpsTest)
 RUN_NAMED_TEST("Rvalue Ops (unique)",          UPTE::RvalueOpsTest)
+RUN_NAMED_TEST("Rvalue Ops (std::uptr)",       SUPDDTE::RvalueOpsTest)
+RUN_NAMED_TEST("Rvalue Ops (std::uptr<Del>)",  SUPCDTE::RvalueOpsTest)
 RUN_NAMED_TEST("Rvalue Ops (RefPtr)",          RPTE::RvalueOpsTest)
 #endif
 
 RUN_NAMED_TEST("Scope (unique)",               UPTE::ScopeTest)
+RUN_NAMED_TEST("Scope (std::uptr)",            SUPDDTE::ScopeTest)
+RUN_NAMED_TEST("Scope (std::uptr<Del>)",       SUPCDTE::ScopeTest)
 RUN_NAMED_TEST("Scope (RefPtr)",               RPTE::ScopeTest)
 
 RUN_NAMED_TEST("TwoContainer (unmanaged)",     UMTE::TwoContainerTest)
 #if TEST_WILL_NOT_COMPILE || 0
 RUN_NAMED_TEST("TwoContainer (unique)",        UPTE::TwoContainerTest)
+RUN_NAMED_TEST("TwoContainer (std::uptr)",     SUPDDTE::TwoContainerTest)
+RUN_NAMED_TEST("TwoContainer (std::uptr<Del>)",SUPCDTE::TwoContainerTest)
 #endif
 RUN_NAMED_TEST("TwoContainer (RefPtr)",        RPTE::TwoContainerTest)
 
 RUN_NAMED_TEST("IterCopyPointer (unmanaged)",  UMTE::IterCopyPointerTest)
 #if TEST_WILL_NOT_COMPILE || 0
 RUN_NAMED_TEST("IterCopyPointer (unique)",     UPTE::IterCopyPointerTest)
+RUN_NAMED_TEST("IterCopyPointer (std::uptr)",  SUPDDTE::IterCopyPointerTest)
+RUN_NAMED_TEST("IterCopyPointer (std::uptr<Del>)",DDTE::IterCopyPointerTest)
 #endif
 RUN_NAMED_TEST("IterCopyPointer (RefPtr)",     RPTE::IterCopyPointerTest)
 
 RUN_NAMED_TEST("EraseIf (unmanaged)",          UMTE::EraseIfTest)
 RUN_NAMED_TEST("EraseIf (unique)",             UPTE::EraseIfTest)
+RUN_NAMED_TEST("EraseIf (std::uptr)",          SUPCDTE::EraseIfTest)
 RUN_NAMED_TEST("EraseIf (RefPtr)",             RPTE::EraseIfTest)
 
 RUN_NAMED_TEST("FindIf (unmanaged)",           UMTE::FindIfTest)
 RUN_NAMED_TEST("FindIf (unique)",              UPTE::FindIfTest)
+RUN_NAMED_TEST("FindIf (std::uptr)",           SUPDDTE::FindIfTest)
+RUN_NAMED_TEST("FindIf (std::uptr<Del>)",      SUPCDTE::FindIfTest)
 RUN_NAMED_TEST("FindIf (RefPtr)",              RPTE::FindIfTest)
 
 //////////////////////////////////////////
 // Associative container specific tests.
 //////////////////////////////////////////
-RUN_NAMED_TEST("InsertByKey (unmanaged)",      UMTE::InsertByKeyTest)
-RUN_NAMED_TEST("InsertByKey (unique)",         UPTE::InsertByKeyTest)
-RUN_NAMED_TEST("InsertByKey (RefPtr)",         RPTE::InsertByKeyTest)
+RUN_NAMED_TEST("InsertByKey (unmanaged)",          UMTE::InsertByKeyTest)
+RUN_NAMED_TEST("InsertByKey (unique)",             UPTE::InsertByKeyTest)
+RUN_NAMED_TEST("InsertByKey (std::uptr)",          SUPDDTE::InsertByKeyTest)
+RUN_NAMED_TEST("InsertByKey (std::uptr<Del>)",     SUPCDTE::InsertByKeyTest)
+RUN_NAMED_TEST("InsertByKey (RefPtr)",             RPTE::InsertByKeyTest)
 
-RUN_NAMED_TEST("FindByKey (unmanaged)",        UMTE::FindByKeyTest)
-RUN_NAMED_TEST("FindByKey (unique)",           UPTE::FindByKeyTest)
-RUN_NAMED_TEST("FindByKey (RefPtr)",           RPTE::FindByKeyTest)
+RUN_NAMED_TEST("FindByKey (unmanaged)",            UMTE::FindByKeyTest)
+RUN_NAMED_TEST("FindByKey (unique)",               UPTE::FindByKeyTest)
+RUN_NAMED_TEST("FindByKey (std::uptr)",            SUPDDTE::FindByKeyTest)
+RUN_NAMED_TEST("FindByKey (std::uptr<Del>)",       SUPCDTE::FindByKeyTest)
+RUN_NAMED_TEST("FindByKey (RefPtr)",               RPTE::FindByKeyTest)
 
-RUN_NAMED_TEST("EraseByKey (unmanaged)",       UMTE::EraseByKeyTest)
-RUN_NAMED_TEST("EraseByKey (unique)",          UPTE::EraseByKeyTest)
-RUN_NAMED_TEST("EraseByKey (RefPtr)",          RPTE::EraseByKeyTest)
+RUN_NAMED_TEST("EraseByKey (unmanaged)",           UMTE::EraseByKeyTest)
+RUN_NAMED_TEST("EraseByKey (unique)",              UPTE::EraseByKeyTest)
+RUN_NAMED_TEST("EraseByKey (std::uptr)",           SUPDDTE::EraseByKeyTest)
+RUN_NAMED_TEST("EraseByKey (std::uptr<Del>)",      SUPCDTE::EraseByKeyTest)
+RUN_NAMED_TEST("EraseByKey (RefPtr)",              RPTE::EraseByKeyTest)
 
-RUN_NAMED_TEST("InsertOrFind (unmanaged)",     UMTE::InsertOrFindTest)
-RUN_NAMED_TEST("InsertOrFind (unique)",        UPTE::InsertOrFindTest)
-RUN_NAMED_TEST("InsertOrFind (RefPtr)",        RPTE::InsertOrFindTest)
+RUN_NAMED_TEST("InsertOrFind (unmanaged)",         UMTE::InsertOrFindTest)
+RUN_NAMED_TEST("InsertOrFind (unique)",            UPTE::InsertOrFindTest)
+RUN_NAMED_TEST("InsertOrFind (std::uptr)",         SUPDDTE::InsertOrFindTest)
+RUN_NAMED_TEST("InsertOrFind (RefPtr)",            RPTE::InsertOrFindTest)
 
-RUN_NAMED_TEST("InsertOrReplace (unmanaged)",  UMTE::InsertOrReplaceTest)
-RUN_NAMED_TEST("InsertOrReplace (unique)",     UPTE::InsertOrReplaceTest)
-RUN_NAMED_TEST("InsertOrReplace (RefPtr)",     RPTE::InsertOrReplaceTest)
+RUN_NAMED_TEST("InsertOrReplace (unmanaged)",      UMTE::InsertOrReplaceTest)
+RUN_NAMED_TEST("InsertOrReplace (unique)",         UPTE::InsertOrReplaceTest)
+RUN_NAMED_TEST("InsertOrReplace (std::uptr)",      SUPDDTE::InsertOrReplaceTest)
+RUN_NAMED_TEST("InsertOrReplace (std::uptr<Del>)", SUPCDTE::InsertOrReplaceTest)
+RUN_NAMED_TEST("InsertOrReplace (RefPtr)",         RPTE::InsertOrReplaceTest)
 END_TEST_CASE(hashtable_sll_tests);
 
 }  // namespace intrusive_containers

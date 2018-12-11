@@ -240,8 +240,6 @@ public:
         END_TEST;
     }
 
-    // TODO(johngro) : lower bound tests
-
 private:
     ContainerType&       container()       { return this->container_; }
     const ContainerType& const_container() { return this->container_; }

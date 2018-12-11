@@ -5,10 +5,13 @@
 #pragma once
 
 #include <fbl/alloc_checker.h>
+#include <fbl/atomic.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
+#include <unittest/unittest.h>
 
+#include <memory>
 #include <utility>
 
 namespace fbl {
@@ -57,6 +60,24 @@ public:
         // the number of buckets.
         return (static_cast<HashType>(key) * 0xcf2fd713) % kNumBuckets;
     }
+};
+
+// A 'test' custom deleter for use when testing managed pointer type which have
+// support for template define custom deleters.
+template <typename T>
+struct TestCustomDeleter {
+public:
+    constexpr TestCustomDeleter() = default;
+    void operator()(T* ptr) const {
+        delete_count_.fetch_add(1u);
+        delete ptr;
+    }
+
+    static void reset_delete_count() { delete_count_.store(0); }
+    static size_t delete_count() { return delete_count_.load(); }
+
+private:
+    static fbl::atomic<size_t> delete_count_;
 };
 
 // Container test objects are objects which...
@@ -108,10 +129,41 @@ public:
     explicit RefedTestObj(size_t val) : TestObj<ContainerTraits>(val) { }
 };
 
+// Basic pointer type definitions for the 5 types of currently support pointers
+//
+// Used by the macros which generate the various test environmements
+//
+// 1) Foo* (unmanaged/raw)
+// 2) fbl::unique_ptr<Foo>
+// 3) std::unique_ptr<Foo>
+// 4) std::unique_ptr<Foo, CustomDeleter>
+// 5) fbl::RefPtr<Foo>
+//
+namespace ptr_type {
+
+template <typename _ObjType>
+struct Unmanaged { using type = _ObjType*; };
+
+template <typename _ObjType>
+struct UniquePtr { using type = ::fbl::unique_ptr<_ObjType>; };
+
+template <typename _ObjType>
+struct StdUniquePtrDefaultDeleter { using type = ::std::unique_ptr<_ObjType>; };
+
+template <typename _ObjType>
+struct StdUniquePtrCustomDeleter {
+    using type = ::std::unique_ptr<_ObjType, TestCustomDeleter<_ObjType>>;
+};
+
+template <typename _ObjType>
+struct RefPtr { using type = ::fbl::RefPtr<_ObjType>; };
+
+}  // namespace ptr_type
+
 // Test trait structures contain utilities which define test behavior for the
-// three types of pointers which are managed by intrusive containers.
-// Specifically: unmanaged pointers, unique_ptr<>s and RefPtr<>s.  Defined
-// behaviors include...
+// five types of pointers which are managed by intrusive containers (see above).
+//
+// Defined behaviors include...
 //
 // 1) Allocating a valid version of a pointer to a TestObj of the proper type.
 // 2) "Transferring" a pointer (eg. copying if the pointer type supports copying,
@@ -120,10 +172,13 @@ public:
 //    container.
 // 4) Testing to see if a pointer to an object was properly moved into a
 //    container.
+// 5) Checking to see if the number of times an associated custom deleter was
+//    invoked.
+// 5) Resetting any assoicated custom deleter state.
 template <typename _ObjType>
 struct UnmanagedTestTraits {
     using ObjType       = _ObjType;
-    using PtrType       = ObjType*;
+    using PtrType       = typename ptr_type::Unmanaged<ObjType>::type;
     using ConstPtrType  = const ObjType*;
     using ContainerType = typename ObjType::ContainerTraits::ContainerType;
 
@@ -138,6 +193,9 @@ struct UnmanagedTestTraits {
         ptr = nullptr;
     }
 
+    static bool CheckCustomDeleteInvocations(size_t expected) { return true; }
+    static void ResetCustomDeleter() { }
+
     // Unmanaged pointers never get cleared when being moved or transferred.
     static inline PtrType& Transfer(PtrType& ptr)       { return ptr; }
     static bool WasTransferred(const ConstPtrType& ptr) { return ptr != nullptr; }
@@ -147,7 +205,7 @@ struct UnmanagedTestTraits {
 template <typename _ObjType>
 struct UniquePtrTestTraits {
     using ObjType       = _ObjType;
-    using PtrType       = ::fbl::unique_ptr<ObjType>;
+    using PtrType       = typename ptr_type::UniquePtr<ObjType>::type;
     using ConstPtrType  = const PtrType;
     using ContainerType = typename ObjType::ContainerTraits::ContainerType;
 
@@ -161,6 +219,68 @@ struct UniquePtrTestTraits {
         ptr = nullptr;
     }
 
+    static bool CheckCustomDeleteInvocations(size_t expected) { return true; }
+    static void ResetCustomDeleter() { }
+
+    // Unique pointers always get cleared when being moved or transferred.
+    static inline PtrType&& Transfer(PtrType& ptr)      { return std::move(ptr); }
+    static bool WasTransferred(const ConstPtrType& ptr) { return ptr == nullptr; }
+    static bool WasMoved (const ConstPtrType& ptr)      { return ptr == nullptr; }
+};
+
+template <typename _ObjType>
+struct StdUniquePtrDefaultDeleterTestTraits {
+    using ObjType       = _ObjType;
+    using PtrType       = typename ptr_type::StdUniquePtrDefaultDeleter<ObjType>::type;
+    using ConstPtrType  = const PtrType;
+    using ContainerType = typename ObjType::ContainerTraits::ContainerType;
+
+    static PtrType CreateObject(size_t value) {
+        AllocChecker ac;
+        auto r = new (&ac) ObjType(value);
+        return PtrType(ac.check() ? r : nullptr);
+    }
+
+    static void ReleaseObject(PtrType& ptr) {
+        ptr = nullptr;
+    }
+
+    static bool CheckCustomDeleteInvocations(size_t expected) { return true; }
+    static void ResetCustomDeleter() { }
+
+    // Unique pointers always get cleared when being moved or transferred.
+    static inline PtrType&& Transfer(PtrType& ptr)      { return std::move(ptr); }
+    static bool WasTransferred(const ConstPtrType& ptr) { return ptr == nullptr; }
+    static bool WasMoved (const ConstPtrType& ptr)      { return ptr == nullptr; }
+};
+
+template <typename _ObjType>
+struct StdUniquePtrCustomDeleterTestTraits {
+    using ObjType       = _ObjType;
+    using PtrType       = typename ptr_type::StdUniquePtrCustomDeleter<ObjType>::type;
+    using ConstPtrType  = const PtrType;
+    using ContainerType = typename ObjType::ContainerTraits::ContainerType;
+
+    static PtrType CreateObject(size_t value) {
+        AllocChecker ac;
+        auto r = new (&ac) ObjType(value);
+        return PtrType(ac.check() ? r : nullptr);
+    }
+
+    static void ReleaseObject(PtrType& ptr) {
+        ptr = nullptr;
+    }
+
+    static bool CheckCustomDeleteInvocations(size_t expected) {
+        BEGIN_HELPER;
+        EXPECT_EQ(expected, TestCustomDeleter<_ObjType>::delete_count());
+        END_HELPER;
+    }
+
+    static void ResetCustomDeleter() {
+        TestCustomDeleter<_ObjType>::reset_delete_count();
+    }
+
     // Unique pointers always get cleared when being moved or transferred.
     static inline PtrType&& Transfer(PtrType& ptr)      { return std::move(ptr); }
     static bool WasTransferred(const ConstPtrType& ptr) { return ptr == nullptr; }
@@ -170,7 +290,7 @@ struct UniquePtrTestTraits {
 template <typename _ObjType>
 struct RefPtrTestTraits {
     using ObjType       = _ObjType;
-    using PtrType       = ::fbl::RefPtr<ObjType>;
+    using PtrType       = typename ptr_type::RefPtr<ObjType>::type;
     using ConstPtrType  = const PtrType;
     using ContainerType = typename ObjType::ContainerTraits::ContainerType;
 
@@ -183,6 +303,9 @@ struct RefPtrTestTraits {
     static void ReleaseObject(PtrType& ptr) {
         ptr = nullptr;
     }
+
+    static bool CheckCustomDeleteInvocations(size_t expected) { return true; }
+    static void ResetCustomDeleter() { }
 
     // RefCounted pointers do not get cleared when being transferred, but do get
     // cleared when being moved.

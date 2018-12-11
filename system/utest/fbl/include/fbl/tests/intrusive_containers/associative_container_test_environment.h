@@ -172,8 +172,13 @@ public:
         BEGIN_TEST;
 
         EXPECT_TRUE(DoInsertByKey(PopulateMethod::AscendingKey), "");
+        EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(OBJ_COUNT));
+
         EXPECT_TRUE(DoInsertByKey(PopulateMethod::DescendingKey), "");
+        EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(2 * OBJ_COUNT));
+
         EXPECT_TRUE(DoInsertByKey(PopulateMethod::RandomKey), "");
+        EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(3 * OBJ_COUNT));
 
         END_TEST;
     }
@@ -207,17 +212,23 @@ public:
         BEGIN_TEST;
 
         EXPECT_TRUE(DoFindByKey(PopulateMethod::AscendingKey), "");
+        EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(OBJ_COUNT));
+
         EXPECT_TRUE(DoFindByKey(PopulateMethod::DescendingKey), "");
+        EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(2 * OBJ_COUNT));
+
         EXPECT_TRUE(DoFindByKey(PopulateMethod::RandomKey), "");
+        EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(3 * OBJ_COUNT));
 
         END_TEST;
     }
 
-    bool DoEraseByKey(PopulateMethod populate_method) {
+    bool DoEraseByKey(PopulateMethod populate_method, size_t already_erased) {
         BEGIN_TEST;
 
         EXPECT_TRUE(Populate(container(), populate_method), "");
         size_t remaining = OBJ_COUNT;
+        size_t erased = 0;
 
         // Fail to erase a key which is not in the container.
         EXPECT_NULL(container().erase(kBannedKeyValue), "");
@@ -231,7 +242,9 @@ public:
             if (key & 1)
                 continue;
 
+            EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(erased + already_erased));
             EXPECT_TRUE(TestEnvironment<TestEnvTraits>::DoErase(key, i, remaining), "");
+            EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(++erased + already_erased));
             --remaining;
         }
 
@@ -245,7 +258,9 @@ public:
             KeyType key = objects()[i]->GetKey();
             EXPECT_TRUE(key & 1, "");
 
+            EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(erased + already_erased));
             EXPECT_TRUE(TestEnvironment<TestEnvTraits>::DoErase(key, i, remaining), "");
+            EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(++erased + already_erased));
             --remaining;
         }
 
@@ -258,14 +273,14 @@ public:
     bool EraseByKey() {
         BEGIN_TEST;
 
-        EXPECT_TRUE(DoEraseByKey(PopulateMethod::AscendingKey), "");
-        EXPECT_TRUE(DoEraseByKey(PopulateMethod::DescendingKey), "");
-        EXPECT_TRUE(DoEraseByKey(PopulateMethod::RandomKey), "");
+        EXPECT_TRUE(DoEraseByKey(PopulateMethod::AscendingKey, 0), "");
+        EXPECT_TRUE(DoEraseByKey(PopulateMethod::DescendingKey, OBJ_COUNT), "");
+        EXPECT_TRUE(DoEraseByKey(PopulateMethod::RandomKey, 2 * OBJ_COUNT), "");
 
         END_TEST;
     }
 
-    bool DoInsertOrFind(PopulateMethod populate_method) {
+    bool DoInsertOrFind(PopulateMethod populate_method, size_t already_destroyed) {
         BEGIN_TEST;
 
         for (unsigned int pass_iterator = 0u; pass_iterator < 2u; ++pass_iterator) {
@@ -316,6 +331,9 @@ public:
             if (!pass_iterator)
                 ASSERT_TRUE(TestEnvironment<TestEnvTraits>::Reset(), "");
         }
+
+        // The objects from the first test pass should have been deleted.
+        EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(already_destroyed + OBJ_COUNT));
 
         // Now go over the (populated) container and attempt to insert new
         // objects which have the same keys as existing objects.  Each of these
@@ -374,26 +392,33 @@ public:
                 }
 
                 // Release the object we failed to insert.
+                EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(
+                            already_destroyed + OBJ_COUNT + (OBJ_COUNT * pass_iterator) + i));
                 TestEnvTraits::ReleaseObject(new_object);
+                EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(
+                            already_destroyed + OBJ_COUNT + (OBJ_COUNT * pass_iterator) + i + 1));
             }
         }
 
         ASSERT_TRUE(TestEnvironment<TestEnvTraits>::Reset(), "");
+        EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(
+                    already_destroyed + (4 *OBJ_COUNT)));
         END_TEST;
     }
 
     bool InsertOrFind() {
         BEGIN_TEST;
 
-        EXPECT_TRUE(DoInsertOrFind(PopulateMethod::AscendingKey), "");
-        EXPECT_TRUE(DoInsertOrFind(PopulateMethod::DescendingKey), "");
-        EXPECT_TRUE(DoInsertOrFind(PopulateMethod::RandomKey), "");
+        // Each time we run this test, we create and destroy 4 * OBJ_COUNT objects
+        EXPECT_TRUE(DoInsertOrFind(PopulateMethod::AscendingKey, 0), "");
+        EXPECT_TRUE(DoInsertOrFind(PopulateMethod::DescendingKey, 4 * OBJ_COUNT), "");
+        EXPECT_TRUE(DoInsertOrFind(PopulateMethod::RandomKey, 8 * OBJ_COUNT), "");
 
         END_TEST;
     }
 
     template <typename CopyOrMoveUtil>
-    bool DoInsertOrReplace() {
+    bool DoInsertOrReplace(size_t extra_elements, size_t already_destroyed) {
         BEGIN_TEST;
 
         ASSERT_EQ(0u, ObjType::live_obj_count(), "");
@@ -402,7 +427,7 @@ public:
         // Attempt to replace every element in the container with one that has
         // the same key.  Then attempt to replace some which were not in the
         // container to start with and verify that they were inserted instead.
-        for (size_t i = 0; i < OBJ_COUNT + 10; ++i) {
+        for (size_t i = 0; i < OBJ_COUNT + extra_elements; ++i) {
             PtrType new_obj = TestEnvTraits::CreateObject(i);
             ASSERT_NONNULL(new_obj, "");
             new_obj->SetKey(i);
@@ -423,10 +448,18 @@ public:
                 replaced = nullptr;
                 EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
                 EXPECT_EQ(OBJ_COUNT, container().size(), "");
+
+                // The replaced object should be gone now.
+                EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(already_destroyed + i + 1));
             } else {
                 EXPECT_EQ(i + 1, ObjType::live_obj_count());
                 EXPECT_EQ(i + 1, container().size(), "");
                 EXPECT_NULL(replaced, "");
+
+                // We should have succeeded in inserting this object, so the delete count should not
+                // have gone up.
+                EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(
+                            already_destroyed + OBJ_COUNT));
             }
         }
 
@@ -437,15 +470,23 @@ public:
             TestEnvTraits::ReleaseObject(ptr);
         }
 
+        EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(
+                    already_destroyed + (2 * OBJ_COUNT) + extra_elements));
+
         END_TEST;
     }
 
     bool InsertOrReplace() {
         BEGIN_TEST;
 
-        EXPECT_TRUE(DoInsertOrReplace<MoveUtil>(), "");
+        // Each time we run each version of the tests, we create and destroy 2 *
+        // OBJ_COUNT + the number of extra elements we specify;
+        constexpr size_t EXTRA_ELEMENTS = 10;
+        constexpr size_t TOTAL_OBJS = (2 * OBJ_COUNT) + EXTRA_ELEMENTS;
+
+        EXPECT_TRUE(DoInsertOrReplace<MoveUtil>(EXTRA_ELEMENTS, 0), "");
         if (CopyUtil<PtrTraits>::CanCopy) {
-            EXPECT_TRUE(DoInsertOrReplace<CopyUtil<PtrTraits>>(), "");
+            EXPECT_TRUE(DoInsertOrReplace<CopyUtil<PtrTraits>>(EXTRA_ELEMENTS, TOTAL_OBJS), "");
         }
 
         END_TEST;

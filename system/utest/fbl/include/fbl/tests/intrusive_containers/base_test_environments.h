@@ -110,6 +110,50 @@ protected:
 };
 
 template <typename T>
+class TestEnvironmentSpecialized<StdUniquePtrDefaultDeleterTestTraits<T>> :
+    public TestEnvironmentBase<StdUniquePtrDefaultDeleterTestTraits<T>> {
+protected:
+    using Base = TestEnvironmentBase<StdUniquePtrDefaultDeleterTestTraits<T>>;
+    using PtrType = typename Base::PtrType;
+    static constexpr auto OBJ_COUNT = Base::OBJ_COUNT;
+
+    void ReleaseObject(size_t ndx) {
+        if (ndx < OBJ_COUNT)
+            this->objects_[ndx] = nullptr;
+    }
+
+    bool HoldingObject(size_t ndx) const {
+        return false;
+    }
+
+    PtrType CreateTrackedObject(size_t ndx, size_t value, bool hold_ref = false) {
+        return Base::CreateTrackedObject(ndx, value, false);
+    }
+};
+
+template <typename T>
+class TestEnvironmentSpecialized<StdUniquePtrCustomDeleterTestTraits<T>> :
+    public TestEnvironmentBase<StdUniquePtrCustomDeleterTestTraits<T>> {
+protected:
+    using Base = TestEnvironmentBase<StdUniquePtrCustomDeleterTestTraits<T>>;
+    using PtrType = typename Base::PtrType;
+    static constexpr auto OBJ_COUNT = Base::OBJ_COUNT;
+
+    void ReleaseObject(size_t ndx) {
+        if (ndx < OBJ_COUNT)
+            this->objects_[ndx] = nullptr;
+    }
+
+    bool HoldingObject(size_t ndx) const {
+        return false;
+    }
+
+    PtrType CreateTrackedObject(size_t ndx, size_t value, bool hold_ref = false) {
+        return Base::CreateTrackedObject(ndx, value, false);
+    }
+};
+
+template <typename T>
 class TestEnvironmentSpecialized<RefPtrTestTraits<T>> :
     public TestEnvironmentBase<RefPtrTestTraits<T>> {
 protected:
@@ -166,6 +210,7 @@ public:
         HoldAll,
     };
 
+    TestEnvironment() { TestEnvTraits::ResetCustomDeleter(); }
     ~TestEnvironment() { Reset(); }
 
     // Utility methods used to check if the target of an Erase operation is
@@ -236,6 +281,7 @@ public:
             }
         }
 
+        EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(OBJ_COUNT));
         END_TEST;
     }
 
@@ -281,6 +327,7 @@ public:
         EXPECT_FALSE(container().is_empty(), "");
         EXPECT_TRUE(Reset(), "");
         EXPECT_TRUE(container().is_empty(), "");
+        EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(OBJ_COUNT));
 
         END_TEST;
     }
@@ -338,11 +385,15 @@ public:
         // Don't perform index sanity checks for the objects we erase unless
         // this is a sequence container type.
         bool check_ndx = ContainerType::IsSequenced;
+        size_t erased = 0;
 
         // Remove all of the elements from the container by erasing from the front.
         ASSERT_TRUE(Populate(container()), "");
-        for (size_t i = 0; i < OBJ_COUNT; ++i)
+        for (size_t i = 0; i < OBJ_COUNT; ++i) {
+            EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(erased));
             EXPECT_TRUE(DoErase(container().begin(), i, OBJ_COUNT - i, check_ndx), "");
+            EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(++erased));
+        }
 
         EXPECT_EQ(0u, ObjType::live_obj_count(), "");
         EXPECT_EQ(0u, Size(container()), "");
@@ -352,23 +403,32 @@ public:
         ASSERT_TRUE(Populate(container()), "");
         auto iter = container().begin();
         iter++;
-        for (size_t i = 1; i < OBJ_COUNT - 1; ++i)
+        for (size_t i = 1; i < OBJ_COUNT - 1; ++i) {
+            EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(erased));
             EXPECT_TRUE(DoErase(iter++, i, OBJ_COUNT - i + 1, check_ndx), "");
+            EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(++erased));
+        }
 
         // Attempting to erase end() from a container with more than one element in
         // it should return nullptr.
         EXPECT_NULL(container().erase(container().end()), "");
+        EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(erased));
         EXPECT_TRUE(DoErase(container().begin(), 0, 2, check_ndx), "");
+        EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(++erased));
 
         // Attempting to erase end() from a container with just one element in
         // it should return nullptr.
         EXPECT_NULL(container().erase(container().end()), "");
+        EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(erased));
         EXPECT_TRUE(DoErase(container().begin(), OBJ_COUNT - 1, 1, check_ndx), "");
+        EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(++erased));
 
         // Attempting to erase end() from an empty container should return nullptr.
         EXPECT_EQ(0u, ObjType::live_obj_count(), "");
         EXPECT_EQ(0u, Size(container()), "");
         EXPECT_NULL(container().erase(container().end()), "");
+        EXPECT_EQ(erased, OBJ_COUNT * 2);
+        EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(OBJ_COUNT * 2));
 
         END_TEST;
     }
@@ -555,6 +615,9 @@ public:
             objects()[i]->ResetVisitedCount();
         }
 
+        // None of the objects should have been destroyed during this test.
+        EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(0));
+
         END_TEST;
     }
 
@@ -650,6 +713,9 @@ public:
         // Test const_iterator
         EXPECT_TRUE(DoReverseIterate(container().cbegin(), container().cend()), "");
 
+        // None of the objects should have been destroyed during this test.
+        EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(0));
+
         END_TEST;
     }
 
@@ -737,8 +803,14 @@ public:
             EXPECT_TRUE(ContainerChecker::SanityCheck(container()), "");
             EXPECT_TRUE(ContainerChecker::SanityCheck(other_container), "");
 
+            // Nothing should have been deleted yet.
+            EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(0));
+
             // Reset;
             EXPECT_TRUE(Reset(), "");
+
+            // Now all of the objects should be gone.
+            EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(OBJ_COUNT));
         }
 
         // Make a new other_container, this time with some stuff in it.
@@ -810,6 +882,9 @@ public:
             for (auto& obj : container())     EXPECT_EQ(1u, obj.visited_count(), "");
             for (auto& obj : other_container) EXPECT_EQ(2u, obj.visited_count(), "");
 
+            // No new objects should have been deleted.
+            EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(OBJ_COUNT));
+
             // If we are testing unmanaged pointers clean them up.
             EXPECT_EQ(OBJ_COUNT + OTHER_COUNT, ObjType::live_obj_count(), "");
             other_container.clear();
@@ -820,9 +895,16 @@ public:
             }
             EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
 
+            // Now, we should have deleted an additional OTHER_COUNT objects
+            EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(OBJ_COUNT + OTHER_COUNT));
+
             // Reset the internal state
             EXPECT_TRUE(Reset(), "");
             EXPECT_EQ(0u, ObjType::live_obj_count(), "");
+
+            // Now we should have filled and emptied the test environment twice, and
+            // created+destroyed an additional OTHER_COUNT objects..
+            EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations((2 * OBJ_COUNT) + OTHER_COUNT));
         }
 
         END_TEST;
@@ -844,7 +926,7 @@ public:
 
         EXPECT_TRUE(ContainerChecker::SanityCheck(container()), "");
 
-        // Move its contents to a new container by explicity invoking the Rvalue
+        // Move its contents to a new container by explicitly invoking the Rvalue
         // constructor.
 #if TEST_WILL_NOT_COMPILE || 0
         ContainerType other_container(container());
@@ -893,10 +975,11 @@ public:
         static constexpr size_t EXTRA_COUNT = 5;
         size_t extras_added = 0;
         if (PtrTraits::IsManaged) {
-            while (extras_added < EXTRA_COUNT)
+            while (extras_added < EXTRA_COUNT) {
                 ContainerUtils<ContainerType>::MoveInto(
                         container(),
                         std::move(TestEnvTraits::CreateObject(extras_added++)));
+            }
         }
 
         // Sanity checks before the assignment
@@ -911,11 +994,16 @@ public:
         EXPECT_TRUE(ContainerChecker::SanityCheck(other_container), "");
         EXPECT_TRUE(ContainerChecker::SanityCheck(another_container), "");
 
+        // No objects should have been deleted yet.
+        EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(0));
 #if TEST_WILL_NOT_COMPILE || 0
         container() = another_container;
 #else
         container() = std::move(another_container);
 #endif
+        // The extra objects we put into container() should have been released
+        // when we moved the contents of another_container into container()
+        EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(extras_added));
 
         // another_container should now be empty, and we should have returned to our
         // starting, post-populated state.
@@ -953,9 +1041,11 @@ public:
             Populate(container, RefAction::HoldNone);
             EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
             EXPECT_EQ(OBJ_COUNT, Size(container), "");
+            EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(0));
         }  // Let the container go out of scope and clean itself up..
 
         EXPECT_EQ(0U, ObjType::live_obj_count(), "");
+        EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(OBJ_COUNT));
 
         END_TEST;
     }
@@ -1051,10 +1141,12 @@ public:
             EXPECT_EQ(0u, refs_held(), "");
             EXPECT_EQ(OBJ_COUNT, Size(other_container), "");
         }
+        EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(0));
 
         // Finally, clear() other_container and reset the internal state.  At this
         // point, all objects should have gone away.
         other_container.clear();
+        EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(OBJ_COUNT));
         EXPECT_TRUE(Reset(), "");
 
         EXPECT_EQ(0u, ObjType::live_obj_count(), "");
@@ -1134,6 +1226,7 @@ public:
 
         EXPECT_EQ(EVEN_OBJ_COUNT, even_erased, "");
         EXPECT_EQ(OBJ_COUNT, even_erased + Size(container()), "");
+        EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(even_erased));
         for (const auto& obj : container())
             EXPECT_TRUE(obj.value() & 1, "");
 
@@ -1150,6 +1243,7 @@ public:
         EXPECT_EQ(ODD_OBJ_COUNT, odd_erased, "");
         EXPECT_EQ(OBJ_COUNT, even_erased + odd_erased, "");
         EXPECT_TRUE(container().is_empty(), "");
+        EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(OBJ_COUNT));
 
         END_TEST;
     }
@@ -1205,6 +1299,9 @@ public:
                 return (obj.value() == OBJ_COUNT);
             });
         EXPECT_FALSE(iter.IsValid(), "");
+
+        // We should not have destroyed any objects in this test.
+        EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(0));
 
         END_TEST;
     }
