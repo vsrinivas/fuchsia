@@ -71,6 +71,15 @@ zx_status_t InitLogger();
 #define FX_LOG_LAZY_STREAM(stream, condition) \
   !(condition) ? (void)0 : ::syslog::internal::LogMessageVoidify() & (stream)
 
+#define _FX_EAT_STREAM_PARAMETERS(ignored, tag)                              \
+  true || (ignored) || (tag) != nullptr                                      \
+      ? (void)0                                                              \
+      : FX_LOG_LAZY_STREAM(                                                  \
+            ::syslog::internal::LogMessage(FX_LOG_FATAL, __FILE__, __LINE__, \
+                                           tag, #ignored)                    \
+                .stream(),                                                   \
+            !(ignored))
+
 // Writes a message to the global logger.
 // |severity| is one of DEBUG, INFO, WARNING, ERROR, FATAL
 // |tag| is a tag to associated with the message, or NULL if none.
@@ -106,6 +115,16 @@ zx_status_t InitLogger();
 
 // Writes error message to the global logger if |condition| fails.
 #define FX_CHECK(condition) FX_CHECKT(condition, nullptr)
+
+// Writes error message to the global logger if |condition| fails in debug
+// build.
+#ifndef NDEBUG
+#define FX_DCHECK(condition) FX_CHECK(condition)
+#define FX_DCHECKT(condition, tag) FX_CHECKT(condition, tag)
+#else
+#define FX_DCHECK(condition) _FX_EAT_STREAM_PARAMETERS(condition, nullptr)
+#define FX_DCHECKT(condition, tag) _FX_EAT_STREAM_PARAMETERS(condition, tag)
+#endif
 
 // VLOG macros log with negative verbosities.
 #define FX_VLOG_STREAM(verbose_level, tag)                                    \
