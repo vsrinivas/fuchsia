@@ -66,7 +66,6 @@ where
             Some(MessageType::DHCPNAK) => None,
             Some(MessageType::DHCPRELEASE) => self.handle_release(msg),
             Some(MessageType::DHCPINFORM) => self.handle_inform(msg),
-            Some(MessageType::Unknown) => None,
             None => None,
         }
     }
@@ -333,7 +332,7 @@ fn add_required_options(msg: &mut Message, config: &ServerConfig, msg_type: Mess
     });
     msg.options.push(ConfigOption {
         code: OptionCode::DhcpMessageType,
-        value: vec![msg_type as u8],
+        value: vec![msg_type.into()],
     });
     msg.options.push(ConfigOption {
         code: OptionCode::ServerId,
@@ -367,7 +366,7 @@ fn add_recommended_options(msg: &mut Message, config: &ServerConfig) {
 fn add_inform_ack_options(msg: &mut Message, config: &ServerConfig) {
     msg.options.push(ConfigOption {
         code: OptionCode::DhcpMessageType,
-        value: vec![MessageType::DHCPINFORM as u8],
+        value: vec![MessageType::DHCPINFORM.into()],
     });
     msg.options.push(ConfigOption {
         code: OptionCode::ServerId,
@@ -432,7 +431,7 @@ fn build_nak(req: Message, config: &ServerConfig) -> Message {
     BigEndian::write_u32(&mut lease, config.default_lease_time);
     nak.options.push(ConfigOption {
         code: OptionCode::DhcpMessageType,
-        value: vec![MessageType::DHCPNAK as u8],
+        value: vec![MessageType::DHCPNAK.into()],
     });
     nak.options.push(ConfigOption {
         code: OptionCode::ServerId,
@@ -517,7 +516,7 @@ mod tests {
         };
         disc.options.push(ConfigOption {
             code: OptionCode::DhcpMessageType,
-            value: vec![MessageType::DHCPDISCOVER as u8],
+            value: vec![MessageType::DHCPDISCOVER.into()],
         });
         disc
     }
@@ -536,7 +535,7 @@ mod tests {
         });
         offer.options.push(ConfigOption {
             code: OptionCode::DhcpMessageType,
-            value: vec![MessageType::DHCPOFFER as u8],
+            value: vec![MessageType::DHCPOFFER.into()],
         });
         offer.options.push(ConfigOption {
             code: OptionCode::ServerId,
@@ -573,7 +572,7 @@ mod tests {
         });
         req.options.push(ConfigOption {
             code: OptionCode::DhcpMessageType,
-            value: vec![MessageType::DHCPREQUEST as u8],
+            value: vec![MessageType::DHCPREQUEST.into()],
         });
         req.options.push(ConfigOption {
             code: OptionCode::ServerId,
@@ -596,7 +595,7 @@ mod tests {
         });
         ack.options.push(ConfigOption {
             code: OptionCode::DhcpMessageType,
-            value: vec![MessageType::DHCPACK as u8],
+            value: vec![MessageType::DHCPACK.into()],
         });
         ack.options.push(ConfigOption {
             code: OptionCode::ServerId,
@@ -630,7 +629,7 @@ mod tests {
         };
         nak.options.push(ConfigOption {
             code: OptionCode::DhcpMessageType,
-            value: vec![MessageType::DHCPNAK as u8],
+            value: vec![MessageType::DHCPNAK.into()],
         });
         nak.options.push(ConfigOption {
             code: OptionCode::ServerId,
@@ -648,7 +647,7 @@ mod tests {
         };
         release.options.push(ConfigOption {
             code: OptionCode::DhcpMessageType,
-            value: vec![MessageType::DHCPRELEASE as u8],
+            value: vec![MessageType::DHCPRELEASE.into()],
         });
         release
     }
@@ -662,7 +661,7 @@ mod tests {
         };
         inform.options.push(ConfigOption {
             code: OptionCode::DhcpMessageType,
-            value: vec![MessageType::DHCPINFORM as u8],
+            value: vec![MessageType::DHCPINFORM.into()],
         });
         inform
     }
@@ -677,7 +676,7 @@ mod tests {
         };
         ack.options.push(ConfigOption {
             code: OptionCode::DhcpMessageType,
-            value: vec![MessageType::DHCPINFORM as u8],
+            value: vec![MessageType::DHCPINFORM.into()],
         });
         ack.options.push(ConfigOption {
             code: OptionCode::ServerId,
@@ -702,7 +701,7 @@ mod tests {
         };
         decline.options.push(ConfigOption {
             code: OptionCode::DhcpMessageType,
-            value: vec![MessageType::DHCPDECLINE as u8],
+            value: vec![MessageType::DHCPDECLINE.into()],
         });
         decline.options.push(ConfigOption {
             code: OptionCode::RequestedIpAddr,

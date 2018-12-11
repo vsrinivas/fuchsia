@@ -4,6 +4,7 @@
 #![deny(warnings)]
 
 use fidl_zircon_ethernet_ext::MacAddress as MacAddr;
+use std::iter::Iterator;
 use std::net::Ipv4Addr;
 
 pub const SERVER_PORT: u16 = 67;
@@ -102,7 +103,7 @@ impl Message {
 
         let mut msg = Message::new();
         let op = buf.get(OP_IDX)?;
-        msg.op = OpCode::from(*op)?;
+        msg.op = OpCode::try_from(*op).ok()?;
         msg.xid = BigEndian::read_u32(&buf[XID_IDX..SECS_IDX]);
         msg.secs = BigEndian::read_u16(&buf[SECS_IDX..FLAGS_IDX]);
         msg.bdcast_flag = buf[FLAGS_IDX] > 0;
@@ -123,7 +124,7 @@ impl Message {
     /// Consumes the calling `Message` to serialize it into a buffer of bytes.
     pub fn serialize(&self) -> Vec<u8> {
         let mut buffer = Vec::with_capacity(OPTIONS_START_IDX);
-        buffer.push(self.op as u8);
+        buffer.push(self.op.into());
         buffer.push(ETHERNET_HTYPE);
         buffer.push(ETHERNET_HLEN);
         buffer.push(HOPS_DEFAULT);
@@ -158,7 +159,7 @@ impl Message {
         for option in &self.options {
             option.serialize_to(&mut bytes);
         }
-        bytes.push(OptionCode::End as u8);
+        bytes.push(OptionCode::End.into());
         bytes
     }
 
@@ -179,11 +180,10 @@ impl Message {
     pub fn get_dhcp_type(&self) -> Option<MessageType> {
         let dhcp_type_option = self.get_config_option(OptionCode::DhcpMessageType)?;
         let maybe_dhcp_type_value = dhcp_type_option.value.get(0)?;
-        let dhcp_type = MessageType::from(*maybe_dhcp_type_value);
-        if dhcp_type == MessageType::Unknown {
-            return None;
+        match MessageType::try_from(*maybe_dhcp_type_value) {
+            Ok(dhcp_type) => Some(dhcp_type),
+            Err(MessageTypeError::UnknownMessageType(_typ)) => None,
         }
-        Some(dhcp_type)
     }
 }
 
@@ -198,18 +198,31 @@ impl Message {
 /// from the server.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum OpCode {
-    BOOTREQUEST = 1,
-    BOOTREPLY = 2,
+    BOOTREQUEST,
+    BOOTREPLY,
+}
+
+impl Into<u8> for OpCode {
+    fn into(self) -> u8 {
+        match self {
+            OpCode::BOOTREQUEST => 1,
+            OpCode::BOOTREPLY => 2,
+        }
+    }
+}
+
+enum OpCodeError {
+    UnknownCode(u8),
 }
 
 impl OpCode {
-    /// Instantiates an `OpCode` from its `u8` raw value. Returns None for an
-    /// invalid `OpCode` raw value.
-    pub fn from(val: u8) -> Option<Self> {
-        match val {
-            1 => Some(OpCode::BOOTREQUEST),
-            2 => Some(OpCode::BOOTREPLY),
-            _ => None,
+    fn try_from(n: u8) -> Result<Self, OpCodeError> {
+        // TODO(atait): implement TryFrom when that is stable.
+        // See https://github.com/rust-lang/rust/issues/33417.
+        match n {
+            1 => Ok(OpCode::BOOTREQUEST),
+            2 => Ok(OpCode::BOOTREPLY),
+            code => Err(OpCodeError::UnknownCode(code)),
         }
     }
 }
@@ -226,32 +239,8 @@ pub struct ConfigOption {
 }
 
 impl ConfigOption {
-    fn from_buffer(buf: &[u8]) -> Option<ConfigOption> {
-        let raw_code = buf.get(0)?;
-        let code = OptionCode::option_code_from_u8(*raw_code)?;
-        let len: usize = match buf.get(1) {
-            Some(l) => *l as usize,
-            None => {
-                return Some(ConfigOption {
-                    code: code,
-                    value: vec![],
-                })
-            }
-        };
-        let mut value = Vec::with_capacity(len);
-        let val_offset = 2;
-        let actual_len = buf.len() - val_offset;
-        if len > 0 && len == actual_len {
-            value.extend_from_slice(&buf[val_offset..]);
-        } else if len > 0 {
-            return None;
-        }
-        let opt = ConfigOption { code, value };
-        Some(opt)
-    }
-
     fn serialize_to(&self, output: &mut Vec<u8>) {
-        output.push(self.code as u8);
+        output.push(self.code.into());
         let len = self.value.len() as u8;
         if len > 0 {
             output.push(len);
@@ -268,35 +257,58 @@ impl ConfigOption {
 /// options appear in this type in the order in which they are defined in the RFC.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum OptionCode {
-    Pad = 0,
-    End = 255,
-    SubnetMask = 1,
-    Router = 3,
-    NameServer = 5,
-    RequestedIpAddr = 50,
-    IpAddrLeaseTime = 51,
-    DhcpMessageType = 53,
-    ServerId = 54,
-    RenewalTime = 58,
-    RebindingTime = 59,
+    Pad,
+    End,
+    SubnetMask,
+    Router,
+    NameServer,
+    RequestedIpAddr,
+    IpAddrLeaseTime,
+    DhcpMessageType,
+    ServerId,
+    RenewalTime,
+    RebindingTime,
+}
+
+impl Into<u8> for OptionCode {
+    fn into(self) -> u8 {
+        match self {
+            OptionCode::Pad => 0,
+            OptionCode::End => 255,
+            OptionCode::SubnetMask => 1,
+            OptionCode::Router => 3,
+            OptionCode::NameServer => 5,
+            OptionCode::RequestedIpAddr => 50,
+            OptionCode::IpAddrLeaseTime => 51,
+            OptionCode::DhcpMessageType => 53,
+            OptionCode::ServerId => 54,
+            OptionCode::RenewalTime => 58,
+            OptionCode::RebindingTime => 59,
+        }
+    }
+}
+
+enum OptionCodeError {
+    UnknownCode(u8),
 }
 
 impl OptionCode {
-    /// Returns an OptionCode value when given a valid and supported code value, else None.
-    pub fn option_code_from_u8(n: u8) -> Option<OptionCode> {
+    fn try_from(n: u8) -> Result<Self, OptionCodeError> {
+        // TODO(atait): implement TryFrom when that is stable.
+        // See https://github.com/rust-lang/rust/issues/33417.
         match n {
-            0 => Some(OptionCode::Pad),
-            255 => Some(OptionCode::End),
-            1 => Some(OptionCode::SubnetMask),
-            3 => Some(OptionCode::Router),
-            5 => Some(OptionCode::NameServer),
-            50 => Some(OptionCode::RequestedIpAddr),
-            51 => Some(OptionCode::IpAddrLeaseTime),
-            53 => Some(OptionCode::DhcpMessageType),
-            54 => Some(OptionCode::ServerId),
-            58 => Some(OptionCode::RenewalTime),
-            59 => Some(OptionCode::RebindingTime),
-            _ => None,
+            0 => Ok(OptionCode::Pad),
+            255 => Ok(OptionCode::End),
+            1 => Ok(OptionCode::SubnetMask),
+            3 => Ok(OptionCode::Router),
+            5 => Ok(OptionCode::NameServer),
+            50 => Ok(OptionCode::RequestedIpAddr),
+            51 => Ok(OptionCode::IpAddrLeaseTime),
+            53 => Ok(OptionCode::DhcpMessageType),
+            54 => Ok(OptionCode::ServerId),
+            58 => Ok(OptionCode::RenewalTime),
+            59 => Ok(OptionCode::RebindingTime),
+            code => Err(OptionCodeError::UnknownCode(code)),
         }
     }
 }
@@ -307,35 +319,103 @@ impl OptionCode {
 /// defined in section 9.4 of RFC 1533.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum MessageType {
-    Unknown = 0, // Not specified by RFC; used for From implementation.
-    DHCPDISCOVER = 1,
-    DHCPOFFER = 2,
-    DHCPREQUEST = 3,
-    DHCPDECLINE = 4,
-    DHCPACK = 5,
-    DHCPNAK = 6,
-    DHCPRELEASE = 7,
-    DHCPINFORM = 8,
+    DHCPDISCOVER,
+    DHCPOFFER,
+    DHCPREQUEST,
+    DHCPDECLINE,
+    DHCPACK,
+    DHCPNAK,
+    DHCPRELEASE,
+    DHCPINFORM,
 }
 
-impl From<u8> for MessageType {
-    /// Creates a `MessageType` value from a `u8`.
-    ///
-    /// The mapping of `u8` value to `MessageType` reflects the mapping defined in
-    /// RFC 2132 with on exception: `u8` values outside of the RFC defined mappings
-    /// will return a `MessageType::Unknown`. The client should treat this value
-    /// as an error case.
-    fn from(num: u8) -> Self {
-        match num {
-            1 => MessageType::DHCPDISCOVER,
-            2 => MessageType::DHCPOFFER,
-            3 => MessageType::DHCPREQUEST,
-            4 => MessageType::DHCPDECLINE,
-            5 => MessageType::DHCPACK,
-            6 => MessageType::DHCPNAK,
-            7 => MessageType::DHCPRELEASE,
-            8 => MessageType::DHCPINFORM,
-            _ => MessageType::Unknown,
+impl Into<u8> for MessageType {
+    fn into(self) -> u8 {
+        match self {
+            MessageType::DHCPDISCOVER => 1,
+            MessageType::DHCPOFFER => 2,
+            MessageType::DHCPREQUEST => 3,
+            MessageType::DHCPDECLINE => 4,
+            MessageType::DHCPACK => 5,
+            MessageType::DHCPNAK => 6,
+            MessageType::DHCPRELEASE => 7,
+            MessageType::DHCPINFORM => 8,
+        }
+    }
+}
+
+enum MessageTypeError {
+    UnknownMessageType(u8),
+}
+
+impl MessageType {
+    fn try_from(n: u8) -> Result<Self, MessageTypeError> {
+        // TODO(atait): implement TryFrom when that is stable.
+        // See https://github.com/rust-lang/rust/issues/33417.
+        match n {
+            1 => Ok(MessageType::DHCPDISCOVER),
+            2 => Ok(MessageType::DHCPOFFER),
+            3 => Ok(MessageType::DHCPREQUEST),
+            4 => Ok(MessageType::DHCPDECLINE),
+            5 => Ok(MessageType::DHCPACK),
+            6 => Ok(MessageType::DHCPNAK),
+            7 => Ok(MessageType::DHCPRELEASE),
+            8 => Ok(MessageType::DHCPINFORM),
+            typ => Err(MessageTypeError::UnknownMessageType(typ)),
+        }
+    }
+}
+
+/// A wrapper type implementing `Iterator` around a byte slice containing
+/// serialized `ConfigOption`s.
+struct OptionBuffer<'a> {
+    buf: &'a [u8],
+}
+
+impl<'a> OptionBuffer<'a> {
+    fn new(buf: &'a [u8]) -> Self {
+        Self { buf }
+    }
+}
+
+impl<'a> Iterator for OptionBuffer<'a> {
+    type Item = ConfigOption;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            let (&raw_opt_code, buf) = self.buf.split_first()?;
+            self.buf = buf;
+            match OptionCode::try_from(raw_opt_code) {
+                Ok(OptionCode::End) | Ok(OptionCode::Pad) => {
+                    // End and Pad have neither runtime meaning nor a payload.
+                }
+                code => {
+                    let (&opt_len, buf) = self.buf.split_first()?;
+                    self.buf = buf;
+                    let opt_len = opt_len as usize;
+                    // Equivalent to [T].split_at with a bounds check.
+                    let (val, buf) = if self.buf.len() < opt_len {
+                        None
+                    } else {
+                        Some(unsafe {
+                            (
+                                self.buf.get_unchecked(..opt_len),
+                                self.buf.get_unchecked(opt_len..),
+                            )
+                        })
+                    }?;
+                    self.buf = buf;
+                    match code {
+                        Ok(code) => {
+                            let value = val.to_vec();
+                            break Some(ConfigOption { code, value });
+                        }
+                        Err(OptionCodeError::UnknownCode(_code)) => {
+                            // TODO(atait): signal to the caller that we got an unknown option?
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -370,30 +450,8 @@ fn buf_into_options(buf: &[u8], options: &mut Vec<ConfigOption>) {
     if buf[0..MAGIC_COOKIE.len()] != MAGIC_COOKIE {
         return;
     }
-    let mut opt_idx = MAGIC_COOKIE.len();
-    while opt_idx < buf.len()
-        && OptionCode::option_code_from_u8(buf[opt_idx]) != Some(OptionCode::End)
-    {
-        let opt_code = buf[opt_idx];
-        let opt_len: usize = match OptionCode::option_code_from_u8(opt_code) {
-            None => {
-                // Invalid option: increment to next option start
-                opt_idx += (buf[opt_idx + 1] + 2) as usize;
-                continue;
-            }
-            Some(OptionCode::Pad) | Some(OptionCode::End) => 1, // fixed length option
-            _ => match buf.get(opt_idx + 1) {
-                // variable length option
-                Some(len) => (len + 2) as usize,
-                None => 1 as usize,
-            },
-        };
-        let maybe_opt = ConfigOption::from_buffer(&buf[opt_idx..opt_idx + opt_len]);
-        opt_idx += opt_len;
-        let opt = match maybe_opt {
-            Some(opt) => opt,
-            None => continue,
-        };
+    let buf = OptionBuffer::new(&buf[MAGIC_COOKIE.len()..]);
+    for opt in buf {
         options.push(opt);
     }
 }
@@ -500,14 +558,6 @@ mod tests {
             value: vec![255, 255, 255, 0],
         };
         let opt_want2 = ConfigOption {
-            code: OptionCode::Pad,
-            value: vec![],
-        };
-        let opt_want3 = ConfigOption {
-            code: OptionCode::Pad,
-            value: vec![],
-        };
-        let opt_want4 = ConfigOption {
             code: OptionCode::ServerId,
             value: vec![0xAA, 0xBB, 0xCC, 0xDD],
         };
@@ -525,7 +575,7 @@ mod tests {
             },
             sname: "relay.example.com".to_string(),
             file: "boot.img".to_string(),
-            options: vec![opt_want1, opt_want2, opt_want3, opt_want4],
+            options: vec![opt_want1, opt_want2],
         };
 
         assert_eq!(got, want);
@@ -562,7 +612,7 @@ mod tests {
         });
         msg.options.push(ConfigOption {
             code: OptionCode::DhcpMessageType,
-            value: vec![MessageType::DHCPDISCOVER as u8],
+            value: vec![MessageType::DHCPDISCOVER.into()],
         });
 
         assert_eq!(Message::from_buffer(&msg.serialize()).unwrap(), msg);
@@ -609,10 +659,12 @@ mod tests {
     #[test]
     fn test_option_from_valid_buffer_has_correct_values() {
         let buf = vec![1, 4, 255, 255, 255, 0];
-        let result = ConfigOption::from_buffer(&buf);
+        let mut buf = OptionBuffer { buf: &buf };
+        let result = buf.next();
         match result {
             Some(opt) => {
-                assert_eq!(opt.code as u8, 1);
+                let code: u8 = opt.code.into();
+                assert_eq!(code, 1);
                 assert_eq!(opt.value, vec![255, 255, 255, 0]);
             }
             None => assert!(false), // test failure
@@ -620,22 +672,21 @@ mod tests {
     }
 
     #[test]
-    fn test_option_from_valid_buffer_with_fixed_length_has_correct_values() {
+    fn test_option_from_valid_buffer_with_fixed_length_returns_none() {
         let buf = vec![255];
-        let result = ConfigOption::from_buffer(&buf);
+        let mut buf = OptionBuffer { buf: &buf };
+        let result = buf.next();
         match result {
-            Some(opt) => {
-                assert_eq!(opt.code as u8, 255);
-                assert!(opt.value.is_empty());
-            }
-            None => assert!(false), // test failure
+            Some(_) => assert!(false),
+            None => assert!(true),
         }
     }
 
     #[test]
     fn test_option_from_buffer_with_invalid_code_returns_none() {
         let buf = vec![72, 2, 1, 2];
-        let result = ConfigOption::from_buffer(&buf);
+        let mut buf = OptionBuffer { buf: &buf };
+        let result = buf.next();
         match result {
             Some(_) => assert!(false), // test failure
             None => assert!(true),     // test success
@@ -645,7 +696,8 @@ mod tests {
     #[test]
     fn test_option_from_buffer_with_invalid_length_returns_none() {
         let buf = vec![1, 6, 255, 255, 255, 0];
-        let result = ConfigOption::from_buffer(&buf);
+        let mut buf = OptionBuffer { buf: &buf };
+        let result = buf.next();
         match result {
             Some(_) => assert!(false), // test failure
             None => assert!(true),     // test success
@@ -657,7 +709,7 @@ mod tests {
         let mut msg = Message::new();
         msg.options.push(ConfigOption {
             code: OptionCode::DhcpMessageType,
-            value: vec![MessageType::DHCPDISCOVER as u8],
+            value: vec![MessageType::DHCPDISCOVER.into()],
         });
 
         let got = msg.get_dhcp_type().unwrap();
@@ -705,7 +757,7 @@ mod tests {
         });
         msg.options.push(ConfigOption {
             code: OptionCode::DhcpMessageType,
-            value: vec![MessageType::DHCPDISCOVER as u8],
+            value: vec![MessageType::DHCPDISCOVER.into()],
         });
 
         let mut buf = msg.serialize();
