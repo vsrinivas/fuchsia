@@ -27,7 +27,7 @@ TEST(OperationSerializer, ExecutionIsInOrder) {
                                      });
   }
 
-  // In the begining only the first serializer callback must be called. The
+  // In the beginning only the first serializer callback must be called. The
   // rest should be blocked until the first operation is executed.
   EXPECT_TRUE(called[0]);
   for (int i = 1; i < N; ++i) {

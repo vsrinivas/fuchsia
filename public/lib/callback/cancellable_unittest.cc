@@ -57,7 +57,7 @@ class FakeCancellable : public Cancellable {
 };
 
 TEST(AutoCancel, EmptyAutoCancel) {
-  // An empty AutoCancell does not crash on destruction.
+  // An empty AutoCancel does not crash on destruction.
   AutoCancel auto_cancel;
 }
 

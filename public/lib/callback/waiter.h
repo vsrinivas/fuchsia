@@ -239,7 +239,7 @@ class BaseWaiter : public fxl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
   }
 
   // Executes the finalization callback if the waiter is finalized, and there
-  // are no more pending callbacks or the the waiter is done.
+  // are no more pending callbacks or the waiter is done.
   // Must only be called in STARTED or DONE state.
   void ExecuteCallbackIfFinished() {
     FXL_DCHECK(state_ != State::FINISHED) << "Waiter already finished.";

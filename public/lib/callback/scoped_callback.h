@@ -40,8 +40,8 @@ class ScopedLambda {
 // Scopes the given |lambda| to the given |witness|.
 //
 // This returns a new callable with the same signature as the original one.
-// Calling the new callable will be forwared to |lambda| if and only if
-// |witness| is true at the time where the callbable is called.
+// Calling the new callable will be forwarded to |lambda| if and only if
+// |witness| is true at the time where the callable is called.
 template <typename W, typename T>
 internal::ScopedLambda<W, T> MakeScoped(W witness, T lambda) {
   return internal::ScopedLambda<W, T>(std::move(witness), std::move(lambda));
