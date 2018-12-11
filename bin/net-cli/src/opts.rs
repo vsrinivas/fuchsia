@@ -95,14 +95,14 @@ pub enum FwdCmd {
     /// adds a forwarding table entry
     AddDevice {
         #[structopt(raw(required = "true"))]
+        /// id of the network interface to route to
+        id: u64,
+        #[structopt(raw(required = "true"))]
         /// address portion of the subnet for this forwarding rule
         addr: String,
         #[structopt(raw(required = "true"))]
         /// routing prefix for this forwarding rule
         prefix: u8,
-        #[structopt(raw(required = "true"))]
-        /// id of the network interface to route to
-        id: u64,
     },
     // TODO add-hop, del
 }

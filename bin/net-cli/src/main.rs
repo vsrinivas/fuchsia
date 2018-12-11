@@ -131,7 +131,7 @@ async fn do_fwd(cmd: opts::FwdCmd, stack: StackProxy) -> Result<(), Error> {
                 println!("{}", pretty::ForwardingEntry::from(entry));
             }
         }
-        FwdCmd::AddDevice { addr, prefix, id } => {
+        FwdCmd::AddDevice { id, addr, prefix } => {
             let response = await!(stack.add_forwarding_entry(
                 &mut fidl_fuchsia_net_stack::ForwardingEntry {
                     subnet: net::Subnet {
