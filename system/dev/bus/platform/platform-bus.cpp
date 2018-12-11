@@ -518,10 +518,22 @@ zx_status_t PlatformBus::Init(zx::vmo zbi) {
     return DdkAdd("platform", 0, props, fbl::count_of(props));
 }
 
-} // namespace platform_bus
-
 zx_status_t platform_bus_create(void* ctx, zx_device_t* parent, const char* name,
                                 const char* args, zx_handle_t zbi_vmo_handle) {
     zx::vmo zbi(zbi_vmo_handle);
     return platform_bus::PlatformBus::Create(parent, name, std::move(zbi));
 }
+
+static zx_driver_ops_t driver_ops = [](){
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.create = platform_bus_create;
+    return ops;
+}();
+
+} // namespace platform_bus
+
+ZIRCON_DRIVER_BEGIN(platform_bus, platform_bus::driver_ops, "zircon", "0.1", 1)
+    // devmgr loads us directly, so we need no binding information here
+    BI_ABORT_IF_AUTOBIND,
+ZIRCON_DRIVER_END(platform_bus)
