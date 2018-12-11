@@ -7,95 +7,95 @@ library fuchsia.net.stack;
 using fuchsia.net;
 using zircon.ethernet;
 
-// Status constants
-// The interface is enabled.
+/// Status constants
+/// The interface is enabled.
 const uint32 interfaceStatusEnabled = 0x01;
-// The interface has a physical link.
+/// The interface has a physical link.
 const uint32 interfaceStatusLinkUp = 0x02;
 
 struct InterfaceAddress {
-    // The IP address of the interface.
+    /// The IP address of the interface.
     fuchsia.net.IpAddress ipAddress;
 
-    // The length of the network portion of the interface IP address.
+    /// The length of the network portion of the interface IP address.
     uint8 prefixLen;
 
-    // For point-to-point interfaces, the address of the remote peer.
+    /// For point-to-point interfaces, the address of the remote peer.
     fuchsia.net.IpAddress? peerAddress;
 };
 
 struct InterfaceInfo {
-    // An opaque identifier for the interface, assigned by the stack.
-    // This identifier will never be 0, and will not be reused even if the device is removed and
-    // subsequently re-added. It is not stable across netstack instances.
+    /// An opaque identifier for the interface, assigned by the stack.
+    /// This identifier will never be 0, and will not be reused even if the device is removed and
+    /// subsequently re-added. It is not stable across netstack instances.
     uint64 id;
 
-    // The topological path to the device, representing a stable identifier for the interface
-    // hardware.
+    /// The topological path to the device, representing a stable identifier for the interface
+    /// hardware.
     string path;
 
-    // The MAC address of the interface, if available.
+    /// The MAC address of the interface, if available.
     zircon.ethernet.MacAddress? mac;
 
-    // The maximum transmission unit for the interface in bytes.
+    /// The maximum transmission unit for the interface in bytes.
     uint32 mtu;
 
-    // The features present on the interface, as a bitfield. Valid flags are
-    // zircon.ethernet.INFO_FEATURE_*.
+    /// The features present on the interface, as a bitfield. Valid flags are
+    /// zircon.ethernet.INFO_FEATURE_*.
     uint32 features;
 
-    // The status of the interface. This is a bitfield containing the "Status constants" in this
-    // file.
+    /// The status of the interface. This is a bitfield containing the "Status constants" in this
+    /// file.
     uint32 status;
 
-    // The list of addresses currently assigned to the interface.
+    /// The list of addresses currently assigned to the interface.
     vector<InterfaceAddress> addresses;
 };
 
-// A ForwardingDestination represents either the device that should transmit a packet or the address
-// of the next hop in the route.
+/// A ForwardingDestination represents either the device that should transmit a packet or the address
+/// of the next hop in the route.
 union ForwardingDestination {
-    // The opaque identifier of the device to which packets should be forwarded.
+    /// The opaque identifier of the device to which packets should be forwarded.
     uint64 deviceId;
 
-    // The IP address of the next hop, used to look up the next forwarding entry.
+    /// The IP address of the next hop, used to look up the next forwarding entry.
     fuchsia.net.IpAddress nextHop;
 };
 
-// An entry in the forwarding table for the network stack.
+/// An entry in the forwarding table for the network stack.
 struct ForwardingEntry {
-    // The subnet is the key for the entry in the table.
+    /// The subnet is the key for the entry in the table.
     fuchsia.net.Subnet subnet;
 
-    // The destination that will receive the forwarded packet.
+    /// The destination that will receive the forwarded packet.
     ForwardingDestination destination;
 };
 
 enum InterfaceChangeEvent {
-    // The device was added to the system.
+    /// The device was added to the system.
     added = 1;
 
-    // The device was removed from the system.
+    /// The device was removed from the system.
     removed = 2;
 
-    // The device was enabled.
+    /// The device was enabled.
     enabled = 3;
 
-    // The device was disabled.
+    /// The device was disabled.
     disabled = 4;
 
-    // The device has a link to the medium on which it is attached.
+    /// The device has a link to the medium on which it is attached.
     linkUp = 5;
 
-    // The device does not have a link to the medium on which it is attached.
+    /// The device does not have a link to the medium on which it is attached.
     linkDown = 6;
 };
 
 struct InterfaceStatusChange {
-    // The opaque identifier of the device that had its status change.
+    /// The opaque identifier of the device that had its status change.
     uint64 id;
 
-    // The event representing the status change.
+    /// The event representing the status change.
     InterfaceChangeEvent event;
 };
 
@@ -105,10 +105,10 @@ union InterfaceAddressChangeEvent {
 };
 
 struct InterfaceAddressChange {
-    // The opaque identifier of the device that had its address change.
+    /// The opaque identifier of the device that had its address change.
     uint64 id;
 
-    // The event representing the address change.
+    /// The event representing the address change.
     InterfaceAddressChangeEvent event;
 };
 
@@ -129,51 +129,49 @@ struct Error {
 
 [Discoverable]
 interface Stack {
-    // Add an Ethernet interface to the network stack. On success, returns the identifier assigned
-    // by the stack for use in subsequent calls.
-    0x001: AddEthernetInterface(string topological_path, zircon.ethernet.Device device) -> (Error? err, uint64 id);
+    /// Add an Ethernet interface to the network stack. On success, returns the identifier assigned
+    /// by the stack for use in subsequent calls.
+    AddEthernetInterface(string topological_path, zircon.ethernet.Device device) -> (Error? err, uint64 id);
 
-    // Remove an Ethernet interface from the network stack.
-    0x002: DelEthernetInterface(uint64 id) -> (Error? err);
+    /// Remove an Ethernet interface from the network stack.
+    DelEthernetInterface(uint64 id) -> (Error? err);
 
-    // List all the interfaces available in the network stack.
-    0x100: ListInterfaces() -> (vector<InterfaceInfo> ifs);
+    /// List all the interfaces available in the network stack.
+    ListInterfaces() -> (vector<InterfaceInfo> ifs);
 
-    // Retrieve info about a specific interface.
-    0x101: GetInterfaceInfo(uint64 id) -> (InterfaceInfo? info, Error? err);
+    /// Retrieve info about a specific interface.
+    GetInterfaceInfo(uint64 id) -> (InterfaceInfo? info, Error? err);
 
-    // Enable the interface. Packets may be processed by the stack after this call is processed.
-    0x102: EnableInterface(uint64 id) -> (Error? err);
+    /// Enable the interface. Packets may be processed by the stack after this call is processed.
+    EnableInterface(uint64 id) -> (Error? err);
 
-    // Disable the interface. The stack will no longer process packets after this call.
-    0x103: DisableInterface(uint64 id) -> (Error? err);
+    /// Disable the interface. The stack will no longer process packets after this call.
+    DisableInterface(uint64 id) -> (Error? err);
 
-    // Add an address to the interface. If the interface already has an address of a given type that
-    // does not allow duplicates, this method will return an error.
-    0x104: AddInterfaceAddress(uint64 id, InterfaceAddress addr) -> (Error? err);
+    /// Add an address to the interface. If the interface already has an address of a given type that
+    /// does not allow duplicates, this method will return an error.
+    AddInterfaceAddress(uint64 id, InterfaceAddress addr) -> (Error? err);
 
-    // Remove the address from the interface. If the address is not assigned to the interface, an
-    // error is returned.
-    0x105: DelInterfaceAddress(uint64 id, fuchsia.net.IpAddress addr) -> (Error? err);
+    /// Remove the address from the interface. If the address is not assigned to the interface, an
+    /// error is returned.
+    DelInterfaceAddress(uint64 id, fuchsia.net.IpAddress addr) -> (Error? err);
 
-    // List all the entries in the forwarding table for the network stack.
-    0x200: GetForwardingTable() -> (vector<ForwardingEntry> table);
+    /// List all the entries in the forwarding table for the network stack.
+    GetForwardingTable() -> (vector<ForwardingEntry> table);
 
-    // Add a new entry to the forwarding table. If the table already contains an entry with the same
-    // subnet, an error is returned. The entry may be deleted using DelForwardingEntry first.
-    0x201: AddForwardingEntry(ForwardingEntry entry) -> (Error? err);
+    /// Add a new entry to the forwarding table. If the table already contains an entry with the same
+    /// subnet, an error is returned. The entry may be deleted using DelForwardingEntry first.
+    AddForwardingEntry(ForwardingEntry entry) -> (Error? err);
 
-    // Removes the forwarding entry with the given subnet. This will not affect any overlapping
-    // subnets (superset or subset) so the subnet must exactly match an entry in the forwarding
-    // table. If no entry for the subnet exists, an error is returned.
-    0x202: DelForwardingEntry(fuchsia.net.Subnet subnet) -> (Error? err);
+    /// Removes the forwarding entry with the given subnet. This will not affect any overlapping
+    /// subnets (superset or subset) so the subnet must exactly match an entry in the forwarding
+    /// table. If no entry for the subnet exists, an error is returned.
+    DelForwardingEntry(fuchsia.net.Subnet subnet) -> (Error? err);
 
-    // 0x300: reserved for packet filtering
+    /// Events
+    /// A status change event is triggered whenever an interface's status changes.
+    -> OnInterfaceStatusChange(InterfaceStatusChange info);
 
-    // Events
-    // A status change event is triggered whenever an interface's status changes.
-    0x1000: -> OnInterfaceStatusChange(InterfaceStatusChange info);
-
-    // An address change event is triggered whenever an interface's addresses change.
-    0x1001: -> OnInterfaceAddressChange(InterfaceAddressChange info);
+    /// An address change event is triggered whenever an interface's addresses change.
+    -> OnInterfaceAddressChange(InterfaceAddressChange info);
 };
