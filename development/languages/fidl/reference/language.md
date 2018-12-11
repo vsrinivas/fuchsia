@@ -436,6 +436,7 @@ struct Circle {
     bool dashed;
 };
 ```
+
 #### Tables
 
 *   Record type consisting of a sequence of typed fields with ordinals.
@@ -446,37 +447,37 @@ struct Circle {
 ##### Declaration
 
 ```fidl
-// original definiton has id and data
-table OriginalIdentifier {
-    1: int64    id;
-    2: int64    data;
-};
-
-// some time later, we added refinement
-table UpdatedIdentifier {
-    1: int64    id;
-    2: int64    data;
-    3: int64    refinement;
-};
-
-// later still, we removed refinement in favor of description
-table NewestIdentifier {
-    1: int64    id;
-    2: int64    data;
-    3: reserved;
-    4: string   description;
+table Profile {
+    1: vector<string> locales;
+    2: vector<string> calendars;
+    3: vector<string> time_zones;
 };
 ```
 
 #### Use
 
-Tables are denoted by their declared name (eg. **OriginalIdentifier**) and nullability:
+Tables are denoted by their declared name (eg. **Profile**) and nullability:
 
-*   **`OriginalIdentifier`** : non-nullable OriginalIdentifier
-*   **`OriginalIdentifier?`** : nullable OriginalIdentifier
+*   **`Profile`** : non-nullable Profile
+*   **`Profile?`** : nullable Profile
+
+Here, we show how `Profile` evolves to also carry temperature units.
+A client aware of the previous definition of `Profile` (without temperature units)
+can still send its profile to a server which has been updated to handle the larger
+set of fields.
 
 ```fidl
-@@@ example please
+enum TemperatureUnit {
+    CELSIUS = 1;
+    FAHRENHEIT = 2;
+};
+
+table Profile {
+    1: vector<string> locales;
+    2: vector<string> calendars;
+    3: vector<string> time_zones;
+    4: TemperatureUnit temperature_unit;
+};
 ```
 
 #### Unions

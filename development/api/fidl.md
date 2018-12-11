@@ -573,6 +573,23 @@ Use `array` for fixed-length data:
 
  * Use `array` for MAC addresses because a MAC address is always six bytes long.
 
+### Should I use a struct or a table?
+
+Structs and tables provide semantically similar notions,
+and so it can seem complicated deciding which to prefer.
+
+For very high level IPCs, or for persistent storage, where
+serialization performance tends not to be a concern:
+- Tables provide some forwards and backwards compatibility, and so offer an
+  element of future proofing: prefer them for most concepts.
+- Take the performance benefits of structs only for concepts that are very
+  unlikely to change in the future (say `struct Vec3 { float x; float y; float z }`,
+  or `Ipv4Address`).
+
+Once serialization performance becomes an overriding concern (this is common on the
+data path for device drivers for example), we can begin to prefer structs only and
+rely on adding new methods to interfaces to account for future changes.
+
 ### When should I use an enum?
 
 (Note: This section depends on a proposed FIDL 2.1 feature that makes enums
