@@ -6,6 +6,8 @@ import("//build/sdk/sdk_documentation.gni")
 
 docs = [
   "bootserver",
+  "devices",
+  "logging",
   "packages",
   "ssh",
 ]
