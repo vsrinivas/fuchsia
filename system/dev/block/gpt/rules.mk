@@ -8,7 +8,7 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := driver
 
-MODULE_SRCS := $(LOCAL_DIR)/gpt.c
+MODULE_SRCS := $(LOCAL_DIR)/gpt.cpp
 
 MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync third_party/ulib/cksum
 

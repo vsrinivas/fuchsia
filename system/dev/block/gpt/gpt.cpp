@@ -21,22 +21,25 @@
 #include <sys/param.h>
 #include <lib/sync/completion.h>
 #include <threads.h>
+#include <zircon/assert.h>
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+namespace {
+
 typedef gpt_header_t gpt_t;
 
-#define TXN_SIZE 0x4000 // 128 partition entries
+constexpr size_t kTransactionSize = 0x4000; // 128 partition entries
 
-typedef struct guid {
+struct guid_t {
     uint32_t data1;
     uint16_t data2;
     uint16_t data3;
     uint8_t data4[8];
-} guid_t;
+};
 
-typedef struct gptpart_device {
+struct gptpart_device_t {
     zx_device_t* zxdev;
     zx_device_t* parent;
 
@@ -50,16 +53,16 @@ typedef struct gptpart_device {
     // Owned by gpt_bind_thread, or by gpt_bind if creation of the thread fails.
     guid_map_t* guid_map;
     size_t guid_map_entries;
-} gptpart_device_t;
+};
 
-static void uint8_to_guid_string(char* dst, uint8_t* src) {
+void uint8_to_guid_string(char* dst, uint8_t* src) {
     guid_t* guid = (guid_t*)src;
     sprintf(dst, "%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X", guid->data1, guid->data2,
             guid->data3, guid->data4[0], guid->data4[1], guid->data4[2], guid->data4[3],
             guid->data4[4], guid->data4[5], guid->data4[6], guid->data4[7]);
 }
 
-static void utf16_to_cstring(char* dst, uint8_t* src, size_t charcount) {
+void utf16_to_cstring(char* dst, uint8_t* src, size_t charcount) {
     while (charcount > 0) {
         *dst++ = *src;
         src += 2; // FIXME cheesy
@@ -67,12 +70,12 @@ static void utf16_to_cstring(char* dst, uint8_t* src, size_t charcount) {
     }
 }
 
-static uint64_t get_lba_count(gptpart_device_t* dev) {
+uint64_t get_lba_count(gptpart_device_t* dev) {
     // last LBA is inclusive
     return dev->gpt_entry.last - dev->gpt_entry.first + 1;
 }
 
-static bool validate_header(const gpt_t* header, const block_info_t* info) {
+bool validate_header(const gpt_t* header, const block_info_t* info) {
     if (header->size > sizeof(gpt_t)) {
         zxlogf(ERROR, "gpt: invalid header size\n");
         return false;
@@ -93,15 +96,15 @@ static bool validate_header(const gpt_t* header, const block_info_t* info) {
         zxlogf(ERROR, "gpt: last block > block count\n");
         return false;
     }
-    if (header->entries_count * header->entries_size > TXN_SIZE) {
+    if (header->entries_count * header->entries_size > kTransactionSize) {
         zxlogf(ERROR, "gpt: entry table too big\n");
         return false;
     }
     return true;
 }
 
-static void apply_guid_map(const guid_map_t* guid_map, size_t entries, const char* name,
-                           uint8_t* type) {
+void apply_guid_map(const guid_map_t* guid_map, size_t entries,
+                    const char* name, uint8_t* type) {
     for (size_t i = 0; i < entries; i++) {
         if (strncmp(name, guid_map[i].name, GPT_NAME_LEN) == 0) {
             memcpy(type, guid_map[i].guid, GPT_GUID_LEN);
@@ -111,13 +114,12 @@ static void apply_guid_map(const guid_map_t* guid_map, size_t entries, const cha
 }
 
 // implement device protocol:
-
-static zx_status_t gpt_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmdlen,
-                         void* reply, size_t max, size_t* out_actual) {
-    gptpart_device_t* device = ctx;
+zx_status_t gpt_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmdlen,
+                      void* reply, size_t max, size_t* out_actual) {
+    gptpart_device_t* device = static_cast<gptpart_device_t*>(ctx);
     switch (op) {
     case IOCTL_BLOCK_GET_INFO: {
-        block_info_t* info = reply;
+        block_info_t* info = static_cast<block_info_t*>(reply);
         if (max < sizeof(*info))
             return ZX_ERR_BUFFER_TOO_SMALL;
         memcpy(info, &device->info, sizeof(*info));
@@ -125,21 +127,21 @@ static zx_status_t gpt_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmd
         return ZX_OK;
     }
     case IOCTL_BLOCK_GET_TYPE_GUID: {
-        char* guid = reply;
+        char* guid = static_cast<char*>(reply);
         if (max < GPT_GUID_LEN) return ZX_ERR_BUFFER_TOO_SMALL;
         memcpy(guid, device->gpt_entry.type, GPT_GUID_LEN);
         *out_actual = GPT_GUID_LEN;
         return ZX_OK;
     }
     case IOCTL_BLOCK_GET_PARTITION_GUID: {
-        char* guid = reply;
+        char* guid = static_cast<char*>(reply);
         if (max < GPT_GUID_LEN) return ZX_ERR_BUFFER_TOO_SMALL;
         memcpy(guid, device->gpt_entry.guid, GPT_GUID_LEN);
         *out_actual = GPT_GUID_LEN;
         return ZX_OK;
     }
     case IOCTL_BLOCK_GET_NAME: {
-        char* name = reply;
+        char* name = static_cast<char*>(reply);
         memset(name, 0, max);
         // save room for the null terminator
         utf16_to_cstring(name, device->gpt_entry.name, MIN((max - 1) * 2, GPT_NAME_LEN));
@@ -155,15 +157,14 @@ static zx_status_t gpt_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmd
     }
 }
 
-static void gpt_query(void* ctx, block_info_t* bi, size_t* bopsz) {
-    gptpart_device_t* gpt = ctx;
+void gpt_query(void* ctx, block_info_t* bi, size_t* bopsz) {
+    gptpart_device_t* gpt = static_cast<gptpart_device_t*>(ctx);
     memcpy(bi, &gpt->info, sizeof(block_info_t));
     *bopsz = gpt->block_op_size;
 }
 
-static void gpt_queue(void* ctx, block_op_t* bop, block_impl_queue_callback completion_cb,
-                      void* cookie) {
-    gptpart_device_t* gpt = ctx;
+void gpt_queue(void* ctx, block_op_t* bop, block_impl_queue_callback completion_cb, void* cookie) {
+    gptpart_device_t* gpt = static_cast<gptpart_device_t*>(ctx);
 
     switch (bop->command & BLOCK_OP_MASK) {
     case BLOCK_OP_READ:
@@ -192,46 +193,48 @@ static void gpt_queue(void* ctx, block_op_t* bop, block_impl_queue_callback comp
     block_impl_queue(&gpt->bp, bop, completion_cb, cookie);
 }
 
-static void gpt_unbind(void* ctx) {
-    gptpart_device_t* device = ctx;
+void gpt_unbind(void* ctx) {
+    gptpart_device_t* device = static_cast<gptpart_device_t*>(ctx);
     device_remove(device->zxdev);
 }
 
-static void gpt_release(void* ctx) {
-    gptpart_device_t* device = ctx;
+void gpt_release(void* ctx) {
+    gptpart_device_t* device = static_cast<gptpart_device_t*>(ctx);
     free(device);
 }
 
-static zx_off_t gpt_get_size(void* ctx) {
-    gptpart_device_t* dev = ctx;
+zx_off_t gpt_get_size(void* ctx) {
+    gptpart_device_t* dev = static_cast<gptpart_device_t*>(ctx);
     return dev->info.block_count * dev->info.block_size;
 }
 
-static zx_protocol_device_t gpt_proto = {
-    .version = DEVICE_OPS_VERSION,
-    .ioctl = gpt_ioctl,
-    .get_size = gpt_get_size,
-    .unbind = gpt_unbind,
-    .release = gpt_release,
-};
+zx_protocol_device_t gpt_proto = []() {
+    zx_protocol_device_t gpt = {};
+    gpt.version = DEVICE_OPS_VERSION;
+    gpt.unbind = gpt_unbind;
+    gpt.release = gpt_release;
+    gpt.get_size = gpt_get_size;
+    gpt.ioctl = gpt_ioctl;
+    return gpt;
+}();
 
-static block_impl_protocol_ops_t block_ops = {
+block_impl_protocol_ops_t block_ops = {
     .query = gpt_query,
     .queue = gpt_queue,
 };
 
-static void gpt_read_sync_complete(void* cookie, zx_status_t status, block_op_t* bop) {
+void gpt_read_sync_complete(void* cookie, zx_status_t status, block_op_t* bop) {
     // Pass 32bit status back to caller via 32bit command field
     // Saves from needing custom structs, etc.
     bop->command = status;
     sync_completion_signal((sync_completion_t*)cookie);
 }
 
-static zx_status_t vmo_read(zx_handle_t vmo, void* data, uint64_t off, size_t len) {
+zx_status_t vmo_read(zx_handle_t vmo, void* data, uint64_t off, size_t len) {
     return zx_vmo_read(vmo, data, off, len);
 }
 
-static int gpt_bind_thread(void* arg) {
+int gpt_bind_thread(void* arg) {
     gptpart_device_t* first_dev = (gptpart_device_t*)arg;
     zx_device_t* dev = first_dev->parent;
 
@@ -240,6 +243,11 @@ static int gpt_bind_thread(void* arg) {
 
     // used to keep track of number of partitions found
     unsigned partitions = 0;
+    uint64_t dev_block_count;
+    uint64_t length;
+    uint32_t crc;
+    size_t table_sz;
+    sync_completion_t completion;
 
     block_impl_protocol_t bp;
     memcpy(&bp, &first_dev->bp, sizeof(bp));
@@ -249,24 +257,22 @@ static int gpt_bind_thread(void* arg) {
     bp.ops->query(bp.ctx, &block_info, &block_op_size);
 
     zx_handle_t vmo = ZX_HANDLE_INVALID;
-    block_op_t* bop = calloc(1, block_op_size);
+    block_op_t* bop = static_cast<block_op_t*>(calloc(1, block_op_size));
     if (bop == NULL) {
         goto unbind;
     }
 
-    if (zx_vmo_create(TXN_SIZE, 0, &vmo) != ZX_OK) {
+    if (zx_vmo_create(kTransactionSize, 0, &vmo) != ZX_OK) {
         zxlogf(ERROR, "gpt: cannot allocate vmo\n");
         goto unbind;
     }
 
     // sanity check the default txn size with the block size
-    if ((TXN_SIZE % block_info.block_size) || (TXN_SIZE < block_info.block_size)) {
-        zxlogf(ERROR, "gpt: default txn size=%d is not aligned to blksize=%u!\n",
-               TXN_SIZE, block_info.block_size);
+    if ((kTransactionSize % block_info.block_size) || (kTransactionSize < block_info.block_size)) {
+        zxlogf(ERROR, "gpt: default txn size=%lu is not aligned to blksize=%u!\n",
+               kTransactionSize, block_info.block_size);
         goto unbind;
     }
-
-    sync_completion_t completion = SYNC_COMPLETION_INIT;
 
     // read partition table header synchronously (LBA1)
     bop->command = BLOCK_OP_READ;
@@ -295,17 +301,19 @@ static int gpt_bind_thread(void* arg) {
            header.entries_count, header.entries);
 
     // read partition table entries
-    size_t table_sz = header.entries_count * header.entries_size;
-    if (table_sz > TXN_SIZE) {
+    table_sz = header.entries_count * header.entries_size;
+    if (table_sz > kTransactionSize) {
         zxlogf(INFO, "gpt: partition table is larger than the buffer!\n");
         // FIXME read the whole partition table. ok for now because on pixel2, this is
         // enough to read the entries that actually contain valid data
-        table_sz = TXN_SIZE;
+        table_sz = kTransactionSize;
     }
 
     bop->command = BLOCK_OP_READ;
     bop->rw.vmo = vmo;
-    bop->rw.length = (table_sz + (block_info.block_size - 1)) / block_info.block_size;
+    length = (table_sz + (block_info.block_size - 1)) / block_info.block_size;
+    ZX_DEBUG_ASSERT(length <= UINT32_MAX);
+    bop->rw.length = static_cast<uint32_t>(length);
     bop->rw.offset_dev = header.entries;
     bop->rw.offset_vmo = 0;
 
@@ -317,18 +325,18 @@ static int gpt_bind_thread(void* arg) {
         goto unbind;
     }
 
-    uint8_t entries[TXN_SIZE];
-    if (vmo_read(vmo, entries, 0, TXN_SIZE) != ZX_OK) {
+    uint8_t entries[kTransactionSize];
+    if (vmo_read(vmo, entries, 0, kTransactionSize) != ZX_OK) {
         goto unbind;
     }
 
-    uint32_t crc = crc32(0, (const unsigned char*)entries, table_sz);
+    crc = crc32(0, static_cast<const unsigned char*>(entries), table_sz);
     if (crc != header.entries_crc) {
         zxlogf(ERROR, "gpt: entries crc invalid\n");
         goto unbind;
     }
 
-    uint64_t dev_block_count = block_info.block_count;
+    dev_block_count = block_info.block_count;
 
     for (partitions = 0; partitions < header.entries_count; partitions++) {
         if (partitions * header.entries_size > table_sz) break;
@@ -353,7 +361,7 @@ static int gpt_bind_thread(void* arg) {
         if (first_dev) {
             device = first_dev;
         } else {
-            device = calloc(1, sizeof(gptpart_device_t));
+            device = static_cast<gptpart_device_t*>(calloc(1, sizeof(gptpart_device_t)));
             if (!device) {
                 zxlogf(ERROR, "gpt: out of memory!\n");
                 goto unbind;
@@ -390,14 +398,13 @@ static int gpt_bind_thread(void* arg) {
                    partitions, name, type_guid, partition_guid, pname,
                    device->gpt_entry.first, device->gpt_entry.last);
 
-            device_add_args_t args = {
-                .version = DEVICE_ADD_ARGS_VERSION,
-                .name = name,
-                .ctx = device,
-                .ops = &gpt_proto,
-                .proto_id = ZX_PROTOCOL_BLOCK_IMPL,
-                .proto_ops = &block_ops,
-            };
+            device_add_args_t args = {};
+            args.version = DEVICE_ADD_ARGS_VERSION;
+            args.name = name;
+            args.ctx = device;
+            args.ops = &gpt_proto;
+            args.proto_id = ZX_PROTOCOL_BLOCK_IMPL;
+            args.proto_ops = &block_ops;
 
             if (device_add(dev, &args, &device->zxdev) != ZX_OK) {
                 free(device);
@@ -423,15 +430,16 @@ unbind:
     return -1;
 }
 
-static zx_status_t gpt_bind(void* ctx, zx_device_t* parent) {
+zx_status_t gpt_bind(void* ctx, zx_device_t* parent) {
     // create an invisible device, which will be used for the first partition
-    gptpart_device_t* device = calloc(1, sizeof(gptpart_device_t));
+    gptpart_device_t* device = static_cast<gptpart_device_t*>(calloc(1, sizeof(gptpart_device_t)));
     if (!device) {
         return ZX_ERR_NO_MEMORY;
     }
     device->parent = parent;
 
-    device->guid_map = calloc(DEVICE_METADATA_GUID_MAP_MAX_ENTRIES, sizeof(*device->guid_map));
+    device->guid_map = static_cast<guid_map_t*>(
+        calloc(DEVICE_METADATA_GUID_MAP_MAX_ENTRIES, sizeof(*device->guid_map)));
     if (!device->guid_map) {
         free(device);
         return ZX_ERR_NO_MEMORY;
@@ -465,15 +473,14 @@ static zx_status_t gpt_bind(void* ctx, zx_device_t* parent) {
     char name[128];
     snprintf(name, sizeof(name), "part-%03u", 0);
 
-    device_add_args_t args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = name,
-        .ctx = device,
-        .ops = &gpt_proto,
-        .proto_id = ZX_PROTOCOL_BLOCK_IMPL,
-        .proto_ops = &block_ops,
-        .flags = DEVICE_ADD_INVISIBLE,
-    };
+    device_add_args_t args = {};
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.name = name;
+    args.ctx = device;
+    args.ops = &gpt_proto;
+    args.proto_id = ZX_PROTOCOL_BLOCK_IMPL;
+    args.proto_ops = &block_ops;
+    args.flags = DEVICE_ADD_INVISIBLE;
 
     status = device_add(parent, &args, &device->zxdev);
     if (status != ZX_OK) {
@@ -492,12 +499,18 @@ static zx_status_t gpt_bind(void* ctx, zx_device_t* parent) {
     return status;
 }
 
-static zx_driver_ops_t gpt_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .bind = gpt_bind,
-};
+constexpr zx_driver_ops_t gpt_driver_ops = []() {
+    zx_driver_ops_t ops = {};
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = gpt_bind;
+    return ops;
+}();
 
+} // namespace
+
+// clang-format off
 ZIRCON_DRIVER_BEGIN(gpt, gpt_driver_ops, "zircon", "0.1", 2)
     BI_ABORT_IF_AUTOBIND,
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_BLOCK),
 ZIRCON_DRIVER_END(gpt)
+// clang-format on
