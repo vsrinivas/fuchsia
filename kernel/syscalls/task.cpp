@@ -664,7 +664,7 @@ zx_status_t sys_job_create(zx_handle_t parent_job, uint32_t options,
 }
 
 // zx_status_t zx_job_set_policy
-zx_status_t sys_job_set_policy(zx_handle_t job_handle, uint32_t options,
+zx_status_t sys_job_set_policy(zx_handle_t handle, uint32_t options,
                                uint32_t topic, user_in_ptr<const void> _policy,
                                uint32_t count) {
 
@@ -690,7 +690,7 @@ zx_status_t sys_job_set_policy(zx_handle_t job_handle, uint32_t options,
     auto up = ProcessDispatcher::GetCurrent();
 
     fbl::RefPtr<JobDispatcher> job;
-    status = up->GetDispatcherWithRights(job_handle, ZX_RIGHT_SET_POLICY, &job);
+    status = up->GetDispatcherWithRights(handle, ZX_RIGHT_SET_POLICY, &job);
     if (status != ZX_OK)
         return status;
 

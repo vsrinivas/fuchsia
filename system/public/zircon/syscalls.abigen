@@ -431,9 +431,9 @@ syscall job_create
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 
 #^ Set job security and resource policies.
-#! job must be of type ZX_OBJ_TYPE_JOB and have ZX_RIGHT_SET_POLICY.
+#! handle must be of type ZX_OBJ_TYPE_JOB and have ZX_RIGHT_SET_POLICY.
 syscall job_set_policy
-    (job: zx_handle_t, options: uint32_t, topic: uint32_t, policy: any[count] IN, count: uint32_t)
+    (handle: zx_handle_t, options: uint32_t, topic: uint32_t, policy: any[count] IN, count: uint32_t)
     returns (zx_status_t);
 
 # Tasks (shared between threads, processes, and jobs)

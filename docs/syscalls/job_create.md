@@ -8,11 +8,14 @@ job_create - create a new job
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_job_create(zx_handle_t job, uint32_t options, zx_handle_t* out);
-
+zx_status_t zx_job_create(zx_handle_t parent_job,
+                          uint32_t options,
+                          zx_handle_t* out);
 ```
 
 ## DESCRIPTION
@@ -43,15 +46,16 @@ is returned.
 
 ## ERRORS
 
-**ZX_ERR_BAD_HANDLE**  *job* is not a valid handle.
+**ZX_ERR_BAD_HANDLE**  *parent_job* is not a valid handle.
 
-**ZX_ERR_WRONG_TYPE**  *job* is not a job handle.
+**ZX_ERR_WRONG_TYPE**  *parent_job* is not a job handle.
 
 **ZX_ERR_INVALID_ARGS**  *options* is nonzero, or *out* is an invalid pointer.
 
-**ZX_ERR_ACCESS_DENIED**  *job* does not have the **ZX_RIGHT_WRITE** or **ZX_RIGHT_MANAGE_JOB** right.
+**ZX_ERR_ACCESS_DENIED**  *parent_job* does not have the **ZX_RIGHT_WRITE** or
+**ZX_RIGHT_MANAGE_JOB** right.
 
-**ZX_ERR_OUT_OF_RANGE**  The height of *job* is too large to create a child job.
+**ZX_ERR_OUT_OF_RANGE**  The height of *parent_job* is too large to create a child job.
 
 **ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
 There is no good way for userspace to handle this (unlikely) error.

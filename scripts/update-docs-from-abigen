@@ -406,8 +406,6 @@ synopsis_blacklist = (
     'interrupt_bind',
     'interrupt_create',
     'iommu_create',
-    'job_create',
-    'job_set_policy',
     'object_get_info',
     'object_get_property',
     'object_signal',

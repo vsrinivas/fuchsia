@@ -8,13 +8,16 @@ job_set_policy - Set job security and resource policies.
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
-#include <zircon/syscalls/policy.h>
 
-zx_status_t zx_job_set_policy(zx_handle_t job_handle, uint32_t options,
-                              uint32_t topic, const void* policy, uint32_t count);
-
+zx_status_t zx_job_set_policy(zx_handle_t handle,
+                              uint32_t options,
+                              uint32_t topic,
+                              const void* policy,
+                              uint32_t count);
 ```
 
 ## DESCRIPTION
@@ -93,7 +96,7 @@ implies **ZX_POL_ACTION_DENY**.
 
 <!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
 
-*job* must be of type **ZX_OBJ_TYPE_JOB** and have **ZX_RIGHT_SET_POLICY**.
+*handle* must be of type **ZX_OBJ_TYPE_JOB** and have **ZX_RIGHT_SET_POLICY**.
 
 ## RETURN VALUE
 
@@ -112,11 +115,11 @@ take handles are subject to the policy.
 or *policy* was not **ZX_JOB_POL_RELATIVE** or **ZX_JOB_POL_ABSOLUTE**, or
 *topic* was not **ZX_JOB_POL_BASIC**.
 
-**ZX_ERR_BAD_HANDLE**  *job_handle* is not valid handle.
+**ZX_ERR_BAD_HANDLE**  *handle* is not valid handle.
 
-**ZX_ERR_WRONG_TYPE**  *job_handle* is not a job handle.
+**ZX_ERR_WRONG_TYPE**  *handle* is not a job handle.
 
-**ZX_ERR_ACCESS_DENIED**  *job_handle* does not have ZX_POL_RIGHT_SET right.
+**ZX_ERR_ACCESS_DENIED**  *handle* does not have ZX_POL_RIGHT_SET right.
 
 **ZX_ERR_BAD_STATE**  the job has existing jobs or processes alive.
 
