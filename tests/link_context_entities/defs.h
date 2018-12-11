@@ -8,7 +8,8 @@
 namespace {
 
 // Package URLs of the test components used here.
-constexpr char kModuleUrl[] = "link_context_entities_test_module";
+constexpr char kModuleUrl[] =
+    "fuchsia-pkg://fuchsia.com/link_context_entities_test_module#meta/link_context_entities_test_module.cmx";
 constexpr char kModuleAction[] = "action";
 
 }  // namespace

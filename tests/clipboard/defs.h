@@ -8,7 +8,8 @@
 namespace {
 
 // The url of the clipboard agent under test.
-constexpr char kClipboardAgentUrl[] = "clipboard_agent";
+constexpr char kClipboardAgentUrl[] =
+    "fuchsia-pkg://fuchsia.com/clipboard_agent#meta/clipboard_agent.cmx";
 
 }  // namespace
 

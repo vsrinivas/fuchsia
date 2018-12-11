@@ -12,8 +12,12 @@ namespace {
 constexpr int kTimeoutMilliseconds = 10000;
 
 // Package URLs of the test components used here.
-constexpr char kTestAgent[] = "trigger_test_agent";
-const char kModuleUrl[] = "trigger_test_module";
+constexpr char kTestAgent[] =
+    "fuchsia-pkg://fuchsia.com/trigger_test_agent#meta/trigger_test_agent.cmx";
+
+const char kModuleUrl[] =
+    "fuchsia-pkg://fuchsia.com/trigger_test_module#meta/trigger_test_module.cmx";
+
 const char kModuleAction[] = "trigger_test_action";
 
 }  // namespace

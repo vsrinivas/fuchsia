@@ -344,7 +344,7 @@ class TestApp : public modular::testing::ComponentBase<void> {
   fuchsia::modular::Intent IntentWithParameterString(
       std::string parameter_string) {
     fuchsia::modular::Intent intent;
-    intent.handler = kModulePackageName;
+    intent.handler = kModuleUrl;
     intent.action = kIntentAction;
 
     fuchsia::modular::IntentParameter parameter;

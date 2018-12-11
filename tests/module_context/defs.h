@@ -13,10 +13,11 @@ constexpr char kLinkName[] = "link";
 // The key the modules use to Get their name.
 constexpr char kLinkKey[] = "name";
 
-// The package name for the module under test.
-constexpr char kModulePackageName[] = "module_context_test_module";
+// The URL for the module under test.
+constexpr char kModuleUrl[] =
+    "fuchsia-pkg://fuchsia.com/module_context_test_module#meta/module_context_test_module.cmx";
 
-// The intent action |kModulePackageName| accepts.
+// The intent action |kModuleUrl| accepts.
 constexpr char kIntentAction[] = "action";
 
 // The names of the first and second modules to be stopped.

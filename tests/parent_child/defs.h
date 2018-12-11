@@ -10,9 +10,12 @@ namespace {
 constexpr char kChildModuleName[] = "child";
 
 // Package URLs of the test components used here.
-constexpr char kChildModuleUrl1[] = "parent_child_test_child_module1";
-constexpr char kChildModuleUrl2[] = "parent_child_test_child_module2";
-constexpr char kChildModuleAction[] = "parent_child_test_child_module_action";
+constexpr char kChildModuleUrl1[] =
+    "fuchsia-pkg://fuchsia.com/parent_child_test_child_module1#meta/parent_child_test_child_module1.cmx";
+constexpr char kChildModuleUrl2[] =
+    "fuchsia-pkg://fuchsia.com/parent_child_test_child_module2#meta/parent_child_test_child_module2.cmx";
+constexpr char kChildModuleAction[] =
+    "fuchsia-pkg://fuchsia.com/parent_child_test_child_module_action#meta/parent_child_test_child_module_action.cmx";
 
 constexpr int kTimeoutMilliseconds = 5000;
 

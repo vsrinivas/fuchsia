@@ -8,8 +8,10 @@
 namespace {
 
 // Package URLs of the test components used here.
-constexpr char kModuleUrl[] = "chain_test_module";
-constexpr char kChildModuleUrl[] = "chain_test_child_module";
+constexpr char kModuleUrl[] =
+    "fuchsia-pkg://fuchsia.com/chain_test_module#meta/chain_test_module.cmx";
+constexpr char kChildModuleUrl[] =
+    "fuchsia-pkg://fuchsia.com/chain_test_child_module#meta/chain_test_child_module.cmx";
 
 }  // namespace
 

@@ -8,15 +8,18 @@
 namespace {
 
 // Package URLs and actions of the test components used here.
-constexpr char kModule0Url[] = "link_data_test_module0";
+constexpr char kModule0Url[] =
+    "fuchsia-pkg://fuchsia.com/link_data_test_module0#meta/link_data_test_module0.cmx";
 constexpr char kModule0Action[] = "action";
 constexpr char kModule0Name[] = "module0";
 
-constexpr char kModule1Url[] = "link_data_test_module1";
+constexpr char kModule1Url[] =
+    "fuchsia-pkg://fuchsia.com/link_data_test_module1#meta/link_data_test_module1.cmx";
 constexpr char kModule1Action[] = "action";
 constexpr char kModule1Name[] = "module1";
 
-constexpr char kModule2Url[] = "link_data_test_module2";
+constexpr char kModule2Url[] =
+    "fuchsia-pkg://fuchsia.com/link_data_test_module2#meta/link_data_test_module2.cmx";
 constexpr char kModule2Action[] = "action";
 constexpr char kModule2Name[] = "module2";
 

@@ -10,7 +10,8 @@ namespace {
 constexpr char kChildModuleName[] = "child";
 
 // Package URLs of the test components used here.
-constexpr char kChildModuleUrl[] = "embed_shell_test_child_module";
+constexpr char kChildModuleUrl[] =
+    "fuchsia-pkg://fuchsia.com/embed_shell_test_child_module#meta/embed_shell_test_child_module.cmx";
 
 constexpr char kChildModuleAction[] = "action";
 

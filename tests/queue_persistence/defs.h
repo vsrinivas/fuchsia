@@ -12,7 +12,8 @@ namespace {
 constexpr int kTimeoutMilliseconds = 10000;
 
 // Package URLs of the test components used here.
-constexpr char kTestAgent[] = "queue_persistence_test_agent";
+constexpr char kTestAgent[] =
+    "fuchsia-pkg://fuchsia.com/queue_persistence_test_agent#meta/queue_persistence_test_agent.cmx";
 
 }  // namespace
 

@@ -7,13 +7,15 @@
 
 namespace {
 
-constexpr char kCommonNullModule[] = "common_null_module";
+constexpr char kCommonNullModule[] =
+    "fuchsia-pkg://fuchsia.com/common_null_module#meta/common_null_module.cmx";
 constexpr char kCommonNullAction[] = "com.google.fuchsia.common.null";
 
 constexpr char kCommonNullModuleStarted[] = "common_null_module_started";
 constexpr char kCommonNullModuleStopped[] = "common_null_module_stopped";
 
-constexpr char kCommonActiveModule[] = "common_active_module";
+constexpr char kCommonActiveModule[] =
+    "fuchsia-pkg://fuchsia.com/common_active_module#meta/common_active_module.cmx";
 constexpr char kCommonActiveAction[] = "com.google.fuchsia.common.active";
 
 constexpr char kCommonActiveModuleStarted[] = "common_active_module_started";
