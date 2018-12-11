@@ -117,5 +117,14 @@ pub enum FwdCmd {
         /// routing prefix for this forwarding rule
         prefix: u8,
     },
-    // TODO del
+    #[structopt(name = "del")]
+    /// deletes a forwarding table entry
+    Del {
+        #[structopt(raw(required = "true"))]
+        /// address portion of the subnet for this forwarding rule
+        addr: String,
+        #[structopt(raw(required = "true"))]
+        /// routing prefix for this forwarding rule
+        prefix: u8,
+    },
 }

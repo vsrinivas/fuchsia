@@ -171,6 +171,23 @@ async fn do_fwd(cmd: opts::FwdCmd, stack: StackProxy) -> Result<(), Error> {
                 );
             }
         }
+        FwdCmd::Del { addr, prefix } => {
+            let response = await!(stack.del_forwarding_entry(
+                &mut net::Subnet {
+                    addr: parse_ip_addr(&addr)?,
+                    prefix_len: prefix,
+                }
+            ))
+            .context("error removing forwarding entry")?;
+            if let Some(e) = response {
+                println!("Error removing forwarding entry: {:?}", e);
+            } else {
+                println!(
+                    "Removed forwarding entry for {}/{}",
+                    addr, prefix
+                );
+            }
+        }
     }
     Ok(())
 }
