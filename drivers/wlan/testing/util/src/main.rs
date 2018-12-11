@@ -13,12 +13,19 @@ use std::convert::Into;
 use std::fs::{File, OpenOptions};
 use std::path::Path;
 
+use fidl_fuchsia_device_test::CONTROL_DEVICE;
+
 mod sys;
 
-const DEV_TEST: &str = "/dev/test/test";
-const DEV_WLANPHY: &str = "/dev/test/test/wlan/wlanphy-test";
+const DEV_TEST: &str = CONTROL_DEVICE;
 const WLAN: &str = "wlan";
 const WLAN_DRIVER_NAME: &str = "/system/driver/wlanphy-testdev.so";
+
+fn dev_wlanphy() -> String {
+    let mut s = String::from(DEV_TEST);
+    s.push_str("/wlan/wlanphy-test");
+    s
+}
 
 fn usage(appname: &str) {
     eprintln!("usage: {} [add|rm|query|create|destroy <n>]", appname);
@@ -31,7 +38,7 @@ fn open_rdwr<P: AsRef<Path>>(path: P) -> Result<File, Error> {
 fn get_proxy() -> Result<(fasync::Executor, wlan::PhyProxy), Error> {
     let executor = fasync::Executor::new().context("error creating event loop")?;
 
-    let phy = wlan_dev::Device::new(DEV_WLANPHY)?;
+    let phy = wlan_dev::Device::new(&dev_wlanphy())?;
     let proxy = wlan_dev::connect_wlan_phy(&phy)?;
     Ok((executor, proxy))
 }

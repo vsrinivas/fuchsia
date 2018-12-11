@@ -4,36 +4,23 @@
 
 #![deny(warnings)]
 
-use failure::Error;
-use fdio::{fdio_sys, ioctl, make_ioctl};
-use std::ffi::{CString, OsStr, OsString};
+use failure::{Error, err_msg};
+use fdio::{self, fdio_sys, ioctl, make_ioctl};
+use std::ffi::CString;
 use std::fs::File;
 use std::os::raw;
-use std::os::unix::ffi::OsStrExt;
+use fidl_fuchsia_device_test::{DeviceSynchronousProxy, RootDeviceSynchronousProxy};
 
 use super::open_rdwr;
 
-pub fn create_test_device(test_path: &str, dev_name: &str) -> Result<OsString, Error> {
+pub fn create_test_device(test_path: &str, dev_name: &str) -> Result<String, Error> {
     let test_dev = open_rdwr(test_path)?;
+    let channel = fdio::clone_channel(&test_dev)?;
+    let mut interface = RootDeviceSynchronousProxy::new(channel);
 
-    let devname = CString::new(dev_name)?;
-    // Buffer to hold the device path output from the ioctl.
-    let mut devpath = vec![0; 1024];
-    // This is safe because the length of the output buffer is computed from the vector, and the
-    // callee does not retain the pointers.
-    let pathlen = unsafe {
-        ioctl(&test_dev,
-              IOCTL_TEST_CREATE_DEVICE,
-              devname.as_ptr() as *const raw::c_void,
-              devname.as_bytes_with_nul().len(),
-              devpath.as_mut_ptr() as *mut raw::c_void,
-              devpath.len())?
-    };
-    // Need to return an OsString with length equal to the return value of the ioctl, rather than
-    // the full length of the buffer.
-    let mut ospath = OsString::new();
-    ospath.push(OsStr::from_bytes(&devpath[0..(pathlen - 1) as usize]));
-    Ok(ospath)
+    let (status, devpath) = interface.create_device(dev_name, fuchsia_zircon::Time::INFINITE)?;
+    fuchsia_zircon::Status::ok(status)?;
+    devpath.ok_or(err_msg("RootDevice.CreateDevice received no devpath?"))
 }
 
 pub fn bind_test_device(device: &File, driver_name: &str) -> Result<(), Error> {
@@ -51,28 +38,10 @@ pub fn bind_test_device(device: &File, driver_name: &str) -> Result<(), Error> {
 }
 
 pub fn destroy_test_device(device: &File) -> Result<(), Error> {
-    // This is safe because no memory ownership is transferred by this function.
-    unsafe {
-        ioctl(device,
-              IOCTL_TEST_DESTROY_DEVICE,
-              ::std::ptr::null() as *const raw::c_void,
-              0,
-              ::std::ptr::null_mut() as *mut raw::c_void,
-              0).map(|_| ()).map_err(|e| e.into())
-    }
+    let channel = fdio::clone_channel(device)?;
+    let mut interface = DeviceSynchronousProxy::new(channel);
+    Ok(interface.destroy()?)
 }
-
-const IOCTL_TEST_CREATE_DEVICE: raw::c_int = make_ioctl!(
-    fdio_sys::IOCTL_KIND_DEFAULT,
-    fdio_sys::IOCTL_FAMILY_TEST,
-    0
-);
-
-const IOCTL_TEST_DESTROY_DEVICE: raw::c_int = make_ioctl!(
-    fdio_sys::IOCTL_KIND_DEFAULT,
-    fdio_sys::IOCTL_FAMILY_TEST,
-    1
-);
 
 const IOCTL_DEVICE_BIND: raw::c_int = make_ioctl!(
     fdio_sys::IOCTL_KIND_DEFAULT,
