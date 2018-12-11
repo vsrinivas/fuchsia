@@ -6,7 +6,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -16,6 +15,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"fuchsia.googlesource.com/tools/botanist"
 	"fuchsia.googlesource.com/tools/qemu"
 	"fuchsia.googlesource.com/tools/secrets"
 	"github.com/google/subcommands"
@@ -76,9 +76,16 @@ func overwriteFileWithCopy(filepath string) error {
 	return os.Rename(copy.Name(), filepath)
 }
 
+// TODO(INTK-736): Delete the three image flags below once botanist is migrated to
+// specfying imageManifest instead.
+
 // QEMUCommand is a Command implementation for running the testing workflow on an emulated
 // target within QEMU.
 type QEMUCommand struct {
+	// ImageManifest is the path an image manifest specifying a QEMU kernel, a zircon
+	// kernel, and block image to back QEMU storage.
+	imageManifest string
+
 	// QEMUBinDir is a path to a directory of QEMU binaries.
 	qemuBinDir string
 
@@ -121,6 +128,7 @@ func (*QEMUCommand) Synopsis() string {
 }
 
 func (cmd *QEMUCommand) SetFlags(f *flag.FlagSet) {
+	f.StringVar(&cmd.imageManifest, "images", "", "path to an image manifest")
 	f.StringVar(&cmd.qemuBinDir, "qemu-dir", "", "")
 	f.StringVar(&cmd.qemuKernelImage, "qemu-kernel", "", "path to a qemu-kernel image")
 	f.StringVar(&cmd.zirconAImage, "zircon-a", "", "path to a zircon-a image")
@@ -132,53 +140,51 @@ func (cmd *QEMUCommand) SetFlags(f *flag.FlagSet) {
 	f.BoolVar(&cmd.enableNetworking, "enable-networking", false, "whether to enable external networking")
 }
 
-// EnsureFlagsAreSet validates that required flags are set and that the provided images exist.
-func (cmd *QEMUCommand) validateFlags() error {
-	var errs []string
-
-	if cmd.qemuBinDir == "" {
-		errs = append(errs, "-qemu-dir must be set")
+// TODO(INTK-736): Temporary measure. Delete along with flags when botanist is only
+// passing image manifests, and not a flat list of flags of images.
+func (cmd QEMUCommand) getImagesFromFlags() ([]botanist.Image, error) {
+	// Absolutize qemuKernelImage, zirconAImage, and minFSImage paths so that QEMU can be
+	// invoked in any working directory.
+	absQEMUKernelImage, err := filepath.Abs(cmd.qemuKernelImage)
+	if err != nil {
+		return []botanist.Image{}, err
 	}
-	_, ok := targetToQEMUArch[cmd.targetArch]
-	if !ok {
-		errs = append(errs, fmt.Sprintf("invalid target architecture: %s", cmd.targetArch))
-	}
-
-	existsIfSet := func(filename string) {
-		if filename == "" {
-			return
-		}
-		_, err := os.Stat(filename)
-		if err != nil {
-			errs = append(errs, fmt.Sprintf("failed to stat %s: %v", filename, err))
-		}
+	absZirconAImage, err := filepath.Abs(cmd.zirconAImage)
+	if err != nil {
+		return []botanist.Image{}, err
 	}
 
-	existsIfSet(cmd.qemuKernelImage)
-	if cmd.qemuKernelImage == "" {
-		errs = append(errs, "-qemu-kernel must be set.")
-	}
-	existsIfSet(cmd.zirconAImage)
-	if cmd.zirconAImage == "" {
-		errs = append(errs, "-zircon-a must be set.")
-	}
-	existsIfSet(cmd.storageFullImage)
-	existsIfSet(cmd.minFSImage)
-
-	if len(errs) > 0 {
-		errs = append(errs, "run `help qemu` for flag documentation.")
-		return errors.New(strings.Join(errs, "\n"))
-	}
-	return nil
+	return []botanist.Image{
+		{
+			Name: "zircon-a",
+			Path: absZirconAImage,
+		},
+		{
+			Name: "qemu-kernel",
+			Path: absQEMUKernelImage,
+		},
+		{
+			Name: "storage-full",
+			Path: cmd.storageFullImage,
+		},
+	}, nil
 }
 
 func (cmd *QEMUCommand) execute(ctx context.Context, cmdlineArgs []string) error {
-	if err := cmd.validateFlags(); err != nil {
-		return err
+	if cmd.qemuBinDir == "" {
+		return fmt.Errorf("-qemu-dir must be set")
 	}
-
-	qemuArch, _ := targetToQEMUArch[cmd.targetArch]
+	if _, err := os.Stat(cmd.minFSImage); cmd.minFSImage != "" && err != nil {
+		return fmt.Errorf("invalid -minfs: %s; could not be found", cmd.minFSImage)
+	}
+	qemuArch, ok := targetToQEMUArch[cmd.targetArch]
+	if !ok {
+		return fmt.Errorf("invalid -arch: %s", cmd.targetArch)
+	}
 	qemuBinPath := filepath.Join(cmd.qemuBinDir, fmt.Sprintf("%s-%s", qemuBinPrefix, qemuArch))
+	if _, err := os.Stat(qemuBinPath); err != nil {
+		return fmt.Errorf("invalid -qemu-dir: %s; could not find qemu binary", cmd.qemuBinDir)
+	}
 
 	var q qemu.QEMUBuilder
 	if err := q.Initialize(qemuBinPath, cmd.targetArch, cmd.enableKVM); err != nil {
@@ -206,19 +212,27 @@ func (cmd *QEMUCommand) execute(ctx context.Context, cmdlineArgs []string) error
 	}
 	q.AddArgs("-append", strings.Join(cmdlineArgs, " "))
 
-	// Absolutize qemuKernelImage, zirconAImage, and minFSImage paths so that QEMU can be
-	// invoked in any working directory.
-	absQEMUKernelImage, err := filepath.Abs(cmd.qemuKernelImage)
+	var imgs []botanist.Image
+	var err error
+	if cmd.imageManifest != "" {
+		imgs, err = botanist.LoadImages(cmd.imageManifest)
+	} else {
+		imgs, err = cmd.getImagesFromFlags()
+	}
 	if err != nil {
 		return err
 	}
-	q.AddArgs("-kernel", absQEMUKernelImage)
 
-	absZirconAImage, err := filepath.Abs(cmd.zirconAImage)
-	if err != nil {
-		return err
+	qemuKernel := botanist.GetImage(imgs, "qemu-kernel")
+	if qemuKernel == nil {
+		return fmt.Errorf("could not find qemu-kernel")
 	}
-	q.AddArgs("-initrd", absZirconAImage)
+	zirconA := botanist.GetImage(imgs, "zircon-a")
+	if qemuKernel == nil {
+		return fmt.Errorf("could not find zircon-a")
+	}
+	q.AddArgs("-kernel", qemuKernel.Path)
+	q.AddArgs("-initrd", zirconA.Path)
 
 	if cmd.minFSImage != "" {
 		absMinFSImage, err := filepath.Abs(cmd.minFSImage)
@@ -235,7 +249,8 @@ func (cmd *QEMUCommand) execute(ctx context.Context, cmdlineArgs []string) error
 		q.AddArgs("-device", fmt.Sprintf("virtio-blk-pci,drive=testdisk,addr=%s", cmd.minFSBlkDevPCIAddr))
 	}
 
-	if cmd.storageFullImage != "" {
+	storageFull := botanist.GetImage(imgs, "storage-full")
+	if storageFull != nil {
 		qemuImgToolPath := filepath.Join(cmd.qemuBinDir, qemuImgTool)
 		qcowDir, err := ioutil.TempDir("", "qcow-dir")
 		if err != nil {
@@ -243,7 +258,8 @@ func (cmd *QEMUCommand) execute(ctx context.Context, cmdlineArgs []string) error
 		}
 		defer os.RemoveAll(qcowDir)
 		qcowImage := filepath.Join(qcowDir, qcowImageName)
-		if err = qemu.CreateQCOWImage(qemuImgToolPath, cmd.storageFullImage, qcowImage); err != nil {
+
+		if err = qemu.CreateQCOWImage(qemuImgToolPath, storageFull.Path, qcowImage); err != nil {
 			return err
 		}
 		qcowPath := filepath.Join(qcowDir, qcowImageName)

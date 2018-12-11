@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -40,6 +39,12 @@ const (
 // ZedbootCommand is a Command implementation for running the testing workflow on a device
 // that boots with Zedboot.
 type ZedbootCommand struct {
+	// ImageManifests is a list of paths to image manifests (e.g., images.json)
+	imageManifests botanist.StringsFlag
+
+	// NoPave tells botanist not to pave.
+	netboot bool
+
 	// KernelImage is the path to a kernel image.
 	kernelImage string
 
@@ -52,8 +57,8 @@ type ZedbootCommand struct {
 	// KerncImage is the path to a kernc image.
 	kerncImage string
 
-	// FVMImages is a list of paths to sparse fvm images to be paved.
-	fvmImages botanist.StringsFlag
+	// FVMImage is the path to a sparse fvm image to be paved.
+	fvmImage string
 
 	// ZedbootImage is the path to the zedboot image.
 	zedbootImage string
@@ -103,19 +108,19 @@ func (*ZedbootCommand) Synopsis() string {
 }
 
 func (cmd *ZedbootCommand) SetFlags(f *flag.FlagSet) {
+	f.Var(&cmd.imageManifests, "images", "paths to image manifests")
+	f.BoolVar(&cmd.netboot, "netboot", false, "if set, botanist will not pave; but will netboot instead")
 	f.StringVar(&cmd.kernelImage, "kernel", "", "path to kernel image")
 	f.StringVar(&cmd.ramdiskImage, "ramdisk", "", "path to ramdisk image")
 	f.StringVar(&cmd.efiImage, "efi", "", "path to EFI image to be paved")
 	f.StringVar(&cmd.kerncImage, "kernc", "", "path to kernc image to be paved")
-	f.Var(&cmd.fvmImages, "fvm", "paths to sparse FVM images to be paved (may be specified up to 4 times)")
+	f.StringVar(&cmd.fvmImage, "fvm", "", "path to a sparse FVM image to be paved")
 	f.StringVar(&cmd.zedbootImage, "zedboot", "", "path to zedboot image to be flashed. Must be set together with -fastboot")
 	f.StringVar(&cmd.testResultsDir, "results-dir", "/test", "path on target to where test results will be written")
 	f.StringVar(&cmd.outputArchive, "out", "output.tar", "path on host to output tarball of test results")
 	f.StringVar(&cmd.summaryFilename, "summary-name", botanist.TestSummaryFilename, "name of the file in the test directory")
 	f.DurationVar(&cmd.filePollInterval, "poll-interval", 1*time.Minute, "time between checking for summary.json on the target")
-
 	f.StringVar(&cmd.propertiesFile, "properties", "/etc/botanist/config.json", "path to file of device properties")
-
 	f.StringVar(&cmd.cmdlineFile, "cmdline-file", "", "path to a file containing additional kernel command-line arguments")
 	f.StringVar(&cmd.fastbootTool, "fastboot-tool", "./fastboot/fastboot", "path to the fastboot tool.")
 	f.BoolVar(&cmd.fastboot, "fastboot", false, "If set, -fastboot-tool will be used to put the device into zedboot before "+
@@ -123,37 +128,37 @@ func (cmd *ZedbootCommand) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&cmd.hackyHostCommand, "hacky-host-cmd", "", "host command to run after paving. To be removed on completion of IN-831")
 }
 
-func (cmd *ZedbootCommand) validateImages() error {
-	var errs []string
-	existsIfSet := func(filename string) {
-		if filename == "" {
-			return
-		}
-		_, err := os.Stat(filename)
-		if err != nil {
-			errs = append(errs, fmt.Sprintf("failed to stat %s: %v", filename, err.Error()))
-		}
+// TODO(INTK-736): Temporary measure. Delete along with flags when botanist is only
+// passing image manifests, and not a flat list of flags.
+// Note that this function reverse engineers the current recipe logic.
+func (cmd *ZedbootCommand) getImagesFromFlags() []botanist.Image {
+	return []botanist.Image{
+		{
+			Name:     "zircon-a",
+			Path:     cmd.kernelImage,
+			PaveArgs: []string{"--boot"},
+		},
+		{
+			Name:        "netboot",
+			Path:        cmd.kernelImage,
+			NetbootArgs: []string{"--boot"},
+		},
+		{
+			Name:     "efi",
+			Path:     cmd.efiImage,
+			PaveArgs: []string{"--efi"},
+		},
+		{
+			Name:     "storage-sparse",
+			Path:     cmd.fvmImage,
+			PaveArgs: []string{"--fvm"},
+		},
+		{
+			Name:     "zircon-r",
+			Path:     cmd.zedbootImage,
+			PaveArgs: []string{"--zircon-r"},
+		},
 	}
-
-	if cmd.kernelImage == "" {
-		errs = append(errs, "|kernelImage| must be set.")
-	}
-	existsIfSet(cmd.kernelImage)
-	existsIfSet(cmd.ramdiskImage)
-	existsIfSet(cmd.efiImage)
-	existsIfSet(cmd.kerncImage)
-	for _, image := range cmd.fvmImages {
-		existsIfSet(image)
-	}
-	if cmd.fastboot {
-		existsIfSet(cmd.zedbootImage)
-		existsIfSet(cmd.fastbootTool)
-	}
-
-	if len(errs) > 0 {
-		return errors.New(strings.Join(errs, "\n"))
-	}
-	return nil
 }
 
 // Creates TAR archive from existing file or directory(recursive).
@@ -283,10 +288,9 @@ func (cmd *ZedbootCommand) tarHostCmdArtifacts(summary []byte, cmdOutput []byte,
 	return tarLocalFileOrDirectory(tw, outputDir)
 }
 
-func (cmd *ZedbootCommand) runTests(ctx context.Context, nodename string, cmdlineArgs []string) error {
+func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs []botanist.Image, nodename string, cmdlineArgs []string) error {
 	// Find the node address UDP address.
 	n := netboot.NewClient(time.Second)
-
 	var addr *net.UDPAddr
 	var err error
 
@@ -321,45 +325,28 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, nodename string, cmdlin
 		return err
 	}, nil)
 	if err != nil {
-		return fmt.Errorf("cannot find node \"%s\": %v\n", nodename, err)
+		return fmt.Errorf("cannot find node \"%s\": %v", nodename, err)
 	}
 
-	// Transfer kernel, ramdisk, and command line args onto the node.
-	client := tftp.NewClient()
+	t := tftp.NewClient()
 	tftpAddr := &net.UDPAddr{
 		IP:   addr.IP,
 		Port: tftp.ClientPort,
 		Zone: addr.Zone,
 	}
 
-	// TFTPFiles is effectively an ordered map, so the order in which
-	// its contents are added is the order in which they'll be transferred
-	// later.
-	var files botanist.TFTPFiles
-	if cmd.ramdiskImage != "" {
-		files.Set(botanist.RamdiskFilename, cmd.ramdiskImage)
+	// TODO(INTK-736): Delete condition of fvmImage being empty after transition.
+	if cmd.netboot || cmd.fvmImage == "" {
+		err = botanist.Netboot(ctx, t, tftpAddr, imgs, cmdlineArgs, "")
+	} else {
+		err = botanist.Pave(ctx, t, tftpAddr, imgs, cmdlineArgs, "")
 	}
-	if cmd.fvmImages != nil {
-		files.Set(botanist.FVMFilename, cmd.fvmImages...)
-	}
-	if cmd.efiImage != "" {
-		files.Set(botanist.EFIFilename, cmd.efiImage)
-	}
-	if cmd.kerncImage != "" {
-		files.Set(botanist.KerncFilename, cmd.kerncImage)
-	}
-	if cmd.kernelImage != "" {
-		files.Set(botanist.KernelFilename, cmd.kernelImage)
-	}
-	if err := files.Transfer(ctx, client, tftpAddr); err != nil {
-		return fmt.Errorf("cannot transfer files: %v\n", err)
-	}
-	if err := botanist.TransferCmdlineArgs(client, tftpAddr, cmdlineArgs); err != nil {
-		return fmt.Errorf("cannot transer command-line arguments: %v\n", cmdlineArgs)
+	if err != nil {
+		return err
 	}
 
+	// Boot Fuchsia.
 	log.Printf("sending boot command\n")
-
 	// Boot Fuchsia.
 	if err := n.Boot(addr); err != nil {
 		return fmt.Errorf("cannot boot: %v\n", err)
@@ -398,7 +385,7 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, nodename string, cmdlin
 	var buffer bytes.Buffer
 	var writer io.WriterTo
 	err = retry.Retry(ctx, retry.NewConstantBackoff(cmd.filePollInterval), func() error {
-		writer, err = client.Receive(tftpAddr, path.Join(cmd.testResultsDir, cmd.summaryFilename))
+		writer, err = t.Receive(tftpAddr, path.Join(cmd.testResultsDir, cmd.summaryFilename))
 		return err
 	}, nil)
 	if err != nil {
@@ -438,20 +425,20 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, nodename string, cmdlin
 	go func() {
 		// Copy test output from the node.
 		for _, output := range result.Outputs {
-			if err = botanist.TransferAndWriteFileToTar(client, tftpAddr, tw, cmd.testResultsDir, output); err != nil {
+			if err = botanist.TransferAndWriteFileToTar(t, tftpAddr, tw, cmd.testResultsDir, output); err != nil {
 				c <- err
 				return
 			}
 		}
 		for _, test := range result.Tests {
-			if err = botanist.TransferAndWriteFileToTar(client, tftpAddr, tw, cmd.testResultsDir, test.OutputFile); err != nil {
+			if err = botanist.TransferAndWriteFileToTar(t, tftpAddr, tw, cmd.testResultsDir, test.OutputFile); err != nil {
 				c <- err
 				return
 			}
 			// Copy data sinks if any are present.
 			for _, sinks := range test.DataSinks {
 				for _, sink := range sinks {
-					if err = botanist.TransferAndWriteFileToTar(client, tftpAddr, tw, cmd.testResultsDir, sink.File); err != nil {
+					if err = botanist.TransferAndWriteFileToTar(t, tftpAddr, tw, cmd.testResultsDir, sink.File); err != nil {
 						c <- err
 						return
 					}
@@ -469,19 +456,19 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, nodename string, cmdlin
 			ticker.Stop()
 			return err
 		case <-ticker.C:
-			log.Printf("...")
+			log.Printf("tarring test output...")
 		}
 	}
 }
 
-func (cmd *ZedbootCommand) fastbootToZedboot(ctx context.Context) error {
+func (cmd *ZedbootCommand) fastbootToZedboot(ctx context.Context, zirconRPath string) error {
 	// If it can't find any fastboot device, the fastboot tool will hang waiting, so we add a timeout.
 	// All fastboot operations take less than a second on a developer workstation, so a
 	// minute per each operation is very generous.
 	ctx, _ = context.WithTimeout(ctx, 2*time.Minute)
 	f := fastboot.Fastboot{cmd.fastbootTool}
 	log.Printf("fastboot flashing zedboot image")
-	if _, err := f.Flash(ctx, "boot", cmd.zedbootImage); err != nil {
+	if _, err := f.Flash(ctx, "boot", zirconRPath); err != nil {
 		return fmt.Errorf("failed to flash the fastboot device: %v", err)
 	}
 	log.Printf("continuing from fastboot into zedboot")
@@ -495,10 +482,6 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 	var properties botanist.DeviceProperties
 	if err := botanist.LoadDeviceProperties(cmd.propertiesFile, &properties); err != nil {
 		return fmt.Errorf("failed to open device properties file \"%v\"", cmd.propertiesFile)
-	}
-
-	if err := cmd.validateImages(); err != nil {
-		return err
 	}
 
 	if properties.PDU != nil {
@@ -517,15 +500,26 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGTERM)
 
+	var imgs []botanist.Image
+	if len(cmd.imageManifests) > 0 {
+		imgs, _ = botanist.LoadImages(cmd.imageManifests...)
+	} else {
+		imgs = cmd.getImagesFromFlags()
+	}
+	zirconR := botanist.GetImage(imgs, "zircon-r")
+	if zirconR == nil {
+		return fmt.Errorf("zircon-r not provided")
+	}
+
 	errs := make(chan error)
 	go func() {
 		if cmd.fastboot {
-			if err := cmd.fastbootToZedboot(ctx); err != nil {
+			if err := cmd.fastbootToZedboot(ctx, zirconR.Path); err != nil {
 				errs <- err
 				return
 			}
 		}
-		errs <- cmd.runTests(ctx, properties.Nodename, cmdlineArgs)
+		errs <- cmd.runTests(ctx, imgs, properties.Nodename, cmdlineArgs)
 	}()
 
 	select {

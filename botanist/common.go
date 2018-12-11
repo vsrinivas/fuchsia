@@ -12,19 +12,7 @@ import (
 	"fuchsia.googlesource.com/tools/pdu"
 )
 
-const (
-	netbootFilenamePrefix = "<<netboot>>"
-	KernelFilename        = netbootFilenamePrefix + "kernel.bin"
-	RamdiskFilename       = netbootFilenamePrefix + "ramdisk.bin"
-	CmdlineFilename       = netbootFilenamePrefix + "cmdline"
-
-	imageFilenamePrefix = "<<image>>"
-	EFIFilename         = imageFilenamePrefix + "efi.img"
-	KerncFilename       = imageFilenamePrefix + "kernc.img"
-	FVMFilename         = imageFilenamePrefix + "sparse.fvm"
-
-	TestSummaryFilename = "summary.json"
-)
+const TestSummaryFilename = "summary.json"
 
 // StringsFlag implements flag.Value so it may be treated as a flag type.
 type StringsFlag []string
