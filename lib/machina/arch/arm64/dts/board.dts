@@ -51,7 +51,7 @@
     // Interrupt controller is populated at run-time.
   };
 
-  pci@808200000 {
+  pci {
     device_type = "pci";
     compatible = "pci-host-ecam-generic";
     reg = <0x8 0x08100000 0 0x100000>;
@@ -79,7 +79,7 @@
     #interrupt-cells = <1>;
   };
 
-  serial@808300000 {
+  serial {
     compatible = "arm,pl011", "arm,primecell";
     arm,primecell-periphid = <0x00341011>;
     reg = <0x8 0x08300000 0 0x1000>;
@@ -88,7 +88,7 @@
     interrupts = <0 79 4>; // SPI 111 HIGH/CPU-0
   };
 
-  rtc@808301000 {
+  rtc {
     compatible = "arm,pl031", "arm,primecell";
     arm,primecell-periphid = <0x00041031>;
     reg = <0x8 0x08301000 0 0x1000>;

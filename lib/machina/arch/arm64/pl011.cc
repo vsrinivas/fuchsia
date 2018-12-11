@@ -115,12 +115,12 @@ zx_status_t Pl011::ConfigureDtb(void* dtb) const {
   int node_off =
       fdt_node_offset_by_prop_value(dtb, -1, "reg", reg_val, sizeof(reg_val));
   if (node_off < 0) {
-    FXL_LOG(ERROR) << "Failed to find Pl011 in DTB";
+    FXL_LOG(ERROR) << "Failed to find PL011 in DTB";
     return ZX_ERR_INTERNAL;
   }
   int ret = fdt_node_check_compatible(dtb, node_off, "arm,pl011");
   if (ret != 0) {
-    FXL_LOG(ERROR) << "Device with Pl011 registers is not Pl011 compatible";
+    FXL_LOG(ERROR) << "Device with PL011 registers is not PL011 compatible";
     return ZX_ERR_INTERNAL;
   }
   return ZX_OK;

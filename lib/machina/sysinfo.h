@@ -11,11 +11,21 @@ namespace machina {
 
 static constexpr char kSysInfoPath[] = "/dev/misc/sysinfo";
 
-static fidl::SynchronousInterfacePtr<fuchsia::sysinfo::Device> get_sysinfo() {
-  fidl::SynchronousInterfacePtr<fuchsia::sysinfo::Device> device;
+static inline fuchsia::sysinfo::DeviceSyncPtr get_sysinfo() {
+  fuchsia::sysinfo::DeviceSyncPtr device;
   fdio_service_connect(kSysInfoPath,
                        device.NewRequest().TakeChannel().release());
   return device;
+}
+
+static inline zx_status_t get_root_resource(
+    const fuchsia::sysinfo::DeviceSyncPtr& sysinfo, zx::resource* resource) {
+  zx_status_t fidl_status;
+  zx_status_t status = sysinfo->GetRootResource(&fidl_status, resource);
+  if (status != ZX_OK) {
+    return status;
+  }
+  return fidl_status;
 }
 
 }  // namespace machina

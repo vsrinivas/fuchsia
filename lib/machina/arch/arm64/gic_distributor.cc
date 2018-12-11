@@ -164,19 +164,28 @@ static uint32_t pidr2_arch_rev(uint32_t revision) {
   return set_bits(revision, 7, 4);
 }
 
+static zx_status_t get_interrupt_controller_info(
+    const fuchsia::sysinfo::DeviceSyncPtr& sysinfo,
+    fuchsia::sysinfo::InterruptControllerInfoPtr* info) {
+  zx_status_t fidl_status;
+  zx_status_t status = sysinfo->GetInterruptControllerInfo(&fidl_status, info);
+  if (status != ZX_OK) {
+    return status;
+  }
+  return fidl_status;
+}
+
 GicDistributor::GicDistributor(Guest* guest) : guest_(guest) {}
 
 zx_status_t GicDistributor::Init(uint8_t num_cpus,
                                  const std::vector<InterruptSpec>& interrupts) {
   // Fetch the interrupt controller type.
-  auto sysinfo = get_sysinfo();
-  zx_status_t fidl_status;
+  fuchsia::sysinfo::DeviceSyncPtr sysinfo = get_sysinfo();
   fuchsia::sysinfo::InterruptControllerInfoPtr info;
-  zx_status_t status = sysinfo->GetInterruptControllerInfo(&fidl_status, &info);
-  if (status != ZX_OK || fidl_status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to get GIC version " << status << " "
-                   << fidl_status;
-    return status != ZX_OK ? status : fidl_status;
+  zx_status_t status = get_interrupt_controller_info(sysinfo, &info);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to get GIC version " << status;
+    return status;
   }
   if (info->type != fuchsia::sysinfo::InterruptControllerType::GIC_V2 &&
       info->type != fuchsia::sysinfo::InterruptControllerType::GIC_V3) {
@@ -189,11 +198,10 @@ zx_status_t GicDistributor::Init(uint8_t num_cpus,
   // Create physical interrupts, so that we can bind them to VCPUs.
   if (!interrupts.empty()) {
     zx::resource resource;
-    zx_status_t status = sysinfo->GetRootResource(&fidl_status, &resource);
-    if (status != ZX_OK || fidl_status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to get root resource " << status << " "
-                     << fidl_status;
-      return status != ZX_OK ? status : fidl_status;
+    zx_status_t status = get_root_resource(sysinfo, &resource);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to get root resource " << status;
+      return status;
     }
     for (const InterruptSpec& spec : interrupts) {
       if (spec.vector < kSpiBase || spec.vector >= kNumInterrupts) {

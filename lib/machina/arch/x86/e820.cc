@@ -16,7 +16,7 @@ static constexpr uint64_t kAddr1mb      = 0x0000000000100000;
 
 namespace machina {
 
-E820Map::E820Map(size_t pmem_size, const DevMem &dev_mem) {
+E820Map::E820Map(size_t mem_size, const DevMem &dev_mem) {
   // 0 to 32kb is reserved.
   entries.emplace_back(e820entry_t{0, kAddr32kb, E820_RESERVED});
   // 32kb to to 512kb is available (for Linux's real mode trampoline).
@@ -26,7 +26,7 @@ E820Map::E820Map(size_t pmem_size, const DevMem &dev_mem) {
   entries.emplace_back(
       e820entry_t{kAddr512kb, kAddr1mb - kAddr512kb, E820_RESERVED});
   // 1mb to min(size, 1mb) is available.
-  dev_mem.YieldInverseRange(kAddr1mb, pmem_size - kAddr1mb, [this](auto range) {
+  dev_mem.YieldInverseRange(kAddr1mb, mem_size - kAddr1mb, [this](auto range) {
     entries.emplace_back(e820entry_t{range.addr, range.size, E820_RAM});
   });
 }

@@ -14,7 +14,7 @@
 #include "garnet/lib/machina/io.h"
 #include "garnet/lib/machina/platform_device.h"
 
-// NOTE(abdulla): Ideally, this should be guest_config.h.
+// NOTE(abdulla): Ideally, this should be in guest_config.h.
 struct InterruptSpec {
   uint32_t vector;
   uint32_t options;

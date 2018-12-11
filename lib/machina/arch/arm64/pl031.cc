@@ -51,14 +51,15 @@ zx_status_t Pl031::Write(uint64_t addr, const IoValue& value) {
 
 zx_status_t Pl031::ConfigureDtb(void* dtb) const {
   uint64_t reg_val[2] = {htobe64(kPl031PhysBase), htobe64(kPl031Size)};
-  int node_off = fdt_node_offset_by_prop_value(dtb, -1, "reg", reg_val, sizeof(reg_val));
+  int node_off =
+      fdt_node_offset_by_prop_value(dtb, -1, "reg", reg_val, sizeof(reg_val));
   if (node_off < 0) {
-    FXL_LOG(ERROR) << "Failed to find Pl031 in DTB";
+    FXL_LOG(ERROR) << "Failed to find PL031 in DTB";
     return ZX_ERR_INTERNAL;
   }
   int ret = fdt_node_check_compatible(dtb, node_off, "arm,pl031");
   if (ret != 0) {
-    FXL_LOG(ERROR) << "Device with Pl031 registers is not Pl031 compatible";
+    FXL_LOG(ERROR) << "Device with PL031 registers is not PL031 compatible";
     return ZX_ERR_INTERNAL;
   }
   return ZX_OK;
