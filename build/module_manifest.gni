@@ -2,48 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/compiled_action.gni")
 import("//build/package.gni")
-
-module_manifest_schema = "//peridot/build/module_manifest_schema.json"
-
-# This template generates a target that will verify the supplied module
-# manifest.
-#
-# Parameters
-#
-#   original_target_name (required)
-#     This is the original parent-level target name for the package that calls
-#     this into template. This name is used for printing out a stamp file.
-#
-#   module_manifest (required)
-#     Path to the module manifest that needs to be verified.
-template("verify_module_manifest") {
-  assert(defined(invoker.original_target_name),
-         "Must specify original_target_name.")
-  assert(defined(invoker.module_manifest),
-         "Must specify path to module manifest.")
-
-  compiled_action(target_name) {
-    tool = "//build/tools/json_validator"
-    stamp_file = "$target_gen_dir/${invoker.original_target_name}.verified"
-
-    inputs = [
-      invoker.module_manifest,
-      module_manifest_schema,
-    ]
-
-    outputs = [
-      stamp_file,
-    ]
-
-    args = [
-      rebase_path(module_manifest_schema),
-      rebase_path(invoker.module_manifest),
-      rebase_path(stamp_file),
-    ]
-  }
-}
 
 # This is a rule used to generate an index of module packages that should be
 # indexed by the on-device module resolver when it starts up. This template is
@@ -85,20 +44,6 @@ template("initial_module_packages") {
         path = rebase_path(module_index_filename)
         dest = "initial_module_packages/$target_name"
       },
-    ]
-  }
-}
-
-template("copy_module_manifest") {
-  assert(defined(invoker.module_manifest), "Must specify module_manifest.")
-  assert(defined(invoker.package_name), "Must specify package_name.")
-
-  copy(target_name) {
-    sources = [
-      rebase_path(invoker.module_manifest),
-    ]
-    outputs = [
-      "$root_build_dir/module_manifests/${invoker.package_name}",
     ]
   }
 }
