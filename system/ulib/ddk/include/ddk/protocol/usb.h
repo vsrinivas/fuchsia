@@ -29,7 +29,7 @@ typedef void (*usb_request_complete_cb)(usb_request_t* req, void* cookie);
 typedef void (*usb_batch_complete_cb)(usb_request_t** completed_reqs, size_t num_completed,
                                       void* cookie);
 
-// Should be set by the requestor.
+// Should be set by the requester.
 typedef struct usb_header {
     // frame number for scheduling isochronous transfers
     uint64_t frame;
@@ -77,7 +77,7 @@ typedef struct usb_request {
     // Number of entries in the scatter gather list.
     uint64_t sg_count;
 
-    // The complete_cb() callback is set by the requestor and is
+    // The complete_cb() callback is set by the requester and is
     // invoked by the 'complete' ops method when it is called by
     // the processor upon completion of the usb request.
     // The saved_complete_cb field can be used to temporarily save
@@ -85,7 +85,7 @@ typedef struct usb_request {
     // callback.
     usb_request_complete_cb complete_cb;
 
-    // Set by requestor for passing data to complete_cb callback
+    // Set by requester for passing data to complete_cb callback
     // The saved_cookie field can be used to temporarily save the
     // original cookie.
     void* cookie;
@@ -100,16 +100,16 @@ typedef struct usb_request {
 
     // The release_cb() callback is set by the allocator and is
     // invoked by the 'usb_request_release' method when it is called
-    // by the requestor.
+    // by the requester.
     void (*release_cb)(usb_request_t* req);
     size_t alloc_size;
 
     // For requests queued on endpoints which have batching enabled via
     // usb_configure_batch_callback().
-    // Set by the requestor if a callback is required on this request's completion.
-    // This is useful for isochronous requests, where the requestor does not care about
+    // Set by the requester if a callback is required on this request's completion.
+    // This is useful for isochronous requests, where the requester does not care about
     // most callbacks.
-    // The requestor should ensure the last request has this set to true.
+    // The requester should ensure the last request has this set to true.
     bool require_batch_cb;
 } usb_request_t;
 

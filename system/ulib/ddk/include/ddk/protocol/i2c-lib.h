@@ -23,7 +23,7 @@ typedef struct {
 
 // Writes and reads data on an i2c channel. If both write_length and read_length
 // are greater than zero, this call will perform a write operation immediately followed
-// by a read operation with no other traffic occuring on the bus in between.
+// by a read operation with no other traffic occurring on the bus in between.
 // If read_length is zero, then i2c_write_read will only perform a write operation,
 // and if write_length is zero, then it will only perform a read operation.
 // The results of the operation are returned asynchronously via the transact_cb.

@@ -6,7 +6,7 @@
 
 #include <zircon/types.h>
 
-// Enumeration of all differnt types of bad blocks.
+// Enumeration of all different types of bad blocks.
 typedef uint8_t bad_block_type_t;
 #define kAmlogicUboot ((bad_block_type_t)0)
 
