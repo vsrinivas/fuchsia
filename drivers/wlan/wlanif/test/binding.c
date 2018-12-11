@@ -38,10 +38,8 @@ wlanif_bss_description_t scan_results[] = {
      .dtim_period = 1,
      .timestamp = 0,
      .local_time = 0,
-     .num_supp_rates = 8,
-     .supp_rates = {128 + 2, 128 + 4, 128 + 11, 128 + 22, 12, 18, 24, 36},
-     .num_ext_supp_rates = 4,
-     .ext_supp_rates = {48, 72, 96, 108},
+     .num_rates = 12,
+     .rates = {128 + 2, 128 + 4, 128 + 11, 128 + 22, 12, 18, 24, 36, 48, 72, 96, 108},
      .rsne_len = 0,
      .chan = {.primary = 4, .cbw = CBW20, .secondary80 = 0}}};
 
@@ -85,7 +83,7 @@ void wlanif_auth_req(void* ctx, wlanif_auth_req_t* req) {
     wlanif_ifc.auth_conf(wlanif_cookie, &conf);
 }
 
-void wlanif_auth_ind(void* ctx, wlanif_auth_ind_t* ind) {
+void wlanif_auth_resp(void* ctx, wlanif_auth_resp_t* ind) {
     printf("***** auth_ind\n");
 }
 
@@ -101,7 +99,7 @@ void wlanif_assoc_req(void* ctx, wlanif_assoc_req_t* req) {
     wlanif_ifc.assoc_conf(wlanif_cookie, &conf);
 }
 
-void wlanif_assoc_ind(void* ctx, wlanif_assoc_ind_t* ind) {
+void wlanif_assoc_resp(void* ctx, wlanif_assoc_resp_t* ind) {
     printf("***** assoc_ind\n");
 }
 
@@ -180,10 +178,10 @@ wlanif_impl_protocol_ops_t wlanif_impl_ops = {
     .start_scan = wlanif_start_scan,
     .join_req = wlanif_join_req,
     .auth_req = wlanif_auth_req,
-    .auth_ind = wlanif_auth_ind,
+    .auth_resp = wlanif_auth_resp,
     .deauth_req = wlanif_deauth_req,
     .assoc_req = wlanif_assoc_req,
-    .assoc_ind = wlanif_assoc_ind,
+    .assoc_resp = wlanif_assoc_resp,
     .disassoc_req = wlanif_disassoc_req,
     .reset_req = wlanif_reset_req,
     .start_req = wlanif_start_req,
@@ -227,5 +225,8 @@ static zx_driver_ops_t wlanif_test_driver_ops = {
     .release = dev_release,
 };
 
-ZIRCON_DRIVER_BEGIN(wlanif - test, wlanif_test_driver_ops, "fuchsia", "0.1", 1)
-BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST_PARENT), ZIRCON_DRIVER_END(wlanif - test)
+// clang-format off
+ZIRCON_DRIVER_BEGIN(wlanif-test, wlanif_test_driver_ops, "fuchsia", "0.1", 1)
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST_PARENT),
+ZIRCON_DRIVER_END(wlanif-test)
+// clang-format on
