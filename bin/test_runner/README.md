@@ -28,10 +28,15 @@ The top-level `tests` field is a list of tests to run, sequentially.
 Each test is an object with the following fields:
 
 - `name`
-  - A string field identifying the test. Required.
+  - Required.
+  - A string field identifying the test.
 - `exec`
+  - Required. Must not be empty.
   - A string with the command representing the test to run. This will be run in
     a new application environment with a TestRunner service, which some part of
-    the test is expected to use to report completion.
+    the test is expected to use to report completion. Must not be the empty string.
+  - Alternativey, an array of strings. The first element is the component to run,
+    all following elements are the args given to the component. Must not be the
+    empty array. The first element must not be the empty string.
 - `disabled`
   - If this field is present, the test is not executed.

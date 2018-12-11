@@ -14,7 +14,6 @@
 
 #include "garnet/bin/test_runner/run_integration_tests/test_runner_config.h"
 #include "lib/fxl/command_line.h"
-#include "lib/fxl/strings/split_string.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/test_runner/cpp/test_runner.h"
 
@@ -118,9 +117,13 @@ int RunIntegrationTestsMain(int argc, char** argv) {
       unknown.push_back(test_name);
       continue;
     }
-    std::vector<std::string> args =
-        fxl::SplitStringCopy(config.GetTestCommand(test_name), " ",
-                             fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
+
+    std::vector<std::string> args = config.GetTestCommand(test_name);
+    if (args.empty()) {
+      unknown.push_back(test_name);
+      continue;
+    }
+
     auto url = args.front();
     args.erase(args.begin());
 
