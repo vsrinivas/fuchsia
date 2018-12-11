@@ -1,31 +1,28 @@
-# zx_object_get_property, zx_object_set_property
+# zx_object_get_property
 
 ## NAME
 
-object_get_property - Ask for various properties of various kernel objects.
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
 
-object_set_property - Set various properties of various kernel objects.
+object_get_property - Ask for various properties of various kernel objects.
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
-#include <zircon/syscalls/object.h>
 
-zx_status_t zx_object_get_property(zx_handle_t handle, uint32_t property,
-                                   void* value, size_t value_size);
-
-zx_status_t zx_object_set_property(zx_handle_t handle, uint32_t property,
-                                   const void* value, size_t value_size);
+zx_status_t zx_object_get_property(zx_handle_t handle,
+                                   uint32_t property,
+                                   void* value,
+                                   size_t value_size);
 ```
 
 ## DESCRIPTION
 
 **zx_object_get_property()** requests the value of a kernel object's property.
 Getting a property requires **ZX_RIGHT_GET_PROPERTY** rights on the handle.
-
-**zx_object_set_property()** modifies the value of a kernel object's property.
-Setting a property requires **ZX_RIGHT_SET_PROPERTY** rights on the handle.
 
 The *handle* parameter indicates the target kernel object. Different properties
 only work on certain types of kernel objects, as described below.

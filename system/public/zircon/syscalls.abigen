@@ -177,7 +177,7 @@ syscall object_signal
     returns (zx_status_t);
 
 #^ signal an object's peer
-#! handle must of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_SIGNAL_PEER.
+#! handle must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_SIGNAL_PEER.
 syscall object_signal_peer
     (handle: zx_handle_t, clear_mask: uint32_t, set_mask: uint32_t)
     returns (zx_status_t);
@@ -271,6 +271,7 @@ syscall channel_read
         num_handles: uint32_t)
     returns (zx_status_t, actual_bytes: uint32_t optional, actual_handles: uint32_t optional);
 
+#^ read a message from a channel
 #! handle must be of type ZX_OBJ_TYPE_CHANNEL and have ZX_RIGHT_READ.
 syscall channel_read_etc
     (handle: zx_handle_t, options: uint32_t,

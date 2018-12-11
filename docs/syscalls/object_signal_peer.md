@@ -1,10 +1,10 @@
-# zx_object_signal
+# zx_object_signal_peer
 
 ## NAME
 
 <!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
 
-object_signal - signal an object
+object_signal_peer - signal an object's peer
 
 ## SYNOPSIS
 
@@ -13,15 +13,16 @@ object_signal - signal an object
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_object_signal(zx_handle_t handle,
-                             uint32_t clear_mask,
-                             uint32_t set_mask);
+zx_status_t zx_object_signal_peer(zx_handle_t handle,
+                                  uint32_t clear_mask,
+                                  uint32_t set_mask);
 ```
 
 ## DESCRIPTION
 
-**zx_object_signal**() asserts and deasserts the userspace-accessible signal
-bits on an object.
+**zx_object_signal_peer**() asserts and deasserts the userspace-accessible
+signal bits on the object's peer. A object peer is the opposite endpoint of a
+*channel*, *socket*, *fifo*, or *eventpair*.
 
 Most of the 32 signals are reserved for system use and are assigned to
 per-object functions, like *ZX_CHANNEL_READABLE* or *ZX_TASK_TERMINATED*. There
@@ -39,23 +40,27 @@ The *clear_mask* is first used to clear any bits indicated, and then the
 
 <!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
 
-*handle* must be of type **ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_SIGNAL**.
+*handle* must be of type **ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_SIGNAL_PEER**.
 
 ## RETURN VALUE
 
-**zx_object_signal**() returns **ZX_OK** on success. In the event of failure, a
-negative error value is returned.
+**zx_object_signal_peer**() returns **ZX_OK** on success. In the event of
+failure, a negative error value is returned.
 
 ## ERRORS
 
 **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
 
-**ZX_ERR_ACCESS_DENIED**  *handle* lacks the right **ZX_RIGHT_SIGNAL**.
+**ZX_ERR_ACCESS_DENIED**  *handle* lacks the right **ZX_RIGHT_SIGNAL_PEER**.
 
 **ZX_ERR_INVALID_ARGS**  *clear_mask* or *set_mask* contain bits that are not allowed.
+
+**ZX_ERR_NOT_SUPPORTED**  Used on an object lacking a peer.
+
+**ZX_ERR_PEER_CLOSED**  Called on an object with a closed peer.
 
 ## SEE ALSO
 
 [event_create](event_create.md),
-[eventpair_create](eventpair_create.md).
-[object_signal_peer](object_signal_peer.md).
+[eventpair_create](eventpair_create.md),
+[object_signal](object_signal.md).

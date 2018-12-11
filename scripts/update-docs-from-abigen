@@ -248,16 +248,6 @@ def match_sentence_form(sentence, arg_names):
         return None, None
 
 
-def is_special_and_warn(syscall_data, what, warn):
-    name = syscall_data['name']
-    # TODO(ZX-2399): These files multiplex multiple functions into one doc. I'm
-    # not sure if this is worth it, but don't break them for now.
-    if name in ('channel_read', 'object_get_property', 'object_signal'):
-        warn('not updating ' + what + ' for special file')
-        return True
-    return False
-
-
 def to_markdown(req, arguments, warn):
     """Parses a few known forms of rules (see match_sentence_forms).
 
@@ -327,9 +317,6 @@ def make_name_block(syscall_data):
 def update_name(lines, syscall_data, warn):
     """Updates the NAME block of the .md file in lines.
     """
-    if is_special_and_warn(syscall_data, 'name', warn):
-        return
-
     name_start_index, name_end_index = find_block(lines, 'NAME')
     if name_start_index == -1 or name_end_index == -1:
         warn('did not find NAME section, skipping update')
@@ -396,7 +383,6 @@ def make_synopsis_block(syscall_data, warn):
 # which makes the hand written DESCRIPTION block wrong if they're changed. This
 # will be deleted once all can be generated.
 synopsis_blacklist = (
-    'channel_read',
     'clock_get',
     'futex_get_owner',
     'futex_requeue',
@@ -404,8 +390,6 @@ synopsis_blacklist = (
     'futex_wake',
     'futex_wake_handle_close_thread_exit',
     'object_get_info',
-    'object_get_property',
-    'object_signal',
     'object_wait_many',
 )
 
@@ -424,12 +408,9 @@ def update_synopsis(lines, syscall_data, warn):
     lines[start_index:end_index] = syn
 
 
-def update_title(lines, syscall_data, warn):
+def update_title(lines, syscall_data, _):
     """Updates the main title of the .md file given by |filename|.
     """
-    if is_special_and_warn(syscall_data, 'title', warn):
-        return
-
     correct_title = '# zx_' + syscall_data['name']
     if lines[0] != correct_title:
         lines[0] = correct_title

@@ -21,6 +21,9 @@ zx_status_t zx_object_set_property(zx_handle_t handle,
 
 ## DESCRIPTION
 
+**zx_object_set_property()** modifies the value of a kernel object's property.
+Setting a property requires **ZX_RIGHT_SET_PROPERTY** rights on the handle.
+
 See [object_get_property()](object_get_property.md) for a full description.
 
 ## RIGHTS
