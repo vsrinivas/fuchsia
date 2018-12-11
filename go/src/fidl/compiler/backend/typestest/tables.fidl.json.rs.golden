@@ -14,6 +14,7 @@ use futures::{Future, Stream, StreamExt};
 use std::ops::Deref;
 
 
+#[derive(Debug, PartialEq)]
 pub struct SimpleTable {
   pub x: Option<i64>,
   pub y: Option<i64>,
@@ -33,6 +34,7 @@ fidl_table! {
   },
 }
 
+#[derive(Debug, PartialEq)]
 pub struct OlderSimpleTable {
   pub x: Option<i64>,
 }
@@ -47,6 +49,7 @@ fidl_table! {
   },
 }
 
+#[derive(Debug, PartialEq)]
 pub struct NewerSimpleTable {
   pub x: Option<i64>,
   pub y: Option<i64>,
