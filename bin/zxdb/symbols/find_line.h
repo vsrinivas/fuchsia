@@ -22,6 +22,15 @@ struct ResolveOptions;
 class SymbolContext;
 
 struct LineMatch {
+  LineMatch() = default;
+  LineMatch(uint64_t addr, int ln, uint32_t func)
+      : address(addr), line(ln), function_die_offset(func) {}
+
+  bool operator==(const LineMatch& other) const {
+    return std::tie(address, line, function_die_offset) ==
+           std::tie(other.address, other.line, other.function_die_offset);
+  }
+
   uint64_t address = 0;
   int line = 0;
 

@@ -70,14 +70,9 @@ std::vector<LineMatch> GetAllLineTableMatchesInUnit(
       int row_line = static_cast<int>(row.Line);
       if (line == row_line ||
           (prev_line_matching_file < line && line <= row_line)) {
-        LineMatch match;
-        match.address = row.Address;
-        match.line = row_line;
-
         auto subroutine = line_table.GetSubroutineForRow(row);
-        if (subroutine.isValid())
-          match.function_die_offset = subroutine.getOffset();
-        result.push_back(match);
+        result.emplace_back(row.Address, row_line,
+                            subroutine.isValid() ? subroutine.getOffset() : 0);
       }
       prev_line_matching_file = row.Line;
     }
