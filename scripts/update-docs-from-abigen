@@ -411,6 +411,7 @@ synopsis_whitelist = (
     'fifo_read',
     'fifo_write',
     'guest_create',
+    'guest_set_trap',
     'handle_close',
     'handle_close_many',
     'handle_duplicate',

@@ -1040,9 +1040,9 @@ syscall guest_create
 
 #^ sets a trap within a guest
 #! handle must be of type ZX_OBJ_TYPE_GUEST and have ZX_RIGHT_WRITE.
-#! port must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_WRITE.
+#! port_handle must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_WRITE.
 syscall guest_set_trap
-    (handle: zx_handle_t, kind: uint32_t, addr: zx_vaddr_t, size: size_t, port: zx_handle_t,
+    (handle: zx_handle_t, kind: uint32_t, addr: zx_vaddr_t, size: size_t, port_handle: zx_handle_t,
         key: uint64_t)
     returns (zx_status_t);
 

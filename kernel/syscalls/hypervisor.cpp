@@ -42,12 +42,12 @@ zx_status_t sys_guest_create(zx_handle_t resource, uint32_t options, user_out_ha
 }
 
 // zx_status_t zx_guest_set_trap
-zx_status_t sys_guest_set_trap(zx_handle_t guest_handle, uint32_t kind, zx_vaddr_t addr, size_t len,
+zx_status_t sys_guest_set_trap(zx_handle_t handle, uint32_t kind, zx_vaddr_t addr, size_t size,
                                zx_handle_t port_handle, uint64_t key) {
     auto up = ProcessDispatcher::GetCurrent();
 
     fbl::RefPtr<GuestDispatcher> guest;
-    zx_status_t status = up->GetDispatcherWithRights(guest_handle, ZX_RIGHT_WRITE, &guest);
+    zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &guest);
     if (status != ZX_OK)
         return status;
 
@@ -58,7 +58,7 @@ zx_status_t sys_guest_set_trap(zx_handle_t guest_handle, uint32_t kind, zx_vaddr
             return status;
     }
 
-    return guest->SetTrap(kind, addr, len, ktl::move(port), key);
+    return guest->SetTrap(kind, addr, size, ktl::move(port), key);
 }
 
 // zx_status_t zx_vcpu_create
