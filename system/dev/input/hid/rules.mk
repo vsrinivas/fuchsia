@@ -11,10 +11,17 @@ MODULE_TYPE := driver
 MODULE_SRCS := \
     $(LOCAL_DIR)/hid-fifo.c \
     $(LOCAL_DIR)/hid-parser.c \
+    $(LOCAL_DIR)/hid-parser-lib.cpp \
     $(LOCAL_DIR)/hid.c
 
 MODULE_FIDL_LIBS := system/fidl/zircon-input
-MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/fidl
+
+MODULE_STATIC_LIBS := \
+    system/ulib/ddk \
+    system/ulib/fbl \
+    system/ulib/zxcpp \
+    system/ulib/fidl \
+    system/ulib/hid-parser
 
 MODULE_LIBS := \
     system/ulib/driver \
