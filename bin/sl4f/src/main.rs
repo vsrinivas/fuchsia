@@ -17,6 +17,7 @@ use std::thread;
 
 mod bluetooth;
 mod server;
+mod wlan;
 
 use fuchsia_syslog::macros::*;
 
@@ -39,7 +40,8 @@ fn main() -> Result<(), Error> {
     fx_log_info!("Now listening on: {:?}", address);
 
     // Session storing all information about state
-    // Current support is Bluetooth, add other stacks to sl4f.rs
+    // Currently supported: Bluetooth, wlan
+    // Add other stacks to sl4f.rs
     let sl4f_session: Arc<RwLock<Sl4f>> = Sl4f::new()?;
 
     // Create channel for communication: rouille sync side -> async exec side

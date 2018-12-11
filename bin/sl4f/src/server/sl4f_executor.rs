@@ -18,10 +18,11 @@ use std::sync::Arc;
 use crate::server::sl4f::Sl4f;
 use crate::server::sl4f_types::{AsyncRequest, AsyncResponse, FacadeType};
 
-// Translation layers go here (i.e wlan_method_to_fidl)
+// Translation layers go here (i.e netstack_method_to_fidl)
 use crate::bluetooth::commands::ble_advertise_method_to_fidl;
 use crate::bluetooth::commands::ble_method_to_fidl;
 use crate::bluetooth::commands::gatt_client_method_to_fidl;
+use crate::wlan::commands::wlan_method_to_fidl;
 
 pub fn run_fidl_loop(
     executor: &mut fasync::Executor,
@@ -85,9 +86,11 @@ fn method_to_fidl(
                 args,
                 sl4f_session.write().get_gatt_client_facade(),
         )),
-        FacadeType::Wlan => MethodType::Wlan(fready(Err(BTError::new(
-            "Nice try. WLAN not implemented yet",
-        ).into()))),
+        FacadeType::Wlan => MethodType::Wlan(wlan_method_to_fidl(
+            method_name,
+            args,
+            sl4f_session.write().get_wlan_facade()
+        )),
         _ => MethodType::Error(fready(Err(BTError::new("Invalid FIDL method type").into()))),
     }
 }
