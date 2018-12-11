@@ -35,12 +35,6 @@
 #define IOCTL_TEST_SET_OUTPUT_SOCKET \
     IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_TEST, 3)
 
-// Set a control channel
-//   in: zx_handle_t*
-//   out: none
-#define IOCTL_TEST_SET_CONTROL_CHANNEL \
-    IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_TEST, 4)
-
 typedef struct test_ioctl_test_report {
     unsigned int n_tests;
     unsigned int n_success;
@@ -53,11 +47,8 @@ IOCTL_WRAPPER_VARIN_VAROUT(ioctl_test_create_device, IOCTL_TEST_CREATE_DEVICE, c
 // ssize_t ioctl_test_destroy_device(int fd)
 IOCTL_WRAPPER(ioctl_test_destroy_device, IOCTL_TEST_DESTROY_DEVICE);
 
-// ssize_t ioctl_test_run_tests(int fd, void* in, size_t in_len, test_ioctl_test_report_t* out);
-IOCTL_WRAPPER_VARIN_OUT(ioctl_test_run_tests, IOCTL_TEST_RUN_TESTS, void*, test_ioctl_test_report_t);
+// ssize_t ioctl_test_run_tests(int fd, test_ioctl_test_report_t* out);
+IOCTL_WRAPPER_OUT(ioctl_test_run_tests, IOCTL_TEST_RUN_TESTS, test_ioctl_test_report_t);
 
 // ssize_t ioctl_test_set_output_socket(int fd, zx_handle_t in)
 IOCTL_WRAPPER_IN(ioctl_test_set_output_socket, IOCTL_TEST_SET_OUTPUT_SOCKET, zx_handle_t)
-
-// ssize_t ioctl_test_set_control_channel(int fd, zx_handle_t in)
-IOCTL_WRAPPER_IN(ioctl_test_set_control_channel, IOCTL_TEST_SET_CONTROL_CHANNEL, zx_handle_t)

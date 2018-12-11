@@ -14,7 +14,7 @@ struct TestReport {
 
 [Layout="ddk-callback"]
 interface TestFunc {
-    1: Callback(vector<voidptr> arg) -> (zx.status s, TestReport report);
+    1: Callback() -> (zx.status s, TestReport report);
 };
 
 [Layout="ddk-protocol", DefaultProtocol]
@@ -25,18 +25,12 @@ interface Test {
     /// Gets test output socket.
     2: GetOutputSocket() -> (handle<socket> h);
 
-    /// Sets control channel.
-    3: SetControlChannel(handle<channel> @handle) -> ();
-
-    /// Gets control channel.
-    4: GetControlChannel() -> (handle<channel> @handle);
-
     /// Sets test function.
-    5: SetTestFunc(TestFunc func) -> ();
+    3: SetTestFunc(TestFunc func) -> ();
 
     /// Run tests, calls the function set in |SetTestFunc|.
-    6: RunTests(vector<voidptr> arg) -> (zx.status s, TestReport report);
+    4: RunTests() -> (zx.status s, TestReport report);
 
     /// Calls `device_remove()`.
-    7: Destroy() -> ();
+    5: Destroy() -> ();
 };

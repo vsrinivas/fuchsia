@@ -38,7 +38,7 @@ static void inline update_test_report(bool success, test_report_t* report) {
     }
 }
 
-zx_status_t ddktl_test_func(void* cookie, const void* arg, size_t arglen, test_report_t* report) {
+zx_status_t ddktl_test_func(void* cookie, test_report_t* report) {
     auto dev = static_cast<zx_device_t*>(cookie);
 
     test_protocol_t proto;

@@ -32,14 +32,11 @@ public:
     // Methods required by the TestProtocol mixin
     void TestSetOutputSocket(zx_handle_t handle);
     zx_handle_t TestGetOutputSocket();
-    void TestSetControlChannel(zx_handle_t handle);
-    zx_handle_t TestGetControlChannel();
     void TestSetTestFunc(const test_func_t* func);
-    zx_status_t TestRunTests(const void* arg_buffer, size_t arg_size, test_report_t* out_report);
+    zx_status_t TestRunTests(test_report_t* out_report);
     void TestDestroy();
 private:
     zx::socket output_;
-    zx::channel control_;
     test_func_t test_func_;
 };
 
@@ -68,23 +65,15 @@ zx_handle_t TestDevice::TestGetOutputSocket() {
     return output_.get();
 }
 
-void TestDevice::TestSetControlChannel(zx_handle_t handle) {
-    control_.reset(handle);
-}
-
-zx_handle_t TestDevice::TestGetControlChannel() {
-    return control_.get();
-}
-
 void TestDevice::TestSetTestFunc(const test_func_t* func) {
     test_func_ = *func;
 }
 
-zx_status_t TestDevice::TestRunTests(const void* arg, size_t arglen, test_report_t* report) {
+zx_status_t TestDevice::TestRunTests(test_report_t* report) {
     if (test_func_.callback == NULL) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    return test_func_.callback(test_func_.ctx, arg, arglen, report);
+    return test_func_.callback(test_func_.ctx, report);
 }
 
 void TestDevice::TestDestroy() {
@@ -101,19 +90,12 @@ zx_status_t TestDevice::DdkIoctl(uint32_t op, const void* in, size_t inlen, void
         TestSetOutputSocket(*(zx_handle_t*)in);
         return ZX_OK;
 
-    case IOCTL_TEST_SET_CONTROL_CHANNEL:
-        if (inlen != sizeof(zx_handle_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        TestSetControlChannel(*(zx_handle_t*)in);
-        return ZX_OK;
-
     case IOCTL_TEST_RUN_TESTS: {
         if (outlen != sizeof(test_report_t)) {
             return ZX_ERR_BUFFER_TOO_SMALL;
         }
         *out_actual = sizeof(test_report_t);
-        return TestRunTests(in, inlen, (test_report_t*)out);
+        return TestRunTests(static_cast<test_report_t*>(out));
     }
 
     case IOCTL_TEST_DESTROY_DEVICE:

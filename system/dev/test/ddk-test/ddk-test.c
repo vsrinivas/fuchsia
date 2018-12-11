@@ -34,7 +34,7 @@ static void update_test_report(bool success, test_report_t* report) {
     }
 }
 
-static zx_status_t ddk_test_func(void* cookie, const void* arg, size_t arglen, test_report_t* report) {
+static zx_status_t ddk_test_func(void* cookie, test_report_t* report) {
     zx_device_t* dev = (zx_device_t*)cookie;
 
     test_protocol_t proto;

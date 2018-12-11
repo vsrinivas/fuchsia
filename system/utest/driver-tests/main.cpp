@@ -95,7 +95,7 @@ void do_one_test(const fbl::unique_ptr<IsolatedDevmgr>& devmgr, const fbl::uniqu
 
     ioctl_test_set_output_socket(fd.get(), &h);
 
-    rc = ioctl_test_run_tests(fd.get(), NULL, 0, report);
+    rc = ioctl_test_run_tests(fd.get(), report);
     if (rc < 0) {
         printf("driver-tests: error %zd running tests\n", rc);
         report->n_tests = 1;
