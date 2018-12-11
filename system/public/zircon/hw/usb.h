@@ -59,10 +59,14 @@ __BEGIN_CDECLS;
 #define USB_CLASS_DIAGNOSTIC                0xdc
 #define USB_CLASS_WIRELESS                  0xe0
 #define USB_CLASS_MISC                      0xef
+#define USB_CLASS_APPLICATION_SPECIFIC      0xfe
 #define USB_CLASS_VENDOR                    0xFf
 
 #define USB_SUBCLASS_MSC_SCSI               0x06
 #define USB_PROTOCOL_MSC_BULK_ONLY          0x50
+
+#define USB_SUBCLASS_DFU                    0x01
+#define USB_PROTOCOL_DFU                    0x02
 
 /* Descriptor Types */
 #define USB_DT_DEVICE                      0x01
