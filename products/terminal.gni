@@ -2,8 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-monolith = [ "garnet/packages/products/terminal" ]
+import("base.gni")
 
-preinstall = []
+monolith += [
+  "garnet/packages/config/terminal",
+  "garnet/packages/prod/scenic",
+]
 
-available = [ "garnet/packages/prod/vboot_reference" ]
+preinstall += [
+  "garnet/packages/prod/fonts",
+  "garnet/packages/prod/terminal",
+  "garnet/packages/tools/tiles",
+]
+
+available += [
+  "garnet/packages/prod/media_audio",
+]
