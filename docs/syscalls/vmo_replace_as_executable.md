@@ -8,19 +8,22 @@ vmo_replace_as_executable - add execute rights to a vmo
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_vmo_replace_as_executable(zx_handle_t vmo, zx_handle_t vmex, zx_handle_t* out);
-
+zx_status_t zx_vmo_replace_as_executable(zx_handle_t handle,
+                                         zx_handle_t vmex,
+                                         zx_handle_t* out);
 ```
 
 ## DESCRIPTION
 
-**vmo_replace_as_executable**() creates a replacement for *vmo*, referring
+**vmo_replace_as_executable**() creates a replacement for *handle*, referring
 to the same underlying VM object, adding the right **ZX_RIGHT_EXECUTE**.
 
-*vmo* is always invalidated.
+*handle* is always invalidated.
 
 *vmex* may currently be **ZX_HANDLE_INVALID** to ease migration of new code,
 this is TODO(SEC-42) and will be removed.
@@ -40,7 +43,7 @@ of failure, a negative error value is returned.
 
 ## ERRORS
 
-**ZX_ERR_BAD_HANDLE**  *vmo* isn't a valid VM object handle, or
+**ZX_ERR_BAD_HANDLE**  *handle* isn't a valid VM object handle, or
 *vmex* isn't a valid **ZX_RSRC_KIND_VMEX** resource handle.
 
 **ZX_ERR_NO_MEMORY**  Failure due to lack of memory.

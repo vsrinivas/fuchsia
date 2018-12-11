@@ -279,8 +279,8 @@ zx_status_t sys_vmo_clone(zx_handle_t handle, uint32_t options,
 
 // zx_status_t zx_vmo_replace_as_executable
 zx_status_t sys_vmo_replace_as_executable(
-    zx_handle_t vmo, zx_handle_t vmex, user_out_handle* out) {
-    LTRACEF("repexec %x %x\n", vmo, vmex);
+    zx_handle_t handle, zx_handle_t vmex, user_out_handle* out) {
+    LTRACEF("repexec %x %x\n", handle, vmex);
 
     zx_status_t vmex_status = ZX_OK;
     if (vmex != ZX_HANDLE_INVALID) {
@@ -293,12 +293,12 @@ zx_status_t sys_vmo_replace_as_executable(
     auto up = ProcessDispatcher::GetCurrent();
 
     Guard<fbl::Mutex> guard{up->handle_table_lock()};
-    auto source = up->GetHandleLocked(vmo);
+    auto source = up->GetHandleLocked(handle);
     if (!source)
         return ZX_ERR_BAD_HANDLE;
 
-    auto handle_cleanup = fbl::MakeAutoCall([up, vmo]() TA_NO_THREAD_SAFETY_ANALYSIS {
-        up->RemoveHandleLocked(vmo);
+    auto handle_cleanup = fbl::MakeAutoCall([up, handle]() TA_NO_THREAD_SAFETY_ANALYSIS {
+        up->RemoveHandleLocked(handle);
     });
 
     if (vmex_status != ZX_OK)

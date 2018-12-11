@@ -8,18 +8,18 @@ resource_create - create a resource object
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
 zx_status_t zx_resource_create(zx_handle_t parent_rsrc,
                                uint32_t options,
                                uint64_t base,
-                               size_t len,
+                               size_t size,
                                const char* name,
                                size_t name_size,
-                               zx_handle_t* out_handle)
-
-
+                               zx_handle_t* resource_out);
 ```
 
 ## DESCRIPTION
@@ -28,7 +28,7 @@ zx_status_t zx_resource_create(zx_handle_t parent_rsrc,
 syscalls. Resources are typically handed out to bus drivers and rarely need to
 be interacted with directly by drivers using driver protocols. Resource objects
 grant access to an address space range starting at *base* up to but not
-including *base* + *len*. Two special values for *kind* exist:
+including *base* + *size*. Two special values for *kind* exist:
 **ZX_RSRC_KIND_ROOT** and **ZX_RSRC_KIND_HYPERVISOR**. These resources have no
 range associated with them and are used as a privilege check.
 
@@ -40,7 +40,7 @@ flags. Valid kinds of resources are **ZX_RSRC_KIND_MMIO**, **ZX_RSRC_KIND_IRQ**,
 **ZX_RSRC_KIND_HYPERVISOR**, **ZX_RSRC_KIND_VMEX**, and **ZX_RSRC_KIND_SMC**
 (ARM only).
 **ZX_RSRC_KIND_ROOT**, **ZX_RSRC_KIND_HYPERVISOR**, and **ZX_RSRC_KIND_VMEX**
-must be paired with zero values for *base* and *len*, as they do not use
+must be paired with zero values for *base* and *size*, as they do not use
 an address space range.
 At this time the only optional flag is **ZX_RSRC_FLAG_EXCLUSIVE**. If
 **ZX_RSRC_FLAG_EXCLUSIVE** is provided then the syscall will attempt to
@@ -51,7 +51,7 @@ resources creation from overlapping with it as long as it exists.
 This name is provided for debugging / tool use only and is not used by the
 kernel.
 
-On success, a valid resource handle is returned in *out_handle*.
+On success, a valid resource handle is returned in *resource_out*.
 
 ## RETURN VALUE
 
@@ -81,7 +81,7 @@ to be duplicated), **ZX_RIGHT_INSPECT** (to allow inspection of the object with
 
 **ZX_ERR_INVALID_ARGS** *options* contains an invalid kind or flag combination,
 *name* is an invalid pointer, or the kind specified is one of
-**ZX_RSRC_KIND_ROOT** or **ZX_RSRC_KIND_HYPERVISOR** but *base* and *len* are
+**ZX_RSRC_KIND_ROOT** or **ZX_RSRC_KIND_HYPERVISOR** but *base* and *size* are
 not 0.
 
 **ZX_ERR_NO_MEMORY** Failure due to lack of memory. There is no good way for

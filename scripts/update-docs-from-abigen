@@ -405,14 +405,10 @@ synopsis_blacklist = (
     'futex_wake_handle_close_thread_exit',
     'interrupt_bind',
     'interrupt_create',
-    'iommu_create',
     'object_get_info',
     'object_get_property',
     'object_signal',
     'object_wait_many',
-    'resource_create',
-    'timer_create',
-    'vmo_replace_as_executable',
 )
 
 

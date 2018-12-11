@@ -188,16 +188,16 @@ zx_status_t sys_framebuffer_set_range(zx_handle_t hrsrc, zx_handle_t vmo_handle,
 }
 
 // zx_status_t zx_iommu_create
-zx_status_t sys_iommu_create(zx_handle_t rsrc_handle, uint32_t type,
-                             user_in_ptr<const void> desc, size_t desc_len,
+zx_status_t sys_iommu_create(zx_handle_t resource, uint32_t type,
+                             user_in_ptr<const void> desc, size_t desc_size,
                              user_out_handle* out) {
     // TODO: finer grained validation
     zx_status_t status;
-    if ((status = validate_resource(rsrc_handle, ZX_RSRC_KIND_ROOT)) < 0) {
+    if ((status = validate_resource(resource, ZX_RSRC_KIND_ROOT)) < 0) {
         return status;
     }
 
-    if (desc_len > ZX_IOMMU_MAX_DESC_LEN) {
+    if (desc_size > ZX_IOMMU_MAX_DESC_LEN) {
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -208,16 +208,16 @@ zx_status_t sys_iommu_create(zx_handle_t rsrc_handle, uint32_t type,
         // Copy the descriptor into the kernel and try to create the dispatcher
         // using it.
         fbl::AllocChecker ac;
-        ktl::unique_ptr<uint8_t[]> copied_desc(new (&ac) uint8_t[desc_len]);
+        ktl::unique_ptr<uint8_t[]> copied_desc(new (&ac) uint8_t[desc_size]);
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
-        if ((status = desc.copy_array_from_user(copied_desc.get(), desc_len)) != ZX_OK) {
+        if ((status = desc.copy_array_from_user(copied_desc.get(), desc_size)) != ZX_OK) {
             return status;
         }
         status = IommuDispatcher::Create(type,
                                          ktl::unique_ptr<const uint8_t[]>(copied_desc.release()),
-                                         desc_len, &dispatcher, &rights);
+                                         desc_size, &dispatcher, &rights);
         if (status != ZX_OK) {
             return status;
         }

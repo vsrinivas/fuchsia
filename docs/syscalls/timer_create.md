@@ -8,11 +8,14 @@ timer_create - create a timer
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_timer_create(uint32_t options, uint32_t clock_id, zx_handle_t* out);
-
+zx_status_t zx_timer_create(uint32_t options,
+                            zx_clock_t clock_id,
+                            zx_handle_t* out);
 ```
 
 ## DESCRIPTION

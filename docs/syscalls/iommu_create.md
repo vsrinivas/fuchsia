@@ -8,11 +8,16 @@ iommu_create - create a new IOMMU object in the kernel
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_iommu_create(zx_handle_t root_resource, uint32_t type,
-                            const void* desc, size_t desc_size, zx_handle_t* out);
+zx_status_t zx_iommu_create(zx_handle_t resource,
+                            uint32_t type,
+                            const void* desc,
+                            size_t desc_size,
+                            zx_handle_t* out);
 ```
 
 ## DESCRIPTION
@@ -33,7 +38,7 @@ pages, to prevent the reuse of a page until the driver using the page says it is
 done with it.
 
 *desc* must be a valid pointer to a value of type *zx_iommu_desc_dummy_t*.
-*desc_len* must be *sizeof(zx_iommu_desc_dummy_t)*.
+*desc_size* must be *sizeof(zx_iommu_desc_dummy_t)*.
 
 ## RIGHTS
 
@@ -49,11 +54,11 @@ is returned.
 
 ## ERRORS
 
-**ZX_ERR_BAD_HANDLE**  *root_resource* is not a valid handle.
+**ZX_ERR_BAD_HANDLE**  *resource* is not a valid handle.
 
-**ZX_ERR_WRONG_TYPE**  *root_resource* is not a resource handle.
+**ZX_ERR_WRONG_TYPE**  *resource* is not a resource handle.
 
-**ZX_ERR_ACCESS_DENIED**  *root_resource* handle does not have sufficient privileges.
+**ZX_ERR_ACCESS_DENIED**  *resource* handle does not have sufficient privileges.
 
 **ZX_ERR_NOT_SUPPORTED** *type* is not a defined value or is not
 supported on this system.
