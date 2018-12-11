@@ -391,7 +391,7 @@ static void eth0_complete_tx(void* cookie, ethmac_netbuf_t* netbuf, zx_status_t 
                               .cookie = tx_info->fifo_cookie};
 
     // Now that we've copied all pertinent data from the netbuf, return it to the free list so
-    // it is avaialble immediately for the next request.
+    // it is available immediately for the next request.
     eth_put_tx_info(edev, tx_info);
 
     // Send the entry back to the client

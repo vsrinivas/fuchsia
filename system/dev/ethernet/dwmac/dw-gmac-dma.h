@@ -174,7 +174,7 @@ enum inter_frame_gap {
 #define ETH_REG0_RX_REUSE       (1 << 30)
 #define ETH_REG0_URGENT         (1 << 31)
 
-// miiaddr register defintions
+// miiaddr register definitions
 #define MII_BUSY                 (1 << 0)
 #define MII_WRITE                (1 << 1)
 #define MII_CLKRANGE_60_100M     (0)
