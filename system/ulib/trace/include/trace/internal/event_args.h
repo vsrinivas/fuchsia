@@ -25,6 +25,11 @@
 #define TRACE_INTERNAL_NEW_NUM_ARGS(variable_name) \
     (sizeof(variable_name) / sizeof((variable_name)[0]))
 
+// Note: Argument names are processed in two steps. The first step is here
+// where we store the string in |name_ref.inline_string|. The second step is
+// done by |trace_internal_complete_args()| which is normally called by the
+// helper routines that finish recording the event.
+
 #ifdef __cplusplus
 
 #define TRACE_INTERNAL_NEW_SCOPE_ARG_LABEL(var_name, idx) \
