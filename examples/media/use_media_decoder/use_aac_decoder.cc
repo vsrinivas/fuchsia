@@ -17,7 +17,7 @@
 
 // Re. this example and threading:
 //
-// This example shows the handling needed to run a Codec using mulitiple client
+// This example shows the handling needed to run a Codec using multiple client
 // threads correctly.  Any new codec client author should consider whether the
 // benefits of using multiple threads are really worthwhile in the client's
 // particular use case, or if goals can be met just fine with a single FIDL
@@ -51,7 +51,7 @@ namespace {
 // stream, even if it's just to decode the same data again.
 constexpr uint64_t kStreamLifetimeOrdinal = 1;
 
-// Whether we actaully output a wav depends on whether there are any args or
+// Whether we actually output a wav depends on whether there are any args or
 // not.
 constexpr bool kWavWriterEnabled = true;
 
@@ -174,7 +174,7 @@ void use_aac_decoder(async::Loop* main_loop,
   //  * loop thread - this thread pumps all the FIDL interfaces in this example,
   //    using a separate thread from the main thread.  This does require us to
   //    be a bit more careful to fully configure an interface to be ready to
-  //    recieve messages before binding a server endpoint locally, or fully
+  //    receive messages before binding a server endpoint locally, or fully
   //    ready to have error handler (or similar) called on the client end before
   //    sending the sever end somewhere else.
   //  * input thread - feeds in compressed input data - but note that the actual
@@ -264,7 +264,7 @@ void use_aac_decoder(async::Loop* main_loop,
   //
   // Unbind() is only safe to call on the interfaces's dispatcher thread.  We
   // also want to block the current thread until this is done, to avoid
-  // codec_factory potentially disapearing before this posted work finishes.
+  // codec_factory potentially disappearing before this posted work finishes.
   std::mutex unbind_mutex;
   std::condition_variable unbind_done_condition;
   bool unbind_done = false;
@@ -288,14 +288,14 @@ void use_aac_decoder(async::Loop* main_loop,
   }  // ~lock
   FXL_DCHECK(unbind_done);
 
-  // We use a seprarate thread to provide input data, separate thread for output
+  // We use a separate thread to provide input data, separate thread for output
   // data, and a separate FIDL thread (started above).  This is to avoid the
   // example being too simplistic to be of any use as a reference to authors of
   // codec clients that use multiple threads, and to some degree, to keep the
   // input handling and output handling code clear.
 
   // The captures here require the main thread to call in_thread->join() before
-  // the caputures go out of scope.
+  // the captures go out of scope.
   VLOGF("before starting in_thread...\n");
   std::unique_ptr<std::thread> in_thread = std::make_unique<std::thread>(
       [&codec_client, full_input_details = std::move(full_input_details),

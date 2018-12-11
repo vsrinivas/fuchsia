@@ -125,7 +125,7 @@ void FrameSink::PutEndOfStreamThenWaitForFramesReturnedAsync(
       << "::zx::vmo::create() failed - status: " << status;
 
   // We intentionally change the format, including pixel format, for the blank
-  // frame, becaues it's easier to generate a black frame in RGB, and because
+  // frame, because it's easier to generate a black frame in RGB, and because
   // there's no harm in covering Scenic's ability to switch to a frame with
   // completely different format.
   fuchsia::mediacodec::VideoUncompressedFormat blank_frame_video_format{

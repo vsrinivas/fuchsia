@@ -120,9 +120,9 @@ void CodecClient::Start() {
       packet_count_for_client + packet_count_for_codec;
   if (input_packet_count < packet_count_for_codec ||
       input_packet_count > input_constraints_->packet_count_for_codec_max) {
-    FXL_LOG(FATAL) << "server can't easily accomodate "
+    FXL_LOG(FATAL) << "server can't easily accommodate "
                       "kMinExtraInputPacketsForClient - not "
-                      "using servr - exiting";
+                      "using server - exiting";
   }
   {  // scope input_settings, just for clarity
     fuchsia::mediacodec::CodecPortBufferSettings input_settings{
@@ -508,7 +508,7 @@ std::unique_ptr<CodecOutput> CodecClient::BlockingGetEmittedOutput() {
       // The last buffer being added is significant to the protocol.
       if (i == packet_count - 1) {
         std::unique_lock<std::mutex> lock(lock_);
-        // The last mesage will potentially result in OnOutputPacket(), so we
+        // The last message will potentially result in OnOutputPacket(), so we
         // need to be ready for that packet.
         //
         // This is non-harmful if output_config_action_pending_ will remain
@@ -562,7 +562,7 @@ std::unique_ptr<CodecOutput> CodecClient::BlockingGetEmittedOutput() {
                        "caught up";
         output_config_action_pending_ = false;
         // Because this was true for at least pending config reason which we
-        // are only just clearning immediately above.
+        // are only just clearing immediately above.
         assert(output_pending_);
         // There can be output packets by this point so only clear
         // output_pending_ if there are also no packets.
@@ -598,7 +598,7 @@ void CodecClient::RecycleOutputPacket(
 void CodecClient::OnOutputConfig(
     fuchsia::mediacodec::CodecOutputConfig output_config) {
   bool output_pending_notify_needed = false;
-  // Not that the std::move() actaully helps here, but that's what we're doing.
+  // Not that the std::move() actually helps here, but that's what we're doing.
   std::shared_ptr<fuchsia::mediacodec::CodecOutputConfig> shared_config =
       std::make_shared<fuchsia::mediacodec::CodecOutputConfig>(
           std::move(output_config));

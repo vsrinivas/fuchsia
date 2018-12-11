@@ -17,7 +17,7 @@
 
 // This class is just _a_ codec client, and should be read as an example only,
 // and probably not a fully complete example either.  This class is just here
-// to organize the code involved in seting up a Codec with input buffers and
+// to organize the code involved in setting up a Codec with input buffers and
 // packets, feeding it input data in a single Stream, setting up the output
 // buffers and packets, and ensuring that all input data is processed into
 // output.
@@ -84,7 +84,7 @@ class CodecClient {
 
   void FlushEndOfStreamAndCloseStream(uint64_t stream_lifetime_ordinal);
 
-  // Use the current thread to do what is necessary to get an ouput packet.
+  // Use the current thread to do what is necessary to get an output packet.
   // Near the start, this will include configuring output buffers once.  In
   // steady state this thread will just wait for an output packet to show up or
   // the stream to be done.  If an end_of_stream packet shows up, this method
@@ -171,11 +171,11 @@ class CodecClient {
   // would be of any real use, we could add it.  Either add that mode to Codec
   // interface and down, or remove this comment.
   //
-  // The index into the vector is the saem as packet_id, since we're running in
+  // The index into the vector is the same as packet_id, since we're running in
   // buffer-per-packet mode.
   std::vector<std::unique_ptr<CodecBuffer>> all_input_buffers_;
   // We don't even create the output buffers until after the output format is
-  // known, which can requier some input data first.
+  // known, which can require some input data first.
   std::vector<std::unique_ptr<CodecBuffer>> all_output_buffers_;
 
   // In contrast to buffers, packets don't really exist in full continuously.

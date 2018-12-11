@@ -81,7 +81,7 @@ class FrameSink {
   async::Loop* main_loop_ = nullptr;
   const double frames_per_second_ = 0.0;
 
-  // The actaul views are owned by the view_provider_app_ with no
+  // The actual views are owned by the view_provider_app_ with no
   // super-straightforward way for PutFrame() to find them, so we instead have
   // our views register themselves with the FrameSink as they're
   // created/destroyed, and we make sure to only interact with them on main_loop

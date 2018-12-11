@@ -41,7 +41,7 @@ constexpr uint8_t kShortStartCodeArray[] = {0x00, 0x00, 0x01};
 // found or the end of the buffer is found.
 //
 // ptr has readable_bytes of data - the function only evaluates whether there is
-// a start code at the begining of the data at ptr.
+// a start code at the beginning of the data at ptr.
 //
 // readable_bytes - the caller indicates how many bytes are readable starting at
 // ptr.
@@ -312,7 +312,7 @@ static void use_video_decoder(
   //
   // Unbind() is only safe to call on the interfaces's dispatcher thread.  We
   // also want to block the current thread until this is done, to avoid
-  // codec_factory potentially disapearing before this posted work finishes.
+  // codec_factory potentially disappearing before this posted work finishes.
   std::mutex unbind_mutex;
   std::condition_variable unbind_done_condition;
   bool unbind_done = false;
