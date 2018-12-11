@@ -117,8 +117,11 @@ zx_status_t xdc_queue_transfer(xdc_t* xdc, usb_request_t* req, bool in, bool is_
         }
     }
 
-    zx_status_t status = xdc_req_list_add_tail(&ep->queued_reqs, req, sizeof(usb_request_t));
-    ZX_DEBUG_ASSERT(status == ZX_OK);
+    xdc_req_internal_t* req_int = USB_REQ_TO_XDC_INTERNAL(req, sizeof(usb_request_t));
+    req_int->complete_cb = in ? xdc_read_complete : xdc_write_complete;
+    req_int->cookie = xdc;
+
+    list_add_tail(&ep->queued_reqs, &req_int->node);
 
     // We can still queue requests for later while waiting for the xdc device to be configured,
     // or while the endpoint is halted. Before scheduling the TRBs however, we should wait

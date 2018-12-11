@@ -650,11 +650,18 @@ static void xdc_shutdown(xdc_t* xdc) {
         ep->state = XDC_EP_STATE_DEAD;
 
         usb_request_t* req;
-        while ((req = xdc_req_list_remove_tail(&ep->pending_reqs, usb_req_size)) != nullptr) {
-            usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0, req->complete_cb, req->cookie);
+        xdc_req_internal_t* req_int;
+        while ((req_int = list_remove_tail_type(&ep->pending_reqs, xdc_req_internal_t, node))
+                                                                                  != nullptr) {
+            req = XDC_INTERNAL_TO_USB_REQ(req_int, usb_req_size);
+            usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0, req_int->complete_cb,
+                                 req_int->cookie);
         }
-        while ((req = xdc_req_list_remove_tail(&ep->queued_reqs, usb_req_size)) != nullptr) {
-            usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0, req->complete_cb, req->cookie);
+        while ((req_int = list_remove_tail_type(&ep->queued_reqs, xdc_req_internal_t, node))
+                                                                                  != nullptr) {
+            req = XDC_INTERNAL_TO_USB_REQ(req_int, usb_req_size);
+            usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0, req_int->complete_cb,
+                                 req_int->cookie);
         }
     }
 
@@ -740,7 +747,7 @@ static void xdc_update_write_signal_locked(xdc_t* xdc, bool online)
     mtx_unlock(&xdc->instance_list_lock);
 }
 
-static void xdc_write_complete(usb_request_t* req, void* cookie) {
+void xdc_write_complete(usb_request_t* req, void* cookie) {
     auto* xdc = static_cast<xdc_t*>(cookie);
 
     zx_status_t status = req->response.status;
@@ -781,8 +788,6 @@ static zx_status_t xdc_write(xdc_t* xdc, uint32_t stream_id, const void* buf, si
         if (status != ZX_OK) {
             goto out;
         }
-        req->complete_cb = xdc_write_complete;
-        req->cookie = xdc;
     }
 
     usb_request_copy_to(req, &header, header_len, 0);
@@ -864,7 +869,7 @@ static void xdc_handle_msg(xdc_t* xdc, xdc_msg_t* msg) {
     }
 }
 
-static void xdc_read_complete(usb_request_t* req, void* cookie) {
+void xdc_read_complete(usb_request_t* req, void* cookie) {
     auto* xdc = static_cast<xdc_t*>(cookie);
 
     mtx_lock(&xdc->read_lock);
@@ -1215,11 +1220,13 @@ zx_status_t xdc_poll(xdc_t* xdc) {
 
             // Call complete callbacks out of the lock.
             // TODO(jocelyndang): might want a separate thread for this.
+            xdc_req_internal_t* req_int;
             usb_request_t* req;
-            while ((req = xdc_req_list_remove_head(&poll_state.completed_reqs,
-                                                    sizeof(usb_request_t))) != nullptr) {
+            while ((req_int = list_remove_head_type(&poll_state.completed_reqs,
+                                                    xdc_req_internal_t, node)) != nullptr) {
+                req = XDC_INTERNAL_TO_USB_REQ(req_int, usb_req_size);
                 usb_request_complete(req, req->response.status, req->response.actual,
-                                     req->complete_cb, req->cookie);
+                                     req_int->complete_cb, req_int->cookie);
             }
         }
     }
@@ -1263,8 +1270,6 @@ static zx_status_t xdc_init_internal(xdc_t* xdc) {
             zxlogf(ERROR, "xdc failed to alloc write usb requests, err: %d\n", status);
             return status;
         }
-        req->complete_cb = xdc_write_complete;
-        req->cookie = xdc;
         ZX_DEBUG_ASSERT(usb_request_pool_add(&xdc->free_write_reqs, req) == ZX_OK);
     }
     for (int i = 0; i < MAX_REQS; i++) {
@@ -1274,8 +1279,6 @@ static zx_status_t xdc_init_internal(xdc_t* xdc) {
             zxlogf(ERROR, "xdc failed to alloc read usb requests, err: %d\n", status);
             return status;
         }
-        req->complete_cb = xdc_read_complete;
-        req->cookie = xdc;
         status = xdc_req_list_add_head(&xdc->free_read_reqs, req, usb_req_size);
         ZX_DEBUG_ASSERT(status == ZX_OK);
     }

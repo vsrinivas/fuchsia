@@ -156,3 +156,5 @@ zx_status_t xdc_bind(zx_device_t* parent, zx_handle_t bti_handle, void* mmio);
 
 void xdc_endpoint_set_halt_locked(xdc_t* xdc, xdc_poll_state_t* poll_state, xdc_endpoint_t* ep)
                                   __TA_REQUIRES(xdc->lock);
+void xdc_write_complete(usb_request_t* req, void* cookie);
+void xdc_read_complete(usb_request_t* req, void* cookie);
