@@ -491,13 +491,19 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 					r = t
 				}
 			}
+		case types.TableDeclType:
+			if val.Nullable {
+				r = fmt.Sprintf("Option<%s>", t)
+			} else {
+				r = t
+			}
 		case types.InterfaceDeclType:
 			r = fmt.Sprintf("fidl::endpoints::ClientEnd<%sMarker>", t)
 			if val.Nullable {
 				r = fmt.Sprintf("Option<%s>", r)
 			}
 		default:
-			log.Fatal("Unknown declaration type: ", declType)
+			log.Fatal("Unknown declaration type in interface: ", declType)
 		}
 	default:
 		log.Fatal("Unknown type kind: ", val.Kind)
