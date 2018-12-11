@@ -8,15 +8,17 @@ vcpu_interrupt - raise an interrupt on a VCPU
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_vcpu_interrupt(zx_handle_t vcpu, uint32_t vector);
+zx_status_t zx_vcpu_interrupt(zx_handle_t handle, uint32_t vector);
 ```
 
 ## DESCRIPTION
 
-**vcpu_interrupt**() raises an interrupt of *vector* on *vcpu*, and may be
+**vcpu_interrupt**() raises an interrupt of *vector* on *handle*, and may be
 called from any thread.
 
 ## RIGHTS
@@ -32,14 +34,14 @@ returned.
 
 ## ERRORS
 
-**ZX_ERR_ACCESS_DENIED** *vcpu* does not have the *ZX_RIGHT_SIGNAL* right.
+**ZX_ERR_ACCESS_DENIED** *handle* does not have the *ZX_RIGHT_SIGNAL* right.
 
-**ZX_ERR_BAD_HANDLE** *vcpu* is an invalid handle.
+**ZX_ERR_BAD_HANDLE** *handle* is an invalid handle.
 
 **ZX_ERR_OUT_OF_RANGE** *vector* is outside of the range interrupts supported by
 the current architecture.
 
-**ZX_ERR_WRONG_TYPE** *vcpu* is not a handle to a VCPU.
+**ZX_ERR_WRONG_TYPE** *handle* is not a handle to a VCPU.
 
 ## SEE ALSO
 

@@ -8,18 +8,21 @@ vcpu_write_state - write the state of a VCPU
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
-#include <zircon/syscalls/hypervisor.h>
 
-zx_status_t zx_vcpu_write_state(zx_handle_t vcpu, uint32_t kind,
-                                const void* buffer, size_t buffer_size);
+zx_status_t zx_vcpu_write_state(zx_handle_t handle,
+                                uint32_t kind,
+                                const void* buffer,
+                                size_t buffer_size);
 ```
 
 ## DESCRIPTION
 
-**vcpu_write_state**() writes the state of *vcpu* as specified by *kind* from
-*buffer*. It is only valid to write the state of *vcpu* when execution has been
+**vcpu_write_state**() writes the state of *handle* as specified by *kind* from
+*buffer*. It is only valid to write the state of *handle* when execution has been
 paused.
 
 *kind* may be *ZX_VCPU_STATE* or *ZX_VCPU_IO*.
@@ -37,16 +40,16 @@ returned.
 
 ## ERRORS
 
-**ZX_ERR_ACCESS_DENIED** *vcpu* does not have the *ZX_RIGHT_WRITE* right.
+**ZX_ERR_ACCESS_DENIED** *handle* does not have the *ZX_RIGHT_WRITE* right.
 
-**ZX_ERR_BAD_HANDLE** *vcpu* is an invalid handle.
+**ZX_ERR_BAD_HANDLE** *handle* is an invalid handle.
 
-**ZX_ERR_BAD_STATE** *vcpu* is in a bad state, and state can not be written.
+**ZX_ERR_BAD_STATE** *handle* is in a bad state, and state can not be written.
 
 **ZX_ERR_INVALID_ARGS** *kind* does not name a known VCPU state, *buffer* is an
 invalid pointer, or *buffer_size* does not match the expected size of *kind*.
 
-**ZX_ERR_WRONG_TYPE** *vcpu* is not a handle to a VCPU.
+**ZX_ERR_WRONG_TYPE** *handle* is not a handle to a VCPU.
 
 ## SEE ALSO
 

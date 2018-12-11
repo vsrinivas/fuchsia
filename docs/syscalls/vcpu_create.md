@@ -8,12 +8,15 @@ vcpu_create - create a VCPU
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
-#include <zircon/syscalls/hypervisor.h>
 
-zx_status_t zx_vcpu_create(zx_handle_t guest, uint32_t options,
-                           zx_vaddr_t entry, zx_handle_t* out);
+zx_status_t zx_vcpu_create(zx_handle_t guest,
+                           uint32_t options,
+                           zx_vaddr_t entry,
+                           zx_handle_t* out);
 ```
 
 ## DESCRIPTION

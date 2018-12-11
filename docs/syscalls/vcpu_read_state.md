@@ -8,18 +8,21 @@ vcpu_read_state - read the state of a VCPU
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
-#include <zircon/syscalls/hypervisor.h>
 
-zx_status_t zx_vcpu_read_state(zx_handle_t vcpu, uint32_t kind, void* buffer,
-                               size_t len);
+zx_status_t zx_vcpu_read_state(zx_handle_t handle,
+                               uint32_t kind,
+                               void* buffer,
+                               size_t buffer_size);
 ```
 
 ## DESCRIPTION
 
-**vcpu_read_state**() reads the state of *vcpu* as specified by *kind* into
-*buffer*. It is only valid to read the state of *vcpu* when execution has been
+**vcpu_read_state**() reads the state of *handle* as specified by *kind* into
+*buffer*. It is only valid to read the state of *handle* when execution has been
 paused.
 
 *kind* must be *ZX_VCPU_STATE*.
@@ -37,16 +40,16 @@ returned.
 
 ## ERRORS
 
-**ZX_ERR_ACCESS_DENIED** *vcpu* does not have the *ZX_RIGHT_READ* right.
+**ZX_ERR_ACCESS_DENIED** *handle* does not have the *ZX_RIGHT_READ* right.
 
-**ZX_ERR_BAD_HANDLE** *vcpu* is an invalid handle.
+**ZX_ERR_BAD_HANDLE** *handle* is an invalid handle.
 
-**ZX_ERR_BAD_STATE** *vcpu* is in a bad state, and state can not be read.
+**ZX_ERR_BAD_STATE** *handle* is in a bad state, and state can not be read.
 
 **ZX_ERR_INVALID_ARGS** *kind* does not name a known VCPU state, *buffer* is an
-invalid pointer, or *len* does not match the expected size of *kind*.
+invalid pointer, or *buffer_size* does not match the expected size of *kind*.
 
-**ZX_ERR_WRONG_TYPE** *vcpu* is not a handle to a VCPU.
+**ZX_ERR_WRONG_TYPE** *handle* is not a handle to a VCPU.
 
 ## SEE ALSO
 

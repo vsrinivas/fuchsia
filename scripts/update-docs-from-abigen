@@ -335,11 +335,14 @@ def update_name(lines, syscall_data, warn):
 
 
 def make_synopsis_block(syscall_data, warn):
-    header = [
-        '```',
+    headers = set([
         '#include <zircon/syscalls.h>',
-        '',
-    ]
+    ])
+    extra_headers = {}
+    for arg in syscall_data['arguments']:
+        if arg['type'] == 'zx_port_packet_t':
+            headers.add('#include <zircon/syscalls/port.h>')
+    header = ['```'] + sorted(list(headers)) + ['']
 
     def format_arg(x):
         ret = ''
@@ -437,6 +440,11 @@ synopsis_whitelist = (
     'thread_write_state',
     'timer_cancel',
     'timer_set',
+    'vcpu_create',
+    'vcpu_interrupt',
+    'vcpu_read_state',
+    'vcpu_resume',
+    'vcpu_write_state',
     'vmar_allocate',
     'vmar_destroy',
     'vmar_map',
