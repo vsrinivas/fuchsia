@@ -32,14 +32,6 @@ struct Context {
     Context(MockDevice* device, InfraBss* bss, common::MacAddr client_addr)
         : device(device), bss(bss), client_addr(client_addr) {}
 
-    zx_status_t HandleFrame(std::function<zx_status_t(fbl::unique_ptr<Packet>*)> create_frame) {
-        fbl::unique_ptr<Packet> pkt;
-        auto status = create_frame(&pkt);
-        if (status != ZX_OK) { return status; }
-        bss->HandleAnyFrame(std::move(pkt));
-        return ZX_OK;
-    }
-
     void HandleTimeout() { bss->HandleTimeout(client_addr); }
 
     template <typename FV> FV TypeCheckWlanFrame(Packet* pkt) {
@@ -61,48 +53,34 @@ struct Context {
 
     void SendClientDisassocFrame() { bss->HandleAnyFrame(CreateDisassocFrame(client_addr)); }
 
-    zx_status_t SendNullDataFrame(bool pwr_mgmt) {
-        return HandleFrame([=](auto pkt) {
-            auto frame = CreateNullDataFrame();
-            if (frame.IsEmpty()) { return ZX_ERR_NO_RESOURCES; }
-
-            common::MacAddr bssid(kBssid1);
-            frame.hdr()->fc.set_from_ds(0);
-            frame.hdr()->fc.set_to_ds(1);
-            frame.hdr()->fc.set_pwr_mgmt(pwr_mgmt ? 1 : 0);
-            frame.hdr()->addr1 = bssid;
-            frame.hdr()->addr2 = client_addr;
-            frame.hdr()->addr3 = bssid;
-            *pkt = frame.Take();
-            return ZX_OK;
-        });
+    void SendNullDataFrame(bool pwr_mgmt) {
+        auto frame = CreateNullDataFrame();
+        common::MacAddr bssid(kBssid1);
+        frame.hdr()->fc.set_from_ds(0);
+        frame.hdr()->fc.set_to_ds(1);
+        frame.hdr()->fc.set_pwr_mgmt(pwr_mgmt ? 1 : 0);
+        frame.hdr()->addr1 = bssid;
+        frame.hdr()->addr2 = client_addr;
+        frame.hdr()->addr3 = bssid;
+        bss->HandleAnyFrame(frame.Take());
     }
 
-    zx_status_t SendDataFrame() {
-        return HandleFrame([=](auto pkt) {
-            auto frame = CreateDataFrame(kTestPayload.data(), kTestPayload.size());
-            if (frame.IsEmpty()) { return ZX_ERR_NO_RESOURCES; }
-
-            common::MacAddr bssid(kBssid1);
-            frame.hdr()->fc.set_from_ds(0);
-            frame.hdr()->fc.set_to_ds(1);
-            frame.hdr()->addr1 = bssid;
-            frame.hdr()->addr2 = client_addr;
-            frame.hdr()->addr3 = bssid;
-            *pkt = frame.Take();
-            return ZX_OK;
-        });
+    void SendDataFrame() {
+        auto frame = CreateDataFrame(kTestPayload.data(), kTestPayload.size());
+        common::MacAddr bssid(kBssid1);
+        frame.hdr()->fc.set_from_ds(0);
+        frame.hdr()->fc.set_to_ds(1);
+        frame.hdr()->addr1 = bssid;
+        frame.hdr()->addr2 = client_addr;
+        frame.hdr()->addr3 = bssid;
+        bss->HandleAnyFrame(frame.Take());
     }
 
-    zx_status_t SendEthFrame(std::vector<uint8_t> payload) {
-        return HandleFrame([&](auto pkt) {
-            auto eth_frame = CreateEthFrame(payload.data(), payload.size());
-            if (eth_frame.IsEmpty()) { return ZX_ERR_NO_RESOURCES; }
-            eth_frame.hdr()->src = common::MacAddr(kBssid1);
-            eth_frame.hdr()->dest = client_addr;
-            *pkt = eth_frame.Take();
-            return ZX_OK;
-        });
+    void SendEthFrame(std::vector<uint8_t> payload) {
+        auto eth_frame = CreateEthFrame(payload.data(), payload.size());
+        eth_frame.hdr()->src = common::MacAddr(kBssid1);
+        eth_frame.hdr()->dest = client_addr;
+        bss->HandleAnyFrame(eth_frame.Take());
     }
 
     zx::duration TuPeriodsToDuration(size_t periods) { return zx::usec(1024) * periods; }

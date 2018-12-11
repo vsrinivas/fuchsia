@@ -474,7 +474,7 @@ DataFrame<LlcHeader> CreateDataFrame(const uint8_t* payload, size_t len) {
 
     const size_t buf_len = DataFrameHeader::max_len() + LlcHeader::max_len() + len;
     auto packet = GetWlanPacket(buf_len);
-    if (packet == nullptr) { return {}; }
+    ZX_DEBUG_ASSERT(packet != nullptr);
 
     BufferWriter w(*packet);
     auto data_hdr = w.Write<DataFrameHeader>();
@@ -507,7 +507,7 @@ DataFrame<> CreateNullDataFrame() {
     common::MacAddr client(kClientAddress);
 
     auto packet = GetWlanPacket(DataFrameHeader::max_len());
-    if (packet == nullptr) { return {}; }
+    ZX_DEBUG_ASSERT(packet != nullptr);
 
     BufferWriter w(*packet);
     auto data_hdr = w.Write<DataFrameHeader>();
@@ -533,7 +533,7 @@ EthFrame CreateEthFrame(const uint8_t* payload, size_t len) {
 
     size_t buf_len = EthernetII::max_len() + len;
     auto packet = GetEthPacket(buf_len);
-    if (packet == nullptr) { return {}; }
+    ZX_DEBUG_ASSERT(packet != nullptr);
 
     BufferWriter w(*packet);
     auto eth_hdr = w.Write<EthernetII>();
