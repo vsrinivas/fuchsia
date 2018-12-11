@@ -8,11 +8,14 @@ task_resume_from_exception - resume the given task after an exception has been r
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_task_resume_from_exception(zx_handle_t task, zx_handle_t port, uint32_t options);
-
+zx_status_t zx_task_resume_from_exception(zx_handle_t handle,
+                                          zx_handle_t port,
+                                          uint32_t options);
 ```
 
 ## DESCRIPTION
@@ -64,9 +67,9 @@ In the event of failure, a negative error value is returned.
 **ZX_ERR_ACCESS_DENIED** *port* is not the port from which the exception
 report was sent.
 
-**ZX_ERR_BAD_HANDLE** Either *task* or *port* is not a valid handle.
+**ZX_ERR_BAD_HANDLE** Either *handle* or *port* is not a valid handle.
 
-**ZX_ERR_WRONG_TYPE** Either *task* is not a thread handle,
+**ZX_ERR_WRONG_TYPE** Either *handle* is not a thread handle,
 or *port* is not a port handle.
 
 **ZX_ERR_BAD_STATE**  The task is not in a state where resuming is possible,

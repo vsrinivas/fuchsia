@@ -125,7 +125,7 @@ static zx_status_t task_bind_exception_port(zx_handle_t obj_handle, zx_handle_t 
 }
 
 // zx_status_t zx_task_bind_exception_port
-zx_status_t sys_task_bind_exception_port(zx_handle_t obj_handle, zx_handle_t eport_handle,
+zx_status_t sys_task_bind_exception_port(zx_handle_t handle, zx_handle_t port,
                                            uint64_t key, uint32_t options) {
     LTRACE_ENTRY;
 
@@ -134,27 +134,26 @@ zx_status_t sys_task_bind_exception_port(zx_handle_t obj_handle, zx_handle_t epo
 
     bool debugger = (options & ZX_EXCEPTION_PORT_DEBUGGER) != 0;
 
-    if (eport_handle == ZX_HANDLE_INVALID) {
-        return object_unbind_exception_port(obj_handle, debugger);
+    if (port == ZX_HANDLE_INVALID) {
+        return object_unbind_exception_port(handle, debugger);
     } else {
-        return task_bind_exception_port(obj_handle, eport_handle, key, debugger);
+        return task_bind_exception_port(handle, port, key, debugger);
     }
 }
 
 // zx_status_t zx_task_resume_from_exception
-zx_status_t sys_task_resume_from_exception(zx_handle_t task_handle, zx_handle_t eport_handle,
-                                           uint32_t options) {
+zx_status_t sys_task_resume_from_exception(zx_handle_t handle, zx_handle_t port, uint32_t options) {
     LTRACE_ENTRY;
 
     auto up = ProcessDispatcher::GetCurrent();
 
     fbl::RefPtr<ThreadDispatcher> thread;
-    zx_status_t status = up->GetDispatcher(task_handle, &thread);
+    zx_status_t status = up->GetDispatcher(handle, &thread);
     if (status != ZX_OK)
         return status;
 
     fbl::RefPtr<PortDispatcher> eport;
-    status = up->GetDispatcher(eport_handle, &eport);
+    status = up->GetDispatcher(port, &eport);
     if (status != ZX_OK)
         return status;
 

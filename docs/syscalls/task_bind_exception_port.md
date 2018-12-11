@@ -8,11 +8,15 @@ task_bind_exception_port - Bind to, or unbind from, the exception port correspon
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_task_bind_exception_port(zx_handle_t object, zx_handle_t eport,
-                                          uint64_t key, uint32_t options);
+zx_status_t zx_task_bind_exception_port(zx_handle_t handle,
+                                        zx_handle_t port,
+                                        uint64_t key,
+                                        uint32_t options);
 ```
 
 ## DESCRIPTION
@@ -20,7 +24,7 @@ zx_status_t zx_task_bind_exception_port(zx_handle_t object, zx_handle_t eport,
 **task_bind_exception_port**() is used to bind (or unbind) a port to
 the exception port of a job, process, or thread.
 
-*eport* is an IO port created by [zx_port_create](port_create.md). The same
+*port* is an IO port created by [zx_port_create](port_create.md). The same
 IO port can be bound to multiple objects.
 
 *key* is passed back in exception reports, and is part of the port
@@ -31,16 +35,16 @@ in exception processing. See below for how exceptions are processed.
 
 ### Unbinding
 
-To unbind from an exception port pass **ZX_HANDLE_INVALID** for *eport*.
-This will remove the exception port from *object* and *eport* will no
-longer participate in exception processing for *object*.
+To unbind from an exception port pass **ZX_HANDLE_INVALID** for *port*.
+This will remove the exception port from *handle* and *port* will no
+longer participate in exception processing for *handle*.
 
-The exception port will unbind automatically if all handles to *eport*
+The exception port will unbind automatically if all handles to *port*
 are closed while it is still bound.
 
 A thread may be currently waiting for a response from the program that
-bound *eport* when it is unbound. Exception processing will continue as if
-*eport* had never been bound.
+bound *port* when it is unbound. Exception processing will continue as if
+*port* had never been bound.
 
 ## RIGHTS
 
@@ -55,17 +59,17 @@ In the event of failure, a negative error value is returned.
 
 ## ERRORS
 
-**ZX_ERR_ALREADY_BOUND** *object* already has its exception port bound.
+**ZX_ERR_ALREADY_BOUND** *handle* already has its exception port bound.
 
-**ZX_ERR_BAD_HANDLE** *object* is not a valid handle,
-or *eport* is not a valid handle. Note that when unbinding from an exception
-port *eport* is **ZX_HANDLE_INVALID**.
+**ZX_ERR_BAD_HANDLE** *handle* is not a valid handle,
+or *port* is not a valid handle. Note that when unbinding from an exception
+port *port* is **ZX_HANDLE_INVALID**.
 
 **ZX_ERR_BAD_STATE** Unbinding a port that is not currently bound.
 
-**ZX_ERR_WRONG_TYPE**  *object* is not that of a job, process, or thread,
+**ZX_ERR_WRONG_TYPE**  *handle* is not that of a job, process, or thread,
 and is not **ZX_HANDLE_INVALID**,
-or *eport* is not that of a port and is not **ZX_HANDLE_INVALID**.
+or *port* is not that of a port and is not **ZX_HANDLE_INVALID**.
 
 **ZX_ERR_INVALID_ARGS** A bad value has been passed in *options*.
 

@@ -300,14 +300,14 @@ zx_status_t sys_thread_set_priority(int32_t prio) {
 }
 
 // zx_status_t zx_task_suspend
-zx_status_t sys_task_suspend(zx_handle_t task_handle, user_out_handle* token) {
+zx_status_t sys_task_suspend(zx_handle_t handle, user_out_handle* token) {
     LTRACE_ENTRY;
 
     auto up = ProcessDispatcher::GetCurrent();
 
     // TODO(ZX-858): Add support for jobs
     fbl::RefPtr<Dispatcher> task;
-    zx_status_t status = up->GetDispatcherWithRights(task_handle, ZX_RIGHT_WRITE, &task);
+    zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &task);
     if (status != ZX_OK)
         return status;
 
@@ -322,8 +322,8 @@ zx_status_t sys_task_suspend(zx_handle_t task_handle, user_out_handle* token) {
 }
 
 // zx_status_t zx_task_suspend_token
-zx_status_t sys_task_suspend_token(zx_handle_t task_handle, user_out_handle* token) {
-    return sys_task_suspend(task_handle, token);
+zx_status_t sys_task_suspend_token(zx_handle_t handle, user_out_handle* token) {
+    return sys_task_suspend(handle, token);
 }
 
 // zx_status_t zx_process_create

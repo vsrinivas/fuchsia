@@ -12,11 +12,12 @@ task_suspend_token - suspend the given task. Currently only thread or process ha
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-void zx_task_suspend_token(zx_handle_t task, zx_handle_t* suspend_token);
-
+zx_status_t zx_task_suspend_token(zx_handle_t handle, zx_handle_t* token);
 ```
 
 ## DESCRIPTION
@@ -55,7 +56,7 @@ In the event of failure, a negative error value is returned.
 
 **ZX_ERR_WRONG_TYPE** *handle* is not a thread handle.
 
-**ZX_ERR_INVALID_ARGS**  *suspend_token*  was an invalid pointer.
+**ZX_ERR_INVALID_ARGS**  *token*  was an invalid pointer.
 
 **ZX_ERR_BAD_STATE**  The task is not in a state where suspending is possible.
 
