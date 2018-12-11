@@ -66,6 +66,25 @@ TEST(FindLine, GetAllLineTableMatchesInUnit) {
   EXPECT_TRUE(out.empty());
 }
 
+// Out-of-order lines. In this case there was some later code moved before
+// the line being searched for, even though the transition of addresses
+// goes in the opposite direction (high to low), we should find the line.
+TEST(FindLine, GetAllLineTableMatchesInUnit_Reverse) {
+  MockLineTable::FileNameVector files = {"file1.cc"};
+
+  MockLineTable::RowVector rows;
+  rows.push_back(MakeStatementRow(0x1000, 1, 105));  // Later code moved before.
+  rows.push_back(MakeStatementRow(0x1001, 1, 101));  // Best match.
+  rows.push_back(MakeStatementRow(0x1002, 1, 91));   //
+  rows.push_back(MakeStatementRow(0x1003, 1, 103));  // Less-good match.
+
+  MockLineTable table(files, rows);
+
+  auto out = GetAllLineTableMatchesInUnit(table, "file1.cc", 100);
+  ASSERT_EQ(1u, out.size());
+  EXPECT_EQ(LineMatch(0x1001, 101, 0), out[0]);
+}
+
 TEST(FindLine, GetBestLineMatches) {
   // Empty input.
   auto out = GetBestLineMatches({});

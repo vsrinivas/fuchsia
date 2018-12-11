@@ -25,14 +25,15 @@ std::vector<LineMatch> GetAllLineTableMatchesInUnit(
   std::vector<FileChecked> checked;
   checked.resize(line_table.GetNumFileNames(), FileChecked::kUnchecked);
 
-  // Once we find a match, assume there aren't any others so we don't need to
-  // keep looking up file names.
+  // Once we find a file match, assume there aren't any others so we don't need
+  // to keep looking up file names.
   bool file_match_found = false;
 
-  // We save every time there's a transition from a line < the one we want to a
-  // line >= the one we want. This tracks the previous line we've seen in the
-  // file.
-  int prev_line_matching_file = -1;
+  // The |best_line| is the line number of the smallest line in the file
+  // we've found >= to the search line. The |result| contains all lines
+  // we've encountered in the unit so far that match this.
+  constexpr int kWorstLine = std::numeric_limits<int>::max();
+  int best_line = kWorstLine;
 
   // Rows in the line table.
   for (const llvm::DWARFDebugLine::Row& row : line_table.GetRows()) {
@@ -45,7 +46,9 @@ std::vector<LineMatch> GetAllLineTableMatchesInUnit(
       continue;
 
     auto file_id = row.File;  // 1-based!
-    FXL_DCHECK(file_id >= 1 && file_id <= checked.size());
+    if (file_id < 1 && file_id > checked.size())
+      continue;  // Symbols are corrupt.
+
     auto file_index = file_id - 1;  // 0-based for indexing into array.
     if (!file_match_found && checked[file_index] == FileChecked::kUnchecked) {
       // Look up effective file name and see if it's a match.
@@ -62,19 +65,22 @@ std::vector<LineMatch> GetAllLineTableMatchesInUnit(
     }
 
     if (checked[file_index] == FileChecked::kMatch) {
-      // Looking for a transition across the line of interest in the file.
-      // Also catch all exact matches. This will sometimes duplicate entries
-      // where the line is split across multiple statements, this will get
-      // filtered out later. But if a one-line function is inlined twice in a
-      // row, we want to catch both instances.
       int row_line = static_cast<int>(row.Line);
-      if (line == row_line ||
-          (prev_line_matching_file < line && line <= row_line)) {
-        auto subroutine = line_table.GetSubroutineForRow(row);
-        result.emplace_back(row.Address, row_line,
-                            subroutine.isValid() ? subroutine.getOffset() : 0);
+      if (line <= row_line) {
+        // All lines >= to the line in question are possibilities.
+        if (row_line < best_line) {
+          // Found a new best match, clear all existing ones.
+          best_line = row_line;
+          result.clear();
+        }
+        if (row_line == best_line) {
+          // Accumulate all matching results.
+          auto subroutine = line_table.GetSubroutineForRow(row);
+          result.emplace_back(
+              row.Address, row_line,
+              subroutine.isValid() ? subroutine.getOffset() : 0);
+        }
       }
-      prev_line_matching_file = row.Line;
     }
   }
 
@@ -123,7 +129,7 @@ std::vector<LineMatch> GetBestLineMatches(
   // Convert back to a result vector.
   std::vector<LineMatch> result;
   result.reserve(die_to_match_index.size());
-  for (const auto& [die, match_index] : die_to_match_index)
+  for (const auto & [ die, match_index ] : die_to_match_index)
     result.push_back(matches[match_index]);
   return result;
 }
