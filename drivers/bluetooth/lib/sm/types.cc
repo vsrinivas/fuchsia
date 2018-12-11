@@ -8,6 +8,29 @@
 
 namespace btlib {
 namespace sm {
+namespace {
+
+SecurityLevel SecurityLevelFromLinkKey(hci::LinkKeyType lk_type) {
+  switch (lk_type) {
+    case hci::LinkKeyType::kDebugCombination:
+    case hci::LinkKeyType::kUnauthenticatedCombination192:
+    case hci::LinkKeyType::kUnauthenticatedCombination256:
+      return SecurityLevel::kEncrypted;
+    case hci::LinkKeyType::kAuthenticatedCombination192:
+    case hci::LinkKeyType::kAuthenticatedCombination256:
+      return SecurityLevel::kAuthenticated;
+    default:
+      break;
+  }
+  return SecurityLevel::kNoSecurity;
+}
+
+bool IsSecureConnectionsKey(hci::LinkKeyType lk_type) {
+  return (lk_type == hci::LinkKeyType::kUnauthenticatedCombination256 ||
+          lk_type == hci::LinkKeyType::kAuthenticatedCombination256);
+}
+
+}  // namespace
 
 PairingFeatures::PairingFeatures() { std::memset(this, 0, sizeof(*this)); }
 
@@ -39,6 +62,18 @@ SecurityProperties::SecurityProperties()
 SecurityProperties::SecurityProperties(SecurityLevel level, size_t enc_key_size,
                                        bool secure_connections)
     : level_(level), enc_key_size_(enc_key_size), sc_(secure_connections) {}
+
+// All BR/EDR link keys, even those from legacy pairing or based on 192-bit EC
+// points, are stored in 128 bits, according to Core Spec v5.0, Vol 2, Part H
+// Section 3.1 "Key Types."
+SecurityProperties::SecurityProperties(hci::LinkKeyType lk_type)
+    : SecurityProperties(SecurityLevelFromLinkKey(lk_type),
+                         kMaxEncryptionKeySize,
+                         IsSecureConnectionsKey(lk_type)) {
+  ZX_DEBUG_ASSERT_MSG(
+      lk_type != hci::LinkKeyType::kChangedCombination,
+      "Can't infer security information from a Changed Combination Key");
+}
 
 std::string SecurityProperties::ToString() const {
   return fxl::StringPrintf(

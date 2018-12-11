@@ -7,6 +7,7 @@
 
 #include "garnet/drivers/bluetooth/lib/common/optional.h"
 #include "garnet/drivers/bluetooth/lib/common/uint128.h"
+#include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
 #include "garnet/drivers/bluetooth/lib/hci/link_key.h"
 #include "garnet/drivers/bluetooth/lib/sm/smp.h"
 
@@ -62,6 +63,17 @@ class SecurityProperties final {
   SecurityProperties(SecurityLevel level, size_t enc_key_size,
                      bool secure_connections);
 
+  // Build from a BR/EDR Link Key that resulted from pairing. |lk_type| should
+  // not be kChangedCombination, because that means that the link key is the
+  // same type as before it was changed.
+  //
+  // Legacy pairing keys will be considered to have security level kNoSecurity
+  // because legacy pairing is superceded by Secure Simple Pairing in Core Spec
+  // v2.1 + EDR in 2007. Backwards compatiblity is optional per v5.0, Vol 3,
+  // Part C, Section 5. Furthermore, the last Core Spec with only legacy pairing
+  // (v2.0 + EDR) is to be withdrawn by Bluetooth SIG on 2019-01-28.
+  explicit SecurityProperties(hci::LinkKeyType lk_type);
+
   SecurityLevel level() const { return level_; }
   size_t enc_key_size() const { return enc_key_size_; }
   bool secure_connections() const { return sc_; }
@@ -82,7 +94,7 @@ class SecurityProperties final {
   bool sc_;
 };
 
-// Represents a Long Term Key.
+// Represents a reusable long term key for a specific transport.
 class LTK final {
  public:
   LTK() = default;

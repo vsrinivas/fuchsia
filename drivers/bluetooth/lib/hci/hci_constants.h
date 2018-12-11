@@ -1342,6 +1342,42 @@ enum class AuthRequirements : uint8_t {
   kMITMGeneralBonding = 0x05,
 };
 
+// Key types for BR/EDR link encryption as reported to the host using the Link
+// Key Notification event upon pairing or key changes (v5.0 Vol 2, Part E,
+// Section 7.7.24).
+//
+// "Combination" refers to keys created from contributions of two devices
+// according to v5.0 Vol 2, Part H, Section 3.2.4 and as opposed to "unit" keys
+// that are generated on a single device but used by both parties (Section 3.2.3
+// and deprecated in Section 3.1).
+//
+// Authenticated keys were generated using a challenge-response scheme described
+// in v5.0 Vol 2, Part H, Section 5 to protect against man-in-the-middle (MITM)
+// attacks.
+//
+// When Secure Connections is used, the key exchange uses keys generated from
+// points on a 256-bit elliptic curve (v5.0 Vol 2, Part H, Section 7.1) and
+// authentication uses Secure Authentication procedures described in Section 5.
+enum class LinkKeyType : uint8_t {
+  // Legacy pairing (pre-v2.1) key types
+  kCombination = 0x00,
+  kLocalUnit = 0x01,
+  kRemoteUnit = 0x02,
+
+  // Secure Simple Pairing key types
+  kDebugCombination = 0x03,
+  kUnauthenticatedCombination192 = 0x04,
+  kAuthenticatedCombination192 = 0x05,
+
+  // Special value indicating key generated due to a Change Connection Link Key
+  // command. The actual key type is the same as before the change.
+  kChangedCombination = 0x06,
+
+  // Secure Simple Pairing with Secure Connections key types
+  kUnauthenticatedCombination256 = 0x07,
+  kAuthenticatedCombination256 = 0x08,
+};
+
 // Bitmask values for supported Packet Types
 // Used for HCI_Create_Connection and HCI_Change_Connection_Packet_Type
 enum class PacketTypeBits : uint16_t {
