@@ -70,45 +70,15 @@ void AttributeList::Accept(TreeVisitor& visitor) {
     }
 }
 
-void ArrayType::Accept(TreeVisitor& visitor) {
-    SourceElementMark sem(visitor, *this);
-    visitor.OnType(element_type);
-    visitor.OnConstant(element_count);
-}
-
-void VectorType::Accept(TreeVisitor& visitor) {
-    SourceElementMark sem(visitor, *this);
-    visitor.OnType(element_type);
-    if (maybe_element_count != nullptr) {
-        visitor.OnConstant(maybe_element_count);
-    }
-    visitor.OnNullability(nullability);
-}
-
-void StringType::Accept(TreeVisitor& visitor) {
-    SourceElementMark sem(visitor, *this);
-    if (maybe_element_count != nullptr) {
-        visitor.OnConstant(maybe_element_count);
-    }
-
-    visitor.OnNullability(nullability);
-}
-
-void HandleType::Accept(TreeVisitor& visitor) {
-    SourceElementMark sem(visitor, *this);
-    visitor.OnHandleSubtype(subtype);
-    visitor.OnNullability(nullability);
-}
-
-void RequestHandleType::Accept(TreeVisitor& visitor) {
+void TypeConstructor::Accept(TreeVisitor& visitor) {
     SourceElementMark sem(visitor, *this);
     visitor.OnCompoundIdentifier(identifier);
-    visitor.OnNullability(nullability);
-}
-
-void IdentifierType::Accept(TreeVisitor& visitor) {
-    SourceElementMark sem(visitor, *this);
-    visitor.OnCompoundIdentifier(identifier);
+    if (maybe_arg_type_ctor != nullptr)
+        visitor.OnTypeConstructor(maybe_arg_type_ctor);
+    if (maybe_handle_subtype != nullptr)
+        visitor.OnHandleSubtype(*maybe_handle_subtype);
+    if (maybe_size != nullptr)
+        visitor.OnConstant(maybe_size);
     visitor.OnNullability(nullability);
 }
 
@@ -118,8 +88,8 @@ void Using::Accept(TreeVisitor& visitor) {
     if (maybe_alias != nullptr) {
         visitor.OnIdentifier(maybe_alias);
     }
-    if (maybe_type != nullptr) {
-        visitor.OnIdentifierType(maybe_type);
+    if (maybe_type_ctor != nullptr) {
+        visitor.OnTypeConstructor(maybe_type_ctor);
     }
 }
 
@@ -128,7 +98,7 @@ void ConstDeclaration::Accept(TreeVisitor& visitor) {
     if (attributes != nullptr) {
         visitor.OnAttributeList(attributes);
     }
-    visitor.OnType(type);
+    visitor.OnTypeConstructor(type_ctor);
     visitor.OnIdentifier(identifier);
     visitor.OnConstant(constant);
 }
@@ -148,8 +118,8 @@ void EnumDeclaration::Accept(TreeVisitor& visitor) {
         visitor.OnAttributeList(attributes);
     }
     visitor.OnIdentifier(identifier);
-    if (maybe_subtype != nullptr) {
-        visitor.OnIdentifierType(maybe_subtype);
+    if (maybe_type_ctor != nullptr) {
+        visitor.OnTypeConstructor(maybe_type_ctor);
     }
     for (auto member = members.begin(); member != members.end(); ++member) {
         visitor.OnEnumMember(*member);
@@ -158,7 +128,7 @@ void EnumDeclaration::Accept(TreeVisitor& visitor) {
 
 void Parameter::Accept(TreeVisitor& visitor) {
     SourceElementMark sem(visitor, *this);
-    visitor.OnType(type);
+    visitor.OnTypeConstructor(type_ctor);
     visitor.OnIdentifier(identifier);
 }
 
@@ -209,7 +179,7 @@ void StructMember::Accept(TreeVisitor& visitor) {
     if (attributes != nullptr) {
         visitor.OnAttributeList(attributes);
     }
-    visitor.OnType(type);
+    visitor.OnTypeConstructor(type_ctor);
     visitor.OnIdentifier(identifier);
     if (maybe_default_value != nullptr) {
         visitor.OnConstant(maybe_default_value);
@@ -238,7 +208,7 @@ void TableMember::Accept(TreeVisitor& visitor) {
     }
     visitor.OnOrdinal(*ordinal);
     if (maybe_used != nullptr) {
-        visitor.OnType(maybe_used->type);
+        visitor.OnTypeConstructor(maybe_used->type_ctor);
         visitor.OnIdentifier(maybe_used->identifier);
         if (maybe_used->maybe_default_value != nullptr) {
             visitor.OnConstant(maybe_used->maybe_default_value);
@@ -264,7 +234,7 @@ void UnionMember::Accept(TreeVisitor& visitor) {
     if (attributes != nullptr) {
         visitor.OnAttributeList(attributes);
     }
-    visitor.OnType(type);
+    visitor.OnTypeConstructor(type_ctor);
     visitor.OnIdentifier(identifier);
 }
 
@@ -287,7 +257,7 @@ void XUnionMember::Accept(TreeVisitor& visitor) {
         visitor.OnAttributeList(attributes);
     }
 
-    visitor.OnType(type);
+    visitor.OnTypeConstructor(type_ctor);
     visitor.OnIdentifier(identifier);
 }
 

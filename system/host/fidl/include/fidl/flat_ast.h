@@ -32,6 +32,7 @@ struct PtrCompare {
     bool operator()(const T* left, const T* right) const { return *left < *right; }
 };
 
+class Typespace;
 struct Decl;
 class Library;
 
@@ -61,7 +62,6 @@ struct Name {
     bool is_anonymous() const { return name_from_source_ == nullptr; }
     const Library* library() const { return library_; }
     const SourceLocation& source_location() const {
-        assert(!is_anonymous());
         return *name_from_source_.get();
     }
     const StringView name_part() const {
@@ -71,17 +71,21 @@ struct Name {
     }
 
     bool operator==(const Name& other) const {
-        // TODO(pascallouis): Why are we lenient, and allow a name comparison,
-        // rather than require the more stricter pointer equality here?
-        if (LibraryName(library_, ".") != LibraryName(other.library_, "."))
+        // can't use the library name yet, not necesserily compiled!
+        auto library_ptr = reinterpret_cast<uintptr_t>(library_);
+        auto other_library_ptr = reinterpret_cast<uintptr_t>(other.library_);
+        if (library_ptr != other_library_ptr)
             return false;
         return name_part() == other.name_part();
     }
     bool operator!=(const Name& other) const { return !operator==(other); }
 
     bool operator<(const Name& other) const {
-        if (LibraryName(library_, ".") != LibraryName(other.library_, "."))
-            return LibraryName(library_, ".") < LibraryName(other.library_, ".");
+        // can't use the library name yet, not necesserily compiled!
+        auto library_ptr = reinterpret_cast<uintptr_t>(library_);
+        auto other_library_ptr = reinterpret_cast<uintptr_t>(other.library_);
+        if (library_ptr != other_library_ptr)
+            return library_ptr < other_library_ptr;
         return name_part() < other.name_part();
     }
 
@@ -445,6 +449,12 @@ struct Decl {
     bool compiled = false;
 };
 
+struct TypeDecl : public Decl {
+    TypeDecl(Kind kind, std::unique_ptr<raw::AttributeList> attributes, Name name)
+        : Decl(kind, std::move(attributes), std::move(name)) {}
+    TypeShape typeshape;
+};
+
 struct Type {
     virtual ~Type() {}
 
@@ -458,14 +468,12 @@ struct Type {
         kIdentifier,
     };
 
-    explicit Type(Kind kind, uint32_t size, types::Nullability nullability)
-        : kind(kind), size(size), nullability(nullability) {}
+    explicit Type(Kind kind, types::Nullability nullability, TypeShape shape)
+        : kind(kind), nullability(nullability), shape(shape) {}
 
     const Kind kind;
-    // Set at construction time for most types. Identifier types get
-    // this set later, during compilation.
-    uint32_t size;
     const types::Nullability nullability;
+    TypeShape shape;
 
     // Comparison helper object.
     class Comparison {
@@ -510,63 +518,63 @@ struct Type {
 };
 
 struct ArrayType : public Type {
-    ArrayType(SourceLocation name, std::unique_ptr<Type> element_type,
-              std::unique_ptr<Constant> element_count)
-        : Type(Kind::kArray, 0u, types::Nullability::kNonnullable), name(name),
-          element_type(std::move(element_type)),
-          element_count(std::move(element_count)) {}
+    ArrayType(const Type* element_type, const Size* element_count)
+        : Type(
+              Kind::kArray,
+              types::Nullability::kNonnullable,
+              Shape(element_type->shape, element_count->value)),
+          element_type(element_type), element_count(element_count) {}
 
-    SourceLocation name;
-    std::unique_ptr<Type> element_type;
-    std::unique_ptr<Constant> element_count;
+    const Type* element_type;
+    const Size* element_count;
 
     Comparison Compare(const Type& other) const override {
         const auto& o = static_cast<const ArrayType&>(other);
         return Type::Compare(o)
-            .Compare(static_cast<const Size&>(element_count->Value()).value,
-                     static_cast<const Size&>(o.element_count->Value()).value)
+            .Compare(element_count->value, o.element_count->value)
             .Compare(*element_type, *o.element_type);
     }
+
+    static TypeShape Shape(TypeShape element, uint32_t count);
 };
 
 struct VectorType : public Type {
-    VectorType(SourceLocation name, std::unique_ptr<Type> element_type,
-               std::unique_ptr<Constant> element_count, types::Nullability nullability)
-        : Type(Kind::kVector, 16u, nullability), name(name), element_type(std::move(element_type)),
-          element_count(std::move(element_count)) {}
+    VectorType(const Type* element_type, const Size* element_count, types::Nullability nullability)
+        : Type(Kind::kVector, nullability, Shape(element_type->shape, element_count->value)),
+          element_type(element_type), element_count(element_count) {}
 
-    SourceLocation name;
-    std::unique_ptr<Type> element_type;
-    std::unique_ptr<Constant> element_count;
+    const Type* element_type;
+    const Size* element_count;
 
     Comparison Compare(const Type& other) const override {
         const auto& o = static_cast<const VectorType&>(other);
         return Type::Compare(o)
-            .Compare(static_cast<const Size&>(element_count->Value()).value,
-                     static_cast<const Size&>(o.element_count->Value()).value)
+            .Compare(element_count->value, o.element_count->value)
             .Compare(*element_type, *o.element_type);
     }
+
+    static TypeShape Shape(TypeShape element, uint32_t max_element_count);
 };
 
 struct StringType : public Type {
-    StringType(SourceLocation name, std::unique_ptr<Constant> max_size,
-               types::Nullability nullability)
-        : Type(Kind::kString, 16u, nullability), name(name), max_size(std::move(max_size)) {}
+    StringType(const Size* max_size, types::Nullability nullability)
+        : Type(Kind::kString, nullability, Shape(max_size->value)), max_size(max_size) {}
 
-    SourceLocation name;
-    std::unique_ptr<Constant> max_size;
+    const Size* max_size;
 
     Comparison Compare(const Type& other) const override {
         const auto& o = static_cast<const StringType&>(other);
         return Type::Compare(o)
-            .Compare(static_cast<const Size&>(max_size->Value()).value,
-                     static_cast<const Size&>(o.max_size->Value()).value);
+            .Compare(max_size->value, o.max_size->value);
     }
+
+    static TypeShape Shape(uint32_t max_length);
 };
 
 struct HandleType : public Type {
     HandleType(types::HandleSubtype subtype, types::Nullability nullability)
-        : Type(Kind::kHandle, 4u, nullability), subtype(subtype) {}
+        : Type(Kind::kHandle, nullability, Shape()),
+          subtype(subtype) {}
 
     const types::HandleSubtype subtype;
 
@@ -575,47 +583,17 @@ struct HandleType : public Type {
         return Type::Compare(o)
             .Compare(subtype, o.subtype);
     }
-};
 
-struct RequestHandleType : public Type {
-    RequestHandleType(Name name, types::Nullability nullability)
-        : Type(Kind::kRequestHandle, 4u, nullability), name(std::move(name)) {}
-
-    Name name;
-
-    Comparison Compare(const Type& other) const override {
-        const auto& o = static_cast<const RequestHandleType&>(other);
-        return Type::Compare(o)
-            .Compare(name, o.name);
-    }
+    static TypeShape Shape();
 };
 
 struct PrimitiveType : public Type {
-    static uint32_t SubtypeSize(types::PrimitiveSubtype subtype) {
-        switch (subtype) {
-        case types::PrimitiveSubtype::kBool:
-        case types::PrimitiveSubtype::kInt8:
-        case types::PrimitiveSubtype::kUint8:
-            return 1u;
-
-        case types::PrimitiveSubtype::kInt16:
-        case types::PrimitiveSubtype::kUint16:
-            return 2u;
-
-        case types::PrimitiveSubtype::kFloat32:
-        case types::PrimitiveSubtype::kInt32:
-        case types::PrimitiveSubtype::kUint32:
-            return 4u;
-
-        case types::PrimitiveSubtype::kFloat64:
-        case types::PrimitiveSubtype::kInt64:
-        case types::PrimitiveSubtype::kUint64:
-            return 8u;
-        }
-    }
 
     explicit PrimitiveType(types::PrimitiveSubtype subtype)
-        : Type(Kind::kPrimitive, SubtypeSize(subtype), types::Nullability::kNonnullable),
+        : Type(
+            Kind::kPrimitive,
+            types::Nullability::kNonnullable,
+            Shape(subtype)),
           subtype(subtype) {}
 
     types::PrimitiveSubtype subtype;
@@ -625,19 +603,59 @@ struct PrimitiveType : public Type {
         return Type::Compare(o)
             .Compare(subtype, o.subtype);
     }
+
+    static TypeShape Shape(types::PrimitiveSubtype subtype);
+    static uint32_t SubtypeSize(types::PrimitiveSubtype subtype);
 };
 
 struct IdentifierType : public Type {
-    IdentifierType(Name name, types::Nullability nullability)
-        : Type(Kind::kIdentifier, 0u, nullability), name(std::move(name)) {}
+    IdentifierType(Name name, types::Nullability nullability, const TypeDecl* type_decl, TypeShape shape)
+        : Type(Kind::kIdentifier, nullability, shape),
+          name(std::move(name)), type_decl(type_decl) {}
 
     Name name;
+    const TypeDecl* type_decl;
+
+    Comparison Compare(const Type& other) const override {
+        const auto& o = static_cast<const IdentifierType&>(other);
+        return Type::Compare(o)
+            .Compare(name, o.name);
+    }
+};
+
+struct RequestHandleType : public Type {
+    RequestHandleType(const IdentifierType* interface_type, types::Nullability nullability)
+        : Type(Kind::kRequestHandle, nullability, HandleType::Shape()),
+          interface_type(interface_type) {}
+
+    const IdentifierType* interface_type;
 
     Comparison Compare(const Type& other) const override {
         const auto& o = static_cast<const RequestHandleType&>(other);
         return Type::Compare(o)
-            .Compare(name, o.name);
+            .Compare(*interface_type, *o.interface_type);
     }
+};
+
+struct TypeConstructor {
+    TypeConstructor(Name name, std::unique_ptr<TypeConstructor> maybe_arg_type_ctor,
+               std::unique_ptr<types::HandleSubtype> maybe_handle_subtype,
+               std::unique_ptr<Constant> maybe_size, types::Nullability nullability)
+        : name(std::move(name)), maybe_arg_type_ctor(std::move(maybe_arg_type_ctor)),
+          maybe_handle_subtype(std::move(maybe_handle_subtype)),
+          maybe_size(std::move(maybe_size)), nullability(nullability) {}
+
+    // Set during construction.
+    const Name name;
+    const std::unique_ptr<TypeConstructor> maybe_arg_type_ctor;
+    const std::unique_ptr<types::HandleSubtype> maybe_handle_subtype;
+    const std::unique_ptr<Constant> maybe_size;
+    const types::Nullability nullability;
+
+    // Set during compilation.
+    bool compiling = false;
+    bool compiled = false;
+    const Type* type = nullptr;
 };
 
 struct Using {
@@ -649,15 +667,16 @@ struct Using {
 };
 
 struct Const : public Decl {
-    Const(std::unique_ptr<raw::AttributeList> attributes, Name name, std::unique_ptr<Type> type,
+    Const(std::unique_ptr<raw::AttributeList> attributes, Name name,
+          std::unique_ptr<TypeConstructor> type_ctor,
           std::unique_ptr<Constant> value)
-        : Decl(Kind::kConst, std::move(attributes), std::move(name)), type(std::move(type)),
+        : Decl(Kind::kConst, std::move(attributes), std::move(name)), type_ctor(std::move(type_ctor)),
           value(std::move(value)) {}
-    std::unique_ptr<Type> type;
+    std::unique_ptr<TypeConstructor> type_ctor;
     std::unique_ptr<Constant> value;
 };
 
-struct Enum : public Decl {
+struct Enum : public TypeDecl {
     struct Member {
         Member(SourceLocation name, std::unique_ptr<Constant> value, std::unique_ptr<raw::AttributeList> attributes)
             : name(name), value(std::move(value)), attributes(std::move(attributes)) {}
@@ -667,30 +686,29 @@ struct Enum : public Decl {
     };
 
     Enum(std::unique_ptr<raw::AttributeList> attributes, Name name,
-         std::unique_ptr<raw::IdentifierType> maybe_subtype,
+         std::unique_ptr<TypeConstructor> subtype_ctor,
          std::vector<Member> members)
-        : Decl(Kind::kEnum, std::move(attributes), std::move(name)),
-          maybe_subtype(std::move(maybe_subtype)),
+        : TypeDecl(Kind::kEnum, std::move(attributes), std::move(name)),
+          subtype_ctor(std::move(subtype_ctor)),
           members(std::move(members)) {}
 
     // Set during construction.
-    std::unique_ptr<raw::IdentifierType> maybe_subtype;
+    std::unique_ptr<TypeConstructor> subtype_ctor;
     std::vector<Member> members;
 
     // Set during compilation.
     const PrimitiveType* type = nullptr;
-    TypeShape typeshape;
 };
 
-struct Struct : public Decl {
+struct Struct : public TypeDecl {
     struct Member {
-        Member(std::unique_ptr<Type> type, SourceLocation name,
+        Member(std::unique_ptr<TypeConstructor> type_ctor, SourceLocation name,
                std::unique_ptr<Constant> maybe_default_value,
                std::unique_ptr<raw::AttributeList> attributes)
-            : type(std::move(type)), name(std::move(name)),
+            : type_ctor(std::move(type_ctor)), name(std::move(name)),
               maybe_default_value(std::move(maybe_default_value)),
               attributes(std::move(attributes)) {}
-        std::unique_ptr<Type> type;
+        std::unique_ptr<TypeConstructor> type_ctor;
         SourceLocation name;
         std::unique_ptr<Constant> maybe_default_value;
         std::unique_ptr<raw::AttributeList> attributes;
@@ -699,19 +717,21 @@ struct Struct : public Decl {
 
     Struct(std::unique_ptr<raw::AttributeList> attributes, Name name,
            std::vector<Member> members, bool anonymous = false)
-        : Decl(Kind::kStruct, std::move(attributes), std::move(name)),
+        : TypeDecl(Kind::kStruct, std::move(attributes), std::move(name)),
           members(std::move(members)), anonymous(anonymous) {
     }
 
     std::vector<Member> members;
     const bool anonymous;
-    TypeShape typeshape;
     bool recursive = false;
+
+    static TypeShape Shape(std::vector<FieldShape*>* fields, uint32_t extra_handles = 0u);
 };
 
-struct Table : public Decl {
+struct Table : public TypeDecl {
     struct Member {
-        Member(std::unique_ptr<raw::Ordinal> ordinal, std::unique_ptr<Type> type, SourceLocation name,
+        Member(std::unique_ptr<raw::Ordinal> ordinal, std::unique_ptr<TypeConstructor> type,
+               SourceLocation name,
                std::unique_ptr<Constant> maybe_default_value,
                std::unique_ptr<raw::AttributeList> attributes)
             : ordinal(std::move(ordinal)),
@@ -722,13 +742,13 @@ struct Table : public Decl {
             : ordinal(std::move(ordinal)) {}
         std::unique_ptr<raw::Ordinal> ordinal;
         struct Used {
-            Used(std::unique_ptr<Type> type, SourceLocation name,
+            Used(std::unique_ptr<TypeConstructor> type_ctor, SourceLocation name,
                  std::unique_ptr<Constant> maybe_default_value,
                  std::unique_ptr<raw::AttributeList> attributes)
-                : type(std::move(type)), name(std::move(name)),
+                : type_ctor(std::move(type_ctor)), name(std::move(name)),
                   maybe_default_value(std::move(maybe_default_value)),
                   attributes(std::move(attributes)) {}
-            std::unique_ptr<Type> type;
+            std::unique_ptr<TypeConstructor> type_ctor;
             SourceLocation name;
             std::unique_ptr<Constant> maybe_default_value;
             std::unique_ptr<raw::AttributeList> attributes;
@@ -738,55 +758,64 @@ struct Table : public Decl {
     };
 
     Table(std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Member> members)
-        : Decl(Kind::kTable, std::move(attributes), std::move(name)), members(std::move(members)) {
-    }
+        : TypeDecl(Kind::kTable, std::move(attributes), std::move(name)),
+                   members(std::move(members)) {}
 
     std::vector<Member> members;
-    TypeShape typeshape;
     bool recursive = false;
+
+    static TypeShape Shape(std::vector<TypeShape*>* fields, uint32_t extra_handles = 0u);
 };
 
-struct Union : public Decl {
+struct Union : public TypeDecl {
     struct Member {
-        Member(std::unique_ptr<Type> type, SourceLocation name, std::unique_ptr<raw::AttributeList> attributes)
-            : type(std::move(type)), name(std::move(name)), attributes(std::move(attributes)) {}
-        std::unique_ptr<Type> type;
+        Member(std::unique_ptr<TypeConstructor> type_ctor, SourceLocation name,
+               std::unique_ptr<raw::AttributeList> attributes)
+            : type_ctor(std::move(type_ctor)), name(std::move(name)),
+              attributes(std::move(attributes)) {}
+        std::unique_ptr<TypeConstructor> type_ctor;
         SourceLocation name;
         std::unique_ptr<raw::AttributeList> attributes;
         FieldShape fieldshape;
     };
 
     Union(std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Member> members)
-        : Decl(Kind::kUnion, std::move(attributes), std::move(name)), members(std::move(members)) {}
+        : TypeDecl(Kind::kUnion, std::move(attributes), std::move(name)),
+                   members(std::move(members)) {}
 
     std::vector<Member> members;
-    TypeShape typeshape;
     // The offset of each of the union members is the same, so store
     // it here as well.
     FieldShape membershape;
     bool recursive = false;
+
+    static TypeShape Shape(const std::vector<flat::Union::Member>& members);
 };
 
-struct XUnion : public Decl {
+struct XUnion : public TypeDecl {
     struct Member {
-        Member(std::unique_ptr<raw::Ordinal> ordinal, std::unique_ptr<Type> type, SourceLocation name, std::unique_ptr<raw::AttributeList> attributes)
-            : ordinal(std::move(ordinal)), type(std::move(type)), name(std::move(name)), attributes(std::move(attributes)) {}
+        Member(std::unique_ptr<raw::Ordinal> ordinal, std::unique_ptr<TypeConstructor> type_ctor,
+               SourceLocation name, std::unique_ptr<raw::AttributeList> attributes)
+            : ordinal(std::move(ordinal)), type_ctor(std::move(type_ctor)), name(std::move(name)),
+              attributes(std::move(attributes)) {}
         std::unique_ptr<raw::Ordinal> ordinal;
-        std::unique_ptr<Type> type;
+        std::unique_ptr<TypeConstructor> type_ctor;
         SourceLocation name;
         std::unique_ptr<raw::AttributeList> attributes;
         FieldShape fieldshape;
     };
 
     XUnion(std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Member> members)
-        : Decl(Kind::kXUnion, std::move(attributes), std::move(name)), members(std::move(members)) {}
+        : TypeDecl(Kind::kXUnion, std::move(attributes), std::move(name)), members(std::move(members)) {}
 
     std::vector<Member> members;
     TypeShape typeshape;
     bool recursive = false;
+
+    static TypeShape Shape(const std::vector<flat::XUnion::Member>& members, uint32_t extra_handles = 0u);
 };
 
-struct Interface : public Decl {
+struct Interface : public TypeDecl {
     struct Method {
         Method(Method&&) = default;
         Method& operator=(Method&&) = default;
@@ -816,7 +845,7 @@ struct Interface : public Decl {
 
     Interface(std::unique_ptr<raw::AttributeList> attributes, Name name,
               std::vector<Name> superinterfaces, std::vector<Method> methods)
-        : Decl(Kind::kInterface, std::move(attributes), std::move(name)),
+        : TypeDecl(Kind::kInterface, std::move(attributes), std::move(name)),
           superinterfaces(std::move(superinterfaces)), methods(std::move(methods)) {}
 
     std::vector<Name> superinterfaces;
@@ -826,6 +855,39 @@ struct Interface : public Decl {
     std::vector<const Method*> all_methods;
 };
 
+class TypeTemplate {
+public:
+    TypeTemplate(Name name, Typespace* typespace, ErrorReporter* error_reporter)
+        : typespace_(typespace), name_(std::move(name)), error_reporter_(error_reporter) {}
+
+    TypeTemplate(TypeTemplate&& type_template) = default;
+
+    virtual ~TypeTemplate() = default;
+
+    const Name* name() const { return &name_; }
+
+    virtual bool Create(const SourceLocation& location,
+                        const Type* arg_type,
+                        const types::HandleSubtype* handle_subtype,
+                        const Size* size,
+                        types::Nullability nullability,
+                        std::unique_ptr<Type>* out_type) const = 0;
+
+protected:
+    bool MustBeParameterized(const SourceLocation& location) const { return Fail(location, "must be parametrized"); }
+    bool MustHaveSize(const SourceLocation& location) const { return Fail(location, "must have size"); }
+    bool CannotBeParameterized(const SourceLocation& location) const { return Fail(location, "cannot be parametrized"); }
+    bool CannotHaveSize(const SourceLocation& location) const { return Fail(location, "cannot have size"); }
+    bool CannotBeNullable(const SourceLocation& location) const { return Fail(location, "cannot be nullable"); }
+    bool Fail(const SourceLocation& location, const std::string& content) const;
+
+    Typespace* typespace_;
+
+private:
+    Name name_;
+    ErrorReporter* error_reporter_;
+};
+
 // Typespace provides builders for all types (e.g. array, vector, string), and
 // ensures canonicalization, i.e. the same type is represented by one object,
 // shared amongst all uses of said type. For instance, while the text
@@ -833,102 +895,25 @@ struct Interface : public Decl {
 // the same type.
 class Typespace {
 public:
-    enum LookupMode {
-        kNoForwardReferences,
-        kAllowForwardReferences,
-    };
+    explicit Typespace(ErrorReporter* error_reporter)
+        : error_reporter_(error_reporter) {}
 
-    // Lookup looks up a type by its name, or alias, and returns the type
-    // which corresponds, whilst respecting the nullability qualifier.
-    // If the type exists, returns the type, otherwise returns nullptr.
-    //
-    // If forward references are allowed, a placeholder type is returned
-    // if the type does not exist yet. This allows forward references to be
-    // made, and later resolved.
-    //
-    // See also RegisterDecl, RegisterAlias, and
-    // EnsureAllTypesHaveBeenResolved.
-    Type* Lookup(const flat::Name& name, types::Nullability nullability,
-                 LookupMode lookup_mode);
+    bool Create(const flat::Name& name,
+                const Type* arg_type,
+                const types::HandleSubtype* handle_subtype,
+                const Size* size,
+                types::Nullability nullability,
+                const Type** out_type);
 
-    // ArrayType creates or returns an array type for the |element_type|,
-    // and |element_count|.
-    ArrayType* ArrayType(Type* element_type, Size element_count);
-
-    // VectorType creates or returns a vector type for the |element_type|,
-    // |max_size|, and |nullability|.
-    VectorType* VectorType(Type* element_type, Size max_size,
-                           types::Nullability nullability);
-
-    // StringType creates or returns a string type for |max_size|,
-    // and |nullability|.
-    StringType* StringType(Size max_size, types::Nullability nullability);
-
-    // HandleType creates or returns a handle type for the |subtype|,
-    // and |nullability|.
-    HandleType* HandleType(types::HandleSubtype subtype, types::Nullability nullability);
-
-    // RequestType creates or returns an interface request type for the |name|,
-    // and |nullability|.
-    RequestHandleType* RequestType(Name name, types::Nullability nullability);
-
-    // RegisterDecl registers a declaration under a specific name. Registering
-    // a declaration resolves all prior references to this named type, i.e.
-    // earlier lookups from forward references.
-    // This method returns true if there was no name conflict, false otherwise.
-    bool RegisterDecl(Name name, Decl* decl);
-
-    // RegisterAlias registers a type alias, such as `using int = int32;`. An
-    // aliased type can be referenced by either name, with no behavioral
-    // difference.
-    // This method returns true if there was no name conflict, false otherwise.
-    bool RegisterAlias(Name name, Name alias);
-
-    // EnsureAllTypesHaveBeenResolved checks that all forward references have
-    // been propertly resolved.
-    bool EnsureAllTypesHaveBeenResolved();
+    void AddTemplate(std::unique_ptr<TypeTemplate> type_template);
 
     // BoostrapRootTypes creates a instance with all primitive types. It is
     // meant to be used as the top-level types lookup mechanism, providing
     // definitional meaning to names such as `int64`, or `bool`.
-    static Typespace RootTypes() {
-        Typespace root_typespace;
-        ByName primitive_types;
-        auto add = [&](const std::string name, types::PrimitiveSubtype subtype) {
-            root_typespace.owned_names_.push_back(
-                std::make_unique<Name>(nullptr, name));
-            primitive_types.emplace(
-                root_typespace.owned_names_.back().get(),
-                std::make_unique<PrimitiveType>(subtype));
-        };
-
-        add("bool", types::PrimitiveSubtype::kBool);
-
-        add("int8", types::PrimitiveSubtype::kInt8);
-        add("int16", types::PrimitiveSubtype::kInt16);
-        add("int32", types::PrimitiveSubtype::kInt32);
-        add("int64", types::PrimitiveSubtype::kInt64);
-        add("uint8", types::PrimitiveSubtype::kUint8);
-        add("uint16", types::PrimitiveSubtype::kUint16);
-        add("uint32", types::PrimitiveSubtype::kUint32);
-        add("uint64", types::PrimitiveSubtype::kUint64);
-
-        add("float32", types::PrimitiveSubtype::kFloat32);
-        add("float64", types::PrimitiveSubtype::kFloat64);
-
-        root_typespace.named_types_.emplace(
-            types::Nullability::kNonnullable, std::move(primitive_types));
-        return root_typespace;
-    }
+    static Typespace RootTypes(ErrorReporter* error_reporter);
 
 private:
-    // CreateForwardDeclaredType creates a placeholder for the named type. As
-    // the name suggest, this type must be resolved by registering a named type
-    // for it.
-    //
-    // See also RegisterDecl, RegisterAlias, and
-    // EnsureAllTypesHaveBeenResolved.
-    Type* CreateForwardDeclaredType(const flat::Name& name, types::Nullability nullability);
+    const TypeTemplate* LookupTemplate(const flat::Name& name) const;
 
     struct cmpName {
         bool operator()(const flat::Name* a, const flat::Name* b) const {
@@ -936,24 +921,10 @@ private:
         }
     };
 
-    using BySize = std::map<const Size, std::unique_ptr<Type>>;
-    using ByNullability = std::map<types::Nullability, std::unique_ptr<Type>>;
-    using ByName = std::map<const flat::Name*, std::unique_ptr<Type>, cmpName>;
-    using ByHandleSubtype = std::map<types::HandleSubtype, std::unique_ptr<Type>>;
+    std::map<const flat::Name*, std::unique_ptr<TypeTemplate>, cmpName> templates_;
+    std::vector<std::unique_ptr<Type>> types_;
 
-    using ByNullabilityThenBySize = std::map<types::Nullability, BySize>;
-    using ByNullabilityThenByName = std::map<types::Nullability, ByName>;
-    using ByNullabilityThenByHandleSubtype = std::map<types::Nullability, ByHandleSubtype>;
-
-    std::map<const Type*, BySize> array_types_;
-    std::map<const Type*, ByNullabilityThenBySize> vector_types_;
-    ByNullabilityThenBySize string_types_;
-    ByNullabilityThenByHandleSubtype handle_types_;
-    ByNullabilityThenByName request_types_;
-    ByNullabilityThenByName named_types_;
-    ByName aliases_;
-
-    std::vector<std::unique_ptr<Name>> owned_names_;
+    ErrorReporter* error_reporter_;
 };
 
 // AttributeSchema defines a schema for attributes. This includes:
@@ -1105,8 +1076,9 @@ private:
 
     bool ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant, SourceLocation location,
                          std::unique_ptr<Constant>* out_constant);
-    bool ConsumeType(std::unique_ptr<raw::Type> raw_type, SourceLocation location,
-                     std::unique_ptr<Type>* out_type);
+    bool ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> raw_type_ctor,
+                                SourceLocation location,
+                                std::unique_ptr<TypeConstructor>* out_type);
 
     bool ConsumeUsing(std::unique_ptr<raw::Using> using_directive);
     bool ConsumeTypeAlias(std::unique_ptr<raw::Using> using_directive);
@@ -1125,16 +1097,12 @@ private:
     bool TypeCanBeConst(const Type* type);
     const Type* TypeResolve(const Type* type);
     bool TypeIsConvertibleTo(const Type* from_type, const Type* to_type);
-    std::unique_ptr<IdentifierType> IdentifierTypeForDecl(const Decl* decl, types::Nullability nullability);
+    std::unique_ptr<TypeConstructor> IdentifierTypeForDecl(const Decl* decl, types::Nullability nullability);
 
     // Given a const declaration of the form
     //     const type foo = name;
     // return the declaration corresponding to name.
-    Decl* LookupConstant(const Type* type, const Name& name);
-
-    // Given a name, checks whether that name corresponds to a primitive type. If
-    // so, returns the type. Otherwise, returns nullptr.
-    const PrimitiveType* LookupPrimitiveType(const Name& name) const;
+    Decl* LookupConstant(const TypeConstructor* type_ctor, const Name& name);
 
     // Given a name, checks whether that name corresponds to a type alias. If
     // so, returns the type. Otherwise, returns nullptr.
@@ -1148,7 +1116,7 @@ private:
         kIgnoreNullable,
         kIncludeNullable,
     };
-    Decl* LookupDeclByType(const flat::Type* type, LookupOption option) const;
+    Decl* DependentDeclOfTypeConstructor(const TypeConstructor* type_ctor, LookupOption option) const;
 
     bool DeclDependencies(Decl* decl, std::set<Decl*>* out_edges);
 
@@ -1168,14 +1136,7 @@ private:
     // information for the type. In particular, we validate that
     // optional identifier types refer to things that can in fact be
     // nullable (ie not enums).
-    bool CompileArrayType(ArrayType* array_type, TypeShape* out_type_metadata);
-    bool CompileVectorType(VectorType* vector_type, TypeShape* out_type_metadata);
-    bool CompileStringType(StringType* string_type, TypeShape* out_type_metadata);
-    bool CompileHandleType(HandleType* handle_type, TypeShape* out_type_metadata);
-    bool CompileRequestHandleType(RequestHandleType* request_type, TypeShape* out_type_metadata);
-    bool CompilePrimitiveType(PrimitiveType* primitive_type, TypeShape* out_type_metadata);
-    bool CompileIdentifierType(IdentifierType* identifier_type, TypeShape* out_type_metadata);
-    bool CompileType(Type* type, TypeShape* out_type_metadata);
+    bool CompileTypeConstructor(TypeConstructor* type, TypeShape* out_type_metadata);
 
     bool ResolveConstant(Constant* constant, const Type* type);
     bool ResolveIdentifierConstant(IdentifierConstant* identifier_constant, const Type* type);
@@ -1184,7 +1145,11 @@ private:
     template <typename MemberType>
     bool ValidateEnumMembers(Enum* enum_decl);
 
+    bool VerifyDeclAttributes(Decl* decl);
+
 public:
+    bool CompileDecl(Decl* decl);
+
     // Returns nullptr when the |name| cannot be resolved to a
     // Name. Otherwise it returns the declaration.
     Decl* LookupDeclByName(const Name& name) const;

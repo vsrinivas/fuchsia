@@ -116,57 +116,10 @@ public:
         element->Accept(*this);
     }
 
-    virtual void OnType(std::unique_ptr<Type> const& element) {
-        fidl::raw::Type::Kind kind = element->kind;
-        switch (kind) {
-        case Type::Kind::kArray: {
-            DISPATCH_TO(ArrayType, Type, element);
-            break;
-        }
-        case Type::Kind::kVector: {
-            DISPATCH_TO(VectorType, Type, element);
-            break;
-        }
-        case Type::Kind::kString: {
-            DISPATCH_TO(StringType, Type, element);
-            break;
-        }
-        case Type::Kind::kHandle: {
-            DISPATCH_TO(HandleType, Type, element);
-            break;
-        }
-        case Type::Kind::kRequestHandle: {
-            DISPATCH_TO(RequestHandleType, Type, element);
-            break;
-        }
-        case Type::Kind::kIdentifier: {
-            DISPATCH_TO(IdentifierType, Type, element);
-            break;
-        }
-        default:
-            // Die!
-            break;
-        }
-        return;
-    }
-    virtual void OnArrayType(std::unique_ptr<ArrayType> const& element) {
+    virtual void OnTypeConstructor(std::unique_ptr<TypeConstructor> const& element) {
         element->Accept(*this);
     }
-    virtual void OnVectorType(std::unique_ptr<VectorType> const& element) {
-        element->Accept(*this);
-    }
-    virtual void OnStringType(std::unique_ptr<StringType> const& element) {
-        element->Accept(*this);
-    }
-    virtual void OnHandleType(std::unique_ptr<HandleType> const& element) {
-        element->Accept(*this);
-    }
-    virtual void OnRequestHandleType(std::unique_ptr<RequestHandleType> const& element) {
-        element->Accept(*this);
-    }
-    virtual void OnIdentifierType(std::unique_ptr<IdentifierType> const& element) {
-        element->Accept(*this);
-    }
+
     virtual void OnUsing(std::unique_ptr<Using> const& element) {
         element->Accept(*this);
     }

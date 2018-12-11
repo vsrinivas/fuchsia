@@ -335,7 +335,7 @@ int main(int argc, char* argv[]) {
 
     // Ready. Set. Go.
     fidl::ErrorReporter error_reporter;
-    auto typespace = fidl::flat::Typespace::RootTypes();
+    auto typespace = fidl::flat::Typespace::RootTypes(&error_reporter);
     auto status = compile(&error_reporter,
                           &typespace,
                           library_name,

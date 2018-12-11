@@ -178,6 +178,32 @@ std::string NameRawLiteralKind(raw::Literal::Kind kind) {
     }
 }
 
+void NameFlatTypeConstructorHelper(std::ostringstream& buf,
+                                   const flat::TypeConstructor* type_ctor) {
+    buf << NameName(type_ctor->name, ".", "/");
+    if (type_ctor->maybe_arg_type_ctor) {
+        buf << "<";
+        NameFlatTypeConstructorHelper(buf, type_ctor->maybe_arg_type_ctor.get());
+        buf << ">";
+    }
+    if (type_ctor->maybe_size) {
+        auto size = static_cast<const flat::Size&>(type_ctor->maybe_size->Value());
+        if (size != flat::Size::Max()) {
+            buf << ":";
+            buf << size.value;
+        }
+    }
+    if (type_ctor->nullability == types::Nullability::kNullable) {
+        buf << "?";
+    }
+}
+
+std::string NameFlatTypeConstructor(const flat::TypeConstructor* type_ctor) {
+    std::ostringstream buf;
+    NameFlatTypeConstructorHelper(buf, type_ctor);
+    return buf.str();
+}
+
 std::string NameFlatTypeKind(flat::Type::Kind kind) {
     switch (kind) {
     case flat::Type::Kind::kArray:
@@ -280,34 +306,31 @@ void NameFlatTypeHelper(std::ostringstream& buf, const flat::Type* type) {
     case flat::Type::Kind::kArray: {
         auto array_type = static_cast<const flat::ArrayType*>(type);
         buf << "array<";
-        NameFlatTypeHelper(buf, array_type->element_type.get());
+        NameFlatTypeHelper(buf, array_type->element_type);
         buf << ">";
-        auto element_count = static_cast<const flat::Size&>(array_type->element_count->Value());
-        if (element_count != flat::Size::Max()) {
+        if (*array_type->element_count != flat::Size::Max()) {
             buf << ":";
-            buf << element_count.value;
+            buf << array_type->element_count->value;
         }
         break;
     }
     case flat::Type::Kind::kVector: {
         auto vector_type = static_cast<const flat::VectorType*>(type);
         buf << "vector<";
-        NameFlatTypeHelper(buf, vector_type->element_type.get());
+        NameFlatTypeHelper(buf, vector_type->element_type);
         buf << ">";
-        auto element_count = static_cast<const flat::Size&>(vector_type->element_count->Value());
-        if (element_count != flat::Size::Max()) {
+        if (*vector_type->element_count != flat::Size::Max()) {
             buf << ":";
-            buf << element_count.value;
+            buf << vector_type->element_count->value;
         }
         break;
     }
     case flat::Type::Kind::kString: {
         auto string_type = static_cast<const flat::StringType*>(type);
         buf << "string";
-        auto max_size = static_cast<const flat::Size&>(string_type->max_size->Value());
-        if (max_size != flat::Size::Max()) {
+        if (*string_type->max_size != flat::Size::Max()) {
             buf << ":";
-            buf << max_size.value;
+            buf << string_type->max_size->value;
         }
         break;
     }
@@ -324,7 +347,7 @@ void NameFlatTypeHelper(std::ostringstream& buf, const flat::Type* type) {
     case flat::Type::Kind::kRequestHandle: {
         auto request_handle_type = static_cast<const flat::RequestHandleType*>(type);
         buf << "request<";
-        buf << NameName(request_handle_type->name, ".", "/");
+        buf << NameName(request_handle_type->interface_type->name, ".", "/");
         buf << ">";
         break;
     }
@@ -368,8 +391,7 @@ std::string NameFlatCType(const flat::Type* type, flat::Decl::Kind decl_kind) {
         }
 
         case flat::Type::Kind::kArray: {
-            auto array_type = static_cast<const flat::ArrayType*>(type);
-            type = array_type->element_type.get();
+            type = static_cast<const flat::ArrayType*>(type)->element_type;
             continue;
         }
 
@@ -406,8 +428,11 @@ std::string NameIdentifier(SourceLocation name) {
 }
 
 std::string NameName(const flat::Name& name, StringView library_separator, StringView name_separator) {
-    std::string compiled_name = LibraryName(name.library(), library_separator);
-    compiled_name += name_separator;
+    std::string compiled_name("");
+    if (name.library() != nullptr) {
+        compiled_name += LibraryName(name.library(), library_separator);
+        compiled_name += name_separator;
+    }
     compiled_name += name.name_part();
     return compiled_name;
 }

@@ -48,7 +48,6 @@ public:
     uint32_t MaxHandles() const { return typeshape_.MaxHandles(); }
     uint32_t MaxOutOfLine() const { return typeshape_.MaxOutOfLine(); }
 
-    void SetTypeshape(TypeShape typeshape) { typeshape_ = typeshape; }
     void SetOffset(uint32_t offset) { offset_ = offset; }
 
 private:
