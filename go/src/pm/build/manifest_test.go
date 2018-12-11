@@ -134,53 +134,103 @@ func TestNewManifest_withManifest(t *testing.T) {
 	validateMapping(t, m, wantPaths)
 }
 
-func TestNewManifest_withManifest_withDuplicates(t *testing.T) {
-	f, wantPaths := makeTestManifestFile(t)
-	defer os.Remove(f)
+type manifestEntry struct {
+	packagePath string
+	filePath    string
+	contents    string
+}
 
-	file, err := os.OpenFile(f, os.O_APPEND|os.O_WRONLY, 0600)
+func makeTestManifest(t *testing.T, entries []manifestEntry) (error, string, string, func()) {
+	tmp, err := ioutil.TempDir("", t.Name())
 	if err != nil {
-		panic(err)
+		return err, "", "", nil
 	}
-
-	//duplicate all entires
-	for k, v := range wantPaths {
-		if _, err := fmt.Fprintf(file, "%s=%s\n", k, v); err != nil {
-			file.Close()
-			t.Fatal(err)
+	cleanup := func() {
+		os.RemoveAll(tmp)
+	}
+	defer func() {
+		if err != nil {
+			cleanup()
+		}
+	}()
+	manifestPath := filepath.Join(tmp, "test.manifest")
+	manifest, err := os.Create(manifestPath)
+	if err != nil {
+		return err, "", "", nil
+	}
+	defer manifest.Close()
+	for _, entry := range entries {
+		path := filepath.Join(tmp, entry.filePath)
+		if err := os.MkdirAll(filepath.Dir(path), 0777); err != nil {
+			return err, "", "", nil
+		}
+		if err := ioutil.WriteFile(path, []byte(entry.contents), 0600); err != nil {
+			return err, "", "", nil
+		}
+		if _, err := fmt.Fprintf(manifest, "%s=%s\n", entry.packagePath, path); err != nil {
+			return err, "", "", nil
 		}
 	}
+	return nil, tmp, manifestPath, cleanup
+}
 
-	file.Close()
-
-	m, err := NewManifest([]string{f})
+func TestNewManifest_withManifest_withDuplicates(t *testing.T) {
+	err, tmp, manifestPath, cleanup := makeTestManifest(t, []manifestEntry{
+		manifestEntry{
+			packagePath: "bin/app1",
+			filePath:    "app1/bin",
+			contents:    "app1's unique binary",
+		},
+		manifestEntry{
+			packagePath: "bin/app2",
+			filePath:    "app2/bin",
+			contents:    "app2's unique binary",
+		},
+		manifestEntry{
+			packagePath: "lib/shared.so",
+			filePath:    "app1/lib",
+			contents:    "duplicate shared library",
+		},
+		manifestEntry{
+			packagePath: "lib/shared.so",
+			filePath:    "app2/lib",
+			contents:    "duplicate shared library",
+		},
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	validateMapping(t, m, wantPaths)
+	defer cleanup()
+	manifest, err := NewManifest([]string{manifestPath})
+	if err != nil {
+		t.Fatal(err)
+	}
+	validateMapping(t, manifest, map[string]string{
+		"bin/app1": filepath.Join(tmp, "app1/bin"),
+		"bin/app2": filepath.Join(tmp, "app2/bin"),
+		// first duplicate entry wins
+		"lib/shared.so": filepath.Join(tmp, "app1/lib"),
+	})
 }
 
-func TestNewManifest_withManifest_withDuplicateSrcInconsistentDests(t *testing.T) {
-	f, wantPaths := makeTestManifestFile(t)
-	defer os.Remove(f)
-
-	file, err := os.OpenFile(f, os.O_APPEND|os.O_WRONLY, 0600)
+func TestNewManifest_withManifest_withDuplicatesWithUnEqualContent(t *testing.T) {
+	err, _, manifestPath, cleanup := makeTestManifest(t, []manifestEntry{
+		manifestEntry{
+			packagePath: "lib/shared.so",
+			filePath:    "app1/lib",
+			contents:    "duplicate shared library",
+		},
+		manifestEntry{
+			packagePath: "lib/shared.so",
+			filePath:    "app2/lib",
+			contents:    "duplicate shared library with different content",
+		},
+	})
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
-
-	// duplicate all entires and put a different unique source
-	for k, _ := range wantPaths {
-		if _, err := fmt.Fprintf(file, "%s=junk\n", k); err != nil {
-			file.Close()
-			t.Fatal(err)
-		}
-	}
-
-	file.Close()
-
-	if m, err := NewManifest([]string{f}); err == nil {
+	defer cleanup()
+	if m, err := NewManifest([]string{manifestPath}); err == nil {
 		t.Fatalf("should have thrown error, got %v:", m)
 	}
 }

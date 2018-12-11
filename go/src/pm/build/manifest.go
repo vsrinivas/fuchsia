@@ -6,6 +6,7 @@ package build
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -168,12 +169,74 @@ func parseManifest(path string) (map[string]string, error) {
 		src := strings.TrimSpace(parts[1])
 		dest := strings.TrimSpace(parts[0])
 
-		// TODO(anmittal): check if files are same and throw error only if they are different.
+		// TODO(anmittal): make file comparision efficient.
 		if duplicateSrc, ok := r[dest]; ok {
-			if src != duplicateSrc {
-				return r, fmt.Errorf("build.parseManifest: Multiple entries for key %q, [%s, %s]", dest, src, duplicateSrc)
+			if equal, err := filesEqual(src, duplicateSrc); err != nil {
+				return r, err
+			} else if !equal {
+				return r, fmt.Errorf("build.parseManifest: Multiple entries for key, pointing to different files: %q, [%s, %s]", dest, src, duplicateSrc)
 			}
+			continue
 		}
 		r[dest] = src
+	}
+}
+
+func filesEqual(file1, file2 string) (bool, error) {
+	f1, err := os.Open(file1)
+	if err != nil {
+		return false, fmt.Errorf("error while opening file (%s): %s", file1, err)
+	}
+	defer f1.Close()
+	f1s, err := f1.Stat()
+	if err != nil {
+		return false, fmt.Errorf("error while file stat (%s): %s", file1, err)
+	}
+
+	f2, err := os.Open(file2)
+	if err != nil {
+		return false, fmt.Errorf("error while opening file (%s): %s", file2, err)
+	}
+	defer f2.Close()
+	f2s, err := f2.Stat()
+	if err != nil {
+		return false, fmt.Errorf("error while file stat (%s): %s", file2, err)
+	}
+
+	if os.SameFile(f1s, f2s) {
+		return true, nil
+	}
+	if f1s.Size() != f2s.Size() {
+		return false, nil
+	}
+	size := f1s.Size()
+	chunkSize := int64(1024 * 16)
+	b1 := make([]byte, chunkSize)
+	b2 := make([]byte, chunkSize)
+	offset := int64(0)
+	for {
+		nextChunkSize := chunkSize
+		if size-offset < nextChunkSize {
+			nextChunkSize = size - offset
+		}
+		n1, err1 := io.ReadFull(f1, b1[0:nextChunkSize])
+		if err1 != nil && err1 != io.EOF {
+			return false, fmt.Errorf("error while reading file (%s): %s", file1, err1)
+		}
+
+		n2, err2 := io.ReadFull(f2, b2[0:nextChunkSize])
+		if err2 != nil && err2 != io.EOF {
+			return false, fmt.Errorf("error while reading file (%s): %s", file2, err2)
+		}
+		if n1 != n2 {
+			return false, fmt.Errorf("something wrong, read size should have been same for files %q and %q", file1, file2)
+		}
+		if n1 == 0 {
+			return true, nil
+		}
+		offset += int64(n1)
+		if !bytes.Equal(b1[0:n1], b2[0:n2]) {
+			return false, nil
+		}
 	}
 }
