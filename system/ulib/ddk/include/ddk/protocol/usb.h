@@ -77,25 +77,6 @@ typedef struct usb_request {
     // Number of entries in the scatter gather list.
     uint64_t sg_count;
 
-    // The complete_cb() callback is set by the requester and is
-    // invoked by the 'complete' ops method when it is called by
-    // the processor upon completion of the usb request.
-    // The saved_complete_cb field can be used to temporarily save
-    // the original callback and overwrite it with the desired intermediate
-    // callback.
-    usb_request_complete_cb complete_cb;
-
-    // Set by requester for passing data to complete_cb callback
-    // The saved_cookie field can be used to temporarily save the
-    // original cookie.
-    void* cookie;
-
-    // The current 'owner' of the usb request may save the original
-    // complete callback and cookie, allowing them to insert an
-    // intermediate callback.
-    usb_request_complete_cb saved_complete_cb;
-    void* saved_cookie;
-
     usb_response_t response;
 
     // The release_cb() callback is set by the allocator and is
