@@ -14,12 +14,16 @@
 
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
+#include <fuchsia/device/test/c/fidl.h>
 #include <lib/devmgr-integration-test/fixture.h>
+#include <lib/fdio/util.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/socket.h>
 #include <lib/zx/time.h>
-#include <zircon/syscalls.h>
-#include <zircon/device/device.h>
-#include <zircon/device/test.h>
 #include <unittest/unittest.h>
+#include <zircon/device/device.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
 
 #define DRIVER_TEST_DIR "/boot/driver/test"
 
@@ -27,23 +31,35 @@ using devmgr_integration_test::IsolatedDevmgr;
 
 namespace {
 
-void do_one_test(const fbl::unique_ptr<IsolatedDevmgr>& devmgr, const fbl::unique_fd& tfd,
-                 const char* drv_libname, zx_handle_t output, test_ioctl_test_report_t* report) {
-    char devpath[1024];
-    ssize_t rc = ioctl_test_create_device(tfd.get(), drv_libname, strlen(drv_libname) + 1, devpath,
-                                          sizeof(devpath));
-    if (rc < 0) {
-        printf("driver-tests: error %zd creating device for %s\n", rc, drv_libname);
-        report->n_tests = 1;
-        report->n_failed = 1;
+void do_one_test(const fbl::unique_ptr<IsolatedDevmgr>& devmgr, const zx::channel& test_root,
+                 const char* drv_libname, const zx::socket& output,
+                 fuchsia_device_test_TestReport* report) {
+    // Initialize the report with a failure state to handle early returns
+    *report = {
+        .test_count = 1,
+        .success_count = 0,
+        .failure_count = 1,
+    };
+
+    char devpath[fuchsia_device_test_MAX_DEVICE_PATH_LEN+1];
+    size_t devpath_count;
+    zx_status_t call_status;
+    zx_status_t status = fuchsia_device_test_RootDeviceCreateDevice(
+            test_root.get(), drv_libname, strlen(drv_libname),
+            &call_status, devpath, sizeof(devpath) - 1, &devpath_count);
+    if (status == ZX_OK) {
+        status = call_status;
+    }
+    if (status != ZX_OK) {
+        printf("driver-tests: error %s creating device for %s\n", zx_status_get_string(status),
+               drv_libname);
         return;
     }
+    devpath[devpath_count] = 0;
 
     const char* kDevPrefix = "/dev/";
     if (strncmp(devpath, kDevPrefix, strlen(kDevPrefix))) {
         printf("driver-tests: bad path when creating device for %s: %s\n", drv_libname, devpath);
-        report->n_tests = 1;
-        report->n_failed = 1;
         return;
     }
 
@@ -64,63 +80,70 @@ void do_one_test(const fbl::unique_ptr<IsolatedDevmgr>& devmgr, const fbl::uniqu
 
     if (retry == 100) {
         printf("driver-tests: failed to open %s\n", devpath);
-        report->n_tests = 1;
-        report->n_failed = 1;
-        ioctl_test_destroy_device(fd.get());
         return;
     }
 
     char libpath[PATH_MAX];
     int n = snprintf(libpath, sizeof(libpath), "%s/%s", DRIVER_TEST_DIR, drv_libname);
-    rc = ioctl_device_bind(fd.get(), libpath, n);
+    ssize_t rc = ioctl_device_bind(fd.get(), libpath, n);
     if (rc < 0) {
         printf("driver-tests: error %zd binding to %s\n", rc, libpath);
-        report->n_tests = 1;
-        report->n_failed = 1;
-        // TODO(teisenbe): I think ioctl_test_destroy_device() should be called
+        // TODO(teisenbe): I think fuchsia_device_test_DeviceDestroy() should be called
         // here?
         return;
     }
 
-    zx_handle_t h;
-    zx_status_t status = zx_handle_duplicate(output, ZX_RIGHT_SAME_RIGHTS, &h);
+    zx::channel test_channel;
+    status = fdio_get_service_handle(fd.release(), test_channel.reset_and_get_address());
+    if (status != ZX_OK) {
+        printf("driver-tests: failed to get channel %s\n", zx_status_get_string(status));
+        return;
+    }
+
+    zx::socket output_copy;
+    status = output.duplicate(ZX_RIGHT_SAME_RIGHTS, &output_copy);
     if (status != ZX_OK) {
         printf("driver-tests: error %d duplicating output socket\n", status);
-        report->n_tests = 1;
-        report->n_failed = 1;
-        // TODO(teisenbe): I think ioctl_test_destroy_device() should be called
+        // TODO(teisenbe): I think fuchsia_device_test_DeviceDestroy() should be called
         // here?
         return;
     }
 
-    ioctl_test_set_output_socket(fd.get(), &h);
+    fuchsia_device_test_DeviceSetOutputSocket(test_channel.get(), output_copy.release());
 
-    rc = ioctl_test_run_tests(fd.get(), report);
-    if (rc < 0) {
-        printf("driver-tests: error %zd running tests\n", rc);
-        report->n_tests = 1;
-        report->n_failed = 1;
+    status = fuchsia_device_test_DeviceRunTests(test_channel.get(), &call_status, report);
+    if (status == ZX_OK) {
+        status = call_status;
+    }
+    if (status != ZX_OK) {
+        printf("driver-tests: error %s running tests\n", zx_status_get_string(status));
+        *report = {
+            .test_count = 1,
+            .success_count = 0,
+            .failure_count = 1,
+        };
     }
 
-    ioctl_test_destroy_device(fd.get());
+    fuchsia_device_test_DeviceDestroy(test_channel.get());
 }
 
 int output_thread(void* arg) {
-    zx_handle_t h = *(zx_handle_t*)arg;
+    zx::socket h(static_cast<zx_handle_t>(reinterpret_cast<uintptr_t>(arg)));
     char buf[1024];
     for (;;) {
-        zx_status_t status = zx_object_wait_one(h, ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED, ZX_TIME_INFINITE, NULL);
+        zx_status_t status = h.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
+                                        zx::time::infinite(), NULL);
         if (status != ZX_OK) {
             break;
         }
         size_t bytes = 0;
-        status = zx_socket_read(h, 0u, buf, sizeof(buf), &bytes);
+        status = h.read(0u, buf, sizeof(buf), &bytes);
         if (status != ZX_OK) {
             break;
         }
         size_t written = 0;
         while (written < bytes) {
-            ssize_t rc = write(2, buf + written, bytes - written);
+            ssize_t rc = write(STDERR_FILENO, buf + written, bytes - written);
             if (rc < 0) {
                 break;
             }
@@ -142,8 +165,8 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    zx_handle_t socket[2];
-    status = zx_socket_create(0u, socket, socket + 1);
+    zx::socket local_socket, remote_socket;
+    status = zx::socket::create(0u, &local_socket, &remote_socket);
     if (status != ZX_OK) {
         printf("driver-tests: error creating socket\n");
         return -1;
@@ -158,17 +181,23 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    thrd_t t;
-    int rc = thrd_create_with_name(&t, output_thread, socket, "driver-test-output");
-    if (rc != thrd_success) {
-        printf("driver-tests: error %d creating output thread\n", rc);
-        zx_handle_close(socket[0]);
-        zx_handle_close(socket[1]);
+    zx::channel test_root;
+    status = fdio_get_service_handle(fd.release(), test_root.reset_and_get_address());
+    if (status != ZX_OK) {
+        printf("driver-tests: failed to get root channel %s\n", zx_status_get_string(status));
         return -1;
     }
 
-    test_ioctl_test_report_t final_report;
-    memset(&final_report, 0, sizeof(final_report));
+    thrd_t t;
+    int rc = thrd_create_with_name(&t, output_thread,
+                                   reinterpret_cast<void*>(local_socket.release()),
+                                   "driver-test-output");
+    if (rc != thrd_success) {
+        printf("driver-tests: error %d creating output thread\n", rc);
+        return -1;
+    }
+
+    fuchsia_device_test_TestReport final_report = {};
 
     DIR* dir = opendir(DRIVER_TEST_DIR);
     if (dir == NULL) {
@@ -190,27 +219,26 @@ int main(int argc, char** argv) {
         if (strcmp(de->d_name, "sysdev.so") == 0) {
             continue;
         }
-        test_ioctl_test_report_t one_report;
-        memset(&one_report, 0, sizeof(one_report));
-        do_one_test(devmgr, fd, de->d_name, socket[1], &one_report);
-        final_report.n_tests += one_report.n_tests;
-        final_report.n_success += one_report.n_success;
-        final_report.n_failed += one_report.n_failed;
+        fuchsia_device_test_TestReport one_report = {};
+        do_one_test(devmgr, test_root, de->d_name, remote_socket, &one_report);
+
+        final_report.test_count += one_report.test_count;
+        final_report.success_count += one_report.success_count;
+        final_report.failure_count += one_report.failure_count;
     }
 
     // close this handle before thrd_join to get PEER_CLOSED in output thread
-    zx_handle_close(socket[1]);
+    remote_socket.reset();
 
     thrd_join(t, NULL);
-    zx_handle_close(socket[0]);
 
     unittest_printf_critical(
             "\n====================================================\n");
     unittest_printf_critical(
             "    CASES:  %d     SUCCESS:  %d     FAILED:  %d   ",
-            final_report.n_tests, final_report.n_success, final_report.n_failed);
+            final_report.test_count, final_report.success_count, final_report.failure_count);
     unittest_printf_critical(
             "\n====================================================\n");
 
-    return final_report.n_failed == 0 ? 0 : -1;
+    return final_report.failure_count == 0 ? 0 : -1;
 }

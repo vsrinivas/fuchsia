@@ -251,12 +251,12 @@ under test can bind to, and it should implement the protocol functions the
 driver under test invokes in normal operation. This helper driver should be
 declared with `BI_ABORT_IF_AUTOBIND` in the bindings.
 
-The test harness calls `ioctl_test_create_device()` on `/dev/misc/test`, which
-will create a `ZX_PROTOCOL_TEST` device and return its path. Then it calls
-`ioctl_device_bind()` with the helper driver on the newly created device.
-This approach generally works better for mid-layer protocol drivers. It's
-possible to emulate real hardware with the same approach but it may not be as
-useful.
+The test harness calls `fuchsia.device.test.RootDevice.CreateDevice()` on
+`/dev/test/test`, which will create a `ZX_PROTOCOL_TEST` device and return
+its path. Then it calls `ioctl_device_bind()` with the helper driver on the
+newly created device.  This approach generally works better for mid-layer
+protocol drivers. It's possible to emulate real hardware with the same
+approach but it may not be as useful.
 
 The functions defined in
 [ddk/protocol/test.h](../../system/ulib/ddk/include/ddk/protocol/test.h) are

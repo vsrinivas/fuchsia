@@ -28,4 +28,7 @@ MODULE_LIBS := \
 	system/ulib/unittest \
 	system/ulib/zircon \
 
+MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-device-test \
+
 include make/module.mk
