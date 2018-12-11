@@ -351,6 +351,10 @@ out:
 void settitle(const char* title) {
 	if (!iflag || !isatty(0))
 		return;
+	char *term = getenv("TERM");
+	if (term == NULL || strcmp(term, "dumb") == 0 || strcmp(term, "uart") == 0) {
+		return;
+	}
 	char str[16];
 	int n = snprintf(str, sizeof(str) - 1, "\033]2;%s", title);
 	if (n < 0) {
