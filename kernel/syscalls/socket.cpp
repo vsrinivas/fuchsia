@@ -119,17 +119,17 @@ zx_status_t sys_socket_read(zx_handle_t handle, uint32_t options,
 }
 
 // zx_status_t zx_socket_share
-zx_status_t sys_socket_share(zx_handle_t handle, zx_handle_t other) {
+zx_status_t sys_socket_share(zx_handle_t handle, zx_handle_t socket_to_share) {
     auto up = ProcessDispatcher::GetCurrent();
 
     fbl::RefPtr<SocketDispatcher> socket;
     zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &socket);
     if (status != ZX_OK) {
-        up->RemoveHandle(other);
+        up->RemoveHandle(socket_to_share);
         return status;
     }
 
-    HandleOwner other_handle = up->RemoveHandle(other);
+    HandleOwner other_handle = up->RemoveHandle(socket_to_share);
     if (!other_handle) {
         return ZX_ERR_BAD_HANDLE;
     }

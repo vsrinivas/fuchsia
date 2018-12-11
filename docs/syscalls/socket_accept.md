@@ -8,13 +8,15 @@ socket_accept - receive another socket object via a socket
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_socket_accept(zx_handle_t socket, zx_handle_t* out_socket);
+zx_status_t zx_socket_accept(zx_handle_t handle, zx_handle_t* out_socket);
 ```
 
-### DESCRIPTION
+## DESCRIPTION
 
 **socket_accept**() attempts to receive a new socket via an existing socket
 connection.  The signal **ZX_SOCKET_ACCEPT** is asserted when there is a new
@@ -34,11 +36,11 @@ values is returned.
 
 ## ERRORS
 
-**ZX_ERR_BAD_HANDLE**  The handle *socket* is invalid.
+**ZX_ERR_BAD_HANDLE**  *socket* is invalid.
 
-**ZX_ERR_WRONG_TYPE**  The handle *socket* is not a socket handle.
+**ZX_ERR_WRONG_TYPE**  *socket* is not a socket handle.
 
-**ZX_ERR_ACCESS_DENIED**  The handle *socket* lacks **ZX_RIGHT_READ**.
+**ZX_ERR_ACCESS_DENIED**  *socket* lacks **ZX_RIGHT_READ**.
 
 **ZX_ERR_INVALID_ARGS**  *out_socket* is an invalid pointer.
 
