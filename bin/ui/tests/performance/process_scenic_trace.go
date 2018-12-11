@@ -104,11 +104,11 @@ func jsonFloat(num float64) float64 {
 	}
 }
 
-// Return all pids that have name |processName|.
-func getProcessesWithName(model benchmarking.Model, processName string) []benchmarking.Process {
+// Return all pids that start with |prefix|.
+func getProcessesWithPrefix(model benchmarking.Model, prefix string) []benchmarking.Process {
 	result := make([]benchmarking.Process, 0)
 	for _, process := range model.Processes {
-		if process.Name == processName {
+		if strings.HasPrefix(process.Name, prefix) {
 			result = append(result, process)
 		}
 	}
@@ -292,58 +292,41 @@ func reportFlutterFpsForInstance(model benchmarking.Model, testSuite string, tes
 	fps, fpsPerTimeWindow := calculateFpsForEvents(vsyncEvents)
 	fmt.Printf("%.4gfps\nfps per one-second window: %v\n", fps, fpsPerTimeWindow)
 
-	frameStr := "Frame"
+	testResultsFile.Add(&benchmarking.TestCaseResults{
+		Label:     metricNamePrefix + "_fps",
+		TestSuite: testSuite,
+		Unit:      benchmarking.FramesPerSecond,
+		Values:    []float64{jsonFloat(fps)},
+	})
+
+	testResultsFile.Add(&benchmarking.TestCaseResults{
+		Label:     metricNamePrefix + "_minimum_fps_per_one_second_time_window",
+		TestSuite: testSuite,
+		Unit:      benchmarking.FramesPerSecond,
+		Values:    []float64{jsonFloat(computeMin(fpsPerTimeWindow))},
+	})
+
+	frameStr := "vsync callback"
 	frameEvents := uiThread.FindEvents(benchmarking.EventsFilter{Name: &frameStr})
 
 	frameDurations := convertMicrosToMillis(extractDurations(frameEvents))
 
-	const buildBudget float64 = 8.0
-
-	averageFrameBuildTimeMillis := computeAverage(frameDurations)
-	worstFrameBuildTimeMillis := computeMax(frameDurations)
-	missedFrameBuildBudgetCount := len(filterByThreshold(frameDurations, buildBudget))
-
 	drawStr := "GPURasterizer::Draw"
 	rasterizerEvents := gpuThread.FindEvents(benchmarking.EventsFilter{Name: &drawStr})
 	rasterizerDurations := convertMicrosToMillis(extractDurations(rasterizerEvents))
-
-	averageFrameRasterizerTimeMillis := computeAverage(rasterizerDurations)
-	percentile90FrameRasterizerTimeMillis := computePercentile(rasterizerDurations, 90)
-	percentile99FrameRasterizerTimeMillis := computePercentile(rasterizerDurations, 99)
-	worstFrameRasterizerTimeMillis := computeMax(rasterizerDurations)
-	missedFrameRasterizerBudgetCount := len(filterByThreshold(rasterizerDurations, buildBudget))
 
 	type Metric struct {
 		Name   string
 		Values []float64
 	}
 
-	// Metrics inspired by https://github.com/flutter/flutter/blob/master/packages/flutter_driver/lib/src/driver/timeline_summary.dart.
 	metrics := []Metric{
-		{"fps", []float64{fps}},
-		{"average_frame_build_time_millis", []float64{averageFrameBuildTimeMillis}},
-		{"worst_frame_build_time_millis", []float64{worstFrameBuildTimeMillis}},
-		{"missed_frame_build_budget_count", []float64{float64(missedFrameBuildBudgetCount)}},
-		{"average_frame_rasterizer_time_millis", []float64{averageFrameRasterizerTimeMillis}},
-		{"percentile_90_frame_rasterizer_time_millis", []float64{percentile90FrameRasterizerTimeMillis}},
-		{"percentile_99_frame_rasterizer_time_millis", []float64{percentile99FrameRasterizerTimeMillis}},
-		{"worst_frame_rasterizer_time_millis", []float64{worstFrameRasterizerTimeMillis}},
-		{"missed_frame_rasterizer_budget_count", []float64{float64(missedFrameRasterizerBudgetCount)}},
-		{"frame_count", []float64{float64(len(frameDurations))}},
 		{"frame_build_times", frameDurations},
 		{"frame_rasterizer_times", rasterizerDurations},
 	}
 	for _, metric := range metrics {
 		fullName := metricNamePrefix + "_" + metric.Name
-		// Only print scalar metrics, as the collection based ones are too large
-		// to be useful when printed out.
-		if len(metric.Values) == 1 {
-			fmt.Printf("%s: %4g\n", fullName, metric.Values)
-		}
-		if len(metric.Values) == 0 {
-			fmt.Fprintf(os.Stderr, "Warning: no values found for %s. Falling back to a zero value.\n", fullName)
-			metric.Values = []float64{0}
-		}
+		fmt.Printf("%s: %4g\n", fullName, computeAverage(metric.Values))
 		testResultsFile.Add(&benchmarking.TestCaseResults{
 			Label:     fullName,
 			TestSuite: testSuite,
@@ -364,30 +347,26 @@ func getThreadsWithPrefixAndSuffix(process benchmarking.Process, prefix string, 
 }
 
 func reportFlutterFps(model benchmarking.Model, testSuite string, testResultsFile *benchmarking.TestResultsFile, flutterAppName string) {
-	if flutterAppName != "" {
-		// TODO: What does this look like if we aren't running in aot mode?  Not a
-		// concern for now, as we only use aot.
-		flutterProcesses := getProcessesWithName(model, "io.flutter.runner.aot")
-	FlutterProcessesLoop:
-		for _, flutterProcess := range flutterProcesses {
-			gpuThreads := getThreadsWithPrefixAndSuffix(flutterProcess, flutterAppName, ".gpu")
-			uiThreads := getThreadsWithPrefixAndSuffix(flutterProcess, flutterAppName, ".ui")
-			if len(gpuThreads) != len(uiThreads) {
-				panic("Unequal ui threads and gpu threads")
-			}
+	flutterProcesses := getProcessesWithPrefix(model, "io.flutter.runner")
+	for _, flutterProcess := range flutterProcesses {
+		gpuThreads := getThreadsWithPrefixAndSuffix(flutterProcess, flutterAppName, ".gpu")
+		uiThreads := getThreadsWithPrefixAndSuffix(flutterProcess, flutterAppName, ".ui")
+		if len(gpuThreads) != len(uiThreads) {
+			panic("Unequal ui threads and gpu threads")
+		}
 
-			for i, uiThread := range uiThreads {
-				// TODO: We are assuming that threads are in order, instead we should verify
-				// that they have the same name % suffix
-				gpuThread := gpuThreads[i]
-				metricNamePrefix := strings.Split(uiThread.Name, ".")[0]
-				reportFlutterFpsForInstance(model, testSuite, testResultsFile, uiThread, gpuThread, metricNamePrefix)
-				// TODO: Decide how to handle multiple flutter apps that match the
-				// target app name. Just report the first one for now.
-				break FlutterProcessesLoop
-			}
+		for i, uiThread := range uiThreads {
+			// TODO: We are assuming that threads are in order, instead we should verify
+			// that they have the same name % suffix
+			gpuThread := gpuThreads[i]
+			metricNamePrefix := strings.Split(uiThread.Name, ".")[0]
+			reportFlutterFpsForInstance(model, testSuite, testResultsFile, uiThread, gpuThread, metricNamePrefix)
+			// TODO: Decide how to handle multiple flutter apps that match the
+			// target app name. Just report the first one for now.
+			return
 		}
 	}
+	fmt.Printf("Did not find any processes that matched %s\n", flutterAppName)
 }
 
 func main() {
