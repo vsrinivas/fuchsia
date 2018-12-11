@@ -113,7 +113,7 @@ public:
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    // The assocaited VmObjectDispatcher will set an observer to notify user mode.
+    // The associated VmObjectDispatcher will set an observer to notify user mode.
     void SetChildObserver(VmObjectChildObserver* child_observer);
 
     // Returns a null-terminated name, or the empty string if set_name() has not
@@ -137,7 +137,7 @@ public:
 
     virtual void Dump(uint depth, bool verbose) = 0;
 
-    // cache maintainence operations.
+    // cache maintenance operations.
     virtual zx_status_t InvalidateCache(const uint64_t offset, const uint64_t len) {
         return ZX_ERR_NOT_SUPPORTED;
     }

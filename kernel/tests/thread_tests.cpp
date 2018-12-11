@@ -739,7 +739,7 @@ static int affinity_test_thread(void* arg) {
 
 // start a bunch of threads that randomly set the affinity of the other threads
 // to random masks while doing various work.
-// a sucessful pass is one where it completes the run without tripping over any asserts
+// a successful pass is one where it completes the run without tripping over any asserts
 // in the scheduler code.
 __NO_INLINE static void affinity_test() {
     printf("starting thread affinity test\n");

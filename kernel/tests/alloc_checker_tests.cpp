@@ -40,7 +40,7 @@ static bool alloc_checker_basic() {
     ac.arm(16u, false);
     EXPECT_FALSE(ac.check(), "");
 
-    // Allocating zero bytes, allways succeeds.
+    // Allocating zero bytes, always succeeds.
     ac.arm(0u, false);
     EXPECT_TRUE(ac.check(), "");
 

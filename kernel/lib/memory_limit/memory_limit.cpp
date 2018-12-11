@@ -36,7 +36,7 @@ typedef struct reserve_entry {
     size_t unused_back;  // Space after the region that is available
 } reserve_entry_t;
 
-// Boot reserve entries are processsed and added here for memory limit calculations.
+// Boot reserve entries are processed and added here for memory limit calculations.
 const size_t kReservedRegionMax = 64;
 static reserve_entry_t ReservedRegions[kReservedRegionMax];
 static size_t ReservedRegionCount;

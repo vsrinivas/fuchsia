@@ -128,7 +128,7 @@ static void wait_queue_insert(wait_queue_t* wait, thread_t* t) {
 static void remove_queue_head(thread_t* t) {
     // are there any nodes in the queue for this priority?
     if (list_is_empty(&t->queue_node)) {
-        // no, remove ourself from the the queue list
+        // no, remove ourself from the queue list
         list_delete(&t->wait_queue_heads_node);
         list_clear_node(&t->queue_node);
     } else {

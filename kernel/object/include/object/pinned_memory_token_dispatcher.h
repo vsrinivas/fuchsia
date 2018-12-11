@@ -68,7 +68,7 @@ public:
     uint64_t size() const { return pinned_vmo_.size(); }
 protected:
     friend BusTransactionInitiatorDispatcher;
-    // Set the the permissions of |pinned_vmo|'s pinned range to |perms| on
+    // Set the permissions of |pinned_vmo|'s pinned range to |perms| on
     // behalf of |bti|. |perms| should be flags suitable for the Iommu::Map()
     // interface.  Must be created under the BTI dispatcher's lock.
     static zx_status_t Create(fbl::RefPtr<BusTransactionInitiatorDispatcher> bti,

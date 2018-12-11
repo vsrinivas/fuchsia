@@ -30,7 +30,7 @@ union Encoding {
     static constexpr uint8_t kExplicitBit = 0b1000;
     static constexpr uint8_t kActionBits  = 0b0111;
 
-    // Indicates the the policies are fully encoded in the cookie.
+    // Indicates the policies are fully encoded in the cookie.
     static constexpr uint8_t kPolicyInCookie = 0;
 
     pol_cookie_t encoded;

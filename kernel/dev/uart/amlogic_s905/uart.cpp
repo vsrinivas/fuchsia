@@ -221,7 +221,7 @@ static int s905_uart_getc(bool wait) {
         return ZX_ERR_INTERNAL;
 
     } else {
-        //Interupts not online yet, use the panic calls for now.
+        //Interrupts not online yet, use the panic calls for now.
         return s905_uart_pgetc();
     }
 }

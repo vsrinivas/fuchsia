@@ -39,7 +39,7 @@ typedef const fbl::Vector<Node*>& IterableProcessors;
 // system.
 class Graph {
 public:
-    // Takes the flat topology array, valdates it, and sets it as the current topology. Returns an
+    // Takes the flat topology array, validates it, and sets it as the current topology. Returns an
     // error if the topology is invalid.
     //
     // This should only be called during early boot (platform_init), after that this data is

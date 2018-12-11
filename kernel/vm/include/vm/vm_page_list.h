@@ -113,7 +113,7 @@ public:
     ~VmPageSpliceList();
 
     // Pops the next page off of the splice. If the next page was
-    // not commited, returns null.
+    // not committed, returns null.
     vm_page* Pop();
 
     // Returns true after the whole collection has been processed by Pop.

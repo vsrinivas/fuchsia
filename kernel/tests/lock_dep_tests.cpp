@@ -336,7 +336,7 @@ static bool lock_dep_dynamic_analysis_tests() {
         }
     }
 
-    // Test address order invariant with a differnt lock class.
+    // Test address order invariant with a different lock class.
     {
         Bar a{};
         Bar b{};
@@ -490,7 +490,7 @@ static bool lock_dep_dynamic_analysis_tests() {
         }
     }
 
-    // Test spinlock options compile and baisc guard functions.
+    // Test spinlock options compile and basic guard functions.
     // TODO(eieio): Add Guard<>::state() accessor and check state values.
     {
         Baz<Spinlock> baz1;

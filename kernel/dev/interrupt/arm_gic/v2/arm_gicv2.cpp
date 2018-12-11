@@ -98,7 +98,7 @@ static void arm_gic_resume_cpu(uint level) {
 
     spin_lock_save(&gicd_lock, &state, GICD_LOCK_FLAGS);
     if (!(GICREG(0, GICD_CTLR) & 1)) {
-        dprintf(SPEW, "%s: distibutor is off, calling arm_gic_init instead\n", __func__);
+        dprintf(SPEW, "%s: distributor is off, calling arm_gic_init instead\n", __func__);
         arm_gic_init();
         resume_gicd = true;
     } else {
@@ -342,7 +342,7 @@ static bool is_ppi_enabled() {
     // PPIs are 16-31.
     uint32_t ppi_mask = 0xffff0000;
 
-    // GICD_ISENABLER0 is banked so it cooresponds to *this* CPU's interface.
+    // GICD_ISENABLER0 is banked so it corresponds to *this* CPU's interface.
     return (GICREG(0, GICD_ISENABLER(0)) & ppi_mask) != 0;
 }
 
@@ -351,7 +351,7 @@ static bool is_spi_enabled() {
     DEBUG_ASSERT(arch_ints_disabled());
 
     // We're going to check four interrupts at a time.  Build a repeated mask for the current CPU.
-    // Each byte in the mask is a CPU bit mask cooresponding to CPU0..CPU7 (lsb..msb).
+    // Each byte in the mask is a CPU bit mask corresponding to CPU0..CPU7 (lsb..msb).
     uint cpu_num = arch_curr_cpu_num();
     DEBUG_ASSERT(cpu_num < 8);
     uint32_t mask = 0x01010101U << cpu_num;

@@ -17,7 +17,7 @@ struct FlatTopo {
     size_t node_count = 0;
 };
 
-// Defined at bottom of file, they are long and noisey.
+// Defined at bottom of file, they are long and noisy.
 
 // A generic arm big.LITTLE.
 FlatTopo SimpleTopology();
