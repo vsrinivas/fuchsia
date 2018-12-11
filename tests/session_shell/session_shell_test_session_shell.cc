@@ -140,11 +140,9 @@ class TestApp : public modular::testing::ComponentBase<void> {
       : ComponentBase(startup_context) {
     TestInit(__FILE__);
 
-    session_shell_context_ = startup_context->ConnectToEnvironmentService<
-        fuchsia::modular::SessionShellContext>();
-    puppet_master_ =
-        startup_context
-            ->ConnectToEnvironmentService<fuchsia::modular::PuppetMaster>();
+    startup_context->ConnectToEnvironmentService(
+        session_shell_context_.NewRequest());
+    startup_context->ConnectToEnvironmentService(puppet_master_.NewRequest());
 
     session_shell_context_->GetStoryProvider(story_provider_.NewRequest());
     story_provider_state_watcher_.Watch(&story_provider_);
@@ -223,7 +221,6 @@ class TestApp : public modular::testing::ComponentBase<void> {
     const std::string initial_json = R"({"created-with-info": true})";
     puppet_master_->ControlStory("story1", story_puppet_master_.NewRequest());
 
-    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
     fuchsia::modular::AddMod add_mod;
     add_mod.mod_name.push_back("mod1");
     add_mod.intent.handler = kCommonActiveModule;
@@ -237,6 +234,8 @@ class TestApp : public modular::testing::ComponentBase<void> {
 
     fuchsia::modular::StoryCommand command;
     command.set_add_mod(std::move(add_mod));
+
+    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
     commands.push_back(std::move(command));
 
     story_puppet_master_->Enqueue(std::move(commands));
@@ -285,13 +284,14 @@ class TestApp : public modular::testing::ComponentBase<void> {
   void TestStory2() {
     puppet_master_->ControlStory("story2", story_puppet_master_.NewRequest());
 
-    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
     fuchsia::modular::AddMod add_mod;
     add_mod.mod_name.push_back("mod1");
     add_mod.intent.handler = kCommonNullModule;
 
     fuchsia::modular::StoryCommand command;
     command.set_add_mod(std::move(add_mod));
+
+    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
     commands.push_back(std::move(command));
 
     story_puppet_master_->Enqueue(std::move(commands));
@@ -387,6 +387,7 @@ class TestApp : public modular::testing::ComponentBase<void> {
     fuchsia::modular::StoryOptions story_options;
     story_options.kind_of_proto_story = true;
     story_puppet_master_->SetCreateOptions(std::move(story_options));
+
     story_puppet_master_->Execute(
         [this](fuchsia::modular::ExecuteResult result) {
           story_provider_state_watcher_.SetKindOfProtoStory("story3");
