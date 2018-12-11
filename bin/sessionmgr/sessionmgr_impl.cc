@@ -72,9 +72,6 @@ constexpr char kMessageQueuePath[] = "/data/MESSAGE_QUEUES/v1/";
 constexpr char kSessionShellComponentNamespace[] = "user-shell-namespace";
 constexpr char kSessionShellLinkName[] = "user-shell-link";
 
-constexpr char kLedgerDashboardUrl[] = "ledger_dashboard";
-constexpr char kLedgerDashboardEnvLabel[] = "ledger-dashboard";
-
 constexpr char kClipboardAgentUrl[] =
     "fuchsia-pkg://fuchsia.com/clipboard_agent#meta/clipboard_agent.cmx";
 
@@ -199,7 +196,6 @@ void SessionmgrImpl::Initialize(
   InitializeUser(std::move(account), std::move(token_provider_factory),
                  std::move(agent_token_manager), std::move(user_context));
   InitializeLedger(std::move(ledger_token_manager));
-  InitializeLedgerDashboard();
   InitializeDeviceMap();
   InitializeMessageQueueManager();
   InitializeMaxwellAndModular(session_shell.url, std::move(story_shell));
@@ -348,41 +344,6 @@ void SessionmgrImpl::InitializeLedger(
         Logout();
       });
   AtEnd(Reset(&ledger_client_));
-}
-
-void SessionmgrImpl::InitializeLedgerDashboard() {
-  if (options_.test)
-    return;
-  static const auto* const kEnvServices = new std::vector<std::string>{
-      fuchsia::ledger::internal::LedgerRepositoryDebug::Name_};
-  ledger_dashboard_environment_ = std::make_unique<Environment>(
-      user_environment_->environment(), std::string(kLedgerDashboardEnvLabel),
-      *kEnvServices, /* kill_on_oom = */ false);
-  AtEnd(Reset(&ledger_dashboard_environment_));
-
-  ledger_dashboard_environment_
-      ->AddService<fuchsia::ledger::internal::LedgerRepositoryDebug>(
-          [this](fidl::InterfaceRequest<
-                 fuchsia::ledger::internal::LedgerRepositoryDebug>
-                     request) {
-            if (ledger_repository_) {
-              ledger_repository_->GetLedgerRepositoryDebug(std::move(request));
-            }
-          });
-
-  fuchsia::modular::AppConfig ledger_dashboard_config;
-  ledger_dashboard_config.url = kLedgerDashboardUrl;
-
-  ledger_dashboard_app_ =
-      std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-          ledger_dashboard_environment_->GetLauncher(),
-          std::move(ledger_dashboard_config));
-
-  AtEnd(Reset(&ledger_dashboard_app_));
-  AtEnd(
-      Teardown(kBasicTimeout, "LedgerDashboard", ledger_dashboard_app_.get()));
-
-  FXL_LOG(INFO) << "Starting Ledger dashboard " << kLedgerDashboardUrl;
 }
 
 void SessionmgrImpl::InitializeDeviceMap() {

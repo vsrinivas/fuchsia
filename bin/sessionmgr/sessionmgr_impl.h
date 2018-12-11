@@ -111,7 +111,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
           user_context);
   void InitializeLedger(
       fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager);
-  void InitializeLedgerDashboard();
   void InitializeDeviceMap();
   void InitializeClipboard();
   void InitializeMessageQueueManager();
@@ -287,10 +286,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   std::unique_ptr<StoryStorage> session_shell_storage_;
   fidl::BindingSet<fuchsia::modular::Link, std::unique_ptr<LinkImpl>>
       session_shell_link_bindings_;
-
-  // For the Ledger Debug Dashboard
-  std::unique_ptr<Environment> ledger_dashboard_environment_;
-  std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> ledger_dashboard_app_;
 
   // Holds the actions scheduled by calls to the AtEnd() method.
   std::vector<std::function<void(std::function<void()>)>> at_end_;
