@@ -8,12 +8,13 @@ port_queue - queue a packet to an port
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 
 zx_status_t zx_port_queue(zx_handle_t handle, const zx_port_packet_t* packet);
-
 ```
 
 ## DESCRIPTION

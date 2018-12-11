@@ -8,11 +8,15 @@ port_wait - wait for a packet arrival in a port
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 
-zx_status_t zx_port_wait(zx_handle_t handle, zx_time_t deadline, zx_port_packet_t* packet);
+zx_status_t zx_port_wait(zx_handle_t handle,
+                         zx_time_t deadline,
+                         zx_port_packet_t* packet);
 ```
 
 ## DESCRIPTION
