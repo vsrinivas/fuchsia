@@ -13,9 +13,9 @@ const uint32 MAX_EXCEPTION_MSG_LENGTH = 4096;
 // Enumerates the languages with managed runtimes for which we might want a
 // specific handling of the thrown exceptions.
 enum ManagedRuntimeLanguage {
-  UNKNOWN_LANGUAGE = 0;
-  OTHER_LANGUAGE = 1;
-  DART = 2;
+    UNKNOWN_LANGUAGE = 0;
+    OTHER_LANGUAGE = 1;
+    DART = 2;
 };
 
 // Analyzes crashed processes, string exceptions from managed runtimes or
@@ -33,10 +33,10 @@ interface Analyzer {
     //
     // |exception_port| is the port on which the exception was delivered and
     // can be passed to zx_task_resume_from_exception().
-    1: HandleNativeException(handle<process> process,
-                             handle<thread> thread,
-                             handle<port> exception_port)
-                         -> (zx.status status);
+    HandleNativeException(handle<process> process,
+                          handle<thread> thread,
+                          handle<port> exception_port)
+        -> (zx.status status);
 
     // Requests that the crash analyzer handles the exception thrown in the
     // managed runtime for the given |language|.
@@ -47,16 +47,16 @@ interface Analyzer {
     // The behavior of this method varies depending on the implementation, but
     // a typical implementation might print the exception message and stack
     // trace to the system log or upload a crash report to a server.
-    2: HandleManagedRuntimeException(ManagedRuntimeLanguage language,
-                                     string:MAX_COMPONENT_URL_LENGTH componentUrl,
-                                     string:MAX_EXCEPTION_MSG_LENGTH exception,
-                                     fuchsia.mem.Buffer stackTrace)
-                                 -> (zx.status status);
+    HandleManagedRuntimeException(ManagedRuntimeLanguage language,
+                                  string:MAX_COMPONENT_URL_LENGTH componentUrl,
+                                  string:MAX_EXCEPTION_MSG_LENGTH exception,
+                                  fuchsia.mem.Buffer stackTrace)
+        -> (zx.status status);
 
     // Requests that the crash analyzer processes the kernel panic crash log.
     //
     // The behavior of this method varies depending on the implementation, but
     // a typical implementation might print the crash log to the system log or
     // upload a crash report to a server with the log as attachment.
-    3: ProcessKernelPanicCrashlog(fuchsia.mem.Buffer crashlog) -> (zx.status status);
+    ProcessKernelPanicCrashlog(fuchsia.mem.Buffer crashlog) -> (zx.status status);
 };
