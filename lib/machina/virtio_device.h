@@ -8,6 +8,7 @@
 #include <atomic>
 
 #include <fuchsia/guest/device/cpp/fidl.h>
+#include <lib/fsl/handles/object_info.h>
 #include <trace-engine/types.h>
 #include <trace/event.h>
 
@@ -204,6 +205,7 @@ class VirtioComponentDevice
             std::move(ready_device)) {
     zx_status_t status = zx::event::create(0, &event_);
     FXL_CHECK(status == ZX_OK) << "Failed to create event";
+    event_koid_ = fsl::GetKoid(event_.get());
     wait_.set_object(event_.get());
     wait_.set_trigger(ZX_USER_SIGNAL_ALL);
   }
@@ -248,6 +250,7 @@ class VirtioComponentDevice
     if (status != ZX_OK) {
       return;
     }
+    TRACE_FLOW_END("machina", "device:interrupt", event_koid_);
     status = event_.signal(signal->trigger, 0);
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to clear interrupt signal " << status;
@@ -265,6 +268,7 @@ class VirtioComponentDevice
   }
 
   zx::event event_;
+  zx_koid_t event_koid_;
   async::WaitMethod<VirtioComponentDevice, &VirtioComponentDevice::OnInterrupt>
       wait_{this};
 };

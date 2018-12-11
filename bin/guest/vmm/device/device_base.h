@@ -10,6 +10,8 @@
 #include <lib/async/default.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/fsl/handles/object_info.h>
+#include <trace/event.h>
 #include <zx/event.h>
 
 #include "garnet/lib/machina/device/config.h"
@@ -31,6 +33,7 @@ class DeviceBase {
   fidl::BindingSet<T> bindings_;
   zx_gpaddr_t trap_addr_;
   zx::event event_;
+  zx_koid_t event_koid_;
   machina::PhysMem phys_mem_;
   async::GuestBellTrapMethod<DeviceBase, &DeviceBase::OnQueueNotify> trap_{
       this};
@@ -45,6 +48,7 @@ class DeviceBase {
     FXL_CHECK(!event_) << "Device has already been started";
 
     event_ = std::move(start_info.event);
+    event_koid_ = fsl::GetKoid(event_.get());
     zx_status_t status = phys_mem_.Init(std::move(start_info.vmo));
     FXL_CHECK(status == ZX_OK)
         << "Failed to init guest physical memory " << status;
@@ -59,6 +63,7 @@ class DeviceBase {
 
   // Signals an interrupt for the device.
   zx_status_t Interrupt(uint8_t actions) {
+    TRACE_FLOW_BEGIN("machina", "device:interrupt", event_koid_);
     return event_.signal(0, static_cast<zx_signals_t>(actions)
                                 << machina::kDeviceInterruptShift);
   }
