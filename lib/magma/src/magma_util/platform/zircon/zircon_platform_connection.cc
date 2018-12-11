@@ -4,8 +4,10 @@
 
 #include "zircon_platform_connection.h"
 
+
 #include "platform_connection.h"
 #include "zircon_platform_event.h"
+#include <fuchsia/gpu/magma/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/task.h>
 #include <lib/async/time.h>
@@ -47,7 +49,7 @@ ExecuteImmediateCommandsOp* OpCast<ExecuteImmediateCommandsOp>(uint8_t* bytes, u
     return reinterpret_cast<ExecuteImmediateCommandsOp*>(bytes);
 }
 
-class ZirconPlatformConnection : public PlatformConnection {
+class ZirconPlatformConnection : public PlatformConnection, public fuchsia::gpu::magma::Primary {
 public:
     struct AsyncWait : public async_wait {
         AsyncWait(ZirconPlatformConnection* connection, zx_handle_t object, zx_signals_t trigger)
@@ -76,16 +78,16 @@ public:
         msd_notification_t notification;
     };
 
-    ZirconPlatformConnection(std::unique_ptr<Delegate> delegate, zx::channel local_endpoint,
-                             zx::channel remote_endpoint, zx::channel local_notification_endpoint,
-                             zx::channel remote_notification_endpoint,
+    ZirconPlatformConnection(std::unique_ptr<Delegate> delegate, zx::channel server_endpoint,
+                             zx::channel client_endpoint, zx::channel server_notification_endpoint,
+                             zx::channel client_notification_endpoint,
                              std::shared_ptr<magma::PlatformEvent> shutdown_event)
         : magma::PlatformConnection(shutdown_event), delegate_(std::move(delegate)),
-          local_endpoint_(std::move(local_endpoint)), remote_endpoint_(std::move(remote_endpoint)),
-          local_notification_endpoint_(std::move(local_notification_endpoint)),
-          remote_notification_endpoint_(std::move(remote_notification_endpoint)),
+          server_endpoint_(std::move(server_endpoint)), client_endpoint_(std::move(client_endpoint)),
+          server_notification_endpoint_(std::move(server_notification_endpoint)),
+          client_notification_endpoint_(std::move(client_notification_endpoint)),
           async_loop_(&kAsyncLoopConfigNoAttachToThread),
-          async_wait_channel_(this, local_endpoint_.get(),
+          async_wait_channel_(this, server_endpoint_.get(),
                               ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED),
           async_wait_shutdown_(
               this, static_cast<magma::ZirconPlatformEvent*>(shutdown_event.get())->zx_handle(),
@@ -133,7 +135,7 @@ public:
         uint8_t bytes[num_bytes];
         zx_handle_t handles[kNumHandles];
 
-        zx_status_t status = local_endpoint_.read(0, bytes, num_bytes, &actual_bytes, handles,
+        zx_status_t status = server_endpoint_.read(0, bytes, num_bytes, &actual_bytes, handles,
                                                   kNumHandles, &actual_handles);
         if (status != ZX_OK)
             return DRETF(false, "failed to read from channel");
@@ -204,16 +206,16 @@ public:
         return true;
     }
 
-    uint32_t GetHandle() override
+    uint32_t GetClientEndpoint() override
     {
-        DASSERT(remote_endpoint_);
-        return remote_endpoint_.release();
+        DASSERT(client_endpoint_);
+        return client_endpoint_.release();
     }
 
-    uint32_t GetNotificationChannel() override
+    uint32_t GetClientNotificationEndpoint() override
     {
-        DASSERT(remote_notification_endpoint_);
-        return remote_notification_endpoint_.release();
+        DASSERT(client_notification_endpoint_);
+        return client_notification_endpoint_.release();
     }
 
     async::Loop* async_loop() { return &async_loop_; }
@@ -276,7 +278,7 @@ private:
         switch (static_cast<MSD_CONNECTION_NOTIFICATION_TYPE>(task->notification.type)) {
             case MSD_CONNECTION_NOTIFICATION_CHANNEL_SEND: {
                 zx_status_t status = zx_channel_write(
-                    local_notification_endpoint_.get(), 0, task->notification.u.channel_send.data,
+                    server_notification_endpoint_.get(), 0, task->notification.u.channel_send.data,
                     task->notification.u.channel_send.size, nullptr, 0);
                 if (status != ZX_OK)
                     return DRETF(MAGMA_STATUS_INTERNAL_ERROR, "Failed writing to channel %d",
@@ -289,6 +291,14 @@ private:
                 return true;
         }
         return DRETF(false, "Unhandled notification type: %d", task->notification.type);
+    }
+
+    void ImportBufferFIDL(::zx::vmo buffer) override {
+        DLOG("Operation: FIDL ImportBuffer");
+        uint64_t buffer_id;
+        if (!delegate_->ImportBuffer(buffer.get(), &buffer_id)) {
+            SetError(MAGMA_STATUS_INVALID_ARGS);
+        }
     }
 
     bool ImportBuffer(ImportBufferOp* op, zx_handle_t* handle)
@@ -432,16 +442,16 @@ private:
     bool WriteError(magma_status_t error)
     {
         DLOG("Writing error %d to channel", error);
-        auto status = local_endpoint_.write(0, &error, sizeof(error), nullptr, 0);
+        auto status = server_endpoint_.write(0, &error, sizeof(error), nullptr, 0);
         return DRETF(status == ZX_OK, "failed to write to channel");
     }
 
     std::unique_ptr<Delegate> delegate_;
-    zx::channel local_endpoint_;
-    zx::channel remote_endpoint_;
+    zx::channel server_endpoint_;
+    zx::channel client_endpoint_;
     magma_status_t error_{};
-    zx::channel local_notification_endpoint_;
-    zx::channel remote_notification_endpoint_;
+    zx::channel server_notification_endpoint_;
+    zx::channel client_notification_endpoint_;
     async::Loop async_loop_;
     AsyncWait async_wait_channel_;
     AsyncWait async_wait_shutdown_;
@@ -453,15 +463,15 @@ PlatformConnection::Create(std::unique_ptr<PlatformConnection::Delegate> delegat
     if (!delegate)
         return DRETP(nullptr, "attempting to create PlatformConnection with null delegate");
 
-    zx::channel local_endpoint;
-    zx::channel remote_endpoint;
-    zx_status_t status = zx::channel::create(0, &local_endpoint, &remote_endpoint);
+    zx::channel server_endpoint;
+    zx::channel client_endpoint;
+    zx_status_t status = zx::channel::create(0, &server_endpoint, &client_endpoint);
     if (status != ZX_OK)
         return DRETP(nullptr, "zx::channel::create failed");
 
-    zx::channel local_notification_endpoint;
-    zx::channel remote_notification_endpoint;
-    status = zx::channel::create(0, &local_notification_endpoint, &remote_notification_endpoint);
+    zx::channel server_notification_endpoint;
+    zx::channel client_notification_endpoint;
+    status = zx::channel::create(0, &server_notification_endpoint, &client_notification_endpoint);
     if (status != ZX_OK)
         return DRETP(nullptr, "zx::channel::create failed");
 
@@ -470,8 +480,8 @@ PlatformConnection::Create(std::unique_ptr<PlatformConnection::Delegate> delegat
         return DRETP(nullptr, "Failed to create shutdown event");
 
     auto connection = std::make_shared<ZirconPlatformConnection>(
-        std::move(delegate), std::move(local_endpoint), std::move(remote_endpoint),
-        std::move(local_notification_endpoint), std::move(remote_notification_endpoint),
+        std::move(delegate), std::move(server_endpoint), std::move(client_endpoint),
+        std::move(server_notification_endpoint), std::move(client_notification_endpoint),
         std::shared_ptr<magma::PlatformEvent>(std::move(shutdown_event)));
 
     if (!connection->BeginChannelWait())

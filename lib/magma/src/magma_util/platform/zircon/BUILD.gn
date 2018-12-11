@@ -131,6 +131,7 @@ source_set("connection") {
   ]
 
   deps = [
+    "$magma_build_root/fidl",
     "$magma_build_root/include:msd_abi",
     "$magma_build_root/src/magma_util",
     "$zircon_build_root/public/lib/async-loop-cpp",

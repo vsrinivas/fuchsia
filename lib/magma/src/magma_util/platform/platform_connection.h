@@ -56,9 +56,9 @@ public:
     virtual ~PlatformConnection() {}
 
     static std::shared_ptr<PlatformConnection> Create(std::unique_ptr<Delegate> Delegate);
-    virtual uint32_t GetHandle() = 0;
+    virtual uint32_t GetClientEndpoint() = 0;
     // This handle is used to asynchronously return information to the client.
-    virtual uint32_t GetNotificationChannel() = 0;
+    virtual uint32_t GetClientNotificationEndpoint() = 0;
 
     // handles a single request, returns false if anything has put it into an illegal state
     // or if the remote has closed

@@ -90,7 +90,7 @@ static zx_status_t device_fidl_connect(void* context, uint64_t client_id, fidl_t
         return DRET_MSG(ZX_ERR_INVALID_ARGS, "MagmaSystemDevice::Open failed");
 
     zx_status_t status = fuchsia_gpu_magma_DeviceConnect_reply(
-        transaction, connection->GetHandle(), connection->GetNotificationChannel());
+        transaction, connection->GetClientEndpoint(), connection->GetClientNotificationEndpoint());
     if (status != ZX_OK)
         return DRET_MSG(ZX_ERR_INTERNAL, "magma_DeviceConnect_reply failed: %d", status);
 

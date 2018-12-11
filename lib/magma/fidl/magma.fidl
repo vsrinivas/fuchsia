@@ -10,11 +10,15 @@ interface Device {
     1: Query(uint64 query_id) -> (uint64 result);
 
     // Get the magma ipc channels.
-    2: Connect(uint64 client_id) -> (handle<channel> device_channel, handle<channel> notification_channel);
+    2: Connect(uint64 client_id) -> (handle<channel> primary_channel, handle<channel> notification_channel);
 
     // Dumps driver and hardware state.
     3: DumpState(uint32 dump_type);
 
     // For testing only.
     4: TestRestart();
+};
+
+interface Primary {
+    ImportBufferFIDL(handle<vmo> buffer);
 };

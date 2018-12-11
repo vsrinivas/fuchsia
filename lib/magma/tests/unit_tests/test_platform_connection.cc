@@ -339,7 +339,7 @@ std::unique_ptr<TestPlatformConnection> TestPlatformConnection::Create()
     if (!connection)
         return DRETP(nullptr, "failed to create PlatformConnection");
     auto client_connection = magma::PlatformConnectionClient::Create(
-        connection->GetHandle(), connection->GetNotificationChannel());
+        connection->GetClientEndpoint(), connection->GetClientNotificationEndpoint());
     if (!client_connection)
         return DRETP(nullptr, "failed to create PlatformConnectionClient");
 
