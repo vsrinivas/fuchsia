@@ -521,6 +521,7 @@ Libraries::Libraries() {
     }, {
         "Channel",
         "SocketControl",
+        "OvernetStream",
     }));
 }
 
