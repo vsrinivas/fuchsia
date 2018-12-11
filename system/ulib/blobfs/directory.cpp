@@ -15,6 +15,7 @@
 #include <fbl/string_piece.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/vfs.h>
+#include <lib/fidl-utils/bind.h>
 #include <lib/sync/completion.h>
 #include <zircon/device/device.h>
 #include <zircon/device/vfs.h>
@@ -183,6 +184,62 @@ void Directory::Sync(SyncCallback closure) {
         status = sync_txn.Transact();
         cb(status);
     });
+}
+
+// DirectoryConnection overrides the base Connection class to allow Directory to
+// dispatch its own ordinals.
+class DirectoryConnection : public fs::Connection {
+public:
+    using DirectoryConnectionBinder = fidl::Binder<DirectoryConnection>;
+
+    DirectoryConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx::channel channel,
+                    uint32_t flags)
+            : Connection(vfs, std::move(vnode), std::move(channel), flags) {}
+
+private:
+    Directory& GetDirectory() const {
+        return reinterpret_cast<Directory&>(GetVnode());
+    }
+
+    zx_status_t GetAllocatedRegions(fidl_txn_t* txn) {
+        return GetDirectory().GetAllocatedRegions(txn);
+    }
+
+    static const fuchsia_blobfs_Blobfs_ops* Ops() {
+        static const fuchsia_blobfs_Blobfs_ops kBlobfsOps = {
+            .GetAllocatedRegions =
+                DirectoryConnectionBinder::BindMember<&DirectoryConnection::GetAllocatedRegions>,
+        };
+        return &kBlobfsOps;
+    }
+
+    zx_status_t HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn_t* txn) final {
+        return fuchsia_blobfs_Blobfs_dispatch(this, txn, msg, Ops());
+    }
+};
+
+#ifdef __Fuchsia__
+zx_status_t Directory::Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) {
+    return vfs->ServeConnection(fbl::make_unique<DirectoryConnection>(
+        vfs, fbl::WrapRefPtr(this), std::move(channel), flags));
+}
+#endif
+
+zx_status_t Directory::GetAllocatedRegions(fidl_txn_t* txn) const {
+    zx::vmo vmo;
+    zx_status_t status = ZX_OK;
+    fbl::Vector<BlockRegion> buffer =  blobfs_->GetAllocatedRegions();
+    uint64_t allocations = buffer.size();
+    if (allocations != 0) {
+        status = zx::vmo::create(sizeof(BlockRegion) * allocations, 0, &vmo);
+        if (status == ZX_OK) {
+            status = vmo.write(buffer.get(), 0, sizeof(BlockRegion) * allocations);
+        }
+    }
+    return fuchsia_blobfs_BlobfsGetAllocatedRegions_reply(txn, status,
+                                                          status == ZX_OK ? vmo.get() :
+                                                          ZX_HANDLE_INVALID,
+                                                          status == ZX_OK ? allocations : 0);
 }
 
 } // namespace blobfs

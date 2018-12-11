@@ -49,6 +49,9 @@ TARGET_MODULE_STATIC_LIBS := \
     system/ulib/cobalt-client \
     system/ulib/digest \
     system/ulib/fbl \
+    system/ulib/fidl \
+    system/ulib/fidl-async \
+    system/ulib/fidl-utils \
     system/ulib/fs \
     system/ulib/fzl \
     system/ulib/sync \
@@ -70,6 +73,7 @@ TARGET_MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-cobalt \
     system/fidl/fuchsia-io \
     system/fidl/fuchsia-mem \
+    system/fidl/fuchsia-blobfs \
 
 # target blobfs lib
 MODULE_SRCS := \
@@ -100,6 +104,7 @@ MODULE_SRCS := \
     $(TEST_DIR)/blob-cache-test.cpp \
     $(TEST_DIR)/compressor-test.cpp \
     $(TEST_DIR)/extent-reserver-test.cpp \
+    $(TEST_DIR)/get-allocated-regions-test.cpp \
     $(TEST_DIR)/journal-test.cpp \
     $(TEST_DIR)/main.cpp \
     $(TEST_DIR)/node-populator-test.cpp \

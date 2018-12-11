@@ -49,6 +49,7 @@ MODULE_LIBS := \
     system/ulib/zircon \
 
 MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-blobfs \
     system/fidl/fuchsia-cobalt \
     system/fidl/fuchsia-io \
     system/fidl/fuchsia-mem \

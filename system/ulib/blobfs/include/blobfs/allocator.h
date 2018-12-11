@@ -20,11 +20,14 @@
 #include <fbl/function.h>
 #include <fbl/vector.h>
 #include <fs/trace.h>
+#include <fuchsia/blobfs/c/fidl.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>
 
 namespace blobfs {
+
+using BlockRegion = fuchsia_blobfs_BlockRegion;
 
 // An interface which controls actual access to the underlying storage.
 class SpaceManager {
@@ -138,6 +141,8 @@ public:
     // Frees a node which has already been committed.
     void FreeNode(uint32_t node_index);
 
+    // Record the location and size of all non-free block regions.
+    fbl::Vector<BlockRegion> GetAllocatedRegions() const;
 private:
     // Returns true if [start_block, end_block) are unallocated.
     bool CheckBlocksUnallocated(uint64_t start_block, uint64_t end_block) const;

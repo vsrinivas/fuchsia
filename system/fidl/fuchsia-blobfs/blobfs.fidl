@@ -1,0 +1,19 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.blobfs;
+
+using zx;
+
+// Describes contiguous run of allocated blocks.
+struct BlockRegion {
+    uint64 offset;
+    uint64 length;
+};
+
+[Layout="Simple"]
+interface Blobfs {
+    // Retrieve information about allocated regions on the filesystem.
+    GetAllocatedRegions() -> (zx.status status, handle<vmo>? regions, uint64 count);
+};

@@ -1042,6 +1042,57 @@ static bool TestQueryInfo(BlobfsTest* blobfsTest) {
     END_HELPER;
 }
 
+bool GetAllocations(zx::vmo* out_vmo, uint64_t* out_count) {
+    BEGIN_HELPER;
+    fbl::unique_fd fd(open(MOUNT_PATH, O_RDONLY | O_DIRECTORY));
+    ASSERT_TRUE(fd);
+    zx_status_t status;
+    zx_handle_t vmo_handle;
+    fzl::FdioCaller caller(std::move(fd));
+    ASSERT_EQ(fuchsia_blobfs_BlobfsGetAllocatedRegions(caller.borrow_channel(), &status,
+              &vmo_handle, out_count), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
+    out_vmo->reset(vmo_handle);
+    END_HELPER;
+}
+
+bool TestGetAllocatedRegions(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
+    zx::vmo vmo;
+    uint64_t count;
+    size_t total_bytes = 0;
+    size_t fidl_bytes = 0;
+
+    // Although we expect this partition to be empty, we check the results of GetAllocations
+    // in case blobfs chooses to store any metadata of pre-initialized data with the
+    // allocated regions.
+    ASSERT_TRUE(GetAllocations(&vmo, &count));
+    fbl::Array<fuchsia_blobfs_BlockRegion> buffer(new fuchsia_blobfs_BlockRegion[count], count);
+    ASSERT_EQ(vmo.read(buffer.get(), 0, sizeof(fuchsia_blobfs_BlockRegion) * count), ZX_OK);
+    for (size_t i = 0; i < count; i++) {
+        total_bytes += buffer[i].length * blobfs::kBlobfsBlockSize;
+    }
+
+    for (size_t i = 10; i < 16; i++) {
+        fbl::unique_ptr<blob_info_t> info;
+        ASSERT_TRUE(GenerateRandomBlob(1 << i, &info));
+
+        fbl::unique_fd fd;
+        ASSERT_TRUE(MakeBlob(info.get(), &fd));
+        ASSERT_EQ(close(fd.release()), 0);
+        total_bytes += fbl::round_up(info->size_merkle + info->size_data,
+                       blobfs::kBlobfsBlockSize);
+    }
+    ASSERT_TRUE(GetAllocations(&vmo, &count));
+    buffer.reset(new fuchsia_blobfs_BlockRegion[count], count);
+    ASSERT_EQ(vmo.read(buffer.get(), 0, sizeof(fuchsia_blobfs_BlockRegion) * count), ZX_OK);
+    for (size_t i = 0; i < count; i++) {
+        fidl_bytes += buffer[i].length * blobfs::kBlobfsBlockSize;
+    }
+    ASSERT_EQ(fidl_bytes, total_bytes);
+    END_HELPER;
+}
+
 static bool UseAfterUnlink(BlobfsTest* blobfsTest) {
     BEGIN_HELPER;
     for (size_t i = 0; i < 16; i++) {
@@ -2734,6 +2785,7 @@ RUN_TESTS(MEDIUM, TestMmapUseAfterClose)
 RUN_TESTS(MEDIUM, TestReaddir)
 RUN_TESTS(MEDIUM, TestDiskTooSmall)
 RUN_TEST_FVM(MEDIUM, TestQueryInfo)
+RUN_TESTS(MEDIUM, TestGetAllocatedRegions)
 RUN_TESTS(MEDIUM, UseAfterUnlink)
 RUN_TESTS(MEDIUM, WriteAfterRead)
 RUN_TESTS(MEDIUM, WriteAfterUnlink)

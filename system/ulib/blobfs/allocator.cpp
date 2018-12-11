@@ -465,4 +465,18 @@ void Allocator::LogAllocationFailure(uint64_t num_blocks) const {
                    requested_bytes <= free_bytes ? "fragmentation" : "over-allocation");
 }
 
+// Finds all allocated regions in the bitmap and returns a vector of their offsets and lengths.
+fbl::Vector<BlockRegion> Allocator::GetAllocatedRegions() const {
+    fbl::Vector<BlockRegion> out_regions;
+    uint64_t offset = 0;
+    uint64_t end = 0;
+    while (!block_map_.Scan(end, block_map_.size(), false, &offset)) {
+        if (block_map_.Scan(offset, block_map_.size(), true, &end)) {
+            end = block_map_.size();
+        }
+        out_regions.push_back({offset, end - offset});
+    }
+    return out_regions;
+}
+
 } // namespace blobfs

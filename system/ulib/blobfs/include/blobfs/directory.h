@@ -15,6 +15,7 @@
 #include <fbl/ref_ptr.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
+#include <fuchsia/blobfs/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 
 namespace blobfs {
@@ -22,6 +23,7 @@ namespace blobfs {
 class Blobfs;
 
 using digest::Digest;
+using BlockRegion = fuchsia_blobfs_BlockRegion;
 
 // The root directory of blobfs. This directory is a flat container of all blobs in the filesystem.
 class Directory final : public fs::Vnode {
@@ -31,6 +33,8 @@ public:
     virtual ~Directory();
     DISALLOW_COPY_ASSIGN_AND_MOVE(Directory);
 
+    // Shim to allow GetAllocatedRegions call to blobfs.
+    zx_status_t GetAllocatedRegions(fidl_txn_t* txn) const;
 private:
     ////////////////
     // fs::Vnode interface.
@@ -52,6 +56,7 @@ private:
     zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) final;
     zx_status_t Unlink(fbl::StringPiece name, bool must_be_dir) final;
     void Sync(SyncCallback closure) final;
+    zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) final;
 
     ////////////////
     // Other methods.

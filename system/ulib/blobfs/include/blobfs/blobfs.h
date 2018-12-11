@@ -30,6 +30,7 @@
 #include <fs/trace.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
+#include <fuchsia/blobfs/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fzl/owned-vmo-mapper.h>
@@ -212,6 +213,10 @@ public:
 
     fs::VnodeMetrics* GetMutableVnodeMetrics() { return cobalt_metrics_.mutable_vnode_metrics(); }
 
+    // Record the location and size of all non-free block regions.
+    fbl::Vector<BlockRegion> GetAllocatedRegions() const {
+        return allocator_->GetAllocatedRegions();
+    }
 private:
     friend class BlobfsChecker;
 
