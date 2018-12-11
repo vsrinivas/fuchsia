@@ -92,7 +92,7 @@ pub enum FwdCmd {
     /// lists forwarding table entries
     List,
     #[structopt(name = "add-device")]
-    /// adds a forwarding table entry
+    /// adds a forwarding table entry to route to a device
     AddDevice {
         #[structopt(raw(required = "true"))]
         /// id of the network interface to route to
@@ -104,5 +104,18 @@ pub enum FwdCmd {
         /// routing prefix for this forwarding rule
         prefix: u8,
     },
-    // TODO add-hop, del
+    #[structopt(name = "add-hop")]
+    /// adds a forwarding table entry to route to a IP address
+    AddHop {
+        #[structopt(raw(required = "true"))]
+        /// IP address of the next hop to route to
+        next_hop: String,
+        #[structopt(raw(required = "true"))]
+        /// address portion of the subnet for this forwarding rule
+        addr: String,
+        #[structopt(raw(required = "true"))]
+        /// routing prefix for this forwarding rule
+        prefix: u8,
+    },
+    // TODO del
 }
