@@ -172,16 +172,16 @@ function get-device-addr {
     shift
     if [[ "$1" == *"-"* ]]; then
       if [[ "$2" != "-z" ]]; then
-        device="$(fx-command-run netaddr $1 --fuchsia)"
+        device="$(fx-command-run netaddr "$1" --fuchsia)"
       else
-        device="$(fx-command-run netaddr $1)"
+        device="$(fx-command-run netaddr "$1")"
       fi
     else
       device="$1"
     fi
     shift
   fi
-  echo $device
+  echo "${device}"
 }
 
 function fx-command-run {
