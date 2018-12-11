@@ -16,20 +16,14 @@ set -o pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 
 function listen {
-  trap "exit 0" INT
   while true; do
-    addr="$(get-fuchsia-device-addr --nowait --timeout=1000)"
-    if [[ -n "${addr}" ]]; then
-      echo "Connecting to device (${addr})..."
-      (fx-command-exec ssh "${addr}" log_listener "$@" || true)
-      if [[ $? -eq 0 ]]; then
-        break
-      fi
-    fi
+    fx-command-run wait || return
+    fx-command-run shell log_listener "$@"
+    echo "Connection lost, reconnecting..."
   done
 }
 
-echo "Looking for device"
+echo "Connecting..."
 if [[ $# > 0 && "$1" = "--raw" ]]; then
   shift
   listen "$@"
