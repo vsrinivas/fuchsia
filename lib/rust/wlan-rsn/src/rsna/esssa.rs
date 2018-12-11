@@ -250,8 +250,13 @@ impl EssSa {
                         info!("established PTKSA");
                         Ptksa::Established { method, ptk }
                     },
-                    other => {
-                        // PTK re-keying is not supported.
+                    Ptksa::Established { method, .. } => {
+                        // PTK was already initialized.
+                        info!("re-established new PTKSA; invalidating previous one");
+                        info!("(this is likely a result of using a wrong password)");
+                        Ptksa::Established { method, ptk }
+                    },
+                    other@ Ptksa::Uninitialized { .. } => {
                         error!("received PTK in unexpected PTKSA state");
                         other
                     }
@@ -264,7 +269,7 @@ impl EssSa {
                         Gtksa::Established { method, gtk }
                     },
                     Gtksa::Established { method, .. } => {
-                        info!("re-key'ed GTK");
+                        info!("re-established new GTKSA; invalidating previous one");
                         Gtksa::Established { method, gtk }
                     },
                     Gtksa::Uninitialized { cfg } => {
@@ -311,7 +316,7 @@ impl EssSa {
         let was_esssa_established = self.is_established();
         updates
             .drain_filter(|update| match update {
-                SecAssocUpdate::Key(_) if !was_esssa_established => true,
+                SecAssocUpdate::Key(_) => true,
                 _ => false,
             }).for_each(|update| {
                 if let SecAssocUpdate::Key(key) = update {
@@ -322,15 +327,18 @@ impl EssSa {
             });
         update_sink.append(&mut updates);
 
-        // Report if ESSSA was established successfully for the first time,
-        // as well as PTK and GTK.
-        if !was_esssa_established {
-            let state = (self.ptksa.state(), self.gtksa.state());
-            if let (Ptksa::Established {ptk, ..}, Gtksa::Established {gtk, .. }) = state {
+        // Report keys once an ESSSA is established.
+        let state = (self.ptksa.state(), self.gtksa.state());
+        if let (Ptksa::Established {ptk, ..}, Gtksa::Established {gtk, .. }) = state {
+            if !was_esssa_established {
                 info!("established ESSSA");
                 update_sink.push(SecAssocUpdate::Key(Key::Ptk(ptk.clone())));
                 update_sink.push(SecAssocUpdate::Key(Key::Gtk(gtk.clone())));
                 update_sink.push(SecAssocUpdate::Status(SecAssocStatus::EssSaEstablished));
+            } else {
+                info!("rekey'ed some keys of an established ESSSA");
+                update_sink.push(SecAssocUpdate::Key(Key::Ptk(ptk.clone())));
+                update_sink.push(SecAssocUpdate::Key(Key::Gtk(gtk.clone())));
             }
         }
 
@@ -468,7 +476,6 @@ mod tests {
             (a, s) => panic!("Invalid status; Authenticator: {:?}, Supplicant: {:?}", a, s),
         };
     }
-
     #[test]
     fn test_replay_first_message() {
         let mut supplicant = test_util::get_supplicant();
@@ -505,7 +512,7 @@ mod tests {
         assert!(result.is_ok());
         let msg2 =
             extract_eapol_resp(&updates[..]).expect("Supplicant did not respond with 2nd message");
-        let ptk = extract_ptk(msg2);
+        let ptk = derive_ptk(msg2);
 
         let (result, _) = send_msg3(&mut supplicant, &ptk, |_| {});
         assert!(result.is_ok());
@@ -533,7 +540,7 @@ mod tests {
         assert!(result.is_ok());
         let msg2 =
             extract_eapol_resp(&updates[..]).expect("Supplicant did not respond with 2nd message");
-        let ptk = extract_ptk(msg2);
+        let ptk = derive_ptk(msg2);
 
         let (result, _) = send_msg3(&mut supplicant, &ptk, |msg3| {
             msg3.key_replay_counter = 0;
@@ -552,7 +559,7 @@ mod tests {
         assert!(result.is_ok());
         let msg2 =
             extract_eapol_resp(&updates[..]).expect("Supplicant did not respond with 2nd message");
-        let ptk = extract_ptk(msg2);
+        let ptk = derive_ptk(msg2);
 
         let (result, _) = send_msg3(&mut supplicant, &ptk, |msg3| {
             msg3.key_replay_counter = 1;
@@ -571,7 +578,7 @@ mod tests {
         assert!(result.is_ok());
         let msg2 =
             extract_eapol_resp(&updates[..]).expect("Supplicant did not respond with 2nd message");
-        let ptk = extract_ptk(msg2);
+        let ptk = derive_ptk(msg2);
 
         let (result, _) = send_msg3(&mut supplicant, &ptk, |msg3| {
             msg3.key_replay_counter = 2;
@@ -592,6 +599,48 @@ mod tests {
             msg3.key_replay_counter = 3;
         });
         assert!(result.is_ok());
+    }
+
+    // Replays the first message of the 4-Way Handshake to verify that
+    // (1) the Supplicant discards the first derived PTK in favor of a new one, and
+    // (2) the Supplicant is not reusing a nonce from its previous message,
+    // (3) the Supplicant only reports a new PTK if the 4-Way Handshake was completed successfully.
+    #[test]
+    fn test_replayed_msg1_ptk_installation() {
+        let mut supplicant = test_util::get_supplicant();
+        supplicant.start().expect("Failed starting Supplicant");
+
+        // Send 1st message of 4-Way Handshake for the first time and derive PTK.
+        let (_, updates) = send_msg1(&mut supplicant, |msg1| {
+            msg1.key_replay_counter = 1;
+        });
+        assert_eq!(extract_reported_ptk(&updates[..]), None);
+        let msg2 = extract_eapol_resp(&updates[..])
+            .expect("Supplicant did not respond with 2nd message");
+        let first_ptk = derive_ptk(msg2);
+        let first_nonce = msg2.key_nonce;
+
+        // Send 1st message of 4-Way Handshake a second time and derive PTK.
+        let (_, updates) = send_msg1(&mut supplicant, |msg1| {
+            msg1.key_replay_counter = 2;
+        });
+        assert_eq!(extract_reported_ptk(&updates[..]), None);
+        let msg2 = extract_eapol_resp(&updates[..])
+            .expect("Supplicant did not respond with 2nd message");
+        let second_ptk = derive_ptk(msg2);
+        let second_nonce = msg2.key_nonce;
+
+        // Send 3rd message of 4-Way Handshake.
+        // The Supplicant now finished the 4-Way Handshake and should report its PTK.
+        let (_, updates) = send_msg3(&mut supplicant, &second_ptk, |msg3| {
+            msg3.key_replay_counter = 3;
+        });
+        let installed_ptk = extract_reported_ptk(&updates[..])
+            .expect("Supplicant did not report PTK");
+
+        assert_ne!(first_nonce, second_nonce);
+        assert_ne!(&first_ptk, &second_ptk);
+        assert_eq!(installed_ptk, &second_ptk);
     }
 
     // Integration test for WPA2 CCMP-128 PSK with a Supplicant role.
@@ -627,7 +676,7 @@ mod tests {
         assert_eq!(&msg2.key_data[..], &s_rsne_data[..]);
 
         // Send 3rd message.
-        let ptk = extract_ptk(msg2);
+        let ptk = derive_ptk(msg2);
         let (result, updates) =
             send_msg3(&mut supplicant, &ptk, |_| {});
         assert!(result.is_ok());
@@ -707,7 +756,7 @@ mod tests {
     // invalid messages from Authenticator, timeouts, nonce reuse,
     // (in)-compatible protocol and RSNE versions, etc.
 
-    fn extract_ptk(msg2: &eapol::KeyFrame) -> Ptk {
+    fn derive_ptk(msg2: &eapol::KeyFrame) -> Ptk {
         let snonce = msg2.key_nonce;
         test_util::get_ptk(&ANONCE[..], &snonce[..])
     }
