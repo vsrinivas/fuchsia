@@ -146,7 +146,8 @@ void DiskSpaceBenchmark::Run() {
       fxl::MakeRefCounted<callback::Waiter<Status, PagePtr>>(Status::OK);
 
   for (size_t page_number = 0; page_number < page_count_; page_number++) {
-    GetPageEnsureInitialized(&ledger_, nullptr, QuitLoopClosure(),
+    GetPageEnsureInitialized(&ledger_, nullptr, DelayCallback::YES,
+                             QuitLoopClosure(),
                              [callback = waiter->NewCallback()](
                                  Status status, PagePtr page, PageId id) {
                                callback(status, std::move(page));

@@ -154,7 +154,7 @@ void PutBenchmark::Run() {
   }
 
   GetPageEnsureInitialized(
-      &ledger_, nullptr, QuitLoopClosure(),
+      &ledger_, nullptr, DelayCallback::YES, QuitLoopClosure(),
       [this](Status status, PagePtr page, PageId id) mutable {
         if (QuitOnError(QuitLoopClosure(), status,
                         "GetPageEnsureInitialized")) {

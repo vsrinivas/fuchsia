@@ -53,7 +53,7 @@ TEST(GetLedgerTest, GetPageEnsureInitialized) {
   PageId page_id;
 
   GetPageEnsureInitialized(
-      &ledger, nullptr, [&] { loop.Quit(); },
+      &ledger, nullptr, DelayCallback::NO, [&] { loop.Quit(); },
       callback::Capture([&] { loop.Quit(); }, &status, &page, &page_id));
   loop.Run();
 

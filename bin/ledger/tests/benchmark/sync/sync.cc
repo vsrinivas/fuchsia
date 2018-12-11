@@ -184,7 +184,7 @@ void SyncBenchmark::Run() {
     return;
   }
   GetPageEnsureInitialized(
-      &alpha_, nullptr, QuitLoopClosure(),
+      &alpha_, nullptr, DelayCallback::YES, QuitLoopClosure(),
       [this](Status status, PagePtr page, PageId id) {
         if (QuitOnError(QuitLoopClosure(), status,
                         "alpha page initialization")) {

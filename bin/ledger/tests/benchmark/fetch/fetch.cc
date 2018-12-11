@@ -168,7 +168,8 @@ void FetchBenchmark::Run() {
     return;
   }
 
-  GetPageEnsureInitialized(&writer_, nullptr, QuitLoopClosure(),
+  GetPageEnsureInitialized(&writer_, nullptr, DelayCallback::YES,
+                           QuitLoopClosure(),
                            [this](Status status, PagePtr page, PageId id) {
                              if (QuitOnError(QuitLoopClosure(), status,
                                              "Writer page initialization")) {

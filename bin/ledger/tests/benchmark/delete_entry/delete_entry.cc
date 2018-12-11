@@ -126,7 +126,7 @@ void DeleteEntryBenchmark::Run() {
   }
 
   GetPageEnsureInitialized(
-      &ledger_, nullptr, QuitLoopClosure(),
+      &ledger_, nullptr, DelayCallback::YES, QuitLoopClosure(),
       [this](Status status, PagePtr page, PageId id) {
         if (QuitOnError(QuitLoopClosure(), status, "Page initialization")) {
           return;

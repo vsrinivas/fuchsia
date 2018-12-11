@@ -210,7 +210,8 @@ void BacklogBenchmark::ConnectWriter() {
   }
 
   GetPageEnsureInitialized(
-      &writer_, nullptr, []() { FXL_LOG(INFO) << "Writer page closed."; },
+      &writer_, nullptr, DelayCallback::YES,
+      []() { FXL_LOG(INFO) << "Writer page closed."; },
       [this](Status status, PagePtr writer_page, PageId page_id) {
         if (QuitOnError(QuitLoopClosure(), status,
                         "Writer page initialization")) {

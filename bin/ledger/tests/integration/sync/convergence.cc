@@ -236,7 +236,7 @@ class ConvergenceTest
           &ledger_ptr,
           // The first ledger gets a random page id, the others use the
           // same id for their pages.
-          i == 0 ? nullptr : fidl::MakeOptional(page_id),
+          i == 0 ? nullptr : fidl::MakeOptional(page_id), DelayCallback::NO,
           [&] {
             ADD_FAILURE() << "Page should not be disconnected.";
             StopLoop();
