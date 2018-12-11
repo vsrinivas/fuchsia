@@ -196,7 +196,6 @@ package("gltf_export") {
 }
 
 package("scenic_tools") {
-  deprecated_system_image = true
 
   deps = [
     "gltf_export",
@@ -212,27 +211,35 @@ package("scenic_tools") {
   binaries = [
     {
       name = "gltf_export"
+      shell = true
     },
     {
       name = "input"
+      shell = true
     },
     {
       name = "set_root_view"
+      shell = true
     },
     {
       name = "set_renderer_params"
+      shell = true
     },
     {
       name = "present_view"
+      shell = true
     },
     {
       name = "print_input"
+      shell = true
     },
     {
       name = "screencap"
+      shell = true
     },
     {
       name = "snapshot"
+      shell = true
     },
   ]
 }
