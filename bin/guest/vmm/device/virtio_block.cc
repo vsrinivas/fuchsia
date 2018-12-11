@@ -6,6 +6,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/defer.h>
 #include <trace-provider/provider.h>
+#include <trace/event.h>
 #include <virtio/block.h>
 
 #include "garnet/bin/guest/vmm/device/block_dispatcher.h"
@@ -20,13 +21,16 @@ enum class Queue : uint16_t {
 // A single asynchronous block request.
 class Request : public fbl::RefCounted<Request> {
  public:
-  Request(machina::VirtioChain chain) : chain_(std::move(chain)) {}
+  Request(machina::VirtioChain chain) : chain_(std::move(chain)) {
+    TRACE_ASYNC_BEGIN("machina", "block:request", nonce_);
+  }
 
   ~Request() {
     if (status_ptr_ != nullptr) {
       *status_ptr_ = status_;
     }
     chain_.Return();
+    TRACE_ASYNC_END("machina", "block:request", nonce_);
   }
 
   bool NextDescriptor(machina::VirtioDescriptor* desc, bool writable) {
@@ -53,6 +57,7 @@ class Request : public fbl::RefCounted<Request> {
 
  private:
   machina::VirtioChain chain_;
+  trace_async_id_t nonce_ = TRACE_NONCE();
   uint8_t status_ = VIRTIO_BLK_S_OK;
   uint8_t* status_ptr_ = nullptr;
 };
@@ -123,43 +128,56 @@ class RequestStream : public StreamBase {
 
   void DoRead(fbl::RefPtr<Request> request, uint64_t off) {
     while (request->NextDescriptor(&desc_, true /* writable */)) {
-      if (desc_.len % machina::kBlockSectorSize != 0) {
+      const uint32_t size = desc_.len;
+      if (size % machina::kBlockSectorSize != 0) {
         request->SetStatus(VIRTIO_BLK_S_IOERR);
         continue;
       }
-      auto callback = [request, len = desc_.len](zx_status_t status) {
+      const trace_async_id_t nonce = TRACE_NONCE();
+      auto callback = [request, nonce, size](zx_status_t status) {
         if (status != ZX_OK) {
           request->SetStatus(VIRTIO_BLK_S_IOERR);
         }
-        request->AddUsed(len);
+        request->AddUsed(size);
+        TRACE_ASYNC_END("machina", "block:read-at", nonce);
       };
-      dispatcher_->ReadAt(desc_.addr, desc_.len, off, callback);
-      off += desc_.len;
+      TRACE_ASYNC_BEGIN("machina", "block:read-at", nonce, "size", size, "off",
+                        off);
+      dispatcher_->ReadAt(desc_.addr, size, off, callback);
+      off += size;
     }
   }
 
   void DoWrite(fbl::RefPtr<Request> request, uint64_t off) {
     while (request->NextDescriptor(&desc_, false /* writable */)) {
-      if (desc_.len % machina::kBlockSectorSize != 0) {
+      const uint32_t size = desc_.len;
+      if (size % machina::kBlockSectorSize != 0) {
         request->SetStatus(VIRTIO_BLK_S_IOERR);
         continue;
       }
-      auto callback = [request](zx_status_t status) {
+      const trace_async_id_t nonce = TRACE_NONCE();
+      auto callback = [request, nonce](zx_status_t status) {
         if (status != ZX_OK) {
           request->SetStatus(VIRTIO_BLK_S_IOERR);
         }
+        TRACE_ASYNC_END("machina", "block:write-at", nonce);
       };
-      dispatcher_->WriteAt(desc_.addr, desc_.len, off, callback);
-      off += desc_.len;
+      TRACE_ASYNC_BEGIN("machina", "block:write-at", nonce, "size", size, "off",
+                        off);
+      dispatcher_->WriteAt(desc_.addr, size, off, callback);
+      off += size;
     }
   }
 
   void DoSync(fbl::RefPtr<Request> request) {
-    auto callback = [request](zx_status_t status) {
+    const trace_async_id_t nonce = TRACE_NONCE();
+    auto callback = [request, nonce](zx_status_t status) {
       if (status != ZX_OK) {
         request->SetStatus(VIRTIO_BLK_S_IOERR);
       }
+      TRACE_ASYNC_END("machina", "block:sync", nonce);
     };
+    TRACE_ASYNC_BEGIN("machina", "block:sync", nonce);
     dispatcher_->Sync(callback);
     while (request->NextDescriptor(&desc_, false /* writable */)) {
     }
@@ -171,9 +189,10 @@ class RequestStream : public StreamBase {
         request->SetStatus(VIRTIO_BLK_S_IOERR);
         continue;
       }
-      auto len = std::min<uint32_t>(id_.size() + 1, desc_.len);
-      memcpy(desc_.addr, id_.c_str(), len);
-      request->AddUsed(len);
+      TRACE_DURATION("machina", "block:id");
+      auto size = std::min<uint32_t>(id_.size() + 1, desc_.len);
+      memcpy(desc_.addr, id_.c_str(), size);
+      request->AddUsed(size);
     }
   }
 

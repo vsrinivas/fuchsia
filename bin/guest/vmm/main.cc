@@ -357,7 +357,8 @@ int main(int argc, char** argv) {
     size_t wl_dev_mem_size = launch_info.wayland_device->memory;
     zx_gpaddr_t wl_dev_mem_offset = alloc_device_addr(wl_dev_mem_size);
     if (!dev_mem.AddRange(wl_dev_mem_offset, wl_dev_mem_size)) {
-      FXL_LOG(INFO) << "Could not reserve device memory range for wayland device";
+      FXL_LOG(INFO)
+          << "Could not reserve device memory range for wayland device";
       return status;
     }
     zx::vmar wl_vmar;
@@ -371,10 +372,9 @@ int main(int argc, char** argv) {
       FXL_LOG(INFO) << "Could not connect wayland device";
       return status;
     }
-    status =
-        wl.Start(guest.object(), std::move(wl_vmar),
-                 std::move(launch_info.wayland_device->dispatcher),
-                 launcher.get(), guest.device_dispatcher());
+    status = wl.Start(guest.object(), std::move(wl_vmar),
+                      std::move(launch_info.wayland_device->dispatcher),
+                      launcher.get(), guest.device_dispatcher());
     if (status != ZX_OK) {
       FXL_LOG(INFO) << "Could not start wayland device";
       return status;
