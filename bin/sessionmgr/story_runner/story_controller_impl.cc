@@ -1383,7 +1383,11 @@ void StoryControllerImpl::GetInfo(GetInfoCallback callback) {
         // may have been deleted when GetStoryInfo returned if there was a
         // Delete operation in the queue before GetStoryInfo().
         [state = state_, callback](fuchsia::modular::StoryInfoPtr story_info) {
-          callback(std::move(*story_info), state);
+          if (story_info) {
+            callback(std::move(*story_info), state);
+          } else {
+            callback(fuchsia::modular::StoryInfo(), state);
+          }
         });
   }));
 }
