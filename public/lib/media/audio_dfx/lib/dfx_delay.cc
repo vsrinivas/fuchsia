@@ -58,7 +58,7 @@ DfxDelay* DfxDelay::Create(uint32_t frame_rate, uint16_t channels_in,
 DfxDelay::DfxDelay(uint32_t frame_rate, uint16_t channels)
     : DfxBase(Effect::Delay, kNumControls, frame_rate, channels, channels,
               kLatencyFrames, kLatencyFrames) {
-  // This buff must accomodate our maximum delay, plus the largest 'num_frames'
+  // This buff must accommodate our maximum delay, plus the largest 'num_frames'
   // required by process_inplace -- which can be as large as frame_rate.
   delay_buff_ =
       std::make_unique<float[]>((kMaxDelayFrames + frame_rate) * channels);

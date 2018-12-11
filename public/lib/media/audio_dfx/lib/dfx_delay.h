@@ -55,7 +55,7 @@ class DfxDelay : public DfxBase {
 
  protected:
   uint32_t delay_samples_;
-  // This buff must accomodate the largest process_inplace call, plus our delay.
+  // Buffer must accommodate the largest process_inplace call, plus our delay.
   // N.B.: 'num_frames' for process_inplace can be as large as frame_rate.
   std::unique_ptr<float[]> delay_buff_;
 };

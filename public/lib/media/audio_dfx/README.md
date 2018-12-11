@@ -502,7 +502,7 @@ const uint16_t FUCHSIA_AUDIO_DFX_CHANNELS_ANY =
     std::numeric_limits<uint16_t>::max();
 ```
 This value can be returned in a **fuchsia_audio_dfx_description** struct, to
-indicate that an effect can potentially accomodate any number of channels. This
+indicate that an effect can potentially accommodate any number of channels. This
 value may NOT be used in **fuchsia_audio_dfx_create** calls or
 **fuchsia_audio_dfx_parameters** structs, as `channels_in` and `channels_out` in
 those contexts indicate the actual number of channels in the effect instance,
