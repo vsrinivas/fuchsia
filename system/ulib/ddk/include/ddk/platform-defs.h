@@ -58,6 +58,7 @@ __BEGIN_CDECLS;
 #define PDEV_PID_ASTRO              3
 #define PDEV_PID_MADRONE            4
 #define PDEV_PID_SHERLOCK           5
+#define PDEV_PID_CLEO               6
 
 #define PDEV_DID_GAUSS_AUDIO_IN     1
 #define PDEV_DID_GAUSS_AUDIO_OUT    2

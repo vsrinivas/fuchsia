@@ -337,6 +337,9 @@ zx_status_t PlatformBus::ReadZbi(zx::vmo zbi) {
             board_info_.board_revision = 0;
             got_platform_id = true;
 
+            zxlogf(INFO, "platform bus: VID: %u PID: %u board: \"%s\"\n", platform_id.vid,
+                   platform_id.pid, platform_id.board_name);
+
             // Publish board name to sysinfo driver
             status = device_publish_metadata(parent(), "/dev/misc/sysinfo",
                                              DEVICE_METADATA_BOARD_NAME, platform_id.board_name,
