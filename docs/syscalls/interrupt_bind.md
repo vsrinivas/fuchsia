@@ -8,12 +8,15 @@ interrupt_bind - Bind an interrupt object to a port
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_interrupt_bind(zx_handle_t inth, zx_handle_t porth,
-                              uint64_t key, uint32_t options);
-
+zx_status_t zx_interrupt_bind(zx_handle_t handle,
+                              zx_handle_t port_handle,
+                              uint64_t key,
+                              uint32_t options);
 ```
 
 ## DESCRIPTION
@@ -44,7 +47,7 @@ than non-interrupt packets.
 
 *handle* must be of type **ZX_OBJ_TYPE_INTERRUPT** and have **ZX_RIGHT_READ**.
 
-*port* must be of type **ZX_OBJ_TYPE_PORT** and have **ZX_RIGHT_WRITE**.
+*port_handle* must be of type **ZX_OBJ_TYPE_PORT** and have **ZX_RIGHT_WRITE**.
 
 ## RETURN VALUE
 
@@ -53,15 +56,15 @@ of failure, a negative error value is returned.
 
 ## ERRORS
 
-**ZX_ERR_BAD_HANDLE** *inth* or *porth* is not a valid handle.
+**ZX_ERR_BAD_HANDLE** *handle* or *port_handle* is not a valid handle.
 
-**ZX_ERR_WRONG_TYPE** *inth* is not an interrupt object or *porth* is not a port object.
+**ZX_ERR_WRONG_TYPE** *handle* is not an interrupt object or *port_handle* is not a port object.
 
-**ZX_ERR_CANCELED**  **zx_interrupt_destroy**() was called on *inth*.
+**ZX_ERR_CANCELED**  **zx_interrupt_destroy**() was called on *handle*.
 
 **ZX_ERR_BAD_STATE**  A thread is waiting on the interrupt using **zx_interrupt_wait**()
 
-**ZX_ERR_ACCESS_DENIED** the *inth* handle lacks **ZX_RIGHT_READ** or the *porth* handle
+**ZX_ERR_ACCESS_DENIED** the *handle* handle lacks **ZX_RIGHT_READ** or the *port_handle* handle
 lacks **ZX_RIGHT_WRITE**
 
 **ZX_ERR_ALREADY_BOUND** this interrupt object is already bound.

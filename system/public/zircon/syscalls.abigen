@@ -831,13 +831,13 @@ syscall debug_send_command
 #! src_obj must have resource kind ZX_RSRC_KIND_IRQ.
 syscall interrupt_create
     (src_obj: zx_handle_t, src_num: uint32_t, options: uint32_t)
-    returns (zx_status_t, out: zx_handle_t);
+    returns (zx_status_t, out_handle: zx_handle_t);
 
 #^ Bind an interrupt object to a port
 #! handle must be of type ZX_OBJ_TYPE_INTERRUPT and have ZX_RIGHT_READ.
-#! port must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_WRITE.
+#! port_handle must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_WRITE.
 syscall interrupt_bind
-    (handle: zx_handle_t, port: zx_handle_t, key: uint64_t, options: uint32_t)
+    (handle: zx_handle_t, port_handle: zx_handle_t, key: uint64_t, options: uint32_t)
     returns (zx_status_t);
 
 #^ wait for an interrupt

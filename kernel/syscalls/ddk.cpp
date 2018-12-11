@@ -461,9 +461,9 @@ zx_status_t sys_interrupt_create(zx_handle_t src_obj, uint32_t src_num,
 }
 
 // zx_status_t zx_interrupt_bind
-zx_status_t sys_interrupt_bind(zx_handle_t inth, zx_handle_t porth,
+zx_status_t sys_interrupt_bind(zx_handle_t handle, zx_handle_t port_handle,
                                uint64_t key, uint32_t options) {
-    LTRACEF("handle %x\n", inth);
+    LTRACEF("handle %x\n", handle);
     if (options) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -471,12 +471,12 @@ zx_status_t sys_interrupt_bind(zx_handle_t inth, zx_handle_t porth,
     zx_status_t status;
     auto up = ProcessDispatcher::GetCurrent();
     fbl::RefPtr<InterruptDispatcher> interrupt;
-    status = up->GetDispatcherWithRights(inth, ZX_RIGHT_READ, &interrupt);
+    status = up->GetDispatcherWithRights(handle, ZX_RIGHT_READ, &interrupt);
     if (status != ZX_OK)
         return status;
 
     fbl::RefPtr<PortDispatcher> port;
-    status = up->GetDispatcherWithRights(porth, ZX_RIGHT_WRITE, &port);
+    status = up->GetDispatcherWithRights(port_handle, ZX_RIGHT_WRITE, &port);
     if (status != ZX_OK)
         return status;
 

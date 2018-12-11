@@ -8,12 +8,15 @@ interrupt_create - create an interrupt object
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_interrupt_create(zx_handle_t src_obj, uint32_t src_num,
-                                uint32_t options, zx_handle_t* out_handle);
-
+zx_status_t zx_interrupt_create(zx_handle_t src_obj,
+                                uint32_t src_num,
+                                uint32_t options,
+                                zx_handle_t* out_handle);
 ```
 
 ## DESCRIPTION

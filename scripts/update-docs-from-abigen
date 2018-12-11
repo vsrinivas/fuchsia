@@ -403,8 +403,6 @@ synopsis_blacklist = (
     'futex_wait',
     'futex_wake',
     'futex_wake_handle_close_thread_exit',
-    'interrupt_bind',
-    'interrupt_create',
     'object_get_info',
     'object_get_property',
     'object_signal',
