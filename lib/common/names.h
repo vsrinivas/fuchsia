@@ -13,11 +13,17 @@ namespace modular {
 constexpr char kRootModuleName[] = "root";
 
 // The service name of the Presentation service that is routed between
-// BaseShell and SessionShell. The same service exchange between SessionShell and
-// StoryShell uses the SessionShellPresentationProvider service, which is
+// BaseShell and SessionShell. The same service exchange between SessionShell
+// and StoryShell uses the SessionShellPresentationProvider service, which is
 // discoverable.
 // TODO(SCN-595): mozart.Presentation is being renamed to ui.Presenter.
 constexpr char kPresentationService[] = "mozart.Presentation";
+
+// TODO(MF-134): This key is duplicated in
+// topaz/lib/settings/lib/device_info.dart. Remove this key once factory reset
+// is provided to topaz as a service.
+// The key for factory reset toggles.
+constexpr char kFactoryResetKey[] = "FactoryReset";
 
 }  // namespace modular
 

@@ -82,14 +82,14 @@ class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
   // |fuchsia::modular::UserProvider|, also called by |basemgr_impl|.
   void PreviousUsers(PreviousUsersCallback callback) override;
 
+  // |fuchsia::modular::UserProvider|, also called by |basemgr_impl|.
+  void RemoveUser(fidl::StringPtr account_id,
+                  RemoveUserCallback callback) override;
+
  private:
   // |fuchsia::modular::UserProvider|
   void AddUser(fuchsia::modular::auth::IdentityProvider identity_provider,
                AddUserCallback callback) override;
-
-  // |fuchsia::modular::UserProvider|
-  void RemoveUser(fidl::StringPtr account_id,
-                  RemoveUserCallback callback) override;
 
   // |fuchsia::auth::AuthenticationContextProvider|
   void GetAuthenticationUIContext(

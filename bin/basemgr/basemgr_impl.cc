@@ -39,12 +39,14 @@ BasemgrImpl::BasemgrImpl(
     fuchsia::sys::Launcher* const launcher,
     fuchsia::modular::BasemgrMonitorPtr monitor,
     fuchsia::ui::policy::PresenterPtr presenter,
+    fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager,
     std::function<void()> on_shutdown)
     : settings_(settings),
       session_shell_settings_(session_shell_settings),
       launcher_(launcher),
       monitor_(std::move(monitor)),
       presenter_(std::move(presenter)),
+      device_settings_manager_(std::move(device_settings_manager)),
       on_shutdown_(std::move(on_shutdown)),
       user_provider_impl_("UserProviderImpl"),
       base_shell_context_binding_(this),
@@ -269,24 +271,7 @@ void BasemgrImpl::Start() {
       authentication_context_provider_binding_.NewBinding().Bind(),
       settings_.enable_garnet_token_manager, this));
 
-  // If the session shell settings specifies it, auto-login as the first
-  // authenticated user.
-  if (active_session_shell_settings_index_ < session_shell_settings_.size() &&
-      session_shell_settings_[active_session_shell_settings_index_]
-          .auto_login) {
-    user_provider_impl_->PreviousUsers(
-        [this](fidl::VectorPtr<fuchsia::modular::auth::Account> accounts) {
-          if (accounts->empty()) {
-            StartBaseShell();
-          } else {
-            fuchsia::modular::UserLoginParams params;
-            params.account_id = accounts->at(0).id;
-            user_provider_impl_->Login(std::move(params));
-          }
-        });
-  } else {
-    StartBaseShell();
-  }
+  ShowSetupOrLogin();
 
   ReportEvent(ModularEvent::BOOTED_TO_BASEMGR);
 }
@@ -535,6 +520,79 @@ void BasemgrImpl::UpdateSessionShellConfig() {
   }
 
   session_shell_config_ = std::move(session_shell_config);
+}
+
+void BasemgrImpl::ShowSetupOrLogin() {
+  auto show_setup_or_login = [this] {
+    // If the session shell settings specifies it, auto-login as the first
+    // authenticated user. Otherwise, start the base shell to launch setup.
+    if (active_session_shell_settings_index_ < session_shell_settings_.size() &&
+        session_shell_settings_[active_session_shell_settings_index_]
+            .auto_login) {
+      user_provider_impl_->PreviousUsers(
+          [this](fidl::VectorPtr<fuchsia::modular::auth::Account> accounts) {
+            if (accounts->empty()) {
+              StartBaseShell();
+            } else {
+              fuchsia::modular::UserLoginParams params;
+              params.account_id = accounts->at(0).id;
+              user_provider_impl_->Login(std::move(params));
+            }
+          });
+    } else {
+      StartBaseShell();
+    }
+  };
+
+  // TODO(MF-134): Improve the factory reset logic by deleting more than just
+  // the user data.
+  // If the device needs factory reset, remove all the users before proceeding
+  // with setup.
+  device_settings_manager_.set_error_handler(
+      [show_setup_or_login](zx_status_t status) { show_setup_or_login(); });
+  device_settings_manager_->GetInteger(
+      kFactoryResetKey,
+      [this, show_setup_or_login](int factory_reset_value,
+                                  fuchsia::devicesettings::Status status) {
+        if (status == fuchsia::devicesettings::Status::ok &&
+            factory_reset_value > 0) {
+          // Unset the factory reset flag.
+          device_settings_manager_->SetInteger(
+              kFactoryResetKey, 0, [](bool result) {
+                if (!result) {
+                  FXL_LOG(WARNING) << "Factory reset flag was not updated.";
+                }
+              });
+
+          user_provider_impl_->PreviousUsers(
+              [this](
+                  fidl::VectorPtr<fuchsia::modular::auth::Account> accounts) {
+                std::vector<FuturePtr<>> did_remove_users;
+                did_remove_users.reserve(accounts->size());
+
+                for (const auto& account : *accounts) {
+                  auto did_remove_user = Future<>::Create(
+                      "BasemgrImpl.ShowSetupOrLogin.did_remove_user");
+                  user_provider_impl_->RemoveUser(
+                      account.id,
+                      [did_remove_user](fidl::StringPtr error_code) {
+                        if (error_code) {
+                          FXL_LOG(WARNING) << "Account was not removed during "
+                                              "factory reset. Error code: "
+                                           << error_code;
+                        }
+                        did_remove_user->Complete();
+                      });
+                  did_remove_users.emplace_back(did_remove_user);
+                }
+
+                Wait("BasemgrImpl.ShowSetupOrLogin.Wait", did_remove_users)
+                    ->Then([this] { StartBaseShell(); });
+              });
+        } else {
+          show_setup_or_login();
+        }
+      });
 }
 
 }  // namespace modular

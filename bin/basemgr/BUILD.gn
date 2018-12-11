@@ -31,6 +31,7 @@ executable_package("basemgr") {
   deps = [
     ":lib",
     "//garnet/public/fidl/fuchsia.auth",
+    "//garnet/public/fidl/fuchsia.devicesettings",
     "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/fidl/fuchsia.ui.policy",
     "//garnet/public/fidl/fuchsia.ui.viewsv1",
@@ -50,6 +51,7 @@ executable_package("basemgr") {
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/fidl/fuchsia.modular.auth",
     "//peridot/public/fidl/fuchsia.modular.internal",
+    "//peridot/public/lib/async/cpp:future",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
   ]

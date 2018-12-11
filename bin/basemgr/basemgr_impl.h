@@ -8,6 +8,7 @@
 #include <memory>
 
 #include <fuchsia/auth/cpp/fidl.h>
+#include <fuchsia/devicesettings/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
@@ -52,6 +53,8 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   // |launcher| Environment service for creating component instances.
   // |monitor| Service that monitors how many basemgr instances are active.
   // |presenter| Service to initialize the presentation.
+  // |device_settings_manager| Service to look-up whether device needs factory
+  // reset.
   // |on_shutdown| Callback invoked when this basemgr instance is shutdown.
   explicit BasemgrImpl(
       const modular::BasemgrSettings& settings,
@@ -59,6 +62,7 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
       fuchsia::sys::Launcher* const launcher,
       fuchsia::modular::BasemgrMonitorPtr monitor,
       fuchsia::ui::policy::PresenterPtr presenter,
+      fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager,
       std::function<void()> on_shutdown);
 
   ~BasemgrImpl() override;
@@ -128,6 +132,8 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
 
   void ToggleClipping();
 
+  void ShowSetupOrLogin();
+
   // Updates the session shell app config to the active session shell. Done once
   // on initialization and every time the session shells are swapped.
   void UpdateSessionShellConfig();
@@ -146,6 +152,8 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   fuchsia::modular::BasemgrMonitorPtr monitor_;
   // Used to initialize the presentation.
   fuchsia::ui::policy::PresenterPtr presenter_;
+  // Used to look-up whether device needs a factory reset.
+  fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager_;
   std::function<void()> on_shutdown_;
 
   AsyncHolder<UserProviderImpl> user_provider_impl_;
