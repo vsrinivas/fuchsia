@@ -1,5 +1,3 @@
-#include <utility>
-
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -8,6 +6,8 @@
 #define GARNET_BIN_NETEMUL_RUNNER_SANDBOX_ENV_H_
 
 #include <lib/fxl/files/unique_fd.h>
+#include <lib/fxl/macros.h>
+#include <lib/netemul/network/network_context.h>
 #include <memory>
 #include <string>
 
@@ -23,9 +23,14 @@ class SandboxEnv {
 
   const fxl::UniqueFD& dir() const { return package_dir_; }
 
+  NetworkContext& network_context() { return net_context_; }
+
  private:
   std::string package_name_;
   fxl::UniqueFD package_dir_;
+  NetworkContext net_context_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(SandboxEnv);
 };
 }  // namespace netemul
 

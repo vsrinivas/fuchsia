@@ -48,6 +48,7 @@ void Sandbox::Terminate(int64_t exit_code, Sandbox::TerminationReason reason) {
 void Sandbox::Terminate(Sandbox::TerminationReason reason) {
   Terminate(-1, reason);
 }
+
 void Sandbox::LoadPackage(fuchsia::sys::PackagePtr package) {
   // package is loaded, proceed to parsing cmx and starting child env
   component::FuchsiaPkgUrl pkgUrl;

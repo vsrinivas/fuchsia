@@ -1,5 +1,18 @@
 {
     "program": {
         "binary": "test/svc_list"
+    },
+    "sandbox": {
+        "dev": [
+            "class/ethernet"
+        ],
+        "features": [
+            "persistent-storage"
+        ],
+        "services": [
+            "fuchsia.netemul.environment.ManagedEnvironment",
+            "fuchsia.netemul.network.NetworkContext",
+            "fuchsia.netstack.Netstack"
+        ]
     }
 }

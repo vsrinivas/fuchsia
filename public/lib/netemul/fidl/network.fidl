@@ -33,11 +33,11 @@ struct ReorderConfig {
 /// Used to configure a network with emulated adversity conditions.
 table NetworkConfig {
     /// Latency configuration.
-        1: LatencyConfig latency;
+    1: LatencyConfig latency;
     /// Packet loss configuration.
-        2: LossConfig packet_loss;
+    2: LossConfig packet_loss;
     /// Packet reordering configuration.
-        3: ReorderConfig reorder;
+    3: ReorderConfig reorder;
 };
 
 /// Manages virtual networks.
@@ -101,6 +101,12 @@ interface Network {
     CreateFakeEndpoint(request<FakeEndpoint> ep);
 };
 
+/// Simple interface to serve devices over fidl.
+interface DeviceProxy {
+    /// Fulfills the device request.
+    ServeDevice(handle<channel> req);
+};
+
 /// Virtual ethernet endpoint.
 interface Endpoint {
     // Gets endpoint configuration.
@@ -111,6 +117,8 @@ interface Endpoint {
     SetLinkUp(bool up) -> ();
     /// Opens channel with zircon ethernet device.
     GetEthernetDevice() -> (fuchsia.hardware.ethernet.Device device);
+    /// Gets a proxy to open requests with zircon ethernet device.
+    GetProxy(request<DeviceProxy> proxy);
 };
 
 /// Main entry point to manage virtual networks and endpoints.

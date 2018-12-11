@@ -19,10 +19,12 @@ class EndpointImpl;
 
 class NetworkContext;
 class EndpointManager;
-class Endpoint : public fuchsia::netemul::network::Endpoint {
+class Endpoint : public fuchsia::netemul::network::Endpoint,
+                 public fuchsia::netemul::network::DeviceProxy {
  public:
   using Ptr = std::unique_ptr<Endpoint>;
   using FEndpoint = fuchsia::netemul::network::Endpoint;
+  using FProxy = fuchsia::netemul::network::DeviceProxy;
   using Config = fuchsia::netemul::network::EndpointConfig;
   using EndpointClosedCallback = fit::function<void(const Endpoint&)>;
 
@@ -40,6 +42,9 @@ class Endpoint : public fuchsia::netemul::network::Endpoint {
   void GetName(GetNameCallback callback) override;
   void SetLinkUp(bool up, SetLinkUpCallback callback) override;
   void GetEthernetDevice(GetEthernetDeviceCallback callback) override;
+  void GetProxy(fidl::InterfaceRequest<FProxy> proxy) override;
+
+  void ServeDevice(zx::channel channel) override;
 
   // Installs a data sink on endpoint.
   // Data sinks will be notified via ->Consume of any data that is sent to the
@@ -66,6 +71,7 @@ class Endpoint : public fuchsia::netemul::network::Endpoint {
   NetworkContext* parent_;
   std::string name_;
   fidl::BindingSet<FEndpoint> bindings_;
+  fidl::BindingSet<FProxy> proxy_bindings_;
 };
 
 }  // namespace netemul

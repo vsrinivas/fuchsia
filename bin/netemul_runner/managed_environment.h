@@ -5,17 +5,24 @@
 #ifndef GARNET_BIN_NETEMUL_RUNNER_MANAGED_ENVIRONMENT_H_
 #define GARNET_BIN_NETEMUL_RUNNER_MANAGED_ENVIRONMENT_H_
 
+#include <fuchsia/netemul/environment/cpp/fidl.h>
 #include <lib/component/cpp/testing/enclosing_environment.h>
+#include <lib/fxl/macros.h>
 #include <lib/svc/cpp/services.h>
 #include <memory>
 #include "managed_launcher.h"
 #include "sandbox_env.h"
+#include "virtual_data.h"
+#include "virtual_devices.h"
 
 namespace netemul {
 
-class ManagedEnvironment {
+class ManagedEnvironment
+    : public fuchsia::netemul::environment::ManagedEnvironment {
  public:
   using EnvironmentRunningCallback = fit::closure;
+  using Options = fuchsia::netemul::environment::EnvironmentOptions;
+  using FManagedEnvironment = fuchsia::netemul::environment::ManagedEnvironment;
   using Ptr = std::unique_ptr<ManagedEnvironment>;
   static Ptr CreateRoot(const fuchsia::sys::EnvironmentPtr& parent,
                         const SandboxEnv::Ptr& sandbox_env);
@@ -29,7 +36,13 @@ class ManagedEnvironment {
     return services_;
   }
 
-  ManagedLauncher& launcher() { return launcher_; }
+  void GetLauncher(
+      ::fidl::InterfaceRequest<::fuchsia::sys::Launcher> launcher) override;
+
+  void CreateChildEnvironment(fidl::InterfaceRequest<FManagedEnvironment> me,
+                              Options options) override;
+
+  ManagedLauncher& launcher() { return *launcher_; }
 
   void SetRunningCallback(EnvironmentRunningCallback cb) {
     running_callback_ = std::move(cb);
@@ -39,17 +52,24 @@ class ManagedEnvironment {
   friend ManagedLauncher;
 
   component::testing::EnclosingEnvironment& environment();
+  zx::channel OpenVdevDirectory();
+  zx::channel OpenVdataDirectory();
 
  private:
-  ManagedEnvironment(
-      std::unique_ptr<component::testing::EnclosingEnvironment> env,
-      const SandboxEnv::Ptr& sandbox_env);
+  ManagedEnvironment(const SandboxEnv::Ptr& sandbox_env);
+  void Create(const fuchsia::sys::EnvironmentPtr& parent, Options options);
 
   SandboxEnv::Ptr sandbox_env_;
   std::unique_ptr<component::testing::EnclosingEnvironment> env_;
-  ManagedLauncher launcher_;
+  std::unique_ptr<ManagedLauncher> launcher_;
   std::shared_ptr<component::Services> services_;
   EnvironmentRunningCallback running_callback_;
+  fidl::BindingSet<FManagedEnvironment> bindings_;
+  std::vector<ManagedEnvironment::Ptr> children_;
+  VirtualDevices virtual_devices_;
+  std::unique_ptr<VirtualData> virtual_data_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(ManagedEnvironment);
 };
 
 }  // namespace netemul

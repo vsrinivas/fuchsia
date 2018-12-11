@@ -2,12 +2,46 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![feature(async_await, await_macro, futures_api)]
+
+use failure::{format_err, Error, ResultExt};
+
 use std::fs;
 use std::io;
 use std::path::Path;
 
+use fidl;
+use fidl::endpoints::ServiceMarker;
+use fidl_fuchsia_netemul_environment::{
+    EnvironmentOptions, LaunchService, ManagedEnvironmentMarker, VirtualDevice,
+};
+use fidl_fuchsia_netemul_network::{
+    DeviceProxy_Marker, EndpointBacking, EndpointConfig, EndpointManagerMarker,
+    NetworkContextMarker,
+};
+use fidl_fuchsia_netstack::NetstackMarker;
+use fidl_fuchsia_sys::{
+    ComponentControllerEvent, ComponentControllerMarker, LaunchInfo, LauncherMarker,
+    TerminationReason,
+};
+
+use fuchsia_app::client;
+use fuchsia_async as fasync;
+use futures::TryStreamExt;
+use structopt::StructOpt;
+
+const EP_NAME: &str = "ep0";
+const EP_MOUNT: &str = "class/ethernet/ep0";
+const MY_PACKAGE: &str = "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/svc_list_run.cmx";
+const NETSTACK_URL: &str = "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx";
+const SKIP_DIRS: &'static [&str] = &["/data", "/pkg"];
+
 fn visit_dirs(dir: &Path) -> io::Result<()> {
-    if dir.is_dir() {
+    let strpath = dir.to_str().unwrap();
+    if SKIP_DIRS.contains(&strpath) {
+        // skip some of the entries to avoid clogging the logs
+        println!("{}/[...]", strpath);
+    } else if dir.is_dir() {
         for entry in fs::read_dir(dir)? {
             let entry = entry?;
             let path = entry.path();
@@ -19,11 +53,157 @@ fn visit_dirs(dir: &Path) -> io::Result<()> {
     Ok(())
 }
 
-fn main() -> io::Result<()> {
-    println!("Hello World");
-    visit_dirs(Path::new("/"))?;
+// this is the main body of our test, which
+// runs in an executor
+async fn run_test() -> Result<(), Error> {
+    // connect to NetworkContext and ManagedEnvironment services
+    let netctx = client::connect_to_service::<NetworkContextMarker>()?;
+    let env = client::connect_to_service::<ManagedEnvironmentMarker>()?;
 
-    // TODO(brunodalbo) the idea of this test is to find the sandbox services and ensure they're there
+    // get the endpoint manager
+    let (epm, epmch) = fidl::endpoints::create_proxy::<EndpointManagerMarker>()?;
+    netctx.get_endpoint_manager(epmch)?;
 
-    Ok(())
+    let mut cfg = EndpointConfig {
+        backing: EndpointBacking::Ethertap,
+        mac: None,
+        mtu: 1500,
+    };
+
+    // create a network endpoint
+    let (_, ep) = await!(epm.create_endpoint(EP_NAME, &mut cfg))?;
+    let ep = ep.unwrap().into_proxy()?;
+
+    // get the endpoint proxy to pass to child environment
+    let (ep_proxy_client, ep_proxy_server) =
+        fidl::endpoints::create_endpoints::<DeviceProxy_Marker>()?;
+    ep.get_proxy_(ep_proxy_server)?;
+
+    // prepare a child managed environment
+    let (child_env, child_env_server) =
+        fidl::endpoints::create_proxy::<ManagedEnvironmentMarker>()?;
+
+    let mut env_options = EnvironmentOptions {
+        name: String::from("child_env"),
+        services: vec![LaunchService {
+            name: String::from(NetstackMarker::NAME),
+            url: String::from(NETSTACK_URL),
+        }],
+        // pass the endpoint's proxy to create a virtual device
+        devices: vec![VirtualDevice {
+            path: String::from(EP_MOUNT),
+            device: ep_proxy_client,
+        }],
+    };
+    // launch the child env
+    env.create_child_environment(child_env_server, &mut env_options)?;
+
+    // launch as a process in the created environment.
+    let (launcher, launcher_req) = fidl::endpoints::create_proxy::<LauncherMarker>()?;
+    child_env.get_launcher(launcher_req)?;
+
+    // launch info is our own package
+    // plus the command line argument to run the child proc
+    let mut linfo = LaunchInfo {
+        url: String::from(MY_PACKAGE),
+        arguments: Some(vec![String::from("-c")]),
+        additional_services: None,
+        directory_request: None,
+        err: None,
+        out: None,
+        flat_namespace: None,
+    };
+
+    let (comp_controller, comp_controller_req) =
+        fidl::endpoints::create_proxy::<ComponentControllerMarker>()?;
+    let mut component_events = comp_controller.take_event_stream();
+    launcher.create_component(&mut linfo, Some(comp_controller_req))?;
+
+    // wait for child to exit and mimic the result code
+    let result = loop {
+        let event = await!(component_events.try_next())
+            .context("wait for child component to exit")?
+            .ok_or_else(|| format_err!("Child didn't exit cleanly"))?;
+
+        match event {
+            ComponentControllerEvent::OnTerminated {
+                return_code: code,
+                termination_reason: reason,
+            } => {
+                println!("Child exited with code {}, reason {}", code, reason as u32);
+                if code != 0 || reason != TerminationReason::Exited {
+                    break Err(format_err!(
+                        "Child exited with code {}, reason {}",
+                        code,
+                        reason as u32
+                    ));
+                } else {
+                    break Ok(());
+                }
+            }
+            _ => {
+                continue;
+            }
+        }
+    };
+    result
+}
+
+fn check_service(service: &str) -> Result<(), Error> {
+    let fs_path = format!("/svc/{}", service);
+    let p = Path::new(&fs_path);
+    if p.exists() {
+        Ok(())
+    } else {
+        Err(format_err!("Service {} does not exist", service))
+    }
+}
+
+fn check_virtual_device(vdev: &str) -> Result<(), Error> {
+    let fs_path = &format!("/vdev/{}", vdev);
+    let p = Path::new(fs_path);
+    if p.exists() {
+        Ok(())
+    } else {
+        Err(format_err!("Virtual device {} does not exist", vdev))
+    }
+}
+
+fn check_vdata() -> Result<(), Error> {
+    if Path::new("/vdata/.THIS_IS_A_VIRTUAL_FS").exists() {
+        Ok(())
+    } else {
+        Err(format_err!("/vdata does not exist"))
+    }
+}
+
+fn main() -> Result<(), Error> {
+    // make sure both services exist!
+    check_vdata()?;
+    check_service(NetworkContextMarker::NAME)?;
+    check_service(ManagedEnvironmentMarker::NAME)?;
+    #[derive(StructOpt, Debug)]
+    struct Opt {
+        #[structopt(short = "c")]
+        is_child: bool,
+    }
+    let opt = Opt::from_args();
+
+    // the same binary is used for the root test
+    // and the test in a child env
+    // a flag is passed on the command line to change
+    // the code path
+    if opt.is_child {
+        println!("Running as child");
+        // print whole namespace to console (for manual testing)
+        visit_dirs(Path::new("/"))?;
+        // check that the virtual ethernet device is there
+        check_virtual_device(EP_MOUNT)?;
+        // check that netstack was served
+        check_service(NetstackMarker::NAME)?;
+        Ok(())
+    } else {
+        let mut executor = fasync::Executor::new().context("Error creating executor")?;
+        executor.run_singlethreaded(run_test())
+    }
 }

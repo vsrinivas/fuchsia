@@ -6,24 +6,39 @@
 #define GARNET_BIN_NETEMUL_RUNNER_MANAGED_LAUNCHER_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fxl/macros.h>
 #include <string>
 
 namespace netemul {
 class ManagedEnvironment;
-class ManagedLauncher {
+class ManagedLauncher : public fuchsia::sys::Launcher {
  public:
   explicit ManagedLauncher(ManagedEnvironment* environment);
 
   ~ManagedLauncher();
 
+  void CreateComponent(fuchsia::sys::LaunchInfo launch_info,
+                       fidl::InterfaceRequest<fuchsia::sys::ComponentController>
+                           controller) override;
+
+ protected:
+  friend ManagedEnvironment;
+  void Bind(fidl::InterfaceRequest<fuchsia::sys::Launcher> request);
+
+ private:
   void CreateComponent(
-      fuchsia::sys::LaunchInfo launch_info,
+      fuchsia::sys::PackagePtr package, fuchsia::sys::LaunchInfo launch_info,
       fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller);
 
  private:
   // Pointer to parent environment. Not owned.
   ManagedEnvironment* env_;
   fuchsia::sys::LauncherPtr real_launcher_;
+  fuchsia::sys::LoaderPtr loader_;
+  fidl::BindingSet<fuchsia::sys::Launcher> bindings_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(ManagedLauncher);
 };
 
 }  // namespace netemul

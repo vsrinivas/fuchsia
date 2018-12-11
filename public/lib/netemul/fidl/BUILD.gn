@@ -14,3 +14,15 @@ fidl("network") {
     "//zircon/public/fidl/fuchsia-hardware-ethernet",
   ]
 }
+
+fidl("environment") {
+  name = "fuchsia.netemul.environment"
+  sources = [
+    "environment.fidl",
+  ]
+
+  deps = [
+    ":network",
+    "//garnet/public/fidl/fuchsia.sys",
+  ]
+}

@@ -93,6 +93,10 @@ class EndpointImpl : public data::Consumer {
     return ret;
   }
 
+  void ConnectEthernetDevice(zx::channel channel) {
+    fdio_service_connect(ethernet_mount_path_.c_str(), channel.release());
+  }
+
   void Consume(const void* data, size_t len) override {
     auto status = ethertap_->Send(data, len);
     if (status != ZX_OK) {
@@ -159,6 +163,14 @@ void Endpoint::SetLinkUp(bool up, Endpoint::SetLinkUpCallback callback) {
 
 void Endpoint::GetEthernetDevice(GetEthernetDeviceCallback callback) {
   callback(impl_->GetEthernetDevice());
+}
+
+void Endpoint::GetProxy(fidl::InterfaceRequest<FProxy> proxy) {
+  proxy_bindings_.AddBinding(this, std::move(proxy), parent_->dispatcher());
+}
+
+void Endpoint::ServeDevice(zx::channel channel) {
+  impl_->ConnectEthernetDevice(std::move(channel));
 }
 
 fidl::InterfaceHandle<Endpoint::FEndpoint> Endpoint::Bind() {

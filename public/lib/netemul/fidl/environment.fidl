@@ -1,0 +1,45 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.netemul.environment;
+using fuchsia.sys;
+using fuchsia.netemul.network;
+
+/// A single service to be launched in managed environment.
+struct LaunchService {
+    /// Service name.
+    string name;
+    /// Service launch url (fuchsia component url).
+    string url;
+};
+
+/// A single virtual device to make available for child processes.
+/// Virtual devices are mounted on /vdev.
+struct VirtualDevice {
+    /// Relative path to /vdev.
+    string path;
+    /// Virtual device server.
+    fuchsia.netemul.network.DeviceProxy device;
+};
+
+/// Options used to create environment.
+struct EnvironmentOptions {
+    /// Environment name, for debugging purposes.
+    string name;
+    /// Services to register on environment.
+    vector<LaunchService> services;
+    /// Devices to make available.
+    vector<VirtualDevice> devices;
+};
+
+/// Managed environment is made available on netemul runners.
+/// Typically this interface will be used by the root runner
+/// to setup the testing environment.
+[Discoverable]
+interface ManagedEnvironment {
+    /// Gets the managed launcher for the environment.
+    GetLauncher(request<fuchsia.sys.Launcher> launcher);
+    /// Creates a nested managed environment.
+    CreateChildEnvironment(request<ManagedEnvironment> child_env, EnvironmentOptions options);
+};
