@@ -12,7 +12,7 @@ namespace debug_agent {
 namespace arch {
 
 // Helper functions for defining x86 arch dependent behavior.
-// They are on a separete header/implementation so that it can be more easily
+// They are on a separate header/implementation so that it can be more easily
 // tested.
 
 // Returns the state the debug registers should be if we added a execution HW

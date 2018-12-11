@@ -21,7 +21,7 @@ zx_status_t Launcher::Setup(const std::vector<std::string>& argv) {
   builder_.AddArgs(argv);
 
   /*
-  Transfering STDIO handles is currently disabled. When doing local debugging
+  Transferring STDIO handles is currently disabled. When doing local debugging
   sharing stdio currently leaves the debugger UI in an inconsistent state and
   stdout doesn't work. Instead we need to redirect stdio in a way the debugger
   can control.

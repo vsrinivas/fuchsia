@@ -413,9 +413,9 @@ DebuggedJob* DebugAgent::AddDebuggedJob(zx_koid_t job_koid, zx::job zx_job) {
 
 DebuggedProcess* DebugAgent::AddDebuggedProcess(zx_koid_t process_koid,
                                                 zx::process zx_proc,
-                                                bool resume_inital_thread) {
+                                                bool resume_initial_thread) {
   auto proc = std::make_unique<DebuggedProcess>(
-      this, process_koid, std::move(zx_proc), resume_inital_thread);
+      this, process_koid, std::move(zx_proc), resume_initial_thread);
   if (!proc->Init())
     return nullptr;
 

@@ -31,7 +31,7 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher,
   // Caller must call Init immediately after construction and delete the
   // object if that fails.
   DebuggedProcess(DebugAgent* debug_agent, zx_koid_t process_koid,
-                  zx::process proc, bool resume_inital_thread);
+                  zx::process proc, bool resume_initial_thread);
   virtual ~DebuggedProcess();
 
   zx_koid_t koid() const { return koid_; }
@@ -53,7 +53,7 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher,
                       debug_ipc::AddressSpaceReply* reply);
   void OnModules(debug_ipc::ModulesReply* reply);
 
-  // Pauses all threads in the process. If non-null, the pused_koids vector
+  // Pauses all threads in the process. If non-null, the paused_koids vector
   // will be populated with the koids of all threads paused by this operation.
   void PauseAll(std::vector<uint64_t>* paused_koids = nullptr);
 

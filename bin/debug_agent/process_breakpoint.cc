@@ -17,7 +17,7 @@
 namespace debug_agent {
 
 // Low-level Declarations ------------------------------------------------------
-// Implentations are at the end of the file.
+// Implementations are at the end of the file.
 
 class ProcessBreakpoint::SoftwareBreakpoint {
  public:
@@ -161,7 +161,7 @@ void ProcessBreakpoint::OnHit(
 }
 
 void ProcessBreakpoint::BeginStepOver(zx_koid_t thread_koid) {
-  // Should't be recursively stepping over a breakpoint from the same thread.
+  // Shouldn't be recursively stepping over a breakpoint from the same thread.
   FXL_DCHECK(thread_step_over_.find(thread_koid) == thread_step_over_.end());
 
   if (!CurrentlySteppingOver()) {
@@ -393,7 +393,7 @@ zx_status_t ProcessBreakpoint::HardwareBreakpoint::Install(
   DebuggedThread* thread = process_bp_->process()->GetThread(thread_id);
   if (!thread) {
     FXL_LOG(WARNING) << fxl::StringPrintf(
-        "Warning: installing HW breakpoint for unexistent thread %u at "
+        "Warning: installing HW breakpoint for nonexistent thread %u at "
         "%" PRIX64 "\n",
         static_cast<uint32_t>(thread_id), address);
     return ZX_OK;
@@ -429,7 +429,7 @@ zx_status_t ProcessBreakpoint::HardwareBreakpoint::Uninstall(
   DebuggedThread* thread = process_bp_->process()->GetThread(thread_id);
   if (!thread) {
     FXL_LOG(WARNING) << fxl::StringPrintf(
-        "Warning: removed HW breakpoint for unexistent thread %u at %" PRIX64
+        "Warning: removed HW breakpoint for nonexistent thread %u at %" PRIX64
         "\n",
         static_cast<uint32_t>(thread_id), address);
     // TODO: What to do in this case?

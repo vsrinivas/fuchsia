@@ -51,7 +51,7 @@ class DebuggedThread {
   // When a thread is first created and we get a notification about it, it
   // will be suspended, but when we attach to a process with existing threads
   // it won't in in this state. The |starting| flag indicates that this is
-  // a thread discoverd via a debug notification.
+  // a thread discovered via a debug notification.
   DebuggedThread(DebuggedProcess* process, zx::thread thread,
                  zx_koid_t thread_koid, ThreadCreationOption option);
   virtual ~DebuggedThread();
@@ -68,7 +68,7 @@ class DebuggedThread {
   // when this returns.
   bool Pause();
 
-  // Resumes execution of the thread. The thead should currently be in a
+  // Resumes execution of the thread. The thread should currently be in a
   // stopped state. If it's not stopped, this will be ignored.
   void Resume(const debug_ipc::ResumeRequest& request);
 

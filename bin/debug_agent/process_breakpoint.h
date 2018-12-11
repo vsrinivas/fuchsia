@@ -27,7 +27,7 @@ class ProcessBreakpoint {
   // Given the initial Breakpoint object this corresponds to. Breakpoints
   // can be added or removed later.
   //
-  // Call Init() immediately after construction to initalize the parts that
+  // Call Init() immediately after construction to initialize the parts that
   // can report errors.
   explicit ProcessBreakpoint(Breakpoint* breakpoint,
                              DebuggedProcess* debugged_process,

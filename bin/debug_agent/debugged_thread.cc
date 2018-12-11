@@ -55,7 +55,7 @@ void DebuggedThread::OnException(uint32_t type) {
     // single-stepping over one. We're not going to get an exception for a
     // thread when stopped, so hitting this exception means the breakpoint is
     // done being stepped over. The breakpoint will tell us if the exception
-    // was from a normal completion of the breakpoing step, or whether
+    // was from a normal completion of the breakpoint step, or whether
     // something else went wrong while stepping.
     bool completes_bp_step =
         current_breakpoint_->BreakpointStepHasException(koid_, notify.type);
@@ -71,7 +71,7 @@ void DebuggedThread::OnException(uint32_t type) {
       return;
     }
     // Something else went wrong while stepping (the instruction with the
-    // breakpoing could have crashed). Fall through to dispatching the
+    // breakpoint could have crashed). Fall through to dispatching the
     // exception to the client.
     current_breakpoint_ = nullptr;
   }
@@ -241,7 +241,7 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
         // notify us that the loader is ready. Send the current module list
         // and silently keep this thread stopped. The client will explicitly
         // resume this thread when it's ready to continue (it will need to
-        // load symbols for the moduless and may need to set breakpoints based
+        // load symbols for the modules and may need to set breakpoints based
         // on them).
         std::vector<uint64_t> paused_threads;
         paused_threads.push_back(koid());

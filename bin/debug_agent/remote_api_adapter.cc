@@ -99,7 +99,7 @@ void RemoteAPIAdapter::OnStreamReadable() {
       DISPATCH(JobFilter);
 
       // Attach is special (see remote_api.h): forward the raw data instead of
-      // a deserizlied version.
+      // a deserialized version.
       case debug_ipc::MsgHeader::Type::kAttach:
         api_->OnAttach(std::move(buffer));
         break;

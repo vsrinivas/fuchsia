@@ -257,7 +257,7 @@ TEST_F(JobDebuggerTest, FilterMultipleProcess) {
 }
 
 
-// Launch two seperate processes and check that multiple filters can attach to
+// Launch two separate processes and check that multiple filters can attach to
 // them.
 TEST_F(JobDebuggerTest, MultipleFilters) {
   zx::job duplicate_job;

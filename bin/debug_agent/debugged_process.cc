@@ -23,13 +23,13 @@
 namespace debug_agent {
 
 DebuggedProcess::DebuggedProcess(DebugAgent* debug_agent, zx_koid_t koid,
-                                 zx::process proc, bool resume_inital_thread)
+                                 zx::process proc, bool resume_initial_thread)
     : debug_agent_(debug_agent),
       koid_(koid),
       process_(std::move(proc)),
-      resume_initial_thread_(resume_inital_thread),
+      resume_initial_thread_(resume_initial_thread),
       waiting_for_initial_thread_(true) {
-  // set this propery so we can know about module loads.
+  // set this property so we can know about module loads.
   const intptr_t kMagicValue = ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET;
   zx_object_set_property(process_.get(), ZX_PROP_PROCESS_DEBUG_ADDR,
                          &kMagicValue, sizeof(kMagicValue));
@@ -133,7 +133,7 @@ bool DebuggedProcess::RegisterDebugState() {
   dl_debug_addr_ = debug_addr;
 
   // TODO(brettw) register breakpoint for dynamic loads. This current code
-  // only notifies for the inital set of binaries loaded by the process.
+  // only notifies for the initial set of binaries loaded by the process.
   return true;
 }
 

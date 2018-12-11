@@ -196,7 +196,7 @@ TEST(Breakpoint, OneShot) {
   EXPECT_EQ(0u, bp->stats().hit_count);
   EXPECT_FALSE(bp->stats().should_delete);
 
-  // The hit cound and "should delete" flag should be set.
+  // The hit count and "should delete" flag should be set.
   EXPECT_EQ(Breakpoint::HitResult::kOneShotHit, bp->OnHit());
   EXPECT_EQ(kBreakpointId, bp->stats().breakpoint_id);
   EXPECT_EQ(1u, bp->stats().hit_count);
