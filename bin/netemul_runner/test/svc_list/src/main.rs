@@ -12,6 +12,7 @@ use std::path::Path;
 
 use fidl;
 use fidl::endpoints::ServiceMarker;
+use fidl_fuchsia_netemul_bus::BusManagerMarker;
 use fidl_fuchsia_netemul_environment::{
     EnvironmentOptions, LaunchService, ManagedEnvironmentMarker, VirtualDevice,
 };
@@ -178,10 +179,12 @@ fn check_vdata() -> Result<(), Error> {
 }
 
 fn main() -> Result<(), Error> {
-    // make sure both services exist!
+    // make sure all services exist!
     check_vdata()?;
     check_service(NetworkContextMarker::NAME)?;
     check_service(ManagedEnvironmentMarker::NAME)?;
+    check_service(BusManagerMarker::NAME)?;
+
     #[derive(StructOpt, Debug)]
     struct Opt {
         #[structopt(short = "c")]

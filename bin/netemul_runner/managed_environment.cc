@@ -48,6 +48,9 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
   // add network context service:
   services->AddService(sandbox_env_->network_context().GetHandler());
 
+  // add Bus service:
+  services->AddService(sandbox_env_->bus_manager().GetHandler());
+
   // add managed environment itself as a handler
   services->AddService(bindings_.GetHandler(this));
 

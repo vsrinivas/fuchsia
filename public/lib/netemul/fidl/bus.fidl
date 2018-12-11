@@ -1,0 +1,41 @@
+library fuchsia.netemul.bus;
+
+/// Simple data structure passed on netemul bus.
+struct Event {
+    /// User-defined event code.
+    int32 code;
+    /// Optional string message.
+    string? message;
+    /// Optional serialized arguments.
+    vector<uint8>? arguments;
+};
+
+/// Represents a named bus:
+///    a bus is a broadcast pub/sub network that distributes Events.
+///    Events are not stored, only forwarded to attached clients.
+interface Bus {
+    /// Publishes event on the bus.
+    Publish(Event data);
+    /// Publishes data on bus and only returns when data has been dispatched.
+    /// Use this if you need guarantees that the data was broadcast before continuing.
+    /// Note that this ensures that the data will be *published* to all listening clients,
+    /// but it cannot guarantee that all clients will have observed the event before it returns.
+    EnsurePublish(Event data) -> ();
+    /// Notifies client of new event.
+    -> OnBusData(Event data);
+    /// Get list of named clients.
+    GetClients() -> (vector<string> clients);
+    /// Notifies a client is now attached.
+    -> OnClientAttached(string client);
+    /// Notifies a client was detached.
+    -> OnClientDetached(string client);
+};
+
+/// The bus manager is the entry point to attach a client to a bus.
+/// The client's 'ticket' to remain on the bus is the channel obtained through the 'Subscribe' call.
+[Discoverable]
+interface BusManager {
+    /// Subscribes to bus 'busName' with a given client name.
+    /// Duplicate client names are disallowed and will cause the request to return unfulfilled.
+    Subscribe(string busName, string clientName, request<Bus> bus);
+};

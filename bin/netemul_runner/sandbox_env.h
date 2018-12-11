@@ -7,6 +7,7 @@
 
 #include <lib/fxl/files/unique_fd.h>
 #include <lib/fxl/macros.h>
+#include <lib/netemul/bus/bus_manager.h>
 #include <lib/netemul/network/network_context.h>
 #include <memory>
 #include <string>
@@ -24,11 +25,13 @@ class SandboxEnv {
   const fxl::UniqueFD& dir() const { return package_dir_; }
 
   NetworkContext& network_context() { return net_context_; }
+  BusManager& bus_manager() { return bus_manager_; }
 
  private:
   std::string package_name_;
   fxl::UniqueFD package_dir_;
   NetworkContext net_context_;
+  BusManager bus_manager_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SandboxEnv);
 };

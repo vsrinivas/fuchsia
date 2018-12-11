@@ -26,3 +26,10 @@ fidl("environment") {
     "//garnet/public/fidl/fuchsia.sys",
   ]
 }
+
+fidl("bus") {
+  name = "fuchsia.netemul.bus"
+  sources = [
+    "bus.fidl",
+  ]
+}

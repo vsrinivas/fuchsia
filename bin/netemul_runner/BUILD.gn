@@ -30,6 +30,8 @@ executable("bin") {
     "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/netemul/bus:bus_service",
+    "//garnet/public/lib/netemul/fidl:bus",
     "//garnet/public/lib/netemul/fidl:environment",
     "//garnet/public/lib/netemul/fidl:network",
     "//garnet/public/lib/netemul/network:network_service",

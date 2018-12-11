@@ -12,6 +12,7 @@ rustc_binary("svc_list") {
     "//garnet/public/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//garnet/public/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/lib/netemul/fidl:bus-rustc",
     "//garnet/public/lib/netemul/fidl:environment-rustc",
     "//garnet/public/lib/netemul/fidl:network-rustc",
     "//garnet/public/rust/fuchsia-app",
