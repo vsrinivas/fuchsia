@@ -8,10 +8,12 @@ cache_flush - Flush CPU data and/or instruction caches
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_cache_flush(const void* addr, size_t size, uint32_t flags);
+zx_status_t zx_cache_flush(const void* addr, size_t size, uint32_t options);
 ```
 
 ## DESCRIPTION
@@ -20,7 +22,7 @@ zx_status_t zx_cache_flush(const void* addr, size_t size, uint32_t flags);
 virtual address range.  If that range of memory is not readable, then
 the thread may fault as it would for a data read.
 
-*flags* is a bitwise OR of:
+*options* is a bitwise OR of:
 
  * **ZX_CACHE_FLUSH_DATA**
 
@@ -42,7 +44,7 @@ the thread may fault as it would for a data read.
    main memory as well as to instruction fetches.
 
 At least one of **ZX_CACHE_FLUSH_DATA** and **ZX_CACHE_FLUSH_INSN**
-must be included in *flags*.
+must be included in *options*.
 
 ## RIGHTS
 
@@ -56,4 +58,4 @@ TODO(ZX-2399)
 
 ## ERRORS
 
-**ZX_ERR_INVALID_ARGS** *flags* is invalid.
+**ZX_ERR_INVALID_ARGS** *options* is invalid.

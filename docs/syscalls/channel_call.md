@@ -8,23 +8,17 @@ channel_call - send a message to a channel and await a reply
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-typedef struct {
-    void* wr_bytes;
-    zx_handle_t* wr_handles;
-    void *rd_bytes;
-    zx_handle_t* rd_handles;
-    uint32_t wr_num_bytes;
-    uint32_t wr_num_handles;
-    uint32_t rd_num_bytes;
-    uint32_t rd_num_handles;
-} zx_channel_call_args_t;
-
-zx_status_t zx_channel_call(zx_handle_t handle, uint32_t options,
-                            zx_time_t deadline, zx_channel_call_args_t* args,
-                            uint32_t* actual_bytes, uint32_t* actual_handles);
+zx_status_t zx_channel_call(zx_handle_t handle,
+                            uint32_t options,
+                            zx_time_t deadline,
+                            const zx_channel_call_args_t* args,
+                            uint32_t* actual_bytes,
+                            uint32_t* actual_handles);
 ```
 
 ## DESCRIPTION

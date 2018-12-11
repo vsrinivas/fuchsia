@@ -8,10 +8,12 @@ ticks_get - Read the number of high-precision timer ticks since boot.
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_ticks_t zx_ticks_get(void)
+zx_ticks_t zx_ticks_get(void);
 ```
 
 ## DESCRIPTION

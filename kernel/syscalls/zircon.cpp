@@ -275,8 +275,8 @@ zx_status_t sys_cprng_draw_once(user_out_ptr<void> buffer, size_t len) {
 }
 
 // zx_status_t zx_cprng_add_entropy
-zx_status_t sys_cprng_add_entropy(user_in_ptr<const void> buffer, size_t len) {
-    if (len > kMaxCPRNGSeed)
+zx_status_t sys_cprng_add_entropy(user_in_ptr<const void> buffer, size_t buffer_size) {
+    if (buffer_size > kMaxCPRNGSeed)
         return ZX_ERR_INVALID_ARGS;
 
     uint8_t kernel_buf[kMaxCPRNGSeed];
@@ -284,12 +284,12 @@ zx_status_t sys_cprng_add_entropy(user_in_ptr<const void> buffer, size_t len) {
     // returns.
     explicit_memory::ZeroDtor<uint8_t> zero_guard(kernel_buf, sizeof(kernel_buf));
 
-    if (buffer.copy_array_from_user(kernel_buf, len) != ZX_OK)
+    if (buffer.copy_array_from_user(kernel_buf, buffer_size) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
 
     auto prng = crypto::GlobalPRNG::GetInstance();
     ASSERT(prng->is_thread_safe());
-    prng->AddEntropy(kernel_buf, len);
+    prng->AddEntropy(kernel_buf, buffer_size);
 
     return ZX_OK;
 }

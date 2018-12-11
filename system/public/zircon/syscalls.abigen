@@ -72,12 +72,12 @@ syscall nanosleep blocking
 #^ Read the number of high-precision timer ticks since boot.
 syscall ticks_get vdsocall
     ()
-    returns (uint64_t);
+    returns (zx_ticks_t);
 
 #^ Read the number of high-precision timer ticks in a second.
 syscall ticks_per_second vdsocall const
     ()
-    returns (uint64_t);
+    returns (zx_ticks_t);
 
 #^ Convert a time relative to now to an absolute deadline
 syscall deadline_after vdsocall
@@ -713,7 +713,7 @@ syscall cprng_draw vdsocall
 
 #^ Add entropy to the kernel CPRNG
 syscall cprng_add_entropy
-    (buffer: any[len] IN, len: size_t)
+    (buffer: any[buffer_size] IN, buffer_size: size_t)
     returns (zx_status_t);
 
 # IPC: Fifos

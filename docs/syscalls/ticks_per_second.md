@@ -8,10 +8,12 @@ ticks_per_second - Read the number of high-precision timer ticks in a second.
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_ticks_t zx_ticks_per_second(void)
+zx_ticks_t zx_ticks_per_second(void);
 ```
 
 ## DESCRIPTION
