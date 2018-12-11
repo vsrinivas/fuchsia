@@ -8,11 +8,16 @@ fifo_write - write data to a fifo
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_fifo_write(zx_handle_t handle, size_t elem_size,
-                          const void* buffer, size_t count, size_t* actual_count);
+zx_status_t zx_fifo_write(zx_handle_t handle,
+                          size_t elem_size,
+                          const void* data,
+                          size_t count,
+                          size_t* actual_count);
 ```
 
 ## DESCRIPTION
@@ -50,7 +55,7 @@ the number of elements written (at least one) via *actual_count*.
 
 **ZX_ERR_WRONG_TYPE**  *handle* is not a fifo handle.
 
-**ZX_ERR_INVALID_ARGS**  *buffer* is an invalid pointer or *actual_count*
+**ZX_ERR_INVALID_ARGS**  *data* is an invalid pointer or *actual_count*
 is an invalid pointer.
 
 **ZX_ERR_OUT_OF_RANGE**  *count* is zero or *elem_size* is not equal

@@ -398,6 +398,8 @@ synopsis_whitelist = (
     'event_create',
     'eventpair_create',
     'fifo_create',
+    'fifo_read',
+    'fifo_write',
     'guest_create',
     'handle_close',
     'handle_close_many',

@@ -45,8 +45,8 @@ zx_status_t sys_fifo_create(size_t count, size_t elemsize, uint32_t options,
 }
 
 // zx_status_t zx_fifo_write
-zx_status_t sys_fifo_write(zx_handle_t handle, size_t elem_size, user_in_ptr<const void> entries,
-                           size_t count, user_out_ptr<size_t> actual_out) {
+zx_status_t sys_fifo_write(zx_handle_t handle, size_t elem_size, user_in_ptr<const void> data,
+                           size_t count, user_out_ptr<size_t> actual_count) {
     auto up = ProcessDispatcher::GetCurrent();
 
     fbl::RefPtr<FifoDispatcher> fifo;
@@ -55,12 +55,12 @@ zx_status_t sys_fifo_write(zx_handle_t handle, size_t elem_size, user_in_ptr<con
         return status;
 
     size_t actual;
-    status = fifo->WriteFromUser(elem_size, entries.reinterpret<const uint8_t>(), count, &actual);
+    status = fifo->WriteFromUser(elem_size, data.reinterpret<const uint8_t>(), count, &actual);
     if (status != ZX_OK)
         return status;
 
-    if (actual_out) {
-        status = actual_out.copy_to_user(actual);
+    if (actual_count) {
+        status = actual_count.copy_to_user(actual);
         if (status != ZX_OK)
             return status;
     }
@@ -68,8 +68,8 @@ zx_status_t sys_fifo_write(zx_handle_t handle, size_t elem_size, user_in_ptr<con
 }
 
 // zx_status_t zx_fifo_read
-zx_status_t sys_fifo_read(zx_handle_t handle, size_t elem_size, user_out_ptr<void> entries,
-                          size_t count, user_out_ptr<size_t> actual_out) {
+zx_status_t sys_fifo_read(zx_handle_t handle, size_t elem_size, user_out_ptr<void> data,
+                          size_t count, user_out_ptr<size_t> actual_count) {
     auto up = ProcessDispatcher::GetCurrent();
 
     fbl::RefPtr<FifoDispatcher> fifo;
@@ -78,12 +78,12 @@ zx_status_t sys_fifo_read(zx_handle_t handle, size_t elem_size, user_out_ptr<voi
         return status;
 
     size_t actual;
-    status = fifo->ReadToUser(elem_size, entries.reinterpret<uint8_t>(), count, &actual);
+    status = fifo->ReadToUser(elem_size, data.reinterpret<uint8_t>(), count, &actual);
     if (status != ZX_OK)
         return status;
 
-    if (actual_out) {
-        status = actual_out.copy_to_user(actual);
+    if (actual_count) {
+        status = actual_count.copy_to_user(actual);
         if (status != ZX_OK)
             return status;
     }
