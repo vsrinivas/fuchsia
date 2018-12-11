@@ -8,10 +8,12 @@ vmar_destroy - destroy a virtual memory address region
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_vmar_destroy(zx_handle_t vmar_handle);
+zx_status_t zx_vmar_destroy(zx_handle_t handle);
 ```
 
 ## DESCRIPTION
@@ -19,7 +21,7 @@ zx_status_t zx_vmar_destroy(zx_handle_t vmar_handle);
 **vmar_destroy**() unmaps all mappings within the given region, and destroys
 all sub-regions of the region.  Note that this operation is logically recursive.
 
-This operation does not close *vmar_handle*.  Any outstanding handles to this
+This operation does not close *handle*.  Any outstanding handles to this
 VMAR will remain valid handles, but all VMAR operations on them will fail.
 
 ## RIGHTS
@@ -34,9 +36,9 @@ TODO(ZX-2399)
 
 ## ERRORS
 
-**ZX_ERR_BAD_HANDLE**  *vmar_handle* is not a valid handle.
+**ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
 
-**ZX_ERR_WRONG_TYPE**  *vmar_handle* is not a VMAR handle.
+**ZX_ERR_WRONG_TYPE**  *handle* is not a VMAR handle.
 
 **ZX_ERR_BAD_STATE**  This region is already destroyed.
 

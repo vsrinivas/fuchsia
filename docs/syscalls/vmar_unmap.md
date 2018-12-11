@@ -8,10 +8,12 @@ vmar_unmap - unmap virtual memory pages
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_vmar_unmap(zx_handle_t vmar_handle, zx_vaddr_t addr, uint64_t len);
+zx_status_t zx_vmar_unmap(zx_handle_t handle, zx_vaddr_t addr, uint64_t len);
 ```
 
 ## DESCRIPTION
@@ -37,14 +39,14 @@ TODO(ZX-2399)
 
 ## ERRORS
 
-**ZX_ERR_BAD_HANDLE**  *vmar_handle* is not a valid handle.
+**ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
 
-**ZX_ERR_WRONG_TYPE**  *vmar_handle* is not a VMAR handle.
+**ZX_ERR_WRONG_TYPE**  *handle* is not a VMAR handle.
 
 **ZX_ERR_INVALID_ARGS**  *addr* is not page-aligned, *len* is 0 or not page-aligned,
 or the requested range partially overlaps a sub-region.
 
-**ZX_ERR_BAD_STATE**  *vmar_handle* refers to a destroyed handle.
+**ZX_ERR_BAD_STATE**  *handle* refers to a destroyed handle.
 
 **ZX_ERR_NOT_FOUND**  Could not find the requested mapping.
 

@@ -8,13 +8,18 @@ vmar_map - add a memory mapping
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_vmar_map(zx_handle_t vmar, zx_vm_option_t options,
-                        uint64_t vmar_offset, zx_handle_t vmo,
-                        uint64_t vmo_offset, uint64_t len,
-                        zx_vaddr_t* mapped_addr)
+zx_status_t zx_vmar_map(zx_handle_t handle,
+                        zx_vm_option_t options,
+                        uint64_t vmar_offset,
+                        zx_handle_t vmo,
+                        uint64_t vmo_offset,
+                        uint64_t len,
+                        zx_vaddr_t* mapped_addr);
 ```
 
 ## DESCRIPTION
@@ -25,23 +30,23 @@ closing the VMO handle does not remove the mapping added by this function.
 
 *options* is a bit vector of the following:
 - **ZX_VM_SPECIFIC**  Use the *vmar_offset* to place the mapping, invalid if
-  vmar does not have the **ZX_VM_CAN_MAP_SPECIFIC** permission.
+  *handle* does not have the **ZX_VM_CAN_MAP_SPECIFIC** permission.
   *vmar_offset* is an offset relative to the base address of the given VMAR.
   It is an error to specify a range that overlaps with another VMAR or mapping.
 - **ZX_VM_SPECIFIC_OVERWRITE**  Same as **ZX_VM_SPECIFIC**, but can
   overlap another mapping.  It is still an error to partially-overlap another VMAR.
   If the range meets these requirements, it will atomically (with respect to all
   other map/unmap/protect operations) replace existing mappings in the area.
-- **ZX_VM_PERM_READ**  Map *vmo* as readable.  It is an error if *vmar*
-  does not have *ZX_VM_CAN_MAP_READ* permissions, the *vmar* handle does
+- **ZX_VM_PERM_READ**  Map *vmo* as readable.  It is an error if *handle*
+  does not have *ZX_VM_CAN_MAP_READ* permissions, the *handle* does
   not have the *ZX_RIGHT_READ* right, or the *vmo* handle does not have the
   *ZX_RIGHT_READ* right.
-- **ZX_VM_PERM_WRITE**  Map *vmo* as writable.  It is an error if *vmar*
-  does not have *ZX_VM_CAN_MAP_WRITE* permissions, the *vmar* handle does
+- **ZX_VM_PERM_WRITE**  Map *vmo* as writable.  It is an error if *handle*
+  does not have *ZX_VM_CAN_MAP_WRITE* permissions, the *handle* does
   not have the *ZX_RIGHT_WRITE* right, or the *vmo* handle does not have the
   *ZX_RIGHT_WRITE* right.
-- **ZX_VM_PERM_EXECUTE**  Map *vmo* as executable.  It is an error if *vmar*
-  does not have *ZX_VM_CAN_MAP_EXECUTE* permissions, the *vmar* handle does
+- **ZX_VM_PERM_EXECUTE**  Map *vmo* as executable.  It is an error if *handle*
+  does not have *ZX_VM_CAN_MAP_EXECUTE* permissions, the *handle* handle does
   not have the *ZX_RIGHT_EXECUTE* right, or the *vmo* handle does not have the
   *ZX_RIGHT_EXECUTE* right.
 - **ZX_VM_MAP_RANGE**  Immediately page into the new mapping all backed
@@ -73,11 +78,11 @@ and non-zero.  In the event of failure, a negative error value is returned.
 
 ## ERRORS
 
-**ZX_ERR_BAD_HANDLE**  *vmar* or *vmo* is not a valid handle.
+**ZX_ERR_BAD_HANDLE**  *handle* or *vmo* is not a valid handle.
 
-**ZX_ERR_WRONG_TYPE**  *vmar* or *vmo* is not a VMAR or VMO handle, respectively.
+**ZX_ERR_WRONG_TYPE**  *handle* or *vmo* is not a VMAR or VMO handle, respectively.
 
-**ZX_ERR_BAD_STATE**  *vmar* refers to a destroyed VMAR.
+**ZX_ERR_BAD_STATE**  *handle* refers to a destroyed VMAR.
 
 **ZX_ERR_INVALID_ARGS** *mapped_addr* or *options* are not valid, *vmar_offset* is
 non-zero when neither **ZX_VM_SPECIFIC** nor

@@ -8,11 +8,15 @@ vmar_protect - set protection of virtual memory pages
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_vmar_protect(zx_handle_t handle, uint32_t options,
-                            zx_vaddr_t addr, uint64_t len);
+zx_status_t zx_vmar_protect(zx_handle_t handle,
+                            zx_vm_option_t options,
+                            zx_vaddr_t addr,
+                            uint64_t len);
 ```
 
 ## DESCRIPTION
@@ -51,9 +55,9 @@ If *options* & **ZX_VM_PERM_EXECUTE**, *handle* must be of type **ZX_OBJ_TYPE_VM
 
 ## ERRORS
 
-**ZX_ERR_BAD_HANDLE**  *vmar_handle* is not a valid handle.
+**ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
 
-**ZX_ERR_WRONG_TYPE**  *vmar_handle* is not a VMAR handle.
+**ZX_ERR_WRONG_TYPE**  *handle* is not a VMAR handle.
 
 **ZX_ERR_INVALID_ARGS**  *prot_flags* is an unsupported combination of flags
 (e.g., **ZX_VM_PERM_WRITE** but not **ZX_VM_PERM_READ**), *addr* is
@@ -62,7 +66,7 @@ occupied by a subregion.
 
 **ZX_ERR_NOT_FOUND**  Some subrange of the requested range is not mapped.
 
-**ZX_ERR_ACCESS_DENIED**  *vmar_handle* does not have the proper rights for the
+**ZX_ERR_ACCESS_DENIED**  *handle* does not have the proper rights for the
 requested change, the original VMO handle used to create the mapping did not
 have the rights for the requested change, or the VMAR itself does not allow
 the requested change.

@@ -85,12 +85,12 @@ zx_status_t sys_vmar_allocate_old(zx_handle_t parent_vmar_handle,
 }
 
 // zx_status_t zx_vmar_destroy
-zx_status_t sys_vmar_destroy(zx_handle_t vmar_handle) {
+zx_status_t sys_vmar_destroy(zx_handle_t handle) {
     auto up = ProcessDispatcher::GetCurrent();
 
     // lookup the dispatcher from handle
     fbl::RefPtr<VmAddressRegionDispatcher> vmar;
-    zx_status_t status = up->GetDispatcher(vmar_handle, &vmar);
+    zx_status_t status = up->GetDispatcher(handle, &vmar);
     if (status != ZX_OK)
         return status;
 
@@ -98,7 +98,7 @@ zx_status_t sys_vmar_destroy(zx_handle_t vmar_handle) {
 }
 
 // zx_status_t zx_vmar_map
-zx_status_t sys_vmar_map(zx_handle_t vmar_handle, zx_vm_option_t options,
+zx_status_t sys_vmar_map(zx_handle_t handle, zx_vm_option_t options,
                          uint64_t vmar_offset, zx_handle_t vmo_handle,
                          uint64_t vmo_offset, uint64_t len,
                          user_out_ptr<zx_vaddr_t> mapped_addr) {
@@ -107,7 +107,7 @@ zx_status_t sys_vmar_map(zx_handle_t vmar_handle, zx_vm_option_t options,
     // lookup the VMAR dispatcher from handle
     fbl::RefPtr<VmAddressRegionDispatcher> vmar;
     zx_rights_t vmar_rights;
-    zx_status_t status = up->GetDispatcherAndRights(vmar_handle, &vmar, &vmar_rights);
+    zx_status_t status = up->GetDispatcherAndRights(handle, &vmar, &vmar_rights);
     if (status != ZX_OK)
         return status;
 
@@ -197,12 +197,12 @@ zx_status_t sys_vmar_map_old(zx_handle_t vmar_handle, uint64_t vmar_offset,
 }
 
 // zx_status_t zx_vmar_unmap
-zx_status_t sys_vmar_unmap(zx_handle_t vmar_handle, zx_vaddr_t addr, uint64_t len) {
+zx_status_t sys_vmar_unmap(zx_handle_t handle, zx_vaddr_t addr, uint64_t len) {
     auto up = ProcessDispatcher::GetCurrent();
 
     // lookup the dispatcher from handle
     fbl::RefPtr<VmAddressRegionDispatcher> vmar;
-    zx_status_t status = up->GetDispatcher(vmar_handle, &vmar);
+    zx_status_t status = up->GetDispatcher(handle, &vmar);
     if (status != ZX_OK)
         return status;
 
@@ -210,7 +210,7 @@ zx_status_t sys_vmar_unmap(zx_handle_t vmar_handle, zx_vaddr_t addr, uint64_t le
 }
 
 // zx_status_t zx_vmar_protect
-zx_status_t sys_vmar_protect(zx_handle_t vmar_handle, zx_vm_option_t options, zx_vaddr_t addr, uint64_t len) {
+zx_status_t sys_vmar_protect(zx_handle_t handle, zx_vm_option_t options, zx_vaddr_t addr, uint64_t len) {
     auto up = ProcessDispatcher::GetCurrent();
 
     zx_rights_t vmar_rights = 0u;
@@ -223,7 +223,7 @@ zx_status_t sys_vmar_protect(zx_handle_t vmar_handle, zx_vm_option_t options, zx
 
     // lookup the dispatcher from handle
     fbl::RefPtr<VmAddressRegionDispatcher> vmar;
-    zx_status_t status = up->GetDispatcherWithRights(vmar_handle, vmar_rights, &vmar);
+    zx_status_t status = up->GetDispatcherWithRights(handle, vmar_rights, &vmar);
     if (status != ZX_OK)
         return status;
 

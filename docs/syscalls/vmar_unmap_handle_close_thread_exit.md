@@ -8,11 +8,14 @@ vmar_unmap_handle_close_thread_exit - unmap memory, close handle, exit
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
 zx_status_t zx_vmar_unmap_handle_close_thread_exit(zx_handle_t vmar_handle,
-                                                   zx_vaddr_t addr, size_t size,
+                                                   zx_vaddr_t addr,
+                                                   size_t size,
                                                    zx_handle_t close_handle);
 ```
 
@@ -29,7 +32,7 @@ is valid for this call, though it would be invalid for *zx_vmar_unmap*() or
 any other call.
 
 If the *vmar_unmap* operation is successful, then this call never returns.
-If `close_handle` is an invalid handle so that the *handle_close* operation
+If *close_handle* is an invalid handle so that the *handle_close* operation
 fails, then the thread takes a trap (as if by `__builtin_trap();`).
 
 ## RIGHTS

@@ -748,7 +748,7 @@ syscall profile_create
 #^ unmap memory, close handle, exit
 # TODO(ZX-2399): ???
 syscall vmar_unmap_handle_close_thread_exit vdsocall
-    (vmar_handle: zx_handle_t, addr: zx_vaddr_t, size: size_t, handle: zx_handle_t handle_release)
+    (vmar_handle: zx_handle_t, addr: zx_vaddr_t, size: size_t, close_handle: zx_handle_t handle_release)
     returns (zx_status_t);
 
 #^ write to futex, wake futex, close handle, exit
