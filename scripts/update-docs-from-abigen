@@ -346,6 +346,8 @@ def make_synopsis_block(syscall_data, warn):
     for arg in syscall_data['arguments']:
         if arg['type'] == 'zx_port_packet_t':
             headers.add('#include <zircon/syscalls/port.h>')
+        elif arg['type'] == 'zx_smc_parameters_t' or arg['type'] == 'zx_smc_result_t':
+            headers.add('#include <zircon/syscalls/smc.h>')
     header = ['```'] + sorted(list(headers)) + ['']
 
     def format_arg(x):
@@ -411,7 +413,6 @@ synopsis_blacklist = (
     'object_signal',
     'object_wait_many',
     'resource_create',
-    'smc_call',
     'timer_create',
     'vmo_replace_as_executable',
 )

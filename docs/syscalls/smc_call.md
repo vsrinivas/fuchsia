@@ -8,28 +8,11 @@ smc_call - Make Secure Monitor Call (SMC) from user space
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/smc.h>
-
-typedef struct zx_smc_parameters {
-    uint32_t func_id;
-    uint64_t arg1;
-    uint64_t arg2;
-    uint64_t arg3;
-    uint64_t arg4;
-    uint64_t arg5;
-    uint64_t arg6;
-    uint16_t client_id;
-    uint16_t secure_os_id;
-} zx_smc_parameters_t;
-
-typedef struct zx_smc_result {
-    uint64_t arg0;
-    uint64_t arg1;
-    uint64_t arg2;
-    uint64_t arg3;
-} zx_smc_result_t;
 
 zx_status_t zx_smc_call(zx_handle_t handle,
                         const zx_smc_parameters_t* parameters,
