@@ -8,10 +8,12 @@ system_get_physmem - get amount of physical memory on the system
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-size_t zx_system_get_physmem(void);
+uint64_t zx_system_get_physmem(void);
 ```
 
 ## DESCRIPTION

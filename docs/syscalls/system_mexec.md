@@ -8,6 +8,8 @@ system_mexec - Soft reboot the system with a new kernel and bootimage
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
@@ -37,9 +39,9 @@ to the new kernel.
 
 *resource* must have resource kind **ZX_RSRC_KIND_ROOT**.
 
-*kernel* must be of type **ZX_OBJ_TYPE_VMO** and have **ZX_RIGHT_READ**.
+*kernel_vmo* must be of type **ZX_OBJ_TYPE_VMO** and have **ZX_RIGHT_READ**.
 
-*bootimage* must be of type **ZX_OBJ_TYPE_VMO** and have **ZX_RIGHT_READ**.
+*bootimage_vmo* must be of type **ZX_OBJ_TYPE_VMO** and have **ZX_RIGHT_READ**.
 
 ## RETURN VALUE
 

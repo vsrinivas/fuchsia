@@ -8,11 +8,14 @@ system_mexec_payload_get - Return a ZBI containing ZBI entries necessary to boot
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
 zx_status_t zx_system_mexec_payload_get(zx_handle_t resource,
-                                        void* buffer, size_t len);
+                                        void* buffer,
+                                        size_t buffer_size);
 ```
 
 ## DESCRIPTION
@@ -24,7 +27,7 @@ ZBI before passing that image to zx_system_mexec().
 
 *resource* must be of type *ZX_RSRC_KIND_ROOT*.
 
-*buffer* and *len* must point to a buffer that is no longer than 16KiB.
+*buffer* and *buffer_size* must point to a buffer that is no longer than 16KiB.
 
 ## RIGHTS
 

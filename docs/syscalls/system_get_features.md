@@ -8,10 +8,12 @@ system_get_features - get supported hardware capabilities
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_system_features(uint32_t kind, uint32_t* features);
+zx_status_t zx_system_get_features(uint32_t kind, uint32_t* features);
 ```
 
 ## DESCRIPTION

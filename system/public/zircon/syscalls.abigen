@@ -113,7 +113,7 @@ syscall system_get_physmem vdsocall
 #^ get supported hardware capabilities
 syscall system_get_features vdsocall
     (kind: uint32_t)
-    returns (zx_status_t, out: uint32_t features);
+    returns (zx_status_t, features: uint32_t features);
 
 # Abstraction of machine operations
 
@@ -1080,10 +1080,10 @@ syscall vcpu_write_state
 
 #^ Soft reboot the system with a new kernel and bootimage
 #! resource must have resource kind ZX_RSRC_KIND_ROOT.
-#! kernel must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
-#! bootimage must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
+#! kernel_vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
+#! bootimage_vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
 syscall system_mexec
-    (resource: zx_handle_t, kernel: zx_handle_t, bootimage: zx_handle_t)
+    (resource: zx_handle_t, kernel_vmo: zx_handle_t, bootimage_vmo: zx_handle_t)
     returns (zx_status_t);
 
 #^ Return a ZBI containing ZBI entries necessary to boot this system
