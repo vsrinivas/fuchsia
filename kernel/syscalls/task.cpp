@@ -461,20 +461,20 @@ void sys_process_exit(int64_t retcode) {
 }
 
 // zx_status_t zx_process_read_memory
-zx_status_t sys_process_read_memory(zx_handle_t proc, zx_vaddr_t vaddr,
-                                    user_out_ptr<void> _buffer,
-                                    size_t len, user_out_ptr<size_t> _actual) {
-    LTRACEF("vaddr 0x%" PRIxPTR ", size %zu\n", vaddr, len);
+zx_status_t sys_process_read_memory(zx_handle_t handle, zx_vaddr_t vaddr,
+                                    user_out_ptr<void> buffer,
+                                    size_t buffer_size, user_out_ptr<size_t> _actual) {
+    LTRACEF("vaddr 0x%" PRIxPTR ", size %zu\n", vaddr, buffer_size);
 
-    if (!_buffer)
+    if (!buffer)
         return ZX_ERR_INVALID_ARGS;
-    if (len == 0 || len > kMaxDebugReadBlock)
+    if (buffer_size == 0 || buffer_size > kMaxDebugReadBlock)
         return ZX_ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
 
     fbl::RefPtr<ProcessDispatcher> process;
-    zx_status_t status = up->GetDispatcherWithRights(proc, ZX_RIGHT_READ | ZX_RIGHT_WRITE,
+    zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_READ | ZX_RIGHT_WRITE,
                                                      &process);
     if (status != ZX_OK)
         return status;
@@ -500,15 +500,15 @@ zx_status_t sys_process_read_memory(zx_handle_t proc, zx_vaddr_t vaddr,
     // things, the bug will come back.  We should fix this more properly.
     {
         uint8_t byte = 0;
-        auto int_data = _buffer.reinterpret<uint8_t>();
-        for (size_t i = 0; i < len; i += PAGE_SIZE) {
+        auto int_data = buffer.reinterpret<uint8_t>();
+        for (size_t i = 0; i < buffer_size; i += PAGE_SIZE) {
             status = int_data.copy_array_to_user(&byte, 1, i);
             if (status != ZX_OK) {
                 return status;
             }
         }
-        if (len > 0) {
-            status = int_data.copy_array_to_user(&byte, 1, len - 1);
+        if (buffer_size > 0) {
+            status = int_data.copy_array_to_user(&byte, 1, buffer_size - 1);
             if (status != ZX_OK) {
                 return status;
             }
@@ -519,11 +519,11 @@ zx_status_t sys_process_read_memory(zx_handle_t proc, zx_vaddr_t vaddr,
     // TODO(ZX-1631): While this limits reading to the mapped address space of
     // this VMO, it should be reading from multiple VMOs, not a single one.
     // Additionally, it is racy with the mapping going away.
-    len = MIN(len, vm_mapping->size() - (vaddr - vm_mapping->base()));
-    zx_status_t st = vmo->ReadUser(_buffer, offset, len);
+    buffer_size = MIN(buffer_size, vm_mapping->size() - (vaddr - vm_mapping->base()));
+    zx_status_t st = vmo->ReadUser(buffer, offset, buffer_size);
 
     if (st == ZX_OK) {
-        zx_status_t status = _actual.copy_to_user(static_cast<size_t>(len));
+        zx_status_t status = _actual.copy_to_user(static_cast<size_t>(buffer_size));
         if (status != ZX_OK)
             return status;
     }
@@ -531,20 +531,20 @@ zx_status_t sys_process_read_memory(zx_handle_t proc, zx_vaddr_t vaddr,
 }
 
 // zx_status_t zx_process_write_memory
-zx_status_t sys_process_write_memory(zx_handle_t proc, zx_vaddr_t vaddr,
-                                     user_in_ptr<const void> _buffer,
-                                     size_t len, user_out_ptr<size_t> _actual) {
-    LTRACEF("vaddr 0x%" PRIxPTR ", size %zu\n", vaddr, len);
+zx_status_t sys_process_write_memory(zx_handle_t handle, zx_vaddr_t vaddr,
+                                     user_in_ptr<const void> buffer,
+                                     size_t buffer_size, user_out_ptr<size_t> _actual) {
+    LTRACEF("vaddr 0x%" PRIxPTR ", size %zu\n", vaddr, buffer_size);
 
-    if (!_buffer)
+    if (!buffer)
         return ZX_ERR_INVALID_ARGS;
-    if (len == 0 || len > kMaxDebugWriteBlock)
+    if (buffer_size == 0 || buffer_size > kMaxDebugWriteBlock)
         return ZX_ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
 
     fbl::RefPtr<ProcessDispatcher> process;
-    zx_status_t status = up->GetDispatcherWithRights(proc, ZX_RIGHT_WRITE, &process);
+    zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &process);
     if (status != ZX_OK)
         return status;
 
@@ -569,15 +569,15 @@ zx_status_t sys_process_write_memory(zx_handle_t proc, zx_vaddr_t vaddr,
     // things, the bug will come back.  We should fix this more properly.
     {
         uint8_t byte = 0;
-        auto int_data = _buffer.reinterpret<const uint8_t>();
-        for (size_t i = 0; i < len; i += PAGE_SIZE) {
+        auto int_data = buffer.reinterpret<const uint8_t>();
+        for (size_t i = 0; i < buffer_size; i += PAGE_SIZE) {
             status = int_data.copy_array_from_user(&byte, 1, i);
             if (status != ZX_OK) {
                 return status;
             }
         }
-        if (len > 0) {
-            status = int_data.copy_array_from_user(&byte, 1, len - 1);
+        if (buffer_size > 0) {
+            status = int_data.copy_array_from_user(&byte, 1, buffer_size - 1);
             if (status != ZX_OK) {
                 return status;
             }
@@ -588,11 +588,11 @@ zx_status_t sys_process_write_memory(zx_handle_t proc, zx_vaddr_t vaddr,
     // TODO(ZX-1631): While this limits writing to the mapped address space of
     // this VMO, it should be writing to multiple VMOs, not a single one.
     // Additionally, it is racy with the mapping going away.
-    len = MIN(len, vm_mapping->size() - (vaddr - vm_mapping->base()));
-    zx_status_t st = vmo->WriteUser(_buffer, offset, len);
+    buffer_size = MIN(buffer_size, vm_mapping->size() - (vaddr - vm_mapping->base()));
+    zx_status_t st = vmo->WriteUser(buffer, offset, buffer_size);
 
     if (st == ZX_OK) {
-        zx_status_t status = _actual.copy_to_user(static_cast<size_t>(len));
+        zx_status_t status = _actual.copy_to_user(static_cast<size_t>(buffer_size));
         if (status != ZX_OK)
             return status;
     }

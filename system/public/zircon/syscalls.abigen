@@ -410,15 +410,15 @@ syscall process_start
     returns (zx_status_t);
 
 #^ Read from the given process's address space.
-#! proc must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_READ and have ZX_RIGHT_WRITE.
+#! handle must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_READ and have ZX_RIGHT_WRITE.
 syscall process_read_memory
-    (proc: zx_handle_t, vaddr: zx_vaddr_t, buffer: any[buffer_size] OUT, buffer_size: size_t)
+    (handle: zx_handle_t, vaddr: zx_vaddr_t, buffer: any[buffer_size] OUT, buffer_size: size_t)
     returns (zx_status_t, actual: size_t);
 
 #^ Write into the given process's address space.
-#! proc must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_WRITE.
+#! handle must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_WRITE.
 syscall process_write_memory
-    (proc: zx_handle_t, vaddr: zx_vaddr_t, buffer: any[buffer_size] IN, buffer_size: size_t)
+    (handle: zx_handle_t, vaddr: zx_vaddr_t, buffer: any[buffer_size] IN, buffer_size: size_t)
     returns (zx_status_t, actual: size_t);
 
 # Jobs

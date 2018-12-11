@@ -8,12 +8,16 @@ process_read_memory - Read from the given process's address space.
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_process_read_memory(zx_handle_t process, zx_vaddr_t vaddr,
-                                   void* buffer, size_t length, size_t* actual);
-
+zx_status_t zx_process_read_memory(zx_handle_t handle,
+                                   zx_vaddr_t vaddr,
+                                   void* buffer,
+                                   size_t buffer_size,
+                                   size_t* actual);
 ```
 
 ## DESCRIPTION
@@ -26,19 +30,19 @@ This function will eventually be replaced with something vmo-centric.
 
 *buffer* pointer to a user buffer to read bytes into.
 
-*length* number of bytes to attempt to read. *buffer* buffer must be large
-enough for at least this many bytes.
-*length* must be greater than zero and less than or equal to 64MB.
+*buffer_size* number of bytes to attempt to read. *buffer* buffer must be large
+enough for at least this many bytes. *buffer_size* must be greater than zero
+and less than or equal to 64MB.
 
-*actual_size* the actual number of bytes read is stored here.
-Less bytes than requested may be returned if *vaddr*+*length*
-extends beyond the memory mapped in the process.
+*actual_size* the actual number of bytes read is stored here. Less bytes than
+requested may be returned if *vaddr*+*buffer_size* extends beyond the memory
+mapped in the process.
 
 ## RIGHTS
 
 <!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
 
-*proc* must be of type **ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_READ** and have **ZX_RIGHT_WRITE**.
+*handle* must be of type **ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_READ** and have **ZX_RIGHT_WRITE**.
 
 ## RETURN VALUE
 
@@ -59,7 +63,7 @@ the process is being terminated),
 or the requested memory is not cacheable.
 
 **ZX_ERR_INVALID_ARGS** *buffer* is an invalid pointer or NULL,
-or *length* is zero or greater than 64MB.
+or *buffer_size* is zero or greater than 64MB.
 
 **ZX_ERR_NO_MEMORY** the process does not have any memory at the
 requested address.
