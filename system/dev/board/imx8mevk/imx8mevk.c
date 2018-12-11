@@ -113,7 +113,7 @@ static int imx8mevk_start_thread(void* arg) {
     // start the gpio driver first so we can do our initial pinmux
     if ((status = imx8m_gpio_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "%s: failed %d\n", __FUNCTION__, status);
-        goto fail;
+        return status;
     }
 
     // Pinmux
@@ -123,34 +123,26 @@ static int imx8mevk_start_thread(void* arg) {
 
     if ((status = imx_i2c_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "%s: failed %d\n", __FUNCTION__, status);
-        goto fail;
     }
 
     if ((status = imx_usb_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "%s: failed %d\n", __FUNCTION__, status);
-        goto fail;
     }
 
     if ((status = imx_gpu_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "%s: imx_gpu_init failed %d\n", __FUNCTION__, status);
-        goto fail;
     }
 
     if ((status = imx8m_sdhci_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "%s: failed %d\n", __FUNCTION__, status);
-        goto fail;
     }
 
     if ((status = pbus_device_add(&bus->pbus, &display_dev)) != ZX_OK) {
         zxlogf(ERROR, "%s could not add display_dev: %d\n", __FUNCTION__, status);
-        goto fail;
     }
 
     return ZX_OK;
 
-fail:
-    zxlogf(ERROR, "aml_start_thread failed, not all devices have been initialized\n");
-    return status;
 }
 
 static zx_status_t imx8mevk_bus_bind(void* ctx, zx_device_t* parent) {

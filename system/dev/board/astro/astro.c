@@ -71,7 +71,7 @@ static int aml_start_thread(void* arg) {
 
     if ((status = aml_gpio_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "aml_gpio_init failed: %d\n", status);
-        goto fail;
+        return status;
     }
 
     // Once gpio is up and running, let's populate board revision
@@ -83,101 +83,80 @@ static int aml_start_thread(void* arg) {
 
     if ((status = astro_buttons_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "astro_buttons_init failed: %d\n", status);
-        goto fail;
     }
 
     if ((status = aml_i2c_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "aml_i2c_init failed: %d\n", status);
-        goto fail;
     }
 
     status = aml_mali_init(&bus->pbus, BTI_MALI);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml_mali_init failed: %d\n", status);
-        goto fail;
     }
 
     if ((status = aml_usb_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "aml_usb_init failed: %d\n", status);
-        goto fail;
     }
 
     if ((status = astro_touch_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "astro_touch_init failed: %d\n", status);
-        goto fail;
     }
 
     if ((status = astro_backlight_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "astro_backlight_init failed: %d\n", status);
-        goto fail;
     }
 
     if ((status = aml_display_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "aml_display_init failed: %d\n", status);
-        goto fail;
     }
 
     if ((status = aml_canvas_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "aml_canvas_init failed: %d\n", status);
-        goto fail;
     }
 
     if ((status = astro_tee_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "astro_tee_init failed: %d\n", status);
-        goto fail;
     }
 
     if ((status = aml_video_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "aml_video_init failed: %d\n", status);
-        goto fail;
     }
 
     if ((status = pbus_device_add(&bus->pbus, &rtc_dev)) != ZX_OK) {
         zxlogf(ERROR, "aml_start_thread could not add rtc_dev: %d\n", status);
-        goto fail;
     }
 
     if ((status = aml_raw_nand_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "aml_raw_nand_init failed: %d\n", status);
-        goto fail;
     }
 
     if ((status = aml_sdio_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "aml_sdio_init failed: %d\n", status);
-        goto fail;
     }
 
     if ((status = ams_light_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "ams_light_init failed: %d\n", status);
-        goto fail;
     }
 
     if ((status = aml_clk_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "aml_clk_init failed: %d\n", status);
-        goto fail;
     }
 
     if ((status = aml_thermal_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "aml_thermal_init failed: %d\n", status);
-        goto fail;
     }
 
     if ((status = astro_tdm_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "astro_tdm_init failed: %d\n", status);
-        goto fail;
     }
 
     // This function includes some non-trivial delays, so lets run this last
     // to avoid slowing down the rest of the boot.
     if ((status = aml_bluetooth_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "aml_bluetooth_init failed: %d\n", status);
-        goto fail;
     }
 
     return ZX_OK;
-fail:
-    zxlogf(ERROR, "aml_start_thread failed, not all devices have been initialized\n");
-    return status;
 }
 
 static zx_status_t aml_bus_bind(void* ctx, zx_device_t* parent) {
@@ -207,7 +186,8 @@ static zx_status_t aml_bus_bind(void* ctx, zx_device_t* parent) {
         .flags = DEVICE_ADD_NON_BINDABLE,
     };
 
-    status = device_add(parent, &args, NULL);
+    zx_device_t* device;
+    status = device_add(parent, &args, &device);
     if (status != ZX_OK) {
         goto fail;
     }
@@ -216,6 +196,7 @@ static zx_status_t aml_bus_bind(void* ctx, zx_device_t* parent) {
     int thrd_rc = thrd_create_with_name(&t, aml_start_thread, bus, "aml_start_thread");
     if (thrd_rc != thrd_success) {
         status = thrd_status_to_zx_status(thrd_rc);
+        device_remove(device);
         goto fail;
     }
     return ZX_OK;

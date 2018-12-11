@@ -70,70 +70,57 @@ int Sherlock::Thread() {
 
     if (I2cInit() != ZX_OK) {
         zxlogf(ERROR, "I2cInit() failed\n");
-        return -1;
     }
 
     if (CanvasInit() != ZX_OK) {
         zxlogf(ERROR, "CanvasInit() failed\n");
-        return -1;
     }
 
     if (DisplayInit() != ZX_OK) {
         zxlogf(ERROR, "DisplayInit()failed\n");
-        return -1;
     }
 
     // Then the platform device drivers.
     if (UsbInit() != ZX_OK) {
         zxlogf(ERROR, "UsbInit() failed\n");
-        return -1;
     }
 
     if (EmmcInit() != ZX_OK) {
         zxlogf(ERROR, "EmmcInit() failed\n");
-        return -1;
     }
 
     // The BMC43458 chip requires this hardware clock for bluetooth and wifi.
     // Called here to avoid a dep. between sdio and bluetooth init order.
     if (BCM43458LpoClockInit() != ZX_OK) {
         zxlogf(ERROR, "Bcm43458LpoClockInit() failed\n");
-        return -1;
     }
 
     if (SdioInit() != ZX_OK) {
         zxlogf(ERROR, "SdioInit() failed\n");
-        return -1;
     }
 
     if (BluetoothInit() != ZX_OK) {
         zxlogf(ERROR, "BluetoothInit() failed\n");
-        return -1;
     }
 
     if (CameraInit() != ZX_OK) {
         zxlogf(ERROR, "CameraInit() failed\n");
-        return -1;
     }
 
     if (VideoInit() != ZX_OK) {
         zxlogf(ERROR, "VideoInit() failed\n");
-        return -1;
     }
 
     if (MaliInit() != ZX_OK) {
         zxlogf(ERROR, "MaliInit() failed\n");
-        return -1;
     }
 
     if (BacklightInit() != ZX_OK) {
         zxlogf(ERROR, "BacklightInit() failed\n");
-        return -1;
     }
 
     if (ButtonsInit() != ZX_OK) {
         zxlogf(ERROR, "ButtonsInit() failed\n");
-        return -1;
     }
 
     if (AudioInit() != ZX_OK) {

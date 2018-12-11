@@ -113,7 +113,7 @@ static zx_status_t machina_board_bind(void* ctx, zx_device_t* parent) {
 
     zx_status_t status = machina_pci_init();
     if (status != ZX_OK) {
-        goto fail;
+        zxlogf(ERROR, "machina_pci_init failed: %d\n", status);
     }
 
     device_add_args_t args = {

@@ -155,32 +155,26 @@ static int gauss_start_thread(void* arg) {
 
     if ((status = gauss_pcie_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "gauss_pcie_init failed: %d\n", status);
-        goto fail;
     }
     if ((status = gauss_usb_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "gauss_usb_init failed: %d\n", status);
-        goto fail;
     }
     if ((status = gauss_audio_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "gauss_audio_init failed: %d\n", status);
-        goto fail;
     }
 
 #if I2C_TEST
     if ((status = pbus_device_add(&bus->pbus, &i2c_test_dev, 0)) != ZX_OK) {
         zxlogf(ERROR, "a113_i2c_init could not add i2c_test_dev: %d\n", status);
-        goto fail;
     }
 #endif
 
     if ((status = gauss_raw_nand_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "gauss_raw_nand_init failed: %d\n", status);
-        goto fail;
     }
 
     if ((status = pbus_device_add(&bus->pbus, &led_dev)) != ZX_OK) {
         zxlogf(ERROR, "a113_i2c_init could not add i2c_led_dev: %d\n", status);
-        goto fail;
     }
 
     return ZX_OK;

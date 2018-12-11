@@ -57,7 +57,6 @@ int Board::Thread() {
     auto status = StartGpio();
     if (status != ZX_OK) {
         ERROR("could not start gpio driver: %d\n", status);
-        return -1;
     }
     return ZX_OK;
 }

@@ -59,45 +59,35 @@ int Mt8167::Thread() {
     // Load protocol implementation drivers first.
     if (GpioInit() != ZX_OK) {
         zxlogf(ERROR, "GpioInit() failed\n");
-        return -1;
     }
     if (I2cInit() != ZX_OK) {
         zxlogf(ERROR, "I2cInit() failed\n");
-        return -1;
     }
     if (ClkInit() != ZX_OK) {
         zxlogf(ERROR, "ClkInit() failed\n");
-        return -1;
     }
 
     // Then the platform device drivers.
     if (EmmcInit() != ZX_OK) {
         zxlogf(ERROR, "EmmcInit() failed\n");
-        return -1;
     }
     if (SdioInit() != ZX_OK) {
         zxlogf(ERROR, "SdioInit() failed\n");
-        return -1;
     }
     if (DisplayInit() != ZX_OK) {
         zxlogf(ERROR, "DisplayInit() failed\n");
-        return -1;
     }
     if (ButtonsInit() != ZX_OK) {
         zxlogf(ERROR, "DisplayInit() failed\n");
-        return -1;
     }
     if (GpuInit() != ZX_OK) {
         zxlogf(ERROR, "GpuInit() failed\n");
-        return -1;
     }
     if (UsbInit() != ZX_OK) {
         zxlogf(ERROR, "UsbInit() failed\n");
-        return -1;
     }
     if (ThermalInit() != ZX_OK) {
         zxlogf(ERROR, "ThermalInit() failed\n");
-        return -1;
     }
 
     return 0;
