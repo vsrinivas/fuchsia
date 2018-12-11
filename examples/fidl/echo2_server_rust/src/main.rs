@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await, await_macro, futures_api)]
 
 use failure::{Error, ResultExt};
 use fidl::endpoints::{ServiceMarker, RequestStream};
@@ -31,8 +31,8 @@ fn spawn_echo_server(chan: fasync::Channel, quiet: bool) {
     }.unwrap_or_else(|e: failure::Error| eprintln!("{:?}", e)));
 }
 
-fn main() -> Result<(), Error> {
-    let mut executor = fasync::Executor::new().context("Error creating executor")?;
+#[fasync::run_singlethreaded]
+async fn main() -> Result<(), Error> {
     let quiet = env::args().any(|arg| arg == "-q");
 
     let fut = ServicesServer::new()
@@ -40,6 +40,6 @@ fn main() -> Result<(), Error> {
                 .start()
                 .context("Error starting echo services server")?;
 
-    executor.run_singlethreaded(fut).context("failed to execute echo future")?;
+    await!(fut).context("failed to execute echo future")?;
     Ok(())
 }

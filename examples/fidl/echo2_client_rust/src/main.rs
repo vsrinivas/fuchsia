@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await, await_macro, futures_api)]
 
 use failure::{Error, ResultExt};
 use fidl_fidl_examples_echo::EchoMarker;
@@ -10,9 +10,8 @@ use fuchsia_app::client::Launcher;
 use fuchsia_async as fasync;
 use structopt::StructOpt;
 
-fn main() -> Result<(), Error> {
-    let mut executor = fasync::Executor::new().context("Error creating executor")?;
-
+#[fasync::run_singlethreaded]
+async fn main() -> Result<(), Error> {
     #[derive(StructOpt, Debug)]
     #[structopt(name = "echo_client_rust")]
     struct Opt {
@@ -31,11 +30,7 @@ fn main() -> Result<(), Error> {
     let echo = app.connect_to_service(EchoMarker)
        .context("Failed to connect to echo service")?;
 
-    let fut = async {
-        let res = await!(echo.echo_string(Some("hello world!")))?;
-        println!("response: {:?}", res);
-        Ok(())
-    };
-
-    executor.run_singlethreaded(fut)
+    let res = await!(echo.echo_string(Some("hello world!")))?;
+    println!("response: {:?}", res);
+    Ok(())
 }
