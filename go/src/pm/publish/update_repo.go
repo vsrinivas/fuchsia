@@ -134,6 +134,9 @@ func (u *UpdateRepo) AddBlob(root string, r io.Reader) (string, error) {
 		dst := filepath.Join(blobDir, root)
 		f, err := os.OpenFile(dst, os.O_CREATE|os.O_EXCL|os.O_WRONLY, os.ModePerm)
 		if err != nil {
+			if os.IsExist(err) {
+				return root, nil
+			}
 			return root, err
 		}
 		defer f.Close()
