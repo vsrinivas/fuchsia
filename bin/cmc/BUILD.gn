@@ -1,0 +1,47 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//build/host.gni")
+
+source_set("cmx_schema_json") {
+  inputs = [
+    "cmx_schema.json"
+  ]
+}
+
+rustc_binary("cmc") {
+  name = "cmc"
+  with_unit_tests = true
+  edition = "2018"
+
+  sdk_category = "partner"
+
+  deps = [
+    "//third_party/rust-crates/rustc_deps:clap",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:lazy_static",
+    "//third_party/rust-crates/rustc_deps:regex",
+    "//third_party/rust-crates/rustc_deps:serde",
+    "//third_party/rust-crates/rustc_deps:serde_derive",
+    "//third_party/rust-crates/rustc_deps:serde_json",
+    "//third_party/rust-crates/rustc_deps:structopt",
+    "//third_party/rust-crates/rustc_deps:tempfile",
+    "//third_party/rust-crates/rustc_deps:valico",
+  ]
+
+  non_rust_deps = [
+    ":cmx_schema_json"
+  ]
+}
+
+install_host_tools("install") {
+  deps = [
+    ":cmc",
+  ]
+
+  outputs = [
+    "cmc",
+  ]
+}
