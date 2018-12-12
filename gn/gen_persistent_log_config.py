@@ -33,7 +33,7 @@ def main():
         file_cap_args = [ '--file_capacity', str(args.file_capacity) ]
 
     with open(args.path, 'w') as f:
-        json.dump({'apps':[["log_listener", "--file", "/data/logs."+args.name] +
+        json.dump({'apps':[["fuchsia-pkg://fuchsia.com/log_listener#meta/log_listener.cmx", "--file", "/data/logs."+args.name] +
              file_cap_args + tag_args + ignore_tag_args] }, f)
 
     return 0
