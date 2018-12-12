@@ -26,7 +26,7 @@ func parseSentCount(outStr string) (int, error) {
 }
 
 func TestOutput(t *testing.T) {
-	out, err := exec.Command("/system/bin/netstat", "-s").CombinedOutput()
+	out, err := exec.Command("/bin/netstat", "-s").CombinedOutput()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,7 +98,7 @@ func TestOutput(t *testing.T) {
 			// fallthrough, ping doesn't have to successfully resolve the host for sent count to increase
 		}
 
-		out, err := exec.Command("/system/bin/netstat", "-s").CombinedOutput()
+		out, err := exec.Command("/bin/netstat", "-s").CombinedOutput()
 		if err != nil {
 			t.Fatal(err)
 		}

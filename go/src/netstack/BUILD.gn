@@ -32,8 +32,6 @@ package("netstack") {
 }
 
 package("netstack_tools") {
-  deprecated_system_image = true
-
   deps = [
     "filter/netfilter",
     "ifconfig",
@@ -44,15 +42,19 @@ package("netstack_tools") {
   binaries = [
     {
       name = "ifconfig"
+      shell = true
     },
     {
       name = "ifinfo"
+      shell = true
     },
     {
       name = "netstat"
+      shell = true
     },
     {
       name = "netfilter"
+      shell = true
     },
   ]
 }

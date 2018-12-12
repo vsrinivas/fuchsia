@@ -47,50 +47,62 @@ package("netstack_manual_tests") {
   binaries = [
     {
       name = "closetest"
+      shell = true
     },
 
     {
       name = "getaddrinfo_test"
+      shell = true
     },
 
     {
       name = "gethostbyname_test"
+      shell = true
     },
 
     {
       name = "keepalivetest"
+      shell = true
     },
 
     {
       name = "mctest"
+      shell = true
     },
 
     {
       name = "nbiotest"
+      shell = true
     },
 
     {
       name = "passfdtest"
+      shell = true
     },
 
     {
       name = "polltest"
+      shell = true
     },
 
     {
       name = "selecttest"
+      shell = true
     },
 
     {
       name = "sockettest"
+      shell = true
     },
 
     {
       name = "sockopttest"
+      shell = true
     },
 
     {
       name = "udptest"
+      shell = true
     },
   ]
 }

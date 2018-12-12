@@ -32,7 +32,7 @@ static const char* sa_to_str(const struct sockaddr* sa, char* str,
   }
 }
 
-const char* kProgram = "/system/bin/passfdtest";
+const char* kProgram = "/bin/passfdtest";
 
 static int server(const char* service) {
   int16_t port = atoi(service);
