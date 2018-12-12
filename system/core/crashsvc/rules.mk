@@ -21,6 +21,7 @@ MODULE_STATIC_LIBS := \
 
 MODULE_LIBS := \
     system/ulib/zircon \
+    system/ulib/fdio \
     system/ulib/c
 
 include make/module.mk

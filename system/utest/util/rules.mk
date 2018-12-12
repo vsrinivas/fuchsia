@@ -4,7 +4,7 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 LOCAL_SRCS = \
-	$(LOCAL_DIR)/listnode.cpp
+    $(LOCAL_DIR)/listnode.cpp
 
 # User test
 
@@ -13,9 +13,10 @@ MODULE_TYPE := usertest
 MODULE_NAME := listnode-test
 MODULE_SRCS := $(LOCAL_SRCS)
 MODULE_LIBS := \
-	system/ulib/c \
-	system/ulib/unittest \
-	system/ulib/zircon
+    system/ulib/c \
+    system/ulib/fdio \
+    system/ulib/unittest \
+    system/ulib/zircon
 
 include make/module.mk
 
@@ -28,7 +29,7 @@ MODULE_SRCS := $(LOCAL_SRCS)
 MODULE_COMPILEFLAGS := \
     -Isystem/ulib/unittest/include
 MODULE_HOST_LIBS += \
-	system/ulib/pretty.hostlib \
+    system/ulib/pretty.hostlib \
     system/ulib/unittest.hostlib \
 
 include make/module.mk
