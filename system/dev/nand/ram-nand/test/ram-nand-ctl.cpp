@@ -27,41 +27,37 @@ zircon_nand_RamNandInfo BuildConfig() {
 class NandDevice {
   public:
     explicit NandDevice(const zircon_nand_RamNandInfo& config = BuildConfig()) {
-        if (create_ram_nand(&config, path_) == ZX_OK) {
-            fbl::unique_fd device(open(path_, O_RDWR));
+        if (fs_mgmt::RamNand::Create(&config, &ram_nand_) == ZX_OK) {
+            // caller_ want's to own the device, so we re-open it even though
+            // ram_nand_ already has it open.
+            fbl::unique_fd device(dup(ram_nand_->fd()));
             caller_.reset(std::move(device));
         }
     }
 
-    ~NandDevice() { Unlink(); }
+    ~NandDevice() = default;
 
     bool IsValid() const { return caller_ ? true : false; }
 
-    const char* path() const { return path_; }
-
-    bool Unlink() {
-        if (!caller_) {
-            return false;
-        }
-        zx_status_t status;
-        return zircon_nand_RamNandUnlink(caller_.borrow_channel(), &status) == ZX_OK &&
-               status == ZX_OK;
-    }
+    const char* path() const { return ram_nand_->path(); }
 
   private:
 
+    std::unique_ptr<fs_mgmt::RamNand> ram_nand_;
     fzl::FdioCaller caller_;
-    char path_[PATH_MAX];
     DISALLOW_COPY_ASSIGN_AND_MOVE(NandDevice);
 };
 
 bool TrivialLifetimeTest() {
     BEGIN_TEST;
-    NandDevice device;
-    ASSERT_TRUE(device.IsValid());
-    ASSERT_TRUE(device.Unlink());
+    fbl::String path;
+    {
+        NandDevice device;
+        ASSERT_TRUE(device.IsValid());
+        path = fbl::String(device.path());
+    }
 
-    fbl::unique_fd found(open(device.path(), O_RDWR));
+    fbl::unique_fd found(open(path.c_str(), O_RDWR));
     ASSERT_FALSE(found);
     END_TEST;
 }

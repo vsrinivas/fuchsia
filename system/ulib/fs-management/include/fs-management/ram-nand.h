@@ -4,18 +4,46 @@
 
 #pragma once
 
+#include <memory>
+
 #include <inttypes.h>
 
+#include <fbl/string.h>
+#include <fbl/string_piece.h>
+#include <fbl/unique_fd.h>
 #include <zircon/compiler.h>
 #include <zircon/nand/c/fidl.h>
 
-__BEGIN_CDECLS
+namespace fs_mgmt {
 
-// Creates a ram_nand, returning the full path to the new device. The provided
-// buffer for the path should be at least PATH_MAX characters long.
-zx_status_t create_ram_nand(const zircon_nand_RamNandInfo* config, char* out_path);
+class RamNand {
+public:
+    // Creates a ram_nand.
+    static zx_status_t Create(const zircon_nand_RamNandInfo* config, std::unique_ptr<RamNand>* out);
 
-// Destroys a ram_nand, given the name returned from create_ram_nand().
-zx_status_t destroy_ram_nand(const char* ram_nand_path);
+    // Not copyable.
+    RamNand(RamNand&) = delete;
+    RamNand& operator=(RamNand&) = delete;
 
-__END_CDECLS
+    // Movable.
+    RamNand(RamNand&&) = default;
+    RamNand& operator=(RamNand&&) = default;
+
+    ~RamNand();
+
+    // Don't unbind in destructor.
+    void NoUnbind() { unbind = false; }
+
+    int fd() { return fd_.get(); }
+    const char* path() { return path_.c_str(); }
+
+private:
+    RamNand(fbl::StringPiece path, fbl::unique_fd fd)
+        : path_(std::move(path)), fd_(std::move(fd)) {}
+
+    fbl::String path_;
+    fbl::unique_fd fd_;
+    bool unbind = true;
+};
+
+} // namespace fs_mgmt

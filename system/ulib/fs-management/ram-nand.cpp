@@ -5,10 +5,12 @@
 #include <fs-management/ram-nand.h>
 
 #include <fcntl.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
 #include <lib/fzl/fdio.h>
 #include <zircon/device/device.h>
@@ -23,7 +25,9 @@ constexpr char kBasePath[] = "/dev/misc/nand-ctl";
 
 } // namespace
 
-zx_status_t create_ram_nand(const zircon_nand_RamNandInfo* config, char* out_path) {
+namespace fs_mgmt {
+
+zx_status_t RamNand::Create(const zircon_nand_RamNandInfo* config, std::unique_ptr<RamNand>* out) {
     fbl::unique_fd control(open(kBasePath, O_RDWR));
     fzl::FdioCaller caller(std::move(control));
     char name[zircon_nand_NAME_LEN + 1];
@@ -38,22 +42,26 @@ zx_status_t create_ram_nand(const zircon_nand_RamNandInfo* config, char* out_pat
     }
     name[out_name_size] = '\0';
 
-    strcpy(out_path, kBasePath);
-    out_path[sizeof(kBasePath) - 1] = '/';
-    strcpy(out_path + sizeof(kBasePath), name);
+    fbl::StringBuffer<PATH_MAX> path;
+    path.AppendPrintf("%s/%s", kBasePath, name);
+
+    fbl::unique_fd ram_nand(open(path.c_str(), O_RDWR));
+    if (!ram_nand) {
+        fprintf(stderr, "Could not open ram_nand\n");
+        return ZX_ERR_INTERNAL;
+    }
+
+    out->reset(new RamNand(path.ToStringPiece(), std::move(ram_nand)));
     return ZX_OK;
 }
 
-zx_status_t destroy_ram_nand(const char* ram_nand_path) {
-    fbl::unique_fd ram_nand(open(ram_nand_path, O_RDWR));
-    if (!ram_nand) {
-        fprintf(stderr, "Could not open ram_nand\n");
-        return ZX_ERR_BAD_STATE;
+RamNand::~RamNand() {
+    if (unbind && fd_) {
+      zx_status_t status = static_cast<zx_status_t>(ioctl_device_unbind(fd_.get()));
+      if (status != ZX_OK) {
+          fprintf(stderr, "Could not unbind ram_nand, %d\n", status);
+      }
     }
-
-    zx_status_t status = static_cast<zx_status_t>(ioctl_device_unbind(ram_nand.get()));
-    if (status != ZX_OK) {
-        fprintf(stderr, "Could not unlink ram_nand, %d\n", status);
-    }
-    return status;
 }
+
+} // namespace fs_mgmt

@@ -209,10 +209,6 @@ public:
         destroy_ramdisk(path_.data());
     }
 
-    fbl::StringPiece GetPath() {
-        return path_.ToStringPiece();
-    }
-
 private:
     BlockDevice(fbl::String path)
         : path_(std::move(path)) {}
@@ -252,28 +248,22 @@ public:
         zx::vmo dup;
         ASSERT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup), ZX_OK);
 
-        fbl::String path(PATH_MAX, '\0');
         zircon_nand_RamNandInfo info = kNandInfo;
         info.vmo = dup.release();
-        ASSERT_EQ(create_ram_nand(&info, const_cast<char*>(path.data())), ZX_OK);
-        ASSERT_TRUE(InsertTestDevices(path.ToStringPiece(), true));
-        device->reset(new SkipBlockDevice(std::move(path), std::move(mapper)));
+        std::unique_ptr<fs_mgmt::RamNand> ram_nand;
+        ASSERT_EQ(fs_mgmt::RamNand::Create(&info, &ram_nand), ZX_OK);
+        ASSERT_TRUE(InsertTestDevices(ram_nand->path(), true));
+        device->reset(new SkipBlockDevice(std::move(*ram_nand), std::move(mapper)));
         END_HELPER;
     }
 
-    ~SkipBlockDevice() {
-        destroy_ram_nand(path_.data());
-    }
-
-    fbl::StringPiece GetPath() {
-        return path_.ToStringPiece();
-    }
+    ~SkipBlockDevice() = default;
 
 private:
-    SkipBlockDevice(fbl::String path, fzl::VmoMapper mapper)
-        : path_(std::move(path)), mapper_(std::move(mapper)) {}
+    SkipBlockDevice(fs_mgmt::RamNand ram_nand, fzl::VmoMapper mapper)
+        : ram_nand_(std::move(ram_nand)), mapper_(std::move(mapper)) {}
 
-    fbl::String path_;
+    fs_mgmt::RamNand ram_nand_;
     fzl::VmoMapper mapper_;
 };
 

@@ -6,7 +6,10 @@
 
 #include <limits.h>
 
+#include <fs-management/ram-nand.h>
+#include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
+#include <fbl/unique_ptr.h>
 #include <zircon/nand/c/fidl.h>
 
 // The nand device that will be used as the parent of the broker device. This
@@ -24,16 +27,16 @@ class ParentDevice {
     };
 
     explicit ParentDevice(const TestConfig& config);
-    ~ParentDevice();
+    ~ParentDevice() = default;
 
-    const char* Path() const { return path_; }
+    const char* Path() const { return path_.c_str(); }
 
     bool IsValid() const { return ram_nand_ || device_; }
     bool IsExternal() const { return device_ ?  true : false; }
     bool IsBroker() const { return config_.is_broker; }
 
     // Returns a file descriptor for the device.
-    int get() const { return ram_nand_ ? ram_nand_.get() : device_.get(); }
+    int get() const { return ram_nand_ ? ram_nand_->fd() : device_.get(); }
 
     const zircon_nand_Info& Info() const { return config_.info; }
     void SetInfo(const zircon_nand_Info& info);
@@ -45,10 +48,10 @@ class ParentDevice {
     uint32_t FirstBlock() const { return config_.first_block; }
 
   private:
-    fbl::unique_fd ram_nand_;
+    std::unique_ptr<fs_mgmt::RamNand> ram_nand_;
     fbl::unique_fd device_;
     TestConfig config_;
-    char path_[PATH_MAX];
+    fbl::StringBuffer<PATH_MAX> path_;
 };
 
 extern ParentDevice* g_parent_device_;

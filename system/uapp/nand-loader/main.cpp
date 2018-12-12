@@ -153,12 +153,14 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    char path[PATH_MAX];
-    if (create_ram_nand(&ram_nand_config, path) != ZX_OK) {
+    std::unique_ptr<fs_mgmt::RamNand> ram_nand;
+    if (fs_mgmt::RamNand::Create(&ram_nand_config, &ram_nand) != ZX_OK) {
         printf("Unable to load device\n");
         return -1;
     }
+    printf("Device loaded: %s\n", ram_nand->path());
 
-    printf("Device loaded: %s\n", path);
+    // Purposefully prevent automatic removal of ram_nand in destructor.
+    ram_nand->NoUnbind();
     return 0;
 }

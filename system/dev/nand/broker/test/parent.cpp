@@ -7,14 +7,13 @@
 #include <fcntl.h>
 #include <string.h>
 
-#include <fs-management/ram-nand.h>
 #include <zircon/assert.h>
 #include <zircon/device/device.h>
 
 ParentDevice::ParentDevice(const TestConfig& config) : config_(config) {
     if (config_.path) {
         device_.reset(open(config_.path, O_RDWR));
-        strncpy(path_, config_.path, sizeof(path_) - 1);
+        path_.Append(config_.path);
     } else {
         zircon_nand_RamNandInfo ram_nand_config = {};
         ram_nand_config.nand_info = config_.info;
@@ -26,16 +25,10 @@ ParentDevice::ParentDevice(const TestConfig& config) : config_(config) {
         } else {
             ram_nand_config.export_partition_map = false;
         }
-        if (create_ram_nand(&ram_nand_config, path_) == ZX_OK) {
-            ram_nand_.reset(open(path_, O_RDWR));
+        if (fs_mgmt::RamNand::Create(&ram_nand_config, &ram_nand_) == ZX_OK) {
+            path_.Append(ram_nand_->path());
             config_.num_blocks = config.info.num_blocks;
         }
-    }
-}
-
-ParentDevice::~ParentDevice() {
-    if (ram_nand_) {
-        ioctl_device_unbind(ram_nand_.get());
     }
 }
 
