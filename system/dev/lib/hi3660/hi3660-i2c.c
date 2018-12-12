@@ -21,10 +21,10 @@ zx_status_t hi3660_i2c1_init(hi3660_t* hi3660) {
     volatile void* iomcu = hi3660->iomcu.vaddr + I2C1_ENABLE_REG_OFFSET;
     uint32_t temp;
 
-    temp = readl(iomcu + CLKGATE_SEPERATED_ENABLE);
+    temp = readl(iomcu + CLKGATE_SEPARATED_ENABLE);
     temp |= (1 << I2C1_ENABLE_REG_BIT);
-    writel(temp, iomcu + CLKGATE_SEPERATED_ENABLE);
-    readl(iomcu + CLKGATE_SEPERATED_STATUS); // need to read back status to ensure enable occurs
+    writel(temp, iomcu + CLKGATE_SEPARATED_ENABLE);
+    readl(iomcu + CLKGATE_SEPARATED_STATUS); // need to read back status to ensure enable occurs
 
     return ZX_OK;
 }

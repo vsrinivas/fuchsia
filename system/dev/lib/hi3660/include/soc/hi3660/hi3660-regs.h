@@ -81,6 +81,6 @@
 #define PCLK_GATE_DSI0_OFFSET                   0x50
 #define PCLK_GATE_DSI0_BIT                      28
 
-#define CLKGATE_SEPERATED_ENABLE                0x0
-#define CLKGATE_SEPERATED_DISABLE               0x4
-#define CLKGATE_SEPERATED_STATUS                0x8
+#define CLKGATE_SEPARATED_ENABLE                0x0
+#define CLKGATE_SEPARATED_DISABLE               0x4
+#define CLKGATE_SEPARATED_STATUS                0x8

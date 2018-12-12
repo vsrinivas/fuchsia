@@ -21,17 +21,17 @@ zx_status_t hi3660_dsi_init(hi3660_t* hi3660) {
     temp = readl(peri_crg + TXDPHY0_REF_OFFSET);
     temp |= (1 << TXDPHY0_REF_BIT);
     writel(temp, peri_crg + TXDPHY0_REF_OFFSET);
-    readl(peri_crg + TXDPHY0_REF_OFFSET + CLKGATE_SEPERATED_STATUS);
+    readl(peri_crg + TXDPHY0_REF_OFFSET + CLKGATE_SEPARATED_STATUS);
 
     temp = readl(peri_crg + TXDPHY0_CFG_OFFSET);
     temp |= (1 << TXDPHY0_CFG_BIT);
     writel(temp, peri_crg + TXDPHY0_CFG_OFFSET);
-    readl(peri_crg + TXDPHY0_CFG_OFFSET + CLKGATE_SEPERATED_STATUS);
+    readl(peri_crg + TXDPHY0_CFG_OFFSET + CLKGATE_SEPARATED_STATUS);
 
     temp = readl(peri_crg + PCLK_GATE_DSI0_OFFSET);
     temp |= (1 << PCLK_GATE_DSI0_BIT);
     writel(temp, peri_crg + PCLK_GATE_DSI0_OFFSET);
-    readl(peri_crg + PCLK_GATE_DSI0_OFFSET + CLKGATE_SEPERATED_STATUS);
+    readl(peri_crg + PCLK_GATE_DSI0_OFFSET + CLKGATE_SEPARATED_STATUS);
 
     return ZX_OK;
 }
