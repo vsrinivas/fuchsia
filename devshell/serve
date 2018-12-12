@@ -4,7 +4,8 @@
 # found in the LICENSE file.
 
 ### start `pave` and `serve-updates` in a single command
-## usage: fx serve [-v]
+## usage: fx serve [-v] [-l host[:port]]
+##   -l host:port for "pm serve" to listen on
 ##   -v enable more verbose output (must be first argument)
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
@@ -29,6 +30,10 @@ while (($#)); do
   case "$1" in
     -v|-vv|--verbose)
       serve_args+=("$1")
+      ;;
+    -l)
+      serve_args+=("$1" "$2")
+      shift
       ;;
     *)
       echo 2>&1 "Unknown argument: \"${1}\" ignored"
