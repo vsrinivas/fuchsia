@@ -5,6 +5,7 @@
 #include "garnet/bin/guest/cli/launch.h"
 
 #include <fuchsia/guest/cpp/fidl.h>
+#include <lib/fxl/strings/string_printf.h>
 
 #include "garnet/bin/guest/cli/serial.h"
 
@@ -18,7 +19,8 @@ void handle_launch(int argc, const char* argv[], async::Loop* loop,
 
   // Launch guest.
   fuchsia::guest::LaunchInfo launch_info;
-  launch_info.url = argv[0];
+  launch_info.url = fxl::StringPrintf(
+      "fuchsia-pkg://fuchsia.com/%s#meta/%s.cmx", argv[0], argv[0]);
   for (int i = 0; i < argc - 1; ++i) {
     launch_info.args.push_back(argv[i + 1]);
   }
