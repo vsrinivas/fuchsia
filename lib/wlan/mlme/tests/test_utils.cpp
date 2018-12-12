@@ -13,43 +13,46 @@ namespace wlan {
 namespace test_utils {
 
 AssocContext FakeAssocCtx() {
-    wlan_ht_caps_t ht_cap_ddk{
-        .ht_capability_info = 0x016e,
-        .ampdu_params = 0x17,
-        .mcs_set.rx_mcs_head = 0x00000001000000ff,
-        .mcs_set.rx_mcs_tail = 0x01000000,
-        .mcs_set.tx_mcs = 0x00000000,
-        .ht_ext_capabilities = 0x1234,
-        .tx_beamforming_capabilities = 0x12345678,
-        .asel_capabilities = 0xff,
+    return AssocContext{
+        .ht_cap =
+            HtCapabilities{
+                .ht_cap_info = HtCapabilityInfo(0x0162),
+                .ampdu_params = AmpduParams(0x17),
+                .mcs_set =
+                    SupportedMcsSet{
+                        .rx_mcs_head = SupportedMcsRxMcsHead(0x00000001000000ff),
+                        .rx_mcs_tail = SupportedMcsRxMcsTail(0x01000000),
+                        .tx_mcs = SupportedMcsTxMcs(0x00000000),
+                    },
+                .ht_ext_cap = HtExtCapabilities(0x1234),
+                .txbf_cap = TxBfCapability(0x12345678),
+                .asel_cap = AselCapability(0xff),
+            },
+        .ht_op =
+            HtOperation{
+                .primary_chan = 123,
+                .head = HtOpInfoHead(0x01020304),
+                .tail = HtOpInfoTail(0x05),
+                .basic_mcs_set =
+                    SupportedMcsSet{
+                        .rx_mcs_head = SupportedMcsRxMcsHead(0x00000001000000ff),
+                        .rx_mcs_tail = SupportedMcsRxMcsTail(0x01000000),
+                        .tx_mcs = SupportedMcsTxMcs(0x00000000),
+                    },
+            },
+        .vht_cap =
+            VhtCapabilities{
+                .vht_cap_info = VhtCapabilitiesInfo(0x0f805032),
+                .vht_mcs_nss = VhtMcsNss(0x0000fffe0000fffe),
+            },
+        .vht_op =
+            VhtOperation{
+                .vht_cbw = 0x01,
+                .center_freq_seg0 = 42,
+                .center_freq_seg1 = 106,
+                .basic_mcs = BasicVhtMcsNss(0x1122),
+            },
     };
-    wlan_ht_op_t ht_op_ddk{
-        .primary_chan = 123,
-        .head = 0x01020304,
-        .tail = 0x05,
-        .basic_mcs_set.rx_mcs_head = 0x00000001000000ff,
-        .basic_mcs_set.rx_mcs_tail = 0x01000000,
-        .basic_mcs_set.tx_mcs = 0x00000000,
-    };
-    wlan_vht_caps_t vht_cap_ddk{
-        .vht_capability_info = 0x0f805032,
-        .supported_vht_mcs_and_nss_set = 0x0000fffe0000fffe,
-    };
-
-    wlan_vht_op_t vht_op_ddk{
-        .vht_cbw = 0x01,
-        .center_freq_seg0 = 42,
-        .center_freq_seg1 = 106,
-        .basic_mcs = 0x1122,
-    };
-
-    AssocContext ctx{};
-    ctx.ht_cap = HtCapabilities::FromDdk(ht_cap_ddk);
-    ctx.ht_op = HtOperation::FromDdk(ht_op_ddk);
-    ctx.vht_cap = VhtCapabilities::FromDdk(vht_cap_ddk);
-    ctx.vht_op = VhtOperation::FromDdk(vht_op_ddk);
-
-    return ctx;
 }
 
 wlan_band_info_t FakeBandInfo(Band band) {
