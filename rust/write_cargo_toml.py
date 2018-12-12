@@ -41,6 +41,7 @@ description = "Rust crate for Fuchsia OS"
 repository = "https://fuchsia.googlesource.com"
 
 %(bin_or_lib)s
+%(is_proc_macro)s
 name = "%(crate_name)s"%(lib_crate_type)s
 path = "%(source_root)s"
 '''
@@ -125,6 +126,7 @@ def main():
             "deps": deps,
             "year": cur_year(),
             "bin_or_lib": "[[bin]]" if args.crate_type == "bin" else "[lib]",
+            "is_proc_macro": "proc-macro = true" if args.crate_type == "proc-macro" else "",
             "lib_crate_type": "" if args.crate_type == "bin" else (
                 '\ncrate_type = ["%s"]' % args.crate_type
             ),

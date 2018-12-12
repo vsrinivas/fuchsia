@@ -23,6 +23,10 @@ def main():
         cargo_toml = pytoml.load(file)
         for key in cargo_toml["dependencies"].keys():
             print key
+        target_specs = ['cfg(target_os = "fuchsia")', 'cfg(not(target_os = "fuchsia"))']
+        for target_spec in target_specs:
+            for key in cargo_toml.get("target", {}).get(target_spec, {}).get("dependencies", []):
+                print key
 
 if __name__ == '__main__':
     sys.exit(main())

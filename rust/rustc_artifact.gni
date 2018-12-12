@@ -116,15 +116,19 @@ template("rustc_artifact") {
     extension = ".a"
     root_file = "src/lib.rs"
   } else if (type == "proc-macro") {
-    prefix = "macro"
-    extension = ".so"
+    prefix = "lib"
     root_file = "src/lib.rs"
   }
 
   third_party_build = "//third_party/rust-crates/rustc_deps:build-third-party"
   third_party_deps_data = "${root_out_dir}/rust_third_party/deps_data.json"
   first_party_crate_root = "${root_out_dir}/rust_crates"
-  output_file = "${first_party_crate_root}/${prefix}${crate_name}${extension}"
+  if (defined(invoker.output_file_override)) {
+    output_filename = invoker.output_file_override
+  } else {
+    output_filename = "${prefix}${crate_name}${extension}"
+  }
+  output_file = "${first_party_crate_root}/$output_filename"
   output_depfile = "${first_party_crate_root}/${prefix}${crate_name}.d"
   test_output_file = "${root_out_dir}/${crate_name}_${invoker.type}_test_rustc"
 
@@ -232,6 +236,7 @@ template("rustc_artifact") {
     args += dep_info_paths
     outputs = [
       output_file,
+      out_info_path,
     ]
     if (with_unit_tests) {
       outputs += [ test_output_file ]

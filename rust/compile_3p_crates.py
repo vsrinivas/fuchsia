@@ -187,6 +187,24 @@ def main():
 
     # output the info for fuchsia-third-party's direct dependencies
     crates = {}
+    cargo_dependencies = cargo_toml["dependencies"]
+    fuchsia_target_spec = 'cfg(target_os = "fuchsia")'
+    non_fuchsia_target_spec = 'cfg(not(target_os = "fuchsia"))'
+    if "fuchsia" in args.target:
+        target_spec = fuchsia_target_spec
+        non_target_spec = non_fuchsia_target_spec
+    else:
+        target_spec = non_fuchsia_target_spec
+        non_target_spec = fuchsia_target_spec
+    target_only_deps = cargo_toml \
+            .get("target", {}) \
+            .get(target_spec, {}) \
+            .get("dependencies", [])
+    cargo_dependencies.update(target_only_deps)
+    other_target_deps = cargo_toml \
+            .get("target", {}) \
+            .get(non_target_spec, {}) \
+            .get("dependencies", [])
     for package in cargo_lock_toml["package"]:
         if package["name"] == "fuchsia-third-party":
             for crate_id in package["dependencies"]:
@@ -194,13 +212,12 @@ def main():
                 crate_info = crate_id_to_info[crate_id]
                 crate_name = crate_info["crate_name"]
                 package_name = package_name_from_crate_id(crate_id)
-
-                if not package_name in cargo_toml["dependencies"]:
+                if package_name in cargo_dependencies:
+                    crate_info["cargo_dependency_toml"] = cargo_dependencies[package_name]
+                    crates[package_name] = crate_info
+                elif package_name not in other_target_deps:
                     print (package_name + " not found in Cargo.toml dependencies section")
                     return 1
-                crate_info["cargo_dependency_toml"] = cargo_toml["dependencies"][package_name]
-
-                crates[package_name] = crate_info
 
     # normalize paths for patches
     patches = cargo_toml["patch"]["crates-io"]
