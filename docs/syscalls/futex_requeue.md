@@ -8,20 +8,17 @@ futex_requeue - Wake some number of threads waiting on a futex, and move more wa
 
 ## SYNOPSIS
 
-```C
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+```
 #include <zircon/syscalls.h>
 
 zx_status_t zx_futex_requeue(const zx_futex_t* value_ptr,
                              uint32_t wake_count,
-                             int current_value,
+                             zx_futex_t current_value,
                              const zx_futex_t* requeue_ptr,
                              uint32_t requeue_count,
                              zx_handle_t new_requeue_owner);
-zx_status_t zx_futex_requeue_single_owner(const zx_futex_t* value_ptr,
-                                          int current_value,
-                                          const zx_futex_t* requeue_ptr,
-                                          uint32_t requeue_count,
-                                          zx_handle_t new_requeue_owner);
 ```
 
 ## DESCRIPTION
@@ -87,5 +84,6 @@ None.
 ## SEE ALSO
 
 [futex objects](../objects/futex.md),
+[futex_requeue_single_owner](futex_requeue_single_owner.md),
 [futex_wait](futex_wait.md),
 [futex_wake](futex_wake.md).

@@ -13,7 +13,7 @@ thread_exit - terminate the current running thread
 ```
 #include <zircon/syscalls.h>
 
-void zx_thread_exit(void);
+[[noreturn]] void zx_thread_exit(void);
 ```
 
 ## DESCRIPTION

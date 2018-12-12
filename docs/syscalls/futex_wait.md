@@ -8,11 +8,13 @@ futex_wait - Wait on a futex.
 
 ## SYNOPSIS
 
-```C
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+```
 #include <zircon/syscalls.h>
 
 zx_status_t zx_futex_wait(const zx_futex_t* value_ptr,
-                          int32_t current_value,
+                          zx_futex_t current_value,
                           zx_handle_t new_futex_owner,
                           zx_time_t deadline);
 ```

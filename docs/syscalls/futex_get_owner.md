@@ -8,10 +8,12 @@ futex_get_owner - Fetch the koid current owner of a futex, if any.
 
 ## SYNOPSIS
 
-```C
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_futex_get_owner(const zx_futex_t* value_ptr, uint64_t* koid);
+zx_status_t zx_futex_get_owner(const zx_futex_t* value_ptr, zx_koid_t* koid);
 ```
 
 ## DESCRIPTION

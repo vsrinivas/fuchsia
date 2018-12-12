@@ -496,24 +496,26 @@ syscall futex_wait blocking
 #^ Wake some number of threads waiting on a futex, optionally transferring ownership to the thread which was woken in the process.
 #! None.
 syscall futex_wake
-    (value_ptr: zx_futex_t[1] IN, count: uint32_t)
+    (value_ptr: zx_futex_t[1] IN, wake_count: uint32_t)
     returns (zx_status_t);
 
 #^ Wake some number of threads waiting on a futex, and move more waiters to another wait queue.
 #! None.
 syscall futex_requeue
-    (wake_ptr: zx_futex_t[1] IN, wake_count: uint32_t, current_value: zx_futex_t,
+    (value_ptr: zx_futex_t[1] IN, wake_count: uint32_t, current_value: zx_futex_t,
         requeue_ptr: zx_futex_t[1] IN, requeue_count: uint32_t, new_requeue_owner: zx_handle_t)
     returns (zx_status_t);
 
+#^ Wake some number of threads waiting on a futex, optionally transferring ownership to the thread which was woken in the process.
 #! None.
 syscall futex_wake_single_owner
     (value_ptr: zx_futex_t[1] IN)
     returns (zx_status_t);
 
+#^ Wake some number of threads waiting on a futex, and move more waiters to another wait queue.
 #! None.
 syscall futex_requeue_single_owner
-    (wake_ptr: zx_futex_t[1] IN, current_value: zx_futex_t,
+    (value_ptr: zx_futex_t[1] IN, current_value: zx_futex_t,
         requeue_ptr: zx_futex_t[1] IN, requeue_count: uint32_t, new_requeue_owner: zx_handle_t)
     returns (zx_status_t);
 
@@ -756,8 +758,8 @@ syscall vmar_unmap_handle_close_thread_exit vdsocall
 #^ write to futex, wake futex, close handle, exit
 # TODO(ZX-2399): ???
 syscall futex_wake_handle_close_thread_exit vdsocall noreturn
-    (value_ptr: zx_futex_t[1] IN, count: uint32_t, new_value: int32_t,
-        handle: zx_handle_t handle_release);
+    (value_ptr: zx_futex_t[1] IN, wake_count: uint32_t, new_value: int32_t,
+        close_handle: zx_handle_t handle_release);
 
 # Logging
 

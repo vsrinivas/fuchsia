@@ -1,0 +1,54 @@
+# zx_futex_requeue_single_owner
+
+## NAME
+
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+futex_requeue_single_owner - Wake some number of threads waiting on a futex, and move more waiters to another wait queue.
+
+## SYNOPSIS
+
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+```
+#include <zircon/syscalls.h>
+
+zx_status_t zx_futex_requeue_single_owner(const zx_futex_t* value_ptr,
+                                          zx_futex_t current_value,
+                                          const zx_futex_t* requeue_ptr,
+                                          uint32_t requeue_count,
+                                          zx_handle_t new_requeue_owner);
+```
+
+## DESCRIPTION
+
+See [futex_requeue](futex_requeue.md) for a full description.
+
+## RIGHTS
+
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+None.
+
+## RETURN VALUE
+
+**futex_requeue_single_owner**() returns **ZX_OK** on success.
+
+## ERRORS
+
+**ZX_ERR_INVALID_ARGS**  One of the following is true:
++ Either `value_ptr` or `requeue_ptr` is not a valid userspace pointer
++ Either `value_ptr` or `requeue_ptr` is not aligned to a sizeof(zx_futex_t) boundary.
++ `value_ptr` is the same futex as `requeue_ptr`
++ `new_requeue_owner` is currently a member of the waiters for either value_ptr or requeue_ptr
+
+**ZX_ERR_BAD_HANDLE**  `new_requeue_owner` is not **ZX_HANDLE_INVALID**, and not a valid handle.
+**ZX_ERR_WRONG_TYPE**  `new_requeue_owner` is a valid handle, but is not a handle to a thread.
+**ZX_ERR_BAD_STATE**  `current_value` does not match the value at `value_ptr`.
+
+## SEE ALSO
+
+[futex objects](../objects/futex.md),
+[futex_requeue](futex_requeue.md),
+[futex_wait](futex_wait.md),
+[futex_wake](futex_wake.md).

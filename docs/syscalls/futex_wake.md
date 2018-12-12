@@ -8,11 +8,12 @@ futex_wake - Wake some number of threads waiting on a futex, optionally transfer
 
 ## SYNOPSIS
 
-```C
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
+```
 #include <zircon/syscalls.h>
 
 zx_status_t zx_futex_wake(const zx_futex_t* value_ptr, uint32_t wake_count);
-zx_status_t zx_futex_wake_single_owner(const zx_futex_t* value_ptr);
 ```
 
 ## DESCRIPTION
@@ -55,3 +56,4 @@ None.
 [futex objects](../objects/futex.md),
 [futex_requeue](futex_requeue.md),
 [futex_wait](futex_wait.md).
+[futex_wake_single_owner](futex_wake_single_owner.md).

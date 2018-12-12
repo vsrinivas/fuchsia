@@ -333,7 +333,8 @@ def make_synopsis_block(syscall_data, warn):
     for arg in syscall_data['arguments']:
         if arg['type'] == 'zx_port_packet_t':
             headers.add('#include <zircon/syscalls/port.h>')
-        elif arg['type'] == 'zx_smc_parameters_t' or arg['type'] == 'zx_smc_result_t':
+        elif (arg['type'] == 'zx_smc_parameters_t' or
+              arg['type'] == 'zx_smc_result_t'):
             headers.add('#include <zircon/syscalls/smc.h>')
     header = ['```'] + sorted(list(headers)) + ['']
 
@@ -350,8 +351,11 @@ def make_synopsis_block(syscall_data, warn):
         ret += ' ' + x['name']
         return ret
 
-    to_format = (
-        syscall_data['return_type'] + ' zx_' + syscall_data['name'] + '(')
+    no_return = ''
+    if 'noreturn' in syscall_data['attributes']: no_return = '[[noreturn]]'
+
+    to_format = (no_return + syscall_data['return_type'] + ' zx_' +
+                 syscall_data['name'] + '(')
     args = ','.join(format_arg(x) for x in syscall_data['arguments'])
     if not args:
         args = 'void'
@@ -376,19 +380,6 @@ def make_synopsis_block(syscall_data, warn):
         '',
     ]
     return STANDARD_BLOCK_HEADER + header + [formatted] + footer
-
-
-# TODO(ZX-2399): This is a temporary worklist as each is manually audited. Many
-# argument names between syscalls.abigen and the existing documentation differ,
-# which makes the hand written DESCRIPTION block wrong if they're changed. This
-# will be deleted once all can be generated.
-synopsis_blacklist = (
-    'futex_get_owner',
-    'futex_requeue',
-    'futex_wait',
-    'futex_wake',
-    'futex_wake_handle_close_thread_exit',
-)
 
 
 def update_synopsis(lines, syscall_data, warn):
@@ -438,10 +429,7 @@ def main():
 
             update_title(lines, syscall, warn)
             update_name(lines, syscall, warn)
-            if name not in synopsis_blacklist:
-                update_synopsis(lines, syscall, warn)
-            else:
-                warn('skipped due to not in synopsis_blacklist')
+            update_synopsis(lines, syscall, warn)
             update_rights(lines, syscall, warn)
 
             with open(md, 'wb') as f:
