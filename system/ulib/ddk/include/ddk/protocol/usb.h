@@ -79,10 +79,8 @@ typedef struct usb_request {
 
     usb_response_t response;
 
-    // The release_cb() callback is set by the allocator and is
-    // invoked by the 'usb_request_release' method when it is called
-    // by the requester.
-    void (*release_cb)(usb_request_t* req);
+    // usb_request_release() frees the request if this is true.
+    bool release_frees;
     size_t alloc_size;
 
     // For requests queued on endpoints which have batching enabled via
