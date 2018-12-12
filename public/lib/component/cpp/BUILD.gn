@@ -22,6 +22,7 @@ source_set("cpp") {
   ]
 
   deps = [
+    "//garnet/public/lib/syslog/cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/fdio",
   ]
@@ -30,7 +31,6 @@ source_set("cpp") {
     "//garnet/public/fidl/fuchsia.inspect",
     "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/lib/fidl/cpp",
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/svc/cpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/fs",

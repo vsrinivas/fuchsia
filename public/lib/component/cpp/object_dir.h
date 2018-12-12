@@ -36,16 +36,11 @@ class ObjectDir {
   ObjectDir();
 
   // Constructs an |ObjectDir| wrapping the given |Object|.
-  explicit ObjectDir(fbl::RefPtr<Object> object);
-
-  // Construct a new |ObjectDir| wrapping the given raw object pointer.
-  static ObjectDir Wrap(Object* object) {
-    return ObjectDir(fbl::WrapRefPtr(object));
-  }
+  explicit ObjectDir(std::shared_ptr<Object> object);
 
   // Construct a new |ObjectDir| wrapping a new Object with the given name.
   static ObjectDir Make(std::string name) {
-    return ObjectDir(fbl::AdoptRef(new Object(std::move(name))));
+    return ObjectDir(std::make_shared<Object>(std::move(name)));
   }
 
   // The boolean value of an |ObjectDir| is true if and only if the wrapped
@@ -53,9 +48,9 @@ class ObjectDir {
   operator bool() const { return object_.get(); }
 
   // Obtains a reference to the wrapped |Object|.
-  fbl::RefPtr<Object> object() const { return object_; }
+  std::shared_ptr<Object> object() const { return object_; }
 
-  fbl::String name() const { return (*this) ? object_->name() : ""; }
+  std::string name() const { return (*this) ? object_->name() : ""; }
 
   // Finds a child |Object| by path, and wraps it in an |ObjectDir|.
   // If |initialize| is true, this method initialized all objects along the path
@@ -114,13 +109,13 @@ class ObjectDir {
   }
 
   // Sets a child on this object to the given object.
-  void set_child(fbl::RefPtr<Object> obj) const {
+  void set_child(std::shared_ptr<Object> obj) const {
     set_child({}, std::move(obj));
   }
 
   // Sets a child on the child specified by path to the given object.
   // All objects along the path that do not exist will be initialized.
-  void set_child(ObjectPath path, fbl::RefPtr<Object> obj) const;
+  void set_child(ObjectPath path, std::shared_ptr<Object> obj) const;
 
   // Sets the dynamic child callback on this object.
   void set_children_callback(Object::ChildrenCallback callback) const {
@@ -138,7 +133,7 @@ class ObjectDir {
                       Property property) const;
 
   // The wrapper object.
-  fbl::RefPtr<Object> object_;
+  std::shared_ptr<Object> object_;
 };
 
 }  // namespace component

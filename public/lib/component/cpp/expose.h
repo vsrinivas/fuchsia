@@ -5,11 +5,8 @@
 #ifndef LIB_COMPONENT_CPP_EXPOSE_H_
 #define LIB_COMPONENT_CPP_EXPOSE_H_
 
-#include <fbl/auto_lock.h>
-#include <fbl/mutex.h>
-#include <fbl/ref_counted.h>
-#include <fbl/ref_ptr.h>
-#include <fbl/string.h>
+#include <fs/lazy-dir.h>
+#include <fs/pseudo-file.h>
 #include <fuchsia/inspect/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
@@ -180,32 +177,31 @@ Metric CallbackMetric(Metric::ValueCallback callback);
 // utilities must communicate over the FIDL interface.
 //
 // This class is thread safe.
-class Object : public fuchsia::inspect::Inspect,
-               public fbl::RefCounted<Object> {
+class Object : public fuchsia::inspect::Inspect {
  public:
-  using ObjectVector = std::vector<fbl::RefPtr<Object>>;
+  using ObjectVector = std::vector<std::shared_ptr<Object>>;
   using ChildrenCallback = fit::function<void(ObjectVector*)>;
   using StringOutputVector = fidl::VectorPtr<fidl::StringPtr>;
 
   // Constructs a new |Object| with the given name.
   // Every object requires a name, and names for children must be unique.
-  explicit Object(fbl::String name);
+  explicit Object(std::string name);
 
   // Gets the name of this |Object|.
-  fbl::String name() { return name_; }
+  std::string name() { return name_; }
 
   // Gets a new reference to a child by name. The return value may be empty if
   // the child does not exist.
-  fbl::RefPtr<Object> GetChild(fbl::String name);
+  std::shared_ptr<Object> GetChild(std::string name);
 
   // Sets a child to a new reference. If the child already exists, the contained
   // reference will be dropped and replaced with the given one.
-  void SetChild(fbl::RefPtr<Object> child);
+  void SetChild(std::shared_ptr<Object> child);
 
   // Takes a child from this |Object|. This |Object| will no longer contain a
   // reference to the returned child. The return value may be empty if the child
   // does not exist.
-  fbl::RefPtr<Object> TakeChild(fbl::String name);
+  std::shared_ptr<Object> TakeChild(std::string name);
 
   // Sets a callback to dynamically populate children. The children returned by
   // this callback are in addition to the children already contained by this
@@ -227,7 +223,7 @@ class Object : public fuchsia::inspect::Inspect,
   // Adds to a numeric |Metric| on this |Object|.
   template <typename T>
   bool AddMetric(const std::string& name, T amount) {
-    fbl::AutoLock lock(&mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     auto it = metrics_.find(name);
     if (it == metrics_.end()) {
       return false;
@@ -239,7 +235,7 @@ class Object : public fuchsia::inspect::Inspect,
   // Subtracts from a numeric |Metric| on this |Object|.
   template <typename T>
   bool SubMetric(const std::string& name, T amount) {
-    fbl::AutoLock lock(&mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     auto it = metrics_.find(name);
     if (it == metrics_.end()) {
       return false;
@@ -270,11 +266,11 @@ class Object : public fuchsia::inspect::Inspect,
   fuchsia::inspect::Object ToFidl() __TA_REQUIRES(mutex_);
 
   // Mutex protecting fields below.
-  mutable fbl::Mutex mutex_;
+  mutable std::mutex mutex_;
   // The name of this object.
-  fbl::String name_;
+  std::string name_;
   // The bindings for channels connected to this |Inspect|.
-  fidl::BindingSet<fuchsia::inspect::Inspect, fbl::RefPtr<Object>> bindings_
+  fidl::BindingSet<fuchsia::inspect::Inspect, std::shared_ptr<Object>> bindings_
       __TA_GUARDED(mutex_);
   // |Property| for this object, keyed by name.
   std::unordered_map<std::string, Property> properties_ __TA_GUARDED(mutex_);
@@ -282,7 +278,7 @@ class Object : public fuchsia::inspect::Inspect,
   std::unordered_map<std::string, Metric> metrics_ __TA_GUARDED(mutex_);
   // |Children| for this object, keyed by name. Ordered structure for consistent
   // iteration.
-  std::map<std::string, fbl::RefPtr<Object>> children_ __TA_GUARDED(mutex_);
+  std::map<std::string, std::shared_ptr<Object>> children_ __TA_GUARDED(mutex_);
   // Callback for retrieving lazily generated children. May be empty.
   ChildrenCallback lazy_object_callback_ __TA_GUARDED(mutex_);
 };

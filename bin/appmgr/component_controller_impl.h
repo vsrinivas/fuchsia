@@ -19,8 +19,6 @@
 #include "garnet/bin/appmgr/namespace.h"
 
 #include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/memory/ref_ptr.h"
 
 namespace component {
 
@@ -196,7 +194,7 @@ class ComponentControllerImpl : public ComponentControllerBase {
   TerminationCallback termination_callback_;
 
   fidl::BindingSet<fuchsia::inspect::Inspect,
-                   fbl::RefPtr<component::Object>>
+                   std::shared_ptr<component::Object>>
       debug_directory_bindings_;
   DebugDirectory debug_directory_;
 
