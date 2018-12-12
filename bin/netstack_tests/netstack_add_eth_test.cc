@@ -126,7 +126,7 @@ zx_status_t OpenEthertapDev(zx::channel* svc) {
   }
 }
 
-TEST_F(NetstackLaunchTest, AddEthernetDevice) {
+TEST_F(NetstackLaunchTest, AddEthernetInterface) {
   auto services = CreateServices();
 
   // TODO(NET-1818): parameterize this over multiple netstack implementations
@@ -192,6 +192,70 @@ TEST_F(NetstackLaunchTest, AddEthernetDevice) {
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return list_ifs; }, zx::sec(5)));
 }
 
+TEST_F(NetstackLaunchTest, AddEthernetDevice) {
+  auto services = CreateServices();
+
+  // TODO(NET-1818): parameterize this over multiple netstack implementations
+  fuchsia::sys::LaunchInfo launch_info;
+  launch_info.url = "netstack";
+  launch_info.out = component::testing::CloneFileDescriptor(1);
+  launch_info.err = component::testing::CloneFileDescriptor(2);
+  services->AddServiceWithLaunchInfo(std::move(launch_info),
+                                     fuchsia::netstack::Netstack::Name_);
+
+  auto env = CreateNewEnclosingEnvironment("NetstackLaunchTest_AddEth",
+                                           std::move(services));
+  ASSERT_TRUE(WaitForEnclosingEnvToStart(env.get()));
+
+  zx::socket sock;
+  zx_status_t status = CreateEthertap(&sock);
+  ASSERT_EQ(ZX_OK, status) << zx_status_get_string(status);
+  zx::channel svc;
+  status = OpenEthertapDev(&svc);
+  ASSERT_EQ(ZX_OK, status) << zx_status_get_string(status);
+  fprintf(stderr, "found tap device\n");
+
+  bool list_ifs = false;
+  fuchsia::netstack::NetstackPtr netstack;
+  env->ConnectToService(netstack.NewRequest());
+  fidl::StringPtr topo_path = "/fake/device";
+  fidl::StringPtr interface_name = "en0";
+  fuchsia::netstack::InterfaceConfig config =
+      fuchsia::netstack::InterfaceConfig{};
+  config.name = interface_name;
+  config.ip_address_config.set_dhcp(true);
+  netstack->GetInterfaces(
+      [&](::fidl::VectorPtr<::fuchsia::netstack::NetInterface> interfaces) {
+        for (const auto& iface : *interfaces) {
+          ASSERT_TRUE(iface.features &
+                      ::zircon::ethernet::INFO_FEATURE_LOOPBACK);
+        }
+        list_ifs = true;
+      });
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return list_ifs; }, zx::sec(5)));
+
+  uint32_t eth_id = 0;
+  netstack->AddEthernetDevice(
+      std::move(topo_path), std::move(config),
+      fidl::InterfaceHandle<::zircon::ethernet::Device>(std::move(svc)),
+      [&](uint32_t id) { eth_id = id; });
+  ASSERT_TRUE(
+      RunLoopWithTimeoutOrUntil([&] { return eth_id > 0; }, zx::sec(5)));
+
+  list_ifs = false;
+  netstack->GetInterfaces(
+      [&](::fidl::VectorPtr<::fuchsia::netstack::NetInterface> interfaces) {
+        for (const auto& iface : *interfaces) {
+          if (iface.features & ::zircon::ethernet::INFO_FEATURE_LOOPBACK) {
+            continue;
+          }
+          ASSERT_EQ(eth_id, iface.id);
+        }
+        list_ifs = true;
+      });
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return list_ifs; }, zx::sec(5)));
+}
+
 TEST_F(NetstackLaunchTest, DISABLED_DHCPRequestSent) {
   auto services = CreateServices();
 
@@ -234,7 +298,8 @@ TEST_F(NetstackLaunchTest, DISABLED_DHCPRequestSent) {
   // migrate netcfg to use AddEthernetInterface.
   netstack->AddEthernetDevice(
       std::move(topo_path), std::move(config),
-      fidl::InterfaceHandle<::zircon::ethernet::Device>(std::move(svc)));
+      fidl::InterfaceHandle<::zircon::ethernet::Device>(std::move(svc)),
+      [&](uint32_t id) {});
 
   // Give zx_channel_write 10ms to enqueue whatever it needs, then run
   // until idle (reduces flake rate to zero).

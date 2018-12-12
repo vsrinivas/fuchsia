@@ -6,9 +6,11 @@
 #![feature(async_await, await_macro, futures_api, pin, try_from)]
 
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::fs;
 use std::os::unix::io::AsRawFd;
 use std::path;
+use std::sync::{Arc, Mutex};
 
 use failure::{self, ResultExt};
 use fidl::endpoints::ServiceMarker;
@@ -119,6 +121,8 @@ fn main() -> Result<(), failure::Error> {
     let mut watcher = fuchsia_vfs_watcher::Watcher::new(&ethdir)
         .with_context(|_| format!("could not watch {}", ETHDIR))?;
 
+    let interface_ids = Arc::new(Mutex::new(HashMap::new()));
+
     let ethernet_device = async {
         while let Some(fuchsia_vfs_watcher::WatchMessage { event, filename }) =
             await!(watcher.try_next()).with_context(|_| format!("watching {}", ETHDIR))?
@@ -182,18 +186,23 @@ fn main() -> Result<(), failure::Error> {
                             &default_config_rules,
                         );
 
-                        let () = netstack
-                            .add_ethernet_device(
-                                &topological_path,
-                                &mut derived_interface_config,
-                                fidl::endpoints::ClientEnd::<fidl_zircon_ethernet::DeviceMarker>::new(client),
+                        let nic_id = await!(netstack.add_ethernet_device(
+                            &topological_path,
+                            &mut derived_interface_config,
+                            fidl::endpoints::ClientEnd::<fidl_zircon_ethernet::DeviceMarker>::new(
+                                client
+                            ),
+                        ))
+                        .with_context(|_| {
+                            format!(
+                                "fidl_netstack::Netstack::add_ethernet_device({})",
+                                filename.display()
                             )
-                            .with_context(|_| {
-                                format!(
-                                    "fidl_netstack::Netstack::add_ethernet_device({})",
-                                    filename.display()
-                                )
-                            })?;
+                        })?;
+                        interface_ids
+                            .lock()
+                            .unwrap()
+                            .insert(derived_interface_config.name, nic_id);
                     }
                 }
 

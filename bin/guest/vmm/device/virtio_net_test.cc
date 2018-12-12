@@ -58,7 +58,8 @@ class VirtioNetTest : public TestWithDevice,
   void AddEthernetDevice(
       ::fidl::StringPtr topological_path,
       fuchsia::netstack::InterfaceConfig interfaceConfig,
-      ::fidl::InterfaceHandle<::zircon::ethernet::Device> device) override {
+      ::fidl::InterfaceHandle<::zircon::ethernet::Device> device,
+      AddEthernetDeviceCallback callback) override {
     eth_device_ = device.Bind();
     eth_device_added_ = true;
   }

@@ -176,7 +176,7 @@ interface Netstack {
     // TODO(NET-1263): remove once we can use the ResolverAdmin interface
     SetNameServers(vector<fuchsia.net.IpAddress> servers);
 
-    AddEthernetDevice(string topological_path, InterfaceConfig interfaceConfig, zircon.ethernet.Device device);
+    AddEthernetDevice(string topological_path, InterfaceConfig interfaceConfig, zircon.ethernet.Device device) -> (uint32 nicid);
 
     // Begin a route transaction for atomically getting and setting the route
     // table.  Returns true if a transaction can be started.

@@ -211,7 +211,8 @@ TEST_F(NetstackFilterTest, DISABLED_TestRuleset) {
   config.ip_address_config.set_static_ip(std::move(subnet));
   netstack->AddEthernetDevice(
       std::move(topo_path), std::move(config),
-      fidl::InterfaceHandle<::zircon::ethernet::Device>(std::move(svc)));
+      fidl::InterfaceHandle<::zircon::ethernet::Device>(std::move(svc)),
+      [&](uint32_t id) {});
   fprintf(stderr, "added new ethernet device\n");
 
   // Validate that the interface was actually added and that the static IP

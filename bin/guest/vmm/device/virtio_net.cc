@@ -181,7 +181,8 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
     config.name = kInterfaceName;
     config.ip_address_config.set_static_ip(std::move(subnet));
     netstack_->AddEthernetDevice(kInterfacePath, std::move(config),
-                                 device_binding_.NewBinding());
+                                 device_binding_.NewBinding(),
+                                 [&](uint32_t id) {});
 
     rx_stream_.Init(&guest_ethernet_, phys_mem_,
                     fit::bind_member<zx_status_t, DeviceBase>(

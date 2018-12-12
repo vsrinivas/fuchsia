@@ -376,7 +376,10 @@ func (dns *dnsImpl) GetNameServers() ([]net.IpAddress, error) {
 	return out, nil
 }
 
-func (ns *netstackImpl) AddEthernetDevice(topological_path string, interfaceConfig netstack.InterfaceConfig, device ethernet.DeviceInterface) error {
-	_, err := ns.ns.addEth(topological_path, interfaceConfig, &device)
-	return err
+func (ns *netstackImpl) AddEthernetDevice(topological_path string, interfaceConfig netstack.InterfaceConfig, device ethernet.DeviceInterface) (uint32, error) {
+	ifs, err := ns.ns.addEth(topological_path, interfaceConfig, &device)
+	if err != nil {
+		return 0, err
+	}
+	return uint32(ifs.nic.ID), err
 }
