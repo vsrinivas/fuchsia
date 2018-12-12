@@ -34,8 +34,7 @@ constexpr fxl::StringView kUserID = "test user ID";
 class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
  public:
   LedgerRepositoryFactoryImplTest() {
-    object_dir_ = component::ObjectDir(
-        fbl::MakeRefCounted<component::Object>(kObjectsName));
+    object_dir_ = component::ObjectDir::Make({kObjectsName.data(), kObjectsName.size()});
     repository_factory_ = std::make_unique<LedgerRepositoryFactoryImpl>(
         &environment_, nullptr, object_dir_);
   }
