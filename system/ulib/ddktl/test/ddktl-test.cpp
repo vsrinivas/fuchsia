@@ -57,6 +57,8 @@ zx_status_t ddktl_test_func(void* cookie, test_report_t* report) {
     memset(report, 0, sizeof(*report));
     update_test_report(unittest_run_one_test(test_case_ddktl_device, TEST_ALL), report);
     update_test_report(unittest_run_one_test(test_case_ddktl_ethernet_device, TEST_ALL), report);
+    unittest_restore_output_function();
+    zx_handle_close(output);
     return report->n_failed == 0 ? ZX_OK : ZX_ERR_INTERNAL;
 }
 

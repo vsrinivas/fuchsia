@@ -34,8 +34,8 @@ public:
     void DdkRelease();
 
     // Methods required by the TestProtocol mixin
-    void TestSetOutputSocket(zx_handle_t handle);
-    void TestGetOutputSocket(zx_handle_t* output_handle);
+    void TestSetOutputSocket(zx::socket socket);
+    void TestGetOutputSocket(zx::socket* out_socket);
     void TestSetTestFunc(const test_func_t* func);
     zx_status_t TestRunTests(test_report_t* out_report);
     void TestDestroy();
@@ -69,12 +69,12 @@ private:
                              char* path_out, size_t path_size, size_t* path_actual);
 };
 
-void TestDevice::TestSetOutputSocket(zx_handle_t handle) {
-    output_.reset(handle);
+void TestDevice::TestSetOutputSocket(zx::socket socket) {
+    output_ = std::move(socket);
 }
 
-void TestDevice::TestGetOutputSocket(zx_handle_t* output_handle) {
-    *output_handle = output_.get();
+void TestDevice::TestGetOutputSocket(zx::socket* out_socket) {
+    output_.duplicate(ZX_RIGHT_SAME_RIGHTS, out_socket);
 }
 
 void TestDevice::TestSetTestFunc(const test_func_t* func) {
@@ -95,7 +95,7 @@ void TestDevice::TestDestroy() {
 static zx_status_t fidl_SetOutputSocket(void* ctx, zx_handle_t raw_socket) {
     zx::socket socket(raw_socket);
     auto dev = static_cast<TestDevice*>(ctx);
-    dev->TestSetOutputSocket(socket.release());
+    dev->TestSetOutputSocket(std::move(socket));
     return ZX_OK;
 }
 
@@ -135,7 +135,7 @@ zx_status_t TestDevice::DdkIoctl(uint32_t op, const void* in, size_t inlen, void
         if (inlen != sizeof(zx_handle_t)) {
             return ZX_ERR_INVALID_ARGS;
         }
-        TestSetOutputSocket(*(zx_handle_t*)in);
+        TestSetOutputSocket(zx::socket(*static_cast<const zx_handle_t*>(in)));
         return ZX_OK;
 
     case IOCTL_TEST_RUN_TESTS: {
