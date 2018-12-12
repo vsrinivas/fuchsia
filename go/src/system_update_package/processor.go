@@ -108,7 +108,6 @@ func fetchPackage(p *Package, amber *amber.ControlInterface) error {
 	if err == nil {
 		// package is already installed, skip
 		if string(b) == p.merkle {
-			logger.Infof("%s/%s up to date", p.namever, p.merkle)
 			return nil
 		}
 	}

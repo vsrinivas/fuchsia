@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"log"
+	"os"
 	"path/filepath"
 	"strings"
 	"thinfs/fs"
@@ -50,7 +51,9 @@ func newPackageDir(name, version string, filesystem *Filesystem) (*packageDir, e
 func newPackageDirFromBlob(blob string, filesystem *Filesystem) (*packageDir, error) {
 	f, err := filesystem.blobfs.Open(blob)
 	if err != nil {
-		log.Printf("pkgfs: failed to open package contents at %q: %s", blob, err)
+		if !os.IsNotExist(err) {
+			log.Printf("pkgfs: failed to open package contents at %q: %s", blob, err)
+		}
 		return nil, goErrToFSErr(err)
 	}
 	defer f.Close()
