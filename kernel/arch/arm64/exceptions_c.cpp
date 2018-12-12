@@ -158,7 +158,7 @@ static void arm64_fpu_handler(struct arm64_iframe_long* iframe, uint exception_f
 static void arm64_instruction_abort_handler(struct arm64_iframe_long* iframe, uint exception_flags,
                                             uint32_t esr) {
     /* read the FAR register */
-    uint64_t far = ARM64_READ_SYSREG(far_el1);
+    uint64_t far = __arm_rsr64("far_el1");
     uint32_t ec = BITS_SHIFT(esr, 31, 26);
     uint32_t iss = BITS(esr, 24, 0);
     bool is_user = !BIT(ec, 0);
@@ -198,7 +198,7 @@ static void arm64_instruction_abort_handler(struct arm64_iframe_long* iframe, ui
 static void arm64_data_abort_handler(struct arm64_iframe_long* iframe, uint exception_flags,
                                      uint32_t esr) {
     /* read the FAR register */
-    uint64_t far = ARM64_READ_SYSREG(far_el1);
+    uint64_t far = __arm_rsr64("far_el1");
     uint32_t ec = BITS_SHIFT(esr, 31, 26);
     uint32_t iss = BITS(esr, 24, 0);
     bool is_user = !BIT(ec, 0);

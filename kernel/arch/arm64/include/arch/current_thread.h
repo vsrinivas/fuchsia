@@ -18,14 +18,15 @@ static inline struct thread* get_current_thread(void) {
     // which conceivably could let it optimize better.
     char* tp = (char*)__builtin_thread_pointer();
 #else
-    char* tp = (char*)ARM64_READ_SYSREG(tpidr_el1);
+    char* tp = (char*)__arm_rsr64("tpidr_el1");
 #endif
     tp -= offsetof(struct thread, arch.thread_pointer_location);
     return (struct thread*)tp;
 }
 
 static inline void set_current_thread(struct thread* t) {
-    ARM64_WRITE_SYSREG(tpidr_el1, (uint64_t)&t->arch.thread_pointer_location);
+    __arm_wsr64("tpidr_el1", (uint64_t)&t->arch.thread_pointer_location);
+    __isb(ARM_MB_SY);
 }
 
 __END_CDECLS

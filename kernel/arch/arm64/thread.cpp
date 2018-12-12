@@ -100,7 +100,7 @@ __NO_SAFESTACK void arch_thread_construct_first(thread_t* t) {
 __NO_SAFESTACK void arch_context_switch(thread_t* oldthread,
                                         thread_t* newthread) {
     LTRACEF("old %p (%s), new %p (%s)\n", oldthread, oldthread->name, newthread, newthread->name);
-    DSB; /* broadcast tlb operations in case the thread moves to another cpu */
+    __dsb(ARM_MB_SY); /* broadcast tlb operations in case the thread moves to another cpu */
 
     /* set the current cpu pointer in the new thread's structure so it can be
      * restored on exception entry.

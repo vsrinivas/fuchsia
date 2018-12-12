@@ -22,25 +22,17 @@ __BEGIN_CDECLS
 #define ENABLE_CYCLE_COUNTER 1
 
 static inline void arch_spinloop_pause(void) {
-    __asm__ volatile("yield" ::
-                         : "memory");
+    __yield();
 }
 
-#define mb() __asm__ volatile("dsb sy" \
-                              :        \
-                              :        \
-                              : "memory")
-#define smp_mb() __asm__ volatile("dmb sy" \
-                                  :         \
-                                  :         \
-                                  : "memory")
+#define mb() __dsb(ARM_MB_SY)
+#define smp_mb() __dmb(ARM_MB_SY)
 
 static inline uint64_t arch_cycle_count(void) {
-    return ARM64_READ_SYSREG(pmccntr_el0);
+    return __arm_rsr64("pmccntr_el0");
 }
 
-static inline uint32_t arch_cpu_features(void)
-{
+static inline uint32_t arch_cpu_features(void) {
     return arm64_features;
 }
 

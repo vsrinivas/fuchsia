@@ -159,7 +159,7 @@ static zx_status_t gic_init() {
     // disable the distributor
     GICREG(0, GICD_CTLR) = 0;
     gic_wait_for_rwp(GICD_CTLR);
-    ISB;
+    __isb(ARM_MB_SY);
 
     // distributor config: mask and clear all spis, set group 1.
     uint i;
@@ -193,7 +193,7 @@ static zx_status_t gic_init() {
     gic_init_percpu_early();
 
     mb();
-    ISB;
+    __isb(ARM_MB_SY);
 
     return ZX_OK;
 }

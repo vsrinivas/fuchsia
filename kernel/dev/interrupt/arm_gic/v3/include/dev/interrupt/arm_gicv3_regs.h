@@ -106,18 +106,18 @@ extern uint64_t arm_gicv3_gicr_stride;
 
 static inline void gic_write_ctlr(uint32_t val) {
     __asm__ volatile("msr " ICC_CTLR_EL1 ", %0" :: "r"((uint64_t)val));
-    ISB;
+    __isb(ARM_MB_SY);
 }
 
 static inline void gic_write_pmr(uint32_t val) {
     __asm__ volatile("msr " ICC_PMR_EL1 ", %0" :: "r"((uint64_t)val));
-    ISB;
-    DSB;
+    __isb(ARM_MB_SY);
+    __dsb(ARM_MB_SY);
 }
 
 static inline void gic_write_igrpen(uint32_t val) {
     __asm__ volatile("msr " ICC_IGRPEN1_EL1 ", %0" :: "r"((uint64_t)val));
-    ISB;
+    __isb(ARM_MB_SY);
 }
 
 static inline uint32_t gic_read_sre(void) {
@@ -128,28 +128,28 @@ static inline uint32_t gic_read_sre(void) {
 
 static inline void gic_write_sre(uint32_t val) {
     __asm__ volatile("msr " ICC_SRE_EL1 ", %0" :: "r"((uint64_t)val));
-    ISB;
+    __isb(ARM_MB_SY);
 }
 
 static inline void gic_write_eoir(uint32_t val) {
     __asm__ volatile("msr " ICC_EOIR1_EL1 ", %0" :: "r"((uint64_t)val));
-    ISB;
+    __isb(ARM_MB_SY);
 }
 
 static inline void gic_write_dir(uint32_t val) {
     __asm__ volatile("msr " ICC_DIR_EL1 ", %0" :: "r"((uint64_t)val));
-    ISB;
+    __isb(ARM_MB_SY);
 }
 
 static inline uint32_t gic_read_iar() {
     uint64_t temp;
     __asm__ volatile("mrs %0, " ICC_IAR1_EL1 : "=r"(temp));
-    DSB;
+    __dsb(ARM_MB_SY);
     return (uint32_t)temp;
 }
 
 static inline void gic_write_sgi1r(uint64_t val) {
     __asm__ volatile("msr " ICC_SGI1R_EL1 ", %0" :: "r"((uint64_t)val));
-    ISB;
-    DSB;
+    __isb(ARM_MB_SY);
+    __dsb(ARM_MB_SY);
 }

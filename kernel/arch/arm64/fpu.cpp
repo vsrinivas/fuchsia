@@ -90,7 +90,7 @@ __NO_SAFESTACK static void arm64_fpu_save_state(struct thread* t) {
 /* save fpu state if the thread had dirtied it and disable the fpu */
 __NO_SAFESTACK void arm64_fpu_context_switch(struct thread* oldthread,
                                              struct thread* newthread) {
-    uint64_t cpacr = ARM64_READ_SYSREG(cpacr_el1);
+    uint64_t cpacr = __arm_rsr64("cpacr_el1");
     if (is_fpu_enabled((uint32_t)cpacr)) {
         LTRACEF("saving state on thread %s\n", oldthread->name);
 
@@ -98,7 +98,8 @@ __NO_SAFESTACK void arm64_fpu_context_switch(struct thread* oldthread,
         arm64_fpu_save_state(oldthread);
 
         /* disable the fpu again */
-        ARM64_WRITE_SYSREG(cpacr_el1, cpacr & ~FPU_ENABLE_MASK);
+        __arm_wsr64("cpacr_el1", cpacr & ~FPU_ENABLE_MASK);
+        __isb(ARM_MB_SY);
     }
 }
 
@@ -109,12 +110,13 @@ void arm64_fpu_exception(struct arm64_iframe_long* iframe, uint exception_flags)
     /* only valid to be called if exception came from lower level */
     DEBUG_ASSERT(exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL);
 
-    uint64_t cpacr = ARM64_READ_SYSREG(cpacr_el1);
+    uint64_t cpacr = __arm_rsr64("cpacr_el1");
     DEBUG_ASSERT(!is_fpu_enabled((uint32_t)cpacr));
 
     /* enable the fpu */
     cpacr |= FPU_ENABLE_MASK;
-    ARM64_WRITE_SYSREG(cpacr_el1, cpacr);
+    __arm_wsr64("cpacr_el1", cpacr);
+    __isb(ARM_MB_SY);
 
     /* load the state from the current cpu */
     thread_t* t = get_current_thread();

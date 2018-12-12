@@ -386,13 +386,13 @@ __BEGIN_CDECLS
 #define ARM64_TLBI_NOADDR(op)            \
     ({                                   \
         __asm__ volatile("tlbi " #op::); \
-        ISB;                             \
+        __isb(ARM_MB_SY);                             \
     })
 
 #define ARM64_TLBI(op, val)                                          \
     ({                                                               \
         __asm__ volatile("tlbi " #op ", %0" ::"r"((uint64_t)(val))); \
-        ISB;                                                         \
+        __isb(ARM_MB_SY);                                                         \
     })
 
 const size_t MMU_ARM64_ASID_BITS = 16;

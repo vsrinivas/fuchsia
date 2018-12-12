@@ -34,7 +34,7 @@ static void parse_ccsid(arm64_cache_desc_t* desc, uint64_t ccsid) {
 void arm64_get_cache_info(arm64_cache_info_t* info) {
     uint64_t temp = 0;
 
-    uint64_t sysreg = ARM64_READ_SYSREG(clidr_el1);
+    uint64_t sysreg = __arm_rsr64("clidr_el1");
     info->inner_boundary = (uint8_t)BITS_SHIFT(sysreg, 32, 30);
     info->lou_u = (uint8_t)BITS_SHIFT(sysreg, 29, 27);
     info->loc = (uint8_t)BITS_SHIFT(sysreg, 26, 24);
@@ -45,20 +45,23 @@ void arm64_get_cache_info(arm64_cache_info_t* info) {
             info->level_data_type[i].ctype = 0;
             info->level_inst_type[i].ctype = 0;
         } else if (ctype == 4) {                               // Unified
-            ARM64_WRITE_SYSREG(CSSELR_EL1, (int64_t)(i << 1)); // Select cache level
-            temp = ARM64_READ_SYSREG(ccsidr_el1);
+            __arm_wsr64("csselr_el1", (int64_t)(i << 1)); // Select cache level
+            __isb(ARM_MB_SY);
+            temp = __arm_rsr64("ccsidr_el1");
             info->level_data_type[i].ctype = 4;
             parse_ccsid(&(info->level_data_type[i]), temp);
         } else {
             if (ctype & 0x02) {
-                ARM64_WRITE_SYSREG(CSSELR_EL1, (int64_t)(i << 1));
-                temp = ARM64_READ_SYSREG(ccsidr_el1);
+                __arm_wsr64("csselr_el1", (int64_t)(i << 1));
+                __isb(ARM_MB_SY);
+                temp = __arm_rsr64("ccsidr_el1");
                 info->level_data_type[i].ctype = 2;
                 parse_ccsid(&(info->level_data_type[i]), temp);
             }
             if (ctype & 0x01) {
-                ARM64_WRITE_SYSREG(CSSELR_EL1, (int64_t)(i << 1) | 0x01);
-                temp = ARM64_READ_SYSREG(ccsidr_el1);
+                __arm_wsr64("csselr_el1", (int64_t)(i << 1) | 0x01);
+                __isb(ARM_MB_SY);
+                temp = __arm_rsr64("ccsidr_el1");
                 info->level_inst_type[i].ctype = 1;
                 parse_ccsid(&(info->level_inst_type[i]), temp);
             }
@@ -163,11 +166,11 @@ unknown:
 }
 
 static void print_cpu_info() {
-    uint32_t midr = (uint32_t)ARM64_READ_SYSREG(midr_el1);
+    uint32_t midr = (uint32_t)__arm_rsr64("midr_el1");
     char cpu_name[128];
     midr_to_core(midr, cpu_name, sizeof(cpu_name));
 
-    uint64_t mpidr = ARM64_READ_SYSREG(mpidr_el1);
+    uint64_t mpidr = __arm_rsr64("mpidr_el1");
 
     dprintf(INFO, "ARM cpu %u: midr %#x '%s' mpidr %#" PRIx64 " aff %u:%u:%u:%u\n",
             arch_curr_cpu_num(), midr, cpu_name, mpidr,
@@ -183,16 +186,16 @@ void arm64_feature_init() {
     cpu_num_t cpu = arch_curr_cpu_num();
     if (cpu == 0) {
         // read the block size of DC ZVA
-        uint64_t dczid = ARM64_READ_SYSREG(dczid_el0);
+        uint64_t dczid = __arm_rsr64("dczid_el0");
         uint32_t arm64_zva_shift = 0;
         if (BIT(dczid, 4) == 0) {
-            arm64_zva_shift = (uint32_t)(ARM64_READ_SYSREG(dczid_el0) & 0xf) + 2;
+            arm64_zva_shift = (uint32_t)(__arm_rsr64("dczid_el0") & 0xf) + 2;
         }
         ASSERT(arm64_zva_shift != 0); // for now, fail if DC ZVA is unavailable
         arm64_zva_size = (1u << arm64_zva_shift);
 
         // read the dcache and icache line size
-        uint64_t ctr = ARM64_READ_SYSREG(ctr_el0);
+        uint64_t ctr = __arm_rsr64("ctr_el0");
         uint32_t arm64_dcache_shift = (uint32_t)BITS_SHIFT(ctr, 19, 16) + 2;
         arm64_dcache_size = (1u << arm64_dcache_shift);
         uint32_t arm64_icache_shift = (uint32_t)BITS(ctr, 3, 0) + 2;
@@ -200,7 +203,7 @@ void arm64_feature_init() {
 
         // parse the ISA feature bits
         arm64_features |= ZX_HAS_CPU_FEATURES;
-        uint64_t isar0 = ARM64_READ_SYSREG(id_aa64isar0_el1);
+        uint64_t isar0 = __arm_rsr64("id_aa64isar0_el1");
         if (BITS_SHIFT(isar0, 7, 4) >= 1) {
             arm64_features |= ZX_ARM64_FEATURE_ISA_AES;
         }
@@ -235,12 +238,12 @@ void arm64_feature_init() {
             arm64_features |= ZX_ARM64_FEATURE_ISA_DP;
         }
 
-        uint64_t isar1 = ARM64_READ_SYSREG(id_aa64isar1_el1);
+        uint64_t isar1 = __arm_rsr64("id_aa64isar1_el1");
         if (BITS_SHIFT(isar1, 3, 0) >= 1) {
             arm64_features |= ZX_ARM64_FEATURE_ISA_DPB;
         }
 
-        uint64_t pfr0 = ARM64_READ_SYSREG(id_aa64pfr0_el1);
+        uint64_t pfr0 = __arm_rsr64("id_aa64pfr0_el1");
         if (BITS_SHIFT(pfr0, 19, 16) < 0b1111) {
             arm64_features |= ZX_ARM64_FEATURE_ISA_FP;
         }
@@ -253,7 +256,7 @@ void arm64_feature_init() {
     arm64_get_cache_info(&(cache_info[cpu]));
 
     // check to make sure implementation supports 16 bit asids
-    uint64_t mmfr0 = ARM64_READ_SYSREG(ID_AA64MMFR0_EL1);
+    uint64_t mmfr0 = __arm_rsr64("id_aa64mmfr0_el1");
     ASSERT((mmfr0 & ARM64_MMFR0_ASIDBITS_MASK) == ARM64_MMFR0_ASIDBITS_16);
 }
 

@@ -9,6 +9,7 @@
 
 #ifndef __ASSEMBLER__
 
+#include <arm_acle.h>
 #include <assert.h>
 #include <stdbool.h>
 #include <sys/types.h>
@@ -17,38 +18,26 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+// Constants from ACLE section 8.3, used as the argument for __dmb(), __dsb(), and __isb()
+// in arm_acle.h. Values are the architecturally defined immediate values encoded in barrier
+// instructions DMB, DSB, and ISB.
+#define ARM_MB_OSHLD    0x1
+#define ARM_MB_OSHST    0x2
+#define ARM_MB_OSH      0x3
+
+#define ARM_MB_NSHLD    0x5
+#define ARM_MB_NSHST    0x6
+#define ARM_MB_NSH      0x7
+
+#define ARM_MB_ISHLD    0x9
+#define ARM_MB_ISHST    0xa
+#define ARM_MB_ISH      0xb
+
+#define ARM_MB_LD       0xd
+#define ARM_MB_ST       0xe
+#define ARM_MB_SY       0xf
+
 __BEGIN_CDECLS
-
-#define DSB __asm__ volatile("dsb sy" :: \
-                                 : "memory")
-#define DSB_ISHST __asm__ volatile("dsb ishst" :: \
-                                       : "memory")
-#define DMB __asm__ volatile("dmb sy" :: \
-                                 : "memory")
-#define DMB_ISHST __asm__ volatile("dmb ishst" :: \
-                                       : "memory")
-#define ISB __asm__ volatile("isb" :: \
-                                 : "memory")
-
-#define STRINGIFY(x) #x
-#define TOSTRING(x) STRINGIFY(x)
-
-#define ARM64_READ_SYSREG(reg)                   \
-    ({                                           \
-        uint64_t _val;                           \
-        __asm__ volatile("mrs %0," TOSTRING(reg) \
-                         : "=r"(_val));          \
-        _val;                                    \
-    })
-
-#define ARM64_READ_SYSREG_32(reg) ((uint32_t)ARM64_READ_SYSREG(reg))
-
-#define ARM64_WRITE_SYSREG(reg, val)                               \
-    ({                                                             \
-        uint64_t _val = (val);                                     \
-        __asm__ volatile("msr " TOSTRING(reg) ", %0" ::"r"(_val)); \
-        ISB;                                                       \
-    })
 
 void arm64_context_switch(vaddr_t* old_sp, vaddr_t new_sp);
 void arm64_uspace_entry(uintptr_t arg1, uintptr_t arg2,

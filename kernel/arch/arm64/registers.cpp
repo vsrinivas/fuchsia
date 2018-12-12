@@ -11,15 +11,17 @@
 void arm64_disable_debug_state() {
     // The KDE bit enables and disables debug exceptions for the current execution.
     // Instruction Breakpoint Exceptions (software breakpoints) cannot be deactivated.
-    uint32_t mdscr_val = ARM64_READ_SYSREG_32(mdscr_el1) & ~ARM64_MDSCR_EL1_KDE;
-    ARM64_WRITE_SYSREG(mdscr_el1, mdscr_val);
+    uint32_t mdscr_val = __arm_rsr("mdscr_el1") & ~ARM64_MDSCR_EL1_KDE;
+    __arm_wsr("mdscr_el1", mdscr_val);
+    __isb(ARM_MB_SY);
 }
 
 void arm64_enable_debug_state() {
     // The KDE bit enables and disables debug exceptions for the current execution.
     // Instruction Breakpoint Exceptions (software breakpoints) cannot be deactivated.
-    uint32_t mdscr_val = ARM64_READ_SYSREG_32(mdscr_el1) | ARM64_MDSCR_EL1_KDE;
-    ARM64_WRITE_SYSREG(mdscr_el1, mdscr_val);
+    uint32_t mdscr_val = __arm_rsr("mdscr_el1") | ARM64_MDSCR_EL1_KDE;
+    __arm_wsr("mdscr_el1", mdscr_val);
+    __isb(ARM_MB_SY);
 }
 
 bool arm64_validate_debug_state(arm64_debug_state_t* state) {
@@ -41,7 +43,7 @@ bool arm64_validate_debug_state(arm64_debug_state_t* state) {
 
 uint8_t arm64_hw_breakpoint_count() {
     // TODO(donoso): Eventually this should be cached as a boot time constant.
-    uint64_t dfr0 = ARM64_READ_SYSREG(id_aa64dfr0_el1);
+    uint64_t dfr0 = __arm_rsr64("id_aa64dfr0_el1");
     uint8_t count = (uint8_t)(((dfr0 & ARM64_ID_AADFR0_EL1_BRPS) >>
                                ARM64_ID_AADFR0_EL1_BRPS_SHIFT) +
                               1lu);
@@ -58,68 +60,68 @@ static void arm64_read_hw_breakpoint_by_index(arm64_debug_state_t* debug_state,
 
     switch (index) {
     case 0:
-        debug_state->hw_bps[0].dbgbcr = ARM64_READ_SYSREG_32(dbgbcr0_el1);
-        debug_state->hw_bps[0].dbgbvr = ARM64_READ_SYSREG(dbgbvr0_el1);
+        debug_state->hw_bps[0].dbgbcr = __arm_rsr("dbgbcr0_el1");
+        debug_state->hw_bps[0].dbgbvr = __arm_rsr64("dbgbvr0_el1");
         break;
     case 1:
-        debug_state->hw_bps[1].dbgbcr = ARM64_READ_SYSREG_32(dbgbcr1_el1);
-        debug_state->hw_bps[1].dbgbvr = ARM64_READ_SYSREG(dbgbvr1_el1);
+        debug_state->hw_bps[1].dbgbcr = __arm_rsr("dbgbcr1_el1");
+        debug_state->hw_bps[1].dbgbvr = __arm_rsr64("dbgbvr1_el1");
         break;
     case 2:
-        debug_state->hw_bps[2].dbgbcr = ARM64_READ_SYSREG_32(dbgbcr2_el1);
-        debug_state->hw_bps[2].dbgbvr = ARM64_READ_SYSREG(dbgbvr2_el1);
+        debug_state->hw_bps[2].dbgbcr = __arm_rsr("dbgbcr2_el1");
+        debug_state->hw_bps[2].dbgbvr = __arm_rsr64("dbgbvr2_el1");
         break;
     case 3:
-        debug_state->hw_bps[3].dbgbcr = ARM64_READ_SYSREG_32(dbgbcr3_el1);
-        debug_state->hw_bps[3].dbgbvr = ARM64_READ_SYSREG(dbgbvr3_el1);
+        debug_state->hw_bps[3].dbgbcr = __arm_rsr("dbgbcr3_el1");
+        debug_state->hw_bps[3].dbgbvr = __arm_rsr64("dbgbvr3_el1");
         break;
     case 4:
-        debug_state->hw_bps[4].dbgbcr = ARM64_READ_SYSREG_32(dbgbcr4_el1);
-        debug_state->hw_bps[4].dbgbvr = ARM64_READ_SYSREG(dbgbvr4_el1);
+        debug_state->hw_bps[4].dbgbcr = __arm_rsr("dbgbcr4_el1");
+        debug_state->hw_bps[4].dbgbvr = __arm_rsr64("dbgbvr4_el1");
         break;
     case 5:
-        debug_state->hw_bps[5].dbgbcr = ARM64_READ_SYSREG_32(dbgbcr5_el1);
-        debug_state->hw_bps[5].dbgbvr = ARM64_READ_SYSREG(dbgbvr5_el1);
+        debug_state->hw_bps[5].dbgbcr = __arm_rsr("dbgbcr5_el1");
+        debug_state->hw_bps[5].dbgbvr = __arm_rsr64("dbgbvr5_el1");
         break;
     case 6:
-        debug_state->hw_bps[6].dbgbcr = ARM64_READ_SYSREG_32(dbgbcr6_el1);
-        debug_state->hw_bps[6].dbgbvr = ARM64_READ_SYSREG(dbgbvr6_el1);
+        debug_state->hw_bps[6].dbgbcr = __arm_rsr("dbgbcr6_el1");
+        debug_state->hw_bps[6].dbgbvr = __arm_rsr64("dbgbvr6_el1");
         break;
     case 7:
-        debug_state->hw_bps[7].dbgbcr = ARM64_READ_SYSREG_32(dbgbcr7_el1);
-        debug_state->hw_bps[7].dbgbvr = ARM64_READ_SYSREG(dbgbvr7_el1);
+        debug_state->hw_bps[7].dbgbcr = __arm_rsr("dbgbcr7_el1");
+        debug_state->hw_bps[7].dbgbvr = __arm_rsr64("dbgbvr7_el1");
         break;
     case 8:
-        debug_state->hw_bps[8].dbgbcr = ARM64_READ_SYSREG_32(dbgbcr8_el1);
-        debug_state->hw_bps[8].dbgbvr = ARM64_READ_SYSREG(dbgbvr8_el1);
+        debug_state->hw_bps[8].dbgbcr = __arm_rsr("dbgbcr8_el1");
+        debug_state->hw_bps[8].dbgbvr = __arm_rsr64("dbgbvr8_el1");
         break;
     case 9:
-        debug_state->hw_bps[9].dbgbcr = ARM64_READ_SYSREG_32(dbgbcr9_el1);
-        debug_state->hw_bps[9].dbgbvr = ARM64_READ_SYSREG(dbgbvr9_el1);
+        debug_state->hw_bps[9].dbgbcr = __arm_rsr("dbgbcr9_el1");
+        debug_state->hw_bps[9].dbgbvr = __arm_rsr64("dbgbvr9_el1");
         break;
     case 10:
-        debug_state->hw_bps[10].dbgbcr = ARM64_READ_SYSREG_32(dbgbcr10_el1);
-        debug_state->hw_bps[10].dbgbvr = ARM64_READ_SYSREG(dbgbvr10_el1);
+        debug_state->hw_bps[10].dbgbcr = __arm_rsr("dbgbcr10_el1");
+        debug_state->hw_bps[10].dbgbvr = __arm_rsr64("dbgbvr10_el1");
         break;
     case 11:
-        debug_state->hw_bps[11].dbgbcr = ARM64_READ_SYSREG_32(dbgbcr11_el1);
-        debug_state->hw_bps[11].dbgbvr = ARM64_READ_SYSREG(dbgbvr11_el1);
+        debug_state->hw_bps[11].dbgbcr = __arm_rsr("dbgbcr11_el1");
+        debug_state->hw_bps[11].dbgbvr = __arm_rsr64("dbgbvr11_el1");
         break;
     case 12:
-        debug_state->hw_bps[12].dbgbcr = ARM64_READ_SYSREG_32(dbgbcr12_el1);
-        debug_state->hw_bps[12].dbgbvr = ARM64_READ_SYSREG(dbgbvr12_el1);
+        debug_state->hw_bps[12].dbgbcr = __arm_rsr("dbgbcr12_el1");
+        debug_state->hw_bps[12].dbgbvr = __arm_rsr64("dbgbvr12_el1");
         break;
     case 13:
-        debug_state->hw_bps[13].dbgbcr = ARM64_READ_SYSREG_32(dbgbcr13_el1);
-        debug_state->hw_bps[13].dbgbvr = ARM64_READ_SYSREG(dbgbvr13_el1);
+        debug_state->hw_bps[13].dbgbcr = __arm_rsr("dbgbcr13_el1");
+        debug_state->hw_bps[13].dbgbvr = __arm_rsr64("dbgbvr13_el1");
         break;
     case 14:
-        debug_state->hw_bps[14].dbgbcr = ARM64_READ_SYSREG_32(dbgbcr14_el1);
-        debug_state->hw_bps[14].dbgbvr = ARM64_READ_SYSREG(dbgbvr14_el1);
+        debug_state->hw_bps[14].dbgbcr = __arm_rsr("dbgbcr14_el1");
+        debug_state->hw_bps[14].dbgbvr = __arm_rsr64("dbgbvr14_el1");
         break;
     case 15:
-        debug_state->hw_bps[15].dbgbcr = ARM64_READ_SYSREG_32(dbgbcr15_el1);
-        debug_state->hw_bps[15].dbgbvr = ARM64_READ_SYSREG(dbgbvr15_el1);
+        debug_state->hw_bps[15].dbgbcr = __arm_rsr("dbgbcr15_el1");
+        debug_state->hw_bps[15].dbgbvr = __arm_rsr64("dbgbvr15_el1");
         break;
     default:
         DEBUG_ASSERT(false);
@@ -141,68 +143,100 @@ static void arm64_write_hw_breakpoint_by_index(const arm64_debug_state_t* debug_
 
     switch (index) {
     case 0:
-        ARM64_WRITE_SYSREG(dbgbcr0_el1, debug_state->hw_bps[0].dbgbcr);
-        ARM64_WRITE_SYSREG(dbgbvr0_el1, debug_state->hw_bps[0].dbgbvr);
+        __arm_wsr("dbgbcr0_el1", debug_state->hw_bps[0].dbgbcr);
+        __isb(ARM_MB_SY);
+        __arm_wsr64("dbgbvr0_el1", debug_state->hw_bps[0].dbgbvr);
+        __isb(ARM_MB_SY);
         break;
     case 1:
-        ARM64_WRITE_SYSREG(dbgbcr1_el1, debug_state->hw_bps[1].dbgbcr);
-        ARM64_WRITE_SYSREG(dbgbvr1_el1, debug_state->hw_bps[1].dbgbvr);
+        __arm_wsr("dbgbcr1_el1", debug_state->hw_bps[1].dbgbcr);
+        __isb(ARM_MB_SY);
+        __arm_wsr64("dbgbvr1_el1", debug_state->hw_bps[1].dbgbvr);
+        __isb(ARM_MB_SY);
         break;
     case 2:
-        ARM64_WRITE_SYSREG(dbgbcr2_el1, debug_state->hw_bps[2].dbgbcr);
-        ARM64_WRITE_SYSREG(dbgbvr2_el1, debug_state->hw_bps[2].dbgbvr);
+        __arm_wsr("dbgbcr2_el1", debug_state->hw_bps[2].dbgbcr);
+        __isb(ARM_MB_SY);
+        __arm_wsr64("dbgbvr2_el1", debug_state->hw_bps[2].dbgbvr);
+        __isb(ARM_MB_SY);
         break;
     case 3:
-        ARM64_WRITE_SYSREG(dbgbcr3_el1, debug_state->hw_bps[3].dbgbcr);
-        ARM64_WRITE_SYSREG(dbgbvr3_el1, debug_state->hw_bps[3].dbgbvr);
+        __arm_wsr("dbgbcr3_el1", debug_state->hw_bps[3].dbgbcr);
+        __isb(ARM_MB_SY);
+        __arm_wsr64("dbgbvr3_el1", debug_state->hw_bps[3].dbgbvr);
+        __isb(ARM_MB_SY);
         break;
     case 4:
-        ARM64_WRITE_SYSREG(dbgbcr4_el1, debug_state->hw_bps[4].dbgbcr);
-        ARM64_WRITE_SYSREG(dbgbvr4_el1, debug_state->hw_bps[4].dbgbvr);
+        __arm_wsr("dbgbcr4_el1", debug_state->hw_bps[4].dbgbcr);
+        __isb(ARM_MB_SY);
+        __arm_wsr64("dbgbvr4_el1", debug_state->hw_bps[4].dbgbvr);
+        __isb(ARM_MB_SY);
         break;
     case 5:
-        ARM64_WRITE_SYSREG(dbgbcr5_el1, debug_state->hw_bps[5].dbgbcr);
-        ARM64_WRITE_SYSREG(dbgbvr5_el1, debug_state->hw_bps[5].dbgbvr);
+        __arm_wsr("dbgbcr5_el1", debug_state->hw_bps[5].dbgbcr);
+        __isb(ARM_MB_SY);
+        __arm_wsr64("dbgbvr5_el1", debug_state->hw_bps[5].dbgbvr);
+        __isb(ARM_MB_SY);
         break;
     case 6:
-        ARM64_WRITE_SYSREG(dbgbcr6_el1, debug_state->hw_bps[6].dbgbcr);
-        ARM64_WRITE_SYSREG(dbgbvr6_el1, debug_state->hw_bps[6].dbgbvr);
+        __arm_wsr("dbgbcr6_el1", debug_state->hw_bps[6].dbgbcr);
+        __isb(ARM_MB_SY);
+        __arm_wsr64("dbgbvr6_el1", debug_state->hw_bps[6].dbgbvr);
+        __isb(ARM_MB_SY);
         break;
     case 7:
-        ARM64_WRITE_SYSREG(dbgbcr7_el1, debug_state->hw_bps[7].dbgbcr);
-        ARM64_WRITE_SYSREG(dbgbvr7_el1, debug_state->hw_bps[7].dbgbvr);
+        __arm_wsr("dbgbcr7_el1", debug_state->hw_bps[7].dbgbcr);
+        __isb(ARM_MB_SY);
+        __arm_wsr64("dbgbvr7_el1", debug_state->hw_bps[7].dbgbvr);
+        __isb(ARM_MB_SY);
         break;
     case 8:
-        ARM64_WRITE_SYSREG(dbgbcr8_el1, debug_state->hw_bps[8].dbgbcr);
-        ARM64_WRITE_SYSREG(dbgbvr8_el1, debug_state->hw_bps[8].dbgbvr);
+        __arm_wsr("dbgbcr8_el1", debug_state->hw_bps[8].dbgbcr);
+        __isb(ARM_MB_SY);
+        __arm_wsr64("dbgbvr8_el1", debug_state->hw_bps[8].dbgbvr);
+        __isb(ARM_MB_SY);
         break;
     case 9:
-        ARM64_WRITE_SYSREG(dbgbcr9_el1, debug_state->hw_bps[9].dbgbcr);
-        ARM64_WRITE_SYSREG(dbgbvr9_el1, debug_state->hw_bps[9].dbgbvr);
+        __arm_wsr("dbgbcr9_el1", debug_state->hw_bps[9].dbgbcr);
+        __isb(ARM_MB_SY);
+        __arm_wsr64("dbgbvr9_el1", debug_state->hw_bps[9].dbgbvr);
+        __isb(ARM_MB_SY);
         break;
     case 10:
-        ARM64_WRITE_SYSREG(dbgbcr10_el1, debug_state->hw_bps[10].dbgbcr);
-        ARM64_WRITE_SYSREG(dbgbvr10_el1, debug_state->hw_bps[10].dbgbvr);
+        __arm_wsr("dbgbcr10_el1", debug_state->hw_bps[10].dbgbcr);
+        __isb(ARM_MB_SY);
+        __arm_wsr64("dbgbvr10_el1", debug_state->hw_bps[10].dbgbvr);
+        __isb(ARM_MB_SY);
         break;
     case 11:
-        ARM64_WRITE_SYSREG(dbgbcr11_el1, debug_state->hw_bps[11].dbgbcr);
-        ARM64_WRITE_SYSREG(dbgbvr11_el1, debug_state->hw_bps[11].dbgbvr);
+        __arm_wsr("dbgbcr11_el1", debug_state->hw_bps[11].dbgbcr);
+        __isb(ARM_MB_SY);
+        __arm_wsr64("dbgbvr11_el1", debug_state->hw_bps[11].dbgbvr);
+        __isb(ARM_MB_SY);
         break;
     case 12:
-        ARM64_WRITE_SYSREG(dbgbcr12_el1, debug_state->hw_bps[12].dbgbcr);
-        ARM64_WRITE_SYSREG(dbgbvr12_el1, debug_state->hw_bps[12].dbgbvr);
+        __arm_wsr("dbgbcr12_el1", debug_state->hw_bps[12].dbgbcr);
+        __isb(ARM_MB_SY);
+        __arm_wsr64("dbgbvr12_el1", debug_state->hw_bps[12].dbgbvr);
+        __isb(ARM_MB_SY);
         break;
     case 13:
-        ARM64_WRITE_SYSREG(dbgbcr13_el1, debug_state->hw_bps[13].dbgbcr);
-        ARM64_WRITE_SYSREG(dbgbvr13_el1, debug_state->hw_bps[13].dbgbvr);
+        __arm_wsr("dbgbcr13_el1", debug_state->hw_bps[13].dbgbcr);
+        __isb(ARM_MB_SY);
+        __arm_wsr64("dbgbvr13_el1", debug_state->hw_bps[13].dbgbvr);
+        __isb(ARM_MB_SY);
         break;
     case 14:
-        ARM64_WRITE_SYSREG(dbgbcr14_el1, debug_state->hw_bps[14].dbgbcr);
-        ARM64_WRITE_SYSREG(dbgbvr14_el1, debug_state->hw_bps[14].dbgbvr);
+        __arm_wsr("dbgbcr14_el1", debug_state->hw_bps[14].dbgbcr);
+        __isb(ARM_MB_SY);
+        __arm_wsr64("dbgbvr14_el1", debug_state->hw_bps[14].dbgbvr);
+        __isb(ARM_MB_SY);
         break;
     case 15:
-        ARM64_WRITE_SYSREG(dbgbcr15_el1, debug_state->hw_bps[15].dbgbcr);
-        ARM64_WRITE_SYSREG(dbgbvr15_el1, debug_state->hw_bps[15].dbgbvr);
+        __arm_wsr("dbgbcr15_el1", debug_state->hw_bps[15].dbgbcr);
+        __isb(ARM_MB_SY);
+        __arm_wsr64("dbgbvr15_el1", debug_state->hw_bps[15].dbgbvr);
+        __isb(ARM_MB_SY);
         break;
     default:
         DEBUG_ASSERT(false);

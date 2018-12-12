@@ -60,7 +60,7 @@ void arch_init_cpu_map(uint cluster_count, const uint* cluster_cpus) {
 
 // do the 'slow' lookup by mpidr to cpu number
 static uint arch_curr_cpu_num_slow() {
-    uint64_t mpidr = ARM64_READ_SYSREG(mpidr_el1);
+    uint64_t mpidr = __arm_rsr64("mpidr_el1");
     uint cluster = (mpidr & MPIDR_AFF1_MASK) >> MPIDR_AFF1_SHIFT;
     uint cpu = (mpidr & MPIDR_AFF0_MASK) >> MPIDR_AFF0_SHIFT;
 

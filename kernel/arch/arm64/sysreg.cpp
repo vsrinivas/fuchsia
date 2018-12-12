@@ -14,42 +14,42 @@
 #if ARCH_ARM64
 #include <lib/console.h>
 
-#define SYSREG_READ_COMMAND(sysreg_string)                                      \
-    if (!strncasecmp(regname, #sysreg_string, sizeof(#sysreg_string))) {        \
-        printf(#sysreg_string " = %016lx\n", ARM64_READ_SYSREG(sysreg_string)); \
-        return 0;                                                               \
+#define SYSREG_READ_COMMAND(sysreg_string)                               \
+    if (!strncasecmp(regname, sysreg_string, sizeof(sysreg_string))) {   \
+        printf(sysreg_string " = %016lx\n", __arm_rsr64(sysreg_string)); \
+        return 0;                                                        \
     } else
 
 static uint64_t read_sysregs(const char* regname) {
-    SYSREG_READ_COMMAND(ACTLR_EL1)
-    SYSREG_READ_COMMAND(CCSIDR_EL1)
-    SYSREG_READ_COMMAND(CLIDR_EL1)
-    SYSREG_READ_COMMAND(CSSELR_EL1)
-    SYSREG_READ_COMMAND(MIDR_EL1)
-    SYSREG_READ_COMMAND(MPIDR_EL1)
-    SYSREG_READ_COMMAND(SCTLR_EL1)
-    SYSREG_READ_COMMAND(SPSR_EL1)
-    SYSREG_READ_COMMAND(TCR_EL1)
-    SYSREG_READ_COMMAND(TPIDRRO_EL0)
-    SYSREG_READ_COMMAND(TPIDR_EL1)
-    SYSREG_READ_COMMAND(TTBR0_EL1)
-    SYSREG_READ_COMMAND(TTBR1_EL1)
-    SYSREG_READ_COMMAND(VBAR_EL1)
+    SYSREG_READ_COMMAND("actlr_el1")
+    SYSREG_READ_COMMAND("ccsidr_el1")
+    SYSREG_READ_COMMAND("clidr_el1")
+    SYSREG_READ_COMMAND("csselr_el1")
+    SYSREG_READ_COMMAND("midr_el1")
+    SYSREG_READ_COMMAND("mpidr_el1")
+    SYSREG_READ_COMMAND("sctlr_el1")
+    SYSREG_READ_COMMAND("spsr_el1")
+    SYSREG_READ_COMMAND("tcr_el1")
+    SYSREG_READ_COMMAND("tpidrro_el0")
+    SYSREG_READ_COMMAND("tpidr_el1")
+    SYSREG_READ_COMMAND("ttbr0_el1")
+    SYSREG_READ_COMMAND("ttbr1_el1")
+    SYSREG_READ_COMMAND("vbar_el1")
 
     //Generic Timer regs
-    SYSREG_READ_COMMAND(CNTFRQ_EL0)
-    SYSREG_READ_COMMAND(CNTKCTL_EL1)
-    SYSREG_READ_COMMAND(CNTPCT_EL0)
-    SYSREG_READ_COMMAND(CNTPS_CTL_EL1)
-    SYSREG_READ_COMMAND(CNTPS_CVAL_EL1)
-    SYSREG_READ_COMMAND(CNTPS_TVAL_EL1)
-    SYSREG_READ_COMMAND(CNTP_CTL_EL0)
-    SYSREG_READ_COMMAND(CNTP_CVAL_EL0)
-    SYSREG_READ_COMMAND(CNTP_TVAL_EL0)
-    SYSREG_READ_COMMAND(CNTVCT_EL0)
-    SYSREG_READ_COMMAND(CNTV_CTL_EL0)
-    SYSREG_READ_COMMAND(CNTV_CVAL_EL0)
-    SYSREG_READ_COMMAND(CNTV_TVAL_EL0) {
+    SYSREG_READ_COMMAND("cntfrq_el0")
+    SYSREG_READ_COMMAND("cntkctl_el1")
+    SYSREG_READ_COMMAND("cntpct_el0")
+    SYSREG_READ_COMMAND("cntps_ctl_el1")
+    SYSREG_READ_COMMAND("cntps_cval_el1")
+    SYSREG_READ_COMMAND("cntps_tval_el1")
+    SYSREG_READ_COMMAND("cntp_ctl_el0")
+    SYSREG_READ_COMMAND("cntp_cval_el0")
+    SYSREG_READ_COMMAND("cntp_tval_el0")
+    SYSREG_READ_COMMAND("cntvct_el0")
+    SYSREG_READ_COMMAND("cntv_ctl_el0")
+    SYSREG_READ_COMMAND("cntv_cval_el0")
+    SYSREG_READ_COMMAND("cntv_tval_el0") {
         printf("Could not find register %s in list (you may need to add it to kernel/kernel/sysreg.c)\n", regname);
     }
     return 0;

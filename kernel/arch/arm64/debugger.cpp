@@ -158,8 +158,8 @@ zx_status_t arch_get_debug_regs(struct thread* thread, zx_thread_state_debug_reg
     // debug registers.
     // TODO(ZX-3038): This should be exposed through a standard interface.
     //                Either the sysinfo fidl, the vDSO info mapping or some other mechanism.
-    out->hw_bps[AARCH64_MAX_HW_BREAKPOINTS - 1].dbgbvr = ARM64_READ_SYSREG(id_aa64dfr0_el1);
-    out->hw_bps[AARCH64_MAX_HW_BREAKPOINTS - 2].dbgbvr = ARM64_READ_SYSREG(mdscr_el1);
+    out->hw_bps[AARCH64_MAX_HW_BREAKPOINTS - 1].dbgbvr = __arm_rsr64("id_aa64dfr0_el1");
+    out->hw_bps[AARCH64_MAX_HW_BREAKPOINTS - 2].dbgbvr = __arm_rsr64("mdscr_el1");
 
     return ZX_OK;
 }

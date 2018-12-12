@@ -151,32 +151,40 @@ static void arm64_cpu_early_init() {
     arm64_init_percpu_early();
 
     // Set the vector base.
-    ARM64_WRITE_SYSREG(VBAR_EL1, (uint64_t)&arm64_el1_exception_base);
+    __arm_wsr64("vbar_el1", (uint64_t)&arm64_el1_exception_base);
+    __isb(ARM_MB_SY);
 
     // Set some control bits in sctlr.
-    uint64_t sctlr = ARM64_READ_SYSREG(sctlr_el1);
+    uint64_t sctlr = __arm_rsr64("sctlr_el1");
     sctlr |= SCTLR_EL1_UCI | SCTLR_EL1_UCT | SCTLR_EL1_DZE | SCTLR_EL1_SA0 | SCTLR_EL1_SA;
     sctlr &= ~SCTLR_EL1_AC;  // Disable alignment checking for EL1, EL0.
-    ARM64_WRITE_SYSREG(sctlr_el1, sctlr);
+    __arm_wsr64("sctlr_el1", sctlr);
+    __isb(ARM_MB_SY);
 
     // Save all of the features of the cpu.
     arm64_feature_init();
 
     // Enable cycle counter.
-    ARM64_WRITE_SYSREG(pmcr_el0, PMCR_EL0_ENABLE_BIT | PMCR_EL0_LONG_COUNTER_BIT);
-    ARM64_WRITE_SYSREG(pmcntenset_el0, PMCNTENSET_EL0_ENABLE);
+    __arm_wsr64("pmcr_el0", PMCR_EL0_ENABLE_BIT | PMCR_EL0_LONG_COUNTER_BIT);
+    __isb(ARM_MB_SY);
+    __arm_wsr64("pmcntenset_el0", PMCNTENSET_EL0_ENABLE);
+    __isb(ARM_MB_SY);
 
     // Enable user space access to cycle counter.
-    ARM64_WRITE_SYSREG(pmuserenr_el0, PMUSERENR_EL0_ENABLE);
+    __arm_wsr64("pmuserenr_el0", PMUSERENR_EL0_ENABLE);
+    __isb(ARM_MB_SY);
 
     // Enable Debug Exceptions by Disabling the OS Lock. The OSLAR_EL1 is a WO
     // register with only the low bit defined as OSLK. Write 0 to disable.
-    ARM64_WRITE_SYSREG(oslar_el1, 0x0);
+    __arm_wsr64("oslar_el1", 0x0);
+    __isb(ARM_MB_SY);
 
     // Enable user space access to virtual counter (CNTVCT_EL0).
-    ARM64_WRITE_SYSREG(cntkctl_el1, CNTKCTL_EL1_ENABLE_VIRTUAL_COUNTER);
+    __arm_wsr64("cntkctl_el1", CNTKCTL_EL1_ENABLE_VIRTUAL_COUNTER);
+    __isb(ARM_MB_SY);
 
-    ARM64_WRITE_SYSREG(mdscr_el1, MSDCR_EL1_INITIAL_VALUE);
+    __arm_wsr64("mdscr_el1", MSDCR_EL1_INITIAL_VALUE);
+    __isb(ARM_MB_SY);
 
     arch_enable_fiqs();
 }

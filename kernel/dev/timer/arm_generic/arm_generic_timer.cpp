@@ -23,24 +23,24 @@
 #define LOCAL_TRACE 0
 
 /* CNTFRQ AArch64 register */
-#define TIMER_REG_CNTFRQ cntfrq_el0
+#define TIMER_REG_CNTFRQ "cntfrq_el0"
 
 /* CNTP AArch64 registers */
-#define TIMER_REG_CNTP_CTL cntp_ctl_el0
-#define TIMER_REG_CNTP_CVAL cntp_cval_el0
-#define TIMER_REG_CNTP_TVAL cntp_tval_el0
-#define TIMER_REG_CNTPCT cntpct_el0
+#define TIMER_REG_CNTP_CTL "cntp_ctl_el0"
+#define TIMER_REG_CNTP_CVAL "cntp_cval_el0"
+#define TIMER_REG_CNTP_TVAL "cntp_tval_el0"
+#define TIMER_REG_CNTPCT "cntpct_el0"
 
-/* CNTPS AArch64 registers */
-#define TIMER_REG_CNTPS_CTL cntps_ctl_el1
-#define TIMER_REG_CNTPS_CVAL cntps_cval_el1
-#define TIMER_REG_CNTPS_TVAL cntps_tval_el1
+/* CNTPS "AArch64" registers */
+#define TIMER_REG_CNTPS_CTL "cntps_ctl_el1"
+#define TIMER_REG_CNTPS_CVAL "cntps_cval_el1"
+#define TIMER_REG_CNTPS_TVAL "cntps_tval_el1"
 
-/* CNTV AArch64 registers */
-#define TIMER_REG_CNTV_CTL cntv_ctl_el0
-#define TIMER_REG_CNTV_CVAL cntv_cval_el0
-#define TIMER_REG_CNTV_TVAL cntv_tval_el0
-#define TIMER_REG_CNTVCT cntvct_el0
+/* CNTV "AArch64" registers */
+#define TIMER_REG_CNTV_CTL "cntv_ctl_el0"
+#define TIMER_REG_CNTV_CVAL "cntv_cval_el0"
+#define TIMER_REG_CNTV_TVAL "cntv_tval_el0"
+#define TIMER_REG_CNTVCT "cntvct_el0"
 
 static int timer_irq;
 
@@ -59,77 +59,86 @@ zx_time_t cntpct_to_zx_time(uint64_t cntpct) {
 static uint32_t read_cntfrq(void) {
     uint32_t cntfrq;
 
-    cntfrq = ARM64_READ_SYSREG_32(TIMER_REG_CNTFRQ);
+    cntfrq = __arm_rsr(TIMER_REG_CNTFRQ);
     LTRACEF("cntfrq: 0x%08x, %u\n", cntfrq, cntfrq);
     return cntfrq;
 }
 
 static uint32_t read_cntp_ctl(void) {
-    return ARM64_READ_SYSREG_32(TIMER_REG_CNTP_CTL);
+    return __arm_rsr(TIMER_REG_CNTP_CTL);
 }
 
 static uint32_t read_cntv_ctl(void) {
-    return ARM64_READ_SYSREG_32(TIMER_REG_CNTV_CTL);
+    return __arm_rsr(TIMER_REG_CNTV_CTL);
 }
 
 static uint32_t read_cntps_ctl(void) {
-    return ARM64_READ_SYSREG_32(TIMER_REG_CNTPS_CTL);
+    return __arm_rsr(TIMER_REG_CNTPS_CTL);
 }
 
 static void write_cntp_ctl(uint32_t val) {
     LTRACEF_LEVEL(3, "cntp_ctl: 0x%x %x\n", val, read_cntp_ctl());
-    ARM64_WRITE_SYSREG(TIMER_REG_CNTP_CTL, val);
+    __arm_wsr(TIMER_REG_CNTP_CTL, val);
+    __isb(ARM_MB_SY);
 }
 
 static void write_cntv_ctl(uint32_t val) {
     LTRACEF_LEVEL(3, "cntv_ctl: 0x%x %x\n", val, read_cntv_ctl());
-    ARM64_WRITE_SYSREG(TIMER_REG_CNTV_CTL, val);
+    __arm_wsr(TIMER_REG_CNTV_CTL, val);
+    __isb(ARM_MB_SY);
 }
 
 static void write_cntps_ctl(uint32_t val) {
     LTRACEF_LEVEL(3, "cntps_ctl: 0x%x %x\n", val, read_cntps_ctl());
-    ARM64_WRITE_SYSREG(TIMER_REG_CNTPS_CTL, val);
+    __arm_wsr(TIMER_REG_CNTPS_CTL, val);
+    __isb(ARM_MB_SY);
 }
 
 static void write_cntp_cval(uint64_t val) {
     LTRACEF_LEVEL(3, "cntp_cval: 0x%016" PRIx64 ", %" PRIu64 "\n",
                   val, val);
-    ARM64_WRITE_SYSREG(TIMER_REG_CNTP_CVAL, val);
+    __arm_wsr64(TIMER_REG_CNTP_CVAL, val);
+    __isb(ARM_MB_SY);
 }
 
 static void write_cntv_cval(uint64_t val) {
     LTRACEF_LEVEL(3, "cntv_cval: 0x%016" PRIx64 ", %" PRIu64 "\n",
                   val, val);
-    ARM64_WRITE_SYSREG(TIMER_REG_CNTV_CVAL, val);
+    __arm_wsr64(TIMER_REG_CNTV_CVAL, val);
+    __isb(ARM_MB_SY);
 }
 
 static void write_cntps_cval(uint64_t val) {
     LTRACEF_LEVEL(3, "cntps_cval: 0x%016" PRIx64 ", %" PRIu64 "\n",
                   val, val);
-    ARM64_WRITE_SYSREG(TIMER_REG_CNTPS_CVAL, val);
+    __arm_wsr64(TIMER_REG_CNTPS_CVAL, val);
+    __isb(ARM_MB_SY);
 }
 
 static void write_cntp_tval(int32_t val) {
     LTRACEF_LEVEL(3, "cntp_tval: %d\n", val);
-    ARM64_WRITE_SYSREG(TIMER_REG_CNTP_TVAL, val);
+    __arm_wsr(TIMER_REG_CNTP_TVAL, val);
+    __isb(ARM_MB_SY);
 }
 
 static void write_cntv_tval(int32_t val) {
     LTRACEF_LEVEL(3, "cntv_tval: %d\n", val);
-    ARM64_WRITE_SYSREG(TIMER_REG_CNTV_TVAL, val);
+    __arm_wsr(TIMER_REG_CNTV_TVAL, val);
+    __isb(ARM_MB_SY);
 }
 
 static void write_cntps_tval(int32_t val) {
     LTRACEF_LEVEL(3, "cntps_tval: %d\n", val);
-    ARM64_WRITE_SYSREG(TIMER_REG_CNTPS_TVAL, val);
+    __arm_wsr(TIMER_REG_CNTPS_TVAL, val);
+    __isb(ARM_MB_SY);
 }
 
 static uint64_t read_cntpct(void) {
-    return ARM64_READ_SYSREG(TIMER_REG_CNTPCT);
+    return __arm_rsr64(TIMER_REG_CNTPCT);
 }
 
 static uint64_t read_cntvct(void) {
-    return ARM64_READ_SYSREG(TIMER_REG_CNTVCT);
+    return __arm_rsr64(TIMER_REG_CNTVCT);
 }
 
 struct timer_reg_procs {

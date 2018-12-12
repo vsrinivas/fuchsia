@@ -43,7 +43,7 @@ zx_status_t El2TranslationTable::Init() {
                     MMU_PTE_L012_DESCRIPTOR_BLOCK;
     }
 
-    DMB;
+    __dmb(ARM_MB_SY);
     return ZX_OK;
 }
 

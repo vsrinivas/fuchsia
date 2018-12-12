@@ -178,7 +178,7 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
     vcpu->gich_state_.apr = 0;
     vcpu->el2_state_->guest_state.system_state.elr_el2 = entry;
     vcpu->el2_state_->guest_state.system_state.spsr_el2 = kSpsrDaif | kSpsrEl1h;
-    uint64_t mpidr = ARM64_READ_SYSREG(mpidr_el1);
+    uint64_t mpidr = __arm_rsr64("mpidr_el1");
     vcpu->el2_state_->guest_state.system_state.vmpidr_el2 = vmpidr_of(vpid, mpidr);
     vcpu->el2_state_->host_state.system_state.vmpidr_el2 = mpidr;
     vcpu->hcr_ = HCR_EL2_VM | HCR_EL2_PTW | HCR_EL2_FMO | HCR_EL2_IMO | HCR_EL2_DC | HCR_EL2_TWI |
