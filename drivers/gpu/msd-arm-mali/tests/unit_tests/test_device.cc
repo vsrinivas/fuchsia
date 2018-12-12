@@ -24,7 +24,7 @@ public:
         EXPECT_NE(device, nullptr);
 
         MsdArmDevice::DumpState dump_state;
-        device->Dump(&dump_state);
+        device->Dump(&dump_state, true);
         ASSERT_EQ(12u, dump_state.power_states.size());
         EXPECT_EQ(std::string("L2 Cache"), dump_state.power_states[0].core_type);
         EXPECT_EQ(std::string("Present"), dump_state.power_states[0].status_type);
@@ -190,7 +190,7 @@ public:
         EXPECT_NE(device, nullptr);
 
         MsdArmDevice::DumpState dump_state;
-        device->Dump(&dump_state);
+        device->Dump(&dump_state, false);
 
         // Ensure that the GPU is idle and not doing anything at this point. A
         // failure in this may be caused by a previous test.

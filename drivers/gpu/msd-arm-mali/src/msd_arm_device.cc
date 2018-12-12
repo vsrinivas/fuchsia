@@ -44,12 +44,15 @@ protected:
     }
 };
 
-class MsdArmDevice::GpuInterruptRequest : public DeviceRequest {
+class MsdArmDevice::PerfCounterSampleCompletedRequest : public DeviceRequest {
 public:
-    GpuInterruptRequest() {}
+    PerfCounterSampleCompletedRequest() {}
 
 protected:
-    magma::Status Process(MsdArmDevice* device) override { return device->ProcessGpuInterrupt(); }
+    magma::Status Process(MsdArmDevice* device) override
+    {
+        return device->ProcessPerfCounterSampleCompleted();
+    }
 };
 
 class MsdArmDevice::JobInterruptRequest : public DeviceRequest {
@@ -212,7 +215,8 @@ bool MsdArmDevice::Init(void* device_handle)
 bool MsdArmDevice::InitializeHardware()
 {
     cycle_counter_refcount_ = 0;
-    DASSERT(registers::GpuStatus::Get().ReadFrom(register_io_.get()).cycle_count_active().get() == 0);
+    DASSERT(registers::GpuStatus::Get().ReadFrom(register_io_.get()).cycle_count_active().get() ==
+            0);
     EnableInterrupts();
     InitializeHardwareQuirks(&gpu_features_, register_io_.get());
 
@@ -306,18 +310,20 @@ int MsdArmDevice::GpuInterruptThreadLoop()
             break;
 
         auto irq_status = registers::GpuIrqFlags::GetStatus().ReadFrom(register_io_.get());
-        auto clear_flags = registers::GpuIrqFlags::GetIrqClear().FromValue(0);
-        // Handle some interrupts on the interrupt thread so the device thread
-        // can wait for them to complete.
+
+        if (!irq_status.reg_value()) {
+            magma::log(magma::LOG_WARNING, "Got unexpected GPU IRQ with no flags set\n");
+        }
+
+        auto clear_flags = registers::GpuIrqFlags::GetIrqClear().FromValue(irq_status.reg_value());
+        // Handle interrupts on the interrupt thread so the device thread can wait for them to
+        // complete.
         if (irq_status.reset_completed().get()) {
             DLOG("Received GPU reset completed");
-            clear_flags.reset_completed().set(true);
             reset_semaphore_->Signal();
             irq_status.reset_completed().set(0);
         }
         if (irq_status.power_changed_single().get() || irq_status.power_changed_all().get()) {
-            clear_flags.power_changed_single().set(irq_status.power_changed_single().get());
-            clear_flags.power_changed_all().set(irq_status.power_changed_all().get());
             irq_status.power_changed_single().set(0);
             irq_status.power_changed_all().set(0);
             power_manager_->ReceivedPowerInterrupt(register_io_.get());
@@ -328,16 +334,26 @@ int MsdArmDevice::GpuInterruptThreadLoop()
                 enable_reg.WriteTo(register_io_.get());
             }
         }
-        if (clear_flags.reg_value()) {
-            clear_flags.WriteTo(register_io_.get());
+
+        if (irq_status.performance_counter_sample_completed().get()) {
+            irq_status.performance_counter_sample_completed().set(0);
+            EnqueueDeviceRequest(std::make_unique<PerfCounterSampleCompletedRequest>(), true);
+            // Don't wait for a reply, to ensure there's no deadlock. Clearing the interrupt flag
+            // before the interrupt is actually processed shouldn't matter, because perf_counters_
+            // ensures only one request happens at a time.
         }
 
         if (irq_status.reg_value()) {
-            auto request = std::make_unique<GpuInterruptRequest>();
-            auto reply = request->GetReply();
+            magma::log(magma::LOG_WARNING, "Got unexpected GPU IRQ %d\n", irq_status.reg_value());
+            // Perform the GPU dump immediately, because clearing the irq flags might cause another
+            // GPU fault to be generated, which could overwrite the earlier data.
+            std::string dump;
+            DumpToString(dump, false);
+            magma::log(magma::LOG_INFO, "GPU fault status: %s", dump.c_str());
+        }
 
-            EnqueueDeviceRequest(std::move(request), true);
-            reply->Wait();
+        if (clear_flags.reg_value()) {
+            clear_flags.WriteTo(register_io_.get());
         }
     }
 
@@ -345,38 +361,19 @@ int MsdArmDevice::GpuInterruptThreadLoop()
     return 0;
 }
 
-magma::Status MsdArmDevice::ProcessGpuInterrupt()
+magma::Status MsdArmDevice::ProcessPerfCounterSampleCompleted()
 {
-    auto irq_status = registers::GpuIrqFlags::GetStatus().ReadFrom(register_io_.get());
-    // Some interrupts are handled on the interrupt thread, so ignore them in this
-    // function.
-    irq_status.reset_completed().set(0);
-    irq_status.power_changed_single().set(0);
-    irq_status.power_changed_all().set(0);
-    auto clear_flags = registers::GpuIrqFlags::GetIrqClear().FromValue(irq_status.reg_value());
-    clear_flags.WriteTo(register_io_.get());
 
-    DLOG("Got GPU interrupt status 0x%x\n", irq_status.reg_value());
-    if (!irq_status.reg_value())
-        magma::log(magma::LOG_WARNING, "Got unexpected GPU IRQ with no flags set\n");
+    DLOG("Perf Counter sample completed");
 
-    if (irq_status.performance_counter_sample_completed().get()) {
-        uint64_t duration_ms = 0;
-        std::vector<uint32_t> perf_result = perf_counters_->ReadCompleted(&duration_ms);
+    uint64_t duration_ms = 0;
+    std::vector<uint32_t> perf_result = perf_counters_->ReadCompleted(&duration_ms);
 
-        magma::log(magma::LOG_INFO, "Performance counter read complete, duration %lu ms:\n",
-                   duration_ms);
-        for (uint32_t i = 0; i < perf_result.size(); ++i) {
-            magma::log(magma::LOG_INFO, "Performance counter %d: %u\n", i, perf_result[i]);
-        }
-        irq_status.performance_counter_sample_completed().set(0);
+    magma::log(magma::LOG_INFO, "Performance counter read complete, duration %lu ms:\n",
+               duration_ms);
+    for (uint32_t i = 0; i < perf_result.size(); ++i) {
+        magma::log(magma::LOG_INFO, "Performance counter %d: %u\n", i, perf_result[i]);
     }
-
-    if (irq_status.reg_value()) {
-        magma::log(magma::LOG_WARNING, "Got unexpected GPU IRQ %d\n", irq_status.reg_value());
-        ProcessDumpStatusToLog();
-    }
-    gpu_interrupt_->Complete();
     return MAGMA_STATUS_OK;
 }
 
@@ -702,23 +699,25 @@ void MsdArmDevice::DumpRegisters(const GpuFeatures& features, magma::RegisterIo*
     }
 }
 
-void MsdArmDevice::Dump(DumpState* dump_state)
+void MsdArmDevice::Dump(DumpState* dump_state, bool on_device_thread)
 {
     DumpRegisters(gpu_features_, register_io_.get(), dump_state);
 
-    std::chrono::steady_clock::duration total_time;
-    std::chrono::steady_clock::duration active_time;
-    power_manager_->GetGpuActiveInfo(&total_time, &active_time);
-    dump_state->total_time_ms =
-        std::chrono::duration_cast<std::chrono::milliseconds>(total_time).count();
-    dump_state->active_time_ms =
-        std::chrono::duration_cast<std::chrono::milliseconds>(active_time).count();
+    if (on_device_thread) {
+        std::chrono::steady_clock::duration total_time;
+        std::chrono::steady_clock::duration active_time;
+        power_manager_->GetGpuActiveInfo(&total_time, &active_time);
+        dump_state->total_time_ms =
+            std::chrono::duration_cast<std::chrono::milliseconds>(total_time).count();
+        dump_state->active_time_ms =
+            std::chrono::duration_cast<std::chrono::milliseconds>(active_time).count();
+    }
 }
 
-void MsdArmDevice::DumpToString(std::string& dump_string)
+void MsdArmDevice::DumpToString(std::string& dump_string, bool on_device_thread)
 {
-    DumpState dump_state;
-    Dump(&dump_state);
+    DumpState dump_state = {};
+    Dump(&dump_state, on_device_thread);
 
     FormatDump(dump_state, dump_string);
 }
@@ -760,7 +759,7 @@ void MsdArmDevice::FormatDump(DumpState& dump_state, std::string& dump_string)
 magma::Status MsdArmDevice::ProcessDumpStatusToLog()
 {
     std::string dump;
-    DumpToString(dump);
+    DumpToString(dump, true);
     magma::log(magma::LOG_INFO, "%s", dump.c_str());
     return MAGMA_STATUS_OK;
 }

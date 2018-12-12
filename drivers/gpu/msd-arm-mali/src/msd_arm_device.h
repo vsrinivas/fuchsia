@@ -87,8 +87,8 @@ public:
     };
     static void DumpRegisters(const GpuFeatures& features, magma::RegisterIo* io,
                               DumpState* dump_state);
-    void Dump(DumpState* dump_state);
-    void DumpToString(std::string& dump_string);
+    void Dump(DumpState* dump_state, bool from_device_thread);
+    void DumpToString(std::string& dump_string, bool from_device_thread);
     void FormatDump(DumpState& dump_state, std::string& dump_string);
     void DumpStatusToLog();
 
@@ -123,7 +123,7 @@ private:
     friend class TestMsdArmDevice;
 
     class DumpRequest;
-    class GpuInterruptRequest;
+    class PerfCounterSampleCompletedRequest;
     class JobInterruptRequest;
     class MmuInterruptRequest;
     class ScheduleAtomRequest;
@@ -158,7 +158,7 @@ private:
     bool ResetDevice();
 
     magma::Status ProcessDumpStatusToLog();
-    magma::Status ProcessGpuInterrupt();
+    magma::Status ProcessPerfCounterSampleCompleted();
     magma::Status ProcessJobInterrupt();
     magma::Status ProcessMmuInterrupt();
     magma::Status ProcessScheduleAtoms();
