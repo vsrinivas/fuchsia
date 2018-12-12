@@ -54,6 +54,7 @@ syscall clock_get
     (clock_id: zx_clock_t)
     returns (zx_time_t);
 
+#^ Acquire the current time.
 syscall clock_get_new
     (clock_id: zx_clock_t)
     returns (zx_status_t, out: zx_time_t);
