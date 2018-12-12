@@ -2,12 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config/fuchsia/zircon.gni")
 import("//build/config/fuchsia/zbi.gni")
+import("//build/config/fuchsia/zircon.gni")
 import("//build/images/manifest.gni")
 import("//build/package.gni")
 
 guest_packages = [
+  get_label_info("//build/images:shell-commands", "label_no_toolchain"),
   get_label_info("//garnet/bin/appmgr", "label_no_toolchain"),
   get_label_info(
       "//garnet/bin/guest/integration_tests:guest_integration_tests_utils",
@@ -106,7 +107,8 @@ action("guest_blob.manifest") {
   response_file_contents = [
     "--depfile=" + rebase_path(depfile, root_build_dir),
     "--output=" + rebase_path(guest_blob_manifest, root_build_dir),
-    "--input=" + rebase_path("$target_out_dir/guest.meta/blobs.json", root_build_dir),
+    "--input=" +
+        rebase_path("$target_out_dir/guest.meta/blobs.json", root_build_dir),
   ]
   foreach(pkg_label, guest_packages) {
     pkg_target_name = get_label_info(pkg_label, "name")
