@@ -26,7 +26,6 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <ddk/protocol/usb.h>  // Remove when the USB structs move out
 #include <netinet/if_ether.h>
 #include <pthread.h>
 #include <stdarg.h>
