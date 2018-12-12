@@ -71,7 +71,7 @@ void GenerateRoundedRectIndices(const RoundedRectSpec& spec,
                                 uint32_t max_bytes) {
   TRACE_DURATION("gfx", "escher::GenerateRoundedRectIndices");
 
-  FXL_DCHECK(max_bytes == kIndexCount * sizeof(uint32_t));
+  FXL_DCHECK(max_bytes >= kIndexCount * sizeof(uint32_t));
   uint32_t* indices = static_cast<uint32_t*>(indices_out);
 
   // Central square triangles.
@@ -265,7 +265,7 @@ void GenerateRoundedRectVertices(const RoundedRectSpec& spec,
   FXL_DCHECK(mesh_spec.total_attribute_count() == 2);
   FXL_DCHECK(mesh_spec.attributes[0] ==
              (MeshAttribute::kPosition2D | MeshAttribute::kUV));
-  FXL_DCHECK(max_bytes == kVertexCount * mesh_spec.stride(0));
+  FXL_DCHECK(max_bytes >= kVertexCount * mesh_spec.stride(0));
   FXL_DCHECK(sizeof(PosUvVertex) == mesh_spec.stride(0));
   FXL_DCHECK(0U == mesh_spec.attribute_offset(0, MeshAttribute::kPosition2D));
   FXL_DCHECK(sizeof(vec2) == mesh_spec.attribute_offset(0, MeshAttribute::kUV));
