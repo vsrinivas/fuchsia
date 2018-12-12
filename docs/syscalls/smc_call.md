@@ -2,13 +2,13 @@
 
 ## NAME
 
-<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+<!-- Updated by update-docs-from-abigen, do not edit. -->
 
 smc_call - Make Secure Monitor Call (SMC) from user space
 
 ## SYNOPSIS
 
-<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+<!-- Updated by update-docs-from-abigen, do not edit. -->
 
 ```
 #include <zircon/syscalls.h>
@@ -38,7 +38,7 @@ http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.den0028b/index.html)
 
 ## RIGHTS
 
-<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+<!-- Updated by update-docs-from-abigen, do not edit. -->
 
 TODO(ZX-2399)
 

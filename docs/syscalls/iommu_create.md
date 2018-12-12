@@ -2,13 +2,13 @@
 
 ## NAME
 
-<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+<!-- Updated by update-docs-from-abigen, do not edit. -->
 
 iommu_create - create a new IOMMU object in the kernel
 
 ## SYNOPSIS
 
-<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+<!-- Updated by update-docs-from-abigen, do not edit. -->
 
 ```
 #include <zircon/syscalls.h>
@@ -42,7 +42,7 @@ done with it.
 
 ## RIGHTS
 
-<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+<!-- Updated by update-docs-from-abigen, do not edit. -->
 
 *resource* must have resource kind **ZX_RSRC_KIND_ROOT**.
 

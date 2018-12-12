@@ -2,13 +2,13 @@
 
 ## NAME
 
-<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+<!-- Updated by update-docs-from-abigen, do not edit. -->
 
 channel_call - send a message to a channel and await a reply
 
 ## SYNOPSIS
 
-<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+<!-- Updated by update-docs-from-abigen, do not edit. -->
 
 ```
 #include <zircon/syscalls.h>
@@ -59,7 +59,7 @@ As with **zx_channel_write**(), the handles in *handles* are always consumed by
 
 ## RIGHTS
 
-<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+<!-- Updated by update-docs-from-abigen, do not edit. -->
 
 *handle* must be of type **ZX_OBJ_TYPE_CHANNEL** and have **ZX_RIGHT_READ** and have **ZX_RIGHT_WRITE**.
 

@@ -2,13 +2,13 @@
 
 ## NAME
 
-<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+<!-- Updated by update-docs-from-abigen, do not edit. -->
 
 handle_duplicate - duplicate a handle
 
 ## SYNOPSIS
 
-<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+<!-- Updated by update-docs-from-abigen, do not edit. -->
 
 ```
 #include <zircon/syscalls.h>
@@ -29,7 +29,7 @@ to specify no rights by using 0.
 
 ## RIGHTS
 
-<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+<!-- Updated by update-docs-from-abigen, do not edit. -->
 
 *handle* must have **ZX_RIGHT_DUPLICATE**.
 

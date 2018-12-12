@@ -2,13 +2,13 @@
 
 ## NAME
 
-<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+<!-- Updated by update-docs-from-abigen, do not edit. -->
 
 futex_requeue - Wake some number of threads waiting on a futex, and move more waiters to another wait queue.
 
 ## SYNOPSIS
 
-<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+<!-- Updated by update-docs-from-abigen, do not edit. -->
 
 ```
 #include <zircon/syscalls.h>
@@ -61,7 +61,7 @@ results in the owner of the futex being set to the thread referenced by the
 
 ## RIGHTS
 
-<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+<!-- Updated by update-docs-from-abigen, do not edit. -->
 
 None.
 

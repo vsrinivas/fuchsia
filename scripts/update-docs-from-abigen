@@ -26,8 +26,7 @@ import sys
 SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
 
 STANDARD_BLOCK_HEADER = [
-    '', '<!-- Updated by scripts/update-docs-from-abigen, '
-    'do not edit this section manually. -->', ''
+    '', '<!-- Updated by update-docs-from-abigen, do not edit. -->', ''
 ]
 
 
@@ -46,6 +45,11 @@ def parse_args():
         default=os.path.normpath(
             os.path.join(SCRIPT_DIR, os.pardir, 'docs', 'syscalls')),
         help='root of docs/syscalls/ to be updated')
+    parser.add_argument(
+        '--generate-missing',
+        default=False,
+        action="store_true",
+        help='if set, generate stubs for any syscalls that are missing')
     return parser.parse_args()
 
 
@@ -311,6 +315,8 @@ def make_name_block(syscall_data):
             if desc and desc[-1] not in ('-', '/', '\'', '('):
                 desc += ' '
             desc += x
+    if not desc:
+        desc = 'TODO(ZX-3106)'
     return STANDARD_BLOCK_HEADER + [start + desc, '']
 
 
@@ -404,6 +410,39 @@ def update_title(lines, syscall_data, _):
         lines[0] = correct_title
 
 
+def generate_stub(md):
+    """Makes a mostly-empty file that can then be filled out by later update
+    functions."""
+
+    stub = '''\
+# zx_xyz
+
+## NAME
+
+## SYNOPSIS
+
+## DESCRIPTION
+
+TODO(ZX-3106)
+
+## RIGHTS
+
+## RETURN VALUE
+
+TODO(ZX-3106)
+
+## ERRORS
+
+TODO(ZX-3106)
+
+## SEE ALSO
+
+TODO(ZX-3106)
+'''
+    with open(md, 'wb') as f:
+        f.write(stub)
+
+
 def main():
     args = parse_args()
     inf = os.path.relpath(args.json)
@@ -414,6 +453,10 @@ def main():
     for syscall in data['syscalls']:
         name = syscall['name']
         md = os.path.join(outf, name + '.md')
+
+        if not os.path.exists(md) and args.generate_missing:
+            generate_stub(md)
+
         if not os.path.exists(md):
             print >> sys.stderr, (
                 'warning: %s not found for updating, skipping update' % md)

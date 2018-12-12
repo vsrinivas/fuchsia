@@ -2,13 +2,13 @@
 
 ## NAME
 
-<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+<!-- Updated by update-docs-from-abigen, do not edit. -->
 
 vmar_allocate - allocate a new subregion
 
 ## SYNOPSIS
 
-<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+<!-- Updated by update-docs-from-abigen, do not edit. -->
 
 ```
 #include <zircon/syscalls.h>
@@ -47,7 +47,7 @@ Creates a new VMAR within the one specified by *parent_vmar*.
 
 ## RIGHTS
 
-<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+<!-- Updated by update-docs-from-abigen, do not edit. -->
 
 If *options* & **ZX_VM_CAN_MAP_READ**, *parent_vmar* must be of type **ZX_OBJ_TYPE_VMAR** and have **ZX_RIGHT_READ**.
 
