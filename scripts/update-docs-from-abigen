@@ -389,8 +389,6 @@ synopsis_blacklist = (
     'futex_wait',
     'futex_wake',
     'futex_wake_handle_close_thread_exit',
-    'object_get_info',
-    'object_wait_many',
 )
 
 

@@ -8,16 +8,14 @@ object_wait_many - wait for signals on multiple objects
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_object_wait_many(zx_wait_item_t* items, size_t count, zx_time_t deadline);
-
-typedef struct {
-    zx_handle_t handle;
-    zx_signals_t waitfor;
-    zx_signals_t pending;
-} zx_wait_item_t;
+zx_status_t zx_object_wait_many(zx_wait_item_t* items,
+                                size_t count,
+                                zx_time_t deadline);
 ```
 
 ## DESCRIPTION
@@ -28,7 +26,15 @@ signals is asserted by the object to which the associated handle refers.
 If an object is already asserting at least one of the specified signals,
 the wait ends immediately.
 
-The caller must provide *count* zx_wait_item_ts in the *items* array,
+```
+typedef struct {
+    zx_handle_t handle;
+    zx_signals_t waitfor;
+    zx_signals_t pending;
+} zx_wait_item_t;
+```
+
+The caller must provide *count* `zx_wait_item_t`s in the *items* array,
 containing the handle and signals bitmask to wait for for each item.
 
 The *deadline* parameter specifies a deadline with respect to

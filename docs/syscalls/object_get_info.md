@@ -8,13 +8,17 @@ object_get_info - query information about an object
 
 ## SYNOPSIS
 
+<!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
+
 ```
 #include <zircon/syscalls.h>
-#include <zircon/syscalls/object.h>
 
-zx_status_t zx_object_get_info(zx_handle_t handle, uint32_t topic,
-                               void* buffer, size_t buffer_size,
-                               size_t* actual, size_t* avail);
+zx_status_t zx_object_get_info(zx_handle_t handle,
+                               uint32_t topic,
+                               void* buffer,
+                               size_t buffer_size,
+                               size_t* actual,
+                               size_t* avail);
 ```
 
 ## DESCRIPTION
