@@ -278,10 +278,10 @@ func (f *Source) Enabled() bool {
 // data to create the derived fields, like the TUFClient.
 func (f *Source) initSource() error {
 	f.mu.Lock()
+	defer f.mu.Unlock()
 
 	keys, err := newTUFKeys(f.cfg.Config.RootKeys)
 	if err != nil {
-		f.mu.Unlock()
 		return err
 	}
 	f.keys = keys
@@ -290,18 +290,11 @@ func (f *Source) initSource() error {
 	// it's own directory.
 	localStore, err := NewFileStore(filepath.Join(f.dir, "tuf.json"))
 	if err != nil {
-		f.mu.Unlock()
 		return IOError{fmt.Errorf("couldn't open datastore: %s", err)}
 	}
 	f.localStore = localStore
 
-	if err := f.updateTUFClientLocked(); err != nil {
-		f.mu.Unlock()
-		return err
-	}
-	f.mu.Unlock()
-
-	return nil
+	return f.updateTUFClientLocked()
 }
 
 // Start starts background operations associated with this Source, such as
