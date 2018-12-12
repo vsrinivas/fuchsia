@@ -372,11 +372,13 @@ func oauth2HttpClient(httpClient *http.Client, cfg *oauth2.Config,
 	ctx := context.WithValue(context.Background(), oauth2.HTTPClient, httpClient)
 
 	timeout := httpClient.Timeout
+	transport := httpClient.Transport
 
 	tokenSource = cfg.TokenSource(ctx, token)
 	httpClient = oauth2.NewClient(ctx, tokenSource)
 
 	httpClient.Timeout = timeout
+	httpClient.Transport = transport
 
 	return httpClient, tokenSource
 }
