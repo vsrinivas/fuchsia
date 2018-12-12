@@ -491,6 +491,49 @@ struct HistogramBucket {
     uint64 count;
 };
 
+// Used to log that an event has occurred a given number of times. Using this
+// struct with LogCobaltEvent() is equivalent to invoking LogEventCount().
+struct CountEvent {
+    // The number of microseconds over which this count was observed.
+    int64 period_duration_micros;
+
+    // The number of times the event occurred
+    int64 count;
+};
+
+// The variadic part of a CobaltEvent.
+union EventPayload {
+    // A Count event.
+    CountEvent event_count;
+
+    // An IntHistogram event.
+    vector<HistogramBucket> int_histogram;
+};
+
+// A specification of an event that occurred to be passed to LogCobaltEvent().
+// This is part of an alternative API to cobalt that uses a single method with a
+// variadic parameter instead of the multiple methods above. This technique
+// allows multiple event codes to be passed whereas the methods above support
+// only a single event code.
+struct CobaltEvent {
+    // ID of the metric to use. It must be one of the Metrics from the
+    // ProjectProfile used to obtain this Logger, and its type must match the
+    // |payload| type.
+    uint32 metric_id;
+
+    // The event codes for the event that occurred. There must be one event code
+    // given for each dimension specified in the metric definition.
+    vector<uint32>:5 event_codes;
+
+    // Optionally, a component associated with the event that occurred may also
+    // be logged also be logged. Any notion of component that makes sense may be
+    // used or use the empty string if there is no natural notion of component.
+    string:64? component;
+
+    // The event-specific information for the event to be logged.
+    EventPayload payload;
+};
+
 // Logger is an extension of the LoggerBase interface that adds some additional
 // methods that do not naturally conform to the Simple layout. We opt for
 // a natural easy-to-understand interface at the cost of not being "Simple".
@@ -539,6 +582,20 @@ interface Logger : LoggerBase {
     // be consistent with the dimensions declared in the Metric definition.
     101: LogCustomEvent(uint32 metric_id, vector<CustomEventValue> event_values)
              -> (Status status);
+
+    // Logs a CobaltEvent. This method offers an alternative API to Cobalt that
+    // uses a single method with a variadic parameter instead of the multiple
+    // methods defined above. The reason to use this method is that a
+    // CobaltEvent allows multiple event codes to be specified whereas the
+    // methods above allow only a single event code.
+    [Transitional]
+    102: LogCobaltEvent(CobaltEvent event) -> (Status status);
+
+    // Logs a list of CobaltEvents. This method is equivalent to invoking
+    // LogCobaltEvent() multiple times but is more efficient as it requires only
+    // a single FIDL call.
+    [Transitional]
+    103: LogCobaltEvents(vector<CobaltEvent> events) -> (Status status);
 };
 
 /////////////////////////////////////////////////////////////////////
