@@ -67,7 +67,7 @@ static void print_usage(fxl::CommandLine& cl) {
   // clang-format on
 }
 
-static GuestConfigParser::OptionHandler save_option(std::string* out) {
+static GuestConfigParser::OptionHandler set_option(std::string* out) {
   return [out](const std::string& key, const std::string& value) {
     if (value.empty()) {
       FXL_LOG(ERROR) << "Option: '" << key << "' expects a value (--" << key
@@ -81,21 +81,21 @@ static GuestConfigParser::OptionHandler save_option(std::string* out) {
 
 // A function that converts a string option into a custom type.
 template <typename T>
-using OptionTransform =
+using OptionParser =
     std::function<zx_status_t(const std::string& arg, T* out)>;
 
-// Handles an option by transforming the value and adding it to the vector.
+// Handles an option by parsing the value and adding it to a container.
 template <typename T, typename C>
 static GuestConfigParser::OptionHandler add_option(
-    C* out, OptionTransform<T> transform) {
-  return [out, transform](const std::string& key, const std::string& value) {
+    C* out, OptionParser<T> parse) {
+  return [out, parse](const std::string& key, const std::string& value) {
     if (value.empty()) {
       FXL_LOG(ERROR) << "Option: '" << key << "' expects a value (--" << key
                      << "=<value>)";
       return ZX_ERR_INVALID_ARGS;
     }
     T t;
-    zx_status_t status = transform(value, &t);
+    zx_status_t status = parse(value, &t);
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to parse option string '" << value << "'";
       return status;
@@ -105,8 +105,8 @@ static GuestConfigParser::OptionHandler add_option(
   };
 }
 
-static GuestConfigParser::OptionHandler append_string(std::string* out,
-                                                      const char* delim) {
+static GuestConfigParser::OptionHandler add_string(std::string* out,
+                                                   const char* delim) {
   return [out, delim](const std::string& key, const std::string& value) {
     if (value.empty()) {
       FXL_LOG(ERROR) << "Option: '" << key << "' expects a value (--" << key
@@ -274,12 +274,12 @@ static zx_status_t parse_memory_spec(const std::string& spec, MemorySpec* out) {
   return ZX_OK;
 }
 
-static GuestConfigParser::OptionHandler save_kernel(std::string* out,
-                                                    Kernel* kernel,
-                                                    Kernel set_kernel) {
+static GuestConfigParser::OptionHandler set_kernel(std::string* out,
+                                                   Kernel* kernel,
+                                                   Kernel set_kernel) {
   return [out, kernel, set_kernel](const std::string& key,
                                    const std::string& value) {
-    zx_status_t status = save_option(out)(key, value);
+    zx_status_t status = set_option(out)(key, value);
     if (status == ZX_OK) {
       *kernel = set_kernel;
     }
@@ -292,17 +292,17 @@ GuestConfigParser::GuestConfigParser(GuestConfig* cfg)
       opts_{
           {"block",
            add_option<BlockSpec>(&cfg_->block_devices_, parse_block_spec)},
-          {"cmdline-add", append_string(&cfg_->cmdline_, " ")},
-          {"cmdline", save_option(&cfg_->cmdline_)},
+          {"cmdline-add", add_string(&cfg_->cmdline_, " ")},
+          {"cmdline", set_option(&cfg_->cmdline_)},
           {"cpus", set_number(&cfg_->cpus_)},
-          {"dtb-overlay", save_option(&cfg_->dtb_overlay_path_)},
+          {"dtb-overlay", set_option(&cfg_->dtb_overlay_path_)},
           {"interrupt",
            add_option<InterruptSpec>(&cfg_->interrupts_, parse_interrupt_spec)},
           {"legacy-net", set_flag(&cfg_->legacy_net_, true)},
           {"linux",
-           save_kernel(&cfg_->kernel_path_, &cfg_->kernel_, Kernel::LINUX)},
+           set_kernel(&cfg_->kernel_path_, &cfg_->kernel_, Kernel::LINUX)},
           {"memory", add_option<MemorySpec>(&cfg_->memory_, parse_memory_spec)},
-          {"ramdisk", save_option(&cfg_->ramdisk_path_)},
+          {"ramdisk", set_option(&cfg_->ramdisk_path_)},
           {"virtio-balloon", set_flag(&cfg_->virtio_balloon_, true)},
           {"virtio-console", set_flag(&cfg_->virtio_console_, true)},
           {"virtio-gpu", set_flag(&cfg_->virtio_gpu_, true)},
@@ -310,7 +310,7 @@ GuestConfigParser::GuestConfigParser(GuestConfig* cfg)
           {"virtio-rng", set_flag(&cfg_->virtio_rng_, true)},
           {"virtio-vsock", set_flag(&cfg_->virtio_vsock_, true)},
           {"zircon",
-           save_kernel(&cfg_->kernel_path_, &cfg_->kernel_, Kernel::ZIRCON)},
+           set_kernel(&cfg_->kernel_path_, &cfg_->kernel_, Kernel::ZIRCON)},
       } {}
 
 void GuestConfigParser::SetDefaults() {
