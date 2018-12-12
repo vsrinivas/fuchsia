@@ -24,6 +24,8 @@ enum class Syntax {
   kVariable  // Use for variable names.
 };
 
+const char* SyntaxToString(Syntax);
+
 // The following color enums are to be used when Syntax is not enough, which
 // is meant to semantic meaning. Colors are to be used by specific output that
 // use more fine-grained control over color output, like the register output
@@ -53,6 +55,8 @@ enum class TextBackgroundColor {
   kLightYellow,
 };
 
+const char* TextBackgroundColorToString(TextBackgroundColor);
+
 enum class TextForegroundColor {
   kDefault,
   // Basic 16 colors
@@ -74,6 +78,8 @@ enum class TextForegroundColor {
   kLightRed,
   kLightYellow,
 };
+
+const char* TextForegroundColorToString(TextBackgroundColor);
 
 // This class collects output from commands so it can be put on the screen in
 // one chunk. It's not just a string because we want to add helper functions
@@ -119,6 +125,17 @@ class OutputBuffer {
   void Clear();
 
   bool empty() const { return spans_.empty(); }
+
+  // Formats this buffer's formatting into a text form for testing. It will be
+  // normalized (so adjacent spans of the same format will be combined).
+  //
+  // The format is
+  //   <format> "<text>", <format> "<text>", ...
+  // The format is the syntax enum name, and if either foreground or background
+  // are non-default, background and foreground, they will both follow (always
+  // together), separated by spaces. So:
+  //   kComment "foo", kNormal kGreen kGray "bar"
+  std::string GetDebugString() const;
 
  private:
   struct Span {

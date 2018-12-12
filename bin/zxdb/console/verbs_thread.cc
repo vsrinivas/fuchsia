@@ -126,6 +126,12 @@ const char kBacktraceHelp[] =
 
   To see less information, use "frame" or just "f".
 
+Arguments
+
+  -t
+  --types
+      Include all type information for function parameters.
+
 Examples
 
   t 2 bt
@@ -139,7 +145,8 @@ Err DoBacktrace(ConsoleContext* context, const Command& cmd) {
   if (!cmd.thread())
     return Err("There is no thread to have frames.");
 
-  OutputFrameList(cmd.thread(), true);
+  bool show_params = cmd.HasSwitch(kForceTypes);
+  OutputFrameList(cmd.thread(), show_params, true);
   return Err();
 }
 
@@ -1004,17 +1011,20 @@ Err DoUntil(ConsoleContext* context, const Command& cmd) {
 
 void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
   // Shared options for value printing.
+  SwitchRecord force_types(kForceTypes, false, "types", 't');
   const std::vector<SwitchRecord> format_switches{
-      SwitchRecord(kForceTypes, false, "types", 't'),
+      force_types,
       SwitchRecord(kForceNumberChar, false, "", 'c'),
       SwitchRecord(kForceNumberSigned, false, "", 'd'),
       SwitchRecord(kForceNumberUnsigned, false, "", 'u'),
       SwitchRecord(kForceNumberHex, false, "", 'x'),
       SwitchRecord(kMaxArraySize, true, "max-array")};
 
-  (*verbs)[Verb::kBacktrace] =
-      VerbRecord(&DoBacktrace, {"backtrace", "bt"}, kBacktraceShortHelp,
-                 kBacktraceHelp, CommandGroup::kQuery);
+  VerbRecord backtrace(&DoBacktrace, {"backtrace", "bt"}, kBacktraceShortHelp,
+                       kBacktraceHelp, CommandGroup::kQuery);
+  backtrace.switches = {force_types};
+  (*verbs)[Verb::kBacktrace] = std::move(backtrace);
+
   (*verbs)[Verb::kContinue] =
       VerbRecord(&DoContinue, {"continue", "c"}, kContinueShortHelp,
                  kContinueHelp, CommandGroup::kStep, SourceAffinity::kSource);

@@ -521,7 +521,7 @@ Err DoSymNear(ConsoleContext* context, const Command& cmd) {
       cmd.target()->GetProcess()->GetSymbols()->ResolveInputLocation(
           InputLocation(address));
   FXL_DCHECK(locations.size() == 1u);
-  Console::get()->Output(DescribeLocation(locations[0], true));
+  Console::get()->Output(FormatLocation(locations[0], true, true));
   return Err();
 }
 

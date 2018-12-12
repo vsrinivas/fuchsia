@@ -34,7 +34,8 @@ namespace zxdb {
 
 namespace {
 
-constexpr int kVerboseSwitch = 1;
+constexpr int kForceTypes = 1;
+constexpr int kVerboseSwitch = 2;
 
 // Frames ----------------------------------------------------------------------
 
@@ -57,7 +58,12 @@ const char kFrameHelp[] =
 
 Options
 
-  --verbose | -v
+  -t
+  --types
+      Include all type information for function parameters.
+
+  -v
+  --verbose
       Show more information in the frame list. This is valid when listing
       frames only.
 
@@ -90,7 +96,8 @@ bool HandleFrameNoun(ConsoleContext* context, const Command& cmd, Err* err) {
 
   if (cmd.GetNounIndex(Noun::kFrame) == Command::kNoIndex) {
     // Just "frame", this lists available frames.
-    OutputFrameList(cmd.thread(), cmd.HasSwitch(kVerboseSwitch));
+    OutputFrameList(cmd.thread(), cmd.HasSwitch(kForceTypes),
+                    cmd.HasSwitch(kVerboseSwitch));
     return true;
   }
 
@@ -106,7 +113,8 @@ bool HandleFrameNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   // Schedule asynchronous output of the full frame description.
   auto helper = fxl::MakeRefCounted<FormatValue>(
       std::make_unique<FormatValueProcessContextImpl>(cmd.target()));
-  FormatFrameLong(cmd.frame(), helper.get(), FormatValueOptions(),
+  FormatFrameLong(cmd.frame(), cmd.HasSwitch(kForceTypes), helper.get(),
+                  FormatValueOptions(),
                   context->GetActiveFrameIdForThread(cmd.thread()));
   helper->Complete(
       [helper](OutputBuffer out) { Console::get()->Output(std::move(out)); });
@@ -601,6 +609,7 @@ void AppendNouns(std::map<Noun, NounRecord>* nouns) {
 const std::vector<SwitchRecord>& GetNounSwitches() {
   static std::vector<SwitchRecord> switches;
   if (switches.empty()) {
+    switches.emplace_back(kForceTypes, false, "types", 't');
     switches.emplace_back(kVerboseSwitch, false, "verbose", 'v');
   }
   return switches;

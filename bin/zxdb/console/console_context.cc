@@ -511,7 +511,7 @@ void ConsoleContext::OnThreadStopped(
   FXL_DCHECK(!frames.empty());
   const Location& location = frames[0]->GetLocation();
   out.Append("at ");
-  out.Append(DescribeLocation(location, false));
+  out.Append(FormatLocation(location, false, false));
   if (location.has_symbols()) {
     out.Append("\n");
   } else {

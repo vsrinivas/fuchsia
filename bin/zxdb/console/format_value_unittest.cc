@@ -655,12 +655,9 @@ TEST_F(FormatValueTest, FunctionPtr) {
             SyncFormatValue(ExprValue(func_ptr_type, {5, 0, 0, 0, 0, 0, 0, 0}),
                             opts));
 
-  // Found symbol (matching kAddress) should be printed. The "()" looks weird
-  // here but this is what our function name outputs. GDB includes the () and
-  // includes the parameter types which can disambiguate overloaded functions,
-  // but also adds noise.
+  // Found symbol (matching kAddress) should be printed.
   ExprValue good_ptr(func_ptr_type, {0x34, 0x12, 0, 0, 0, 0, 0, 0});
-  EXPECT_EQ("&MyFunc()", SyncFormatValue(good_ptr, opts));
+  EXPECT_EQ("&MyFunc", SyncFormatValue(good_ptr, opts));
 
   // Force output as hex even when the function is matched.
   FormatValueOptions hex_opts;
@@ -684,7 +681,7 @@ TEST_F(FormatValueTest, FunctionPtr) {
   // looks like a class member, but that's OK, wherever the address points to
   // is what we print.
   ExprValue good_member_func_ptr(member_func, {0x34, 0x12, 0, 0, 0, 0, 0, 0});
-  EXPECT_EQ("(void (MyClass::*)()) &MyFunc()",
+  EXPECT_EQ("(void (MyClass::*)()) &MyFunc",
             SyncFormatValue(good_member_func_ptr, type_opts));
 }
 

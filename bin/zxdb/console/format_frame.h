@@ -13,21 +13,24 @@ class OutputBuffer;
 class Thread;
 
 // Outputs the list of frames to the console. This will complete asynchronously
-// if the frames are not currently available.
-void OutputFrameList(Thread* thread, bool long_format);
+// if the frames are not currently available. Printing of function parameter
+// types is controlled by include_params.
+void OutputFrameList(Thread* thread, bool include_params, bool long_format);
 
 // Formats one frame using the short format to the output buffer. The frame ID
 // will be printed if supplied. If the ID is -1, it will be omitted.
 //
+// Printing of function parameter types is controlled by include_params.
+//
 // This does not append a newline at the end of the output.
-void FormatFrame(const Frame* frame, OutputBuffer* out, int id = -1);
+void FormatFrame(const Frame* frame, bool include_params, OutputBuffer* out, int id = -1);
 
 // Formats one frame using the long format. Since the long format includes
 // function parameters which are computed asynchronously, this takes the
 // asynchronous FormatValue as the output.
 //
 // This does not append a newline at the end of the output.
-void FormatFrameLong(const Frame* frame, FormatValue* out,
+void FormatFrameLong(const Frame* frame, bool include_params, FormatValue* out,
                      const FormatValueOptions& options, int id = -1);
 
 }  // namespace zxdb

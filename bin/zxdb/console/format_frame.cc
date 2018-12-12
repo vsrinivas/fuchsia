@@ -24,7 +24,8 @@ namespace zxdb {
 
 namespace {
 
-void ListCompletedFrames(Thread* thread, bool long_format) {
+void ListCompletedFrames(Thread* thread, bool include_params,
+                         bool long_format) {
   Console* console = Console::get();
   int active_frame_id = console->context().GetActiveFrameIdForThread(thread);
 
@@ -60,10 +61,11 @@ void ListCompletedFrames(Thread* thread, bool long_format) {
       // Supply "-1" for the frame index to suppress printing (we already
       // did it above).
       if (long_format) {
-        FormatFrameLong(frames[i], helper.get(), FormatValueOptions(), -1);
+        FormatFrameLong(frames[i], include_params, helper.get(),
+                        FormatValueOptions(), -1);
       } else {
         OutputBuffer out;
-        FormatFrame(frames[i], &out, -1);
+        FormatFrame(frames[i], include_params, &out, -1);
         helper->Append(std::move(out));
       }
 
@@ -77,26 +79,28 @@ void ListCompletedFrames(Thread* thread, bool long_format) {
 
 }  // namespace
 
-void OutputFrameList(Thread* thread, bool long_format) {
+void OutputFrameList(Thread* thread, bool include_params, bool long_format) {
   // Always request an up-to-date frame list from the agent. Various things
   // could have changed and the user is manually requesting a new list, so
   // don't rely on the cached copy even if Thread::HasAllFrames() is true.
-  thread->SyncFrames([ thread = thread->GetWeakPtr(), long_format ]() {
-    Console* console = Console::get();
-    if (thread)
-      ListCompletedFrames(thread.get(), long_format);
-    else
-      console->Output("Thread exited, no frames.\n");
-  });
+  thread->SyncFrames(
+      [ thread = thread->GetWeakPtr(), include_params, long_format ]() {
+        Console* console = Console::get();
+        if (thread)
+          ListCompletedFrames(thread.get(), include_params, long_format);
+        else
+          console->Output("Thread exited, no frames.\n");
+      });
 }
 
-void FormatFrame(const Frame* frame, OutputBuffer* out, int id) {
+void FormatFrame(const Frame* frame, bool include_params, OutputBuffer* out,
+                 int id) {
   if (id >= 0)
     out->Append(fxl::StringPrintf("Frame %d ", id));
-  out->Append(DescribeLocation(frame->GetLocation(), false));
+  out->Append(FormatLocation(frame->GetLocation(), false, include_params));
 }
 
-void FormatFrameLong(const Frame* frame, FormatValue* out,
+void FormatFrameLong(const Frame* frame, bool include_params, FormatValue* out,
                      const FormatValueOptions& options, int id) {
   if (id >= 0)
     out->Append(OutputBuffer::WithContents(fxl::StringPrintf("Frame %d ", id)));
@@ -105,7 +109,7 @@ void FormatFrameLong(const Frame* frame, FormatValue* out,
   // address will be shown twice.
   const Location& location = frame->GetLocation();
   if (location.has_symbols())
-    out->Append(DescribeLocation(location, false));
+    out->Append(FormatLocation(location, false, include_params));
 
   // Long format includes the IP address.
   // TODO(brettw) handle asynchronously available BP.

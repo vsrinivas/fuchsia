@@ -49,19 +49,18 @@ TEST(SymbolUtils, SymbolScopeFunctions) {
   ns->set_assigned_name("ns");
 
   // Function definition inside namespace.
-  // TODO(brettw) these will need to be updated when function parameter types
-  // are added to the name.
   fxl::RefPtr<Function> fn = fxl::MakeRefCounted<Function>();
   fn->set_parent(LazySymbol(ns));
   fn->set_assigned_name("Function");
   EXPECT_EQ("ns::", GetSymbolScopePrefix(fn.get()));
-  EXPECT_EQ("ns::Function()", fn->GetFullName());
+  EXPECT_EQ("ns::Function", fn->GetFullName());
 
   // Lexical scope inside the function. This should not appear in names.
+  // TODO(brettw) these nested function scopes should include paramter names.
   fxl::RefPtr<CodeBlock> block =
       fxl::MakeRefCounted<CodeBlock>(Symbol::kTagLexicalBlock);
   block->set_parent(LazySymbol(fn));
-  EXPECT_EQ("ns::Function()::", GetSymbolScopePrefix(block.get()));
+  EXPECT_EQ("ns::Function::", GetSymbolScopePrefix(block.get()));
   EXPECT_EQ("", block->GetFullName());
 
   // Type defined inside the function is qualified by the function name. This
@@ -70,8 +69,8 @@ TEST(SymbolUtils, SymbolScopeFunctions) {
       fxl::MakeRefCounted<Collection>(Symbol::kTagStructureType);
   sc->set_parent(LazySymbol(block));
   sc->set_assigned_name("Struct");
-  EXPECT_EQ("ns::Function()::", GetSymbolScopePrefix(sc.get()));
-  EXPECT_EQ("ns::Function()::Struct", sc->GetFullName());
+  EXPECT_EQ("ns::Function::", GetSymbolScopePrefix(sc.get()));
+  EXPECT_EQ("ns::Function::Struct", sc->GetFullName());
 
   // Variable defined inside the function. Currently these are qualified with
   // the function name like the types above. But this may need to change
@@ -83,8 +82,8 @@ TEST(SymbolUtils, SymbolScopeFunctions) {
       fxl::MakeRefCounted<Variable>(Symbol::kTagVariable);
   var->set_parent(LazySymbol(block));
   var->set_assigned_name("var");
-  EXPECT_EQ("ns::Function()::", GetSymbolScopePrefix(var.get()));
-  EXPECT_EQ("ns::Function()::var", var->GetFullName());
+  EXPECT_EQ("ns::Function::", GetSymbolScopePrefix(var.get()));
+  EXPECT_EQ("ns::Function::var", var->GetFullName());
 }
 
 }  // namespace zxdb

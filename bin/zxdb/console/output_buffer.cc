@@ -172,6 +172,66 @@ static const ForegroundColorMap& GetForegroundColorMap() {
 
 }  // namespace
 
+const char* SyntaxToString(Syntax syntax) {
+  switch (syntax) {
+    case Syntax::kNormal: return "kNormal";
+    case Syntax::kComment: return "kComment";
+    case Syntax::kHeading: return "kHeading";
+    case Syntax::kError: return "kError";
+    case Syntax::kWarning: return "kWarning";
+    case Syntax::kSpecial: return "kSpecial";
+    case Syntax::kReversed: return "kReversed";
+    case Syntax::kVariable: return "kVariable";
+  }
+  return nullptr;
+}
+
+const char* TextBackgroundColorToString(TextBackgroundColor color) {
+  switch (color) {
+    case TextBackgroundColor::kDefault: return "kDefault";
+    case TextBackgroundColor::kBlack: return "kBlack";
+    case TextBackgroundColor::kBlue: return "kBlue";
+    case TextBackgroundColor::kCyan: return "kCyan";
+    case TextBackgroundColor::kGray: return "kGray";
+    case TextBackgroundColor::kGreen: return "kGreen";
+    case TextBackgroundColor::kMagenta: return "kMagenta";
+    case TextBackgroundColor::kRed: return "kRed";
+    case TextBackgroundColor::kYellow: return "kYellow";
+    case TextBackgroundColor::kWhite: return "kWhite";
+    case TextBackgroundColor::kLightBlue: return "kLightBlue";
+    case TextBackgroundColor::kLightCyan: return "kLightCyan";
+    case TextBackgroundColor::kLightGray: return "kLightGray";
+    case TextBackgroundColor::kLightGreen: return "kLightGreen";
+    case TextBackgroundColor::kLightMagenta: return "kLightMagenta";
+    case TextBackgroundColor::kLightRed: return "kLightRed";
+    case TextBackgroundColor::kLightYellow: return "kLightYellow";
+  }
+  return nullptr;
+}
+
+const char* TextForegroundColorToString(TextForegroundColor color) {
+  switch (color) {
+    case TextForegroundColor::kDefault: return "kDefault";
+    case TextForegroundColor::kBlack: return "kBlack";
+    case TextForegroundColor::kBlue: return "kBlue";
+    case TextForegroundColor::kCyan: return "kCyan";
+    case TextForegroundColor::kGray: return "kGray";
+    case TextForegroundColor::kGreen: return "kGreen";
+    case TextForegroundColor::kMagenta: return "kMagenta";
+    case TextForegroundColor::kRed: return "kRed";
+    case TextForegroundColor::kYellow: return "kYellow";
+    case TextForegroundColor::kWhite: return "kWhite";
+    case TextForegroundColor::kLightBlue: return "kLightBlue";
+    case TextForegroundColor::kLightCyan: return "kLightCyan";
+    case TextForegroundColor::kLightGray: return "kLightGray";
+    case TextForegroundColor::kLightGreen: return "kLightGreen";
+    case TextForegroundColor::kLightMagenta: return "kLightMagenta";
+    case TextForegroundColor::kLightRed: return "kLightRed";
+    case TextForegroundColor::kLightYellow: return "kLightYellow";
+  }
+  return nullptr;
+}
+
 OutputBuffer::Span::Span(Syntax s, std::string t) : syntax(s), text(std::move(t)) {}
 OutputBuffer::Span::Span(TextForegroundColor fg, std::string t) : foreground(fg), text(std::move(t)) {}
 
@@ -298,6 +358,45 @@ void OutputBuffer::SetForegroundColor(TextForegroundColor color) {
 
 void OutputBuffer::Clear() {
   spans_.clear();
+}
+
+std::string OutputBuffer::GetDebugString() const {
+  // Normalize so the output is the same even if it was built with different
+  // sequences of spans.
+  std::vector<Span> normalized;
+  for (const auto& cur : spans_) {
+    if (normalized.empty()) {
+      normalized.push_back(cur);
+    } else {
+      Span& prev = normalized.back();
+      if (prev.syntax == cur.syntax &&
+          prev.background == cur.background &&
+          prev.foreground == cur.foreground)
+        prev.text.append(cur.text);  // Merge: continuation of same format.
+      else
+        normalized.push_back(cur);  // New format.
+    }
+  }
+
+  std::string result;
+  for (size_t i = 0; i < normalized.size(); i++) {
+    if (i > 0)
+      result += ", ";
+
+    result += SyntaxToString(normalized[i].syntax);
+    if (normalized[i].background != TextBackgroundColor::kDefault ||
+        normalized[i].foreground != TextForegroundColor::kDefault) {
+      result += " ";
+      result += TextBackgroundColorToString(normalized[i].background);
+      result += " ";
+      result += TextForegroundColorToString(normalized[i].foreground);
+    }
+
+    result += " \"";
+    result += normalized[i].text;
+    result.push_back('"');
+  }
+  return result;
 }
 
 }  // namespace zxdb

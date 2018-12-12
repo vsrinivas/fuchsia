@@ -30,6 +30,12 @@ namespace zxdb {
 // attributes from the specification automatically so this Function object
 // will have full context. Be aware that this won't necessarily match the
 // DIE that generated the object.
+//
+// NAMING: The "full name" (as returned by Symbol::GetFullName()) of a function
+// is the qualified name without any return types or parameters. Some callers
+// may want parameters, we can add a helper function in the future if necessary
+// (for display we would often want to syntax highlight these differently so
+// this is often betetr done at a a different layer).
 class Function final : public CodeBlock {
  public:
   // Construct with fxl::MakeRefCounted().

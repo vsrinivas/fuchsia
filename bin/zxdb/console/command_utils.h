@@ -22,6 +22,7 @@ class Command;
 class ConsoleContext;
 class Err;
 class Frame;
+class Function;
 struct InputLocation;
 class Location;
 class Thread;
@@ -101,7 +102,24 @@ std::string DescribeBreakpoint(const ConsoleContext* context,
                                const Breakpoint* breakpoint);
 
 std::string DescribeInputLocation(const InputLocation& location);
-std::string DescribeLocation(const Location& loc, bool always_show_address);
+
+// Formats the given string as an identifier, with any template annotations
+// dimmed. If bold_last is set, the last identifier component will be bolded.
+OutputBuffer FormatIdentifier(const std::string& str, bool bold_last);
+
+// Formats the function name with syntax highlighting. If show_params is true,
+// the types of the function parameters will be output. Otherwise the
+// function name will end with "()" if there are no parameters, or "(...)" if
+// there are some. The goal is to be as short as possible without being
+// misleading (showing "()" when there are parameters may be misleading, and
+// no parens at all don't look like a function).
+OutputBuffer FormatFunctionName(const Function* function, bool show_params);
+
+// Formats the location. Normally if a function name is present the code
+// address will be omitted, but always_show_address will override this.
+OutputBuffer FormatLocation(const Location& loc,
+                            bool always_show_address,
+                            bool show_params);
 
 // If show_path is set, the path to the file will be included, otherwise only
 // the last file component will be printed.

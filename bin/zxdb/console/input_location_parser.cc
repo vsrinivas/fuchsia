@@ -148,7 +148,7 @@ Err ResolveUniqueInputLocation(const ProcessSymbols* process_symbols,
     if (locations[i].file_line().is_valid())
       err_str += DescribeFileLine(locations[i].file_line(), true);
     else
-      err_str += DescribeLocation(locations[i], true);
+      err_str += FormatLocation(locations[i], true, false).AsString();
     err_str += "\n";
   }
   if (locations.size() > kMaxSuggestions) {

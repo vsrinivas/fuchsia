@@ -24,7 +24,7 @@ std::string SyncFormatFrameLong(const Frame* frame,
 
   auto helper = fxl::MakeRefCounted<FormatValue>(
       std::make_unique<MockFormatValueProcessContext>());
-  FormatFrameLong(frame, helper.get(), FormatValueOptions());
+  FormatFrameLong(frame, false, helper.get(), FormatValueOptions());
 
   std::string out_string;
   bool complete = false;
@@ -59,7 +59,7 @@ TEST(FormatFrame, Unsymbolized) {
   OutputBuffer out;
 
   // Short format just prints the address.
-  FormatFrame(&frame, &out);
+  FormatFrame(&frame, false, &out);
   EXPECT_EQ("0x12345678", out.AsString());
 
   // Long version should do the same (not duplicate it).
@@ -68,7 +68,7 @@ TEST(FormatFrame, Unsymbolized) {
 
   // With index.
   out = OutputBuffer();
-  FormatFrame(&frame, &out, 3);
+  FormatFrame(&frame, false, &out, 3);
   EXPECT_EQ("Frame 3 0x12345678", out.AsString());
 }
 

@@ -11,8 +11,12 @@
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
+#include "garnet/bin/zxdb/symbols/base_type.h"
 #include "garnet/bin/zxdb/symbols/function.h"
 #include "garnet/bin/zxdb/symbols/location.h"
+#include "garnet/bin/zxdb/symbols/namespace.h"
+#include "garnet/bin/zxdb/symbols/type_test_support.h"
+#include "garnet/bin/zxdb/symbols/variable_test_support.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/strings/string_printf.h"
 
@@ -178,43 +182,113 @@ TEST(CommandUtils, ParseHostPort) {
   EXPECT_TRUE(ParseHostPort("google.com:99999999", &host, &port).has_error());
 }
 
-TEST(CommandUtils, DescribeLocation) {
+TEST(CommandUtils, FormatIdentifier) {
+  // Obviously unparseable identifiers should just come through as strings.
+  std::string gibberish("!@(#*ASDGasdh<@");
+  EXPECT_EQ(gibberish, FormatIdentifier(gibberish, true).AsString());
+
+  // Regular name.
+  auto output = FormatIdentifier("ThisIsAName", false);
+  EXPECT_EQ("kNormal \"ThisIsAName\"", output.GetDebugString());
+
+  // Regular name with bolding.
+  output = FormatIdentifier("ThisIsAName", true);
+  EXPECT_EQ("kHeading \"ThisIsAName\"", output.GetDebugString());
+
+  // Hierarchical name.
+  output = FormatIdentifier("::Foo<int, char*>::Bar<Baz>", true);
+  EXPECT_EQ(
+      "kNormal \"::Foo\", "
+      "kComment \"<int, char*>\", "
+      "kNormal \"::\", "
+      "kHeading \"Bar\", "
+      "kComment \"<Baz>\"",
+      output.GetDebugString());
+}
+
+TEST(CommandUtils, FormatFunctionName) {
+  auto function = fxl::MakeRefCounted<Function>();
+  function->set_assigned_name("Function");
+
+  // Function with no parameters.
+  EXPECT_EQ("Function()", FormatFunctionName(function.get(), false).AsString());
+  EXPECT_EQ("Function()", FormatFunctionName(function.get(), true).AsString());
+
+  // Add two parameters.
+  auto int32_type = MakeInt32Type();
+  auto param_value = MakeVariableForTest("value", int32_type, 0x100, 0x200,
+                                         std::vector<uint8_t>());
+  auto param_other = MakeVariableForTest("other_param", int32_type, 0x100,
+                                         0x200, std::vector<uint8_t>());
+  function->set_parameters({LazySymbol(param_value), LazySymbol(param_other)});
+
+  EXPECT_EQ("Function(…)",
+            FormatFunctionName(function.get(), false).AsString());
+  EXPECT_EQ("Function(int32_t, int32_t)",
+            FormatFunctionName(function.get(), true).AsString());
+
+  // Put in a namespace and add some templates. This needs a new function
+  // because the name will be cached above.
+  function = fxl::MakeRefCounted<Function>();
+  function->set_assigned_name("Function<int>");
+  function->set_parameters({LazySymbol(param_value), LazySymbol(param_other)});
+
+  auto ns = fxl::MakeRefCounted<Namespace>();
+  ns->set_assigned_name("ns");
+  function->set_parent(LazySymbol(ns));
+
+  EXPECT_EQ(
+      "kNormal \"ns::\", "
+      "kHeading \"Function\", "
+      "kComment \"<int>(…)\"",
+      FormatFunctionName(function.get(), false).GetDebugString());
+
+  function->set_parent(LazySymbol());
+}
+
+TEST(CommandUtils, FormatLocation) {
   SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
 
-  EXPECT_EQ("<invalid address>", DescribeLocation(Location(), true));
+  EXPECT_EQ("<invalid address>",
+            FormatLocation(Location(), true, false).AsString());
 
   // Address-only location.
   EXPECT_EQ(
       "0x12345",
-      DescribeLocation(Location(Location::State::kAddress, 0x12345), false));
+      FormatLocation(Location(Location::State::kAddress, 0x12345), false, false)
+          .AsString());
 
   // Function-only location.
   fxl::RefPtr<Function> function(fxl::MakeRefCounted<Function>());
   function->set_assigned_name("Func");
   function->set_code_ranges({{0x1200, 0x1300}});
   EXPECT_EQ("Func() + 0x34 (no line info)",
-            DescribeLocation(Location(0x1234, FileLine(), 0, symbol_context,
-                                      LazySymbol(function)),
-                             false));
+            FormatLocation(Location(0x1234, FileLine(), 0, symbol_context,
+                                    LazySymbol(function)),
+                           false, false)
+                .AsString());
 
   // Same as above but location is before the function address (probably
   // something is corrupt). It should omit the offset.
   EXPECT_EQ("Func()",
-            DescribeLocation(Location(0x1100, FileLine(), 0, symbol_context,
-                                      LazySymbol(function)),
-                             false));
+            FormatLocation(Location(0x1100, FileLine(), 0, symbol_context,
+                                    LazySymbol(function)),
+                           false, false)
+                .AsString());
 
   // File/line-only location.
   EXPECT_EQ("foo.cc:21",
-            DescribeLocation(Location(0x1234, FileLine("/path/foo.cc", 21), 0,
-                                      symbol_context),
-                             false));
+            FormatLocation(Location(0x1234, FileLine("/path/foo.cc", 21), 0,
+                                    symbol_context),
+                           false, false)
+                .AsString());
 
   // Full location.
   Location loc(0x1234, FileLine("/path/foo.cc", 21), 0, symbol_context,
                LazySymbol(function));
-  EXPECT_EQ("0x1234, Func() • foo.cc:21", DescribeLocation(loc, true));
-  EXPECT_EQ("Func() • foo.cc:21", DescribeLocation(loc, false));
+  EXPECT_EQ("0x1234, Func() • foo.cc:21",
+            FormatLocation(loc, true, false).AsString());
+  EXPECT_EQ("Func() • foo.cc:21", FormatLocation(loc, false, false).AsString());
 }
 
 TEST(CommandUtils, DescribeFileLine) {
@@ -261,8 +335,8 @@ TEST(SetElementsToAdd, TestCase) {
 
   // Multiple assign.
 
-  err = SetElementsToAdd({"option_name", "value", "value2"}, &assign_type,
-                         &out);
+  err =
+      SetElementsToAdd({"option_name", "value", "value2"}, &assign_type, &out);
   EXPECT_FALSE(err.has_error()) << err.msg();
   EXPECT_EQ(assign_type, AssignType::kAssign);
   ASSERT_EQ(out.size(), 2u);

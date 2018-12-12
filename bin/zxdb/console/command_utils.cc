@@ -20,9 +20,11 @@
 #include "garnet/bin/zxdb/console/console_context.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/console/string_util.h"
+#include "garnet/bin/zxdb/expr/identifier.h"
 #include "garnet/bin/zxdb/symbols/function.h"
 #include "garnet/bin/zxdb/symbols/location.h"
 #include "garnet/bin/zxdb/symbols/symbol_utils.h"
+#include "garnet/bin/zxdb/symbols/variable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/strings/trim.h"
@@ -132,7 +134,8 @@ Err StringToUint64(const std::string& s, uint64_t* out) {
       return Err(ErrType::kInput, "Expecting number after \"0x\".");
     for (size_t i = hex_after_prefix; i < trimmed.size(); i++) {
       if (!isxdigit(trimmed[i]))
-        return Err(ErrType::kInput, "Invalid hex number: + \"" + trimmed + "\".");
+        return Err(ErrType::kInput,
+                   "Invalid hex number: + \"" + trimmed + "\".");
     }
     *out = strtoull(trimmed.c_str(), nullptr, 16);
   } else {
@@ -268,9 +271,8 @@ std::string BreakpointScopeToString(const ConsoleContext* context,
                                context->IdForTarget(settings.scope_target));
     case BreakpointSettings::Scope::kThread:
       return fxl::StringPrintf(
-          "pr %d t %d",
-          context->IdForTarget(
-              settings.scope_thread->GetProcess()->GetTarget()),
+          "pr %d t %d", context->IdForTarget(
+                            settings.scope_thread->GetProcess()->GetTarget()),
           context->IdForThread(settings.scope_thread));
   }
   FXL_NOTREACHED();
@@ -424,38 +426,107 @@ std::string DescribeInputLocation(const InputLocation& location) {
   return std::string();
 }
 
-std::string DescribeLocation(const Location& loc, bool always_show_address) {
-  if (!loc.is_valid())
-    return "<invalid address>";
-  if (!loc.has_symbols())
-    return fxl::StringPrintf("0x%" PRIx64, loc.address());
+OutputBuffer FormatIdentifier(const std::string& str, bool bold_last) {
+  const auto & [ err, identifier ] = Identifier::FromString(str);
+  if (err.has_error()) {
+    // Not parseable as an identnfier, just write the string.
+    return OutputBuffer(str);
+  }
 
-  std::string result;
-  if (always_show_address)
-    result = fxl::StringPrintf("0x%" PRIx64 ", ", loc.address());
+  OutputBuffer result;
+
+  const auto& comps = identifier.components();
+  for (size_t i = 0; i < comps.size(); i++) {
+    const auto& comp = comps[i];
+    if (comp.has_separator())
+      result.Append("::");
+
+    // Name.
+    if (bold_last && i == comps.size() - 1)
+      result.Append(Syntax::kHeading, comp.name().value());
+    else
+      result.Append(Syntax::kNormal, comp.name().value());
+
+    // Template.
+    if (comp.has_template()) {
+      std::string t_string;
+      t_string += comp.template_begin().value();
+
+      for (size_t t_i = 0; t_i < comp.template_contents().size(); t_i++) {
+        if (t_i > 0)
+          t_string += ", ";
+        t_string += comp.template_contents()[t_i];
+      }
+
+      t_string += comp.template_end().value();
+      result.Append(Syntax::kComment, std::move(t_string));
+    }
+  }
+
+  return result;
+}
+
+OutputBuffer FormatFunctionName(const Function* function, bool show_params) {
+  OutputBuffer result = FormatIdentifier(function->GetFullName(), true);
+
+  const auto& params = function->parameters();
+  std::string params_str;
+  if (show_params) {
+    params_str.push_back('(');
+    for (size_t i = 0; i < params.size(); i++) {
+      if (i > 0)
+        params_str += ", ";
+      if (const Variable* var = params[i].Get()->AsVariable())
+        params_str += var->type().Get()->GetFullName();
+    }
+    params_str.push_back(')');
+  } else {
+    if (params.empty())
+      params_str += "()";
+    else
+      params_str += "(…)";
+  }
+
+  result.Append(Syntax::kComment, std::move(params_str));
+  return result;
+}
+
+OutputBuffer FormatLocation(const Location& loc, bool always_show_address,
+                            bool always_show_types) {
+  if (!loc.is_valid())
+    return OutputBuffer("<invalid address>");
+  if (!loc.has_symbols())
+    return OutputBuffer(fxl::StringPrintf("0x%" PRIx64, loc.address()));
+
+  OutputBuffer result;
+  if (always_show_address) {
+    result = OutputBuffer(Syntax::kComment,
+                          fxl::StringPrintf("0x%" PRIx64 ", ", loc.address()));
+  }
 
   const Function* func = loc.symbol().Get()->AsFunction();
   if (func) {
-    const std::string& func_name = func->GetFullName();
-    if (!func_name.empty()) {
-      result += func_name;
+    OutputBuffer func_output = FormatFunctionName(func, always_show_types);
+    if (!func_output.empty()) {
+      result.Append(std::move(func_output));
       if (loc.file_line().is_valid()) {
         // Separator between function and file/line.
-        result += " " + GetBullet() + " ";
+        result.Append(" " + GetBullet() + " ");
       } else {
         // Check if the address is inside a function and show the offset.
         AddressRange function_range = func->GetFullRange(loc.symbol_context());
         if (function_range.InRange(loc.address())) {
           // Inside a function but no file/line known. Show the offset.
-          result += fxl::StringPrintf(" + 0x%" PRIx64 " (no line info)",
-                                      loc.address() - function_range.begin());
+          result.Append(fxl::StringPrintf(" + 0x%" PRIx64,
+                                      loc.address() - function_range.begin()));
+          result.Append(Syntax::kComment, " (no line info)");
         }
       }
     }
   }
 
   if (loc.file_line().is_valid())
-    result += DescribeFileLine(loc.file_line());
+    result.Append(DescribeFileLine(loc.file_line()));
   return result;
 }
 
@@ -481,7 +552,8 @@ std::string DescribeFileLine(const FileLine& file_line, bool show_path) {
   return result;
 }
 
-Err SetElementsToAdd(const std::vector<std::string>& args, AssignType* assign_type,
+Err SetElementsToAdd(const std::vector<std::string>& args,
+                     AssignType* assign_type,
                      std::vector<std::string>* elements_to_set) {
   if (args.size() < 2u)
     return Err("Expected at least two arguments.");
