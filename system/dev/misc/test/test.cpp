@@ -15,12 +15,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <zircon/device/test.h>
 
 namespace {
 
 class TestDevice;
-using TestDeviceType = ddk::Device<TestDevice, ddk::Ioctlable, ddk::Messageable>;
+using TestDeviceType = ddk::Device<TestDevice, ddk::Messageable>;
 
 class TestDevice : public TestDeviceType,
                    public ddk::TestProtocol<TestDevice> {
@@ -28,8 +27,6 @@ public:
     TestDevice(zx_device_t* parent) : TestDeviceType(parent) { }
 
     // Methods required by the ddk mixins
-    zx_status_t DdkIoctl(uint32_t op, const void* in, size_t inlen, void* out,
-                         size_t outlen, size_t* out_actual);
     zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
     void DdkRelease();
 
@@ -45,7 +42,7 @@ private:
 };
 
 class TestRootDevice;
-using TestRootDeviceType = ddk::Device<TestRootDevice, ddk::Ioctlable, ddk::Messageable>;
+using TestRootDeviceType = ddk::Device<TestRootDevice, ddk::Messageable>;
 
 class TestRootDevice : public TestRootDeviceType {
 public:
@@ -56,8 +53,6 @@ public:
     }
 
     // Methods required by the ddk mixins
-    zx_status_t DdkIoctl(uint32_t op, const void* in, size_t inlen, void* out,
-                         size_t outlen, size_t* out_actual);
     zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
     void DdkRelease() { ZX_ASSERT_MSG(false, "TestRootDevice::DdkRelease() not supported\n"); }
 
@@ -128,33 +123,6 @@ zx_status_t TestDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     return fuchsia_device_test_Device_dispatch(this, txn, msg, &kOps);
 }
 
-zx_status_t TestDevice::DdkIoctl(uint32_t op, const void* in, size_t inlen, void* out,
-                                 size_t outlen, size_t* out_actual) {
-    switch (op) {
-    case IOCTL_TEST_SET_OUTPUT_SOCKET:
-        if (inlen != sizeof(zx_handle_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        TestSetOutputSocket(zx::socket(*static_cast<const zx_handle_t*>(in)));
-        return ZX_OK;
-
-    case IOCTL_TEST_RUN_TESTS: {
-        if (outlen != sizeof(test_report_t)) {
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        }
-        *out_actual = sizeof(test_report_t);
-        return TestRunTests(static_cast<test_report_t*>(out));
-    }
-
-    case IOCTL_TEST_DESTROY_DEVICE:
-        TestDestroy();
-        return 0;
-
-    default:
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-}
-
 void TestDevice::DdkRelease() {
     delete this;
 }
@@ -189,27 +157,6 @@ zx_status_t TestRootDevice::CreateDevice(const fbl::StringPiece& name,
 
     *path_actual = snprintf(path_out, path_size ,"%s/%s", fuchsia_device_test_CONTROL_DEVICE,
                             devname);
-    return ZX_OK;
-}
-
-zx_status_t TestRootDevice::DdkIoctl(uint32_t op, const void* in, size_t inlen,
-                                     void* out, size_t outlen, size_t* out_actual) {
-    if (op != IOCTL_TEST_CREATE_DEVICE) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    zx_status_t status = CreateDevice(fbl::StringPiece(static_cast<const char*>(in)),
-                                      static_cast<char*>(out), outlen, out_actual);
-    if (status != ZX_OK) {
-        return status;
-    }
-    if (*out_actual == outlen) {
-        // Force null-termination if we filled the buffer.
-        static_cast<char*>(out)[outlen - 1] = 0;
-    } else {
-        // Account for the trailing null byte which is reported in the ioctl return
-        *out_actual += 1;
-    }
     return ZX_OK;
 }
 
