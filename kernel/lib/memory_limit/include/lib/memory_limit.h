@@ -10,6 +10,7 @@
 #include <zircon/types.h>
 
 __BEGIN_CDECLS
+
 // This library exists to calculate memory ranges to be used as arenas
 // for the pmm based on a predefined memory limit. The limit is passed in
 // MB via the kernel.memory-limit-mb cmdline argument. The library will
@@ -17,6 +18,41 @@ __BEGIN_CDECLS
 // and the limit provided and add those to the system when
 // memory_limit_add_arenas is called.
 //
+// A system that has a single contiguous range of memory may look something
+// like this with a couple reserved regions at the front. Limiting memory in
+// this case is simple since we can shrink the range on the right.
+// +-------------------------------------------------+
+// |--|  ||                                          |
+// +-------------------------------------------------+
+// becomes
+// +---------------------+
+// |--|  ||              |
+// +---------------------+
+// A more complicated layout might be two contiguous memory ranges with reserved
+// boot regions in each:
+// +--------------------------------+  +-------------+
+// |   |-|       |-----|            |  |      |--|   |
+// +--------------------------------+  +-------------+
+// In this case we would have to ensure reach reserved range is mantained but
+// also keep it within a limit. It could end up like the following after we
+// track front/back space in each range and adjust things as needed (front /
+// back are noted by characters):
+//    +------+       +---------------------+      +------+
+//  f |  |-| | b   f |  |-----|            | b  f | |--| | b
+//    +------+       +---------------------+      +------+
+// Even more complicated layouts like the following also need to be handled:
+// +--------+ +--------+ +---------------+  +--------+
+// | |-|    | |   |--| | | |--|          |  |   ||   |
+// +--------+ +--------+ +---------------+  +--------+
+//
+// In this case we would need to ensure we fit all four reserved regions in four
+// separate ranges, then grow each one outward as the limit allowed.
+//
+// For the reasons above, the library makes multiple passes through the memory
+// arenas to ensure all reserved regions are protected, and while doing so it
+// tracks 'spare' memory nearby so that it can be added to the PMM if the
+// limit provided facilitates it.
+
 // Checks if a memory limit exists and initializes the lib bookkeeping.
 //
 // Returns ZX_OK on success, ZX_ERR_BAD_STATE if already initialized, or

@@ -366,8 +366,11 @@ void platform_early_init(void) {
     // If no memory limit was found, or adding arenas from the range failed, then add
     // the existing global arena.
     if (status != ZX_OK) {
-        dprintf(INFO, "memory limit lib returned an error (%d), falling back to default arena\n",
-                status);
+        // Init returns not supported if no limit exists
+        if (status != ZX_ERR_NOT_SUPPORTED) {
+            dprintf(INFO, "memory limit lib returned an error (%d), falling back to defaults\n",
+                    status);
+        }
         pmm_add_arena(&mem_arena);
     }
 

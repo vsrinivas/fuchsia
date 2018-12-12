@@ -21,6 +21,11 @@
 #include <vm/pmm.h>
 #include <vm/vm.h>
 
+#define memlim_logf(...)                \
+    if (MemoryLimitDbg) {               \
+        printf("memlim: " __VA_ARGS__); \
+    }
+
 // The max bytes of memory allowed by the system. Since it's specified in MB via the command
 // line argument it will always be page aligned.
 static size_t SystemMemoryLimit = 0;
@@ -49,11 +54,16 @@ static zx_status_t add_arena(uintptr_t base, size_t size, pmm_arena_info_t arena
 }
 
 static void print_reserve_state(void) {
+    if (!MemoryLimitDbg) {
+        return;
+    }
+
     for (size_t i = 0; i < ReservedRegionCount; i++) {
         const auto& entry = ReservedRegions[i];
         printf("%zu: [f: %-#10" PRIxPTR " |%#10" PRIxPTR " - %-#10" PRIxPTR "| (len: %#10" PRIxPTR
-                ") b: %-#10" PRIxPTR "]\n", i, entry.unused_front, entry.start, entry.end,
-                entry.len, entry.unused_back);
+               ") b: %-#10" PRIxPTR "]\n",
+               i, entry.unused_front, entry.start, entry.end,
+               entry.len, entry.unused_back);
     }
 }
 
@@ -64,7 +74,9 @@ zx_status_t memory_limit_init() {
         if (!SystemMemoryLimit) {
             return ZX_ERR_NOT_SUPPORTED;
         }
-        MemoryLimitDbg = cmdline_get_bool("kernel.memory-limit-dbg", false);
+
+        // For now, always print debug information if a limit is imposed.
+        MemoryLimitDbg = cmdline_get_bool("kernel.memory-limit-dbg", true);
         SystemMemoryRemaining = SystemMemoryLimit;
         return ZX_OK;
     }
@@ -72,16 +84,37 @@ zx_status_t memory_limit_init() {
     return ZX_ERR_BAD_STATE;
 }
 
+static size_t record_bytes_needed(size_t len) {
+    const size_t vm_pages_per_page = PAGE_SIZE / sizeof(vm_page_t);
+    // This is how many pages are needed to represent the range. Each needs one vm_page_t.
+    size_t pages_cnt = (len + (PAGE_SIZE - 1)) / PAGE_SIZE;
+    // We need vm_page_t entries for each page above
+    size_t pages_first_level = (pages_cnt + (vm_pages_per_page - 1)) / vm_pages_per_page;
+    // We may need a page to do a second level of tracking the first level pages
+    size_t pages_second_level = (pages_first_level + (vm_pages_per_page - 1)) / vm_pages_per_page;
+    // And finally to support ranges larger than ~8GB we need one more level
+    size_t pages_third_level = (pages_second_level + (vm_pages_per_page - 1)) / vm_pages_per_page;
+    return PAGE_SIZE * (pages_first_level + pages_second_level + pages_third_level);
+}
+
 zx_status_t memory_limit_add_range(uintptr_t range_base,
                                    size_t range_size,
                                    pmm_arena_info_t arena_template) {
+    // This function is called for every contiguous range of memory the system wants to add
+    // to the PMM. Some systems have a simple layout of a single memory range. Other systems
+    // may have multiple due to segmentation between < 4 GB and higher, or ranges broken up
+    // by peripheral memory and EFI runtime services. To handle these circumstances we walk
+    // the list of boot reserved regions entirely for each to check if they exist in the given
+    // range added to the system.
+    //
     // Arenas passed to us should never overlap. For that reason we can get a good idea of whether
-    // a given memory limit can fit all the reserved regions by getting the total.
+    // a given memory limit can fit all the reserved regions by trying to fulfill their vm_page_t
+    // requirements while processing the arenas themselves, rather than waiting until later.
     auto cb = [range_base, range_size](reserve_range_t reserve) {
         // Is this reserved region in the arena?
         uintptr_t in_offset;
         size_t in_len;
-        // If there's no intersection then move on to the next reserved region.
+        // If there's no intersection then move on to the next reserved boot region.
         if (!GetIntersect(range_base, range_size, reserve.pa, reserve.len, &in_offset, &in_len)) {
             return true;
         }
@@ -102,25 +135,38 @@ zx_status_t memory_limit_add_range(uintptr_t range_base,
             // There's no limit to how many memory ranges may be added by the platform so we
             // need to figure out if we're in a new contiguous range, or contiguously next to
             // another reservation so we know where to set our starting point for this section.
+            // We can tell which one by seeing which is closest to us: the start of the range
+            // being added, or the end of the last reserved space we dealt with.
             uintptr_t start = fbl::max(range_base, prev.end);
             if (start == prev.end) {
-                // We're next to someone! Figure out the gap space and share some of it with them.
-                // This prevents corner case situations such as reserved regions on the edge of the
-                // start or end, or where an expanded region may almost line up with the region
-                // following it, but takes up enough space that the remaining region has no space to
-                // allocate pages for its own bookkeeping. It also simplifies the logic for growing
-                // space later, and results in less 'cheating' if we've allocated all of our
-                // specified space and have to add room for a region's bookkeeping regardless. These
-                // problems can be resolved in other ways, but they require extra passes, or more
-                // complicated solutions.
-                size_t spare_pages = (reserve.pa - start) / PAGE_SIZE;
-                entry.unused_front = (spare_pages / 2) * PAGE_SIZE;
-                prev.unused_back = (spare_pages / 2) * PAGE_SIZE;
-                // If the page count was odd, account for the remaining page.
-                if (spare_pages & 0x1) {
-                    entry.unused_front += PAGE_SIZE;
+                // How much room is between us and the start of the previous entry?
+                size_t spare_bytes = (reserve.pa - start);
+                size_t bytes_needed = record_bytes_needed(prev.len);
+
+                // If there isn't enough space for the previous region's vm_page_t entries
+                // then merge it with this reserved range and try again on this range. This
+                // typically happens with regions the bootloader placed near each other
+                // due to heap fragmentation before booting the kernel.
+                if (bytes_needed > spare_bytes) {
+                    memlim_logf("prev needs %#zx but only %#zx are available, merging with entry\n",
+                                bytes_needed, spare_bytes);
+                    prev.len = prev.len + spare_bytes + entry.len;
+                    prev.end = entry.end;
+                    // Return true early to avoid incrementing the region count
+                    return true;
                 }
+
+                // If we're next to a reserved region and have enough space between for their
+                // records we'll adjust their range to include as much as needed and keep the rest
+                // for ourselves. This later can be consumed if we are allowed to use more memory.
+                memlim_logf("increasing entry at %#zx by %#zx for vm_page_t records.\n",
+                            prev.start, bytes_needed);
+                prev.len += bytes_needed;
+                prev.end += bytes_needed;
+                entry.unused_front = (spare_bytes - bytes_needed);
             } else {
+                // If this entry is the first in a region it can take everything in
+                // front of it.
                 entry.unused_front = reserve.pa - start;
             }
         }
@@ -137,48 +183,46 @@ zx_status_t memory_limit_add_range(uintptr_t range_base,
         return ZX_ERR_OUT_OF_RANGE;
     }
 
-    // If there's still space between the last reserved region in an arena and the end of the
-    // arena then it should be accounted for in that last reserved region.
+    // The last entry still needs to have its record pages accounted for.
+    // Additionally, If there's still space between the last reserved region in
+    // an arena and the end of the arena then it should be accounted for in that
+    // last reserved region.
     if (ReservedRegionCount) {
-        auto& last_entry = ReservedRegions[ReservedRegionCount - 1];
-        if (Intersects(range_base, range_size, last_entry.start, last_entry.end)) {
-            last_entry.unused_back = (range_base + range_size) - last_entry.end;
+        // First, account for the space in back of the last entry.
+        auto& last = ReservedRegions[ReservedRegionCount - 1];
+        if (Intersects(range_base, range_size, last.start, last.end)) {
+            last.unused_back = (range_base + range_size) - last.end;
+        }
+
+        // Now figure out where we can put the records for this region
+        size_t needed_bytes = record_bytes_needed(last.len);
+        if (needed_bytes < last.unused_front) {
+            last.start -= needed_bytes;
+            last.len += needed_bytes;
+            last.unused_front -= needed_bytes;
+        } else if (needed_bytes < last.unused_back) {
+            last.len += needed_bytes;
+            last.unused_back -= needed_bytes;
+        } else {
+            MemoryLimitDbg = true;
+            memlim_logf("unable to resolve record pages for final entry!");
+            print_reserve_state();
+            return ZX_ERR_BAD_STATE;
         }
     }
 
-    if (MemoryLimitDbg) {
-        printf("MemoryLimit: Processed arena [%#" PRIxPTR " - %#" PRIxPTR "]\n", range_base,
-               range_base + range_size);
-    }
+    memlim_logf("processed arena [%#" PRIxPTR " - %#" PRIxPTR "]\n", range_base,
+                range_base + range_size);
 
     return ZX_OK;
 }
 
 zx_status_t memory_limit_add_arenas(pmm_arena_info_t arena_template) {
-    // First pass, add up the memory needed for reserved ranges
-    size_t required_for_reserved = 0;
-    for (size_t i = 0; i < ReservedRegionCount; i++) {
-        const auto& entry = ReservedRegions[i];
-        required_for_reserved += (entry.end - entry.start);
-    }
+    memlim_logf("after processing ranges:\n");
+    print_reserve_state();
 
-    char lim[16];
-    printf("MemoryLimit: Limit of %s provided by kernel.memory-limit-mb\n",
-            format_size(lim, sizeof(lim), SystemMemoryRemaining));
-    if (required_for_reserved > SystemMemoryRemaining) {
-        char req[16];
-        printf("MemoryLimit: reserved regions need %s at a minimum!\n",
-                format_size(req, sizeof(req), required_for_reserved));
-        return ZX_ERR_NO_MEMORY;
-    }
-
-    SystemMemoryRemaining -= required_for_reserved;
-    if (MemoryLimitDbg) {
-        printf("MemoryLimit: First Pass, %#" PRIxPTR " remaining\n", SystemMemoryRemaining);
-        print_reserve_state();
-    }
-
-    // Second pass, expand to take memory from the front / back of each region
+    // First pass, expand to take memory from the front / back of each region as
+    // the limit allows.
     for (size_t i = 0; i < ReservedRegionCount; i++) {
         auto& entry = ReservedRegions[i];
         // Now expand based on any remaining memory we have to spare from the front
@@ -196,46 +240,21 @@ zx_status_t memory_limit_add_arenas(pmm_arena_info_t arena_template) {
             entry.unused_back -= available;
             entry.end = PAGE_ALIGN(entry.end + available);
         }
-
-        // Calculate how many pages are needed to hold the vm_page_t entries for this range
-        size_t pages_needed = ROUNDUP_PAGE_SIZE((entry.len / PAGE_SIZE) * sizeof(vm_page_t));
-        // Now add extra pages to account for pages added in the previous step
-        const size_t vm_pages_per_page = PAGE_SIZE / sizeof(vm_page_t);
-        pages_needed += (pages_needed + vm_pages_per_page - 1) / vm_pages_per_page;
-        // Check if there is enough space in the range to hold the reserve region's bookkeeping
-        // in a contiguous block on either side of it. If necessary, add some space if possible.
-        size_t needed = ROUNDUP_PAGE_SIZE(((entry.len * 101) / 100));
-        if (needed > (entry.end - entry.start)) {
-            size_t pages_needed = (entry.len / PAGE_SIZE);
-            size_t diff = needed - entry.len;
-            printf("MemoryLimit: %zu needs %#zx for bookkeeping still (%zu pages)\n", i, diff, pages_needed);
-            if (entry.unused_front > diff) {
-                entry.unused_front -= diff;
-                entry.start -= diff;
-            } else if (entry.unused_back > diff) {
-                entry.unused_back -= diff;
-                entry.end += diff;
-            } else {
-                printf("KMemoryLimit: Unable to grow %zu to fit bookkeeping. Need %#" PRIxPTR "\n",
-                       i, diff);
-                return ZX_ERR_NO_MEMORY;
-            }
-        }
     }
 
-    if (MemoryLimitDbg) {
-        printf("MemoryLimit: Second Pass, %#" PRIxPTR " remaining\n", SystemMemoryRemaining);
-        print_reserve_state();
-    }
+    memlim_logf("first pass; %#" PRIxPTR " remaining\n", SystemMemoryRemaining);
+    print_reserve_state();
+    memlim_logf("second pass; merging arenas\n");
 
-    // Third pass, coalesce the regions into the smallest number of arenas possible
+    // Second pass, coalesce the regions into the smallest number of arenas possible
     for (size_t i = 0; i < ReservedRegionCount - 1; i++) {
         auto& cur = ReservedRegions[i];
         auto& next = ReservedRegions[i + 1];
 
         if (cur.end == next.start) {
-            printf("SystemMemoryLimit: merging |%#" PRIxPTR " - %#" PRIxPTR "| and |%#" PRIxPTR " - %#"
-                   PRIxPTR "|\n", cur.start, cur.end, next.start, next.end);
+            memlim_logf("merging |%#" PRIxPTR " - %#" PRIxPTR "| and |%#" PRIxPTR " - %#" PRIxPTR
+                        "|\n",
+                        cur.start, cur.end, next.start, next.end);
             cur.end = next.end;
             memmove(&ReservedRegions[i + 1], &ReservedRegions[i + 2],
                     sizeof(reserve_entry_t) * (ReservedRegionCount - i - 2));
@@ -246,19 +265,13 @@ zx_status_t memory_limit_add_arenas(pmm_arena_info_t arena_template) {
         }
     }
 
-    if (MemoryLimitDbg) {
-        printf("MemoryLimit: Third Pass\n");
-        print_reserve_state();
-        printf("MemoryLimit: Fourth Pass\n");
-    }
+    print_reserve_state();
 
     // Last pass, add arenas to the system
     for (uint i = 0; i < ReservedRegionCount; i++) {
         auto& entry = ReservedRegions[i];
         size_t size = entry.end - entry.start;
-        if (MemoryLimitDbg) {
-            printf("MemoryLimit: adding [%#" PRIxPTR " - %#" PRIxPTR "]\n", entry.start, entry.end);
-        }
+        memlim_logf("adding [%#" PRIxPTR " - %#" PRIxPTR "]\n", entry.start, entry.end);
         zx_status_t status = add_arena(entry.start, size, arena_template);
         if (status != ZX_OK) {
             printf("MemoryLimit: Failed to add arena [%#" PRIxPTR " - %#" PRIxPTR
