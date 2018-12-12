@@ -92,8 +92,8 @@ static void stop_callback_thread(usb_device_t* dev) {
 }
 
 // usb request completion for the requests passed down to the HCI driver
-static void request_complete(usb_request_t* req, void* cookie) {
-    usb_device_t* dev = cookie;
+static void request_complete(void* ctx, usb_request_t* req) {
+    usb_device_t* dev = ctx;
 
     mtx_lock(&dev->callback_lock);
     // move original request to completed_reqs list so it can be completed on the callback_thread
@@ -152,8 +152,8 @@ static void usb_device_release(void* ctx) {
     free(dev);
 }
 
-static void usb_control_complete(usb_request_t* req, void* cookie) {
-    sync_completion_signal((sync_completion_t*)cookie);
+static void usb_control_complete(void* ctx, usb_request_t* req) {
+    sync_completion_signal((sync_completion_t*)ctx);
 }
 
 static zx_status_t usb_device_control(void* ctx, uint8_t request_type, uint8_t request,
@@ -193,7 +193,11 @@ static zx_status_t usb_device_control(void* ctx, uint8_t request_type, uint8_t r
     req->header.length = length;
     // We call this directly instead of via hci_queue, as it's safe to call our
     // own completion callback, and prevents clients getting into odd deadlocks.
-    usb_hci_request_queue(&dev->hci, req, usb_control_complete, &completion);
+    usb_request_complete_t complete = {
+        .callback = usb_control_complete,
+        .ctx = &completion,
+    };
+    usb_hci_request_queue(&dev->hci, req, &complete);
     zx_status_t status = sync_completion_wait(&completion, timeout);
 
     if (status == ZX_OK) {
@@ -239,7 +243,11 @@ static void usb_device_request_queue(void* ctx, usb_request_t* req, usb_request_
     req->header.device_id = dev->device_id;
     // save the existing callback and cookie, so we can replace them
     // with our own before passing the request to the HCI driver.
-    usb_hci_request_queue(&dev->hci, req, request_complete, dev);
+    usb_request_complete_t complete = {
+        .callback = request_complete,
+        .ctx = dev,
+    };
+    usb_hci_request_queue(&dev->hci, req, &complete);
 }
 
 

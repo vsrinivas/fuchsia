@@ -23,8 +23,8 @@ typedef struct usb_langid_desc {
     uint16_t wLangIds[127];
 } __PACKED usb_langid_desc_t;
 
-static void usb_util_control_complete(usb_request_t* req, void* cookie) {
-    sync_completion_signal((sync_completion_t*)cookie);
+static void usb_util_control_complete(void* ctx, usb_request_t* req) {
+    sync_completion_signal((sync_completion_t*)ctx);
 }
 
 zx_status_t usb_util_control(usb_device_t* dev, uint8_t request_type, uint8_t request,
@@ -57,7 +57,11 @@ zx_status_t usb_util_control(usb_device_t* dev, uint8_t request_type, uint8_t re
 
     req->header.length = length;
 
-    usb_hci_request_queue(&dev->hci, req, usb_util_control_complete, &completion);
+    usb_request_complete_t complete = {
+        .callback = usb_util_control_complete,
+        .ctx = &completion,
+    };
+    usb_hci_request_queue(&dev->hci, req, &complete);
     zx_status_t status = sync_completion_wait(&completion, ZX_SEC(1));
     if (status == ZX_OK) {
         status = req->response.status;

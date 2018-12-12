@@ -4,7 +4,7 @@
 
 #include <ddk/debug.h>
 #include <ddk/protocol/usb.h>
-#include <ddk/protocol/usb-hci.h>
+#include <ddk/protocol/usb/hci.h>
 #include <zircon/assert.h>
 #include <zircon/hw/usb.h>
 #include <stdio.h>
@@ -157,8 +157,8 @@ zx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint8_t ep_addre
     while ((req_int = list_remove_head_type(&completed_reqs,
                                             xhci_usb_request_internal_t, node)) != nullptr) {
         req = XHCI_INTERNAL_TO_USB_REQ(req_int);
-        usb_request_complete(req, req->response.status, req->response.actual,
-                             req_int->complete_cb, req_int->cookie);
+        usb_request_complete_new(req, req->response.status, req->response.actual,
+                                 &req_int->complete_cb);
     }
 
     return status;
@@ -432,8 +432,8 @@ zx_status_t xhci_queue_transfer(xhci_t* xhci, usb_request_t* req) {
     while ((req_int = list_remove_head_type(&completed_reqs,
                                             xhci_usb_request_internal_t, node)) != nullptr) {
         req = XHCI_INTERNAL_TO_USB_REQ(req_int);
-        usb_request_complete(req, req->response.status, req->response.actual,
-                             req_int->complete_cb, req_int->cookie);
+        usb_request_complete_new(req, req->response.status, req->response.actual,
+                                 &req_int->complete_cb);
     }
 
     return ZX_OK;
@@ -518,15 +518,15 @@ zx_status_t xhci_cancel_transfers(xhci_t* xhci, uint32_t slot_id, uint32_t ep_in
     while ((req_int = list_remove_head_type(&completed_reqs,
                                             xhci_usb_request_internal_t, node)) != NULL) {
         req = XHCI_INTERNAL_TO_USB_REQ(req_int);
-        usb_request_complete(req, req->response.status, req->response.actual,
-                             req_int->complete_cb, req_int->cookie);
+        usb_request_complete_new(req, req->response.status, req->response.actual,
+                                 &req_int->complete_cb);
     }
 
     return status;
 }
 
-static void xhci_control_complete(usb_request_t* req, void* cookie) {
-    sync_completion_signal((sync_completion_t*)cookie);
+static void xhci_control_complete(void* ctx, usb_request_t* req) {
+    sync_completion_signal((sync_completion_t*)ctx);
 }
 
 zx_status_t xhci_control_request(xhci_t* xhci, uint32_t slot_id, uint8_t request_type,
@@ -563,7 +563,11 @@ zx_status_t xhci_control_request(xhci_t* xhci, uint32_t slot_id, uint8_t request
     sync_completion_t completion;
 
     req->header.length = length;
-    xhci_request_queue(xhci, req, xhci_control_complete, &completion);
+    usb_request_complete_t complete = {
+        .callback = xhci_control_complete,
+        .ctx = &completion,
+    };
+    xhci_request_queue(xhci, req, &complete);
     auto status = sync_completion_wait(&completion, ZX_SEC(1));
     if (status == ZX_OK) {
         status = req->response.status;
@@ -817,7 +821,7 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
     while ((req_int = list_remove_head_type(&completed_reqs,
                                              xhci_usb_request_internal_t, node)) != NULL) {
         req = XHCI_INTERNAL_TO_USB_REQ(req_int);
-        usb_request_complete(req, req->response.status, req->response.actual,
-                             req_int->complete_cb, req_int->cookie);
+        usb_request_complete_new(req, req->response.status, req->response.actual,
+                                 &req_int->complete_cb);
     }
 }

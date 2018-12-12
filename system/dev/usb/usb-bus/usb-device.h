@@ -6,7 +6,7 @@
 
 #include <ddk/binding.h>
 #include <ddk/device.h>
-#include <ddk/protocol/usb-hci.h>
+#include <ddk/protocol/usb/hci.h>
 #include <ddk/protocol/usb/hub.h>
 #include <ddk/protocol/usb.h>
 #include <usb/usb-request.h>

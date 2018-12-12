@@ -5,8 +5,11 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
+#include <ddk/phys-iter.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/usb-hci.h>
+// TODO: Reorder. This needs to be included first until USB headers move to banjo.
+#include <zircon/hw/usb-hub.h>
+#include <ddk/protocol/usb/hci.h>
 #include <ddk/protocol/usb.h>
 
 #include <hw/arch_ops.h>
@@ -57,13 +60,13 @@ void xhci_remove_device(xhci_t* xhci, int slot_id) {
     usb_bus_interface_remove_device(&xhci->bus, slot_id);
 }
 
-static void xhci_hci_request_queue(void* ctx, usb_request_t* req, usb_request_complete_cb cb,
-                                   void* cookie) {
+static void xhci_hci_request_queue(void* ctx, usb_request_t* usb_request,
+                                   const usb_request_complete_t* complete_cb) {
     auto* xhci = static_cast<xhci_t*>(ctx);
-    xhci_request_queue(xhci, req, cb, cookie);
+    xhci_request_queue(xhci, usb_request, complete_cb);
 }
 
-static void xhci_set_bus_interface(void* ctx, usb_bus_interface_t* bus) {
+static void xhci_set_bus_interface(void* ctx, const usb_bus_interface_t* bus) {
     auto* xhci = static_cast<xhci_t*>(ctx);
 
     if (bus) {
@@ -99,13 +102,13 @@ static zx_status_t xhci_config_hub(void* ctx, uint32_t device_id, usb_speed_t sp
     return xhci_configure_hub(xhci, device_id, speed, descriptor);
 }
 
-static zx_status_t xhci_hub_device_added(void* ctx, uint32_t hub_address, int port,
+static zx_status_t xhci_hub_device_added(void* ctx, uint32_t hub_address, uint32_t port,
                                   usb_speed_t speed) {
     auto* xhci = static_cast<xhci_t*>(ctx);
     return xhci_enumerate_device(xhci, hub_address, port, speed);
 }
 
-static zx_status_t xhci_hub_device_removed(void* ctx, uint32_t hub_address, int port) {
+static zx_status_t xhci_hub_device_removed(void* ctx, uint32_t hub_address, uint32_t port) {
     auto* xhci = static_cast<xhci_t*>(ctx);
     xhci_device_disconnected(xhci, hub_address, port);
     return ZX_OK;
@@ -134,10 +137,10 @@ static zx_status_t xhci_cancel_all(void* ctx, uint32_t device_id, uint8_t ep_add
     return xhci_cancel_transfers(xhci, device_id, xhci_endpoint_index(ep_address));
 }
 
-static zx_status_t xhci_get_bti(void* ctx, zx_handle_t* out_handle) {
+static void xhci_get_bti(void* ctx, zx_handle_t* out_handle) {
     auto* xhci = static_cast<xhci_t*>(ctx);
-    *out_handle = xhci->bti_handle;
-    return ZX_OK;
+    *out_handle = ZX_HANDLE_INVALID;
+    zx_handle_duplicate(xhci->bti_handle, ZX_RIGHT_SAME_RIGHTS, out_handle);
 }
 
 //Returns the public request size plus its private context size.
@@ -161,13 +164,12 @@ usb_hci_protocol_ops_t xhci_hci_protocol = {
     .get_request_size = xhci_get_request_size,
 };
 
-void xhci_request_queue(xhci_t* xhci, usb_request_t* req, usb_request_complete_cb cb,
-                        void* cookie) {
+void xhci_request_queue(xhci_t* xhci, usb_request_t* req,
+                        const usb_request_complete_t* complete_cb) {
     zx_status_t status;
 
     xhci_usb_request_internal_t* req_int = USB_REQ_TO_XHCI_INTERNAL(req);
-    req_int->complete_cb = cb;
-    req_int->cookie = cookie;
+    req_int->complete_cb = *complete_cb;
     if (req->header.length > xhci_get_max_transfer_size(xhci->zxdev, req->header.device_id,
                                                         req->header.ep_address)) {
         status = ZX_ERR_INVALID_ARGS;
@@ -176,7 +178,7 @@ void xhci_request_queue(xhci_t* xhci, usb_request_t* req, usb_request_complete_c
     }
 
     if (status != ZX_OK && status != ZX_ERR_BUFFER_TOO_SMALL) {
-        usb_request_complete(req, status, 0, cb, cookie);
+        usb_request_complete_new(req, status, 0, complete_cb);
     }
 }
 

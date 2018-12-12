@@ -66,3 +66,8 @@ struct UsbRequest {
     /// The requester should ensure the last request has this set to true.
     bool require_batch_cb;
 };
+
+[Layout="ddk-callback"]
+interface UsbRequestComplete {
+    Callback(UsbRequest? req) -> ();
+};

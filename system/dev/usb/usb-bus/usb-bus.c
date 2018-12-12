@@ -141,6 +141,7 @@ static void usb_bus_unbind(void* ctx) {
 static void usb_bus_release(void* ctx) {
     zxlogf(INFO, "usb_bus_release\n");
     usb_bus_t* bus = ctx;
+    zx_handle_close(bus->bti_handle);
     free(bus->devices);
     free(bus);
 }
@@ -163,11 +164,7 @@ static zx_status_t usb_bus_bind(void* ctx, zx_device_t* device) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    zx_status_t status = usb_hci_get_bti(&bus->hci, &bus->bti_handle);
-    if (status != ZX_OK) {
-        free(bus);
-        return status;
-    }
+    usb_hci_get_bti(&bus->hci, &bus->bti_handle);
 
     bus->hci_zxdev = device;
     bus->max_device_count = usb_hci_get_max_device_count(&bus->hci);
@@ -189,7 +186,7 @@ static zx_status_t usb_bus_bind(void* ctx, zx_device_t* device) {
         .flags = DEVICE_ADD_NON_BINDABLE,
     };
 
-    status = device_add(device, &args, &bus->zxdev);
+    zx_status_t status = device_add(device, &args, &bus->zxdev);
     if (status == ZX_OK) {
         static usb_bus_interface_t bus_intf;
         bus_intf.ops = &_bus_interface;

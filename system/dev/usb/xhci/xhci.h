@@ -83,9 +83,7 @@ typedef struct xhci_slot {
 
 typedef struct xhci_usb_request_internal {
      // callback to the upper layer
-     usb_request_complete_cb complete_cb;
-     // context for the callback
-     void* cookie;
+     usb_request_complete_t complete_cb;
      // for queueing request at xhci level
      list_node_t node;
      void* context;
@@ -256,5 +254,5 @@ static inline bool xhci_is_root_hub(xhci_t* xhci, uint32_t device_id) {
 zx_status_t xhci_add_device(xhci_t* xhci, int slot_id, int hub_address, int speed);
 void xhci_remove_device(xhci_t* xhci, int slot_id);
 
-void xhci_request_queue(xhci_t* xhci, usb_request_t* req, usb_request_complete_cb cb,
-                        void* cookie);
+void xhci_request_queue(xhci_t* xhci, usb_request_t* req,
+                        const usb_request_complete_t* complete_cb);
