@@ -389,8 +389,23 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
 
     if (gBS->AllocatePages(AllocateAddress, EfiLoaderData,
                           BYTES_TO_PAGES(kernel_zone_size), &kernel_zone_base)) {
-        printf("boot: cannot obtain memory for kernel @ %p\n", (void*) kernel_zone_base);
+        printf("boot: cannot obtain %zu bytes for kernel @ %p\n", kernel_zone_size,
+               (void*) kernel_zone_base);
         kernel_zone_size = 0;
+    }
+    // HACK: Try again with a smaller size - certain platforms (ex: GCE) are unable
+    // to support a large fixed allocation at 0x100000.
+    if (kernel_zone_size == 0) {
+        kernel_zone_size = 3 * 1024 * 1024;
+        efi_status status = gBS->AllocatePages(AllocateAddress, EfiLoaderData,
+                                               BYTES_TO_PAGES(kernel_zone_size),
+                                               &kernel_zone_base);
+        if (status) {
+            printf("boot: cannot obtain %zu bytes for kernel @ %p\n",
+                   kernel_zone_size,
+                   (void*) kernel_zone_base);
+            kernel_zone_size = 0;
+        }
     }
     printf("KALLOC DONE\n");
 
