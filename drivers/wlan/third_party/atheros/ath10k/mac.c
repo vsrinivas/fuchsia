@@ -5574,15 +5574,6 @@ zx_status_t ath10k_mac_set_key(struct ath10k* ar, wlan_key_config_t* key_config)
         goto exit;
     }
 
-    if (peer->num_wlan_cfg >= WMI_MAX_KEY_INDEX) {
-        char ethaddr_str[ETH_ALEN * 3];
-        ethaddr_sprintf(ethaddr_str, peer_addr);
-        ath10k_err("failed to install key for %s (key index too large: %zu >= %d)\n",
-                   ethaddr_str, peer->num_wlan_cfg, WMI_MAX_KEY_INDEX);
-        ret = ZX_ERR_INVALID_ARGS;
-        goto exit;
-    }
-
     switch (key_config->key_type) {
     case WLAN_KEY_TYPE_PAIRWISE:
         flags |= WMI_KEY_PAIRWISE;
@@ -5595,6 +5586,16 @@ zx_status_t ath10k_mac_set_key(struct ath10k* ar, wlan_key_config_t* key_config)
     default:
         ZX_ASSERT(0);
     }
+
+    // If the key has been set, ignore the request. See WLAN-855.
+    mtx_lock(&ar->data_lock);
+    if (key_config->key_idx < peer->num_wlan_cfg &&
+        peer->wlan_cfg[key_config->key_idx].key_idx == key_config->key_idx) {
+        ath10k_warn("key idx %d has been created. ignore it.\n", key_config->key_idx);
+        mtx_unlock(&ar->data_lock);
+        goto exit;
+    }
+    mtx_unlock(&ar->data_lock);
 
     ret = ath10k_install_key(arvif, key_config, peer_addr, flags);
     if (ret != ZX_OK) {
@@ -5614,7 +5615,9 @@ zx_status_t ath10k_mac_set_key(struct ath10k* ar, wlan_key_config_t* key_config)
     ath10k_dbg(ar, ATH10K_DBG_MAC, "Added wlan_cfg[%zu] with key index: %hhu\n",
                peer->num_wlan_cfg, key_config->key_idx);
     mtx_lock(&ar->data_lock);
-    peer->wlan_cfg[peer->num_wlan_cfg++] = *key_config;
+    peer->wlan_cfg[key_config->key_idx] = *key_config;
+    // peer->num_wlan_cfg is used to record the max key index in firmware for later deletion.
+    peer->num_wlan_cfg = MAX(peer->num_wlan_cfg, key_config->key_idx + 1);
     mtx_unlock(&ar->data_lock);
 
     ath10k_set_key_h_def_keyidx(ar, key_config);
