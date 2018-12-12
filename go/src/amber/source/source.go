@@ -419,15 +419,6 @@ func (f *Source) updateTUFClientLocked() error {
 }
 
 func newHTTPClient(cfg *amber.TransportConfig) (*http.Client, error) {
-	if cfg == nil {
-		return http.DefaultClient, nil
-	}
-
-	tlsClientConfig, err := newTLSClientConfig(cfg.TlsClientConfig)
-	if err != nil {
-		return nil, err
-	}
-
 	// Create our transport with default settings copied from Go's
 	// `http.DefaultTransport`. We can't just copy the default because it
 	// contains some mutexes, and copying it may leave the transport in an
@@ -439,13 +430,24 @@ func newHTTPClient(cfg *amber.TransportConfig) (*http.Client, error) {
 			KeepAlive: 30 * time.Second,
 			DualStack: true,
 		}).DialContext,
-		MaxIdleConns:          100,
+		MaxIdleConns: 100,
+		// The following setting is non-default:
 		MaxConnsPerHost:       50,
 		IdleConnTimeout:       90 * time.Second,
 		TLSHandshakeTimeout:   10 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
-		TLSClientConfig:       tlsClientConfig,
+		TLSClientConfig:       nil,
 	}
+
+	if cfg == nil {
+		return &http.Client{Transport: t}, nil
+	}
+
+	tlsClientConfig, err := newTLSClientConfig(cfg.TlsClientConfig)
+	if err != nil {
+		return nil, err
+	}
+	t.TLSClientConfig = tlsClientConfig
 
 	if cfg.ConnectTimeout != 0 || cfg.KeepAlive != 0 {
 		t.DialContext = (&net.Dialer{
@@ -714,7 +716,6 @@ func (f *Source) Update() error {
 			err = nil
 		}
 		return err
-
 	})
 }
 
