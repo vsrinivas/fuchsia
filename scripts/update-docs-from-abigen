@@ -443,6 +443,22 @@ TODO(ZX-3106)
         f.write(stub)
 
 
+def check_for_orphans(syscalls, root):
+    """Checks for any .md files that have been orphaned (no longer have an
+    associated abigen entry.)
+    """
+    orphan_count = 0
+    names = set([x['name'] for x in syscalls])
+    for md in os.listdir(root):
+        if not md.endswith('.md'):
+            print >> sys.stderr, 'warning: non .md file %s in %s' % (md, outf)
+        name = md[:-3]
+        if name not in names:
+            orphan_count += 1
+            print >> sys.stderr, 'warning: %s has no entry in syscalls' % md
+    return orphan_count
+
+
 def main():
     args = parse_args()
     inf = os.path.relpath(args.json)
@@ -480,6 +496,7 @@ def main():
 
     if missing_count > 0:
         print >> sys.stderr, 'warning: %d missing .md files' % missing_count
+    missing_count += check_for_orphans(data['syscalls'], outf)
     return missing_count
 
 
