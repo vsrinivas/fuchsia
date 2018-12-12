@@ -49,6 +49,13 @@ typedef struct hid_report_size {
     input_report_size_t feat_size;
 } hid_report_size_t;
 
+typedef struct hid_reports {
+    hid_report_size_t *sizes;
+    size_t sizes_len;
+    size_t num_reports;
+    bool has_rpt_id;
+} hid_reports_t;
+
 typedef struct hid_device {
     zx_device_t* zxdev;
 
@@ -407,23 +414,22 @@ static const uint8_t* hid_parse_short_item(const uint8_t* buf, const uint8_t* en
     return buf;
 }
 
-static int hid_fetch_or_alloc_report_ndx(input_report_id_t report_id, hid_device_t* dev) {
-    ZX_DEBUG_ASSERT(dev->num_reports <= countof(dev->sizes));
-    for (size_t i = 0; i < dev->num_reports; i++) {
-        if (dev->sizes[i].id == report_id)
+static int hid_fetch_or_alloc_report_ndx(input_report_id_t report_id, hid_reports_t* reports) {
+    ZX_DEBUG_ASSERT(reports->num_reports <= reports->sizes_len);
+    for (size_t i = 0; i < reports->num_reports; i++) {
+        if (reports->sizes[i].id == report_id)
             return i;
     }
 
-    if (dev->num_reports < countof(dev->sizes)) {
-        dev->sizes[dev->num_reports].id = report_id;
-        ZX_DEBUG_ASSERT(dev->sizes[dev->num_reports].in_size == 0);
-        ZX_DEBUG_ASSERT(dev->sizes[dev->num_reports].out_size == 0);
-        ZX_DEBUG_ASSERT(dev->sizes[dev->num_reports].feat_size == 0);
-        return dev->num_reports++;
+    if (reports->num_reports < reports->sizes_len) {
+        reports->sizes[reports->num_reports].id = report_id;
+        ZX_DEBUG_ASSERT(reports->sizes[reports->num_reports].in_size == 0);
+        ZX_DEBUG_ASSERT(reports->sizes[reports->num_reports].out_size == 0);
+        ZX_DEBUG_ASSERT(reports->sizes[reports->num_reports].feat_size == 0);
+        return reports->num_reports++;
     } else {
         return -1;
     }
-
 }
 
 typedef struct hid_global_state {
@@ -465,13 +471,20 @@ static void hid_clear_global_state(list_node_t* stack) {
     }
 }
 
-static zx_status_t hid_process_hid_report_desc(hid_device_t* dev) {
-    const uint8_t* buf = dev->hid_report_desc;
-    const uint8_t* end = buf + dev->hid_report_desc_len;
+void hid_reports_set_boot_mode(hid_reports_t *reports) {
+    reports->num_reports = 1;
+    reports->sizes[0].id = 0;
+    reports->sizes[0].in_size = 24;
+    reports->sizes[0].out_size = 0;
+    reports->sizes[0].feat_size = 0;
+    reports->has_rpt_id = false;
+}
+
+zx_status_t hid_parse_reports(const uint8_t *buf, const size_t buf_len, hid_reports_t *reports) {
+    const uint8_t* end = buf + buf_len;
     zx_status_t status = ZX_OK;
     hid_item_t item;
 
-    bool has_rpt_id = false;
     hid_global_state_t state;
     memset(&state, 0, sizeof(state));
     list_node_t global_stack;
@@ -484,28 +497,28 @@ static zx_status_t hid_process_hid_report_desc(hid_device_t* dev) {
             int idx;
             switch (item.bTag) {
             case HID_ITEM_MAIN_TAG_INPUT:
-                idx = hid_fetch_or_alloc_report_ndx(state.rpt_id, dev);
+                idx = hid_fetch_or_alloc_report_ndx(state.rpt_id, reports);
                 if (idx < 0) {
                     status = ZX_ERR_NOT_SUPPORTED;
                     goto done;
                 }
-                dev->sizes[idx].in_size += inc;
+                reports->sizes[idx].in_size += inc;
                 break;
             case HID_ITEM_MAIN_TAG_OUTPUT:
-                idx = hid_fetch_or_alloc_report_ndx(state.rpt_id, dev);
+                idx = hid_fetch_or_alloc_report_ndx(state.rpt_id, reports);
                 if (idx < 0) {
                     status = ZX_ERR_NOT_SUPPORTED;
                     goto done;
                 }
-                dev->sizes[idx].out_size += inc;
+                reports->sizes[idx].out_size += inc;
                 break;
             case HID_ITEM_MAIN_TAG_FEATURE:
-                idx = hid_fetch_or_alloc_report_ndx(state.rpt_id, dev);
+                idx = hid_fetch_or_alloc_report_ndx(state.rpt_id, reports);
                 if (idx < 0) {
                     status = ZX_ERR_NOT_SUPPORTED;
                     goto done;
                 }
-                dev->sizes[idx].feat_size += inc;
+                reports->sizes[idx].feat_size += inc;
                 break;
             default:
                 break;
@@ -519,7 +532,7 @@ static zx_status_t hid_process_hid_report_desc(hid_device_t* dev) {
                 break;
             case HID_ITEM_GLOBAL_TAG_REPORT_ID:
                 state.rpt_id = (input_report_id_t)item.data;
-                has_rpt_id = true;
+                reports->has_rpt_id = true;
                 break;
             case HID_ITEM_GLOBAL_TAG_REPORT_COUNT:
                 state.rpt_count = (uint32_t)item.data;
@@ -548,7 +561,20 @@ static zx_status_t hid_process_hid_report_desc(hid_device_t* dev) {
 done:
     hid_clear_global_state(&global_stack);
 
+    return status;
+}
+
+
+zx_status_t hid_process_hid_report_desc(hid_device_t* dev) {
+    hid_reports_t reports;
+    reports.num_reports = 0;
+    reports.sizes_len = HID_MAX_REPORT_IDS;
+    reports.sizes = dev->sizes;
+    reports.has_rpt_id = false;
+
+    zx_status_t status = hid_parse_reports(dev->hid_report_desc, dev->hid_report_desc_len, &reports);
     if (status == ZX_OK) {
+
 #if BOOT_MOUSE_HACK
         // Ignore the HID report descriptor from the device, since we're putting
         // the device into boot protocol mode.
@@ -561,12 +587,7 @@ done:
                        "feat sz (%d->0)\n",
                        dev->name, dev->num_reports, dev->sizes[0].in_size,
                        dev->sizes[0].out_size, dev->sizes[0].feat_size);
-                dev->num_reports = 1;
-                dev->sizes[0].id = 0;
-                dev->sizes[0].in_size = 24;
-                dev->sizes[0].out_size = 0;
-                dev->sizes[0].feat_size = 0;
-                has_rpt_id = false;
+                hid_reports_set_boot_mode(&reports);
             } else {
                 zxlogf(INFO,
                     "hid: boot mouse hack skipped for \"%s\": does not support protocol.\n",
@@ -574,10 +595,13 @@ done:
             }
         }
 #endif
+
+        dev->num_reports = reports.num_reports;
+
         // If we saw a report ID, adjust the expected report sizes to reflect
         // the fact that we expect a report ID to be prepended to each report.
         ZX_DEBUG_ASSERT(dev->num_reports <= countof(dev->sizes));
-        if (has_rpt_id) {
+        if (reports.has_rpt_id) {
             for (size_t i = 0; i < dev->num_reports; ++i) {
                 if (dev->sizes[i].in_size)   dev->sizes[i].in_size   += 8;
                 if (dev->sizes[i].out_size)  dev->sizes[i].out_size  += 8;
