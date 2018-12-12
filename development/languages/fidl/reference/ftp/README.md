@@ -5,3 +5,5 @@
 - [FTP-007](ftp-007.md): Tables
 - [FTP-008](ftp-008.md): Epitaphs
 - [FTP-009](ftp-009.md): Documentation comments
+- [FTP-012](ftp-012.md): Empty structs
+- [FTP-020](ftp-020.md): Ordinal Hashing
