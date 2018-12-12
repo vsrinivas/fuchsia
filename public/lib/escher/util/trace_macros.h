@@ -11,8 +11,11 @@
 
 #ifdef OS_FUCHSIA
 #include <trace/event.h>
+#include "trace-vthread/event_vthread.h"
 #else
 #include "lib/escher/util/impl/trace_macros_impl.h"
+
+#define TRACE_NONCE() 0
 
 #define TRACE_DURATION(category_literal, name_literal, args...) \
   TRACE_INTERNAL_DURATION((category_literal), (name_literal), args)

@@ -21,7 +21,9 @@ FrameManager::FrameManager(EscherWeakPtr escher)
       // from being returned to the pool too early, resulting in the current
       // frame's data being stomped by the next frame's while it is still in
       // use.
-      uniform_buffer_pool_(std::move(escher), 1) {
+      uniform_buffer_pool_(std::move(escher), 1),
+      gpu_vthread_literal_("Escher GPU"),
+      gpu_vthread_id_(TRACE_NONCE()) {
   // Escher apps will at least double-buffer, so avoid expensive allocations in
   // the initial few frames.
   constexpr int kInitialBlockAllocatorCount = 2;
@@ -40,7 +42,7 @@ FramePtr FrameManager::NewFrame(const char* trace_literal,
   FramePtr frame = fxl::AdoptRef<Frame>(
       new Frame(this, requested_type, std::move(*GetBlockAllocator().get()),
                 uniform_buffer_pool_.GetWeakPtr(), frame_number, trace_literal,
-                enable_gpu_logging));
+                gpu_vthread_literal_, gpu_vthread_id_, enable_gpu_logging));
   frame->BeginFrame();
   return frame;
 }

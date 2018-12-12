@@ -10,8 +10,12 @@ if (is_mac) {
     # support Vulkan. So that we may include Escher host tests in
     # the default build, we substitute in a dummy no-op test in the
     # case of a mac build.
-    sources = ["no_op_mac_unittest.cc"]
-    deps = ["//third_party/googletest:gtest_main"]
+    sources = [
+      "no_op_mac_unittest.cc",
+    ]
+    deps = [
+      "//third_party/googletest:gtest_main",
+    ]
   }
 } else {
   test("escher_unittests") {
@@ -85,10 +89,10 @@ if (is_mac) {
         "flib/release_fence_signaller_unittest.cc",
         "flib/util.cc",
         "flib/util.h",
+        "profiling/timestamp_profiler_unittest.cc",
       ]
       deps += [
         "//garnet/public/lib/gtest",
-
         "//zircon/public/lib/async-loop-cpp",
       ]
     }

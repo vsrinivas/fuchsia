@@ -50,6 +50,12 @@ class FrameManager : public ResourceManager {
 
   uint32_t num_outstanding_frames_ = 0;
   UniformBufferPool uniform_buffer_pool_;
+
+  // The name of the default vthread for GPU trace events. This should be a
+  // string literal.
+  const char* gpu_vthread_literal_;
+  // The default vthread ID for GPU trace events.
+  const uint64_t gpu_vthread_id_;
 };
 
 }  // namespace impl

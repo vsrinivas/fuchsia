@@ -89,6 +89,7 @@ class Frame : public Resource {
         BlockAllocator allocator,
         impl::UniformBufferPoolWeakPtr uniform_buffer_pool,
         uint64_t frame_number, const char* trace_literal,
+        const char* gpu_vthread_literal, uint64_t gpu_vthread_id,
         bool enable_gpu_logging);
   void BeginFrame();
 
@@ -108,15 +109,6 @@ class Frame : public Resource {
   CommandBufferPtr TakeCommandBuffer();
   void PutCommandBuffer(CommandBufferPtr command_buffer);
 
-  static void LogGpuQueryResults(
-      uint64_t escher_frame_number,
-      const std::vector<TimestampProfiler::Result>& timestamps);
-
-  static void TraceGpuQueryResults(
-      uint64_t frame_number, uint64_t escher_frame_number,
-      const std::vector<TimestampProfiler::Result>& timestamps,
-      const char* trace_literal);
-
   enum class State {
     kReadyToBegin,
     kInProgress,
@@ -131,7 +123,14 @@ class Frame : public Resource {
   // A unique number to identify this escher frame. It can diverge from
   // frame_number_, as frame_number_ is used by the client for its own tracking.
   const uint64_t escher_frame_number_;
+  // A string constant that is the name of the trace event this frame will
+  // generate.
   const char* trace_literal_;
+  // A string constant that is the name of the virtual thread this frame
+  // generates events for.
+  const char* gpu_vthread_literal_;
+  // A unique identifier for the virtual thread this frame generates events for.
+  const uint64_t gpu_vthread_id_;
   bool enable_gpu_logging_;
   vk::Queue queue_;
 
