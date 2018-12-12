@@ -8,6 +8,7 @@
 #include <lib/fxl/strings/string_printf.h>
 #include <lib/zx/time.h>
 #include <iostream>
+#include <regex>
 
 static constexpr bool kGuestOutput = false;
 static constexpr size_t kSerialBufferSize = 1024;
@@ -101,10 +102,15 @@ zx_status_t TestSerial::SendBlocking(const std::string& message) {
 
 zx_status_t TestSerial::WaitForMarker(const std::string& marker,
                                       std::string* result) {
+  std::regex prompt_re("[#$] ");
   std::string output = buffer_;
   buffer_.erase();
   zx_status_t status;
   do {
+    // We strip prompts from the output as a stopgap against linux guests
+    // interleaving the prompt randomly in the output.
+    output = std::regex_replace(output, prompt_re, "");
+
     auto marker_loc = output.rfind(marker);
     if (marker_loc != std::string::npos && !output.empty()) {
       // Do not accept a marker that isn't terminated by a newline.

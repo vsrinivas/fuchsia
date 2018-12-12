@@ -98,6 +98,14 @@ class LinuxMultiprocessorGuestTest
         "--cmdline=loglevel=0 console=hvc0 root=/dev/vda rw");
     return true;
   }
+
+  static bool SetUpGuest() {
+    if (WaitForShellReady() != ZX_OK) {
+      ADD_FAILURE() << "Failed to wait for shell";
+      return false;
+    }
+    return true;
+  }
 };
 
 TEST_F(LinuxMultiprocessorGuestTest, LaunchGuest) {
