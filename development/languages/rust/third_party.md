@@ -13,16 +13,20 @@ any necessary crates into the `vendor` dir.
 If a crate is not available in the vendor directory, it can to be added with
 the following steps:
 
-1. If you have not yet received OSRB approval for the library, you will need
-   to do so by following the instructions under the "Process for 3rd Party
-   Hosted Code" section in [this document][osrb-process]. If you are not a
-   Google employee, you will need to ask a Google employee to do this part
-   for you.
 1. Reference the crates you need in [`rustc_deps/Cargo.toml`][3p-cargo-toml].
 1. Run `scripts/fx update-rustc-third-party`. This will download all crates listed in
    [`rustc_deps/Cargo.toml`][3p-cargo-toml] as well as their dependencies and
    place them in the `vendor` directory.
-1. `git add` the `Cargo.toml`, `Cargo.lock` and `vendor` directory.
+1. `git add` the `Cargo.toml`, `Cargo.lock` and `vendor` directory and upload
+   to gerrit.
+1. If you have not yet received OSRB approval for the library, you will need to
+   do so by following the instructions under the "Process for 3rd Party Hosted
+   Code" section in [this document][osrb-process]. Make sure to include the
+   requested information for all new crates pulled in by your new dependency.
+   Also include a link to the CL so the OSRB reviewer can see all the files
+   that will be added to the vendor repository by the new vendored dependency.
+   If you are not a Google employee, you will need to ask a Google employee to
+   do this part for you.
 1. Merge the change into [third_party/rust-crates][3p-crates].
 1. Update the git revision of `third_party/rust-crates` in
    [integration/fuchsia/garnet/third_party][3p-manifest]:
