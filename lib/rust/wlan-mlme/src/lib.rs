@@ -7,6 +7,7 @@
 
 #[macro_use]
 mod utils;
+pub mod buffer;
 pub mod ie;
 pub mod mac;
 pub mod sequence;

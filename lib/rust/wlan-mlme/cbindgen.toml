@@ -11,3 +11,19 @@ autogen_warning = """
 
 include_guard = "GARNET_LIB_RUST_WLAN_MLME_ABI_H_"
 language = "C"
+
+[export]
+# These types are not used yet but we want to generate
+# bindings for them already.
+include = ["BufferProvider", "Buffer"]
+prefix = "rust_mlme_"
+
+[export.rename]
+# Unfortunately cbindgen's rename machinery is rather simple
+# and doesn't accomodate our needs. As a result we have to
+# explicitly declare the items which should get renamed
+"BufferProvider" = "buffer_provider_ops_t"
+"Buffer" = "buffer_t"
+
+[fn]
+prefix = 'extern "C"'
