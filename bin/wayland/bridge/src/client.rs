@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use std::any::Any;
+use std::cell::Cell;
 use std::sync::Arc;
 
 use failure::Error;
@@ -44,7 +45,7 @@ pub struct Client {
     task_queue: TaskQueue,
 
     /// A monotonically increasing value that can be embedded in certain events.
-    next_event_serial: u32,
+    next_event_serial: Cell<u32>,
 
     protocol_logging: bool,
 }
@@ -59,15 +60,15 @@ impl Client {
             objects: ObjectMap::new(),
             tasks: receiver,
             task_queue: TaskQueue(sender),
-            next_event_serial: 0,
+            next_event_serial: Cell::new(0),
             protocol_logging: false,
         }
     }
 
     #[allow(dead_code)]
-    pub fn next_event_serial(&mut self) -> u32 {
-        let serial = self.next_event_serial;
-        self.next_event_serial += 1;
+    pub fn next_event_serial(&self) -> u32 {
+        let serial = self.next_event_serial.get();
+        self.next_event_serial.set(serial + 1);
         serial
     }
 
