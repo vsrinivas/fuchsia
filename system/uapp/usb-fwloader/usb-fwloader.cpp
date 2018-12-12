@@ -30,7 +30,13 @@ namespace {
 
 struct WatchDirData {
     const char* dev_name;
-    int fd;
+    fbl::unique_fd fd;
+};
+
+enum class Mode {
+    kUpdateTest = 0,             // Update the test firmware.
+    kUpdateTestBoot = 1,         // Update the test device bootloader.
+    kDeviceFirmwareUpgrade = 2,  // Perform a DFU. The device must implement the USB DFU Spec.
 };
 
 constexpr char kFwLoaderDir[] = "/dev/class/usb-test-fwloader";
@@ -38,6 +44,8 @@ constexpr char kUsbTesterDevDir[] = "/dev/class/usb-tester";
 
 constexpr char kFirmwareLoader[] = "fx3";
 constexpr char kFlashProgrammer[] = "flash-programmer";
+constexpr char kUSBDFU[] = "usb-dfu";
+constexpr char kUSBTester[] = "usb-tester";
 
 constexpr int kEnumerationWaitSecs = 5;
 
@@ -50,30 +58,37 @@ void usage(const char* prog_name) {
     printf("  -t                   : Load test firmware mode.\n"
            "                         This is the default if no mode is specified.\n"
            "  -b                   : Flash bootloader mode.\n"
+           "  -d                   : USB Device Firmware Upgrade.\n"
            "  -f <firmware_path>   : Firmware to load.\n"
            "  -p <flash_prog_path> : Firmware image for the flash programmer.\n"
-           "                         This is required when flashing a new bootloader.\n");
+           "                         This is only required when flashing a new bootloader.\n");
+}
+
+zx_status_t fd_matches_name(const fbl::unique_fd& fd, const char* dev_name, bool* out_match) {
+    char path[PATH_MAX];
+    const ssize_t r = ioctl_device_get_topo_path(fd.get(), path, sizeof(path));
+    if (r < 0) {
+        return ZX_ERR_IO;
+    }
+    *out_match = dev_name == nullptr || strstr(path, dev_name) != nullptr;
+    return ZX_OK;
 }
 
 zx_status_t watch_dir_cb(int dirfd, int event, const char* filename, void* cookie) {
     if (event != WATCH_EVENT_ADD_FILE) {
         return ZX_OK;
     }
-    int fd = openat(dirfd, filename, O_RDWR);
-    if (fd < 0) {
+    fbl::unique_fd fd(openat(dirfd, filename, O_RDWR));
+    if (!fd) {
         return ZX_OK;
     }
     auto data = reinterpret_cast<WatchDirData*>(cookie);
-    char path[PATH_MAX];
-    const ssize_t r = ioctl_device_get_topo_path(fd, path, sizeof(path));
-    if (r < 0) {
-        return ZX_ERR_IO;
+    bool match = false;
+    zx_status_t status = fd_matches_name(fd, data->dev_name, &match);
+    if (status != ZX_OK || !match) {
+        return status;
     }
-    if (data->dev_name && strstr(path, data->dev_name) == nullptr) {
-        close(fd);
-        return ZX_OK;
-    }
-    data->fd = fd;
+    data->fd = std::move(fd);
     return ZX_ERR_STOP;
 }
 
@@ -85,19 +100,19 @@ zx_status_t wait_dev_enumerate(const char* dir, const char* dev_name, fbl::uniqu
         return ZX_ERR_BAD_STATE;
     }
     auto close_dir = fbl::MakeAutoCall([&] { closedir(d); });
-    WatchDirData data = { .dev_name = dev_name, .fd = 0 };
+    WatchDirData data = { .dev_name = dev_name, .fd = fbl::unique_fd() };
     zx_status_t status = fdio_watch_directory(dirfd(d), watch_dir_cb,
                                               zx_deadline_after(ZX_SEC(kEnumerationWaitSecs)),
                                               reinterpret_cast<void*>(&data));
     if (status == ZX_ERR_STOP) {
-        out_fd->reset(data.fd);
+        *out_fd = std::move(data.fd);
         return ZX_OK;
     } else {
         return status;
     }
 }
 
-zx_status_t open_dev(const char* dir, fbl::unique_fd* out_fd) {
+zx_status_t open_dev(const char* dir, const char* dev_name, fbl::unique_fd* out_fd) {
     DIR* d = opendir(dir);
     if (d == nullptr) {
         fprintf(stderr, "Could not open dir: \"%s\"\n", dir);
@@ -106,11 +121,16 @@ zx_status_t open_dev(const char* dir, fbl::unique_fd* out_fd) {
 
     struct dirent* de;
     while ((de = readdir(d)) != nullptr) {
-        int fd = openat(dirfd(d), de->d_name, O_RDWR);
-        if (fd < 0) {
+        fbl::unique_fd fd(openat(dirfd(d), de->d_name, O_RDWR));
+        if (!fd) {
             continue;
         }
-        out_fd->reset(fd);
+        bool match = false;
+        zx_status_t status = fd_matches_name(fd, dev_name, &match);
+        if (status != ZX_OK || !match) {
+            continue;
+        }
+        *out_fd = std::move(fd);
         closedir(d);
         return ZX_OK;
     }
@@ -119,13 +139,18 @@ zx_status_t open_dev(const char* dir, fbl::unique_fd* out_fd) {
     return ZX_ERR_NOT_FOUND;
 }
 
-zx_status_t open_fwloader_dev(fbl::unique_fd* out_fd) {
-    return open_dev(kFwLoaderDir, out_fd);
+zx_status_t open_test_fwloader_dev(fbl::unique_fd* out_fd) {
+    return open_dev(kFwLoaderDir, kFirmwareLoader, out_fd);
 }
 
 zx_status_t open_usb_tester_dev(fbl::unique_fd* out_fd) {
-    return open_dev(kUsbTesterDevDir, out_fd);
+    return open_dev(kUsbTesterDevDir, kUSBTester, out_fd);
 }
+
+zx_status_t open_dfu_dev(fbl::unique_fd* out_fd) {
+    return open_dev(kFwLoaderDir, kUSBDFU, out_fd);
+}
+
 // Reads the firmware file and populates the provided vmo with the contents.
 zx_status_t read_firmware(fbl::unique_fd& file_fd, zx::vmo& vmo, size_t* out_fw_size) {
     struct stat s;
@@ -222,7 +247,7 @@ zx_status_t load_to_ram(
     std::variant<const char*, zircon_usb_test_fwloader_PrebuiltType> firmware) {
 
     fbl::unique_fd fd;
-    zx_status_t status = open_fwloader_dev(&fd);
+    zx_status_t status = open_test_fwloader_dev(&fd);
     if (status != ZX_OK) {
         fbl::unique_fd usb_tester_fd;
         // Check if there is a usb tester device we can switch to firmware loading mode.
@@ -324,23 +349,44 @@ zx_status_t load_bootloader(const char* flash_prog_image_path, const char* firmw
     return ZX_OK;
 }
 
+zx_status_t device_firmware_upgrade(const char* firmware_path) {
+    fbl::unique_fd fd;
+    zx_status_t status = open_dfu_dev(&fd);
+    if (status != ZX_OK) {
+        fprintf(stderr, "Could not find any connected USB DFU device.\n");
+        return status;
+    }
+    // TODO(jocelyndang): support prebuilts.
+    std::variant<const char*, zircon_usb_test_fwloader_PrebuiltType> firmware = firmware_path;
+    status = device_load_firmware(std::move(fd), firmware);
+    if (status != ZX_OK) {
+        fprintf(stderr, "Device firmware upgrade failed, err: %d\n", status);
+        return status;
+    }
+    printf("Finished device firmware upgrade.\n");
+    return ZX_OK;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
     auto print_usage = fbl::MakeAutoCall([prog_name = argv[0]]() { usage(prog_name); });
 
-    bool load_test_firmware_mode = true;
+    Mode mode = Mode::kUpdateTest;
     const char* firmware_path = nullptr;
     const char* flash_prog_path = nullptr;
 
     int opt;
-    while ((opt = getopt(argc, argv, "tbf:p:")) != -1) {
+    while ((opt = getopt(argc, argv, "tbdf:p:")) != -1) {
         switch (opt) {
         case 't':
-            load_test_firmware_mode = true;
+            mode = Mode::kUpdateTest;
             break;
         case 'b':
-            load_test_firmware_mode = false;
+            mode = Mode::kUpdateTestBoot;
+            break;
+        case 'd':
+            mode = Mode::kDeviceFirmwareUpgrade;
             break;
         case 'f':
             firmware_path = optarg;
@@ -356,10 +402,16 @@ int main(int argc, char** argv) {
     print_usage.cancel();
 
     zx_status_t status;
-    if (load_test_firmware_mode) {
+    switch (mode) {
+    case Mode::kUpdateTest:
         status = load_test_firmware(firmware_path);
-    } else {
+        break;
+    case Mode::kUpdateTestBoot:
         status = load_bootloader(flash_prog_path, firmware_path);
+        break;
+    case Mode::kDeviceFirmwareUpgrade:
+        status = device_firmware_upgrade(firmware_path);
+        break;
     }
     return status == ZX_OK ? 0 : -1;
 }

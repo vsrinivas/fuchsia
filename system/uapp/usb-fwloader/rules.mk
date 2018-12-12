@@ -8,7 +8,7 @@ MODULE_TYPE := userapp
 MODULE_GROUP := misc
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/usb-test-fwloader.cpp \
+    $(LOCAL_DIR)/usb-fwloader.cpp \
 
 MODULE_STATIC_LIBS := \
     system/ulib/zx \
