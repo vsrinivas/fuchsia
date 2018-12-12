@@ -1,0 +1,88 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.device.mock;
+
+using zx;
+
+/// A record of the invocation of a hook
+struct HookInvocation {
+    /// Process that the hook was invoked in
+    zx.koid process_koid;
+    /// Thread that the hook was invoked on
+    zx.koid thread_koid;
+    /// An opaque identifier identifying a specific device
+    uint64 device_id;
+};
+
+/// Marker struct for remove action
+struct RemoveDeviceAction { };
+
+const uint32 MAX_NAME_LEN = 32;
+
+/// Request to add a new child device
+struct AddDeviceAction {
+    /// If true, will let the device go through the bind protocol.
+    /// Otherwise, will just create another mock device and skip binding.
+    bool do_bind;
+
+    /// If creating a mock device, the service the new device will listen to.
+    MockDevice? controller;
+
+    /// The name that should be given to the new device.  Used by devfs and
+    /// debug messages.
+    string:MAX_NAME_LEN name;
+};
+
+/// What a hook should do.
+union Action {
+    /// Return this status.
+    zx.status return_status;
+
+    /// Write these bytes to the buffer associated with the hook.
+    vector<uint8>:MAX_WRITE_BYTES write;
+
+    /// Create a new thread with a processing loop.
+    request<MockDeviceThread> create_thread;
+
+    /// Invoke device_remove() on our device.
+    RemoveDeviceAction remove_device;
+
+    /// Create a new child device
+    AddDeviceAction add_device;
+};
+
+const uint32 MAX_ACTIONS = 10;
+const uint32 MAX_WRITE_BYTES = 16384;
+
+/// Interface for controlling a mock device.  The test suite will implement this interface.
+/// Any method that returns a list of actions is interpreted as requesting the corresponding hook
+/// to perform that list of actions in order.
+interface MockDevice {
+    /// |record.device_id| corresponds to the parent here.
+    Bind(HookInvocation record) -> (vector<Action>:MAX_ACTIONS actions);
+
+    Release(HookInvocation record);
+    GetProtocol(HookInvocation record, uint32 protocol_id) -> (vector<Action>:MAX_ACTIONS actions);
+    Open(HookInvocation record, uint32 flags) -> (vector<Action>:MAX_ACTIONS actions);
+    OpenAt(HookInvocation record, string path, uint32 flags) -> (vector<Action>:MAX_ACTIONS actions);
+    Close(HookInvocation record, uint32 flags) -> (vector<Action>:MAX_ACTIONS actions);
+    Unbind(HookInvocation record) -> (vector<Action>:MAX_ACTIONS actions);
+    Read(HookInvocation record, uint64 count, zx.off off) -> (vector<Action>:MAX_ACTIONS actions);
+    Write(HookInvocation record, vector<uint8>:MAX_WRITE_BYTES buffer, zx.off off) -> (vector<Action>:MAX_ACTIONS actions);
+    GetSize(HookInvocation record) -> (vector<Action>:MAX_ACTIONS actions);
+    Suspend(HookInvocation record, uint32 flags) -> (vector<Action>:MAX_ACTIONS actions);
+    Resume(HookInvocation record, uint32 flags) -> (vector<Action>:MAX_ACTIONS actions);
+
+    Ioctl(HookInvocation record, uint32 op, vector<uint8>:MAX_WRITE_BYTES in, uint64 out_count) -> (vector<Action>:MAX_ACTIONS actions);
+    Message(HookInvocation record) -> (vector<Action>:MAX_ACTIONS actions);
+    Rxrpc(HookInvocation record) -> (vector<Action>:MAX_ACTIONS actions);
+};
+
+/// Interface for requesting a mock device thread do something.  The mock device implements
+/// this interface.  Closing the interface causes the thread to exit.
+interface MockDeviceThread {
+    /// Perform the actions in the given list.  Threads may not create other threads.
+    PerformActions(vector<Action>:MAX_ACTIONS actions);
+};
