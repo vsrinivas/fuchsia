@@ -96,13 +96,11 @@ func (d *rootDirectory) dirLocked(path string) fs.Directory {
 
 func (d *rootDirectory) Unlink(path string) error {
 	// the toplevel "garbage" file is a special control file. When it is
-	// unlinked, we trigger garbage collection in the background.
+	// unlinked, we trigger garbage collection.
 	if path == "garbage" {
-		go func() {
-			if err := d.fs.GC(); err != nil {
-				log.Printf("pkgfs: GC error: %s", err)
-			}
-		}()
+		if err := d.fs.GC(); err != nil {
+			log.Printf("pkgfs: GC error: %s", err)
+		}
 		return nil
 	}
 
