@@ -89,6 +89,9 @@ bool MsdArmConnection::ExecuteAtom(
                        client_id_, flags);
             return false;
         }
+#if defined(ENABLE_PROTECTED_DEBUG_SWAP_MODE)
+        flags ^= kAtomFlagProtected;
+#endif
         if ((flags & kAtomFlagProtected) && !owner_->IsProtectedModeSupported()) {
             magma::log(magma::LOG_WARNING,
                        "Client %" PRIu64 ": Attempting to use protected mode when not supported\n",

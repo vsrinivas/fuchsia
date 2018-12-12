@@ -11,6 +11,16 @@ declare_args() {
   # With this flag set the system tries to use cache coherent memory if the
   # GPU supports it.
   msd_arm_enable_cache_coherency = true
+
+  # In protected mode, faults don't return as much information so they're much harder to debug. To
+  # work around that, add a mode where protected atoms are executed in non-protected mode and
+  # vice-versa.
+  #
+  # NOTE: The memory security ranges should also be set (in TrustZone) to the opposite of normal, so
+  # that non-protected mode accesses can only access protected memory and vice versa.  Also,
+  # growable memory faults won't work in this mode, so larger portions of growable memory should
+  # precommitted (which is not done by default).
+  msd_arm_enable_protected_debug_swap_mode = false
 }
 
 source_set("src") {
@@ -54,6 +64,10 @@ source_set("src") {
 
   if (msd_arm_enable_cache_coherency) {
     defines += [ "MSD_ARM_ENABLE_CACHE_COHERENCY" ]
+  }
+
+  if (msd_arm_enable_protected_debug_swap_mode) {
+    defines += [ "ENABLE_PROTECTED_DEBUG_SWAP_MODE" ]
   }
 
   # Don't depend on shared libraries besides libzircon.so, libc.c, and

@@ -834,9 +834,12 @@ void MsdArmDevice::ExecuteAtomOnDevice(MsdArmAtom* atom, magma::RegisterIo* regi
     config.end_flush_invalidate().set(true);
     // Atoms are in unprotected memory, so don't attempt to write to them when
     // executing in protected mode.
-    if (atom->is_protected()) {
-        config.disable_descriptor_write_back().set(true);
-    }
+    bool disable_descriptor_write_back = atom->is_protected();
+#if defined(ENABLE_PROTECTED_DEBUG_SWAP_MODE)
+    // In this case, nonprotected-mode atoms also need to abide by protected mode restrictions.
+    disable_descriptor_write_back = true;
+#endif
+    config.disable_descriptor_write_back().set(disable_descriptor_write_back);
     config.WriteTo(register_io);
 
     // Execute on every powered-on core.
