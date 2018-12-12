@@ -1,0 +1,92 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library zircon.hw.usb;
+
+using zx;
+
+enum UsbSpeed : uint32 {
+
+};
+
+[Packed, repr="C"]
+struct UsbSetup {
+    uint8 bmRequestType;
+    uint8 bRequest;
+    uint16 wValue;
+    uint16 wIndex;
+    uint16 wLength;
+};
+
+[Packed, repr="C"]
+struct UsbDeviceDescriptor {
+    uint8 bLength;
+    uint8 bDescriptorType;
+    uint16 bcdUSB;
+    uint8 bDeviceClass;
+    uint8 bDeviceSubClass;
+    uint8 bDeviceProtocol;
+    uint8 bMaxPacketSize0;
+    uint16 idVendor;
+    uint16 idProduct;
+    uint16 bcdDevice;
+    uint8 iManufacturer;
+    uint8 iProduct;
+    uint8 iSerialNumber;
+    uint8 bNumConfigurations;
+};
+
+[Packed, repr="C"]
+struct UsbConfigurationDescriptor {
+    uint8 bLength;
+    uint8 bDescriptorType;
+    uint16 wTotalLength;
+    uint8 bNumInterfaces;
+    uint8 bConfigurationValue;
+    uint8 iConfiguration;
+    uint8 bmAttributes;
+    uint8 bMaxPower;
+};
+
+[Packed, repr="C"]
+struct UsbInterfaceDescriptor {
+    uint8 bLength;
+    uint8 bDescriptorType;
+    uint8 bEndpointAddress;
+    uint8 bmAttributes;
+    uint16 wMaxPacketSize;
+    uint8 bInterval;
+};
+
+[Packed, repr="C"]
+struct UsbEndpointDescriptor {
+    uint8 bLength;
+    uint8 bDescriptorType;
+    uint8 bAlternateSetting;
+    uint8 bNumEndpoints;
+    uint8 bInterfaceClass;
+    uint8 bInterfaceSubClass;
+    uint8 bInterfaceProtocol;
+    uint8 iInterface;
+};
+
+[Packed, repr="C"]
+struct UsbSsEpCompDescriptor {
+    uint8 bLength;
+    uint8 bDescriptorType;
+    uint8 bMaxBurst;
+    uint8 bmAttributes;
+    uint16 wBytesPerInterval;
+};
+
+[Packed, repr="C"]
+struct UsbHubDescriptor {
+    uint8 bDescLength;
+    uint8 bDescriptorType;
+    uint8 bNbrPorts;
+    uint16 wHubCharacteristics;
+    uint8 bPowerOn2PwrGood;
+    uint8 bHubContrCurrent;
+    // Variable length union below, which we are ignoring here for now.
+};

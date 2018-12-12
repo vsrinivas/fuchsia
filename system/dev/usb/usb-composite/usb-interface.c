@@ -285,12 +285,12 @@ zx_status_t usb_interface_get_string_descriptor(void* ctx, uint8_t desc_id, uint
                                      out_actual_lang_id);
 }
 
-static zx_status_t usb_interface_claim_device_interface(void* ctx, const uint8_t desc[9],
+static zx_status_t usb_interface_claim_device_interface(void* ctx,
+                                                        const usb_interface_descriptor_t* desc,
                                                         uint32_t claim_length) {
     usb_interface_t* intf = ctx;
-    usb_interface_descriptor_t* claim_intf = (usb_interface_descriptor_t*)desc;
 
-    zx_status_t status = usb_composite_do_claim_interface(intf->comp, claim_intf->bInterfaceNumber);
+    zx_status_t status = usb_composite_do_claim_interface(intf->comp, desc->bInterfaceNumber);
     if (status != ZX_OK) {
         return status;
     }
@@ -300,12 +300,12 @@ static zx_status_t usb_interface_claim_device_interface(void* ctx, const uint8_t
     if (!descriptors) {
         return ZX_ERR_NO_MEMORY;
     }
-    memcpy(descriptors + intf->descriptor_length, claim_intf, claim_length);
+    memcpy(descriptors + intf->descriptor_length, desc, claim_length);
     intf->descriptor = descriptors;
     intf->descriptor_length += claim_length;
 
-    if (claim_intf->bInterfaceNumber > intf->last_interface_id) {
-        intf->last_interface_id = claim_intf->bInterfaceNumber;
+    if (desc->bInterfaceNumber > intf->last_interface_id) {
+        intf->last_interface_id = desc->bInterfaceNumber;
     }
     return ZX_OK;
 }

@@ -10,13 +10,11 @@ MODULE_TYPE := banjo
 
 MODULE_PACKAGE := banjo
 
-MODULE_BANJO_LIBRARY := ddk.protocol.usb.composite
+MODULE_BANJO_LIBRARY := zircon.hw.usb
 
-MODULE_BANJO_NAME := usb/composite
+MODULE_BANJO_NAME := usb
 
-MODULE_BANJO_DEPS := system/banjo/zircon-hw-usb
-
-MODULE_SRCS += $(LOCAL_DIR)/usb-composite.banjo
+MODULE_SRCS += $(LOCAL_DIR)/usb.banjo
 
 include make/module.mk
 

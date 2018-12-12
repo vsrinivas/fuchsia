@@ -72,14 +72,13 @@ static zx_status_t bus_get_device_id(zx_device_t* device, uint32_t* out) {
 }
 
 static zx_status_t bus_configure_hub(void* ctx, zx_device_t* hub_device, usb_speed_t speed,
-                                     const uint8_t desc[15]) {
+                                     const usb_hub_descriptor_t* desc) {
     usb_bus_t* bus = ctx;
-    usb_hub_descriptor_t* descriptor = (usb_hub_descriptor_t*)desc;
     uint32_t hub_id;
     if (bus_get_device_id(hub_device, &hub_id) != ZX_OK) {
         return ZX_ERR_INTERNAL;
     }
-    return usb_hci_configure_hub(&bus->hci, hub_id, speed, descriptor);
+    return usb_hci_configure_hub(&bus->hci, hub_id, speed, desc);
 }
 
 static zx_status_t bus_device_added(void* ctx, zx_device_t* hub_device, uint32_t port,

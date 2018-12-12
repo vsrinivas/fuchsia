@@ -731,7 +731,7 @@ zx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_de
 }
 
 zx_status_t xhci_configure_hub(xhci_t* xhci, uint32_t slot_id, usb_speed_t speed,
-                               usb_hub_descriptor_t* descriptor) {
+                               const usb_hub_descriptor_t* descriptor) {
     zxlogf(TRACE, "xhci_configure_hub slot_id: %d speed: %d\n", slot_id, speed);
     if (xhci_is_root_hub(xhci, slot_id)) {
         // nothing to do for root hubs

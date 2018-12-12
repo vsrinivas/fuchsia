@@ -94,7 +94,7 @@ static uint64_t xhci_get_frame(void* ctx) {
 }
 
 static zx_status_t xhci_config_hub(void* ctx, uint32_t device_id, usb_speed_t speed,
-                            usb_hub_descriptor_t* descriptor) {
+                                   const usb_hub_descriptor_t* descriptor) {
     auto* xhci = static_cast<xhci_t*>(ctx);
     return xhci_configure_hub(xhci, device_id, speed, descriptor);
 }

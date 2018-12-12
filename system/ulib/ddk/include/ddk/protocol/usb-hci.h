@@ -31,7 +31,7 @@ typedef struct usb_hci_protocol_ops {
 
     // Hub support
     zx_status_t (*configure_hub)(void* ctx, uint32_t device_id, usb_speed_t speed,
-                 usb_hub_descriptor_t* descriptor);
+                 const usb_hub_descriptor_t* descriptor);
     zx_status_t (*hub_device_added)(void* ctx, uint32_t device_id, int port, usb_speed_t speed);
     zx_status_t (*hub_device_removed)(void* ctx, uint32_t device_id, int port);
     zx_status_t (*reset_endpoint)(void* ctx, uint32_t device_id, uint8_t ep_address);
@@ -75,7 +75,7 @@ static inline uint64_t usb_hci_get_current_frame(usb_hci_protocol_t* hci) {
 
 static inline zx_status_t usb_hci_configure_hub(usb_hci_protocol_t* hci, uint32_t device_id,
                                                 usb_speed_t speed,
-                                                usb_hub_descriptor_t* descriptor) {
+                                                const usb_hub_descriptor_t* descriptor) {
     return hci->ops->configure_hub(hci->ctx, device_id, speed, descriptor);
 }
 

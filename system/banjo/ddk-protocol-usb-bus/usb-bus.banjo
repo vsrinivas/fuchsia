@@ -7,9 +7,7 @@ library ddk.protocol.usb.bus;
 using zx;
 using ddk.driver;
 using ddk.protocol.usb.hub;
-
-/// sizeof(usb_hub_descriptor_t)
-const uint32 HUB_DESC_SIZE = 15;
+using zircon.hw.usb;
 
 enum UsbSpeed : uint32 {
 };
@@ -18,7 +16,7 @@ enum UsbSpeed : uint32 {
 interface UsbBus {
     /// Configures a new hub based on its USB hub descriptor.
     ConfigureHub(ddk.driver.ZxDevice? hub_device, UsbSpeed speed,
-                 array<uint8>:HUB_DESC_SIZE desc) -> (zx.status s);
+                 zircon.hw.usb.UsbHubDescriptor desc) -> (zx.status s);
     /// Informs the USB bus that a new device has been added.
     DeviceAdded(ddk.driver.ZxDevice? hub_device, uint32 port, UsbSpeed speed) -> (zx.status s);
     /// Informs the USB bus that a device has been removed.

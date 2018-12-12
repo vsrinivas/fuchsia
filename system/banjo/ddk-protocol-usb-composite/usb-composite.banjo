@@ -4,10 +4,8 @@
 
 library ddk.protocol.usb.composite;
 
+using zircon.hw.usb;
 using zx;
-
-/// sizeof(usb_interface_descriptor_t)
-const uint32 INTERFACE_DESC_SIZE = 9;
 
 [Layout = "ddk-protocol"]
 interface UsbComposite {
@@ -17,5 +15,5 @@ interface UsbComposite {
     GetAdditionalDescriptorList() -> (zx.status s, vector<uint8> desc);
     /// Marks the interface as claimed and appends the interface descriptor to the
     /// interface's existing descriptors.
-    ClaimInterface(array<uint8>:INTERFACE_DESC_SIZE desc, uint32 length) -> (zx.status s);
+    ClaimInterface(zircon.hw.usb.UsbInterfaceDescriptor desc, uint32 length) -> (zx.status s);
 };

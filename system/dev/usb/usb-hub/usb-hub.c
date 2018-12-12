@@ -329,7 +329,7 @@ static int usb_hub_thread(void* arg) {
         goto fail;
     }
 
-    result = usb_bus_configure_hub(&hub->bus, hub->usb_device, hub->hub_speed, (uint8_t*)&desc);
+    result = usb_bus_configure_hub(&hub->bus, hub->usb_device, hub->hub_speed, &desc);
     if (result < 0) {
         zxlogf(ERROR, "configure_hub failed: %d\n", result);
         goto fail;

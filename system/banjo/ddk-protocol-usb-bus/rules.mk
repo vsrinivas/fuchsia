@@ -19,6 +19,7 @@ MODULE_SRCS += $(LOCAL_DIR)/usb-bus.banjo
 MODULE_BANJO_DEPS := \
     system/banjo/ddk-driver \
     system/banjo/ddk-protocol-usb-hub \
+    system/banjo/zircon-hw-usb \
 
 include make/module.mk
 
