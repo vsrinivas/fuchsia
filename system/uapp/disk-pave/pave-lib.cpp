@@ -952,7 +952,9 @@ zx_status_t RealMain(Flags flags) {
     case Command::kWipe:
         return device_partitioner->WipePartitions();
     case Command::kInstallFvm:
-        break;
+    case Command::kInstallVbMetaA:
+    case Command::kInstallVbMetaB:
+       break;
     case Command::kInstallBootloader:
         if (flags.arch == Arch::X64 && !flags.force) {
             LOG("SKIPPING BOOTLOADER install on x64 device, pass --force if desired.\n");
