@@ -31,6 +31,11 @@ import("//build/rust/rustc_artifact.gni")
 #     Builds unit tests associated with the binary. This will create a
 #     `<name>_bin_test` test file in the output directory.
 #
+#   sdk_category (optional)
+#     If this field is set, this rust binary will be included in SDK builds for
+#     the provided category. See //build/sdk/sdk_atom.gni for available
+#     categories.
+#
 #   source_root (optional)
 #     Location of the crate root (e.g. `src/main.rs` or `src/lib.rs`).
 #     This defaults to `./src/main.rs` for binaries and `./src/lib.rs` for libraries,
@@ -66,6 +71,7 @@ template("rustc_binary") {
                              "source_root",
                              "testonly",
                              "with_lto",
+                             "sdk_category"
                            ])
     type = "bin"
   }

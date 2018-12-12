@@ -13,10 +13,12 @@ source_set("cmx_schema_json") {
   ]
 }
 
-rustc_binary("cmx_bin_test_rustc") {
+rustc_binary("cmx") {
   name = "cmx"
   with_unit_tests = true
   edition = "2018"
+
+  sdk_category = "partner"
 
   deps = [
     "//third_party/rust-crates/rustc_deps:clap",

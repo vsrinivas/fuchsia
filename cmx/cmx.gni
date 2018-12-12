@@ -63,7 +63,7 @@ template("cmx_validate") {
                              "visibility",
                            ])
 
-    tool = "//build/tools/cmx:cmx_bin_test_rustc"
+    tool = "//build/tools/cmx"
     tool_output_name = "cmx"
 
     stamp_file = "$target_gen_dir/$target_name.verified"
@@ -130,7 +130,7 @@ template("cmx_merge") {
                              "visibility",
                            ])
 
-    tool = "//build/tools/cmx:cmx_bin_test_rustc"
+    tool = "//build/tools/cmx"
     tool_output_name = "cmx"
 
     merged_output = "$target_out_dir/$target_name"
@@ -183,7 +183,7 @@ template("cmx_format") {
                              "visibility",
                            ])
 
-    tool = "//build/tools/cmx:cmx_bin_test_rustc"
+    tool = "//build/tools/cmx"
     tool_output_name = "cmx"
 
     formatted_output = "$target_out_dir/$target_name"
