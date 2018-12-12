@@ -35,6 +35,10 @@ class CmxMetadata {
   const RuntimeMetadata& runtime_meta() { return runtime_meta_; }
   const ProgramMetadata& program_meta() { return program_meta_; }
 
+  // True iff cmx has the deprecated-bare-package-url set to true.
+  // TODO(CF-156): Remove this logic once all URLs are fuchsia-pkg.
+  bool deprecated_bare_package_url() { return deprecated_bare_package_url_; }
+
  private:
   static std::string GetCmxPathFromPath(const std::regex& regex,
                                         const std::string& path);
@@ -43,10 +47,17 @@ class CmxMetadata {
   void ParseProgramMetadata(const rapidjson::Document& document,
                             json::JSONParser* json_parser);
 
+  // TODO(CF-156): Remove this logic once all URLs are fuchsia-pkg.
+  void ParseDeprecatedBarePackageUrl(const rapidjson::Document& document,
+                                     json::JSONParser* json_parser);
+
   SandboxMetadata sandbox_meta_;
   RuntimeMetadata runtime_meta_;
   ProgramMetadata program_meta_;
   CmxFacetParser facet_parser_;
+
+  // TODO(CF-156): Remove this logic once all URLs are fuchsia-pkg.
+  bool deprecated_bare_package_url_;
 };
 
 }  // namespace component

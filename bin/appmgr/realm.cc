@@ -618,10 +618,15 @@ void Realm::CreateComponentFromPackage(
   CmxMetadata cmx;
   std::string cmx_path;
   FuchsiaPkgUrl fp;
+  bool is_fuchsia_pkg_url = false;
   if (fp.Parse(package->resolved_url.get())) {
     if (!fp.resource_path().empty()) {
       // If the url has a resource, assume that's the cmx.
       cmx_path = fp.resource_path();
+
+      // The URL is fuchsia-pkg iff it has a resource.
+      // TODO(CF-156): Remove this logic once all URLs are fuchsia-pkg.
+      is_fuchsia_pkg_url = true;
     } else {
       // It's possible the url does not have a resource, in which case either
       // the cmx exists at meta/<package_name.cmx> or it does not exist.
@@ -654,6 +659,17 @@ void Realm::CreateComponentFromPackage(
     component_request.SetReturnValues(kComponentCreationFailed,
                                       TerminationReason::INTERNAL_ERROR);
     return;
+  }
+
+  // TODO(CF-156): Remove this logic once all URLs are fuchsia-pkg.
+  if (!is_fuchsia_pkg_url) {
+    // TODO(CF-156): If !cmx.deprecated_bare_package_url(), fail the component.
+    FXL_LOG(WARNING)
+        << "Component " << fp.GetDefaultComponentName()
+        << " was launched without using fuchsia-pkg URLs! Use "
+        << package->resolved_url << "#" << fp.GetDefaultComponentCmxPath()
+        << " instead. See https://fuchsia.googlesource.com/docs/+/master/"
+        << "glossary.md#fuchsia_pkg-url for more information.";
   }
 
   RuntimeMetadata runtime;

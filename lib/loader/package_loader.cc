@@ -48,16 +48,6 @@ void PackageLoader::LoadUrl(fidl::StringPtr url, LoadUrlCallback callback) {
   }
 
   package.resolved_url = fuchsia_url.ToString();
-  // TODO(CF-156): Remove support for non fuchsia-pkg URLs, and get rid of this.
-  if (!FuchsiaPkgUrl::IsFuchsiaPkgScheme(url)) {
-    FXL_LOG(WARNING)
-        << "Component " << url
-        << " was launched without using fuchsia-pkg URLs! Use "
-        << package.resolved_url << "#"
-        << fuchsia_url.GetDefaultComponentCmxPath()
-        << " instead. See https://fuchsia.googlesource.com/docs/+/master/"
-        << "glossary.md#fuchsia_pkg-url for more information.";
-  }
 
   fxl::UniqueFD package_dir(
       open(fuchsia_url.pkgfs_dir_path().c_str(), O_DIRECTORY | O_RDONLY));
