@@ -77,7 +77,12 @@ static zx_status_t read_guest_cfg(const char* cfg_path, int argc, char** argv,
       return status;
     }
   }
-  return parser.ParseArgcArgv(argc, argv);
+  zx_status_t status = parser.ParseArgcArgv(argc, argv);
+  if (status != ZX_OK) {
+    return status;
+  }
+  parser.SetDefaults();
+  return ZX_OK;
 }
 
 static zx_gpaddr_t alloc_device_addr(size_t device_size) {

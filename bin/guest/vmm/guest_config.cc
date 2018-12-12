@@ -214,8 +214,6 @@ static zx_status_t parse_interrupt_spec(const std::string& spec,
   return parse_number(tokens[1], &out->options, fxl::Base::k10);
 }
 
-constexpr size_t kMinMemorySize = 1 << 20;
-
 static zx_status_t parse_memory(const std::string& value, size_t* out) {
   char modifier = 'b';
   size_t size;
@@ -224,6 +222,7 @@ static zx_status_t parse_memory(const std::string& value, size_t* out) {
     FXL_LOG(ERROR) << "Value is not a size string: " << value;
     return ZX_ERR_INVALID_ARGS;
   }
+
   switch (modifier) {
     case 'b':
       break;
@@ -241,12 +240,6 @@ static zx_status_t parse_memory(const std::string& value, size_t* out) {
       return ZX_ERR_INVALID_ARGS;
   }
 
-  if (size < kMinMemorySize) {
-    FXL_LOG(ERROR) << "Requested memory " << size
-                   << " is less than the minimum supported size "
-                   << kMinMemorySize;
-    return ZX_ERR_INVALID_ARGS;
-  }
   *out = size;
   return ZX_OK;
 }
@@ -349,7 +342,6 @@ zx_status_t GuestConfigParser::ParseArgcArgv(int argc, char** argv) {
     }
   }
 
-  SetDefaults();
   return ZX_OK;
 }
 
@@ -399,6 +391,5 @@ zx_status_t GuestConfigParser::ParseConfig(const std::string& data) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  SetDefaults();
   return ZX_OK;
 }

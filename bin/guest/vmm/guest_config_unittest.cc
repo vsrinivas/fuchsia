@@ -231,10 +231,6 @@ TEST_F(GuestConfigParserTest, Memory_MultipleEntries) {
   EXPECT_EQ(MemoryPolicy::GUEST_CACHED, memory[1].policy);
 }
 
-TEST_F(GuestConfigParserTest, Memory_TooSmall) {
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, ParseArg("--memory=1k"));
-}
-
 TEST_F(GuestConfigParserTest, Memory_IllegalModifier) {
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, ParseArg("--memory=5l"));
 }

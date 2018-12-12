@@ -75,12 +75,11 @@ class GuestConfigParser {
 
   zx_status_t ParseArgcArgv(int argc, char** argv);
   zx_status_t ParseConfig(const std::string& data);
+  void SetDefaults();
 
  private:
   GuestConfig* cfg_;
   std::unordered_map<std::string, OptionHandler> opts_;
-
-  void SetDefaults();
 };
 
 #endif  // GARNET_BIN_GUEST_VMM_GUEST_CONFIG_H_
