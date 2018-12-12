@@ -4,6 +4,13 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/persist_logs.gni")
+
+declare_args() {
+  # Controls how many bytes of space on disk are used to persist device logs.
+  # Should be a string value that only contains digits.
+  max_log_disk_usage = "0"
+}
 
 rustc_binary("bin") {
   name = "log_listener"
@@ -21,7 +28,7 @@ rustc_binary("bin") {
   ]
 }
 
-package("log_listener") {
+package("log_listener_shell") {
   deps = [
     ":bin",
   ]
@@ -33,6 +40,20 @@ package("log_listener") {
       shell = true
     },
   ]
+}
+
+fuchsia_component("log_listener_component") {
+  name = "log_listener"
+  deps = [
+    ":bin",
+  ]
+
+  binary = "rust_crates/log_listener"
+  manifest = rebase_path("meta/log_listener.cmx")
+}
+
+package("log_listener") {
+  components = [ ":log_listener_component" ]
 }
 
 package("log_listener_tests") {
@@ -47,4 +68,8 @@ package("log_listener_tests") {
       name = "log_listener_bin_test_rustc"
     },
   ]
+}
+
+persist_logs("all_logs") {
+  max_disk_usage = max_log_disk_usage
 }

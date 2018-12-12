@@ -132,7 +132,14 @@ impl MaxCapacityFile {
     // rotate will move the current file to ${file_path}.log.old and create a new file at ${file_path}
     // to hold future messages.
     fn rotate(&mut self) -> io::Result<()> {
-        fs::rename(&self.file_path, &self.file_path.with_extension("log.old"))?;
+        let mut new_file_name =
+                self.file_path
+                .to_str()
+                .ok_or(io::Error::new(io::ErrorKind::Other, "invalid file name"))?
+                .to_string();
+        new_file_name.push_str(".old");
+
+        fs::rename(&self.file_path, PathBuf::from(new_file_name))?;
         self.file = fs::OpenOptions::new().append(true).create(true).open(&self.file_path)?;
         self.curr_size = 0;
         Ok(())
@@ -141,6 +148,9 @@ impl MaxCapacityFile {
 
 impl Write for MaxCapacityFile {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        if self.capacity == 0 {
+            return Ok(0);
+        }
         if buf.len() as u64 > self.capacity / 2 {
             return Err(io::Error::new(io::ErrorKind::Other, "buffer size larger than file capacity"));
         }
