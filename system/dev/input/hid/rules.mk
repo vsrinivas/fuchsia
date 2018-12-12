@@ -10,6 +10,7 @@ MODULE_TYPE := driver
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/hid-fifo.c \
+    $(LOCAL_DIR)/hid-parser.c \
     $(LOCAL_DIR)/hid.c
 
 MODULE_FIDL_LIBS := system/fidl/zircon-input
