@@ -67,12 +67,6 @@ type Netstack struct {
 	OnInterfacesChanged func([]netstack.NetInterface)
 }
 
-type dhcpState struct {
-	client  *dhcp.Client
-	cancel  context.CancelFunc
-	enabled bool
-}
-
 // Each ifState tracks the state of a network interface.
 type ifState struct {
 	ns  *Netstack
@@ -81,8 +75,17 @@ type ifState struct {
 		sync.Mutex
 		state link.State
 		// TODO(NET-1223): remove and replace with refs to stack via ns
-		nic *netiface.NIC
-		dhcpState
+		nic  *netiface.NIC
+		dhcp struct {
+			*dhcp.Client
+			// running must not be nil.
+			running func() bool
+			// cancel must not be nil.
+			cancel context.CancelFunc
+			// Used to restart the DHCP client when we go from link.StateDown to
+			// link.StateStarted.
+			enabled bool
+		}
 	}
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -253,22 +256,32 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.Address, config dhcp.Con
 }
 
 func (ifs *ifState) setDHCPStatusLocked(enabled bool) {
-	d := &ifs.mu.dhcpState
-	if enabled == d.enabled {
-		return
+	ifs.mu.dhcp.enabled = enabled
+	ifs.mu.dhcp.cancel()
+	if ifs.mu.dhcp.enabled && ifs.mu.state == link.StateStarted {
+		ifs.runDHCPLocked()
 	}
-	if enabled {
-		ctx, cancel := context.WithCancel(ifs.ctx)
-		d.cancel = cancel
-		if c := d.client; c != nil {
-			c.Run(ctx)
-		} else {
-			panic(fmt.Sprintf("nil DHCP client on interface %s", ifs.mu.nic.Name))
-		}
-	} else if d.cancel != nil {
-		d.cancel()
+}
+
+// Runs the DHCP client with a fresh context and initializes ifs.mu.dhcp.cancel.
+// Call the old cancel function before calling this function.
+func (ifs *ifState) runDHCPLocked() {
+	ctx, cancel := context.WithCancel(context.Background())
+	ifs.mu.dhcp.cancel = cancel
+	ifs.mu.dhcp.running = func() bool {
+		return ctx.Err() == nil
 	}
-	d.enabled = enabled
+	if c := ifs.mu.dhcp.Client; c != nil {
+		c.Run(ctx)
+	} else {
+		panic(fmt.Sprintf("nil DHCP client on interface %s", ifs.mu.nic.Name))
+	}
+}
+
+func (ifs *ifState) dhcpEnabled() bool {
+	ifs.mu.Lock()
+	defer ifs.mu.Unlock()
+	return ifs.mu.dhcp.enabled
 }
 
 func (ifs *ifState) stateChange(s link.State) {
@@ -280,13 +293,7 @@ func (ifs *ifState) stateChange(s link.State) {
 		fallthrough
 	case link.StateDown:
 		log.Printf("NIC %s: stopped", ifs.mu.nic.Name)
-		if ifs.cancel != nil {
-			ifs.cancel()
-		}
-		if ifs.mu.dhcpState.cancel != nil {
-			// TODO: consider remembering DHCP status
-			ifs.setDHCPStatusLocked(false)
-		}
+		ifs.mu.dhcp.cancel()
 
 		// TODO(crawshaw): more cleanup to be done here:
 		// 	- remove link endpoint
@@ -298,13 +305,12 @@ func (ifs *ifState) stateChange(s link.State) {
 		ifs.mu.nic.DNSServers = nil
 
 	case link.StateStarted:
-		// Only call `restarted` if we are not in the initial state (which means we're still starting).
-		if ifs.mu.state != link.StateUnknown {
-			log.Printf("NIC %s: restarting", ifs.mu.nic.Name)
-			ifs.ctx, ifs.cancel = context.WithCancel(context.Background())
-			ifs.mu.nic.Routes = defaultRouteTable(ifs.mu.nic.ID, "")
-			ifs.setDHCPStatusLocked(true)
-
+		log.Printf("NIC %s: starting", ifs.mu.nic.Name)
+		ifs.ctx, ifs.cancel = context.WithCancel(context.Background())
+		ifs.mu.nic.Routes = defaultRouteTable(ifs.mu.nic.ID, "")
+		if ifs.mu.dhcp.enabled {
+			ifs.mu.dhcp.cancel()
+			ifs.runDHCPLocked()
 		}
 	}
 	ifs.mu.state = s
@@ -409,9 +415,10 @@ func (ns *Netstack) getNodeName() string {
 }
 
 // TODO(tamird): refactor to use addEndpoint.
+// TODO(stijlist): figure out a way to make it impossible to accidentally
+// enable DHCP on loopback interfaces.
 func (ns *Netstack) addLoopback() error {
 	const nicid = 1
-	ctx, cancel := context.WithCancel(context.Background())
 	nic := &netiface.NIC{
 		ID:       nicid,
 		Addr:     ipv4Loopback,
@@ -434,13 +441,13 @@ func (ns *Netstack) addLoopback() error {
 	nic.Name = "lo"
 
 	ifs := &ifState{
-		ns:     ns,
-		ctx:    ctx,
-		cancel: cancel,
+		ns: ns,
 	}
 
 	ifs.mu.state = link.StateStarted
 	ifs.mu.nic = nic
+	ifs.mu.dhcp.running = func() bool { return false }
+	ifs.mu.dhcp.cancel = func() {}
 
 	ns.mu.Lock()
 	defer ns.mu.Unlock()
@@ -522,6 +529,9 @@ func (ns *Netstack) addEth(topological_path string, config netstack.InterfaceCon
 			ifs.setDHCPStatusLocked(true)
 			ifs.mu.Unlock()
 		case netstack.IpAddressConfigStaticIp:
+			ifs.mu.Lock()
+			ifs.setDHCPStatusLocked(false)
+			ifs.mu.Unlock()
 			subnet := config.IpAddressConfig.StaticIp
 			protocol, tcpipAddr, retval := ns.validateInterfaceAddress(subnet.Addr, subnet.PrefixLen)
 			if retval.Status != netstack.StatusOk {
@@ -534,18 +544,16 @@ func (ns *Netstack) addEth(topological_path string, config netstack.InterfaceCon
 }
 
 func (ns *Netstack) addEndpoint(makeEndpoint func(*ifState) (stack.LinkEndpoint, error), finalize func(*ifState) error) (*ifState, error) {
-	ctx, cancel := context.WithCancel(context.Background())
-
 	ifs := &ifState{
-		ns:     ns,
-		ctx:    ctx,
-		cancel: cancel,
+		ns: ns,
 	}
 	ifs.mu.state = link.StateUnknown
 	ifs.mu.nic = &netiface.NIC{
 		Addr:    "\x00\x00\x00\x00",
 		Netmask: "\xff\xff\xff\xff",
 	}
+	ifs.mu.dhcp.running = func() bool { return false }
+	ifs.mu.dhcp.cancel = func() {}
 
 	ep, err := makeEndpoint(ifs)
 	if err != nil {
@@ -600,7 +608,7 @@ func (ns *Netstack) addEndpoint(makeEndpoint func(*ifState) (stack.LinkEndpoint,
 	ifs.mu.nic.Routes = defaultRouteTable(nicid, "")
 	ifs.mu.nic.Ipv6addrs = []tcpip.Address{lladdr}
 	ifs.statsEP.Nic = ifs.mu.nic
-	ifs.mu.dhcpState.client = dhcp.NewClient(ns.mu.stack, nicid, linkAddr, ifs.dhcpAcquired)
+	ifs.mu.dhcp.Client = dhcp.NewClient(ns.mu.stack, nicid, linkAddr, ifs.dhcpAcquired)
 	ifs.mu.Unlock()
 
 	// Add default route. This will get clobbered later when we get a DHCP response.

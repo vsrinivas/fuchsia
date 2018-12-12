@@ -67,7 +67,7 @@ func (ifs *ifState) toNetInterfaceLocked() (netstack.NetInterface, error) {
 	if ifs.mu.state == link.StateStarted {
 		flags |= netstack.NetInterfaceFlagUp
 	}
-	if ifs.mu.dhcpState.enabled {
+	if ifs.mu.dhcp.enabled {
 		flags |= netstack.NetInterfaceFlagDhcp
 	}
 

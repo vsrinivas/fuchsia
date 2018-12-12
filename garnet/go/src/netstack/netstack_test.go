@@ -9,9 +9,11 @@ import (
 	"testing"
 
 	"fidl/fuchsia/hardware/ethernet"
+	"fidl/fuchsia/net"
 	"fidl/fuchsia/netstack"
 	ethernetext "fidlext/fuchsia/hardware/ethernet"
 
+	"netstack/fidlconv"
 	"netstack/link/eth"
 
 	"github.com/google/netstack/tcpip"
@@ -22,15 +24,34 @@ import (
 )
 
 const (
-	testDeviceName string = "testdevice"
-	testTopoPath   string = "/fake/ethernet/device"
+	testDeviceName string        = "testdevice"
+	testTopoPath   string        = "/fake/ethernet/device"
+	testIpAddress  tcpip.Address = tcpip.Address("\xc0\xa8\x2a\x10")
 )
 
 func TestNicName(t *testing.T) {
 	ns := newNetstack(t)
 
-	d := deviceForAddEth(ethernet.Info{}, t)
-	ifs, err := ns.addEth("/fake/ethernet/device", netstack.InterfaceConfig{Name: testDeviceName}, &d)
+	ifs, err := ns.addEth("/fake/ethernet/device", netstack.InterfaceConfig{Name: testDeviceName}, &ethernetext.Device{
+		TB:                t,
+		GetInfoImpl:       func() (ethernet.Info, error) { return ethernet.Info{}, nil },
+		SetClientNameImpl: func(string) (int32, error) { return 0, nil },
+		GetFifosImpl: func() (int32, *ethernet.Fifos, error) {
+			return int32(zx.ErrOk), &ethernet.Fifos{
+				TxDepth: 1,
+			}, nil
+		},
+		GetStatusImpl: func() (uint32, error) {
+			return uint32(eth.LinkUp), nil
+		},
+		SetIoBufferImpl: func(zx.VMO) (int32, error) {
+			return int32(zx.ErrOk), nil
+		},
+		StartImpl: func() (int32, error) {
+			return int32(zx.ErrOk), nil
+		},
+	})
+
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,13 +94,115 @@ func TestDhcpConfiguration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	ifs.mu.Lock()
-	defer ifs.mu.Unlock()
-	if ifs.mu.dhcpState.client == nil {
+	if ifs.mu.dhcp.Client == nil {
 		t.Errorf("no dhcp client")
 	}
-	if ifs.mu.dhcpState.enabled == false {
-		t.Errorf("dhcp disabled")
+	if !ifs.mu.dhcp.enabled {
+		t.Errorf("expected dhcp to be configured to run initially")
+	}
+
+	if !ifs.mu.dhcp.running() {
+		t.Errorf("expected dhcp client to be running initially")
+	}
+	ifs.mu.Unlock()
+
+	ifs.eth.Down()
+
+	ifs.mu.Lock()
+	if ifs.mu.dhcp.running() {
+		t.Errorf("expected dhcp client to be stopped on eth down")
+	}
+	if !ifs.mu.dhcp.enabled {
+		t.Errorf("expected dhcp configuration to be preserved on eth down")
+	}
+	ifs.mu.Unlock()
+
+	ifs.eth.Up()
+
+	ifs.mu.Lock()
+	if !ifs.mu.dhcp.running() {
+		t.Errorf("expected dhcp client to be running on eth restart")
+	}
+	if !ifs.mu.dhcp.enabled {
+		t.Errorf("expected dhcp configuration to be preserved on eth restart")
+	}
+	ifs.mu.Unlock()
+}
+
+func TestStaticIPConfiguration(t *testing.T) {
+	ns := newNetstack(t)
+
+	ipAddressConfig := netstack.IpAddressConfig{}
+	addr := fidlconv.ToNetIpAddress(testIpAddress)
+	subnet := net.Subnet{Addr: addr, PrefixLen: 32}
+	ipAddressConfig.SetStaticIp(subnet)
+	d := deviceForAddEth(ethernet.Info{}, t)
+	ifs, err := ns.addEth("/fake/ethernet/device", netstack.InterfaceConfig{Name: testDeviceName, IpAddressConfig: ipAddressConfig}, &d)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if ifs.mu.nic.Addr != testIpAddress {
+		t.Errorf("expected static IP to be set when configured")
+	}
+	if ifs.mu.dhcp.enabled {
+		t.Errorf("expected dhcp state to be disabled initially")
+	}
+
+	ifs.eth.Down()
+
+	if ifs.mu.dhcp.enabled {
+		t.Errorf("expected dhcp state to remain disabled after bringing interface down")
+	}
+
+	ifs.eth.Up()
+
+	ifs.mu.Lock()
+	if ifs.mu.dhcp.enabled {
+		t.Errorf("expected dhcp state to remain disabled after restarting interface")
+	}
+
+	ifs.setDHCPStatusLocked(true)
+	if !ifs.mu.dhcp.enabled {
+		t.Errorf("expected dhcp state to become enabled after manually enabling it")
+	}
+	if !ifs.mu.dhcp.running() {
+		t.Errorf("expected dhcp state running")
+	}
+	ifs.mu.Unlock()
+}
+
+func TestWLANStaticIPConfiguration(t *testing.T) {
+	arena, err := eth.NewArena()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ns := &Netstack{
+		arena: arena,
+	}
+	ns.mu.ifStates = make(map[tcpip.NICID]*ifState)
+	ns.mu.stack = stack.New(
+		[]string{
+			ipv4.ProtocolName,
+			ipv6.ProtocolName,
+			arp.ProtocolName,
+		}, nil, stack.Options{})
+
+	ns.OnInterfacesChanged = func([]netstack.NetInterface) {}
+	ipAddressConfig := netstack.IpAddressConfig{}
+	addr := fidlconv.ToNetIpAddress(testIpAddress)
+	subnet := net.Subnet{Addr: addr, PrefixLen: 32}
+	ipAddressConfig.SetStaticIp(subnet)
+	d := deviceForAddEth(ethernet.Info{Features: ethernet.InfoFeatureWlan}, t)
+	ifs, err := ns.addEth("/fake/ethernet/device", netstack.InterfaceConfig{Name: testDeviceName, IpAddressConfig: ipAddressConfig}, &d)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if ifs.mu.nic.Addr != testIpAddress {
+		t.Errorf("expected static IP to be set when configured")
 	}
 }
 
