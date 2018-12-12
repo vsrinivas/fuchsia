@@ -492,9 +492,11 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
 class StoryControllerImpl::StopCall : public Operation<> {
  public:
   StopCall(StoryControllerImpl* const story_controller_impl,
+           const bool bulk,
            std::function<void()> done)
       : Operation("StoryControllerImpl::StopCall", done),
-        story_controller_impl_(story_controller_impl) {}
+        story_controller_impl_(story_controller_impl),
+        bulk_(bulk) {}
 
  private:
   void Run() override {
@@ -502,13 +504,66 @@ class StoryControllerImpl::StopCall : public Operation<> {
       Done();
       return;
     }
+
     story_controller_impl_->SetState(fuchsia::modular::StoryState::STOPPING);
 
-    story_controller_impl_->DetachView([this, weak_this = GetWeakPtr()] {
-                                         if (weak_this) {
-                                           StopStory();
-                                         }
-                                       });
+    // If this StopCall is part of a bulk operation of story provider that stops
+    // all stories at once, no DetachView() notification is given to the session
+    // shell.
+    if (bulk_) {
+      StopStory();
+      return;
+    }
+
+    // Invocation of DetachView() follows below.
+    //
+    // The following callback is scheduled twice, once as response from
+    // DetachView(), and again as a timeout.
+    //
+    // The shared bool did_run keeps track of the number of invocations, and
+    // allows to suppress the second one.
+    //
+    // The weak pointer is needed because the method invocation would not be
+    // cancelled when the OperationQueue holding this Operation instance is
+    // deleted, because the method is invoked on an instance outside of the
+    // instance that owns the OperationQueue that holds this Operation instance.
+    //
+    // The argument from_timeout informs whether the invocation was from the
+    // timeout or from the method callback. It's used only to log diagnostics.
+    // If we would not want to have this diagnostic, we could use this callback
+    // directly to schedule it twice. In that case, it would be important that
+    // passing it to DetachView() has copy semantics, as it does now passing it
+    // to the capture list of two separate lambdas, and not move semantics, i.e.
+    // that the argument is of DetachView() is NOT a fit::function but a
+    // std::function.
+    //
+    // Both weak and shared pointers are copyable, so we don't need to do
+    // anything to make this lambda copyable. (But it will be copied when used
+    // below.)
+    auto cont = [this, weak_this = GetWeakPtr(),
+                 did_run = std::make_shared<bool>(false),
+                 story_id = story_controller_impl_->story_id_](
+                     const bool from_timeout) {
+                  if (*did_run) {
+                    return;
+                  }
+
+                  *did_run = true;
+
+                  if (from_timeout) {
+                    FXL_LOG(INFO) << "DetachView() timed out: story_id=" << story_id;
+                  }
+
+                  if (weak_this) {
+                    StopStory();
+                  }
+                };
+
+    story_controller_impl_->DetachView([cont] { cont(false); });
+
+    async::PostDelayedTask(
+        async_get_default_dispatcher(), [cont] { cont(true); },
+        kBasicTimeout);
   }
 
   void StopStory() {
@@ -567,6 +622,10 @@ class StoryControllerImpl::StopCall : public Operation<> {
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
 
+  // Whether this Stop operation is part of stopping all stories at once. In
+  // that case, DetachView() is not called.
+  const bool bulk_;
+
   FXL_DISALLOW_COPY_AND_ASSIGN(StopCall);
 };
 
@@ -619,7 +678,8 @@ class StoryControllerImpl::StopModuleAndStoryIfEmptyCall : public Operation<> {
         story_controller_impl_->FindRunningModInfo(module_path_);
     if (running_mod_info &&
         story_controller_impl_->running_mod_infos_.size() == 1) {
-      operation_queue_.Add(new StopCall(story_controller_impl_, [flow] {}));
+      operation_queue_.Add(new StopCall(story_controller_impl_, false /* bulk */,
+                                        [flow] {}));
     } else {
       // Otherwise, stop this one module.
       operation_queue_.Add(new StopModuleCall(
@@ -1436,7 +1496,11 @@ void StoryControllerImpl::RequestStart() {
 }
 
 void StoryControllerImpl::Stop(StopCallback done) {
-  operation_queue_.Add(new StopCall(this, done));
+  operation_queue_.Add(new StopCall(this, false /* bulk */, done));
+}
+
+void StoryControllerImpl::StopBulk(const bool bulk, StopCallback done) {
+  operation_queue_.Add(new StopCall(this, bulk, done));
 }
 
 void StoryControllerImpl::TakeAndLoadSnapshot(

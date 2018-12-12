@@ -15,6 +15,11 @@ This test exercises the APIs exposed to the session shell:
 
 * Be notified through SessionShell.DetachView() of a story going away.
 
+* StoryRunner tolerates a session shell not responding fast enough to
+  SessionShell.DetachView().
+
+* On logout, no DetachView() calls are made for still running stories.
+
 The test code is invoked as a session shell from basemgr and executes a
 predefined sequence of steps, rather than to expose a UI to be driven by user
 interaction, as a session shell normally would. I.e. the test is implemented as a

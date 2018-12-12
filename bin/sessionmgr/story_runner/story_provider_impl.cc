@@ -49,11 +49,13 @@ class StoryProviderImpl::StopStoryCall : public Operation<> {
   using StoryRuntimesMap = std::map<std::string, struct StoryRuntimeContainer>;
 
   StopStoryCall(fidl::StringPtr story_id,
+                const bool bulk,
                 StoryRuntimesMap* const story_runtime_containers,
                 MessageQueueManager* const message_queue_manager,
                 ResultCall result_call)
       : Operation("StoryProviderImpl::DeleteStoryCall", std::move(result_call)),
         story_id_(story_id),
+        bulk_(bulk),
         story_runtime_containers_(story_runtime_containers),
         message_queue_manager_(message_queue_manager) {}
 
@@ -69,7 +71,8 @@ class StoryProviderImpl::StopStoryCall : public Operation<> {
     }
 
     FXL_DCHECK(i->second.controller_impl != nullptr);
-    i->second.controller_impl->Stop([this, flow] { CleanupRuntime(flow); });
+    i->second.controller_impl->StopBulk(bulk_,
+                                        [this, flow] { CleanupRuntime(flow); });
   }
 
   void CleanupRuntime(FlowToken flow) {
@@ -92,6 +95,7 @@ class StoryProviderImpl::StopStoryCall : public Operation<> {
 
  private:
   const fidl::StringPtr story_id_;
+  const bool bulk_;
   StoryRuntimesMap* const story_runtime_containers_;
   MessageQueueManager* const message_queue_manager_;
 
@@ -190,7 +194,7 @@ class StoryProviderImpl::StopAllStoriesCall : public Operation<> {
       // OperationQueue on which we're running will block.  Moving over to
       // fit::promise will allow us to observe cancellation.
       operations_.Add(new StopStoryCall(
-          it.first, &story_provider_impl_->story_runtime_containers_,
+          it.first, true /* bulk */, &story_provider_impl_->story_runtime_containers_,
           story_provider_impl_->component_context_info_.message_queue_manager,
           [flow] {}));
     }
@@ -608,7 +612,7 @@ void StoryProviderImpl::OnStoryStorageUpdated(
 
 void StoryProviderImpl::OnStoryStorageDeleted(fidl::StringPtr story_id) {
   operation_queue_.Add(new StopStoryCall(
-      story_id, &story_runtime_containers_,
+      story_id, false /* bulk */, &story_runtime_containers_,
       component_context_info_.message_queue_manager, [this, story_id] {
         for (const auto& i : watchers_.ptrs()) {
           (*i)->OnDelete(story_id);

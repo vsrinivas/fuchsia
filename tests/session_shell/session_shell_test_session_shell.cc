@@ -159,6 +159,10 @@ class SessionShellImpl : fuchsia::modular::SessionShell {
     on_detach_view_ = callback;
   }
 
+  void set_detach_delay(zx::duration detach_delay) {
+    detach_delay_ = detach_delay;
+  }
+
  private:
   // |SessionShell|
   void AttachView(fuchsia::modular::ViewIdentifier view_id,
@@ -171,12 +175,16 @@ class SessionShellImpl : fuchsia::modular::SessionShell {
   void DetachView(fuchsia::modular::ViewIdentifier view_id,
                   std::function<void()> done) override {
     on_detach_view_(std::move(view_id));
-    done();
+
+    // Used to simulate a sluggish shell that hits the timeout.
+    async::PostDelayedTask(async_get_default_dispatcher(),
+                           std::move(done), detach_delay_);
   }
 
   fidl::BindingSet<fuchsia::modular::SessionShell> bindings_;
   std::function<void(ViewId view_id)> on_attach_view_{[](ViewId) {}};
   std::function<void(ViewId view_id)> on_detach_view_{[](ViewId) {}};
+  zx::duration detach_delay_{};
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SessionShellImpl);
 };
@@ -205,11 +213,11 @@ class TestApp : public modular::testing::ComponentBase<void>
     // Until we use RequestStart() for the first time, there must be no calls on
     // the SessionShell service.
     session_shell_impl_.set_on_attach_view(
-        [](ViewId view_id) {
+        [](ViewId) {
           Fail("AttachView() called without RequestStart().");
         });
     session_shell_impl_.set_on_detach_view(
-        [](ViewId view_id) {
+        [](ViewId) {
           Fail("DetachView() called without RequestStart().");
         });
 
@@ -603,13 +611,10 @@ class TestApp : public modular::testing::ComponentBase<void>
 
   TestPoint story4_state_before_run_{"Story4 State before Run"};
   TestPoint story4_state_after_run_{"Story4 State after Run"};
-
   TestPoint story4_attach_view_{"Story4 attach View"};
-  TestPoint story4_detach_view_{"Story4 detach View"};
 
   void TestStory4_Run() {
     story_provider_->GetController("story4", story_controller_.NewRequest());
-
     story_controller_->GetInfo([this](fuchsia::modular::StoryInfo info,
                                       fuchsia::modular::StoryState state) {
       story_info_ = std::move(info);
@@ -630,8 +635,25 @@ class TestApp : public modular::testing::ComponentBase<void>
                                       fuchsia::modular::StoryState state) {
       if (state == fuchsia::modular::StoryState::RUNNING) {
         story4_state_after_run_.Pass();
-        TestStory4_DeleteStory();
+        TestStory4_Stop();
       }
+    });
+  }
+
+  TestPoint story4_detach_view_{"Story4 detach View"};
+  TestPoint story4_stop_{"Story4 Stop"};
+
+  void TestStory4_Stop() {
+    session_shell_impl_.set_on_detach_view(
+        [this](ViewId) {
+          story4_detach_view_.Pass();
+        });
+
+    story_controller_->Stop([this] {
+      TeardownStoryController();
+      story4_stop_.Pass();
+
+      TestStory4_DeleteStory();
     });
   }
 
@@ -640,11 +662,6 @@ class TestApp : public modular::testing::ComponentBase<void>
   void TestStory4_DeleteStory() {
     puppet_master_->DeleteStory(story_info_.id,
                                 [this] { story4_delete_.Pass(); });
-
-    session_shell_impl_.set_on_detach_view(
-        [this](ViewId) {
-          story4_detach_view_.Pass();
-        });
 
     story_provider_->GetStoryInfo(
         story_info_.id, [this](fuchsia::modular::StoryInfoPtr info) {
@@ -659,6 +676,185 @@ class TestApp : public modular::testing::ComponentBase<void>
     if (!info) {
       story4_info_after_delete_.Pass();
     }
+
+    TestStory5();
+  }
+
+  // Test Case Story5:
+  //
+  // Create a story and start it with RequestStart() rather than Start().
+  //
+  // Verify that, when the story is stopped, a request for
+  // SessionShell.DetachView() is received, and if the request is not answered,
+  // the Stop() request proceeds anyway.
+
+  TestPoint story5_create_{"Story5 Create"};
+
+  void TestStory5() {
+    puppet_master_->ControlStory("story5", story_puppet_master_.NewRequest());
+
+    fuchsia::modular::AddMod add_mod;
+    add_mod.mod_name.push_back("mod1");
+    add_mod.intent.handler = kCommonNullModule;
+
+    fuchsia::modular::StoryCommand command;
+    command.set_add_mod(std::move(add_mod));
+
+    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+    commands.push_back(std::move(command));
+
+    story_puppet_master_->Enqueue(std::move(commands));
+    story_puppet_master_->Execute(
+        [this](fuchsia::modular::ExecuteResult result) {
+          story5_create_.Pass();
+          TestStory5_Run();
+        });
+  }
+
+  TestPoint story5_state_before_run_{"Story5 State before Run"};
+  TestPoint story5_state_after_run_{"Story5 State after Run"};
+
+  TestPoint story5_attach_view_{"Story5 attach View"};
+
+  void TestStory5_Run() {
+    story_provider_->GetController("story5", story_controller_.NewRequest());
+
+    story_controller_->GetInfo([this](fuchsia::modular::StoryInfo info,
+                                      fuchsia::modular::StoryState state) {
+      story_info_ = std::move(info);
+      if (state == fuchsia::modular::StoryState::STOPPED) {
+        story5_state_before_run_.Pass();
+      }
+    });
+
+    // Start and show the new story using RequestStart().
+    story_controller_->RequestStart();
+
+    session_shell_impl_.set_on_attach_view(
+        [this](ViewId) {
+          story5_attach_view_.Pass();
+        });
+
+    story_controller_->GetInfo([this](fuchsia::modular::StoryInfo info,
+                                      fuchsia::modular::StoryState state) {
+      if (state == fuchsia::modular::StoryState::RUNNING) {
+        story5_state_after_run_.Pass();
+        TestStory5_Stop();
+      }
+    });
+  }
+
+  TestPoint story5_stop_{"Story5 Stop"};
+
+  void TestStory5_Stop() {
+    // Ignore the detach view. The delay is larger than the timeout for the
+    // whole test configured in dev_base_shell.cc, so an attempt to wait for
+    // this timeout would fail the whole test.
+    session_shell_impl_.set_detach_delay(
+        zx::msec(modular::testing::kTestTimeoutMilliseconds * 2));
+    session_shell_impl_.set_on_detach_view([](ViewId) {});
+
+    story_controller_->Stop([this] {
+      TeardownStoryController();
+      story5_stop_.Pass();
+
+      TestStory5_DeleteStory();
+    });
+  }
+
+  TestPoint story5_delete_{"Story5 Delete"};
+
+  void TestStory5_DeleteStory() {
+    puppet_master_->DeleteStory(story_info_.id,
+                                [this] { story5_delete_.Pass(); });
+
+    story_provider_->GetStoryInfo(
+        story_info_.id, [this](fuchsia::modular::StoryInfoPtr info) {
+          TestStory5_InfoAfterDeleteIsNull(std::move(info));
+        });
+
+  }
+
+  TestPoint story5_info_after_delete_{"Story5 Info after Delete is null"};
+
+  void TestStory5_InfoAfterDeleteIsNull(fuchsia::modular::StoryInfoPtr info) {
+    if (!info) {
+      story5_info_after_delete_.Pass();
+    }
+
+    TestStory6();
+  }
+
+  // Test Case Story6:
+  //
+  // Create a story and start it with RequestStart() rather than Start().
+  //
+  // Verify that, when the story is NOT stopped when the SessionShell is stopped
+  // (such as at Logout) NO request for SessionShell.DetachView() is received.
+
+  TestPoint story6_create_{"Story6 Create"};
+
+  void TestStory6() {
+    puppet_master_->ControlStory("story6", story_puppet_master_.NewRequest());
+
+    fuchsia::modular::AddMod add_mod;
+    add_mod.mod_name.push_back("mod1");
+    add_mod.intent.handler = kCommonNullModule;
+
+    fuchsia::modular::StoryCommand command;
+    command.set_add_mod(std::move(add_mod));
+
+    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+    commands.push_back(std::move(command));
+
+    story_puppet_master_->Enqueue(std::move(commands));
+    story_puppet_master_->Execute(
+        [this](fuchsia::modular::ExecuteResult result) {
+          story6_create_.Pass();
+          TestStory6_Run();
+        });
+  }
+
+  TestPoint story6_state_before_run_{"Story6 State before Run"};
+  TestPoint story6_state_after_run_{"Story6 State after Run"};
+
+  TestPoint story6_attach_view_{"Story6 attach View"};
+
+  void TestStory6_Run() {
+    story_provider_->GetController("story6", story_controller_.NewRequest());
+
+    story_controller_->GetInfo([this](fuchsia::modular::StoryInfo info,
+                                      fuchsia::modular::StoryState state) {
+      story_info_ = std::move(info);
+      if (state == fuchsia::modular::StoryState::STOPPED) {
+        story6_state_before_run_.Pass();
+      }
+    });
+
+    // Start and show the new story using RequestStart().
+    story_controller_->RequestStart();
+
+    session_shell_impl_.set_on_attach_view(
+        [this](ViewId) {
+          story6_attach_view_.Pass();
+        });
+
+    story_controller_->GetInfo([this](fuchsia::modular::StoryInfo info,
+                                      fuchsia::modular::StoryState state) {
+      if (state == fuchsia::modular::StoryState::RUNNING) {
+        story6_state_after_run_.Pass();
+        TestStory6_Logout();
+      }
+    });
+  }
+
+  void TestStory6_Logout() {
+    // If we get a DetachView() call during logout, that's a failure.
+    session_shell_impl_.set_detach_delay(zx::sec(0));
+    session_shell_impl_.set_on_detach_view(
+        [](ViewId) {
+          Fail("DetachView() Received on Logout");
+        });
 
     Signal(modular::testing::kTestShutdown);
   }

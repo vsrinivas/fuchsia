@@ -165,11 +165,17 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
       fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request,
       std::function<void(std::string /* entity_reference */)> callback);
 
-  // |StoryController|
-  // NOTE: Public so that StoryProviderImpl can call it.
-  void Stop(StopCallback done) override;
+  // Stops the story as part of a story provider operation. The story provider
+  // can indicate whether this is part of an operation where all stories are
+  // stopped at once in order to stop the session shell, indicated by bulk being
+  // true. Happens at logout or when session shells are swapped. In that
+  // situation, DetachView() is not called for this story.
+  void StopBulk(bool bulk, StopCallback done);
 
  private:
+  // |StoryController|
+  void Stop(StopCallback done) override;
+
   // |StoryController|
   void GetInfo(GetInfoCallback callback) override;
   void Start(fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
