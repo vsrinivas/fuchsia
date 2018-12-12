@@ -28,7 +28,7 @@ constexpr const char* kDevmgrPath = "/boot/bin/devmgr";
 
 namespace devmgr_launcher {
 
-zx_status_t Launch(const Args& args, zx::job* devmgr_job, zx::channel* devfs_root) {
+zx_status_t Launch(Args args, zx::job* devmgr_job, zx::channel* devfs_root) {
     // Create containing job (and copy to send to devmgr)
     zx::job job, job_copy;
     zx_status_t status = zx::job::create(*zx::job::default_job(), 0, &job);
@@ -83,24 +83,29 @@ zx_status_t Launch(const Args& args, zx::job* devmgr_job, zx::channel* devfs_roo
     }
     argv.push_back(nullptr);
 
-    fdio_spawn_action_t actions[] = {
-        {
-            .action = FDIO_SPAWN_ACTION_SET_NAME,
-            .name = { .data = "test-devmgr" },
-        },
-        {
+    fbl::Vector<fdio_spawn_action_t> actions;
+    actions.push_back(fdio_spawn_action_t{
+        .action = FDIO_SPAWN_ACTION_SET_NAME,
+        .name = { .data = "test-devmgr" },
+    });
+    actions.push_back(fdio_spawn_action_t{
+        .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+        .h = { .id = PA_HND(PA_JOB_DEFAULT, 0), .handle = job_copy.release() },
+    });
+    actions.push_back(fdio_spawn_action_t{
+        .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+        .h = { .id = DEVMGR_LAUNCHER_DEVFS_ROOT_HND, .handle = devfs_server.release() },
+    });
+    actions.push_back(fdio_spawn_action_t{
+        .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+        .ns = { .prefix = "/boot", .handle = bootfs_client.release() },
+    });
+    if (args.bootdata) {
+        actions.push_back(fdio_spawn_action_t{
             .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-            .h = { .id = PA_HND(PA_JOB_DEFAULT, 0), .handle = job_copy.release() },
-        },
-        {
-            .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-            .h = { .id = DEVMGR_LAUNCHER_DEVFS_ROOT_HND, .handle = devfs_server.release() },
-        },
-        {
-            .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
-            .ns = { .prefix = "/boot", .handle = bootfs_client.release() },
-        },
-    };
+            .h = { .id = PA_HND(PA_VMO_BOOTDATA, 0), .handle = args.bootdata.release() },
+        });
+    }
 
     zx::process new_process;
     status = fdio_spawn_etc(job.get(),
@@ -108,8 +113,8 @@ zx_status_t Launch(const Args& args, zx::job* devmgr_job, zx::channel* devfs_roo
                             kDevmgrPath,
                             argv.get(),
                             nullptr /* environ */,
-                            fbl::count_of(actions),
-                            actions,
+                            actions.size(),
+                            actions.get(),
                             new_process.reset_and_get_address(),
                             nullptr /* err_msg */);
     if (status != ZX_OK) {

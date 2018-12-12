@@ -159,7 +159,7 @@ int main(int argc, char** argv) {
     auto args = IsolatedDevmgr::DefaultArgs();
 
     fbl::unique_ptr<IsolatedDevmgr> devmgr;
-    zx_status_t status = IsolatedDevmgr::Create(args, &devmgr);
+    zx_status_t status = IsolatedDevmgr::Create(std::move(args), &devmgr);
     if (status != ZX_OK) {
         printf("driver-tests: failed to create isolated devmgr\n");
         return -1;

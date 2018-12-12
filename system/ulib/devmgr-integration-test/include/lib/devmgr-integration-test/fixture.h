@@ -25,7 +25,7 @@ public:
 
     // Launch a new isolated devmgr.  The instance will be destroyed when
     // |*out|'s dtor runs.
-    static zx_status_t Create(const devmgr_launcher::Args& args,
+    static zx_status_t Create(devmgr_launcher::Args args,
                               fbl::unique_ptr<IsolatedDevmgr>* out);
 
     // Get a fd to the root of the isolate devmgr's devfs.  This fd
