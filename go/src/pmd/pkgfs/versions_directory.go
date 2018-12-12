@@ -38,6 +38,18 @@ func (d *versionsDirectory) Open(name string, flags fs.OpenFlags) (fs.File, fs.D
 		return nil, nil, nil, fs.ErrNotFound
 	}
 
+	found := false
+	roots := d.fs.index.PackageBlobs()
+	for _, root := range roots {
+		if root == parts[0] {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return nil, nil, nil, fs.ErrNotFound
+	}
+
 	pd, err := newPackageDirFromBlob(parts[0], d.fs)
 	if err != nil {
 		return nil, nil, nil, err
@@ -55,7 +67,7 @@ func (d *versionsDirectory) Open(name string, flags fs.OpenFlags) (fs.File, fs.D
 }
 
 func (d *versionsDirectory) Read() ([]fs.Dirent, error) {
-	roots := d.fs.index.AllPackageBlobs()
+	roots := d.fs.index.PackageBlobs()
 
 	dents := make([]fs.Dirent, 0, len(roots))
 	for _, m := range roots {
