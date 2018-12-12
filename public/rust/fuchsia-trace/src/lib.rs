@@ -150,7 +150,7 @@ impl<'a> ArgValue for &'a str {
 #[macro_export]
 macro_rules! instant {
     ($category:expr, $name:expr, $scope:expr $(, $key:expr => $val:expr)*) => {
-        $crate::instant(cstr!($category), cstr!($name), $scope,
+        $crate::instant($crate::cstr!($category), $crate::cstr!($name), $scope,
             &[$($crate::ArgValue::of($key, $val)),*])
     }
 }
@@ -201,7 +201,7 @@ pub fn instant(category: &'static CStr, name: &'static CStr, scope: Scope, args:
 #[macro_export]
 macro_rules! counter {
     ($category:expr, $name:expr, $counter_id:expr $(, $key:expr => $val:expr)*) => {
-        $crate::counter(cstr!($category), cstr!($name), $counter_id,
+        $crate::counter($crate::cstr!($category), $crate::cstr!($name), $counter_id,
             &[$($crate::ArgValue::of($key, $val)),*])
     }
 }
@@ -324,7 +324,7 @@ impl DurationScope {
 #[macro_export]
 macro_rules! duration {
     ($category:expr, $name:expr $(, $key:expr => $val:expr)*) => {
-        $crate::duration(cstr!($category), cstr!($name),
+        $crate::duration($crate::cstr!($category), $crate::cstr!($name),
             &[$($crate::ArgValue::of($key, $val)),*])
     }
 }
