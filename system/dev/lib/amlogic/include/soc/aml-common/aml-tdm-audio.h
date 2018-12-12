@@ -102,7 +102,7 @@ private:
 
     ~AmlTdmDevice() = default;
 
-    /* Get the resgister block offset for our ddr block */
+    /* Get the register block offset for our ddr block */
     static zx_off_t GetFrddrBase(aml_frddr_t ch) {
         switch (ch) {
         case FRDDR_A:
@@ -139,7 +139,7 @@ private:
     void TdmOutDisable();
     void TdmOutEnable();
 
-    /* Get the resgister block offset for our ddr block */
+    /* Get the register block offset for our ddr block */
     zx_off_t GetFrddrOffset(zx_off_t off) {
         return frddr_base_ + off;
     }

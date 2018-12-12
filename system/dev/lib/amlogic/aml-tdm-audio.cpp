@@ -161,7 +161,7 @@ zx_status_t AmlTdmDevice::SetBuffer(zx_paddr_t buf, size_t len) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    //Write32 the start and end pointers.  Each fetch is 64-bits, so end poitner
+    //Write32 the start and end pointers.  Each fetch is 64-bits, so end pointer
     //    is pointer to the last 64-bit fetch (inclusive)
     mmio_.Write32(static_cast<uint32_t>(buf), GetFrddrOffset(FRDDR_START_ADDR_OFFS));
     mmio_.Write32(static_cast<uint32_t>(buf + len - 8),

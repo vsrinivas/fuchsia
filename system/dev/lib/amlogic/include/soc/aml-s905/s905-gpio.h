@@ -70,7 +70,7 @@
 #define S905_PERIPHS_PIN_MUX_8 0x34
 #define S905_PERIPHS_PIN_MUX_9 0x35
 
-// GPIO AO registers live in a seperate register bank.
+// GPIO AO registers live in a separate register bank.
 #define S905_AO_RTI_PIN_MUX_REG  0x05
 #define S905_AO_RTI_PIN_MUX_REG2 0x06
 #define S905_AO_GPIO_OEN_OUT     0x09   // OEN: [13:0], OUT: [25:16]

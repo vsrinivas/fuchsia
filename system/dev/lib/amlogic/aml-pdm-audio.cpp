@@ -98,7 +98,7 @@ void AmlPdmDevice::InitRegs() {
                         (0x02 << 8),                //STATUS2 source is ddr position
                         GetToddrOffset(TODDR_CTRL1_OFFS));
 
-    //*To keep things simple, we are using the same clock sourse for both the
+    //*To keep things simple, we are using the same clock source for both the
     // pdm sysclk and dclk.  Sysclk needs to be ~100-200MHz per AmLogic recommendations.
     // dclk is osr*fs
     //*Sysclk must be configured, enabled, and PDM audio clock gated prior to
@@ -212,7 +212,7 @@ zx_status_t AmlPdmDevice::SetBuffer(zx_paddr_t buf, size_t len) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    //Write32 the start and end pointers.  Each fetch is 64-bits, so end poitner
+    //Write32 the start and end pointers.  Each fetch is 64-bits, so end pointer
     //    is pointer to the last 64-bit fetch (inclusive)
     audio_mmio_.Write32(static_cast<uint32_t>(buf), GetToddrOffset(TODDR_START_ADDR_OFFS));
     audio_mmio_.Write32(static_cast<uint32_t>(buf), GetToddrOffset(TODDR_INIT_ADDR_OFFS));

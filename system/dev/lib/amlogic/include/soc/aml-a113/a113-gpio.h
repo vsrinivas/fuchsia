@@ -61,7 +61,7 @@
 #define A113_PERIPHS_PIN_MUX_C 0x2c
 #define A113_PERIPHS_PIN_MUX_D 0x2d
 
-// GPIO AO registers live in a seperate register bank.
+// GPIO AO registers live in a separate register bank.
 #define A113_AO_RTI_PIN_MUX_REG0 0x05
 #define A113_AO_RTI_PIN_MUX_REG1 0x06
 #define A113_AO_GPIO_O_EN        0x08

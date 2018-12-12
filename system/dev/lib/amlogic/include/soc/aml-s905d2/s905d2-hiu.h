@@ -15,7 +15,7 @@
 #define SDM_FRACTIONALITY         ((uint32_t)16384)
 #define S905D2_FIXED_PLL_RATE     ((uint32_t)2000000000)
 
-/* Intial configuration values for PLLs.  These were taken
+/* Initial configuration values for PLLs.  These were taken
     from the AmLogic SDK.  No documentation available to
     understand settings at this time beyond the multiply/divide
     ratios.

@@ -79,7 +79,7 @@ private:
 
     void ConfigFilters();
 
-    /* Get the resgister block offset for our ddr block */
+    /* Get the register block offset for our ddr block */
     static zx_off_t GetToddrBase(aml_toddr_t ch) {
         switch (ch) {
         case TODDR_A:
@@ -102,7 +102,7 @@ private:
     void PdmInDisable();
     void PdmInEnable();
 
-    /* Get the resgister block offset for our ddr block */
+    /* Get the register block offset for our ddr block */
     zx_off_t GetToddrOffset(zx_off_t off) {
         return toddr_base_ + off;
     }

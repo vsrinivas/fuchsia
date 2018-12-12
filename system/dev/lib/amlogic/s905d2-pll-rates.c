@@ -38,8 +38,8 @@ static const hhi_pll_rate_t s905d2_hiu_pll_rates[] = {
     HHI_PLL_RATE(3072000000, 1, 128, 0, 0), /*DCO=3072M*/
 };
 
-/* Find frequence in the rate table and return pointer to the entry.
-   At this point this assumes even integer requencies. This will be expanded later
+/* Find frequency in the rate table and return pointer to the entry.
+   At this point this assumes even integer frequencies. This will be expanded later
    to handle fractional cases.
 */
 zx_status_t s905d2_pll_fetch_rate(aml_pll_dev_t* pll_dev, uint64_t freq,

@@ -100,7 +100,7 @@
 #define S912_GPIOX_PIN_START       89
 #define S912_GPIOCLK_PIN_START     108
 
-// GPIO AO registers live in a seperate register bank.
+// GPIO AO registers live in a separate register bank.
 #define S912_AO_RTI_PIN_MUX_REG  0x05
 #define S912_AO_RTI_PIN_MUX_REG2 0x06
 #define S912_AO_GPIO_OEN_OUT     0x09   // OEN: [9:0], OUT: [25:16]

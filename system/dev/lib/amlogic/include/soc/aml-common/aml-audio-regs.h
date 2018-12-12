@@ -89,7 +89,7 @@ __BEGIN_CDECLS
 
 #define EE_AUDIO_ARB_CTRL             (0xa0 << 2)
 
-//TDMOUT control regs (common to three seperate units)
+//TDMOUT control regs (common to three separate units)
 #define TDMOUT_CTRL0_OFFS     (0x00)
 #define TDMOUT_CTRL1_OFFS     (0x04)
 #define TDMOUT_SWAP_OFFS      (0x08)

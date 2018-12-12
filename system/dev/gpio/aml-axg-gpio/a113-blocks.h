@@ -196,7 +196,7 @@ static aml_gpio_block_t a113_gpio_blocks[] = {
     },
 
     // GPIO AO Block
-    // NOTE: The GPIO AO block has a seperate control block than the other
+    // NOTE: The GPIO AO block has a separate control block than the other
     //       GPIO blocks.
     {
         .start_pin = (A113_GPIOAO_START + 0),

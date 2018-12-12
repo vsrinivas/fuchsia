@@ -227,7 +227,7 @@
 #define T931_WIFI_LPO_CLK               T931_GPIOX(16)
 #define T931_WIFI_LPO_CLK_FN            1 // PWM_E
 
-// Alternate Funcitons for UART
+// Alternate Functions for UART
 #define T931_UART_A_TX                  T931_GPIOX(12)
 #define T931_UART_A_TX_FN               1
 #define T931_UART_A_RX                  T931_GPIOX(13)

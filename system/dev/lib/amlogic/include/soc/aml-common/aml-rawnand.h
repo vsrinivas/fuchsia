@@ -85,7 +85,7 @@ enum {
     AML_ECC_BCH60_1K,
 
     /*
-     * Short mode is special only for page 0 when inplement booting
+     * Short mode is special only for page 0 when implement booting
      * from nand. it means that using a small size(384B/8=48B) of ecc page
      * with a fixed ecc mode. rom code use short mode to read page0 for
      * getting nand parameter such as ecc, scramber and so on.
