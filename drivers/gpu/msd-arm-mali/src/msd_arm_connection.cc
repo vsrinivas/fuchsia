@@ -218,7 +218,7 @@ MsdArmConnection::MsdArmConnection(msd_client_id_t client_id, Owner* owner)
 {
 }
 
-MsdArmConnection::~MsdArmConnection() {}
+MsdArmConnection::~MsdArmConnection() { owner_->DeregisterConnection(); }
 
 static bool access_flags_from_flags(uint64_t mapping_flags, bool cache_coherent,
                                     uint64_t* flags_out)
@@ -491,6 +491,37 @@ void MsdArmConnection::MarkDestroyed()
 
     // Don't send any completion messages after termination.
     token_ = 0;
+}
+
+bool MsdArmConnection::GetVirtualAddressFromPhysical(uint64_t address,
+                                                     uint64_t* virtual_address_out)
+{
+    std::lock_guard<std::mutex> lock(address_lock_);
+    uint64_t page_address = address & ~(PAGE_SIZE - 1);
+    for (auto& mapping : gpu_mappings_) {
+        for (const std::unique_ptr<magma::PlatformBusMapper::BusMapping>& bus_mapping :
+             mapping.second->bus_mappings()) {
+            const std::vector<uint64_t>& page_list = bus_mapping->Get();
+            for (uint32_t i = 0; i < page_list.size(); i++) {
+                if (page_address == page_list[i]) {
+                    // Offset in bytes from the start of the vmo.
+                    uint64_t buffer_offset = (i + bus_mapping->page_offset()) * PAGE_SIZE;
+                    // Offset in bytes of the start of the mapping from the start of the
+                    // vmo.
+                    uint64_t mapping_offset = mapping.second->page_offset() * PAGE_SIZE;
+                    // The bus mapping shouldn't contain memory outside the gpu
+                    // offset.
+                    DASSERT(buffer_offset >= mapping_offset);
+                    uint64_t offset_in_page = address - page_address;
+                    *virtual_address_out =
+                        mapping.second->gpu_va() + buffer_offset - mapping_offset + offset_in_page;
+                    // Only return one virtual address.
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
 }
 
 magma_status_t msd_connection_map_buffer_gpu(msd_connection_t* abi_connection,

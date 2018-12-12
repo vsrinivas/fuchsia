@@ -62,6 +62,15 @@ private:
     std::vector<std::shared_ptr<MsdArmAtom>> atoms_list_;
 };
 
+class DeregisterConnectionOwner : public FakeConnectionOwner {
+public:
+    void set_connection(std::weak_ptr<MsdArmConnection> connection) { connection_ = connection; }
+    void DeregisterConnection() override { EXPECT_TRUE(connection_.expired()); }
+
+private:
+    std::weak_ptr<MsdArmConnection> connection_;
+};
+
 void* g_test_token;
 uint32_t g_test_data_size;
 magma_arm_mali_status g_status;
@@ -441,6 +450,56 @@ public:
         EXPECT_EQ(0u, buffer->flushed_region_start_bytes_);
         EXPECT_EQ(0u, buffer->flushed_region_end_bytes_);
     }
+
+    void PhysicalToVirtual()
+    {
+        FakeConnectionOwner owner;
+        auto connection = MsdArmConnection::Create(0, &owner);
+        EXPECT_TRUE(connection);
+        constexpr uint64_t kBufferSize = PAGE_SIZE * 100;
+
+        std::shared_ptr<MsdArmBuffer> buffer(
+            MsdArmBuffer::Create(kBufferSize, "test-buffer").release());
+        EXPECT_TRUE(buffer);
+
+        constexpr uint64_t kGpuOffset = 1100;
+        constexpr uint32_t kMappingOffsetInPages = 1;
+
+        auto mapping = std::make_unique<GpuMapping>(kGpuOffset * PAGE_SIZE, kMappingOffsetInPages,
+                                                    PAGE_SIZE * 5, 0, connection.get(), buffer);
+        EXPECT_TRUE(connection->AddMapping(std::move(mapping)));
+        EXPECT_TRUE(connection->CommitMemoryForBuffer(buffer.get(), kMappingOffsetInPages, 2));
+
+        auto bus_mapping = owner.GetBusMapper()->MapPageRangeBus(buffer->platform_buffer(), 0, 100);
+        constexpr uint32_t kPageOffsetIntoBuffer = 2;
+        uint64_t physical = bus_mapping->Get()[kPageOffsetIntoBuffer] + 300;
+        uint64_t virtual_address;
+        EXPECT_TRUE(connection->GetVirtualAddressFromPhysical(physical, &virtual_address));
+        EXPECT_EQ((kGpuOffset + kPageOffsetIntoBuffer - kMappingOffsetInPages) * PAGE_SIZE + 300,
+                  virtual_address);
+
+        // Don't check uncommitted pages inside mapping.
+        physical = bus_mapping->Get()[4] + 300;
+        EXPECT_FALSE(connection->GetVirtualAddressFromPhysical(physical, &virtual_address));
+
+        // Don't check pages after mapping.
+        physical = bus_mapping->Get()[6] + 300;
+        EXPECT_FALSE(connection->GetVirtualAddressFromPhysical(physical, &virtual_address));
+
+        // Don't check pages before mapping.
+        physical = bus_mapping->Get()[0] + 300;
+        EXPECT_FALSE(connection->GetVirtualAddressFromPhysical(physical, &virtual_address));
+    }
+
+    void DeregisterConnection()
+    {
+        DeregisterConnectionOwner owner;
+        {
+            auto connection = MsdArmConnection::Create(0, &owner);
+            EXPECT_TRUE(connection);
+            owner.set_connection(connection);
+        }
+    }
 };
 
 TEST(TestConnection, MapUnmap)
@@ -495,4 +554,16 @@ TEST(TestConnection, FlushUncachedRegion)
 {
     TestConnection test;
     test.FlushUncachedRegion();
+}
+
+TEST(TestConnection, PhysicalToVirtual)
+{
+    TestConnection test;
+    test.PhysicalToVirtual();
+}
+
+TEST(TestConnection, DeregisterConnection)
+{
+    TestConnection test;
+    test.DeregisterConnection();
 }

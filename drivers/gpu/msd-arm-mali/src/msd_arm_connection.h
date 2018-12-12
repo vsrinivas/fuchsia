@@ -39,6 +39,9 @@ public:
         }
         virtual magma::PlatformBusMapper* GetBusMapper() = 0;
         virtual bool IsProtectedModeSupported() { return false; }
+        // Called after the connection's destructor has been called, so the
+        // refcount should be 0.
+        virtual void DeregisterConnection() {}
     };
 
     static std::shared_ptr<MsdArmConnection> Create(msd_client_id_t client_id, Owner* owner);
@@ -82,6 +85,10 @@ public:
 
     bool PageInMemory(uint64_t address);
     bool CommitMemoryForBuffer(MsdArmBuffer* buffer, uint64_t page_offset, uint64_t page_count);
+
+    // This is slow because it iterates over all pages for all mappings. It should be used only
+    // rarely.
+    bool GetVirtualAddressFromPhysical(uint64_t address, uint64_t* virtual_address_out);
 
 private:
     static const uint32_t kMagic = 0x636f6e6e; // "conn" (Connection)

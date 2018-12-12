@@ -74,6 +74,11 @@ public:
     void Remove() { owner_->RemoveMapping(addr_); }
     bool UpdateCommittedMemory() { return owner_->UpdateCommittedMemory(this); }
 
+    const std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>>& bus_mappings()
+    {
+        return bus_mappings_;
+    }
+
 private:
     friend class TestConnection;
     const uint64_t addr_;

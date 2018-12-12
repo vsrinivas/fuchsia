@@ -102,6 +102,7 @@ public:
     }
     magma::PlatformBusMapper* GetBusMapper() override { return bus_mapper_.get(); }
     bool IsProtectedModeSupported() override;
+    void DeregisterConnection() override;
 
     magma_status_t QueryInfo(uint64_t id, uint64_t* value_out);
 
@@ -217,6 +218,10 @@ private:
     uint64_t cycle_counter_refcount_ = 0;
 
     std::unique_ptr<PerformanceCounters> perf_counters_;
+
+    std::mutex connection_list_mutex_;
+    MAGMA_GUARDED(connection_list_mutex_)
+    std::vector<std::weak_ptr<MsdArmConnection>> connection_list_;
 };
 
 #endif // MSD_ARM_DEVICE_H

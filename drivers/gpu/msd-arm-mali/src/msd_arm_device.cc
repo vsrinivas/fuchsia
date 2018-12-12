@@ -231,7 +231,20 @@ bool MsdArmDevice::InitializeHardware()
 
 std::shared_ptr<MsdArmConnection> MsdArmDevice::Open(msd_client_id_t client_id)
 {
-    return MsdArmConnection::Create(client_id, this);
+    auto connection = MsdArmConnection::Create(client_id, this);
+    if (connection) {
+        std::lock_guard<std::mutex> lock(connection_list_mutex_);
+        connection_list_.push_back(connection);
+    }
+    return connection;
+}
+
+void MsdArmDevice::DeregisterConnection()
+{
+    std::lock_guard<std::mutex> lock(connection_list_mutex_);
+    connection_list_.erase(std::remove_if(connection_list_.begin(), connection_list_.end(),
+                                          [](auto& connection) { return connection.expired(); }),
+                           connection_list_.end());
 }
 
 void MsdArmDevice::DumpStatusToLog() { EnqueueDeviceRequest(std::make_unique<DumpRequest>()); }
@@ -345,6 +358,22 @@ int MsdArmDevice::GpuInterruptThreadLoop()
 
         if (irq_status.reg_value()) {
             magma::log(magma::LOG_WARNING, "Got unexpected GPU IRQ %d\n", irq_status.reg_value());
+            uint64_t fault_addr =
+                registers::GpuFaultAddress::Get().ReadFrom(register_io_.get()).reg_value();
+            {
+                std::lock_guard<std::mutex> lock(connection_list_mutex_);
+                for (auto& connection : connection_list_) {
+                    auto locked = connection.lock();
+                    if (locked) {
+                        uint64_t virtual_address;
+                        if (locked->GetVirtualAddressFromPhysical(fault_addr, &virtual_address))
+                            magma::log(magma::LOG_WARNING,
+                                       "Client %lx has VA %lx mapped to PA %lx\n",
+                                       locked->client_id(), virtual_address, fault_addr);
+                    }
+                }
+            }
+
             // Perform the GPU dump immediately, because clearing the irq flags might cause another
             // GPU fault to be generated, which could overwrite the earlier data.
             std::string dump;
