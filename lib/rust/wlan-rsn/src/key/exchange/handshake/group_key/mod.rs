@@ -84,12 +84,12 @@ impl<'a> GroupKeyHandshakeFrame<'a> {
                     frame.key_info.encrypted_key_data(),
                     "encrypted data bit must be set in 1st message of Group Key Handshake"
                 );
-                ensure!(
-                    frame.version == eapol::ProtocolVersion::Ieee802dot1x2001 as u8
-                        || is_zero(&frame.key_iv[..]),
-                    "invalid IV in 1st message of Group Key Handshake with version: {}",
-                    frame.version
-                );
+
+                // IEEE Std 802.11-2016, 12.7.7.2 requires the key frame's IV to be zero'ed when
+                // using 802.1X-2004. Some routers, such as Linksys, violate this constraint.
+                // The IV is not used in the Group Key Handshake, thus, ignoring this requirement is
+                // safe.
+
                 // RSC is currently not taken into account.
             }
             // IEEE Std 802.11-2016, 12.7.7.3
@@ -172,4 +172,70 @@ impl GroupKey {
 
 fn is_zero(slice: &[u8]) -> bool {
     slice.iter().all(|&x| x == 0)
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::rsna::{test_util, NegotiatedRsne};
+
+    fn verify_group_key_frame<'a>(
+        key_frame: &'a eapol::KeyFrame,
+        role: Role,
+    ) -> Result<GroupKeyHandshakeFrame<'a>, failure::Error> {
+        let rsne = NegotiatedRsne::from_rsne(&test_util::get_s_rsne()).expect("error getting RNSE");
+        let frame = VerifiedKeyFrame::from_key_frame(&key_frame, &role, &rsne, 0)
+            .expect("couldn't verify frame");
+        GroupKeyHandshakeFrame::from_verified(frame, role)
+    }
+
+    fn fake_key_frame() -> eapol::KeyFrame {
+        eapol::KeyFrame {
+            version: eapol::ProtocolVersion::Ieee802dot1x2004 as u8,
+            packet_type: eapol::PacketType::Key as u8,
+            descriptor_type: eapol::KeyDescriptor::Ieee802dot11 as u8,
+            key_info: eapol::KeyInformation(0b01001110000010),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn zeroed_iv_8021x2004() {
+        let key_frame = eapol::KeyFrame {
+            version: eapol::ProtocolVersion::Ieee802dot1x2004 as u8,
+            ..fake_key_frame()
+        };
+        verify_group_key_frame(&key_frame, Role::Supplicant).expect("error verifying group frame");
+    }
+
+    #[test]
+    fn random_iv_8021x2004() {
+        let key_frame = eapol::KeyFrame {
+            version: eapol::ProtocolVersion::Ieee802dot1x2004 as u8,
+            // IEEE does not allow random IV in combination with 802.1X-2004, however, not
+            key_iv: [1; 16],
+            ..fake_key_frame()
+        };
+        verify_group_key_frame(&key_frame, Role::Supplicant).expect("error verifying group frame");
+    }
+
+    #[test]
+    fn zeroed_iv_8021x2001() {
+        let key_frame = eapol::KeyFrame {
+            version: eapol::ProtocolVersion::Ieee802dot1x2001 as u8,
+            ..fake_key_frame()
+        };
+        verify_group_key_frame(&key_frame, Role::Supplicant).expect("error verifying group frame");
+    }
+
+    #[test]
+    fn random_iv_8021x2001() {
+        let key_frame = eapol::KeyFrame {
+            version: eapol::ProtocolVersion::Ieee802dot1x2001 as u8,
+            key_iv: [1; 16],
+            ..fake_key_frame()
+        };
+        verify_group_key_frame(&key_frame, Role::Supplicant).expect("error verifying group frame");
+    }
 }
