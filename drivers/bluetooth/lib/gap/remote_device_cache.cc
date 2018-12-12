@@ -36,27 +36,12 @@ DeviceAddress GetAliasAddress(const DeviceAddress& address) {
 RemoteDevice* RemoteDeviceCache::NewDevice(const DeviceAddress& address,
                                            bool connectable) {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
-  if (FindIdByAddress(address)) {
-    bt_log(WARN, "gap", "tried to create new device with existing address: %s",
-           address.ToString().c_str());
-    return nullptr;
+  auto* const device =
+      InsertDeviceRecord(fxl::GenerateUUID(), address, connectable);
+  if (device) {
+    UpdateExpiry(*device);
+    NotifyDeviceUpdated(*device);
   }
-
-  auto* device = new RemoteDevice(
-      fit::bind_member(this, &RemoteDeviceCache::NotifyDeviceUpdated),
-      fit::bind_member(this, &RemoteDeviceCache::UpdateExpiry),
-      fit::bind_member(this, &RemoteDeviceCache::MakeDualMode),
-      fxl::GenerateUUID(), address, connectable);
-  // Note: we must emplace() the RemoteDeviceRecord, because it doesn't support
-  // copy or move.
-  devices_.emplace(
-      std::piecewise_construct, std::forward_as_tuple(device->identifier()),
-      std::forward_as_tuple(std::unique_ptr<RemoteDevice>(device),
-                            [this, device] { RemoveDevice(device); }));
-
-  address_map_[device->address()] = device->identifier();
-  UpdateExpiry(*device);
-  NotifyDeviceUpdated(*device);
   return device;
 }
 
@@ -74,21 +59,6 @@ bool RemoteDeviceCache::AddBondedDevice(const std::string& identifier,
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   ZX_DEBUG_ASSERT(!bond_data.identity_address ||
                   address == *bond_data.identity_address);
-
-  if (devices_.find(identifier) != devices_.end()) {
-    bt_log(WARN, "gap",
-           "tried to initialize bonded device with existing ID: %s",
-           identifier.c_str());
-    return false;
-  }
-
-  if (FindIdByAddress(address)) {
-    bt_log(WARN, "gap",
-           "tried to initialize bonded device with existing address: %s",
-           address.ToString().c_str());
-    return false;
-  }
-
   ZX_DEBUG_ASSERT(address.type() != DeviceAddress::Type::kLEAnonymous);
 
   // |bond_data| must contain either a LTK or CSRK for LE Security Mode 1 or 2.
@@ -99,26 +69,17 @@ bool RemoteDeviceCache::AddBondedDevice(const std::string& identifier,
     return false;
   }
 
-  auto* device = new RemoteDevice(
-      fit::bind_member(this, &RemoteDeviceCache::NotifyDeviceUpdated),
-      fit::bind_member(this, &RemoteDeviceCache::UpdateExpiry),
-      fit::bind_member(this, &RemoteDeviceCache::MakeDualMode), identifier,
-      address, true);
+  auto* device = InsertDeviceRecord(identifier, address, true);
+  if (!device) {
+    return false;
+  }
 
   // A bonded device must have its identity known.
   device->set_identity_known(true);
-  // Note: we must emplace() the RemoteDeviceRecord, because it doesn't support
-  // copy or move.
-  devices_.emplace(
-      std::piecewise_construct, std::forward_as_tuple(device->identifier()),
-      std::forward_as_tuple(std::unique_ptr<RemoteDevice>(device),
-                            [this, device] { RemoveDevice(device); }));
-  address_map_[device->address()] = device->identifier();
 
   device->MutLe().SetBondData(bond_data);
   ZX_DEBUG_ASSERT(!device->temporary());
   ZX_DEBUG_ASSERT(device->le()->bonded());
-  ZX_DEBUG_ASSERT(device->identity_known());
 
   // Add the device to the resolving list if it has an IRK.
   if (bond_data.irk) {
@@ -153,21 +114,26 @@ bool RemoteDeviceCache::StoreLowEnergyBond(const std::string& identifier,
   }
 
   if (bond_data.identity_address) {
-    auto iter = address_map_.find(*bond_data.identity_address);
-    if (iter == address_map_.end()) {
+    auto existing_id = FindIdByAddress(*bond_data.identity_address);
+    if (!existing_id) {
       // Map the new address to |device|. We leave old addresses that map to
       // this device in the cache in case there are any pending controller
       // procedures that expect them.
       // TODO(armansito): Maybe expire the old address after a while?
       address_map_[*bond_data.identity_address] = identifier;
-    } else if (iter->second != identifier) {
-      bt_log(TRACE, "gap-le", "identity address belongs to another device!");
+    } else if (existing_id->get() != identifier) {
+      bt_log(TRACE, "gap-le",
+             "identity address %s for device %s belongs to another device %s!",
+             bond_data.identity_address->ToString().c_str(), identifier.c_str(),
+             existing_id->get().c_str());
       return false;
     }
     // We have either created a new mapping or the identity address already
     // maps to this device.
   }
 
+  // TODO(BT-619): Check that we're not downgrading the security level before
+  // overwriting the bond.
   device->MutLe().SetBondData(bond_data);
   ZX_DEBUG_ASSERT(!device->temporary());
   ZX_DEBUG_ASSERT(device->le()->bonded());
@@ -181,6 +147,27 @@ bool RemoteDeviceCache::StoreLowEnergyBond(const std::string& identifier,
   if (device->identity_known()) {
     NotifyDeviceBonded(*device);
   }
+  return true;
+}
+
+bool RemoteDeviceCache::StoreBrEdrBond(const common::DeviceAddress& address,
+                                       const sm::LTK& link_key) {
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(address.type() == common::DeviceAddress::Type::kBREDR);
+  auto* device = FindDeviceByAddress(address);
+  if (!device) {
+    bt_log(TRACE, "gap-bredr", "failed to store bond for unknown device: %s",
+           address.ToString().c_str());
+    return false;
+  }
+
+  // TODO(BT-619): Check that we're not downgrading the security level before
+  // overwriting the bond.
+  device->MutBrEdr().SetLinkKey(link_key);
+  ZX_DEBUG_ASSERT(!device->temporary());
+  ZX_DEBUG_ASSERT(device->bredr()->bonded());
+
+  NotifyDeviceBonded(*device);
   return true;
 }
 
@@ -217,6 +204,35 @@ RemoteDevice* RemoteDeviceCache::FindDeviceByAddress(
 }
 
 // Private methods below.
+
+RemoteDevice* RemoteDeviceCache::InsertDeviceRecord(
+    const std::string& identifier, const common::DeviceAddress& address,
+    bool connectable) {
+  if (FindIdByAddress(address)) {
+    bt_log(WARN, "gap", "tried to insert device with existing address: %s",
+           address.ToString().c_str());
+    return nullptr;
+  }
+
+  std::unique_ptr<RemoteDevice> device(new RemoteDevice(
+      fit::bind_member(this, &RemoteDeviceCache::NotifyDeviceUpdated),
+      fit::bind_member(this, &RemoteDeviceCache::UpdateExpiry),
+      fit::bind_member(this, &RemoteDeviceCache::MakeDualMode), identifier,
+      address, connectable));
+  // Note: we must construct the RemoteDeviceRecord in-place, because it doesn't
+  // support copy or move.
+  auto [iter, inserted] =
+      devices_.try_emplace(device->identifier(), std::move(device),
+                           [this, d = device.get()] { RemoveDevice(d); });
+  if (!inserted) {
+    bt_log(WARN, "gap", "tried to insert device with existing ID: %s",
+           identifier.c_str());
+    return nullptr;
+  }
+
+  address_map_[address] = identifier;
+  return iter->second.device();
+}
 
 void RemoteDeviceCache::NotifyDeviceBonded(const RemoteDevice& device) {
   ZX_DEBUG_ASSERT(devices_.find(device.identifier()) != devices_.end());

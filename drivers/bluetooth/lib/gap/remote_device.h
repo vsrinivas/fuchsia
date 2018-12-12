@@ -101,8 +101,8 @@ class RemoteDevice final {
     void SetPreferredConnectionParameters(
         const hci::LEPreferredConnectionParameters& value);
 
-    // Stores LE bonding data and makes this device "boded". Marks the device as
-    // non-temporary if necessary.
+    // Stores LE bonding data and makes this device "bonded." Marks the device
+    // as non-temporary if necessary.
     void SetBondData(const sm::PairingData& bond_data);
 
     // TODO(armansito): Store most recently seen random address and identity
@@ -138,6 +138,7 @@ class RemoteDevice final {
     bool connected() const {
       return connection_state() == ConnectionState::kConnected;
     }
+    bool bonded() const { return link_key_.HasValue(); }
 
     // Returns the device's BD_ADDR.
     const common::DeviceAddress& address() const { return address_; }
@@ -164,6 +165,8 @@ class RemoteDevice final {
       return eir_buffer_.view(0, eir_len_);
     }
 
+    const common::Optional<sm::LTK>& link_key() const { return link_key_; }
+
     // Setters:
 
     // Updates the inquiry data for this device and notifies listeners. These
@@ -176,6 +179,11 @@ class RemoteDevice final {
 
     // Updates the connection state and notifies listeners if necessary.
     void SetConnectionState(ConnectionState state);
+
+    // Stores a link key resulting from Secure Simple Pairing and makes this
+    // device "bonded." Marks the device as non-temporary if necessary. All
+    // BR/EDR link keys are "long term" (reusable across sessions).
+    void SetLinkKey(const sm::LTK& link_key);
 
     // TODO(armansito): Store BD_ADDR here, once RemoteDeviceCache can index
     // devices by multiple addresses.
@@ -201,8 +209,8 @@ class RemoteDevice final {
     // TODO(jamuraa): Parse more of the Extended Inquiry Response fields
     size_t eir_len_;
     common::DynamicByteBuffer eir_buffer_;
+    common::Optional<sm::LTK> link_key_;
 
-    // TODO(armansito): Store link key.
     // TODO(armansito): Store traditional service UUIDs.
   };
 
@@ -246,8 +254,7 @@ class RemoteDevice final {
 
   // Returns true if this device has been bonded over BR/EDR or LE transports.
   bool bonded() const {
-    // TODO(armansito): Check BR/EDR state here.
-    return (le() && le()->bonded());
+    return (le() && le()->bonded()) || (bredr() && bredr()->bonded());
   }
 
   // Returns the most recently observed RSSI for this remote device. Returns

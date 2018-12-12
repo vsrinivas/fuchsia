@@ -89,7 +89,12 @@ class RemoteDeviceCache final {
   bool StoreLowEnergyBond(const std::string& identifier,
                           const sm::PairingData& bond_data);
 
-  // TODO(armansito): Add StoreBrEdrBond() method.
+  // Update a device identified by BD_ADDR |address| with a new BR/EDR link key.
+  // The device will be considered "bonded" and the bonded callback notified. If
+  // the device is already bonded then the link key will be updated. Returns
+  // false if the address does not match that of a known device.
+  bool StoreBrEdrBond(const common::DeviceAddress& address,
+                      const sm::LTK& link_key);
 
   // Returns the remote device with identifier |identifier|. Returns nullptr if
   // |identifier| is not recognized.
@@ -131,7 +136,6 @@ class RemoteDeviceCache final {
   using RemoteDeviceMap =
       std::unordered_map<std::string, std::unique_ptr<RemoteDevice>>;
 
- private:
   class RemoteDeviceRecord final {
    public:
     RemoteDeviceRecord(std::unique_ptr<RemoteDevice> device,
@@ -155,6 +159,14 @@ class RemoteDeviceCache final {
     std::unique_ptr<RemoteDevice> device_;
     async::TaskClosure removal_task_;
   };
+
+  // Create and track a record of a remote device with a given |identifier|,
+  // |address|, and connectability (|connectable|). Returns a pointer to the
+  // inserted device or nullptr if |identifier| or |address| already exists in
+  // the cache.
+  RemoteDevice* InsertDeviceRecord(const std::string& identifier,
+                                   const common::DeviceAddress& address,
+                                   bool connectable);
 
   // Notifies interested parties that |device| has bonded
   // |device| must already exist in the cache.

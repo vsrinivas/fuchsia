@@ -265,6 +265,18 @@ bool RemoteDevice::BrEdrData::SetEirData(const common::ByteBuffer& eir) {
   return changed;
 }
 
+void RemoteDevice::BrEdrData::SetLinkKey(const sm::LTK& link_key) {
+  ZX_DEBUG_ASSERT(dev_->connectable());
+
+  // Make sure the device is non-temporary.
+  dev_->TryMakeNonTemporary();
+
+  // Storing the key establishes the bond.
+  link_key_ = link_key;
+
+  dev_->NotifyListeners();
+}
+
 RemoteDevice::RemoteDevice(DeviceCallback notify_listeners_callback,
                            DeviceCallback update_expiry_callback,
                            DeviceCallback dual_mode_callback,

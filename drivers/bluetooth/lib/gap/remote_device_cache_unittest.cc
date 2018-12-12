@@ -55,6 +55,8 @@ const auto kEirData = kAdvData;
 const btlib::sm::LTK kLTK;
 const btlib::sm::Key kKey{};
 
+const btlib::sm::LTK kBrEdrKey;
+
 // Phone (Networking)
 const common::DeviceClass kTestDeviceClass({0x06, 0x02, 0x02});
 
@@ -502,7 +504,26 @@ TEST_F(GAP_RemoteDeviceCacheTest_BondingTest,
   EXPECT_TRUE(dev->temporary());
 }
 
-// StoreLowEnergyBond success if it contains an identity address that already
+// StoreLowEnergyBond fails if the new identity is the address of a "different"
+// (another device record with a distinct ID) BR/EDR device.
+TEST_F(GAP_RemoteDeviceCacheTest_BondingTest,
+       StoreLowEnergyBondWithNewIdentityMatchingExistingBrEdrDevice) {
+  ASSERT_TRUE(NewDevice(kAddrBrEdr, true));
+  ASSERT_TRUE(NewDevice(kAddrLeRandom, true));
+  ASSERT_FALSE(device()->identity_known());
+
+  sm::PairingData data;
+  data.ltk = kLTK;
+  // new identity address is same as another device's BR/EDR identity
+  data.identity_address = kAddrLeAlias;
+  const auto old_address = device()->address();
+  ASSERT_EQ(device(), cache()->FindDeviceByAddress(old_address));
+  ASSERT_NE(device(), cache()->FindDeviceByAddress(*data.identity_address));
+  EXPECT_FALSE(cache()->StoreLowEnergyBond(device()->identifier(), data));
+  EXPECT_FALSE(device()->identity_known());
+}
+
+// StoreLowEnergyBond succeeds if it contains an identity address that already
 // matches the target device.
 TEST_F(GAP_RemoteDeviceCacheTest_BondingTest,
        StoreLowEnergyBondWithExistingMatchingIdentity) {
@@ -557,6 +578,55 @@ TEST_F(GAP_RemoteDeviceCacheTest_BondingTest,
   // device.
   DeviceAddress rpa = sm::util::GenerateRpa(data.irk->value());
   EXPECT_EQ(device(), cache()->FindDeviceByAddress(rpa));
+}
+
+TEST_F(GAP_RemoteDeviceCacheTest_BondingTest,
+       StoreBrEdrBondWithUnknownAddress) {
+  ASSERT_EQ(nullptr, cache()->FindDeviceByAddress(kAddrBrEdr));
+  EXPECT_FALSE(cache()->StoreBrEdrBond(kAddrBrEdr, kBrEdrKey));
+}
+
+TEST_F(GAP_RemoteDeviceCacheTest_BondingTest, StoreBrEdrBond) {
+  ASSERT_TRUE(NewDevice(kAddrBrEdr, true));
+  ASSERT_EQ(device(), cache()->FindDeviceByAddress(kAddrBrEdr));
+  ASSERT_TRUE(device()->temporary());
+  ASSERT_FALSE(device()->bonded());
+  ASSERT_TRUE(device()->bredr());
+  ASSERT_FALSE(device()->bredr()->bonded());
+
+  EXPECT_TRUE(cache()->StoreBrEdrBond(kAddrBrEdr, kBrEdrKey));
+
+  EXPECT_FALSE(device()->temporary());
+  EXPECT_TRUE(device()->bonded());
+  EXPECT_TRUE(device()->bredr()->bonded());
+  EXPECT_TRUE(device()->bredr()->link_key());
+  EXPECT_EQ(kBrEdrKey, *device()->bredr()->link_key());
+}
+
+TEST_F(GAP_RemoteDeviceCacheTest_BondingTest, StoreBondsForBothTech) {
+  ASSERT_TRUE(NewDevice(kAddrBrEdr, true));
+  ASSERT_EQ(device(), cache()->FindDeviceByAddress(kAddrBrEdr));
+  ASSERT_TRUE(device()->temporary());
+  ASSERT_FALSE(device()->bonded());
+
+  device()->MutLe().SetAdvertisingData(kTestRSSI, kAdvData);
+  ASSERT_EQ(TechnologyType::kDualMode, device()->technology());
+
+  // Without Secure Connections cross-transport key generation, bonding on one
+  // technology does not bond on the other.
+  ASSERT_FALSE(kBrEdrKey.security().secure_connections());
+  EXPECT_TRUE(cache()->StoreBrEdrBond(kAddrBrEdr, kBrEdrKey));
+  EXPECT_TRUE(device()->bonded());
+  EXPECT_FALSE(device()->le()->bonded());
+
+  sm::PairingData data;
+  data.ltk = kLTK;
+  EXPECT_TRUE(cache()->StoreLowEnergyBond(device()->identifier(), data));
+
+  EXPECT_FALSE(device()->temporary());
+  EXPECT_TRUE(device()->bonded());
+  EXPECT_TRUE(device()->bredr()->bonded());
+  EXPECT_TRUE(device()->le()->bonded());
 }
 
 template <const DeviceAddress* DevAddr>
