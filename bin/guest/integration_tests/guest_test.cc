@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fxl/logging.h>
 #include <lib/fxl/strings/string_printf.h>
 
 #include "garnet/bin/guest/integration_tests/guest_test.h"
@@ -25,6 +26,7 @@ zx_status_t GuestWaitForShellReady(EnclosedGuest& enclosed_guest) {
     }
     return ZX_OK;
   }
+  FXL_LOG(ERROR) << "Failed to wait for shell";
   return ZX_ERR_TIMED_OUT;
 }
 
@@ -33,7 +35,7 @@ zx_status_t GuestWaitForAppmgrReady(EnclosedGuest& enclosed_guest) {
     std::string ps;
     zx_status_t status = enclosed_guest.Execute("ps", &ps);
     if (status != ZX_OK) {
-      return status;
+      continue;
     }
     auto appmgr = ps.find("appmgr");
     if (appmgr == std::string::npos) {
@@ -42,21 +44,22 @@ zx_status_t GuestWaitForAppmgrReady(EnclosedGuest& enclosed_guest) {
     }
     return ZX_OK;
   }
+  FXL_LOG(ERROR) << "Failed to wait for appmgr";
   return ZX_ERR_TIMED_OUT;
 }
 
 zx_status_t GuestRun(EnclosedGuest& enclosed_guest, const std::string& cmx,
                      const std::string& args, std::string* result) {
-  std::string message =
-      fxl::StringPrintf("/pkgfs/packages/run/0/bin/run %s#%s %s", kTestUtilsUrl,
-                        cmx.c_str(), args.c_str());
+  std::string cmd = fxl::StringPrintf("/bin/run %s#%s %s", kTestUtilsUrl,
+                                      cmx.c_str(), args.c_str());
   // Even after checking for pkgfs to start up, the guest might not be ready to
   // accept run commands. We loop here to give it some time and reduce test
   // flakiness.
   for (size_t i = 0; i != kNumRetries; ++i) {
     std::string output;
-    zx_status_t status = enclosed_guest.Execute(message, &output);
+    zx_status_t status = enclosed_guest.Execute(cmd, &output);
     if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to run `" << cmd << "` " << status;
       return status;
     }
     auto not_found = output.find("run: not found");

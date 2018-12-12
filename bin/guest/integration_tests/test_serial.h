@@ -13,12 +13,16 @@ class TestSerial {
  public:
   zx_status_t Start(zx::socket socket);
 
+  // Executes a command and waits for a response. Uses a header and a footer to
+  // ensure the command finished executing and to capture output. Blocks on the
+  // serial socket being writable and readable at various points and on the
+  // command completing.
   zx_status_t ExecuteBlocking(const std::string& command,
                               std::string* result = nullptr);
 
+ private:
   zx_status_t SendBlocking(const std::string& message);
 
- private:
   zx_status_t WaitForMarker(const std::string& marker,
                             std::string* result = nullptr);
 
