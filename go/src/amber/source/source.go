@@ -559,10 +559,16 @@ func (f *Source) SetEnabled(enabled bool) {
 // try to start a refresh token update. This should not be called while holding
 // the struct mutex as it will be locked during this call
 func (f *Source) updateRefreshToken() {
-	if !f.Enabled() || f.cfg.Config.Oauth2Config == nil {
+	if !f.Enabled() {
 		return
 	}
 
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	if f.cfg.Config.Oauth2Config == nil {
+		return
+	}
 	go defaultTokenLoader.ReadToken(f.processTokenUpdate, f.cfg.Config.Oauth2Config.ClientId)
 }
 
