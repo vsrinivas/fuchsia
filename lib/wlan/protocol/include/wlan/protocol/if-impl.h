@@ -54,6 +54,7 @@ typedef struct wlanif_bss_description {
     uint32_t dtim_period;
     uint64_t timestamp;
     uint64_t local_time;
+    uint16_t cap;
     // Concatenation of SuppRates and ExtSuppRates - MSB indicates basic rate
     // IEEE Std 802.11-2016, 9.4.2.3 & 9.4.2.13
     uint8_t rates[WLAN_MAC_MAX_RATES];

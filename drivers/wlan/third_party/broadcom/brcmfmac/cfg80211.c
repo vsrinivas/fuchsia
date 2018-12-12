@@ -2551,6 +2551,7 @@ static void brcmf_return_scan_result(struct wiphy* wiphy, uint16_t channel, cons
     result.bss.dtim_period = 0;
     result.bss.timestamp = 0;
     result.bss.local_time = 0;
+    result.bss.cap = capability;
     result.bss.chan.primary = (uint8_t)channel;
     result.bss.chan.cbw = CBW20; // TODO(cphoenix): Don't hard-code this.
     result.bss.rssi_dbm = (uint8_t)(min(0, max(-255, rssi_dbm)));

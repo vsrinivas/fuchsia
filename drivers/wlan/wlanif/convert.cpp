@@ -9,6 +9,7 @@
 #include <wlan/common/element.h>
 #include <wlan/common/logging.h>
 #include <wlan/protocol/mac.h>
+#include <bitset>
 
 namespace wlanif {
 
@@ -137,6 +138,9 @@ void ConvertBSSDescription(wlanif_bss_description_t* wlanif_desc,
     // local_time
     wlanif_desc->local_time = fidl_desc.local_time;
 
+    // capability
+    wlanif_desc->cap = ConvertCapabilityInfo(fidl_desc.cap);
+
     // basic_rate_set and op_rate_set
     ConvertRateSets(wlanif_desc, fidl_desc);
 
@@ -250,6 +254,9 @@ void ConvertBSSDescription(wlan_mlme::BSSDescription* fidl_desc,
     // local_time
     fidl_desc->local_time = wlanif_desc.local_time;
 
+    // capability
+    fidl_desc->cap = ConvertCapabilityInfo(wlanif_desc.cap);
+
     // basic_rate_set and op_rate_set
     ConvertRateSets(&fidl_desc->basic_rate_set, &fidl_desc->op_rate_set, wlanif_desc);
 
@@ -267,6 +274,48 @@ void ConvertBSSDescription(wlan_mlme::BSSDescription* fidl_desc,
 
     // rsni_dbh
     fidl_desc->rsni_dbh = wlanif_desc.rsni_dbh;
+}
+
+// IEEE Std 802.11-2016, 9.4.1.4
+uint16_t ConvertCapabilityInfo(wlan_mlme::CapabilityInfo cap_info) {
+    std::bitset<16> cap(0);
+    if (cap_info.ess) { cap.set(0); }
+    if (cap_info.ibss) { cap.set(1); }
+    if (cap_info.cf_pollable) { cap.set(2); }
+    if (cap_info.cf_poll_req) { cap.set(3); }
+    if (cap_info.privacy) { cap.set(4); }
+    if (cap_info.short_preamble) { cap.set(5); }
+    // bit 6-7 reserved
+    if (cap_info.spectrum_mgmt) { cap.set(8); }
+    if (cap_info.qos) { cap.set(9); }
+    if (cap_info.short_slot_time) { cap.set(10); }
+    if (cap_info.apsd) { cap.set(11); }
+    if (cap_info.radio_msmt) { cap.set(12); }
+    // bit 13 reserved
+    if (cap_info.delayed_block_ack) { cap.set(14); }
+    if (cap_info.immediate_block_ack) { cap.set(15); }
+    return static_cast<uint16_t>(cap.to_ulong());
+}
+
+wlan_mlme::CapabilityInfo ConvertCapabilityInfo(uint16_t capability) {
+    std::bitset<16> cap(capability);
+    wlan_mlme::CapabilityInfo cap_info;
+    cap_info.ess = cap.test(0);
+    cap_info.ibss = cap.test(1);
+    cap_info.cf_pollable = cap.test(2);
+    cap_info.cf_poll_req = cap.test(3);
+    cap_info.privacy = cap.test(4);
+    cap_info.short_preamble = cap.test(5);
+    // bit 6-7 reserved
+    cap_info.spectrum_mgmt = cap.test(8);
+    cap_info.qos = cap.test(9);
+    cap_info.short_slot_time = cap.test(10);
+    cap_info.apsd = cap.test(11);
+    cap_info.radio_msmt = cap.test(12);
+    // bit 13 reserved
+    cap_info.delayed_block_ack = cap.test(14);
+    cap_info.immediate_block_ack = cap.test(15);
+    return cap_info;
 }
 
 uint8_t ConvertAuthType(wlan_mlme::AuthenticationTypes auth_type) {

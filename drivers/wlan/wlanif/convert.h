@@ -23,6 +23,8 @@ void ConvertBSSDescription(wlanif_bss_description_t* wlanif_bss_desc,
                            const wlan_mlme::BSSDescription& fidl_bss_desc);
 void ConvertBSSDescription(wlan_mlme::BSSDescription* fidl_bss_desc,
                            const wlanif_bss_description_t& wlanif_bss_desc);
+uint16_t ConvertCapabilityInfo(wlan_mlme::CapabilityInfo cap_info);
+wlan_mlme::CapabilityInfo ConvertCapabilityInfo(uint16_t capability);
 uint8_t ConvertAuthType(wlan_mlme::AuthenticationTypes auth_type);
 uint16_t ConvertDeauthReasonCode(wlan_mlme::ReasonCode reason);
 uint8_t ConvertKeyType(wlan_mlme::KeyType key_type);
