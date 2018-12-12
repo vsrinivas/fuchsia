@@ -33,6 +33,8 @@ int main(int argc, const char** argv) {
   FXL_LOG(WARNING)
       << "If scenic is already running on your system you "
          "will probably want to kill it before invoking this tool.";
+  FXL_LOG(WARNING)
+      << "Use the newer present_view tool for launching apps with Views V2.";
 
   const auto& positional_args = command_line.positional_args();
   if (positional_args.empty()) {

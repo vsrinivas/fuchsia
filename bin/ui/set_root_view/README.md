@@ -21,6 +21,13 @@ When a view is presented, it takes over the entire display. To switch between
 presentations, type Control-Alt-'[' or Control-Alt-']'.
 
 Alternatively, kill any other view-providing processes like so:
+
 ```shell
 $ killall spinning_square_view
 ```
+
+## Views V2
+
+Use the
+[`present_view`](https://fuchsia.googlesource.com/garnet/+/master/bin/ui/present_view/README.md)
+tool to launch an application via the Views v2 interface.
