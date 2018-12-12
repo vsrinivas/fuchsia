@@ -33,11 +33,15 @@ public:
     // Methods required by the TestProtocol mixin
     void TestSetOutputSocket(zx::socket socket);
     void TestGetOutputSocket(zx::socket* out_socket);
+    void TestGetChannel(zx::channel* out_channel);
     void TestSetTestFunc(const test_func_t* func);
     zx_status_t TestRunTests(test_report_t* out_report);
     void TestDestroy();
+
+    void SetChannel(zx::channel c);
 private:
     zx::socket output_;
+    zx::channel channel_;
     test_func_t test_func_;
 };
 
@@ -72,6 +76,10 @@ void TestDevice::TestGetOutputSocket(zx::socket* out_socket) {
     output_.duplicate(ZX_RIGHT_SAME_RIGHTS, out_socket);
 }
 
+void TestDevice::TestGetChannel(zx::channel* out_channel) {
+    *out_channel = std::move(channel_);
+}
+
 void TestDevice::TestSetTestFunc(const test_func_t* func) {
     test_func_ = *func;
 }
@@ -91,6 +99,17 @@ static zx_status_t fidl_SetOutputSocket(void* ctx, zx_handle_t raw_socket) {
     zx::socket socket(raw_socket);
     auto dev = static_cast<TestDevice*>(ctx);
     dev->TestSetOutputSocket(std::move(socket));
+    return ZX_OK;
+}
+
+void TestDevice::SetChannel(zx::channel c) {
+    channel_ = std::move(c);
+}
+
+static zx_status_t fidl_SetChannel(void* ctx, zx_handle_t raw_channel) {
+    zx::channel channel(raw_channel);
+    auto dev = static_cast<TestDevice*>(ctx);
+    dev->SetChannel(std::move(channel));
     return ZX_OK;
 }
 
@@ -117,6 +136,7 @@ static zx_status_t fidl_Destroy(void* ctx) {
 zx_status_t TestDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     static const fuchsia_device_test_Device_ops_t kOps = {
         .SetOutputSocket = fidl_SetOutputSocket,
+        .SetChannel = fidl_SetChannel,
         .RunTests = fidl_RunTests,
         .Destroy = fidl_Destroy,
     };

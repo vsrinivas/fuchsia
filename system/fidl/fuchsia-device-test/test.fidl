@@ -24,6 +24,10 @@ struct TestReport {
 interface Device {
     /// Set a socket to stream test output to.
     SetOutputSocket(handle<socket> sock);
+
+    /// Set a channel for the test to use in a test-specific manner.
+    SetChannel(handle<channel> chan);
+
     /// Execute the tests for this device.  Test output will be streamed to
     /// the socket set by SetOutputSocket().  Returns the status from the test.
     RunTests() -> (zx.status status, TestReport report);

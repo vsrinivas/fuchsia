@@ -25,6 +25,9 @@ interface Test {
     /// Gets test output socket.
     GetOutputSocket() -> (handle<socket> h);
 
+    /// Gets test channel.  This has per-test meaning.
+    GetChannel() -> (handle<channel>? h);
+
     /// Sets test function.
     SetTestFunc(TestFunc func) -> ();
 
