@@ -36,17 +36,15 @@ int main(int argc, char* argv[]) {
 
   fbl::unique_ptr<trace::TraceProvider> provider1;
   bool already_started;
-  if (!trace::TraceProvider::CreateSynchronously(dispatcher, "provider1",
-                                                 &provider1,
-                                                 &already_started)) {
+  if (!trace::TraceProvider::CreateSynchronously(
+          dispatcher, "provider1", &provider1, &already_started)) {
     FXL_LOG(ERROR) << "Failed to create provider1";
     return EXIT_FAILURE;
   }
 
   fbl::unique_ptr<trace::TraceProvider> provider2;
-  if (!trace::TraceProvider::CreateSynchronously(dispatcher, "provider2",
-                                                 &provider2,
-                                                 &already_started)) {
+  if (!trace::TraceProvider::CreateSynchronously(
+          dispatcher, "provider2", &provider2, &already_started)) {
     FXL_LOG(ERROR) << "Failed to create provider2";
     return EXIT_FAILURE;
   }
@@ -63,11 +61,10 @@ int main(int argc, char* argv[]) {
 
   // The test harness will signal us it's done by closing its side
   // of the eventpair.
-  async::Wait wait{event.get(), ZX_EVENTPAIR_PEER_CLOSED,
-      [&loop] (async_dispatcher_t* dispatcher,
-               async::Wait* wait,
-               zx_status_t status,
-               const zx_packet_signal_t* signal) {
+  async::Wait wait{
+      event.get(), ZX_EVENTPAIR_PEER_CLOSED,
+      [&loop](async_dispatcher_t* dispatcher, async::Wait* wait,
+              zx_status_t status, const zx_packet_signal_t* signal) {
         if (signal->observed & ZX_EVENTPAIR_PEER_CLOSED) {
           loop.Quit();
         }

@@ -25,17 +25,11 @@ static void RunAndVerify(const char* tspec_path) {
   ASSERT_TRUE(VerifyTspec(g_context.get(), tspec_path, kOutputFilePath));
 }
 
-TEST(Oneshot, FillBuffer) {
-  RunAndVerify("/pkg/data/oneshot.tspec");
-}
+TEST(Oneshot, FillBuffer) { RunAndVerify("/pkg/data/oneshot.tspec"); }
 
-TEST(Circular, FillBuffer) {
-  RunAndVerify("/pkg/data/circular.tspec");
-}
+TEST(Circular, FillBuffer) { RunAndVerify("/pkg/data/circular.tspec"); }
 
-TEST(Streaming, FillBuffer) {
-  RunAndVerify("/pkg/data/streaming.tspec");
-}
+TEST(Streaming, FillBuffer) { RunAndVerify("/pkg/data/streaming.tspec"); }
 
 // A class for adding an extra provider to the test.
 
@@ -47,7 +41,7 @@ class ExtraProvider : public ::testing::Test {
   const zx::process& provider_process() const { return provider_process_; }
 
   void SetUp() override {
-    zx::job job{}; // -> default job
+    zx::job job{};  // -> default job
     argv_.push_back(GetProgramPath());
     AppendLoggingArgs(&argv_, "");
     zx::eventpair their_event;
@@ -57,27 +51,27 @@ class ExtraProvider : public ::testing::Test {
                      << zx_status_get_string(status);
       return;
     }
-    status = SpawnProgram(job, argv_, their_event.release(),
-                          &provider_process_);
+    status =
+        SpawnProgram(job, argv_, their_event.release(), &provider_process_);
     if (status != ZX_OK) {
       TearDown();
       return;
     }
     // Wait for the provider to be ready.
     zx_wait_item_t wait_items[2] = {
-      {
-        .handle = provider_process_.get(),
-        .waitfor = ZX_PROCESS_TERMINATED,
-        .pending = 0,
-      },
-      {
-        .handle = our_event_.get(),
-        .waitfor = ZX_EVENTPAIR_SIGNALED | ZX_EVENTPAIR_PEER_CLOSED,
-        .pending = 0,
-      },
+        {
+            .handle = provider_process_.get(),
+            .waitfor = ZX_PROCESS_TERMINATED,
+            .pending = 0,
+        },
+        {
+            .handle = our_event_.get(),
+            .waitfor = ZX_EVENTPAIR_SIGNALED | ZX_EVENTPAIR_PEER_CLOSED,
+            .pending = 0,
+        },
     };
     status = our_event_.wait_many(
-      &wait_items[0], 2, zx::deadline_after(zx::duration(kTestTimeout)));
+        &wait_items[0], 2, zx::deadline_after(zx::duration(kTestTimeout)));
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed waiting for provider process to start\n";
       TearDown();
@@ -89,8 +83,7 @@ class ExtraProvider : public ::testing::Test {
     if (provider_process_.is_valid()) {
       our_event_.reset();
       int exit_code;
-      auto status = WaitAndGetExitCode(argv_[0], provider_process_,
-                                       &exit_code);
+      auto status = WaitAndGetExitCode(argv_[0], provider_process_, &exit_code);
       EXPECT_EQ(status, ZX_OK);
       if (status == ZX_OK) {
         EXPECT_EQ(exit_code, 0);
@@ -133,8 +126,7 @@ TEST(TwoProvidersTwoEngines, Test) {
 
 // Provide our own main so that --verbose,etc. are recognized.
 // This is useful because our verbosity is passed on to each test.
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv) {
   auto cl = fxl::CommandLineFromArgcArgv(argc, argv);
   if (!fxl::SetLogSettingsFromCommandLine(cl))
     return EXIT_FAILURE;

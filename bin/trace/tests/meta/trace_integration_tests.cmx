@@ -1,4 +1,18 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.tracelink.Registry": [
+                    "trace_manager",
+                    "--verbose=2"
+                ],
+                "fuchsia.tracing.TraceController": [
+                    "trace_manager",
+                    "--verbose=2"
+                ]
+            }
+        }
+    },
     "program": {
         "binary": "test/trace_integration_tests"
     },
@@ -7,20 +21,14 @@
             "persistent-storage",
             "system-temp"
         ],
-	"services": [
+        "services": [
             "fuchsia.process.Launcher",
             "fuchsia.sys.Launcher",
             "fuchsia.tracelink.Registry",
             "fuchsia.tracing.TraceController"
         ],
-        "system": [ "bin" ]
-    },
-    "facets": {
-        "fuchsia.test": {
-            "injected-services": {
-                "fuchsia.tracelink.Registry": [ "trace_manager", "--verbose=2" ],
-                "fuchsia.tracing.TraceController": [ "trace_manager", "--verbose=2" ]
-            }
-        }
+        "system": [
+            "bin"
+        ]
     }
 }

@@ -35,8 +35,8 @@ static bool VerifySimpleTest(const tracing::Spec& spec,
   }
 
   if (num_events != kNumSimpleTestEvents) {
-    FXL_LOG(ERROR) << "Incorrect number of events present, got "
-                   << num_events << ", expected " << kNumSimpleTestEvents;
+    FXL_LOG(ERROR) << "Incorrect number of events present, got " << num_events
+                   << ", expected " << kNumSimpleTestEvents;
     return false;
   }
 
@@ -44,7 +44,7 @@ static bool VerifySimpleTest(const tracing::Spec& spec,
 }
 
 const IntegrationTest kSimpleIntegrationTest = {
-  "simple",
-  &RunSimpleTest,
-  &VerifySimpleTest,
+    "simple",
+    &RunSimpleTest,
+    &VerifySimpleTest,
 };

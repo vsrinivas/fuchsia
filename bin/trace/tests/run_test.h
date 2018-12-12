@@ -24,12 +24,10 @@ void AppendLoggingArgs(std::vector<std::string>* argv, const char* prefix);
 // process with id PA_USER0.
 zx_status_t SpawnProgram(const zx::job& job,
                          const std::vector<std::string>& argv,
-                         zx_handle_t arg_handle,
-                         zx::process* out_process);
+                         zx_handle_t arg_handle, zx::process* out_process);
 
 zx_status_t WaitAndGetExitCode(const std::string& program_name,
-                               const zx::process& process,
-                               int* out_exit_code);
+                               const zx::process& process, int* out_exit_code);
 
 // We don't need to pass a context to RunTspec because the trace program
 // is currently a system app. If that changes then we will need a context
@@ -44,4 +42,4 @@ bool VerifyTspec(component::StartupContext* context,
                  const std::string& tspec_file_path,
                  const std::string& output_file_path);
 
-#endif // GARNET_BIN_TRACE_TESTS_RUN_TEST_H
+#endif  // GARNET_BIN_TRACE_TESTS_RUN_TEST_H

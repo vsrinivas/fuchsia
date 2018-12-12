@@ -148,7 +148,7 @@ void CheckCommandLineOverride(const char* name, bool present_in_spec) {
 }
 
 // Helper so call sites don't have to type !!object_as_unique_ptr.
-template<typename T>
+template <typename T>
 void CheckCommandLineOverride(const char* name, const T& object) {
   CheckCommandLineOverride(name, !!object);
 }
@@ -212,8 +212,7 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
     if (spec.categories)
       categories = *spec.categories;
     if (spec.buffering_mode) {
-      if (!LookupBufferingMode(*spec.buffering_mode,
-                               &buffering_mode)) {
+      if (!LookupBufferingMode(*spec.buffering_mode, &buffering_mode)) {
         FXL_LOG(ERROR) << "Unknown spec parameter buffering-mode: "
                        << spec.buffering_mode;
         return false;
@@ -245,9 +244,8 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
   if (command_line.HasOption(kAppendArgs, nullptr)) {
     auto all_append_args = command_line.GetOptionValues(kAppendArgs);
     for (const auto& arg : all_append_args) {
-      auto args =
-        fxl::SplitStringCopy(arg, ",", fxl::kTrimWhitespace,
-                             fxl::kSplitWantNonEmpty);
+      auto args = fxl::SplitStringCopy(arg, ",", fxl::kTrimWhitespace,
+                                       fxl::kSplitWantNonEmpty);
       std::move(std::begin(args), std::end(args),
                 std::back_inserter(append_args));
     }
@@ -332,9 +330,8 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
   if (command_line.HasOption(kBufferingMode, &index)) {
     if (!LookupBufferingMode(command_line.options()[index].value,
                              &buffering_mode)) {
-      FXL_LOG(ERROR) << "Failed to parse command-line option "
-                     << kBufferingMode << ": "
-                     << command_line.options()[index].value;
+      FXL_LOG(ERROR) << "Failed to parse command-line option " << kBufferingMode
+                     << ": " << command_line.options()[index].value;
       return false;
     }
     CheckCommandLineOverride("buffering-mode", spec.buffering_mode);
@@ -375,10 +372,12 @@ Command::Info Record::Describe() {
       "record",
       "starts tracing and records data",
       {{"spec-file=[none]", "Tracing specification file"},
-       {"output-file=[/data/trace.json]", "Trace data is stored in this file. "
+       {"output-file=[/data/trace.json]",
+        "Trace data is stored in this file. "
         "If the output file is \"tcp:TCP-ADDRESS\" then the output is streamed "
         "to that address. This option is generally only used by traceutil."},
-       {"compress=[false]", "Compress trace output. This option is ignored "
+       {"compress=[false]",
+        "Compress trace output. This option is ignored "
         "when streaming over a TCP socket."},
        {"duration=[10]",
         "Trace will be active for this many seconds after the session has been "
@@ -423,17 +422,16 @@ static bool TcpAddrFromString(fxl::StringView address, fxl::StringView port,
   hints.ai_flags = AI_NUMERICHOST | AI_NUMERICSERV;
 
   addrinfo* addrinfos;
-  int errcode = getaddrinfo(address.ToString().c_str(),
-                            port.ToString().c_str(),
+  int errcode = getaddrinfo(address.ToString().c_str(), port.ToString().c_str(),
                             &hints, &addrinfos);
   if (errcode != 0) {
-    FXL_LOG(ERROR) << "Failed to getaddrinfo for address " << address
-                   << ":" << port << ": " << gai_strerror(errcode);
+    FXL_LOG(ERROR) << "Failed to getaddrinfo for address " << address << ":"
+                   << port << ": " << gai_strerror(errcode);
     return false;
   }
   if (addrinfos == nullptr) {
-    FXL_LOG(ERROR) << "No matching addresses found for " << address
-                   << ":" << port;
+    FXL_LOG(ERROR) << "No matching addresses found for " << address << ":"
+                   << port;
     return false;
   }
 
@@ -442,7 +440,8 @@ static bool TcpAddrFromString(fxl::StringView address, fxl::StringView port,
   return true;
 }
 
-static std::unique_ptr<std::ostream> ConnectToTraceSaver(fxl::StringView address) {
+static std::unique_ptr<std::ostream> ConnectToTraceSaver(
+    fxl::StringView address) {
   FXL_LOG(INFO) << "Connecting to " << address;
 
   size_t colon = address.rfind(':');
@@ -488,7 +487,7 @@ static std::unique_ptr<std::ostream> OpenOutputStream(
   } else if (compress) {
     // TODO(dje): Compressing a network stream is not supported.
     auto gzstream = std::make_unique<gzofstream>(
-      output_file_name.c_str(), std::ios_base::out | std::ios_base::trunc);
+        output_file_name.c_str(), std::ios_base::out | std::ios_base::trunc);
     if (gzstream->is_open()) {
       out_stream = std::move(gzstream);
     }
@@ -510,7 +509,7 @@ void Record::Start(const fxl::CommandLine& command_line) {
   }
 
   std::unique_ptr<std::ostream> out_stream =
-    OpenOutputStream(options_.output_file_name, options_.compress);
+      OpenOutputStream(options_.output_file_name, options_.compress);
   if (!out_stream) {
     FXL_LOG(ERROR) << "Failed to open " << options_.output_file_name
                    << " for writing";
@@ -720,12 +719,13 @@ void Record::LaunchTool() {
 }
 
 void Record::StartTimer() {
-  async::PostDelayedTask(async_get_default_dispatcher(),
-                         [weak = weak_ptr_factory_.GetWeakPtr()] {
-                           if (weak)
-                             weak->StopTrace(0);
-                         },
-                         zx::nsec(options_.duration.ToNanoseconds()));
+  async::PostDelayedTask(
+      async_get_default_dispatcher(),
+      [weak = weak_ptr_factory_.GetWeakPtr()] {
+        if (weak)
+          weak->StopTrace(0);
+      },
+      zx::nsec(options_.duration.ToNanoseconds()));
   out() << "Starting trace; will stop in " << options_.duration.ToSecondsF()
         << " seconds..." << std::endl;
 }

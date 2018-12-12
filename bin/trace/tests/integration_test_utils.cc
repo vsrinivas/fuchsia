@@ -183,22 +183,22 @@ static size_t GetMinimumNumberOfEvents(tracing::BufferingMode buffering_mode,
   // We just need a lower bound on the number of records that are present.
   double percentage_buffer_filled;
   switch (buffering_mode) {
-  case tracing::BufferingMode::kOneshot:
-    percentage_buffer_filled = 0.8;
-    break;
-  case tracing::BufferingMode::kCircular:
-    // One of the rolling buffers could be empty.
-    // If we conservatively assume durable,rolling buffers are all the same
-    // size this could be 0.333. Rounded down to 0.2 as a safe lower bound.
-    percentage_buffer_filled = 0.2;
-    break;
-  case tracing::BufferingMode::kStreaming:
-    // If we conservatively assume durable,rolling buffers are all the same
-    // size this could be 0.666. Rounded down to 0.5 as a safe lower bound.
-    percentage_buffer_filled = 0.5;
-    break;
-  default:
-    FXL_NOTREACHED();
+    case tracing::BufferingMode::kOneshot:
+      percentage_buffer_filled = 0.8;
+      break;
+    case tracing::BufferingMode::kCircular:
+      // One of the rolling buffers could be empty.
+      // If we conservatively assume durable,rolling buffers are all the same
+      // size this could be 0.333. Rounded down to 0.2 as a safe lower bound.
+      percentage_buffer_filled = 0.2;
+      break;
+    case tracing::BufferingMode::kStreaming:
+      // If we conservatively assume durable,rolling buffers are all the same
+      // size this could be 0.666. Rounded down to 0.5 as a safe lower bound.
+      percentage_buffer_filled = 0.5;
+      break;
+    default:
+      FXL_NOTREACHED();
   }
 
   return (buffer_size / kRecordSize) * percentage_buffer_filled;
@@ -212,8 +212,8 @@ bool VerifyFullBuffer(const std::string& test_output_file,
     return false;
   }
 
-  size_t min_num_events = GetMinimumNumberOfEvents(buffering_mode,
-                                                   buffer_size_in_mb);
+  size_t min_num_events =
+      GetMinimumNumberOfEvents(buffering_mode, buffer_size_in_mb);
   if (num_events < min_num_events) {
     FXL_LOG(ERROR) << "Insufficient number of events present, got "
                    << num_events << ", expected at least " << min_num_events;

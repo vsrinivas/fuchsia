@@ -19,14 +19,14 @@
 const char kOutputFilePath[] = "/tmp/test.trace";
 
 const char kUsageString[] = {
-  "Usage: run fuchsia-pkg://fuchsia.com/trace_tests#meta/run_integration_test.cmx\n"
-  "  [options] /pkg/data/<test>.tspec\n"
-  "\n"
-  "Options:\n"
-  "  --quiet[=LEVEL]    set quietness level (opposite of verbose)\n"
-  "  --verbose[=LEVEL]  set debug verbosity level\n"
-  "  --log-file=FILE    write log output to FILE\n"
-};
+    "Usage: run "
+    "fuchsia-pkg://fuchsia.com/trace_tests#meta/run_integration_test.cmx\n"
+    "  [options] /pkg/data/<test>.tspec\n"
+    "\n"
+    "Options:\n"
+    "  --quiet[=LEVEL]    set quietness level (opposite of verbose)\n"
+    "  --verbose[=LEVEL]  set debug verbosity level\n"
+    "  --log-file=FILE    write log output to FILE\n"};
 
 static void PrintUsageString() { std::cout << kUsageString << std::endl; }
 

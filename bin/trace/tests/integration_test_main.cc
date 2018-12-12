@@ -13,8 +13,8 @@
 // The tests are currently combined into one binary because there aren't
 // that many and they share enough code. KISS.
 
-#include <iostream>
 #include <stdlib.h>
+#include <iostream>
 
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/files/file.h>
@@ -26,17 +26,16 @@
 #include "garnet/bin/trace/tests/integration_test_utils.h"
 
 const char kUsageString[] = {
-  "Test runner usage:\n"
-  "  $program [options] run tspec-file\n"
-  "\n"
-  "Test verifier usage:\n"
-  "  $program [options] verify tspec-file trace-output-file\n"
-  "\n"
-  "Options:\n"
-  "  --quiet[=LEVEL]    set quietness level (opposite of verbose)\n"
-  "  --verbose[=LEVEL]  set debug verbosity level\n"
-  "  --log-file=FILE    write log output to FILE\n"
-};
+    "Test runner usage:\n"
+    "  $program [options] run tspec-file\n"
+    "\n"
+    "Test verifier usage:\n"
+    "  $program [options] verify tspec-file trace-output-file\n"
+    "\n"
+    "Options:\n"
+    "  --quiet[=LEVEL]    set quietness level (opposite of verbose)\n"
+    "  --verbose[=LEVEL]  set debug verbosity level\n"
+    "  --log-file=FILE    write log output to FILE\n"};
 
 static int RunTest(const tracing::Spec& spec, TestRunner* run) {
   bool success = run(spec);
@@ -52,7 +51,7 @@ static int VerifyTest(const tracing::Spec& spec, TestVerifier* verify,
 
 static void PrintUsageString() { std::cout << kUsageString << std::endl; }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   fxl::CommandLine cl = fxl::CommandLineFromArgcArgv(argc, argv);
 
   if (!fxl::SetLogSettingsFromCommandLine(cl))
@@ -110,12 +109,12 @@ int main(int argc, char *argv[]) {
   }
 
   if (command == "run") {
-    FXL_VLOG(1) << "Running subprogram for test " << spec_file_path
-                << ":\"" << test_name << "\"";
+    FXL_VLOG(1) << "Running subprogram for test " << spec_file_path << ":\""
+                << test_name << "\"";
     return RunTest(spec, test->run);
   } else {
-    FXL_VLOG(1) << "Verifying test " << spec_file_path
-                << ":\"" << test_name << "\"";
+    FXL_VLOG(1) << "Verifying test " << spec_file_path << ":\"" << test_name
+                << "\"";
     const std::string& trace_output_file = args[2];
     return VerifyTest(spec, test->verify, trace_output_file);
   }

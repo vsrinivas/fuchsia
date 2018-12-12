@@ -37,7 +37,7 @@ static bool VerifyFillBufferTest(const tracing::Spec& spec,
 }
 
 const IntegrationTest kFillBufferIntegrationTest = {
-  "fill-buffer",
-  &RunFillBufferTest,
-  &VerifyFillBufferTest,
+    "fill-buffer",
+    &RunFillBufferTest,
+    &VerifyFillBufferTest,
 };

@@ -7,11 +7,13 @@
             "persistent-storage",
             "system-temp"
         ],
-	"services": [
+        "services": [
             "fuchsia.process.Launcher",
             "fuchsia.sys.Launcher",
             "fuchsia.tracing.TraceController"
         ],
-        "system": [ "bin" ]
+        "system": [
+            "bin"
+        ]
     }
 }

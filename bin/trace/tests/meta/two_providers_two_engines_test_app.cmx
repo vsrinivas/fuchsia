@@ -7,7 +7,7 @@
             "persistent-storage",
             "system-temp"
         ],
-	"services": [
+        "services": [
             "fuchsia.tracelink.Registry",
             "fuchsia.tracing.TraceController"
         ]

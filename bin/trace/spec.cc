@@ -276,8 +276,8 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
   }
 
   if (document.HasMember(kTestNameKey)) {
-    result.test_name = std::make_unique<std::string>(
-        document[kTestNameKey].GetString());
+    result.test_name =
+        std::make_unique<std::string>(document[kTestNameKey].GetString());
   }
 
   if (document.HasMember(kAppKey)) {
@@ -303,13 +303,13 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
   }
 
   if (document.HasMember(kBufferingModeKey)) {
-    result.buffering_mode = std::make_unique<std::string>(
-        document[kBufferingModeKey].GetString());
+    result.buffering_mode =
+        std::make_unique<std::string>(document[kBufferingModeKey].GetString());
   }
 
   if (document.HasMember(kBufferSizeInMbKey)) {
-    result.buffer_size_in_mb = std::make_unique<size_t>(
-        document[kBufferSizeInMbKey].GetUint());
+    result.buffer_size_in_mb =
+        std::make_unique<size_t>(document[kBufferSizeInMbKey].GetUint());
   }
 
   if (document.HasMember(kDurationKey)) {
@@ -318,8 +318,8 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
   }
 
   if (document.HasMember(kTestSuiteNameKey)) {
-    result.test_suite_name = std::make_unique<std::string>(
-      document[kTestSuiteNameKey].GetString());
+    result.test_suite_name =
+        std::make_unique<std::string>(document[kTestSuiteNameKey].GetString());
   }
 
   if (!document.HasMember(kMeasurementsKey)) {

@@ -7,8 +7,8 @@
 // Basic tests are all folded into integration_test_app.
 
 const IntegrationTest* kIntegrationTests[] = {
-  &kFillBufferIntegrationTest,
-  &kSimpleIntegrationTest,
+    &kFillBufferIntegrationTest,
+    &kSimpleIntegrationTest,
 };
 
 const IntegrationTest* LookupTest(const std::string& test_name) {

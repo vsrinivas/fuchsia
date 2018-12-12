@@ -14,9 +14,9 @@
 
 #include "garnet/bin/trace/spec.h"
 
-using TestRunner = bool (const tracing::Spec& spec);
-using TestVerifier = bool (const tracing::Spec& spec,
-                           const std::string& test_output_file);
+using TestRunner = bool(const tracing::Spec& spec);
+using TestVerifier = bool(const tracing::Spec& spec,
+                          const std::string& test_output_file);
 
 struct IntegrationTest {
   const char* name;
