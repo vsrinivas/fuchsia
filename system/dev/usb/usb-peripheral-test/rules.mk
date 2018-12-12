@@ -22,6 +22,9 @@ MODULE_LIBS := \
     system/ulib/zircon \
     system/ulib/c \
 
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-usb-request \
+
 MODULE_HEADER_DEPS := \
     system/ulib/inet6 \
 

@@ -43,5 +43,6 @@ MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-platform-device \
     system/banjo/ddk-protocol-usb-bus \
     system/banjo/ddk-protocol-usb-hub \
+    system/banjo/ddk-protocol-usb-request \
 
 include make/module.mk

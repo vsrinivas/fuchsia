@@ -29,5 +29,6 @@ MODULE_LIBS := \
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-test \
+    system/banjo/ddk-protocol-usb-request \
 
 include make/module.mk

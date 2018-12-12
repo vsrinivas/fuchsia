@@ -25,6 +25,7 @@ MODULE_FIDL_LIBS := system/fidl/zircon-usb-peripheral
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-usb-mode-switch \
+    system/banjo/ddk-protocol-usb-request \
 
 # Set default configuration here, rather than relying on usbctl to do it
 MODULE_DEFINES := USB_DEVICE_VID=0x18D1 \

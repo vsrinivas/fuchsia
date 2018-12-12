@@ -1,0 +1,68 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.usb.request;
+
+using ddk.driver;
+using zircon.hw.usb;
+using zx;
+
+/// Should be set by the requestor.
+struct UsbHeader {
+    /// Frame number for scheduling isochronous transfers.
+    uint64 frame;
+    uint32 device_id;
+    /// bEndpointAddress from endpoint descriptor.
+    uint8 ep_address;
+    /// Number of bytes to transfer.
+    zx.off length;
+    /// Send zero length packet if length is multiple of max packet size.
+    bool send_zlp;
+};
+
+/// Response data.
+/// (Filled in by processor before |UsbRequestComplete()| is called)
+struct UsbResponse {
+    /// Status of transaction.
+    zx.status status;
+    /// Number of bytes actually transferred (on success).
+    zx.off actual;
+};
+
+struct UsbRequest {
+    UsbHeader header;
+
+    /// For control transactions.
+    zircon.hw.usb.UsbSetup setup;
+
+    /// VMO handle for payload.
+    handle<vmo> vmo_handle;
+    usize size;
+    /// Offset of the start of data from first page address of the vmo.
+    zx.off offset;
+    /// Mapped address of the first page of the vmo.
+    /// Add offset to get actual data.
+    uint64 virt;
+
+    handle pmt;
+    /// Phys addresses of the payload.
+    vector<zx.paddr>? phys;
+
+    vector<ddk.driver.PhysIterSgEntry>? sg;
+
+    UsbResponse response;
+
+    /// usb_request_release() frees the request if this is true.
+    bool release_frees;
+
+    usize alloc_size;
+
+    /// For requests queued on endpoints which have batching enabled via
+    /// usb_configure_batch_callback().
+    /// Set by the requester if a callback is required on this request's completion.
+    /// This is useful for isochronous requests, where the requester does not care about
+    /// most callbacks.
+    /// The requester should ensure the last request has this set to true.
+    bool require_batch_cb;
+};

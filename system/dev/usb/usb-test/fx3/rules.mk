@@ -21,6 +21,7 @@ MODULE_FIDL_LIBS := \
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-usb-composite \
+    system/banjo/ddk-protocol-usb-request \
 
 ifeq ($(call TOBOOL,$(INTERNAL_ACCESS)),true)
 MODULE_FIRMWARE := \

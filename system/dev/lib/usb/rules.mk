@@ -16,6 +16,7 @@ MODULE_LIBS := system/ulib/c
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-usb-composite \
+    system/banjo/ddk-protocol-usb-request \
 
 MODULE_PACKAGE := src
 

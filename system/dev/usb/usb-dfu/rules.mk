@@ -32,5 +32,6 @@ MODULE_FIDL_LIBS := \
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-usb-composite \
+    system/banjo/ddk-protocol-usb-request \
 
 include make/module.mk

@@ -55,7 +55,7 @@ __EXPORT zx_status_t usb_request_alloc(usb_request_t** out, uint64_t data_size,
             return status;
         }
 
-        req->virt = (void *)mapped_addr;
+        req->virt = mapped_addr;
         req->offset = 0;
         req->size = data_size;
     }
@@ -103,7 +103,7 @@ __EXPORT zx_status_t usb_request_alloc_vmo(usb_request_t** out, zx_handle_t vmo_
 
     req->alloc_size = req_size;
     req->vmo_handle = dup_handle;
-    req->virt = (void *)mapped_addr;
+    req->virt = mapped_addr;
     req->offset = vmo_offset;
     req->size = size;
 
@@ -147,7 +147,7 @@ __EXPORT zx_status_t usb_request_init(usb_request_t* req, zx_handle_t vmo_handle
     }
 
     req->vmo_handle = dup_handle;
-    req->virt = (void *)mapped_addr;
+    req->virt = mapped_addr;
     req->offset = vmo_offset;
     req->size = size;
 

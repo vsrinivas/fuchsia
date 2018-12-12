@@ -17,5 +17,6 @@ MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-serial \
     system/banjo/ddk-protocol-serial-impl \
     system/banjo/ddk-protocol-usb-composite \
+    system/banjo/ddk-protocol-usb-request \
 
 include make/module.mk

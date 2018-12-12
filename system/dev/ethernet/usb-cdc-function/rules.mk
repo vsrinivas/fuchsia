@@ -23,6 +23,7 @@ MODULE_LIBS := \
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-ethernet \
+    system/banjo/ddk-protocol-usb-request \
 
 MODULE_HEADER_DEPS := \
 	system/ulib/inet6 \

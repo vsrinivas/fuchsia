@@ -5,6 +5,7 @@
 #pragma once
 
 #include <ddk/phys-iter.h>
+#include <ddk/protocol/usb/request.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -28,70 +29,6 @@ typedef void (*usb_request_complete_cb)(usb_request_t* req, void* cookie);
 // The client should free the completed_reqs array once they are finished with it.
 typedef void (*usb_batch_complete_cb)(usb_request_t** completed_reqs, size_t num_completed,
                                       void* cookie);
-
-// Should be set by the requester.
-typedef struct usb_header {
-    // frame number for scheduling isochronous transfers
-    uint64_t frame;
-    uint32_t device_id;
-    // bEndpointAddress from endpoint descriptor
-    uint8_t ep_address;
-    // number of bytes to transfer
-    zx_off_t length;
-    // send zero length packet if length is multiple of max packet size
-    bool send_zlp;
-} usb_header_t;
-
-// response data
-// (filled in by processor before usb_request_complete() is called)
-typedef struct usb_response {
-    // status of transaction
-    zx_status_t status;
-    // number of bytes actually transferred (on success)
-    zx_off_t actual;
-} usb_response_t;
-
-typedef struct usb_request {
-    usb_header_t header;
-
-    // for control transactions
-    usb_setup_t setup;
-
-    // vmo_handle for payload
-    zx_handle_t vmo_handle;
-    size_t size;
-    // offset of the start of data from first page address of the vmo.
-    zx_off_t offset;
-    // mapped address of the first page of the vmo.
-    // Add offset to get actual data.
-    void* virt;
-
-    zx_handle_t pmt;
-    // phys addresses of the payload.
-    zx_paddr_t* phys_list;
-    // Number of physical pages of the payload.
-    uint64_t phys_count;
-
-    // Scatter gather entries of the payload.
-    phys_iter_sg_entry_t* sg_list;
-    // Number of entries in the scatter gather list.
-    uint64_t sg_count;
-
-    usb_response_t response;
-
-    // usb_request_release() frees the request if this is true.
-    bool release_frees;
-    size_t alloc_size;
-
-    // For requests queued on endpoints which have batching enabled via
-    // usb_configure_batch_callback().
-    // Set by the requester if a callback is required on this request's completion.
-    // This is useful for isochronous requests, where the requester does not care about
-    // most callbacks.
-    // The requester should ensure the last request has this set to true.
-    bool require_batch_cb;
-} usb_request_t;
-
 
 typedef struct {
     zx_status_t (*control)(void* ctx, uint8_t request_type, uint8_t request, uint16_t value,
