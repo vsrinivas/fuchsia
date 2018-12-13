@@ -9,8 +9,6 @@
 
 #include <fbl/intrusive_double_list.h>
 
-#include "garnet/drivers/bluetooth/lib/common/intrusive_pointer_traits.h"
-
 namespace btlib {
 namespace common {
 

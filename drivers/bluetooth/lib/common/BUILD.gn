@@ -10,7 +10,6 @@ source_set("common") {
     "device_address.h",
     "device_class.cc",
     "device_class.h",
-    "intrusive_pointer_traits.h",
     "linked_list.h",
     "log.cc",
     "log.h",
