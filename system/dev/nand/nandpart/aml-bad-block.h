@@ -25,7 +25,7 @@ namespace nand {
 class AmlBadBlock : public BadBlock {
 public:
     struct OobMetadata {
-        // Identifer value.
+        // Identifier value.
         uint32_t magic;
         // Number of times the block has been programmed and erased.
         int16_t program_erase_cycles;

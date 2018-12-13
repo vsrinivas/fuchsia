@@ -106,7 +106,7 @@ zx_status_t NandPartDevice::Create(zx_device_t* parent) {
     status = device_get_metadata(parent, DEVICE_METADATA_PARTITION_MAP, buffer, sizeof(buffer),
                                  &actual);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "nandpart: parent device '%s' has no parititon map\n",
+        zxlogf(ERROR, "nandpart: parent device '%s' has no partition map\n",
                device_get_name(parent));
         return status;
     }
