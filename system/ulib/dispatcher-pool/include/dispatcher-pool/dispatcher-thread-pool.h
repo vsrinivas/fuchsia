@@ -56,7 +56,7 @@ private:
         int Main();
 
         // TODO(johngro) : migrate away from C11 threads, use native zircon
-        // primatives instead.
+        // primitives instead.
         //
         // TODO(johngro) : What is the proper "invalid" value to initialize with
         // here?

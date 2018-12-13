@@ -40,7 +40,7 @@ namespace dispatcher {
 // object itself, or by deactivating the execution domain that the channel is
 // bound to.
 //
-// :: Activtation ::
+// :: Activation ::
 //
 // Two forms of the Activate method are provided.  One requires that a valid
 // zx::channel handle be supplied to the Channel object; this is the handle
@@ -54,7 +54,7 @@ namespace dispatcher {
 // :: Reading/Writing ::
 //
 // Reading and writing on the channel is done using the Read and Write methods.
-// Intenally, the handle itself is protected with a lock making it safe to call
+// Internally, the handle itself is protected with a lock making it safe to call
 // Read or Write on a Channel object from any thread.  Attempts to read or write
 // a channel which either has not been activated yet, or which has been
 // deactivated, will fail.

@@ -27,7 +27,7 @@ namespace dispatcher {
 // the process handler will cause the Interrupt to automatically become deactivated.
 // Returning ZX_OK will cause the Interrupt to become re-armed.
 //
-// :: Activtation ::
+// :: Activation ::
 //
 // Activation requires a user to provide a valid ExecutionDomain, a
 // zx::interrupt,  and a valid ProcessHandler.  The Interrupt object takes ownership

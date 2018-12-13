@@ -25,7 +25,7 @@ namespace dispatcher {
 // fires.  Returning an error from the process handler will cause the timer to
 // automatically become deactivated.
 //
-// :: Activtation ::
+// :: Activation ::
 //
 // Activation simply requires a user to provide a valid ExecutionDomain and a
 // valid ProcessHandler.  The timer kernel object itself will be allocated

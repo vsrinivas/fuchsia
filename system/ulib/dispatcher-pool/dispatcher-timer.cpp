@@ -125,7 +125,7 @@ void Timer::Cancel() {
     }
 
     // We are either waiting on the port, or we are waiting in the dispatch
-    // queue.  Attemtp to cancel any pending dispatch operation.  It's OK if
+    // queue.  Attempt to cancel any pending dispatch operation.  It's OK if
     // this fails, it just means that the dispatch operation is in flight; we'll
     // figure it out by the time we hit Dispatch.
     ZX_DEBUG_ASSERT((dispatch_state() == DispatchState::WaitingOnPort) ||

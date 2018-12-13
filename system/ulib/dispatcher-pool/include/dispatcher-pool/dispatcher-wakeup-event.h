@@ -24,7 +24,7 @@ namespace dispatcher {
 // event becomes signaled at least once.  Returning an error from the process
 // handler will cause the event to automatically become deactivated.
 //
-// :: Activtation ::
+// :: Activation ::
 //
 // Activation simply requires a user to provide a valid ExecutionDomain and a
 // valid ProcessHandler.  The event handle itself will allocated internally.

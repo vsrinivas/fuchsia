@@ -81,10 +81,10 @@ protected:
     // are fired and need to be waited on again (using zx_interrupt_ack).  In
     // addition, wait operations cannot be canceled using zx_port_cancel.
     // Instead, once bound and acked, the only way to cancel a pending wait
-    // operation is to destroy the the interrupt using zx_interrupt_destroy.
+    // operation is to destroy the interrupt using zx_interrupt_destroy.
     //
     // See dispatcher::Interrupt for the customized behavior; this is the
-    // implementaiton of the default behavior which just defers the operation
+    // implementation of the default behavior which just defers the operation
     // over to the thread-pool (which owns the port object itself)
     virtual zx_status_t DoPortWaitLocked() __TA_REQUIRES(obj_lock_);
     virtual zx_status_t DoPortCancelLocked() __TA_REQUIRES(obj_lock_);

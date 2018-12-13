@@ -172,7 +172,7 @@ void Channel::Dispatch(ExecutionDomain* domain) {
             InternalDeactivateLocked();
         }
 
-        // If we are still active, attempt to set up the next wait opertaion.
+        // If we are still active, attempt to set up the next wait operation.
         // If this fails (it should never fail) then automatically deactivate
         // ourselves.
         if (is_active()) {
