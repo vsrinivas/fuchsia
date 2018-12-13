@@ -5,8 +5,6 @@
 import("//build/package.gni")
 
 package("bt-tools") {
-  deprecated_system_image = true
-
   deps = [
     "bt-cli:bin",
     "bt-snoop-cli:bin",
@@ -22,32 +20,40 @@ package("bt-tools") {
     {
       name = "bt_cli"
       dest = "bt-cli"
+      shell = true
     },
     {
       name = "bt_snoop_cli"
       dest = "bt-snoop-cli"
+      shell = true
     },
     {
       name = "bt_fake_hci"
       dest = "bt-fake-hci"
+      shell = true
     },
     {
       name = "bt-hci-tool"
+      shell = true
     },
     {
       name = "bt-intel-tool"
+      shell = true
     },
     {
       name = "bt_le_central"
       dest = "bt-le-central"
+      shell = true
     },
     {
       name = "bt_le_peripheral"
       dest = "bt-le-peripheral"
+      shell = true
     },
     {
       name = "bt_pairing_tool"
       dest = "bt-pairing-tool"
+      shell = true
     },
   ]
 }
