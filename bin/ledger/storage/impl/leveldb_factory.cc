@@ -8,6 +8,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/callback/scoped_callback.h>
+#include <lib/callback/trace_callback.h>
 #include <lib/fxl/files/directory.h>
 #include <lib/fxl/files/scoped_temp_dir.h>
 #include <lib/fxl/memory/ref_counted.h>
@@ -254,12 +255,14 @@ Status LevelDbFactory::CreateDbThroughStagingPathOnIOThread(
 
 void LevelDbFactory::PrepareCachedDb(
     CreateInStagingPath create_in_staging_path) {
+  TRACE_ASYNC_BEGIN("ledger", "prepare_cached_db", 0);
   FXL_DCHECK(!cached_db_is_ready_);
   FXL_DCHECK(cached_db_ == nullptr);
   GetOrCreateDbAtPath(
       cached_db_path_, create_in_staging_path,
       callback::MakeScoped(weak_factory_.GetWeakPtr(),
                            [this](Status status, std::unique_ptr<Db> db) {
+                             TRACE_ASYNC_END("ledger", "prepare_cached_db", 0);
                              cached_db_status_ = status;
                              cached_db_ = std::move(db);
                              cached_db_is_ready_ = true;

@@ -12,6 +12,14 @@
       "event_category": "benchmark",
       "expected_sample_count": 50,
       "split_first": true
+    },
+    {
+      "type": "duration",
+      "output_test_name": "new_page/precache_db",
+      "event_name": "prepare_cached_db",
+      "event_category": "ledger",
+      "expected_sample_count": 50,
+      "split_first": true
     }
   ]
 }
