@@ -683,7 +683,8 @@ void Realm::CreateComponentFromPackage(
     TRACE_DURATION_END("appmgr",
                        "Realm::CreateComponentFromPackage:VmoFromFilenameAt");
     if (!app_data) {
-      FXL_LOG(ERROR) << "component has neither runner (error: '"
+      FXL_LOG(ERROR) << "component '" << package->resolved_url.get()
+                     << "' has neither runner (error: '"
                      << runtime_parse_error << "') nor elf binary: '"
                      << bin_path << "'";
       component_request.SetReturnValues(kComponentCreationFailed,
