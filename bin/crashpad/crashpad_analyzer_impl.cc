@@ -43,7 +43,6 @@ namespace fuchsia {
 namespace crash {
 namespace {
 
-const char kLocalCrashDatabase[] = "/data/crashes";
 const char kURL[] = "https://clients2.google.com/cr/report";
 
 std::string GetPackageName(const zx::process& process) {
@@ -65,8 +64,7 @@ zx_status_t CrashpadAnalyzerImpl::UploadReport(
        !uploads_enabled)) {
     FX_LOGS(INFO)
         << "upload to remote crash server disabled. Local crash report, ID "
-        << local_report_id.ToString() << ", available under "
-        << kLocalCrashDatabase;
+        << local_report_id.ToString() << ", available under " << database_path_;
     database_->SkipReportUpload(
         local_report_id,
         crashpad::Metrics::CrashSkippedReason::kUploadsDisabled);
@@ -171,7 +169,7 @@ zx_status_t CrashpadAnalyzerImpl::HandleNativeException(
   // attachments, not file objects, but we need the underlying files
   // to still be there.
   const std::map<std::string, ScopedUnlink> attachments =
-      MakeNativeExceptionAttachments(kLocalCrashDatabase);
+      MakeNativeExceptionAttachments(database_path_);
   std::map<std::string, base::FilePath> attachment_paths;
   for (const auto& key_file : attachments) {
     attachment_paths[key_file.first] = base::FilePath(key_file.second.get());
@@ -283,8 +281,9 @@ zx_status_t CrashpadAnalyzerImpl::ProcessKernelPanicCrashlog(
 }
 
 CrashpadAnalyzerImpl::CrashpadAnalyzerImpl(
+    const std::string& database_path,
     std::unique_ptr<crashpad::CrashReportDatabase> database)
-    : database_(std::move(database)) {
+    : database_path_(database_path), database_(std::move(database)) {
   FXL_DCHECK(database_);
 }
 
@@ -322,17 +321,17 @@ void CrashpadAnalyzerImpl::ProcessKernelPanicCrashlog(
   callback(status);
 }
 
-std::unique_ptr<CrashpadAnalyzerImpl> CrashpadAnalyzerImpl::TryCreate() {
-  if (!files::IsDirectory(kLocalCrashDatabase)) {
-    files::CreateDirectory(kLocalCrashDatabase);
+std::unique_ptr<CrashpadAnalyzerImpl> CrashpadAnalyzerImpl::TryCreate(
+    const std::string& database_path) {
+  if (!files::IsDirectory(database_path)) {
+    files::CreateDirectory(database_path);
   }
 
   std::unique_ptr<crashpad::CrashReportDatabase> database(
-      crashpad::CrashReportDatabase::Initialize(
-          base::FilePath(kLocalCrashDatabase)));
+      crashpad::CrashReportDatabase::Initialize(base::FilePath(database_path)));
   if (!database) {
     FX_LOGS(ERROR) << "error initializing local crash report database at "
-                   << kLocalCrashDatabase;
+                   << database_path;
     return nullptr;
   }
 
@@ -342,7 +341,11 @@ std::unique_ptr<CrashpadAnalyzerImpl> CrashpadAnalyzerImpl::TryCreate() {
   database->GetSettings()->SetUploadsEnabled(false);
 
   return std::unique_ptr<CrashpadAnalyzerImpl>(
-      new CrashpadAnalyzerImpl(std::move(database)));
+      new CrashpadAnalyzerImpl(database_path, std::move(database)));
+}
+
+std::unique_ptr<CrashpadAnalyzerImpl> CrashpadAnalyzerImpl::TryCreate() {
+  return CrashpadAnalyzerImpl::TryCreate("/data/crashes");
 }
 
 }  // namespace crash

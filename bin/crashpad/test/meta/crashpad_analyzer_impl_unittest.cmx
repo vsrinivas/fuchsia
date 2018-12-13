@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "test/crashpad_analyzer_impl_unittest"
+    },
+    "sandbox": {
+        "dev": [
+            "misc/sysinfo"
+        ],
+        "features": [
+            "build-info",
+            "system-temp"
+        ],
+        "services": [ "fuchsia.logger.LogSink" ]
+    }
+}

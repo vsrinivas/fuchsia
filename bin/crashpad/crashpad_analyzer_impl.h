@@ -24,10 +24,12 @@ namespace crash {
 
 class CrashpadAnalyzerImpl : public Analyzer {
  public:
-  // Static factory method.
+  // Static factory methods.
   // Returns nullptr if the analyzer cannot be instantiated, e.g., because the
   // local report database cannot be accessed.
   static std::unique_ptr<CrashpadAnalyzerImpl> TryCreate();
+  static std::unique_ptr<CrashpadAnalyzerImpl> TryCreate(
+      const std::string& database_path);
 
   void HandleNativeException(zx::process process, zx::thread thread,
                              zx::port exception_port,
@@ -44,6 +46,7 @@ class CrashpadAnalyzerImpl : public Analyzer {
 
  private:
   explicit CrashpadAnalyzerImpl(
+      const std::string& database_path,
       std::unique_ptr<crashpad::CrashReportDatabase> database);
 
   zx_status_t HandleNativeException(zx::process process, zx::thread thread,
@@ -64,6 +67,7 @@ class CrashpadAnalyzerImpl : public Analyzer {
       const std::map<std::string, std::string>* annotations,
       bool read_annotations_from_minidump);
 
+  const std::string database_path_;
   const std::unique_ptr<crashpad::CrashReportDatabase> database_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CrashpadAnalyzerImpl);
