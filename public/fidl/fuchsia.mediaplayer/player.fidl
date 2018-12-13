@@ -87,7 +87,7 @@ struct PlayerStatus {
     bool ready;
 
     // Describes the media.
-    Metadata? metadata;
+    fuchsia.media.Metadata? metadata;
 
     // Indicates a problem preventing intended operation.
     Problem? problem;

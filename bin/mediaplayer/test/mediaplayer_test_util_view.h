@@ -88,7 +88,7 @@ class MediaPlayerTestUtilView : public scenic::V1BaseView {
   State state_ = State::kPaused;
   media::TimelineFunction timeline_function_;
   int64_t duration_ns_ = 0;
-  fuchsia::mediaplayer::MetadataPtr metadata_;
+  fuchsia::media::MetadataPtr metadata_;
   fuchsia::math::RectF content_rect_;
   fuchsia::math::RectF controls_rect_;
   bool problem_shown_ = false;

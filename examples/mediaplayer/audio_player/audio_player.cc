@@ -81,22 +81,22 @@ void AudioPlayer::HandleStatusChanged(
     FXL_LOG(INFO) << "duration   " << std::fixed << std::setprecision(1)
                   << double(status.duration_ns) / 1000000000.0 << " seconds";
     MaybeLogMetadataProperty(*status.metadata,
-                             fuchsia::mediaplayer::METADATA_LABEL_TITLE,
+                             fuchsia::media::METADATA_LABEL_TITLE,
                              "title      ");
     MaybeLogMetadataProperty(*status.metadata,
-                             fuchsia::mediaplayer::METADATA_LABEL_ARTIST,
+                             fuchsia::media::METADATA_LABEL_ARTIST,
                              "artist     ");
     MaybeLogMetadataProperty(*status.metadata,
-                             fuchsia::mediaplayer::METADATA_LABEL_ALBUM,
+                             fuchsia::media::METADATA_LABEL_ALBUM,
                              "album      ");
     MaybeLogMetadataProperty(*status.metadata,
-                             fuchsia::mediaplayer::METADATA_LABEL_PUBLISHER,
+                             fuchsia::media::METADATA_LABEL_PUBLISHER,
                              "publisher  ");
     MaybeLogMetadataProperty(*status.metadata,
-                             fuchsia::mediaplayer::METADATA_LABEL_GENRE,
+                             fuchsia::media::METADATA_LABEL_GENRE,
                              "genre      ");
     MaybeLogMetadataProperty(*status.metadata,
-                             fuchsia::mediaplayer::METADATA_LABEL_COMPOSER,
+                             fuchsia::media::METADATA_LABEL_COMPOSER,
                              "composer   ");
     metadata_shown_ = true;
   }
@@ -135,7 +135,7 @@ void AudioPlayer::GetKeystroke() {
 }
 
 void AudioPlayer::MaybeLogMetadataProperty(
-    const fuchsia::mediaplayer::Metadata& metadata,
+    const fuchsia::media::Metadata& metadata,
     const std::string& property_label, const std::string& prefix) {
   for (auto& property : *metadata.properties) {
     if (property.label == property_label) {

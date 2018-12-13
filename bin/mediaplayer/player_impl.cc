@@ -567,7 +567,7 @@ void PlayerImpl::CreateReaderSource(
 
 void PlayerImpl::CreateStreamSource(
     int64_t duration_ns, bool can_pause, bool can_seek,
-    std::unique_ptr<fuchsia::mediaplayer::Metadata> metadata,
+    std::unique_ptr<fuchsia::media::Metadata> metadata,
     ::fidl::InterfaceRequest<fuchsia::mediaplayer::StreamSource>
         source_request) {
   FXL_DCHECK(source_request);
@@ -664,7 +664,7 @@ void PlayerImpl::UpdateStatus() {
   auto metadata = core_.metadata();
   status_.metadata =
       metadata ? fidl::MakeOptional(
-                     fxl::To<fuchsia::mediaplayer::Metadata>(*metadata))
+                     fxl::To<fuchsia::media::Metadata>(*metadata))
                : nullptr;
 
   if (video_renderer_) {
