@@ -23,10 +23,10 @@ where any **interrupt_wait**() operations on it will return ZX_ERR_CANCELED,
 and it is unbound from any ports it was bound to.
 
 This provides a clean shut down mechanism.  Closing the last handle to the
-interrupt object results in similar cancelation but could result in use-after-close
+interrupt object results in similar cancellation but could result in use-after-close
 of the handle.
 
-If the interrupt object is bound to a port when cancelation happens, if it
+If the interrupt object is bound to a port when cancellation happens, if it
 has not yet triggered, or it has triggered but the packet has not yet been
 received by a caller of **port_wait**(), success is returned and any packets
 in flight are removed.  Otherwise, **ZX_ERR_NOT_FOUND** is returned, indicating
