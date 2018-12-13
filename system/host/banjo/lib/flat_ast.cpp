@@ -1328,7 +1328,7 @@ bool Library::CompileInterface(Interface* interface_declaration) {
             auto name_result = method_scope.names.Insert(method.name.data(), method.name);
             if (!name_result.ok())
                 return Fail(method.name,
-                            "Multiple methods with the same name in an interface; last occurance was at " +
+                            "Multiple methods with the same name in an interface; last occurrence was at " +
                                 name_result.previous_occurance().position());
 
             // Add a pointer to this method to the interface_declarations list.
