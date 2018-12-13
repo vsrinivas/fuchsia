@@ -43,6 +43,7 @@ void FidlDecoderFactory::CreateDecoder(
   fuchsia::mediacodec::CreateDecoder_Params decoder_params;
   decoder_params.input_details = fidl::Clone(*format_details);
   decoder_params.promise_separate_access_units_on_input = true;
+  decoder_params.require_hw = true;
 
   fuchsia::mediacodec::CodecPtr decoder;
   codec_factory_->CreateDecoder(std::move(decoder_params),
