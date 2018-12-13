@@ -101,6 +101,14 @@ be `fidl`, or (b) the library is used only for internal testing and is not
 included in the SDK or in production builds, in which case the top-level
 namespace must be `test`.
 
+FIDL libraries defined in the Fuchsia source tree for the purpose of exposing
+hardware functionality to applications must be in the `fuchsia.hardware`
+namespace.  For example, an interface for exposing an ethernet device might
+be named `fuchsia.hardware.ethernet.Device`.  Higher-level functionality built
+on top of these interfaces does not belong in the `fuchsia.hardware` namespace.
+For example, it is more appropriate for network protocols to be under `fuchsia.net`
+than `fuchsia.hardware`.
+
 Avoid library names with more than two dots (e.g., `fuchsia.foo.bar.baz`).
 There are some cases when a third dot is appropriate, but those cases are rare.
 If you use more than two dots, you should have a specific reason for that
