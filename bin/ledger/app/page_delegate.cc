@@ -148,6 +148,8 @@ void PageDelegate::PutReference(fidl::VectorPtr<uint8_t> key,
                                 Reference reference, Priority priority,
                                 Page::PutReferenceCallback callback) {
   FXL_DCHECK(key->size() <= kMaxKeySize);
+  // |ResolveReference| also makes sure that the reference was created for this
+  // page.
   storage::ObjectIdentifier object_identifier;
   Status status =
       manager_->ResolveReference(std::move(reference), &object_identifier);
@@ -156,36 +158,15 @@ void PageDelegate::PutReference(fidl::VectorPtr<uint8_t> key,
     return;
   }
 
-  auto promise = fxl::MakeRefCounted<callback::Promise<
-      storage::Status, std::unique_ptr<const storage::Object>>>(
-      storage::Status::ILLEGAL_STATE);
-
-  storage_->GetObject(object_identifier, storage::PageStorage::Location::LOCAL,
-                      promise->NewCallback());
-
   operation_serializer_.Serialize<Status>(
       std::move(callback),
-      [this, promise = std::move(promise), key = std::move(key),
+      [this, key = std::move(key),
        object_identifier = std::move(object_identifier),
        priority](Page::PutReferenceCallback callback) mutable {
-        promise->Finalize(callback::MakeScoped(
-            weak_factory_.GetWeakPtr(),
-            [this, key = std::move(key),
-             object_identifier = std::move(object_identifier), priority,
-             callback = std::move(callback)](
-                storage::Status status,
-                std::unique_ptr<const storage::Object> object) mutable {
-              if (status != storage::Status::OK) {
-                callback(PageUtils::ConvertStatus(status,
-                                                  Status::REFERENCE_NOT_FOUND));
-                return;
-              }
-              PutInCommit(std::move(key), std::move(object_identifier),
-                          priority == Priority::EAGER
-                              ? storage::KeyPriority::EAGER
-                              : storage::KeyPriority::LAZY,
-                          std::move(callback));
-            }));
+        PutInCommit(std::move(key), std::move(object_identifier),
+                    priority == Priority::EAGER ? storage::KeyPriority::EAGER
+                                                : storage::KeyPriority::LAZY,
+                    std::move(callback));
       });
 }
 
