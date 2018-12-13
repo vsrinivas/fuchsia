@@ -17,9 +17,9 @@
 # [args] can be empty or is a comma separated list of
 # '<aname>: <type> [attributes] [ctr]'
 #
-# <aname> is the argument name. It must be a valid C indentifier.
+# <aname> is the argument name. It must be a valid C identifier.
 #
-# <type> is the argument type. It must be a valid C indentifer with an optional
+# <type> is the argument type. It must be a valid C identifier with an optional
 # array-spec which when present it must be "[number]" or "[aname]", with the
 # number being an integer and aname the name of the argument that controls the
 # array size.
