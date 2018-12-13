@@ -139,12 +139,11 @@ constexpr zircon_nand_RamNandInfo kNandInfo = {
     .export_partition_map = true,
 };
 
-
 static fbl::Vector<fbl::String> test_block_devices;
 static fbl::Vector<fbl::String> test_skip_block_devices;
 
 bool FilterRealBlockDevices(const fbl::unique_fd& fd) {
-    char topo_path[PATH_MAX] = { '\0' };
+    char topo_path[PATH_MAX] = {'\0'};
     if (ioctl_device_get_topo_path(fd.get(), topo_path, PATH_MAX) < 0) {
         return false;
     }
@@ -156,39 +155,20 @@ bool FilterRealBlockDevices(const fbl::unique_fd& fd) {
     return true;
 }
 
-bool FilterRealSkipBlockDevices(const fbl::unique_fd& fd) {
-    char topo_path[PATH_MAX] = { '\0' };
-    if (ioctl_device_get_topo_path(fd.get(), topo_path, PATH_MAX) < 0) {
-        return false;
-    }
-    for (const auto& device : test_skip_block_devices) {
-        if (strstr(topo_path, device.data()) == topo_path) {
-            return false;
-        }
-    }
-    return true;
-}
-
 bool Initialize() {
     test_block_devices.reset();
-    test_skip_block_devices.reset();
     paver::TestBlockFilter = FilterRealBlockDevices;
-    paver::TestSkipBlockFilter = FilterRealSkipBlockDevices;
     return true;
 }
 
-bool InsertTestDevices(fbl::StringPiece path, bool skip) {
+bool InsertTestDevices(fbl::StringPiece path) {
     BEGIN_HELPER;
     fbl::unique_fd fd(open(path.data(), O_RDWR));
     ASSERT_TRUE(fd.is_valid());
     fbl::String topo_path(PATH_MAX, '\0');
     ASSERT_GE(ioctl_device_get_topo_path(fd.get(), const_cast<char*>(topo_path.data()), PATH_MAX),
               0);
-    if (skip) {
-        test_skip_block_devices.push_back(std::move(topo_path));
-    } else {
-        test_block_devices.push_back(std::move(topo_path));
-    }
+    test_block_devices.push_back(std::move(topo_path));
     END_HELPER;
 }
 
@@ -200,7 +180,7 @@ public:
         ASSERT_EQ(create_ramdisk_with_guid(kBlockSize, kBlockCount, guid, ZBI_PARTITION_GUID_LEN,
                                            const_cast<char*>(path.data())),
                   ZX_OK);
-        ASSERT_TRUE(InsertTestDevices(path.ToStringPiece(), false));
+        ASSERT_TRUE(InsertTestDevices(path.ToStringPiece()));
         device->reset(new BlockDevice(std::move(path)));
         END_HELPER;
     }
@@ -250,19 +230,25 @@ public:
 
         zircon_nand_RamNandInfo info = kNandInfo;
         info.vmo = dup.release();
+        fbl::RefPtr<fs_mgmt::RamNandCtl> ctl;
+        ASSERT_EQ(fs_mgmt::RamNandCtl::Create(&ctl), ZX_OK);
         std::optional<fs_mgmt::RamNand> ram_nand;
-        ASSERT_EQ(fs_mgmt::RamNand::Create(&info, &ram_nand), ZX_OK);
-        ASSERT_TRUE(InsertTestDevices(ram_nand->path(), true));
-        device->reset(new SkipBlockDevice(std::move(*ram_nand), std::move(mapper)));
+        ASSERT_EQ(fs_mgmt::RamNand::Create(ctl, &info, &ram_nand), ZX_OK);
+        device->reset(new SkipBlockDevice(std::move(ctl), std::move(*ram_nand),
+                                          std::move(mapper)));
         END_HELPER;
     }
+
+    fbl::unique_fd devfs_root() { return fbl::unique_fd(dup(ctl_->devfs_root().get())); }
 
     ~SkipBlockDevice() = default;
 
 private:
-    SkipBlockDevice(fs_mgmt::RamNand ram_nand, fzl::VmoMapper mapper)
-        : ram_nand_(std::move(ram_nand)), mapper_(std::move(mapper)) {}
+    SkipBlockDevice(fbl::RefPtr<fs_mgmt::RamNandCtl> ctl, fs_mgmt::RamNand ram_nand,
+                    fzl::VmoMapper mapper)
+        : ctl_(std::move(ctl)), ram_nand_(std::move(ram_nand)), mapper_(std::move(mapper)) {}
 
+    fbl::RefPtr<fs_mgmt::RamNandCtl> ctl_;
     fs_mgmt::RamNand ram_nand_;
     fzl::VmoMapper mapper_;
 };
@@ -313,8 +299,9 @@ namespace {
 bool IsCrosTest() {
     BEGIN_TEST;
 
+    fbl::unique_fd dev_fs(open("/dev", O_RDWR));
     fbl::unique_ptr<paver::DevicePartitioner> partitioner;
-    ASSERT_EQ(paver::FixedDevicePartitioner::Initialize(&partitioner), ZX_OK);
+    ASSERT_EQ(paver::FixedDevicePartitioner::Initialize(std::move(dev_fs), &partitioner), ZX_OK);
     ASSERT_FALSE(partitioner->IsCros());
 
     END_TEST;
@@ -323,8 +310,9 @@ bool IsCrosTest() {
 bool UseBlockInterfaceTest() {
     BEGIN_TEST;
 
+    fbl::unique_fd devfs(open("/dev", O_RDWR));
     fbl::unique_ptr<paver::DevicePartitioner> partitioner;
-    ASSERT_EQ(paver::FixedDevicePartitioner::Initialize(&partitioner), ZX_OK);
+    ASSERT_EQ(paver::FixedDevicePartitioner::Initialize(std::move(devfs), &partitioner), ZX_OK);
     ASSERT_FALSE(partitioner->UseSkipBlockInterface());
 
     END_TEST;
@@ -333,8 +321,9 @@ bool UseBlockInterfaceTest() {
 bool AddPartitionTest() {
     BEGIN_TEST;
 
+    fbl::unique_fd devfs(open("/dev", O_RDWR));
     fbl::unique_ptr<paver::DevicePartitioner> partitioner;
-    ASSERT_EQ(paver::FixedDevicePartitioner::Initialize(&partitioner), ZX_OK);
+    ASSERT_EQ(paver::FixedDevicePartitioner::Initialize(std::move(devfs), &partitioner), ZX_OK);
     ASSERT_EQ(partitioner->AddPartition(paver::Partition::kZirconB, nullptr), ZX_ERR_NOT_SUPPORTED);
 
     END_TEST;
@@ -343,8 +332,9 @@ bool AddPartitionTest() {
 bool WipePartitionsTest() {
     BEGIN_TEST;
 
+    fbl::unique_fd devfs(open("/dev", O_RDWR));
     fbl::unique_ptr<paver::DevicePartitioner> partitioner;
-    ASSERT_EQ(paver::FixedDevicePartitioner::Initialize(&partitioner), ZX_OK);
+    ASSERT_EQ(paver::FixedDevicePartitioner::Initialize(std::move(devfs), &partitioner), ZX_OK);
     ASSERT_EQ(partitioner->WipePartitions(), ZX_OK);
 
     END_TEST;
@@ -353,8 +343,9 @@ bool WipePartitionsTest() {
 bool FinalizePartitionTest() {
     BEGIN_TEST;
 
+    fbl::unique_fd devfs(open("/dev", O_RDWR));
     fbl::unique_ptr<paver::DevicePartitioner> partitioner;
-    ASSERT_EQ(paver::FixedDevicePartitioner::Initialize(&partitioner), ZX_OK);
+    ASSERT_EQ(paver::FixedDevicePartitioner::Initialize(std::move(devfs), &partitioner), ZX_OK);
 
     ASSERT_EQ(partitioner->FinalizePartition(paver::Partition::kZirconA), ZX_OK);
     ASSERT_EQ(partitioner->FinalizePartition(paver::Partition::kZirconB), ZX_OK);
@@ -378,8 +369,9 @@ bool FindPartitionTest() {
     ASSERT_TRUE(BlockDevice::Create(kVbMetaBType, &vbmeta_b));
     ASSERT_TRUE(BlockDevice::Create(kFvmType, &fvm));
 
+    fbl::unique_fd devfs(open("/dev", O_RDWR));
     fbl::unique_ptr<paver::DevicePartitioner> partitioner;
-    ASSERT_EQ(paver::FixedDevicePartitioner::Initialize(&partitioner), ZX_OK);
+    ASSERT_EQ(paver::FixedDevicePartitioner::Initialize(std::move(devfs), &partitioner), ZX_OK);
 
     fbl::unique_fd fd;
     ASSERT_EQ(partitioner->FindPartition(paver::Partition::kZirconA, &fd), ZX_OK);
@@ -404,8 +396,9 @@ bool GetBlockSizeTest() {
     ASSERT_TRUE(BlockDevice::Create(kVbMetaBType, &vbmeta_b));
     ASSERT_TRUE(BlockDevice::Create(kFvmType, &fvm));
 
+    fbl::unique_fd devfs(open("/dev", O_RDWR));
     fbl::unique_ptr<paver::DevicePartitioner> partitioner;
-    ASSERT_EQ(paver::FixedDevicePartitioner::Initialize(&partitioner), ZX_OK);
+    ASSERT_EQ(paver::FixedDevicePartitioner::Initialize(std::move(devfs), &partitioner), ZX_OK);
 
     fbl::unique_fd fd;
     uint32_t block_size;
@@ -455,7 +448,8 @@ bool IsCrosTest() {
     ASSERT_TRUE(SkipBlockDevice::Create(&device));
 
     fbl::unique_ptr<paver::DevicePartitioner> partitioner;
-    ASSERT_EQ(paver::SkipBlockDevicePartitioner::Initialize(&partitioner), ZX_OK);
+    ASSERT_EQ(paver::SkipBlockDevicePartitioner::Initialize(device->devfs_root(), &partitioner),
+              ZX_OK);
     ASSERT_FALSE(partitioner->IsCros());
 
     END_TEST;
@@ -469,7 +463,8 @@ bool UseSkipBlockInterfaceTest() {
     ASSERT_TRUE(SkipBlockDevice::Create(&device));
 
     fbl::unique_ptr<paver::DevicePartitioner> partitioner;
-    ASSERT_EQ(paver::SkipBlockDevicePartitioner::Initialize(&partitioner), ZX_OK);
+    ASSERT_EQ(paver::SkipBlockDevicePartitioner::Initialize(device->devfs_root(), &partitioner),
+              ZX_OK);
     ASSERT_TRUE(partitioner->UseSkipBlockInterface());
 
     END_TEST;
@@ -483,7 +478,8 @@ bool AddPartitionTest() {
     ASSERT_TRUE(SkipBlockDevice::Create(&device));
 
     fbl::unique_ptr<paver::DevicePartitioner> partitioner;
-    ASSERT_EQ(paver::SkipBlockDevicePartitioner::Initialize(&partitioner), ZX_OK);
+    ASSERT_EQ(paver::SkipBlockDevicePartitioner::Initialize(device->devfs_root(), &partitioner),
+              ZX_OK);
     ASSERT_EQ(partitioner->AddPartition(paver::Partition::kZirconB, nullptr), ZX_ERR_NOT_SUPPORTED);
 
     END_TEST;
@@ -497,7 +493,8 @@ bool WipePartitionsTest() {
     ASSERT_TRUE(SkipBlockDevice::Create(&device));
 
     fbl::unique_ptr<paver::DevicePartitioner> partitioner;
-    ASSERT_EQ(paver::SkipBlockDevicePartitioner::Initialize(&partitioner), ZX_OK);
+    ASSERT_EQ(paver::SkipBlockDevicePartitioner::Initialize(device->devfs_root(), &partitioner),
+              ZX_OK);
     ASSERT_EQ(partitioner->WipePartitions(), ZX_OK);
 
     END_TEST;
@@ -511,7 +508,8 @@ bool FinalizePartitionTest() {
     ASSERT_TRUE(SkipBlockDevice::Create(&device));
 
     fbl::unique_ptr<paver::DevicePartitioner> partitioner;
-    ASSERT_EQ(paver::SkipBlockDevicePartitioner::Initialize(&partitioner), ZX_OK);
+    ASSERT_EQ(paver::SkipBlockDevicePartitioner::Initialize(device->devfs_root(), &partitioner),
+              ZX_OK);
 
     ASSERT_EQ(partitioner->FinalizePartition(paver::Partition::kBootloader), ZX_OK);
     ASSERT_EQ(partitioner->FinalizePartition(paver::Partition::kZirconA), ZX_OK);
@@ -533,7 +531,8 @@ bool FindPartitionTest() {
     ASSERT_TRUE(BlockDevice::Create(kFvmType, &fvm));
 
     fbl::unique_ptr<paver::DevicePartitioner> partitioner;
-    ASSERT_EQ(paver::SkipBlockDevicePartitioner::Initialize(&partitioner), ZX_OK);
+    ASSERT_EQ(paver::SkipBlockDevicePartitioner::Initialize(device->devfs_root(), &partitioner),
+              ZX_OK);
 
     fbl::unique_fd fd;
     ASSERT_EQ(partitioner->FindPartition(paver::Partition::kBootloader, &fd), ZX_OK);
@@ -558,7 +557,8 @@ bool GetBlockSizeTest() {
     ASSERT_TRUE(BlockDevice::Create(kFvmType, &fvm));
 
     fbl::unique_ptr<paver::DevicePartitioner> partitioner;
-    ASSERT_EQ(paver::SkipBlockDevicePartitioner::Initialize(&partitioner), ZX_OK);
+    ASSERT_EQ(paver::SkipBlockDevicePartitioner::Initialize(device->devfs_root(), &partitioner),
+              ZX_OK);
 
     fbl::unique_fd fd;
     uint32_t block_size;
