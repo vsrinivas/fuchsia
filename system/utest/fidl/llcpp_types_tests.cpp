@@ -7,6 +7,7 @@
 #include <memory>
 
 #include <lib/fidl/internal.h>
+#include <lib/fidl/llcpp/array_wrapper.h>
 #include <lib/fidl/llcpp/encoded_message.h>
 #include <lib/fidl/llcpp/decoded_message.h>
 #include <lib/zx/channel.h>
@@ -237,10 +238,25 @@ bool RoundTripTest() {
     END_TEST;
 }
 
+bool ArrayLayoutTest() {
+    BEGIN_TEST;
+
+    static_assert(sizeof(fidl::ArrayWrapper<uint8_t, 3>) == sizeof(uint8_t[3]));
+    static_assert(sizeof(fidl::ArrayWrapper<fidl::ArrayWrapper<uint8_t, 7>, 3>)
+                      == sizeof(uint8_t[3][7]));
+
+    constexpr fidl::ArrayWrapper<uint8_t, 3> a = {1, 2, 3};
+    constexpr uint8_t b[3] = {1, 2, 3};
+    EXPECT_EQ((&a[2] - &a[0]), (&b[2] - &b[0]));
+
+    END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(llcpp_types_tests)
     RUN_NAMED_TEST("EncodedMessage test", EncodedMessageTest)
     RUN_NAMED_TEST("DecodedMessage test", DecodedMessageTest)
     RUN_NAMED_TEST("Round trip test", RoundTripTest)
+    RUN_NAMED_TEST("Array layout test", ArrayLayoutTest)
 END_TEST_CASE(llcpp_types_tests);
