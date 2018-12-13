@@ -18,10 +18,25 @@ namespace gap {
 
 using common::DeviceAddress;
 
+namespace {
+
+// Return an address with the same value as given, but with type kBREDR for
+// kLEPublic addresses and vice versa.
+DeviceAddress GetAliasAddress(const DeviceAddress& address) {
+  if (address.type() == DeviceAddress::Type::kBREDR) {
+    return {DeviceAddress::Type::kLEPublic, address.value()};
+  } else if (address.type() == DeviceAddress::Type::kLEPublic) {
+    return {DeviceAddress::Type::kBREDR, address.value()};
+  }
+  return address;
+}
+
+}  // namespace
+
 RemoteDevice* RemoteDeviceCache::NewDevice(const DeviceAddress& address,
                                            bool connectable) {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
-  if (address_map_.find(address) != address_map_.end()) {
+  if (FindIdByAddress(address)) {
     bt_log(WARN, "gap", "tried to create new device with existing address: %s",
            address.ToString().c_str());
     return nullptr;
@@ -67,7 +82,7 @@ bool RemoteDeviceCache::AddBondedDevice(const std::string& identifier,
     return false;
   }
 
-  if (address_map_.find(address) != address_map_.end()) {
+  if (FindIdByAddress(address)) {
     bt_log(WARN, "gap",
            "tried to initialize bonded device with existing address: %s",
            address.ToString().c_str());
@@ -191,15 +206,13 @@ RemoteDevice* RemoteDeviceCache::FindDeviceByAddress(
   }
 
   ZX_DEBUG_ASSERT(address);
-
-  auto iter = address_map_.find(*address);
-  if (iter == address_map_.end()) {
+  auto identifier = FindIdByAddress(*address);
+  if (!identifier) {
     return nullptr;
   }
 
-  auto* dev = FindDeviceById(iter->second);
+  auto* dev = FindDeviceById(identifier->get());
   ZX_DEBUG_ASSERT(dev);
-
   return dev;
 }
 
@@ -245,6 +258,13 @@ void RemoteDeviceCache::UpdateExpiry(const RemoteDevice& device) {
 
 void RemoteDeviceCache::MakeDualMode(const RemoteDevice& device) {
   ZX_DEBUG_ASSERT(address_map_.at(device.address()) == device.identifier());
+  const auto address_alias = GetAliasAddress(device.address());
+  auto [iter, inserted] =
+      address_map_.try_emplace(address_alias, device.identifier());
+  ZX_DEBUG_ASSERT_MSG(inserted || iter->second == device.identifier(),
+                      "%s can't become dual-mode because %s maps to %s",
+                      device.identifier().c_str(),
+                      address_alias.ToString().c_str(), iter->second.c_str());
 
   // The device became dual mode in lieu of adding a new device but is as
   // significant, so notify listeners of the change.
@@ -259,11 +279,36 @@ void RemoteDeviceCache::RemoveDevice(RemoteDevice* device) {
   ZX_DEBUG_ASSERT(device_record_it->second.device() == device);
 
   const std::string identifier_copy = device->identifier();
-  address_map_.erase(device->address());
+  for (auto iter = address_map_.begin(); iter != address_map_.end();) {
+    if (iter->second == device->identifier()) {
+      iter = address_map_.erase(iter);
+    } else {
+      iter++;
+    }
+  }
   devices_.erase(device_record_it);  // Destroys |device|.
   if (device_removed_callback_) {
     device_removed_callback_(identifier_copy);
   }
+}
+
+// This returns string cref instead of string_view because the caller is likely
+// to use the ID to index into |devices_|.
+// TODO(BT-305): This would be less messy using an integer ID type.
+std::optional<std::reference_wrapper<const std::string>>
+RemoteDeviceCache::FindIdByAddress(const common::DeviceAddress& address) const {
+  auto iter = address_map_.find(address);
+  if (iter == address_map_.end()) {
+    // Search again using the other technology's address. This is necessary when
+    // a dual-mode device is known by only one technology and is then discovered
+    // or connected on its other technology.
+    iter = address_map_.find(GetAliasAddress(address));
+  }
+
+  if (iter == address_map_.end()) {
+    return {};
+  }
+  return {iter->second};
 }
 
 }  // namespace gap

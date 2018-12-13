@@ -151,6 +151,13 @@ void RemoteDevice::LowEnergyData::SetBondData(
 RemoteDevice::BrEdrData::BrEdrData(RemoteDevice* owner)
     : dev_(owner), conn_state_(ConnectionState::kNotConnected), eir_len_(0u) {
   ZX_DEBUG_ASSERT(dev_);
+  ZX_DEBUG_ASSERT(dev_->identity_known());
+
+  // Devices that are capable of BR/EDR and use a LE random device address will
+  // end up with separate entries for the BR/EDR and LE addresses.
+  ZX_DEBUG_ASSERT(dev_->address().type() != DeviceAddress::Type::kLERandom &&
+                  dev_->address().type() != DeviceAddress::Type::kLEAnonymous);
+  address_ = {DeviceAddress::Type::kBREDR, dev_->address().value()};
 }
 
 void RemoteDevice::BrEdrData::SetInquiryData(const hci::InquiryResult& value) {

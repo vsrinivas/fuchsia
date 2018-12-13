@@ -23,16 +23,19 @@ namespace {
 using ::btlib::testing::FakeController;
 using ::btlib::testing::FakeDevice;
 
+using common::DeviceAddress;
+
 using TestingBase = ::btlib::testing::FakeControllerTest<FakeController>;
 
-const common::DeviceAddress kAddress0(common::DeviceAddress::Type::kLEPublic,
-                                      "00:00:00:00:00:01");
-const common::DeviceAddress kAddress1(common::DeviceAddress::Type::kLERandom,
-                                      "00:00:00:00:00:02");
-const common::DeviceAddress kAddress2(common::DeviceAddress::Type::kLEPublic,
-                                      "00:00:00:00:00:03");
-const common::DeviceAddress kAddress3(common::DeviceAddress::Type::kLEPublic,
-                                      "00:00:00:00:00:04");
+const DeviceAddress kAddress0(DeviceAddress::Type::kLEPublic,
+                              "00:00:00:00:00:01");
+const DeviceAddress kAddrAlias0(DeviceAddress::Type::kBREDR, kAddress0.value());
+const DeviceAddress kAddress1(DeviceAddress::Type::kLERandom,
+                              "00:00:00:00:00:02");
+const DeviceAddress kAddress2(DeviceAddress::Type::kLEPublic,
+                              "00:00:00:00:00:03");
+const DeviceAddress kAddress3(DeviceAddress::Type::kLEPublic,
+                              "00:00:00:00:00:04");
 
 constexpr int64_t kTestScanPeriodMs = 10000;
 
@@ -796,6 +799,33 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, DirectedConnectableEvent) {
   // Advance to the next scan period. We should receive a new notification.
   RunLoopFor(zx::msec(kTestScanPeriodMs));
   EXPECT_EQ(1, count);
+}
+
+TEST_F(GAP_LowEnergyDiscoveryManagerTest,
+       ScanResuiltUpgradesKnownBrEdrDeviceToDualMode) {
+  RemoteDevice* device = device_cache()->NewDevice(kAddrAlias0, true);
+  ASSERT_TRUE(device);
+  ASSERT_EQ(device, device_cache()->FindDeviceByAddress(kAddress0));
+  ASSERT_EQ(TechnologyType::kClassic, device->technology());
+
+  AddFakeDevices();
+
+  discovery_manager()->set_scan_period(kTestScanPeriodMs);
+
+  std::unordered_set<common::DeviceAddress> addresses_found;
+  LowEnergyDiscoverySession::DeviceFoundCallback result_cb =
+      [&addresses_found](const auto& device) {
+        addresses_found.insert(device.address());
+      };
+  auto session = StartDiscoverySession();
+  session->filter()->SetGeneralDiscoveryFlags();
+  session->SetResultCallback(std::move(result_cb));
+
+  RunLoopUntilIdle();
+
+  ASSERT_EQ(3u, addresses_found.size());
+  EXPECT_TRUE(addresses_found.find(kAddrAlias0) != addresses_found.end());
+  EXPECT_EQ(TechnologyType::kDualMode, device->technology());
 }
 
 TEST_F(GAP_LowEnergyDiscoveryManagerTest, EnableBackgroundScan) {

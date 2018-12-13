@@ -31,8 +31,6 @@ namespace gap {
 
 // A RemoteDeviceCache provides access to remote Bluetooth devices that are
 // known to the system.
-// TODO(armansito): The current implementation is very simple but it will grow
-// to support more complex features such as LE private address resolution.
 class RemoteDeviceCache final {
  public:
   using DeviceCallback = fit::function<void(const RemoteDevice& device)>;
@@ -43,9 +41,10 @@ class RemoteDeviceCache final {
   // Creates a new device entry using the given parameters, and returns a
   // (non-owning) pointer to that device. The caller must not retain the pointer
   // beyond the current dispatcher task, as the underlying RemoteDevice is owned
-  // by |this| RemoveDeviceCache, and may be invalidated spontaneously.
+  // by |this| RemoteDeviceCache, and may be invalidated spontaneously.
   //
-  // Returns nullptr if an entry matching |address| already exists in the cache.
+  // Returns nullptr if an entry matching |address| already exists in the cache,
+  // including as a public identity of a device with a different technology.
   RemoteDevice* NewDevice(const common::DeviceAddress& address,
                           bool connectable);
 
@@ -65,6 +64,11 @@ class RemoteDeviceCache final {
   // already exists the cache and returns false if a mapping for |identifier| or
   // |address| is already present. Use Store*Bond() methods to update pairing
   // information of an existing device.
+  //
+  // If a device already exists that has the same public identity address with a
+  // different technology, this method will return false. The existing device
+  // should be instead updated with new bond information to create a dual-mode
+  // device.
   //
   // TODO(armansito): Pass in BR/EDR link key here as well, if present.
   bool AddBondedDevice(const std::string& identifier,
@@ -93,6 +97,8 @@ class RemoteDeviceCache final {
 
   // Finds and returns a RemoteDevice with address |address| if it exists,
   // returns nullptr otherwise. Tries to resolve |address| if it is resolvable.
+  // If |address| is of type kBREDR or kLEPublic, then this searches for devices
+  // that have either type of address.
   RemoteDevice* FindDeviceByAddress(const common::DeviceAddress& address) const;
 
   // When set, |callback| will be invoked whenever a device is added
@@ -150,6 +156,10 @@ class RemoteDeviceCache final {
     async::TaskClosure removal_task_;
   };
 
+  // Notifies interested parties that |device| has bonded
+  // |device| must already exist in the cache.
+  void NotifyDeviceBonded(const RemoteDevice& device);
+
   // Notifies interested parties that |device| has seen a significant change.
   // |device| must already exist in the cache.
   void NotifyDeviceUpdated(const RemoteDevice& device);
@@ -169,9 +179,12 @@ class RemoteDeviceCache final {
   // removal.
   void RemoveDevice(RemoteDevice* device);
 
-  // Notifies interested parties that |device| has bonded
-  // |device| must already exist in the cache.
-  void NotifyDeviceBonded(const RemoteDevice& device);
+  // Search for an unique device ID by its device address |address|, by both
+  // technologies if it is a public address. |address| should be already
+  // resolved, if it is resolvable. Returns a reference to a value of
+  // |address_map_| if found, empty otherwise.
+  std::optional<std::reference_wrapper<const std::string>> FindIdByAddress(
+      const common::DeviceAddress& address) const;
 
   // Mapping from unique device IDs to RemoteDeviceRecords.
   // Owns the corresponding RemoteDevices.
@@ -181,6 +194,9 @@ class RemoteDeviceCache final {
   // devices. This is used to look-up and update existing cached data for a
   // particular scan result so as to avoid creating duplicate entries for the
   // same device.
+  //
+  // Dual-mode devices shall have identity addresses of both technologies
+  // mapped to the same ID, if the addresses have the same value.
   //
   // TODO(armansito): Replace this with an implementation that can resolve
   // device identity, to handle bonded LE devices that use privacy.

@@ -117,6 +117,32 @@ TEST_F(GAP_RemoteDeviceCacheTest, LookUp) {
   EXPECT_EQ(kTestRSSI, device->rssi());
 }
 
+TEST_F(GAP_RemoteDeviceCacheTest, LookUpBrEdrDeviceByLePublicAlias) {
+  ASSERT_FALSE(cache()->FindDeviceByAddress(kAddrLeAlias));
+  NewDevice(kAddrBrEdr, true);
+  auto* dev = cache()->FindDeviceByAddress(kAddrBrEdr);
+  ASSERT_TRUE(dev);
+  EXPECT_EQ(device(), dev);
+
+  dev = cache()->FindDeviceByAddress(kAddrLeAlias);
+  ASSERT_TRUE(dev);
+  EXPECT_EQ(device(), dev);
+  EXPECT_EQ(DeviceAddress::Type::kBREDR, dev->address().type());
+}
+
+TEST_F(GAP_RemoteDeviceCacheTest, LookUpLeDeviceByBrEdrAlias) {
+  EXPECT_FALSE(cache()->FindDeviceByAddress(kAddrBrEdr));
+  NewDevice(kAddrLeAlias, true);
+  auto* dev = cache()->FindDeviceByAddress(kAddrLeAlias);
+  ASSERT_TRUE(dev);
+  EXPECT_EQ(device(), dev);
+
+  dev = cache()->FindDeviceByAddress(kAddrBrEdr);
+  ASSERT_TRUE(dev);
+  EXPECT_EQ(device(), dev);
+  EXPECT_EQ(DeviceAddress::Type::kLEPublic, dev->address().type());
+}
+
 TEST_F(GAP_RemoteDeviceCacheTest,
        NewDeviceDoesNotCrashWhenNoCallbackIsRegistered) {
   RemoteDeviceCache().NewDevice(kAddrLePublic, true);
@@ -200,7 +226,29 @@ TEST_F(GAP_RemoteDeviceCacheTest, NewDeviceInitialTechnologyLowEnergy) {
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest,
-       ClassicDeviceBecomesDualModeWithAdvertisingData) {
+       DisallowNewLowEnergyDeviceIfBrEdrDeviceExists) {
+  NewDevice(kAddrBrEdr, true);
+  ASSERT_TRUE(device());
+
+  // Try to add new LE device with a public identity address containing the same
+  // value as the existing BR/EDR device's BD_ADDR.
+  auto* le_alias_dev = cache()->NewDevice(kAddrLeAlias, true);
+  EXPECT_FALSE(le_alias_dev);
+}
+
+TEST_F(GAP_RemoteDeviceCacheTest,
+       DisallowNewBrEdrDeviceIfLowEnergyDeviceExists) {
+  NewDevice(kAddrLeAlias, true);
+  ASSERT_TRUE(device());
+
+  // Try to add new BR/EDR device with BD_ADDR containing the same value as the
+  // existing LE device's public identity address.
+  auto* bredr_alias_dev = cache()->NewDevice(kAddrBrEdr, true);
+  ASSERT_FALSE(bredr_alias_dev);
+}
+
+TEST_F(GAP_RemoteDeviceCacheTest,
+       BrEdrDeviceBecomesDualModeWithAdvertisingData) {
   NewDevice(kAddrBrEdr, true);
   ASSERT_TRUE(device());
   ASSERT_TRUE(device()->bredr());
@@ -209,10 +257,16 @@ TEST_F(GAP_RemoteDeviceCacheTest,
   device()->MutLe().SetAdvertisingData(kTestRSSI, kAdvData);
   EXPECT_TRUE(device()->le());
   EXPECT_EQ(TechnologyType::kDualMode, device()->technology());
+
+  // Searching by LE address should turn up this device, which should retain its
+  // original address type.
+  auto* const le_device = cache()->FindDeviceByAddress(kAddrLeAlias);
+  ASSERT_EQ(device(), le_device);
+  EXPECT_EQ(DeviceAddress::Type::kBREDR, device()->address().type());
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest,
-       ClassicDeviceBecomesDualModeWhenConnectedOverLowEnergy) {
+       BrEdrDeviceBecomesDualModeWhenConnectedOverLowEnergy) {
   NewDevice(kAddrBrEdr, true);
   ASSERT_TRUE(device());
   ASSERT_TRUE(device()->bredr());
@@ -222,10 +276,14 @@ TEST_F(GAP_RemoteDeviceCacheTest,
       RemoteDevice::ConnectionState::kConnected);
   EXPECT_TRUE(device()->le());
   EXPECT_EQ(TechnologyType::kDualMode, device()->technology());
+
+  auto* const le_device = cache()->FindDeviceByAddress(kAddrLeAlias);
+  ASSERT_EQ(device(), le_device);
+  EXPECT_EQ(DeviceAddress::Type::kBREDR, device()->address().type());
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest,
-       ClassicDeviceBecomesDualModeWithLowEnergyConnParams) {
+       BrEdrDeviceBecomesDualModeWithLowEnergyConnParams) {
   NewDevice(kAddrBrEdr, true);
   ASSERT_TRUE(device());
   ASSERT_TRUE(device()->bredr());
@@ -234,10 +292,14 @@ TEST_F(GAP_RemoteDeviceCacheTest,
   device()->MutLe().SetConnectionParameters({});
   EXPECT_TRUE(device()->le());
   EXPECT_EQ(TechnologyType::kDualMode, device()->technology());
+
+  auto* const le_device = cache()->FindDeviceByAddress(kAddrLeAlias);
+  ASSERT_EQ(device(), le_device);
+  EXPECT_EQ(DeviceAddress::Type::kBREDR, device()->address().type());
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest,
-       ClassicDeviceBecomesDualModeWithLowEnergyPreferredConnParams) {
+       BrEdrDeviceBecomesDualModeWithLowEnergyPreferredConnParams) {
   NewDevice(kAddrBrEdr, true);
   ASSERT_TRUE(device());
   ASSERT_TRUE(device()->bredr());
@@ -246,25 +308,36 @@ TEST_F(GAP_RemoteDeviceCacheTest,
   device()->MutLe().SetPreferredConnectionParameters({});
   EXPECT_TRUE(device()->le());
   EXPECT_EQ(TechnologyType::kDualMode, device()->technology());
+
+  auto* const le_device = cache()->FindDeviceByAddress(kAddrLeAlias);
+  ASSERT_EQ(device(), le_device);
+  EXPECT_EQ(DeviceAddress::Type::kBREDR, device()->address().type());
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest,
        LowEnergyDeviceBecomesDualModeWithInquiryData) {
-  NewDevice(kAddrLePublic, true);
+  NewDevice(kAddrLeAlias, true);
   ASSERT_TRUE(device());
   ASSERT_TRUE(device()->le());
   ASSERT_FALSE(device()->bredr());
 
   hci::InquiryResult ir;
-  ir.bd_addr = kAddrLePublic.value();
+  ir.bd_addr = kAddrLeAlias.value();
   device()->MutBrEdr().SetInquiryData(ir);
   EXPECT_TRUE(device()->bredr());
   EXPECT_EQ(TechnologyType::kDualMode, device()->technology());
+
+  // Searching by only BR/EDR technology should turn up this device, which
+  // should still retain its original address type.
+  auto* const bredr_device = cache()->FindDeviceByAddress(kAddrBrEdr);
+  ASSERT_EQ(device(), bredr_device);
+  EXPECT_EQ(DeviceAddress::Type::kLEPublic, device()->address().type());
+  EXPECT_EQ(kAddrBrEdr, device()->bredr()->address());
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest,
        LowEnergyDeviceBecomesDualModeWhenConnectedOverClassic) {
-  NewDevice(kAddrLePublic, true);
+  NewDevice(kAddrLeAlias, true);
   ASSERT_TRUE(device());
   ASSERT_TRUE(device()->le());
   ASSERT_FALSE(device()->bredr());
@@ -273,6 +346,11 @@ TEST_F(GAP_RemoteDeviceCacheTest,
       RemoteDevice::ConnectionState::kConnected);
   EXPECT_TRUE(device()->bredr());
   EXPECT_EQ(TechnologyType::kDualMode, device()->technology());
+
+  auto* const bredr_device = cache()->FindDeviceByAddress(kAddrBrEdr);
+  ASSERT_EQ(device(), bredr_device);
+  EXPECT_EQ(DeviceAddress::Type::kLEPublic, device()->address().type());
+  EXPECT_EQ(kAddrBrEdr, device()->bredr()->address());
 }
 
 class GAP_RemoteDeviceCacheTest_BondingTest : public GAP_RemoteDeviceCacheTest {
@@ -306,6 +384,15 @@ TEST_F(GAP_RemoteDeviceCacheTest_BondingTest,
   sm::PairingData data;
   data.ltk = kLTK;
   EXPECT_FALSE(cache()->AddBondedDevice("foo", device()->address(), data));
+  EXPECT_FALSE(bonded_callback_called());
+}
+
+TEST_F(GAP_RemoteDeviceCacheTest_BondingTest,
+       AddBondedLowEnergyDeviceFailsWithExistingBrEdrAliasAddress) {
+  EXPECT_TRUE(NewDevice(kAddrBrEdr, true));
+  sm::PairingData data;
+  data.ltk = kLTK;
+  EXPECT_FALSE(cache()->AddBondedDevice("foo", kAddrLeAlias, data));
   EXPECT_FALSE(bonded_callback_called());
 }
 

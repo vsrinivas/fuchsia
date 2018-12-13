@@ -29,14 +29,16 @@ namespace {
 using ::btlib::testing::FakeController;
 using ::btlib::testing::FakeDevice;
 
+using common::DeviceAddress;
+
 using TestingBase = ::btlib::testing::FakeControllerTest<FakeController>;
 
-const common::DeviceAddress kAddress0(common::DeviceAddress::Type::kLEPublic,
-                                      "00:00:00:00:00:01");
-const common::DeviceAddress kAddress1(common::DeviceAddress::Type::kLEPublic,
-                                      "00:00:00:00:00:02");
-const common::DeviceAddress kAddress2(common::DeviceAddress::Type::kBREDR,
-                                      "00:00:00:00:00:03");
+const DeviceAddress kAddress0(DeviceAddress::Type::kLEPublic,
+                              "00:00:00:00:00:01");
+const DeviceAddress kAddrAlias0(DeviceAddress::Type::kBREDR, kAddress0.value());
+const DeviceAddress kAddress1(DeviceAddress::Type::kLEPublic,
+                              "00:00:00:00:00:02");
+const DeviceAddress kAddress2(DeviceAddress::Type::kBREDR, "00:00:00:00:00:03");
 
 class LowEnergyConnectionManagerTest : public TestingBase {
  public:
@@ -804,6 +806,33 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, RegisterRemoteInitiatedLink) {
 
   RunLoopUntilIdle();
   EXPECT_TRUE(connected_devices().empty());
+}
+
+// Listener receives remote initiated connection ref for a known device with the
+// same BR/EDR address.
+TEST_F(GAP_LowEnergyConnectionManagerTest,
+       IncomingConnectionUpgradesKnownBrEdrDeviceToDualMode) {
+  RemoteDevice* device = dev_cache()->NewDevice(kAddrAlias0, true);
+  ASSERT_TRUE(device);
+  ASSERT_EQ(device, dev_cache()->FindDeviceByAddress(kAddress0));
+  ASSERT_EQ(TechnologyType::kClassic, device->technology());
+
+  test_device()->AddDevice(std::make_unique<FakeDevice>(kAddress0));
+
+  // First create a fake incoming connection.
+  test_device()->ConnectLowEnergy(kAddress0);
+
+  RunLoopUntilIdle();
+
+  auto link = MoveLastRemoteInitiated();
+  ASSERT_TRUE(link);
+
+  LowEnergyConnectionRefPtr conn_ref =
+      conn_mgr()->RegisterRemoteInitiatedLink(std::move(link));
+  ASSERT_TRUE(conn_ref);
+
+  EXPECT_EQ(device->identifier(), conn_ref->device_identifier());
+  EXPECT_EQ(TechnologyType::kDualMode, device->technology());
 }
 
 // Tests that the master accepts the connection parameters that are sent from

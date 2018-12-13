@@ -17,6 +17,7 @@ namespace {
 
 using ::btlib::testing::CommandTransaction;
 
+using common::DeviceAddress;
 using common::LowerBits;
 using common::UpperBits;
 
@@ -24,8 +25,8 @@ using TestingBase =
     ::btlib::testing::FakeControllerTest<::btlib::testing::TestController>;
 
 constexpr hci::ConnectionHandle kConnectionHandle = 0x0BAA;
-const common::DeviceAddress kTestDevAddr(common::DeviceAddress::Type::kBREDR,
-                                         "00:00:00:00:00:01");
+const DeviceAddress kTestDevAddr(DeviceAddress::Type::kBREDR,
+                                 "00:00:00:00:00:01");
 
 #define TEST_DEV_ADDR_BYTES_LE 0x01, 0x00, 0x00, 0x00, 0x00, 0x00
 
@@ -475,6 +476,31 @@ TEST_F(GAP_BrEdrConnectionManagerTest, IncomingConnectionSuccess) {
   RunLoopUntilIdle();
 
   EXPECT_EQ(9u, transactions);
+}
+
+// Test: An incoming connection request should upgrade a known LE device with a
+// matching address to a dual mode device.
+TEST_F(GAP_BrEdrConnectionManagerTest,
+       IncomingConnectionUpgradesKnownLowEnergyDeviceToDualMode) {
+  const DeviceAddress le_alias_addr(DeviceAddress::Type::kLEPublic,
+                                    kTestDevAddr.value());
+  RemoteDevice* const dev = device_cache()->NewDevice(le_alias_addr, true);
+  ASSERT_TRUE(dev);
+  ASSERT_EQ(TechnologyType::kLowEnergy, dev->technology());
+
+  QueueSuccessfulIncomingConn();
+
+  test_device()->SendCommandChannelPacket(kConnectionRequest);
+
+  RunLoopUntilIdle();
+
+  ASSERT_EQ(dev, device_cache()->FindDeviceByAddress(kTestDevAddr));
+  EXPECT_EQ(dev->identifier(), connmgr()->GetPeerId(kConnectionHandle));
+  EXPECT_EQ(TechnologyType::kDualMode, dev->technology());
+
+  // Prepare for disconnection upon teardown.
+  test_device()->QueueCommandTransaction(CommandTransaction(
+      kDisconnect, {&kDisconnectRsp, &kDisconnectionComplete}));
 }
 
 // Test: A remote disconnect should correctly remove the conneection.

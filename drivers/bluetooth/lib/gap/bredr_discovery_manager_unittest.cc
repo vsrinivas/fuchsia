@@ -16,6 +16,8 @@ namespace {
 
 using ::btlib::testing::CommandTransaction;
 
+using common::DeviceAddress;
+using common::DeviceAddressBytes;
 using common::LowerBits;
 using common::UpperBits;
 
@@ -85,7 +87,7 @@ class BrEdrDiscoveryManagerTest : public TestingBase {
     RunLoopUntilIdle();
   }
 
-  const RemoteDeviceCache* device_cache() const { return &device_cache_; }
+  RemoteDeviceCache* device_cache() { return &device_cache_; }
 
  protected:
   BrEdrDiscoveryManager* discovery_manager() const {
@@ -126,11 +128,24 @@ const auto kInquiryCompleteError = common::CreateStaticByteBuffer(
   hci::kHardwareFailure
 );
 
+#define BD_ADDR(addr1) addr1, 0x00, 0x00, 0x00, 0x00, 0x00
+
+const DeviceAddress kDeviceAddress1(DeviceAddress::Type::kBREDR,
+                                    DeviceAddressBytes{BD_ADDR(0x01)});
+const DeviceAddress kLeAliasAddress1(DeviceAddress::Type::kLEPublic,
+                                     kDeviceAddress1.value());
+const DeviceAddress kDeviceAddress2(DeviceAddress::Type::kBREDR,
+                                    DeviceAddressBytes{BD_ADDR(0x02)});
+const DeviceAddress kLeAliasAddress2(DeviceAddress::Type::kLEPublic,
+                                     kDeviceAddress2.value());
+const DeviceAddress kDeviceAddress3(DeviceAddress::Type::kBREDR,
+                                    DeviceAddressBytes{BD_ADDR(0x03)});
+
 const auto kInquiryResult = common::CreateStaticByteBuffer(
   hci::kInquiryResultEventCode,
   0x0F, // parameter_total_size (15 bytes)
   0x01, // num_responses
-  0x01, 0x00, 0x00, 0x00, 0x00, 0x00, // bd_addr[0]
+  BD_ADDR(0x01), // bd_addr[0]
   0x00, // page_scan_repetition_mode[0] (R0)
   0x00, // unused / reserved
   0x00, // unused / reserved
@@ -142,7 +157,7 @@ const auto kRSSIInquiryResult = common::CreateStaticByteBuffer(
   hci::kInquiryResultWithRSSIEventCode,
   0x0F, // parameter_total_size (15 bytes)
   0x01, // num_responses
-  0x02, 0x00, 0x00, 0x00, 0x00, 0x00, // bd_addr[0]
+  BD_ADDR(0x02), // bd_addr[0]
   0x00, // page_scan_repetition_mode[0] (R0)
   0x00, // unused / reserved
   0x00, 0x1F, 0x00, // class_of_device[0] (unspecified)
@@ -153,7 +168,7 @@ const auto kRSSIInquiryResult = common::CreateStaticByteBuffer(
 #define REMOTE_NAME_REQUEST(addr1) common::CreateStaticByteBuffer( \
     LowerBits(hci::kRemoteNameRequest), UpperBits(hci::kRemoteNameRequest), \
     0x0a, /* parameter_total_size (10 bytes) */ \
-    (addr1),  0x00, 0x00, 0x00, 0x00, 0x00,  /* BD_ADDR */ \
+    BD_ADDR(addr1),  /* BD_ADDR */ \
     0x00, 0x00, 0x00, 0x80 /* page_scan_repetition_mode, 0, clock_offset */ \
 );
 
@@ -161,14 +176,18 @@ const auto kRemoteNameRequest1 = REMOTE_NAME_REQUEST(0x01);
 const auto kRemoteNameRequest2 = REMOTE_NAME_REQUEST(0x02);
 const auto kRemoteNameRequest3 = REMOTE_NAME_REQUEST(0x03);
 
+#undef REMOTE_NAME_REQUEST
+
 const auto kRemoteNameRequestRsp =
     COMMAND_STATUS_RSP(hci::kRemoteNameRequest, hci::StatusCode::kSuccess);
+
+#undef COMMAND_STATUS_RSP
 
 const auto kRemoteNameRequestComplete1 = common::CreateStaticByteBuffer(
     hci::kRemoteNameRequestCompleteEventCode,
     0x20,                                // parameter_total_size (32)
     hci::StatusCode::kSuccess,           // status
-    0x01, 0x00, 0x00, 0x00, 0x00, 0x00,  // BD_ADDR (00:00:00:00:00:01)
+    BD_ADDR(0x01),                       // BD_ADDR (00:00:00:00:00:01)
     'F', 'u', 'c', 'h', 's', 'i', 'a', 0xF0, 0x9F, 0x92, 0x96, 0x00, 0x14, 0x15,
     0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20
     // remote name (Fuchsia 💖)
@@ -178,7 +197,7 @@ const auto kRemoteNameRequestComplete2 = common::CreateStaticByteBuffer(
     hci::kRemoteNameRequestCompleteEventCode,
     0x10,                                // parameter_total_size (16)
     hci::StatusCode::kSuccess,           // status
-    0x02, 0x00, 0x00, 0x00, 0x00, 0x00,  // BD_ADDR (00:00:00:00:00:01)
+    BD_ADDR(0x02),                       // BD_ADDR (00:00:00:00:00:02)
     'S', 'a', 'p', 'p', 'h', 'i', 'r', 'e', 0x00 // remote name (Sapphire)
 );
 
@@ -186,7 +205,7 @@ const auto kExtendedInquiryResult = common::CreateStaticByteBuffer(
   hci::kExtendedInquiryResultEventCode,
   0xFF, // parameter_total_size (255 bytes)
   0x01, // num_responses
-  0x03, 0x00, 0x00, 0x00, 0x00, 0x00, // bd_addr
+  BD_ADDR(0x03),  // bd_addr
   0x00, // page_scan_repetition_mode (R0)
   0x00, // unused / reserved
   0x00, 0x1F, 0x00, // class_of_device (unspecified)
@@ -214,6 +233,8 @@ const auto kExtendedInquiryResult = common::CreateStaticByteBuffer(
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 );
+
+#undef BD_ADDR
 
 const auto kInqCancel = common::CreateStaticByteBuffer(
   LowerBits(hci::kInquiryCancel), UpperBits(hci::kInquiryCancel),  // opcode
@@ -714,16 +735,11 @@ TEST_F(GAP_BrEdrDiscoveryManagerTest, ExtendedInquiry) {
   EXPECT_TRUE(discovery_manager()->discovering());
   session1 = nullptr;
 
-  RemoteDevice* device1 =
-      device_cache()->FindDeviceByAddress(common::DeviceAddress(
-          common::DeviceAddress::Type::kBREDR, "00:00:00:00:00:02"));
+  RemoteDevice* device1 = device_cache()->FindDeviceByAddress(kDeviceAddress2);
   ASSERT_TRUE(device1);
   EXPECT_EQ(-20, device1->rssi());
 
-  RemoteDevice* device2 =
-      device_cache()->FindDeviceByAddress(common::DeviceAddress(
-          common::DeviceAddress::Type::kBREDR, "00:00:00:00:00:03"));
-
+  RemoteDevice* device2 = device_cache()->FindDeviceByAddress(kDeviceAddress3);
   ASSERT_TRUE(device2);
   ASSERT_TRUE(device2->name());
   EXPECT_EQ("Fuchsia💖", *device2->name());
@@ -735,7 +751,73 @@ TEST_F(GAP_BrEdrDiscoveryManagerTest, ExtendedInquiry) {
   EXPECT_FALSE(discovery_manager()->discovering());
 }
 
-#undef COMMAND_STATUS_RSP
+TEST_F(GAP_BrEdrDiscoveryManagerTest,
+       InquiryResultUpgradesKnownLowEnergyDeviceToDualMode) {
+  RemoteDevice* device = device_cache()->NewDevice(kLeAliasAddress1, true);
+  ASSERT_TRUE(device);
+  ASSERT_EQ(TechnologyType::kLowEnergy, device->technology());
+
+  test_device()->QueueCommandTransaction(
+      CommandTransaction(kInquiry, {&kInquiryRsp, &kInquiryResult}));
+  test_device()->QueueCommandTransaction(CommandTransaction(
+      kRemoteNameRequest1,
+      {&kRemoteNameRequestRsp, &kRemoteNameRequestComplete1}));
+
+  std::unique_ptr<BrEdrDiscoverySession> session;
+  size_t devices_found = 0u;
+
+  discovery_manager()->RequestDiscovery(
+      [&session, &devices_found](auto status, auto cb_session) {
+        EXPECT_TRUE(status);
+        cb_session->set_result_callback(
+            [&devices_found](auto&) { devices_found++; });
+        session = std::move(cb_session);
+      });
+  RunLoopUntilIdle();
+  session = nullptr;
+
+  EXPECT_EQ(1u, devices_found);
+  ASSERT_EQ(device, device_cache()->FindDeviceByAddress(kDeviceAddress1));
+  EXPECT_EQ(TechnologyType::kDualMode, device->technology());
+
+  test_device()->SendCommandChannelPacket(kInquiryComplete);
+}
+
+TEST_F(GAP_BrEdrDiscoveryManagerTest,
+       ExtendedInquiryResultUpgradesKnownLowEnergyDeviceToDualMode) {
+  RemoteDevice* device = device_cache()->NewDevice(kLeAliasAddress2, true);
+  ASSERT_TRUE(device);
+  ASSERT_EQ(TechnologyType::kLowEnergy, device->technology());
+
+  NewDiscoveryManager(hci::InquiryMode::kExtended);
+
+  test_device()->QueueCommandTransaction(
+      CommandTransaction(kSetExtendedMode, {&kSetExtendedModeRsp}));
+  test_device()->QueueCommandTransaction(CommandTransaction(
+      kInquiry, {&kInquiryRsp, &kExtendedInquiryResult, &kRSSIInquiryResult}));
+  test_device()->QueueCommandTransaction(CommandTransaction(
+      kRemoteNameRequest2,
+      {&kRemoteNameRequestRsp, &kRemoteNameRequestComplete2}));
+
+  std::unique_ptr<BrEdrDiscoverySession> session;
+  size_t devices_found = 0u;
+
+  discovery_manager()->RequestDiscovery(
+      [&session, &devices_found](auto status, auto cb_session) {
+        EXPECT_TRUE(status);
+        cb_session->set_result_callback(
+            [&devices_found](auto&) { devices_found++; });
+        session = std::move(cb_session);
+      });
+  RunLoopUntilIdle();
+  session = nullptr;
+
+  EXPECT_EQ(2u, devices_found);
+  ASSERT_EQ(device, device_cache()->FindDeviceByAddress(kDeviceAddress2));
+  EXPECT_EQ(TechnologyType::kDualMode, device->technology());
+
+  test_device()->SendCommandChannelPacket(kInquiryComplete);
+}
 
 }  // namespace
 }  // namespace gap

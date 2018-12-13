@@ -139,6 +139,9 @@ class RemoteDevice final {
       return connection_state() == ConnectionState::kConnected;
     }
 
+    // Returns the device's BD_ADDR.
+    const common::DeviceAddress& address() const { return address_; }
+
     // Returns the device class of this device, if it is known.
     const common::Optional<common::DeviceClass>& device_class() const {
       return device_class_;
@@ -191,6 +194,7 @@ class RemoteDevice final {
 
     RemoteDevice* dev_;  // weak
     ConnectionState conn_state_;
+    common::DeviceAddress address_;
     common::Optional<common::DeviceClass> device_class_;
     common::Optional<hci::PageScanRepetitionMode> page_scan_rep_mode_;
     common::Optional<uint16_t> clock_offset_;
