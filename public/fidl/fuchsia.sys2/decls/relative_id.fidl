@@ -1,0 +1,25 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sys2;
+
+/// Specifies a relation from one component to its containing realm, itself,
+/// or one of its children.
+enum Relation {
+  /// This component’s containing realm, i.e. the parent component.
+  REALM = 0;
+  /// This component (the one for this component manifest).
+  SELF = 1;
+  /// One of this component’s children.
+  CHILD = 2;
+};
+
+/// Identifies a relative component.
+table RelativeId {
+  1: Relation relation;
+
+  /// The name of the child if |relation| == |CHILD|, otherwise the empty
+  /// string.
+  2: string:MAX_CHILD_NAME_LENGTH child_name;
+};

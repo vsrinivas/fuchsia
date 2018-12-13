@@ -1,0 +1,27 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sys2;
+
+/// Declares a capability exposed to a component's containing realm, such as a
+/// service exposed by the component or one of its children at runtime.
+table ExposeDecl {
+    /// The type of capability exposed.
+    1: CapabilityType type;
+
+    /// The incoming path to the capability.
+    ///
+    /// If |source| == |SELF|, this is a path in the component’s namespace.
+    /// Otherwise, it is the path by which the capability was presented to the
+    /// component.
+    2: string:MAX_PATH_LENGTH source_path;
+
+    /// The provider of the service relative to the component itself.
+    ///
+    /// Valid relations: SELF, CHILD.
+    3: RelativeId source;
+
+    /// The path by which the capability is being exposed.
+    4: string:MAX_PATH_LENGTH target_path;
+};

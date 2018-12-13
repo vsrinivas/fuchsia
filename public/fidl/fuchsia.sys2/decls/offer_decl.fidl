@@ -1,0 +1,37 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sys2;
+
+/// Declares a capability offered by a component to one of its children, such as
+/// a service offered by the component's containing realm, the component itself,
+/// or one of its children.
+table OfferDecl {
+    /// The type of capability offered.
+    1: CapabilityType type;
+
+    /// The incoming path to the capability.
+    ///
+    /// If |source| == |SELF|, this is a path in the component’s namespace.
+    /// Otherwise, it is the path by which the capability was presented to the
+    /// component.
+    2: string:MAX_PATH_LENGTH source_path;
+
+    /// The provider of the capability relative to the component itself.
+    ///
+    /// Valid relations: REALM, SELF, CHILD.
+    3: RelativeId source;
+
+    /// The list of children to which the capability should be offered.
+    4: vector<OfferTarget> targets;
+};
+
+/// Describes a target for a capability offering.
+table OfferTarget {
+    /// The path under which the capability is being offered.
+    1: string:MAX_PATH_LENGTH target_path;
+
+    /// The name of the child component.
+    2: string:MAX_CHILD_NAME_LENGTH child_name;
+};

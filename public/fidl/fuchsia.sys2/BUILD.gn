@@ -14,13 +14,14 @@ fidl("fuchsia.sys2") {
 
   sources = [
     "constants.fidl",
+    "decls/capability.fidl",
     "decls/child_decl.fidl",
     "decls/component_decl.fidl",
-    "decls/export_decl.fidl",
+    "decls/expose_decl.fidl",
     "decls/facet_decl.fidl",
-    "decls/import_decl.fidl",
-    "decls/relative_ids.fidl",
-    "decls/route_decl.fidl",
+    "decls/offer_decl.fidl",
+    "decls/relative_id.fidl",
+    "decls/use_decl.fidl",
     "lifecycle_handler.fidl",
     "moniker.fidl",
     "realm.fidl",
