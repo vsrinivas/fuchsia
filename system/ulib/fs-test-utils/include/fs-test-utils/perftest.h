@@ -61,7 +61,7 @@ struct PerformanceTestOptions {
 };
 
 struct TestInfo {
-    // Funcion that executes the test.
+    // Function that executes the test.
     fbl::Function<bool(perftest::RepeatState*, Fixture*)> test_fn;
 
     // Name of the test.

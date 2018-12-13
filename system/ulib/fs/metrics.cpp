@@ -95,7 +95,7 @@ cobalt_client::HistogramOptions MakeHistogramOptions(const cobalt_client::Histog
 
 VnodeMetrics::VnodeMetrics(cobalt_client::Collector* collector, const fbl::String& fs_name,
                            bool local_metrics) {
-    // Initalize all the metrics for the collector.
+    // Initialize all the metrics for the collector.
     cobalt_client::HistogramOptions nano_base = kVnodeOptionsNanoOp;
     cobalt_client::HistogramOptions micro_base = kVnodeOptionsMicroOp;
     nano_base.component = fs_name;

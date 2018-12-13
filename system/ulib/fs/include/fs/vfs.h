@@ -119,7 +119,7 @@ public:
     // If the node represented by |path| contains a remote node,
     // set |pathout| to the remaining portion of the path yet to
     // be traversed (or ".", if the endpoint of |path| is the mount point),
-    // and return the node containing the ndoe in |out|.
+    // and return the node containing the node in |out|.
     zx_status_t Open(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
                      fbl::StringPiece path, fbl::StringPiece* pathout,
                      uint32_t flags, uint32_t mode) FS_TA_EXCLUDES(vfs_lock_);
