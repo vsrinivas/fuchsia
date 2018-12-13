@@ -375,7 +375,7 @@ zx_status_t sys_channel_call_noretry(zx_handle_t handle_value, uint32_t options,
 
     // TODO(ZX-970): ktrace channel calls; maybe two traces, maybe with txid.
 
-    // Write message and wait for reply, deadline, or cancelation
+    // Write message and wait for reply, deadline, or cancellation
     ktl::unique_ptr<MessagePacket> reply;
     status = channel->Call(up->get_koid(), ktl::move(msg), deadline, &reply);
     if (status != ZX_OK)

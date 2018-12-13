@@ -97,15 +97,15 @@ zx_status_t TimerDispatcher::Set(zx_time_t deadline, zx_duration_t slack) {
     deadline_ = deadline;
     slack_ = slack;
 
-    // If we're imminently awaiting a timer callback due to a prior cancelation request,
-    // let the callback take care of restarting the timer too so everthing happens in the
+    // If we're imminently awaiting a timer callback due to a prior cancellation request,
+    // let the callback take care of restarting the timer too so everything happens in the
     // right sequence.
     if (cancel_pending_)
         return ZX_OK;
 
     // We need to ref-up because the timer and the dpc don't understand
     // refcounted objects. The Release() is called either in OnTimerFired()
-    // or in the complicated cancelation path above.
+    // or in the complicated cancellation path above.
     AddRef();
 
     // We must ensure that the timer callback (running in interrupt context,
