@@ -167,11 +167,6 @@ zx_status_t async_loop_create(const async_loop_config_t* config, async_loop_t** 
     if (status == ZX_OK)
         status = zx_timer_create(ZX_TIMER_SLACK_LATE, ZX_CLOCK_MONOTONIC, &loop->timer);
     if (status == ZX_OK) {
-        status = zx_object_wait_async(loop->timer, loop->port, KEY_CONTROL,
-                                      ZX_TIMER_SIGNALED,
-                                      ZX_WAIT_ASYNC_REPEATING);
-    }
-    if (status == ZX_OK) {
         *out_loop = loop;
         if (loop->config.make_default_for_current_thread) {
             ZX_DEBUG_ASSERT(async_get_default_dispatcher() == NULL);
@@ -269,7 +264,7 @@ static zx_status_t async_loop_run_once(async_loop_t* loop, zx_time_t deadline) {
             return ZX_OK;
 
         // Handle task timer expirations.
-        if (packet.type == ZX_PKT_TYPE_SIGNAL_REP &&
+        if (packet.type == ZX_PKT_TYPE_SIGNAL_ONE &&
             packet.signal.observed & ZX_TIMER_SIGNALED) {
             return async_loop_dispatch_tasks(loop);
         }
@@ -731,6 +726,10 @@ static void async_loop_restart_timer_locked(async_loop_t* loop) {
 
     zx_status_t status = zx_timer_set(loop->timer, deadline, 0);
     ZX_ASSERT_MSG(status == ZX_OK, "zx_timer_set: status=%d", status);
+    status = zx_object_wait_async(loop->timer, loop->port, KEY_CONTROL,
+                                              ZX_TIMER_SIGNALED,
+                                              ZX_WAIT_ASYNC_ONCE);
+    ZX_ASSERT_MSG(status == ZX_OK, "zx_object_wait_async: status=%d", status);
 }
 
 static void async_loop_invoke_prologue(async_loop_t* loop) {
