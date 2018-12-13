@@ -149,7 +149,7 @@ zx_status_t CheckFvmConsistency(const Superblock* info, int block_fd) {
 } // namespace
 
 zx_status_t Blobfs::VerifyBlob(uint32_t node_index) {
-    return VnodeBlob::VerifyBlob(this, node_index);
+    return Blob::VerifyBlob(this, node_index);
 }
 
 void Blobfs::PersistBlocks(WritebackWork* wb, const ReservedExtent& reserved_extent) {
@@ -268,7 +268,7 @@ void Blobfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
     ManagedVfs::Shutdown([this, cb = std::move(cb)](zx_status_t status) mutable {
         // 2a) Shutdown all internal connections to blobfs.
         Cache().ForAllOpenNodes([](fbl::RefPtr<CacheNode> cache_node) {
-            auto vnode = fbl::RefPtr<VnodeBlob>::Downcast(std::move(cache_node));
+            auto vnode = fbl::RefPtr<Blob>::Downcast(std::move(cache_node));
             vnode->CloneWatcherTeardown();
         });
 
@@ -653,7 +653,7 @@ zx_status_t Blobfs::InitializeVnodes() {
         const Inode* inode = GetNode(node_index);
         if (inode->header.IsAllocated() && !inode->header.IsExtentContainer()) {
             Digest digest(inode->merkle_root_hash);
-            fbl::RefPtr<VnodeBlob> vnode = fbl::AdoptRef(new VnodeBlob(this, digest));
+            fbl::RefPtr<Blob> vnode = fbl::AdoptRef(new Blob(this, digest));
             vnode->SetState(kBlobStateReadable);
             vnode->PopulateInode(node_index);
 
@@ -723,9 +723,9 @@ zx_status_t Blobfs::Reload() {
     return ZX_OK;
 }
 
-zx_status_t Blobfs::OpenRootNode(fbl::RefPtr<VnodeBlob>* out) {
+zx_status_t Blobfs::OpenRootNode(fbl::RefPtr<Directory>* out) {
     fbl::AllocChecker ac;
-    fbl::RefPtr<VnodeBlob> vn = fbl::AdoptRef(new (&ac) VnodeBlob(this));
+    fbl::RefPtr<Directory> vn = fbl::AdoptRef(new (&ac) Directory(this));
 
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
@@ -794,7 +794,7 @@ zx_status_t Mount(async_dispatcher_t* dispatcher, fbl::unique_fd blockfd,
     fs->SetDispatcher(dispatcher);
     fs->SetUnmountCallback(std::move(on_unmount));
 
-    fbl::RefPtr<VnodeBlob> vn;
+    fbl::RefPtr<Directory> vn;
     if ((status = fs->OpenRootNode(&vn)) != ZX_OK) {
         FS_TRACE_ERROR("blobfs: mount failed; could not get root blob\n");
         return status;
@@ -810,7 +810,7 @@ zx_status_t Mount(async_dispatcher_t* dispatcher, fbl::unique_fd blockfd,
     return ZX_OK;
 }
 
-zx_status_t Blobfs::CreateWork(fbl::unique_ptr<WritebackWork>* out, VnodeBlob* vnode) {
+zx_status_t Blobfs::CreateWork(fbl::unique_ptr<WritebackWork>* out, Blob* vnode) {
     if (writeback_ == nullptr) {
         // Transactions should never be allowed if the writeback queue is disabled.
         return ZX_ERR_BAD_STATE;

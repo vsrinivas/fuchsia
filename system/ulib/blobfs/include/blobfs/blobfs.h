@@ -39,8 +39,10 @@
 #include <trace/event.h>
 
 #include <blobfs/allocator.h>
+#include <blobfs/blob.h>
 #include <blobfs/blob-cache.h>
 #include <blobfs/common.h>
+#include <blobfs/directory.h>
 #include <blobfs/extent-reserver.h>
 #include <blobfs/format.h>
 #include <blobfs/iterator/allocated-extent-iterator.h>
@@ -49,7 +51,6 @@
 #include <blobfs/lz4.h>
 #include <blobfs/metrics.h>
 #include <blobfs/node-reserver.h>
-#include <blobfs/vnode.h>
 #include <blobfs/writeback.h>
 
 #include <atomic>
@@ -59,7 +60,7 @@ namespace blobfs {
 
 class Blobfs;
 class Journal;
-class VnodeBlob;
+class Blob;
 class WritebackQueue;
 class WritebackWork;
 
@@ -174,7 +175,7 @@ public:
 
     // Invokes "open" on the root directory.
     // Acts as a special-case to bootstrap filesystem mounting.
-    zx_status_t OpenRootNode(fbl::RefPtr<VnodeBlob>* out);
+    zx_status_t OpenRootNode(fbl::RefPtr<Directory>* out);
 
 
     BlobCache& Cache() {
@@ -193,7 +194,7 @@ public:
     using SyncCallback = fs::Vnode::SyncCallback;
     void Sync(SyncCallback closure);
 
-    zx_status_t CreateWork(fbl::unique_ptr<WritebackWork>* out, VnodeBlob* vnode);
+    zx_status_t CreateWork(fbl::unique_ptr<WritebackWork>* out, Blob* vnode);
 
     // Enqueues |work| to the appropriate buffer. If |journal| is true and the journal is enabled,
     // the transaction(s) will first be written to the journal. Otherwise, they will be sent

@@ -60,13 +60,19 @@ constexpr BlobFlags kBlobStateMask        = 0x000000FF;
 
 // Informational non-state flags:
 constexpr BlobFlags kBlobFlagDeletable    = 0x00000100; // This node should be unlinked when closed
-constexpr BlobFlags kBlobFlagDirectory    = 0x00000200; // This node represents the root directory
 constexpr BlobFlags kBlobOtherMask        = 0x0000FF00;
 
 // clang-format on
 
-class VnodeBlob final : public CacheNode, fbl::Recyclable<VnodeBlob> {
+class Blob final : public CacheNode, fbl::Recyclable<Blob> {
 public:
+    // Constructs a blob, reads in data, verifies the contents, then destroys the in-memory copy.
+    static zx_status_t VerifyBlob(Blobfs* bs, uint32_t node_index);
+
+    // Constructs actual blobs
+    Blob(Blobfs* bs, const Digest& digest);
+    virtual ~Blob();
+
     ////////////////
     // fs::Vnode interface.
 
@@ -93,8 +99,6 @@ public:
         return fd_count_ == 0 && (DeletionQueued() || !(GetState() & kBlobStateReadable));
     }
 
-    bool IsDirectory() const { return flags_ & kBlobFlagDirectory; }
-
     bool DeletionQueued() const {
         return flags_ & kBlobFlagDeletable;
     }
@@ -115,13 +119,6 @@ public:
         return inode_;
     }
 
-    // Constructs the "directory" blob
-    VnodeBlob(Blobfs* bs);
-    // Constructs actual blobs
-    VnodeBlob(Blobfs* bs, const Digest& digest);
-
-    virtual ~VnodeBlob();
-
     void CompleteSync();
 
     // When blob VMOs are cloned and returned to clients, blobfs watches
@@ -135,34 +132,28 @@ public:
     //
     // Returns this reference, if it exists, to provide control over
     // when the Vnode destructor is executed.
-    fbl::RefPtr<VnodeBlob> CloneWatcherTeardown();
+    fbl::RefPtr<Blob> CloneWatcherTeardown();
 
-    // Constructs a blob, reads in data, verifies the contents, then destroys the in-memory copy.
-    static zx_status_t VerifyBlob(Blobfs* bs, uint32_t node_index);
+    // Marks the blob as deletable, and attempt to purge it.
+    zx_status_t QueueUnlink();
 
 private:
-    DISALLOW_COPY_ASSIGN_AND_MOVE(VnodeBlob);
+    DISALLOW_COPY_ASSIGN_AND_MOVE(Blob);
 
     ////////////////
     // fs::Vnode interface.
 
     zx_status_t GetHandles(uint32_t flags, fuchsia_io_NodeInfo* info) final;
     zx_status_t ValidateFlags(uint32_t flags) final;
-    zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
-                        size_t* out_actual) final;
     zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
     zx_status_t Write(const void* data, size_t len, size_t offset,
                       size_t* out_actual) final;
     zx_status_t Append(const void* data, size_t len, size_t* out_end,
                        size_t* out_actual) final;
-    zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
     zx_status_t Getattr(vnattr_t* a) final;
-    zx_status_t Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name,
-                       uint32_t mode) final;
     zx_status_t Truncate(size_t len) final;
     zx_status_t QueryFilesystem(fuchsia_io_FilesystemInfo* out) final;
     zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) final;
-    zx_status_t Unlink(fbl::StringPiece name, bool must_be_dir) final;
     zx_status_t GetVmo(int flags, zx_handle_t* out) final;
     void Sync(SyncCallback closure) final;
 
@@ -192,9 +183,6 @@ private:
     zx_status_t CloneVmo(zx_rights_t rights, zx_handle_t* out);
     void HandleNoClones(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                         zx_status_t status, const zx_packet_signal_t* signal);
-
-    // Marks the blob as deletable, and attempt to purge it.
-    zx_status_t QueueUnlink();
 
     // Invokes |Purge()| if the vnode is purgeable.
     zx_status_t TryPurge();
@@ -263,13 +251,13 @@ private:
 
     // Watches any clones of "vmo_" provided to clients.
     // Observes the ZX_VMO_ZERO_CHILDREN signal.
-    async::WaitMethod<VnodeBlob, &VnodeBlob::HandleNoClones> clone_watcher_;
+    async::WaitMethod<Blob, &Blob::HandleNoClones> clone_watcher_;
     // Keeps a reference to the blob alive (from within itself)
     // until there are no cloned VMOs in used.
     //
     // This RefPtr is only non-null when a client is using a cloned VMO,
-    // or there would be a clear leak of VnodeBlob.
-    fbl::RefPtr<VnodeBlob> clone_ref_ = {};
+    // or there would be a clear leak of Blob.
+    fbl::RefPtr<Blob> clone_ref_ = {};
 
     zx::event readable_event_ = {};
 

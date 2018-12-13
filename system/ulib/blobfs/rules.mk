@@ -29,14 +29,14 @@ COMMON_SRCS := \
 COMMON_TARGET_SRCS := \
     $(COMMON_SRCS) \
     $(LOCAL_DIR)/allocator.cpp \
-    $(LOCAL_DIR)/blob-cache.cpp \
+    $(LOCAL_DIR)/blob.cpp \
     $(LOCAL_DIR)/blobfs.cpp \
+    $(LOCAL_DIR)/blob-cache.cpp \
     $(LOCAL_DIR)/cache-node.cpp \
+    $(LOCAL_DIR)/directory.cpp \
     $(LOCAL_DIR)/iterator/node-populator.cpp \
     $(LOCAL_DIR)/journal.cpp \
     $(LOCAL_DIR)/metrics.cpp \
-    $(LOCAL_DIR)/rpc.cpp \
-    $(LOCAL_DIR)/vnode.cpp \
     $(LOCAL_DIR)/writeback.cpp \
 
 TARGET_MODULE_STATIC_LIBS := \

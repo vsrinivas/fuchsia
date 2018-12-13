@@ -11,7 +11,7 @@
 namespace blobfs {
 namespace {
 
-// A mock Node, comparable to VnodeBlob.
+// A mock Node, comparable to Blob.
 //
 // "ShouldCache" mimics the internal Vnode state machine.
 // "UsingMemory" mimics the storage of pages and mappings, which may be evicted

@@ -158,7 +158,7 @@ public:
     // and adds transactions for the deletions to |work|.
     virtual void PrepareDelete(JournalEntry* entry, WritebackWork* work) = 0;
 
-    // Shortcut to create a WritebackWork with no associated VnodeBlob.
+    // Shortcut to create a WritebackWork with no associated Blob.
     virtual fbl::unique_ptr<WritebackWork> CreateWork() = 0;
 
     // Enqueues transactions from the entry buffer to the blobfs writeback queue.
@@ -253,7 +253,7 @@ public:
     // and adds transactions for the deletions to |work|.
     void PrepareDelete(JournalEntry* entry, WritebackWork* work) final __TA_EXCLUDES(lock_);
 
-    // Shortcut to create a WritebackWork with no associated VnodeBlob.
+    // Shortcut to create a WritebackWork with no associated Blob.
     fbl::unique_ptr<WritebackWork> CreateWork() final;
 
     // Enqueues transactions from the entry buffer to the blobfs writeback queue.

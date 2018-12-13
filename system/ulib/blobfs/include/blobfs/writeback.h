@@ -35,7 +35,7 @@
 namespace blobfs {
 
 class Blobfs;
-class VnodeBlob;
+class Blob;
 
 struct WriteRequest {
     zx_handle_t vmo;
@@ -122,7 +122,7 @@ public:
 
     // Create a WritebackWork given a vnode (which may be null)
     // Vnode is stored for duration of txn so that it isn't destroyed during the write process
-    WritebackWork(Blobfs* bs, fbl::RefPtr<VnodeBlob> vnode);
+    WritebackWork(Blobfs* bs, fbl::RefPtr<Blob> vnode);
     ~WritebackWork() = default;
 
     // Sets the WritebackWork to a completed state. |status| should indicate whether the work was
@@ -166,7 +166,7 @@ private:
     SyncCallback sync_cb_; // Call after work has been completely flushed.
 
     bool sync_;
-    fbl::RefPtr<VnodeBlob> vn_;
+    fbl::RefPtr<Blob> vn_;
 };
 
 // In-memory data buffer.

@@ -148,7 +148,7 @@ zx_status_t WritebackWork::Complete() {
     return status;
 }
 
-WritebackWork::WritebackWork(Blobfs* bs, fbl::RefPtr<VnodeBlob> vn) :
+WritebackWork::WritebackWork(Blobfs* bs, fbl::RefPtr<Blob> vn) :
     WriteTxn(bs), ready_cb_(nullptr), sync_cb_(nullptr), sync_(false), vn_(std::move(vn)) {}
 
 void WritebackWork::InvokeSyncCallback(zx_status_t status) {

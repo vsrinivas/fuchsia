@@ -11,29 +11,26 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <digest/digest.h>
-#include <zircon/device/device.h>
-#include <zircon/device/vfs.h>
-
-#include <cobalt-client/cpp/timer.h>
-#include <fbl/auto_call.h>
-#include <fbl/ref_ptr.h>
-#include <fbl/string_piece.h>
-#include <fs/metrics.h>
-#include <lib/fdio/debug.h>
-#include <lib/fdio/vfs.h>
-#include <lib/sync/completion.h>
-#include <zircon/status.h>
-#include <zircon/syscalls.h>
-
-#define ZXDEBUG 0
-
 #include <blobfs/blobfs.h>
 #include <blobfs/iterator/allocated-extent-iterator.h>
 #include <blobfs/iterator/block-iterator.h>
 #include <blobfs/iterator/extent-iterator.h>
 #include <blobfs/iterator/node-populator.h>
 #include <blobfs/iterator/vector-extent-iterator.h>
+#include <blobfs/latency-event.h>
+#include <cobalt-client/cpp/timer.h>
+#include <digest/digest.h>
+#include <fbl/auto_call.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/string_piece.h>
+#include <fs/metrics.h>
+#include <fuchsia/io/c/fidl.h>
+#include <lib/fdio/vfs.h>
+#include <lib/sync/completion.h>
+#include <zircon/device/device.h>
+#include <zircon/device/vfs.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
 
 #include <utility>
 
@@ -42,27 +39,6 @@ namespace {
 
 using digest::Digest;
 using digest::MerkleTree;
-
-// RAII interface for registering latency events.
-class LatencyEvent {
-public:
-    LatencyEvent(cobalt_client::Histogram<fs::VnodeMetrics::kHistogramBuckets>* histogram,
-                 bool collect)
-        : timer_(collect), histogram_(histogram) {}
-    LatencyEvent(LatencyEvent&& rhs)
-        : timer_(std::move(rhs.timer_)), histogram_(std::move(rhs.histogram_)) {}
-    ~LatencyEvent() {
-        zx::duration latency = timer_.End();
-        if (latency.get() > 0) {
-            ZX_DEBUG_ASSERT(histogram_ != nullptr);
-            histogram_->Add(latency.get());
-        }
-    }
-
-private:
-    cobalt_client::Timer timer_;
-    cobalt_client::Histogram<fs::VnodeMetrics::kHistogramBuckets>* histogram_;
-};
 
 // A wrapper around "Enqueue" for content which risks being larger
 // than the writeback buffer.
@@ -73,7 +49,7 @@ private:
 // For content which is larger than 3/4 the size of the writeback buffer: flush
 // the data by enqueueing it to the writeback thread in chunks until the
 // remainder is small enough to comfortably fit within the writeback buffer.
-zx_status_t EnqueuePaginated(fbl::unique_ptr<WritebackWork>* work, Blobfs* blobfs, VnodeBlob* vn,
+zx_status_t EnqueuePaginated(fbl::unique_ptr<WritebackWork>* work, Blobfs* blobfs, Blob* vn,
                              const zx::vmo& vmo, uint64_t relative_block, uint64_t absolute_block,
                              uint64_t nblocks) {
     const size_t kMaxChunkBlocks = (3 * blobfs->WritebackCapacity()) / 4;
@@ -101,7 +77,7 @@ zx_status_t EnqueuePaginated(fbl::unique_ptr<WritebackWork>* work, Blobfs* blobf
 
 } // namespace
 
-zx_status_t VnodeBlob::Verify() const {
+zx_status_t Blob::Verify() const {
     TRACE_DURATION("blobfs", "Blobfs::Verify");
     fs::Ticker ticker(blobfs_->LocalMetrics().Collecting());
 
@@ -127,7 +103,7 @@ zx_status_t VnodeBlob::Verify() const {
     return status;
 }
 
-zx_status_t VnodeBlob::InitVmos() {
+zx_status_t Blob::InitVmos() {
     TRACE_DURATION("blobfs", "Blobfs::InitVmos");
 
     if (mapping_.vmo()) {
@@ -179,7 +155,7 @@ zx_status_t VnodeBlob::InitVmos() {
     return ZX_OK;
 }
 
-zx_status_t VnodeBlob::InitCompressed() {
+zx_status_t Blob::InitCompressed() {
     TRACE_DURATION("blobfs", "Blobfs::InitCompressed", "size", inode_.blob_size, "blocks",
                    inode_.block_count);
     fs::Ticker ticker(blobfs_->LocalMetrics().Collecting());
@@ -263,7 +239,7 @@ zx_status_t VnodeBlob::InitCompressed() {
     return ZX_OK;
 }
 
-zx_status_t VnodeBlob::InitUncompressed() {
+zx_status_t Blob::InitUncompressed() {
     TRACE_DURATION("blobfs", "Blobfs::InitUncompressed", "size", inode_.blob_size, "blocks",
                    inode_.block_count);
     fs::Ticker ticker(blobfs_->LocalMetrics().Collecting());
@@ -296,7 +272,7 @@ zx_status_t VnodeBlob::InitUncompressed() {
     return status;
 }
 
-void VnodeBlob::PopulateInode(uint32_t node_index) {
+void Blob::PopulateInode(uint32_t node_index) {
     ZX_DEBUG_ASSERT(map_index_ == 0);
     SetState(kBlobStateReadable);
     map_index_ = node_index;
@@ -304,27 +280,23 @@ void VnodeBlob::PopulateInode(uint32_t node_index) {
     inode_ = *inode;
 }
 
-uint64_t VnodeBlob::SizeData() const {
+uint64_t Blob::SizeData() const {
     if (GetState() == kBlobStateReadable) {
         return inode_.blob_size;
     }
     return 0;
 }
 
-VnodeBlob::VnodeBlob(Blobfs* bs, const Digest& digest)
+Blob::Blob(Blobfs* bs, const Digest& digest)
     : CacheNode(digest), blobfs_(bs), flags_(kBlobStateEmpty), syncing_(false),
       clone_watcher_(this) {}
 
-VnodeBlob::VnodeBlob(Blobfs* bs)
-    : blobfs_(bs), flags_(kBlobStateEmpty | kBlobFlagDirectory), syncing_(false),
-      clone_watcher_(this) {}
-
-void VnodeBlob::BlobCloseHandles() {
+void Blob::BlobCloseHandles() {
     mapping_.Reset();
     readable_event_.reset();
 }
 
-zx_status_t VnodeBlob::SpaceAllocate(uint64_t size_data) {
+zx_status_t Blob::SpaceAllocate(uint64_t size_data) {
     TRACE_DURATION("blobfs", "Blobfs::SpaceAllocate", "size_data", size_data);
     fs::Ticker ticker(blobfs_->LocalMetrics().Collecting());
 
@@ -415,15 +387,15 @@ zx_status_t VnodeBlob::SpaceAllocate(uint64_t size_data) {
     return ZX_OK;
 }
 
-void* VnodeBlob::GetData() const {
+void* Blob::GetData() const {
     return fs::GetBlock(kBlobfsBlockSize, mapping_.start(), MerkleTreeBlocks(inode_));
 }
 
-void* VnodeBlob::GetMerkle() const {
+void* Blob::GetMerkle() const {
     return mapping_.start();
 }
 
-zx_status_t VnodeBlob::WriteMetadata() {
+zx_status_t Blob::WriteMetadata() {
     TRACE_DURATION("blobfs", "Blobfs::WriteMetadata");
     assert(GetState() == kBlobStateDataWrite);
 
@@ -508,7 +480,7 @@ zx_status_t VnodeBlob::WriteMetadata() {
     return status;
 }
 
-zx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actual) {
+zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
     TRACE_DURATION("blobfs", "Blobfs::WriteInternal", "data", data, "len", len);
 
     *actual = 0;
@@ -668,7 +640,7 @@ zx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actua
     return ZX_ERR_BAD_STATE;
 }
 
-void VnodeBlob::ConsiderCompressionAbort() {
+void Blob::ConsiderCompressionAbort() {
     ZX_DEBUG_ASSERT(write_info_->compressor.Compressing());
     if (inode_.blob_size - kCompressionMinBytesSaved < write_info_->compressor.Size()) {
         write_info_->compressor.Reset();
@@ -676,7 +648,7 @@ void VnodeBlob::ConsiderCompressionAbort() {
     }
 }
 
-zx_status_t VnodeBlob::GetReadableEvent(zx_handle_t* out) {
+zx_status_t Blob::GetReadableEvent(zx_handle_t* out) {
     TRACE_DURATION("blobfs", "Blobfs::GetReadableEvent");
     zx_status_t status;
     // This is the first 'wait until read event' request received.
@@ -695,7 +667,7 @@ zx_status_t VnodeBlob::GetReadableEvent(zx_handle_t* out) {
     return sizeof(zx_handle_t);
 }
 
-zx_status_t VnodeBlob::CloneVmo(zx_rights_t rights, zx_handle_t* out) {
+zx_status_t Blob::CloneVmo(zx_rights_t rights, zx_handle_t* out) {
     TRACE_DURATION("blobfs", "Blobfs::CloneVmo", "rights", rights, "out", out);
     if (GetState() != kBlobStateReadable) {
         return ZX_ERR_BAD_STATE;
@@ -736,14 +708,14 @@ zx_status_t VnodeBlob::CloneVmo(zx_rights_t rights, zx_handle_t* out) {
         // underlying memory.
         //
         // We'll release it when no client-held VMOs are in use.
-        clone_ref_ = fbl::RefPtr<VnodeBlob>(this);
+        clone_ref_ = fbl::RefPtr<Blob>(this);
         clone_watcher_.Begin(blobfs_->dispatcher());
     }
 
     return ZX_OK;
 }
 
-void VnodeBlob::HandleNoClones(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+void Blob::HandleNoClones(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                zx_status_t status, const zx_packet_signal_t* signal) {
     ZX_DEBUG_ASSERT(status == ZX_OK);
     ZX_DEBUG_ASSERT((signal->observed & ZX_VMO_ZERO_CHILDREN) != 0);
@@ -752,7 +724,7 @@ void VnodeBlob::HandleNoClones(async_dispatcher_t* dispatcher, async::WaitBase* 
     clone_ref_ = nullptr;
 }
 
-zx_status_t VnodeBlob::ReadInternal(void* data, size_t len, size_t off, size_t* actual) {
+zx_status_t Blob::ReadInternal(void* data, size_t len, size_t off, size_t* actual) {
     TRACE_DURATION("blobfs", "Blobfs::ReadInternal", "len", len, "off", off);
 
     if (GetState() != kBlobStateReadable) {
@@ -787,17 +759,17 @@ zx_status_t VnodeBlob::ReadInternal(void* data, size_t len, size_t off, size_t* 
     return status;
 }
 
-zx_status_t VnodeBlob::QueueUnlink() {
+zx_status_t Blob::QueueUnlink() {
     flags_ |= kBlobFlagDeletable;
     // Attempt to purge in case the blob has been unlinked with no open fds
     return TryPurge();
 }
 
-zx_status_t VnodeBlob::VerifyBlob(Blobfs* bs, uint32_t node_index) {
+zx_status_t Blob::VerifyBlob(Blobfs* bs, uint32_t node_index) {
     Inode* inode = bs->GetNode(node_index);
     Digest digest(inode->merkle_root_hash);
     fbl::AllocChecker ac;
-    fbl::RefPtr<VnodeBlob> vn = fbl::AdoptRef(new (&ac) VnodeBlob(bs, digest));
+    fbl::RefPtr<Blob> vn = fbl::AdoptRef(new (&ac) Blob(bs, digest));
 
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
@@ -810,11 +782,11 @@ zx_status_t VnodeBlob::VerifyBlob(Blobfs* bs, uint32_t node_index) {
     return vn->InitVmos();
 }
 
-BlobCache& VnodeBlob::Cache() {
+BlobCache& Blob::Cache() {
     return blobfs_->Cache();
 }
 
-bool VnodeBlob::ShouldCache() const {
+bool Blob::ShouldCache() const {
     switch (GetState()) {
     // All "Valid", cacheable states, where the blob still exists on storage.
     case kBlobStateReadable:
@@ -824,7 +796,7 @@ bool VnodeBlob::ShouldCache() const {
     }
 }
 
-void VnodeBlob::ActivateLowMemory() {
+void Blob::ActivateLowMemory() {
     // We shouldn't be putting the blob into a low-memory state while it is still mapped.
     ZX_ASSERT(clone_watcher_.object() == ZX_HANDLE_INVALID);
     if (mapping_.vmo()) {
@@ -833,55 +805,47 @@ void VnodeBlob::ActivateLowMemory() {
     mapping_.Reset();
 }
 
-VnodeBlob::~VnodeBlob() {
+Blob::~Blob() {
     ActivateLowMemory();
 }
 
-zx_status_t VnodeBlob::ValidateFlags(uint32_t flags) {
-    if ((flags & ZX_FS_FLAG_DIRECTORY) && !IsDirectory()) {
+zx_status_t Blob::ValidateFlags(uint32_t flags) {
+    if (flags & ZX_FS_FLAG_DIRECTORY) {
         return ZX_ERR_NOT_DIR;
     }
 
     if (flags & ZX_FS_RIGHT_WRITABLE) {
-        if (IsDirectory()) {
-            return ZX_ERR_NOT_FILE;
-        } else if (GetState() != kBlobStateEmpty) {
+        if (GetState() != kBlobStateEmpty) {
             return ZX_ERR_ACCESS_DENIED;
         }
     }
     return ZX_OK;
 }
 
-zx_status_t VnodeBlob::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
-                               size_t* out_actual) {
-    if (!IsDirectory()) {
-        return ZX_ERR_NOT_DIR;
+zx_status_t Blob::GetHandles(uint32_t flags, fuchsia_io_NodeInfo* info) {
+    info->tag = fuchsia_io_NodeInfoTag_file;
+    zx_status_t r = GetReadableEvent(&info->file.event);
+    if (r < 0) {
+        return r;
     }
 
-    return blobfs_->Readdir(cookie, dirents, len, out_actual);
+    return ZX_OK;
 }
 
-zx_status_t VnodeBlob::Read(void* data, size_t len, size_t off, size_t* out_actual) {
-    TRACE_DURATION("blobfs", "VnodeBlob::Read", "len", len, "off", off);
+zx_status_t Blob::Read(void* data, size_t len, size_t off, size_t* out_actual) {
+    TRACE_DURATION("blobfs", "Blob::Read", "len", len, "off", off);
     LatencyEvent event(&blobfs_->GetMutableVnodeMetrics()->read, blobfs_->CollectingMetrics());
-
-    if (IsDirectory()) {
-        return ZX_ERR_NOT_FILE;
-    }
 
     return ReadInternal(data, len, off, out_actual);
 }
 
-zx_status_t VnodeBlob::Write(const void* data, size_t len, size_t offset, size_t* out_actual) {
-    TRACE_DURATION("blobfs", "VnodeBlob::Write", "len", len, "off", offset);
+zx_status_t Blob::Write(const void* data, size_t len, size_t offset, size_t* out_actual) {
+    TRACE_DURATION("blobfs", "Blob::Write", "len", len, "off", offset);
     LatencyEvent event(&blobfs_->GetMutableVnodeMetrics()->write, blobfs_->CollectingMetrics());
-    if (IsDirectory()) {
-        return ZX_ERR_NOT_FILE;
-    }
     return WriteInternal(data, len, out_actual);
 }
 
-zx_status_t VnodeBlob::Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) {
+zx_status_t Blob::Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) {
     LatencyEvent event(&blobfs_->GetMutableVnodeMetrics()->append, blobfs_->CollectingMetrics());
     zx_status_t status = WriteInternal(data, len, out_actual);
     if (GetState() == kBlobStateDataWrite) {
@@ -893,41 +857,12 @@ zx_status_t VnodeBlob::Append(const void* data, size_t len, size_t* out_end, siz
     return status;
 }
 
-zx_status_t VnodeBlob::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) {
-    TRACE_DURATION("blobfs", "VnodeBlob::Lookup", "name", name);
-    LatencyEvent event(&blobfs_->GetMutableVnodeMetrics()->look_up, blobfs_->CollectingMetrics());
-    assert(memchr(name.data(), '/', name.length()) == nullptr);
-    if (name == "." && IsDirectory()) {
-        // Special case: Accessing root directory via '.'
-        *out = fbl::RefPtr<VnodeBlob>(this);
-        return ZX_OK;
-    }
-
-    if (!IsDirectory()) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    zx_status_t status;
-    Digest digest;
-    if ((status = digest.Parse(name.data(), name.length())) != ZX_OK) {
-        return status;
-    }
-    fbl::RefPtr<CacheNode> cache_node;
-    if ((status = Cache().Lookup(digest, &cache_node)) != ZX_OK) {
-        return status;
-    }
-    auto vnode = fbl::RefPtr<VnodeBlob>::Downcast(std::move(cache_node));
-    blobfs_->LocalMetrics().UpdateLookup(vnode->SizeData());
-    *out = std::move(vnode);
-    return ZX_OK;
-}
-
-zx_status_t VnodeBlob::Getattr(vnattr_t* a) {
+zx_status_t Blob::Getattr(vnattr_t* a) {
     LatencyEvent event(&blobfs_->GetMutableVnodeMetrics()->get_attr, blobfs_->CollectingMetrics());
     memset(a, 0, sizeof(vnattr_t));
-    a->mode = (IsDirectory() ? V_TYPE_DIR : V_TYPE_FILE) | V_IRUSR;
+    a->mode = V_TYPE_FILE | V_IRUSR;
     a->inode = fuchsia_io_INO_UNKNOWN;
-    a->size = IsDirectory() ? 0 : SizeData();
+    a->size = SizeData();
     a->blksize = kBlobfsBlockSize;
     a->blkcount = inode_.block_count * (kBlobfsBlockSize / VNATTR_BLKSIZE);
     a->nlink = 1;
@@ -936,38 +871,9 @@ zx_status_t VnodeBlob::Getattr(vnattr_t* a) {
     return ZX_OK;
 }
 
-zx_status_t VnodeBlob::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name, uint32_t mode) {
-    TRACE_DURATION("blobfs", "VnodeBlob::Create", "name", name, "mode", mode);
-    LatencyEvent event(&blobfs_->GetMutableVnodeMetrics()->create, blobfs_->CollectingMetrics());
-    assert(memchr(name.data(), '/', name.length()) == nullptr);
-
-    if (!IsDirectory()) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    Digest digest;
-    zx_status_t status;
-    if ((status = digest.Parse(name.data(), name.length())) != ZX_OK) {
-        return status;
-    }
-
-    fbl::RefPtr<VnodeBlob> vn = fbl::AdoptRef(new VnodeBlob(blobfs_, std::move(digest)));
-    if ((status = Cache().Add(vn)) != ZX_OK) {
-        return status;
-    }
-    vn->fd_count_ = 1;
-    *out = std::move(vn);
-    return ZX_OK;
-}
-
-zx_status_t VnodeBlob::Truncate(size_t len) {
-    TRACE_DURATION("blobfs", "VnodeBlob::Truncate", "len", len);
+zx_status_t Blob::Truncate(size_t len) {
+    TRACE_DURATION("blobfs", "Blob::Truncate", "len", len);
     LatencyEvent event(&blobfs_->GetMutableVnodeMetrics()->truncate, blobfs_->CollectingMetrics());
-
-    if (IsDirectory()) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
     return SpaceAllocate(len);
 }
 
@@ -975,7 +881,7 @@ zx_status_t VnodeBlob::Truncate(size_t len) {
 
 constexpr const char kFsName[] = "blobfs";
 
-zx_status_t VnodeBlob::QueryFilesystem(fuchsia_io_FilesystemInfo* info) {
+zx_status_t Blob::QueryFilesystem(fuchsia_io_FilesystemInfo* info) {
     static_assert(fbl::constexpr_strlen(kFsName) + 1 < fuchsia_io_MAX_FS_NAME_BUFFER,
                   "Blobfs name too long");
 
@@ -992,7 +898,7 @@ zx_status_t VnodeBlob::QueryFilesystem(fuchsia_io_FilesystemInfo* info) {
     return ZX_OK;
 }
 
-zx_status_t VnodeBlob::GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) {
+zx_status_t Blob::GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) {
     ssize_t len = ioctl_device_get_topo_path(blobfs_->Fd(), out_name, buffer_len);
     if (len < 0) {
         return static_cast<zx_status_t>(len);
@@ -1002,35 +908,9 @@ zx_status_t VnodeBlob::GetDevicePath(size_t buffer_len, char* out_name, size_t* 
 }
 #endif
 
-zx_status_t VnodeBlob::Unlink(fbl::StringPiece name, bool must_be_dir) {
-    TRACE_DURATION("blobfs", "VnodeBlob::Unlink", "name", name, "must_be_dir", must_be_dir);
-    LatencyEvent event(&blobfs_->GetMutableVnodeMetrics()->unlink, blobfs_->CollectingMetrics());
-    assert(memchr(name.data(), '/', name.length()) == nullptr);
+zx_status_t Blob::GetVmo(int flags, zx_handle_t* out) {
+    TRACE_DURATION("blobfs", "Blob::GetVmo", "flags", flags);
 
-    if (!IsDirectory()) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    zx_status_t status;
-    Digest digest;
-    if ((status = digest.Parse(name.data(), name.length())) != ZX_OK) {
-        return status;
-    }
-    fbl::RefPtr<CacheNode> cache_node;
-    if ((status = Cache().Lookup(digest, &cache_node)) != ZX_OK) {
-        return status;
-    }
-    auto vnode = fbl::RefPtr<VnodeBlob>::Downcast(std::move(cache_node));
-    blobfs_->LocalMetrics().UpdateLookup(vnode->SizeData());
-    return vnode->QueueUnlink();
-}
-
-zx_status_t VnodeBlob::GetVmo(int flags, zx_handle_t* out) {
-    TRACE_DURATION("blobfs", "VnodeBlob::GetVmo", "flags", flags);
-
-    if (IsDirectory()) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
     if (flags & fuchsia_io_VMO_FLAG_WRITE) {
         return ZX_ERR_NOT_SUPPORTED;
     } else if (flags & fuchsia_io_VMO_FLAG_EXACT) {
@@ -1047,7 +927,7 @@ zx_status_t VnodeBlob::GetVmo(int flags, zx_handle_t* out) {
     return CloneVmo(rights, out);
 }
 
-void VnodeBlob::Sync(SyncCallback closure) {
+void Blob::Sync(SyncCallback closure) {
     LatencyEvent event(&blobfs_->GetMutableVnodeMetrics()->sync, blobfs_->CollectingMetrics());
     if (atomic_load(&syncing_)) {
         blobfs_->Sync([this, evt = std::move(event), cb = std::move(closure)](zx_status_t status) {
@@ -1066,12 +946,12 @@ void VnodeBlob::Sync(SyncCallback closure) {
     }
 }
 
-void VnodeBlob::CompleteSync() {
+void Blob::CompleteSync() {
     fsync(blobfs_->Fd());
     atomic_store(&syncing_, false);
 }
 
-fbl::RefPtr<VnodeBlob> VnodeBlob::CloneWatcherTeardown() {
+fbl::RefPtr<Blob> Blob::CloneWatcherTeardown() {
     if (clone_watcher_.is_pending()) {
         clone_watcher_.Cancel();
         clone_watcher_.set_object(ZX_HANDLE_INVALID);
@@ -1080,12 +960,12 @@ fbl::RefPtr<VnodeBlob> VnodeBlob::CloneWatcherTeardown() {
     return nullptr;
 }
 
-zx_status_t VnodeBlob::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
+zx_status_t Blob::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
     fd_count_++;
     return ZX_OK;
 }
 
-zx_status_t VnodeBlob::Close() {
+zx_status_t Blob::Close() {
     LatencyEvent event(&blobfs_->GetMutableVnodeMetrics()->close, blobfs_->CollectingMetrics());
     ZX_DEBUG_ASSERT_MSG(fd_count_ > 0, "Closing blob with no fds open");
     fd_count_--;
@@ -1093,14 +973,14 @@ zx_status_t VnodeBlob::Close() {
     return TryPurge();
 }
 
-zx_status_t VnodeBlob::TryPurge() {
+zx_status_t Blob::TryPurge() {
     if (Purgeable()) {
         return Purge();
     }
     return ZX_OK;
 }
 
-zx_status_t VnodeBlob::Purge() {
+zx_status_t Blob::Purge() {
     ZX_DEBUG_ASSERT(fd_count_ == 0);
     ZX_DEBUG_ASSERT(Purgeable());
 
