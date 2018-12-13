@@ -760,7 +760,7 @@ EXPORT void trace_context_write_blob_record(
     }
 }
 
-EXPORT_NO_DDK void trace_context_write_kernel_object_record(
+void trace_context_write_kernel_object_record(
     trace_context_t* context,
     bool use_durable,
     zx_koid_t koid, zx_obj_type_t type,
@@ -784,7 +784,7 @@ EXPORT_NO_DDK void trace_context_write_kernel_object_record(
     }
 }
 
-EXPORT_NO_DDK void trace_context_write_kernel_object_record_for_handle(
+EXPORT void trace_context_write_kernel_object_record_for_handle(
     trace_context_t* context,
     zx_handle_t handle,
     const trace_arg_t* args, size_t num_args) {

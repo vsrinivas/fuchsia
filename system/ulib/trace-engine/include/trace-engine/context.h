@@ -235,22 +235,6 @@ void trace_context_write_blob_record(
     const trace_string_ref_t* name_ref,
     const void* blob, size_t blob_size);
 
-// Writes a kernel object record which describes the specified object into
-// the trace buffer.  Discards the record if it cannot be written.
-//
-// |context| must be a valid trace context reference.
-// |koid| is the koid of the object being described.
-// |type| is the object type.
-// |name_ref| is the name of the object.
-// |args| contains |num_args| key/value pairs to include in the record, or NULL if none.
-//
-// This function is thread-safe.
-void trace_context_write_kernel_object_record(
-    trace_context_t* context,
-    zx_koid_t koid, zx_obj_type_t type,
-    const trace_string_ref_t* name_ref,
-    const trace_arg_t* args, size_t num_args);
-
 // Writes a kernel object record for the object reference by the specified handle
 // into the trace buffer.  Discards the record if it cannot be written.
 //
