@@ -1029,7 +1029,7 @@ void Controller::UpdateAllocations(const uint16_t min_allocs[registers::kPipeCou
         }
     }
 
-    // Do the actual allocation, using the buffers that are asigned to each pipe.
+    // Do the actual allocation, using the buffers that are assigned to each pipe.
     for (unsigned pipe_num = 0; pipe_num < registers::kPipeCount; pipe_num++) {
         uint16_t start = pipe_buffers_[pipe_num].start;
         for (unsigned plane_num = 0; plane_num < registers::kImagePlaneCount; plane_num++) {

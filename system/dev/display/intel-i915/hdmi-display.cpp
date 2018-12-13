@@ -568,7 +568,7 @@ bool HdmiDisplay::DdiModeset(const display_mode_t& mode,
 
     auto dpll_enable = registers::DpllEnable::Get(dpll).ReadFrom(mmio_space());
     if (!dpll_enable.enable_dpll()) {
-        // Set the the DPLL control settings
+        // Set the DPLL control settings
         auto dpll_ctrl1 = registers::DpllControl1::Get().ReadFrom(mmio_space());
         dpll_ctrl1.dpll_hdmi_mode(dpll).set(1);
         dpll_ctrl1.dpll_override(dpll).set(1);

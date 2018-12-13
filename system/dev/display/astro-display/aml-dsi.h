@@ -100,7 +100,7 @@
 #define DPHY_TIME_CLK_POST(ui)                  (2 * (60 * UI_X_100 + 52 * ui))
 
 // Time that the HS clock shall be driven by the transmitter prior to any associated Data Lane
-// beginging the transition from LP to HS mode.  (>8*ui)
+// beginning the transition from LP to HS mode.  (>8*ui)
 #define DPHY_TIME_CLK_PRE(ui)                   (10 * ui)
 
 // Time that the transmitter drives the Clock Lane LP-00 Line state immediately
@@ -130,7 +130,7 @@
 #define DPHY_TIME_HS_ZERO(ui)               (160 * UI_X_100  + 10 * ui - DPHY_TIME_HS_PREPARE(ui))
 
 // Time that the transmitter drives the flipped differential state after last
-// payload data bit of a HS transmissoin burst  max(n*8*ui, 60+n*4*ui) <n = 1>
+// payload data bit of a HS transmission burst  max(n*8*ui, 60+n*4*ui) <n = 1>
 #define DPHY_TIME_HS_TRAIL(ui)                  (fbl::max((8 * ui), (60 * UI_X_100  + 4 * ui)))
 
 // >100us
@@ -155,7 +155,7 @@
 // exit from ULPS >1ms
 #define DPHY_TIME_WAKEUP                        (1020 * UI_X_100 * 1000)
 
-// LP TX excape mode should be  >100ns --> TODO(payamm): Where is this coming from?
+// LP TX escape mode should be  >100ns --> TODO(payamm): Where is this coming from?
 #define DPHY_TIME_LP_TESC                       (250 * UI_X_100 )
 
 //  MIPI DSI/VENC Color Format Definitions

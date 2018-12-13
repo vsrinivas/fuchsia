@@ -38,7 +38,7 @@ public:
     // Called to set this image's fences and prepare the image to be displayed.
     void PrepareFences(fbl::RefPtr<FenceReference>&& wait,
                        fbl::RefPtr<FenceReference>&& signal);
-    // Called to immedately retire the image if StartPresent hasn't been called yet.
+    // Called to immediately retire the image if StartPresent hasn't been called yet.
     void EarlyRetire();
     // Called when the image is passed to the display hardware.
     void StartPresent();

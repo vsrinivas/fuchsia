@@ -34,7 +34,7 @@ zx_status_t AmlMipiPhy::PhyCfgLoad(uint32_t bitrate) {
     // Calculate values will be rounded by the lanebyteclk
     const uint32_t lanebytetime = ui * 8;
 
-    // lp_tesc:TX Excape Clock Division factor (from linebyteclk). Round up to units of ui
+    // lp_tesc:TX Escape Clock Division factor (from linebyteclk). Round up to units of ui
     dsi_phy_cfg_.lp_tesc = NsToLaneByte(DPHY_TIME_LP_TESC, lanebytetime);
 
     // lp_lpx: Transmit length of any LP state period

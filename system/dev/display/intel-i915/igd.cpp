@@ -265,7 +265,7 @@ bool IgdOpRegion::Swsci(pci_protocol_t* pci,
 bool IgdOpRegion::GetPanelType(pci_protocol_t* pci, uint8_t* type) {
     uint16_t exit_param;
     uint32_t additional_res;
-    // TODO(stevensd): cache the supported calls when we nede to use Swsci more than once
+    // TODO(stevensd): cache the supported calls when we need to use Swsci more than once
     if (Swsci(pci, SciEntryParam::kFuncGetBiosData, SciEntryParam::kGbdaSupportedCalls,
               0 /* unused additional_param */, &exit_param, &additional_res)) {
         auto support = GbdaSupportedCalls::Get().FromValue(additional_res);

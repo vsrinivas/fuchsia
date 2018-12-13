@@ -430,7 +430,7 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
         return;
     }
 
-    // See ::ApplyConfig for more explaination of how vsync image tracking works.
+    // See ::ApplyConfig for more explanation of how vsync image tracking works.
     //
     // If there's a pending layer change, don't process any present/retire actions
     // until the change is complete.
@@ -563,7 +563,7 @@ void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count,
         //
         // Since layers can be moved between displays but the implementation only supports
         // tracking the image in one display's queue, we need to ensure that the old display is
-        // done with the a migrated image before the new display is done with it. This means
+        // done with a migrated image before the new display is done with it. This means
         // that the new display can't flip until the configuration change is done. However, we
         // don't want to completely prohibit flips, as that would add latency if the layer's new
         // image is being waited for when the configuration is applied.

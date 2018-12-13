@@ -41,7 +41,7 @@ public:
     bool OnRefDead();
 
     // Gets the fence reference for the current import. An individual fence reference cannot
-    // be used for multiple things simultaniously.
+    // be used for multiple things simultaneously.
     fbl::RefPtr<FenceReference> GetReference();
 private:
     void Signal();
@@ -80,7 +80,7 @@ public:
 
     zx_status_t StartReadyWait();
     void ResetReadyWait();
-    // Sets the fence which will be signaled immedately when this fence is ready.
+    // Sets the fence which will be signaled immediately when this fence is ready.
     void SetImmediateRelease(fbl::RefPtr<FenceReference>&& fence);
 
     void OnReady();

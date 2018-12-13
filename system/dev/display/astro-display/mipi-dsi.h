@@ -52,7 +52,7 @@
 #define MIPI_DSI_CMD_FLAGS_ACK                  (1 << 0)
 #define MIPI_DSI_CMD_FLAGS_SET_MAX              (1 << 1)
 
-// This is the generic MIPI-DSI comomand structure that
+// This is the generic MIPI-DSI command structure that
 // can be used as a IP-independent driver
 struct MipiDsiCmd {
     uint8_t             virt_chn_id;

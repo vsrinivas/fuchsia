@@ -415,7 +415,7 @@ static void hdmi_config_encoder(vim2_display_t* display, const struct hdmi_param
     WRITE32_REG(VPU, VPU_ENCP_DE_V_END_EVEN, v_end);
 
     if (p->timings.interlace_mode) {
-        // TODO: Add support for interlace mdoe
+        // TODO: Add support for interlace mode
         // We should not even get here
         DISP_ERROR("Interface mode not supported\n");
     }
@@ -655,7 +655,7 @@ static void hdmi_config_hdmitx(vim2_display_t* display, const struct hdmi_param*
     hdmitx_writereg(display, HDMITX_DWC_FC_MASK1, 0xfb);
     hdmitx_writereg(display, HDMITX_DWC_FC_MASK2, 0x3);
 
-    // No pixel repeition for the currently supported resolution
+    // No pixel repetition for the currently supported resolution
     hdmitx_writereg(display, HDMITX_DWC_FC_PRCONF,
                                 ((p->timings.pixel_repeat + 1) << 4) |
                                 (p->timings.pixel_repeat) << 0);
@@ -914,7 +914,7 @@ void dump_regs(vim2_display_t* display)
             reg_val = hdmitx_readreg(display, reg_adr);
         }
         if (reg_val) {
-            // excluse HDCP regisiters
+            // exclude HDCP registers
             if ((reg_adr < HDMITX_DWC_A_HDCPCFG0) || (reg_adr > HDMITX_DWC_CEC_CTRL))
                 DISP_INFO("DWC[0x%x]: 0x%x\n", reg_adr, reg_val);
         }
