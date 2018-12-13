@@ -956,6 +956,22 @@ impl<'a> SharedBufferSliceMut<'a> {
     }
 }
 
+// Send and Sync implementations. Send and Sync are definitely safe since
+// SharedBufferXXX are all written under the assumption that a remote process is
+// concurrently modifying the memory. However, we aim to provide a Rust-like API
+// with lifetimes and an immutable/mutable distinction, so the real question is
+// whether Send and Sync make sense by analogy to normal Rust types. Insofar as
+// SharedBuffer is analogous to [u8], SharedBufferSlice is analogous to &[u8],
+// and SharedBufferSliceMut is analogous to &mut [u8], the answer is yes - all
+// of those types implement both Send and Sync.
+
+unsafe impl Send for SharedBuffer {}
+unsafe impl Sync for SharedBuffer {}
+unsafe impl<'a> Send for SharedBufferSlice<'a> {}
+unsafe impl<'a> Sync for SharedBufferSlice<'a> {}
+unsafe impl<'a> Send for SharedBufferSliceMut<'a> {}
+unsafe impl<'a> Sync for SharedBufferSliceMut<'a> {}
+
 #[cfg(test)]
 mod tests {
     use core::mem;
