@@ -43,6 +43,8 @@ struct TxStats {
     size_t success_total = 0;                  // cumulative succcess counts.
     size_t attempts_total = 0;                 // cumulative attempts.
     size_t probes_total = 0;
+    // Delay probe if probability < (1 - kMinstrelProbabilityThreshold).
+    uint8_t probe_cycles_skipped = 0;
 
     ::fuchsia::wlan::minstrel::StatsEntry ToFidl() const;
 };
@@ -87,8 +89,6 @@ class MinstrelRateSelector {
 
    private:
     void UpdateStats();
-    tx_vec_idx_t GetNextProbe(Peer* peer);
-    tx_vec_idx_t GetTxVector(const common::MacAddr& addr, bool needs_reliability);
     Peer* GetPeer(const common::MacAddr& addr);
     const Peer* GetPeer(const common::MacAddr& addr) const;
 

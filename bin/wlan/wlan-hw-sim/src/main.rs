@@ -606,13 +606,19 @@ mod simulation_tests {
         };
         pin_mut!(test_fut);
 
-        let threshold = 130;
+        let threshold = 130;  // highest tx_vec_idx that could succeed.
+        // Simulated hardware supports ERP data rate with idx 129 to 136, both inclusive.
+        // Only the lowest ones can succeed in the simulated environment.
         let will_succeed = |idx| {129 <= idx && idx <= threshold};
         let is_done = |hm: &HashMap<u16, u64>| {
-            let second_largest = hm.iter().map(|(k, v)| if k == &threshold {0} else {*v}).max()
-                .unwrap_or(0);
-            let expected = hm.get(&threshold).unwrap_or(&0);
-            second_largest > 0 && *expected >= 25 * second_largest
+            // This hardware supports 8 tx vectors, Minstrel should try all of them.
+            if hm.keys().len() < 8 { return false; }
+            let second_largest = hm.iter().map(|(k, v)| if k == &threshold {0} else {*v})
+                .max().unwrap(); // safe to unwrap as there are 8 entries
+            let highest = hm.values().max().unwrap();
+            // One tx vector has become dominant as the number of data frames transmitted with it is
+            // at least 25 times as large as anyone else.
+            *highest >= 25 * second_largest
         };
         let mut hm = HashMap::new();
         let () = helper.run(&mut exec, 30.seconds(), "verify rate selection is working",
@@ -626,10 +632,9 @@ mod simulation_tests {
         let total = hm.values().sum::<u64>();
         let others = total - hm[&threshold];
         println!("{:#?}\ntotal: {}, others: {}", hm, total, others);
-        // Minstrel has tried all options
-        assert_eq!(7, hm.keys().count());
+        // Find the tx_vec_idx that has been used to transmit the most data frames.
         let max = hm.keys().max_by_key(|k| {hm[&k]}).unwrap();
-        // The dominant one is indeed the optimal.
+        // This dominant idx must match the expected optimal.
         assert_eq!(max, &threshold);
     }
 

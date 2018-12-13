@@ -19,6 +19,7 @@ struct StatsEntry {
     uint64 success_total;
     uint64 attempts_total;
     uint64 probes_total;
+    uint8 probe_cycles_skipped;
 };
 
 struct Peer {
