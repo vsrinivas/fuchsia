@@ -12,6 +12,7 @@
 #include "garnet/lib/debug_ipc/records.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 #include "garnet/public/lib/fxl/strings/trim.h"
+#include "lib/fxl/logging.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -154,7 +155,7 @@ size_t Disassembler::DisassembleOne(const uint8_t* data, size_t data_len,
   if (!out->comment.empty()) {
     // Canonicalize the comments, they'll end in a newline (which is added
     // manually later) and may contain embedded newlines.
-    out->comment = fxl::TrimString(out->comment, "\r\n ").ToString();
+    out->comment = std::string(fxl::TrimString(out->comment, "\r\n "));
     ReplaceAllInstancesOf("\r\n", ' ', &out->comment);
 
     out->comment =

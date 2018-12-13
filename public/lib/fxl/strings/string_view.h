@@ -7,6 +7,7 @@
 
 #include <iosfwd>
 #include <string>
+#include <string_view>
 #include <type_traits>
 
 #include "lib/fxl/fxl_export.h"
@@ -51,6 +52,9 @@ class FXL_EXPORT StringView {
 
   // Implicit constructor.
   StringView(const std::string& str) : data_(str.data()), size_(str.size()) {}
+
+  // Implicit conversion from std::string_view for interoperability.
+  StringView(std::string_view str) : data_(str.data()), size_(str.size()) {}
 
   // Copy operators.
   StringView& operator=(const StringView& other) {
@@ -115,6 +119,9 @@ class FXL_EXPORT StringView {
 
   // String conversion.
   std::string ToString() const { return std::string(data_, size_); }
+
+  // Implicit conversion to string_view for interoperability.
+  operator std::string_view() const { return std::string_view(data_, size_); }
 
   // String operations.
   constexpr StringView substr(size_t pos = 0, size_t n = npos) const {

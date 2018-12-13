@@ -6,10 +6,10 @@
 
 namespace fxl {
 
-fxl::StringView TrimString(fxl::StringView str, fxl::StringView chars_to_trim) {
+std::string_view TrimString(std::string_view str, std::string_view chars_to_trim) {
   size_t start_index = str.find_first_not_of(chars_to_trim);
-  if (start_index == fxl::StringView::npos) {
-    return fxl::StringView();
+  if (start_index == std::string_view::npos) {
+    return std::string_view();
   }
   size_t end_index = str.find_last_not_of(chars_to_trim);
   return str.substr(start_index, end_index - start_index + 1);

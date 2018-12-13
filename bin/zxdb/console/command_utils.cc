@@ -82,7 +82,7 @@ Err StringToInt(const std::string& s, int* out) {
   if (s.empty())
     return Err(ErrType::kInput, "The empty string is not a number.");
 
-  std::string trimmed = fxl::TrimString(s, " ").ToString();
+  std::string trimmed = std::string(fxl::TrimString(s, " "));
 
   // Re-uses StringToUint64's error handling and just adds support for '-' at
   // the beginning and size-checks the output.
@@ -123,7 +123,7 @@ Err StringToUint32(const std::string& s, uint32_t* out) {
 }
 
 Err StringToUint64(const std::string& s, uint64_t* out) {
-  std::string trimmed = fxl::TrimString(s, " ").ToString();
+  std::string trimmed = std::string(fxl::TrimString(s, " "));
 
   *out = 0;
   if (trimmed.empty())
