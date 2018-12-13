@@ -373,14 +373,6 @@ static zx_status_t usb_composite_bind(void* ctx, zx_device_t* parent) {
     }
     memcpy(&comp->usb, &usb, sizeof(comp->usb));
 
-    size_t actual;
-    status = device_get_metadata(parent, DEVICE_METADATA_PRIVATE, &comp->bti_handle,
-                                 sizeof(comp->bti_handle), &actual);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "usb_composite_bind: device_get_metadata failed: %d\n", status);
-        return ZX_OK;
-    }
-
     list_initialize(&comp->children);
 
     mtx_init(&comp->interface_mutex, mtx_plain);

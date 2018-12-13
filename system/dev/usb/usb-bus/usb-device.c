@@ -630,14 +630,6 @@ zx_status_t usb_device_add(usb_bus_t* bus, uint32_t device_id, uint32_t hub_id,
 
     status = device_add(bus->zxdev, &args, &dev->zxdev);
     if (status == ZX_OK) {
-        *out_device = dev;
-        zx_handle_t bti_handle = bus->bti_handle;
-        status = device_add_metadata(dev->zxdev, DEVICE_METADATA_PRIVATE, &bti_handle,
-                                     sizeof(bti_handle));
-        if (status != ZX_OK) {
-            zxlogf(ERROR, "usb_device_add: device_add_metadata failed: %d\n", status);
-            return status;
-        }
         return ZX_OK;
     } else {
         stop_callback_thread(dev);

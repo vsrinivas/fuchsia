@@ -26,7 +26,6 @@ typedef enum {
 typedef struct {
     zx_device_t* zxdev;
     usb_protocol_t usb;
-    zx_handle_t bti_handle;
     usb_device_descriptor_t device_desc;
     usb_configuration_descriptor_t* config_desc;
 

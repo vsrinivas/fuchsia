@@ -141,7 +141,6 @@ static void usb_bus_unbind(void* ctx) {
 static void usb_bus_release(void* ctx) {
     zxlogf(INFO, "usb_bus_release\n");
     usb_bus_t* bus = ctx;
-    zx_handle_close(bus->bti_handle);
     free(bus->devices);
     free(bus);
 }
@@ -163,8 +162,6 @@ static zx_status_t usb_bus_bind(void* ctx, zx_device_t* device) {
         free(bus);
         return ZX_ERR_NOT_SUPPORTED;
     }
-
-    usb_hci_get_bti(&bus->hci, &bus->bti_handle);
 
     bus->hci_zxdev = device;
     bus->max_device_count = usb_hci_get_max_device_count(&bus->hci);

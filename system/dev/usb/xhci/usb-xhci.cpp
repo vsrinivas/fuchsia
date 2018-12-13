@@ -137,12 +137,6 @@ static zx_status_t xhci_cancel_all(void* ctx, uint32_t device_id, uint8_t ep_add
     return xhci_cancel_transfers(xhci, device_id, xhci_endpoint_index(ep_address));
 }
 
-static void xhci_get_bti(void* ctx, zx_handle_t* out_handle) {
-    auto* xhci = static_cast<xhci_t*>(ctx);
-    *out_handle = ZX_HANDLE_INVALID;
-    zx_handle_duplicate(xhci->bti_handle, ZX_RIGHT_SAME_RIGHTS, out_handle);
-}
-
 //Returns the public request size plus its private context size.
 static size_t xhci_get_request_size(void* ctx) {
     return sizeof(xhci_usb_request_internal_t) + sizeof(usb_request_t);
@@ -160,7 +154,6 @@ usb_hci_protocol_ops_t xhci_hci_protocol = {
     .reset_endpoint = xhci_reset_ep,
     .get_max_transfer_size = xhci_get_max_transfer_size,
     .cancel_all = xhci_cancel_all,
-    .get_bti = xhci_get_bti,
     .get_request_size = xhci_get_request_size,
 };
 

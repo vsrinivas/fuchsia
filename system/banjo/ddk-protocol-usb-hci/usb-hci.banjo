@@ -36,8 +36,6 @@ interface UsbHci {
     GetMaxTransferSize(uint32 device_id, uint8 ep_address) -> (usize size);
     /// Cancels all transactions currently queued on the specified endpoint.
     CancelAll(uint32 device_id, uint8 ep_address) -> (zx.status s);
-    /// Returns a BTI handle that can be used for DMA.
-    GetBti() -> (handle<bti> bti);
     /// Returns the size needed for a |usb_request_t|, including private storage needed by the
     /// HCI driver.
     GetRequestSize() -> (usize size);

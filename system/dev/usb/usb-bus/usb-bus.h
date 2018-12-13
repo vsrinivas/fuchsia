@@ -14,7 +14,6 @@ typedef struct usb_bus {
     zx_device_t* zxdev;
     zx_device_t* hci_zxdev;
     usb_hci_protocol_t hci;
-    zx_handle_t bti_handle;
 
     // top-level USB devices, indexed by device_id
     usb_device_t** devices;
