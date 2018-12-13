@@ -53,6 +53,8 @@ MODULE_SRCS += \
     $(TEST_DIR)/parent.cpp \
 
 MODULE_STATIC_LIBS := \
+    system/ulib/devmgr-integration-test \
+    system/ulib/devmgr-launcher \
     system/ulib/fbl \
     system/ulib/fzl \
     system/ulib/zx \
@@ -85,8 +87,8 @@ MODULE_SRCS += \
     $(TEST_DIR)/parent.cpp \
 
 MODULE_STATIC_LIBS := \
-    system/ulib/devmgr-integration-test \
-    system/ulib/devmgr-launcher \
+	system/ulib/devmgr-integration-test \
+	system/ulib/devmgr-launcher \
     system/ulib/fbl \
     system/ulib/fzl \
     system/ulib/zx \

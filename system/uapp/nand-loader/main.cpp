@@ -153,7 +153,7 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    std::unique_ptr<fs_mgmt::RamNand> ram_nand;
+    std::optional<fs_mgmt::RamNand> ram_nand;
     if (fs_mgmt::RamNand::Create(&ram_nand_config, &ram_nand) != ZX_OK) {
         printf("Unable to load device\n");
         return -1;

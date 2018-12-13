@@ -76,6 +76,8 @@ MODULE_STATIC_LIBS := \
     system/ulib/block-client \
     system/ulib/chromeos-disk-setup \
     system/ulib/ddk \
+    system/ulib/devmgr-integration-test \
+    system/ulib/devmgr-launcher \
     system/ulib/fbl \
     system/ulib/fs-management \
     system/ulib/fzl \

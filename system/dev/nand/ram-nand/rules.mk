@@ -54,6 +54,8 @@ MODULE_COMPILEFLAGS := -I$(LOCAL_DIR)
 
 MODULE_STATIC_LIBS := \
     system/dev/lib/fake_ddk \
+    system/ulib/devmgr-integration-test \
+    system/ulib/devmgr-launcher \
     system/ulib/fbl \
     system/ulib/fzl \
     system/ulib/ddk \

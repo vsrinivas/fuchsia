@@ -250,7 +250,7 @@ public:
 
         zircon_nand_RamNandInfo info = kNandInfo;
         info.vmo = dup.release();
-        std::unique_ptr<fs_mgmt::RamNand> ram_nand;
+        std::optional<fs_mgmt::RamNand> ram_nand;
         ASSERT_EQ(fs_mgmt::RamNand::Create(&info, &ram_nand), ZX_OK);
         ASSERT_TRUE(InsertTestDevices(ram_nand->path(), true));
         device->reset(new SkipBlockDevice(std::move(*ram_nand), std::move(mapper)));

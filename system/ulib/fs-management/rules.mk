@@ -21,6 +21,8 @@ MODULE_STATIC_LIBS := \
     system/ulib/fbl \
     system/ulib/fvm \
     system/ulib/fs \
+    system/ulib/devmgr-integration-test \
+    system/ulib/devmgr-launcher \
     system/ulib/digest \
     system/ulib/ddk \
     system/ulib/gpt \

@@ -30,7 +30,7 @@ class NandDevice {
         if (fs_mgmt::RamNand::Create(&config, &ram_nand_) == ZX_OK) {
             // caller_ want's to own the device, so we re-open it even though
             // ram_nand_ already has it open.
-            fbl::unique_fd device(dup(ram_nand_->fd()));
+            fbl::unique_fd device(dup(ram_nand_->fd().get()));
             caller_.reset(std::move(device));
         }
     }
@@ -39,11 +39,11 @@ class NandDevice {
 
     bool IsValid() const { return caller_ ? true : false; }
 
-    const char* path() const { return ram_nand_->path(); }
+    const char* path() { return ram_nand_->path(); }
 
   private:
 
-    std::unique_ptr<fs_mgmt::RamNand> ram_nand_;
+    std::optional<fs_mgmt::RamNand> ram_nand_;
     fzl::FdioCaller caller_;
     DISALLOW_COPY_ASSIGN_AND_MOVE(NandDevice);
 };
