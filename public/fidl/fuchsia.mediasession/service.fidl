@@ -1,0 +1,48 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.mediasession;
+
+using zx;
+
+using id = uint64;
+
+/// |Publisher| publishes media sessions. This allows priviledged processes to
+/// send media controls to the media session and observe changes in its
+/// playback state.
+[Discoverable]
+interface Publisher {
+    /// Publishes a session. Returns |session_id| which can be used to
+    /// to identify the session.
+    Publish(Controller controller) -> (id session_id);
+};
+
+/// Describes the session which is currently implementing the active session
+/// interface.
+struct ActiveSession {
+    id session_id;
+};
+
+/// |ControllerVendor| observes the collection of published media sessions
+/// and vends control handles to them.
+[Discoverable]
+interface ControllerVendor {
+    /// |OnActiveSession| is sent on connection and when the
+    /// underlying active session is changed.
+    -> OnActiveSession(ActiveSession? active_session);
+
+    /// Connects to a |Controller| for |session_id| if present.
+    ConnectToControllerById(id session_id, request<Controller> controller_request);
+};
+
+/// |ObserverVendor| vends handles to observe published media sessions.
+[Discoverable]
+interface ObserverVendor {
+    /// |OnActiveSession| is sent on connection and when the
+    /// underlying active session is changed.
+    -> OnActiveSession(ActiveSession? active_session);
+
+    /// Connects to an |Observer| for |session_id| if present.
+    GetObserverById(id session_id, request<Observer> observer_request);
+};

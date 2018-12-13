@@ -1,0 +1,22 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.mediasession;
+
+using zx;
+using fuchsia.mediaplayer;
+
+/// |Observer| is a handle for media playback, allowing clients to observe
+/// a playback session.
+[FragileBase]
+interface Observer {
+    /// Sent on first connection and when playback
+    /// status changes.
+    -> OnPlaybackStatusChanged(PlaybackStatus playback_status);
+    /// Sent on first connection and when metadata
+    /// changes.
+    // TODO(turnage): Do a soft or hard transition to move Metadata into
+    // fuchsia.media.
+    -> OnMetadataChanged(fuchsia.mediaplayer.Metadata media_metadata);
+};

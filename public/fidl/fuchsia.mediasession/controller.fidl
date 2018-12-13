@@ -1,0 +1,55 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.mediasession;
+
+using zx;
+
+/// |Controller| is a handle for media playback, allowing clients to observe
+/// and control a media playback session. Unsupported commands are no-ops.
+/// Consult |PlaybackCapabilities|, sent by |OnPlaybackCapabilities|, to learn
+/// which commands are supported.
+[FragileBase]
+interface Controller : Observer {
+    /// Sent on first connection and when supported
+    /// playback capabilities change.
+    -> OnPlaybackCapabilitiesChanged(PlaybackCapabilities playback_capabilities);
+
+    // Plays media.
+    Play();
+    // Pauses playback and retains position in media
+    Pause();
+    // Stops playback. There is no position or associated media in the stopped
+    // state.
+    Stop();
+    // Seeks to a specific position in media. Implementations are free to
+    // to treat this as a no-op or enter an error state if the position
+    // is out of bounds. |position| is an offset from the beginning of the media.
+    SeekToPosition(zx.duration position);
+    // Skips forward in media. Uses the default skip interval if |skip_amount|
+    // is 0.
+    SkipForward(zx.duration skip_amount);
+    // Skips in reverse in media. Uses the default skip interval if |skip_amount|
+    // is 0.
+    SkipReverse(zx.duration skip_amount);
+    // Changes media to the next item (e.g. next song in playlist).
+    NextItem();
+    // Changes media to the previous item.
+    PrevItem();
+    // Sets the playback rate of the media. This may imply a change of
+    // playback mode.
+    SetPlaybackRate(float32 playback_rate);
+    // Sets through supported repeat modes.
+    SetRepeatMode(RepeatMode repeat_mode);
+    // Sets through supported shuffle modes.
+    SetShuffleMode(bool shuffle_on);
+    // Likes the playing media.
+    Like();
+    // Dislikes the playing media.
+    Dislike();
+
+    // Connects a channel to a custom extension. This is for clients
+    // privy to the underlying implementation.
+    ConnectToExtension(string extension, handle<channel> channel);
+};
