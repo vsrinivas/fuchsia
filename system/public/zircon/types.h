@@ -107,7 +107,7 @@ typedef uint32_t zx_signals_t;
 #define ZX_USER_SIGNAL_6            ((zx_signals_t)1u << 30)
 #define ZX_USER_SIGNAL_7            ((zx_signals_t)1u << 31)
 
-// Cancelation (handle was closed while waiting with it)
+// Cancellation (handle was closed while waiting with it)
 #define ZX_SIGNAL_HANDLE_CLOSED     __ZX_OBJECT_HANDLE_CLOSED
 
 // Event

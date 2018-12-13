@@ -203,7 +203,7 @@ public:
     explicit operator bool() const { return !!completion_ref_; }
 
     // Returns true if the associated |consumer| has canceled the task.
-    // This method returns a snapshot of the current cancelation state.
+    // This method returns a snapshot of the current cancellation state.
     // Note that the task may be canceled concurrently at any time.
     bool was_canceled() const {
         assert(completion_ref_);
@@ -351,7 +351,7 @@ public:
     explicit operator bool() const { return !!consumption_ref_; }
 
     // Explicitly cancels the task, meaning that its result will never be consumed.
-    // See |fit::bridge| for details about cancelation.
+    // See |fit::bridge| for details about cancellation.
     void cancel() {
         assert(consumption_ref_);
         consumption_ref_ = consumption_ref();

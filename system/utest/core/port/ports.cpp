@@ -651,7 +651,7 @@ static bool cancel_stress() {
     BEGIN_TEST;
 
     // This tests a race that existed between the port observer
-    // removing itself from the event and the cancelation logic which is
+    // removing itself from the event and the cancellation logic which is
     // also working with the same internal object. The net effect of the
     // bug is that port_cancel() would fail with ZX_ERR_NOT_FOUND.
     //

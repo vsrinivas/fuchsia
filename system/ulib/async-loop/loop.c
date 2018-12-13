@@ -510,7 +510,7 @@ static zx_status_t async_loop_cancel_wait(async_dispatcher_t* async, async_wait_
     ZX_DEBUG_ASSERT(loop);
     ZX_DEBUG_ASSERT(wait);
 
-    // Note: We need to process cancelations even while the loop is being
+    // Note: We need to process cancellations even while the loop is being
     // destroyed in case the client is counting on the handler not being
     // invoked again past this point.
 
@@ -565,7 +565,7 @@ static zx_status_t async_loop_cancel_task(async_dispatcher_t* async, async_task_
     ZX_DEBUG_ASSERT(loop);
     ZX_DEBUG_ASSERT(task);
 
-    // Note: We need to process cancelations even while the loop is being
+    // Note: We need to process cancellations even while the loop is being
     // destroyed in case the client is counting on the handler not being
     // invoked again past this point.  Also, the task we're removing here
     // might be present in the dispatcher's |due_list| if it is pending
