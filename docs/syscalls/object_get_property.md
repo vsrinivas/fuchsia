@@ -31,8 +31,8 @@ The *property* parameter indicates which property to get/set. Property values
 have the prefix **ZX_PROP_**, and are described below.
 
 The *value* parameter holds the property value, and must be a pointer to a
-buffer of *size* bytes. Different properties expect different value types/sizes
-as described below.
+buffer of *value_size* bytes. Different properties expect different value
+types/sizes as described below.
 
 ## PROPERTIES
 

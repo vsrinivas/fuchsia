@@ -29,7 +29,7 @@ machine.
 *entry* is the instruction pointer used to indicate where in guest physical
 memory execution of the VCPU should start.
 
-*vcpu* is bound to the thread that created it, and all syscalls that operate on
+*out* is bound to the thread that created it, and all syscalls that operate on
 it must be called from the same thread, with the exception of
 **vcpu_interrupt**().
 

@@ -23,7 +23,7 @@ zx_status_t zx_fifo_write(zx_handle_t handle,
 ## DESCRIPTION
 
 **fifo_write**() attempts to write up to *count* elements
-(*count * elem_size* bytes) from *buf* to the fifo specified by *handle*.
+(*count * elem_size* bytes) from *data* to the fifo specified by *handle*.
 
 Fewer elements may be written than requested if there is insufficient
 room in the fifo to contain all of them. The number of

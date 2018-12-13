@@ -19,11 +19,11 @@ zx_status_t zx_handle_close_many(const zx_handle_t* handles,
 
 ## DESCRIPTION
 
-**handle_close_many**() closes a number of *handle*s, causing each
+**handle_close_many**() closes a number of handles, causing each
 underlying object to be reclaimed by the kernel if no other handles to
 it exist.
 
-If a *handle* was used in a pending [object_wait_one](object_wait_one.md) or a
+If a handle was used in a pending [object_wait_one](object_wait_one.md) or a
 [object_wait_many](object_wait_many.md) call, the wait will be aborted.
 
 This operation closes all handles presented to it, even if one or more

@@ -34,7 +34,7 @@ This function will eventually be replaced with something vmo-centric.
 enough for at least this many bytes. *buffer_size* must be greater than zero
 and less than or equal to 64MB.
 
-*actual_size* the actual number of bytes read is stored here. Less bytes than
+*actual* the actual number of bytes read is stored here. Less bytes than
 requested may be returned if *vaddr*+*buffer_size* extends beyond the memory
 mapped in the process.
 
