@@ -1,4 +1,4 @@
-# Fuchsia CLI Tool Help Requirements
+# CLI Tool Help Requirements
 
 
 ## Overview
@@ -33,7 +33,7 @@ Options:
   -v, --verbose     say more. Defaults to $BLAST_VERBOSE.
 
 Commands:
-  blow_up         explosively separate
+  blow-up         explosively separate
   grind           make smaller by many small cuts
   help            get help on other commands e.g. `blast help grind`
 
