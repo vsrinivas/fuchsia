@@ -5,7 +5,6 @@
 import("//build/package.gni")
 
 package("vol") {
-  deprecated_system_image = true
   deps = [
     ":bin",
   ]
@@ -13,6 +12,7 @@ package("vol") {
   binaries = [
     {
       name = "vol"
+      shell = true
     },
   ]
 }
