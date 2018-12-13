@@ -2774,7 +2774,10 @@ static const struct ath10k_bus_ops ath10k_pci_bus_ops = {
 
 static void ath10k_chan_query_info(const struct ath10k_channel* dev_channel, void* cookie) {
     uint8_t** wlan_channel_ptr = cookie;
-    *(*wlan_channel_ptr)++ = dev_channel->hw_value;
+    // wlan only wants to hear about 20 MHz channels
+    if (dev_channel->center_freq.cbw20 != 0) {
+        *(*wlan_channel_ptr)++ = dev_channel->hw_value;
+    }
 }
 
 static void ath10k_get_ht_cap(struct ath10k* ar, struct wlan_ht_caps* ht_caps) {

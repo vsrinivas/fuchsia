@@ -51,10 +51,19 @@ enum ath10k_channel_flags {
     // clang-format on
 };
 
+struct ath10k_channel_freq {
+    uint32_t cbw20;
+    uint32_t cbw40_above;
+    uint32_t cbw40_below;
+    uint32_t cbw80;
+    uint32_t cbw160;
+    uint32_t cbw80p80;
+};
+
 struct ath10k_channel {
     uint32_t hw_value;
     uint32_t flags;
-    uint32_t center_freq;
+    struct ath10k_channel_freq center_freq;
     uint32_t max_power;
     uint32_t max_reg_power;
     uint32_t max_antenna_gain;

@@ -42,68 +42,99 @@
 #define BIT(x) (1 << (x))
 #endif
 
-#define CHAN2G(_channel, _freq, _flags) { \
+#define CHAN2G(_channel, _freq20, _freq40plus, _freq40minus) { \
     .hw_value           = (_channel), \
-    .center_freq        = (_freq), \
-    .flags              = (_flags), \
+    .center_freq        = { .cbw20 = _freq20, \
+                            .cbw40_above = _freq40plus, \
+                            .cbw40_below = _freq40minus, \
+                            .cbw80 = 0, \
+                            .cbw160 = 0 }, \
+    .flags              = 0, \
     .max_antenna_gain   = 0, \
     .max_power          = 30, \
     .max_reg_power      = 0, \
 }
 
-#define CHAN5G(_channel, _freq, _flags) { \
+#define CHAN5G(_channel, _freq20, _freq40plus, _freq40minus, _freq80, _freq160) { \
     .hw_value           = (_channel), \
-    .center_freq        = (_freq), \
-    .flags              = (_flags), \
+    .center_freq        = { .cbw20 = _freq20, \
+                            .cbw40_above = _freq40plus, \
+                            .cbw40_below = _freq40minus, \
+                            .cbw80 = _freq80, \
+                            .cbw160 = _freq160 }, \
+    .flags              = 0, \
     .max_antenna_gain   = 0, \
     .max_power          = 30, \
     .max_reg_power      = 0, \
 }
 
 static const struct ath10k_channel ath10k_2ghz_channels[] = {
-    CHAN2G(1, 2412, 0),
-    CHAN2G(2, 2417, 0),
-    CHAN2G(3, 2422, 0),
-    CHAN2G(4, 2427, 0),
-    CHAN2G(5, 2432, 0),
-    CHAN2G(6, 2437, 0),
-    CHAN2G(7, 2442, 0),
-    CHAN2G(8, 2447, 0),
-    CHAN2G(9, 2452, 0),
-    CHAN2G(10, 2457, 0),
-    CHAN2G(11, 2462, 0),
-    CHAN2G(12, 2467, 0),
-    CHAN2G(13, 2472, 0),
-    CHAN2G(14, 2484, 0),
+              /* CBW:  20   40+   40- */
+    CHAN2G(1,        2412, 2422,    0),
+    CHAN2G(2,        2417, 2427,    0),
+    CHAN2G(3,        2422, 2432,    0),
+    CHAN2G(4,        2427, 2437,    0),
+    CHAN2G(5,        2432, 2442, 2422),
+    CHAN2G(6,        2437, 2447, 2427),
+    CHAN2G(7,        2442, 2452, 2432),
+    CHAN2G(8,        2447, 2457, 2437),
+    CHAN2G(9,        2452, 2462, 2442),
+    CHAN2G(10,       2457,    0, 2447),
+    CHAN2G(11,       2462,    0, 2452),
+    CHAN2G(12,       2467,    0, 2457),
+    CHAN2G(13,       2472,    0, 2462),
+    CHAN2G(14,       2484,    0,    0),
 };
 
 static const struct ath10k_channel ath10k_5ghz_channels[] = {
-    CHAN5G(36, 5180, 0),
-    CHAN5G(40, 5200, 0),
-    CHAN5G(44, 5220, 0),
-    CHAN5G(48, 5240, 0),
-    CHAN5G(52, 5260, 0),
-    CHAN5G(56, 5280, 0),
-    CHAN5G(60, 5300, 0),
-    CHAN5G(64, 5320, 0),
-    CHAN5G(100, 5500, 0),
-    CHAN5G(104, 5520, 0),
-    CHAN5G(108, 5540, 0),
-    CHAN5G(112, 5560, 0),
-    CHAN5G(116, 5580, 0),
-    CHAN5G(120, 5600, 0),
-    CHAN5G(124, 5620, 0),
-    CHAN5G(128, 5640, 0),
-    CHAN5G(132, 5660, 0),
-    CHAN5G(136, 5680, 0),
-    CHAN5G(140, 5700, 0),
-    CHAN5G(144, 5720, 0),
-    CHAN5G(149, 5745, 0),
-    CHAN5G(153, 5765, 0),
-    CHAN5G(157, 5785, 0),
-    CHAN5G(161, 5805, 0),
-    CHAN5G(165, 5825, 0),
-    CHAN5G(169, 5845, 0),
+              /* CBW:  20   40+   40-    80   160 */
+    CHAN5G(36,       5180, 5190,    0, 5210, 5250),
+    CHAN5G(38,          0, 5190,    0,    0,    0),
+    CHAN5G(40,       5200, 5210, 5190, 5210, 5250),
+    CHAN5G(42,          0,    0,    0, 5210,    0),
+    CHAN5G(44,       5220, 5230, 5210, 5210, 5250),
+    CHAN5G(46,          0, 5230,    0,    0,    0),
+    CHAN5G(48,       5240, 5250, 5230, 5210, 5250),
+    CHAN5G(50,          0,    0,    0,    0, 5250),
+    CHAN5G(52,       5260, 5270, 5250, 5290, 5250),
+    CHAN5G(54,          0, 5270,    0,    0,    0),
+    CHAN5G(56,       5280, 5290, 5270, 5290, 5250),
+    CHAN5G(58,          0,    0,    0, 5290,    0),
+    CHAN5G(60,       5300, 5310, 5290, 5290, 5250),
+    CHAN5G(62,          0, 5310,    0,    0,    0),
+    CHAN5G(64,       5320,    0, 5310, 5290, 5250),
+
+    CHAN5G(100,      5500, 5510,    0, 5530, 5570),
+    CHAN5G(102,         0, 5510,    0,    0,    0),
+    CHAN5G(104,      5520, 5530, 5510, 5530, 5570),
+    CHAN5G(106,         0,    0,    0, 5530,    0),
+    CHAN5G(108,      5540, 5550, 5530, 5530, 5570),
+    CHAN5G(110,         0, 5550,    0,    0,    0),
+    CHAN5G(112,      5560, 5570, 5550, 5530, 5570),
+    CHAN5G(114,         0,    0,    0,    0, 5570),
+    CHAN5G(116,      5580, 5590, 5570, 5610, 5570),
+    CHAN5G(118,         0, 5590,    0,    0,    0),
+    CHAN5G(120,      5600, 5610, 5590, 5610, 5570),
+    CHAN5G(122,         0,    0,    0, 5610,    0),
+    CHAN5G(124,      5620, 5630, 5610, 5610, 5570),
+    CHAN5G(126,         0, 5630,    0,    0,    0),
+    CHAN5G(128,      5640, 5650, 5630, 5610, 5570),
+    CHAN5G(132,      5660, 5670, 5650, 5690,    0),
+    CHAN5G(134,         0, 5670,    0,    0,    0),
+    CHAN5G(136,      5680, 5690, 5670, 5690,    0),
+    CHAN5G(138,         0,    0,    0, 5690,    0),
+    CHAN5G(140,      5700, 5710, 5690, 5690,    0),
+    CHAN5G(142,         0, 5710,    0,    0,    0),
+    CHAN5G(144,      5720,    0, 5710, 5690,    0),
+
+    CHAN5G(149,      5745, 5755,    0, 5775,    0),
+    CHAN5G(151,         0, 5755,    0,    0,    0),
+    CHAN5G(153,      5765, 5775, 5755, 5775,    0),
+    CHAN5G(155,         0,    0,    0, 5775,    0),
+    CHAN5G(157,      5785, 5795, 5775, 5775,    0),
+    CHAN5G(159,         0, 5795,    0,    0,    0),
+    CHAN5G(161,      5805, 5815, 5795, 5775,    0),
+    CHAN5G(165,      5825,    0, 5815,    0,    0),
 };
 // clang-format on
 
@@ -244,7 +275,6 @@ static struct ieee80211_rate ath10k_rates_rev2[] = {
 
 #define ath10k_g_rates_rev2 (ath10k_rates_rev2 + 0)
 #define ath10k_g_rates_rev2_size (countof(ath10k_rates_rev2))
-#endif  // NEEDS PORTING
 
 static bool ath10k_mac_bitrate_is_cck(int bitrate) {
     switch (bitrate) {
@@ -258,11 +288,6 @@ static bool ath10k_mac_bitrate_is_cck(int bitrate) {
     return false;
 }
 
-static uint8_t ath10k_mac_supp_rate_to_rate(int supp_rate) {
-    return supp_rate | (ath10k_mac_bitrate_is_cck(5 * supp_rate) ? (1 << 7) : 0);
-}
-
-#if 0  // NEEDS PORTING
 uint8_t ath10k_mac_hw_rate_to_idx(const struct ieee80211_supported_band* sband,
                                   uint8_t hw_rate, bool cck) {
     const struct ieee80211_rate* rate;
@@ -1358,7 +1383,7 @@ static zx_status_t ath10k_lookup_chan(uint8_t wlan_chan, const struct ath10k_cha
 // garnet/lib/wlan/common/include/wlan/common/channel.h). However, wmi_channel_arg.band_center_freq1
 // is defined as uint32_t. So, |ptr_center_freq| is 'uint32_t*'.
 static inline zx_status_t set_center_freq_and_phymode(const wlan_channel_t* chandef,
-                                                      const uint16_t center_freq,
+                                                      const struct ath10k_channel_freq* center_freq,
                                                       uint32_t* ptr_center_freq,
                                                       enum wmi_phy_mode* ptr_phymode) {
     uint8_t primary_chan = chandef->primary;
@@ -1371,15 +1396,15 @@ static inline zx_status_t set_center_freq_and_phymode(const wlan_channel_t* chan
     case WLAN_BAND_2GHZ:
         switch (cbw) {
         case CBW20:
-            new_center_freq = center_freq;
+            new_center_freq = center_freq->cbw20;
             phymode = MODE_11NG_HT20;
             break;
         case CBW40ABOVE:
-            new_center_freq = center_freq + 10;
+            new_center_freq = center_freq->cbw40_above;
             phymode = MODE_11NG_HT40;
             break;
         case CBW40BELOW:
-            new_center_freq = center_freq - 10;
+            new_center_freq = center_freq->cbw40_below;
             phymode = MODE_11NG_HT40;
             break;
         default:
@@ -1391,21 +1416,25 @@ static inline zx_status_t set_center_freq_and_phymode(const wlan_channel_t* chan
     case WLAN_BAND_5GHZ:
         switch (cbw) {
         case CBW20:
-            new_center_freq = center_freq;
+            new_center_freq = center_freq->cbw20;
             phymode = MODE_11NA_HT20;
             break;
         case CBW40ABOVE:
-            new_center_freq = center_freq + 10;
+            new_center_freq = center_freq->cbw40_above;
             phymode = MODE_11NA_HT40;
             break;
         case CBW40BELOW:
-            new_center_freq = center_freq - 10;
+            new_center_freq = center_freq->cbw40_below;
             phymode = MODE_11NA_HT40;
             break;
         case CBW80:
+            new_center_freq = center_freq->cbw80;
+            phymode = MODE_11AC_VHT80;
+            break;
         case CBW160:
-            // TODO(WLAN-834): Add support for VHT
-            return ZX_ERR_NOT_SUPPORTED;
+            new_center_freq = center_freq->cbw160;
+            phymode = MODE_11AC_VHT160;
+            break;
         case CBW80P80:
             // TODO(WLAN-837): Returns 2 center freqs.
             return ZX_ERR_NOT_SUPPORTED;
@@ -1420,9 +1449,20 @@ static inline zx_status_t set_center_freq_and_phymode(const wlan_channel_t* chan
         return ZX_ERR_INVALID_ARGS;
     }
 
-    ath10k_info("basic setting: phymode %s center_freq=%d-->%d\n",
-                ath10k_wmi_phymode_str(phymode),
-                center_freq, new_center_freq);
+    // Check for unsupported channel + CBW combinations
+    if (new_center_freq == 0) {
+        ath10k_err("unsupported channel/CBW combination (%d @ %s MHz)\n",
+                  primary_chan, cbw == CBW20      ? "20"      :
+                                cbw == CBW40ABOVE ? "40+"     :
+                                cbw == CBW40BELOW ? "40-"     :
+                                cbw == CBW80      ? "80"      :
+                                cbw == CBW160     ? "160"     :
+                                cbw == CBW80P80   ? "80 + 80" : "unrecognized");
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    ath10k_info("basic setting: phymode %s center_freq=%d\n",
+                ath10k_wmi_phymode_str(phymode), new_center_freq);
     *ptr_center_freq = new_center_freq;
     *ptr_phymode = phymode;
     return ZX_OK;
@@ -1459,7 +1499,7 @@ static zx_status_t ath10k_vdev_start_restart(struct ath10k_vif* arvif, wlan_chan
     arg.dtim_period = arvif->dtim_period;
     arg.bcn_intval = arvif->beacon_interval;
 
-    arg.channel.freq = primary_chan->center_freq;
+    arg.channel.freq = primary_chan->center_freq.cbw20;
 
     // Set the default PHY mode for basic mode.
     //
@@ -1468,7 +1508,7 @@ static zx_status_t ath10k_vdev_start_restart(struct ath10k_vif* arvif, wlan_chan
     // For AP role, this will be used for management frames only. For each client associated, the
     // corresponding phymode will be specified in the association context.
     status = set_center_freq_and_phymode(chandef,
-                                         primary_chan->center_freq,
+                                         &primary_chan->center_freq,
                                          &arg.channel.band_center_freq1,
                                          &arg.channel.mode);
     if (status != ZX_OK) {
@@ -2288,7 +2328,7 @@ static void ath10k_peer_assoc_h_rates(struct ath10k* ar,
     size_t rates_size = countof(rateset->rates);
     rateset->num_rates = MIN(assoc->rates_cnt, rates_size);
     for (i = 0; i < rateset->num_rates; i++) {
-        rateset->rates[i] = ath10k_mac_supp_rate_to_rate(assoc->rates[i]);
+        rateset->rates[i] = assoc->rates[i];
     }
 }
 
@@ -2505,41 +2545,23 @@ ath10k_peer_assoc_h_vht_limit(uint16_t tx_mcs_set,
 static void ath10k_peer_assoc_h_vht(struct ath10k* ar,
                                     wlan_assoc_ctx_t* assoc,
                                     struct wmi_peer_assoc_complete_arg* arg) {
-    const wlan_vht_caps_t* vht_cap = &assoc->vht_cap;
-    const uint16_t vht_mcs_mask[] = {0};  // TODO(NET-1958)
-    uint8_t ampdu_factor;
-    uint8_t max_nss, vht_mcs;
-    int i;
-
-#if 0  // NEEDS PORTING
-    if (COND_WARN(ath10k_mac_vif_chan(vif, &def))) {
-        return;
-    }
-#endif  // NEEDS PORTING
-
     if (!assoc->has_vht_cap) {
         return;
     }
 
-#if 0  // NEEDS PORTING
-    // TODO(NET-1958): Supports other bands.
-    vht_mcs_mask = arvif->bitrate_mask.control[band].vht_mcs;
-#endif  // NEEDS PORTING
+    uint32_t vht_cap = assoc->vht_cap.vht_capability_info;
 
     arg->peer_flags |= ar->wmi.peer_flags->vht;
 
-#if 0  // NEEDS PORTING
-    // TODO(NET-1973): 2 GHz band supports VHT
-    enum nl80211_band band = NL80211_BAND_2GHZ;
-    if (band == NL80211_BAND_2GHZ) {
+    enum Band band = chan_to_band(assoc->chan.primary);
+    if (band == WLAN_BAND_2GHZ) {
         arg->peer_flags |= ar->wmi.peer_flags->vht_2g;
     }
-#endif  // NEEDS PORTING
 
-    arg->peer_vht_caps = vht_cap->vht_capability_info;
+    arg->peer_vht_caps = vht_cap;
 
-    ampdu_factor = (vht_cap->vht_capability_info & IEEE80211_VHT_CAPS_MAX_AMPDU_LEN) >>
-                   IEEE80211_VHT_CAPS_MAX_AMPDU_LEN_SHIFT;
+    uint8_t ampdu_factor = (vht_cap & IEEE80211_VHT_CAPS_MAX_AMPDU_LEN) >>
+                           IEEE80211_VHT_CAPS_MAX_AMPDU_LEN_SHIFT;
 
     /* Workaround: Some Netgear/Linksys 11ac APs set Rx A-MPDU factor to
      * zero in VHT IE. Using it would result in degraded throughput.
@@ -2562,31 +2584,35 @@ static void ath10k_peer_assoc_h_vht(struct ath10k* ar,
     /* Calculate peer NSS capability from VHT capabilities if STA
      * supports VHT.
      */
-    for (i = 0, max_nss = 0, vht_mcs = 0; i < VHT_NSS_NUM; i++) {
-        vht_mcs = vht_cap->supported_vht_mcs_and_nss_set >> (2 * i) & 3;
+    uint8_t i, max_nss, vht_mcs;
+    uint64_t supported_vht_mcs_and_nss_set = assoc->vht_cap.supported_vht_mcs_and_nss_set;
+    uint16_t rx_vht_mcs_map = (supported_vht_mcs_and_nss_set & IEEE80211_VHT_MCS_NSS_RX_MCS_MAP)
+                              >> IEEE80211_VHT_MCS_NSS_RX_MCS_MAP_SHIFT;
+    uint16_t rx_highest = (supported_vht_mcs_and_nss_set & IEEE80211_VHT_MCS_NSS_RX_MAX_LGI_RATE)
+                          >> IEEE80211_VHT_MCS_NSS_RX_MAX_LGI_RATE_SHIFT;
+    uint16_t tx_vht_mcs_map = (supported_vht_mcs_and_nss_set & IEEE80211_VHT_MCS_NSS_TX_MCS_MAP)
+                              >> IEEE80211_VHT_MCS_NSS_TX_MCS_MAP_SHIFT;
+    uint16_t tx_highest = (supported_vht_mcs_and_nss_set & IEEE80211_VHT_MCS_NSS_TX_MAX_LGI_RATE)
+                          >> IEEE80211_VHT_MCS_NSS_TX_MAX_LGI_RATE_SHIFT;
 
-        if ((vht_mcs != IEEE80211_VHT_MCS_NONE) && vht_mcs_mask[i]) {
+    for (i = 0, max_nss = 0, vht_mcs = 0; i < VHT_NSS_NUM; i++) {
+        vht_mcs = rx_vht_mcs_map >> (2 * i) & 3;
+
+        if (vht_mcs != IEEE80211_VHT_MCS_NONE) {
             max_nss = i + 1;
         }
     }
 
-#if 0  // NEEDS PORTING
-    arg->peer_num_spatial_streams = MIN(sta->rx_nss, max_nss);
-    arg->peer_vht_rates.rx_max_rate = vht_cap->vht_mcs.rx_highest;
-    arg->peer_vht_rates.rx_mcs_set = vht_cap->vht_mcs.rx_mcs_map;
-    arg->peer_vht_rates.tx_max_rate = vht_cap->vht_mcs.tx_highest;
-    arg->peer_vht_rates.tx_mcs_set = ath10k_peer_assoc_h_vht_limit(
-                                         vht_cap->vht_mcs.tx_mcs_map, vht_mcs_mask);
-#endif  // NEEDS PORTING
+    arg->peer_num_spatial_streams = max_nss;
+    arg->peer_vht_rates.rx_max_rate = rx_highest;
+    arg->peer_vht_rates.rx_mcs_set = rx_vht_mcs_map;
+    arg->peer_vht_rates.tx_max_rate = tx_highest;
+    arg->peer_vht_rates.tx_mcs_set = tx_vht_mcs_map;
 
     ath10k_dbg(ar, ATH10K_DBG_MAC, "mac vht peer %pM max_mpdu %d flags 0x%x\n",
                assoc->bssid, arg->peer_max_mpdu, arg->peer_flags);
 
-#if 1  // NEEDS PORTING
-    arg->peer_bw_rxnss_override = 1;
-#else
-    if (arg->peer_vht_rates.rx_max_rate &&
-            (sta->vht_cap.cap & IEEE80211_VHT_CAP_SUPP_CHAN_WIDTH_MASK)) {
+    if (arg->peer_vht_rates.rx_max_rate && (vht_cap & IEEE80211_VHT_CAPS_SUPP_CHAN_WIDTH)) {
         switch (arg->peer_vht_rates.rx_max_rate) {
         case 1560:
             /* Must be 2x2 at 160Mhz is all it can do. */
@@ -2598,7 +2624,6 @@ static void ath10k_peer_assoc_h_vht(struct ath10k* ar,
             break;
         }
     }
-#endif  // NEEDS PORTING
 }
 
 static void ath10k_peer_assoc_h_qos(struct ath10k* ar,
@@ -3187,10 +3212,11 @@ static zx_status_t ath10k_update_channel_list(struct ath10k* ar) {
 
             if (channel->flags & IEEE80211_CHAN_DISABLED) { continue; }
 
-            ch->allow_ht = true;
+            // For scan purposes, we only want to consider CBW20 channels
+            if (channel->center_freq.cbw20 == 0) { continue; }
 
-            /* FIXME: when should we really allow VHT? */
-            ch->allow_vht = true;
+            ch->allow_ht = ath10k_supported_bands[band].ht_supported;
+            ch->allow_vht = ath10k_supported_bands[band].vht_supported;
 
             ch->allow_ibss = !(channel->flags & IEEE80211_CHAN_NO_IR);
 
@@ -3201,8 +3227,8 @@ static zx_status_t ath10k_update_channel_list(struct ath10k* ar) {
             bool passive = channel->flags & IEEE80211_CHAN_NO_IR;
             ch->passive = passive;
 
-            ch->freq = channel->center_freq;
-            ch->band_center_freq1 = channel->center_freq;
+            ch->freq = channel->center_freq.cbw20;
+            ch->band_center_freq1 = channel->center_freq.cbw20;
             ch->min_power = 0;
             ch->max_power = channel->max_power * 2;
             ch->max_reg_power = channel->max_reg_power * 2;
@@ -5428,7 +5454,8 @@ static zx_status_t ath10k_mac_convert_scan_config(const wlan_hw_scan_config_t* s
             ath10k_err("invalid channel number %u\n", scan_config->channels[i]);
             return ZX_ERR_INVALID_ARGS;
         }
-        arg->channels[i] = ath_chan->center_freq;
+        ZX_DEBUG_ASSERT(ath_chan->center_freq.cbw20 != 0);
+        arg->channels[i] = ath_chan->center_freq.cbw20;
     }
     return ZX_OK;
 }
