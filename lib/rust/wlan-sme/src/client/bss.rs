@@ -145,7 +145,10 @@ mod tests {
         Wep,
         Wpa1,
         Wpa2,
+        Wpa3,
         Wpa2NoPrivacy,
+        Wpa2Wpa3MixedMode,
+        Eap,
     }
 
     #[test]
@@ -184,11 +187,14 @@ mod tests {
         // Compatible:
         assert!(is_bss_compatible(&bss(-30, -10, ProtectionCfg::Open)));
         assert!(is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wpa2)));
+        assert!(is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wpa2Wpa3MixedMode)));
 
         // Not compatible:
         assert!(!is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wep)));
         assert!(!is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wpa1)));
         assert!(!is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wpa2NoPrivacy)));
+        assert!(!is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wpa3)));
+        assert!(!is_bss_compatible(&bss(-30, -10, ProtectionCfg::Eap)));
     }
 
     #[test]
@@ -263,34 +269,11 @@ mod tests {
             op_rate_set: vec![],
             country: None,
             rsn: match protection {
-                ProtectionCfg::Wpa2 | ProtectionCfg::Wpa2NoPrivacy => Some(
-                    vec![
-                        // Element header
-                        48, 18,
-                        // Version
-                        1, 0,
-                        // Group Cipher: CCMP-128
-                        0x00, 0x0F, 0xAC, 4,
-                        // 1 Pairwise Cipher: CCMP-128
-                        1, 0, 0x00, 0x0F, 0xAC, 4,
-                        // 1 AKM: PSK
-                        1, 0, 0x00, 0x0F, 0xAC, 2
-                    ]
-                ),
-                ProtectionCfg::Wpa1 => Some(
-                    vec![
-                        // Element header
-                        48, 18,
-                        // Version
-                        1, 0,
-                        // Group Cipher: TKIP
-                        0x00, 0x0F, 0xAC, 2,
-                        // 1 Pairwise Cipher: TKIP
-                        1, 0, 0x00, 0x0F, 0xAC, 2,
-                        // 1 AKM: PSK
-                        1, 0, 0x00, 0x0F, 0xAC, 2
-                    ]
-                ),
+                ProtectionCfg::Wpa1 => Some(fake_wpa1_rsne()),
+                ProtectionCfg::Wpa2 | ProtectionCfg::Wpa2NoPrivacy => Some(fake_wpa2_rsne()),
+                ProtectionCfg::Wpa3 => Some(fake_wpa3_rsne()),
+                ProtectionCfg::Wpa2Wpa3MixedMode => Some(fake_wpa2_wpa3_mixed_mode_rsne()),
+                ProtectionCfg::Eap => Some(fake_eap_rsne()),
                 _ => None,
             },
 
@@ -306,6 +289,83 @@ mod tests {
             rssi_dbm: _rssi_dbm,
         };
         ret
+    }
+
+    fn fake_wpa1_rsne() -> Vec<u8> {
+        vec![
+            // Element header
+            48, 18,
+            // Version
+            1, 0,
+            // Group Cipher: TKIP
+            0x00, 0x0F, 0xAC, 2,
+            // 1 Pairwise Cipher: TKIP
+            1, 0, 0x00, 0x0F, 0xAC, 2,
+            // 1 AKM: PSK
+            1, 0, 0x00, 0x0F, 0xAC, 2
+        ]
+    }
+
+    fn fake_wpa2_rsne() -> Vec<u8> {
+        vec![
+            // Element header
+            48, 18,
+            // Version
+            1, 0,
+            // Group Cipher: CCMP-128
+            0x00, 0x0F, 0xAC, 4,
+            // 1 Pairwise Cipher: CCMP-128
+            1, 0, 0x00, 0x0F, 0xAC, 4,
+            // 1 AKM: PSK
+            1, 0, 0x00, 0x0F, 0xAC, 2
+        ]
+    }
+
+    fn fake_wpa3_rsne() -> Vec<u8> {
+        vec![
+            // Element header
+            48, 18,
+            // Version
+            1, 0,
+            // Group Cipher: CCMP-128
+            0x00, 0x0F, 0xAC, 4,
+            // 1 Pairwise Cipher: CCMP-128
+            1, 0, 0x00, 0x0F, 0xAC, 4,
+            // 1 AKM:  SAE
+            1, 0, 0x00, 0x0F, 0xAC, 8
+        ]
+    }
+
+    fn fake_wpa2_wpa3_mixed_mode_rsne() -> Vec<u8> {
+        vec![
+            // Element header
+            48, 18,
+            // Version
+            1, 0,
+            // Group Cipher: CCMP-128
+            0x00, 0x0F, 0xAC, 4,
+            // 1 Pairwise Cipher: CCMP-128
+            1, 0, 0x00, 0x0F, 0xAC, 4,
+            // 2 AKM:  SAE, PSK
+            2, 0,
+            0x00, 0x0F, 0xAC, 8,
+            0x00, 0x0F, 0xAC, 2
+        ]
+    }
+
+    fn fake_eap_rsne() -> Vec<u8> {
+        vec![
+            // Element header
+            48, 18,
+            // Version
+            1, 0,
+            // Group Cipher: CCMP-128
+            0x00, 0x0F, 0xAC, 4,
+            // 1 Pairwise Cipher: CCMP-128
+            1, 0, 0x00, 0x0F, 0xAC, 4,
+            // 1 AKM:  802.1X
+            1, 0, 0x00, 0x0F, 0xAC, 1,
+        ]
     }
 
 }
