@@ -51,8 +51,7 @@ static zx_status_t log_reader_cb(port_handler_t* ph, zx_signals_t signals, uint3
     for (;;) {
         if ((status = zx_debuglog_read(ph->handle, 0, rec, ZX_LOG_RECORD_MAX)) < 0) {
             if (status == ZX_ERR_SHOULD_WAIT) {
-                // return non-OK to avoid needlessly re-arming the repeating wait
-                return ZX_ERR_NEXT;
+                return ZX_OK;
             }
             break;
         }
@@ -345,7 +344,7 @@ static zx_status_t input_cb(port_handler_t* ph, zx_signals_t signals, uint32_t e
 
 void set_log_listener_active(bool active) {
     if (active) {
-        port_wait_repeating(&port, &log_ph);
+        port_wait(&port, &log_ph);
     } else {
         port_cancel(&port, &log_ph);
     }

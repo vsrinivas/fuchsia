@@ -131,21 +131,17 @@ static void vc_input_destroy(vc_input_t* vi) {
 static zx_status_t vc_timer_cb(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
     vc_input_t* vi = containerof(ph, vc_input_t, th);
 
-    // if interval is infinite, repeat was canceled
-    if (vi->repeat_interval != ZX_TIME_INFINITE) {
-        vc_input_process(vi, vi->previous_report_buf);
-        vc_input_process(vi, vi->report_buf);
+    vc_input_process(vi, vi->previous_report_buf);
+    vc_input_process(vi, vi->report_buf);
 
-        // increase repeat rate if we're not yet at the fastest rate
-        if ((vi->repeat_interval = vi->repeat_interval * 3 / 4) < HIGH_REPEAT_KEY_FREQ) {
-            vi->repeat_interval = HIGH_REPEAT_KEY_FREQ;
-        }
-
-        zx_timer_set(vi->timer, zx_deadline_after(vi->repeat_interval), 0);
+    // increase repeat rate if we're not yet at the fastest rate
+    if ((vi->repeat_interval = vi->repeat_interval * 3 / 4) < HIGH_REPEAT_KEY_FREQ) {
+        vi->repeat_interval = HIGH_REPEAT_KEY_FREQ;
     }
 
-    // return non-OK to avoid needlessly re-arming the repeating wait
-    return ZX_ERR_NEXT;
+    zx_timer_set(vi->timer, zx_deadline_after(vi->repeat_interval), 0);
+
+    return ZX_OK;
 }
 
 static zx_status_t vc_input_cb(port_fd_handler_t* fh, unsigned pollevt, uint32_t evt) {
@@ -171,7 +167,7 @@ static zx_status_t vc_input_cb(port_fd_handler_t* fh, unsigned pollevt, uint32_t
         vi->repeat_interval = LOW_REPEAT_KEY_FREQ;
         zx_timer_set(vi->timer, zx_deadline_after(vi->repeat_interval), 0);
     } else {
-        vi->repeat_interval = ZX_TIME_INFINITE;
+        zx_timer_cancel(vi->timer);
     }
     return ZX_OK;
 }
@@ -222,7 +218,7 @@ zx_status_t vc_input_create(vc_input_t** out, keypress_handler_t handler, int fd
     vi->th.handle = vi->timer;
     vi->th.waitfor = ZX_TIMER_SIGNALED;
     vi->th.func = vc_timer_cb;
-    port_wait_repeating(&port, &vi->th);
+    port_wait(&port, &vi->th);
 #endif
 
     *out = vi;
