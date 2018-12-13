@@ -13,8 +13,6 @@
 #include <trace-provider/provider.h>
 #include <trace/event.h>
 
-static constexpr uint32_t kMapFlags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
-
 // Vfd type that holds a region of memory that is mapped into the guest's
 // physical address space. The memory region is unmapped when instance is
 // destroyed.
@@ -26,7 +24,8 @@ class Memory : public VirtioWl::Vfd {
 
   // Create a memory instance by mapping |vmo| into |vmar|. Returns a valid
   // instance on success.
-  static std::unique_ptr<Memory> Create(zx::vmo vmo, zx::vmar* vmar) {
+  static std::unique_ptr<Memory> Create(zx::vmo vmo, zx::vmar* vmar,
+                                        uint32_t map_flags) {
     // Get the VMO size that has been rounded up to the next page size boundary.
     uint64_t size;
     zx_status_t status = vmo.get_size(&size);
@@ -38,7 +37,7 @@ class Memory : public VirtioWl::Vfd {
     // Map memory into VMAR. |addr| is guaranteed to be page-aligned and
     // non-zero on success.
     zx_gpaddr_t addr;
-    status = vmar->map(0, vmo, 0, size, kMapFlags, &addr);
+    status = vmar->map(0, vmo, 0, size, map_flags, &addr);
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to map VMO into guest VMAR: " << status;
       return nullptr;
@@ -374,7 +373,8 @@ void VirtioWl::HandleNew(const virtio_wl_ctrl_vfd_new_t* request,
     return;
   }
 
-  std::unique_ptr<Memory> vfd = Memory::Create(std::move(vmo), &vmar_);
+  std::unique_ptr<Memory> vfd = Memory::Create(
+      std::move(vmo), &vmar_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
   if (!vfd) {
     response->hdr.type = VIRTIO_WL_RESP_OUT_OF_MEMORY;
     return;
@@ -771,8 +771,15 @@ void VirtioWl::DispatchPendingEvents() {
 
         switch (handle_infos[i].type) {
           case ZX_OBJ_TYPE_VMO: {
-            std::unique_ptr<Memory> vfd =
-                Memory::Create(zx::vmo(handle_infos[i].handle), &vmar_);
+            uint32_t map_flags = 0;
+            if (handle_infos[i].rights & ZX_RIGHT_READ) {
+              map_flags |= ZX_VM_PERM_READ;
+            }
+            if (handle_infos[i].rights & ZX_RIGHT_WRITE) {
+              map_flags |= ZX_VM_PERM_WRITE;
+            }
+            std::unique_ptr<Memory> vfd = Memory::Create(
+                zx::vmo(handle_infos[i].handle), &vmar_, map_flags);
             if (!vfd) {
               FXL_LOG(ERROR) << "Failed to create memory instance for VMO";
               break;
