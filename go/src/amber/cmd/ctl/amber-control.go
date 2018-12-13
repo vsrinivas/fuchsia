@@ -23,6 +23,7 @@ import (
 	"syscall/zx/zxwait"
 	"time"
 
+	"amber/urlscope"
 	"app/context"
 	"fidl/fuchsia/amber"
 )
@@ -114,7 +115,9 @@ func addSource(a *amber.ControlInterface) error {
 
 	var source io.Reader
 	url, err := url.Parse(*pkgFile)
+	isURL := false
 	if err == nil && url.IsAbs() {
+		isURL = true
 		var expectedHash []byte
 		hash := strings.TrimSpace(*hash)
 		if len(hash) != 0 {
@@ -169,6 +172,21 @@ func addSource(a *amber.ControlInterface) error {
 
 	if len(*name) != 0 {
 		cfg.Id = *name
+	}
+
+	// Update the host segment of the URL with the original if it appears to have
+	// only been de-scoped, so that link-local configurations retain ipv6 scopes.
+	if isURL {
+		if remote, err := url.Parse(cfg.RepoUrl); err == nil {
+			if u := urlscope.Rescope(url, remote); u != nil {
+				cfg.RepoUrl = u.String()
+			}
+		}
+		if remote, err := url.Parse(cfg.BlobRepoUrl); err == nil {
+			if u := urlscope.Rescope(url, remote); u != nil {
+				cfg.BlobRepoUrl = u.String()
+			}
+		}
 	}
 
 	if cfg.BlobRepoUrl == "" {
