@@ -21,7 +21,12 @@ trap "rm -rf '$tmp'" EXIT
 cd "$tmp"
 mv "$diskimage" disk.raw
 
-tar -Sczf "$FUCHSIA_OUT_DIR/$FUCHSIA_GCE_IMAGE.tar.gz" disk.raw
+tar -Scf "$FUCHSIA_OUT_DIR/$FUCHSIA_GCE_IMAGE.tar" disk.raw
+if [ -x "$(command -v pigz)" ]; then
+  pigz -f "$FUCHSIA_OUT_DIR/$FUCHSIA_GCE_IMAGE.tar"
+else
+  gzip -f "$FUCHSIA_OUT_DIR/$FUCHSIA_GCE_IMAGE.tar"
+fi
 gsutil cp "$FUCHSIA_OUT_DIR/$FUCHSIA_GCE_IMAGE.tar.gz" "gs://$FUCHSIA_GCE_PROJECT/$FUCHSIA_GCE_USER/$FUCHSIA_GCE_IMAGE.tar.gz"
 gcloud -q compute images delete "$FUCHSIA_GCE_IMAGE"
 gcloud -q compute images create "$FUCHSIA_GCE_IMAGE" --source-uri "gs://$FUCHSIA_GCE_PROJECT/$FUCHSIA_GCE_USER/$FUCHSIA_GCE_IMAGE.tar.gz" --guest-os-features=UEFI_COMPATIBLE
