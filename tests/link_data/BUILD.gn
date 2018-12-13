@@ -19,6 +19,14 @@ executable_package("link_data_test_session_shell") {
     "link_data_test_session_shell.cc",
   ]
 
+  meta = [
+    {
+      path = "meta/link_data_test_session_shell.cmx"
+      dest = "link_data_test_session_shell.cmx"
+    },
+  ]
+
+
   deps = [
     ":defs",
     "//garnet/public/fidl/fuchsia.testing.runner",
@@ -42,6 +50,13 @@ executable_package("link_data_test_module0") {
     "link_data_test_module0.cc",
   ]
 
+  meta = [
+    {
+      path = "meta/link_data_test_module0.cmx"
+      dest = "link_data_test_module0.cmx"
+    },
+  ]
+
   deps = [
     ":defs",
     "//garnet/public/fidl/fuchsia.ui.viewsv1",
@@ -61,6 +76,13 @@ executable_package("link_data_test_module1") {
     "link_data_test_module1.cc",
   ]
 
+  meta = [
+    {
+      path = "meta/link_data_test_module1.cmx"
+      dest = "link_data_test_module1.cmx"
+    },
+  ]
+
   deps = [
     ":defs",
     "//garnet/public/fidl/fuchsia.ui.viewsv1",
@@ -78,6 +100,13 @@ executable_package("link_data_test_module2") {
 
   sources = [
     "link_data_test_module2.cc",
+  ]
+
+  meta = [
+    {
+      path = "meta/link_data_test_module2.cmx"
+      dest = "link_data_test_module2.cmx"
+    },
   ]
 
   deps = [

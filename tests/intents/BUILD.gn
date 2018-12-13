@@ -15,6 +15,13 @@ source_set("defs") {
 executable_package("intent_test_parent_module") {
   testonly = true
 
+  meta = [
+    {
+      path = "meta/intent_test_parent_module.cmx"
+      dest = "intent_test_parent_module.cmx"
+    },
+  ]
+
   sources = [
     "intent_test_parent_module.cc",
   ]
@@ -32,6 +39,13 @@ executable_package("intent_test_parent_module") {
 
 executable_package("intent_test_child_module") {
   testonly = true
+
+  meta = [
+    {
+      path = "meta/intent_test_child_module.cmx"
+      dest = "intent_test_child_module.cmx"
+    },
+  ]
 
   sources = [
     "intent_test_child_module.cc",
