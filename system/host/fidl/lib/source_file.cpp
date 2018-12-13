@@ -38,7 +38,7 @@ StringView SourceFile::LineContaining(StringView view, Position* position_out) c
            "The view is not part of this SourceFile");
 
     // We are looking from the end of the file backwards (hence
-    // crbegin and crend), looking for the the first line (hence
+    // crbegin and crend), looking for the first line (hence
     // upper_bound) to start at or before before the token in
     // question.
     auto is_in_line = [&ptr_less_equal](const StringView& left, const StringView& right) {

@@ -1228,7 +1228,7 @@ bool Library::ResolveConstant(Constant* constant, const Type* type) {
 
 bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant, const Type* type) {
     assert(TypeCanBeConst(type) &&
-           "Compiler bug: resolving indentifier constant to non-const-able type!");
+           "Compiler bug: resolving identifier constant to non-const-able type!");
 
     auto decl = LookupDeclByName(identifier_constant->name);
     if (!decl || decl->kind != Decl::Kind::kConst)
@@ -1333,7 +1333,7 @@ bool Library::ResolveLiteralConstant(LiteralConstant* literal_constant, const Ty
         auto max_size = static_cast<const Size&>(string_type->max_size->Value());
         // TODO(pascallouis): because data() contains the raw content,
         // with the two " to identify strings, we need to take this
-        // into account. Whe should expose the actual size of string
+        // into account. We should expose the actual size of string
         // literals properly, and take into account escaping.
         uint64_t string_size = string_data.size() - 2;
         if (max_size.value < string_size) {
@@ -1534,7 +1534,7 @@ bool Library::TypeIsConvertibleTo(const Type* from_type, const Type* to_type) {
         case types::PrimitiveSubtype::kBool:
             return from_primitive_type->subtype == types::PrimitiveSubtype::kBool;
         default:
-            // TODO(pascallouis): be more precise about convertability, e.g. it
+            // TODO(pascallouis): be more precise about convertibility, e.g. it
             // should not be allowed to convert a float to an int.
             return from_primitive_type->subtype != types::PrimitiveSubtype::kBool;
         }
@@ -1939,7 +1939,7 @@ bool Library::CompileInterface(Interface* interface_declaration) {
             auto name_result = method_scope.names.Insert(method.name.data(), method.name);
             if (!name_result.ok())
                 return Fail(method.name,
-                            "Multiple methods with the same name in an interface; last occurance was at " +
+                            "Multiple methods with the same name in an interface; last occurrence was at " +
                                 name_result.previous_occurance().position());
             auto ordinal_result = method_scope.ordinals.Insert(method.ordinal->value, method.name);
             if (method.ordinal->value == 0)
