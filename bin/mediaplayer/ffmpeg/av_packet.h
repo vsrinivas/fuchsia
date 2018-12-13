@@ -14,16 +14,16 @@ namespace media_player {
 namespace ffmpeg {
 
 struct AVPacketDeleter {
-  inline void operator()(AVPacket* ptr) const { av_packet_unref(ptr); }
+  inline void operator()(AVPacket* ptr) const {
+    av_packet_free(&ptr);
+  }
 };
 
 using AvPacketPtr = std::unique_ptr<AVPacket, AVPacketDeleter>;
 
 struct AvPacket {
   static AvPacketPtr Create() {
-    AVPacket* av_packet = new AVPacket();
-    av_init_packet(av_packet);
-    return AvPacketPtr(av_packet);
+    return AvPacketPtr(av_packet_alloc());
   }
 };
 
