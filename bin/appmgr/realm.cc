@@ -567,7 +567,8 @@ void Realm::CreateComponentWithRunnerForScheme(
   // "web_runner_prototype" instead.
   // TODO(CP-71): Remove web_runner_prototype scaffolding once there is a real
   // web_runner.
-  if (runner_url == "web_runner" &&
+  if (runner_url ==
+          "fuchsia-pkg://fuchsia.com/web_runner#meta/web_runner.cmx" &&
       !files::IsDirectory("/pkgfs/packages/web_runner") &&
       files::IsDirectory("/pkgfs/packages/web_runner_prototype")) {
     runner_url = "web_runner_prototype";

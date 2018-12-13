@@ -262,13 +262,29 @@ class RealmFakeLoaderTest : public RealmTest, public fuchsia::sys::Loader {
 TEST_F(RealmFakeLoaderTest, CreateWebComponent_HTTP) {
   RunComponent(enclosing_environment_.get(), "http://example.com");
   ASSERT_TRUE(WaitForComponentLoad());
-  EXPECT_EQ("file://web_runner", component_url());
+  EXPECT_EQ("fuchsia-pkg://fuchsia.com/web_runner#meta/web_runner.cmx",
+            component_url());
 }
 
 TEST_F(RealmFakeLoaderTest, CreateWebComponent_HTTPS) {
   RunComponent(enclosing_environment_.get(), "https://example.com");
   ASSERT_TRUE(WaitForComponentLoad());
-  EXPECT_EQ("file://web_runner", component_url());
+  EXPECT_EQ("fuchsia-pkg://fuchsia.com/web_runner#meta/web_runner.cmx",
+            component_url());
+}
+
+TEST_F(RealmFakeLoaderTest, CreateCastComponent_CAST) {
+  RunComponent(enclosing_environment_.get(), "cast://a12345/");
+  ASSERT_TRUE(WaitForComponentLoad());
+  EXPECT_EQ("fuchsia-pkg://fuchsia.com/cast_runner#meta/cast_runner.cmx",
+            component_url());
+}
+
+TEST_F(RealmFakeLoaderTest, CreateCastComponent_CASTS) {
+  RunComponent(enclosing_environment_.get(), "casts://a12345/");
+  ASSERT_TRUE(WaitForComponentLoad());
+  EXPECT_EQ("fuchsia-pkg://fuchsia.com/cast_runner#meta/cast_runner.cmx",
+            component_url());
 }
 
 TEST_F(RealmFakeLoaderTest, CreateInvalidComponent) {
