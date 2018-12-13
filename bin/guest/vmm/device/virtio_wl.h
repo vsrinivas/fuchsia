@@ -24,7 +24,7 @@
 #define VIRTWL_VQ_MAGMA_IN 2
 #define VIRTWL_VQ_MAGMA_OUT 3
 #define VIRTWL_QUEUE_COUNT 4
-#define VIRTWL_NEXT_VFD_ID_BASE (1 << 31)
+#define VIRTWL_NEXT_VFD_ID_BASE (1 << 30)
 #define VIRTWL_VFD_ID_HOST_MASK VIRTWL_NEXT_VFD_ID_BASE
 
 // Virtio wayland device.

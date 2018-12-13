@@ -20,7 +20,7 @@ namespace {
 #define VIRTWL_VQ_OUT 1
 #define VIRTWL_VQ_MAGMA_IN 2
 #define VIRTWL_VQ_MAGMA_OUT 3
-#define VIRTWL_NEXT_VFD_ID_BASE (1 << 31)
+#define VIRTWL_NEXT_VFD_ID_BASE 0x40000000
 
 static constexpr char kVirtioWlUrl[] = "virtio_wl";
 static constexpr uint16_t kNumQueues = 2;
