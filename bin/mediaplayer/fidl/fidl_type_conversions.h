@@ -107,15 +107,15 @@ struct TypeConverter<std::unique_ptr<media_player::StreamType>,
 };
 
 template <>
-struct TypeConverter<fuchsia::media::Metadata, media_player::Metadata> {
-  static fuchsia::media::Metadata Convert(
+struct TypeConverter<fuchsia::mediaplayer::Metadata, media_player::Metadata> {
+  static fuchsia::mediaplayer::Metadata Convert(
       const media_player::Metadata& input);
 };
 
 template <>
-struct TypeConverter<media_player::Metadata, fuchsia::media::Metadata> {
+struct TypeConverter<media_player::Metadata, fuchsia::mediaplayer::Metadata> {
   static media_player::Metadata Convert(
-      const fuchsia::media::Metadata& input);
+      const fuchsia::mediaplayer::Metadata& input);
 };
 
 template <>

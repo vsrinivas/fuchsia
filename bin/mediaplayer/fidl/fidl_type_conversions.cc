@@ -453,12 +453,12 @@ std::unique_ptr<media_player::StreamType> TypeConverter<
   return nullptr;
 }
 
-fuchsia::media::Metadata
-TypeConverter<fuchsia::media::Metadata, media_player::Metadata>::Convert(
+fuchsia::mediaplayer::Metadata
+TypeConverter<fuchsia::mediaplayer::Metadata, media_player::Metadata>::Convert(
     const media_player::Metadata& input) {
-  fuchsia::media::Metadata result;
+  fuchsia::mediaplayer::Metadata result;
   for (auto& pair : input) {
-    fuchsia::media::Property property;
+    fuchsia::mediaplayer::Property property;
     property.label = pair.first;
     property.value = pair.second;
     result.properties->push_back(property);
@@ -468,8 +468,8 @@ TypeConverter<fuchsia::media::Metadata, media_player::Metadata>::Convert(
 }
 
 media_player::Metadata
-TypeConverter<media_player::Metadata, fuchsia::media::Metadata>::Convert(
-    const fuchsia::media::Metadata& input) {
+TypeConverter<media_player::Metadata, fuchsia::mediaplayer::Metadata>::Convert(
+    const fuchsia::mediaplayer::Metadata& input) {
   media_player::Metadata result(input.properties->size());
   for (auto& property : *input.properties) {
     result.emplace(property.label, property.value);

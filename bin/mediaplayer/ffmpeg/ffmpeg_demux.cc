@@ -29,12 +29,12 @@ namespace media_player {
 namespace {
 
 const std::unordered_map<std::string, std::string> kMetadataLabelMap{
-    {"TITLE", fuchsia::media::METADATA_LABEL_TITLE},
-    {"ARTIST", fuchsia::media::METADATA_LABEL_ARTIST},
-    {"ALBUM", fuchsia::media::METADATA_LABEL_ALBUM},
-    {"PUBLISHER", fuchsia::media::METADATA_LABEL_PUBLISHER},
-    {"GENRE", fuchsia::media::METADATA_LABEL_GENRE},
-    {"COMPOSER", fuchsia::media::METADATA_LABEL_COMPOSER},
+    {"TITLE", fuchsia::mediaplayer::METADATA_LABEL_TITLE},
+    {"ARTIST", fuchsia::mediaplayer::METADATA_LABEL_ARTIST},
+    {"ALBUM", fuchsia::mediaplayer::METADATA_LABEL_ALBUM},
+    {"PUBLISHER", fuchsia::mediaplayer::METADATA_LABEL_PUBLISHER},
+    {"GENRE", fuchsia::mediaplayer::METADATA_LABEL_GENRE},
+    {"COMPOSER", fuchsia::mediaplayer::METADATA_LABEL_COMPOSER},
 };
 
 const std::string kMetadataUnknownPropertyPrefix = "ffmpeg.";

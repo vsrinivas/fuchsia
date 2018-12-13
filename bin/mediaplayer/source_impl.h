@@ -116,13 +116,13 @@ class StreamSourceImpl : public SourceImpl,
   // to signal that its connection has failed.
   static std::unique_ptr<StreamSourceImpl> Create(
       int64_t duration_ns, bool can_pause, bool can_seek,
-      std::unique_ptr<fuchsia::media::Metadata> metadata, Graph* graph,
+      std::unique_ptr<fuchsia::mediaplayer::Metadata> metadata, Graph* graph,
       fidl::InterfaceRequest<fuchsia::mediaplayer::StreamSource> request,
       fit::closure connection_failure_callback);
 
   StreamSourceImpl(
       int64_t duration_ns, bool can_pause, bool can_seek,
-      std::unique_ptr<fuchsia::media::Metadata> metadata, Graph* graph,
+      std::unique_ptr<fuchsia::mediaplayer::Metadata> metadata, Graph* graph,
       fidl::InterfaceRequest<fuchsia::mediaplayer::StreamSource> request,
       fit::closure connection_failure_callback);
 

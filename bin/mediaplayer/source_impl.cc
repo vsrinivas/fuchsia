@@ -125,7 +125,7 @@ void SourceImpl::UpdateStatus() {
   auto metadata = source_segment_->metadata();
   status_.metadata =
       metadata ? fidl::MakeOptional(
-                     fxl::To<fuchsia::media::Metadata>(*metadata))
+                     fxl::To<fuchsia::mediaplayer::Metadata>(*metadata))
                : nullptr;
 
   status_.problem = SafeClone(source_segment_->problem());
@@ -185,7 +185,7 @@ void DemuxSourceImpl::SendStatusUpdates() {
 // static
 std::unique_ptr<StreamSourceImpl> StreamSourceImpl::Create(
     int64_t duration_ns, bool can_pause, bool can_seek,
-    std::unique_ptr<fuchsia::media::Metadata> metadata, Graph* graph,
+    std::unique_ptr<fuchsia::mediaplayer::Metadata> metadata, Graph* graph,
     fidl::InterfaceRequest<fuchsia::mediaplayer::StreamSource> request,
     fit::closure connection_failure_callback) {
   FXL_DCHECK(graph);
@@ -197,7 +197,7 @@ std::unique_ptr<StreamSourceImpl> StreamSourceImpl::Create(
 
 StreamSourceImpl::StreamSourceImpl(
     int64_t duration_ns, bool can_pause, bool can_seek,
-    std::unique_ptr<fuchsia::media::Metadata> metadata, Graph* graph,
+    std::unique_ptr<fuchsia::mediaplayer::Metadata> metadata, Graph* graph,
     fidl::InterfaceRequest<fuchsia::mediaplayer::StreamSource> request,
     fit::closure connection_failure_callback)
     : SourceImpl(graph, std::move(connection_failure_callback)),

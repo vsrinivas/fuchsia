@@ -6,6 +6,7 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.mediaplayer") {
   sources = [
+    "metadata.fidl",
     "player.fidl",
     "problem.fidl",
     "seeking_reader.fidl",
