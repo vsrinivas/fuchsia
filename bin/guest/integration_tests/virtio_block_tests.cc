@@ -2,25 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fcntl.h>
-#include <limits.h>
-#include <stdlib.h>
-#include <string>
-
 #include <fbl/unique_fd.h>
-#include <garnet/bin/guest/vmm/device/qcow.h>
-#include <garnet/bin/guest/vmm/device/qcow_test_data.h>
-#include <garnet/lib/machina/device/block.h>
+#include <fcntl.h>
 #include <gmock/gmock.h>
 #include <lib/fdio/util.h>
 #include <lib/fxl/arraysize.h>
 #include <lib/fxl/strings/string_printf.h>
+#include <limits.h>
+#include <stdlib.h>
+#include <string>
+
+#include "garnet/bin/guest/vmm/device/block.h"
+#include "garnet/bin/guest/vmm/device/qcow.h"
+#include "garnet/bin/guest/vmm/device/qcow_test_data.h"
 
 #include "guest_test.h"
 
 using namespace qcow_test_data;
-using ::machina::kBlockSectorSize;
-using ::testing::HasSubstr;
+using testing::HasSubstr;
 
 static constexpr char kVirtioBlockUtilCmx[] = "meta/virtio_block_test_util.cmx";
 static constexpr uint32_t kVirtioBlockCount = 32;

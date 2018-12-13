@@ -1,6 +1,6 @@
 # Guest
 The `vmm` app enables booting a guest operating system using the Zircon
-hypervisor.
+hypervisor. The hypervisor and VMM are collectively referred to as "Machina".
 
 These instructions will guide you through creating minimal Zircon and Linux
 guests. For instructions on building a more comprehensive linux guest system
@@ -19,10 +19,21 @@ $ fx pave
 Where `${ARCH}` is one of `x64` or `arm64`.
 
 ### Note for external developers
-The linux_guest package expects the Linux kernel binaries to be in `garnet/bin/guest/pkg/linux_guest/`, you should create them before running `fx full-build` by running the following scripts:
+The linux_guest package expects the Linux kernel binaries to be in
+`garnet/bin/guest/pkg/linux_guest`, you should create them before running
+`fx full-build` by running the following scripts:
 ```
-$ ./garnet/bin/guest/pkg/linux_guest/mklinux.sh -l /tmp/linux/source -o garnet/bin/guest/pkg/linux_guest/images/${ARCH}/Image -b machina-4.18 ${ARCH}
-$ ./garnet/bin/guest/pkg/linux_guest/mksysroot.sh -r -p garnet/bin/guest/pkg/linux_guest/images/${ARCH}/disk.img -d /tmp/toybox -s /tmp/dash S{ARCH}
+$ ./garnet/bin/guest/pkg/linux_guest/mklinux.sh \
+    -l /tmp/linux/source \
+    -o garnet/bin/guest/pkg/linux_guest/images/${ARCH}/Image \
+    -b machina-4.18 \
+    ${ARCH}
+$ ./garnet/bin/guest/pkg/linux_guest/mksysroot.sh \
+    -r \
+    -p garnet/bin/guest/pkg/linux_guest/images/${ARCH}/disk.img \
+    -d /tmp/toybox \
+    -s /tmp/dash \
+    S{ARCH}
 ```
 
 Note: `-b` specifies the branch of zircon_guest to use. You can modify this

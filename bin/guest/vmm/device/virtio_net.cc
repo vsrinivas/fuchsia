@@ -28,8 +28,8 @@ enum class Queue : uint16_t {
 
 class RxStream : public StreamBase {
  public:
-  void Init(GuestEthernet* guest_ethernet, const machina::PhysMem& phys_mem,
-            machina::VirtioQueue::InterruptFn interrupt) {
+  void Init(GuestEthernet* guest_ethernet, const PhysMem& phys_mem,
+            VirtioQueue::InterruptFn interrupt) {
     guest_ethernet_ = guest_ethernet;
     phys_mem_ = &phys_mem;
     StreamBase::Init(phys_mem, std::move(interrupt));
@@ -93,14 +93,14 @@ class RxStream : public StreamBase {
   };
 
   GuestEthernet* guest_ethernet_ = nullptr;
-  const machina::PhysMem* phys_mem_ = nullptr;
+  const PhysMem* phys_mem_ = nullptr;
   std::queue<Packet> packet_queue_;
 };
 
 class TxStream : public StreamBase {
  public:
-  void Init(GuestEthernet* guest_ethernet, const machina::PhysMem& phys_mem,
-            machina::VirtioQueue::InterruptFn interrupt) {
+  void Init(GuestEthernet* guest_ethernet, const PhysMem& phys_mem,
+            VirtioQueue::InterruptFn interrupt) {
     guest_ethernet_ = guest_ethernet;
     phys_mem_ = &phys_mem;
     StreamBase::Init(phys_mem, std::move(interrupt));
@@ -129,7 +129,7 @@ class TxStream : public StreamBase {
 
  private:
   GuestEthernet* guest_ethernet_ = nullptr;
-  const machina::PhysMem* phys_mem_ = nullptr;
+  const PhysMem* phys_mem_ = nullptr;
 };
 
 class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,

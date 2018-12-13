@@ -8,12 +8,11 @@
 #include <unistd.h>
 #include <iostream>
 
+#include <lib/fxl/command_line.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/strings/string_number_conversions.h>
+#include <rapidjson/document.h>
 #include <zircon/device/block.h>
-
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/string_number_conversions.h"
-#include "rapidjson/document.h"
 
 static void print_usage(fxl::CommandLine& cl) {
   // clang-format off
@@ -81,13 +80,12 @@ static GuestConfigParser::OptionHandler set_option(std::string* out) {
 
 // A function that converts a string option into a custom type.
 template <typename T>
-using OptionParser =
-    std::function<zx_status_t(const std::string& arg, T* out)>;
+using OptionParser = std::function<zx_status_t(const std::string& arg, T* out)>;
 
 // Handles an option by parsing the value and adding it to a container.
 template <typename T, typename C>
-static GuestConfigParser::OptionHandler add_option(
-    C* out, OptionParser<T> parse) {
+static GuestConfigParser::OptionHandler add_option(C* out,
+                                                   OptionParser<T> parse) {
   return [out, parse](const std::string& key, const std::string& value) {
     if (value.empty()) {
       FXL_LOG(ERROR) << "Option: '" << key << "' expects a value (--" << key

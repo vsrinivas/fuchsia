@@ -9,10 +9,10 @@
 #include <trace/event.h>
 #include <virtio/block.h>
 
+#include "garnet/bin/guest/vmm/device/block.h"
 #include "garnet/bin/guest/vmm/device/block_dispatcher.h"
 #include "garnet/bin/guest/vmm/device/device_base.h"
 #include "garnet/bin/guest/vmm/device/stream_base.h"
-#include "garnet/lib/machina/device/block.h"
 
 enum class Queue : uint16_t {
   REQUEST = 0,
@@ -21,7 +21,7 @@ enum class Queue : uint16_t {
 // A single asynchronous block request.
 class Request : public fbl::RefCounted<Request> {
  public:
-  Request(machina::VirtioChain chain) : chain_(std::move(chain)) {
+  Request(VirtioChain chain) : chain_(std::move(chain)) {
     TRACE_ASYNC_BEGIN("machina", "block:request", nonce_);
   }
 
@@ -33,7 +33,7 @@ class Request : public fbl::RefCounted<Request> {
     TRACE_ASYNC_END("machina", "block:request", nonce_);
   }
 
-  bool NextDescriptor(machina::VirtioDescriptor* desc, bool writable) {
+  bool NextDescriptor(VirtioDescriptor* desc, bool writable) {
     bool has_next;
     // Read the next descriptor. If we have previously encountered an error,
     // keep reading descriptors until we find the status byte.
@@ -56,7 +56,7 @@ class Request : public fbl::RefCounted<Request> {
   void AddUsed(uint32_t used) { *chain_.Used() += used; }
 
  private:
-  machina::VirtioChain chain_;
+  VirtioChain chain_;
   trace_async_id_t nonce_ = TRACE_NONCE();
   uint8_t status_ = VIRTIO_BLK_S_OK;
   uint8_t* status_ptr_ = nullptr;
@@ -66,8 +66,7 @@ class Request : public fbl::RefCounted<Request> {
 class RequestStream : public StreamBase {
  public:
   void Init(std::unique_ptr<BlockDispatcher> disp, const std::string& id,
-            const machina::PhysMem& phys_mem,
-            machina::VirtioQueue::InterruptFn interrupt) {
+            const PhysMem& phys_mem, VirtioQueue::InterruptFn interrupt) {
     dispatcher_ = std::move(disp);
     id_ = id;
     StreamBase::Init(phys_mem, std::move(interrupt));
@@ -87,7 +86,7 @@ class RequestStream : public StreamBase {
       // for the driver to use. This does not affect the units used in the
       // protocol (always 512 bytes), but awareness of the correct value can
       // affect performance.
-      uint64_t off = header->sector * machina::kBlockSectorSize;
+      uint64_t off = header->sector * kBlockSectorSize;
       switch (header->type) {
         case VIRTIO_BLK_T_IN:
           DoRead(std::move(request), off);
@@ -129,7 +128,7 @@ class RequestStream : public StreamBase {
   void DoRead(fbl::RefPtr<Request> request, uint64_t off) {
     while (request->NextDescriptor(&desc_, true /* writable */)) {
       const uint32_t size = desc_.len;
-      if (size % machina::kBlockSectorSize != 0) {
+      if (size % kBlockSectorSize != 0) {
         request->SetStatus(VIRTIO_BLK_S_IOERR);
         continue;
       }
@@ -151,7 +150,7 @@ class RequestStream : public StreamBase {
   void DoWrite(fbl::RefPtr<Request> request, uint64_t off) {
     while (request->NextDescriptor(&desc_, false /* writable */)) {
       const uint32_t size = desc_.len;
-      if (size % machina::kBlockSectorSize != 0) {
+      if (size % kBlockSectorSize != 0) {
         request->SetStatus(VIRTIO_BLK_S_IOERR);
         continue;
       }

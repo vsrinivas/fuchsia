@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_MACHINA_VIRTIO_MAGMA_H_
-#define GARNET_LIB_MACHINA_VIRTIO_MAGMA_H_
+#ifndef GARNET_BIN_GUEST_VMM_DEVICE_VIRTIO_MAGMA_H_
+#define GARNET_BIN_GUEST_VMM_DEVICE_VIRTIO_MAGMA_H_
 
 #include <memory>
 #include <string>
@@ -16,18 +16,17 @@
 #include <lib/zx/vmar.h>
 #include <zircon/types.h>
 
-#include "garnet/lib/machina/device/virtio_queue.h"
+#include "garnet/bin/guest/vmm/device/virtio_queue.h"
 #include "garnet/lib/magma/include/magma_abi/magma.h"
 #include "garnet/lib/magma/include/virtio/virtio_magma.h"
 
 class VirtioMagma {
  public:
-  VirtioMagma(zx::vmar* vmar, machina::VirtioQueue* in_queue,
-              machina::VirtioQueue* out_queue)
+  VirtioMagma(zx::vmar* vmar, VirtioQueue* in_queue, VirtioQueue* out_queue)
       : vmar_(vmar) {}
   ~VirtioMagma();
   zx_status_t Init(std::string device_path);
-  void HandleCommand(machina::VirtioChain* chain);
+  void HandleCommand(VirtioChain* chain);
 
   void OnCommandAvailable();
   void OnQueueReady();
@@ -44,12 +43,12 @@ class VirtioMagma {
 
   fbl::unique_fd device_fd_;
   __UNUSED zx::vmar* vmar_;
-  __UNUSED machina::VirtioQueue* in_queue_;
-  machina::VirtioQueue* out_queue_;
+  __UNUSED VirtioQueue* in_queue_;
+  VirtioQueue* out_queue_;
   std::unordered_map<uint64_t, magma_connection_t*> connections_;
   uint64_t next_connection_id_ = 1;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(VirtioMagma);
 };
 
-#endif  // GARNET_LIB_MACHINA_VIRTIO_MAGMA_H_
+#endif  // GARNET_BIN_GUEST_VMM_DEVICE_VIRTIO_MAGMA_H_

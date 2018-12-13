@@ -8,7 +8,7 @@
 #include <fuchsia/guest/device/cpp/fidl.h>
 #include <lib/component/cpp/testing/test_with_environment.h>
 
-#include "garnet/lib/machina/device/phys_mem.h"
+#include "garnet/bin/guest/vmm/device/phys_mem.h"
 
 class TestWithDevice : public component::testing::TestWithEnvironment {
  protected:
@@ -25,7 +25,7 @@ class TestWithDevice : public component::testing::TestWithEnvironment {
   fuchsia::sys::ComponentControllerPtr component_controller_;
 
   zx::event event_;
-  machina::PhysMem phys_mem_;
+  PhysMem phys_mem_;
 };
 
 #endif  // GARNET_BIN_GUEST_VMM_DEVICE_TEST_WITH_DEVICE_H_

@@ -4,9 +4,9 @@
 
 #include <virtio/input.h>
 
+#include "garnet/bin/guest/vmm/device/input.h"
 #include "garnet/bin/guest/vmm/device/test_with_device.h"
 #include "garnet/bin/guest/vmm/device/virtio_queue_fake.h"
-#include "garnet/lib/machina/device/input.h"
 
 static constexpr char kVirtioInputUrl[] = "virtio_input";
 static constexpr uint16_t kNumQueues = 1;
@@ -104,11 +104,11 @@ TEST_F(VirtioInputTest, PointerMove) {
 
   EXPECT_EQ(VIRTIO_INPUT_EV_ABS, event_1->type);
   EXPECT_EQ(VIRTIO_INPUT_EV_ABS_X, event_1->code);
-  EXPECT_EQ(std::ceil(machina::kInputAbsMaxX * fuchsia_event.pointer().x),
+  EXPECT_EQ(std::ceil(kInputAbsMaxX * fuchsia_event.pointer().x),
             event_1->value);
   EXPECT_EQ(VIRTIO_INPUT_EV_ABS, event_2->type);
   EXPECT_EQ(VIRTIO_INPUT_EV_ABS_Y, event_2->code);
-  EXPECT_EQ(std::ceil(machina::kInputAbsMaxY * fuchsia_event.pointer().y),
+  EXPECT_EQ(std::ceil(kInputAbsMaxY * fuchsia_event.pointer().y),
             event_2->value);
   EXPECT_EQ(VIRTIO_INPUT_EV_SYN, event_3->type);
 }
@@ -143,14 +143,14 @@ TEST_F(VirtioInputTest, PointerUp) {
 
   EXPECT_EQ(VIRTIO_INPUT_EV_ABS, event_1->type);
   EXPECT_EQ(VIRTIO_INPUT_EV_ABS_X, event_1->code);
-  EXPECT_EQ(std::ceil(machina::kInputAbsMaxX * fuchsia_event.pointer().x),
+  EXPECT_EQ(std::ceil(kInputAbsMaxX * fuchsia_event.pointer().x),
             event_1->value);
   EXPECT_EQ(VIRTIO_INPUT_EV_ABS, event_2->type);
   EXPECT_EQ(VIRTIO_INPUT_EV_ABS_Y, event_2->code);
-  EXPECT_EQ(std::ceil(machina::kInputAbsMaxY * fuchsia_event.pointer().y),
+  EXPECT_EQ(std::ceil(kInputAbsMaxY * fuchsia_event.pointer().y),
             event_2->value);
   EXPECT_EQ(VIRTIO_INPUT_EV_KEY, event_3->type);
-  EXPECT_EQ(machina::kButtonTouchCode, event_3->code);
+  EXPECT_EQ(kButtonTouchCode, event_3->code);
   EXPECT_EQ(VIRTIO_INPUT_EV_KEY_RELEASED, event_3->value);
   EXPECT_EQ(VIRTIO_INPUT_EV_SYN, event_4->type);
 }

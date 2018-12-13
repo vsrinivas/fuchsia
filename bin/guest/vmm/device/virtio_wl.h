@@ -17,7 +17,7 @@
 
 #include "garnet/bin/guest/vmm/device/device_base.h"
 #include "garnet/bin/guest/vmm/device/virtio_magma.h"
-#include "garnet/lib/machina/device/virtio_queue.h"
+#include "garnet/bin/guest/vmm/device/virtio_queue.h"
 
 #define VIRTWL_VQ_IN 0
 #define VIRTWL_VQ_OUT 1
@@ -86,14 +86,10 @@ class VirtioWl : public DeviceBase<VirtioWl>,
   ~VirtioWl() override = default;
   zx_status_t OnDeviceReady(uint32_t negotiated_features);
 
-  machina::VirtioQueue* in_queue() { return &queues_[VIRTWL_VQ_IN]; }
-  machina::VirtioQueue* out_queue() { return &queues_[VIRTWL_VQ_OUT]; }
-  machina::VirtioQueue* magma_in_queue() {
-    return &queues_[VIRTWL_VQ_MAGMA_IN];
-  }
-  machina::VirtioQueue* magma_out_queue() {
-    return &queues_[VIRTWL_VQ_MAGMA_OUT];
-  }
+  VirtioQueue* in_queue() { return &queues_[VIRTWL_VQ_IN]; }
+  VirtioQueue* out_queue() { return &queues_[VIRTWL_VQ_OUT]; }
+  VirtioQueue* magma_in_queue() { return &queues_[VIRTWL_VQ_MAGMA_IN]; }
+  VirtioQueue* magma_out_queue() { return &queues_[VIRTWL_VQ_MAGMA_OUT]; }
 
   zx::vmar* vmar() { return &vmar_; }
 
@@ -111,7 +107,7 @@ class VirtioWl : public DeviceBase<VirtioWl>,
       StartCallback callback) override;
 
  private:
-  void HandleCommand(machina::VirtioChain* chain);
+  void HandleCommand(VirtioChain* chain);
   void HandleNew(const virtio_wl_ctrl_vfd_new_t* request,
                  virtio_wl_ctrl_vfd_new_t* response);
   void HandleClose(const virtio_wl_ctrl_vfd_t* request,
@@ -133,14 +129,13 @@ class VirtioWl : public DeviceBase<VirtioWl>,
   void OnCanWrite(async_dispatcher_t* dispatcher, async::Wait* wait,
                   zx_status_t status, const zx_packet_signal_t* signal);
   void DispatchPendingEvents();
-  bool AcquireWritableDescriptor(machina::VirtioQueue* queue,
-                                 machina::VirtioChain* chain,
-                                 machina::VirtioDescriptor* desc);
+  bool AcquireWritableDescriptor(VirtioQueue* queue, VirtioChain* chain,
+                                 VirtioDescriptor* desc);
 
-  std::array<machina::VirtioQueue, VIRTWL_QUEUE_COUNT> queues_;
+  std::array<VirtioQueue, VIRTWL_QUEUE_COUNT> queues_;
   zx::vmar vmar_;
   fuchsia::guest::WaylandDispatcherPtr dispatcher_;
-  machina::VirtioChain out_chain_;
+  VirtioChain out_chain_;
   size_t bytes_written_for_send_request_ = 0;
   std::unordered_map<uint32_t, std::unique_ptr<Vfd>> vfds_;
   std::unordered_map<uint32_t, zx_signals_t> ready_vfds_;

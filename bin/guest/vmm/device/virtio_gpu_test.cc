@@ -4,9 +4,9 @@
 
 #include <virtio/gpu.h>
 
+#include "garnet/bin/guest/vmm/device/gpu.h"
 #include "garnet/bin/guest/vmm/device/test_with_device.h"
 #include "garnet/bin/guest/vmm/device/virtio_queue_fake.h"
-#include "garnet/lib/machina/device/gpu.h"
 
 static constexpr char kVirtioGpuUrl[] = "virtio_gpu";
 static constexpr uint16_t kNumQueues = 2;
@@ -50,8 +50,8 @@ class VirtioGpuTest : public TestWithDevice {
         .hdr = {.type = VIRTIO_GPU_CMD_RESOURCE_CREATE_2D},
         .format = kPixelFormat,
         .resource_id = kResourceId,
-        .width = machina::kGpuStartupWidth,
-        .height = machina::kGpuStartupHeight,
+        .width = kGpuStartupWidth,
+        .height = kGpuStartupHeight,
     };
     virtio_gpu_ctrl_hdr_t* response;
     zx_status_t status =
@@ -98,8 +98,8 @@ class VirtioGpuTest : public TestWithDevice {
         .scanout_id = kScanoutId,
         .r = {.x = 0,
               .y = 0,
-              .width = machina::kGpuStartupWidth,
-              .height = machina::kGpuStartupHeight},
+              .width = kGpuStartupWidth,
+              .height = kGpuStartupHeight},
     };
     virtio_gpu_ctrl_hdr_t* response;
     zx_status_t status =
@@ -142,8 +142,8 @@ TEST_F(VirtioGpuTest, GetDisplayInfo) {
   EXPECT_EQ(response->hdr.type, VIRTIO_GPU_RESP_OK_DISPLAY_INFO);
   EXPECT_EQ(response->pmodes[0].r.x, 0u);
   EXPECT_EQ(response->pmodes[0].r.y, 0u);
-  EXPECT_EQ(response->pmodes[0].r.width, machina::kGpuStartupWidth);
-  EXPECT_EQ(response->pmodes[0].r.height, machina::kGpuStartupHeight);
+  EXPECT_EQ(response->pmodes[0].r.width, kGpuStartupWidth);
+  EXPECT_EQ(response->pmodes[0].r.height, kGpuStartupHeight);
 }
 
 TEST_F(VirtioGpuTest, SetScanout) {

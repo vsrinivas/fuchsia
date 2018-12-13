@@ -9,13 +9,12 @@
 
 #include <virtio/virtio_ring.h>
 
-#include "garnet/lib/machina/device/virtio_queue.h"
+#include "garnet/bin/guest/vmm/device/virtio_queue.h"
 
 // Fake Virtio queue for out-of-process devices.
 class VirtioQueueFake {
  public:
-  VirtioQueueFake(const machina::PhysMem& phys_mem, zx_gpaddr_t addr,
-                  uint16_t size);
+  VirtioQueueFake(const PhysMem& phys_mem, zx_gpaddr_t addr, uint16_t size);
 
   uint16_t size() const { return ring_.size; }
   zx_gpaddr_t desc() const { return desc_; }
@@ -40,13 +39,13 @@ class VirtioQueueFake {
   std::optional<UsedElement> NextUsed();
 
  private:
-  const machina::PhysMem& phys_mem_;
+  const PhysMem& phys_mem_;
   const zx_gpaddr_t desc_;
   const zx_gpaddr_t avail_;
   const zx_gpaddr_t used_;
   const zx_gpaddr_t end_;
 
-  machina::VirtioRing ring_ = {};
+  VirtioRing ring_ = {};
   zx_gpaddr_t data_begin_ = 0;
   zx_gpaddr_t data_end_ = 0;
   uint16_t next_desc_ = 0;
@@ -69,7 +68,7 @@ class DescriptorChainBuilder {
                                                    uint32_t len);
   DescriptorChainBuilder& AppendWritableDescriptor(void** buf, uint32_t len);
 
-  template<typename T>
+  template <typename T>
   DescriptorChainBuilder& AppendWritableDescriptor(T** ptr, uint32_t len) {
     return AppendWritableDescriptor(reinterpret_cast<void**>(ptr), len);
   }

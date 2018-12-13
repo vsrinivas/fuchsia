@@ -5,23 +5,22 @@
 #include "garnet/bin/guest/vmm/device/virtio_queue_fake.h"
 
 static size_t desc_size(uint16_t queue_size) {
-  return sizeof(*machina::VirtioRing::desc) * queue_size;
+  return sizeof(*VirtioRing::desc) * queue_size;
 }
 
 static size_t avail_size(uint16_t queue_size) {
-  return sizeof(*machina::VirtioRing::avail) +
+  return sizeof(*VirtioRing::avail) +
          (sizeof(*vring_avail::ring) * queue_size) +
-         sizeof(*machina::VirtioRing::used_event);
+         sizeof(*VirtioRing::used_event);
 }
 
 static size_t used_size(uint16_t queue_size) {
-  return sizeof(*machina::VirtioRing::used) +
-         (sizeof(*vring_used::ring) * queue_size) +
-         sizeof(*machina::VirtioRing::avail_event);
+  return sizeof(*VirtioRing::used) + (sizeof(*vring_used::ring) * queue_size) +
+         sizeof(*VirtioRing::avail_event);
 }
 
-VirtioQueueFake::VirtioQueueFake(const machina::PhysMem& phys_mem,
-                                 zx_gpaddr_t addr, uint16_t size)
+VirtioQueueFake::VirtioQueueFake(const PhysMem& phys_mem, zx_gpaddr_t addr,
+                                 uint16_t size)
     : phys_mem_(phys_mem),
       desc_(addr),
       avail_(desc_ + desc_size(size)),

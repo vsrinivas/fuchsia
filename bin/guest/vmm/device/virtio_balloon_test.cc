@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <threads.h>
+
 #include <virtio/balloon.h>
 
 #include "garnet/bin/guest/vmm/device/test_with_device.h"

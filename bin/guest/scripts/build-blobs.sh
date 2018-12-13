@@ -27,7 +27,7 @@ which iasl > /dev/null || {
 
 # Generate device tree blobs.
 MAX_SIZE=4096
-for DTS in garnet/lib/machina/arch/arm64/dts/*.dts; do
+for DTS in garnet/bin/guest/vmm/arch/arm64/dts/*.dts; do
   DTB=${DTS%.dts}.dtb
   dtc $DTS -o $DTB -S $MAX_SIZE
 
@@ -39,6 +39,6 @@ for DTS in garnet/lib/machina/arch/arm64/dts/*.dts; do
 done
 
 # Generate ACPI blobs.
-for ASL in garnet/lib/machina/arch/x86/asl/*.asl; do
+for ASL in garnet/bin/guest/vmm/arch/x86/asl/*.asl; do
   iasl -vs -we $ASL
 done

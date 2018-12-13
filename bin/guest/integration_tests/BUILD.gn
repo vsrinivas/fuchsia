@@ -22,8 +22,8 @@ executable("bin") {
   ]
 
   deps = [
+    "//garnet/bin/guest/vmm/device",
     "//garnet/bin/guest/vmm/device:qcow_test_data",
-    "//garnet/lib/machina/device",
     "//garnet/public/fidl/fuchsia.guest",
     "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fxl",

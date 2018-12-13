@@ -3,7 +3,9 @@
         "binary": "test/device_tests"
     },
     "sandbox": {
-        "features": ["system-temp"],
+        "features": [
+            "system-temp"
+        ],
         "services": [
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader"

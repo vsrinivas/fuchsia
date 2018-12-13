@@ -253,8 +253,8 @@ void VirtioWl::NotifyQueue(uint16_t queue) {
   }
 }
 
-void VirtioWl::HandleCommand(machina::VirtioChain* chain) {
-  machina::VirtioDescriptor request_desc;
+void VirtioWl::HandleCommand(VirtioChain* chain) {
+  VirtioDescriptor request_desc;
   if (!chain->NextDescriptor(&request_desc)) {
     FXL_LOG(ERROR) << "Failed to read descriptor";
     return;
@@ -271,7 +271,7 @@ void VirtioWl::HandleCommand(machina::VirtioChain* chain) {
     return;
   }
 
-  machina::VirtioDescriptor response_desc;
+  VirtioDescriptor response_desc;
   if (!chain->NextDescriptor(&response_desc)) {
     FXL_LOG(ERROR) << "Failed to read response descriptor";
     return;
@@ -680,8 +680,8 @@ void VirtioWl::DispatchPendingEvents() {
 
     // Handle the case where the only signal left is PEER_CLOSED.
     if (it->second == __ZX_OBJECT_PEER_CLOSED) {
-      machina::VirtioChain chain;
-      machina::VirtioDescriptor desc;
+      VirtioChain chain;
+      VirtioDescriptor desc;
       if (!AcquireWritableDescriptor(in_queue(), &chain, &desc)) {
         break;
       }
@@ -716,8 +716,8 @@ void VirtioWl::DispatchPendingEvents() {
     }
 
     if (it->second & __ZX_OBJECT_READABLE) {
-      machina::VirtioChain chain;
-      machina::VirtioDescriptor desc;
+      VirtioChain chain;
+      VirtioDescriptor desc;
       if (!AcquireWritableDescriptor(in_queue(), &chain, &desc)) {
         break;
       }
@@ -839,9 +839,8 @@ void VirtioWl::DispatchPendingEvents() {
   }
 }
 
-bool VirtioWl::AcquireWritableDescriptor(
-    machina::VirtioQueue* queue, machina::VirtioChain* chain,
-    machina::VirtioDescriptor* descriptor) {
+bool VirtioWl::AcquireWritableDescriptor(VirtioQueue* queue, VirtioChain* chain,
+                                         VirtioDescriptor* descriptor) {
   return queue->NextChain(chain) && chain->NextDescriptor(descriptor) &&
          descriptor->writable;
 }

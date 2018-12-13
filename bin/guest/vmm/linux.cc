@@ -15,12 +15,12 @@
 #include <array>
 
 #include <fbl/unique_fd.h>
+#include <lib/fxl/strings/string_printf.h>
 #include <zircon/boot/e820.h>
 
+#include "garnet/bin/guest/vmm/bits.h"
+#include "garnet/bin/guest/vmm/guest.h"
 #include "garnet/bin/guest/vmm/guest_config.h"
-#include "garnet/lib/machina/bits.h"
-#include "garnet/lib/machina/guest.h"
-#include "lib/fxl/strings/string_printf.h"
 
 __BEGIN_CDECLS;
 #include <libfdt.h>
@@ -32,8 +32,8 @@ __END_CDECLS;
 static constexpr uintptr_t kKernelOffset = 0x2080000;
 #elif __x86_64__
 static constexpr uintptr_t kKernelOffset = 0x200000;
-#include "garnet/lib/machina/arch/x86/acpi.h"
-#include "garnet/lib/machina/arch/x86/e820.h"
+#include "garnet/bin/guest/vmm/arch/x86/acpi.h"
+#include "garnet/bin/guest/vmm/arch/x86/e820.h"
 #endif
 
 static constexpr uint8_t kLoaderTypeUnspecified = 0xff;  // Unknown bootloader
@@ -113,23 +113,23 @@ enum Xlf : uint16_t {
 
 // clang-format on
 
-static uint8_t& bp(const machina::PhysMem& phys_mem, Bp8 off) {
+static uint8_t& bp(const PhysMem& phys_mem, Bp8 off) {
   return *phys_mem.as<uint8_t>(kKernelOffset + off);
 }
 
-static uint16_t& bp(const machina::PhysMem& phys_mem, Bp16 off) {
+static uint16_t& bp(const PhysMem& phys_mem, Bp16 off) {
   return *phys_mem.as<uint16_t>(kKernelOffset + off);
 }
 
-static uint32_t& bp(const machina::PhysMem& phys_mem, Bp32 off) {
+static uint32_t& bp(const PhysMem& phys_mem, Bp32 off) {
   return *phys_mem.as<uint32_t>(kKernelOffset + off);
 }
 
-static uint64_t& bp(const machina::PhysMem& phys_mem, Bp64 off) {
+static uint64_t& bp(const PhysMem& phys_mem, Bp64 off) {
   return *phys_mem.as<uint64_t>(kKernelOffset + off);
 }
 
-static bool is_boot_params(const machina::PhysMem& phys_mem) {
+static bool is_boot_params(const PhysMem& phys_mem) {
   return bp(phys_mem, BOOTFLAG) == kBootFlagMagic &&
          bp(phys_mem, HEADER) == kHeaderMagic;
 }
@@ -161,7 +161,7 @@ static inline bool is_within(uintptr_t x, uintptr_t addr, uintptr_t size) {
   return x >= addr && x < addr + size;
 }
 
-static zx_status_t read_fd(const int fd, const machina::PhysMem& phys_mem,
+static zx_status_t read_fd(const int fd, const PhysMem& phys_mem,
                            const uintptr_t off, size_t* file_size) {
   struct stat stat;
   ssize_t ret = fstat(fd, &stat);
@@ -178,8 +178,7 @@ static zx_status_t read_fd(const int fd, const machina::PhysMem& phys_mem,
   return ZX_OK;
 }
 
-zx_status_t load_kernel(const std::string& kernel_path,
-                        const machina::PhysMem& phys_mem,
+zx_status_t load_kernel(const std::string& kernel_path, const PhysMem& phys_mem,
                         const uintptr_t kernel_off) {
   fbl::unique_fd fd(open(kernel_path.c_str(), O_RDONLY));
   if (!fd) {
@@ -195,8 +194,7 @@ zx_status_t load_kernel(const std::string& kernel_path,
   return ZX_OK;
 }
 
-static zx_status_t read_device_tree(const int fd,
-                                    const machina::PhysMem& phys_mem,
+static zx_status_t read_device_tree(const int fd, const PhysMem& phys_mem,
                                     const uintptr_t off, const uintptr_t limit,
                                     void** dtb, size_t* dtb_size) {
   zx_status_t status = read_fd(fd, phys_mem, off, dtb_size);
@@ -217,7 +215,7 @@ static zx_status_t read_device_tree(const int fd,
   return ZX_OK;
 }
 
-static zx_status_t read_boot_params(const machina::PhysMem& phys_mem,
+static zx_status_t read_boot_params(const PhysMem& phys_mem,
                                     uintptr_t* guest_ip) {
   // Validate kernel configuration.
   uint16_t xloadflags = bp(phys_mem, XLOADFLAGS);
@@ -252,8 +250,8 @@ static zx_status_t read_boot_params(const machina::PhysMem& phys_mem,
   return ZX_OK;
 }
 
-static zx_status_t write_boot_params(const machina::PhysMem& phys_mem,
-                                     const machina::DevMem& dev_mem,
+static zx_status_t write_boot_params(const PhysMem& phys_mem,
+                                     const DevMem& dev_mem,
                                      const std::string& cmdline,
                                      const int dtb_overlay_fd,
                                      const size_t initrd_size) {
@@ -301,7 +299,7 @@ static zx_status_t write_boot_params(const machina::PhysMem& phys_mem,
 
 #if __x86_64__
   // Setup e820 memory map.
-  machina::E820Map e820_map(phys_mem.size(), dev_mem);
+  E820Map e820_map(phys_mem.size(), dev_mem);
   for (const auto& range : dev_mem) {
     e820_map.AddReservedRegion(range.addr, range.size);
   }
@@ -319,8 +317,7 @@ static zx_status_t write_boot_params(const machina::PhysMem& phys_mem,
   return ZX_OK;
 }
 
-static zx_status_t read_mz(const machina::PhysMem& phys_mem,
-                           uintptr_t* guest_ip) {
+static zx_status_t read_mz(const PhysMem& phys_mem, uintptr_t* guest_ip) {
   MzHeader* mz_header = phys_mem.as<MzHeader>(kKernelOffset);
   if (!is_mz(mz_header)) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -348,12 +345,13 @@ static zx_status_t add_memory_entry(void* dtb, int memory_off, zx_gpaddr_t addr,
   return ZX_OK;
 }
 
-static zx_status_t load_device_tree(
-    const int dtb_fd, const GuestConfig& cfg, const machina::PhysMem& phys_mem,
-    const machina::DevMem& dev_mem,
-    const std::vector<machina::PlatformDevice*>& devices,
-    const std::string& cmdline, const int dtb_overlay_fd,
-    const size_t initrd_size) {
+static zx_status_t load_device_tree(const int dtb_fd, const GuestConfig& cfg,
+                                    const PhysMem& phys_mem,
+                                    const DevMem& dev_mem,
+                                    const std::vector<PlatformDevice*>& devices,
+                                    const std::string& cmdline,
+                                    const int dtb_overlay_fd,
+                                    const size_t initrd_size) {
   void* dtb;
   size_t dtb_size;
   zx_status_t status = read_device_tree(dtb_fd, phys_mem, kDtbOffset,
@@ -487,17 +485,15 @@ static zx_status_t load_device_tree(
 
 static std::string linux_cmdline(std::string cmdline) {
 #if __x86_64__
-  return fxl::StringPrintf("acpi_rsdp=%#lx %s", machina::kAcpiOffset,
-                           cmdline.c_str());
+  return fxl::StringPrintf("acpi_rsdp=%#lx %s", kAcpiOffset, cmdline.c_str());
 #else
   return cmdline;
 #endif
 }
 
-zx_status_t setup_linux(const GuestConfig& cfg,
-                        const machina::PhysMem& phys_mem,
-                        const machina::DevMem& dev_mem,
-                        const std::vector<machina::PlatformDevice*>& devices,
+zx_status_t setup_linux(const GuestConfig& cfg, const PhysMem& phys_mem,
+                        const DevMem& dev_mem,
+                        const std::vector<PlatformDevice*>& devices,
                         uintptr_t* guest_ip, uintptr_t* boot_ptr) {
   // Read the kernel image.
   zx_status_t status = load_kernel(cfg.kernel_path(), phys_mem, kKernelOffset);

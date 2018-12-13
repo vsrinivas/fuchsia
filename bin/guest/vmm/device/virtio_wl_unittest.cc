@@ -14,7 +14,6 @@
 #include "garnet/bin/guest/vmm/device/test_with_device.h"
 #include "garnet/bin/guest/vmm/device/virtio_queue_fake.h"
 
-namespace machina {
 namespace {
 
 #define VIRTWL_VQ_IN 0
@@ -537,4 +536,3 @@ TEST_F(VirtioWlTest, Hup) {
 }
 
 }  // namespace
-}  // namespace machina

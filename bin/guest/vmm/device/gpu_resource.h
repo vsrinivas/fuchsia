@@ -10,12 +10,12 @@
 
 #include <virtio/gpu.h>
 
-#include "garnet/lib/machina/device/phys_mem.h"
+#include "garnet/bin/guest/vmm/device/phys_mem.h"
 
 // A 2D GPU resource encapsulating guest and host memory.
 class GpuResource {
  public:
-  GpuResource(const machina::PhysMem& phys_mem, uint32_t format, uint32_t width,
+  GpuResource(const PhysMem& phys_mem, uint32_t format, uint32_t width,
               uint32_t height);
   GpuResource(GpuResource&&) = default;
   GpuResource& operator=(GpuResource&&) = default;
@@ -47,7 +47,7 @@ class GpuResource {
  private:
   static constexpr uint32_t kPixelSizeInBytes = 4;
 
-  const machina::PhysMem* phys_mem_;
+  const PhysMem* phys_mem_;
   uint32_t format_;
   uint32_t width_;
   uint32_t height_;

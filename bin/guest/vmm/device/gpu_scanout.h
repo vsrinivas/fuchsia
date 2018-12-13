@@ -9,7 +9,7 @@
 #include <lib/zx/vmo.h>
 #include <virtio/gpu.h>
 
-#include "garnet/lib/machina/device/gpu.h"
+#include "garnet/bin/guest/vmm/device/gpu.h"
 
 class GpuResource;
 
@@ -76,8 +76,7 @@ class GpuScanout {
   uintptr_t target_vmo_addr_;
 
   // Scanout parameters.
-  virtio_gpu_rect_t extents_{0, 0, machina::kGpuStartupWidth,
-                             machina::kGpuStartupHeight};
+  virtio_gpu_rect_t extents_{0, 0, kGpuStartupWidth, kGpuStartupHeight};
   const GpuResource* source_resource_ = nullptr;
   virtio_gpu_rect_t source_rect_;
   const GpuResource* cursor_resource_ = nullptr;

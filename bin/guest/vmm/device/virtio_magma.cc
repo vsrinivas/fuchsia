@@ -9,7 +9,7 @@
 
 #include <lib/fxl/logging.h>
 
-#include "garnet/lib/machina/device/virtio_queue.h"
+#include "garnet/bin/guest/vmm/device/virtio_queue.h"
 
 zx_status_t VirtioMagma::Init(std::string device_path) {
   device_path_ = device_path;
@@ -43,8 +43,8 @@ VirtioMagma::~VirtioMagma() {
     }                                                                         \
   } break
 
-void VirtioMagma::HandleCommand(machina::VirtioChain* chain) {
-  machina::VirtioDescriptor request_desc;
+void VirtioMagma::HandleCommand(VirtioChain* chain) {
+  VirtioDescriptor request_desc;
   if (!chain->NextDescriptor(&request_desc)) {
     FXL_LOG(ERROR) << "Failed to read request descriptor";
     return;
@@ -54,7 +54,7 @@ void VirtioMagma::HandleCommand(machina::VirtioChain* chain) {
   const uint32_t command_type = request_header->type;
 
   if (chain->HasDescriptor()) {
-    machina::VirtioDescriptor response_desc{};
+    VirtioDescriptor response_desc{};
     if (!chain->NextDescriptor(&response_desc)) {
       FXL_LOG(ERROR) << "Failed to read descriptor";
       return;
@@ -89,7 +89,7 @@ void VirtioMagma::HandleCommand(machina::VirtioChain* chain) {
 }
 
 void VirtioMagma::OnCommandAvailable() {
-  machina::VirtioChain chain;
+  VirtioChain chain;
   while (out_queue_->NextChain(&chain)) {
     HandleCommand(&chain);
   }

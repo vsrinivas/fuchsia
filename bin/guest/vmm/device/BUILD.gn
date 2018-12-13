@@ -4,23 +4,26 @@
 
 import("//build/package.gni")
 
-source_set("block_lib") {
-  visibility = [ ":*" ]
-
+source_set("device") {
   sources = [
-    "block_dispatcher.cc",
-    "block_dispatcher.h",
-    "qcow.cc",
-    "qcow.h",
+    "block.h",
+    "config.h",
+    "input.h",
+    "phys_mem.cc",
+    "phys_mem.h",
+    "virtio_queue.cc",
+    "virtio_queue.h",
   ]
+  defines = [ "_ALL_SOURCE=1" ]
   public_deps = [
-    "//garnet/lib/machina/device",
-    "//zircon/public/fidl/fuchsia-io",
-    "//zircon/public/lib/bitmap",
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/virtio",
   ]
 }
 
-source_set("device_lib") {
+source_set("virtio") {
   visibility = [ ":*" ]
 
   sources = [
@@ -28,12 +31,11 @@ source_set("device_lib") {
     "stream_base.h",
   ]
   public_deps = [
-    "//garnet/lib/machina/device",
-    "//garnet/lib/machina/fidl:fuchsia.guest.device",
+    ":device",
+    "//garnet/bin/guest/vmm/fidl:fuchsia.guest.device",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/fs",
     "//zircon/public/lib/trace-provider",
   ]
 }
@@ -46,7 +48,7 @@ executable("virtio_balloon_bin") {
     "virtio_balloon.cc",
   ]
   deps = [
-    ":device_lib",
+    ":virtio",
   ]
 }
 
@@ -63,6 +65,22 @@ package("virtio_balloon") {
   ]
 }
 
+source_set("block") {
+  visibility = [ ":*" ]
+
+  sources = [
+    "block_dispatcher.cc",
+    "block_dispatcher.h",
+    "qcow.cc",
+    "qcow.h",
+  ]
+  public_deps = [
+    ":device",
+    "//zircon/public/fidl/fuchsia-io",
+    "//zircon/public/lib/bitmap",
+  ]
+}
+
 executable("virtio_block_bin") {
   visibility = [ ":*" ]
 
@@ -71,8 +89,8 @@ executable("virtio_block_bin") {
     "virtio_block.cc",
   ]
   deps = [
-    ":block_lib",
-    ":device_lib",
+    ":block",
+    ":virtio",
   ]
 }
 
@@ -97,7 +115,7 @@ executable("virtio_console_bin") {
     "virtio_console.cc",
   ]
   deps = [
-    ":device_lib",
+    ":virtio",
   ]
 }
 
@@ -122,7 +140,7 @@ executable("virtio_input_bin") {
     "virtio_input.cc",
   ]
   deps = [
-    ":device_lib",
+    ":virtio",
   ]
 }
 
@@ -153,7 +171,7 @@ executable("virtio_gpu_bin") {
     "virtio_gpu.cc",
   ]
   deps = [
-    ":device_lib",
+    ":virtio",
     "//garnet/public/fidl/fuchsia.ui.policy",
     "//garnet/public/lib/ui/base_view/cpp",
   ]
@@ -182,7 +200,7 @@ executable("virtio_net_bin") {
     "virtio_net.cc",
   ]
   deps = [
-    ":device_lib",
+    ":virtio",
     "//garnet/public/fidl/fuchsia.netstack",
     "//zircon/public/fidl/zircon-ethernet:zircon-ethernet",
   ]
@@ -209,7 +227,7 @@ executable("virtio_rng_bin") {
     "virtio_rng.cc",
   ]
   deps = [
-    ":device_lib",
+    ":virtio",
   ]
 }
 
@@ -237,7 +255,7 @@ executable("virtio_wl_bin") {
     "virtio_wl.h",
   ]
   deps = [
-    ":device_lib",
+    ":virtio",
     "//garnet/lib/magma/src/libmagma",
   ]
 }
@@ -275,8 +293,8 @@ executable("device_tests") {
   ]
 
   deps = [
-    "//garnet/lib/machina/device",
-    "//garnet/lib/machina/fidl:fuchsia.guest.device",
+    ":device",
+    "//garnet/bin/guest/vmm/fidl:fuchsia.guest.device",
     "//garnet/public/fidl/fuchsia.netstack",
     "//garnet/public/lib/component/cpp/testing",
     "//third_party/googletest:gtest_main",
@@ -293,8 +311,8 @@ source_set("qcow_test_data") {
   sources = [
     "qcow_test_data.h",
   ]
-  deps = [
-    ":block_lib",
+  public_deps = [
+    ":block",
   ]
 }
 
@@ -308,7 +326,6 @@ executable("device_unittests") {
   ]
 
   deps = [
-    ":block_lib",
     ":qcow_test_data",
     "//garnet/public/lib/fxl",
     "//third_party/googletest:gtest_main",

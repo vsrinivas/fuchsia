@@ -79,7 +79,8 @@ class QcowTest : public testing::Test {
     }
 
     // Write L1 table.
-    WriteAt(be_table, arraysize(kL2TableClusterOffsets), header_.l1_table_offset);
+    WriteAt(be_table, arraysize(kL2TableClusterOffsets),
+            header_.l1_table_offset);
 
     // Initialize empty L2 tables.
     for (size_t i = 0; i < arraysize(kL2TableClusterOffsets); ++i) {

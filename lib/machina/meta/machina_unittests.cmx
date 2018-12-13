@@ -1,8 +1,0 @@
-{
-    "program": {
-        "binary": "test/machina_unittests"
-    },
-    "sandbox": {
-        "services": []
-    }
-}

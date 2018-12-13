@@ -11,8 +11,8 @@
 #include <virtio/input.h>
 
 #include "garnet/bin/guest/vmm/device/device_base.h"
+#include "garnet/bin/guest/vmm/device/input.h"
 #include "garnet/bin/guest/vmm/device/stream_base.h"
-#include "garnet/lib/machina/device/input.h"
 
 // HID usage -> evdev keycode.
 static constexpr std::array<uint8_t, 232> kKeyMap{
@@ -199,7 +199,7 @@ static uint32_t x_coordinate(float x, float width) {
                      << std::setprecision(7) << x << ")";
     x = std::clamp(x, 0.0f, width);
   }
-  return static_cast<uint32_t>(x * machina::kInputAbsMaxX / width + 0.5f);
+  return static_cast<uint32_t>(x * kInputAbsMaxX / width + 0.5f);
 }
 
 static uint32_t y_coordinate(float y, float height) {
@@ -208,7 +208,7 @@ static uint32_t y_coordinate(float y, float height) {
                      << std::setprecision(7) << y << ")";
     y = std::clamp(y, 0.0f, height);
   }
-  return static_cast<uint32_t>(y * machina::kInputAbsMaxY / height + 0.5f);
+  return static_cast<uint32_t>(y * kInputAbsMaxY / height + 0.5f);
 }
 
 // Stream for event queue.
@@ -302,7 +302,7 @@ class EventStream : public StreamBase,
             },
             {
                 .type = VIRTIO_INPUT_EV_KEY,
-                .code = machina::kButtonTouchCode,
+                .code = kButtonTouchCode,
                 .value = press_or_release(pointer.phase),
             },
             {

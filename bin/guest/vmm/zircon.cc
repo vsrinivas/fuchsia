@@ -8,19 +8,19 @@
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include <fbl/unique_fd.h>
 #include <libzbi/zbi.h>
-#include <sys/stat.h>
 #include <zircon/assert.h>
 #include <zircon/boot/driver-config.h>
 #include <zircon/boot/e820.h>
 #include <zircon/boot/image.h>
 
+#include "garnet/bin/guest/vmm/dev_mem.h"
+#include "garnet/bin/guest/vmm/guest.h"
 #include "garnet/bin/guest/vmm/guest_config.h"
-#include "garnet/lib/machina/dev_mem.h"
-#include "garnet/lib/machina/guest.h"
 
 #if __aarch64__
 // This address works for direct-mapping of host memory. This address is chosen
@@ -43,8 +43,8 @@ static constexpr dcfg_arm_generic_timer_driver_t kTimerDriver = {
 #elif __x86_64__
 static constexpr uintptr_t kKernelOffset = 0x100000;
 
-#include "garnet/lib/machina/arch/x86/acpi.h"
-#include "garnet/lib/machina/arch/x86/e820.h"
+#include "garnet/bin/guest/vmm/arch/x86/acpi.h"
+#include "garnet/bin/guest/vmm/arch/x86/e820.h"
 #endif
 
 static constexpr uintptr_t kRamdiskOffset = 0x4000000;
@@ -55,8 +55,7 @@ static inline bool is_within(uintptr_t x, uintptr_t addr, uintptr_t size) {
 
 zx_status_t read_unified_zbi(const std::string& zbi_path,
                              const uintptr_t kernel_off,
-                             const uintptr_t zbi_off,
-                             const machina::PhysMem& phys_mem,
+                             const uintptr_t zbi_off, const PhysMem& phys_mem,
                              uintptr_t* guest_ip) {
   fbl::unique_fd fd(open(zbi_path.c_str(), O_RDONLY));
   if (!fd) {
@@ -169,10 +168,11 @@ zx_status_t read_unified_zbi(const std::string& zbi_path,
   return ZX_OK;
 }
 
-static zx_status_t build_data_zbi(
-    const GuestConfig& cfg, const machina::PhysMem& phys_mem,
-    const machina::DevMem& dev_mem,
-    const std::vector<machina::PlatformDevice*>& devices, uintptr_t zbi_off) {
+static zx_status_t build_data_zbi(const GuestConfig& cfg,
+                                  const PhysMem& phys_mem,
+                                  const DevMem& dev_mem,
+                                  const std::vector<PlatformDevice*>& devices,
+                                  uintptr_t zbi_off) {
   auto container_hdr = phys_mem.as<zbi_header_t>(zbi_off);
   const size_t zbi_max = phys_mem.size() - zbi_off;
 
@@ -267,12 +267,12 @@ static zx_status_t build_data_zbi(
 #elif __x86_64__
   // ACPI root table pointer.
   res = zbi_append_section(container_hdr, zbi_max, sizeof(uint64_t),
-                           ZBI_TYPE_ACPI_RSDP, 0, 0, &machina::kAcpiOffset);
+                           ZBI_TYPE_ACPI_RSDP, 0, 0, &kAcpiOffset);
   if (res != ZBI_RESULT_OK) {
     return ZX_ERR_INTERNAL;
   }
   // E820 memory map.
-  machina::E820Map e820_map(phys_mem.size(), dev_mem);
+  E820Map e820_map(phys_mem.size(), dev_mem);
   for (const auto& range : dev_mem) {
     e820_map.AddReservedRegion(range.addr, range.size);
   }
@@ -295,10 +295,9 @@ static zx_status_t build_data_zbi(
   return ZX_OK;
 }
 
-zx_status_t setup_zircon(const GuestConfig& cfg,
-                         const machina::PhysMem& phys_mem,
-                         const machina::DevMem& dev_mem,
-                         const std::vector<machina::PlatformDevice*>& devices,
+zx_status_t setup_zircon(const GuestConfig& cfg, const PhysMem& phys_mem,
+                         const DevMem& dev_mem,
+                         const std::vector<PlatformDevice*>& devices,
                          uintptr_t* guest_ip, uintptr_t* boot_ptr) {
   zx_status_t status = read_unified_zbi(cfg.kernel_path(), kKernelOffset,
                                         kRamdiskOffset, phys_mem, guest_ip);

@@ -8,13 +8,13 @@
 #include <lib/fxl/logging.h>
 #include <lib/zx/vmo.h>
 
+#include "garnet/bin/guest/vmm/device/block.h"
 #include "garnet/bin/guest/vmm/device/qcow.h"
-#include "garnet/lib/machina/device/block.h"
 
-static_assert(fuchsia::io::MAX_BUF % machina::kBlockSectorSize == 0,
+static_assert(fuchsia::io::MAX_BUF % kBlockSectorSize == 0,
               "Maximum buffer size is not a multiple of sector size");
 static constexpr size_t kMaxBufSectors =
-    fuchsia::io::MAX_BUF / machina::kBlockSectorSize;
+    fuchsia::io::MAX_BUF / kBlockSectorSize;
 
 // Dispatcher that fulfills block requests using Fuchsia IO.
 class RawBlockDispatcher : public BlockDispatcher {
@@ -114,8 +114,8 @@ class VolatileWriteBlockDispatcher : public BlockDispatcher {
     auto io_guard = fbl::MakeRefCounted<IoGuard>(std::move(callback));
     auto addr = static_cast<uint8_t*>(data);
     while (size > 0) {
-      size_t sector = off / machina::kBlockSectorSize;
-      size_t num_sectors = size / machina::kBlockSectorSize;
+      size_t sector = off / kBlockSectorSize;
+      size_t num_sectors = size / kBlockSectorSize;
       size_t first_sector;
       bitmap_.Get(sector, sector + num_sectors, &first_sector);
       bool unallocated = first_sector == sector;
@@ -125,7 +125,7 @@ class VolatileWriteBlockDispatcher : public BlockDispatcher {
         bitmap_.Find(true, sector, sector + num_sectors, 1, &first_sector);
       }
 
-      size_t read_size = (first_sector - sector) * machina::kBlockSectorSize;
+      size_t read_size = (first_sector - sector) * kBlockSectorSize;
       if (unallocated) {
         // Not Allocated, delegate to dispatcher.
         auto callback = [io_guard](zx_status_t status) {
@@ -154,8 +154,8 @@ class VolatileWriteBlockDispatcher : public BlockDispatcher {
       return;
     }
 
-    size_t sector = off / machina::kBlockSectorSize;
-    size_t num_sectors = size / machina::kBlockSectorSize;
+    size_t sector = off / kBlockSectorSize;
+    size_t num_sectors = size / kBlockSectorSize;
     zx_status_t status = bitmap_.Set(sector, sector + num_sectors);
     if (status != ZX_OK) {
       callback(status);
@@ -175,9 +175,8 @@ class VolatileWriteBlockDispatcher : public BlockDispatcher {
   bitmap::RleBitmap bitmap_;
 
   bool IsAccessValid(uint64_t size, uint64_t off) {
-    return size % machina::kBlockSectorSize == 0 &&
-           off % machina::kBlockSectorSize == 0 && off < vmo_size_ &&
-           size <= vmo_size_ - off;
+    return size % kBlockSectorSize == 0 && off % kBlockSectorSize == 0 &&
+           off < vmo_size_ && size <= vmo_size_ - off;
   }
 };
 

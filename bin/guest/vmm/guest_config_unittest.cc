@@ -4,11 +4,9 @@
 
 #include "garnet/bin/guest/vmm/guest_config.h"
 
+#include <gtest/gtest.h>
+#include <lib/fxl/arraysize.h>
 #include <zircon/compiler.h>
-#include <zircon/syscalls.h>
-
-#include "gtest/gtest.h"
-#include "lib/fxl/arraysize.h"
 
 class GuestConfigParserTest : public ::testing::Test {
  protected:
@@ -43,8 +41,8 @@ TEST_F(GuestConfigParserTest, ParseConfig) {
   ASSERT_EQ(Kernel::ZIRCON, config_.kernel());
   ASSERT_EQ("zircon_path", config_.kernel_path());
   ASSERT_EQ("ramdisk_path", config_.ramdisk_path());
-  ASSERT_EQ(4, config_.cpus());
-  ASSERT_EQ(1, config_.block_devices().size());
+  ASSERT_EQ(4u, config_.cpus());
+  ASSERT_EQ(1ul, config_.block_devices().size());
   ASSERT_EQ("/pkg/data/block_path", config_.block_devices()[0].path);
   ASSERT_EQ("kernel cmdline", config_.cmdline());
 }
@@ -58,8 +56,8 @@ TEST_F(GuestConfigParserTest, ParseArgs) {
   ASSERT_EQ(Kernel::LINUX, config_.kernel());
   ASSERT_EQ("linux_path", config_.kernel_path());
   ASSERT_EQ("ramdisk_path", config_.ramdisk_path());
-  ASSERT_EQ(4, config_.cpus());
-  ASSERT_EQ(1, config_.block_devices().size());
+  ASSERT_EQ(4u, config_.cpus());
+  ASSERT_EQ(1ul, config_.block_devices().size());
   ASSERT_EQ("/pkg/data/block_path", config_.block_devices()[0].path);
   ASSERT_EQ("kernel_cmdline", config_.cmdline());
 }
@@ -94,7 +92,7 @@ TEST_F(GuestConfigParserTest, BlockSpecArg) {
                         "--block=/dev/class/block/001,rw,fdio"};
   ASSERT_EQ(ZX_OK,
             parser_.ParseArgcArgv(arraysize(argv), const_cast<char**>(argv)));
-  ASSERT_EQ(2, config_.block_devices().size());
+  ASSERT_EQ(2ul, config_.block_devices().size());
 
   const BlockSpec& spec0 = config_.block_devices()[0];
   ASSERT_EQ(fuchsia::guest::BlockMode::READ_ONLY, spec0.mode);
@@ -115,7 +113,7 @@ TEST_F(GuestConfigParserTest, BlockSpecJson) {
             "/dev/class/block/001,rw,fdio"
           ]
         })JSON"));
-  ASSERT_EQ(2, config_.block_devices().size());
+  ASSERT_EQ(2ul, config_.block_devices().size());
 
   const BlockSpec& spec0 = config_.block_devices()[0];
   ASSERT_EQ(fuchsia::guest::BlockMode::READ_ONLY, spec0.mode);
@@ -132,14 +130,14 @@ TEST_F(GuestConfigParserTest, InterruptSpecArg) {
   const char* argv[] = {"exe_name", "--interrupt=32,2", "--interrupt=33,4"};
   ASSERT_EQ(ZX_OK,
             parser_.ParseArgcArgv(arraysize(argv), const_cast<char**>(argv)));
-  ASSERT_EQ(2, config_.interrupts().size());
+  ASSERT_EQ(2ul, config_.interrupts().size());
 
   const InterruptSpec& spec0 = config_.interrupts()[0];
-  ASSERT_EQ(32, spec0.vector);
+  ASSERT_EQ(32u, spec0.vector);
   ASSERT_EQ(ZX_INTERRUPT_MODE_EDGE_LOW, spec0.options);
 
   const InterruptSpec& spec1 = config_.interrupts()[1];
-  ASSERT_EQ(33, spec1.vector);
+  ASSERT_EQ(33u, spec1.vector);
   ASSERT_EQ(ZX_INTERRUPT_MODE_EDGE_HIGH, spec1.options);
 }
 
@@ -151,22 +149,22 @@ TEST_F(GuestConfigParserTest, InterruptSpecJson) {
             "33,4"
           ]
         })JSON"));
-  ASSERT_EQ(2, config_.interrupts().size());
+  ASSERT_EQ(2ul, config_.interrupts().size());
 
   const InterruptSpec& spec0 = config_.interrupts()[0];
-  ASSERT_EQ(32, spec0.vector);
+  ASSERT_EQ(32u, spec0.vector);
   ASSERT_EQ(ZX_INTERRUPT_MODE_EDGE_LOW, spec0.options);
 
   const InterruptSpec& spec1 = config_.interrupts()[1];
-  ASSERT_EQ(33, spec1.vector);
+  ASSERT_EQ(33u, spec1.vector);
   ASSERT_EQ(ZX_INTERRUPT_MODE_EDGE_HIGH, spec1.options);
 }
 
 TEST_F(GuestConfigParserTest, Memory_1024k) {
   ASSERT_EQ(ZX_OK, ParseArg("--memory=1024k"));
   const auto& memory = config_.memory();
-  EXPECT_EQ(1, memory.size());
-  EXPECT_EQ(0, memory[0].addr);
+  EXPECT_EQ(1ul, memory.size());
+  EXPECT_EQ(0ul, memory[0].addr);
   EXPECT_EQ(1ul << 20, memory[0].len);
   EXPECT_EQ(MemoryPolicy::GUEST_CACHED, memory[0].policy);
 }
@@ -174,8 +172,8 @@ TEST_F(GuestConfigParserTest, Memory_1024k) {
 TEST_F(GuestConfigParserTest, Memory_2M) {
   ASSERT_EQ(ZX_OK, ParseArg("--memory=2M"));
   const auto& memory = config_.memory();
-  EXPECT_EQ(1, memory.size());
-  EXPECT_EQ(0, memory[0].addr);
+  EXPECT_EQ(1ul, memory.size());
+  EXPECT_EQ(0ul, memory[0].addr);
   EXPECT_EQ(2ul << 20, memory[0].len);
   EXPECT_EQ(MemoryPolicy::GUEST_CACHED, memory[0].policy);
 }
@@ -183,8 +181,8 @@ TEST_F(GuestConfigParserTest, Memory_2M) {
 TEST_F(GuestConfigParserTest, Memory_4G) {
   ASSERT_EQ(ZX_OK, ParseArg("--memory=4G"));
   const auto& memory = config_.memory();
-  EXPECT_EQ(1, memory.size());
-  EXPECT_EQ(0, memory[0].addr);
+  EXPECT_EQ(1ul, memory.size());
+  EXPECT_EQ(0ul, memory[0].addr);
   EXPECT_EQ(4ul << 30, memory[0].len);
   EXPECT_EQ(MemoryPolicy::GUEST_CACHED, memory[0].policy);
 }
@@ -192,8 +190,8 @@ TEST_F(GuestConfigParserTest, Memory_4G) {
 TEST_F(GuestConfigParserTest, Memory_AddressAndSize) {
   ASSERT_EQ(ZX_OK, ParseArg("--memory=ffff,4G"));
   const auto& memory = config_.memory();
-  EXPECT_EQ(1, memory.size());
-  EXPECT_EQ(0xffff, memory[0].addr);
+  EXPECT_EQ(1ul, memory.size());
+  EXPECT_EQ(0xfffful, memory[0].addr);
   EXPECT_EQ(4ul << 30, memory[0].len);
   EXPECT_EQ(MemoryPolicy::GUEST_CACHED, memory[0].policy);
 }
@@ -201,8 +199,8 @@ TEST_F(GuestConfigParserTest, Memory_AddressAndSize) {
 TEST_F(GuestConfigParserTest, Memory_HostCached) {
   ASSERT_EQ(ZX_OK, ParseArg("--memory=eeee,2G,cached"));
   const auto& memory = config_.memory();
-  EXPECT_EQ(1, memory.size());
-  EXPECT_EQ(0xeeee, memory[0].addr);
+  EXPECT_EQ(1ul, memory.size());
+  EXPECT_EQ(0xeeeeul, memory[0].addr);
   EXPECT_EQ(2ul << 30, memory[0].len);
   EXPECT_EQ(MemoryPolicy::HOST_CACHED, memory[0].policy);
 }
@@ -210,8 +208,8 @@ TEST_F(GuestConfigParserTest, Memory_HostCached) {
 TEST_F(GuestConfigParserTest, Memory_HostDevice) {
   ASSERT_EQ(ZX_OK, ParseArg("--memory=dddd,1G,device"));
   const auto& memory = config_.memory();
-  EXPECT_EQ(1, memory.size());
-  EXPECT_EQ(0xdddd, memory[0].addr);
+  EXPECT_EQ(1ul, memory.size());
+  EXPECT_EQ(0xddddul, memory[0].addr);
   EXPECT_EQ(1ul << 30, memory[0].len);
   EXPECT_EQ(MemoryPolicy::HOST_DEVICE, memory[0].policy);
 }
@@ -222,11 +220,11 @@ TEST_F(GuestConfigParserTest, Memory_MultipleEntries) {
   ASSERT_EQ(ZX_OK,
             parser_.ParseArgcArgv(arraysize(argv), const_cast<char**>(argv)));
   const auto& memory = config_.memory();
-  EXPECT_EQ(2, memory.size());
-  EXPECT_EQ(0xf0000000, memory[0].addr);
+  EXPECT_EQ(2ul, memory.size());
+  EXPECT_EQ(0xf0000000ul, memory[0].addr);
   EXPECT_EQ(1ul << 20, memory[0].len);
   EXPECT_EQ(MemoryPolicy::GUEST_CACHED, memory[0].policy);
-  EXPECT_EQ(0xffffffff, memory[1].addr);
+  EXPECT_EQ(0xfffffffful, memory[1].addr);
   EXPECT_EQ(2ul << 20, memory[1].len);
   EXPECT_EQ(MemoryPolicy::GUEST_CACHED, memory[1].policy);
 }

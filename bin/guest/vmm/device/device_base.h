@@ -14,8 +14,8 @@
 #include <trace/event.h>
 #include <zx/event.h>
 
-#include "garnet/lib/machina/device/config.h"
-#include "garnet/lib/machina/device/phys_mem.h"
+#include "garnet/bin/guest/vmm/device/config.h"
+#include "garnet/bin/guest/vmm/device/phys_mem.h"
 
 template <typename T>
 class DeviceBase {
@@ -25,7 +25,7 @@ class DeviceBase {
                      async::GuestBellTrapBase* trap, zx_status_t status,
                      const zx_packet_guest_bell_t* bell) {
     FXL_CHECK(status == ZX_OK) << "Device trap failed " << status;
-    uint16_t queue = machina::queue_from(trap_addr_, bell->addr);
+    uint16_t queue = queue_from(trap_addr_, bell->addr);
     static_cast<T*>(this)->NotifyQueue(queue);
   }
 
@@ -34,7 +34,7 @@ class DeviceBase {
   zx_gpaddr_t trap_addr_;
   zx::event event_;
   zx_koid_t event_koid_;
-  machina::PhysMem phys_mem_;
+  PhysMem phys_mem_;
   async::GuestBellTrapMethod<DeviceBase, &DeviceBase::OnQueueNotify> trap_{
       this};
 
@@ -65,7 +65,7 @@ class DeviceBase {
   zx_status_t Interrupt(uint8_t actions) {
     TRACE_FLOW_BEGIN("machina", "device:interrupt", event_koid_);
     return event_.signal(0, static_cast<zx_signals_t>(actions)
-                                << machina::kDeviceInterruptShift);
+                                << kDeviceInterruptShift);
   }
 };
 

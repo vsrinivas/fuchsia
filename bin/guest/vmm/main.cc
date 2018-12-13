@@ -23,41 +23,40 @@
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/util.h>
 #include <lib/fxl/strings/string_printf.h>
-#include <lib/fzl/fdio.h>
 #include <trace-provider/provider.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>
 
+#include "garnet/bin/guest/vmm/guest.h"
 #include "garnet/bin/guest/vmm/guest_config.h"
 #include "garnet/bin/guest/vmm/instance_controller_impl.h"
+#include "garnet/bin/guest/vmm/interrupt_controller.h"
 #include "garnet/bin/guest/vmm/linux.h"
+#include "garnet/bin/guest/vmm/pci.h"
+#include "garnet/bin/guest/vmm/platform_device.h"
+#include "garnet/bin/guest/vmm/uart.h"
+#include "garnet/bin/guest/vmm/vcpu.h"
+#include "garnet/bin/guest/vmm/virtio_balloon.h"
+#include "garnet/bin/guest/vmm/virtio_block.h"
+#include "garnet/bin/guest/vmm/virtio_console.h"
+#include "garnet/bin/guest/vmm/virtio_gpu.h"
+#include "garnet/bin/guest/vmm/virtio_input.h"
+#include "garnet/bin/guest/vmm/virtio_net.h"
+#include "garnet/bin/guest/vmm/virtio_net_legacy.h"
+#include "garnet/bin/guest/vmm/virtio_rng.h"
+#include "garnet/bin/guest/vmm/virtio_vsock.h"
+#include "garnet/bin/guest/vmm/virtio_wl.h"
 #include "garnet/bin/guest/vmm/zircon.h"
-#include "garnet/lib/machina/guest.h"
-#include "garnet/lib/machina/interrupt_controller.h"
-#include "garnet/lib/machina/pci.h"
-#include "garnet/lib/machina/platform_device.h"
-#include "garnet/lib/machina/uart.h"
-#include "garnet/lib/machina/vcpu.h"
-#include "garnet/lib/machina/virtio_balloon.h"
-#include "garnet/lib/machina/virtio_block.h"
-#include "garnet/lib/machina/virtio_console.h"
-#include "garnet/lib/machina/virtio_gpu.h"
-#include "garnet/lib/machina/virtio_input.h"
-#include "garnet/lib/machina/virtio_net.h"
-#include "garnet/lib/machina/virtio_net_legacy.h"
-#include "garnet/lib/machina/virtio_rng.h"
-#include "garnet/lib/machina/virtio_vsock.h"
-#include "garnet/lib/machina/virtio_wl.h"
 #include "garnet/public/lib/fxl/files/file.h"
 
 #if __aarch64__
-#include "garnet/lib/machina/arch/arm64/pl031.h"
+#include "garnet/bin/guest/vmm/arch/arm64/pl031.h"
 
 #elif __x86_64__
-#include "garnet/lib/machina/arch/x86/acpi.h"
-#include "garnet/lib/machina/arch/x86/io_port.h"
-#include "garnet/lib/machina/arch/x86/page_table.h"
+#include "garnet/bin/guest/vmm/arch/x86/acpi.h"
+#include "garnet/bin/guest/vmm/arch/x86/io_port.h"
+#include "garnet/bin/guest/vmm/arch/x86/page_table.h"
 
 static constexpr char kDsdtPath[] = "/pkg/data/dsdt.aml";
 static constexpr char kMcfgPath[] = "/pkg/data/mcfg.aml";
@@ -128,16 +127,16 @@ int main(int argc, char** argv) {
     }
   }
 
-  machina::Guest guest;
+  Guest guest;
   status = guest.Init(cfg.memory());
   if (status != ZX_OK) {
     return status;
   }
 
-  std::vector<machina::PlatformDevice*> platform_devices;
+  std::vector<PlatformDevice*> platform_devices;
 
   // Setup UARTs.
-  machina::Uart uart(instance_controller.SerialSocket());
+  Uart uart(instance_controller.SerialSocket());
   status = uart.Init(&guest);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create UART at " << status;
@@ -145,7 +144,7 @@ int main(int argc, char** argv) {
   }
   platform_devices.push_back(&uart);
   // Setup interrupt controller.
-  machina::InterruptController interrupt_controller(&guest);
+  InterruptController interrupt_controller(&guest);
 #if __aarch64__
   status = interrupt_controller.Init(cfg.cpus(), cfg.interrupts());
 #elif __x86_64__
@@ -159,7 +158,7 @@ int main(int argc, char** argv) {
 
 #if __aarch64__
   // Setup PL031 RTC.
-  machina::Pl031 pl031;
+  Pl031 pl031;
   status = pl031.Init(&guest);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create PL031 RTC " << status;
@@ -168,7 +167,7 @@ int main(int argc, char** argv) {
   platform_devices.push_back(&pl031);
 #elif __x86_64__
   // Setup IO ports.
-  machina::IoPort io_port;
+  IoPort io_port;
   status = io_port.Init(&guest);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create IO ports " << status;
@@ -177,7 +176,7 @@ int main(int argc, char** argv) {
 #endif
 
   // Setup PCI.
-  machina::PciBus bus(&guest, &interrupt_controller);
+  PciBus bus(&guest, &interrupt_controller);
   status = bus.Init();
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create PCI bus " << status;
@@ -186,7 +185,7 @@ int main(int argc, char** argv) {
   platform_devices.push_back(&bus);
 
   // Setup balloon device.
-  machina::VirtioBalloon balloon(guest.phys_mem());
+  VirtioBalloon balloon(guest.phys_mem());
   if (cfg.virtio_balloon()) {
     status = bus.Connect(balloon.pci_device(), true);
     if (status != ZX_OK) {
@@ -237,10 +236,10 @@ int main(int argc, char** argv) {
   }
 
   // Create a new VirtioBlock device for each device requested.
-  std::vector<std::unique_ptr<machina::VirtioBlock>> block_devices;
+  std::vector<std::unique_ptr<VirtioBlock>> block_devices;
   for (auto& block_device : block_infos) {
-    auto block = std::make_unique<machina::VirtioBlock>(block_device.mode,
-                                                        guest.phys_mem());
+    auto block =
+        std::make_unique<VirtioBlock>(block_device.mode, guest.phys_mem());
     status = bus.Connect(block->pci_device(), true);
     if (status != ZX_OK) {
       return status;
@@ -256,7 +255,7 @@ int main(int argc, char** argv) {
   }
 
   // Setup console device.
-  machina::VirtioConsole console(guest.phys_mem());
+  VirtioConsole console(guest.phys_mem());
   if (cfg.virtio_console()) {
     status = bus.Connect(console.pci_device(), true);
     if (status != ZX_OK) {
@@ -270,8 +269,8 @@ int main(int argc, char** argv) {
     }
   }
 
-  machina::VirtioGpu gpu(guest.phys_mem());
-  machina::VirtioInput input(guest.phys_mem());
+  VirtioGpu gpu(guest.phys_mem());
+  VirtioInput input(guest.phys_mem());
   if (cfg.virtio_gpu()) {
     // Setup input device.
     status = bus.Connect(input.pci_device(), true);
@@ -301,9 +300,8 @@ int main(int argc, char** argv) {
   }
 
   // Setup net device.
-  machina::VirtioNetLegacy legacy_net(guest.phys_mem(),
-                                      guest.device_dispatcher());
-  machina::VirtioNet net(guest.phys_mem());
+  VirtioNetLegacy legacy_net(guest.phys_mem(), guest.device_dispatcher());
+  VirtioNet net(guest.phys_mem());
   if (cfg.virtio_net()) {
     if (cfg.legacy_net()) {
       status = bus.Connect(legacy_net.pci_device());
@@ -330,7 +328,7 @@ int main(int argc, char** argv) {
   }
 
   // Setup RNG device.
-  machina::VirtioRng rng(guest.phys_mem());
+  VirtioRng rng(guest.phys_mem());
   if (cfg.virtio_rng()) {
     status = bus.Connect(rng.pci_device(), true);
     if (status != ZX_OK) {
@@ -345,8 +343,7 @@ int main(int argc, char** argv) {
   }
 
   // Setup vsock device.
-  machina::VirtioVsock vsock(context.get(), guest.phys_mem(),
-                             guest.device_dispatcher());
+  VirtioVsock vsock(context.get(), guest.phys_mem(), guest.device_dispatcher());
   if (cfg.virtio_vsock()) {
     status = bus.Connect(vsock.pci_device());
     if (status != ZX_OK) {
@@ -354,10 +351,10 @@ int main(int argc, char** argv) {
     }
   }
 
-  machina::DevMem dev_mem;
+  DevMem dev_mem;
 
   // Setup wayland device.
-  machina::VirtioWl wl(guest.phys_mem());
+  VirtioWl wl(guest.phys_mem());
   if (launch_info.wayland_device) {
     size_t wl_dev_mem_size = launch_info.wayland_device->memory;
     zx_gpaddr_t wl_dev_mem_offset = alloc_device_addr(wl_dev_mem_size);
@@ -387,19 +384,19 @@ int main(int argc, char** argv) {
   }
 
 #if __x86_64__
-  status = machina::create_page_table(guest.phys_mem());
+  status = create_page_table(guest.phys_mem());
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create page table " << status;
     return status;
   }
 
-  machina::AcpiConfig acpi_cfg = {
+  AcpiConfig acpi_cfg = {
       .dsdt_path = kDsdtPath,
       .mcfg_path = kMcfgPath,
-      .io_apic_addr = machina::IoApic::kPhysBase,
+      .io_apic_addr = IoApic::kPhysBase,
       .cpus = cfg.cpus(),
   };
-  status = machina::create_acpi_table(acpi_cfg, guest.phys_mem());
+  status = create_acpi_table(acpi_cfg, guest.phys_mem());
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create ACPI table " << status;
     return status;
@@ -407,7 +404,7 @@ int main(int argc, char** argv) {
 #endif  // __x86_64__
 
   // Add any trap ranges as device memory.
-  for (const machina::IoMapping& mapping : guest.mappings()) {
+  for (const IoMapping& mapping : guest.mappings()) {
     if (mapping.kind() == ZX_GUEST_TRAP_MEM ||
         mapping.kind() == ZX_GUEST_TRAP_BELL) {
       if (!dev_mem.AddRange(mapping.base(), mapping.size())) {

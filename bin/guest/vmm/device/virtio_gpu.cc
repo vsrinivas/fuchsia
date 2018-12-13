@@ -6,10 +6,9 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/defer.h>
+#include <lib/ui/scenic/cpp/session.h>
 #include <trace-provider/provider.h>
 #include <virtio/gpu.h>
-
-#include "lib/ui/scenic/cpp/session.h"
 
 #include "garnet/bin/guest/vmm/device/device_base.h"
 #include "garnet/bin/guest/vmm/device/gpu_resource.h"
@@ -47,8 +46,7 @@ class ControlStream : public StreamBase {
   ControlStream(GpuScanout* scanout, GpuResourceMap* resources)
       : scanout_(*scanout), resources_(*resources) {}
 
-  void Init(const machina::PhysMem& phys_mem,
-            machina::VirtioQueue::InterruptFn interrupt) {
+  void Init(const PhysMem& phys_mem, VirtioQueue::InterruptFn interrupt) {
     phys_mem_ = &phys_mem;
     StreamBase::Init(phys_mem, std::move(interrupt));
   }
@@ -156,7 +154,7 @@ class ControlStream : public StreamBase {
  private:
   GpuScanout& scanout_;
   GpuResourceMap& resources_;
-  const machina::PhysMem* phys_mem_;
+  const PhysMem* phys_mem_;
 
   void GetDisplayInfo(const virtio_gpu_ctrl_hdr_t* request,
                       virtio_gpu_resp_display_info_t* response) {

@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/guest/vmm/device/test_with_device.h"
-#include "garnet/lib/machina/device/config.h"
-#include "garnet/lib/machina/device/virtio_queue.h"
+#include "garnet/bin/guest/vmm/device/config.h"
+#include "garnet/bin/guest/vmm/device/virtio_queue.h"
 
 zx_status_t TestWithDevice::LaunchDevice(
     const std::string& url, size_t phys_mem_size,
@@ -58,8 +58,8 @@ zx_status_t TestWithDevice::LaunchDevice(
 
 zx_status_t TestWithDevice::WaitOnInterrupt() {
   zx::time deadline = zx::deadline_after(zx::sec(10));
-  zx_signals_t signals = machina::VirtioQueue::InterruptAction::TRY_INTERRUPT
-                         << machina::kDeviceInterruptShift;
+  zx_signals_t signals = VirtioQueue::InterruptAction::TRY_INTERRUPT
+                         << kDeviceInterruptShift;
   zx_signals_t pending;
   zx_status_t status = event_.wait_one(signals, deadline, &pending);
   if (status != ZX_OK) {

@@ -6,7 +6,7 @@
 
 #include <lib/fxl/logging.h>
 
-GpuResource::GpuResource(const machina::PhysMem& phys_mem, uint32_t format,
+GpuResource::GpuResource(const PhysMem& phys_mem, uint32_t format,
                          uint32_t width, uint32_t height)
     : phys_mem_(&phys_mem),
       format_(format),

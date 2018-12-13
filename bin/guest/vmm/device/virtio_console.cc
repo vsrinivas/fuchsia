@@ -22,8 +22,8 @@ class ConsoleStream : public StreamBase {
  public:
   ConsoleStream(VirtioConsoleImpl* impl) : wait_(impl) {}
 
-  void Init(const zx::socket& socket, const machina::PhysMem& phys_mem,
-            machina::VirtioQueue::InterruptFn interrupt) {
+  void Init(const zx::socket& socket, const PhysMem& phys_mem,
+            VirtioQueue::InterruptFn interrupt) {
     wait_.set_object(socket.get());
     wait_.set_trigger(Trigger);
     StreamBase::Init(phys_mem, std::move(interrupt));

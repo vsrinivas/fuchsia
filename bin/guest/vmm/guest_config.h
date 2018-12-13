@@ -14,13 +14,32 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include "garnet/lib/machina/guest.h"
-#include "garnet/lib/machina/interrupt_controller.h"
-
 struct BlockSpec {
   std::string path;
   fuchsia::guest::BlockFormat format = fuchsia::guest::BlockFormat::RAW;
   fuchsia::guest::BlockMode mode = fuchsia::guest::BlockMode::READ_WRITE;
+};
+
+enum class MemoryPolicy {
+  // Map a VMO as cached memory into the guest physical address space.
+  GUEST_CACHED = 0,
+  // Map a VMO with 1:1 correspondence with host memory as cached memory into
+  // the guest physical address space.
+  HOST_CACHED = 1,
+  // Map a VMO with 1:1 correspondence with host memory as device memory into
+  // the guest physical address space.
+  HOST_DEVICE = 2,
+};
+
+struct MemorySpec {
+  zx_gpaddr_t addr;
+  size_t len;
+  MemoryPolicy policy;
+};
+
+struct InterruptSpec {
+  uint32_t vector;
+  uint32_t options;
 };
 
 enum class Kernel {

@@ -9,9 +9,9 @@
 #include <lib/fdio/util.h>
 #include <virtio/block.h>
 
+#include "garnet/bin/guest/vmm/device/block.h"
 #include "garnet/bin/guest/vmm/device/test_with_device.h"
 #include "garnet/bin/guest/vmm/device/virtio_queue_fake.h"
-#include "garnet/lib/machina/device/block.h"
 
 static constexpr char kVirtioBlockUrl[] = "virtio_block";
 static constexpr uint16_t kNumQueues = 1;
@@ -21,7 +21,6 @@ static constexpr size_t kQueueDataSize = 10 * fuchsia::io::MAX_BUF;
 static constexpr char kVirtioBlockId[] = "block-id";
 static constexpr size_t kNumSectors = 2;
 static constexpr uint8_t kSectorBytes[kNumSectors] = {0xab, 0xcd};
-
 
 class VirtioBlockTest : public TestWithDevice {
  protected:
@@ -58,7 +57,7 @@ class VirtioBlockTest : public TestWithDevice {
                       fuchsia::guest::BlockMode::READ_WRITE,
                       fuchsia::guest::BlockFormat::RAW, std::move(file), &size);
     ASSERT_EQ(ZX_OK, status);
-    ASSERT_EQ(machina::kBlockSectorSize * kNumSectors, size);
+    ASSERT_EQ(kBlockSectorSize * kNumSectors, size);
 
     // Configure device queues.
     VirtioQueueFake* queues[kNumQueues] = {&request_queue_};
@@ -82,11 +81,11 @@ class VirtioBlockTest : public TestWithDevice {
       FXL_LOG(ERROR) << "Failed to create " << path << ": " << strerror(errno);
       return fd;
     }
-    std::vector<uint8_t> buf(machina::kBlockSectorSize * kNumSectors);
+    std::vector<uint8_t> buf(kBlockSectorSize * kNumSectors);
     auto addr = buf.data();
     for (uint8_t byte : kSectorBytes) {
-      memset(addr, byte, machina::kBlockSectorSize);
-      addr += machina::kBlockSectorSize;
+      memset(addr, byte, kBlockSectorSize);
+      addr += kBlockSectorSize;
     }
     ssize_t ret = pwrite(fd.get(), buf.data(), buf.size(), 0);
     if (ret < 0) {
@@ -142,7 +141,7 @@ TEST_F(VirtioBlockTest, BadPayload) {
   zx_status_t status =
       DescriptorChainBuilder(request_queue_)
           .AppendReadableDescriptor(&header, sizeof(header))
-          .AppendWritableDescriptor(&sector, machina::kBlockSectorSize + 1)
+          .AppendWritableDescriptor(&sector, kBlockSectorSize + 1)
           .AppendWritableDescriptor(&blk_status, sizeof(*blk_status))
           .Build();
   ASSERT_EQ(ZX_OK, status);
@@ -161,12 +160,11 @@ TEST_F(VirtioBlockTest, BadStatus) {
   };
   uint8_t* sector;
   uint8_t* blk_status;
-  zx_status_t status =
-      DescriptorChainBuilder(request_queue_)
-          .AppendReadableDescriptor(&header, sizeof(header))
-          .AppendWritableDescriptor(&sector, machina::kBlockSectorSize)
-          .AppendWritableDescriptor(&blk_status, 2)
-          .Build();
+  zx_status_t status = DescriptorChainBuilder(request_queue_)
+                           .AppendReadableDescriptor(&header, sizeof(header))
+                           .AppendWritableDescriptor(&sector, kBlockSectorSize)
+                           .AppendWritableDescriptor(&blk_status, 2)
+                           .Build();
   ASSERT_EQ(ZX_OK, status);
   *blk_status = UINT8_MAX;
 
@@ -207,7 +205,7 @@ TEST_F(VirtioBlockTest, Read) {
   zx_status_t status =
       DescriptorChainBuilder(request_queue_)
           .AppendReadableDescriptor(&header, sizeof(header))
-          .AppendWritableDescriptor(&sector, machina::kBlockSectorSize)
+          .AppendWritableDescriptor(&sector, kBlockSectorSize)
           .AppendWritableDescriptor(&blk_status, sizeof(*blk_status))
           .Build();
   ASSERT_EQ(ZX_OK, status);
@@ -218,7 +216,7 @@ TEST_F(VirtioBlockTest, Read) {
   ASSERT_EQ(ZX_OK, status);
 
   EXPECT_EQ(VIRTIO_BLK_S_OK, *blk_status);
-  for (size_t i = 0; i < machina::kBlockSectorSize; i++) {
+  for (size_t i = 0; i < kBlockSectorSize; i++) {
     EXPECT_EQ(kSectorBytes[0], sector[i]) << " mismatched byte " << i;
   }
 }
@@ -233,8 +231,8 @@ TEST_F(VirtioBlockTest, ReadMultipleDescriptors) {
   zx_status_t status =
       DescriptorChainBuilder(request_queue_)
           .AppendReadableDescriptor(&header, sizeof(header))
-          .AppendWritableDescriptor(&sector_1, machina::kBlockSectorSize)
-          .AppendWritableDescriptor(&sector_2, machina::kBlockSectorSize)
+          .AppendWritableDescriptor(&sector_1, kBlockSectorSize)
+          .AppendWritableDescriptor(&sector_2, kBlockSectorSize)
           .AppendWritableDescriptor(&blk_status, sizeof(*blk_status))
           .Build();
   ASSERT_EQ(ZX_OK, status);
@@ -245,7 +243,7 @@ TEST_F(VirtioBlockTest, ReadMultipleDescriptors) {
   ASSERT_EQ(ZX_OK, status);
 
   EXPECT_EQ(VIRTIO_BLK_S_OK, *blk_status);
-  for (size_t i = 0; i < machina::kBlockSectorSize; i++) {
+  for (size_t i = 0; i < kBlockSectorSize; i++) {
     EXPECT_EQ(kSectorBytes[0], sector_1[i]) << " mismatched byte " << i;
     EXPECT_EQ(kSectorBytes[1], sector_2[i]) << " mismatched byte " << i;
   }
@@ -255,7 +253,7 @@ TEST_F(VirtioBlockTest, Write) {
   virtio_blk_req_t header = {
       .type = VIRTIO_BLK_T_OUT,
   };
-  std::vector<uint8_t> sector(machina::kBlockSectorSize, UINT8_MAX);
+  std::vector<uint8_t> sector(kBlockSectorSize, UINT8_MAX);
   uint8_t* blk_status;
   zx_status_t status =
       DescriptorChainBuilder(request_queue_)
@@ -281,7 +279,7 @@ TEST_F(VirtioBlockTest, WriteMultipleDescriptors) {
 
   // Ensure we're writing enough to overflow a single file write transaction.
   static constexpr size_t kTestBlockSize = 2 * fuchsia::io::MAX_BUF;
-  static_assert(kTestBlockSize % machina::kBlockSectorSize == 0);
+  static_assert(kTestBlockSize % kBlockSectorSize == 0);
   static_assert((2 * kTestBlockSize) + sizeof(header) + 1 <= kQueueDataSize);
 
   std::vector<uint8_t> block_1(kTestBlockSize, 0xff);
@@ -336,7 +334,7 @@ TEST_F(VirtioBlockTest, SyncWithData) {
   virtio_blk_req_t header = {
       .type = VIRTIO_BLK_T_FLUSH,
   };
-  std::vector<uint8_t> sector(machina::kBlockSectorSize);
+  std::vector<uint8_t> sector(kBlockSectorSize);
   uint8_t* blk_status;
   zx_status_t status =
       DescriptorChainBuilder(request_queue_)

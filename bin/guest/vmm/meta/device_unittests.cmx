@@ -3,7 +3,9 @@
         "binary": "test/device_unittests"
     },
     "sandbox": {
-        "features": ["system-temp"],
+        "features": [
+            "system-temp"
+        ],
         "services": []
     }
 }

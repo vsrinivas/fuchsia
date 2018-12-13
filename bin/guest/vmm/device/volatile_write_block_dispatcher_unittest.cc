@@ -6,7 +6,7 @@
 
 #include <gtest/gtest.h>
 
-#include "garnet/lib/machina/device/block.h"
+#include "garnet/bin/guest/vmm/device/block.h"
 
 namespace {
 
@@ -55,14 +55,13 @@ TEST(VolatileWriteBlockDispatcherTest, WriteBlock) {
   auto disp = CreateDispatcher();
 
   zx_status_t status;
-  fidl::VectorPtr<uint8_t> buf(machina::kBlockSectorSize);
+  fidl::VectorPtr<uint8_t> buf(kBlockSectorSize);
   disp->ReadAt(buf->data(), buf->size(), 0,
                [&status](zx_status_t s) { s = status; });
   ASSERT_EQ(ZX_OK, status);
   ASSERT_BLOCK_VALUE(buf->data(), buf->size(), 0xab);
 
-  fidl::VectorPtr<uint8_t> write_buf(
-      BufVector(machina::kBlockSectorSize, 0xbe));
+  fidl::VectorPtr<uint8_t> write_buf(BufVector(kBlockSectorSize, 0xbe));
   disp->WriteAt(write_buf->data(), write_buf->size(), 0,
                 [&status](zx_status_t s) { status = s; });
   ASSERT_EQ(ZX_OK, status);
@@ -77,47 +76,44 @@ TEST(VolatileWriteBlockDispatcherTest, WriteBlockComplex) {
   auto disp = CreateDispatcher();
 
   // Write blocks 0 & 2, blocks 1 & 3 will hit the static dispatcher.
-  fidl::VectorPtr<uint8_t> write_buf(
-      BufVector(machina::kBlockSectorSize, 0xbe));
+  fidl::VectorPtr<uint8_t> write_buf(BufVector(kBlockSectorSize, 0xbe));
   zx_status_t status;
   disp->WriteAt(write_buf->data(), write_buf->size(), 0,
                 [&status](zx_status_t s) { status = s; });
   ASSERT_EQ(ZX_OK, status);
-  disp->WriteAt(write_buf->data(), write_buf->size(),
-                machina::kBlockSectorSize * 2,
+  disp->WriteAt(write_buf->data(), write_buf->size(), kBlockSectorSize * 2,
                 [&status](zx_status_t s) { status = s; });
   ASSERT_EQ(ZX_OK, status);
 
-  fidl::VectorPtr<uint8_t> buf(machina::kBlockSectorSize * 4);
+  fidl::VectorPtr<uint8_t> buf(kBlockSectorSize * 4);
   disp->ReadAt(buf->data(), buf->size(), 0,
                [&status](zx_status_t s) { s = status; });
   ASSERT_EQ(ZX_OK, status);
-  ASSERT_BLOCK_VALUE(buf->data(), machina::kBlockSectorSize, 0xbe);
-  ASSERT_BLOCK_VALUE(buf->data() + machina::kBlockSectorSize,
-                     machina::kBlockSectorSize, 0xab);
-  ASSERT_BLOCK_VALUE(buf->data() + machina::kBlockSectorSize * 2,
-                     machina::kBlockSectorSize, 0xbe);
-  ASSERT_BLOCK_VALUE(buf->data() + machina::kBlockSectorSize * 3,
-                     machina::kBlockSectorSize, 0xab);
+  ASSERT_BLOCK_VALUE(buf->data(), kBlockSectorSize, 0xbe);
+  ASSERT_BLOCK_VALUE(buf->data() + kBlockSectorSize, kBlockSectorSize, 0xab);
+  ASSERT_BLOCK_VALUE(buf->data() + kBlockSectorSize * 2, kBlockSectorSize,
+                     0xbe);
+  ASSERT_BLOCK_VALUE(buf->data() + kBlockSectorSize * 3, kBlockSectorSize,
+                     0xab);
 }
 
 TEST(VolatileWriteBlockDispatcherTest, BadRequest) {
   auto disp = CreateDispatcher();
 
   zx_status_t status;
-  disp->ReadAt(nullptr, machina::kBlockSectorSize, 1,
+  disp->ReadAt(nullptr, kBlockSectorSize, 1,
                [&status](zx_status_t s) { status = s; });
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
 
-  disp->ReadAt(nullptr, machina::kBlockSectorSize - 1, 0,
+  disp->ReadAt(nullptr, kBlockSectorSize - 1, 0,
                [&status](zx_status_t s) { status = s; });
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
 
-  disp->WriteAt(nullptr, machina::kBlockSectorSize, 1,
+  disp->WriteAt(nullptr, kBlockSectorSize, 1,
                 [&status](zx_status_t s) { status = s; });
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
 
-  disp->WriteAt(nullptr, machina::kBlockSectorSize - 1, 0,
+  disp->WriteAt(nullptr, kBlockSectorSize - 1, 0,
                 [&status](zx_status_t s) { status = s; });
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
 }
