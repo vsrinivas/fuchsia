@@ -87,6 +87,22 @@ enum SelfProtectedAction : uint8_t {
     // 6 - 255 Reserved
 };
 
+// IEEE Std 802.11-2016, 9.6.17.1, Table 9-370
+enum MeshAction : uint8_t {
+    kMeshLinkMetricReport = 0,
+    kHwmpMeshPathSelection = 1,
+    kGateAnnouncement = 2,
+    kCongestionControlNotification = 3,
+    kMccaSetupRequest = 4,
+    kMccaSetupReply = 5,
+    kMccaAdvertisementRequest = 6,
+    kMccaAdvertisement = 7,
+    kMccaTeardown = 8,
+    kTbttAdjustmentRequest = 9,
+    kTbttAdjustmentResponse = 10,
+    // 11 - 255 Reserved
+};
+
 }  // namespace action
 
 // TODO(hahnr): The structs declared in this file are not frames, but headers,
@@ -172,6 +188,16 @@ struct SelfProtectedActionHeader {
     static constexpr size_t max_len() { return sizeof(SelfProtectedActionHeader); }
 
     action::SelfProtectedAction self_prot_action;
+
+    constexpr size_t len() const { return sizeof(*this); }
+} __PACKED;
+
+// IEEE Std 802.11-2016, 9.6.17.1
+struct MeshActionHeader {
+    static constexpr action::Category ActionCategory() { return action::Category::kMesh; }
+    static constexpr size_t max_len() { return sizeof(MeshActionHeader); }
+
+    action::MeshAction mesh_action;
 
     constexpr size_t len() const { return sizeof(*this); }
 } __PACKED;

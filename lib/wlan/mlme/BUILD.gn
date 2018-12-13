@@ -64,6 +64,7 @@ source_set("mlme") {
     "mac_frame.cpp",
     "mac_header_writer.cpp",
     "mcs.cpp",
+    "mesh/hwmp.cpp",
     "mesh/mesh_mlme.cpp",
     "mesh/parse_mp_action.cpp",
     "mesh/path_table.cpp",

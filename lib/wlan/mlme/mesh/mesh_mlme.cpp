@@ -76,6 +76,16 @@ static zx_status_t BuildMeshBeacon(wlan_channel_t channel, DeviceInterface* devi
 MeshMlme::MeshMlme(DeviceInterface* device) : device_(device) {}
 
 zx_status_t MeshMlme::Init() {
+    fbl::unique_ptr<Timer> timer;
+    ObjectId timer_id;
+    timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
+    timer_id.set_target(to_enum_type(ObjectTarget::kHwmp));
+    zx_status_t status = device_->GetTimer(ToPortKey(PortKeyType::kMlme, timer_id.val()), &timer);
+    if (status != ZX_OK) {
+        errorf("[mesh-mlme] Failed to create the HWMP timer: %s\n", zx_status_get_string(status));
+        return status;
+    }
+    hwmp_ = std::make_unique<HwmpState>(std::move(timer));
     return ZX_OK;
 }
 
@@ -154,6 +164,8 @@ void MeshMlme::ConfigurePeering(const MlmeMsg<wlan_mlme::MeshPeeringParams>& req
         .aid = req.body()->local_aid,
         .qos = true, // all mesh nodes are expected to support QoS frames
         .rates_cnt = static_cast<uint16_t>(std::min(req.body()->rates->size(), sizeof(ctx.rates))),
+        .chan = device_->GetState()->channel(),
+        .phy = WLAN_PHY_OFDM, // TODO(gbonik): get PHY from MeshPeeringParams
     };
     memcpy(ctx.bssid, req.body()->peer_sta_address.data(), sizeof(ctx.bssid));
     memcpy(ctx.rates, req.body()->rates->data(), ctx.rates_cnt);
@@ -220,17 +232,20 @@ void MeshMlme::HandleEthTx(EthFrame&& frame) {
             w.WriteValue(frame.hdr()->src);
         }
     } else {
-        auto path = path_table_.GetPath(frame.hdr()->dest);
-        if (!path) {
+        auto proxy_info = path_table_.GetProxyInfo(frame.hdr()->dest);
+        auto mesh_dest = proxy_info == nullptr ? frame.hdr()->dest : proxy_info->mesh_target;
+
+        auto path = path_table_.GetPath(mesh_dest);
+        if (path == nullptr) {
             // TODO(gbonik): buffer the frame and initiate path discovery
             return;
         }
         CreateMacHeaderWriter().WriteMeshDataHeaderIndivAddressed(&w, path->next_hop,
-                                                                  path->mesh_target, self_addr());
+                                                                  mesh_dest, self_addr());
         auto mesh_ctl = w.Write<MeshControl>();
         mesh_ctl->ttl = ttl;
         mesh_ctl->seq = mesh_seq_++;
-        if (frame.hdr()->src != self_addr() || frame.hdr()->dest != path->mesh_target) {
+        if (frame.hdr()->src != self_addr() || proxy_info != nullptr) {
             mesh_ctl->flags.set_addr_ext_mode(kAddrExt56);
             w.WriteValue(frame.hdr()->dest);
             w.WriteValue(frame.hdr()->src);
@@ -261,19 +276,22 @@ zx_status_t MeshMlme::HandleAnyMgmtFrame(MgmtFrame<>&& frame) {
 
     switch (frame.hdr()->fc.subtype()) {
     case kAction:
-        return HandleActionFrame(frame.hdr()->addr2, &body);
+        return HandleActionFrame(*frame.hdr(), &body);
     default:
         return ZX_OK;
     }
 }
 
-zx_status_t MeshMlme::HandleActionFrame(common::MacAddr src_addr, BufferReader* r) {
+zx_status_t MeshMlme::HandleActionFrame(const MgmtFrameHeader& mgmt, BufferReader* r) {
     auto action_header = r->Read<ActionFrame>();
     if (action_header == nullptr) { return ZX_OK; }
 
     switch (action_header->category) {
     case to_enum_type(action::kSelfProtected):
-        return HandleSelfProtectedAction(src_addr, r);
+        return HandleSelfProtectedAction(mgmt.addr2, r);
+    case to_enum_type(action::kMesh):
+        HandleMeshAction(mgmt, r);
+        return ZX_OK;
     default:
         return ZX_OK;
     }
@@ -291,6 +309,25 @@ zx_status_t MeshMlme::HandleSelfProtectedAction(common::MacAddr src_addr, Buffer
     }
 }
 
+void MeshMlme::HandleMeshAction(const MgmtFrameHeader& mgmt, BufferReader* r) {
+    auto mesh_action_header = r->Read<MeshActionHeader>();
+    if (mesh_action_header == nullptr) { return; }
+
+    switch (mesh_action_header->mesh_action) {
+    case action::kHwmpMeshPathSelection: {
+        // TODO(gbonik): pass the actual airtime metric
+        auto packets_to_tx = HandleHwmpAction(r->ReadRemaining(), mgmt.addr2, self_addr(), 100,
+                                              CreateMacHeaderWriter(), hwmp_.get(), &path_table_);
+        while (!packets_to_tx.is_empty()) {
+            SendMgmtFrame(packets_to_tx.Dequeue());
+        }
+        break;
+    }
+    default:
+        break;
+    }
+}
+
 zx_status_t MeshMlme::HandleMpmOpenAction(common::MacAddr src_addr, BufferReader* r) {
     wlan_mlme::MeshPeeringOpenAction action;
     if (!ParseMpOpenAction(r, &action)) { return ZX_OK; }
@@ -301,6 +338,7 @@ zx_status_t MeshMlme::HandleMpmOpenAction(common::MacAddr src_addr, BufferReader
 
 void MeshMlme::HandleDataFrame(fbl::unique_ptr<Packet> packet) {
     BufferReader r(*packet);
+
     auto header = common::ParseMeshDataHeader(&r);
     if (!header) { return; }
 

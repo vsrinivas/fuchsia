@@ -9,6 +9,7 @@
 #include <wlan/common/parse_mac_header.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/mac_header_writer.h>
+#include <wlan/mlme/mesh/hwmp.h>
 #include <wlan/mlme/mesh/path_table.h>
 #include <wlan/mlme/mlme.h>
 
@@ -42,9 +43,10 @@ class MeshMlme : public Mlme {
 
     zx_status_t HandleAnyWlanFrame(fbl::unique_ptr<Packet> pkt);
     zx_status_t HandleAnyMgmtFrame(MgmtFrame<>&& frame);
-    zx_status_t HandleActionFrame(common::MacAddr src_addr, BufferReader* r);
+    zx_status_t HandleActionFrame(const MgmtFrameHeader& mgmt, BufferReader* r);
     zx_status_t HandleSelfProtectedAction(common::MacAddr src_addr, BufferReader* r);
     zx_status_t HandleMpmOpenAction(common::MacAddr src_addr, BufferReader* r);
+    void HandleMeshAction(const MgmtFrameHeader& mgmt, BufferReader* r);
 
     void HandleDataFrame(fbl::unique_ptr<Packet> packet);
     bool ShouldDeliverData(const common::ParsedDataFrameHeader& header);
@@ -57,6 +59,7 @@ class MeshMlme : public Mlme {
     bool joined_ = false;
     Sequence seq_;
     uint32_t mesh_seq_ = 0;
+    std::unique_ptr<HwmpState> hwmp_;
     PathTable path_table_;
 };
 

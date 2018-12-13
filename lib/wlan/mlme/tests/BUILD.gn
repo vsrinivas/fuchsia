@@ -135,8 +135,9 @@ executable("mesh_tests") {
   testonly = true
 
   sources = [
-    "parse_mp_action_unittest.cpp",
+    "hwmp_unittest.cpp",
     "mesh_mlme_unittest.cpp",
+    "parse_mp_action_unittest.cpp",
     "write_mp_action_unittest.cpp",
   ]
 

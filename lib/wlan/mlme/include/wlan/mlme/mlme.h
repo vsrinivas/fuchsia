@@ -22,6 +22,7 @@ enum class ObjectTarget : uint8_t {
     kStation = 1,
     kBss = 2,
     kMinstrel = 3,
+    kHwmp = 4,
 };
 
 // An ObjectId is used as an id in a PortKey. Therefore, only the lower 56 bits may be used.

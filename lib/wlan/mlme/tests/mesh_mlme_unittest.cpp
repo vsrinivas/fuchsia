@@ -20,10 +20,20 @@ static fbl::unique_ptr<Packet> MakeWlanPacket(Span<const uint8_t> bytes) {
     return packet;
 }
 
+static void JoinMesh(MeshMlme* mlme) {
+    wlan_mlme::StartRequest join;
+    zx_status_t status =
+        mlme->HandleMlmeMsg(MlmeMsg<wlan_mlme::StartRequest>(std::move(join), 123));
+    EXPECT_EQ(ZX_OK, status);
+}
+
 TEST(MeshMlme, HandleMpmOpen) {
     MockDevice device;
     MeshMlme mlme(&device);
+    mlme.Init();
+    JoinMesh(&mlme);
 
+    // clang-format off
     const uint8_t frame[] = {
         // Mgmt header
         0xd0, 0x00, 0x00, 0x00,              // fc, duration
@@ -41,6 +51,7 @@ TEST(MeshMlme, HandleMpmOpen) {
         113, 7, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7,  // mesh config
         117, 4, 0xb1, 0xb2, 0xb3, 0xb4,                    // MPM
     };
+    // clang-format on
 
     ASSERT_EQ(mlme.HandleFramePacket(MakeWlanPacket(frame)), ZX_OK);
 
@@ -62,6 +73,8 @@ TEST(MeshMlme, DeliverProxiedData) {
     MockDevice device;
     device.state->set_address(common::MacAddr("11:11:11:11:11:11"));
     MeshMlme mlme(&device);
+    mlme.Init();
+    JoinMesh(&mlme);
 
     // Simulate receiving a data frame
     zx_status_t status = mlme.HandleFramePacket(test_utils::MakeWlanPacket({
@@ -107,6 +120,54 @@ TEST(MeshMlme, DeliverProxiedData) {
     };
     // clang-format on
     EXPECT_RANGES_EQ(expected, eth_frames[0]);
+}
+
+TEST(MeshMlme, HandlePreq) {
+    MockDevice device;
+    device.state->set_address(common::MacAddr("11:11:11:11:11:11"));
+    MeshMlme mlme(&device);
+    mlme.Init();
+    JoinMesh(&mlme);
+
+    zx_status_t status = mlme.HandleFramePacket(test_utils::MakeWlanPacket({
+        // clang-format off
+        // Mgmt header
+        0xd0, 0x00, 0x00, 0x00, // fc, duration
+        0x11, 0x11, 0x11, 0x11, 0x11, 0x11, // addr1
+        0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, // addr2
+        0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, // addr3
+        0x10, 0x00, // seq ctl
+        // Action
+        13, // category (mesh)
+        1, // action = HWMP mesh path selection
+        130, 37,
+        0x00, // flags: no address extension
+        0x03, // hop count
+        0x20, // element ttl
+        0x04, 0x05, 0x06, 0x07, // path discovery ID
+        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, // originator addr
+        0x07, 0x00, 0x00, 0x00, // originator hwmp seqno
+        0x05, 0x00, 0x00, 0x00, // lifetime: 5 TU = 5120 mircoseconds
+        200, 0, 0, 0, // metric
+        1, // target count
+        // Target 1
+        0x00, // target flags
+        0x11, 0x11, 0x11, 0x11, 0x11, 0x11, // target address
+        0x09, 0x00, 0x00, 0x00, // target hwmp seqno
+        // clang-format on
+    }));
+    EXPECT_EQ(ZX_OK, status);
+
+    auto outgoing_packets = device.GetWlanPackets();
+    ASSERT_EQ(1u, outgoing_packets.size());
+
+    auto& packet = *outgoing_packets[0].pkt;
+    // Simply check that the PREP element is there. hwmp_unittest.cpp tests the actual
+    // contents more thoroughly.
+    ASSERT_GE(packet.len(), 27u);
+    EXPECT_EQ(packet.data()[24], 13);   // mesh action
+    EXPECT_EQ(packet.data()[25], 1);    // hwmp
+    EXPECT_EQ(packet.data()[26], 131);  // prep element
 }
 
 }  // namespace wlan

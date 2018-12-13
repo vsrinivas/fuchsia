@@ -242,6 +242,7 @@ static_assert(sizeof(PreqPerTarget) == 11);
 
 // IEEE Std 802.11-2016, 9.4.2.114, Figure 9-481
 struct PrepFlags : public common::BitField<uint8_t> {
+    PrepFlags() = default;
     explicit PrepFlags(uint8_t raw_value) : common::BitField<uint8_t>(raw_value) {}
 
     // bits 0-5 reserved
