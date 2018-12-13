@@ -5,7 +5,7 @@ impl Decodable for TestResp {
         let _ = buf.get_u8();
         total_len -= 1;
         let res_len = buf.get_u16_le();
-        total_len -= (res_len + 2);
+        total_len -= res_len + 2;
         if 0x00 != buf.get_u16_le() {
             let error_code = buf.get_u16_le();
             return Err(QmiError::from_code(error_code))

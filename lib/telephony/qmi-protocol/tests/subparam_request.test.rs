@@ -13,7 +13,7 @@ impl Encodable for TestReq {
         let mut Test_len = 0u16;
         Test_len += 1; // tlv type length;
         Test_len += 2; // tlv length length;
-        let blah = &self.blah;
+        let _blah = &self.blah;
         Test_len += 2;
         buf.put_u16_le(Test_len);
         // tlvs

@@ -241,7 +241,7 @@ impl<'a, W: io::Write> Codegen<'a, W> {
         writeln_indent!(self, "let _ = buf.get_u8();");
         writeln_indent!(self, "total_len -= 1;");
         writeln_indent!(self, "let res_len = buf.get_u16_le();");
-        writeln_indent!(self, "total_len -= (res_len + 2);");
+        writeln_indent!(self, "total_len -= res_len + 2;");
 
         writeln_indent!(self, "if 0x00 != buf.get_u16_le() {{");
         // This is an error case, generate a qmi error
@@ -350,11 +350,15 @@ impl<'a, W: io::Write> Codegen<'a, W> {
         writeln_indent!(self, "// svc length calculation");
         writeln_indent!(self, "let mut {}_len = 0u16;", msg.name);
         for field in msg.get_request_fields() {
+            let field_name = match field.size {
+                Some(_) => format!("_{}", field.param),
+                None => field.param.clone(),
+            };
             if field.optional {
                 writeln_indent!(
                     self,
                     "if let Some(ref {}) = self.{} {{",
-                    field.param,
+                    field_name,
                     field.param
                 );
                 indent!(self);
@@ -363,7 +367,7 @@ impl<'a, W: io::Write> Codegen<'a, W> {
             } else {
                 writeln_indent!(self, "{}_len += 1; // tlv type length;", msg.name);
                 writeln_indent!(self, "{}_len += 2; // tlv length length;", msg.name);
-                writeln_indent!(self, "let {} = &self.{};", field.param, field.param);
+                writeln_indent!(self, "let {} = &self.{};", field_name, field.param);
             }
             if let Some(size) = field.size {
                 writeln_indent!(self, "{}_len += {};", msg.name, size);
@@ -372,7 +376,7 @@ impl<'a, W: io::Write> Codegen<'a, W> {
                     self,
                     "{}_len += {}.as_bytes().len() as u16;",
                     msg.name,
-                    field.param
+                    field_name
                 );
             }
             if field.optional {
@@ -529,7 +533,8 @@ impl<'a, W: io::Write> Codegen<'a, W> {
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{{Error, Fail}};
+#![allow(unused_mut, non_snake_case)]
+use failure::Fail;
 use bytes::{{Bytes, Buf}};
 use std::fmt::Debug;
 use std::result;

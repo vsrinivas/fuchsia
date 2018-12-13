@@ -29,7 +29,8 @@ macro_rules! consume_header {
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{Error, Fail};
+#![allow(unused_mut, non_snake_case)]
+use failure::Fail;
 use bytes::{Bytes, Buf};
 use std::fmt::Debug;
 use std::result;

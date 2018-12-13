@@ -31,7 +31,7 @@ pub mod TEST {
             let mut Test_len = 0u16;
             Test_len += 1; // tlv type length;
             Test_len += 2; // tlv length length;
-            let blah = &self.blah;
+            let _blah = &self.blah;
             Test_len += 2;
             buf.put_u16_le(Test_len);
             // tlvs
@@ -49,7 +49,7 @@ pub mod TEST {
             let _ = buf.get_u8();
             total_len -= 1;
             let res_len = buf.get_u16_le();
-            total_len -= (res_len + 2);
+            total_len -= res_len + 2;
             if 0x00 != buf.get_u16_le() {
                 let error_code = buf.get_u16_le();
                 return Err(QmiError::from_code(error_code))
