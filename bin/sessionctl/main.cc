@@ -54,14 +54,14 @@ void FindSessionsForPath(const char* glob_str, const char* regex_str,
 
 // Returns a list of all running sessions.
 std::vector<ActiveSession> FindAllSessions() {
-  const char kRegex[] = "/sessionmgr/(\\d+)";
+  const char kRegex[] = "/sessionmgr.cmx/(\\d+)";
   // See peridot/bin/sessionmgr/sessionmgr_impl.cc's definition of
   // kSessionCtlDir for "sessionctl". These must match.
   std::vector<ActiveSession> sessions;
-  FindSessionsForPath("/hub/c/sessionmgr/*/out/debug/sessionctl", kRegex,
+  FindSessionsForPath("/hub/c/sessionmgr.cmx/*/out/debug/sessionctl", kRegex,
                       &sessions);
 
-  FindSessionsForPath("/hub/r/sys/*/c/sessionmgr/*/out/debug/sessionctl",
+  FindSessionsForPath("/hub/r/sys/*/c/sessionmgr.cmx/*/out/debug/sessionctl",
                       kRegex, &sessions);
   return sessions;
 }
