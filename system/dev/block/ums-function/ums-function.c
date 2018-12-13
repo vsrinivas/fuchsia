@@ -92,20 +92,28 @@ typedef struct {
     size_t parent_req_size;
 } usb_ums_t;
 
-static void ums_cbw_complete(usb_request_t* req, void* cookie);
-static void ums_data_complete(usb_request_t* req, void* cookie);
-static void ums_csw_complete(usb_request_t* req, void* cookie);
+static void ums_cbw_complete(void* ctx, usb_request_t* req);
+static void ums_data_complete(void* ctx, usb_request_t* req);
+static void ums_csw_complete(void* ctx, usb_request_t* req);
 
 static void ums_function_queue_data(usb_ums_t* ums, usb_request_t* req) {
     ums->data_length += req->header.length;
     req->header.ep_address = ums->current_cbw.bmCBWFlags & USB_DIR_IN ?
         ums->bulk_in_addr : ums->bulk_out_addr;
-    usb_function_queue(&ums->function, req, ums_data_complete, ums);
+    usb_request_complete_t complete = {
+        .callback = ums_data_complete,
+        .ctx = ums,
+    };
+    usb_function_queue(&ums->function, req, &complete);
 }
 
 static void ums_queue_csw(usb_ums_t* ums, uint8_t status) {
     // first queue next cbw so it is ready to go
-    usb_function_queue(&ums->function, ums->cbw_req, ums_cbw_complete, ums);
+    usb_request_complete_t cbw_complete = {
+        .callback = ums_cbw_complete,
+        .ctx = ums,
+    };
+    usb_function_queue(&ums->function, ums->cbw_req, &cbw_complete);
 
     usb_request_t* req = ums->csw_req;
     ums_csw_t* csw;
@@ -118,7 +126,11 @@ static void ums_queue_csw(usb_ums_t* ums, uint8_t status) {
     csw->bmCSWStatus = status;
 
     req->header.length = sizeof(ums_csw_t);
-    usb_function_queue(&ums->function, ums->csw_req, ums_csw_complete, ums);
+    usb_request_complete_t csw_complete = {
+        .callback = ums_csw_complete,
+        .ctx = ums,
+    };
+    usb_function_queue(&ums->function, ums->csw_req, &csw_complete);
 }
 
 static void ums_continue_transfer(usb_ums_t* ums) {
@@ -373,8 +385,8 @@ static void ums_handle_cbw(usb_ums_t* ums, ums_cbw_t* cbw) {
     }
 }
 
-static void ums_cbw_complete(usb_request_t* req, void* cookie) {
-    usb_ums_t* ums = cookie;
+static void ums_cbw_complete(void* ctx, usb_request_t* req) {
+    usb_ums_t* ums = ctx;
 
     zxlogf(TRACE, "ums_cbw_complete %d %ld\n", req->response.status, req->response.actual);
 
@@ -385,8 +397,8 @@ static void ums_cbw_complete(usb_request_t* req, void* cookie) {
     }
 }
 
-static void ums_data_complete(usb_request_t* req, void* cookie) {
-    usb_ums_t* ums = cookie;
+static void ums_data_complete(void* ctx, usb_request_t* req) {
+    usb_ums_t* ums = ctx;
 
     zxlogf(TRACE, "ums_data_complete %d %ld\n", req->response.status, req->response.actual);
 
@@ -411,7 +423,7 @@ static void ums_data_complete(usb_request_t* req, void* cookie) {
     }
 }
 
-static void ums_csw_complete(usb_request_t* req, void* cookie) {
+static void ums_csw_complete(void* ctx, usb_request_t* req) {
     zxlogf(TRACE, "ums_csw_complete %d %ld\n", req->response.status, req->response.actual);
 }
 
@@ -453,7 +465,11 @@ static zx_status_t ums_set_configured(void* ctx, bool configured, usb_speed_t sp
 
     if (configured && status == ZX_OK) {
         // queue first read on OUT endpoint
-        usb_function_queue(&ums->function, ums->cbw_req, ums_cbw_complete, ums);
+        usb_request_complete_t cbw_complete = {
+            .callback = ums_cbw_complete,
+            .ctx = ums,
+        };
+        usb_function_queue(&ums->function, ums->cbw_req, &cbw_complete);
     }
     return status;
 }

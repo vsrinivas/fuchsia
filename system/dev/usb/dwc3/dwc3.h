@@ -6,9 +6,10 @@
 
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
+#include <ddk/phys-iter.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/platform/device.h>
-#include <ddk/protocol/usb-dci.h>
+#include <ddk/protocol/usb/dci.h>
 #include <ddk/protocol/usb/modeswitch.h>
 #include <ddktl/mmio.h>
 #include <fbl/mutex.h>
@@ -121,9 +122,7 @@ typedef struct {
 // Internal context for USB requests
 typedef struct {
      // callback to the upper layer
-     usb_request_complete_cb complete_cb;
-     // context for the callback
-     void* cookie;
+     usb_request_complete_t complete_cb;
      // for queueing requests internally
      list_node_t node;
 } dwc_usb_req_internal_t;

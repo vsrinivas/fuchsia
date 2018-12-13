@@ -102,10 +102,10 @@ struct {
     },
 };
 
-static void test_bulk_in_complete(usb_request_t* req, void* cookie);
+static void test_bulk_in_complete(void* ctx, usb_request_t* req);
 
-static void test_intr_complete(usb_request_t* req, void* cookie) {
-    auto* test = static_cast<usb_test_t*>(cookie);
+static void test_intr_complete(void* ctx, usb_request_t* req) {
+    auto* test = static_cast<usb_test_t*>(ctx);
 
     zxlogf(LTRACE, "%s %d %ld\n", __func__, req->response.status, req->response.actual);
 
@@ -114,8 +114,8 @@ static void test_intr_complete(usb_request_t* req, void* cookie) {
     ZX_DEBUG_ASSERT(status == ZX_OK);
 }
 
-static void test_bulk_out_complete(usb_request_t* req, void* cookie) {
-    auto* test = static_cast<usb_test_t*>(cookie);
+static void test_bulk_out_complete(void* ctx, usb_request_t* req) {
+    auto* test = static_cast<usb_test_t*>(ctx);
 
     zxlogf(LTRACE, "%s %d %ld\n", __func__, req->response.status, req->response.actual);
 
@@ -137,7 +137,12 @@ static void test_bulk_out_complete(usb_request_t* req, void* cookie) {
             usb_request_mmap(req, &buffer);
             usb_request_copy_to(in_req, buffer, req->response.actual, 0);
             req->header.length = req->response.actual;
-            usb_function_queue(&test->function, in_req, test_bulk_in_complete, test);
+
+            usb_request_complete_t complete = {
+                .callback = test_bulk_in_complete,
+                .ctx = test,
+            };
+            usb_function_queue(&test->function, in_req, &complete);
         } else {
             zxlogf(ERROR, "%s: no bulk in request available\n", __func__);
         }
@@ -147,11 +152,15 @@ static void test_bulk_out_complete(usb_request_t* req, void* cookie) {
     }
 
     // Requeue read.
-    usb_function_queue(&test->function, req, test_bulk_out_complete, test);
+    usb_request_complete_t complete = {
+        .callback = test_bulk_out_complete,
+        .ctx = test,
+    };
+    usb_function_queue(&test->function, req, &complete);
 }
 
-static void test_bulk_in_complete(usb_request_t* req, void* cookie) {
-    auto* test = static_cast<usb_test_t*>(cookie);
+static void test_bulk_in_complete(void* ctx, usb_request_t* req) {
+    auto* test = static_cast<usb_test_t*>(ctx);
 
     zxlogf(LTRACE, "%s %d %ld\n", __func__, req->response.status, req->response.actual);
 
@@ -205,7 +214,12 @@ static zx_status_t test_control(void* ctx, const usb_setup_t* setup, void* buffe
 
         usb_request_copy_to(req, test->test_data, test->test_data_length, 0);
         req->header.length = test->test_data_length;
-        usb_function_queue(&test->function, req, test_intr_complete, test);
+
+        usb_request_complete_t complete = {
+            .callback = test_intr_complete,
+            .ctx = test,
+        };
+        usb_function_queue(&test->function, req, &complete);
         return ZX_OK;
     } else {
         return ZX_ERR_NOT_SUPPORTED;
@@ -238,7 +252,11 @@ static zx_status_t test_set_configured(void* ctx, bool configured, usb_speed_t s
         // Queue our OUT requests.
         usb_request_t* req;
         while ((req = usb_req_list_remove_head(&test->bulk_out_reqs, test->parent_req_size)) != NULL) {
-            usb_function_queue(&test->function, req, test_bulk_out_complete, test);
+            usb_request_complete_t complete = {
+                .callback = test_bulk_out_complete,
+                .ctx = test,
+            };
+            usb_function_queue(&test->function, req, &complete);
         }
     }
 

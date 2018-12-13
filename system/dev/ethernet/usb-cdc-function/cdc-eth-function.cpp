@@ -162,7 +162,7 @@ typedef struct txn_info {
     },
 };
 
-static void cdc_tx_complete(usb_request_t* req, void* cookie);
+static void cdc_tx_complete(void* ctx, usb_request_t* req);
 
 static zx_status_t cdc_generate_mac_address(usb_cdc_t* cdc) {
     zx_cprng_draw(cdc->mac_addr, sizeof(cdc->mac_addr));
@@ -246,7 +246,11 @@ static zx_status_t cdc_send_locked(usb_cdc_t* cdc, ethmac_netbuf_t* netbuf) {
         return ZX_ERR_INTERNAL;
     }
 
-    usb_function_queue(&cdc->function, tx_req, cdc_tx_complete, cdc);
+    usb_request_complete_t complete = {
+        .callback = cdc_tx_complete,
+        .ctx = cdc,
+    };
+    usb_function_queue(&cdc->function, tx_req, &complete);
 
     return ZX_OK;
 }
@@ -293,8 +297,8 @@ static ethmac_protocol_ops_t ethmac_ops = [](){
     return ops;
 }();
 
-static void cdc_intr_complete(usb_request_t* req, void* cookie) {
-    auto* cdc = static_cast<usb_cdc_t*>(cookie);
+static void cdc_intr_complete(void* ctx, usb_request_t* req) {
+    auto* cdc = static_cast<usb_cdc_t*>(ctx);
 
     zxlogf(LTRACE, "%s %d %ld\n", __func__, req->response.status, req->response.actual);
 
@@ -349,7 +353,12 @@ static void cdc_send_notifications(usb_cdc_t* cdc) {
 
     usb_request_copy_to(req, &network_notification, sizeof(network_notification), 0);
     req->header.length = sizeof(network_notification);
-    usb_function_queue(&cdc->function, req, cdc_intr_complete, cdc);
+
+    usb_request_complete_t complete = {
+        .callback = cdc_intr_complete,
+        .ctx = cdc,
+    };
+    usb_function_queue(&cdc->function, req, &complete);
 
     mtx_lock(&cdc->intr_mutex);
     req = usb_req_list_remove_head(&cdc->intr_reqs, cdc->parent_req_size);
@@ -361,11 +370,12 @@ static void cdc_send_notifications(usb_cdc_t* cdc) {
 
     usb_request_copy_to(req, &speed_notification, sizeof(speed_notification), 0);
     req->header.length = sizeof(speed_notification);
-    usb_function_queue(&cdc->function, req, cdc_intr_complete, cdc);
+
+    usb_function_queue(&cdc->function, req, &complete);
 }
 
-static void cdc_rx_complete(usb_request_t* req, void* cookie) {
-    auto* cdc = static_cast<usb_cdc_t*>(cookie);
+static void cdc_rx_complete(void* ctx, usb_request_t* req) {
+    auto* cdc = static_cast<usb_cdc_t*>(ctx);
 
     zxlogf(LTRACE, "%s %d %ld\n", __func__, req->response.status, req->response.actual);
 
@@ -391,11 +401,15 @@ static void cdc_rx_complete(usb_request_t* req, void* cookie) {
         mtx_unlock(&cdc->ethmac_mutex);
     }
 
-    usb_function_queue(&cdc->function, req, cdc_rx_complete, cdc);
+    usb_request_complete_t complete = {
+        .callback = cdc_rx_complete,
+        .ctx = cdc,
+    };
+    usb_function_queue(&cdc->function, req, &complete);
 }
 
-static void cdc_tx_complete(usb_request_t* req, void* cookie) {
-    auto* cdc = static_cast<usb_cdc_t*>(cookie);
+static void cdc_tx_complete(void* ctx, usb_request_t* req) {
+    auto* cdc = static_cast<usb_cdc_t*>(ctx);
 
     zxlogf(LTRACE, "%s %d %ld\n", __func__, req->response.status, req->response.actual);
 
@@ -508,7 +522,11 @@ static zx_status_t cdc_set_interface(void* ctx, unsigned interface, unsigned alt
         usb_request_t* req;
         while ((req = usb_req_list_remove_head(&cdc->bulk_out_reqs,
                                                cdc->parent_req_size)) != NULL) {
-            usb_function_queue(&cdc->function, req, cdc_rx_complete, cdc);
+            usb_request_complete_t complete = {
+                .callback = cdc_rx_complete,
+                .ctx = cdc,
+            };
+            usb_function_queue(&cdc->function, req, &complete);
         }
         mtx_unlock(&cdc->rx_mutex);
     }

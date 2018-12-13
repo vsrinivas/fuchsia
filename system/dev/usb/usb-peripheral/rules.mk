@@ -24,6 +24,7 @@ MODULE_LIBS := \
 MODULE_FIDL_LIBS := system/fidl/zircon-usb-peripheral
 
 MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-usb-dci \
     system/banjo/ddk-protocol-usb-mode-switch \
     system/banjo/ddk-protocol-usb-request \
 

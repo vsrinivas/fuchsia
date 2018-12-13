@@ -74,8 +74,7 @@ typedef struct {
                              usb_ss_ep_comp_descriptor_t* ss_comp_desc);
     zx_status_t (*disable_ep)(void* ctx, uint8_t ep_addr);
     zx_status_t (*alloc_string_desc)(void* ctx, const char* string, uint8_t* out_index);
-    void (*queue)(void* ctx, usb_request_t* req, usb_request_complete_cb complete_cb,
-                  void* complete_cb_cookie);
+    void (*queue)(void* ctx, usb_request_t* req, const usb_request_complete_t* complete_cb);
     zx_status_t (*ep_set_stall)(void* ctx, uint8_t ep_address);
     zx_status_t (*ep_clear_stall)(void* ctx, uint8_t ep_address);
     size_t (*get_request_size)(void* ctx);
@@ -127,8 +126,8 @@ static inline zx_status_t usb_function_alloc_string_desc(usb_function_protocol_t
 
 // helper for queueing a usb request on an endpoint.
 static inline void usb_function_queue(usb_function_protocol_t* func, usb_request_t* req,
-                                      usb_request_complete_cb cb, void* cookie) {
-    return func->ops->queue(func->ctx, req, cb, cookie);
+                                      const usb_request_complete_t* complete_cb) {
+    return func->ops->queue(func->ctx, req, complete_cb);
 }
 
 // stalls an endpoint

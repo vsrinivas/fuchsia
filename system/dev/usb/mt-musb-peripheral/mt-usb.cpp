@@ -16,7 +16,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/gpio.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <hw/reg.h>
@@ -34,9 +33,7 @@ using namespace board_mt8167; // Hardware registers.
 // Internal context for USB requests
 typedef struct {
      // callback to the upper layer
-     usb_request_complete_cb complete_cb;
-     // context for the callback
-     void* cookie;
+     usb_request_complete_t complete_cb;
      // for queueing requests internally
      list_node_t node;
 } mt_usb_req_internal_t;
@@ -107,12 +104,7 @@ void MtUsb::InitEndpoints() {
 zx_status_t MtUsb::Init() {
     InitEndpoints();
 
-    auto status = pdev_.GetBti(0, &bti_);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    status = pdev_.MapMmio(0, &usb_mmio_);
+    auto status = pdev_.MapMmio(0, &usb_mmio_);
     if (status != ZX_OK) {
         return status;
     }
@@ -719,8 +711,8 @@ int MtUsb::IrqThread() {
                     while ((req_int = list_remove_head_type(&complete_reqs, mt_usb_req_internal_t,
                                                             node))) {
                         usb_request_t* req = INTERNAL_TO_USB_REQ(req_int);
-                        usb_request_complete(req, req->response.status, req->response.actual,
-                                             req_int->complete_cb, req_int->cookie);
+                        usb_request_complete_new(req, req->response.status, req->response.actual,
+                                                 &req_int->complete_cb);
                     }
                 }
             }
@@ -742,8 +734,8 @@ int MtUsb::IrqThread() {
                     while ((req_int = list_remove_head_type(&complete_reqs, mt_usb_req_internal_t,
                                                             node))) {
                         usb_request_t* req = INTERNAL_TO_USB_REQ(req_int);
-                        usb_request_complete(req, req->response.status, req->response.actual,
-                                             req_int->complete_cb, req_int->cookie);
+                        usb_request_complete_new(req, req->response.status, req->response.actual,
+                                                 &req_int->complete_cb);
                     }
                 }
             }
@@ -760,23 +752,22 @@ void MtUsb::DdkRelease() {
     delete this;
 }
 
-void MtUsb::UsbDciRequestQueue(usb_request_t* req, usb_request_complete_cb cb, void* cookie) {
+void MtUsb::UsbDciRequestQueue(usb_request_t* req, const usb_request_complete_t* cb) {
     auto* ep = EndpointFromAddress(req->header.ep_address);
     if (ep == nullptr) {
-        usb_request_complete(req, ZX_ERR_INVALID_ARGS, 0, cb, cookie);
+        usb_request_complete_new(req, ZX_ERR_INVALID_ARGS, 0, cb);
         return;
     }
 
     fbl::AutoLock lock(&ep->lock);
 
     if (!ep->enabled) {
-        usb_request_complete(req, ZX_ERR_BAD_STATE, 0, cb, cookie);
+        usb_request_complete_new(req, ZX_ERR_BAD_STATE, 0, cb);
         return;
     }
 
     auto* req_int = USB_REQ_TO_INTERNAL(req);
-    req_int->complete_cb = cb;
-    req_int->cookie = cookie;
+    req_int->complete_cb = *cb;
     list_add_tail(&ep->queued_reqs, &req_int->node);
     EpQueueNextLocked(ep);
 }
@@ -928,11 +919,6 @@ zx_status_t MtUsb::UsbDciEpClearStall(uint8_t ep_address) {
         return ZX_ERR_INVALID_ARGS;
     }
     SetStall(ep, false);
-    return ZX_OK;
-}
-
-zx_status_t MtUsb::UsbDciGetBti(zx_handle_t* out_bti) {
-    *out_bti = bti_.get();
     return ZX_OK;
 }
 

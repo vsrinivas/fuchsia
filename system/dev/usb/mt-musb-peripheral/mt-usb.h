@@ -4,10 +4,11 @@
 
 #pragma once
 
+#include <ddk/phys-iter.h>
 #include <ddktl/device.h>
 #include <ddktl/mmio.h>
 #include <ddktl/pdev.h>
-#include <ddktl/protocol/usb-dci.h>
+#include <ddktl/protocol/usb/dci.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
@@ -35,14 +36,13 @@ public:
     void DdkRelease();
 
     // USB DCI protocol implementation.
-     void UsbDciRequestQueue(usb_request_t* req, usb_request_complete_cb cb, void* cookie);
+     void UsbDciRequestQueue(usb_request_t* req, const usb_request_complete_t* cb);
      zx_status_t UsbDciSetInterface(const usb_dci_interface_t* interface);
      zx_status_t UsbDciConfigEp(const usb_endpoint_descriptor_t* ep_desc, const
                                 usb_ss_ep_comp_descriptor_t* ss_comp_desc);
      zx_status_t UsbDciDisableEp(uint8_t ep_address);
      zx_status_t UsbDciEpSetStall(uint8_t ep_address);
      zx_status_t UsbDciEpClearStall(uint8_t ep_address);
-     zx_status_t UsbDciGetBti(zx_handle_t* out_bti);
      size_t UsbDciGetRequestSize();
 
 private:
@@ -117,7 +117,6 @@ private:
 
     ddk::PDev pdev_;
     std::optional<ddk::UsbDciInterfaceProxy> dci_intf_;
-    zx::bti bti_;
 
     std::optional<ddk::MmioBuffer> usb_mmio_;
     std::optional<ddk::MmioBuffer> phy_mmio_;

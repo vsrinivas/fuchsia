@@ -1,0 +1,42 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.usb.dci;
+
+using ddk.protocol.usb.request;
+using zircon.hw.usb;
+using zx;
+
+[Layout = "ddk-protocol", DefaultProtocol]
+interface UsbDci {
+    /// Queues a USB request with the DCI driver.
+    RequestQueue(ddk.protocol.usb.request.UsbRequest? usb_request,
+                 ddk.protocol.usb.request.UsbRequestComplete? complete_cb) -> ();
+    /// Registers callback interface with the DCI driver.
+    SetInterface(UsbDciInterface @interface) -> (zx.status s);
+    /// Configures an endpoint based on provided descriptors.
+    ConfigEp(zircon.hw.usb.UsbEndpointDescriptor ep_desc,
+                zircon.hw.usb.UsbSsEpCompDescriptor ss_comp_desc) -> (zx.status s);
+    /// Disables the specified endpoint.
+    DisableEp(uint8 ep_address) -> (zx.status s);
+    /// Stalls the specified endpoint.
+    EpSetStall(uint8 ep_address) -> (zx.status s);
+    /// Clears a stall condition for the specified endpoint.
+    EpClearStall(uint8 ep_address) -> (zx.status s);
+    /// Returns the size needed for a |usb_request_t|, including private storage needed by the
+    /// HCI driver.
+    GetRequestSize() -> (usize size);
+};
+
+/// Interface for use by the DCI controller to call into the USB peripheral driver.
+[Layout = "ddk-interface"]
+interface UsbDciInterface {
+    /// Callback for handling ep0 control requests.
+    Control(zircon.hw.usb.UsbSetup setup, vector<voidptr> write) -> (zx.status status,
+                                                                     vector<voidptr> read);
+    /// Notifies change in USB connected state.
+    SetConnected(bool connected) -> ();
+    /// Notifies current USB speed..
+    SetSpeed(zircon.hw.usb.UsbSpeed speed) -> ();
+};

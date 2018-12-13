@@ -14,7 +14,8 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
-#include <ddk/protocol/usb-dci.h>
+#include <ddk/phys-iter.h>
+#include <ddk/protocol/usb/dci.h>
 #include <ddk/protocol/usb-function.h>
 #include <ddk/protocol/usb/modeswitch.h>
 #include <usb/usb-request.h>
@@ -108,8 +109,6 @@ typedef struct usb_device {
     usb_function_t* interface_map[MAX_INTERFACES];
     // map from endpoint index to function
     usb_function_t* endpoint_map[USB_MAX_EPS];
-    // BTI handle shared from DCI layer
-    zx_handle_t bti_handle;
     // strings for USB string descriptors
     char* strings[256];
     // list of usb_function_t
@@ -370,10 +369,9 @@ static zx_status_t usb_func_alloc_string_desc(void* ctx, const char* string, uin
     return usb_device_alloc_string_desc(function->dev, string, out_index);
 }
 
-static void usb_func_queue(void* ctx, usb_request_t* req, usb_request_complete_cb cb,
-                           void* cookie) {
+static void usb_func_queue(void* ctx, usb_request_t* req, const usb_request_complete_t* cb) {
     usb_function_t* function = ctx;
-    usb_dci_request_queue(&function->dev->usb_dci, req, cb, cookie);
+    usb_dci_request_queue(&function->dev->usb_dci, req, cb);
 }
 
 static zx_status_t usb_func_ep_set_stall(void* ctx, uint8_t ep_address) {
@@ -1008,12 +1006,6 @@ zx_status_t usb_dev_bind(void* ctx, zx_device_t* parent) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    zx_status_t status = usb_dci_get_bti(&dev->usb_dci, &dev->bti_handle);
-    if (status != ZX_OK) {
-        free(dev);
-        return status;
-    }
-
     if (device_get_protocol(parent, ZX_PROTOCOL_USB_MODE_SWITCH, &dev->usb_mode_switch) == ZX_OK) {
         dev->has_usb_mode_switch = true;
     }
@@ -1022,8 +1014,8 @@ zx_status_t usb_dev_bind(void* ctx, zx_device_t* parent) {
     // We read initial value and store it in dev->usb_mode, but do not actually
     // enable it until after all of our functions have bound.
     size_t actual;
-    status = device_get_metadata(parent, DEVICE_METADATA_USB_MODE,
-                                 &dev->usb_mode, sizeof(dev->usb_mode), &actual);
+    zx_status_t status = device_get_metadata(parent, DEVICE_METADATA_USB_MODE,
+                                             &dev->usb_mode, sizeof(dev->usb_mode), &actual);
     if (status == ZX_ERR_NOT_FOUND) {
         // Assume peripheral mode by default.
         dev->usb_mode = USB_MODE_PERIPHERAL;
