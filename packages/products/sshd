@@ -1,11 +1,5 @@
 {
-    "imports": [
-        "garnet/packages/config/network",
-        "garnet/packages/config/openssh_keys",
-        "build/packages/shell-commands",
-        "garnet/packages/prod/netstack",
-        "garnet/packages/prod/openssh",
-        "garnet/packages/prod/root_ssl_certificates",
-        "garnet/packages/prod/runtime"
-    ]
+  "imports": [
+    "garnet/packages/products/base"
+  ]
 }

@@ -1,33 +1,12 @@
 {
-    "imports": [
-        "build/packages/shell-commands",
-        "garnet/packages/products/graphical",
-        "garnet/packages/products/network_installer",
-        "garnet/packages/config/mdns",
-        "garnet/packages/config/thermd",
-        "garnet/packages/prod/auth",
-        "garnet/packages/prod/bluetooth",
-        "garnet/packages/prod/build_info",
-        "garnet/packages/prod/cobalt_client",
-        "garnet/packages/prod/crashpad",
-        "garnet/packages/prod/device_settings",
-        "garnet/packages/prod/display_manager",
-        "garnet/packages/prod/fonts",
-        "garnet/packages/prod/kernel_crash_checker",
-        "garnet/packages/prod/logger",
-        "garnet/packages/prod/log_listener",
-        "garnet/packages/prod/mdns",
-        "garnet/packages/prod/media_audio",
-        "garnet/packages/prod/media_codec",
-        "garnet/packages/prod/mediaplayer",
-        "garnet/packages/prod/network",
-        "garnet/packages/prod/network_time",
-        "garnet/packages/prod/power_manager",
-        "garnet/packages/prod/scenic_tools",
-        "garnet/packages/prod/stash",
-        "garnet/packages/prod/thermd",
-        "garnet/packages/prod/scpi",
-        "garnet/packages/prod/timezone",
-        "garnet/packages/prod/vboot_reference"
-    ]
+  "imports": [
+    "garnet/packages/products/graphical",
+    "garnet/packages/prod/display_manager",
+    "garnet/packages/prod/fonts",
+    "garnet/packages/prod/media_audio",
+    "garnet/packages/prod/media_codec",
+    "garnet/packages/prod/mediaplayer",
+    "garnet/packages/prod/scenic_tools",
+    "garnet/packages/prod/vboot_reference"
+  ]
 }

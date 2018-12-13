@@ -1,8 +1,0 @@
-{
-    "imports": [
-        "garnet/packages/config/amber",
-        "garnet/packages/prod/amber",
-        "garnet/packages/prod/installer",
-        "garnet/packages/products/network_wifi"
-    ]
-}

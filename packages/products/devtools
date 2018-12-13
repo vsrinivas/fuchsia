@@ -1,18 +1,15 @@
 {
   "imports": [
-    "build/packages/shell-commands",
-    "garnet/packages/prod/build_info",
     "garnet/packages/prod/cmdutils",
     "garnet/packages/prod/debug_agent",
     "garnet/packages/prod/debugserver",
     "garnet/packages/prod/far",
     "garnet/packages/prod/installblob",
-    "garnet/packages/prod/log_listener",
     "garnet/packages/prod/pm",
     "garnet/packages/prod/run",
     "garnet/packages/prod/ssh",
     "garnet/packages/prod/tracing",
-    "garnet/packages/products/sshd",
+    "garnet/packages/products/base",
     "garnet/packages/tools/zxdb"
   ]
 }

@@ -1,13 +1,11 @@
 {
   "imports": [
-    "garnet/packages/prod/crashpad",
-    "garnet/packages/prod/runtime",
-    "garnet/packages/prod/vboot_reference",
-    "garnet/packages/prod/scenic_tools",
-    "garnet/packages/tools/tiles",
-    "garnet/packages/prod/run",
     "garnet/packages/prod/pm",
+    "garnet/packages/prod/run",
+    "garnet/packages/prod/scenic_tools",
     "garnet/packages/prod/tracing",
-    "garnet/packages/products/graphical"
+    "garnet/packages/prod/vboot_reference",
+    "garnet/packages/products/graphical",
+    "garnet/packages/tools/tiles"
   ]
 }

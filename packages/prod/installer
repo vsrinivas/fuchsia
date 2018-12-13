@@ -1,5 +1,0 @@
-{
-    "labels": [
-        "//garnet/bin/installer:install-fuchsia"
-    ]
-}
