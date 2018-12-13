@@ -8,5 +8,5 @@ using fuchsia.guest;
 
 [Discoverable]
 interface LaunchInfoProvider {
-    1: GetLaunchInfo() -> (fuchsia.guest.LaunchInfo launch_info);
+    GetLaunchInfo() -> (fuchsia.guest.LaunchInfo launch_info);
 };

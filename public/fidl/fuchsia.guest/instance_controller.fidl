@@ -10,5 +10,5 @@ interface InstanceController {
     // Get the socket for the primary serial device of the guest. The details
     // regarding what output is produced and what input is accepted are
     // determined by each guest.
-    1: GetSerial() -> (handle<socket> socket);
+    GetSerial() -> (handle<socket> socket);
 };

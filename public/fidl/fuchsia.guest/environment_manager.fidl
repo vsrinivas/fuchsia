@@ -31,16 +31,16 @@ interface EnvironmentManager {
     //
     // The |label| is a string that is used for diagnostic purposes, such as
     // naming resources and dumping debug info.
-    1: Create(string? label, request<EnvironmentController> env);
+    Create(string? label, request<EnvironmentController> env);
 
     // Query for existing guest environments.
     //
     // This is intended for diagnostic purposes only.
-    2: List() -> (vector<EnvironmentInfo> env_infos);
+    List() -> (vector<EnvironmentInfo> env_infos);
 
     // Connect to a currently running guest environment identified by |id|. The
     // |id| can be found via a call to |List|.
     //
     // This is intended for diagnostic purposes only.
-    3: Connect(uint32 id, request<EnvironmentController> env);
+    Connect(uint32 id, request<EnvironmentController> env);
 };

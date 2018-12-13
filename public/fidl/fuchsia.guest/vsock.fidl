@@ -18,8 +18,8 @@ const uint32 HOST_CID = 2;
 //
 // Also see |GuestVsockEndpoint|.
 interface GuestVsockAcceptor {
-    1: Accept(uint32 src_cid, uint32 src_port, uint32 port, handle? handle)
-           -> (zx.status status);
+    Accept(uint32 src_cid, uint32 src_port, uint32 port, handle? handle)
+        -> (zx.status status);
 };
 
 // Exposed by a host capable of listening via vsocks. A variant of a
@@ -27,8 +27,8 @@ interface GuestVsockAcceptor {
 // to communicate. The |handle| will be either a socket or a channel, depending
 // on the current configuration.
 interface HostVsockAcceptor {
-    1: Accept(uint32 src_cid, uint32 src_port, uint32 port)
-           -> (zx.status status, handle? handle);
+    Accept(uint32 src_cid, uint32 src_port, uint32 port)
+        -> (zx.status status, handle? handle);
 };
 
 // Exposed by a host capable of connecting via vsocks. This allows a guest to
@@ -37,8 +37,8 @@ interface HostVsockAcceptor {
 // to communicate. The |handle| will be either a socket or a channel, depending
 // on the current configuration.
 interface HostVsockConnector {
-    1: Connect(uint32 src_cid, uint32 src_port, uint32 cid, uint32 port)
-           -> (zx.status status, handle? handle);
+    Connect(uint32 src_cid, uint32 src_port, uint32 cid, uint32 port)
+        -> (zx.status status, handle? handle);
 };
 
 // Exposed by guests capable of handling vsock traffic. During
@@ -48,20 +48,20 @@ interface HostVsockConnector {
 // implementation that can handle any inbound connection requests.
 [Discoverable]
 interface GuestVsockEndpoint {
-    1: SetContextId(uint32 cid, HostVsockConnector connector,
-                    request<GuestVsockAcceptor> acceptor);
-    2: -> OnShutdown(uint32 src_cid, uint32 src_port, uint32 dst_cid, uint32 dst_port);
+    SetContextId(uint32 cid, HostVsockConnector connector,
+                 request<GuestVsockAcceptor> acceptor);
+    -> OnShutdown(uint32 src_cid, uint32 src_port, uint32 dst_cid, uint32 dst_port);
 };
 
 // Exposed by a host to provide the ability for listeners to be multiplexed by
 // port and to manage dynamic port allocation for outbound connections.
 interface HostVsockEndpoint {
     // Register |acceptor| to be invoked for any connection requests to |port|.
-    1: Listen(uint32 port, HostVsockAcceptor acceptor)
-           -> (zx.status status);
+    Listen(uint32 port, HostVsockAcceptor acceptor)
+        -> (zx.status status);
 
     // Similar to |HostVsockConnector.Connect| except the |src_cid| is
     // |HOST_CID| and |src_port| is generated automatically.
-    2: Connect(uint32 cid, uint32 port, handle? handle)
-           -> (zx.status status);
+    Connect(uint32 cid, uint32 port, handle? handle)
+        -> (zx.status status);
 };

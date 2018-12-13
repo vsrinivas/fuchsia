@@ -16,7 +16,7 @@ struct MemStat {
 [Discoverable]
 interface BalloonController {
     // Get the number of pages in the memory balloon.
-    1: GetNumPages() -> (uint32 num_pages);
+    GetNumPages() -> (uint32 num_pages);
 
     // Request a number of pages to be supplied to the memory balloon.
     //
@@ -24,8 +24,8 @@ interface BalloonController {
     // provide additional pages to the memory balloon. If |num_pages| is less
     // than the current value, the guest instance is free to reclaim pages from
     // the memory balloon.
-    2: RequestNumPages(uint32 num_pages);
+    RequestNumPages(uint32 num_pages);
 
     // Get memory statistics of the guest instance.
-    3: GetMemStats() -> (zx.status status, vector<MemStat>? mem_stats);
+    GetMemStats() -> (zx.status status, vector<MemStat>? mem_stats);
 };
