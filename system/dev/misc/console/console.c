@@ -130,6 +130,12 @@ static zx_protocol_device_t console_device_proto = {
 };
 
 static zx_status_t console_bind(void* ctx, zx_device_t* parent) {
+    // If we're in an isolated devmgr, we won't have the root resource.  In that
+    // case, just don't bind this driver.
+    if (get_root_resource() == ZX_HANDLE_INVALID) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
     console_device_t* console = calloc(1, sizeof(console_device_t));
     if (!console) {
         return ZX_ERR_NO_MEMORY;
