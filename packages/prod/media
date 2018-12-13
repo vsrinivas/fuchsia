@@ -2,7 +2,8 @@
     "imports": [
         "garnet/packages/prod/media_audio",
         "garnet/packages/prod/media_codec",
-        "garnet/packages/prod/mediaplayer"
+        "garnet/packages/prod/mediaplayer",
+        "garnet/packages/prod/mediasession"
     ],
     "packages": [
         "//garnet/bin/tts:tts_service",
