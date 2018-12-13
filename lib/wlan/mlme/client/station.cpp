@@ -782,19 +782,6 @@ zx_status_t Station::HandleEthFrame(EthFrame&& eth_frame) {
     FillEtherLlcHeader(llc_hdr, eth_hdr->ether_type);
     w.Write({eth_hdr->payload, eth_frame.body_len()});
 
-    CBW cbw = CBW20;
-    PHY phy = WLAN_PHY_OFDM;
-    if (assoc_ctx_.phy == WLAN_PHY_HT) {
-        if (assoc_ctx_.is_cbw40_tx && data_hdr->addr3.IsUcast()) {
-            // 40 MHz direction does not matter here.
-            // Radio uses the operational channel setting. This indicates the bandwidth without
-            // direction.
-            cbw = CBW40;
-            phy = WLAN_PHY_HT;
-        } else {
-            phy = WLAN_PHY_HT;
-        }
-    }
     packet->set_len(w.WrittenBytes());
 
     finspect("Outbound data frame: len %zu\n", w.WrittenBytes());
@@ -802,7 +789,7 @@ zx_status_t Station::HandleEthFrame(EthFrame&& eth_frame) {
     finspect("  llc  hdr: %s\n", debug::Describe(*llc_hdr).c_str());
     finspect("  frame   : %s\n", debug::HexDump(packet->data(), packet->len()).c_str());
 
-    auto status = SendWlan(std::move(packet), cbw, phy);
+    auto status = SendDataFrame(std::move(packet), data_hdr->addr3.IsUcast());
     if (status != ZX_OK) { errorf("could not send wlan data: %d\n", status); }
     return status;
 }
@@ -885,10 +872,9 @@ zx_status_t Station::SendKeepAliveResponse() {
     data_hdr->addr3 = join_ctx_->bssid();
     SetSeqNo(data_hdr, &seq_);
 
-    CBW cbw = (assoc_ctx_.is_cbw40_tx ? CBW40 : CBW20);
     packet->set_len(w.WrittenBytes());
 
-    auto status = SendWlan(std::move(packet), cbw, WLAN_PHY_HT);
+    auto status = SendDataFrame(std::move(packet), true);
     if (status != ZX_OK) {
         errorf("could not send keep alive frame: %d\n", status);
         return status;
@@ -990,7 +976,7 @@ zx_status_t Station::HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRequest>& 
     packet->set_len(w.WrittenBytes());
 
     zx_status_t status =
-        SendWlan(std::move(packet), CBW20, WLAN_PHY_HT, WLAN_TX_INFO_FLAGS_FAVOR_RELIABILITY);
+        SendDataFrame(std::move(packet), true, WLAN_TX_INFO_FLAGS_FAVOR_RELIABILITY);
     if (status != ZX_OK) {
         errorf("could not send eapol request packet: %d\n", status);
         service::SendEapolConfirm(device_, wlan_mlme::EapolResultCodes::TRANSMISSION_FAILURE);
@@ -1092,6 +1078,22 @@ zx_status_t Station::SendMgmtFrame(fbl::unique_ptr<Packet> packet) {
     return SendWlan(std::move(packet), CBW20, WLAN_PHY_OFDM);
 }
 
+zx_status_t Station::SendDataFrame(fbl::unique_ptr<Packet> packet, bool unicast, uint32_t flags) {
+    CBW cbw = CBW20;
+    PHY phy = WLAN_PHY_OFDM;
+    if (assoc_ctx_.phy == WLAN_PHY_HT) {
+        if (assoc_ctx_.is_cbw40_tx && unicast) {
+            // 40 MHz direction does not matter here.
+            // Radio uses the operational channel setting. This indicates the bandwidth without
+            // direction.
+            cbw = CBW40;
+        }
+        phy = WLAN_PHY_HT;
+    }
+
+    return SendWlan(std::move(packet), cbw, phy, flags);
+}
+
 zx_status_t Station::SetPowerManagementMode(bool ps_mode) {
     if (state_ != WlanState::kAssociated) {
         warnf("cannot adjust power management before being associated\n");
@@ -1112,10 +1114,8 @@ zx_status_t Station::SetPowerManagementMode(bool ps_mode) {
     data_hdr->addr3 = join_ctx_->bssid();
     SetSeqNo(data_hdr, &seq_);
 
-    CBW cbw = (assoc_ctx_.is_cbw40_tx ? CBW40 : CBW20);
-
     packet->set_len(w.WrittenBytes());
-    auto status = SendWlan(std::move(packet), cbw, WLAN_PHY_HT);
+    auto status = SendDataFrame(std::move(packet), true);
     if (status != ZX_OK) {
         errorf("could not send power management frame: %d\n", status);
         return status;

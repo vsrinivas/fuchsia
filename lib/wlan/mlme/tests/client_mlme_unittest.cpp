@@ -155,41 +155,43 @@ struct ClientTest : public ::testing::Test {
 
     void AssertAuthConfirm(MlmeMsg<wlan_mlme::AuthenticateConfirm> msg,
                            wlan_mlme::AuthenticateResultCodes result_code) {
-        ASSERT_EQ(msg.body()->result_code, result_code);
+        EXPECT_EQ(msg.body()->result_code, result_code);
     }
 
     void AssertAssocConfirm(MlmeMsg<wlan_mlme::AssociateConfirm> msg, uint16_t aid,
                             wlan_mlme::AssociateResultCodes result_code) {
-        ASSERT_EQ(msg.body()->association_id, aid);
-        ASSERT_EQ(msg.body()->result_code, result_code);
+        EXPECT_EQ(msg.body()->association_id, aid);
+        EXPECT_EQ(msg.body()->result_code, result_code);
     }
 
-    void AssertAuthFrame(fbl::unique_ptr<Packet> pkt) {
-        auto frame = TypeCheckWlanFrame<MgmtFrameView<Authentication>>(pkt.get());
-        ASSERT_EQ(std::memcmp(frame.hdr()->addr1.byte, kBssid1, 6), 0);
-        ASSERT_EQ(std::memcmp(frame.hdr()->addr2.byte, kClientAddress, 6), 0);
-        ASSERT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
-        ASSERT_EQ(frame.body()->auth_algorithm_number, AuthAlgorithm::kOpenSystem);
-        ASSERT_EQ(frame.body()->auth_txn_seq_number, 1);
-        ASSERT_EQ(frame.body()->status_code, 0);
+    void AssertAuthFrame(WlanPacket pkt) {
+        auto frame = TypeCheckWlanFrame<MgmtFrameView<Authentication>>(pkt.pkt.get());
+        EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, kBssid1, 6), 0);
+        EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kClientAddress, 6), 0);
+        EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
+        EXPECT_EQ(frame.body()->auth_algorithm_number, AuthAlgorithm::kOpenSystem);
+        EXPECT_EQ(frame.body()->auth_txn_seq_number, 1);
+        EXPECT_EQ(frame.body()->status_code, 0);
+        AssertSendRate(std::move(pkt), CBW20, WLAN_PHY_OFDM, 0);
     }
 
-    void AssertDeauthFrame(fbl::unique_ptr<Packet> pkt, wlan_mlme::ReasonCode reason_code) {
-        auto frame = TypeCheckWlanFrame<MgmtFrameView<Deauthentication>>(pkt.get());
-        ASSERT_EQ(std::memcmp(frame.hdr()->addr1.byte, kBssid1, 6), 0);
-        ASSERT_EQ(std::memcmp(frame.hdr()->addr2.byte, kClientAddress, 6), 0);
-        ASSERT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
-        ASSERT_EQ(frame.body()->reason_code, static_cast<uint16_t>(reason_code));
+    void AssertDeauthFrame(WlanPacket pkt, wlan_mlme::ReasonCode reason_code) {
+        auto frame = TypeCheckWlanFrame<MgmtFrameView<Deauthentication>>(pkt.pkt.get());
+        EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, kBssid1, 6), 0);
+        EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kClientAddress, 6), 0);
+        EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
+        EXPECT_EQ(frame.body()->reason_code, static_cast<uint16_t>(reason_code));
+        AssertSendRate(std::move(pkt), CBW20, WLAN_PHY_OFDM, 0);
     }
 
-    void AssertAssocReqFrame(fbl::unique_ptr<Packet> pkt, bool rsn) {
-        auto frame = TypeCheckWlanFrame<MgmtFrameView<AssociationRequest>>(pkt.get());
-        ASSERT_EQ(std::memcmp(frame.hdr()->addr1.byte, kBssid1, 6), 0);
-        ASSERT_EQ(std::memcmp(frame.hdr()->addr2.byte, kClientAddress, 6), 0);
-        ASSERT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
+    void AssertAssocReqFrame(WlanPacket pkt, bool rsn) {
+        auto frame = TypeCheckWlanFrame<MgmtFrameView<AssociationRequest>>(pkt.pkt.get());
+        EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, kBssid1, 6), 0);
+        EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kClientAddress, 6), 0);
+        EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
         auto assoc_req_frame = frame.NextFrame();
         Span<const uint8_t> ie_chain{assoc_req_frame.body()->data, assoc_req_frame.body_len()};
-        ASSERT_TRUE(ValidateFrame("invalid assoc request", *pkt));
+        ASSERT_TRUE(ValidateFrame("invalid assoc request", *pkt.pkt));
 
         bool has_ssid = false;
         bool has_rsne = false;
@@ -207,16 +209,19 @@ struct ClientTest : public ::testing::Test {
         }
         EXPECT_TRUE(has_ssid);
         EXPECT_EQ(has_rsne, rsn);
+        AssertSendRate(std::move(pkt), CBW20, WLAN_PHY_OFDM, 0);
     }
 
-    void AssertKeepAliveFrame(fbl::unique_ptr<Packet> pkt) {
-        auto data_frame = TypeCheckWlanFrame<DataFrameView<>>(pkt.get());
-        ASSERT_EQ(data_frame.hdr()->fc.to_ds(), 1);
-        ASSERT_EQ(data_frame.hdr()->fc.from_ds(), 0);
-        ASSERT_EQ(std::memcmp(data_frame.hdr()->addr1.byte, kBssid1, 6), 0);
-        ASSERT_EQ(std::memcmp(data_frame.hdr()->addr2.byte, kClientAddress, 6), 0);
-        ASSERT_EQ(std::memcmp(data_frame.hdr()->addr3.byte, kBssid1, 6), 0);
-        ASSERT_EQ(data_frame.body_len(), static_cast<size_t>(0));
+    void AssertKeepAliveFrame(WlanPacket pkt) {
+        auto data_frame = TypeCheckWlanFrame<DataFrameView<>>(pkt.pkt.get());
+        EXPECT_EQ(data_frame.hdr()->fc.to_ds(), 1);
+        EXPECT_EQ(data_frame.hdr()->fc.from_ds(), 0);
+        EXPECT_EQ(std::memcmp(data_frame.hdr()->addr1.byte, kBssid1, 6), 0);
+        EXPECT_EQ(std::memcmp(data_frame.hdr()->addr2.byte, kClientAddress, 6), 0);
+        EXPECT_EQ(std::memcmp(data_frame.hdr()->addr3.byte, kBssid1, 6), 0);
+        EXPECT_EQ(data_frame.body_len(), static_cast<size_t>(0));
+
+        AssertSendRate(std::move(pkt), CBW20, WLAN_PHY_HT, 0);
     }
 
     struct DataFrameAssert {
@@ -224,9 +229,9 @@ struct ClientTest : public ::testing::Test {
         unsigned char more_data = 0;
     };
 
-    void AssertDataFrameSentToAp(fbl::unique_ptr<Packet> pkt, Span<const uint8_t> expected_payload,
+    void AssertDataFrameSentToAp(WlanPacket pkt, Span<const uint8_t> expected_payload,
                                  DataFrameAssert asserts = {.protected_frame = 0, .more_data = 0}) {
-        auto frame = TypeCheckWlanFrame<DataFrameView<LlcHeader>>(pkt.get());
+        auto frame = TypeCheckWlanFrame<DataFrameView<LlcHeader>>(pkt.pkt.get());
         ASSERT_TRUE(frame);
         EXPECT_EQ(frame.hdr()->fc.more_data(), asserts.more_data);
         EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, kBssid1, 6), 0);
@@ -238,6 +243,14 @@ struct ClientTest : public ::testing::Test {
         EXPECT_EQ(frame.body_len() - llc_hdr->len(), expected_payload.size());
         EXPECT_EQ(std::memcmp(llc_hdr->payload, expected_payload.data(), expected_payload.size()),
                   0);
+
+        AssertSendRate(std::move(pkt), CBW20, WLAN_PHY_HT, 0);
+    }
+
+    void AssertSendRate(WlanPacket pkt, CBW cbw, PHY phy, uint32_t flags) {
+        EXPECT_EQ(pkt.cbw, cbw);
+        EXPECT_EQ(pkt.phy, phy);
+        EXPECT_EQ(pkt.flags, flags);
     }
 
     MockDevice device;
@@ -369,7 +382,7 @@ TEST_F(ClientTest, ExchangeEapolFrames) {
     // Verify EAPOL frame was sent to AP
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     auto pkt = std::move(*device.wlan_queue.begin());
-    auto frame = TypeCheckWlanFrame<DataFrameView<LlcHeader>>(pkt.get());
+    auto frame = TypeCheckWlanFrame<DataFrameView<LlcHeader>>(pkt.pkt.get());
     EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, kBssid1, 6), 0);
     EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kClientAddress, 6), 0);
     EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
@@ -381,6 +394,7 @@ TEST_F(ClientTest, ExchangeEapolFrames) {
     ASSERT_TRUE(llc_eapol_frame);
     EXPECT_EQ(llc_eapol_frame.body_len(), static_cast<size_t>(5));
     EXPECT_RANGES_EQ(llc_eapol_frame.body_data(), kEapolPdu);
+    AssertSendRate(std::move(pkt), CBW20, WLAN_PHY_HT, WLAN_TX_INFO_FLAGS_FAVOR_RELIABILITY);
     device.wlan_queue.clear();
 
     // Verify EAPOL.confirm message was sent to SME
@@ -396,7 +410,7 @@ TEST_F(ClientTest, ExchangeEapolFrames) {
                          common::MacAddr(kClientAddress), common::MacAddr(kBssid1)))));
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     pkt = std::move(*device.wlan_queue.begin());
-    frame = TypeCheckWlanFrame<DataFrameView<LlcHeader>>(pkt.get());
+    frame = TypeCheckWlanFrame<DataFrameView<LlcHeader>>(pkt.pkt.get());
     EXPECT_EQ(frame.hdr()->fc.protected_frame(), 1);
 }
 
@@ -847,14 +861,16 @@ TEST_F(ClientTest, BufferFramesWhileOffChannelAndSendWhenOnChannel) {
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
 
     auto pkt = std::move(*device.wlan_queue.begin());
-    auto frame = TypeCheckWlanFrame<DataFrameView<LlcHeader>>(pkt.get());
-    ASSERT_EQ(std::memcmp(frame.hdr()->addr1.byte, kBssid1, 6), 0);
-    ASSERT_EQ(std::memcmp(frame.hdr()->addr2.byte, kClientAddress, 6), 0);
-    ASSERT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
+    auto frame = TypeCheckWlanFrame<DataFrameView<LlcHeader>>(pkt.pkt.get());
+    EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, kBssid1, 6), 0);
+    EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kClientAddress, 6), 0);
+    EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
 
     auto llc_hdr = frame.body();
-    ASSERT_EQ(frame.body_len() - llc_hdr->len(), sizeof(kTestPayload));
-    ASSERT_EQ(std::memcmp(llc_hdr->payload, kTestPayload, sizeof(kTestPayload)), 0);
+    EXPECT_EQ(frame.body_len() - llc_hdr->len(), sizeof(kTestPayload));
+    EXPECT_EQ(std::memcmp(llc_hdr->payload, kTestPayload, sizeof(kTestPayload)), 0);
+
+    AssertSendRate(std::move(pkt), CBW20, WLAN_PHY_HT, 0);
 }
 
 TEST_F(ClientTest, InvalidAuthenticationResponse) {

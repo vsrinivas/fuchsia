@@ -46,7 +46,7 @@ struct AssocContext {
     std::optional<VhtCapabilities> vht_cap = std::nullopt;
     std::optional<VhtOperation> vht_op = std::nullopt;
 
-    PHY phy;
+    PHY phy = WLAN_PHY_OFDM;
     wlan_channel_t chan;
 
     bool is_cbw40_rx = false;

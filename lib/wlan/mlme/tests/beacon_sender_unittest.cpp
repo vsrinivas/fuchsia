@@ -105,10 +105,14 @@ TEST_F(BeaconSenderTest, ProbeRequest) {
     ASSERT_FALSE(device.wlan_queue.empty());
     auto pkt = std::move(*device.wlan_queue.begin());
 
-    auto checked = MgmtFrameView<ProbeResponse>::CheckType(pkt.get());
+    auto checked = MgmtFrameView<ProbeResponse>::CheckType(pkt.pkt.get());
     ASSERT_TRUE(checked);
     auto beacon_frame = checked.CheckLength();
     ASSERT_TRUE(beacon_frame);
+
+    EXPECT_EQ(pkt.cbw, CBW20);
+    EXPECT_EQ(pkt.phy, WLAN_PHY_OFDM);
+    EXPECT_EQ(pkt.flags, 0u);
 }
 
 TEST(BeaconSender, ShouldSendProbeResponse) {

@@ -97,9 +97,9 @@ class Station {
 
     zx_status_t SendAddBaRequestFrame();
 
-    // Send a non-data frame
     zx_status_t SendCtrlFrame(fbl::unique_ptr<Packet> packet, CBW cbw, PHY phy);
     zx_status_t SendMgmtFrame(fbl::unique_ptr<Packet> packet);
+    zx_status_t SendDataFrame(fbl::unique_ptr<Packet> packet, bool unicast, uint32_t flags = 0);
     zx_status_t SetPowerManagementMode(bool ps_mode);
     zx_status_t SendPsPoll();
     zx_status_t SendDeauthFrame(::fuchsia::wlan::mlme::ReasonCode reason_code);

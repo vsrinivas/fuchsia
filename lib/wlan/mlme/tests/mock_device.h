@@ -29,10 +29,17 @@ static constexpr uint8_t kClientAddress[] = {0x94, 0x3C, 0x49, 0x49, 0x9F, 0x2D}
 
 namespace {
 
+struct WlanPacket {
+    fbl::unique_ptr<Packet> pkt;
+    CBW cbw;
+    PHY phy;
+    uint32_t flags;
+};
+
 // TODO(hahnr): Support for failing various device calls.
 struct MockDevice : public DeviceInterface {
    public:
-    using PacketList = std::vector<fbl::unique_ptr<Packet>>;
+    using PacketList = std::vector<WlanPacket>;
     using KeyList = std::vector<wlan_key_config_t>;
 
     MockDevice(common::MacAddr addr = common::MacAddr(kClientAddress)) : sta_assoc_ctx_{} {
@@ -68,7 +75,12 @@ struct MockDevice : public DeviceInterface {
 
     zx_status_t SendWlan(fbl::unique_ptr<Packet> packet, CBW cbw, PHY phy,
                          uint32_t flags) override final {
-        wlan_queue.push_back(std::move(packet));
+        WlanPacket wlan_packet;
+        wlan_packet.pkt = std::move(packet);
+        wlan_packet.cbw = cbw;
+        wlan_packet.phy = phy;
+        wlan_packet.flags = flags;
+        wlan_queue.push_back(std::move(wlan_packet));
         return ZX_OK;
     }
 

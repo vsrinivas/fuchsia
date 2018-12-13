@@ -28,6 +28,12 @@ namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
 const std::vector<uint8_t> kTestPayload = {'F', 'u', 'c', 'h', 's', 'i', 'a'};
 
+void AssertSendRate(WlanPacket pkt, CBW cbw, PHY phy, uint32_t flags) {
+    EXPECT_EQ(pkt.cbw, cbw);
+    EXPECT_EQ(pkt.phy, phy);
+    EXPECT_EQ(pkt.flags, flags);
+}
+
 struct Context {
     Context(MockDevice* device, ApMlme* ap, common::MacAddr client_addr)
         : device(device), ap(ap), client_addr(client_addr) {}
@@ -157,23 +163,25 @@ struct Context {
                   static_cast<uint16_t>(wlan_mlme::ReasonCode::LEAVING_NETWORK_DISASSOC));
     }
 
-    void AssertAuthFrame(fbl::unique_ptr<Packet> pkt) {
-        auto frame = TypeCheckWlanFrame<MgmtFrameView<Authentication>>(pkt.get());
+    void AssertAuthFrame(WlanPacket pkt) {
+        auto frame = TypeCheckWlanFrame<MgmtFrameView<Authentication>>(pkt.pkt.get());
         EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, client_addr.byte, 6), 0);
         EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
         EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
         EXPECT_EQ(frame.body()->auth_algorithm_number, AuthAlgorithm::kOpenSystem);
         EXPECT_EQ(frame.body()->auth_txn_seq_number, 2);
         EXPECT_EQ(frame.body()->status_code, status_code::kSuccess);
+        AssertSendRate(std::move(pkt), CBW20, WLAN_PHY_OFDM, 0);
     }
 
-    void AssertAssocFrame(fbl::unique_ptr<Packet> pkt) {
-        auto frame = TypeCheckWlanFrame<MgmtFrameView<AssociationResponse>>(pkt.get());
+    void AssertAssocFrame(WlanPacket pkt) {
+        auto frame = TypeCheckWlanFrame<MgmtFrameView<AssociationResponse>>(pkt.pkt.get());
         EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, client_addr.byte, 6), 0);
         EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
         EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
         EXPECT_EQ(frame.body()->status_code, status_code::kSuccess);
         EXPECT_EQ(frame.body()->aid, kAid);
+        AssertSendRate(std::move(pkt), CBW20, WLAN_PHY_OFDM, 0);
     }
 
     struct DataFrameAssert {
@@ -181,11 +189,10 @@ struct Context {
         unsigned char more_data = 0;
     };
 
-    void AssertDataFrameSentToClient(fbl::unique_ptr<Packet> pkt,
-                                     std::vector<uint8_t> expected_payload,
+    void AssertDataFrameSentToClient(WlanPacket pkt, std::vector<uint8_t> expected_payload,
                                      DataFrameAssert asserts = {.protected_frame = 0,
                                                                 .more_data = 0}) {
-        auto frame = TypeCheckWlanFrame<DataFrameView<LlcHeader>>(pkt.get());
+        auto frame = TypeCheckWlanFrame<DataFrameView<LlcHeader>>(pkt.pkt.get());
         ASSERT_TRUE(frame);
         EXPECT_EQ(frame.hdr()->fc.more_data(), asserts.more_data);
         EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, client_addr.byte, 6), 0);
@@ -197,6 +204,8 @@ struct Context {
         EXPECT_EQ(frame.body_len() - llc_hdr->len(), expected_payload.size());
         EXPECT_EQ(std::memcmp(llc_hdr->payload, expected_payload.data(), expected_payload.size()),
                   0);
+
+        AssertSendRate(std::move(pkt), CBW20, WLAN_PHY_HT, 0);
     }
 
     void AssertEthFrame(std::vector<uint8_t> pkt, std::vector<uint8_t> expected_payload) {
@@ -274,13 +283,14 @@ TEST_F(ApInfraBssTest, Authenticate_SmeRefuses) {
     // Verify that authentication response frame for client is a refusal
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     auto pkt = std::move(*device.wlan_queue.begin());
-    auto frame = ctx.TypeCheckWlanFrame<MgmtFrameView<Authentication>>(pkt.get());
+    auto frame = ctx.TypeCheckWlanFrame<MgmtFrameView<Authentication>>(pkt.pkt.get());
     EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, ctx.client_addr.byte, 6), 0);
     EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
     EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
     EXPECT_EQ(frame.body()->auth_algorithm_number, AuthAlgorithm::kOpenSystem);
     EXPECT_EQ(frame.body()->auth_txn_seq_number, 2);
     EXPECT_EQ(frame.body()->status_code, status_code::kRefused);
+    AssertSendRate(std::move(pkt), CBW20, WLAN_PHY_OFDM, 0);
 }
 
 TEST_F(ApInfraBssTest, Authenticate_Timeout) {
@@ -434,20 +444,14 @@ TEST_F(ApInfraBssTest, Associate_MultipleClients) {
     ctx.SendEthFrame(kTestPayload);
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     auto pkt = std::move(*device.wlan_queue.begin());
-    auto frame = ctx.TypeCheckWlanFrame<DataFrameView<LlcHeader>>(pkt.get());
-    EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, ctx.client_addr.byte, 6), 0);
-    EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
-    EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
+    ctx.AssertDataFrameSentToClient(std::move(pkt), kTestPayload);
     device.wlan_queue.clear();
 
     // Test sending message to client 2
     client2_ctx.SendEthFrame(kTestPayload);
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     pkt = std::move(*device.wlan_queue.begin());
-    frame = client2_ctx.TypeCheckWlanFrame<DataFrameView<LlcHeader>>(pkt.get());
-    EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, client2_ctx.client_addr.byte, 6), 0);
-    EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
-    EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
+    client2_ctx.AssertDataFrameSentToClient(std::move(pkt), kTestPayload);
 }
 
 TEST_F(ApInfraBssTest, Associate_SmeRefuses) {
@@ -469,12 +473,13 @@ TEST_F(ApInfraBssTest, Associate_SmeRefuses) {
     // Verify association response frame for the client is a refusal
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     auto pkt = std::move(*device.wlan_queue.begin());
-    auto frame = ctx.TypeCheckWlanFrame<MgmtFrameView<AssociationResponse>>(pkt.get());
+    auto frame = ctx.TypeCheckWlanFrame<MgmtFrameView<AssociationResponse>>(pkt.pkt.get());
     EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, ctx.client_addr.byte, 6), 0);
     EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
     EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
     EXPECT_EQ(frame.body()->status_code, status_code::kRefusedCapabilitiesMismatch);
     EXPECT_EQ(frame.body()->aid, 0);
+    AssertSendRate(std::move(pkt), CBW20, WLAN_PHY_OFDM, 0);
 
     device.wlan_queue.clear();
     // Sending frame should be a no-op since association fails
@@ -665,7 +670,7 @@ TEST_F(ApInfraBssTest, Exchange_Eapol_Frames) {
     // Verify EAPOL frame was sent.
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     auto pkt = std::move(*device.wlan_queue.begin());
-    auto frame = ctx.TypeCheckWlanFrame<DataFrameView<LlcHeader>>(pkt.get());
+    auto frame = ctx.TypeCheckWlanFrame<DataFrameView<LlcHeader>>(pkt.pkt.get());
     EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, ctx.client_addr.byte, 6), 0);
     EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
     EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
@@ -676,6 +681,7 @@ TEST_F(ApInfraBssTest, Exchange_Eapol_Frames) {
     ASSERT_TRUE(llc_eapol_frame);
     EXPECT_EQ(llc_eapol_frame.body_len(), static_cast<size_t>(5));
     EXPECT_RANGES_EQ(llc_eapol_frame.body_data(), kEapolPdu);
+    AssertSendRate(std::move(pkt), CBW20, WLAN_PHY_HT, WLAN_TX_INFO_FLAGS_FAVOR_RELIABILITY);
 }
 
 TEST_F(ApInfraBssTest, SendFrameAfterAssociation) {
@@ -734,11 +740,12 @@ TEST_F(ApInfraBssTest, MlmeDeauthReqWhileAssociated) {
     // Verify deauthenticate frame was sent
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     auto pkt = std::move(*device.wlan_queue.begin());
-    auto frame = ctx.TypeCheckWlanFrame<MgmtFrameView<Deauthentication>>(pkt.get());
+    auto frame = ctx.TypeCheckWlanFrame<MgmtFrameView<Deauthentication>>(pkt.pkt.get());
     EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, kClientAddress, 6), 0);
     EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
     EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
     EXPECT_EQ(frame.body()->reason_code, static_cast<uint16_t>(reason_code));
+    AssertSendRate(std::move(pkt), CBW20, WLAN_PHY_OFDM, 0);
 }
 
 TEST_F(ApInfraBssTest, SetKeys) {
