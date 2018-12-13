@@ -22,7 +22,7 @@ zx_status_t zx_fifo_create(size_t elem_count,
 
 ## DESCRIPTION
 
-**fifo_create**() creates a fifo, which is actually a pair of fifos
+`zx_fifo_create()` creates a fifo, which is actually a pair of fifos
 of *elem_count* entries of *elem_size* bytes.  Two endpoints are
 returned.  Writing to one endpoint enqueues an element into the fifo
 that the opposing endpoint reads from.
@@ -45,7 +45,7 @@ TODO(ZX-2399)
 
 ## RETURN VALUE
 
-**fifo_create**() returns **ZX_OK** on success. In the event of
+`zx_fifo_create()` returns **ZX_OK** on success. In the event of
 failure, one of the following values is returned.
 
 ## ERRORS

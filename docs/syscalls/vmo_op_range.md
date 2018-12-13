@@ -23,7 +23,7 @@ zx_status_t zx_vmo_op_range(zx_handle_t handle,
 
 ## DESCRIPTION
 
-**vmo_op_range()** performs cache and memory operations against pages held by the VMO.
+`zx_vmo_op_range()` performs cache and memory operations against pages held by the VMO.
 
 *offset* byte offset specifying the starting location for *op* in the VMO's held memory.
 
@@ -75,7 +75,7 @@ If *op* is **ZX_VMO_OP_CACHE_CLEAN_INVALIDATE**, *handle* must be of type **ZX_O
 
 ## RETURN VALUE
 
-**vmo_op_range**() returns **ZX_OK** on success. In the event of failure, a negative error
+`zx_vmo_op_range()` returns **ZX_OK** on success. In the event of failure, a negative error
 value is returned.
 
 ## ERRORS

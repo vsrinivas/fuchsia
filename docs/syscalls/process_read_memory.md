@@ -22,7 +22,7 @@ zx_status_t zx_process_read_memory(zx_handle_t handle,
 
 ## DESCRIPTION
 
-**zx_process_read_memory**() attempts to read memory of the specified process.
+`zx_process_read_memory()` attempts to read memory of the specified process.
 
 This function will eventually be replaced with something vmo-centric.
 
@@ -46,7 +46,7 @@ mapped in the process.
 
 ## RETURN VALUE
 
-**zx_process_read_memory**() returns **ZX_OK** on success.
+`zx_process_read_memory()` returns **ZX_OK** on success.
 In the event of failure, a negative error value is returned, and the number of
 bytes written to *buffer* is undefined.
 

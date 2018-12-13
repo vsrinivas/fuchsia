@@ -26,10 +26,10 @@ address for `value_ptr` is not an error condition.
 
 ## OWNERSHIP
 
-A successful call to **futex_wake**() results in the owner of the futex being
+A successful call to `zx_futex_wake()` results in the owner of the futex being
 set to nothing, regardless of the wake count.  In order to transfer ownership of
-a futex, use the **futex_wake_single_owner**() variant instead.
-**futex_wake_single_owner**() will attempt to wake exactly one thread from the
+a futex, use the [`zx_futex_wake_single_owner()`] variant instead.
+[`zx_futex_wake_single_owner()`] will attempt to wake exactly one thread from the
 futex wait queue.  If there is at least one thread to wake, the owner of the
 futex will be set to the thread which was woken.  Otherwise, the futex will have
 no owner.
@@ -45,7 +45,7 @@ None.
 
 ## RETURN VALUE
 
-**futex_wake**() returns **ZX_OK** on success.
+`zx_futex_wake()` returns **ZX_OK** on success.
 
 ## ERRORS
 
@@ -57,3 +57,7 @@ None.
 [futex_requeue](futex_requeue.md),
 [futex_wait](futex_wait.md).
 [futex_wake_single_owner](futex_wake_single_owner.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_futex_wake_single_owner()`]: futex_wake_single_owner.md

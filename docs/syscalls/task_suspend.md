@@ -18,10 +18,10 @@ zx_status_t zx_task_suspend(zx_handle_t handle, zx_handle_t* token);
 
 ## DESCRIPTION
 
-**task_suspend**() causes the requested task to suspend
+`zx_task_suspend()` causes the requested task to suspend
 execution. Task suspension is not synchronous and the task might not
 be suspended before the call returns. The task will be suspended soon
-after **task_suspend**() is invoked, unless it is currently blocked in
+after `zx_task_suspend()` is invoked, unless it is currently blocked in
 the kernel, in which case it will suspend after being unblocked.
 
 Tasks can be suspended and/or resumed before they are started. If a task is
@@ -29,7 +29,7 @@ started while suspended, it will enter suspension before executing any code.
 Similarly, starting a new thread on a suspended process will suspend the thread
 before it executes any code.
 
-Invoking **task_kill**() on a task that is suspended will successfully kill
+Invoking [`zx_task_kill()`] on a task that is suspended will successfully kill
 the task.
 
 ## RESUMING
@@ -64,7 +64,7 @@ exceptions will also be sent on start whether the task is suspended or not.
 
 ## RETURN VALUE
 
-**task_suspend**() returns **ZX_OK** on success.
+`zx_task_suspend()` returns **ZX_OK** on success.
 In the event of failure, a negative error value is returned.
 
 ## ERRORS
@@ -82,3 +82,7 @@ In the event of failure, a negative error value is returned.
 ## LIMITATIONS
 
 Currently only thread and process handles are supported.
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_task_kill()`]: task_kill.md

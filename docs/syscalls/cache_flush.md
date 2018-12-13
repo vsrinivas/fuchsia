@@ -18,7 +18,7 @@ zx_status_t zx_cache_flush(const void* addr, size_t size, uint32_t options);
 
 ## DESCRIPTION
 
-**zx_cache_flush**() flushes CPU caches covering memory in the given
+`zx_cache_flush()` flushes CPU caches covering memory in the given
 virtual address range.  If that range of memory is not readable, then
 the thread may fault as it would for a data read.
 
@@ -54,7 +54,7 @@ TODO(ZX-2399)
 
 ## RETURN VALUE
 
-**zx_cache_flush**() returns **ZX_OK** on success, or an error code on failure.
+`zx_cache_flush()` returns **ZX_OK** on success, or an error code on failure.
 
 ## ERRORS
 

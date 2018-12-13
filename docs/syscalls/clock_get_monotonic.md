@@ -18,7 +18,7 @@ zx_time_t zx_clock_get_monotonic(void);
 
 ## DESCRIPTION
 
-**zx_clock_get_monotonic**() returns the current time in the system
+`zx_clock_get_monotonic()` returns the current time in the system
 monotonic clock. This is the number of nanoseconds since the system was
 powered on.
 
@@ -30,8 +30,12 @@ TODO(ZX-2399)
 
 ## RETURN VALUE
 
-**zx_clock_get**() returns the current monotonic time.
+[`zx_clock_get()`] returns the current monotonic time.
 
 ## ERRORS
 
-**zx_clock_get_monotonic**() cannot fail.
+`zx_clock_get_monotonic()` cannot fail.
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_clock_get()`]: clock_get.md

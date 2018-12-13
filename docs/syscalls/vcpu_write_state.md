@@ -21,7 +21,7 @@ zx_status_t zx_vcpu_write_state(zx_handle_t handle,
 
 ## DESCRIPTION
 
-**vcpu_write_state**() writes the state of *handle* as specified by *kind* from
+`zx_vcpu_write_state()` writes the state of *handle* as specified by *kind* from
 *buffer*. It is only valid to write the state of *handle* when execution has been
 paused.
 
@@ -35,7 +35,7 @@ paused.
 
 ## RETURN VALUE
 
-**vcpu_write_state**() returns ZX_OK on success. On failure, an error value is
+`zx_vcpu_write_state()` returns ZX_OK on success. On failure, an error value is
 returned.
 
 ## ERRORS

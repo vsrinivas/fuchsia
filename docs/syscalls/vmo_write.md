@@ -21,7 +21,7 @@ zx_status_t zx_vmo_write(zx_handle_t handle,
 
 ## DESCRIPTION
 
-**vmo_write**() attempts to write exactly *buffer_size* bytes to a VMO at *offset*.
+`zx_vmo_write()` attempts to write exactly *buffer_size* bytes to a VMO at *offset*.
 
 *buffer* pointer to a user buffer to write bytes from.
 
@@ -35,7 +35,7 @@ zx_status_t zx_vmo_write(zx_handle_t handle,
 
 ## RETURN VALUE
 
-**zx_vmo_write**() returns **ZX_OK** on success, and exactly *buffer_size* bytes will
+`zx_vmo_write()` returns **ZX_OK** on success, and exactly *buffer_size* bytes will
 have been written from *buffer*.
 In the event of failure, a negative error value is returned, and the number of
 bytes written from *buffer* is undefined.

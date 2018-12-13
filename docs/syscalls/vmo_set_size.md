@@ -18,10 +18,10 @@ zx_status_t zx_vmo_set_size(zx_handle_t handle, uint64_t size);
 
 ## DESCRIPTION
 
-**vmo_set_size**() sets the new size of a VMO object.
+`zx_vmo_set_size()` sets the new size of a VMO object.
 
 The size will be rounded up to the next page size boundary.
-Subsequent calls to **vmo_get_size**() will return the rounded up size.
+Subsequent calls to [`zx_vmo_get_size()`] will return the rounded up size.
 
 ## RIGHTS
 
@@ -31,7 +31,7 @@ Subsequent calls to **vmo_get_size**() will return the rounded up size.
 
 ## RETURN VALUE
 
-**vmo_set_size**() returns **ZX_OK** on success. In the event
+`zx_vmo_set_size()` returns **ZX_OK** on success. In the event
 of failure, a negative error value is returned.
 
 ## ERRORS
@@ -56,3 +56,7 @@ of failure, a negative error value is returned.
 [vmo_write](vmo_write.md),
 [vmo_get_size](vmo_get_size.md),
 [vmo_op_range](vmo_op_range.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_vmo_get_size()`]: vmo_get_size.md

@@ -19,7 +19,7 @@ zx_status_t zx_handle_close_many(const zx_handle_t* handles,
 
 ## DESCRIPTION
 
-**handle_close_many**() closes a number of handles, causing each
+`zx_handle_close_many()` closes a number of handles, causing each
 underlying object to be reclaimed by the kernel if no other handles to
 it exist.
 
@@ -40,7 +40,7 @@ None.
 
 ## RETURN VALUE
 
-**handle_close_many**() returns **ZX_OK** on success.
+`zx_handle_close_many()` returns **ZX_OK** on success.
 
 ## ERRORS
 

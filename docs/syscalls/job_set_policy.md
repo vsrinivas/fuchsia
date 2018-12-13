@@ -100,7 +100,7 @@ implies **ZX_POL_ACTION_DENY**.
 
 ## RETURN VALUE
 
-**zx_job_set_policy**() returns **ZX_OK** on success.  In the event of failure,
+`zx_job_set_policy()` returns **ZX_OK** on success.  In the event of failure,
 a negative error value is returned.
 
 ## NOTES

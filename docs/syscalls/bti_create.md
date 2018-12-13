@@ -21,7 +21,7 @@ zx_status_t zx_bti_create(zx_handle_t iommu,
 
 ## DESCRIPTION
 
-**bti_create**() creates a new [bus transaction initiator](../objects/bus_transaction_initiator.md)
+`zx_bti_create()` creates a new [bus transaction initiator](../objects/bus_transaction_initiator.md)
 given a handle to an IOMMU and a hardware transaction identifier for a device
 downstream of that IOMMU.
 
@@ -39,7 +39,7 @@ Upon success a handle for the new BTI is returned.  This handle will have rights
 
 ## RETURN VALUE
 
-**bti_create**() returns **ZX_OK** and a handle to the new BTI
+`zx_bti_create()` returns **ZX_OK** and a handle to the new BTI
 (via *out*) on success.  In the event of failure, a negative error value
 is returned.
 

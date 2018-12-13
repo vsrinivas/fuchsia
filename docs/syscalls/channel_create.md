@@ -20,7 +20,7 @@ zx_status_t zx_channel_create(uint32_t options,
 
 ## DESCRIPTION
 
-**channel_create**() creates a channel, a bi-directional
+`zx_channel_create()` creates a channel, a bi-directional
 datagram-style message transport capable of sending raw data bytes
 as well as handles from one side to the other.
 
@@ -42,7 +42,7 @@ TODO(ZX-2399)
 
 ## RETURN VALUE
 
-**channel_create**() returns **ZX_OK** on success. In the event
+`zx_channel_create()` returns **ZX_OK** on success. In the event
 of failure, a negative error value is returned.
 
 ## ERRORS

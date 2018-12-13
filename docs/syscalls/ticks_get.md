@@ -18,7 +18,7 @@ zx_ticks_t zx_ticks_get(void);
 
 ## DESCRIPTION
 
-**zx_ticks_get**() returns the number of high-precision timer ticks since boot.
+`zx_ticks_get()` returns the number of high-precision timer ticks since boot.
 
 These ticks may be processor cycles, high speed timer, profiling timer, etc.
 They are not guaranteed to continue advancing when the system is asleep.
@@ -31,7 +31,7 @@ TODO(ZX-2399)
 
 ## RETURN VALUE
 
-**zx_ticks_get**() returns the number of high-precision timer ticks since boot.
+`zx_ticks_get()` returns the number of high-precision timer ticks since boot.
 
 ## ERRORS
 

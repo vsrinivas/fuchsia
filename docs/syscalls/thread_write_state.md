@@ -21,7 +21,7 @@ zx_status_t zx_thread_write_state(zx_handle_t handle,
 
 ## DESCRIPTION
 
-**thread_write_state**() writes one aspect of state of the thread. The thread
+`zx_thread_write_state()` writes one aspect of state of the thread. The thread
 state may only be written when the thread is halted for an exception or the
 thread is suspended.
 
@@ -58,7 +58,7 @@ You can get the current state of the registers by calling
 
 ## RETURN VALUE
 
-**thread_write_state**() returns **ZX_OK** on success.
+`zx_thread_write_state()` returns **ZX_OK** on success.
 In the event of failure, a negative error value is returned.
 
 ## ERRORS

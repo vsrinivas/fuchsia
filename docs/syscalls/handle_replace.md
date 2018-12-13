@@ -20,7 +20,7 @@ zx_status_t zx_handle_replace(zx_handle_t handle,
 
 ## DESCRIPTION
 
-**handle_replace**() creates a replacement for *handle*, referring to
+`zx_handle_replace()` creates a replacement for *handle*, referring to
 the same underlying object, with new access rights *rights*.
 
 *handle* is always invalidated.
@@ -37,7 +37,7 @@ None.
 
 ## RETURN VALUE
 
-**handle_replace**() returns **ZX_OK** and the replacement handle (via *out*)
+`zx_handle_replace()` returns **ZX_OK** and the replacement handle (via *out*)
 on success.
 
 ## ERRORS

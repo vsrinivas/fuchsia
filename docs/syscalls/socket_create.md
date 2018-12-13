@@ -20,7 +20,7 @@ zx_status_t zx_socket_create(uint32_t options,
 
 ## DESCRIPTION
 
-**socket_create**() creates a socket, a connected pair of
+`zx_socket_create()` creates a socket, a connected pair of
 bidirectional stream transports, that can move only data, and that
 have a maximum capacity.
 
@@ -33,7 +33,7 @@ The **ZX_SOCKET_HAS_CONTROL** flag may be set to enable the
 socket control plane.
 
 The **ZX_SOCKET_HAS_ACCEPT** flag may be set to enable transfer
-of sockets over this socket via **socket_share**() and **socket_accept**().
+of sockets over this socket via [`zx_socket_share()`] and [`zx_socket_accept()`].
 
 ## RIGHTS
 
@@ -43,7 +43,7 @@ TODO(ZX-2399)
 
 ## RETURN VALUE
 
-**socket_create**() returns **ZX_OK** on success. In the event of
+`zx_socket_create()` returns **ZX_OK** on success. In the event of
 failure, one of the following values is returned.
 
 ## ERRORS
@@ -66,3 +66,8 @@ The maximum capacity is not currently set-able.
 [socket_share](socket_share.md),
 [socket_shutdown](socket_shutdown.md),
 [socket_write](socket_write.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_socket_accept()`]: socket_accept.md
+[`zx_socket_share()`]: socket_share.md

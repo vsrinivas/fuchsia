@@ -21,7 +21,7 @@ zx_status_t zx_vmo_create_physical(zx_handle_t resource,
 
 ## DESCRIPTION
 
-**vmo_create_physical**() creates a new virtual memory object (VMO), which represents the
+`zx_vmo_create_physical()` creates a new virtual memory object (VMO), which represents the
 *size* bytes of physical memory beginning at physical address *paddr*.
 
 One handle is returned on success, representing an object with the requested
@@ -54,8 +54,8 @@ spaces exist.
 
 ## NOTES
 
-The VMOs created by this syscall are not usable with **vmo_read**() and
-**vmo_write**().
+The VMOs created by this syscall are not usable with [`zx_vmo_read()`] and
+[`zx_vmo_write()`].
 
 ## RIGHTS
 
@@ -65,7 +65,7 @@ The VMOs created by this syscall are not usable with **vmo_read**() and
 
 ## RETURN VALUE
 
-**vmo_create_physical**() returns **ZX_OK** on success. In the event
+`zx_vmo_create_physical()` returns **ZX_OK** on success. In the event
 of failure, a negative error value is returned.
 
 ## ERRORS
@@ -85,3 +85,8 @@ In a future build this error will no longer occur.
 ## SEE ALSO
 
 [vmar_map](vmar_map.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_vmo_read()`]: vmo_read.md
+[`zx_vmo_write()`]: vmo_write.md

@@ -18,7 +18,7 @@ zx_status_t zx_socket_shutdown(zx_handle_t handle, uint32_t options);
 
 ## DESCRIPTION
 
-**socket_shutdown**() attempts to prevent future reads or writes on a socket,
+`zx_socket_shutdown()` attempts to prevent future reads or writes on a socket,
 where options can be a combination of **ZX_SOCKET_SHUTDOWN_READ** and
 **ZX_SOCKET_SHUTDOWN_WRITE**:
 
@@ -41,7 +41,7 @@ where options can be a combination of **ZX_SOCKET_SHUTDOWN_READ** and
 
 ## RETURN VALUE
 
-**socket_shutdown**() returns **ZX_OK** on success.
+`zx_socket_shutdown()` returns **ZX_OK** on success.
 
 ## ERRORS
 

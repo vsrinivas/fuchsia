@@ -22,7 +22,7 @@ zx_status_t zx_thread_create(zx_handle_t process,
 
 ## DESCRIPTION
 
-**thread_create**() creates a thread within the specified process.
+`zx_thread_create()` creates a thread within the specified process.
 
 Upon success a handle for the new thread is returned.  The thread
 will not start executing until *thread_start()* is called.
@@ -31,7 +31,7 @@ will not start executing until *thread_start()* is called.
 
 Thread handles may be waited on and will assert the signal
 *ZX_THREAD_TERMINATED* when the thread stops executing (due to
-**thread_exit**() being called).
+[`zx_thread_exit()`] being called).
 
 *process* is the controlling [process object](../objects/process.md) for the
 new thread, which will become a child of that process.
@@ -46,7 +46,7 @@ For thread lifecycle details see [thread object](../objects/thread.md).
 
 ## RETURN VALUE
 
-On success, **thread_create**() returns **ZX_OK** and a handle (via *out*)
+On success, `zx_thread_create()` returns **ZX_OK** and a handle (via *out*)
 to the new thread.  In the event of failure, a negative error value is
 returned.
 
@@ -74,3 +74,7 @@ In a future build this error will no longer occur.
 [object_wait_many](object_wait_many.md),
 [thread_exit](thread_exit.md),
 [thread_start](thread_start.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_thread_exit()`]: thread_exit.md

@@ -18,7 +18,7 @@ zx_status_t zx_handle_close(zx_handle_t handle);
 
 ## DESCRIPTION
 
-**handle_close**() closes a *handle*, causing the underlying object to be
+`zx_handle_close()` closes a *handle*, causing the underlying object to be
 reclaimed by the kernel if no other handles to it exist.
 
 If the *handle* was used in a pending [object_wait_one](object_wait_one.md) or a
@@ -35,7 +35,7 @@ None.
 
 ## RETURN VALUE
 
-**handle_close**() returns **ZX_OK** on success.
+`zx_handle_close()` returns **ZX_OK** on success.
 
 ## ERRORS
 

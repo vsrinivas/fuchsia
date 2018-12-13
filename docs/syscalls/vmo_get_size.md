@@ -18,7 +18,7 @@ zx_status_t zx_vmo_get_size(zx_handle_t handle, uint64_t* size);
 
 ## DESCRIPTION
 
-**vmo_get_size**() returns the current size of the VMO.
+`zx_vmo_get_size()` returns the current size of the VMO.
 
 ## RIGHTS
 
@@ -28,7 +28,7 @@ TODO(ZX-2399)
 
 ## RETURN VALUE
 
-**vmo_get_size**() returns **ZX_OK** on success. In the event
+`zx_vmo_get_size()` returns **ZX_OK** on success. In the event
 of failure, a negative error value is returned.
 
 ## ERRORS

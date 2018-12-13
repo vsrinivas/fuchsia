@@ -20,19 +20,19 @@ zx_status_t zx_timer_set(zx_handle_t handle,
 
 ## DESCRIPTION
 
-**zx_timer_set**() starts a one-shot timer that will fire when
-*deadline* passes. If a previous call to **zx_timer_set**() was
+`zx_timer_set()` starts a one-shot timer that will fire when
+*deadline* passes. If a previous call to `zx_timer_set()` was
 pending, the previous timer is canceled and
 **ZX_TIMER_SIGNALED** is de-asserted as needed.
 
 The *deadline* parameter specifies a deadline with respect to
 **ZX_CLOCK_MONOTONIC**. To wait for a relative interval,
-use **zx_deadline_after**() returned value in *deadline*.
+use [`zx_deadline_after()`] returned value in *deadline*.
 
 To fire the timer immediately pass a *deadline* less than or equal to **0**.
 
 When the timer fires it asserts **ZX_TIMER_SIGNALED**. To de-assert this
-signal call **timer_cancel**() or **timer_set**() again.
+signal call [`zx_timer_cancel()`] or `zx_timer_set()` again.
 
 The *slack* parameter specifies a range from *deadline* - *slack* to
 *deadline* + *slack* during which the timer is allowed to fire. The system
@@ -54,7 +54,7 @@ late firing with an effective interval of *deadline* - *slack* to
 
 ## RETURN VALUE
 
-**zx_timer_set**() returns **ZX_OK** on success.
+`zx_timer_set()` returns **ZX_OK** on success.
 In the event of failure, a negative error value is returned.
 
 
@@ -71,3 +71,8 @@ In the event of failure, a negative error value is returned.
 [timer_create](timer_create.md),
 [timer_cancel](timer_cancel.md),
 [deadline_after](deadline_after.md)
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_deadline_after()`]: deadline_after.md
+[`zx_timer_cancel()`]: timer_cancel.md

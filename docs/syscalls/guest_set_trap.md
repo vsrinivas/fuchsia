@@ -23,20 +23,20 @@ zx_status_t zx_guest_set_trap(zx_handle_t handle,
 
 ## DESCRIPTION
 
-**guest_set_trap**() sets a trap within a guest, which generates a packet when
+`zx_guest_set_trap()` sets a trap within a guest, which generates a packet when
 there is an access by a VCPU within the address range defined by *addr* and
 *size*, within the address space defined by *kind*.
 
 If *port_handle* is specified, a packet for the trap will be delivered through
 *port_handle* each time the trap is triggered, otherwise if *ZX_HANDLE_INVALID*
-is given, a packet will be delivered through **vcpu_resume**(). This provides
+is given, a packet will be delivered through [`zx_vcpu_resume()`]. This provides
 control over whether the packet is delivered asynchronously or synchronously.
 
 When *port_handle* is specified, a fixed number of packets are pre-allocated
 per trap. If all the packets are exhausted, execution of the VCPU that caused
 the trap will be paused. When at least one packet is dequeued, execution of the
-VCPU will resume. To dequeue a packet from *port_handle*, use **port_wait**().
-Multiple threads may use **port_wait**() to dequeue packets, enabling the use
+VCPU will resume. To dequeue a packet from *port_handle*, use [`zx_port_wait()`].
+Multiple threads may use [`zx_port_wait()`] to dequeue packets, enabling the use
 of a thread pool to handle traps.
 
 *key* is used to set the key field within *zx_port_packet_t*, and can be used to
@@ -69,7 +69,7 @@ indicates that the guest requested to start an additional VCPU.
 
 ## RETURN VALUE
 
-**guest_set_trap**() returns ZX_OK on success. On failure, an error value is
+`zx_guest_set_trap()` returns ZX_OK on success. On failure, an error value is
 returned.
 
 ## ERRORS
@@ -116,3 +116,8 @@ acceleration when available.
 [vcpu_interrupt](vcpu_interrupt.md),
 [vcpu_read_state](vcpu_read_state.md),
 [vcpu_write_state](vcpu_write_state.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_port_wait()`]: port_wait.md
+[`zx_vcpu_resume()`]: vcpu_resume.md

@@ -24,7 +24,7 @@ zx_status_t zx_resource_create(zx_handle_t parent_rsrc,
 
 ## DESCRIPTION
 
-**resource_create**() creates an resource object for use with other DDK
+`zx_resource_create()` creates an resource object for use with other DDK
 syscalls. Resources are typically handed out to bus drivers and rarely need to
 be interacted with directly by drivers using driver protocols. Resource objects
 grant access to an address space range starting at *base* up to but not
@@ -55,14 +55,14 @@ On success, a valid resource handle is returned in *resource_out*.
 
 ## RETURN VALUE
 
-**resource_create**() returns **ZX_OK** on success. In the event of failure, a
+`zx_resource_create()` returns **ZX_OK** on success. In the event of failure, a
 negative error value is returned.
 
 The returned handle will have **ZX_RIGHT_TRANSFER** (allowing it to be sent to
 another process via channel write), **ZX_RIGHT_DUPLICATE** (allowing the handle
 to be duplicated), **ZX_RIGHT_INSPECT** (to allow inspection of the object with
 [object_get_info](object_get_info.md) and **ZX_RIGHT_WRITE** which is checked by
-**resource_create**() itself.
+`zx_resource_create()` itself.
 
 ## RIGHTS
 
@@ -93,4 +93,3 @@ longer occur.
 [handle_close](handle_close.md), [interrupt_create](interrupt_create.md),
 [ioports_request](ioports_request.md),
 [vmo_create_physical](vmo_create_physical.md)
-

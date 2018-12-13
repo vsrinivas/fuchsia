@@ -18,11 +18,11 @@ zx_ticks_t zx_ticks_per_second(void);
 
 ## DESCRIPTION
 
-**zx_ticks_per_second**() returns the number of high-precision timer ticks in a
+`zx_ticks_per_second()` returns the number of high-precision timer ticks in a
 second.
 
-This can be used together with **zx_ticks_get**() to calculate the amount of
-time elapsed between two subsequent calls to **zx_ticks_get**().
+This can be used together with [`zx_ticks_get()`] to calculate the amount of
+time elapsed between two subsequent calls to [`zx_ticks_get()`].
 
 This value can vary from boot to boot of a given system. Once booted,
 this value is guaranteed not to change.
@@ -35,12 +35,12 @@ TODO(ZX-2399)
 
 ## RETURN VALUE
 
-**zx_ticks_per_second**() returns the number of high-precision timer ticks in a
+`zx_ticks_per_second()` returns the number of high-precision timer ticks in a
 second.
 
 ## ERRORS
 
-**zx_ticks_per_second**() does not report any error conditions.
+`zx_ticks_per_second()` does not report any error conditions.
 
 ## EXAMPLES
 
@@ -58,3 +58,7 @@ double elapsed_seconds = (ticks_end - ticks_start) / (double)ticks_per_second;
 ## SEE ALSO
 
 [ticks_get](ticks_get.md)
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_ticks_get()`]: ticks_get.md

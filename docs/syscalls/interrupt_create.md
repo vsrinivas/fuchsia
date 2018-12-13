@@ -21,7 +21,7 @@ zx_status_t zx_interrupt_create(zx_handle_t src_obj,
 
 ## DESCRIPTION
 
-**interrupt_create**() creates an interrupt object which represents a physical
+`zx_interrupt_create()` creates an interrupt object which represents a physical
 or virtual interrupt.
 
 If *options* is **ZX_INTERRUPT_VIRTUAL**, *src_obj* and *src_num* are ignored and
@@ -37,14 +37,14 @@ Physical interrupts honor the options **ZX_INTERRUPT_EDGE_LOW**, **ZX_INTERRUPT_
 
 The handles will have *ZX_RIGHT_INSPECT*, *ZX_RIGHT_DUPLICATE*, *ZX_RIGHT_TRANSFER*
 (allowing them to be sent to another process via channel write), *ZX_RIGHT_READ*,
-*ZX_RIGHT_WRITE* (required for **interrupt_ack**()), *ZX_RIGHT_WAIT* (required for
-**interrupt_wait**(), and *ZX_RIGHT_SIGNAL* (required for **interrupt_trigger**()).
+*ZX_RIGHT_WRITE* (required for [`zx_interrupt_ack()`]), *ZX_RIGHT_WAIT* (required for
+[`zx_interrupt_wait()`], and *ZX_RIGHT_SIGNAL* (required for [`zx_interrupt_trigger()`]).
 
 Interrupts are said to be "triggered" when the underlying physical interrupt occurs
-or when **interrupt_trigger**() is called on a virtual interrupt.  A triggered interrupt,
-when bound to a port with **interrupt_bind**(), causes a packet to be delivered to the port.
+or when [`zx_interrupt_trigger()`] is called on a virtual interrupt.  A triggered interrupt,
+when bound to a port with [`zx_interrupt_bind()`], causes a packet to be delivered to the port.
 
-If not bound to a port, an interrupt object may be waited on with **interrupt_wait**().
+If not bound to a port, an interrupt object may be waited on with [`zx_interrupt_wait()`].
 
 Interrupts cannot be waited on with the **object_wait_** family of calls.
 
@@ -56,7 +56,7 @@ Interrupts cannot be waited on with the **object_wait_** family of calls.
 
 ## RETURN VALUE
 
-**interrupt_create**() returns **ZX_OK** on success. In the event
+`zx_interrupt_create()` returns **ZX_OK** on success. In the event
 of failure, a negative error value is returned.
 
 ## ERRORS
@@ -82,3 +82,10 @@ In a future build this error will no longer occur.
 [interrupt_wait](interrupt_wait.md),
 [port_wait](port_wait.md),
 [handle_close](handle_close.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_interrupt_ack()`]: interrupt_ack.md
+[`zx_interrupt_bind()`]: interrupt_bind.md
+[`zx_interrupt_trigger()`]: interrupt_trigger.md
+[`zx_interrupt_wait()`]: interrupt_wait.md

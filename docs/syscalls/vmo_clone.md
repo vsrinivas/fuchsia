@@ -22,7 +22,7 @@ zx_status_t zx_vmo_clone(zx_handle_t handle,
 
 ## DESCRIPTION
 
-**vmo_clone**() creates a new virtual memory object (VMO) that clones a range
+`zx_vmo_clone()` creates a new virtual memory object (VMO) that clones a range
 of an existing vmo.
 
 One handle is returned on success, representing an object with the requested
@@ -71,14 +71,14 @@ active again.
 VMOs produced by this mode will interact with the VMO syscalls in the following
 ways:
 
-- The DECOMMIT and COMMIT modes of **vmo_op_range**() on a clone will only affect pages
+- The DECOMMIT and COMMIT modes of [`zx_vmo_op_range()`] on a clone will only affect pages
   allocated to the clone, never its parent.
-- If a page in a clone is decommitted (e.g. with **vmo_op_range**()), the parent's page will
+- If a page in a clone is decommitted (e.g. with [`zx_vmo_op_range()`]), the parent's page will
   become visible once again, still with copy-on-write semantics.
-- If a page is committed to a clone using the **vmo_op_range**() COMMIT mode, a
+- If a page is committed to a clone using the [`zx_vmo_op_range()`] COMMIT mode, a
   the new page will have the same contents as the parent's corresponding page
   (or zero-filled if no such page exists).
-- If the **vmo_op_range**() LOOKUP mode is used, the parent's pages will be visible
+- If the [`zx_vmo_op_range()`] LOOKUP mode is used, the parent's pages will be visible
   where the clone has not modified them.
 
 ## RIGHTS
@@ -89,7 +89,7 @@ ways:
 
 ## RETURN VALUE
 
-**vmo_clone**() returns **ZX_OK** on success. In the event
+`zx_vmo_clone()` returns **ZX_OK** on success. In the event
 of failure, a negative error value is returned.
 
 ## ERRORS
@@ -116,3 +116,7 @@ In a future build this error will no longer occur.
 [vmo_get_size](vmo_get_size.md),
 [vmo_op_range](vmo_op_range.md),
 [vmar_map](vmar_map.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_vmo_op_range()`]: vmo_op_range.md

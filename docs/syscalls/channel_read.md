@@ -25,7 +25,7 @@ zx_status_t zx_channel_read(zx_handle_t handle,
 
 ## DESCRIPTION
 
-**channel_read**() attempts to read the first message from the channel
+`zx_channel_read()` attempts to read the first message from the channel
 specified by *handle* into the provided *bytes* and/or *handles* buffers.
 
 The parameters *num_bytes* and *num_handles* are used to specify the

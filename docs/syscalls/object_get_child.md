@@ -21,7 +21,7 @@ zx_status_t zx_object_get_child(zx_handle_t handle,
 
 ## DESCRIPTION
 
-**zx_object_get_child** attempts to find a child of the object referred to
+`zx_object_get_child()` attempts to find a child of the object referred to
 by *handle* which has the kernel object id specified by *koid*.  If such an
 object exists, and the requested *rights* are not greater than those provided
 by the *handle* to the parent, a new handle to the specified child object is

@@ -18,7 +18,7 @@ thread_exit - terminate the current running thread
 
 ## DESCRIPTION
 
-**thread_exit**() causes the currently running thread to cease
+`zx_thread_exit()` causes the currently running thread to cease
 running and exit.
 
 The signal *ZX_THREAD_TERMINATED* will be asserted on the thread
@@ -33,7 +33,7 @@ TODO(ZX-2399)
 
 ## RETURN VALUE
 
-**thread_exit**() does not return.
+`zx_thread_exit()` does not return.
 
 ## SEE ALSO
 

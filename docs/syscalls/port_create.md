@@ -18,7 +18,7 @@ zx_status_t zx_port_create(uint32_t options, zx_handle_t* out);
 
 ## DESCRIPTION
 
-**port_create**() creates a port: a waitable object that can be used to read
+`zx_port_create()` creates a port: a waitable object that can be used to read
 packets queued by kernel or by user-mode.
 
 If you need this port to be bound to an interrupt, pass **ZX_PORT_BIND_TO_INTERRUPT** to *options*,
@@ -41,7 +41,7 @@ TODO(ZX-2399)
 
 ## RETURN VALUE
 
-**port_create**() returns **ZX_OK** and a valid IO port handle via *out* on
+`zx_port_create()` returns **ZX_OK** and a valid IO port handle via *out* on
 success. In the event of failure, an error value is returned.
 
 ## ERRORS

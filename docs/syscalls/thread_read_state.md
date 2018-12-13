@@ -21,7 +21,7 @@ zx_status_t zx_thread_read_state(zx_handle_t handle,
 
 ## DESCRIPTION
 
-**thread_read_state**() reads one aspect of state of the thread. The thread
+`zx_thread_read_state()` reads one aspect of state of the thread. The thread
 state may only be read when the thread is halted for an exception or the thread
 is suspended.
 
@@ -73,7 +73,7 @@ a uint64. This is only relevant on x86 platforms.
 
 ## RETURN VALUE
 
-**thread_read_state**() returns **ZX_OK** on success.
+`zx_thread_read_state()` returns **ZX_OK** on success.
 In the event of failure, a negative error value is returned.
 
 ## ERRORS

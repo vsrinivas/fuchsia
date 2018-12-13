@@ -22,7 +22,7 @@ futex_wake_handle_close_thread_exit - write to futex, wake futex, close handle, 
 
 ## DESCRIPTION
 
-**futex_wake_handle_close_thread_exit**() does a sequence of four operations:
+`zx_futex_wake_handle_close_thread_exit()` does a sequence of four operations:
 1. `atomic_store_explicit(value_ptr, new_value, memory_order_release);`
 2. `zx_futex_wake(value_ptr, wake_count);`
 3. `zx_handle_close(close_handle);`
@@ -43,7 +43,7 @@ TODO(ZX-2399)
 
 ## RETURN VALUE
 
-**futex_wake_handle_close_thread_exit**() does not return.
+`zx_futex_wake_handle_close_thread_exit()` does not return.
 
 ## ERRORS
 

@@ -23,21 +23,21 @@ zx_status_t zx_channel_call(zx_handle_t handle,
 
 ## DESCRIPTION
 
-**channel_call**() is like a combined **channel_write**(), **object_wait_one**(),
-and **channel_read**(), with the addition of a feature where a transaction id at
+`zx_channel_call()` is like a combined [`zx_channel_write()`], [`zx_object_wait_one()`],
+and [`zx_channel_read()`], with the addition of a feature where a transaction id at
 the front of the message payload *bytes* is used to match reply messages with send
 messages, enabling multiple calling threads to share a channel without any additional
 userspace bookkeeping.
 
-The write and read phases of this operation behave like **channel_write**() and
-**channel_read**() with the difference that their parameters are provided via the
+The write and read phases of this operation behave like [`zx_channel_write()`] and
+[`zx_channel_read()`] with the difference that their parameters are provided via the
 *zx_channel_call_args_t* structure.
 
 The first four bytes of the written and read back messages are treated as a
 transaction ID of type **zx_txid_t**.  The kernel generates a txid for the
 written message, replacing that part of the message as read from userspace.
 The kernel generated txid will be between 0x80000000 and 0xFFFFFFFF, and will
-not collide with any txid from any other **channel_call**() in progress against
+not collide with any txid from any other `zx_channel_call()` in progress against
 this channel endpoint.  If the written message has a length of fewer than four
 bytes, an error is reported.
 
@@ -46,7 +46,7 @@ for inbound messages of the matching txid.
 
 While *deadline* has not passed, if an inbound message arrives with a matching txid,
 instead of being added to the tail of the general inbound message queue, it is delivered
-directly to the thread waiting in **zx_channel_call**().
+directly to the thread waiting in `zx_channel_call()`.
 
 If such a reply arrives after *deadline* has passed, it will arrive in the general
 inbound message queue, cause **ZX_CHANNEL_READABLE** to be signaled, etc.
@@ -54,8 +54,8 @@ inbound message queue, cause **ZX_CHANNEL_READABLE** to be signaled, etc.
 Inbound messages that are too large to fit in *rd_num_bytes* and *rd_num_handles*
 are discarded and **ZX_ERR_BUFFER_TOO_SMALL** is returned in that case.
 
-As with **zx_channel_write**(), the handles in *handles* are always consumed by
-**zx_channel_call**() and no longer exist in the calling process.
+As with [`zx_channel_write()`], the handles in *handles* are always consumed by
+`zx_channel_call()` and no longer exist in the calling process.
 
 ## RIGHTS
 
@@ -67,7 +67,7 @@ All wr_handles of *args* must have **ZX_RIGHT_TRANSFER**.
 
 ## RETURN VALUE
 
-**channel_call**() returns **ZX_OK** on success and the number of bytes and
+`zx_channel_call()` returns **ZX_OK** on success and the number of bytes and
 count of handles in the reply message are returned via *actual_bytes* and
 *actual_handles*, respectively.
 
@@ -105,21 +105,21 @@ to contain the reply message.
 
 ## NOTES
 
-The facilities provided by **channel_call**() can interoperate with message dispatchers
-using **channel_read**() and **channel_write**() directly, provided the following rules
+The facilities provided by `zx_channel_call()` can interoperate with message dispatchers
+using [`zx_channel_read()`] and [`zx_channel_write()`] directly, provided the following rules
 are observed:
 
-1. A server receiving synchronous messages via **channel_read**() should ensure that the
-txid of incoming messages is reflected back in outgoing responses via **channel_write**()
-so that clients using **channel_call**() can correctly route the replies.
+1. A server receiving synchronous messages via [`zx_channel_read()`] should ensure that the
+txid of incoming messages is reflected back in outgoing responses via [`zx_channel_write()`]
+so that clients using `zx_channel_call()` can correctly route the replies.
 
-2. A client sending messages via **channel_write**() that will be replied to should ensure
+2. A client sending messages via [`zx_channel_write()`] that will be replied to should ensure
 that it uses txids between 0 and 0x7FFFFFFF only, to avoid colliding with other threads
-communicating via **channel_call**().
+communicating via `zx_channel_call()`.
 
-If a **channel_call**() returns due to **ZX_ERR_TIMED_OUT**, if the server eventually replies,
+If a `zx_channel_call()` returns due to **ZX_ERR_TIMED_OUT**, if the server eventually replies,
 at some point in the future, the reply *could* match another outbound request (provided about
-2^31 **channel_call**()s have happened since the original request.  This syscall is designed
+2^31 `zx_channel_call()`s have happened since the original request.  This syscall is designed
 around the expectation that timeouts are generally fatal and clients do not expect to continue
 communications on a channel that is timing out.
 
@@ -134,3 +134,9 @@ communications on a channel that is timing out.
 [channel_create](channel_create.md),
 [channel_read](channel_read.md),
 [channel_write](channel_write.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_channel_read()`]: channel_read.md
+[`zx_channel_write()`]: channel_write.md
+[`zx_object_wait_one()`]: object_wait_one.md

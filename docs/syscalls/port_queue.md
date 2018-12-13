@@ -19,7 +19,7 @@ zx_status_t zx_port_queue(zx_handle_t handle, const zx_port_packet_t* packet);
 
 ## DESCRIPTION
 
-**port_queue**() queues a *packet* to the port specified
+`zx_port_queue()` queues a *packet* to the port specified
 by *handle*.
 
 ```
@@ -56,7 +56,7 @@ typedef union zx_packet_user {
 
 ## RETURN VALUE
 
-**port_queue**() returns **ZX_OK** on successful queue of a packet.
+`zx_port_queue()` returns **ZX_OK** on successful queue of a packet.
 
 ## ERRORS
 
@@ -69,14 +69,18 @@ typedef union zx_packet_user {
 **ZX_ERR_ACCESS_DENIED** *handle* does not have **ZX_RIGHT_WRITE**.
 
 **ZX_ERR_SHOULD_WAIT** the port has too many pending packets. Once a thread
-has drained some packets a new **port_queue**() call will likely succeed.
+has drained some packets a new `zx_port_queue()` call will likely succeed.
 
 ## NOTES
 
-The queue is drained by calling **port_wait**().
+The queue is drained by calling [`zx_port_wait()`].
 
 
 ## SEE ALSO
 
 [port_create](port_create.md).
 [port_wait](port_wait.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_port_wait()`]: port_wait.md

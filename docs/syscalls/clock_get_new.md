@@ -18,7 +18,7 @@ zx_status_t zx_clock_get_new(zx_clock_t clock_id, zx_time_t* out);
 
 ## DESCRIPTION
 
-**zx_clock_get_new** returns the current time of *clock_id* via
+`zx_clock_get_new()` returns the current time of *clock_id* via
   *out*, and returns whether *clock_id* was valid.
 
 ## SUPPORTED CLOCK IDS
@@ -37,7 +37,7 @@ TODO(ZX-2399)
 
 ## RETURN VALUE
 
-On success, **zx_clock_get_new**() returns *ZX_OK*.
+On success, `zx_clock_get_new()` returns *ZX_OK*.
 
 ## ERRORS
 

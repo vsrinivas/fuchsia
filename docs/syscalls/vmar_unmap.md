@@ -18,7 +18,7 @@ zx_status_t zx_vmar_unmap(zx_handle_t handle, zx_vaddr_t addr, uint64_t len);
 
 ## DESCRIPTION
 
-**vmar_unmap**() unmaps all VMO mappings and destroys (as if **vmar_destroy**
+`zx_vmar_unmap()` unmaps all VMO mappings and destroys (as if [`zx_vmar_destroy()`]
 were called) all sub-regions within the absolute range including *addr* and ending
 before exclusively at *addr* + *len*.  Any sub-region that is in the range must
 be fully in the range (i.e. partial overlaps are an error).  If a mapping is
@@ -35,7 +35,7 @@ TODO(ZX-2399)
 
 ## RETURN VALUE
 
-**vmar_unmap**() returns **ZX_OK** on success.
+`zx_vmar_unmap()` returns **ZX_OK** on success.
 
 ## ERRORS
 
@@ -58,3 +58,7 @@ or the requested range partially overlaps a sub-region.
 [vmar_destroy](vmar_destroy.md),
 [vmar_map](vmar_map.md),
 [vmar_protect](vmar_protect.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_vmar_destroy()`]: vmar_destroy.md

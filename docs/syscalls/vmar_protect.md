@@ -21,7 +21,7 @@ zx_status_t zx_vmar_protect(zx_handle_t handle,
 
 ## DESCRIPTION
 
-**vmar_protect**() alters the access protections for the memory mappings
+`zx_vmar_protect()` alters the access protections for the memory mappings
 in the range of *len* bytes starting from *addr*. The *options* argument should
 be a bitwise-or of one or more of the following:
 - **ZX_VM_PERM_READ**  Map as readable.  It is an error if *handle*
@@ -51,7 +51,7 @@ If *options* & **ZX_VM_PERM_EXECUTE**, *handle* must be of type **ZX_OBJ_TYPE_VM
 
 ## RETURN VALUE
 
-**vmar_protect**() returns **ZX_OK** on success.
+`zx_vmar_protect()` returns **ZX_OK** on success.
 
 ## ERRORS
 

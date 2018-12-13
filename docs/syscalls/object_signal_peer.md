@@ -20,7 +20,7 @@ zx_status_t zx_object_signal_peer(zx_handle_t handle,
 
 ## DESCRIPTION
 
-**zx_object_signal_peer**() asserts and deasserts the userspace-accessible
+`zx_object_signal_peer()` asserts and deasserts the userspace-accessible
 signal bits on the object's peer. A object peer is the opposite endpoint of a
 *channel*, *socket*, *fifo*, or *eventpair*.
 
@@ -44,7 +44,7 @@ The *clear_mask* is first used to clear any bits indicated, and then the
 
 ## RETURN VALUE
 
-**zx_object_signal_peer**() returns **ZX_OK** on success. In the event of
+`zx_object_signal_peer()` returns **ZX_OK** on success. In the event of
 failure, a negative error value is returned.
 
 ## ERRORS

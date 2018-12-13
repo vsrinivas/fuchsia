@@ -21,7 +21,7 @@ zx_status_t zx_vcpu_read_state(zx_handle_t handle,
 
 ## DESCRIPTION
 
-**vcpu_read_state**() reads the state of *handle* as specified by *kind* into
+`zx_vcpu_read_state()` reads the state of *handle* as specified by *kind* into
 *buffer*. It is only valid to read the state of *handle* when execution has been
 paused.
 
@@ -35,7 +35,7 @@ paused.
 
 ## RETURN VALUE
 
-**vcpu_read_state**() returns ZX_OK on success. On failure, an error value is
+`zx_vcpu_read_state()` returns ZX_OK on success. On failure, an error value is
 returned.
 
 ## ERRORS

@@ -18,7 +18,7 @@ zx_status_t zx_vmo_set_cache_policy(zx_handle_t handle, uint32_t cache_policy);
 
 ## DESCRIPTION
 
-**vmo_set_cache_policy()** sets caching policy for a VMO. Generally used on VMOs
+`zx_vmo_set_cache_policy()` sets caching policy for a VMO. Generally used on VMOs
 that point directly at physical memory. Such VMOs are generally only handed to
 userspace via bus protocol interfaces, so this syscall will typically only be
 used by drivers dealing with device memory. This call can also be used on a
@@ -48,7 +48,7 @@ This is architecture dependent and may be equivalent to
 
 ## RETURN VALUE
 
-**vmo_set_cache_policy()** returns **ZX_OK** on success. In the event of
+`zx_vmo_set_cache_policy()` returns **ZX_OK** on success. In the event of
 failure, a negative error value is returned.
 
 ## ERRORS

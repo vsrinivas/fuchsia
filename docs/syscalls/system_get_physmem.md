@@ -18,7 +18,7 @@ uint64_t zx_system_get_physmem(void);
 
 ## DESCRIPTION
 
-**system_get_physmem**() returns the total size of physical memory on
+`zx_system_get_physmem()` returns the total size of physical memory on
 the machine, in bytes.
 
 ## RIGHTS
@@ -29,11 +29,11 @@ TODO(ZX-2399)
 
 ## RETURN VALUE
 
-**system_get_physmem**() returns a number in bytes.
+`zx_system_get_physmem()` returns a number in bytes.
 
 ## ERRORS
 
-**system_get_physmem**() cannot fail.
+`zx_system_get_physmem()` cannot fail.
 
 ## NOTES
 

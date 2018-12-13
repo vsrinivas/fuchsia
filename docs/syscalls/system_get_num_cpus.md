@@ -18,7 +18,7 @@ uint32_t zx_system_get_num_cpus(void);
 
 ## DESCRIPTION
 
-**system_get_num_cpus**() returns the number of CPUs (logical processors)
+`zx_system_get_num_cpus()` returns the number of CPUs (logical processors)
 that exist on the system currently running.  This number cannot change
 during a run of the system, only at boot time.
 
@@ -30,11 +30,11 @@ TODO(ZX-2399)
 
 ## RETURN VALUE
 
-**system_get_num_cpus**() returns the number of CPUs.
+`zx_system_get_num_cpus()` returns the number of CPUs.
 
 ## ERRORS
 
-**system_get_num_cpus**() cannot fail.
+`zx_system_get_num_cpus()` cannot fail.
 
 ## NOTES
 

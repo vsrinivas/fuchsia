@@ -22,7 +22,7 @@ zx_status_t zx_socket_read(zx_handle_t handle,
 
 ## DESCRIPTION
 
-**socket_read**() attempts to read *buffer_size* bytes into *buffer*. If
+`zx_socket_read()` attempts to read *buffer_size* bytes into *buffer*. If
 successful, the number of bytes actually read are return via
 *actual*.
 
@@ -33,7 +33,7 @@ only the first available datagram in the socket (if one is present).
 If *buffer* is too small for the datagram, then the read will be
 truncated, and any remaining bytes in the datagram will be discarded.
 
-If *options* is set to **ZX_SOCKET_CONTROL**, then **socket_read**()
+If *options* is set to **ZX_SOCKET_CONTROL**, then `zx_socket_read()`
 attempts to read from the socket control plane.
 
 To determine how many bytes are available to read, use the **rx_buf_available**
@@ -48,7 +48,7 @@ field of the resulting **zx_info_socket_t**, which you can obtain using the
 
 ## RETURN VALUE
 
-**socket_read**() returns **ZX_OK** on success, and writes into
+`zx_socket_read()` returns **ZX_OK** on success, and writes into
 *actual* (if non-NULL) the exact number of bytes read.
 
 ## ERRORS

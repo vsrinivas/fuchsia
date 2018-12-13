@@ -21,7 +21,7 @@ zx_status_t zx_task_bind_exception_port(zx_handle_t handle,
 
 ## DESCRIPTION
 
-**task_bind_exception_port**() is used to bind (or unbind) a port to
+`zx_task_bind_exception_port()` is used to bind (or unbind) a port to
 the exception port of a job, process, or thread.
 
 *port* is an IO port created by [zx_port_create](port_create.md). The same
@@ -54,7 +54,7 @@ bound *port* when it is unbound. Exception processing will continue as if
 
 ## RETURN VALUE
 
-**task_bind_exception_port**() returns **ZX_OK** on success.
+`zx_task_bind_exception_port()` returns **ZX_OK** on success.
 In the event of failure, a negative error value is returned.
 
 ## ERRORS

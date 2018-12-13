@@ -19,10 +19,10 @@ zx_status_t zx_vcpu_resume(zx_handle_t handle, zx_port_packet_t* packet);
 
 ## DESCRIPTION
 
-**vcpu_resume**() begins or resumes execution of *handle*, and blocks until it has
+`zx_vcpu_resume()` begins or resumes execution of *handle*, and blocks until it has
 paused execution. On pause of execution, *packet* is populated with reason for
 the pause. After handling the reason, execution may be resumed by calling
-**vcpu_resume**() again.
+`zx_vcpu_resume()` again.
 
 N.B. Execution of a *handle* must be resumed on the same thread it was created on.
 
@@ -34,7 +34,7 @@ N.B. Execution of a *handle* must be resumed on the same thread it was created o
 
 ## RETURN VALUE
 
-**vcpu_resume**() returns *ZX_OK* on success. On failure, an error value is
+`zx_vcpu_resume()` returns *ZX_OK* on success. On failure, an error value is
 returned.
 
 ## ERRORS

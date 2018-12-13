@@ -22,7 +22,7 @@ zx_status_t zx_thread_start(zx_handle_t handle,
 
 ## DESCRIPTION
 
-**thread_start**() causes a thread to begin execution at the program counter
+`zx_thread_start()` causes a thread to begin execution at the program counter
 specified by *thread_entry* and with the stack pointer set to *stack*. The
 arguments *arg1* and *arg2* are arranged to be in the architecture specific
 registers used for the first two arguments of a function call before the thread
@@ -32,11 +32,11 @@ When the last handle to a thread is closed, the thread is destroyed.
 
 Thread handles may be waited on and will assert the signal
 *ZX_THREAD_TERMINATED* when the thread stops executing (due to
-**thread_exit**() being called.
+[`zx_thread_exit()`] being called.
 
-*thread_entry* shall point to a function that must call **thread_exit**() or
-**futex_wake_handle_close_thread_exit**() or
-**vmar_unmap_handle_close_thread_exit**() before reaching the last instruction.
+*thread_entry* shall point to a function that must call [`zx_thread_exit()`] or
+[`zx_futex_wake_handle_close_thread_exit()`] or
+[`zx_vmar_unmap_handle_close_thread_exit()`] before reaching the last instruction.
 Below is an example:
 
 ```
@@ -58,7 +58,7 @@ the function will cause an architecture / toolchain specific exception.
 
 ## RETURN VALUE
 
-**thread_start**() returns ZX_OK on success.
+`zx_thread_start()` returns ZX_OK on success.
 In the event of failure, a negative error value is returned.
 
 ## ERRORS
@@ -83,3 +83,9 @@ is part of is no longer alive.
 [thread_exit](thread_exit.md),
 [futex_wake_handle_close_thread_exit](futex_wake_handle_close_thread_exit.md),
 [vmar_unmap_handle_close_thread_exit](vmar_unmap_handle_close_thread_exit.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_futex_wake_handle_close_thread_exit()`]: futex_wake_handle_close_thread_exit.md
+[`zx_thread_exit()`]: thread_exit.md
+[`zx_vmar_unmap_handle_close_thread_exit()`]: vmar_unmap_handle_close_thread_exit.md

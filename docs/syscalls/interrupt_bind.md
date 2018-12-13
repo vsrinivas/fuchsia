@@ -21,7 +21,7 @@ zx_status_t zx_interrupt_bind(zx_handle_t handle,
 
 ## DESCRIPTION
 
-**interrupt_bind**() binds an interrupt object to a port.
+`zx_interrupt_bind()` binds an interrupt object to a port.
 
 An interrupt object may only be bound to a single port and may only be bound once.
 The interrupt can only bind to a port which is created with **ZX_PORT_BIND_TO_INTERRUPT**
@@ -33,7 +33,7 @@ of when the interrupt was triggered in the `zx_packet_interrupt_t`.  The *key* u
 when binding the interrupt will be present in the `key` field of the `zx_port_packet_t`.
 
 Before another packet may be delivered, the bound interrupt must be re-armed using the
-**interrupt_ack**() syscall.  This is (in almost all cases) best done after the interrupt
+[`zx_interrupt_ack()`] syscall.  This is (in almost all cases) best done after the interrupt
 packet has been fully processed.  Especially in the case of multiple threads reading
 packets from a port, if the processing thread re-arms the interrupt and it has triggered,
 a packet will immediately be delivered to a waiting thread.
@@ -51,7 +51,7 @@ than non-interrupt packets.
 
 ## RETURN VALUE
 
-**interrupt_bind**() returns **ZX_OK** on success. In the event
+`zx_interrupt_bind()` returns **ZX_OK** on success. In the event
 of failure, a negative error value is returned.
 
 ## ERRORS
@@ -60,9 +60,9 @@ of failure, a negative error value is returned.
 
 **ZX_ERR_WRONG_TYPE** *handle* is not an interrupt object or *port_handle* is not a port object.
 
-**ZX_ERR_CANCELED**  **zx_interrupt_destroy**() was called on *handle*.
+**ZX_ERR_CANCELED**  [`zx_interrupt_destroy()`] was called on *handle*.
 
-**ZX_ERR_BAD_STATE**  A thread is waiting on the interrupt using **zx_interrupt_wait**()
+**ZX_ERR_BAD_STATE**  A thread is waiting on the interrupt using [`zx_interrupt_wait()`]
 
 **ZX_ERR_ACCESS_DENIED** the *handle* handle lacks **ZX_RIGHT_READ** or the *port_handle* handle
 lacks **ZX_RIGHT_WRITE**
@@ -80,3 +80,9 @@ lacks **ZX_RIGHT_WRITE**
 [interrupt_wait](interrupt_wait.md),
 [port_wait](port_wait.md),
 [handle_close](handle_close.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_interrupt_ack()`]: interrupt_ack.md
+[`zx_interrupt_destroy()`]: interrupt_destroy.md
+[`zx_interrupt_wait()`]: interrupt_wait.md

@@ -20,7 +20,7 @@ zx_status_t zx_vmo_replace_as_executable(zx_handle_t handle,
 
 ## DESCRIPTION
 
-**vmo_replace_as_executable**() creates a replacement for *handle*, referring
+`zx_vmo_replace_as_executable()` creates a replacement for *handle*, referring
 to the same underlying VM object, adding the right **ZX_RIGHT_EXECUTE**.
 
 *handle* is always invalidated.
@@ -38,7 +38,7 @@ this is TODO(SEC-42) and will be removed.
 
 ## RETURN VALUE
 
-**vmo_replace_as_executable**() returns **ZX_OK** on success. In the event
+`zx_vmo_replace_as_executable()` returns **ZX_OK** on success. In the event
 of failure, a negative error value is returned.
 
 ## ERRORS

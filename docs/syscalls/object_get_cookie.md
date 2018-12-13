@@ -23,15 +23,15 @@ zx_status_t zx_object_get_cookie(zx_handle_t handle,
 Some objects (Events, Event pairs, Resources, VMOs) may have a cookie attached,
 which is a 64bit opaque value.  Initially the cookie is undefined and not readable.
 
-If the cookie has been set on an object, **zx_object_get_cookie**() may be
+If the cookie has been set on an object, `zx_object_get_cookie()` may be
 called, using the same object as *scope* to obtain the cookie.
 
 Event pairs are special.  If one side of the pair is closed, the other side's
 cookie is invalidated. An invalidated cookie is not get-able or set-able with any scope.
 
 Cookies are useful for objects that will be passed to another process and
-later returned.  By setting the cookie with **zx_object_set_cookie**(),
-using a *scope* that is not accessible by other processes, **zx_object_get_cookie**()
+later returned.  By setting the cookie with [`zx_object_set_cookie()`],
+using a *scope* that is not accessible by other processes, `zx_object_get_cookie()`
 may later be used to verify that a handle is referring to an object that was
 "created" by the calling process and simultaneously return an ID or pointer
 to local state for that object.
@@ -48,7 +48,7 @@ TODO(ZX-2399)
 
 ## RETURN VALUE
 
-**zx_object_get_cookie**() returns **ZX_OK** and the *cookie* value on success.
+`zx_object_get_cookie()` returns **ZX_OK** and the *cookie* value on success.
 In the event of failure, a negative error value is returned.
 
 
@@ -66,3 +66,7 @@ to obtain the set cookie.
 ## SEE ALSO
 
 [object_set_cookie](object_set_cookie.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_object_set_cookie()`]: object_set_cookie.md

@@ -18,7 +18,7 @@ zx_status_t zx_socket_accept(zx_handle_t handle, zx_handle_t* out_socket);
 
 ## DESCRIPTION
 
-**socket_accept**() attempts to receive a new socket via an existing socket
+`zx_socket_accept()` attempts to receive a new socket via an existing socket
 connection.  The signal **ZX_SOCKET_ACCEPT** is asserted when there is a new
 socket available.
 
@@ -30,7 +30,7 @@ socket available.
 
 ## RETURN VALUE
 
-**socket_accept**() returns **ZX_OK** on success and the received handle
+`zx_socket_accept()` returns **ZX_OK** on success and the received handle
 is returned via *out_socket*.  In the event of failure, one of the following
 values is returned.
 

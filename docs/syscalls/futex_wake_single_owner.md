@@ -28,7 +28,7 @@ None.
 
 ## RETURN VALUE
 
-**futex_wake_single_owner**() returns **ZX_OK** on success.
+`zx_futex_wake_single_owner()` returns **ZX_OK** on success.
 
 ## ERRORS
 

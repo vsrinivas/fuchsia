@@ -18,7 +18,7 @@ zx_status_t zx_vmar_destroy(zx_handle_t handle);
 
 ## DESCRIPTION
 
-**vmar_destroy**() unmaps all mappings within the given region, and destroys
+`zx_vmar_destroy()` unmaps all mappings within the given region, and destroys
 all sub-regions of the region.  Note that this operation is logically recursive.
 
 This operation does not close *handle*.  Any outstanding handles to this
@@ -32,7 +32,7 @@ TODO(ZX-2399)
 
 ## RETURN VALUE
 
-**vmar_destroy**() returns **ZX_OK** on success.
+`zx_vmar_destroy()` returns **ZX_OK** on success.
 
 ## ERRORS
 

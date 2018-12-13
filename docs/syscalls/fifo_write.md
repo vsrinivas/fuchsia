@@ -22,7 +22,7 @@ zx_status_t zx_fifo_write(zx_handle_t handle,
 
 ## DESCRIPTION
 
-**fifo_write**() attempts to write up to *count* elements
+`zx_fifo_write()` attempts to write up to *count* elements
 (*count * elem_size* bytes) from *data* to the fifo specified by *handle*.
 
 Fewer elements may be written than requested if there is insufficient
@@ -30,10 +30,10 @@ room in the fifo to contain all of them. The number of
 elements actually written is returned via *actual_count*.
 
 The element size specified by *elem_size* must match the element size
-that was passed into **fifo_create**().
+that was passed into [`zx_fifo_create()`].
 
 *actual_count* is allowed to be NULL. This is useful when writing
-a single element: if *count* is 1 and **fifo_write**() returns **ZX_OK**,
+a single element: if *count* is 1 and `zx_fifo_write()` returns **ZX_OK**,
 *actual_count* is guaranteed to be 1 and thus can be safely ignored.
 
 It is not legal to write zero elements.
@@ -46,7 +46,7 @@ It is not legal to write zero elements.
 
 ## RETURN VALUE
 
-**fifo_write**() returns **ZX_OK** on success, and returns
+`zx_fifo_write()` returns **ZX_OK** on success, and returns
 the number of elements written (at least one) via *actual_count*.
 
 ## ERRORS
@@ -72,3 +72,7 @@ to the element size of the fifo.
 
 [fifo_create](fifo_create.md),
 [fifo_read](fifo_read.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_fifo_create()`]: fifo_create.md

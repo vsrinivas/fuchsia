@@ -27,8 +27,8 @@ zx_status_t zx_channel_read_etc(zx_handle_t handle,
 
 See [channel_read](channel_read.md) for a full description.
 
-Both forms of read behave the same except that **channel_read**() returns an
-array of raw ``zx_handle_t`` handle values while **channel_read_etc**() returns
+Both forms of read behave the same except that [`zx_channel_read()`] returns an
+array of raw ``zx_handle_t`` handle values while `zx_channel_read_etc()` returns
 an array of ``zx_handle_info_t`` structures of the form:
 
 ```
@@ -41,7 +41,7 @@ typedef struct {
 ```
 
 When communicating to an untrusted party over a channel, it is recommended
-that the **channel_read_etc**() form is used and each handle type and rights
+that the `zx_channel_read_etc()` form is used and each handle type and rights
 are validated against the expected values.
 
 ## RIGHTS
@@ -98,3 +98,7 @@ in the *handles* array, not its size in bytes.
 [channel_create](channel_create.md),
 [channel_read](channel_read.md),
 [channel_write](channel_write.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_channel_read()`]: channel_read.md

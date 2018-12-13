@@ -18,7 +18,7 @@ zx_status_t zx_bti_release_quarantine(zx_handle_t handle);
 
 ## DESCRIPTION
 
-**bti_release_quarantine**() releases all quarantined PMTs for the given BTI.
+`zx_bti_release_quarantine()` releases all quarantined PMTs for the given BTI.
 This will release the PMTs' underlying references to VMOs and physical page
 pins.  The underlying physical pages may be eligible to be reallocated
 afterwards.
@@ -31,7 +31,7 @@ afterwards.
 
 ## RETURN VALUE
 
-**bti_release_quarantine**() returns **ZX_OK** on success.
+`zx_bti_release_quarantine()` returns **ZX_OK** on success.
 In the event of failure, a negative error value is returned.
 
 ## ERRORS

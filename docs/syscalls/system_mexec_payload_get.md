@@ -20,7 +20,7 @@ zx_status_t zx_system_mexec_payload_get(zx_handle_t resource,
 
 ## DESCRIPTION
 
-**zx_system_mexec_payload_get**() accepts a resource handle and a
+`zx_system_mexec_payload_get()` accepts a resource handle and a
 pointer/length corresponding to an output buffer and fills the buffer with an
 incomplete ZBI containing a sequence of entries that should be appended to a
 ZBI before passing that image to zx_system_mexec().
@@ -37,7 +37,7 @@ ZBI before passing that image to zx_system_mexec().
 
 ## RETURN VALUE
 
-**zx_system_mexec_payload_get**() returns ZX_OK on success.
+`zx_system_mexec_payload_get()` returns ZX_OK on success.
 
 ## SEE ALSO
 

@@ -22,9 +22,9 @@ zx_status_t zx_object_wait_async(zx_handle_t handle,
 
 ## DESCRIPTION
 
-**object_wait_async**() is a non-blocking syscall which causes packets to be
+`zx_object_wait_async()` is a non-blocking syscall which causes packets to be
 enqueued on *port* when the specified condition is met.
-Use **port_wait**() to retrieve the packets.
+Use [`zx_port_wait()`] to retrieve the packets.
 
 *handle* points to the object that is to be watched for changes and must be a waitable object.
 
@@ -32,7 +32,7 @@ The *options* argument can be either **ZX_WAIT_ASYNC_ONCE** or **ZX_WAIT_ASYNC_R
 
 In both cases, *signals* indicates which signals on the object specified by *handle*
 will cause a packet to be enqueued, and if **any** of those signals are asserted when
-**object_wait_async**() is called, or become asserted afterwards, a packet will be
+`zx_object_wait_async()` is called, or become asserted afterwards, a packet will be
 enqueued on *port* containing all of the currently-asserted signals (not just the ones
 listed in the *signals* argument).
 
@@ -45,7 +45,7 @@ queue on behalf of this wait, a packet is enqueued. If a packet is already in th
 queue, the packet's *observed* field is updated to include all of the currently-asserted
 signals (without removing the existing signals).
 
-In either mode, **port_cancel**() will terminate the operation and if a packet was
+In either mode, [`zx_port_cancel()`] will terminate the operation and if a packet was
 in the queue on behalf of the operation, that packet will be removed from the queue.
 
 If the handle is closed, the operation will also be terminated, but packets already
@@ -64,7 +64,7 @@ of packet and their semantics.
 
 ## RETURN VALUE
 
-**object_wait_async**() returns **ZX_OK** if the subscription succeeded.
+`zx_object_wait_async()` returns **ZX_OK** if the subscription succeeded.
 
 ## ERRORS
 
@@ -95,3 +95,7 @@ See [signals](../signals.md) for more information about signals and their termin
 [port_queue](port_queue.md),
 [port_wait](port_wait.md).
 
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_port_cancel()`]: port_cancel.md
+[`zx_port_wait()`]: port_wait.md

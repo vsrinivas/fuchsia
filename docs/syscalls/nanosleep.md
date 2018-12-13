@@ -18,11 +18,11 @@ zx_status_t zx_nanosleep(zx_time_t deadline);
 
 ## DESCRIPTION
 
-**nanosleep**() suspends the calling thread execution until *deadline* passes on
+`zx_nanosleep()` suspends the calling thread execution until *deadline* passes on
 **ZX_CLOCK_MONOTONIC**. A *deadline* value less than or equal to **0**
 immediately yields the thread.
 
-To sleep for a duration, use [**zx_deadline_after**](deadline_after.md) and the
+To sleep for a duration, use [[`zx_deadline_after()`]](deadline_after.md) and the
 **ZX_\<time-unit\>** helpers:
 
 ```
@@ -53,7 +53,7 @@ None.
 
 ## RETURN VALUE
 
-**nanosleep**() always returns **ZX_OK**.
+`zx_nanosleep()` always returns **ZX_OK**.
 
 ## SEE ALSO
 
@@ -61,3 +61,7 @@ None.
 [xz_timer_create](timer_create.md),
 [timer_set](timer_set.md),
 [timer_cancel](timer_cancel.md),
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_deadline_after()`]: deadline_after.md

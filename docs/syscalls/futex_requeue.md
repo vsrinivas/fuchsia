@@ -44,17 +44,17 @@ details.
 
 ### Effects on the _wake futex_ target
 
-A successful call to **futex_requeue**() results in the owner of the futex being
+A successful call to `zx_futex_requeue()` results in the owner of the futex being
 set to nothing, regardless of the wake count.  In order to transfer ownership of
-a futex, use the **futex_requeue_single_owner**() variant instead.
-**futex_requeue_single_owner**() will attempt to wake exactly one thread from the
+a futex, use the [`zx_futex_requeue_single_owner()`] variant instead.
+[`zx_futex_requeue_single_owner()`] will attempt to wake exactly one thread from the
 futex wait queue.  If there is at least one thread to wake, the owner of the futex will be
 set to the thread which was woken.  Otherwise, the futex
 will have no owner.
 
 ### Effects on the _requeue futex_ target
 
-A successful call to **futex_requeue**() or **futex_requeue_single_owner**()
+A successful call to `zx_futex_requeue()` or [`zx_futex_requeue_single_owner()`]
 results in the owner of the futex being set to the thread referenced by the
 `new_requeue_owner` handle, or to nothing if `new_requeue_owner` is
 **ZX_HANDLE_INVALID**.
@@ -67,7 +67,7 @@ None.
 
 ## RETURN VALUE
 
-**futex_requeue**() returns **ZX_OK** on success.
+`zx_futex_requeue()` returns **ZX_OK** on success.
 
 ## ERRORS
 
@@ -87,3 +87,7 @@ None.
 [futex_requeue_single_owner](futex_requeue_single_owner.md),
 [futex_wait](futex_wait.md),
 [futex_wake](futex_wake.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_futex_requeue_single_owner()`]: futex_requeue_single_owner.md

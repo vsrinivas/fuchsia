@@ -18,7 +18,7 @@ zx_status_t zx_socket_share(zx_handle_t handle, zx_handle_t socket_to_share);
 
 ## DESCRIPTION
 
-**socket_share**() attempts to send a new socket via an existing socket
+`zx_socket_share()` attempts to send a new socket via an existing socket
 connection.  The signal **ZX_SOCKET_SHARE** is asserted when it is possible
 to send a socket.
 
@@ -36,7 +36,7 @@ failure, *socket_to_share* is discarded rather than transferred.
 
 ## RETURN VALUE
 
-**socket_share**() returns **ZX_OK** on success.  In the event of failure,
+`zx_socket_share()` returns **ZX_OK** on success.  In the event of failure,
 one of the following values is returned.
 
 ## ERRORS

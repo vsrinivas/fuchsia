@@ -20,7 +20,7 @@ zx_status_t zx_object_signal(zx_handle_t handle,
 
 ## DESCRIPTION
 
-**zx_object_signal**() asserts and deasserts the userspace-accessible signal
+`zx_object_signal()` asserts and deasserts the userspace-accessible signal
 bits on an object.
 
 Most of the 32 signals are reserved for system use and are assigned to
@@ -43,7 +43,7 @@ The *clear_mask* is first used to clear any bits indicated, and then the
 
 ## RETURN VALUE
 
-**zx_object_signal**() returns **ZX_OK** on success. In the event of failure, a
+`zx_object_signal()` returns **ZX_OK** on success. In the event of failure, a
 negative error value is returned.
 
 ## ERRORS

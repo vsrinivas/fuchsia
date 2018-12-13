@@ -20,7 +20,7 @@ zx_status_t zx_handle_duplicate(zx_handle_t handle,
 
 ## DESCRIPTION
 
-**handle_duplicate**() creates a duplicate of *handle*, referring
+`zx_handle_duplicate()` creates a duplicate of *handle*, referring
 to the same underlying object, with new access rights *rights*.
 
 To duplicate the handle with the same rights use **ZX_RIGHT_SAME_RIGHTS**. If different
@@ -35,7 +35,7 @@ to specify no rights by using 0.
 
 ## RETURN VALUE
 
-**handle_duplicate**() returns ZX_OK and the duplicate handle via *out* on success.
+`zx_handle_duplicate()` returns ZX_OK and the duplicate handle via *out* on success.
 
 ## ERRORS
 

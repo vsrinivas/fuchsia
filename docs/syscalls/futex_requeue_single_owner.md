@@ -32,7 +32,7 @@ None.
 
 ## RETURN VALUE
 
-**futex_requeue_single_owner**() returns **ZX_OK** on success.
+`zx_futex_requeue_single_owner()` returns **ZX_OK** on success.
 
 ## ERRORS
 

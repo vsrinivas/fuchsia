@@ -21,7 +21,7 @@ zx_status_t zx_vcpu_create(zx_handle_t guest,
 
 ## DESCRIPTION
 
-**vcpu_create**() creates a VCPU within a guest, which allows for execution
+`zx_vcpu_create()` creates a VCPU within a guest, which allows for execution
 within the virtual machine. One or more VCPUs may be created per guest, where
 the number of VCPUs does not need to match the number of physical CPUs on the
 machine.
@@ -31,7 +31,7 @@ memory execution of the VCPU should start.
 
 *out* is bound to the thread that created it, and all syscalls that operate on
 it must be called from the same thread, with the exception of
-**vcpu_interrupt**().
+[`zx_vcpu_interrupt()`].
 
 N.B. VCPU is an abbreviation of virtual CPU.
 
@@ -57,7 +57,7 @@ The following rights will be set on the handle *out* by default:
 
 ## RETURN VALUE
 
-**vcpu_create**() returns ZX_OK on success. On failure, an error value is
+`zx_vcpu_create()` returns ZX_OK on success. On failure, an error value is
 returned.
 
 ## ERRORS
@@ -84,3 +84,7 @@ In a future build this error will no longer occur.
 [vcpu_interrupt](vcpu_interrupt.md),
 [vcpu_read_state](vcpu_read_state.md),
 [vcpu_write_state](vcpu_write_state.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_vcpu_interrupt()`]: vcpu_interrupt.md

@@ -23,7 +23,7 @@ zx_status_t zx_object_get_info(zx_handle_t handle,
 
 ## DESCRIPTION
 
-**object_get_info()** requests information about the provided handle (or the
+`zx_object_get_info()` requests information about the provided handle (or the
 object the handle refers to). The *topic* parameter indicates what specific
 information is desired.
 
@@ -715,7 +715,7 @@ If *topic* is **ZX_INFO_SOCKET**, *handle* must be of type **ZX_OBJ_TYPE_SOCKET*
 
 ## RETURN VALUE
 
-**zx_object_get_info**() returns **ZX_OK** on success. In the event of
+`zx_object_get_info()` returns **ZX_OK** on success. In the event of
 failure, a negative error value is returned.
 
 ## ERRORS

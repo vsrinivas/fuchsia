@@ -21,7 +21,7 @@ zx_status_t zx_vmo_read(zx_handle_t handle,
 
 ## DESCRIPTION
 
-**vmo_read**() attempts to read exactly *buffer_size* bytes from a VMO at *offset*.
+`zx_vmo_read()` attempts to read exactly *buffer_size* bytes from a VMO at *offset*.
 
 *buffer* pointer to a user buffer to read bytes into.
 
@@ -36,7 +36,7 @@ enough for at least this many bytes.
 
 ## RETURN VALUE
 
-**zx_vmo_read**() returns **ZX_OK** on success, and exactly *buffer_size* bytes will
+`zx_vmo_read()` returns **ZX_OK** on success, and exactly *buffer_size* bytes will
 have been written to *buffer*.
 In the event of failure, a negative error value is returned, and the number of
 bytes written to *buffer* is undefined.

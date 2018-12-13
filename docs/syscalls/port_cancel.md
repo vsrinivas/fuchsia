@@ -20,8 +20,8 @@ zx_status_t zx_port_cancel(zx_handle_t handle,
 
 ## DESCRIPTION
 
-**port_cancel**() is a non-blocking syscall which cancels
-pending **object_wait_async**() calls done with *source* and *key*.
+`zx_port_cancel()` is a non-blocking syscall which cancels
+pending [`zx_object_wait_async()`] calls done with *source* and *key*.
 
 When this call succeeds no new packets from the object pointed by
 *source* with *key* will be delivered to *handle*, and pending queued
@@ -35,8 +35,8 @@ packets that match *source* and *key* are removed from the port.
 
 ## RETURN VALUE
 
-**zx_port_cancel**() returns **ZX_OK** if cancellation succeeded and
-either queued packets were removed or pending **object_wait_async**() were
+`zx_port_cancel()` returns **ZX_OK** if cancellation succeeded and
+either queued packets were removed or pending [`zx_object_wait_async()`] were
 canceled.
 
 ## ERRORS
@@ -50,8 +50,12 @@ canceled.
 **ZX_ERR_NOT_SUPPORTED**  *source* is a handle that cannot be waited on.
 
 **ZX_ERR_NOT_FOUND** if either no pending packets or pending
-**object_wait_async** calls with *source* and *key* were found.
+[`zx_object_wait_async()`] calls with *source* and *key* were found.
 
 ## SEE ALSO
 
 [port_wait](port_wait.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_object_wait_async()`]: object_wait_async.md

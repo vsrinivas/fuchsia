@@ -20,7 +20,7 @@ zx_status_t zx_timer_create(uint32_t options,
 
 ## DESCRIPTION
 
-**timer_create**() creates a timer, an object that can signal
+`zx_timer_create()` creates a timer, an object that can signal
 when a specified point in time has been reached. The only valid
 *clock_id* is **ZX_CLOCK_MONOTONIC**.
 
@@ -50,7 +50,7 @@ TODO(ZX-2399)
 
 ## RETURN VALUE
 
-**timer_create**() returns **ZX_OK** on success. In the event
+`zx_timer_create()` returns **ZX_OK** on success. In the event
 of failure, a negative error value is returned.
 
 ## ERRORS

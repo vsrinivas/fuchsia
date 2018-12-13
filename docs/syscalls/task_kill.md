@@ -37,13 +37,13 @@ used to create new processes.
 
 ## RETURN VALUE
 
-On success, **zx_task_kill**() returns **ZX_OK**. If a process or thread uses
+On success, `zx_task_kill()` returns **ZX_OK**. If a process or thread uses
 this syscall to kill itself, this syscall does not return.
 
 ## NOTES
 
 When using this syscall on a process, the return code for the process
-is -1 as reported by **object_get_info**() via the ZX_INFO_PROCESS topic.
+is -1 as reported by [`zx_object_get_info()`] via the ZX_INFO_PROCESS topic.
 
 ## ERRORS
 
@@ -58,3 +58,7 @@ right.
 
 [job_create](job_create.md),
 [process_create](process_create.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_object_get_info()`]: object_get_info.md

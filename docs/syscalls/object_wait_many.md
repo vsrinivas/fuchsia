@@ -20,7 +20,7 @@ zx_status_t zx_object_wait_many(zx_wait_item_t* items,
 
 ## DESCRIPTION
 
-**object_wait_many**() is a blocking syscall which causes the caller to
+`zx_object_wait_many()` is a blocking syscall which causes the caller to
 wait until either the *deadline* passes or at least one of the specified
 signals is asserted by the object to which the associated handle refers.
 If an object is already asserting at least one of the specified signals,
@@ -60,7 +60,7 @@ Every entry of *items* must have a *handle* field with **ZX_RIGHT_TRANSFER**.
 
 ## RETURN VALUE
 
-**object_wait_many**() returns **ZX_OK** if any of *waitfor* signals were
+`zx_object_wait_many()` returns **ZX_OK** if any of *waitfor* signals were
 observed on their respective object before *deadline* passed.
 
 In the event of **ZX_ERR_TIMED_OUT**, *items* may reflect state changes

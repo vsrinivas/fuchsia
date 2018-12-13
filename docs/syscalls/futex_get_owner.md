@@ -34,7 +34,7 @@ None.
 
 ## RETURN VALUE
 
-**futex_get_owner**() returns **ZX_OK** on success, and koids hold the owner of
+`zx_futex_get_owner()` returns **ZX_OK** on success, and koids hold the owner of
 the futex at the time of the syscall, or **ZX_KOID_INVALID** if there was no
 owner.
 

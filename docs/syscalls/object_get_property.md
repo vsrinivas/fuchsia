@@ -21,7 +21,7 @@ zx_status_t zx_object_get_property(zx_handle_t handle,
 
 ## DESCRIPTION
 
-**zx_object_get_property()** requests the value of a kernel object's property.
+`zx_object_get_property()` requests the value of a kernel object's property.
 Getting a property requires **ZX_RIGHT_GET_PROPERTY** rights on the handle.
 
 The *handle* parameter indicates the target kernel object. Different properties
@@ -163,7 +163,7 @@ If *property* is **ZX_PROP_SOCKET_TX_THRESHOLD**, *handle* must be of type **ZX_
 
 ## RETURN VALUE
 
-**zx_object_get_property**() returns **ZX_OK** on success. In the event of
+`zx_object_get_property()` returns **ZX_OK** on success. In the event of
 failure, a negative error value is returned.
 
 ## ERRORS

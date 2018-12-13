@@ -57,7 +57,7 @@ If *options* & **ZX_VM_CAN_MAP_EXECUTE**, *parent_vmar* must be of type **ZX_OBJ
 
 ## RETURN VALUE
 
-**vmar_allocate**() returns **ZX_OK**, the absolute base address of the
+`zx_vmar_allocate()` returns **ZX_OK**, the absolute base address of the
 subregion (via *child_addr*), and a handle to the new subregion (via
 *child_vmar*) on success.  The base address will be page-aligned and non-zero.
 In the event of failure, a negative error value is returned.
@@ -86,7 +86,7 @@ In a future build this error will no longer occur.
 ### Deallocation
 
 The address space occupied by a VMAR will remain allocated (within its
-parent VMAR) until the VMAR is destroyed by calling **vmar_destroy**().
+parent VMAR) until the VMAR is destroyed by calling [`zx_vmar_destroy()`].
 
 Note that just closing the VMAR's handle does not deallocate the address
 space occupied by the VMAR.
@@ -106,3 +106,7 @@ to have certain addresses be more correlated.
 [vmar_map](vmar_map.md),
 [vmar_protect](vmar_protect.md),
 [vmar_unmap](vmar_unmap.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_vmar_destroy()`]: vmar_destroy.md

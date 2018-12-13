@@ -20,7 +20,7 @@ zx_status_t zx_job_create(zx_handle_t parent_job,
 
 ## DESCRIPTION
 
-**job_create**() creates a new child [job object](../objects/job.md) given a
+`zx_job_create()` creates a new child [job object](../objects/job.md) given a
 parent job.
 
 Upon success a handle for the new job is returned.
@@ -40,7 +40,7 @@ Job handles may be waited on (TODO(cpu): expand this)
 
 ## RETURN VALUE
 
-**job_create**() returns ZX_OK and a handle to the new job
+`zx_job_create()` returns ZX_OK and a handle to the new job
 (via *out*) on success.  In the event of failure, a negative error value
 is returned.
 

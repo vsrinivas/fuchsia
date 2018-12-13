@@ -21,7 +21,7 @@ zx_status_t zx_futex_wait(const zx_futex_t* value_ptr,
 
 ## DESCRIPTION
 
-**futex_wait**() atomically verifies that *value_ptr* still contains the value
+`zx_futex_wait()` atomically verifies that *value_ptr* still contains the value
 *current_value* and sleeps until the futex is made available by a call to
 `zx_futex_wake`. Optionally, the thread can also be woken up after the
 *deadline* (with respect to **ZX_CLOCK_MONOTONIC**) passes.
@@ -29,20 +29,20 @@ zx_status_t zx_futex_wait(const zx_futex_t* value_ptr,
 ## SPURIOUS WAKEUPS
 
 A component that uses futexes should be prepared to handle spurious
-wakeups.  A spurious wakeup is a situation where **futex_wait**()
+wakeups.  A spurious wakeup is a situation where `zx_futex_wait()`
 returns successfully even though the component did not wake the waiter
-by calling **futex_wake**().
+by calling [`zx_futex_wake()`].
 
 Zircon's implementation of futexes currently does not generate
 spurious wakeups itself.  However, commonly-used algorithms that use
 futexes can sometimes generate spurious wakeups.  For example, the
 usual implementation of `mutex_unlock` can potentially produce a
-**futex_wake**() call on a memory location after the location has been
+[`zx_futex_wake()`] call on a memory location after the location has been
 freed and reused for unrelated purposes.
 
 ## OWNERSHIP
 
-A successful call to **futex_wait**() results in the owner of the futex being
+A successful call to `zx_futex_wait()` results in the owner of the futex being
 set to the thread referenced by the `new_futex_owner` handle, or to nothing if
 `new_futex_owner` is **ZX_HANDLE_INVALID**.
 
@@ -57,7 +57,7 @@ None.
 
 ## RETURN VALUE
 
-**futex_wait**() returns **ZX_OK** on success.
+`zx_futex_wait()` returns **ZX_OK** on success.
 
 ## ERRORS
 
@@ -76,3 +76,7 @@ None.
 [futex objects](../objects/futex.md),
 [futex_requeue](futex_requeue.md),
 [futex_wake](futex_wake.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_futex_wake()`]: futex_wake.md

@@ -23,7 +23,7 @@ zx_status_t zx_channel_write(zx_handle_t handle,
 
 ## DESCRIPTION
 
-**channel_write**() attempts to write a message of *num_bytes*
+`zx_channel_write()` attempts to write a message of *num_bytes*
 bytes and *num_handles* handles to the channel specified by
 *handle*.  The pointers *handles* and *bytes* may be NULL if their
 respective sizes are zero.
@@ -54,7 +54,7 @@ Every entry of *handles* must have **ZX_RIGHT_TRANSFER**.
 
 ## RETURN VALUE
 
-**channel_write**() returns **ZX_OK** on success.
+`zx_channel_write()` returns **ZX_OK** on success.
 
 ## ERRORS
 

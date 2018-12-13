@@ -22,10 +22,10 @@ zx_status_t zx_socket_write(zx_handle_t handle,
 
 ## DESCRIPTION
 
-**socket_write**() attempts to write *buffer_size* bytes to the socket specified
+`zx_socket_write()` attempts to write *buffer_size* bytes to the socket specified
 by *handle*. The pointer to *bytes* may be NULL if *buffer_size* is zero.
 
-If **ZX_SOCKET_CONTROL** is passed to *options*, then **socket_write**()
+If **ZX_SOCKET_CONTROL** is passed to *options*, then `zx_socket_write()`
 attempts to write into the socket control plane. A write to the control plane is
 never short. If the socket control plane has insufficient space for *buffer*, it
 writes nothing and returns **ZX_ERR_OUT_OF_RANGE**.
@@ -55,7 +55,7 @@ insufficient space for *buffer*, it writes nothing and returns
 
 ## RETURN VALUE
 
-**socket_write**() returns **ZX_OK** on success.
+`zx_socket_write()` returns **ZX_OK** on success.
 
 ## ERRORS
 

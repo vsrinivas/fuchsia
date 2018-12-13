@@ -18,14 +18,14 @@ zx_status_t zx_interrupt_wait(zx_handle_t handle, zx_time_t* out_timestamp);
 
 ## DESCRIPTION
 
-**interrupt_wait**() is a blocking syscall which causes the caller to
+`zx_interrupt_wait()` is a blocking syscall which causes the caller to
 wait until an interrupt is triggered.  It can only be used on interrupt
-objects that have not been bound to a port with **interrupt_bind**()
+objects that have not been bound to a port with [`zx_interrupt_bind()`]
 
 It also, before the waiting begins, will acknowledge the interrupt object,
-as if **zx_interrupt_ack**() were called on it.
+as if [`zx_interrupt_ack()`] were called on it.
 
-The wait may be aborted with **zx_interrupt_destroy**() or by closing the handle.
+The wait may be aborted with [`zx_interrupt_destroy()`] or by closing the handle.
 
 ## RIGHTS
 
@@ -35,7 +35,7 @@ The wait may be aborted with **zx_interrupt_destroy**() or by closing the handle
 
 ## RETURN VALUE
 
-**interrupt_wait**() returns **ZX_OK** on success, and *out_timestamp*, if
+`zx_interrupt_wait()` returns **ZX_OK** on success, and *out_timestamp*, if
 non-NULL, returns the timestamp of when the interrupt was triggered (relative
 to **ZX_CLOCK_MONOTONIC**)
 
@@ -49,7 +49,7 @@ to **ZX_CLOCK_MONOTONIC**)
 
 **ZX_ERR_ACCESS_DENIED** *handle* lacks **ZX_RIGHT_WAIT**.
 
-**ZX_ERR_CANCELED**  *handle* was closed while waiting or **zx_interrupt_destroy**() was called
+**ZX_ERR_CANCELED**  *handle* was closed while waiting or [`zx_interrupt_destroy()`] was called
 on it.
 
 **ZX_ERR_INVALID_ARGS** the *out_timestamp* parameter is an invalid pointer.
@@ -63,3 +63,9 @@ on it.
 [interrupt_trigger](interrupt_trigger.md),
 [port_wait](port_wait.md),
 [handle_close](handle_close.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_interrupt_ack()`]: interrupt_ack.md
+[`zx_interrupt_bind()`]: interrupt_bind.md
+[`zx_interrupt_destroy()`]: interrupt_destroy.md

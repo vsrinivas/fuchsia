@@ -21,15 +21,15 @@ zx_status_t zx_guest_create(zx_handle_t resource,
 
 ## DESCRIPTION
 
-**guest_create**() creates a guest, which is a virtual machine that can be run
+`zx_guest_create()` creates a guest, which is a virtual machine that can be run
 within the hypervisor, with *vmar_handle* used to represent the physical address
 space of the guest.
 
 To create a guest, a *resource* of *ZX_RSRC_KIND_HYPERVISOR* must be supplied.
 
 In order to begin execution within the guest, a VMO should be mapped into
-*vmar_handle* using **vmar_map**(), and a VCPU must be created using
-**vcpu_create**(), and then run using **vcpu_resume**().
+*vmar_handle* using [`zx_vmar_map()`], and a VCPU must be created using
+[`zx_vcpu_create()`], and then run using [`zx_vcpu_resume()`].
 
 Additionally, a VMO should be mapped into *vmar_handle* to provide a guest with
 physical memory.
@@ -40,9 +40,9 @@ The following rights will be set on the handle *guest_handle* by default:
 
 **ZX_RIGHT_DUPLICATE** &mdash; *guest_handle* may be duplicated.
 
-**ZX_RIGHT_WRITE** &mdash; A trap to be may be set using **guest_set_trap**().
+**ZX_RIGHT_WRITE** &mdash; A trap to be may be set using [`zx_guest_set_trap()`].
 
-**ZX_RIGHT_MANAGE_PROCESS** &mdash; A VCPU may be created using **vcpu_create**().
+**ZX_RIGHT_MANAGE_PROCESS** &mdash; A VCPU may be created using [`zx_vcpu_create()`].
 
 See [vmar_create](vmar_create.md) for the set of rights applied to
 *vmar_handle*.
@@ -55,7 +55,7 @@ See [vmar_create](vmar_create.md) for the set of rights applied to
 
 ## RETURN VALUE
 
-**guest_create**() returns ZX_OK on success. On failure, an error value is
+`zx_guest_create()` returns ZX_OK on success. On failure, an error value is
 returned.
 
 ## ERRORS
@@ -81,3 +81,10 @@ In a future build this error will no longer occur.
 [vcpu_write_state](vcpu_write_state.md),
 [vmar_map](vmar_map.md),
 [vmo_create](vmo_create.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_guest_set_trap()`]: guest_set_trap.md
+[`zx_vcpu_create()`]: vcpu_create.md
+[`zx_vcpu_resume()`]: vcpu_resume.md
+[`zx_vmar_map()`]: vmar_map.md

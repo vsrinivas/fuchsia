@@ -22,7 +22,7 @@ zx_status_t zx_iommu_create(zx_handle_t resource,
 
 ## DESCRIPTION
 
-**iommu_create**() creates a new object in the kernel representing an IOMMU device.
+`zx_iommu_create()` creates a new object in the kernel representing an IOMMU device.
 
 The value of *type* determines the interpretation of *desc*.  See below for
 details about the values of *type*.
@@ -48,7 +48,7 @@ done with it.
 
 ## RETURN VALUE
 
-**iommu_create**() returns ZX_OK and a handle to the new IOMMU
+`zx_iommu_create()` returns ZX_OK and a handle to the new IOMMU
 (via *out*) on success.  In the event of failure, a negative error value
 is returned.
 

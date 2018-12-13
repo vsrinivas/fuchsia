@@ -18,12 +18,12 @@ zx_status_t zx_vmo_create(uint64_t size, uint32_t options, zx_handle_t* out);
 
 ## DESCRIPTION
 
-**vmo_create**() creates a new virtual memory object (VMO), which represents
+`zx_vmo_create()` creates a new virtual memory object (VMO), which represents
 a container of zero to *size* bytes of memory managed by the operating
 system.
 
 The size of the VMO will be rounded up to the next page size boundary.
-Use **vmo_get_size**() to return the current size of the VMO.
+Use [`zx_vmo_get_size()`] to return the current size of the VMO.
 
 One handle is returned on success, representing an object with the requested
 size.
@@ -64,7 +64,7 @@ TODO(ZX-2399)
 
 ## RETURN VALUE
 
-**vmo_create**() returns **ZX_OK** on success. In the event
+`zx_vmo_create()` returns **ZX_OK** on success. In the event
 of failure, a negative error value is returned.
 
 ## ERRORS
@@ -85,3 +85,7 @@ In a future build this error will no longer occur.
 [vmo_get_size](vmo_get_size.md),
 [vmo_op_range](vmo_op_range.md),
 [vmar_map](vmar_map.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_vmo_get_size()`]: vmo_get_size.md

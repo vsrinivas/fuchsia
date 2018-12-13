@@ -13,13 +13,14 @@ It is not run automatically as part of the build for now (to allow confirmation
 of what it does). So it should be run manually after updating syscalls.abigen
 and building zircon, followed by uploading the changes to docs/ as a CL.
 
-Currently, it only updates the rights annotations, but in the future it should
-update the signature, arguments, etc. too.
+It updates the signature, synopsis, and rights annotations, and corrects some
+formatting.
 """
 
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 
@@ -28,6 +29,9 @@ SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
 STANDARD_BLOCK_HEADER = [
     '', '<!-- Updated by update-docs-from-abigen, do not edit. -->', ''
 ]
+
+REFERENCES_COMMENT = \
+        '<!-- References updated by update-docs-from-abigen, do not edit. -->'
 
 
 def parse_args():
@@ -50,6 +54,7 @@ def parse_args():
         default=False,
         action="store_true",
         help='if set, generate stubs for any syscalls that are missing')
+    parser.add_argument('name', nargs='*', help='only generate these syscalls')
     return parser.parse_args()
 
 
@@ -93,8 +98,8 @@ def match_sentence_form(sentence, arg_names):
             '.'
         ],
         [
-            'ARG', 'must', 'be', 'of', 'type', 'TYPE1', 'or', 'TYPE2', 'and', 'have', 'RIGHT',
-            '.'
+            'ARG', 'must', 'be', 'of', 'type', 'TYPE1', 'or', 'TYPE2', 'and',
+            'have', 'RIGHT', '.'
         ],
         [
             'If', 'ARG1', 'is', 'VALUE', ',', 'ARG2', 'must', 'have', 'RIGHT',
@@ -459,6 +464,57 @@ def check_for_orphans(syscalls, root):
     return orphan_count
 
 
+SYSCALL_RE = {}
+
+
+def update_syscall_references(lines, syscall, all_syscall_names, warn):
+    """Attempts to update all syscall references to a canonical format, and
+    linkifies them to their corresponding syscall.
+
+    TODO(ZX-3106): It'd be nice to do the references from outside of
+    docs/syscalls/ into syscalls too, in a similar style.
+    """
+
+    text = '\n'.join(lines)
+
+    # Precompile these regexes as it takes measurable time.
+    if not SYSCALL_RE:
+        for sc in all_syscall_names:
+            # Look for **zx_stuff()** and [`zx_stuff()`], with both "zx_" and
+            # the () being optional.
+            SYSCALL_RE[sc] = re.compile(
+                r'\*{2}(?:zx_)?' + sc + r'(?:\(\))?\*{2}(?:\(\))?'
+                r'|'
+                r'(?:\[)`(?:zx_)?' + sc + r'(?:\(\))?`(?:\])?(\(\))?')
+
+    referred_to = set()
+    for sc in all_syscall_names:
+        scre = SYSCALL_RE[sc]
+        self = sc == syscall['name']
+        repl = '`zx_' + sc + '()`'
+        # Don't link to ourselves.
+        if not self:
+            repl = '[' + repl + ']'
+        text, count = scre.subn(repl, text)
+        if count and not self:
+            referred_to.add(sc)
+
+    lines[:] = text.splitlines()
+
+    if REFERENCES_COMMENT not in lines:
+        lines.extend(['', REFERENCES_COMMENT])
+    start_index = lines.index(REFERENCES_COMMENT)
+
+    references = []
+    for ref in sorted(referred_to):
+        references.append('[`zx_' + ref + '()`]: ' + ref + '.md')
+    lines[start_index:] = [REFERENCES_COMMENT, ''] + references
+
+    # Drop references section if it's empty to not be noisy.
+    if lines[-3:] == ['', REFERENCES_COMMENT, '']:
+        lines[:] = lines[:-3]
+
+
 def main():
     args = parse_args()
     inf = os.path.relpath(args.json)
@@ -466,8 +522,11 @@ def main():
     print 'using %s as input and updating %s...' % (inf, outf)
     data = json.loads(open(inf, 'rb').read())
     missing_count = 0
+    all_syscall_names = set(x['name'] for x in data['syscalls'])
     for syscall in data['syscalls']:
         name = syscall['name']
+        if args.name and name not in args.name:
+            continue
         md = os.path.join(outf, name + '.md')
 
         if not os.path.exists(md) and args.generate_missing:
@@ -490,6 +549,7 @@ def main():
             update_name(lines, syscall, warn)
             update_synopsis(lines, syscall, warn)
             update_rights(lines, syscall, warn)
+            update_syscall_references(lines, syscall, all_syscall_names, warn)
 
             with open(md, 'wb') as f:
                 f.write('\n'.join(lines) + '\n')

@@ -23,7 +23,7 @@ zx_status_t zx_process_create(zx_handle_t job,
 
 ## DESCRIPTION
 
-**process_create**() creates a new process.
+`zx_process_create()` creates a new process.
 
 Upon success, handles for the new process and the root of its address space
 are returned.  The thread will not start executing until *process_start()* is
@@ -47,7 +47,7 @@ process, which will become a child of that job.
 
 ## RETURN VALUE
 
-On success, **process_create**() returns **ZX_OK**, a handle to the new process
+On success, `zx_process_create()` returns **ZX_OK**, a handle to the new process
 (via *proc_handle*), and a handle to the root of its address space (via
 *vmar_handle*).  In the event of failure, a negative error value is returned.
 

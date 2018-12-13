@@ -72,7 +72,7 @@ allocator determined by policy set on the target VMAR).
 
 ## RETURN VALUE
 
-**vmar_map**() returns **ZX_OK** and the absolute base address of the
+`zx_vmar_map()` returns **ZX_OK** and the absolute base address of the
 mapping (via *mapped_addr*) on success.  The base address will be page-aligned
 and non-zero.  In the event of failure, a negative error value is returned.
 

@@ -20,7 +20,7 @@ zx_status_t zx_task_resume_from_exception(zx_handle_t handle,
 
 ## DESCRIPTION
 
-**task_resume_from_exception**() causes the requested task to resume after an
+`zx_task_resume_from_exception()` causes the requested task to resume after an
 exception has been reported to the debug exception port. The port parameter
 should identify the [exception port](task_bind_exception_port.md) to which the
 exception being resumed from was delivered.
@@ -59,7 +59,7 @@ zx_status_t status = zx_task_resume_from_exception(thread, port, ZX_RESUME_TRY_N
 
 ## RETURN VALUE
 
-**task_resume_from_exception**() returns **ZX_OK** on success.
+`zx_task_resume_from_exception()` returns **ZX_OK** on success.
 In the event of failure, a negative error value is returned.
 
 ## ERRORS

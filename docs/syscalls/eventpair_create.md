@@ -20,12 +20,12 @@ zx_status_t zx_eventpair_create(uint32_t options,
 
 ## DESCRIPTION
 
-**eventpair_create**() creates an event pair, which is a pair of objects that
+`zx_eventpair_create()` creates an event pair, which is a pair of objects that
 are mutually signalable.
 
 The signals *ZX_EVENTPAIR_SIGNALED* and *ZX_USER_SIGNAL_n* (where *n* is 0 through 7)
-may be set or cleared using **object_signal**() (modifying the signals on the
-object itself), or **object_signal_peer**() (modifying the signals on its
+may be set or cleared using [`zx_object_signal()`] (modifying the signals on the
+object itself), or [`zx_object_signal_peer()`] (modifying the signals on its
 counterpart).
 
 When all the handles to one of the objects have been closed, the
@@ -46,7 +46,7 @@ TODO(ZX-2399)
 
 ## RETURN VALUE
 
-**eventpair_create**() returns **ZX_OK** on success. On failure, a (negative)
+`zx_eventpair_create()` returns **ZX_OK** on success. On failure, a (negative)
 error code is returned.
 
 
@@ -72,3 +72,8 @@ In a future build this error will no longer occur.
 [handle_replace](handle_replace.md),
 [object_signal](object_signal.md),
 [object_signal_peer](object_signal.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_object_signal()`]: object_signal.md
+[`zx_object_signal_peer()`]: object_signal_peer.md

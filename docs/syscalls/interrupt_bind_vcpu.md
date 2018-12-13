@@ -20,12 +20,12 @@ zx_status_t zx_interrupt_bind_vcpu(zx_handle_t handle,
 
 ## DESCRIPTION
 
-**interrupt_bind_vcpu**() binds an interrupt object to a VCPU. When the
+`zx_interrupt_bind_vcpu()` binds an interrupt object to a VCPU. When the
 interrupt object is triggered, the interrupt is redirected to the VCPU, in order
 to be processed by a guest with no host intervention.
 
 An interrupt object may be bound to multiple VCPUs, in order to distribute the
-interrupt. Simply invoke **interrupt_bind_vcpu**() with the same *handle*, but
+interrupt. Simply invoke `zx_interrupt_bind_vcpu()` with the same *handle*, but
 different *vcpu*s. However, all VCPUs must belong to a single guest.
 
 ## RIGHTS
@@ -38,7 +38,7 @@ different *vcpu*s. However, all VCPUs must belong to a single guest.
 
 ## RETURN VALUE
 
-**interrupt_bind_vcpu**() returns *ZX_OK* on success. On failure, an error value
+`zx_interrupt_bind_vcpu()` returns *ZX_OK* on success. On failure, an error value
 is returned.
 
 ## ERRORS
@@ -48,10 +48,10 @@ is returned.
 **ZX_ERR_WRONG_TYPE** *handle* is not an interrupt object or *vcpu* is not a
 VCPU.
 
-**ZX_ERR_CANCELED** **interrupt_destroy**() was called on *handle*.
+**ZX_ERR_CANCELED** [`zx_interrupt_destroy()`] was called on *handle*.
 
 **ZX_ERR_BAD_STATE**  a thread is waiting on the interrupt using
-**interrupt_wait**().
+[`zx_interrupt_wait()`].
 
 **ZX_ERR_ACCESS_DENIED** *handle* lacks *ZX_RIGHT_READ* or *vcpu* lacks
 *ZX_RIGHT_WRITE*.
@@ -67,3 +67,8 @@ bound VCPUs, or *options* is non-zero.
 [guest_create](guest_create.md),
 [interrupt_create](interrupt_create.md),
 [vcpu_create](vcpu_create.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_interrupt_destroy()`]: interrupt_destroy.md
+[`zx_interrupt_wait()`]: interrupt_wait.md

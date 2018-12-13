@@ -25,7 +25,7 @@ zx_status_t zx_bti_pin(zx_handle_t handle,
 
 ## DESCRIPTION
 
-**bti_pin**() pins pages of a VMO (i.e. prevents them from being decommitted
+`zx_bti_pin()` pins pages of a VMO (i.e. prevents them from being decommitted
 with **[vmo_op_range](vmo_op_range.md)**()) and grants the hardware
 transaction ID represented by the BTI the ability to access these pages,
 with the permissions specified in *options*.
@@ -38,7 +38,7 @@ with the permissions specified in *options*.
 READ/WRITE rights corresponding to the permissions flags set in *options*.
 (Note: *ZX_BTI_PERM_EXECUTE* requires *ZX_RIGHT_READ*, not *ZX_RIGHT_EXECUTE*.)
 *ZX_BTI_CONTIGUOUS* is only allowed if *vmo* was allocated via
-**zx_vmo_create_contiguous**() or **zx_vmo_create_physical**().
+[`zx_vmo_create_contiguous()`] or [`zx_vmo_create_physical()`].
 *ZX_BTI_COMPRESS* and *ZX_BTI_CONTIGUOUS* are mutually exclusive.
 
 If the range in *vmo* specified by *offset* and *size* contains non-committed
@@ -86,7 +86,7 @@ If *options* & **ZX_BTI_PERM_EXECUTE**, *vmo* must be of type **ZX_OBJ_TYPE_VMO*
 
 ## RETURN VALUE
 
-On success, **bti_pin**() returns *ZX_OK*.  The device-physical addresses of the
+On success, `zx_bti_pin()` returns *ZX_OK*.  The device-physical addresses of the
 requested VMO pages will be written in *addrs*.  A handle to the created Pinned
 Memory Token is returned via *pmt*.  When the PMT is no longer needed,
 *pmt_unpin*() should be invoked.
@@ -120,3 +120,8 @@ In a future build this error will no longer occur.
 [bti_create](bti_create.md),
 [pmt_unpin](pmt_unpin.md),
 [object_get_info](object_get_info.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_vmo_create_contiguous()`]: vmo_create_contiguous.md
+[`zx_vmo_create_physical()`]: vmo_create_physical.md

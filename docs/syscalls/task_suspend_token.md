@@ -1,8 +1,8 @@
 # zx_task_suspend_token
 
 This function replaces [task_suspend](task_suspend.md). When all callers are
-updated, **task_suspend** will be deleted and this function will be renamed
-**task_suspend**.
+updated, [`zx_task_suspend()`] will be deleted and this function will be renamed
+[`zx_task_suspend()`].
 
 ## NAME
 
@@ -22,13 +22,13 @@ zx_status_t zx_task_suspend_token(zx_handle_t handle, zx_handle_t* token);
 
 ## DESCRIPTION
 
-**task_suspend_token**() causes the requested task to suspend execution. Task
+`zx_task_suspend_token()` causes the requested task to suspend execution. Task
 suspension is not synchronous and the task might not be suspended before the
-call returns. The task will be suspended soon after **task_suspend_token**() is
+call returns. The task will be suspended soon after `zx_task_suspend_token()` is
 invoked, unless it is currently blocked in the kernel, in which case it will
 suspend after being unblocked.
 
-Invoking **task_kill**() on a task that is suspended will successfully kill
+Invoking [`zx_task_kill()`] on a task that is suspended will successfully kill
 the task.
 
 ## RESUMING
@@ -47,7 +47,7 @@ are open.
 
 ## RETURN VALUE
 
-**task_suspend**() returns **ZX_OK** on success.
+[`zx_task_suspend()`] returns **ZX_OK** on success.
 In the event of failure, a negative error value is returned.
 
 ## ERRORS
@@ -63,3 +63,8 @@ In the event of failure, a negative error value is returned.
 ## LIMITATIONS
 
 Currently only thread handles are supported.
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_task_kill()`]: task_kill.md
+[`zx_task_suspend()`]: task_suspend.md

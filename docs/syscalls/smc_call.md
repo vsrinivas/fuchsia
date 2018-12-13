@@ -21,11 +21,11 @@ zx_status_t zx_smc_call(zx_handle_t handle,
 
 ## DESCRIPTION
 
-**smc_call**() makes a Secure Monitor Call (SMC) from user space. It supports the ARM SMC Calling
+`zx_smc_call()` makes a Secure Monitor Call (SMC) from user space. It supports the ARM SMC Calling
 Convention using the *zx_smc_parameters_t* input parameter and *zx_smc_result_t* output parameter.
 The input *handle* must be a resource object with sufficient privileges in order to be executed.
 
-The majority of the parameters are opaque from **smc_call** perspective because they are
+The majority of the parameters are opaque from `zx_smc_call()` perspective because they are
 dependent upon the *func_id*. The *func_id* informs the Secure Monitor the service and function
 to be invoked. The *client_id* is an optional field intended for secure software to track and
 index the calling client OS. The *secure_os_id* is an optional field intended for use when there
@@ -44,7 +44,7 @@ TODO(ZX-2399)
 
 ## RETURN VALUE
 
-**smc_call**() returns ZX_OK if *handle* has sufficient privilege. The
+`zx_smc_call()` returns ZX_OK if *handle* has sufficient privilege. The
 return value of the smc call is returned via **out_smc_result** on success. In the event of
 failure, a negative error value is returned.
 

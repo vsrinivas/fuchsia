@@ -23,10 +23,10 @@ zx_status_t zx_process_start(zx_handle_t handle,
 
 ## DESCRIPTION
 
-**process_start**() is similar to **thread_start**(), but is used for the
+`zx_process_start()` is similar to [`zx_thread_start()`], but is used for the
 purpose of starting the first thread in a process.
 
-**process_start**() causes a thread to begin execution at the program
+`zx_process_start()` causes a thread to begin execution at the program
 counter specified by *entry* and with the stack pointer set to *stack*.
 The arguments *arg1* and *arg2* are arranged to be in the architecture
 specific registers used for the first two arguments of a function call
@@ -35,7 +35,7 @@ before the thread is started.  All other registers are zero upon start.
 The first argument (*arg1*) is a handle, which will be transferred from
 the process of the caller to the process which is being started, and an
 appropriate handle value will be placed in arg1 for the newly started
-thread. If **process_start** returns an error, *arg1* is closed rather
+thread. If `zx_process_start()` returns an error, *arg1* is closed rather
 than transferred to the process being started.
 
 ## RIGHTS
@@ -50,7 +50,7 @@ than transferred to the process being started.
 
 ## RETURN VALUE
 
-**process_start**() returns ZX_OK on success.
+`zx_process_start()` returns ZX_OK on success.
 In the event of failure, a negative error value is returned.
 
 ## ERRORS
@@ -77,3 +77,7 @@ does not belong to *process*, or the handle *process* lacks *ZX_RIGHT_WRITE* or
 [thread_create](thread_create.md),
 [thread_exit](thread_exit.md),
 [thread_start](thread_start.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_thread_start()`]: thread_start.md
