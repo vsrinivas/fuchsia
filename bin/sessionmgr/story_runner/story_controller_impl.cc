@@ -50,6 +50,7 @@
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/ledger_client/operations.h"
+#include "peridot/lib/util/string_escape.h"
 
 // Used to create std::set<LinkPath>.
 namespace std {
@@ -72,15 +73,24 @@ constexpr auto kUpdateSnapshotTimeout = zx::sec(1);
 
 namespace {
 
-fidl::StringPtr PathString(
+constexpr char kSurfaceIDSeparator[] = ":";
+fidl::StringPtr ModulePathToSurfaceID(
     const fidl::VectorPtr<fidl::StringPtr>& module_path) {
-  auto path = fxl::To<std::vector<std::string>>(module_path);
-  return fxl::JoinStrings(path, ":");
+  std::vector<std::string> path;
+  // Sanitize all the |module_name|s that make up this |module_path|.
+  for (const auto& module_name : module_path.get()) {
+    path.push_back(StringEscape(module_name.get(), kSurfaceIDSeparator));
+  }
+  return fxl::JoinStrings(path, kSurfaceIDSeparator);
 }
 
-fidl::VectorPtr<fidl::StringPtr> StringToPath(const fidl::StringPtr& view_id) {
-  auto path = fxl::SplitStringCopy(fxl::StringView(view_id), ":",
-                                   fxl::kKeepWhitespace, fxl::kSplitWantAll);
+fidl::VectorPtr<fidl::StringPtr> ModulePathFromSurfaceID(
+    const fidl::StringPtr& surface_id) {
+  std::vector<std::string> path;
+  for (const auto& parts : SplitEscapedString(fxl::StringView(surface_id.get()),
+                                              kSurfaceIDSeparator[0])) {
+    path.push_back(parts.ToString());
+  }
   return fxl::To<fidl::VectorPtr<fidl::StringPtr>>(path);
 }
 
@@ -172,7 +182,7 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
   void Launch(FlowToken /*flow*/) {
     FXL_LOG(INFO) << "StoryControllerImpl::LaunchModule() "
                   << module_data_.module_url << " "
-                  << PathString(module_data_.module_path);
+                  << ModulePathToSurfaceID(module_data_.module_path);
     fuchsia::modular::AppConfig module_config;
     module_config.url = module_data_.module_url;
 
@@ -304,7 +314,7 @@ class StoryControllerImpl::KillModuleCall : public Operation<> {
         module_data_.module_source ==
             fuchsia::modular::ModuleSource::EXTERNAL) {
       story_controller_impl_->story_shell_->DefocusSurface(
-          PathString(module_data_.module_path), future->Completer());
+          ModulePathToSurfaceID(module_data_.module_path), future->Completer());
     } else {
       future->Complete();
     }
@@ -316,9 +326,9 @@ class StoryControllerImpl::KillModuleCall : public Operation<> {
       auto* const running_mod_info =
           story_controller_impl_->FindRunningModInfo(module_data_.module_path);
       if (!running_mod_info) {
-        FXL_LOG(INFO) << "No ModuleController for Module"
-                      << " " << PathString(module_data_.module_path) << ". "
-                      << "Was ModuleController.Stop() called twice?";
+        FXL_LOG(INFO) << "No ModuleController for Module '"
+                      << ModulePathToSurfaceID(module_data_.module_path)
+                      << "'. Was ModuleController.Stop() called twice?";
         InvokeDone();
         return;
       }
@@ -427,9 +437,10 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
 
     auto* const anchor = story_controller_impl_->FindAnchor(running_mod_info);
     if (anchor) {
-      const auto anchor_view_id = PathString(anchor->module_data->module_path);
-      if (story_controller_impl_->connected_views_.count(anchor_view_id)) {
-        ConnectView(flow, anchor_view_id);
+      const auto anchor_surface_id =
+          ModulePathToSurfaceID(anchor->module_data->module_path);
+      if (story_controller_impl_->connected_views_.count(anchor_surface_id)) {
+        ConnectView(flow, anchor_surface_id);
         return;
       }
     }
@@ -439,30 +450,30 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
     auto surface_relation_clone = fuchsia::modular::SurfaceRelation::New();
     module_data_.surface_relation->Clone(surface_relation_clone.get());
     story_controller_impl_->pending_views_.emplace(
-        PathString(module_data_.module_path),
+        ModulePathToSurfaceID(module_data_.module_path),
         PendingView{module_data_.module_path.Clone(), std::move(manifest_clone),
                     std::move(surface_relation_clone),
                     module_data_.module_source, std::move(view_owner_)});
   }
 
-  void ConnectView(FlowToken flow, fidl::StringPtr anchor_view_id) {
-    const auto view_id = PathString(module_data_.module_path);
+  void ConnectView(FlowToken flow, fidl::StringPtr anchor_surface_id) {
+    const auto surface_id = ModulePathToSurfaceID(module_data_.module_path);
 
     fuchsia::modular::ViewConnection view_connection;
-    view_connection.surface_id = view_id;
+    view_connection.surface_id = surface_id;
     view_connection.owner = std::move(view_owner_);
 
     fuchsia::modular::SurfaceInfo surface_info;
-    surface_info.parent_id = anchor_view_id;
+    surface_info.parent_id = anchor_surface_id;
     surface_info.surface_relation = std::move(module_data_.surface_relation);
     surface_info.module_manifest = std::move(module_data_.module_manifest);
     surface_info.module_source = std::move(module_data_.module_source);
     story_controller_impl_->story_shell_->AddSurface(std::move(view_connection),
                                                      std::move(surface_info));
 
-    story_controller_impl_->connected_views_.emplace(view_id);
+    story_controller_impl_->connected_views_.emplace(surface_id);
     story_controller_impl_->ProcessPendingViews();
-    story_controller_impl_->story_shell_->FocusSurface(view_id);
+    story_controller_impl_->story_shell_->FocusSurface(surface_id);
   }
 
   StoryControllerImpl* const story_controller_impl_;
@@ -687,7 +698,7 @@ class StoryControllerImpl::FocusCall : public Operation<> {
     }
 
     story_controller_impl_->story_shell_->FocusSurface(
-        PathString(module_path_));
+        ModulePathToSurfaceID(module_path_));
   }
 
   OperationQueue operation_queue_;
@@ -716,7 +727,7 @@ class StoryControllerImpl::DefocusCall : public Operation<> {
     // NOTE(mesch): We don't wait for defocus to return. TODO(mesch): What is
     // the return callback good for anyway?
     story_controller_impl_->story_shell_->DefocusSurface(
-        PathString(module_path_), [] {});
+        ModulePathToSurfaceID(module_path_), [] {});
   }
 
   OperationQueue operation_queue_;
@@ -906,7 +917,7 @@ class StoryControllerImpl::StartContainerInShellCall : public Operation<> {
             views->at(i) = std::move(view);
           }
           story_controller_impl_->story_shell_->AddContainer(
-              container_name_, PathString(parent_module_path_),
+              container_name_, ModulePathToSurfaceID(parent_module_path_),
               std::move(*parent_relation_), std::move(layout_),
               std::move(relationships_), std::move(views));
         });
@@ -1193,7 +1204,7 @@ void StoryControllerImpl::ReleaseModule(
                           });
   FXL_DCHECK(fit != running_mod_infos_.end());
   fit->module_controller_impl.release();
-  pending_views_.erase(PathString(fit->module_data->module_path));
+  pending_views_.erase(ModulePathToSurfaceID(fit->module_data->module_path));
   running_mod_infos_.erase(fit);
 }
 
@@ -1236,7 +1247,7 @@ fuchsia::modular::LinkPathPtr StoryControllerImpl::GetLinkPathForParameterName(
   // Ledger, accessible through StoryStorage, but the call would be dispatcher,
   // which would change the flow of all clients of this method. For now, we
   // leave as-is.
-  FXL_DCHECK(mod_info) << PathString(module_path);
+  FXL_DCHECK(mod_info) << ModulePathToSurfaceID(module_path);
 
   const auto& param_map = mod_info->module_data->parameter_map;
   auto it = std::find_if(
@@ -1326,23 +1337,24 @@ void StoryControllerImpl::ProcessPendingViews() {
       continue;
     }
 
-    const auto anchor_view_id = PathString(anchor->module_data->module_path);
-    if (!connected_views_.count(anchor_view_id)) {
+    const auto anchor_surface_id =
+        ModulePathToSurfaceID(anchor->module_data->module_path);
+    if (!connected_views_.count(anchor_surface_id)) {
       continue;
     }
 
-    const auto view_id = PathString(kv.second.module_path);
+    const auto surface_id = ModulePathToSurfaceID(kv.second.module_path);
     fuchsia::modular::ViewConnection view_connection;
-    view_connection.surface_id = view_id;
+    view_connection.surface_id = surface_id;
     view_connection.owner = std::move(kv.second.view_owner);
     fuchsia::modular::SurfaceInfo surface_info;
-    surface_info.parent_id = anchor_view_id;
+    surface_info.parent_id = anchor_surface_id;
     surface_info.surface_relation = std::move(kv.second.surface_relation);
     surface_info.module_manifest = std::move(kv.second.module_manifest);
     surface_info.module_source = std::move(kv.second.module_source);
     story_shell_->AddSurface(std::move(view_connection),
                              std::move(surface_info));
-    connected_views_.emplace(view_id);
+    connected_views_.emplace(surface_id);
 
     added_keys.push_back(kv.first);
   }
@@ -1673,7 +1685,7 @@ void StoryControllerImpl::CreateEntity(
 }
 
 void StoryControllerImpl::OnSurfaceFocused(fidl::StringPtr surface_id) {
-  auto module_path = StringToPath(surface_id);
+  auto module_path = ModulePathFromSurfaceID(surface_id);
 
   for (auto& watcher : watchers_.ptrs()) {
     (*watcher)->OnModuleFocused(std::move(module_path));
