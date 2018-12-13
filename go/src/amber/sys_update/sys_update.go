@@ -148,7 +148,7 @@ func (upMon *SystemUpdateMonitor) Check(initiator metrics.Initiator) error {
 				When:      start,
 			})
 
-			launchDesc := sys.LaunchInfo{Url: "system_updater"}
+			launchDesc := sys.LaunchInfo{Url: "fuchsia-pkg://fuchsia.com/system_updater#meta/system_updater.cmx"}
 			if err := runProgram(launchDesc); err != nil {
 				log.Printf("sys_upd_mon: updater failed to start: %s", err)
 			}
