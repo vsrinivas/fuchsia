@@ -8,23 +8,17 @@
 
 set -eo pipefail
 
-GUEST_SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-
 # Where the dash sources are expected to be.
 DASH_SRC_DIR="/tmp/dash"
 
 usage() {
     echo "usage: ${0} [options] {arm64, x64}"
-    echo ""
-    echo "    -r Build ext2 filesystem image."
-    echo "    -i Build initrd CPIO archive."
-    echo "    -f Force a rebuild even if the artifact already exists."
+    echo
     echo "    -d Directory to clone toybox into."
+    echo "    -o Disk image output path."
     echo "    -s Directory to clone dash into."
-    echo "    -o Initrd output path."
-    echo "    -p Disk image output path."
     echo "    -u Update before building."
-    echo ""
+    echo
     exit 1
 }
 
@@ -97,29 +91,20 @@ build_dash() {
 generate_init() {
   local sysroot_dir="$1"
 
+  mkdir -p "${sysroot_dir}/etc"
+  mkdir -p "${sysroot_dir}/testutils"
+
   # Write an init script for toybox.
-  cat > "$sysroot_dir/init" <<'_EOF'
+  cat > "${sysroot_dir}/etc/init" <<'_EOF'
 #!/bin/sh
-mount -t proc none /proc
-mount -t sysfs none /sys
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+mount -t ext2 /dev/vdb /testutils
 echo Launched init
 exec /bin/sh
 _EOF
 
-  chmod +x "$sysroot_dir/init"
-}
-
-# Generate a gzipped CPIO archive of the toybox sysroot.
-#
-# $1 - Toybox sysroot directory.
-# $2 - Filepath of the created initrd.
-package_initrd() {
-  local sysroot="$1"
-  local initrd="$2"
-
-  pushd "${sysroot}"
-  find . | cpio -oH newc | gzip -9 > "${initrd}"
-  popd
+  chmod +x "${sysroot_dir}/etc/init"
 }
 
 # e2tools provides utilities for manipulating EXT2 filesystems.
@@ -160,20 +145,13 @@ package_rootfs() {
   done
 }
 
-declare FORCE="${FORCE:-false}"
-declare BUILD_INITRD="${BUILD_INITRD:-false}"
-declare BUILD_ROOTFS="${BUILD_ROOTFS:-false}"
 declare UPDATE="${UPDATE:-false}"
 
-while getopts "fird:s:o:p:u" opt; do
+while getopts "d:o:s:u" opt; do
   case "${opt}" in
-  f) FORCE="true" ;;
-  i) BUILD_INITRD="true" ;;
-  r) BUILD_ROOTFS="true" ;;
   d) TOYBOX_SRC_DIR="${OPTARG}" ;;
+  o) DISK_OUT="${OPTARG}" ;;
   s) DASH_SRC_DIR="${OPTARG}" ;;
-  o) INITRD_OUT="${OPTARG}" ;;
-  p) DISK_OUT="${OPTARG}" ;;
   u) UPDATE="true" ;;
   *) usage ;;
   esac
@@ -182,11 +160,13 @@ shift $((OPTIND - 1))
 
 case "${1}" in
 arm64)
+  ARCH=${1}
   type aarch64-linux-gnu-gcc ||
     { echo "Required package gcc-aarch64-linux-gnu is not installed."
       echo "(sudo apt install gcc-aarch64-linux-gnu)"; exit 1; };
   AC_HOST="aarch64-linux-gnu";;
 x64)
+  ARCH=${1}
   AC_HOST="x86_64-linux-gnu";;
 *)
   usage;;
@@ -195,40 +175,13 @@ esac
 # Where the toybox sources are expected to be.
 TOYBOX_SRC_DIR="${TOYBOX_SRC_DIR:-/tmp/toybox-${ARCH}}"
 
-# Toybox initrd file.
-TOYBOX_INITRD="$TOYBOX_SRC_DIR/initrd.gz"
-
 # Toybox root filesystem image.
-TOYBOX_ROOTFS="$TOYBOX_SRC_DIR/rootfs.ext2"
+TOYBOX_ROOTFS="${TOYBOX_SRC_DIR}/rootfs.ext2"
 
 # Where to prep the toybox directory structure.
-TOYBOX_SYSROOT="$TOYBOX_SRC_DIR/fs"
+TOYBOX_SYSROOT="${TOYBOX_SRC_DIR}/fs"
 
-# Do we have something to build?
-if [[ ! "${BUILD_INITRD}" = "true" ]] && [[ ! "${BUILD_ROOTFS}" = "true" ]]; then
-  echo "Either -r or -i is required."
-  usage
-fi
-
-# Are the requested targets up-to-date?
-if [[ ! "${FORCE}" = "true" ]]; then
-  if [[ -f "${TOYBOX_INITRD}" ]]; then
-    BUILD_INITRD="false"
-  fi
-  if [[ -f "${TOYBOX_ROOTFS}" ]]; then
-    BUILD_ROOTFS="false"
-  fi
-fi
-if [[ ! "${BUILD_INITRD}" = "true" ]] && [[ ! "${BUILD_ROOTFS}" = "true" ]]; then
-  echo "All targets up to date. Pass -f to force a rebuild."
-  exit 0
-fi
-
-readonly "${FORCE}" "${BUILD_INITRD}" "${BUILD_ROOTFS}"
-
-if [[ "${BUILD_ROOTFS}" = "true" ]]; then
-  check_e2tools
-fi
+check_e2tools
 
 get_toybox_source "${TOYBOX_SRC_DIR}"
 
@@ -240,18 +193,11 @@ build_dash "${DASH_SRC_DIR}" "${TOYBOX_SYSROOT}"
 
 generate_init "${TOYBOX_SYSROOT}"
 
-if [[ "${BUILD_INITRD}" = "true" ]]; then
-  package_initrd "${TOYBOX_SYSROOT}" "${TOYBOX_INITRD}"
-  echo "initrd at ${TOYBOX_INITRD}"
-  if [ -n "${INITRD_OUT}" ]; then
-    mv "${TOYBOX_INITRD}" "${INITRD_OUT}"
-  fi
-fi
+package_rootfs "${TOYBOX_SYSROOT}" "${TOYBOX_ROOTFS}"
 
-if [[ "${BUILD_ROOTFS}" = "true" ]]; then
-  package_rootfs "${TOYBOX_SYSROOT}" "${TOYBOX_ROOTFS}"
+if [ -n "${DISK_OUT}" ]; then
+  mv "${TOYBOX_ROOTFS}" "${DISK_OUT}"
+  echo "filesystem image at ${DISK_OUT}"
+else
   echo "filesystem image at ${TOYBOX_ROOTFS}"
-  if [ -n "${DISK_OUT}" ]; then
-    mv "${TOYBOX_ROOTFS}" "${DISK_OUT}"
-  fi
 fi
