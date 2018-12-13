@@ -145,7 +145,7 @@ void ObservationsCollector::Stop() {
   collection_loop_.join();
 }
 
-void ObservationsCollector::CollectAll() {
+bool ObservationsCollector::CollectAll() {
   std::vector<Observation> observations;
   for (auto iter = metrics_.begin(); iter != metrics_.end(); iter++) {
     observations.push_back(iter->second->GetObservation());
@@ -162,13 +162,17 @@ void ObservationsCollector::CollectAll() {
   }
   auto errors = send_observations_(&observations);
 
+  auto fully_successful = true;
   // Undo failed observations.
   for (auto iter = errors.begin(); iter != errors.end(); iter++) {
     for (auto parts_iter = observations[*iter].parts.begin();
          parts_iter != observations[*iter].parts.end(); parts_iter++) {
       parts_iter->undo();
+      fully_successful = false;
     }
   }
+
+  return fully_successful;
 }
 
 void ObservationsCollector::CollectLoop(
@@ -178,7 +182,15 @@ void ObservationsCollector::CollectLoop(
     // TODO(azani): Add jitter.
     std::this_thread::sleep_for(collection_interval);
   }
-  // Collect one more time after being told to stop.
-  CollectAll();
+  // Collect up to 30 more times to (almost) ensure that all of the observations
+  // have been collected. This will Stop early once CollectAll returns true.
+  //
+  // If, for example, sending observations fails 20% of the time, this will
+  // complete in 5 iterations 99.968% of the time.
+  for (int i = 0; i < 30; i++) {
+    if (CollectAll()) {
+      return;
+    }
+  }
 }
 }  // namespace cobalt

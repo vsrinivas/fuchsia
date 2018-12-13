@@ -389,7 +389,9 @@ class ObservationsCollector {
 
   // CollectAll attempts to collect observations for all MetricObservers
   // created with this collector and send them using |send_observations|.
-  void CollectAll();
+  //
+  // Returns true if all observations were successful.
+  bool CollectAll();
 
  private:
   std::shared_ptr<MetricObservers> GetMetricObservers(uint32_t id);
