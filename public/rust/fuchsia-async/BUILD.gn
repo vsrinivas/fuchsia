@@ -10,11 +10,11 @@ rustc_library("fuchsia-async") {
   version = "0.1.0"
   with_unit_tests = true
   deps = [
+    "//garnet/public/rust/fuchsia-async-macro",
     "//garnet/public/rust/fuchsia-system-alloc",
     "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust-crates/rustc_deps:bytes",
     "//third_party/rust-crates/rustc_deps:crossbeam",
-    "//third_party/rust-crates/rustc_deps:fuchsia-async-macro",
     "//third_party/rust-crates/rustc_deps:futures-preview",
     "//third_party/rust-crates/rustc_deps:libc",
     "//third_party/rust-crates/rustc_deps:net2",
