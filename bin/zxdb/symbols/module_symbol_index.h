@@ -6,11 +6,11 @@
 
 #include <map>
 #include <memory>
+#include <string_view>
 #include <vector>
 
 #include "garnet/bin/zxdb/symbols/module_symbol_index_node.h"
 #include "garnet/public/lib/fxl/macros.h"
-#include "garnet/public/lib/fxl/strings/string_view.h"
 
 namespace llvm {
 
@@ -104,7 +104,7 @@ class ModuleSymbolIndex {
   // should get few duplicates. The cost of using a vector for most items
   // containing one element becomes higher in that case.
   using FileNameIndex =
-      std::multimap<fxl::StringView, FileIndex::const_iterator>;
+      std::multimap<std::string_view, FileIndex::const_iterator>;
   FileNameIndex file_name_index_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleSymbolIndex);

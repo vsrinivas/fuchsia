@@ -4,7 +4,8 @@
 
 #pragma once
 
-#include "garnet/public/lib/fxl/strings/string_view.h"
+#include <string>
+#include <string_view>
 
 namespace zxdb {
 
@@ -12,7 +13,7 @@ namespace zxdb {
 // (the stuff following the last slash). If the path ends in a slash, it will
 // return an empty StringView. If the input has no slash, it will return the
 // whole thing.
-fxl::StringView ExtractLastFileComponent(fxl::StringView path);
+std::string_view ExtractLastFileComponent(std::string_view path);
 
 // Returns true if the given file path is absolute (begins with a slash).
 // The contents could still have relative components ("/foo/../bar" is still

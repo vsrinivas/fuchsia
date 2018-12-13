@@ -4,9 +4,11 @@
 
 #include "garnet/bin/zxdb/common/file_util.h"
 
+#include "lib/fxl/logging.h"
+
 namespace zxdb {
 
-fxl::StringView ExtractLastFileComponent(fxl::StringView path) {
+std::string_view ExtractLastFileComponent(std::string_view path) {
   size_t last_slash = path.rfind('/');
   if (last_slash == std::string::npos)
     return path;

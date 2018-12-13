@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include "garnet/public/lib/fxl/strings/string_view.h"
+#include <string_view>
 
 namespace zxdb {
 
 // Returns true if the first argument ends in exactly the second.
-bool StringEndsWith(fxl::StringView str, fxl::StringView ends_with);
+bool StringEndsWith(std::string_view str, std::string_view ends_with);
 
 }  // namespace zxdb

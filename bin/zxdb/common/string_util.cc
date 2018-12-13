@@ -6,11 +6,11 @@
 
 namespace zxdb {
 
-bool StringEndsWith(fxl::StringView str, fxl::StringView ends_with) {
+bool StringEndsWith(std::string_view str, std::string_view ends_with) {
   if (ends_with.size() > str.size())
     return false;
 
-  fxl::StringView source =
+  std::string_view source =
       str.substr(str.size() - ends_with.size(), ends_with.size());
   return source == ends_with;
 }

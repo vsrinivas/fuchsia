@@ -281,7 +281,7 @@ void OutputBuffer::Append(const Err& err) {
 }
 
 void OutputBuffer::FormatHelp(const std::string& str) {
-  for (fxl::StringView line :
+  for (auto line :
        fxl::SplitString(str, "\n", fxl::kKeepWhitespace, fxl::kSplitWantAll)) {
     Syntax syntax;
     if (!line.empty() && line[0] != ' ') {

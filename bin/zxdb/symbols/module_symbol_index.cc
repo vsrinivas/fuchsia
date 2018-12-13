@@ -383,7 +383,7 @@ const std::vector<ModuleSymbolIndexNode::DieRef>& ModuleSymbolIndex::FindExact(
 
 std::vector<std::string> ModuleSymbolIndex::FindFileMatches(
     const std::string& name) const {
-  fxl::StringView name_last_comp = ExtractLastFileComponent(name);
+  std::string_view name_last_comp = ExtractLastFileComponent(name);
 
   std::vector<std::string> result;
 
@@ -482,7 +482,7 @@ void ModuleSymbolIndex::IndexCompileUnitSourceFiles(llvm::DWARFContext* context,
 void ModuleSymbolIndex::IndexFileNames() {
   for (FileIndex::const_iterator iter = files_.begin(); iter != files_.end();
        ++iter) {
-    fxl::StringView name = ExtractLastFileComponent(iter->first);
+    std::string_view name = ExtractLastFileComponent(iter->first);
     file_name_index_.insert(std::make_pair(name, iter));
   }
 }

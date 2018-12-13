@@ -14,7 +14,7 @@ FileLine::FileLine(std::string file, int line)
 FileLine::~FileLine() = default;
 
 std::string FileLine::GetFileNamePart() const {
-  return ExtractLastFileComponent(file_).ToString();
+  return std::string(ExtractLastFileComponent(file_));
 }
 
 bool operator<(const FileLine& a, const FileLine& b) {
