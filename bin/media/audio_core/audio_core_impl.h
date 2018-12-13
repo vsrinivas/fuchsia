@@ -23,7 +23,7 @@
 namespace media {
 namespace audio {
 
-class AudioCoreImpl : public fuchsia::media::Audio {
+class AudioCoreImpl : public fuchsia::media::AudioCore {
  public:
   AudioCoreImpl();
   ~AudioCoreImpl() override;
@@ -32,9 +32,9 @@ class AudioCoreImpl : public fuchsia::media::Audio {
   void CreateAudioRenderer(fidl::InterfaceRequest<fuchsia::media::AudioRenderer>
                                audio_renderer_request) final;
 
-  void CreateAudioCapturer(fidl::InterfaceRequest<fuchsia::media::AudioCapturer>
-                               audio_capturer_request,
-                           bool loopback) final;
+  void CreateAudioCapturer(bool loopback,
+                           fidl::InterfaceRequest<fuchsia::media::AudioCapturer>
+                               audio_capturer_request) final;
 
   void SetSystemGain(float gain_db) final;
   void SetSystemMute(bool muted) final;
@@ -80,7 +80,7 @@ class AudioCoreImpl : public fuchsia::media::Audio {
   void DoPacketCleanup();
 
   component::Outgoing outgoing_;
-  fidl::BindingSet<fuchsia::media::Audio> bindings_;
+  fidl::BindingSet<fuchsia::media::AudioCore> bindings_;
 
   // A reference to our thread's dispatcher object.  Allows us to post events to
   // be handled by our main application thread from things like the output

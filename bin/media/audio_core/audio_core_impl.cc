@@ -63,12 +63,13 @@ void AudioCoreImpl::PublishServices() {
   auto audio_service =
       fbl::AdoptRef(new fs::Service([this](zx::channel ch) -> zx_status_t {
         bindings_.AddBinding(
-            this, fidl::InterfaceRequest<fuchsia::media::Audio>(std::move(ch)));
+            this,
+            fidl::InterfaceRequest<fuchsia::media::AudioCore>(std::move(ch)));
         bindings_.bindings().back()->events().SystemGainMuteChanged(
             system_gain_db_, system_muted_);
         return ZX_OK;
       }));
-  outgoing_.public_dir()->AddEntry(fuchsia::media::Audio::Name_,
+  outgoing_.public_dir()->AddEntry(fuchsia::media::AudioCore::Name_,
                                    std::move(audio_service));
   // TODO(dalesat): Load the gain/mute values.
 
@@ -97,9 +98,8 @@ void AudioCoreImpl::CreateAudioRenderer(
 }
 
 void AudioCoreImpl::CreateAudioCapturer(
-    fidl::InterfaceRequest<fuchsia::media::AudioCapturer>
-        audio_capturer_request,
-    bool loopback) {
+    bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer>
+                       audio_capturer_request) {
   device_manager_.AddAudioCapturer(AudioCapturerImpl::Create(
       std::move(audio_capturer_request), this, loopback));
 }

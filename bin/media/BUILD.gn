@@ -45,6 +45,25 @@ package("audio_core") {
   ]
 }
 
+package("audio") {
+  deps = [
+    "//garnet/bin/media/audio",
+  ]
+
+  binaries = [
+    {
+      name = "audio"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("audio/meta/audio.cmx")
+      dest = "audio.cmx"
+    },
+  ]
+}
+
 package("codec_factory") {
   deps = [
     "//garnet/bin/media/codec_factory:codec_factory",
