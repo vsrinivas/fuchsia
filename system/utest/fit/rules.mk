@@ -21,7 +21,6 @@ fit_tests := \
     $(LOCAL_DIR)/promise_tests.cpp \
     $(LOCAL_DIR)/result_tests.cpp \
     $(LOCAL_DIR)/scheduler_tests.cpp \
-    $(LOCAL_DIR)/scope_tests.cpp \
     $(LOCAL_DIR)/sequencer_tests.cpp \
     $(LOCAL_DIR)/single_threaded_executor_tests.cpp \
     $(LOCAL_DIR)/suspended_task_tests.cpp \
