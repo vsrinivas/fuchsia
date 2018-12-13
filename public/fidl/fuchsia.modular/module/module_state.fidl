@@ -13,7 +13,8 @@ library fuchsia.modular;
 /// Currently possible state transitions (and the events that cause
 /// them) are:
 ///
-///            -> RUNNING     ModuleContext.StartModule() or
+///            -> RUNNING     ModuleContext.AddModuleToStory() or
+///                           ModuleContext.EmbedModule() or
 ///                           StoryController.AddModule()
 ///   RUNNING  -> STOPPED     ModuleController.Stop() or StoryController.Stop()
 ///   RUNNING  -> ERROR       application exits
