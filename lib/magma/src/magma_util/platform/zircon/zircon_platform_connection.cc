@@ -4,10 +4,10 @@
 
 #include "zircon_platform_connection.h"
 
-
 #include "platform_connection.h"
 #include "zircon_platform_event.h"
 #include <fuchsia/gpu/magma/cpp/fidl.h>
+#include <garnet/public/lib/fidl/cpp/binding.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/task.h>
 #include <lib/async/time.h>
@@ -83,15 +83,29 @@ public:
                              zx::channel client_notification_endpoint,
                              std::shared_ptr<magma::PlatformEvent> shutdown_event)
         : magma::PlatformConnection(shutdown_event), delegate_(std::move(delegate)),
-          server_endpoint_(std::move(server_endpoint)), client_endpoint_(std::move(client_endpoint)),
+#if MAGMA_FIDL
+          client_endpoint_(std::move(client_endpoint)),
+#else
+          server_endpoint_(std::move(server_endpoint)),
+          client_endpoint_(std::move(client_endpoint)),
+#endif
           server_notification_endpoint_(std::move(server_notification_endpoint)),
           client_notification_endpoint_(std::move(client_notification_endpoint)),
           async_loop_(&kAsyncLoopConfigNoAttachToThread),
+#if MAGMA_FIDL
+          async_wait_channel_(this, server_endpoint.get(),
+                              ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED),
+#else
           async_wait_channel_(this, server_endpoint_.get(),
                               ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED),
+#endif
           async_wait_shutdown_(
               this, static_cast<magma::ZirconPlatformEvent*>(shutdown_event.get())->zx_handle(),
               ZX_EVENT_SIGNALED)
+#if MAGMA_FIDL
+          ,
+          binding_(this, std::move(server_endpoint), async_loop_.dispatcher())
+#endif
     {
         delegate_->SetNotificationCallback(NotificationCallbackStatic, this);
     }
@@ -136,7 +150,7 @@ public:
         zx_handle_t handles[kNumHandles];
 
         zx_status_t status = server_endpoint_.read(0, bytes, num_bytes, &actual_bytes, handles,
-                                                  kNumHandles, &actual_handles);
+                                                   kNumHandles, &actual_handles);
         if (status != ZX_OK)
             return DRETF(false, "failed to read from channel");
 
@@ -293,14 +307,6 @@ private:
         return DRETF(false, "Unhandled notification type: %d", task->notification.type);
     }
 
-    void ImportBufferFIDL(::zx::vmo buffer) override {
-        DLOG("Operation: FIDL ImportBuffer");
-        uint64_t buffer_id;
-        if (!delegate_->ImportBuffer(buffer.get(), &buffer_id)) {
-            SetError(MAGMA_STATUS_INVALID_ARGS);
-        }
-    }
-
     bool ImportBuffer(ImportBufferOp* op, zx_handle_t* handle)
     {
         DLOG("Operation: ImportBuffer");
@@ -310,6 +316,15 @@ private:
         if (!delegate_->ImportBuffer(*handle, &buffer_id))
             SetError(MAGMA_STATUS_INVALID_ARGS);
         return true;
+    }
+
+    void ImportBufferFIDL(::zx::vmo buffer) override
+    {
+        DLOG("Operation: FIDL ImportBuffer");
+        uint64_t buffer_id;
+        if (!delegate_->ImportBuffer(buffer.release(), &buffer_id)) {
+            SetError(MAGMA_STATUS_INVALID_ARGS);
+        }
     }
 
     bool ReleaseBuffer(ReleaseBufferOp* op)
@@ -322,6 +337,13 @@ private:
         return true;
     }
 
+    void ReleaseBufferFIDL(uint64_t buffer_id) override
+    {
+        DLOG("Operation: FIDL ReleaseBuffer");
+        if (!delegate_->ReleaseBuffer(buffer_id))
+            SetError(MAGMA_STATUS_INVALID_ARGS);
+    }
+
     bool ImportObject(ImportObjectOp* op, zx_handle_t* handle)
     {
         DLOG("Operation: ImportObject");
@@ -330,6 +352,14 @@ private:
         if (!delegate_->ImportObject(*handle, static_cast<PlatformObject::Type>(op->object_type)))
             SetError(MAGMA_STATUS_INVALID_ARGS);
         return true;
+    }
+
+    void ImportObjectFIDL(::zx::handle object, uint32_t object_type) override
+    {
+        DLOG("Operation: FIDL ImportObject");
+        if (!delegate_->ImportObject(object.release(),
+                                     static_cast<PlatformObject::Type>(object_type)))
+            SetError(MAGMA_STATUS_INVALID_ARGS);
     }
 
     bool ReleaseObject(ReleaseObjectOp* op)
@@ -343,6 +373,13 @@ private:
         return true;
     }
 
+    void ReleaseObjectFIDL(uint64_t object_id, uint32_t object_type) override
+    {
+        DLOG("Operation: FIDL ReleaseObject");
+        if (!delegate_->ReleaseObject(object_id, static_cast<PlatformObject::Type>(object_type)))
+            SetError(MAGMA_STATUS_INVALID_ARGS);
+    }
+
     bool CreateContext(CreateContextOp* op)
     {
         DLOG("Operation: CreateContext");
@@ -353,6 +390,13 @@ private:
         return true;
     }
 
+    void CreateContextFIDL(uint32_t context_id) override
+    {
+        DLOG("Operation: FIDL CreateContext");
+        if (!delegate_->CreateContext(context_id))
+            SetError(MAGMA_STATUS_INTERNAL_ERROR);
+    }
+
     bool DestroyContext(DestroyContextOp* op)
     {
         DLOG("Operation: DestroyContext");
@@ -361,6 +405,13 @@ private:
         if (!delegate_->DestroyContext(op->context_id))
             SetError(MAGMA_STATUS_INTERNAL_ERROR);
         return true;
+    }
+
+    void DestroyContextFIDL(uint32_t context_id) override
+    {
+        DLOG("Operation: FIDL DestroyContext");
+        if (!delegate_->DestroyContext(context_id))
+            SetError(MAGMA_STATUS_INTERNAL_ERROR);
     }
 
     bool ExecuteCommandBuffer(ExecuteCommandBufferOp* op, zx_handle_t* handle)
@@ -374,6 +425,17 @@ private:
         if (!status)
             SetError(MAGMA_STATUS_INTERNAL_ERROR);
         return true;
+    }
+
+    void ExecuteCommandBufferFIDL(::zx::handle command_buffer, uint32_t context_id) override
+    {
+        DLOG("Operation: FIDL ExecuteCommandBuffer");
+        magma::Status status =
+            delegate_->ExecuteCommandBuffer(command_buffer.release(), context_id);
+        if (status.get() == MAGMA_STATUS_CONTEXT_KILLED)
+            ShutdownEvent()->Signal();
+        if (!status)
+            SetError(MAGMA_STATUS_INTERNAL_ERROR);
     }
 
     bool ExecuteImmediateCommands(ExecuteImmediateCommandsOp* op)
@@ -390,6 +452,21 @@ private:
         return true;
     }
 
+    void ExecuteImmediateCommandsFIDL(uint32_t context_id, uint32_t commands_size,
+                                      ::fidl::VectorPtr<uint8_t> command_data,
+                                      uint32_t semaphore_count,
+                                      ::fidl::VectorPtr<uint64_t> semaphores) override
+    {
+        DLOG("Operation: FIDL ExecuteImmediateCommands");
+        std::vector<uint8_t> command_data_vec = command_data.take();
+        std::vector<uint64_t> semaphores_vec = semaphores.take();
+        magma::Status status =
+            delegate_->ExecuteImmediateCommands(context_id, commands_size, command_data_vec.data(),
+                                                semaphore_count, semaphores_vec.data());
+        if (!status)
+            SetError(status.get());
+    }
+
     bool GetError(GetErrorOp* op)
     {
         DLOG("Operation: GetError");
@@ -400,6 +477,14 @@ private:
         if (!WriteError(result))
             return false;
         return true;
+    }
+
+    void GetErrorFIDL(fuchsia::gpu::magma::Primary::GetErrorFIDLCallback error_callback) override
+    {
+        DLOG("Operation: FIDL GetError");
+        magma_status_t result = error_;
+        error_ = 0;
+        error_callback(result);
     }
 
     bool MapBufferGpu(MapBufferGpuOp* op)
@@ -413,6 +498,14 @@ private:
         return true;
     }
 
+    void MapBufferGpuFIDL(uint64_t buffer_id, uint64_t gpu_va, uint64_t page_offset,
+                          uint64_t page_count, uint64_t flags) override
+    {
+        DLOG("Operation: FIDL MapBufferGpu");
+        if (!delegate_->MapBufferGpu(buffer_id, gpu_va, page_offset, page_count, flags))
+            SetError(MAGMA_STATUS_INVALID_ARGS);
+    }
+
     bool UnmapBufferGpu(UnmapBufferGpuOp* op)
     {
         DLOG("Operation: UnmapBufferGpu");
@@ -421,6 +514,13 @@ private:
         if (!delegate_->UnmapBufferGpu(op->buffer_id, op->gpu_va))
             SetError(MAGMA_STATUS_INVALID_ARGS);
         return true;
+    }
+
+    void UnmapBufferGpuFIDL(uint64_t buffer_id, uint64_t gpu_va) override
+    {
+        DLOG("Operation: FIDL UnmapBufferGpu");
+        if (!delegate_->UnmapBufferGpu(buffer_id, gpu_va))
+            SetError(MAGMA_STATUS_INVALID_ARGS);
     }
 
     bool CommitBuffer(CommitBufferOp* op)
@@ -433,6 +533,13 @@ private:
         return true;
     }
 
+    void CommitBufferFIDL(uint64_t buffer_id, uint64_t page_offset, uint64_t page_count) override
+    {
+        DLOG("Operation: FIDL CommitBuffer");
+        if (!delegate_->CommitBuffer(buffer_id, page_offset, page_count))
+            SetError(MAGMA_STATUS_INVALID_ARGS);
+    }
+
     void SetError(magma_status_t error)
     {
         if (!error_)
@@ -442,7 +549,12 @@ private:
     bool WriteError(magma_status_t error)
     {
         DLOG("Writing error %d to channel", error);
-        auto status = server_endpoint_.write(0, &error, sizeof(error), nullptr, 0);
+#if MAGMA_FIDL
+        ::zx::channel& server_endpoint = binding_.channel();
+        zx_status_t status = server_endpoint.write(0, &error, sizeof(error), nullptr, 0);
+#else
+        zx_status_t status = server_endpoint_.write(0, &error, sizeof(error), nullptr, 0);
+#endif
         return DRETF(status == ZX_OK, "failed to write to channel");
     }
 
@@ -455,6 +567,10 @@ private:
     async::Loop async_loop_;
     AsyncWait async_wait_channel_;
     AsyncWait async_wait_shutdown_;
+
+#if MAGMA_FIDL
+    fidl::Binding<fuchsia::gpu::magma::Primary> binding_;
+#endif
 };
 
 std::shared_ptr<PlatformConnection>
