@@ -7,6 +7,7 @@
 #include <fbl/auto_lock.h>
 #include <kernel/lockdep.h>
 #include <ktl/move.h>
+#include <lib/console.h>
 #include <trace.h>
 #include <vm/page_source.h>
 
@@ -61,7 +62,7 @@ void PageSource::Close() {
 
 void PageSource::OnPagesSupplied(uint64_t offset, uint64_t len) {
     canary_.Assert();
-    LTRACEF("%p offset %lx, len %lx\n", this, offset, len);
+    LTRACEF_LEVEL(2, "%p offset %lx, len %lx\n", this, offset, len);
     uint64_t end;
     bool overflow = add_overflow(offset, len, &end);
     DEBUG_ASSERT(!overflow); // vmobject should have already validated overflow
@@ -113,7 +114,7 @@ void PageSource::OnPagesSupplied(uint64_t offset, uint64_t len) {
             LTRACEF("%p, excessive page count\n", this);
         }
 
-        LTRACEF("%p, signaling %lx\n", this, cur->offset_);
+        LTRACEF_LEVEL(2, "%p, signaling %lx\n", this, cur->offset_);
 
         // Notify anything waiting on this page
         CompleteRequestLocked(outstanding_requests_.erase(cur));
@@ -138,7 +139,7 @@ zx_status_t PageSource::GetPage(uint64_t offset, PageRequest* request,
     // for batch requests).
     if (request->offset_ == UINT64_MAX) {
         request->Init(fbl::RefPtr<PageSource>(this), offset);
-        LTRACEF("%p offset %lx\n", this, offset);
+        LTRACEF_LEVEL(2, "%p offset %lx\n", this, offset);
     }
 
 #ifdef DEBUG_ASSERT_IMPLEMENTED
@@ -198,7 +199,7 @@ zx_status_t PageSource::GetPage(uint64_t offset, PageRequest* request,
 }
 
 zx_status_t PageSource::FinalizeRequest(PageRequest* request) {
-    LTRACEF("%p\n", this);
+    LTRACEF_LEVEL(2, "%p\n", this);
     DEBUG_ASSERT(request->offset_ != UINT64_MAX);
 
     Guard<fbl::Mutex> guard{&page_source_mtx_};
@@ -211,7 +212,7 @@ zx_status_t PageSource::FinalizeRequest(PageRequest* request) {
 }
 
 void PageSource::RaiseReadRequestLocked(PageRequest* request) {
-    LTRACEF("%p %p\n", this, request);
+    LTRACEF_LEVEL(2, "%p %p\n", this, request);
     // Find the node with the smallest endpoint greater than offset and then
     // check to see if offset falls within that node.
     auto overlap = outstanding_requests_.upper_bound(request->offset_);
@@ -292,6 +293,15 @@ void PageSource::CancelRequest(PageRequest* request) {
     request->offset_ = UINT64_MAX;
 }
 
+void PageSource::Dump() const {
+    Guard<fbl::Mutex> guard{&page_source_mtx_};
+    printf("page_source %p detached %d closed %d\n", this, detached_, closed_);
+    for (auto& req : outstanding_requests_) {
+        printf("  req [%lx, %lx) pending %lx overlap %lu\n",
+               req.offset_, req.GetEnd(), req.pending_size_, req.overlap_.size_slow());
+    }
+}
+
 PageRequest::~PageRequest() {
     if (offset_ != UINT64_MAX) {
         src_->CancelRequest(this);
@@ -313,3 +323,28 @@ zx_status_t PageRequest::Wait() {
     }
     return status;
 }
+
+static int cmd_page_source(int argc, const cmd_args* argv, uint32_t flags) {
+    if (argc < 2) {
+        printf("not enough arguments\n");
+    usage:
+        printf("usage:\n");
+        printf("%s dump <address>\n", argv[0].str);
+        return ZX_ERR_INTERNAL;
+    }
+
+    if (!strcmp(argv[1].str, "dump")) {
+        reinterpret_cast<PageSource*>(argv[2].u)->Dump();
+    } else {
+        printf("unknown command\n");
+        goto usage;
+    }
+
+    return ZX_OK;
+}
+
+STATIC_COMMAND_START
+#if LK_DEBUGLEVEL > 0
+STATIC_COMMAND("vm_page_source", "page source debug commands", &cmd_page_source)
+#endif
+STATIC_COMMAND_END(ps_object);

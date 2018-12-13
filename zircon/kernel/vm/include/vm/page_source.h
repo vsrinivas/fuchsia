@@ -85,6 +85,7 @@ public:
     // calls will fail.
     void Close();
 
+    void Dump() const;
 protected:
     // Synchronously gets a page from the backing source.
     virtual bool GetPage(uint64_t offset,
