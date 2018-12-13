@@ -1181,7 +1181,6 @@ void StoryControllerImpl::DefocusModule(
 void StoryControllerImpl::StopModule(
     const fidl::VectorPtr<fidl::StringPtr>& module_path,
     const std::function<void()>& done) {
-  FXL_LOG(INFO) << "XXX StopModule() " << PathString(module_path);
   operation_queue_.Add(new StopModuleCall(story_storage_, module_path, done));
 }
 

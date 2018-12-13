@@ -127,7 +127,6 @@ class TestModule {
     child_module3_->Stop([this] { /* do nothing */ });
     child_module3_.events().OnStateChange =
         [this](fuchsia::modular::ModuleState module_state) {
-          FXL_LOG(INFO) << "XXX SDLFKJSDFLKJ " << static_cast<int>(module_state);
           if (module_state == fuchsia::modular::ModuleState::RUNNING) {
             child_module_3_started_.Pass();
           }
