@@ -24,11 +24,11 @@ static ssize_t stub_write(int fd, const void* buf, size_t count) {
 }
 weak_alias(stub_write, write);
 
-static zx_status_t stub_mmap_file(size_t offset, size_t len, uint32_t zx_flags, int flags, int fd,
+static zx_status_t stub__mmap_file(size_t offset, size_t len, uint32_t zx_flags, int flags, int fd,
                                   off_t fd_off, uintptr_t* out) {
     return ZX_ERR_NOT_SUPPORTED;
 }
-weak_alias(stub_mmap_file, _mmap_file);
+weak_alias(stub__mmap_file, _mmap_file);
 
 static int stub_close(int fd) {
     errno = ENOSYS;
@@ -332,12 +332,6 @@ static int stub_lchown(const char* path, uid_t owner, gid_t group) {
 }
 weak_alias(stub_lchown, lchown);
 
-static int stub_creat(const char* path, mode_t mode) {
-    errno = ENOSYS;
-    return -1;
-}
-weak_alias(stub_creat, creat);
-
 static int stub_fcntl(int fd, int cmd, ...) {
     errno = ENOSYS;
     return -1;
@@ -379,12 +373,6 @@ static int stub_mknod(const char* path, mode_t mode, dev_t dev) {
     return -1;
 }
 weak_alias(stub_mknod, mknod);
-
-static int stub_remove(const char* path) {
-    errno = ENOSYS;
-    return -1;
-}
-weak_alias(stub_remove, remove);
 
 static int stub_rename(const char* oldpath, const char* newpath) {
     errno = ENOSYS;

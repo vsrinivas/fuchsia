@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <dirent.h>
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -13,17 +14,20 @@
 
 // checkfile, checkfileat, and checkfd let us error out if the object
 // doesn't exist, which allows the stubs to be a little more 'real'
+static int seterr(int err) {
+    if (err) {
+        errno = err;
+        return -1;
+    }
+    return 0;
+}
+
 static int checkfile(const char* path, int err) {
     struct stat s;
     if (stat(path, &s)) {
         return -1;
     }
-    if (err) {
-        errno = err;
-        return -1;
-    } else {
-        return 0;
-    }
+    return seterr(err);
 }
 
 static int checkfileat(int fd, const char* path, int flags, int err) {
@@ -31,12 +35,7 @@ static int checkfileat(int fd, const char* path, int flags, int err) {
     if (fstatat(fd, path, &s, flags)) {
         return -1;
     }
-    if (err) {
-        errno = err;
-        return -1;
-    } else {
-        return 0;
-    }
+    return seterr(err);
 }
 
 static int checkfd(int fd, int err) {
@@ -46,12 +45,36 @@ static int checkfd(int fd, int err) {
         return -1;
     }
     fdio_release(io);
-    if (err) {
-        errno = err;
+    return seterr(err);
+}
+
+static int check2fds(int fd1, int fd2, int err) {
+    fdio_t* io;
+    if ((io = fd_to_io(fd1)) == NULL) {
+        errno = EBADF;
         return -1;
-    } else {
-        return 0;
     }
+    fdio_release(io);
+    if ((io = fd_to_io(fd2)) == NULL) {
+        errno = EBADF;
+        return -1;
+    }
+    fdio_release(io);
+    return seterr(err);
+}
+
+static int checkfilefd(const char* path, int fd, int err) {
+    struct stat s;
+    if (stat(path, &s)) {
+        return -1;
+    }
+    fdio_t* io;
+    if ((io = fd_to_io(fd)) == NULL) {
+        errno = EBADF;
+        return -1;
+    }
+    fdio_release(io);
+    return seterr(err);
 }
 
 static int checksocket(int fd, int sock_err, int err) {
@@ -66,11 +89,15 @@ static int checksocket(int fd, int sock_err, int err) {
         errno = sock_err;
         return -1;
     }
-    if (err) {
-        errno = err;
+    return seterr(err);
+}
+
+static int checkdir(DIR* dir, int err) {
+    if (dirfd(dir) < 0) {
+        errno = EBADF;
         return -1;
     }
-    return 0;
+    return seterr(err);
 }
 
 // not supported by any filesystems yet
@@ -169,4 +196,48 @@ __EXPORT
 int sockatmark(int fd) {
     // ENOTTY is sic.
     return checksocket(fd, ENOTTY, ENOSYS);
+}
+
+__EXPORT
+int fchownat(int fd, const char* path, uid_t uid, gid_t gid, int flag) {
+    return checkfd(fd, ENOSYS);
+}
+
+__EXPORT
+int linkat(int fd1, const char* existing, int fd2, const char* new, int flag) {
+    return check2fds(fd1, fd2, ENOSYS);
+}
+
+__EXPORT
+int symlinkat(const char* existing, int fd, const char* new) {
+    return checkfilefd(existing, fd, ENOSYS);
+}
+
+__EXPORT
+ssize_t readlinkat(int fd, const char* restrict path, char* restrict buf, size_t bufsize) {
+    return checkfilefd(path, fd, ENOSYS);
+}
+
+__EXPORT
+void seekdir(DIR* dir, long loc) {
+}
+
+__EXPORT
+long telldir(DIR* dir) {
+    return checkdir(dir, ENOSYS);
+}
+
+__EXPORT
+int posix_fadvise(int fd, off_t base, off_t len, int advice) {
+    return checkfd(fd, ENOSYS);
+}
+
+__EXPORT
+int posix_fallocate(int fd, off_t base, off_t len) {
+    return checkfd(fd, ENOSYS);
+}
+
+__EXPORT
+int readdir_r(DIR* dir, struct dirent* entry, struct dirent** result) {
+    return checkdir(dir, ENOSYS);
 }
