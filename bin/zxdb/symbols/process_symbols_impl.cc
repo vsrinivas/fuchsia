@@ -97,6 +97,25 @@ void ProcessSymbolsImpl::SetModules(
     notifications_->OnSymbolLoadFailure(err);
 }
 
+void ProcessSymbolsImpl::InjectModuleForTesting(
+    const std::string& name, const std::string& build_id,
+    std::unique_ptr<LoadedModuleSymbols> mod_sym) {
+  LoadedModuleSymbols* loaded_ptr = mod_sym.get();
+  FXL_DCHECK(loaded_ptr);
+
+  ModuleInfo info;
+  info.name = name;
+  info.build_id = build_id;
+  info.base = loaded_ptr->load_address();
+  info.symbols = std::move(mod_sym);
+  modules_[loaded_ptr->load_address()] = std::move(info);
+
+  // Issue notifications.
+  target_symbols_->AddModule(
+      fxl::RefPtr<SystemSymbols::ModuleRef>(loaded_ptr->module_ref()));
+  notifications_->DidLoadModuleSymbols(loaded_ptr);
+}
+
 TargetSymbols* ProcessSymbolsImpl::GetTargetSymbols() {
   return target_symbols_;
 }

@@ -70,8 +70,19 @@ std::optional<FoundVariable> FindVariable(
 
   // Fall back to searching global vars.
   if (process_symbols) {
-    return FindGlobalVariable(process_symbols, block, block_symbol_context,
-                              identifier);
+    // Get the scope for the current function. This may fail in which case
+    // we'll be left with an empty current scope. This is non-fatal: it just
+    // means we won't implicitly search the current namespace and will search
+    // only the global one.
+    Identifier current_scope;
+    if (const Function* function = block->GetContainingFunction()) {
+      auto [err, func_name] = Identifier::FromString(function->GetFullName());
+      if (!err.has_error())
+        current_scope = func_name.GetScope();
+    }
+
+    return FindGlobalVariable(process_symbols, current_scope,
+                              block_symbol_context, identifier);
   }
   return std::nullopt;
 }
@@ -155,37 +166,23 @@ std::optional<FoundVariable> FindMemberOnThis(const CodeBlock* block,
 }
 
 std::optional<FoundVariable> FindGlobalVariable(
-    const ProcessSymbols* process_symbols, const CodeBlock* block,
-    const SymbolContext* block_symbol_context, const Identifier& identifier) {
+    const ProcessSymbols* process_symbols, const Identifier& current_scope,
+    const SymbolContext* symbol_context, const Identifier& identifier) {
   std::vector<const LoadedModuleSymbols*> modules =
       process_symbols->GetLoadedModuleSymbols();
   if (modules.empty())
     return std::nullopt;
 
-  Identifier current_scope;
-
   // When we're given a block to start searching from, always search
   // that module for symbol matches first. If there are duplicates in other
   // modules, one normally wants the current one.
   const LoadedModuleSymbols* current_module = nullptr;
-  if (block) {
-    // If block is non-null, so must be the symbol context.
-    FXL_DCHECK(block_symbol_context);
-
-    // Get the scope for the current block. This may fail in which case we'll
-    // be left with an empty current scope. This is non-fatal so we can ignore
-    // the err: it must means we won't implicitly search the current namespace.
-    Err err;
-    std::tie(err, current_scope) = Identifier::FromString(block->GetFullName());
-    current_scope = current_scope.GetScope();
-
-    // There's not currently a great way to map a symbol (the code block) back
-    // to the module it came from. So use the symbol_context to find the module
-    // that corresponds to its base address.
-    uint64_t block_module_load_address =
-        block_symbol_context->RelativeToAbsolute(0);
+  if (symbol_context) {
+    // Find the module that corresponds to the symbol context.
+    uint64_t module_load_address =
+        symbol_context->RelativeToAbsolute(0);
     for (const LoadedModuleSymbols* mod : modules) {
-      if (mod->load_address() == block_module_load_address) {
+      if (mod->load_address() == module_load_address) {
         current_module = mod;
         break;
       }
@@ -203,7 +200,7 @@ std::optional<FoundVariable> FindGlobalVariable(
   for (const LoadedModuleSymbols* loaded_mod : modules) {
     if (loaded_mod != current_module) {
       if (auto found = FindGlobalVariableInModule(
-              current_module->module_symbols(), current_scope, identifier))
+              loaded_mod->module_symbols(), current_scope, identifier))
         return found;
     }
   }

@@ -10,9 +10,10 @@
 
 namespace zxdb {
 
-// Provides a ProcessSymbols implementation that just returns empty values for
-// everything. Tests can override this to implement the subset of
-// functionality they need.
+// This is useful for testing things that only use a ProcessSymbols and have
+// minimal requirements. More elaborate tests can use the real ProcessSymbols
+// implementation with MockModuleSymbols backing it. See
+// ProcessSymbolsImplTestSetup.
 class MockProcessSymbols : public ProcessSymbols {
  public:
   MockProcessSymbols();

@@ -33,9 +33,9 @@ class ProcessSymbolsImpl : public ProcessSymbols {
   // See the corresponding functions in ProcessObserver for docs.
   class Notifications {
    public:
-    virtual void DidLoadModuleSymbols(LoadedModuleSymbols* module) = 0;
-    virtual void WillUnloadModuleSymbols(LoadedModuleSymbols* module) = 0;
-    virtual void OnSymbolLoadFailure(const Err& err) = 0;
+    virtual void DidLoadModuleSymbols(LoadedModuleSymbols* module) {}
+    virtual void WillUnloadModuleSymbols(LoadedModuleSymbols* module) {}
+    virtual void OnSymbolLoadFailure(const Err& err) {}
   };
 
   // The passed-in pointers must outlive this class.
@@ -47,6 +47,13 @@ class ProcessSymbolsImpl : public ProcessSymbols {
 
   // Replaces all modules with the given list.
   void SetModules(const std::vector<debug_ipc::Module>& modules);
+
+  // Appends the ModuleSymbols implementation to the current list (unlike
+  // SetModules which does a replacement). This is typically used to populate
+  // a ProcessSymbols with one or more MockModuleSymbols for testing purposes.
+  void InjectModuleForTesting(const std::string& name,
+                              const std::string& build_id,
+                              std::unique_ptr<LoadedModuleSymbols> mod_sym);
 
   // ProcessSymbols implementation.
   fxl::WeakPtr<const ProcessSymbols> GetWeakPtr() const override;

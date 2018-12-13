@@ -56,11 +56,12 @@ std::optional<FoundVariable> FindMemberOnThis(const CodeBlock* block,
                                               const Identifier& identifier);
 
 // Attempts to resolve the named variable in the global namespace and any
-// other namespaces that the given block is in. The block[_symbol_context]
-// can be null to only search from the global namespace.
+// other namespaces that the given block is in. The symbol_context is used
+// to prioritize the current module. It can be null to search in a
+// non-guaranteed order.
 std::optional<FoundVariable> FindGlobalVariable(
-    const ProcessSymbols* process_symbols, const CodeBlock* block,
-    const SymbolContext* block_symbol_context, const Identifier& identifier);
+    const ProcessSymbols* process_symbols, const Identifier& current_scope,
+    const SymbolContext* symbol_context, const Identifier& identifier);
 
 // Searches a specific index and current namespace for a global variable of
 // the given name. The current_scope would be the current namespace + class
