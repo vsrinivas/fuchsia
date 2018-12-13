@@ -588,7 +588,7 @@ static int aml_sd_emmc_irq_thread(void* ctx) {
             goto complete;
         }
         if (status_irq & AML_SD_EMMC_STATUS_RESP_TIMEOUT) {
-            AML_SD_EMMC_ERROR("No response reived before time limit, cmd%d, status=0x%x\n",
+            AML_SD_EMMC_ERROR("No response received before time limit, cmd%d, status=0x%x\n",
                               req->cmd_idx, status_irq);
             status = ZX_ERR_TIMED_OUT;
             goto complete;
