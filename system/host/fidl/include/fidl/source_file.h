@@ -16,7 +16,7 @@ namespace fidl {
 class SourceFile {
 public:
     SourceFile(std::string filename, std::string data);
-    ~SourceFile();
+    virtual ~SourceFile();
 
     StringView filename() const { return filename_; }
     StringView data() const { return data_; }
@@ -28,7 +28,7 @@ public:
         int column;
     };
 
-    StringView LineContaining(StringView view, Position* position_out) const;
+    virtual StringView LineContaining(StringView view, Position* position_out) const;
 
 private:
     std::string filename_;

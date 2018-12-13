@@ -22,6 +22,7 @@
 #include "error_reporter.h"
 #include "raw_ast.h"
 #include "type_shape.h"
+#include "virtual_source_file.h"
 
 namespace fidl {
 namespace flat {
@@ -1094,6 +1095,8 @@ private:
                                        const raw::AttributeList* attributes);
 
     Name NextAnonymousName();
+    Name GeneratedName(const std::string& name);
+    Name DerivedName(const std::vector<StringView>& components);
 
     bool CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_identifier,
                                    SourceLocation location, Name* out_name);
@@ -1111,8 +1114,9 @@ private:
     bool ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_declaration);
     bool
     ConsumeInterfaceDeclaration(std::unique_ptr<raw::InterfaceDeclaration> interface_declaration);
-    bool ConsumeParameterList(std::unique_ptr<raw::ParameterList> parameter_list,
-                              Struct** out_struct_decl);
+    bool ConsumeParameterList(Name name, std::unique_ptr<raw::ParameterList> parameter_list,
+                              bool anonymous, Struct** out_struct_decl);
+    bool CreateMethodResult(const Name& interface_name, raw::InterfaceMethod* method, Struct* in_response, Struct** out_response);
     bool ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> struct_declaration);
     bool ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> table_declaration);
     bool ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> union_declaration);
@@ -1121,6 +1125,7 @@ private:
     bool TypeCanBeConst(const Type* type);
     const Type* TypeResolve(const Type* type);
     bool TypeIsConvertibleTo(const Type* from_type, const Type* to_type);
+    std::unique_ptr<IdentifierType> IdentifierTypeForDecl(const Decl* decl, types::Nullability nullability);
 
     // Given a const declaration of the form
     //     const type foo = name;
@@ -1224,6 +1229,8 @@ private:
     Typespace* typespace_;
 
     uint32_t anon_counter_ = 0;
+
+    VirtualSourceFile generated_source_file_{"generated"};
 };
 
 } // namespace flat

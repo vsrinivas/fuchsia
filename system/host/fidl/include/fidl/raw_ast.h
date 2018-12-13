@@ -396,10 +396,12 @@ public:
                     std::unique_ptr<Ordinal> ordinal,
                     std::unique_ptr<Identifier> identifier,
                     std::unique_ptr<ParameterList> maybe_request,
-                    std::unique_ptr<ParameterList> maybe_response)
+                    std::unique_ptr<ParameterList> maybe_response,
+                    std::unique_ptr<Type> maybe_error)
         : SourceElement(element), attributes(std::move(attributes)),
           ordinal(std::move(ordinal)), identifier(std::move(identifier)),
-          maybe_request(std::move(maybe_request)), maybe_response(std::move(maybe_response)) {}
+          maybe_request(std::move(maybe_request)), maybe_response(std::move(maybe_response)),
+          maybe_error(std::move(maybe_error)) { }
 
     void Accept(TreeVisitor& visitor);
 
@@ -408,6 +410,7 @@ public:
     std::unique_ptr<Identifier> identifier;
     std::unique_ptr<ParameterList> maybe_request;
     std::unique_ptr<ParameterList> maybe_response;
+    std::unique_ptr<Type> maybe_error;
 };
 
 class InterfaceDeclaration : public SourceElement {

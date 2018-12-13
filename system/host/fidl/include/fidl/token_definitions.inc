@@ -63,6 +63,8 @@ KEYWORD(Table, "table")
 KEYWORD(Union, "union")
 KEYWORD(XUnion, "xunion")
 
+KEYWORD(Error, "error")
+
 KEYWORD(True, "true")
 KEYWORD(False, "false")
 

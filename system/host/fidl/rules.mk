@@ -30,6 +30,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/lib/source_manager.cpp \
     $(LOCAL_DIR)/lib/tables_generator.cpp \
     $(LOCAL_DIR)/lib/tree_visitor.cpp \
+    $(LOCAL_DIR)/lib/virtual_source_file.cpp \
     $(BUILDGEN_DIR)/lib/json_schema.cpp \
 
 $(BUILDGEN_DIR)/lib/json_schema.cpp: $(LOCAL_DIR)/schema.json

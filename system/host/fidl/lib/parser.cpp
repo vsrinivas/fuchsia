@@ -690,6 +690,7 @@ std::unique_ptr<raw::InterfaceMethod> Parser::ParseInterfaceMethod(std::unique_p
     std::unique_ptr<raw::Identifier> method_name;
     std::unique_ptr<raw::ParameterList> maybe_request;
     std::unique_ptr<raw::ParameterList> maybe_response;
+    std::unique_ptr<raw::Type> maybe_error;
 
     auto parse_params = [this](std::unique_ptr<raw::ParameterList>* params_out) {
         ConsumeToken(OfKind(Token::Kind::kLeftParen));
@@ -722,6 +723,11 @@ std::unique_ptr<raw::InterfaceMethod> Parser::ParseInterfaceMethod(std::unique_p
                 return Fail();
             if (!parse_params(&maybe_response))
                 return Fail();
+            if (MaybeConsumeToken(IdentifierOfSubkind(Token::Subkind::kError))) {
+                maybe_error = ParseType();
+                if (!Ok())
+                    return Fail();
+            }
         }
     }
 
@@ -733,7 +739,8 @@ std::unique_ptr<raw::InterfaceMethod> Parser::ParseInterfaceMethod(std::unique_p
                                                   std::move(ordinal),
                                                   std::move(method_name),
                                                   std::move(maybe_request),
-                                                  std::move(maybe_response));
+                                                  std::move(maybe_response),
+                                                  std::move(maybe_error));
 }
 
 std::unique_ptr<raw::InterfaceDeclaration>

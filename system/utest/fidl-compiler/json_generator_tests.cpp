@@ -835,6 +835,154 @@ interface Child : Parent {
 
     END_TEST;
 }
+
+bool json_generator_test_error() {
+    BEGIN_TEST;
+
+    for (int i = 0; i < kRepeatTestCount; i++) {
+        EXPECT_TRUE(checkJSONGenerator(R"FIDL(
+library fidl.test.json;
+
+interface Example {
+   foo(string s) -> (int64 y) error uint32;
+};
+
+)FIDL",
+                                       R"JSON({
+  "version": "0.0.1",
+  "name": "fidl.test.json",
+  "library_dependencies": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "interface_declarations": [
+    {
+      "name": "fidl.test.json/Example",
+      "methods": [
+        {
+          "ordinal": 1369693400,
+          "generated_ordinal": 1369693400,
+          "name": "foo",
+          "has_request": true,
+          "maybe_request": [
+            {
+              "type": {
+                "kind": "string",
+                "nullable": false
+              },
+              "name": "s",
+              "size": 16,
+              "max_out_of_line": 4294967295,
+              "alignment": 8,
+              "offset": 16,
+              "max_handles": 0
+            }
+          ],
+          "maybe_request_size": 32,
+          "maybe_request_alignment": 8,
+          "has_response": true,
+          "maybe_response": [
+            {
+              "type": {
+                "kind": "identifier",
+                "identifier": "fidl.test.json/Example_foo_Result",
+                "nullable": false
+              },
+              "name": "result",
+              "size": 16,
+              "max_out_of_line": 0,
+              "alignment": 8,
+              "offset": 16,
+              "max_handles": 0
+            }
+          ],
+          "maybe_response_size": 32,
+          "maybe_response_alignment": 8
+        }
+      ]
+    }
+  ],
+  "struct_declarations": [
+    {
+      "name": "fidl.test.json/Example_foo_Response",
+      "anonymous": false,
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "y",
+          "size": 8,
+          "max_out_of_line": 0,
+          "alignment": 8,
+          "offset": 0,
+          "max_handles": 0
+        }
+      ],
+      "size": 8,
+      "max_out_of_line": 0,
+      "alignment": 8,
+      "max_handles": 0
+    }
+  ],
+  "table_declarations": [],
+  "union_declarations": [
+    {
+      "name": "fidl.test.json/Example_foo_Result",
+      "maybe_attributes": [
+        {
+          "name": "Result",
+          "value": ""
+        }
+      ],
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.json/Example_foo_Response",
+            "nullable": false
+          },
+          "name": "response",
+          "size": 8,
+          "max_out_of_line": 0,
+          "alignment": 8,
+          "offset": 8
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint32"
+          },
+          "name": "err",
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 8
+        }
+      ],
+      "size": 16,
+      "max_out_of_line": 0,
+      "alignment": 8,
+      "max_handles": 0
+    }
+  ],
+  "xunion_declarations": [],
+  "declaration_order": [
+    "fidl.test.json/Example_foo_Response",
+    "fidl.test.json/Example_foo_Result",
+    "fidl.test.json/Example"
+  ],
+  "declarations": {
+    "fidl.test.json/Example": "interface",
+    "fidl.test.json/Example_foo_Response": "struct",
+    "fidl.test.json/Example_foo_Result": "union"
+  }
+})JSON"));
+    }
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(json_generator_tests);
@@ -845,4 +993,5 @@ RUN_TEST(json_generator_test_union);
 RUN_TEST(json_generator_test_xunion);
 RUN_TEST(json_generator_test_inheritance);
 RUN_TEST(json_generator_test_inheritance_with_recursive_decl);
+RUN_TEST(json_generator_test_error);
 END_TEST_CASE(json_generator_tests);

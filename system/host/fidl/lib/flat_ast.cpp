@@ -681,6 +681,11 @@ Libraries::Libraries() {
         "SocketControl",
         "OvernetStream",
     }));
+    AddAttributeSchema("Result", AttributeSchema({
+        AttributeSchema::Placement::kUnionDecl,
+    }, {
+        "",
+    }));
     // clang-format on
 }
 
@@ -857,7 +862,15 @@ Name Library::NextAnonymousName() {
     std::ostringstream data;
     data << "SomeLongAnonymousPrefix";
     data << anon_counter_++;
-    return Name(this, StringView(data.str()));
+    return GeneratedName(data.str());
+}
+
+Name Library::GeneratedName(const std::string& name) {
+    return Name(this, generated_source_file_.AddLine(name));
+}
+
+Name Library::DerivedName(const std::vector<StringView>& components) {
+  return GeneratedName(StringJoin(components, "_"));
 }
 
 bool Library::CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_identifier,
@@ -1128,6 +1141,77 @@ bool Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_
     return true;
 }
 
+bool Library::CreateMethodResult(const Name& interface_name,
+                                raw::InterfaceMethod* method,
+                                Struct* in_response,
+                                Struct** out_response) {
+    // Compile the error type.
+    auto error_location = method->maybe_error->location();
+    std::unique_ptr<Type> error_type;
+    if (!ConsumeType(std::move(method->maybe_error), error_location, &error_type))
+        return false;
+
+    const PrimitiveType* error_primitive = nullptr;
+    if (error_type->kind == Type::Kind::kPrimitive) {
+        error_primitive = static_cast<const PrimitiveType*>(error_type.get());
+    } else if (error_type->kind == Type::Kind::kIdentifier) {
+        auto identifier_type = static_cast<const IdentifierType*>(error_type.get());
+        Decl* decl = LookupDeclByName(identifier_type->name);
+        if (decl && decl->kind == Decl::Kind::kEnum) {
+            Enum* error_enum = static_cast<Enum*>(decl);
+            if (!error_enum->type) {
+                if (!CompileEnum(error_enum))
+                    return false;
+            }
+            error_primitive = error_enum->type;
+        }
+    }
+    if (!error_primitive ||
+        (error_primitive->subtype != types::PrimitiveSubtype::kInt32 &&
+         error_primitive->subtype != types::PrimitiveSubtype::kUint32)) {
+        return Fail(error_location,
+                    "invalid error type: must be int32, uint32 or an enum therof");
+    }
+
+    // Make the Result union containing the response struct and the
+    // error type.
+    Union::Member response_member{
+        IdentifierTypeForDecl(in_response, types::Nullability::kNonnullable),
+        GeneratedName("response").source_location(),
+        nullptr};
+    Union::Member error_member{
+        std::move(error_type),
+        GeneratedName("err").source_location(),
+        nullptr};
+    SourceLocation method_name = method->identifier->location();
+    Name result_name = DerivedName({interface_name.name_part(), method_name.data(), "Result"});
+    std::vector<Union::Member> result_members;
+    result_members.push_back(std::move(response_member));
+    result_members.push_back(std::move(error_member));
+    std::vector<std::unique_ptr<raw::Attribute>> result_attributes;
+    result_attributes.emplace_back(std::make_unique<raw::Attribute>(*method, "Result", ""));
+    auto result_attributelist = std::make_unique<raw::AttributeList>(*method,
+                                                                     std::move(result_attributes));
+    union_declarations_.push_back(std::make_unique<Union>(std::move(result_attributelist),
+                                                          std::move(result_name),
+                                                          std::move(result_members)));
+    auto result_decl = union_declarations_.back().get();
+    if (!RegisterDecl(result_decl))
+        return false;
+
+    // Make a new response struct for the method containing just the
+    // result union.
+    std::vector<Struct::Member> response_members;
+    response_members.push_back(Struct::Member(IdentifierTypeForDecl(result_decl, types::Nullability::kNonnullable),
+                                              GeneratedName("result").source_location(), nullptr, nullptr));
+    struct_declarations_.push_back(std::make_unique<Struct>(nullptr, NextAnonymousName(), std::move(response_members), true));
+    *out_response = struct_declarations_.back().get();
+    if (!RegisterDecl(*out_response))
+        return false;
+
+    return true;
+}
+
 bool Library::ConsumeInterfaceDeclaration(
     std::unique_ptr<raw::InterfaceDeclaration> interface_declaration) {
     auto attributes = std::move(interface_declaration->attributes);
@@ -1153,14 +1237,23 @@ bool Library::ConsumeInterfaceDeclaration(
 
         Struct* maybe_request = nullptr;
         if (method->maybe_request != nullptr) {
-            if (!ConsumeParameterList(std::move(method->maybe_request), &maybe_request))
+            Name request_name = NextAnonymousName();
+            if (!ConsumeParameterList(std::move(request_name), std::move(method->maybe_request), true, &maybe_request))
                 return false;
         }
 
+        bool has_error = (method->maybe_error != nullptr);
+
         Struct* maybe_response = nullptr;
         if (method->maybe_response != nullptr) {
-            if (!ConsumeParameterList(std::move(method->maybe_response), &maybe_response))
+            Name response_name = has_error ? DerivedName({name.name_part(), method_name.data(), "Response"}) : NextAnonymousName();
+            if (!ConsumeParameterList(std::move(response_name), std::move(method->maybe_response), !has_error, &maybe_response))
                 return false;
+        }
+
+        if (has_error) {
+          if (!CreateMethodResult(name, method.get(), maybe_response, &maybe_response))
+            return false;
         }
 
         assert(maybe_request != nullptr || maybe_response != nullptr);
@@ -1177,8 +1270,12 @@ bool Library::ConsumeInterfaceDeclaration(
     return RegisterDecl(interface_declarations_.back().get());
 }
 
-bool Library::ConsumeParameterList(std::unique_ptr<raw::ParameterList> parameter_list,
-                                   Struct** out_struct_decl) {
+std::unique_ptr<IdentifierType> Library::IdentifierTypeForDecl(const Decl* decl, types::Nullability nullability) {
+    return std::make_unique<IdentifierType>(Name(decl->name.library(), decl->name.name_part()), nullability);
+}
+
+bool Library::ConsumeParameterList(Name name, std::unique_ptr<raw::ParameterList> parameter_list,
+                                   bool anonymous, Struct** out_struct_decl) {
     std::vector<Struct::Member> members;
     for (auto& parameter : parameter_list->parameter_list) {
         const SourceLocation name = parameter->identifier->location();
@@ -1191,10 +1288,9 @@ bool Library::ConsumeParameterList(std::unique_ptr<raw::ParameterList> parameter
             nullptr /* attributes */);
     }
 
-    auto name = NextAnonymousName();
     struct_declarations_.push_back(
         std::make_unique<Struct>(nullptr /* attributes */, std::move(name), std::move(members),
-                                 true /* anonymous */));
+                                 anonymous));
 
     auto struct_decl = struct_declarations_.back().get();
     if (!RegisterDecl(struct_decl))

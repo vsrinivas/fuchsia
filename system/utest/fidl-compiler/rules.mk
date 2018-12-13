@@ -21,6 +21,7 @@ EXAMPLE_FILES := \
     $(EXAMPLE_DIR)/empty.fidl \
     $(EXAMPLE_DIR)/enums.fidl \
     $(EXAMPLE_DIR)/events.fidl \
+    $(EXAMPLE_DIR)/errors.fidl \
     $(EXAMPLE_DIR)/example-0.fidl \
     $(EXAMPLE_DIR)/example-1.fidl \
     $(EXAMPLE_DIR)/example-2.fidl \
@@ -66,6 +67,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/consts_tests.cpp \
     $(LOCAL_DIR)/declaration_order_tests.cpp \
     $(LOCAL_DIR)/enums_tests.cpp \
+    $(LOCAL_DIR)/errors_tests.cpp \
     $(LOCAL_DIR)/flat_ast_tests.cpp \
     $(LOCAL_DIR)/formatter_unittests.cpp \
     $(LOCAL_DIR)/json_generator_tests.cpp \
@@ -80,6 +82,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/table_tests.cpp \
     $(LOCAL_DIR)/types_tests.cpp \
     $(LOCAL_DIR)/using_tests.cpp \
+    $(LOCAL_DIR)/virtual_source_tests.cpp \
     $(LOCAL_DIR)/visitor_unittests.cpp \
     $(LOCAL_DIR)/xunion_tests.cpp \
     $(BUILDGEN_DIR)/examples.cpp \
