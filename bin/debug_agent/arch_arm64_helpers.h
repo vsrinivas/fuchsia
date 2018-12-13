@@ -6,18 +6,16 @@
 
 #include <zircon/syscalls/exception.h>
 
-#include "garnet/bin/debug_agent/arch_x64.h"
+#include "garnet/bin/debug_agent/arch_arm64.h"
 
 namespace debug_agent {
 namespace arch {
 
-// Helper functions for defining x86 arch dependent behavior.
-// They are on a separate header/implementation so that it can be more easily
-// tested.
+// Helpers for defining arm64 specific behavior.
 
-// Returns the state the debug registers should be if we added a execution HW
-// breakpoint for |address|.
-// return ZX_ERR_NO_RESOURCES if there are no registers left.
+// Fills the given state the debug registers to what it should be if we added
+// an execution HW breakpoint for |address|.
+// Return ZX_ERR_NO_RESOURCES if there are no registers left.
 zx_status_t SetupHWBreakpoint(uint64_t address,
                                  zx_thread_state_debug_regs_t*);
 

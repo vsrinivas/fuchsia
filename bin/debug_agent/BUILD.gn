@@ -51,9 +51,11 @@ static_library("lib") {
     sources += [
       "arch_arm64.cc",
       "arch_arm64.h",
+      "arch_arm64_helpers.cc",
+      "arch_arm64_helpers.h",
     ]
   } else {
-    assert(false)
+    assert(false, "Un-supported CPU: ${current_cpu}")
   }
 
   public_deps = [
@@ -126,6 +128,10 @@ executable("tests") {
 
   if (current_cpu == "x64") {
     sources += [ "arch_x64_helpers_unittest.cc" ]
+  } else if (current_cpu == "arm64") {
+    sources += [ "arch_arm64_helpers_unittest.cc" ]
+  } else {
+    assert(false, "Un-supported CPU: ${current_cpu}")
   }
 
   deps = [

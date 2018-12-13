@@ -10,7 +10,7 @@ namespace debug_ipc {
 
 #define FROM_HERE \
   ::debug_ipc::FileLineFunction(__FILE__, __LINE__, __PRETTY_FUNCTION__)
-#define FROM_HERE_NO_FUNC ::debug_ipc::FileLineFunction(__FILE__, __LINE__);
+#define FROM_HERE_NO_FUNC ::debug_ipc::FileLineFunction(__FILE__, __LINE__)
 
 class FileLineFunction {
  public:

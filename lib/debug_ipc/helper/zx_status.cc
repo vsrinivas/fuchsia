@@ -27,6 +27,9 @@ std::string ZxStatusToString(uint32_t status) {
     case kZxErrNoResources:
       status_name = "ZX_ERR_NO_RESOURCES";
       break;
+    case kZxErrOutOfRange:
+      status_name = "ZX_ERR_OUT_OF_RANGE";
+      break;
     case kZxErrIO:
       status_name = "ZX_ERR_IO";
       break;

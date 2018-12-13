@@ -248,7 +248,7 @@ zx_status_t ArchProvider::InstallHWBreakpoint(zx::thread* thread,
   if (status != ZX_OK)
     return status;
 
-  status = SetupDebugBreakpoint(address, &debug_regs);
+  status = SetupHWBreakpoint(address, &debug_regs);
   if (status != ZX_OK)
     return status;
 
@@ -264,7 +264,7 @@ zx_status_t ArchProvider::UninstallHWBreakpoint(zx::thread* thread,
   if (status != ZX_OK)
     return status;
 
-  status = RemoveDebugBreakpoint(address, &debug_regs);
+  status = RemoveHWBreakpoint(address, &debug_regs);
   if (status != ZX_OK)
     return status;
 

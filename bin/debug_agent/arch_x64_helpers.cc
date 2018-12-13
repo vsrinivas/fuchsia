@@ -4,6 +4,8 @@
 
 #include "garnet/bin/debug_agent/arch_x64_helpers.h"
 
+#include <vector>
+
 #include "garnet/bin/debug_agent/arch.h"
 #include "lib/fxl/logging.h"
 
@@ -32,14 +34,16 @@ const DebugRegMask* GetDebugRegisterMasks(size_t index) {
 
 }  // namespace
 
-zx_status_t SetupDebugBreakpoint(uint64_t address,
+zx_status_t SetupHWBreakpoint(uint64_t address,
                                  zx_thread_state_debug_regs_t* debug_regs) {
   // Search for an unset register.
   // TODO(donosoc): This doesn't check that the address is already set.
   const DebugRegMask* slot = nullptr;
   for (size_t i = 0; i < 4; i++) {
     const DebugRegMask* mask = GetDebugRegisterMasks(i);
-    if (!FLAG_VALUE(debug_regs->dr7, mask->bp_mask)) {
+    // If it's the same address or it's free, we found our slot.
+    bool active = FLAG_VALUE(debug_regs->dr7, mask->bp_mask);
+    if (debug_regs->dr[i] == address || !active) {
       slot = mask;
       break;
     }
@@ -61,7 +65,7 @@ zx_status_t SetupDebugBreakpoint(uint64_t address,
   return ZX_OK;
 }
 
-zx_status_t RemoveDebugBreakpoint(uint64_t address,
+zx_status_t RemoveHWBreakpoint(uint64_t address,
                                   zx_thread_state_debug_regs_t* debug_regs) {
   // Search for the address.
   bool found = false;
