@@ -3,7 +3,9 @@
 # found in the LICENSE file.
 
 load("@fuchsia_sdk//build_defs:package.bzl", "fuchsia_package")
-load("@fuchsia_sdk//build_defs:packageable_cc_binary.bzl", "packageable_cc_binary")
+load("@fuchsia_sdk//build_defs:cc_binary_component.bzl", "cc_binary_component")
+
+load("//build_defs:verify_package.bzl", "verify_package")
 
 # Vanilla C++ program.
 cc_binary(
@@ -49,9 +51,11 @@ cc_binary(
 )
 
 # Prepare the binary for inclusion in a package.
-packageable_cc_binary(
+cc_binary_component(
     name = "packageable",
-    target = ":pkg_dep",
+    deps = [":pkg_dep"],
+    component_name = "packageable",
+    manifest = "manifest.cmx",
 )
 
 # C++ program in a Fuchsia package.
@@ -59,6 +63,19 @@ fuchsia_package(
     name = "package",
     deps = [
         ":packageable",
+    ],
+)
+
+# Verify that the package contains all the expected files.
+verify_package(
+    name = "package_verify",
+    package = ":package",
+    files = [
+        "bin/pkg_dep",
+        "lib/ld.so.1",
+        "lib/libshared.so",
+        "lib/libsvc.so",
+        "meta/packageable.cmx",
     ],
 )
 
@@ -78,9 +95,11 @@ cc_test(
     ],
 )
 
-packageable_cc_binary(
+cc_binary_component(
     name = "packageable_testonly",
-    target = ":pkg_dep_test",
+    deps = [":pkg_dep_test"],
+    component_name = "packageable_testonly",
+    manifest = "manifest.cmx",
     testonly = 1,
 )
 
@@ -88,6 +107,15 @@ fuchsia_package(
     name = "package_test",
     deps = [
         ":packageable_testonly",
+    ],
+    testonly = 1,
+)
+
+verify_package(
+    name = "package_test_verify",
+    package = ":package_test",
+    files = [
+        "bin/pkg_dep_test",
     ],
     testonly = 1,
 )

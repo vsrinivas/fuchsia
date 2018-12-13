@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 load(":dart.bzl", "COMMON_COMPILE_KERNEL_ACTION_ATTRS", "compile_kernel_action")
-load(":package_info.bzl", "PackageLocalInfo")
+load(":package_info.bzl", "PackageComponentInfo", "PackageLocalInfo")
 
 # A Fuchsia Flutter application
 #
@@ -34,7 +34,6 @@ def _flutter_app_impl(context):
         main_dilp_file = context.outputs.main_dilp,
         dilp_list_file = context.outputs.dilp_list,
     )
-    mappings["meta/%s.cmx" % component_name] = context.files.component_manifest[0]
 
     # Package the assets.
     data_root = "data/%s/" % component_name
@@ -58,6 +57,10 @@ def _flutter_app_impl(context):
     return [
         DefaultInfo(files = depset(outs), runfiles = context.runfiles(files = outs)),
         PackageLocalInfo(mappings = mappings.items()),
+        PackageComponentInfo(
+            name = component_name,
+            manifest = context.files.component_manifest[0],
+        ),
     ]
 
 flutter_app = rule(

@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 load(":dart.bzl", "COMMON_COMPILE_KERNEL_ACTION_ATTRS", "compile_kernel_action")
-load(":package_info.bzl", "PackageLocalInfo")
+load(":package_info.bzl", "PackageComponentInfo", "PackageLocalInfo")
 
 # A Fuchsia Dart application
 #
@@ -34,11 +34,14 @@ def _dart_app_impl(context):
         main_dilp_file = context.outputs.main_dilp,
         dilp_list_file = context.outputs.dilp_list,
     )
-    mappings["meta/%s.cmx" % component_name] = context.files.component_manifest[0]
     outs = [kernel_snapshot_file, manifest_file]
     return [
         DefaultInfo(files = depset(outs), runfiles = context.runfiles(files = outs)),
         PackageLocalInfo(mappings = mappings.items()),
+        PackageComponentInfo(
+            name = component_name,
+            manifest = context.files.component_manifest[0],
+        ),
     ]
 
 dart_app = rule(

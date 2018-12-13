@@ -6,6 +6,15 @@
 Some utilities to declare and aggregate package contents.
 """
 
+# Identifies a component added to a package.
+PackageComponentInfo = provider(
+    fields = {
+        "name": "name of the component",
+        "manifest": "path to the component manifest file",
+    },
+)
+
+# Represents a set of files to be added to a package.
 PackageLocalInfo = provider(
     fields = {
         "mappings": "list of (package dest, source) pairs",
@@ -21,17 +30,31 @@ PackageGeneratedInfo = provider(
     },
 )
 
+# Aggregates the information provided by the above providers.
 PackageAggregateInfo = provider(
     fields = {
-        "contents": "depset of (package dest, source) pairs",
+        "components": "depset of (name, manifest) pairs",
+        "mappings": "depset of (package dest, source) pairs",
     },
 )
 
-def get_aggregate_info(mappings, deps):
-    transitive_info = []
+def get_aggregate_info(components, mappings, deps):
+    transitive_components = []
+    transitive_mappings = []
     for dep in deps:
         if PackageAggregateInfo not in dep:
             continue
-        transitive_info.append(dep[PackageAggregateInfo].contents)
-    return PackageAggregateInfo(contents = depset(mappings,
-                                                  transitive = transitive_info))
+        transitive_components.append(dep[PackageAggregateInfo].components)
+        transitive_mappings.append(dep[PackageAggregateInfo].mappings)
+    return PackageAggregateInfo(
+        components = depset(components, transitive = transitive_components),
+        mappings = depset(mappings, transitive = transitive_mappings),
+    )
+
+# Contains information about a built Fuchsia package.
+PackageInfo = provider(
+    fields = {
+        "name": "name of the package",
+        "archive": "archive file",
+    },
+)

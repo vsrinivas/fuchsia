@@ -2,7 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-load(":package_info.bzl", "PackageAggregateInfo", "PackageGeneratedInfo", "PackageLocalInfo", "get_aggregate_info")
+load(":package_info.bzl", "PackageAggregateInfo", "PackageComponentInfo",
+     "PackageGeneratedInfo", "PackageInfo", "PackageLocalInfo",
+     "get_aggregate_info")
 
 """
 Defines a Fuchsia package
@@ -19,38 +21,36 @@ Parameters
 """
 
 # The attributes along which the aspect propagates.
-# The value denotes whether the attribute represents a list of target or a
-# single target.
-_ASPECT_ATTRIBUTES = {
-    "data": True,
-    "target": False,
-    "deps": True,
-    "srcs": True,
-}
+_ASPECT_ATTRIBUTES = [
+    "data",
+    "deps",
+    "srcs",
+]
 
 def _info_impl(target, context):
+    components = []
     mappings = []
+    if PackageComponentInfo in target:
+        info = target[PackageComponentInfo]
+        components += [(info.name, info.manifest)]
     if PackageLocalInfo in target:
-        mappings = target[PackageLocalInfo].mappings
-    elif PackageGeneratedInfo in target:
-        mappings = target[PackageGeneratedInfo].mappings
+        mappings += target[PackageLocalInfo].mappings
+    if PackageGeneratedInfo in target:
+        mappings += target[PackageGeneratedInfo].mappings
     deps = []
-    for attribute, is_list in _ASPECT_ATTRIBUTES.items():
+    for attribute in _ASPECT_ATTRIBUTES:
         if hasattr(context.rule.attr, attribute):
             value = getattr(context.rule.attr, attribute)
-            if is_list:
-                deps += value
-            else:
-                deps.append(value)
+            deps += value
     return [
-        get_aggregate_info(mappings, deps),
+        get_aggregate_info(components, mappings, deps),
     ]
 
 # An aspect which turns PackageLocalInfo providers into a PackageAggregateInfo
 # provider to identify all elements which need to be included in the package.
 _info_aspect = aspect(
     implementation = _info_impl,
-    attr_aspects = _ASPECT_ATTRIBUTES.keys(),
+    attr_aspects = _ASPECT_ATTRIBUTES,
     provides = [
         PackageAggregateInfo,
     ],
@@ -63,7 +63,7 @@ _info_aspect = aspect(
 
 def _fuchsia_package_impl(context):
     # List all the files that need to be included in the package.
-    info = get_aggregate_info([], context.attr.deps)
+    info = get_aggregate_info([], [], context.attr.deps)
     manifest_file_contents = ""
     package_contents = []
 
@@ -72,16 +72,24 @@ def _fuchsia_package_impl(context):
     manifest_file = context.actions.declare_file(base + "package_manifest")
 
     content = "#!/bin/bash\n"
-    for key, file in info.contents.to_list():
+    for dest, source in info.mappings.to_list():
         # Only add file to the manifest if not empty.
-        content += "if [[ -s %s ]]; then\n" % file.path
-        content += "  echo '%s=%s' >> %s\n" % (key, file.path, manifest_file.path)
+        content += "if [[ -s %s ]]; then\n" % source.path
+        content += "  echo '%s=%s' >> %s\n" % (dest, source.path,
+                                               manifest_file.path)
         content += "fi\n"
-        package_contents.append(file)
+        package_contents.append(source)
+
+    # Add cmx file for each component.
+    for name, cmx in info.components.to_list():
+        content += "echo 'meta/%s.cmx=%s' >> %s\n" % (name, cmx.path,
+                                                      manifest_file.path)
+        package_contents.append(cmx)
 
     # Add the meta/package file to the manifest.
     meta_package = context.actions.declare_file(base + "meta/package")
-    content += "echo 'meta/package=%s' >> %s\n" % (meta_package.path, manifest_file.path)
+    content += "echo 'meta/package=%s' >> %s\n" % (meta_package.path,
+                                                   manifest_file.path)
 
     # Write the manifest file.
     manifest_script = context.actions.declare_file(base + "package_manifest.sh")
@@ -188,7 +196,14 @@ def _fuchsia_package_impl(context):
     outs = [package_archive]
 
     return [
-        DefaultInfo(files = depset(outs), runfiles = context.runfiles(files = outs)),
+        DefaultInfo(
+            files = depset(outs),
+            runfiles = context.runfiles(files = outs),
+        ),
+        PackageInfo(
+            name = context.attr.name,
+            archive = package_archive,
+        ),
     ]
 
 fuchsia_package = rule(
@@ -208,4 +223,5 @@ fuchsia_package = rule(
             cfg = "host",
         ),
     },
+    provides = [PackageInfo],
 )

@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-load(":package_info.bzl", "get_aggregate_info", "PackageGeneratedInfo", "PackageLocalInfo")
+load(":package_info.bzl", "get_aggregate_info", "PackageGeneratedInfo", "PackageComponentInfo")
 
 """
 Makes a cc_binary ready for inclusion in a fuchsia_package.
@@ -42,37 +42,47 @@ _cc_contents_aspect = aspect(
     ],
 )
 
-def _packageable_cc_binary_impl(context):
-    target_files = context.attr.target[DefaultInfo].files.to_list()
-    if len(target_files) != 1:
-        fail("Packaged binary should produce a single output", attr="target")
-    output = target_files[0]
-    if output.extension != "":
-        fail("Expected executable, got: " + output.basename, attr="target")
+def _cc_binary_component_impl(context):
+    if len(context.attr.deps) != 1:
+        fail("'deps' attribute must have exactly one element.", "deps")
     return [
-        # TODO(pylaligand): remove this extra mapping once it's obsolete.
-        PackageLocalInfo(mappings = [("bin/app", output)]),
+        PackageComponentInfo(
+            name = context.attr.component_name,
+            manifest = context.file.manifest,
+        ),
     ]
 
-_packageable_cc_binary = rule(
-    implementation = _packageable_cc_binary_impl,
+_cc_binary_component = rule(
+    implementation = _cc_binary_component_impl,
     attrs = {
-        "target": attr.label(
-            doc = "The cc_binary to package",
+        "deps": attr.label_list(
+            doc = "The cc_binary for the component",
+            mandatory = True,
+            allow_empty = False,
             allow_files = False,
-            aspects = [
-                _cc_contents_aspect,
-            ],
+            aspects = [_cc_contents_aspect],
         ),
+        "component_name": attr.string(
+            doc = "The name of the component",
+            mandatory = True,
+        ),
+        "manifest": attr.label(
+            doc = "The component's manifest file (.cmx)",
+            mandatory = True,
+            allow_single_file = True,
+        )
     },
+    provides = [PackageComponentInfo],
 )
 
-def packageable_cc_binary(name, target, **kwargs):
+def cc_binary_component(name, deps, component_name, manifest, **kwargs):
     packaged_name = name + "_packaged"
 
-    _packageable_cc_binary(
+    _cc_binary_component(
         name = packaged_name,
-        target = target,
+        deps = deps,
+        component_name = component_name,
+        manifest = manifest,
         **kwargs
     )
 
