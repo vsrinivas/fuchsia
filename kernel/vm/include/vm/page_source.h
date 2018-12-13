@@ -12,6 +12,7 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <kernel/event.h>
+#include <kernel/lockdep.h>
 #include <kernel/mutex.h>
 #include <vm/page.h>
 #include <vm/vm.h>
@@ -46,35 +47,11 @@ typedef struct page_request {
     uint64_t length;
 } page_request_t;
 
-// Callback to whatever is backing the PageSource.
-class PageSourceCallback {
-public:
-    // Synchronously gets a page from the backing source.
-    virtual bool GetPage(uint64_t offset,
-                         vm_page_t** const page_out, paddr_t* const pa_out) = 0;
-    // Informs the backing source of a page request. The callback has ownership
-    // of |request| until the async request is cancelled.
-    virtual void GetPageAsync(page_request_t* request) = 0;
-    // Informs the backing source that a page request has been fulfilled. This
-    // must be called for all requests that are raised.
-    virtual void ClearAsyncRequest(page_request_t* request) = 0;
-    // Swaps the backing memory for a request. Assumes that |old|
-    // and |new_request| have the same type, offset, and length.
-    virtual void SwapRequest(page_request_t* old, page_request_t* new_req) = 0;
-
-    // OnClose should be called once no more requests will be made to the page source. The
-    // callback can keep a reference to the page source, so it must be called outside of
-    // the PageSource destructor.
-    virtual void OnClose() = 0;
-
-    virtual zx_status_t WaitOnEvent(event_t* event) = 0;
-};
-
 // Object which provides pages to a vm_object.
 class PageSource : public fbl::RefCounted<PageSource> {
 public:
-    PageSource(PageSourceCallback* callback, uint64_t page_source_id);
-    ~PageSource();
+    PageSource(uint64_t page_source_id);
+    virtual ~PageSource();
 
     // Sends a request to the backing source to provide the requested page.
     //
@@ -89,6 +66,11 @@ public:
     // been supplied to the owning vmo.
     void OnPagesSupplied(uint64_t offset, uint64_t len);
 
+    // Detaches the source. All future calls into the page source will fail. All
+    // pending read transactions are aborted. Pending flush transactions will still
+    // be serviced.
+    void Detach();
+
     // Closes the source. All pending transactions will be aborted and all future
     // calls will fail.
     void Close();
@@ -96,22 +78,46 @@ public:
     // Gets an id used for ownership verification.
     uint64_t get_page_source_id() const { return page_source_id_; }
 
+protected:
+    // Synchronously gets a page from the backing source.
+    virtual bool GetPage(uint64_t offset,
+                         vm_page_t** const page_out, paddr_t* const pa_out) = 0;
+    // Informs the backing source of a page request. The callback has ownership
+    // of |request| until the async request is cancelled.
+    virtual void GetPageAsync(page_request_t* request) = 0;
+    // Informs the backing source that a page request has been fulfilled. This
+    // must be called for all requests that are raised.
+    virtual void ClearAsyncRequest(page_request_t* request) = 0;
+    // Swaps the backing memory for a request. Assumes that |old|
+    // and |new_request| have the same type, offset, and length.
+    virtual void SwapRequest(page_request_t* old, page_request_t* new_req) = 0;
+
+    // OnDetach is called once no more calls to GetPage/GetPageAsync will be made. It
+    // will be called before OnClose and will only be called once.
+    virtual void OnDetach() = 0;
+    // After OnClose is called, no more calls will be made except for ::WaitOnEvent.
+    virtual void OnClose() = 0;
+
+    virtual zx_status_t WaitOnEvent(event_t* event) = 0;
+
 private:
-    PageSourceCallback* const callback_;
+    fbl::Canary<fbl::magic("VMPS")> canary_;
+
     const uint64_t page_source_id_;
 
-    fbl::Mutex mtx_;
-    bool closed_ TA_GUARDED(mtx_) = false;
+    mutable DECLARE_MUTEX(PageSource) page_source_mtx_;
+    bool detached_ TA_GUARDED(page_source_mtx_) = false;
+    bool closed_ TA_GUARDED(page_source_mtx_) = false;
 
     // Tree of pending_request structs which have been sent to the callback.
-    fbl::WAVLTree<uint64_t, PageRequest*> outstanding_requests_ TA_GUARDED(mtx_);
+    fbl::WAVLTree<uint64_t, PageRequest*> outstanding_requests_ TA_GUARDED(page_source_mtx_);
 
     // Wakes up the given PageRequest and all overlapping requests.
-    void CompleteRequestLocked(PageRequest* head) TA_REQ(mtx_);
+    void CompleteRequestLocked(PageRequest* head) TA_REQ(page_source_mtx_);
 
     // Removes |request| from any internal tracking. Called by a PageRequest if
     // it needs to abort itself.
-    void CancelRequest(PageRequest* request) TA_EXCL(mtx_);
+    void CancelRequest(PageRequest* request) TA_EXCL(page_source_mtx_);
 
     friend PageRequest;
 };

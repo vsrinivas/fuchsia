@@ -5,31 +5,34 @@
 // https://opensource.org/licenses/MIT
 
 #include <fbl/auto_lock.h>
+#include <kernel/lockdep.h>
 #include <ktl/move.h>
 #include <trace.h>
 #include <vm/page_source.h>
 
 #define LOCAL_TRACE 0
 
-PageSource::PageSource(PageSourceCallback* callback, uint64_t page_source_id)
-        : callback_(callback), page_source_id_(page_source_id) {
-    LTRACEF("%p callback %p\n", this, callback_);
+PageSource::PageSource(uint64_t page_source_id) : page_source_id_(page_source_id) {
+    LTRACEF("%p\n", this);
 }
 
 PageSource::~PageSource() {
     LTRACEF("%p\n", this);
+    DEBUG_ASSERT(detached_);
     DEBUG_ASSERT(closed_);
 }
 
-void PageSource::Close() {
-    fbl::AutoLock info_lock(&mtx_);
+void PageSource::Detach() {
+    canary_.Assert();
     LTRACEF("%p\n", this);
-
-    if (closed_) {
+    Guard<fbl::Mutex> guard{&page_source_mtx_};
+    if (detached_) {
         return;
     }
-    closed_ = true;
 
+    detached_ = true;
+
+    // Cancel read requests (which everything for now)
     while (!outstanding_requests_.is_empty()) {
         auto req = outstanding_requests_.pop_front();
         LTRACEF("dropping request with offset %lx\n", req->offset_);
@@ -39,15 +42,30 @@ void PageSource::Close() {
         // for this request.
         CompleteRequestLocked(req);
     }
-    callback_->OnClose();
+    OnDetach();
+}
+
+
+void PageSource::Close() {
+    canary_.Assert();
+    LTRACEF("%p\n", this);
+    // TODO: Close will have more meaning once writeback is implemented
+    Detach();
+
+    Guard<fbl::Mutex> guard{&page_source_mtx_};
+    if (!closed_) {
+        closed_ = true;
+        OnClose();
+    }
 }
 
 void PageSource::OnPagesSupplied(uint64_t offset, uint64_t len) {
-    uint64_t end = offset + len;
-    fbl::AutoLock info_lock(&mtx_);
+    canary_.Assert();
     LTRACEF("%p offset %lx, len %lx\n", this, offset, len);
+    uint64_t end = offset + len;
 
-    if (closed_) {
+    Guard<fbl::Mutex> guard{&page_source_mtx_};
+    if (detached_) {
         return;
     }
 
@@ -68,15 +86,16 @@ void PageSource::OnPagesSupplied(uint64_t offset, uint64_t len) {
 
 zx_status_t PageSource::GetPage(uint64_t offset, PageRequest* request,
                                 vm_page_t** const page_out, paddr_t* const pa_out) {
+    canary_.Assert();
     ASSERT(request);
 
-    fbl::AutoLock info_lock(&mtx_);
+    Guard<fbl::Mutex> guard{&page_source_mtx_};
     LTRACEF("%p offset %lx, %lu\n", this, offset, get_current_thread()->user_tid);
-    if (closed_) {
+    if (detached_) {
         return ZX_ERR_NOT_FOUND;
     }
 
-    if (callback_->GetPage(offset, page_out, pa_out)) {
+    if (GetPage(offset, page_out, pa_out)) {
         return ZX_OK;
     }
 
@@ -91,7 +110,7 @@ zx_status_t PageSource::GetPage(uint64_t offset, PageRequest* request,
         request->read_request_.offset = request->offset_;
         request->read_request_.length = PAGE_SIZE;
 
-        callback_->GetPageAsync(&request->read_request_);
+        GetPageAsync(&request->read_request_);
         outstanding_requests_.insert(request);
     }
 
@@ -101,7 +120,7 @@ zx_status_t PageSource::GetPage(uint64_t offset, PageRequest* request,
 void PageSource::CompleteRequestLocked(PageRequest* req) {
     // Take the request back from the callback before waking
     // up the corresponding thread.
-    callback_->ClearAsyncRequest(&req->read_request_);
+    ClearAsyncRequest(&req->read_request_);
 
     while (!req->overlap_.is_empty()) {
         auto waiter = req->overlap_.pop_front();
@@ -113,7 +132,8 @@ void PageSource::CompleteRequestLocked(PageRequest* req) {
 }
 
 void PageSource::CancelRequest(PageRequest* request) {
-    fbl::AutoLock info_lock(&mtx_);
+    canary_.Assert();
+    Guard<fbl::Mutex> guard{&page_source_mtx_};
     LTRACEF("%p %lx\n", this, request->offset_);
 
     if (request->offset_ == UINT64_MAX) {
@@ -141,12 +161,12 @@ void PageSource::CancelRequest(PageRequest* request) {
         outstanding_requests_.erase(*request);
         outstanding_requests_.insert(new_node);
 
-        callback_->SwapRequest(&request->read_request_, &new_node->read_request_);
+        SwapRequest(&request->read_request_, &new_node->read_request_);
     } else if (static_cast<fbl::WAVLTreeContainable<PageRequest*>*>(request)->InContainer()) {
         LTRACEF("Outstanding no overlap\n");
         // This node is an outstanding request with no overlap
         outstanding_requests_.erase(*request);
-        callback_->ClearAsyncRequest(&request->read_request_);
+        ClearAsyncRequest(&request->read_request_);
     }
 
     request->offset_ = UINT64_MAX;
@@ -166,7 +186,7 @@ void PageRequest::Init(fbl::RefPtr<PageSource> src, uint64_t offset) {
 }
 
 zx_status_t PageRequest::Wait() {
-    zx_status_t status = src_->callback_->WaitOnEvent(&event_);
+    zx_status_t status = src_->WaitOnEvent(&event_);
     if (status != ZX_OK) {
         src_->CancelRequest(this);
     }

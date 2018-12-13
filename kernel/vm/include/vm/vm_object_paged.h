@@ -117,6 +117,10 @@ public:
         }
         return 0;
     }
+    void DetachSource() override {
+        DEBUG_ASSERT(page_source_);
+        page_source_->Detach();
+    }
 
     // The size is clamped to allow VmPageList to use a one-past-the-end for
     // VmPageListNode offsets.

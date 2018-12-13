@@ -479,6 +479,126 @@ bool vmar_remap_test() {
     END_TEST;
 }
 
+// Tests that detaching results in a complete request.
+bool detach_page_complete_test() {
+    BEGIN_TEST;
+
+    UserPager pager;
+
+    ASSERT_TRUE(pager.Init());
+
+    Vmo* vmo;
+    ASSERT_TRUE(pager.CreateVmo(1, &vmo));
+
+    ASSERT_TRUE(pager.DetachVmo(vmo));
+
+    ASSERT_TRUE(pager.WaitForPageComplete(vmo->GetKey(), ZX_TIME_INFINITE));
+
+    END_TEST;
+}
+
+// Tests that closing results in a complete request.
+bool close_page_complete_test() {
+    BEGIN_TEST;
+
+    UserPager pager;
+
+    ASSERT_TRUE(pager.Init());
+
+    Vmo* vmo;
+    ASSERT_TRUE(pager.CreateVmo(1, &vmo));
+
+    uint64_t key = vmo->GetKey();
+    pager.ReleaseVmo(vmo);
+
+    ASSERT_TRUE(pager.WaitForPageComplete(key, ZX_TIME_INFINITE));
+
+    END_TEST;
+}
+
+// Tests that interrupting a read after receiving the request doesn't result in hanging threads.
+bool read_interrupt_late_test(bool detach) {
+    BEGIN_TEST;
+
+    UserPager pager;
+
+    ASSERT_TRUE(pager.Init());
+
+    Vmo* vmo;
+    ASSERT_TRUE(pager.CreateVmo(1, &vmo));
+
+    TestThread t([vmo]() -> bool {
+        return vmo->CheckVmar(0, 1);
+    });
+
+    ASSERT_TRUE(t.Start());
+
+    ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, 1, ZX_TIME_INFINITE));
+
+    if (detach) {
+        ASSERT_TRUE(pager.DetachVmo(vmo));
+    } else {
+        pager.ClosePagerHandle();
+    }
+
+    ASSERT_TRUE(t.WaitForCrash(vmo->GetBaseAddr()));
+
+    if (detach) {
+        ASSERT_TRUE(pager.WaitForPageComplete(vmo->GetKey(), ZX_TIME_INFINITE));
+    }
+
+    END_TEST;
+}
+
+bool read_close_interrupt_late_test() {
+    return read_interrupt_late_test(false);
+}
+
+bool read_detach_interrupt_late_test() {
+    return read_interrupt_late_test(true);
+}
+
+// Tests that interrupt a read before receiving requests doesn't result in hanging threads.
+bool read_interrupt_early_test(bool detach) {
+    BEGIN_TEST;
+
+    UserPager pager;
+
+    ASSERT_TRUE(pager.Init());
+
+    Vmo* vmo;
+    ASSERT_TRUE(pager.CreateVmo(1, &vmo));
+
+    TestThread t([vmo]() -> bool {
+        return vmo->CheckVmar(0, 1);
+    });
+
+    ASSERT_TRUE(t.Start());
+    ASSERT_TRUE(t.WaitForBlocked());
+
+    if (detach) {
+        ASSERT_TRUE(pager.DetachVmo(vmo));
+    } else {
+        pager.ClosePagerHandle();
+    }
+
+    ASSERT_TRUE(t.WaitForCrash(vmo->GetBaseAddr()));
+
+    if (detach) {
+        ASSERT_TRUE(pager.WaitForPageComplete(vmo->GetKey(), ZX_TIME_INFINITE));
+    }
+
+    END_TEST;
+}
+
+bool read_close_interrupt_early_test() {
+    return read_interrupt_early_test(false);
+}
+
+bool read_detach_interrupt_early_test() {
+    return read_interrupt_early_test(true);
+}
+
 // Checks that a thread blocked on accessing a paged vmo can be safely killed.
 bool thread_kill_test() {
     BEGIN_TEST;
@@ -578,6 +698,24 @@ bool close_pager_test() {
     END_TEST;
 }
 
+// Tests that closing a pager while a vmo is being detached doesn't cause problems.
+bool detach_close_pager_test() {
+    BEGIN_TEST;
+
+    UserPager pager;
+
+    ASSERT_TRUE(pager.Init());
+
+    Vmo* vmo;
+    ASSERT_TRUE(pager.CreateVmo(1, &vmo));
+
+    ASSERT_TRUE(pager.DetachVmo(vmo));
+
+    pager.ClosePagerHandle();
+
+    END_TEST;
+}
+
 // Tests that closing an in use port doesn't cause issues (beyond no
 // longer being able to receive requests).
 bool close_port_test() {
@@ -602,8 +740,7 @@ bool close_port_test() {
     ASSERT_TRUE(pager.SupplyPages(vmo, 1, 1));
     ASSERT_TRUE(vmo->CheckVmar(1, 1));
 
-    pager.ClosePagerHandle();
-
+    ASSERT_TRUE(pager.DetachVmo(vmo));
     ASSERT_TRUE(t.WaitForCrash(vmo->GetBaseAddr()));
 
     END_TEST;
@@ -791,6 +928,36 @@ bool clone_write_to_clone_test() {
     END_TEST;
 }
 
+// Tests that detaching the parent doesn't crash the clone.
+bool clone_detach_test() {
+    BEGIN_TEST;
+
+    UserPager pager;
+
+    ASSERT_TRUE(pager.Init());
+
+    Vmo* vmo;
+    ASSERT_TRUE(pager.CreateVmo(2, &vmo));
+    auto clone = vmo->Clone();
+
+    ASSERT_TRUE(pager.SupplyPages(vmo, 1, 1));
+
+    TestThread t([clone = clone.get()]() -> bool {
+            uint8_t data[ZX_PAGE_SIZE] = {};
+            return clone->CheckVmar(0, 1, data) && clone->CheckVmar(1, 1);
+    });
+    ASSERT_TRUE(t.Start());
+
+    ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, 1, ZX_TIME_INFINITE));
+
+    ASSERT_TRUE(pager.DetachVmo(vmo));
+
+    ASSERT_TRUE(pager.WaitForPageComplete(vmo->GetKey(), ZX_TIME_INFINITE));
+
+    ASSERT_TRUE(t.Wait());
+
+    END_TEST;
+}
 
 // Tests focused on reading a paged vmo.
 
@@ -815,9 +982,16 @@ END_TEST_CASE(pager_read_tests)
 // Tests focused on lifecycle of pager and paged vmos.
 
 BEGIN_TEST_CASE(lifecycle_tests)
+RUN_TEST(detach_page_complete_test);
+RUN_TEST(close_page_complete_test);
+RUN_TEST(read_detach_interrupt_late_test);
+RUN_TEST(read_close_interrupt_late_test);
+RUN_TEST(read_detach_interrupt_early_test);
+RUN_TEST(read_close_interrupt_early_test);
 RUN_TEST(thread_kill_test);
 RUN_TEST(thread_kill_overlap_test);
 RUN_TEST(close_pager_test);
+RUN_TEST(detach_close_pager_test);
 RUN_TEST(close_port_test);
 END_TEST_CASE(lifecycle_tests)
 
@@ -829,6 +1003,7 @@ RUN_TEST(clone_read_from_parent_test);
 RUN_TEST(clone_simultaneous_read_test);
 RUN_TEST(clone_simultaneous_child_read_test);
 RUN_TEST(clone_write_to_clone_test);
+RUN_TEST(clone_detach_test);
 END_TEST_CASE(clone_tests);
 
 } // namespace pager_tests

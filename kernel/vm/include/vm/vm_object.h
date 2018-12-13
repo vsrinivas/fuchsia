@@ -244,6 +244,9 @@ public:
 
     virtual uint64_t get_page_source_id() const { return 0; }
 
+    // Detaches the underlying page source, if present. Can be called multiple times.
+    virtual void DetachSource() {}
+
 protected:
     // private constructor (use Create())
     explicit VmObject(fbl::RefPtr<VmObject> parent);

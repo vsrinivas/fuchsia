@@ -25,75 +25,64 @@ zx_status_t PagerDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher, zx_righ
 
 PagerDispatcher::PagerDispatcher() : SoloDispatcher() {}
 
-PagerDispatcher::~PagerDispatcher() {}
+PagerDispatcher::~PagerDispatcher() {
+    DEBUG_ASSERT(srcs_.is_empty());
+}
 
 zx_status_t PagerDispatcher::CreateSource(fbl::RefPtr<PortDispatcher> port,
                                           uint64_t key, fbl::RefPtr<PageSource>* src_out) {
     fbl::AllocChecker ac;
-    auto wrapper = fbl::make_unique_checked<PageSourceWrapper>(&ac, this, ktl::move(port), key);
+    auto src = fbl::AdoptRef(new (&ac) PagerSource(get_koid(), this, ktl::move(port), key));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    auto src = fbl::AdoptRef(new (&ac) PageSource(wrapper.get(), get_koid()));
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
-
-    fbl::AutoLock lock(&wrapper->mtx_);
-    wrapper->src_ = src;
-
-    fbl::AutoLock lock2(&mtx_);
-    srcs_.push_front(ktl::move(wrapper));
-
+    Guard<fbl::Mutex> guard{&list_mtx_};
+    srcs_.push_front(src);
     *src_out = ktl::move(src);
     return ZX_OK;
 }
 
-void PagerDispatcher::ReleaseSource(PageSourceWrapper* src) {
-    fbl::AutoLock lock(&mtx_);
-    srcs_.erase(*src);
+fbl::RefPtr<PagerSource> PagerDispatcher::ReleaseSource(PagerSource* src) {
+    Guard<fbl::Mutex> guard{&list_mtx_};
+    return src->InContainer() ? srcs_.erase(*src) : nullptr;
 }
 
 void PagerDispatcher::on_zero_handles() {
-    fbl::DoublyLinkedList<fbl::unique_ptr<PageSourceWrapper>> srcs;
-
-    mtx_.Acquire();
+    Guard<fbl::Mutex> guard{&list_mtx_};
     while (!srcs_.is_empty()) {
-        auto& src = srcs_.front();
-        fbl::RefPtr<PageSource> inner;
-        {
-            fbl::AutoLock lock(&src.mtx_);
-            inner = src.src_;
-        }
+        fbl::RefPtr<PagerSource> src = srcs_.pop_front();
 
-        // Call close outside of the lock, since it will call back into ::OnClose.
-        mtx_.Release();
-        if (inner) {
-            inner->Close();
-        }
-        mtx_.Acquire();
+        // Call unlocked to prevent a double-lock if PagerDispatcher::ReleaseSource is called,
+        // and to preserve the lock order that PagerSource locks are acquired before the
+        // list lock.
+        guard.CallUnlocked([&src]() mutable {
+            src->Close();
+            src->OnDispatcherClosed();
+        });
     }
-    mtx_.Release();
 }
 
-PageSourceWrapper::PageSourceWrapper(PagerDispatcher* dispatcher,
-                                     fbl::RefPtr<PortDispatcher> port, uint64_t key)
-    : pager_(dispatcher), port_(ktl::move(port)), key_(key) {
+PagerSource::PagerSource(uint64_t page_source_id, PagerDispatcher* dispatcher,
+                         fbl::RefPtr<PortDispatcher> port, uint64_t key)
+    : PageSource(page_source_id), pager_(dispatcher), port_(ktl::move(port)), key_(key) {
     LTRACEF("%p key %lx\n", this, key_);
 }
 
-PageSourceWrapper::~PageSourceWrapper() {
+PagerSource::~PagerSource() {
     LTRACEF("%p\n", this);
     DEBUG_ASSERT(closed_);
+    DEBUG_ASSERT(!complete_pending_);
 }
 
-void PageSourceWrapper::GetPageAsync(page_request_t* request) {
-    fbl::AutoLock lock(&mtx_);
+void PagerSource::GetPageAsync(page_request_t* request) {
+    Guard<fbl::Mutex> guard{&mtx_};
+    ASSERT(!closed_);
+
     QueueMessageLocked(request);
 }
 
-void PageSourceWrapper::QueueMessageLocked(page_request_t* request) {
+void PagerSource::QueueMessageLocked(page_request_t* request) {
     if (packet_busy_) {
         list_add_tail(&pending_requests_, &request->node);
         return;
@@ -102,19 +91,28 @@ void PageSourceWrapper::QueueMessageLocked(page_request_t* request) {
     packet_busy_ = true;
     active_request_ = request;
 
-    zx_port_packet_t packet = {
-        .key = key_,
-        .type = ZX_PKT_TYPE_PAGE_REQUEST,
-        .status = ZX_OK,
-        .page_request = {
-            .command = ZX_PAGER_VMO_READ,
-            .flags = 0,
-            .reserved0 = 0,
-            .offset = request->offset,
-            .length = request->length,
-            .reserved1 = 0,
-        },
-    };
+    uint64_t offset, length;
+    uint16_t cmd;
+    if (request != &complete_request_) {
+        cmd = ZX_PAGER_VMO_READ;
+        offset = request->offset;
+        length = request->length;
+
+        // The vm subsystem should guarantee this
+        uint64_t unused;
+        DEBUG_ASSERT(!add_overflow(offset, length, &unused));
+    } else {
+        offset = length = 0;
+        cmd = ZX_PAGER_VMO_COMPLETE;
+    }
+
+    zx_port_packet_t packet = {};
+    packet.key = key_;
+    packet.type = ZX_PKT_TYPE_PAGE_REQUEST;
+    packet.page_request.command = cmd;
+    packet.page_request.offset = offset;
+    packet.page_request.length = length;
+
     packet_.packet = packet;
 
     // We can treat ZX_ERR_BAD_STATE as if the packet was queued
@@ -123,11 +121,13 @@ void PageSourceWrapper::QueueMessageLocked(page_request_t* request) {
     ASSERT(port_->Queue(&packet_, ZX_SIGNAL_NONE, 0) != ZX_ERR_SHOULD_WAIT);
 }
 
-void PageSourceWrapper::ClearAsyncRequest(page_request_t* request) {
-    fbl::AutoLock lock(&mtx_);
+void PagerSource::ClearAsyncRequest(page_request_t* request) {
+    Guard<fbl::Mutex> guard{&mtx_};
+    ASSERT(!closed_);
+
     if (request == active_request_) {
         // Condition on whether or not we atually cancel the packet, to make sure
-        // we don't race with a call to ::Free.
+        // we don't race with a call to PagerSource::Free.
         if (port_->CancelQueued(&packet_)) {
             OnPacketFreedLocked();
         }
@@ -136,29 +136,84 @@ void PageSourceWrapper::ClearAsyncRequest(page_request_t* request) {
     }
 }
 
-void PageSourceWrapper::SwapRequest(page_request_t* old, page_request_t* new_req) {
-    fbl::AutoLock lock(&mtx_);
+void PagerSource::SwapRequest(page_request_t* old, page_request_t* new_req) {
+    Guard<fbl::Mutex> guard{&mtx_};
+    ASSERT(!closed_);
+
     if (list_in_list(&old->node)) {
         list_replace_node(&old->node, &new_req->node);
     } else if (old == active_request_) {
         active_request_ = new_req;
     }
 }
+void PagerSource::OnDetach() {
+    Guard<fbl::Mutex> guard{&mtx_};
+    ASSERT(!closed_);
 
-void PageSourceWrapper::OnClose() {
-    {
-        fbl::AutoLock lock(&mtx_);
-        closed_ = true;
+    complete_pending_ = true;
+    QueueMessageLocked(&complete_request_);
+}
+
+void PagerSource::OnClose() {
+    fbl::RefPtr<PagerSource> self;
+
+    Guard<fbl::Mutex> guard{&mtx_};
+    ASSERT(!closed_);
+
+    closed_ = true;
+    if (!complete_pending_) {
+        // We know PagerDispatcher::on_zero_handles hasn't been invoked, since that would
+        // have already closed this pager source.
+        self = pager_->ReleaseSource(this);
+    } // else this is released in PagerSource::Free
+}
+
+void PagerSource::OnDispatcherClosed() {
+    // The pager dispatcher's reference to this object is the only one we completely control. Now
+    // that it's gone, we need to make sure that port_ doesn't end up with an invalid pointer
+    // to packet_ if all external RefPtrs to this object go away.
+    Guard<fbl::Mutex> guard{&mtx_};
+
+    if (complete_pending_) {
+        if (port_->CancelQueued(&packet_)) {
+            // We successfully cancelled the message, so we don't have to worry about
+            // PagerSource::Free being called.
+            complete_pending_ = false;
+        } else {
+            // If we failed to cancel the message, then there is a pending call to
+            // PagerSource::Free. We need to make sure the object isn't deleted too early,
+            // so have it keep a reference to itself, which PagerSource::Free will then
+            // clean up.
+            self_ref_ = fbl::WrapRefPtr(this);
+        }
+    } else {
+        // Either the complete message had already been dispatched when this object was closed or
+        // PagerSource::Free was called between this object being closed and this method taking the
+        // lock. In either case, the port no longer has a reference and cleanup is already done.
     }
-    pager_->ReleaseSource(this);
 }
 
-void PageSourceWrapper::Free(PortPacket* packet) {
-    fbl::AutoLock lock(&mtx_);
-    OnPacketFreedLocked();
+void PagerSource::Free(PortPacket* packet) {
+    fbl::RefPtr<PagerSource> self;
+
+    Guard<fbl::Mutex> guard{&mtx_};
+    if (active_request_ != &complete_request_) {
+        OnPacketFreedLocked();
+    } else {
+        complete_pending_ = false;
+        if (closed_) {
+            // If the source is closed, we need to do delayed cleanup. If the dispatcher
+            // has already been torn down, then there's a self-reference we need to clean
+            // up. Otherwise, clean up the dispatcher's reference to us.
+            self = std::move(self_ref_);
+            if (!self) {
+                self = pager_->ReleaseSource(this);
+            }
+        }
+    }
 }
 
-void PageSourceWrapper::OnPacketFreedLocked() {
+void PagerSource::OnPacketFreedLocked() {
     packet_busy_ = false;
     active_request_ = nullptr;
     if (!list_is_empty(&pending_requests_)) {
@@ -166,7 +221,7 @@ void PageSourceWrapper::OnPacketFreedLocked() {
     }
 }
 
-zx_status_t PageSourceWrapper::WaitOnEvent(event_t* event) {
+zx_status_t PagerSource::WaitOnEvent(event_t* event) {
     ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::PAGER);
     return event_wait_deadline(event, ZX_TIME_INFINITE, true);
 }

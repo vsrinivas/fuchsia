@@ -134,6 +134,10 @@ bool UserPager::ReplaceVmo(Vmo* vmo, zx::vmo* old_vmo) {
     return true;
 }
 
+bool UserPager::DetachVmo(Vmo* vmo) {
+    return zx_pager_detach_vmo(pager_, vmo->vmo_.get()) == ZX_OK;
+}
+
 void UserPager::ReleaseVmo(Vmo* vmo) {
     zx::vmar::root_self()->unmap(vmo->base_addr_, vmo->size_);
     vmos_.erase(*vmo);
@@ -146,6 +150,12 @@ bool UserPager::WaitForPageRead(
     req.offset = offset * ZX_PAGE_SIZE;
     req.length = length * ZX_PAGE_SIZE;
     return WaitForRequest(vmo->base_val_, req, deadline);
+}
+
+bool UserPager::WaitForPageComplete(uint64_t key, zx_time_t deadline) {
+    zx_packet_page_request_t req = {};
+    req.command = ZX_PAGER_VMO_COMPLETE;
+    return WaitForRequest(key, req, deadline);
 }
 
 bool UserPager::WaitForRequest(

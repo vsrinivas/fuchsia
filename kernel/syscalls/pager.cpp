@@ -70,6 +70,30 @@ zx_status_t sys_pager_create_vmo(zx_handle_t pager, uint32_t options, zx_handle_
     return out->make(ktl::move(dispatcher), rights);
 }
 
+// zx_status_t zx_pager_detach_vmo
+zx_status_t sys_pager_detach_vmo(zx_handle_t pager, zx_handle_t vmo) {
+    auto up = ProcessDispatcher::GetCurrent();
+    fbl::RefPtr<PagerDispatcher> pager_dispatcher;
+    // TODO: Consider rights on the pager dispatcher.
+    zx_status_t status = up->GetDispatcher(pager, &pager_dispatcher);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    fbl::RefPtr<VmObjectDispatcher> vmo_dispatcher;
+    status = up->GetDispatcherWithRights(vmo, ZX_RIGHT_READ | ZX_RIGHT_WRITE, &vmo_dispatcher);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    if (vmo_dispatcher->vmo()->get_page_source_id() != pager_dispatcher->get_koid()) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    vmo_dispatcher->vmo()->DetachSource();
+    return ZX_OK;
+}
+
 // zx_status_t zx_pager_supply_pages
 zx_status_t sys_pager_supply_pages(zx_handle_t pager, zx_handle_t pager_vmo,
                                    uint64_t offset, uint64_t size,
