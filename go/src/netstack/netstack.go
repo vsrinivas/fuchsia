@@ -454,7 +454,10 @@ func (ns *Netstack) Bridge(nics []tcpip.NICID) (*ifState, error) {
 
 	return ns.addEndpoint(func(*ifState) (stack.LinkEndpoint, error) {
 		return bridge.New(links), nil
-	}, func(*ifState) error {
+	}, func(ifs *ifState) error {
+		if len(ifs.nic.Name) == 0 {
+			ifs.nic.Name = fmt.Sprintf("br%d", ifs.nic.ID)
+		}
 		return nil
 	})
 }
