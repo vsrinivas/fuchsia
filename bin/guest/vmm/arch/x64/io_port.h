@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_GUEST_VMM_ARCH_X86_IO_PORT_H_
-#define GARNET_BIN_GUEST_VMM_ARCH_X86_IO_PORT_H_
+#ifndef GARNET_BIN_GUEST_VMM_ARCH_X64_IO_PORT_H_
+#define GARNET_BIN_GUEST_VMM_ARCH_X64_IO_PORT_H_
 
 #include <mutex>
 
@@ -110,4 +110,4 @@ class IoPort {
   ProcessorInterfaceHandler proc_iface_;
 };
 
-#endif  // GARNET_BIN_GUEST_VMM_ARCH_X86_IO_PORT_H_
+#endif  // GARNET_BIN_GUEST_VMM_ARCH_X64_IO_PORT_H_

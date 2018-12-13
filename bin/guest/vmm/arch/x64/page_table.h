@@ -4,8 +4,8 @@
 
 #include <zircon/types.h>
 
-#ifndef GARNET_BIN_GUEST_VMM_ARCH_X86_PAGE_TABLE_H_
-#define GARNET_BIN_GUEST_VMM_ARCH_X86_PAGE_TABLE_H_
+#ifndef GARNET_BIN_GUEST_VMM_ARCH_X64_PAGE_TABLE_H_
+#define GARNET_BIN_GUEST_VMM_ARCH_X64_PAGE_TABLE_H_
 
 class PhysMem;
 
@@ -18,4 +18,4 @@ class PhysMem;
  */
 zx_status_t create_page_table(const PhysMem& phys_mem);
 
-#endif  // GARNET_BIN_GUEST_VMM_ARCH_X86_PAGE_TABLE_H_
+#endif  // GARNET_BIN_GUEST_VMM_ARCH_X64_PAGE_TABLE_H_

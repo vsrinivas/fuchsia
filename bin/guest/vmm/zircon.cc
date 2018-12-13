@@ -43,8 +43,8 @@ static constexpr dcfg_arm_generic_timer_driver_t kTimerDriver = {
 #elif __x86_64__
 static constexpr uintptr_t kKernelOffset = 0x100000;
 
-#include "garnet/bin/guest/vmm/arch/x86/acpi.h"
-#include "garnet/bin/guest/vmm/arch/x86/e820.h"
+#include "garnet/bin/guest/vmm/arch/x64/acpi.h"
+#include "garnet/bin/guest/vmm/arch/x64/e820.h"
 #endif
 
 static constexpr uintptr_t kRamdiskOffset = 0x4000000;

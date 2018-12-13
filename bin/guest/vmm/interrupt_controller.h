@@ -7,7 +7,7 @@
 
 #if __x86_64__
 
-#include "garnet/bin/guest/vmm/arch/x86/io_apic.h"
+#include "garnet/bin/guest/vmm/arch/x64/io_apic.h"
 
 using InterruptController = IoApic;
 

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_GUEST_VMM_ARCH_X86_E820_H_
-#define GARNET_BIN_GUEST_VMM_ARCH_X86_E820_H_
+#ifndef GARNET_BIN_GUEST_VMM_ARCH_X64_E820_H_
+#define GARNET_BIN_GUEST_VMM_ARCH_X64_E820_H_
 
 #include <vector>
 
@@ -42,4 +42,4 @@ class E820Map {
   std::vector<e820entry_t> entries;
 };
 
-#endif  // GARNET_BIN_GUEST_VMM_ARCH_X86_E820_H_
+#endif  // GARNET_BIN_GUEST_VMM_ARCH_X64_E820_H_

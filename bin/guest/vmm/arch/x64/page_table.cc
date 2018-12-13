@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/guest/vmm/arch/x86/page_table.h"
+#include "garnet/bin/guest/vmm/arch/x64/page_table.h"
 
 #include <limits.h>
 

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_GUEST_VMM_ARCH_X86_IO_APIC_H_
-#define GARNET_BIN_GUEST_VMM_ARCH_X86_IO_APIC_H_
+#ifndef GARNET_BIN_GUEST_VMM_ARCH_X64_IO_APIC_H_
+#define GARNET_BIN_GUEST_VMM_ARCH_X64_IO_APIC_H_
 
 #include <mutex>
 
@@ -55,4 +55,4 @@ class IoApic : public IoHandler, public PlatformDevice {
   zx_status_t WriteRegister(uint32_t select_register, const IoValue& value);
 };
 
-#endif  // GARNET_BIN_GUEST_VMM_ARCH_X86_IO_APIC_H_
+#endif  // GARNET_BIN_GUEST_VMM_ARCH_X64_IO_APIC_H_

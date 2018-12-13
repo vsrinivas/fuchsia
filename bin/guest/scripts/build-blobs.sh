@@ -39,6 +39,6 @@ for DTS in garnet/bin/guest/vmm/arch/arm64/dts/*.dts; do
 done
 
 # Generate ACPI blobs.
-for ASL in garnet/bin/guest/vmm/arch/x86/asl/*.asl; do
+for ASL in garnet/bin/guest/vmm/arch/x64/asl/*.asl; do
   iasl -vs -we $ASL
 done

@@ -54,9 +54,9 @@
 #include "garnet/bin/guest/vmm/arch/arm64/pl031.h"
 
 #elif __x86_64__
-#include "garnet/bin/guest/vmm/arch/x86/acpi.h"
-#include "garnet/bin/guest/vmm/arch/x86/io_port.h"
-#include "garnet/bin/guest/vmm/arch/x86/page_table.h"
+#include "garnet/bin/guest/vmm/arch/x64/acpi.h"
+#include "garnet/bin/guest/vmm/arch/x64/io_port.h"
+#include "garnet/bin/guest/vmm/arch/x64/page_table.h"
 
 static constexpr char kDsdtPath[] = "/pkg/data/dsdt.aml";
 static constexpr char kMcfgPath[] = "/pkg/data/mcfg.aml";

@@ -46,7 +46,7 @@ static zx_status_t HandleMemArm(const zx_packet_guest_mem_t& mem,
   return ZX_OK;
 }
 #elif __x86_64__
-#include "garnet/bin/guest/vmm/arch/x86/decode.h"
+#include "garnet/bin/guest/vmm/arch/x64/decode.h"
 
 static zx_status_t HandleMemX86(const zx_packet_guest_mem_t& mem,
                                 uint64_t trap_key, const Instruction* inst) {

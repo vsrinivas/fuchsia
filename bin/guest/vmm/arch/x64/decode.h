@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_GUEST_VMM_ARCH_X86_DECODE_H_
-#define GARNET_BIN_GUEST_VMM_ARCH_X86_DECODE_H_
+#ifndef GARNET_BIN_GUEST_VMM_ARCH_X64_DECODE_H_
+#define GARNET_BIN_GUEST_VMM_ARCH_X64_DECODE_H_
 
 #include <zircon/types.h>
 
@@ -104,4 +104,4 @@ static inline zx_status_t inst_test8(const Instruction* inst, uint8_t inst_val,
 #endif  // __x86_64__
 }
 
-#endif  // GARNET_BIN_GUEST_VMM_ARCH_X86_DECODE_H_
+#endif  // GARNET_BIN_GUEST_VMM_ARCH_X64_DECODE_H_

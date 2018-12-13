@@ -6,7 +6,7 @@
 #include <zircon/errors.h>
 #include <zircon/syscalls/hypervisor.h>
 
-#include "garnet/bin/guest/vmm/arch/x86/decode.h"
+#include "garnet/bin/guest/vmm/arch/x64/decode.h"
 
 namespace {
 

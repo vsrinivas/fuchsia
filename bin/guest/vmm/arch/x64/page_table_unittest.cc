@@ -8,7 +8,7 @@
 
 #include <gtest/gtest.h>
 
-#include "garnet/bin/guest/vmm/arch/x86/page_table.h"
+#include "garnet/bin/guest/vmm/arch/x64/page_table.h"
 #include "garnet/bin/guest/vmm/phys_mem_fake.h"
 
 #define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))

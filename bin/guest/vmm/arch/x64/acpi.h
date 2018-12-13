@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_GUEST_VMM_ARCH_X86_ACPI_H_
-#define GARNET_BIN_GUEST_VMM_ARCH_X86_ACPI_H_
+#ifndef GARNET_BIN_GUEST_VMM_ARCH_X64_ACPI_H_
+#define GARNET_BIN_GUEST_VMM_ARCH_X64_ACPI_H_
 
 #include "garnet/bin/guest/vmm/device/phys_mem.h"
 
@@ -23,4 +23,4 @@ struct AcpiConfig {
 zx_status_t create_acpi_table(const struct AcpiConfig& cfg,
                               const PhysMem& phys_mem);
 
-#endif  // GARNET_BIN_GUEST_VMM_ARCH_X86_ACPI_H_
+#endif  // GARNET_BIN_GUEST_VMM_ARCH_X64_ACPI_H_

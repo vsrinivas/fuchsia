@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/guest/vmm/arch/x86/acpi.h"
+#include "garnet/bin/guest/vmm/arch/x64/acpi.h"
 
 #include <fcntl.h>
 #include <limits.h>
@@ -20,7 +20,7 @@ extern "C" {
 #include <acpica/actypes.h>
 }
 
-#include "garnet/bin/guest/vmm/arch/x86/io_port.h"
+#include "garnet/bin/guest/vmm/arch/x64/io_port.h"
 
 static uint8_t acpi_checksum(void* table, uint32_t length) {
   uint8_t sum = 0;

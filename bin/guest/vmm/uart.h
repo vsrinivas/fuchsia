@@ -7,7 +7,7 @@
 
 #if __x86_64__
 
-#include "garnet/bin/guest/vmm/arch/x86/i8250.h"
+#include "garnet/bin/guest/vmm/arch/x64/i8250.h"
 
 using Uart = I8250Group;
 

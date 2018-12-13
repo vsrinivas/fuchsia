@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_GUEST_VMM_ARCH_X86_I8250_H_
-#define GARNET_BIN_GUEST_VMM_ARCH_X86_I8250_H_
+#ifndef GARNET_BIN_GUEST_VMM_ARCH_X64_I8250_H_
+#define GARNET_BIN_GUEST_VMM_ARCH_X64_I8250_H_
 
 #include <mutex>
 
@@ -52,4 +52,4 @@ class I8250Group : public PlatformDevice {
   I8250 uarts_[kNumUarts];
 };
 
-#endif  // GARNET_BIN_GUEST_VMM_ARCH_X86_I8250_H_
+#endif  // GARNET_BIN_GUEST_VMM_ARCH_X64_I8250_H_
