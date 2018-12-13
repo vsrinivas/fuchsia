@@ -193,6 +193,11 @@ public:
     // Returns ZX_ERR_SHOULD_WAIT if the caller should try again after waiting on the
     // PageRequest.
     //
+    // Returns ZX_ERR_NEXT if |page_request| supports batching and the current request
+    // can be batched. The caller should continue to make successive GetPage requests
+    // until this returns ZX_ERR_SHOULD_WAIT. If the caller runs out of requests, it
+    // should finalize the request with PageSource::FinalizeRequest.
+    //
     // TODO: Currently the caller can also pass null if it knows that the vm object has no
     // page source. This will no longer be the case once page allocations can be delayed.
     zx_status_t GetPage(uint64_t offset, uint pf_flags, list_node* free_list,

@@ -509,7 +509,7 @@ zx_status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_no
             }
 
             return ZX_OK;
-        } else if (status == ZX_ERR_SHOULD_WAIT) {
+        } else if (status == ZX_ERR_SHOULD_WAIT || status == ZX_ERR_NEXT) {
             return status;
         }
     }
@@ -598,11 +598,6 @@ zx_status_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len) {
         return ZX_ERR_OUT_OF_RANGE;
     }
 
-    // TODO: Update commit to support these
-    if (GetRootPageSourceLocked() != nullptr) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
     // was in range, just zero length
     if (new_len == 0) {
         return ZX_OK;
@@ -613,56 +608,122 @@ zx_status_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len) {
     DEBUG_ASSERT(end > offset);
     offset = ROUNDDOWN(offset, PAGE_SIZE);
 
-    // make a pass through the list, counting the number of pages we need to allocate
-    size_t count = 0;
-    uint64_t expected_next_off = offset;
-    page_list_.ForEveryPageInRange(
-        [&count, &expected_next_off](const auto p, uint64_t off) {
+    fbl::RefPtr<PageSource> root_source = GetRootPageSourceLocked();
 
-            count += (off - expected_next_off) / PAGE_SIZE;
-            expected_next_off = off + PAGE_SIZE;
-            return ZX_ERR_NEXT;
-        },
-        expected_next_off, end);
-
-    // If expected_next_off isn't at the end of the range, there was a gap at
-    // the end.  Add it back in
-    DEBUG_ASSERT(end >= expected_next_off);
-    count += (end - expected_next_off) / PAGE_SIZE;
-    if (count == 0) {
-        return ZX_OK;
-    }
-
-    // allocate count number of pages
+    // If this vmo has a direct page source, then the source will provide the backing memory. For
+    // clones that eventually depend on a page source, we skip preallocating memory to avoid
+    // potentially overallocating pages if something else touches the vmo while we're blocked on the
+    // request. Otherwise we optimize things by preallocating all the pages.
     list_node page_list;
     list_initialize(&page_list);
+    if (root_source == nullptr) {
+        // make a pass through the list, counting the number of pages we need to allocate
+        uint64_t expected_next_off = offset;
+        size_t count = 0;
+        page_list_.ForEveryPageInRange(
+            [&count, &expected_next_off](const auto p, uint64_t off) {
+                count += (off - expected_next_off) / PAGE_SIZE;
+                expected_next_off = off + PAGE_SIZE;
+                return ZX_ERR_NEXT;
+            },
+            expected_next_off, end);
 
-    zx_status_t status = pmm_alloc_pages(count, pmm_alloc_flags_, &page_list);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    // unmap all of the pages in this range on all the mapping regions
-    RangeChangeUpdateLocked(offset, end - offset);
-
-    // add them to the appropriate range of the object
-    for (uint64_t o = offset; o < end; o += PAGE_SIZE) {
-        // Don't commit if we already have this page
-        vm_page_t* p = page_list_.GetPage(o);
-        if (p) {
-            continue;
+        // If expected_next_off isn't at the end of the range, there was a gap at
+        // the end.  Add it back in
+        DEBUG_ASSERT(end >= expected_next_off);
+        count += (end - expected_next_off) / PAGE_SIZE;
+        if (count == 0) {
+            return ZX_OK;
         }
 
-        // Check if our parent has the page
-        paddr_t pa;
-        const uint flags = VMM_PF_FLAG_SW_FAULT | VMM_PF_FLAG_WRITE;
-        // Should not be able to fail, since we're providing it memory and the
-        // range should be valid.
-        zx_status_t status = GetPageLocked(o, flags, &page_list, nullptr, &p, &pa);
-        ASSERT(status == ZX_OK);
+        zx_status_t status = pmm_alloc_pages(count, pmm_alloc_flags_, &page_list);
+        if (status != ZX_OK) {
+            return status;
+        }
     }
 
-    DEBUG_ASSERT(list_is_empty(&page_list));
+    auto list_cleanup = fbl::MakeAutoCall([&page_list]() {
+        if (!list_is_empty(&page_list)) {
+            pmm_free(&page_list);
+        }
+    });
+
+    bool retry = false;
+    PageRequest page_request(true);
+    do {
+        if (retry) {
+            // If there was a page request that couldn't be fulfilled, we need wait on the
+            // request and retry the commit. Note that when we retry the loop, offset is
+            // updated past the portion of the vmo that we successfully commited.
+            zx_status_t status = ZX_OK;
+            guard.CallUnlocked([&page_request, &status]() mutable {
+                status = page_request.Wait();
+            });
+            if (status != ZX_OK) {
+                return status;
+            }
+            retry = false;
+
+            // Re-run the range checks, since size_ could have changed while we were blocked.
+            if (!TrimRange(offset, new_len, size_, &new_len)) {
+                return ZX_ERR_OUT_OF_RANGE;
+            }
+
+            if (new_len == 0) {
+                return ZX_OK;
+            }
+
+            end = ROUNDUP_PAGE_SIZE(offset + new_len);
+            DEBUG_ASSERT(end > offset);
+            offset = ROUNDDOWN(offset, PAGE_SIZE);
+        }
+
+        // cur_offset tracks how far we've made page requests, even if they're not done
+        uint64_t cur_offset = offset;
+        // new_offset tracks how far we've succesfully committed and is where we'll
+        // restart from if we need to retry the commit
+        uint64_t new_offset = offset;
+        while (cur_offset < end) {
+            // Don't commit if we already have this page
+            vm_page_t* p = page_list_.GetPage(cur_offset);
+            if (!p) {
+                // Check if our parent has the page
+                const uint flags = VMM_PF_FLAG_SW_FAULT | VMM_PF_FLAG_WRITE;
+                zx_status_t res = GetPageLocked(cur_offset, flags, &page_list,
+                                                &page_request, nullptr, nullptr);
+                if (res == ZX_ERR_NEXT || res == ZX_ERR_SHOULD_WAIT) {
+                    // In either case we'll need to wait on the request and retry, but if we get
+                    // ZX_ERR_NEXT we keep faulting until we eventually see ZX_ERR_SHOULD_WAIT.
+                    retry = true;
+                    if (res == ZX_ERR_SHOULD_WAIT) {
+                        break;
+                    }
+                } else if (res != ZX_OK) {
+                    return res;
+                }
+            }
+
+            cur_offset += PAGE_SIZE;
+            if (!retry) {
+                new_offset = offset;
+            }
+        }
+
+        // Unmap all of the pages in the range we touched. This may end up unmapping non-present
+        // ranges or unmapping things multiple times, but it's necessary to ensure that we unmap
+        // everything that actually is present before anything else sees it.
+        if (cur_offset - offset) {
+            RangeChangeUpdateLocked(offset, cur_offset - offset);
+        }
+
+        if (retry && cur_offset == end) {
+            zx_status_t res = root_source->FinalizeRequest(&page_request);
+            if (res != ZX_ERR_SHOULD_WAIT) {
+                return res;
+            }
+        }
+        offset = new_offset;
+    } while (retry);
 
     return ZX_OK;
 }
@@ -1133,16 +1194,41 @@ zx_status_t VmObjectPaged::SupplyPages(uint64_t offset, uint64_t len, VmPageSpli
         return ZX_ERR_OUT_OF_RANGE;
     }
 
-    page_source_->OnPagesSupplied(offset, len);
+    list_node free_list;
+    list_initialize(&free_list);
+
+    // [new_pages_start, new_pages_start + new_pages_len) tracks the current run of
+    // consecutive new pages added to this vmo.
+    uint64_t new_pages_start = offset;
+    uint64_t new_pages_len = 0;
     while (!pages->IsDone()) {
         vm_page* src_page = pages->Pop();
         zx_status_t status = AddPageLocked(src_page, offset);
         if (status == ZX_ERR_ALREADY_EXISTS) {
-            pmm_free_page(src_page);
+            list_add_tail(&free_list, &src_page->queue_node);
+
+            // We hit the end of a run of absent pages, so notify the pager source
+            // of any new pages that were added and reset the tracking variables.
+            if (new_pages_len) {
+                page_source_->OnPagesSupplied(new_pages_start, new_pages_len);
+            }
+            new_pages_start = offset + PAGE_SIZE;
+            new_pages_len = 0;
+        } else if (status == ZX_OK) {
+            new_pages_len += PAGE_SIZE;
         } else if (status != ZX_OK) {
             return status;
         }
         offset += PAGE_SIZE;
+
+        DEBUG_ASSERT(new_pages_start + new_pages_len <= end);
+    }
+    if (new_pages_len) {
+        page_source_->OnPagesSupplied(new_pages_start, new_pages_len);
+    }
+
+    if (!list_is_empty(&free_list)) {
+        pmm_free(&free_list);
     }
 
     return ZX_OK;

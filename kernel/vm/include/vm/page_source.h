@@ -58,9 +58,19 @@ public:
     // Returns ZX_OK if the request was synchronously fulfilled.
     // Returns ZX_ERR_SHOULD_WAIT if the request will be asynchronously
     // fulfilled. The caller should wait on |req|.
+    // Returns ZX_ERR_NEXT if the PageRequest is in batch mode and the caller
+    // can continue to add more pages to the request.
     // Returns ZX_ERR_NOT_FOUND if the request cannot be fulfilled.
     zx_status_t GetPage(uint64_t offset, PageRequest* req,
                         vm_page_t** const page_out, paddr_t* const pa_out);
+
+    // Called to complete a batched PageRequest if the last call to GetPage
+    // returned ZX_ERR_NEXT.
+    //
+    // Returns ZX_ERR_SHOULD_WAIT if the PageRequest will be fulfilled after
+    // being waited upon.
+    // Returns ZX_ERR_NOT_FOUND if the request will never be resolved.
+    zx_status_t FinalizeRequest(PageRequest* node);
 
     // Updates the request tracking metadata to account for pages [offset, len) having
     // been supplied to the owning vmo.
@@ -104,8 +114,18 @@ private:
     bool detached_ TA_GUARDED(page_source_mtx_) = false;
     bool closed_ TA_GUARDED(page_source_mtx_) = false;
 
-    // Tree of pending_request structs which have been sent to the callback.
+    // Tree of pending_request structs which have been sent to the callback. The list
+    // is keyed by the end offset of the requests (not the start offsets).
     fbl::WAVLTree<uint64_t, PageRequest*> outstanding_requests_ TA_GUARDED(page_source_mtx_);
+
+#ifdef DEBUG_ASSERT_IMPLEMENTED
+    // Tracks the request currently being processed (only used for verifying batching assertions).
+    PageRequest* current_request_ TA_GUARDED(page_source_mtx_) = nullptr;
+#endif // DEBUG_ASSERT_IMPLEMENTED
+
+    // Sends a read request to the backing source, or queues the request if the needed
+    // region has already been requested from the source.
+    void RaiseReadRequestLocked(PageRequest* request) TA_REQ(page_source_mtx_);
 
     // Wakes up the given PageRequest and all overlapping requests.
     void CompleteRequestLocked(PageRequest* head) TA_REQ(page_source_mtx_);
@@ -121,25 +141,42 @@ private:
 class PageRequest : public fbl::WAVLTreeContainable<PageRequest*>,
                     public fbl::DoublyLinkedListable<PageRequest*> {
 public:
-    explicit PageRequest() {}
+    // If |allow_batching| is true, then a single request can be used to service
+    // multiple consecutive pages.
+    explicit PageRequest(bool allow_batching = false)
+        : allow_batching_(allow_batching) {}
     ~PageRequest();
 
     // Returns ZX_OK on success or ZX_ERR_INTERNAL_INTR_KILLED if the thread was killed.
     zx_status_t Wait();
 
-    uint64_t GetKey() const { return offset_; }
-
     DISALLOW_COPY_ASSIGN_AND_MOVE(PageRequest);
 
 private:
+    // PageRequests passed to GetPage may or may not be initialized. offset_ must be checked
+    // and the object must be initalized if necessary.
     void Init(fbl::RefPtr<PageSource> src, uint64_t offset);
+
+    const bool allow_batching_;
 
     // The page source this request is currently associated with.
     fbl::RefPtr<PageSource> src_;
     // Event signaled when the request is fulfilled.
     event_t event_;
-    // PageRequests are active if offset_ is not UINT64_MAX.
+    // PageRequests are active if offset_ is not UINT64_MAX. In an inactive request, the
+    // only other valid field is src_.
     uint64_t offset_ = UINT64_MAX;
+    // The total length of the request.
+    uint64_t len_ = 0;
+
+    // Keeps track of the size of the request that still needs to be fulfilled. This
+    // can become incorrect if some pages get supplied, decommitted, and then
+    // re-supplied. If that happens, then it will cause the page request to complete
+    // prematurely. However, page source clients should be operating in a loop to handle
+    // evictions, so this will simply result in some redundant read requests to the
+    // page source. Given the rarity in which this situation should arise, it's not
+    // worth the complexity of tracking it.
+    uint64_t pending_size_ = 0;
 
     // List node for overlapping requests.
     fbl::DoublyLinkedList<PageRequest*> overlap_;
@@ -147,5 +184,16 @@ private:
     // Request struct for the PageSourceCallback
     page_request_t read_request_;
 
+    uint64_t GetEnd() const {
+        // Assert on overflow, since it means vmobject made an out-of-bounds request.
+        uint64_t unused;
+        DEBUG_ASSERT(!add_overflow(offset_, len_, &unused));
+
+        return offset_ + len_;
+    }
+
+    uint64_t GetKey() const { return GetEnd(); }
+
     friend PageSource;
+    friend fbl::DefaultKeyedObjectTraits<uint64_t, PageRequest>;
 };

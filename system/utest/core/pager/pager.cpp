@@ -959,6 +959,361 @@ bool clone_detach_test() {
     END_TEST;
 }
 
+// Tests that commit on the clone populates things properly.
+bool clone_commit_test() {
+    BEGIN_TEST;
+
+    UserPager pager;
+
+    ASSERT_TRUE(pager.Init());
+
+    constexpr uint64_t kNumPages = 32;
+    Vmo* vmo;
+    ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo));
+
+    auto clone = vmo->Clone();
+    ASSERT_NOT_NULL(clone);
+
+    TestThread t([clone = clone.get()]() -> bool {
+        return clone->Commit(0, kNumPages);
+    });
+
+    ASSERT_TRUE(t.Start());
+
+    ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, kNumPages, ZX_TIME_INFINITE));
+
+    ASSERT_TRUE(pager.SupplyPages(vmo, 0, kNumPages));
+
+    ASSERT_TRUE(t.Wait());
+
+    END_TEST;
+}
+
+// Tests that commit on the clone populates things properly if things have already been touched.
+bool clone_split_commit_test() {
+    BEGIN_TEST;
+
+    UserPager pager;
+
+    ASSERT_TRUE(pager.Init());
+
+    constexpr uint64_t kNumPages = 4;
+    Vmo* vmo;
+    ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo));
+
+    auto clone = vmo->Clone();
+    ASSERT_NOT_NULL(clone);
+
+    TestThread t([clone = clone.get()]() -> bool {
+        return clone->Commit(0, kNumPages);
+    });
+
+    // Populate pages 1 and 2 of the parent vmo, and page 1 of the clone.
+    ASSERT_TRUE(pager.SupplyPages(vmo, 1, 2));
+    ASSERT_TRUE(clone->CheckVmar(1, 1));
+
+    ASSERT_TRUE(t.Start());
+
+    ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, 1, ZX_TIME_INFINITE));
+    ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+    ASSERT_TRUE(pager.WaitForPageRead(vmo, kNumPages - 1, 1, ZX_TIME_INFINITE));
+    ASSERT_TRUE(pager.SupplyPages(vmo, kNumPages - 1, 1));
+
+    ASSERT_TRUE(t.Wait());
+
+    END_TEST;
+}
+
+// Tests that decommit on clone doesn't decommit the parent.
+bool clone_decommit_test() {
+    BEGIN_TEST;
+
+    UserPager pager;
+
+    ASSERT_TRUE(pager.Init());
+
+    Vmo* vmo;
+    ASSERT_TRUE(pager.CreateVmo(1, &vmo));
+    auto clone = vmo->Clone();
+    ASSERT_NOT_NULL(clone);
+
+    ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+    ASSERT_TRUE(clone->CheckVmar(0, 1));
+
+    ASSERT_TRUE(clone->Decommit(0, 1));
+
+    ASSERT_TRUE(clone->CheckVmar(0, 1));
+
+    END_TEST;
+}
+
+// Tests that a commit properly populates the whole range.
+bool simple_commit_test() {
+    BEGIN_TEST;
+
+    UserPager pager;
+
+    ASSERT_TRUE(pager.Init());
+
+    constexpr uint64_t kNumPages = 555;
+    Vmo* vmo;
+    ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo));
+
+    TestThread t([vmo]() -> bool {
+        return vmo->Commit(0, kNumPages);
+    });
+
+    ASSERT_TRUE(t.Start());
+
+    ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, kNumPages, ZX_TIME_INFINITE));
+
+    ASSERT_TRUE(pager.SupplyPages(vmo, 0, kNumPages));
+
+    ASSERT_TRUE(t.Wait());
+
+    END_TEST;
+}
+
+// Tests that a commit over a partially populated range is properly split.
+bool split_commit_test() {
+    BEGIN_TEST;
+
+    UserPager pager;
+
+    ASSERT_TRUE(pager.Init());
+
+    constexpr uint64_t kNumPages = 33;
+    Vmo* vmo;
+    ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo));
+
+    ASSERT_TRUE(pager.SupplyPages(vmo, (kNumPages / 2), 1));
+
+    TestThread t([vmo]() -> bool {
+        return vmo->Commit(0, kNumPages);
+    });
+
+    ASSERT_TRUE(t.Start());
+
+    ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, (kNumPages / 2), ZX_TIME_INFINITE));
+    ASSERT_TRUE(pager.SupplyPages(vmo, 0, (kNumPages / 2)));
+
+    ASSERT_TRUE(pager.WaitForPageRead(vmo, (kNumPages / 2) + 1,
+                                      kNumPages / 2, ZX_TIME_INFINITE));
+    ASSERT_TRUE(pager.SupplyPages(vmo, ((kNumPages / 2) + 1), (kNumPages / 2)));
+
+    ASSERT_TRUE(t.Wait());
+
+    END_TEST;
+}
+
+// Tests that overlapping commits don't result in redundant requests.
+bool overlap_commit_test() {
+    BEGIN_TEST;
+
+    UserPager pager;
+
+    ASSERT_TRUE(pager.Init());
+
+    constexpr uint64_t kNumPages = 32;
+    Vmo* vmo;
+    ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo));
+
+    TestThread t1([vmo]() -> bool {
+        return vmo->Commit((kNumPages / 4), (kNumPages / 2));
+    });
+    TestThread t2([vmo]() -> bool {
+        return vmo->Commit(0, kNumPages);
+    });
+
+    ASSERT_TRUE(t1.Start());
+    ASSERT_TRUE(pager.WaitForPageRead(vmo, (kNumPages / 4), (kNumPages / 2), ZX_TIME_INFINITE));
+
+    ASSERT_TRUE(t2.Start());
+    ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, (kNumPages / 4), ZX_TIME_INFINITE));
+
+    ASSERT_TRUE(pager.SupplyPages(vmo, 0, (3 * kNumPages / 4)));
+
+    ASSERT_TRUE(pager.WaitForPageRead(vmo, (3 * kNumPages / 4), (kNumPages / 4), ZX_TIME_INFINITE));
+    ASSERT_TRUE(pager.SupplyPages(vmo, (3 * kNumPages / 4), (kNumPages / 4)));
+
+    ASSERT_TRUE(t1.Wait());
+    ASSERT_TRUE(t2.Wait());
+
+    END_TEST;
+}
+
+// Tests that overlapping commits are properly supplied.
+bool overlap_commit_supply_test() {
+    BEGIN_TEST;
+
+    UserPager pager;
+
+    ASSERT_TRUE(pager.Init());
+
+    constexpr uint64_t kSupplyLen = 3;
+    constexpr uint64_t kCommitLenA = 7;
+    constexpr uint64_t kCommitLenB = 5;
+    constexpr uint64_t kNumPages = kCommitLenA * kCommitLenB * kSupplyLen;
+    Vmo* vmo;
+    ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo));
+
+    fbl::unique_ptr<TestThread> tsA[kNumPages / kCommitLenA];
+    for (unsigned i = 0; i < fbl::count_of(tsA); i++) {
+        tsA[i] = fbl::make_unique<TestThread>([vmo, i]() -> bool {
+            return vmo->Commit(i * kCommitLenA, kCommitLenA);
+        });
+
+        ASSERT_TRUE(tsA[i]->Start());
+        ASSERT_TRUE(pager.WaitForPageRead(vmo, i * kCommitLenA, kCommitLenA, ZX_TIME_INFINITE));
+    }
+
+    fbl::unique_ptr<TestThread> tsB[kNumPages / kCommitLenB];
+    for (unsigned i = 0; i < fbl::count_of(tsB); i++) {
+        tsB[i] = fbl::make_unique<TestThread>([vmo, i]() -> bool {
+            return vmo->Commit(i * kCommitLenB, kCommitLenB);
+        });
+
+        ASSERT_TRUE(tsB[i]->Start());
+        ASSERT_TRUE(tsB[i]->WaitForBlocked());
+    }
+
+    for (unsigned i = 0; i < kNumPages / kSupplyLen; i++) {
+        ASSERT_TRUE(pager.SupplyPages(vmo, i * kSupplyLen, kSupplyLen));
+    }
+
+    for (unsigned i = 0; i < fbl::count_of(tsA); i++) {
+        ASSERT_TRUE(tsA[i]->Wait());
+    }
+    for (unsigned i = 0; i < fbl::count_of(tsB); i++) {
+        ASSERT_TRUE(tsB[i]->Wait());
+    }
+
+    END_TEST;
+}
+
+// Tests that a single commit can be fulfilled by multiple supplies.
+bool multisupply_commit_test() {
+    BEGIN_TEST;
+
+    UserPager pager;
+
+    ASSERT_TRUE(pager.Init());
+
+    constexpr uint64_t kNumPages = 32;
+    Vmo* vmo;
+    ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo));
+
+    TestThread t([vmo]() -> bool {
+        return vmo->Commit(0, kNumPages);
+    });
+
+    ASSERT_TRUE(t.Start());
+
+    ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, kNumPages, ZX_TIME_INFINITE));
+
+    for (unsigned i = 0; i < kNumPages; i++) {
+        ASSERT_TRUE(pager.SupplyPages(vmo, i, 1));
+    }
+
+    ASSERT_TRUE(t.Wait());
+
+    END_TEST;
+}
+
+// Tests that a single supply can fulfil multiple commits.
+bool multicommit_supply_test() {
+    BEGIN_TEST;
+
+    UserPager pager;
+
+    ASSERT_TRUE(pager.Init());
+
+    constexpr uint64_t kNumCommits = 5;
+    constexpr uint64_t kNumSupplies = 7;
+    Vmo* vmo;
+    ASSERT_TRUE(pager.CreateVmo(kNumCommits * kNumSupplies, &vmo));
+
+    fbl::unique_ptr<TestThread> ts[kNumCommits];
+    for (unsigned i = 0; i < kNumCommits; i++) {
+        ts[i] = fbl::make_unique<TestThread>([vmo, i]() -> bool {
+            return vmo->Commit(i * kNumSupplies, kNumSupplies);
+        });
+        ASSERT_TRUE(ts[i]->Start());
+        ASSERT_TRUE(pager.WaitForPageRead(vmo, i * kNumSupplies, kNumSupplies, ZX_TIME_INFINITE));
+    }
+
+    for (unsigned i = 0; i < kNumSupplies; i++) {
+        ASSERT_TRUE(pager.SupplyPages(vmo, kNumCommits * i, kNumCommits));
+    }
+
+    for (unsigned i = 0; i < kNumCommits; i++) {
+        ASSERT_TRUE(ts[i]->Wait());
+    }
+
+    END_TEST;
+}
+
+// Tests that redundant supplies for a single commit don't cause errors.
+bool commit_redundant_supply_test() {
+    BEGIN_TEST;
+
+    UserPager pager;
+
+    ASSERT_TRUE(pager.Init());
+
+    constexpr uint64_t kNumPages = 8;
+    Vmo* vmo;
+    ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo));
+
+    TestThread t([vmo]() -> bool {
+        return vmo->Commit(0, kNumPages);
+    });
+
+    ASSERT_TRUE(t.Start());
+
+    ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, kNumPages, ZX_TIME_INFINITE));
+
+    for (unsigned i = 1; i <= kNumPages; i++) {
+        ASSERT_TRUE(pager.SupplyPages(vmo, 0, i));
+    }
+
+    ASSERT_TRUE(t.Wait());
+
+    END_TEST;
+}
+
+// Tests that decommitting during a supply doesn't break things.
+bool supply_decommit_test() {
+    BEGIN_TEST;
+
+    UserPager pager;
+
+    ASSERT_TRUE(pager.Init());
+
+    constexpr uint64_t kNumPages = 4;
+    Vmo* vmo;
+    ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo));
+
+    TestThread t([vmo]() -> bool {
+        return vmo->Commit(0, kNumPages);
+    });
+
+    ASSERT_TRUE(t.Start());
+
+    ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, kNumPages, ZX_TIME_INFINITE));
+    ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+    ASSERT_TRUE(vmo->Decommit(0, 1));
+    ASSERT_TRUE(pager.SupplyPages(vmo, 1, kNumPages - 1));
+
+    ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, 1, ZX_TIME_INFINITE));
+    ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+    ASSERT_TRUE(t.Wait());
+
+    END_TEST;
+}
+
 // Tests focused on reading a paged vmo.
 
 BEGIN_TEST_CASE(pager_read_tests)
@@ -1004,7 +1359,23 @@ RUN_TEST(clone_simultaneous_read_test);
 RUN_TEST(clone_simultaneous_child_read_test);
 RUN_TEST(clone_write_to_clone_test);
 RUN_TEST(clone_detach_test);
+RUN_TEST(clone_commit_test);
+RUN_TEST(clone_split_commit_test);
+RUN_TEST(clone_decommit_test);
 END_TEST_CASE(clone_tests);
+
+// Tests focused on commit/decommit.
+
+BEGIN_TEST_CASE(commit_tests)
+RUN_TEST(simple_commit_test);
+RUN_TEST(split_commit_test);
+RUN_TEST(overlap_commit_test);
+RUN_TEST(overlap_commit_supply_test);
+RUN_TEST(multisupply_commit_test);
+RUN_TEST(multicommit_supply_test);
+RUN_TEST(commit_redundant_supply_test);
+RUN_TEST(supply_decommit_test);
+END_TEST_CASE(commit_tests)
 
 } // namespace pager_tests
 

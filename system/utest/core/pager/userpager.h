@@ -27,6 +27,16 @@ public:
     // Validates this vmo's content in the specified pages using a mapped vmar.
     bool CheckVmar(uint64_t page_offset, uint64_t page_count, const void* expected = nullptr);
 
+    // Commits the specified pages in this vmo.
+    bool Commit(uint64_t page_offset, uint64_t page_count) {
+        return OpRange(ZX_VMO_OP_COMMIT, page_offset, page_count);
+    }
+
+    // Decommits the specified pages in this vmo.
+    bool Decommit(uint64_t page_offset, uint64_t page_count) {
+        return OpRange(ZX_VMO_OP_DECOMMIT, page_offset, page_count);
+    }
+
     uint64_t GetKey() const { return base_val_; }
     uintptr_t GetBaseAddr() const { return base_addr_; }
 
@@ -42,6 +52,8 @@ private:
     const uintptr_t base_addr_;
 
     // These are set in the ctor, but can be changed by UserPager::ReplaceVmo
+    bool OpRange(uint32_t op, uint64_t page_offset, uint64_t page_count);
+
     zx::vmo vmo_;
     uint64_t base_val_; // == packet key
 

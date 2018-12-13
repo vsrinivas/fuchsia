@@ -62,7 +62,9 @@ void PageSource::Close() {
 void PageSource::OnPagesSupplied(uint64_t offset, uint64_t len) {
     canary_.Assert();
     LTRACEF("%p offset %lx, len %lx\n", this, offset, len);
-    uint64_t end = offset + len;
+    uint64_t end;
+    bool overflow = add_overflow(offset, len, &end);
+    DEBUG_ASSERT(!overflow); // vmobject should have already validated overflow
 
     Guard<fbl::Mutex> guard{&page_source_mtx_};
     if (detached_) {
@@ -70,12 +72,46 @@ void PageSource::OnPagesSupplied(uint64_t offset, uint64_t len) {
     }
 
     // The first possible request we could fulfill is the one with the smallest
-    // address that is at least offset. Then keep looking as long as the target's
-    // request's start offset is less than the supply end.
-    auto start = outstanding_requests_.lower_bound(offset);
+    // end address that is greater than offset. Then keep looking as long as the
+    // target request's start offset is less than the supply end.
+    auto start = outstanding_requests_.upper_bound(offset);
     while (start.IsValid() && start->offset_ < end) {
         auto cur = start;
         ++start;
+
+        // Calcualte how many pages were supplied to this request by finding the start and
+        // end offsets of the operation in this request.
+        uint64_t req_offset, req_end;
+        if (offset >= cur->offset_) {
+            // The operation started partway into this request.
+            req_offset = offset - cur->offset_;
+        } else {
+            // The operation started before this request.
+            req_offset = 0;
+        }
+        if (end < cur->GetEnd()) {
+            // The operation ended partway into this reqest.
+            req_end = end - cur->offset_;
+
+            uint64_t unused;
+            DEBUG_ASSERT(!sub_overflow(end, cur->offset_, &unused));
+        } else {
+            // The operation ended past the end of this request.
+            req_end = cur->len_;
+        }
+
+        DEBUG_ASSERT(req_end >= req_offset);
+        uint64_t fulfill = req_end - req_offset;
+
+        // If we're not done, continue to the next request
+        if (fulfill < cur->pending_size_) {
+            cur->pending_size_ -= fulfill;
+            continue;
+        } else if (fulfill > cur->pending_size_) {
+            // This just means that part of the request was decommitted. That's not
+            // an error, but it's good to know when we're tracing.
+            LTRACEF("%p, excessive page count\n", this);
+        }
 
         LTRACEF("%p, signaling %lx\n", this, cur->offset_);
 
@@ -90,7 +126,6 @@ zx_status_t PageSource::GetPage(uint64_t offset, PageRequest* request,
     ASSERT(request);
 
     Guard<fbl::Mutex> guard{&page_source_mtx_};
-    LTRACEF("%p offset %lx, %lu\n", this, offset, get_current_thread()->user_tid);
     if (detached_) {
         return ZX_ERR_NOT_FOUND;
     }
@@ -99,22 +134,104 @@ zx_status_t PageSource::GetPage(uint64_t offset, PageRequest* request,
         return ZX_OK;
     }
 
-    request->Init(fbl::RefPtr<PageSource>(this), offset);
+    // Check if request is initalized and initialize it if it isn't (it can be initialized
+    // for batch requests).
+    if (request->offset_ == UINT64_MAX) {
+        request->Init(fbl::RefPtr<PageSource>(this), offset);
+        LTRACEF("%p offset %lx\n", this, offset);
+    }
 
+#ifdef DEBUG_ASSERT_IMPLEMENTED
+    ASSERT(current_request_ == nullptr || current_request_ == request);
+    current_request_ = request;
+#endif // DEBUG_ASSERT_IMPLEMENTED
+
+    bool send_request = false;
+    zx_status_t res;
+    if (request->allow_batching_) {
+        // If possible, append the page directly to the current page. Else have the
+        // caller try again with a new request.
+        if (request->offset_ + request->len_ == offset) {
+            request->len_ += PAGE_SIZE;
+
+            // Assert on overflow, since it means vmobject is trying to get out-of-bounds pages.
+            uint64_t unused;
+            DEBUG_ASSERT(request->len_ >= PAGE_SIZE);
+            DEBUG_ASSERT(!add_overflow(request->offset_, request->len_, &unused));
+
+            bool end_batch = false;
+            auto node = outstanding_requests_.upper_bound(request->offset_);
+            if (node.IsValid()) {
+                uint64_t cur_end = request->offset_ + request->len_;
+                if (node->offset_ <= request->offset_) {
+                    // If offset is in [node->GetOffset(), node->GetEnd()), then we end
+                    // the batch when we'd stop overlapping.
+                    end_batch = node->GetEnd() == cur_end;
+                } else {
+                    // If offset is less than node->GetOffset(), then we end the batch
+                    // when we'd start overlapping.
+                    end_batch = node->offset_ == cur_end;
+                }
+            }
+
+            if (end_batch) {
+                send_request = true;
+                res = ZX_ERR_SHOULD_WAIT;
+            } else {
+                res = ZX_ERR_NEXT;
+            }
+        } else {
+            send_request = true;
+            res = ZX_ERR_SHOULD_WAIT;
+        }
+    } else {
+        request->len_ = PAGE_SIZE;
+        send_request = true;
+        res = ZX_ERR_SHOULD_WAIT;
+    }
+
+    if (send_request) {
+        RaiseReadRequestLocked(request);
+    }
+
+    return res;
+}
+
+zx_status_t PageSource::FinalizeRequest(PageRequest* request) {
+    LTRACEF("%p\n", this);
+    DEBUG_ASSERT(request->offset_ != UINT64_MAX);
+
+    Guard<fbl::Mutex> guard{&page_source_mtx_};
+    if (detached_) {
+        return ZX_ERR_NOT_FOUND;
+    }
+
+    RaiseReadRequestLocked(request);
+    return ZX_ERR_SHOULD_WAIT;
+}
+
+void PageSource::RaiseReadRequestLocked(PageRequest* request) {
     LTRACEF("%p %p\n", this, request);
-    auto overlap = outstanding_requests_.find(request->offset_);
-    if (overlap.IsValid()) {
+    // Find the node with the smallest endpoint greater than offset and then
+    // check to see if offset falls within that node.
+    auto overlap = outstanding_requests_.upper_bound(request->offset_);
+    if (overlap.IsValid() && overlap->offset_ <= request->offset_) {
+        // GetPage guarantees that if offset lies in an existing node, then it is
+        // completely contained in that node.
         overlap->overlap_.push_back(request);
     } else {
+        request->pending_size_ = request->len_;
+
         list_clear_node(&request->read_request_.node);
         request->read_request_.offset = request->offset_;
-        request->read_request_.length = PAGE_SIZE;
+        request->read_request_.length = request->len_;
 
         GetPageAsync(&request->read_request_);
         outstanding_requests_.insert(request);
     }
-
-    return ZX_ERR_SHOULD_WAIT;
+#ifdef DEBUG_ASSERT_IMPLEMENTED
+    current_request_ = nullptr;
+#endif // DEBUG_ASSERT_IMPLEMENTED
 }
 
 void PageSource::CompleteRequestLocked(PageRequest* req) {
@@ -143,7 +260,8 @@ void PageSource::CancelRequest(PageRequest* request) {
     if (static_cast<fbl::DoublyLinkedListable<PageRequest*>*>(request)->InContainer()) {
         LTRACEF("Overlap node\n");
         // This node is overlapping some other node, so just remove the request
-        auto main_node = outstanding_requests_.find(request->offset_);
+        auto main_node = outstanding_requests_.upper_bound(request->offset_);
+        ASSERT(main_node.IsValid());
         main_node->overlap_.erase(*request);
     } else if (!request->overlap_.is_empty()) {
         LTRACEF("Outstanding with overlap\n");
@@ -153,10 +271,12 @@ void PageSource::CancelRequest(PageRequest* request) {
 
         new_node->overlap_.swap(request->overlap_);
         new_node->offset_ = request->offset_;
+        new_node->len_ = request->len_;
+        new_node->pending_size_ = request->pending_size_;
 
         list_clear_node(&new_node->read_request_.node);
         new_node->read_request_.offset = request->offset_;
-        new_node->read_request_.length = PAGE_SIZE;
+        new_node->read_request_.length = request->len_;
 
         outstanding_requests_.erase(*request);
         outstanding_requests_.insert(new_node);
@@ -180,6 +300,7 @@ PageRequest::~PageRequest() {
 
 void PageRequest::Init(fbl::RefPtr<PageSource> src, uint64_t offset) {
     DEBUG_ASSERT(offset_ == UINT64_MAX);
+    len_ = 0;
     offset_ = offset;
     src_ = ktl::move(src);
     event_ = EVENT_INITIAL_VALUE(event_, 0, EVENT_FLAG_AUTOUNSIGNAL);

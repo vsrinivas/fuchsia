@@ -36,6 +36,10 @@ bool Vmo::CheckVmar(uint64_t offset, uint64_t len, const void* expected) {
     return true;
 }
 
+bool Vmo::OpRange(uint32_t op, uint64_t offset, uint64_t len) {
+    return vmo_.op_range(op, offset * ZX_PAGE_SIZE, len * ZX_PAGE_SIZE, nullptr, 0) == ZX_OK;
+}
+
 void Vmo::GenerateBufferContents(void* dest_buffer, uint64_t len, uint64_t paged_vmo_offset) {
     len *= ZX_PAGE_SIZE;
     paged_vmo_offset *= ZX_PAGE_SIZE;
