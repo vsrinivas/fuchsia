@@ -71,6 +71,11 @@ void AmlTdmDevice::InitRegs() {
     //Value to be inserted in a slot if it is masked
     mmio_.Write32(0x00000000, GetTdmOffset(TDMOUT_MASK_VAL_OFFS));
 
+    mmio_.Write32(0x00000000, GetTdmOffset(TDMOUT_MUTE0_OFFS)); // Disable lane 0 muting.
+    mmio_.Write32(0x00000000, GetTdmOffset(TDMOUT_MUTE1_OFFS)); // Disable lane 1 muting.
+    mmio_.Write32(0x00000000, GetTdmOffset(TDMOUT_MUTE2_OFFS)); // Disable lane 2 muting.
+    mmio_.Write32(0x00000000, GetTdmOffset(TDMOUT_MUTE3_OFFS)); // Disable lane 3 muting.
+
     // Datasheets state that PAD_CTRL1 controls sclk and lrclk source selection (which mclk),
     // it does this per pad (0, 1, 2).  These pads are tied to the TDM channel in use
     // (this is not specified in the datasheets but confirmed empirically) such that TDM_OUT_A
@@ -175,11 +180,13 @@ zx_status_t AmlTdmDevice::SetBuffer(zx_paddr_t buf, size_t len) {
     num_slots - number of slots per frame minus one
     bits_per_slot - width of each slot minus one
     bits_per_sample - number of bits in sample minus one
+    mix_mask - lanes to mix L+R.
 */
 void AmlTdmDevice::ConfigTdmOutSlot(uint8_t bit_offset, uint8_t num_slots,
-                                    uint8_t bits_per_slot, uint8_t bits_per_sample) {
+                                    uint8_t bits_per_slot, uint8_t bits_per_sample,
+                                    uint8_t mix_mask) {
 
-    uint32_t reg = bits_per_slot | (num_slots << 5) | (bit_offset << 15);
+    uint32_t reg = bits_per_slot | (num_slots << 5) | (bit_offset << 15) | (mix_mask << 20);
     mmio_.Write32(reg, GetTdmOffset(TDMOUT_CTRL0_OFFS));
 
     reg = (bits_per_sample << 8) | (frddr_ch_ << 24);
@@ -187,7 +194,7 @@ void AmlTdmDevice::ConfigTdmOutSlot(uint8_t bit_offset, uint8_t num_slots,
         // 8 bit sample, left justify in frame, split 64-bit dma fetch into 8 samples
         reg |= (0 << 4);
     } else if (bits_per_sample <= 16) {
-        // 16 bit sample, left justify in frame, split 64-bit dma fetch into 2 samples
+        // 16 bit sample, left justify in frame, split 64-bit dma fetch into 4 samples
         reg |= (2 << 4);
     } else {
         // 32/24 bit sample, left justify in slot, split 64-bit dma fetch into 2 samples

@@ -77,8 +77,8 @@ zx_status_t AstroAudioStreamOut::InitPDev() {
 
     // Setup TDM.
 
-    // 3 bitoffset, 4 slots, 32 bits/slot, 16 bits/sample.
-    aml_audio_->ConfigTdmOutSlot(3, 3, 31, 15);
+    // 3 bitoffset, 4 slots, 32 bits/slot, 16 bits/sample, no mixing.
+    aml_audio_->ConfigTdmOutSlot(3, 3, 31, 15, 0);
 
     // Lane0 right channel.
     aml_audio_->ConfigTdmOutSwaps(0x00000010);

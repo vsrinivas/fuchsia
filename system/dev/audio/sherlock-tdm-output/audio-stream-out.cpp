@@ -13,8 +13,9 @@
 namespace audio {
 namespace sherlock {
 
-// Expects L tweeter + R tweeter + Woofer.
-constexpr size_t kNumberOfChannels = 3;
+// Expects L+R for tweeters + L+R for the 1 Woofer (mixed in HW).
+// The user must perform crossover filtering on these channels.
+constexpr size_t kNumberOfChannels = 4;
 // Calculate ring buffer size for 1 second of 16-bit, 48kHz.
 constexpr size_t kRingBufferSize = fbl::round_up<size_t, size_t>(48000 * 2 * kNumberOfChannels,
                                                                  PAGE_SIZE);
@@ -98,19 +99,20 @@ zx_status_t SherlockAudioStreamOut::InitPdev() {
     // data lines  (ConfigTdmOutSlot bitoffset=4 below accomplishes this).
     // -3072MHz/64 = 48KHz.
 
-    // 4 bitoffset, 2 slots, 32 bits/slot, 16 bits/sample.
-    aml_audio_->ConfigTdmOutSlot(4, 1, 31, 15);
+    // 4 bitoffset, 2 slots, 32 bits/slot, 16 bits/sample, enable mix L+R on lane 1.
+    aml_audio_->ConfigTdmOutSlot(4, 1, 31, 15, (1 << 1));
 
-    // Lane 0 left channel set to FRDDR slot 0.
-    // Lane 0 right channel set to FRDDR slot 1.
-    // Lane 1 left channel set to FRDDR slot 2.
-    aml_audio_->ConfigTdmOutSwaps(0x00000210);
+    // Lane 0 L channel set to FRDDR slot 0.
+    // Lane 0 R channel set to FRDDR slot 1.
+    // Lane 1 L channel set to FRDDR slot 2.  Mixed with R, see ConfigTdmOutSlot above.
+    // Lane 1 R channel set to FRDDR slot 3.  Mixed with L, see ConfigTdmOutSlot above.
+    aml_audio_->ConfigTdmOutSwaps(0x00003210);
 
     // Tweeters: Lane 0, unmask TDM slots 0 & 1 (L+R FRDDR slots 0 & 1).
     aml_audio_->ConfigTdmOutLane(0, 0x00000003);
 
-    // Woofer: Lane 1, unmask TDM slot 0 (Woofer FRDDR slot 2).
-    aml_audio_->ConfigTdmOutLane(1, 0x00000001);
+    // Woofer: Lane 1, unmask TDM slot 0 & 1 (Woofer FRDDR slots 2 & 3).
+    aml_audio_->ConfigTdmOutLane(1, 0x00000003);
 
     // mclk = T931_HIFI_PLL_RATE/125 = 1536MHz/125 = 12.288MHz.
     aml_audio_->SetMclkDiv(124);

@@ -35,8 +35,8 @@ public:
     zx_status_t SetMClkPad(aml_tdm_mclk_pad_t mclk_pad);
 
     // Configures placement of data on the tdm bus
-    void ConfigTdmOutSlot(uint8_t bit_offset, uint8_t num_slots,
-                          uint8_t bits_per_slot, uint8_t bits_per_sample);
+    void ConfigTdmOutSlot(uint8_t bit_offset, uint8_t num_slots, uint8_t bits_per_slot,
+                          uint8_t bits_per_sample, uint8_t mix_mask);
 
     // Configures Lanes.
     zx_status_t ConfigTdmOutLane(size_t lane, uint32_t mask);
