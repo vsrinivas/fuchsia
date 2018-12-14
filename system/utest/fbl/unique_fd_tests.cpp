@@ -191,6 +191,28 @@ bool reset_test() {
     END_TEST;
 }
 
+bool duplicate_test() {
+    BEGIN_TEST;
+    int pipes[2];
+    EXPECT_EQ(pipe(pipes), 0);
+
+    fbl::unique_fd in(pipes[1]);
+    fbl::unique_fd out(pipes[0]);
+    EXPECT_TRUE(verify_pipes_open(in.get(), out.get()));
+    {
+        fbl::unique_fd in2 = in.duplicate();
+        fbl::unique_fd out2 = out.duplicate();
+        EXPECT_TRUE(verify_pipes_open(in2.get(), out2.get()));
+
+        EXPECT_TRUE(verify_pipes_open(in2.get(), out.get()));
+        EXPECT_TRUE(verify_pipes_open(in.get(), out2.get()));
+        EXPECT_TRUE(verify_pipes_open(in.get(), out.get()));
+    }
+    EXPECT_TRUE(verify_pipes_open(in.get(), out.get()));
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(unique_fd_tests)
@@ -200,4 +222,5 @@ RUN_TEST(scoping_test)
 RUN_TEST(swap_test)
 RUN_TEST(move_test)
 RUN_TEST(reset_test)
+RUN_TEST(duplicate_test)
 END_TEST_CASE(unique_fd_tests)

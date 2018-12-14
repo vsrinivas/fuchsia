@@ -42,6 +42,10 @@ public:
     // move semantics only
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(unique_fd);
 
+    fbl::unique_fd duplicate() {
+        return fbl::unique_fd(dup(fd_));
+    }
+
     int release() {
         int t = fd_;
         fd_ = InvalidValue();
