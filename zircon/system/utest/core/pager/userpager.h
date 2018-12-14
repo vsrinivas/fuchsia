@@ -26,6 +26,12 @@ public:
 
     // Validates this vmo's content in the specified pages using a mapped vmar.
     bool CheckVmar(uint64_t page_offset, uint64_t page_count, const void* expected = nullptr);
+    // Validates this vmo's content in the specified pages using vmo_read.
+    bool CheckVmo(uint64_t page_offset, uint64_t page_count, const void* expected = nullptr);
+
+    bool Resize(uint64_t new_page_count) {
+        return vmo_.set_size(new_page_count) == ZX_OK;
+    }
 
     // Commits the specified pages in this vmo.
     bool Commit(uint64_t page_offset, uint64_t page_count) {

@@ -5,6 +5,7 @@
 #include <atomic>
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
+#include <fbl/auto_call.h>
 #include <lib/zx/vmar.h>
 #include <string.h>
 #include <zircon/process.h>
@@ -33,6 +34,42 @@ bool Vmo::CheckVmar(uint64_t offset, uint64_t len, const void* expected) {
             return false;
         }
     }
+    return true;
+}
+
+bool Vmo::CheckVmo(uint64_t offset, uint64_t len, const void* expected) {
+    len *= ZX_PAGE_SIZE;
+    offset *= ZX_PAGE_SIZE;
+
+    zx::vmo tmp_vmo;
+    zx_vaddr_t buf = 0;
+
+    if (zx::vmo::create(len, 0, &tmp_vmo) != ZX_OK) {
+        return false;
+    }
+
+    if (zx::vmar::root_self()->map(0, tmp_vmo, 0, len,
+                                   ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &buf) != ZX_OK) {
+        return false;
+    }
+
+    auto unmap = fbl::MakeAutoCall([&]() {
+        zx_vmar_unmap(zx_vmar_root_self(), buf, len);
+    });
+
+    if (vmo_.read(reinterpret_cast<void*>(buf), offset, len) != ZX_OK) {
+        return false;
+    }
+
+    for (uint64_t i = 0; i < len / sizeof(uint64_t); i++) {
+        auto data_buf = reinterpret_cast<uint64_t*>(buf);
+        auto expected_buf = static_cast<const uint64_t*>(expected);
+        if (data_buf[i] != (expected
+                    ? expected_buf[i] : base_val_ + (offset / sizeof(uint64_t)) + i)) {
+            return false;
+        }
+    }
+
     return true;
 }
 

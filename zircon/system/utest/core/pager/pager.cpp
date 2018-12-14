@@ -11,8 +11,17 @@
 
 namespace pager_tests {
 
+static bool check_buffer_data(Vmo* vmo, uint64_t offset,
+                              uint64_t len, const void* data, bool check_vmar) {
+    return check_vmar ? vmo->CheckVmar(offset, len, data) : vmo->CheckVmo(offset, len, data);
+}
+
+static bool check_buffer(Vmo* vmo, uint64_t offset, uint64_t len, bool check_vmar) {
+    return check_vmar ? vmo->CheckVmar(offset, len) : vmo->CheckVmo(offset, len);
+}
+
 // Simple test that checks that a single thread can access a single page.
-bool single_page_test() {
+bool single_page_test(bool check_vmar) {
     BEGIN_TEST;
 
     UserPager pager;
@@ -22,8 +31,8 @@ bool single_page_test() {
     Vmo* vmo;
     ASSERT_TRUE(pager.CreateVmo(1, &vmo));
 
-    TestThread t([vmo]() -> bool {
-        return vmo->CheckVmar(0, 1);
+    TestThread t([vmo, check_vmar]() -> bool {
+        return check_buffer(vmo, 0, 1, check_vmar);
     });
 
     ASSERT_TRUE(t.Start());
@@ -38,7 +47,7 @@ bool single_page_test() {
 }
 
 // Tests that pre-supplied pages don't result in requests.
-bool presupply_test() {
+bool presupply_test(bool check_vmar) {
     BEGIN_TEST;
 
     UserPager pager;
@@ -50,8 +59,8 @@ bool presupply_test() {
 
     ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
 
-    TestThread t([vmo]() -> bool {
-        return vmo->CheckVmar(0, 1);
+    TestThread t([vmo, check_vmar]() -> bool {
+        return check_buffer(vmo, 0, 1, check_vmar);
     });
 
     ASSERT_TRUE(t.Start());
@@ -65,7 +74,7 @@ bool presupply_test() {
 
 // Tests that supplies between the request and reading the port
 // causes the request to be aborted.
-bool early_supply_test() {
+bool early_supply_test(bool check_vmar) {
     BEGIN_TEST;
 
     UserPager pager;
@@ -75,12 +84,12 @@ bool early_supply_test() {
     Vmo* vmo;
     ASSERT_TRUE(pager.CreateVmo(2, &vmo));
 
-    TestThread t1([vmo]() -> bool {
-        return vmo->CheckVmar(0, 1);
+    TestThread t1([vmo, check_vmar]() -> bool {
+        return check_buffer(vmo, 0, 1, check_vmar);
     });
     // Use a second thread to make sure the queue of requests is flushed.
-    TestThread t2([vmo]() -> bool {
-        return vmo->CheckVmar(1, 1);
+    TestThread t2([vmo, check_vmar]() -> bool {
+        return check_buffer(vmo, 1, 1, check_vmar);
     });
 
     ASSERT_TRUE(t1.Start());
@@ -100,7 +109,7 @@ bool early_supply_test() {
 }
 
 // Checks that a single thread can sequentially access multiple pages.
-bool sequential_multipage_test() {
+bool sequential_multipage_test(bool check_vmar) {
     BEGIN_TEST;
 
     UserPager pager;
@@ -111,8 +120,8 @@ bool sequential_multipage_test() {
     constexpr uint32_t kNumPages = 32;
     ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo));
 
-    TestThread t([vmo]() -> bool {
-        return vmo->CheckVmar(0, kNumPages);
+    TestThread t([vmo, check_vmar]() -> bool {
+        return check_buffer(vmo, 0, kNumPages, check_vmar);
     });
 
     ASSERT_TRUE(t.Start());
@@ -128,7 +137,7 @@ bool sequential_multipage_test() {
 }
 
 // Tests that multiple threads can concurrently access different pages.
-bool concurrent_multipage_access_test() {
+bool concurrent_multipage_access_test(bool check_vmar) {
     BEGIN_TEST;
 
     UserPager pager;
@@ -138,11 +147,11 @@ bool concurrent_multipage_access_test() {
     Vmo* vmo;
     ASSERT_TRUE(pager.CreateVmo(2, &vmo));
 
-    TestThread t([vmo]() -> bool {
-        return vmo->CheckVmar(0, 1);
+    TestThread t([vmo, check_vmar]() -> bool {
+        return check_buffer(vmo, 0, 1, check_vmar);
     });
-    TestThread t2([vmo]() -> bool {
-        return vmo->CheckVmar(1, 1);
+    TestThread t2([vmo, check_vmar]() -> bool {
+        return check_buffer(vmo, 1, 1, check_vmar);
     });
 
     ASSERT_TRUE(t.Start());
@@ -159,7 +168,7 @@ bool concurrent_multipage_access_test() {
 }
 
 // Tests that multiple threads can concurrently access a single page.
-bool concurrent_overlapping_access_test() {
+bool concurrent_overlapping_access_test(bool check_vmar) {
     BEGIN_TEST;
 
     UserPager pager;
@@ -172,8 +181,8 @@ bool concurrent_overlapping_access_test() {
     constexpr uint64_t kNumThreads = 32;
     fbl::unique_ptr<TestThread> threads[kNumThreads];
     for (unsigned i = 0; i < kNumThreads; i++) {
-        threads[i] = fbl::make_unique<TestThread>([vmo]() -> bool {
-            return vmo->CheckVmar(0, 1);
+        threads[i] = fbl::make_unique<TestThread>([vmo, check_vmar]() -> bool {
+            return check_buffer(vmo, 0, 1, check_vmar);
         });
 
         threads[i]->Start();
@@ -194,7 +203,7 @@ bool concurrent_overlapping_access_test() {
 
 // Tests that multiple threads can concurrently access multiple pages and
 // be satisfied by a single supply operation.
-bool bulk_single_supply_test() {
+bool bulk_single_supply_test(bool check_vmar) {
     BEGIN_TEST;
 
     UserPager pager;
@@ -207,8 +216,8 @@ bool bulk_single_supply_test() {
 
     fbl::unique_ptr<TestThread> ts[kNumPages];
     for (unsigned i = 0; i < kNumPages; i++) {
-        ts[i] = fbl::make_unique<TestThread>([vmo, i]() -> bool {
-            return vmo->CheckVmar(i, 1);
+        ts[i] = fbl::make_unique<TestThread>([vmo, i, check_vmar]() -> bool {
+            return check_buffer(vmo, i, 1, check_vmar);
         });
         ASSERT_TRUE(ts[i]->Start());
         ASSERT_TRUE(pager.WaitForPageRead(vmo, i, 1, ZX_TIME_INFINITE));
@@ -224,7 +233,7 @@ bool bulk_single_supply_test() {
 }
 
 // Test body for odd supply tests.
-bool bulk_odd_supply_test_inner(bool use_src_offset) {
+bool bulk_odd_supply_test_inner(bool check_vmar, bool use_src_offset) {
     BEGIN_TEST;
 
     UserPager pager;
@@ -251,8 +260,8 @@ bool bulk_odd_supply_test_inner(bool use_src_offset) {
         fbl::unique_ptr<TestThread> ts[kSupplyLengths[supply_idx]];
         for (uint64_t j = 0; j < kSupplyLengths[supply_idx]; j++) {
             uint64_t thread_offset = offset + j;
-            ts[j] = fbl::make_unique<TestThread>([vmo, thread_offset]() -> bool {
-                return vmo->CheckVmar(thread_offset, 1);
+            ts[j] = fbl::make_unique<TestThread>([vmo, thread_offset, check_vmar]() -> bool {
+                return check_buffer(vmo, thread_offset, 1, check_vmar);
             });
             ASSERT_TRUE(ts[j]->Start());
             ASSERT_TRUE(pager.WaitForPageRead(vmo, thread_offset, 1, ZX_TIME_INFINITE));
@@ -272,18 +281,18 @@ bool bulk_odd_supply_test_inner(bool use_src_offset) {
 }
 
 // Test that exercises supply logic by supplying data in chunks of unusual length.
-bool bulk_odd_length_supply_test() {
-    return bulk_odd_supply_test_inner(false);
+bool bulk_odd_length_supply_test(bool check_vmar) {
+    return bulk_odd_supply_test_inner(check_vmar, false);
 }
 
 // Test that exercises supply logic by supplying data in chunks of
 // unusual lengths and offsets.
-bool bulk_odd_offset_supply_test() {
-    return bulk_odd_supply_test_inner(true);
+bool bulk_odd_offset_supply_test(bool check_vmar) {
+    return bulk_odd_supply_test_inner(check_vmar, true);
 }
 
 // Tests that supply doesn't overwrite existing content.
-bool overlap_supply_test() {
+bool overlap_supply_test(bool check_vmar) {
     BEGIN_TEST;
 
     UserPager pager;
@@ -302,8 +311,9 @@ bool overlap_supply_test() {
     ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1, std::move(alt_data_vmo)));
     ASSERT_TRUE(pager.SupplyPages(vmo, 1, 1));
 
-    TestThread t([vmo, alt_data]() -> bool {
-        return vmo->CheckVmar(0, 1, alt_data) && vmo->CheckVmar(1, 1);
+    TestThread t([vmo, alt_data, check_vmar]() -> bool {
+        return check_buffer_data(vmo, 0, 1, alt_data, check_vmar)
+                && check_buffer(vmo, 1, 1, check_vmar);
     });
 
     ASSERT_TRUE(t.Start());
@@ -316,7 +326,7 @@ bool overlap_supply_test() {
 }
 
 // Tests that a pager can handle lots of pending page requests.
-bool many_request_test() {
+bool many_request_test(bool check_vmar) {
     BEGIN_TEST;
 
     UserPager pager;
@@ -329,8 +339,8 @@ bool many_request_test() {
 
     fbl::unique_ptr<TestThread> ts[kNumPages];
     for (unsigned i = 0; i < kNumPages; i++) {
-        ts[i] = fbl::make_unique<TestThread>([vmo, i]() -> bool {
-            return vmo->CheckVmar(i, 1);
+        ts[i] = fbl::make_unique<TestThread>([vmo, i, check_vmar]() -> bool {
+            return check_buffer(vmo, i, 1, check_vmar);
         });
         ASSERT_TRUE(ts[i]->Start());
         ASSERT_TRUE(ts[i]->WaitForBlocked());
@@ -359,7 +369,7 @@ bool successive_vmo_test() {
         ASSERT_TRUE(pager.CreateVmo(1, &vmo));
 
         TestThread t([vmo]() -> bool {
-            return vmo->CheckVmar(0, 1);
+            return check_buffer(vmo, 0, 1, true);
         });
 
         ASSERT_TRUE(t.Start());
@@ -391,7 +401,7 @@ bool multiple_concurrent_vmo_test() {
         ASSERT_TRUE(pager.CreateVmo(1, vmos + i));
 
         ts[i] = fbl::make_unique<TestThread>([vmo = vmos[i]]() -> bool {
-            return vmo->CheckVmar(0, 1);
+            return check_buffer(vmo, 0, 1, true);
         });
 
         ASSERT_TRUE(ts[i]->Start());
@@ -421,7 +431,7 @@ bool vmar_unmap_test() {
     ASSERT_TRUE(pager.CreateVmo(1, &vmo));
 
     TestThread t([vmo]() -> bool {
-        return vmo->CheckVmar(0, 1);
+        return check_buffer(vmo, 0, 1, true);
     });
     ASSERT_TRUE(t.Start());
     ASSERT_TRUE(t.WaitForBlocked());
@@ -450,7 +460,7 @@ bool vmar_remap_test() {
     fbl::unique_ptr<TestThread> ts[kNumPages];
     for (unsigned i = 0; i < kNumPages; i++) {
         ts[i] = fbl::make_unique<TestThread>([vmo, i]() -> bool {
-            return vmo->CheckVmar(i, 1);
+            return check_buffer(vmo, i, 1, true);
         });
         ASSERT_TRUE(ts[i]->Start());
     }
@@ -465,8 +475,7 @@ bool vmar_remap_test() {
     ASSERT_EQ(zx::vmo::create(kNumPages * ZX_PAGE_SIZE, 0, &tmp), ZX_OK);
     ASSERT_EQ(tmp.op_range(ZX_VMO_OP_COMMIT, 0, kNumPages * ZX_PAGE_SIZE, nullptr, 0), ZX_OK);
     ASSERT_EQ(zx_pager_supply_pages(pager.pager(), old_vmo.get(),
-                                    0, kNumPages * ZX_PAGE_SIZE, tmp.get(), 0),
-              ZX_OK);
+                                    0, kNumPages * ZX_PAGE_SIZE, tmp.get(), 0), ZX_OK);
 
     for (unsigned i = 0; i < kNumPages; i++) {
         uint64_t offset, length;
@@ -533,6 +542,36 @@ bool vmar_map_range_test() {
     END_TEST;
 }
 
+// Tests that vmo_read fails gracefully if a vmo is resized while reading.
+bool vmo_read_resize_test() {
+    BEGIN_TEST;
+
+    UserPager pager;
+
+    ASSERT_TRUE(pager.Init());
+
+    Vmo* vmo;
+    ASSERT_TRUE(pager.CreateVmo(2, &vmo));
+
+    TestThread t([vmo]() -> bool {
+        return !check_buffer(vmo, 0, 2, false);
+    });
+
+    ASSERT_TRUE(t.Start());
+
+    ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, 1, ZX_TIME_INFINITE));
+
+    ASSERT_TRUE(vmo->Resize(1));
+
+    ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+    ASSERT_TRUE(t.Wait());
+
+    ASSERT_FALSE(pager.WaitForPageRead(vmo, 1, 1, 0));
+
+    END_TEST;
+}
+
 // Tests that detaching results in a complete request.
 bool detach_page_complete_test() {
     BEGIN_TEST;
@@ -571,7 +610,7 @@ bool close_page_complete_test() {
 }
 
 // Tests that interrupting a read after receiving the request doesn't result in hanging threads.
-bool read_interrupt_late_test(bool detach) {
+bool read_interrupt_late_test(bool check_vmar, bool detach) {
     BEGIN_TEST;
 
     UserPager pager;
@@ -581,8 +620,8 @@ bool read_interrupt_late_test(bool detach) {
     Vmo* vmo;
     ASSERT_TRUE(pager.CreateVmo(1, &vmo));
 
-    TestThread t([vmo]() -> bool {
-        return vmo->CheckVmar(0, 1);
+    TestThread t([vmo, check_vmar]() -> bool {
+        return check_buffer(vmo, 0, 1, check_vmar);
     });
 
     ASSERT_TRUE(t.Start());
@@ -595,7 +634,11 @@ bool read_interrupt_late_test(bool detach) {
         pager.ClosePagerHandle();
     }
 
-    ASSERT_TRUE(t.WaitForCrash(vmo->GetBaseAddr()));
+    if (check_vmar) {
+        ASSERT_TRUE(t.WaitForCrash(vmo->GetBaseAddr()));
+    } else {
+        ASSERT_TRUE(t.WaitForFailure());
+    }
 
     if (detach) {
         ASSERT_TRUE(pager.WaitForPageComplete(vmo->GetKey(), ZX_TIME_INFINITE));
@@ -604,16 +647,16 @@ bool read_interrupt_late_test(bool detach) {
     END_TEST;
 }
 
-bool read_close_interrupt_late_test() {
-    return read_interrupt_late_test(false);
+bool read_close_interrupt_late_test(bool check_vmar) {
+    return read_interrupt_late_test(check_vmar, false);
 }
 
-bool read_detach_interrupt_late_test() {
-    return read_interrupt_late_test(true);
+bool read_detach_interrupt_late_test(bool check_vmar) {
+    return read_interrupt_late_test(check_vmar, true);
 }
 
 // Tests that interrupt a read before receiving requests doesn't result in hanging threads.
-bool read_interrupt_early_test(bool detach) {
+bool read_interrupt_early_test(bool check_vmar, bool detach) {
     BEGIN_TEST;
 
     UserPager pager;
@@ -623,8 +666,8 @@ bool read_interrupt_early_test(bool detach) {
     Vmo* vmo;
     ASSERT_TRUE(pager.CreateVmo(1, &vmo));
 
-    TestThread t([vmo]() -> bool {
-        return vmo->CheckVmar(0, 1);
+    TestThread t([vmo, check_vmar]() -> bool {
+        return check_buffer(vmo, 0, 1, check_vmar);
     });
 
     ASSERT_TRUE(t.Start());
@@ -636,7 +679,11 @@ bool read_interrupt_early_test(bool detach) {
         pager.ClosePagerHandle();
     }
 
-    ASSERT_TRUE(t.WaitForCrash(vmo->GetBaseAddr()));
+    if (check_vmar) {
+        ASSERT_TRUE(t.WaitForCrash(vmo->GetBaseAddr()));
+    } else {
+        ASSERT_TRUE(t.WaitForFailure());
+    }
 
     if (detach) {
         ASSERT_TRUE(pager.WaitForPageComplete(vmo->GetKey(), ZX_TIME_INFINITE));
@@ -645,16 +692,16 @@ bool read_interrupt_early_test(bool detach) {
     END_TEST;
 }
 
-bool read_close_interrupt_early_test() {
-    return read_interrupt_early_test(false);
+bool read_close_interrupt_early_test(bool check_vmar) {
+    return read_interrupt_early_test(check_vmar, false);
 }
 
-bool read_detach_interrupt_early_test() {
-    return read_interrupt_early_test(true);
+bool read_detach_interrupt_early_test(bool check_vmar) {
+    return read_interrupt_early_test(check_vmar, true);
 }
 
 // Checks that a thread blocked on accessing a paged vmo can be safely killed.
-bool thread_kill_test() {
+bool thread_kill_test(bool check_vmar) {
     BEGIN_TEST;
 
     UserPager pager;
@@ -664,11 +711,11 @@ bool thread_kill_test() {
     Vmo* vmo;
     ASSERT_TRUE(pager.CreateVmo(2, &vmo));
 
-    TestThread t1([vmo]() -> bool {
-        return vmo->CheckVmar(0, 1);
+    TestThread t1([vmo, check_vmar]() -> bool {
+        return check_buffer(vmo, 0, 1, check_vmar);
     });
-    TestThread t2([vmo]() -> bool {
-        return vmo->CheckVmar(1, 1);
+    TestThread t2([vmo, check_vmar]() -> bool {
+        return check_buffer(vmo, 1, 1, check_vmar);
     });
 
     ASSERT_TRUE(t1.Start());
@@ -689,7 +736,7 @@ bool thread_kill_test() {
 
 // Checks that a thread blocked on accessing a paged vmo can be safely killed
 // when there is a second thread waiting for the same address.
-bool thread_kill_overlap_test() {
+bool thread_kill_overlap_test(bool check_vmar) {
     BEGIN_TEST;
 
     UserPager pager;
@@ -699,11 +746,11 @@ bool thread_kill_overlap_test() {
     Vmo* vmo;
     ASSERT_TRUE(pager.CreateVmo(1, &vmo));
 
-    TestThread t1([vmo]() -> bool {
-        return vmo->CheckVmar(0, 1);
+    TestThread t1([vmo, check_vmar]() -> bool {
+        return check_buffer(vmo, 0, 1, check_vmar);
     });
-    TestThread t2([vmo]() -> bool {
-        return vmo->CheckVmar(0, 1);
+    TestThread t2([vmo, check_vmar]() -> bool {
+        return check_buffer(vmo, 0, 1, check_vmar);
     });
 
     ASSERT_TRUE(t1.Start());
@@ -737,7 +784,7 @@ bool close_pager_test() {
     ASSERT_TRUE(pager.CreateVmo(2, &vmo));
 
     TestThread t([vmo]() -> bool {
-        return vmo->CheckVmar(0, 1);
+        return check_buffer(vmo, 0, 1, true);
     });
     ASSERT_TRUE(pager.SupplyPages(vmo, 1, 1));
 
@@ -747,7 +794,7 @@ bool close_pager_test() {
     pager.ClosePagerHandle();
 
     ASSERT_TRUE(t.WaitForCrash(vmo->GetBaseAddr()));
-    ASSERT_TRUE(vmo->CheckVmar(1, 1));
+    ASSERT_TRUE(check_buffer(vmo, 1, 1, true));
 
     END_TEST;
 }
@@ -783,7 +830,7 @@ bool close_port_test() {
     ASSERT_TRUE(pager.CreateVmo(2, &vmo));
 
     TestThread t([vmo]() -> bool {
-        return vmo->CheckVmar(0, 1);
+        return check_buffer(vmo, 0, 1, true);
     });
 
     ASSERT_TRUE(t.Start());
@@ -792,7 +839,7 @@ bool close_port_test() {
     pager.ClosePortHandle();
 
     ASSERT_TRUE(pager.SupplyPages(vmo, 1, 1));
-    ASSERT_TRUE(vmo->CheckVmar(1, 1));
+    ASSERT_TRUE(check_buffer(vmo, 1, 1, true));
 
     ASSERT_TRUE(pager.DetachVmo(vmo));
     ASSERT_TRUE(t.WaitForCrash(vmo->GetBaseAddr()));
@@ -801,7 +848,7 @@ bool close_port_test() {
 }
 
 // Tests that reading from a clone populates the vmo.
-bool clone_read_from_clone_test() {
+bool clone_read_from_clone_test(bool check_vmar) {
     BEGIN_TEST;
 
     UserPager pager;
@@ -814,8 +861,8 @@ bool clone_read_from_clone_test() {
     auto clone = vmo->Clone();
     ASSERT_NOT_NULL(clone);
 
-    TestThread t([clone = clone.get()]() -> bool {
-        return clone->CheckVmar(0, 1);
+    TestThread t([clone = clone.get(), check_vmar]() -> bool {
+        return check_buffer(clone, 0, 1, check_vmar);
     });
 
     ASSERT_TRUE(t.Start());
@@ -830,7 +877,7 @@ bool clone_read_from_clone_test() {
 }
 
 // Tests that reading from the parent populates the clone.
-bool clone_read_from_parent_test() {
+bool clone_read_from_parent_test(bool check_vmar) {
     BEGIN_TEST;
 
     UserPager pager;
@@ -843,8 +890,8 @@ bool clone_read_from_parent_test() {
     auto clone = vmo->Clone();
     ASSERT_NOT_NULL(clone);
 
-    TestThread t([vmo]() -> bool {
-        return vmo->CheckVmar(0, 1);
+    TestThread t([vmo, check_vmar]() -> bool {
+        return check_buffer(vmo, 0, 1, check_vmar);
     });
 
     ASSERT_TRUE(t.Start());
@@ -855,8 +902,8 @@ bool clone_read_from_parent_test() {
 
     ASSERT_TRUE(t.Wait());
 
-    TestThread t2([clone = clone.get()]() -> bool {
-        return clone->CheckVmar(0, 1);
+    TestThread t2([clone = clone.get(), check_vmar]() -> bool {
+        return check_buffer(clone, 0, 1, check_vmar);
     });
 
     ASSERT_TRUE(t2.Start());
@@ -868,7 +915,7 @@ bool clone_read_from_parent_test() {
 }
 
 // Tests that overlapping reads on clone and parent work.
-bool clone_simultaneous_read_test() {
+bool clone_simultaneous_read_test(bool check_vmar) {
     BEGIN_TEST;
 
     UserPager pager;
@@ -881,11 +928,11 @@ bool clone_simultaneous_read_test() {
     auto clone = vmo->Clone();
     ASSERT_NOT_NULL(clone);
 
-    TestThread t([vmo]() -> bool {
-        return vmo->CheckVmar(0, 1);
+    TestThread t([vmo, check_vmar]() -> bool {
+        return check_buffer(vmo, 0, 1, check_vmar);
     });
-    TestThread t2([clone = clone.get()]() -> bool {
-        return clone->CheckVmar(0, 1);
+    TestThread t2([clone = clone.get(), check_vmar]() -> bool {
+        return check_buffer(clone, 0, 1, check_vmar);
     });
 
     ASSERT_TRUE(t.Start());
@@ -907,7 +954,7 @@ bool clone_simultaneous_read_test() {
 }
 
 // Tests that overlapping reads from two clones work.
-bool clone_simultaneous_child_read_test() {
+bool clone_simultaneous_child_read_test(bool check_vmar) {
     BEGIN_TEST;
 
     UserPager pager;
@@ -922,11 +969,11 @@ bool clone_simultaneous_child_read_test() {
     auto clone2 = vmo->Clone();
     ASSERT_NOT_NULL(clone2);
 
-    TestThread t([clone = clone.get()]() -> bool {
-        return clone->CheckVmar(0, 1);
+    TestThread t([clone = clone.get(), check_vmar]() -> bool {
+        return check_buffer(clone, 0, 1, check_vmar);
     });
-    TestThread t2([clone = clone2.get()]() -> bool {
-        return clone->CheckVmar(0, 1);
+    TestThread t2([clone = clone2.get(), check_vmar]() -> bool {
+        return check_buffer(clone, 0, 1, check_vmar);
     });
 
     ASSERT_TRUE(t.Start());
@@ -998,7 +1045,7 @@ bool clone_detach_test() {
 
     TestThread t([clone = clone.get()]() -> bool {
             uint8_t data[ZX_PAGE_SIZE] = {};
-            return clone->CheckVmar(0, 1, data) && clone->CheckVmar(1, 1);
+            return check_buffer_data(clone, 0, 1, data, true) && check_buffer(clone, 1, 1, true);
     });
     ASSERT_TRUE(t.Start());
 
@@ -1012,6 +1059,7 @@ bool clone_detach_test() {
 
     END_TEST;
 }
+
 
 // Tests that commit on the clone populates things properly.
 bool clone_commit_test() {
@@ -1093,11 +1141,11 @@ bool clone_decommit_test() {
     ASSERT_NOT_NULL(clone);
 
     ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
-    ASSERT_TRUE(clone->CheckVmar(0, 1));
+    ASSERT_TRUE(check_buffer(clone.get(), 0, 1, true));
 
     ASSERT_TRUE(clone->Decommit(0, 1));
 
-    ASSERT_TRUE(clone->CheckVmar(0, 1));
+    ASSERT_TRUE(check_buffer(clone.get(), 0, 1, true));
 
     END_TEST;
 }
@@ -1370,36 +1418,64 @@ bool supply_decommit_test() {
 
 // Tests focused on reading a paged vmo.
 
+#define DEFINE_VMO_VMAR_TEST(fn_name) \
+bool fn_name ##_vmar() { return fn_name(true); } \
+bool fn_name ##_vmo() { return fn_name(false); } \
+
+#define RUN_VMO_VMAR_TEST(fn_name) \
+RUN_TEST(fn_name ##_vmar); \
+RUN_TEST(fn_name ##_vmo);
+
+DEFINE_VMO_VMAR_TEST(single_page_test);
+DEFINE_VMO_VMAR_TEST(presupply_test);
+DEFINE_VMO_VMAR_TEST(early_supply_test);
+DEFINE_VMO_VMAR_TEST(sequential_multipage_test);
+DEFINE_VMO_VMAR_TEST(concurrent_multipage_access_test);
+DEFINE_VMO_VMAR_TEST(concurrent_overlapping_access_test);
+DEFINE_VMO_VMAR_TEST(bulk_single_supply_test);
+DEFINE_VMO_VMAR_TEST(bulk_odd_length_supply_test);
+DEFINE_VMO_VMAR_TEST(bulk_odd_offset_supply_test);
+DEFINE_VMO_VMAR_TEST(overlap_supply_test);
+DEFINE_VMO_VMAR_TEST(many_request_test);
+
 BEGIN_TEST_CASE(pager_read_tests)
-RUN_TEST(single_page_test);
-RUN_TEST(presupply_test);
-RUN_TEST(early_supply_test);
-RUN_TEST(sequential_multipage_test);
-RUN_TEST(concurrent_multipage_access_test);
-RUN_TEST(concurrent_overlapping_access_test);
-RUN_TEST(bulk_single_supply_test);
-RUN_TEST(bulk_odd_length_supply_test);
-RUN_TEST(bulk_odd_offset_supply_test);
-RUN_TEST(overlap_supply_test);
-RUN_TEST(many_request_test);
+RUN_VMO_VMAR_TEST(single_page_test);
+RUN_VMO_VMAR_TEST(presupply_test);
+RUN_VMO_VMAR_TEST(early_supply_test);
+RUN_VMO_VMAR_TEST(sequential_multipage_test);
+RUN_VMO_VMAR_TEST(concurrent_multipage_access_test);
+RUN_VMO_VMAR_TEST(concurrent_overlapping_access_test);
+RUN_VMO_VMAR_TEST(bulk_single_supply_test);
+RUN_VMO_VMAR_TEST(bulk_odd_length_supply_test);
+RUN_VMO_VMAR_TEST(bulk_odd_offset_supply_test);
+RUN_VMO_VMAR_TEST(overlap_supply_test);
+RUN_VMO_VMAR_TEST(many_request_test);
 RUN_TEST(successive_vmo_test);
 RUN_TEST(multiple_concurrent_vmo_test);
 RUN_TEST(vmar_unmap_test);
 RUN_TEST(vmar_remap_test);
 RUN_TEST(vmar_map_range_test);
+RUN_TEST(vmo_read_resize_test);
 END_TEST_CASE(pager_read_tests)
 
 // Tests focused on lifecycle of pager and paged vmos.
 
+DEFINE_VMO_VMAR_TEST(read_detach_interrupt_late_test);
+DEFINE_VMO_VMAR_TEST(read_close_interrupt_late_test);
+DEFINE_VMO_VMAR_TEST(read_detach_interrupt_early_test);
+DEFINE_VMO_VMAR_TEST(read_close_interrupt_early_test);
+DEFINE_VMO_VMAR_TEST(thread_kill_test);
+DEFINE_VMO_VMAR_TEST(thread_kill_overlap_test);
+
 BEGIN_TEST_CASE(lifecycle_tests)
 RUN_TEST(detach_page_complete_test);
 RUN_TEST(close_page_complete_test);
-RUN_TEST(read_detach_interrupt_late_test);
-RUN_TEST(read_close_interrupt_late_test);
-RUN_TEST(read_detach_interrupt_early_test);
-RUN_TEST(read_close_interrupt_early_test);
-RUN_TEST(thread_kill_test);
-RUN_TEST(thread_kill_overlap_test);
+RUN_VMO_VMAR_TEST(read_detach_interrupt_late_test);
+RUN_VMO_VMAR_TEST(read_close_interrupt_late_test);
+RUN_VMO_VMAR_TEST(read_detach_interrupt_early_test);
+RUN_VMO_VMAR_TEST(read_close_interrupt_early_test);
+RUN_VMO_VMAR_TEST(thread_kill_test);
+RUN_VMO_VMAR_TEST(thread_kill_overlap_test);
 RUN_TEST(close_pager_test);
 RUN_TEST(detach_close_pager_test);
 RUN_TEST(close_port_test);
@@ -1407,11 +1483,16 @@ END_TEST_CASE(lifecycle_tests)
 
 // Tests focused on clones.
 
+DEFINE_VMO_VMAR_TEST(clone_read_from_clone_test);
+DEFINE_VMO_VMAR_TEST(clone_read_from_parent_test);
+DEFINE_VMO_VMAR_TEST(clone_simultaneous_read_test);
+DEFINE_VMO_VMAR_TEST(clone_simultaneous_child_read_test);
+
 BEGIN_TEST_CASE(clone_tests);
-RUN_TEST(clone_read_from_clone_test);
-RUN_TEST(clone_read_from_parent_test);
-RUN_TEST(clone_simultaneous_read_test);
-RUN_TEST(clone_simultaneous_child_read_test);
+RUN_VMO_VMAR_TEST(clone_read_from_clone_test);
+RUN_VMO_VMAR_TEST(clone_read_from_parent_test);
+RUN_VMO_VMAR_TEST(clone_simultaneous_read_test);
+RUN_VMO_VMAR_TEST(clone_simultaneous_child_read_test);
 RUN_TEST(clone_write_to_clone_test);
 RUN_TEST(clone_detach_test);
 RUN_TEST(clone_commit_test);

@@ -125,6 +125,7 @@ zx_status_t PageSource::GetPage(uint64_t offset, PageRequest* request,
                                 vm_page_t** const page_out, paddr_t* const pa_out) {
     canary_.Assert();
     ASSERT(request);
+    offset = fbl::round_down(offset, static_cast<uint64_t>(PAGE_SIZE));
 
     Guard<fbl::Mutex> guard{&page_source_mtx_};
     if (detached_) {
