@@ -26,7 +26,7 @@ by *handle*.
 typedef struct zx_port_packet {
     uint64_t key;
     uint32_t type;
-    int32_t status;
+    zx_status_t status;
     union {
         zx_packet_user_t user;
         zx_packet_signal_t signal;
