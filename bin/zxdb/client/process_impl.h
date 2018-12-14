@@ -9,7 +9,7 @@
 #include <map>
 #include <memory>
 
-#include "garnet/bin/zxdb/symbols/process_symbols_impl.h"
+#include "garnet/bin/zxdb/symbols/process_symbols.h"
 #include "garnet/public/lib/fxl/macros.h"
 #include "garnet/public/lib/fxl/memory/weak_ptr.h"
 
@@ -18,7 +18,7 @@ namespace zxdb {
 class TargetImpl;
 class ThreadImpl;
 
-class ProcessImpl : public Process, public ProcessSymbolsImpl::Notifications {
+class ProcessImpl : public Process, public ProcessSymbols::Notifications {
  public:
   ProcessImpl(TargetImpl* target, uint64_t koid, const std::string& name);
   ~ProcessImpl() override;
@@ -61,7 +61,7 @@ class ProcessImpl : public Process, public ProcessSymbolsImpl::Notifications {
   // Syncs the threads_ list to the new list of threads passed in .
   void UpdateThreads(const std::vector<debug_ipc::ThreadRecord>& new_threads);
 
-  // ProcessSymbolsImpl::Notifications implementation:
+  // ProcessSymbols::Notifications implementation:
   void DidLoadModuleSymbols(LoadedModuleSymbols* module) override;
   void WillUnloadModuleSymbols(LoadedModuleSymbols* module) override;
   void OnSymbolLoadFailure(const Err& err) override;
@@ -73,7 +73,7 @@ class ProcessImpl : public Process, public ProcessSymbolsImpl::Notifications {
   // Threads indexed by their thread koid.
   std::map<uint64_t, std::unique_ptr<ThreadImpl>> threads_;
 
-  ProcessSymbolsImpl symbols_;
+  ProcessSymbols symbols_;
 
   fxl::WeakPtrFactory<ProcessImpl> weak_factory_;
 

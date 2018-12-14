@@ -6,27 +6,27 @@
 
 #include <memory>
 
-#include "garnet/bin/zxdb/symbols/process_symbols_impl.h"
+#include "garnet/bin/zxdb/symbols/process_symbols.h"
 #include "garnet/bin/zxdb/symbols/system_symbols.h"
-#include "garnet/bin/zxdb/symbols/target_symbols_impl.h"
+#include "garnet/bin/zxdb/symbols/target_symbols.h"
 
 namespace zxdb {
 
 class ModuleSymbols;
 
-// This class sets up a ProcessSymbolsImpl for testing purposes. It allows
+// This class sets up a ProcessSymbols for testing purposes. It allows
 // MockModuleSymbols to be easily injected into the process.
 //
 // This class is only useful for tests that use the symbol system but not the
 // client objects (Process/Target, etc.).
-class ProcessSymbolsImplTestSetup {
+class ProcessSymbolsTestSetup {
  public:
-  ProcessSymbolsImplTestSetup();
-  ~ProcessSymbolsImplTestSetup();
+  ProcessSymbolsTestSetup();
+  ~ProcessSymbolsTestSetup();
 
   SystemSymbols& system() { return system_; }
-  TargetSymbolsImpl& target() { return target_; }
-  ProcessSymbolsImpl& process() { return process_; }
+  TargetSymbols& target() { return target_; }
+  ProcessSymbols& process() { return process_; }
 
   // Appends the given module symbols implementation to the process. This will
   // typically be a MockModuleSymbols.
@@ -36,10 +36,10 @@ class ProcessSymbolsImplTestSetup {
  private:
   SystemSymbols system_;
 
-  TargetSymbolsImpl target_;
+  TargetSymbols target_;
 
-  ProcessSymbolsImpl::Notifications process_notifications_;
-  ProcessSymbolsImpl process_;
+  ProcessSymbols::Notifications process_notifications_;
+  ProcessSymbols process_;
 };
 
 }  // namespace zxdb

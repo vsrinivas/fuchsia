@@ -6,8 +6,8 @@
 
 #include <map>
 
-#include "garnet/bin/zxdb/symbols/module_symbols.h"
 #include "garnet/bin/zxdb/symbols/module_symbol_index.h"
+#include "garnet/bin/zxdb/symbols/module_symbols.h"
 #include "garnet/bin/zxdb/symbols/symbol.h"
 
 namespace zxdb {
@@ -18,8 +18,8 @@ class MockModuleSymbols : public ModuleSymbols {
   explicit MockModuleSymbols(const std::string& local_file_name);
   ~MockModuleSymbols() override;
 
-  // Adds a mock mapping from the given name to the addresses.
-  void AddSymbol(const std::string& name, std::vector<uint64_t> addrs);
+  // Adds a mock mapping from the given name to the list of locations.
+  void AddSymbolLocations(const std::string& name, std::vector<Location> locs);
 
   // Adds a mock mapping from address to line details. This matches an exact
   // address only, not a range.
@@ -27,7 +27,8 @@ class MockModuleSymbols : public ModuleSymbols {
 
   // Injects a response to IndexDieRefToSymbol for resolving symbols from the
   // index. See index() getter.
-  void AddDieRef(const ModuleSymbolIndexNode::DieRef& die, fxl::RefPtr<Symbol> symbol);
+  void AddDieRef(const ModuleSymbolIndexNode::DieRef& die,
+                 fxl::RefPtr<Symbol> symbol);
 
   // Provides writable access to the index for tests to insert data. To hook
   // up symbols, add them to the index and call AddDieRef() with the same
@@ -52,8 +53,8 @@ class MockModuleSymbols : public ModuleSymbols {
 
   std::string local_file_name_;
 
-  // Maps manually-added symbols to their addresses.
-  std::map<std::string, std::vector<uint64_t>> symbols_;
+  // Maps manually-added symbols to their locations.
+  std::map<std::string, std::vector<Location>> symbols_;
 
   // Maps manually-added addresses to line details.
   std::map<uint64_t, LineDetails> lines_;

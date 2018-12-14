@@ -124,8 +124,9 @@ TEST_F(BreakpointImplTest, DynamicLoading) {
       std::make_unique<MockModuleSymbols>("myfile1.so");
   std::unique_ptr<MockModuleSymbols> module2 =
       std::make_unique<MockModuleSymbols>("myfile2.so");
-  module1->AddSymbol(kFunctionName,
-                     std::vector<uint64_t>{kAddress1, kAddress2});
+  module1->AddSymbolLocations(
+      kFunctionName, {Location(Location::State::kSymbolized, kAddress1),
+                      Location(Location::State::kSymbolized, kAddress2)});
 
   // Cause the process to load the module. We have to keep the module_ref
   // alive for this to stay cached in the SystemSymbols.

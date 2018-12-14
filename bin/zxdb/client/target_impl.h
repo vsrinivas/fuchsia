@@ -6,7 +6,7 @@
 #define GARNET_BIN_ZXDB_CLIENT_TARGET_IMPL_H_
 
 #include "garnet/bin/zxdb/client/target.h"
-#include "garnet/bin/zxdb/symbols/target_symbols_impl.h"
+#include "garnet/bin/zxdb/symbols/target_symbols.h"
 #include "garnet/public/lib/fxl/macros.h"
 #include "garnet/public/lib/fxl/memory/weak_ptr.h"
 
@@ -23,7 +23,7 @@ class TargetImpl : public Target {
 
   SystemImpl* system() { return system_; }
   ProcessImpl* process() { return process_.get(); }
-  TargetSymbolsImpl* symbols() { return &symbols_; }
+  TargetSymbols* symbols() { return &symbols_; }
 
   // Allocates a new target with the same settings as this one. This isn't
   // a real copy, because any process information is not cloned.
@@ -73,7 +73,7 @@ class TargetImpl : public Target {
   // Associated process if there is one.
   std::unique_ptr<ProcessImpl> process_;
 
-  TargetSymbolsImpl symbols_;
+  TargetSymbols symbols_;
 
   fxl::WeakPtrFactory<TargetImpl> impl_weak_factory_;
 

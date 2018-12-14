@@ -5,7 +5,8 @@
 #include "garnet/bin/zxdb/console/input_location_parser.h"
 #include "garnet/bin/zxdb/client/mock_frame.h"
 #include "garnet/bin/zxdb/symbols/location.h"
-#include "garnet/bin/zxdb/symbols/mock_process_symbols.h"
+#include "garnet/bin/zxdb/symbols/mock_module_symbols.h"
+#include "garnet/bin/zxdb/symbols/process_symbols_test_setup.h"
 #include "gtest/gtest.h"
 
 namespace zxdb {
@@ -87,21 +88,27 @@ TEST(InputLocationParser, Parse) {
 }
 
 TEST(InputLocation, ResolveInputLocation) {
-  MockProcessSymbols process_symbols;
+  ProcessSymbolsTestSetup symbols;
+  auto owning_mod_sym = std::make_unique<MockModuleSymbols>("mod.so");
+  MockModuleSymbols* module_symbols = owning_mod_sym.get();
+
+  constexpr uint64_t kModuleLoadAddress = 0x10000;
+  SymbolContext symbol_context(kModuleLoadAddress);
+  symbols.InjectModule("mid.so", "1234", kModuleLoadAddress,
+                       std::move(owning_mod_sym));
 
   // Resolve to nothing.
   Location output;
-  Err err = ResolveUniqueInputLocation(&process_symbols, nullptr, "Foo", false,
-                                       &output);
+  Err err = ResolveUniqueInputLocation(&symbols.process(), nullptr, "Foo",
+                                       false, &output);
   EXPECT_TRUE(err.has_error());
   EXPECT_EQ("Nothing matching this symbol was found.", err.msg());
 
-  SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
   Location expected(0x12345678, FileLine("file.cc", 12), 0, symbol_context);
 
   // Resolve to one location (success) case.
-  process_symbols.AddSymbol("Foo", {expected});
-  err = ResolveUniqueInputLocation(&process_symbols, nullptr, "Foo", false,
+  module_symbols->AddSymbolLocations("Foo", {expected});
+  err = ResolveUniqueInputLocation(&symbols.process(), nullptr, "Foo", false,
                                    &output);
   EXPECT_FALSE(err.has_error());
   EXPECT_EQ(expected.address(), output.address());
@@ -114,11 +121,11 @@ TEST(InputLocation, ResolveInputLocation) {
     expected_locations.emplace_back(
         0x12345000 + i, FileLine("file.cc", 100 + i), 0, symbol_context);
   }
-  process_symbols.AddSymbol("Foo", expected_locations);
+  module_symbols->AddSymbolLocations("Foo", expected_locations);
 
   // Resolve to all of them.
   std::vector<Location> output_locations;
-  err = ResolveInputLocations(&process_symbols, nullptr, "Foo", false,
+  err = ResolveInputLocations(&symbols.process(), nullptr, "Foo", false,
                               &output_locations);
   EXPECT_FALSE(err.has_error());
 
@@ -133,7 +140,7 @@ TEST(InputLocation, ResolveInputLocation) {
   // Try to resolve one of them. Since there are many this will fail. We
   // requested no symbolization but the error message should still be
   // symbolized.
-  err = ResolveUniqueInputLocation(&process_symbols, nullptr, "Foo", false,
+  err = ResolveUniqueInputLocation(&symbols.process(), nullptr, "Foo", false,
                                    &output);
   EXPECT_TRUE(err.has_error());
   EXPECT_EQ(R"(This resolves to more than one location. Could be:

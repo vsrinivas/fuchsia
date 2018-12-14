@@ -15,9 +15,9 @@ MockModuleSymbols::MockModuleSymbols(const std::string& local_file_name)
     : local_file_name_(local_file_name) {}
 MockModuleSymbols::~MockModuleSymbols() = default;
 
-void MockModuleSymbols::AddSymbol(const std::string& name,
-                                  std::vector<uint64_t> addrs) {
-  symbols_[name] = std::move(addrs);
+void MockModuleSymbols::AddSymbolLocations(const std::string& name,
+                                           std::vector<Location> locs) {
+  symbols_[name] = std::move(locs);
 }
 
 void MockModuleSymbols::AddLineDetails(uint64_t address, LineDetails details) {
@@ -40,25 +40,31 @@ ModuleSymbolStatus MockModuleSymbols::GetStatus() const {
 std::vector<Location> MockModuleSymbols::ResolveInputLocation(
     const SymbolContext& symbol_context, const InputLocation& input_location,
     const ResolveOptions& options) const {
+  std::vector<Location> result;
   switch (input_location.type) {
     case InputLocation::Type::kAddress:
       // Always return identity for the address case.
-      return std::vector<Location>{
-          Location(Location::State::kAddress, input_location.address)};
+      result.emplace_back(Location::State::kAddress, input_location.address);
+      break;
     case InputLocation::Type::kSymbol: {
       auto found = symbols_.find(input_location.symbol);
-
-      std::vector<Location> result;
-      if (found == symbols_.end())
-        return result;
-      for (uint64_t address : found->second)
-        result.push_back(Location(Location::State::kSymbolized, address));
-      return result;
+      if (found != symbols_.end())
+        result = found->second;
+      break;
     }
     default:
       // More complex stuff is not yet supported by this mock.
-      return std::vector<Location>();
+      break;
   }
+
+  if (!options.symbolize) {
+    // The caller did not request symbols so convert each result to an
+    // unsymbolized answer. This will match the type of output from the
+    // non-mock version.
+    for (size_t i = 0; i < result.size(); i++)
+      result[i] = Location(Location::State::kAddress, result[i].address());
+  }
+  return result;
 }
 
 LineDetails MockModuleSymbols::LineDetailsForAddress(

@@ -8,7 +8,7 @@
 #include "garnet/bin/zxdb/client/register.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
-#include "garnet/bin/zxdb/symbols/mock_process_symbols.h"
+#include "garnet/bin/zxdb/symbols/process_symbols_test_setup.h"
 #include "garnet/lib/debug_ipc/helper/platform_message_loop.h"
 #include "gtest/gtest.h"
 
@@ -26,10 +26,10 @@ class MyMockProcess : public MockProcess {
   explicit MyMockProcess(Session* session) : MockProcess(session) {}
 
   // Process overrides:
-  ProcessSymbols* GetSymbols() override { return &symbols_; }
+  ProcessSymbols* GetSymbols() override { return &symbols_.process(); }
 
  private:
-  MockProcessSymbols symbols_;
+  ProcessSymbolsTestSetup symbols_;
 };
 
 class AnalyzeMemoryTest : public testing::Test {
@@ -98,9 +98,11 @@ TEST_F(AnalyzeMemoryTest, Basic) {
   std::vector<Frame*> frames;
   const uint64_t kStack0SP = kBegin;
   const uint64_t kStack1SP = kBegin + 8;
-  MockFrame frame0(nullptr, nullptr, debug_ipc::StackFrame(0x100, kStack0SP, kStack0SP),
+  MockFrame frame0(nullptr, nullptr,
+                   debug_ipc::StackFrame(0x100, kStack0SP, kStack0SP),
                    Location(Location::State::kSymbolized, 0x1234));
-  MockFrame frame1(nullptr, nullptr, debug_ipc::StackFrame(0x108, kStack1SP, kStack1SP),
+  MockFrame frame1(nullptr, nullptr,
+                   debug_ipc::StackFrame(0x108, kStack1SP, kStack1SP),
                    Location(Location::State::kSymbolized, 0x1234));
   frames.push_back(&frame0);
   frames.push_back(&frame1);

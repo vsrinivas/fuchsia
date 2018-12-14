@@ -9,7 +9,7 @@
 #include "garnet/bin/zxdb/symbols/function.h"
 #include "garnet/bin/zxdb/symbols/mock_module_symbols.h"
 #include "garnet/bin/zxdb/symbols/namespace.h"
-#include "garnet/bin/zxdb/symbols/process_symbols_impl_test_setup.h"
+#include "garnet/bin/zxdb/symbols/process_symbols_test_setup.h"
 #include "garnet/bin/zxdb/symbols/symbol_context.h"
 #include "garnet/bin/zxdb/symbols/type_test_support.h"
 #include "garnet/bin/zxdb/symbols/variable_test_support.h"
@@ -38,7 +38,7 @@ struct TestGlobalVariable {
         index_node(index_parent->AddChild(std::string(var_name))) {
     index_node->AddDie(die_ref);
     var = MakeVariableForTest(var_name, MakeInt32Type(), 0x100, 0x200,
-        std::vector<uint8_t>());
+                              std::vector<uint8_t>());
     mod_sym->AddDieRef(die_ref, var);
   }
 
@@ -75,7 +75,7 @@ int TestGlobalVariable::next_die_ref = 1;
 //
 // }  // namespace ns
 TEST(FindVariable, FindLocalVariable) {
-  ProcessSymbolsImplTestSetup setup;
+  ProcessSymbolsTestSetup setup;
 
   auto int32_type = MakeInt32Type();
 
@@ -186,7 +186,7 @@ TEST(FindVariable, FindLocalVariable) {
   // The namespace of the function should be implicitly picked up.
   Identifier ns_value_ident(ExprToken(ExprToken::kName, kNsVarName, 0));
   found = FindVariable(&setup.process(), block.get(), &symbol_context,
-      ns_value_ident);
+                       ns_value_ident);
   EXPECT_TRUE(found);
   EXPECT_EQ(ns_value.var.get(), found->variable());
 
@@ -203,11 +203,11 @@ TEST(FindVariable, FindLocalVariable) {
 // This only tests the ModulSymbols and function naming integration, the
 // details of the index searching are tested by FindGlobalVariableInModule()
 TEST(FindVariable, FindGlobalVariable) {
-  ProcessSymbolsImplTestSetup setup;
+  ProcessSymbolsTestSetup setup;
 
   const char kGlobalName[] = "global";  // Different variable in each.
-  const char kVar1Name[] = "var1";  // Only in module 1
-  const char kVar2Name[] = "var2";  // Only in module 2
+  const char kVar1Name[] = "var1";      // Only in module 1
+  const char kVar2Name[] = "var2";      // Only in module 2
   const char kNotFoundName[] = "notfound";
 
   Identifier global_ident(ExprToken(ExprToken::kName, kGlobalName, 0));
@@ -236,27 +236,27 @@ TEST(FindVariable, FindGlobalVariable) {
   // Searching for "global" in module1's context should give the global in that
   // module.
   auto found = FindGlobalVariable(&setup.process(), Identifier(),
-         &symbol_context1, global_ident);
+                                  &symbol_context1, global_ident);
   ASSERT_TRUE(found);
   EXPECT_EQ(global1.var.get(), found->variable());
 
   // Searching for "global" in module2's context should give the global in that
   // module.
-  found = FindGlobalVariable(&setup.process(), Identifier(),
-         &symbol_context2, global_ident);
+  found = FindGlobalVariable(&setup.process(), Identifier(), &symbol_context2,
+                             global_ident);
   ASSERT_TRUE(found);
   EXPECT_EQ(global2.var.get(), found->variable());
 
   // Searching for "var1" in module2's context should still find it even though
   // its in the other module.
-  found = FindGlobalVariable(&setup.process(), Identifier(),
-         &symbol_context2, var1_ident);
+  found = FindGlobalVariable(&setup.process(), Identifier(), &symbol_context2,
+                             var1_ident);
   ASSERT_TRUE(found);
   EXPECT_EQ(var1.var.get(), found->variable());
 
   // Searching for "var2" with no context should still find it.
-  found = FindGlobalVariable(&setup.process(), Identifier(),
-         nullptr, var2_ident);
+  found =
+      FindGlobalVariable(&setup.process(), Identifier(), nullptr, var2_ident);
   ASSERT_TRUE(found);
   EXPECT_EQ(var2.var.get(), found->variable());
 }

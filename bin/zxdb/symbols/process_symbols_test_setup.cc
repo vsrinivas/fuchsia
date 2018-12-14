@@ -2,22 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/symbols/process_symbols_impl_test_setup.h"
+#include "garnet/bin/zxdb/symbols/process_symbols_test_setup.h"
 
 #include "garnet/bin/zxdb/symbols/loaded_module_symbols.h"
 #include "garnet/bin/zxdb/symbols/module_symbols.h"
 
 namespace zxdb {
 
-ProcessSymbolsImplTestSetup::ProcessSymbolsImplTestSetup()
+ProcessSymbolsTestSetup::ProcessSymbolsTestSetup()
     : system_(),
       target_(&system_),
       process_notifications_(),
       process_(&process_notifications_, &target_) {}
 
-ProcessSymbolsImplTestSetup::~ProcessSymbolsImplTestSetup() = default;
+ProcessSymbolsTestSetup::~ProcessSymbolsTestSetup() = default;
 
-void ProcessSymbolsImplTestSetup::InjectModule(
+void ProcessSymbolsTestSetup::InjectModule(
     const std::string& name, const std::string& build_id, uint64_t base,
     std::unique_ptr<ModuleSymbols> mod_sym) {
   auto loaded = std::make_unique<LoadedModuleSymbols>(

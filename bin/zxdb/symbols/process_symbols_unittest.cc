@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/symbols/process_symbols_impl.h"
+#include "garnet/bin/zxdb/symbols/process_symbols.h"
 #include "garnet/bin/zxdb/symbols/loaded_module_symbols.h"
 #include "garnet/bin/zxdb/symbols/module_symbols.h"
 #include "garnet/bin/zxdb/symbols/system_symbols.h"
-#include "garnet/bin/zxdb/symbols/target_symbols_impl.h"
+#include "garnet/bin/zxdb/symbols/target_symbols.h"
 #include "garnet/bin/zxdb/symbols/test_symbol_module.h"
 #include "garnet/lib/debug_ipc/records.h"
 #include "gtest/gtest.h"
@@ -15,7 +15,7 @@ namespace zxdb {
 
 namespace {
 
-class NotificationsImpl : public ProcessSymbolsImpl::Notifications {
+class NotificationsImpl : public ProcessSymbols::Notifications {
  public:
   NotificationsImpl() = default;
   ~NotificationsImpl() = default;
@@ -62,7 +62,7 @@ class NotificationsImpl : public ProcessSymbolsImpl::Notifications {
 
 }  // namespace
 
-TEST(ProcessSymbolsImpl, SetModules) {
+TEST(ProcessSymbols, SetModules) {
   // This uses two different build IDs mapping to the same file. SystemSymbols
   // only deals with build IDs rather than file uniqueness, so this will create
   // two separate entries (what we need, even though we only have one symbol
@@ -74,10 +74,10 @@ TEST(ProcessSymbolsImpl, SetModules) {
   system.build_id_index().AddBuildIDMapping(fake_build_id_1, test_file_name);
   system.build_id_index().AddBuildIDMapping(fake_build_id_2, test_file_name);
 
-  TargetSymbolsImpl target(&system);
+  TargetSymbols target(&system);
 
   NotificationsImpl notifications;
-  ProcessSymbolsImpl process(&notifications, &target);
+  ProcessSymbols process(&notifications, &target);
 
   // Add a new module.
   constexpr uint64_t base1 = 0x1234567890;
