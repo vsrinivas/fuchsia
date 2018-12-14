@@ -9,7 +9,7 @@
 #include <bitmap/storage.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/usb.h>
+#include <ddk/protocol/usb-old.h>
 #include <ddk/usb/usb.h>
 #include <fbl/unique_ptr.h>
 #include <lib/fit/function.h>

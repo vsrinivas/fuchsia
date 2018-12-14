@@ -4,7 +4,7 @@
 
 #include "device.h"
 
-#include <ddk/protocol/usb.h>
+#include <ddk/protocol/usb-old.h>
 #include <ddk/usb/usb.h>
 #include <usb/usb-request.h>
 #include <fbl/auto_lock.h>

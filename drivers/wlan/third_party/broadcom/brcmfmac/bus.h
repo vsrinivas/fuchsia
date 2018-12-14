@@ -18,7 +18,7 @@
 #define BRCMFMAC_BUS_H
 
 #include <ddk/protocol/sdio.h>
-#include <ddk/protocol/usb.h>
+#include <ddk/protocol/usb-old.h>
 
 #include "debug.h"
 #include "netbuf.h"

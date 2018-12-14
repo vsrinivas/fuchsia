@@ -5,7 +5,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/bt/hci.h>
-#include <ddk/protocol/usb.h>
+#include <ddk/protocol/usb-old.h>
 #include <ddk/usb/usb.h>
 
 #include <zircon/status.h>
@@ -27,7 +27,7 @@
 
 extern "C" zx_status_t bt_atheros_bind(void* ctx, zx_device_t* device) {
   usb_protocol_t usb;
-  zx_status_t result = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);
+  zx_status_t result = device_get_protocol(device, ZX_PROTOCOL_USB_OLD, &usb);
   if (result != ZX_OK) {
     errorf("couldn't get USB protocol: %s\n", zx_status_get_string(result));
     return result;

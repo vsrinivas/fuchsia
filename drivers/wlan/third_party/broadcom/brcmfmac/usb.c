@@ -16,7 +16,7 @@
 
 #include "usb.h"
 
-#include <ddk/protocol/usb.h>
+#include <ddk/protocol/usb-old.h>
 #include <ddk/usb/usb.h>
 #include <usb/usb-request.h>
 #include <lib/sync/completion.h>

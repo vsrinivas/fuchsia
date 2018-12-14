@@ -7,7 +7,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/ethernet.h>
-#include <ddk/protocol/usb.h>
+#include <ddk/protocol/usb-old.h>
 #include <ddk/usb/usb.h>
 #include <lib/sync/completion.h>
 #include <zircon/device/qmi-transport.h>
@@ -637,7 +637,7 @@ static zx_status_t qmi_bind(void* ctx, zx_device_t* device) {
 
   // Set up USB stuff
   usb_protocol_t usb;
-  status = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);
+  status = device_get_protocol(device, ZX_PROTOCOL_USB_OLD, &usb);
   if (status != ZX_OK) {
     zxlogf(ERROR, "qmi-usb-transport: get protocol failed: %s\n",
            zx_status_get_string(status));
@@ -856,7 +856,7 @@ static zx_driver_ops_t qmi_driver_ops = {
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(qmi_usb, qmi_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_OLD),
     BI_ABORT_IF(NE, BIND_USB_VID, SIERRA_VID),
     BI_MATCH_IF(EQ, BIND_USB_PID, EM7565_PID),
 ZIRCON_DRIVER_END(qmi_usb)

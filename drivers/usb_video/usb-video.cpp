@@ -6,7 +6,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/usb.h>
+#include <ddk/protocol/usb-old.h>
 #include <ddk/usb/usb.h>
 #include <fbl/vector.h>
 #include <stdlib.h>
@@ -72,7 +72,7 @@ video::usb::UsbDeviceInfo GetDeviceInfo(const usb_protocol_t& usb_proto) {
 zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device,
                                         void** cookie) {
   usb_protocol_t usb;
-  zx_status_t status = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);
+  zx_status_t status = device_get_protocol(device, ZX_PROTOCOL_USB_OLD, &usb);
   if (status != ZX_OK) {
     return status;
   }

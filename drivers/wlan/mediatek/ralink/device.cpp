@@ -6,7 +6,7 @@
 
 #include "ralink.h"
 
-#include <ddk/protocol/usb.h>
+#include <ddk/protocol/usb-old.h>
 #include <fbl/algorithm.h>
 #include <lib/fit/defer.h>
 #include <lib/sync/completion.h>

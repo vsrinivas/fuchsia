@@ -6,7 +6,7 @@
 #include <algorithm>
 
 #include <ddk/debug.h>
-#include <ddk/protocol/usb.h>
+#include <ddk/protocol/usb-old.h>
 #include <ddk/usb/usb.h>
 #include <fbl/algorithm.h>
 #include <lib/zx/time.h>
@@ -232,7 +232,7 @@ zx_status_t CreateUsbBus(zx_device_t* bus_device, std::unique_ptr<Bus>* bus) {
     zx_status_t status = ZX_OK;
 
     usb_protocol_t usb_protocol = {};
-    status = device_get_protocol(bus_device, ZX_PROTOCOL_USB, &usb_protocol);
+    status = device_get_protocol(bus_device, ZX_PROTOCOL_USB_OLD, &usb_protocol);
     if (status != ZX_OK) {
         // Explicitly do not log an error here. The caller may try with another bus type instead.
         return status;

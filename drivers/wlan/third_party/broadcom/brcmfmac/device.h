@@ -21,7 +21,7 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/pci-lib.h>
-#include <ddk/protocol/usb.h>
+#include <ddk/protocol/usb-old.h>
 #include <lib/async-loop/loop.h> // to start the worker thread
 #include <lib/async/default.h>  // for async_get_default_dispatcher()
 #include <lib/async/task.h>     // for async_post_task()

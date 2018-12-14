@@ -19,7 +19,7 @@
 #include <ddk/device.h>
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/sdio.h>
-#include <ddk/protocol/usb.h>
+#include <ddk/protocol/usb-old.h>
 #include <netinet/if_ether.h>
 #include <wlan/protocol/phy-impl.h>
 #include <zircon/status.h>
@@ -1271,7 +1271,7 @@ zx_status_t brcmf_core_init(zx_device_t* device) {
 
 #ifdef CONFIG_BRCMFMAC_USB
     usb_protocol_t udev;
-    result = device_get_protocol(device, ZX_PROTOCOL_USB, &udev);
+    result = device_get_protocol(device, ZX_PROTOCOL_USB_OLD, &udev);
     if (result == ZX_OK) {
         result = brcmf_usb_register(device, &udev);
         if (result != ZX_OK) {
