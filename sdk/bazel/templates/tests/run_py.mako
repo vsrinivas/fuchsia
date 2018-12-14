@@ -103,6 +103,10 @@ def main():
                         default='bazel')
     args = parser.parse_args()
 
+    if not program_exists(args.bazel):
+        print('"%s": command not found' % (args.bazel))
+        return 1
+
     for arch in ARCHES:
         print('--> Testing for %s target' % arch)
         config_flags = ['--config=fuchsia_%s' % arch]
@@ -117,6 +121,17 @@ def main():
                            optional_flags=config_flags + cpp17_flags).run():
             return 1
     return 0
+
+
+def program_exists(name):
+    """Returns True if an executable with the name exists"""
+    if len(name) > 0 and name[0] == '/':
+        return os.path.isfile(name) and os.access(name, os.X_OK)
+    for path in os.environ["PATH"].split(os.pathsep):
+        fname = os.path.join(path, name)
+        if os.path.isfile(fname) and os.access(fname, os.X_OK):
+            return True
+    return False
 
 
 if __name__ == '__main__':
