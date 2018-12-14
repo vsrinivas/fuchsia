@@ -78,19 +78,21 @@ ReadyCallback JournalEntry::CreateReadyCallback() {
 }
 
 SyncCallback JournalEntry::CreateSyncCallback() {
-    return [this] (zx_status_t status) {
-        EntryStatus last_status;
-        // The callback sets the state of the JournalEntry based on the status of writeback.
-        if (status == ZX_OK) {
-            last_status = SetStatus(EntryStatus::kPersisted);
-            ZX_DEBUG_ASSERT(last_status == EntryStatus::kWaiting);
-        } else {
-            SetStatus(EntryStatus::kError);
-        }
-
-        // Signal the journal that an entry is complete and ready for processing.
-        journal_->SendSignal(status);
+    return [this] (zx_status_t result) {
+        // Signal the journal that an entry is ready for processing.
+        journal_->ProcessEntryResult(result, this);
     };
+}
+
+void JournalEntry::SetStatusFromResult(zx_status_t result) {
+    // Set the state of the JournalEntry based on the last received result.
+    if (result != ZX_OK) {
+        SetStatus(EntryStatus::kError);
+        return;
+    }
+
+    EntryStatus last_status = SetStatus(EntryStatus::kPersisted);
+    ZX_DEBUG_ASSERT(last_status == EntryStatus::kWaiting);
 }
 
 void JournalEntry::SetChecksum(uint32_t checksum) {
@@ -398,6 +400,15 @@ void Journal::PrepareWork(JournalEntry* entry, fbl::unique_ptr<WritebackWork>* o
     work->SetReadyCallback(entry->CreateReadyCallback());
     work->SetSyncCallback(entry->CreateSyncCallback());
     *out = std::move(work);
+}
+
+void Journal::ProcessEntryResult(zx_status_t result, JournalEntry* entry) {
+    fbl::AutoLock lock(&lock_);
+    // Since it is possible for the entry to be deleted immediately after updating its status
+    // (if the journal is being processed at the time), it is safer to update the entry status
+    // under the journal lock.
+    entry->SetStatusFromResult(result);
+    SendSignalLocked(result);
 }
 
 void Journal::PrepareBuffer(JournalEntry* entry) {

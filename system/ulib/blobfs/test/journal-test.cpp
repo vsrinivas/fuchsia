@@ -10,11 +10,11 @@ namespace {
 
 // Mock journal implementation which can be used to test JournalEntry / JournalProcessor
 // functionality.
-class MockJournal : public JournalBase {
+class FakeJournal : public JournalBase {
 public:
-    MockJournal() : readonly_(false), capacity_(0) {}
+    FakeJournal() : readonly_(false), capacity_(0) {}
 
-    ~MockJournal() {
+    ~FakeJournal() {
         // On destruction, clean up work_queue_ entries.
         while (!work_queue_.is_empty()) {
             work_queue_.front().MarkCompleted(ZX_OK);
@@ -22,8 +22,9 @@ public:
         }
     }
 
-    void SendSignal(zx_status_t status) final {
-        if (status != ZX_OK) {
+    void ProcessEntryResult(zx_status_t result, JournalEntry* entry) final {
+        entry->SetStatusFromResult(result);
+        if (result != ZX_OK) {
             readonly_ = true;
         }
     }
@@ -83,7 +84,7 @@ static bool JournalEntryLifetimeTest() {
     BEGIN_TEST;
 
     // Create a dummy journal and journal processor.
-    MockJournal journal;
+    FakeJournal journal;
     JournalProcessor processor(&journal);
 
     // Create and process a 'work' entry.
@@ -132,7 +133,7 @@ static bool JournalEntryLifetimeTest() {
 static bool JournalProcessorResetWorkTest() {
     BEGIN_TEST;
     // Create a dummy journal and journal processor.
-    MockJournal journal;
+    FakeJournal journal;
     JournalProcessor processor(&journal);
 
     // Create and process a 'work' entry.

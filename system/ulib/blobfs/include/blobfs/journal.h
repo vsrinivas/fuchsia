@@ -101,6 +101,9 @@ public:
         return static_cast<EntryStatus>(status_.exchange(static_cast<uint32_t>(status)));
     }
 
+    // Update the entry status based on |result|.
+    void SetStatusFromResult(zx_status_t result);
+
     // Set the commit block's checksum.
     void SetChecksum(uint32_t checksum);
 
@@ -137,7 +140,10 @@ class JournalBase {
 public:
     JournalBase() = default;
     virtual ~JournalBase() = default;
-    virtual void SendSignal(zx_status_t status) = 0;
+
+    // Process the |result| from the last operation performed on |entry|. This should be invoked as
+    // part of the sync callback from the writeback thread.
+    virtual void ProcessEntryResult(zx_status_t result, JournalEntry* entry) = 0;
 
     // Returns the capacity of the journal (in blobfs blocks).
     virtual size_t GetCapacity() const = 0;
@@ -224,16 +230,12 @@ public:
     // An error will be returned if the journal is currently in read only mode.
     zx_status_t Enqueue(fbl::unique_ptr<WritebackWork> work);
 
-    // Signals the journal thread to process waiting entries.
-    void SendSignal(zx_status_t status) final {
-        fbl::AutoLock lock(&lock_);
-        SendSignalLocked(status);
-    }
-
     // Asynchronously processes journal entries and updates journal state.
     void ProcessLoop();
 
     // JournalBase interface
+
+    void ProcessEntryResult(zx_status_t result, JournalEntry* entry) final;
 
     size_t GetCapacity() const final {
         return entries_->capacity();
