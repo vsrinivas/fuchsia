@@ -48,7 +48,14 @@ fn make_profile_service_definition() -> ServiceDefinition {
             minor_version: 3,
         }],
         additional_protocol_descriptors: None,
-        information: vec![],
+        information: vec![
+            Information {
+                language: "en".to_string(),
+                name: Some("A2DP".to_string()),
+                description: Some("Advanced Audio Distribution Profile".to_string()),
+                provider: Some("Fuchsia".to_string()),
+            }
+        ],
         additional_attributes: None,
     }
 }
