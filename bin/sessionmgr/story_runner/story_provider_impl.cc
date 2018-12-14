@@ -502,7 +502,7 @@ void StoryProviderImpl::NotifyStoryActivityChange(
     fidl::StringPtr story_id,
     fidl::VectorPtr<fuchsia::modular::OngoingActivityType> ongoing_activities) {
   for (const auto& i : activity_watchers_.ptrs()) {
-    (*i)->OnStoryActivityChange(story_id, std::move(ongoing_activities));
+    (*i)->OnStoryActivityChange(story_id, ongoing_activities.Clone());
   }
 }
 
