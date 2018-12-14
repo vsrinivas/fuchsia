@@ -16,7 +16,7 @@ struct ModuleManifest {
     string? suggestion_headline;
 
     /// A list of intents that this module is able to handle.
-    vector<IntentFilter> intent_filters;
+    vector<IntentFilter>? intent_filters;
 
     /// Identifies the pattern with which to compose this module with others.
     string? composition_pattern;
