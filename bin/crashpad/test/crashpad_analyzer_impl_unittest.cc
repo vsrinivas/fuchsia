@@ -66,6 +66,16 @@ TEST_F(CrashpadAnalyzerImplTest,
   EXPECT_EQ(out_status, ZX_OK);
 }
 
+TEST_F(CrashpadAnalyzerImplTest, ProcessKernelPanicCrashlog_Basic) {
+  fuchsia::mem::Buffer crashlog;
+  ASSERT_TRUE(fsl::VmoFromString("ZIRCON KERNEL PANIC", &crashlog));
+  zx_status_t out_status = ZX_ERR_UNAVAILABLE;
+  analyzer_->ProcessKernelPanicCrashlog(
+      std::move(crashlog),
+      [&out_status](zx_status_t status) { out_status = status; });
+  EXPECT_EQ(out_status, ZX_OK);
+}
+
 }  // namespace
 }  // namespace crash
 }  // namespace fuchsia
