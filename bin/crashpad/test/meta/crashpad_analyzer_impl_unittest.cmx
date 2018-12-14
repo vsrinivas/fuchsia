@@ -10,6 +10,10 @@
             "build-info",
             "system-temp"
         ],
-        "services": [ "fuchsia.logger.LogSink" ]
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher"
+        ],
+        "system": [ "bin" ]
     }
 }
