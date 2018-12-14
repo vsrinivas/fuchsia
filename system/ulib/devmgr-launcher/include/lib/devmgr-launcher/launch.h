@@ -4,7 +4,9 @@
 
 #pragma once
 
+#include <fbl/unique_fd.h>
 #include <fbl/vector.h>
+#include <lib/fdio/io.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/job.h>
 #include <lib/zx/vmo.h>
@@ -27,6 +29,9 @@ struct Args {
     // VMO containing ZBI passed in from bootloader. Devmgr will simply
     // forward this along to the sys_device as well as the fs_host.
     zx::vmo bootdata;
+    // If valid, the FD to give to devmgr as stdin/stdout/stderr.  Otherwise
+    // inherits from the caller of Launch().
+    fbl::unique_fd stdio;
 };
 
 // Launches an isolated devmgr, passing the given |args| to it.

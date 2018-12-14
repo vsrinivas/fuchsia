@@ -67,6 +67,8 @@ zx_status_t Launch(Args args, zx::job* devmgr_job, zx::channel* devfs_root) {
         return status;
     }
 
+    const bool clone_stdio = !args.stdio.is_valid();
+
     fbl::Vector<const char*> argv;
     argv.push_back(kDevmgrPath);
     for (const char* path : args.driver_search_paths) {
@@ -106,10 +108,21 @@ zx_status_t Launch(Args args, zx::job* devmgr_job, zx::channel* devfs_root) {
             .h = { .id = PA_HND(PA_VMO_BOOTDATA, 0), .handle = args.bootdata.release() },
         });
     }
+    if (!clone_stdio) {
+        actions.push_back(fdio_spawn_action_t{
+            .action = FDIO_SPAWN_ACTION_TRANSFER_FD,
+            .fd = { .local_fd = args.stdio.release(), .target_fd = FDIO_FLAG_USE_FOR_STDIO },
+        });
+    }
+
+    uint32_t flags = FDIO_SPAWN_DEFAULT_LDSVC;
+    if (clone_stdio) {
+        flags |= FDIO_SPAWN_CLONE_STDIO;
+    }
 
     zx::process new_process;
     status = fdio_spawn_etc(job.get(),
-                            FDIO_SPAWN_DEFAULT_LDSVC | FDIO_SPAWN_CLONE_STDIO,
+                            flags,
                             kDevmgrPath,
                             argv.get(),
                             nullptr /* environ */,
