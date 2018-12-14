@@ -279,14 +279,6 @@ class InterfacePtr {
     return impl_->controller.reader().channel();
   }
 
-  // Closes the channel and sends an Epitaph with the given error.  See the FIDL
-  // language spec for information about Epitaphs.
-  //
-  // The return value can be any of the return values of zx_channel_write.
-  zx_status_t Close(zx_status_t epitaph_value) {
-    return impl_->controller.reader().Close(epitaph_value);
-  }
-
  private:
   struct Impl;
 

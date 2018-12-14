@@ -205,10 +205,6 @@ class Binding {
   // of the channel, the zx_status_t of that error will be passed as the
   // parameter to the handler.
   //
-  // If an Epitaph was present on the channel, its error value will be passed as
-  // the parameter.  See the FIDL language specification for more detail on
-  // Epitaphs.
-  //
   // For example, the error handler will be called if the remote side of the
   // channel sends an invalid message. When the error handler is called, the
   // |Binding| will no longer be bound to the channel.

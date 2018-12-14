@@ -198,7 +198,7 @@ TEST(Binding, UnbindDoesNotTriggerErrorHandler) {
   EXPECT_EQ(0, error_count);
 }
 
-TEST(Binding, BasicEpitaphSupportOnInterfacePtr) {
+TEST(Binding, EpitaphReceivedWhenBindingClosed) {
   fidl::test::AsyncLoopForTest loop;
 
   test::FrobinatorImpl impl;
@@ -226,13 +226,11 @@ TEST(Binding, BasicEpitaphSupportOnInterfacePtr) {
   EXPECT_EQ(ZX_ERR_BAD_STATE, binding.WaitForMessage());
 }
 
-TEST(Binding, BasicEpitaphSupportOnBinding) {
+TEST(Binding, ErrorHandlerCalledWhenInterfacePtrClosed) {
   fidl::test::AsyncLoopForTest loop;
 
   test::FrobinatorImpl impl;
   Binding<fidl::test::frobinator::Frobinator> binding(&impl);
-
-  constexpr zx_status_t kSysError = 0xabDECADE;
 
   fidl::test::frobinator::FrobinatorPtr ptr;
   EXPECT_EQ(ZX_OK, binding.Bind(ptr.NewRequest()));
@@ -241,14 +239,11 @@ TEST(Binding, BasicEpitaphSupportOnBinding) {
   binding.set_error_handler(
       [&error](zx_status_t remote_error) { error = remote_error; });
 
-  EXPECT_EQ(ZX_OK, ptr.Close(kSysError));
-
-  // Check that you can only call Close once...
-  EXPECT_EQ(ZX_ERR_BAD_STATE, ptr.Close(kSysError));
+  ptr.Unbind();
 
   loop.RunUntilIdle();
 
-  EXPECT_EQ(kSysError, error);
+  EXPECT_EQ(ZX_ERR_PEER_CLOSED, error);
 
   ptr->Frob("This should break");
   EXPECT_EQ(ZX_ERR_BAD_STATE, binding.WaitForMessage());
