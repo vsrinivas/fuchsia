@@ -69,12 +69,16 @@ zx_status_t PlatformDevice::RpcGetMmio(const DeviceResources* dr, uint32_t index
     if (index >= dr->mmio_count()) {
         return ZX_ERR_OUT_OF_RANGE;
     }
+    const auto& root_rsrc = bus_->GetResource();
+    if (!root_rsrc->is_valid()) {
+        return ZX_ERR_NO_RESOURCES;
+    }
 
     const pbus_mmio_t& mmio = dr->mmio(index);
     zx::resource resource;
     char rsrc_name[ZX_MAX_NAME_LEN];
     snprintf(rsrc_name, ZX_MAX_NAME_LEN - 1, "%s.pbus[%u]", name_, index);
-    zx_status_t status = zx::resource::create(*bus_->GetResource(), ZX_RSRC_KIND_MMIO, mmio.base,
+    zx_status_t status = zx::resource::create(*root_rsrc, ZX_RSRC_KIND_MMIO, mmio.base,
                                               mmio.length, rsrc_name, sizeof(rsrc_name), &resource);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: pdev_rpc_get_mmio: zx_resource_create failed: %d\n", name_, status);
@@ -97,12 +101,17 @@ zx_status_t PlatformDevice::RpcGetInterrupt(const DeviceResources* dr, uint32_t 
         return ZX_ERR_OUT_OF_RANGE;
     }
 
+    const auto& root_rsrc = bus_->GetResource();
+    if (!root_rsrc->is_valid()) {
+        return ZX_ERR_NO_RESOURCES;
+    }
+
     zx::resource resource;
     const pbus_irq_t& irq = dr->irq(index);
     uint32_t options = ZX_RSRC_KIND_IRQ | ZX_RSRC_FLAG_EXCLUSIVE;
     char rsrc_name[ZX_MAX_NAME_LEN];
     snprintf(rsrc_name, ZX_MAX_NAME_LEN - 1, "%s.pbus[%u]", name_, index);
-    zx_status_t status = zx::resource::create(*bus_->GetResource(), options, irq.irq, 1, rsrc_name,
+    zx_status_t status = zx::resource::create(*root_rsrc, options, irq.irq, 1, rsrc_name,
                                               sizeof(rsrc_name), &resource);
     if (status != ZX_OK) {
         return status;
@@ -112,7 +121,7 @@ zx_status_t PlatformDevice::RpcGetInterrupt(const DeviceResources* dr, uint32_t 
     *out_mode = irq.mode;
     *out_handle_count = 1;
     *out_handle = resource.release();
-    return status;
+    return ZX_OK;
 }
 
 zx_status_t PlatformDevice::RpcGetBti(const DeviceResources* dr, uint32_t index,
@@ -140,12 +149,17 @@ zx_status_t PlatformDevice::RpcGetSmc(const DeviceResources* dr, uint32_t index,
         return ZX_ERR_OUT_OF_RANGE;
     }
 
+    const auto& root_rsrc = bus_->GetResource();
+    if (!root_rsrc->is_valid()) {
+        return ZX_ERR_NO_RESOURCES;
+    }
+
     zx::resource resource;
     const pbus_smc_t& smc = dr->smc(index);
     uint32_t options = ZX_RSRC_KIND_SMC | ZX_RSRC_FLAG_EXCLUSIVE;
     char rsrc_name[ZX_MAX_NAME_LEN];
     snprintf(rsrc_name, ZX_MAX_NAME_LEN - 1, "%s.pbus[%u]", name_, index);
-    zx_status_t status = zx::resource::create(*bus_->GetResource(), options,
+    zx_status_t status = zx::resource::create(*root_rsrc, options,
                                               smc.service_call_num_base, smc.count, rsrc_name,
                                               sizeof(rsrc_name), &resource);
     if (status != ZX_OK) {
@@ -155,7 +169,7 @@ zx_status_t PlatformDevice::RpcGetSmc(const DeviceResources* dr, uint32_t index,
 
     *out_handle_count = 1;
     *out_handle = resource.release();
-    return status;
+    return ZX_OK;
 }
 
 zx_status_t PlatformDevice::RpcGetDeviceInfo(const DeviceResources* dr, pdev_device_info_t* out_info) {

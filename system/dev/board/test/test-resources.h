@@ -4,6 +4,8 @@
 
 #pragma once
 
-#include <ddk/protocol/platform/bus.h>
-
-zx_status_t qemu_test_init(pbus_protocol_t* pbus);
+// GPIO ranges for test drivers
+#define TEST_GPIO_1         0
+#define TEST_GPIO_2         1
+#define TEST_GPIO_3         2
+#define TEST_GPIO_4         3

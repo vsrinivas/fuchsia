@@ -9,46 +9,43 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
+#include <ddk/protocol/gpio.h>
 #include <ddk/protocol/platform/device.h>
-#include <ddk/protocol/platform-device-lib.h>
 
-#include "../qemu-virt.h"
-
-#define DRIVER_NAME "qemu-test-child-1"
+#define DRIVER_NAME "test-child-1"
 
 typedef struct {
     zx_device_t* zxdev;
-} qemu_test_t;
+} test_t;
 
-static void qemu_test_release(void* ctx) {
+static void test_release(void* ctx) {
     free(ctx);
 }
 
-static zx_protocol_device_t qemu_test_device_protocol = {
+static zx_protocol_device_t test_device_protocol = {
     .version = DEVICE_OPS_VERSION,
-    .release = qemu_test_release,
+    .release = test_release,
 };
 
-static zx_status_t qemu_test_bti(pdev_protocol_t* pdev) {
+static zx_status_t test_gpio(pdev_protocol_t* pdev) {
     zx_status_t status;
-    zx_handle_t bti;
+    gpio_protocol_t gpio;
+    size_t actual;
 
-    status = pdev_get_bti(pdev, 0, &bti);
+    status = pdev_get_protocol(pdev, ZX_PROTOCOL_GPIO, 0, &gpio, sizeof(gpio), &actual);
 
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: failed to get bti, st = %d\n", DRIVER_NAME, status);
+        zxlogf(ERROR, "%s: failed to get gpio, st = %d\n", DRIVER_NAME, status);
     }
-
-    zx_handle_close(bti);
 
     return status;
 }
 
-static zx_status_t qemu_test_bind(void* ctx, zx_device_t* parent) {
+static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
     pdev_protocol_t pdev;
     zx_status_t status;
 
-    zxlogf(INFO, "qemu_test_bind: %s \n", DRIVER_NAME);
+    zxlogf(INFO, "test_bind: %s \n", DRIVER_NAME);
 
     status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev);
     if (status != ZX_OK) {
@@ -56,41 +53,28 @@ static zx_status_t qemu_test_bind(void* ctx, zx_device_t* parent) {
         return status;
     }
 
-    // Make sure we can access our MMIO.
-    mmio_buffer_t mmio;
-    status = pdev_map_mmio_buffer2(&pdev, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+    status = test_gpio(&pdev);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: pdev_map_mmio_buffer failed\n", DRIVER_NAME);
-        return status;
-    }
-    if (mmio.size != TEST_MMIO_2_SIZE) {
-        zxlogf(ERROR, "%s: mmio.size expected %u got %zu\n", DRIVER_NAME, TEST_MMIO_2_SIZE,
-               mmio.size);
-    }
-    mmio_buffer_release(&mmio);
-
-    status = qemu_test_bti(&pdev);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: bti test failed, st = %d\n", DRIVER_NAME, status);
+        zxlogf(ERROR, "%s: gpio test failed, st = %d\n", DRIVER_NAME, status);
     }
 
-    qemu_test_t* child_2 = calloc(1, sizeof(qemu_test_t));
+    test_t* child_2 = calloc(1, sizeof(test_t));
     if (!child_2) {
         return ZX_ERR_NO_MEMORY;
     }
 
     zx_device_prop_t child_2_props[] = {
         { BIND_PROTOCOL, 0, ZX_PROTOCOL_PDEV },
-        { BIND_PLATFORM_DEV_VID, 0, PDEV_VID_QEMU },
-        { BIND_PLATFORM_DEV_PID, 0, PDEV_PID_QEMU },
-        { BIND_PLATFORM_DEV_DID, 0, PDEV_DID_QEMU_TEST_CHILD_2 },
+        { BIND_PLATFORM_DEV_VID, 0, PDEV_VID_TEST},
+        { BIND_PLATFORM_DEV_PID, 0, PDEV_PID_PBUS_TEST},
+        { BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TEST_CHILD_2 },
     };
 
     device_add_args_t child_2_args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "child-2",
         .ctx = child_2,
-        .ops = &qemu_test_device_protocol,
+        .ops = &test_device_protocol,
         .props = child_2_props,
         .prop_count = countof(child_2_props),
     };
@@ -102,23 +86,23 @@ static zx_status_t qemu_test_bind(void* ctx, zx_device_t* parent) {
         return status;
     }
 
-    qemu_test_t* child_3 = calloc(1, sizeof(qemu_test_t));
+    test_t* child_3 = calloc(1, sizeof(test_t));
     if (!child_3) {
         return ZX_ERR_NO_MEMORY;
     }
 
     zx_device_prop_t child_3_props[] = {
         { BIND_PROTOCOL, 0, ZX_PROTOCOL_PDEV },
-        { BIND_PLATFORM_DEV_VID, 0, PDEV_VID_QEMU },
-        { BIND_PLATFORM_DEV_PID, 0, PDEV_PID_QEMU },
-        { BIND_PLATFORM_DEV_DID, 0, PDEV_DID_QEMU_TEST_CHILD_3 },
+        { BIND_PLATFORM_DEV_VID, 0, PDEV_VID_TEST },
+        { BIND_PLATFORM_DEV_PID, 0, PDEV_PID_PBUS_TEST },
+        { BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TEST_CHILD_3 },
     };
 
     device_add_args_t child_3_args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "child-3",
         .ctx = child_3,
-        .ops = &qemu_test_device_protocol,
+        .ops = &test_device_protocol,
         .props = child_3_props,
         .prop_count = countof(child_3_props),
     };
@@ -133,14 +117,14 @@ static zx_status_t qemu_test_bind(void* ctx, zx_device_t* parent) {
     return ZX_OK;
 }
 
-static zx_driver_ops_t qemu_test_driver_ops = {
+static zx_driver_ops_t test_driver_ops = {
     .version = DRIVER_OPS_VERSION,
-    .bind = qemu_test_bind,
+    .bind = test_bind,
 };
 
-ZIRCON_DRIVER_BEGIN(qemu_bus, qemu_test_driver_ops, "zircon", "0.1", 4)
+ZIRCON_DRIVER_BEGIN(test_bus, test_driver_ops, "zircon", "0.1", 4)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_QEMU),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_QEMU),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_QEMU_TEST_CHILD_1),
-ZIRCON_DRIVER_END(qemu_bus)
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_PBUS_TEST),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_CHILD_1),
+ZIRCON_DRIVER_END(test_bus)

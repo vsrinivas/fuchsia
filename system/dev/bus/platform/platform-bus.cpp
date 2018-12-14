@@ -506,10 +506,12 @@ zx_status_t PlatformBus::Init(zx::vmo zbi) {
     // set a real one.
     zx_iommu_desc_dummy_t desc;
     zx::unowned_resource root_resource(get_root_resource());
-    status = zx::iommu::create(*root_resource, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
-                               &iommu_handle_);
-    if (status != ZX_OK) {
-        return status;
+    if (root_resource->is_valid()) {
+      status = zx::iommu::create(*root_resource, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
+                                 &iommu_handle_);
+      if (status != ZX_OK) {
+          return status;
+      }
     }
 
     // Then we attach the platform-bus device below it.
