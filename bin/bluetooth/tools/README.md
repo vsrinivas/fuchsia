@@ -43,7 +43,7 @@ $ bt-snoop-cli --dump --format=pretty
 To initiate a live capture using Wireshark (on host):
 
 ```
-$ fx shell bt-snoop | wireshark -k -i -
+$ fx shell bt-snoop-cli | wireshark -k -i -
 ```
 
 To specify a custom HCI device ("005") and output location (on device):
