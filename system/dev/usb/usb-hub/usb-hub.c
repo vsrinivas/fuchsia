@@ -6,7 +6,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/usb.h>
+#include <ddk/protocol/usb-old.h>
 #include <ddk/protocol/usb/bus.h>
 #include <ddk/protocol/usb/hub.h>
 #include <ddk/usb/usb.h>
@@ -406,7 +406,7 @@ fail:
 
 static zx_status_t usb_hub_bind(void* ctx, zx_device_t* device) {
     usb_protocol_t usb;
-    zx_status_t status = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);
+    zx_status_t status = device_get_protocol(device, ZX_PROTOCOL_USB_OLD, &usb);
     if (status != ZX_OK) {
         return status;
     }
@@ -521,6 +521,6 @@ static zx_driver_ops_t usb_hub_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(usb_hub, usb_hub_driver_ops, "zircon", "0.1", 2)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_DEVICE),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_DEVICE_OLD),
     BI_MATCH_IF(EQ, BIND_USB_CLASS, USB_CLASS_HUB),
 ZIRCON_DRIVER_END(usb_hub)

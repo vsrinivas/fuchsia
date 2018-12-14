@@ -15,11 +15,12 @@
 
 #include <ddk/device.h>
 #include <ddk/mmio-buffer.h>
+#include <ddk/phys-iter.h>
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/usb/bus.h>
-#include <ddk/protocol/usb.h>
+#include <ddk/protocol/usb/request.h>
 #include <usb/usb-request.h>
 
 #include "xhci-hw.h"

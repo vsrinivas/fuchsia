@@ -9,7 +9,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/ethernet.h>
-#include <ddk/protocol/usb.h>
+#include <ddk/protocol/usb-old.h>
 #include <ddk/usb/usb.h>
 #include <usb/usb-request.h>
 #include <zircon/hw/usb-cdc.h>
@@ -472,7 +472,7 @@ fail:
 
 static zx_status_t rndishost_bind(void* ctx, zx_device_t* device) {
     usb_protocol_t usb;
-    zx_status_t status = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);
+    zx_status_t status = device_get_protocol(device, ZX_PROTOCOL_USB_OLD, &usb);
     if (status != ZX_OK) {
         return status;
     }
@@ -630,7 +630,7 @@ static zx_driver_ops_t rndis_driver_ops = {
 // covers the tethered device case.
 // clang-format off
 ZIRCON_DRIVER_BEGIN(rndishost, rndis_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_OLD),
     BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_WIRELESS),
     BI_ABORT_IF(NE, BIND_USB_SUBCLASS, RNDIS_SUBCLASS),
     BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, RNDIS_PROTOCOL),

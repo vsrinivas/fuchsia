@@ -251,7 +251,7 @@ static zx_status_t fx3_bind(void* ctx, zx_device_t* device) {
     if (!fx3) {
         return ZX_ERR_NO_MEMORY;
     }
-    zx_status_t result = device_get_protocol(device, ZX_PROTOCOL_USB, &fx3->usb);
+    zx_status_t result = device_get_protocol(device, ZX_PROTOCOL_USB_OLD, &fx3->usb);
     if (result != ZX_OK) {
         fx3_free(fx3);
         return result;
@@ -280,7 +280,7 @@ static zx_driver_ops_t fx3_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(fx3, fx3_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_OLD),
     BI_ABORT_IF(NE, BIND_USB_VID, CYPRESS_VID),
     BI_MATCH_IF(EQ, BIND_USB_PID, FX3_DEFAULT_BOOTLOADER_PID),
     BI_MATCH_IF(EQ, BIND_USB_PID, FX3_SECOND_STAGE_BOOTLOADER_PID),

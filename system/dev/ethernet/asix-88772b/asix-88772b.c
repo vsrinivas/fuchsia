@@ -9,7 +9,7 @@
 #include <ddk/driver.h>
 #include <ddk/binding.h>
 #include <ddk/protocol/ethernet.h>
-#include <ddk/protocol/usb.h>
+#include <ddk/protocol/usb-old.h>
 #include <ddk/usb/usb.h>
 #include <usb/usb-request.h>
 #include <zircon/assert.h>
@@ -616,7 +616,7 @@ fail:
 
 static zx_status_t ax88772b_bind(void* ctx, zx_device_t* device) {
     usb_protocol_t usb;
-    zx_status_t result = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);
+    zx_status_t result = device_get_protocol(device, ZX_PROTOCOL_USB_OLD, &usb);
     if (result != ZX_OK) {
         return result;
     }
@@ -727,7 +727,7 @@ static zx_driver_ops_t ax88772b_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(ethernet_ax88772b, ax88772b_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_OLD),
     BI_ABORT_IF(NE, BIND_USB_VID, ASIX_VID),
     BI_MATCH_IF(EQ, BIND_USB_PID, ASIX_PID),
 ZIRCON_DRIVER_END(ethernet_ax88772b)

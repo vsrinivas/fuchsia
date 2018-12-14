@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <ddk/protocol/usb.h>
+#include <ddk/protocol/usb-old.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <zircon/hw/usb.h>

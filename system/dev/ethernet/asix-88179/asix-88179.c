@@ -7,7 +7,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/ethernet.h>
-#include <ddk/protocol/usb.h>
+#include <ddk/protocol/usb-old.h>
 #include <ddk/usb/usb.h>
 #include <usb/usb-request.h>
 #include <lib/cksum.h>
@@ -909,7 +909,7 @@ static zx_status_t ax88179_bind(void* ctx, zx_device_t* device) {
     zxlogf(TRACE, "ax88179_bind\n");
 
     usb_protocol_t usb;
-    zx_status_t result = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);
+    zx_status_t result = device_get_protocol(device, ZX_PROTOCOL_USB_OLD, &usb);
     if (result != ZX_OK) {
         return result;
     }
@@ -1045,7 +1045,7 @@ static zx_driver_ops_t ax88179_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(ethernet_ax88179, ax88179_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_OLD),
     BI_ABORT_IF(NE, BIND_USB_VID, ASIX_VID),
     BI_MATCH_IF(EQ, BIND_USB_PID, AX88179_PID),
 ZIRCON_DRIVER_END(ethernet_ax88179)

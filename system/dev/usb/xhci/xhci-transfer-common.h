@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <ddk/protocol/usb.h>
 #include <usb/usb-request.h>
 
 #include "xhci-trb.h"

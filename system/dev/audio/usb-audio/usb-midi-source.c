@@ -4,7 +4,7 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/usb.h>
+#include <ddk/protocol/usb-old.h>
 #include <ddk/usb/usb.h>
 #include <usb/usb-request.h>
 #include <zircon/device/midi.h>

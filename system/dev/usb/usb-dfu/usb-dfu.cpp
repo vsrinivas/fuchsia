@@ -7,7 +7,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <ddk/protocol/usb.h>
+#include <ddk/protocol/usb-old.h>
 #include <fbl/algorithm.h>
 #include <fbl/unique_ptr.h>
 #include <fuchsia/mem/c/fidl.h>
@@ -211,7 +211,7 @@ zx_status_t Dfu::Bind() {
 // static
 zx_status_t Dfu::Create(zx_device_t* parent) {
     usb_protocol_t usb;
-    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_USB, &usb);
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_USB_OLD, &usb);
     if (status != ZX_OK) {
         return status;
     }
@@ -281,7 +281,7 @@ static constexpr zx_driver_ops_t dfu_driver_ops = []() {
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(usb_dfu, usb::dfu_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_OLD),
     BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_APPLICATION_SPECIFIC),
     BI_ABORT_IF(NE, BIND_USB_SUBCLASS, USB_SUBCLASS_DFU),
     BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, USB_PROTOCOL_DFU),

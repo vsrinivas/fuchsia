@@ -10,7 +10,6 @@
 // TODO: Reorder. This needs to be included first until USB headers move to banjo.
 #include <zircon/hw/usb-hub.h>
 #include <ddk/protocol/usb/hci.h>
-#include <ddk/protocol/usb.h>
 
 #include <hw/arch_ops.h>
 #include <hw/reg.h>

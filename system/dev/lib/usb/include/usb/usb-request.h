@@ -8,7 +8,7 @@
 #include <sys/types.h>
 #include <ddk/io-buffer.h>
 #include <ddk/phys-iter.h>
-#include <ddk/protocol/usb.h>
+#include <ddk/protocol/usb-old.h>
 #include <zircon/hw/usb.h>
 #include <zircon/listnode.h>
 

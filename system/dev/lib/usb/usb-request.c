@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/protocol/usb.h>
+#include <ddk/protocol/usb-old.h>
 #include <usb/usb-request.h>
 #include <ddk/debug.h>
 

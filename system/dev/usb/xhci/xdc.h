@@ -6,7 +6,7 @@
 
 #include <atomic>
 #include <ddk/device.h>
-#include <ddk/protocol/usb.h>
+#include <ddk/protocol/usb-old.h>
 #include <lib/sync/completion.h>
 #include <usb/usb-request.h>
 #include <xdc-server-utils/packet.h>

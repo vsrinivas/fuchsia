@@ -5,7 +5,6 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/usb.h>
 #include <ddk/usb/usb.h>
 #include <usb/usb-request.h>
 #include <zircon/assert.h>
@@ -657,7 +656,7 @@ static int ums_worker_thread(void* arg) {
 
 static zx_status_t ums_bind(void* ctx, zx_device_t* device) {
     usb_protocol_t usb;
-    if (device_get_protocol(device, ZX_PROTOCOL_USB, &usb)) {
+    if (device_get_protocol(device, ZX_PROTOCOL_USB_OLD, &usb)) {
         return 0;
     }
 
@@ -815,7 +814,7 @@ static zx_driver_ops_t usb_mass_storage_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(usb_mass_storage, usb_mass_storage_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_OLD),
     BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_MSC),
     BI_ABORT_IF(NE, BIND_USB_SUBCLASS, USB_SUBCLASS_MSC_SCSI),
     BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, USB_PROTOCOL_MSC_BULK_ONLY),

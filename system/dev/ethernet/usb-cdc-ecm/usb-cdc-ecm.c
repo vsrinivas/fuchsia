@@ -7,7 +7,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/ethernet.h>
-#include <ddk/protocol/usb.h>
+#include <ddk/protocol/usb-old.h>
 #include <ddk/protocol/usb/composite.h>
 #include <ddk/usb/usb.h>
 #include <usb/usb-request.h>
@@ -529,7 +529,7 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
     zxlogf(TRACE, "%s: starting %s\n", module_name, __FUNCTION__);
 
     usb_protocol_t usb;
-    zx_status_t result = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);
+    zx_status_t result = device_get_protocol(device, ZX_PROTOCOL_USB_OLD, &usb);
     if (result != ZX_OK) {
         return result;
     }
@@ -781,7 +781,7 @@ static zx_driver_ops_t ecm_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(ethernet_usb_cdc_ecm, ecm_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_OLD),
     BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_COMM),
     BI_ABORT_IF(NE, BIND_USB_SUBCLASS, USB_CDC_SUBCLASS_ETHERNET),
     BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, 0),

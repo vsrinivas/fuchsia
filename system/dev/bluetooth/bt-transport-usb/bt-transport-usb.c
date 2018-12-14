@@ -7,7 +7,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/bt/hci.h>
-#include <ddk/protocol/usb.h>
+#include <ddk/protocol/usb-old.h>
 #include <ddk/usb/usb.h>
 #include <usb/usb-request.h>
 #include <zircon/device/bt-hci.h>
@@ -574,7 +574,7 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* device) {
     zxlogf(TRACE, "hci_bind\n");
     usb_protocol_t usb;
 
-    zx_status_t status = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);
+    zx_status_t status = device_get_protocol(device, ZX_PROTOCOL_USB_OLD, &usb);
     if (status != ZX_OK) {
         zxlogf(ERROR, "bt-transport-usb: get protocol failed: %s\n", zx_status_get_string(status));
         return status;
@@ -712,7 +712,7 @@ static zx_driver_ops_t usb_bt_hci_driver_ops = {
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(bt_transport_usb, usb_bt_hci_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_OLD),
     BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_WIRELESS),
     BI_ABORT_IF(NE, BIND_USB_SUBCLASS, USB_SUBCLASS_BLUETOOTH),
     BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, USB_PROTOCOL_BLUETOOTH),

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
-#include <ddk/protocol/usb.h>
 #include <usb/usb-request.h>
 #include <stdlib.h>
 #include <stdio.h>

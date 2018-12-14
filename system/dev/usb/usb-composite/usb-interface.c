@@ -4,7 +4,7 @@
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
-#include <ddk/protocol/usb.h>
+#include <ddk/protocol/usb-old.h>
 #include <ddk/protocol/usb/composite.h>
 #include <usb/usb-request.h>
 #include <stdlib.h>
@@ -17,7 +17,7 @@
 static zx_status_t usb_interface_get_protocol(void* ctx, uint32_t proto_id, void* out) {
     usb_interface_t* intf = ctx;
     switch (proto_id) {
-    case ZX_PROTOCOL_USB: {
+    case ZX_PROTOCOL_USB_OLD: {
         usb_protocol_t* proto = (usb_protocol_t *)out;
         proto->ctx = intf;
         proto->ops = &usb_device_protocol;

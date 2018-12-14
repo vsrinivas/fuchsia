@@ -122,7 +122,7 @@ static usb_configuration_descriptor_t* get_config_desc(usb_device_t* dev, int co
 }
 
 static zx_status_t usb_device_get_protocol(void* ctx, uint32_t proto_id, void* protocol) {
-    if (proto_id == ZX_PROTOCOL_USB) {
+    if (proto_id == ZX_PROTOCOL_USB_OLD) {
         usb_protocol_t* usb_proto = protocol;
         usb_proto->ctx = ctx;
         usb_proto->ops = &_usb_protocol;
@@ -622,7 +622,7 @@ zx_status_t usb_device_add(usb_bus_t* bus, uint32_t device_id, uint32_t hub_id,
         .name = name,
         .ctx = dev,
         .ops = &usb_device_proto,
-        .proto_id = ZX_PROTOCOL_USB_DEVICE,
+        .proto_id = ZX_PROTOCOL_USB_DEVICE_OLD,
         .proto_ops = &_usb_protocol,
         .props = props,
         .prop_count = countof(props),

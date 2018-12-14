@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
-#include <ddk/protocol/usb.h>
+#include <ddk/protocol/usb-old.h>
 #include <ddk/protocol/usb/bus.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -64,7 +64,7 @@ static usb_bus_interface_ops_t _bus_interface = {
 
 static zx_status_t bus_get_device_id(zx_device_t* device, uint32_t* out) {
     usb_protocol_t usb;
-    if (device_get_protocol(device, ZX_PROTOCOL_USB, &usb) != ZX_OK) {
+    if (device_get_protocol(device, ZX_PROTOCOL_USB_OLD, &usb) != ZX_OK) {
         return ZX_ERR_INTERNAL;
     }
     *out = usb_get_device_id(&usb);

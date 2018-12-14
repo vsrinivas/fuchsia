@@ -8,7 +8,7 @@
 #include <ddk/device.h>
 #include <ddk/protocol/usb/hci.h>
 #include <ddk/protocol/usb/hub.h>
-#include <ddk/protocol/usb.h>
+#include <ddk/protocol/usb-old.h>
 #include <usb/usb-request.h>
 #include <lib/sync/completion.h>
 #include <zircon/hw/usb.h>

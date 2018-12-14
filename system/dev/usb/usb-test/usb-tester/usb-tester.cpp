@@ -472,7 +472,7 @@ zx_status_t UsbTester::Bind() {
 // static
 zx_status_t UsbTester::Create(zx_device_t* parent) {
     usb_protocol_t usb;
-    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_USB, &usb);
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_USB_OLD, &usb);
     if (status != ZX_OK) {
         return status;
     }
@@ -581,7 +581,7 @@ static zx_driver_ops_t driver_ops = [](){
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(usb_tester, usb::driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_DEVICE),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_DEVICE_OLD),
     BI_ABORT_IF(NE, BIND_USB_VID, GOOGLE_VID),
     BI_MATCH_IF(EQ, BIND_USB_PID, USB_TESTER_PID),
 ZIRCON_DRIVER_END(usb_tester)

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
-#include <ddk/protocol/usb.h>
+#include <ddk/protocol/usb-old.h>
 #include <usb/usb-request.h>
 #include <endian.h>
 #include <lib/sync/completion.h>

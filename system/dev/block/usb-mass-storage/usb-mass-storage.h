@@ -7,7 +7,7 @@
 #include <inttypes.h>
 #include <ddk/device.h>
 #include <ddk/protocol/block.h>
-#include <ddk/protocol/usb.h>
+#include <ddk/protocol/usb-old.h>
 #include <lib/sync/completion.h>
 #include <zircon/device/block.h>
 #include <zircon/listnode.h>

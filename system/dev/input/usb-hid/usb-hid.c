@@ -7,7 +7,7 @@
 #include <ddk/driver.h>
 #include <ddk/binding.h>
 #include <ddk/protocol/hidbus.h>
-#include <ddk/protocol/usb.h>
+#include <ddk/protocol/usb-old.h>
 #include <ddk/usb/usb.h>
 #include <usb/usb-request.h>
 #include <zircon/hw/usb-hid.h>
@@ -245,7 +245,7 @@ static zx_status_t usb_hid_bind(void* ctx, zx_device_t* dev) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    zx_status_t status = device_get_protocol(dev, ZX_PROTOCOL_USB, &usbhid->usb);
+    zx_status_t status = device_get_protocol(dev, ZX_PROTOCOL_USB_OLD, &usbhid->usb);
     if (status != ZX_OK) {
         goto fail;
     }
@@ -337,6 +337,6 @@ static zx_driver_ops_t usb_hid_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(usb_hid, usb_hid_driver_ops, "zircon", "0.1", 2)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_OLD),
     BI_MATCH_IF(EQ, BIND_USB_CLASS, USB_CLASS_HID),
 ZIRCON_DRIVER_END(usb_hid)
