@@ -151,7 +151,7 @@ Err DoHelp(ConsoleContext* context, const Command& cmd) {
 
 // quit ------------------------------------------------------------------------
 
-const char kQuitShortHelp[] = R"(quit / q: Quits the debugger.)";
+const char kQuitShortHelp[] = R"(quit / q / exit: Quits the debugger.)";
 const char kQuitHelp[] =
     R"(quit
 
@@ -864,8 +864,9 @@ Err DoSet(ConsoleContext* context, const Command& cmd) {
 void AppendControlVerbs(std::map<Verb, VerbRecord>* verbs) {
   (*verbs)[Verb::kHelp] = VerbRecord(&DoHelp, {"help", "h"}, kHelpShortHelp,
                                      kHelpHelp, CommandGroup::kGeneral);
-  (*verbs)[Verb::kQuit] = VerbRecord(&DoQuit, {"quit", "q"}, kQuitShortHelp,
-                                     kQuitHelp, CommandGroup::kGeneral);
+  (*verbs)[Verb::kQuit] =
+      VerbRecord(&DoQuit, {"quit", "q", "exit"}, kQuitShortHelp, kQuitHelp,
+                 CommandGroup::kGeneral);
   (*verbs)[Verb::kConnect] =
       VerbRecord(&DoConnect, {"connect"}, kConnectShortHelp, kConnectHelp,
                  CommandGroup::kGeneral);
