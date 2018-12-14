@@ -116,10 +116,7 @@ private:
 
 namespace internal {
 struct MessagePacketDeleter {
-    constexpr MessagePacketDeleter() = default;
-    void operator()(MessagePacket* packet) const noexcept {
-        MessagePacket::recycle(packet);
-    }
+    void operator()(MessagePacket* packet) const noexcept { MessagePacket::recycle(packet); }
 };
 }  // namespace internal
 
