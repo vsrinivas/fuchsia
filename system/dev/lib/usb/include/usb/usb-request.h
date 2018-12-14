@@ -16,6 +16,12 @@
 
 __BEGIN_CDECLS;
 
+// cache maintenance ops
+#define USB_REQUEST_CACHE_INVALIDATE        ZX_VMO_OP_CACHE_INVALIDATE
+#define USB_REQUEST_CACHE_CLEAN             ZX_VMO_OP_CACHE_CLEAN
+#define USB_REQUEST_CACHE_CLEAN_INVALIDATE  ZX_VMO_OP_CACHE_CLEAN_INVALIDATE
+#define USB_REQUEST_CACHE_SYNC              ZX_VMO_OP_CACHE_SYNC
+
 typedef struct {
     list_node_t free_reqs;
     mtx_t lock;

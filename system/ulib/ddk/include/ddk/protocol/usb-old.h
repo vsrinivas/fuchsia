@@ -15,14 +15,6 @@
 
 __BEGIN_CDECLS;
 
-typedef struct usb_request usb_request_t;
-
-// cache maintenance ops
-#define USB_REQUEST_CACHE_INVALIDATE        ZX_VMO_OP_CACHE_INVALIDATE
-#define USB_REQUEST_CACHE_CLEAN             ZX_VMO_OP_CACHE_CLEAN
-#define USB_REQUEST_CACHE_CLEAN_INVALIDATE  ZX_VMO_OP_CACHE_CLEAN_INVALIDATE
-#define USB_REQUEST_CACHE_SYNC              ZX_VMO_OP_CACHE_SYNC
-
 typedef void (*usb_request_complete_cb)(usb_request_t* req, void* cookie);
 
 // Returns a batch of completed requests for an endpoint.
