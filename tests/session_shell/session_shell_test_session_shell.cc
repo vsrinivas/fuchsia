@@ -133,8 +133,10 @@ class StoryProviderStateWatcherImpl : fuchsia::modular::StoryProviderWatcher {
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryProviderStateWatcherImpl);
 };
 
-// Cf. README.md for what this test does and how.
-class TestApp : public modular::testing::ComponentBase<void> {
+// Cf. README.md for what this test does in general and how. The test cases are
+// described in detail in comments below.
+class TestApp : public modular::testing::ComponentBase<void>
+{
  public:
   explicit TestApp(component::StartupContext* const startup_context)
       : ComponentBase(startup_context) {
@@ -165,6 +167,8 @@ class TestApp : public modular::testing::ComponentBase<void> {
     create_view_.Pass();
   }
 
+  // Test Case: The story info of a story that does not exist is null.
+
   TestPoint get_story_info_null_{"StoryProvider.GetStoryInfo() is null"};
 
   void TestStoryProvider_GetStoryInfo_Null() {
@@ -178,6 +182,10 @@ class TestApp : public modular::testing::ComponentBase<void> {
         });
   }
 
+  // Test Case SessionShellContext:
+  //
+  // The session shell can access a Link.
+
   TestPoint get_link_{"SessionShellContext.GetLink()"};
 
   void TestSessionShellContext_GetLink() {
@@ -188,6 +196,11 @@ class TestApp : public modular::testing::ComponentBase<void> {
           TestStoryProvider_GetStories();
         });
   }
+
+  // Test Case StoryProvider:
+  //
+  // The session shell can access the list of existing stories. This list is
+  // empty at the outset.
 
   TestPoint previous_stories_{"StoryProvider.GetStories()"};
 
@@ -214,6 +227,10 @@ class TestApp : public modular::testing::ComponentBase<void> {
 
     TestStory1();
   }
+
+  // Test Case Story1:
+  //
+  // Create a story with extra information, start, and stop it.
 
   TestPoint story1_create_{"Story1 Create"};
 
@@ -278,6 +295,13 @@ class TestApp : public modular::testing::ComponentBase<void> {
       TestStory2();
     });
   }
+
+  // Test Case Story2:
+  //
+  // Verify that when pipelining Start() and GetInfo() calls, GetInfo() yields
+  // the run state after Start().
+  //
+  // Verify that after DeleteStory(), GetInfo() returns null again.
 
   TestPoint story2_create_{"Story2 Create"};
 
@@ -375,6 +399,11 @@ class TestApp : public modular::testing::ComponentBase<void> {
 
     TestStory3();
   }
+
+  // Test Case Story3:
+  //
+  // Verify that a "kind of proto" story doesn't appear in the list of stories
+  // of the story provider.
 
   TestPoint story3_create_{"Story3 Create"};
 
