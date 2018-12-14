@@ -9,6 +9,7 @@
 #include <ostream>
 
 #include "garnet/bin/zxdb/common/err.h"
+#include "garnet/bin/zxdb/expr/eval_operators.h"
 #include "garnet/bin/zxdb/expr/expr_eval_context.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
 #include "garnet/bin/zxdb/expr/resolve_array.h"
@@ -214,6 +215,18 @@ void ArrayAccessExprNode::Print(std::ostream& out, int indent) const {
   inner_->Print(out, indent + 1);
 }
 
+void BinaryOpExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
+                            EvalCallback cb) const {
+  EvalBinaryOperator(std::move(context), left_, op_, right_,
+                     std::move(cb));
+}
+
+void BinaryOpExprNode::Print(std::ostream& out, int indent) const {
+  out << IndentFor(indent) << "BINARY_OP(" + op_.value() + ")\n";
+  left_->Print(out, indent + 1);
+  right_->Print(out, indent + 1);
+}
+
 void DereferenceExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
                                EvalCallback cb) const {
   expr_->EvalFollowReferences(context, [ context, cb = std::move(cb) ](
@@ -256,26 +269,26 @@ void IntegerExprNode::Print(std::ostream& out, int indent) const {
 void MemberAccessExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
                                 EvalCallback cb) const {
   bool is_arrow = accessor_.type() == ExprToken::kArrow;
-  left_->EvalFollowReferences(context, [
-    context, is_arrow, member = member_, cb = std::move(cb)
-  ](const Err& err, ExprValue base) {
-    if (!is_arrow) {
-      // "." operator.
-      ExprValue result;
-      Err err = ResolveMember(base, member, &result);
-      cb(err, std::move(result));
-      return;
-    }
-
-    // Everything else should be a -> operator.
-    ResolveMemberByPointer(
-        context, base, member,
-        [cb = std::move(cb)](const Err& err, fxl::RefPtr<Symbol>,
-                             ExprValue result) {
-          // Discard resolved symbol, we only need the value.
+  left_->EvalFollowReferences(
+      context, [ context, is_arrow, member = member_, cb = std::move(cb) ](
+                   const Err& err, ExprValue base) {
+        if (!is_arrow) {
+          // "." operator.
+          ExprValue result;
+          Err err = ResolveMember(base, member, &result);
           cb(err, std::move(result));
-        });
-  });
+          return;
+        }
+
+        // Everything else should be a -> operator.
+        ResolveMemberByPointer(
+            context, base, member,
+            [cb = std::move(cb)](const Err& err, fxl::RefPtr<Symbol>,
+                                 ExprValue result) {
+              // Discard resolved symbol, we only need the value.
+              cb(err, std::move(result));
+            });
+      });
 }
 
 void MemberAccessExprNode::Print(std::ostream& out, int indent) const {

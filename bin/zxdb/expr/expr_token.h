@@ -19,6 +19,8 @@ class ExprToken {
     kInvalid = 0,
     kName,         // random_text
     kInteger,      // 123
+    kEquals,       // =
+    kEquality,     // ==
     kDot,          // .
     kComma,        // ,
     kStar,         // *

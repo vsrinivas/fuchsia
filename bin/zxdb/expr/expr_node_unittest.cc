@@ -10,6 +10,8 @@
 #include "garnet/bin/zxdb/expr/expr_eval_context.h"
 #include "garnet/bin/zxdb/expr/expr_node.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
+#include "garnet/bin/zxdb/expr/mock_expr_eval_context.h"
+#include "garnet/bin/zxdb/expr/mock_expr_node.h"
 #include "garnet/bin/zxdb/expr/symbol_eval_context.h"
 #include "garnet/bin/zxdb/expr/symbol_variable_resolver.h"
 #include "garnet/bin/zxdb/symbols/base_type.h"
@@ -26,74 +28,13 @@ namespace zxdb {
 
 namespace {
 
-// Custom ExprNode that just returns a known value, either synchronously or
-// asynchronously.
-class TestExprNode : public ExprNode {
- public:
-  void Eval(fxl::RefPtr<ExprEvalContext> context,
-            EvalCallback cb) const override {
-    if (is_synchronous_) {
-      cb(Err(), value_);
-    } else {
-      debug_ipc::MessageLoop::Current()->PostTask(
-          FROM_HERE, [ value = value_, cb ]() { cb(Err(), value); });
-    }
-  }
-  void Print(std::ostream& out, int indent) const override {}
-
- private:
-  FRIEND_REF_COUNTED_THREAD_SAFE(TestExprNode);
-  FRIEND_MAKE_REF_COUNTED(TestExprNode);
-
-  TestExprNode(bool is_synchronous, ExprValue value)
-      : is_synchronous_(is_synchronous), value_(value) {}
-  ~TestExprNode() override = default;
-
-  bool is_synchronous_;
-  ExprValue value_;
-};
-
-class TestEvalContext : public ExprEvalContext {
- public:
-  TestEvalContext()
-      : data_provider_(fxl::MakeRefCounted<MockSymbolDataProvider>()),
-        resolver_(data_provider_) {}
-  ~TestEvalContext() = default;
-
-  MockSymbolDataProvider* data_provider() { return data_provider_.get(); }
-
-  void AddVariable(const std::string& name, ExprValue v) { values_[name] = v; }
-
-  // ExprEvalContext implementation.
-  void GetNamedValue(
-      const Identifier& ident,
-      std::function<void(const Err&, fxl::RefPtr<Symbol>, ExprValue)> cb)
-      override {
-    // Can ignore the symbol output for this test, it's not needed by the
-    // expression evaluation system.
-    auto found = values_.find(ident.GetFullName());
-    if (found == values_.end())
-      cb(Err("Not found"), nullptr, ExprValue());
-    else
-      cb(Err(), nullptr, found->second);
-  }
-  SymbolVariableResolver& GetVariableResolver() override { return resolver_; }
-  fxl::RefPtr<SymbolDataProvider> GetDataProvider() override {
-    return data_provider_;
-  }
-
- private:
-  fxl::RefPtr<MockSymbolDataProvider> data_provider_;
-  SymbolVariableResolver resolver_;
-  std::map<std::string, ExprValue> values_;
-};
 
 class ExprNodeTest : public TestWithLoop {};
 
 }  // namespace
 
 TEST_F(ExprNodeTest, EvalIdentifier) {
-  auto context = fxl::MakeRefCounted<TestEvalContext>();
+  auto context = fxl::MakeRefCounted<MockExprEvalContext>();
   ExprValue foo_expected(12);
   context->AddVariable("foo", foo_expected);
 
@@ -135,7 +76,7 @@ TEST_F(ExprNodeTest, EvalIdentifier) {
 
 template <typename T>
 void DoUnaryMinusTest(T in) {
-  auto context = fxl::MakeRefCounted<TestEvalContext>();
+  auto context = fxl::MakeRefCounted<MockExprEvalContext>();
   ExprValue foo_expected(in);
   context->AddVariable("foo", foo_expected);
 
@@ -207,7 +148,7 @@ TEST_F(ExprNodeTest, UnaryMinus) {
 
   // Try an unsupported value (a 3-byte signed). This should throw an error and
   // compute an empty value.
-  auto context = fxl::MakeRefCounted<TestEvalContext>();
+  auto context = fxl::MakeRefCounted<MockExprEvalContext>();
   ExprValue expected(
       fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 3, "uint24_t"),
       {0, 0, 0});
@@ -263,7 +204,7 @@ TEST_F(ExprNodeTest, DereferenceReferencePointer) {
 
   // Execute the dereference.
   auto deref_node = fxl::MakeRefCounted<DereferenceExprNode>(
-      fxl::MakeRefCounted<TestExprNode>(true, ptr_value));
+      fxl::MakeRefCounted<MockExprNode>(true, ptr_value));
   bool called = false;
   Err out_err;
   ExprValue out_value;
@@ -289,7 +230,7 @@ TEST_F(ExprNodeTest, DereferenceReferencePointer) {
 
   // Now go backwards and get the address of the value.
   auto addr_node = fxl::MakeRefCounted<AddressOfExprNode>(
-      fxl::MakeRefCounted<TestExprNode>(true, out_value));
+      fxl::MakeRefCounted<MockExprNode>(true, out_value));
 
   called = false;
   out_err = Err();
@@ -322,7 +263,7 @@ TEST_F(ExprNodeTest, DereferenceReferencePointer) {
   // Try to dereference an invalid address.
   ExprValue bad_ptr_value(const_ptr_type, {0, 0, 0, 0, 0, 0, 0, 0});
   auto bad_deref_node = fxl::MakeRefCounted<DereferenceExprNode>(
-      fxl::MakeRefCounted<TestExprNode>(true, bad_ptr_value));
+      fxl::MakeRefCounted<MockExprNode>(true, bad_ptr_value));
   called = false;
   out_err = Err();
   out_value = ExprValue();
@@ -353,19 +294,19 @@ TEST_F(ExprNodeTest, ArrayAccess) {
   constexpr uint64_t kAddress = 0x12345678;
   ExprValue pointer_value(uint32_ptr_type,
                           {0x78, 0x56, 0x34, 0x12, 0x00, 0x00, 0x00, 0x00});
-  auto pointer_node = fxl::MakeRefCounted<TestExprNode>(false, pointer_value);
+  auto pointer_node = fxl::MakeRefCounted<MockExprNode>(false, pointer_value);
 
   // The index value (= 5) lives in memory as a 32-bit little-endian value.
   constexpr uint64_t kRefAddress = 0x5000;
   constexpr uint8_t kIndex = 5;
-  auto context = fxl::MakeRefCounted<TestEvalContext>();
+  auto context = fxl::MakeRefCounted<MockExprEvalContext>();
   context->data_provider()->AddMemory(kRefAddress, {kIndex, 0, 0, 0});
 
   // The index expression is a reference to the index we saved above, and the
   // reference data is the address.
   auto uint32_ref_type = fxl::MakeRefCounted<ModifiedType>(
       Symbol::kTagReferenceType, LazySymbol(uint32_type));
-  auto index = fxl::MakeRefCounted<TestExprNode>(
+  auto index = fxl::MakeRefCounted<MockExprNode>(
       false, ExprValue(uint32_ref_type, {0, 0x50, 0, 0, 0, 0, 0, 0}));
 
   // The node to evaluate the access. Note the pointer are index nodes are
@@ -415,7 +356,7 @@ TEST_F(ExprNodeTest, ArrayAccess) {
 // This is more of an integration smoke test for "." and "->". The details are
 // tested in resolve_collection_unittest.cc.
 TEST_F(ExprNodeTest, MemberAccess) {
-  auto context = fxl::MakeRefCounted<TestEvalContext>();
+  auto context = fxl::MakeRefCounted<MockExprEvalContext>();
 
   // Define a class.
   auto int32_type = MakeInt32Type();
@@ -423,7 +364,7 @@ TEST_F(ExprNodeTest, MemberAccess) {
                                {{"a", int32_type}, {"b", int32_type}});
 
   // Set up a call to do "." synchronously.
-  auto struct_node = fxl::MakeRefCounted<TestExprNode>(
+  auto struct_node = fxl::MakeRefCounted<MockExprNode>(
       true, ExprValue(sc, {0x78, 0x56, 0x34, 0x12}));
   auto access_node = fxl::MakeRefCounted<MemberAccessExprNode>(
       struct_node, ExprToken(ExprToken::Type::kDot, ".", 0),
@@ -457,7 +398,7 @@ TEST_F(ExprNodeTest, MemberAccess) {
 
   // Make this one evaluate the left-hand-size asynchronously. This value
   // references kAddress (little-endian).
-  auto struct_ptr_node = fxl::MakeRefCounted<TestExprNode>(
+  auto struct_ptr_node = fxl::MakeRefCounted<MockExprNode>(
       false, ExprValue(foo_ptr_type,
                        {0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}));
   auto access_ptr_node = fxl::MakeRefCounted<MemberAccessExprNode>(

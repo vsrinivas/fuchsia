@@ -6,6 +6,8 @@ static_library("expr") {
   sources = [
     "cast.cc",
     "cast.h",
+    "eval_operators.cc",
+    "eval_operators.h",
     "expr.cc",
     "expr.h",
     "expr_eval_context.h",
@@ -55,12 +57,17 @@ source_set("tests") {
 
   sources = [
     "cast_unittest.cc",
+    "eval_operators_unittest.cc",
     "expr_node_unittest.cc",
     "expr_parser_unittest.cc",
     "expr_tokenizer_unittest.cc",
     "find_variable_unittest.cc",
     "identifier_unittest.cc",
     "index_walker_unittest.cc",
+    "mock_expr_eval_context.cc",
+    "mock_expr_eval_context.h",
+    "mock_expr_node.cc",
+    "mock_expr_node.h",
     "resolve_array_unittest.cc",
     "resolve_collection_unittest.cc",
     "resolve_ptr_ref_unittest.cc",

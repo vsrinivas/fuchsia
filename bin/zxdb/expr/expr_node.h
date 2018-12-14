@@ -18,6 +18,7 @@ namespace zxdb {
 
 class AddressOfExprNode;
 class ArrayAccessExprNode;
+class BinaryOpExprNode;
 class DereferenceExprNode;
 class Err;
 class ExprEvalContext;
@@ -36,6 +37,7 @@ class ExprNode : public fxl::RefCountedThreadSafe<ExprNode> {
 
   virtual const AddressOfExprNode* AsAddressOf() const { return nullptr; }
   virtual const ArrayAccessExprNode* AsArrayAccess() const { return nullptr; }
+  virtual const BinaryOpExprNode* AsBinaryOp() const { return nullptr; }
   virtual const DereferenceExprNode* AsDereference() const { return nullptr; }
   virtual const IdentifierExprNode* AsIdentifier() const { return nullptr; }
   virtual const IntegerExprNode* AsInteger() const { return nullptr; }
@@ -133,6 +135,29 @@ class ArrayAccessExprNode : public ExprNode {
 
   fxl::RefPtr<ExprNode> left_;
   fxl::RefPtr<ExprNode> inner_;
+};
+
+// Implements all binary operators.
+class BinaryOpExprNode : public ExprNode {
+ public:
+  const BinaryOpExprNode* AsBinaryOp() const override { return this; }
+  void Eval(fxl::RefPtr<ExprEvalContext> context,
+            EvalCallback cb) const override;
+  void Print(std::ostream& out, int indent) const override;
+
+ private:
+  FRIEND_REF_COUNTED_THREAD_SAFE(BinaryOpExprNode);
+  FRIEND_MAKE_REF_COUNTED(BinaryOpExprNode);
+
+  BinaryOpExprNode();
+  BinaryOpExprNode(fxl::RefPtr<ExprNode> left, ExprToken op,
+                   fxl::RefPtr<ExprNode> right)
+      : left_(std::move(left)), op_(std::move(op)), right_(std::move(right)) {}
+  ~BinaryOpExprNode() override = default;
+
+  fxl::RefPtr<ExprNode> left_;
+  ExprToken op_;
+  fxl::RefPtr<ExprNode> right_;
 };
 
 // Implements dereferencing a pointer ("*" in C).

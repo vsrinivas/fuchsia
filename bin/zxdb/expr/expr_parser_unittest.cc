@@ -305,4 +305,12 @@ TEST_F(ExprParserTest, Templates) {
   EXPECT_EQ("Duplicate template specification.", parser().err().msg());
 }
 
+TEST_F(ExprParserTest, BinaryOp) {
+  EXPECT_EQ(
+      "BINARY_OP(=)\n"
+      " IDENTIFIER(\"a\")\n"
+      " INTEGER(23)\n",
+      GetParseString("a = 23"));
+}
+
 }  // namespace zxdb

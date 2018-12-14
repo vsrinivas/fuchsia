@@ -97,12 +97,14 @@ void ExprTokenizer::AdvanceToEndOfToken(ExprToken::Type type) {
 
     case ExprToken::kArrow:
     case ExprToken::kColonColon:
+    case ExprToken::kEquality:
       // The classification code should already have validated there were two
       // characters available.
       AdvanceOneChar();
       AdvanceOneChar();
       break;
 
+    case ExprToken::kEquals:
     case ExprToken::kDot:
     case ExprToken::kComma:
     case ExprToken::kStar:
@@ -151,6 +153,13 @@ ExprToken::Type ExprTokenizer::ClassifyCurrent() {
       }
       // Anything else is a standalone hyphen.
       return ExprToken::kMinus;
+    case '=':
+      // Check for "==".
+      if (can_advance()) {
+        if (input_[cur_ + 1] == '=')
+          return ExprToken::kEquality;
+      }
+      return ExprToken::kEquals;
     case '.':
       return ExprToken::kDot;
     case ',':

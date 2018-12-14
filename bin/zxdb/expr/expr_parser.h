@@ -42,6 +42,8 @@ class ExprParser {
   std::vector<std::string> ParseTemplateList(ExprToken::Type stop_before);
 
   fxl::RefPtr<ExprNode> AmpersandPrefix(const ExprToken& token);
+  fxl::RefPtr<ExprNode> BinaryOpInfix(fxl::RefPtr<ExprNode> left,
+                                      const ExprToken& token);
   fxl::RefPtr<ExprNode> ScopeInfix(fxl::RefPtr<ExprNode> left,
                                    const ExprToken& token);
   fxl::RefPtr<ExprNode> ScopePrefix(const ExprToken& token);

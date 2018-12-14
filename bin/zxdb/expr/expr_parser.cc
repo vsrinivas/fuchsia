@@ -52,18 +52,27 @@ using InfixFunc = fxl::RefPtr<ExprNode> (ExprParser::*)(
 // This should match the C operator precedence for the subset of operations
 // that we support:
 //   https://en.cppreference.com/w/cpp/language/operator_precedence
+// The commented-out values are ones we don't currently implement.
 
-// Lowest precedence: Comma (not currently needed).
-// constexpr int kPrecedenceComma = 10;
-
-// Most C unary operators like "*", "&", and "-".
-constexpr int kPrecedenceUnary = 20;
-
-// () . -> []
-constexpr int kPrecedenceCallAccess = 30;
-
-// Highest precedence: "::"
-constexpr int kPrecedenceScope = 40;
+// clang-format off
+//constexpr int kPrecedenceComma = 10;                // ,  (lowest precedence)
+constexpr int kPrecedenceAssignment = 20;             // = += -= *= -= /= %= <<= >>= &= ^= |=
+//constexpr int kPrecedenceLogicalOr = 30;            // ||
+//constexpr int kPrecedenceLogicalAnd = 40;           // &&
+//constexpr int kPrecedenceBitwiseOr = 50;            // |
+//constexpr int kPrecedenceBitwiseXor = 60;           // ^
+//constexpr int kPrecedenceBitwiseAnd = 70;           // &
+constexpr int kPrecedenceEquality = 80;               // == !=
+//constexpr int kPrecedenceComparison = 90;           // < <= > >=
+//constexpr int kPrecedenceThreeWayComparison = 100;  // <=>
+//constexpr int kPrecedenceShift = 110;               // << >>
+//constexpr int kPrecedenceAddition = 120;            // + -
+//constexpr int kPrecedenceMultiplication = 130;      // * / %
+//constexpr int kPrecedencePointerToMember = 140;     // .* ->*
+constexpr int kPrecedenceUnary = 150;                 // ++ -- +a -a ! ~ *a &a
+constexpr int kPrecedenceCallAccess = 160;            // () . -> []
+constexpr int kPrecedenceScope = 170;                 // ::  (Highest precedence)
+// clang-format on
 
 }  // namespace
 
@@ -79,6 +88,8 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     {nullptr,                      nullptr,                      -1},                     // kInvalid
     {&ExprParser::NamePrefix,      &ExprParser::NameInfix,       -1},                     // kName
     {&ExprParser::IntegerPrefix,   nullptr,                      -1},                     // kInteger
+    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceAssignment},  // kEquals
+    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceEquality},    // kEqualsEquals
     {nullptr,                      &ExprParser::DotOrArrowInfix, kPrecedenceCallAccess},  // kDot
     {nullptr,                      nullptr,                      -1},                     // kComma
     {&ExprParser::StarPrefix,      nullptr,                      kPrecedenceUnary},       // kStar
@@ -190,6 +201,20 @@ fxl::RefPtr<ExprNode> ExprParser::AmpersandPrefix(const ExprToken& token) {
   if (has_error())
     return nullptr;
   return fxl::MakeRefCounted<AddressOfExprNode>(std::move(right));
+}
+
+fxl::RefPtr<ExprNode> ExprParser::BinaryOpInfix(fxl::RefPtr<ExprNode> left,
+                                                const ExprToken& token) {
+  fxl::RefPtr<ExprNode> right = ParseExpression(kPrecedenceUnary);
+  if (!has_error() && !right) {
+    SetError(token, fxl::StringPrintf(
+                        "Expected expression after '%s'.",
+                        token.value().c_str()));
+  }
+  if (has_error())
+    return nullptr;
+
+  return fxl::MakeRefCounted<BinaryOpExprNode>(std::move(left), token, std::move(right));
 }
 
 fxl::RefPtr<ExprNode> ExprParser::ScopeInfix(fxl::RefPtr<ExprNode> left,
