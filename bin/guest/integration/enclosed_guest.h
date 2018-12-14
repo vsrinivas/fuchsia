@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_GUEST_INTEGRATION_TESTS_ENCLOSED_GUEST_H_
-#define GARNET_BIN_GUEST_INTEGRATION_TESTS_ENCLOSED_GUEST_H_
+#ifndef GARNET_BIN_GUEST_INTEGRATION_ENCLOSED_GUEST_H_
+#define GARNET_BIN_GUEST_INTEGRATION_ENCLOSED_GUEST_H_
 
 #include <fuchsia/guest/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/environment_services_helper.h>
 #include <lib/component/cpp/testing/test_with_environment.h>
 
-#include "garnet/bin/guest/integration_tests/test_serial.h"
+#include "garnet/bin/guest/integration/test_serial.h"
 
 class EnclosedGuest {
  public:
@@ -47,4 +47,4 @@ class EnclosedGuest {
   TestSerial serial_;
 };
 
-#endif  // GARNET_BIN_GUEST_INTEGRATION_TESTS_ENCLOSED_GUEST_H_
+#endif  // GARNET_BIN_GUEST_INTEGRATION_ENCLOSED_GUEST_H_

@@ -5,7 +5,7 @@
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/string_printf.h>
 
-#include "garnet/bin/guest/integration_tests/guest_test.h"
+#include "garnet/bin/guest/integration/guest_test.h"
 
 static constexpr size_t kNumRetries = 40;
 static constexpr zx::duration kStepSleep = zx::msec(500);

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/guest/integration_tests/enclosed_guest.h"
+#include "garnet/bin/guest/integration/enclosed_guest.h"
 
 static constexpr char kGuestMgrUrl[] = "guestmgr";
 static constexpr char kRealm[] = "realmguestintegrationtest";

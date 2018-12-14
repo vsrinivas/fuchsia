@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_GUEST_INTEGRATION_TESTS_GUEST_TEST_H_
-#define GARNET_BIN_GUEST_INTEGRATION_TESTS_GUEST_TEST_H_
+#ifndef GARNET_BIN_GUEST_INTEGRATION_GUEST_TEST_H_
+#define GARNET_BIN_GUEST_INTEGRATION_GUEST_TEST_H_
 
-#include "garnet/bin/guest/integration_tests/enclosed_guest.h"
+#include "garnet/bin/guest/integration/enclosed_guest.h"
 
 static constexpr char kZirconGuestUrl[] = "zircon_guest";
 static constexpr char kLinuxGuestUrl[] = "linux_guest";
@@ -75,4 +75,4 @@ bool GuestTest<T>::setup_succeeded_ = false;
 template <class T>
 EnclosedGuest* GuestTest<T>::enclosed_guest_ = nullptr;
 
-#endif  // GARNET_BIN_GUEST_INTEGRATION_TESTS_GUEST_TEST_H_
+#endif  // GARNET_BIN_GUEST_INTEGRATION_GUEST_TEST_H_

@@ -1,0 +1,82 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/test/test_package.gni")
+
+executable("bin") {
+  visibility = [ ":*" ]
+  output_name = "guest_integration_tests"
+  testonly = true
+
+  sources = [
+    "enclosed_guest.cc",
+    "enclosed_guest.h",
+    "guest_test.cc",
+    "guest_test.h",
+    "main.cc",
+    "test_serial.cc",
+    "test_serial.h",
+    "virtio_block_tests.cc",
+  ]
+
+  deps = [
+    "//garnet/bin/guest/vmm/device",
+    "//garnet/bin/guest/vmm/device:qcow_test_data",
+    "//garnet/public/fidl/fuchsia.guest",
+    "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/svc/cpp",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest_main",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+test_package("guest_integration_tests") {
+  deps = [
+    ":bin",
+  ]
+
+  tests = [
+    {
+      name = "guest_integration_tests"
+      environments = [
+        {
+          dimensions = {
+            device_type = "Intel NUC Kit NUC7i5DNHE"
+          }
+        },
+      ]
+    },
+  ]
+}
+
+package("guest_integration_tests_utils") {
+  deps = [
+    "virtio_block_test_util",
+    "virtio_rng_test_util",
+  ]
+
+  meta = [
+    {
+      path =
+          rebase_path("virtio_block_test_util/meta/virtio_block_test_util.cmx")
+      dest = "virtio_block_test_util.cmx"
+    },
+    {
+      path = rebase_path("virtio_rng_test_util/meta/virtio_rng_test_util.cmx")
+      dest = "virtio_rng_test_util.cmx"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "virtio_block_test_util"
+    },
+    {
+      name = "virtio_rng_test_util"
+    },
+  ]
+}
