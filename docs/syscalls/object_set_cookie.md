@@ -66,7 +66,7 @@ object as the *scope*, or the cookie has not been set.
 
 ## SEE ALSO
 
-[object_get_cookie](object_get_cookie.md).
+ - [`zx_object_get_cookie()`]
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 

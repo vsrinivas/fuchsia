@@ -65,7 +65,7 @@ to obtain the set cookie.
 
 ## SEE ALSO
 
-[object_set_cookie](object_set_cookie.md).
+ - [`zx_object_set_cookie()`]
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 

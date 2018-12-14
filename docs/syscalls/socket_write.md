@@ -85,8 +85,16 @@ In a future build this error will no longer occur.
 
 ## SEE ALSO
 
-[socket_accept](socket_accept.md),
-[socket_create](socket_create.md),
-[socket_read](socket_read.md),
-[socket_share](socket_share.md),
-[socket_shutdown](socket_shutdown.md).
+ - [`zx_socket_accept()`]
+ - [`zx_socket_create()`]
+ - [`zx_socket_read()`]
+ - [`zx_socket_share()`]
+ - [`zx_socket_shutdown()`]
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_socket_accept()`]: socket_accept.md
+[`zx_socket_create()`]: socket_create.md
+[`zx_socket_read()`]: socket_read.md
+[`zx_socket_share()`]: socket_share.md
+[`zx_socket_shutdown()`]: socket_shutdown.md

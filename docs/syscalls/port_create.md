@@ -55,9 +55,18 @@ In a future builds this error will no longer occur.
 
 ## SEE ALSO
 
-[port_queue](port_queue.md),
-[port_wait](port_wait.md),
-[object_wait_async](object_wait_async.md),
-[handle_close](handle_close.md),
-[handle_duplicate](handle_duplicate.md),
-[handle_replace](handle_replace.md).
+ - [`zx_handle_close()`]
+ - [`zx_handle_duplicate()`]
+ - [`zx_handle_replace()`]
+ - [`zx_object_wait_async()`]
+ - [`zx_port_queue()`]
+ - [`zx_port_wait()`]
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_handle_close()`]: handle_close.md
+[`zx_handle_duplicate()`]: handle_duplicate.md
+[`zx_handle_replace()`]: handle_replace.md
+[`zx_object_wait_async()`]: object_wait_async.md
+[`zx_port_queue()`]: port_queue.md
+[`zx_port_wait()`]: port_wait.md

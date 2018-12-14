@@ -73,6 +73,12 @@ In a future build this error will no longer occur.
 
 ## SEE ALSO
 
-[bti_create](bti_create.md),
-[bti_pin](bti_pin.md),
-[pmt_unpin](pmt_unpin.md).
+ - [`zx_bti_create()`]
+ - [`zx_bti_pin()`]
+ - [`zx_pmt_unpin()`]
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_bti_create()`]: bti_create.md
+[`zx_bti_pin()`]: bti_pin.md
+[`zx_pmt_unpin()`]: pmt_unpin.md

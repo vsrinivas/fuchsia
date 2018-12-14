@@ -45,9 +45,18 @@ the current architecture.
 
 ## SEE ALSO
 
-[guest_create](guest_create.md),
-[guest_set_trap](guest_set_trap.md),
-[vcpu_create](vcpu_create.md),
-[vcpu_resume](vcpu_resume.md),
-[vcpu_read_state](vcpu_read_state.md),
-[vcpu_write_state](vcpu_write_state.md).
+ - [`zx_guest_create()`]
+ - [`zx_guest_set_trap()`]
+ - [`zx_vcpu_create()`]
+ - [`zx_vcpu_read_state()`]
+ - [`zx_vcpu_resume()`]
+ - [`zx_vcpu_write_state()`]
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_guest_create()`]: guest_create.md
+[`zx_guest_set_trap()`]: guest_set_trap.md
+[`zx_vcpu_create()`]: vcpu_create.md
+[`zx_vcpu_read_state()`]: vcpu_read_state.md
+[`zx_vcpu_resume()`]: vcpu_resume.md
+[`zx_vcpu_write_state()`]: vcpu_write_state.md

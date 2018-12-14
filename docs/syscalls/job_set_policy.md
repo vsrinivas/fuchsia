@@ -136,10 +136,12 @@ In a future build this error will no longer occur.
 
 ## SEE ALSO
 
-[job_create](job_create.md).
-[process_create](job_create.md).
-[object_get_info](object_get_info.md).
+ - [`zx_job_create()`]
+ - [`zx_object_get_info()`]
+ - [`zx_process_create()`]
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
+[`zx_job_create()`]: job_create.md
 [`zx_object_get_info()`]: object_get_info.md
+[`zx_process_create()`]: process_create.md

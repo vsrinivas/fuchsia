@@ -78,9 +78,10 @@ The queue is drained by calling [`zx_port_wait()`].
 
 ## SEE ALSO
 
-[port_create](port_create.md).
-[port_wait](port_wait.md).
+ - [`zx_port_create()`]
+ - [`zx_port_wait()`]
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
+[`zx_port_create()`]: port_create.md
 [`zx_port_wait()`]: port_wait.md

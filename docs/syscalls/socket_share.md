@@ -65,7 +65,14 @@ The socket share queue is only one element deep.
 
 ## SEE ALSO
 
-[socket_accept](socket_accept.md),
-[socket_create](socket_create.md),
-[socket_read](socket_read.md),
-[socket_write](socket_write.md).
+ - [`zx_socket_accept()`]
+ - [`zx_socket_create()`]
+ - [`zx_socket_read()`]
+ - [`zx_socket_write()`]
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_socket_accept()`]: socket_accept.md
+[`zx_socket_create()`]: socket_create.md
+[`zx_socket_read()`]: socket_read.md
+[`zx_socket_write()`]: socket_write.md

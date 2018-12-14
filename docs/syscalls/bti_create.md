@@ -60,6 +60,12 @@ In a future build this error will no longer occur.
 
 ## SEE ALSO
 
-[bti_pin](bti_pin.md),
-[bti_release_quarantine](bti_release_quarantine.md)
-[pmt_unpin](pmt_unpin.md).
+ - [`zx_bti_pin()`]
+ - [`zx_bti_release_quarantine()`]
+ - [`zx_pmt_unpin()`]
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_bti_pin()`]: bti_pin.md
+[`zx_bti_release_quarantine()`]: bti_release_quarantine.md
+[`zx_pmt_unpin()`]: pmt_unpin.md

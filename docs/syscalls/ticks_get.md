@@ -47,4 +47,5 @@ The returned value may be highly variable. Factors that can affect it include:
 
 ## SEE ALSO
 
+
 [ticks_per_second](ticks_per_second.md)

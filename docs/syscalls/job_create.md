@@ -65,6 +65,12 @@ In a future build this error will no longer occur.
 
 ## SEE ALSO
 
-[process_create](process_create.md),
-[task_kill](task_kill.md),
-[object_get_property](object_get_property.md).
+ - [`zx_object_get_property()`]
+ - [`zx_process_create()`]
+ - [`zx_task_kill()`]
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_object_get_property()`]: object_get_property.md
+[`zx_process_create()`]: process_create.md
+[`zx_task_kill()`]: task_kill.md

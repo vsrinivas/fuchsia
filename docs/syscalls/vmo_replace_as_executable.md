@@ -52,5 +52,10 @@ In a future build this error will no longer occur.
 
 ## SEE ALSO
 
-[resource_create](resource_create.md),
-[vmar_map](vmar_map.md).
+ - [`zx_resource_create()`]
+ - [`zx_vmar_map()`]
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_resource_create()`]: resource_create.md
+[`zx_vmar_map()`]: vmar_map.md

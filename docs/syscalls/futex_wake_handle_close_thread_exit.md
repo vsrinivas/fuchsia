@@ -65,13 +65,15 @@ is used for detached threads.
 
 ## SEE ALSO
 
-[futex objects](../objects/futex.md),
-[futex_wake](futex_wake.md),
-[handle_close](handle_close.md),
-[thread_exit](thread_exit.md),
-[vmar_unmap_handle_close_thread_exit](vmar_unmap_handle_close_thread_exit.md).
+ - [futex objects](../objects/futex.md)
+ - [`zx_futex_wake()`]
+ - [`zx_handle_close()`]
+ - [`zx_thread_exit()`]
+ - [`zx_vmar_unmap_handle_close_thread_exit()`]
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
 [`zx_futex_wake()`]: futex_wake.md
+[`zx_handle_close()`]: handle_close.md
+[`zx_thread_exit()`]: thread_exit.md
 [`zx_vmar_unmap_handle_close_thread_exit()`]: vmar_unmap_handle_close_thread_exit.md

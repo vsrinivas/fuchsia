@@ -65,7 +65,14 @@ In a future build this error will no longer occur.
 
 ## SEE ALSO
 
-[timer_set](timer_set.md),
-[timer_cancel](timer_cancel.md),
-[deadline_after](deadline_after.md),
-[handle_close](handle_close.md)
+ - [`zx_deadline_after()`]
+ - [`zx_handle_close()`]
+ - [`zx_timer_cancel()`]
+ - [`zx_timer_set()`]
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_deadline_after()`]: deadline_after.md
+[`zx_handle_close()`]: handle_close.md
+[`zx_timer_cancel()`]: timer_cancel.md
+[`zx_timer_set()`]: timer_set.md

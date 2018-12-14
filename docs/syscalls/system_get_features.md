@@ -46,5 +46,11 @@ Refer to [zircon/features.h](../../system/public/zircon/features.h) for kinds
 of features and individual feature bits.
 
 ## SEE ALSO
-[system_get_num_cpus](system_get_num_cpus.md)
-[system_get_physmem](system_get_physmem.md)
+
+ - [`zx_system_get_num_cpus()`]
+ - [`zx_system_get_physmem()`]
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_system_get_num_cpus()`]: system_get_num_cpus.md
+[`zx_system_get_physmem()`]: system_get_physmem.md

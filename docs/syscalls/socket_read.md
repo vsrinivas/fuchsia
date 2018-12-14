@@ -74,12 +74,17 @@ readable.
 
 ## SEE ALSO
 
-[socket_accept](socket_accept.md),
-[socket_create](socket_create.md),
-[socket_share](socket_share.md),
-[socket_shutdown](socket_shutdown.md),
-[socket_write](socket_write.md).
+ - [`zx_socket_accept()`]
+ - [`zx_socket_create()`]
+ - [`zx_socket_share()`]
+ - [`zx_socket_shutdown()`]
+ - [`zx_socket_write()`]
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
 [`zx_object_get_info()`]: object_get_info.md
+[`zx_socket_accept()`]: socket_accept.md
+[`zx_socket_create()`]: socket_create.md
+[`zx_socket_share()`]: socket_share.md
+[`zx_socket_shutdown()`]: socket_shutdown.md
+[`zx_socket_write()`]: socket_write.md

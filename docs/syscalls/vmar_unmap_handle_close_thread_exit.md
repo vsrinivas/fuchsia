@@ -63,13 +63,14 @@ is used for joinable threads.
 
 ## SEE ALSO
 
-[vmar_unmap](vmar_unmap.md),
-[handle_close](handle_close.md),
-[thread_exit](thread_exit.md),
-[futex_wake_handle_close_thread_exit](futex_wake_handle_close_thread_exit.md).
+ - [`zx_futex_wake_handle_close_thread_exit()`]
+ - [`zx_handle_close()`]
+ - [`zx_thread_exit()`]
+ - [`zx_vmar_unmap()`]
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
 [`zx_futex_wake_handle_close_thread_exit()`]: futex_wake_handle_close_thread_exit.md
 [`zx_handle_close()`]: handle_close.md
+[`zx_thread_exit()`]: thread_exit.md
 [`zx_vmar_unmap()`]: vmar_unmap.md

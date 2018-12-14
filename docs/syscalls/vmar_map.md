@@ -110,7 +110,14 @@ the VMO.
 
 ## SEE ALSO
 
-[vmar_allocate](vmar_allocate.md),
-[vmar_destroy](vmar_destroy.md),
-[vmar_protect](vmar_protect.md),
-[vmar_unmap](vmar_unmap.md).
+ - [`zx_vmar_allocate()`]
+ - [`zx_vmar_destroy()`]
+ - [`zx_vmar_protect()`]
+ - [`zx_vmar_unmap()`]
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_vmar_allocate()`]: vmar_allocate.md
+[`zx_vmar_destroy()`]: vmar_destroy.md
+[`zx_vmar_protect()`]: vmar_protect.md
+[`zx_vmar_unmap()`]: vmar_unmap.md

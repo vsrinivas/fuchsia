@@ -41,7 +41,7 @@ ZBI before passing that image to [`zx_system_mexec()`].
 
 ## SEE ALSO
 
-[system_mexec](system_mexec.md).
+ - [`zx_system_mexec()`]
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 

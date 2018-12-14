@@ -76,5 +76,10 @@ not be waited upon.
 
 ## SEE ALSO
 
-[object_wait_async](object_wait_async.md),
-[object_wait_many](object_wait_many.md).
+ - [`zx_object_wait_async()`]
+ - [`zx_object_wait_many()`]
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_object_wait_async()`]: object_wait_async.md
+[`zx_object_wait_many()`]: object_wait_many.md

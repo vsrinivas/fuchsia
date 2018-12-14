@@ -102,5 +102,10 @@ In a future build this error will no longer occur.
 
 ## SEE ALSO
 
-[object_wait_async](object_wait_async.md),
-[object_wait_one](object_wait_one.md).
+ - [`zx_object_wait_async()`]
+ - [`zx_object_wait_one()`]
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_object_wait_async()`]: object_wait_async.md
+[`zx_object_wait_one()`]: object_wait_one.md

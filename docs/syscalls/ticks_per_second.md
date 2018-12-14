@@ -57,7 +57,7 @@ double elapsed_seconds = (ticks_end - ticks_start) / (double)ticks_per_second;
 
 ## SEE ALSO
 
-[ticks_get](ticks_get.md)
+ - [`zx_ticks_get()`]
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 

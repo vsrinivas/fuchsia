@@ -118,12 +118,13 @@ In a future build this error will no longer occur.
 
 ## SEE ALSO
 
-[bti_create](bti_create.md),
-[pmt_unpin](pmt_unpin.md),
-[object_get_info](object_get_info.md).
+ - [`zx_bti_create()`]
+ - [`zx_object_get_info()`]
+ - [`zx_pmt_unpin()`]
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
+[`zx_bti_create()`]: bti_create.md
 [`zx_object_get_info()`]: object_get_info.md
 [`zx_pmt_unpin()`]: pmt_unpin.md
 [`zx_vmo_create_contiguous()`]: vmo_create_contiguous.md

@@ -79,11 +79,13 @@ In a future build this error will no longer occur.
 
 ## SEE ALSO
 
-[exceptions](../exceptions.md).
-[port_create](port_create.md).
-[port_wait](port_wait.md).
-[task_resume_from_exception](task_resume_from_exception.md).
+ - [exceptions](../exceptions.md)
+ - [`zx_port_create()`]
+ - [`zx_port_wait()`]
+ - [`zx_task_resume_from_exception()`]
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
 [`zx_port_create()`]: port_create.md
+[`zx_port_wait()`]: port_wait.md
+[`zx_task_resume_from_exception()`]: task_resume_from_exception.md

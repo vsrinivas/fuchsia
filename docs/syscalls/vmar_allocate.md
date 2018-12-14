@@ -102,11 +102,14 @@ to have certain addresses be more correlated.
 
 ## SEE ALSO
 
-[vmar_destroy](vmar_destroy.md),
-[vmar_map](vmar_map.md),
-[vmar_protect](vmar_protect.md),
-[vmar_unmap](vmar_unmap.md).
+ - [`zx_vmar_destroy()`]
+ - [`zx_vmar_map()`]
+ - [`zx_vmar_protect()`]
+ - [`zx_vmar_unmap()`]
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
 [`zx_vmar_destroy()`]: vmar_destroy.md
+[`zx_vmar_map()`]: vmar_map.md
+[`zx_vmar_protect()`]: vmar_protect.md
+[`zx_vmar_unmap()`]: vmar_unmap.md

@@ -87,7 +87,7 @@ is not supported by the hardware the program is currently running on.
 
 ## SEE ALSO
 
-[thread_read_state](thread_read_state.md).
+ - [`zx_thread_read_state()`]
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 

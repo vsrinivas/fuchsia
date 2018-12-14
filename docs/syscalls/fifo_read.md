@@ -72,9 +72,10 @@ to the element size of the fifo.
 
 ## SEE ALSO
 
-[fifo_create](fifo_create.md),
-[fifo_write](fifo_write.md).
+ - [`zx_fifo_create()`]
+ - [`zx_fifo_write()`]
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
 [`zx_fifo_create()`]: fifo_create.md
+[`zx_fifo_write()`]: fifo_write.md

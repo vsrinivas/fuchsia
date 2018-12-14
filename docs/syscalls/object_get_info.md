@@ -777,17 +777,21 @@ void examine_threads(zx_handle_t proc) {
 
 ## SEE ALSO
 
-[handle_close](handle_close.md),
-[handle_duplicate](handle_duplicate.md),
-[handle_replace](handle_replace.md),
-[object_get_child](object_get_child.md).
+ - [`zx_handle_close()`]
+ - [`zx_handle_duplicate()`]
+ - [`zx_handle_replace()`]
+ - [`zx_object_get_child()`]
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
 [`zx_channel_call()`]: channel_call.md
 [`zx_futex_wait()`]: futex_wait.md
+[`zx_handle_close()`]: handle_close.md
+[`zx_handle_duplicate()`]: handle_duplicate.md
+[`zx_handle_replace()`]: handle_replace.md
 [`zx_interrupt_wait()`]: interrupt_wait.md
 [`zx_nanosleep()`]: nanosleep.md
+[`zx_object_get_child()`]: object_get_child.md
 [`zx_object_wait_many()`]: object_wait_many.md
 [`zx_object_wait_one()`]: object_wait_one.md
 [`zx_port_wait()`]: port_wait.md

@@ -26,9 +26,8 @@ import sys
 
 SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
 
-STANDARD_BLOCK_HEADER = [
-    '', '<!-- Updated by update-docs-from-abigen, do not edit. -->', ''
-]
+STANDARD_COMMENT = '<!-- Updated by update-docs-from-abigen, do not edit. -->'
+STANDARD_BLOCK_HEADER = ['', STANDARD_COMMENT, '']
 
 REFERENCES_COMMENT = \
         '<!-- References updated by update-docs-from-abigen, do not edit. -->'
@@ -290,7 +289,8 @@ def find_block(lines, name):
     for i, line in enumerate(lines):
         if line == '## ' + name:
             start_index = i + 1
-        elif start_index >= 0 and line.startswith('## '):
+        elif ((start_index >= 0 and line.startswith('## ')) or
+              line == REFERENCES_COMMENT):
             end_index = i
             break
     return start_index, end_index
@@ -464,6 +464,70 @@ def check_for_orphans(syscalls, root):
     return orphan_count
 
 
+# A few concept docs that are linked in SEE ALSO sections.
+SEE_ALSO_CONCEPTS = {
+    'rights': '../rights.md',
+    'exceptions': '../exceptions.md',
+    'futex objects': '../objects/futex.md'
+}
+
+def make_see_also_block(referenced_syscalls, concepts, extra):
+    """Makes a formatted SEE ALSO block given a list of syscall names.
+    """
+    result = []
+
+    for concept in sorted(concepts):
+        path = SEE_ALSO_CONCEPTS[concept]
+        result.append(' - [' + concept + '](' + path + ')')
+
+    for sc in sorted(referenced_syscalls):
+        # References to these will be done later by update_syscall_references().
+        result.append(' - [`zx_' + sc + '()`]')
+
+    if extra:
+        extra += ['']
+
+    # No comment header here, because people are still editing this by hand,
+    # we're only canonicalizing it.
+    return [''] + extra + result + ['']
+
+
+def update_seealso(lines, syscall, all_syscall_names, warn):
+    """Rewrites 'SEE ALSO' block to canonical format.
+    """
+    start_index, end_index = find_block(lines, 'SEE ALSO')
+    if start_index == -1:
+        return
+
+    referenced = set()
+    concepts = set()
+    extra = []
+    for line in lines[start_index:end_index]:
+        if not line or line == STANDARD_COMMENT:
+            continue
+
+        handled = False
+        for concept in SEE_ALSO_CONCEPTS:
+            if '[' + concept + ']' in line:
+                concepts.add(concept)
+                handled = True
+        if handled:
+            continue
+
+        for sc in all_syscall_names:
+            old = '[' + sc + ']'
+            new = '[`zx_' + sc + '()`]'
+            if old in line or new in line:
+                referenced.add(sc)
+                break
+        else:
+            warn('unrecognized "see also", keeping before syscalls: ' + line)
+            extra.append(line)
+
+    lines[start_index:end_index] = make_see_also_block(referenced, concepts,
+                                                       extra)
+
+
 SYSCALL_RE = {}
 
 
@@ -549,6 +613,7 @@ def main():
             update_name(lines, syscall, warn)
             update_synopsis(lines, syscall, warn)
             update_rights(lines, syscall, warn)
+            update_seealso(lines, syscall, all_syscall_names, warn)
             update_syscall_references(lines, syscall, all_syscall_names, warn)
 
             with open(md, 'wb') as f:

@@ -42,7 +42,7 @@ If *property* is **ZX_PROP_JOB_KILL_ON_OOM**, *handle* must be of type **ZX_OBJ_
 
 ## SEE ALSO
 
-[object_get_property()](object_get_property.md).
+ - [`zx_object_get_property()`]
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 

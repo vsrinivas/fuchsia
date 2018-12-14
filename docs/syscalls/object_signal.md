@@ -56,6 +56,12 @@ negative error value is returned.
 
 ## SEE ALSO
 
-[event_create](event_create.md),
-[eventpair_create](eventpair_create.md).
-[object_signal_peer](object_signal_peer.md).
+ - [`zx_event_create()`]
+ - [`zx_eventpair_create()`]
+ - [`zx_object_signal_peer()`]
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_event_create()`]: event_create.md
+[`zx_eventpair_create()`]: eventpair_create.md
+[`zx_object_signal_peer()`]: object_signal_peer.md

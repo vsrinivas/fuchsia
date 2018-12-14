@@ -41,4 +41,6 @@ Currently the total size of physical memory cannot change during a run of
 the system, only at boot time.  This might change in the future.
 
 ## SEE ALSO
+
+
 [system_get_num_cpus](system_get_num_cpus.md).

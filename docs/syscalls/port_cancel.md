@@ -54,8 +54,9 @@ canceled.
 
 ## SEE ALSO
 
-[port_wait](port_wait.md).
+ - [`zx_port_wait()`]
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
 [`zx_object_wait_async()`]: object_wait_async.md
+[`zx_port_wait()`]: port_wait.md

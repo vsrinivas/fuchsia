@@ -84,9 +84,10 @@ In a future build this error will no longer occur.
 
 ## SEE ALSO
 
-[vmar_map](vmar_map.md).
+ - [`zx_vmar_map()`]
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
+[`zx_vmar_map()`]: vmar_map.md
 [`zx_vmo_read()`]: vmo_read.md
 [`zx_vmo_write()`]: vmo_write.md

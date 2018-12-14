@@ -83,11 +83,13 @@ None.
 
 ## SEE ALSO
 
-[futex objects](../objects/futex.md),
-[futex_requeue_single_owner](futex_requeue_single_owner.md),
-[futex_wait](futex_wait.md),
-[futex_wake](futex_wake.md).
+ - [futex objects](../objects/futex.md)
+ - [`zx_futex_requeue_single_owner()`]
+ - [`zx_futex_wait()`]
+ - [`zx_futex_wake()`]
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
 [`zx_futex_requeue_single_owner()`]: futex_requeue_single_owner.md
+[`zx_futex_wait()`]: futex_wait.md
+[`zx_futex_wake()`]: futex_wake.md

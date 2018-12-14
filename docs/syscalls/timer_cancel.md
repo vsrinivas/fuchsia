@@ -49,9 +49,10 @@ Calling this function before [`zx_timer_set()`] has no effect.
 
 ## SEE ALSO
 
-[timer_create](timer_create.md),
-[timer_set](timer_set.md)
+ - [`zx_timer_create()`]
+ - [`zx_timer_set()`]
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
+[`zx_timer_create()`]: timer_create.md
 [`zx_timer_set()`]: timer_set.md

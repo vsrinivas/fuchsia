@@ -68,11 +68,12 @@ In the event of failure, a negative error value is returned.
 
 ## SEE ALSO
 
-[timer_create](timer_create.md),
-[timer_cancel](timer_cancel.md),
-[deadline_after](deadline_after.md)
+ - [`zx_deadline_after()`]
+ - [`zx_timer_cancel()`]
+ - [`zx_timer_create()`]
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
 [`zx_deadline_after()`]: deadline_after.md
 [`zx_timer_cancel()`]: timer_cancel.md
+[`zx_timer_create()`]: timer_create.md

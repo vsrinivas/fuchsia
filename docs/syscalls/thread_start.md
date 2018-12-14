@@ -74,18 +74,24 @@ is part of is no longer alive.
 
 ## SEE ALSO
 
-[handle_close](handle_close.md),
-[handle_duplicate](handle_duplicate.md),
-[object_wait_async](object_wait_async.md),
-[object_wait_one](object_wait_one.md),
-[object_wait_many](object_wait_many.md),
-[thread_create](thread_create.md),
-[thread_exit](thread_exit.md),
-[futex_wake_handle_close_thread_exit](futex_wake_handle_close_thread_exit.md),
-[vmar_unmap_handle_close_thread_exit](vmar_unmap_handle_close_thread_exit.md).
+ - [`zx_futex_wake_handle_close_thread_exit()`]
+ - [`zx_handle_close()`]
+ - [`zx_handle_duplicate()`]
+ - [`zx_object_wait_async()`]
+ - [`zx_object_wait_many()`]
+ - [`zx_object_wait_one()`]
+ - [`zx_thread_create()`]
+ - [`zx_thread_exit()`]
+ - [`zx_vmar_unmap_handle_close_thread_exit()`]
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
 [`zx_futex_wake_handle_close_thread_exit()`]: futex_wake_handle_close_thread_exit.md
+[`zx_handle_close()`]: handle_close.md
+[`zx_handle_duplicate()`]: handle_duplicate.md
+[`zx_object_wait_async()`]: object_wait_async.md
+[`zx_object_wait_many()`]: object_wait_many.md
+[`zx_object_wait_one()`]: object_wait_one.md
+[`zx_thread_create()`]: thread_create.md
 [`zx_thread_exit()`]: thread_exit.md
 [`zx_vmar_unmap_handle_close_thread_exit()`]: vmar_unmap_handle_close_thread_exit.md

@@ -49,11 +49,14 @@ present multiple times.
 
 ## SEE ALSO
 
-[handle_close](handle_close.md),
-[handle_duplicate](handle_duplicate.md),
-[handle_replace](handle_replace.md).
+ - [`zx_handle_close()`]
+ - [`zx_handle_duplicate()`]
+ - [`zx_handle_replace()`]
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
+[`zx_handle_close()`]: handle_close.md
+[`zx_handle_duplicate()`]: handle_duplicate.md
+[`zx_handle_replace()`]: handle_replace.md
 [`zx_object_wait_many()`]: object_wait_many.md
 [`zx_object_wait_one()`]: object_wait_one.md

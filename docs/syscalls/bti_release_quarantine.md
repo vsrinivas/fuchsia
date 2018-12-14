@@ -44,5 +44,10 @@ In the event of failure, a negative error value is returned.
 
 ## SEE ALSO
 
-[bti_pin](bti_pin.md),
-[pmt_unpin](pmt_unpin.md).
+ - [`zx_bti_pin()`]
+ - [`zx_pmt_unpin()`]
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_bti_pin()`]: bti_pin.md
+[`zx_pmt_unpin()`]: pmt_unpin.md

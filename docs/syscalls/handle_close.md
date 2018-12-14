@@ -43,11 +43,14 @@ None.
 
 ## SEE ALSO
 
-[handle_close_many](handle_close_many.md),
-[handle_duplicate](handle_duplicate.md),
-[handle_replace](handle_replace.md).
+ - [`zx_handle_close_many()`]
+ - [`zx_handle_duplicate()`]
+ - [`zx_handle_replace()`]
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
+[`zx_handle_close_many()`]: handle_close_many.md
+[`zx_handle_duplicate()`]: handle_duplicate.md
+[`zx_handle_replace()`]: handle_replace.md
 [`zx_object_wait_many()`]: object_wait_many.md
 [`zx_object_wait_one()`]: object_wait_one.md

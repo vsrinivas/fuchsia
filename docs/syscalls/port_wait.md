@@ -117,13 +117,14 @@ not be waited upon.
 
 ## SEE ALSO
 
-[port_create](port_create.md).
-[port_queue](port_queue.md).
-[object_wait_async](object_wait_async.md).
+ - [`zx_object_wait_async()`]
+ - [`zx_port_create()`]
+ - [`zx_port_queue()`]
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
 [`zx_object_wait_async()`]: object_wait_async.md
 [`zx_object_wait_many()`]: object_wait_many.md
 [`zx_object_wait_one()`]: object_wait_one.md
+[`zx_port_create()`]: port_create.md
 [`zx_port_queue()`]: port_queue.md

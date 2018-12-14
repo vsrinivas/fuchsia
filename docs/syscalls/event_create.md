@@ -46,15 +46,22 @@ In a future build this error will no longer occur.
 
 ## SEE ALSO
 
-[eventpair_create](eventpair_create.md),
-[handle_close](handle_close.md),
-[handle_duplicate](handle_duplicate.md),
-[object_wait_async](object_wait_async.md),
-[object_wait_one](object_wait_one.md),
-[object_wait_many](object_wait_many.md),
-[handle_replace](handle_replace.md),
-[object_signal](object_signal.md).
+ - [`zx_eventpair_create()`]
+ - [`zx_handle_close()`]
+ - [`zx_handle_duplicate()`]
+ - [`zx_handle_replace()`]
+ - [`zx_object_signal()`]
+ - [`zx_object_wait_async()`]
+ - [`zx_object_wait_many()`]
+ - [`zx_object_wait_one()`]
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
+[`zx_eventpair_create()`]: eventpair_create.md
+[`zx_handle_close()`]: handle_close.md
+[`zx_handle_duplicate()`]: handle_duplicate.md
+[`zx_handle_replace()`]: handle_replace.md
 [`zx_object_signal()`]: object_signal.md
+[`zx_object_wait_async()`]: object_wait_async.md
+[`zx_object_wait_many()`]: object_wait_many.md
+[`zx_object_wait_one()`]: object_wait_one.md

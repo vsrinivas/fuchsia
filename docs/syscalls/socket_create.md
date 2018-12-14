@@ -61,13 +61,16 @@ The maximum capacity is not currently set-able.
 
 ## SEE ALSO
 
-[socket_accept](socket_accept.md),
-[socket_read](socket_read.md),
-[socket_share](socket_share.md),
-[socket_shutdown](socket_shutdown.md),
-[socket_write](socket_write.md).
+ - [`zx_socket_accept()`]
+ - [`zx_socket_read()`]
+ - [`zx_socket_share()`]
+ - [`zx_socket_shutdown()`]
+ - [`zx_socket_write()`]
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
 [`zx_socket_accept()`]: socket_accept.md
+[`zx_socket_read()`]: socket_read.md
 [`zx_socket_share()`]: socket_share.md
+[`zx_socket_shutdown()`]: socket_shutdown.md
+[`zx_socket_write()`]: socket_write.md

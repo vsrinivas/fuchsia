@@ -71,7 +71,14 @@ In a future build this error will no longer occur.
 
 ## SEE ALSO
 
-[handle_close](handle_close.md),
-[handle_duplicate](handle_duplicate.md),
-[handle_replace](handle_replace.md),
-[object_get_info](object_get_info.md).
+ - [`zx_handle_close()`]
+ - [`zx_handle_duplicate()`]
+ - [`zx_handle_replace()`]
+ - [`zx_object_get_info()`]
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_handle_close()`]: handle_close.md
+[`zx_handle_duplicate()`]: handle_duplicate.md
+[`zx_handle_replace()`]: handle_replace.md
+[`zx_object_get_info()`]: object_get_info.md

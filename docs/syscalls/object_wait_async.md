@@ -89,13 +89,16 @@ See [signals](../signals.md) for more information about signals and their termin
 
 ## SEE ALSO
 
-[object_wait_many](object_wait_many.md),
-[object_wait_one](object_wait_one.md),
-[port_cancel](port_cancel.md),
-[port_queue](port_queue.md),
-[port_wait](port_wait.md).
+ - [`zx_object_wait_many()`]
+ - [`zx_object_wait_one()`]
+ - [`zx_port_cancel()`]
+ - [`zx_port_queue()`]
+ - [`zx_port_wait()`]
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
+[`zx_object_wait_many()`]: object_wait_many.md
+[`zx_object_wait_one()`]: object_wait_one.md
 [`zx_port_cancel()`]: port_cancel.md
+[`zx_port_queue()`]: port_queue.md
 [`zx_port_wait()`]: port_wait.md

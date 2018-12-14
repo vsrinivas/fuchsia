@@ -73,16 +73,20 @@ lacks **ZX_RIGHT_WRITE**
 
 ## SEE ALSO
 
-[interrupt_ack](interrupt_ack.md),
-[interrupt_create](interrupt_create.md),
-[interrupt_destroy](interrupt_destroy.md),
-[interrupt_trigger](interrupt_trigger.md),
-[interrupt_wait](interrupt_wait.md),
-[port_wait](port_wait.md),
-[handle_close](handle_close.md).
+ - [`zx_handle_close()`]
+ - [`zx_interrupt_ack()`]
+ - [`zx_interrupt_create()`]
+ - [`zx_interrupt_destroy()`]
+ - [`zx_interrupt_trigger()`]
+ - [`zx_interrupt_wait()`]
+ - [`zx_port_wait()`]
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
+[`zx_handle_close()`]: handle_close.md
 [`zx_interrupt_ack()`]: interrupt_ack.md
+[`zx_interrupt_create()`]: interrupt_create.md
 [`zx_interrupt_destroy()`]: interrupt_destroy.md
+[`zx_interrupt_trigger()`]: interrupt_trigger.md
 [`zx_interrupt_wait()`]: interrupt_wait.md
+[`zx_port_wait()`]: port_wait.md

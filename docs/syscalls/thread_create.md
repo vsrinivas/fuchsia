@@ -67,15 +67,20 @@ In a future build this error will no longer occur.
 
 ## SEE ALSO
 
-[handle_close](handle_close.md),
-[handle_duplicate](handle_duplicate.md),
-[object_wait_async](object_wait_async.md),
-[object_wait_one](object_wait_one.md),
-[object_wait_many](object_wait_many.md),
-[thread_exit](thread_exit.md),
-[thread_start](thread_start.md).
+ - [`zx_handle_close()`]
+ - [`zx_handle_duplicate()`]
+ - [`zx_object_wait_async()`]
+ - [`zx_object_wait_many()`]
+ - [`zx_object_wait_one()`]
+ - [`zx_thread_exit()`]
+ - [`zx_thread_start()`]
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
+[`zx_handle_close()`]: handle_close.md
+[`zx_handle_duplicate()`]: handle_duplicate.md
+[`zx_object_wait_async()`]: object_wait_async.md
+[`zx_object_wait_many()`]: object_wait_many.md
+[`zx_object_wait_one()`]: object_wait_one.md
 [`zx_thread_exit()`]: thread_exit.md
 [`zx_thread_start()`]: thread_start.md

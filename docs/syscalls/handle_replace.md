@@ -53,6 +53,12 @@ In a future build this error will no longer occur.
 
 ## SEE ALSO
 
-[handle_close](handle_close.md),
-[handle_close_many](handle_close_many.md),
-[handle_duplicate](handle_duplicate.md).
+ - [`zx_handle_close()`]
+ - [`zx_handle_close_many()`]
+ - [`zx_handle_duplicate()`]
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_handle_close()`]: handle_close.md
+[`zx_handle_close_many()`]: handle_close_many.md
+[`zx_handle_duplicate()`]: handle_duplicate.md

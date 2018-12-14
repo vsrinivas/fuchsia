@@ -64,11 +64,14 @@ bound VCPUs, or *options* is non-zero.
 
 ## SEE ALSO
 
-[guest_create](guest_create.md),
-[interrupt_create](interrupt_create.md),
-[vcpu_create](vcpu_create.md).
+ - [`zx_guest_create()`]
+ - [`zx_interrupt_create()`]
+ - [`zx_vcpu_create()`]
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
+[`zx_guest_create()`]: guest_create.md
+[`zx_interrupt_create()`]: interrupt_create.md
 [`zx_interrupt_destroy()`]: interrupt_destroy.md
 [`zx_interrupt_wait()`]: interrupt_wait.md
+[`zx_vcpu_create()`]: vcpu_create.md
