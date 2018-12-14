@@ -14,7 +14,6 @@
 #include <sys/socket.h>
 #include <fstream>
 #include <string>
-#include <string_view>
 #include <unordered_set>
 
 #include <third_party/zlib/contrib/iostream3/zfstream.h>
@@ -30,6 +29,7 @@
 #include "lib/fxl/strings/join_strings.h"
 #include "lib/fxl/strings/split_string.h"
 #include "lib/fxl/strings/string_number_conversions.h"
+#include "lib/fxl/strings/string_view.h"
 #include "lib/fxl/strings/trim.h"
 
 namespace tracing {
@@ -63,8 +63,8 @@ const struct {
     {"streaming", fuchsia::tracing::BufferingMode::STREAMING},
 };
 
-static bool BeginsWith(std::string_view str, std::string_view prefix,
-                       std::string_view* arg) {
+static bool BeginsWith(fxl::StringView str, fxl::StringView prefix,
+                       fxl::StringView* arg) {
   size_t prefix_size = prefix.size();
   if (str.size() < prefix_size)
     return false;
@@ -129,7 +129,7 @@ bool LookupBufferingMode(const std::string& mode_name,
   return false;
 }
 
-bool ParseBoolean(const std::string_view& arg, bool* out_value) {
+bool ParseBoolean(const fxl::StringView& arg, bool* out_value) {
   if (arg == "" || arg == "true") {
     *out_value = true;
   } else if (arg == "false") {
@@ -412,7 +412,7 @@ Command::Info Record::Describe() {
 Record::Record(component::StartupContext* context)
     : CommandWithTraceController(context), weak_ptr_factory_(this) {}
 
-static bool TcpAddrFromString(std::string_view address, std::string_view port,
+static bool TcpAddrFromString(fxl::StringView address, fxl::StringView port,
                               addrinfo* out_addr) {
   struct addrinfo hints;
   memset(&hints, 0, sizeof(hints));
@@ -422,7 +422,7 @@ static bool TcpAddrFromString(std::string_view address, std::string_view port,
   hints.ai_flags = AI_NUMERICHOST | AI_NUMERICSERV;
 
   addrinfo* addrinfos;
-  int errcode = getaddrinfo(std::string(address).c_str(), std::string(port).c_str(),
+  int errcode = getaddrinfo(address.ToString().c_str(), port.ToString().c_str(),
                             &hints, &addrinfos);
   if (errcode != 0) {
     FXL_LOG(ERROR) << "Failed to getaddrinfo for address " << address << ":"
@@ -441,7 +441,7 @@ static bool TcpAddrFromString(std::string_view address, std::string_view port,
 }
 
 static std::unique_ptr<std::ostream> ConnectToTraceSaver(
-    std::string_view address) {
+    fxl::StringView address) {
   FXL_LOG(INFO) << "Connecting to " << address;
 
   size_t colon = address.rfind(':');
@@ -450,8 +450,8 @@ static std::unique_ptr<std::ostream> ConnectToTraceSaver(
     return nullptr;
   }
 
-  std::string_view ip_addr_str(address.substr(0, colon));
-  std::string_view port_str(address.substr(colon + 1));
+  fxl::StringView ip_addr_str(address.substr(0, colon));
+  fxl::StringView port_str(address.substr(colon + 1));
 
   // [::1] -> ::1
   ip_addr_str = fxl::TrimString(ip_addr_str, "[]");
@@ -481,7 +481,7 @@ static std::unique_ptr<std::ostream> ConnectToTraceSaver(
 static std::unique_ptr<std::ostream> OpenOutputStream(
     const std::string& output_file_name, bool compress) {
   std::unique_ptr<std::ostream> out_stream;
-  std::string_view address;
+  fxl::StringView address;
   if (BeginsWith(output_file_name, kTcpPrefix, &address)) {
     out_stream = ConnectToTraceSaver(address);
   } else if (compress) {

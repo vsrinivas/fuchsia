@@ -10,7 +10,7 @@ namespace fxl {
 namespace {
 
 TEST(StringUtil, TrimString) {
-  std::string_view sw = " \tHello World\t ";
+  StringView sw = " \tHello World\t ";
 
   EXPECT_EQ(sw, TrimString(sw, ""));
   EXPECT_EQ(sw, TrimString(sw, "abc"));

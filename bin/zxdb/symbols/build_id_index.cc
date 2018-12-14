@@ -72,17 +72,17 @@ int BuildIDIndex::ParseIDs(const std::string& input, IDMap* output) {
     if (newline == std::string::npos)
       newline = input.size();
 
-    std::string_view line(&input[line_begin], newline - line_begin);
+    fxl::StringView line(&input[line_begin], newline - line_begin);
     if (!line.empty()) {
       // Format is <buildid> <space> <filename>
       size_t first_space = line.find(' ');
       if (first_space != std::string::npos && first_space > 0 &&
           first_space + 1 < line.size()) {
         // There is a space and it separates two nonempty things.
-        std::string_view to_trim(" \t\r\n");
-        std::string_view build_id =
+        fxl::StringView to_trim(" \t\r\n");
+        fxl::StringView build_id =
             fxl::TrimString(line.substr(0, first_space), to_trim);
-        std::string_view path = fxl::TrimString(
+        fxl::StringView path = fxl::TrimString(
             line.substr(first_space + 1, line.size() - first_space - 1),
             to_trim);
 

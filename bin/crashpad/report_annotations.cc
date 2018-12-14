@@ -56,7 +56,7 @@ std::string GetVersion() {
                    << "'.";
     return "unknown";
   }
-  return std::string(fxl::TrimString(build_timestamp, "\r\n"));
+  return fxl::TrimString(build_timestamp, "\r\n").ToString();
 }
 
 }  // namespace
