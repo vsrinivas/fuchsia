@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "test_registry.h"
+#include "test-registry.h"
 
 #include <memory>
 
@@ -23,22 +23,6 @@ constexpr bool kPassSetUp = false;
 constexpr bool kFailsSetUp = true;
 constexpr bool kPassTestBody = false;
 constexpr bool kFailsTestBody = true;
-
-class TestDriverStub : public internal::TestDriver {
-public:
-    ~TestDriverStub() final{};
-
-    void Skip() final {}
-
-    bool Continue() const final { return should_continue_; }
-
-    void NotifyFail() { should_continue_ = false; }
-
-    TestStatus Status() const final { return TestStatus::kFailed; }
-
-private:
-    bool should_continue_ = true;
-};
 
 template <bool FailOnSetUp, bool FailOnTestBody>
 class FakeTest : public zxtest::Test {

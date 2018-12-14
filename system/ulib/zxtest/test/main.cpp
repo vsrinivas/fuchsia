@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "test_registry.h"
+#include "test-registry.h"
 
 int main(int argc, char** argv) {
-    zxtest::test::TestRun();
-    zxtest::test::TestRunFailure();
-    zxtest::test::TestSetUpFailure();
+    // TODO(gevalentino): Make it print some meaningful output.
+    for (auto& test : zxtest::test::kRegisteredTests) {
+        test.test_fn();
+    }
     return 0;
 }
