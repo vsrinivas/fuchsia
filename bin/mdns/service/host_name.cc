@@ -23,16 +23,15 @@ class NetstackClient {
  public:
   static void GetInterfaces(
       fuchsia::netstack::Netstack::GetInterfacesCallback callback) {
-    NetstackClient* client = new NetstackClient();
-    client->netstack_->GetInterfaces(
-        [client, callback = std::move(callback)](
+    auto client = std::make_unique<NetstackClient>();
+    auto raw_client = client.get();
+    raw_client->netstack_->GetInterfaces(
+        [client = std::move(client), callback = std::move(callback)](
             fidl::VectorPtr<fuchsia::netstack::NetInterface> interfaces) {
           callback(std::move(interfaces));
-          delete client;
         });
   }
 
- private:
   NetstackClient()
       : context_(component::StartupContext::CreateFromStartupInfo()) {
     FXL_DCHECK(context_);
@@ -41,6 +40,7 @@ class NetstackClient {
     FXL_DCHECK(netstack_);
   }
 
+ private:
   std::unique_ptr<component::StartupContext> context_;
   fuchsia::netstack::NetstackPtr netstack_;
 };

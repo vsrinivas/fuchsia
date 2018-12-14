@@ -29,17 +29,11 @@ namespace mdns {
 // static
 std::unique_ptr<MdnsInterfaceTransceiver> MdnsInterfaceTransceiver::Create(
     inet::IpAddress address, const std::string& name, uint32_t index) {
-  MdnsInterfaceTransceiver* interface_transceiver;
-
   if (address.is_v4()) {
-    interface_transceiver =
-        new MdnsInterfaceTransceiverV4(address, name, index);
+    return std::make_unique<MdnsInterfaceTransceiverV4>(address, name, index);
   } else {
-    interface_transceiver =
-        new MdnsInterfaceTransceiverV6(address, name, index);
+    return std::make_unique<MdnsInterfaceTransceiverV6>(address, name, index);
   }
-
-  return std::unique_ptr<MdnsInterfaceTransceiver>(interface_transceiver);
 }
 
 MdnsInterfaceTransceiver::MdnsInterfaceTransceiver(inet::IpAddress address,

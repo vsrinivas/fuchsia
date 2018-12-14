@@ -108,8 +108,8 @@ void MdnsServiceImpl::PublishServiceInstance(
     return;
   }
 
-  auto publisher = std::unique_ptr<SimplePublisher>(new SimplePublisher(
-      inet::IpPort::From_uint16_t(port), std::move(text), callback.share()));
+  auto publisher = std::make_unique<SimplePublisher>(
+      inet::IpPort::From_uint16_t(port), std::move(text), callback.share());
 
   if (!mdns_.PublishServiceInstance(service_name, instance_name,
                                     publisher.get())) {
@@ -168,10 +168,10 @@ void MdnsServiceImpl::AddResponder(
   std::string instance_full_name =
       MdnsNames::LocalInstanceFullName(instance_name, service_name);
 
-  auto publisher = std::unique_ptr<ResponderPublisher>(new ResponderPublisher(
+  auto publisher = std::make_unique<ResponderPublisher>(
       std::move(responder_ptr), [this, instance_full_name]() {
         publishers_by_instance_full_name_.erase(instance_full_name);
-      }));
+      });
 
   if (!mdns_.PublishServiceInstance(service_name, instance_name,
                                     publisher.get())) {

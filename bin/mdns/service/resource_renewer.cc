@@ -13,24 +13,23 @@ ResourceRenewer::ResourceRenewer(MdnsAgent::Host* host) : MdnsAgent(host) {}
 
 ResourceRenewer::~ResourceRenewer() {
   FXL_DCHECK(entries_.size() == schedule_.size());
-  for (Entry* entry : entries_) {
-    delete entry;
-  }
 }
 
 void ResourceRenewer::Renew(const DnsResource& resource) {
   FXL_DCHECK(resource.time_to_live_ != 0);
 
-  Entry key(resource.name_.dotted_string_, resource.type_);
-  auto iter = entries_.find(&key);
+  auto key =
+      std::make_unique<Entry>(resource.name_.dotted_string_, resource.type_);
+  auto iter = entries_.find(key);
 
   if (iter == entries_.end()) {
-    Entry* entry = new Entry(resource.name_.dotted_string_, resource.type_);
+    auto entry =
+        std::make_unique<Entry>(resource.name_.dotted_string_, resource.type_);
     entry->SetFirstQuery(resource.time_to_live_);
 
-    Schedule(entry);
+    Schedule(entry.get());
 
-    if (entry == schedule_.top()) {
+    if (entry.get() == schedule_.top()) {
       PostTaskForTime([this]() { SendRenewals(); }, entry->schedule_time_);
     }
 
@@ -45,8 +44,9 @@ void ResourceRenewer::ReceiveResource(const DnsResource& resource,
                                       MdnsResourceSection section) {
   FXL_DCHECK(section != MdnsResourceSection::kExpired);
 
-  Entry key(resource.name_.dotted_string_, resource.type_);
-  auto iter = entries_.find(&key);
+  auto key =
+      std::make_unique<Entry>(resource.name_.dotted_string_, resource.type_);
+  auto iter = entries_.find(key);
   if (iter != entries_.end()) {
     (*iter)->delete_ = true;
   }
@@ -65,8 +65,7 @@ void ResourceRenewer::SendRenewals() {
     schedule_.pop();
 
     if (entry->delete_) {
-      entries_.erase(entry);
-      delete entry;
+      EraseEntry(entry);
     } else if (entry->schedule_time_ != entry->time_) {
       // Postponed entry.
       Schedule(entry);
@@ -75,9 +74,8 @@ void ResourceRenewer::SendRenewals() {
       std::shared_ptr<DnsResource> resource =
           std::make_shared<DnsResource>(entry->name_, entry->type_);
       resource->time_to_live_ = 0;
-      entries_.erase(entry);
       SendResource(resource, MdnsResourceSection::kExpired);
-      delete entry;
+      EraseEntry(entry);
     } else {
       // Need to query.
       SendQuestion(std::make_shared<DnsQuestion>(entry->name_, entry->type_));
@@ -95,6 +93,14 @@ void ResourceRenewer::SendRenewals() {
 void ResourceRenewer::Schedule(Entry* entry) {
   entry->schedule_time_ = entry->time_;
   schedule_.push(entry);
+}
+
+void ResourceRenewer::EraseEntry(Entry* entry) {
+  // We need a unique_ptr to use as a key. We don't own |entry| here, so we
+  // have to be careful to release the unique_ptr later.
+  auto unique_entry = std::unique_ptr<Entry>(entry);
+  entries_.erase(unique_entry);
+  unique_entry.release();
 }
 
 void ResourceRenewer::Entry::SetFirstQuery(uint32_t time_to_live) {

@@ -89,17 +89,18 @@ class ResourceRenewer : public MdnsAgent {
   };
 
   struct Hash {
-    size_t operator()(const Entry* m) {
-      FXL_DCHECK(m != nullptr);
+    size_t operator()(const std::unique_ptr<Entry>& m) {
+      FXL_DCHECK(m);
       return std::hash<std::string>{}(m->name_) ^
              std::hash<DnsType>{}(m->type_);
     }
   };
 
   struct Equals {
-    size_t operator()(const Entry* a, const Entry* b) {
-      FXL_DCHECK(a != nullptr);
-      FXL_DCHECK(b != nullptr);
+    size_t operator()(const std::unique_ptr<Entry>& a,
+                      const std::unique_ptr<Entry>& b) {
+      FXL_DCHECK(a);
+      FXL_DCHECK(b);
       return a->name_ == b->name_ && a->type_ == b->type_;
     }
   };
@@ -118,7 +119,9 @@ class ResourceRenewer : public MdnsAgent {
 
   void Schedule(Entry* entry);
 
-  std::unordered_set<Entry*, Hash, Equals> entries_;
+  void EraseEntry(Entry* entry);
+
+  std::unordered_set<std::unique_ptr<Entry>, Hash, Equals> entries_;
   std::priority_queue<Entry*, std::vector<Entry*>, LaterScheduleTime> schedule_;
 };
 

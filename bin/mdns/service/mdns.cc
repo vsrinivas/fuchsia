@@ -447,10 +447,10 @@ void Mdns::PostTask() {
 // static
 std::unique_ptr<Mdns::Publication> Mdns::Publication::Create(
     inet::IpPort port, const std::vector<std::string>& text) {
-  auto publication = new Publication();
+  auto publication = std::make_unique<Publication>();
   publication->port_ = port;
   publication->text_ = text;
-  return std::unique_ptr<Mdns::Publication>(publication);
+  return publication;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

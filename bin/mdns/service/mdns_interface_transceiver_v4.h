@@ -12,6 +12,9 @@ namespace mdns {
 // Provides V4-specific behavior for abstract MdnsInterfaceTransceiver.
 class MdnsInterfaceTransceiverV4 : public MdnsInterfaceTransceiver {
  public:
+  MdnsInterfaceTransceiverV4(inet::IpAddress address, const std::string& name,
+                             uint32_t index);
+
   virtual ~MdnsInterfaceTransceiverV4() override;
 
  protected:
@@ -24,12 +27,6 @@ class MdnsInterfaceTransceiverV4 : public MdnsInterfaceTransceiver {
   int Bind() override;
   int SendTo(const void* buffer, size_t size,
              const inet::SocketAddress& address) override;
-
- private:
-  MdnsInterfaceTransceiverV4(inet::IpAddress address, const std::string& name,
-                             uint32_t index);
-
-  friend class MdnsInterfaceTransceiver;  // For constructor.
 };
 
 }  // namespace mdns
