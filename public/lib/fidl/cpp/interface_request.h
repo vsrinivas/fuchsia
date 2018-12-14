@@ -5,6 +5,7 @@
 #ifndef LIB_FIDL_CPP_INTERFACE_REQUEST_H_
 #define LIB_FIDL_CPP_INTERFACE_REQUEST_H_
 
+#include <lib/fidl/epitaph.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 
@@ -105,6 +106,18 @@ class InterfaceRequest {
   static void Decode(Decoder* decoder, InterfaceRequest<Interface>* value,
                      size_t offset) {
     decoder->DecodeHandle(&value->channel_, offset);
+  }
+
+  // Sends an Epitaph over the bound channel corresponding to the error passed
+  // as a parameter, closes the channel, and unbinds it.  An Epitaph is the last
+  // message sent over a channel before a close operation; for the purposes of
+  // this function, it can be thought of as a return code.  See the FIDL
+  // language spec for more information about Epitaphs.
+  //
+  // The return value can be any of the return values of zx_channel_write.
+  zx_status_t Close(zx_status_t epitaph_value) {
+    return is_valid() ? fidl_epitaph_write(TakeChannel().get(), epitaph_value)
+                      : ZX_ERR_BAD_STATE;
   }
 
  private:

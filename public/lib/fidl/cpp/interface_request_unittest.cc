@@ -9,6 +9,7 @@
 #include <utility>
 
 #include "gtest/gtest.h"
+#include "lib/fidl/cpp/test/async_loop_for_test.h"
 #include "lib/fidl/cpp/test/frobinator_impl.h"
 
 namespace fidl {
@@ -46,6 +47,30 @@ TEST(InterfaceRequest, Control) {
   EXPECT_FALSE(request.is_valid());
 
   EXPECT_EQ(ZX_ERR_PEER_CLOSED, h1.write(0, "a", 1, nullptr, 0));
+}
+
+TEST(InterfaceRequest, Close) {
+  fidl::test::AsyncLoopForTest loop;
+
+  fidl::test::frobinator::FrobinatorPtr ptr;
+  zx_status_t error = 0;
+  ptr.set_error_handler(
+      [&error](zx_status_t remote_error) { error = remote_error; });
+
+  InterfaceRequest<fidl::test::frobinator::Frobinator> request =
+      ptr.NewRequest();
+  EXPECT_TRUE(request.is_valid());
+
+  constexpr zx_status_t kSysError = 0xabDECADE;
+
+  EXPECT_EQ(ZX_OK, request.Close(kSysError));
+  EXPECT_FALSE(request.is_valid());
+
+  // Should only be able to call Close successfully once
+  EXPECT_EQ(ZX_ERR_BAD_STATE, request.Close(ZX_ERR_BAD_STATE));
+
+  loop.RunUntilIdle();
+  EXPECT_EQ(kSysError, error);
 }
 
 }  // namespace
