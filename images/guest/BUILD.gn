@@ -10,9 +10,8 @@ import("//build/package.gni")
 guest_packages = [
   get_label_info("//build/images:shell-commands", "label_no_toolchain"),
   get_label_info("//garnet/bin/appmgr", "label_no_toolchain"),
-  get_label_info(
-      "//garnet/bin/guest/integration_tests:guest_integration_tests_utils",
-      "label_no_toolchain"),
+  get_label_info("//garnet/bin/guest/integration:guest_integration_tests_utils",
+                 "label_no_toolchain"),
   get_label_info("//garnet/bin/guest/pkg/zircon_guest:services_config",
                  "label_no_toolchain"),
   get_label_info("//garnet/bin/run", "label_no_toolchain"),
