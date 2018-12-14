@@ -1033,7 +1033,8 @@ static void demo_prepare_depth(struct demo *demo) {
         .samples = VK_SAMPLE_COUNT_1_BIT,
         .tiling = VK_IMAGE_TILING_OPTIMAL,
         .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-        .flags = 0,
+        .flags = demo->protected_output ? VK_IMAGE_CREATE_PROTECTED_BIT
+                                        : static_cast<VkImageCreateFlagBits>(0),
     };
 
     VkImageViewCreateInfo view = {
