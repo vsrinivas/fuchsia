@@ -123,6 +123,17 @@ pub struct BufferPool {
     tx_in_flight: BufferMap,
 }
 
+// The only field within a BufferPool which is not already Send is the
+// `base: *mut u8` field. We use that field as the base from which to calculate
+// offsets which are obtained through thread-safe mechanisms (accessing the
+// other fields of the struct, all of which are Send). Thus, there is no race
+// condition. Further, since we never give out overlapping memory, it is safe
+// for multiple different threads to hold onto memory vended by a BufferPool.
+// Additionally, since the VMO is expected to be shared with another process
+// anyways, we already expect it to be subject to unsynchronized manipulation.
+// TODO(tkilbourn): write more tests (and/or proofs) that we don't give out overlapping memory
+unsafe impl Send for BufferPool{}
+
 impl BufferPool {
     /// Create a new `BufferPool` out of the given VMO, with each buffer having length
     /// `buffer_size`.
