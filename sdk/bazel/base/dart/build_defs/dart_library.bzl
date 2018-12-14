@@ -22,8 +22,7 @@ dart_library = rule(
             # TODO(pylaligand): set a default value to "lib".
             doc = "The directory containing the library sources",
             mandatory = True,
-            allow_files = True,
-            single_file = True,
+            allow_single_file = True,
         ),
         "deps": attr.label_list(
             doc = "The list of libraries this library depends on",

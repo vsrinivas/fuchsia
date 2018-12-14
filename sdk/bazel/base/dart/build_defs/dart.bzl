@@ -17,8 +17,7 @@ COMMON_COMPILE_KERNEL_ACTION_ATTRS = {
     "main": attr.label(
         doc = "The main script file",
         mandatory = True,
-        allow_files = True,
-        single_file = True,
+        allow_single_file = True,
     ),
     "srcs": attr.label_list(
         doc = "Additional source files",
@@ -49,7 +48,7 @@ COMMON_COMPILE_KERNEL_ACTION_ATTRS = {
 def compile_kernel_action(
         context,
         package_name,
-        component_name,
+        dest_dir,
         dart_exec,
         kernel_compiler,
         sdk_root,
@@ -65,7 +64,7 @@ def compile_kernel_action(
     Args:
         context: The rule context.
         package_name: The Dart package name.
-        component_name: The name of this component.
+        dest_dir: The directory under data/ where to install compiled files.
         dart_exec: The Dart executable `File`.
         kernel_compiler: The kernel compiler snapshot `File`.
         sdk_root: The Dart SDK root `File` (Dart or Flutter's platform libs).
@@ -97,7 +96,7 @@ def compile_kernel_action(
     )
 
     # 2. Declare *.dilp files for all dependencies.
-    data_root = "data/%s/" % component_name
+    data_root = "data/%s/" % dest_dir
     mappings = {}
     dart_ctxs = collect_dart_context(dart_ctx).values()
     for dc in dart_ctxs:
@@ -158,8 +157,8 @@ def compile_kernel_action(
         executable = kernel_script,
         arguments = [
             kernel_compiler.path,
-            "--component-name",
-            component_name,
+            "--data-dir",
+            dest_dir,
             "--target",
             "dart_runner",
             "--sdk-root",

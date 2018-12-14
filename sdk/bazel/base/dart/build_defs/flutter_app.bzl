@@ -22,7 +22,7 @@ def _flutter_app_impl(context):
     mappings = compile_kernel_action(
         context = context,
         package_name = context.attr.package_name,
-        component_name = component_name,
+        dest_dir = component_name,
         dart_exec = context.executable._dart,
         kernel_compiler = context.files._kernel_compiler[0],
         sdk_root = context.files._platform_lib[0],
@@ -73,8 +73,7 @@ flutter_app = rule(
         "component_manifest": attr.label(
             doc = "The flutter component's cmx",
             mandatory = True,
-            allow_files = True,
-            single_file = True,
+            allow_single_file = True,
         ),
         "_platform_lib": attr.label(
             default = Label("//tools/dart_prebuilts/flutter_runner:platform_strong.dill"),
