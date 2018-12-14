@@ -1,0 +1,29 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+executable("bin") {
+  output_name = "system_monitor_harvester"
+
+  sources = [
+    "harvester.cc",
+  ]
+
+  deps = [
+  ]
+}
+
+package("system_monitor_harvester") {
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [
+    {
+      name = "system_monitor_harvester"
+      shell = true
+    },
+  ]
+}
