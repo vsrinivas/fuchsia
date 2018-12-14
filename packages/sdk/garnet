@@ -18,6 +18,7 @@
         "garnet/packages/prod/media_codec",
         "garnet/packages/prod/netstack",
         "garnet/packages/prod/openssh",
+        "garnet/packages/prod/pkg_resolver",
         "garnet/packages/prod/pkgsvr",
         "garnet/packages/prod/pm",
         "garnet/packages/prod/root_ssl_certificates",
