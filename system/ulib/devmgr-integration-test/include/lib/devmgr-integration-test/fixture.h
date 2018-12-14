@@ -31,6 +31,10 @@ public:
     // Get a fd to the root of the isolate devmgr's devfs.  This fd
     // may be used with openat() and fdio_watch_directory().
     const fbl::unique_fd& devfs_root() const { return devfs_root_; }
+
+    // Borrow the handle to the job containing the isolated devmgr.  This may be
+    // used for things like binding to an exception port.
+    const zx::job& containing_job() const { return job_; }
 private:
     // Job that contains the devmgr environment
     zx::job job_;
