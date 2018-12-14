@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 
+#include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/termination_reason.h>
@@ -171,9 +172,18 @@ int main(int argc, const char** argv) {
     auto env_services =
         component::testing::EnvironmentServices::Create(parent_env);
     auto services = test_metadata.TakeServices();
+    bool provide_real_log_sink = true;
     for (auto& service : services) {
       env_services->AddServiceWithLaunchInfo(std::move(service.second),
                                              service.first);
+      if (service.first == fuchsia::logger::LogSink::Name_) {
+        // don't add global log sink service if test component is injecting
+        // it.
+        provide_real_log_sink = false;
+      }
+    }
+    if (provide_real_log_sink) {
+      env_services->AllowParentService(fuchsia::logger::LogSink::Name_);
     }
     auto& system_services = test_metadata.system_services();
     for (auto& service : system_services) {

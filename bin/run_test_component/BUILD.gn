@@ -40,6 +40,7 @@ executable("bin") {
     "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/component/cpp/testing",
+    "//zircon/public/fidl/fuchsia-logger",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
