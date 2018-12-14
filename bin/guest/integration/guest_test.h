@@ -7,8 +7,10 @@
 
 #include "garnet/bin/guest/integration/enclosed_guest.h"
 
-static constexpr char kZirconGuestUrl[] = "zircon_guest";
-static constexpr char kLinuxGuestUrl[] = "linux_guest";
+static constexpr char kZirconGuestUrl[] =
+    "fuchsia-pkg://fuchsia.com/zircon_guest#meta/zircon_guest.cmx";
+static constexpr char kLinuxGuestUrl[] =
+    "fuchsia-pkg://fuchsia.com/linux_guest#meta/linux_guest.cmx";
 
 zx_status_t GuestWaitForShellReady(EnclosedGuest& enclosed_guest);
 zx_status_t GuestWaitForAppmgrReady(EnclosedGuest& enclosed_guest);

@@ -4,7 +4,8 @@
 
 #include "garnet/bin/guest/integration/enclosed_guest.h"
 
-static constexpr char kGuestMgrUrl[] = "guestmgr";
+static constexpr char kGuestMgrUrl[] =
+    "fuchsia-pkg://fuchsia.com/guestmgr#meta/guestmgr.cmx";
 static constexpr char kRealm[] = "realmguestintegrationtest";
 static constexpr zx::duration kLoopTimeout = zx::sec(5);
 static constexpr zx::duration kLoopConditionStep = zx::msec(10);
