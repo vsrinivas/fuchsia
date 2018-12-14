@@ -102,7 +102,32 @@ private:
     // nodes were intrusive, we wouldn't need to have a resizable array for this
     // and we could have cheaper removal.  We can fix this up when it's a
     // problem though.
-    fbl::Vector<ktl::unique_ptr<const RegionAllocator::Region>> allocated_regions_;
+    //
+    // TODO(johngro): @teisenbe.  I think that the efficient solution here would
+    // be to slightly tweak the way that Regions handed out from the
+    // RegionAllocator are structured.  Currently, they are handed out as
+    // unique_ptrs of const Region* so that users may not mess with *any* of the
+    // bookkeeping structure of the region.
+    //
+    // It should be rather simple to alter this so that the start/len book is
+    // read-only because of the class contract (inherit Region privately from
+    // ralloc_region_t instead of publically, then add some accessors for the
+    // start/len), and then hand out mutable pointers instead of const pointer.
+    // All that should be needed after that is some storage for your instrusive
+    // state.  Currently, there are already 2 WAVL nodes which are part of this
+    // structure but not used when the structure is owned by a user.
+    //
+    // We could just add some state which is dedicated to the user's list node,
+    // or we could repurpose the storage already available to us because of the
+    // WAVL state and allow the user to make use of this storage however they
+    // want to.  The latter option involves some grungy casting, but would mean
+    // that you do not need to maintain a vector or perform *any* dynamic
+    // allocation at this level, and still not have to pay any price in terms of
+    // storage in order to do so.
+    //
+    // LMK if any of this is interesting to you.  I can put together a patch and
+    // send it your way if you want.
+    fbl::Vector<RegionAllocator::Region::UPtr> allocated_regions_;
 
     const ds::Bdf bdf_;
     const bool extended_;

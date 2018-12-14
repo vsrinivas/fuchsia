@@ -224,7 +224,7 @@ zx_status_t DeviceContext::SecondLevelMapDiscontiguous(const fbl::RefPtr<VmObjec
         return ZX_OK;
     };
 
-    ktl::unique_ptr<const RegionAllocator::Region> region;
+    RegionAllocator::Region::UPtr region;
     zx_status_t status = region_alloc_.GetRegion(size, min_contig, region);
     if (status != ZX_OK) {
         return status;
@@ -306,7 +306,7 @@ zx_status_t DeviceContext::SecondLevelMapContiguous(const fbl::RefPtr<VmObject>&
     }
     DEBUG_ASSERT(paddr != UINT64_MAX);
 
-    ktl::unique_ptr<const RegionAllocator::Region> region;
+    RegionAllocator::Region::UPtr region;
     uint64_t min_contig = minimum_contiguity();
     status = region_alloc_.GetRegion(size, min_contig, region);
     if (status != ZX_OK) {
@@ -347,7 +347,7 @@ zx_status_t DeviceContext::SecondLevelMapIdentity(paddr_t base, size_t size, uin
 
     uint flags = perms_to_arch_mmu_flags(perms);
 
-    ktl::unique_ptr<const RegionAllocator::Region> region;
+    RegionAllocator::Region::UPtr region;
     zx_status_t status = region_alloc_.GetRegion({ base, size }, region);
     if (status != ZX_OK) {
         return status;

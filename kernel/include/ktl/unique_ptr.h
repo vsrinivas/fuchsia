@@ -43,8 +43,8 @@ struct deleter<T[]> {
 
 } // namespace internal
 
-template <typename T>
-using unique_ptr = std::unique_ptr<T, internal::deleter<T>>;
+template <typename T, typename Deleter = internal::deleter<T>>
+using unique_ptr = std::unique_ptr<T, Deleter>;
 
 template <typename T, typename... Args>
 unique_ptr<T> make_unique(fbl::AllocChecker* ac, Args&&... args) {

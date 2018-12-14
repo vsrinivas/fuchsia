@@ -11,6 +11,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+extern int some_function(void);
+extern int some_variable;
 // RegionAllocator
 //
 // == Overview ==
@@ -255,13 +257,15 @@ public:
     using RegionSlabTraits = fbl::ManualDeleteSlabAllocatorTraits<Region*, REGION_POOL_SLAB_SIZE>;
 
     class Region : public ralloc_region_t,
-                   public fbl::SlabAllocated<RegionSlabTraits>,
-                   public fbl::Recyclable<Region> {
+                   public fbl::SlabAllocated<RegionSlabTraits> {
+    private:
+        struct RegionDeleter;
+
     public:
 #ifdef _KERNEL
-        using UPtr = ktl::unique_ptr<const Region>;
+        using UPtr = ktl::unique_ptr<const Region, RegionDeleter>;
 #else
-        using UPtr = fbl::unique_ptr<const Region>;
+        using UPtr = std::unique_ptr<const Region, RegionDeleter>;
 #endif
 
     private:
@@ -288,6 +292,32 @@ public:
             }
         };
 
+        // When a user's unique_ptr<> reference to this region goes out of
+        // scope, Don't actually delete the region.  Instead, recycle it back
+        // into the set of available regions.  The memory for the bookkeeping
+        // will eventually be deleted when it merges with another available
+        // region, or when the allocator finally shuts down.
+        struct RegionDeleter {
+            void operator()(const Region* region) const noexcept {
+                // Note: The external std::unique_ptrs that we hand out to our
+                // users are deliberately limited to being const Region*s.  For
+                // our users, regions are read only constructs; they check them
+                // out from the allocator and can read the bookkeeping values,
+                // but not change them.
+                //
+                // When the region is finally returned to our pool via the
+                // deleter, the std::unique_ptr will hand it to the deleter
+                // class as a const pointer (it has no choice).  We need to cast
+                // that const away here.  When the region re-joins the pool, its
+                // bookkeeping information (which is logically owned by the
+                // pool) needs to be mutable in order to merge with other
+                // regions in the pool.
+                ZX_DEBUG_ASSERT(region->owner_ != nullptr);
+                Region* r = const_cast<Region*>(region);
+                r->owner_->ReleaseRegion(r);
+            }
+        };
+
         using WAVLTreeSortByBase = fbl::WAVLTree<uint64_t, Region*,
                                                   KeyTraitsSortByBase,
                                                   WAVLTreeNodeTraitsSortByBase>;
@@ -301,32 +331,18 @@ public:
         // So many friends!  I'm the most popular class in the build!!
         friend class  RegionAllocator;
         friend class  RegionPool;
-#ifndef _KERNEL
-        friend class  fbl::unique_ptr<const Region>;
-#endif
-        friend class  fbl::Recyclable<Region>;
         friend        KeyTraitsSortByBase;
         friend struct KeyTraitsSortBySize;
         friend struct WAVLTreeNodeTraitsSortByBase;
         friend struct WAVLTreeNodeTraitsSortBySize;
+        friend class  fbl::SlabAllocator<RegionSlabTraits>;
 
         // Regions can only be placement new'ed by the RegionPool slab
         // allocator.  They cannot be copied, assigned, or deleted.  Externally,
         // they should only be handled by their unique_ptr<>s.
         explicit Region(RegionAllocator* owner) : owner_(owner) { }
-        friend class  fbl::SlabAllocator<RegionSlabTraits>;
+        ~Region() = default;
         DISALLOW_COPY_ASSIGN_AND_MOVE(Region);
-
-        // When a user's unique_ptr<> reference to this region goes out of
-        // scope, we will be "recycled".  Don't actually delete the region.
-        // Instead, recycle it back into the set of available regions.  The
-        // memory for the bookkeeping will eventually be deleted when it merges
-        // with another available region, or when the allocator finally shuts
-        // down.
-        void fbl_recycle() {
-            ZX_DEBUG_ASSERT(owner_ != nullptr);
-            owner_->ReleaseRegion(this);
-        }
 
         RegionAllocator* owner_;
         WAVLTreeNodeState ns_tree_sort_by_base_;
