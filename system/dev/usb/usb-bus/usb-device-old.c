@@ -4,7 +4,7 @@
 
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
-#include <ddk/protocol/usb.h>
+#include <ddk/protocol/usb-old.h>
 #include <zircon/usb/device/c/fidl.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -18,9 +18,11 @@
 
 typedef struct usb_device_req_internal {
     // callback to client driver
-    usb_request_complete_t complete_cb;
+    usb_request_complete_cb complete_cb;
     // callback only on error
     bool cb_on_error_only;
+    // context for callback
+    void* cookie;
     // for queueing at the usb-bus level
     list_node_t node;
 } usb_device_req_internal_t;
@@ -77,8 +79,8 @@ static int callback_thread(void* arg) {
         usb_device_req_internal_t* req_int;
         while ((req_int = list_remove_head_type(&temp_list, usb_device_req_internal_t, node))) {
             req = DEV_INTERNAL_TO_USB_REQ(req_int, dev->parent_req_size);
-            usb_request_complete_new(req, req->response.status, req->response.actual,
-                                     &req_int->complete_cb);
+            usb_request_complete(req, req->response.status, req->response.actual,
+                                 req_int->complete_cb, req_int->cookie);
         }
     }
 
@@ -112,14 +114,6 @@ static void request_complete(void* ctx, usb_request_t* req) {
     sync_completion_signal(&dev->callback_thread_completion);
 }
 
-void usb_device_set_hub_interface(usb_device_t* device, const usb_hub_interface_t* hub_intf) {
-    if (hub_intf) {
-        memcpy(&device->hub_intf, hub_intf, sizeof(device->hub_intf));
-    } else {
-        memset(&device->hub_intf, 0, sizeof(device->hub_intf));
-    }
-}
-
 static usb_configuration_descriptor_t* get_config_desc(usb_device_t* dev, int config) {
     for (int i = 0; i <  dev->num_configurations; i++) {
         usb_configuration_descriptor_t* desc = dev->config_descs[i];
@@ -131,7 +125,7 @@ static usb_configuration_descriptor_t* get_config_desc(usb_device_t* dev, int co
 }
 
 static zx_status_t usb_device_get_protocol(void* ctx, uint32_t proto_id, void* protocol) {
-    if (proto_id == ZX_PROTOCOL_USB) {
+    if (proto_id == ZX_PROTOCOL_USB_OLD) {
         usb_protocol_t* usb_proto = protocol;
         usb_proto->ctx = ctx;
         usb_proto->ops = &_usb_protocol;
@@ -166,10 +160,8 @@ static void usb_control_complete(void* ctx, usb_request_t* req) {
 }
 
 static zx_status_t usb_device_control(void* ctx, uint8_t request_type, uint8_t request,
-                                      uint16_t value, uint16_t index, uint16_t length,
-                                      int64_t timeout, const void* write_buffer,
-                                      size_t write_size, void* out_read_buffer,
-                                      size_t read_size, size_t* out_read_actual) {
+                                      uint16_t value, uint16_t index, void* data, size_t length,
+                                      zx_time_t timeout, size_t* out_length) {
     usb_device_t* dev = ctx;
 
     usb_request_t* req = NULL;
@@ -193,25 +185,9 @@ static zx_status_t usb_device_control(void* ctx, uint8_t request_type, uint8_t r
     setup->wIndex = index;
     setup->wLength = length;
 
-    bool out = ((request_type & USB_DIR_MASK) == USB_DIR_OUT);
-    if (out) {
-        if (length > 0 && write_buffer == NULL) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        if (length > write_size) {
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        }
-    } else {
-        if (length > 0 && out_read_buffer == NULL) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        if (length > read_size) {
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        }
-    }
-
+    bool out = !!((request_type & USB_DIR_MASK) == USB_DIR_OUT);
     if (length > 0 && out) {
-        usb_request_copy_to(req, write_buffer, length, 0);
+        usb_request_copy_to(req, data, length, 0);
     }
 
     sync_completion_t completion = SYNC_COMPLETION_INIT;
@@ -238,12 +214,13 @@ static zx_status_t usb_device_control(void* ctx, uint8_t request_type, uint8_t r
             status = ZX_ERR_TIMED_OUT;
         }
     }
-    if (status == ZX_OK && !out) {
-        if (length > 0) {
-            usb_request_copy_from(req, out_read_buffer, req->response.actual, 0);
+    if (status == ZX_OK) {
+        if (out_length != NULL) {
+            *out_length = req->response.actual;
         }
-        if (out_read_actual != NULL) {
-            *out_read_actual = req->response.actual;
+
+        if (length > 0 && !out) {
+            usb_request_copy_from(req, data, req->response.actual, 0);
         }
     }
 
@@ -258,15 +235,16 @@ static zx_status_t usb_device_control(void* ctx, uint8_t request_type, uint8_t r
     return status;
 }
 
-static void usb_device_request_queue(void* ctx, usb_request_t* req,
-                                     const usb_request_complete_t* cb) {
+static void usb_device_request_queue(void* ctx, usb_request_t* req, usb_request_complete_cb cb,
+                                     void* cookie) {
     usb_device_t* dev = ctx;
 
     usb_device_req_internal_t* req_int = USB_REQ_TO_DEV_INTERNAL(req, dev->parent_req_size);
-    req_int->complete_cb = *cb;
+    req_int->complete_cb = cb;
+    req_int->cookie = cookie;
 
     req->header.device_id = dev->device_id;
-    // save the existing callback, so we can replace them
+    // save the existing callback and cookie, so we can replace them
     // with our own before passing the request to the HCI driver.
     usb_request_complete_t complete = {
         .callback = request_complete,
@@ -277,21 +255,20 @@ static void usb_device_request_queue(void* ctx, usb_request_t* req,
 
 
 static zx_status_t usb_device_configure_batch_callback(void* ctx, uint8_t ep_address,
-                                                       const usb_batch_request_complete_t*
-                                                                            complete_cb) {
+                                                       usb_batch_complete_cb cb, void* cookie) {
     // TODO(jocelyndang): implement this.
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static void usb_device_get_speed(void* ctx, usb_speed_t* out_speed) {
+static usb_speed_t usb_device_get_speed(void* ctx) {
     usb_device_t* dev = ctx;
-    *out_speed = dev->speed;
+    return dev->speed;
 }
 
 static zx_status_t usb_device_set_interface(void* ctx, uint8_t interface_number,
                                             uint8_t alt_setting) {
     usb_device_t* dev = ctx;
-    return usb_util_control(dev, USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_INTERFACE,
+    return old_usb_util_control(dev, USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_INTERFACE,
                             USB_REQ_SET_INTERFACE, alt_setting, interface_number, NULL, 0);
 }
 
@@ -306,7 +283,7 @@ static zx_status_t usb_device_set_configuration(void* ctx, uint8_t configuration
         usb_configuration_descriptor_t* descriptor = dev->config_descs[i];
         if (descriptor->bConfigurationValue == configuration) {
             zx_status_t status;
-            status = usb_util_control(dev, USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE,
+            status = old_usb_util_control(dev, USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE,
                                       USB_REQ_SET_CONFIGURATION, configuration, 0, NULL, 0);
             if (status == ZX_OK) {
                 dev->current_config_index = i;
@@ -317,8 +294,8 @@ static zx_status_t usb_device_set_configuration(void* ctx, uint8_t configuration
     return ZX_ERR_INVALID_ARGS;
 }
 
-static zx_status_t usb_device_enable_endpoint(void* ctx, const usb_endpoint_descriptor_t* ep_desc,
-                                              const usb_ss_ep_comp_descriptor_t* ss_comp_desc,
+static zx_status_t usb_device_enable_endpoint(void* ctx, usb_endpoint_descriptor_t* ep_desc,
+                                              usb_ss_ep_comp_descriptor_t* ss_comp_desc,
                                               bool enable) {
     usb_device_t* dev = ctx;
     return usb_hci_enable_endpoint(&dev->hci, dev->device_id, ep_desc, ss_comp_desc, enable);
@@ -344,65 +321,53 @@ static void usb_device_get_device_descriptor(void* ctx, usb_device_descriptor_t*
     memcpy(out_desc, &dev->device_desc, sizeof(usb_device_descriptor_t));
 }
 
-static zx_status_t usb_device_get_configuration_descriptor_length(void* ctx,
-                                                                  uint8_t configuration,
-                                                                  size_t* out_length) {
-    usb_device_t* dev = ctx;
-    for (int i = 0; i <  dev->num_configurations; i++) {
-        usb_configuration_descriptor_t* config_desc = dev->config_descs[i];
-        if (config_desc->bConfigurationValue == configuration) {
-            *out_length = le16toh(config_desc->wTotalLength);
-            return ZX_OK;
-        }
-    }
-     *out_length = 0;
-    return ZX_ERR_INVALID_ARGS;
-}
-
 static zx_status_t usb_device_get_configuration_descriptor(void* ctx, uint8_t configuration,
-                                                           void* out_desc_buffer, size_t desc_size,
-                                                           size_t* out_desc_actual) {
+                                                           usb_configuration_descriptor_t** out,
+                                                           size_t* out_length) {
     usb_device_t* dev = ctx;
     for (int i = 0; i <  dev->num_configurations; i++) {
         usb_configuration_descriptor_t* config_desc = dev->config_descs[i];
         if (config_desc->bConfigurationValue == configuration) {
             size_t length = le16toh(config_desc->wTotalLength);
-            if (length > desc_size) {
-                length = desc_size;
+            usb_configuration_descriptor_t* descriptor = malloc(length);
+            if (!descriptor) {
+                *out = NULL;
+                *out_length = 0;
+                return ZX_ERR_NO_MEMORY;
             }
-            memcpy(out_desc_buffer, config_desc, length);
-            *out_desc_actual = length;
+            memcpy(descriptor, config_desc, length);
+            *out = descriptor;
+            *out_length = length;
             return ZX_OK;
         }
     }
     return ZX_ERR_INVALID_ARGS;
 }
 
-static size_t usb_device_get_descriptors_length(void* ctx) {
-    usb_device_t* dev = ctx;
-    usb_configuration_descriptor_t* config_desc = dev->config_descs[dev->current_config_index];
-    return le16toh(config_desc->wTotalLength);
-}
-
-static void usb_device_get_descriptors(void* ctx, void* out_descs_buffer, size_t descs_size,
-                                       size_t* out_descs_actual) {
+static zx_status_t usb_device_get_descriptor_list(void* ctx, void** out_descriptors,
+                                                  size_t* out_length) {
     usb_device_t* dev = ctx;
     usb_configuration_descriptor_t* config_desc = dev->config_descs[dev->current_config_index];
     size_t length = le16toh(config_desc->wTotalLength);
-    if (length > descs_size) {
-        length = descs_size;
-    }
 
-    memcpy(out_descs_buffer, config_desc, length);
-    *out_descs_actual = length;
+    void* descriptors = malloc(length);
+    if (!descriptors) {
+        *out_descriptors = NULL;
+        *out_length = 0;
+        return ZX_ERR_NO_MEMORY;
+    }
+    memcpy(descriptors, config_desc, length);
+    *out_descriptors = descriptors;
+    *out_length = length;
+    return ZX_OK;
 }
 
-static zx_status_t usb_device_get_string_descriptor(void* ctx, uint8_t desc_id, uint16_t lang_id,
-                                                    uint16_t* out_lang_id, void* out_string_buffer,
-                                                    size_t string_size, size_t* out_string_actual) {
+zx_status_t usb_device_get_string_descriptor(void* ctx, uint8_t desc_id, uint16_t lang_id,
+                                             uint8_t* buf, size_t buflen, size_t* out_actual,
+                                             uint16_t* out_actual_lang_id) {
     usb_device_t* dev = ctx;
-    return usb_util_get_string_descriptor(dev, desc_id, lang_id, out_string_buffer, string_size,
-                                          out_string_actual, out_lang_id);
+    return old_usb_util_get_string_descriptor(dev, desc_id, lang_id, buf, buflen,
+                                          out_actual, out_actual_lang_id);
 }
 
 static zx_status_t usb_device_cancel_all(void* ctx, uint8_t ep_address) {
@@ -433,123 +398,29 @@ static usb_protocol_ops_t _usb_protocol = {
     .get_max_transfer_size = usb_device_get_max_transfer_size,
     .get_device_id = _usb_device_get_device_id,
     .get_device_descriptor = usb_device_get_device_descriptor,
-    .get_configuration_descriptor_length = usb_device_get_configuration_descriptor_length,
     .get_configuration_descriptor = usb_device_get_configuration_descriptor,
-    .get_descriptors_length = usb_device_get_descriptors_length,
-    .get_descriptors = usb_device_get_descriptors,
+    .get_descriptor_list = usb_device_get_descriptor_list,
     .get_string_descriptor = usb_device_get_string_descriptor,
     .cancel_all = usb_device_cancel_all,
     .get_current_frame = usb_device_get_current_frame,
     .get_request_size = usb_device_get_request_size,
 };
 
-static zx_status_t fidl_GetDeviceSpeed(void* ctx, fidl_txn_t* txn) {
-    usb_device_t* dev = ctx;
-    return zircon_usb_device_DeviceGetDeviceSpeed_reply(txn, dev->speed);
-}
-
-static zx_status_t fidl_GetDeviceDescriptor(void* ctx, fidl_txn_t* txn) {
-    usb_device_t* dev = ctx;
-    return zircon_usb_device_DeviceGetDeviceDescriptor_reply(txn, (uint8_t*)&dev->device_desc);
-}
-
-static zx_status_t fidl_GetConfigurationDescriptorSize(void* ctx, uint8_t config, fidl_txn_t* txn) {
-    usb_device_t* dev = ctx;
-    usb_configuration_descriptor_t* descriptor = get_config_desc(dev, config);
-    if (!descriptor) {
-        return zircon_usb_device_DeviceGetConfigurationDescriptorSize_reply(txn,
-                                                                            ZX_ERR_INVALID_ARGS, 0);
-    }
-
-    size_t length = le16toh(descriptor->wTotalLength);
-    return zircon_usb_device_DeviceGetConfigurationDescriptorSize_reply(txn, ZX_OK, length);
-}
-
-static zx_status_t fidl_GetConfigurationDescriptor(void* ctx, uint8_t config, fidl_txn_t* txn) {
-    usb_device_t* dev = ctx;
-    usb_configuration_descriptor_t* descriptor = get_config_desc(dev, config);
-    if (!descriptor) {
-        return zircon_usb_device_DeviceGetConfigurationDescriptor_reply(txn, ZX_ERR_INVALID_ARGS,
-                                                                        NULL, 0);
-    }
-
-    size_t length = le16toh(descriptor->wTotalLength);
-    return zircon_usb_device_DeviceGetConfigurationDescriptor_reply(txn, ZX_OK,
-                                                                    (uint8_t*)descriptor, length);
-}
-
-static zx_status_t fidl_GetStringDescriptor(void* ctx, uint8_t desc_id, uint16_t lang_id,
-                                            fidl_txn_t* txn) {
-    usb_device_t* dev = ctx;
-    uint8_t buffer[zircon_usb_device_MAX_STRING_DESC_SIZE];
-    size_t actual;
-    zx_status_t status = usb_util_get_string_descriptor(dev, desc_id, lang_id, buffer,
-                                                        sizeof(buffer), &actual, &lang_id);
-    return zircon_usb_device_DeviceGetStringDescriptor_reply(txn, status, buffer, actual, lang_id);
-}
-
-static zx_status_t fidl_SetInterface(void* ctx, uint8_t interface_number, uint8_t alt_setting,
-                                     fidl_txn_t* txn) {
-    usb_device_t* dev = ctx;
-    zx_status_t status = usb_device_set_interface(dev, interface_number, alt_setting);
-    return zircon_usb_device_DeviceSetInterface_reply(txn, status);
-}
-
-static zx_status_t fidl_GetDeviceId(void* ctx, fidl_txn_t* txn) {
-    usb_device_t* dev = ctx;
-    return zircon_usb_device_DeviceGetDeviceId_reply(txn, dev->device_id);
-}
-
-static zx_status_t fidl_GetHubDeviceId(void* ctx, fidl_txn_t* txn) {
-    usb_device_t* dev = ctx;
-    return zircon_usb_device_DeviceGetHubDeviceId_reply(txn, dev->hub_id);
-}
-
-static zx_status_t fidl_GetConfiguration(void* ctx, fidl_txn_t* txn) {
-    usb_device_t* dev = ctx;
-    usb_configuration_descriptor_t* descriptor = dev->config_descs[dev->current_config_index];
-    return zircon_usb_device_DeviceGetConfiguration_reply(txn, descriptor->bConfigurationValue);
-}
-
-static zx_status_t fidl_SetConfiguration(void* ctx, uint8_t configuration, fidl_txn_t* txn) {
-    usb_device_t* dev = ctx;
-    zx_status_t status = usb_device_set_configuration(dev, configuration);
-    return zircon_usb_device_DeviceSetConfiguration_reply(txn, status);
-}
-
-static zircon_usb_device_Device_ops_t fidl_ops = {
-    .GetDeviceSpeed = fidl_GetDeviceSpeed,
-    .GetDeviceDescriptor = fidl_GetDeviceDescriptor,
-    .GetConfigurationDescriptorSize = fidl_GetConfigurationDescriptorSize,
-    .GetConfigurationDescriptor = fidl_GetConfigurationDescriptor,
-    .GetStringDescriptor = fidl_GetStringDescriptor,
-    .SetInterface = fidl_SetInterface,
-    .GetDeviceId = fidl_GetDeviceId,
-    .GetHubDeviceId = fidl_GetHubDeviceId,
-    .GetConfiguration = fidl_GetConfiguration,
-    .SetConfiguration = fidl_SetConfiguration,
-};
-
-zx_status_t usb_device_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
-    return zircon_usb_device_Device_dispatch(ctx, txn, msg, &fidl_ops);
-}
-
 static zx_protocol_device_t usb_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .get_protocol = usb_device_get_protocol,
-    .message = usb_device_message,
     .release = usb_device_release,
 };
 
-zx_status_t usb_device_add(usb_bus_t* bus, uint32_t device_id, uint32_t hub_id,
-                           usb_speed_t speed, usb_device_t** out_device) {
+zx_status_t old_usb_device_add(usb_bus_t* bus, uint32_t device_id, uint32_t hub_id,
+                               usb_speed_t speed, usb_device_t** out_device) {
 
     usb_device_t* dev = calloc(1, sizeof(usb_device_t));
     if (!dev) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    // Needed for usb_util_control requests.
+    // Needed for old_usb_util_control requests.
     memcpy(&dev->hci, &bus->hci, sizeof(usb_hci_protocol_t));
     dev->parent_req_size = usb_hci_get_request_size(&dev->hci);
     dev->req_size = dev->parent_req_size + sizeof(usb_device_req_internal_t);
@@ -564,10 +435,10 @@ zx_status_t usb_device_add(usb_bus_t* bus, uint32_t device_id, uint32_t hub_id,
 
     // read device descriptor
     usb_device_descriptor_t* device_desc = &dev->device_desc;
-    zx_status_t status = usb_util_get_descriptor(dev, USB_DT_DEVICE, 0, 0, device_desc,
+    zx_status_t status = old_usb_util_get_descriptor(dev, USB_DT_DEVICE, 0, 0, device_desc,
                                                  sizeof(*device_desc));
     if (status != sizeof(*device_desc)) {
-        zxlogf(ERROR, "usb_device_add: usb_util_get_descriptor failed\n");
+        zxlogf(ERROR, "usb_device_add: old_usb_util_get_descriptor failed\n");
         free(dev);
         return status;
     }
@@ -583,10 +454,10 @@ zx_status_t usb_device_add(usb_bus_t* bus, uint32_t device_id, uint32_t hub_id,
     for (int config = 0; config < num_configurations; config++) {
         // read configuration descriptor header to determine size
         usb_configuration_descriptor_t config_desc_header;
-        status = usb_util_get_descriptor(dev, USB_DT_CONFIG, config, 0, &config_desc_header,
+        status = old_usb_util_get_descriptor(dev, USB_DT_CONFIG, config, 0, &config_desc_header,
                                          sizeof(config_desc_header));
         if (status != sizeof(config_desc_header)) {
-            zxlogf(ERROR, "usb_device_add: usb_util_get_descriptor failed\n");
+            zxlogf(ERROR, "usb_device_add: old_usb_util_get_descriptor failed\n");
             goto error_exit;
         }
         uint16_t config_desc_size = letoh16(config_desc_header.wTotalLength);
@@ -598,10 +469,10 @@ zx_status_t usb_device_add(usb_bus_t* bus, uint32_t device_id, uint32_t hub_id,
         configs[config] = config_desc;
 
         // read full configuration descriptor
-        status = usb_util_get_descriptor(dev, USB_DT_CONFIG, config, 0, config_desc,
+        status = old_usb_util_get_descriptor(dev, USB_DT_CONFIG, config, 0, config_desc,
                                          config_desc_size);
          if (status != config_desc_size) {
-            zxlogf(ERROR, "usb_device_add: usb_util_get_descriptor failed\n");
+            zxlogf(ERROR, "usb_device_add: old_usb_util_get_descriptor failed\n");
             goto error_exit;
         }
     }
@@ -625,7 +496,7 @@ zx_status_t usb_device_add(usb_bus_t* bus, uint32_t device_id, uint32_t hub_id,
     dev->num_configurations = num_configurations;
 
     // set configuration
-    status = usb_util_control(dev, USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE,
+    status = old_usb_util_control(dev, USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE,
                               USB_REQ_SET_CONFIGURATION,
                               configs[dev->current_config_index]->bConfigurationValue, 0, NULL, 0);
     if (status < 0) {
@@ -662,7 +533,7 @@ zx_status_t usb_device_add(usb_bus_t* bus, uint32_t device_id, uint32_t hub_id,
         .name = name,
         .ctx = dev,
         .ops = &usb_device_proto,
-        .proto_id = ZX_PROTOCOL_USB_DEVICE,
+        .proto_id = ZX_PROTOCOL_USB_DEVICE_OLD,
         .proto_ops = &_usb_protocol,
         .props = props,
         .prop_count = countof(props),

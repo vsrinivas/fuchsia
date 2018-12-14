@@ -100,13 +100,10 @@ DDK_PROTOCOL_DEF(GPU,            'pGPU', "gpu", 0)
 DDK_PROTOCOL_DEF(RTC,            'pRTC', "rtc", 0)
 DDK_PROTOCOL_DEF(TEE,            'pTEE', "tee", 0)
 DDK_PROTOCOL_DEF(VSOCK,          'pVSK', "vsock", 0)
+
+// Old protocols needed during soft protocol transition.
+DDK_PROTOCOL_DEF(USB_OLD,        'pUSb', "usb-old", PF_NOPUB)
+DDK_PROTOCOL_DEF(USB_DEVICE_OLD, 'pUSd', "usb-device-old", PF_NOPUB)
+
 #undef DDK_PROTOCOL_DEF
-
-#ifdef DDK_PROTOCOL_DEF_ALIAS
-// Temporary aliases for soft protocol transition.
-DDK_PROTOCOL_DEF_ALIAS(USB_OLD,        'pUSB', "usb", PF_NOPUB)
-DDK_PROTOCOL_DEF_ALIAS(USB_DEVICE_OLD, 'pUSD', "usb-device", 0)
-#undef DDK_PROTOCOL_DEF_ALIAS
-#endif
-
 #endif

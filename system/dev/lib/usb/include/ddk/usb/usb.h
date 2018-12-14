@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <ddk/protocol/usb-old.h>
+#include <ddk/protocol/usb.h>
 #include <ddk/protocol/usb/composite.h>
 #include <zircon/compiler.h>
 #include <zircon/hw/usb.h>

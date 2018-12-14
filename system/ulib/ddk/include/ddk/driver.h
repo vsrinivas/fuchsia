@@ -160,7 +160,6 @@ static inline void panic(void) {
 
 // Protocol Identifiers
 #define DDK_PROTOCOL_DEF(tag, val, name, flags) ZX_PROTOCOL_##tag = val,
-#define DDK_PROTOCOL_DEF_ALIAS(tag, val, name, flags) ZX_PROTOCOL_##tag = val,
 enum {
 #include <ddk/protodefs.h>
 };

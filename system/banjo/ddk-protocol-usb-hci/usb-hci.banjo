@@ -20,8 +20,8 @@ interface UsbHci {
     /// Returns the maximum number of USB devices that might be connected to the controller.
     GetMaxDeviceCount() -> (usize count);
     /// Enables or disables an endpoint using parameters derived from |ep_desc|.
-    EnableEndpoint(uint32 device_id, zircon.hw.usb.UsbEndpointDescriptor? ep_desc,
-                   zircon.hw.usb.UsbSsEpCompDescriptor? ss_com_desc, bool enable) -> (zx.status s);
+    EnableEndpoint(uint32 device_id, zircon.hw.usb.UsbEndpointDescriptor ep_desc,
+                   zircon.hw.usb.UsbSsEpCompDescriptor ss_com_desc, bool enable) -> (zx.status s);
     /// Returns the current frame (in milliseconds), used for isochronous transfers.
     GetCurrentFrame() -> (uint64 frame);
     /// Used by the USB hub driver to configure a newly enumerated USB hub.

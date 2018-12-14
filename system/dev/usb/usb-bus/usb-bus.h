@@ -16,6 +16,7 @@ typedef struct usb_bus {
     usb_hci_protocol_t hci;
 
     // top-level USB devices, indexed by device_id
-    usb_device_t** devices;
+    usb_device_t** new_devices;
+    usb_device_t** old_devices;
     size_t max_device_count;
 } usb_bus_t;

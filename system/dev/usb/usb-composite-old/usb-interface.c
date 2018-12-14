@@ -4,7 +4,7 @@
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
-#include <ddk/protocol/usb.h>
+#include <ddk/protocol/usb-old.h>
 #include <ddk/protocol/usb/composite.h>
 #include <usb/usb-request.h>
 #include <stdlib.h>
@@ -17,7 +17,7 @@
 static zx_status_t usb_interface_get_protocol(void* ctx, uint32_t proto_id, void* out) {
     usb_interface_t* intf = ctx;
     switch (proto_id) {
-    case ZX_PROTOCOL_USB: {
+    case ZX_PROTOCOL_USB_OLD: {
         usb_protocol_t* proto = (usb_protocol_t *)out;
         proto->ctx = intf;
         proto->ops = &usb_device_protocol;
@@ -122,31 +122,28 @@ zx_status_t usb_interface_configure_endpoints(usb_interface_t* intf, uint8_t int
 }
 
 static zx_status_t usb_interface_control(void* ctx, uint8_t request_type, uint8_t request,
-                                         uint16_t value, uint16_t index, uint16_t length,
-                                         int64_t timeout, const void* write_buffer,
-                                         size_t write_size, void* out_read_buffer,
-                                         size_t read_size, size_t* out_read_actual) {
+                                         uint16_t value, uint16_t index, void* data,
+                                         size_t length, zx_time_t timeout, size_t* out_length) {
     usb_interface_t* intf = ctx;
-    return usb_control(&intf->comp->usb, request_type, request, value, index, length, timeout,
-                       write_buffer, write_size, out_read_buffer, read_size, out_read_actual);
+    return usb_control(&intf->comp->usb, request_type, request, value, index, data, length,
+                              timeout, out_length);
 }
 
 static void usb_interface_request_queue(void* ctx, usb_request_t* usb_request,
-                                        const usb_request_complete_t* complete_cb) {
+                                        usb_request_complete_cb cb, void* cookie) {
     usb_interface_t* intf = ctx;
-    usb_request_queue(&intf->comp->usb, usb_request, complete_cb);
+    usb_request_queue(&intf->comp->usb, usb_request, cb, cookie);
 }
 
 static zx_status_t usb_interface_configure_batch_callback(void* ctx, uint8_t ep_address,
-                                                          const usb_batch_request_complete_t*
-                                                                                complete_cb) {
+                                                          usb_batch_complete_cb cb, void* cookie) {
     usb_interface_t* intf = ctx;
-    return usb_configure_batch_callback(&intf->comp->usb, ep_address, complete_cb);
+    return usb_configure_batch_callback(&intf->comp->usb, ep_address, cb, cookie);
 }
 
-static void usb_interface_get_speed(void* ctx, usb_speed_t* out_speed) {
+static usb_speed_t usb_interface_get_speed(void* ctx) {
     usb_interface_t* intf = ctx;
-    usb_get_speed(&intf->comp->usb, out_speed);
+    return usb_get_speed(&intf->comp->usb);
 }
 
 static zx_status_t usb_interface_set_interface(void* ctx, uint8_t interface_number,
@@ -165,9 +162,8 @@ static zx_status_t usb_interface_set_configuration(void* ctx, uint8_t configurat
     return usb_set_configuration(&intf->comp->usb, configuration);
 }
 
-static zx_status_t usb_interface_enable_endpoint(void* ctx,
-                                                 const usb_endpoint_descriptor_t* ep_desc,
-                                                 const usb_ss_ep_comp_descriptor_t* ss_comp_desc,
+static zx_status_t usb_interface_enable_endpoint(void* ctx, usb_endpoint_descriptor_t* ep_desc,
+                                                 usb_ss_ep_comp_descriptor_t* ss_comp_desc,
                                                  bool enable) {
     return ZX_ERR_NOT_SUPPORTED;
 }
@@ -192,35 +188,26 @@ static void usb_interface_get_device_descriptor(void* ctx, usb_device_descriptor
     return usb_get_device_descriptor(&intf->comp->usb, out_desc);
 }
 
-zx_status_t usb_interface_get_configuration_descriptor_length(void* ctx, uint8_t configuration,
+static zx_status_t usb_interface_get_configuration_descriptor(void* ctx, uint8_t configuration,
+                                                              usb_configuration_descriptor_t** out,
                                                               size_t* out_length) {
     usb_interface_t* intf = ctx;
-    return usb_get_configuration_descriptor_length(&intf->comp->usb, configuration, out_length);
+    return usb_get_configuration_descriptor(&intf->comp->usb, configuration, out, out_length);
 }
 
-static zx_status_t usb_interface_get_configuration_descriptor(void* ctx, uint8_t configuration,
-                                                              void* out_desc_buffer,
-                                                              size_t desc_size,
-                                                              size_t* out_desc_actual) {
+static zx_status_t usb_interface_get_descriptor_list(void* ctx, void** out_descriptors,
+                                                     size_t* out_length) {
     usb_interface_t* intf = ctx;
-    return usb_get_configuration_descriptor(&intf->comp->usb, configuration, out_desc_buffer,
-                                            desc_size, out_desc_actual);
-}
-
-static size_t usb_interface_get_descriptors_length(void* ctx) {
-    usb_interface_t* intf = ctx;
-    return intf->descriptor_length;
-}
-
-static void usb_interface_get_descriptors(void* ctx, void* out_descs_buffer, size_t descs_size,
-                                          size_t* out_descs_actual) {
-    usb_interface_t* intf = ctx;
-    size_t length = intf->descriptor_length;
-    if (length > descs_size) {
-        length = descs_size;
+    void* descriptors = malloc(intf->descriptor_length);
+    if (!descriptors) {
+        *out_descriptors = NULL;
+        *out_length = 0;
+        return ZX_ERR_NO_MEMORY;
     }
-    memcpy(out_descs_buffer, intf->descriptor, length);
-    *out_descs_actual = length;
+    memcpy(descriptors, intf->descriptor, intf->descriptor_length);
+    *out_descriptors = descriptors;
+    *out_length = intf->descriptor_length;
+    return ZX_OK;
 }
 
 static size_t usb_interface_get_additional_descriptor_length(void* ctx) {
@@ -291,11 +278,11 @@ static zx_status_t usb_interface_get_additional_descriptor_list(void* ctx, uint8
 }
 
 zx_status_t usb_interface_get_string_descriptor(void* ctx, uint8_t desc_id, uint16_t lang_id,
-                                                uint16_t* out_lang_id, void* out_string_buffer,
-                                                size_t string_size, size_t* out_string_actual) {
+                                                uint8_t* buf, size_t buflen, size_t* out_actual,
+                                                uint16_t* out_actual_lang_id) {
     usb_interface_t* intf = ctx;
-    return usb_get_string_descriptor(&intf->comp->usb, desc_id, lang_id, out_lang_id,
-                                     out_string_buffer, string_size, out_string_actual);
+    return usb_get_string_descriptor(&intf->comp->usb, desc_id, lang_id, buf, buflen, out_actual,
+                                     out_actual_lang_id);
 }
 
 static zx_status_t usb_interface_claim_device_interface(void* ctx,
@@ -351,10 +338,8 @@ usb_protocol_ops_t usb_device_protocol = {
     .get_max_transfer_size = usb_interface_get_max_transfer_size,
     .get_device_id = usb_interface_get_device_id,
     .get_device_descriptor = usb_interface_get_device_descriptor,
-    .get_configuration_descriptor_length = usb_interface_get_configuration_descriptor_length,
     .get_configuration_descriptor = usb_interface_get_configuration_descriptor,
-    .get_descriptors_length = usb_interface_get_descriptors_length,
-    .get_descriptors = usb_interface_get_descriptors,
+    .get_descriptor_list = usb_interface_get_descriptor_list,
     .get_string_descriptor = usb_interface_get_string_descriptor,
     .cancel_all = usb_interface_cancel_all,
     .get_current_frame = usb_interface_get_current_frame,
@@ -392,6 +377,6 @@ zx_status_t usb_interface_set_alt_setting(usb_interface_t* intf, uint8_t interfa
     }
 
     return usb_control(&intf->comp->usb, USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_INTERFACE,
-                       USB_REQ_SET_INTERFACE, alt_setting, interface_id, 0, ZX_TIME_INFINITE,
-                       NULL, 0, NULL, 0, NULL);
+                       USB_REQ_SET_INTERFACE, alt_setting, interface_id, NULL, 0, ZX_TIME_INFINITE,
+                       NULL);
 }

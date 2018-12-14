@@ -1,4 +1,4 @@
-# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -9,33 +9,22 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS := \
-    $(LOCAL_DIR)/usb-bus.c \
-    $(LOCAL_DIR)/usb-device.c \
-    $(LOCAL_DIR)/usb-device-old.c \
-    $(LOCAL_DIR)/util.c \
-    $(LOCAL_DIR)/util-old.c \
+    $(LOCAL_DIR)/usb-composite.c \
+    $(LOCAL_DIR)/usb-interface.c \
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
-    system/ulib/fidl \
+    system/dev/lib/usb-old \
     system/ulib/sync \
-    system/ulib/utf_conversion \
-    system/dev/lib/usb \
 
 MODULE_LIBS := \
     system/ulib/driver \
     system/ulib/zircon \
-    system/ulib/c \
-
-MODULE_FIDL_LIBS := \
-    system/fidl/zircon-usb-device \
+    system/ulib/c
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-usb \
-    system/banjo/ddk-protocol-usb-bus \
     system/banjo/ddk-protocol-usb-composite \
-    system/banjo/ddk-protocol-usb-hci \
-    system/banjo/ddk-protocol-usb-hub \
     system/banjo/ddk-protocol-usb-request \
 
 include make/module.mk

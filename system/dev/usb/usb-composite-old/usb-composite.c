@@ -77,7 +77,7 @@ static zx_status_t usb_composite_add_interface(usb_composite_t* comp,
     snprintf(name, sizeof(name), "ifc-%03d", interface_desc->bInterfaceNumber);
 
     zx_device_prop_t props[] = {
-        { BIND_PROTOCOL, 0, ZX_PROTOCOL_USB },
+        { BIND_PROTOCOL, 0, ZX_PROTOCOL_USB_OLD },
         { BIND_USB_VID, 0, device_desc->idVendor },
         { BIND_USB_PID, 0, device_desc->idProduct },
         { BIND_USB_CLASS, 0, usb_class },
@@ -90,7 +90,7 @@ static zx_status_t usb_composite_add_interface(usb_composite_t* comp,
         .name = name,
         .ctx = intf,
         .ops = &usb_interface_proto,
-        .proto_id = ZX_PROTOCOL_USB,
+        .proto_id = ZX_PROTOCOL_USB_OLD,
         .proto_ops = &usb_device_protocol,
         .props = props,
         .prop_count = countof(props),
@@ -159,7 +159,7 @@ static zx_status_t usb_composite_add_interface_assoc(usb_composite_t* comp,
     snprintf(name, sizeof(name), "asc-%03d", assoc_desc->iFunction);
 
     zx_device_prop_t props[] = {
-        { BIND_PROTOCOL, 0, ZX_PROTOCOL_USB },
+        { BIND_PROTOCOL, 0, ZX_PROTOCOL_USB_OLD },
         { BIND_USB_VID, 0, device_desc->idVendor },
         { BIND_USB_PID, 0, device_desc->idProduct },
         { BIND_USB_CLASS, 0, usb_class },
@@ -172,7 +172,7 @@ static zx_status_t usb_composite_add_interface_assoc(usb_composite_t* comp,
         .name = name,
         .ctx = intf,
         .ops = &usb_interface_proto,
-        .proto_id = ZX_PROTOCOL_USB,
+        .proto_id = ZX_PROTOCOL_USB_OLD,
         .proto_ops = &usb_device_protocol,
         .props = props,
         .prop_count = countof(props),
@@ -362,7 +362,7 @@ static zx_protocol_device_t usb_composite_device_proto = {
 
 static zx_status_t usb_composite_bind(void* ctx, zx_device_t* parent) {
     usb_protocol_t usb;
-    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_USB, &usb);
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_USB_OLD, &usb);
     if (status != ZX_OK) {
         return status;
     }
@@ -379,19 +379,9 @@ static zx_status_t usb_composite_bind(void* ctx, zx_device_t* parent) {
 
     usb_get_device_descriptor(&usb, &comp->device_desc);
 
-    uint8_t configuration = usb_get_configuration(&comp->usb);
     size_t config_length;
-    status = usb_get_configuration_descriptor_length(&comp->usb, configuration, &config_length);
-    if (status != ZX_OK) {
-        return status;
-    }
-    comp->config_desc = malloc(config_length);
-    if (!comp->config_desc) {
-        return ZX_ERR_NO_MEMORY;
-    }
-    size_t actual;
-    status = usb_get_configuration_descriptor(&comp->usb, configuration,
-                                              comp->config_desc, config_length, &actual);
+    status = usb_get_configuration_descriptor(&comp->usb, usb_get_configuration(&comp->usb),
+                                              &comp->config_desc, &config_length);
     if (status != ZX_OK) {
         goto error_exit;
     }
@@ -426,5 +416,5 @@ static zx_driver_ops_t usb_composite_driver_ops = {
 // The '*' in the version string is important. This marks this driver as a fallback,
 // to allow other drivers to bind against ZX_PROTOCOL_USB_DEVICE to handle more specific cases.
 ZIRCON_DRIVER_BEGIN(usb_composite, usb_composite_driver_ops, "zircon", "*0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_USB_DEVICE),
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_USB_DEVICE_OLD),
 ZIRCON_DRIVER_END(usb_composite)

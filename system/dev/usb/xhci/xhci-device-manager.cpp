@@ -237,7 +237,7 @@ static zx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
 #define BOUNDS_CHECK(i, min, max) (i < min ? min : (i > max ? max : i))
 #define LOG2(i) (31 - __builtin_clz(i))
 
-static int compute_interval(usb_endpoint_descriptor_t* ep, usb_speed_t speed) {
+static int compute_interval(const usb_endpoint_descriptor_t* ep, usb_speed_t speed) {
     int ep_type = ep->bmAttributes & USB_ENDPOINT_TYPE_MASK;
     int interval = ep->bInterval;
 
@@ -604,8 +604,9 @@ static zx_status_t xhci_update_input_context(xhci_t* xhci, uint32_t slot_id, int
     return xhci_send_command(xhci, TRB_CMD_CONFIGURE_EP, icc_phys, (slot_id << TRB_SLOT_ID_START));
 }
 
-zx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_descriptor_t* ep_desc,
-                                 usb_ss_ep_comp_descriptor_t* ss_comp_desc, bool enable) {
+zx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id,
+                                 const usb_endpoint_descriptor_t* ep_desc,
+                                 const usb_ss_ep_comp_descriptor_t* ss_comp_desc, bool enable) {
     if (xhci_is_root_hub(xhci, slot_id)) {
         // nothing to do for root hubs
         return ZX_OK;

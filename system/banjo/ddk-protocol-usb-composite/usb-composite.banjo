@@ -10,7 +10,7 @@ using zx;
 [Layout = "ddk-protocol"]
 interface UsbComposite {
     /// Returns the length of the additional descriptor list.
-    GetAdditionalDescriptorLength() -> (uint32 length);
+    GetAdditionalDescriptorLength() -> (usize length);
     /// Returns the USB descriptors following the interface's existing descriptors.
     GetAdditionalDescriptorList() -> (zx.status s, vector<uint8> desc);
     /// Marks the interface as claimed and appends the interface descriptor to the

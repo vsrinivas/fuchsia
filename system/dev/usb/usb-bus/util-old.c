@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
-#include <ddk/protocol/usb.h>
+#include <ddk/protocol/usb-old.h>
 #include <usb/usb-request.h>
 #include <endian.h>
 #include <lib/sync/completion.h>
@@ -23,12 +23,12 @@ typedef struct usb_langid_desc {
     uint16_t wLangIds[127];
 } __PACKED usb_langid_desc_t;
 
-static void usb_util_control_complete(void* ctx, usb_request_t* req) {
+static void old_usb_util_control_complete(void* ctx, usb_request_t* req) {
     sync_completion_signal((sync_completion_t*)ctx);
 }
 
-zx_status_t usb_util_control(usb_device_t* dev, uint8_t request_type, uint8_t request,
-                             uint16_t value, uint16_t index, void* data, size_t length) {
+zx_status_t old_usb_util_control(usb_device_t* dev, uint8_t request_type, uint8_t request,
+                                 uint16_t value, uint16_t index, void* data, size_t length) {
     usb_request_t* req = NULL;
     bool use_free_list = length == 0;
     if (use_free_list) {
@@ -58,7 +58,7 @@ zx_status_t usb_util_control(usb_device_t* dev, uint8_t request_type, uint8_t re
     req->header.length = length;
 
     usb_request_complete_t complete = {
-        .callback = usb_util_control_complete,
+        .callback = old_usb_util_control_complete,
         .ctx = &completion,
     };
     usb_hci_request_queue(&dev->hci, req, &complete);
@@ -92,22 +92,22 @@ zx_status_t usb_util_control(usb_device_t* dev, uint8_t request_type, uint8_t re
     return status;
 }
 
-zx_status_t usb_util_get_descriptor(usb_device_t* dev, uint16_t type, uint16_t index,
-                                    uint16_t language, void* data, size_t length) {
-    return usb_util_control(dev, USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_DEVICE,
-                           USB_REQ_GET_DESCRIPTOR, type << 8 | index, language, data, length);
+zx_status_t old_usb_util_get_descriptor(usb_device_t* dev, uint16_t type, uint16_t index,
+                                        uint16_t language, void* data, size_t length) {
+    return old_usb_util_control(dev, USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_DEVICE,
+                                USB_REQ_GET_DESCRIPTOR, type << 8 | index, language, data, length);
 }
 
-zx_status_t usb_util_get_string_descriptor(usb_device_t* dev, uint8_t desc_id, uint16_t lang_id,
-                                           uint8_t* buf, size_t buflen, size_t* out_actual,
-                                           uint16_t* out_actual_lang_id) {
+zx_status_t old_usb_util_get_string_descriptor(usb_device_t* dev, uint8_t desc_id, uint16_t lang_id,
+                                               uint8_t* buf, size_t buflen, size_t* out_actual,
+                                               uint16_t* out_actual_lang_id) {
     //  If we have never attempted to load our language ID table, do so now.
     zx_status_t result;
     if (!atomic_load_explicit(&dev->langids_fetched, memory_order_relaxed)) {
         usb_langid_desc_t* id_desc = calloc(1, sizeof(usb_langid_desc_t));
 
         if (id_desc != NULL) {
-            result = usb_util_get_descriptor(dev, USB_DT_STRING, 0, 0, id_desc, sizeof(*id_desc));
+            result = old_usb_util_get_descriptor(dev, USB_DT_STRING, 0, 0, id_desc, sizeof(*id_desc));
             if (result == ZX_ERR_IO_REFUSED || result == ZX_ERR_IO_INVALID) {
                 // some devices do not support fetching language list
                 // in that case assume US English (0x0409)
@@ -191,7 +191,7 @@ zx_status_t usb_util_get_string_descriptor(usb_device_t* dev, uint8_t desc_id, u
         uint16_t code_points[127];
     } string_desc;
 
-    result = usb_util_get_descriptor(dev, USB_DT_STRING, desc_id, le16toh(lang_id),
+    result = old_usb_util_get_descriptor(dev, USB_DT_STRING, desc_id, le16toh(lang_id),
                                      &string_desc, sizeof(string_desc));
 
     if (result == ZX_ERR_IO_REFUSED || result == ZX_ERR_IO_INVALID) {
@@ -200,7 +200,7 @@ zx_status_t usb_util_get_string_descriptor(usb_device_t* dev, uint8_t desc_id, u
             zxlogf(ERROR, "failed to reset endpoint, err: %d\n", reset_result);
             return result;
         }
-        result = usb_util_get_descriptor(dev, USB_DT_STRING, desc_id, le16toh(lang_id),
+        result = old_usb_util_get_descriptor(dev, USB_DT_STRING, desc_id, le16toh(lang_id),
                                          &string_desc, sizeof(string_desc));
         if (result == ZX_ERR_IO_REFUSED || result == ZX_ERR_IO_INVALID) {
             reset_result = usb_hci_reset_endpoint(&dev->hci, dev->device_id, 0);

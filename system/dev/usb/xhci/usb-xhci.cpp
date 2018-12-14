@@ -81,8 +81,8 @@ static size_t xhci_get_max_device_count(void* ctx) {
 }
 
 static zx_status_t xhci_enable_ep(void* ctx, uint32_t device_id,
-                                  usb_endpoint_descriptor_t* ep_desc,
-                                  usb_ss_ep_comp_descriptor_t* ss_comp_desc, bool enable) {
+                                  const usb_endpoint_descriptor_t* ep_desc,
+                                  const usb_ss_ep_comp_descriptor_t* ss_comp_desc, bool enable) {
     auto* xhci = static_cast<xhci_t*>(ctx);
     return xhci_enable_endpoint(xhci, device_id, ep_desc, ss_comp_desc, enable);
 }

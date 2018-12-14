@@ -8,7 +8,6 @@
 #include <ddk/device.h>
 #include <ddk/protocol/usb/hci.h>
 #include <ddk/protocol/usb/hub.h>
-#include <ddk/protocol/usb-old.h>
 #include <usb/usb-request.h>
 #include <lib/sync/completion.h>
 #include <zircon/hw/usb.h>
@@ -58,23 +57,13 @@ typedef struct usb_device {
     size_t req_size;
 } usb_device_t;
 
-typedef struct usb_device_req_internal {
-    // callback to client driver
-    usb_request_complete_cb complete_cb;
-    // callback only on error
-    bool cb_on_error_only;
-    // context for callback
-    void* cookie;
-    // for queueing at the usb-bus level
-    list_node_t node;
-} usb_device_req_internal_t;
-
 void usb_device_set_hub_interface(usb_device_t* dev, const usb_hub_interface_t* hub_intf);
 
 zx_status_t usb_device_add(usb_bus_t* bus, uint32_t device_id, uint32_t hub_id,
                            usb_speed_t speed, usb_device_t** out_device);
 
-void usb_device_remove(usb_device_t* dev);
+zx_status_t old_usb_device_add(usb_bus_t* bus, uint32_t device_id, uint32_t hub_id,
+                               usb_speed_t speed, usb_device_t** out_device);
 
 #define USB_REQ_TO_DEV_INTERNAL(req, size) \
     ((usb_device_req_internal_t *)((uintptr_t)(req) + (size)))
