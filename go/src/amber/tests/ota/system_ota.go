@@ -17,6 +17,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -34,7 +35,7 @@ var (
 	deviceHostname  = flag.String("device-hostname", "", "device hostname")
 
 	localDevmgr []byte
-	noSuchFile  = []byte(": No such file or directory\n")
+	noSuchFile  = regexp.MustCompile("(:No such file or directory$)|(^error: cannot stat )")
 )
 
 const (
@@ -168,7 +169,7 @@ func RemoteFileExists(t *testing.T, path string) bool {
 		return true
 	}
 
-	if !bytes.HasSuffix(stderr, noSuchFile) {
+	if !noSuchFile.Match(stderr) {
 		t.Fatalf("error reading %q: %s", path, stderr)
 	}
 
@@ -218,11 +219,10 @@ func runOutput(name string, arg ...string) ([]byte, []byte, error) {
 
 func ssh(arg ...string) ([]byte, []byte, error) {
 	var a []string
+	a = append(a, "-o", "LogLevel=quiet", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null")
 	if *sshConfig == "" {
-		a = make([]string, 0, len(arg)+1)
 		a = append(append(a, *deviceHostname), arg...)
 	} else {
-		a = make([]string, 0, len(arg)+3)
 		a = append(append(a, "-F", *sshConfig, *deviceHostname), arg...)
 	}
 
