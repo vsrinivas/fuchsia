@@ -148,8 +148,8 @@ void AutoVmcs::IssueInterrupt(uint32_t vector) {
         interrupt_info |= kInterruptTypeSoftwareException;
     } else if (vector == X86_INT_NMI) {
         interrupt_info |= kInterruptTypeNmi;
-    } else if (vector < X86_INT_PLATFORM_BASE) {
-        // From Volume 3, Section 6.15. Vectors from 0 to 32 (X86_INT_PLATFORM_BASE) are exceptions.
+    } else if (vector <= X86_INT_VIRT) {
+        // From Volume 3, Section 6.15. All other vectors from 0 to X86_INT_VIRT are exceptions.
         interrupt_info |= kInterruptTypeHardwareException;
     }
     if (has_error_code(vector)) {
@@ -707,24 +707,27 @@ static zx_status_t local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* lo
     // Since hardware generated exceptions are delivered to the guest directly, the only exceptions
     // we see here are those we generate in the VMM, e.g. GP faults in vmexit handlers. Therefore
     // we simplify interrupt priority to 1) NMIs, 2) interrupts, and 3) generated exceptions. See
-    // Intel Volume 3, Section 6.9, Table 6-2.
+    // Volume 3, Section 6.9, Table 6-2.
     uint32_t vector;
     hypervisor::InterruptType type = local_apic_state->interrupt_tracker.TryPop(X86_INT_NMI);
     if (type != hypervisor::InterruptType::INACTIVE) {
         vector = X86_INT_NMI;
     } else {
         // Pop scans vectors from highest to lowest, which will correctly pop interrupts before
-        // exceptions. All vectors < X86_INT_PLATFORM_BASE except the NMI vector are exceptions.
+        // exceptions. All vectors <= X86_INT_VIRT except the NMI vector are exceptions.
         type = local_apic_state->interrupt_tracker.Pop(&vector);
         if (type == hypervisor::InterruptType::INACTIVE) {
             return ZX_OK;
         }
     }
 
-    // Intel Volume 3, Section 6.8.1: The IF flag does not affect non-maskable interrupts (NMIs),
-    // [...] nor does it affect processor generated exceptions.
-    if (vector >= X86_INT_PLATFORM_BASE &&
+    if (vector > X86_INT_VIRT && vector < X86_INT_PLATFORM_BASE) {
+        dprintf(INFO, "Invalid interrupt vector: %u\n", vector);
+        return ZX_ERR_NOT_SUPPORTED;
+    } else if (vector >= X86_INT_PLATFORM_BASE &&
         !(vmcs->Read(VmcsFieldXX::GUEST_RFLAGS) & X86_FLAGS_IF)) {
+        // Volume 3, Section 6.8.1: The IF flag does not affect non-maskable interrupts (NMIs),
+        // [...] nor does it affect processor generated exceptions.
         local_apic_state->interrupt_tracker.Track(vector, type);
         // If interrupts are disabled, we set VM exit on interrupt enable.
         vmcs->InterruptWindowExiting(true);
@@ -734,12 +737,12 @@ static zx_status_t local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* lo
     // If the vector is non-maskable or interrupts are enabled, we inject an interrupt.
     vmcs->IssueInterrupt(vector);
 
-    // Intel Volume 3, Section 6.9: Lower priority exceptions are discarded; lower priority
-    // interrupts are held pending. Discarded exceptions are re-generated when the interrupt handler
-    // returns execution to the point in the program or task where the exceptions and/or interrupts
+    // Volume 3, Section 6.9: Lower priority exceptions are discarded; lower priority interrupts are
+    // held pending. Discarded exceptions are re-generated when the interrupt handler returns
+    // execution to the point in the program or task where the exceptions and/or interrupts
     // occurred.
     local_apic_state->interrupt_tracker.Clear(0, X86_INT_NMI);
-    local_apic_state->interrupt_tracker.Clear(X86_INT_NMI + 1, X86_INT_PLATFORM_BASE);
+    local_apic_state->interrupt_tracker.Clear(X86_INT_NMI + 1, X86_INT_VIRT + 1);
 
     return ZX_OK;
 }
