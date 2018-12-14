@@ -31,10 +31,10 @@ userspace bookkeeping.
 
 The write and read phases of this operation behave like [`zx_channel_write()`] and
 [`zx_channel_read()`] with the difference that their parameters are provided via the
-*zx_channel_call_args_t* structure.
+`zx_channel_call_args_t` structure.
 
 The first four bytes of the written and read back messages are treated as a
-transaction ID of type **zx_txid_t**.  The kernel generates a txid for the
+transaction ID of type `zx_txid_t`.  The kernel generates a txid for the
 written message, replacing that part of the message as read from userspace.
 The kernel generated txid will be between 0x80000000 and 0xFFFFFFFF, and will
 not collide with any txid from any other `zx_channel_call()` in progress against

@@ -20,7 +20,7 @@ zx_status_t zx_vmar_unmap(zx_handle_t handle, zx_vaddr_t addr, uint64_t len);
 
 `zx_vmar_unmap()` unmaps all VMO mappings and destroys (as if [`zx_vmar_destroy()`]
 were called) all sub-regions within the absolute range including *addr* and ending
-before exclusively at *addr* + *len*.  Any sub-region that is in the range must
+before exclusively at `addr + len`.  Any sub-region that is in the range must
 be fully in the range (i.e. partial overlaps are an error).  If a mapping is
 only partially in the range, the mapping is split and the requested portion is
 unmapped.

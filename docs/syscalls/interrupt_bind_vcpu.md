@@ -38,7 +38,7 @@ different *vcpu*s. However, all VCPUs must belong to a single guest.
 
 ## RETURN VALUE
 
-`zx_interrupt_bind_vcpu()` returns *ZX_OK* on success. On failure, an error value
+`zx_interrupt_bind_vcpu()` returns **ZX_OK** on success. On failure, an error value
 is returned.
 
 ## ERRORS
@@ -53,8 +53,8 @@ VCPU.
 **ZX_ERR_BAD_STATE**  a thread is waiting on the interrupt using
 [`zx_interrupt_wait()`].
 
-**ZX_ERR_ACCESS_DENIED** *handle* lacks *ZX_RIGHT_READ* or *vcpu* lacks
-*ZX_RIGHT_WRITE*.
+**ZX_ERR_ACCESS_DENIED** *handle* lacks **ZX_RIGHT_READ** or *vcpu* lacks
+**ZX_RIGHT_WRITE**.
 
 **ZX_ERR_ALREADY_BOUND** *handle* is already bound to another guest or to a
 port.

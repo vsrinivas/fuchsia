@@ -20,7 +20,7 @@ zx_status_t zx_system_get_features(uint32_t kind, uint32_t* features);
 
 `zx_system_get_features()` populates *features* with a bit mask of
 hardware-specific features.  *kind* indicates the specific type of features
-to retrieve, e.g. *ZX_FEATURE_KIND_CPU*.  The supported kinds and the meaning
+to retrieve, e.g. **ZX_FEATURE_KIND_CPU**.  The supported kinds and the meaning
 of individual feature bits is hardware-dependent.
 
 ## RIGHTS

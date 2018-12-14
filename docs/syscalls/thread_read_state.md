@@ -32,37 +32,37 @@ zircon/syscalls/debug.h for the contents of the structures on each platform.
 
 ### ZX_THREAD_STATE_GENERAL_REGS
 
-The buffer must point to a **zx_thread_state_general_regs_t** structure that
+The buffer must point to a `zx_thread_state_general_regs_t` structure that
 contains the general registers for the current architecture.
 
 ### ZX_THREAD_STATE_FP_REGS
 
-The buffer must point to a **zx_thread_state_fp_regs_t** structure. On 64-bit
+The buffer must point to a `zx_thread_state_fp_regs_t` structure. On 64-bit
 ARM platforms, float point state is in the vector registers and this structure
 is empty.
 
 ### ZX_THREAD_STATE_VECTOR_REGS
 
-The buffer must point to a **zx_thread_state_vector_regs_t** structure.
+The buffer must point to a `zx_thread_state_vector_regs_t` structure.
 
 ### ZX_THREAD_STATE_DEBUG_REGS
 
-The buffer must point to a **zx_thread_state_debug_regs_t** structure. All input
+The buffer must point to a `zx_thread_state_debug_regs_t` structure. All input
 fields will be ignored and overwritten with the actual values for the thread.
 
 ### ZX_THREAD_STATE_SINGLE_STEP
 
-The buffer must point to a **zx_thread_state_single_step_t** value which
+The buffer must point to a `zx_thread_state_single_step_t` value which
 may contain either 0 (normal running), or 1 (single stepping enabled).
 
 ### ZX_THREAD_X86_REGISTER_FS
 
-The buffer must point to a **zx_thread_x86_register_fs_t** structure which contains
+The buffer must point to a `zx_thread_x86_register_fs_t` structure which contains
 a uint64. This is only relevant on x86 platforms.
 
 ### ZX_THREAD_X86_REGISTER_GS
 
-The buffer must point to a **zx_thread_x86_register_gs_t** structure which contains
+The buffer must point to a `zx_thread_x86_register_gs_t` structure which contains
 a uint64. This is only relevant on x86 platforms.
 
 ## RIGHTS
@@ -82,7 +82,7 @@ In the event of failure, a negative error value is returned.
 
 **ZX_ERR_WRONG_TYPE**  *handle* is not that of a thread.
 
-**ZX_ERR_ACCESS_DENIED**  *handle* lacks *ZX_RIGHT_READ*.
+**ZX_ERR_ACCESS_DENIED**  *handle* lacks **ZX_RIGHT_READ**.
 
 **ZX_ERR_INVALID_ARGS**  *kind* is not valid or *buffer* is an invalid pointer.
 

@@ -25,7 +25,7 @@ zx_status_t zx_guest_create(zx_handle_t resource,
 within the hypervisor, with *vmar_handle* used to represent the physical address
 space of the guest.
 
-To create a guest, a *resource* of *ZX_RSRC_KIND_HYPERVISOR* must be supplied.
+To create a guest, a *resource* of **ZX_RSRC_KIND_HYPERVISOR** must be supplied.
 
 In order to begin execution within the guest, a VMO should be mapped into
 *vmar_handle* using [`zx_vmar_map()`], and a VCPU must be created using
@@ -44,8 +44,7 @@ The following rights will be set on the handle *guest_handle* by default:
 
 **ZX_RIGHT_MANAGE_PROCESS** &mdash; A VCPU may be created using [`zx_vcpu_create()`].
 
-See [vmar_create](vmar_create.md) for the set of rights applied to
-*vmar_handle*.
+See [`zx_vmo_create()`] for the set of rights applied to *vmar_handle*.
 
 ## RIGHTS
 
@@ -55,12 +54,12 @@ See [vmar_create](vmar_create.md) for the set of rights applied to
 
 ## RETURN VALUE
 
-`zx_guest_create()` returns ZX_OK on success. On failure, an error value is
+`zx_guest_create()` returns **ZX_OK** on success. On failure, an error value is
 returned.
 
 ## ERRORS
 
-**ZX_ERR_ACCESS_DENIED** *resource* is not of *ZX_RSRC_KIND_HYPERVISOR*.
+**ZX_ERR_ACCESS_DENIED** *resource* is not of **ZX_RSRC_KIND_HYPERVISOR**.
 
 **ZX_ERR_INVALID_ARGS** *guest_handle* or *vmar_handle* is an invalid pointer,
 or *options* is nonzero.
@@ -88,3 +87,4 @@ In a future build this error will no longer occur.
 [`zx_vcpu_create()`]: vcpu_create.md
 [`zx_vcpu_resume()`]: vcpu_resume.md
 [`zx_vmar_map()`]: vmar_map.md
+[`zx_vmo_create()`]: vmo_create.md

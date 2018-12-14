@@ -29,12 +29,12 @@ called from any thread.
 
 ## RETURN VALUE
 
-`zx_vcpu_interrupt()` returns ZX_OK on success. On failure, an error value is
+`zx_vcpu_interrupt()` returns **ZX_OK** on success. On failure, an error value is
 returned.
 
 ## ERRORS
 
-**ZX_ERR_ACCESS_DENIED** *handle* does not have the *ZX_RIGHT_SIGNAL* right.
+**ZX_ERR_ACCESS_DENIED** *handle* does not have the **ZX_RIGHT_SIGNAL** right.
 
 **ZX_ERR_BAD_HANDLE** *handle* is an invalid handle.
 

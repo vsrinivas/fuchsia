@@ -37,8 +37,8 @@ against unauthorized access to memory.  It does allow pinning of physical memory
 pages, to prevent the reuse of a page until the driver using the page says it is
 done with it.
 
-*desc* must be a valid pointer to a value of type *zx_iommu_desc_dummy_t*.
-*desc_size* must be *sizeof(zx_iommu_desc_dummy_t)*.
+*desc* must be a valid pointer to a value of type `zx_iommu_desc_dummy_t`.
+*desc_size* must be `sizeof(zx_iommu_desc_dummy_t)`.
 
 ## RIGHTS
 
@@ -48,7 +48,7 @@ done with it.
 
 ## RETURN VALUE
 
-`zx_iommu_create()` returns ZX_OK and a handle to the new IOMMU
+`zx_iommu_create()` returns **ZX_OK** and a handle to the new IOMMU
 (via *out*) on success.  In the event of failure, a negative error value
 is returned.
 
@@ -63,7 +63,7 @@ is returned.
 **ZX_ERR_NOT_SUPPORTED** *type* is not a defined value or is not
 supported on this system.
 
-**ZX_ERR_INVALID_ARGS**  *desc_size* is larger than *ZX_IOMMU_MAX_DESC_LEN*,
+**ZX_ERR_INVALID_ARGS**  *desc_size* is larger than **ZX_IOMMU_MAX_DESC_LEN**,
 *desc* is an invalid pointer, *out* is an invalid pointer, or the contents of
 *desc* are not valid for the given *type*.
 

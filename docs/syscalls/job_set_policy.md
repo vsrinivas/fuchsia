@@ -78,7 +78,7 @@ Where *condition* is one of
   the above **ZX_NEW** condtions such as **ZX_POL_NEW_VMO**,
   **ZX_POL_NEW_CHANNEL**, **ZX_POL_NEW_EVENT**, **ZX_POL_NEW_EVENTPAIR**,
   **ZX_POL_NEW_PORT**, **ZX_POL_NEW_SOCKET**, **ZX_POL_NEW_FIFO**,
-  and any future ZX_NEW policy. This will include any new
+  and any future **ZX_NEW** policy. This will include any new
   kernel objects which do not require a parent object for creation.
 
 Where *policy* is either
@@ -105,8 +105,8 @@ a negative error value is returned.
 
 ## NOTES
 
-The **ZX_POL_BAD_HANDLE** policy does not apply when calling ``zx_object_get_info()``
-with the topic ZX_INFO_HANDLE_VALID.  All other topics and all other syscalls that
+The **ZX_POL_BAD_HANDLE** policy does not apply when calling [`zx_object_get_info()`]
+with the topic **ZX_INFO_HANDLE_VALID**.  All other topics and all other syscalls that
 take handles are subject to the policy.
 
 ## ERRORS
@@ -119,12 +119,12 @@ or *policy* was not **ZX_JOB_POL_RELATIVE** or **ZX_JOB_POL_ABSOLUTE**, or
 
 **ZX_ERR_WRONG_TYPE**  *handle* is not a job handle.
 
-**ZX_ERR_ACCESS_DENIED**  *handle* does not have ZX_POL_RIGHT_SET right.
+**ZX_ERR_ACCESS_DENIED**  *handle* does not have **ZX_POL_RIGHT_SET** right.
 
 **ZX_ERR_BAD_STATE**  the job has existing jobs or processes alive.
 
-**ZX_ERR_OUT_OF_RANGE** *count* is bigger than ZX_POL_MAX or *condition* is
-bigger than ZX_POL_MAX.
+**ZX_ERR_OUT_OF_RANGE** *count* is bigger than **ZX_POL_MAX** or *condition* is
+bigger than **ZX_POL_MAX**.
 
 **ZX_ERR_ALREADY_EXISTS** existing policy conflicts with the new policy.
 
@@ -139,3 +139,7 @@ In a future build this error will no longer occur.
 [job_create](job_create.md).
 [process_create](job_create.md).
 [object_get_info](object_get_info.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_object_get_info()`]: object_get_info.md

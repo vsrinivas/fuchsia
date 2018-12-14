@@ -28,7 +28,7 @@ there is an access by a VCPU within the address range defined by *addr* and
 *size*, within the address space defined by *kind*.
 
 If *port_handle* is specified, a packet for the trap will be delivered through
-*port_handle* each time the trap is triggered, otherwise if *ZX_HANDLE_INVALID*
+*port_handle* each time the trap is triggered, otherwise if **ZX_HANDLE_INVALID**
 is given, a packet will be delivered through [`zx_vcpu_resume()`]. This provides
 control over whether the packet is delivered asynchronously or synchronously.
 
@@ -39,24 +39,24 @@ VCPU will resume. To dequeue a packet from *port_handle*, use [`zx_port_wait()`]
 Multiple threads may use [`zx_port_wait()`] to dequeue packets, enabling the use
 of a thread pool to handle traps.
 
-*key* is used to set the key field within *zx_port_packet_t*, and can be used to
+*key* is used to set the key field within `zx_port_packet_t`, and can be used to
 distinguish between packets for different traps.
 
-*kind* may be either *ZX_GUEST_TRAP_BELL*, *ZX_GUEST_TRAP_MEM*, or
-*ZX_GUEST_TRAP_IO*. If *ZX_GUEST_TRAP_BELL* or *ZX_GUEST_TRAP_MEM* is
+*kind* may be either **ZX_GUEST_TRAP_BELL**, **ZX_GUEST_TRAP_MEM**, or
+**ZX_GUEST_TRAP_IO**. If **ZX_GUEST_TRAP_BELL** or **ZX_GUEST_TRAP_MEM** is
 specified, then *addr* and *size* must both be page-aligned. If
-*ZX_GUEST_TRAP_BELL* is set, then *port_handle* must be specified. If
-*ZX_GUEST_TRAP_MEM* or *ZX_GUEST_TRAP_IO* is set, then *port_handle* must be
-*ZX_HANDLE_INVALID*.
+**ZX_GUEST_TRAP_BELL** is set, then *port_handle* must be specified. If
+**ZX_GUEST_TRAP_MEM** or **ZX_GUEST_TRAP_IO** is set, then *port_handle* must be
+**ZX_HANDLE_INVALID**.
 
-*ZX_GUEST_TRAP_BELL* is a type of trap that defines a door-bell. If there is an
+**ZX_GUEST_TRAP_BELL** is a type of trap that defines a door-bell. If there is an
 access to the memory region specified by the trap, then a packet is generated
 that does not fetch the instruction associated with the access. The packet will
 then be delivered via *port_handle*.
 
-To identify what *kind* of trap generated a packet, use *ZX_PKT_TYPE_GUEST_MEM*,
-*ZX_PKT_TYPE_GUEST_IO*, *ZX_PKT_TYPE_GUEST_BELL*, and *ZX_PKT_TYPE_GUEST_VCPU*.
-*ZX_PKT_TYPE_GUEST_VCPU* is a special packet, not caused by a trap, that
+To identify what *kind* of trap generated a packet, use **ZX_PKT_TYPE_GUEST_MEM**,
+**ZX_PKT_TYPE_GUEST_IO**, **ZX_PKT_TYPE_GUEST_BELL**, and **ZX_PKT_TYPE_GUEST_VCPU**.
+**ZX_PKT_TYPE_GUEST_VCPU** is a special packet, not caused by a trap, that
 indicates that the guest requested to start an additional VCPU.
 
 ## RIGHTS
@@ -69,20 +69,20 @@ indicates that the guest requested to start an additional VCPU.
 
 ## RETURN VALUE
 
-`zx_guest_set_trap()` returns ZX_OK on success. On failure, an error value is
+`zx_guest_set_trap()` returns **ZX_OK** on success. On failure, an error value is
 returned.
 
 ## ERRORS
 
 **ZX_ERR_ACCESS_DENIED** *handle* or *port_handle* do not have the
-*ZX_RIGHT_WRITE* right.
+**ZX_RIGHT_WRITE** right.
 
 **ZX_ERR_ALREADY_EXISTS** A trap with the same *kind* and *addr* already exists.
 
 **ZX_ERR_BAD_HANDLE** *handle* or *port_handle* are invalid handles.
 
 **ZX_ERR_INVALID_ARGS** *kind* is not a valid address space, *addr* or *size*
-do not meet the requirements of *kind*, *size* is 0, or *ZX_GUEST_TRAP_MEM* was
+do not meet the requirements of *kind*, *size* is 0, or **ZX_GUEST_TRAP_MEM** was
 specified with a *port_handle*.
 
 **ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
@@ -97,12 +97,11 @@ not a handle to a port.
 
 ## NOTES
 
-*ZX_GUEST_TRAP_BELL* shares the same address space as *ZX_GUEST_TRAP_MEM*.
+**ZX_GUEST_TRAP_BELL** shares the same address space as **ZX_GUEST_TRAP_MEM**.
 
-On x86-64, if *kind* is *ZX_GUEST_TRAP_BELL* or *ZX_GUEST_TRAP_MEM* and *addr*
+On x86-64, if *kind* is **ZX_GUEST_TRAP_BELL** or **ZX_GUEST_TRAP_MEM** and *addr*
 is the address of the local APIC, then *size* must be equivalent to the size of
-a
-page. This is due to a special page being mapped when a trap is requested at the
+a page. This is due to a special page being mapped when a trap is requested at the
 address of the local APIC. This allows us to take advantage of hardware
 acceleration when available.
 

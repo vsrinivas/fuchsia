@@ -32,7 +32,7 @@ TODO(ZX-2399)
 
 ## RETURN VALUE
 
-On success, `zx_pmt_unpin()` returns *ZX_OK*.
+On success, `zx_pmt_unpin()` returns **ZX_OK**.
 In the event of failure, a negative error value is returned.
 
 ## ERRORS

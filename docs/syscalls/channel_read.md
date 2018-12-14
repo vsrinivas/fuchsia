@@ -39,7 +39,7 @@ overlap between these two buffers, the contents written to *handles*
 will overwrite the portion of *bytes* it overlaps.
 
 When communicating to an untrusted party over a channel, it is recommended that
-the [channel_read_etc](channel_read_etc.md) form is used and each handle type
+the [`zx_channel_read_etc()`] form is used and each handle type
 and rights are validated against the expected values.
 
 ## RIGHTS
@@ -96,3 +96,7 @@ in the *handles* array, not its size in bytes.
 [channel_create](channel_create.md),
 [channel_read_etc](channel_read_etc.md),
 [channel_write](channel_write.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_channel_read_etc()`]: channel_read_etc.md

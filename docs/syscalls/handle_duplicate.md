@@ -35,7 +35,7 @@ to specify no rights by using 0.
 
 ## RETURN VALUE
 
-`zx_handle_duplicate()` returns ZX_OK and the duplicate handle via *out* on success.
+`zx_handle_duplicate()` returns **ZX_OK** and the duplicate handle via *out* on success.
 
 ## ERRORS
 

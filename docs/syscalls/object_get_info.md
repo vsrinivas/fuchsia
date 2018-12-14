@@ -55,7 +55,7 @@ records are returned and *buffer* may be NULL.
 
 *handle* type: **Any**
 
-*buffer* type: **zx_info_handle_basic_t[1]**
+*buffer* type: `zx_info_handle_basic_t[1]`
 
 ```
 typedef struct zx_info_handle_basic {
@@ -88,7 +88,7 @@ typedef struct zx_info_handle_basic {
 
 *handle* type: **Any**
 
-*buffer* type: **zx_info_handle_count_t[1]**
+*buffer* type: `zx_info_handle_count_t[1]`
 
 ```
 typedef struct zx_info_handle_count {
@@ -106,7 +106,7 @@ owner even as the last handle is transferred from one process to another.
 
 *handle* type: **Process**
 
-*buffer* type: **zx_info_process_handle_stats_t[1]**
+*buffer* type: `zx_info_process_handle_stats_t[1]`
 
 ```
 typedef struct zx_info_process_handle_stats {
@@ -119,7 +119,7 @@ typedef struct zx_info_process_handle_stats {
 
 *handle* type: **Process**
 
-*buffer* type: **zx_info_process_t[1]**
+*buffer* type: `zx_info_process_t[1]`
 
 ```
 typedef struct zx_info_process {
@@ -143,9 +143,9 @@ typedef struct zx_info_process {
 
 *handle* type: **Process**
 
-*buffer* type: **zx_koid_t[n]**
+*buffer* type: `zx_koid_t[n]`
 
-Returns an array of *zx_koid_t*, one for each running thread in the Process at
+Returns an array of `zx_koid_t`, one for each running thread in the Process at
 that moment in time.
 
 N.B. Getting the list of threads is inherently racy.
@@ -159,7 +159,7 @@ the time the list of threads was obtained, it could be larger than *actual*.
 
 *handle* type: **Thread**
 
-*buffer* type: **zx_info_thread_t[1]**
+*buffer* type: `zx_info_thread_t[1]`
 
 ```
 typedef struct zx_info_thread {
@@ -177,52 +177,52 @@ typedef struct zx_info_thread {
 The values in this struct are mainly for informational and debugging
 purposes at the moment.
 
-The **ZX_THREAD_STATE_\*** values are defined by
+The various **ZX_THREAD_STATE_** values are defined by
 
 ```
 #include <zircon/syscalls/object.h>
 ```
 
-*   *ZX_THREAD_STATE_NEW*: The thread has been created but it has not started running yet.
-*   *ZX_THREAD_STATE_RUNNING*: The thread is running user code normally.
-*   *ZX_THREAD_STATE_SUSPENDED*: Stopped due to [zx_task_suspend](task_suspend.md).
-*   *ZX_THREAD_STATE_BLOCKED*: In a syscall or handling an exception.
+*   **ZX_THREAD_STATE_NEW**: The thread has been created but it has not started running yet.
+*   **ZX_THREAD_STATE_RUNNING**: The thread is running user code normally.
+*   **ZX_THREAD_STATE_SUSPENDED**: Stopped due to [`zx_task_suspend()`].
+*   **ZX_THREAD_STATE_BLOCKED**: In a syscall or handling an exception.
     This value is never returned by itself.
 	See **ZX_THREAD_STATE_BLOCKED_\*** below.
-*   *ZX_THREAD_STATE_DYING*: The thread is in the process of being terminated,
+*   **ZX_THREAD_STATE_DYING**: The thread is in the process of being terminated,
     but it has not been stopped yet.
-*   *ZX_THREAD_STATE_DEAD*: The thread has stopped running.
+*   **ZX_THREAD_STATE_DEAD**: The thread has stopped running.
 
 When a thread is stopped inside a blocking syscall, or stopped in an
 exception, the value returned in **state** is one of the following:
 
-*   *ZX_THREAD_STATE_BLOCKED_EXCEPTION*: The thread is stopped in an exception.
-*   *ZX_THREAD_STATE_BLOCKED_SLEEPING*: The thread is stopped in [zx_nanosleep](nanosleep.md).
-*   *ZX_THREAD_STATE_BLOCKED_FUTEX*: The thread is stopped in [zx_futex_wait](futex_wait.md).
-*   *ZX_THREAD_STATE_BLOCKED_PORT*: The thread is stopped in [zx_port_wait](port_wait.md).
-*   *ZX_THREAD_STATE_BLOCKED_CHANNEL*: The thread is stopped in [zx_channel_call](channel_call.md).
-*   *ZX_THREAD_STATE_BLOCKED_WAIT_ONE*: The thread is stopped in [zx_object_wait_one](object_wait_one.md).
-*   *ZX_THREAD_STATE_BLOCKED_WAIT_MANY*: The thread is stopped in [zx_object_wait_many](object_wait_many.md).
-*   *ZX_THREAD_STATE_BLOCKED_INTERRUPT*: The thread is stopped in [zx_interrupt_wait](interrupt_wait.md).
+*   **ZX_THREAD_STATE_BLOCKED_EXCEPTION**: The thread is stopped in an exception.
+*   **ZX_THREAD_STATE_BLOCKED_SLEEPING**: The thread is stopped in [`zx_nanosleep()`].
+*   **ZX_THREAD_STATE_BLOCKED_FUTEX**: The thread is stopped in [`zx_futex_wait()`].
+*   **ZX_THREAD_STATE_BLOCKED_PORT**: The thread is stopped in [`zx_port_wait()`].
+*   **ZX_THREAD_STATE_BLOCKED_CHANNEL**: The thread is stopped in [`zx_channel_call()`].
+*   **ZX_THREAD_STATE_BLOCKED_WAIT_ONE**: The thread is stopped in [`zx_object_wait_one()`].
+*   **ZX_THREAD_STATE_BLOCKED_WAIT_MANY**: The thread is stopped in [`zx_object_wait_many()`].
+*   **ZX_THREAD_STATE_BLOCKED_INTERRUPT**: The thread is stopped in [`zx_interrupt_wait()`].
 
-The **ZX_EXCEPTION_PORT_TYPE_\*** values are defined by
+The various **ZX_EXCEPTION_PORT_TYPE_** values are defined by
 
 ```
 #include <zircon/syscalls/exception.h>
 ```
 
-*   *ZX_EXCEPTION_PORT_TYPE_NONE*
-*   *ZX_EXCEPTION_PORT_TYPE_DEBUGGER*
-*   *ZX_EXCEPTION_PORT_TYPE_THREAD*
-*   *ZX_EXCEPTION_PORT_TYPE_PROCESS*
-*   *ZX_EXCEPTION_PORT_TYPE_JOB*
-*   *ZX_EXCEPTION_PORT_TYPE_JOB_DEBUGGER*
+*   **ZX_EXCEPTION_PORT_TYPE_NONE**
+*   **ZX_EXCEPTION_PORT_TYPE_DEBUGGER**
+*   **ZX_EXCEPTION_PORT_TYPE_THREAD**
+*   **ZX_EXCEPTION_PORT_TYPE_PROCESS**
+*   **ZX_EXCEPTION_PORT_TYPE_JOB**
+*   **ZX_EXCEPTION_PORT_TYPE_JOB_DEBUGGER**
 
 ### ZX_INFO_THREAD_EXCEPTION_REPORT
 
 *handle* type: **Thread**
 
-*buffer* type: **zx_exception_report_t[1]**
+*buffer* type: `zx_exception_report_t[1]`
 
 ```
 #include <zircon/syscalls/exception.h>
@@ -230,7 +230,7 @@ The **ZX_EXCEPTION_PORT_TYPE_\*** values are defined by
 
 If the thread is currently in an exception and is waiting for an exception
 response, then this returns the exception report as a single
-*zx_exception_report_t*, with status ZX_OK.
+`zx_exception_report_t`, with status **ZX_OK**.
 
 Returns **ZX_ERR_BAD_STATE** if the thread is not in an exception and waiting for
 an exception response.
@@ -239,7 +239,7 @@ an exception response.
 
 *handle* type: **Thread**
 
-*buffer* type: **zx_info_thread_stats[1]**
+*buffer* type: `zx_info_thread_stats[1]`
 
 ```
 typedef struct zx_info_thread_stats {
@@ -255,7 +255,7 @@ Note: many values of this topic are being retired in favor of a different mechan
 
 *handle* type: **Resource** (Specifically, the root resource)
 
-*buffer* type: **zx_info_cpu_stats_t[1]**
+*buffer* type: `zx_info_cpu_stats_t[1]`
 
 ```
 typedef struct zx_info_cpu_stats {
@@ -290,7 +290,7 @@ typedef struct zx_info_cpu_stats {
 
 *handle* type: **VM Address Region**
 
-*buffer* type: **zx_info_vmar_t[1]**
+*buffer* type: `zx_info_vmar_t[1]`
 
 ```
 typedef struct zx_info_vmar {
@@ -302,14 +302,14 @@ typedef struct zx_info_vmar {
 } zx_info_vmar_t;
 ```
 
-This returns a single *zx_info_vmar_t* that describes the range of address
+This returns a single `zx_info_vmar_t` that describes the range of address
 space that the VMAR occupies.
 
 ### ZX_INFO_VMO
 
 *handle* type: **VM Object**
 
-*buffer* type: **zx_info_vmo_t[1]**
+*buffer* type: `zx_info_vmo_t[1]`
 
 ```
 typedef struct zx_info_vmo {
@@ -356,14 +356,14 @@ typedef struct zx_info_vmo {
 } zx_info_vmo_t;
 ```
 
-This returns a single *zx_info_vmo_t* that describes various attributes of
+This returns a single `zx_info_vmo_t` that describes various attributes of
 the VMO.
 
 ### ZX_INFO_SOCKET
 
 *handle* type: **Socket**
 
-*buffer* type: **zx_info_socket_t[1]**
+*buffer* type: `zx_info_socket_t[1]`
 
 ```
 typedef struct zx_info_socket {
@@ -406,25 +406,25 @@ typedef struct zx_info_socket {
 
 *handle* type: **Job**
 
-*buffer* type: **zx_koid_t[n]**
+*buffer* type: `zx_koid_t[n]`
 
-Returns an array of *zx_koid_t*, one for each direct child Job of the provided
+Returns an array of `zx_koid_t`, one for each direct child Job of the provided
 Job handle.
 
 ### ZX_INFO_JOB_PROCESSES
 
 *handle* type: **Job**
 
-*buffer* type: **zx_koid_t[n]**
+*buffer* type: `zx_koid_t[n]`
 
-Returns an array of *zx_koid_t*, one for each direct child Process of the
+Returns an array of `zx_koid_t`, one for each direct child Process of the
 provided Job handle.
 
 ### ZX_INFO_TASK_STATS
 
 *handle* type: **Process**
 
-*buffer* type: **zx_info_task_stats_t[1]**
+*buffer* type: `zx_info_task_stats_t[1]`
 
 Returns statistics about resources (e.g., memory) used by a task.
 
@@ -464,9 +464,9 @@ Additional errors:
 
 *handle* type: **Process** other than your own, with **ZX_RIGHT_READ**
 
-*buffer* type: **zx_info_maps_t[n]**
+*buffer* type: `zx_info_maps_t[n]`
 
-The *zx_info_maps_t* array is a depth-first pre-order walk of the target
+The `zx_info_maps_t` array is a depth-first pre-order walk of the target
 process's Aspace/VMAR/Mapping tree. As per the pre-order traversal base
 addresses will be in ascending order.
 
@@ -517,9 +517,9 @@ Additional errors:
 
 *handle* type: **Process** other than your own, with **ZX_RIGHT_READ**
 
-*buffer* type: **zx_info_vmos_t[n]**
+*buffer* type: `zx_info_vmos_t[n]`
 
-The *zx_info_vmos_t* array is list of all VMOs pointed to by the target process.
+The `zx_info_vmos_t` array is list of all VMOs pointed to by the target process.
 Some VMOs are mapped, some are pointed to by handles, and some are both.
 
 **Note**: The same VMO may appear multiple times due to multiple
@@ -583,7 +583,7 @@ the VMOs of arbitrary processes by koid.
 
 *handle* type: **Resource** (Specifically, the root resource)
 
-*buffer* type: **zx_info_kmem_stats_t[1]**
+*buffer* type: `zx_info_kmem_stats_t[1]`
 
 Returns information about kernel memory usage. It can be expensive to gather.
 
@@ -627,7 +627,8 @@ typedef struct zx_info_kmem_stats {
 ### ZX_INFO_RESOURCE
 
 *handle* type: **Resource**
-*buffer* type: **zx_info_resource_t[1]**
+
+*buffer* type: `zx_info_resource_t[1]`
 
 Returns information about a resource object via its handle.
 
@@ -644,19 +645,19 @@ typedef struct zx_info_resource {
 
 The resource kind is one of
 
-*   *ZX_RSRC_KIND_ROOT*
-*   *ZX_RSRC_KIND_MMIO*
-*   *ZX_RSRC_KIND_IOPORT*
-*   *ZX_RSRC_KIND_IRQ*
-*   *ZX_RSRC_KIND_HYPERVISOR*
-*   *ZX_RSRC_KIND_VMEX*
-*   *ZX_RSRC_KIND_SMC*
+*   **ZX_RSRC_KIND_ROOT**
+*   **ZX_RSRC_KIND_MMIO**
+*   **ZX_RSRC_KIND_IOPORT**
+*   **ZX_RSRC_KIND_IRQ**
+*   **ZX_RSRC_KIND_HYPERVISOR**
+*   **ZX_RSRC_KIND_VMEX**
+*   **ZX_RSRC_KIND_SMC**
 
 ### ZX_INFO_BTI
 
 *handle* type: **Bus Transaction Initiator**
 
-*buffer* type: **zx_info_bti_t[1]**
+*buffer* type: `zx_info_bti_t[1]`
 
 ```
 typedef struct zx_info_bti {
@@ -776,5 +777,18 @@ void examine_threads(zx_handle_t proc) {
 
 ## SEE ALSO
 
-[handle_close](handle_close.md), [handle_duplicate](handle_duplicate.md),
-[handle_replace](handle_replace.md), [object_get_child](object_get_child.md).
+[handle_close](handle_close.md),
+[handle_duplicate](handle_duplicate.md),
+[handle_replace](handle_replace.md),
+[object_get_child](object_get_child.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_channel_call()`]: channel_call.md
+[`zx_futex_wait()`]: futex_wait.md
+[`zx_interrupt_wait()`]: interrupt_wait.md
+[`zx_nanosleep()`]: nanosleep.md
+[`zx_object_wait_many()`]: object_wait_many.md
+[`zx_object_wait_one()`]: object_wait_one.md
+[`zx_port_wait()`]: port_wait.md
+[`zx_task_suspend()`]: task_suspend.md

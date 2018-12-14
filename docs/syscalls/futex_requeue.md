@@ -24,10 +24,10 @@ zx_status_t zx_futex_requeue(const zx_futex_t* value_ptr,
 ## DESCRIPTION
 
 Requeuing is a generalization of waking. First, the kernel verifies
-that the value in `current_value` matches the value of the futex at
-`value_ptr`, and if not reports *ZX_ERR_BAD_STATE*. After waking `wake_count`
-threads, `requeue_count` threads are moved from the original futex's
-wait queue to the wait queue corresponding to `requeue_ptr`, another
+that the value in *current_value* matches the value of the futex at
+*value_ptr*, and if not reports **ZX_ERR_BAD_STATE**. After waking *wake_count*
+threads, *requeue_count* threads are moved from the original futex's
+wait queue to the wait queue corresponding to *requeue_ptr*, another
 futex.
 
 This requeueing behavior may be used to avoid thundering herds on wake.
@@ -56,7 +56,7 @@ will have no owner.
 
 A successful call to `zx_futex_requeue()` or [`zx_futex_requeue_single_owner()`]
 results in the owner of the futex being set to the thread referenced by the
-`new_requeue_owner` handle, or to nothing if `new_requeue_owner` is
+*new_requeue_owner* handle, or to nothing if *new_requeue_owner* is
 **ZX_HANDLE_INVALID**.
 
 ## RIGHTS
@@ -72,14 +72,14 @@ None.
 ## ERRORS
 
 **ZX_ERR_INVALID_ARGS**  One of the following is true:
-+ Either `value_ptr` or `requeue_ptr` is not a valid userspace pointer
-+ Either `value_ptr` or `requeue_ptr` is not aligned to a sizeof(zx_futex_t) boundary.
-+ `value_ptr` is the same futex as `requeue_ptr`
-+ `new_requeue_owner` is currently a member of the waiters for either value_ptr or requeue_ptr
++ Either *value_ptr* or *requeue_ptr* is not a valid userspace pointer
++ Either *value_ptr* or *requeue_ptr* is not aligned to a `sizeof(zx_futex_t)` boundary.
++ *value_ptr* is the same futex as *requeue_ptr*
++ *new_requeue_owner* is currently a member of the waiters for either *value_ptr* or *requeue_ptr*
 
-**ZX_ERR_BAD_HANDLE**  `new_requeue_owner` is not **ZX_HANDLE_INVALID**, and not a valid handle.
-**ZX_ERR_WRONG_TYPE**  `new_requeue_owner` is a valid handle, but is not a handle to a thread.
-**ZX_ERR_BAD_STATE**  `current_value` does not match the value at `value_ptr`.
+**ZX_ERR_BAD_HANDLE**  *new_requeue_owner* is not **ZX_HANDLE_INVALID**, and not a valid handle.
+**ZX_ERR_WRONG_TYPE**  *new_requeue_owner* is a valid handle, but is not a handle to a thread.
+**ZX_ERR_BAD_STATE**  *current_value* does not match the value at *value_ptr*.
 
 ## SEE ALSO
 

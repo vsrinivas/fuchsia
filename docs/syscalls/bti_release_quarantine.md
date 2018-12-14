@@ -40,7 +40,7 @@ In the event of failure, a negative error value is returned.
 
 **ZX_ERR_WRONG_TYPE**  *handle* is not a BTI handle.
 
-**ZX_ERR_ACCESS_DENIED** *handle* does not have the *ZX_RIGHT_WRITE* right.
+**ZX_ERR_ACCESS_DENIED** *handle* does not have the **ZX_RIGHT_WRITE** right.
 
 ## SEE ALSO
 

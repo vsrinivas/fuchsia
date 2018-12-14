@@ -43,7 +43,7 @@ this syscall to kill itself, this syscall does not return.
 ## NOTES
 
 When using this syscall on a process, the return code for the process
-is -1 as reported by [`zx_object_get_info()`] via the ZX_INFO_PROCESS topic.
+is -1 as reported by [`zx_object_get_info()`] via the **ZX_INFO_PROCESS** topic.
 
 ## ERRORS
 

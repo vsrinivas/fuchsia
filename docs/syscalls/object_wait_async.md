@@ -51,7 +51,7 @@ in the queue on behalf of the operation, that packet will be removed from the qu
 If the handle is closed, the operation will also be terminated, but packets already
 in the queue are not affected.
 
-See [port_wait](port_wait.md) for more information about each type
+See [`zx_port_wait()`] for more information about each type
 of packet and their semantics.
 
 ## RIGHTS

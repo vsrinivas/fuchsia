@@ -19,11 +19,11 @@ zx_status_t zx_event_create(uint32_t options, zx_handle_t* out);
 ## DESCRIPTION
 
 `zx_event_create()` creates an event, which is an object that is signalable. That
-is, its *ZX_USER_SIGNAL_n* (where *n* is 0 through 7) signals can be
+is, its **ZX_USER_SIGNAL_n** (where *n* is 0 through 7) signals can be
 manipulated using [`zx_object_signal()`].
 
 The newly-created handle will have the [basic
-rights](../rights.md#zx_rights_basic) plus *ZX_RIGHT_SIGNAL*.
+rights](../rights.md#zx_rights_basic) plus **ZX_RIGHT_SIGNAL**.
 
 ## RIGHTS
 
@@ -33,7 +33,7 @@ TODO(ZX-2399)
 
 ## RETURN VALUE
 
-`zx_event_create()` returns ZX_OK and a valid event handle (via *out*) on success.
+`zx_event_create()` returns **ZX_OK** and a valid event handle (via *out*) on success.
 On failure, an error value is returned.
 
 ## ERRORS

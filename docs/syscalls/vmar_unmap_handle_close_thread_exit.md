@@ -22,17 +22,17 @@ zx_status_t zx_vmar_unmap_handle_close_thread_exit(zx_handle_t vmar_handle,
 ## DESCRIPTION
 
 `zx_vmar_unmap_handle_close_thread_exit()` does a sequence of three operations:
-1. `zx_vmar_unmap(vmar_handle, addr, size);`
-2. `zx_handle_close(close_handle);`
-3. `zx_thread_exit();`
+1. `zx_vmar_unmap(vmar_handle, addr, size)`
+2. `zx_handle_close(close_handle)`
+3. `zx_thread_exit()`
 
 The expectation is that the first operation unmaps a region including the
 calling thread's own stack.  (It's not required, but it's permitted.)  This
-is valid for this call, though it would be invalid for *zx_vmar_unmap*() or
+is valid for this call, though it would be invalid for [`zx_vmar_unmap()`] or
 any other call.
 
-If the *vmar_unmap* operation is successful, then this call never returns.
-If *close_handle* is an invalid handle so that the *handle_close* operation
+If the [`zx_vmar_unmap()`] operation is successful, then this call never returns.
+If *close_handle* is an invalid handle so that the [`zx_handle_close()`] operation
 fails, then the thread takes a trap (as if by `__builtin_trap();`).
 
 ## RIGHTS
@@ -47,7 +47,7 @@ TODO(ZX-2399)
 
 ## ERRORS
 
-Same as [*zx_vmar_unmap*()](vmar_unmap.md).
+Same as [`zx_vmar_unmap()`].
 
 ## NOTES
 
@@ -58,7 +58,7 @@ The stack cannot be unmapped beforehand because the thread must have some
 stack space on which to make its final system calls.
 
 This call is used for detached threads, while
-[*futex_wake_handle_close_thread_exit*()](futex_wake_handle_close_thread_exit.md)
+[`zx_futex_wake_handle_close_thread_exit()`]
 is used for joinable threads.
 
 ## SEE ALSO
@@ -67,3 +67,9 @@ is used for joinable threads.
 [handle_close](handle_close.md),
 [thread_exit](thread_exit.md),
 [futex_wake_handle_close_thread_exit](futex_wake_handle_close_thread_exit.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_futex_wake_handle_close_thread_exit()`]: futex_wake_handle_close_thread_exit.md
+[`zx_handle_close()`]: handle_close.md
+[`zx_vmar_unmap()`]: vmar_unmap.md

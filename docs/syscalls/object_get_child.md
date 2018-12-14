@@ -27,7 +27,7 @@ object exists, and the requested *rights* are not greater than those provided
 by the *handle* to the parent, a new handle to the specified child object is
 returned.
 
-*rights* may be *ZX_RIGHT_SAME_RIGHTS* which will result in rights equivalent
+*rights* may be **ZX_RIGHT_SAME_RIGHTS** which will result in rights equivalent
 to the those on the *handle*.
 
 If the object is a *Process*, the *Threads* it contains may be obtained by

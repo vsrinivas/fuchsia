@@ -35,7 +35,7 @@ TODO(ZX-2399)
 
 ## ERRORS
 
-**zx_tick_get**() does not report any error conditions.
+`zx_ticks_get()` does not report any error conditions.
 
 ## NOTES
 

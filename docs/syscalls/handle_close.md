@@ -21,11 +21,11 @@ zx_status_t zx_handle_close(zx_handle_t handle);
 `zx_handle_close()` closes a *handle*, causing the underlying object to be
 reclaimed by the kernel if no other handles to it exist.
 
-If the *handle* was used in a pending [object_wait_one](object_wait_one.md) or a
-[object_wait_many](object_wait_many.md) call, the wait will be aborted.
+If the *handle* was used in a pending [`zx_object_wait_one()`] or a
+[`zx_object_wait_many()`] call, the wait will be aborted.
 
 It is not an error to close the special "never a valid handle" **ZX_HANDLE_INVALID**,
-similar to free(NULL) being a valid call.
+similar to `free(NULL)` being a valid call.
 
 ## RIGHTS
 
@@ -46,3 +46,8 @@ None.
 [handle_close_many](handle_close_many.md),
 [handle_duplicate](handle_duplicate.md),
 [handle_replace](handle_replace.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_object_wait_many()`]: object_wait_many.md
+[`zx_object_wait_one()`]: object_wait_one.md

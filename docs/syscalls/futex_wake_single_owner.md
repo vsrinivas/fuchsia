@@ -18,7 +18,7 @@ zx_status_t zx_futex_wake_single_owner(const zx_futex_t* value_ptr);
 
 ## DESCRIPTION
 
-See [futex_wake](futex_wake.md) for a full description.
+See [`zx_futex_wake()`] for a full description.
 
 ## RIGHTS
 
@@ -32,7 +32,7 @@ None.
 
 ## ERRORS
 
-**ZX_ERR_INVALID_ARGS**  `value_ptr` is not aligned.
+**ZX_ERR_INVALID_ARGS**  *value_ptr* is not aligned.
 
 ## SEE ALSO
 
@@ -40,3 +40,7 @@ None.
 [futex_requeue](futex_requeue.md),
 [futex_wait](futex_wait.md),
 [futex_wake](futex_wake.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_futex_wake()`]: futex_wake.md

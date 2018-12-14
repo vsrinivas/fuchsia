@@ -36,7 +36,7 @@ the task.
 The allow the task to resume, close the suspend token handle. The task will
 remain suspended as long as there are any open suspend tokens. Like suspending,
 resuming is asynchronous so the thread may not be in a running state when the
-[handle_close](handle_close.md) call returns, even if no other suspend tokens
+[`zx_handle_close()`] call returns, even if no other suspend tokens
 are open.
 
 ## RIGHTS
@@ -66,5 +66,6 @@ Currently only thread handles are supported.
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
+[`zx_handle_close()`]: handle_close.md
 [`zx_task_kill()`]: task_kill.md
 [`zx_task_suspend()`]: task_suspend.md

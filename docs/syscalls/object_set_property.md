@@ -24,7 +24,7 @@ zx_status_t zx_object_set_property(zx_handle_t handle,
 `zx_object_set_property()` modifies the value of a kernel object's property.
 Setting a property requires **ZX_RIGHT_SET_PROPERTY** rights on the handle.
 
-See [object_get_property()](object_get_property.md) for a full description.
+See [`zx_object_get_property()`] for a full description.
 
 ## RIGHTS
 
@@ -43,3 +43,7 @@ If *property* is **ZX_PROP_JOB_KILL_ON_OOM**, *handle* must be of type **ZX_OBJ_
 ## SEE ALSO
 
 [object_get_property()](object_get_property.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_object_get_property()`]: object_get_property.md

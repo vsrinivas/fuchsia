@@ -30,7 +30,7 @@ zircon/syscalls/debug.h for the contents of the structures on each platform.
 
 ## STATES
 
-See [thread_read_state](thread_read_state.md) for the list of available states
+See [`zx_thread_read_state()`] for the list of available states
 and their corresponding values.
 
 ### ZX_THREAD_STATE_DEBUG_REGS
@@ -38,7 +38,7 @@ and their corresponding values.
 #### ARM
 
 ARM has a variable amount of debug breakpoints and watchpoints. For this
-architecture, **zx_thread_state_debug_regs_t** is big enough to hold the maximum
+architecture, `zx_thread_state_debug_regs_t` is big enough to hold the maximum
 amount of breakpoints possible. But in most cases a given CPU implementation
 holds a lesser amount, meaning that the upper values beyond the limit are not
 used.
@@ -48,7 +48,7 @@ the given breakpoint/watchpoint count value. This means that all the correct
 state must be set for the call.
 
 You can get the current state of the registers by calling
-[thread_read_state](thread_read_state.md#zx_thread_state_debug_regs).
+[`zx_thread_read_state()`](thread_read_state.md#zx_thread_state_debug_regs).
 
 ## RIGHTS
 
@@ -67,7 +67,7 @@ In the event of failure, a negative error value is returned.
 
 **ZX_ERR_WRONG_TYPE**  *handle* is not that of a thread.
 
-**ZX_ERR_ACCESS_DENIED**  *handle* lacks *ZX_RIGHT_WRITE*.
+**ZX_ERR_ACCESS_DENIED**  *handle* lacks **ZX_RIGHT_WRITE**.
 
 **ZX_ERR_INVALID_ARGS**  *kind* is not valid, *buffer* is an invalid pointer,
 *buffer_size* doesn't match the size of the structure expected for *kind* or
@@ -88,3 +88,7 @@ is not supported by the hardware the program is currently running on.
 ## SEE ALSO
 
 [thread_read_state](thread_read_state.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_thread_read_state()`]: thread_read_state.md

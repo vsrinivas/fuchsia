@@ -33,7 +33,7 @@ Their read and write operations are more efficient than *sockets* or
 and buffers.
 
 The *elem_count* must be a power of two.  The total size of each fifo
-(*elem_count* * *elem_size*) may not exceed 4096 bytes.
+(`elem_count * elem_size`) may not exceed 4096 bytes.
 
 The *options* argument must be 0.
 

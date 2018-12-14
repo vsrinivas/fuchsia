@@ -90,6 +90,7 @@ longer occur.
 
 ## SEE ALSO
 
-[handle_close](handle_close.md), [interrupt_create](interrupt_create.md),
+[handle_close](handle_close.md),
+[interrupt_create](interrupt_create.md),
 [ioports_request](ioports_request.md),
 [vmo_create_physical](vmo_create_physical.md)

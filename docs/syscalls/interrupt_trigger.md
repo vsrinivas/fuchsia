@@ -34,7 +34,7 @@ to a port, or [`zx_interrupt_wait()`] to return if it is waiting on this interru
 
 ## RETURN VALUE
 
-**interrupt_signal**() returns **ZX_OK** on success. In the event
+`zx_interrupt_trigger()` returns **ZX_OK** on success. In the event
 of failure, a negative error value is returned.
 
 ## ERRORS

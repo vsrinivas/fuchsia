@@ -25,17 +25,17 @@ zx_status_t zx_vmar_protect(zx_handle_t handle,
 in the range of *len* bytes starting from *addr*. The *options* argument should
 be a bitwise-or of one or more of the following:
 - **ZX_VM_PERM_READ**  Map as readable.  It is an error if *handle*
-  does not have *ZX_VM_CAN_MAP_READ* permissions or *handle* does
-  not have the *ZX_RIGHT_READ* right.  It is also an error if the VMO handle
-  used to create the mapping did not have the *ZX_RIGHT_READ* right.
+  does not have **ZX_VM_CAN_MAP_READ** permissions or *handle* does
+  not have the **ZX_RIGHT_READ** right.  It is also an error if the VMO handle
+  used to create the mapping did not have the **ZX_RIGHT_READ** right.
 - **ZX_VM_PERM_WRITE**  Map as writable.  It is an error if *handle*
-  does not have *ZX_VM_CAN_MAP_WRITE* permissions or *handle* does
-  not have the *ZX_RIGHT_WRITE* right.  It is also an error if the VMO handle
-  used to create the mapping did not have the *ZX_RIGHT_WRITE* right.
+  does not have **ZX_VM_CAN_MAP_WRITE** permissions or *handle* does
+  not have the **ZX_RIGHT_WRITE** right.  It is also an error if the VMO handle
+  used to create the mapping did not have the **ZX_RIGHT_WRITE** right.
 - **ZX_VM_PERM_EXECUTE**  Map as executable.  It is an error if *handle*
-  does not have *ZX_VM_CAN_MAP_EXECUTE* permissions or *handle* does
-  not have the *ZX_RIGHT_EXECUTE* right.  It is also an error if the VMO handle
-  used to create the mapping did not have the *ZX_RIGHT_EXECUTE* right.
+  does not have **ZX_VM_CAN_MAP_EXECUTE** permissions or *handle* does
+  not have the **ZX_RIGHT_EXECUTE** right.  It is also an error if the VMO handle
+  used to create the mapping did not have the **ZX_RIGHT_EXECUTE** right.
 
 *len* must be page-aligned.
 

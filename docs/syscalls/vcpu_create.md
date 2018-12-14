@@ -57,12 +57,12 @@ The following rights will be set on the handle *out* by default:
 
 ## RETURN VALUE
 
-`zx_vcpu_create()` returns ZX_OK on success. On failure, an error value is
+`zx_vcpu_create()` returns **ZX_OK** on success. On failure, an error value is
 returned.
 
 ## ERRORS
 
-**ZX_ERR_ACCESS_DENIED** *guest* does not have the *ZX_RIGHT_MANAGE_PROCESS*
+**ZX_ERR_ACCESS_DENIED** *guest* does not have the **ZX_RIGHT_MANAGE_PROCESS**
 right.
 
 **ZX_ERR_BAD_HANDLE** *guest* is an invalid handle.

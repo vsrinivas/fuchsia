@@ -24,7 +24,7 @@ zx_status_t zx_task_bind_exception_port(zx_handle_t handle,
 `zx_task_bind_exception_port()` is used to bind (or unbind) a port to
 the exception port of a job, process, or thread.
 
-*port* is an IO port created by [zx_port_create](port_create.md). The same
+*port* is an IO port created by [`zx_port_create()`]. The same
 IO port can be bound to multiple objects.
 
 *key* is passed back in exception reports, and is part of the port
@@ -83,3 +83,7 @@ In a future build this error will no longer occur.
 [port_create](port_create.md).
 [port_wait](port_wait.md).
 [task_resume_from_exception](task_resume_from_exception.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_port_create()`]: port_create.md

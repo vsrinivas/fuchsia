@@ -19,7 +19,7 @@ zx_status_t zx_interrupt_destroy(zx_handle_t handle);
 ## DESCRIPTION
 
 `zx_interrupt_destroy()` "destroys" an interrupt object, putting it in a state
-where any [`zx_interrupt_wait()`] operations on it will return ZX_ERR_CANCELED,
+where any [`zx_interrupt_wait()`] operations on it will return **ZX_ERR_CANCELED**,
 and it is unbound from any ports it was bound to.
 
 This provides a clean shut down mechanism.  Closing the last handle to the

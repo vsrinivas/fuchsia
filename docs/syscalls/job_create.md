@@ -40,7 +40,7 @@ Job handles may be waited on (TODO(cpu): expand this)
 
 ## RETURN VALUE
 
-`zx_job_create()` returns ZX_OK and a handle to the new job
+`zx_job_create()` returns **ZX_OK** and a handle to the new job
 (via *out*) on success.  In the event of failure, a negative error value
 is returned.
 

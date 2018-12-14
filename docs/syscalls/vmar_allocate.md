@@ -35,13 +35,13 @@ Creates a new VMAR within the one specified by *parent_vmar*.
   to specify an address range that overlaps with another VMAR or mapping.
 - **ZX_VM_CAN_MAP_SPECIFIC**  The new VMAR can have subregions/mappings
   created with **ZX_VM_SPECIFIC**.  It is NOT an error if the parent does
-  not have *ZX_VM_CAN_MAP_SPECIFIC* permissions.
+  not have **ZX_VM_CAN_MAP_SPECIFIC** permissions.
 - **ZX_VM_CAN_MAP_READ**  The new VMAR can contain readable mappings.
-  It is an error if the parent does not have *ZX_VM_CAN_MAP_READ* permissions.
+  It is an error if the parent does not have **ZX_VM_CAN_MAP_READ** permissions.
 - **ZX_VM_CAN_MAP_WRITE**  The new VMAR can contain writable mappings.
-  It is an error if the parent does not have *ZX_VM_CAN_MAP_WRITE* permissions.
+  It is an error if the parent does not have **ZX_VM_CAN_MAP_WRITE** permissions.
 - **ZX_VM_CAN_MAP_EXECUTE**  The new VMAR can contain executable mappings.
-  It is an error if the parent does not have *ZX_VM_CAN_MAP_EXECUTE* permissions.
+  It is an error if the parent does not have **ZX_VM_CAN_MAP_EXECUTE** permissions.
 
 *offset* must be 0 if *options* does not have **ZX_VM_SPECIFIC** set.
 
@@ -71,7 +71,7 @@ In the event of failure, a negative error value is returned.
 **ZX_ERR_BAD_STATE**  *parent_vmar* refers to a destroyed VMAR.
 
 **ZX_ERR_INVALID_ARGS**  *child_vmar* or *child_addr* are not valid, *offset* is
-non-zero when *ZX_VM_SPECIFIC* is not given, *offset* and *size* describe
+non-zero when **ZX_VM_SPECIFIC** is not given, *offset* and *size* describe
 an unsatisfiable allocation due to exceeding the region bounds, *offset*
 or *size* is not page-aligned, or *size* is 0.
 

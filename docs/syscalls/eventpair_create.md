@@ -23,17 +23,17 @@ zx_status_t zx_eventpair_create(uint32_t options,
 `zx_eventpair_create()` creates an event pair, which is a pair of objects that
 are mutually signalable.
 
-The signals *ZX_EVENTPAIR_SIGNALED* and *ZX_USER_SIGNAL_n* (where *n* is 0 through 7)
+The signals **ZX_EVENTPAIR_SIGNALED** and **ZX_USER_SIGNAL_n** (where *n* is 0 through 7)
 may be set or cleared using [`zx_object_signal()`] (modifying the signals on the
 object itself), or [`zx_object_signal_peer()`] (modifying the signals on its
 counterpart).
 
 When all the handles to one of the objects have been closed, the
-*ZX_EVENTPAIR_PEER_CLOSED* signal will be asserted on the opposing object.
+**ZX_EVENTPAIR_PEER_CLOSED** signal will be asserted on the opposing object.
 
-The newly-created handles will have the *ZX_RIGHT_TRANSFER*,
-*ZX_RIGHT_DUPLICATE*, *ZX_RIGHT_READ*, *ZX_RIGHT_WRITE*, *ZX_RIGHT_SIGNAL*,
-and *ZX_RIGHT_SIGNAL_PEER* rights.
+The newly-created handles will have the **ZX_RIGHT_TRANSFER**,
+**ZX_RIGHT_DUPLICATE**, **ZX_RIGHT_READ**, **ZX_RIGHT_WRITE**, **ZX_RIGHT_SIGNAL**,
+and **ZX_RIGHT_SIGNAL_PEER** rights.
 
 Currently, no options are supported, so *options* must be set to 0.
 

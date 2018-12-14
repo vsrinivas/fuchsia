@@ -25,7 +25,7 @@ zx_status_t zx_vcpu_read_state(zx_handle_t handle,
 *buffer*. It is only valid to read the state of *handle* when execution has been
 paused.
 
-*kind* must be *ZX_VCPU_STATE*.
+*kind* must be **ZX_VCPU_STATE**.
 
 ## RIGHTS
 
@@ -35,12 +35,12 @@ paused.
 
 ## RETURN VALUE
 
-`zx_vcpu_read_state()` returns ZX_OK on success. On failure, an error value is
+`zx_vcpu_read_state()` returns **ZX_OK** on success. On failure, an error value is
 returned.
 
 ## ERRORS
 
-**ZX_ERR_ACCESS_DENIED** *handle* does not have the *ZX_RIGHT_READ* right.
+**ZX_ERR_ACCESS_DENIED** *handle* does not have the **ZX_RIGHT_READ** right.
 
 **ZX_ERR_BAD_HANDLE** *handle* is an invalid handle.
 

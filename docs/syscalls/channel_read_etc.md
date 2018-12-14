@@ -25,11 +25,11 @@ zx_status_t zx_channel_read_etc(zx_handle_t handle,
 
 ## DESCRIPTION
 
-See [channel_read](channel_read.md) for a full description.
+See [`zx_channel_read()`] for a full description.
 
 Both forms of read behave the same except that [`zx_channel_read()`] returns an
-array of raw ``zx_handle_t`` handle values while `zx_channel_read_etc()` returns
-an array of ``zx_handle_info_t`` structures of the form:
+array of raw `zx_handle_t` handle values while `zx_channel_read_etc()` returns
+an array of `zx_handle_info_t` structures of the form:
 
 ```
 typedef struct {

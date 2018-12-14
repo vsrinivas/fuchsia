@@ -46,7 +46,7 @@ Property values have the prefix **ZX_PROP_**, and are defined in
 
 *handle* type: **(Most types)**
 
-*value* type: **char\[ZX_MAX_NAME_LEN\]**
+*value* type: `char[ZX_MAX_NAME_LEN]`
 
 Allowed operations: **get**, **set**
 
@@ -56,7 +56,7 @@ The name of the object, as a NUL-terminated string.
 
 *handle* type: **Thread**
 
-*value* type: **uintptr_t**
+*value* type: `uintptr_t`
 
 Allowed operations: **set**
 
@@ -69,7 +69,7 @@ Only defined for x86-64.
 
 *handle* type: **Process**
 
-*value* type: **uintptr_t**
+*value* type: `uintptr_t`
 
 Allowed operations: **get**, **set**
 
@@ -85,7 +85,7 @@ the initial state of the program.
 
 *handle* type: **Process**
 
-*value* type: **uintptr_t**
+*value* type: `uintptr_t`
 
 Allowed operations: **get**
 
@@ -95,7 +95,7 @@ The base address of the vDSO mapping, or zero.
 
 *handle* type: **Job**
 
-*value* type: **zx_job_importance_t**
+*value* type: `zx_job_importance_t`
 
 Allowed operations: **get**, **set**
 
@@ -110,7 +110,7 @@ Additional errors:
 
 *handle* type: **Socket**
 
-*value* type: **size_t**
+*value* type: `size_t`
 
 Allowed operations: **get**, **set**
 
@@ -123,7 +123,7 @@ will result in the deasserting of ZX_SOCKET_READ_THRESHOLD.
 
 *handle* type: **Socket**
 
-*value* type: **size_t**
+*value* type: `size_t`
 
 Allowed operations: **get**, **set**
 
@@ -138,7 +138,7 @@ ZX_ERR_PEER_CLOSED error being returned.
 
 *handle* type: **Job**
 
-*value* type: **size_t**
+*value* type: `size_t`
 
 Allowed operations: **set**
 

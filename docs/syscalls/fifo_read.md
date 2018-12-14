@@ -32,7 +32,7 @@ elements actually read is returned via *actual_count*.
 The element size specified by *elem_size* must match the element size
 that was passed into [`zx_fifo_create()`].
 
-*data* must have a size of at least *count * elem_size* bytes.
+*data* must have a size of at least `count * elem_size` bytes.
 
 *actual_count* is allowed to be NULL. This is useful when reading
 a single element: if *count* is 1 and `zx_fifo_read()` returns **ZX_OK**,

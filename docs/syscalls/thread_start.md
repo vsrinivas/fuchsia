@@ -31,8 +31,8 @@ is started.  All other registers are zero upon start.
 When the last handle to a thread is closed, the thread is destroyed.
 
 Thread handles may be waited on and will assert the signal
-*ZX_THREAD_TERMINATED* when the thread stops executing (due to
-[`zx_thread_exit()`] being called.
+**ZX_THREAD_TERMINATED** when the thread stops executing (due to
+[`zx_thread_exit()`] being called).
 
 *thread_entry* shall point to a function that must call [`zx_thread_exit()`] or
 [`zx_futex_wake_handle_close_thread_exit()`] or
@@ -58,7 +58,7 @@ the function will cause an architecture / toolchain specific exception.
 
 ## RETURN VALUE
 
-`zx_thread_start()` returns ZX_OK on success.
+`zx_thread_start()` returns **ZX_OK** on success.
 In the event of failure, a negative error value is returned.
 
 ## ERRORS
@@ -67,7 +67,7 @@ In the event of failure, a negative error value is returned.
 
 **ZX_ERR_WRONG_TYPE**  *thread* is not a thread handle.
 
-**ZX_ERR_ACCESS_DENIED**  The handle *thread* lacks *ZX_RIGHT_WRITE*.
+**ZX_ERR_ACCESS_DENIED**  The handle *thread* lacks **ZX_RIGHT_WRITE**.
 
 **ZX_ERR_BAD_STATE**  *thread* is not ready to run or the process *thread*
 is part of is no longer alive.

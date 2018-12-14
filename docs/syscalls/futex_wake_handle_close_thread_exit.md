@@ -31,7 +31,7 @@ futex_wake_handle_close_thread_exit - write to futex, wake futex, close handle, 
 The expectation is that as soon as the first operation completes,
 other threads may unmap or reuse the memory containing the calling
 thread's own stack.  This is valid for this call, though it would be
-invalid for plain *zx_futex_wake*() or any other call.
+invalid for plain [`zx_futex_wake()`] or any other call.
 
 If any of the operations fail, then the thread takes a trap (as if by `__builtin_trap();`).
 
@@ -54,13 +54,13 @@ None.
 The intended use for this is for a dying thread to alert another thread
 waiting for its completion, close its own thread handle, and exit.
 The thread handle cannot be closed beforehand because closing the last
-handle to a thread kills that thread.  The write to `value_ptr` can't be
+handle to a thread kills that thread.  The write to *value_ptr* can't be
 done before this call because any time after the write, a joining thread might
 reuse or deallocate this thread's stack, which may cause issues with calling
 conventions into this function.
 
 This call is used for joinable threads, while
-[*vmar_unmap_handle_close_thread_exit*()](vmar_unmap_handle_close_thread_exit.md)
+[`zx_vmar_unmap_handle_close_thread_exit()`]
 is used for detached threads.
 
 ## SEE ALSO
@@ -70,3 +70,8 @@ is used for detached threads.
 [handle_close](handle_close.md),
 [thread_exit](thread_exit.md),
 [vmar_unmap_handle_close_thread_exit](vmar_unmap_handle_close_thread_exit.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_futex_wake()`]: futex_wake.md
+[`zx_vmar_unmap_handle_close_thread_exit()`]: vmar_unmap_handle_close_thread_exit.md

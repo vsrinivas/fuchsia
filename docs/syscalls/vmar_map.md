@@ -38,20 +38,20 @@ closing the VMO handle does not remove the mapping added by this function.
   If the range meets these requirements, it will atomically (with respect to all
   other map/unmap/protect operations) replace existing mappings in the area.
 - **ZX_VM_PERM_READ**  Map *vmo* as readable.  It is an error if *handle*
-  does not have *ZX_VM_CAN_MAP_READ* permissions, the *handle* does
-  not have the *ZX_RIGHT_READ* right, or the *vmo* handle does not have the
-  *ZX_RIGHT_READ* right.
+  does not have **ZX_VM_CAN_MAP_READ** permissions, the *handle* does
+  not have the **ZX_RIGHT_READ** right, or the *vmo* handle does not have the
+  **ZX_RIGHT_READ** right.
 - **ZX_VM_PERM_WRITE**  Map *vmo* as writable.  It is an error if *handle*
-  does not have *ZX_VM_CAN_MAP_WRITE* permissions, the *handle* does
-  not have the *ZX_RIGHT_WRITE* right, or the *vmo* handle does not have the
-  *ZX_RIGHT_WRITE* right.
+  does not have **ZX_VM_CAN_MAP_WRITE** permissions, the *handle* does
+  not have the **ZX_RIGHT_WRITE** right, or the *vmo* handle does not have the
+  **ZX_RIGHT_WRITE** right.
 - **ZX_VM_PERM_EXECUTE**  Map *vmo* as executable.  It is an error if *handle*
-  does not have *ZX_VM_CAN_MAP_EXECUTE* permissions, the *handle* handle does
-  not have the *ZX_RIGHT_EXECUTE* right, or the *vmo* handle does not have the
-  *ZX_RIGHT_EXECUTE* right.
+  does not have **ZX_VM_CAN_MAP_EXECUTE** permissions, the *handle* handle does
+  not have the **ZX_RIGHT_EXECUTE** right, or the *vmo* handle does not have the
+  **ZX_RIGHT_EXECUTE** right.
 - **ZX_VM_MAP_RANGE**  Immediately page into the new mapping all backed
   regions of the VMO.  This cannot be specified if
-  *ZX_VM_SPECIFIC_OVERWRITE* is used.
+  **ZX_VM_SPECIFIC_OVERWRITE** is used.
 - **ZX_VM_REQUIRE_NON_RESIZABLE** Maps the VMO only if the VMO is non-resizable,
   that is, it was created with the **ZX_VMO_NON_RESIZABLE** option.
 
@@ -90,7 +90,7 @@ non-zero when neither **ZX_VM_SPECIFIC** nor
 **ZX_VM_SPECIFIC_OVERWRITE** and **ZX_VM_MAP_RANGE** are both given,
 *vmar_offset* and *len* describe an unsatisfiable allocation due to exceeding the region bounds,
 *vmar_offset* or *vmo_offset* or *len* are not page-aligned,
-*vmo_offset* + ROUNDUP(*len*, PAGE_SIZE) overflows.
+`vmo_offset + ROUNDUP(len, PAGE_SIZE)` overflows.
 
 **ZX_ERR_ACCESS_DENIED**  Insufficient privileges to make the requested mapping.
 

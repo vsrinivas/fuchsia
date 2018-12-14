@@ -18,7 +18,7 @@ zx_status_t zx_futex_get_owner(const zx_futex_t* value_ptr, zx_koid_t* koid);
 
 ## DESCRIPTION
 
-Fetch the koid of the current owner of the futex identified by `value_ptr`, or
+Fetch the koid of the current owner of the futex identified by *value_ptr*, or
 **ZX_KOID_INVALID** if there is no current owner.  Knowledge of the ownership of
 a futex typically serves no purpose when building synchronization primitives
 from futexes.  This syscall is used primarily for testing.
@@ -41,9 +41,9 @@ owner.
 ## ERRORS
 
 **ZX_ERR_INVALID_ARGS**  One of the following is true:
-+ `value_ptr` is not a valid userspace pointer.
-+ `value_ptr` is not aligned to a sizeof(zx_futex_t) boundary.
-+ `koid` is not a valid userspace pointer.
++ *value_ptr* is not a valid userspace pointer.
++ *value_ptr* is not aligned to a `sizeof(zx_futex_t)` boundary.
++ *koid* is not a valid userspace pointer.
 
 ## SEE ALSO
 

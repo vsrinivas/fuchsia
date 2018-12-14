@@ -50,7 +50,7 @@ than transferred to the process being started.
 
 ## RETURN VALUE
 
-`zx_process_start()` returns ZX_OK on success.
+`zx_process_start()` returns **ZX_OK** on success.
 In the event of failure, a negative error value is returned.
 
 ## ERRORS
@@ -60,9 +60,9 @@ In the event of failure, a negative error value is returned.
 **ZX_ERR_WRONG_TYPE**  *process* is not a process handle or *thread* is
 not a thread handle.
 
-**ZX_ERR_ACCESS_DENIED**  The handle *thread* lacks *ZX_RIGHT_WRITE* or *thread*
-does not belong to *process*, or the handle *process* lacks *ZX_RIGHT_WRITE* or
-*arg1* lacks ZX_RIGHT_TRANSFER.
+**ZX_ERR_ACCESS_DENIED**  The handle *thread* lacks **ZX_RIGHT_WRITE** or *thread*
+does not belong to *process*, or the handle *process* lacks **ZX_RIGHT_WRITE** or
+*arg1* lacks **ZX_RIGHT_TRANSFER**.
 
 **ZX_ERR_BAD_STATE**  *process* is already running or has exited.
 

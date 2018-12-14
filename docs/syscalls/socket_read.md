@@ -37,8 +37,8 @@ If *options* is set to **ZX_SOCKET_CONTROL**, then `zx_socket_read()`
 attempts to read from the socket control plane.
 
 To determine how many bytes are available to read, use the **rx_buf_available**
-field of the resulting **zx_info_socket_t**, which you can obtain using the
-**ZX_INFO_SOCET** topic for [object_get_info](object_get_info.md).
+field of the resulting `zx_info_socket_t`, which you can obtain using the
+**ZX_INFO_SOCKET** topic for [`zx_object_get_info()`].
 
 ## RIGHTS
 
@@ -79,3 +79,7 @@ readable.
 [socket_share](socket_share.md),
 [socket_shutdown](socket_shutdown.md),
 [socket_write](socket_write.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_object_get_info()`]: object_get_info.md

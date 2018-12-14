@@ -21,9 +21,9 @@ thread_exit - terminate the current running thread
 `zx_thread_exit()` causes the currently running thread to cease
 running and exit.
 
-The signal *ZX_THREAD_TERMINATED* will be asserted on the thread
-object upon exit and may be observed via *object_wait_one*()
-or *object_wait_many*() on a handle to the thread.
+The signal **ZX_THREAD_TERMINATED** will be asserted on the thread
+object upon exit and may be observed via [`zx_object_wait_one()`]
+or [`zx_object_wait_many()`] on a handle to the thread.
 
 ## RIGHTS
 
@@ -44,3 +44,8 @@ TODO(ZX-2399)
 [object_wait_many](object_wait_many.md),
 [thread_create](thread_create.md),
 [thread_start](thread_start.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_object_wait_many()`]: object_wait_many.md
+[`zx_object_wait_one()`]: object_wait_one.md

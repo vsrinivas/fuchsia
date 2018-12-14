@@ -28,12 +28,12 @@ of an existing vmo.
 One handle is returned on success, representing an object with the requested
 size.
 
-*options* must contain *ZX_VMO_CLONE_COPY_ON_WRITE* and zero or more flags to control
+*options* must contain **ZX_VMO_CLONE_COPY_ON_WRITE** and zero or more flags to control
 clone creation.
 
 Valid flags:
 
-- *ZX_VMO_CLONE_COPY_ON_WRITE* - Create a copy-on-write clone. The cloned vmo will
+- **ZX_VMO_CLONE_COPY_ON_WRITE** - Create a copy-on-write clone. The cloned vmo will
 behave the same way the parent does, except that any write operation on the clone
 will bring in a copy of the page at the offset the write occurred. The new page in
 the cloned vmo is now a copy and may diverge from the parent. Any reads from
@@ -41,7 +41,7 @@ ranges outside of the parent vmo's size will contain zeros, and writes will
 allocate new zero filled pages.  See the NOTES section below for details on
 VMO syscall interactions with clones.
 
-- *ZX_VMO_CLONE_NON_RESIZEABLE* - Create a non-resizeable clone VMO.
+- **ZX_VMO_CLONE_NON_RESIZEABLE** - Create a non-resizeable clone VMO.
 
 *offset* must be page aligned.
 
@@ -52,10 +52,10 @@ Both offset and size may start or extend beyond the original VMO's size.
 The size of the VMO will be rounded up to the next page size boundary.
 
 By default the rights of the cloned handled will be the same as the
-original with a few exceptions. See [vmo_create](vmo_create.md) for a
+original with a few exceptions. See [`zx_vmo_create()`] for a
 discussion of the details of each right.
 
-If *options* is *ZX_VMO_CLONE_COPY_ON_WRITE* the following rights are added:
+If *options* is **ZX_VMO_CLONE_COPY_ON_WRITE** the following rights are added:
 
 - **ZX_RIGHT_WRITE**
 
@@ -119,4 +119,5 @@ In a future build this error will no longer occur.
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
+[`zx_vmo_create()`]: vmo_create.md
 [`zx_vmo_op_range()`]: vmo_op_range.md

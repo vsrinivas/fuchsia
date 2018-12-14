@@ -33,8 +33,7 @@ one wants the thread to resume where it left off, which in the case
 of an architectural exception generally means retrying the offending
 instruction, or give the next handler in the search order a chance
 to handle the exception.
-See [task_bind_exception_port](task_bind_exception_port.md)
-for a description of exception processing.
+See [`zx_task_bind_exception_port()`] for a description of exception processing.
 
 To resume a thread where it left off, pass 0 for the options:
 
@@ -84,3 +83,7 @@ Currently only thread handles are supported.
 ## SEE ALSO
 
 [task_bind_exception_port](task_bind_exception_port.md),
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_task_bind_exception_port()`]: task_bind_exception_port.md

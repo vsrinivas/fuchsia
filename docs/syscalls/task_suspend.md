@@ -37,7 +37,7 @@ the task.
 The allow the task to resume, close the suspend token handle. The task will
 remain suspended as long as there are any open suspend tokens. Like suspending,
 resuming is asynchronous so the thread may not be in a running state when the
-[handle_close](handle_close.md) call returns, even if no other suspend tokens
+[`zx_handle_close()`] call returns, even if no other suspend tokens
 are open.
 
 ## SIGNALS AND EXCEPTIONS
@@ -48,7 +48,7 @@ There are two relevant signals that a thread can assert:
 - **ZX_THREAD_SUSPENDED**
 
 Neither of these will be asserted until the thread is started via
-[process_start](process_start.md) or [thread_start](thread_start.md). When
+[`zx_process_start()`] or [`zx_thread_start()`]. When
 a thread starts, it will assert **ZX_THREAD_RUNNING** whether it is suspended
 or not, but if it is suspended will then switch to **ZX_THREAD_SUSPENDED**
 before executing any code.
@@ -85,4 +85,7 @@ Currently only thread and process handles are supported.
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
+[`zx_handle_close()`]: handle_close.md
+[`zx_process_start()`]: process_start.md
 [`zx_task_kill()`]: task_kill.md
+[`zx_thread_start()`]: thread_start.md

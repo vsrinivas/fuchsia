@@ -26,15 +26,15 @@ zx_status_t zx_process_create(zx_handle_t job,
 `zx_process_create()` creates a new process.
 
 Upon success, handles for the new process and the root of its address space
-are returned.  The thread will not start executing until *process_start()* is
+are returned.  The thread will not start executing until [`zx_process_start()`] is
 called.
 
-*name* is silently truncated to a maximum of *ZX_MAX_NAME_LEN-1* characters.
+*name* is silently truncated to a maximum of `ZX_MAX_NAME_LEN-1` characters.
 
 When the last handle to a process is closed, the process is destroyed.
 
 Process handles may be waited on and will assert the signal
-*ZX_PROCESS_TERMINATED* when the process exits.
+**ZX_PROCESS_TERMINATED** when the process exits.
 
 *job* is the controlling [job object](../objects/job.md) for the new
 process, which will become a child of that job.
@@ -82,3 +82,7 @@ In a future build this error will no longer occur.
 [thread_exit](thread_exit.md),
 [thread_start](thread_start.md),
 [job_create](job_create.md).
+
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_process_start()`]: process_start.md

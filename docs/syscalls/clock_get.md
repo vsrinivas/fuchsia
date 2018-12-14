@@ -23,11 +23,11 @@ invalid.
 
 ## SUPPORTED CLOCK IDS
 
-*ZX_CLOCK_MONOTONIC* number of nanoseconds since the system was powered on.
+**ZX_CLOCK_MONOTONIC** number of nanoseconds since the system was powered on.
 
-*ZX_CLOCK_UTC* number of wall clock nanoseconds since the Unix epoch (midnight on January 1 1970) in UTC
+**ZX_CLOCK_UTC** number of wall clock nanoseconds since the Unix epoch (midnight on January 1 1970) in UTC
 
-*ZX_CLOCK_THREAD* number of nanoseconds the current thread has been running for.
+**ZX_CLOCK_THREAD** number of nanoseconds the current thread has been running for.
 
 ## RIGHTS
 

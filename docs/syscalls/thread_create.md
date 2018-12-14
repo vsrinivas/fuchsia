@@ -25,12 +25,12 @@ zx_status_t zx_thread_create(zx_handle_t process,
 `zx_thread_create()` creates a thread within the specified process.
 
 Upon success a handle for the new thread is returned.  The thread
-will not start executing until *thread_start()* is called.
+will not start executing until [`zx_thread_start()`] is called.
 
-*name* is silently truncated to a maximum of *ZX_MAX_NAME_LEN-1* characters.
+*name* is silently truncated to a maximum of `ZX_MAX_NAME_LEN-1` characters.
 
 Thread handles may be waited on and will assert the signal
-*ZX_THREAD_TERMINATED* when the thread stops executing (due to
+**ZX_THREAD_TERMINATED** when the thread stops executing (due to
 [`zx_thread_exit()`] being called).
 
 *process* is the controlling [process object](../objects/process.md) for the
@@ -78,3 +78,4 @@ In a future build this error will no longer occur.
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
 [`zx_thread_exit()`]: thread_exit.md
+[`zx_thread_start()`]: thread_start.md
