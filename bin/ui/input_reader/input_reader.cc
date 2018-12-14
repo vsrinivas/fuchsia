@@ -51,12 +51,14 @@ void InputReader::Start(std::unique_ptr<DeviceWatcher> device_watcher) {
 
 // Register to receive notifications that display ownership has changed
 void InputReader::SetOwnershipEvent(zx::event event) {
-  display_ownership_event_ = event.release();
+  display_ownership_waiter_.Cancel();
+
+  display_ownership_event_ = std::move(event);
 
   // Add handler to listen for signals on this event
   zx_signals_t signals = fuchsia::ui::scenic::displayOwnedSignal |
                          fuchsia::ui::scenic::displayNotOwnedSignal;
-  display_ownership_waiter_.set_object(display_ownership_event_);
+  display_ownership_waiter_.set_object(display_ownership_event_.get());
   display_ownership_waiter_.set_trigger(signals);
   zx_status_t status =
       display_ownership_waiter_.Begin(async_get_default_dispatcher());

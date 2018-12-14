@@ -58,7 +58,7 @@ class InputReader {
 
   std::map<zx_handle_t, std::unique_ptr<DeviceInfo>> devices_;
   std::unique_ptr<DeviceWatcher> device_watcher_;
-  zx_handle_t display_ownership_event_;
+  zx::event display_ownership_event_;
   async::WaitMethod<InputReader, &InputReader::OnDisplayHandleReady>
       display_ownership_waiter_{this};
   bool display_owned_ = true;
