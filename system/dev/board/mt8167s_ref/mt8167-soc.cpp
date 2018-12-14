@@ -33,21 +33,22 @@ zx_status_t Mt8167::SocInit() {
     static constexpr bool L = 1;
     static constexpr bool H = 0;
     static constexpr bool R = 0;
+
     static const bool spi_polarities[] = {
-        L, L, L, L, R, R, R, R, L, L, L, L, R, R, R, R,
-        L, L, L, L, R, R, R, R, L, L, L, L, R, R, R, R,
-        L, L, L, L, R, R, R, R, L, L, L, L, R, R, R, R,
-        L, R, L, L, L, L, R, R, R, R, R, R, R, R, R, L,
-        H, H, H, H, H, H, H, H, L, L, R, L, L, L, L, L,
-        L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L,
-        L, L, L, L, L, L, L, L, L, H, H, L, H, L, L, L,
-        L, L, L, L, H, L, L, L, L, L, L, L, L, L, L, L,
-        L, L, L, L, L, H, H, L, L, L, L, L, L, L, L, L,
-        L, L, L, L, R, L, L, L, L, L, L, L, L, L, L, L,
-        L, R, L, L, L, L, L, L, L, L, R, L, L, L, L, L,
-        L, L, L, L, L, L, L, L, L, H, L, L, L, L, L, R,
-        R, R, L, L, L, L, L, L, L, L, L, R, L, H, H, H,
-        H, L, L, L, R, R, L, H, H, H, H
+        L, L, L, L, R, R, R, R, L, L, L, L, R, R, R, R, // 32 (first interrupt in the line).
+        L, L, L, L, R, R, R, R, L, L, L, L, R, R, R, R, // 48.
+        L, L, L, L, R, R, R, R, L, L, L, L, R, R, R, R, // 64.
+        L, R, L, L, L, L, R, R, R, R, R, R, R, R, R, L, // 80.
+        H, H, H, H, H, H, H, H, L, L, R, L, L, L, L, L, // 96.
+        L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, // 112.
+        L, L, L, L, L, L, L, L, L, H, H, L, H, L, L, L, // 128.
+        L, L, L, L, H, L, L, L, L, L, L, L, L, L, L, L, // 144.
+        L, L, L, L, L, H, H, L, L, L, L, L, L, L, L, L, // 160.
+        L, L, L, L, R, L, L, L, L, L, L, L, L, L, L, L, // 176.
+        L, R, L, L, L, L, L, L, L, L, R, L, L, L, L, L, // 192.
+        L, L, L, L, L, L, L, L, L, H, L, L, L, L, L, R, // 208.
+        R, R, L, L, L, L, L, L, L, L, L, R, L, H, H, H, // 224.
+        H, L, L, L, R, R, L, H, H, H, H                 // 240 (first is 240, last is 250).
     };
 
     // Start from interrupt 32 (first SPI after 32 PPIs)
