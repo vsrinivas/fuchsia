@@ -30,6 +30,7 @@ executable("realm_tests") {
     "//garnet/public/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
     "//third_party/googletest:gtest",
+    "//third_party/googletest:gmock",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

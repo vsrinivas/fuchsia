@@ -20,6 +20,7 @@
 #include <lib/async/default.h>
 #include <lib/fdio/util.h>
 #include "garnet/bin/appmgr/util.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "lib/component/cpp/testing/test_util.h"
 #include "lib/component/cpp/testing/test_with_environment.h"
@@ -31,6 +32,9 @@ namespace component {
 namespace {
 
 using fuchsia::sys::TerminationReason;
+
+using ::testing::AnyOf;
+using ::testing::Eq;
 
 using testing::CloneFileDescriptor;
 using testing::EnclosingEnvironment;
@@ -262,15 +266,21 @@ class RealmFakeLoaderTest : public RealmTest, public fuchsia::sys::Loader {
 TEST_F(RealmFakeLoaderTest, CreateWebComponent_HTTP) {
   RunComponent(enclosing_environment_.get(), "http://example.com");
   ASSERT_TRUE(WaitForComponentLoad());
-  EXPECT_EQ("fuchsia-pkg://fuchsia.com/web_runner#meta/web_runner.cmx",
-            component_url());
+  EXPECT_THAT(
+      component_url(),
+      AnyOf(Eq("fuchsia-pkg://fuchsia.com/web_runner#meta/web_runner.cmx"),
+            Eq("fuchsia-pkg://fuchsia.com/web_runner_prototype#meta/"
+               "web_runner_prototype.cmx")));
 }
 
 TEST_F(RealmFakeLoaderTest, CreateWebComponent_HTTPS) {
   RunComponent(enclosing_environment_.get(), "https://example.com");
   ASSERT_TRUE(WaitForComponentLoad());
-  EXPECT_EQ("fuchsia-pkg://fuchsia.com/web_runner#meta/web_runner.cmx",
-            component_url());
+  EXPECT_THAT(
+      component_url(),
+      AnyOf(Eq("fuchsia-pkg://fuchsia.com/web_runner#meta/web_runner.cmx"),
+            Eq("fuchsia-pkg://fuchsia.com/web_runner_prototype#meta/"
+               "web_runner_prototype.cmx")));
 }
 
 TEST_F(RealmFakeLoaderTest, CreateCastComponent_CAST) {

@@ -571,7 +571,9 @@ void Realm::CreateComponentWithRunnerForScheme(
           "fuchsia-pkg://fuchsia.com/web_runner#meta/web_runner.cmx" &&
       !files::IsDirectory("/pkgfs/packages/web_runner") &&
       files::IsDirectory("/pkgfs/packages/web_runner_prototype")) {
-    runner_url = "web_runner_prototype";
+    runner_url =
+        "fuchsia-pkg://fuchsia.com/web_runner_prototype#meta/"
+        "web_runner_prototype.cmx";
   }
 
   fuchsia::sys::Package package;
@@ -684,9 +686,8 @@ void Realm::CreateComponentFromPackage(
                        "Realm::CreateComponentFromPackage:VmoFromFilenameAt");
     if (!app_data) {
       FXL_LOG(ERROR) << "component '" << package->resolved_url.get()
-                     << "' has neither runner (error: '"
-                     << runtime_parse_error << "') nor elf binary: '"
-                     << bin_path << "'";
+                     << "' has neither runner (error: '" << runtime_parse_error
+                     << "') nor elf binary: '" << bin_path << "'";
       component_request.SetReturnValues(kComponentCreationFailed,
                                         TerminationReason::INTERNAL_ERROR);
       return;
