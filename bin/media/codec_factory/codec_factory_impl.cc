@@ -16,14 +16,10 @@ namespace {
 const std::string kIsolateUrlOmx = "codec_runner_sw_omx";
 const std::string kIsolateUrlFfmpeg = "codec_runner_sw_ffmpeg";
 
-#ifdef FFMPEG_CODEC_FACTORY
 // TODO(turnage): Devise a better routing system between ffmpeg and omx codec
 // factories. Using this should be fine for now because omx does not service
 // this mime type and it is the first one we will roll out with ffmpeg.
 const std::string kFfmpegMimeType = "video/h264";
-#else
-const std::string kFfmpegMimeType = "disabled";
-#endif
 
 }  // namespace
 
