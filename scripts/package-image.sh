@@ -15,6 +15,8 @@ USE_AVB=
 BOARD=
 BUILD_DIR=
 CMDLINE=
+MKBOOTIMG_CMDLINE=
+MEXEC=
 DTB_PATH=
 DTB_DEST=
 USE_GZIP=
@@ -24,13 +26,15 @@ MEMBASE=0x00000000
 BOOT_IMG=
 VBMETA_IMG=
 ZIRCON_BOOTIMAGE=
+MKBOOTIMG_ARGS=
 
 function HELP {
     echo "help:"
     echo "-a                                : use AVB to sign image"
     echo "-b <board>                        : board name"
     echo "-B <build-dir>                    : path to zircon build directory"
-    echo "-c <cmd line>                     : Extra command line options"
+    echo "-c <cmd line>                     : Extra command line options for the ZBI"
+    echo "-C <cmd line>                     : Extra command line options for mkbootimg"
     echo "-d <dtb-path>                     : path to device tree binary"
     echo "-D (append | kdtb | mkbootimg)    : destination for device tree binary"
     echo "-g                                : gzip compress the image"
@@ -49,19 +53,20 @@ function HELP {
 DTB_OFFSET=0x03000000
 BOOT_PARTITION_SIZE=33554432
 
-while getopts "ab:B:c:d:D:ghK:lmM:r:o:v:z:" FLAG; do
+while getopts "ab:B:cC::d:D:ghK:lmM:r:o:v:z:" FLAG; do
     case $FLAG in
         a) USE_AVB=true;;
         b) BOARD="${OPTARG}";;
         B) BUILD_DIR="${OPTARG}";;
-        c) CMDLINE+=" ${OPTARG}";;
+        c) CMDLINE+="${OPTARG}";;
+        C) MKBOOTIMG_CMDLINE+="${OPTARG}";;
         d) DTB_PATH="${OPTARG}";;
         D) DTB_DEST="${OPTARG}";;
         g) USE_GZIP=true;;
         K) KERNEL_OFFSET="${OPTARG}";;
         l) USE_LZ4=true;;
         h) HELP;;
-        m) CMDLINE+=" netsvc.netboot=true";;
+        m) MEXEC=true;;
         M) MEMBASE="${OPTARG}";;
         o) BOOT_IMG="${OPTARG}";;
         v) VBMETA_IMG="${OPTARG}";;
@@ -126,6 +131,10 @@ fi
 
 # PACKAGING STEPS BEGIN HERE
 
+if [[ ${MEXEC} == true ]]; then
+    CMDLINE+=" netsvc.netboot=true"
+fi
+
 # Append extra command line items
 if [[ -n "${CMDLINE}" ]]; then
     CMDLINE_FILE="${BUILD_DIR}/${BOARD}-cmdline.txt"
@@ -151,8 +160,6 @@ else
     COMPRESSED_BOOTIMAGE="${SHIMMED_ZIRCON_BOOTIMAGE}"
 fi
 
-MKBOOTFS_ARGS=
-
 # Handle options for packaging dtb
 if [[ -n "${DTB_PATH}" ]] && [[ "${DTB_DEST}" == "append" ]]; then
     COMPRESSED_BOOTIMAGE_DTB="${COMPRESSED_BOOTIMAGE}.dtb"
@@ -162,7 +169,7 @@ elif [[ -n "${DTB_PATH}" ]] && [[ "${DTB_DEST}" == "kdtb" ]]; then
     "${MKKDTB}" "${COMPRESSED_BOOTIMAGE}" "${DTB_PATH}" "${COMPRESSED_BOOTIMAGE_DTB}"
 elif [[ -n "${DTB_PATH}" ]] && [[ "${DTB_DEST}" == "mkbootimg" ]]; then
     COMPRESSED_BOOTIMAGE_DTB="${COMPRESSED_BOOTIMAGE}"
-    MKBOOTFS_ARGS+=" --second ${DTB_PATH} --second_offset ${DTB_OFFSET}"
+    MKBOOTIMG_ARGS+=" --second ${DTB_PATH} --second_offset ${DTB_OFFSET}"
 else
     COMPRESSED_BOOTIMAGE_DTB="${COMPRESSED_BOOTIMAGE}"
 fi
@@ -178,7 +185,8 @@ echo "foo" > "${RAMDISK}"
     --ramdisk "${RAMDISK}" \
     --base ${MEMBASE} \
     --tags_offset 0xE000000 \
-    ${MKBOOTFS_ARGS} \
+    --cmdline "${MKBOOTIMG_CMDLINE}" \
+    ${MKBOOTIMG_ARGS} \
     -o "${BOOT_IMG}"
 
 # optionally sign with AVB tools
