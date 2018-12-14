@@ -4,10 +4,16 @@
 
 #![feature(async_await, await_macro, futures_api)]
 
+#[macro_use]
+mod log_error;
+mod controller;
 mod publisher;
 mod service;
 mod session;
+#[cfg(test)]
+mod test;
 
+use self::controller::ControllerVendor;
 use self::publisher::Publisher;
 use self::service::Service;
 use failure::{Error, ResultExt};
@@ -16,18 +22,19 @@ use fuchsia_async as fasync;
 use futures::channel::mpsc::channel;
 use futures::prelude::TryFutureExt;
 
+type Result<T> = std::result::Result<T, Error>;
+
 const CHANNEL_BUFFER_SIZE: usize = 100;
 
 #[fasync::run_singlethreaded]
-async fn main() -> Result<(), Error> {
-    let (new_session_sender, new_session_receiver) = channel(CHANNEL_BUFFER_SIZE);
+async fn main() -> Result<()> {
+    let (fidl_sink, fidl_stream) = channel(CHANNEL_BUFFER_SIZE);
     let fidl_server = ServicesServer::new()
-        .add_service(Publisher::factory(new_session_sender))
+        .add_service(Publisher::factory(fidl_sink.clone()))
+        .add_service(ControllerVendor::factory(fidl_sink.clone()))
         .start()
         .context("Starting Media Session FIDL server.")?;
 
-    let service = Service::new(new_session_receiver);
-
-    await!(service.serve().try_join(fidl_server))?;
+    await!(Service::new().serve(fidl_stream).try_join(fidl_server))?;
     Ok(())
 }

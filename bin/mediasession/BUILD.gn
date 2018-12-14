@@ -11,6 +11,7 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
+    "//garnet/public/fidl/fuchsia.mediaplayer:fuchsia.mediaplayer-rustc",
     "//garnet/public/fidl/fuchsia.mediasession:fuchsia.mediasession-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-app",
@@ -21,6 +22,27 @@ rustc_binary("bin") {
     "//third_party/rust-crates/rustc_deps:futures-preview",
     "//third_party/rust-crates/rustc_deps:log",
     "//third_party/rust-crates/rustc_deps:rand",
+  ]
+}
+
+package("mediasession_tests") {
+  testonly = true
+
+  deps = [
+    ":bin",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/mediasession_tests.cmx")
+      dest = "mediasession_tests.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      name = "mediasession_bin_test"
+    },
   ]
 }
 

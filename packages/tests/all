@@ -55,6 +55,7 @@
         "garnet/packages/tests/mdns",
         "garnet/packages/tests/media",
         "garnet/packages/tests/mediaplayer",
+        "garnet/packages/tests/mediasession",
         "garnet/packages/tests/memory_monitor",
         "garnet/packages/tests/mime_sniffer",
         "garnet/packages/tests/netcfg_tests",
