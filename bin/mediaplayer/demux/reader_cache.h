@@ -51,15 +51,12 @@ class ReaderCache : public Reader,
   void SetCacheOptions(size_t capacity, size_t max_backtrack);
 
  private:
-  // Loads if 1) No load is in progress already. 2) There are holes in the
-  // desired cache range for this position which require filling.
-  //
   // Starts a load from the upstream |Reader| into our buffer over the given
   // range. 1) Cleans up memory outside the desired range to pay for the new
   // allocations. 2) Makes async calls for the upstream |Reader| to fill all the
-  // holes in the desired cache range. 3) Runs any |ReadAt| call queued on this
-  // reload.
-  void MaybeStartLoadForPosition(size_t position);
+  // holes in the desired cache range. 3) Invokes |load_callback| on completion
+  // of the load.
+  void StartLoadForPosition(size_t position, fit::closure load_callback);
 
   // Calculates the range of bytes we should load ahead of the current requested
   // position based on our capacity and current estimations of the input and
@@ -80,7 +77,6 @@ class ReaderCache : public Reader,
   Result last_result_;
 
   Incident describe_is_complete_;
-  Incident load_is_complete_;
 
   // These values are stable after |describe_is_complete_|.
   std::shared_ptr<Reader> upstream_reader_;
@@ -97,8 +93,6 @@ class ReaderCache : public Reader,
   std::optional<ByteRateEstimator::ByteRateSampler> demux_sampler_;
   ByteRateEstimator upstream_reader_byte_rate_;
   std::optional<ByteRateEstimator::ByteRateSampler> upstream_reader_sampler_;
-
-  bool load_in_progress_ = false;
 };
 
 }  // namespace media_player
