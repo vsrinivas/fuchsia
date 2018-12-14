@@ -30,8 +30,8 @@ fuchsia_internal/firmware/amlogic-video 21de4e7661973554287f571d3a0affb72b62283b
 
 # Linux guest kernel images for x64
 @Subdir bin/guest/pkg/linux_guest/images/x64
-fuchsia_internal/linux/linux_guest-4.18-x64 ZrFlSPzMALkf0rl4S2WRGBnHrIII8QWLcridRRzNXaMC
+fuchsia_internal/linux/linux_guest-4.18-x64 Xj0yti9cg-gcRsALaWKRNN1enItez7StkSiUdErl5KQC
 
 # Linux guest kernel images for arm64
 @Subdir bin/guest/pkg/linux_guest/images/arm64
-fuchsia_internal/linux/linux_guest-4.18-arm64 TJZGvW2oqF1RhpQGR4_SF7Gepnsj4UHpmswbPjoQebkC
+fuchsia_internal/linux/linux_guest-4.18-arm64 dJUDBIRNSLxulyOyCQwsm_Cw8ubaUFeEW939e8hZYM4C
