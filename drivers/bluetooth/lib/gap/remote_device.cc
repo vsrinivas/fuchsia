@@ -260,10 +260,12 @@ bool RemoteDevice::BrEdrData::SetEirData(const common::ByteBuffer& eir) {
 
 RemoteDevice::RemoteDevice(DeviceCallback notify_listeners_callback,
                            DeviceCallback update_expiry_callback,
+                           DeviceCallback dual_mode_callback,
                            const std::string& identifier,
                            const DeviceAddress& address, bool connectable)
     : notify_listeners_callback_(std::move(notify_listeners_callback)),
       update_expiry_callback_(std::move(update_expiry_callback)),
+      dual_mode_callback_(std::move(dual_mode_callback)),
       identifier_(identifier),
       technology_((address.type() == DeviceAddress::Type::kBREDR)
                       ? TechnologyType::kClassic
@@ -275,6 +277,7 @@ RemoteDevice::RemoteDevice(DeviceCallback notify_listeners_callback,
       rssi_(hci::kRSSIInvalid) {
   ZX_DEBUG_ASSERT(notify_listeners_callback_);
   ZX_DEBUG_ASSERT(update_expiry_callback_);
+  ZX_DEBUG_ASSERT(dual_mode_callback_);
   ZX_DEBUG_ASSERT(!identifier_.empty());
 
   if (address.type() == DeviceAddress::Type::kBREDR ||
@@ -297,9 +300,9 @@ RemoteDevice::LowEnergyData& RemoteDevice::MutLe() {
 
   le_data_ = LowEnergyData(this);
 
-  // Set to dual-mode if both transport states have been initialized.
+  // Make dual-mode if both transport states have been initialized.
   if (bredr_data_) {
-    technology_ = TechnologyType::kDualMode;
+    MakeDualMode();
   }
   return *le_data_;
 }
@@ -311,9 +314,9 @@ RemoteDevice::BrEdrData& RemoteDevice::MutBrEdr() {
 
   bredr_data_ = BrEdrData(this);
 
-  // Set to dual-mode if both transport states have been initialized.
+  // Make dual-mode if both transport states have been initialized.
   if (le_data_) {
-    technology_ = TechnologyType::kDualMode;
+    MakeDualMode();
   }
   return *bredr_data_;
 }
@@ -375,6 +378,12 @@ void RemoteDevice::UpdateExpiry() {
 void RemoteDevice::NotifyListeners() {
   ZX_DEBUG_ASSERT(notify_listeners_callback_);
   notify_listeners_callback_(*this);
+}
+
+void RemoteDevice::MakeDualMode() {
+  technology_ = TechnologyType::kDualMode;
+  ZX_DEBUG_ASSERT(dual_mode_callback_);
+  dual_mode_callback_(*this);
 }
 
 }  // namespace gap

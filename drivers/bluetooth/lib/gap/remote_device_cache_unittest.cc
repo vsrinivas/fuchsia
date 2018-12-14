@@ -33,6 +33,10 @@ const DeviceAddress kAddrBrEdr(DeviceAddress::Type::kBREDR,
                                "AA:BB:CC:DD:EE:FF");
 const DeviceAddress kAddrLePublic(DeviceAddress::Type::kLEPublic,
                                   "01:02:03:04:05:06");
+// LE Public Device Address that has the same value as a BR/EDR BD_ADDR, e.g. on
+// a dual-mode device.
+const DeviceAddress kAddrLeAlias(DeviceAddress::Type::kLEPublic,
+                                 "AA:BB:CC:DD:EE:FF");
 
 // TODO(armansito): Make these adhere to privacy specification.
 const DeviceAddress kAddrLeRandom(DeviceAddress::Type::kLERandom,
@@ -50,6 +54,9 @@ const auto kEirData = kAdvData;
 
 const btlib::sm::LTK kLTK;
 const btlib::sm::Key kKey{};
+
+// Phone (Networking)
+const common::DeviceClass kTestDeviceClass({0x06, 0x02, 0x02});
 
 class GAP_RemoteDeviceCacheTest : public ::gtest::TestLoopFixture {
  public:
@@ -465,12 +472,13 @@ TEST_F(GAP_RemoteDeviceCacheTest_BondingTest,
   EXPECT_EQ(device(), cache()->FindDeviceByAddress(rpa));
 }
 
+template <const DeviceAddress* DevAddr>
 class GAP_RemoteDeviceCacheTest_UpdateCallbackTest
     : public GAP_RemoteDeviceCacheTest {
  public:
   void SetUp() {
     was_called_ = false;
-    NewDevice(kAddrLePublic, true);
+    NewDevice(*DevAddr, true);
     cache()->set_device_updated_callback(
         [this](const auto&) { was_called_ = true; });
     ir_.bd_addr = device()->address().value();
@@ -499,21 +507,19 @@ class GAP_RemoteDeviceCacheTest_UpdateCallbackTest
   hci::ExtendedInquiryResultEventParams eirep_;
 };
 
-TEST_F(GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
+using GAP_RemoteDeviceCacheTest_BrEdrUpdateCallbackTest =
+    GAP_RemoteDeviceCacheTest_UpdateCallbackTest<&kAddrBrEdr>;
+using GAP_RemoteDeviceCacheTest_LowEnergyUpdateCallbackTest =
+    GAP_RemoteDeviceCacheTest_UpdateCallbackTest<&kAddrLeAlias>;
+
+TEST_F(GAP_RemoteDeviceCacheTest_LowEnergyUpdateCallbackTest,
        ChangingLEConnectionStateTriggersUpdateCallback) {
   device()->MutLe().SetConnectionState(
       RemoteDevice::ConnectionState::kConnected);
   EXPECT_TRUE(was_called());
 }
 
-TEST_F(GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
-       ChangingBrEdrConnectionStateTriggersUpdateCallback) {
-  device()->MutBrEdr().SetConnectionState(
-      RemoteDevice::ConnectionState::kConnected);
-  EXPECT_TRUE(was_called());
-}
-
-TEST_F(GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
+TEST_F(GAP_RemoteDeviceCacheTest_LowEnergyUpdateCallbackTest,
        SetAdvertisingDataTriggersUpdateCallbackOnNameSet) {
   device()->MutLe().SetAdvertisingData(kTestRSSI, kAdvData);
   EXPECT_TRUE(was_called());
@@ -521,7 +527,7 @@ TEST_F(GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
   EXPECT_EQ("Test", *device()->name());
 }
 
-TEST_F(GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
+TEST_F(GAP_RemoteDeviceCacheTest_LowEnergyUpdateCallbackTest,
        SetLowEnergyAdvertisingDataUpdateCallbackProvidesUpdatedDevice) {
   ASSERT_NE(device()->rssi(), kTestRSSI);
   cache()->set_device_updated_callback([&](const auto& updated_dev) {
@@ -533,7 +539,7 @@ TEST_F(GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
   device()->MutLe().SetAdvertisingData(kTestRSSI, kAdvData);
 }
 
-TEST_F(GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
+TEST_F(GAP_RemoteDeviceCacheTest_LowEnergyUpdateCallbackTest,
        SetAdvertisingDataDoesNotTriggerUpdateCallbackOnSameName) {
   device()->MutLe().SetAdvertisingData(kTestRSSI, kAdvData);
   ASSERT_TRUE(was_called());
@@ -543,32 +549,67 @@ TEST_F(GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
   EXPECT_FALSE(was_called());
 }
 
+TEST_F(GAP_RemoteDeviceCacheTest_LowEnergyUpdateCallbackTest,
+       SetLowEnergyConnectionParamsDoesNotTriggerUpdateCallback) {
+  device()->MutLe().SetConnectionParameters({});
+  EXPECT_FALSE(was_called());
+}
+
+TEST_F(GAP_RemoteDeviceCacheTest_LowEnergyUpdateCallbackTest,
+       SetLowEnergyPreferredConnectionParamsDoesNotTriggerUpdateCallback) {
+  device()->MutLe().SetPreferredConnectionParameters({});
+  EXPECT_FALSE(was_called());
+}
+
+TEST_F(GAP_RemoteDeviceCacheTest_LowEnergyUpdateCallbackTest,
+       BecomingDualModeTriggersUpdateCallBack) {
+  EXPECT_EQ(TechnologyType::kLowEnergy, device()->technology());
+
+  size_t call_count = 0;
+  cache()->set_device_updated_callback([&](const auto&) { ++call_count; });
+  device()->MutBrEdr();
+  EXPECT_EQ(TechnologyType::kDualMode, device()->technology());
+  EXPECT_EQ(call_count, 1U);
+
+  // Calling MutBrEdr again on doesn't trigger additional callbacks.
+  device()->MutBrEdr();
+  EXPECT_EQ(call_count, 1U);
+  device()->MutBrEdr().SetInquiryData(eirep());
+  EXPECT_EQ(call_count, 2U);
+}
+
+TEST_F(GAP_RemoteDeviceCacheTest_BrEdrUpdateCallbackTest,
+       ChangingBrEdrConnectionStateTriggersUpdateCallback) {
+  device()->MutBrEdr().SetConnectionState(
+      RemoteDevice::ConnectionState::kConnected);
+  EXPECT_TRUE(was_called());
+}
+
 TEST_F(
-    GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
+    GAP_RemoteDeviceCacheTest_BrEdrUpdateCallbackTest,
     SetBrEdrInquiryDataFromInquiryResultTriggersUpdateCallbackOnDeviceClassSet) {
-  ir().class_of_device = common::DeviceClass({0x06, 0x02, 0x02});  // Phone.
+  ir().class_of_device = kTestDeviceClass;
   device()->MutBrEdr().SetInquiryData(ir());
   EXPECT_TRUE(was_called());
 }
 
 TEST_F(
-    GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
+    GAP_RemoteDeviceCacheTest_BrEdrUpdateCallbackTest,
     SetBrEdrInquiryDataFromInquiryResultUpdateCallbackProvidesUpdatedDevice) {
-  ir().class_of_device = common::DeviceClass({0x06, 0x02, 0x02});  // Phone.
-  ASSERT_FALSE(device()->bredr());
+  ir().class_of_device = kTestDeviceClass;
   cache()->set_device_updated_callback([](const auto& updated_dev) {
     ASSERT_TRUE(updated_dev.bredr());
     ASSERT_TRUE(updated_dev.bredr()->device_class());
-    EXPECT_EQ(updated_dev.bredr()->device_class()->major_class(),
-              common::DeviceClass::MajorClass(0x02));
+    EXPECT_EQ(common::DeviceClass::MajorClass(0x02),
+              updated_dev.bredr()->device_class()->major_class());
   });
   device()->MutBrEdr().SetInquiryData(ir());
 }
 
 TEST_F(
-    GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
+    GAP_RemoteDeviceCacheTest_BrEdrUpdateCallbackTest,
     SetBrEdrInquiryDataFromInquiryResultDoesNotTriggerUpdateCallbackOnSameDeviceClass) {
-  ir().class_of_device = common::DeviceClass({0x06, 0x02, 0x02});  // Phone.
+  ir().class_of_device = kTestDeviceClass;
   device()->MutBrEdr().SetInquiryData(ir());
   ASSERT_TRUE(was_called());
 
@@ -578,30 +619,29 @@ TEST_F(
 }
 
 TEST_F(
-    GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
+    GAP_RemoteDeviceCacheTest_BrEdrUpdateCallbackTest,
     SetBrEdrInquiryDataFromInquiryResultRSSITriggersUpdateCallbackOnDeviceClassSet) {
-  irr().class_of_device = common::DeviceClass({0x06, 0x02, 0x02});  // Phone.
+  irr().class_of_device = kTestDeviceClass;
   device()->MutBrEdr().SetInquiryData(irr());
   EXPECT_TRUE(was_called());
 }
 
 TEST_F(
-    GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
+    GAP_RemoteDeviceCacheTest_BrEdrUpdateCallbackTest,
     SetBrEdrInquiryDataFromInquiryResultRSSIUpdateCallbackProvidesUpdatedDevice) {
-  irr().class_of_device = common::DeviceClass({0x06, 0x02, 0x02});  // Phone.
-  ASSERT_FALSE(device()->bredr());
+  irr().class_of_device = kTestDeviceClass;
   cache()->set_device_updated_callback([](const auto& updated_dev) {
     ASSERT_TRUE(updated_dev.bredr()->device_class());
-    EXPECT_EQ(updated_dev.bredr()->device_class()->major_class(),
-              common::DeviceClass::MajorClass(0x02));
+    EXPECT_EQ(common::DeviceClass::MajorClass(0x02),
+              updated_dev.bredr()->device_class()->major_class());
   });
   device()->MutBrEdr().SetInquiryData(irr());
 }
 
 TEST_F(
-    GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
+    GAP_RemoteDeviceCacheTest_BrEdrUpdateCallbackTest,
     SetBrEdrInquiryDataFromInquiryResultRSSIDoesNotTriggerUpdateCallbackOnSameDeviceClass) {
-  irr().class_of_device = common::DeviceClass({0x06, 0x02, 0x02});  // Phone.
+  irr().class_of_device = kTestDeviceClass;
   device()->MutBrEdr().SetInquiryData(irr());
   ASSERT_TRUE(was_called());
 
@@ -611,7 +651,7 @@ TEST_F(
 }
 
 TEST_F(
-    GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
+    GAP_RemoteDeviceCacheTest_BrEdrUpdateCallbackTest,
     SetBrEdrInquiryDataFromInquiryResultRSSIDoesNotTriggerUpdateCallbackOnRSSI) {
   irr().rssi = 1;
   device()->MutBrEdr().SetInquiryData(irr());
@@ -624,15 +664,15 @@ TEST_F(
 }
 
 TEST_F(
-    GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
+    GAP_RemoteDeviceCacheTest_BrEdrUpdateCallbackTest,
     SetBrEdrInquiryDataFromExtendedInquiryResultEventParamsTriggersUpdateCallbackOnDeviceClassSet) {
-  eirep().class_of_device = common::DeviceClass({0x06, 0x02, 0x02});  // Phone.
+  eirep().class_of_device = kTestDeviceClass;
   device()->MutBrEdr().SetInquiryData(eirep());
   EXPECT_TRUE(was_called());
 }
 
 TEST_F(
-    GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
+    GAP_RemoteDeviceCacheTest_BrEdrUpdateCallbackTest,
     SetBrEdrInquiryDataFromExtendedInquiryResultEventParamsTriggersUpdateCallbackOnNameSet) {
   device()->MutBrEdr().SetInquiryData(eirep());
   ASSERT_TRUE(was_called());  // Callback due to |class_of_device|.
@@ -644,14 +684,13 @@ TEST_F(
 }
 
 TEST_F(
-    GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
+    GAP_RemoteDeviceCacheTest_BrEdrUpdateCallbackTest,
     SetBrEdrInquiryDataFromExtendedInquiryResultEventParamsUpdateCallbackProvidesUpdatedDevice) {
   eirep().clock_offset = htole16(1);
   eirep().page_scan_repetition_mode = hci::PageScanRepetitionMode::kR1;
   eirep().rssi = kTestRSSI;
-  eirep().class_of_device = common::DeviceClass({0x06, 0x02, 0x02});  // Phone.
+  eirep().class_of_device = kTestDeviceClass;
   eir_data().Write(kEirData);
-  ASSERT_FALSE(device()->bredr().HasValue());
   ASSERT_FALSE(device()->name().HasValue());
   ASSERT_EQ(device()->rssi(), hci::kRSSIInvalid);
   cache()->set_device_updated_callback([](const auto& updated_dev) {
@@ -665,8 +704,8 @@ TEST_F(
     EXPECT_EQ(*data->clock_offset(), 0x8001);
     EXPECT_EQ(*data->page_scan_repetition_mode(),
               hci::PageScanRepetitionMode::kR1);
-    EXPECT_EQ(data->device_class()->major_class(),
-              common::DeviceClass::MajorClass(0x02));
+    EXPECT_EQ(common::DeviceClass::MajorClass(0x02),
+              updated_dev.bredr()->device_class()->major_class());
     EXPECT_EQ(updated_dev.rssi(), kTestRSSI);
     EXPECT_EQ(*updated_dev.name(), "Test");
   });
@@ -674,12 +713,12 @@ TEST_F(
 }
 
 TEST_F(
-    GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
+    GAP_RemoteDeviceCacheTest_BrEdrUpdateCallbackTest,
     SetBrEdrInquiryDataFromExtendedInquiryResultEventParamsGeneratesExactlyOneUpdateCallbackRegardlessOfNumberOfFieldsChanged) {
   eirep().clock_offset = htole16(1);
   eirep().page_scan_repetition_mode = hci::PageScanRepetitionMode::kR1;
   eirep().rssi = kTestRSSI;
-  eirep().class_of_device = common::DeviceClass({0x06, 0x02, 0x02});  // Phone.
+  eirep().class_of_device = kTestDeviceClass;
   eir_data().Write(kEirData);
 
   size_t call_count = 0;
@@ -689,9 +728,9 @@ TEST_F(
 }
 
 TEST_F(
-    GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
+    GAP_RemoteDeviceCacheTest_BrEdrUpdateCallbackTest,
     SetBrEdrInquiryDataFromExtendedInquiryResultEventParamsDoesNotTriggerUpdateCallbackOnSameDeviceClass) {
-  eirep().class_of_device = common::DeviceClass({0x06, 0x02, 0x02});  // Phone.
+  eirep().class_of_device = kTestDeviceClass;
   device()->MutBrEdr().SetInquiryData(eirep());
   ASSERT_TRUE(was_called());
 
@@ -701,7 +740,7 @@ TEST_F(
 }
 
 TEST_F(
-    GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
+    GAP_RemoteDeviceCacheTest_BrEdrUpdateCallbackTest,
     SetBrEdrInquiryDataFromExtendedInquiryResultEventParamsDoesNotTriggerUpdateCallbackOnSameName) {
   eir_data().Write(kEirData);
   device()->MutBrEdr().SetInquiryData(eirep());
@@ -713,7 +752,7 @@ TEST_F(
 }
 
 TEST_F(
-    GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
+    GAP_RemoteDeviceCacheTest_BrEdrUpdateCallbackTest,
     SetBrEdrInquiryDataFromExtendedInquiryResultEventParamsDoesNotTriggerUpdateCallbackOnRSSI) {
   eirep().rssi = 1;
   device()->MutBrEdr().SetInquiryData(eirep());
@@ -725,13 +764,13 @@ TEST_F(
   EXPECT_FALSE(was_called());
 }
 
-TEST_F(GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
+TEST_F(GAP_RemoteDeviceCacheTest_BrEdrUpdateCallbackTest,
        SetNameTriggersUpdateCallback) {
   device()->SetName("nombre");
   EXPECT_TRUE(was_called());
 }
 
-TEST_F(GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
+TEST_F(GAP_RemoteDeviceCacheTest_BrEdrUpdateCallbackTest,
        SetNameDoesNotTriggerUpdateCallbackOnSameName) {
   device()->SetName("nombre");
   ASSERT_TRUE(was_called());
@@ -743,16 +782,21 @@ TEST_F(GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
   EXPECT_FALSE(was_called_again);
 }
 
-TEST_F(GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
-       SetLowEnergyConnectionParamsDoesNotTriggerUpdateCallback) {
-  device()->MutLe().SetConnectionParameters({});
-  EXPECT_FALSE(was_called());
-}
+TEST_F(GAP_RemoteDeviceCacheTest_BrEdrUpdateCallbackTest,
+       BecomingDualModeTriggersUpdateCallBack) {
+  EXPECT_EQ(TechnologyType::kClassic, device()->technology());
 
-TEST_F(GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
-       SetLowEnergyPreferredConnectionParamsDoesNotTriggerUpdateCallback) {
-  device()->MutLe().SetPreferredConnectionParameters({});
-  EXPECT_FALSE(was_called());
+  size_t call_count = 0;
+  cache()->set_device_updated_callback([&](const auto&) { ++call_count; });
+  device()->MutLe();
+  EXPECT_EQ(TechnologyType::kDualMode, device()->technology());
+  EXPECT_EQ(call_count, 1U);
+
+  // Calling MutLe again on doesn't trigger additional callbacks.
+  device()->MutLe();
+  EXPECT_EQ(call_count, 1U);
+  device()->MutLe().SetAdvertisingData(kTestRSSI, kAdvData);
+  EXPECT_EQ(call_count, 2U);
 }
 
 class GAP_RemoteDeviceCacheTest_ExpirationTest

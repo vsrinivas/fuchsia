@@ -30,6 +30,7 @@ RemoteDevice* RemoteDeviceCache::NewDevice(const DeviceAddress& address,
   auto* device = new RemoteDevice(
       fit::bind_member(this, &RemoteDeviceCache::NotifyDeviceUpdated),
       fit::bind_member(this, &RemoteDeviceCache::UpdateExpiry),
+      fit::bind_member(this, &RemoteDeviceCache::MakeDualMode),
       fxl::GenerateUUID(), address, connectable);
   // Note: we must emplace() the RemoteDeviceRecord, because it doesn't support
   // copy or move.
@@ -85,7 +86,8 @@ bool RemoteDeviceCache::AddBondedDevice(const std::string& identifier,
 
   auto* device = new RemoteDevice(
       fit::bind_member(this, &RemoteDeviceCache::NotifyDeviceUpdated),
-      fit::bind_member(this, &RemoteDeviceCache::UpdateExpiry), identifier,
+      fit::bind_member(this, &RemoteDeviceCache::UpdateExpiry),
+      fit::bind_member(this, &RemoteDeviceCache::MakeDualMode), identifier,
       address, true);
 
   // A bonded device must have its identity known.
@@ -239,6 +241,14 @@ void RemoteDeviceCache::UpdateExpiry(const RemoteDevice& device) {
         async_get_default_dispatcher(), kCacheTimeout);
     ZX_DEBUG_ASSERT(schedule_res == ZX_OK || schedule_res == ZX_ERR_BAD_STATE);
   }
+}
+
+void RemoteDeviceCache::MakeDualMode(const RemoteDevice& device) {
+  ZX_DEBUG_ASSERT(address_map_.at(device.address()) == device.identifier());
+
+  // The device became dual mode in lieu of adding a new device but is as
+  // significant, so notify listeners of the change.
+  NotifyDeviceUpdated(device);
 }
 
 void RemoteDeviceCache::RemoveDevice(RemoteDevice* device) {

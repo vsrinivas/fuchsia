@@ -160,6 +160,11 @@ class RemoteDeviceCache final {
   // - can only be called from the thread that created |device|
   void UpdateExpiry(const RemoteDevice& device);
 
+  // Updates the cache when an existing device is found to be dual-mode. Also
+  // notifies listeners of the "device updated" callback.
+  // |device| must already exist in the cache.
+  void MakeDualMode(const RemoteDevice& device);
+
   // Removes |device| from this cache, and notifies listeners of the
   // removal.
   void RemoveDevice(RemoteDevice* device);

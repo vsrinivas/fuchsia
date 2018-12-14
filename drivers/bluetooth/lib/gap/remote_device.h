@@ -318,14 +318,14 @@ class RemoteDevice final {
   friend class RemoteDeviceCache;
   using DeviceCallback = fit::function<void(const RemoteDevice&)>;
 
-  // Caller must ensure that both callbacks are non-empty.
+  // Caller must ensure that callbacks are non-empty.
   // Note that the ctor is only intended for use by RemoteDeviceCache.
   // Expanding access would a) violate the constraint that all RemoteDevices
   // are created through a RemoteDeviceCache, and b) introduce lifetime issues
   // (do the callbacks outlive |this|?).
   RemoteDevice(DeviceCallback notify_listeners_callback,
                DeviceCallback update_expiry_callback,
-               const std::string& identifier,
+               DeviceCallback dual_mode_callback, const std::string& identifier,
                const common::DeviceAddress& address, bool connectable);
 
   // Marks this device's identity as known. Called by RemoteDeviceCache when
@@ -361,9 +361,13 @@ class RemoteDevice final {
   // Signal to the cache to notify listeners.
   void NotifyListeners();
 
+  // Mark this device as dual mode and signal the cache.
+  void MakeDualMode();
+
   // Callbacks used to notify state changes.
   DeviceCallback notify_listeners_callback_;
   DeviceCallback update_expiry_callback_;
+  DeviceCallback dual_mode_callback_;
 
   const std::string identifier_;
   TechnologyType technology_;
