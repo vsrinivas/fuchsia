@@ -8,7 +8,6 @@
         ],
         "services": [
             "fuchsia.cobalt.LoggerFactory",
-            "fuchsia.modular.BasemgrMonitor",
             "fuchsia.modular.ComponentContext",
             "fuchsia.sys.Launcher",
             "fuchsia.testing.runner.TestRunner",

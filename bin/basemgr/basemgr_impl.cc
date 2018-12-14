@@ -37,14 +37,12 @@ BasemgrImpl::BasemgrImpl(
     const modular::BasemgrSettings& settings,
     const std::vector<SessionShellSettings>& session_shell_settings,
     fuchsia::sys::Launcher* const launcher,
-    fuchsia::modular::BasemgrMonitorPtr monitor,
     fuchsia::ui::policy::PresenterPtr presenter,
     fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager,
     std::function<void()> on_shutdown)
     : settings_(settings),
       session_shell_settings_(session_shell_settings),
       launcher_(launcher),
-      monitor_(std::move(monitor)),
       presenter_(std::move(presenter)),
       device_settings_manager_(std::move(device_settings_manager)),
       on_shutdown_(std::move(on_shutdown)),
@@ -60,25 +58,7 @@ BasemgrImpl::BasemgrImpl(
                                     presentation_state_.presentation.get()),
                                 kPresentationService);
 
-  if (settings.ignore_monitor) {
-    Start();
-    return;
-  }
-
-  monitor_.set_error_handler([](zx_status_t status) {
-    FXL_LOG(ERROR) << "No basemgr monitor found.";
-    exit(1);
-  });
-
-  monitor_->GetConnectionCount([this](uint32_t count) {
-    if (count != 1) {
-      FXL_LOG(ERROR) << "Another basemgr is running."
-                     << " Please use that one, or shut it down first.";
-      exit(1);
-    }
-
-    Start();
-  });
+  Start();
 }
 
 BasemgrImpl::~BasemgrImpl() = default;

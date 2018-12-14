@@ -6,7 +6,6 @@
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.modular.AgentContext",
-            "fuchsia.modular.BasemgrMonitor",
             "fuchsia.modular.ModuleContext",
             "fuchsia.modular.PuppetMaster",
             "fuchsia.modular.SessionShellContext",

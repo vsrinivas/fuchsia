@@ -9,7 +9,6 @@
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.devicesettings.DeviceSettingsManager",
-            "fuchsia.modular.BasemgrMonitor",
             "fuchsia.ui.policy.Presenter",
             "fuchsia.sys.Launcher",
             "fuchsia.tracelink.Registry"

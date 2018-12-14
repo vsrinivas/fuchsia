@@ -50,20 +50,18 @@ int main(int argc, const char** argv) {
   fit::deferred_action<fit::closure> cobalt_cleanup =
       SetupCobalt(settings, std::move(loop.dispatcher()), context.get());
 
-  fuchsia::modular::BasemgrMonitorPtr monitor;
-  context->ConnectToEnvironmentService(monitor.NewRequest());
   fuchsia::ui::policy::PresenterPtr presenter;
   context->ConnectToEnvironmentService(presenter.NewRequest());
   fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager;
   context->ConnectToEnvironmentService(device_settings_manager.NewRequest());
 
-  modular::BasemgrImpl basemgr(
-      settings, session_shell_settings, context->launcher().get(),
-      std::move(monitor), std::move(presenter),
-      std::move(device_settings_manager), [&loop, &cobalt_cleanup] {
-        cobalt_cleanup.call();
-        loop.Quit();
-      });
+  modular::BasemgrImpl basemgr(settings, session_shell_settings,
+                               context->launcher().get(), std::move(presenter),
+                               std::move(device_settings_manager),
+                               [&loop, &cobalt_cleanup] {
+                                 cobalt_cleanup.call();
+                                 loop.Quit();
+                               });
   loop.Run();
 
   return 0;

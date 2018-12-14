@@ -51,7 +51,6 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   // |session_shell_settings| Settings relevant to session shells. Used to
   // configure session shells that are launched.
   // |launcher| Environment service for creating component instances.
-  // |monitor| Service that monitors how many basemgr instances are active.
   // |presenter| Service to initialize the presentation.
   // |device_settings_manager| Service to look-up whether device needs factory
   // reset.
@@ -60,7 +59,6 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
       const modular::BasemgrSettings& settings,
       const std::vector<modular::SessionShellSettings>& session_shell_settings,
       fuchsia::sys::Launcher* const launcher,
-      fuchsia::modular::BasemgrMonitorPtr monitor,
       fuchsia::ui::policy::PresenterPtr presenter,
       fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager,
       std::function<void()> on_shutdown);
@@ -148,8 +146,6 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
 
   // Used to launch component instances, such as the base shell.
   fuchsia::sys::Launcher* const launcher_;  // Not owned.
-  // Used to report this basemgr instance to the BasemgrMonitor.
-  fuchsia::modular::BasemgrMonitorPtr monitor_;
   // Used to initialize the presentation.
   fuchsia::ui::policy::PresenterPtr presenter_;
   // Used to look-up whether device needs a factory reset.

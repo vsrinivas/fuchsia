@@ -28,7 +28,6 @@ BasemgrSettings::BasemgrSettings(const fxl::CommandLine& command_line) {
       "account_provider", "oauth_token_manager");
 
   disable_statistics = command_line.HasOption("disable_statistics");
-  ignore_monitor = command_line.HasOption("ignore_monitor");
   no_minfs = command_line.HasOption("no_minfs");
   test = command_line.HasOption("test");
   enable_presenter = command_line.HasOption("enable_presenter");
@@ -54,7 +53,6 @@ BasemgrSettings::BasemgrSettings(const fxl::CommandLine& command_line) {
     session_shell.args.push_back("--test");
     test_name = FindTestName(session_shell.url, session_shell.args);
     disable_statistics = true;
-    ignore_monitor = true;
     no_minfs = true;
   }
 }
@@ -69,7 +67,6 @@ std::string BasemgrSettings::GetUsage() {
       --story_shell_args=SHELL_ARGS
       --account_provider=ACCOUNT_PROVIDER
       --disable_statistics
-      --ignore_monitor
       --no_minfs
       --test
       --enable_presenter

@@ -29,7 +29,6 @@ class BasemgrSettings {
 
   std::string test_name;
   bool disable_statistics;
-  bool ignore_monitor;
   bool no_minfs;
   bool test;
   bool enable_presenter;
