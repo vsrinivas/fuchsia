@@ -12,7 +12,8 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/usb-function.h>
+#include <ddk/phys-iter.h>
+#include <ddk/protocol/usb/function.h>
 #include <usb/usb-request.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
@@ -104,7 +105,7 @@ static void ums_function_queue_data(usb_ums_t* ums, usb_request_t* req) {
         .callback = ums_data_complete,
         .ctx = ums,
     };
-    usb_function_queue(&ums->function, req, &complete);
+    usb_function_request_queue(&ums->function, req, &complete);
 }
 
 static void ums_queue_csw(usb_ums_t* ums, uint8_t status) {
@@ -113,7 +114,7 @@ static void ums_queue_csw(usb_ums_t* ums, uint8_t status) {
         .callback = ums_cbw_complete,
         .ctx = ums,
     };
-    usb_function_queue(&ums->function, ums->cbw_req, &cbw_complete);
+    usb_function_request_queue(&ums->function, ums->cbw_req, &cbw_complete);
 
     usb_request_t* req = ums->csw_req;
     ums_csw_t* csw;
@@ -130,7 +131,7 @@ static void ums_queue_csw(usb_ums_t* ums, uint8_t status) {
         .callback = ums_csw_complete,
         .ctx = ums,
     };
-    usb_function_queue(&ums->function, ums->csw_req, &csw_complete);
+    usb_function_request_queue(&ums->function, ums->csw_req, &csw_complete);
 }
 
 static void ums_continue_transfer(usb_ums_t* ums) {
@@ -427,18 +428,27 @@ static void ums_csw_complete(void* ctx, usb_request_t* req) {
     zxlogf(TRACE, "ums_csw_complete %d %ld\n", req->response.status, req->response.actual);
 }
 
-static const usb_descriptor_header_t* ums_get_descriptors(void* ctx, size_t* out_length) {
-    *out_length = sizeof(descriptors);
-    return (const usb_descriptor_header_t *)&descriptors;
+static size_t ums_get_descriptors_size(void* ctx) {
+    return sizeof(descriptors);
 }
 
-static zx_status_t ums_control(void* ctx, const usb_setup_t* setup, void* buffer,
-                                         size_t length, size_t* out_actual) {
+static void ums_get_descriptors(void* ctx, void* buffer, size_t buffer_size, size_t* out_actual) {
+    size_t length = sizeof(descriptors);
+    if (length > buffer_size) {
+        length = buffer_size;
+    }
+    memcpy(buffer, &descriptors, length);
+    *out_actual = length;
+}
+
+static zx_status_t ums_control(void* ctx, const usb_setup_t* setup, const void* write_buffer,
+                               size_t write_size, void* out_read_buffer, size_t read_size,
+                               size_t* out_read_actual) {
     if (setup->bmRequestType == (USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE) &&
         setup->bRequest == USB_REQ_GET_MAX_LUN && setup->wValue == 0 && setup->wIndex == 0 &&
         setup->wLength >= sizeof(uint8_t)) {
-        *((uint8_t *)buffer) = 0;
-        *out_actual = sizeof(uint8_t);
+        *((uint8_t *)out_read_buffer) = 0;
+        *out_read_actual = sizeof(uint8_t);
         return ZX_OK;
     }
 
@@ -469,16 +479,17 @@ static zx_status_t ums_set_configured(void* ctx, bool configured, usb_speed_t sp
             .callback = ums_cbw_complete,
             .ctx = ums,
         };
-        usb_function_queue(&ums->function, ums->cbw_req, &cbw_complete);
+        usb_function_request_queue(&ums->function, ums->cbw_req, &cbw_complete);
     }
     return status;
 }
 
-static zx_status_t ums_set_interface(void* ctx, unsigned interface, unsigned alt_setting) {
+static zx_status_t ums_set_interface(void* ctx, uint8_t interface, uint8_t alt_setting) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
 usb_function_interface_ops_t ums_device_ops = {
+    .get_descriptors_size = ums_get_descriptors_size,
     .get_descriptors = ums_get_descriptors,
     .control = ums_control,
     .set_configured = ums_set_configured,
@@ -601,7 +612,7 @@ zx_status_t usb_ums_bind(void* ctx, zx_device_t* parent) {
         .ops = &ums_device_ops,
         .ctx = ums,
     };
-    usb_function_register(&ums->function, &intf);
+    usb_function_set_interface(&ums->function, &intf);
 
     return ZX_OK;
 

@@ -13,6 +13,7 @@ MODULE_SRCS := \
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
+    system/ulib/fbl \
     system/ulib/sync \
     system/dev/lib/usb \
 
@@ -23,6 +24,7 @@ MODULE_LIBS := \
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-ethernet \
+    system/banjo/ddk-protocol-usb-function \
     system/banjo/ddk-protocol-usb-request \
 
 MODULE_HEADER_DEPS := \

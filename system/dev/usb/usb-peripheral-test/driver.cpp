@@ -14,7 +14,8 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/usb-function.h>
+#include <ddk/phys-iter.h>
+#include <ddk/protocol/usb/function.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <usb/usb-request.h>
@@ -142,7 +143,7 @@ static void test_bulk_out_complete(void* ctx, usb_request_t* req) {
                 .callback = test_bulk_in_complete,
                 .ctx = test,
             };
-            usb_function_queue(&test->function, in_req, &complete);
+            usb_function_request_queue(&test->function, in_req, &complete);
         } else {
             zxlogf(ERROR, "%s: no bulk in request available\n", __func__);
         }
@@ -156,7 +157,7 @@ static void test_bulk_out_complete(void* ctx, usb_request_t* req) {
         .callback = test_bulk_out_complete,
         .ctx = test,
     };
-    usb_function_queue(&test->function, req, &complete);
+    usb_function_request_queue(&test->function, req, &complete);
 }
 
 static void test_bulk_in_complete(void* ctx, usb_request_t* req) {
@@ -169,19 +170,24 @@ static void test_bulk_in_complete(void* ctx, usb_request_t* req) {
     ZX_DEBUG_ASSERT(status == ZX_OK);
 }
 
-const usb_descriptor_header_t* test_get_descriptors(void* ctx, size_t* out_length) {
-    *out_length = sizeof(descriptors);
-    return reinterpret_cast<const usb_descriptor_header_t*>(&descriptors);
+static size_t test_get_descriptors_size(void* ctx) {
+    return sizeof(descriptors);
 }
 
-static zx_status_t test_control(void* ctx, const usb_setup_t* setup, void* buffer,
-                                size_t buffer_length, size_t* out_actual) {
+static void test_get_descriptors(void* ctx, void* buffer, size_t buffer_size, size_t* out_actual) {
+    size_t length = sizeof(descriptors);
+    if (length > buffer_size) {
+        length = buffer_size;
+    }
+    memcpy(buffer, &descriptors, length);
+    *out_actual = length;
+}
+
+static zx_status_t test_control(void* ctx, const usb_setup_t* setup, const void* write_buffer,
+                                size_t write_size, void* read_buffer, size_t read_size,
+                                size_t* out_read_actual) {
     auto* test = static_cast<usb_test_t*>(ctx);
     size_t length = le16toh(setup->wLength);
-    if (length > buffer_length) {
-        length = buffer_length;
-    }
-    *out_actual = 0;
 
     zxlogf(TRACE, "%s\n", __func__);
     if (setup->bmRequestType == (USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_INTERFACE) &&
@@ -189,17 +195,16 @@ static zx_status_t test_control(void* ctx, const usb_setup_t* setup, void* buffe
         if (length > sizeof(test->test_data)) {
             length = sizeof(test->test_data);
         }
-        memcpy(test->test_data, buffer, length);
+        memcpy(test->test_data, write_buffer, length);
         test->test_data_length = length;
-        *out_actual = length;
         return ZX_OK;
     } else if (setup->bmRequestType == (USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_INTERFACE) &&
         setup->bRequest == USB_PERIPHERAL_TEST_GET_DATA) {
         if (length > test->test_data_length) {
             length = test->test_data_length;
         }
-        memcpy(buffer, test->test_data, length);
-        *out_actual = length;
+        memcpy(read_buffer, test->test_data, length);
+        *out_read_actual = length;
         return ZX_OK;
     } else if (setup->bmRequestType == (USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_INTERFACE) &&
         setup->bRequest == USB_PERIPHERAL_TEST_SEND_INTERUPT) {
@@ -219,7 +224,7 @@ static zx_status_t test_control(void* ctx, const usb_setup_t* setup, void* buffe
             .callback = test_intr_complete,
             .ctx = test,
         };
-        usb_function_queue(&test->function, req, &complete);
+        usb_function_request_queue(&test->function, req, &complete);
         return ZX_OK;
     } else {
         return ZX_ERR_NOT_SUPPORTED;
@@ -256,18 +261,19 @@ static zx_status_t test_set_configured(void* ctx, bool configured, usb_speed_t s
                 .callback = test_bulk_out_complete,
                 .ctx = test,
             };
-            usb_function_queue(&test->function, req, &complete);
+            usb_function_request_queue(&test->function, req, &complete);
         }
     }
 
     return ZX_OK;
 }
 
-static zx_status_t test_set_interface(void* ctx, unsigned interface, unsigned alt_setting) {
+static zx_status_t test_set_interface(void* ctx, uint8_t interface, uint8_t alt_setting) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
 static usb_function_interface_ops_t device_ops = {
+    .get_descriptors_size = test_get_descriptors_size,
     .get_descriptors = test_get_descriptors,
     .control = test_control,
     .set_configured = test_set_configured,
@@ -404,7 +410,7 @@ static zx_status_t usb_test_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    usb_function_register(&test->function, &intf);
+    usb_function_set_interface(&test->function, &intf);
 
     return ZX_OK;
 

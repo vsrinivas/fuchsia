@@ -16,7 +16,7 @@
 #include <ddk/metadata.h>
 #include <ddk/phys-iter.h>
 #include <ddk/protocol/usb/dci.h>
-#include <ddk/protocol/usb-function.h>
+#include <ddk/protocol/usb/function.h>
 #include <ddk/protocol/usb/modeswitch.h>
 #include <usb/usb-request.h>
 #include <zircon/listnode.h>
@@ -238,23 +238,27 @@ static zx_status_t usb_device_function_registered(usb_device_t* dev) {
     return status;
 }
 
-static zx_status_t usb_func_register(void* ctx, usb_function_interface_t* interface) {
+static zx_status_t usb_func_set_interface(void* ctx, const usb_function_interface_t* interface) {
     usb_function_t* function = ctx;
     usb_device_t* dev = function->dev;
     usb_function_t** endpoint_map = dev->endpoint_map;
 
-    size_t length;
-    const usb_descriptor_header_t* descriptors = usb_function_get_descriptors(interface, &length);
-
-    // validate the descriptor list
-    if (!descriptors || length < sizeof(usb_interface_descriptor_t)) {
-        return ZX_ERR_INVALID_ARGS;
+    size_t length = usb_function_interface_get_descriptors_size(interface);
+    void* descriptors = malloc(length);
+    if (!descriptors) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    size_t actual;
+    usb_function_interface_get_descriptors(interface, descriptors, length, &actual);
+    if (actual != length) {
+        zxlogf(ERROR, "usb_function_interface_get_descriptors failed\n");
+        return ZX_ERR_INTERNAL;
     }
 
     usb_interface_descriptor_t* intf_desc = (usb_interface_descriptor_t *)descriptors;
     if (intf_desc->bDescriptorType != USB_DT_INTERFACE ||
             intf_desc->bLength != sizeof(usb_interface_descriptor_t)) {
-        zxlogf(ERROR, "usb_func_register: first descriptor not an interface descriptor\n");
+        zxlogf(ERROR, "usb_func_set_interface: first descriptor not an interface descriptor\n");
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -266,7 +270,7 @@ static zx_status_t usb_func_register(void* ctx, usb_function_interface_t* interf
             usb_interface_descriptor_t* desc = (usb_interface_descriptor_t *)header;
             if (desc->bInterfaceNumber >= countof(dev->interface_map) ||
                 dev->interface_map[desc->bInterfaceNumber] != function) {
-                zxlogf(ERROR, "usb_func_register: bInterfaceNumber %u\n",
+                zxlogf(ERROR, "usb_func_set_interface: bInterfaceNumber %u\n",
                        desc->bInterfaceNumber);
                 return ZX_ERR_INVALID_ARGS;
             }
@@ -278,14 +282,14 @@ static zx_status_t usb_func_register(void* ctx, usb_function_interface_t* interf
             unsigned index = ep_address_to_index(desc->bEndpointAddress);
             if (index == 0 || index >= countof(dev->endpoint_map) ||
                 endpoint_map[index] != function) {
-                zxlogf(ERROR, "usb_func_register: bad endpoint address 0x%X\n",
+                zxlogf(ERROR, "usb_func_set_interface: bad endpoint address 0x%X\n",
                        desc->bEndpointAddress);
                 return ZX_ERR_INVALID_ARGS;
             }
         }
 
         if (header->bLength == 0) {
-            zxlogf(ERROR, "usb_func_register: zero length descriptor\n");
+            zxlogf(ERROR, "usb_func_set_interface: zero length descriptor\n");
             return ZX_ERR_INVALID_ARGS;
         }
         header = (void *)header + header->bLength;
@@ -352,8 +356,8 @@ static zx_status_t usb_func_alloc_ep(void* ctx, uint8_t direction, uint8_t* out_
     return ZX_ERR_NO_RESOURCES;
 }
 
-static zx_status_t usb_func_config_ep(void* ctx, usb_endpoint_descriptor_t* ep_desc,
-                                      usb_ss_ep_comp_descriptor_t* ss_comp_desc) {
+static zx_status_t usb_func_config_ep(void* ctx, const usb_endpoint_descriptor_t* ep_desc,
+                                      const usb_ss_ep_comp_descriptor_t* ss_comp_desc) {
     usb_function_t* function = ctx;
     return usb_dci_config_ep(&function->dev->usb_dci, ep_desc, ss_comp_desc);
 }
@@ -369,7 +373,7 @@ static zx_status_t usb_func_alloc_string_desc(void* ctx, const char* string, uin
     return usb_device_alloc_string_desc(function->dev, string, out_index);
 }
 
-static void usb_func_queue(void* ctx, usb_request_t* req, const usb_request_complete_t* cb) {
+static void usb_func_request_queue(void* ctx, usb_request_t* req, const usb_request_complete_t* cb) {
     usb_function_t* function = ctx;
     usb_dci_request_queue(&function->dev->usb_dci, req, cb);
 }
@@ -390,13 +394,13 @@ static size_t usb_func_get_request_size(void* ctx) {
 }
 
 usb_function_protocol_ops_t usb_function_proto = {
-    .register_func = usb_func_register,
+    .set_interface = usb_func_set_interface,
     .alloc_interface = usb_func_alloc_interface,
     .alloc_ep = usb_func_alloc_ep,
     .config_ep = usb_func_config_ep,
     .disable_ep = usb_func_disable_ep,
     .alloc_string_desc = usb_func_alloc_string_desc,
-    .queue = usb_func_queue,
+    .request_queue = usb_func_request_queue,
     .ep_set_stall = usb_func_ep_set_stall,
     .ep_clear_stall = usb_func_ep_clear_stall,
     .get_request_size = usb_func_get_request_size,
@@ -479,7 +483,8 @@ static zx_status_t usb_dev_set_configuration(usb_device_t* dev, uint8_t configur
     usb_function_t* function;
     list_for_every_entry(&dev->functions, function, usb_function_t, node) {
         if (function->interface.ops) {
-            status = usb_function_set_configured(&function->interface, configured, dev->speed);
+            status = usb_function_interface_set_configured(&function->interface, configured,
+                                                           dev->speed);
             if (status != ZX_OK && configured) {
                 goto fail;
             }
@@ -497,13 +502,13 @@ static zx_status_t usb_dev_set_interface(usb_device_t* dev, unsigned interface,
                                          unsigned alt_setting) {
     usb_function_t* function = dev->interface_map[interface];
     if (function && function->interface.ops) {
-        return usb_function_set_interface(&function->interface, interface, alt_setting);
+        return usb_function_interface_set_interface(&function->interface, interface, alt_setting);
     }
     return ZX_ERR_NOT_SUPPORTED;
 }
 
 static zx_status_t usb_dev_control(void* ctx, const usb_setup_t* setup, const void* write_buffer,
-                                   size_t write_size, void* out_read_buffer, size_t read_size,
+                                   size_t write_size, void* read_buffer, size_t read_size,
                                    size_t* out_read_actual) {
     usb_device_t* dev = ctx;
     uint8_t request_type = setup->bmRequestType;
@@ -518,7 +523,7 @@ static zx_status_t usb_dev_control(void* ctx, const usb_setup_t* setup, const vo
     } else if (direction == USB_DIR_OUT && length > write_size) {
         return ZX_ERR_BUFFER_TOO_SMALL;
     }
-    if ((write_size > 0 && write_buffer == NULL) || (read_size > 0 && out_read_buffer == NULL)) {
+    if ((write_size > 0 && write_buffer == NULL) || (read_size > 0 && read_buffer == NULL)) {
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -530,14 +535,14 @@ static zx_status_t usb_dev_control(void* ctx, const usb_setup_t* setup, const vo
         // handle standard device requests
         if ((request_type & (USB_DIR_MASK | USB_TYPE_MASK)) == (USB_DIR_IN | USB_TYPE_STANDARD) &&
             request == USB_REQ_GET_DESCRIPTOR) {
-            return usb_dev_get_descriptor(dev, request_type, value, index, out_read_buffer, length,
+            return usb_dev_get_descriptor(dev, request_type, value, index, read_buffer, length,
                                           out_read_actual);
         } else if (request_type == (USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE) &&
                    request == USB_REQ_SET_CONFIGURATION && length == 0) {
             return usb_dev_set_configuration(dev, value);
         } else if (request_type == (USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_DEVICE) &&
                    request == USB_REQ_GET_CONFIGURATION && length > 0) {
-            *((uint8_t *)out_read_buffer) = dev->configuration;
+            *((uint8_t *)read_buffer) = dev->configuration;
             *out_read_actual = sizeof(uint8_t);
             return ZX_OK;
         }
@@ -550,14 +555,9 @@ static zx_status_t usb_dev_control(void* ctx, const usb_setup_t* setup, const vo
             // delegate to the function driver for the interface
             usb_function_t* function = dev->interface_map[index];
             if (function && function->interface.ops) {
-                if (direction == USB_DIR_IN) {
-                    return usb_function_control(&function->interface, setup, out_read_buffer,
-                                                read_size, out_read_actual);
-                } else {
-                    size_t actual;
-                    return usb_function_control(&function->interface, setup, (void *)write_buffer,
-                                                write_size, &actual);
-                }
+                return usb_function_interface_control(&function->interface, setup, write_buffer,
+                                                      write_size, read_buffer, read_size,
+                                                      out_read_actual);
             }
         }
         break;
@@ -570,13 +570,9 @@ static zx_status_t usb_dev_control(void* ctx, const usb_setup_t* setup, const vo
         }
         usb_function_t* function = dev->endpoint_map[index];
         if (function && function->interface.ops) {
-            if (direction == USB_DIR_IN) {
-                return usb_function_control(&function->interface, setup, out_read_buffer, read_size,
-                                            out_read_actual);
-            } else {
-                return usb_function_control(&function->interface, setup, (void *)write_buffer,
-                                            write_size, NULL);
-            }
+            return usb_function_interface_control(&function->interface, setup, write_buffer,
+                                                   write_size, read_buffer, read_size,
+                                                   out_read_actual);
         }
         break;
     }
@@ -596,7 +592,8 @@ static void usb_dev_set_connected(void* ctx, bool connected) {
             usb_function_t* function;
             list_for_every_entry(&dev->functions, function, usb_function_t, node) {
                 if (function->interface.ops) {
-                    usb_function_set_configured(&function->interface, false, USB_SPEED_UNDEFINED);
+                    usb_function_interface_set_configured(&function->interface, false,
+                                                          USB_SPEED_UNDEFINED);
                 }
             }
         }

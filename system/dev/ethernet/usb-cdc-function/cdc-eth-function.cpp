@@ -14,8 +14,10 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/phys-iter.h>
 #include <ddk/protocol/ethernet.h>
-#include <ddk/protocol/usb-function.h>
+#include <ddk/protocol/usb/function.h>
+#include <fbl/algorithm.h>
 #include <inet6/inet6.h>
 #include <usb/usb-request.h>
 #include <zircon/listnode.h>
@@ -250,7 +252,7 @@ static zx_status_t cdc_send_locked(usb_cdc_t* cdc, ethmac_netbuf_t* netbuf) {
         .callback = cdc_tx_complete,
         .ctx = cdc,
     };
-    usb_function_queue(&cdc->function, tx_req, &complete);
+    usb_function_request_queue(&cdc->function, tx_req, &complete);
 
     return ZX_OK;
 }
@@ -358,7 +360,7 @@ static void cdc_send_notifications(usb_cdc_t* cdc) {
         .callback = cdc_intr_complete,
         .ctx = cdc,
     };
-    usb_function_queue(&cdc->function, req, &complete);
+    usb_function_request_queue(&cdc->function, req, &complete);
 
     mtx_lock(&cdc->intr_mutex);
     req = usb_req_list_remove_head(&cdc->intr_reqs, cdc->parent_req_size);
@@ -371,7 +373,7 @@ static void cdc_send_notifications(usb_cdc_t* cdc) {
     usb_request_copy_to(req, &speed_notification, sizeof(speed_notification), 0);
     req->header.length = sizeof(speed_notification);
 
-    usb_function_queue(&cdc->function, req, &complete);
+    usb_function_request_queue(&cdc->function, req, &complete);
 }
 
 static void cdc_rx_complete(void* ctx, usb_request_t* req) {
@@ -405,7 +407,7 @@ static void cdc_rx_complete(void* ctx, usb_request_t* req) {
         .callback = cdc_rx_complete,
         .ctx = cdc,
     };
-    usb_function_queue(&cdc->function, req, &complete);
+    usb_function_request_queue(&cdc->function, req, &complete);
 }
 
 static void cdc_tx_complete(void* ctx, usb_request_t* req) {
@@ -437,14 +439,20 @@ static void cdc_tx_complete(void* ctx, usb_request_t* req) {
     }
 }
 
-static const usb_descriptor_header_t* cdc_get_descriptors(void* ctx, size_t* out_length) {
-    *out_length = sizeof(descriptors);
-    return (const usb_descriptor_header_t *)&descriptors;
+static size_t cdc_get_descriptors_size(void* ctx) {
+    return sizeof(descriptors);
 }
 
-static zx_status_t cdc_control(void* ctx, const usb_setup_t* setup, void* buffer,
-                               size_t length, size_t* out_actual) {
-    *out_actual = 0;
+static void cdc_get_descriptors(void* ctx, void* buffer, size_t buffer_size, size_t* out_actual) {
+    const size_t length = fbl::min(sizeof(descriptors), buffer_size);
+    memcpy(buffer, &descriptors, length);
+    *out_actual = length;
+}
+
+static zx_status_t cdc_control(void* ctx, const usb_setup_t* setup, const void* write_buffer,
+                               size_t write_size, void* out_read_buffer, size_t read_size,
+                               size_t* out_read_actual) {
+    *out_read_actual = 0;
 
     zxlogf(TRACE, "%s\n", __func__);
 
@@ -489,7 +497,7 @@ static zx_status_t cdc_set_configured(void* ctx, bool configured, usb_speed_t sp
     return ZX_OK;
 }
 
-static zx_status_t cdc_set_interface(void* ctx, unsigned interface, unsigned alt_setting) {
+static zx_status_t cdc_set_interface(void* ctx, uint8_t interface, uint8_t alt_setting) {
     zxlogf(TRACE, "%s: %d %d\n", __func__, interface, alt_setting);
     auto* cdc = static_cast<usb_cdc_t*>(ctx);
     zx_status_t status;
@@ -526,7 +534,7 @@ static zx_status_t cdc_set_interface(void* ctx, unsigned interface, unsigned alt
                 .callback = cdc_rx_complete,
                 .ctx = cdc,
             };
-            usb_function_queue(&cdc->function, req, &complete);
+            usb_function_request_queue(&cdc->function, req, &complete);
         }
         mtx_unlock(&cdc->rx_mutex);
     }
@@ -545,6 +553,7 @@ static zx_status_t cdc_set_interface(void* ctx, unsigned interface, unsigned alt
 }
 
 usb_function_interface_ops_t device_ops = {
+    .get_descriptors_size = cdc_get_descriptors_size,
     .get_descriptors = cdc_get_descriptors,
     .control = cdc_control,
     .set_configured = cdc_set_configured,
@@ -719,7 +728,7 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    usb_function_register(&cdc->function, &intf);
+    usb_function_set_interface(&cdc->function, &intf);
 
     return ZX_OK;
 

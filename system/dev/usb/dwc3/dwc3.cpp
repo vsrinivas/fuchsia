@@ -5,7 +5,6 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/usb-function.h>
 #include <usb/usb-request.h>
 #include <fbl/auto_lock.h>
 #include <hw/reg.h>
