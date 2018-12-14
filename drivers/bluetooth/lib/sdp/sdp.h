@@ -220,6 +220,9 @@ constexpr AttributeId kBrowseGroupList = 0x0005;
 // service belongs to.
 using BrowseGroupListValueType = std::vector<DataElement>;
 
+// The UUID used for the root of the browsing hierarchy
+constexpr common::UUID kPublicBrowseRootUuid(uint16_t(0x1002));
+
 // Language Base Attribute Id List
 constexpr AttributeId kLanguageBaseAttributeIdList = 0x0006;
 

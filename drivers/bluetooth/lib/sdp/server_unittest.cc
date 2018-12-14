@@ -790,6 +790,53 @@ TEST_F(SDP_ServerTest, ConnectionCallbacks) {
   EXPECT_NE(socks.front(), socks.back());
 }
 
+// Browse Group gets set correctly
+TEST_F(SDP_ServerTest, BrowseGroup) {
+  AddA2DPSink();
+
+  l2cap()->TriggerInboundL2capChannel(kTestHandle1, l2cap::kSDP, kSdpChannel,
+                                      0x0bad);
+  RunLoopUntilIdle();
+
+  const auto kRequestAttr = common::CreateStaticByteBuffer(
+      0x06,        // SDP_ServiceAttritbuteRequest
+      0x10, 0x01,  // Transaction ID (0x1001)
+      0x00, 0x0D,  // Parameter length (12 bytes)
+      // ServiceSearchPattern
+      0x35, 0x03,        // Sequence uint8 3 bytes
+      0x19, 0x01, 0x00,  // UUID: Protocol: L2CAP
+      0xFF, 0xFF,        // MaximumAttributeByteCount (no max)
+      // AttributeIDList
+      0x35, 0x03,  // Sequence uint8 3 bytes
+      0x09,        // uint16_t, single attribute
+      0x00, 0x05,  // BrowseGroupList
+      0x00         // Contunuation State: none
+  );
+
+  ServiceSearchAttributeResponse rsp;
+  auto send_cb = [this, &rsp](auto cb_packet) {
+    EXPECT_LE(sizeof(Header), cb_packet->size());
+    common::PacketView<sdp::Header> packet(cb_packet.get());
+    ASSERT_EQ(0x07, packet.header().pdu_id);
+    uint16_t len = betoh16(packet.header().param_length);
+    packet.Resize(len);
+    auto status = rsp.Parse(packet.payload_data());
+    EXPECT_TRUE(status);
+  };
+
+  fake_chan()->SetSendCallback(send_cb, dispatcher());
+  fake_chan()->Receive(kRequestAttr);
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(1u, rsp.num_attribute_lists());
+  auto& attributes = rsp.attributes(0);
+  auto group_attr_it = attributes.find(kBrowseGroupList);
+  ASSERT_EQ(DataElement::Type::kSequence, group_attr_it->second.type());
+  ASSERT_EQ(DataElement::Type::kUuid, group_attr_it->second.At(0)->type());
+  EXPECT_NE(attributes.end(), group_attr_it);
+  EXPECT_EQ(kPublicBrowseRootUuid, *group_attr_it->second.At(0)->Get<common::UUID>());
+}
+
 #undef SDP_ERROR_RSP
 #undef UINT32_AS_LE_BYTES
 

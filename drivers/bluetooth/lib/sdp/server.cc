@@ -194,6 +194,11 @@ ServiceHandle Server::RegisterService(ServiceRecord record,
     return 0;
   }
 
+  // All services are placed in the top-level browse group.
+  std::vector<DataElement> browse_list;
+  browse_list.emplace_back(DataElement(kPublicBrowseRootUuid));
+  record.SetAttribute(kBrowseGroupList, DataElement(std::move(browse_list)));
+
   // ProtocolDescriptorList handling:
   if (record.HasAttribute(kProtocolDescriptorList)) {
     const auto& primary_list = record.GetAttribute(kProtocolDescriptorList);
