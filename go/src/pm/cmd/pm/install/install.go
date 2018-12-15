@@ -67,21 +67,25 @@ func Run(cfg *build.Config, args []string) error {
 	merkleroot := tree.Root()
 
 	f, err := os.Create(filepath.Join("/pkgfs/install/pkg", fmt.Sprintf("%x", merkleroot)))
-	if err != nil {
+	if err != nil && !os.IsExist(err) {
 		return err
 	}
-	f.Truncate(int64(len(b)))
-	_, err = f.Write(b)
-	if err != nil {
-		f.Close()
-		if os.IsExist(err) {
-			log.Printf("package already exists")
-			return nil
+
+	if err == nil {
+		f.Truncate(int64(len(b)))
+		_, err = f.Write(b)
+		if err != nil {
+			f.Close()
+			if os.IsExist(err) {
+				log.Printf("package already exists")
+				return nil
+			}
+			return err
 		}
-		return err
-	}
-	if err := f.Close(); err != nil {
-		return err
+
+		if err := f.Close(); err != nil {
+			return err
+		}
 	}
 
 	log.Printf("meta.far written, starting blobs")
