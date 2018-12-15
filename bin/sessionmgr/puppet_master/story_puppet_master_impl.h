@@ -22,6 +22,7 @@ class StoryCommandExecutor;
 class StoryPuppetMasterImpl : public fuchsia::modular::StoryPuppetMaster {
  public:
   StoryPuppetMasterImpl(fidl::StringPtr story_name,
+                        OperationContainer* operations,
                         SessionStorage* session_storage,
                         StoryCommandExecutor* executor);
   ~StoryPuppetMasterImpl() override;
@@ -43,7 +44,7 @@ class StoryPuppetMasterImpl : public fuchsia::modular::StoryPuppetMaster {
 
   std::vector<fuchsia::modular::StoryCommand> enqueued_commands_;
 
-  OperationCollection operations_;
+  OperationContainer* const operations_;  // Not owned.
 
   fuchsia::modular::StoryOptions story_options_;
 

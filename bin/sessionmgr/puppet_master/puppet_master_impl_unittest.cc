@@ -74,10 +74,7 @@ TEST_F(PuppetMasterTest, CommandsAreSentToExecutor) {
   EXPECT_EQ(1, executor_.execute_count());
   EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK, result.status);
 
-  // Executor gets the internal story id. It is auto-generated, so we simply see
-  // that we got one.
-  EXPECT_TRUE(executor_.last_story_id() &&
-              executor_.last_story_id()->size() > 0);
+  EXPECT_EQ("foo", executor_.last_story_id());
   ASSERT_EQ(3u, executor_.last_commands().size());
   EXPECT_EQ("one",
             executor_.last_commands().at(0).remove_mod().mod_name->at(0));
@@ -85,6 +82,32 @@ TEST_F(PuppetMasterTest, CommandsAreSentToExecutor) {
             executor_.last_commands().at(1).remove_mod().mod_name->at(0));
   EXPECT_EQ("three",
             executor_.last_commands().at(2).remove_mod().mod_name->at(0));
+}
+
+TEST_F(PuppetMasterTest, CommandsAreSentToExecutor_IfWeCloseStoryChannel) {
+  // We're going to call Execute(), and then immediately drop the
+  // StoryPuppetMaster connection. We won't get a callback, but we still
+  // expect that the commands are executed.
+  auto story = ControlStory("foo");
+
+  // Enqueue some commands. Do this twice and show that all the commands show
+  // up as one batch.
+  fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+  commands.push_back(MakeRemoveModCommand("one"));
+  story->Enqueue(std::move(commands));
+
+  fuchsia::modular::ExecuteResult result;
+  bool callback_called{false};
+  // Instruct our test executor to return an OK status.
+  executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK,
+                                   nullptr);
+  story->Execute([&](fuchsia::modular::ExecuteResult r) {
+    callback_called = true;
+  });
+  story.Close(ZX_OK);
+  RunLoopUntil([&]() { return executor_.execute_count() > 0; });
+  EXPECT_FALSE(callback_called);
+  EXPECT_EQ(1, executor_.execute_count());
 }
 
 TEST_F(PuppetMasterTest, MultipleExecuteCalls) {

@@ -30,15 +30,13 @@ void PuppetMasterImpl::ControlStory(
     fidl::StringPtr story_name,
     fidl::InterfaceRequest<fuchsia::modular::StoryPuppetMaster> request) {
   auto controller = std::make_unique<StoryPuppetMasterImpl>(
-      story_name, session_storage_, executor_);
+      story_name, &operations_, session_storage_, executor_);
   story_puppet_masters_.AddBinding(std::move(controller), std::move(request));
 }
 
 void PuppetMasterImpl::DeleteStory(fidl::StringPtr story_name,
                                    DeleteStoryCallback done) {
-  session_storage_->DeleteStory(story_name)->Then([done = std::move(done)] {
-    done();
-  });
+  session_storage_->DeleteStory(story_name)->Then(std::move(done));
 }
 
 void PuppetMasterImpl::GetStories(GetStoriesCallback done) {

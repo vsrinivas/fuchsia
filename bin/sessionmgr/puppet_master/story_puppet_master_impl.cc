@@ -75,11 +75,12 @@ class ExecuteOperation : public Operation<fuchsia::modular::ExecuteResult> {
 }  // namespace
 
 StoryPuppetMasterImpl::StoryPuppetMasterImpl(
-    fidl::StringPtr story_name, SessionStorage* const session_storage,
-    StoryCommandExecutor* const executor)
+    fidl::StringPtr story_name, OperationContainer* const operations,
+    SessionStorage* const session_storage, StoryCommandExecutor* const executor)
     : story_name_(story_name),
       session_storage_(session_storage),
-      executor_(executor) {
+      executor_(executor),
+      operations_(operations) {
   FXL_DCHECK(session_storage != nullptr);
   FXL_DCHECK(executor != nullptr);
 }
@@ -98,9 +99,9 @@ void StoryPuppetMasterImpl::Enqueue(
 
 void StoryPuppetMasterImpl::Execute(ExecuteCallback done) {
   // First ensure that the story is created.
-  operations_.Add(new ExecuteOperation(session_storage_, executor_, story_name_,
-                                       std::move(story_options_),
-                                       std::move(enqueued_commands_), done));
+  operations_->Add(new ExecuteOperation(session_storage_, executor_,
+                                        story_name_, std::move(story_options_),
+                                        std::move(enqueued_commands_), done));
 }
 
 void StoryPuppetMasterImpl::SetCreateOptions(
