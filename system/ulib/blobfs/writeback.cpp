@@ -336,6 +336,12 @@ void Buffer::FreeSpace(size_t blocks) {
 }
 
 WritebackQueue::~WritebackQueue() {
+    // Ensure that thread teardown has completed, or that it was never brought up to begin with.
+    ZX_DEBUG_ASSERT(!IsRunning());
+    ZX_DEBUG_ASSERT(work_queue_.is_empty());
+}
+
+zx_status_t WritebackQueue::Teardown() {
     WritebackState state;
 
     {
@@ -347,12 +353,17 @@ WritebackQueue::~WritebackQueue() {
         cnd_signal(&work_added_);
     }
 
+    zx_status_t status = ZX_OK;
     if (state != WritebackState::kInit) {
         // Block until the thread completes itself.
-        int r;
-        thrd_join(worker_, &r);
+        int result = -1;
+        int success = thrd_join(worker_, &result);
+        if (result != 0 || success != thrd_success) {
+            status = ZX_ERR_INTERNAL;
+        }
     }
-    ZX_DEBUG_ASSERT(work_queue_.is_empty());
+
+    return status;
 }
 
 zx_status_t WritebackQueue::Create(Blobfs* blobfs, const size_t buffer_blocks,
@@ -395,6 +406,8 @@ zx_status_t WritebackQueue::Enqueue(fbl::unique_ptr<WritebackWork> work) {
         // potential race conditions if the work callback must acquire a lock.
         status = ZX_ERR_BAD_STATE;
     } else if (!work->IsBuffered()) {
+        ZX_DEBUG_ASSERT(state_ == WritebackState::kRunning);
+
         // Only copy blocks to the buffer if they have not already been copied to another buffer.
         EnsureSpaceLocked(work->BlkCount());
 
@@ -410,6 +423,16 @@ zx_status_t WritebackQueue::Enqueue(fbl::unique_ptr<WritebackWork> work) {
     work_queue_.push(std::move(work));
     cnd_signal(&work_added_);
     return status;
+}
+
+bool WritebackQueue::IsRunning() const {
+    switch (state_) {
+    case WritebackState::kRunning:
+    case WritebackState::kReadOnly:
+        return true;
+    default:
+        return false;
+    }
 }
 
 void WritebackQueue::EnsureSpaceLocked(size_t blocks) {
@@ -489,6 +512,7 @@ int WritebackQueue::WritebackThread(void* arg) {
         if (b->unmounting_ && b->work_queue_.is_empty() && b->producer_queue_.is_empty()) {
             ZX_DEBUG_ASSERT(b->work_queue_.is_empty());
             ZX_DEBUG_ASSERT(b->producer_queue_.is_empty());
+            b->state_ = WritebackState::kComplete;
             b->lock_.Release();
             return 0;
         }

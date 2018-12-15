@@ -49,6 +49,7 @@ enum class WritebackState {
     kReady,    // Indicates the queue is ready to start running.
     kRunning,  // Indicates that the queue's async processor is currently running.
     kReadOnly, // State of a writeback queue which no longer allows writes.
+    kComplete, // Indicates that the async processor has been torn down.
 };
 
 // A transaction consisting of enqueued VMOs to be written
@@ -265,6 +266,9 @@ public:
     bool IsReadOnly() const __TA_REQUIRES(lock_) { return state_ == WritebackState::kReadOnly; }
 
     size_t GetCapacity() const { return buffer_->capacity(); }
+
+    // Stops the asynchronous queue processor.
+    zx_status_t Teardown();
 private:
     // The waiter struct may be used as a stack-allocated queue for producers.
     // It allows them to take turns putting data into the buffer when it is
@@ -274,6 +278,8 @@ private:
     using WorkQueue = fs::Queue<fbl::unique_ptr<WritebackWork>>;
 
     WritebackQueue(fbl::unique_ptr<Buffer> buffer) : buffer_(std::move(buffer)) {}
+
+    bool IsRunning() const __TA_REQUIRES(lock_);
 
     // Blocks until |blocks| blocks of data are free for the caller.
     // Doesn't actually allocate any space.

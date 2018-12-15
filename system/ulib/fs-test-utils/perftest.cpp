@@ -21,7 +21,7 @@ namespace {
 constexpr char kUsage[] = R"(
 Usage:
 
-    %s [mode] [fixture options] [test options]    
+    %s [mode] [fixture options] [test options]
     Runs a set of benchmarks and write results.
 
     Note: Argument order matters, latest overrides earliest.
@@ -29,7 +29,7 @@ Usage:
     [Mode]
         -h,--help                      Print usage description. This message.
 
-        -p                             Performance test mode. Default mode is 
+        -p                             Performance test mode. Default mode is
                                        Unit test.
 
     [Fixture Options]
@@ -42,16 +42,16 @@ Usage:
 
         --ramdisk_block_count COUNT    Number of blocks in the ramdisk.
 
-        --use_fvm                      A FVM will be created on the block 
+        --use_fvm                      A FVM will be created on the block
                                        device.
 
         --fvm_slice_size SIZE          Size in bytes of the FVM's slices.
 
-        --fs FS_NAME                   Will use FS_NAME filesystem to format 
+        --fs FS_NAME                   Will use FS_NAME filesystem to format
                                        the block device.
                                        (Options: blobfs, minfs)
 
-        --seed SEED                    An unsigned integer to initialize 
+        --seed SEED                    An unsigned integer to initialize
                                        pseudo-ramdom number generator.
 
     [Test Options]

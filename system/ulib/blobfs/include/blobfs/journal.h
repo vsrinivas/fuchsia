@@ -260,6 +260,9 @@ public:
     // Verifies the transactions and sets the buffer if necessary.
     zx_status_t EnqueueEntryWork(fbl::unique_ptr<WritebackWork> work) final;
 
+    // Stops the asynchronous queue processor.
+    zx_status_t Teardown();
+
 private:
     // The waiter struct may be used as a stack-allocated queue for producers.
     // It allows them to take turns putting data into the buffer when it is
@@ -271,6 +274,8 @@ private:
             uint64_t start_block)
         : blobfs_(blobfs), start_block_(start_block),
           info_(std::move(info)), entries_(std::move(entries)) {}
+
+    bool IsRunning() const __TA_REQUIRES(lock_);
 
     // Creates an entry within the journal ranging from |header_index| to |commit_index|, inclusive.
     fbl::unique_ptr<JournalEntry> CreateEntry(uint64_t header_index, uint64_t commit_index,

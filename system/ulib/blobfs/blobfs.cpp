@@ -288,13 +288,28 @@ void Blobfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
 
                 auto on_unmount = std::move(on_unmount_);
 
+                // Explicitly tear down the journal and writeback threads in case any unexpected
+                // errors occur.
+                zx_status_t journal_status = ZX_OK, writeback_status = ZX_OK;
+                if (journal_ != nullptr) {
+                    journal_status = journal_->Teardown();
+                }
+
+                if (writeback_ != nullptr) {
+                    writeback_status = writeback_->Teardown();
+                }
+
                 // Manually destroy Blobfs. The promise of Shutdown is that no
                 // connections are active, and destroying the Blobfs object
                 // should terminate all background workers.
                 delete this;
 
                 // Identify to the unmounting channel that we've completed teardown.
-                cb(ZX_OK);
+                if (journal_status != ZX_OK) {
+                    cb(journal_status);
+                } else {
+                    cb(writeback_status);
+                }
 
                 // Identify to the mounting thread that the filesystem has
                 // terminated.

@@ -133,6 +133,15 @@ zx_status_t Journal::Create(Blobfs* blobfs, uint64_t journal_blocks, uint64_t st
 }
 
 Journal::~Journal() {
+    // Ensure that thread teardown has completed, or that it was never brought up to begin with.
+    ZX_DEBUG_ASSERT(!IsRunning());
+
+    // Ensure that work and producer queues are currently empty.
+    ZX_DEBUG_ASSERT(work_queue_.is_empty());
+    ZX_DEBUG_ASSERT(producer_queue_.is_empty());
+}
+
+zx_status_t Journal::Teardown() {
     WritebackState state;
 
     {
@@ -144,14 +153,17 @@ Journal::~Journal() {
         cnd_signal(&consumer_cvar_);
     }
 
+    zx_status_t status = ZX_OK;
     if (state != WritebackState::kInit && state != WritebackState::kReady) {
         // Block until the thread completes itself.
-        thrd_join(thread_, nullptr);
+        int result = -1;
+        int success = thrd_join(thread_, &result);
+        if (result != 0 || success != thrd_success) {
+            status = ZX_ERR_INTERNAL;
+        }
     }
 
-    // Ensure that work and producer queues are currently empty.
-    ZX_DEBUG_ASSERT(work_queue_.is_empty());
-    ZX_DEBUG_ASSERT(producer_queue_.is_empty());
+    return status;
 }
 
 zx_status_t Journal::Load() {
@@ -288,6 +300,8 @@ zx_status_t Journal::Enqueue(fbl::unique_ptr<WritebackWork> work) {
         // If we are in "read only" mode, set an error status.
         status = ZX_ERR_BAD_STATE;
     } else if (blocks) {
+        ZX_DEBUG_ASSERT(state_ == WritebackState::kRunning);
+
         // If the work contains no blocks (i.e. it is a sync work), proceed to create an entry
         // without enqueueing any data to the buffer.
 
@@ -358,6 +372,16 @@ void Journal::SendSignalLocked(zx_status_t status) {
     }
     consumer_signalled_ = true;
     cnd_signal(&consumer_cvar_);
+}
+
+bool Journal::IsRunning() const {
+    switch (state_) {
+    case WritebackState::kRunning:
+    case WritebackState::kReadOnly:
+        return true;
+    default:
+        return false;
+    }
 }
 
 fbl::unique_ptr<JournalEntry> Journal::CreateEntry(uint64_t header_index, uint64_t commit_index,
@@ -801,6 +825,7 @@ void Journal::ProcessLoop() {
             producer_queue_.is_empty()) {
             // Only return if we are unmounting AND all entries in all queues have been
             // processed. This includes producers which are currently waiting to be enqueued.
+            state_ = WritebackState::kComplete;
             break;
         }
 
