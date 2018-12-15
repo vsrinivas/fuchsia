@@ -9,7 +9,7 @@
 #include <usb/usb-request.h>
 #include <zircon/assert.h>
 #include <zircon/hw/usb.h>
-#include <zircon/hw/usb-mass-storage.h>
+#include <zircon/hw/usb/ums.h>
 
 #include <endian.h>
 #include <stdio.h>

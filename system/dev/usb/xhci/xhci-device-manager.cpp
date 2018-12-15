@@ -4,7 +4,6 @@
 
 #include <ddk/debug.h>
 #include <zircon/hw/usb.h>
-#include <zircon/hw/usb-hub.h>
 #include <endian.h>
 #include <stdio.h>
 #include <stdlib.h>

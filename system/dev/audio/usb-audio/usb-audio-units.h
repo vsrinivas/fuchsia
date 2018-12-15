@@ -9,7 +9,7 @@
 #include <fbl/macros.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <zircon/hw/usb-audio.h>
+#include <zircon/hw/usb/audio.h>
 
 #include <utility>
 

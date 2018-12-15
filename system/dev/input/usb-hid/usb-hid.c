@@ -10,7 +10,7 @@
 #include <ddk/protocol/usb-old.h>
 #include <ddk/usb/usb.h>
 #include <usb/usb-request.h>
-#include <zircon/hw/usb-hid.h>
+#include <zircon/hw/usb/hid.h>
 
 #include <zircon/status.h>
 #include <zircon/types.h>

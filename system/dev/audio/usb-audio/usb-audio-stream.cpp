@@ -13,7 +13,7 @@
 #include <string.h>
 #include <usb/usb-request.h>
 #include <utility>
-#include <zircon/hw/usb-audio.h>
+#include <zircon/hw/usb/audio.h>
 #include <zircon/process.h>
 #include <zircon/time.h>
 #include <zircon/types.h>

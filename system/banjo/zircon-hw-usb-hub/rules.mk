@@ -10,17 +10,11 @@ MODULE_TYPE := banjo
 
 MODULE_PACKAGE := banjo
 
-MODULE_BANJO_LIBRARY := ddk.protocol.usb.bus
+MODULE_BANJO_LIBRARY := zircon.hw.usb.hub
 
-MODULE_BANJO_NAME := usb/bus
+MODULE_BANJO_NAME := usb/hub
 
-MODULE_SRCS += $(LOCAL_DIR)/usb-bus.banjo
-
-MODULE_BANJO_DEPS := \
-    system/banjo/ddk-driver \
-    system/banjo/ddk-protocol-usb-hub \
-    system/banjo/zircon-hw-usb \
-    system/banjo/zircon-hw-usb-hub \
+MODULE_SRCS += $(LOCAL_DIR)/usb-hub.banjo
 
 include make/module.mk
 

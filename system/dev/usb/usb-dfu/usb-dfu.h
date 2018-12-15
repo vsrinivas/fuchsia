@@ -8,7 +8,7 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <lib/zx/vmo.h>
-#include <zircon/hw/usb-dfu.h>
+#include <zircon/hw/usb/dfu.h>
 
 namespace usb {
 

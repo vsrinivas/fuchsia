@@ -7,8 +7,6 @@
 #include <ddk/driver.h>
 #include <ddk/phys-iter.h>
 #include <ddk/platform-defs.h>
-// TODO: Reorder. This needs to be included first until USB headers move to banjo.
-#include <zircon/hw/usb-hub.h>
 #include <ddk/protocol/usb/hci.h>
 
 #include <hw/arch_ops.h>

@@ -10,8 +10,6 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 #include <zircon/hw/usb.h>
-#include <zircon/hw/usb-hub.h>
-#include <zircon/listnode.h>
 
 __BEGIN_CDECLS;
 

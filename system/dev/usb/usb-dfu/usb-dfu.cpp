@@ -12,7 +12,7 @@
 #include <fbl/unique_ptr.h>
 #include <fuchsia/mem/c/fidl.h>
 #include <lib/zx/vmo.h>
-#include <zircon/hw/usb-dfu.h>
+#include <zircon/hw/usb/dfu.h>
 #include <zircon/usb/test/fwloader/c/fidl.h>
 
 namespace {

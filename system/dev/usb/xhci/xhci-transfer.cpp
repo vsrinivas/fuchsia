@@ -4,7 +4,6 @@
 
 #include <ddk/debug.h>
 #include <ddk/phys-iter.h>
-#include <zircon/hw/usb-hub.h>
 #include <ddk/protocol/usb/hci.h>
 #include <zircon/assert.h>
 #include <zircon/hw/usb.h>

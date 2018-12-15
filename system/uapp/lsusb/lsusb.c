@@ -18,7 +18,7 @@
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #include <zircon/hw/usb.h>
-#include <zircon/hw/usb-hid.h>
+#include <zircon/hw/usb/hid.h>
 #include <zircon/usb/device/c/fidl.h>
 #include <pretty/hexdump.h>
 

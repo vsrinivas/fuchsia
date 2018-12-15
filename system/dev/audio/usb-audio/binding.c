@@ -6,7 +6,7 @@
 #include <ddk/driver.h>
 #include <ddk/binding.h>
 #include <zircon/hw/usb.h>
-#include <zircon/hw/usb-audio.h>
+#include <zircon/hw/usb/audio.h>
 
 extern zx_status_t usb_audio_device_bind(void*, zx_device_t*);
 extern void usb_audio_driver_release(void*);

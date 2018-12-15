@@ -8,6 +8,7 @@ using zx;
 using ddk.driver;
 using ddk.protocol.usb.hub;
 using zircon.hw.usb;
+using zircon.hw.usb.hub;
 
 enum UsbSpeed : uint32 {
 };
@@ -16,7 +17,7 @@ enum UsbSpeed : uint32 {
 interface UsbBus {
     /// Configures a new hub based on its USB hub descriptor.
     ConfigureHub(ddk.driver.ZxDevice? hub_device, UsbSpeed speed,
-                 zircon.hw.usb.UsbHubDescriptor desc) -> (zx.status s);
+                 zircon.hw.usb.hub.UsbHubDescriptor desc) -> (zx.status s);
     /// Informs the USB bus that a new device has been added.
     DeviceAdded(ddk.driver.ZxDevice? hub_device, uint32 port, UsbSpeed speed) -> (zx.status s);
     /// Informs the USB bus that a device has been removed.

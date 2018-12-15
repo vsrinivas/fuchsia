@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <zircon/hw/usb-hub.h>
+#include <zircon/hw/usb/hub.h>
 #include <zircon/types.h>
 #include <stdbool.h>
 

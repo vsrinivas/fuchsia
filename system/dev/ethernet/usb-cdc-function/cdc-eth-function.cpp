@@ -24,7 +24,7 @@
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/device/usb-peripheral.h>
-#include <zircon/hw/usb-cdc.h>
+#include <zircon/hw/usb/cdc.h>
 
 namespace usb_cdc_function {
 

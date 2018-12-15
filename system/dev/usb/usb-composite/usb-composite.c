@@ -5,7 +5,7 @@
 #include <ddk/debug.h>
 #include <ddk/usb/usb.h>
 #include <ddk/metadata.h>
-#include <zircon/hw/usb-audio.h>
+#include <zircon/hw/usb/audio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>

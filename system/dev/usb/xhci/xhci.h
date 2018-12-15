@@ -8,7 +8,6 @@
 #include <lib/sync/completion.h>
 #include <limits.h>
 #include <threads.h>
-#include <zircon/hw/usb-hub.h>
 #include <zircon/hw/usb.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>

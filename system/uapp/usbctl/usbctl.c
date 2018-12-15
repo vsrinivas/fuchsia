@@ -12,7 +12,7 @@
 #include <ddk/protocol/usb/modeswitch.h>
 #include <zircon/device/usb-peripheral.h>
 #include <zircon/hw/usb.h>
-#include <zircon/hw/usb-cdc.h>
+#include <zircon/hw/usb/cdc.h>
 #include <zircon/usb/peripheral/c/fidl.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>

@@ -7,7 +7,7 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/vector.h>
 #include <zircon/device/audio.h>
-#include <zircon/hw/usb-audio.h>
+#include <zircon/hw/usb/audio.h>
 
 #include <utility>
 

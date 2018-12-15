@@ -22,7 +22,7 @@
 #include <zircon/listnode.h>
 #include <zircon/device/usb-peripheral.h>
 #include <zircon/usb/peripheral/c/fidl.h>
-#include <zircon/hw/usb-cdc.h>
+#include <zircon/hw/usb/cdc.h>
 #include <zircon/hw/usb.h>
 
 /*

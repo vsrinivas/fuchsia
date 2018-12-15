@@ -18,7 +18,7 @@
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/device/usb-peripheral.h>
-#include <zircon/hw/usb-mass-storage.h>
+#include <zircon/hw/usb/ums.h>
 
 #define BLOCK_SIZE      512
 #define STORAGE_SIZE    (10 * 1024 * 1024)

@@ -17,6 +17,7 @@ MODULE_BANJO_NAME := usb/hci
 MODULE_BANJO_DEPS := \
     system/banjo/ddk-driver \
     system/banjo/zircon-hw-usb \
+    system/banjo/zircon-hw-usb-hub \
     system/banjo/ddk-protocol-usb-request \
     system/banjo/ddk-protocol-usb-hub \
     system/banjo/ddk-protocol-usb-bus \

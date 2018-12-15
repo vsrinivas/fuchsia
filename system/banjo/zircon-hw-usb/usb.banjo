@@ -79,14 +79,3 @@ struct UsbSsEpCompDescriptor {
     uint8 bmAttributes;
     uint16 wBytesPerInterval;
 };
-
-[Packed, repr="C"]
-struct UsbHubDescriptor {
-    uint8 bDescLength;
-    uint8 bDescriptorType;
-    uint8 bNbrPorts;
-    uint16 wHubCharacteristics;
-    uint8 bPowerOn2PwrGood;
-    uint8 bHubContrCurrent;
-    // Variable length union below, which we are ignoring here for now.
-};

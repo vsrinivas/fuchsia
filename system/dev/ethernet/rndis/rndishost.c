@@ -12,7 +12,7 @@
 #include <ddk/protocol/usb-old.h>
 #include <ddk/usb/usb.h>
 #include <usb/usb-request.h>
-#include <zircon/hw/usb-cdc.h>
+#include <zircon/hw/usb/cdc.h>
 #include <zircon/hw/usb.h>
 #include <zircon/listnode.h>
 
