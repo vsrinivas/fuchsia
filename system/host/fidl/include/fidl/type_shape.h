@@ -5,7 +5,7 @@
 #ifndef ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_TYPE_SHAPE_H_
 #define ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_TYPE_SHAPE_H_
 
-#include <stddef.h>
+#include <cstdint>
 
 class TypeShape {
 public:
