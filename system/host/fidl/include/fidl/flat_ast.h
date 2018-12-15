@@ -6,8 +6,6 @@
 #define ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_FLAT_AST_H_
 
 #include <assert.h>
-#include <errno.h>
-#include <locale.h>
 #include <stdint.h>
 
 #include <iostream>
@@ -1156,48 +1154,7 @@ public:
     Decl* LookupDeclByName(const Name& name) const;
 
     template <typename NumericType>
-    bool ParseNumericLiteral(const raw::NumericLiteral* literal, NumericType* out_value) const {
-        assert(literal != nullptr);
-        assert(out_value != nullptr);
-
-        // Set locale to "C" for numeric types, since all strtox() functions are locale-dependent
-        setlocale(LC_NUMERIC, "C");
-
-        auto data = literal->location().data();
-        std::string string_data(data.data(), data.data() + data.size());
-        if constexpr (std::is_unsigned<NumericType>::value) {
-            if (string_data[0] == '-')
-                return false;
-            errno = 0;
-            unsigned long long value = strtoull(string_data.data(), nullptr, 0);
-            if (errno != 0)
-                return false;
-            if (value > std::numeric_limits<NumericType>::max())
-                return false;
-            *out_value = static_cast<NumericType>(value);
-        } else if constexpr (std::is_floating_point<NumericType>::value) {
-            errno = 0;
-            long double value = strtold(string_data.data(), nullptr);
-            if (errno != 0)
-                return false;
-            if (value > std::numeric_limits<NumericType>::max())
-                return false;
-            if (value < std::numeric_limits<NumericType>::lowest())
-                return false;
-            *out_value = static_cast<NumericType>(value);
-        } else {
-            errno = 0;
-            long long value = strtoll(string_data.data(), nullptr, 0);
-            if (errno != 0)
-                return false;
-            if (value > std::numeric_limits<NumericType>::max())
-                return false;
-            if (value < std::numeric_limits<NumericType>::lowest())
-                return false;
-            *out_value = static_cast<NumericType>(value);
-        }
-        return true;
-    }
+    bool ParseNumericLiteral(const raw::NumericLiteral* literal, NumericType* out_value) const;
 
     bool HasAttribute(fidl::StringView name) const;
 

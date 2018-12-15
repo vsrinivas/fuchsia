@@ -17,6 +17,7 @@
 #include "fidl/ordinals.h"
 #include "fidl/parser.h"
 #include "fidl/raw_ast.h"
+#include "fidl/utils.h"
 
 namespace fidl {
 namespace flat {
@@ -489,6 +490,105 @@ bool SimpleLayoutConstraint(ErrorReporter* error_reporter,
     return ok;
 }
 
+bool ParseBound(ErrorReporter* error_reporter, const SourceLocation& location,
+                const std::string& input, uint32_t* out_value) {
+    auto result = utils::ParseNumeric(input, out_value, 10);
+    switch (result) {
+    case utils::ParseNumericResult::kOutOfBounds:
+        error_reporter->ReportError(location, "bound is too big");
+        return false;
+    case utils::ParseNumericResult::kMalformed: {
+        std::string message("unable to parse bound '");
+        message.append(input);
+        message.append("'");
+        error_reporter->ReportError(location, message);
+        return false;
+    }
+    case utils::ParseNumericResult::kSuccess:
+        return true;
+    }
+}
+
+bool MaxBytesConstraint(ErrorReporter* error_reporter,
+                        const raw::Attribute* attribute,
+                        const Decl* decl) {
+    uint32_t bound;
+    if (!ParseBound(error_reporter, attribute->location(), attribute->value, &bound))
+        return false;
+    uint32_t max_bytes = std::numeric_limits<uint32_t>::max();
+    switch (decl->kind) {
+        case Decl::Kind::kStruct: {
+            auto struct_decl = static_cast<const Struct*>(decl);
+            max_bytes = struct_decl->typeshape.Size() + struct_decl->typeshape.MaxOutOfLine();
+            break;
+        }
+        case Decl::Kind::kTable: {
+            auto table_decl = static_cast<const Table*>(decl);
+            max_bytes = table_decl->typeshape.Size() + table_decl->typeshape.MaxOutOfLine();
+            break;
+        }
+        case Decl::Kind::kUnion: {
+            auto union_decl = static_cast<const Union*>(decl);
+            max_bytes = union_decl->typeshape.Size() + union_decl->typeshape.MaxOutOfLine();
+            break;
+        }
+        default:
+            assert(false && "unexpected kind");
+            return false;
+    }
+    if (max_bytes > bound) {
+        std::ostringstream message;
+        message << "too large: only ";
+        message << bound;
+        message << " bytes allowed, but ";
+        message << max_bytes;
+        message << " bytes found";
+        error_reporter->ReportError(attribute->location(), message.str());
+        return false;
+    }
+    return true;
+}
+
+bool MaxHandlesConstraint(ErrorReporter* error_reporter,
+                          const raw::Attribute* attribute,
+                          const Decl* decl) {
+    uint32_t bound;
+    if (!ParseBound(error_reporter, attribute->location(), attribute->value.c_str(), &bound))
+        return false;
+    uint32_t max_handles = std::numeric_limits<uint32_t>::max();
+    switch (decl->kind) {
+        case Decl::Kind::kStruct: {
+            auto struct_decl = static_cast<const Struct*>(decl);
+            max_handles = struct_decl->typeshape.MaxHandles();
+            break;
+        }
+        case Decl::Kind::kTable: {
+            auto table_decl = static_cast<const Table*>(decl);
+            max_handles = table_decl->typeshape.MaxHandles();
+            break;
+        }
+        case Decl::Kind::kUnion: {
+            auto union_decl = static_cast<const Union*>(decl);
+            max_handles = union_decl->typeshape.MaxHandles();
+            break;
+        }
+        default:
+            assert(false && "unexpected kind");
+            return false;
+    }
+    if (max_handles > bound) {
+        std::ostringstream message;
+        message << "too many handles: only ";
+        message << bound;
+        message << " allowed, but ";
+        message << max_handles;
+        message << " found";
+        error_reporter->ReportError(attribute->location(), message.str());
+        return false;
+    }
+    return true;
+}
+
 Libraries::Libraries() {
     AddAttributeSchema("Discoverable", AttributeSchema({
         AttributeSchema::Placement::kInterfaceDecl,
@@ -511,6 +611,26 @@ Libraries::Libraries() {
         "Simple",
     },
     SimpleLayoutConstraint));
+    AddAttributeSchema("MaxBytes", AttributeSchema({
+        AttributeSchema::Placement::kInterfaceDecl,
+        AttributeSchema::Placement::kMethod,
+        AttributeSchema::Placement::kStructDecl,
+        AttributeSchema::Placement::kTableDecl,
+        AttributeSchema::Placement::kUnionDecl,
+    }, {
+        /* any value */
+    },
+    MaxBytesConstraint));
+    AddAttributeSchema("MaxHandles", AttributeSchema({
+        AttributeSchema::Placement::kInterfaceDecl,
+        AttributeSchema::Placement::kMethod,
+        AttributeSchema::Placement::kStructDecl,
+        AttributeSchema::Placement::kTableDecl,
+        AttributeSchema::Placement::kUnionDecl,
+    }, {
+        /* any value */
+    },
+    MaxHandlesConstraint));
     AddAttributeSchema("Selector", AttributeSchema({
         AttributeSchema::Placement::kMethod,
     }, {
@@ -1623,6 +1743,18 @@ Decl* Library::LookupDeclByName(const Name& name) const {
         return nullptr;
     }
     return iter->second;
+}
+
+template <typename NumericType>
+bool Library::ParseNumericLiteral(const raw::NumericLiteral* literal,
+                                  NumericType* out_value) const {
+    assert(literal != nullptr);
+    assert(out_value != nullptr);
+
+    auto data = literal->location().data();
+    std::string string_data(data.data(), data.data() + data.size());
+    auto result = utils::ParseNumeric(string_data, out_value);
+    return result == utils::ParseNumericResult::kSuccess;
 }
 
 // An edge from D1 to D2 means that a C needs to see the declaration

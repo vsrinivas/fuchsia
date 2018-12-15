@@ -240,7 +240,7 @@ bool MustHaveThreeMembers(fidl::ErrorReporter* error_reporter,
     }
 }
 
-bool constraint_only_three_members() {
+bool constraint_only_three_members_on_struct() {
     BEGIN_TEST;
 
     TestLibrary library(R"FIDL(
@@ -270,6 +270,104 @@ struct MyStruct {
     END_TEST;
 }
 
+bool constraint_only_three_members_on_method() {
+    BEGIN_TEST;
+
+    TestLibrary library(R"FIDL(
+library fidl.test;
+
+interface MyInterface {
+    [MustHaveThreeMembers] MyMethod();
+};
+
+)FIDL");
+    library.AddAttributeSchema("MustHaveThreeMembers", fidl::flat::AttributeSchema({
+        fidl::flat::AttributeSchema::Placement::kMethod,
+    }, {
+        "",
+    },
+    MustHaveThreeMembers));
+    EXPECT_FALSE(library.Compile());
+    auto errors = library.errors();
+    ASSERT_EQ(errors.size(), 1);
+    ASSERT_STR_STR(errors[0].c_str(),
+        "declaration did not satisfy constraint of attribute 'MustHaveThreeMembers' with value ''");
+
+    END_TEST;
+}
+
+bool constraint_only_three_members_on_interface() {
+    BEGIN_TEST;
+
+    TestLibrary library(R"FIDL(
+library fidl.test;
+
+[MustHaveThreeMembers]
+interface MyInterface {
+    MyMethod();
+    MySecondMethod();
+};
+
+)FIDL");
+    library.AddAttributeSchema("MustHaveThreeMembers", fidl::flat::AttributeSchema({
+        fidl::flat::AttributeSchema::Placement::kInterfaceDecl,
+    }, {
+        "",
+    },
+    MustHaveThreeMembers));
+    EXPECT_FALSE(library.Compile());
+    auto errors = library.errors();
+    ASSERT_EQ(errors.size(), 2); // 2 because there are two methods
+    ASSERT_STR_STR(errors[0].c_str(),
+        "declaration did not satisfy constraint of attribute 'MustHaveThreeMembers' with value ''");
+
+    END_TEST;
+}
+
+bool max_bytes() {
+    BEGIN_TEST;
+
+    TestLibrary library(R"FIDL(
+library fidl.test;
+
+[MaxBytes = "27"]
+table MyTable {
+  1: bool here;
+};
+
+)FIDL");
+    EXPECT_FALSE(library.Compile());
+    auto errors = library.errors();
+    ASSERT_EQ(errors.size(), 1);
+    ASSERT_STR_STR(errors[0].c_str(),
+        "too large: only 27 bytes allowed, but 40 bytes found");
+
+    END_TEST;
+}
+
+bool max_handles() {
+    BEGIN_TEST;
+
+    TestLibrary library(R"FIDL(
+library fidl.test;
+
+[MaxHandles = "2"]
+union MyUnion {
+  uint8 hello;
+  array<uint8>:8 world;
+  vector<handle>:6 foo;
+};
+
+)FIDL");
+    EXPECT_FALSE(library.Compile());
+    auto errors = library.errors();
+    ASSERT_EQ(errors.size(), 1);
+    ASSERT_STR_STR(errors[0].c_str(),
+        "too many handles: only 2 allowed, but 6 found");
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(attributes_tests);
@@ -282,5 +380,8 @@ RUN_TEST(bogus_transport);
 RUN_TEST(channel_transport);
 RUN_TEST(socket_control_transport);
 RUN_TEST(incorrect_placement_layout);
-RUN_TEST(constraint_only_three_members);
+RUN_TEST(constraint_only_three_members_on_struct);
+RUN_TEST(constraint_only_three_members_on_method);
+RUN_TEST(max_bytes);
+RUN_TEST(max_handles);
 END_TEST_CASE(attributes_tests);
