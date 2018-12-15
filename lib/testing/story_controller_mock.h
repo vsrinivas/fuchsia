@@ -17,8 +17,6 @@ class StoryControllerMock : public fuchsia::modular::StoryController {
  public:
   StoryControllerMock() {}
 
-  std::string last_added_module() const { return last_added_module_; }
-
   struct GetLinkCall {
     fuchsia::modular::LinkPath link_path;
   };
@@ -94,15 +92,6 @@ class StoryControllerMock : public fuchsia::modular::StoryController {
     GetLinkCall call{std::move(link_path)};
     get_link_calls.push_back(std::move(call));
   }
-
-  void AddModule(
-      fidl::VectorPtr<fidl::StringPtr> module_path, fidl::StringPtr module_name,
-      fuchsia::modular::Intent intent,
-      fuchsia::modular::SurfaceRelationPtr surface_relation) override {
-    last_added_module_ = intent.handler;
-  }
-
-  std::string last_added_module_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryControllerMock);
 };

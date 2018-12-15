@@ -138,13 +138,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
       fidl::VectorPtr<fuchsia::modular::ContainerRelationEntry> relationships,
       fidl::VectorPtr<fuchsia::modular::ContainerNodePtr> nodes);
 
-  // |fuchsia::modular::StoryController| - public so that
-  // fuchsia::modular::StoryProvider can call it
-  void AddModule(
-      fidl::VectorPtr<fidl::StringPtr> parent_module_path,
-      fidl::StringPtr module_name, fuchsia::modular::Intent intent,
-      fuchsia::modular::SurfaceRelationPtr surface_relation) override;
-
   // Stops the module at |module_path| in response to a call to
   // |ModuleContext.RemoveSelfFromStory|.
   void RemoveModuleFromStory(

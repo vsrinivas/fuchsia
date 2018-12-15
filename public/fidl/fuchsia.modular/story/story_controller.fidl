@@ -49,25 +49,6 @@ interface StoryController {
     // for the holder of a StoryController to provide a watcher.
     5: Watch(StoryWatcher watcher);
 
-    // Adds a module matching the provided Intent to the story.
-    //
-    // A module is selected via Module Resolution (docs/module_resolution.md).
-    // The started module will see one Link per |intent.parameters| entry available
-    // with the same name as the noun. For example, if intent.parameters[0].name ==
-    // 'foo', the started module can call ModuleContext.GetLink('foo', ...) in
-    // order to access the Link.
-    //
-    // |parent_module_path| is the path to the module that is adding the Intent.
-    // |module_name| is the name of the started module as exposed to the parent
-    //               module.
-    // |intent| is the intent that will be used for module resolution.
-    // |surface_relation| is used to determine how the started module will be
-    //                    presented.
-    //
-    // DEPRECATED: To add modules to stories, use PuppetMaster.
-    12: AddModule(vector<string>? parent_module_path, string module_name,
-                  Intent intent, SurfaceRelation? surface_relation);
-
     // Lists the active modules in the story. Active modules are those with a
     // controller.
     //

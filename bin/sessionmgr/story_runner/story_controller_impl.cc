@@ -211,9 +211,8 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
             std::move(module_config), running_mod_info.module_data.get(),
             std::move(service_list), std::move(view_provider_request));
 
-    // Modules started with
-    // fuchsia::modular::StoryController.fuchsia::modular::AddModule() don't
-    // have a module controller request.
+    // Modules added/started through PuppetMaster don't have a module
+    // controller request.
     if (module_controller_request_.is_valid()) {
       running_mod_info.module_controller_impl->Connect(
           std::move(module_controller_request_));
@@ -1591,33 +1590,6 @@ void StoryControllerImpl::GetLink(
     fuchsia::modular::LinkPath link_path,
     fidl::InterfaceRequest<fuchsia::modular::Link> request) {
   ConnectLinkPath(fidl::MakeOptional(std::move(link_path)), std::move(request));
-}
-
-void StoryControllerImpl::AddModule(
-    fidl::VectorPtr<fidl::StringPtr> parent_module_path,
-    fidl::StringPtr module_name, fuchsia::modular::Intent intent,
-    fuchsia::modular::SurfaceRelationPtr surface_relation) {
-  if (!module_name || module_name->empty()) {
-    // TODO(thatguy): When we report errors, make this an error reported back
-    // to the client.
-    FXL_LOG(FATAL) << "fuchsia::modular::StoryController::fuchsia::modular::"
-                      "AddModule(): module_name must not be empty.";
-  }
-
-  // AddModule() only adds modules to the story shell. Internally, we use a
-  // null SurfaceRelation to mean that the module is embedded, and a non-null
-  // SurfaceRelation to indicate that the module is composed by the story
-  // shell. If it is null, we set it to the default SurfaceRelation.
-  if (!surface_relation) {
-    surface_relation = fuchsia::modular::SurfaceRelation::New();
-  }
-
-  operation_queue_.Add(new AddIntentCall(
-      this, std::move(parent_module_path), module_name, CloneOptional(intent),
-      nullptr /* module_controller_request */, std::move(surface_relation),
-      nullptr /* view_owner_request */,
-      fuchsia::modular::ModuleSource::EXTERNAL,
-      [](fuchsia::modular::StartModuleStatus) {}));
 }
 
 void StoryControllerImpl::StartStoryShell(
