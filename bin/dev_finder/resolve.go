@@ -62,13 +62,14 @@ func (cmd *resolveCmd) execute(ctx context.Context, domains ...string) error {
 		return errors.New("no domains supplied")
 	}
 	for _, domain := range domains {
-		devices, err := cmd.sendMDNSPacket(ctx, mdns.QuestionPacket(domain))
+		mDNSDomain := fmt.Sprintf("%s.local", domain)
+		devices, err := cmd.sendMDNSPacket(ctx, mdns.QuestionPacket(mDNSDomain))
 		if err != nil {
 			return fmt.Errorf("sending/receiving mdns packets during resolve of domain '%s': %v", domain, err)
 		}
 		filteredDevices := make([]*fuchsiaDevice, 0)
 		for _, device := range devices {
-			if device.domain == domain {
+			if device.domain == mDNSDomain {
 				filteredDevices = append(filteredDevices, device)
 			}
 		}
