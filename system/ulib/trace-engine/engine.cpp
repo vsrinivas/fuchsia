@@ -689,19 +689,21 @@ EXPORT trace_context_t* trace_acquire_context_for_category(
     return context;
 }
 
-// thread-safe, fail-fast, lock-free
-EXPORT trace_context_t* trace_acquire_context_for_category_cached(
+// TODO(PT-84): This function is split out from
+// |trace_acquire_context_for_category_cached()| because gcc doesn't
+// optimize the prologue as well as it could: It creates the stack frame
+// for the entire function prior to the "is disabled?" early-exit test.
+// Clang does fine, but for now to achieve optimum performance for the common
+// case of tracing off, regardless of compiler, we employ this workaround.
+// Both gcc and clang do the expected tail-call optimization, so all this
+// costs is an extra branch when tracing is on.
+//
+// |current_state| is appended as an argument, violating the convention to
+// put output parameters last to minimize the changes in the caller's tail
+// call.
+static __NO_INLINE trace_context_t* trace_acquire_context_for_category_cached_worker(
     const char* category_literal, trace_site_t* site,
-    trace_string_ref_t* out_ref) {
-
-    trace_site_atomic_state_t* state_ptr = get_trace_site_state_as_atomic(site);
-
-    trace_site_state_t current_state =
-        state_ptr->load(std::memory_order_relaxed);
-    if (likely(current_state & kSiteStateDisabled)) {
-        return nullptr;
-    }
-
+    trace_string_ref_t* out_ref, trace_site_state_t current_state) {
     trace_context_t* context =
         trace_acquire_context_for_category(category_literal, out_ref);
 
@@ -714,6 +716,22 @@ EXPORT trace_context_t* trace_acquire_context_for_category_cached(
     add_to_site_cache(site, current_state, context != nullptr);
 
     return context;
+}
+
+// thread-safe, fail-fast, lock-free
+EXPORT trace_context_t* trace_acquire_context_for_category_cached(
+    const char* category_literal, trace_site_t* site,
+    trace_string_ref_t* out_ref) {
+    trace_site_atomic_state_t* state_ptr = get_trace_site_state_as_atomic(site);
+
+    trace_site_state_t current_state =
+        state_ptr->load(std::memory_order_relaxed);
+    if (likely(current_state & kSiteStateDisabled)) {
+        return nullptr;
+    }
+
+    return trace_acquire_context_for_category_cached_worker(
+        category_literal, site, out_ref, current_state);
 }
 
 // thread-safe
