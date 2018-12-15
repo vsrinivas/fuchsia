@@ -47,7 +47,7 @@ template("prebuilt_package") {
     blobs_rsp = "$target_out_dir/$pkg_name.blobs.rsp"
     manifest = "$target_out_dir/$pkg_name.manifest"
     system_rsp = "$target_out_dir/$pkg_name.system.rsp"
-    ids_txt = "$target_out_dir/$pkg_name.manifest.ids.txt"
+    ids_txt = "$target_out_dir/$pkg_name.final.manifest.ids.txt"
     meta_merkle = "$meta_dir/meta.far.merkle"
 
     args = [
@@ -92,6 +92,12 @@ template("prebuilt_package") {
   }
 
   group(target_name + ".manifest") {
+    public_deps = [
+      ":$pkg_target_name",
+    ]
+  }
+
+  group(target_name + ".final.manifest.ids.txt") {
     public_deps = [
       ":$pkg_target_name",
     ]

@@ -624,7 +624,7 @@ template("package") {
     if (pkg.deprecated_system_image) {
       # Dummy target to deposit an empty ids.txt file for
       # //build/images:ids.txt to collect.
-      action("${pkg_target_name}.manifest") {
+      action("${pkg_target_name}.final.manifest.ids.txt") {
         script = "/bin/cp"
 
         # Add sources and deps so that the package gets rebuilt whenever they
@@ -634,7 +634,7 @@ template("package") {
         deps = pkg.deps
         public_deps = pkg.public_deps
         outputs = [
-          "$target_out_dir/${target_name}.ids.txt",
+          "$target_out_dir/${target_name}",
         ]
         args = [
                  "-f",
@@ -669,8 +669,41 @@ template("package") {
       }
 
       final_manifest = "${pkg_target_name}.final.manifest"
+      final_manifest_ids = "${final_manifest}.ids.txt"
 
       # TODO(CF-224): clean this up when gn has metadata support for templates
+      # merge all package ids and component ids in a single file.
+      action(final_manifest_ids) {
+        script = "/usr/bin/sort"
+        output_name = "${target_out_dir}/${final_manifest_ids}"
+        outputs = [
+          output_name,
+        ]
+        manifest_id = "$target_out_dir/${pkg_target_name}.manifest.ids.txt"
+        args = [
+          "-u",
+          "-o",
+          rebase_path(output_name),
+          rebase_path(manifest_id),
+        ]
+        inputs = [
+          manifest_id,
+        ]
+        deps = [
+          ":${pkg_target_name}.manifest",
+        ]
+
+        foreach(component, pkg.components) {
+          deps += [ component ]
+          component_name = get_label_info(component, "name")
+          dir = get_label_info(component, "target_out_dir")
+          manifest_file = "${dir}/${component_name}.manifest.ids.txt"
+          inputs += [ manifest_file ]
+          args += [ rebase_path(manifest_file) ]
+        }
+      }
+
+      # Merge all component and package manifests in single file
       action(final_manifest) {
         script = "//build/cat.py"
         output_name = "${target_out_dir}/${final_manifest}"
@@ -690,6 +723,7 @@ template("package") {
           pmx,
         ]
         deps = [
+          ":${final_manifest_ids}",
           ":${pkg_target_name}.manifest",
         ]
 
@@ -722,7 +756,11 @@ template("package") {
                        "//build/images:system_image.manifest",
                      ]
       }
-      deps = pkg.deps + [ ":${pkg_target_name}.manifest" ]
+      if (pkg.deprecated_system_image) {
+        deps = pkg.deps + [ ":${pkg_target_name}.final.manifest.ids.txt" ]
+      } else {
+        deps = pkg.deps + [ ":${pkg_target_name}.final.manifest" ]
+      }
       data_deps = pkg.data_deps
       public_deps = pkg.public_deps
       output_name = "${pkg_target_name}.system.rsp"

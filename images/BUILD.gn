@@ -1511,11 +1511,12 @@ action("ids.txt") {
 
   foreach(pkg_label, available_packages) {
     # Find the ids.txt file written by package().
-    manifest = get_label_info(pkg_label, "label_no_toolchain") + ".manifest"
+    manifest = get_label_info(pkg_label, "label_no_toolchain") +
+               ".final.manifest.ids.txt"
     manifest_target_name = get_label_info(manifest, "name")
     manifest_target_out_dir = get_label_info(manifest, "target_out_dir")
     deps += [ manifest ]
-    sources += [ "$manifest_target_out_dir/${manifest_target_name}.ids.txt" ]
+    sources += [ "$manifest_target_out_dir/${manifest_target_name}" ]
   }
 
   script = "/usr/bin/sort"
