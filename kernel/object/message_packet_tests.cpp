@@ -30,7 +30,7 @@ static bool create() {
     ASSERT_EQ(ZX_OK, mem_out.copy_array_to_user(buf.get(), kSize), "");
 
     constexpr uint32_t kNumHandles = 64;
-    ktl::unique_ptr<MessagePacket> mp;
+    MessagePacketPtr mp;
     EXPECT_EQ(ZX_OK, MessagePacket::Create(mem_in, kSize, kNumHandles, &mp), "");
     ASSERT_EQ(kSize, mp->data_size(), "");
     EXPECT_EQ(kNumHandles, mp->num_handles(), "");
@@ -59,7 +59,7 @@ static bool create_void_star() {
     void* in = in_buf.get();
 
     constexpr uint32_t kNumHandles = 0;
-    ktl::unique_ptr<MessagePacket> mp;
+    MessagePacketPtr mp;
     EXPECT_EQ(ZX_OK, MessagePacket::Create(in, kSize, kNumHandles, &mp), "");
     ASSERT_EQ(kSize, mp->data_size(), "");
     EXPECT_EQ(kNumHandles, mp->num_handles(), "");
@@ -80,7 +80,7 @@ static bool create_zero() {
     auto mem_in = make_user_in_ptr(mem->in());
     auto mem_out = make_user_out_ptr(mem->out());
 
-    ktl::unique_ptr<MessagePacket> mp;
+    MessagePacketPtr mp;
     EXPECT_EQ(ZX_OK, MessagePacket::Create(mem_in, 0, 0, &mp), "");
     ASSERT_EQ(0U, mp->data_size(), "");
     EXPECT_EQ(0U, mp->num_handles(), "");
@@ -96,7 +96,7 @@ static bool create_too_many_handles() {
     ktl::unique_ptr<UserMemory> mem = UserMemory::Create(1);
     auto mem_in = make_user_in_ptr(mem->in());
 
-    ktl::unique_ptr<MessagePacket> mp;
+    MessagePacketPtr mp;
     EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, MessagePacket::Create(mem_in, 1, 65, &mp), "");
     END_TEST;
 }
@@ -113,7 +113,7 @@ static bool create_bad_mem() {
     auto in = make_user_in_ptr(static_cast<const void*>(buf.get()));
 
     constexpr uint32_t kNumHandles = 0;
-    ktl::unique_ptr<MessagePacket> mp;
+    MessagePacketPtr mp;
     EXPECT_EQ(ZX_ERR_INVALID_ARGS, MessagePacket::Create(in, kSize, kNumHandles, &mp), "");
     END_TEST;
 }
@@ -133,7 +133,7 @@ static bool copy_bad_mem() {
     ASSERT_EQ(ZX_OK, mem_out.copy_array_to_user(buf.get(), kSize), "");
 
     constexpr uint32_t kNumHandles = 0;
-    ktl::unique_ptr<MessagePacket> mp;
+    MessagePacketPtr mp;
     EXPECT_EQ(ZX_OK, MessagePacket::Create(mem_in, kSize, kNumHandles, &mp), "");
 
     auto out = make_user_out_ptr(static_cast<void*>(buf.get()));

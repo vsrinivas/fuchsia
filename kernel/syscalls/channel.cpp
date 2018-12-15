@@ -132,7 +132,7 @@ static zx_status_t channel_read(zx_handle_t handle_value, uint32_t options,
     if (options & ~ZX_CHANNEL_READ_MAY_DISCARD)
         return ZX_ERR_NOT_SUPPORTED;
 
-    ktl::unique_ptr<MessagePacket> msg;
+    MessagePacketPtr msg;
     result = channel->Read(up->get_koid(), &num_bytes, &num_handles, &msg,
                            options & ZX_CHANNEL_READ_MAY_DISCARD);
     if (result != ZX_OK && result != ZX_ERR_BUFFER_TOO_SMALL)
@@ -193,7 +193,7 @@ zx_status_t sys_channel_read_etc(zx_handle_t handle_value, uint32_t options,
 }
 
 static zx_status_t channel_read_out(ProcessDispatcher* up,
-                                    ktl::unique_ptr<MessagePacket> reply,
+                                    MessagePacketPtr reply,
                                     zx_channel_call_args_t* args,
                                     user_out_ptr<uint32_t> actual_bytes,
                                     user_out_ptr<uint32_t> actual_handles) {
@@ -224,7 +224,7 @@ static zx_status_t channel_read_out(ProcessDispatcher* up,
 }
 
 static zx_status_t channel_call_epilogue(ProcessDispatcher* up,
-                                         ktl::unique_ptr<MessagePacket> reply,
+                                         MessagePacketPtr reply,
                                          zx_channel_call_args_t* args,
                                          user_out_ptr<uint32_t> actual_bytes,
                                          user_out_ptr<uint32_t> actual_handles) {
@@ -298,7 +298,7 @@ zx_status_t sys_channel_write(zx_handle_t handle_value, uint32_t options,
         return status;
     }
 
-    ktl::unique_ptr<MessagePacket> msg;
+    MessagePacketPtr msg;
     status = MessagePacket::Create(user_bytes, num_bytes, num_handles, &msg);
     if (status != ZX_OK) {
         return status;
@@ -356,7 +356,7 @@ zx_status_t sys_channel_call_noretry(zx_handle_t handle_value, uint32_t options,
     }
 
     // Prepare a MessagePacket for writing
-    ktl::unique_ptr<MessagePacket> msg;
+    MessagePacketPtr msg;
     status = MessagePacket::Create(user_bytes, num_bytes, num_handles, &msg);
     if (status != ZX_OK) {
         return status;
@@ -376,7 +376,7 @@ zx_status_t sys_channel_call_noretry(zx_handle_t handle_value, uint32_t options,
     // TODO(ZX-970): ktrace channel calls; maybe two traces, maybe with txid.
 
     // Write message and wait for reply, deadline, or cancellation
-    ktl::unique_ptr<MessagePacket> reply;
+    MessagePacketPtr reply;
     status = channel->Call(up->get_koid(), ktl::move(msg), deadline, &reply);
     if (status != ZX_OK)
         return status;
@@ -401,7 +401,7 @@ zx_status_t sys_channel_call_finish(zx_time_t deadline,
     if (!channel)
         return ZX_ERR_BAD_STATE;
 
-    ktl::unique_ptr<MessagePacket> reply;
+    MessagePacketPtr reply;
     status = channel->ResumeInterruptedCall(waiter, deadline, &reply);
     if (status != ZX_OK)
         return status;

@@ -24,19 +24,26 @@ static_assert(ZX_CHANNEL_MAX_MSG_BYTES == kMaxMessageSize, "");
 static_assert(ZX_CHANNEL_MAX_MSG_HANDLES == kMaxMessageHandles, "");
 
 class Handle;
+class MessagePacket;
+namespace internal {
+struct MessagePacketDeleter;
+}  // namespace internal
 
-class MessagePacket final : public fbl::DoublyLinkedListable<ktl::unique_ptr<MessagePacket>>,
-                            fbl::Recyclable<MessagePacket> {
+
+// Definition of a MessagePacket's specific pointer type.  Message packets must
+// be managed using this specific type of pointer, because MessagePackets have a
+// specific custom deletion requirement.
+using MessagePacketPtr = ktl::unique_ptr<MessagePacket, internal::MessagePacketDeleter>;
+
+class MessagePacket final : public fbl::DoublyLinkedListable<MessagePacketPtr> {
 public:
     // Creates a message packet containing the provided data and space for
     // |num_handles| handles. The handles array is uninitialized and must
     // be completely overwritten by clients.
     static zx_status_t Create(user_in_ptr<const void> data, uint32_t data_size,
-                              uint32_t num_handles,
-                              ktl::unique_ptr<MessagePacket>* msg);
+                              uint32_t num_handles, MessagePacketPtr* msg);
     static zx_status_t Create(const void* data, uint32_t data_size,
-                              uint32_t num_handles,
-                              ktl::unique_ptr<MessagePacket>* msg);
+                              uint32_t num_handles, MessagePacketPtr* msg);
 
     uint32_t data_size() const { return data_size_; }
 
@@ -71,11 +78,18 @@ public:
     }
 
 private:
+    // A private constructor ensures that users must use the static factory
+    // Create method to create a MessagePacket.  This, in turn, guarantees that
+    // when a user creates a MessagePacket, they end up with the proper
+    // MessagePacket::UPtr type for managing the message packet's life cycle.
     MessagePacket(BufferChain* chain, uint32_t data_size, uint32_t payload_offset,
                   uint16_t num_handles, Handle** handles)
         : buffer_chain_(chain), handles_(handles), data_size_(data_size),
           payload_offset_(payload_offset), num_handles_(num_handles), owns_handles_(false) {}
 
+    // A private destructor helps to make sure that only our custom deleter is
+    // ever used to destroy this object which, in turn, makes it very difficult
+    // to not properly recycle the object.
     ~MessagePacket() {
         DEBUG_ASSERT(!InContainer());
         if (owns_handles_) {
@@ -86,11 +100,11 @@ private:
         }
     }
 
-    friend class fbl::Recyclable<MessagePacket>;
-    void fbl_recycle();
+    friend struct internal::MessagePacketDeleter;
+    static void recycle(MessagePacket* packet);
 
     static zx_status_t CreateCommon(uint32_t data_size, uint32_t num_handles,
-                                    ktl::unique_ptr<MessagePacket>* msg);
+                                    MessagePacketPtr* msg);
 
     BufferChain* buffer_chain_;
     Handle** const handles_;
@@ -99,3 +113,13 @@ private:
     const uint16_t num_handles_;
     bool owns_handles_;
 };
+
+namespace internal {
+struct MessagePacketDeleter {
+    constexpr MessagePacketDeleter() = default;
+    void operator()(MessagePacket* packet) const noexcept {
+        MessagePacket::recycle(packet);
+    }
+};
+}  // namespace internal
+

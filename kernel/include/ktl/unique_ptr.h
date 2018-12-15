@@ -11,39 +11,7 @@
 
 namespace ktl {
 
-namespace internal {
-
-template <typename T>
-struct deleter {
-    constexpr deleter() noexcept = default;
-
-    template <typename U>
-    deleter(const deleter<U>&,
-            typename std::enable_if_t<std::is_convertible<U*, T*>::value>* = nullptr)
-        noexcept {
-    }
-
-    void operator()(T* ptr) const noexcept {
-        if constexpr (fbl::internal::has_fbl_recycle<T>::value) {
-            fbl::internal::recycler<T>::recycle(ptr);
-        } else {
-            delete ptr;
-        }
-    }
-};
-
-template <typename T>
-struct deleter<T[]> {
-    constexpr deleter() noexcept = default;
-
-    void operator()(T* ptr) const noexcept {
-        delete[] ptr;
-    }
-};
-
-} // namespace internal
-
-template <typename T, typename Deleter = internal::deleter<T>>
+template <typename T, typename Deleter = ::std::default_delete<T>>
 using unique_ptr = std::unique_ptr<T, Deleter>;
 
 template <typename T, typename... Args>

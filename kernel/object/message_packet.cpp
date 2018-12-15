@@ -44,7 +44,7 @@ static inline uint32_t PayloadOffset(uint32_t num_handles) {
 //
 // static
 inline zx_status_t MessagePacket::CreateCommon(uint32_t data_size, uint32_t num_handles,
-                                               ktl::unique_ptr<MessagePacket>* msg) {
+                                               MessagePacketPtr* msg) {
     if (unlikely(data_size > kMaxMessageSize || num_handles > kMaxMessageHandles)) {
         return ZX_ERR_OUT_OF_RANGE;
     }
@@ -74,8 +74,8 @@ inline zx_status_t MessagePacket::CreateCommon(uint32_t data_size, uint32_t num_
 
 // static
 zx_status_t MessagePacket::Create(user_in_ptr<const void> data, uint32_t data_size,
-                                  uint32_t num_handles, ktl::unique_ptr<MessagePacket>* msg) {
-    ktl::unique_ptr<MessagePacket> new_msg;
+                                  uint32_t num_handles, MessagePacketPtr* msg) {
+    MessagePacketPtr new_msg;
     zx_status_t status = CreateCommon(data_size, num_handles, &new_msg);
     if (unlikely(status != ZX_OK)) {
         return status;
@@ -90,8 +90,8 @@ zx_status_t MessagePacket::Create(user_in_ptr<const void> data, uint32_t data_si
 
 // static
 zx_status_t MessagePacket::Create(const void* data, uint32_t data_size, uint32_t num_handles,
-                                  ktl::unique_ptr<MessagePacket>* msg) {
-    ktl::unique_ptr<MessagePacket> new_msg;
+                                  MessagePacketPtr* msg) {
+    MessagePacketPtr new_msg;
     zx_status_t status = CreateCommon(data_size, num_handles, &new_msg);
     if (unlikely(status != ZX_OK)) {
         return status;
@@ -104,10 +104,14 @@ zx_status_t MessagePacket::Create(const void* data, uint32_t data_size, uint32_t
     return ZX_OK;
 }
 
-void MessagePacket::fbl_recycle() {
-    // This function invokes the destructor so be careful about taking any references to |this|.
-    BufferChain* chain = buffer_chain_;
-    this->~MessagePacket();
-    // |this| has been destroyed.
+void MessagePacket::recycle(MessagePacket* packet) {
+    // Grab the buffer chain for this packet
+    BufferChain* chain = packet->buffer_chain_;
+
+    // Manually destruct the packet.  Do not delete it; its memory did not come
+    // from new, it is contained as part of the buffer chain.
+    packet->~MessagePacket();
+
+    // Now return the buffer chain to where it came from.
     BufferChain::Free(chain);
 }
