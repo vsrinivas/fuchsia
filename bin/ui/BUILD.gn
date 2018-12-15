@@ -31,6 +31,16 @@ package("scenic_tests") {
       name = "gfx_apptests"
     },
     {
+      name = "gfx_pixeltests"
+      environments = [
+        {
+          dimensions = {
+            device_type = "Intel NUC Kit NUC7i5DNHE"
+          }
+        },
+      ]
+    },
+    {
       name = "gfx_unittests"
     },
     {
@@ -64,6 +74,10 @@ package("scenic_tests") {
     {
       path = rebase_path("meta/gfx_apptests.cmx")
       dest = "gfx_apptests.cmx"
+    },
+    {
+      path = rebase_path("meta/gfx_pixeltests.cmx")
+      dest = "gfx_pixeltests.cmx"
     },
     {
       path = rebase_path("meta/gfx_unittests.cmx")
@@ -229,7 +243,6 @@ package("gltf_export") {
 }
 
 package("scenic_tools") {
-
   deps = [
     "gltf_export",
     "input",

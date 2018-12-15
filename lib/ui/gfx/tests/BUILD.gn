@@ -8,6 +8,7 @@ group("tests") {
   testonly = true
   public_deps = [
     ":apptests",
+    ":pixeltests",
     ":unittests",
   ]
 }
@@ -102,6 +103,32 @@ executable("apptests") {
   ]
   deps = [
     ":testing_deps",
+  ]
+}
+
+executable("pixeltests") {
+  output_name = "gfx_pixeltests"
+
+  testonly = true
+  sources = [
+    "scenic_pixel_test.cc",
+  ]
+  include_dirs = [
+    "//garnet/public/lib/escher",
+    "//third_party/glm",
+  ]
+  deps = [
+    "//garnet/public/fidl/fuchsia.sys",
+    "//garnet/public/fidl/fuchsia.ui.policy",
+    "//garnet/public/fidl/fuchsia.ui.scenic",
+    "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/gtest",
+    "//garnet/public/lib/ui/gfx/cpp",
+    "//garnet/public/lib/ui/scenic/cpp",
+    "//third_party/googletest:gtest_main",
+    "//zircon/public/lib/async-cpp",
   ]
 }
 
