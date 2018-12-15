@@ -141,6 +141,8 @@ vm_page* VmPageList::GetPage(uint64_t offset) {
 }
 
 bool VmPageList::RemovePage(uint64_t offset, vm_page_t** page_out) {
+    DEBUG_ASSERT(page_out);
+
     uint64_t node_offset = offset_to_node_offset(offset);
     size_t index = offset_to_node_index(offset);
 
@@ -162,15 +164,46 @@ bool VmPageList::RemovePage(uint64_t offset, vm_page_t** page_out) {
             list_.erase(*pln);
         }
 
-        if (!page_out) {
-            pmm_free_page(page);
-        } else {
-            *page_out = page;
-        }
+        *page_out = page;
         return true;
     } else {
         return false;
     }
+}
+
+void VmPageList::FreePages(uint64_t start_offset, uint64_t end_offset) {
+    // Find the first node with a start after start_offset; if start_offset
+    // is in a node, it'll be in the one before that one.
+    auto start = --list_.upper_bound(start_offset);
+    if (!start.IsValid()) {
+        start = list_.begin();
+    }
+    // Find the first node which is completely after the end of the region. If
+    // end_offset falls in the middle of a node, this finds the next node.
+    const auto end = list_.lower_bound(end_offset);
+
+    list_node list;
+    list_initialize(&list);
+
+    // Visitor function which moves the pages from the VmPageListNode
+    // to the accumulation list.
+    auto per_page_func = [&list](vm_page*& p, uint64_t offset) {
+        list_add_tail(&list, &p->queue_node);
+        p = nullptr;
+        return ZX_ERR_NEXT;
+    };
+
+    // Iterate through all nodes which have at least some overlap with the
+    // region, freeing the pages and erasing nodes which become empty.
+    while (start != end) {
+        auto cur = start++;
+        cur->ForEveryPage(per_page_func, start_offset, end_offset);
+        if (cur->IsEmpty()) {
+            list_.erase(cur);
+        }
+    }
+
+    pmm_free(&list);
 }
 
 size_t VmPageList::FreeAllPages() {

@@ -32,7 +32,6 @@ public:
     // for every valid page in the node call the passed in function
     template <typename T>
     zx_status_t ForEveryPage(T func, uint64_t start_offset, uint64_t end_offset) {
-        DEBUG_ASSERT(IS_PAGE_ALIGNED(start_offset) && IS_PAGE_ALIGNED(end_offset));
         size_t start = 0;
         size_t end = kPageFanOut;
         if (start_offset > obj_offset_) {
@@ -58,7 +57,6 @@ public:
     // for every valid page in the node call the passed in function
     template <typename T>
     zx_status_t ForEveryPage(T func, uint64_t start_offset, uint64_t end_offset) const {
-        DEBUG_ASSERT(IS_PAGE_ALIGNED(start_offset) && IS_PAGE_ALIGNED(end_offset));
         size_t start = 0;
         size_t end = kPageFanOut;
         if (start_offset > obj_offset_) {
@@ -177,7 +175,6 @@ public:
     // walk the page tree, calling the passed in function on every tree node
     template <typename T>
     zx_status_t ForEveryPageInRange(T per_page_func, uint64_t start_offset, uint64_t end_offset) {
-        DEBUG_ASSERT(IS_PAGE_ALIGNED(start_offset) && IS_PAGE_ALIGNED(end_offset));
         // Find the first node with a start after start_offset; if start_offset
         // is in a node, it'll be in the one before it.
         auto start = --list_.upper_bound(start_offset);
@@ -201,7 +198,6 @@ public:
     template <typename T>
     zx_status_t ForEveryPageInRange(T per_page_func, uint64_t start_offset,
                                     uint64_t end_offset) const {
-        DEBUG_ASSERT(IS_PAGE_ALIGNED(start_offset) && IS_PAGE_ALIGNED(end_offset));
         // Find the first node with a start after start_offset; if start_offset
         // is in a node, it'll be in the one before it.
         auto start = --list_.upper_bound(start_offset);
@@ -224,11 +220,12 @@ public:
 
     zx_status_t AddPage(vm_page*, uint64_t offset);
     vm_page* GetPage(uint64_t offset);
-    // Removes the page at |offset| from the list. Returns true if a page
-    // was present, false otherwise.  If |page| is non-null, returns the
-    // physical page in it, otherwise frees the page.
+    // Removes the page at |offset| from the list. Returns true if a page was
+    // present, false otherwise.  If a page was removed, returns it in |page|.
     bool RemovePage(uint64_t offset, vm_page** page);
     size_t FreeAllPages();
+    // Frees all pages in the range [start_offset, end_offset).
+    void FreePages(uint64_t start_offset, uint64_t end_offset);
     bool IsEmpty();
 
     // Takes the pages in the range [offset, length) out of this page list.

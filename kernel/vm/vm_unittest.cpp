@@ -1055,6 +1055,75 @@ static bool vmpl_add_remove_page_test() {
     END_TEST;
 }
 
+// Test for freeing a range of pages
+static bool vmpl_free_pages_test() {
+    BEGIN_TEST;
+
+    vm_page_t* first_page = nullptr;
+    vm_page_t* last_page = nullptr;
+
+    VmPageList pl;
+    constexpr uint32_t kCount = 3 * VmPageListNode::kPageFanOut;
+    for (uint32_t i = 0; i < kCount; i++) {
+        paddr_t pa;
+        vm_page_t* page;
+
+        zx_status_t status = pmm_alloc_page(0, &page, &pa);
+        ASSERT_EQ(ZX_OK, status, "pmm_alloc single page");
+        ASSERT_NONNULL(page, "pmm_alloc single page");
+        ASSERT_NE(0u, pa, "pmm_alloc single page");
+
+        pl.AddPage(page, i * PAGE_SIZE);
+
+        if (i == 0) {
+            first_page = page;
+        } else if (i == kCount - 1) {
+            last_page = page;
+        }
+    }
+
+    pl.FreePages(PAGE_SIZE, (kCount - 1) * PAGE_SIZE);
+
+    for (uint32_t i = 0; i < kCount; i++) {
+        vm_page* remove_page;
+        bool res = pl.RemovePage(i * PAGE_SIZE, &remove_page);
+        if (i == 0) {
+            EXPECT_TRUE(res, "missing page\n");
+            EXPECT_EQ(first_page, remove_page, "unexpected page\n");
+        } else if (i == kCount - 1) {
+            EXPECT_TRUE(res, "missing page\n");
+            EXPECT_EQ(last_page, remove_page, "unexpected page\n");
+        } else {
+            EXPECT_FALSE(res, "extra page\n");
+        }
+    }
+
+    END_TEST;
+}
+
+// Tests freeing the last page in a list
+static bool vmpl_free_pages_last_page_test() {
+    BEGIN_TEST;
+
+    paddr_t pa;
+    vm_page_t* page;
+
+    zx_status_t status = pmm_alloc_page(0, &page, &pa);
+    ASSERT_EQ(ZX_OK, status, "pmm_alloc single page");
+    ASSERT_NONNULL(page, "pmm_alloc single page");
+    ASSERT_NE(0u, pa, "pmm_alloc single page");
+
+    VmPageList pl;
+    pl.AddPage(page, 0);
+
+    EXPECT_EQ(page, pl.GetPage(0), "unexpected page\n");
+
+    pl.FreePages(0, PAGE_SIZE);
+    EXPECT_TRUE(pl.IsEmpty(), "not empty\n");
+
+    END_TEST;
+}
+
 // Tests taking a page from the start of a VmPageListNode
 static bool vmpl_take_single_page_even_test() {
     BEGIN_TEST;
@@ -1256,6 +1325,8 @@ UNITTEST_END_TESTCASE(pmm_tests, "pmm", "Physical memory manager tests");
 
 UNITTEST_START_TESTCASE(vm_page_list_tests)
 VM_UNITTEST(vmpl_add_remove_page_test)
+VM_UNITTEST(vmpl_free_pages_test)
+VM_UNITTEST(vmpl_free_pages_last_page_test)
 VM_UNITTEST(vmpl_take_single_page_even_test)
 VM_UNITTEST(vmpl_take_single_page_odd_test)
 VM_UNITTEST(vmpl_take_all_pages_test)

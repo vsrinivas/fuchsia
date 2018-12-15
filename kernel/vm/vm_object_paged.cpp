@@ -678,12 +678,7 @@ zx_status_t VmObjectPaged::DecommitRange(uint64_t offset, uint64_t len) {
     // unmap all of the pages in this range on all the mapping regions
     RangeChangeUpdateLocked(start, page_aligned_len);
 
-    // iterate through the pages, freeing them
-    // TODO: use page_list iterator, move pages to list, free at once
-    while (start < end) {
-        page_list_.RemovePage(start, nullptr);
-        start += PAGE_SIZE;
-    }
+    page_list_.FreePages(start, end);
 
     return ZX_OK;
 }
@@ -836,12 +831,7 @@ zx_status_t VmObjectPaged::ResizeLocked(uint64_t s) {
         // unmap all of the pages in this range on all the mapping regions
         RangeChangeUpdateLocked(start, len);
 
-        // iterate through the pages, freeing them
-        // TODO: use page_list iterator, move pages to list, free at once
-        while (start < end) {
-            page_list_.RemovePage(start, nullptr);
-            start += PAGE_SIZE;
-        }
+        page_list_.FreePages(start, end);
     } else if (s > size_) {
         // expanding
         // figure the starting and ending page offset that is affected
