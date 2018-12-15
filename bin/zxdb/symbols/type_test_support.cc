@@ -15,6 +15,20 @@ fxl::RefPtr<BaseType> MakeInt32Type() {
   return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 4, "int32_t");
 }
 
+fxl::RefPtr<BaseType> MakeUint32Type() {
+  return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 4,
+                                       "uint32_t");
+}
+
+fxl::RefPtr<BaseType> MakeInt64Type() {
+  return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 8, "int64_t");
+}
+
+fxl::RefPtr<BaseType> MakeUint64Type() {
+  return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 8,
+                                       "uint64_t");
+}
+
 fxl::RefPtr<Collection> MakeCollectionType(
     int type_tag, const std::string& type_name,
     std::initializer_list<NameAndType> members) {

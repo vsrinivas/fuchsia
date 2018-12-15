@@ -17,8 +17,11 @@ class Type;
 // Used for declarations that have a name and a type.
 using NameAndType = std::pair<std::string, fxl::RefPtr<Type>>;
 
-// Returns a type that can hold 4-byte signed integers.
+// Returns a type that can hold 4/8-byte [un]signed integers.
 fxl::RefPtr<BaseType> MakeInt32Type();
+fxl::RefPtr<BaseType> MakeUint32Type();
+fxl::RefPtr<BaseType> MakeInt64Type();
+fxl::RefPtr<BaseType> MakeUint64Type();
 
 // Creates a collection type with the given members.
 //

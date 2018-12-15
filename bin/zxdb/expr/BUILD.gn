@@ -4,6 +4,8 @@
 
 static_library("expr") {
   sources = [
+    "cast.cc",
+    "cast.h",
     "expr.cc",
     "expr.h",
     "expr_eval_context.h",
@@ -52,6 +54,7 @@ source_set("tests") {
   testonly = true
 
   sources = [
+    "cast_unittest.cc",
     "expr_node_unittest.cc",
     "expr_parser_unittest.cc",
     "expr_tokenizer_unittest.cc",

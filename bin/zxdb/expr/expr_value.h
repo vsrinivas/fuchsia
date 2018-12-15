@@ -70,8 +70,12 @@ class ExprValue {
   // Gets the result as a [u]int64_t, promoting all shorter values to the
   // longer ones. If the data size is empty or greater than 64 bits it will
   // return an error.
-  Err PromoteToInt64(int64_t* output) const;
-  Err PromoteToUint64(uint64_t* output) const;
+  Err PromoteTo64(int64_t* output) const;
+  Err PromoteTo64(uint64_t* output) const;
+
+  // Gets the result as a double. This will convert floats and doubles to
+  // doubles.
+  Err PromoteToDouble(double* output) const;
 
  private:
   // Internal constructor for the primitive types that constructs an on-the-fly

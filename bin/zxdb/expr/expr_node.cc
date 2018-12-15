@@ -39,7 +39,7 @@ bool BaseTypeCanBeArrayIndex(const BaseType* type) {
 
 void EvalUnaryOperator(const ExprToken& op_token, const ExprValue& value,
                        ExprNode::EvalCallback cb) {
-  // This manually extracts the value rather than calling PromoteToInt64() so
+  // This manually extracts the value rather than calling PromoteTo64() so
   // that the result type is exactly the same as the input type.
   //
   // TODO(brettw) when we add more mathematical operations we'll want a
@@ -180,7 +180,7 @@ Err ArrayAccessExprNode::InnerValueToOffset(const ExprValue& inner,
 
   // This uses signed integers to explicitly allow negative indexing which the
   // user may want to do for some reason.
-  Err promote_err = inner.PromoteToInt64(offset);
+  Err promote_err = inner.PromoteTo64(offset);
   if (promote_err.has_error())
     return promote_err;
   return Err();

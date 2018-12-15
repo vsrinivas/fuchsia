@@ -594,7 +594,7 @@ void FormatValue::FormatNumeric(const ExprValue& value,
 
 void FormatValue::FormatBoolean(const ExprValue& value, OutputBuffer* out) {
   uint64_t int_val = 0;
-  Err err = value.PromoteToUint64(&int_val);
+  Err err = value.PromoteTo64(&int_val);
   if (err.has_error())
     out->Append(ErrToOutput(err));
   else if (int_val)
@@ -612,11 +612,11 @@ void FormatValue::FormatEnum(const ExprValue& value,
   uint64_t numeric_value;
   if (enum_type->is_signed()) {
     int64_t signed_value;
-    err = value.PromoteToInt64(&signed_value);
+    err = value.PromoteTo64(&signed_value);
     if (!err.has_error())
       numeric_value = static_cast<uint64_t>(signed_value);
   } else {
-    err = value.PromoteToUint64(&numeric_value);
+    err = value.PromoteTo64(&numeric_value);
   }
   if (err.has_error()) {
     out->Append(ErrToOutput(err));
@@ -666,7 +666,7 @@ void FormatValue::FormatFloat(const ExprValue& value, OutputBuffer* out) {
 
 void FormatValue::FormatSignedInt(const ExprValue& value, OutputBuffer* out) {
   int64_t int_val = 0;
-  Err err = value.PromoteToInt64(&int_val);
+  Err err = value.PromoteTo64(&int_val);
   if (err.has_error())
     out->Append(ErrToOutput(err));
   else
@@ -678,7 +678,7 @@ void FormatValue::FormatUnsignedInt(const ExprValue& value,
                                     OutputBuffer* out) {
   // This formatter handles unsigned and hex output.
   uint64_t int_val = 0;
-  Err err = value.PromoteToUint64(&int_val);
+  Err err = value.PromoteTo64(&int_val);
   if (err.has_error())
     out->Append(ErrToOutput(err));
   else if (options.num_format == FormatValueOptions::NumFormat::kHex)
@@ -745,7 +745,7 @@ void FormatValue::FormatReference(fxl::RefPtr<SymbolDataProvider> data_provider,
 
     // Followed by the address.
     TargetPointer address = 0;
-    Err addr_err = original_value.PromoteToUint64(&address);
+    Err addr_err = original_value.PromoteTo64(&address);
     if (addr_err.has_error()) {
       // Invalid data in the reference.
       out.Append(ErrToOutput(addr_err));
@@ -770,9 +770,9 @@ void FormatValue::FormatReference(fxl::RefPtr<SymbolDataProvider> data_provider,
   });
 }
 
-void FormatValue::FormatFunctionPointer(
-    const ExprValue& value,
-    const FormatValueOptions& options, OutputBuffer* out) {
+void FormatValue::FormatFunctionPointer(const ExprValue& value,
+                                        const FormatValueOptions& options,
+                                        OutputBuffer* out) {
   // Unlike pointers, we don't print the type for function pointers. These
   // are usually very long and not very informative. If explicitly requested,
   // the types will be printed out by the calling function.
@@ -814,8 +814,7 @@ void FormatValue::FormatFunctionPointer(
   }
 }
 
-void FormatValue::FormatMemberPtr(const ExprValue& value,
-                                  const MemberPtr* type,
+void FormatValue::FormatMemberPtr(const ExprValue& value, const MemberPtr* type,
                                   const FormatValueOptions& options,
                                   OutputBuffer* out) {
   const Type* container_type = type->container_type().Get()->AsType();
