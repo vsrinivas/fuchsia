@@ -6,8 +6,10 @@ Fuchsia target devices must be connected to a host device via a network link.
 SSH is the protocol for communications over that link, as described in
 [this document](ssh.md).
 
-_TODO_: add details about the mDNS tool (locating devices, getting host address
-for reverse connections)
+### Getting the device address
+
+Getting the Fuchsia device address can be done using mDNS. Methods for device
+discovery are outlined in [this document](device_discovery.md)
 
 ## Flashing a device
 
@@ -23,5 +25,5 @@ For information on how to push packages to a Fuchsia device, see the
 ## Getting logs from a device
 
 In order to retrieve logs from a device, open a shell on the device and run the
-`log_listener` command, which provides various filtering knobs.
-See [this page](logging.md) for more details.
+`log_listener` command, which provides various filtering knobs. See
+[this page](logging.md) for more details.
