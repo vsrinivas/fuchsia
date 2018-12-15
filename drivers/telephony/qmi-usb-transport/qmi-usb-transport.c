@@ -11,7 +11,7 @@
 #include <ddk/usb/usb.h>
 #include <lib/sync/completion.h>
 #include <zircon/device/qmi-transport.h>
-#include <zircon/hw/usb-cdc.h>
+#include <zircon/hw/usb/cdc.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/types.h>

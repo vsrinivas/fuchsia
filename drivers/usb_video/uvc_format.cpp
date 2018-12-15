@@ -7,7 +7,7 @@
 #include <ddk/usb/usb.h>
 #include <fbl/vector.h>
 #include <stdlib.h>
-#include <zircon/hw/usb-video.h>
+#include <zircon/hw/usb/video.h>
 
 #include "garnet/drivers/usb_video/usb-video-stream.h"
 #include "garnet/drivers/usb_video/uvc_format.h"

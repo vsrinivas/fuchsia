@@ -7,7 +7,7 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/usb-old.h>
 
-#include <zircon/hw/usb-video.h>
+#include <zircon/hw/usb/video.h>
 
 extern zx_status_t usb_video_bind(void* ctx, zx_device_t* parent);
 
