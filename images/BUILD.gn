@@ -272,9 +272,7 @@ action("preinstall.manifest") {
     "--entry",
     "update/0=" + rebase_path(update_meta_far_merkle, root_build_dir),
   ]
-  deps += [
-    ":update.meta",
-  ]
+  deps += [ ":update.meta" ]
 }
 
 # The /boot and /system manifests have to be generated in concert.  Things
@@ -361,8 +359,10 @@ action("blob.manifest") {
   response_file_contents = [
     "--output=" + rebase_path(blob_manifest, root_build_dir),
     "--depfile=" + rebase_path(depfile, root_build_dir),
-    "--input=" + rebase_path("$target_out_dir/system_image.meta/blobs.json", root_build_dir),
-    "--input=" + rebase_path("$target_out_dir/update.meta/blobs.json", root_build_dir),
+    "--input=" + rebase_path("$target_out_dir/system_image.meta/blobs.json",
+                             root_build_dir),
+    "--input=" +
+        rebase_path("$target_out_dir/update.meta/blobs.json", root_build_dir),
   ]
   foreach(pkg_label, monolith_packages + preinstall_packages) {
     pkg_target_name = get_label_info(pkg_label, "name")
@@ -1503,6 +1503,8 @@ action("ids.txt") {
   deps = [
     ":kernel-ids.txt",
     ":system_image.manifest",
+    ":zircon-asan-build-id",
+    ":zircon-build-id",
   ]
   sources = [
     "$target_out_dir/kernel-ids.txt",
@@ -1549,6 +1551,39 @@ action("kernel-ids.txt") {
     "--include-source=*/zircon.elf",
     "--manifest=" + rebase_path(sources[0], root_build_dir),
   ]
+}
+
+# TODO(TC-303): This is a temporary hack to get all of Zircon's debug files
+# into the $root_build_dir/.build-id hierarchy.  The Zircon build produces
+# its own .build-id hierarchy under $zircon_build_dir, but using its ids.txt
+# is the simpler way to populate the one in this build.  When ids.txt is fully
+# obsolete, hopefully Zircon will be in the unified build anyway.
+foreach(target,
+        [
+          {
+            name = "zircon-build-id"
+            sources = [
+              "$zircon_build_dir/ids.txt",
+            ]
+          },
+          {
+            name = "zircon-asan-build-id"
+            sources = [
+              "$zircon_asan_build_dir/ids.txt",
+            ]
+          },
+        ]) {
+  action(target.name) {
+    visibility = [ ":ids.txt" ]
+    script = "//scripts/build_id_conv.py"
+    sources = target.sources
+    outputs = [
+      "$root_build_dir/${target_name}.stamp",
+    ]
+    args =
+        [ "--stamp=" + rebase_path(outputs[0], root_build_dir) ] +
+        rebase_path(sources + [ "$root_build_dir/.build-id" ], root_build_dir)
+  }
 }
 
 images += [
