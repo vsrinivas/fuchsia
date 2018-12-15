@@ -21,6 +21,9 @@ interface Device {
     TestRestart();
 };
 
+// Primary declarations.
+const uint32 kReceiveBufferSize = 2048;
+
 interface Primary {
     // Imports a buffer for use in the system driver.
     ImportBufferFIDL(handle<vmo> buffer);
@@ -47,9 +50,9 @@ interface Primary {
     ExecuteCommandBufferFIDL(handle command_buffer, uint32 context_id);
 
     // Submits a series of commands for execution on the GPU without using a command buffer.
-    ExecuteImmediateCommandsFIDL(uint32 context_id, uint32 commands_size,
-                                 vector<uint8> command_data, uint32 semaphore_count,
-                                 vector<uint64> semaphores);
+    ExecuteImmediateCommandsFIDL(uint32 context_id,
+                                 vector<uint8>:kReceiveBufferSize command_data,
+                                 vector<uint64>? semaphores);
 
     // Retrieve the current magma error status.
     GetErrorFIDL() -> (int32 magma_status);

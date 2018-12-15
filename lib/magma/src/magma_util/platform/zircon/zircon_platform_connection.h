@@ -8,9 +8,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
-namespace magma {
+// Enable / disable to compare FIDL IPC to raw IPC performance.
+#define MAGMA_FIDL 1
 
-constexpr size_t kReceiveBufferSize = 2048;
+namespace magma {
 
 enum OpCode {
     ImportBuffer,
@@ -119,4 +120,4 @@ struct CommitBufferOp {
 
 } // namespace magma
 
-#endif  // GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_ZIRCON_ZIRCON_PLATFORM_CONNECTION_H_
+#endif // GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_ZIRCON_ZIRCON_PLATFORM_CONNECTION_H_

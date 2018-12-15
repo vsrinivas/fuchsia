@@ -13,6 +13,7 @@
 #include <lib/async/time.h>
 #include <lib/async/wait.h>
 #include <lib/zx/channel.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
@@ -83,19 +84,14 @@ public:
                              zx::channel client_notification_endpoint,
                              std::shared_ptr<magma::PlatformEvent> shutdown_event)
         : magma::PlatformConnection(shutdown_event), delegate_(std::move(delegate)),
-#if MAGMA_FIDL
-          client_endpoint_(std::move(client_endpoint)),
-#else
+#if !MAGMA_FIDL
           server_endpoint_(std::move(server_endpoint)),
-          client_endpoint_(std::move(client_endpoint)),
 #endif
+          client_endpoint_(std::move(client_endpoint)),
           server_notification_endpoint_(std::move(server_notification_endpoint)),
           client_notification_endpoint_(std::move(client_notification_endpoint)),
           async_loop_(&kAsyncLoopConfigNoAttachToThread),
-#if MAGMA_FIDL
-          async_wait_channel_(this, server_endpoint.get(),
-                              ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED),
-#else
+#if !MAGMA_FIDL
           async_wait_channel_(this, server_endpoint_.get(),
                               ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED),
 #endif
@@ -107,6 +103,9 @@ public:
           binding_(this, std::move(server_endpoint), async_loop_.dispatcher())
 #endif
     {
+#if MAGMA_FIDL
+        binding_.set_error_handler([this](zx_status_t status) { async_loop()->Quit(); });
+#endif
         delegate_->SetNotificationCallback(NotificationCallbackStatic, this);
     }
 
@@ -114,42 +113,44 @@ public:
 
     bool HandleRequest() override
     {
-        zx_status_t status = async_loop_.Run(zx::time::infinite(), true); // Once
-        if (status != ZX_OK) {
-            DLOG("Run returned %d", status);
+        zx_status_t status = async_loop_.Run(zx::time::infinite(), true /* once */);
+        if (status != ZX_OK)
             return false;
-        }
         return true;
     }
 
+#if !MAGMA_FIDL
     bool BeginChannelWait()
     {
         zx_status_t status = async_begin_wait(async_loop()->dispatcher(), &async_wait_channel_);
         if (status != ZX_OK)
-            return DRETF(false, "Couldn't begin wait on channel: %d", status);
+            return DRETF(false, "Couldn't begin wait on channel: %s", zx_status_get_string(status));
         return true;
     }
+#endif
 
     bool BeginShutdownWait()
     {
         zx_status_t status = async_begin_wait(async_loop()->dispatcher(), &async_wait_shutdown_);
         if (status != ZX_OK)
-            return DRETF(false, "Couldn't begin wait on shutdown: %d", status);
+            return DRETF(false, "Couldn't begin wait on shutdown: %s",
+                         zx_status_get_string(status));
         return true;
     }
 
+#if !MAGMA_FIDL
     bool ReadChannel()
     {
-        constexpr uint32_t num_bytes = kReceiveBufferSize;
+        constexpr uint32_t kNumBytes = fuchsia::gpu::magma::kReceiveBufferSize;
         constexpr uint32_t kNumHandles = 1;
 
         uint32_t actual_bytes;
         uint32_t actual_handles;
 
-        uint8_t bytes[num_bytes];
+        uint8_t bytes[kNumBytes];
         zx_handle_t handles[kNumHandles];
 
-        zx_status_t status = server_endpoint_.read(0, bytes, num_bytes, &actual_bytes, handles,
+        zx_status_t status = server_endpoint_.read(0, bytes, kNumBytes, &actual_bytes, handles,
                                                    kNumHandles, &actual_handles);
         if (status != ZX_OK)
             return DRETF(false, "failed to read from channel");
@@ -219,6 +220,7 @@ public:
 
         return true;
     }
+#endif
 
     uint32_t GetClientEndpoint() override
     {
@@ -253,13 +255,17 @@ private:
             DASSERT(signal->observed == ZX_EVENT_SIGNALED);
             quit = true;
             DLOG("got shutdown event");
-        } else if (wait == &async_wait_channel_ && signal->observed & ZX_CHANNEL_PEER_CLOSED) {
+        }
+#if !MAGMA_FIDL
+        else if (wait == &async_wait_channel_ && signal->observed & ZX_CHANNEL_PEER_CLOSED) {
             quit = true;
         } else if (wait == &async_wait_channel_ && signal->observed & ZX_CHANNEL_READABLE) {
             if (!ReadChannel() || !BeginChannelWait()) {
                 quit = true;
             }
-        } else {
+        }
+#endif
+        else {
             DASSERT(false);
         }
 
@@ -276,7 +282,7 @@ private:
         zx_status_t status = async_post_task(connection->async_loop()->dispatcher(),
                                              new AsyncTask(connection, notification));
         if (status != ZX_OK)
-            DLOG("async_post_task failed, status %d", status);
+            DLOG("async_post_task failed, status %s", zx_status_get_string(status));
     }
 
     static void AsyncTaskHandlerStatic(async_dispatcher_t* dispatcher, async_task_t* async_task,
@@ -295,8 +301,8 @@ private:
                     server_notification_endpoint_.get(), 0, task->notification.u.channel_send.data,
                     task->notification.u.channel_send.size, nullptr, 0);
                 if (status != ZX_OK)
-                    return DRETF(MAGMA_STATUS_INTERNAL_ERROR, "Failed writing to channel %d",
-                                 status);
+                    return DRETF(MAGMA_STATUS_INTERNAL_ERROR, "Failed writing to channel %s",
+                                 zx_status_get_string(status));
                 return true;
             }
             case MSD_CONNECTION_NOTIFICATION_CONTEXT_KILLED:
@@ -309,7 +315,7 @@ private:
 
     bool ImportBuffer(ImportBufferOp* op, zx_handle_t* handle)
     {
-        DLOG("Operation: ImportBuffer");
+        DLOG("ZirconPlatformConnection: ImportBuffer");
         if (!op)
             return DRETF(false, "malformed message");
         uint64_t buffer_id;
@@ -318,18 +324,18 @@ private:
         return true;
     }
 
-    void ImportBufferFIDL(::zx::vmo buffer) override
+    void ImportBufferFIDL(zx::vmo vmo) override
     {
-        DLOG("Operation: FIDL ImportBuffer");
+        DLOG("ZirconPlatformConnection - ImportBufferFIDL");
         uint64_t buffer_id;
-        if (!delegate_->ImportBuffer(buffer.release(), &buffer_id)) {
+        if (!delegate_->ImportBuffer(vmo.release(), &buffer_id)) {
             SetError(MAGMA_STATUS_INVALID_ARGS);
         }
     }
 
     bool ReleaseBuffer(ReleaseBufferOp* op)
     {
-        DLOG("Operation: ReleaseBuffer");
+        DLOG("ZirconPlatformConnection: ReleaseBuffer");
         if (!op)
             return DRETF(false, "malformed message");
         if (!delegate_->ReleaseBuffer(op->buffer_id))
@@ -339,14 +345,14 @@ private:
 
     void ReleaseBufferFIDL(uint64_t buffer_id) override
     {
-        DLOG("Operation: FIDL ReleaseBuffer");
+        DLOG("ZirconPlatformConnection: ReleaseBufferFIDL");
         if (!delegate_->ReleaseBuffer(buffer_id))
             SetError(MAGMA_STATUS_INVALID_ARGS);
     }
 
     bool ImportObject(ImportObjectOp* op, zx_handle_t* handle)
     {
-        DLOG("Operation: ImportObject");
+        DLOG("ZirconPlatformConnection: ImportObject");
         if (!op)
             return DRETF(false, "malformed message");
         if (!delegate_->ImportObject(*handle, static_cast<PlatformObject::Type>(op->object_type)))
@@ -354,17 +360,17 @@ private:
         return true;
     }
 
-    void ImportObjectFIDL(::zx::handle object, uint32_t object_type) override
+    void ImportObjectFIDL(zx::handle handle, uint32_t object_type) override
     {
-        DLOG("Operation: FIDL ImportObject");
-        if (!delegate_->ImportObject(object.release(),
+        DLOG("ZirconPlatformConnection: ImportObjectFIDL");
+        if (!delegate_->ImportObject(handle.release(),
                                      static_cast<PlatformObject::Type>(object_type)))
             SetError(MAGMA_STATUS_INVALID_ARGS);
     }
 
     bool ReleaseObject(ReleaseObjectOp* op)
     {
-        DLOG("Operation: ReleaseObject");
+        DLOG("ZirconPlatformConnection: ReleaseObject");
         if (!op)
             return DRETF(false, "malformed message");
         if (!delegate_->ReleaseObject(op->object_id,
@@ -375,14 +381,14 @@ private:
 
     void ReleaseObjectFIDL(uint64_t object_id, uint32_t object_type) override
     {
-        DLOG("Operation: FIDL ReleaseObject");
+        DLOG("ZirconPlatformConnection: ReleaseObjectFIDL");
         if (!delegate_->ReleaseObject(object_id, static_cast<PlatformObject::Type>(object_type)))
             SetError(MAGMA_STATUS_INVALID_ARGS);
     }
 
     bool CreateContext(CreateContextOp* op)
     {
-        DLOG("Operation: CreateContext");
+        DLOG("ZirconPlatformConnection: CreateContext");
         if (!op)
             return DRETF(false, "malformed message");
         if (!delegate_->CreateContext(op->context_id))
@@ -392,14 +398,14 @@ private:
 
     void CreateContextFIDL(uint32_t context_id) override
     {
-        DLOG("Operation: FIDL CreateContext");
+        DLOG("ZirconPlatformConnection: CreateContextFIDL");
         if (!delegate_->CreateContext(context_id))
             SetError(MAGMA_STATUS_INTERNAL_ERROR);
     }
 
     bool DestroyContext(DestroyContextOp* op)
     {
-        DLOG("Operation: DestroyContext");
+        DLOG("ZirconPlatformConnection: DestroyContext");
         if (!op)
             return DRETF(false, "malformed message");
         if (!delegate_->DestroyContext(op->context_id))
@@ -409,14 +415,14 @@ private:
 
     void DestroyContextFIDL(uint32_t context_id) override
     {
-        DLOG("Operation: FIDL DestroyContext");
+        DLOG("ZirconPlatformConnection: DestroyContextFIDL");
         if (!delegate_->DestroyContext(context_id))
             SetError(MAGMA_STATUS_INTERNAL_ERROR);
     }
 
     bool ExecuteCommandBuffer(ExecuteCommandBufferOp* op, zx_handle_t* handle)
     {
-        DLOG("Operation: ExecuteCommandBuffer");
+        DLOG("ZirconPlatformConnection: ExecuteCommandBuffer");
         if (!op)
             return DRETF(false, "malformed message");
         magma::Status status = delegate_->ExecuteCommandBuffer(*handle, op->context_id);
@@ -427,9 +433,9 @@ private:
         return true;
     }
 
-    void ExecuteCommandBufferFIDL(::zx::handle command_buffer, uint32_t context_id) override
+    void ExecuteCommandBufferFIDL(zx::handle command_buffer, uint32_t context_id) override
     {
-        DLOG("Operation: FIDL ExecuteCommandBuffer");
+        DLOG("ZirconPlatformConnection: ExecuteCommandBufferFIDL");
         magma::Status status =
             delegate_->ExecuteCommandBuffer(command_buffer.release(), context_id);
         if (status.get() == MAGMA_STATUS_CONTEXT_KILLED)
@@ -440,7 +446,7 @@ private:
 
     bool ExecuteImmediateCommands(ExecuteImmediateCommandsOp* op)
     {
-        DLOG("Operation: ExecuteImmediateCommands");
+        DLOG("ZirconPlatformConnection: ExecuteImmediateCommands");
         if (!op)
             return DRETF(false, "malformed message");
 
@@ -452,24 +458,22 @@ private:
         return true;
     }
 
-    void ExecuteImmediateCommandsFIDL(uint32_t context_id, uint32_t commands_size,
-                                      ::fidl::VectorPtr<uint8_t> command_data,
-                                      uint32_t semaphore_count,
+    void ExecuteImmediateCommandsFIDL(uint32_t context_id, ::fidl::VectorPtr<uint8_t> command_data,
                                       ::fidl::VectorPtr<uint64_t> semaphores) override
     {
-        DLOG("Operation: FIDL ExecuteImmediateCommands");
-        std::vector<uint8_t> command_data_vec = command_data.take();
-        std::vector<uint64_t> semaphores_vec = semaphores.take();
-        magma::Status status =
-            delegate_->ExecuteImmediateCommands(context_id, commands_size, command_data_vec.data(),
-                                                semaphore_count, semaphores_vec.data());
+        DLOG("ZirconPlatformConnection: ExecuteImmediateCommandsFIDL");
+        std::vector<uint8_t> command_data_vec(command_data.take());
+        std::vector<uint64_t> semaphore_vec(semaphores.take());
+        magma::Status status = delegate_->ExecuteImmediateCommands(
+            context_id, command_data_vec.size(), command_data_vec.data(), semaphore_vec.size(),
+            semaphore_vec.data());
         if (!status)
             SetError(status.get());
     }
 
     bool GetError(GetErrorOp* op)
     {
-        DLOG("Operation: GetError");
+        DLOG("ZirconPlatformConnection: GetError");
         if (!op)
             return DRETF(false, "malformed message");
         magma_status_t result = error_;
@@ -481,7 +485,6 @@ private:
 
     void GetErrorFIDL(fuchsia::gpu::magma::Primary::GetErrorFIDLCallback error_callback) override
     {
-        DLOG("Operation: FIDL GetError");
         magma_status_t result = error_;
         error_ = 0;
         error_callback(result);
@@ -489,7 +492,7 @@ private:
 
     bool MapBufferGpu(MapBufferGpuOp* op)
     {
-        DLOG("Operation: MapBufferGpu");
+        DLOG("ZirconPlatformConnection: MapBufferGpu");
         if (!op)
             return DRETF(false, "malformed message");
         if (!delegate_->MapBufferGpu(op->buffer_id, op->gpu_va, op->page_offset, op->page_count,
@@ -501,14 +504,14 @@ private:
     void MapBufferGpuFIDL(uint64_t buffer_id, uint64_t gpu_va, uint64_t page_offset,
                           uint64_t page_count, uint64_t flags) override
     {
-        DLOG("Operation: FIDL MapBufferGpu");
+        DLOG("ZirconPlatformConnection: MapBufferGpuFIDL");
         if (!delegate_->MapBufferGpu(buffer_id, gpu_va, page_offset, page_count, flags))
             SetError(MAGMA_STATUS_INVALID_ARGS);
     }
 
     bool UnmapBufferGpu(UnmapBufferGpuOp* op)
     {
-        DLOG("Operation: UnmapBufferGpu");
+        DLOG("ZirconPlatformConnection: UnmapBufferGpu");
         if (!op)
             return DRETF(false, "malformed message");
         if (!delegate_->UnmapBufferGpu(op->buffer_id, op->gpu_va))
@@ -518,14 +521,14 @@ private:
 
     void UnmapBufferGpuFIDL(uint64_t buffer_id, uint64_t gpu_va) override
     {
-        DLOG("Operation: FIDL UnmapBufferGpu");
+        DLOG("ZirconPlatformConnection: UnmapBufferGpuFIDL");
         if (!delegate_->UnmapBufferGpu(buffer_id, gpu_va))
             SetError(MAGMA_STATUS_INVALID_ARGS);
     }
 
     bool CommitBuffer(CommitBufferOp* op)
     {
-        DLOG("Operation: CommitBuffer");
+        DLOG("ZirconPlatformConnection: CommitBuffer");
         if (!op)
             return DRETF(false, "malformed message");
         if (!delegate_->CommitBuffer(op->buffer_id, op->page_offset, op->page_count))
@@ -535,7 +538,7 @@ private:
 
     void CommitBufferFIDL(uint64_t buffer_id, uint64_t page_offset, uint64_t page_count) override
     {
-        DLOG("Operation: FIDL CommitBuffer");
+        DLOG("ZirconPlatformConnection: CommitBufferFIDL");
         if (!delegate_->CommitBuffer(buffer_id, page_offset, page_count))
             SetError(MAGMA_STATUS_INVALID_ARGS);
     }
@@ -549,12 +552,7 @@ private:
     bool WriteError(magma_status_t error)
     {
         DLOG("Writing error %d to channel", error);
-#if MAGMA_FIDL
-        ::zx::channel& server_endpoint = binding_.channel();
-        zx_status_t status = server_endpoint.write(0, &error, sizeof(error), nullptr, 0);
-#else
         zx_status_t status = server_endpoint_.write(0, &error, sizeof(error), nullptr, 0);
-#endif
         return DRETF(status == ZX_OK, "failed to write to channel");
     }
 
@@ -565,7 +563,9 @@ private:
     zx::channel server_notification_endpoint_;
     zx::channel client_notification_endpoint_;
     async::Loop async_loop_;
+#if !MAGMA_FIDL
     AsyncWait async_wait_channel_;
+#endif
     AsyncWait async_wait_shutdown_;
 
 #if MAGMA_FIDL
@@ -600,8 +600,10 @@ PlatformConnection::Create(std::unique_ptr<PlatformConnection::Delegate> delegat
         std::move(server_notification_endpoint), std::move(client_notification_endpoint),
         std::shared_ptr<magma::PlatformEvent>(std::move(shutdown_event)));
 
+#if !MAGMA_FIDL
     if (!connection->BeginChannelWait())
         return DRETP(nullptr, "Failed to begin channel wait");
+#endif
 
     if (!connection->BeginShutdownWait())
         return DRETP(nullptr, "Failed to begin shutdown wait");
