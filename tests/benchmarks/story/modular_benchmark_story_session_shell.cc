@@ -201,11 +201,6 @@ class TestApp : public modular::ViewApp {
   void StoryInfo(fidl::StringPtr story_id) {
     FXL_LOG(INFO) << "StoryInfo()";
     story_provider_->GetController(story_id, story_controller_.NewRequest());
-    fuchsia::modular::Intent intent;
-    intent.handler = settings_.module_url;
-    intent.action = "action";
-    intent.parameters.resize(0);
-    story_controller_->AddModule(nullptr, "root", std::move(intent), nullptr);
 
     TRACE_ASYNC_BEGIN("benchmark", "story/info", 0);
     story_controller_->GetInfo([this](fuchsia::modular::StoryInfo story_info,
