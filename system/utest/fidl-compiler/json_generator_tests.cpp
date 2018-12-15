@@ -93,6 +93,7 @@ struct Simple {
           },
           "name": "f1",
           "size": 1,
+          "max_out_of_line": 0,
           "alignment": 1,
           "offset": 0,
           "max_handles": 0
@@ -104,12 +105,14 @@ struct Simple {
           },
           "name": "f2",
           "size": 1,
+          "max_out_of_line": 0,
           "alignment": 1,
           "offset": 1,
           "max_handles": 0
         }
       ],
       "size": 2,
+      "max_out_of_line": 0,
       "alignment": 1,
       "max_handles": 0
     }
@@ -169,6 +172,7 @@ interface EmptyInterface {
               },
               "name": "e",
               "size": 1,
+              "max_out_of_line": 0,
               "alignment": 1,
               "offset": 16,
               "max_handles": 0
@@ -192,6 +196,7 @@ interface EmptyInterface {
               },
               "name": "e",
               "size": 1,
+              "max_out_of_line": 0,
               "alignment": 1,
               "offset": 16,
               "max_handles": 0
@@ -213,6 +218,7 @@ interface EmptyInterface {
               },
               "name": "e",
               "size": 1,
+              "max_out_of_line": 0,
               "alignment": 1,
               "offset": 16,
               "max_handles": 0
@@ -230,6 +236,7 @@ interface EmptyInterface {
               },
               "name": "e",
               "size": 1,
+              "max_out_of_line": 0,
               "alignment": 1,
               "offset": 16,
               "max_handles": 0
@@ -247,6 +254,7 @@ interface EmptyInterface {
       "anonymous": false,
       "members": [],
       "size": 1,
+      "max_out_of_line": 0,
       "alignment": 1,
       "max_handles": 0
     }
@@ -304,6 +312,7 @@ table Simple {
           },
           "name": "f1",
           "size": 1,
+          "max_out_of_line": 0,
           "alignment": 1,
           "max_handles": 0
         },
@@ -316,6 +325,7 @@ table Simple {
           },
           "name": "f2",
           "size": 1,
+          "max_out_of_line": 0,
           "alignment": 1,
           "max_handles": 0
         },
@@ -325,6 +335,7 @@ table Simple {
         }
       ],
       "size": 16,
+      "max_out_of_line": 48,
       "alignment": 8,
       "max_handles": 0
     }
@@ -389,12 +400,14 @@ union PizzaOrPasta {
           },
           "name": "toppings",
           "size": 16,
+          "max_out_of_line": 4294967295,
           "alignment": 8,
           "offset": 0,
           "max_handles": 0
         }
       ],
       "size": 16,
+      "max_out_of_line": 4294967295,
       "alignment": 8,
       "max_handles": 0
     },
@@ -410,12 +423,14 @@ union PizzaOrPasta {
           },
           "name": "sauce",
           "size": 16,
+          "max_out_of_line": 16,
           "alignment": 8,
           "offset": 0,
           "max_handles": 0
         }
       ],
       "size": 16,
+      "max_out_of_line": 16,
       "alignment": 8,
       "max_handles": 0
     }
@@ -433,6 +448,7 @@ union PizzaOrPasta {
           },
           "name": "pizza",
           "size": 16,
+          "max_out_of_line": 4294967295,
           "alignment": 8,
           "offset": 8
         },
@@ -444,11 +460,13 @@ union PizzaOrPasta {
           },
           "name": "pasta",
           "size": 16,
+          "max_out_of_line": 16,
           "alignment": 8,
           "offset": 8
         }
       ],
       "size": 24,
+      "max_out_of_line": 4294967295,
       "alignment": 8,
       "max_handles": 0
     }
@@ -516,6 +534,7 @@ interface sub : super {
               },
               "name": "s",
               "size": 16,
+              "max_out_of_line": 4294967295,
               "alignment": 8,
               "offset": 16,
               "max_handles": 0
@@ -532,6 +551,7 @@ interface sub : super {
               },
               "name": "y",
               "size": 8,
+              "max_out_of_line": 0,
               "alignment": 8,
               "offset": 16,
               "max_handles": 0
@@ -557,6 +577,7 @@ interface sub : super {
               },
               "name": "s",
               "size": 16,
+              "max_out_of_line": 4294967295,
               "alignment": 8,
               "offset": 16,
               "max_handles": 0
@@ -573,6 +594,7 @@ interface sub : super {
               },
               "name": "y",
               "size": 8,
+              "max_out_of_line": 0,
               "alignment": 8,
               "offset": 16,
               "max_handles": 0

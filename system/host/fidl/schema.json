@@ -259,6 +259,7 @@
                 "type",
                 "name",
                 "size",
+                "max_out_of_line",
                 "alignment",
                 "offset"
             ],
@@ -273,6 +274,10 @@
                 },
                 "size": {
                     "description": "Size of the parameter or return",
+                    "$ref": "#/definitions/count"
+                },
+                "max_out_of_line": {
+                    "description": "Maximum size of the out-of-line payload",
                     "$ref": "#/definitions/count"
                 },
                 "alignment": {
@@ -291,7 +296,8 @@
             "required": [
                 "name",
                 "members",
-                "size"
+                "size",
+                "max_out_of_line"
             ],
             "properties": {
                 "max_handles": {
@@ -320,6 +326,10 @@
                 "size": {
                     "description": "Size of struct",
                     "$ref": "#/definitions/count"
+                },
+                "max_out_of_line": {
+                    "description": "Maximum size of the out-of-line struct payload",
+                    "$ref": "#/definitions/count"
                 }
             }
         },
@@ -330,6 +340,7 @@
                 "type",
                 "name",
                 "size",
+                "max_out_of_line",
                 "alignment",
                 "offset"
             ],
@@ -344,6 +355,10 @@
                 },
                 "size": {
                     "description": "Size of struct member",
+                    "$ref": "#/definitions/count"
+                },
+                "max_out_of_line": {
+                    "description": "Maximum size of the out-of-line payload",
                     "$ref": "#/definitions/count"
                 },
                 "alignment": {
@@ -370,7 +385,8 @@
             "required": [
                 "name",
                 "members",
-                "size"
+                "size",
+                "max_out_of_line"
             ],
             "properties": {
                 "max_handles": {
@@ -394,6 +410,10 @@
                 },
                 "size": {
                     "description": "Size of table",
+                    "$ref": "#/definitions/count"
+                },
+                "max_out_of_line": {
+                    "description": "Maximum size of the out-of-line payload for the entire table. Note that this value is computed without considering future member additions, otherwise it would always be pegged at the maximum. Bindings should take this into consideration when using max_out_of_line.",
                     "$ref": "#/definitions/count"
                 }
             }
@@ -426,6 +446,10 @@
                     "description": "Size of table member",
                     "$ref": "#/definitions/count"
                 },
+                "max_out_of_line": {
+                    "description": "Maximum size of the out-of-line payload",
+                    "$ref": "#/definitions/count"
+                },
                 "alignment": {
                     "description": "Alignment of table member",
                     "$ref": "#/definitions/count"
@@ -447,6 +471,7 @@
                 "name",
                 "members",
                 "size",
+                "max_out_of_line",
                 "alignment"
             ],
             "properties": {
@@ -473,6 +498,10 @@
                     "description": "Size of union",
                     "$ref": "#/definitions/count"
                 },
+                "max_out_of_line": {
+                    "description": "Maximum size of the out-of-line payload",
+                    "$ref": "#/definitions/count"
+                },
                 "alignment": {
                     "description": "Alignment of union",
                     "$ref": "#/definitions/count"
@@ -486,6 +515,7 @@
                 "type",
                 "name",
                 "size",
+                "max_out_of_line",
                 "alignment",
                 "offset"
             ],
@@ -500,6 +530,10 @@
                 },
                 "size": {
                     "description": "Size of union member",
+                    "$ref": "#/definitions/count"
+                },
+                "max_out_of_line": {
+                    "description": "Maximum size of the out-of-line payload",
                     "$ref": "#/definitions/count"
                 },
                 "alignment": {
