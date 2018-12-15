@@ -16,6 +16,10 @@ use {
     std::pin::Unpin,
 };
 
+#[cfg(test)]
+#[macro_use]
+mod test_utils;
+
 pub mod file;
 
 /// A base trait for all the pseudo file implementations.  Most clients will probably just use the
