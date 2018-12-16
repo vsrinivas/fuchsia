@@ -176,6 +176,11 @@ int wait_queue_blocked_priority(wait_queue_t* wait) {
     return t->effec_priority;
 }
 
+// returns a reference to the highest priority thread queued
+thread_t* wait_queue_peek(wait_queue_t* wait) {
+    return list_peek_head_type(&wait->heads, thread_t, wait_queue_heads_node);
+}
+
 static void wait_queue_timeout_handler(timer_t* timer, zx_time_t now,
                                        void* arg) {
     thread_t* thread = (thread_t*)arg;

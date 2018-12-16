@@ -62,6 +62,10 @@ zx_status_t wait_queue_block_with_mask(wait_queue_t*, zx_time_t deadline,
 
 int wait_queue_blocked_priority(wait_queue_t*) TA_REQ(thread_lock);
 
+// returns the current highest priority blocked thread on this wait queue, or
+// null if no threads are blocked.
+struct thread* wait_queue_peek(wait_queue_t*) TA_REQ(thread_lock);
+
 // release one or more threads from the wait queue.
 // reschedule = should the system reschedule if any is released.
 // wait_queue_error = what wait_queue_block() should return for the blocking thread.
@@ -105,8 +109,19 @@ public:
         return wait_queue_block(&wq_, deadline);
     }
 
+    struct thread* Peek() TA_REQ(thread_lock) {
+        return wait_queue_peek(&wq_);
+    }
+
     int WakeOne(bool reschedule, zx_status_t wait_queue_error) TA_REQ(thread_lock) {
         return wait_queue_wake_one(&wq_, reschedule, wait_queue_error);
+    }
+
+    bool IsEmpty() TA_REQ(thread_lock) { return wait_queue_is_empty(&wq_); }
+
+    static zx_status_t UnblockThread(struct thread* t, zx_status_t wait_queue_error)
+        TA_REQ(thread_lock) {
+        return wait_queue_unblock_thread(t, wait_queue_error);
     }
 
 private:
