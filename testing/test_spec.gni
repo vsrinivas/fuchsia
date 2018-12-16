@@ -139,6 +139,16 @@ template("test_spec") {
     environments = target_envs
   }
 
+  # TODO(IN-571): Delete this block once vim2s are ready to be targeted.
+  foreach(env, target_envs) {
+    dims = []  # Clear from previous iteration.
+    dims = env.dimensions
+    if (defined(dims.device_type) && dims.device_type == "Khadas Vim2 Max") {
+      assert(defined(env.label) && env.label == "vim2",
+             "vim2s may not yet be targeted.")
+    }
+  }
+
   # We take the basename just to make sure no other path components are given
   # in the name, for which we have no guarantees.
   target_base_name = get_path_info(target_name, "name")

@@ -36,4 +36,10 @@ test_platforms = [
     device_type = "Intel NUC Kit NUC7i5DNHE"
     cpu = "x64"
   },
+
+  # Experimental. May not yet be targeted. See IN-571.
+  {
+    device_type = "Khadas Vim2 Max"
+    cpu = "arm64"
+  },
 ]

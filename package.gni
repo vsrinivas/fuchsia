@@ -492,14 +492,24 @@ template("package") {
                 ]
               }
 
-              # TODO(joshuaseaton): This is temporary until we are confident that all
-              # tests that need to specify hardware are doing so.
               if (current_cpu == "x64") {
+                # TODO(joshuaseaton): This is temporary until we are confident that all
+                # tests that need to specify hardware are doing so.
                 environments += [
                   {
                     dimensions = {
                       device_type = "Intel NUC Kit NUC7i5DNHE"
                     }
+                  },
+                ]
+              } else if (current_cpu == "arm64") {
+                # TODO(IN-571): Remove after vim2s are ready to be targeted.
+                environments += [
+                  {
+                    dimensions = {
+                      device_type = "Khadas Vim2 Max"
+                    }
+                    label = "vim2"
                   },
                 ]
               }
