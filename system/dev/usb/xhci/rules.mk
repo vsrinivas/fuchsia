@@ -29,7 +29,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/sync \
     system/ulib/xdc-server-utils \
     system/ulib/zx \
-    system/dev/lib/usb \
+    system/dev/lib/usb-old \
 
 MODULE_LIBS := \
     system/ulib/driver \

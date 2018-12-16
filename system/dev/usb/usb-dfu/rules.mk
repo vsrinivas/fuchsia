@@ -12,7 +12,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/usb-dfu.cpp \
 
 MODULE_STATIC_LIBS := \
-    system/dev/lib/usb \
+    system/dev/lib/usb-old \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/fbl \

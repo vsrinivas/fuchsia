@@ -11,7 +11,7 @@ MODULE_TYPE := driver
 MODULE_SRCS += \
     $(LOCAL_DIR)/fx3.c \
 
-MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/fidl system/dev/lib/usb
+MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/fidl system/dev/lib/usb-old
 
 MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/zircon
 

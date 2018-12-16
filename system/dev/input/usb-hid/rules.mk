@@ -10,7 +10,7 @@ MODULE_TYPE := driver
 
 MODULE_SRCS := $(LOCAL_DIR)/usb-hid.c
 
-MODULE_STATIC_LIBS := system/ulib/ddk system/dev/lib/usb \
+MODULE_STATIC_LIBS := system/ulib/ddk system/dev/lib/usb-old \
                       system/ulib/pretty system/ulib/sync
 
 MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c

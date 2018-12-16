@@ -30,7 +30,7 @@ MODULE_LIBS := \
 MODULE_STATIC_LIBS := \
     system/ulib/audio-driver-proto \
     system/ulib/audio-proto-utils \
-    system/dev/lib/usb \
+    system/dev/lib/usb-old \
     system/ulib/digest \
     system/ulib/dispatcher-pool \
     system/ulib/ddk \

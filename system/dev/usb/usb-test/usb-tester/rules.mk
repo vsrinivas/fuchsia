@@ -17,7 +17,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/fbl \
     system/ulib/fidl \
     system/ulib/sync \
-    system/dev/lib/usb \
+    system/dev/lib/usb-old \
     system/ulib/zxcpp \
 
 MODULE_FIDL_LIBS := system/fidl/zircon-usb-tester

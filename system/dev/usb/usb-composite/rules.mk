@@ -14,7 +14,7 @@ MODULE_SRCS := \
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
-    system/dev/lib/usb \
+    system/dev/lib/usb-old \
     system/ulib/sync \
 
 MODULE_LIBS := \

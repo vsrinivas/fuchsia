@@ -12,8 +12,7 @@ MODULE_SRCS := $(LOCAL_DIR)/usb-hub.c
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
-    system/dev/lib/usb \
-    system/dev/lib/usb \
+    system/dev/lib/usb-old \
     system/ulib/sync \
 
 MODULE_LIBS := \

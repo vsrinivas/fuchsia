@@ -14,12 +14,11 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/util.c \
 
 MODULE_STATIC_LIBS := \
-    system/dev/lib/usb \
     system/ulib/ddk \
     system/ulib/fidl \
     system/ulib/sync \
     system/ulib/utf_conversion \
-    system/dev/lib/usb \
+    system/dev/lib/usb-old \
 
 MODULE_LIBS := \
     system/ulib/driver \
