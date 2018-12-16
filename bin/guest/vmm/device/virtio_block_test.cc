@@ -44,9 +44,9 @@ class VirtioBlockTest : public TestWithDevice {
     ASSERT_TRUE(fd_);
     zx_handle_t handle;
     status = fdio_get_service_handle(fd_.release(), &handle);
-    FXL_CHECK(status == ZX_OK) << "Failed to get block file handle";
+    ASSERT_EQ(ZX_OK, status);
     fuchsia::io::FilePtr file;
-    file.Bind(zx::channel(zx::channel(handle)));
+    file.Bind(zx::channel(handle));
     fd_ = fbl::unique_fd(open(path_template, O_RDWR));
     ASSERT_TRUE(fd_);
 
@@ -278,13 +278,8 @@ TEST_F(VirtioBlockTest, WriteMultipleDescriptors) {
       .sector = 0,
   };
 
-  // Ensure we're writing enough to overflow a single file write transaction.
-  static constexpr size_t kTestBlockSize = 2 * fuchsia::io::MAX_BUF;
-  static_assert(kTestBlockSize % kBlockSectorSize == 0);
-  static_assert((2 * kTestBlockSize) + sizeof(header) + 1 <= kQueueDataSize);
-
-  std::vector<uint8_t> block_1(kTestBlockSize, 0xff);
-  std::vector<uint8_t> block_2(kTestBlockSize, 0xab);
+  std::vector<uint8_t> block_1(kBlockSectorSize, 0xff);
+  std::vector<uint8_t> block_2(kBlockSectorSize, 0xab);
   uint8_t* blk_status;
   zx_status_t status =
       DescriptorChainBuilder(request_queue_)
@@ -302,7 +297,7 @@ TEST_F(VirtioBlockTest, WriteMultipleDescriptors) {
 
   EXPECT_EQ(VIRTIO_BLK_S_OK, *blk_status);
 
-  std::vector<uint8_t> result(2 * kTestBlockSize, 0);
+  std::vector<uint8_t> result(2 * kBlockSectorSize, 0);
   ASSERT_EQ(pread(fd_.get(), result.data(), result.size(), 0),
             static_cast<ssize_t>(result.size()));
   ASSERT_EQ(memcmp(result.data(), block_1.data(), block_1.size()), 0);

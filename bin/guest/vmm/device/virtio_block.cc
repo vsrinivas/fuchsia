@@ -253,7 +253,11 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
       };
     }
 
-    CreateRawBlockDispatcher(file.Bind(), std::move(nested));
+    uint32_t vmo_flags = fuchsia::io::VMO_FLAG_READ;
+    if (mode == fuchsia::guest::BlockMode::READ_WRITE) {
+      vmo_flags |= fuchsia::io::VMO_FLAG_WRITE;
+    }
+    CreateRawBlockDispatcher(file.Bind(), vmo_flags, std::move(nested));
   }
 
   // |fuchsia::guest::device::VirtioDevice|
