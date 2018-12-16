@@ -6,8 +6,6 @@
 
 #include <lib/zx/vmar.h>
 
-static constexpr uint32_t kMapFlags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
-
 zx_status_t PhysMem::Init(zx::vmo vmo) {
   vmo_ = std::move(vmo);
 
@@ -16,7 +14,8 @@ zx_status_t PhysMem::Init(zx::vmo vmo) {
     return status;
   }
 
-  return zx::vmar::root_self()->map(0, vmo_, 0, vmo_size_, kMapFlags, &addr_);
+  return zx::vmar::root_self()->map(0, vmo_, 0, vmo_size_,
+                                    ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &addr_);
 }
 
 PhysMem::~PhysMem() {
