@@ -5,7 +5,8 @@
 #include "garnet/bin/guest/vmm/device/test_with_device.h"
 #include "garnet/bin/guest/vmm/device/virtio_queue_fake.h"
 
-static constexpr char kVirtioConsoleUrl[] = "virtio_console";
+static constexpr char kVirtioConsoleUrl[] =
+    "fuchsia-pkg://fuchsia.com/virtio_console#meta/virtio_console.cmx";
 static constexpr uint16_t kNumQueues = 2;
 static constexpr uint16_t kQueueSize = 16;
 

@@ -8,7 +8,8 @@
 #include "garnet/bin/guest/vmm/device/test_with_device.h"
 #include "garnet/bin/guest/vmm/device/virtio_queue_fake.h"
 
-static constexpr char kVirtioGpuUrl[] = "virtio_gpu";
+static constexpr char kVirtioGpuUrl[] =
+    "fuchsia-pkg://fuchsia.com/virtio_gpu#meta/virtio_gpu.cmx";
 static constexpr uint16_t kNumQueues = 2;
 static constexpr uint16_t kQueueSize = 16;
 

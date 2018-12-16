@@ -8,7 +8,8 @@
 #include "garnet/bin/guest/vmm/device/test_with_device.h"
 #include "garnet/bin/guest/vmm/device/virtio_queue_fake.h"
 
-static constexpr char kVirtioInputUrl[] = "virtio_input";
+static constexpr char kVirtioInputUrl[] =
+    "fuchsia-pkg://fuchsia.com/virtio_input#meta/virtio_input.cmx";
 static constexpr uint16_t kNumQueues = 1;
 static constexpr uint16_t kQueueSize = 16;
 

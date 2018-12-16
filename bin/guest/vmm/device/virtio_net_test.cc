@@ -12,7 +12,8 @@
 
 #include <virtio/net.h>
 
-static constexpr char kVirtioNetUrl[] = "virtio_net";
+static constexpr char kVirtioNetUrl[] =
+    "fuchsia-pkg://fuchsia.com/virtio_net#meta/virtio_net.cmx";
 static constexpr size_t kNumQueues = 2;
 static constexpr uint16_t kQueueSize = 16;
 static constexpr size_t kVmoSize = 1024;

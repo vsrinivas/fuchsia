@@ -13,7 +13,8 @@
 #include "garnet/bin/guest/vmm/device/test_with_device.h"
 #include "garnet/bin/guest/vmm/device/virtio_queue_fake.h"
 
-static constexpr char kVirtioBlockUrl[] = "virtio_block";
+static constexpr char kVirtioBlockUrl[] =
+    "fuchsia-pkg://fuchsia.com/virtio_block#meta/virtio_block.cmx";
 static constexpr uint16_t kNumQueues = 1;
 static constexpr uint16_t kQueueSize = 16;
 static constexpr size_t kQueueDataSize = 10 * fuchsia::io::MAX_BUF;

@@ -22,7 +22,8 @@ namespace {
 #define VIRTWL_VQ_MAGMA_OUT 3
 #define VIRTWL_NEXT_VFD_ID_BASE 0x40000000
 
-static constexpr char kVirtioWlUrl[] = "virtio_wl";
+static constexpr char kVirtioWlUrl[] =
+    "fuchsia-pkg://fuchsia.com/virtio_wl#meta/virtio_wl.cmx";
 static constexpr uint16_t kNumQueues = 2;
 static constexpr uint16_t kQueueSize = 32;
 static constexpr uint32_t kVirtioWlVmarSize = 1 << 16;

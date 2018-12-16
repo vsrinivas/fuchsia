@@ -9,7 +9,8 @@
 #include "garnet/bin/guest/vmm/device/test_with_device.h"
 #include "garnet/bin/guest/vmm/device/virtio_queue_fake.h"
 
-static constexpr char kVirtioBalloonUrl[] = "virtio_balloon";
+static constexpr char kVirtioBalloonUrl[] =
+    "fuchsia-pkg://fuchsia.com/virtio_balloon#meta/virtio_balloon.cmx";
 static constexpr uint16_t kNumQueues = 3;
 static constexpr uint16_t kQueueSize = 16;
 

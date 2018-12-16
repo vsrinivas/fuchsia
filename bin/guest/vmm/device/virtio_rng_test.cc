@@ -5,7 +5,8 @@
 #include "garnet/bin/guest/vmm/device/test_with_device.h"
 #include "garnet/bin/guest/vmm/device/virtio_queue_fake.h"
 
-static constexpr char kVirtioRngUrl[] = "virtio_rng";
+static constexpr char kVirtioRngUrl[] =
+    "fuchsia-pkg://fuchsia.com/virtio_rng#meta/virtio_rng.cmx";
 static constexpr uint16_t kQueueSize = 16;
 
 class VirtioRngTest : public TestWithDevice {
