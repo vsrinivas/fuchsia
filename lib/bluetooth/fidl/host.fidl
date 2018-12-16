@@ -102,7 +102,7 @@ interface Host {
     // The result of the procedure will be communicated via |status|. If the remote device
     // supports both BR/EDR and LE transports and a link cannot be established over both, then an
     // error Status will be returned and neither transport will be connected.
-    15: Connect(string device_id) -> (fuchsia.bluetooth.Status status);
+    Connect(string device_id) -> (fuchsia.bluetooth.Status status);
 
     // Enable or disable a passive LE background scan. When enabled, the bt-host
     // device will continuously perform a passive LE scan in the background when
