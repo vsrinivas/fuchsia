@@ -30,7 +30,7 @@ driver_module("ralink_driver") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/usb",
+    "//zircon/public/lib/usb-old",
     "//zircon/public/lib/zx",
   ]
 

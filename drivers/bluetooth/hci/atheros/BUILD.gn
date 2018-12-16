@@ -24,7 +24,7 @@ driver_module("btatheros_driver") {
     "//zircon/public/lib/driver",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/usb",
+    "//zircon/public/lib/usb-old",
     "//zircon/public/lib/zx",
   ]
 
