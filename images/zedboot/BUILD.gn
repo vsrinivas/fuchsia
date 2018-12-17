@@ -66,6 +66,7 @@ zedboot_binary_patterns = [
   "bin/ps",
   "bin/sh",
   "bin/umount",
+  "bin/unbind",
 ]
 
 generate_manifest("zedboot.manifest") {
