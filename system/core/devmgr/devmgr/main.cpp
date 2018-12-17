@@ -40,9 +40,9 @@
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 
+#include "../shared/fdio.h"
 #include "coordinator.h"
 #include "devmgr.h"
-#include "../shared/fdio.h"
 
 namespace {
 
@@ -206,7 +206,7 @@ int console_starter(void* arg) {
         printf("devmgr: failed to wait for console '%s'\n", device);
         return 1;
     }
-    fbl::unique_fd fd(open(device, O_RDWR));;
+    fbl::unique_fd fd(open(device, O_RDWR));
     if (!fd.is_valid()) {
         printf("devmgr: failed to open console '%s'\n", device);
         return 1;
@@ -596,7 +596,7 @@ int service_starter(void* arg) {
 void fetch_root_resource() {
     // Read the root resource out of its channel
     zx::channel root_resource_channel(
-            zx_take_startup_handle(DEVMGR_LAUNCHER_ROOT_RESOURCE_CHANNEL_HND));
+        zx_take_startup_handle(DEVMGR_LAUNCHER_ROOT_RESOURCE_CHANNEL_HND));
     if (!root_resource_channel.is_valid()) {
         printf("devmgr: did not receive root resource channel\n");
         return;
@@ -620,9 +620,9 @@ void ParseArgs(int argc, char** argv, devmgr::DevmgrArgs* out) {
         kSysDeviceDriver,
     };
     option options[] = {
-        { "driver-search-path", required_argument, nullptr, kDriverSearchPath },
-        { "load-driver", required_argument, nullptr, kLoadDriver },
-        { "sys-device-driver", required_argument, nullptr, kSysDeviceDriver },
+        {"driver-search-path", required_argument, nullptr, kDriverSearchPath},
+        {"load-driver", required_argument, nullptr, kLoadDriver},
+        {"sys-device-driver", required_argument, nullptr, kSysDeviceDriver},
     };
 
     auto print_usage_and_exit = [options]() {
@@ -646,18 +646,18 @@ void ParseArgs(int argc, char** argv, devmgr::DevmgrArgs* out) {
     int opt;
     while ((opt = getopt_long(argc, argv, "", options, nullptr)) != -1) {
         switch (opt) {
-            case kDriverSearchPath:
-                out->driver_search_paths.push_back(optarg);
-                break;
-            case kLoadDriver:
-                out->load_drivers.push_back(optarg);
-                break;
-            case kSysDeviceDriver:
-                check_not_duplicated(out->sys_device_driver);
-                out->sys_device_driver = optarg;
-                break;
-            default:
-                print_usage_and_exit();
+        case kDriverSearchPath:
+            out->driver_search_paths.push_back(optarg);
+            break;
+        case kLoadDriver:
+            out->load_drivers.push_back(optarg);
+            break;
+        case kSysDeviceDriver:
+            check_not_duplicated(out->sys_device_driver);
+            out->sys_device_driver = optarg;
+            break;
+        default:
+            print_usage_and_exit();
         }
     }
 }
@@ -753,7 +753,6 @@ void fshost_start() {
     } else {
         ldsvc = ZX_HANDLE_INVALID;
     }
-
 
     // pass fuchsia start event to fshost
     zx::event fshost_event_duplicate;
@@ -908,7 +907,6 @@ void devmgr_vfs_init() {
         printf("devmgr: cannot bind /system to namespace: %d\n", r);
     }
 }
-
 
 zx_status_t svchost_start() {
     zx::channel dir_request;
