@@ -162,7 +162,7 @@ TEST_F(ExprParserTest, ArrayAccess) {
       "    IDENTIFIER(\"foo\")\n"
       "    bar\n"
       "   baz\n"
-      "  INTEGER(34)\n"
+      "  LITERAL(34)\n"
       " IDENTIFIER(\"bar\")\n",
       GetParseString("foo.bar->baz[34][bar]"));
 
@@ -193,7 +193,7 @@ TEST_F(ExprParserTest, DereferenceAndAddress) {
       "    ACCESSOR(->)\n"
       "     IDENTIFIER(\"foo\")\n"
       "     bar\n"
-      "    INTEGER(1)\n",
+      "    LITERAL(1)\n",
       GetParseString("&*&foo->bar[1]"));
 
   // "*" by itself is an error.
@@ -213,18 +213,18 @@ TEST_F(ExprParserTest, Parens) {
       "    ADDRESS_OF\n"
       "     IDENTIFIER(\"foo\")\n"
       "    bar\n"
-      "  INTEGER(1)\n",
+      "  LITERAL(1)\n",
       GetParseString("(&(*(&foo)->bar)[1])"));
 }
 
 TEST_F(ExprParserTest, UnaryMath) {
   EXPECT_EQ(
       "UNARY(-)\n"
-      " INTEGER(5)\n",
+      " LITERAL(5)\n",
       GetParseString("-5"));
   EXPECT_EQ(
       "UNARY(-)\n"
-      " INTEGER(5)\n",
+      " LITERAL(5)\n",
       GetParseString(" - 5 "));
 
   EXPECT_EQ(
@@ -309,7 +309,7 @@ TEST_F(ExprParserTest, BinaryOp) {
   EXPECT_EQ(
       "BINARY_OP(=)\n"
       " IDENTIFIER(\"a\")\n"
-      " INTEGER(23)\n",
+      " LITERAL(23)\n",
       GetParseString("a = 23"));
 }
 

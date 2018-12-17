@@ -23,7 +23,7 @@ class DereferenceExprNode;
 class Err;
 class ExprEvalContext;
 class IdentifierExprNode;
-class IntegerExprNode;
+class LiteralExprNode;
 class MemberAccessExprNode;
 class UnaryOpExprNode;
 
@@ -40,7 +40,7 @@ class ExprNode : public fxl::RefCountedThreadSafe<ExprNode> {
   virtual const BinaryOpExprNode* AsBinaryOp() const { return nullptr; }
   virtual const DereferenceExprNode* AsDereference() const { return nullptr; }
   virtual const IdentifierExprNode* AsIdentifier() const { return nullptr; }
-  virtual const IntegerExprNode* AsInteger() const { return nullptr; }
+  virtual const LiteralExprNode* AsLiteral() const { return nullptr; }
   virtual const MemberAccessExprNode* AsMemberAccess() const { return nullptr; }
   virtual const UnaryOpExprNode* AsUnaryOp() const { return nullptr; }
 
@@ -208,27 +208,25 @@ class IdentifierExprNode : public ExprNode {
   Identifier ident_;
 };
 
-// Implements an integer. If we add more numeric types we may want this to be
-// called a "Literal" instead.
-class IntegerExprNode : public ExprNode {
+// Implements a literal like a number or a boolean.
+class LiteralExprNode : public ExprNode {
  public:
-  const IntegerExprNode* AsInteger() const override { return this; }
+  const LiteralExprNode* AsLiteral() const override { return this; }
   void Eval(fxl::RefPtr<ExprEvalContext> context,
             EvalCallback cb) const override;
   void Print(std::ostream& out, int indent) const override;
 
-  // The number token.
-  const ExprToken& integer() const { return integer_; }
+  const ExprToken& token() const { return token_; }
 
  private:
-  FRIEND_REF_COUNTED_THREAD_SAFE(IntegerExprNode);
-  FRIEND_MAKE_REF_COUNTED(IntegerExprNode);
+  FRIEND_REF_COUNTED_THREAD_SAFE(LiteralExprNode);
+  FRIEND_MAKE_REF_COUNTED(LiteralExprNode);
 
-  IntegerExprNode() = default;
-  explicit IntegerExprNode(const ExprToken& integer) : integer_(integer) {}
-  ~IntegerExprNode() override = default;
+  LiteralExprNode() = default;
+  explicit LiteralExprNode(const ExprToken& token) : token_(token) {}
+  ~LiteralExprNode() override = default;
 
-  ExprToken integer_;
+  ExprToken token_;
 };
 
 // Implements both "." and "->" struct/class/union data member accesses.

@@ -49,12 +49,12 @@ class ExprParser {
   fxl::RefPtr<ExprNode> ScopePrefix(const ExprToken& token);
   fxl::RefPtr<ExprNode> DotOrArrowInfix(fxl::RefPtr<ExprNode> left,
                                         const ExprToken& token);
-  fxl::RefPtr<ExprNode> IntegerPrefix(const ExprToken& token);
   fxl::RefPtr<ExprNode> LeftParenPrefix(const ExprToken& token);
   fxl::RefPtr<ExprNode> LeftSquareInfix(fxl::RefPtr<ExprNode> left,
                                         const ExprToken& token);
   fxl::RefPtr<ExprNode> LessInfix(fxl::RefPtr<ExprNode> left,
                                   const ExprToken& token);
+  fxl::RefPtr<ExprNode> LiteralPrefix(const ExprToken& token);
   fxl::RefPtr<ExprNode> GreaterInfix(fxl::RefPtr<ExprNode> left,
                                      const ExprToken& token);
   fxl::RefPtr<ExprNode> MinusPrefix(const ExprToken& token);

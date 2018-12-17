@@ -12,6 +12,8 @@ namespace zxdb {
 
 ExprValue::ExprValue() = default;
 
+ExprValue::ExprValue(bool value)
+    : ExprValue(BaseType::kBaseTypeBoolean, "bool", &value, sizeof(bool)) {}
 ExprValue::ExprValue(int8_t value)
     : ExprValue(BaseType::kBaseTypeSigned, "int8_t", &value, sizeof(int8_t)) {}
 ExprValue::ExprValue(uint8_t value)

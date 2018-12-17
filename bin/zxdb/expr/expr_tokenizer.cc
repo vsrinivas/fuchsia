@@ -74,6 +74,8 @@ std::string ExprTokenizer::GetErrorContext(const std::string& input,
   return output;
 }
 
+void ExprTokenizer::AdvanceChars(int n) { cur_ += n; }
+
 void ExprTokenizer::AdvanceOneChar() { cur_++; }
 
 void ExprTokenizer::AdvanceToNextToken() {
@@ -120,6 +122,13 @@ void ExprTokenizer::AdvanceToEndOfToken(ExprToken::Type type) {
       AdvanceOneChar();  // All are one char.
       break;
 
+    case ExprToken::kTrue:
+      AdvanceChars(4);
+      break;
+    case ExprToken::kFalse:
+      AdvanceChars(5);
+      break;
+
     case ExprToken::kInvalid:
     case ExprToken::kNumTypes:
       FXL_NOTREACHED();
@@ -127,6 +136,24 @@ void ExprTokenizer::AdvanceToEndOfToken(ExprToken::Type type) {
       error_location_ = cur_;
       break;
   }
+}
+
+bool ExprTokenizer::IsCurrentString(std::string_view s) const {
+  if (!can_advance(s.size() - 1))
+    return false;
+  for (size_t i = 0; i < s.size(); i++) {
+    if (input_[cur_ + i] != s[i])
+      return false;
+  }
+  return true;
+}
+
+bool ExprTokenizer::IsCurrentName(std::string_view s) const {
+  if (!IsCurrentString(s))
+    return false;
+  return input_.size() == cur_ + s.size() ||  // End of buffer.
+         !IsNameContinuingChar(input_[cur_ + s.size()]);  // Non-name char.
+
 }
 
 bool ExprTokenizer::IsCurrentWhitespace() const {
@@ -139,11 +166,20 @@ ExprToken::Type ExprTokenizer::ClassifyCurrent() {
   FXL_DCHECK(!at_end());
   char cur = cur_char();
 
+  // Numbers.
   if (cur >= '0' && cur <= '9')
     return ExprToken::kInteger;
-  if (IsNameFirstChar(cur))
-    return ExprToken::kName;
 
+  // Words.
+  if (IsNameFirstChar(cur)) {
+    if (IsCurrentName("true"))
+      return ExprToken::kTrue;
+    else if (IsCurrentName("false"))
+      return ExprToken::kFalse;
+    return ExprToken::kName;
+  }
+
+  // Punctuation.
   switch (cur) {
     case '-':
       // Hyphen could be itself or an arrow, look ahead.

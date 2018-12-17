@@ -26,6 +26,7 @@ class ExprValue {
 
   // Constructs a value from the corresponding C++ value. A Type will be
   // created to represent the value.
+  explicit ExprValue(bool value);
   explicit ExprValue(int8_t value);
   explicit ExprValue(uint8_t value);
   explicit ExprValue(int16_t value);

@@ -131,6 +131,41 @@ TEST(ExprTokenizer, ValidIntegers) {
   EXPECT_EQ(11u, tokens[5].byte_offset());
 }
 
+TEST(ExprTokenizer, OtherLiterals) {
+  // Char offsets: 012345678901234567890123456
+  // Token #'s:    0    1    2   34     5
+  ExprTokenizer t("true True true)false falsey");
+
+  EXPECT_TRUE(t.Tokenize());
+  EXPECT_FALSE(t.err().has_error()) << t.err().msg();
+  const auto& tokens = t.tokens();
+  ASSERT_EQ(6u, tokens.size());
+
+  EXPECT_EQ(ExprToken::kTrue, tokens[0].type());
+  EXPECT_EQ("true", tokens[0].value());
+  EXPECT_EQ(0u, tokens[0].byte_offset());
+
+  EXPECT_EQ(ExprToken::kName, tokens[1].type());
+  EXPECT_EQ("True", tokens[1].value());
+  EXPECT_EQ(5u, tokens[1].byte_offset());
+
+  EXPECT_EQ(ExprToken::kTrue, tokens[2].type());
+  EXPECT_EQ("true", tokens[2].value());
+  EXPECT_EQ(10u, tokens[2].byte_offset());
+
+  EXPECT_EQ(ExprToken::kRightParen, tokens[3].type());
+  EXPECT_EQ(")", tokens[3].value());
+  EXPECT_EQ(14u, tokens[3].byte_offset());
+
+  EXPECT_EQ(ExprToken::kFalse, tokens[4].type());
+  EXPECT_EQ("false", tokens[4].value());
+  EXPECT_EQ(15u, tokens[4].byte_offset());
+
+  EXPECT_EQ(ExprToken::kName, tokens[5].type());
+  EXPECT_EQ("falsey", tokens[5].value());
+  EXPECT_EQ(21u, tokens[5].byte_offset());
+}
+
 TEST(ExprTokenizer, Names) {
   // Char offsets: 0123456789012345678901
   // Token #'s:     0   12    3 4       5

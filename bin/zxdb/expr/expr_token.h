@@ -35,6 +35,8 @@ class ExprToken {
     kMinus,        // - (by itself, not part of "->")
     kPlus,         // +
     kColonColon,   // ::
+    kTrue,         // true
+    kFalse,        // false
 
     // Keep last. Not a token, but the count of tokens.
     kNumTypes

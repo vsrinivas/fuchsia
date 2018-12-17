@@ -87,7 +87,7 @@ struct ExprParser::DispatchInfo {
 ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     {nullptr,                      nullptr,                      -1},                     // kInvalid
     {&ExprParser::NamePrefix,      &ExprParser::NameInfix,       -1},                     // kName
-    {&ExprParser::IntegerPrefix,   nullptr,                      -1},                     // kInteger
+    {&ExprParser::LiteralPrefix,   nullptr,                      -1},                     // kInteger
     {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceAssignment},  // kEquals
     {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceEquality},    // kEqualsEquals
     {nullptr,                      &ExprParser::DotOrArrowInfix, kPrecedenceCallAccess},  // kDot
@@ -103,7 +103,9 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     {nullptr,                      nullptr,                      -1},                     // kGreater
     {&ExprParser::MinusPrefix,     nullptr,                      -1},                     // kMinus
     {nullptr,                      nullptr,                      -1},                     // kPlus (currently unhandled)
-    {&ExprParser::ScopePrefix,     &ExprParser::ScopeInfix,      kPrecedenceScope}        // kColonColon
+    {&ExprParser::ScopePrefix,     &ExprParser::ScopeInfix,      kPrecedenceScope},       // kColonColon
+    {&ExprParser::LiteralPrefix,   nullptr,                      -1},                     // kTrue
+    {&ExprParser::LiteralPrefix,   nullptr,                      -1},                     // kFalse
 };
 // clang-format on
 
@@ -248,10 +250,6 @@ fxl::RefPtr<ExprNode> ExprParser::DotOrArrowInfix(fxl::RefPtr<ExprNode> left,
       std::move(left), token, right->AsIdentifier()->ident());
 }
 
-fxl::RefPtr<ExprNode> ExprParser::IntegerPrefix(const ExprToken& token) {
-  return fxl::MakeRefCounted<IntegerExprNode>(token);
-}
-
 fxl::RefPtr<ExprNode> ExprParser::LeftParenPrefix(const ExprToken& token) {
   // "(" as a prefix is a grouping or cast: "a + (b + c)" or "(Foo)bar" where
   // it doesn't modify the thing on the left. Evaluate the thing inside the
@@ -316,6 +314,10 @@ fxl::RefPtr<ExprNode> ExprParser::LessInfix(fxl::RefPtr<ExprNode> left,
   result->ident().components().back() = Identifier::Component(
       back.separator(), back.name(), token, std::move(list), template_end);
   return result;
+}
+
+fxl::RefPtr<ExprNode> ExprParser::LiteralPrefix(const ExprToken& token) {
+  return fxl::MakeRefCounted<LiteralExprNode>(token);
 }
 
 fxl::RefPtr<ExprNode> ExprParser::GreaterInfix(fxl::RefPtr<ExprNode> left,

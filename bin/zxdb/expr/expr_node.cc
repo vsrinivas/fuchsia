@@ -256,14 +256,26 @@ void IdentifierExprNode::Print(std::ostream& out, int indent) const {
   out << IndentFor(indent) << "IDENTIFIER(" << ident_.GetDebugName() << ")\n";
 }
 
-void IntegerExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
+void LiteralExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
                            EvalCallback cb) const {
-  // The tokenizer will have already validated the integer format.
-  cb(Err(), ExprValue(static_cast<int64_t>(atoll(integer_.value().c_str()))));
+  switch (token_.type()) {
+    case ExprToken::kInteger:
+      // The tokenizer will have already validated the integer format.
+      cb(Err(), ExprValue(static_cast<int64_t>(atoll(token_.value().c_str()))));
+      break;
+    case ExprToken::kTrue:
+      cb(Err(), ExprValue(true));
+      break;
+    case ExprToken::kFalse:
+      cb(Err(), ExprValue(false));
+      break;
+    default:
+      FXL_NOTREACHED();
+  }
 }
 
-void IntegerExprNode::Print(std::ostream& out, int indent) const {
-  out << IndentFor(indent) << "INTEGER(" << integer_.value() << ")\n";
+void LiteralExprNode::Print(std::ostream& out, int indent) const {
+  out << IndentFor(indent) << "LITERAL(" << token_.value() << ")\n";
 }
 
 void MemberAccessExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,

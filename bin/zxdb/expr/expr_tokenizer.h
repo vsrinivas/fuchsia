@@ -5,6 +5,7 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "garnet/bin/zxdb/common/err.h"
@@ -43,11 +44,22 @@ class ExprTokenizer {
                                      size_t byte_offset);
 
  private:
+  void AdvanceChars(int n);
   void AdvanceOneChar();
   void AdvanceToNextToken();
   void AdvanceToEndOfToken(ExprToken::Type type);
 
   bool IsCurrentWhitespace() const;
+
+  // Returns true if the next characters in the buffer are the given ones. This
+  // doesn't check anything afterward so the end need not represent a name
+  // boundary.
+  bool IsCurrentString(std::string_view s) const;
+
+  // Returns true if the next characters in the buffer are the given ones, and
+  // the one after that is a name boundary (puntuation, end of buffer, etc.).
+  bool IsCurrentName(std::string_view s) const;
+
   ExprToken::Type ClassifyCurrent();
 
   bool done() const { return at_end() || has_error(); }
@@ -55,6 +67,7 @@ class ExprTokenizer {
   bool at_end() const { return cur_ == input_.size(); }
   char cur_char() const { return input_[cur_]; }
   bool can_advance() const { return cur_ < input_.size() - 1; }
+  bool can_advance(int n) const { return cur_ + n < input_.size(); }
 
   std::string input_;
   size_t cur_ = 0;  // Character offset into input_.
