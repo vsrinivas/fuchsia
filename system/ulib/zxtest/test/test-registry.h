@@ -77,6 +77,15 @@ void TestCaseShuffle();
 // Verify that |TestCase::UnShuffle| restores original order.
 void TestCaseUnShuffle();
 
+// Verify that the broadcasting is working for all LifecycleObserver
+// events.
+void EventBroadcasterOnTestCaseStart();
+void EventBroadcasterOnTestStart();
+void EventBroadcasterOnTestSkip();
+void EventBroadcasterOnTestSuccess();
+void EventBroadcasterOnTestFailure();
+void EventBroadcasterOnTestCaseEnd();
+
 struct RegisteredTest {
     const char* name = nullptr;
     void (*test_fn)() = nullptr;
@@ -104,6 +113,12 @@ static constexpr RegisteredTest kRegisteredTests[] = {
     RUN_TEST(TestCaseFilterDoNotAccumulate),
     RUN_TEST(TestCaseShuffle),
     RUN_TEST(TestCaseUnShuffle),
+    RUN_TEST(EventBroadcasterOnTestCaseStart),
+    RUN_TEST(EventBroadcasterOnTestStart),
+    RUN_TEST(EventBroadcasterOnTestSkip),
+    RUN_TEST(EventBroadcasterOnTestSuccess),
+    RUN_TEST(EventBroadcasterOnTestFailure),
+    RUN_TEST(EventBroadcasterOnTestCaseEnd),
 };
 
 #undef RUN_TEST

@@ -14,9 +14,7 @@
 #include <zxtest/base/types.h>
 
 namespace zxtest {
-using internal::SourceLocation;
 using internal::TestDriver;
-using internal::TestInfo;
 namespace test {
 namespace {
 

@@ -9,11 +9,11 @@
 #include <fbl/function.h>
 #include <fbl/string.h>
 #include <fbl/vector.h>
+#include <zxtest/base/observer.h>
 #include <zxtest/base/test-info.h>
 #include <zxtest/base/types.h>
 
 namespace zxtest {
-namespace internal {
 
 // Represents a collection of |TestInfo| with a unique name. Here all the logic for
 // unique test definition per testcase exists. Also provides the mechanisms for
@@ -25,7 +25,8 @@ public:
     using FilterFn = fbl::Function<bool(const fbl::String& test_case, const fbl::String test)>;
 
     TestCase() = delete;
-    TestCase(const fbl::String& name, SetUpTestCaseFn set_up, TearDownTestCaseFn tear_down);
+    TestCase(const fbl::String& name, internal::SetUpTestCaseFn set_up,
+             internal::TearDownTestCaseFn tear_down);
     TestCase(const TestCase&) = delete;
     TestCase(TestCase&&);
     ~TestCase();
@@ -54,7 +55,7 @@ public:
                       internal::TestFactory factory);
 
     // Executes all registered tests with the provided |driver|.
-    void Run(TestDriver* driver);
+    void Run(LifecycleObserver* lifecycle_observer, internal::TestDriver* driver);
 
     // Returns the name of test case.
     const fbl::String& name() const { return name_; }
@@ -70,11 +71,10 @@ private:
     fbl::String name_;
 
     // Called before any test in |test_infos_| is executed.
-    SetUpTestCaseFn set_up_;
+    internal::SetUpTestCaseFn set_up_;
 
     // Called after all tests in |test_infos_| are executed.
-    TearDownTestCaseFn tear_down_;
+    internal::TearDownTestCaseFn tear_down_;
 };
 
-} // namespace internal
 } // namespace zxtest

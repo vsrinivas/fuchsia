@@ -6,15 +6,13 @@
 
 #include <fbl/function.h>
 #include <zircon/assert.h>
+#include <zxtest/base/observer.h>
 #include <zxtest/base/test-case.h>
 #include <zxtest/base/test-driver.h>
 #include <zxtest/base/test.h>
 
 namespace zxtest {
-using internal::SourceLocation;
-using internal::TestCase;
 using internal::TestDriver;
-using internal::TestInfo;
 namespace test {
 namespace {
 
@@ -28,6 +26,54 @@ public:
 
 private:
     void TestBody() final { body(); }
+};
+
+// Lifecycle observer that verifies that callbacks are executed correctly within
+// zxtest::TestCase.
+class FakeLifecycleObserver : public LifecycleObserver {
+public:
+    ~FakeLifecycleObserver() final {}
+
+    // Reports before every TestCase is set up.
+    void OnTestCaseStart(const TestCase& test_case) final {
+        ZX_ASSERT_MSG(
+            test_case_++ == 0 && test_ == 0,
+            "LifecycleObserver::TestCaseStart was not called before any test execution.\n");
+    }
+
+    // Reports before every test starts.
+    void OnTestStart(const TestCase& test_case, const TestInfo& test) final {
+        ZX_ASSERT_MSG(test_++ == 0, "LifecycleObserver::TestStart was not called second.\n");
+    }
+
+    // Reports before every test starts.
+    void OnTestSkip(const TestCase& test_case, const TestInfo& test) final {
+        ZX_ASSERT_MSG(test_ == 1, "LifecycleObserver::TestSkip was not called third.\n");
+        test_ = 0;
+    }
+
+    // Reports before every TestCase is set up.
+    void OnTestFailure(const TestCase& test_case, const TestInfo& test) final {
+        ZX_ASSERT_MSG(test_ == 1, "LifecycleObserver::TestFailure was not called third.\n");
+        test_ = 0;
+    }
+
+    // Reports before every TestCase is set up.
+    void OnTestSuccess(const TestCase& test_case, const TestInfo& test) final {
+        ZX_ASSERT_MSG(test_ == 1, "LifecycleObserver::TestSuccess was not called third.\n");
+        test_ = 0;
+    }
+
+    // Reports before every TestCase is torn down.
+    void OnTestCaseEnd(const TestCase& test_case) final {
+        ZX_ASSERT_MSG(test_case_ == 1 && test_ == 0,
+                      "LifecycleObserver::TestCaseEnd was not called after all tests.\n");
+        test_case_ = 0;
+    }
+
+private:
+    size_t test_case_ = 0;
+    size_t test_ = 0;
 };
 
 } // namespace
@@ -72,7 +118,8 @@ void TestCaseRun() {
                                              return test_ptr;
                                          }),
                   "TestCase failed to register a test.");
-    test_case.Run(&driver);
+    FakeLifecycleObserver observer;
+    test_case.Run(&observer, &driver);
 
     ZX_ASSERT_MSG(set_up < test, "Test executed before Test::SetUpTestCase\n");
     ZX_ASSERT_MSG(test < tear_down, "Test::TearDownTestCase executed before Test/\n ");
@@ -221,8 +268,9 @@ void TestCaseShuffle() {
                   "TestCase failed to register a test.");
 
     // With seed = 0 and 3 tests, using musl implementation of random , we get 2 3 1 run order.
+    LifecycleObserver observer;
     test_case.Shuffle(0);
-    test_case.Run(&driver);
+    test_case.Run(&observer, &driver);
 
     ZX_ASSERT_MSG(run_order[0] == 2, "Shuffle failed.");
     ZX_ASSERT_MSG(run_order[1] == 3, "Shuffle failed.");
@@ -266,9 +314,10 @@ void TestCaseUnShuffle() {
                                          }),
                   "TestCase failed to register a test.");
 
+    LifecycleObserver observer;
     test_case.Shuffle(0);
     test_case.UnShuffle();
-    test_case.Run(&driver);
+    test_case.Run(&observer, &driver);
 
     ZX_ASSERT_MSG(run_order[0] == 1, "UnShuffle failed.");
     ZX_ASSERT_MSG(run_order[1] == 2, "UnShuffle failed.");

@@ -13,16 +13,16 @@ namespace zxtest {
 // Forward Declaration.
 class Test;
 
-namespace internal {
-// Forward Declaration.
-class TestDriver;
-
 // Describes a location within a source file. Useful for assertions, and
 // error reporting.
 struct SourceLocation {
     const char* filename = nullptr;
     std::int64_t line_number = -1;
 };
+
+namespace internal {
+// Forward Declaration.
+class TestDriver;
 
 // Function for instantiating a TestInstance.
 using TestFactory = fbl::Function<std::unique_ptr<Test>(TestDriver*)>;

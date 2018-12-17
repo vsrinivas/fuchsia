@@ -12,7 +12,15 @@
 #include <zxtest/base/test-case.h>
 
 namespace zxtest {
-namespace internal {
+
+namespace {
+
+using internal::SetUpTestCaseFn;
+using internal::TearDownTestCaseFn;
+using internal::TestDriver;
+using internal::TestStatus;
+
+} // namespace
 
 TestCase::TestCase(const fbl::String& name, SetUpTestCaseFn set_up, TearDownTestCaseFn tear_down)
     : name_(name), set_up_(std::move(set_up)), tear_down_(std::move(tear_down)) {
@@ -72,8 +80,12 @@ bool TestCase::RegisterTest(const fbl::String& name, const SourceLocation& locat
     return true;
 }
 
-void TestCase::Run(TestDriver* driver) {
-    auto tear_down = fbl::MakeAutoCall([this] { tear_down_(); });
+void TestCase::Run(LifecycleObserver* event_broadcaster, TestDriver* driver) {
+    auto tear_down = fbl::MakeAutoCall([this, event_broadcaster] {
+        tear_down_();
+        event_broadcaster->OnTestCaseEnd(*this);
+    });
+    event_broadcaster->OnTestCaseStart(*this);
     set_up_();
 
     if (!driver->Continue()) {
@@ -83,9 +95,22 @@ void TestCase::Run(TestDriver* driver) {
     for (unsigned long i = 0; i < selected_indexes_.size(); ++i) {
         const auto& test_info = test_infos_[selected_indexes_[i]];
         std::unique_ptr<Test> test = test_info.Instantiate(driver);
+        event_broadcaster->OnTestStart(*this, test_info);
         test->Run();
+        switch (driver->Status()) {
+        case TestStatus::kPassed:
+            event_broadcaster->OnTestSuccess(*this, test_info);
+            break;
+        case TestStatus::kSkipped:
+            event_broadcaster->OnTestSkip(*this, test_info);
+            break;
+        case TestStatus::kFailed:
+            event_broadcaster->OnTestFailure(*this, test_info);
+            break;
+        default:
+            break;
+        }
     }
 }
 
-} // namespace internal
 } // namespace zxtest

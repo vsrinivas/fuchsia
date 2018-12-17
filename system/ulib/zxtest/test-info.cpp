@@ -10,16 +10,15 @@
 #include <zxtest/base/types.h>
 
 namespace zxtest {
-namespace internal {
 
-TestInfo::TestInfo(const fbl::String& name, const SourceLocation& location, TestFactory factory)
+TestInfo::TestInfo(const fbl::String& name, const SourceLocation& location,
+                   internal::TestFactory factory)
     : factory_(std::move(factory)), name_(name), location_(location) {}
 TestInfo::TestInfo(TestInfo&& rhs) = default;
 TestInfo::~TestInfo() = default;
 
-std::unique_ptr<Test> TestInfo::Instantiate(TestDriver* driver) const {
+std::unique_ptr<Test> TestInfo::Instantiate(internal::TestDriver* driver) const {
     return factory_(driver);
 }
 
-} // namespace internal
 } // namespace zxtest

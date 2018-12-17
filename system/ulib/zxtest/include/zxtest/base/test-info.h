@@ -12,12 +12,12 @@
 #include <zxtest/base/types.h>
 
 namespace zxtest {
-namespace internal {
 
 class TestInfo {
 public:
     TestInfo() = delete;
-    TestInfo(const fbl::String& name, const SourceLocation& location, TestFactory factory);
+    TestInfo(const fbl::String& name, const SourceLocation& location,
+             internal::TestFactory factory);
     TestInfo(const TestInfo&) = delete;
     TestInfo(TestInfo&& rhs);
     TestInfo& operator=(const TestInfo&) = delete;
@@ -25,7 +25,7 @@ public:
     ~TestInfo();
 
     // Returns an instance of the described test.
-    std::unique_ptr<Test> Instantiate(TestDriver* driver) const;
+    std::unique_ptr<Test> Instantiate(internal::TestDriver* driver) const;
 
     // Returns the name used to register the test.
     const fbl::String& name() const { return name_; }
@@ -34,12 +34,11 @@ public:
     const SourceLocation& location() const { return location_; }
 
 private:
-    TestFactory factory_ = nullptr;
+    internal::TestFactory factory_ = nullptr;
 
     fbl::String name_;
 
     SourceLocation location_;
 };
 
-} // namespace internal
 } // namespace zxtest

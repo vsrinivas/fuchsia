@@ -28,7 +28,7 @@ public:
     // Return true if the is allowed to continue execution.
     virtual bool Continue() const = 0;
 
-    //
+    // Returns the current status of the test.
     virtual TestStatus Status() const = 0;
 
 protected:
