@@ -35,14 +35,15 @@ void ManagedEnvironment::CreateChildEnvironment(
   ManagedEnvironment::Ptr np(new ManagedEnvironment(sandbox_env_));
   fuchsia::sys::EnvironmentPtr env;
   env_->ConnectToService(env.NewRequest());
-  np->Create(env, std::move(options));
+  np->Create(env, std::move(options), this);
   np->bindings_.AddBinding(np.get(), std::move(me));
 
   children_.emplace_back(std::move(np));
 }
 
 void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
-                                ManagedEnvironment::Options options) {
+                                ManagedEnvironment::Options options,
+                                const ManagedEnvironment* managed_parent) {
   auto services = EnvironmentServices::Create(parent);
 
   // add network context service:
@@ -54,8 +55,18 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
   // add managed environment itself as a handler
   services->AddService(bindings_.GetHandler(this));
 
+  // prepare service configurations:
+  service_config_.clear();
+  if (options.inherit_parent_launch_services && managed_parent != nullptr) {
+    service_config_.insert(service_config_.begin(),
+                           managed_parent->service_config_.begin(),
+                           managed_parent->service_config_.end());
+  }
+  service_config_.insert(service_config_.begin(), options.services.begin(),
+                         options.services.end());
+
   // push all the allowable launch services:
-  for (const auto& svc : options.services) {
+  for (const auto& svc : service_config_) {
     fuchsia::sys::LaunchInfo linfo;
     linfo.url = svc.url;
     services->AddServiceWithLaunchInfo(std::move(linfo), svc.name);
@@ -69,7 +80,7 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
   fuchsia::sys::EnvironmentOptions sub_options = {
       .kill_on_oom = true,
       .allow_parent_runners = false,
-      .inherit_parent_services = true};
+      .inherit_parent_services = false};
 
   env_ = EnclosingEnvironment::Create(options.name, parent, std::move(services),
                                       sub_options);

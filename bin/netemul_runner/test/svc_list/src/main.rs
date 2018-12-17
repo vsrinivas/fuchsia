@@ -22,8 +22,8 @@ use fidl_fuchsia_netemul_network::{
 };
 use fidl_fuchsia_netstack::NetstackMarker;
 use fidl_fuchsia_sys::{
-    ComponentControllerEvent, ComponentControllerMarker, LaunchInfo, LauncherMarker,
-    TerminationReason,
+    ComponentControllerEvent, ComponentControllerEventStream, ComponentControllerMarker,
+    LaunchInfo, LauncherMarker, TerminationReason,
 };
 
 use fuchsia_app::client;
@@ -36,6 +36,8 @@ const EP_MOUNT: &str = "class/ethernet/ep0";
 const MY_PACKAGE: &str = "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/svc_list_run.cmx";
 const NETSTACK_URL: &str = "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx";
 const SKIP_DIRS: &'static [&str] = &["/data", "/pkg"];
+const FAKE_SVC_NAME: &str = "fuchsia.some.fake.Service";
+const FAKE_SVC_URL: &str = "fuchsia-pkg://fuchsia.com/fake#meta/fake.cmx";
 
 fn visit_dirs(dir: &Path) -> io::Result<()> {
     let strpath = dir.to_str().unwrap();
@@ -52,6 +54,39 @@ fn visit_dirs(dir: &Path) -> io::Result<()> {
         }
     }
     Ok(())
+}
+
+async fn wait_for_component(
+    component_events: &mut ComponentControllerEventStream,
+) -> Result<(), Error> {
+    // wait for child to exit and mimic the result code
+    let result = loop {
+        let event = await!(component_events.try_next())
+            .context("wait for child component to exit")?
+            .ok_or_else(|| format_err!("Child didn't exit cleanly"))?;
+
+        match event {
+            ComponentControllerEvent::OnTerminated {
+                return_code: code,
+                termination_reason: reason,
+            } => {
+                println!("Child exited with code {}, reason {}", code, reason as u32);
+                if code != 0 || reason != TerminationReason::Exited {
+                    break Err(format_err!(
+                        "Child exited with code {}, reason {}",
+                        code,
+                        reason as u32
+                    ));
+                } else {
+                    break Ok(());
+                }
+            }
+            _ => {
+                continue;
+            }
+        }
+    };
+    result
 }
 
 // this is the main body of our test, which
@@ -95,6 +130,7 @@ async fn run_test() -> Result<(), Error> {
             path: String::from(EP_MOUNT),
             device: ep_proxy_client,
         }],
+        inherit_parent_launch_services: false,
     };
     // launch the child env
     env.create_child_environment(child_env_server, &mut env_options)?;
@@ -120,34 +156,7 @@ async fn run_test() -> Result<(), Error> {
     let mut component_events = comp_controller.take_event_stream();
     launcher.create_component(&mut linfo, Some(comp_controller_req))?;
 
-    // wait for child to exit and mimic the result code
-    let result = loop {
-        let event = await!(component_events.try_next())
-            .context("wait for child component to exit")?
-            .ok_or_else(|| format_err!("Child didn't exit cleanly"))?;
-
-        match event {
-            ComponentControllerEvent::OnTerminated {
-                return_code: code,
-                termination_reason: reason,
-            } => {
-                println!("Child exited with code {}, reason {}", code, reason as u32);
-                if code != 0 || reason != TerminationReason::Exited {
-                    break Err(format_err!(
-                        "Child exited with code {}, reason {}",
-                        code,
-                        reason as u32
-                    ));
-                } else {
-                    break Ok(());
-                }
-            }
-            _ => {
-                continue;
-            }
-        }
-    };
-    result
+    await!(wait_for_component(&mut component_events))
 }
 
 fn check_service(service: &str) -> Result<(), Error> {
@@ -178,6 +187,53 @@ fn check_vdata() -> Result<(), Error> {
     }
 }
 
+async fn launch_grandchild() -> Result<(), Error> {
+    let env = client::connect_to_service::<ManagedEnvironmentMarker>()?;
+
+    let mut env_options = EnvironmentOptions {
+        name: String::from("grandchild_env"),
+        // add some arbitrary service to the grandchild environment
+        services: vec![LaunchService {
+            name: String::from(FAKE_SVC_NAME),
+            url: String::from(FAKE_SVC_URL),
+        }],
+        devices: vec![],
+        // inherit parent configuration to check if netstack flows through
+        // this won't be the same netstack *instance*, though. But it should be
+        // launched with the same url as the "child" environment
+        inherit_parent_launch_services: true,
+    };
+
+    let (child_env, child_env_server) =
+        fidl::endpoints::create_proxy::<ManagedEnvironmentMarker>()?;
+
+    // launch the grandchild env
+    env.create_child_environment(child_env_server, &mut env_options)?;
+
+    // launch info is our own package
+    // plus the command line argument to run the grandchild proc
+    let mut linfo = LaunchInfo {
+        url: String::from(MY_PACKAGE),
+        arguments: Some(vec![String::from("-g")]),
+        additional_services: None,
+        directory_request: None,
+        err: None,
+        out: None,
+        flat_namespace: None,
+    };
+
+    // launch myself as a process in the created environment.
+    let (launcher, launcher_req) = fidl::endpoints::create_proxy::<LauncherMarker>()?;
+    child_env.get_launcher(launcher_req)?;
+
+    let (comp_controller, comp_controller_req) =
+        fidl::endpoints::create_proxy::<ComponentControllerMarker>()?;
+    let mut component_events = comp_controller.take_event_stream();
+    launcher.create_component(&mut linfo, Some(comp_controller_req))?;
+
+    await!(wait_for_component(&mut component_events))
+}
+
 fn main() -> Result<(), Error> {
     // make sure all services exist!
     check_vdata()?;
@@ -189,14 +245,17 @@ fn main() -> Result<(), Error> {
     struct Opt {
         #[structopt(short = "c")]
         is_child: bool,
+        #[structopt(short = "g")]
+        is_grandchild: bool,
     }
-    let opt = Opt::from_args();
 
+    let opt = Opt::from_args();
     // the same binary is used for the root test
-    // and the test in a child env
+    // and the test in child envs
     // a flag is passed on the command line to change
     // the code path
     if opt.is_child {
+        let mut executor = fasync::Executor::new().context("Error creating executor")?;
         println!("Running as child");
         // print whole namespace to console (for manual testing)
         visit_dirs(Path::new("/"))?;
@@ -204,6 +263,14 @@ fn main() -> Result<(), Error> {
         check_virtual_device(EP_MOUNT)?;
         // check that netstack was served
         check_service(NetstackMarker::NAME)?;
+        // launch grandchild service to test environment inheritance
+        executor.run_singlethreaded(launch_grandchild())
+    } else if opt.is_grandchild {
+        println!("Running as grandchild");
+        // assert that netstack was served (should be present due to inheritance)
+        check_service(NetstackMarker::NAME)?;
+        // and the fake service:
+        check_service(FAKE_SVC_NAME)?;
         Ok(())
     } else {
         let mut executor = fasync::Executor::new().context("Error creating executor")?;

@@ -22,6 +22,7 @@ class ManagedEnvironment
  public:
   using EnvironmentRunningCallback = fit::closure;
   using Options = fuchsia::netemul::environment::EnvironmentOptions;
+  using LaunchService = fuchsia::netemul::environment::LaunchService;
   using FManagedEnvironment = fuchsia::netemul::environment::ManagedEnvironment;
   using Ptr = std::unique_ptr<ManagedEnvironment>;
   static Ptr CreateRoot(const fuchsia::sys::EnvironmentPtr& parent,
@@ -57,7 +58,8 @@ class ManagedEnvironment
 
  private:
   ManagedEnvironment(const SandboxEnv::Ptr& sandbox_env);
-  void Create(const fuchsia::sys::EnvironmentPtr& parent, Options options);
+  void Create(const fuchsia::sys::EnvironmentPtr& parent, Options options,
+              const ManagedEnvironment* managed_parent = nullptr);
 
   SandboxEnv::Ptr sandbox_env_;
   std::unique_ptr<component::testing::EnclosingEnvironment> env_;
@@ -66,6 +68,7 @@ class ManagedEnvironment
   EnvironmentRunningCallback running_callback_;
   fidl::BindingSet<FManagedEnvironment> bindings_;
   std::vector<ManagedEnvironment::Ptr> children_;
+  std::vector<LaunchService> service_config_;
   VirtualDevices virtual_devices_;
   std::unique_ptr<VirtualData> virtual_data_;
 

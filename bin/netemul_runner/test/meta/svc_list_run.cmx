@@ -13,7 +13,8 @@
             "fuchsia.netemul.environment.ManagedEnvironment",
             "fuchsia.netemul.network.NetworkContext",
             "fuchsia.netemul.bus.BusManager",
-            "fuchsia.netstack.Netstack"
+            "fuchsia.netstack.Netstack",
+            "fuchsia.some.fake.Service"
         ]
     }
 }

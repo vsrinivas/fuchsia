@@ -93,12 +93,12 @@ async fn spawn_env(network: &NetworkProxy, options: SpawnOptions) -> Result<Env,
                 url: String::from(NETSTACK_URL),
             },
         ],
-
         // pass the endpoint's proxy to create a virtual device
         devices: vec![VirtualDevice {
             path: String::from(format!("class/ethernet/{}", env_name)),
             device: ep_proxy_client,
         }],
+        inherit_parent_launch_services: false,
     };
     // launch the child env
     env.create_child_environment(child_env_server, &mut env_options)?;
