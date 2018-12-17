@@ -45,7 +45,7 @@ mod test {
         // Launch the wayland bridge process & connect to the WaylandDispatcher
         // FIDL service.
         let launcher = Launcher::new()?;
-        let app = launcher.launch("fuchsia-pkg://fuchsia.com/wayland_bridge#meta/wayland_bridge.cmx".to_string(), None)?;
+        let app = launcher.launch("fuchsia-pkg://fuchsia.com/test_wayland_bridge#meta/test_wayland_bridge.cmx".to_string(), None)?;
         let bridge_proxy = app.connect_to_service(WaylandDispatcherMarker)?;
         let (h1, h2) = zx::Channel::create()?;
         bridge_proxy.on_new_connection(h1)?;

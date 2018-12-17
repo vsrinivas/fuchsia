@@ -12,7 +12,7 @@ test_package("wayland_tests") {
   ]
   tests = [
     {
-      name = "wayland_bridge_test_lib_test_rustc"
+      name = "test_wayland_bridge_test_lib_test_rustc"
     },
     {
       name = "wayland_scanner_front_end_test_lib_test_rustc"

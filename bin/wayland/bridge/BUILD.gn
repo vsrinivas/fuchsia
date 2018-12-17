@@ -8,7 +8,7 @@ import("//build/rust/rustc_library.gni")
 import("//garnet/bin/wayland/protocol.gni")
 
 rustc_binary("bin") {
-  name = "wayland_bridge"
+  name = "test_wayland_bridge"
   edition = "2018"
   with_unit_tests = true
   deps = [
@@ -36,19 +36,19 @@ rustc_binary("bin") {
 package("bridge") {
   meta = [
     {
-      path = rebase_path("meta/wayland_bridge.cmx")
-      dest = "wayland_bridge.cmx"
+      path = rebase_path("meta/test_wayland_bridge.cmx")
+      dest = "test_wayland_bridge.cmx"
     },
   ]
 
-  package_name = "wayland_bridge"
-  binary = "wayland_bridge"
+  package_name = "test_wayland_bridge"
+  binary = "test_wayland_bridge"
   deps = [
     ":bin",
   ]
 }
 
-rustc_library("wayland_bridge_test") {
+rustc_library("test_wayland_bridge_test") {
   edition = "2018"
   with_unit_tests = true
   deps = [
@@ -67,6 +67,6 @@ rustc_library("wayland_bridge_test") {
 
 group("tests") {
   public_deps = [
-    ":wayland_bridge_test",
+    ":test_wayland_bridge_test",
   ]
 }
