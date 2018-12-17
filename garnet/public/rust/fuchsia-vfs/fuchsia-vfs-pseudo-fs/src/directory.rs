@@ -637,7 +637,7 @@ mod tests {
     use super::*;
 
     use {
-        crate::file::{read_only, read_write},
+        crate::file::{read_only, read_write, write_only},
         fidl::endpoints::{create_proxy, ServerEnd},
         fidl_fuchsia_io::{
             DirectoryEvent, DirectoryMarker, DirectoryObject, DirectoryProxy, FileEvent,
@@ -649,8 +649,16 @@ mod tests {
         futures::{select, Future, FutureExt, SinkExt},
         libc::{S_IRGRP, S_IROTH, S_IRUSR, S_IXGRP, S_IXOTH, S_IXUSR},
         pin_utils::pin_mut,
+        proc_macro_hack::proc_macro_hack,
         std::{cell::RefCell, io::Write},
     };
+
+    // Create level import of this macro does not affect nested modules.  And as attributes can
+    // only be applied to the whole "use" directive, this need to be present here and need to be
+    // separate form the above.  "use crate::pseudo_directory" generates a warning refering to
+    // "issue #52234 <https://github.com/rust-lang/rust/issues/52234>".
+    #[proc_macro_hack(support_nested)]
+    use fuchsia_vfs_pseudo_fs_macros::pseudo_directory;
 
     fn run_server_client<GetClientRes>(
         flags: u32,
@@ -841,8 +849,9 @@ mod tests {
 
     #[test]
     fn one_file_open_existing() {
-        let mut root = PseudoDirectory::empty();
-        root.add_entry("file1", read_only(|| Ok(b"Content".to_vec()))).unwrap();
+        let root = pseudo_directory! {
+            "file1" => read_only(|| Ok(b"Content".to_vec())),
+        };
 
         run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
@@ -857,8 +866,9 @@ mod tests {
 
     #[test]
     fn one_file_open_missing() {
-        let mut root = PseudoDirectory::empty();
-        root.add_entry("file1", read_only(|| Ok(b"Content".to_vec()))).unwrap();
+        let root = pseudo_directory! {
+            "file1" => read_only(|| Ok(b"Content".to_vec())),
+        };
 
         run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
@@ -870,17 +880,15 @@ mod tests {
 
     #[test]
     fn small_tree_traversal() {
-        let mut root = PseudoDirectory::empty();
-        let mut etc_dir = PseudoDirectory::empty();
-        let mut ssh_dir = PseudoDirectory::empty();
-
-        ssh_dir.add_entry("sshd_config", read_only(|| Ok(b"# Empty".to_vec()))).unwrap();
-
-        etc_dir.add_entry("ssh", ssh_dir).unwrap();
-        etc_dir.add_entry("fstab", read_only(|| Ok(b"/dev/fs /".to_vec()))).unwrap();
-
-        root.add_entry("etc", etc_dir).unwrap();
-        root.add_entry("uname", read_only(|| Ok(b"Fuchsia".to_vec()))).unwrap();
+        let root = pseudo_directory! {
+            "etc" => pseudo_directory! {
+                "fstab" => read_only(|| Ok(b"/dev/fs /".to_vec())),
+                "ssh" => pseudo_directory! {
+                    "sshd_config" => read_only(|| Ok(b"# Empty".to_vec())),
+                },
+            },
+            "uname" => read_only(|| Ok(b"Fuchsia".to_vec())),
+        };
 
         run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
             async fn open_read_close<'a>(
@@ -912,28 +920,23 @@ mod tests {
 
     #[test]
     fn open_writable_in_subdir() {
-        let mut root = PseudoDirectory::empty();
-        let mut etc_dir = PseudoDirectory::empty();
-        let mut ssh_dir = PseudoDirectory::empty();
-
         let write_count = &RefCell::new(0);
-        ssh_dir
-            .add_entry(
-                "sshd_config",
-                read_write(
-                    || Ok(b"# Empty".to_vec()),
-                    100,
-                    |content| {
-                        let mut count = write_count.borrow_mut();
-                        assert_eq!(*&content, format!("Port {}", 22 + *count).as_bytes());
-                        *count += 1;
-                        Ok(())
-                    },
-                ),
-            )
-            .unwrap();
-        etc_dir.add_entry("ssh", ssh_dir).unwrap();
-        root.add_entry("etc", etc_dir).unwrap();
+        let root = pseudo_directory! {
+            "etc" => pseudo_directory! {
+                "ssh" => pseudo_directory! {
+                    "sshd_config" => read_write(
+                        || Ok(b"# Empty".to_vec()),
+                        100,
+                        |content| {
+                            let mut count = write_count.borrow_mut();
+                            assert_eq!(*&content, format!("Port {}", 22 + *count).as_bytes());
+                            *count += 1;
+                            Ok(())
+                        }
+                    )
+                }
+            }
+        };
 
         run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
             async fn open_read_write_close<'a>(
@@ -982,14 +985,52 @@ mod tests {
     }
 
     #[test]
+    fn open_write_only() {
+        let write_count = &RefCell::new(0);
+        let root = pseudo_directory! {
+            "dev" => pseudo_directory! {
+                "output" => write_only(
+                    100,
+                    |content| {
+                        let mut count = write_count.borrow_mut();
+                        assert_eq!(*&content, format!("Message {}", 1 + *count).as_bytes());
+                        *count += 1;
+                        Ok(())
+                    }
+                )
+            }
+        };
+
+        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+            async fn open_write_close<'a>(
+                from_dir: &'a DirectoryProxy,
+                new_content: &'a str,
+                write_count: &'a RefCell<u32>,
+                expected_count: u32,
+            ) {
+                let flags = OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
+                let file = open_get_file_proxy_assert_ok!(from_dir, flags, "dev/output");
+                assert_write!(file, new_content);
+                assert_close!(file);
+
+                assert_eq!(*write_count.borrow(), expected_count);
+            }
+
+            await!(open_write_close(&root, "Message 1", write_count, 1));
+            await!(open_write_close(&root, "Message 2", write_count, 2));
+
+            assert_close!(root);
+        });
+    }
+
+    #[test]
     fn open_non_existing_path() {
-        let mut root = PseudoDirectory::empty();
-        let mut sub_dir = PseudoDirectory::empty();
-
-        sub_dir.add_entry("file1", read_only(|| Ok(b"Content 1".to_vec()))).unwrap();
-
-        root.add_entry("file2", read_only(|| Ok(b"Content 2".to_vec()))).unwrap();
-        root.add_entry("dir", sub_dir).unwrap();
+        let root = pseudo_directory! {
+            "dir" => pseudo_directory! {
+                "file1" => read_only(|| Ok(b"Content 1".to_vec())),
+            },
+            "file2" => read_only(|| Ok(b"Content 2".to_vec())),
+        };
 
         run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
@@ -1004,13 +1045,12 @@ mod tests {
 
     #[test]
     fn open_path_within_a_file() {
-        let mut root = PseudoDirectory::empty();
-        let mut sub_dir = PseudoDirectory::empty();
-
-        sub_dir.add_entry("file1", read_only(|| Ok(b"Content 1".to_vec()))).unwrap();
-
-        root.add_entry("file2", read_only(|| Ok(b"Content 2".to_vec()))).unwrap();
-        root.add_entry("dir", sub_dir).unwrap();
+        let root = pseudo_directory! {
+            "dir" => pseudo_directory! {
+                "file1" => read_only(|| Ok(b"Content 1".to_vec())),
+            },
+            "file2" => read_only(|| Ok(b"Content 2".to_vec())),
+        };
 
         run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
@@ -1023,26 +1063,25 @@ mod tests {
 
     #[test]
     fn open_file_as_directory() {
-        let mut root = PseudoDirectory::empty();
-        let mut sub_dir = PseudoDirectory::empty();
-
-        sub_dir.add_entry("file2", read_only(|| Ok(b"Content 1".to_vec()))).unwrap();
-
-        root.add_entry("file1", read_only(|| Ok(b"Content 2".to_vec()))).unwrap();
-        root.add_entry("dir", sub_dir).unwrap();
+        let root = pseudo_directory! {
+            "dir" => pseudo_directory! {
+                "file1" => read_only(|| Ok(b"Content 1".to_vec())),
+            },
+            "file2" => read_only(|| Ok(b"Content 2".to_vec())),
+        };
 
         run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
             let mode = MODE_TYPE_DIRECTORY;
             {
-                let proxy = open_get_proxy!(&root, flags, mode, "file1", FileMarker);
+                let proxy = open_get_proxy!(&root, flags, mode, "file2", FileMarker);
                 assert_event!(proxy, FileEvent::OnOpen_ { s, info }, {
                     assert_eq!(Status::from_raw(s), Status::NOT_DIR);
                     assert_eq!(info, None);
                 });
             }
             {
-                let proxy = open_get_proxy!(&root, flags, mode, "dir/file2", FileMarker);
+                let proxy = open_get_proxy!(&root, flags, mode, "dir/file1", FileMarker);
                 assert_event!(proxy, FileEvent::OnOpen_ { s, info }, {
                     assert_eq!(Status::from_raw(s), Status::NOT_DIR);
                     assert_eq!(info, None);
@@ -1055,11 +1094,11 @@ mod tests {
 
     #[test]
     fn open_directory_as_file() {
-        let mut root = PseudoDirectory::empty();
-        let mut sub_dir = PseudoDirectory::empty();
-
-        sub_dir.add_entry("dir2", PseudoDirectory::empty()).unwrap();
-        root.add_entry("dir", sub_dir).unwrap();
+        let root = pseudo_directory! {
+            "dir" => pseudo_directory! {
+                "dir2" => pseudo_directory! {},
+            },
+        };
 
         run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
@@ -1085,11 +1124,10 @@ mod tests {
 
     #[test]
     fn trailing_slash_means_directory() {
-        let mut root = PseudoDirectory::empty();
-        let sub_dir = PseudoDirectory::empty();
-
-        root.add_entry("file", read_only(|| Ok(b"Content".to_vec()))).unwrap();
-        root.add_entry("dir", sub_dir).unwrap();
+        let root = pseudo_directory! {
+            "file" => read_only(|| Ok(b"Content".to_vec())),
+            "dir" => pseudo_directory! {},
+        };
 
         run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
@@ -1113,13 +1151,12 @@ mod tests {
 
     #[test]
     fn no_dots_in_open() {
-        let mut root = PseudoDirectory::empty();
-        let mut sub_dir = PseudoDirectory::empty();
-
-        sub_dir.add_entry("dir2", PseudoDirectory::empty()).unwrap();
-
-        root.add_entry("file", read_only(|| Ok(b"Content".to_vec()))).unwrap();
-        root.add_entry("dir", sub_dir).unwrap();
+        let root = pseudo_directory! {
+            "file" => read_only(|| Ok(b"Content".to_vec())),
+            "dir" => pseudo_directory! {
+                "dir2" => pseudo_directory! {},
+            },
+        };
 
         run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
@@ -1133,11 +1170,11 @@ mod tests {
 
     #[test]
     fn no_consequtive_slashes_in_open() {
-        let mut root = PseudoDirectory::empty();
-        let mut sub_dir = PseudoDirectory::empty();
-
-        sub_dir.add_entry("dir2", PseudoDirectory::empty()).unwrap();
-        root.add_entry("dir", sub_dir).unwrap();
+        let root = pseudo_directory! {
+            "dir" => pseudo_directory! {
+                "dir2" => pseudo_directory! {},
+            },
+        };
 
         run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
@@ -1154,21 +1191,19 @@ mod tests {
 
     #[test]
     fn read_dirents_large_buffer() {
-        let mut root = PseudoDirectory::empty();
-        let mut etc_dir = PseudoDirectory::empty();
-        let mut ssh_dir = PseudoDirectory::empty();
-
-        ssh_dir.add_entry("sshd_config", read_only(|| Ok(b"# Empty".to_vec()))).unwrap();
-
-        etc_dir.add_entry("fstab", read_only(|| Ok(b"/dev/fs /".to_vec()))).unwrap();
-        etc_dir.add_entry("passwd", read_only(|| Ok(b"[redacted]".to_vec()))).unwrap();
-        etc_dir.add_entry("shells", read_only(|| Ok(b"/bin/bash".to_vec()))).unwrap();
-        etc_dir.add_entry("ssh", ssh_dir).unwrap();
-
-        root.add_entry("etc", etc_dir).unwrap();
-        root.add_entry("files", read_only(|| Ok(b"Content".to_vec()))).unwrap();
-        root.add_entry("more", read_only(|| Ok(b"Content".to_vec()))).unwrap();
-        root.add_entry("uname", read_only(|| Ok(b"Fuchsia".to_vec()))).unwrap();
+        let root = pseudo_directory! {
+            "etc" => pseudo_directory! {
+                "fstab" => read_only(|| Ok(b"/dev/fs /".to_vec())),
+                "passwd" => read_only(|| Ok(b"[redacted]".to_vec())),
+                "shells" => read_only(|| Ok(b"/bin/bash".to_vec())),
+                "ssh" => pseudo_directory! {
+                    "sshd_config" => read_only(|| Ok(b"# Empty".to_vec())),
+                },
+            },
+            "files" => read_only(|| Ok(b"Content".to_vec())),
+            "more" => read_only(|| Ok(b"Content".to_vec())),
+            "uname" => read_only(|| Ok(b"Fuchsia".to_vec())),
+        };
 
         run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
             let mut expected = Vec::new();
@@ -1217,13 +1252,12 @@ mod tests {
 
     #[test]
     fn read_dirents_small_buffer() {
-        let mut root = PseudoDirectory::empty();
-        let etc_dir = PseudoDirectory::empty();
-
-        root.add_entry("etc", etc_dir).unwrap();
-        root.add_entry("files", read_only(|| Ok(b"Content".to_vec()))).unwrap();
-        root.add_entry("more", read_only(|| Ok(b"Content".to_vec()))).unwrap();
-        root.add_entry("uname", read_only(|| Ok(b"Fuchsia".to_vec()))).unwrap();
+        let root = pseudo_directory! {
+            "etc" => pseudo_directory! { },
+            "files" => read_only(|| Ok(b"Content".to_vec())),
+            "more" => read_only(|| Ok(b"Content".to_vec())),
+            "uname" => read_only(|| Ok(b"Fuchsia".to_vec())),
+        };
 
         run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
             let mut expected = Vec::new();
@@ -1254,8 +1288,9 @@ mod tests {
 
     #[test]
     fn read_dirents_very_small_buffer() {
-        let mut root = PseudoDirectory::empty();
-        root.add_entry("file", read_only(|| Ok(b"Content".to_vec()))).unwrap();
+        let root = pseudo_directory! {
+            "file" => read_only(|| Ok(b"Content".to_vec())),
+        };
 
         run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
             // Entry header is 10 bytes, so this read should not be able to return a single entry.

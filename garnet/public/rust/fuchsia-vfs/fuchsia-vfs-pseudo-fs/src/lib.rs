@@ -6,8 +6,9 @@
 //! configuration, debug information or statistics.
 
 #![feature(async_await, await_macro, futures_api)]
-#![warn(missing_docs)]
-#![recursion_limit = "128"]
+#![recursion_limit = "1024"]
+
+use proc_macro_hack::proc_macro_hack;
 
 #[cfg(test)]
 #[macro_use]
@@ -19,3 +20,81 @@ pub mod file;
 
 mod common;
 mod watcher_connection;
+
+// --- pseudo_directory ---
+
+// pseudo_directory! uses helper functions that live in this module.  It needs to be accessible
+// from the outside of this crate.
+#[doc(hidden)]
+pub mod pseudo_directory;
+
+/// Builds a pseudo directory using a simple DSL, potentially containing files and nested pseudo directories.
+///
+/// A directory is described using a sequence of rules of the following form:
+///
+///   <name> `=>` <something that implements DirectoryEntry>
+///
+/// separated by commas, with an optional trailing comma.
+///
+/// It generates a nested pseudo directory, using [`directory::empty`] then adding all the
+/// specified entries in it, by calling [`directory::PseudoDirectory::add_entry`].
+///
+/// Note: At the moment duplicate entry names are not checked statically.  Duplicate entries will
+/// cause panic when the pseudo directory will be constructed at run time.  The error message will
+/// contain details on the location of the generating macro and the duplicate entry name.
+///
+/// # Examples
+///
+/// This will construct a small tree of read-only files:
+/// ```
+/// let root = pseudo_directory! {
+///     "etc" => pseudo_directory! {
+///         "fstab" => read_only(|| Ok(b"/dev/fs /".to_vec())),
+///         "passwd" => read_only(|| Ok(b"[redacted]".to_vec())),
+///         "shells" => read_only(|| Ok(b"/bin/bash".to_vec())),
+///         "ssh" => pseudo_directory! {
+///           "sshd_config" => read_only(|| Ok(b"# Empty".to_vec())),
+///         },
+///     },
+///     "uname" => read_only(|| Ok(b"Fuchsia".to_vec())),
+/// };
+/// ```
+///
+/// An example of a tree with a writable file:
+/// ```
+/// let write_count = &RefCell::new(0);
+/// let root = pseudo_directory! {
+///     "etc" => pseudo_directory! {
+///         "sshd_config" => read_write(
+///           || Ok(b"# Empty".to_vec()),
+///           100,
+///           |content| {
+///               let mut count = write_count.borrow_mut();
+///               assert_eq!(*&content, format!("Port {}", 22 + *count).as_bytes());
+///               *count += 1;
+///               Ok(())
+///           }),
+///     },
+/// };
+/// ```
+///
+/// You can specify the POSIX attributes for the pseudo directory, by providing the attributes as
+/// an expression, fater a "protection_attributes" keyword followed by a comma, with a `;`
+/// separating it from the entry definitions:
+/// ```
+/// let root = pseudo_directory! {
+///     "etc" => pseudo_directory! {
+///         protection_attributes: S_IXOTH | S_IROTH | S_IXGRP | S_IRGRP | S_IXUSR | S_IRUSR;
+///         "fstab" => read_only_attr(S_IROTH | S_IRGRP | S_IRUSR,
+///                                   || Ok(b"/dev/fs /".to_vec())),
+///         "passwd" => read_only(S_IRUSR, || Ok(b"[redacted]".to_vec())),
+///     },
+/// };
+/// ```
+#[proc_macro_hack(support_nested)]
+pub use fuchsia_vfs_pseudo_fs_macros::pseudo_directory;
+
+// This allows the pseudo_directory! macro to use absolute paths within this crate to refer to the
+// helper functions. External crates that use pseudo_directory! will rely on the pseudo_directory
+// export above.
+extern crate self as fuchsia_vfs_pseudo_fs;

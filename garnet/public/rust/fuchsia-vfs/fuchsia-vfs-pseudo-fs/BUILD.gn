@@ -13,12 +13,15 @@ rustc_library("fuchsia-vfs-pseudo-fs") {
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-vfs/fuchsia-vfs-pseudo-fs/macros",
     "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust-crates/rustc_deps:byteorder",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures-preview",
     "//third_party/rust-crates/rustc_deps:libc",
     "//third_party/rust-crates/rustc_deps:pin-utils",
+    "//third_party/rust-crates/rustc_deps:proc-macro-hack",
+    "//third_party/rust-crates/rustc_deps:proc-macro-nested",
     "//third_party/rust-crates/rustc_deps:void",
     "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
