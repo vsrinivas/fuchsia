@@ -482,13 +482,6 @@ func (ns *Netstack) addEth(topological_path string, config netstack.InterfaceCon
 		if len(ifs.nic.Name) == 0 {
 			ifs.nic.Name = fmt.Sprintf("eth%d", ifs.nic.ID)
 		}
-		// TODO(NET-298): Delete this condition after enabling multiple concurrent DHCP clients
-		// in third_party/netstack.
-		if client.Info.Features&ethernet.InfoFeatureWlan != 0 {
-			// WLAN: Upon 802.1X port open, the state change will ensue, which
-			// will invoke the DHCP Client.
-			return nil
-		}
 
 		switch config.IpAddressConfig.Which() {
 		case netstack.IpAddressConfigDhcp:
