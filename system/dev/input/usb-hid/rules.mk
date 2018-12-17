@@ -10,13 +10,14 @@ MODULE_TYPE := driver
 
 MODULE_SRCS := $(LOCAL_DIR)/usb-hid.c
 
-MODULE_STATIC_LIBS := system/ulib/ddk system/dev/lib/usb-old \
+MODULE_STATIC_LIBS := system/ulib/ddk system/dev/lib/usb \
                       system/ulib/pretty system/ulib/sync
 
 MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-hidbus \
+    system/banjo/ddk-protocol-usb \
     system/banjo/ddk-protocol-usb-composite \
     system/banjo/ddk-protocol-usb-request \
 

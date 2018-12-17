@@ -7,7 +7,7 @@
 #include <ddk/driver.h>
 #include <ddk/binding.h>
 #include <ddk/protocol/hidbus.h>
-#include <ddk/protocol/usb-old.h>
+#include <ddk/protocol/usb.h>
 #include <ddk/usb/usb.h>
 #include <usb/usb-request.h>
 #include <zircon/hw/usb/hid.h>
@@ -45,8 +45,8 @@ typedef struct usb_hid_device {
     size_t parent_req_size;
 } usb_hid_device_t;
 
-static void usb_interrupt_callback(usb_request_t* req, void* cookie) {
-    usb_hid_device_t* hid = (usb_hid_device_t*)cookie;
+static void usb_interrupt_callback(void* ctx, usb_request_t* req) {
+    usb_hid_device_t* hid = (usb_hid_device_t*)ctx;
     // TODO use usb request copyfrom instead of mmap
     void* buffer;
     zx_status_t status = usb_request_mmap(req, &buffer);
@@ -79,7 +79,11 @@ static void usb_interrupt_callback(usb_request_t* req, void* cookie) {
     }
 
     if (requeue) {
-        usb_request_queue(&hid->usb, req, usb_interrupt_callback, hid);
+        usb_request_complete_t complete = {
+            .callback = usb_interrupt_callback,
+            .ctx = hid,
+        };
+        usb_request_queue(&hid->usb, req, &complete);
     } else {
         hid->req_queued = false;
     }
@@ -106,7 +110,11 @@ static zx_status_t usb_hid_start(void* ctx, const hidbus_ifc_t* ifc) {
     hid->ifc = *ifc;
     if (!hid->req_queued) {
         hid->req_queued = true;
-        usb_request_queue(&hid->usb, hid->req, usb_interrupt_callback, hid);
+        usb_request_complete_t complete = {
+            .callback = usb_interrupt_callback,
+            .ctx = hid,
+        };
+        usb_request_queue(&hid->usb, hid->req, &complete);
     }
     mtx_unlock(&hid->lock);
     return ZX_OK;
@@ -124,8 +132,8 @@ static void usb_hid_stop(void* ctx) {
 static zx_status_t usb_hid_control(usb_hid_device_t* hid, uint8_t req_type, uint8_t request,
                                    uint16_t value, uint16_t index, void* data, size_t length,
                                    size_t* out_length) {
-    zx_status_t status = usb_control(&hid->usb, req_type, request, value, index, data, length,
-                                     ZX_TIME_INFINITE, out_length);
+    zx_status_t status = usb_control(&hid->usb, req_type, request, value, index, length,
+                                     ZX_TIME_INFINITE, NULL, 0, data, length, out_length);
     if (status == ZX_ERR_IO_REFUSED || status == ZX_ERR_IO_INVALID) {
         usb_reset_endpoint(&hid->usb, 0);
     }
@@ -245,7 +253,7 @@ static zx_status_t usb_hid_bind(void* ctx, zx_device_t* dev) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    zx_status_t status = device_get_protocol(dev, ZX_PROTOCOL_USB_OLD, &usbhid->usb);
+    zx_status_t status = device_get_protocol(dev, ZX_PROTOCOL_USB, &usbhid->usb);
     if (status != ZX_OK) {
         goto fail;
     }
@@ -337,6 +345,6 @@ static zx_driver_ops_t usb_hid_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(usb_hid, usb_hid_driver_ops, "zircon", "0.1", 2)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_OLD),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
     BI_MATCH_IF(EQ, BIND_USB_CLASS, USB_CLASS_HID),
 ZIRCON_DRIVER_END(usb_hid)
