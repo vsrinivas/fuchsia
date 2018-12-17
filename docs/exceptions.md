@@ -375,12 +375,12 @@ is always run on a separate thread.
 There are three good example programs in the Zircon tree to use to
 further one's understanding of exceptions and signals in Zircon.
 
-- `system/core/crashsvc`, `system/core/crashanalyzer`
+- `system/core/svchost/crashsvc`
 
-`crashsvc` is the main crash logging service. It delegates the
-processing of the crash to various programs.
-One of those programs is `crashanalyzer` which prints a backtrace
-of the crashing thread.
+`crash-svc` is the crash service thread hosted in `svchost`. It
+delegates the processing of the crash to either `ulib/inspector` in a
+standalone zircon build or to a upper layer FIDL service if the build
+contains garnet.
 
 - `system/utest/exception`
 

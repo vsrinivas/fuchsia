@@ -15,7 +15,6 @@
 
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
-#include <fuchsia/crash/c/fidl.h>
 #include <launchpad/launchpad.h>
 #include <loader-service/loader-service.h>
 #include <zircon/boot/bootdata.h>
@@ -24,7 +23,6 @@
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
-#include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/syscalls/policy.h>
 
@@ -59,7 +57,6 @@ struct {
     zx::unowned_job root_job;
     zx::job svc_job;
     zx::job fuchsia_job;
-    zx::channel exception_channel;
     zx::channel svchost_outgoing;
 
     zx::event fshost_event;
@@ -341,128 +338,6 @@ zx::job get_sysinfo_job_root() {
     }
 }
 
-// Reads messages from crashsvc and launches analyzers for exceptions.
-int crash_analyzer_listener(void* arg) {
-    for (;;) {
-        zx_signals_t observed;
-        zx_status_t status =
-            g_handles.exception_channel.wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                                                 zx::time::infinite(), &observed);
-        if (status != ZX_OK) {
-            printf("devmgr: crash_analyzer_listener zx_object_wait_one failed: %d\n", status);
-            return 1;
-        }
-        if ((observed & ZX_CHANNEL_READABLE) == 0) {
-            printf("devmgr: crash_analyzer_listener: peer closed\n");
-            return 1;
-        }
-
-        uint32_t exception_type;
-        zx_handle_t handles[3];
-        uint32_t actual_bytes, actual_handles;
-        status =
-            g_handles.exception_channel.read(0, &exception_type, sizeof(exception_type),
-                                             &actual_bytes, handles, fbl::count_of(handles),
-                                             &actual_handles);
-        if (status != ZX_OK) {
-            printf("devmgr: zx_channel_read failed: %d\n", status);
-            continue;
-        }
-        if (actual_bytes != sizeof(exception_type) || actual_handles != fbl::count_of(handles)) {
-            printf("devmgr: zx_channel_read unexpected read size: %d\n", status);
-            zx_handle_close_many(handles, actual_handles);
-            continue;
-        }
-
-        // launchpad always takes ownership of handles (even on failure). It's
-        // necessary to resume the thread on failure otherwise the process will
-        // hang indefinitely, so copy the thread handle before launch.
-        zx_handle_t thread_handle;
-        status = zx_handle_duplicate(handles[1], ZX_RIGHT_SAME_RIGHTS, &thread_handle);
-        if (status != ZX_OK) {
-            printf("devmgr: crash_analyzer_listener: thread handle duplicate failed: %d\n", status);
-            // If thread handle duplication failed, try to resume and bail.
-            zx_task_resume_from_exception(handles[1], handles[2], ZX_RESUME_TRY_NEXT);
-            zx_handle_close_many(handles, fbl::count_of(handles));
-            continue;
-        }
-
-        zx_handle_t port_handle;
-        status = zx_handle_duplicate(handles[2], ZX_RIGHT_SAME_RIGHTS, &port_handle);
-        if (status != ZX_OK) {
-            printf("devmgr: crash_analyzer_listener: port handle duplicate failed: %d\n", status);
-            // If port handle duplication failed, try to resume and bail.
-            zx_handle_close(thread_handle);
-            zx_task_resume_from_exception(handles[1], handles[2], ZX_RESUME_TRY_NEXT);
-            zx_handle_close_many(handles, fbl::count_of(handles));
-            continue;
-        }
-
-        printf("devmgr: crash_analyzer_listener: analyzing exception type 0x%x\n", exception_type);
-
-        zx_handle_t appmgr_svc_request = ZX_HANDLE_INVALID;
-        zx_handle_t appmgr_svc = ZX_HANDLE_INVALID;
-
-        zx_handle_t analyzer_request = ZX_HANDLE_INVALID;
-        zx_handle_t analyzer = ZX_HANDLE_INVALID;
-        status = zx_channel_create(0, &analyzer_request, &analyzer);
-        if (status != ZX_OK)
-            goto cleanup;
-
-        if (require_system) {
-            // TODO(abarth|scottmg): Appmgr appears to fail at lookups
-            // containing /, so do lookup in two steps ("svc", then "Analyzer")
-            // for now. ZX-2265.
-            status = zx_channel_create(0, &appmgr_svc_request, &appmgr_svc);
-            if (status != ZX_OK)
-                goto cleanup;
-            status = fdio_service_connect_at(g_handles.appmgr_client.get(), "svc",
-                                             appmgr_svc_request);
-            if (status != ZX_OK)
-                goto cleanup;
-            appmgr_svc_request = ZX_HANDLE_INVALID;
-            status = fdio_service_connect_at(appmgr_svc, fuchsia_crash_Analyzer_Name,
-                                             analyzer_request);
-        } else {
-            status = fdio_service_connect_at(g_handles.svchost_outgoing.get(),
-                                             "public/" fuchsia_crash_Analyzer_Name,
-                                             analyzer_request);
-        }
-        analyzer_request = ZX_HANDLE_INVALID;
-        if (status != ZX_OK)
-            goto cleanup;
-        zx_status_t out_status;
-        status = fuchsia_crash_AnalyzerHandleNativeException(analyzer, handles[0], handles[1], handles[2], &out_status);
-        // fuchsia_crash_AnalyzerHandleNativeException always consumes the handles.
-        memset(handles, 0, sizeof(handles));
-        if (status == ZX_OK)
-            status = out_status;
-
-    cleanup:
-        if (analyzer)
-            zx_handle_close(analyzer);
-        if (appmgr_svc)
-            zx_handle_close(appmgr_svc);
-        if (handles[0])
-            zx_handle_close(handles[0]);
-        if (handles[1])
-            zx_handle_close(handles[1]);
-        if (handles[2])
-            zx_handle_close(handles[2]);
-        if (status != ZX_OK) {
-            printf("devmgr: crash_analyzer_listener: failed to analyze crash: %d (%s)\n",
-                   status, zx_status_get_string(status));
-            status = zx_task_resume_from_exception(thread_handle, port_handle, ZX_RESUME_TRY_NEXT);
-            if (status != ZX_OK) {
-                printf("devmgr: crash_analyzer_listener: zx_task_resume_from_exception: %d (%s)\n",
-                       status, zx_status_get_string(status));
-            }
-        }
-        zx_handle_close(thread_handle);
-        zx_handle_close(port_handle);
-    }
-}
-
 int service_starter(void* arg) {
     // Features like Intel Processor Trace need a dump of ld.so activity.
     // The output has a specific format, and will eventually be recorded
@@ -475,35 +350,6 @@ int service_starter(void* arg) {
         putenv(strdup(LDSO_TRACE_ENV));
         // There is still devmgr_launch() which does not clone our enviroment.
         // It has its own check.
-    }
-
-    // Start crashsvc. Bind the exception port now, to avoid missing any crashes
-    // that might occur early on before crashsvc has finished initializing.
-    // crashsvc writes messages to the passed channel when an analyzer for an
-    // exception is required.
-    zx::port exception_port;
-    zx::channel exception_channel_passed;
-    if (zx::port::create(0, &exception_port) == ZX_OK &&
-        zx::channel::create(0, &g_handles.exception_channel, &exception_channel_passed) == ZX_OK &&
-        g_handles.root_job->bind_exception_port(exception_port, 0, 0) == ZX_OK) {
-        thrd_t t;
-        if ((thrd_create_with_name(&t, crash_analyzer_listener, nullptr,
-                                   "crash-analyzer-listener")) == thrd_success) {
-            thrd_detach(t);
-        }
-        zx::job duplicate_job;
-        g_handles.root_job->duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate_job);
-        zx_handle_t handles[] = {
-            duplicate_job.release(),
-            exception_port.release(),
-            exception_channel_passed.release(),
-        };
-        uint32_t handle_types[] = {PA_HND(PA_USER0, 0), PA_HND(PA_USER0, 1), PA_HND(PA_USER0, 2)};
-        static const char* argv_crashsvc[] = {"/boot/bin/crashsvc"};
-        devmgr_launch(g_handles.svc_job, "crashsvc",
-                      &devmgr_launch_load, nullptr,
-                      fbl::count_of(argv_crashsvc), argv_crashsvc, nullptr, -1,
-                      handles, handle_types, fbl::count_of(handles), nullptr, 0);
     }
 
     char vcmd[64];
@@ -942,15 +788,22 @@ zx_status_t svchost_start() {
     };
     int argc = require_system ? 2 : 1;
 
-    zx::job job_copy;
+    zx::job svc_job_copy;
     status = g_handles.svc_job.duplicate(
-        ZX_RIGHTS_BASIC | ZX_RIGHT_MANAGE_JOB | ZX_RIGHT_MANAGE_PROCESS, &job_copy);
+        ZX_RIGHTS_BASIC | ZX_RIGHT_MANAGE_JOB | ZX_RIGHT_MANAGE_PROCESS, &svc_job_copy);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    zx::job root_job_copy;
+    status = g_handles.root_job->duplicate(
+        ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHTS_PROPERTY | ZX_RIGHT_ENUMERATE, &root_job_copy);
     if (status != ZX_OK) {
         return status;
     }
 
     launchpad_t* lp = nullptr;
-    launchpad_create(job_copy.get(), name, &lp);
+    launchpad_create(svc_job_copy.get(), name, &lp);
     launchpad_load_from_file(lp, argv[0]);
     launchpad_set_args(lp, argc, argv);
     launchpad_add_handle(lp, dir_request.release(), PA_DIRECTORY_REQUEST);
@@ -958,6 +811,11 @@ zx_status_t svchost_start() {
 
     // Remove once svchost hosts the tracelink service itself.
     launchpad_add_handle(lp, appmgr_svc.release(), PA_HND(PA_USER0, 0));
+
+    // Give svchost a restricted root job handle. svchost is already a privileged system service
+    // as it controls system-wide process launching. With the root job it can consolidate a few
+    // services such as crashsvc and the profile service.
+    launchpad_add_handle(lp, root_job_copy.release(), PA_HND(PA_USER0, 1));
 
     const char* errmsg = nullptr;
     if ((status = launchpad_go(lp, nullptr, &errmsg)) < 0) {

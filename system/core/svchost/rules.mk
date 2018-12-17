@@ -11,6 +11,7 @@ MODULE_GROUP := core
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/svchost.cpp \
+    $(LOCAL_DIR)/crashsvc.cpp
 
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-crash \
@@ -18,7 +19,7 @@ MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-logger \
     system/fidl/fuchsia-mem \
     system/fidl/fuchsia-process \
-    system/fidl/fuchsia-sysmem \
+    system/fidl/fuchsia-sysmem
 
 MODULE_STATIC_LIBS := \
     system/ulib/elf-search \
@@ -28,7 +29,6 @@ MODULE_STATIC_LIBS := \
     system/ulib/process-launcher \
     system/ulib/sysmem \
     system/ulib/fs \
-    system/core/crashanalyzer \
     system/ulib/async \
     system/ulib/async.cpp \
     system/ulib/async-loop.cpp \

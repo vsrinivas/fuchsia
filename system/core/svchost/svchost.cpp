@@ -4,12 +4,12 @@
 
 #include <fbl/algorithm.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/crashanalyzer/crashanalyzer.h>
 #include <lib/fdio/util.h>
 #include <lib/logger/provider.h>
 #include <lib/process-launcher/launcher.h>
 #include <lib/svc/outgoing.h>
 #include <lib/sysmem/sysmem.h>
+#include <lib/zx/job.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
@@ -24,6 +24,9 @@ typedef struct zx_service_provider_instance {
     // The |ctx| pointer returned by the provider's |init| function, if any.
     void* ctx;
 } zx_service_provider_instance_t;
+
+// start_crashsvc() is implemented in crashsvc.cpp.
+void start_crashsvc(zx::job root_job, zx_handle_t analyzer_svc);
 
 static zx_status_t provider_init(zx_service_provider_instance_t* instance) {
     if (instance->provider->ops->init) {
@@ -85,6 +88,7 @@ static zx_status_t provider_load(zx_service_provider_instance_t* instance,
 }
 
 static zx_handle_t appmgr_svc;
+static zx_handle_t root_job;
 
 // We should host the tracelink service ourselves instead of routing the request
 // to appmgr.
@@ -147,6 +151,7 @@ int main(int argc, char** argv) {
     svc::Outgoing outgoing(dispatcher);
 
     appmgr_svc = zx_take_startup_handle(PA_HND(PA_USER0, 0));
+    root_job = zx_take_startup_handle(PA_HND(PA_USER0, 1));
 
     zx_status_t status = outgoing.ServeFromStartupInfo();
     if (status != ZX_OK) {
@@ -156,11 +161,9 @@ int main(int argc, char** argv) {
     }
 
     zx_service_provider_instance_t service_providers[] = {
-        {.provider = crashanalyzer_get_service_provider(), .ctx = nullptr},
         {.provider = launcher_get_service_provider(), .ctx = nullptr},
         {.provider = sysmem_get_service_provider(), .ctx = nullptr},
     };
-
 
     for (size_t i = 0; i < fbl::count_of(service_providers); ++i) {
         status = provider_load(&service_providers[i], dispatcher, outgoing.public_dir());
@@ -190,6 +193,9 @@ int main(int argc, char** argv) {
     }
 
     publish_deprecated_services(outgoing.public_dir());
+
+    start_crashsvc(zx::job(root_job),
+        require_system? appmgr_svc : ZX_HANDLE_INVALID);
 
     status = loop.Run();
 

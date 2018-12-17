@@ -26,10 +26,7 @@ MODULE_SRCS += \
 # can be linked dynamically.  But it doesn't support any means to look
 # up other shared libraries, so everything else must be linked statically.
 
-# We can avoid the fuchsia.crash dependency if crashsvc connects directly to the
-# analyzer.
 MODULE_FIDL_LIBS := \
-    system/fidl/fuchsia-crash \
     system/fidl/fuchsia-device-manager \
     system/fidl/fuchsia-io \
     system/fidl/fuchsia-mem \
