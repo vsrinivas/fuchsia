@@ -124,6 +124,9 @@ class VectorPtr {
   std::vector<T>& operator*() { return vec_; }
   const std::vector<T>& operator*() const { return vec_; }
 
+  // Provides implicit conversion for accessing the underlying std::vector.
+  // To mutate the vector, use operator* or operator-> or one of the mutation
+  // functions.
   operator const std::vector<T>&() const { return vec_; }
 
  private:
