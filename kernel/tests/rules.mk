@@ -12,6 +12,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_SRCS += \
     $(LOCAL_DIR)/alloc_checker_tests.cpp \
     $(LOCAL_DIR)/benchmarks.cpp \
+    $(LOCAL_DIR)/brwlock_tests.cpp \
     $(LOCAL_DIR)/cache_tests.cpp \
     $(LOCAL_DIR)/clock_tests.cpp \
     $(LOCAL_DIR)/fibo.cpp \
