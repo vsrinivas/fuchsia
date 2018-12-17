@@ -19,7 +19,7 @@ constexpr char kTestShutdown[] = "test_shutdown";
 
 // Integration tests that run under DevBaseShell are cut off after this
 // timeout.
-constexpr int kTestTimeoutMilliseconds = 15000;
+constexpr int kTestTimeoutMilliseconds = 30000;
 
 // Connects to the TestRunner service in the caller's Environment.
 // This function must be invoked first before calling any of the ones below. A

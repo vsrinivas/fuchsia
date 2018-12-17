@@ -26,6 +26,7 @@
 
 using modular::testing::Await;
 using modular::testing::Get;
+using modular::testing::Signal;
 using modular::testing::TestPoint;
 
 namespace {
@@ -230,16 +231,25 @@ class TestApp : public modular::testing::ComponentBase<void> {
         return;
       }
 
-      TestStory2_Delete();
+      TestStory2_Stop();
     });
   }
 
   TestPoint story2_stop_{"Story2 Stop"};
 
+  void TestStory2_Stop() {
+    story_controller_->Stop([this] {
+      story2_stop_.Pass();
+      TestStory2_Delete();
+    });
+  }
+
+  TestPoint story2_delete_{"Story2 Delete"};
+
   void TestStory2_Delete() {
     puppet_master_->DeleteStory(story_info_.id, [this] {
-      story2_stop_.Pass();
-      session_shell_context_->Logout();
+      story2_delete_.Pass();
+      Signal(modular::testing::kTestShutdown);
     });
   }
 
