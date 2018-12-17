@@ -81,7 +81,7 @@ void VmoPayloadAllocator::AddVmo(fbl::RefPtr<PayloadVmo> payload_vmo) {
       << "Attempt to add more than one VMO to single-vmo allocator.";
 
   payload_vmo->SetIndex(payload_vmos_.size());
-  
+
   payload_vmos_.push_back(payload_vmo);
   if (vmo_allocation_ != VmoAllocation::kVmoPerBuffer) {
     payload_vmo->allocator_ =
@@ -128,7 +128,8 @@ fbl::RefPtr<PayloadBuffer> VmoPayloadAllocator::TryAllocateFromVmo(
 
     // Success!
     return PayloadBuffer::Create(size, payload_vmo->start(), payload_vmo, 0,
-                                 [this](PayloadBuffer* payload_buffer) {
+                                 [this, this_refptr = fbl::WrapRefPtr(this)](
+                                     PayloadBuffer* payload_buffer) {
                                    FXL_DCHECK(payload_buffer->vmo());
                                    // Take the |VmoPayloadAllocator|'s mutex to
                                    // serialize access to the |allocated_| field
@@ -154,7 +155,9 @@ fbl::RefPtr<PayloadBuffer> VmoPayloadAllocator::TryAllocateFromVmo(
   // Success!
   return PayloadBuffer::Create(
       size, reinterpret_cast<uint8_t*>(payload_vmo->start()) + offset,
-      payload_vmo, offset, [this, offset](PayloadBuffer* payload_buffer) {
+      payload_vmo, offset,
+      [this, this_refptr = fbl::WrapRefPtr(this),
+       offset](PayloadBuffer* payload_buffer) {
         FXL_DCHECK(payload_buffer->vmo());
         FXL_DCHECK(payload_buffer->vmo()->allocator_);
         // Take the |VmoPayloadAllocator|'s mutex to serialize access to the
