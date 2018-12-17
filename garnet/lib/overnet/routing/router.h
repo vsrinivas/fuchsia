@@ -62,7 +62,7 @@ class Link {
   virtual ~Link() {}
   virtual void Close(Callback<void> quiesced) = 0;
   virtual void Forward(Message message) = 0;
-  virtual fuchsia::overnet::protocol::LinkMetrics GetLinkMetrics() = 0;
+  virtual fuchsia::overnet::protocol::LinkStatus GetLinkStatus() = 0;
 };
 
 template <class T = Link>
@@ -104,9 +104,10 @@ class Router {
   auto* rng() { return &rng_; }
 
   void UpdateRoutingTable(
-      std::vector<fuchsia::overnet::protocol::NodeMetrics> node_metrics,
-      std::vector<fuchsia::overnet::protocol::LinkMetrics> link_metrics) {
-    UpdateRoutingTable(std::move(node_metrics), std::move(link_metrics), false);
+      std::initializer_list<fuchsia::overnet::protocol::NodeStatus> node_status,
+      std::initializer_list<fuchsia::overnet::protocol::LinkStatus>
+          link_status) {
+    UpdateRoutingTable(std::move(node_status), std::move(link_status), false);
   }
 
   void BlockUntilNoBackgroundUpdatesProcessing() {
@@ -119,10 +120,16 @@ class Router {
   }
 
   Optional<NodeId> SelectGossipPeer();
-  Slice WriteGossipUpdate(Border desired_border, NodeId target);
-  Status ApplyGossipUpdate(Slice update, NodeId peer);
+  void SendGossipUpdate(fuchsia::overnet::protocol::Peer_Proxy* peer,
+                        NodeId target);
 
-  void SetDescription(fuchsia::overnet::protocol::PeerDescription description);
+  void ApplyGossipUpdate(fuchsia::overnet::protocol::NodeStatus node_status) {
+    UpdateRoutingTable({std::move(node_status)}, {}, false);
+  }
+
+  void ApplyGossipUpdate(fuchsia::overnet::protocol::LinkStatus link_status) {
+    UpdateRoutingTable({}, {std::move(link_status)}, false);
+  }
 
   template <class F>
   void ForEachNodeMetric(F mutator) {
@@ -134,8 +141,8 @@ class Router {
   const NodeId node_id_;
 
   void UpdateRoutingTable(
-      std::vector<fuchsia::overnet::protocol::NodeMetrics> node_metrics,
-      std::vector<fuchsia::overnet::protocol::LinkMetrics> link_metrics,
+      std::initializer_list<fuchsia::overnet::protocol::NodeStatus> node_status,
+      std::initializer_list<fuchsia::overnet::protocol::LinkStatus> link_status,
       bool flush_old_nodes);
   virtual void OnUnknownStream(NodeId peer, StreamId stream_id) {}
 
@@ -226,7 +233,7 @@ class Router {
   RoutingTable routing_table_;
   Optional<Timeout> poll_link_changes_timeout_;
   Optional<Timeout> flush_old_nodes_timeout_;
-  fuchsia::overnet::protocol::NodeMetrics own_metrics_;
+  fuchsia::overnet::protocol::NodeStatus own_node_status_;
 };
 
 }  // namespace overnet

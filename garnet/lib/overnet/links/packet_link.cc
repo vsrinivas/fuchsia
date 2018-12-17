@@ -44,19 +44,18 @@ void PacketLink::Forward(Message message) {
   }
 }
 
-fuchsia::overnet::protocol::LinkMetrics PacketLink::GetLinkMetrics() {
+fuchsia::overnet::protocol::LinkStatus PacketLink::GetLinkStatus() {
   ScopedModule<PacketLink> scoped_module(this);
   // Advertise MSS as smaller than it is to account for some bugs that exist
   // right now.
   // TODO(ctiller): eliminate this - we should be precise.
   constexpr uint32_t kUnderadvertiseMaximumSendSize = 32;
-  fuchsia::overnet::protocol::LinkMetrics m;
-  m.set_label(fuchsia::overnet::protocol::LinkLabel{
-      router_->node_id().as_fidl(), peer_.as_fidl(), label_,
-      metrics_version_++});
-  m.set_bw_link(protocol_.bottleneck_bandwidth().bits_per_second());
-  m.set_rtt(protocol_.round_trip_time().as_us());
-  m.set_mss(
+  fuchsia::overnet::protocol::LinkStatus m{router_->node_id().as_fidl(),
+                                           peer_.as_fidl(), label_,
+                                           metrics_version_++};
+  m.metrics.set_bw_link(protocol_.bottleneck_bandwidth().bits_per_second());
+  m.metrics.set_rtt(protocol_.round_trip_time().as_us());
+  m.metrics.set_mss(
       std::max(kUnderadvertiseMaximumSendSize, protocol_.maximum_send_size()) -
       kUnderadvertiseMaximumSendSize);
   return m;

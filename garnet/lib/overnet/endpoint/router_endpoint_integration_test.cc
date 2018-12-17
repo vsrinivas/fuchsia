@@ -155,14 +155,14 @@ class InProcessLink final : public Link {
 
   std::shared_ptr<InProcessLinkImpl> get() { return impl_; }
 
-  void Close(Callback<void> quiesced) {
+  void Close(Callback<void> quiesced) override {
     impl_->Close(Callback<void>(
         ALLOCATED_CALLBACK,
         [this, quiesced = std::move(quiesced)]() mutable { impl_.reset(); }));
   }
-  void Forward(Message message) { impl_->Forward(std::move(message)); }
-  fuchsia::overnet::protocol::LinkMetrics GetLinkMetrics() {
-    return impl_->GetLinkMetrics();
+  void Forward(Message message) override { impl_->Forward(std::move(message)); }
+  fuchsia::overnet::protocol::LinkStatus GetLinkStatus() override {
+    return impl_->GetLinkStatus();
   }
 
  private:
@@ -394,6 +394,22 @@ std::ostream& operator<<(std::ostream& out, MakeEnv env) {
   return out << env->name();
 }
 
+class TestService final : public RouterEndpoint::Service {
+ public:
+  TestService(RouterEndpoint* endpoint, std::string fully_qualified_name,
+              fuchsia::overnet::protocol::ReliabilityAndOrdering
+                  reliability_and_ordering,
+              std::function<void(RouterEndpoint::NewStream)> accept_stream)
+      : Service(endpoint, fully_qualified_name, reliability_and_ordering),
+        accept_stream_(accept_stream) {}
+  void AcceptStream(RouterEndpoint::NewStream stream) override {
+    accept_stream_(std::move(stream));
+  }
+
+ private:
+  std::function<void(RouterEndpoint::NewStream)> accept_stream_;
+};
+
 TEST_P(RouterEndpoint_IntegrationEnv, NoOp) {
   std::cout << "Param: " << GetParam() << std::endl;
   GetParam()->Make()->AwaitConnected();
@@ -402,9 +418,10 @@ TEST_P(RouterEndpoint_IntegrationEnv, NoOp) {
 TEST_P(RouterEndpoint_IntegrationEnv, NodeDescriptionPropagation) {
   std::cout << "Param: " << GetParam() << std::endl;
   auto env = GetParam()->Make();
-  fuchsia::overnet::protocol::PeerDescription desc;
-  desc.mutable_services()->push_back("#ff00ff");
-  env->endpoint1()->SetDescription(std::move(desc));
+  TestService service(
+      env->endpoint1(), "#ff00ff",
+      fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableOrdered,
+      [](auto) { abort(); });
   env->AwaitConnected();
   auto start_wait = env->timer()->Now();
   auto idle_time_done = [&] {
@@ -414,14 +431,14 @@ TEST_P(RouterEndpoint_IntegrationEnv, NodeDescriptionPropagation) {
     env->FlushTodo(idle_time_done);
   }
   bool found = false;
-  env->endpoint2()->ForEachNodeMetric(
-      [env = env.get(),
-       &found](const fuchsia::overnet::protocol::NodeMetrics& m) {
+  env->endpoint2()->ForEachNodeDescription(
+      [env = env.get(), &found](
+          NodeId id, const fuchsia::overnet::protocol::PeerDescription& m) {
         fuchsia::overnet::protocol::PeerDescription want_desc;
         want_desc.mutable_services()->push_back("#ff00ff");
-        if (m.label()->id == env->endpoint1()->node_id()) {
+        if (id == env->endpoint1()->node_id()) {
           found = true;
-          EXPECT_EQ(*m.description(), want_desc);
+          EXPECT_EQ(m, want_desc);
         }
       });
   EXPECT_TRUE(found);
@@ -462,19 +479,15 @@ TEST_P(RouterEndpoint_OneMessageIntegration, Works) {
   env->AwaitConnected();
 
   auto got_pull_cb = std::make_shared<bool>(false);
-  auto got_push_cb = std::make_shared<bool>(false);
 
-  env->endpoint2()->RecvIntro(StatusOrCallback<
-                              RouterEndpoint::ReceivedIntroduction>(
-      ALLOCATED_CALLBACK,
-      [got_pull_cb](StatusOr<RouterEndpoint::ReceivedIntroduction>&& status) {
-        OVERNET_TRACE(INFO) << "ep2: recv_intro status=" << status.AsStatus();
-        ASSERT_TRUE(status.is_ok()) << status.AsStatus();
-        auto intro = std::move(*status);
-        EXPECT_EQ(*AbcIntro(), intro.introduction)
-            << Encode(&intro.introduction);
+  TestService service(
+      env->endpoint2(), "abc",
+      fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableOrdered,
+      [got_pull_cb](RouterEndpoint::NewStream new_stream) {
+        ASSERT_FALSE(*got_pull_cb);
+        OVERNET_TRACE(INFO) << "ep2: recv_intro";
         auto stream =
-            MakeClosedPtr<RouterEndpoint::Stream>(std::move(intro.new_stream));
+            MakeClosedPtr<RouterEndpoint::Stream>(std::move(new_stream));
         OVERNET_TRACE(INFO) << "ep2: start pull_all";
         auto* op = new RouterEndpoint::ReceiveOp(stream.get());
         OVERNET_TRACE(INFO) << "ep2: op=" << op;
@@ -492,30 +505,22 @@ TEST_P(RouterEndpoint_OneMessageIntegration, Works) {
               delete op;
               *got_pull_cb = true;
             }));
-      }));
+      });
 
   ScopedOp scoped_op(Op::New(OpType::OUTGOING_REQUEST));
-  env->endpoint1()->SendIntro(
+  auto new_stream = env->endpoint1()->InitiateStream(
       env->endpoint2()->node_id(),
       fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableOrdered,
-      std::move(*AbcIntro()),
-      StatusOrCallback<RouterEndpoint::NewStream>(
-          ALLOCATED_CALLBACK,
-          [got_push_cb](StatusOr<RouterEndpoint::NewStream> intro_status) {
-            OVERNET_TRACE(INFO) << "ep1: send_intro status=" << intro_status;
-            ASSERT_TRUE(intro_status.is_ok());
-            auto stream = MakeClosedPtr<RouterEndpoint::Stream>(
-                std::move(*intro_status.get()));
-            RouterEndpoint::SendOp(stream.get(), GetParam().body.length())
-                .Push(GetParam().body, Callback<void>::Ignored());
-            *got_push_cb = true;
-          }));
+      "abc");
+  ASSERT_TRUE(new_stream.is_ok()) << new_stream.AsStatus();
+  auto stream =
+      MakeClosedPtr<RouterEndpoint::Stream>(std::move(*new_stream.get()));
+  RouterEndpoint::SendOp(stream.get(), GetParam().body.length())
+      .Push(GetParam().body, Callback<void>::Ignored());
 
-  env->FlushTodo(
-      [got_pull_cb, got_push_cb]() { return *got_pull_cb && *got_push_cb; },
-      env->timer()->Now() + kAllowedTime);
+  env->FlushTodo([got_pull_cb]() { return *got_pull_cb; },
+                 env->timer()->Now() + kAllowedTime);
 
-  ASSERT_TRUE(*got_push_cb);
   ASSERT_TRUE(*got_pull_cb);
 }
 

@@ -39,21 +39,45 @@ class OvernetApp final {
   /////////////////////////////////////////////////////////////////////////////
   // Allows binding a zx::channel to some service denoted by an Introduction
   // object.
-  class ServiceProvider {
+  class ServiceProvider;
+  using ServiceProviderMap =
+      std::unordered_map<std::string, std::unique_ptr<ServiceProvider>>;
+  class ServiceProvider : public overnet::RouterEndpoint::Service {
+    friend class OvernetApp;
+
    public:
+    ServiceProvider(OvernetApp* app, std::string fully_qualified_name,
+                    fuchsia::overnet::protocol::ReliabilityAndOrdering
+                        reliability_and_ordering)
+        : overnet::RouterEndpoint::Service(
+              &app->endpoint_, fully_qualified_name, reliability_and_ordering),
+          app_(app) {}
     virtual ~ServiceProvider() {}
-    virtual void Connect(const fuchsia::overnet::protocol::Introduction& intro,
-                         zx::channel channel) = 0;
+    virtual void Connect(zx::channel channel) = 0;
+    void AcceptStream(overnet::RouterEndpoint::NewStream stream) override final;
+
+   protected:
+    void Close() { app_->service_providers_.erase(where_am_i_); };
+
+   private:
+    OvernetApp* const app_;
+    ServiceProviderMap::iterator where_am_i_;
   };
 
-  // Register a service provider for this app.
-  void RegisterServiceProvider(const std::string& name,
-                               std::unique_ptr<ServiceProvider> provider);
+  template <class T, class... Args>
+  void InstantiateServiceProvider(Args&&... args) {
+    auto sp = std::make_unique<T>(std::forward<Args>(args)...);
+    auto name = sp->fully_qualified_name;
+    // Keep pointer to sp even though we'll move it as an arg on the next line,
+    // so we can assign where_am_i_
+    auto sp_ptr = sp.get();
+    sp_ptr->where_am_i_ =
+        service_providers_.emplace(std::move(name), std::move(sp)).first;
+  }
 
   // Bind 'channel' to a local overnet service.
-  void ConnectToLocalService(
-      const fuchsia::overnet::protocol::Introduction& intro,
-      zx::channel channel);
+  void ConnectToLocalService(const std::string& service_name,
+                             zx::channel channel);
 
   /////////////////////////////////////////////////////////////////////////////
   // Accessors for well known objects.
@@ -72,9 +96,6 @@ class OvernetApp final {
   void BindStream(overnet::RouterEndpoint::NewStream ns, zx::channel channel);
 
  private:
-  void ReadNextIntroduction();
-  void UpdateDescription();
-
   static overnet::NodeId GenerateNodeId();
 
   const std::unique_ptr<component::StartupContext> startup_context_;
@@ -82,8 +103,7 @@ class OvernetApp final {
   const overnet::NodeId node_id_ = GenerateNodeId();
   overnet::RouterEndpoint endpoint_{timer_, node_id_, true};
   std::vector<std::unique_ptr<Actor>> actors_;
-  std::unordered_map<std::string, std::unique_ptr<ServiceProvider>>
-      service_providers_;
+  ServiceProviderMap service_providers_;
 };
 
 }  // namespace overnetstack

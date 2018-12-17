@@ -8,6 +8,7 @@ fidl("fuchsia.overnet.protocol") {
   sources = [
     "forking.fidl",
     "labels.fidl",
+    "peer_interface.fidl",
     "routing.fidl",
   ]
 }

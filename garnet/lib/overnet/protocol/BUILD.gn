@@ -62,15 +62,15 @@ fuzz_target("ack_frame_fuzzer") {
 
 # coding
 source_set("coding") {
-    sources = [
-        "coding.h",
-        "coding.cc",
-    ]
-    deps = [
-        "//garnet/lib/overnet/vocabulary:slice",
-        "//garnet/lib/overnet/vocabulary:status",
-        "//third_party/snappy",
-    ]
+  sources = [
+    "coding.cc",
+    "coding.h",
+  ]
+  deps = [
+    "//garnet/lib/overnet/vocabulary:slice",
+    "//garnet/lib/overnet/vocabulary:status",
+    "//third_party/snappy",
+  ]
 }
 
 fuzz_target("overnet_encoding_fuzzer") {

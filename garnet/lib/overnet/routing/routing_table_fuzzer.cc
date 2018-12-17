@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/overnet/routingtablefuzzer/cpp/fidl.h>
 #include "garnet/lib/overnet/protocol/fidl.h"
-#include "garnet/lib/overnet/protocol/varint.h"
 #include "garnet/lib/overnet/routing/routing_table.h"
 #include "garnet/lib/overnet/testing/test_timer.h"
 #include "garnet/lib/overnet/testing/trace_cout.h"
@@ -18,30 +18,35 @@ class RoutingTableFuzzer {
   RoutingTableFuzzer(bool log_stuff)
       : logging_(log_stuff ? new Logging(&timer_) : nullptr) {}
 
-  bool StepTime(uint64_t micros) {
-    timer_.Step(micros);
-    return timer_.Now().after_epoch() != TimeDelta::PositiveInf();
-  }
-
-  void ProcessUpdate(Slice update) {
-    auto parse_status =
-        Decode<fuchsia::overnet::protocol::RoutingTableUpdate>(update);
-    OVERNET_TRACE(INFO) << "Parse: " << parse_status;
-    if (parse_status.is_error()) {
-      return;
+  void Run(fuchsia::overnet::routingtablefuzzer::RoutingTableFuzzPlan plan) {
+    using namespace fuchsia::overnet::routingtablefuzzer;
+    for (const auto& action : plan.actions) {
+      switch (action.Which()) {
+        case RoutingTableAction::Tag::kStepTime:
+          timer_.Step(action.step_time());
+          break;
+        case RoutingTableAction::Tag::kUpdateNode:
+          // Ignores failures in order to verify that the next input doesn't
+          // crash.
+          routing_table_.ProcessUpdate({fidl::Clone(action.update_node())}, {},
+                                       false);
+          break;
+        case RoutingTableAction::Tag::kUpdateLink:
+          // Ignores failures in order to verify that the next input doesn't
+          // crash.
+          routing_table_.ProcessUpdate({}, {fidl::Clone(action.update_link())},
+                                       false);
+          break;
+        case RoutingTableAction::Tag::kUpdateFlush:
+          // Ignores failures in order to verify that the next input doesn't
+          // crash.
+          routing_table_.ProcessUpdate({}, {}, true);
+          break;
+        case RoutingTableAction::Tag::Invalid:
+          break;
+      }
     }
-    auto nodes = std::move(*parse_status->mutable_nodes());
-    auto links = std::move(*parse_status->mutable_links());
-    auto validation_status =
-        routing_table_.ValidateIncomingUpdate(nodes, links);
-    OVERNET_TRACE(INFO) << "Validate: " << validation_status;
-    if (validation_status.is_error()) {
-      return;
-    }
-    routing_table_.ProcessUpdate(std::move(nodes), std::move(links), true);
   }
-
-  void GenerateUpdate() { routing_table_.GenerateUpdate(NodeId(2)); }
 
  private:
   TestTimer timer_;
@@ -54,60 +59,14 @@ class RoutingTableFuzzer {
   RoutingTable routing_table_{NodeId(1), &timer_, false};
 };
 
-class InputStream {
- public:
-  InputStream(const uint8_t* data, size_t size)
-      : cur_(data), end_(data + size) {}
-
-  uint64_t Next64() {
-    uint64_t out;
-    if (!varint::Read(&cur_, end_, &out))
-      out = 0;
-    return out;
-  }
-
-  uint8_t NextByte() {
-    if (cur_ == end_)
-      return 0;
-    return *cur_++;
-  }
-
-  Slice NextSlice() {
-    auto len = std::min(uint64_t(1024 * 1024), Next64());
-    return Slice::WithInitializerAndBorders(
-        len, Border::None(), [this, len](uint8_t* p) {
-          for (uint64_t i = 0; i < len; i++) {
-            *p++ = NextByte();
-          }
-        });
-  }
-
- private:
-  const uint8_t* cur_;
-  const uint8_t* end_;
-};
 }  // namespace
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
-  InputStream input(data, size);
-  RoutingTableFuzzer fuzzer(false);
-  for (;;) {
-    switch (input.NextByte()) {
-      default:
-        // input exhausted, or unknown op-code
-        return 0;
-      case 1:
-        if (!fuzzer.StepTime(input.Next64()))
-          return 0;
-        break;
-      case 2:
-        // Ignores failures in order to verify that the next input doesn't
-        // crash.
-        fuzzer.ProcessUpdate(input.NextSlice());
-        break;
-      case 3:
-        fuzzer.GenerateUpdate();
-        break;
-    }
+  if (auto buffer =
+          Decode<fuchsia::overnet::routingtablefuzzer::RoutingTableFuzzPlan>(
+              Slice::FromCopiedBuffer(data, size));
+      buffer.is_ok()) {
+    RoutingTableFuzzer(false).Run(std::move(*buffer));
   }
+  return 0;
 }

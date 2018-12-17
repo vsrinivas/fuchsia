@@ -45,6 +45,7 @@ source_set("router_endpoint") {
   ]
   deps = [
     "//garnet/lib/overnet/datagram_stream",
+    "//garnet/lib/overnet/protocol:coding",
     "//garnet/lib/overnet/protocol:fidl",
     "//garnet/lib/overnet/routing:router",
     "//garnet/lib/overnet/vocabulary:manual_constructor",

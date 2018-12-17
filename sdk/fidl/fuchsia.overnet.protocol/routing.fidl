@@ -10,33 +10,28 @@ table PeerDescription {
     1: vector<string> services;
 };
 
-struct LinkLabel {
+table LinkMetrics {
+    1: uint64 bw_link;
+    2: uint64 bw_used;
+    3: uint64 rtt;
+    4: uint32 mss;
+};
+
+struct LinkStatus {
     NodeId from;
     NodeId to;
     uint64 local_id;
     uint64 version;
-};
 
-table LinkMetrics {
-    1: LinkLabel label;
-    2: uint64 bw_link;
-    3: uint64 bw_used;
-    4: uint64 rtt;
-    5: uint32 mss;
-};
-
-struct NodeLabel {
-    NodeId id;
-    uint64 version;
+    LinkMetrics metrics;
 };
 
 table NodeMetrics {
-    1: NodeLabel label;
-    2: PeerDescription description;
-    3: uint64 forwarding_time;
+    1: uint64 forwarding_time;
 };
 
-table RoutingTableUpdate {
-    1: vector<NodeMetrics> nodes;
-    2: vector<LinkMetrics> links;
+struct NodeStatus {
+    NodeId id;
+    uint64 version;
+    NodeMetrics metrics;
 };

@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/fidl/fidl.gni")
 import("//build/fuzzing/fuzzer.gni")
 
 ###############################################################################
@@ -77,12 +78,23 @@ source_set("routing_table") {
   ]
 }
 
+fidl("fuchsia.overnet.routingtablefuzzer") {
+  sources = [
+    "routing_table_fuzzer.fidl",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.overnet.protocol",
+  ]
+}
+
 fuzz_target("routing_table_fuzzer") {
   testonly = true
   sources = [
     "routing_table_fuzzer.cc",
   ]
   deps = [
+    ":fuchsia.overnet.routingtablefuzzer",
     ":routing_table",
     "//garnet/lib/overnet/protocol:fidl",
     "//garnet/lib/overnet/protocol:varint",

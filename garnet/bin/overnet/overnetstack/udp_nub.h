@@ -131,7 +131,7 @@ class UdpNub final : public UdpNubBase, public OvernetApp::Actor {
   overnet::Router* GetRouter() override { return endpoint_; }
 
   void Publish(overnet::LinkPtr<> link) override {
-    overnet::NodeId node = overnet::NodeId(link->GetLinkMetrics().label()->to);
+    overnet::NodeId node = overnet::NodeId(link->GetLinkStatus().to);
     OVERNET_TRACE(DEBUG) << "NewLink: " << node << "\n";
     endpoint_->RegisterPeer(node);
     endpoint_->RegisterLink(std::move(link));

@@ -83,13 +83,12 @@ async fn exec(svc: OvernetProxy, quiet: bool) -> Result<(), Error> {
     let mut stream = ServiceProviderRequestStream::from_channel(chan);
     svc.register_service(ExampleMarker::NAME, ClientEnd::new(p))?;
     while let Some(ServiceProviderRequest::ConnectToService {
-        service_name,
         chan,
         control_handle: _control_handle,
     }) = await!(next_request(&mut stream))?
     {
         if !quiet {
-            println!("Received service request for service {:?}", service_name);
+            println!("Received service request for service");
         }
         let chan = fasync::Channel::from_channel(chan).context("failed to make async channel")?;
         spawn_example_server(chan, quiet);

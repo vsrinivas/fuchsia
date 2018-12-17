@@ -12,6 +12,10 @@ const Header = `
 
 #include "lib/fidl/cpp/internal/header.h"
 
+{{- if .HasOvernetStreams }}
+#include <lib/fidl/cpp/overnet_stream.h>
+{{- end }}
+
 {{ range .Headers -}}
 #include <{{ . }}>
 {{ end -}}
@@ -23,7 +27,7 @@ namespace {{ . }} {
 
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Enum }}{{ template "EnumForwardDeclaration" . }}{{- end }}
-{{- if Eq .Kind Kinds.Interface }}{{ template "InterfaceForwardDeclaration" . }}{{- end }}
+{{- if Eq .Kind Kinds.Interface }}{{ template "DispatchInterfaceForwardDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Struct }}{{ template "StructForwardDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Table }}{{ template "TableForwardDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Union }}{{ template "UnionForwardDeclaration" . }}{{- end }}
@@ -32,7 +36,7 @@ namespace {{ . }} {
 
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Const }}{{ template "ConstDeclaration" . }}{{- end }}
-{{- if Eq .Kind Kinds.Interface }}{{ template "InterfaceDeclaration" . }}{{- end }}
+{{- if Eq .Kind Kinds.Interface }}{{ template "DispatchInterfaceDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Struct }}{{ template "StructDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Table }}{{ template "TableDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Union }}{{ template "UnionDeclaration" . }}{{- end }}
@@ -47,7 +51,7 @@ namespace fidl {
 
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Enum }}{{ template "EnumTraits" . }}{{- end }}
-{{- if Eq .Kind Kinds.Interface }}{{ template "InterfaceTraits" . }}{{- end }}
+{{- if Eq .Kind Kinds.Interface }}{{ template "DispatchInterfaceTraits" . }}{{- end }}
 {{- if Eq .Kind Kinds.Struct }}{{ template "StructTraits" . }}{{- end }}
 {{- if Eq .Kind Kinds.Table }}{{ template "TableTraits" . }}{{- end }}
 {{- if Eq .Kind Kinds.Union }}{{ template "UnionTraits" . }}{{- end }}
@@ -56,4 +60,22 @@ namespace fidl {
 
 }  // namespace fidl
 {{ end }}
+
+{{- define "DispatchInterfaceForwardDeclaration" -}}
+{{- if Eq .Transport "Channel" -}}{{ template "InterfaceForwardDeclaration" . }}{{- end }}
+{{- if Eq .Transport "OvernetStream" }}{{ template "OvernetStreamForwardDeclaration" . }}{{- end }}
+{{- if Eq .Transport "SocketControl" -}}{{ template "InterfaceForwardDeclaration" . }}{{- end }}
+{{- end -}}
+
+{{- define "DispatchInterfaceDeclaration" -}}
+{{- if Eq .Transport "Channel" -}}{{ template "InterfaceDeclaration" . }}{{- end }}
+{{- if Eq .Transport "OvernetStream" }}{{ template "OvernetStreamDeclaration" . }}{{- end }}
+{{- if Eq .Transport "SocketControl" -}}{{ template "InterfaceDeclaration" . }}{{- end }}
+{{- end -}}
+
+{{- define "DispatchInterfaceTraits" -}}
+{{- if Eq .Transport "Channel" -}}{{ template "InterfaceTraits" . }}{{- end }}
+{{- if Eq .Transport "OvernetStream" }}{{ template "OvernetStreamTraits" . }}{{- end }}
+{{- if Eq .Transport "SocketControl" -}}{{ template "InterfaceTraits" . }}{{- end }}
+{{- end -}}
 `

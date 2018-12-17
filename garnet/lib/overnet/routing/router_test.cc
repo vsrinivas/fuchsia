@@ -45,11 +45,9 @@ class MockLink {
         link_->Forward(std::make_shared<Message>(std::move(message)));
       }
 
-      fuchsia::overnet::protocol::LinkMetrics GetLinkMetrics() override {
-        fuchsia::overnet::protocol::LinkMetrics lm;
-        lm.set_label(fuchsia::overnet::protocol::LinkLabel{
-            src_.as_fidl(), peer_.as_fidl(), 1, 1});
-        return lm;
+      fuchsia::overnet::protocol::LinkStatus GetLinkStatus() override {
+        return fuchsia::overnet::protocol::LinkStatus{src_.as_fidl(),
+                                                      peer_.as_fidl(), 1, 1};
       }
 
      private:

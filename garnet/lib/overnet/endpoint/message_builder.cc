@@ -72,7 +72,7 @@ Slice MessageWireEncoder::Write(Border desired_border) const {
           p = varint::Write(txid_, txid_len, p);
         }
         *p++ = static_cast<uint8_t>(MessageFragmentType::kOrdinal);
-        p = varint::Write(ordinal_len_len, ordinal_len, p);
+        p = varint::Write(ordinal_len, ordinal_len_len, p);
         p = varint::Write(ordinal_, ordinal_len, p);
         *p++ = static_cast<uint8_t>(MessageFragmentType::kBody);
         p = varint::Write(body_len, body_len_len, p);

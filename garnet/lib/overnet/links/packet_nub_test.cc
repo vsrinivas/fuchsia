@@ -198,8 +198,8 @@ TEST(PacketNub, ProcessHandshakeFromAnnounceAndVerifyLink) {
               Slice::FromContainer({3}) /* HelloAck packet */);
   EXPECT_TRUE(Mock::VerifyAndClearExpectations(&nub));
 
-  EXPECT_EQ(NodeId(1), NodeId((*link)->GetLinkMetrics().label()->from));
-  EXPECT_EQ(NodeId(2), NodeId((*link)->GetLinkMetrics().label()->to));
+  EXPECT_EQ(NodeId(1), NodeId((*link)->GetLinkStatus().from));
+  EXPECT_EQ(NodeId(2), NodeId((*link)->GetLinkStatus().to));
 }
 
 TEST(PacketNub, ProcessHandshakeFromHelloAndVerifyLink) {
@@ -230,8 +230,8 @@ TEST(PacketNub, ProcessHandshakeFromHelloAndVerifyLink) {
               Slice::FromContainer({0}) /* Connected packet */);
   EXPECT_TRUE(Mock::VerifyAndClearExpectations(&nub));
 
-  EXPECT_EQ(NodeId(2), NodeId((*link)->GetLinkMetrics().label()->from));
-  EXPECT_EQ(NodeId(1), NodeId((*link)->GetLinkMetrics().label()->to));
+  EXPECT_EQ(NodeId(2), NodeId((*link)->GetLinkStatus().from));
+  EXPECT_EQ(NodeId(1), NodeId((*link)->GetLinkStatus().to));
 }
 
 }  // namespace packet_nub_test

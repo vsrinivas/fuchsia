@@ -20,7 +20,7 @@ class PacketLink : public Link, private PacketProtocol::PacketSender {
   void Forward(Message message) override final;
   void Process(TimeStamp received, Slice packet);
   virtual void Emit(Slice packet) = 0;
-  fuchsia::overnet::protocol::LinkMetrics GetLinkMetrics() override final;
+  fuchsia::overnet::protocol::LinkStatus GetLinkStatus() override final;
 
  private:
   void SchedulePacket();

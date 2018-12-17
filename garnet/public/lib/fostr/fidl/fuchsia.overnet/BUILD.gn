@@ -9,5 +9,6 @@ fostr_fidl("fuchsia.overnet") {
 
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.overnet.protocol",
+    "//garnet/public/lib/fostr/fidl/fuchsia.overnet.services",
   ]
 }

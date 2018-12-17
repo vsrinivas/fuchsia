@@ -15,7 +15,9 @@
 
 namespace overnet {
 
-class RouterEndpoint final : public Router {
+// A thin wrapper over Router to provide a stream abstraction, and provide
+// for connecting streams to node-wide services.
+class RouterEndpoint : public Router {
  private:
   class ConnectionStream;
 
@@ -96,6 +98,37 @@ class RouterEndpoint final : public Router {
     InternalListNode<Stream> connection_stream_link_;
   };
 
+  // A service is published by an endpoint for clients to connect to.
+  // The service automatically binds to the endpoint at construction, and
+  // unbinds at destruction.
+  class Service {
+   public:
+    Service(RouterEndpoint* endpoint, std::string fully_qualified_name,
+            fuchsia::overnet::protocol::ReliabilityAndOrdering
+                reliability_and_ordering)
+        : fully_qualified_name(std::move(fully_qualified_name)),
+          reliability_and_ordering(reliability_and_ordering),
+          endpoint_(endpoint) {
+      endpoint_->Bind(this);
+    }
+    virtual ~Service() { endpoint_->Unbind(this); }
+
+    Service(const Service&) = delete;
+    Service& operator=(const Service&) = delete;
+
+    // The name clients can request to reach this service.
+    const std::string fully_qualified_name;
+    // The reliability and ordering constraints expected by this service.
+    const fuchsia::overnet::protocol::ReliabilityAndOrdering
+        reliability_and_ordering;
+
+    // Acceptor function to create a new stream.
+    virtual void AcceptStream(NewStream stream) = 0;
+
+   private:
+    RouterEndpoint* const endpoint_;
+  };
+
   StatusOr<ReceivedIntroduction> UnwrapForkFrame(
       NodeId peer, fuchsia::overnet::protocol::ForkFrame fork_frame);
 
@@ -105,7 +138,7 @@ class RouterEndpoint final : public Router {
   explicit RouterEndpoint(Timer* timer, NodeId node_id,
                           bool allow_non_determinism);
   ~RouterEndpoint();
-  void Close(Callback<void> done) override;
+  void Close(Callback<void> done) override final;
 
   void RegisterPeer(NodeId peer);
 
@@ -116,16 +149,27 @@ class RouterEndpoint final : public Router {
     }
   }
 
-  void RecvIntro(StatusOrCallback<ReceivedIntroduction> ready);
-  void SendIntro(NodeId peer,
-                 fuchsia::overnet::protocol::ReliabilityAndOrdering
-                     reliability_and_ordering,
-                 fuchsia::overnet::protocol::Introduction introduction,
-                 StatusOrCallback<NewStream> new_stream);
+  template <class F>
+  void ForEachNodeDescription(F f) {
+    for (const auto& peer : connection_streams_) {
+      OVERNET_TRACE(DEBUG) << node_id() << " query desc on " << peer.first
+                           << " = " << peer.second.description_;
+      f(peer.first, peer.second.description_);
+    }
+  }
+
+  StatusOr<NewStream> InitiateStream(
+      NodeId peer,
+      fuchsia::overnet::protocol::ReliabilityAndOrdering
+          reliability_and_ordering,
+      const std::string& service_name);
 
  private:
-  void MaybeContinueIncomingForks();
-  void OnUnknownStream(NodeId peer, StreamId stream) override;
+  void OnUnknownStream(NodeId peer, StreamId stream) override final;
+  void Bind(Service* service);
+  void Unbind(Service* service);
+  void UpdatedDescription();
+  fuchsia::overnet::protocol::PeerDescription BuildDescription() const;
 
   class ConnectionStream final : public DatagramStream {
     friend class RouterEndpoint;
@@ -145,38 +189,58 @@ class RouterEndpoint final : public Router {
             reliability_and_ordering,
         fuchsia::overnet::protocol::Introduction introduction);
 
-    void Fork(fuchsia::overnet::protocol::ReliabilityAndOrdering
-                  reliability_and_ordering,
-              fuchsia::overnet::protocol::Introduction introduction,
-              StatusOrCallback<NewStream> new_stream);
+    StatusOr<NewStream> Fork(fuchsia::overnet::protocol::ReliabilityAndOrdering
+                                 reliability_and_ordering,
+                             const std::string& introduction);
 
-    Stream* GossipStream();
+    fuchsia::overnet::protocol::Peer_Proxy* proxy() { return &proxy_; }
 
    private:
-    void BeginForkRead();
-    void BeginGossipRead();
-    bool IsGossipStreamInitiator() { return endpoint_->node_id() < peer(); }
-    void InstantiateGossipStream(NewStream ns);
-
-    enum class ReadState {
-      Reading,
-      Waiting,
-      Stopped,
-    };
+    void BeginReading();
+    void SendFidl(fidl::Message message);
 
     RouterEndpoint* const endpoint_;
     uint64_t next_stream_id_;
 
-    ReadState fork_read_state_ = ReadState::Waiting;
-    ReadState gossip_read_state_ = ReadState::Waiting;
-    ManualConstructor<ReceiveOp> fork_read_;
-    ManualConstructor<ReceiveOp> gossip_read_;
-    InternalListNode<ConnectionStream> forking_ready_;
+    Optional<ReceiveOp> reader_;
     InternalList<Stream, &Stream::connection_stream_link_> forked_streams_;
-    ManualConstructor<fuchsia::overnet::protocol::ForkFrame> fork_frame_;
     Optional<Status> closing_status_;
-    bool forking_gossip_stream_ = false;
-    ClosedPtr<Stream> gossip_stream_;
+    fuchsia::overnet::protocol::PeerDescription description_;
+
+    class Proxy final : public fuchsia::overnet::protocol::Peer_Proxy {
+     public:
+      Proxy(ConnectionStream* connection_stream)
+          : connection_stream_(connection_stream) {}
+
+     private:
+      void Send_(fidl::Message message) override {
+        connection_stream_->SendFidl(std::move(message));
+      }
+      ConnectionStream* const connection_stream_;
+    };
+    class Stub final : public fuchsia::overnet::protocol::Peer_Stub {
+     public:
+      Stub(ConnectionStream* connection_stream)
+          : connection_stream_(connection_stream) {}
+
+      void Fork(fuchsia::overnet::protocol::ForkFrame fork) override;
+      void Ping(PingCallback callback) override;
+      void UpdateNodeStatus(
+          fuchsia::overnet::protocol::NodeStatus node) override;
+      void UpdateNodeDescription(
+          fuchsia::overnet::protocol::PeerDescription desc) override;
+      void UpdateLinkStatus(
+          fuchsia::overnet::protocol::LinkStatus link) override;
+
+     private:
+      void Send_(fidl::Message message) override {
+        connection_stream_->SendFidl(std::move(message));
+      }
+      ConnectionStream* const connection_stream_;
+    };
+
+    Proxy proxy_;
+    Stub stub_;
   };
 
   StatusOr<OutgoingFork> ForkImpl(
@@ -189,15 +253,14 @@ class RouterEndpoint final : public Router {
     return TimeDelta::FromMilliseconds(42);
   }
   void StartGossipTimer();
-  void SendGossipTo(NodeId target, Callback<void> done);
+  void SendGossipTo(NodeId target);
 
   std::unordered_map<NodeId, ConnectionStream> connection_streams_;
-  InternalList<ConnectionStream, &ConnectionStream::forking_ready_>
-      incoming_forks_;
-  StatusOrCallback<ReceivedIntroduction> recv_intro_ready_;
   Optional<Timeout> gossip_timer_;
+  Optional<Timeout> description_timer_;
   TimeDelta gossip_interval_ = InitialGossipInterval();
   bool closing_ = false;
+  std::map<std::string, Service*> services_;
 };
 
 }  // namespace overnet

@@ -70,8 +70,10 @@ class RoutingTable {
   using SelectedLinks = std::unordered_map<NodeId, SelectedLink>;
 
   void ProcessUpdate(
-      std::vector<fuchsia::overnet::protocol::NodeMetrics> node_metrics,
-      std::vector<fuchsia::overnet::protocol::LinkMetrics> link_metrics,
+      std::initializer_list<fuchsia::overnet::protocol::NodeStatus>
+          node_updates,
+      std::initializer_list<fuchsia::overnet::protocol::LinkStatus>
+          link_updates,
       bool flush_old_nodes);
 
   // Returns true if this update concludes any changes begun by all prior
@@ -100,19 +102,15 @@ class RoutingTable {
     return gossip_version_;
   }
 
-  struct Update {
-    uint64_t version;
-    fuchsia::overnet::protocol::RoutingTableUpdate data;
-  };
-
-  Update GenerateUpdate(Optional<NodeId> exclude_node) const;
+  uint64_t SendUpdate(fuchsia::overnet::protocol::Peer_Proxy* peer,
+                      Optional<NodeId> exclude_node) const;
 
   template <class F>
   void ForEachNodeMetric(F visitor) const {
-    std::vector<fuchsia::overnet::protocol::NodeMetrics> nodes_copy;
+    std::vector<fuchsia::overnet::protocol::NodeStatus> nodes_copy;
     {
       std::lock_guard lock{shared_table_mu_};
-      for (const auto& m : shared_node_metrics_) {
+      for (const auto& m : shared_node_status_) {
         nodes_copy.emplace_back(fidl::Clone(m));
       }
     }
@@ -121,28 +119,24 @@ class RoutingTable {
     }
   }
 
-  Status ValidateIncomingUpdate(
-      const std::vector<fuchsia::overnet::protocol::NodeMetrics>& nodes,
-      const std::vector<fuchsia::overnet::protocol::LinkMetrics>& links) const;
-
  private:
   const NodeId root_node_;
   Timer* const timer_;
 
-  struct Metrics {
-    std::vector<fuchsia::overnet::protocol::NodeMetrics> node_metrics;
-    std::vector<fuchsia::overnet::protocol::LinkMetrics> link_metrics;
-    bool Empty() const { return node_metrics.empty() && link_metrics.empty(); }
+  struct StatusVecs {
+    std::vector<fuchsia::overnet::protocol::NodeStatus> nodes;
+    std::vector<fuchsia::overnet::protocol::LinkStatus> links;
+    bool Empty() const { return nodes.empty() && links.empty(); }
     void Clear() {
-      node_metrics.clear();
-      link_metrics.clear();
+      nodes.clear();
+      links.clear();
     }
   };
-  Metrics change_log_;
+  StatusVecs change_log_;
   const bool allow_threading_;
   bool flush_requested_ = false;
 
-  void ApplyChanges(TimeStamp now, const Metrics& changes, bool flush);
+  void ApplyChanges(TimeStamp now, const StatusVecs& changes, bool flush);
   SelectedLinks BuildForwardingTable();
 
   TimeStamp last_update_{TimeStamp::Epoch()};
@@ -155,19 +149,19 @@ class RoutingTable {
   struct Node;
 
   struct Link {
-    Link(TimeStamp now, fuchsia::overnet::protocol::LinkMetrics initial_metrics,
+    Link(TimeStamp now, fuchsia::overnet::protocol::LinkStatus initial_status,
          Node* to)
-        : metrics(std::move(initial_metrics)), last_updated(now), to_node(to) {}
-    fuchsia::overnet::protocol::LinkMetrics metrics;
+        : status(std::move(initial_status)), last_updated(now), to_node(to) {}
+    fuchsia::overnet::protocol::LinkStatus status;
     TimeStamp last_updated;
     InternalListNode<Link> outgoing_link;
     Node* const to_node;
   };
 
   struct Node {
-    Node(TimeStamp now, fuchsia::overnet::protocol::NodeMetrics initial_metrics)
-        : metrics(std::move(initial_metrics)), last_updated(now) {}
-    fuchsia::overnet::protocol::NodeMetrics metrics;
+    Node(TimeStamp now, fuchsia::overnet::protocol::NodeStatus initial_status)
+        : status(std::move(initial_status)), last_updated(now) {}
+    fuchsia::overnet::protocol::NodeStatus status;
     TimeStamp last_updated;
     InternalList<Link, &Link::outgoing_link> outgoing_links;
 
@@ -183,13 +177,13 @@ class RoutingTable {
 
   void RemoveOutgoingLinks(Node& node);
 
-  std::unordered_map<NodeId, Node> node_metrics_;
-  std::unordered_map<routing_table_impl::FullLinkLabel, Link> link_metrics_;
+  std::unordered_map<NodeId, Node> nodes_;
+  std::unordered_map<routing_table_impl::FullLinkLabel, Link> links_;
 
   mutable std::mutex shared_table_mu_;
   uint64_t gossip_version_ = 0;
-  std::vector<fuchsia::overnet::protocol::NodeMetrics> shared_node_metrics_;
-  std::vector<fuchsia::overnet::protocol::LinkMetrics> shared_link_metrics_;
+  std::vector<fuchsia::overnet::protocol::NodeStatus> shared_node_status_;
+  std::vector<fuchsia::overnet::protocol::LinkStatus> shared_link_status_;
 
   uint64_t selected_links_version_ = 0;
   SelectedLinks selected_links_;

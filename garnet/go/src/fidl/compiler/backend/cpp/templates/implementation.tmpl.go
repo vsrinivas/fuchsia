@@ -19,7 +19,7 @@ namespace {{ . }} {
 
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Const }}{{ template "ConstDefinition" . }}{{- end }}
-{{- if Eq .Kind Kinds.Interface }}{{ template "InterfaceDefinition" . }}{{- end }}
+{{- if Eq .Kind Kinds.Interface }}{{ template "DispatchInterfaceDefinition" . }}{{- end }}
 {{- if Eq .Kind Kinds.Struct }}{{ template "StructDefinition" . }}{{- end }}
 {{- if Eq .Kind Kinds.Union }}{{ template "UnionDefinition" . }}{{- end }}
 {{- if Eq .Kind Kinds.XUnion }}{{ template "XUnionDefinition" . }}{{- end }}
@@ -30,4 +30,10 @@ namespace {{ . }} {
 }  // namespace {{ . }}
 {{- end }}
 {{ end }}
+
+{{- define "DispatchInterfaceDefinition" -}}
+{{- if Eq .Transport "Channel" -}}{{ template "InterfaceDefinition" . }}{{- end }}
+{{- if Eq .Transport "OvernetStream" }}{{ template "OvernetStreamDefinition" . }}{{- end }}
+{{- if Eq .Transport "SocketControl" -}}{{ template "InterfaceDefinition" . }}{{- end }}
+{{- end -}}
 `

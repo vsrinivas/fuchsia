@@ -12,9 +12,7 @@ namespace overnetstack {
 
 OvernetApp::OvernetApp(overnet::Timer* timer)
     : startup_context_(component::StartupContext::CreateFromStartupInfo()),
-      timer_(timer) {
-  UpdateDescription();
-}
+      timer_(timer) {}
 
 OvernetApp::~OvernetApp() {}
 
@@ -32,22 +30,7 @@ overnet::Status OvernetApp::Start() {
       return status.WithContext("Trying to start actor");
     }
   }
-  ReadNextIntroduction();
   return overnet::Status::Ok();
-}
-
-void OvernetApp::RegisterServiceProvider(
-    const std::string& name, std::unique_ptr<ServiceProvider> provider) {
-  service_providers_.emplace(name, std::move(provider));
-  UpdateDescription();
-}
-
-void OvernetApp::UpdateDescription() {
-  fuchsia::overnet::protocol::PeerDescription desc;
-  for (const auto& svc : service_providers_) {
-    desc.mutable_services()->push_back(svc.first);
-  }
-  endpoint_.SetDescription(std::move(desc));
 }
 
 void OvernetApp::BindStream(overnet::RouterEndpoint::NewStream ns,
@@ -62,44 +45,26 @@ void OvernetApp::BindStream(overnet::RouterEndpoint::NewStream ns,
   ZX_ASSERT(!channel.is_valid());
 }
 
-void OvernetApp::ConnectToLocalService(
-    const fuchsia::overnet::protocol::Introduction& intro,
-    zx::channel channel) {
-  if (!intro.has_service_name()) {
-    OVERNET_TRACE(DEBUG) << "No service name in local service request";
-    return;
-  }
-  auto it = service_providers_.find(*intro.service_name());
+void OvernetApp::ConnectToLocalService(const std::string& service_name,
+                                       zx::channel channel) {
+  auto it = service_providers_.find(service_name);
   if (it == service_providers_.end()) {
-    OVERNET_TRACE(DEBUG) << "Local service not found: "
-                         << *intro.service_name();
+    OVERNET_TRACE(DEBUG) << "Local service not found: " << service_name;
     return;
   }
-  it->second->Connect(intro, std::move(channel));
+  it->second->Connect(std::move(channel));
 }
 
-void OvernetApp::ReadNextIntroduction() {
-  // Loop, reading service creation requests, and attempting to bind them to
-  // local services.
-  endpoint_.RecvIntro(
-      [this](overnet::StatusOr<overnet::RouterEndpoint::ReceivedIntroduction>
-                 status) {
-        if (status.is_error()) {
-          OVERNET_TRACE(ERROR)
-              << "Failed to read introduction: " << status.AsStatus();
-          return;
-        }
-        zx_handle_t a, b;
-        auto err = zx_channel_create(0, &a, &b);
-        if (err != ZX_OK) {
-          status->new_stream.Fail(
-              overnet::Status::FromZx(err).WithContext("ReadNextIntroduction"));
-          return;
-        }
-        BindStream(std::move(status->new_stream), zx::channel(a));
-        ConnectToLocalService(std::move(status->introduction), zx::channel(b));
-        ReadNextIntroduction();
-      });
+void OvernetApp::ServiceProvider::AcceptStream(
+    overnet::RouterEndpoint::NewStream stream) {
+  zx_handle_t a, b;
+  auto err = zx_channel_create(0, &a, &b);
+  if (err != ZX_OK) {
+    stream.Fail(overnet::Status::FromZx(err).WithContext("AcceptStream"));
+    return;
+  }
+  app_->BindStream(std::move(stream), zx::channel(a));
+  Connect(zx::channel(b));
 }
 
 }  // namespace overnetstack

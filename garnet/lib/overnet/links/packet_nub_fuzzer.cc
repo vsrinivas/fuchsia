@@ -51,7 +51,7 @@ void PacketNubFuzzer::Nub::SendTo(uint64_t dest, Slice slice) {
 Router* PacketNubFuzzer::Nub::GetRouter() { return &router_; }
 
 void PacketNubFuzzer::Nub::Publish(LinkPtr<> link) {
-  auto node = link->GetLinkMetrics().label()->to;
+  auto node = link->GetLinkStatus().to;
   assert(NodeId(node) != NodeId(1));
   router_.RegisterLink(std::move(link));
 }

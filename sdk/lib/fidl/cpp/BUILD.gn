@@ -100,6 +100,8 @@ sdk_source_set("cpp_base") {
     "internal/logging.cc",
     "internal/logging.h",
     "object_coding.h",
+    "overnet_stream.h",
+    "overnet_stream.cc",
     "string.cc",
     "string.h",
     "traits.h",

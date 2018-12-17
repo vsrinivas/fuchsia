@@ -16,7 +16,7 @@ interface Overnet {
 };
 
 interface ServiceProvider {
-    ConnectToService(string service_name, handle<channel> chan);
+    ConnectToService(handle<channel> chan);
 };
 
 struct Peer {

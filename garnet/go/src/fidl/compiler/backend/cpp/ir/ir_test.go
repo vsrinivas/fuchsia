@@ -82,6 +82,7 @@ func TestCompileInterface(t *testing.T) {
 				EventSenderName: "Test_EventSender",
 				SyncName:        "Test_Sync",
 				SyncProxyName:   "Test_SyncProxy",
+				Transport:       "Channel",
 				Methods: []Method{
 					{
 						Ordinal:        1,

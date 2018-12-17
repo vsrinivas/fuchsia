@@ -60,8 +60,8 @@ source_set("bbr") {
     "//garnet/lib/overnet/environment:trace",
     "//garnet/lib/overnet/vocabulary:bandwidth",
     "//garnet/lib/overnet/vocabulary:callback",
-    "//garnet/lib/overnet/vocabulary:optional",
     "//garnet/lib/overnet/vocabulary:internal_list",
+    "//garnet/lib/overnet/vocabulary:optional",
   ]
 }
 
