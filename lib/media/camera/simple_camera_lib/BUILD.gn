@@ -51,8 +51,6 @@ group("tests") {
 }
 
 executable("simple_camera_unittests") {
-  output_name = "simple_camera_unittests"
-
   testonly = true
 
   sources = [
@@ -67,7 +65,6 @@ executable("simple_camera_unittests") {
 
 package("camera_tests") {
   testonly = true
-  deprecated_system_image = true
 
   package_name = "simple_camera_unittests"
 
