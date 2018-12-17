@@ -97,7 +97,8 @@ void Heap::Free(BlockIndex block_index) {
 
     // Repeatedly merge buddies of the freed block until the buddy is
     // not free or we hit the maximum block size.
-    while (GetType(buddy) == BlockType::kFree && GetOrder(block) < kNumOrders - 1) {
+    while (GetType(buddy) == BlockType::kFree && GetOrder(block) < kNumOrders - 1 &&
+           GetOrder(block) == GetOrder(buddy)) {
         RemoveFree(buddy_index);
         if (buddy < block) {
             // We must always merge into the lower index block.

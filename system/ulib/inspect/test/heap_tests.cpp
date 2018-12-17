@@ -182,6 +182,52 @@ bool Allocate() {
     END_TEST;
 }
 
+bool MergeBlockedByAllocation() {
+    BEGIN_TEST;
+
+    auto vmo = fzl::ResizeableVmoMapper::Create(4096, "test");
+    ASSERT_NE(nullptr, vmo.get());
+    Heap heap(std::move(vmo));
+
+    // Allocate 4 small blocks at the beginning of the buffer.
+    BlockIndex b;
+    EXPECT_EQ(ZX_OK, heap.Allocate(kMinAllocationSize, &b));
+    EXPECT_EQ(0, b);
+    EXPECT_EQ(ZX_OK, heap.Allocate(kMinAllocationSize, &b));
+    EXPECT_EQ(1, b);
+    EXPECT_EQ(ZX_OK, heap.Allocate(kMinAllocationSize, &b));
+    EXPECT_EQ(2, b);
+    EXPECT_EQ(ZX_OK, heap.Allocate(kMinAllocationSize, &b));
+    EXPECT_EQ(3, b);
+
+    // Free position 2 first, then 0 and 1.
+    // The final free sees a situation like:
+    // FREE | FREE | FREE | RESERVED
+    // The first two spaces will get merged into an order 1 block, but the
+    // reserved space will prevent merging into an order 2 block.
+    heap.Free(2);
+    heap.Free(0);
+    heap.Free(1);
+
+    EXPECT_TRUE(MatchDebugBlockVectors({{0, BlockType::kFree, 1},
+                                        {2, BlockType::kFree, 0},
+                                        {3, BlockType::kReserved, 0},
+                                        {4, BlockType::kFree, 2},
+                                        {8, BlockType::kFree, 3},
+                                        {16, BlockType::kFree, 4},
+                                        {32, BlockType::kFree, 5},
+                                        {64, BlockType::kFree, 6},
+                                        {128, BlockType::kFree, 7}},
+                                       dump(heap)));
+
+    heap.Free(3);
+
+    EXPECT_TRUE(
+        MatchDebugBlockVectors({{0, BlockType::kFree, 7}, {128, BlockType::kFree, 7}}, dump(heap)));
+
+    END_TEST;
+}
+
 bool Extend() {
     BEGIN_TEST;
 
@@ -274,6 +320,7 @@ bool ExtendFailure() {
 BEGIN_TEST_CASE(HeapTests)
 RUN_TEST(Create)
 RUN_TEST(Allocate)
+RUN_TEST(MergeBlockedByAllocation)
 RUN_TEST(Extend)
 RUN_TEST(ExtendFailure)
 END_TEST_CASE(HeapTests)
