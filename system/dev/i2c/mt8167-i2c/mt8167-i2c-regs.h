@@ -12,15 +12,13 @@
 
 namespace mt8167_i2c {
 
-class DataPortReg : public hwreg::RegisterBase<DataPortReg, uint32_t> {
+class DataPortReg : public hwreg::RegisterBase<DataPortReg, uint8_t> {
 public:
-    DEF_FIELD(7, 0, data_port);
     static auto Get() { return hwreg::RegisterAddr<DataPortReg>(0x00); }
 };
 
-class SlaveAddrReg : public hwreg::RegisterBase<SlaveAddrReg, uint32_t> {
+class SlaveAddrReg : public hwreg::RegisterBase<SlaveAddrReg, uint8_t> {
 public:
-    DEF_FIELD(7, 0, slave_addr);
     static auto Get() { return hwreg::RegisterAddr<SlaveAddrReg>(0x04); }
 };
 
@@ -55,15 +53,19 @@ public:
     static auto Get() { return hwreg::RegisterAddr<ControlReg>(0x10); }
 };
 
-class TransacLenReg : public hwreg::RegisterBase<TransacLenReg, uint32_t> {
+// This register is not documented in the datasheet.
+class TransferLenReg : public hwreg::RegisterBase<TransferLenReg, uint8_t> {
 public:
-    DEF_FIELD(7, 0, transfer_len);
+    static auto Get() { return hwreg::RegisterAddr<TransferLenReg>(0x14); }
+};
+
+class TransacLenReg : public hwreg::RegisterBase<TransacLenReg, uint8_t> {
+public:
     static auto Get() { return hwreg::RegisterAddr<TransacLenReg>(0x18); }
 };
 
-class DelayLenReg : public hwreg::RegisterBase<DelayLenReg, uint32_t> {
+class DelayLenReg : public hwreg::RegisterBase<DelayLenReg, uint8_t> {
 public:
-    DEF_FIELD(7, 0, delay_len);
     static auto Get() { return hwreg::RegisterAddr<DelayLenReg>(0x1c); }
 };
 

@@ -9,9 +9,9 @@
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/i2cimpl.h>
+#include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
-#include <ddk/protocol/platform-device-lib.h>
 
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
@@ -21,28 +21,6 @@
 #include <zircon/types.h>
 
 //#define TEST_USB_REGS_READ
-
-// clang-format off
-#define REG_R32(reg) reg::Get().ReadFrom(&keys_[id].mmio).reg_value()
-
-#define REG_W32(reg, val)                                               \
-    reg::Get().FromValue(0).                                            \
-    set_reg_value(static_cast<uint32_t>(val)).                          \
-    WriteTo(&keys_[id].mmio)
-
-#define REG_R(reg, field) reg::Get().ReadFrom(&keys_[id].mmio).field()
-
-#define REG_RMW(reg, field, val)                                        \
-    reg::Get().ReadFrom(&keys_[id].mmio).                               \
-    set_ ## field(static_cast<uint32_t>(val)).                          \
-    WriteTo(&keys_[id].mmio)
-
-#define REG_RMMW(reg, field1, val1, field2, val2)                       \
-    reg::Get().ReadFrom(&keys_[id].mmio).                               \
-    set_ ## field1(static_cast<uint32_t>(val1)).                        \
-    set_ ## field2(static_cast<uint32_t>(val2)).                        \
-    WriteTo(&keys_[id].mmio)
-// clang-format on
 
 namespace mt8167_i2c {
 
@@ -71,7 +49,8 @@ zx_status_t Mt8167I2c::I2cImplTransact(uint32_t id, const i2c_impl_op_t* ops, si
         return ZX_ERR_INVALID_ARGS;
     }
 
-    REG_RMMW(ControlReg, ackerr_det_en, 1, clk_ext_en, 1);
+    auto control_reg = ControlReg::Get().ReadFrom(&keys_[id].mmio);
+    control_reg.set_ackerr_det_en(1).set_clk_ext_en(1).WriteTo(&keys_[id].mmio);
 
     for (size_t i = 0; i < count; ++i) {
         if (ops[i].address > 0xFF) {
@@ -105,7 +84,8 @@ int Mt8167I2c::IrqThread() {
         keys_[id].irq.ack();
         auto st = IntrStatReg::Get().ReadFrom(&keys_[id].mmio);
         if (st.arb_lost() || st.hs_nacker() || st.ackerr()) {
-            zxlogf(ERROR, "%s: error 0x%08X\n", __func__, REG_R32(IntrStatReg));
+            zxlogf(ERROR, "%s: error 0x%08X\n", __func__,
+                   IntrStatReg::Get().ReadFrom(&keys_[id].mmio).reg_value());
             IntrStatReg::Get().ReadFrom(&keys_[id].mmio).Print();
         }
         keys_[id].event.signal(0, kEventCompletion);
@@ -113,17 +93,17 @@ int Mt8167I2c::IrqThread() {
 }
 
 void Mt8167I2c::Reset(uint32_t id) {
-    REG_RMW(SoftResetReg, soft_reset, 1);
-    REG_W32(IntrStatReg, 0xFFFFFFFF); // Write to clear register.
+    SoftResetReg::Get().ReadFrom(&keys_[id].mmio).set_soft_reset(1).WriteTo(&keys_[id].mmio);
+    IntrStatReg::Get().FromValue(0xFFFFFFFF).WriteTo(&keys_[id].mmio); // Write to clear register.
 }
 
 void Mt8167I2c::DataMove(bool is_read, uint32_t id, void* buf, size_t len) {
     uint8_t* p = static_cast<uint8_t*>(buf);
     for (size_t i = 0; i < len; ++i) {
         if (is_read) {
-            p[i] = static_cast<uint8_t>(REG_R(DataPortReg, data_port));
+            p[i] = DataPortReg::Get().ReadFrom(&keys_[id].mmio).reg_value();
         } else {
-            REG_RMW(DataPortReg, data_port, p[i]);
+            DataPortReg::Get().FromValue(p[i]).WriteTo(&keys_[id].mmio);
         }
     }
 }
@@ -139,17 +119,18 @@ zx_status_t Mt8167I2c::Transact(bool is_read, uint32_t id, uint8_t addr, void* b
     }
 
     uint8_t addr_dir = static_cast<uint8_t>((addr << 1) | is_read);
-    REG_RMW(FifoAddrClrReg, fifo_addr_clr, 1);
-    REG_RMW(SlaveAddrReg, slave_addr, addr_dir);
-    REG_RMW(TransacLenReg, transfer_len, len);
+    FifoAddrClrReg::Get().ReadFrom(&keys_[id].mmio).set_fifo_addr_clr(1).WriteTo(&keys_[id].mmio);
+    SlaveAddrReg::Get().ReadFrom(&keys_[id].mmio).set_reg_value(addr_dir).WriteTo(&keys_[id].mmio);
+    TransferLenReg::Get().FromValue(static_cast<uint8_t>(len)).WriteTo(&keys_[id].mmio);
+    TransacLenReg::Get().FromValue(1).WriteTo(&keys_[id].mmio); // Single transaction of len bytes.
 
-    REG_W32(IntrStatReg, 0xFFFFFFFF); // Write to clear register.
+    IntrStatReg::Get().FromValue(0xFFFFFFFF).WriteTo(&keys_[id].mmio); // Write to clear register.
 
     if (!is_read) {
         DataMove(is_read, id, buf, len);
     }
 
-    REG_RMW(StartReg, start, 1);
+    StartReg::Get().ReadFrom(&keys_[id].mmio).set_start(1).WriteTo(&keys_[id].mmio);
     status = keys_[id].event.wait_one(kEventCompletion, zx::deadline_after(kTimeout), nullptr);
     if (status != ZX_OK) {
         return status;
