@@ -6,4 +6,8 @@ import("//garnet/public/build/fostr/fostr_fidl.gni")
 
 fostr_fidl("fuchsia.ui.policy") {
   fidl_target = "//garnet/public/fidl/fuchsia.ui.policy"
+
+  deps = [
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.gfx",
+  ]
 }
