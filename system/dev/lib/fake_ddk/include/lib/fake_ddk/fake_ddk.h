@@ -6,8 +6,20 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <fbl/array.h>
 
 namespace fake_ddk {
+
+// Generic protocol.
+struct Protocol {
+    void* ops;
+    void* ctx;
+};
+
+struct ProtocolEntry {
+    uint32_t id;
+    Protocol proto;
+};
 
 // Fake instances of a parent device, and device returned by DeviceAdd.
 extern zx_device_t* kFakeDevice;
@@ -27,6 +39,23 @@ class Bind {
     Bind();
     ~Bind() { instance_ = nullptr; }
 
+    // Verifies that the whole process of bind and unbind went as expected.
+    bool Ok();
+
+    // Sets optional expectations for DeviceAddMetadata(). If used, the provided
+    // pointer must remain valid until the call to DeviceAddMetadata(). If the
+    // provided data doesn't match the expectations, DeviceAddMetadata will fail
+    // with ZX_ERR_BAD_STATE.
+    void ExpectMetadata(const void* data, size_t data_length);
+
+    // Returns the number of times DeviceAddMetadata has been called and the
+    // total length of all the data provided.
+    void GetMetadataInfo(int* num_calls, size_t* length);
+
+    // Sets an optional list of protocols that the ddk should return for the
+    // parent device.
+    void SetProtocols(fbl::Array<ProtocolEntry>&& protocols);
+
     static Bind* Instance() { return instance_; }
 
     // Internal fake implementation of ddk functionality.
@@ -42,22 +71,15 @@ class Bind {
     // Internal fake implementation of ddk functionality.
     void DeviceMakeVisible(zx_device_t* dev);
 
-    // Verifies that the whole process of bind and unbind went as expected.
-    bool Ok();
+    // Internal fake implementation of ddk functionality.
+    zx_status_t DeviceGetProtocol(const zx_device_t* device, uint32_t proto_id, void* protocol);
 
-    // Sets optional expectations for DeviceAddMetadata(). If used, the provided
-    // pointer must remain valid until the call to DeviceAddMetadata(). If the
-    // provided data doesn't match the expectations, DeviceAddMetadata will fail
-    // with ZX_ERR_BAD_STATE.
-    void ExpectMetadata(const void* data, size_t data_length);
-
-    // Returns the number of times DeviceAddMetadata has been called and the
-    // total length of all the data provided.
-    void GetMetadataInfo(int* num_calls, size_t* length);
-
-    static Bind* instance_;
+    // Internal fake implementation of ddk functionality.
+    const char* DeviceGetName(zx_device_t* device);
 
   private:
+    static Bind* instance_;
+
     bool bad_parent_ = false;
     bool bad_device_ = false;
     bool add_called_ = false;
@@ -67,6 +89,8 @@ class Bind {
     int add_metadata_calls_ = 0;
     size_t metadata_length_ = 0;
     const void* metadata_ = nullptr;
+
+    fbl::Array<ProtocolEntry> protocols_;
 };
 
 }  // namespace fake_ddk

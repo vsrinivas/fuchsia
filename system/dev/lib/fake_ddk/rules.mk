@@ -13,6 +13,7 @@ MODULE_SRCS := \
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
+    system/ulib/fbl \
 
 MODULE_LIBS := \
     system/ulib/c \

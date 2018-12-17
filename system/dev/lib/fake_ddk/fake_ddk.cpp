@@ -5,6 +5,8 @@
 
 #include <stdlib.h>
 
+#include <utility>
+
 #include <lib/fake_ddk/fake_ddk.h>
 #include <unittest/unittest.h>
 #include <zircon/assert.h>
@@ -19,6 +21,29 @@ Bind* Bind::instance_ = nullptr;
 Bind::Bind() {
     ZX_ASSERT(!instance_);
     instance_ = this;
+}
+
+bool Bind::Ok() {
+    BEGIN_HELPER;
+    EXPECT_TRUE(add_called_);
+    EXPECT_TRUE(remove_called_);
+    EXPECT_FALSE(bad_parent_);
+    EXPECT_FALSE(bad_device_);
+    END_HELPER;
+}
+
+void Bind::ExpectMetadata(const void* data, size_t data_length) {
+    metadata_ = data;
+    metadata_length_ = data_length;
+}
+
+void Bind::GetMetadataInfo(int* num_calls, size_t* length) {
+    *num_calls = add_metadata_calls_;
+    *length = metadata_length_;
+}
+
+void Bind::SetProtocols(fbl::Array<ProtocolEntry>&& protocols) {
+    protocols_ = std::move(protocols);
 }
 
 zx_status_t Bind::DeviceAdd(zx_driver_t* drv, zx_device_t* parent,
@@ -66,23 +91,27 @@ void Bind::DeviceMakeVisible(zx_device_t* device) {
     return;
 }
 
-bool Bind::Ok() {
-    BEGIN_HELPER;
-    EXPECT_TRUE(add_called_);
-    EXPECT_TRUE(remove_called_);
-    EXPECT_FALSE(bad_parent_);
-    EXPECT_FALSE(bad_device_);
-    END_HELPER;
+zx_status_t Bind::DeviceGetProtocol(const zx_device_t* device, uint32_t proto_id, void* protocol) {
+    if (device != kFakeParent) {
+        bad_device_ = true;
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    auto out = reinterpret_cast<Protocol*>(protocol);
+    for (const auto& proto : protocols_) {
+        if (proto_id == proto.id) {
+            out->ops = proto.proto.ops;
+            out->ctx = proto.proto.ctx;
+            return ZX_OK;
+        }
+    }
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
-void Bind::ExpectMetadata(const void* data, size_t data_length) {
-    metadata_ = data;
-    metadata_length_ = data_length;
-}
-
-void Bind::GetMetadataInfo(int* num_calls, size_t* length) {
-    *num_calls = add_metadata_calls_;
-    *length = metadata_length_;
+const char* Bind::DeviceGetName(zx_device_t* device) {
+    if (device != kFakeParent) {
+        bad_device_ = true;
+    }
+    return "";
 }
 
 }  // namespace fake_ddk
@@ -117,5 +146,20 @@ void device_make_visible(zx_device_t* device) {
     return;
 }
 
+zx_status_t device_get_protocol(const zx_device_t* device, uint32_t proto_id, void* protocol) {
+    if (!fake_ddk::Bind::Instance()) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    return fake_ddk::Bind::Instance()->DeviceGetProtocol(device, proto_id, protocol);
+}
+
+const char* device_get_name(zx_device_t* device) {
+    if (!fake_ddk::Bind::Instance()) {
+        return nullptr;
+    }
+    return fake_ddk::Bind::Instance()->DeviceGetName(device);
+}
+
+extern "C" void driver_printf(uint32_t flags, const char* fmt, ...) {}
 
 zx_driver_rec __zircon_driver_rec__ = {};
