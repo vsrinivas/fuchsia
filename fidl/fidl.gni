@@ -41,6 +41,9 @@ template("fidl") {
   if (defined(invoker.cpp_legacy_callbacks)) {
     not_needed(invoker, [ "cpp_legacy_callbacks" ])
   }
+  if (defined(invoker.cpp_public_deps)) {
+    not_needed(invoker, [ "cpp_public_deps"])
+  }
 
   if (current_toolchain == fidl_toolchain) {
     import("//build/fidl/fidl_library.gni")
