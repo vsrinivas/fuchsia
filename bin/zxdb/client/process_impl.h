@@ -49,6 +49,9 @@ class ProcessImpl : public Process, public ProcessSymbols::Notifications {
   void ReadMemory(
       uint64_t address, uint32_t size,
       std::function<void(const Err&, MemoryDump)> callback) override;
+  virtual void WriteMemory(
+      uint64_t address, std::vector<uint8_t> data,
+      std::function<void(const Err&)> callback) override;
 
   // Notifications from the agent that a thread has started or exited.
   void OnThreadStarting(const debug_ipc::ThreadRecord& record);

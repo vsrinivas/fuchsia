@@ -33,6 +33,14 @@ inline void Serialize(const std::vector<T>& v, MessageWriter* writer) {
     Serialize(v[i], writer);
 }
 
+template <>
+inline void Serialize(const std::vector<uint8_t>& v, MessageWriter* writer) {
+  uint32_t size = static_cast<uint32_t>(v.size());
+  writer->WriteUint32(size);
+  if (size > 0)
+    writer->WriteBytes(&v[0], size);
+}
+
 // Will call Deserialize for each element in the vector.
 template <typename T>
 inline bool Deserialize(MessageReader* reader, std::vector<T>* v) {
@@ -45,6 +53,17 @@ inline bool Deserialize(MessageReader* reader, std::vector<T>* v) {
       return false;
   }
   return true;
+}
+
+template <>
+inline bool Deserialize(MessageReader* reader, std::vector<uint8_t>* v) {
+  uint32_t size = 0;
+  if (!reader->ReadUint32(&size))
+    return false;
+  v->resize(size);
+  if (size == 0)
+    return true;
+  return reader->ReadBytes(size, &(*v)[0]);
 }
 
 }  // namespace debug_ipc

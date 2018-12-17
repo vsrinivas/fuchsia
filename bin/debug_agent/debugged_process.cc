@@ -298,6 +298,16 @@ void DebuggedProcess::OnModules(debug_ipc::ModulesReply* reply) {
     GetModulesForProcess(process_, dl_debug_addr_, &reply->modules);
 }
 
+void DebuggedProcess::OnWriteMemory(
+    const debug_ipc::WriteMemoryRequest& request,
+    debug_ipc::WriteMemoryReply* reply) {
+  size_t actual = 0;
+  reply->status = process_.write_memory(request.address, &request.data[0],
+                                        request.data.size(), &actual);
+  if (reply->status == ZX_OK && actual != request.data.size())
+    reply->status = ZX_ERR_IO;  // Convert partial writes to errors.
+}
+
 void DebuggedProcess::PauseAll(std::vector<uint64_t>* paused_koids) {
   for (auto& pair : threads_) {
     if (pair.second->Pause() && paused_koids)

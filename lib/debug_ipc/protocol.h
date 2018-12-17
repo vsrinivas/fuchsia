@@ -9,7 +9,7 @@
 
 namespace debug_ipc {
 
-constexpr uint32_t kProtocolVersion = 3;
+constexpr uint32_t kProtocolVersion = 4;
 
 enum class Arch { kUnknown = 0, kX64, kArm64 };
 
@@ -23,23 +23,25 @@ struct MsgHeader {
   enum class Type : uint32_t {
     kNone = 0,
     kHello,
-    kLaunch,
-    kKill,
+
+    kAddOrChangeBreakpoint,
+    kAddressSpace,
     kAttach,
     kDetach,
+    kJobFilter,
+    kKill,
+    kLaunch,
     kModules,
     kPause,
-    kQuitAgent,
-    kResume,
     kProcessTree,
-    kThreads,
+    kQuitAgent,
     kReadMemory,
     kRegisters,
-    kAddOrChangeBreakpoint,
     kRemoveBreakpoint,
+    kResume,
     kThreadStatus,
-    kAddressSpace,
-    kJobFilter,
+    kThreads,
+    kWriteMemory,
 
     // The "notify" messages are sent unrequested from the agent to the client.
     kNotifyProcessExiting,
@@ -244,6 +246,16 @@ struct JobFilterRequest {
 
 struct JobFilterReply {
   uint32_t status;  // zx_status for filter request
+};
+
+struct WriteMemoryRequest {
+  uint64_t process_koid = 0;
+  uint64_t address = 0;
+  std::vector<uint8_t> data;
+};
+
+struct WriteMemoryReply {
+  uint64_t status = 0;  // zx_status_t
 };
 
 // Registers -------------------------------------------------------------------

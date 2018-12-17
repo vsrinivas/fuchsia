@@ -412,6 +412,27 @@ void WriteReply(const JobFilterReply& reply, uint32_t transaction_id,
   writer->WriteUint32(reply.status);
 }
 
+// WriteMemory -----------------------------------------------------------------
+
+bool ReadRequest(MessageReader* reader, WriteMemoryRequest* request,
+                 uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+  if (!reader->ReadUint64(&request->process_koid))
+    return false;
+  if (!reader->ReadUint64(&request->address))
+    return false;
+  return Deserialize(reader, &request->data);
+}
+
+void WriteReply(const WriteMemoryReply& reply, uint32_t transaction_id,
+                MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kWriteMemory, transaction_id);
+  writer->WriteUint64(reply.status);
+}
+
 // Registers -------------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader, RegistersRequest* request,

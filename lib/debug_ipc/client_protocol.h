@@ -120,6 +120,12 @@ void WriteRequest(const JobFilterRequest& request, uint32_t transaction_id,
 bool ReadReply(MessageReader* reader, JobFilterReply* reply,
                uint32_t* transaction_id);
 
+// WriteMemory.
+void WriteRequest(const WriteMemoryRequest& request, uint32_t transaction_id,
+                  MessageWriter* writer);
+bool ReadReply(MessageReader* reader, WriteMemoryReply* reply,
+               uint32_t* transaction_id);
+
 // Notifications ---------------------------------------------------------------
 //
 // (These don't have a "request"/"reply".)

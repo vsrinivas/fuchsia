@@ -52,6 +52,8 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher,
   void OnAddressSpace(const debug_ipc::AddressSpaceRequest& request,
                       debug_ipc::AddressSpaceReply* reply);
   void OnModules(debug_ipc::ModulesReply* reply);
+  void OnWriteMemory(const debug_ipc::WriteMemoryRequest& request,
+                     debug_ipc::WriteMemoryReply* reply);
 
   // Pauses all threads in the process. If non-null, the paused_koids vector
   // will be populated with the koids of all threads paused by this operation.

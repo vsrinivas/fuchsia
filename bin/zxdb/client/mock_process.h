@@ -36,6 +36,9 @@ class MockProcess : public Process {
   void ReadMemory(
       uint64_t address, uint32_t size,
       std::function<void(const Err&, MemoryDump)> callback) override;
+  void WriteMemory(
+      uint64_t address, std::vector<uint8_t> data,
+      std::function<void(const Err&)> callback) override;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(MockProcess);

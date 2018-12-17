@@ -30,6 +30,8 @@ class FrameSymbolDataProvider : public SymbolDataProvider {
   void GetFrameBaseAsync(GetRegisterCallback callback) override;
   void GetMemoryAsync(uint64_t address, uint32_t size,
                       GetMemoryCallback callback) override;
+  void WriteMemory(uint64_t address, std::vector<uint8_t> data,
+      std::function<void(const Err&)> cb) override;
 
  private:
   FRIEND_MAKE_REF_COUNTED(FrameSymbolDataProvider);

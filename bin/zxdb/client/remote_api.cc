@@ -116,4 +116,10 @@ void RemoteAPI::JobFilter(
   FXL_NOTREACHED();
 }
 
+void RemoteAPI::WriteMemory(
+      const debug_ipc::WriteMemoryRequest& request,
+      std::function<void(const Err&, debug_ipc::WriteMemoryReply)> cb) {
+  FXL_NOTREACHED();
+}
+
 }  // namespace zxdb

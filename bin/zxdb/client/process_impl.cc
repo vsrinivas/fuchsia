@@ -4,6 +4,8 @@
 
 #include "garnet/bin/zxdb/client/process_impl.h"
 
+#include <inttypes.h>
+
 #include <set>
 
 #include "garnet/bin/zxdb/client/memory_dump.h"
@@ -134,6 +136,29 @@ void ProcessImpl::ReadMemory(
   session()->remote_api()->ReadMemory(
       request, [callback](const Err& err, debug_ipc::ReadMemoryReply reply) {
         callback(err, MemoryDump(std::move(reply.blocks)));
+      });
+}
+
+void ProcessImpl::WriteMemory(uint64_t address, std::vector<uint8_t> data,
+                              std::function<void(const Err&)> callback) {
+  debug_ipc::WriteMemoryRequest request;
+  request.process_koid = koid_;
+  request.address = address;
+  request.data = std::move(data);
+  session()->remote_api()->WriteMemory(
+      request,
+      [address, callback](const Err& err, debug_ipc::WriteMemoryReply reply) {
+        if (err.has_error()) {
+          callback(err);
+        } else if (reply.status != 0) {
+          // Convert bad reply to error.
+          callback(Err("Unable to write memory to 0x%" PRIx64 ", error %" PRId64
+                       ".",
+                       address, reply.status));
+        } else {
+          // Success.
+          callback(Err());
+        }
       });
 }
 

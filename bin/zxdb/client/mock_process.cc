@@ -68,4 +68,12 @@ void MockProcess::ReadMemory(uint64_t address, uint32_t size,
                                    [cb]() { cb(Err(), MemoryDump()); });
 }
 
+void MockProcess::WriteMemory(
+      uint64_t address, std::vector<uint8_t> data,
+      std::function<void(const Err&)> callback) {
+  // Currently always just report success.
+  MessageLoop::Current()->PostTask(FROM_HERE,
+                                   [cb = std::move(callback)]() { cb(Err()); });
+}
+
 }  // namespace zxdb

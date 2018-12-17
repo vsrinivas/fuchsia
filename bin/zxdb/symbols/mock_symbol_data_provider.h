@@ -14,6 +14,9 @@ namespace zxdb {
 // An implementation of SymbolDataProdiver for testing.
 class MockSymbolDataProvider : public SymbolDataProvider {
  public:
+  // Holds a list of time-ordered (address, data) pairs of memory.
+  using MemoryWrites = std::vector<std::pair<uint64_t, std::vector<uint8_t>>>;
+
   MockSymbolDataProvider();
 
   void set_ip(uint64_t ip) { ip_ = ip; }
@@ -27,6 +30,10 @@ class MockSymbolDataProvider : public SymbolDataProvider {
   // Sets an expected memory value.
   void AddMemory(uint64_t address, std::vector<uint8_t> data);
 
+  // Returns the list of all memory written by WriteMemory calls as a series
+  // of (address, data) pairs. The stored list will be cleared by this call.
+  MemoryWrites GetMemoryWrites() { return std::move(memory_writes_); }
+
   // SymbolDataProvider implementation.
   std::optional<uint64_t> GetRegister(int dwarf_register_number) override;
   void GetRegisterAsync(int dwarf_register_number,
@@ -35,6 +42,8 @@ class MockSymbolDataProvider : public SymbolDataProvider {
   void GetFrameBaseAsync(GetRegisterCallback callback) override;
   void GetMemoryAsync(uint64_t address, uint32_t size,
                       GetMemoryCallback callback) override;
+  void WriteMemory(uint64_t address, std::vector<uint8_t> data,
+                   std::function<void(const Err&)> cb) override;
 
  private:
   struct RegData {
@@ -57,6 +66,8 @@ class MockSymbolDataProvider : public SymbolDataProvider {
   std::map<int, RegData> regs_;
 
   RegisteredMemory mem_;
+
+  MemoryWrites memory_writes_;  // Logs calls to WriteMemory().
 
   fxl::WeakPtrFactory<MockSymbolDataProvider> weak_factory_;
 };

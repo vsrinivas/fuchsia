@@ -39,6 +39,8 @@ const char* MsgHeaderTypeToString(MsgHeader::Type type) {
       return "kThreads";
     case MsgHeader::Type::kReadMemory:
       return "kReadMemory";
+    case MsgHeader::Type::kWriteMemory:
+      return "kWriteMemory";
     case MsgHeader::Type::kRegisters:
       return "kRegisters";
     case MsgHeader::Type::kAddOrChangeBreakpoint:

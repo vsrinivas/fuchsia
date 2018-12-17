@@ -506,6 +506,33 @@ TEST(Protocol, JobFilterReply) {
   EXPECT_EQ(initial.status, second.status);
 }
 
+// WriteMemory -----------------------------------------------------------------
+
+TEST(Protocol, WriteMemoryRequest) {
+  WriteMemoryRequest initial;
+  initial.process_koid = 91823765;
+  initial.address = 0x3468234;
+  initial.data = { 0, 1, 2, 3, 4, 5};
+
+  WriteMemoryRequest second;
+  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+  EXPECT_EQ(initial.process_koid, second.process_koid);
+  EXPECT_EQ(initial.address, second.address);
+  ASSERT_EQ(initial.data.size(), second.data.size());
+  for (size_t i = 0; i < initial.data.size(); i++)
+    EXPECT_EQ(initial.data[i], second.data[i]);
+}
+
+TEST(Protocol, WriteMemoryReply) {
+  WriteMemoryReply initial;
+  initial.status = 7645;
+
+  WriteMemoryReply second;
+  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+
+  ASSERT_EQ(initial.status, second.status);
+}
+
 // Registers -------------------------------------------------------------------
 
 using debug_ipc::RegisterID;

@@ -81,6 +81,12 @@ class MinidumpRemoteAPI : public RemoteAPI {
       const debug_ipc::AddressSpaceRequest& request,
       std::function<void(const Err&, debug_ipc::AddressSpaceReply)> cb)
       override;
+  virtual void JobFilter(
+      const debug_ipc::JobFilterRequest& request,
+      std::function<void(const Err&, debug_ipc::JobFilterReply)> cb) override;
+  virtual void WriteMemory(
+      const debug_ipc::WriteMemoryRequest& request,
+      std::function<void(const Err&, debug_ipc::WriteMemoryReply)> cb) override;
 
  private:
   std::string ProcessName();

@@ -78,6 +78,9 @@ class RemoteAPI {
   virtual void JobFilter(
       const debug_ipc::JobFilterRequest& request,
       std::function<void(const Err&, debug_ipc::JobFilterReply)> cb);
+  virtual void WriteMemory(
+      const debug_ipc::WriteMemoryRequest& request,
+      std::function<void(const Err&, debug_ipc::WriteMemoryReply)> cb);
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(RemoteAPI);

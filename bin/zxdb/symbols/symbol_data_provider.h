@@ -81,6 +81,11 @@ class SymbolDataProvider
   virtual void GetMemoryAsync(uint64_t address, uint32_t size,
                               GetMemoryCallback callback) = 0;
 
+  // Asynchronously writes to the given memory. The callback will be issued
+  // when the write is complete.
+  virtual void WriteMemory(uint64_t address, std::vector<uint8_t> data,
+      std::function<void(const Err&)> cb) = 0;
+
  protected:
   FRIEND_REF_COUNTED_THREAD_SAFE(SymbolDataProvider);
   virtual ~SymbolDataProvider() = default;

@@ -12,7 +12,6 @@
 #include "garnet/lib/debug_ipc/message_writer.h"
 #include "garnet/public/lib/fxl/logging.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
-//#include "garnet/lib/debug_ipc/helper/buffered_fd.h"
 
 namespace zxdb {
 
@@ -124,6 +123,12 @@ void RemoteAPIImpl::AddressSpace(
 void RemoteAPIImpl::JobFilter(
     const debug_ipc::JobFilterRequest& request,
     std::function<void(const Err&, debug_ipc::JobFilterReply)> cb) {
+  Send(request, std::move(cb));
+}
+
+void RemoteAPIImpl::WriteMemory(
+      const debug_ipc::WriteMemoryRequest& request,
+      std::function<void(const Err&, debug_ipc::WriteMemoryReply)> cb) {
   Send(request, std::move(cb));
 }
 

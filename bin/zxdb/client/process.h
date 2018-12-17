@@ -116,6 +116,11 @@ class Process : public ClientObject {
       uint64_t address, uint32_t size,
       std::function<void(const Err&, MemoryDump)> callback) = 0;
 
+  // Write memory to the debugged process.
+  virtual void WriteMemory(
+      uint64_t address, std::vector<uint8_t> data,
+      std::function<void(const Err&)> callback) = 0;
+
   StartType start_type() const { return start_type_; }
 
  protected:

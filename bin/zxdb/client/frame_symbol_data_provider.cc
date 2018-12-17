@@ -20,6 +20,14 @@
 
 namespace zxdb {
 
+namespace {
+
+Err CallFrameDestroyedErr() {
+  return Err("Call frame destroyed.");
+}
+
+}  // namespace
+
 FrameSymbolDataProvider::FrameSymbolDataProvider(Frame* frame)
     : frame_(frame) {}
 
@@ -105,7 +113,7 @@ void FrameSymbolDataProvider::GetFrameBaseAsync(GetRegisterCallback cb) {
   if (!frame_) {
     debug_ipc::MessageLoop::Current()->PostTask(
         FROM_HERE,
-        [cb = std::move(cb)]() { cb(Err("Call frame destroyed."), 0); });
+        [cb = std::move(cb)]() { cb(CallFrameDestroyedErr(), 0); });
     return;
   }
 
@@ -119,7 +127,7 @@ void FrameSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
   if (!frame_) {
     debug_ipc::MessageLoop::Current()->PostTask(
         FROM_HERE, [cb = std::move(callback)]() {
-          cb(Err("Call frame destroyed."), std::vector<uint8_t>());
+          cb(CallFrameDestroyedErr(), std::vector<uint8_t>());
         });
     return;
   }
@@ -170,6 +178,16 @@ void FrameSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
           cb(Err(), std::move(flat));
         }
       });
+}
+
+void FrameSymbolDataProvider::WriteMemory(uint64_t address, std::vector<uint8_t> data,
+      std::function<void(const Err&)> cb) {
+  if (!frame_) {
+    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE,
+        [cb = std::move(cb)](){ cb(CallFrameDestroyedErr()); });
+    return;
+  }
+  frame_->GetThread()->GetProcess()->WriteMemory(address, std::move(data), std::move(cb));
 }
 
 bool FrameSymbolDataProvider::IsTopFrame() const {

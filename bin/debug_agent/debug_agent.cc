@@ -379,6 +379,15 @@ void DebugAgent::OnJobFilter(const debug_ipc::JobFilterRequest& request,
   reply->status = ZX_OK;
 }
 
+void DebugAgent::OnWriteMemory(const debug_ipc::WriteMemoryRequest& request,
+                               debug_ipc::WriteMemoryReply* reply) {
+  DebuggedProcess* proc = GetDebuggedProcess(request.process_koid);
+  if (proc)
+    proc->OnWriteMemory(request, reply);
+  else
+    reply->status = ZX_ERR_NOT_FOUND;
+}
+
 DebuggedProcess* DebugAgent::GetDebuggedProcess(zx_koid_t koid) {
   auto found = procs_.find(koid);
   if (found == procs_.end())

@@ -490,6 +490,26 @@ bool ReadReply(MessageReader* reader, JobFilterReply* reply,
   return reader->ReadUint32(&reply->status);
 }
 
+// WriteMemory -----------------------------------------------------------------
+
+void WriteRequest(const WriteMemoryRequest& request, uint32_t transaction_id,
+                  MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kWriteMemory, transaction_id);
+  writer->WriteUint64(request.process_koid);
+  writer->WriteUint64(request.address);
+  return Serialize(request.data, writer);
+}
+
+bool ReadReply(MessageReader* reader, WriteMemoryReply* reply,
+               uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+
+  return reader->ReadUint64(&reply->status);
+}
+
 // Notifications ---------------------------------------------------------------
 
 bool ReadNotifyProcess(MessageReader* reader, NotifyProcess* process) {

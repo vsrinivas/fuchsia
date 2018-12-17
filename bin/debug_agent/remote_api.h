@@ -73,6 +73,9 @@ class RemoteAPI {
 
   virtual void OnJobFilter(const debug_ipc::JobFilterRequest& request,
                            debug_ipc::JobFilterReply* reply) = 0;
+
+  virtual void OnWriteMemory(const debug_ipc::WriteMemoryRequest& request,
+                             debug_ipc::WriteMemoryReply* reply) = 0;
 };
 
 }  // namespace debug_agent

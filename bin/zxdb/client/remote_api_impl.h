@@ -77,6 +77,9 @@ class RemoteAPIImpl : public RemoteAPI {
   void JobFilter(
       const debug_ipc::JobFilterRequest& request,
       std::function<void(const Err&, debug_ipc::JobFilterReply)> cb) override;
+  void WriteMemory(
+      const debug_ipc::WriteMemoryRequest& request,
+      std::function<void(const Err&, debug_ipc::WriteMemoryReply)> cb) override;
 
  private:
   // Sends a message with an asynchronous reply.

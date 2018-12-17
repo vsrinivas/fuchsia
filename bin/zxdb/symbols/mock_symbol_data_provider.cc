@@ -95,6 +95,15 @@ void MockSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
   }
 }
 
+void MockSymbolDataProvider::WriteMemory(uint64_t address,
+                                         std::vector<uint8_t> data,
+                                         std::function<void(const Err&)> cb) {
+  memory_writes_.emplace_back(address, std::move(data));
+
+  // Declare success.
+  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb]() { cb(Err()); });
+}
+
 MockSymbolDataProvider::RegisteredMemory::const_iterator
 MockSymbolDataProvider::FindBlockForAddress(uint64_t address) const {
   // Finds the first block >= address.

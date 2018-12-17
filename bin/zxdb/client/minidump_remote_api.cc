@@ -583,4 +583,16 @@ void MinidumpRemoteAPI::AddressSpace(
   Succeed(cb, reply);
 }
 
+void MinidumpRemoteAPI::JobFilter(
+      const debug_ipc::JobFilterRequest& request,
+      std::function<void(const Err&, debug_ipc::JobFilterReply)> cb) {
+  ErrNoLive(cb);
+}
+
+void MinidumpRemoteAPI::WriteMemory(
+      const debug_ipc::WriteMemoryRequest& request,
+      std::function<void(const Err&, debug_ipc::WriteMemoryReply)> cb) {
+  ErrNoLive(cb);
+}
+
 }  // namespace zxdb
