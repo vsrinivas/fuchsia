@@ -226,8 +226,12 @@ void TargetImpl::OnLaunchOrAttachReply(Callback callback, const Err& err,
                                 debug_ipc::ZxStatusToString(status).data()));
     }
   } else {
+    Process::StartType start_type = state_ == State::kAttaching
+                                        ? Process::StartType::kAttach
+                                        : Process::StartType::kLaunch;
     state_ = State::kRunning;
-    process_ = std::make_unique<ProcessImpl>(this, koid, process_name);
+    process_ =
+        std::make_unique<ProcessImpl>(this, koid, process_name, start_type);
   }
 
   if (callback)
@@ -246,7 +250,8 @@ void TargetImpl::AttachToProcess(uint64_t koid,
   FXL_DCHECK(!process_.get());  // Shouldn't have a process.
 
   state_ = State::kRunning;
-  process_ = std::make_unique<ProcessImpl>(this, koid, process_name);
+  process_ = std::make_unique<ProcessImpl>(this, koid, process_name,
+                                           Process::StartType::kAttach);
   system_->NotifyDidCreateProcess(process_.get());
   for (auto& observer : observers())
     observer.DidCreateProcess(this, process_.get());

@@ -10,6 +10,7 @@
 #include "garnet/bin/zxdb/client/frame.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/session.h"
+#include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
@@ -372,6 +373,20 @@ void ConsoleContext::DidCreateProcess(Target* target, Process* process) {
   // Restart the thread ID counting when the process starts in case this
   // target was previously running (we want to restart numbering every time).
   record->next_thread_id = 1;
+
+  // Do the feedback.
+  int target_id = IdForTarget(target);
+  const char *msg = nullptr;
+  Process::StartType start_type = process->start_type();
+  if (start_type == Process::StartType::kAttach) {
+    msg = "attached to";
+  } else if (start_type == Process::StartType::kLaunch) {
+    msg = "launched";
+  }
+  FXL_DCHECK(msg);
+
+  Console::get()->Output(fxl::StringPrintf("Process %d %s %s", target_id, msg,
+                                           process->GetName().data()));
 }
 
 void ConsoleContext::WillDestroyProcess(Target* target, Process* process,

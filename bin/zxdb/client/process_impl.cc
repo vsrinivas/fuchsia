@@ -17,8 +17,8 @@
 namespace zxdb {
 
 ProcessImpl::ProcessImpl(TargetImpl* target, uint64_t koid,
-                         const std::string& name)
-    : Process(target->session()),
+                         const std::string& name, Process::StartType start_type)
+    : Process(target->session(), start_type),
       target_(target),
       koid_(koid),
       name_(name),

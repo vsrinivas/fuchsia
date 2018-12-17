@@ -20,7 +20,8 @@ class ThreadImpl;
 
 class ProcessImpl : public Process, public ProcessSymbols::Notifications {
  public:
-  ProcessImpl(TargetImpl* target, uint64_t koid, const std::string& name);
+  ProcessImpl(TargetImpl* target, uint64_t koid, const std::string& name,
+              Process::StartType start_type);
   ~ProcessImpl() override;
 
   ThreadImpl* GetThreadImplFromKoid(uint64_t koid);

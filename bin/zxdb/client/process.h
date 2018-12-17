@@ -33,7 +33,15 @@ class Thread;
 
 class Process : public ClientObject {
  public:
-  Process(Session* session);
+  // Documents how this process was started.
+  // This is useful for user feedback.
+  enum class StartType {
+    kAttach,
+    kLaunch,
+  };
+  const char* StartTypeToString(StartType);
+
+  Process(Session* session, StartType);
   ~Process() override;
 
   void AddObserver(ProcessObserver* observer);
@@ -108,10 +116,14 @@ class Process : public ClientObject {
       uint64_t address, uint32_t size,
       std::function<void(const Err&, MemoryDump)> callback) = 0;
 
+  StartType start_type() const { return start_type_; }
+
  protected:
   fxl::ObserverList<ProcessObserver>& observers() { return observers_; }
 
  private:
+  StartType start_type_;
+
   fxl::ObserverList<ProcessObserver> observers_;
   fxl::WeakPtrFactory<Process> weak_factory_;
 
