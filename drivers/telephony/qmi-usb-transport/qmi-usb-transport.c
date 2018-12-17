@@ -755,7 +755,7 @@ static zx_status_t qmi_bind(void* ctx, zx_device_t* device) {
   while (tx_buf_remain >= tx_buf_sz) {
     usb_request_t* tx_buf;
     zx_status_t alloc_result = usb_request_alloc(
-        &tx_buf, tx_buf_sz, qmi_ctx->tx_endpoint_addr, qmi_ctx->parent_req_size);
+        &tx_buf, tx_buf_sz, qmi_ctx->tx_endpoint_addr, req_size);
     if (alloc_result != ZX_OK) {
       result = alloc_result;
       goto fail;
