@@ -285,6 +285,13 @@ TEST_F(MediaPlayerTests, PlayBear) {
   // different targets.
 
   fake_scenic_.session().SetExpectations(
+      1,
+      {
+          .width = 2,
+          .height = 2,
+          .stride = 2 + sizeof(uint32_t),
+          .pixel_format = fuchsia::images::PixelFormat::BGRA_8,
+      },
       {
           .width = 1280,
           .height = 768,
@@ -402,6 +409,27 @@ TEST_F(MediaPlayerTests, RegressionTestUS544) {
   commands_.Seek(zx::sec(0));
   commands_.Play();
 
+  QuitOnEndOfStream();
+
+  Execute(zx::sec(20));
+  EXPECT_TRUE(fake_audio_.renderer().expected());
+  EXPECT_TRUE(fake_scenic_.session().expected());
+}
+
+// Regression test for QA-539.
+// Verifies that the player can play two files in a row.
+TEST_F(MediaPlayerTests, RegressionTestQA539) {
+  CreateView();
+  commands_.SetFile(kBearFilePath);
+
+  // Play the file to the end.
+  commands_.Play();
+  commands_.WaitForEndOfStream();
+
+  // Reload the file.
+  commands_.SetFile(kBearFilePath);
+
+  commands_.Play();
   QuitOnEndOfStream();
 
   Execute(zx::sec(20));

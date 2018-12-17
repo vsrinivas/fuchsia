@@ -115,6 +115,10 @@ class FidlVideoRenderer
 
     ~View() override;
 
+    // Adds the black image to the image pipe.
+    void AddBlackImage(uint32_t image_id, fuchsia::images::ImageInfo image_info,
+                       const zx::vmo& vmo);
+
     // Removes the old images from the image pipe, if images were added
     // previously, and adds new images. An image is added for each VMO in
     // |vmos|, and they are numbered starting with |image_id_base|.
@@ -123,7 +127,10 @@ class FidlVideoRenderer
                       uint32_t display_width, uint32_t display_height,
                       const std::vector<fbl::RefPtr<PayloadVmo>>& vmos);
 
-    // Present an image using the |ImagePipe|.
+    // Presents the black image using the |ImagePipe|.
+    void PresentBlackImage(uint32_t image_id, uint64_t presentation_time);
+
+    // Presents an image using the |ImagePipe|.
     void PresentImage(uint32_t buffer_index, uint64_t presentation_time,
                       fbl::RefPtr<ReleaseTracker> release_tracker,
                       async_dispatcher_t* dispatcher);
@@ -154,12 +161,19 @@ class FidlVideoRenderer
   // Updates the images added to the image pipes associated with the views.
   void UpdateImages();
 
+  // Presents a black image immediately.
+  void PresentBlackImage();
+
   // Present |packet| at |scenic_presentation_time|.
   void PresentPacket(PacketPtr packet, int64_t scenic_presentation_time);
 
   // Called when all image pipes have released an image that was submitted for
   // presentation.
   void PacketReleased(PacketPtr packet);
+
+  // Completes a pending flush if all packets (except maybe the held frame) are
+  // released.
+  void MaybeCompleteFlush();
 
   // Checks |packet| for a revised stream type and updates state accordingly.
   void CheckForRevisedStreamType(const PacketPtr& packet);
@@ -180,6 +194,7 @@ class FidlVideoRenderer
 
   std::vector<std::unique_ptr<StreamTypeSet>> supported_stream_types_;
   bool input_connection_ready_ = false;
+  zx::vmo black_image_vmo_;
   fuchsia::images::ImageInfo image_info_{};
   uint32_t display_width_{};
   uint32_t display_height_{};
@@ -193,8 +208,8 @@ class FidlVideoRenderer
   std::unordered_map<View*, std::unique_ptr<View>> views_;
   fit::closure prime_callback_;
   fit::closure geometry_update_callback_;
-  uint32_t image_id_base_ = 1;
-  uint32_t next_image_id_base_ = 1;
+  uint32_t image_id_base_ = 2; // 1 is reserved for the black image.
+  uint32_t next_image_id_base_ = 2;
 
   PacketTimingTracker arrivals_;
 

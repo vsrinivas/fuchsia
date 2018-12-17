@@ -4,6 +4,7 @@
 
 #include "garnet/bin/mediaplayer/fidl/fidl_video_renderer.h"
 
+#include <lib/fzl/vmo-mapper.h>
 #include <lib/ui/scenic/cpp/commands.h>
 #include <limits>
 #include "garnet/bin/mediaplayer/fidl/fidl_type_conversions.h"
@@ -12,6 +13,23 @@
 #include "lib/media/timeline/timeline.h"
 
 namespace media_player {
+namespace {
+
+// TODO(dalesat): |ZX_RIGHT_WRITE| shouldn't be required, but it is.
+static constexpr zx_rights_t kVmoDupRights =
+    ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER | ZX_RIGHT_DUPLICATE |
+    ZX_RIGHT_WRITE;
+
+static constexpr uint32_t kBlackImageId = 1;
+static constexpr uint32_t kBlackImageWidth = 2;
+static constexpr uint32_t kBlackImageHeight = 2;
+static const fuchsia::images::ImageInfo kBlackImageInfo{
+    .width = kBlackImageWidth,
+    .height = kBlackImageHeight,
+    .stride = kBlackImageWidth + sizeof(uint32_t),
+    .pixel_format = fuchsia::images::PixelFormat::BGRA_8};
+
+}  // namespace
 
 // static
 std::shared_ptr<FidlVideoRenderer> FidlVideoRenderer::Create(
@@ -28,6 +46,19 @@ FidlVideoRenderer::FidlVideoRenderer(component::StartupContext* startup_context)
       {StreamType::kVideoEncodingUncompressed},
       Range<uint32_t>(0, std::numeric_limits<uint32_t>::max()),
       Range<uint32_t>(0, std::numeric_limits<uint32_t>::max())));
+
+  // Create the black image VMO.
+  size_t size =
+      kBlackImageInfo.width * kBlackImageInfo.height * sizeof(uint32_t);
+  fzl::VmoMapper mapper;
+  zx_status_t status =
+      mapper.CreateAndMap(size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr,
+                          &black_image_vmo_, kVmoDupRights);
+  if (status != ZX_OK) {
+    FXL_LOG(FATAL) << "Failed to create and map VMO, status " << status;
+  }
+
+  memset(mapper.start(), 0, mapper.size());
 }
 
 FidlVideoRenderer::~FidlVideoRenderer() {}
@@ -40,6 +71,7 @@ void FidlVideoRenderer::Dump(std::ostream& os) const {
   os << fostr::Indent;
   os << fostr::NewLine << "priming:               " << !!prime_callback_;
   os << fostr::NewLine << "flushed:               " << flushed_;
+  os << fostr::NewLine << "flushing:              " << !!flush_callback_;
   os << fostr::NewLine << "presentation time:     "
      << AsNs(current_timeline_function()(media::Timeline::local_now()));
   os << fostr::NewLine << "video size:            " << video_size().width << "x"
@@ -83,7 +115,10 @@ void FidlVideoRenderer::FlushInput(bool hold_frame, size_t input_index,
   flushed_ = true;
 
   // TODO(dalesat): Cancel presentations on flush when that's supported.
-  // TODO(dalesat): For |!hold_frame|, present a black image.
+
+  if (!hold_frame) {
+    PresentBlackImage();
+  }
 
   SetEndOfStreamPts(fuchsia::media::NO_TIMESTAMP);
 
@@ -91,13 +126,9 @@ void FidlVideoRenderer::FlushInput(bool hold_frame, size_t input_index,
     packets_awaiting_presentation_.pop();
   }
 
-  if (presented_packets_not_released_ <= hold_frame ? 1 : 0) {
-    callback();
-    return;
-  }
-
   flush_callback_ = std::move(callback);
   flush_hold_frame_ = hold_frame;
+  MaybeCompleteFlush();
 }
 
 void FidlVideoRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
@@ -141,7 +172,8 @@ void FidlVideoRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
     PresentPacket(packet,
                   current_timeline_function().ApplyInverse(packet_pts_ns));
   } else {
-    // The rate is zero, so we can't translate the packet's PTS to system time.
+    // The rate is zero, so we can't translate the packet's PTS to system
+    // time.
     if (!initial_packet_presented_) {
       // No packet is currently being presented. We present this packet now,
       // so there's something to look at while we wait to progress.
@@ -292,6 +324,8 @@ void FidlVideoRenderer::CreateView(zx::eventpair view_token) {
   view_raw_ptr->SetReleaseHandler(
       [this, view_raw_ptr](zx_status_t status) { views_.erase(view_raw_ptr); });
 
+  view_raw_ptr->AddBlackImage(kBlackImageId, kBlackImageInfo, black_image_vmo_);
+
   if (have_valid_image_info() && input_connection_ready_) {
     // We're ready to add images to the new view, so do so.
     std::vector<fbl::RefPtr<PayloadVmo>> vmos =
@@ -315,17 +349,28 @@ void FidlVideoRenderer::UpdateImages() {
   }
 }
 
+void FidlVideoRenderer::PresentBlackImage() {
+  for (auto& [view_raw_ptr, view_unique_ptr] : views_) {
+    view_raw_ptr->PresentBlackImage(kBlackImageId,
+                                    media::Timeline::local_now());
+  }
+}
+
 void FidlVideoRenderer::PacketReleased(PacketPtr packet) {
   --presented_packets_not_released_;
 
+  MaybeCompleteFlush();
+
+  if (need_more_packets()) {
+    stage()->RequestInputPacket();
+  }
+}
+
+void FidlVideoRenderer::MaybeCompleteFlush() {
   if (flush_callback_ &&
       (presented_packets_not_released_ <= flush_hold_frame_ ? 1 : 0)) {
     flush_callback_();
     flush_callback_ = nullptr;
-  }
-
-  if (need_more_packets()) {
-    stage()->RequestInputPacket();
   }
 }
 
@@ -368,8 +413,8 @@ void FidlVideoRenderer::CheckForRevisedStreamType(const PacketPtr& packet) {
   SetStreamType(*revised_stream_type);
 
   if (geometry_update_callback_) {
-    // Notify the player that geometry has changed. This eventually reaches the
-    // parent view.
+    // Notify the player that geometry has changed. This eventually reaches
+    // the parent view.
     geometry_update_callback_();
   }
 }
@@ -436,14 +481,15 @@ FidlVideoRenderer::View::View(scenic::ViewContext context,
   // |image_pipe_node_| will eventually be a rectangle that covers the entire
   // view, and will use |image_pipe_material_|. Unfortunately, an |ImagePipe|
   // texture that has no images is white, so in order to prevent a white
-  // rectangle from flashing up during startup, we use a black material for now.
+  // rectangle from flashing up during startup, we use a black material for
+  // now.
   scenic::Material material(session());
   material.SetColor(0x00, 0x00, 0x00, 0xff);
   image_pipe_node_.SetMaterial(material);
 
   // Initialize |clip_node_|, which provides the geometry for |entity_node_|'s
-  // clipping of |image_pipe_material_|. See the comment in |OnSceneInvalidate|
-  // for why that's needed.
+  // clipping of |image_pipe_material_|. See the comment in
+  // |OnSceneInvalidate| for why that's needed.
   scenic::Material clip_material(session());
   clip_material.SetColor(0x00, 0x00, 0x00, 0xff);
   clip_node_.SetMaterial(clip_material);
@@ -460,6 +506,34 @@ FidlVideoRenderer::View::View(scenic::ViewContext context,
 
 FidlVideoRenderer::View::~View() {}
 
+void FidlVideoRenderer::View::AddBlackImage(
+    uint32_t image_id, fuchsia::images::ImageInfo image_info,
+    const zx::vmo& vmo) {
+  FXL_DCHECK(vmo);
+
+  if (!image_pipe_) {
+    FXL_LOG(FATAL) << "View::AddBlackImage called with no ImagePipe.";
+    return;
+  }
+
+  zx::vmo duplicate;
+  zx_status_t status = vmo.duplicate(kVmoDupRights, &duplicate);
+  if (status != ZX_OK) {
+    FXL_LOG(FATAL) << "Failed to duplicate VMO, status " << status;
+  }
+
+  uint64_t size;
+  status = vmo.get_size(&size);
+  if (status != ZX_OK) {
+    FXL_LOG(FATAL) << "Failed to get size of VMO, status " << status;
+  }
+
+  // For now, we don't support non-zero memory offsets.
+  image_pipe_->AddImage(image_id, image_info, std::move(duplicate),
+                        /*offset_bytes=*/0, size,
+                        fuchsia::images::MemoryType::HOST_MEMORY);
+}
+
 void FidlVideoRenderer::View::UpdateImages(
     uint32_t image_id_base, fuchsia::images::ImageInfo image_info,
     uint32_t display_width, uint32_t display_height,
@@ -467,7 +541,7 @@ void FidlVideoRenderer::View::UpdateImages(
   FXL_DCHECK(!vmos.empty());
 
   if (!image_pipe_) {
-    FXL_LOG(WARNING) << "View::UpdateImages called with no ImagePipe.";
+    FXL_LOG(FATAL) << "View::UpdateImages called with no ImagePipe.";
     return;
   }
 
@@ -492,14 +566,24 @@ void FidlVideoRenderer::View::UpdateImages(
     ++index;
 
     // For now, we don't support non-zero memory offsets.
-    // TODO(dalesat): |ZX_RIGHT_WRITE| shouldn't be required, but it is.
-    image_pipe_->AddImage(
-        image.image_id_, image_info,
-        image.vmo_->Duplicate(ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER |
-                              ZX_RIGHT_DUPLICATE | ZX_RIGHT_WRITE),
-        /*offset_bytes=*/0, image.vmo_->size(),
-        fuchsia::images::MemoryType::HOST_MEMORY);
+    image_pipe_->AddImage(image.image_id_, image_info,
+                          image.vmo_->Duplicate(kVmoDupRights),
+                          /*offset_bytes=*/0, image.vmo_->size(),
+                          fuchsia::images::MemoryType::HOST_MEMORY);
   }
+}
+
+void FidlVideoRenderer::View::PresentBlackImage(uint32_t image_id,
+                                                uint64_t presentation_time) {
+  if (!image_pipe_) {
+    FXL_LOG(FATAL) << "View::PresentBlackImage called with no ImagePipe.";
+    return;
+  }
+
+  image_pipe_->PresentImage(
+      image_id, presentation_time, fidl::VectorPtr<zx::event>::New(0),
+      fidl::VectorPtr<zx::event>::New(0),
+      [](fuchsia::images::PresentationInfo presentation_info) {});
 }
 
 void FidlVideoRenderer::View::PresentImage(
@@ -509,7 +593,7 @@ void FidlVideoRenderer::View::PresentImage(
   FXL_DCHECK(dispatcher);
 
   if (!image_pipe_) {
-    FXL_LOG(WARNING) << "View::PresentImage called with no ImagePipe.";
+    FXL_LOG(FATAL) << "View::PresentImage called with no ImagePipe.";
     return;
   }
 

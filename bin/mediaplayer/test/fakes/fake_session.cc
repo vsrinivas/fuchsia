@@ -56,14 +56,18 @@ void FakeSession::DumpExpectations(uint32_t display_height) {
 }
 
 void FakeSession::SetExpectations(
+    uint32_t black_image_id, const fuchsia::images::ImageInfo& black_image_info,
     const fuchsia::images::ImageInfo& info, uint32_t display_height,
     const std::vector<PacketInfo>&& expected_packets_info) {
   if (image_pipe_) {
-    image_pipe_->SetExpectations(info, display_height,
+    image_pipe_->SetExpectations(black_image_id, black_image_info, info,
+                                 display_height,
                                  std::move(expected_packets_info));
   } else {
-    expected_packets_info_ = std::move(expected_packets_info);
+    expected_black_image_id_ = black_image_id;
+    expected_black_image_info_ = fidl::MakeOptional(black_image_info);
     expected_image_info_ = fidl::MakeOptional(info);
+    expected_packets_info_ = std::move(expected_packets_info);
     expected_display_height_ = display_height;
   }
 }
@@ -175,9 +179,10 @@ void FakeSession::HandleCreateResource(uint32_t resource_id,
 
     if (!expected_packets_info_.empty()) {
       FXL_DCHECK(expected_image_info_);
-      image_pipe_->SetExpectations(*expected_image_info_,
-                                   expected_display_height_,
-                                   std::move(expected_packets_info_));
+      image_pipe_->SetExpectations(
+          expected_black_image_id_, *expected_black_image_info_,
+          *expected_image_info_, expected_display_height_,
+          std::move(expected_packets_info_));
     }
   }
 

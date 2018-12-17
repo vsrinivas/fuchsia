@@ -59,62 +59,22 @@ void FakeImagePipe::AddImage(uint32_t image_id,
                              zx::vmo memory, uint64_t offset_bytes,
                              uint64_t size_bytes,
                              fuchsia::images::MemoryType memory_type) {
-  if (dump_expectations_) {
-    FXL_DCHECK(image_info.pixel_format == fuchsia::images::PixelFormat::YV12);
-    std::cerr << "{.width = " << image_info.width << ",\n"
-              << ".height = " << image_info.height << ",\n"
-              << ".stride = " << image_info.stride << ",\n"
-              << ".pixel_format = fuchsia::images::PixelFormat::YV12,\n"
-              << "};\n";
-  }
-
-  if (expected_image_info_) {
-    if (image_info.transform != expected_image_info_->transform) {
-      FXL_LOG(ERROR) << "AddImage: unexpected ImageInfo.transform value "
-                     << fidl::ToUnderlying(image_info.transform);
-      expected_ = false;
+  if (image_id == expected_black_image_id_) {
+    if (expected_black_image_info_) {
+      ExpectImageInfo(*expected_black_image_info_, image_info);
+    }
+  } else {
+    if (dump_expectations_) {
+      FXL_DCHECK(image_info.pixel_format == fuchsia::images::PixelFormat::YV12);
+      std::cerr << "{.width = " << image_info.width << ",\n"
+                << ".height = " << image_info.height << ",\n"
+                << ".stride = " << image_info.stride << ",\n"
+                << ".pixel_format = fuchsia::images::PixelFormat::YV12,\n"
+                << "};\n";
     }
 
-    if (image_info.width != expected_image_info_->width) {
-      FXL_LOG(ERROR) << "AddImage: unexpected ImageInfo.width value "
-                     << image_info.width;
-      expected_ = false;
-    }
-
-    if (image_info.height != expected_image_info_->height) {
-      FXL_LOG(ERROR) << "AddImage: unexpected ImageInfo.height value "
-                     << image_info.height;
-      expected_ = false;
-    }
-
-    if (image_info.stride != expected_image_info_->stride) {
-      FXL_LOG(ERROR) << "AddImage: unexpected ImageInfo.stride value "
-                     << image_info.stride;
-      expected_ = false;
-    }
-
-    if (image_info.pixel_format != expected_image_info_->pixel_format) {
-      FXL_LOG(ERROR) << "AddImage: unexpected ImageInfo.pixel_format value "
-                     << fidl::ToUnderlying(image_info.pixel_format);
-      expected_ = false;
-    }
-
-    if (image_info.color_space != expected_image_info_->color_space) {
-      FXL_LOG(ERROR) << "AddImage: unexpected ImageInfo.color_space value "
-                     << fidl::ToUnderlying(image_info.color_space);
-      expected_ = false;
-    }
-
-    if (image_info.tiling != expected_image_info_->tiling) {
-      FXL_LOG(ERROR) << "AddImage: unexpected ImageInfo.tiling value "
-                     << fidl::ToUnderlying(image_info.tiling);
-      expected_ = false;
-    }
-
-    if (image_info.alpha_format != expected_image_info_->alpha_format) {
-      FXL_LOG(ERROR) << "AddImage: unexpected ImageInfo.alpha_format value "
-                     << fidl::ToUnderlying(image_info.alpha_format);
-      expected_ = false;
+    if (expected_image_info_) {
+      ExpectImageInfo(*expected_image_info_, image_info);
     }
   }
 
@@ -269,6 +229,59 @@ void FakeImagePipe::PresentImage(uint32_t image_id, uint64_t presentation_time,
         .presentation_interval =
             static_cast<uint64_t>(presentation_interval_.get())});
   });
+}
+
+void FakeImagePipe::ExpectImageInfo(const fuchsia::images::ImageInfo& expected,
+                                    const fuchsia::images::ImageInfo& actual) {
+  if (actual.transform != expected.transform) {
+    FXL_LOG(ERROR) << "ExpectImageInfo: unexpected ImageInfo.transform value "
+                   << fidl::ToUnderlying(actual.transform);
+    expected_ = false;
+  }
+
+  if (actual.width != expected.width) {
+    FXL_LOG(ERROR) << "ExpectImageInfo: unexpected ImageInfo.width value "
+                   << actual.width;
+    expected_ = false;
+  }
+
+  if (actual.height != expected.height) {
+    FXL_LOG(ERROR) << "ExpectImageInfo: unexpected ImageInfo.height value "
+                   << actual.height;
+    expected_ = false;
+  }
+
+  if (actual.stride != expected.stride) {
+    FXL_LOG(ERROR) << "ExpectImageInfo: unexpected ImageInfo.stride value "
+                   << actual.stride;
+    expected_ = false;
+  }
+
+  if (actual.pixel_format != expected.pixel_format) {
+    FXL_LOG(ERROR)
+        << "ExpectImageInfo: unexpected ImageInfo.pixel_format value "
+        << fidl::ToUnderlying(actual.pixel_format);
+    expected_ = false;
+  }
+
+  if (actual.color_space != expected.color_space) {
+    FXL_LOG(ERROR) << "ExpectImageInfo: unexpected ImageInfo.color_space value "
+                   << fidl::ToUnderlying(actual.color_space);
+    expected_ = false;
+  }
+
+  if (actual.tiling != expected.tiling) {
+    FXL_LOG(ERROR) << "ExpectImageInfo: unexpected ImageInfo.tiling value "
+                   << fidl::ToUnderlying(actual.tiling);
+    expected_ = false;
+  }
+
+  if (actual.alpha_format != expected.alpha_format) {
+    FXL_LOG(ERROR)
+        << "ExpectImageInfo: unexpected ImageInfo.alpha_format value "
+        << fidl::ToUnderlying(actual.alpha_format);
+    expected_ = false;
+  }
 }
 
 uint64_t FakeImagePipe::PacketHash(

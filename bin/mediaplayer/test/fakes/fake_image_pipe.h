@@ -36,9 +36,13 @@ class FakeImagePipe : public fuchsia::images::ImagePipe {
 
   // Indicates that the session should verify supplied frames against the
   // specified PacketInfos.
-  void SetExpectations(const fuchsia::images::ImageInfo& info,
+  void SetExpectations(uint32_t black_image_id,
+                       const fuchsia::images::ImageInfo& black_image_info,
+                       const fuchsia::images::ImageInfo& info,
                        uint32_t display_height,
                        const std::vector<PacketInfo>&& expected_packets_info) {
+    expected_black_image_id_ = black_image_id;
+    expected_black_image_info_ = fidl::MakeOptional(black_image_info);
     expected_image_info_ = fidl::MakeOptional(info);
     expected_display_height_ = display_height;
     expected_packets_info_ = std::move(expected_packets_info);
@@ -93,6 +97,9 @@ class FakeImagePipe : public fuchsia::images::ImagePipe {
     return weak_factory_.GetWeakPtr();
   }
 
+  void ExpectImageInfo(const fuchsia::images::ImageInfo& expected,
+                       const fuchsia::images::ImageInfo& actual);
+
   uint64_t PacketHash(const void* data,
                       const fuchsia::images::ImageInfo& image_info);
 
@@ -107,6 +114,8 @@ class FakeImagePipe : public fuchsia::images::ImagePipe {
   bool dump_expectations_ = false;
   std::vector<PacketInfo> expected_packets_info_;
   std::vector<PacketInfo>::iterator expected_packets_info_iter_;
+  uint32_t expected_black_image_id_ = 0;
+  std::unique_ptr<fuchsia::images::ImageInfo> expected_black_image_info_;
   std::unique_ptr<fuchsia::images::ImageInfo> expected_image_info_;
   uint32_t expected_display_height_ = 720;
   bool expected_ = true;

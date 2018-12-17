@@ -36,7 +36,9 @@ class FakeSession : public ::fuchsia::ui::scenic::Session {
 
   // Indicates that the session should verify supplied frames against the
   // specified PacketInfos.
-  void SetExpectations(const fuchsia::images::ImageInfo& info,
+  void SetExpectations(uint32_t black_image_id,
+                       const fuchsia::images::ImageInfo& black_image_info,
+                       const fuchsia::images::ImageInfo& info,
                        uint32_t display_height,
                        const std::vector<PacketInfo>&& expected_packets_info);
 
@@ -106,8 +108,10 @@ class FakeSession : public ::fuchsia::ui::scenic::Session {
   std::unique_ptr<FakeImagePipe> image_pipe_;
 
   bool dump_expectations_ = false;
-  std::vector<PacketInfo> expected_packets_info_;
+  uint32_t expected_black_image_id_ = 0;
+  std::unique_ptr<fuchsia::images::ImageInfo> expected_black_image_info_;
   std::unique_ptr<fuchsia::images::ImageInfo> expected_image_info_;
+  std::vector<PacketInfo> expected_packets_info_;
   uint32_t expected_display_height_ = 0;
   bool expected_ = true;
 
