@@ -515,11 +515,14 @@ grpc::Status Guest::VmReady(grpc::ServerContext* context,
   FXL_CHECK(maitred_) << "Failed to connect to Maitre'd";
 
   // If we're not booting to a container; we'll drop the VM inside a root shell.
-  if (!kBootToContainer) {
+  const bool vm_only = cl_.HasOption("vm");
+  if (!kBootToContainer || vm_only) {
     LaunchVmShell();
   }
-  ConfigureNetwork();
-  StartTermina();
+  if (!vm_only) {
+    ConfigureNetwork();
+    StartTermina();
+  }
   return grpc::Status::OK;
 }
 
