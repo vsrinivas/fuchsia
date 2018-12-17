@@ -323,6 +323,8 @@ void DebuggedThread::UpdateForHitProcessBreakpoint(
 
 void DebuggedThread::ResumeForRunMode() {
   if (suspend_reason_ == SuspendReason::kException) {
+    // Note: we could have a valid suspend token here in addition to the
+    // exception if the suspension races with the delivery of the exception.
     if (current_breakpoint_) {
       // Going over a breakpoint always requires a single-step first. Then we
       // continue according to run_mode_.
@@ -333,7 +335,6 @@ void DebuggedThread::ResumeForRunMode() {
       SetSingleStep(run_mode_ != debug_ipc::ResumeRequest::How::kContinue);
     }
     suspend_reason_ = SuspendReason::kNone;
-    FXL_DCHECK(!suspend_token_.is_valid());  // Should not exist.
     debug_ipc::MessageLoopZircon::Current()->ResumeFromException(thread_, 0);
   } else if (suspend_reason_ == SuspendReason::kOther) {
     // A breakpoint should only be current when it was hit which will be
