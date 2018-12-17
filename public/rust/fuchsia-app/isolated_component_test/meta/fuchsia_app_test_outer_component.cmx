@@ -1,0 +1,11 @@
+{
+  "program": {
+    "binary": "test/fuchsia_app_test_outer_component"
+  },
+  "sandbox": {
+    "services": [
+        "fuchsia.sys.Environment",
+        "fuchsia.sys.Loader"
+    ]
+  }
+}

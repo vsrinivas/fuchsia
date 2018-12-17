@@ -15,7 +15,7 @@ use {
 ///
 /// Implementations of this trait can be used to manufacture instances of a FIDL service
 /// and get metadata about a particular service.
-pub trait ServiceMarker: Sized {
+pub trait ServiceMarker: Sized + Send + Sync + 'static {
     /// The type of the structure against which FIDL requests are made.
     /// Queries made against the proxy are sent to the paired `ServerEnd`.
     type Proxy: Proxy;

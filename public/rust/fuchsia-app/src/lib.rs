@@ -29,35 +29,66 @@ use {
     },
     fidl_fuchsia_sys::{
         ComponentControllerProxy,
+        EnvironmentControllerProxy,
+        EnvironmentMarker,
+        EnvironmentOptions,
         FlatNamespace,
         LauncherMarker,
         LauncherProxy,
         LaunchInfo,
+        LoaderMarker,
+        ServiceList,
     },
     fuchsia_zircon::{self as zx, Peered, Signals},
     std::{
         fs::File,
-        marker::Unpin,
+        marker::{PhantomData, Unpin},
         os::unix::io::IntoRawFd,
         pin::Pin,
     },
 };
 
+#[macro_export]
+macro_rules! fuchsia_single_component_package_url {
+    ($component_name:expr) => {
+        concat!(
+            "fuchsia-pkg://fuchsia.com/",
+            $component_name,
+            "#meta/",
+            $component_name,
+            ".cmx",
+            )
+    }
+}
+
 /// Tools for starting or connecting to existing Fuchsia applications and services.
 pub mod client {
     use super::*;
 
+    /// Connect to a FIDL service using the provided channel and namespace prefix.
+    pub fn connect_channel_to_service_at<S: ServiceMarker>(
+        server_end: zx::Channel,
+        service_prefix: &str,
+    ) -> Result<(), Error> {
+        let service_path = format!("{}/{}", service_prefix, S::NAME);
+        fdio::service_connect(&service_path, server_end)
+            .with_context(|_| format!("Error connecting to service path: {}", service_path))?;
+        Ok(())
+    }
+
+    /// Connect to a FIDL service using the provided channel.
+    pub fn connect_channel_to_service<S: ServiceMarker>(server_end: zx::Channel)
+        -> Result<(), Error>
+    {
+        connect_channel_to_service_at::<S>(server_end, "/svc")
+    }
+
     /// Connect to a FIDL service using the provided namespace prefix.
-    #[inline]
     pub fn connect_to_service_at<S: ServiceMarker>(service_prefix: &str)
         -> Result<S::Proxy, Error>
     {
         let (proxy, server) = zx::Channel::create()?;
-
-        let service_path = format!("{}/{}", service_prefix, S::NAME);
-        fdio::service_connect(&service_path, server)
-            .with_context(|_| format!("Error connecting to service path: {}", service_path))?;
-
+        connect_channel_to_service_at::<S>(server, service_prefix)?;
         let proxy = fasync::Channel::from_channel(proxy)?;
         Ok(S::Proxy::from_channel(proxy))
     }
@@ -102,6 +133,18 @@ pub mod client {
     #[derive(Clone)]
     pub struct Launcher {
         launcher: LauncherProxy,
+    }
+
+    impl From<LauncherProxy> for Launcher {
+        fn from(other: LauncherProxy) -> Self {
+            Launcher { launcher: other }
+        }
+    }
+
+    impl Into<LauncherProxy> for Launcher {
+        fn into(self) -> LauncherProxy {
+            self.launcher
+        }
     }
 
     impl Launcher {
@@ -166,6 +209,18 @@ pub mod client {
     }
 
     impl App {
+        /// Returns a reference to the directory protocol channel of the application.
+        #[inline]
+        pub fn directory_channel(&self) -> &zx::Channel {
+            &self.directory_request
+        }
+
+        /// Returns a reference to the component controller.
+        #[inline]
+        pub fn controller(&self) -> &ComponentControllerProxy {
+            &self.controller
+        }
+
         #[inline]
         /// Connect to a service provided by the `App`.
         pub fn connect_to_service<S: ServiceMarker>(&self, service: S)
@@ -180,7 +235,14 @@ pub mod client {
         pub fn pass_to_service<S: ServiceMarker>(&self, _: S, server_channel: zx::Channel)
             -> Result<(), Error>
         {
-            fdio::service_connect_at(&self.directory_request, S::NAME, server_channel)?;
+            self.pass_to_named_service(S::NAME, server_channel)
+        }
+
+        /// Connect to a service by name.
+        pub fn pass_to_named_service(&self, service_name: &str, server_channel: zx::Channel)
+            -> Result<(), Error>
+        {
+            fdio::service_connect_at(&self.directory_request, service_name, server_channel)?;
             Ok(())
         }
     }
@@ -228,9 +290,16 @@ pub mod server {
         /// Used by the `FdioServer` to know which service to connect incoming requests to.
         fn service_name(&self) -> &str;
 
-        /// Create a `fidl::Stub` service.
-        // TODO(cramertj): allow `spawn` calls to fail.
+        /// Create a new instance of the service on the provided `fasync::Channel`.
         fn spawn_service(&mut self, channel: fasync::Channel);
+
+        /// Create a new instance of the service on the provided `zx::Channel`.
+        fn spawn_service_zx_channel(&mut self, channel: zx::Channel) {
+            match fasync::Channel::from_channel(channel) {
+                Ok(chan) => self.spawn_service(chan),
+                Err(e) => eprintln!("Unable to convert channel to async: {:?}", e),
+            }
+        }
     }
 
     impl<F> ServiceFactory for (&'static str, F)
@@ -264,19 +333,65 @@ pub mod server {
             self
         }
 
-        /// Start serving directory protocol service requests on the process
-        /// PA_DIRECTORY_REQUEST handle
-        pub fn start(self) -> Result<FdioServer, Error> {
-            let fdio_handle =
-                take_startup_handle(HandleType::DirectoryRequest)
-                    .ok_or(MissingStartupHandle)?;
+        /// Add a service that proxies requests to the current environment.
+        pub fn add_proxy_service<S: ServiceMarker>(self) -> Self {
+            struct Proxy<S>(PhantomData<S>);
+            impl<S: ServiceMarker> ServiceFactory for Proxy<S> {
+                fn service_name(&self) -> &str {
+                    S::NAME
+                }
+                fn spawn_service(&mut self, channel: fasync::Channel) {
+                    self.spawn_service_zx_channel(channel.into())
+                }
+                fn spawn_service_zx_channel(&mut self, channel: zx::Channel) {
+                    if let Err(e) = crate::client::connect_channel_to_service::<S>(channel) {
+                        eprintln!("failed to proxy request to {}: {:?}", S::NAME, e);
+                    }
+                }
+            }
 
-            let fdio_channel = fasync::Channel::from_channel(fdio_handle.into())?;
-            fdio_channel
+            self.add_service(Proxy::<S>(PhantomData))
+        }
+
+        /// Add a service to the `ServicesServer` that will launch a component
+        /// upon request, proxying requests to the launched component.
+        pub fn add_component_proxy_service(
+            self,
+            service_name: &'static str,
+            component_url: String,
+            arguments: Option<Vec<String>>,
+        ) -> Self {
+            // Note: the launched app will live for the remaining lifetime of the
+            // closure, which will be exactly as long as the lifetime of the resulting
+            // `FdioServer`. When the `FdioServer` is dropped, the launched component
+            // will be terminated.
+            let mut launched_app = None;
+            let mut args = Some((component_url, arguments));
+            self.add_service((service_name, move |channel: fasync::Channel| {
+                let res = (|| {
+                    if let Some((component_url, arguments)) = args.take() {
+                        launched_app = Some(
+                            crate::client::Launcher::new()?.launch(component_url, arguments)?);
+                    }
+                    if let Some(app) = launched_app.as_ref() {
+                        app.pass_to_named_service(service_name, channel.into())?;
+                    }
+                    Ok::<(), Error>(())
+                })();
+                if let Err(e) = res {
+                    eprintln!("ServicesServer failed to launch component: {:?}", e);
+                }
+            }))
+        }
+
+        /// Start serving directory protocol service requests on a new channel.
+        pub fn start_on_channel(self, channel: zx::Channel) -> Result<FdioServer, Error> {
+            let channel = fasync::Channel::from_channel(channel)?;
+            channel
                 .as_ref()
                 .signal_peer(Signals::NONE, Signals::USER_0)
                 .unwrap_or_else(|e| {
-                    eprintln!("ServicesServer::start signal_peer failed with {}", e);
+                    eprintln!("ServicesServer::start_on_channel signal_peer failed with {}", e);
                 });
 
             let mut server = FdioServer {
@@ -284,9 +399,81 @@ pub mod server {
                 factories: self.services,
             };
 
-            server.serve_connection(fdio_channel);
-
+            server.serve_connection(channel);
             Ok(server)
+        }
+
+        /// Start serving directory protocol service requests on the process
+        /// PA_DIRECTORY_REQUEST handle
+        pub fn start(self) -> Result<FdioServer, Error> {
+            let fdio_handle =
+                take_startup_handle(HandleType::DirectoryRequest)
+                    .ok_or(MissingStartupHandle)?;
+
+            self.start_on_channel(fdio_handle.into())
+        }
+
+        /// Start serving directory protocol service requests via a `ServiceList`.
+        /// The resulting `ServiceList` can be attached to a new environment in
+        /// order to provide child components with access to these services.
+        pub fn start_services_list(self) -> Result<(FdioServer, ServiceList), Error> {
+            let (chan1, chan2) = zx::Channel::create()?;
+
+            self.start_on_channel(chan1).map(|fdio_server| {
+                let names = fdio_server.factories
+                                .iter()
+                                .map(|x| x.service_name().to_owned())
+                                .collect();
+                (
+                    fdio_server,
+                    ServiceList {
+                        names,
+                        provider: None,
+                        host_directory: Some(chan2),
+                    },
+                )
+            })
+        }
+
+        /// Starts a new component inside an environment that only has access to
+        /// the services provided through this `ServicesServer`.
+        ///
+        /// Note that the resulting `App` and `EnvironmentControllerProxy` must be kept
+        /// alive for the component to continue running. Once they are dropped, the
+        /// component will be destroyed.
+        pub fn launch_component_in_nested_environment(
+            self,
+            url: String,
+            arguments: Option<Vec<String>>,
+            environment_label: &str,
+        ) -> Result<(FdioServer, EnvironmentControllerProxy, crate::client::App), Error> {
+            let env = crate::client::connect_to_service::<EnvironmentMarker>()
+                .context("connecting to current environment")?;
+            let services_with_loader = self.add_proxy_service::<LoaderMarker>();
+            let (fdio_server, mut service_list) = services_with_loader.start_services_list()?;
+
+            let (new_env, new_env_server_end) = fidl::endpoints::create_proxy()?;
+            let (new_env_controller, new_env_controller_server_end) = fidl::endpoints::create_proxy()?;
+            env.create_nested_environment(
+                new_env_server_end,
+                Some(new_env_controller_server_end),
+                Some(environment_label),
+                Some(fidl::encoding::OutOfLine(&mut service_list)),
+                &mut EnvironmentOptions {
+                    inherit_parent_services: false,
+                    allow_parent_runners: false,
+                    kill_on_oom: false,
+                },
+            ).context("creating isolated environment")?;
+
+            let (launcher_proxy, launcher_server_end) = fidl::endpoints::create_proxy()?;
+            new_env.get_launcher(launcher_server_end)
+                .context("getting nested environment launcher")?;
+
+            let launcher = crate::client::Launcher::from(launcher_proxy);
+            let app = launcher.launch(url, arguments)?;
+
+            Ok((fdio_server, new_env_controller, app))
         }
     }
 
@@ -306,7 +493,8 @@ pub mod server {
     impl Unpin for FdioServer {}
 
     impl FdioServer {
-        fn serve_connection(&mut self, chan: fasync::Channel) {
+        /// Add an additional connection to the `FdioServer` to provide services to.
+        pub fn serve_connection(&mut self, chan: fasync::Channel) {
             self.connections.push(DirectoryRequestStream::from_channel(chan).into_future())
         }
 
@@ -321,8 +509,6 @@ pub mod server {
                     responder.send(zx::sys::ZX_OK).map_err(|e| e.into())
                 }
                 DirectoryRequest::Open { flags: _, mode: _, path, object, control_handle: _, } => {
-                    let service_channel = fasync::Channel::from_channel(object.into_channel())?;
-
                     // This mechanism to open "public" redirects the service
                     // request to the FDIO Server itself for historical reasons.
                     //
@@ -334,12 +520,13 @@ pub mod server {
                     // capable of distinguishing between different characteristics
                     // of imported / exported directories.
                     if path == "public" {
+                        let service_channel = fasync::Channel::from_channel(object.into_channel())?;
                         self.serve_connection(service_channel);
                         return Ok(());
                     }
 
                     match self.factories.iter_mut().find(|factory| factory.service_name() == path) {
-                        Some(factory) => factory.spawn_service(service_channel),
+                        Some(factory) => factory.spawn_service_zx_channel(object.into_channel()),
                         None => eprintln!("No service found for path {}", path),
                     }
                     Ok(())
