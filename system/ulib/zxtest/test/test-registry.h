@@ -50,6 +50,33 @@ void TestInfoDefault();
 // Verify that the instantiated |std::unique_ptr<Test>| is actually from the provided factory.
 void TestInfoInstantiate();
 
+// Verify default state of a |TestCase.
+void TestCaseDefault();
+
+// Verify that |TestCase::RegisterTest| adds test correctly.
+void TestCaseRegisterTest();
+
+// Verify that |TestCase::RegisterTest| returns false for duplicated tests names.
+void TestCaseRegisterDuplicatedTestFails();
+
+// Verify that |Testcase::Run| executes TestCase set up and tear down in the correct order.
+void TestCaseRun();
+
+// Verify that |TestCase::Filter| works as expected.
+void TestCaseFilter();
+void TestCaseFilterNoMatches();
+void TestCaseFilterAllMatching();
+void TestCaseFilterNullMatchesAll();
+
+// Verify that |TestCase::Filter| is idempotent.
+void TestCaseFilterDoNotAccumulate();
+
+// Verify that |TestCase::Shuffle| changes the execution order.
+void TestCaseShuffle();
+
+// Verify that |TestCase::UnShuffle| restores original order.
+void TestCaseUnShuffle();
+
 struct RegisteredTest {
     const char* name = nullptr;
     void (*test_fn)() = nullptr;
@@ -61,8 +88,22 @@ struct RegisteredTest {
 
 // List of tests to run.
 static constexpr RegisteredTest kRegisteredTests[] = {
-    RUN_TEST(TestRun),         RUN_TEST(TestRunFailure),      RUN_TEST(TestSetUpFailure),
-    RUN_TEST(TestInfoDefault), RUN_TEST(TestInfoInstantiate),
+    RUN_TEST(TestRun),
+    RUN_TEST(TestRunFailure),
+    RUN_TEST(TestSetUpFailure),
+    RUN_TEST(TestInfoDefault),
+    RUN_TEST(TestInfoInstantiate),
+    RUN_TEST(TestCaseDefault),
+    RUN_TEST(TestCaseRegisterTest),
+    RUN_TEST(TestCaseRegisterDuplicatedTestFails),
+    RUN_TEST(TestCaseRun),
+    RUN_TEST(TestCaseFilter),
+    RUN_TEST(TestCaseFilterNoMatches),
+    RUN_TEST(TestCaseFilterAllMatching),
+    RUN_TEST(TestCaseFilterNullMatchesAll),
+    RUN_TEST(TestCaseFilterDoNotAccumulate),
+    RUN_TEST(TestCaseShuffle),
+    RUN_TEST(TestCaseUnShuffle),
 };
 
 #undef RUN_TEST

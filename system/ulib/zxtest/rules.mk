@@ -9,6 +9,7 @@ MODULE_TYPE := userlib
 MODULE_COMPILEFLAGS += -fvisibility=hidden
 
 MODULE_SRCS := \
+    $(LOCAL_DIR)/test-case.cpp \
     $(LOCAL_DIR)/test.cpp \
     $(LOCAL_DIR)/test-info.cpp \
 
@@ -38,8 +39,9 @@ MODULE_TYPE := usertest
 TEST_DIR := $(LOCAL_DIR)/test
 
 MODULE_SRCS := \
-    $(TEST_DIR)/test_test.cpp \
+    $(TEST_DIR)/test-case_test.cpp \
     $(TEST_DIR)/test-info_test.cpp \
+    $(TEST_DIR)/test_test.cpp \
     $(TEST_DIR)/main.cpp \
 
 MODULE_STATIC_LIBS := \

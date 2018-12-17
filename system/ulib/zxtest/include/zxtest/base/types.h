@@ -27,5 +27,11 @@ struct SourceLocation {
 // Function for instantiating a TestInstance.
 using TestFactory = fbl::Function<std::unique_ptr<Test>(TestDriver*)>;
 
+// Function that definest a SetUp for a TestCase.
+using SetUpTestCaseFn = fbl::Function<void()>;
+
+// Function that definest a TearDown for a TestCase.
+using TearDownTestCaseFn = fbl::Function<void()>;
+
 } // namespace internal
 } // namespace zxtest
