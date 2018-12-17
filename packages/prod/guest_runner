@@ -1,7 +1,6 @@
 {
   "imports": [
         "garnet/packages/config/network",
-        "garnet/packages/experimental/wayland_bridge",
         "garnet/packages/prod/pkgsvr",
         "garnet/packages/prod/runtime"
     ],
