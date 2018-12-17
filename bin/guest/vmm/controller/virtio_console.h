@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_GUEST_VMM_VIRTIO_CONSOLE_H_
-#define GARNET_BIN_GUEST_VMM_VIRTIO_CONSOLE_H_
+#ifndef GARNET_BIN_GUEST_VMM_CONTROLLER_VIRTIO_CONSOLE_H_
+#define GARNET_BIN_GUEST_VMM_CONTROLLER_VIRTIO_CONSOLE_H_
 
 #include <fuchsia/guest/device/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
@@ -45,4 +45,4 @@ class VirtioConsole
   zx_status_t Ready(uint32_t negotiated_features);
 };
 
-#endif  // GARNET_BIN_GUEST_VMM_VIRTIO_CONSOLE_H_
+#endif  // GARNET_BIN_GUEST_VMM_CONTROLLER_VIRTIO_CONSOLE_H_

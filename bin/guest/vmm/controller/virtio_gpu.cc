@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/guest/vmm/virtio_gpu.h"
+#include "garnet/bin/guest/vmm/controller/virtio_gpu.h"
 
 static constexpr char kVirtioGpuUrl[] =
     "fuchsia-pkg://fuchsia.com/virtio_gpu#meta/virtio_gpu.cmx";

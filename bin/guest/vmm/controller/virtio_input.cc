@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/guest/vmm/virtio_input.h"
+#include "garnet/bin/guest/vmm/controller/virtio_input.h"
 
 #include <lib/fxl/logging.h>
 #include <lib/svc/cpp/services.h>

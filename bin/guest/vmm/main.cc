@@ -28,6 +28,14 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>
 
+#include "garnet/bin/guest/vmm/controller/virtio_balloon.h"
+#include "garnet/bin/guest/vmm/controller/virtio_block.h"
+#include "garnet/bin/guest/vmm/controller/virtio_console.h"
+#include "garnet/bin/guest/vmm/controller/virtio_gpu.h"
+#include "garnet/bin/guest/vmm/controller/virtio_input.h"
+#include "garnet/bin/guest/vmm/controller/virtio_net.h"
+#include "garnet/bin/guest/vmm/controller/virtio_rng.h"
+#include "garnet/bin/guest/vmm/controller/virtio_wl.h"
 #include "garnet/bin/guest/vmm/guest.h"
 #include "garnet/bin/guest/vmm/guest_config.h"
 #include "garnet/bin/guest/vmm/instance_controller_impl.h"
@@ -37,16 +45,8 @@
 #include "garnet/bin/guest/vmm/platform_device.h"
 #include "garnet/bin/guest/vmm/uart.h"
 #include "garnet/bin/guest/vmm/vcpu.h"
-#include "garnet/bin/guest/vmm/virtio_balloon.h"
-#include "garnet/bin/guest/vmm/virtio_block.h"
-#include "garnet/bin/guest/vmm/virtio_console.h"
-#include "garnet/bin/guest/vmm/virtio_gpu.h"
-#include "garnet/bin/guest/vmm/virtio_input.h"
-#include "garnet/bin/guest/vmm/virtio_net.h"
 #include "garnet/bin/guest/vmm/virtio_net_legacy.h"
-#include "garnet/bin/guest/vmm/virtio_rng.h"
 #include "garnet/bin/guest/vmm/virtio_vsock.h"
-#include "garnet/bin/guest/vmm/virtio_wl.h"
 #include "garnet/bin/guest/vmm/zircon.h"
 #include "garnet/public/lib/fxl/files/file.h"
 

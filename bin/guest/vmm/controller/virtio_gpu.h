@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_GUEST_VMM_VIRTIO_GPU_H_
-#define GARNET_BIN_GUEST_VMM_VIRTIO_GPU_H_
+#ifndef GARNET_BIN_GUEST_VMM_CONTROLLER_VIRTIO_GPU_H_
+#define GARNET_BIN_GUEST_VMM_CONTROLLER_VIRTIO_GPU_H_
 
 #include <fuchsia/guest/device/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
@@ -48,4 +48,4 @@ class VirtioGpu
   void OnConfigChanged();
 };
 
-#endif  // GARNET_BIN_GUEST_VMM_VIRTIO_GPU_H_
+#endif  // GARNET_BIN_GUEST_VMM_CONTROLLER_VIRTIO_GPU_H_

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/guest/vmm/virtio_net.h"
+#include "garnet/bin/guest/vmm/controller/virtio_net.h"
 
 #include <lib/svc/cpp/services.h>
 

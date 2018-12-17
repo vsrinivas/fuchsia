@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/guest/vmm/virtio_wl.h"
+#include "garnet/bin/guest/vmm/controller/virtio_wl.h"
 
 #include <lib/fit/function.h>
 #include <lib/fxl/logging.h>

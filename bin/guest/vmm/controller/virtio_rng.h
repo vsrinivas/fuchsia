@@ -2,28 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_GUEST_VMM_VIRTIO_NET_H_
-#define GARNET_BIN_GUEST_VMM_VIRTIO_NET_H_
+#ifndef GARNET_BIN_GUEST_VMM_CONTROLLER_VIRTIO_RNG_H_
+#define GARNET_BIN_GUEST_VMM_CONTROLLER_VIRTIO_RNG_H_
 
 #include <fuchsia/guest/device/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <virtio/net.h>
 #include <virtio/virtio_ids.h>
 
 #include "garnet/bin/guest/vmm/virtio_device.h"
 
-static constexpr uint16_t kVirtioNetNumQueues = 2;
+static constexpr uint16_t kVirtioRngNumQueues = 1;
 
-static constexpr uint16_t kVirtioNetRxQueueIndex = 0;
-static constexpr uint16_t kVirtioNetTxQueueIndex = 1;
-static_assert(kVirtioNetRxQueueIndex != kVirtioNetTxQueueIndex,
-              "RX and TX queues must be distinct");
+// virtio-rng has no configuration.
+struct virtio_rng_config_t {};
 
-class VirtioNet
-    : public VirtioComponentDevice<VIRTIO_ID_NET, kVirtioNetNumQueues,
-                                   virtio_net_config_t> {
+class VirtioRng
+    : public VirtioComponentDevice<VIRTIO_ID_RNG, kVirtioRngNumQueues,
+                                   virtio_rng_config_t> {
  public:
-  explicit VirtioNet(const PhysMem& phys_mem);
+  explicit VirtioRng(const PhysMem& phys_mem);
 
   zx_status_t Start(const zx::guest& guest, fuchsia::sys::Launcher* launcher,
                     async_dispatcher_t* dispatcher);
@@ -31,11 +28,11 @@ class VirtioNet
  private:
   fuchsia::sys::ComponentControllerPtr controller_;
   // Use a sync pointer for consistency of virtual machine execution.
-  fuchsia::guest::device::VirtioNetSyncPtr net_;
+  fuchsia::guest::device::VirtioRngSyncPtr rng_;
 
   zx_status_t ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
                              zx_gpaddr_t avail, zx_gpaddr_t used);
   zx_status_t Ready(uint32_t negotiated_features);
 };
 
-#endif  // GARNET_BIN_GUEST_VMM_VIRTIO_NET_H_
+#endif  // GARNET_BIN_GUEST_VMM_CONTROLLER_VIRTIO_RNG_H_

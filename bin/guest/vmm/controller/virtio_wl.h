@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_GUEST_VMM_VIRTIO_WL_H_
-#define GARNET_BIN_GUEST_VMM_VIRTIO_WL_H_
+#ifndef GARNET_BIN_GUEST_VMM_CONTROLLER_VIRTIO_WL_H_
+#define GARNET_BIN_GUEST_VMM_CONTROLLER_VIRTIO_WL_H_
 
 #include <lib/zx/vmar.h>
 #include <virtio/virtio_ids.h>
@@ -36,4 +36,4 @@ class VirtioWl : public VirtioComponentDevice<VIRTIO_ID_WL, VIRTWL_QUEUE_COUNT,
   zx_status_t Ready(uint32_t negotiated_features);
 };
 
-#endif  // GARNET_BIN_GUEST_VMM_VIRTIO_WL_H_
+#endif  // GARNET_BIN_GUEST_VMM_CONTROLLER_VIRTIO_WL_H_
