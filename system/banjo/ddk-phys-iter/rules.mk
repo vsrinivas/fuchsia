@@ -10,16 +10,11 @@ MODULE_TYPE := banjo
 
 MODULE_PACKAGE := banjo
 
-MODULE_BANJO_LIBRARY := ddk.protocol.usb.function
+MODULE_BANJO_LIBRARY := ddk.physiter
 
-MODULE_BANJO_NAME := usb/function
+MODULE_BANJO_NAME := physiter
 
-MODULE_BANJO_DEPS := \
-    system/banjo/ddk-phys-iter \
-    system/banjo/zircon-hw-usb \
-    system/banjo/ddk-protocol-usb-request \
-
-MODULE_SRCS += $(LOCAL_DIR)/usb-function.banjo
+MODULE_SRCS += $(LOCAL_DIR)/phys-iter.banjo
 
 include make/module.mk
 

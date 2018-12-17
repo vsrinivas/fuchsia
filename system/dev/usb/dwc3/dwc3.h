@@ -6,7 +6,6 @@
 
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
-#include <ddk/phys-iter.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/usb/dci.h>

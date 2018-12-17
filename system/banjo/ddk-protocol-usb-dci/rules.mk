@@ -15,7 +15,7 @@ MODULE_BANJO_LIBRARY := ddk.protocol.usb.dci
 MODULE_BANJO_NAME := usb/dci
 
 MODULE_BANJO_DEPS := \
-    system/banjo/ddk-driver \
+    system/banjo/ddk-phys-iter \
     system/banjo/zircon-hw-usb \
     system/banjo/ddk-protocol-usb-request \
 

@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <ddk/phys-iter.h>
 #include <ddk/protocol/usb/request.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>

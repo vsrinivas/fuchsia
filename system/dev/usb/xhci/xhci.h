@@ -14,7 +14,6 @@
 
 #include <ddk/device.h>
 #include <ddk/mmio-buffer.h>
-#include <ddk/phys-iter.h>
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/platform/device.h>

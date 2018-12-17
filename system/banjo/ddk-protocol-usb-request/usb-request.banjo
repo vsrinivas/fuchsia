@@ -4,7 +4,7 @@
 
 library ddk.protocol.usb.request;
 
-using ddk.driver;
+using ddk.physiter;
 using zircon.hw.usb;
 using zx;
 
@@ -49,7 +49,7 @@ struct UsbRequest {
     /// Phys addresses of the payload.
     vector<zx.paddr>? phys;
 
-    vector<ddk.driver.PhysIterSgEntry>? sg;
+    vector<ddk.physiter.PhysIterSgEntry>? sg;
 
     UsbResponse response;
 

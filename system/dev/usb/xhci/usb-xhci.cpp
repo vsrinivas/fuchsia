@@ -5,7 +5,6 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
-#include <ddk/phys-iter.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/usb/hci.h>
 

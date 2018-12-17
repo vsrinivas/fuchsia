@@ -54,11 +54,3 @@ struct DeviceAddArgs {
     /// One or more of DEVICE_ADD_*
     uint32 flags;
 };
-
-[repr = "C"]
-struct PhysIterSgEntry {
-    /// length starting at the scatter gather entry offset, must be non zero
-    usize length;
-    /// offset relative to the buffer's vmo_offset
-    usize offset;
-};

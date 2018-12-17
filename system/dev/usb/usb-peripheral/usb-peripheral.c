@@ -14,7 +14,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
-#include <ddk/phys-iter.h>
 #include <ddk/protocol/usb/dci.h>
 #include <ddk/protocol/usb/function.h>
 #include <ddk/protocol/usb/modeswitch.h>

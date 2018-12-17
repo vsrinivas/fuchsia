@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <ddk/phys-iter.h>
 #include <ddktl/device.h>
 #include <ddktl/mmio.h>
 #include <ddktl/pdev.h>

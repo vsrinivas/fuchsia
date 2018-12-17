@@ -14,7 +14,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/phys-iter.h>
 #include <ddk/protocol/ethernet.h>
 #include <ddk/protocol/usb/function.h>
 #include <fbl/algorithm.h>
