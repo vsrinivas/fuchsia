@@ -204,7 +204,7 @@ std::unique_ptr<StreamType> StreamTypeFromVideoCodecContext(
   uint32_t coded_width;
   uint32_t coded_height;
   FfmpegVideoFrameLayout::LayoutFrame(
-      pixel_format,
+      from, pixel_format,
       VideoStreamType::Extent(from.coded_width, from.coded_height),
       &line_stride, &plane_offset, &coded_width, &coded_height);
 
@@ -223,8 +223,8 @@ std::unique_ptr<StreamType> StreamTypeFromVideoCodecContext(
           : Bytes::Create(from.extradata, from.extradata_size),
       VideoStreamType::VideoProfile::kNotApplicable, pixel_format,
       ColorSpaceFromAVColorSpaceAndRange(from.colorspace, from.color_range),
-      from.width, from.height, coded_width, coded_height,
-      aspect_ratio_width, aspect_ratio_height, line_stride, plane_offset);
+      from.width, from.height, coded_width, coded_height, aspect_ratio_width,
+      aspect_ratio_height, line_stride, plane_offset);
 }
 
 // Creates a StreamType from an AVStream describing a video type.
