@@ -31,8 +31,6 @@ import (
 	"github.com/google/netstack/tcpip/transport/udp"
 )
 
-var OnInterfacesChanged func()
-
 func Main() {
 	flag.Parse()
 	log.SetFlags(log.Lshortfile)
@@ -70,8 +68,8 @@ func Main() {
 		arena:          arena,
 		dnsClient:      dns.NewClient(stk),
 		deviceSettings: ds,
-		ifStates:       make(map[tcpip.NICID]*ifState),
 	}
+	ns.mu.ifStates = make(map[tcpip.NICID]*ifState)
 	ns.mu.stack = stk
 
 	if err := ns.addLoopback(); err != nil {
@@ -82,8 +80,7 @@ func Main() {
 	// var dnsService netstack.ResolverAdminService
 	var netstackService netstack.NetstackService
 
-	OnInterfacesChanged = func() {
-		interfaces := getInterfaces(ns)
+	ns.OnInterfacesChanged = func(interfaces []netstack.NetInterface) {
 		connectivity.InferAndNotify(interfaces)
 		for _, key := range netstackService.BindingKeys() {
 			if p, ok := netstackService.EventProxyFor(key); ok {
@@ -104,7 +101,11 @@ func Main() {
 		// Send a synthetic InterfacesChanged event to each client when they join
 		// Prevents clients from having to race GetInterfaces / InterfacesChanged.
 		if p, ok := netstackService.EventProxyFor(k); ok {
-			if err := p.OnInterfacesChanged(getInterfaces(ns)); err != nil {
+			ns.mu.Lock()
+			interfaces := ns.getInterfacesLocked()
+			ns.mu.Unlock()
+
+			if err := p.OnInterfacesChanged(interfaces); err != nil {
 				log.Printf("OnInterfacesChanged failed: %v", err)
 			}
 		}

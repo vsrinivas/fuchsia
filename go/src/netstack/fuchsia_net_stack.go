@@ -24,32 +24,34 @@ type stackImpl struct {
 	ns *Netstack
 }
 
-func getInterfaceInfo(nicid tcpip.NICID, ifs *ifState) *stack.InterfaceInfo {
-	// Long-hand for: broadaddr = ifs.nic.Addr | ^ifs.nic.Netmask
-	broadaddr := []byte(ifs.nic.Addr)
-	if len(ifs.nic.Netmask) != len(ifs.nic.Addr) {
-		log.Printf("warning: mismatched netmask and address length for nic: %+v", ifs.nic)
+func getInterfaceInfo(ifs *ifState) *stack.InterfaceInfo {
+	ifs.mu.Lock()
+	defer ifs.mu.Unlock()
+	// Long-hand for: broadaddr = ifs.mu.nic.Addr | ^ifs.mu.nic.Netmask
+	broadaddr := []byte(ifs.mu.nic.Addr)
+	if len(ifs.mu.nic.Netmask) != len(ifs.mu.nic.Addr) {
+		log.Printf("warning: mismatched netmask and address length for nic: %+v", ifs.mu.nic)
 		return nil
 	}
 
 	for i := range broadaddr {
-		broadaddr[i] |= ^ifs.nic.Netmask[i]
+		broadaddr[i] |= ^ifs.mu.nic.Netmask[i]
 	}
 
 	// TODO(tkilbourn): distinguish between enabled and link up
 	enablementStatus := stack.EnablementStatusDisabled
 	physicalStatus := stack.PhysicalStatusDown
-	if ifs.state == eth.StateStarted {
+	if ifs.mu.state == eth.StateStarted {
 		enablementStatus = stack.EnablementStatusEnabled
 		physicalStatus = stack.PhysicalStatusUp
 	}
 
 	// TODO(tkilbourn): implement interface addresses
 	addrs := make([]stack.InterfaceAddress, 0, 1)
-	if len(ifs.nic.Addr) > 0 {
+	if len(ifs.mu.nic.Addr) > 0 {
 		addrs = append(addrs, stack.InterfaceAddress{
-			IpAddress: fidlconv.ToNetIpAddress(ifs.nic.Addr),
-			PrefixLen: fidlconv.GetPrefixLen(ifs.nic.Netmask),
+			IpAddress: fidlconv.ToNetIpAddress(ifs.mu.nic.Addr),
+			PrefixLen: fidlconv.GetPrefixLen(ifs.mu.nic.Netmask),
 		})
 	}
 
@@ -62,28 +64,27 @@ func getInterfaceInfo(nicid tcpip.NICID, ifs *ifState) *stack.InterfaceInfo {
 	}
 
 	return &stack.InterfaceInfo{
-		Id: uint64(nicid),
+		Id: uint64(ifs.mu.nic.ID),
 		Properties: stack.InterfaceProperties{
 			Path:             path,
 			Mac:              mac,
 			Mtu:              uint32(ifs.statsEP.MTU()),
 			EnablementStatus: enablementStatus,
 			PhysicalStatus:   physicalStatus,
-			Features:         ifs.nic.Features,
+			Features:         ifs.mu.nic.Features,
 			Addresses:        addrs,
 		},
 	}
-
 }
 
 func (ns *Netstack) getNetInterfaces() []stack.InterfaceInfo {
 	ns.mu.Lock()
-	defer ns.mu.Unlock()
-
-	out := make([]stack.InterfaceInfo, 0, len(ns.ifStates))
-	for nicid, ifs := range ns.ifStates {
-		out = append(out, *getInterfaceInfo(nicid, ifs))
+	out := make([]stack.InterfaceInfo, 0, len(ns.mu.ifStates))
+	for _, ifs := range ns.mu.ifStates {
+		out = append(out, *getInterfaceInfo(ifs))
 	}
+	ns.mu.Unlock()
+
 	sort.Slice(out[:], func(i, j int) bool {
 		return out[i].Id < out[j].Id
 	})
@@ -96,56 +97,52 @@ func (ns *Netstack) addInterface(topologicalPath string, device ethernet.DeviceI
 	if err != nil {
 		return &stack.Error{Type: stack.ErrorTypeInternal}, 0
 	}
-	return nil, uint64(ifs.nic.ID)
+	return nil, uint64(ifs.mu.nic.ID)
 }
 
 func (ns *Netstack) delInterface(id uint64) *stack.Error {
-	if ifs, ok := ns.ifStates[tcpip.NICID(id)]; ok {
+	ns.mu.Lock()
+	ifs, ok := ns.mu.ifStates[tcpip.NICID(id)]
+	ns.mu.Unlock()
+
+	if ok {
 		if err := ifs.eth.Close(); err != nil {
-			log.Printf("ifs.eth.Close() failed: %v", err)
+			log.Printf("ifs.eth.Close() failed (NIC: %d): %v", id, err)
 			return &stack.Error{Type: stack.ErrorTypeInternal}
 		}
 		return nil
-
 	}
 	return &stack.Error{Type: stack.ErrorTypeNotFound}
 }
 
 func (ns *Netstack) getInterface(id uint64) (*stack.InterfaceInfo, *stack.Error) {
 	ns.mu.Lock()
-	defer ns.mu.Unlock()
+	ifs, ok := ns.mu.ifStates[tcpip.NICID(id)]
+	ns.mu.Unlock()
 
-	for nicid, ifs := range ns.ifStates {
-		if uint64(nicid) == id {
-			return getInterfaceInfo(nicid, ifs), nil
-		}
+	if ok {
+		return getInterfaceInfo(ifs), nil
 	}
 	return nil, &stack.Error{Type: stack.ErrorTypeNotFound}
 }
 
 func (ns *Netstack) setInterfaceState(id uint64, enabled bool) *stack.Error {
 	ns.mu.Lock()
-	defer ns.mu.Unlock()
+	ifs, ok := ns.mu.ifStates[tcpip.NICID(id)]
+	ns.mu.Unlock()
 
-	var ifs *ifState
-	for i, ifState := range ns.ifStates {
-		if uint64(i) == id {
-			ifs = ifState
-			break
-		}
-	}
-	if ifs == nil {
+	if !ok {
 		return &stack.Error{Type: stack.ErrorTypeNotFound}
 	}
 
 	if enabled {
 		if err := ifs.eth.Up(); err != nil {
-			log.Printf("ifs.eth.Up() failed: %v", err)
+			log.Printf("ifs.eth.Up() failed (NIC %d): %v", id, err)
 			return &stack.Error{Type: stack.ErrorTypeInternal}
 		}
 	} else {
 		if err := ifs.eth.Down(); err != nil {
-			log.Printf("ifs.eth.Down() failed: %v", err)
+			log.Printf("ifs.eth.Down() failed (NIC %d): %v", id, err)
 			return &stack.Error{Type: stack.ErrorTypeInternal}
 		}
 	}
@@ -153,26 +150,24 @@ func (ns *Netstack) setInterfaceState(id uint64, enabled bool) *stack.Error {
 }
 
 func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr stack.InterfaceAddress) *stack.Error {
-	// The ns mutex is held in the setInterfaceAddress call below so release it
-	// after we find the right ifState.
+	nicid := tcpip.NICID(id)
+
 	ns.mu.Lock()
-	var ifs *ifState
-	for i, ifState := range ns.ifStates {
-		if uint64(i) == id {
-			ifs = ifState
-			break
-		}
-	}
+	ifs, ok := ns.mu.ifStates[nicid]
 	ns.mu.Unlock()
 
-	if ifs == nil {
+	ifs.mu.Lock()
+	addr := ifs.mu.nic.Addr
+	ifs.mu.Unlock()
+
+	if !ok {
 		return &stack.Error{Type: stack.ErrorTypeNotFound}
 	}
 
 	var protocol tcpip.NetworkProtocolNumber
 	switch ifAddr.IpAddress.Which() {
 	case net.IpAddressIpv4:
-		if len(ifs.nic.Addr) > 0 {
+		if len(addr) > 0 {
 			return &stack.Error{Type: stack.ErrorTypeAlreadyExists}
 		}
 		protocol = ipv4.ProtocolNumber
@@ -181,10 +176,8 @@ func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr stack.InterfaceAddress) *
 		return &stack.Error{Type: stack.ErrorTypeNotSupported}
 	}
 
-	nic := ifs.nic.ID
-	addr := fidlconv.ToTCPIPAddress(ifAddr.IpAddress)
-	if err := ns.setInterfaceAddress(nic, protocol, addr, ifAddr.PrefixLen); err != nil {
-		log.Printf("(*Netstack).setInterfaceAddress(...) failed: %v", err)
+	if err := ns.setInterfaceAddress(nicid, protocol, fidlconv.ToTCPIPAddress(ifAddr.IpAddress), ifAddr.PrefixLen); err != nil {
+		log.Printf("(*Netstack).setInterfaceAddress(...) failed (NIC %d): %v", nicid, err)
 		return &stack.Error{Type: stack.ErrorTypeBadState}
 	}
 	return nil

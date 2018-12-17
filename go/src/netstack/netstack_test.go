@@ -52,9 +52,11 @@ func TestNicName(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if ifs.nic.Name != testDeviceName {
-		t.Errorf("ifs.nic.Name = %v, want %v", ifs.nic.Name, testDeviceName)
+	ifs.mu.Lock()
+	if ifs.mu.nic.Name != testDeviceName {
+		t.Errorf("ifs.mu.nic.Name = %v, want %v", ifs.mu.nic.Name, testDeviceName)
 	}
+	ifs.mu.Unlock()
 }
 
 func TestNicStartedByDefault(t *testing.T) {
@@ -89,10 +91,12 @@ func TestDhcpConfiguration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if ifs.dhcpState.client == nil {
+	ifs.mu.Lock()
+	defer ifs.mu.Unlock()
+	if ifs.mu.dhcpState.client == nil {
 		t.Errorf("no dhcp client")
 	}
-	if ifs.dhcpState.enabled == false {
+	if ifs.mu.dhcpState.enabled == false {
 		t.Errorf("dhcp disabled")
 	}
 }
@@ -103,9 +107,9 @@ func newNetstack(t *testing.T) *Netstack {
 		t.Fatal(err)
 	}
 	ns := &Netstack{
-		arena:    arena,
-		ifStates: make(map[tcpip.NICID]*ifState),
+		arena: arena,
 	}
+	ns.mu.ifStates = make(map[tcpip.NICID]*ifState)
 	ns.mu.stack = stack.New(
 		[]string{
 			ipv4.ProtocolName,
@@ -113,7 +117,7 @@ func newNetstack(t *testing.T) *Netstack {
 			arp.ProtocolName,
 		}, nil, stack.Options{})
 
-	OnInterfacesChanged = func() {}
+	ns.OnInterfacesChanged = func([]netstack.NetInterface) {}
 	return ns
 }
 

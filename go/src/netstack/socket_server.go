@@ -832,11 +832,13 @@ func (ios *iostate) buildIfInfos() *C.netc_get_if_info_t {
 	ios.ns.mu.Lock()
 	defer ios.ns.mu.Unlock()
 	var index C.uint
-	for nicid, ifs := range ios.ns.ifStates {
-		if ifs.nic.Addr == ipv4Loopback {
+	for nicid, ifs := range ios.ns.mu.ifStates {
+		ifs.mu.Lock()
+		if ifs.mu.nic.Addr == ipv4Loopback {
+
 			continue
 		}
-		name := ifs.nic.Name
+		name := ifs.mu.nic.Name
 		// leave one byte for the null terminator.
 		if l := len(rep.info[index].name) - 1; len(name) > l {
 			name = name[:l]
@@ -847,15 +849,17 @@ func (ios *iostate) buildIfInfos() *C.netc_get_if_info_t {
 		}
 		rep.info[index].index = C.ushort(index + 1)
 		rep.info[index].flags |= C.NETC_IFF_UP
-		rep.info[index].addr.Encode(ipv4.ProtocolNumber, tcpip.FullAddress{NIC: nicid, Addr: ifs.nic.Addr})
-		rep.info[index].netmask.Encode(ipv4.ProtocolNumber, tcpip.FullAddress{NIC: nicid, Addr: tcpip.Address(ifs.nic.Netmask)})
+		rep.info[index].addr.Encode(ipv4.ProtocolNumber, tcpip.FullAddress{NIC: nicid, Addr: ifs.mu.nic.Addr})
+		rep.info[index].netmask.Encode(ipv4.ProtocolNumber, tcpip.FullAddress{NIC: nicid, Addr: tcpip.Address(ifs.mu.nic.Netmask)})
 
-		// Long-hand for: broadaddr = ifs.nic.Addr | ^ifs.nic.Netmask
-		broadaddr := []byte(ifs.nic.Addr)
+		// Long-hand for: broadaddr = ifs.mu.nic.Addr | ^ifs.mu.nic.Netmask
+		broadaddr := []byte(ifs.mu.nic.Addr)
 		for i := range broadaddr {
-			broadaddr[i] |= ^ifs.nic.Netmask[i]
+			broadaddr[i] |= ^ifs.mu.nic.Netmask[i]
 		}
 		rep.info[index].broadaddr.Encode(ipv4.ProtocolNumber, tcpip.FullAddress{NIC: nicid, Addr: tcpip.Address(broadaddr)})
+		ifs.mu.Unlock()
+
 		index++
 	}
 	rep.n_info = index
