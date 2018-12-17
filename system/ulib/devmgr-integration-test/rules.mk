@@ -27,5 +27,7 @@ MODULE_STATIC_LIBS := \
 	system/ulib/zxcpp \
 
 MODULE_PACKAGE := shared
+MODULE_EXPORT := so
+MODULE_SO_NAME := devmgr-integration-test
 
 include make/module.mk
