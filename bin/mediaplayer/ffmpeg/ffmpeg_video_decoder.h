@@ -6,7 +6,6 @@
 #define GARNET_BIN_MEDIAPLAYER_FFMPEG_FFMPEG_VIDEO_DECODER_H_
 
 #include "garnet/bin/mediaplayer/ffmpeg/ffmpeg_decoder_base.h"
-#include "garnet/bin/mediaplayer/ffmpeg/ffmpeg_video_frame_layout.h"
 #include "lib/media/timeline/timeline_rate.h"
 
 namespace media_player {
@@ -42,19 +41,19 @@ class FfmpegVideoDecoder : public FfmpegDecoderBase {
   static const int kFrameBufferAlign = 32;
 
   // Indicates whether the decoder has a non-zero coded size.
-  bool has_size() const {
-    return coded_size_.width() != 0 && coded_size_.height() != 0;
-  }
+  bool has_size() const { return aligned_width_ != 0 && aligned_height_ != 0; }
 
-  FfmpegVideoFrameLayout frame_layout_;
-  std::unique_ptr<StreamType> revised_stream_type_;
+  // Updates |buffer_size_|, |aligned_width_| and |aligned_height_| based on
+  // |av_codec_context|. Returns true if those values change, false if not.
+  // Specifying a changed size is fine.  Specifying a changed pix_fmt is not.
+  bool UpdateSize(const AVCodecContext& av_codec_context);
 
-  // TODO(dalesat): For investigation only...remove these three fields.
-  bool first_frame_ = true;
-  AVColorSpace colorspace_;
-  VideoStreamType::Extent coded_size_;
+  size_t buffer_size_ = 0;
+  uint32_t aligned_width_ = 0;
+  uint32_t aligned_height_ = 0;
 
   size_t configured_output_buffer_size_ = 0;
+  std::unique_ptr<StreamType> revised_stream_type_;
 };
 
 }  // namespace media_player

@@ -101,10 +101,8 @@ FidlDecoder::FidlDecoder(
     case StreamType::Medium::kVideo:
       output_stream_type_ = VideoStreamType::Create(
           StreamType::kVideoEncodingUncompressed, nullptr,
-          VideoStreamType::VideoProfile::kUnknown,
           VideoStreamType::PixelFormat::kUnknown,
-          VideoStreamType::ColorSpace::kUnknown, 0, 0, 0, 0, 1, 1,
-          std::vector<uint32_t>(), std::vector<uint32_t>());
+          VideoStreamType::ColorSpace::kUnknown, 0, 0, 0, 0, 1, 1, 0);
       break;
     case StreamType::Medium::kText:
     case StreamType::Medium::kSubpicture:

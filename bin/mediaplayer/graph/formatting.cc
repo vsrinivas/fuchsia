@@ -107,8 +107,6 @@ std::ostream& operator<<(std::ostream& os, const StreamType& value) {
       break;
     case StreamType::Medium::kVideo:
       os << fostr::NewLine
-         << "profile:              " << value.video()->profile();
-      os << fostr::NewLine
          << "pixel format:         " << value.video()->pixel_format();
       os << fostr::NewLine
          << "color space:          " << value.video()->color_space();
@@ -120,10 +118,8 @@ std::ostream& operator<<(std::ostream& os, const StreamType& value) {
       os << fostr::NewLine << "pixel aspect ratio:   "
          << value.video()->pixel_aspect_ratio_width() << "x"
          << value.video()->pixel_aspect_ratio_height();
-      os << fostr::NewLine << "line stride:          "
-         << AsInlineVector<uint32_t>(value.video()->line_stride());
-      os << fostr::NewLine << "plane offsets:        "
-         << AsInlineVector<uint32_t>(value.video()->plane_offset());
+      os << fostr::NewLine
+         << "line stride:          " << value.video()->line_stride();
       break;
     default:
       break;
@@ -191,74 +187,18 @@ std::ostream& operator<<(std::ostream& os,
   return os;
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         VideoStreamType::VideoProfile value) {
-  switch (value) {
-    case VideoStreamType::VideoProfile::kUnknown:
-      return os << "unknown";
-    case VideoStreamType::VideoProfile::kNotApplicable:
-      return os << "not applicable";
-    case VideoStreamType::VideoProfile::kH264Baseline:
-      return os << "h264 baseline";
-    case VideoStreamType::VideoProfile::kH264Main:
-      return os << "h264 main";
-    case VideoStreamType::VideoProfile::kH264Extended:
-      return os << "h264 extended";
-    case VideoStreamType::VideoProfile::kH264High:
-      return os << "h264 high";
-    case VideoStreamType::VideoProfile::kH264High10:
-      return os << "h264 high 10";
-    case VideoStreamType::VideoProfile::kH264High422:
-      return os << "h264 high 422";
-    case VideoStreamType::VideoProfile::kH264High444Predictive:
-      return os << "h264 high 444 predictive";
-    case VideoStreamType::VideoProfile::kH264ScalableBaseline:
-      return os << "h264 scalable baseline";
-    case VideoStreamType::VideoProfile::kH264ScalableHigh:
-      return os << "h264 scalable high";
-    case VideoStreamType::VideoProfile::kH264StereoHigh:
-      return os << "h264 stereo high";
-    case VideoStreamType::VideoProfile::kH264MultiviewHigh:
-      return os << "h264 multiview high";
-  }
-
-  return os;
-}
-
 std::ostream& operator<<(std::ostream& os, VideoStreamType::PixelFormat value) {
   switch (value) {
     case VideoStreamType::PixelFormat::kUnknown:
       return os << "unknown";
-    case VideoStreamType::PixelFormat::kI420:
-      return os << "i420";
-    case VideoStreamType::PixelFormat::kYv12:
-      return os << "yv12";
-    case VideoStreamType::PixelFormat::kYv16:
-      return os << "yv16";
-    case VideoStreamType::PixelFormat::kYv12A:
-      return os << "yv12a";
-    case VideoStreamType::PixelFormat::kYv24:
-      return os << "yv24";
-    case VideoStreamType::PixelFormat::kNv12:
-      return os << "nv12";
-    case VideoStreamType::PixelFormat::kNv21:
-      return os << "nv21";
-    case VideoStreamType::PixelFormat::kUyvy:
-      return os << "uyvy";
-    case VideoStreamType::PixelFormat::kYuy2:
-      return os << "yuy2";
     case VideoStreamType::PixelFormat::kArgb:
       return os << "argb";
-    case VideoStreamType::PixelFormat::kXrgb:
-      return os << "xrgb";
-    case VideoStreamType::PixelFormat::kRgb24:
-      return os << "rgb24";
-    case VideoStreamType::PixelFormat::kRgb32:
-      return os << "rgb32";
-    case VideoStreamType::PixelFormat::kMjpeg:
-      return os << "mjpeg";
-    case VideoStreamType::PixelFormat::kMt21:
-      return os << "mt21";
+    case VideoStreamType::PixelFormat::kYuy2:
+      return os << "yuy2";
+    case VideoStreamType::PixelFormat::kYv12:
+      return os << "yv12";
+    case VideoStreamType::PixelFormat::kNv12:
+      return os << "nv12";
   }
 
   return os;

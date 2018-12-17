@@ -39,7 +39,6 @@ std::ostream& operator<<(std::ostream& os, Result value);
 std::ostream& operator<<(std::ostream& os, const PacketPtr& value);
 std::ostream& operator<<(std::ostream& os, StreamType::Medium value);
 std::ostream& operator<<(std::ostream& os, AudioStreamType::SampleFormat value);
-std::ostream& operator<<(std::ostream& os, VideoStreamType::VideoProfile value);
 std::ostream& operator<<(std::ostream& os, VideoStreamType::PixelFormat value);
 std::ostream& operator<<(std::ostream& os, VideoStreamType::ColorSpace value);
 std::ostream& operator<<(std::ostream& os, const Bytes& value);

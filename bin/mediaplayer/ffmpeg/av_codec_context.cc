@@ -5,7 +5,6 @@
 #include "garnet/bin/mediaplayer/ffmpeg/av_codec_context.h"
 
 #include "garnet/bin/mediaplayer/ffmpeg/ffmpeg_init.h"
-#include "garnet/bin/mediaplayer/ffmpeg/ffmpeg_video_frame_layout.h"
 #include "garnet/bin/mediaplayer/graph/types/audio_stream_type.h"
 #include "garnet/bin/mediaplayer/graph/types/subpicture_stream_type.h"
 #include "garnet/bin/mediaplayer/graph/types/text_stream_type.h"
@@ -164,49 +163,15 @@ VideoStreamType::ColorSpace ColorSpaceFromAVColorSpaceAndRange(
   }
 }
 
-// Converts VideoProfile to an ffmpeg profile.
-int FfmpegProfileFromVideoProfile(VideoStreamType::VideoProfile video_profile) {
-  // TODO(dalesat): Blindly copied from Chromium.
-  switch (video_profile) {
-    case VideoStreamType::VideoProfile::kH264Baseline:
-      return FF_PROFILE_H264_BASELINE;
-    case VideoStreamType::VideoProfile::kH264Main:
-      return FF_PROFILE_H264_MAIN;
-    case VideoStreamType::VideoProfile::kH264Extended:
-      return FF_PROFILE_H264_EXTENDED;
-    case VideoStreamType::VideoProfile::kH264High:
-      return FF_PROFILE_H264_HIGH;
-    case VideoStreamType::VideoProfile::kH264High10:
-      return FF_PROFILE_H264_HIGH_10;
-    case VideoStreamType::VideoProfile::kH264High422:
-      return FF_PROFILE_H264_HIGH_422;
-    case VideoStreamType::VideoProfile::kH264High444Predictive:
-      return FF_PROFILE_H264_HIGH_444_PREDICTIVE;
-    case VideoStreamType::VideoProfile::kUnknown:
-    case VideoStreamType::VideoProfile::kNotApplicable:
-    case VideoStreamType::VideoProfile::kH264ScalableBaseline:
-    case VideoStreamType::VideoProfile::kH264ScalableHigh:
-    case VideoStreamType::VideoProfile::kH264StereoHigh:
-    case VideoStreamType::VideoProfile::kH264MultiviewHigh:
-    default:
-      return FF_PROFILE_UNKNOWN;
-  }
-}
-
 // Creates a StreamType from an AVCodecContext describing a video type.
 std::unique_ptr<StreamType> StreamTypeFromVideoCodecContext(
     const AVCodecContext& from) {
-  VideoStreamType::PixelFormat pixel_format =
-      PixelFormatFromAVPixelFormat(from.pix_fmt);
-
-  std::vector<uint32_t> line_stride;
-  std::vector<uint32_t> plane_offset;
-  uint32_t coded_width;
-  uint32_t coded_height;
-  FfmpegVideoFrameLayout::LayoutFrame(
-      from, pixel_format,
-      VideoStreamType::Extent(from.coded_width, from.coded_height),
-      &line_stride, &plane_offset, &coded_width, &coded_height);
+  int coded_width = from.coded_width;
+  int coded_height = from.coded_height;
+  avcodec_align_dimensions(const_cast<AVCodecContext*>(&from), &coded_width,
+                           &coded_height);
+  FXL_DCHECK(coded_width >= from.coded_width);
+  FXL_DCHECK(coded_height >= from.coded_height);
 
   uint32_t aspect_ratio_width = from.sample_aspect_ratio.num;
   uint32_t aspect_ratio_height = from.sample_aspect_ratio.den;
@@ -215,16 +180,27 @@ std::unique_ptr<StreamType> StreamTypeFromVideoCodecContext(
     aspect_ratio_height = 1;
   }
 
+  uint32_t line_stride;
+  switch (from.pix_fmt) {
+    case AV_PIX_FMT_YUV420P:
+    case AV_PIX_FMT_YUVJ420P:
+      line_stride = coded_width;
+      break;
+    default:
+      line_stride = 0;
+      FXL_LOG(FATAL) << "Unrecognized pixel format " << from.pix_fmt;
+  }
+
   return VideoStreamType::Create(
       from.codec == nullptr ? EncodingFromCodecId(from.codec_id)
                             : StreamType::kVideoEncodingUncompressed,
       (from.codec != nullptr || from.extradata_size == 0)
           ? nullptr
           : Bytes::Create(from.extradata, from.extradata_size),
-      VideoStreamType::VideoProfile::kNotApplicable, pixel_format,
+      PixelFormatFromAVPixelFormat(from.pix_fmt),
       ColorSpaceFromAVColorSpaceAndRange(from.colorspace, from.color_range),
       from.width, from.height, coded_width, coded_height, aspect_ratio_width,
-      aspect_ratio_height, line_stride, plane_offset);
+      aspect_ratio_height, line_stride);
 }
 
 // Creates a StreamType from an AVStream describing a video type.
@@ -247,11 +223,11 @@ std::unique_ptr<StreamType> StreamTypeFromVideoStream(const AVStream& from) {
       parameters.extradata_size == 0
           ? nullptr
           : Bytes::Create(parameters.extradata, parameters.extradata_size),
-      VideoStreamType::VideoProfile::kNotApplicable, pixel_format,
+      pixel_format,
       ColorSpaceFromAVColorSpaceAndRange(parameters.color_space,
                                          parameters.color_range),
       parameters.width, parameters.height, 0, 0, pixel_aspect_ratio.num,
-      pixel_aspect_ratio.den, std::vector<uint32_t>(), std::vector<uint32_t>());
+      pixel_aspect_ratio.den, 0);
 }
 
 // Creates a StreamType from an AVCodecContext describing a data type.
@@ -409,7 +385,6 @@ AvCodecContextPtr AVCodecContextFromVideoStreamType(
 
   context->codec_type = AVMEDIA_TYPE_VIDEO;
   context->codec_id = codec_id;
-  context->profile = FfmpegProfileFromVideoProfile(stream_type.profile());
   context->pix_fmt = AVPixelFormatFromPixelFormat(stream_type.pixel_format());
   if (stream_type.color_space() == VideoStreamType::ColorSpace::kJpeg) {
     context->color_range = AVCOL_RANGE_JPEG;
@@ -446,19 +421,10 @@ AvCodecContextPtr AVCodecContextFromSubpictureStreamType(
 
 VideoStreamType::PixelFormat PixelFormatFromAVPixelFormat(
     AVPixelFormat av_pixel_format) {
-  // TODO(dalesat): Blindly copied from Chromium.
   switch (av_pixel_format) {
-    case AV_PIX_FMT_YUV422P:
-    case AV_PIX_FMT_YUVJ422P:
-      return VideoStreamType::PixelFormat::kYv16;
-    case AV_PIX_FMT_YUV444P:
-    case AV_PIX_FMT_YUVJ444P:
-      return VideoStreamType::PixelFormat::kYv24;
     case AV_PIX_FMT_YUV420P:
     case AV_PIX_FMT_YUVJ420P:
       return VideoStreamType::PixelFormat::kYv12;
-    case AV_PIX_FMT_YUVA420P:
-      return VideoStreamType::PixelFormat::kYv12A;
     default:
       return VideoStreamType::PixelFormat::kUnknown;
   }
@@ -466,28 +432,13 @@ VideoStreamType::PixelFormat PixelFormatFromAVPixelFormat(
 
 AVPixelFormat AVPixelFormatFromPixelFormat(
     VideoStreamType::PixelFormat pixel_format) {
-  // TODO(dalesat): Blindly copied from Chromium.
   switch (pixel_format) {
     case VideoStreamType::PixelFormat::kYv12:
       return AV_PIX_FMT_YUV420P;
-    case VideoStreamType::PixelFormat::kYv16:
-      return AV_PIX_FMT_YUV422P;
-    case VideoStreamType::PixelFormat::kYv12A:
-      return AV_PIX_FMT_YUVA420P;
-    case VideoStreamType::PixelFormat::kYv24:
-      return AV_PIX_FMT_YUV444P;
     case VideoStreamType::PixelFormat::kUnknown:
-    case VideoStreamType::PixelFormat::kI420:
-    case VideoStreamType::PixelFormat::kNv12:
-    case VideoStreamType::PixelFormat::kNv21:
-    case VideoStreamType::PixelFormat::kUyvy:
-    case VideoStreamType::PixelFormat::kYuy2:
     case VideoStreamType::PixelFormat::kArgb:
-    case VideoStreamType::PixelFormat::kXrgb:
-    case VideoStreamType::PixelFormat::kRgb24:
-    case VideoStreamType::PixelFormat::kRgb32:
-    case VideoStreamType::PixelFormat::kMjpeg:
-    case VideoStreamType::PixelFormat::kMt21:
+    case VideoStreamType::PixelFormat::kYuy2:
+    case VideoStreamType::PixelFormat::kNv12:
     default:
       return AV_PIX_FMT_NONE;
   }

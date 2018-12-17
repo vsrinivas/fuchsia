@@ -57,7 +57,6 @@ void ExpectEqual(const StreamType* a, const StreamType* b) {
       EXPECT_EQ(StreamType::Medium::kVideo, b->medium());
       EXPECT_NE(nullptr, a->video());
       EXPECT_NE(nullptr, b->video());
-      EXPECT_EQ(a->video()->profile(), b->video()->profile());
       EXPECT_EQ(a->video()->pixel_format(), b->video()->pixel_format());
       EXPECT_EQ(a->video()->color_space(), b->video()->color_space());
       EXPECT_EQ(a->video()->width(), b->video()->width());
@@ -191,10 +190,9 @@ TEST_F(PlayerTest, FakeSegments) {
 
   // Add a video stream indicating we will *not* add more streams.
   VideoStreamType video_type(StreamType::kVideoEncodingUncompressed, nullptr,
-                             VideoStreamType::VideoProfile::kNotApplicable,
                              VideoStreamType::PixelFormat::kYv12,
                              VideoStreamType::ColorSpace::kNotApplicable, 0, 0,
-                             0, 0, 1, 1, {}, {});
+                             0, 0, 1, 1, 0);
 
   // We need a non-null output, but it doesn't have to work.
   OutputRef video_output(reinterpret_cast<Output*>(2));

@@ -38,7 +38,7 @@ FfmpegVideoDecoder::FfmpegVideoDecoder(AvCodecContextPtr av_codec_context)
   context()->thread_count = 2;
   context()->thread_type = FF_THREAD_FRAME;
 
-  frame_layout_.Update(*context());
+  UpdateSize(*context());
 }
 
 FfmpegVideoDecoder::~FfmpegVideoDecoder() {}
@@ -51,7 +51,7 @@ void FfmpegVideoDecoder::ConfigureConnectors() {
                                  2);  // max_payload_count
 
   if (has_size()) {
-    configured_output_buffer_size_ = frame_layout_.buffer_size();
+    configured_output_buffer_size_ = buffer_size_;
     ConfigureOutputToUseLocalMemory(0, kOutputMaxPayloadCount,
                                     configured_output_buffer_size_);
   } else {
@@ -78,7 +78,7 @@ int FfmpegVideoDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
                                      AVFrame* av_frame) {
   FXL_DCHECK(av_frame);
 
-  if (frame_layout_.Update(av_codec_context)) {
+  if (UpdateSize(av_codec_context)) {
     revised_stream_type_ = AvCodecContext::GetStreamType(av_codec_context);
   }
 
@@ -103,29 +103,7 @@ int FfmpegVideoDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
       std::max(visible_size.height(),
                static_cast<uint32_t>(av_codec_context.coded_height)));
 
-  // TODO(dalesat): For investigation purposes only...remove one day.
-  if (first_frame_) {
-    first_frame_ = false;
-    colorspace_ = av_codec_context.colorspace;
-    coded_size_ = coded_size;
-  } else {
-    if (av_codec_context.colorspace != colorspace_) {
-      FXL_LOG(WARNING) << " colorspace changed to "
-                       << av_codec_context.colorspace << "\n";
-    }
-    if (coded_size.width() != coded_size_.width()) {
-      FXL_LOG(WARNING) << " coded_size width changed to " << coded_size.width()
-                       << "\n";
-    }
-    if (coded_size.height() != coded_size_.height()) {
-      FXL_LOG(WARNING) << " coded_size height changed to "
-                       << coded_size.height() << "\n";
-    }
-    colorspace_ = av_codec_context.colorspace;
-    coded_size_ = coded_size;
-  }
-
-  size_t buffer_size = frame_layout_.buffer_size();
+  size_t buffer_size = buffer_size_;
   if (has_size() && configured_output_buffer_size_ < buffer_size) {
     configured_output_buffer_size_ = buffer_size;
 
@@ -144,11 +122,11 @@ int FfmpegVideoDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
   }
 
   fbl::RefPtr<PayloadBuffer> payload_buffer =
-      AllocatePayloadBuffer(frame_layout_.buffer_size());
+      AllocatePayloadBuffer(buffer_size_);
 
   if (!payload_buffer) {
     FXL_LOG(ERROR) << "failed to allocate payload buffer of size "
-                   << frame_layout_.buffer_size();
+                   << buffer_size_;
     return -1;
   }
 
@@ -158,18 +136,18 @@ int FfmpegVideoDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
   FXL_DCHECK(PayloadBuffer::kByteAlignment >= kFrameBufferAlign);
 
   // Decoders require a zeroed buffer.
-  std::memset(payload_buffer->data(), 0, frame_layout_.buffer_size());
+  std::memset(payload_buffer->data(), 0, buffer_size_);
 
-  FXL_DCHECK(frame_layout_.line_stride().size() ==
-             frame_layout_.plane_offset().size());
+  av_image_fill_arrays(av_frame->data, av_frame->linesize,
+                       reinterpret_cast<uint8_t*>(payload_buffer->data()),
+                       av_codec_context.pix_fmt, aligned_width_,
+                       aligned_height_, kFrameBufferAlign);
 
-  for (size_t plane = 0; plane < frame_layout_.plane_offset().size(); ++plane) {
-    av_frame->data[plane] = reinterpret_cast<uint8_t*>(payload_buffer->data()) +
-                            frame_layout_.plane_offset()[plane];
-    av_frame->linesize[plane] = frame_layout_.line_stride()[plane];
+  if (av_codec_context.pix_fmt == AV_PIX_FMT_YUV420P ||
+      av_codec_context.pix_fmt == AV_PIX_FMT_YUVJ420P) {
+    // Turn I420 into YV12 by swapping the U and V planes.
+    std::swap(av_frame->data[1], av_frame->data[2]);
   }
-
-  // TODO(dalesat): Do we need to attach colorspace info to the packet?
 
   av_frame->width = coded_size.width();
   av_frame->height = coded_size.height();
@@ -190,9 +168,9 @@ PacketPtr FfmpegVideoDecoder::CreateOutputPacket(
   // Recover the pts deposited in Decode.
   set_next_pts(av_frame.reordered_opaque);
 
-  PacketPtr packet = Packet::Create(
-      av_frame.reordered_opaque, pts_rate(), av_frame.key_frame, false,
-      frame_layout_.buffer_size(), std::move(payload_buffer));
+  PacketPtr packet =
+      Packet::Create(av_frame.reordered_opaque, pts_rate(), av_frame.key_frame,
+                     false, buffer_size_, std::move(payload_buffer));
 
   if (revised_stream_type_) {
     packet->SetRevisedStreamType(std::move(revised_stream_type_));
@@ -202,5 +180,28 @@ PacketPtr FfmpegVideoDecoder::CreateOutputPacket(
 }
 
 const char* FfmpegVideoDecoder::label() const { return "video_decoder"; }
+
+bool FfmpegVideoDecoder::UpdateSize(const AVCodecContext& av_codec_context) {
+  int aligned_width = av_codec_context.coded_width;
+  int aligned_height = av_codec_context.coded_height;
+
+  avcodec_align_dimensions(const_cast<AVCodecContext*>(&av_codec_context),
+                           &aligned_width, &aligned_height);
+  FXL_DCHECK(aligned_width >= av_codec_context.coded_width);
+  FXL_DCHECK(aligned_height >= av_codec_context.coded_height);
+
+  if (aligned_width_ == static_cast<uint32_t>(aligned_width) &&
+      aligned_height_ == static_cast<uint32_t>(aligned_height)) {
+    return false;
+  }
+
+  aligned_width_ = aligned_width;
+  aligned_height_ = aligned_height;
+
+  buffer_size_ =
+      av_image_get_buffer_size(av_codec_context.pix_fmt, aligned_width,
+                               aligned_height, kFrameBufferAlign);
+  return true;
+}
 
 }  // namespace media_player

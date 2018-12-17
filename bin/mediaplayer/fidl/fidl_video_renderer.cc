@@ -246,9 +246,7 @@ void FidlVideoRenderer::SetStreamType(const StreamType& stream_type) {
   pixel_aspect_ratio_.width = video_stream_type.pixel_aspect_ratio_width();
   pixel_aspect_ratio_.height = video_stream_type.pixel_aspect_ratio_height();
 
-  image_info_.stride = video_stream_type.line_stride().empty()
-                           ? 0
-                           : video_stream_type.line_stride()[0];
+  image_info_.stride = video_stream_type.line_stride();
 
   switch (video_stream_type.pixel_format()) {
     case VideoStreamType::PixelFormat::kArgb:

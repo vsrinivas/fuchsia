@@ -109,81 +109,19 @@ TypeConverter<media_player::AudioStreamType::SampleFormat,
   abort();
 }
 
-media_player::VideoStreamType::VideoProfile TypeConverter<
-    media_player::VideoStreamType::VideoProfile,
-    fuchsia::media::VideoProfile>::Convert(fuchsia::media::VideoProfile
-                                               video_profile) {
-  switch (video_profile) {
-    case fuchsia::media::VideoProfile::UNKNOWN:
-      return media_player::VideoStreamType::VideoProfile::kUnknown;
-    case fuchsia::media::VideoProfile::NOT_APPLICABLE:
-      return media_player::VideoStreamType::VideoProfile::kNotApplicable;
-    case fuchsia::media::VideoProfile::H264_BASELINE:
-      return media_player::VideoStreamType::VideoProfile::kH264Baseline;
-    case fuchsia::media::VideoProfile::H264_MAIN:
-      return media_player::VideoStreamType::VideoProfile::kH264Main;
-    case fuchsia::media::VideoProfile::H264_EXTENDED:
-      return media_player::VideoStreamType::VideoProfile::kH264Extended;
-    case fuchsia::media::VideoProfile::H264_HIGH:
-      return media_player::VideoStreamType::VideoProfile::kH264High;
-    case fuchsia::media::VideoProfile::H264_HIGH10:
-      return media_player::VideoStreamType::VideoProfile::kH264High10;
-    case fuchsia::media::VideoProfile::H264_HIGH422:
-      return media_player::VideoStreamType::VideoProfile::kH264High422;
-    case fuchsia::media::VideoProfile::H264_HIGH444_PREDICTIVE:
-      return media_player::VideoStreamType::VideoProfile::
-          kH264High444Predictive;
-    case fuchsia::media::VideoProfile::H264_SCALABLE_BASELINE:
-      return media_player::VideoStreamType::VideoProfile::kH264ScalableBaseline;
-    case fuchsia::media::VideoProfile::H264_SCALABLE_HIGH:
-      return media_player::VideoStreamType::VideoProfile::kH264ScalableHigh;
-    case fuchsia::media::VideoProfile::H264_STEREO_HIGH:
-      return media_player::VideoStreamType::VideoProfile::kH264StereoHigh;
-    case fuchsia::media::VideoProfile::H264_MULTIVIEW_HIGH:
-      return media_player::VideoStreamType::VideoProfile::kH264MultiviewHigh;
-  }
-
-  FXL_LOG(ERROR);
-  abort();
-}
-
-media_player::VideoStreamType::PixelFormat
-TypeConverter<media_player::VideoStreamType::PixelFormat,
-              fuchsia::media::PixelFormat>::Convert(fuchsia::media::PixelFormat
-                                                        pixel_format) {
+media_player::VideoStreamType::PixelFormat TypeConverter<
+    media_player::VideoStreamType::PixelFormat,
+    fuchsia::images::PixelFormat>::Convert(fuchsia::images::PixelFormat
+                                               pixel_format) {
   switch (pixel_format) {
-    case fuchsia::media::PixelFormat::UNKNOWN:
-      return media_player::VideoStreamType::PixelFormat::kUnknown;
-    case fuchsia::media::PixelFormat::I420:
-      return media_player::VideoStreamType::PixelFormat::kI420;
-    case fuchsia::media::PixelFormat::YV12:
-      return media_player::VideoStreamType::PixelFormat::kYv12;
-    case fuchsia::media::PixelFormat::YV16:
-      return media_player::VideoStreamType::PixelFormat::kYv16;
-    case fuchsia::media::PixelFormat::YV12A:
-      return media_player::VideoStreamType::PixelFormat::kYv12A;
-    case fuchsia::media::PixelFormat::YV24:
-      return media_player::VideoStreamType::PixelFormat::kYv24;
-    case fuchsia::media::PixelFormat::NV12:
-      return media_player::VideoStreamType::PixelFormat::kNv12;
-    case fuchsia::media::PixelFormat::NV21:
-      return media_player::VideoStreamType::PixelFormat::kNv21;
-    case fuchsia::media::PixelFormat::UYVY:
-      return media_player::VideoStreamType::PixelFormat::kUyvy;
-    case fuchsia::media::PixelFormat::YUY2:
-      return media_player::VideoStreamType::PixelFormat::kYuy2;
-    case fuchsia::media::PixelFormat::ARGB:
+    case fuchsia::images::PixelFormat::BGRA_8:
       return media_player::VideoStreamType::PixelFormat::kArgb;
-    case fuchsia::media::PixelFormat::XRGB:
-      return media_player::VideoStreamType::PixelFormat::kXrgb;
-    case fuchsia::media::PixelFormat::RGB24:
-      return media_player::VideoStreamType::PixelFormat::kRgb24;
-    case fuchsia::media::PixelFormat::RGB32:
-      return media_player::VideoStreamType::PixelFormat::kRgb32;
-    case fuchsia::media::PixelFormat::MJPEG:
-      return media_player::VideoStreamType::PixelFormat::kMjpeg;
-    case fuchsia::media::PixelFormat::MT21:
-      return media_player::VideoStreamType::PixelFormat::kMt21;
+    case fuchsia::images::PixelFormat::YUY2:
+      return media_player::VideoStreamType::PixelFormat::kYuy2;
+    case fuchsia::images::PixelFormat::YV12:
+      return media_player::VideoStreamType::PixelFormat::kYv12;
+    case fuchsia::images::PixelFormat::NV12:
+      return media_player::VideoStreamType::PixelFormat::kNv12;
   }
 
   return media_player::VideoStreamType::PixelFormat::kUnknown;
@@ -230,78 +168,20 @@ TypeConverter<fuchsia::media::AudioSampleFormat,
   abort();
 }
 
-fuchsia::media::VideoProfile TypeConverter<
-    fuchsia::media::VideoProfile, media_player::VideoStreamType::VideoProfile>::
-    Convert(media_player::VideoStreamType::VideoProfile video_profile) {
-  switch (video_profile) {
-    case media_player::VideoStreamType::VideoProfile::kUnknown:
-      return fuchsia::media::VideoProfile::UNKNOWN;
-    case media_player::VideoStreamType::VideoProfile::kNotApplicable:
-      return fuchsia::media::VideoProfile::NOT_APPLICABLE;
-    case media_player::VideoStreamType::VideoProfile::kH264Baseline:
-      return fuchsia::media::VideoProfile::H264_BASELINE;
-    case media_player::VideoStreamType::VideoProfile::kH264Main:
-      return fuchsia::media::VideoProfile::H264_MAIN;
-    case media_player::VideoStreamType::VideoProfile::kH264Extended:
-      return fuchsia::media::VideoProfile::H264_EXTENDED;
-    case media_player::VideoStreamType::VideoProfile::kH264High:
-      return fuchsia::media::VideoProfile::H264_HIGH;
-    case media_player::VideoStreamType::VideoProfile::kH264High10:
-      return fuchsia::media::VideoProfile::H264_HIGH10;
-    case media_player::VideoStreamType::VideoProfile::kH264High422:
-      return fuchsia::media::VideoProfile::H264_HIGH422;
-    case media_player::VideoStreamType::VideoProfile::kH264High444Predictive:
-      return fuchsia::media::VideoProfile::H264_HIGH444_PREDICTIVE;
-    case media_player::VideoStreamType::VideoProfile::kH264ScalableBaseline:
-      return fuchsia::media::VideoProfile::H264_SCALABLE_BASELINE;
-    case media_player::VideoStreamType::VideoProfile::kH264ScalableHigh:
-      return fuchsia::media::VideoProfile::H264_SCALABLE_HIGH;
-    case media_player::VideoStreamType::VideoProfile::kH264StereoHigh:
-      return fuchsia::media::VideoProfile::H264_STEREO_HIGH;
-    case media_player::VideoStreamType::VideoProfile::kH264MultiviewHigh:
-      return fuchsia::media::VideoProfile::H264_MULTIVIEW_HIGH;
-  }
-
-  FXL_LOG(ERROR) << "unrecognized video profile";
-  abort();
-}
-
-fuchsia::media::PixelFormat TypeConverter<
-    fuchsia::media::PixelFormat, media_player::VideoStreamType::PixelFormat>::
+fuchsia::images::PixelFormat TypeConverter<
+    fuchsia::images::PixelFormat, media_player::VideoStreamType::PixelFormat>::
     Convert(media_player::VideoStreamType::PixelFormat pixel_format) {
   switch (pixel_format) {
     case media_player::VideoStreamType::PixelFormat::kUnknown:
-      return fuchsia::media::PixelFormat::UNKNOWN;
-    case media_player::VideoStreamType::PixelFormat::kI420:
-      return fuchsia::media::PixelFormat::I420;
-    case media_player::VideoStreamType::PixelFormat::kYv12:
-      return fuchsia::media::PixelFormat::YV12;
-    case media_player::VideoStreamType::PixelFormat::kYv16:
-      return fuchsia::media::PixelFormat::YV16;
-    case media_player::VideoStreamType::PixelFormat::kYv12A:
-      return fuchsia::media::PixelFormat::YV12A;
-    case media_player::VideoStreamType::PixelFormat::kYv24:
-      return fuchsia::media::PixelFormat::YV24;
-    case media_player::VideoStreamType::PixelFormat::kNv12:
-      return fuchsia::media::PixelFormat::NV12;
-    case media_player::VideoStreamType::PixelFormat::kNv21:
-      return fuchsia::media::PixelFormat::NV21;
-    case media_player::VideoStreamType::PixelFormat::kUyvy:
-      return fuchsia::media::PixelFormat::UYVY;
-    case media_player::VideoStreamType::PixelFormat::kYuy2:
-      return fuchsia::media::PixelFormat::YUY2;
+      break;
     case media_player::VideoStreamType::PixelFormat::kArgb:
-      return fuchsia::media::PixelFormat::ARGB;
-    case media_player::VideoStreamType::PixelFormat::kXrgb:
-      return fuchsia::media::PixelFormat::XRGB;
-    case media_player::VideoStreamType::PixelFormat::kRgb24:
-      return fuchsia::media::PixelFormat::RGB24;
-    case media_player::VideoStreamType::PixelFormat::kRgb32:
-      return fuchsia::media::PixelFormat::RGB32;
-    case media_player::VideoStreamType::PixelFormat::kMjpeg:
-      return fuchsia::media::PixelFormat::MJPEG;
-    case media_player::VideoStreamType::PixelFormat::kMt21:
-      return fuchsia::media::PixelFormat::MT21;
+      return fuchsia::images::PixelFormat::BGRA_8;
+    case media_player::VideoStreamType::PixelFormat::kYuy2:
+      return fuchsia::images::PixelFormat::YUY2;
+    case media_player::VideoStreamType::PixelFormat::kNv12:
+      return fuchsia::images::PixelFormat::NV12;
+    case media_player::VideoStreamType::PixelFormat::kYv12:
+      return fuchsia::images::PixelFormat::YV12;
   }
 
   FXL_LOG(ERROR) << "unrecognized pixel format";
@@ -351,10 +231,8 @@ TypeConverter<fuchsia::media::StreamType, media_player::StreamType>::Convert(
     }
     case media_player::StreamType::Medium::kVideo: {
       fuchsia::media::VideoStreamType video_stream_type;
-      video_stream_type.profile =
-          To<fuchsia::media::VideoProfile>(input.video()->profile());
       video_stream_type.pixel_format =
-          To<fuchsia::media::PixelFormat>(input.video()->pixel_format());
+          To<fuchsia::images::PixelFormat>(input.video()->pixel_format());
       video_stream_type.color_space =
           To<fuchsia::media::ColorSpace>(input.video()->color_space());
       video_stream_type.width = input.video()->width();
@@ -365,10 +243,7 @@ TypeConverter<fuchsia::media::StreamType, media_player::StreamType>::Convert(
           input.video()->pixel_aspect_ratio_width();
       video_stream_type.pixel_aspect_ratio_height =
           input.video()->pixel_aspect_ratio_height();
-      video_stream_type.line_stride =
-          To<fidl::VectorPtr<uint32_t>>(input.video()->line_stride());
-      video_stream_type.plane_offset =
-          To<fidl::VectorPtr<uint32_t>>(input.video()->plane_offset());
+      video_stream_type.stride = input.video()->line_stride();
       fuchsia::media::MediumSpecificStreamType medium_specific_stream_type;
       medium_specific_stream_type.set_video(std::move(video_stream_type));
       fuchsia::media::StreamType stream_type;
@@ -424,8 +299,6 @@ std::unique_ptr<media_player::StreamType> TypeConverter<
       return media_player::VideoStreamType::Create(
           input.encoding,
           To<std::unique_ptr<media_player::Bytes>>(input.encoding_parameters),
-          To<media_player::VideoStreamType::VideoProfile>(
-              input.medium_specific.video().profile),
           To<media_player::VideoStreamType::PixelFormat>(
               input.medium_specific.video().pixel_format),
           To<media_player::VideoStreamType::ColorSpace>(
@@ -436,8 +309,7 @@ std::unique_ptr<media_player::StreamType> TypeConverter<
           input.medium_specific.video().coded_height,
           input.medium_specific.video().pixel_aspect_ratio_width,
           input.medium_specific.video().pixel_aspect_ratio_height,
-          input.medium_specific.video().line_stride,
-          input.medium_specific.video().plane_offset);
+          input.medium_specific.video().stride);
     case fuchsia::media::MediumSpecificStreamType::Tag::kText:
       return media_player::TextStreamType::Create(
           input.encoding,
@@ -597,34 +469,16 @@ TypeConverter<std::unique_ptr<media_player::StreamType>,
         return nullptr;
     }
 
-    std::vector<uint32_t> line_stride;
-    std::vector<uint32_t> plane_offset;
-
-    if (format.planar) {
-      line_stride.push_back(format.primary_line_stride_bytes);
-      line_stride.push_back(format.secondary_line_stride_bytes);
-
-      plane_offset.push_back(format.primary_start_offset);
-      plane_offset.push_back(format.secondary_start_offset);
-
-      if (format.tertiary_start_offset != format.secondary_start_offset + 1) {
-        // secondary_line_stride_bytes is resused here.
-        line_stride.push_back(format.secondary_line_stride_bytes);
-        plane_offset.push_back(format.tertiary_start_offset);
-      }
-    }
-
     // This doesn't care if has_pixel_aspect_ratio is true or false, as
     // pixel_aspect_ratio_width == 1, pixel_aspect_ratio_height == 1 is as good
     // a default as any, at least for now.
     return media_player::VideoStreamType::Create(
         media_player::StreamType::kVideoEncodingUncompressed, nullptr,
-        media_player::VideoStreamType::VideoProfile::kUnknown, pixel_format,
-        media_player::VideoStreamType::ColorSpace::kUnknown,
+        pixel_format, media_player::VideoStreamType::ColorSpace::kUnknown,
         format.primary_display_width_pixels,
         format.primary_display_height_pixels, format.primary_width_pixels,
         format.primary_height_pixels, format.pixel_aspect_ratio_width,
-        format.pixel_aspect_ratio_height, line_stride, plane_offset);
+        format.pixel_aspect_ratio_height, format.primary_line_stride_bytes);
   }
 
   return nullptr;

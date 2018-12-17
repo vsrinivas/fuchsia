@@ -16,4 +16,8 @@ fidl("fuchsia.media") {
     "stream.fidl",
     "stream_type.fidl",
   ]
+
+  public_deps = [
+    "//garnet/public/fidl/fuchsia.images",
+  ]
 }

@@ -35,17 +35,10 @@ struct TypeConverter<media_player::AudioStreamType::SampleFormat,
 };
 
 template <>
-struct TypeConverter<media_player::VideoStreamType::VideoProfile,
-                     fuchsia::media::VideoProfile> {
-  static media_player::VideoStreamType::VideoProfile Convert(
-      fuchsia::media::VideoProfile video_profile);
-};
-
-template <>
 struct TypeConverter<media_player::VideoStreamType::PixelFormat,
-                     fuchsia::media::PixelFormat> {
+                     fuchsia::images::PixelFormat> {
   static media_player::VideoStreamType::PixelFormat Convert(
-      fuchsia::media::PixelFormat pixel_format);
+      fuchsia::images::PixelFormat pixel_format);
 };
 
 template <>
@@ -63,16 +56,9 @@ struct TypeConverter<fuchsia::media::AudioSampleFormat,
 };
 
 template <>
-struct TypeConverter<fuchsia::media::VideoProfile,
-                     media_player::VideoStreamType::VideoProfile> {
-  static fuchsia::media::VideoProfile Convert(
-      media_player::VideoStreamType::VideoProfile video_profile);
-};
-
-template <>
-struct TypeConverter<fuchsia::media::PixelFormat,
+struct TypeConverter<fuchsia::images::PixelFormat,
                      media_player::VideoStreamType::PixelFormat> {
-  static fuchsia::media::PixelFormat Convert(
+  static fuchsia::images::PixelFormat Convert(
       media_player::VideoStreamType::PixelFormat pixel_format);
 };
 

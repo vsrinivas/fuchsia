@@ -25,14 +25,13 @@ std::unique_ptr<StreamType> FakeDecoder::OutputStreamType(
       FXL_DCHECK(stream_type.video());
       return VideoStreamType::Create(
           StreamType::kVideoEncodingUncompressed, nullptr,
-          stream_type.video()->profile(), stream_type.video()->pixel_format(),
+          stream_type.video()->pixel_format(),
           stream_type.video()->color_space(), stream_type.video()->width(),
           stream_type.video()->height(), stream_type.video()->coded_width(),
           stream_type.video()->coded_height(),
           stream_type.video()->pixel_aspect_ratio_width(),
           stream_type.video()->pixel_aspect_ratio_height(),
-          stream_type.video()->line_stride(),
-          stream_type.video()->plane_offset());
+          stream_type.video()->line_stride());
     case StreamType::Medium::kText:
     case StreamType::Medium::kSubpicture:
       FXL_DCHECK(false) << "Text and Subpicture media not supported.";
