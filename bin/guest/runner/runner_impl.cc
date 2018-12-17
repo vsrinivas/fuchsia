@@ -42,10 +42,10 @@ void RunnerImpl::StartComponent(
       // doesn't allow overriding the /svc namespace of the vmm, instead it
       // initialized it to the set of services requested in the vmm.cmx.
       //
-      // The solution here is to invert the dependency between guestmgr and the
-      // guest_runner. Apps that call the guestmgr directly can just embed the
-      // artifacts they need into their own package and don't need to use a
-      // companion guest package. Then the runner can be used for the
+      // The solution here is to invert the dependency between guest_manager and
+      // the guest_runner. Apps that call the guest_manager directly can just
+      // embed the artifacts they need into their own package and don't need to
+      // use a companion guest package. Then the runner can be used for the
       // standalone guest packages (ex: linux_guest/zircon_guest).
       //
       // Note: the leaking of the |ServiceProviderBridge| is intentional. We

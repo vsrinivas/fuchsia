@@ -2,13 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/guest/mgr/environment_controller_impl.h"
+#include "garnet/bin/guest/manager/environment_controller_impl.h"
 
 #include <lib/fxl/logging.h>
 
-#include "garnet/bin/guest/mgr/guest_services.h"
-
-namespace guestmgr {
+#include "garnet/bin/guest/manager/guest_services.h"
 
 EnvironmentControllerImpl::EnvironmentControllerImpl(
     uint32_t id, const std::string& label, component::StartupContext* context,
@@ -137,5 +135,3 @@ fuchsia::guest::GuestVsockAcceptor* EnvironmentControllerImpl::GetAcceptor(
   const auto& it = guests_.find(cid);
   return it == guests_.end() ? nullptr : it->second->endpoint();
 }
-
-}  // namespace guestmgr

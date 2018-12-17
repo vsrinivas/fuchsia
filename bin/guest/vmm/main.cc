@@ -101,9 +101,9 @@ int main(int argc, char** argv) {
   fuchsia::guest::vmm::LaunchInfoProviderSyncPtr launch_info_provider;
   context->ConnectToEnvironmentService(launch_info_provider.NewRequest());
   zx_status_t status = launch_info_provider->GetLaunchInfo(&launch_info);
-  // This isn't an error yet since only the guestmgr exposes the
+  // NOTE: This isn't an error yet since only the guest_manager exposes the
   // LaunchInfoProvider service. This will become an error once we invert the
-  // dependency between guest_runner and guestmgr.
+  // dependency between guest_runner and guest_manager.
   if (status != ZX_OK) {
     FXL_LOG(INFO) << "No launch info provided.";
   }

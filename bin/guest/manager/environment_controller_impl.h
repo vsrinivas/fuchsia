@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_GUEST_MGR_ENVIRONMENT_CONTROLLER_IMPL_H_
-#define GARNET_BIN_GUEST_MGR_ENVIRONMENT_CONTROLLER_IMPL_H_
+#ifndef GARNET_BIN_GUEST_MANAGER_ENVIRONMENT_CONTROLLER_IMPL_H_
+#define GARNET_BIN_GUEST_MANAGER_ENVIRONMENT_CONTROLLER_IMPL_H_
 
 #include <unordered_map>
 
@@ -11,10 +11,9 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include "garnet/bin/guest/mgr/guest_component.h"
-#include "garnet/bin/guest/mgr/host_vsock_endpoint.h"
 
-namespace guestmgr {
+#include "garnet/bin/guest/manager/guest_component.h"
+#include "garnet/bin/guest/manager/host_vsock_endpoint.h"
 
 // Per the virto-vsock spec, CID values 0 and 1 are reserved and CID 2 is used
 // to address the host. We'll allocate CIDs linearly starting at 3 for each
@@ -77,6 +76,4 @@ class EnvironmentControllerImpl : public fuchsia::guest::EnvironmentController {
   fidl::BindingSet<fuchsia::guest::EnvironmentController> bindings_;
 };
 
-}  // namespace guestmgr
-
-#endif  // GARNET_BIN_GUEST_MGR_ENVIRONMENT_CONTROLLER_IMPL_H_
+#endif  // GARNET_BIN_GUEST_MANAGER_ENVIRONMENT_CONTROLLER_IMPL_H_

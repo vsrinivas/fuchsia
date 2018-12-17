@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//build/test/test_package.gni")
 
 source_set("lib") {
   visibility = [ ":*" ]
@@ -35,7 +35,7 @@ source_set("lib") {
 }
 
 executable("bin") {
-  output_name = "guestmgr"
+  output_name = "guest_manager"
 
   sources = [
     "main.cc",
@@ -46,20 +46,20 @@ executable("bin") {
   ]
 }
 
-package("guestmgr") {
+package("guest_manager") {
   deps = [
     ":bin",
   ]
-  binary = "guestmgr"
+  binary = "guest_manager"
   meta = [
     {
-      path = rebase_path("meta/guestmgr.cmx")
-      dest = "guestmgr.cmx"
+      path = rebase_path("meta/guest_manager.cmx")
+      dest = "guest_manager.cmx"
     },
   ]
 }
 
-executable("guestmgr_unittests") {
+executable("guest_manager_unittests") {
   visibility = [ ":*" ]
   testonly = true
 
@@ -74,16 +74,14 @@ executable("guestmgr_unittests") {
   ]
 }
 
-package("guestmgr_tests") {
-  testonly = true
-
+test_package("guest_manager_tests") {
   deps = [
-    ":guestmgr_unittests",
+    ":guest_manager_unittests",
   ]
 
   tests = [
     {
-      name = "guestmgr_unittests"
+      name = "guest_manager_unittests"
     },
   ]
 }

@@ -5,6 +5,9 @@
         "garnet/packages/prod/runtime"
     ],
     "packages": [
+        "//garnet/bin/guest/cli:guest",
+        "//garnet/bin/guest/manager:guest_manager",
+        "//garnet/bin/guest/runner:guest_runner",
         "//garnet/bin/guest/vmm",
         "//garnet/bin/guest/vmm/device:virtio_balloon",
         "//garnet/bin/guest/vmm/device:virtio_block",
@@ -13,9 +16,6 @@
         "//garnet/bin/guest/vmm/device:virtio_input",
         "//garnet/bin/guest/vmm/device:virtio_net",
         "//garnet/bin/guest/vmm/device:virtio_rng",
-        "//garnet/bin/guest/vmm/device:virtio_wl",
-        "//garnet/bin/guest/runner:guest_runner",
-        "//garnet/bin/guest/cli:guest",
-        "//garnet/bin/guest/mgr:guestmgr"
+        "//garnet/bin/guest/vmm/device:virtio_wl"
     ]
 }

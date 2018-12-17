@@ -2,11 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/guest/mgr/environment_manager_impl.h"
+#include "garnet/bin/guest/manager/environment_manager_impl.h"
 
-#include "lib/fxl/logging.h"
-
-namespace guestmgr {
+#include <lib/fxl/logging.h>
 
 static uint32_t g_next_env_id = 0;
 
@@ -48,5 +46,3 @@ void EnvironmentManagerImpl::Connect(
     it->second->AddBinding(std::move(request));
   }
 }
-
-}  // namespace guestmgr

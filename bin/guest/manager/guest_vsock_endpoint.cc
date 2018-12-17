@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/guest/mgr/guest_vsock_endpoint.h"
-
-namespace guestmgr {
+#include "garnet/bin/guest/manager/guest_vsock_endpoint.h"
 
 GuestVsockEndpoint::GuestVsockEndpoint(
     uint32_t cid, fuchsia::guest::GuestVsockEndpointPtr guest_endpoint,
@@ -21,5 +19,3 @@ void GuestVsockEndpoint::Accept(uint32_t src_cid, uint32_t src_port,
   acceptor_->Accept(src_cid, src_port, port, std::move(handle),
                     std::move(callback));
 }
-
-}  //  namespace guestmgr

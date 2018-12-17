@@ -2,17 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_GUEST_MGR_GUEST_COMPONENT_H_
-#define GARNET_BIN_GUEST_MGR_GUEST_COMPONENT_H_
-
-#include "garnet/bin/guest/mgr/guest_services.h"
-#include "garnet/bin/guest/mgr/guest_vsock_endpoint.h"
+#ifndef GARNET_BIN_GUEST_MANAGER_GUEST_COMPONENT_H_
+#define GARNET_BIN_GUEST_MANAGER_GUEST_COMPONENT_H_
 
 #include <fuchsia/guest/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/svc/cpp/services.h>
 
-namespace guestmgr {
+#include "garnet/bin/guest/manager/guest_services.h"
+#include "garnet/bin/guest/manager/guest_vsock_endpoint.h"
 
 // Maintains references to resources associated with a guest throughout the
 // lifetime of the guest.
@@ -40,6 +38,4 @@ class GuestComponent {
   fuchsia::sys::ComponentControllerPtr component_controller_;
 };
 
-}  // namespace guestmgr
-
-#endif  // GARNET_BIN_GUEST_MGR_GUEST_COMPONENT_H_
+#endif  // GARNET_BIN_GUEST_MANAGER_GUEST_COMPONENT_H_

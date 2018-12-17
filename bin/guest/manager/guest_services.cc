@@ -2,12 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/guest/mgr/guest_services.h"
+#include "garnet/bin/guest/manager/guest_services.h"
 
 #include <lib/fidl/cpp/vector.h>
 #include <lib/zx/channel.h>
-
-namespace guestmgr {
 
 GuestServices::GuestServices(fuchsia::guest::LaunchInfo launch_info)
     : launch_info_(std::move(launch_info)) {
@@ -26,5 +24,3 @@ fuchsia::sys::ServiceListPtr GuestServices::ServeDirectory() {
 void GuestServices::GetLaunchInfo(GetLaunchInfoCallback callback) {
   callback(std::move(launch_info_));
 }
-
-}  // namespace guestmgr

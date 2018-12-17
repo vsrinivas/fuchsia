@@ -2,16 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_GUEST_MGR_GUEST_SERVICES_H_
-#define GARNET_BIN_GUEST_MGR_GUEST_SERVICES_H_
+#ifndef GARNET_BIN_GUEST_MANAGER_GUEST_SERVICES_H_
+#define GARNET_BIN_GUEST_MANAGER_GUEST_SERVICES_H_
 
-#include "garnet/bin/guest/mgr/guest_vsock_endpoint.h"
+#include "garnet/bin/guest/manager/guest_vsock_endpoint.h"
 
 #include <fuchsia/guest/vmm/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/svc/cpp/service_provider_bridge.h>
-
-namespace guestmgr {
 
 class GuestServices : public fuchsia::guest::vmm::LaunchInfoProvider {
  public:
@@ -28,6 +26,4 @@ class GuestServices : public fuchsia::guest::vmm::LaunchInfoProvider {
   fuchsia::guest::LaunchInfo launch_info_;
 };
 
-}  // namespace guestmgr
-
-#endif  // GARNET_BIN_GUEST_MGR_GUEST_SERVICES_H_
+#endif  // GARNET_BIN_GUEST_MANAGER_GUEST_SERVICES_H_

@@ -2,13 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_GUEST_MGR_GUEST_VSOCK_ENDPOINT_H_
-#define GARNET_BIN_GUEST_MGR_GUEST_VSOCK_ENDPOINT_H_
+#ifndef GARNET_BIN_GUEST_MANAGER_GUEST_VSOCK_ENDPOINT_H_
+#define GARNET_BIN_GUEST_MANAGER_GUEST_VSOCK_ENDPOINT_H_
 
 #include <fuchsia/guest/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
-
-namespace guestmgr {
 
 // An endpoint that represents a guest. This endpoint delegates work to the
 // guest using the |fuchsia::guest::GuestVsockAcceptor| interface. Specifically
@@ -30,6 +28,4 @@ class GuestVsockEndpoint : public fuchsia::guest::GuestVsockAcceptor {
   fuchsia::guest::GuestVsockEndpointPtr guest_endpoint_;
 };
 
-}  // namespace guestmgr
-
-#endif  // GARNET_BIN_GUEST_MGR_GUEST_VSOCK_ENDPOINT_H_
+#endif  // GARNET_BIN_GUEST_MANAGER_GUEST_VSOCK_ENDPOINT_H_

@@ -2,18 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_GUEST_MGR_ENVIRONMENT_MANAGER_IMPL_H_
-#define GARNET_BIN_GUEST_MGR_ENVIRONMENT_MANAGER_IMPL_H_
-
-#include <fuchsia/guest/cpp/fidl.h>
+#ifndef GARNET_BIN_GUEST_MANAGER_ENVIRONMENT_MANAGER_IMPL_H_
+#define GARNET_BIN_GUEST_MANAGER_ENVIRONMENT_MANAGER_IMPL_H_
 
 #include <unordered_map>
 
-#include "garnet/bin/guest/mgr/environment_controller_impl.h"
-#include "lib/component/cpp/startup_context.h"
-#include "lib/fidl/cpp/binding_set.h"
+#include <fuchsia/guest/cpp/fidl.h>
+#include <lib/component/cpp/startup_context.h>
+#include <lib/fidl/cpp/binding_set.h>
 
-namespace guestmgr {
+#include "garnet/bin/guest/manager/environment_controller_impl.h"
 
 class EnvironmentManagerImpl : public fuchsia::guest::EnvironmentManager {
  public:
@@ -38,6 +36,4 @@ class EnvironmentManagerImpl : public fuchsia::guest::EnvironmentManager {
   fidl::BindingSet<fuchsia::guest::EnvironmentManager> bindings_;
 };
 
-}  // namespace guestmgr
-
-#endif  // GARNET_BIN_GUEST_MGR_ENVIRONMENT_MANAGER_IMPL_H_
+#endif  // GARNET_BIN_GUEST_MANAGER_ENVIRONMENT_MANAGER_IMPL_H_

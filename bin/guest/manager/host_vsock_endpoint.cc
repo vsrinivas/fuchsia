@@ -2,13 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/guest/mgr/host_vsock_endpoint.h"
+#include "garnet/bin/guest/manager/host_vsock_endpoint.h"
 
 #include <lib/async/default.h>
 #include <lib/fit/defer.h>
 #include <lib/fxl/logging.h>
-
-namespace guestmgr {
 
 HostVsockEndpoint::HostVsockEndpoint(AcceptorProvider acceptor_provider)
     : acceptor_provider_(std::move(acceptor_provider)) {}
@@ -133,5 +131,3 @@ void HostVsockEndpoint::FreeEphemeralPort(uint32_t port) {
   __UNUSED zx_status_t status = port_bitmap_.ClearOne(port);
   FXL_DCHECK(status == ZX_OK);
 }
-
-}  // namespace guestmgr

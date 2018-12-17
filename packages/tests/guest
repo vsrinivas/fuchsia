@@ -1,11 +1,11 @@
 {
     "imports": [
-        "garnet/packages/experimental/zircon_guest",
-        "garnet/packages/experimental/linux_guest"
+        "garnet/packages/experimental/linux_guest",
+        "garnet/packages/experimental/zircon_guest"
     ],
     "packages": [
         "//garnet/bin/guest/integration:guest_integration_tests",
-        "//garnet/bin/guest/mgr:guestmgr_tests",
+        "//garnet/bin/guest/manager:guest_manager_tests",
         "//garnet/bin/guest/vmm:vmm_tests"
     ]
 }

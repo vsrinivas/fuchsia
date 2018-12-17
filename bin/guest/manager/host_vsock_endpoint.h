@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_GUEST_MGR_HOST_VSOCK_ENDPOINT_H_
-#define GARNET_BIN_GUEST_MGR_HOST_VSOCK_ENDPOINT_H_
+#ifndef GARNET_BIN_GUEST_MANAGER_HOST_VSOCK_ENDPOINT_H_
+#define GARNET_BIN_GUEST_MANAGER_HOST_VSOCK_ENDPOINT_H_
 
 #include <unordered_map>
 
@@ -11,8 +11,6 @@
 #include <fuchsia/guest/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/cpp/binding_set.h>
-
-namespace guestmgr {
 
 // Per:
 // https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml
@@ -63,6 +61,4 @@ class HostVsockEndpoint : public fuchsia::guest::HostVsockConnector,
   std::unordered_map<uint32_t, fuchsia::guest::HostVsockAcceptorPtr> listeners_;
 };
 
-}  // namespace guestmgr
-
-#endif  // GARNET_BIN_GUEST_MGR_HOST_VSOCK_ENDPOINT_H_
+#endif  // GARNET_BIN_GUEST_MANAGER_HOST_VSOCK_ENDPOINT_H_

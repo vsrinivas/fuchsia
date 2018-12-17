@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/guest/mgr/host_vsock_endpoint.h"
+#include "garnet/bin/guest/manager/host_vsock_endpoint.h"
 
 #include <unordered_map>
 
@@ -10,10 +10,7 @@
 #include <lib/fsl/handles/object_info.h>
 #include <lib/gtest/test_loop_fixture.h>
 
-#include "garnet/bin/guest/mgr/guest_vsock_endpoint.h"
-
-namespace guestmgr {
-namespace {
+#include "garnet/bin/guest/manager/guest_vsock_endpoint.h"
 
 static constexpr uint32_t kGuestCid = 3;
 static constexpr uint32_t kOtherGuestCid = 4;
@@ -283,6 +280,3 @@ TEST_F(HostVsockEndpointTest, ConnectHostToGuestFreeEphemeralPort) {
   EXPECT_EQ(22u, requests[0].port);
   EXPECT_TRUE(requests[0].handle.is_valid());
 }
-
-}  // namespace
-}  // namespace guestmgr

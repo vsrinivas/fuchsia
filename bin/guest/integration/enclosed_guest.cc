@@ -4,15 +4,13 @@
 
 #include "garnet/bin/guest/integration/enclosed_guest.h"
 
-static constexpr char kGuestMgrUrl[] =
-    "fuchsia-pkg://fuchsia.com/guestmgr#meta/guestmgr.cmx";
+static constexpr char kGuestManagerUrl[] =
+    "fuchsia-pkg://fuchsia.com/guest_manager#meta/guest_manager.cmx";
 static constexpr char kRealm[] = "realmguestintegrationtest";
 static constexpr zx::duration kLoopTimeout = zx::sec(5);
 static constexpr zx::duration kLoopConditionStep = zx::msec(10);
 
-namespace {
-
-bool RunLoopUntil(async::Loop* loop, fit::function<bool()> condition) {
+static bool RunLoopUntil(async::Loop* loop, fit::function<bool()> condition) {
   const zx::time deadline = zx::deadline_after(kLoopTimeout);
   while (zx::clock::get_monotonic() < deadline) {
     if (condition()) {
@@ -24,14 +22,12 @@ bool RunLoopUntil(async::Loop* loop, fit::function<bool()> condition) {
   return condition();
 }
 
-}  // namespace
-
 zx_status_t EnclosedGuest::Start(fuchsia::guest::LaunchInfo guest_launch_info) {
   real_services_->ConnectToService(real_env_.NewRequest());
   auto services = component::testing::EnvironmentServices::Create(
       real_env_, loop_.dispatcher());
   fuchsia::sys::LaunchInfo launch_info;
-  launch_info.url = kGuestMgrUrl;
+  launch_info.url = kGuestManagerUrl;
   zx_status_t status = services->AddServiceWithLaunchInfo(
       std::move(launch_info), fuchsia::guest::EnvironmentManager::Name_);
   if (status != ZX_OK) {
