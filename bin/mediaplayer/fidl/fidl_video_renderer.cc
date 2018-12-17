@@ -26,7 +26,7 @@ static constexpr uint32_t kBlackImageHeight = 2;
 static const fuchsia::images::ImageInfo kBlackImageInfo{
     .width = kBlackImageWidth,
     .height = kBlackImageHeight,
-    .stride = kBlackImageWidth + sizeof(uint32_t),
+    .stride = kBlackImageWidth * sizeof(uint32_t),
     .pixel_format = fuchsia::images::PixelFormat::BGRA_8};
 
 }  // namespace

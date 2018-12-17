@@ -289,7 +289,7 @@ TEST_F(MediaPlayerTests, PlayBear) {
       {
           .width = 2,
           .height = 2,
-          .stride = 2 + sizeof(uint32_t),
+          .stride = 2 * sizeof(uint32_t),
           .pixel_format = fuchsia::images::PixelFormat::BGRA_8,
       },
       {
