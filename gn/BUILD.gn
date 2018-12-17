@@ -152,7 +152,6 @@ action("breakpad_symbols") {
   # find and upload the symbol files.
   outputs = [
     "$root_out_dir/breakpad_symbols/symbol_file_mappings.json",
-    "$root_out_dir/breakpad_symbols/breakpad_symbols.tar.gz",
   ]
 
   depfile = "${outputs[0]}.d"
@@ -166,8 +165,6 @@ action("breakpad_symbols") {
            rebase_path(outputs[0], root_build_dir),
            "-depfile",
            rebase_path(depfile, root_build_dir),
-           "-tar-file",
-           rebase_path(outputs[1], root_build_dir),
          ] + rebase_path(sources, root_build_dir)
 }
 
