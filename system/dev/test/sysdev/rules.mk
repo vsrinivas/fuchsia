@@ -6,9 +6,11 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := drivertest
+MODULE_TYPE := driver
 
 MODULE_COMPILEFLAGS += -fvisibility=hidden
+
+MODULE_SO_INSTALL_NAME := driver/test/sysdev.so
 
 MODULE_SRCS := \
   $(LOCAL_DIR)/bind.c \
