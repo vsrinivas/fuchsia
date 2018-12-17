@@ -4,6 +4,7 @@
 
 #include "parent.h"
 
+#include <lib/devmgr-integration-test/fixture.h>
 #include <unittest/unittest.h>
 #include <zircon/hw/gpt.h>
 
@@ -51,6 +52,21 @@ int main(int argc, char** argv) {
         printf("Unable to create ram-nand device\n");
         return -1;
     }
+
+    // TODO(ZX-3193)
+#if OPENAT_FIXED
+    // Wait for nandpart to spawn.
+    fbl::unique_fd dir(dup(parent.get()));
+    fbl::unique_fd nandpart;
+    zx_status_t status = devmgr_integration_test::WaitForFile(
+        dir, "test", zx::deadline_after(zx::sec(1)), &nandpart);
+    if (status != ZX_OK) {
+        printf("Unable to attach to device: %d\n", status);
+        return -1;
+    }
+#else
+    usleep(50000);
+#endif
 
     // Construct path to nandpart partition.
     char path[PATH_MAX];
