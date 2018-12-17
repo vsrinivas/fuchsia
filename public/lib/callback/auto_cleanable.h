@@ -68,6 +68,8 @@ class AutoCleanableSet {
   AutoCleanableSet(AutoCleanableSet&& other) noexcept = default;
   AutoCleanableSet& operator=(AutoCleanableSet&& other) noexcept = default;
 
+  // Capacity methods.
+  size_t size() const { return set_.size(); }
   bool empty() { return set_.empty(); }
 
   void clear() { set_.clear(); }

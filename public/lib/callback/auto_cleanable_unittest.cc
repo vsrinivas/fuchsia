@@ -32,17 +32,21 @@ class Cleanable {
 TEST(AutoCleanableSet, ClearsOnEmpty) {
   AutoCleanableSet<Cleanable> set;
   EXPECT_TRUE(set.empty());
+  EXPECT_EQ(0UL, set.size());
 
   auto& p1 = set.emplace();
   auto& p2 = set.emplace();
 
   EXPECT_FALSE(set.empty());
+  EXPECT_EQ(2UL, set.size());
 
   p1.Clean();
   EXPECT_FALSE(set.empty());
+  EXPECT_EQ(1UL, set.size());
 
   p2.Clean();
   EXPECT_TRUE(set.empty());
+  EXPECT_EQ(0UL, set.size());
 }
 
 TEST(AutoCleanableSet, Iterator) {
@@ -54,6 +58,7 @@ TEST(AutoCleanableSet, Iterator) {
   auto& p3 = set.emplace(3);
   auto& p4 = set.emplace(4);
   EXPECT_FALSE(set.empty());
+  EXPECT_EQ(4UL, set.size());
   p2.Clean();
 
   AutoCleanableSet<Cleanable>::iterator it = set.begin();
