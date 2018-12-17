@@ -28,7 +28,17 @@ struct is_null_predicate {
 };
 template <typename T>
 struct is_null_predicate<T, decltype(std::declval<const T&>() == nullptr)> {
+    // This test is intended to work for all types that are comparable with
+    // nullptr.  Sometimes, the compiler knows that the value can never equal
+    // nullptr and it may complain that the comparison is always false.
+    // For example, this is the case for a function type or a captureless
+    // lambda closure.  It's possible to use template selection to match
+    // some of these cases but not all, so just suppress the warning.
+    // The compiler will optimize away the always-false comparison.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress"
     constexpr bool operator()(const T& value) { return value == nullptr; }
+#pragma GCC diagnostic pop
 };
 template <typename T>
 constexpr inline bool is_null(const T& value) {

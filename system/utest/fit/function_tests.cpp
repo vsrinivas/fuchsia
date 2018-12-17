@@ -5,9 +5,6 @@
 #include <lib/fit/function.h>
 #include <unittest/unittest.h>
 
-#include "examples/function_example1.h"
-#include "examples/function_example2.h"
-
 namespace {
 
 using Closure = void();
@@ -19,9 +16,9 @@ using BooleanGenerator = bool();
 using IntGenerator = int();
 
 class BuildableFromInt {
- public:
-  BuildableFromInt(int);
-  BuildableFromInt& operator=(int);
+public:
+    BuildableFromInt(int);
+    BuildableFromInt& operator=(int);
 };
 
 using BuildableFromIntGenerator = BuildableFromInt();
@@ -590,6 +587,8 @@ bool overload_resolution() {
     END_TEST;
 }
 
+// We don't have std::shared in Zircon yet.
+#ifndef FIT_NO_STD_FOR_ZIRCON_USERSPACE
 bool sharing() {
     BEGIN_TEST;
 
@@ -676,6 +675,7 @@ bool sharing() {
 
     END_TEST;
 }
+#endif // FIT_NO_STD_FOR_ZIRCON_USERSPACE
 
 struct Obj {
     void Call() {
@@ -713,18 +713,6 @@ bool bind_member() {
     EXPECT_EQ(5, *move_only_value);
     EXPECT_EQ(3, obj.calls);
 
-    END_TEST;
-}
-
-bool example1() {
-    BEGIN_TEST;
-    function_example1::run();
-    END_TEST;
-}
-
-bool example2() {
-    BEGIN_TEST;
-    function_example2::run();
     END_TEST;
 }
 } // namespace
@@ -777,8 +765,8 @@ RUN_TEST(inline_function_size_bounds);
 RUN_TEST(move_only_argument_and_result);
 RUN_TEST(implicit_construction);
 RUN_TEST(overload_resolution);
+#ifndef FIT_NO_STD_FOR_ZIRCON_USERSPACE
 RUN_TEST(sharing)
+#endif
 RUN_TEST(bind_member);
-RUN_TEST(example1);
-RUN_TEST(example2);
 END_TEST_CASE(function_tests)

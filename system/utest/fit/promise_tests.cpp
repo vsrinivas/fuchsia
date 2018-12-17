@@ -8,8 +8,6 @@
 #include <lib/fit/single_threaded_executor.h>
 #include <unittest/unittest.h>
 
-#include "examples/promise_example1.h"
-#include "examples/promise_example2.h"
 #include "examples/utils.h"
 #include "unittest_utils.h"
 
@@ -1169,19 +1167,6 @@ static_assert(!fit::internal::is_continuation<
               "");
 
 } // namespace is_continuation_test
-
-bool example1() {
-    BEGIN_TEST;
-    promise_example1::run();
-    END_TEST;
-}
-
-bool example2() {
-    BEGIN_TEST;
-    promise_example2::run();
-    END_TEST;
-}
-
 } // namespace
 
 // These are compile-time diagnostic tests.
@@ -1275,8 +1260,6 @@ RUN_TEST(discard_result_combinator)
 RUN_TEST(wrap_with_combinator)
 RUN_TEST(box_combinator)
 RUN_TEST(join_combinator)
-RUN_TEST(example1)
-RUN_TEST(example2)
 
 // suppress -Wunneeded-internal-declaration
 (void)handler_invoker_test::result_continuation_lambda;

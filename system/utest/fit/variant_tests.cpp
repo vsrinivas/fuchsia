@@ -147,9 +147,18 @@ bool copy_move_assign() {
     EXPECT_EQ(1, x.index());
     EXPECT_TRUE(T::b_value == x.template get<1>());
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wself-assign-overloaded"
+#endif
+
     x = x;
     EXPECT_EQ(1, x.index());
     EXPECT_TRUE(T::b_value == x.template get<1>());
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
     x = std::move(x);
     EXPECT_EQ(1, x.index());

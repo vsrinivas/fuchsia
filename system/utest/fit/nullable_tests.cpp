@@ -108,6 +108,10 @@ constexpr void* void_a = &item_a;
 constexpr void* void_b = &item_b;
 constexpr void* void_null = nullptr;
 
+// Function and lambda types are never nullable.
+void function(float, bool) {}
+auto lambda = [](float, bool) { return 0; };
+
 // Test is_comparable_with_null.
 static_assert(!fit::is_comparable_with_null<void>::value, "");
 static_assert(!fit::is_comparable_with_null<int>::value, "");
@@ -120,6 +124,10 @@ static_assert(fit::is_comparable_with_null<nullable_struct>::value, "");
 static_assert(fit::is_comparable_with_null<fit::nullable<int>>::value, "");
 static_assert(fit::is_comparable_with_null<fit::nullable<void*>>::value, "");
 static_assert(fit::is_comparable_with_null<std::unique_ptr<int>>::value, "");
+static_assert(fit::is_comparable_with_null<decltype(function)>::value, "");
+static_assert(fit::is_comparable_with_null<decltype(&function)>::value, "");
+static_assert(fit::is_comparable_with_null<decltype(lambda)>::value, "");
+static_assert(fit::is_comparable_with_null<decltype(&lambda)>::value, "");
 
 // Test is_nullable.
 static_assert(!fit::is_nullable<void>::value, "");
@@ -135,6 +143,10 @@ static_assert(fit::is_nullable<nullable_struct>::value, "");
 static_assert(fit::is_nullable<fit::nullable<int>>::value, "");
 static_assert(fit::is_nullable<fit::nullable<void*>>::value, "");
 static_assert(fit::is_nullable<std::unique_ptr<int>>::value, "");
+static_assert(!fit::is_nullable<decltype(function)>::value, "");
+static_assert(fit::is_nullable<decltype(&function)>::value, "");
+static_assert(!fit::is_nullable<decltype(lambda)>::value, "");
+static_assert(fit::is_nullable<decltype(&lambda)>::value, "");
 
 // Test is_null.
 static_assert(fit::is_null(nullptr), "");
@@ -143,10 +155,17 @@ static_assert(fit::is_null(fit::nullable<void*>(nullptr)), "");
 static_assert(!fit::is_null(void_a), "");
 static_assert(!fit::is_null(fit::nullable<void*>(void_a)), "");
 static_assert(!fit::is_null(5), "");
+static_assert(!fit::is_null(function), "");
+static_assert(!fit::is_null(&function), "");
+static_assert(!fit::is_null(lambda), "");
+static_assert(!fit::is_null(&lambda), "");
 
 // Test nullable::value_type.
 static_assert(std::is_same<int, fit::nullable<int>::value_type>::value, "");
 static_assert(std::is_same<void*, fit::nullable<void*>::value_type>::value, "");
+static_assert(std::is_same<decltype(&function),
+                           fit::nullable<decltype(&function)>::value_type>::value,
+              "");
 
 // Test constexpr comparators for nullable.
 static_assert(!fit::nullable<void*>(), "");
@@ -420,12 +439,21 @@ bool assign_copy() {
     EXPECT_TRUE(a.has_value());
     EXPECT_EQ(55, b.value().value);
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wself-assign-overloaded"
+#endif
+
     b = b;
     EXPECT_TRUE(b.has_value());
     EXPECT_EQ(55, b.value().value);
 
     c = c;
     EXPECT_FALSE(c.has_value());
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
     b = traits<T>::null;
     EXPECT_FALSE(b.has_value());
