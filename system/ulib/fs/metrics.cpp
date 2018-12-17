@@ -126,7 +126,7 @@ VnodeMetrics::VnodeMetrics(cobalt_client::Collector* collector, const fbl::Strin
     set_attr.Initialize(MakeHistogramOptions(micro_base, VnodeCobalt::MetricId::kSetAttr,
                                              VnodeCobalt::EventCode::kUnknown),
                         collector);
-    get_attr.Initialize(MakeHistogramOptions(micro_base, VnodeCobalt::MetricId::kGetAttr,
+    get_attr.Initialize(MakeHistogramOptions(nano_base, VnodeCobalt::MetricId::kGetAttr,
                                              VnodeCobalt::EventCode::kUnknown),
                         collector);
     sync.Initialize(MakeHistogramOptions(micro_base, VnodeCobalt::MetricId::kSync,
