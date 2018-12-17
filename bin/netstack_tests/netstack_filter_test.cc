@@ -152,7 +152,20 @@ fuchsia::sys::ComponentControllerPtr RunComponent(
       CreateLaunchInfo(url, std::move(args)));
 }
 
-TEST_F(NetstackFilterTest, DISABLED_TestRuleset) {
+bool WaitForNewInterface(
+    const inet::IpAddress& test_static_ip,
+    fidl::VectorPtr<fuchsia::netstack::NetInterface> interfaces) {
+  inet::IpAddress ip_address;
+  for (const auto& interface : *interfaces) {
+    ip_address = inet::IpAddress(&interface.addr);
+    if (test_static_ip == ip_address) {
+      return true;
+    }
+  }
+  return false;
+}
+
+TEST_F(NetstackFilterTest, TestRuleset) {
   auto services = CreateServices();
   const std::string netstack_url =
       "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx";
@@ -174,16 +187,16 @@ TEST_F(NetstackFilterTest, DISABLED_TestRuleset) {
 
   zx::socket sock;
   status = CreateEthertap(&sock);
-  EXPECT_EQ(ZX_OK, status);
+  ASSERT_EQ(ZX_OK, status);
   fprintf(stderr, "created tap device\n");
 
   zx::channel svc;
   status = OpenEthertapDev(&svc);
-  EXPECT_EQ(ZX_OK, status);
+  ASSERT_EQ(ZX_OK, status);
   fprintf(stderr, "found tap device\n");
 
   status = sock.signal_peer(0u, ETHERTAP_SIGNAL_ONLINE);
-  EXPECT_EQ(ZX_OK, status);
+  ASSERT_EQ(ZX_OK, status);
   fprintf(stderr, "set ethertap link status online\n");
 
   fuchsia::netstack::NetstackPtr netstack;
@@ -215,24 +228,21 @@ TEST_F(NetstackFilterTest, DISABLED_TestRuleset) {
       [&](uint32_t id) {});
   fprintf(stderr, "added new ethernet device\n");
 
-  // Validate that the interface was actually added and that the static IP
-  // address now shows up in the list of interfaces.
+  // Fetch the interface list synchronously so that we can make sure that our
+  // interface is added correctly before continuing.
   static inet::IpAddress ip_address;
   bool found_static_ip_on_interface = false;
-  netstack->GetInterfaces(
-      [&found_static_ip_on_interface, &test_static_ip](
-          const fidl::VectorPtr<fuchsia::netstack::NetInterface>& interfaces) {
-        for (const auto& interface : *interfaces) {
-          ip_address = inet::IpAddress(&interface.addr);
-          fprintf(stderr, "Found interface %d with IPv4 address: %s\n",
-                  interface.id, ip_address.ToString().c_str());
-          if (test_static_ip == ip_address) {
-            found_static_ip_on_interface = true;
-            break;
-          }
-        }
-      });
-  RealLoopFixture::RunLoopWithTimeout();
+  netstack.events().OnInterfacesChanged =
+      [&test_static_ip, &found_static_ip_on_interface](
+          fidl::VectorPtr<fuchsia::netstack::NetInterface> interfaces) {
+        found_static_ip_on_interface =
+            WaitForNewInterface(test_static_ip, std::move(interfaces));
+      };
+  ASSERT_TRUE(RealLoopFixture::RunLoopWithTimeoutOrUntil(
+      [&found_static_ip_on_interface] { return found_static_ip_on_interface; },
+      kTimeout))
+      << "Timed out waiting for netstack interface to appear!";
+
   ASSERT_TRUE(found_static_ip_on_interface)
       << "Static IP address was not found in the interface list!";
 
