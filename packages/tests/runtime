@@ -1,7 +1,6 @@
 {
     "imports": [
-        "garnet/packages/prod/runtime",
-        "garnet/bin/appmgr/integration_tests/sandbox/tests"
+        "garnet/packages/prod/runtime"
     ],
     "packages": [
         "//garnet/bin/appmgr:appmgr_unittests",
@@ -10,6 +9,15 @@
         "//garnet/bin/appmgr/integration_tests/mock_runner:fake_component_for_runner",
         "//garnet/bin/appmgr/integration_tests/inspect:inspect_integration_tests",
         "//garnet/bin/appmgr/integration_tests/inspect:inspect_test_app",
+        "//garnet/bin/appmgr/integration_tests/sandbox/features/persistent-storage:has_persistent_storage",
+        "//garnet/bin/appmgr/integration_tests/sandbox/features/persistent-storage:no_persistent_storage",
+        "//garnet/bin/appmgr/integration_tests/sandbox/features/shell:has_shell",
+        "//garnet/bin/appmgr/integration_tests/sandbox/features/shell:no_shell",
+        "//garnet/bin/appmgr/integration_tests/sandbox/features/system-temp:has_system_temp",
+        "//garnet/bin/appmgr/integration_tests/sandbox/features/system-temp:no_system_temp",
+        "//garnet/bin/appmgr/integration_tests/sandbox/services:multiple_components",
+        "//garnet/bin/appmgr/integration_tests/sandbox/services:no_services",
+        "//garnet/bin/appmgr/integration_tests/sandbox/services:some_services",
         "//garnet/bin/glob"
     ]
 }
