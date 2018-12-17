@@ -97,6 +97,8 @@ std::vector<uint8_t> AsData(Data d) {
 constexpr uint32_t kTestExampleMinidumpKOID = 656254UL;
 constexpr uint32_t kTestExampleMinidumpThreadKOID = 671806UL;
 
+constexpr uint32_t kTestExampleMinidumpWithAspaceKOID = 9462UL;
+
 TEST_F(MinidumpTest, Load) {
   EXPECT_ZXDB_SUCCESS(TryOpen("test_example_minidump.dmp"));
 }
@@ -365,20 +367,108 @@ TEST_F(MinidumpTest, Modules) {
 }
 
 TEST_F(MinidumpTest, AddressSpace) {
-  ASSERT_ZXDB_SUCCESS(TryOpen("test_example_minidump.dmp"));
+  ASSERT_ZXDB_SUCCESS(TryOpen("test_example_minidump_with_aspace.dmp"));
 
   Err err;
   debug_ipc::AddressSpaceRequest request;
   debug_ipc::AddressSpaceReply reply;
 
-  request.process_koid = kTestExampleMinidumpKOID;
+  request.process_koid = kTestExampleMinidumpWithAspaceKOID;
 
   DoRequest(request, reply, err, &RemoteAPI::AddressSpace);
   ASSERT_ZXDB_SUCCESS(err);
 
-  // TODO(DX-591): When we can get dumps that actually fill out this field we
-  // should attempt to parse it.
-  ASSERT_EQ(0UL, reply.map.size());
+  ASSERT_EQ(18UL, reply.map.size());
+
+  EXPECT_EQ("", reply.map[0].name);
+  EXPECT_EQ(0x12766084a000UL, reply.map[0].base);
+  EXPECT_EQ(262144UL, reply.map[0].size);
+  EXPECT_EQ(0UL, reply.map[0].depth);
+
+  EXPECT_EQ("", reply.map[1].name);
+  EXPECT_EQ(0x1a531e112000UL, reply.map[1].base);
+  EXPECT_EQ(262144UL, reply.map[1].size);
+  EXPECT_EQ(0UL, reply.map[1].depth);
+
+  EXPECT_EQ("", reply.map[2].name);
+  EXPECT_EQ(0x38b28bf10000UL, reply.map[2].base);
+  EXPECT_EQ(4096UL, reply.map[2].size);
+  EXPECT_EQ(0UL, reply.map[2].depth);
+
+  EXPECT_EQ("", reply.map[3].name);
+  EXPECT_EQ(0x41ea65c3d000UL, reply.map[3].base);
+  EXPECT_EQ(4096UL, reply.map[3].size);
+  EXPECT_EQ(0UL, reply.map[3].depth);
+
+  EXPECT_EQ("", reply.map[4].name);
+  EXPECT_EQ(0x44b8c3369000UL, reply.map[4].base);
+  EXPECT_EQ(2097152UL, reply.map[4].size);
+  EXPECT_EQ(0UL, reply.map[4].depth);
+
+  EXPECT_EQ("", reply.map[5].name);
+  EXPECT_EQ(0x45226ca65000UL, reply.map[5].base);
+  EXPECT_EQ(2097152UL, reply.map[5].size);
+  EXPECT_EQ(0UL, reply.map[5].depth);
+
+  EXPECT_EQ("", reply.map[6].name);
+  EXPECT_EQ(0x513737c43000UL, reply.map[6].base);
+  EXPECT_EQ(28672UL, reply.map[6].size);
+  EXPECT_EQ(0UL, reply.map[6].depth);
+
+  EXPECT_EQ("", reply.map[7].name);
+  EXPECT_EQ(0x513737c4a000UL, reply.map[7].base);
+  EXPECT_EQ(4096UL, reply.map[7].size);
+  EXPECT_EQ(0UL, reply.map[7].depth);
+
+  EXPECT_EQ("", reply.map[8].name);
+  EXPECT_EQ(0x5e008a746000UL, reply.map[8].base);
+  EXPECT_EQ(139264UL, reply.map[8].size);
+  EXPECT_EQ(0UL, reply.map[8].depth);
+
+  EXPECT_EQ("", reply.map[9].name);
+  EXPECT_EQ(0x5e008a768000UL, reply.map[9].base);
+  EXPECT_EQ(8192UL, reply.map[9].size);
+  EXPECT_EQ(0UL, reply.map[9].depth);
+
+  EXPECT_EQ("", reply.map[10].name);
+  EXPECT_EQ(0x5e008a76a000UL, reply.map[10].base);
+  EXPECT_EQ(12288UL, reply.map[10].size);
+  EXPECT_EQ(0UL, reply.map[10].depth);
+
+  EXPECT_EQ("", reply.map[11].name);
+  EXPECT_EQ(0x652d9b6bb000UL, reply.map[11].base);
+  EXPECT_EQ(831488UL, reply.map[11].size);
+  EXPECT_EQ(0UL, reply.map[11].depth);
+
+  EXPECT_EQ("", reply.map[12].name);
+  EXPECT_EQ(0x652d9b787000UL, reply.map[12].base);
+  EXPECT_EQ(12288UL, reply.map[12].size);
+  EXPECT_EQ(0UL, reply.map[12].depth);
+
+  EXPECT_EQ("", reply.map[13].name);
+  EXPECT_EQ(0x652d9b78a000UL, reply.map[13].base);
+  EXPECT_EQ(12288UL, reply.map[13].size);
+  EXPECT_EQ(0UL, reply.map[13].depth);
+
+  EXPECT_EQ("", reply.map[14].name);
+  EXPECT_EQ(0x7328c9333000UL, reply.map[14].base);
+  EXPECT_EQ(8192UL, reply.map[14].size);
+  EXPECT_EQ(0UL, reply.map[14].depth);
+
+  EXPECT_EQ("", reply.map[15].name);
+  EXPECT_EQ(0x7328c9335000UL, reply.map[15].base);
+  EXPECT_EQ(4096UL, reply.map[15].size);
+  EXPECT_EQ(0UL, reply.map[15].depth);
+
+  EXPECT_EQ("", reply.map[16].name);
+  EXPECT_EQ(0x7328c9336000UL, reply.map[16].base);
+  EXPECT_EQ(4096UL, reply.map[16].size);
+  EXPECT_EQ(0UL, reply.map[16].depth);
+
+  EXPECT_EQ("", reply.map[17].name);
+  EXPECT_EQ(0x7c1d710c8000UL, reply.map[17].base);
+  EXPECT_EQ(4096UL, reply.map[17].size);
+  EXPECT_EQ(0UL, reply.map[17].depth);
 }
 
 }  // namespace zxdb

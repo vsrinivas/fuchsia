@@ -153,10 +153,11 @@ source_set("test_support") {
 copy("copy_test_data") {
   sources = [
     "test_example_minidump.dmp",
+    "test_example_minidump_with_aspace.dmp",
   ]
 
   outputs = [
-    "$root_build_dir/test_data/zxdb/test_example_minidump.dmp",
+    "$root_build_dir/test_data/zxdb/{{source_file_part}}",
   ]
 }
 
