@@ -193,12 +193,38 @@ def _fuchsia_package_impl(context):
         mnemonic = "PmArchive",
     )
 
-    outs = [package_archive]
+    components_file = context.actions.declare_file(context.attr.name + "_components.txt")
+    components_contents = "\n".join([n for n, _ in info.components.to_list()])
+    context.actions.write(
+        output = components_file,
+        content = components_contents,
+    )
+
+    executable_file = context.actions.declare_file(context.attr.name + "_run.sh")
+    executable_contents = "#!/bin/sh\n"
+    executable_contents += "%s --config %s --package %s run \"$@\"" % (
+        context.executable._runner.short_path,
+        components_file.short_path,
+        package_archive.short_path,
+    )
+    context.actions.write(
+        output = executable_file,
+        content = executable_contents,
+        is_executable = True,
+    )
+
+    runfiles = context.runfiles(files = [
+        components_file,
+        context.executable._runner,
+        executable_file,
+        package_archive,
+    ])
 
     return [
         DefaultInfo(
-            files = depset(outs),
-            runfiles = context.runfiles(files = outs),
+            files = depset([package_archive]),
+            executable = executable_file,
+            runfiles = runfiles,
         ),
         PackageInfo(
             name = context.attr.name,
@@ -222,6 +248,12 @@ fuchsia_package = rule(
             executable = True,
             cfg = "host",
         ),
+        "_runner": attr.label(
+            default = Label("//build_defs/internal/component_runner:component_runner.par"),
+            executable = True,
+            cfg = "host",
+        ),
     },
     provides = [PackageInfo],
+    executable = True,
 )

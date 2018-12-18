@@ -1,8 +1,17 @@
 <%include file="header_no_license.mako" />
 
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
 local_repository(
     name = "fuchsia_sdk",
     path = "${data.sdk_path}",
+)
+
+# TODO(DX-750): should be in a setup method provided by the SDK workspace.
+http_archive(
+    name = "subpar",
+    url = "https://github.com/google/subpar/archive/1.0.0.zip",
+    strip_prefix = "subpar-1.0.0",
 )
 
 % if data.with_cc:
