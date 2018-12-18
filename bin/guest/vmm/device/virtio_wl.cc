@@ -13,6 +13,13 @@
 #include <trace-provider/provider.h>
 #include <trace/event.h>
 
+#include "garnet/bin/guest/vmm/bits.h"
+
+static constexpr uint32_t DRM_FORMAT_ARGB8888 = 0x34325241;
+static constexpr uint32_t DRM_FORMAT_ABGR8888 = 0x34324241;
+static constexpr uint32_t DRM_FORMAT_XRGB8888 = 0x34325258;
+static constexpr uint32_t DRM_FORMAT_XBGR8888 = 0x34324258;
+
 // Vfd type that holds a region of memory that is mapped into the guest's
 // physical address space. The memory region is unmapped when instance is
 // destroyed.
@@ -601,6 +608,7 @@ void VirtioWl::HandleNewPipe(const virtio_wl_ctrl_vfd_new_t* request,
   response->size = 0;
 }
 
+// This implements dmabuf allocations that allow direct access by GPU.
 void VirtioWl::HandleNewDmabuf(const virtio_wl_ctrl_vfd_new_t* request,
                                virtio_wl_ctrl_vfd_new_t* response) {
   TRACE_DURATION("machina", "virtio_wl_new_dmabuf");
@@ -610,8 +618,65 @@ void VirtioWl::HandleNewDmabuf(const virtio_wl_ctrl_vfd_new_t* request,
     return;
   }
 
-  FXL_LOG(ERROR) << __FUNCTION__ << ": Not implemented";
-  response->hdr.type = VIRTIO_WL_RESP_INVALID_CMD;
+  size_t stride;
+  size_t total_size;
+  switch (request->dmabuf.format) {
+    case DRM_FORMAT_ARGB8888:
+    case DRM_FORMAT_ABGR8888:
+    case DRM_FORMAT_XRGB8888:
+    case DRM_FORMAT_XBGR8888: {
+      // Alignment that is sufficient for all known devices.
+      // TODO(MAC-227): Use sysmem for allocation instead of making
+      // alignment assumptions here.
+      stride = align(request->dmabuf.width * 4, 64);
+      total_size = stride * align(request->dmabuf.height, 4);
+    } break;
+    default:
+      FXL_LOG(ERROR) << __FUNCTION__ << ": Invalid format";
+      response->hdr.type = VIRTIO_WL_RESP_ERR;
+      return;
+  }
+
+  zx::vmo vmo;
+  zx_status_t status = zx::vmo::create(total_size, 0, &vmo);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to allocate VMO (size=" << total_size
+                   << "): " << status;
+    response->hdr.type = VIRTIO_WL_RESP_OUT_OF_MEMORY;
+    return;
+  }
+
+  std::unique_ptr<Memory> vfd = Memory::Create(
+      std::move(vmo), &vmar_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
+  if (!vfd) {
+    FXL_LOG(ERROR) << "Failed to create memory instance";
+    response->hdr.type = VIRTIO_WL_RESP_OUT_OF_MEMORY;
+    return;
+  }
+
+  zx_gpaddr_t addr = vfd->addr();
+  uint64_t size = vfd->size();
+
+  bool inserted;
+  std::tie(std::ignore, inserted) =
+      vfds_.insert({request->vfd_id, std::move(vfd)});
+  if (!inserted) {
+    response->hdr.type = VIRTIO_WL_RESP_INVALID_ID;
+    return;
+  }
+
+  response->hdr.type = VIRTIO_WL_RESP_VFD_NEW_DMABUF;
+  response->hdr.flags = 0;
+  response->vfd_id = request->vfd_id;
+  response->flags = VIRTIO_WL_VFD_READ | VIRTIO_WL_VFD_WRITE;
+  response->pfn = addr / PAGE_SIZE;
+  response->size = size;
+  response->dmabuf.stride0 = stride;
+  response->dmabuf.stride1 = 0;
+  response->dmabuf.stride2 = 0;
+  response->dmabuf.offset0 = 0;
+  response->dmabuf.offset1 = 0;
+  response->dmabuf.offset2 = 0;
 }
 
 void VirtioWl::HandleDmabufSync(const virtio_wl_ctrl_vfd_dmabuf_sync_t* request,

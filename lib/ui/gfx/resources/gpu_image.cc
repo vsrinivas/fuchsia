@@ -78,6 +78,15 @@ GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
   escher_image_info.usage = vk::ImageUsageFlagBits::eTransferSrc |
                             vk::ImageUsageFlagBits::eTransferDst |
                             vk::ImageUsageFlagBits::eSampled;
+  // TODO(SCN-1182): Add unit tests to verify this logic.
+  switch (image_info.tiling) {
+    case fuchsia::images::Tiling::LINEAR:
+      escher_image_info.tiling = vk::ImageTiling::eLinear;
+      break;
+    case fuchsia::images::Tiling::GPU_OPTIMAL:
+      escher_image_info.tiling = vk::ImageTiling::eOptimal;
+      break;
+  }
   // TODO(SCN-1012): Don't hardcode this -- use the data on the memory
   // object once we support a bitmask instead of an enum.
   escher_image_info.memory_flags = vk::MemoryPropertyFlagBits::eDeviceLocal;

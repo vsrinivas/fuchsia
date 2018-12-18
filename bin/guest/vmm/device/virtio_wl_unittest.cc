@@ -296,6 +296,37 @@ TEST_F(VirtioWlTest, HandleNewPipe) {
   EXPECT_EQ(response->flags, static_cast<uint32_t>(VIRTIO_WL_VFD_READ));
 }
 
+TEST_F(VirtioWlTest, HandleDmabuf) {
+  virtio_wl_ctrl_vfd_new_t request = {};
+  request.hdr.type = VIRTIO_WL_CMD_VFD_NEW_DMABUF;
+  request.vfd_id = 1u;
+  request.dmabuf.format = 0x34325241;  // DRM_FORMAT_ARGB8888
+  request.dmabuf.width = 64;
+  request.dmabuf.height = 64;
+  virtio_wl_ctrl_vfd_new_t* response;
+  uint16_t descriptor_id;
+  ASSERT_EQ(DescriptorChainBuilder(out_queue_)
+                .AppendReadableDescriptor(&request, sizeof(request))
+                .AppendWritableDescriptor(&response, sizeof(*response))
+                .Build(&descriptor_id),
+            ZX_OK);
+
+  ASSERT_EQ(wl_->NotifyQueue(VIRTWL_VQ_OUT), ZX_OK);
+  ASSERT_EQ(WaitOnInterrupt(), ZX_OK);
+
+  auto used_elem = out_queue_.NextUsed();
+  EXPECT_TRUE(used_elem);
+  EXPECT_EQ(used_elem->id, descriptor_id);
+  EXPECT_EQ(used_elem->len, sizeof(*response));
+  EXPECT_EQ(response->hdr.type, VIRTIO_WL_RESP_VFD_NEW_DMABUF);
+  EXPECT_EQ(response->hdr.flags, 0u);
+  EXPECT_EQ(response->vfd_id, 1u);
+  EXPECT_EQ(response->flags,
+            static_cast<uint32_t>(VIRTIO_WL_VFD_READ | VIRTIO_WL_VFD_WRITE));
+  EXPECT_GT(response->pfn, 0u);
+  EXPECT_GT(response->size, 0u);
+}
+
 TEST_F(VirtioWlTest, HandleSend) {
   ASSERT_EQ(CreateNew(1u, 0xaa), ZX_OK);
   ASSERT_EQ(CreatePipe(2u), ZX_OK);
