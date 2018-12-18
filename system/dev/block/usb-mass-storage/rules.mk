@@ -12,12 +12,13 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/block.c \
     $(LOCAL_DIR)/usb-mass-storage.c \
 
-MODULE_STATIC_LIBS := system/ulib/ddk system/dev/lib/usb-old system/ulib/sync
+MODULE_STATIC_LIBS := system/ulib/ddk system/dev/lib/usb system/ulib/sync
 
 MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-block \
+    system/banjo/ddk-protocol-usb \
     system/banjo/ddk-protocol-usb-composite \
     system/banjo/ddk-protocol-usb-request \
 
