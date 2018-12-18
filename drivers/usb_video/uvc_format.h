@@ -6,9 +6,9 @@
 #define GARNET_DRIVERS_USB_VIDEO_UVC_FORMAT_H_
 
 #include <ddk/device.h>
-#include <ddk/usb/usb.h>
 #include <fbl/vector.h>
 #include <fuchsia/camera/cpp/fidl.h>
+#include <usb/usb.h>
 #include <zircon/compiler.h>
 #include <zircon/hw/usb/video.h>
 #include <zircon/hw/usb.h>

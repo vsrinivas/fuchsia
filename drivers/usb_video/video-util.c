@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
-#include <ddk/usb/usb.h>
+#include <usb/usb.h>
 #include <string.h>
 
 #include "garnet/drivers/usb_video/video-util.h"
@@ -31,10 +31,10 @@ zx_status_t usb_video_negotiate_probe(
   // (in this case USB_VIDEO_VS_PROBE_CONTROL) in the high byte,
   // and the low byte must be set to zero.
   // See UVC 1.5 Spec. 4.2.1 Interface Control Requests.
-  status = usb_control(usb, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-                       USB_VIDEO_SET_CUR, USB_VIDEO_VS_PROBE_CONTROL << 8,
-                       vs_interface_num, proposal, sizeof(*proposal),
-                       ZX_TIME_INFINITE, NULL);
+  status = usb_control_out(usb, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+                           USB_VIDEO_SET_CUR, USB_VIDEO_VS_PROBE_CONTROL << 8,
+                           vs_interface_num, ZX_TIME_INFINITE,
+                           proposal, sizeof(*proposal));
   if (status != ZX_OK)
     goto out;
 
@@ -42,10 +42,10 @@ zx_status_t usb_video_negotiate_probe(
   memset(out_result, 0, sizeof(usb_video_vc_probe_and_commit_controls));
 
   zxlogf(TRACE, "usb_video_negotiate_probe: PROBE_CONTROL GET_CUR\n");
-  status = usb_control(usb, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-                       USB_VIDEO_GET_CUR, USB_VIDEO_VS_PROBE_CONTROL << 8,
-                       vs_interface_num, out_result, sizeof(*out_result),
-                       ZX_TIME_INFINITE, &out_length);
+  status = usb_control_in(usb, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+                          USB_VIDEO_GET_CUR, USB_VIDEO_VS_PROBE_CONTROL << 8,
+                          vs_interface_num, ZX_TIME_INFINITE,
+                          out_result, sizeof(*out_result), &out_length);
   if (status != ZX_OK) {
     goto out;
   }
@@ -70,10 +70,10 @@ zx_status_t usb_video_negotiate_commit(
     usb_protocol_t* usb, uint8_t vs_interface_num,
     usb_video_vc_probe_and_commit_controls* ctrls) {
   zxlogf(TRACE, "usb_video_negotiate_commit: COMMIT_CONTROL SET_CUR\n");
-  zx_status_t status = usb_control(
+  zx_status_t status = usb_control_out(
       usb, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
       USB_VIDEO_SET_CUR, USB_VIDEO_VS_COMMIT_CONTROL << 8, vs_interface_num,
-      ctrls, sizeof(*ctrls), ZX_TIME_INFINITE, NULL);
+      ZX_TIME_INFINITE, ctrls, sizeof(*ctrls));
   if (status == ZX_ERR_IO_REFUSED || status == ZX_ERR_IO_INVALID) {
     // clear the stall/error
     usb_reset_endpoint(usb, 0);

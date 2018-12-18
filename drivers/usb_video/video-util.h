@@ -5,7 +5,7 @@
 #ifndef GARNET_DRIVERS_USB_VIDEO_VIDEO_UTIL_H_
 #define GARNET_DRIVERS_USB_VIDEO_VIDEO_UTIL_H_
 
-#include <ddk/usb/usb.h>
+#include <usb/usb.h>
 #include <zircon/hw/usb/video.h>
 
 __BEGIN_CDECLS

@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
-#include <ddk/protocol/usb-old.h>
-#include <ddk/usb/usb.h>
+#include <ddk/protocol/usb.h>
 #include <fbl/vector.h>
 #include <stdlib.h>
+#include <usb/usb.h>
 #include <zircon/hw/usb/video.h>
 
 #include "garnet/drivers/usb_video/usb-video-stream.h"

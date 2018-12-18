@@ -6,8 +6,8 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/usb-old.h>
-#include <ddk/usb/usb.h>
+#include <ddk/protocol/usb.h>
+#include <usb/usb.h>
 #include <fbl/vector.h>
 #include <stdlib.h>
 #include <zircon/hw/usb/video.h>
@@ -32,8 +32,8 @@ std::string FetchString(const usb_protocol_t& usb_proto,
   size_t buflen = sizeof(str_buf);
   uint16_t language_id = 0;
   zx_status_t res = usb_get_string_descriptor(&usb_proto, description_index,
-                                              language_id, str_buf, buflen,
-                                              &buflen, &language_id);
+                                              language_id,  &language_id,
+                                              str_buf, buflen, &buflen);
   if (res != ZX_OK) {
     return std::string();
   }
@@ -72,7 +72,7 @@ video::usb::UsbDeviceInfo GetDeviceInfo(const usb_protocol_t& usb_proto) {
 zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device,
                                         void** cookie) {
   usb_protocol_t usb;
-  zx_status_t status = device_get_protocol(device, ZX_PROTOCOL_USB_OLD, &usb);
+  zx_status_t status = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);
   if (status != ZX_OK) {
     return status;
   }

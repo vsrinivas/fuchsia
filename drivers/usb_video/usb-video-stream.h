@@ -5,7 +5,6 @@
 #ifndef GARNET_DRIVERS_USB_VIDEO_USB_VIDEO_STREAM_H_
 #define GARNET_DRIVERS_USB_VIDEO_USB_VIDEO_STREAM_H_
 
-#include <ddk/usb/usb.h>
 #include <ddktl/device-internal.h>
 #include <ddktl/device.h>
 #include <fbl/mutex.h>
@@ -14,6 +13,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/default.h>
 #include <lib/zx/vmo.h>
+#include <usb/usb.h>
 
 #include <lib/fzl/vmo-pool.h>
 #include "garnet/drivers/usb_video/camera_control_impl.h"
@@ -110,7 +110,7 @@ class UsbVideoStream : public UsbVideoStreamBase, public VideoStreamProtocol {
   void QueueRequestLocked() __TA_REQUIRES(lock_);
   void RequestComplete(usb_request_t* req);
 
-  static void RequestCompleteCallback(usb_request_t* request, void* cookie);
+  static void RequestCompleteCallback(void* ctx, usb_request_t* request);
   void ParseHeaderTimestamps(usb_request_t* req);
   // Notifies the client regarding the status of the completed frame.
   // If the frame was completed successfully, it will also be locked until the
