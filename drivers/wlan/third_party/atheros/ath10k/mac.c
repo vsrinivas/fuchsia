@@ -2652,7 +2652,7 @@ static enum wmi_phy_mode ath10k_mac_get_phymode_vht(enum CBW cbw) {
         return MODE_11AC_VHT80_80;
     } else if (cbw == CBW80) {
         return MODE_11AC_VHT80;
-    } else if (cbw == CBW40) {
+    } else if (cbw == CBW40ABOVE || cbw == CBW40BELOW) {
         return MODE_11AC_VHT40;
     } else if (cbw == CBW20) {
         return MODE_11AC_VHT20;
