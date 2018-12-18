@@ -7,19 +7,10 @@ local_repository(
     path = "${data.sdk_path}",
 )
 
-# TODO(DX-750): should be in a setup method provided by the SDK workspace.
-http_archive(
-    name = "subpar",
-    url = "https://github.com/google/subpar/archive/1.0.0.zip",
-    strip_prefix = "subpar-1.0.0",
+load("@fuchsia_sdk//build_defs:fuchsia_setup.bzl", "fuchsia_setup")
+fuchsia_setup(
+    with_toolchain = ${data.with_cc},
 )
-
-% if data.with_cc:
-load("@fuchsia_sdk//build_defs:crosstool.bzl", "install_fuchsia_crosstool")
-install_fuchsia_crosstool(
-name = "fuchsia_crosstool",
-)
-% endif
 
 % if data.with_dart:
 http_archive(

@@ -130,11 +130,12 @@ class BazelBuilder(Frontend):
         if not self.has_cc:
             return
         crosstool = model.Crosstool(arches['target'])
-        self.write_file(self.dest('build_defs', 'crosstool.bzl'),
+        crosstool_base = self.dest('build_defs', 'internal', 'crosstool')
+        self.write_file(self.dest(crosstool_base, 'crosstool.bzl'),
                         'crosstool_bzl', crosstool)
-        self.write_file(self.dest('build_defs', 'BUILD.crosstool'),
+        self.write_file(self.dest(crosstool_base, 'BUILD.crosstool'),
                         'crosstool', crosstool)
-        self.write_file(self.dest('build_defs', 'CROSSTOOL.in'),
+        self.write_file(self.dest(crosstool_base, 'CROSSTOOL.in'),
                         'crosstool_in', crosstool)
         self.write_file(self.dest('build_defs', 'toolchain', 'BUILD'),
                         'toolchain_build', crosstool)

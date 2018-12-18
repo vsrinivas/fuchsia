@@ -43,7 +43,7 @@ def _configure_crosstool_impl(repository_ctx):
     )
     # Set up the BUILD file from the Fuchsia SDK.
     repository_ctx.symlink(
-        Label("@fuchsia_sdk//build_defs:BUILD.crosstool"),
+        Label("@fuchsia_sdk//build_defs/internal/crosstool:BUILD.crosstool"),
         "BUILD",
     )
     # Hack to get the path to the sysroot directory, see
@@ -55,7 +55,7 @@ def _configure_crosstool_impl(repository_ctx):
     # Set up the CROSSTOOL file from the template.
     repository_ctx.template(
         "CROSSTOOL",
-        Label("@fuchsia_sdk//build_defs:CROSSTOOL.in"),
+        Label("@fuchsia_sdk//build_defs/internal/crosstool:CROSSTOOL.in"),
         substitutions = {
             % for arch in data.arches:
             "%{SYSROOT_${arch.short_name.upper()}}": str(sysroot_${arch.short_name}),
@@ -65,6 +65,6 @@ def _configure_crosstool_impl(repository_ctx):
     )
 
 
-install_fuchsia_crosstool = repository_rule(
+configure_crosstool = repository_rule(
     implementation = _configure_crosstool_impl,
 )
