@@ -44,7 +44,7 @@ fuchsia::math::PointF TransformPointerEvent(const Point3F& ray_origin,
                                             const Point3F& ray_direction,
                                             fuchsia::ui::gfx::Hit hit) {
   escher::mat4 hit_node_to_device_transform =
-      scenic::gfx::Unwrap(hit.inverse_transform);
+      scenic_impl::gfx::Unwrap(hit.inverse_transform);
   escher::ray4 ray{{ray_origin.x, ray_origin.y, ray_origin.z, 1.f},
                    {ray_direction.x, ray_direction.y, ray_direction.z, 0.f}};
   escher::ray4 transformed_ray =

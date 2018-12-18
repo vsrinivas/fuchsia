@@ -128,7 +128,7 @@ fuchsia::accessibility::Node* SemanticTree::HitTest(
   if (it == nodes.end()) {
     return nullptr;
   }
-  escher::mat4 transform = scenic::gfx::Unwrap(it->second.data.transform);
+  escher::mat4 transform = scenic_impl::gfx::Unwrap(it->second.data.transform);
   escher::vec4 local_coordinates = transform * coordinates;
   escher::vec2 point(local_coordinates[0], local_coordinates[1]);
 

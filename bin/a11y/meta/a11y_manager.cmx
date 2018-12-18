@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "bin/a11y_manager"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.tracelink.Registry",
+            "fuchsia.ui.viewsv1.AccessibilityViewInspector"
+        ]
+    }
+}

@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 executable("a11y_toggler") {
+  output_name = "a11y_toggler"
+
   sources = [
     "main.cc",
   ]

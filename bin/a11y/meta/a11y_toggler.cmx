@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/a11y_toggler"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.accessibility.Toggler"
+        ]
+    }
+}

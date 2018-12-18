@@ -26,15 +26,38 @@ package("a11y_manager") {
     "a11y_manager",
   ]
 
-  binary = "a11y_manager"
+  binaries = [
+    {
+      name = "a11y_manager"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/a11y_manager.cmx")
+      dest = "a11y_manager.cmx"
+    },
+  ]
 }
 
 package("a11y_toggler") {
   deps = [
-    "a11y_toggler",
+    "//garnet/bin/a11y/a11y_toggler:a11y_toggler",
   ]
 
-  binary = "a11y_toggler"
+  binaries = [
+    {
+      name = "a11y_toggler"
+      shell = true
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/a11y_toggler.cmx")
+      dest = "a11y_toggler.cmx"
+    },
+  ]
 }
 
 package("a11y_touch_dispatcher") {
@@ -43,6 +66,13 @@ package("a11y_touch_dispatcher") {
   ]
 
   binary = "a11y_touch_dispatcher"
+
+  meta = [
+    {
+      path = rebase_path("meta/a11y_touch_dispatcher.cmx")
+      dest = "a11y_touch_dispatcher.cmx"
+    },
+  ]
 }
 
 package("talkback") {
@@ -51,4 +81,11 @@ package("talkback") {
   ]
 
   binary = "talkback"
+
+  meta = [
+    {
+      path = rebase_path("meta/talkback.cmx")
+      dest = "talkback.cmx"
+    },
+  ]
 }
