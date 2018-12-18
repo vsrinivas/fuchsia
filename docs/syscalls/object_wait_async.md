@@ -48,11 +48,24 @@ signals (without removing the existing signals).
 In either mode, [`zx_port_cancel()`] will terminate the operation and if a packet was
 in the queue on behalf of the operation, that packet will be removed from the queue.
 
-If the handle is closed, the operation will also be terminated, but packets already
+If *handle* is closed, the operation will also be terminated, but packets already
 in the queue are not affected.
 
-See [`zx_port_wait()`] for more information about each type
-of packet and their semantics.
+Packets generated via this syscall will have *type* set to either **ZX_PKT_TYPE_SIGNAL_ONE**
+or **ZX_PKT_TYPE_SIGNAL_REP**, and the union is of type `zx_packet_signal_t`:
+
+```
+typedef struct zx_packet_signal {
+    zx_signals_t trigger;
+    zx_signals_t observed;
+    uint64_t count;
+} zx_packet_signal_t;
+```
+
+*trigger* is the signals used in the call to `zx_object_wait_async()`, *observed* is the
+signals actually observed, and *count* is a per object defined count of pending operations. Use
+the `zx_port_packet_t`'s *key* member to track what object this packet corresponds to and
+therefore match *count* with the operation.
 
 ## RIGHTS
 

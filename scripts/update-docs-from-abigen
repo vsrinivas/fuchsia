@@ -456,7 +456,7 @@ def check_for_orphans(syscalls, root):
     names = set([x['name'] for x in syscalls])
     for md in os.listdir(root):
         if not md.endswith('.md'):
-            print >> sys.stderr, 'warning: non .md file %s in %s' % (md, outf)
+            print >> sys.stderr, 'warning: non .md file %s' % md
         name = md[:-3]
         if name not in names:
             orphan_count += 1
