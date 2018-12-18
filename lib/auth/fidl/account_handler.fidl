@@ -38,6 +38,16 @@ interface AccountHandlerControl {
     2: LoadAccount(fuchsia.auth.account.LocalAccountId id)
            -> (fuchsia.auth.account.Status status);
 
+    // Deletes all persistent information about the Fuchsia account handled by
+    // this handler, including all credentials and global identifiers. After a
+    // successfull call to RemoveAccount, all other open interfaces for this
+    // account handler will be closed and any subsequent calls on the current
+    // interface will fail.
+    //
+    // Returns: |status| A |Status| indicating whether the operation was
+    //                   successful
+    3: RemoveAccount() -> (fuchsia.auth.account.Status status);
+
     // TODO(jsankey): Add methods to cover adding an existing account and
     // handling an account where the disk is not yet decrpyted.
 
@@ -53,7 +63,7 @@ interface AccountHandlerControl {
     //
     // Returns: |status| A |Status| indicating whether the operation was
     //                   successful
-    3: GetAccount(
+    4: GetAccount(
            fuchsia.auth.AuthenticationContextProvider auth_context_provider,
            request<fuchsia.auth.account.Account> account)
            -> (fuchsia.auth.account.Status status);
@@ -61,7 +71,7 @@ interface AccountHandlerControl {
     // Signals that the AccountHandler should tear itself down. After the
     // receiver responds by closing its handle, the caller may terminate the
     // component if it hasn't already exited.
-    4: Terminate();
+    5: Terminate();
 };
 
 // An interface that supplies the account and authentication services that

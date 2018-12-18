@@ -72,6 +72,10 @@ impl AccountHandler {
                 let response = self.load_account(id.into());
                 responder.send(response)?;
             }
+            AccountHandlerControlRequest::RemoveAccount { responder } => {
+                let response = self.remove_account();
+                responder.send(response)?;
+            }
             AccountHandlerControlRequest::GetAccount {
                 auth_context_provider,
                 account,
@@ -109,6 +113,12 @@ impl AccountHandler {
     fn load_account(&self, _id: LocalAccountId) -> Status {
         // TODO(jsankey): Implement this method once accounts are persisted on disk.
         warn!("LoadAccount method not yet implemented");
+        Status::InternalError
+    }
+
+    fn remove_account(&self) -> Status {
+        // TODO(dnordstrom): Implement this method once accounts are persisted on disk.
+        warn!("RemoveAccount method not yet implemented");
         Status::InternalError
     }
 
