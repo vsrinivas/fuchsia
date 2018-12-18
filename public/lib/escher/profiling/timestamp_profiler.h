@@ -23,17 +23,21 @@ class TimestampProfiler : public fxl::RefCountedThreadSafe<TimestampProfiler> {
   // |flags|.  For example, use eVertexShader to mark the time that vertex
   // shaders have been applied to all vertices from previous draw-calls.
   //
+  // |name| needs to be a global constant. The trace engine that ultimately
+  // consumes Result structs caches it, so if the contents were overwritten the
+  // records would be inaccurate.
+  //
   // NOTE: you should understand the caveats in the Vulkan spec regarding the
   // accuracy of these timestamps.  For example, many implementations will treat
   // any set of flags as equivalent to eBottomOfPipe.
   void AddTimestamp(impl::CommandBuffer* cmd_buf,
-                    vk::PipelineStageFlagBits flags, std::string name);
+                    vk::PipelineStageFlagBits flags, const char *name);
 
   struct Result {
     uint64_t raw_nanoseconds;  // nanoseconds according to some timebase.
     uint64_t time;     // microseconds elapsed since the first timestamp.
     uint64_t elapsed;  // microseconds elapsed since the previous timestamp.
-    std::string name;
+    const char *name;
   };
 
   std::vector<Result> GetQueryResults();

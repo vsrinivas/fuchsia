@@ -21,10 +21,10 @@ TimestampProfiler::~TimestampProfiler() {
 
 void TimestampProfiler::AddTimestamp(impl::CommandBuffer* cmd_buf,
                                      vk::PipelineStageFlagBits flags,
-                                     std::string name) {
+                                     const char *name) {
   QueryRange* range = ObtainRange(cmd_buf);
   cmd_buf->vk().writeTimestamp(flags, range->pool, current_pool_index_);
-  results_.push_back(Result{0, 0, 0, std::move(name)});
+  results_.push_back(Result{0, 0, 0, name});
   ++range->count;
   ++current_pool_index_;
   ++query_count_;
