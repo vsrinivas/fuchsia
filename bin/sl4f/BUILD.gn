@@ -35,6 +35,7 @@ rustc_binary("bin") {
     "//third_party/rust-crates/rustc_deps:serde_derive",
     "//third_party/rust-crates/rustc_deps:serde_json",
     "//third_party/rust-crates/rustc_deps:slab",
+    "//zircon/public/fidl/fuchsia-net-stack:fuchsia-net-stack-rustc",
   ]
 }
 

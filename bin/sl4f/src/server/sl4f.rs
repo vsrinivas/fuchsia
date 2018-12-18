@@ -30,6 +30,8 @@ use crate::bluetooth::gatt_client_facade::GattClientFacade;
 // Wlan related includes
 use crate::wlan::facade::WlanFacade;
 
+use crate::netstack::facade::NetstackFacade;
+
 /// Sl4f object. This stores all information about state for each connectivity stack.
 /// Every session will have a new Sl4f object.
 /// For example, to add WLAN stack support, add "wlan_facade" to the struct definition and update
@@ -45,6 +47,9 @@ pub struct Sl4f {
     // gatt_client_facade: Thread safe object for state for Gatt Client tests
     gatt_client_facade: Arc<GattClientFacade>,
 
+    // netstack_facade: Thread safe object for state for netstack functions.
+    netstack_facade: Arc<NetstackFacade>,
+
     // wlan_facade: Thread safe object for state for wlan connectivity tests
     wlan_facade: Arc<WlanFacade>,
 
@@ -56,6 +61,7 @@ pub struct Sl4f {
 
 impl Sl4f {
     pub fn new() -> Result<Arc<RwLock<Sl4f>>, Error> {
+        let netstack_facade = Arc::new(NetstackFacade::new());
         let ble_advertise_facade = Arc::new(BleAdvertiseFacade::new());
         let gatt_client_facade = Arc::new(GattClientFacade::new());
         let wlan_facade = Arc::new(WlanFacade::new()?);
@@ -63,9 +69,14 @@ impl Sl4f {
             ble_advertise_facade,
             bt_facade: BluetoothFacade::new(),
             gatt_client_facade,
+            netstack_facade,
             wlan_facade,
             clients: Arc::new(Mutex::new(HashMap::new())),
         })))
+    }
+
+    pub fn get_netstack_facade(&self) -> Arc<NetstackFacade> {
+        self.netstack_facade.clone()
     }
 
     pub fn get_ble_advertise_facade(&self) -> Arc<BleAdvertiseFacade> {

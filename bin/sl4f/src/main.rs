@@ -16,6 +16,7 @@ use std::sync::Arc;
 use std::thread;
 
 mod bluetooth;
+mod netstack;
 mod server;
 mod wlan;
 
