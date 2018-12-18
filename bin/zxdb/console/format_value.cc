@@ -342,7 +342,7 @@ void FormatValue::FormatCollection(
 
     // Print "ClassName = "
     AppendToOutputKey(output_key,
-                      OutputBuffer(Syntax::kSpecial, from->GetFullName()));
+                      OutputBuffer(Syntax::kComment, from->GetFullName()));
     AppendToOutputKey(output_key, OutputBuffer(" = "));
 
     // Pass "true" to suppress type printing since we just printed the type.
