@@ -115,12 +115,10 @@ where
     PseudoFileImpl::<fn() -> Result<Vec<u8>, Status>, _>::new(
         None,
         capacity,
-        Some(
-            move |bytes: Vec<u8>| match String::from_utf8(bytes) {
-                Ok(content) => on_write(content),
-                Err(_) => Err(Status::INVALID_ARGS),
-            },
-        ),
+        Some(move |bytes: Vec<u8>| match String::from_utf8(bytes) {
+            Ok(content) => on_write(content),
+            Err(_) => Err(Status::INVALID_ARGS),
+        }),
     )
 }
 
@@ -160,12 +158,10 @@ where
     PseudoFileImpl::new(
         Some(move || on_read().map(|content| content.into_bytes())),
         capacity,
-        Some(
-            move |bytes: Vec<u8>| match String::from_utf8(bytes) {
-                Ok(content) => on_write(content),
-                Err(_) => Err(Status::INVALID_ARGS),
-            },
-        ),
+        Some(move |bytes: Vec<u8>| match String::from_utf8(bytes) {
+            Ok(content) => on_write(content),
+            Err(_) => Err(Status::INVALID_ARGS),
+        }),
     )
 }
 

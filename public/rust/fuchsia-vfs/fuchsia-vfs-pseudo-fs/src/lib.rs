@@ -9,8 +9,10 @@
 #![warn(missing_docs)]
 
 use {
-    failure::Error, fidl_fuchsia_io::FileRequestStream, fuchsia_zircon::Status,
-    futures::future::{Future, FusedFuture},
+    failure::Error,
+    fidl_fuchsia_io::FileRequestStream,
+    fuchsia_zircon::Status,
+    futures::future::{FusedFuture, Future},
     std::pin::Unpin,
 };
 
