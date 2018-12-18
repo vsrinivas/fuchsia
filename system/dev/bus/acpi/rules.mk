@@ -77,7 +77,7 @@ endif
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-acpi \
     system/banjo/ddk-protocol-hidbus \
-    system/banjo/ddk-protocol-intel-hda-dsp \
+    system/banjo/ddk-protocol-intelhda-dsp \
     system/banjo/ddk-protocol-pciroot \
     system/banjo/ddk-protocol-platform-device \
     system/banjo/ddk-protocol-scpi \

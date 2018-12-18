@@ -15,7 +15,7 @@ MODULE_BANJO_LIBRARY := ddk.protocol.usb
 MODULE_BANJO_NAME := usb
 
 MODULE_BANJO_DEPS := \
-    system/banjo/ddk-phys-iter \
+    system/banjo/ddk-physiter \
     system/banjo/zircon-hw-usb \
     system/banjo/ddk-protocol-usb-request \
 

@@ -1,0 +1,13 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.physiter;
+
+[repr = "C"]
+struct PhysIterSgEntry {
+    /// length starting at the scatter gather entry offset, must be non zero
+    usize length;
+    /// offset relative to the buffer's vmo_offset
+    usize offset;
+};

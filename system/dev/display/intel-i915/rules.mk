@@ -39,8 +39,8 @@ MODULE_FIDL_LIBS := system/fidl/zircon-backlight
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-display-controller \
-    system/banjo/ddk-protocol-i2c-impl \
-    system/banjo/ddk-protocol-intel-gpu-core \
+    system/banjo/ddk-protocol-i2cimpl \
+    system/banjo/ddk-protocol-intelgpucore \
     system/banjo/ddk-protocol-pci \
 
 include make/module.mk

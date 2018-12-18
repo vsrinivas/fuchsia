@@ -17,6 +17,6 @@ MODULE_LIBS := \
     system/ulib/zircon \
 
 MODULE_BANJO_LIBS := \
-    system/banjo/ddk-protocol-bt-gatt-svc
+    system/banjo/ddk-protocol-bt-gattsvc
 
 include make/module.mk

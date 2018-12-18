@@ -1,0 +1,28 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.i2cimpl;
+
+using zx;
+
+/// See `Transact` below for usage.
+struct I2cImplOp {
+    uint16 address;
+    vector<voidptr>? data;
+    bool is_read;
+    bool stop;
+};
+
+/// Low-level protocol for i2c drivers.
+[Layout = "ddk-protocol", DefaultProtocol]
+interface I2cImpl {
+    GetBusCount() -> (uint32 count);
+    GetMaxTransferSize(uint32 bus_id) -> (zx.status s, usize size);
+    /// Sets the bitrate for the i2c bus in KHz units.
+    SetBitrate(uint32 bus_id, uint32 bitrate) -> (zx.status s);
+    /// |Transact| assumes that all ops buf are not null.
+    /// |Transact| assumes that all ops length are not zero.
+    /// |Transact| assumes that at least the last op has stop set to true.
+    Transact(uint32 bus_id, vector<I2cImplOp> op) -> (zx.status status);
+};

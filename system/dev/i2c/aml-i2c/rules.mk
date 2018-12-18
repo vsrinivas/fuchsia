@@ -24,7 +24,7 @@ MODULE_HEADER_DEPS := system/dev/lib/amlogic
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-i2c \
-    system/banjo/ddk-protocol-i2c-impl \
+    system/banjo/ddk-protocol-i2cimpl \
     system/banjo/ddk-protocol-platform-bus \
     system/banjo/ddk-protocol-platform-device \
 
