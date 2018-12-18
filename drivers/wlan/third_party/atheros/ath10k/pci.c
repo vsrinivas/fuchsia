@@ -3080,6 +3080,7 @@ static zx_status_t ath10k_pci_configure_bss(void* ctx, uint32_t options,
     struct ath10k* ar = ctx;
     if (!verify_started(ar)) { return ZX_ERR_BAD_STATE; }
 
+    ath10k_info("configuring BSS\n");
     return ath10k_mac_set_bss(ar, config);
 }
 
@@ -3152,14 +3153,14 @@ static zx_status_t ath10k_pci_configure_assoc(void* ctx, uint32_t options,
     struct ath10k* ar = ctx;
     char buf[ETH_ALEN * 3];
 
+    ethaddr_sprintf(buf, assoc_ctx->bssid);
     switch (ar->arvif.vdev_type) {
     case WMI_VDEV_TYPE_STA:
+        ath10k_info("as a client, configuring an association with an AP [%s]\n", buf);
         return ath10k_mac_bss_assoc(ar, assoc_ctx);
 
     case WMI_VDEV_TYPE_AP:
-        ethaddr_sprintf(buf, assoc_ctx->bssid);
-        ath10k_info("As an AP, configuring an association with a STA [%s].\n", buf);
-        // TODO(NET-1682): Implement the vht/ht MCS for AP mode.
+        ath10k_info("as an AP, configuring an association with a STA [%s].\n", buf);
         return ath10k_mac_ap_assoc_with_sta(ar, assoc_ctx);
 
     default:
@@ -3172,14 +3173,16 @@ static zx_status_t ath10k_pci_clear_assoc(void* ctx, uint32_t options, const uin
     struct ath10k* ar = ctx;
     char buf[ETH_ALEN * 3];
 
+    ethaddr_sprintf(buf, peer_addr);
     switch (ar->arvif.vdev_type) {
     case WMI_VDEV_TYPE_STA:
-        // TODO(NET-1760): Client mode supports disassociation from the associated AP.
+        ath10k_info("as a client, clearing the association with an AP [%s]\n", buf);
+        // This is actually a no-op because we cannot delete peer otherwise the management packets
+        // will be lost.
         return ZX_OK;
 
     case WMI_VDEV_TYPE_AP:
-        ethaddr_sprintf(buf, peer_addr);
-        ath10k_info("As an AP, clearing the association to a STA [%s].\n", buf);
+        ath10k_info("as an AP, clearing the association to a STA [%s].\n", buf);
         return ath10k_mac_ap_disassoc_sta(ar, peer_addr);
 
     default:

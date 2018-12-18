@@ -640,6 +640,29 @@ ath10k_mac_get_any_chandef_iter(struct ieee80211_hw* hw,
 }
 
 #endif  // NEEDS PORTING
+
+// When |expect_existing|==true, returns true if the peer has been created.
+// When |expect_existing|==false, returns true if the peer is not existed yet.
+// Otherwise, returns false. In another word, returns whether it matches expectation or not.
+static bool ath10k_check_peer_existence(struct ath10k* ar, const uint8_t* bssid,
+                                        bool expect_existing) {
+    mtx_lock(&ar->data_lock);
+    struct ath10k_peer* peer = ath10k_peer_find(ar, ar->arvif.vdev_id, bssid);
+    mtx_unlock(&ar->data_lock);
+
+    char bssid_str[ETH_ALEN * 3];
+    ethaddr_sprintf(bssid_str, bssid);
+    if (expect_existing && !peer) {
+        ath10k_warn("the peer %s hadn't been created yet\n", bssid_str);
+        return false;
+    } else if (!expect_existing && peer) {
+        ath10k_warn("the peer %s had been created\n", bssid_str);
+        return false;
+    }
+
+    return true;
+}
+
 static zx_status_t ath10k_peer_create(struct ath10k* ar,
                                       uint32_t vdev_id,
                                       const uint8_t* addr,
@@ -659,6 +682,11 @@ static zx_status_t ath10k_peer_create(struct ath10k* ar,
 
     if (num_peers >= ar->max_num_peers) {
         return ZX_ERR_NO_RESOURCES;
+    }
+
+    // Return error immediately if the peer had been created.
+    if (!ath10k_check_peer_existence(ar, addr, false)) {
+        return ZX_ERR_ALREADY_EXISTS;
     }
 
     zx_status_t status = ath10k_wmi_peer_create(ar, vdev_id, addr, peer_type);
@@ -754,6 +782,11 @@ static int ath10k_mac_set_rts(struct ath10k_vif* arvif, uint32_t value) {
 
 static zx_status_t ath10k_peer_delete(struct ath10k* ar, uint32_t vdev_id, const uint8_t* addr) {
     ASSERT_MTX_HELD(&ar->conf_mutex);
+
+    // If the peer is not existing, return error.
+    if (!ath10k_check_peer_existence(ar, addr, true)) {
+        return ZX_ERR_NOT_FOUND;
+    }
 
     zx_status_t status = ath10k_wmi_peer_delete(ar, vdev_id, addr);
     if (status != ZX_OK) {
@@ -1467,6 +1500,8 @@ static inline zx_status_t set_center_freq_and_phymode(const wlan_channel_t* chan
     *ptr_phymode = phymode;
     return ZX_OK;
 }
+
+// Restart the vdev. After this function is done successfully, the vdev will be on started state.
 static zx_status_t ath10k_vdev_start_restart(struct ath10k_vif* arvif, wlan_channel_t* chandef,
                                              bool restart) {
     struct ath10k* ar = arvif->ar;
@@ -2851,16 +2886,16 @@ static zx_status_t ath10k_mac_delete_bss_peer(struct ath10k* ar, struct ath10k_v
         if (status != ZX_OK) {
             char ethaddr_str[ETH_ALEN * 3];
             ethaddr_sprintf(ethaddr_str, arvif->bssid);
-            ath10k_err("Failed to delete peer %s in vdev %i: %s\n", ethaddr_str, arvif->vdev_id,
+            ath10k_err("failed to delete peer %s in vdev %i: %s\n", ethaddr_str, arvif->vdev_id,
                        zx_status_get_string(status));
             return status;
         }
-        memset(arvif->bssid, 0, ETH_ALEN);
+        memset(arvif->bssid, 0, ETH_ALEN);  // Clear it so that we won't delete peer twice.
     }
     return ZX_OK;
 }
 
-// Take the vdev down, and tell the firmware to forget about the previous association.
+// Take the vdev down, and tell the firmware to forget about the previous peer.
 static zx_status_t ath10k_mac_bss_disassoc(struct ath10k* ar) {
     struct ath10k_vif* arvif = &ar->arvif;
 
@@ -2877,7 +2912,7 @@ static zx_status_t ath10k_mac_bss_disassoc(struct ath10k* ar) {
 
     ret = ath10k_wmi_vdev_down(ar, arvif->vdev_id);
     if (ret != ZX_OK) {
-        ath10k_err("Failed to take vdev %i down: %s\n", arvif->vdev_id, zx_status_get_string(ret));
+        ath10k_err("failed to take vdev %i down: %s\n", arvif->vdev_id, zx_status_get_string(ret));
         return ret;
     }
     arvif->is_started = false;
@@ -2885,11 +2920,15 @@ static zx_status_t ath10k_mac_bss_disassoc(struct ath10k* ar) {
     return ZX_OK;
 }
 
+// As a client role, prepare to connect to a BSS.
 zx_status_t ath10k_mac_set_bss(struct ath10k* ar, wlan_bss_config_t* config) {
     struct ath10k_vif* arvif = &ar->arvif;
 
     mtx_lock(&ar->conf_mutex);
 
+    // Always try to delete the peer first. The peer entry can be left on the previous attempt
+    // to connect a BSS (AP) and that failed at the authentication stage (for example, AP didn't
+    // respond the Auth Request) where MLME has no way to tell driver to delete the entry.
     zx_status_t ret = ath10k_mac_delete_bss_peer(ar, arvif);
     if (ret != ZX_OK) {
         goto out;
@@ -2898,14 +2937,15 @@ zx_status_t ath10k_mac_set_bss(struct ath10k* ar, wlan_bss_config_t* config) {
     if (arvif->is_started && arvif->is_up) {
         ret = ath10k_mac_bss_disassoc(ar);
         if (ret != ZX_OK) {
-            ath10k_warn("failed to disassociate vdev %i: %s\n", arvif->vdev_id,
-                        zx_status_get_string(ret));
+            ath10k_err("disassociating vdev failed %i: %s\n", arvif->vdev_id,
+                                                              zx_status_get_string(ret));
             goto out;
         }
+
         ret = ath10k_vdev_restart(arvif, &ar->rx_channel);
         if (ret != ZX_OK) {
-            ath10k_warn("failed to restart vdev %i: %s\n", arvif->vdev_id,
-                        zx_status_get_string(ret));
+            ath10k_err("failed to restart vdev %i: %s\n", arvif->vdev_id,
+                                                          zx_status_get_string(ret));
             goto out;
         }
         arvif->is_started = true;
@@ -2945,6 +2985,12 @@ zx_status_t ath10k_mac_bss_assoc(struct ath10k* ar, wlan_assoc_ctx_t* assoc_ctx)
     ath10k_dbg(ar, ATH10K_DBG_MAC, "mac vdev %i assoc bssid %pM aid %u\n",
                arvif->vdev_id, arvif->bssid, assoc_ctx->aid);
 
+    // Ensure the peer had been created before we associate it.
+    if (!ath10k_check_peer_existence(ar, assoc_ctx->bssid, true)) {
+        ret = ZX_ERR_NOT_FOUND;
+        goto done;
+    }
+
     ret = ath10k_peer_assoc_prepare(ar, arvif, assoc_ctx, &peer_arg);
     if (ret != ZX_OK) {
         ath10k_warn("failed to prepare WMI peer assoc for %pM vdev %i: %s\n",
@@ -2953,12 +2999,6 @@ zx_status_t ath10k_mac_bss_assoc(struct ath10k* ar, wlan_assoc_ctx_t* assoc_ctx)
     }
 
     peer_arg.peer_flags |= ar->wmi.peer_flags->qos;
-
-    ret = ath10k_wmi_peer_create(ar, arvif->vdev_id, assoc_ctx->bssid, WMI_PEER_TYPE_BSS);
-    if (ret != ZX_OK) {
-        ath10k_warn("failed to create peer: %s\n", zx_status_get_string(ret));
-        goto done;
-    }
 
     ret = ath10k_wmi_peer_assoc(ar, &peer_arg);
     if (ret != ZX_OK) {
@@ -4775,7 +4815,7 @@ static zx_status_t ath10k_add_interface(struct ath10k* ar, uint32_t vif_role) {
     }
 
     if (ar->free_vdev_map == 0) {
-        ath10k_warn("Free vdev map is empty, no more interfaces allowed.\n");
+        ath10k_warn("free vdev map is empty, no more interfaces allowed.\n");
         ret = ZX_ERR_NO_RESOURCES;
         goto err;
     }
@@ -4795,7 +4835,7 @@ static zx_status_t ath10k_add_interface(struct ath10k* ar, uint32_t vif_role) {
 #endif  // NEEDS PORTING
     case WLAN_MAC_ROLE_CLIENT:
         arvif->vdev_type = WMI_VDEV_TYPE_STA;
-        ath10k_info("Adding a station interface (vdev_id=%d) ...\n", arvif->vdev_id);
+        ath10k_info("adding a station interface (vdev_id=%d) ...\n", arvif->vdev_id);
 #if 0   // NEEDS PORTING
         if (vif->p2p)
             arvif->vdev_subtype = ath10k_wmi_get_vdev_subtype
@@ -4822,7 +4862,7 @@ static zx_status_t ath10k_add_interface(struct ath10k* ar, uint32_t vif_role) {
         break;
     case WLAN_MAC_ROLE_AP:
         arvif->vdev_type = WMI_VDEV_TYPE_AP;
-        ath10k_info("Adding an AP interface (vdev_id=%d) ...\n", arvif->vdev_id);
+        ath10k_info("adding an AP interface (vdev_id=%d) ...\n", arvif->vdev_id);
         break;
 
 #if 0   // NEEDS PORTING
