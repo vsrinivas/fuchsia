@@ -14,7 +14,6 @@ MODULE_SRCS += \
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/fidl \
-    system/dev/lib/usb-old \
 
 MODULE_LIBS := \
     system/ulib/driver \

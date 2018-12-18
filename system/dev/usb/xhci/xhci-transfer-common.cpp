@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
+#include <usb/usb-request.h>
 #include <string.h>
 
 #include "xhci-transfer-common.h"

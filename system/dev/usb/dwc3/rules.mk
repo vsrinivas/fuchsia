@@ -22,7 +22,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/hwreg \
     system/ulib/sync   \
     system/ulib/pretty \
-    system/dev/lib/usb-old \
+    system/dev/lib/usb \
     system/ulib/zx \
     system/ulib/zxcpp \
 

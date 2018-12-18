@@ -307,16 +307,6 @@ __EXPORT void usb_request_complete(usb_request_t* req, zx_status_t status, zx_of
     }
 }
 
-__EXPORT void usb_request_complete_new(usb_request_t* req, zx_status_t status, zx_off_t actual,
-                                       const usb_request_complete_t* complete_cb) {
-    req->response.status = status;
-    req->response.actual = actual;
-
-    if (complete_cb) {
-        complete_cb->callback(complete_cb->ctx, req);
-    }
-}
-
 __EXPORT void usb_request_phys_iter_init(phys_iter_t* iter, usb_request_t* req, size_t max_length) {
     phys_iter_buffer_t buf = {
         .length = req->header.length,

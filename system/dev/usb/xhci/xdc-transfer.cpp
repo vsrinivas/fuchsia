@@ -118,8 +118,8 @@ zx_status_t xdc_queue_transfer(xdc_t* xdc, usb_request_t* req, bool in, bool is_
     }
 
     xdc_req_internal_t* req_int = USB_REQ_TO_XDC_INTERNAL(req, sizeof(usb_request_t));
-    req_int->complete_cb = in ? xdc_read_complete : xdc_write_complete;
-    req_int->cookie = xdc;
+    req_int->complete_cb.callback = in ? xdc_read_complete : xdc_write_complete;
+    req_int->complete_cb.ctx = xdc;
 
     list_add_tail(&ep->queued_reqs, &req_int->node);
 

@@ -654,14 +654,12 @@ static void xdc_shutdown(xdc_t* xdc) {
         while ((req_int = list_remove_tail_type(&ep->pending_reqs, xdc_req_internal_t, node))
                                                                                   != nullptr) {
             req = XDC_INTERNAL_TO_USB_REQ(req_int, usb_req_size);
-            usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0, req_int->complete_cb,
-                                 req_int->cookie);
+            usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0, &req_int->complete_cb);
         }
         while ((req_int = list_remove_tail_type(&ep->queued_reqs, xdc_req_internal_t, node))
                                                                                   != nullptr) {
             req = XDC_INTERNAL_TO_USB_REQ(req_int, usb_req_size);
-            usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0, req_int->complete_cb,
-                                 req_int->cookie);
+            usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0, &req_int->complete_cb);
         }
     }
 
@@ -747,8 +745,8 @@ static void xdc_update_write_signal_locked(xdc_t* xdc, bool online)
     mtx_unlock(&xdc->instance_list_lock);
 }
 
-void xdc_write_complete(usb_request_t* req, void* cookie) {
-    auto* xdc = static_cast<xdc_t*>(cookie);
+void xdc_write_complete(void* ctx, usb_request_t* req) {
+    auto* xdc = static_cast<xdc_t*>(ctx);
 
     zx_status_t status = req->response.status;
     if (status != ZX_OK) {
@@ -869,8 +867,8 @@ static void xdc_handle_msg(xdc_t* xdc, xdc_msg_t* msg) {
     }
 }
 
-void xdc_read_complete(usb_request_t* req, void* cookie) {
-    auto* xdc = static_cast<xdc_t*>(cookie);
+void xdc_read_complete(void* ctx, usb_request_t* req) {
+    auto* xdc = static_cast<xdc_t*>(ctx);
 
     mtx_lock(&xdc->read_lock);
 
@@ -1226,7 +1224,7 @@ zx_status_t xdc_poll(xdc_t* xdc) {
                                                     xdc_req_internal_t, node)) != nullptr) {
                 req = XDC_INTERNAL_TO_USB_REQ(req_int, usb_req_size);
                 usb_request_complete(req, req->response.status, req->response.actual,
-                                     req_int->complete_cb, req_int->cookie);
+                                     &req_int->complete_cb);
             }
         }
     }

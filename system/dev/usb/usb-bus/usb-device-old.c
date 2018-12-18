@@ -79,8 +79,9 @@ static int callback_thread(void* arg) {
         usb_device_req_internal_t* req_int;
         while ((req_int = list_remove_head_type(&temp_list, usb_device_req_internal_t, node))) {
             req = DEV_INTERNAL_TO_USB_REQ(req_int, dev->parent_req_size);
-            usb_request_complete(req, req->response.status, req->response.actual,
-                                 req_int->complete_cb, req_int->cookie);
+            if (req_int->complete_cb) {
+                req_int->complete_cb(req, req_int->cookie);
+            }
         }
     }
 

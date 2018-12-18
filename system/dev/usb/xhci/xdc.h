@@ -6,10 +6,10 @@
 
 #include <atomic>
 #include <ddk/device.h>
-#include <ddk/protocol/usb-old.h>
 #include <lib/sync/completion.h>
 #include <usb/usb-request.h>
 #include <xdc-server-utils/packet.h>
+#include <threads.h>
 
 #include "xdc-hw.h"
 #include "xhci-transfer-common.h"
@@ -137,8 +137,7 @@ typedef struct {
 
 typedef struct {
     list_node_t node;
-    usb_request_complete_cb complete_cb;
-    void* cookie;
+    usb_request_complete_t complete_cb;
     void* context;
 } xdc_req_internal_t;
 
@@ -156,5 +155,5 @@ zx_status_t xdc_bind(zx_device_t* parent, zx_handle_t bti_handle, void* mmio);
 
 void xdc_endpoint_set_halt_locked(xdc_t* xdc, xdc_poll_state_t* poll_state, xdc_endpoint_t* ep)
                                   __TA_REQUIRES(xdc->lock);
-void xdc_write_complete(usb_request_t* req, void* cookie);
-void xdc_read_complete(usb_request_t* req, void* cookie);
+void xdc_write_complete(void* ctx, usb_request_t* req);
+void xdc_read_complete(void* ctx, usb_request_t* req);

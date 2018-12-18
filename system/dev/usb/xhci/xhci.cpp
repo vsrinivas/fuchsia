@@ -483,13 +483,13 @@ static void xhci_slot_stop(xhci_slot_t* slot, xhci_t* xhci) {
                                                     xhci_usb_request_internal_t,
                                                     node)) != nullptr) {
                 req = XHCI_INTERNAL_TO_USB_REQ(req_int);
-                usb_request_complete_new(req, ZX_ERR_IO_NOT_PRESENT, 0, &req_int->complete_cb);
+                usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0, &req_int->complete_cb);
             }
             while ((req_int = list_remove_head_type(&ep->queued_reqs,
                                                     xhci_usb_request_internal_t,
                                                     node)) != nullptr) {
                 req = XHCI_INTERNAL_TO_USB_REQ(req_int);
-                usb_request_complete_new(req, ZX_ERR_IO_NOT_PRESENT, 0, &req_int->complete_cb);
+                usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0, &req_int->complete_cb);
             }
 
             ep->state = EP_STATE_DEAD;

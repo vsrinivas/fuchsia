@@ -204,7 +204,7 @@ void dwc3_ep_queue(dwc3_t* dwc, unsigned ep_num, usb_request_t* req) {
     if (EP_OUT(ep_num)) {
         if (req->header.length == 0 || req->header.length % ep->max_packet_size != 0) {
             zxlogf(ERROR, "dwc3_ep_queue: OUT transfers must be multiple of max packet size\n");
-            usb_request_complete_new(req, ZX_ERR_INVALID_ARGS, 0, &req_int->complete_cb);
+            usb_request_complete(req, ZX_ERR_INVALID_ARGS, 0, &req_int->complete_cb);
             return;
         }
     }
@@ -212,7 +212,7 @@ void dwc3_ep_queue(dwc3_t* dwc, unsigned ep_num, usb_request_t* req) {
     fbl::AutoLock lock(&ep->lock);
 
     if (!ep->enabled) {
-        usb_request_complete_new(req, ZX_ERR_BAD_STATE, 0, &req_int->complete_cb);
+        usb_request_complete(req, ZX_ERR_BAD_STATE, 0, &req_int->complete_cb);
         return;
     }
 
@@ -317,7 +317,7 @@ void dwc3_ep_xfer_complete(dwc3_t* dwc, unsigned ep_num) {
             ep->lock.Release();
 
             auto* req_int = USB_REQ_TO_INTERNAL(req);
-            usb_request_complete_new(req, ZX_OK, actual, &req_int->complete_cb);
+            usb_request_complete(req, ZX_OK, actual, &req_int->complete_cb);
         } else {
             ep->lock.Release();
             zxlogf(ERROR, "dwc3_ep_xfer_complete: no usb request found to complete!\n");
@@ -353,7 +353,7 @@ void dwc3_ep_end_transfers(dwc3_t* dwc, unsigned ep_num, zx_status_t reason) {
     if (ep->current_req) {
         dwc3_cmd_ep_end_transfer(dwc, ep_num);
         auto* req_int = USB_REQ_TO_INTERNAL(ep->current_req);
-        usb_request_complete_new(ep->current_req, reason, 0, &req_int->complete_cb);
+        usb_request_complete(ep->current_req, reason, 0, &req_int->complete_cb);
         ep->current_req = nullptr;
     }
 
@@ -361,6 +361,6 @@ void dwc3_ep_end_transfers(dwc3_t* dwc, unsigned ep_num, zx_status_t reason) {
     while ((req_int = list_remove_head_type(&ep->queued_reqs, dwc_usb_req_internal_t, node))
                 != nullptr) {
         usb_request_t* req = INTERNAL_TO_USB_REQ(req_int);
-        usb_request_complete_new(req, reason, 0, &req_int->complete_cb);
+        usb_request_complete(req, reason, 0, &req_int->complete_cb);
     }
 }

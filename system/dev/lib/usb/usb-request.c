@@ -298,17 +298,7 @@ __EXPORT void usb_request_release(usb_request_t* req) {
 }
 
 __EXPORT void usb_request_complete(usb_request_t* req, zx_status_t status, zx_off_t actual,
-                                   usb_request_complete_cb complete_cb, void* complete_cb_cookie) {
-    req->response.status = status;
-    req->response.actual = actual;
-
-    if (complete_cb) {
-        complete_cb(req, complete_cb_cookie);
-    }
-}
-
-__EXPORT void usb_request_complete_new(usb_request_t* req, zx_status_t status, zx_off_t actual,
-                                       const usb_request_complete_t* complete_cb) {
+                                   const usb_request_complete_t* complete_cb) {
     req->response.status = status;
     req->response.actual = actual;
 

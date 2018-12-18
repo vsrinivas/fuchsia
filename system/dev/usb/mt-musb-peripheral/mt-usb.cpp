@@ -711,8 +711,8 @@ int MtUsb::IrqThread() {
                     while ((req_int = list_remove_head_type(&complete_reqs, mt_usb_req_internal_t,
                                                             node))) {
                         usb_request_t* req = INTERNAL_TO_USB_REQ(req_int);
-                        usb_request_complete_new(req, req->response.status, req->response.actual,
-                                                 &req_int->complete_cb);
+                        usb_request_complete(req, req->response.status, req->response.actual,
+                                             &req_int->complete_cb);
                     }
                 }
             }
@@ -734,8 +734,8 @@ int MtUsb::IrqThread() {
                     while ((req_int = list_remove_head_type(&complete_reqs, mt_usb_req_internal_t,
                                                             node))) {
                         usb_request_t* req = INTERNAL_TO_USB_REQ(req_int);
-                        usb_request_complete_new(req, req->response.status, req->response.actual,
-                                                 &req_int->complete_cb);
+                        usb_request_complete(req, req->response.status, req->response.actual,
+                                             &req_int->complete_cb);
                     }
                 }
             }
@@ -755,14 +755,14 @@ void MtUsb::DdkRelease() {
 void MtUsb::UsbDciRequestQueue(usb_request_t* req, const usb_request_complete_t* cb) {
     auto* ep = EndpointFromAddress(req->header.ep_address);
     if (ep == nullptr) {
-        usb_request_complete_new(req, ZX_ERR_INVALID_ARGS, 0, cb);
+        usb_request_complete(req, ZX_ERR_INVALID_ARGS, 0, cb);
         return;
     }
 
     fbl::AutoLock lock(&ep->lock);
 
     if (!ep->enabled) {
-        usb_request_complete_new(req, ZX_ERR_BAD_STATE, 0, cb);
+        usb_request_complete(req, ZX_ERR_BAD_STATE, 0, cb);
         return;
     }
 
