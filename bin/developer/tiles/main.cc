@@ -22,7 +22,7 @@ void Usage() {
       "\n"
       "Options:\n"
       "  --border=<integer>  Border (in pixels) around each tile\n"
-      "  --input_path=[old|new]\n");
+      "  --input_path=<string>  DEPRECATED - Flag to be removed\n");
 }
 
 int main(int argc, const char** argv) {
@@ -38,13 +38,10 @@ int main(int argc, const char** argv) {
   auto border_arg = command_line.GetOptionValueWithDefault("border", "10");
   int border = fxl::StringToNumber<int>(border_arg);
 
-  bool input_path = true;
-  {
-    auto input_path_arg =
-        command_line.GetOptionValueWithDefault("input_path", "old");
-    input_path = input_path_arg != "new";
-    FXL_LOG(INFO) << "Tiles requesting input delivery by: "
-                  << (input_path ? "ViewManager" : "Scenic");
+  if (command_line.HasOption("input_path", nullptr)) {
+    // Ease users off this flag.
+    FXL_LOG(ERROR)
+        << "The --input_path= flag is DEPRECATED. Flag will be removed.";
   }
 
   zx::eventpair view_owner_token, view_token;
@@ -61,7 +58,6 @@ int main(int argc, const char** argv) {
       startup_context
           ->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>();
   presenter->Present2(std::move(view_owner_token), nullptr);
-  presenter->HACK_SetInputPath(input_path);
 
   loop.Run();
   return 0;
