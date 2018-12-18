@@ -15,8 +15,7 @@ namespace test {
 FakeView::FakeView()
     : dispatcher_(async_get_default_dispatcher()),
       binding_(this),
-      service_provider_binding_(this),
-      input_connection_binding_(this) {}
+      service_provider_binding_(this) {}
 
 FakeView::~FakeView() {}
 
@@ -48,32 +47,9 @@ void FakeView::GetContainer(
 }
 
 void FakeView::ConnectToService(fidl::StringPtr name, zx::channel channel) {
-  if (name == ::fuchsia::ui::input::InputConnection::Name_) {
-    input_connection_binding_.Bind(std::move(channel));
-    return;
-  }
-
   FXL_LOG(ERROR) << "ServiceProvider::ConnectToService: name " << name
                  << "  not recognized";
 }
-
-void FakeView::SetEventListener(
-    fidl::InterfaceHandle<::fuchsia::ui::input::InputListener> listener) {
-  input_view_listener_ = listener.Bind();
-}
-
-void FakeView::GetInputMethodEditor(
-    ::fuchsia::ui::input::KeyboardType keyboard_type,
-    ::fuchsia::ui::input::InputMethodAction action,
-    ::fuchsia::ui::input::TextInputState initial_state,
-    fidl::InterfaceHandle<::fuchsia::ui::input::InputMethodEditorClient> client,
-    fidl::InterfaceRequest<::fuchsia::ui::input::InputMethodEditor> editor) {
-  FXL_NOTIMPLEMENTED();
-}
-
-void FakeView::ShowKeyboard() { FXL_NOTIMPLEMENTED(); }
-
-void FakeView::HideKeyboard() { FXL_NOTIMPLEMENTED(); }
 
 }  // namespace test
 }  // namespace media_player

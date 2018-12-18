@@ -16,8 +16,7 @@ namespace test {
 
 // Implements View for testing.
 class FakeView : public ::fuchsia::ui::viewsv1::View,
-                 public ::fuchsia::sys::ServiceProvider,
-                 public ::fuchsia::ui::input::InputConnection {
+                 public ::fuchsia::sys::ServiceProvider {
  public:
   FakeView();
 
@@ -48,24 +47,6 @@ class FakeView : public ::fuchsia::ui::viewsv1::View,
   // ServiceProvider implementation.
   void ConnectToService(fidl::StringPtr name, zx::channel channel) override;
 
-  // InputConnection implementation.
-  void SetEventListener(
-      fidl::InterfaceHandle<::fuchsia::ui::input::InputListener> listener)
-      override;
-
-  void GetInputMethodEditor(
-      ::fuchsia::ui::input::KeyboardType keyboard_type,
-      ::fuchsia::ui::input::InputMethodAction action,
-      ::fuchsia::ui::input::TextInputState initial_state,
-      fidl::InterfaceHandle<::fuchsia::ui::input::InputMethodEditorClient>
-          client,
-      fidl::InterfaceRequest<::fuchsia::ui::input::InputMethodEditor> editor)
-      override;
-
-  void ShowKeyboard() override;
-
-  void HideKeyboard() override;
-
  private:
   async_dispatcher_t* dispatcher_;
   fidl::Binding<::fuchsia::ui::viewsv1::View> binding_;
@@ -76,11 +57,6 @@ class FakeView : public ::fuchsia::ui::viewsv1::View,
 
   // ServiceProvider fields.
   fidl::Binding<::fuchsia::sys::ServiceProvider> service_provider_binding_;
-
-  // InputConnection fields.
-  fidl::Binding<::fuchsia::ui::input::InputConnection>
-      input_connection_binding_;
-  ::fuchsia::ui::input::InputListenerPtr input_view_listener_;
 };
 
 }  // namespace test
