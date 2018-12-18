@@ -166,14 +166,22 @@ static void usb_control_complete(void* ctx, usb_request_t* req) {
 }
 
 static zx_status_t usb_device_control(void* ctx, uint8_t request_type, uint8_t request,
-                                      uint16_t value, uint16_t index, uint16_t length,
-                                      int64_t timeout, const void* write_buffer,
-                                      size_t write_size, void* out_read_buffer,
-                                      size_t read_size, size_t* out_read_actual) {
+                                      uint16_t value, uint16_t index, zx_time_t timeout,
+                                      const void* write_buffer, size_t write_size,
+                                      void* out_read_buffer, size_t read_size,
+                                      size_t* out_read_actual) {
     usb_device_t* dev = ctx;
 
+    size_t length;
+    bool out = ((request_type & USB_DIR_MASK) == USB_DIR_OUT);
+    if (out) {
+        length = write_size;
+    } else {
+        length = read_size;
+    }
+
     usb_request_t* req = NULL;
-    bool use_free_list = length == 0;
+    bool use_free_list = (length == 0);
     if (use_free_list) {
         req = usb_request_pool_get(&dev->free_reqs, length);
     }
@@ -193,7 +201,6 @@ static zx_status_t usb_device_control(void* ctx, uint8_t request_type, uint8_t r
     setup->wIndex = index;
     setup->wLength = length;
 
-    bool out = ((request_type & USB_DIR_MASK) == USB_DIR_OUT);
     if (out) {
         if (length > 0 && write_buffer == NULL) {
             return ZX_ERR_INVALID_ARGS;

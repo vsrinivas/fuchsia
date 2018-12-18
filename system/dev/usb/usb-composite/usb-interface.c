@@ -122,13 +122,13 @@ zx_status_t usb_interface_configure_endpoints(usb_interface_t* intf, uint8_t int
 }
 
 static zx_status_t usb_interface_control(void* ctx, uint8_t request_type, uint8_t request,
-                                         uint16_t value, uint16_t index, uint16_t length,
-                                         int64_t timeout, const void* write_buffer,
-                                         size_t write_size, void* out_read_buffer,
-                                         size_t read_size, size_t* out_read_actual) {
+                                         uint16_t value, uint16_t index, zx_time_t timeout,
+                                         const void* write_buffer, size_t write_size,
+                                         void* out_read_buffer, size_t read_size,
+                                         size_t* out_read_actual) {
     usb_interface_t* intf = ctx;
-    return usb_control(&intf->comp->usb, request_type, request, value, index, length, timeout,
-                       write_buffer, write_size, out_read_buffer, read_size, out_read_actual);
+    return usb_control(&intf->comp->usb, request_type, request, value, index, timeout, write_buffer,
+                       write_size, out_read_buffer, read_size, out_read_actual);
 }
 
 static void usb_interface_request_queue(void* ctx, usb_request_t* usb_request,
@@ -392,6 +392,6 @@ zx_status_t usb_interface_set_alt_setting(usb_interface_t* intf, uint8_t interfa
     }
 
     return usb_control(&intf->comp->usb, USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_INTERFACE,
-                       USB_REQ_SET_INTERFACE, alt_setting, interface_id, 0, ZX_TIME_INFINITE,
+                       USB_REQ_SET_INTERFACE, alt_setting, interface_id, ZX_TIME_INFINITE,
                        NULL, 0, NULL, 0, NULL);
 }
