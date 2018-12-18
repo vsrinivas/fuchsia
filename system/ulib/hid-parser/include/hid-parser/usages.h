@@ -418,6 +418,10 @@ inline bool operator==(uint32_t e, hid::usage::GenericDesktop gd) {
     return (static_cast<uint32_t>(gd) == e);
 }
 
+inline bool operator==(uint32_t e, hid::usage::Digitizer d) {
+    return (static_cast<uint32_t>(d) == e);
+}
+
 inline bool operator==(uint32_t e, hid::usage::LEDs gd) {
     return (static_cast<uint32_t>(gd) == e);
 }
