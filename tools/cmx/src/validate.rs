@@ -38,14 +38,14 @@ fn validate_json(json: &Value) -> Result<(), Error> {
     // Validate the json
     let res = schema.validate(json);
     if !res.is_strictly_valid() {
-        let mut err_msg = String::new();
+        let mut err_msgs = Vec::new();
         for e in &res.errors {
-            if !err_msg.is_empty() {
-                err_msg.push_str(", ");
-            }
-            err_msg.push_str(&format!("{} at {}", e.get_title(), e.get_path()));
+            err_msgs.push(format!("{} at {}", e.get_title(), e.get_path()).into_boxed_str());
         }
-        return Err(format_err!("{}", err_msg));
+        // The ordering in which valico emits these errors is unstable.
+        // Sort error messages so that the resulting message is predictable.
+        err_msgs.sort_unstable();
+        return Err(format_err!("{}", err_msgs.join(", ")));
     }
     Ok(())
 }
@@ -61,12 +61,32 @@ mod tests {
     #[test]
     fn test_validate_json() {
         let tests = vec![
-            (json!({}), Err("\"This property is required at /program\"")),
-            (json!({"program": {}}), Err("\"OneOf conditions are not met at /program\"")),
+            (json!({}), Err(format_err!("This property is required at /program"))),
+            (json!({"program": {}}), Err(format_err!("OneOf conditions are not met at /program"))),
             (json!({"program": { "binary": "bin/app" }}), Ok(())),
-            (json!({"prigram": { "binary": "bin/app" }}), Err("\"Property conditions are not met at , This property is required at /program\"")),
-            (json!({ "program": { "binary": "bin/app" }, "sandbox": { "dev": [ "class/camera" ] } }), Ok(())),
-            (json!({ "program": { "binary": "bin/app" }, "facets": { "fuchsia.test": { "system-services": [ "fuchsia.net.LegacySocketProvider" ] } } }), Ok(())),
+            (
+                json!({"prigram": { "binary": "bin/app" }}),
+                Err(format_err!(
+                    "Property conditions are not met at , This property is required at /program"))
+            ),
+            (
+                json!({
+                    "program": { "binary": "bin/app" },
+                    "sandbox": { "dev": [ "class/camera" ] }
+                }),
+                Ok(())
+            ),
+            (
+                json!({
+                    "program": { "binary": "bin/app" },
+                    "facets": {
+                        "fuchsia.test": {
+                            "system-services": [ "fuchsia.net.LegacySocketProvider" ]
+                        }
+                    }
+                }),
+                Ok(())
+            ),
         ];
 
         for (input, expected_result) in tests {
@@ -80,11 +100,7 @@ mod tests {
 
             let result = validate(vec![tmp_file_path]);
 
-            assert_eq!(result.is_ok(), expected_result.is_ok());
-
-            if let Err(msg) = expected_result {
-                assert!(format!("{:?}", result).contains(msg));
-            }
+            assert_eq!(format!("{:?}", result), format!("{:?}", expected_result));
         }
     }
 
