@@ -52,6 +52,9 @@ bool Message::TryInitializeParameters(size_t starting_param_index,
         const zircon_tee_Parameter& zx_param = parameter_set.parameters[i];
 
         switch (zx_param.tag) {
+        case zircon_tee_ParameterTag_none:
+            optee_param.attribute = MessageParam::kAttributeTypeNone;
+            break;
         case zircon_tee_ParameterTag_value:
             is_valid = TryInitializeValue(zx_param.value, &optee_param);
             break;
@@ -198,20 +201,20 @@ zx_status_t Message::CreateOutputParameterSet(size_t starting_param_index,
     }
 
     parameter_set.count = static_cast<uint16_t>(count);
-    size_t out_param_index = 0;
     for (size_t i = starting_param_index; i < header()->num_params; i++) {
         const MessageParam& optee_param = params()[i];
-        zircon_tee_Parameter& zx_param = parameter_set.parameters[out_param_index];
+        zircon_tee_Parameter& zx_param = parameter_set.parameters[i];
 
         switch (optee_param.attribute) {
         case MessageParam::kAttributeTypeNone:
+            zx_param.tag = zircon_tee_ParameterTag_none;
+            zx_param.none = {};
             break;
         case MessageParam::kAttributeTypeValueInput:
         case MessageParam::kAttributeTypeValueOutput:
         case MessageParam::kAttributeTypeValueInOut:
             zx_param.tag = zircon_tee_ParameterTag_value;
             zx_param.value = CreateOutputValueParameter(optee_param);
-            out_param_index++;
             break;
         case MessageParam::kAttributeTypeTempMemInput:
         case MessageParam::kAttributeTypeTempMemOutput:
@@ -221,7 +224,6 @@ zx_status_t Message::CreateOutputParameterSet(size_t starting_param_index,
                 status != ZX_OK) {
                 return status;
             }
-            out_param_index++;
             break;
         case MessageParam::kAttributeTypeRegMemInput:
         case MessageParam::kAttributeTypeRegMemOutput:

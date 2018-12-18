@@ -278,38 +278,34 @@ static TEEC_Result preprocess_operation(const TEEC_Operation* operation,
     }
 
     TEEC_Result rc = TEEC_SUCCESS;
-    size_t out_param_index = 0;
     for (size_t i = 0; i < TEEC_NUM_PARAMS_MAX; i++) {
         uint32_t param_type = GET_PARAM_TYPE_FOR_INDEX(operation->paramTypes, i);
 
         switch (param_type) {
         case TEEC_NONE:
+            out_parameter_set->parameters[i].tag = zircon_tee_ParameterTag_none;
             break;
         case TEEC_VALUE_INPUT:
         case TEEC_VALUE_OUTPUT:
         case TEEC_VALUE_INOUT:
             preprocess_value(param_type, &operation->params[i].value,
-                             &out_parameter_set->parameters[out_param_index]);
-            out_param_index++;
+                             &out_parameter_set->parameters[i]);
             break;
         case TEEC_MEMREF_TEMP_INPUT:
         case TEEC_MEMREF_TEMP_OUTPUT:
         case TEEC_MEMREF_TEMP_INOUT:
             rc = preprocess_temporary_memref(param_type, &operation->params[i].tmpref,
-                                             &out_parameter_set->parameters[out_param_index]);
-            out_param_index++;
+                                             &out_parameter_set->parameters[i]);
             break;
         case TEEC_MEMREF_WHOLE:
             rc = preprocess_whole_memref(&operation->params[i].memref,
-                                         &out_parameter_set->parameters[out_param_index]);
-            out_param_index++;
+                                         &out_parameter_set->parameters[i]);
             break;
         case TEEC_MEMREF_PARTIAL_INPUT:
         case TEEC_MEMREF_PARTIAL_OUTPUT:
         case TEEC_MEMREF_PARTIAL_INOUT:
             rc = preprocess_partial_memref(param_type, &operation->params[i].memref,
-                                           &out_parameter_set->parameters[out_param_index]);
-            out_param_index++;
+                                           &out_parameter_set->parameters[i]);
             break;
         default:
             rc = TEEC_ERROR_BAD_PARAMETERS;
@@ -317,15 +313,13 @@ static TEEC_Result preprocess_operation(const TEEC_Operation* operation,
         }
 
         if (rc != TEEC_SUCCESS) {
-            break;
+            // Close out any VMOs we already opened for the parameters we did parse
+            close_all_vmos(out_parameter_set);
+            return rc;
         }
     }
-    out_parameter_set->count = out_param_index;
 
-    if (rc != TEEC_SUCCESS) {
-        // Close out any VMOs we already opened for the parameters we did parse
-        close_all_vmos(out_parameter_set);
-    }
+    out_parameter_set->count = TEEC_NUM_PARAMS_MAX;
 
     return rc;
 }
@@ -471,49 +465,44 @@ static TEEC_Result postprocess_operation(const zircon_tee_ParameterSet* paramete
     }
 
     TEEC_Result rc = TEEC_SUCCESS;
-    size_t in_param_index = 0;
     for (size_t i = 0; i < TEEC_NUM_PARAMS_MAX; i++) {
         uint32_t param_type = GET_PARAM_TYPE_FOR_INDEX(out_operation->paramTypes, i);
 
         // This check catches the case where we did not receive all the parameters back that we
         // expected. Once in_param_index hits the parameter_set count, we've parsed all the
-        // parameters that came back and we should just hit NONEs for the rest of the parameters in
-        // the operation.
-        if ((param_type != TEEC_NONE) && (in_param_index >= parameter_set->count)) {
+        // parameters that came back.
+        if (i >= parameter_set->count) {
             rc = TEEC_ERROR_BAD_PARAMETERS;
             break;
         }
 
         switch (param_type) {
         case TEEC_NONE:
-            // We don't pass NONEs to the device, so skip these.
+            if (parameter_set->parameters[i].tag != zircon_tee_ParameterTag_none) {
+                rc = TEEC_ERROR_BAD_PARAMETERS;
+            }
             break;
         case TEEC_VALUE_INPUT:
         case TEEC_VALUE_OUTPUT:
         case TEEC_VALUE_INOUT:
-            rc = postprocess_value(param_type, &parameter_set->parameters[in_param_index],
+            rc = postprocess_value(param_type, &parameter_set->parameters[i],
                                    &out_operation->params[i].value);
-            in_param_index++;
             break;
         case TEEC_MEMREF_TEMP_INPUT:
         case TEEC_MEMREF_TEMP_OUTPUT:
         case TEEC_MEMREF_TEMP_INOUT:
-            rc = postprocess_temporary_memref(param_type,
-                                              &parameter_set->parameters[in_param_index],
+            rc = postprocess_temporary_memref(param_type, &parameter_set->parameters[i],
                                               &out_operation->params[i].tmpref);
-            in_param_index++;
             break;
         case TEEC_MEMREF_WHOLE:
-            rc = postprocess_whole_memref(&parameter_set->parameters[in_param_index],
+            rc = postprocess_whole_memref(&parameter_set->parameters[i],
                                           &out_operation->params[i].memref);
-            in_param_index++;
             break;
         case TEEC_MEMREF_PARTIAL_INPUT:
         case TEEC_MEMREF_PARTIAL_OUTPUT:
         case TEEC_MEMREF_PARTIAL_INOUT:
-            rc = postprocess_partial_memref(param_type, &parameter_set->parameters[in_param_index],
+            rc = postprocess_partial_memref(param_type, &parameter_set->parameters[i],
                                             &out_operation->params[i].memref);
-            in_param_index++;
             break;
         default:
             rc = TEEC_ERROR_BAD_PARAMETERS;

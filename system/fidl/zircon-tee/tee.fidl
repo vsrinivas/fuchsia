@@ -39,6 +39,10 @@ enum Direction : uint32 {
     INOUT = 2;
 };
 
+// None is an empty parameter type that is used as a placeholder for elements in the parameter set
+// that are not used.
+struct None {};
+
 struct Buffer {
     Direction direction;
     // The VMO is allowed to be null for situations where the TEE allows for buffer size checks.
@@ -59,6 +63,7 @@ struct Value {
 };
 
 union Parameter {
+    None none;
     Buffer buffer;
     Value value;
 };
