@@ -54,8 +54,8 @@ $(MODULE_PKG_FILE): $(MODULE_RULESMK) make/module-fidl.mk
 	echo "library=$(_LIBRARY)" >> $@ ;\
 	echo "arch=fidl" >> $@ ;\
 	echo "type=fidl" >> $@ ;\
-	for i in $(_SRCS) ; do echo $$i >> $@ ; done ;\
-	for i in $(_DEPS) ; do echo $$i >> $@ ; done
+	for i in $(_SRCS) ; do echo "$$i" >> $@ ; done ;\
+	for i in $(_DEPS) ; do echo "$$i" >> $@ ; done
 
 
 $(MODULE_EXP_FILE): $(MODULE_PKG_FILE)

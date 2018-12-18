@@ -49,8 +49,8 @@ $(MODULE_PKG_FILE): $(MODULE_RULESMK) make/module-banjo.mk
 	echo "library=$(_LIBRARY)" >> $@ ;\
 	echo "arch=banjo" >> $@ ;\
 	echo "type=banjo" >> $@ ;\
-	for i in $(_SRCS) ; do echo $$i >> $@ ; done ;\
-	for i in $(_DEPS) ; do echo $$i >> $@ ; done
+	for i in $(_SRCS) ; do echo "$$i" >> $@ ; done ;\
+	for i in $(_DEPS) ; do echo "$$i" >> $@ ; done
 
 
 $(MODULE_EXP_FILE): $(MODULE_PKG_FILE)

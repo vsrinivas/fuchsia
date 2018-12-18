@@ -278,12 +278,12 @@ $(MODULE_PKG_FILE): $(MODULE_RULESMK) make/module-userlib.mk
 	echo "name=$(_NAME)" >> $@ ;\
 	echo "type=lib" >> $@ ;\
 	echo "arch=$(_ARCH)" >> $@ ;\
-	for i in $(_INCS) ; do echo $$i >> $@ ; done ;\
-	for i in $(_SRCS) ; do echo $$i >> $@ ; done ;\
-	for i in $(_SDEPS) ; do echo $$i >> $@ ; done ;\
-	for i in $(_FDEPS) ; do echo $$i >> $@ ; done ;\
-	for i in $(_BDEPS) ; do echo $$i >> $@ ; done ;\
-	for i in $(_DEPS) ; do echo $$i >> $@ ; done
+	for i in $(_INCS) ; do echo "$$i" >> $@ ; done ;\
+	for i in $(_SRCS) ; do echo "$$i" >> $@ ; done ;\
+	for i in $(_SDEPS) ; do echo "$$i" >> $@ ; done ;\
+	for i in $(_FDEPS) ; do echo "$$i" >> $@ ; done ;\
+	for i in $(_BDEPS) ; do echo "$$i" >> $@ ; done ;\
+	for i in $(_DEPS) ; do echo "$$i" >> $@ ; done
 
 $(MODULE_EXP_FILE): $(MODULE_PKG_FILE)
 	@$(MKDIR) ;\
