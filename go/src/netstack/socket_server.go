@@ -188,17 +188,21 @@ func (ios *iostate) loopStreamWrite(stk *stack.Stack) {
 		v = v[:n]
 		for {
 			n, resCh, err := ios.ep.Write(tcpip.SlicePayload(v), tcpip.WriteOptions{})
+			if err != nil {
+				switch err {
+				case tcpip.ErrNoLinkAddress:
+					panic(fmt.Sprintf("TCP Write: err=%v; should only happen on connect; n=%d resCh=%v", n, resCh, err))
+				case tcpip.ErrWouldBlock:
+					// Note that Close should not interrupt this wait.
+					<-notifyCh
+				default:
+					panic(fmt.Sprintf("TCP Write: err=%v; unexpected; n=%d, resCh=%v", n, resCh, err))
+				}
+			}
 			v = v[n:]
-			if resCh != nil {
-				<-resCh
-				continue
+			if len(v) == 0 {
+				break
 			}
-			if err == tcpip.ErrWouldBlock {
-				// Note that Close should not interrupt this wait.
-				<-notifyCh
-				continue
-			}
-			break
 		}
 		ios.wq.EventUnregister(&waitEntry)
 		if err != nil {
@@ -403,7 +407,6 @@ func (ios *iostate) loopDgramRead(stk *stack.Stack) {
 
 // loopDgramWrite connects libc write to the network stack for UDP messages.
 func (ios *iostate) loopDgramWrite(stk *stack.Stack) {
-	waitEntry, notifyCh := waiter.NewChannelEntry(nil)
 	for {
 		v := buffer.NewView(2048)
 		n, err := ios.dataHandle.Read([]byte(v), 0)
@@ -447,24 +450,26 @@ func (ios *iostate) loopDgramWrite(stk *stack.Stack) {
 			continue
 		}
 
-		ios.wq.EventRegister(&waitEntry, waiter.EventOut)
-
 		v = v[c_fdio_socket_msg_hdr_len:]
 		for {
 			n, resCh, err := ios.ep.Write(tcpip.SlicePayload(v), tcpip.WriteOptions{To: receiver})
-			v = v[n:]
-			if resCh != nil {
-				<-resCh
-				continue
+			if err != nil {
+				switch err {
+				case tcpip.ErrNoLinkAddress:
+					if resCh != nil {
+						<-resCh
+					} else {
+						panic(fmt.Sprintf("UDP Write: err=%v resCh=%v; unexpected; n=%d", err, resCh, n))
+					}
+				default:
+					panic(fmt.Sprintf("UDP Write: err=%v; unexpected; n=%d, resCh=%v", err, n, resCh))
+				}
 			}
-			if err == tcpip.ErrWouldBlock {
-				// Note that Close should not interrupt this wait.
-				<-notifyCh
-				continue
+			if int(n) < len(v) {
+				panic(fmt.Sprintf("UDP short write: %d/%d", n, len(v)))
 			}
 			break
 		}
-		ios.wq.EventUnregister(&waitEntry)
 		if err != nil {
 			log.Printf("loopDgramWrite: got endpoint error: %v (TODO)", err)
 			return
