@@ -415,6 +415,15 @@ bool suspend() {
     END_TEST;
 }
 
+bool suspend_self() {
+    BEGIN_TEST;
+
+    zx_handle_t suspend_token;
+    EXPECT_EQ(zx_task_suspend(zx_process_self(), &suspend_token), ZX_ERR_NOT_SUPPORTED);
+
+    END_TEST;
+}
+
 bool suspend_multiple_threads() {
     BEGIN_TEST;
 
@@ -662,6 +671,7 @@ RUN_TEST_ENABLE_CRASH_HANDLER(kill_process_via_vmar_destroy);
 RUN_TEST(kill_channel_handle_cycle);
 RUN_TEST(info_reflects_process_state);
 RUN_TEST(suspend);
+RUN_TEST(suspend_self);
 RUN_TEST(suspend_multiple_threads);
 RUN_TEST(suspend_before_creating_threads);
 RUN_TEST(suspend_before_starting_threads);

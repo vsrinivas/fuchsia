@@ -20,11 +20,17 @@ namespace {
 // Suspends a process or thread.
 // TODO(ZX-858): Add support for jobs.
 zx_status_t SuspendTask(fbl::RefPtr<Dispatcher> task) {
-    if (auto thread = DownCastDispatcher<ThreadDispatcher>(&task))
+    if (auto thread = DownCastDispatcher<ThreadDispatcher>(&task)) {
+        if (thread.get() == ThreadDispatcher::GetCurrent())
+            return ZX_ERR_NOT_SUPPORTED;
         return thread->Suspend();
+    }
 
-    if (auto process = DownCastDispatcher<ProcessDispatcher>(&task))
+    if (auto process = DownCastDispatcher<ProcessDispatcher>(&task)) {
+        if (process.get() == ProcessDispatcher::GetCurrent())
+            return ZX_ERR_NOT_SUPPORTED;
         return process->Suspend();
+    }
 
     return ZX_ERR_WRONG_TYPE;
 }

@@ -19,8 +19,11 @@ class SuspendTokenDispatcher final :
 public:
     // Creates a new token which suspends |task|.
     //
-    // Returns ZX_ERR_NO_MEMORY if the token could not be allocated, ZX_ERR_WRONG_TYPE if |task|
-    // is not a supported type, or ZX_OK otherwise.
+    // Returns:
+    //   ZX_OK on success
+    //   ZX_ERR_NO_MEMORY if the token could not be allocated
+    //   ZX_ERR_WRONG_TYPE if |task| is not a supported type
+    //   ZX_ERR_NOT_SUPPORTED if |task| is trying to suspend itself
     static zx_status_t Create(fbl::RefPtr<Dispatcher> task,
                               fbl::RefPtr<SuspendTokenDispatcher>* dispatcher,
                               zx_rights_t* rights);

@@ -32,6 +32,9 @@ before it executes any code.
 Invoking [`zx_task_kill()`] on a task that is suspended will successfully kill
 the task.
 
+A task cannot suspend itself or any of its parent tasks because it would never
+receive the suspend token and would be unable to resume execution.
+
 ## RESUMING
 
 The allow the task to resume, close the suspend token handle. The task will
@@ -78,6 +81,9 @@ In the event of failure, a negative error value is returned.
 **ZX_ERR_BAD_STATE**  The task is already dying or dead and cannot be suspended.
 
 **ZX_ERR_NO_MEMORY**  Failed to allocate memory.
+
+**ZX_ERR_NOT_SUPPORTED**  The calling thread is attempting to suspend itself or
+                          one of its parent tasks.
 
 ## LIMITATIONS
 
