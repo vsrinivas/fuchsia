@@ -35,7 +35,7 @@ MODULE_LIBS := \
     system/ulib/c \
 
 MODULE_BANJO_LIBS := \
-    system/banjo/ddk-protocol-amlogiccanvas \
+    system/banjo/ddk-protocol-amlogic-canvas \
     system/banjo/ddk-protocol-display-controller \
     system/banjo/ddk-protocol-gpio \
     system/banjo/ddk-protocol-i2c \

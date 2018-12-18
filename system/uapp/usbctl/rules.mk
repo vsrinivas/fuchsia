@@ -23,6 +23,6 @@ MODULE_STATIC_LIBS := \
 MODULE_FIDL_LIBS := system/fidl/zircon-usb-peripheral
 
 MODULE_BANJO_LIBS := \
-    system/banjo/ddk-protocol-usb-modeswitch \
+    system/banjo/ddk-protocol-usb-mode-switch \
 
 include make/module.mk

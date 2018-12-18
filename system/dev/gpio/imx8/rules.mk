@@ -25,7 +25,7 @@ MODULE_HEADER_DEPS := system/dev/lib/imx8m
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-gpio \
-    system/banjo/ddk-protocol-gpioimpl \
+    system/banjo/ddk-protocol-gpio-impl \
     system/banjo/ddk-protocol-platform-bus \
     system/banjo/ddk-protocol-platform-device \
 
@@ -49,7 +49,7 @@ MODULE_LIBS := \
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-gpio \
-    system/banjo/ddk-protocol-gpioimpl \
+    system/banjo/ddk-protocol-gpio-impl \
     system/banjo/ddk-protocol-platform-bus \
     system/banjo/ddk-protocol-platform-device \
 

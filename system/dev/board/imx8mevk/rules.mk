@@ -29,10 +29,10 @@ MODULE_LIBS := \
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-gpio \
-    system/banjo/ddk-protocol-gpioimpl \
+    system/banjo/ddk-protocol-gpio-impl \
     system/banjo/ddk-protocol-iommu \
     system/banjo/ddk-protocol-platform-bus \
     system/banjo/ddk-protocol-platform-device \
-    system/banjo/ddk-protocol-usb-modeswitch \
+    system/banjo/ddk-protocol-usb-mode-switch \
 
 include make/module.mk
