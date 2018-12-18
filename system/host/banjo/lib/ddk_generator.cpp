@@ -953,6 +953,7 @@ void DdktlGenerator::GeneratePrologues() {
     EmitFileComment(&file_, library_->name().back());
     EmitHeaderGuard(&file_);
     EmitBlank(&file_);
+    EmitIncludeHeader(&file_, "<ddk/driver.h>");
     EmitIncludeHeader(&file_, "<" +  ToLispCase(LibraryName(library_, "/")) + ".h>");
     for (const auto& dep_library : library_->dependencies()) {
         if (dep_library == library_)
@@ -1659,7 +1660,8 @@ void DdktlGenerator::ProduceProxyImplementation(const NamedInterface& named_inte
     const auto& sc_name = named_interface.snake_case_name;
     const auto& cc_name = named_interface.camel_case_name;
 
-    auto type = sc_name + "_t";
+    const auto type = sc_name + "_t";
+    const auto proto_id = "ZX_PROTOCOL_" + ToSnakeCase(named_interface.shortname, true);
 
     file_ << "class " << cc_name << "Proxy {\n";
     file_ << "public:\n";
@@ -1667,6 +1669,20 @@ void DdktlGenerator::ProduceProxyImplementation(const NamedInterface& named_inte
     file_ << kIndent << kIndent << ": ops_(nullptr), ctx_(nullptr) {}\n";
     file_ << kIndent << cc_name << "Proxy(const " << type << "* proto)\n";
     file_ << kIndent << kIndent << ": ops_(proto->ops), ctx_(proto->ctx) {}\n";
+    if (named_interface.type != InterfaceType::kInterface) {
+        EmitBlank(&file_);
+        file_ << kIndent << cc_name << "Proxy(zx_device_t* parent) {\n";
+        file_ << kIndent << kIndent << type << " proto;\n";
+        file_ << kIndent << kIndent << "if (device_get_protocol(parent, " << proto_id
+              << ", &proto) == ZX_OK) {\n";
+        file_ << kIndent << kIndent << kIndent << "ops_ = proto.ops;\n";
+        file_ << kIndent << kIndent << kIndent << "ctx_ = proto.ctx;\n";
+        file_ << kIndent << kIndent << "} else {\n";
+        file_ << kIndent << kIndent << kIndent << "ops_ = nullptr;\n";
+        file_ << kIndent << kIndent << kIndent << "ctx_ = nullptr;\n";
+        file_ << kIndent << kIndent << "}\n";
+        file_ << kIndent << "}\n";
+    }
     EmitBlank(&file_);
     file_ << kIndent << "void GetProto(" << type << "* proto) {\n";
     file_ << kIndent << kIndent << "proto->ctx = ctx_;\n";
