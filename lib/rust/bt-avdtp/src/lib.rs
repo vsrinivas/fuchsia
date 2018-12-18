@@ -138,6 +138,59 @@ impl Peer {
         }
     }
 
+    /// Send a Stream Configuration (Sec 8.9) command to the remote peer for the
+    /// given remote `stream_id`, communicating the association to a local
+    /// `local_stream_id` and the required stream `capabilities`.
+    /// Panics if `capabilities` is empty.
+    /// Returns Ok(()) if the command was accepted, and RemoteConfigRejected
+    /// if the remote refused.
+    pub async fn set_configuration<'a>(
+        &'a self, stream_id: &'a StreamEndpointId, local_stream_id: &'a StreamEndpointId,
+        capabilities: &'a [ServiceCapability],
+    ) -> Result<()> {
+        assert!(!capabilities.is_empty(), "must set at least one capability");
+        let mut params: Vec<u8> = Vec::new();
+        params.resize(capabilities.iter().fold(2, |a, x| a + x.encoded_len()), 0);
+        params[0] = stream_id.to_msg();
+        params[1] = local_stream_id.to_msg();
+        let mut idx = 2;
+        for capability in capabilities {
+            capability.encode(&mut params[idx..])?;
+            idx += capability.encoded_len();
+        }
+        let response: Result<SimpleResponse> =
+            await!(self.send_command(SignalIdentifier::SetConfiguration, &params));
+        response.and(Ok(()))
+    }
+
+    /// Send a Stream Reconfigure (Sec 8.11) command to the remote peer for the
+    /// given remote `stream_id`, to reconfigure the Application Service
+    /// capabilities in `capabilities`.
+    /// Note: Per the spec, only the Media Codec and Content Protection
+    /// capablities will be accepted in this command.
+    /// Panics if there are no capabilities to configure.
+    /// Returns Ok(()) if the command was accepted, and RemoteConfigRejected
+    /// if the remote refused.
+    pub async fn reconfigure<'a>(
+        &'a self, stream_id: &'a StreamEndpointId, capabilities: &'a [ServiceCapability],
+    ) -> Result<()> {
+        assert!(!capabilities.is_empty(), "must set at least one capability");
+        let mut params: Vec<u8> = Vec::new();
+        params.resize(capabilities.iter().fold(1, |a, x| a + x.encoded_len()), 0);
+        params[0] = stream_id.to_msg();
+        let mut idx = 1;
+        for capability in capabilities {
+            if !capability.is_application() {
+                return Err(Error::Encoding);
+            }
+            capability.encode(&mut params[idx..])?;
+            idx += capability.encoded_len();
+        }
+        let response: Result<SimpleResponse> =
+            await!(self.send_command(SignalIdentifier::Reconfigure, &params));
+        response.and(Ok(()))
+    }
+
     /// Send a Open Stream Command (Sec 8.12) to the remote peer for the given
     /// `stream_id`.
     /// Returns Ok(()) if the command is accepted, and RemoteRejected if the
@@ -146,8 +199,7 @@ impl Peer {
         let stream_params = &[stream_id.to_msg()];
         let response: Result<SimpleResponse> =
             await!(self.send_command(SignalIdentifier::Open, stream_params));
-        response?;
-        Ok(())
+        response.and(Ok(()))
     }
 
     /// Send a Start Stream Command (Sec 8.13) to the remote peer for all the
@@ -162,8 +214,7 @@ impl Peer {
         }
         let response: Result<SimpleResponse> =
             await!(self.send_command(SignalIdentifier::Start, &stream_params));
-        response?;
-        Ok(())
+        response.and(Ok(()))
     }
 
     /// Send a Close Stream Command (Sec 8.14) to the remote peer for the given
@@ -174,8 +225,7 @@ impl Peer {
         let stream_params = &[stream_id.to_msg()];
         let response: Result<SimpleResponse> =
             await!(self.send_command(SignalIdentifier::Close, stream_params));
-        response?;
-        Ok(())
+        response.and(Ok(()))
     }
 
     /// Send a Suspend Command (Sec 8.15) to the remote peer for all the
@@ -190,8 +240,7 @@ impl Peer {
         }
         let response: Result<SimpleResponse> =
             await!(self.send_command(SignalIdentifier::Suspend, &stream_params));
-        response?;
-        Ok(())
+        response.and(Ok(()))
     }
 
     /// Send a Close Stream Command (Sec 8.14) to the remote peer for the given
@@ -202,8 +251,7 @@ impl Peer {
         let stream_params = &[stream_id.to_msg()];
         let response: Result<SimpleResponse> =
             await!(self.send_command(SignalIdentifier::Abort, stream_params));
-        response?;
-        Ok(())
+        response.and(Ok(()))
     }
 
     /// The maximum amount of time we will wait for a response to a signaling command.
@@ -332,7 +380,7 @@ impl Request {
             let cap = match ServiceCapability::decode(&encoded[loc..]) {
                 Ok(cap) => cap,
                 Err(Error::RequestInvalid(code)) => {
-                    return Err(Error::RequestInvalidExtra(code, encoded[loc]))
+                    return Err(Error::RequestInvalidExtra(code, encoded[loc]));
                 }
                 Err(e) => return Err(e),
             };
@@ -393,7 +441,7 @@ impl Request {
                         return Err(Error::RequestInvalidExtra(
                             ErrorCode::InvalidCapabilities,
                             x.to_category_byte(),
-                        ))
+                        ));
                     }
                     None => (),
                 };
@@ -783,14 +831,21 @@ fn decode_signaling_response<D: Decodable>(
         return Err(Error::InvalidHeader);
     }
     if !header.is_type(SignalingMessageType::ResponseAccept) {
+        let params_idx = header.encoded_len();
         match header.signal() {
             SignalIdentifier::Start | SignalIdentifier::Suspend => {
                 return Err(Error::RemoteStreamRejected(
-                    buf[header.encoded_len()] >> 2,
-                    buf[header.encoded_len() + 1],
+                    buf[params_idx] >> 2,
+                    buf[params_idx + 1],
                 ));
             }
-            _ => return Err(Error::RemoteRejected(buf[header.encoded_len()])),
+            SignalIdentifier::SetConfiguration | SignalIdentifier::Reconfigure => {
+                return Err(Error::RemoteConfigRejected(
+                    buf[params_idx],
+                    buf[params_idx + 1],
+                ));
+            }
+            _ => return Err(Error::RemoteRejected(buf[params_idx])),
         };
     }
     D::decode(&buf[header.encoded_len()..])

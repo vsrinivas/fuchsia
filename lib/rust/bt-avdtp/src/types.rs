@@ -44,6 +44,15 @@ pub enum Error {
     #[fail(display = "Remote end rejected the command (code = {:}", _0)]
     RemoteRejected(u8),
 
+    /// The Remote end rejected a set configuration or reconfigure command we sent,
+    /// indicating this ServiceCategory (code).
+    /// The indicated ServiceCategory can be retrieved using `ServiceCategory::try_from`
+    #[fail(
+        display = "Remote end rejected the command (Category = {:}, code = {:}",
+        _0, _1
+    )]
+    RemoteConfigRejected(u8, u8),
+
     /// The Remote end rejected a start or suspend command we sent, indicating this SEID and error
     /// code.
     #[fail(
@@ -167,7 +176,7 @@ macro_rules! tofrom_decodable_enum {
     }
 }
 
-pub_decodable_enum!{
+pub_decodable_enum! {
     /// Error Codes that can be returned as part of a reject message.
     /// See Section 8.20.6
     ErrorCode<u8> {
@@ -486,11 +495,12 @@ impl TryFrom<u16> for ContentProtectionType {
     }
 }
 
-decodable_enum! {
+pub_decodable_enum! {
     /// Indicates the signaling command on a command packet.  The same identifier is used on the
     /// response to that command packet.
     /// See Section 8.4.4
     ServiceCategory<u8> {
+        None => 0x00,
         MediaTransport => 0x01,
         Reporting => 0x02,
         Recovery => 0x03,

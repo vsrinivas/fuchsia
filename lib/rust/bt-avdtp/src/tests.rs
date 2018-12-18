@@ -1395,6 +1395,128 @@ fn set_config_event_responder_reject_works() {
     expect_remote_recv(&[0x43, 0x03, 0x01, 0x29], &remote);
 }
 
+#[test]
+fn set_config_command_works() {
+    let mut exec = fasync::Executor::new().expect("failed to create an executor");
+    let (peer, remote) = setup_peer();
+    // This should cover all the implemented capabilities to confirm they are
+    // encoded correctly.
+    let caps = vec![
+        ServiceCapability::MediaTransport,
+        ServiceCapability::Reporting,
+        ServiceCapability::Recovery {
+            recovery_type: 0x01,
+            max_recovery_window_size: 10,
+            max_number_media_packets: 255,
+        },
+        ServiceCapability::MediaCodec {
+            media_type: MediaType::Audio,
+            codec_type: MediaCodecType::new(0x40),
+            codec_extra: vec![0xDE, 0xAD, 0xBE, 0xEF],
+        },
+        ServiceCapability::ContentProtection {
+            protection_type: ContentProtectionType::DigitalTransmissionContentProtection,
+            extra: vec![0xF0, 0x0D],
+        },
+        ServiceCapability::DelayReporting,
+    ];
+    let mut response_fut =
+        Box::pinned(peer.set_configuration(&StreamEndpointId(1), &StreamEndpointId(2), &caps));
+    assert!(exec.run_until_stalled(&mut response_fut).is_pending());
+
+    let received = recv_remote(&remote).unwrap();
+    #[rustfmt::skip]
+    let set_capabilities_req = &[
+        0x03,      // Set Configuration Signal
+        0x01 << 2, // ACP SEID, RFA
+        0x02 << 2, // INT SEID, RFA
+        // MediaTransport (Length of Service Capability = 0)
+        0x01, 0x00,
+        // Reporting (LOSC = 0)
+        0x02, 0x00,
+        // Recovery (LOSC = 3), Type (0x01), Window size (10), Number Media Packets (255)
+        0x03, 0x03, 0x01, 0x0A, 0xFF,
+        // Media Codec (LOSC = 2 + 4), Media Type Audio (0x00), Codec type (0x40), Codec speciic
+        // as above
+        0x07, 0x06, 0x00, 0x40, 0xDE, 0xAD, 0xBE, 0xEF,
+        // Content Protection (LOSC = 2 + 2), DTCP (0x01, 0x00), CP Specific as above
+        0x04, 0x04, 0x01, 0x00, 0xF0, 0x0D,
+        // DelayReporting (LOSC = 0)
+        0x08, 0x00,
+    ];
+    // Last half of header must be Single (0b00) and Command (0b00)
+    assert_eq!(0x00, received[0] & 0xF);
+    assert_eq!(set_capabilities_req, &received[1..]);
+
+    let txlabel_raw = received[0] & 0xF0;
+
+    let complete = exec.run_until_stalled(&mut response_fut);
+    assert!(complete.is_pending());
+
+    // Positive response
+    let response: &[u8] = &[
+        txlabel_raw << 4 | 0x0 << 2 | 0x2, // txlabel (same), Single (0b00), Response Accept (0b10)
+        0x03,                              // Set Configuration
+    ];
+    assert!(remote.write(response).is_ok());
+
+    let complete = exec.run_until_stalled(&mut response_fut);
+    assert_eq!(Poll::Ready(Ok(())), complete);
+}
+
+#[test]
+fn set_config_error_response() {
+    let mut exec = fasync::Executor::new().expect("failed to create an executor");
+    let (peer, remote) = setup_peer();
+    let caps = vec![
+        ServiceCapability::MediaTransport,
+        ServiceCapability::MediaCodec {
+            media_type: MediaType::Audio,
+            codec_type: MediaCodecType::new(0x40),
+            codec_extra: vec![0xDE, 0xAD, 0xBE, 0xEF],
+        },
+    ];
+    let mut response_fut =
+        Box::pinned(peer.set_configuration(&StreamEndpointId(1), &StreamEndpointId(2), &caps));
+    assert!(exec.run_until_stalled(&mut response_fut).is_pending());
+
+    let received = recv_remote(&remote).unwrap();
+    #[rustfmt::skip]
+    let set_capabilities_req = &[
+        0x03,      // Set Configuration Signal
+        0x01 << 2, // ACP SEID, RFA
+        0x02 << 2, // INT SEID, RFA
+        // MediaTransport (Length of Service Capability = 0)
+        0x01, 0x00,
+        // Media Codec (LOSC = 2 + 4), Media Type Audio (0x00), Codec type (0x40), Codec speciic
+        // as above
+        0x07, 0x06, 0x00, 0x40, 0xDE, 0xAD, 0xBE, 0xEF,
+    ];
+    // Last half of header must be Single (0b00) and Command (0b00)
+    assert_eq!(0x00, received[0] & 0xF);
+    assert_eq!(set_capabilities_req, &received[1..]);
+
+    let txlabel_raw = received[0] & 0xF0;
+
+    let complete = exec.run_until_stalled(&mut response_fut);
+    assert!(complete.is_pending());
+
+    // Error response
+    let response: &[u8] = &[
+        txlabel_raw << 4 | 0x0 << 2 | 0x3, // txlabel (same), Single (0b00), Response Reject
+        0x03,                              // Set Configuration
+        0x07,                              // Relevant Capability (Media Codec)
+        0x29,                              // Unsupported configuration
+    ];
+    assert!(remote.write(response).is_ok());
+
+    let complete = exec.run_until_stalled(&mut response_fut);
+    assert_eq!(
+        Poll::Ready(Err(Error::RemoteConfigRejected(0x07, 0x29))),
+        complete
+    );
+}
+
 // Set Config: Reporting
 
 #[test]
@@ -1687,4 +1809,116 @@ fn reconfig_event_responder_reject_works() {
     // Expected response: Same TxLabel (4) & ResponseReject, Signal,
     // Relevant capability, Error Code (Unsupported Config)
     expect_remote_recv(&[0x43, 0x05, 0x07, 0x29], &remote);
+}
+
+#[test]
+fn reconfigure_command_works() {
+    let mut exec = fasync::Executor::new().expect("failed to create an executor");
+    let (peer, remote) = setup_peer();
+    // This should cover all the implemented capabilities to confirm they are
+    // encoded correctly.
+    let caps = vec![
+        ServiceCapability::MediaCodec {
+            media_type: MediaType::Audio,
+            codec_type: MediaCodecType::new(0x40),
+            codec_extra: vec![0xDE, 0xAD, 0xBE, 0xEF],
+        },
+        ServiceCapability::ContentProtection {
+            protection_type: ContentProtectionType::DigitalTransmissionContentProtection,
+            extra: vec![0xF0, 0x0D],
+        },
+    ];
+    let mut response_fut = Box::pinned(peer.reconfigure(&StreamEndpointId(1), &caps));
+    assert!(exec.run_until_stalled(&mut response_fut).is_pending());
+
+    let received = recv_remote(&remote).unwrap();
+    #[rustfmt::skip]
+    let reconfigure_req = &[
+        0x05,      // Reconfigure Signal
+        0x01 << 2, // ACP SEID, RFA
+        // Media Codec (LOSC = 2 + 4), Media Type Audio (0x00), Codec type (0x40), Codec speciic
+        // as above
+        0x07, 0x06, 0x00, 0x40, 0xDE, 0xAD, 0xBE, 0xEF,
+        // Content Protection (LOSC = 2 + 2), DTCP (0x01, 0x00), CP Specific as above
+        0x04, 0x04, 0x01, 0x00, 0xF0, 0x0D,
+    ];
+    // Last half of header must be Single (0b00) and Command (0b00)
+    assert_eq!(0x00, received[0] & 0xF);
+    assert_eq!(reconfigure_req, &received[1..]);
+
+    let txlabel_raw = received[0] & 0xF0;
+
+    let complete = exec.run_until_stalled(&mut response_fut);
+    assert!(complete.is_pending());
+
+    // Positive response
+    let response: &[u8] = &[
+        txlabel_raw << 4 | 0x0 << 2 | 0x2, // txlabel (same), Single (0b00), Response Accept (0b10)
+        0x05,                              // Reconfigure
+    ];
+    assert!(remote.write(response).is_ok());
+
+    let complete = exec.run_until_stalled(&mut response_fut);
+    assert_eq!(Poll::Ready(Ok(())), complete);
+}
+
+#[test]
+fn reconfigure_error_response() {
+    let mut exec = fasync::Executor::new().expect("failed to create an executor");
+    let (peer, remote) = setup_peer();
+    let caps = vec![
+        ServiceCapability::MediaTransport,
+        ServiceCapability::MediaCodec {
+            media_type: MediaType::Audio,
+            codec_type: MediaCodecType::new(0x40),
+            codec_extra: vec![0xDE, 0xAD, 0xBE, 0xEF],
+        },
+    ];
+    let mut response_fut = Box::pinned(peer.reconfigure(&StreamEndpointId(1), &caps));
+    // This isn't valid, you can't reconfigure Media Transport
+    assert_eq!(
+        Poll::Ready(Err(Error::Encoding)),
+        exec.run_until_stalled(&mut response_fut)
+    );
+
+    let caps = vec![ServiceCapability::MediaCodec {
+        media_type: MediaType::Audio,
+        codec_type: MediaCodecType::new(0x40),
+        codec_extra: vec![0xDE, 0xAD, 0xBE, 0xEF],
+    }];
+    let mut response_fut = Box::pinned(peer.reconfigure(&StreamEndpointId(1), &caps));
+    assert!(exec.run_until_stalled(&mut response_fut).is_pending());
+
+    let received = recv_remote(&remote).unwrap();
+    #[rustfmt::skip]
+    let reconfigure_req = &[
+        0x05,      // Reconfigure Signal
+        0x01 << 2, // ACP SEID, RFA
+        // Media Codec (LOSC = 2 + 4), Media Type Audio (0x00), Codec type (0x40), Codec speciic
+        // as above
+        0x07, 0x06, 0x00, 0x40, 0xDE, 0xAD, 0xBE, 0xEF,
+    ];
+    // Last half of header must be Single (0b00) and Command (0b00)
+    assert_eq!(0x00, received[0] & 0xF);
+    assert_eq!(reconfigure_req, &received[1..]);
+
+    let txlabel_raw = received[0] & 0xF0;
+
+    let complete = exec.run_until_stalled(&mut response_fut);
+    assert!(complete.is_pending());
+
+    // Error response
+    let response: &[u8] = &[
+        txlabel_raw << 4 | 0x0 << 2 | 0x3, // txlabel (same), Single (0b00), Response Reject
+        0x05,                              // Set Configuration
+        0x00,                              // Relevant Capability (none)
+        0x13,                              // SEP In Use
+    ];
+    assert!(remote.write(response).is_ok());
+
+    let complete = exec.run_until_stalled(&mut response_fut);
+    assert_eq!(
+        Poll::Ready(Err(Error::RemoteConfigRejected(0x00, 0x13))),
+        complete
+    );
 }
