@@ -7,9 +7,9 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/ethernet.h>
-#include <ddk/protocol/usb-old.h>
-#include <ddk/usb/usb.h>
+#include <ddk/protocol/usb.h>
 #include <lib/sync/completion.h>
+#include <usb/usb.h>
 #include <zircon/device/qmi-transport.h>
 #include <zircon/hw/usb/cdc.h>
 #include <zircon/status.h>
@@ -90,7 +90,7 @@ typedef struct qmi_ctx {
   uint64_t rx_endpoint_delay;  // wait time between 2 recv requests
 } qmi_ctx_t;
 
-static void usb_write_complete(usb_request_t* request, void* cookie);
+static void usb_write_complete(void* ctx, usb_request_t* request);
 
 static zx_status_t get_channel(void* ctx, zx_handle_t* out_channel) {
   ZX_DEBUG_ASSERT(ctx);
@@ -177,7 +177,11 @@ static zx_status_t queue_request(qmi_ctx_t* ctx, const uint8_t* data, size_t len
     return ZX_ERR_IO;
   }
 
-  usb_request_queue(&ctx->usb, req, usb_write_complete, ctx);
+  usb_request_complete_t complete = {
+    .callback = usb_write_complete,
+    .ctx = ctx,
+  };
+  usb_request_queue(&ctx->usb, req, &complete);
   return ZX_OK;
 }
 
@@ -407,10 +411,10 @@ static void qmi_handle_interrupt(qmi_ctx_t* qmi_ctx, usb_request_t* request) {
 
   switch (usb_req.bNotification) {
     case USB_CDC_NC_RESPONSE_AVAILABLE:
-      status = usb_control(
+      status = usb_control_in(
           &qmi_ctx->usb, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-          USB_CDC_GET_ENCAPSULATED_RESPONSE, 0, QMI_INTERFACE_NUM, buffer,
-          packet_size, ZX_TIME_INFINITE, NULL);
+          USB_CDC_GET_ENCAPSULATED_RESPONSE, 0, QMI_INTERFACE_NUM,
+          ZX_TIME_INFINITE, buffer, packet_size, NULL);
       if (!qmi_ctx->channel) {
         zxlogf(
             WARN,
@@ -431,8 +435,8 @@ static void qmi_handle_interrupt(qmi_ctx_t* qmi_ctx, usb_request_t* request) {
   }
 }
 
-static void qmi_interrupt_cb(usb_request_t* req, void* cookie) {
-  qmi_ctx_t* qmi_ctx = (qmi_ctx_t*)cookie;
+static void qmi_interrupt_cb(void* ctx, usb_request_t* req) {
+  qmi_ctx_t* qmi_ctx = (qmi_ctx_t*)ctx;
 
   zx_port_packet_t packet = {};
   packet.key = INTERRUPT_MSG;
@@ -443,7 +447,11 @@ static int qmi_transport_thread(void* cookie) {
   qmi_ctx_t* ctx = cookie;
   usb_request_t* txn = ctx->int_txn_buf;
 
-  usb_request_queue(&ctx->usb, txn, qmi_interrupt_cb, ctx);
+  usb_request_complete_t complete = {
+    .callback = qmi_interrupt_cb,
+    .ctx = ctx,
+  };
+  usb_request_queue(&ctx->usb, txn, &complete);
   if (ctx->max_packet_size > 2048) {
     zxlogf(ERROR, "qmi-usb-transport: packet too big: %d\n",
            ctx->max_packet_size);
@@ -467,13 +475,13 @@ static int qmi_transport_thread(void* cookie) {
                  zx_status_get_string(status));
           return status;
         }
-        status = usb_control(&ctx->usb,
+        status = usb_control_out(&ctx->usb,
                              USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-                             USB_CDC_SEND_ENCAPSULATED_COMMAND, 0, 8, buffer,
-                             length, ZX_TIME_INFINITE, NULL);
+                             USB_CDC_SEND_ENCAPSULATED_COMMAND, 0, 8,
+                             ZX_TIME_INFINITE, buffer, length);
         if (status != ZX_OK) {
           zxlogf(ERROR,
-                 "qmi-usb-transport: got an bad status from usb_control: %s\n",
+                 "qmi-usb-transport: got an bad status from usb_control_out: %s\n",
                  zx_status_get_string(status));
           return status;
         }
@@ -484,7 +492,11 @@ static int qmi_transport_thread(void* cookie) {
       } else if (packet.key == INTERRUPT_MSG) {
         if (txn->response.status == ZX_OK) {
           qmi_handle_interrupt(ctx, txn);
-          usb_request_queue(&ctx->usb, txn, qmi_interrupt_cb, ctx);
+          usb_request_complete_t complete = {
+            .callback = qmi_interrupt_cb,
+            .ctx = ctx,
+          };
+          usb_request_queue(&ctx->usb, txn, &complete);
         } else if (txn->response.status == ZX_ERR_PEER_CLOSED ||
                    txn->response.status == ZX_ERR_IO_NOT_PRESENT) {
           zxlogf(INFO,
@@ -540,8 +552,8 @@ static void usb_recv(qmi_ctx_t* ctx, usb_request_t* request) {
   mtx_unlock(&ctx->ethmac_mutex);
 }
 
-static void usb_read_complete(usb_request_t* request, void* cookie) {
-  qmi_ctx_t* ctx = cookie;
+static void usb_read_complete(void* context, usb_request_t* request) {
+  qmi_ctx_t* ctx = context;
 
   if (request->response.status != ZX_OK) {
     zxlogf(ERROR,
@@ -571,11 +583,16 @@ static void usb_read_complete(usb_request_t* request, void* cookie) {
   }
 
   zx_nanosleep(zx_deadline_after(ZX_USEC(ctx->rx_endpoint_delay)));
-  usb_request_queue(&ctx->usb, request, usb_read_complete, ctx);
+
+  usb_request_complete_t complete = {
+    .callback = usb_read_complete,
+    .ctx = ctx,
+  };
+  usb_request_queue(&ctx->usb, request, &complete);
 }
 
-static void usb_write_complete(usb_request_t* request, void* cookie) {
-  qmi_ctx_t* ctx = cookie;
+static void usb_write_complete(void* context, usb_request_t* request) {
+  qmi_ctx_t* ctx = context;
 
   if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
     usb_request_release(request);
@@ -637,7 +654,7 @@ static zx_status_t qmi_bind(void* ctx, zx_device_t* device) {
 
   // Set up USB stuff
   usb_protocol_t usb;
-  status = device_get_protocol(device, ZX_PROTOCOL_USB_OLD, &usb);
+  status = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);
   if (status != ZX_OK) {
     zxlogf(ERROR, "qmi-usb-transport: get protocol failed: %s\n",
            zx_status_get_string(status));
@@ -785,7 +802,11 @@ static zx_status_t qmi_bind(void* ctx, zx_device_t* device) {
       goto fail;
     }
 
-    usb_request_queue(&qmi_ctx->usb, rx_buf, usb_read_complete, qmi_ctx);
+  usb_request_complete_t complete = {
+    .callback = usb_read_complete,
+    .ctx = qmi_ctx,
+  };
+    usb_request_queue(&qmi_ctx->usb, rx_buf, &complete);
     rx_buf_remain -= rx_buf_sz;
   }
 
@@ -856,7 +877,7 @@ static zx_driver_ops_t qmi_driver_ops = {
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(qmi_usb, qmi_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_OLD),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
     BI_ABORT_IF(NE, BIND_USB_VID, SIERRA_VID),
     BI_MATCH_IF(EQ, BIND_USB_PID, EM7565_PID),
 ZIRCON_DRIVER_END(qmi_usb)
