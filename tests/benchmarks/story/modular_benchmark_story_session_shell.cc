@@ -23,7 +23,8 @@
 
 #include "peridot/lib/common/names.h"
 #include "peridot/lib/fidl/single_service_app.h"
-#include "peridot/lib/testing/component_base.h"
+#include "peridot/lib/testing/component_main.h"
+#include "peridot/lib/testing/session_shell_impl.h"
 #include "peridot/public/lib/integration_testing/cpp/reporting.h"
 #include "peridot/public/lib/integration_testing/cpp/testing.h"
 #include "peridot/tests/benchmarks/story/tracing_waiter.h"
@@ -43,7 +44,8 @@ class Settings {
     }
 
     module_url = command_line.GetOptionValueWithDefault(
-        "module_url", "modular_benchmark_story_module");
+        "module_url",
+        "fuchsia-pkg://fuchsia.com/modular_benchmark_story_module#meta/modular_benchmark_story_module.cmx");
   }
 
   int story_count{0};
@@ -60,8 +62,8 @@ class StoryWatcherImpl : fuchsia::modular::StoryWatcher {
 
   // Registers itself as a watcher on the given story. Only one story at a time
   // can be watched.
-  void Watch(fuchsia::modular::StoryControllerPtr* const story_controller) {
-    (*story_controller)->Watch(binding_.NewBinding());
+  void Watch(fuchsia::modular::StoryController* const story_controller) {
+    story_controller->Watch(binding_.NewBinding());
   }
 
   // Deregisters itself from the watched story.
@@ -107,8 +109,8 @@ class LinkWatcherImpl : fuchsia::modular::LinkWatcher {
 
   // Registers itself as a watcher on the given link. Only one story at a time
   // can be watched.
-  void Watch(fuchsia::modular::LinkPtr* const link) {
-    (*link)->WatchAll(binding_.NewBinding());
+  void Watch(fuchsia::modular::Link* const link) {
+    link->WatchAll(binding_.NewBinding());
   }
 
   // Deregisters itself from the watched story.
@@ -140,12 +142,15 @@ class TestApp : public modular::ViewApp {
  public:
   TestApp(component::StartupContext* const startup_context, Settings settings)
       : ViewApp(startup_context), settings_(std::move(settings)) {
-    session_shell_context_ = startup_context->ConnectToEnvironmentService<
-        fuchsia::modular::SessionShellContext>();
+    startup_context->ConnectToEnvironmentService(
+        session_shell_context_.NewRequest());
     session_shell_context_->GetStoryProvider(story_provider_.NewRequest());
-    puppet_master_ =
-        startup_context
-            ->ConnectToEnvironmentService<fuchsia::modular::PuppetMaster>();
+
+    startup_context->ConnectToEnvironmentService(puppet_master_.NewRequest());
+
+    startup_context->outgoing().AddPublicService(
+        session_shell_impl_.GetHandler());
+
     tracing_waiter_.WaitForTracing([this] { Loop(); });
   }
 
@@ -220,7 +225,7 @@ class TestApp : public modular::ViewApp {
     link_path.link_name = nullptr;
     story_controller_->GetLink(std::move(link_path), link_.NewRequest());
 
-    link_watcher_.Watch(&link_);
+    link_watcher_.Watch(link_.get());
     link_watcher_.Continue([this](fidl::StringPtr json) {
       FXL_LOG(INFO) << "Link() Watch: " << json;
       if (json == "") {
@@ -247,10 +252,8 @@ class TestApp : public modular::ViewApp {
       TRACE_ASYNC_END("benchmark", "story/start", 0);
     });
 
-    story_watcher_.Watch(&story_controller_);
-
-    fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> story_view;
-    story_controller_->Start(story_view.NewRequest());
+    story_watcher_.Watch(story_controller_.get());
+    story_controller_->RequestStart();
   }
 
   void StoryStop() {
@@ -279,6 +282,7 @@ class TestApp : public modular::ViewApp {
 
   StoryWatcherImpl story_watcher_;
   LinkWatcherImpl link_watcher_;
+  modular::testing::SessionShellImpl session_shell_impl_;
 
   fuchsia::modular::PuppetMasterPtr puppet_master_;
   fuchsia::modular::StoryPuppetMasterPtr story_puppet_master_;

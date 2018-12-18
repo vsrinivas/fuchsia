@@ -165,11 +165,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
  private:
   // |StoryController|
   void Stop(StopCallback done) override;
-
-  // |StoryController|
   void GetInfo(GetInfoCallback callback) override;
-  void Start(fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
-                 request) override;
   void RequestStart() override;
   void TakeAndLoadSnapshot(
       fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> request,
@@ -189,8 +185,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
                fidl::InterfaceRequest<fuchsia::modular::Link> request) override;
 
   // Communicates with SessionShell.
-  void StartStoryShell(
-      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> request);
+  void StartStoryShell();
   void DetachView(std::function<void()> done);
 
   // Called whenever |story_storage_| sees an updated ModuleData from another
@@ -227,13 +222,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   // reading from the |story_observer_| directly.
   const fidl::StringPtr story_id_;
 
-  // True once AttachView() was called. Temporarily needed during transition
-  // from Start() to RequestStart(), will be removed once Start() is removed.
-  // Cf. MF-121.
-  bool needs_detach_view_{};
-
   StoryProviderImpl* const story_provider_impl_;  // Not owned.
-
   SessionStorage* const session_storage_;  // Not owned.
   StoryStorage* const story_storage_;      // Not owned.
 

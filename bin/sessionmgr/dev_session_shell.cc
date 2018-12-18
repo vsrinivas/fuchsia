@@ -56,6 +56,7 @@ class Settings {
 class DevSessionShellApp : fuchsia::modular::StoryWatcher,
                            fuchsia::modular::InterruptionListener,
                            fuchsia::modular::NextListener,
+                           fuchsia::modular::SessionShell,
                            public modular::ViewApp {
  public:
   explicit DevSessionShellApp(component::StartupContext* const startup_context,
@@ -63,11 +64,9 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
       : ViewApp(startup_context),
         settings_(std::move(settings)),
         story_watcher_binding_(this) {
-    puppet_master_ =
-        startup_context
-            ->ConnectToEnvironmentService<fuchsia::modular::PuppetMaster>();
-    session_shell_context_ = startup_context->ConnectToEnvironmentService<
-        fuchsia::modular::SessionShellContext>();
+    startup_context->ConnectToEnvironmentService(puppet_master_.NewRequest());
+    startup_context->ConnectToEnvironmentService(
+        session_shell_context_.NewRequest());
     session_shell_context_->GetStoryProvider(story_provider_.NewRequest());
     session_shell_context_->GetSuggestionProvider(
         suggestion_provider_.NewRequest());
@@ -79,6 +78,9 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
         interruption_listener_bindings_.AddBinding(this));
     suggestion_provider_->SubscribeToNext(
         next_listener_bindings_.AddBinding(this), 3);
+
+    startup_context->outgoing().AddPublicService(
+        session_shell_bindings_.GetHandler(this));
   }
 
   ~DevSessionShellApp() override = default;
@@ -182,10 +184,8 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
     story_controller_->Watch(story_watcher_binding_.NewBinding());
 
     FXL_LOG(INFO) << "DevSessionShell Starting story with id: " << story_id;
-    fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner>
-        root_module_view;
-    story_controller_->Start(root_module_view.NewRequest());
-    view_->ConnectView(std::move(root_module_view));
+
+    story_controller_->RequestStart();
     focus_controller_->Set(story_id);
     auto visible_stories = fidl::VectorPtr<fidl::StringPtr>::New(0);
     visible_stories.push_back(story_id);
@@ -203,6 +203,21 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
       FXL_CHECK(fsl::VmoFromString(settings_.root_link, &vmo));
       root->Set(nullptr, std::move(vmo).ToTransport());
     }
+  }
+
+  // |SessionShell|
+  void AttachView(fuchsia::modular::ViewIdentifier view_id,
+                  fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner>
+                  view_owner) override {
+    FXL_LOG(INFO) << "DevSessionShell AttachView(): " << view_id.story_id;
+    view_->ConnectView(std::move(view_owner));
+  }
+
+  // |SessionShell|
+  void DetachView(fuchsia::modular::ViewIdentifier view_id,
+                  std::function<void()> done) override {
+    FXL_LOG(INFO) << "DevSessionShell DetachView(): " << view_id.story_id;
+    done();
   }
 
   // |fuchsia::modular::StoryWatcher|
@@ -243,6 +258,8 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
   }
 
   const Settings settings_;
+
+  fidl::BindingSet<fuchsia::modular::SessionShell> session_shell_bindings_;
 
   zx::eventpair view_token_;
   std::unique_ptr<modular::ViewHost> view_;

@@ -11,7 +11,7 @@ This test exercises the APIs exposed to the session shell:
 * Be notified when story state changes.
 
 * Be notified through SessionShell.AttachView() of a new story view when story
-  start is requested by RequestStart() rather than Start().
+  start is requested by RequestStart().
 
 * Be notified through SessionShell.DetachView() of a story going away.
 

@@ -153,13 +153,6 @@ class TestApp : public modular::testing::SessionShellBase {
         component_context_.NewRequest());
     story_provider_state_watcher_.Watch(story_provider());
 
-    // Until we use RequestStart() for the first time, there must be no calls on
-    // the SessionShell service.
-    session_shell_impl()->set_on_attach_view(
-        [](ViewId) { Fail("AttachView() called without RequestStart()."); });
-    session_shell_impl()->set_on_detach_view(
-        [](ViewId) { Fail("DetachView() called without RequestStart()."); });
-
     TestComponentContext_GetPackageName_Works();
   }
 
@@ -178,8 +171,10 @@ class TestApp : public modular::testing::SessionShellBase {
     create_view_.Pass();
   }
 
-  // Test Case: When we call GetPackageName() on ComponentContext acquired from
-  // our environment, it works.
+  // Test Case GetPackageName:
+  //
+  // When we call GetPackageName() on ComponentContext acquired from our
+  // environment, it works.
 
   TestPoint component_context_package_name_{
       "ComponentContext.GetPackageName() works"};
@@ -194,7 +189,9 @@ class TestApp : public modular::testing::SessionShellBase {
     });
   }
 
-  // Test Case: The story info of a story that does not exist is null.
+  // Test Case GetStoryInfo Null:
+  //
+  // The story info of a story that does not exist is null.
 
   TestPoint get_story_info_null_{"StoryProvider.GetStoryInfo() is null"};
 
@@ -305,8 +302,7 @@ class TestApp : public modular::testing::SessionShellBase {
   TestPoint story1_run_{"Story1 Run"};
   void TestStory1_Run() {
     // Start and show the new story.
-    fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> story_view;
-    story_controller_->Start(story_view.NewRequest());
+    story_controller_->RequestStart();
     story1_run_.Pass();
     TestStory1_Stop();
   }
@@ -391,8 +387,7 @@ class TestApp : public modular::testing::SessionShellBase {
 
     // Start and show the new story *while* the GetInfo() call above is in
     // flight.
-    fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> story_view;
-    story_controller_->Start(story_view.NewRequest());
+    story_controller_->RequestStart();
 
     story_controller_->GetInfo([this](fuchsia::modular::StoryInfo info,
                                       fuchsia::modular::StoryState state) {
@@ -487,8 +482,7 @@ class TestApp : public modular::testing::SessionShellBase {
   TestPoint story3_run_{"Story3 Run"};
 
   void TestStory3_Run() {
-    fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> story_view;
-    story_controller_->Start(story_view.NewRequest());
+    story_controller_->RequestStart();
 
     story_controller_->GetInfo([this](fuchsia::modular::StoryInfo info,
                                       fuchsia::modular::StoryState state) {

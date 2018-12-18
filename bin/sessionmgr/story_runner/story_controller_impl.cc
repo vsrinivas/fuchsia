@@ -1003,12 +1003,10 @@ class StoryControllerImpl::StartCall : public Operation<> {
  public:
   StartCall(
       StoryControllerImpl* const story_controller_impl,
-      StoryStorage* const storage,
-      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> request)
+      StoryStorage* const storage)
       : Operation("StoryControllerImpl::StartCall", [] {}),
         story_controller_impl_(story_controller_impl),
-        storage_(storage),
-        request_(std::move(request)) {}
+        storage_(storage) {}
 
  private:
   void Run() override {
@@ -1021,7 +1019,7 @@ class StoryControllerImpl::StartCall : public Operation<> {
       return;
     }
 
-    story_controller_impl_->StartStoryShell(std::move(request_));
+    story_controller_impl_->StartStoryShell();
 
     // Start all modules that were not themselves explicitly started by another
     // module.
@@ -1046,7 +1044,6 @@ class StoryControllerImpl::StartCall : public Operation<> {
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
   StoryStorage* const storage_;                       // not owned
-  fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> request_;
 
   OperationQueue operation_queue_;
 
@@ -1459,14 +1456,8 @@ void StoryControllerImpl::GetInfo(GetInfoCallback callback) {
   }));
 }
 
-void StoryControllerImpl::Start(
-    fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> request) {
-  operation_queue_.Add(new StartCall(this, story_storage_, std::move(request)));
-}
-
 void StoryControllerImpl::RequestStart() {
-  operation_queue_.Add(
-      new StartCall(this, story_storage_, nullptr /* ViewOwner request */));
+  operation_queue_.Add(new StartCall(this, story_storage_));
 }
 
 void StoryControllerImpl::Stop(StopCallback done) {
@@ -1560,15 +1551,10 @@ void StoryControllerImpl::GetLink(
   ConnectLinkPath(fidl::MakeOptional(std::move(link_path)), std::move(request));
 }
 
-void StoryControllerImpl::StartStoryShell(
-    fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> request) {
-  if (!request) {
-    // The start call originated in RequestStart() rather than Start().
-    fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner;
-    request = view_owner.NewRequest();
-    story_provider_impl_->AttachView(story_id_, std::move(view_owner));
-    needs_detach_view_ = true;
-  }
+void StoryControllerImpl::StartStoryShell() {
+  fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner;
+  auto request = view_owner.NewRequest();
+  story_provider_impl_->AttachView(story_id_, std::move(view_owner));
 
   story_shell_app_ =
       story_provider_impl_->StartStoryShell(story_id_, std::move(request));
@@ -1581,12 +1567,7 @@ void StoryControllerImpl::StartStoryShell(
 }
 
 void StoryControllerImpl::DetachView(std::function<void()> done) {
-  if (needs_detach_view_) {
-    story_provider_impl_->DetachView(story_id_, std::move(done));
-    needs_detach_view_ = false;
-  } else {
-    done();
-  }
+  story_provider_impl_->DetachView(story_id_, std::move(done));
 }
 
 void StoryControllerImpl::SetRuntimeState(

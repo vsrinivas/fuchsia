@@ -32,16 +32,14 @@ class StoryControllerMock : public fuchsia::modular::StoryController {
   }
 
   // |fuchsia::modular::StoryController|
-  void Start(fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
-                 request) override {
+  void RequestStart() override {
     FXL_NOTIMPLEMENTED();
   }
 
   // |fuchsia::modular::StoryController|
-  void RequestStart() override { FXL_NOTIMPLEMENTED(); }
-
-  // |fuchsia::modular::StoryController|
-  void Stop(StopCallback done) override { FXL_NOTIMPLEMENTED(); }
+  void Stop(StopCallback done) override {
+    FXL_NOTIMPLEMENTED();
+  }
 
   // |fuchsia::modular::StoryController|
   void TakeAndLoadSnapshot(
