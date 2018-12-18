@@ -5,20 +5,64 @@
 #include "garnet/bin/zxdb/console/console.h"
 
 #include <fcntl.h>
+#include <stdlib.h>
 #include <unistd.h>
+
+#include <filesystem>
 
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/session.h"
+#include "garnet/bin/zxdb/client/system.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_parser.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
-#include "garnet/public/lib/fxl/logging.h"
-#include "garnet/public/lib/fxl/strings/string_printf.h"
+#include "lib/fxl/files/file.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/join_strings.h"
+#include "lib/fxl/strings/split_string.h"
+#include "lib/fxl/strings/string_printf.h"
+#include "lib/fxl/strings/trim.h"
 
 namespace zxdb {
+
+namespace {
+
+const char* kHistoryFilename = ".zxdb_history";
+
+std::filesystem::path CheckForFile(const std::filesystem::path& path,
+                                   const std::string& filename) {
+  for (auto entry : std::filesystem::directory_iterator(path)) {
+    if (!entry.is_regular_file() || entry.path().filename() != filename)
+      continue;
+
+    return entry.path();
+  }
+  return {};
+}
+
+// Searches for the history file in $HOME, if not fallback locally.
+std::filesystem::path SearchForHistoryFile(const std::string& filename) {
+  // We check home.
+  char* home = getenv("HOME");
+  if (home) {
+    if (auto filepath = CheckForFile(home, filename); !filepath.empty())
+      return filepath;
+  }
+  return {};
+}
+
+std::vector<std::string> ReadHistoryContents(const std::string& path) {
+  std::string data;
+  if (!files::ReadFileToString(path, &data))
+    return {};
+  return fxl::SplitStringCopy(data, "\n", fxl::kTrimWhitespace,
+                              fxl::kSplitWantNonEmpty);
+}
+
+}  // namespace
 
 Console* Console::singleton_ = nullptr;
 
@@ -36,6 +80,9 @@ Console::Console(Session* session)
 Console::~Console() {
   FXL_DCHECK(singleton_ == this);
   singleton_ = nullptr;
+
+  if (!SaveHistoryToFile())
+    Output(Err("Could not save history file to $HOME/%s.\n", kHistoryFilename));
 }
 
 void Console::Init() {
@@ -43,6 +90,47 @@ void Console::Init() {
 
   stdio_watch_ = debug_ipc::MessageLoop::Current()->WatchFD(
       debug_ipc::MessageLoop::WatchMode::kRead, STDIN_FILENO, this);
+
+  // Load history.
+  if (auto path = SearchForHistoryFile(kHistoryFilename); !path.empty())
+    LoadHistoryFile(path);
+}
+
+void Console::LoadHistoryFile(const std::string& path) {
+  auto history = ReadHistoryContents(path);
+  AppendToHistory(history);
+}
+
+void Console::AppendToHistory(const std::vector<std::string>& history) {
+  for (const std::string& cmd : history) {
+    line_input_.AddToHistory(cmd);
+  }
+}
+
+bool Console::SaveHistoryToFile() {
+  char* home = getenv("HOME");
+  if (!home)
+    return false;
+
+  auto filepath = CheckForFile(home, kHistoryFilename);
+  if (filepath.empty())
+    return false;
+
+  // We need to invert the order the deque has the entries.
+  std::string history_data;
+  const auto& history = line_input_.history();
+  for (auto it = history.rbegin(); it != history.rend(); it++) {
+    auto trimmed = fxl::TrimString(*it, " ");
+    // We ignore empty entries or quit commands.
+    if (trimmed.empty() || trimmed == "quit" || trimmed == "q" ||
+        trimmed == "exit") {
+      continue;
+    }
+
+    history_data.append(trimmed.ToString()).append("\n");
+  }
+
+  return files::WriteFile(filepath, history_data.data(), history_data.size());
 }
 
 void Console::Output(OutputBuffer output) {

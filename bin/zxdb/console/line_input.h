@@ -50,6 +50,8 @@ class LineInputBase {
   // Returns the current insert position.
   size_t pos() const { return pos_; }
 
+  const std::deque<std::string>& history() const { return history_; }
+
   // Call to initialize reading a new line.
   void BeginReadLine();
 

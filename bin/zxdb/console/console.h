@@ -62,6 +62,10 @@ class Console : public debug_ipc::FDWatcher {
   // FDWatcher implementation.
   void OnFDReadable(int fd) override;
 
+  void LoadHistoryFile(const std::string& path);
+  void AppendToHistory(const std::vector<std::string>& history);
+  bool SaveHistoryToFile();
+
   static Console* singleton_;
 
   ConsoleContext context_;
