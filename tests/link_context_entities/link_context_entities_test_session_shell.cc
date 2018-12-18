@@ -17,12 +17,14 @@
 
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
-#include "peridot/lib/testing/component_base.h"
+#include "peridot/lib/testing/component_main.h"
+#include "peridot/lib/testing/session_shell_base.h"
 #include "peridot/public/lib/integration_testing/cpp/reporting.h"
 #include "peridot/public/lib/integration_testing/cpp/testing.h"
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/link_context_entities/defs.h"
 
+using modular::testing::Signal;
 using modular::testing::TestPoint;
 
 namespace {
@@ -81,18 +83,13 @@ class ContextListenerImpl : fuchsia::modular::ContextListener {
 };
 
 // Cf. README.md for what this test does and how.
-class TestApp : public modular::testing::ComponentBase<void> {
+class TestApp : public modular::testing::SessionShellBase {
  public:
   TestApp(component::StartupContext* const startup_context)
-      : ComponentBase(startup_context) {
+      : SessionShellBase(startup_context) {
     TestInit(__FILE__);
 
-    puppet_master_ =
-        startup_context
-            ->ConnectToEnvironmentService<fuchsia::modular::PuppetMaster>();
-    session_shell_context_ = startup_context->ConnectToEnvironmentService<
-        fuchsia::modular::SessionShellContext>();
-    session_shell_context_->GetStoryProvider(story_provider_.NewRequest());
+    startup_context->ConnectToEnvironmentService(puppet_master_.NewRequest());
 
     fuchsia::modular::IntelligenceServicesPtr intelligence_services;
     startup_context->ConnectToEnvironmentService(
@@ -143,9 +140,8 @@ class TestApp : public modular::testing::ComponentBase<void> {
           ProcessContextValue(value);
         });
 
-    story_provider_->GetController(kStoryName, story_controller_.NewRequest());
-    fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> story_view;
-    story_controller_->Start(story_view.NewRequest());
+    story_provider()->GetController(kStoryName, story_controller_.NewRequest());
+    story_controller_->RequestStart();
 
     start_story_exit_.Pass();
   }
@@ -222,10 +218,9 @@ class TestApp : public modular::testing::ComponentBase<void> {
     }
   }
 
-  void Logout() { session_shell_context_->Logout(); }
-
-  fuchsia::modular::SessionShellContextPtr session_shell_context_;
-  fuchsia::modular::StoryProviderPtr story_provider_;
+  void Logout() {
+    Signal(modular::testing::kTestShutdown);
+  }
 
   fuchsia::modular::PuppetMasterPtr puppet_master_;
   fuchsia::modular::StoryPuppetMasterPtr story_puppet_master_;

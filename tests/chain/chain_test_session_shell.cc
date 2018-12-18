@@ -17,13 +17,13 @@
 
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
-#include "peridot/lib/testing/component_base.h"
+#include "peridot/lib/testing/component_main.h"
+#include "peridot/lib/testing/session_shell_base.h"
 #include "peridot/public/lib/integration_testing/cpp/reporting.h"
 #include "peridot/public/lib/integration_testing/cpp/testing.h"
 #include "peridot/tests/chain/defs.h"
 #include "peridot/tests/common/defs.h"
 
-using modular::testing::Await;
 using modular::testing::Put;
 using modular::testing::TestPoint;
 
@@ -32,19 +32,13 @@ namespace {
 const char kStoryName[] = "story";
 
 // Cf. README.md for what this test does and how.
-class TestApp : public modular::testing::ComponentBase<void> {
+class TestApp : public modular::testing::SessionShellBase {
  public:
   TestApp(component::StartupContext* const startup_context)
-      : ComponentBase(startup_context) {
+      : SessionShellBase(startup_context) {
     TestInit(__FILE__);
 
-    session_shell_context_ = startup_context->ConnectToEnvironmentService<
-        fuchsia::modular::SessionShellContext>();
-    session_shell_context_->GetStoryProvider(story_provider_.NewRequest());
-
-    puppet_master_ =
-        startup_context
-            ->ConnectToEnvironmentService<fuchsia::modular::PuppetMaster>();
+    startup_context->ConnectToEnvironmentService(puppet_master_.NewRequest());
 
     CreateStory();
   }
@@ -85,16 +79,13 @@ class TestApp : public modular::testing::ComponentBase<void> {
   }
 
   void StartStory() {
-    // Start and show the new story.
-    story_provider_->GetController(kStoryName, story_controller_.NewRequest());
-    fidl::InterfacePtr<fuchsia::ui::viewsv1token::ViewOwner> story_view_binding;
-    story_controller_->Start(story_view_binding.NewRequest());
+    // Request start of the new story.
+    story_provider()->GetController(kStoryName, story_controller_.NewRequest());
+    story_controller_->RequestStart();
   }
 
-  fuchsia::modular::SessionShellContextPtr session_shell_context_;
   fuchsia::modular::PuppetMasterPtr puppet_master_;
   fuchsia::modular::StoryPuppetMasterPtr story_puppet_master_;
-  fuchsia::modular::StoryProviderPtr story_provider_;
   fidl::StringPtr story_id_;
   fuchsia::modular::StoryControllerPtr story_controller_;
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);

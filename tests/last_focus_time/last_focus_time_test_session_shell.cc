@@ -13,11 +13,13 @@
 #include <lib/fxl/macros.h>
 
 #include "peridot/lib/common/story_provider_watcher_base.h"
-#include "peridot/lib/testing/component_base.h"
+#include "peridot/lib/testing/component_main.h"
+#include "peridot/lib/testing/session_shell_base.h"
 #include "peridot/public/lib/integration_testing/cpp/testing.h"
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/last_focus_time/defs.h"
 
+using modular::testing::Signal;
 using modular::testing::TestPoint;
 
 namespace {
@@ -147,22 +149,17 @@ class FocusWatcherImpl : fuchsia::modular::FocusWatcher {
 };
 
 // Cf. README.md for what this test does and how.
-class TestApp : public modular::testing::ComponentBase<void> {
+class TestApp : public modular::testing::SessionShellBase {
  public:
   TestApp(component::StartupContext* const startup_context)
-      : ComponentBase(startup_context) {
+      : SessionShellBase(startup_context) {
     TestInit(__FILE__);
 
-    puppet_master_ =
-        startup_context
-            ->ConnectToEnvironmentService<fuchsia::modular::PuppetMaster>();
-    session_shell_context_ = startup_context->ConnectToEnvironmentService<
-        fuchsia::modular::SessionShellContext>();
-    session_shell_context_->GetStoryProvider(story_provider_.NewRequest());
-    story_provider_watcher_.Watch(&story_provider_);
+    startup_context->ConnectToEnvironmentService(puppet_master_.NewRequest());
+    story_provider_watcher_.Watch(story_provider());
 
-    session_shell_context_->GetFocusController(focus_controller_.NewRequest());
-    session_shell_context_->GetFocusProvider(focus_provider_.NewRequest());
+    session_shell_context()->GetFocusController(focus_controller_.NewRequest());
+    session_shell_context()->GetFocusProvider(focus_provider_.NewRequest());
     focus_watcher_.Watch(focus_provider_.get());
 
     CreateStory();
@@ -197,12 +194,11 @@ class TestApp : public modular::testing::ComponentBase<void> {
   TestPoint start_story_{"StartStory()"};
 
   void StartStory() {
-    story_provider_->GetController(kStoryName, story_controller_.NewRequest());
+    story_provider()->GetController(kStoryName, story_controller_.NewRequest());
     story_watcher_.Watch(story_controller_.get());
 
-    // Start and show the new story.
-    fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> story_view;
-    story_controller_->Start(story_view.NewRequest());
+    // Request start of the new story.
+    story_controller_->RequestStart();
 
     story_watcher_.Continue([this] {
       start_story_.Pass();
@@ -219,18 +215,13 @@ class TestApp : public modular::testing::ComponentBase<void> {
     story_provider_watcher_.Continue([this] {
       focus_.Pass();
       story_provider_watcher_.Reset();
-      Logout();
+
+      Signal(modular::testing::kTestShutdown);
     });
   }
 
-  void Logout() { session_shell_context_->Logout(); }
-
-  fuchsia::modular::SessionShellContextPtr session_shell_context_;
-
   fuchsia::modular::PuppetMasterPtr puppet_master_;
   fuchsia::modular::StoryPuppetMasterPtr story_puppet_master_;
-
-  fuchsia::modular::StoryProviderPtr story_provider_;
   StoryProviderWatcherImpl story_provider_watcher_;
 
   fuchsia::modular::StoryControllerPtr story_controller_;

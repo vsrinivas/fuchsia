@@ -12,6 +12,7 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/component_context/defs.h"
 
+using ::modular::testing::Signal;
 using ::modular::testing::TestPoint;
 
 namespace {
@@ -26,7 +27,7 @@ class TestApp {
   // Called by AgentDriver.
   void Connect(
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*services*/) {
-    modular::testing::GetStore()->Put("two_agent_connected", "", [] {});
+    Signal("two_agent_connected");
   }
 
   // Called by AgentDriver.

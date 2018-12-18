@@ -19,8 +19,8 @@ void StoryProviderWatcherBase::Continue(std::function<void()> at) {
 }
 
 void StoryProviderWatcherBase::Watch(
-    fuchsia::modular::StoryProviderPtr* const story_provider) {
-  (*story_provider)->Watch(binding_.NewBinding());
+    fuchsia::modular::StoryProvider* const story_provider) {
+  story_provider->Watch(binding_.NewBinding());
 }
 
 void StoryProviderWatcherBase::Reset() { binding_.Unbind(); }

@@ -35,7 +35,8 @@ executable_package("session_shell_test_session_shell") {
     "//garnet/public/lib/fxl",
     "//peridot/lib/rapidjson",
     "//peridot/public/lib/integration_testing/cpp",
-    "//peridot/lib/testing:component_base",
+    "//peridot/lib/testing:component_main",
+    "//peridot/lib/testing:session_shell_base",
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/tests/common:defs",
   ]

@@ -26,7 +26,7 @@ class StoryProviderWatcherBase : fuchsia::modular::StoryProviderWatcher {
 
   // Registers itself a watcher on the given story provider. Only one story
   // provider can be watched at a time.
-  void Watch(fuchsia::modular::StoryProviderPtr* story_provider);
+  void Watch(fuchsia::modular::StoryProvider* story_provider);
 
   // Deregisters itself from the watched story provider.
   void Reset();

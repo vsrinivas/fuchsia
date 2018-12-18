@@ -18,7 +18,8 @@
 
 #include "peridot/lib/common/names.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
-#include "peridot/lib/testing/component_base.h"
+#include "peridot/lib/testing/component_main.h"
+#include "peridot/lib/testing/session_shell_base.h"
 #include "peridot/public/lib/integration_testing/cpp/reporting.h"
 #include "peridot/public/lib/integration_testing/cpp/testing.h"
 #include "peridot/tests/common/defs.h"
@@ -34,19 +35,13 @@ namespace {
 const char kStoryName[] = "story";
 
 // Cf. README.md for what this test does and how.
-class TestApp : public modular::testing::ComponentBase<void> {
+class TestApp : public modular::testing::SessionShellBase {
  public:
   explicit TestApp(component::StartupContext* const startup_context)
-      : ComponentBase(startup_context) {
+      : SessionShellBase(startup_context) {
     TestInit(__FILE__);
 
-    puppet_master_ =
-        startup_context
-            ->ConnectToEnvironmentService<fuchsia::modular::PuppetMaster>();
-    startup_context
-        ->ConnectToEnvironmentService<fuchsia::modular::SessionShellContext>(
-            session_shell_context_.NewRequest());
-    session_shell_context_->GetStoryProvider(story_provider_.NewRequest());
+    startup_context->ConnectToEnvironmentService(puppet_master_.NewRequest());
 
     TestStory1();
   }
@@ -88,7 +83,7 @@ class TestApp : public modular::testing::ComponentBase<void> {
   TestPoint story1_get_controller_{"Story1 GetController"};
 
   void TestStory1_GetController() {
-    story_provider_->GetController(kStoryName, story_controller_.NewRequest());
+    story_provider()->GetController(kStoryName, story_controller_.NewRequest());
     story_controller_->GetInfo([this](fuchsia::modular::StoryInfo story_info,
                                       fuchsia::modular::StoryState state) {
       story1_get_controller_.Pass();
@@ -146,8 +141,7 @@ class TestApp : public modular::testing::ComponentBase<void> {
   TestPoint story1_run_module0_link_{"Story1 Run: Module0 link"};
 
   void TestStory1_Run() {
-    fuchsia::ui::viewsv1token::ViewOwnerPtr story_view;
-    story_controller_->Start(story_view.NewRequest());
+    story_controller_->RequestStart();
 
     Await(std::string("module0_link") + ":" + kRootJson1, [this] {
       story1_run_module0_link_.Pass();
@@ -214,8 +208,7 @@ class TestApp : public modular::testing::ComponentBase<void> {
   void TestStory2_Run() {
     story2_run_.Pass();
 
-    fuchsia::ui::viewsv1token::ViewOwnerPtr story_view;
-    story_controller_->Start(story_view.NewRequest());
+    story_controller_->RequestStart();
 
     TestStory2_Wait();
   }
@@ -255,8 +248,6 @@ class TestApp : public modular::testing::ComponentBase<void> {
 
   fuchsia::modular::PuppetMasterPtr puppet_master_;
   fuchsia::modular::StoryPuppetMasterPtr story_puppet_master_;
-  fuchsia::modular::SessionShellContextPtr session_shell_context_;
-  fuchsia::modular::StoryProviderPtr story_provider_;
   fuchsia::modular::StoryControllerPtr story_controller_;
   fuchsia::modular::LinkPtr module0_link_;
   fuchsia::modular::StoryInfo story_info_;

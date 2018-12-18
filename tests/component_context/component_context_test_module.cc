@@ -27,56 +27,15 @@ using ::test::peridot::tests::componentcontext::ComponentContextTestServicePtr;
 
 namespace {
 
-// Execute a trigger after the counter reaches a particular value OR if the
-// count is canceled.
-class CounterTrigger {
- public:
-  CounterTrigger(int count, std::function<void()> trigger)
-      : count_(count), trigger_(std::move(trigger)) {}
-
-  void Step() {
-    if (!finished_) {
-      // If this CHECK triggers, then you've called Step() more times than
-      // you passed for |count| into the constructor.
-      FXL_CHECK(count_ > 0);
-      if (count_ && --count_ == 0) {
-        Finished();
-      }
-    }
-  }
-
-  // It's safe to call Cancel() at any time, even if the trigger has already
-  // executed.
-  void Cancel() { Finished(); }
-
- private:
-  void Finished() {
-    if (!finished_) {
-      finished_ = true;
-      trigger_();
-    }
-  }
-
-  int count_;
-  const std::function<void()> trigger_;
-  bool finished_{};
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(CounterTrigger);
-};
-
 // Cf. README.md for what this test does and how.
 class TestModule {
  public:
   TestPoint initialized_{"Root module initialized"};
-  TestPoint one_agent_connected_{"One agent accepted connection"};
 
   TestModule(modular::ModuleHost* module_host,
              fidl::InterfaceRequest<
                  fuchsia::ui::app::ViewProvider> /*view_provider_request*/)
-      : steps_(
-            kTotalSimultaneousTests,
-            [this, module_host] { Signal(modular::testing::kTestShutdown); }),
-        weak_ptr_factory_(this) {
+      : weak_ptr_factory_(this) {
     modular::testing::Init(module_host->startup_context(), __FILE__);
 
     initialized_.Pass();
@@ -92,13 +51,7 @@ class TestModule {
     component::ConnectToService(one_agent_services.get(),
                                 one_agent_interface_.NewRequest());
 
-    Await("one_agent_connected", [this] {
-      one_agent_connected_.Pass();
-      TestMessageQueue(
-          [this] { TestAgentController([this] { steps_.Step(); }); });
-    });
-
-    TestUnstoppableAgent([this] { steps_.Step(); });
+    TestAgentConnected();
   }
 
   TestModule(modular::ModuleHost* const module_host,
@@ -116,11 +69,21 @@ class TestModule {
   }
 
  private:
+  TestPoint one_agent_connected_{"One agent accepted connection"};
+
+  void TestAgentConnected() {
+    Await("one_agent_connected", [this] {
+                                   FXL_LOG(INFO) << "TestModule One Agent Connected";
+                                   one_agent_connected_.Pass();
+                                   TestMessageQueue();
+                               });
+  }
+
   TestPoint msg_queue_communicated_{
       "Communicated message between Agent one using a MessageQueue"};
 
-  // Tests message queues. Calls |done_cb| when completed successfully.
-  void TestMessageQueue(std::function<void()> done_cb) {
+  // Tests message queues.
+  void TestMessageQueue() {
     constexpr char kTestMessage[] = "test message!";
 
     component_context_->ObtainMessageQueue("root_msg_queue",
@@ -128,8 +91,8 @@ class TestModule {
 
     // MessageQueueManager shouldn't send us anything just yet.
     msg_queue_.RegisterReceiver(
-        [this, done_cb, kTestMessage](const std::string& msg,
-                                      fit::function<void()> ack) {
+        [this, kTestMessage](const std::string& msg,
+                             fit::function<void()> ack) {
           ack();
           // We only want one message.
           msg_queue_.RegisterReceiver(nullptr);
@@ -137,7 +100,7 @@ class TestModule {
           if (msg == kTestMessage) {
             msg_queue_communicated_.Pass();
           }
-          done_cb();
+          TestAgentController();
         });
 
     msg_queue_.GetToken([this, kTestMessage](const fidl::StringPtr& token) {
@@ -149,18 +112,18 @@ class TestModule {
 
   // Tests fuchsia::modular::AgentController. Calls |done_cb| when completed
   // successfully.
-  void TestAgentController(std::function<void()> done_cb) {
+  void TestAgentController() {
     // Closing the agent controller should trigger the agent to stop.
     one_agent_controller.Unbind();
 
-    Await("one_agent_stopped", [this, done_cb] {
+    Await("one_agent_stopped", [this] {
       one_agent_stopped_.Pass();
-      done_cb();
+      TestUnstoppableAgent();
     });
   }
 
   // Start an agent that will not stop of its own accord.
-  void TestUnstoppableAgent(std::function<void()> done_cb) {
+  void TestUnstoppableAgent() {
     fuchsia::sys::ServiceProviderPtr unstoppable_agent_services;
     component_context_->ConnectToAgent(
         kUnstoppableAgent, unstoppable_agent_services.NewRequest(),
@@ -174,14 +137,12 @@ class TestModule {
     async::PostDelayedTask(
         async_get_default_dispatcher(),
         callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
-                             [this, done_cb] {
+                             [this] {
                                unstoppable_agent_controller_.Unbind();
-                               done_cb();
+                               Signal(modular::testing::kTestShutdown);
                              }),
         zx::msec(500));
   }
-
-  CounterTrigger steps_;
 
   fuchsia::modular::AgentControllerPtr one_agent_controller;
   ComponentContextTestServicePtr one_agent_interface_;

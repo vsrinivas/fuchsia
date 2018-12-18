@@ -15,7 +15,8 @@
 #include <lib/fxl/macros.h>
 
 #include "peridot/lib/rapidjson/rapidjson.h"
-#include "peridot/lib/testing/component_base.h"
+#include "peridot/lib/testing/component_main.h"
+#include "peridot/lib/testing/session_shell_base.h"
 #include "peridot/public/lib/integration_testing/cpp/reporting.h"
 #include "peridot/public/lib/integration_testing/cpp/testing.h"
 #include "peridot/tests/common/defs.h"
@@ -39,8 +40,8 @@ class StoryActivityWatcherImpl : fuchsia::modular::StoryActivityWatcher {
                fidl::VectorPtr<fuchsia::modular::OngoingActivityType>) {}) {}
   ~StoryActivityWatcherImpl() override = default;
 
-  void Watch(fuchsia::modular::StoryProviderPtr* const story_provider) {
-    (*story_provider)->WatchActivity(binding_.NewBinding());
+  void Watch(fuchsia::modular::StoryProvider* const story_provider) {
+    story_provider->WatchActivity(binding_.NewBinding());
   }
 
   void OnNotify(std::function<
@@ -67,33 +68,20 @@ class StoryActivityWatcherImpl : fuchsia::modular::StoryActivityWatcher {
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryActivityWatcherImpl);
 };
 
-class TestApp : public modular::testing::ComponentBase<void> {
+class TestApp : public modular::testing::SessionShellBase {
  public:
   TestApp(component::StartupContext* const startup_context)
-      : ComponentBase(startup_context), weak_ptr_factory_(this) {
+      : SessionShellBase(startup_context), weak_ptr_factory_(this) {
     TestInit(__FILE__);
 
-    puppet_master_ =
-        startup_context
-            ->ConnectToEnvironmentService<fuchsia::modular::PuppetMaster>();
-    session_shell_context_ = startup_context->ConnectToEnvironmentService<
-        fuchsia::modular::SessionShellContext>();
-
-    session_shell_context_->GetStoryProvider(story_provider_.NewRequest());
+    startup_context->ConnectToEnvironmentService(puppet_master_.NewRequest());
 
     CreateStory();
-    async::PostDelayedTask(
-        async_get_default_dispatcher(),
-        callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
-                             [this] { session_shell_context_->Logout(); }),
-        zx::msec(modular::testing::kTestTimeoutMilliseconds));
   }
 
   ~TestApp() override = default;
 
  private:
-  using TestPoint = modular::testing::TestPoint;
-
   TestPoint story_create_{"Created story."};
   void CreateStory() {
     fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
@@ -141,13 +129,13 @@ class TestApp : public modular::testing::ComponentBase<void> {
   TestPoint story_get_controller_{"Story GetController()"};
   // Starts the story and adds two modules to it.
   void StartStory() {
-    story_provider_->GetController(kStoryName, story_controller_.NewRequest());
+    story_provider()->GetController(kStoryName, story_controller_.NewRequest());
     story_controller_.set_error_handler([this](zx_status_t status) {
       FXL_LOG(ERROR) << "Story controller for story " << kStoryName
                      << " died. Does this story exist?";
     });
 
-    story_controller_->Start(story_view_.NewRequest());
+    story_controller_->RequestStart();
     story_controller_->GetInfo(
         [this](fuchsia::modular::StoryInfo, fuchsia::modular::StoryState) {
           story_get_controller_.Pass();
@@ -158,7 +146,7 @@ class TestApp : public modular::testing::ComponentBase<void> {
   TestPoint on_watch_ongoing_activities_dispatched{
       "When a watcher is registered, ongoing activities should be dispatched."};
   void PerformWatchActivity() {
-    story_activity_watcher_.Watch(&story_provider_);
+    story_activity_watcher_.Watch(story_provider());
     story_activity_watcher_.OnNotify(
         [this](
             fidl::StringPtr story_id,
@@ -318,7 +306,8 @@ class TestApp : public modular::testing::ComponentBase<void> {
               if (!is_running) {
                 story_stopped_.Pass();
               }
-              session_shell_context_->Logout();
+
+              Signal(modular::testing::kTestShutdown);
             });
           });
     });
@@ -327,7 +316,7 @@ class TestApp : public modular::testing::ComponentBase<void> {
   // Verifies that the story is stopped when the last module that is part of the
   // story calls ModuleContext.Done and is stopped.
   void IsStoryRunning(std::function<void(bool)> callback) {
-    story_provider_->RunningStories(
+    story_provider()->RunningStories(
         [this, callback](fidl::VectorPtr<fidl::StringPtr> story_ids) {
           bool found_story = false;
           // Check all the running stories to make sure the one created for this
@@ -366,12 +355,8 @@ class TestApp : public modular::testing::ComponentBase<void> {
 
   fuchsia::modular::PuppetMasterPtr puppet_master_;
   fuchsia::modular::StoryPuppetMasterPtr story_puppet_master_;
-  fuchsia::modular::SessionShellContextPtr session_shell_context_;
-  fuchsia::modular::StoryProviderPtr story_provider_;
   fuchsia::modular::StoryControllerPtr story_controller_;
   StoryActivityWatcherImpl story_activity_watcher_;
-
-  fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> story_view_;
 
   fxl::WeakPtrFactory<TestApp> weak_ptr_factory_;
 

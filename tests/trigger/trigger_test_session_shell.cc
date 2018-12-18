@@ -13,31 +13,28 @@
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
 
-#include "peridot/lib/testing/component_base.h"
+#include "peridot/lib/testing/component_main.h"
+#include "peridot/lib/testing/session_shell_base.h"
 #include "peridot/public/lib/integration_testing/cpp/reporting.h"
 #include "peridot/public/lib/integration_testing/cpp/testing.h"
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/trigger/defs.h"
 
 using ::modular::testing::Await;
+using ::modular::testing::Signal;
 using ::modular::testing::TestPoint;
 
 namespace {
 
 const char kStoryName[] = "story";
 
-class TestApp : public modular::testing::ComponentBase<void> {
+class TestApp : public modular::testing::SessionShellBase {
  public:
   TestApp(component::StartupContext* const startup_context)
-      : ComponentBase(startup_context), weak_ptr_factory_(this) {
+      : SessionShellBase(startup_context), weak_ptr_factory_(this) {
     TestInit(__FILE__);
 
-    puppet_master_ =
-        startup_context
-            ->ConnectToEnvironmentService<fuchsia::modular::PuppetMaster>();
-    session_shell_context_ = startup_context->ConnectToEnvironmentService<
-        fuchsia::modular::SessionShellContext>();
-    session_shell_context_->GetStoryProvider(story_provider_.NewRequest());
+    startup_context->ConnectToEnvironmentService(puppet_master_.NewRequest());
 
     CreateStory();
   }
@@ -45,8 +42,6 @@ class TestApp : public modular::testing::ComponentBase<void> {
   ~TestApp() override = default;
 
  private:
-  using TestPoint = modular::testing::TestPoint;
-
   TestPoint story_create_{"Created story."};
 
   void CreateStory() {
@@ -68,11 +63,6 @@ class TestApp : public modular::testing::ComponentBase<void> {
           story_create_.Pass();
           StartStory();
         });
-    async::PostDelayedTask(
-        async_get_default_dispatcher(),
-        callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
-                             [this] { session_shell_context_->Logout(); }),
-        zx::msec(kTimeoutMilliseconds));
   }
 
   TestPoint got_queue_token_{"Got message queue token."};
@@ -81,13 +71,13 @@ class TestApp : public modular::testing::ComponentBase<void> {
   TestPoint agent_executed_delete_task_{
       "fuchsia::modular::Agent executed message queue task."};
   void StartStory() {
-    story_provider_->GetController(kStoryName, story_controller_.NewRequest());
+    story_provider()->GetController(kStoryName, story_controller_.NewRequest());
     story_controller_.set_error_handler([this](zx_status_t status) {
       FXL_LOG(ERROR) << "Story controller for story " << kStoryName
                      << " died. Does this story exist?";
     });
 
-    story_controller_->Start(story_view_.NewRequest());
+    story_controller_->RequestStart();
 
     // Retrieve the message queue token for the messsage queue that the module
     // created.
@@ -107,7 +97,7 @@ class TestApp : public modular::testing::ComponentBase<void> {
               // test store.
               Await(value, [this] {
                 agent_executed_delete_task_.Pass();
-                session_shell_context_->Logout();
+                Signal(modular::testing::kTestShutdown);
               });
             });
           });
@@ -116,11 +106,7 @@ class TestApp : public modular::testing::ComponentBase<void> {
 
   fuchsia::modular::PuppetMasterPtr puppet_master_;
   fuchsia::modular::StoryPuppetMasterPtr story_puppet_master_;
-  fuchsia::modular::SessionShellContextPtr session_shell_context_;
-  fuchsia::modular::StoryProviderPtr story_provider_;
   fuchsia::modular::StoryControllerPtr story_controller_;
-
-  fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> story_view_;
 
   fxl::WeakPtrFactory<TestApp> weak_ptr_factory_;
 

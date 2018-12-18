@@ -37,7 +37,8 @@ executable_package("last_focus_time_test_session_shell") {
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/rapidjson",
     "//peridot/public/lib/integration_testing/cpp",
-    "//peridot/lib/testing:component_base",
+    "//peridot/lib/testing:component_main",
+    "//peridot/lib/testing:session_shell_base",
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/tests/common:defs",
   ]

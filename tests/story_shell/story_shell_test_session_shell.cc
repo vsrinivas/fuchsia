@@ -23,7 +23,8 @@
 #include "peridot/lib/common/names.h"
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
-#include "peridot/lib/testing/component_base.h"
+#include "peridot/lib/testing/component_main.h"
+#include "peridot/lib/testing/session_shell_base.h"
 #include "peridot/public/lib/integration_testing/cpp/reporting.h"
 #include "peridot/public/lib/integration_testing/cpp/testing.h"
 #include "peridot/tests/common/defs.h"
@@ -31,6 +32,7 @@
 
 using modular::testing::Get;
 using modular::testing::Put;
+using modular::testing::Signal;
 using modular::testing::TestPoint;
 
 namespace {
@@ -39,19 +41,14 @@ const char kStoryName1[] = "story1";
 const char kStoryName2[] = "story2";
 
 // Cf. README.md for what this test does and how.
-class TestApp : public modular::testing::ComponentBase<void>,
+class TestApp : public modular::testing::SessionShellBase,
                 fuchsia::modular::SessionShellPresentationProvider {
  public:
   explicit TestApp(component::StartupContext* const startup_context)
-      : ComponentBase(startup_context) {
+      : SessionShellBase(startup_context) {
     TestInit(__FILE__);
 
-    puppet_master_ =
-        startup_context
-            ->ConnectToEnvironmentService<fuchsia::modular::PuppetMaster>();
-    session_shell_context_ = startup_context->ConnectToEnvironmentService<
-        fuchsia::modular::SessionShellContext>();
-    session_shell_context_->GetStoryProvider(story_provider_.NewRequest());
+    startup_context->ConnectToEnvironmentService(puppet_master_.NewRequest());
 
     startup_context->outgoing()
         .AddPublicService<fuchsia::modular::SessionShellPresentationProvider>(
@@ -146,7 +143,7 @@ class TestApp : public modular::testing::ComponentBase<void>,
   TestPoint story1_run1_{"Story1 Run1"};
 
   void Story1_Run1() {
-    story_provider_->GetController(kStoryName1, story_controller_.NewRequest());
+    story_provider()->GetController(kStoryName1, story_controller_.NewRequest());
 
     // TODO(jphsiao|vardhan): remodel this |proceed_after_6| style of
     // continuation to use Futures instead.
@@ -162,8 +159,7 @@ class TestApp : public modular::testing::ComponentBase<void>,
     Get("root:one:two manifest", proceed_after_6);
     Get("root:one:two ordering", proceed_after_6);
 
-    fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> story_view;
-    story_controller_->Start(story_view.NewRequest());
+    story_controller_->RequestStart();
   }
 
   void Story1_Stop1() {
@@ -185,8 +181,7 @@ class TestApp : public modular::testing::ComponentBase<void>,
     Get("root:one:two manifest", proceed_after_6);
     Get("root:one:two ordering", proceed_after_6);
 
-    fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> story_view;
-    story_controller_->Start(story_view.NewRequest());
+    story_controller_->RequestStart();
   }
 
   void Story1_Stop2() {
@@ -244,9 +239,8 @@ class TestApp : public modular::testing::ComponentBase<void>,
     Get("root:one:two manifest", proceed_after_5);
     Get("root:one:two ordering", proceed_after_5);
 
-    story_provider_->GetController(kStoryName2, story_controller_.NewRequest());
-    fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> story_view;
-    story_controller_->Start(story_view.NewRequest());
+    story_provider()->GetController(kStoryName2, story_controller_.NewRequest());
+    story_controller_->RequestStart();
   }
 
   void Story2_Stop1() {
@@ -267,8 +261,7 @@ class TestApp : public modular::testing::ComponentBase<void>,
     Get("root:one:two manifest", proceed_after_5);
     Get("root:one:two ordering", proceed_after_5);
 
-    fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> story_view;
-    story_controller_->Start(story_view.NewRequest());
+    story_controller_->RequestStart();
   }
 
   bool end_of_story2_{};
@@ -283,14 +276,12 @@ class TestApp : public modular::testing::ComponentBase<void>,
   void MaybeLogout() {
     if (story1_presentation_request_received_ &&
         story2_presentation_request_received_ && end_of_story2_) {
-      session_shell_context_->Logout();
+      Signal(modular::testing::kTestShutdown);
     }
   }
 
   fuchsia::modular::PuppetMasterPtr puppet_master_;
   fuchsia::modular::StoryPuppetMasterPtr story_puppet_master_;
-  fuchsia::modular::SessionShellContextPtr session_shell_context_;
-  fuchsia::modular::StoryProviderPtr story_provider_;
   fuchsia::modular::StoryControllerPtr story_controller_;
   fidl::BindingSet<fuchsia::modular::SessionShellPresentationProvider>
       presentation_provider_bindings_;

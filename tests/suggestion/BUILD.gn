@@ -55,7 +55,8 @@ executable_package("suggestion_test_session_shell") {
   deps = [
     ":defs",
     "//peridot/public/lib/integration_testing/cpp",
-    "//peridot/lib/testing:component_base",
+    "//peridot/lib/testing:component_main",
+    "//peridot/lib/testing:session_shell_base",
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/tests/common:defs",
   ]

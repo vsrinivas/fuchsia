@@ -14,6 +14,8 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/component_context/defs.h"
 
+using ::modular::testing::Await;
+using ::modular::testing::Signal;
 using ::modular::testing::TestPoint;
 using ::test::peridot::tests::componentcontext::ComponentContextTestService;
 
@@ -41,7 +43,7 @@ class TestApp : ComponentContextTestService {
   // Called by AgentDriver.
   void Connect(fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> request) {
     agent_services_.AddBinding(std::move(request));
-    modular::testing::GetStore()->Put("one_agent_connected", "", [] {});
+    Signal("one_agent_connected");
   }
 
   // Called by AgentDriver.
@@ -52,15 +54,15 @@ class TestApp : ComponentContextTestService {
 
   // Called by AgentDriver.
   void Terminate(const std::function<void()>& done) {
+    FXL_LOG(INFO) << "TestOneAgent::Terminate()";
     // Before reporting that we stop, we wait until two_agent has connected.
-    modular::testing::GetStore()->Get(
-        "two_agent_connected", [this, done](const fidl::StringPtr&) {
+    Await("two_agent_connected", [this, done] {
+          FXL_LOG(INFO) << "TestOneAgent::Terminate() GET";
           // Killing the agent controller should stop it.
           two_agent_controller_.Unbind();
           two_agent_connected_.Pass();
-          modular::testing::GetStore()->Put("one_agent_stopped", "", [done] {
-            modular::testing::Done(done);
-          });
+          Signal("one_agent_stopped");
+          modular::testing::Done(done);
         });
   }
 

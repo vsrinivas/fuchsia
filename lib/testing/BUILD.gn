@@ -10,11 +10,23 @@ source_set("component_base") {
   ]
 
   public_deps = [
+    ":component_main",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fxl",
     "//peridot/lib/fidl:single_service_app",
-    "//peridot/public/lib/app_driver/cpp:app_driver",
     "//peridot/public/lib/integration_testing/cpp",
+  ]
+}
+
+source_set("component_main") {
+  testonly = true
+
+  sources = [
+    "component_main.h",
+  ]
+
+  public_deps = [
+    "//peridot/public/lib/app_driver/cpp:app_driver",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -74,6 +86,40 @@ source_set("module_facet_reader_fake") {
     "//garnet/public/lib/fxl",
     "//peridot/lib/module_manifest:module_facet_reader",
     "//peridot/public/fidl/fuchsia.modular",
+  ]
+}
+
+source_set("session_shell_base") {
+  testonly = true
+
+  sources = [
+    "session_shell_base.h",
+  ]
+
+  public_deps = [
+    ":component_base",
+    ":session_shell_impl",
+  ]
+}
+
+source_set("session_shell_impl") {
+  testonly = true
+
+  sources = [
+    "session_shell_impl.h",
+    "session_shell_impl.cc",
+  ]
+
+  public_deps = [
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fxl",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/lib/integration_testing/cpp",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 

@@ -5,12 +5,11 @@
 #ifndef PERIDOT_LIB_TESTING_COMPONENT_BASE_H_
 #define PERIDOT_LIB_TESTING_COMPONENT_BASE_H_
 
-#include <lib/app_driver/cpp/app_driver.h>
-#include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/connect.h>
 #include <lib/fxl/memory/weak_ptr.h>
 
 #include "peridot/lib/fidl/single_service_app.h"
+#include "peridot/lib/testing/component_main.h"
 #include "peridot/public/lib/integration_testing/cpp/reporting.h"
 #include "peridot/public/lib/integration_testing/cpp/testing.h"
 
@@ -114,42 +113,6 @@ class ComponentBase<void> : protected ViewApp {
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ComponentBase);
 };
-
-// A main function for an application that only runs the implementation of a
-// single component used for integration testing. The component implementation
-// Impl usually derives from ComponentBase.
-//
-// Args are either nothing or the instance of a Settings class initialized from
-// the command line arguments.
-//
-// Example use with settings (TestApp and Settings are locally defined classes):
-//
-//   int main(int argc, const char** argv) {
-//     auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-//     Settings settings(command_line);
-//     modular::testing::ComponentMain<TestApp,
-//     Settings>(std::move(settings)); return 0;
-//   }
-//
-// Example use without settings (TestApp is a locally defined class):
-//
-//   int main(int, const char**) {
-//     modular::testing::ComponentMain<TestApp>();
-//     return 0;
-//   }
-//
-template <typename Impl, typename... Args>
-void ComponentMain(Args... args) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
-
-  auto context = component::StartupContext::CreateFromStartupInfo();
-  modular::AppDriver<Impl> driver(
-      context->outgoing().deprecated_services(),
-      std::make_unique<Impl>(context.get(), std::move(args)...),
-      [&loop] { loop.Quit(); });
-
-  loop.Run();
-}
 
 }  // namespace testing
 }  // namespace modular
