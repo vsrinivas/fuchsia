@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 #
 
-group("no_cmx_whitelist") {
+group("bare_package_url_whitelist") {
   #  ________  _________  ________  ________
   # |\   ____\|\___   ___\\   __  \|\   __  \
   # \ \  \___|\|___ \  \_\ \  \|\  \ \  \|\  \
@@ -12,9 +12,8 @@ group("no_cmx_whitelist") {
   #     ____\_\  \   \ \__\ \ \_______\ \__\
   #    |\_________\   \|__|  \|_______|\|__|
   #    \|_________|
-  # This is a whitelist of packages that have components that are missing cmx
-  # files. Do not add to this list. Please add cmx files to your components
-  # instead.
-  # https://fuchsia.googlesource.com/docs/+/master/the-book/package_metadata.md#Component-manifest
-  visibility = []
+  # This is a whitelist of packages that have components that launch with legacy
+  # bare package URLs. Do not add to this list. Please launch your components
+  # with fuchsia-pkg URLs instead.
+  visibility = [ "//garnet/bin/auth:*" ]
 }
