@@ -44,13 +44,10 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  bool input_path = true;
-  {
-    auto input_path_arg =
-        command_line.GetOptionValueWithDefault("input_path", "old");
-    input_path = input_path_arg != "new";
-    FXL_LOG(INFO) << "set_root_view requesting input delivery by: "
-                  << (input_path ? "ViewManager" : "Scenic");
+  if (command_line.HasOption("input_path", nullptr)) {
+    // Ease users off this flag.
+    FXL_LOG(ERROR)
+        << "The --input_path= flag is DEPRECATED. Flag will be removed.";
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
@@ -84,7 +81,6 @@ int main(int argc, const char** argv) {
       startup_context_
           ->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>();
   presenter->Present2(std::move(view_holder_token), nullptr);
-  presenter->HACK_SetInputPath(input_path);
 
   // Done!
   loop.Run();
