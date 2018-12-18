@@ -68,6 +68,18 @@ package("build-info") {
   ]
   resources = [
     {
+      dest = "product"
+      path = build_info_files.product
+    },
+    {
+      dest = "board"
+      path = build_info_files.board
+    },
+    {
+      dest = "version"
+      path = build_info_files.version
+    },
+    {
       dest = "last-update"
       path = build_info_files.last_update
     },

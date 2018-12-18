@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "test/build_info_tests"
+    },
+    "sandbox": {
+        "features": [
+            "build-info"
+        ],
+        "services": []
+    }
+}
