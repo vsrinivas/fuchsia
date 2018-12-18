@@ -4,22 +4,25 @@
 
 import("//build/rust/rustc_binary.gni")
 
-rustc_binary("dev_auth_provider_iotid_rust_bin") {
-  name = "dev_auth_provider_iotid_rust"
-  with_unit_tests = true
+rustc_binary("account_manager") {
+  name = "account_manager"
   edition = "2018"
+  with_unit_tests = true
 
   deps = [
-    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/lib/auth/account_common",
+    "//garnet/lib/auth/fidl:account-rustc",
     "//garnet/public/fidl/fuchsia.auth:fuchsia.auth-rustc",
+    "//garnet/public/fidl/fuchsia.auth.account:fuchsia.auth.account-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-zircon",
     "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures-preview",
-    "//third_party/rust-crates/rustc_deps:rand",
     "//third_party/rust-crates/rustc_deps:log",
+    "//third_party/rust-crates/rustc_deps:parking_lot",
   ]
 }
 

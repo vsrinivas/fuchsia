@@ -8,8 +8,8 @@ rustc_binary("token_manager_factory") {
   edition = "2018"
 
   deps = [
-    "//garnet/bin/auth/rust/cache",
-    "//garnet/bin/auth/rust/store",
+    "//garnet/lib/auth/cache",
+    "//garnet/lib/auth/store",
     "//garnet/public/fidl/fuchsia.auth:fuchsia.auth-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-app",

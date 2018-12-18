@@ -4,8 +4,7 @@
 
 import("//build/rust/rustc_binary.gni")
 
-rustc_binary("dev_auth_provider_rust_bin") {
-  name = "dev_auth_provider_rust"
+rustc_binary("dev_auth_provider") {
   with_unit_tests = true
   edition = "2018"
 

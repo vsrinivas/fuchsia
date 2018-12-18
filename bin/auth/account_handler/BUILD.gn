@@ -1,20 +1,17 @@
 # Copyright 2018 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-#
 
-import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//build/rust/rustc_binary.gni")
 
-rustc_library("account_manager_integration") {
+rustc_binary("account_handler") {
+  name = "account_handler"
   edition = "2018"
-  testonly = true
   with_unit_tests = true
 
-  source_root = "tests/lib.rs"
-
   deps = [
-    "//garnet/bin/auth/rust/account_common",
+    "//garnet/lib/auth/account_common",
+    "//garnet/lib/auth/fidl:account-rustc",
     "//garnet/public/fidl/fuchsia.auth:fuchsia.auth-rustc",
     "//garnet/public/fidl/fuchsia.auth.account:fuchsia.auth.account-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
@@ -26,17 +23,7 @@ rustc_library("account_manager_integration") {
     "//third_party/rust-crates/rustc_deps:futures-preview",
     "//third_party/rust-crates/rustc_deps:log",
     "//third_party/rust-crates/rustc_deps:parking_lot",
+    "//third_party/rust-crates/rustc_deps:rand",
   ]
 }
 
-test_package("account_manager_integration_test_pkg") {
-  deps = [
-    ":account_manager_integration",
-  ]
-
-  tests = [
-    {
-      name = "account_manager_integration_lib_test_rustc"
-    },
-  ]
-}

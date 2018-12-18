@@ -46,13 +46,15 @@ const std::string kDevIotIDIdp = "DevIotID";
 
 const TestComponentParam kTestComponentParams[] = {
     {{kDevIdp,
-      "fuchsia-pkg://fuchsia.com/token_manager_tests#"
-      "meta/dev_auth_provider_rust.cmx"},
-     "token_manager_factory"},
+      "fuchsia-pkg://fuchsia.com/token_manager_integration_tests#"
+      "meta/dev_auth_provider.cmx"},
+     "fuchsia-pkg://fuchsia.com/token_manager_factory#"
+     "meta/token_manager_factory.cmx"},
     {{kDevIotIDIdp,
-      "fuchsia-pkg://fuchsia.com/token_manager_tests#"
-      "meta/dev_auth_provider_iotid_rust.cmx"},
-     "token_manager_factory"}};
+      "fuchsia-pkg://fuchsia.com/token_manager_integration_tests#"
+      "meta/dev_auth_provider_iotid.cmx"},
+     "fuchsia-pkg://fuchsia.com/token_manager_factory#"
+     "meta/token_manager_factory.cmx"}};
 
 fuchsia::auth::AppConfig MakeDevAppConfig(
     const std::string& auth_provider_type) {

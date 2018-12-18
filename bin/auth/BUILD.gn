@@ -6,14 +6,14 @@ import("//build/package.gni")
 
 package("token_manager_factory") {
   deps = [
-    "//garnet/bin/auth/rust/token_manager:token_manager_factory",
+    "//garnet/bin/auth/token_manager_factory:token_manager_factory",
   ]
 
   binary = "rust_crates/token_manager_factory"
 
   meta = [
     {
-      path = rebase_path("rust/meta/token_manager.cmx")
+      path = rebase_path("meta/token_manager_factory.cmx")
       dest = "token_manager_factory.cmx"
     },
   ]
@@ -21,14 +21,14 @@ package("token_manager_factory") {
 
 package("account_manager") {
   deps = [
-    "//garnet/bin/auth/rust/account_manager:account_manager",
+    "//garnet/bin/auth/account_manager:account_manager",
   ]
 
   binary = "rust_crates/account_manager"
 
   meta = [
     {
-      path = rebase_path("rust/meta/account_manager.cmx")
+      path = rebase_path("meta/account_manager.cmx")
       dest = "account_manager.cmx"
     },
   ]
@@ -36,74 +36,33 @@ package("account_manager") {
 
 package("account_handler") {
   deps = [
-    "//garnet/bin/auth/rust/account_handler:account_handler",
+    "//garnet/bin/auth/account_handler:account_handler",
   ]
 
   binary = "rust_crates/account_handler"
 
   meta = [
     {
-      path = rebase_path("rust/meta/account_handler.cmx")
+      path = rebase_path("meta/account_handler.cmx")
       dest = "account_handler.cmx"
     },
   ]
 }
 
 
-package("rust_tests") {
+package("auth_bin_unittests") {
   testonly = true
-  package_name = "auth_rust_tests"
 
   deps = [
-    "rust/cache:cache",
-    "rust/store:store",
-    "rust/account_manager:account_manager",
-    "rust/testing/dev_auth_provider:dev_auth_provider_rust_bin",
-    "rust/testing/dev_auth_provider_iotid:dev_auth_provider_iotid_rust_bin",
+    "account_manager:account_manager",
+    "account_handler:account_handler",
+    "testing/dev_auth_provider:dev_auth_provider",
+    "testing/dev_auth_provider_iotid:dev_auth_provider_iotid",
   ]
 
   tests = [
-    { name = "auth_cache_lib_test_rustc" },
-    { name = "auth_store_lib_test_rustc" },
     { name = "account_manager_bin_test_rustc" },
-    { name = "dev_auth_provider_rust_bin_test_rustc"},
-    { name = "dev_auth_provider_iotid_rust_bin_test_rustc"},
-  ]
-}
-
-package("tests") {
-  testonly = true
-  package_name = "token_manager_tests"
-
-  deps = [
-    "//garnet/bin/auth/testing/e2e_local:e2e_dev",
-    "//garnet/bin/auth/rust/testing/dev_auth_provider:dev_auth_provider_rust_bin",
-    "//garnet/bin/auth/rust/testing/dev_auth_provider_iotid:dev_auth_provider_iotid_rust_bin"
-  ]
-
-  binaries = [
-    {
-      name = "dev_auth_provider_rust"
-    },
-    {
-      name = "dev_auth_provider_iotid_rust"
-    },
-  ]
-
-  tests = [
-    {
-      name = "dev_token_mgr_e2e_test"
-    },
-  ]
-
-   meta = [
-    {
-        path = rebase_path("testing/meta/dev_auth_provider_rust.cmx")
-        dest = "dev_auth_provider_rust.cmx"
-    },
-    {
-        path = rebase_path("testing/meta/dev_auth_provider_iotid_rust.cmx")
-        dest = "dev_auth_provider_iotid_rust.cmx"
-    },
+    { name = "dev_auth_provider_bin_test_rustc"},
+    { name = "dev_auth_provider_iotid_bin_test_rustc"},
   ]
 }
