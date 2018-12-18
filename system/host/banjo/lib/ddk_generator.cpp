@@ -65,7 +65,9 @@ std::string NameCount(const DdkGenerator::Member& member) {
 
 bool ReturnFirst(const std::vector<DdkGenerator::Member>& output) {
     return output.size() > 0 && (output[0].kind == flat::Type::Kind::kPrimitive ||
-                                 output[0].kind == flat::Type::Kind::kString);
+                                 output[0].kind == flat::Type::Kind::kString ||
+                                 (output[0].kind == flat::Type::Kind::kIdentifier &&
+                                  output[0].decl_kind == flat::Decl::Kind::kEnum));
 }
 
 void EmitFileComment(std::ostream* file, banjo::StringView name) {

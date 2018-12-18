@@ -144,9 +144,9 @@ static zx_status_t usb_interface_configure_batch_callback(void* ctx, uint8_t ep_
     return usb_configure_batch_callback(&intf->comp->usb, ep_address, complete_cb);
 }
 
-static void usb_interface_get_speed(void* ctx, usb_speed_t* out_speed) {
+static usb_speed_t usb_interface_get_speed(void* ctx) {
     usb_interface_t* intf = ctx;
-    usb_get_speed(&intf->comp->usb, out_speed);
+    return usb_get_speed(&intf->comp->usb);
 }
 
 static zx_status_t usb_interface_set_interface(void* ctx, uint8_t interface_number,

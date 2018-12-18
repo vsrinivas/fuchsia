@@ -283,9 +283,9 @@ static zx_status_t usb_device_configure_batch_callback(void* ctx, uint8_t ep_add
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static void usb_device_get_speed(void* ctx, usb_speed_t* out_speed) {
+static usb_speed_t usb_device_get_speed(void* ctx) {
     usb_device_t* dev = ctx;
-    *out_speed = dev->speed;
+    return dev->speed;
 }
 
 static zx_status_t usb_device_set_interface(void* ctx, uint8_t interface_number,
