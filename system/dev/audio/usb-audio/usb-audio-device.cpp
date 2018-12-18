@@ -58,7 +58,7 @@ zx_status_t UsbAudioDevice::Bind() {
 
     // Fetch our protocol.  We will need it to do pretty much anything with this
     // device.
-    status = device_get_protocol(parent(), ZX_PROTOCOL_USB_OLD, &usb_proto_);
+    status = device_get_protocol(parent(), ZX_PROTOCOL_USB, &usb_proto_);
     if (status != ZX_OK) {
         LOG(ERROR, "Failed to get USB protocol thunks (status %d)\n", status);
         return status;

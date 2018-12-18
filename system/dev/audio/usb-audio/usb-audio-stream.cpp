@@ -132,9 +132,9 @@ zx_status_t UsbAudioStream::Bind() {
     return status;
 }
 
-void UsbAudioStream::RequestCompleteCallback(usb_request_t* request, void* cookie) {
-    ZX_DEBUG_ASSERT(cookie != nullptr);
-    reinterpret_cast<UsbAudioStream*>(cookie)->RequestComplete(request);
+void UsbAudioStream::RequestCompleteCallback(void* ctx, usb_request_t* request) {
+    ZX_DEBUG_ASSERT(ctx != nullptr);
+    reinterpret_cast<UsbAudioStream*>(ctx)->RequestComplete(request);
 }
 
 void UsbAudioStream::ComputePersistentUniqueId() {
@@ -1122,8 +1122,11 @@ void UsbAudioStream::QueueRequestLocked() {
 
     req->header.frame = usb_frame_num_++;
     req->header.length = todo;
-    usb_request_queue(&parent_.usb_proto(), req,
-                      UsbAudioStream::RequestCompleteCallback, this);
+    usb_request_complete_t complete = {
+        .callback = UsbAudioStream::RequestCompleteCallback,
+        .ctx = this,
+    };
+    usb_request_queue(&parent_.usb_proto(), req, &complete);
 }
 
 void UsbAudioStream::CompleteRequestLocked(usb_request_t* req) {

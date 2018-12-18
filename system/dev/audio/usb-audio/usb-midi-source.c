@@ -4,8 +4,8 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/usb-old.h>
-#include <ddk/usb/usb.h>
+#include <ddk/protocol/usb.h>
+#include <usb/usb.h>
 #include <usb/usb-request.h>
 #include <zircon/device/midi.h>
 #include <stdlib.h>
@@ -53,8 +53,8 @@ static void update_signals(usb_midi_source_t* source) {
     }
 }
 
-static void usb_midi_source_read_complete(usb_request_t* req, void* cookie) {
-    usb_midi_source_t* source = (usb_midi_source_t*)cookie;
+static void usb_midi_source_read_complete(void* ctx, usb_request_t* req) {
+    usb_midi_source_t* source = (usb_midi_source_t*)ctx;
 
     if (req->response.status == ZX_ERR_IO_NOT_PRESENT) {
         usb_request_release(req);
@@ -68,7 +68,11 @@ static void usb_midi_source_read_complete(usb_request_t* req, void* cookie) {
                                                    source->parent_req_size);
         ZX_DEBUG_ASSERT(status == ZX_OK);
     } else {
-        usb_request_queue(&source->usb, req, usb_midi_source_read_complete, source);
+        usb_request_complete_t complete = {
+            .callback = usb_midi_source_read_complete,
+            .ctx = source,
+        };
+        usb_request_queue(&source->usb, req, &complete);
     }
     update_signals(source);
     mtx_unlock(&source->mutex);
@@ -112,14 +116,18 @@ static zx_status_t usb_midi_source_open(void* ctx, zx_device_t** dev_out, uint32
     }
 
     // queue up reads, including stale completed reads
+    usb_request_complete_t complete = {
+        .callback = usb_midi_source_read_complete,
+        .ctx = source,
+    };
     usb_request_t* req;
     while ((req = usb_req_list_remove_head(&source->completed_reads,
                                            source->parent_req_size)) != NULL) {
-        usb_request_queue(&source->usb, req, usb_midi_source_read_complete, source);
+        usb_request_queue(&source->usb, req, &complete);
     }
     while ((req = usb_req_list_remove_head(&source->free_read_reqs,
                                            source->parent_req_size)) != NULL) {
-        usb_request_queue(&source->usb, req, usb_midi_source_read_complete, source);
+        usb_request_queue(&source->usb, req, &complete);
     }
     mtx_unlock(&source->mutex);
 
@@ -163,9 +171,13 @@ static zx_status_t usb_midi_source_read(void* ctx, void* data, size_t len, zx_of
     list_remove_head(&source->completed_reads);
     status = usb_req_list_add_head(&source->free_read_reqs, req, source->parent_req_size);
     ZX_DEBUG_ASSERT(status == ZX_OK);
+    usb_request_complete_t complete = {
+        .callback = usb_midi_source_read_complete,
+        .ctx = source,
+    };
     while ((req = usb_req_list_remove_head(&source->free_read_reqs,
                                            source->parent_req_size)) != NULL) {
-        usb_request_queue(&source->usb, req, usb_midi_source_read_complete, source);
+        usb_request_queue(&source->usb, req, &complete);
     }
 
 out:

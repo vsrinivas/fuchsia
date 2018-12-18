@@ -6,13 +6,13 @@
 
 #include <ddktl/device.h>
 #include <ddktl/device-internal.h>
-#include <ddk/usb/usb.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/vector.h>
 #include <lib/zx/vmo.h>
+#include <usb/usb.h>
 #include <zircon/listnode.h>
 
 #include <audio-proto/audio-proto.h>
@@ -119,7 +119,7 @@ private:
     void QueueRequestLocked() __TA_REQUIRES(req_lock_);
     void CompleteRequestLocked(usb_request_t* req) __TA_REQUIRES(req_lock_);
 
-    static void RequestCompleteCallback(usb_request_t* request, void* cookie);
+    static void RequestCompleteCallback(void* ctx, usb_request_t* request);
     UsbAudioDevice& parent_;
     const fbl::unique_ptr<UsbAudioStreamInterface> ifc_;
     char log_prefix_[LOG_PREFIX_STORAGE] = { 0 };

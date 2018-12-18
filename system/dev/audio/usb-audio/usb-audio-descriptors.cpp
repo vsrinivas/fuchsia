@@ -32,11 +32,12 @@ fbl::RefPtr<DescriptorListMemory> DescriptorListMemory::Create(usb_protocol_t* p
         return nullptr;
     }
 
-    zx_status_t status = usb_get_descriptor_list(proto, &ret->data_, &ret->size_);
-    if (status != ZX_OK) {
-        GLOBAL_LOG(ERROR, "Failed to fetch device descriptor list (status = %d)\n", status);
+    size_t desc_length = usb_get_descriptors_length(proto);
+    ret->data_ = malloc(desc_length);
+    if (!ret->data_) {
         return nullptr;
     }
+    usb_get_descriptors(proto, ret->data_, desc_length, &ret->size_);
 
     if (zxlog_level_enabled(SPEW)) {
         GLOBAL_LOG(SPEW, "Descriptor List is %zu bytes long\n", ret->size_);

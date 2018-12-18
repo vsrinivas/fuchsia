@@ -87,8 +87,15 @@ zx_status_t AudioUnit::CtrlReq(const usb_protocol_t& proto,
     // on the code above us taking some action to shut this device down.
     constexpr uint64_t kRelativeTimeout = ZX_MSEC(500);
     size_t done = 0;
-    zx_status_t status = usb_control(proto_ptr, req_type, code, val, index(), data, len,
-                                     zx_deadline_after(kRelativeTimeout), &done);
+    zx_status_t status;
+    if ((req_type & USB_DIR_MASK) == USB_DIR_OUT) {
+        status = usb_control(proto_ptr, req_type, code, val, index(),
+                             zx_deadline_after(kRelativeTimeout), data, len, nullptr, 0, nullptr);
+        done = len;
+    } else {
+        status = usb_control(proto_ptr, req_type, code, val, index(),
+                             zx_deadline_after(kRelativeTimeout), nullptr, 0, data, len, &done);
+    }
     if ((status == ZX_OK) && (done != len)) {
         status = ZX_ERR_BUFFER_TOO_SMALL;
     }

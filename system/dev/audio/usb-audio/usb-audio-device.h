@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <ddk/protocol/usb-old.h>
+#include <ddk/protocol/usb.h>
 #include <ddktl/device.h>
 #include <fbl/array.h>
 #include <fbl/intrusive_double_list.h>

@@ -30,7 +30,7 @@ MODULE_LIBS := \
 MODULE_STATIC_LIBS := \
     system/ulib/audio-driver-proto \
     system/ulib/audio-proto-utils \
-    system/dev/lib/usb-old \
+    system/dev/lib/usb \
     system/ulib/digest \
     system/ulib/dispatcher-pool \
     system/ulib/ddk \
@@ -43,6 +43,7 @@ MODULE_STATIC_LIBS := \
     third_party/ulib/uboringssl \
 
 MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-usb \
     system/banjo/ddk-protocol-usb-composite \
     system/banjo/ddk-protocol-usb-request \
 

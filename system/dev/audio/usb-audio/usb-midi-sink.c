@@ -4,8 +4,8 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/usb-old.h>
-#include <ddk/usb/usb.h>
+#include <ddk/protocol/usb.h>
+#include <usb/usb.h>
 #include <usb/usb-request.h>
 #include <zircon/device/midi.h>
 #include <lib/sync/completion.h>
@@ -54,8 +54,8 @@ static void update_signals(usb_midi_sink_t* sink) {
     }
 }
 
-static void usb_midi_sink_write_complete(usb_request_t* req, void* cookie) {
-    usb_midi_sink_t* sink = (usb_midi_sink_t*)cookie;
+static void usb_midi_sink_write_complete(void* ctx, usb_request_t* req) {
+    usb_midi_sink_t* sink = (usb_midi_sink_t*)ctx;
     if (req->response.status == ZX_ERR_IO_NOT_PRESENT) {
         usb_request_release(req);
         return;
@@ -161,7 +161,11 @@ static zx_status_t usb_midi_sink_write(void* ctx, const void* data, size_t lengt
 
         usb_request_copy_to(req, buffer, 4, 0);
         req->header.length = 4;
-        usb_request_queue(&sink->usb, req, usb_midi_sink_write_complete, sink);
+        usb_request_complete_t complete = {
+            .callback = usb_midi_sink_write_complete,
+            .ctx = sink,
+        };
+        usb_request_queue(&sink->usb, req, &complete);
 
         src += message_length;
         length -= message_length;

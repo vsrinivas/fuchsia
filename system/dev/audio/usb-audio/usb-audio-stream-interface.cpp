@@ -385,8 +385,8 @@ zx_status_t UsbAudioStreamInterface::ActivateFormat(size_t ndx, uint32_t frames_
                              USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_ENDPOINT,
                              USB_AUDIO_SET_CUR,
                              USB_AUDIO_SAMPLING_FREQ_CONTROL << 8,
-                             f.ep_addr_,
-                             &buffer, sizeof(buffer), ZX_TIME_INFINITE, NULL);
+                             f.ep_addr_, ZX_TIME_INFINITE,
+                             &buffer, sizeof(buffer), nullptr, 0, nullptr);
         if (status != ZX_OK) {
             if (status == ZX_ERR_IO_REFUSED || status == ZX_ERR_IO_INVALID) {
                 // clear the stall/error
