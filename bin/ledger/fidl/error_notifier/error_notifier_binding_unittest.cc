@@ -268,7 +268,7 @@ TEST_F(ErrorNotifierTest, OnEmpty) {
   binding_.set_on_empty(callback::SetWhenCalled(&called));
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
-  ptr_.Close(ZX_OK);
+  ptr_.Unbind();
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
 }
@@ -280,7 +280,7 @@ TEST_F(ErrorNotifierTest, OnEmptyWithRunningOperation) {
   ptr_->NoResponse();
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
-  ptr_.Close(ZX_OK);
+  ptr_.Unbind();
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
   impl_.RunDelayedCallback();
