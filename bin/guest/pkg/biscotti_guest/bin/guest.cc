@@ -222,38 +222,35 @@ void Guest::StartGuest() {
 void Guest::ConfigureNetwork() {
   FXL_CHECK(maitred_)
       << "Called ConfigureNetwork without a maitre'd connection";
-
   std::string arg;
-  uint32_t ip_addr = 0;
-  uint32_t netmask = 0;
-  uint32_t gateway = 0;
-  if (cl_.GetOptionValue("ip", &arg)) {
-    FXL_LOG(INFO) << "Using ip: " << arg;
-    struct in_addr addr;
-    FXL_CHECK(inet_aton(arg.c_str(), &addr) != 0)
-        << "Failed to parse address string";
-    ip_addr = addr.s_addr;
-  }
-  if (cl_.GetOptionValue("netmask", &arg)) {
-    FXL_LOG(INFO) << "Using netmask: " << arg;
-    struct in_addr addr;
-    FXL_CHECK(inet_aton(arg.c_str(), &addr) != 0)
-        << "Failed to parse address string";
-    netmask = addr.s_addr;
-  }
-  if (cl_.GetOptionValue("gateway", &arg)) {
-    FXL_LOG(INFO) << "Using gateway: " << arg;
-    struct in_addr addr;
-    FXL_CHECK(inet_aton(arg.c_str(), &addr) != 0)
-        << "Failed to parse address string";
-    gateway = addr.s_addr;
-  }
-  if (!ip_addr && !gateway && !netmask) {
-    FXL_LOG(INFO) << "No network configuration arguments provided, skipping network configuration.";
-    FXL_LOG(INFO) << "Re-run with '--help' for more information";
-    return;
-  }
+  struct in_addr addr;
 
+  uint32_t ip_addr = 0;
+  if (!cl_.GetOptionValue("ip", &arg)) {
+    arg = BISCOTTI_IP_DEFAULT;
+  }
+  FXL_LOG(INFO) << "Using ip: " << arg;
+  FXL_CHECK(inet_aton(arg.c_str(), &addr) != 0)
+      << "Failed to parse address string";
+  ip_addr = addr.s_addr;
+
+  uint32_t netmask = 0;
+  if (!cl_.GetOptionValue("netmask", &arg)) {
+    arg = BISCOTTI_NETMASK_DEFAULT;
+  }
+  FXL_LOG(INFO) << "Using netmask: " << arg;
+  FXL_CHECK(inet_aton(arg.c_str(), &addr) != 0)
+      << "Failed to parse address string";
+  netmask = addr.s_addr;
+
+  uint32_t gateway = 0;
+  if (!cl_.GetOptionValue("gateway", &arg)) {
+    arg = BISCOTTI_GATEWAY_DEFAULT;
+  }
+  FXL_LOG(INFO) << "Using gateway: " << arg;
+  FXL_CHECK(inet_aton(arg.c_str(), &addr) != 0)
+      << "Failed to parse address string";
+  gateway = addr.s_addr;
   FXL_LOG(INFO) << "Configuring Guest Network...";
 
   grpc::ClientContext context;

@@ -5,6 +5,26 @@
 import("//build/package.gni")
 import("//third_party/protobuf/proto_library.gni")
 
+declare_args() {
+  # Default values for the guest network configuration.
+  #
+  # Currently the guest shares the same NIC as the host, so you need to use
+  # values here that play nicely with your network setup. Typically I've found
+  # using a unique IP on the same subnet as fuchsia works okay. The values below
+  # are chosen to play nicely with the default edge-router setup.
+  biscotti_ip = "192.168.42.111"
+  biscotti_gateway = "192.168.42.1"
+  biscotti_netmask = "255.255.255.0"
+}
+
+config("biscotti_net_config") {
+  defines = [
+    "BISCOTTI_IP_DEFAULT=\"" + biscotti_ip + "\"",
+    "BISCOTTI_GATEWAY_DEFAULT=\"" + biscotti_gateway + "\"",
+    "BISCOTTI_NETMASK_DEFAULT=\"" + biscotti_netmask + "\"",
+  ]
+}
+
 source_set("lib") {
   sources = [
     "guest.cc",
@@ -12,6 +32,7 @@ source_set("lib") {
     "log_collector.cc",
     "log_collector.h",
   ]
+  public_configs = [ ":biscotti_net_config" ]
   public_deps = [
     ":protos",
     "//garnet/public/fidl/fuchsia.guest",
