@@ -247,7 +247,7 @@ static void use_video_decoder(
     async::Loop* main_loop, fuchsia::mediacodec::CodecFactoryPtr codec_factory,
     Format format, const std::string& input_file,
     const std::string& output_file, uint8_t md_out[SHA256_DIGEST_LENGTH],
-    std::vector<std::pair<bool, uint64_t>>* timestamps_out,
+    std::vector<std::pair<bool, uint64_t>>* timestamps_out, uint32_t* fourcc,
     FrameSink* frame_sink) {
   VLOGF("use_h264_decoder()\n");
   FXL_DCHECK(!timestamps_out || timestamps_out->empty());
@@ -356,7 +356,7 @@ static void use_video_decoder(
   // frame_sink activity started by out_thread).
   std::unique_ptr<std::thread> out_thread = std::make_unique<
       std::thread>([main_loop, &codec_client, output_file, md_out,
-                    &timestamps_out, frame_sink]() {
+                    &timestamps_out, &fourcc, frame_sink]() {
     // The codec_client lock_ is not held for long durations in here, which is
     // good since we're using this thread to do things like write to an output
     // file.
@@ -440,6 +440,9 @@ static void use_video_decoder(
         }
 
         raw = &video_format.uncompressed();
+        if (fourcc) {
+          *fourcc = raw->fourcc;
+        }
         switch (raw->fourcc) {
           case make_fourcc('N', 'V', '1', '2'): {
             size_t y_size =
@@ -727,9 +730,9 @@ void use_h264_decoder(async::Loop* main_loop,
                       const std::string& output_file,
                       uint8_t md_out[SHA256_DIGEST_LENGTH],
                       std::vector<std::pair<bool, uint64_t>>* timestamps_out,
-                      FrameSink* frame_sink) {
+                      uint32_t* fourcc, FrameSink* frame_sink) {
   use_video_decoder(main_loop, std::move(codec_factory), Format::kH264,
-                    input_file, output_file, md_out, timestamps_out,
+                    input_file, output_file, md_out, timestamps_out, fourcc,
                     frame_sink);
 }
 
@@ -741,6 +744,6 @@ void use_vp9_decoder(async::Loop* main_loop,
                      std::vector<std::pair<bool, uint64_t>>* timestamps_out,
                      FrameSink* frame_sink) {
   use_video_decoder(main_loop, std::move(codec_factory), Format::kVp9,
-                    input_file, output_file, md_out, timestamps_out,
+                    input_file, output_file, md_out, timestamps_out, nullptr,
                     frame_sink);
 }

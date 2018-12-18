@@ -112,7 +112,7 @@ int main(int argc, char* argv[]) {
                    input_file, output_file, &md,
                    frame_sink = frame_sink.get()]() mutable {
       use_h264_decoder(&main_loop, std::move(codec_factory), input_file,
-                       output_file, md, nullptr, frame_sink);
+                       output_file, md, nullptr, nullptr, frame_sink);
     };
   } else if (command_line.HasOption("vp9")) {
     use_decoder = [&main_loop, codec_factory = std::move(codec_factory),

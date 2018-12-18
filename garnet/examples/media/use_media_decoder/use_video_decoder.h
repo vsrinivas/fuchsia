@@ -38,6 +38,7 @@ class FrameSink;
 //     format details.
 // timestamps_out - out ordered <has_timestamp_ish, timestamp_ish> seen at the
 //     output of the decoder.
+// fourcc - if not nullptr, sets the value to the fourcc of the decoded frames.
 // frame_sink - if not nullptr, send each frame to this FrameSink, which will
 //     call back when the frame has been released by the sink.
 void use_h264_decoder(async::Loop* main_loop,
@@ -46,7 +47,7 @@ void use_h264_decoder(async::Loop* main_loop,
                       const std::string& output_file,
                       uint8_t md_out[SHA256_DIGEST_LENGTH],
                       std::vector<std::pair<bool, uint64_t>>* timestamps_out,
-                      FrameSink* frame_sink);
+                      uint32_t* fourcc, FrameSink* frame_sink);
 
 // The same as use_h264_decoder, but for a VP9 file wrapped in an IVF container.
 void use_vp9_decoder(async::Loop* main_loop,

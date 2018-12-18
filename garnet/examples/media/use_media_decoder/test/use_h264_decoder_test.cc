@@ -10,23 +10,27 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <map>
 
 #include "../use_video_decoder.h"
+#include "../util.h"
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>
-#include "lib/fxl/logging.h"
+#include <lib/fxl/logging.h>
+#include <lib/media/codec_impl/fourcc.h>
 
 #include <set>
 
 namespace {
 
-constexpr char kInputFilePath[] =
-    "/pkgfs/packages/media_examples_manual_tests/0/data/media_test_data/"
-    "bear.h264";
+constexpr char kInputFilePath[] = "/pkg/data/bear.h264";
 
-constexpr char kGoldenSha256[SHA256_DIGEST_LENGTH * 2 + 1] =
-    "212aad741a1f2f560753f2b2731afe483e975ec5891dcd20cf93fe1c57b1091a";
+const std::map<uint32_t, const char*> GoldenSha256s = {
+    {make_fourcc('Y', 'V', '1', '2'),
+     "f40cd9c876ef429da421cf4ae4a5a0df1795c4519ddac098a5c3f427f5566281"},
+    {make_fourcc('N', 'V', '1', '2'),
+     "29c86f37972b5b70768620f8f702c37f3579e0cd84bec7159900680075026460"}};
 
 }  // namespace
 
@@ -48,13 +52,13 @@ int main(int argc, char* argv[]) {
           codec_factory.NewRequest());
 
   printf("The test file is: %s\n", kInputFilePath);
-  printf("The expected sha256 is: %s\n", kGoldenSha256);
   printf("Decoding test file and computing sha256...\n");
 
   uint8_t md[SHA256_DIGEST_LENGTH];
   std::vector<std::pair<bool, uint64_t>> timestamps;
+  uint32_t fourcc;
   use_h264_decoder(&main_loop, std::move(codec_factory), kInputFilePath, "", md,
-                   &timestamps, nullptr);
+                   &timestamps, &fourcc, nullptr);
 
   std::set<uint64_t> expected_timestamps;
   for (uint64_t i = 0; i < 30; i++) {
@@ -102,9 +106,9 @@ int main(int argc, char* argv[]) {
   }
   FXL_CHECK(actual_sha256_ptr == actual_sha256 + SHA256_DIGEST_LENGTH * 2);
   printf("Done decoding - computed sha256 is: %s\n", actual_sha256);
-  if (strcmp(actual_sha256, kGoldenSha256)) {
+  if (strcmp(actual_sha256, GoldenSha256s.at(fourcc))) {
     printf("The sha256 doesn't match - expected: %s actual: %s\n",
-           kGoldenSha256, actual_sha256);
+           GoldenSha256s.at(fourcc), actual_sha256);
     exit(-1);
   }
   printf("The computed sha256 matches kGoldenSha256.  Yay!\nPASS\n");
