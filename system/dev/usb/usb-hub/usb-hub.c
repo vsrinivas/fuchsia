@@ -6,10 +6,10 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/usb-old.h>
+#include <ddk/protocol/usb.h>
 #include <ddk/protocol/usb/bus.h>
 #include <ddk/protocol/usb/hub.h>
-#include <ddk/usb/usb.h>
+#include <usb/usb.h>
 #include <usb/usb-request.h>
 #include <zircon/hw/usb/hub.h>
 #include <lib/sync/completion.h>
@@ -161,9 +161,9 @@ static zx_status_t usb_hub_wait_for_port(usb_hub_t* hub, int port, port_status_t
     return ZX_ERR_TIMED_OUT;
 }
 
-static void usb_hub_interrupt_complete(usb_request_t* req, void* cookie) {
+static void usb_hub_interrupt_complete(void* ctx, usb_request_t* req) {
     zxlogf(TRACE, "usb_hub_interrupt_complete got %d %" PRIu64 "\n", req->response.status, req->response.actual);
-    usb_hub_t* hub = (usb_hub_t*)cookie;
+    usb_hub_t* hub = (usb_hub_t*)ctx;
     sync_completion_signal(&hub->completion);
 }
 
@@ -360,10 +360,15 @@ static int usb_hub_thread(void* arg) {
     uint8_t status_buf[128 / 8];
     memset(status_buf, 0, sizeof(status_buf));
 
+    usb_request_complete_t complete = {
+        .callback = usb_hub_interrupt_complete,
+        .ctx = hub,
+    };
+
     // This loop handles events from our interrupt endpoint
     while (1) {
         sync_completion_reset(&hub->completion);
-        usb_request_queue(&hub->usb, req, usb_hub_interrupt_complete, hub);
+        usb_request_queue(&hub->usb, req, &complete);
         sync_completion_wait(&hub->completion, ZX_TIME_INFINITE);
         if (req->response.status != ZX_OK || atomic_load(&hub->thread_done)) {
             break;
@@ -406,7 +411,7 @@ fail:
 
 static zx_status_t usb_hub_bind(void* ctx, zx_device_t* device) {
     usb_protocol_t usb;
-    zx_status_t status = device_get_protocol(device, ZX_PROTOCOL_USB_OLD, &usb);
+    zx_status_t status = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);
     if (status != ZX_OK) {
         return status;
     }
@@ -521,6 +526,6 @@ static zx_driver_ops_t usb_hub_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(usb_hub, usb_hub_driver_ops, "zircon", "0.1", 2)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_DEVICE_OLD),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_DEVICE),
     BI_MATCH_IF(EQ, BIND_USB_CLASS, USB_CLASS_HUB),
 ZIRCON_DRIVER_END(usb_hub)
