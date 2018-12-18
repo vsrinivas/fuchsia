@@ -209,7 +209,7 @@ dwarf_find_unwind_table (struct elf_dyn_info *edi, unw_addr_space_t as,
       /* two 32-bit values (ip_offset/fde_offset) per table-entry: */
       edi->di_cache.u.rti.table_len = (fde_count * 8) / sizeof (unw_word_t);
       edi->di_cache.u.rti.table_data = ((load_base + peh_hdr->p_vaddr)
-                                        + sizeof(*hdr));
+                                        + (addr - (unw_word_t)hdr));
 
       /* For the binary-search table in the eh_frame_hdr, data-relative
          means relative to the start of that section... */
@@ -448,7 +448,7 @@ dwarf_as_find_unwind_table (struct as_elf_dyn_info *edi, unw_addr_space_t as,
       /* two 32-bit values (ip_offset/fde_offset) per table-entry: */
       edi->di_cache.u.rti.table_len = (fde_count * 8) / sizeof (unw_word_t);
       edi->di_cache.u.rti.table_data = ((load_base + peh_hdr->p_vaddr)
-                                        + sizeof(*hdr));
+                                        + (addr - (unw_word_t)hdr));
 
       /* For the binary-search table in the eh_frame_hdr, data-relative
          means relative to the start of that section... */
