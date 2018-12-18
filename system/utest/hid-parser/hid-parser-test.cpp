@@ -19,6 +19,7 @@ extern "C" const uint8_t ps3_ds_r_desc[148];
 extern "C" const uint8_t acer12_touch_r_desc[660];
 extern "C" const uint8_t eve_tablet_r_desc[28];
 extern "C" const uint8_t asus_touch_desc[945];
+extern "C" const uint8_t eve_touchpad_v2_r_desc[560];
 
 // See hid-utest-data.cpp for the definitions of the test data
 extern "C" const uint8_t push_pop_test[62];
@@ -760,6 +761,15 @@ static bool parse_push_pop() {
     END_TEST;
 }
 
+static bool parse_eve_touchpad_v2() {
+   BEGIN_TEST;
+   hid::DeviceDescriptor* dev = nullptr;
+   auto res = hid::ParseReportDescriptor(eve_touchpad_v2_r_desc,
+                                         sizeof(eve_touchpad_v2_r_desc), &dev);
+   ASSERT_EQ(res, hid::ParseResult::kParseOk);
+   END_TEST;
+}
+
 BEGIN_TEST_CASE(hidparser_tests)
 RUN_TEST(itemize_acer12_rpt1)
 RUN_TEST(itemize_eve_tablet_rpt)
@@ -770,6 +780,7 @@ RUN_TEST(parse_ps3_controller)
 RUN_TEST(parse_acer12_touch)
 RUN_TEST(parse_eve_tablet)
 RUN_TEST(parse_asus_touch)
+RUN_TEST(parse_eve_touchpad_v2)
 END_TEST_CASE(hidparser_tests)
 
 int main(int argc, char** argv) {
