@@ -65,7 +65,7 @@ void MemoryAnalysis::Schedule(const AnalyzeMemoryOptions& opts) {
   if (opts.thread) {
     // Request registers. Only need the general registers.
     if (!have_registers_) {
-      opts.thread->GetRegisters(
+      opts.thread->ReadRegisters(
           {debug_ipc::RegisterCategory::Type::kGeneral},
           [this_ref](const Err& err, const RegisterSet& registers) {
             this_ref->OnRegisters(err, registers);

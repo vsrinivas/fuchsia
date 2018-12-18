@@ -59,9 +59,12 @@ class RemoteAPI {
   virtual void ReadMemory(
       const debug_ipc::ReadMemoryRequest& request,
       std::function<void(const Err&, debug_ipc::ReadMemoryReply)> cb);
-  virtual void Registers(
-      const debug_ipc::RegistersRequest& request,
-      std::function<void(const Err&, debug_ipc::RegistersReply)> cb);
+  virtual void ReadRegisters(
+      const debug_ipc::ReadRegistersRequest& request,
+      std::function<void(const Err&, debug_ipc::ReadRegistersReply)> cb);
+  virtual void WriteRegisters(
+      const debug_ipc::WriteRegistersRequest& request,
+      std::function<void(const Err&, debug_ipc::WriteRegistersReply)> cb);
   virtual void AddOrChangeBreakpoint(
       const debug_ipc::AddOrChangeBreakpointRequest& request,
       std::function<void(const Err&, debug_ipc::AddOrChangeBreakpointReply)>

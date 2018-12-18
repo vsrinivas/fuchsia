@@ -850,14 +850,14 @@ Err DoRegs(ConsoleContext* context, const Command& cmd) {
     if (option == "all") {
       cats_to_show = {
           debug_ipc::RegisterCategory::Type::kGeneral,
-          debug_ipc::RegisterCategory::Type::kFloatingPoint,
+          debug_ipc::RegisterCategory::Type::kFP,
           debug_ipc::RegisterCategory::Type::kVector,
           debug_ipc::RegisterCategory::Type::kDebug,
       };
     } else if (option == "general") {
       cats_to_show = {RegisterCategory::Type::kGeneral};
     } else if (option == "fp") {
-      cats_to_show = {RegisterCategory::Type::kFloatingPoint};
+      cats_to_show = {RegisterCategory::Type::kFP};
     } else if (option == "vector") {
       cats_to_show = {RegisterCategory::Type::kVector};
     } else if (option == "debug") {
@@ -879,7 +879,7 @@ Err DoRegs(ConsoleContext* context, const Command& cmd) {
     OnRegsComplete(err, registers, std::move(options));
   };
 
-  cmd.thread()->GetRegisters(std::move(cats_to_show), regs_cb);
+  cmd.thread()->ReadRegisters(std::move(cats_to_show), regs_cb);
   return Err();
 }
 

@@ -555,20 +555,20 @@ debug_ipc::Register CreateRegister(RegisterID id, size_t length) {
   return reg;
 }
 
-TEST(Protocol, RegistersRequest) {
-  RegistersRequest initial;
+TEST(Protocol, ReadRegistersRequest) {
+  ReadRegistersRequest initial;
   initial.process_koid = 0x1234;
   initial.thread_koid = 0x5678;
 
-  RegistersRequest second;
+  ReadRegistersRequest second;
   ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
 
   EXPECT_EQ(initial.process_koid, second.process_koid);
   EXPECT_EQ(initial.thread_koid, second.thread_koid);
 }
 
-TEST(Protocol, RegistersReply) {
-  RegistersReply initial;
+TEST(Protocol, ReadRegistersReply) {
+  ReadRegistersReply initial;
 
   RegisterCategory cat1;
   cat1.type = RegisterCategory::Type::kGeneral;
@@ -593,7 +593,7 @@ TEST(Protocol, RegistersReply) {
   cat2.registers.push_back(CreateRegister(RegisterID::kARMv8_x4, 16));
   initial.categories.push_back(cat2);
 
-  RegistersReply second;
+  ReadRegistersReply second;
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
 
   ASSERT_EQ(second.categories.size(), 2u);
@@ -621,6 +621,42 @@ TEST(Protocol, RegistersReply) {
   EXPECT_EQ(out_cat2.registers[2].data, cat2.registers[2].data);
   EXPECT_EQ(out_cat2.registers[3].id, cat2.registers[3].id);
   EXPECT_EQ(out_cat2.registers[3].data, cat2.registers[3].data);
+}
+
+TEST(Protocol, WriteRegistersRequest) {
+  WriteRegistersRequest initial;
+  initial.process_koid = 0x1234;
+  initial.thread_koid = 0x5678;
+  initial.registers.push_back(CreateRegister(RegisterID::kARMv8_x0, 1));
+  initial.registers.push_back(CreateRegister(RegisterID::kARMv8_x1, 2));
+  initial.registers.push_back(CreateRegister(RegisterID::kARMv8_x2, 4));
+  initial.registers.push_back(CreateRegister(RegisterID::kARMv8_x3, 8));
+  initial.registers.push_back(CreateRegister(RegisterID::kARMv8_x4, 16));
+
+  WriteRegistersRequest second;
+  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+
+  EXPECT_EQ(initial.process_koid, second.process_koid);
+  EXPECT_EQ(initial.thread_koid, second.thread_koid);
+  ASSERT_EQ(second.registers.size(), 5u);
+  EXPECT_EQ(second.registers[0].id, initial.registers[0].id);
+  EXPECT_EQ(second.registers[0].data, initial.registers[0].data);
+  EXPECT_EQ(second.registers[1].id, initial.registers[1].id);
+  EXPECT_EQ(second.registers[1].data, initial.registers[1].data);
+  EXPECT_EQ(second.registers[2].id, initial.registers[2].id);
+  EXPECT_EQ(second.registers[2].data, initial.registers[2].data);
+  EXPECT_EQ(second.registers[3].id, initial.registers[3].id);
+  EXPECT_EQ(second.registers[3].data, initial.registers[3].data);
+}
+
+TEST(Protocol, WriteRegistersReply) {
+  WriteRegistersReply initial = {};
+  initial.status = 0x1234u;
+
+  WriteRegistersReply second = {};
+  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+
+  EXPECT_EQ(second.status, initial.status);
 }
 
 // Notifications ---------------------------------------------------------------

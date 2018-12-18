@@ -348,7 +348,7 @@ bool FormatCategoryX64(const FormatRegisterOptions& options,
     case RegisterCategory::Type::kGeneral:
       FormatGeneralRegisters(options, registers, out);
       return true;
-    case RegisterCategory::Type::kFloatingPoint:
+    case RegisterCategory::Type::kFP:
       *err = FormatFPRegisters(registers, out);
       return true;
     case RegisterCategory::Type::kDebug:

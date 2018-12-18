@@ -85,9 +85,9 @@ void FrameSymbolDataProvider::GetRegisterAsync(int dwarf_register_number,
 
   // We only need the general registers.
   // TODO: Other categories will need to be supported here (eg. floating point).
-  frame_->GetThread()->GetRegisters(
+  frame_->GetThread()->ReadRegisters(
       {debug_ipc::RegisterCategory::Type::kGeneral},
-      [ dwarf_register_number, cb = std::move(callback) ](
+      [dwarf_register_number, cb = std::move(callback)](
           const Err& err, const RegisterSet& regs) {
         uint64_t value = 0;
         if (err.has_error()) {

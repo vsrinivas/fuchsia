@@ -102,10 +102,16 @@ bool ReadRequest(MessageReader* reader, ModulesRequest* request,
 void WriteReply(const ModulesReply& reply, uint32_t transaction_id,
                 MessageWriter* writer);
 
-// Registers
-bool ReadRequest(MessageReader* reader, RegistersRequest* request,
+// ReadRegisters
+bool ReadRequest(MessageReader* reader, ReadRegistersRequest* request,
                  uint32_t* transaction_id);
-void WriteReply(const RegistersReply& reply, uint32_t transaction_id,
+void WriteReply(const ReadRegistersReply& reply, uint32_t transaction_id,
+                MessageWriter* writer);
+
+// WriteRegisters
+bool ReadRequest(MessageReader* reader, WriteRegistersRequest* request,
+                 uint32_t* transaction_id);
+void WriteReply(const WriteRegistersReply& reply, uint32_t transaction_id,
                 MessageWriter* writer);
 
 // Address space

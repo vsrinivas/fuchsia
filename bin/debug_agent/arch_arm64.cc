@@ -71,8 +71,8 @@ namespace {
 
 using debug_ipc::RegisterID;
 
-inline debug_ipc::Register CreateRegister(RegisterID id, uint32_t length,
-                                          const void* val_ptr) {
+debug_ipc::Register CreateRegister(RegisterID id, uint32_t length,
+                                   const void* val_ptr) {
   debug_ipc::Register reg;
   reg.id = id;
   const uint8_t* ptr = reinterpret_cast<const uint8_t*>(val_ptr);
@@ -80,14 +80,14 @@ inline debug_ipc::Register CreateRegister(RegisterID id, uint32_t length,
   return reg;
 }
 
-inline bool ReadGeneralRegs(const zx::thread& thread,
+zx_status_t ReadGeneralRegs(const zx::thread& thread,
                             std::vector<debug_ipc::Register>* out) {
   // We get the general state registers.
   zx_thread_state_general_regs gen_regs;
   zx_status_t status = thread.read_state(ZX_THREAD_STATE_GENERAL_REGS,
                                          &gen_regs, sizeof(gen_regs));
   if (status != ZX_OK)
-    return false;
+    return status;
 
   // We add the X0-X29 registers.
   uint32_t base = static_cast<uint32_t>(RegisterID::kARMv8_x0);
@@ -102,16 +102,16 @@ inline bool ReadGeneralRegs(const zx::thread& thread,
   out->push_back(CreateRegister(RegisterID::kARMv8_pc, 8u, &gen_regs.pc));
   out->push_back(CreateRegister(RegisterID::kARMv8_cpsr, 8u, &gen_regs.cpsr));
 
-  return true;
+  return ZX_OK;
 }
 
-inline bool ReadVectorRegs(const zx::thread& thread,
-                                  std::vector<debug_ipc::Register>* out) {
+zx_status_t ReadVectorRegs(const zx::thread& thread,
+                           std::vector<debug_ipc::Register>* out) {
   zx_thread_state_vector_regs vec_regs;
   zx_status_t status = thread.read_state(ZX_THREAD_STATE_VECTOR_REGS, &vec_regs,
                                          sizeof(vec_regs));
   if (status != ZX_OK)
-    return false;
+    return status;
 
   out->push_back(CreateRegister(RegisterID::kARMv8_fpcr, 4u, &vec_regs.fpcr));
   out->push_back(CreateRegister(RegisterID::kARMv8_fpsr, 4u, &vec_regs.fpsr));
@@ -122,22 +122,22 @@ inline bool ReadVectorRegs(const zx::thread& thread,
     out->push_back(CreateRegister(reg_id, 16u, &vec_regs.v[i]));
   }
 
-  return true;
+  return ZX_OK;
 }
 
-bool ReadDebugRegs(const zx::thread& thread,
-                   std::vector<debug_ipc::Register>* out) {
+zx_status_t ReadDebugRegs(const zx::thread& thread,
+                          std::vector<debug_ipc::Register>* out) {
   zx_thread_state_debug_regs_t debug_regs;
   zx_status_t status = thread.read_state(ZX_THREAD_STATE_DEBUG_REGS,
                                          &debug_regs, sizeof(debug_regs));
   if (status != ZX_OK)
-    return false;
+    return status;
 
   if (debug_regs.hw_bps_count >= AARCH64_MAX_HW_BREAKPOINTS) {
     FXL_LOG(ERROR) << "Received too many HW breakpoints: "
                    << debug_regs.hw_bps_count
                    << " (max: " << AARCH64_MAX_HW_BREAKPOINTS << ").";
-    return false;
+    return ZX_ERR_INVALID_ARGS;
   }
 
   auto bcr_base = static_cast<uint32_t>(RegisterID::kARMv8_dbgbcr0_el1);
@@ -163,18 +163,19 @@ bool ReadDebugRegs(const zx::thread& thread,
   out->push_back(CreateRegister(
       RegisterID::kARMv8_mdscr_el1, 8u,
       &debug_regs.hw_bps[AARCH64_MAX_HW_BREAKPOINTS - 2].dbgbvr));
-  return true;
+
+  return ZX_OK;
 }
 
 }  // namespace
 
-bool ArchProvider::GetRegisters(const debug_ipc::RegisterCategory::Type& cat,
-                                const zx::thread& thread,
-                                std::vector<debug_ipc::Register>* out) {
+zx_status_t ArchProvider::ReadRegisters(
+    const debug_ipc::RegisterCategory::Type& cat, const zx::thread& thread,
+    std::vector<debug_ipc::Register>* out) {
   switch (cat) {
     case debug_ipc::RegisterCategory::Type::kGeneral:
       return ReadGeneralRegs(thread, out);
-    case debug_ipc::RegisterCategory::Type::kFloatingPoint:
+    case debug_ipc::RegisterCategory::Type::kFP:
       // No FP registers
       return true;
     case debug_ipc::RegisterCategory::Type::kVector:
@@ -183,8 +184,14 @@ bool ArchProvider::GetRegisters(const debug_ipc::RegisterCategory::Type& cat,
       return ReadDebugRegs(thread, out);
     default:
       FXL_LOG(ERROR) << "Invalid category: " << static_cast<uint32_t>(cat);
-      return false;
+      return ZX_ERR_INVALID_ARGS;
   }
+}
+
+zx_status_t ArchProvider::WriteRegisters(const debug_ipc::RegisterCategory&,
+                                         const zx::thread&) {
+  // TODO(donosoc): Implement.
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 debug_ipc::NotifyException::Type HardwareNotificationType(const zx::thread&) {

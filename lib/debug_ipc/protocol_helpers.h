@@ -24,6 +24,11 @@ bool Deserialize(MessageReader* reader, std::string* s);
 void Serialize(uint64_t data, MessageWriter* writer);
 bool Deserialize(MessageReader* reader, uint64_t* data);
 
+// Aggregate types that are serialized in both directions (otherwise the
+// implementations would go into the client-/agent-specific file).
+void Serialize(const Register& reg, MessageWriter* writer);
+bool Deserialize(MessageReader* reader, Register* reg);
+
 // Will call Serialize for each element in the vector.
 template <typename T>
 inline void Serialize(const std::vector<T>& v, MessageWriter* writer) {

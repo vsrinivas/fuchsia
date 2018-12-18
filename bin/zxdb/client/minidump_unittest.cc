@@ -188,8 +188,8 @@ TEST_F(MinidumpTest, Registers) {
   ASSERT_ZXDB_SUCCESS(TryOpen("test_example_minidump.dmp"));
 
   Err err;
-  debug_ipc::RegistersRequest request;
-  debug_ipc::RegistersReply reply;
+  debug_ipc::ReadRegistersRequest request;
+  debug_ipc::ReadRegistersReply reply;
 
   using C = debug_ipc::RegisterCategory::Type;
   using R = debug_ipc::RegisterID;
@@ -198,17 +198,17 @@ TEST_F(MinidumpTest, Registers) {
   request.thread_koid = kTestExampleMinidumpThreadKOID;
   request.categories = {
       C::kGeneral,
-      C::kFloatingPoint,
+      C::kFP,
       C::kVector,
       C::kDebug,
   };
-  DoRequest(request, reply, err, &RemoteAPI::Registers);
+  DoRequest(request, reply, err, &RemoteAPI::ReadRegisters);
   ASSERT_ZXDB_SUCCESS(err);
 
   EXPECT_EQ(4UL, reply.categories.size());
 
   EXPECT_EQ(C::kGeneral, reply.categories[0].type);
-  EXPECT_EQ(C::kFloatingPoint, reply.categories[1].type);
+  EXPECT_EQ(C::kFP, reply.categories[1].type);
   EXPECT_EQ(C::kVector, reply.categories[2].type);
   EXPECT_EQ(C::kDebug, reply.categories[3].type);
 
@@ -242,20 +242,20 @@ TEST_F(MinidumpTest, Registers) {
   EXPECT_EQ(AsData(0x4DC6479A5B1EUL), got[std::pair(C::kGeneral, R::kX64_rip)]);
   EXPECT_EQ(AsData(0x10206UL), got[std::pair(C::kGeneral, R::kX64_rflags)]);
 
-  EXPECT_EQ(zero_short, got[std::pair(C::kFloatingPoint, R::kX64_fcw)]);
-  EXPECT_EQ(zero_short, got[std::pair(C::kFloatingPoint, R::kX64_fsw)]);
-  EXPECT_EQ(AsData('\0'), got[std::pair(C::kFloatingPoint, R::kX64_ftw)]);
-  EXPECT_EQ(zero_short, got[std::pair(C::kFloatingPoint, R::kX64_fop)]);
-  EXPECT_EQ(AsData(0x0UL), got[std::pair(C::kFloatingPoint, R::kX64_fip)]);
-  EXPECT_EQ(AsData(0x0UL), got[std::pair(C::kFloatingPoint, R::kX64_fdp)]);
-  EXPECT_EQ(zero_128, got[std::pair(C::kFloatingPoint, R::kX64_st0)]);
-  EXPECT_EQ(zero_128, got[std::pair(C::kFloatingPoint, R::kX64_st1)]);
-  EXPECT_EQ(zero_128, got[std::pair(C::kFloatingPoint, R::kX64_st2)]);
-  EXPECT_EQ(zero_128, got[std::pair(C::kFloatingPoint, R::kX64_st3)]);
-  EXPECT_EQ(zero_128, got[std::pair(C::kFloatingPoint, R::kX64_st4)]);
-  EXPECT_EQ(zero_128, got[std::pair(C::kFloatingPoint, R::kX64_st5)]);
-  EXPECT_EQ(zero_128, got[std::pair(C::kFloatingPoint, R::kX64_st6)]);
-  EXPECT_EQ(zero_128, got[std::pair(C::kFloatingPoint, R::kX64_st7)]);
+  EXPECT_EQ(zero_short, got[std::pair(C::kFP, R::kX64_fcw)]);
+  EXPECT_EQ(zero_short, got[std::pair(C::kFP, R::kX64_fsw)]);
+  EXPECT_EQ(AsData('\0'), got[std::pair(C::kFP, R::kX64_ftw)]);
+  EXPECT_EQ(zero_short, got[std::pair(C::kFP, R::kX64_fop)]);
+  EXPECT_EQ(AsData(0x0UL), got[std::pair(C::kFP, R::kX64_fip)]);
+  EXPECT_EQ(AsData(0x0UL), got[std::pair(C::kFP, R::kX64_fdp)]);
+  EXPECT_EQ(zero_128, got[std::pair(C::kFP, R::kX64_st0)]);
+  EXPECT_EQ(zero_128, got[std::pair(C::kFP, R::kX64_st1)]);
+  EXPECT_EQ(zero_128, got[std::pair(C::kFP, R::kX64_st2)]);
+  EXPECT_EQ(zero_128, got[std::pair(C::kFP, R::kX64_st3)]);
+  EXPECT_EQ(zero_128, got[std::pair(C::kFP, R::kX64_st4)]);
+  EXPECT_EQ(zero_128, got[std::pair(C::kFP, R::kX64_st5)]);
+  EXPECT_EQ(zero_128, got[std::pair(C::kFP, R::kX64_st6)]);
+  EXPECT_EQ(zero_128, got[std::pair(C::kFP, R::kX64_st7)]);
 
   EXPECT_EQ(AsData(0x0U), got[std::pair(C::kVector, R::kX64_mxcsr)]);
   EXPECT_EQ(zero_128, got[std::pair(C::kVector, R::kX64_xmm0)]);

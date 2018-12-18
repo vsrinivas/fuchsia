@@ -71,7 +71,7 @@ void AddReg(debug_ipc::RegisterCategory* category, debug_ipc::RegisterID id,
 template <typename IterType>
 debug_ipc::RegisterCategory* MakeCategory(
     IterType& pos, debug_ipc::RegisterCategory::Type type,
-    debug_ipc::RegistersReply* reply) {
+    debug_ipc::ReadRegistersReply* reply) {
   if (*pos == type) {
     pos++;
     auto category = &reply->categories.emplace_back();
@@ -83,8 +83,8 @@ debug_ipc::RegisterCategory* MakeCategory(
 }
 
 void PopulateRegistersARM64(const crashpad::CPUContextARM64& ctx,
-                            const debug_ipc::RegistersRequest& request,
-                            debug_ipc::RegistersReply* reply) {
+                            const debug_ipc::ReadRegistersRequest& request,
+                            debug_ipc::ReadRegistersReply* reply) {
   auto pos = request.categories.begin();
 
   using R = debug_ipc::RegisterID;
@@ -129,7 +129,7 @@ void PopulateRegistersARM64(const crashpad::CPUContextARM64& ctx,
   }
 
   // ARM doesn't define any registers in this category.
-  MakeCategory(pos, debug_ipc::RegisterCategory::Type::kFloatingPoint, reply);
+  MakeCategory(pos, debug_ipc::RegisterCategory::Type::kFP, reply);
 
   category =
       MakeCategory(pos, debug_ipc::RegisterCategory::Type::kVector, reply);
@@ -175,8 +175,8 @@ void PopulateRegistersARM64(const crashpad::CPUContextARM64& ctx,
 }
 
 void PopulateRegistersX86_64(const crashpad::CPUContextX86_64& ctx,
-                             const debug_ipc::RegistersRequest& request,
-                             debug_ipc::RegistersReply* reply) {
+                             const debug_ipc::ReadRegistersRequest& request,
+                             debug_ipc::ReadRegistersReply* reply) {
   auto pos = request.categories.begin();
 
   using R = debug_ipc::RegisterID;
@@ -205,7 +205,7 @@ void PopulateRegistersX86_64(const crashpad::CPUContextX86_64& ctx,
   }
 
   category = MakeCategory(
-      pos, debug_ipc::RegisterCategory::Type::kFloatingPoint, reply);
+      pos, debug_ipc::RegisterCategory::Type::kFP, reply);
   if (category != nullptr) {
     AddReg(category, R::kX64_fcw, ctx.fxsave.fcw);
     AddReg(category, R::kX64_fsw, ctx.fxsave.fsw);
@@ -488,15 +488,15 @@ void MinidumpRemoteAPI::ReadMemory(
   ErrNoImpl(cb);
 }
 
-void MinidumpRemoteAPI::Registers(
-    const debug_ipc::RegistersRequest& request,
-    std::function<void(const Err&, debug_ipc::RegistersReply)> cb) {
+void MinidumpRemoteAPI::ReadRegisters(
+    const debug_ipc::ReadRegistersRequest& request,
+    std::function<void(const Err&, debug_ipc::ReadRegistersReply)> cb) {
   if (!minidump_) {
     ErrNoDump(cb);
     return;
   }
 
-  debug_ipc::RegistersReply reply;
+  debug_ipc::ReadRegistersReply reply;
 
   if (static_cast<pid_t>(request.process_koid) != minidump_->ProcessID()) {
     Succeed(cb, reply);

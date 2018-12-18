@@ -18,6 +18,7 @@
 #include "garnet/lib/debug_ipc/agent_protocol.h"
 #include "garnet/lib/debug_ipc/helper/message_loop_zircon.h"
 #include "garnet/lib/debug_ipc/helper/stream_buffer.h"
+#include "garnet/lib/debug_ipc/helper/zx_status.h"
 #include "garnet/lib/debug_ipc/message_reader.h"
 #include "garnet/lib/debug_ipc/message_writer.h"
 #include "lib/fxl/logging.h"
@@ -163,20 +164,53 @@ void DebuggedThread::FillThreadRecord(
                                 thread_, stack_amount, optional_regs, record);
 }
 
-void DebuggedThread::GetRegisters(
+void DebuggedThread::ReadRegisters(
     const std::vector<debug_ipc::RegisterCategory::Type>& cats_to_get,
     std::vector<debug_ipc::RegisterCategory>* out) const {
   out->clear();
   for (const auto& cat_type : cats_to_get) {
     auto& cat = out->emplace_back();
     cat.type = cat_type;
-    if (!arch::ArchProvider::Get().GetRegisters(cat_type, thread_,
-                                                &cat.registers)) {
+    zx_status_t status = arch::ArchProvider::Get().ReadRegisters(
+        cat_type, thread_, &cat.registers);
+    if (status != ZX_OK) {
       out->pop_back();
       FXL_LOG(ERROR) << "Could not get register state for category: "
-                     << static_cast<uint32_t>(cat_type);
+                     << debug_ipc::RegisterCategory::TypeToString(cat_type);
     }
   }
+}
+
+zx_status_t DebuggedThread::WriteRegisters(
+    const std::vector<debug_ipc::Register>& regs) {
+  // We use a map to keep track of which categories will change.
+  std::map<debug_ipc::RegisterCategory::Type, debug_ipc::RegisterCategory>
+      categories;
+
+  // We append each register to the correct category to be changed.
+  for (const debug_ipc::Register& reg : regs) {
+    auto cat_type = debug_ipc::RegisterCategory::RegisterIDToCategory(reg.id);
+    if (cat_type == debug_ipc::RegisterCategory::Type::kNone) {
+      FXL_LOG(WARNING) << "Attempting to change register without category: "
+                       << RegisterIDToString(reg.id);
+      continue;
+    }
+    auto& category = categories[cat_type];
+    category.type = cat_type;
+    category.registers.push_back(reg);
+  }
+
+  for (const auto& [cat_type, cat] : categories) {
+    FXL_DCHECK(cat_type != debug_ipc::RegisterCategory::Type::kNone);
+    zx_status_t res = arch::ArchProvider::Get().WriteRegisters(cat, thread_);
+    if (res != ZX_OK) {
+      FXL_LOG(ERROR) << "Could not write category "
+                     << debug_ipc::RegisterCategory::TypeToString(cat_type)
+                     << ": " << debug_ipc::ZxStatusToString(res);
+    }
+  }
+
+  return ZX_OK;
 }
 
 void DebuggedThread::SendThreadNotification() const {

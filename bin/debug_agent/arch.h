@@ -61,9 +61,16 @@ class ArchProvider {
   // have been written into the program.
   bool IsBreakpointInstruction(zx::process& process, uint64_t address);
 
-  virtual bool GetRegisters(const debug_ipc::RegisterCategory::Type& cat,
-                            const zx::thread&,
-                            std::vector<debug_ipc::Register>* out);
+  virtual zx_status_t ReadRegisters(
+      const debug_ipc::RegisterCategory::Type& cat, const zx::thread&,
+      std::vector<debug_ipc::Register>* out);
+
+  // The RegisterCategory will have the corresponding register values, which
+  // the arch will make sure it writes correctly. Since each category is a
+  // different syscall anyway, there is no need to group many categories into
+  // one call.
+  virtual zx_status_t WriteRegisters(const debug_ipc::RegisterCategory&,
+                                     const zx::thread&);
 
   // Hardware Exceptions -------------------------------------------------------
 

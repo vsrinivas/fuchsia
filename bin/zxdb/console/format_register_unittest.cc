@@ -81,7 +81,7 @@ void GetCategories(RegisterSet* registers) {
   categories.push_back(cat2);
 
   RegisterCategory cat3;
-  cat3.type = RegisterCategory::Type::kFloatingPoint;
+  cat3.type = RegisterCategory::Type::kFP;
   cat3.registers.push_back(CreateRegister(RegisterID::kX64_st0, 16, 4));
   cat3.registers.push_back(CreateRegister(RegisterID::kX64_st1, 16, 4));
   // Invalid
@@ -166,7 +166,7 @@ TEST(FormatRegisters, AllRegisters) {
   FormatRegisterOptions options;
   options.arch = debug_ipc::Arch::kX64;
   options.categories = {RegisterCategory::Type::kGeneral,
-                        RegisterCategory::Type::kFloatingPoint,
+                        RegisterCategory::Type::kFP,
                         RegisterCategory::Type::kVector};
   FilteredRegisterSet filtered_set;
   Err err = FilterRegisters(options, registers, &filtered_set);
@@ -207,7 +207,7 @@ TEST(FormatRegisters, OneRegister) {
   options.arch = debug_ipc::Arch::kX64;
   options.filter_regexp = "xmm3";
   options.categories = {RegisterCategory::Type::kGeneral,
-                        RegisterCategory::Type::kFloatingPoint,
+                        RegisterCategory::Type::kFP,
                         RegisterCategory::Type::kVector};
 
   FilteredRegisterSet filtered_set;
@@ -259,7 +259,7 @@ TEST(FormatRegisters, CannotFindRegister) {
   options.arch = debug_ipc::Arch::kX64;
   options.filter_regexp = "W0";
   options.categories = {RegisterCategory::Type::kGeneral,
-                        RegisterCategory::Type::kFloatingPoint,
+                        RegisterCategory::Type::kFP,
                         RegisterCategory::Type::kVector};
   FilteredRegisterSet filtered_set;
   Err err = FilterRegisters(options, registers, &filtered_set);

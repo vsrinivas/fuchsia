@@ -239,7 +239,8 @@ void DebugAgent::OnPause(const debug_ipc::PauseRequest& request,
   if (request.process_koid) {
     // Single process.
     DebuggedProcess* proc = GetDebuggedProcess(request.process_koid);
-    if (proc) proc->OnPause(request);
+    if (proc)
+      proc->OnPause(request);
   } else {
     // All debugged processes.
     for (const auto& pair : procs_)
@@ -295,13 +296,26 @@ void DebugAgent::OnReadMemory(const debug_ipc::ReadMemoryRequest& request,
     proc->OnReadMemory(request, reply);
 }
 
-void DebugAgent::OnRegisters(const debug_ipc::RegistersRequest& request,
-                             debug_ipc::RegistersReply* reply) {
+void DebugAgent::OnReadRegisters(const debug_ipc::ReadRegistersRequest& request,
+                                 debug_ipc::ReadRegistersReply* reply) {
   DebuggedThread* thread =
       GetDebuggedThread(request.process_koid, request.thread_koid);
   if (thread) {
-    thread->GetRegisters(request.categories, &reply->categories);
+    thread->ReadRegisters(request.categories, &reply->categories);
   } else {
+    FXL_LOG(ERROR) << "Cannot find thread with koid: " << request.thread_koid;
+  }
+}
+
+void DebugAgent::OnWriteRegisters(
+    const debug_ipc::WriteRegistersRequest& request,
+    debug_ipc::WriteRegistersReply* reply) {
+  DebuggedThread* thread =
+      GetDebuggedThread(request.process_koid, request.thread_koid);
+  if (thread) {
+    reply->status = thread->WriteRegisters(request.registers);
+  } else {
+    reply->status = ZX_ERR_NOT_FOUND;
     FXL_LOG(ERROR) << "Cannot find thread with koid: " << request.thread_koid;
   }
 }

@@ -69,8 +69,10 @@ class DebugAgent : public RemoteAPI,
                  debug_ipc::ThreadsReply* reply) override;
   void OnReadMemory(const debug_ipc::ReadMemoryRequest& request,
                     debug_ipc::ReadMemoryReply* reply) override;
-  void OnRegisters(const debug_ipc::RegistersRequest& request,
-                   debug_ipc::RegistersReply* reply) override;
+  void OnReadRegisters(const debug_ipc::ReadRegistersRequest& request,
+                       debug_ipc::ReadRegistersReply* reply) override;
+  void OnWriteRegisters(const debug_ipc::WriteRegistersRequest& request,
+                        debug_ipc::WriteRegistersReply* reply) override;
   void OnAddOrChangeBreakpoint(
       const debug_ipc::AddOrChangeBreakpointRequest& request,
       debug_ipc::AddOrChangeBreakpointReply* reply) override;

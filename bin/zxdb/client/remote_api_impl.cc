@@ -90,9 +90,9 @@ void RemoteAPIImpl::ReadMemory(
   Send(request, std::move(cb));
 }
 
-void RemoteAPIImpl::Registers(
-    const debug_ipc::RegistersRequest& request,
-    std::function<void(const Err&, debug_ipc::RegistersReply)> cb) {
+void RemoteAPIImpl::ReadRegisters(
+    const debug_ipc::ReadRegistersRequest& request,
+    std::function<void(const Err&, debug_ipc::ReadRegistersReply)> cb) {
   Send(request, std::move(cb));
 }
 

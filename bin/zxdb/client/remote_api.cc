@@ -80,9 +80,15 @@ void RemoteAPI::ReadMemory(
   FXL_NOTREACHED();
 }
 
-void RemoteAPI::Registers(
-    const debug_ipc::RegistersRequest& request,
-    std::function<void(const Err&, debug_ipc::RegistersReply)> cb) {
+void RemoteAPI::ReadRegisters(
+    const debug_ipc::ReadRegistersRequest& request,
+    std::function<void(const Err&, debug_ipc::ReadRegistersReply)> cb) {
+  FXL_NOTREACHED();
+}
+
+void RemoteAPI::WriteRegisters(
+    const debug_ipc::WriteRegistersRequest& request,
+    std::function<void(const Err&, debug_ipc::WriteRegistersReply)> cb) {
   FXL_NOTREACHED();
 }
 

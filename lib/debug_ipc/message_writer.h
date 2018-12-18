@@ -35,6 +35,8 @@ class MessageWriter {
 
   void WriteHeader(MsgHeader::Type type, uint32_t transaction_id);
 
+  size_t current_length() const { return buffer_.size(); }
+
   // Writes the size of the current buffer to the first 4 bytes, and
   // destructively returns the buffer.
   std::vector<char> MessageComplete();

@@ -75,13 +75,6 @@ void Serialize(const Module& module, MessageWriter* writer) {
   writer->WriteString(module.build_id);
 }
 
-void Serialize(const Register& reg, MessageWriter* writer) {
-  writer->WriteUint32(*reinterpret_cast<const uint32_t*>(&reg.id));
-  // We send the length before serializing the actual data.
-  writer->WriteUint32(reg.data.size());
-  writer->WriteBytes(&reg.data[0], reg.data.size());
-}
-
 void Serialize(const RegisterCategory& reg_cat, MessageWriter* writer) {
   writer->WriteUint32(*reinterpret_cast<const uint32_t*>(&reg_cat.type));
   Serialize(reg_cat.registers, writer);
@@ -433,9 +426,9 @@ void WriteReply(const WriteMemoryReply& reply, uint32_t transaction_id,
   writer->WriteUint64(reply.status);
 }
 
-// Registers -------------------------------------------------------------------
+// ReadRegisters ---------------------------------------------------------------
 
-bool ReadRequest(MessageReader* reader, RegistersRequest* request,
+bool ReadRequest(MessageReader* reader, ReadRegistersRequest* request,
                  uint32_t* transaction_id) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))
@@ -443,16 +436,37 @@ bool ReadRequest(MessageReader* reader, RegistersRequest* request,
   *transaction_id = header.transaction_id;
 
   if (!reader->ReadUint64(&request->process_koid) ||
-      !reader->ReadUint32(&request->thread_koid))
+      !reader->ReadUint64(&request->thread_koid))
     return false;
 
   return Deserialize(reader, &request->categories);
 }
 
-void WriteReply(const RegistersReply& reply, uint32_t transaction_id,
+void WriteReply(const ReadRegistersReply& reply, uint32_t transaction_id,
                 MessageWriter* writer) {
-  writer->WriteHeader(MsgHeader::Type::kRegisters, transaction_id);
+  writer->WriteHeader(MsgHeader::Type::kReadRegisters, transaction_id);
   Serialize(reply.categories, writer);
+}
+
+// WriteRegisters --------------------------------------------------------------
+
+bool ReadRequest(MessageReader* reader, WriteRegistersRequest* request,
+                 uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+
+  if (!reader->ReadUint64(&request->process_koid) ||
+      !reader->ReadUint64(&request->thread_koid))
+    return false;
+  return Deserialize(reader, &request->registers);
+}
+
+void WriteReply(const WriteRegistersReply& reply, uint32_t transaction_id,
+                MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kWriteRegisters, transaction_id);
+  writer->WriteUint64(reply.status);
 }
 
 // Address space ---------------------------------------------------------------

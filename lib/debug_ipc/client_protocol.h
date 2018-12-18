@@ -78,10 +78,16 @@ void WriteRequest(const ReadMemoryRequest& request, uint32_t transaction_id,
 bool ReadReply(MessageReader* reader, ReadMemoryReply* reply,
                uint32_t* transaction_id);
 
-// Registers
-void WriteRequest(const RegistersRequest& request, uint32_t transaction_id,
+// ReadRegisters
+void WriteRequest(const ReadRegistersRequest& request, uint32_t transaction_id,
                   MessageWriter* writer);
-bool ReadReply(MessageReader* reader, RegistersReply* reply,
+bool ReadReply(MessageReader* reader, ReadRegistersReply* reply,
+               uint32_t* transaction_id);
+
+// WriteRegisters
+void WriteRequest(const WriteRegistersRequest& request, uint32_t transaction_id,
+                  MessageWriter* writer);
+bool ReadReply(MessageReader* reader, WriteRegistersReply* reply,
                uint32_t* transaction_id);
 
 // AddOrChangeBreakpoint.

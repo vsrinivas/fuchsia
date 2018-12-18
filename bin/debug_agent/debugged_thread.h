@@ -82,10 +82,11 @@ class DebuggedThread {
                         const zx_thread_state_general_regs* optional_regs,
                         debug_ipc::ThreadRecord* record) const;
 
-  // Fills in the information for the registers of the thread
-  void GetRegisters(
+  // Register reading and writing.
+  void ReadRegisters(
       const std::vector<debug_ipc::RegisterCategory::Type>& cats_to_get,
       std::vector<debug_ipc::RegisterCategory>* out) const;
+  zx_status_t WriteRegisters(const std::vector<debug_ipc::Register>& regs);
 
   // Sends a notification to the client about the state of this thread.
   void SendThreadNotification() const;

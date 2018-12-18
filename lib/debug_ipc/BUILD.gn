@@ -14,6 +14,8 @@ static_library("shared") {
     "protocol.h",
     "protocol_helpers.cc",
     "protocol_helpers.h",
+    "register_desc.cc",
+    "register_desc.h",
     "records.cc",
     "records.h",
     "message_writer.h",

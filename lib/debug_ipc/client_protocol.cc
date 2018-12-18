@@ -83,17 +83,6 @@ bool Deserialize(MessageReader* reader, Module* module) {
   return true;
 };
 
-bool Deserialize(MessageReader* reader, Register* reg) {
-  if (!reader->ReadUint32(reinterpret_cast<uint32_t*>(&reg->id)))
-    return false;
-  // Length is sent implicitly.
-  uint32_t length;
-  if (!reader->ReadUint32(&length))
-    return false;
-  reg->data.resize(length);
-  return reader->ReadBytes(length, &reg->data[0]);
-}
-
 bool Deserialize(MessageReader* reader, RegisterCategory* reg_cat) {
   if (!reader->ReadUint32(reinterpret_cast<uint32_t*>(&reg_cat->type)))
     return false;
@@ -359,18 +348,18 @@ bool ReadReply(MessageReader* reader, ReadMemoryReply* reply,
   return Deserialize(reader, &reply->blocks);
 }
 
-// Registers -------------------------------------------------------------------
+// ReadRegisters ---------------------------------------------------------------
 
-void WriteRequest(const RegistersRequest& request, uint32_t transaction_id,
+void WriteRequest(const ReadRegistersRequest& request, uint32_t transaction_id,
                   MessageWriter* writer) {
-  writer->WriteHeader(MsgHeader::Type::kRegisters, transaction_id);
+  writer->WriteHeader(MsgHeader::Type::kReadRegisters, transaction_id);
 
   writer->WriteUint64(request.process_koid);
-  writer->WriteUint32(request.thread_koid);
+  writer->WriteUint64(request.thread_koid);
   Serialize(request.categories, writer);
 }
 
-bool ReadReply(MessageReader* reader, RegistersReply* reply,
+bool ReadReply(MessageReader* reader, ReadRegistersReply* reply,
                uint32_t* transaction_id) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))
@@ -378,6 +367,26 @@ bool ReadReply(MessageReader* reader, RegistersReply* reply,
 
   *transaction_id = header.transaction_id;
   return Deserialize(reader, &reply->categories);
+}
+
+// WriteRegisters --------------------------------------------------------------
+
+void WriteRequest(const WriteRegistersRequest& request, uint32_t transaction_id,
+                  MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kWriteRegisters, transaction_id);
+  writer->WriteUint64(request.process_koid);
+  writer->WriteUint64(request.thread_koid);
+  Serialize(request.registers, writer);
+}
+
+bool ReadReply(MessageReader* reader, WriteRegistersReply* reply,
+               uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+
+  *transaction_id = header.transaction_id;
+  return reader->ReadUint64(&reply->status);
 }
 
 // AddOrChangeBreakpoint -------------------------------------------------------

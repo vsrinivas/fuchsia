@@ -64,7 +64,7 @@ class MockThread : public Thread {
   FrameFingerprint GetFrameFingerprint(size_t frame_index) const override {
     return FrameFingerprint();
   }
-  void GetRegisters(
+  void ReadRegisters(
       std::vector<debug_ipc::RegisterCategory::Type> cats_to_get,
       std::function<void(const Err&, const RegisterSet&)> cb) override {
     debug_ipc::MessageLoop::Current()->PostTask(

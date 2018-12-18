@@ -21,6 +21,7 @@ class MessageReader {
 
   // Returns the number of bytes available still to read.
   uint32_t remaining() const { return message_.size() - offset_; }
+  size_t message_size() const { return message_.size(); }
 
   // These functions return true on success.
   bool ReadBytes(uint32_t len, void* output);

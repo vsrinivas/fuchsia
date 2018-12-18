@@ -13,6 +13,29 @@
 
 namespace debug_ipc {
 
+enum class RegisterID : uint32_t;   // Forward declaration.
+
+const char* RegisterIDToString(debug_ipc::RegisterID);
+
+// These ranges permit to make transformation from registerID to category and
+// make some formal verifications.
+constexpr uint32_t kARMv8GeneralBegin = 1000;
+constexpr uint32_t kARMv8GeneralEnd = 1099;
+constexpr uint32_t kARMv8VectorBegin = 1100;
+constexpr uint32_t kARMv8VectorEnd = 1299;
+constexpr uint32_t kARMv8DebugBegin = 1300;
+constexpr uint32_t kARMv8DebugEnd = 1399;
+
+
+constexpr uint32_t kX64GeneralBegin = 2000;
+constexpr uint32_t kX64GeneralEnd = 2099;
+constexpr uint32_t kX64FPBegin = 2100;
+constexpr uint32_t kX64FPEnd = 2199;
+constexpr uint32_t kX64VectorBegin = 2200;
+constexpr uint32_t kX64VectorEnd = 2499;
+constexpr uint32_t kX64DebugBegin = 2500;
+constexpr uint32_t kX64DebugEnd = 2599;
+
 enum class RegisterID : uint32_t {
   kUnknown = 0,
 
@@ -232,7 +255,7 @@ enum class RegisterID : uint32_t {
   // dr4 is reserved.
   // dr5 is reserved.
   kX64_dr6 = 2506,
-  kX64_dr7 = 2507
+  kX64_dr7 = 2507,
 };
 
 }  // namespace debug_ipc

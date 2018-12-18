@@ -56,8 +56,4 @@ Err FormatRegisters(const FormatRegisterOptions&, const FilteredRegisterSet&,
 std::vector<OutputBuffer> DescribeRegister(const Register& reg,
                                            TextForegroundColor color);
 
-const char* RegisterCategoryTypeToString(debug_ipc::RegisterCategory::Type);
-
-const char* RegisterIDToString(debug_ipc::RegisterID);
-
 }  // namespace zxdb

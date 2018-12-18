@@ -36,7 +36,8 @@ struct MsgHeader {
     kProcessTree,
     kQuitAgent,
     kReadMemory,
-    kRegisters,
+    kReadRegisters,
+    kWriteRegisters,
     kRemoveBreakpoint,
     kResume,
     kThreadStatus,
@@ -245,7 +246,7 @@ struct JobFilterRequest {
 };
 
 struct JobFilterReply {
-  uint32_t status;  // zx_status for filter request
+  uint32_t status = 0;  // zx_status for filter request
 };
 
 struct WriteMemoryRequest {
@@ -258,17 +259,29 @@ struct WriteMemoryReply {
   uint64_t status = 0;  // zx_status_t
 };
 
-// Registers -------------------------------------------------------------------
+// ReadRegisters ---------------------------------------------------------------
 
-struct RegistersRequest {
+struct ReadRegistersRequest {
   uint64_t process_koid = 0;
-  uint32_t thread_koid = 0;
+  uint64_t thread_koid = 0;
   // What categories do we want to receive data from.
   std::vector<RegisterCategory::Type> categories;
 };
 
-struct RegistersReply {
+struct ReadRegistersReply {
   std::vector<RegisterCategory> categories;
+};
+
+// WriteRegisters --------------------------------------------------------------
+
+struct WriteRegistersRequest {
+  uint64_t process_koid = 0;
+  uint64_t thread_koid = 0;
+  std::vector<Register> registers;
+};
+
+struct WriteRegistersReply {
+  uint64_t status = 0;  // zx_status_t.
 };
 
 // Notifications ---------------------------------------------------------------

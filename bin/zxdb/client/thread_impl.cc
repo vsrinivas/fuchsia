@@ -197,17 +197,17 @@ FrameFingerprint ThreadImpl::GetFrameFingerprint(size_t frame_index) const {
   return FrameFingerprint(frames_[prev_frame_index]->GetStackPointer());
 }
 
-void ThreadImpl::GetRegisters(
+void ThreadImpl::ReadRegisters(
     std::vector<debug_ipc::RegisterCategory::Type> cats_to_get,
     std::function<void(const Err&, const RegisterSet&)> callback) {
-  debug_ipc::RegistersRequest request;
+  debug_ipc::ReadRegistersRequest request;
   request.process_koid = process_->GetKoid();
   request.thread_koid = koid_;
   request.categories = std::move(cats_to_get);
 
-  session()->remote_api()->Registers(
-      request, [ thread = weak_factory_.GetWeakPtr(), callback ](
-                   const Err& err, debug_ipc::RegistersReply reply) {
+  session()->remote_api()->ReadRegisters(
+      request, [thread = weak_factory_.GetWeakPtr(), callback](
+                   const Err& err, debug_ipc::ReadRegistersReply reply) {
         thread->registers_ = std::make_unique<RegisterSet>(
             thread->session()->arch(), std::move(reply.categories));
         if (callback)

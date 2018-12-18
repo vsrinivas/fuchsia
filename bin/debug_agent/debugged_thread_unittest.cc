@@ -9,20 +9,59 @@
 
 namespace debug_agent {
 
-using debug_ipc::RegisterCategory;
+using namespace debug_ipc;
 
 namespace {
 
+// TODO(donosoc): These helpers are replicated throughout many tests.
+//                Collapse them into one place.
+std::vector<uint8_t> CreateData(size_t length) {
+  std::vector<uint8_t> data;
+  data.reserve(length);
+  // So that we get the number backwards (0x0102...).
+  uint8_t base = length;
+  for (size_t i = 0; i < length; i++) {
+    data.emplace_back(base - i);
+  }
+  return data;
+}
+
+debug_ipc::Register CreateRegister(RegisterID id, size_t length) {
+  debug_ipc::Register reg;
+  reg.id = id;
+  reg.data = CreateData(length);
+  return reg;
+}
+
+bool FindRegister(const std::vector<Register>& regs, RegisterID id) {
+  for (const auto& reg : regs) {
+    if (reg.id == id)
+      return true;
+  }
+  return false;
+}
+
 class FakeArchProvider : public arch::ArchProvider {
  public:
-  bool GetRegisters(const debug_ipc::RegisterCategory::Type& type,
-                    const zx::thread&,
-                    std::vector<debug_ipc::Register>* out) override {
+  zx_status_t ReadRegisters(const debug_ipc::RegisterCategory::Type& type,
+                     const zx::thread&,
+                     std::vector<debug_ipc::Register>* out) override {
     auto it = categories_.find(type);
     if (it == categories_.end())
-      return false;
+      return ZX_ERR_INVALID_ARGS;
+
     *out = it->second.registers;
-    return true;
+    return ZX_OK;
+  }
+
+  zx_status_t WriteRegisters(const debug_ipc::RegisterCategory& cat,
+                             const zx::thread&) override {
+    auto& written_cat = regs_written_[cat.type];
+    for (const Register& reg : cat.registers) {
+      written_cat.push_back(reg);
+    }
+
+    return ZX_OK;
   }
 
   void AddCategory(RegisterCategory::Type type, size_t reg_count) {
@@ -36,8 +75,14 @@ class FakeArchProvider : public arch::ArchProvider {
     }
   }
 
+  const std::map<RegisterCategory::Type, std::vector<Register>>& regs_written()
+      const {
+    return regs_written_;
+  }
+
  private:
   std::map<RegisterCategory::Type, RegisterCategory> categories_;
+  std::map<RegisterCategory::Type, std::vector<Register>> regs_written_;
 };
 
 class ScopedFakeArchProvider {
@@ -74,7 +119,7 @@ class FakeProcess : public DebuggedProcess {
   std::unique_ptr<DebuggedThread> thread_;
 };
 
-TEST(DebuggedThread, GetsRegisters) {
+TEST(DebuggedThread, ReadRegisters) {
   ScopedFakeArchProvider scoped_arch_provider;
   FakeArchProvider* arch = scoped_arch_provider.get();
 
@@ -88,7 +133,7 @@ TEST(DebuggedThread, GetsRegisters) {
       RegisterCategory::Type::kGeneral};
 
   std::vector<RegisterCategory> categories;
-  thread->GetRegisters(cats_to_get, &categories);
+  thread->ReadRegisters(cats_to_get, &categories);
 
   ASSERT_EQ(categories.size(), 1u);
   auto& cat = categories.front();
@@ -96,7 +141,7 @@ TEST(DebuggedThread, GetsRegisters) {
   EXPECT_EQ(cat.registers.size(), kGeneralCount);
 }
 
-TEST(DebuggedThread, GettingErrorShouldStillReturnTheRest) {
+TEST(DebuggedThread, ReadRegistersGettingErrorShouldStillReturnTheRest) {
   ScopedFakeArchProvider scoped_arch_provider;
   FakeArchProvider* arch = scoped_arch_provider.get();
 
@@ -113,13 +158,70 @@ TEST(DebuggedThread, GettingErrorShouldStillReturnTheRest) {
       RegisterCategory::Type::kDebug};
 
   std::vector<RegisterCategory> categories;
-  thread->GetRegisters(cats_to_get, &categories);
+  thread->ReadRegisters(cats_to_get, &categories);
 
   ASSERT_EQ(categories.size(), 2u);
   EXPECT_EQ(categories[0].type, RegisterCategory::Type::kGeneral);
   EXPECT_EQ(categories[0].registers.size(), kGeneralCount);
   EXPECT_EQ(categories[1].type, RegisterCategory::Type::kDebug);
   EXPECT_EQ(categories[1].registers.size(), kDebugCount);
+}
+
+TEST(DebuggedThread, WriteRegisters) {
+  ScopedFakeArchProvider scoped_arch_provider;
+  FakeArchProvider* arch = scoped_arch_provider.get();
+
+  FakeProcess fake_process(1u);
+  DebuggedThread* thread = fake_process.CreateThread(1u);
+
+  std::vector<Register> regs_to_write;
+  regs_to_write.push_back(CreateRegister(RegisterID::kX64_rax, 16));
+  regs_to_write.push_back(CreateRegister(RegisterID::kX64_rip, 16));
+  regs_to_write.push_back(CreateRegister(RegisterID::kX64_rsp, 16));
+
+  regs_to_write.push_back(CreateRegister(RegisterID::kX64_fcw, 16));
+  regs_to_write.push_back(CreateRegister(RegisterID::kX64_st0, 16));
+
+  regs_to_write.push_back(CreateRegister(RegisterID::kX64_mxcsr, 16));
+  regs_to_write.push_back(CreateRegister(RegisterID::kX64_ymm1, 16));
+  regs_to_write.push_back(CreateRegister(RegisterID::kX64_ymm2, 16));
+  regs_to_write.push_back(CreateRegister(RegisterID::kX64_ymm3, 16));
+
+  regs_to_write.push_back(CreateRegister(RegisterID::kX64_dr1, 16));
+  regs_to_write.push_back(CreateRegister(RegisterID::kX64_dr7, 16));
+
+  thread->WriteRegisters(regs_to_write);
+
+  const auto& regs_written = arch->regs_written();
+  ASSERT_EQ(regs_written.size(), 4u);
+  EXPECT_EQ(regs_written.count(RegisterCategory::Type::kNone), 0u);
+
+  auto it = regs_written.find(RegisterCategory::Type::kGeneral);
+  ASSERT_NE(it, regs_written.end());
+  ASSERT_EQ(it->second.size(), 3u);
+  EXPECT_TRUE(FindRegister(it->second, RegisterID::kX64_rax));
+  EXPECT_TRUE(FindRegister(it->second, RegisterID::kX64_rip));
+  EXPECT_TRUE(FindRegister(it->second, RegisterID::kX64_rsp));
+
+  it = regs_written.find(RegisterCategory::Type::kFP);
+  ASSERT_NE(it, regs_written.end());
+  ASSERT_EQ(it->second.size(), 2u);
+  EXPECT_TRUE(FindRegister(it->second, RegisterID::kX64_fcw));
+  EXPECT_TRUE(FindRegister(it->second, RegisterID::kX64_st0));
+
+  it = regs_written.find(RegisterCategory::Type::kVector);
+  ASSERT_NE(it, regs_written.end());
+  ASSERT_EQ(it->second.size(), 4u);
+  EXPECT_TRUE(FindRegister(it->second, RegisterID::kX64_mxcsr));
+  EXPECT_TRUE(FindRegister(it->second, RegisterID::kX64_ymm1));
+  EXPECT_TRUE(FindRegister(it->second, RegisterID::kX64_ymm2));
+  EXPECT_TRUE(FindRegister(it->second, RegisterID::kX64_ymm3));
+
+  it = regs_written.find(RegisterCategory::Type::kDebug);
+  ASSERT_NE(it, regs_written.end());
+  ASSERT_EQ(it->second.size(), 2u);
+  EXPECT_TRUE(FindRegister(it->second, RegisterID::kX64_dr1));
+  EXPECT_TRUE(FindRegister(it->second, RegisterID::kX64_dr7));
 }
 
 }  // namespace

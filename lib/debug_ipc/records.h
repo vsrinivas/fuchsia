@@ -201,11 +201,12 @@ struct AddressRegion {
   uint64_t depth;
 };
 
-// Registers -------------------------------------------------------------------
+// ReadRegisters -------------------------------------------------------------------
 
 // Value representing a particular register.
 struct Register {
   RegisterID id;
+
   // This data is stored in the architecture native's endianness
   // (eg. the result of running memcpy over the data).
   std::vector<uint8_t> data;
@@ -216,12 +217,15 @@ struct RegisterCategory {
   // Categories will always be sorted from lower to upper
   enum class Type : uint32_t {
     kGeneral,
-    kFloatingPoint,
+    kFP,
     kVector,
     kDebug,
 
     kNone,
   };
+  static const char* TypeToString(Type);
+  static Type RegisterIDToCategory(RegisterID);
+
   Type type = Type::kNone;
   std::vector<Register> registers;
 };
