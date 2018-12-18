@@ -286,6 +286,8 @@ class BrEdrConnectionManagerTest : public TestingBase {
   }
 
  protected:
+  static constexpr const int kIncomingConnTransactions = 6;
+
   BrEdrConnectionManager* connmgr() const { return connection_manager_.get(); }
   void SetConnectionManager(std::unique_ptr<BrEdrConnectionManager> mgr) {
     connection_manager_ = std::move(mgr);
@@ -297,6 +299,9 @@ class BrEdrConnectionManagerTest : public TestingBase {
 
   int transaction_count() const { return transaction_count_; }
 
+  // Add expectations and simulated responses for the outbound commands sent
+  // after an inbound Connection Request Event is received. Results in
+  // |kIncomingConnTransactions| transactions.
   void QueueSuccessfulIncomingConn() const {
     test_device()->QueueCommandTransaction(CommandTransaction(
         kAcceptConnectionRequest,
@@ -464,7 +469,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest, IncomingConnectionSuccess) {
   ASSERT_TRUE(dev);
   EXPECT_EQ(dev->identifier(), connmgr()->GetPeerId(kConnectionHandle));
 
-  EXPECT_EQ(6, transaction_count());
+  EXPECT_EQ(kIncomingConnTransactions, transaction_count());
 
   // When we deallocate the connection manager next, we should disconnect.
   test_device()->QueueCommandTransaction(CommandTransaction(
@@ -480,7 +485,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest, IncomingConnectionSuccess) {
 
   RunLoopUntilIdle();
 
-  EXPECT_EQ(9, transaction_count());
+  EXPECT_EQ(kIncomingConnTransactions + 3, transaction_count());
 }
 
 // Test: An incoming connection request should upgrade a known LE device with a
@@ -521,7 +526,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest, RemoteDisconnect) {
   ASSERT_TRUE(dev);
   EXPECT_EQ(dev->identifier(), connmgr()->GetPeerId(kConnectionHandle));
 
-  EXPECT_EQ(6, transaction_count());
+  EXPECT_EQ(kIncomingConnTransactions, transaction_count());
 
   // Remote end disconnects.
   test_device()->SendCommandChannelPacket(kDisconnectionComplete);
@@ -540,7 +545,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest, RemoteDisconnect) {
 
   RunLoopUntilIdle();
 
-  EXPECT_EQ(8, transaction_count());
+  EXPECT_EQ(kIncomingConnTransactions + 2, transaction_count());
 }
 
 const auto kRemoteNameRequestCompleteFailed =
@@ -686,7 +691,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest, LinkKeyRequestAndNegativeReply) {
 
   RunLoopUntilIdle();
 
-  EXPECT_EQ(7, transaction_count());
+  EXPECT_EQ(kIncomingConnTransactions + 1, transaction_count());
 
   auto* dev = device_cache()->FindDeviceByAddress(kTestDevAddr);
   ASSERT_TRUE(dev);
@@ -700,10 +705,17 @@ TEST_F(GAP_BrEdrConnectionManagerTest, LinkKeyRequestAndNegativeReply) {
 
   RunLoopUntilIdle();
 
-  EXPECT_EQ(8, transaction_count());
+  EXPECT_EQ(kIncomingConnTransactions + 2, transaction_count());
 
   QueueDisconnection();
 }
+
+const hci::LinkKey kRawKey({0xc0, 0xde, 0xfa, 0x57, 0x4b, 0xad, 0xf0, 0x0d,
+                            0xa7, 0x60, 0x06, 0x1e, 0xca, 0x1e, 0xca, 0xfe},
+                           0, 0);
+const sm::LTK kLinkKey(
+    sm::SecurityProperties(hci::LinkKeyType::kAuthenticatedCombination192),
+    kRawKey);
 
 const auto kLinkKeyNotification = common::CreateStaticByteBuffer(
     hci::kLinkKeyNotificationEventCode,
@@ -728,6 +740,36 @@ const auto kLinkKeyRequestReplyRsp = common::CreateStaticByteBuffer(
     hci::kSuccess,          // status
     TEST_DEV_ADDR_BYTES_LE  // peer address
 );
+
+// Test: replies to Link Key Requests for bonded device
+TEST_F(GAP_BrEdrConnectionManagerTest, RecallLinkKeyForBondedDevice) {
+  ASSERT_TRUE(
+      device_cache()->AddBondedDevice("1234", kTestDevAddr, {}, kLinkKey));
+  auto* dev = device_cache()->FindDeviceByAddress(kTestDevAddr);
+  ASSERT_TRUE(dev);
+  ASSERT_FALSE(dev->connected());
+  ASSERT_TRUE(dev->bonded());
+
+  QueueSuccessfulIncomingConn();
+
+  test_device()->SendCommandChannelPacket(kConnectionRequest);
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(kIncomingConnTransactions, transaction_count());
+  ASSERT_TRUE(dev->connected());
+
+  test_device()->QueueCommandTransaction(kLinkKeyRequestReply,
+                                         {&kLinkKeyRequestReplyRsp});
+
+  test_device()->SendCommandChannelPacket(kLinkKeyRequest);
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(kIncomingConnTransactions + 1, transaction_count());
+
+  QueueDisconnection();
+}
 
 const auto kLinkKeyNotificationChanged = common::CreateStaticByteBuffer(
     hci::kLinkKeyNotificationEventCode,
@@ -754,7 +796,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest, BondRemoteDevice) {
 
   RunLoopUntilIdle();
 
-  EXPECT_EQ(6, transaction_count());
+  EXPECT_EQ(kIncomingConnTransactions, transaction_count());
 
   auto* dev = device_cache()->FindDeviceByAddress(kTestDevAddr);
   ASSERT_TRUE(dev);
@@ -773,7 +815,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest, BondRemoteDevice) {
 
   RunLoopUntilIdle();
 
-  EXPECT_EQ(7, transaction_count());
+  EXPECT_EQ(kIncomingConnTransactions + 1, transaction_count());
 
   // Change the link key.
   test_device()->SendCommandChannelPacket(kLinkKeyNotificationChanged);
@@ -789,7 +831,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest, BondRemoteDevice) {
   RunLoopUntilIdle();
 
   EXPECT_TRUE(dev->bonded());
-  EXPECT_EQ(8, transaction_count());
+  EXPECT_EQ(kIncomingConnTransactions + 2, transaction_count());
 
   QueueDisconnection();
 }
@@ -802,7 +844,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest, UnbondedDeviceChangeLinkKey) {
 
   RunLoopUntilIdle();
 
-  EXPECT_EQ(6, transaction_count());
+  EXPECT_EQ(kIncomingConnTransactions, transaction_count());
 
   auto* dev = device_cache()->FindDeviceByAddress(kTestDevAddr);
   ASSERT_TRUE(dev);
@@ -823,7 +865,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest, UnbondedDeviceChangeLinkKey) {
   RunLoopUntilIdle();
 
   EXPECT_FALSE(dev->bonded());
-  EXPECT_EQ(7, transaction_count());
+  EXPECT_EQ(kIncomingConnTransactions + 1, transaction_count());
 
   QueueDisconnection();
 }
@@ -845,7 +887,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest, LegacyLinkKeyNotBonded) {
 
   RunLoopUntilIdle();
 
-  EXPECT_EQ(6, transaction_count());
+  EXPECT_EQ(kIncomingConnTransactions, transaction_count());
 
   auto* dev = device_cache()->FindDeviceByAddress(kTestDevAddr);
   ASSERT_TRUE(dev);
@@ -865,7 +907,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest, LegacyLinkKeyNotBonded) {
   RunLoopUntilIdle();
 
   EXPECT_FALSE(dev->bonded());
-  EXPECT_EQ(7, transaction_count());
+  EXPECT_EQ(kIncomingConnTransactions + 1, transaction_count());
 
   QueueDisconnection();
 }
@@ -878,7 +920,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest, DisconnectOnLinkError) {
 
   RunLoopUntilIdle();
 
-  EXPECT_EQ(6, transaction_count());
+  EXPECT_EQ(kIncomingConnTransactions, transaction_count());
 
   // When we deallocate the connection manager next, we should disconnect.
   QueueDisconnection();
@@ -887,7 +929,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest, DisconnectOnLinkError) {
 
   RunLoopUntilIdle();
 
-  EXPECT_EQ(7, transaction_count());
+  EXPECT_EQ(kIncomingConnTransactions + 1, transaction_count());
 
   test_device()->QueueCommandTransaction(
       CommandTransaction(kReadScanEnable, {&kReadScanEnableRspBoth}));
@@ -898,7 +940,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest, DisconnectOnLinkError) {
 
   RunLoopUntilIdle();
 
-  EXPECT_EQ(9, transaction_count());
+  EXPECT_EQ(kIncomingConnTransactions + 3, transaction_count());
 }
 
 TEST_F(GAP_BrEdrConnectionManagerTest, ConnectedDeviceTimeout) {
@@ -908,7 +950,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest, ConnectedDeviceTimeout) {
 
   RunLoopUntilIdle();
 
-  EXPECT_EQ(6, transaction_count());
+  EXPECT_EQ(kIncomingConnTransactions, transaction_count());
 
   auto* dev = device_cache()->FindDeviceByAddress(kTestDevAddr);
   ASSERT_TRUE(dev);

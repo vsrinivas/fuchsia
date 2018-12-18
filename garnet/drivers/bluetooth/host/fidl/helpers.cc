@@ -330,7 +330,7 @@ fhost::BondingData NewBondingData(const ::btlib::gap::Adapter& adapter,
     }
   }
 
-  // TODO(armansito): Store BR/EDR data.
+  // TODO(BT-640): Store BR/EDR data.
   return out_data;
 }
 

@@ -139,7 +139,8 @@ class Adapter final {
   // auto-connect procedures.
   bool AddBondedDevice(const std::string& identifier,
                        const common::DeviceAddress& address,
-                       const sm::PairingData& le_bond_data);
+                       const sm::PairingData& le_bond_data,
+                       const std::optional<sm::LTK>& link_key);
 
   // Assigns a pairing delegate to this adapter. This PairingDelegate and its
   // I/O capabilities will be used for all future pairing procedures. Setting a

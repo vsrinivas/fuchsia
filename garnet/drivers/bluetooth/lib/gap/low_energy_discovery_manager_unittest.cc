@@ -793,7 +793,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, DirectedConnectableEvent) {
   // Mark the device as bonded.
   sm::PairingData pdata;
   pdata.ltk = sm::LTK();
-  device_cache()->AddBondedDevice("1234", kAddress0, pdata);
+  device_cache()->AddBondedDevice("1234", kAddress0, pdata, {});
   EXPECT_EQ(1u, device_cache()->count());
 
   // Advance to the next scan period. We should receive a new notification.
@@ -996,7 +996,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest,
 
   sm::PairingData pdata;
   pdata.ltk = sm::LTK();
-  device_cache()->AddBondedDevice(kBondedDeviceId, kAddress0, pdata);
+  device_cache()->AddBondedDevice(kBondedDeviceId, kAddress0, pdata, {});
   EXPECT_EQ(1u, device_cache()->count());
 
   // Add a second device the sends directed advertisements but do not mark it as

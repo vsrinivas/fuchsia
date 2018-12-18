@@ -193,9 +193,10 @@ void Adapter::ShutDown() {
 
 bool Adapter::AddBondedDevice(const std::string& identifier,
                               const common::DeviceAddress& address,
-                              const sm::PairingData& le_bond_data) {
+                              const sm::PairingData& le_bond_data,
+                              const std::optional<sm::LTK>& link_key) {
   return remote_device_cache()->AddBondedDevice(identifier, address,
-                                                le_bond_data);
+                                                le_bond_data, link_key);
 }
 
 void Adapter::SetPairingDelegate(fxl::WeakPtr<PairingDelegate> delegate) {

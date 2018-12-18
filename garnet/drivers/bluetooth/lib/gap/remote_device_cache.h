@@ -58,7 +58,8 @@ class RemoteDeviceCache final {
 
   // Creates a new non-temporary device entry using the given |identifier| and
   // identity |address|. This is intended to initialize this RemoteDeviceCache
-  // with previously bonded devices while bootstrapping a bt-host device.
+  // with previously bonded devices while bootstrapping a bt-host device. The
+  // "device bonded" callback will not be invoked.
   //
   // This method is not intended for updating the bonding data of a device that
   // already exists the cache and returns false if a mapping for |identifier| or
@@ -70,10 +71,10 @@ class RemoteDeviceCache final {
   // should be instead updated with new bond information to create a dual-mode
   // device.
   //
-  // TODO(armansito): Pass in BR/EDR link key here as well, if present.
   bool AddBondedDevice(const std::string& identifier,
                        const common::DeviceAddress& address,
-                       const sm::PairingData& bond_data);
+                       const sm::PairingData& bond_data,
+                       const std::optional<sm::LTK>& link_key);
 
   // Update the device with the given identifier with new LE bonding
   // information. The device will be considered "bonded" and the bonded callback

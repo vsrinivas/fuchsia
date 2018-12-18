@@ -322,7 +322,8 @@ TEST_F(GAP_AdapterTest, LeAutoConnect) {
   // Mark the device as bonded and advance the scan period.
   sm::PairingData pdata;
   pdata.ltk = sm::LTK();
-  adapter()->remote_device_cache()->AddBondedDevice(kDeviceId, kAddress, pdata);
+  adapter()->remote_device_cache()->AddBondedDevice(kDeviceId, kAddress, pdata,
+                                                    {});
   EXPECT_EQ(1u, adapter()->remote_device_cache()->count());
   RunLoopFor(zx::msec(kTestScanPeriodMs));
 

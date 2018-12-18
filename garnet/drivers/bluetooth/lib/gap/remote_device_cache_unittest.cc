@@ -374,8 +374,8 @@ TEST_F(GAP_RemoteDeviceCacheTest_BondingTest,
        AddBondedDeviceFailsWithExistingId) {
   sm::PairingData data;
   data.ltk = kLTK;
-  EXPECT_FALSE(
-      cache()->AddBondedDevice(device()->identifier(), kAddrLePublic, data));
+  EXPECT_FALSE(cache()->AddBondedDevice(device()->identifier(), kAddrLeRandom,
+                                        data, {}));
   EXPECT_FALSE(bonded_callback_called());
 }
 
@@ -383,7 +383,7 @@ TEST_F(GAP_RemoteDeviceCacheTest_BondingTest,
        AddBondedDeviceFailsWithExistingAddress) {
   sm::PairingData data;
   data.ltk = kLTK;
-  EXPECT_FALSE(cache()->AddBondedDevice("foo", device()->address(), data));
+  EXPECT_FALSE(cache()->AddBondedDevice("foo", device()->address(), data, {}));
   EXPECT_FALSE(bonded_callback_called());
 }
 
@@ -392,23 +392,32 @@ TEST_F(GAP_RemoteDeviceCacheTest_BondingTest,
   EXPECT_TRUE(NewDevice(kAddrBrEdr, true));
   sm::PairingData data;
   data.ltk = kLTK;
-  EXPECT_FALSE(cache()->AddBondedDevice("foo", kAddrLeAlias, data));
+  EXPECT_FALSE(cache()->AddBondedDevice("foo", kAddrLeAlias, data, {}));
+  EXPECT_FALSE(bonded_callback_called());
+}
+
+TEST_F(GAP_RemoteDeviceCacheTest_BondingTest,
+       AddBondedBrEdrDeviceFailsWithExistingLowEnergyAliasAddress) {
+  EXPECT_TRUE(NewDevice(kAddrLeAlias, true));
+  EXPECT_FALSE(cache()->AddBondedDevice("foo", kAddrBrEdr, {}, kBrEdrKey));
   EXPECT_FALSE(bonded_callback_called());
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_BondingTest,
        AddBondedDeviceFailsWithoutMandatoryKeys) {
   sm::PairingData data;
-  EXPECT_FALSE(cache()->AddBondedDevice("foo", kAddrLePublic, data));
+  EXPECT_FALSE(cache()->AddBondedDevice("foo", kAddrLeAlias, data, kBrEdrKey));
+  data.ltk = kLTK;
+  EXPECT_FALSE(cache()->AddBondedDevice("foo", kAddrBrEdr, data, {}));
   EXPECT_FALSE(bonded_callback_called());
 }
 
-TEST_F(GAP_RemoteDeviceCacheTest_BondingTest, AddBondedDeviceSuccess) {
+TEST_F(GAP_RemoteDeviceCacheTest_BondingTest, AddLowEnergyBondedDeviceSuccess) {
   const std::string kId("test-id");
   sm::PairingData data;
   data.ltk = kLTK;
 
-  EXPECT_TRUE(cache()->AddBondedDevice(kId, kAddrLeRandom, data));
+  EXPECT_TRUE(cache()->AddBondedDevice(kId, kAddrLeRandom, data, {}));
   auto* dev = cache()->FindDeviceById(kId);
   ASSERT_TRUE(dev);
   EXPECT_EQ(dev, cache()->FindDeviceByAddress(kAddrLeRandom));
@@ -419,9 +428,34 @@ TEST_F(GAP_RemoteDeviceCacheTest_BondingTest, AddBondedDeviceSuccess) {
   EXPECT_TRUE(dev->le()->bonded());
   ASSERT_TRUE(dev->le()->bond_data());
   EXPECT_EQ(data, *dev->le()->bond_data());
+  EXPECT_FALSE(dev->bredr());
+  EXPECT_EQ(TechnologyType::kLowEnergy, dev->technology());
 
-  // The "new bond" callback should be called when restoring a previously bonded
-  // device.
+  // The "new bond" callback should not be called when restoring a previously
+  // bonded device.
+  EXPECT_FALSE(bonded_callback_called());
+}
+
+TEST_F(GAP_RemoteDeviceCacheTest_BondingTest, AddBrEdrBondedDeviceSuccess) {
+  const std::string kId("test-id");
+  sm::PairingData data;
+
+  EXPECT_TRUE(cache()->AddBondedDevice(kId, kAddrBrEdr, data, kBrEdrKey));
+  auto* dev = cache()->FindDeviceById(kId);
+  ASSERT_TRUE(dev);
+  EXPECT_EQ(dev, cache()->FindDeviceByAddress(kAddrBrEdr));
+  EXPECT_EQ(kId, dev->identifier());
+  EXPECT_EQ(kAddrBrEdr, dev->address());
+  EXPECT_TRUE(dev->identity_known());
+  ASSERT_TRUE(dev->bredr());
+  EXPECT_TRUE(dev->bredr()->bonded());
+  ASSERT_TRUE(dev->bredr()->link_key());
+  EXPECT_EQ(kBrEdrKey, *dev->bredr()->link_key());
+  EXPECT_FALSE(dev->le());
+  EXPECT_EQ(TechnologyType::kClassic, dev->technology());
+
+  // The "new bond" callback should not be called when restoring a previously
+  // bonded device.
   EXPECT_FALSE(bonded_callback_called());
 }
 
@@ -432,7 +466,7 @@ TEST_F(GAP_RemoteDeviceCacheTest_BondingTest,
   data.ltk = kLTK;
   data.irk = sm::Key(sm::SecurityProperties(), common::RandomUInt128());
 
-  EXPECT_TRUE(cache()->AddBondedDevice(kId, kAddrLeRandom, data));
+  EXPECT_TRUE(cache()->AddBondedDevice(kId, kAddrLeRandom, data, {}));
   auto* dev = cache()->FindDeviceByAddress(kAddrLeRandom);
   ASSERT_TRUE(dev);
   EXPECT_EQ(kAddrLeRandom, dev->address());
@@ -626,6 +660,45 @@ TEST_F(GAP_RemoteDeviceCacheTest_BondingTest, StoreBondsForBothTech) {
   EXPECT_TRUE(device()->bredr()->bonded());
   EXPECT_TRUE(device()->le()->bonded());
 }
+
+// Fixture parameterized by device address
+class DualModeBondingTest
+    : public GAP_RemoteDeviceCacheTest_BondingTest,
+      public ::testing::WithParamInterface<DeviceAddress> {};
+
+TEST_P(DualModeBondingTest, AddBondedDeviceSuccess) {
+  const std::string kId("test-id");
+  sm::PairingData data;
+  data.ltk = kLTK;
+
+  const DeviceAddress& address = GetParam();
+  EXPECT_TRUE(cache()->AddBondedDevice(kId, address, data, kBrEdrKey));
+  auto* dev = cache()->FindDeviceById(kId);
+  ASSERT_TRUE(dev);
+  EXPECT_EQ(dev, cache()->FindDeviceByAddress(kAddrLeAlias));
+  EXPECT_EQ(dev, cache()->FindDeviceByAddress(kAddrBrEdr));
+  EXPECT_EQ(kId, dev->identifier());
+  EXPECT_EQ(address, dev->address());
+  EXPECT_TRUE(dev->identity_known());
+  EXPECT_TRUE(dev->bonded());
+  ASSERT_TRUE(dev->le());
+  EXPECT_TRUE(dev->le()->bonded());
+  ASSERT_TRUE(dev->le()->bond_data());
+  EXPECT_EQ(data, *dev->le()->bond_data());
+  ASSERT_TRUE(dev->bredr());
+  EXPECT_TRUE(dev->bredr()->bonded());
+  ASSERT_TRUE(dev->bredr()->link_key());
+  EXPECT_EQ(kBrEdrKey, *dev->bredr()->link_key());
+  EXPECT_EQ(TechnologyType::kDualMode, dev->technology());
+
+  // The "new bond" callback should not be called when restoring a previously
+  // bonded device.
+  EXPECT_FALSE(bonded_callback_called());
+}
+
+// Test dual-mode character of device using the same address of both types.
+INSTANTIATE_TEST_SUITE_P(GAP_RemoteDeviceCacheTest, DualModeBondingTest,
+                         ::testing::Values(kAddrBrEdr, kAddrLeAlias));
 
 template <const DeviceAddress* DevAddr>
 class GAP_RemoteDeviceCacheTest_UpdateCallbackTest

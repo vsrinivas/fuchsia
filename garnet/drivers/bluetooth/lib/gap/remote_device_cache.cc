@@ -53,18 +53,26 @@ void RemoteDeviceCache::ForEach(DeviceCallback f) {
   }
 }
 
-bool RemoteDeviceCache::AddBondedDevice(const std::string& identifier,
-                                        const DeviceAddress& address,
-                                        const sm::PairingData& bond_data) {
+bool RemoteDeviceCache::AddBondedDevice(
+    const std::string& identifier, const DeviceAddress& address,
+    const sm::PairingData& bond_data, const std::optional<sm::LTK>& link_key) {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   ZX_DEBUG_ASSERT(!bond_data.identity_address ||
-                  address == *bond_data.identity_address);
+                  address.value() == bond_data.identity_address->value());
   ZX_DEBUG_ASSERT(address.type() != DeviceAddress::Type::kLEAnonymous);
 
+  const bool bond_le = bond_data.ltk || bond_data.csrk;
+  const bool bond_bredr = link_key.has_value();
+
   // |bond_data| must contain either a LTK or CSRK for LE Security Mode 1 or 2.
-  // TODO(armansito): Accept empty |bond_data| if a BR/EDR link key is provided.
-  if (!bond_data.ltk && !bond_data.csrk) {
-    bt_log(ERROR, "gap-le", "mandatory keys missing: no IRK or CSRK (id: %s)",
+  if (address.IsLowEnergy() && !bond_le) {
+    bt_log(ERROR, "gap-le", "mandatory keys missing: no LTK or CSRK (id: %s)",
+           identifier.c_str());
+    return false;
+  }
+
+  if (address.IsBrEdr() && !bond_bredr) {
+    bt_log(ERROR, "gap-bredr", "mandatory link key missing (id: %s)",
            identifier.c_str());
     return false;
   }
@@ -77,15 +85,27 @@ bool RemoteDeviceCache::AddBondedDevice(const std::string& identifier,
   // A bonded device must have its identity known.
   device->set_identity_known(true);
 
-  device->MutLe().SetBondData(bond_data);
-  ZX_DEBUG_ASSERT(!device->temporary());
-  ZX_DEBUG_ASSERT(device->le()->bonded());
+  if (bond_le) {
+    device->MutLe().SetBondData(bond_data);
+    ZX_DEBUG_ASSERT(device->le()->bonded());
 
-  // Add the device to the resolving list if it has an IRK.
-  if (bond_data.irk) {
-    le_resolving_list_.Add(device->address(), bond_data.irk->value());
+    // Add the device to the resolving list if it has an IRK.
+    if (bond_data.irk) {
+      le_resolving_list_.Add(device->address(), bond_data.irk->value());
+    }
   }
 
+  if (bond_bredr) {
+    device->MutBrEdr().SetLinkKey(*link_key);
+    ZX_DEBUG_ASSERT(device->bredr()->bonded());
+  }
+
+  if (device->technology() == TechnologyType::kDualMode) {
+    address_map_[GetAliasAddress(address)] = identifier;
+  }
+
+  ZX_DEBUG_ASSERT(!device->temporary());
+  ZX_DEBUG_ASSERT(device->bonded());
   bt_log(SPEW, "gap", "restored bonded device: %s, id: %s",
          address.ToString().c_str(), identifier.c_str());
 

@@ -104,6 +104,12 @@ class DeviceAddress {
   Type type() const { return type_; }
   const DeviceAddressBytes& value() const { return value_; }
 
+  bool IsBrEdr() const { return type_ == Type::kBREDR; }
+  bool IsLowEnergy() const {
+    return type_ == Type::kLEPublic || type_ == Type::kLERandom ||
+           type_ == Type::kLEAnonymous;
+  }
+
   // Comparison operators. The equality and less-than operators are needed to
   // support unordered and ordered containers, respectively.
   inline bool operator==(const DeviceAddress& other) const {

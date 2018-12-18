@@ -259,7 +259,7 @@ void HostServer::AddBondedDevices(::std::vector<BondingData> bonds,
   for (auto& bond : bonds) {
     btlib::sm::PairingData bond_data;
 
-    // TODO(armansito): Handle BR/EDR data here. For now we skip the entry if LE
+    // TODO(BT-640): Handle BR/EDR data here. For now we skip the entry if LE
     // data isn't available.
     if (!bond.le) {
       bt_log(ERROR, "bt-host", "Ignore non-LE bonding data");
@@ -277,7 +277,7 @@ void HostServer::AddBondedDevices(::std::vector<BondingData> bonds,
     // transports instead of storing them separately. For now use the one we
     // obtained from |bond.le|.
     if (!adapter()->AddBondedDevice(bond.identifier,
-                                    *bond_data.identity_address, bond_data)) {
+                                    *bond_data.identity_address, bond_data, {})) {
       failed_ids.push_back(bond.identifier);
       continue;
     }
