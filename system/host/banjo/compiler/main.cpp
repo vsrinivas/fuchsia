@@ -112,12 +112,57 @@ void MakeParentDirectory(const std::string& filename) {
     }
 }
 
-std::fstream Open(std::string filename, std::ios::openmode mode) {
+// Stream is a wrapper around std::fstream to ensure we delete files that we
+// open for output but don't write anything to.
+class Stream {
+public:
+    Stream() {}
+    Stream(Stream&& other)
+        : stream_(std::move(other.stream_)), filename_(other.filename_),
+          written_to_(other.written_to_), out_(other.out_) {
+        other.out_ = false;
+    }
+
+    auto eof() const { return stream_.eof(); }
+    void flush() { stream_.flush(); }
+    auto get() { return stream_.get(); }
+    auto is_open() { return stream_.is_open(); }
+    auto peek() { return stream_.peek(); }
+
+    Stream& operator<<(const std::string& value) {
+        written_to_ = true;
+        stream_ << value;
+        return *this;
+    }
+
+    void open(std::string filename,
+              std::ios_base::openmode mode = std::ios_base::in | std::ios_base::out) {
+        out_ = mode & std::ios_base::out;
+        stream_.open(filename, mode);
+        filename_ = std::string(filename);
+    }
+
+    ~Stream() {
+        stream_.close();
+        if (out_ && !written_to_) {
+            remove(filename_.c_str());
+        }
+    }
+
+private:
+    std::fstream stream_;
+    std::string filename_;
+    bool written_to_ = false;
+    bool out_ = false;
+};
+
+
+Stream Open(std::string filename, std::ios::openmode mode) {
     if ((mode & std::ios::out) != 0) {
         MakeParentDirectory(filename);
     }
 
-    std::fstream stream;
+    Stream stream;
     stream.open(filename, mode);
     if (!stream.is_open()) {
         Fail("Could not open file: %s\n", filename.data());
@@ -199,7 +244,7 @@ private:
         }
     }
 
-    std::fstream file_;
+    Stream file_;
 };
 
 enum struct Behavior {
@@ -223,7 +268,7 @@ bool Parse(const banjo::SourceFile& source_file, banjo::IdentifierTable* identif
     return true;
 }
 
-void Write(std::ostringstream output, std::fstream file) {
+void Write(std::ostringstream output, Stream file) {
     file << output.str();
     file.flush();
 }
@@ -259,11 +304,11 @@ int main(int argc, char* argv[]) {
 
     std::string library_name;
 
-    std::map<Behavior, std::fstream> outputs;
+    std::map<Behavior, Stream> outputs;
     while (args->Remaining()) {
         // Try to parse an output type.
         std::string behavior_argument = args->Claim();
-        std::fstream output_file;
+        Stream output_file;
         if (behavior_argument == "--help") {
             Usage();
             exit(0);
