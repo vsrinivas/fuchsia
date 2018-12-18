@@ -107,7 +107,7 @@ func (f *TFTPFiles) Transfer(ctx context.Context, client *tftp.Client, addr *net
 			fmt.Println("done")
 			return nil
 		})
-	})
+	}, nil)
 }
 
 // TransferCmdlineArgs sends command-line arguments to a file over TFTP to a node at a given address.

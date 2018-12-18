@@ -319,7 +319,7 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, nodename string, cmdlin
 	err = retry.Retry(ctx, retry.WithMaxRetries(retry.NewConstantBackoff(time.Second), 60), func() error {
 		addr, err = n.Discover(nodename, false)
 		return err
-	})
+	}, nil)
 	if err != nil {
 		return fmt.Errorf("cannot find node \"%s\": %v\n", nodename, err)
 	}
@@ -400,7 +400,7 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, nodename string, cmdlin
 	err = retry.Retry(ctx, retry.NewConstantBackoff(cmd.filePollInterval), func() error {
 		writer, err = client.Receive(tftpAddr, path.Join(cmd.testResultsDir, cmd.summaryFilename))
 		return err
-	})
+	}, nil)
 	if err != nil {
 		return fmt.Errorf("timed out waiting for tests to complete: %v", err)
 	}

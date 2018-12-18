@@ -10,7 +10,7 @@ import (
 
 // Retry the operation using the provided back-off policy until it succeeds,
 // or the context is cancelled.
-func Retry(ctx context.Context, b Backoff, f func() error) error {
+func Retry(ctx context.Context, b Backoff, f func() error, c chan<- error) error {
 	var err error
 	var next time.Duration
 
@@ -31,6 +31,9 @@ func Retry(ctx context.Context, b Backoff, f func() error) error {
 			timer.Stop()
 			return err
 		case <-timer.C:
+			if c != nil {
+				c <- err
+			}
 		}
 	}
 

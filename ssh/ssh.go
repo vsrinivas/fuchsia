@@ -76,7 +76,7 @@ func Connect(ctx context.Context, addr *net.UDPAddr, user string, privateKey []b
 	err = retry.Retry(ctx, retry.WithMaxRetries(retry.NewConstantBackoff(time.Second), 10), func() error {
 		client, err = ssh.Dial(protocol, address, config)
 		return err
-	})
+	}, nil)
 	if err != nil {
 		return nil, fmt.Errorf("cannot connect to '%s' address, '%s': %v", protocol, address, err)
 	}
