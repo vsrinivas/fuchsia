@@ -7,7 +7,6 @@
 #include <gmock/gmock.h>
 #include <lib/fdio/util.h>
 #include <lib/fxl/arraysize.h>
-#include <lib/fxl/logging.h>
 #include <lib/fxl/strings/string_printf.h>
 #include <limits.h>
 #include <stdlib.h>

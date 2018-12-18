@@ -12,9 +12,8 @@
 
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-  if (!fxl::SetLogSettingsFromCommandLine(command_line)) {
+  if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
-  }
 
   iquery::Options options(command_line);
   if (!options.Valid()) {

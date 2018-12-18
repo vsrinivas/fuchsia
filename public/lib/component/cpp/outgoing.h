@@ -7,7 +7,6 @@
 
 #include <fs/pseudo-dir.h>
 #include <fs/service.h>
-#include <lib/fidl/cpp/thread_safe_binding_set.h>
 #include <lib/fit/function.h>
 
 #include <memory>
@@ -104,9 +103,6 @@ class Outgoing {
   fbl::RefPtr<fs::PseudoDir> public_dir_;
   fbl::RefPtr<fs::PseudoDir> debug_dir_;
   fbl::RefPtr<fs::PseudoDir> ctrl_dir_;
-
-  fidl::ThreadSafeBindingSet<fuchsia::inspect::Inspect, std::shared_ptr<Object>>
-      inspect_bindings_;
   std::unique_ptr<ObjectDir> object_dir_;
 
   mutable ServiceNamespace deprecated_outgoing_services_;

@@ -15,6 +15,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/default.h>
 #include "lib/component/cpp/testing/launcher_impl.h"
+#include "lib/fxl/logging.h"
 #include "lib/svc/cpp/services.h"
 
 namespace component {

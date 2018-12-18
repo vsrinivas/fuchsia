@@ -7,7 +7,6 @@
 #include <fbl/string_printf.h>
 #include <fs/pseudo-file.h>
 #include <fs/remote-dir.h>
-#include <fs/service.h>
 #include <lib/async/default.h>
 #include <lib/fdio/util.h>
 #include <lib/fit/function.h>
@@ -196,19 +195,7 @@ ComponentControllerImpl::ComponentControllerImpl(
   hub()->SetJobId(std::to_string(fsl::GetKoid(job_.get())));
   hub()->SetProcessId(koid_);
 
-  // Serve connections to the system_objects interface.
-  auto system_objects = fbl::MakeRefCounted<fs::PseudoDir>();
-  system_objects->AddEntry(
-      ".inspect", fbl::MakeRefCounted<fs::Service>([this](zx::channel channel) {
-        debug_directory_bindings_.AddBinding(
-            debug_directory_.object(),
-            fidl::InterfaceRequest<fuchsia::inspect::Inspect>(
-                std::move(channel)),
-            nullptr);
-        return ZX_OK;
-      }));
-
-  hub()->AddEntry("system_objects", system_objects);
+  hub()->AddEntry("system_objects", debug_directory_.object());
 
   hub()->AddIncomingServices(this->incoming_services());
 }

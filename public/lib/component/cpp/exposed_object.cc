@@ -4,16 +4,16 @@
 //
 #include <optional>
 #include <string>
-#include <sstream>
 
 #include <fbl/ref_ptr.h>
+#include <lib/fxl/strings/string_printf.h>
 
 #include "exposed_object.h"
 
 namespace component {
 
 ExposedObject::ExposedObject(const std::string& name)
-    : object_dir_(std::make_shared<Object>(name.c_str())) {}
+    : object_dir_(fbl::MakeRefCounted<Object>(name.c_str())) {}
 
 ExposedObject::~ExposedObject() { remove_from_parent(); }
 
@@ -42,10 +42,10 @@ void ExposedObject::move_parents(const ObjectDir& new_parent) {
 
 std::string ExposedObject::UniqueName(const std::string& prefix) {
   static std::atomic_uint_fast64_t next_id;
-  std::ostringstream out;
+  std::string out = prefix;
   auto value = next_id.fetch_add(1);
-  out << prefix << "0x" << std::hex << value;
-  return out.str();
+  fxl::StringAppendf(&out, "0x%lx", value);
+  return out;
 }
 
 }  // namespace component

@@ -8,20 +8,20 @@ namespace component {
 
 ObjectDir::ObjectDir() {}
 
-ObjectDir::ObjectDir(std::shared_ptr<Object> object) : object_(std::move(object)) {}
+ObjectDir::ObjectDir(fbl::RefPtr<Object> object) : object_(std::move(object)) {}
 
 ObjectDir ObjectDir::find(ObjectPath path, bool initialize) const {
   if (!object_) {
     return ObjectDir();
   }
-  std::shared_ptr<Object> current = object_;
+  fbl::RefPtr<Object> current = object_;
   for (const char* p : path) {
     auto next = current->GetChild(p);
     if (!next) {
       if (!initialize) {
         return ObjectDir();
       }
-      next = std::make_shared<Object>(p);
+      next = fbl::MakeRefCounted<Object>(p);
       current->SetChild(next);
     }
     current = std::move(next);
@@ -40,7 +40,7 @@ bool ObjectDir::set_metric(ObjectPath path, std::string name,
   return object_ ? find(path).object()->SetMetric(name, std::move(metric)) : false;
 }
 
-void ObjectDir::set_child(ObjectPath path, std::shared_ptr<Object> obj) const {
+void ObjectDir::set_child(ObjectPath path, fbl::RefPtr<Object> obj) const {
   if (object_) {
     find(path).object()->SetChild(obj);
   }

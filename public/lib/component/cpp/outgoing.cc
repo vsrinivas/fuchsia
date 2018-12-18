@@ -4,7 +4,6 @@
 
 #include "lib/component/cpp/outgoing.h"
 
-#include <fuchsia/inspect/cpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fdio/util.h>
 #include <zircon/process.h>
@@ -22,19 +21,9 @@ Outgoing::Outgoing()
   root_dir_->AddEntry("public", public_dir_);
   root_dir_->AddEntry("debug", debug_dir_);
   root_dir_->AddEntry("ctrl", ctrl_dir_);
-  auto objects = std::make_shared<Object>("objects");
+  auto objects = fbl::MakeRefCounted<Object>("objects");
   object_dir_ = std::make_unique<ObjectDir>(objects);
-
-  auto out_objects = fbl::MakeRefCounted<fs::PseudoDir>();
-  out_objects->AddEntry(
-      ".inspect", fbl::MakeRefCounted<fs::Service>([this](zx::channel chan) {
-        inspect_bindings_.AddBinding(
-            object_dir_->object(),
-            fidl::InterfaceRequest<fuchsia::inspect::Inspect>(std::move(chan)),
-            nullptr);
-        return ZX_OK;
-      }));
-  root_dir_->AddEntry("objects", out_objects);
+  root_dir_->AddEntry("objects", objects);
 }
 
 Outgoing::~Outgoing() = default;

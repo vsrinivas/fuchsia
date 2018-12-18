@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 #include <fs/service.h>
-#include <lib/syslog/cpp/logger.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/strings/string_printf.h>
 
 #include "expose.h"
 
@@ -69,11 +70,11 @@ void Metric::SetCallback(ValueCallback callback) {
 std::string Metric::ToString() const {
   switch (type_) {
     case INT:
-      return std::to_string(int_value_);
+      return fxl::StringPrintf("%ld", int_value_);
     case UINT:
-      return std::to_string(uint_value_);
+      return fxl::StringPrintf("%lu", uint_value_);
     case DOUBLE:
-      return std::to_string(double_value_);
+      return fxl::StringPrintf("%f", double_value_);
     case CALLBACK:
       Metric temp;
       callback_(&temp);
@@ -126,18 +127,14 @@ Metric CallbackMetric(Metric::ValueCallback callback) {
   return ret;
 }
 
-Object::Object(std::string name) : name_(name) {
-  FX_CHECK(std::find(name_.begin(), name_.end(), '\0') == name_.end())
-      << "Null bytes not allowed in object names.";
+Object::Object(fbl::String name) : name_(name) {
+  FXL_CHECK(std::find(name_.begin(), name_.end(), '\0') == name_.end())
+      << "Object name cannot contain null bytes";
 }
 
 void Object::ReadData(ReadDataCallback callback) {
-  fuchsia::inspect::Object object;
-  {
-    std::lock_guard<std::mutex> lock(mutex_);
-    object = ToFidl();
-  }
-  callback(std::move(object));
+  fbl::AutoLock lock(&mutex_);
+  callback(ToFidl());
 }
 
 void Object::ListChildren(ListChildrenCallback callback) {
@@ -155,15 +152,13 @@ void Object::OpenChild(::fidl::StringPtr name,
     return;
   }
 
-  {
-    std::lock_guard<std::mutex> lock(child->mutex_);
-    child->bindings_.AddBinding(child, std::move(child_channel));
-  }
+  fbl::AutoLock lock(&(child->mutex_));
+  child->bindings_.AddBinding(child, std::move(child_channel));
   callback(true);
 }
 
-std::shared_ptr<Object> Object::GetChild(std::string name) {
-  std::lock_guard<std::mutex> lock(mutex_);
+fbl::RefPtr<Object> Object::GetChild(fbl::String name) {
+  fbl::AutoLock lock(&mutex_);
   auto it = children_.find(name.data());
   if (it != children_.end()) {
     return it->second;
@@ -181,11 +176,11 @@ std::shared_ptr<Object> Object::GetChild(std::string name) {
   }
 
   // Child not found.
-  return std::shared_ptr<Object>();
+  return fbl::RefPtr<Object>();
 }
 
-void Object::SetChild(std::shared_ptr<Object> child) {
-  std::lock_guard<std::mutex> lock(mutex_);
+void Object::SetChild(fbl::RefPtr<Object> child) {
+  fbl::AutoLock lock(&mutex_);
   auto it = children_.find(child->name().data());
   if (it != children_.end()) {
     it->second.swap(child);
@@ -194,11 +189,11 @@ void Object::SetChild(std::shared_ptr<Object> child) {
   }
 }
 
-std::shared_ptr<Object> Object::TakeChild(std::string name) {
-  std::lock_guard<std::mutex> lock(mutex_);
+fbl::RefPtr<Object> Object::TakeChild(fbl::String name) {
+  fbl::AutoLock lock(&mutex_);
   auto it = children_.find(name.c_str());
   if (it == children_.end()) {
-    return std::shared_ptr<Object>();
+    return fbl::RefPtr<Object>();
   }
   auto ret = it->second;
   children_.erase(it);
@@ -206,41 +201,100 @@ std::shared_ptr<Object> Object::TakeChild(std::string name) {
 }
 
 void Object::SetChildrenCallback(ChildrenCallback callback) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  fbl::AutoLock lock(&mutex_);
   lazy_object_callback_ = std::move(callback);
 }
 
 void Object::ClearChildrenCallback() {
-  std::lock_guard<std::mutex> lock(mutex_);
+  fbl::AutoLock lock(&mutex_);
   ChildrenCallback temp;
   lazy_object_callback_.swap(temp);
 }
 
 bool Object::SetProperty(const std::string& name, Property value) {
   if (name.find('\0') != std::string::npos) {
-    FX_DCHECK(false) << "Null bytes are not allowed in property names.";
+    FXL_DCHECK(false) << "Null bytes are not allowed in property names.";
     return false;
   }
-  std::lock_guard<std::mutex> lock(mutex_);
+  fbl::AutoLock lock(&mutex_);
   properties_[name.c_str()] = std::move(value);
   return true;
 }
 
 bool Object::SetMetric(const std::string& name, Metric metric) {
   if (name.find('\0') != std::string::npos) {
-    FX_DCHECK(false) << "Null bytes are not allowed in metric names.";
+    FXL_DCHECK(false) << "Null bytes are not allowed in metric names.";
     return false;
   }
-  std::lock_guard<std::mutex> lock(mutex_);
+  fbl::AutoLock lock(&mutex_);
   metrics_[name.c_str()] = std::move(metric);
   return true;
+}
+
+void Object::GetContents(LazyEntryVector* out_vector) {
+  fbl::AutoLock lock(&mutex_);
+  out_vector->push_back({kChanId, ".channel", V_TYPE_FILE});
+  uint64_t index = kSpecialIdMax;
+
+  // Each child gets a unique ID, which is just its index in the directory.
+  // If the set of children changes between successive calls to readdir(3), it
+  // is possible we will miss children.
+  //
+  // This behavior is documented at the declaration point.
+  for (const auto& it : children_) {
+    out_vector->push_back({index++, it.second->name_, V_TYPE_DIR});
+  }
+  if (lazy_object_callback_) {
+    ObjectVector lazy_objects;
+    lazy_object_callback_(&lazy_objects);
+    for (const auto& obj : lazy_objects) {
+      out_vector->push_back({index++, obj->name(), V_TYPE_DIR});
+    }
+  }
+}
+
+zx_status_t Object::GetFile(fbl::RefPtr<Vnode>* out_vnode, uint64_t id,
+                            fbl::String name) {
+  fbl::AutoLock lock(&mutex_);
+  if (id == kChanId) {
+    // `.channel` is a Service file that binds incoming channels to this
+    // Inspect implementation.
+    auto ref = fbl::WrapRefPtr(this);
+    *out_vnode = fbl::MakeRefCounted<fs::Service>([ref](zx::channel chan) {
+      fbl::AutoLock lock(&ref->mutex_);
+      ref->bindings_.AddBinding(
+          ref, fidl::InterfaceRequest<Inspect>(std::move(chan)));
+      return ZX_OK;
+    });
+    return ZX_OK;
+  }
+
+  // If the file isn't a special file, search for the name as a child object.
+  auto it = children_.find(name.c_str());
+  if (it == children_.end()) {
+    // If the named child is not found, search through the lazy objects if the
+    // callback is set.
+    if (lazy_object_callback_) {
+      ObjectVector lazy_objects;
+      lazy_object_callback_(&lazy_objects);
+      for (const auto& obj : lazy_objects) {
+        if (obj->name() == name.c_str()) {
+          *out_vnode = obj;
+          return ZX_OK;
+        }
+      }
+    }
+    return ZX_ERR_NOT_FOUND;
+  }
+  *out_vnode = it->second;
+  return ZX_OK;
 }
 
 void Object::PopulateChildVector(StringOutputVector* out_vector)
     __TA_EXCLUDES(mutex_) {
   // Lock the local child vector. No need to lock children since we are only
   // reading their constant name.
-  std::lock_guard<std::mutex> lock(mutex_);
+  fbl::AutoLock lock(&mutex_);
   for (const auto& it : children_) {
     out_vector->push_back(it.second->name().data());
   }

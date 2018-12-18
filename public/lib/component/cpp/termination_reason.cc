@@ -1,7 +1,5 @@
 #include "lib/component/cpp/termination_reason.h"
-
-#include <string>
-#include <sstream>
+#include <lib/fxl/strings/string_printf.h>
 
 namespace component {
 
@@ -25,7 +23,7 @@ std::string TerminationReasonToString(
     case fuchsia::sys::TerminationReason::RUNNER_TERMINATED:
       return "RUNNER_TERMINATED";
     default:
-      return std::to_string(static_cast<int>(termination_reason));
+      return fxl::StringPrintf("%d", termination_reason);
   }
 }
 
@@ -45,9 +43,9 @@ std::string HumanReadableTerminationReason(
     case fuchsia::sys::TerminationReason::RUNNER_TERMINATED:
       return "runner failed to execute";
     default:
-      std::ostringstream out;
-      out << "failed to create component (" << TerminationReasonToString(termination_reason) << ")";
-      return out.str();
+      return fxl::StringPrintf(
+          "failed to create component (%s)",
+          TerminationReasonToString(termination_reason).c_str());
   }
 }
 
