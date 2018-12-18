@@ -149,7 +149,7 @@ impl MaxCapacityFile {
 impl Write for MaxCapacityFile {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         if self.capacity == 0 {
-            return Ok(0);
+            return Ok(buf.len());
         }
         if buf.len() as u64 > self.capacity / 2 {
             return Err(io::Error::new(io::ErrorKind::Other, "buffer size larger than file capacity"));
@@ -578,9 +578,9 @@ mod tests {
 
     #[test]
     fn test_max_capacity_file_write() {
-        let cap = 10;
 
         struct TestCase {
+            file_cap: u64,
             file_1_initial_state: Vec<u8>,
             file_2_initial_state: Vec<u8>,
             write_to_perform: Vec<u8>,
@@ -590,6 +590,7 @@ mod tests {
 
         let test_cases = vec![
             TestCase {
+                file_cap: 10,
                 file_1_initial_state: vec![],
                 file_2_initial_state: vec![],
                 write_to_perform: vec![],
@@ -597,6 +598,7 @@ mod tests {
                 file_2_expected_state: vec![],
             },
             TestCase {
+                file_cap: 10,
                 file_1_initial_state: vec![],
                 file_2_initial_state: vec![],
                 write_to_perform: vec![0],
@@ -604,6 +606,7 @@ mod tests {
                 file_2_expected_state: vec![],
             },
             TestCase {
+                file_cap: 10,
                 file_1_initial_state: vec![0],
                 file_2_initial_state: vec![0],
                 write_to_perform: vec![],
@@ -611,6 +614,7 @@ mod tests {
                 file_2_expected_state: vec![0],
             },
             TestCase {
+                file_cap: 10,
                 file_1_initial_state: vec![],
                 file_2_initial_state: vec![],
                 write_to_perform: vec![0,1,2,3,4],
@@ -618,6 +622,7 @@ mod tests {
                 file_2_expected_state: vec![],
             },
             TestCase {
+                file_cap: 10,
                 file_1_initial_state: vec![0,1,2,3,4],
                 file_2_initial_state: vec![],
                 write_to_perform: vec![5],
@@ -625,11 +630,20 @@ mod tests {
                 file_2_expected_state: vec![0,1,2,3,4],
             },
             TestCase {
+                file_cap: 10,
                 file_1_initial_state: vec![5,6,7,8,9],
                 file_2_initial_state: vec![0,1,2,3,4],
                 write_to_perform: vec![10,11,12,13,14],
                 file_1_expected_state: vec![10,11,12,13,14],
                 file_2_expected_state: vec![5,6,7,8,9],
+            },
+            TestCase {
+                file_cap: 0,
+                file_1_initial_state: vec![],
+                file_2_initial_state: vec![],
+                write_to_perform: vec![1,2,3,4,5],
+                file_1_expected_state: vec![],
+                file_2_expected_state: vec![],
             },
         ];
 
@@ -643,7 +657,7 @@ mod tests {
                 .open(&tmp_file_path.with_extension("log.old")).unwrap()
                 .write(&tc.file_2_initial_state).unwrap();
 
-            MaxCapacityFile::new(tmp_file_path.clone(), cap).unwrap()
+            MaxCapacityFile::new(tmp_file_path.clone(), tc.file_cap).unwrap()
                 .write(&tc.write_to_perform).unwrap();
 
             let mut file1 = fs::OpenOptions::new().read(true)
