@@ -132,8 +132,14 @@ static void usb_hid_stop(void* ctx) {
 static zx_status_t usb_hid_control(usb_hid_device_t* hid, uint8_t req_type, uint8_t request,
                                    uint16_t value, uint16_t index, void* data, size_t length,
                                    size_t* out_length) {
-    zx_status_t status = usb_control(&hid->usb, req_type, request, value, index, length,
+    zx_status_t status;
+    if ((req_type & USB_DIR_MASK) == USB_DIR_OUT) {
+        status = usb_control(&hid->usb, req_type, request, value, index, length,
+                                     ZX_TIME_INFINITE, data, length, NULL, 0, NULL);
+    } else {
+        status = usb_control(&hid->usb, req_type, request, value, index, length,
                                      ZX_TIME_INFINITE, NULL, 0, data, length, out_length);
+    }
     if (status == ZX_ERR_IO_REFUSED || status == ZX_ERR_IO_INVALID) {
         usb_reset_endpoint(&hid->usb, 0);
     }
