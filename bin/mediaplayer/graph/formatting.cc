@@ -7,7 +7,6 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <iomanip>
 #include <iostream>
-#include "garnet/bin/mediaplayer/graph/stages/stage_impl.h"
 #include "lib/fostr/zx_types.h"
 
 namespace media_player {
@@ -295,26 +294,20 @@ std::ostream& operator<<(std::ostream& os, media::TimelineFunction value) {
             << "::" << AsNs(value.reference_time()) << "@" << value.rate();
 }
 
-std::ostream& operator<<(std::ostream& os, const GenericNode& value) {
+std::ostream& operator<<(std::ostream& os, const Node& value) {
   return os << value.label();
 }
 
-std::ostream& operator<<(std::ostream& os, const StageImpl& value) {
-  FXL_DCHECK(value.GetGenericNode());
-
-  return os << *value.GetGenericNode();
-}
-
 std::ostream& operator<<(std::ostream& os, const Input& value) {
-  FXL_DCHECK(value.stage());
+  FXL_DCHECK(value.node());
 
-  return os << *value.stage() << ".input#" << value.index();
+  return os << *value.node() << ".input#" << value.index();
 }
 
 std::ostream& operator<<(std::ostream& os, const Output& value) {
-  FXL_DCHECK(value.stage());
+  FXL_DCHECK(value.node());
 
-  return os << *value.stage() << ".output#" << value.index();
+  return os << *value.node() << ".output#" << value.index();
 }
 
 std::ostream& operator<<(std::ostream& os, PayloadMode value) {

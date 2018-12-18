@@ -5,13 +5,10 @@
 #ifndef GARNET_BIN_MEDIAPLAYER_GRAPH_GRAPH_H_
 #define GARNET_BIN_MEDIAPLAYER_GRAPH_GRAPH_H_
 
-#include <list>
-
 #include <lib/fit/function.h>
-
+#include <list>
+#include "garnet/bin/mediaplayer/graph/nodes/node.h"
 #include "garnet/bin/mediaplayer/graph/refs.h"
-#include "garnet/bin/mediaplayer/graph/stages/async_node_stage.h"
-#include "garnet/bin/mediaplayer/graph/stages/stage_impl.h"
 
 namespace media_player {
 
@@ -47,22 +44,15 @@ namespace media_player {
 // objects, only the graph itself is of relevance to code that uses Graph and
 // to node implementations. The other objects are:
 //
-// Stage
-// A stage hosts a single node. There are many subclasses of Stage, one for
-// each supported node model. The stage's job is to implement the contract
-// represented by the model so the nodes that conform to the model can
-// participate in the operation of the graph. Stages are uniform with respect
-// to how they interact with graph. NodeRef references a stage.
-//
 // Input
-// A stage possesses zero or more Input instances. Input objects
-// implement the supply of media into the stage and demand for media signalled
+// A node possesses zero or more Input instances. Input objects
+// implement the supply of media into the node and demand for media signalled
 // upstream. Inputs recieve media from Outputs in the form of packets
 // (type Packet).
 //
 // Output
-// A stage possesses zero or more Output instances. Output objects
-// implement the supply of media output of the stage to a downstream input and
+// A node possesses zero or more Output instances. Output objects
+// implement the supply of media output of the node to a downstream input and
 // demand for media signalled from that input.
 //
 
@@ -75,15 +65,7 @@ class Graph {
   ~Graph();
 
   // Adds a node to the graph.
-  template <typename TNode,
-            typename TStageImpl = typename NodeTraits<TNode>::stage_impl_type>
-  NodeRef Add(std::shared_ptr<TNode> node_ptr) {
-    FXL_DCHECK(node_ptr);
-    auto stage = std::make_shared<TStageImpl>(node_ptr);
-    node_ptr->SetStage(stage.get());
-    node_ptr->ConfigureConnectors();
-    return AddStage(stage);
-  }
+  NodeRef Add(std::shared_ptr<Node> node);
 
   // Removes a node from the graph after disconnecting it from other nodes.
   void RemoveNode(NodeRef node);
@@ -142,9 +124,6 @@ class Graph {
  private:
   using Visitor = fit::function<void(Input* input, Output* output)>;
 
-  // Adds a stage to the graph.
-  NodeRef AddStage(std::shared_ptr<StageImpl> stage);
-
   // Flushes all the outputs in |backlog| and all inputs/outputs downstream
   // and calls |callback| when all flush operations are complete. |backlog| is
   // empty when this method returns.
@@ -162,9 +141,9 @@ class Graph {
 
   async_dispatcher_t* dispatcher_;
 
-  std::list<std::shared_ptr<StageImpl>> stages_;
-  std::list<StageImpl*> sources_;
-  std::list<StageImpl*> sinks_;
+  std::list<std::shared_ptr<Node>> nodes_;
+  std::list<Node*> sources_;
+  std::list<Node*> sinks_;
 };
 
 }  // namespace media_player

@@ -91,10 +91,10 @@ void FidlVideoRenderer::Dump(std::ostream& os) const {
 void FidlVideoRenderer::ConfigureConnectors() {
   // The decoder knows |max_payload_size|, so this is enough information to
   // configure the allocator(s).
-  stage()->ConfigureInputToUseVmos(0,              // max_aggregate_payload_size
-                                   kPacketDemand,  // max_payload_count
-                                   0,              // max_payload_size
-                                   VmoAllocation::kVmoPerBuffer, false);
+  ConfigureInputToUseVmos(0,              // max_aggregate_payload_size
+                          kPacketDemand,  // max_payload_count
+                          0,              // max_payload_size
+                          VmoAllocation::kVmoPerBuffer, false);
 }
 
 void FidlVideoRenderer::OnInputConnectionReady(size_t input_index) {
@@ -155,7 +155,7 @@ void FidlVideoRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
   if (flushed_ || packet->payload() == nullptr || packet_pts_ns < min_pts(0) ||
       packet_pts_ns > max_pts(0)) {
     if (need_more_packets()) {
-      stage()->RequestInputPacket();
+      RequestInputPacket();
     }
 
     return;
@@ -186,7 +186,7 @@ void FidlVideoRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
   }
 
   if (need_more_packets()) {
-    stage()->RequestInputPacket();
+    RequestInputPacket();
     return;
   }
 
@@ -201,8 +201,8 @@ void FidlVideoRenderer::PresentPacket(PacketPtr packet,
                                       int64_t scenic_presentation_time) {
   // fbl::MakeRefCounted doesn't seem to forward these parameters properly, so
   // do it the old-fashioned way.
-  auto release_tracker =
-      fbl::AdoptRef(new ReleaseTracker(packet, shared_from_this()));
+  auto release_tracker = fbl::AdoptRef(new ReleaseTracker(
+      packet, std::static_pointer_cast<FidlVideoRenderer>(shared_from_this())));
 
   FXL_DCHECK(packet->payload_buffer()->vmo());
   uint32_t buffer_index = packet->payload_buffer()->vmo()->index();
@@ -294,7 +294,7 @@ void FidlVideoRenderer::Prime(fit::closure callback) {
   }
 
   prime_callback_ = std::move(callback);
-  stage()->RequestInputPacket();
+  RequestInputPacket();
 }
 
 fuchsia::math::Size FidlVideoRenderer::video_size() const {
@@ -316,8 +316,9 @@ void FidlVideoRenderer::CreateView(zx::eventpair view_token) {
           scenic::CreateScenicSessionPtrAndListenerRequest(scenic_.get()),
       .view_token = std::move(view_token),
       .startup_context = startup_context_};
-  auto view =
-      std::make_unique<View>(std::move(view_context), shared_from_this());
+  auto view = std::make_unique<View>(
+      std::move(view_context),
+      std::static_pointer_cast<FidlVideoRenderer>(shared_from_this()));
   View* view_raw_ptr = view.get();
   views_.emplace(view_raw_ptr, std::move(view));
 
@@ -328,8 +329,7 @@ void FidlVideoRenderer::CreateView(zx::eventpair view_token) {
 
   if (have_valid_image_info() && input_connection_ready_) {
     // We're ready to add images to the new view, so do so.
-    std::vector<fbl::RefPtr<PayloadVmo>> vmos =
-        stage()->UseInputVmos().GetVmos();
+    std::vector<fbl::RefPtr<PayloadVmo>> vmos = UseInputVmos().GetVmos();
     FXL_DCHECK(!vmos.empty());
     view_raw_ptr->UpdateImages(image_id_base_, image_info_, display_width_,
                                display_height_, vmos);
@@ -337,7 +337,7 @@ void FidlVideoRenderer::CreateView(zx::eventpair view_token) {
 }
 
 void FidlVideoRenderer::UpdateImages() {
-  std::vector<fbl::RefPtr<PayloadVmo>> vmos = stage()->UseInputVmos().GetVmos();
+  std::vector<fbl::RefPtr<PayloadVmo>> vmos = UseInputVmos().GetVmos();
   FXL_DCHECK(!vmos.empty());
 
   image_id_base_ = next_image_id_base_;
@@ -362,7 +362,7 @@ void FidlVideoRenderer::PacketReleased(PacketPtr packet) {
   MaybeCompleteFlush();
 
   if (need_more_packets()) {
-    stage()->RequestInputPacket();
+    RequestInputPacket();
   }
 }
 
@@ -390,7 +390,7 @@ void FidlVideoRenderer::OnTimelineTransition() {
   }
 
   if (need_more_packets()) {
-    stage()->RequestInputPacket();
+    RequestInputPacket();
   }
 }
 

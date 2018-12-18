@@ -22,7 +22,7 @@ std::ostream& operator<<(std::ostream& os, NodeRef value) {
     return os << "<none>";
   }
 
-  os << value.GetGenericNode()->label();
+  os << value.GetNode()->label();
   for (size_t output_index = 0; output_index < value.output_count();
        output_index++) {
     os << fostr::NewLine << "[" << output_index << "] " << fostr::Indent
@@ -528,7 +528,7 @@ void ExpectRealSegmentsGraph(const PlayerCore& player_core) {
   EXPECT_TRUE(source_node_ref);
   EXPECT_EQ(0u, source_node_ref.input_count());
   EXPECT_EQ(2u, source_node_ref.output_count());
-  EXPECT_EQ("FakeDemux", source_node_ref.GetGenericNode()->label());
+  EXPECT_EQ("FakeDemux", source_node_ref.GetNode()->label());
 
   // Walk the audio segment. It has a decoder, an lpcm reformatter and a
   // renderer.
@@ -538,7 +538,7 @@ void ExpectRealSegmentsGraph(const PlayerCore& player_core) {
   EXPECT_EQ(1u, audio_decoder_node_ref.output_count());
   EXPECT_TRUE(audio_decoder_node_ref.input().connected());
   EXPECT_TRUE(audio_decoder_node_ref.output().connected());
-  EXPECT_EQ("FakeDecoder", audio_decoder_node_ref.GetGenericNode()->label());
+  EXPECT_EQ("FakeDecoder", audio_decoder_node_ref.GetNode()->label());
 
   NodeRef audio_renderer_node_ref =
       audio_decoder_node_ref.output().mate().node();
@@ -546,8 +546,7 @@ void ExpectRealSegmentsGraph(const PlayerCore& player_core) {
   EXPECT_EQ(1u, audio_renderer_node_ref.input_count());
   EXPECT_EQ(0u, audio_renderer_node_ref.output_count());
   EXPECT_TRUE(audio_renderer_node_ref.input().connected());
-  EXPECT_EQ("FakeAudioRenderer",
-            audio_renderer_node_ref.GetGenericNode()->label());
+  EXPECT_EQ("FakeAudioRenderer", audio_renderer_node_ref.GetNode()->label());
 
   // Walk the video segment. It has a decoder and a renderer.
   NodeRef video_decoder_node_ref = source_node_ref.output(1).mate().node();
@@ -556,7 +555,7 @@ void ExpectRealSegmentsGraph(const PlayerCore& player_core) {
   EXPECT_EQ(1u, video_decoder_node_ref.output_count());
   EXPECT_TRUE(video_decoder_node_ref.input().connected());
   EXPECT_TRUE(video_decoder_node_ref.output().connected());
-  EXPECT_EQ("FakeDecoder", video_decoder_node_ref.GetGenericNode()->label());
+  EXPECT_EQ("FakeDecoder", video_decoder_node_ref.GetNode()->label());
 
   NodeRef video_renderer_node_ref =
       video_decoder_node_ref.output().mate().node();
@@ -564,8 +563,7 @@ void ExpectRealSegmentsGraph(const PlayerCore& player_core) {
   EXPECT_EQ(1u, video_renderer_node_ref.input_count());
   EXPECT_EQ(0u, video_renderer_node_ref.output_count());
   EXPECT_TRUE(video_renderer_node_ref.input().connected());
-  EXPECT_EQ("FakeVideoRenderer",
-            video_renderer_node_ref.GetGenericNode()->label());
+  EXPECT_EQ("FakeVideoRenderer", video_renderer_node_ref.GetNode()->label());
 
   // std::cout << "\n" << source_node_ref << "\n\n";
 }

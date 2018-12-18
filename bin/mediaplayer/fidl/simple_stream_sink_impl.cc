@@ -33,13 +33,13 @@ SimpleStreamSinkImpl::~SimpleStreamSinkImpl() {
 
 void SimpleStreamSinkImpl::Dump(std::ostream& os) const {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  GenericNode::Dump(os);
+  Node::Dump(os);
   // TODO(dalesat): More.
 }
 
 void SimpleStreamSinkImpl::ConfigureConnectors() {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  stage()->ConfigureOutputToProvideVmos(VmoAllocation::kUnrestricted);
+  ConfigureOutputToProvideVmos(VmoAllocation::kUnrestricted);
 }
 
 void SimpleStreamSinkImpl::FlushOutput(size_t output_index,
@@ -67,7 +67,6 @@ void SimpleStreamSinkImpl::RequestOutputPacket() {
 void SimpleStreamSinkImpl::AddPayloadBuffer(uint32_t id,
                                             zx::vmo payload_buffer) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  FXL_DCHECK(stage());
 
   if (id < payload_vmo_infos_.size() && payload_vmo_infos_[id].vmo_) {
     FXL_LOG(ERROR) << "AddPayloadBuffer: payload buffer with id " << id
@@ -91,7 +90,7 @@ void SimpleStreamSinkImpl::AddPayloadBuffer(uint32_t id,
   payload_vmo_infos_[id].vmo_ = payload_vmo;
   FXL_DCHECK(payload_vmo_infos_[id].packet_count_ == 0);
 
-  stage()->ProvideOutputVmos().AddVmo(payload_vmo);
+  ProvideOutputVmos().AddVmo(payload_vmo);
 }
 
 void SimpleStreamSinkImpl::RemovePayloadBuffer(uint32_t id) {
@@ -112,7 +111,7 @@ void SimpleStreamSinkImpl::RemovePayloadBuffer(uint32_t id) {
     return;
   }
 
-  stage()->ProvideOutputVmos().RemoveVmo(payload_vmo_info.vmo_);
+  ProvideOutputVmos().RemoveVmo(payload_vmo_info.vmo_);
   payload_vmo_info.vmo_ = nullptr;
 }
 
@@ -167,7 +166,7 @@ void SimpleStreamSinkImpl::SendPacket(fuchsia::media::StreamPacket packet,
         }
       });
 
-  stage()->PutOutputPacket(Packet::Create(
+  PutOutputPacket(Packet::Create(
       packet.pts, pts_rate_,
       (packet.flags & fuchsia::media::STREAM_PACKET_FLAG_KEY_FRAME) != 0,
       false,  // end_of_stream
@@ -184,7 +183,7 @@ void SimpleStreamSinkImpl::SendPacketNoReply(
 
 void SimpleStreamSinkImpl::EndOfStream() {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  stage()->PutOutputPacket(Packet::CreateEndOfStream(pts_, pts_rate_));
+  PutOutputPacket(Packet::CreateEndOfStream(pts_, pts_rate_));
 }
 
 void SimpleStreamSinkImpl::DiscardAllPackets(

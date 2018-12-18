@@ -24,11 +24,11 @@ class FakeDecoder : public Decoder {
 
   // Decoder implementation.
   void ConfigureConnectors() override {
-    stage()->ConfigureInputToUseLocalMemory(1,    // max_aggregate_payload_size
-                                            0);   // max_payload_count
-    stage()->ConfigureOutputToUseLocalMemory(1,   // max_aggregate_payload_size
-                                             0,   // max_payload_count
-                                             0);  // max_payload_size
+    ConfigureInputToUseLocalMemory(1,    // max_aggregate_payload_size
+                                   0);   // max_payload_count
+    ConfigureOutputToUseLocalMemory(1,   // max_aggregate_payload_size
+                                    0,   // max_payload_count
+                                    0);  // max_payload_size
   }
 
   void FlushInput(bool hold_frame, size_t input_index,
@@ -41,7 +41,7 @@ class FakeDecoder : public Decoder {
   }
 
   void PutInputPacket(PacketPtr packet, size_t input_index) override {
-    stage()->RequestInputPacket();
+    RequestInputPacket();
   }
 
   void RequestOutputPacket() override {}

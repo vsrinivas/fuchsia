@@ -28,7 +28,7 @@ void Renderer::Deprovision() {
 
 void Renderer::Dump(std::ostream& os) const {
   os << label() << fostr::Indent;
-  stage()->Dump(os);
+  Node::Dump(os);
   os << fostr::NewLine
      << "timeline:              " << current_timeline_function_;
   os << fostr::NewLine << "end of stream:         " << end_of_stream();
@@ -42,7 +42,7 @@ void Renderer::Dump(std::ostream& os) const {
 
 void Renderer::ConfigureConnectors() {
   // We'll have one input, but we not ready to configure it.
-  stage()->ConfigureInputDeferred();
+  ConfigureInputDeferred();
 }
 
 void Renderer::SetProgramRange(uint64_t program, int64_t min_pts,

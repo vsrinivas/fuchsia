@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/mediaplayer/graph/stages/async_node_stage.h"
+#include "garnet/bin/mediaplayer/graph/nodes/node.h"
 
+#include <lib/async/cpp/task.h>
 #include "garnet/bin/mediaplayer/graph/formatting.h"
 
 namespace media_player {
@@ -23,8 +24,8 @@ bool NotifyConnectionReady(const Input& input) {
 
   Output* output = input.mate();
   FXL_DCHECK(output);
-  FXL_DCHECK(output->stage());
-  output->stage()->NotifyOutputConnectionReady(output->index());
+  FXL_DCHECK(output->node());
+  output->node()->NotifyOutputConnectionReady(output->index());
 
   return true;
 }
@@ -44,24 +45,131 @@ bool NotifyConnectionReady(const Output& output) {
     return false;
   }
 
-  FXL_DCHECK(input->stage());
-  input->stage()->NotifyInputConnectionReady(input->index());
+  FXL_DCHECK(input->node());
+  input->node()->NotifyInputConnectionReady(input->index());
 
   return true;
 }
 
 }  // namespace
 
-AsyncNodeStageImpl::AsyncNodeStageImpl(std::shared_ptr<AsyncNode> node)
-    : node_(node) {
-  FXL_DCHECK(node_);
+Node::Node() { update_counter_ = 0; }
+
+Node::~Node() {}
+
+const char* Node::label() const { return "<not labelled>"; }
+
+void Node::ShutDown() {
+  std::lock_guard<std::mutex> locker(tasks_mutex_);
+  while (!tasks_.empty()) {
+    tasks_.pop();
+  }
 }
 
-AsyncNodeStageImpl::~AsyncNodeStageImpl() {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+void Node::NeedsUpdate() {
+  // Atomically preincrement the update counter. If we get the value 1, that
+  // means the counter was zero, and we need to post an update. If we get
+  // anything else, |UpdateUntilDone| is already running. In that case, we know
+  // |UpdateUntilDone| will run |Update| after the increment occurred.
+  if (++update_counter_ == 1) {
+    // This stage has no update pending in the task queue or running.
+    PostTask([this]() { UpdateUntilDone(); });
+  }
 }
 
-void AsyncNodeStageImpl::Dump(std::ostream& os) const {
+void Node::UpdateUntilDone() {
+  while (true) {
+    // Set the counter to 1. If it's still 1 after we updated, we're done.
+    // Otherwise, we need to update more.
+    update_counter_ = 1;
+
+    Update();
+
+    // Quit if the counter is still at 1, otherwise update again.
+    uint32_t expected = 1;
+    if (update_counter_.compare_exchange_strong(expected, 0)) {
+      break;
+    }
+  }
+}
+
+void Node::Acquire(fit::closure callback) {
+  PostTask([this, callback = std::move(callback)]() {
+    {
+      std::lock_guard<std::mutex> locker(tasks_mutex_);
+      tasks_suspended_ = true;
+    }
+
+    callback();
+  });
+}
+
+void Node::Release() {
+  {
+    std::lock_guard<std::mutex> locker(tasks_mutex_);
+    tasks_suspended_ = false;
+    if (tasks_.empty()) {
+      // Don't need to run tasks.
+      return;
+    }
+  }
+
+  FXL_DCHECK(dispatcher_);
+  async::PostTask(dispatcher_, [shared_this = shared_from_this()]() {
+    shared_this->RunTasks();
+  });
+}
+
+void Node::SetDispatcher(async_dispatcher_t* dispatcher) {
+  FXL_DCHECK(dispatcher);
+  dispatcher_ = dispatcher;
+}
+
+void Node::PostTask(fit::closure task) {
+  FXL_DCHECK(task);
+
+  {
+    std::lock_guard<std::mutex> locker(tasks_mutex_);
+    tasks_.push(std::move(task));
+    if (tasks_.size() != 1 || tasks_suspended_) {
+      // Don't need to run tasks, either because there were already tasks in
+      // the queue or because task execution is suspended.
+      return;
+    }
+  }
+
+  FXL_DCHECK(dispatcher_);
+  async::PostTask(dispatcher_, [shared_this = shared_from_this()]() {
+    shared_this->RunTasks();
+  });
+}
+
+void Node::PostShutdownTask(fit::closure task) {
+  FXL_DCHECK(dispatcher_);
+  async::PostTask(dispatcher_, [shared_this = shared_from_this(),
+                                task = std::move(task)]() { task(); });
+}
+
+void Node::RunTasks() {
+  tasks_mutex_.lock();
+
+  while (!tasks_.empty() && !tasks_suspended_) {
+    fit::closure task = std::move(tasks_.front());
+    tasks_mutex_.unlock();
+    task();
+    // The closure may be keeping objects alive. Destroy it here so those
+    // objects are destroyed with the mutex unlocked. It's OK to do this,
+    // because this method is the only consumer of tasks from the queue, and
+    // this method will not be re-entered.
+    task = nullptr;
+    tasks_mutex_.lock();
+    tasks_.pop();
+  }
+
+  tasks_mutex_.unlock();
+}
+
+void Node::Dump(std::ostream& os) const {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
   if (inputs_.size() == 1) {
@@ -89,8 +197,7 @@ void AsyncNodeStageImpl::Dump(std::ostream& os) const {
   }
 }
 
-void AsyncNodeStageImpl::DumpInputDetail(std::ostream& os,
-                                         const Input& input) const {
+void Node::DumpInputDetail(std::ostream& os, const Input& input) const {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
   os << fostr::Indent;
@@ -109,8 +216,7 @@ void AsyncNodeStageImpl::DumpInputDetail(std::ostream& os,
   os << fostr::Outdent;
 }
 
-void AsyncNodeStageImpl::DumpOutputDetail(std::ostream& os,
-                                          const Output& output) const {
+void Node::DumpOutputDetail(std::ostream& os, const Output& output) const {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
   os << fostr::Indent;
@@ -141,61 +247,52 @@ void AsyncNodeStageImpl::DumpOutputDetail(std::ostream& os,
   os << fostr::Outdent;
 }
 
-void AsyncNodeStageImpl::OnShutDown() {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-}
-
-size_t AsyncNodeStageImpl::input_count() const {
+size_t Node::input_count() const {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   return inputs_.size();
 };
 
-Input& AsyncNodeStageImpl::input(size_t input_index) {
+Input& Node::input(size_t input_index) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   FXL_DCHECK(input_index < inputs_.size());
   return inputs_[input_index];
 }
 
-size_t AsyncNodeStageImpl::output_count() const {
+size_t Node::output_count() const {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   return outputs_.size();
 }
 
-Output& AsyncNodeStageImpl::output(size_t output_index) {
+Output& Node::output(size_t output_index) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   FXL_DCHECK(output_index < outputs_.size());
   return outputs_[output_index];
 }
 
-void AsyncNodeStageImpl::NotifyInputConnectionReady(size_t index) {
+void Node::NotifyInputConnectionReady(size_t index) {
   FXL_DCHECK(index < inputs_.size());
-  FXL_DCHECK(node_);
 
   PostTask([this, index]() {
     FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-    node_->OnInputConnectionReady(index);
+    OnInputConnectionReady(index);
   });
 }
 
-void AsyncNodeStageImpl::NotifyOutputConnectionReady(size_t index) {
+void Node::NotifyOutputConnectionReady(size_t index) {
   FXL_DCHECK(index < outputs_.size());
-  FXL_DCHECK(node_);
 
   PostTask([this, index]() {
     FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-    node_->OnOutputConnectionReady(index);
+    OnOutputConnectionReady(index);
   });
 }
 
-GenericNode* AsyncNodeStageImpl::GetGenericNode() const { return node_.get(); }
-
-void AsyncNodeStageImpl::Update() {
+void Node::Update() {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  FXL_DCHECK(node_);
 
   for (auto& input : inputs_) {
     if (input.packet()) {
-      node_->PutInputPacket(input.TakePacket(false), input.index());
+      PutInputPacket(input.TakePacket(false), input.index());
     }
   }
 
@@ -217,12 +314,12 @@ void AsyncNodeStageImpl::Update() {
   }
 
   if (request_packet) {
-    node_->RequestOutputPacket();
+    RequestOutputPacket();
   }
 }
 
-bool AsyncNodeStageImpl::MaybeTakePacketForOutput(const Output& output,
-                                                  PacketPtr* packet_out) {
+bool Node::MaybeTakePacketForOutput(const Output& output,
+                                    PacketPtr* packet_out) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   FXL_DCHECK(packet_out);
 
@@ -248,51 +345,45 @@ bool AsyncNodeStageImpl::MaybeTakePacketForOutput(const Output& output,
   return request_packet;
 }
 
-void AsyncNodeStageImpl::FlushInput(size_t input_index, bool hold_frame,
-                                    fit::closure callback) {
+void Node::FlushInputExternal(size_t input_index, bool hold_frame,
+                              fit::closure callback) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   FXL_DCHECK(input_index < inputs_.size());
 
   inputs_[input_index].Flush();
 
-  node_->FlushInput(hold_frame, input_index,
-                    [this, callback = std::move(callback)]() mutable {
-                      PostTask(std::move(callback));
-                    });
+  FlushInput(hold_frame, input_index,
+             [this, callback = std::move(callback)]() mutable {
+               PostTask(std::move(callback));
+             });
 }
 
-void AsyncNodeStageImpl::FlushOutput(size_t output_index,
-                                     fit::closure callback) {
+void Node::FlushOutputExternal(size_t output_index, fit::closure callback) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   FXL_DCHECK(output_index < outputs_.size());
 
-  node_->FlushOutput(output_index, [this, output_index,
-                                    callback = std::move(callback)]() mutable {
-    {
-      std::lock_guard<std::mutex> locker(packets_per_output_mutex_);
-      auto& packets = packets_per_output_[output_index];
-      while (!packets.empty()) {
-        packets.pop_front();
-      }
-    }
+  FlushOutput(output_index,
+              [this, output_index, callback = std::move(callback)]() mutable {
+                {
+                  std::lock_guard<std::mutex> locker(packets_per_output_mutex_);
+                  auto& packets = packets_per_output_[output_index];
+                  while (!packets.empty()) {
+                    packets.pop_front();
+                  }
+                }
 
-    PostTask(std::move(callback));
-  });
+                PostTask(std::move(callback));
+              });
 }
 
-void AsyncNodeStageImpl::PostTask(fit::closure task) {
-  // This method runs on an arbitrary thread.
-  StageImpl::PostTask(std::move(task));
-}
-
-void AsyncNodeStageImpl::ConfigureInputDeferred(size_t input_index) {
+void Node::ConfigureInputDeferred(size_t input_index) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   EnsureInput(input_index);
 }
 
-bool AsyncNodeStageImpl::ConfigureInputToUseLocalMemory(
-    uint64_t max_aggregate_payload_size, uint32_t max_payload_count,
-    size_t input_index) {
+bool Node::ConfigureInputToUseLocalMemory(uint64_t max_aggregate_payload_size,
+                                          uint32_t max_payload_count,
+                                          size_t input_index) {
   // This method runs on an arbitrary thread.
   FXL_DCHECK(max_aggregate_payload_size != 0 || max_payload_count != 0);
 
@@ -313,7 +404,7 @@ bool AsyncNodeStageImpl::ConfigureInputToUseLocalMemory(
   return NotifyConnectionReady(input);
 }
 
-bool AsyncNodeStageImpl::ConfigureInputToUseVmos(
+bool Node::ConfigureInputToUseVmos(
     uint64_t max_aggregate_payload_size, uint32_t max_payload_count,
     uint64_t max_payload_size, VmoAllocation vmo_allocation,
     bool physically_contiguous, zx::handle bti_handle,
@@ -339,9 +430,10 @@ bool AsyncNodeStageImpl::ConfigureInputToUseVmos(
   return NotifyConnectionReady(input);
 }
 
-bool AsyncNodeStageImpl::ConfigureInputToProvideVmos(
-    VmoAllocation vmo_allocation, bool physically_contiguous,
-    AllocateCallback allocate_callback, size_t input_index) {
+bool Node::ConfigureInputToProvideVmos(VmoAllocation vmo_allocation,
+                                       bool physically_contiguous,
+                                       AllocateCallback allocate_callback,
+                                       size_t input_index) {
   // This method runs on an arbitrary thread.
   EnsureInput(input_index);
   Input& input = inputs_[input_index];
@@ -360,13 +452,13 @@ bool AsyncNodeStageImpl::ConfigureInputToProvideVmos(
   return NotifyConnectionReady(input);
 }
 
-bool AsyncNodeStageImpl::InputConnectionReady(size_t input_index) const {
+bool Node::InputConnectionReady(size_t input_index) const {
   FXL_DCHECK(input_index < inputs_.size());
 
   return inputs_[input_index].payload_manager().ready();
 }
 
-const PayloadVmos& AsyncNodeStageImpl::UseInputVmos(size_t input_index) const {
+const PayloadVmos& Node::UseInputVmos(size_t input_index) const {
   // This method runs on an arbitrary thread.
   FXL_DCHECK(input_index < inputs_.size());
   const Input& input = inputs_[input_index];
@@ -378,7 +470,7 @@ const PayloadVmos& AsyncNodeStageImpl::UseInputVmos(size_t input_index) const {
   return input.payload_manager().input_vmos();
 }
 
-PayloadVmoProvision& AsyncNodeStageImpl::ProvideInputVmos(size_t input_index) {
+PayloadVmoProvision& Node::ProvideInputVmos(size_t input_index) {
   // This method runs on an arbitrary thread.
   FXL_DCHECK(input_index < inputs_.size());
   Input& input = inputs_[input_index];
@@ -389,21 +481,22 @@ PayloadVmoProvision& AsyncNodeStageImpl::ProvideInputVmos(size_t input_index) {
   return input.payload_manager().input_external_vmos();
 }
 
-void AsyncNodeStageImpl::RequestInputPacket(size_t input_index) {
+void Node::RequestInputPacket(size_t input_index) {
   // This method runs on an arbitrary thread.
   FXL_DCHECK(input_index < inputs_.size());
 
   inputs_[input_index].RequestPacket();
 }
 
-void AsyncNodeStageImpl::ConfigureOutputDeferred(size_t output_index) {
+void Node::ConfigureOutputDeferred(size_t output_index) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   EnsureOutput(output_index);
 }
 
-bool AsyncNodeStageImpl::ConfigureOutputToUseLocalMemory(
-    uint64_t max_aggregate_payload_size, uint32_t max_payload_count,
-    uint64_t max_payload_size, size_t output_index) {
+bool Node::ConfigureOutputToUseLocalMemory(uint64_t max_aggregate_payload_size,
+                                           uint32_t max_payload_count,
+                                           uint64_t max_payload_size,
+                                           size_t output_index) {
   // This method runs on an arbitrary thread.
   FXL_DCHECK(max_aggregate_payload_size != 0 ||
              (max_payload_count != 0 && max_payload_size != 0));
@@ -427,8 +520,7 @@ bool AsyncNodeStageImpl::ConfigureOutputToUseLocalMemory(
   return NotifyConnectionReady(output);
 }
 
-bool AsyncNodeStageImpl::ConfigureOutputToProvideLocalMemory(
-    size_t output_index) {
+bool Node::ConfigureOutputToProvideLocalMemory(size_t output_index) {
   // This method runs on an arbitrary thread.
   EnsureOutput(output_index);
   Output& output = outputs_[output_index];
@@ -449,7 +541,7 @@ bool AsyncNodeStageImpl::ConfigureOutputToProvideLocalMemory(
   return NotifyConnectionReady(output);
 }
 
-bool AsyncNodeStageImpl::ConfigureOutputToUseVmos(
+bool Node::ConfigureOutputToUseVmos(
     uint64_t max_aggregate_payload_size, uint32_t max_payload_count,
     uint64_t max_payload_size, VmoAllocation vmo_allocation,
     bool physically_contiguous, zx::handle bti_handle, size_t output_index) {
@@ -479,9 +571,9 @@ bool AsyncNodeStageImpl::ConfigureOutputToUseVmos(
   return NotifyConnectionReady(output);
 }
 
-bool AsyncNodeStageImpl::ConfigureOutputToProvideVmos(
-    VmoAllocation vmo_allocation, bool physically_contiguous,
-    size_t output_index) {
+bool Node::ConfigureOutputToProvideVmos(VmoAllocation vmo_allocation,
+                                        bool physically_contiguous,
+                                        size_t output_index) {
   // This method runs on an arbitrary thread.
   EnsureOutput(output_index);
   Output& output = outputs_[output_index];
@@ -502,14 +594,14 @@ bool AsyncNodeStageImpl::ConfigureOutputToProvideVmos(
   return NotifyConnectionReady(output);
 }
 
-bool AsyncNodeStageImpl::OutputConnectionReady(size_t output_index) const {
+bool Node::OutputConnectionReady(size_t output_index) const {
   FXL_DCHECK(output_index < outputs_.size());
 
   return outputs_[output_index].mate()->payload_manager().ready();
 }
 
-fbl::RefPtr<PayloadBuffer> AsyncNodeStageImpl::AllocatePayloadBuffer(
-    uint64_t size, size_t output_index) {
+fbl::RefPtr<PayloadBuffer> Node::AllocatePayloadBuffer(uint64_t size,
+                                                       size_t output_index) {
   // This method runs on an arbitrary thread.
   FXL_DCHECK(output_index < outputs_.size());
   Output& output = outputs_[output_index];
@@ -521,8 +613,7 @@ fbl::RefPtr<PayloadBuffer> AsyncNodeStageImpl::AllocatePayloadBuffer(
   return output.mate()->payload_manager().AllocatePayloadBufferForOutput(size);
 }
 
-const PayloadVmos& AsyncNodeStageImpl::UseOutputVmos(
-    size_t output_index) const {
+const PayloadVmos& Node::UseOutputVmos(size_t output_index) const {
   // This method runs on an arbitrary thread.
   FXL_DCHECK(output_index < outputs_.size());
   const Output& output = outputs_[output_index];
@@ -535,8 +626,7 @@ const PayloadVmos& AsyncNodeStageImpl::UseOutputVmos(
   return output.mate()->payload_manager().output_vmos();
 }
 
-PayloadVmoProvision& AsyncNodeStageImpl::ProvideOutputVmos(
-    size_t output_index) {
+PayloadVmoProvision& Node::ProvideOutputVmos(size_t output_index) {
   // This method runs on an arbitrary thread.
   FXL_DCHECK(output_index < outputs_.size());
   Output& output = outputs_[output_index];
@@ -548,8 +638,7 @@ PayloadVmoProvision& AsyncNodeStageImpl::ProvideOutputVmos(
   return output.mate()->payload_manager().output_external_vmos();
 }
 
-void AsyncNodeStageImpl::PutOutputPacket(PacketPtr packet,
-                                         size_t output_index) {
+void Node::PutOutputPacket(PacketPtr packet, size_t output_index) {
   // This method runs on an arbitrary thread.
   FXL_DCHECK(packet);
   FXL_DCHECK(output_index < outputs_.size());
@@ -564,19 +653,19 @@ void AsyncNodeStageImpl::PutOutputPacket(PacketPtr packet,
   NeedsUpdate();
 }
 
-void AsyncNodeStageImpl::EnsureInput(size_t input_index) {
+void Node::EnsureInput(size_t input_index) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
   while (inputs_.size() <= input_index) {
-    inputs_.emplace_back(this, inputs_.size());  // stage, index
+    inputs_.emplace_back(this, inputs_.size());  // node, index
   }
 }
 
-void AsyncNodeStageImpl::EnsureOutput(size_t output_index) {
+void Node::EnsureOutput(size_t output_index) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
   while (outputs_.size() <= output_index) {
-    outputs_.emplace_back(this, outputs_.size());  // stage, index
+    outputs_.emplace_back(this, outputs_.size());  // node, index
   }
 
   std::lock_guard<std::mutex> locker(packets_per_output_mutex_);

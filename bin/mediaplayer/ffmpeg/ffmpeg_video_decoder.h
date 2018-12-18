@@ -20,7 +20,7 @@ class FfmpegVideoDecoder : public FfmpegDecoderBase {
 
   ~FfmpegVideoDecoder() override;
 
-  // AsyncNode implementation.
+  // Node implementation.
   void ConfigureConnectors() override;
 
  protected:
@@ -53,7 +53,7 @@ class FfmpegVideoDecoder : public FfmpegDecoderBase {
   bool first_frame_ = true;
   AVColorSpace colorspace_;
   VideoStreamType::Extent coded_size_;
-  
+
   size_t configured_output_buffer_size_ = 0;
 };
 

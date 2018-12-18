@@ -26,7 +26,7 @@ class FakeDemux : public Demux {
   void ConfigureConnectors() override {
     for (size_t output_index = 0; output_index < streams_.size();
          ++output_index) {
-      stage()->ConfigureOutputToProvideLocalMemory(output_index);
+      ConfigureOutputToProvideLocalMemory(output_index);
     }
   }
 

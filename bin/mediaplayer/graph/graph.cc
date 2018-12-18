@@ -14,30 +14,50 @@ Graph::Graph(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
 Graph::~Graph() { Reset(); }
 
-void Graph::RemoveNode(NodeRef node) {
+NodeRef Graph::Add(std::shared_ptr<Node> node) {
   FXL_DCHECK(node);
+  FXL_DCHECK(dispatcher_);
 
-  StageImpl* stage = node.stage_;
+  node->SetDispatcher(dispatcher_);
+  node->ConfigureConnectors();
 
-  size_t input_count = stage->input_count();
+  nodes_.push_back(node);
+
+  if (node->input_count() == 0) {
+    sources_.push_back(node.get());
+  }
+
+  if (node->output_count() == 0) {
+    sinks_.push_back(node.get());
+  }
+
+  return NodeRef(node.get());
+}
+
+void Graph::RemoveNode(NodeRef node_ref) {
+  FXL_DCHECK(node_ref);
+
+  Node* node = node_ref.node_;
+
+  size_t input_count = node->input_count();
   for (size_t input_index = 0; input_index < input_count; input_index++) {
-    Input& input = stage->input(input_index);
+    Input& input = node->input(input_index);
     if (input.connected()) {
       DisconnectInput(InputRef(&input));
     }
   }
 
-  size_t output_count = stage->output_count();
+  size_t output_count = node->output_count();
   for (size_t output_index = 0; output_index < output_count; output_index++) {
-    Output& output = stage->output(output_index);
+    Output& output = node->output(output_index);
     if (output.connected()) {
       DisconnectOutput(OutputRef(&output));
     }
   }
 
-  sources_.remove(stage);
-  sinks_.remove(stage);
-  stages_.remove(stage->shared_from_this());
+  sources_.remove(node);
+  sinks_.remove(node);
+  nodes_.remove(node->shared_from_this());
 }
 
 NodeRef Graph::Connect(const OutputRef& output_ref, const InputRef& input_ref) {
@@ -61,8 +81,8 @@ NodeRef Graph::Connect(const OutputRef& output_ref, const InputRef& input_ref) {
 
   // If the payload manager is ready, notify the nodes.
   if (input.payload_manager().ready()) {
-    input.stage()->NotifyInputConnectionReady(input.index());
-    output.stage()->NotifyOutputConnectionReady(output.index());
+    input.node()->NotifyInputConnectionReady(input.index());
+    output.node()->NotifyOutputConnectionReady(output.index());
   }
 
   return input_ref.node();
@@ -178,15 +198,15 @@ void Graph::Reset() {
 
   auto joiner = ThreadsafeCallbackJoiner::Create();
 
-  for (auto& stage : stages_) {
-    stage->Acquire(joiner->NewCallback());
+  for (auto& node : nodes_) {
+    node->Acquire(joiner->NewCallback());
   }
 
-  joiner->WhenJoined(dispatcher_, [stages = std::move(stages_)]() mutable {
-    while (!stages.empty()) {
-      std::shared_ptr<StageImpl> stage = stages.front();
-      stages.pop_front();
-      stage->ShutDown();
+  joiner->WhenJoined(dispatcher_, [nodes = std::move(nodes_)]() mutable {
+    while (!nodes.empty()) {
+      std::shared_ptr<Node> node = nodes.front();
+      nodes.pop_front();
+      node->ShutDown();
     }
   });
 }
@@ -212,40 +232,23 @@ void Graph::FlushAllOutputs(NodeRef node, bool hold_frame,
   FlushOutputs(&backlog, hold_frame, std::move(callback));
 }
 
-void Graph::PostTask(fit::closure task, std::initializer_list<NodeRef> nodes) {
+void Graph::PostTask(fit::closure task,
+                     std::initializer_list<NodeRef> node_refs) {
   auto joiner = ThreadsafeCallbackJoiner::Create();
 
-  std::vector<StageImpl*> stages;
-  for (NodeRef node : nodes) {
-    node.stage_->Acquire(joiner->NewCallback());
-    stages.push_back(node.stage_);
+  std::vector<Node*> nodes;
+  for (NodeRef node_ref : node_refs) {
+    node_ref.node_->Acquire(joiner->NewCallback());
+    nodes.push_back(node_ref.node_);
   }
 
   joiner->WhenJoined(dispatcher_,
-                     [task = std::move(task), stages = std::move(stages)]() {
+                     [task = std::move(task), nodes = std::move(nodes)]() {
                        task();
-                       for (auto stage : stages) {
-                         stage->Release();
+                       for (auto node : nodes) {
+                         node->Release();
                        }
                      });
-}
-
-NodeRef Graph::AddStage(std::shared_ptr<StageImpl> stage) {
-  FXL_DCHECK(stage);
-  FXL_DCHECK(dispatcher_);
-
-  stage->SetDispatcher(dispatcher_);
-  stages_.push_back(stage);
-
-  if (stage->input_count() == 0) {
-    sources_.push_back(stage.get());
-  }
-
-  if (stage->output_count() == 0) {
-    sinks_.push_back(stage.get());
-  }
-
-  return NodeRef(stage.get());
 }
 
 void Graph::FlushOutputs(std::queue<Output*>* backlog, bool hold_frame,
@@ -255,11 +258,11 @@ void Graph::FlushOutputs(std::queue<Output*>* backlog, bool hold_frame,
   auto callback_joiner = CallbackJoiner::Create();
 
   // Walk the graph downstream from the outputs already in the backlog until
-  // we hit a sink. The |FlushOutput| and |FlushInput| calls are all issued
-  // synchronously from this loop, and then we wait for all the callbacks to
-  // be called. This works, because downstream flow is halted synchronously,
-  // even though the nodes may have additional flushing business that needs
-  // time to complete.
+  // we hit a sink. The |FlushOutputExternal| and |FlushInputExternal| calls are
+  // all issued synchronously from this loop, and then we wait for all the
+  // callbacks to be called. This works, because downstream flow is halted
+  // synchronously, even though the nodes may have additional flushing business
+  // that needs time to complete.
   while (!backlog->empty()) {
     Output* output = backlog->front();
     backlog->pop();
@@ -271,17 +274,17 @@ void Graph::FlushOutputs(std::queue<Output*>* backlog, bool hold_frame,
 
     Input* input = output->mate();
     FXL_DCHECK(input);
-    StageImpl* input_stage = input->stage();
+    Node* input_node = input->node();
 
-    output->stage()->FlushOutput(output->index(),
-                                 callback_joiner->NewCallback());
+    output->node()->FlushOutputExternal(output->index(),
+                                        callback_joiner->NewCallback());
 
-    input_stage->FlushInput(input->index(), hold_frame,
-                            callback_joiner->NewCallback());
+    input_node->FlushInputExternal(input->index(), hold_frame,
+                                   callback_joiner->NewCallback());
 
-    for (size_t output_index = 0; output_index < input_stage->output_count();
+    for (size_t output_index = 0; output_index < input_node->output_count();
          ++output_index) {
-      backlog->push(&input_stage->output(output_index));
+      backlog->push(&input_node->output(output_index));
     }
   }
 
@@ -304,13 +307,13 @@ void Graph::VisitUpstream(Input* input, const Visitor& visitor) {
     }
 
     Output* output = input->mate();
-    StageImpl* output_stage = output->stage();
+    Node* output_node = output->node();
 
     visitor(input, output);
 
-    for (size_t input_index = 0; input_index < output_stage->input_count();
+    for (size_t input_index = 0; input_index < output_node->input_count();
          ++input_index) {
-      backlog.push(&output_stage->input(input_index));
+      backlog.push(&output_node->input(input_index));
     }
   }
 }

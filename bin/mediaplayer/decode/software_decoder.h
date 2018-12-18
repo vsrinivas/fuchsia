@@ -67,7 +67,7 @@ class SoftwareDecoder : public Decoder {
 
   ~SoftwareDecoder() override;
 
-  // AsyncNode implementation.
+  // Node implementation.
   void Dump(std::ostream& os) const override;
 
   void FlushInput(bool hold_frame, size_t input_index,

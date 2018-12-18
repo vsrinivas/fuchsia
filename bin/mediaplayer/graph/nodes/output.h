@@ -2,30 +2,30 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIAPLAYER_GRAPH_STAGES_OUTPUT_H_
-#define GARNET_BIN_MEDIAPLAYER_GRAPH_STAGES_OUTPUT_H_
+#ifndef GARNET_BIN_MEDIAPLAYER_GRAPH_NODES_OUTPUT_H_
+#define GARNET_BIN_MEDIAPLAYER_GRAPH_NODES_OUTPUT_H_
 
 #include "garnet/bin/mediaplayer/graph/packet.h"
 #include "garnet/bin/mediaplayer/graph/payloads/payload_config.h"
 
 namespace media_player {
 
-class StageImpl;
+class Node;
 class Input;
 
-// Represents a stage's connector to an adjacent downstream stage.
+// Represents a node's connector to an adjacent downstream node.
 class Output {
  public:
-  Output(StageImpl* stage, size_t index);
+  Output(Node* node, size_t index);
 
   Output(Output&& output);
 
   ~Output();
 
-  // The stage of which this output is a part.
-  StageImpl* stage() const { return stage_; }
+  // The node of which this output is a part.
+  Node* node() const { return node_; }
 
-  // The index of this output with respect to the stage.
+  // The index of this output with respect to the node.
   size_t index() const { return index_; }
 
   // The input to which this output is connected.
@@ -44,7 +44,7 @@ class Output {
   // input is currently holding a packet.
   bool needs_packet() const;
 
-  // Supplies a packet to mate. Called only by StageImpl::Update
+  // Supplies a packet to mate. Called only by Node::Update
   // implementations.
   void SupplyPacket(PacketPtr packet) const;
 
@@ -53,7 +53,7 @@ class Output {
   const PayloadConfig& payload_config() const { return payload_config_; }
 
  private:
-  StageImpl* stage_;
+  Node* node_;
   size_t index_;
   Input* mate_ = nullptr;
   PayloadConfig payload_config_;
@@ -62,4 +62,4 @@ class Output {
 
 }  // namespace media_player
 
-#endif  // GARNET_BIN_MEDIAPLAYER_GRAPH_STAGES_OUTPUT_H_
+#endif  // GARNET_BIN_MEDIAPLAYER_GRAPH_NODES_OUTPUT_H_

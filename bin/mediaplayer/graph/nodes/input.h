@@ -2,32 +2,31 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIAPLAYER_GRAPH_STAGES_INPUT_H_
-#define GARNET_BIN_MEDIAPLAYER_GRAPH_STAGES_INPUT_H_
+#ifndef GARNET_BIN_MEDIAPLAYER_GRAPH_NODES_INPUT_H_
+#define GARNET_BIN_MEDIAPLAYER_GRAPH_NODES_INPUT_H_
 
 #include <atomic>
-
 #include "garnet/bin/mediaplayer/graph/packet.h"
 #include "garnet/bin/mediaplayer/graph/payloads/payload_manager.h"
 
 namespace media_player {
 
-class StageImpl;
+class Node;
 class Output;
 
-// Represents a stage's connector to an adjacent upstream stage.
+// Represents a node's connector to an adjacent upstream node.
 class Input {
  public:
-  Input(StageImpl* stage, size_t index);
+  Input(Node* node, size_t index);
 
   Input(Input&& input);
 
   ~Input();
 
-  // The stage of which this input is a part.
-  StageImpl* stage() const { return stage_; }
+  // The node of which this input is a part.
+  Node* node() const { return node_; }
 
-  // The index of this input with respect to the stage.
+  // The index of this input with respect to the node.
   size_t index() const { return index_; }
 
   // The output to which this input is connected.
@@ -59,7 +58,7 @@ class Input {
   PacketPtr TakePacket(bool request_another);
 
   // Requests a packet if |packet()| is empty. Called only by the downstream
-  // stage.
+  // node.
   void RequestPacket();
 
   // Flushes retained media.
@@ -76,7 +75,7 @@ class Input {
  private:
   enum class State { kNeedsPacket, kRefusesPacket, kHasPacket };
 
-  StageImpl* stage_;
+  Node* node_;
   size_t index_;
   Output* mate_ = nullptr;
   PacketPtr packet_;
@@ -87,4 +86,4 @@ class Input {
 
 }  // namespace media_player
 
-#endif  // GARNET_BIN_MEDIAPLAYER_GRAPH_STAGES_INPUT_H_
+#endif  // GARNET_BIN_MEDIAPLAYER_GRAPH_NODES_INPUT_H_

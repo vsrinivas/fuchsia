@@ -29,7 +29,7 @@ class FfmpegDecoderBase : public SoftwareDecoder {
   // Decoder implementation.
   std::unique_ptr<StreamType> output_stream_type() const override;
 
-  // AsyncNode implementation.
+  // Node implementation.
   void Dump(std::ostream& os) const override;
 
  protected:

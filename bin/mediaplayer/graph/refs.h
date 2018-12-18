@@ -10,21 +10,20 @@
 namespace media_player {
 
 class Graph;
-class StageImpl;
+class Node;
 class Input;
 class Output;
 class Engine;
 class InputRef;
 class OutputRef;
-class GenericNode;
 
-// Opaque Stage pointer used for graph building.
+// Opaque node pointer used for graph building.
 class NodeRef {
  public:
   NodeRef() {}
 
   NodeRef& operator=(std::nullptr_t) {
-    stage_ = nullptr;
+    node_ = nullptr;
     return *this;
   }
 
@@ -49,18 +48,17 @@ class NodeRef {
   OutputRef output() const;
 
   // Returns true if the reference refers to a node, false if it's null.
-  explicit operator bool() const { return stage_ != nullptr; }
+  explicit operator bool() const { return node_ != nullptr; }
 
-  // Gets the actual node referenced by this |NodeRef|.
-  GenericNode* GetGenericNode();
+  Node* GetNode() const { return node_; }
 
-  bool operator==(const NodeRef& other) const { return stage_ == other.stage_; }
-  bool operator!=(const NodeRef& other) const { return stage_ != other.stage_; }
+  bool operator==(const NodeRef& other) const { return node_ == other.node_; }
+  bool operator!=(const NodeRef& other) const { return node_ != other.node_; }
 
  private:
-  explicit NodeRef(StageImpl* stage) : stage_(stage) {}
+  explicit NodeRef(Node* node) : node_(node) {}
 
-  StageImpl* stage_ = nullptr;
+  Node* node_ = nullptr;
 
   friend Graph;
   friend InputRef;

@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/bin/mediaplayer/graph/nodes/input.h"
+
 #include <atomic>
-
-#include "garnet/bin/mediaplayer/graph/stages/input.h"
-
-#include "garnet/bin/mediaplayer/graph/stages/stage_impl.h"
+#include "garnet/bin/mediaplayer/graph/nodes/node.h"
+#include "garnet/bin/mediaplayer/graph/nodes/output.h"
 
 namespace media_player {
 namespace {
@@ -33,15 +33,13 @@ PacketPtr CopyPacket(const Packet& original,
 
 }  // namespace
 
-Input::Input(StageImpl* stage, size_t index)
-    : stage_(stage), index_(index), state_(State::kRefusesPacket) {
-  FXL_DCHECK(stage_);
+Input::Input(Node* node, size_t index)
+    : node_(node), index_(index), state_(State::kRefusesPacket) {
+  FXL_DCHECK(node_);
 }
 
 Input::Input(Input&& input)
-    : stage_(input.stage()),
-      index_(input.index()),
-      state_(input.state_.load()) {
+    : node_(input.node()), index_(input.index()), state_(input.state_.load()) {
   // We can't move an input that's connected, has a packet or is configured.
   // TODO(dalesat): Make |Input| non-movable.
   FXL_DCHECK(input.mate() == nullptr);
@@ -67,7 +65,7 @@ void Input::PutPacket(PacketPtr packet) {
 
   std::atomic_store(&packet_, packet);
   state_.store(State::kHasPacket);
-  stage_->NeedsUpdate();
+  node_->NeedsUpdate();
 }
 
 PacketPtr Input::TakePacket(bool request_another) {
@@ -78,7 +76,7 @@ PacketPtr Input::TakePacket(bool request_another) {
 
   if (request_another) {
     state_.store(State::kNeedsPacket);
-    mate_->stage()->NeedsUpdate();
+    mate_->node()->NeedsUpdate();
   } else {
     state_.store(State::kRefusesPacket);
   }
@@ -122,7 +120,7 @@ void Input::RequestPacket() {
 
   State expected = State::kRefusesPacket;
   if (state_.compare_exchange_strong(expected, State::kNeedsPacket)) {
-    mate_->stage()->NeedsUpdate();
+    mate_->node()->NeedsUpdate();
   }
 }
 

@@ -17,9 +17,7 @@ namespace media_player {
 // AudioRenderer that renders audio via FIDL services.
 //
 // This class run single-threaded.
-class FidlAudioRenderer
-    : public AudioRenderer,
-      public std::enable_shared_from_this<FidlAudioRenderer> {
+class FidlAudioRenderer : public AudioRenderer {
  public:
   static std::shared_ptr<FidlAudioRenderer> Create(
       fuchsia::media::AudioRendererPtr audio_renderer);

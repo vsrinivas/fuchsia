@@ -7,14 +7,14 @@
 
 #include <fuchsia/mediaplayer/cpp/fidl.h>
 #include <vector>
-#include "garnet/bin/mediaplayer/graph/models/async_node.h"
+#include "garnet/bin/mediaplayer/graph/nodes/node.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/synchronization/thread_checker.h"
 
 namespace media_player {
 
 // Fidl decoder as exposed by the codec factory service.
-class SimpleStreamSinkImpl : public AsyncNode,
+class SimpleStreamSinkImpl : public Node,
                              public fuchsia::media::SimpleStreamSink {
  public:
   // Creates a fidl decoder factory. Calls the callback with the initalized
@@ -34,7 +34,7 @@ class SimpleStreamSinkImpl : public AsyncNode,
     return *output_stream_type_;
   }
 
-  // AsyncNode implementation.
+  // Node implementation.
   const char* label() const override { return "stream source sink"; }
 
   void Dump(std::ostream& os) const override;

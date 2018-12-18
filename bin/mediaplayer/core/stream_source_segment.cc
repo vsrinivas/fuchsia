@@ -31,7 +31,7 @@ StreamSourceSegment::StreamSourceSegment(
 
 StreamSourceSegment::~StreamSourceSegment() {}
 
-void StreamSourceSegment::AddStream(std::shared_ptr<AsyncNode> node,
+void StreamSourceSegment::AddStream(std::shared_ptr<Node> node,
                                     const StreamType& output_stream_type) {
   FXL_DCHECK(node);
 

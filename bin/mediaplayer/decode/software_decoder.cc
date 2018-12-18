@@ -90,7 +90,7 @@ void SoftwareDecoder::PutInputPacket(PacketPtr packet, size_t input_index) {
 
   if (!end_of_input_stream_) {
     // Request another packet to keep |input_packet_| full.
-    stage()->RequestInputPacket();
+    RequestInputPacket();
   }
 }
 
@@ -102,7 +102,7 @@ void SoftwareDecoder::RequestOutputPacket() {
     FXL_DCHECK(!end_of_input_stream_);
     FXL_DCHECK(!input_packet_);
     flushing_ = false;
-    stage()->RequestInputPacket();
+    RequestInputPacket();
   }
 
   if (output_state_ == OutputState::kWaitingForWorker) {
@@ -133,7 +133,7 @@ void SoftwareDecoder::RequestOutputPacket() {
 
   if (!end_of_input_stream_) {
     // Request the next packet, so it will be ready when we need it.
-    stage()->RequestInputPacket();
+    RequestInputPacket();
   }
 }
 
@@ -195,7 +195,7 @@ void SoftwareDecoder::HandleOutputPacket(PacketPtr packet) {
   }
 
   end_of_output_stream_ = packet->end_of_stream();
-  stage()->PutOutputPacket(std::move(packet));
+  PutOutputPacket(std::move(packet));
 }
 
 void SoftwareDecoder::WorkerDoneWithInputPacket() {
@@ -240,7 +240,7 @@ void SoftwareDecoder::Dump(std::ostream& os) const {
   FXL_DCHECK(is_main_thread());
 
   os << label() << fostr::Indent;
-  stage()->Dump(os);
+  Node::Dump(os);
   os << fostr::NewLine << "output stream type:" << output_stream_type();
   os << fostr::NewLine << "state:             ";
 

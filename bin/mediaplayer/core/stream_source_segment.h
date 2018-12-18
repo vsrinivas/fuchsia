@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "garnet/bin/mediaplayer/core/source_segment.h"
-#include "garnet/bin/mediaplayer/graph/models/async_node.h"
+#include "garnet/bin/mediaplayer/graph/nodes/node.h"
 #include "garnet/bin/mediaplayer/graph/types/stream_type.h"
 
 namespace media_player {
@@ -27,7 +27,7 @@ class StreamSourceSegment : public SourceSegment {
   ~StreamSourceSegment() override;
 
   // Adds a stream to this source segment.
-  void AddStream(std::shared_ptr<AsyncNode> node,
+  void AddStream(std::shared_ptr<Node> node,
                  const StreamType& output_stream_type);
 
  protected:

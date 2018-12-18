@@ -38,11 +38,11 @@ FfmpegAudioDecoder::FfmpegAudioDecoder(AvCodecContextPtr av_codec_context)
 FfmpegAudioDecoder::~FfmpegAudioDecoder() {}
 
 void FfmpegAudioDecoder::ConfigureConnectors() {
-  stage()->ConfigureInputToUseLocalMemory(0, 2);
+  ConfigureInputToUseLocalMemory(0, 2);
   // TODO(dalesat): Real numbers here. How big are packets?
   // We're OK for now, because the audio renderer asks for a single VMO that's
   // big enough to handle any packet we want to produce.
-  stage()->ConfigureOutputToUseLocalMemory(0, 1, 1);
+  ConfigureOutputToUseLocalMemory(0, 1, 1);
 }
 
 void FfmpegAudioDecoder::OnNewInputPacket(const PacketPtr& packet) {
@@ -77,7 +77,7 @@ int FfmpegAudioDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
   // a buffer allocated using malloc. If not, we ask the stage for a buffer.
   fbl::RefPtr<PayloadBuffer> buffer =
       lpcm_util_ ? PayloadBuffer::CreateWithMalloc(buffer_size)
-                 : stage()->AllocatePayloadBuffer(buffer_size);
+                 : AllocatePayloadBuffer(buffer_size);
 
   if (!buffer) {
     // TODO(dalesat): Renderer VMO is full. What can we do about this?
@@ -158,7 +158,7 @@ PacketPtr FfmpegAudioDecoder::CreateOutputPacket(
     // |payload_buffer|, which was allocated from system memory. That buffer
     // will get released later in ReleaseBufferForAvFrame. We need a new
     // buffer for the interleaved frames, which we get from the stage.
-    auto new_payload_buffer = stage()->AllocatePayloadBuffer(payload_size);
+    auto new_payload_buffer = AllocatePayloadBuffer(payload_size);
     if (!new_payload_buffer) {
       // TODO(dalesat): Renderer VMO is full. What can we do about this?
       FXL_LOG(FATAL) << "Ran out of memory for decoded, interleaved audio.";

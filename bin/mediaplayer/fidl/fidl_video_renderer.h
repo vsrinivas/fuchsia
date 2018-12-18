@@ -19,9 +19,7 @@
 namespace media_player {
 
 // VideoRenderer that renders video via FIDL services.
-class FidlVideoRenderer
-    : public VideoRenderer,
-      public std::enable_shared_from_this<FidlVideoRenderer> {
+class FidlVideoRenderer : public VideoRenderer {
  public:
   static std::shared_ptr<FidlVideoRenderer> Create(
       component::StartupContext* startup_context);
@@ -208,7 +206,7 @@ class FidlVideoRenderer
   std::unordered_map<View*, std::unique_ptr<View>> views_;
   fit::closure prime_callback_;
   fit::closure geometry_update_callback_;
-  uint32_t image_id_base_ = 2; // 1 is reserved for the black image.
+  uint32_t image_id_base_ = 2;  // 1 is reserved for the black image.
   uint32_t next_image_id_base_ = 2;
 
   PacketTimingTracker arrivals_;

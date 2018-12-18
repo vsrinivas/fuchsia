@@ -68,13 +68,11 @@ class PayloadManager {
   //                           requested size, or nullptr if the allocation
   //                           failed.
   //
-  // The allocator callback is called on an arbitrary thread and may not call
-  // any methods on the stage.
+  // The allocator callback is called on an arbitrary thread.
   //
-  // The supplied VMOs are the same ones available on the stage via
-  // |AsyncNodeStage::UseOutputVmos| or |AsyncNodeStage::UseInputVmos|. They're
-  // passed to the callback, because the callback may not call back into the
-  // stage.
+  // The supplied VMOs are the same ones available on the node via
+  // |Node::UseOutputVmos| or |Node::UseInputVmos|. They're passed to the
+  // callback, because the callback may not call back into the node.
   using AllocateCallback =
       fit::function<fbl::RefPtr<PayloadBuffer>(uint64_t, const PayloadVmos&)>;
 

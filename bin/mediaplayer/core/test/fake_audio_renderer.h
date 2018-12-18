@@ -34,7 +34,7 @@ class FakeAudioRenderer : public Renderer {
     FXL_DCHECK(input_index == 0);
     // Throw away the packet and request a new one.
     // TODO(dalesat): Simulate real renderer timing and stop requestion on eos.
-    stage()->RequestInputPacket();
+    RequestInputPacket();
   }
 
   const std::vector<std::unique_ptr<StreamTypeSet>>& GetSupportedStreamTypes()

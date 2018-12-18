@@ -22,7 +22,7 @@ class FfmpegAudioDecoder : public FfmpegDecoderBase {
 
   ~FfmpegAudioDecoder() override;
 
-  // AsyncNode implementation.
+  // Node implementation.
   void ConfigureConnectors() override;
 
  protected:

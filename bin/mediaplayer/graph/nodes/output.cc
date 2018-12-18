@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/mediaplayer/graph/stages/output.h"
+#include "garnet/bin/mediaplayer/graph/nodes/output.h"
 
-#include "garnet/bin/mediaplayer/graph/stages/stage_impl.h"
+#include "garnet/bin/mediaplayer/graph/nodes/input.h"
+#include "garnet/bin/mediaplayer/graph/nodes/node.h"
 
 namespace media_player {
 
-Output::Output(StageImpl* stage, size_t index) : stage_(stage), index_(index) {}
+Output::Output(Node* node, size_t index) : node_(node), index_(index) {}
 
 Output::Output(Output&& output)
-    : stage_(output.stage()),
+    : node_(output.node()),
       index_(output.index()),
       payload_config_(output.payload_config()),
       bti_handle_(std::move(output.bti_handle_)) {

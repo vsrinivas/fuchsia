@@ -32,7 +32,7 @@ class FakeVideoRenderer : public Renderer {
   void PutInputPacket(PacketPtr packet, size_t input_index) override {
     FXL_DCHECK(packet);
     FXL_DCHECK(input_index == 0);
-    stage()->RequestInputPacket();
+    RequestInputPacket();
   }
 
   const std::vector<std::unique_ptr<StreamTypeSet>>& GetSupportedStreamTypes()

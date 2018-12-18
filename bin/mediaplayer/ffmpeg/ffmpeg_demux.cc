@@ -60,7 +60,7 @@ class FfmpegDemuxImpl : public FfmpegDemux {
 
   void Seek(int64_t position, SeekCallback callback) override;
 
-  // AsyncNode implementation.
+  // Node implementation.
   const char* label() const override;
 
   void Dump(std::ostream& os) const override;
@@ -232,6 +232,7 @@ const char* FfmpegDemuxImpl::label() const { return "demux"; }
 
 void FfmpegDemuxImpl::Dump(std::ostream& os) const {
   os << label() << fostr::Indent;
+  Node::Dump(os);
   os << fostr::NewLine << "stream types per output:";
 
   {
@@ -243,14 +244,13 @@ void FfmpegDemuxImpl::Dump(std::ostream& os) const {
     }
   }
 
-  stage()->Dump(os);
   os << fostr::Outdent;
 }
 
 void FfmpegDemuxImpl::ConfigureConnectors() {
   for (size_t output_index = 0; output_index < streams_.size();
        ++output_index) {
-    stage()->ConfigureOutputToProvideLocalMemory(output_index);
+    ConfigureOutputToProvideLocalMemory(output_index);
   }
 }
 
@@ -353,10 +353,7 @@ void FfmpegDemuxImpl::Worker() {
       PacketPtr packet = PullPacket(&stream_index);
       FXL_DCHECK(packet);
 
-      AsyncNodeStage* stage_ptr = stage();
-      if (stage_ptr) {
-        stage_ptr->PutOutputPacket(std::move(packet), stream_index);
-      }
+      PutOutputPacket(std::move(packet), stream_index);
     }
   }
 }

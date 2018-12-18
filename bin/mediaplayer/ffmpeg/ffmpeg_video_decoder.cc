@@ -47,15 +47,15 @@ void FfmpegVideoDecoder::ConfigureConnectors() {
   // TODO(dalesat): Make sure these numbers are adequate.
   // The demux allocates local memory itself, so we don't have to say much
   // here.
-  stage()->ConfigureInputToUseLocalMemory(0,   // max_aggregate_payload_size
-                                          2);  // max_payload_count
+  ConfigureInputToUseLocalMemory(0,   // max_aggregate_payload_size
+                                 2);  // max_payload_count
 
   if (has_size()) {
     configured_output_buffer_size_ = frame_layout_.buffer_size();
-    stage()->ConfigureOutputToUseLocalMemory(0, kOutputMaxPayloadCount,
-                                             configured_output_buffer_size_);
+    ConfigureOutputToUseLocalMemory(0, kOutputMaxPayloadCount,
+                                    configured_output_buffer_size_);
   } else {
-    stage()->ConfigureOutputDeferred();
+    ConfigureOutputDeferred();
   }
 }
 
@@ -132,8 +132,8 @@ int FfmpegVideoDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
     // We need to configure the output, but that has to happen on the graph
     // thread. Do that and block until it's done.
     sync_completion completion;
-    stage()->PostTask([this, buffer_size, &completion]() {
-      stage()->ConfigureOutputToUseLocalMemory(
+    PostTask([this, buffer_size, &completion]() {
+      ConfigureOutputToUseLocalMemory(
           0,                       // max_aggregate_payload_size
           kOutputMaxPayloadCount,  // max_payload_count
           buffer_size);            // max_payload_size
@@ -144,7 +144,7 @@ int FfmpegVideoDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
   }
 
   fbl::RefPtr<PayloadBuffer> payload_buffer =
-      stage()->AllocatePayloadBuffer(frame_layout_.buffer_size());
+      AllocatePayloadBuffer(frame_layout_.buffer_size());
 
   if (!payload_buffer) {
     FXL_LOG(ERROR) << "failed to allocate payload buffer of size "

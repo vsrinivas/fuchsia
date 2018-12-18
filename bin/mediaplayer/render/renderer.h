@@ -9,14 +9,14 @@
 
 #include <fuchsia/media/cpp/fidl.h>
 
-#include "garnet/bin/mediaplayer/graph/models/async_node.h"
+#include "garnet/bin/mediaplayer/graph/nodes/node.h"
 #include "garnet/bin/mediaplayer/graph/types/stream_type.h"
 #include "lib/media/timeline/timeline_function.h"
 
 namespace media_player {
 
 // Abstract base class for sinks that render packets.
-class Renderer : public AsyncNode {
+class Renderer : public Node {
  public:
   Renderer();
 
@@ -32,7 +32,7 @@ class Renderer : public AsyncNode {
   // |Provision|.
   void Deprovision();
 
-  // AsyncNode implementation.
+  // Node implementation.
   void Dump(std::ostream& os) const override;
 
   void ConfigureConnectors() override;

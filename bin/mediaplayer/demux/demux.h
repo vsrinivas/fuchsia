@@ -12,7 +12,7 @@
 
 #include "garnet/bin/mediaplayer/demux/reader_cache.h"
 #include "garnet/bin/mediaplayer/graph/metadata.h"
-#include "garnet/bin/mediaplayer/graph/models/async_node.h"
+#include "garnet/bin/mediaplayer/graph/nodes/node.h"
 #include "garnet/bin/mediaplayer/graph/packet.h"
 #include "garnet/bin/mediaplayer/graph/result.h"
 #include "garnet/bin/mediaplayer/graph/types/stream_type.h"
@@ -22,7 +22,7 @@ namespace media_player {
 
 // Abstract base class for sources that parse input from a reader and
 // produce one or more output streams.
-class Demux : public AsyncNode {
+class Demux : public Node {
  public:
   using SeekCallback = fit::closure;
   using StatusCallback = fit::function<void(

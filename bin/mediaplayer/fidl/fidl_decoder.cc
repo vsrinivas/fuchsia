@@ -148,7 +148,7 @@ FidlDecoder::~FidlDecoder() {
 const char* FidlDecoder::label() const { return "fidl decoder"; }
 
 void FidlDecoder::Dump(std::ostream& os) const {
-  GenericNode::Dump(os);
+  Node::Dump(os);
   // TODO(dalesat): More.
 }
 
@@ -308,32 +308,16 @@ void FidlDecoder::InitFailed() {
 
 void FidlDecoder::MaybeConfigureInput(
     fuchsia::mediacodec::CodecBufferConstraints* constraints) {
-  if (stage() == nullptr) {
-    // The node isn't ready to configure.
-    if (constraints != nullptr) {
-      cached_input_constraints_ = std::move(*constraints);
-      input_constraints_cached_ = true;
-    }
-
-    return;
-  }
-
-  // The node is ready.
   if (constraints == nullptr) {
-    if (!input_constraints_cached_) {
-      // We have no constraints to apply. Defer the configuration.
-      stage()->ConfigureInputDeferred();
-      return;
-    }
-
-    constraints = &cached_input_constraints_;
-    input_constraints_cached_ = false;
+    // We have no constraints to apply. Defer the configuration.
+    ConfigureInputDeferred();
+    return;
   }
 
   FXL_DCHECK(input_buffers_.has_current_set());
 
   BufferSet& current_set = input_buffers_.current_set();
-  stage()->ConfigureInputToUseVmos(
+  ConfigureInputToUseVmos(
       0, current_set.buffer_count(), current_set.buffer_size(),
       current_set.single_vmo() ? VmoAllocation::kSingleVmo
                                : VmoAllocation::kVmoPerBuffer,
@@ -344,7 +328,7 @@ void FidlDecoder::MaybeConfigureInput(
         return current_set.AllocateBuffer(size, payload_vmos);
       });
 
-  if (stage()->InputConnectionReady()) {
+  if (InputConnectionReady()) {
     AddInputBuffers();
   } else {
     add_input_buffers_pending_ = true;
@@ -352,13 +336,12 @@ void FidlDecoder::MaybeConfigureInput(
 }
 
 void FidlDecoder::AddInputBuffers() {
-  FXL_DCHECK(stage());
-  FXL_DCHECK(stage()->InputConnectionReady());
+  FXL_DCHECK(InputConnectionReady());
 
   BufferSet& current_set = input_buffers_.current_set();
   for (uint32_t index = 0; index < current_set.buffer_count(); ++index) {
     auto descriptor =
-        current_set.GetBufferDescriptor(index, false, stage()->UseInputVmos());
+        current_set.GetBufferDescriptor(index, false, UseInputVmos());
     outboard_decoder_->AddInputBuffer(std::move(descriptor));
   }
 }
@@ -368,26 +351,10 @@ void FidlDecoder::MaybeConfigureOutput(
   FXL_DCHECK(constraints == nullptr ||
              constraints->per_packet_buffer_bytes_max != 0);
 
-  if (stage() == nullptr) {
-    // The node isn't ready to configure.
-    if (constraints != nullptr) {
-      cached_output_constraints_ = std::move(*constraints);
-      output_constraints_cached_ = true;
-    }
-
-    return;
-  }
-
-  // The node is ready.
   if (constraints == nullptr) {
-    if (!output_constraints_cached_) {
-      // We have no constraints to apply. Defer the configuration.
-      stage()->ConfigureOutputDeferred();
-      return;
-    }
-
-    constraints = &cached_output_constraints_;
-    output_constraints_cached_ = false;
+    // We have no constraints to apply. Defer the configuration.
+    ConfigureOutputDeferred();
+    return;
   }
 
   FXL_DCHECK(output_buffers_.has_current_set());
@@ -397,14 +364,14 @@ void FidlDecoder::MaybeConfigureOutput(
   BufferSet& current_set = output_buffers_.current_set();
   output_vmos_physically_contiguous_ =
       constraints->is_physically_contiguous_required;
-  stage()->ConfigureOutputToUseVmos(
+  ConfigureOutputToUseVmos(
       0, current_set.buffer_count(), current_set.buffer_size(),
       current_set.single_vmo() ? VmoAllocation::kSingleVmo
                                : VmoAllocation::kVmoPerBuffer,
       output_vmos_physically_contiguous_,
       std::move(constraints->very_temp_kludge_bti_handle));
 
-  if (stage()->OutputConnectionReady()) {
+  if (OutputConnectionReady()) {
     AddOutputBuffers();
   } else {
     add_output_buffers_pending_ = true;
@@ -412,8 +379,7 @@ void FidlDecoder::MaybeConfigureOutput(
 }
 
 void FidlDecoder::AddOutputBuffers() {
-  FXL_DCHECK(stage());
-  FXL_DCHECK(stage()->OutputConnectionReady());
+  FXL_DCHECK(OutputConnectionReady());
 
   // We allocate all the buffers on behalf of the outboard decoder. We give
   // the outboard decoder ownership of these buffers as long as this set is
@@ -424,11 +390,11 @@ void FidlDecoder::AddOutputBuffers() {
   // as references and even use the same output buffer for multiple packets as
   // happens with VP9.
   BufferSet& current_set = output_buffers_.current_set();
-  current_set.AllocateAllBuffersForDecoder(stage()->UseOutputVmos());
+  current_set.AllocateAllBuffersForDecoder(UseOutputVmos());
 
   for (uint32_t index = 0; index < current_set.buffer_count(); ++index) {
     auto descriptor =
-        current_set.GetBufferDescriptor(index, true, stage()->UseOutputVmos());
+        current_set.GetBufferDescriptor(index, true, UseOutputVmos());
     outboard_decoder_->AddOutputBuffer(std::move(descriptor));
   }
 }
@@ -452,7 +418,7 @@ void FidlDecoder::MaybeRequestInputPacket() {
       }
     }
 
-    stage()->RequestInputPacket();
+    RequestInputPacket();
   }
 }
 
@@ -622,7 +588,7 @@ void FidlDecoder::OnOutputPacket(fuchsia::mediacodec::CodecPacket packet,
         });
       });
 
-  stage()->PutOutputPacket(std::move(output_packet));
+  PutOutputPacket(std::move(output_packet));
 }
 
 void FidlDecoder::OnOutputEndOfStream(uint64_t stream_lifetime_ordinal,
@@ -633,7 +599,7 @@ void FidlDecoder::OnOutputEndOfStream(uint64_t stream_lifetime_ordinal,
     FXL_LOG(WARNING) << "OnOutputEndOfStream: error_detected_before";
   }
 
-  stage()->PutOutputPacket(Packet::CreateEndOfStream(next_pts_, pts_rate_));
+  PutOutputPacket(Packet::CreateEndOfStream(next_pts_, pts_rate_));
 }
 
 void FidlDecoder::OnFreeInputPacket(

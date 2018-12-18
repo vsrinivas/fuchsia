@@ -6,12 +6,12 @@
 #define GARNET_BIN_MEDIAPLAYER_GRAPH_FORMATTING_H_
 
 #include <ostream>
+#include "garnet/bin/mediaplayer/graph/nodes/input.h"
+#include "garnet/bin/mediaplayer/graph/nodes/node.h"
+#include "garnet/bin/mediaplayer/graph/nodes/output.h"
 #include "garnet/bin/mediaplayer/graph/packet.h"
 #include "garnet/bin/mediaplayer/graph/payloads/payload_config.h"
 #include "garnet/bin/mediaplayer/graph/result.h"
-#include "garnet/bin/mediaplayer/graph/stages/input.h"
-#include "garnet/bin/mediaplayer/graph/stages/output.h"
-#include "garnet/bin/mediaplayer/graph/stages/stage_impl.h"
 #include "garnet/bin/mediaplayer/graph/types/audio_stream_type.h"
 #include "garnet/bin/mediaplayer/graph/types/stream_type.h"
 #include "garnet/bin/mediaplayer/graph/types/video_stream_type.h"
@@ -45,8 +45,7 @@ std::ostream& operator<<(std::ostream& os, VideoStreamType::ColorSpace value);
 std::ostream& operator<<(std::ostream& os, const Bytes& value);
 std::ostream& operator<<(std::ostream& os, media::TimelineRate value);
 std::ostream& operator<<(std::ostream& os, media::TimelineFunction value);
-std::ostream& operator<<(std::ostream& os, const GenericNode& value);
-std::ostream& operator<<(std::ostream& os, const StageImpl& value);
+std::ostream& operator<<(std::ostream& os, const Node& value);
 std::ostream& operator<<(std::ostream& os, const Input& value);
 std::ostream& operator<<(std::ostream& os, const Output& value);
 std::ostream& operator<<(std::ostream& os, const StreamType& value);

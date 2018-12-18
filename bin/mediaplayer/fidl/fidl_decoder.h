@@ -6,7 +6,6 @@
 #define GARNET_BIN_MEDIAPLAYER_FIDL_FIDL_DECODER_H_
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
-#include <memory>
 #include "garnet/bin/mediaplayer/decode/decoder.h"
 #include "garnet/bin/mediaplayer/fidl/buffer_set.h"
 #include "lib/fxl/synchronization/thread_checker.h"
@@ -14,8 +13,7 @@
 namespace media_player {
 
 // Fidl decoder as exposed by the codec factory service.
-class FidlDecoder : public Decoder,
-                    public std::enable_shared_from_this<FidlDecoder> {
+class FidlDecoder : public Decoder {
  public:
   // Creates a fidl decoder factory. Calls the callback with the initalized
   // decoder on success. Calls the callback with nullptr on failure.
@@ -133,11 +131,7 @@ class FidlDecoder : public Decoder,
   uint32_t pre_stream_type_packet_requests_remaining_ = 10;
   std::unique_ptr<StreamType> output_stream_type_;
   std::unique_ptr<StreamType> revised_output_stream_type_;
-  bool input_constraints_cached_ = false;
-  fuchsia::mediacodec::CodecBufferConstraints cached_input_constraints_;
   bool add_input_buffers_pending_ = false;
-  bool output_constraints_cached_ = false;
-  fuchsia::mediacodec::CodecBufferConstraints cached_output_constraints_;
   bool add_output_buffers_pending_ = false;
   bool output_vmos_physically_contiguous_ = false;
   uint64_t stream_lifetime_ordinal_ = 1;

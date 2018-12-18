@@ -112,7 +112,7 @@ void FidlAudioRenderer::Dump(std::ostream& os) const {
 void FidlAudioRenderer::OnInputConnectionReady(size_t input_index) {
   FXL_DCHECK(input_index == 0);
 
-  auto vmos = stage()->UseInputVmos().GetVmos();
+  auto vmos = UseInputVmos().GetVmos();
   FXL_DCHECK(vmos.size() == 1);
   audio_renderer_->AddPayloadBuffer(
       0,
@@ -232,7 +232,7 @@ void FidlAudioRenderer::SetStreamType(const StreamType& stream_type) {
   size_t size = stream_type.audio()->min_buffer_size(
       stream_type.audio()->frames_per_second());  // TODO How many seconds?
 
-  if (stage()->ConfigureInputToUseVmos(size, 0, 0, VmoAllocation::kSingleVmo)) {
+  if (ConfigureInputToUseVmos(size, 0, 0, VmoAllocation::kSingleVmo)) {
     OnInputConnectionReady(0);
   }
 
@@ -356,7 +356,7 @@ bool FidlAudioRenderer::SignalCurrentDemand() {
   }
 
   input_packet_request_outstanding_ = true;
-  stage()->RequestInputPacket();
+  RequestInputPacket();
   return true;
 }
 

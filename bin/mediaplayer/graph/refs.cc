@@ -4,53 +4,49 @@
 
 #include "garnet/bin/mediaplayer/graph/refs.h"
 
-#include "garnet/bin/mediaplayer/graph/stages/input.h"
-#include "garnet/bin/mediaplayer/graph/stages/output.h"
-#include "garnet/bin/mediaplayer/graph/stages/stage_impl.h"
+#include "garnet/bin/mediaplayer/graph/nodes/input.h"
+#include "garnet/bin/mediaplayer/graph/nodes/node.h"
+#include "garnet/bin/mediaplayer/graph/nodes/output.h"
 #include "lib/fxl/logging.h"
 
 namespace media_player {
 
 size_t NodeRef::input_count() const {
-  FXL_DCHECK(stage_);
-  return stage_->input_count();
+  FXL_DCHECK(node_);
+  return node_->input_count();
 }
 
 InputRef NodeRef::input(size_t index) const {
-  FXL_DCHECK(stage_);
-  FXL_DCHECK(index < stage_->input_count());
-  return InputRef(&stage_->input(index));
+  FXL_DCHECK(node_);
+  FXL_DCHECK(index < node_->input_count());
+  return InputRef(&node_->input(index));
 }
 
 InputRef NodeRef::input() const {
-  FXL_DCHECK(stage_);
-  FXL_DCHECK(stage_->input_count() == 1);
-  return InputRef(&stage_->input(0));
+  FXL_DCHECK(node_);
+  FXL_DCHECK(node_->input_count() == 1);
+  return InputRef(&node_->input(0));
 }
 
 size_t NodeRef::output_count() const {
-  FXL_DCHECK(stage_);
-  return stage_->output_count();
+  FXL_DCHECK(node_);
+  return node_->output_count();
 }
 
 OutputRef NodeRef::output(size_t index) const {
-  FXL_DCHECK(stage_);
-  FXL_DCHECK(index < stage_->output_count());
-  return OutputRef(&stage_->output(index));
+  FXL_DCHECK(node_);
+  FXL_DCHECK(index < node_->output_count());
+  return OutputRef(&node_->output(index));
 }
 
 OutputRef NodeRef::output() const {
-  FXL_DCHECK(stage_);
-  FXL_DCHECK(stage_->output_count() == 1);
-  return OutputRef(&stage_->output(0));
-}
-
-GenericNode* NodeRef::GetGenericNode() {
-  return stage_ ? stage_->GetGenericNode() : nullptr;
+  FXL_DCHECK(node_);
+  FXL_DCHECK(node_->output_count() == 1);
+  return OutputRef(&node_->output(0));
 }
 
 NodeRef InputRef::node() const {
-  return input_ ? NodeRef(input_->stage()) : NodeRef();
+  return input_ ? NodeRef(input_->node()) : NodeRef();
 }
 
 bool InputRef::connected() const {
@@ -64,7 +60,7 @@ OutputRef InputRef::mate() const {
 }
 
 NodeRef OutputRef::node() const {
-  return output_ ? NodeRef(output_->stage()) : NodeRef();
+  return output_ ? NodeRef(output_->node()) : NodeRef();
 }
 
 bool OutputRef::connected() const {

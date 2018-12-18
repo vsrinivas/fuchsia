@@ -429,17 +429,17 @@ void PlayerCore::ConnectStream(Stream* stream) {
 
 void PlayerCore::Dump(std::ostream& os) const {
   std::queue<NodeRef> backlog;
-  std::unordered_set<GenericNode*> visited;
+  std::unordered_set<Node*> visited;
 
   backlog.push(source_node());
-  visited.insert(source_node().GetGenericNode());
+  visited.insert(source_node().GetNode());
 
   while (!backlog.empty()) {
     NodeRef node = backlog.front();
     backlog.pop();
 
     os << fostr::NewLine << fostr::NewLine;
-    node.GetGenericNode()->Dump(os);
+    node.GetNode()->Dump(os);
 
     for (size_t output_index = 0; output_index < node.output_count();
          ++output_index) {
@@ -449,13 +449,13 @@ void PlayerCore::Dump(std::ostream& os) const {
       }
 
       NodeRef downstream = output.mate().node();
-      GenericNode* downstream_generic_node = downstream.GetGenericNode();
-      if (visited.find(downstream_generic_node) != visited.end()) {
+      Node* downstream_node = downstream.GetNode();
+      if (visited.find(downstream_node) != visited.end()) {
         continue;
       }
 
       backlog.push(downstream);
-      visited.insert(downstream_generic_node);
+      visited.insert(downstream_node);
     }
   }
 }

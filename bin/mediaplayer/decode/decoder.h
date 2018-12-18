@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_MEDIAPLAYER_DECODE_DECODER_H_
 #define GARNET_BIN_MEDIAPLAYER_DECODE_DECODER_H_
 
-#include "garnet/bin/mediaplayer/graph/models/async_node.h"
+#include "garnet/bin/mediaplayer/graph/nodes/node.h"
 #include "garnet/bin/mediaplayer/graph/packet.h"
 #include "garnet/bin/mediaplayer/graph/payloads/payload_allocator.h"
 #include "garnet/bin/mediaplayer/graph/result.h"
@@ -15,7 +15,7 @@
 namespace media_player {
 
 // Abstract base class for nodes that decode compressed media.
-class Decoder : public AsyncNode {
+class Decoder : public Node {
  public:
   ~Decoder() override {}
 
