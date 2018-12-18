@@ -48,12 +48,10 @@ std::string GetBoardName() {
   return std::string(board_name, actual_size);
 }
 
-std::string GetVersion() {
-  const char kFilepath[] = "/config/build-info/last-update";
+std::string ReadStringFromFile(const std::string& filepath) {
   std::string build_timestamp;
-  if (!files::ReadFileToString(kFilepath, &build_timestamp)) {
-    FX_LOGS(ERROR) << "Failed to read build timestamp from '" << kFilepath
-                   << "'.";
+  if (!files::ReadFileToString(filepath, &build_timestamp)) {
+    FX_LOGS(ERROR) << "Failed to read content from '" << filepath << "'.";
     return "unknown";
   }
   return fxl::TrimString(build_timestamp, "\r\n").ToString();
@@ -63,13 +61,19 @@ std::string GetVersion() {
 
 std::map<std::string, std::string> MakeDefaultAnnotations(
     const std::string& package_name) {
+  const std::string version = ReadStringFromFile("/config/build-info/version");
   return {
       {"product", "Fuchsia"},
-      {"version", GetVersion()},
+      {"version", version},
       // We use ptype to benefit from Chrome's "Process type" handling in
       // the UI.
       {"ptype", package_name},
       {"board_name", GetBoardName()},
+      {"build.product", ReadStringFromFile("/config/build-info/product")},
+      {"build.board", ReadStringFromFile("/config/build-info/board")},
+      {"build.version", version},
+      {"build.last-update",
+       ReadStringFromFile("/config/build-info/last-update")},
   };
 }
 

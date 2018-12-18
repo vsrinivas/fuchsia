@@ -92,6 +92,7 @@ std::map<std::string, ScopedUnlink> MakeNativeExceptionAttachments(
     attachments["kernel_log"] = ScopedUnlink(tmp_kernel_log_filename);
   }
   // TODO(DX-581): attach syslog as well.
+  // TODO(DX-839): attach /config/build-info/snapshot as well.
   return attachments;
 }
 
@@ -106,6 +107,7 @@ zx_status_t AddManagedRuntimeExceptionAttachments(
                 "stack trace");
   // TODO(DX-581): attach syslog as well.
   // TODO(DX-748): attach kernel log as well.
+  // TODO(DX-839): attach /config/build-info/snapshot as well.
   return ZX_OK;
 }
 
@@ -113,6 +115,7 @@ zx_status_t AddKernelPanicAttachments(
     crashpad::CrashReportDatabase::NewReport* report,
     fuchsia::mem::Buffer crashlog) {
   AddAttachment(report, "log", std::move(crashlog), "kernel panic crashlog");
+  // TODO(DX-839): attach /config/build-info/snapshot as well.
   return ZX_OK;
 }
 
