@@ -33,6 +33,7 @@ __BEGIN_CDECLS;
 #define PDEV_DID_MUSB_PERIPHERAL    20  // MUSB in peripheral role
 #define PDEV_DID_MUSB_HOST          21  // MUSB in host role
 #define PDEV_DID_DUMMY_DISPLAY      22  // Dummy display
+#define PDEV_DID_FOCALTOUCH         23  // FocalTech touch device
 
 // QEMU emulator
 #define PDEV_VID_QEMU               1
@@ -65,8 +66,7 @@ __BEGIN_CDECLS;
 #define PDEV_DID_GAUSS_AUDIO_OUT    2
 #define PDEV_DID_GAUSS_I2C_TEST     3
 #define PDEV_DID_GAUSS_LED          4
-#define PDEV_DID_ASTRO_FOCALTOUCH   5
-#define PDEV_DID_ASTRO_GOODIXTOUCH  6
+#define PDEV_DID_ASTRO_GOODIXTOUCH  5
 
 // Khadas
 #define PDEV_VID_KHADAS             4

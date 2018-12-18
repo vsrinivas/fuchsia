@@ -33,9 +33,8 @@ static const pbus_i2c_channel_t ft3x27_touch_i2c[] = {
 
 static pbus_dev_t ft3x27_touch_dev = {
     .name = "ft3x27-touch",
-    .vid = PDEV_VID_GOOGLE,
-    .pid = PDEV_PID_ASTRO,
-    .did = PDEV_DID_ASTRO_FOCALTOUCH,
+    .vid = PDEV_VID_GENERIC,
+    .did = PDEV_DID_FOCALTOUCH,
     .i2c_channel_list = ft3x27_touch_i2c,
     .i2c_channel_count = countof(ft3x27_touch_i2c),
     .gpio_list = touch_gpios,

@@ -5,6 +5,7 @@
 #include <ddk/debug.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/i2c-lib.h>
+#include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_counted.h>
@@ -235,13 +236,23 @@ uint8_t Ft3x27Device::Read(uint8_t addr) {
     return rbuf;
 }
 
-zx_status_t Ft3x27Device::Read(uint8_t addr, uint8_t* buf, uint8_t len) {
+zx_status_t Ft3x27Device::Read(uint8_t addr, uint8_t* buf, size_t len) {
+    // TODO(bradenkell): Remove this workaround when transfers of more than 8 bytes are supported on
+    // the MT8167.
+    while (len > 0) {
+        size_t readlen = fbl::min(len, kMaxI2cTransferLength);
 
-    zx_status_t status = i2c_write_read_sync(&i2c_, &addr, 1, buf, len);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "Failed to read i2c - %d\n", status);
-        return status;
+        zx_status_t status = i2c_write_read_sync(&i2c_, &addr, 1, buf, readlen);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "Failed to read i2c - %d\n", status);
+            return status;
+        }
+
+        addr = static_cast<uint8_t>(addr + readlen);
+        buf += readlen;
+        len -= readlen;
     }
+
     return ZX_OK;
 }
 } //namespace ft

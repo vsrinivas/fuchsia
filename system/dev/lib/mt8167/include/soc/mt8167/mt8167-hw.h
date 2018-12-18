@@ -114,6 +114,7 @@
 #define MT8167_I2C_CNT                                      3
 #define MT8167_GPIO_EINT_MAX                                131
 
-#define MT8167_GPIO_MSDC0_RST                               114
-
 #define MT8167_GPIO_MT7668_PMU_EN                           2
+#define MT8167_GPIO_TOUCH_INT                               8
+#define MT8167_GPIO_TOUCH_RST                               9
+#define MT8167_GPIO_MSDC0_RST                               114

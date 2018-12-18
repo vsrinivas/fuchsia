@@ -96,11 +96,13 @@ private:
     //  them) on the i2c bus.  This is not the HID report size.
     static constexpr uint32_t kFingerRptSize = 6;
 
+    static constexpr size_t kMaxI2cTransferLength = 8;
+
     zx_status_t InitPdev();
     zx_status_t ShutDown() __TA_EXCLUDES(proxy_lock_);
 
     uint8_t Read(uint8_t addr);
-    zx_status_t Read(uint8_t addr, uint8_t* buf, uint8_t len);
+    zx_status_t Read(uint8_t addr, uint8_t* buf, size_t len);
 
     int Thread();
 
