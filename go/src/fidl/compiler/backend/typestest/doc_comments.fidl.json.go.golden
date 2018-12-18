@@ -168,6 +168,10 @@ type Interface interface {
 	Method() error
 }
 
+type InterfaceTransitionalBase struct {}
+
+
+
 type InterfaceInterfaceRequest _bindings.InterfaceRequest
 
 func NewInterfaceInterfaceRequest() (InterfaceInterfaceRequest, *InterfaceInterface, error) {

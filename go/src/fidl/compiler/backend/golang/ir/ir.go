@@ -17,13 +17,14 @@ import (
 )
 
 const (
-	ProxySuffix       = "Interface"
-	StubSuffix        = "Stub"
-	EventProxySuffix  = "EventProxy"
-	ServiceSuffix     = "Service"
-	ServiceNameSuffix = "Name"
-	RequestSuffix     = "InterfaceRequest"
-	TagSuffix         = "Tag"
+	ProxySuffix            = "Interface"
+	StubSuffix             = "Stub"
+	EventProxySuffix       = "EventProxy"
+	ServiceSuffix          = "Service"
+	TransitionalBaseSuffix = "TransitionalBase"
+	ServiceNameSuffix      = "Name"
+	RequestSuffix          = "InterfaceRequest"
+	TagSuffix              = "Tag"
 
 	MessageHeaderSize = 16
 
@@ -318,6 +319,10 @@ type Interface struct {
 	// EventProxyName is the name of the event proxy type for this FIDL interface.
 	EventProxyName string
 
+	// TransitionalBaseName is the name of the base implementation for transitional methods
+	// for this FIDL interface.
+	TransitionalBaseName string
+
 	// RequestName is the name of the interface request type for this FIDL interface.
 	RequestName string
 
@@ -361,6 +366,9 @@ type Method struct {
 	// IsEvent is set to true if the method is an event. In this case, Response will always be
 	// non-nil while Request will always be nil. EventExpectName will also be non-empty.
 	IsEvent bool
+
+	// IsTransitional is set to true if the method has the Transitional attribute.
+	IsTransitional bool
 }
 
 // Library represents a FIDL library as a golang package.
@@ -826,6 +834,7 @@ func (c *compiler) compileMethod(ifaceName types.EncodedCompoundIdentifier, val 
 		OrdinalName:     ordinalName,
 		EventExpectName: "Expect" + methodName,
 		IsEvent:         !val.HasRequest && val.HasResponse,
+		IsTransitional:  val.IsTransitional(),
 	}
 	if val.HasRequest {
 		req := Struct{
@@ -856,15 +865,16 @@ func (c *compiler) compileMethod(ifaceName types.EncodedCompoundIdentifier, val 
 
 func (c *compiler) compileInterface(val types.Interface) Interface {
 	r := Interface{
-		Attributes:          val.Attributes,
-		Name:                c.compileCompoundIdentifier(val.Name, ""),
-		ProxyName:           c.compileCompoundIdentifier(val.Name, ProxySuffix),
-		StubName:            c.compileCompoundIdentifier(val.Name, StubSuffix),
-		RequestName:         c.compileCompoundIdentifier(val.Name, RequestSuffix),
-		EventProxyName:      c.compileCompoundIdentifier(val.Name, EventProxySuffix),
-		ServerName:          c.compileCompoundIdentifier(val.Name, ServiceSuffix),
-		ServiceNameConstant: c.compileCompoundIdentifier(val.Name, ServiceNameSuffix),
-		ServiceNameString:   val.GetServiceName(),
+		Attributes:           val.Attributes,
+		Name:                 c.compileCompoundIdentifier(val.Name, ""),
+		TransitionalBaseName: c.compileCompoundIdentifier(val.Name, TransitionalBaseSuffix),
+		ProxyName:            c.compileCompoundIdentifier(val.Name, ProxySuffix),
+		StubName:             c.compileCompoundIdentifier(val.Name, StubSuffix),
+		RequestName:          c.compileCompoundIdentifier(val.Name, RequestSuffix),
+		EventProxyName:       c.compileCompoundIdentifier(val.Name, EventProxySuffix),
+		ServerName:           c.compileCompoundIdentifier(val.Name, ServiceSuffix),
+		ServiceNameConstant:  c.compileCompoundIdentifier(val.Name, ServiceNameSuffix),
+		ServiceNameString:    val.GetServiceName(),
 	}
 	for _, v := range val.Methods {
 		r.Methods = append(r.Methods, c.compileMethod(val.Name, v))

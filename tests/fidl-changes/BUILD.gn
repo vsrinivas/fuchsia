@@ -9,6 +9,7 @@ group("fidl-changes") {
     ":cpp",
     ":fidl.test.after",
     ":fidl.test.before",
+    "go",
     "rust",
   ]
 }

@@ -423,6 +423,12 @@ type Method struct {
 	ResponseSize int         `json:"maybe_response_size,omitempty"`
 }
 
+// IsTransitional returns whether this method has the `Transitional` attribute.
+func (m *Method) IsTransitional() bool {
+	_, transitional := m.LookupAttribute("Transitional")
+	return transitional
+}
+
 // Parameter represents a parameter to a FIDL method.
 type Parameter struct {
 	Type   Type       `json:"type"`

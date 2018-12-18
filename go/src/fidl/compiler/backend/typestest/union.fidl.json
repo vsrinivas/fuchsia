@@ -18,6 +18,7 @@
           },
           "name": "Primitive",
           "size": 4,
+          "max_out_of_line": 0,
           "alignment": 4,
           "offset": 8
         },
@@ -28,6 +29,7 @@
           },
           "name": "StringNeedsConstructor",
           "size": 16,
+          "max_out_of_line": 4294967295,
           "alignment": 8,
           "offset": 8
         },
@@ -42,11 +44,13 @@
           },
           "name": "VectorStringAlsoNeedsConstructor",
           "size": 16,
+          "max_out_of_line": 4294967295,
           "alignment": 8,
           "offset": 8
         }
       ],
       "size": 24,
+      "max_out_of_line": 4294967295,
       "alignment": 8,
       "max_handles": 0
     }

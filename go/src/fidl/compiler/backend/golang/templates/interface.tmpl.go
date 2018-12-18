@@ -103,6 +103,36 @@ type {{ .Name }} interface {
 {{- end }}
 }
 
+type {{.TransitionalBaseName}} struct {}
+
+{{ $transitionalBaseName := .TransitionalBaseName }}
+
+{{- range  $method := .Methods }}
+	{{- if $method.IsTransitional }}
+		{{- if $method.Request }}
+			func (_ *{{$transitionalBaseName}}) {{ $method.Name }} (
+			{{- range $index, $m := $method.Request.Members -}}
+				{{- if $index -}}, {{- end -}}
+				{{ $m.PrivateName }} {{ $m.Type }}
+			{{- end -}}
+			)
+			{{- if $method.Response -}}
+				{{- if len $method.Response.Members }} (
+					{{- range $method.Response.Members }}{{ $method.Type }}, {{ end -}}
+						error)
+				{{- else -}}
+					error
+				{{ end -}}
+			{{- else -}}
+				error
+			{{- end -}}
+			{
+				panic("Not Implemented")
+			}
+		{{- end -}}
+	{{- end}}
+{{- end }}
+
 type {{ .RequestName }} _bindings.InterfaceRequest
 
 func New{{ .RequestName }}() ({{ .RequestName }}, *{{ .ProxyName }}, error) {
