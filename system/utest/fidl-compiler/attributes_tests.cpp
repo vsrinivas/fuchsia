@@ -382,6 +382,7 @@ RUN_TEST(socket_control_transport);
 RUN_TEST(incorrect_placement_layout);
 RUN_TEST(constraint_only_three_members_on_struct);
 RUN_TEST(constraint_only_three_members_on_method);
+RUN_TEST(constraint_only_three_members_on_interface);
 RUN_TEST(max_bytes);
 RUN_TEST(max_handles);
 END_TEST_CASE(attributes_tests);
