@@ -125,16 +125,6 @@ class Presentation1 : private ::fuchsia::ui::viewsv1::ViewTreeListener,
 
   scenic::Camera* camera() override { return &camera_; }
 
-  // |HACK_InputPath|
-  void HACK_SetInputPath(bool use_legacy) override {
-    HACK_legacy_input_path_ = use_legacy;
-  }
-
-  // |HACK_InputPath|
-  void HACK_QueryInputPath(HACK_QueryInputPathCallback callback) override {
-    callback(HACK_legacy_input_path_);
-  }
-
  private:
   enum SessionPresentState {
     kNoPresentPending,
@@ -370,8 +360,6 @@ class Presentation1 : private ::fuchsia::ui::viewsv1::ViewTreeListener,
   // We store the view tree token to pass to |a11y_input_connection_| on
   // registration.
   fuchsia::ui::viewsv1::ViewTreeToken current_view_tree_;
-
-  bool HACK_legacy_input_path_;
 
   fxl::WeakPtrFactory<Presentation1> weak_factory_;
 

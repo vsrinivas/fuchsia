@@ -20,12 +20,6 @@ interface Presenter {
     // presenter's lifetime. Only applies to any subsequent calls to Present().
     // Used for testing.
     2: HACK_SetRendererParams(bool enable_clipping, vector<fuchsia.ui.gfx.RendererParam> params);
-
-    // Set the input path. Root presenter will send to ViewManager (legacy) or Scenic.
-    3: HACK_SetInputPath(bool use_legacy);
-
-    // Query the input path. Return true if ViewManager receives input.
-    4: HACK_QueryInputPath() -> (bool use_legacy);
 };
 
 // The Presenter service provides a way for applications to ask that a

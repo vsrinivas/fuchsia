@@ -57,12 +57,6 @@ class App : public fuchsia::ui::policy::Presenter,
       bool enable_clipping,
       fidl::VectorPtr<fuchsia::ui::gfx::RendererParam> params) override;
 
-  // |Presenter|
-  void HACK_SetInputPath(bool use_legacy) override;
-
-  // |Presenter|
-  void HACK_QueryInputPath(HACK_QueryInputPathCallback callback) override;
-
   // |Presenter2|
   void PresentView(zx::eventpair view_holder_token,
                    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
@@ -115,10 +109,6 @@ class App : public fuchsia::ui::policy::Presenter,
   uint32_t next_device_token_ = 0;
   std::unordered_map<uint32_t, std::unique_ptr<mozart::InputDeviceImpl>>
       devices_by_id_;
-
-  // TODO(SCN-1013): Remove this wart.
-  // True if inputs are sent to ViewManager.
-  bool HACK_legacy_input_path_ = true;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };

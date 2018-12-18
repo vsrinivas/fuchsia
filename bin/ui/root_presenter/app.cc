@@ -32,9 +32,6 @@ App::App(const fxl::CommandLine& command_line)
       presenter2_bindings_.GetHandler(this));
   startup_context_->outgoing().AddPublicService(
       input_receiver_bindings_.GetHandler(this));
-
-  HACK_legacy_input_path_ =
-      command_line.GetOptionValueWithDefault("input_path", "new") != "new";
 }
 
 App::~App() {}
@@ -104,8 +101,6 @@ void App::Present2(zx::eventpair view_holder_token,
   presentation->Present(std::move(presentation_request), GetYieldCallback(),
                         GetShutdownCallback(presentation.get()));
 
-  presentation->HACK_SetInputPath(HACK_legacy_input_path_);
-
   AddPresentation(std::move(presentation));
 }
 
@@ -171,19 +166,6 @@ void App::HACK_SetRendererParams(
   }
   for (const auto& presentation : presentations_) {
     presentation->OverrideRendererParams(renderer_params_);
-  }
-}
-
-void App::HACK_SetInputPath(bool use_legacy) {
-  for (const auto& presentation : presentations_) {
-    presentation->HACK_SetInputPath(use_legacy);
-  }
-}
-
-void App::HACK_QueryInputPath(HACK_QueryInputPathCallback callback) {
-  if (active_presentation_idx_ != std::numeric_limits<size_t>::max()) {
-    presentations_[active_presentation_idx_]->HACK_QueryInputPath(
-        std::move(callback));
   }
 }
 
