@@ -7,8 +7,8 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/bt/hci.h>
-#include <ddk/protocol/usb-old.h>
-#include <ddk/usb/usb.h>
+#include <ddk/protocol/usb.h>
+#include <usb/usb.h>
 #include <usb/usb-request.h>
 #include <zircon/device/bt-hci.h>
 #include <zircon/listnode.h>
@@ -81,20 +81,28 @@ typedef struct {
     size_t parent_req_size;
 } hci_t;
 
-static void hci_event_complete(usb_request_t* req, void* cookie);
-static void hci_acl_read_complete(usb_request_t* req, void* cookie);
+static void hci_event_complete(void* ctx, usb_request_t* req);
+static void hci_acl_read_complete(void* ctx, usb_request_t* req);
 
 static void queue_acl_read_requests_locked(hci_t* hci) {
     usb_request_t* req = NULL;
+    usb_request_complete_t complete = {
+        .callback = hci_acl_read_complete,
+        .ctx = hci,
+    };
     while ((req = usb_req_list_remove_head(&hci->free_acl_read_reqs, hci->parent_req_size)) != NULL) {
-        usb_request_queue(&hci->usb, req, hci_acl_read_complete, hci);
+        usb_request_queue(&hci->usb, req, &complete);
     }
 }
 
 static void queue_interrupt_requests_locked(hci_t* hci) {
     usb_request_t* req = NULL;
+    usb_request_complete_t complete = {
+        .callback = hci_event_complete,
+        .ctx = hci,
+    };
     while ((req = usb_req_list_remove_head(&hci->free_event_reqs, hci->parent_req_size)) != NULL) {
-        usb_request_queue(&hci->usb, req, hci_event_complete, hci);
+        usb_request_queue(&hci->usb, req, &complete);
     }
 }
 
@@ -122,8 +130,8 @@ static void snoop_channel_write_locked(hci_t* hci, uint8_t flags, uint8_t* bytes
     }
 }
 
-static void hci_event_complete(usb_request_t* req, void* cookie) {
-    hci_t* hci = (hci_t*)cookie;
+static void hci_event_complete(void* ctx, usb_request_t* req) {
+    hci_t* hci = (hci_t*)ctx;
     zxlogf(SPEW, "bt-transport-usb: Event received\n");
     mtx_lock(&hci->mutex);
     zx_status_t status;
@@ -197,8 +205,8 @@ out2:
     mtx_unlock(&hci->mutex);
 }
 
-static void hci_acl_read_complete(usb_request_t* req, void* cookie) {
-    hci_t* hci = (hci_t*)cookie;
+static void hci_acl_read_complete(void* ctx, usb_request_t* req) {
+    hci_t* hci = (hci_t*)ctx;
     zxlogf(SPEW, "bt-transport-usb: ACL frame received\n");
     mtx_lock(&hci->mutex);
 
@@ -232,8 +240,8 @@ static void hci_acl_read_complete(usb_request_t* req, void* cookie) {
     mtx_unlock(&hci->mutex);
 }
 
-static void hci_acl_write_complete(usb_request_t* req, void* cookie) {
-    hci_t* hci = (hci_t*)cookie;
+static void hci_acl_write_complete(void* ctx, usb_request_t* req) {
+    hci_t* hci = (hci_t*)ctx;
 
     // FIXME what to do with error here?
     mtx_lock(&hci->mutex);
@@ -304,7 +312,7 @@ static void hci_handle_cmd_read_events(hci_t* hci, zx_wait_item_t* cmd_item) {
         }
 
         status = usb_control(&hci->usb, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_DEVICE,
-                             0, 0, 0, buf, length, ZX_TIME_INFINITE, NULL);
+                             0, 0, 0, ZX_TIME_INFINITE, buf, length, NULL, 0, NULL);
         if (status < 0) {
             zxlogf(ERROR, "hci_read_thread: usb_control failed: %s\n", zx_status_get_string(status));
             goto fail;
@@ -356,7 +364,11 @@ static void hci_handle_acl_read_events(hci_t* hci, zx_wait_item_t* acl_item) {
         usb_request_t* req = REQ_INTERNAL_TO_USB_REQ(req_int, hci->parent_req_size);
         usb_request_copy_to(req, buf, length, 0);
         req->header.length = length;
-        usb_request_queue(&hci->usb, req, hci_acl_write_complete, hci);
+        usb_request_complete_t complete = {
+            .callback = hci_acl_write_complete,
+            .ctx = hci,
+        };
+        usb_request_queue(&hci->usb, req, &complete);
     }
 
     return;
@@ -574,7 +586,7 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* device) {
     zxlogf(TRACE, "hci_bind\n");
     usb_protocol_t usb;
 
-    zx_status_t status = device_get_protocol(device, ZX_PROTOCOL_USB_OLD, &usb);
+    zx_status_t status = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);
     if (status != ZX_OK) {
         zxlogf(ERROR, "bt-transport-usb: get protocol failed: %s\n", zx_status_get_string(status));
         return status;
@@ -712,7 +724,7 @@ static zx_driver_ops_t usb_bt_hci_driver_ops = {
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(bt_transport_usb, usb_bt_hci_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_OLD),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
     BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_WIRELESS),
     BI_ABORT_IF(NE, BIND_USB_SUBCLASS, USB_SUBCLASS_BLUETOOTH),
     BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, USB_PROTOCOL_BLUETOOTH),
