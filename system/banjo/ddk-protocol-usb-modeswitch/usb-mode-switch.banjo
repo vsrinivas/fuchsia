@@ -1,0 +1,21 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.usb.modeswitch;
+
+using zx;
+
+/// Values for `SetMode`.
+enum UsbMode : uint32 {
+    NONE = 0;
+    HOST = 1;
+    PERIPHERAL = 2;
+    OTG = 3;
+};
+
+[Layout = "ddk-protocol", DefaultProtocol]
+interface UsbModeSwitch {
+    /// Sets the current USB mode.
+    SetMode(UsbMode mode) -> (zx.status s);
+};

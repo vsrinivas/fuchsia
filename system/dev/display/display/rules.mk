@@ -40,7 +40,7 @@ MODULE_LIBS := \
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-display-controller \
-    system/banjo/ddk-protocol-i2c-impl \
+    system/banjo/ddk-protocol-i2cimpl \
 
 ifeq ($(call TOBOOL,$(ENABLE_DRIVER_TRACING)),true)
 MODULE_STATIC_LIBS += system/ulib/trace.driver

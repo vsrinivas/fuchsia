@@ -34,7 +34,7 @@ MODULE_LIBS := \
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-platform-device \
     system/banjo/ddk-protocol-usb-dci \
-    system/banjo/ddk-protocol-usb-mode-switch \
+    system/banjo/ddk-protocol-usb-modeswitch \
     system/banjo/ddk-protocol-usb-request \
 
 include make/module.mk
