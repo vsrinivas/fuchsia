@@ -46,6 +46,9 @@ struct TxStats {
     // Delay probe if probability < (1 - kMinstrelProbabilityThreshold).
     uint8_t probe_cycles_skipped = 0;
 
+    constexpr bool PhyPreferredOver(const TxStats& other) const;
+    constexpr bool ThroughputHigherThan(const TxStats& other) const;
+    constexpr bool ProbabilityHigherThan(const TxStats& other) const;
     ::fuchsia::wlan::minstrel::StatsEntry ToFidl() const;
 };
 

@@ -75,6 +75,9 @@ bool operator!=(const TxVector& lhs, const TxVector& rhs);
 // Used by ralink driver to check if its auto-fallback mechanism changed anything other than MCS.
 bool IsEqualExceptMcs(const ::wlan::TxVector& lhs, const ::wlan::TxVector& rhs);
 std::optional<SupportedRate> TxVectorIdxToErpRate(tx_vec_idx_t idx);
+static constexpr bool IsHt(tx_vec_idx_t idx) {
+    return kHtStartIdx <= idx && idx < kHtStartIdx + kHtNumTxVector;
+}
 }  // namespace wlan
 
 #endif  // GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_TX_VECTOR_H_

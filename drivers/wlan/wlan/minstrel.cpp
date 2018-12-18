@@ -314,18 +314,25 @@ void MinstrelRateSelector::HandleTxStatusReport(const wlan_tx_status_t& tx_statu
     outdated_peers_.emplace(peer_addr);
 }
 
-bool BetterThroughput(const TxStats& lhs, const TxStats& rhs) {
-    return lhs.cur_tp > rhs.cur_tp ||
-           (lhs.cur_tp == rhs.cur_tp && lhs.probability > rhs.probability);
+constexpr bool TxStats::PhyPreferredOver(const wlan::TxStats& other) const {
+    // based on experiment, If HT is supported, it is better not to use ERP for data frames.
+    // With ralink RT5592 and Netgear Nighthawk X10, approximately 80 feet away,
+    // HT/ERP tx throughput < 1 Mbps, HT only tx 4-8 Mbps
+    // TODO(WLAN-868): Revisit with VHT support.
+    return IsHt(tx_vector_idx) || IsHt(tx_vector_idx) == IsHt(other.tx_vector_idx);
 }
 
-bool BetterProbability(const TxStats& lhs, const TxStats& rhs) {
-    if (lhs.probability >= kMinstrelProbabilityThreshold &&
-        rhs.probability >= kMinstrelProbabilityThreshold) {
+constexpr bool TxStats::ThroughputHigherThan(const TxStats& other) const {
+    return cur_tp > other.cur_tp || (cur_tp == other.cur_tp && probability > other.probability);
+}
+
+constexpr bool TxStats::ProbabilityHigherThan(const TxStats& other) const {
+    if (probability >= kMinstrelProbabilityThreshold &&
+        other.probability >= kMinstrelProbabilityThreshold) {
         // When probability is "high enough", consider throughput instead.
-        return lhs.cur_tp > rhs.cur_tp;
+        return cur_tp > other.cur_tp;
     }
-    return lhs.probability > rhs.probability;
+    return probability > other.probability;
 }
 
 void UpdateStatsPeer(Peer* peer) {
@@ -350,7 +357,7 @@ void UpdateStatsPeer(Peer* peer) {
             stats.attempts_cur = 0;
             stats.success_cur = 0;
             stats.probe_cycles_skipped = 0;
-      } else {
+        } else {
             ++stats.probe_cycles_skipped;
         }
         constexpr float kNanoSecondsPerSecond = 1e9;
@@ -366,9 +373,15 @@ void UpdateStatsPeer(Peer* peer) {
     tx_vec_idx_t max_probability = max_tp;
     tx_vec_idx_t basic_max_probability = peer->basic_highest;
     for (const auto& [idx, stats] : peer->tx_stats_map) {
-        if (BetterThroughput(stats, ctsm.at(max_tp))) { max_tp = idx; }
-        if (BetterProbability(stats, ctsm.at(max_probability))) { max_probability = idx; }
-        if (brs.count(idx) != 0 && BetterProbability(stats, ctsm.at(basic_max_probability))) {
+        if (stats.PhyPreferredOver(ctsm.at(max_tp)) &&
+            stats.ThroughputHigherThan(ctsm.at(max_tp))) {
+            max_tp = idx;
+        }
+        if (stats.PhyPreferredOver(ctsm.at(max_probability)) &&
+            stats.ProbabilityHigherThan(ctsm.at(max_probability))) {
+            max_probability = idx;
+        }
+        if (brs.count(idx) != 0 && stats.ProbabilityHigherThan(ctsm.at(basic_max_probability))) {
             basic_max_probability = idx;
         }
     }
