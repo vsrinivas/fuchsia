@@ -1,48 +1,54 @@
-Intents
-===
+## Intents
 
-An [`Intent`](../../public/lib/intent/fidl/intent.fidl) is a runtime structure
-for describing a composable action in Fuchsia.  `Intents` are produced by
-3rd-party code and platform components.
+An `Intent` is used to instruct a module to perform an action. The intent
+contains the action name, the arguments for the action parameters, and an
+optional handler which explicitly specifies which module is meant to perform the
+action.
 
-Ultimately, an `Intent` will be handled by a [`Module`](module.md). A process
-called [Module Resolution](module_resolution.md) finds `Modules` capable of
-performing the `action` described by the `Intent`.
+### Declaring Actions
 
-## Overview
+Modules can declare which actions they handle, and their associated parameters
+in their [module facet](module_facet.md). The modular framework will then index
+the module and treat it as a candidate for any incoming intents which contain
+the specified action, and don't have an explicit handler set.
 
-`Intents` describe an `action`, its `parameters`, and optionally an explicit 
-`handler` for the `action`.
+### Handling Intents
 
-If an explicit `handler` is not set, then the `Intent` is passed to a
-[Module Resolution](module_resolution.md) process, which returns a set of
-potential `handlers` for the `Intent`.
+When an intent is resolved the framework determines which module instance will
+handle it.
 
-Once a `handler` has been specified, the data in an `Intent`'s `parameters` is
-exposed to the `handler` via [`Links`](../../public/lib/story/fidl/link.fidl).
+The framework then connects to the module's `fuchsia::modular::IntentHandler`
+service, and calls `HandleIntent()`. The framework will connect to the intent
+handler interface each time a new intent is seen for a particular module
+instance, and intents can be sent to modules which are already running. Modules
+are expected to handle the transition between different intents gracefully.
 
-## Examples
+### Example
 
-### Creating an Intent with an explicit handler
+To illustrate the intended use of intents, consider the following fictional
+example: a new story has been created with a module displaying a list of
+restaurants and the module wants to show directions to the currently selected
+restaurant.
 
-```
-// Create an Intent parameter with an entity representing the selectable
-// contacts.
-IntentParameterData parameter_data;
-parameter_data.set_entity_reference(contacts_list_entity_ref);
+The restaurant module creates an intent with a `com.fuchsia.navigate` action
+with two parameters `start` and `end`, both of type `com.fuchsia.geolocation`
+and passes it to the modular framework via `ModuleContext.AddModuleToStory`.
 
-IntentParameter parameter;
-parameter.name = "contacts";
-parameter.data = parameter_data;
+At this point, the framework will search for a module which has declared support
+for the `com.fuchsia.navigate` action. Once such a module is found, it is added
+to the story and started. The framework then connects to the started module's
+`IntentHandler` service and provides it with the intent.
 
-Intent intent;
-intent.handler = url_to_contacts_picker_module;
-intent.action = "com.google.fuchsia.pick-contacts";
-intent.parameters = { parameter };
+At this point, the restaurant list module's selected restaurant changes. It
+again creates an intent, with the same action as before but with new location
+arguments and calls `ModuleContext.AddModuleToStory`.
 
-module_context.StartModule("contacts-picker", intent ...);
-```
+The framework now knows there is already a module instance running (in this case
+`AddModuleToStory` uses the `name` parameter to identify module instances)o
+explicitly specify a which can handle the given action, and connects to its
+`IntentHandler` interface and provides it with the new intent. The navigation
+module can then update its UI to display directions to the new restaurant.
 
-The framework will find the `handler` (i.e. the contacts picker module), and 
-make sure that it sees the provided contacts list entity under a link called
-`contacts` (as specified by the `IntentParameter`'s name).
+If the restaurant module wanted a specific module (e.g. `Fuchsia Maps`) to
+handle the intent, it would set the `Intent.handler` to the component URL for
+the module.

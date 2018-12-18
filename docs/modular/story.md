@@ -1,17 +1,16 @@
-Story
-=====
+## Stories
 
-A story is a logical container for a root application along with associated
-data. An instance of a story can be created, deleted, started and stopped by the
-system in response to user actions. Creating a new story instance creates an
-entry in the user's ledger which stores the data associated with this story
-instance; deleting a story instance deletes the associated data. Starting a
-story instance runs the root application; which may start other applications. If
-the root application is a module, it can start other modules and access / modify
-data associated with the story instance (via links). The root application must
-also implement the view associated with this story which might embed views from
-other applications / modules.
+A story is a logical container for composing a set of modules.
 
-## See also:
-[fuchsia::modular::StoryProvider](../services/story/story_provider.fidl)
-[fuchsia::modular::StoryController](../services/story/story_controller.fidl)
+Stories and their associated state are stored in the user's Ledger.
+
+### Presentation
+
+The modular framework uses the `fuchsia.modular.StoryShell` interface to display
+the UI for stories.
+
+### Lifecycle
+
+Stories can be created, deleted, started, and stopped. Created and deleted refer
+to the existence of the story in the ledger, whereas started and stopped refer
+to whether or not the story and its associated modules are currently running.

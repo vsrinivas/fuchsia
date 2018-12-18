@@ -1,114 +1,70 @@
-Entities
-====
-> Status: DRAFT
+## Entities
 
 The Fuchsia entity model facilitates information interchange by defining a
-common interface for **describing**, **referencing**, and **accessing** data
-objects (entities) which are shared between components running on the Fuchsia
-platform.  It consists of the following major concepts:
+common interface for _describing_, _referencing_, _accessing_, and _mutating_
+data objects (entities) which are shared between components (modules, agents,
+shells) running in the modular framework. It consists of the following major
+concepts:
 
-* [entities](../../public/lib/entity/fidl/entity.fidl): the data objects
-  described by the model
-* entity types: the way different kinds of entities are distinguished
-* [entity references](../../public/lib/entity/fidl/entity_reference_factory.fidl):
-  a serializable token that can be used to retrieve an entity handle
-* [entity providers](../../public/lib/entity/fidl/entity_provider.fidl):
-  the extensible means by which entities are made available to the system and to
-  other components independent of their source
-* [entity resolver](../../public/lib/entity/fidl/entity_resolver.fidl):
-  a Fuchsia API for accessing an entity given a reference
+*   Entities: the data objects shared between components.
+*   Entity references: a serializable token which can be used to retrieve an
+    `Entity` handle.
+*   `Entity`: An interface which gives access to a shared data object.
+*   `EntityProvider`: the interface which allows agents to expose entities to
+    the system.
+*   `EntityResolver`: the Fuchsia API for requesting an `Entity` handle for a
+    given reference.
 
-Here are some ways entities can be used:
+### Lifecycle
 
-* copy/paste via the clipboard
-* describing a contact card
-* attaching images and files to an email
-* providing a programmatic interface to create, view, and change calendar
-  events independent of any specific calendar provider
-* decoupling presentation components from data sources
-* indicating the focused elements of a story and persisting them across
-  restarts
-* enabling the assistant to inspect and manipulate entities present in the
-  current context or seen in the past
+The lifecycle of the data backing an `Entity` is controlled by the
+`EntityProvider`. The lifecycle of the `Entity` handle is controlled by
+`sessionmgr`.
 
-### What are Entities?
+#### Entities owned by Agents
 
-An entity is an **identifiable** person, place, thing, event, or concept which
-is represented within the Fuchsia platform as a **structured data object**
-which can be **referenced**, **retrieved**, **presented**, **manipulated**, or
-**shared**.
+Agents don't create `Entity` handles directly. Agents connect to the
+`EntityReferenceFactory` which provides the agent with an entity reference in
+exchange for a `cookie`. The entity reference can then be shared with other
+modular components which can use their `EntityResolver` to dereference it into
+an `Entity` interface.
 
-This use of the term “entity” has parallels in the fields of
-[databases](https://en.wikipedia.org/wiki/fuchsia::modular::Entity%E2%80%93relationship_model),
-[information extraction](https://en.wikipedia.org/wiki/Named_entity), and
-[ontology](https://en.wikipedia.org/wiki/Ontology_(information_science)).
+Calls on that `Entity` interface will then be forwarded to the agent, along with
+the associated cookie.
 
-Fuchsia entities have the following characteristics:
+The agent is thus responsible for storing and providing the entity data,
+associating it with the correct cookie, and optionally handling requests for
+mutating the entity data.
 
-* **types**: indicate the representations and intended interpretations of the
-  entity’s content, often denoting a particular schema
-* **content**: data which can be retrieved from the entity, often in the form
-  of structured properties or binary data as required by the entity’s type
-* **provider** (TODO): the provider of an entity is the component through which
-  the content of the entity is accessed
-* **reference**: a token which is used to locate the entity provider from which
-  the content of the entity can be retrieved (or modified through actions)
+#### Entities owned by a Story
 
-Fuchsia entities come in two flavors:
+Modules can create entities explicitly via their `ModuleContext` by providing a
+`fuchsia.mem.Buffer` and an associated type. The framework manages the lifecycle
+of such entities by storing them in the story's record. For this reason, when
+the story is deleted, so is the entity. Agents and modules outside the story can
+dereference the entity so long as the story still exists.
 
-* **transient entities**: represent objects which exist only at runtime as a
-  means of transmitting structured data, examples:
-  - a paragraph of text which has been copied to the clipboard and which
-    retains no connection to its original source
-  - a phone number which has been extracted from content
-  - an image which has been captured but not saved anywhere
-* **persistent entities**: represent objects for which a durable record is
-  being maintained by an entity provider, examples:
-  - an email thread
-  - a photo in the camera roll or in the cloud
-  - a contact card
-  - a calendar event
+#### Entity Resolution
 
-### How to create an fuchsia::modular::Entity
+This section describes the internals of entity resolution.
 
-It is currently possible to create *transient entities* by using the
-[`EntityStore`](../services/entity/entity_store.fidl) available in the
-application namespace for both `Modules` and `Agents`.
+`EntityProviderRunner` implements the `fuchsia::modular::EntityResolver`
+interface, and is also responsible for creating entity references by
+implementing the `fuchsia::modular::EntityReferenceFactory` interface. A single
+instance of the `EntityProviderRunner` manages all the entity providers running
+in the system.
 
-`EntityStore` can create transient Entities from a list of **types** and
-**content** arrays.
+The first step in entity resolution (i.e. the first thing which happens when
+`ResolveEntity` is called) is the runner determines whether the entity is
+provided by an agent or by the modular framework by inspecting the entity
+reference. The runner then asks an `EntityProviderLauncher` to launch the
+appropriate entity provider.
 
-In Dart:
+If the entity provider is an agent, an `AgentController` is passed to the
+launcher, and the runner keeps the agent controller alive until the client
+closes the `Entity`.
 
-```dart
-final EntityStoreProxy entityStore = new EntityStoreProxy();
-connectToService(context.environmentServices, entityStore.ctrl);
-final myType = <unique type identifier>;
-final myContent = <uint8 array>;
-entityStore.createEntity([myType], [myContent], (final EntityProxy entity) {
-  // Do something with |entity|
-});
-```
-
-In C++:
-TODO
-
-### How to retrieve an fuchsia::modular::Entity
-
-If you have an `EntityReference` (which is available by calling
-`fuchsia::modular::Entity.getReference()` on any `fuchsia::modular::Entity` instance), you can retrieve a handle to
-it by using the `fuchsia::modular::EntityResolver` service available in the application
-namespace. Both `Modules` and `Agents` have this service available.
-
-In Dart:
-
-```dart
-final EntityProxy entity = new EntityProxy();
-final EntityResolverProxy entityResolver = new EntityResolverProxy();
-connectToService(context.environmentServices, entityResolver.ctrl);
-entityResolver.getEntity(entityReference, entity.ctrl);
-// Do something with |entity|
-```
-
-In C++:
-TODO
+Each `Entity` request has an associated `EntityController` which the entity
+runner owns. The `EntityController` owns the `AgentController` if the entity
+provider was an agent, and is responsible for forwarding the entity interface
+methods to the entity provider.
