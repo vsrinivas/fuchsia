@@ -20,20 +20,20 @@ export GO_HOME=${HOME}/go/bin/
 
 # Where does pprof search for shared libraries and executables? (macos version, need to adjust for Linux)
 export PPROF_BINARY_PATH=\
-${MY_ROOT}/out/x64/exe.unstripped:\
-${MY_ROOT}/out/x64/x64-shared/lib.unstripped:\
-${MY_ROOT}/buildtools/mac-x64/clang/lib/clang/8.0.0/x86_64-fuchsia/lib:\
-${MY_ROOT}/out/x64/sdk/exported/zircon_sysroot/arch/x64/sysroot/debug
+${FUCHSIA_DIR}/out/x64/exe.unstripped:\
+${FUCHSIA_DIR}/out/x64/x64-shared/lib.unstripped:\
+${FUCHSIA_DIR}/buildtools/mac-x64/clang/lib/clang/8.0.0/x86_64-fuchsia/lib:\
+${FUCHSIA_DIR}/out/x64/sdk/exported/zircon_sysroot/arch/x64/sysroot/debug
 
 # Where is the tool chain? (macos version, need to adjust for Linux)
 export PPROF_TOOLS=\
-${MY_ROOT}/buildtools/mac-x64/clang/bin
+${FUCHSIA_DIR}/buildtools/mac-x64/clang/bin
 
-# It is easier to execute pprof from within ${MY_ROOT}/out/x64 (or whatever appropriate to your case)
-cd ${MY_ROOT}/out/x64
+# It is easier to execute pprof from within ${FUCHSIA_DIR}/out/x64 (or whatever appropriate to your case)
+cd ${FUCHSIA_DIR}/out/x64
 
 # Execute pprof to extract the distributions and to collate and symbolize the data.
-${GO_HOME}/pprof -text -lines -nodecount 35 -compact_labels -source_path /Users/fricc/fuchsia/ -trim_path ../../ exe.unstripped/profiler_example_bin /tmp/profiler_example.ppf
+${GO_HOME}/pprof -text -lines -nodecount 35 -compact_labels -source_path ${FUCHSIA_DIR} -trim_path ../../ exe.unstripped/profiler_example_bin /tmp/profiler_example.ppf
 Showing nodes accounting for 67.56s, 86.67% of 77.95s total
 Dropped 256 nodes (cum <= 0.39s)
 Showing top 35 nodes out of 57
@@ -75,4 +75,4 @@ Showing top 35 nodes out of 57
          0     0% 86.67%     77.95s   100%  async_loop_dispatch_tasks zircon/system/ulib/async-loop/loop.c:378
 
 #Or for a more fun browser-based interactive version of the above:
-${GO_HOME}/pprof -http=:8080 -source_path /Users/fricc/fuchsia/ -trim_path ../../ exe.unstripped/profiler_example_bin /tmp/profiler_example.ppf
+${GO_HOME}/pprof -http=:8080 -source_path ${FUCHSIA_DIR} -trim_path ../../ exe.unstripped/profiler_example_bin /tmp/profiler_example.ppf
