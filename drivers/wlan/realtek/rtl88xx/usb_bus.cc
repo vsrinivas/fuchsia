@@ -6,10 +6,10 @@
 #include <algorithm>
 
 #include <ddk/debug.h>
-#include <ddk/protocol/usb-old.h>
-#include <ddk/usb/usb.h>
+#include <ddk/protocol/usb.h>
 #include <fbl/algorithm.h>
 #include <lib/zx/time.h>
+#include <usb/usb.h>
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
 #include <zircon/hw/usb.h>
@@ -213,8 +213,9 @@ zx_status_t UsbBus::ControlReadRegister(uint16_t offset, char* value, size_t siz
     constexpr uint8_t kRequest = 0x0;
     constexpr uint8_t kIndex = 0x0;
 
-    return usb_control(&usb_protocol_, kRequestType, kRequest, offset, kIndex, value, size,
-                       zx::deadline_after(kRegisterIoDeadline).get(), nullptr);
+    return usb_control_in(&usb_protocol_, kRequestType, kRequest, offset, kIndex,
+                          zx::deadline_after(kRegisterIoDeadline).get(), value, size,
+                          nullptr);
 }
 
 zx_status_t UsbBus::ControlWriteRegister(uint16_t offset, char* value, size_t size) {
@@ -222,8 +223,8 @@ zx_status_t UsbBus::ControlWriteRegister(uint16_t offset, char* value, size_t si
     constexpr uint8_t kRequest = 0x0;
     constexpr uint8_t kIndex = 0x0;
 
-    return usb_control(&usb_protocol_, kRequestType, kRequest, offset, kIndex, value, size,
-                       zx::deadline_after(kRegisterIoDeadline).get(), nullptr);
+    return usb_control_out(&usb_protocol_, kRequestType, kRequest, offset, kIndex,
+                           zx::deadline_after(kRegisterIoDeadline).get(), value, size);
 }
 
 }  // namespace
@@ -232,7 +233,7 @@ zx_status_t CreateUsbBus(zx_device_t* bus_device, std::unique_ptr<Bus>* bus) {
     zx_status_t status = ZX_OK;
 
     usb_protocol_t usb_protocol = {};
-    status = device_get_protocol(bus_device, ZX_PROTOCOL_USB_OLD, &usb_protocol);
+    status = device_get_protocol(bus_device, ZX_PROTOCOL_USB, &usb_protocol);
     if (status != ZX_OK) {
         // Explicitly do not log an error here. The caller may try with another bus type instead.
         return status;
@@ -261,8 +262,9 @@ zx_status_t CreateUsbBus(zx_device_t* bus_device, std::unique_ptr<Bus>* bus) {
         uint8_t id_buf[256];
         size_t actual_buflen = 0;
         uint16_t actual_langid = 0;
-        if (usb_get_string_descriptor(&usb_protocol, usb_iface_desc->iInterface, kLangId, id_buf,
-                                      sizeof(id_buf), &actual_buflen, &actual_langid) != ZX_OK) {
+        if (usb_get_string_descriptor(&usb_protocol, usb_iface_desc->iInterface, kLangId,
+                                      &actual_langid, id_buf, sizeof(id_buf), &actual_buflen)
+                                        != ZX_OK) {
             actual_buflen = 0;
         }
         id_buf[std::min(actual_buflen, fbl::count_of(id_buf) - 1)] = '\0';

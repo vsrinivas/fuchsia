@@ -5,7 +5,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/usb/usb.h>
+#include <usb/usb.h>
 #include <wlan/common/logging.h>
 
 #include <stdint.h>
@@ -19,7 +19,7 @@ extern "C" zx_status_t ralink_bind(void* ctx, zx_device_t* device) {
     zxlogf(TRACE, "%s\n", __func__);
 
     usb_protocol_t usb;
-    zx_status_t result = device_get_protocol(device, ZX_PROTOCOL_USB_OLD, &usb);
+    zx_status_t result = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);
     if (result != ZX_OK) { return result; }
 
     size_t parent_req_size = usb_get_request_size(&usb);

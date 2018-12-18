@@ -6,7 +6,7 @@
 
 #include "ralink.h"
 
-#include <ddk/protocol/usb-old.h>
+#include <ddk/protocol/usb.h>
 #include <fbl/algorithm.h>
 #include <lib/fit/defer.h>
 #include <lib/sync/completion.h>
@@ -318,8 +318,8 @@ zx_status_t Device::Bind() {
 }
 
 zx_status_t Device::ReadRegister(uint16_t offset, uint32_t* value) {
-    auto ret = usb_control(&usb_, (USB_DIR_IN | USB_TYPE_VENDOR), kMultiRead, 0, offset, value,
-                           sizeof(*value), ZX_TIME_INFINITE, NULL);
+    auto ret = usb_control_in(&usb_, (USB_DIR_IN | USB_TYPE_VENDOR), kMultiRead, 0, offset,
+                              ZX_TIME_INFINITE, value, sizeof(*value), nullptr);
     return ret;
 }
 
@@ -328,8 +328,8 @@ template <uint16_t A> zx_status_t Device::ReadRegister(Register<A>* reg) {
 }
 
 zx_status_t Device::WriteRegister(uint16_t offset, uint32_t value) {
-    auto ret = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite, 0, offset, &value,
-                           sizeof(value), ZX_TIME_INFINITE, NULL);
+    auto ret = usb_control_out(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite, 0, offset,
+                               ZX_TIME_INFINITE, &value, sizeof(value));
     return ret;
 }
 
@@ -573,10 +573,9 @@ zx_status_t Device::LoadFirmware() {
             errorf("error reading firmware\n");
             return ZX_ERR_BAD_STATE;
         }
-        size_t out_length;
-        status = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite, 0, addr, buf,
-                             to_send, ZX_TIME_INFINITE, &out_length);
-        if (status != ZX_OK || out_length < to_send) {
+        status = usb_control_out(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite, 0, addr,
+                                 ZX_TIME_INFINITE, buf, to_send);
+        if (status != ZX_OK) {
             errorf("failed to send firmware\n");
             return ZX_ERR_BAD_STATE;
         }
@@ -597,8 +596,8 @@ zx_status_t Device::LoadFirmware() {
     CHECK_WRITE(H2M_MAILBOX_STATUS, status);
 
     // Tell the device to load the firmware
-    status = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kDeviceMode, kFirmware, 0, NULL, 0,
-                         ZX_TIME_INFINITE, NULL);
+    status = usb_control_out(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kDeviceMode, kFirmware, 0,
+                             ZX_TIME_INFINITE, nullptr, 0);
     if (status != ZX_OK) {
         errorf("failed to send load firmware command\n");
         return status;
@@ -800,8 +799,8 @@ zx_status_t Device::InitRegisters() {
     status = WriteRegister(udc);
     CHECK_WRITE(USB_DMA_CFG, status);
 
-    status = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kDeviceMode, kReset, 0, NULL, 0,
-                         ZX_TIME_INFINITE, NULL);
+    status = usb_control_out(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kDeviceMode, kReset, 0,
+                             ZX_TIME_INFINITE, nullptr, 0);
     if (status != ZX_OK) {
         errorf("failed reset\n");
         return status;
@@ -1134,10 +1133,9 @@ zx_status_t Device::InitRegisters() {
     memset(&rwe.ba_sess_mask, 0xff, sizeof(rwe.ba_sess_mask));
     for (int i = 0; i < 256; i++) {
         uint16_t addr = RX_WCID_BASE + i * sizeof(rwe);
-        size_t out_length;
-        status = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite, 0, addr, &rwe,
-                             sizeof(rwe), ZX_TIME_INFINITE, &out_length);
-        if (status != ZX_OK || out_length < (ssize_t)sizeof(rwe)) {
+        status = usb_control_out(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite, 0, addr,
+                                 ZX_TIME_INFINITE, &rwe, sizeof(rwe));
+        if (status != ZX_OK) {
             errorf("failed to set RX WCID search entry\n");
             return ZX_ERR_BAD_STATE;
         }
@@ -1934,8 +1932,8 @@ zx_status_t Device::DisableWpdma() {
 
 zx_status_t Device::DetectAutoRun(bool* autorun) {
     uint32_t fw_mode = 0;
-    zx_status_t status = usb_control(&usb_, (USB_DIR_IN | USB_TYPE_VENDOR), kDeviceMode, kAutorun,
-                                     0, &fw_mode, sizeof(fw_mode), ZX_TIME_INFINITE, NULL);
+    zx_status_t status = usb_control_in(&usb_, (USB_DIR_IN | USB_TYPE_VENDOR), kDeviceMode, kAutorun,
+                                        0, ZX_TIME_INFINITE, &fw_mode, sizeof(fw_mode), nullptr);
     if (status < 0) {
         errorf("DeviceMode error: %d\n", status);
         return status;
@@ -3273,8 +3271,12 @@ void Device::HandleRxComplete(usb_request_t* request) {
         usb_reset_endpoint(&usb_, rx_endpt_);
     }
     std::lock_guard<std::mutex> guard(lock_);
-    auto ac = fit::defer([&]() { usb_request_queue(&usb_, request, &Device::ReadRequestComplete,
-                                                   this); });
+    auto ac = fit::defer([&]() {
+        usb_request_complete_t complete = {
+            .callback = &Device::ReadRequestComplete,
+            .ctx = this,
+        };
+        usb_request_queue(&usb_, request, &complete); });
 
     if (request->response.status == ZX_OK) {
         // Total bytes received is (request->response.actual) bytes
@@ -3652,7 +3654,11 @@ zx_status_t Device::WlanmacStart(wlanmac_ifc_t* ifc, void* cookie) {
             errorf("failed to allocate rx usb request\n");
             return status;
         }
-        usb_request_queue(&usb_, req, &Device::ReadRequestComplete, this);
+        usb_request_complete_t complete = {
+            .callback = &Device::ReadRequestComplete,
+            .ctx = this,
+        };
+        usb_request_queue(&usb_, req, &complete);
     }
     // Only one TX queue for now
     auto tx_endpt = tx_endpts_.front();
@@ -4103,11 +4109,10 @@ zx_status_t Device::WlanmacConfigureBeacon(uint32_t options, wlan_tx_packet_t* b
     // Write Beacon in chunks to the device.
     const size_t max_chunk_size = 64;
     for (; data_end - data > 0; data += max_chunk_size, index += max_chunk_size) {
-        size_t written;
         size_t writing = std::min(max_chunk_size, static_cast<size_t>(data_end - data));
-        status = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite, 0, index, data,
-                             writing, ZX_TIME_INFINITE, &written);
-        if (status != ZX_OK || written < writing) {
+        status = usb_control_out(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite, 0, index,
+                                 ZX_TIME_INFINITE, data, writing);
+        if (status != ZX_OK) {
             std::printf("error writing Beacon to offset 0x%4x: %d\n", index, status);
             return ZX_ERR_IO;
         }
@@ -4170,7 +4175,11 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* wlan_pkt)
 
     // Send the whole thing
     req->header.length = usb_request_len;
-    usb_request_queue(&usb_, req, &Device::WriteRequestComplete, this);
+    usb_request_complete_t complete = {
+        .callback = &Device::WriteRequestComplete,
+        .ctx = this,
+    };
+    usb_request_queue(&usb_, req, &complete);
 
 #if RALINK_DUMP_TX
     debugf("[Ralink] Outbound WLAN packet meta info\n");
@@ -4668,10 +4677,9 @@ zx_status_t Device::WriteKey(const uint8_t key[], size_t key_len, uint16_t index
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    size_t out_len;
-    auto status = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite, 0, index,
-                              &keyEntry, sizeof(keyEntry), ZX_TIME_INFINITE, &out_len);
-    if (status != ZX_OK || out_len < sizeof(keyEntry)) {
+    auto status = usb_control_out(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite, 0, index,
+                                  ZX_TIME_INFINITE, &keyEntry, sizeof(keyEntry));
+    if (status != ZX_OK) {
         std::printf("Error writing Key Entry: %d\n", status);
         return ZX_ERR_IO;
     }
@@ -4697,11 +4705,10 @@ zx_status_t Device::WriteWcid(uint8_t wcid, const uint8_t mac[]) {
     memset(wcidEntry.ba_sess_mask, 0xFF, sizeof(wcidEntry.ba_sess_mask));
     memcpy(wcidEntry.mac, mac, sizeof(wcidEntry.mac));
 
-    size_t out_len;
     uint16_t index = RX_WCID_BASE + wcid * sizeof(wcidEntry);
-    auto status = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite, 0, index,
-                              &wcidEntry, sizeof(wcidEntry), ZX_TIME_INFINITE, &out_len);
-    if (status != ZX_OK || out_len < sizeof(wcidEntry)) {
+    auto status = usb_control_out(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite, 0, index,
+                                  ZX_TIME_INFINITE, &wcidEntry, sizeof(wcidEntry));
+    if (status != ZX_OK) {
         std::printf("Error writing WCID Entry: %d\n", status);
         return ZX_ERR_IO;
     }
@@ -4759,11 +4766,10 @@ zx_status_t Device::ResetIvEiv(uint8_t wcid, uint8_t key_id, KeyMode mode) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    size_t out_len;
     uint16_t index = IV_EIV_BASE + wcid * sizeof(ivEntry);
-    auto status = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite, 0, index,
-                              &ivEntry, sizeof(ivEntry), ZX_TIME_INFINITE, &out_len);
-    if (status != ZX_OK || out_len < sizeof(ivEntry)) {
+    auto status = usb_control_out(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite, 0, index,
+                                  ZX_TIME_INFINITE, &ivEntry, sizeof(ivEntry));
+    if (status != ZX_OK) {
         std::printf("Error writing IVEIV Entry: %d\n", status);
         return ZX_ERR_IO;
     }
@@ -4928,8 +4934,8 @@ zx_status_t Device::WlanmacClearAssoc(uint32_t options, const uint8_t* bssid) {
     return status;
 }
 
-void Device::ReadRequestComplete(usb_request_t* request, void* cookie) {
-    auto dev = static_cast<Device*>(cookie);
+void Device::ReadRequestComplete(void* ctx, usb_request_t* request) {
+    auto dev = static_cast<Device*>(ctx);
     if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
         usb_request_release(request);
         return;
@@ -4938,8 +4944,8 @@ void Device::ReadRequestComplete(usb_request_t* request, void* cookie) {
     dev->HandleRxComplete(request);
 }
 
-void Device::WriteRequestComplete(usb_request_t* request, void* cookie) {
-    auto dev = static_cast<Device*>(cookie);
+void Device::WriteRequestComplete(void* ctx, usb_request_t* request) {
+    auto dev = static_cast<Device*>(ctx);
     if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
         usb_request_release(request);
         return;

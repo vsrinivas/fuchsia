@@ -9,11 +9,11 @@
 #include <bitmap/storage.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/usb-old.h>
-#include <ddk/usb/usb.h>
+#include <ddk/protocol/usb.h>
 #include <fbl/unique_ptr.h>
 #include <lib/fit/function.h>
 #include <lib/zx/time.h>
+#include <usb/usb.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/protocol/mac.h>
 #include <wlan/protocol/phy-impl.h>
@@ -261,8 +261,8 @@ class Device {
     zx::duration RemainingTbttTime();
     zx_status_t EnableHwBcn(bool active);
 
-    static void ReadRequestComplete(usb_request_t* request, void* cookie);
-    static void WriteRequestComplete(usb_request_t* request, void* cookie);
+    static void ReadRequestComplete(void* ctx, usb_request_t* request);
+    static void WriteRequestComplete(void* ctx, usb_request_t* request);
 
     void DumpLengths(const wlan_tx_packet_t& wlan_pkt, BulkoutAggregation* aggr,
                      usb_request_t* req);

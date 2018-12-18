@@ -30,10 +30,11 @@ driver_module("rtl88xx_driver") {
   deps = [
     "//garnet/lib/wlan/common",
     "//garnet/lib/wlan/protocol",
+    "//zircon/public/banjo/ddk-protocol-usb",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/driver",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/usb-old",
+    "//zircon/public/lib/usb",
     "//zircon/public/lib/zx",
     "//zircon/system/public",
   ]

@@ -16,7 +16,7 @@
 #ifndef BRCMFMAC_USB_H
 #define BRCMFMAC_USB_H
 
-#include <ddk/protocol/usb-old.h>
+#include <ddk/protocol/usb.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>
 
