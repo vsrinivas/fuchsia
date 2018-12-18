@@ -20,6 +20,9 @@ extern "C" const uint8_t acer12_touch_r_desc[660];
 extern "C" const uint8_t eve_tablet_r_desc[28];
 extern "C" const uint8_t asus_touch_desc[945];
 
+// See hid-utest-data.cpp for the definitions of the test data
+extern "C" const uint8_t push_pop_test[62];
+
 namespace {
 struct Stats {
     int input_count;
@@ -658,10 +661,110 @@ static bool parse_asus_touch() {
    END_TEST;
 }
 
+// Test that the push and pop operations complete successfully.
+// Pushing saves all of the GLOBAL items.
+// Popping restores the previously saved GLOBAL items
+static bool parse_push_pop() {
+    BEGIN_TEST;
+    hid::DeviceDescriptor* dev = nullptr;
+    auto res = hid::ParseReportDescriptor(push_pop_test, sizeof(push_pop_test), &dev);
+    ASSERT_EQ(res, hid::ParseResult::kParseOk);
+
+    // A single report with id zero, this means no report id.
+    ASSERT_EQ(dev->rep_count, 1u);
+    EXPECT_EQ(dev->report[0].report_id, 0);
+
+    // The only report has 12 fields.
+    EXPECT_EQ(dev->report[0].count, 12);
+    const auto fields = dev->report[0].first_field;
+
+    // All fields are input type with report id = 0.
+    for (uint8_t ix = 0; ix != dev->report[0].count; ++ix) {
+        EXPECT_EQ(fields[ix].report_id, 0);
+        EXPECT_EQ(fields[ix].type, hid::kInput);
+    }
+
+    // First 3 fields are the buttons, with usages 1, 2, 3, in the button page.
+    auto expected_flags = hid::kData | hid::kAbsolute | hid::kScalar;
+
+    for (uint8_t ix = 0; ix != 3; ++ix) {
+        EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kButton);
+        EXPECT_EQ(fields[ix].attr.usage.usage, uint32_t(ix + 1));
+        EXPECT_EQ(fields[ix].attr.bit_sz, 1);
+        EXPECT_EQ(fields[ix].attr.logc_mm.min, 0);
+        EXPECT_EQ(fields[ix].attr.logc_mm.max, 1);
+        EXPECT_EQ(expected_flags & fields[ix].flags, expected_flags);
+    }
+
+    // Next field is 5 bits constant. Aka padding.
+    EXPECT_EQ(fields[3].attr.bit_sz, 5);
+    EXPECT_EQ(hid::kConstant & fields[3].flags, hid::kConstant);
+
+    // Next comes 'X' field, 8 bits data, relative.
+    expected_flags = hid::kData | hid::kRelative | hid::kScalar;
+
+    EXPECT_EQ(fields[4].attr.usage.page, hid::usage::Page::kGenericDesktop);
+    EXPECT_EQ(fields[4].attr.usage.usage, hid::usage::GenericDesktop::kX);
+    EXPECT_EQ(fields[4].attr.bit_sz, 8);
+    EXPECT_EQ(fields[4].attr.logc_mm.min, -127);
+    EXPECT_EQ(fields[4].attr.logc_mm.max, 127);
+    EXPECT_EQ(fields[4].attr.phys_mm.min, 0);
+    EXPECT_EQ(fields[4].attr.phys_mm.max, 0);
+    EXPECT_EQ(expected_flags & fields[4].flags, expected_flags);
+
+    // Next comes 'Y' field, same as 'X'.
+    EXPECT_EQ(fields[5].attr.usage.page, hid::usage::Page::kGenericDesktop);
+    EXPECT_EQ(fields[5].attr.usage.usage, hid::usage::GenericDesktop::kY);
+    EXPECT_EQ(fields[5].attr.bit_sz, 8);
+    EXPECT_EQ(fields[5].attr.logc_mm.min, -127);
+    EXPECT_EQ(fields[5].attr.logc_mm.max, 127);
+    EXPECT_EQ(fields[5].attr.phys_mm.min, 0);
+    EXPECT_EQ(fields[5].attr.phys_mm.max, 0);
+    EXPECT_EQ(expected_flags & fields[4].flags, expected_flags);
+
+    // Next comes 'X' and 'Y' field again
+    expected_flags = hid::kData | hid::kRelative | hid::kScalar;
+    EXPECT_EQ(fields[6].attr.usage.page, hid::usage::Page::kGenericDesktop);
+    EXPECT_EQ(fields[6].attr.usage.usage, 0);
+    EXPECT_EQ(fields[6].attr.bit_sz, 8);
+    EXPECT_EQ(fields[6].attr.logc_mm.min, -127);
+    EXPECT_EQ(fields[6].attr.logc_mm.max, 127);
+    EXPECT_EQ(fields[6].attr.phys_mm.min, 0);
+    EXPECT_EQ(fields[6].attr.phys_mm.max, 0);
+    EXPECT_EQ(expected_flags & fields[6].flags, expected_flags);
+    EXPECT_EQ(fields[7].attr.usage.page, hid::usage::Page::kGenericDesktop);
+    EXPECT_EQ(fields[7].attr.usage.usage, 0);
+    EXPECT_EQ(fields[7].attr.bit_sz, 8);
+    EXPECT_EQ(fields[7].attr.logc_mm.min, -127);
+    EXPECT_EQ(fields[7].attr.logc_mm.max, 127);
+    EXPECT_EQ(fields[7].attr.phys_mm.min, 0);
+    EXPECT_EQ(fields[7].attr.phys_mm.max, 0);
+    EXPECT_EQ(expected_flags & fields[7].flags, expected_flags);
+
+    // Next is the popped padding field
+    EXPECT_EQ(fields[8].attr.bit_sz, 5);
+    EXPECT_EQ(hid::kConstant & fields[8].flags, hid::kConstant);
+
+    // Last 3 fields are the popped buttons
+    expected_flags = hid::kData | hid::kAbsolute | hid::kScalar;
+
+    for (uint8_t ix = 9; ix != 12; ++ix) {
+        EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kButton);
+        EXPECT_EQ(fields[ix].attr.usage.usage, 0);
+        EXPECT_EQ(fields[ix].attr.bit_sz, 1);
+        EXPECT_EQ(fields[ix].attr.logc_mm.min, 0);
+        EXPECT_EQ(fields[ix].attr.logc_mm.max, 1);
+        EXPECT_EQ(expected_flags & fields[ix].flags, expected_flags);
+    }
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(hidparser_tests)
 RUN_TEST(itemize_acer12_rpt1)
 RUN_TEST(itemize_eve_tablet_rpt)
 RUN_TEST(parse_boot_mouse)
+RUN_TEST(parse_push_pop)
 RUN_TEST(parse_adaf_trinket)
 RUN_TEST(parse_ps3_controller)
 RUN_TEST(parse_acer12_touch)
