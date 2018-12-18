@@ -8,7 +8,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/bt/hci.h>
-#include <ddk/protocol/usb-old.h>
+#include <ddk/protocol/usb.h>
 #include <fbl/mutex.h>
 #include <lib/sync/completion.h>
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"

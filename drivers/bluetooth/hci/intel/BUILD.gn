@@ -24,6 +24,7 @@ driver_module("btintel_driver") {
   deps = [
     "//garnet/drivers/bluetooth/lib/gap",
     "//garnet/drivers/bluetooth/lib/hci",
+    "//zircon/public/banjo/ddk-protocol-usb",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/driver",
