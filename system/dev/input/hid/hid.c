@@ -354,7 +354,7 @@ zx_status_t hid_process_hid_report_desc(hid_device_t* dev) {
     reports.sizes = dev->sizes;
     reports.has_rpt_id = false;
 
-    zx_status_t status = hid_parse_reports(dev->hid_report_desc, dev->hid_report_desc_len, &reports);
+    zx_status_t status = hid_lib_parse_reports(dev->hid_report_desc, dev->hid_report_desc_len, &reports);
     if (status == ZX_OK) {
 
 #if BOOT_MOUSE_HACK

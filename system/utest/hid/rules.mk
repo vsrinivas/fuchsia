@@ -10,7 +10,7 @@ MODULE_TYPE := usertest
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/hid-test.cpp \
-    system/dev/input/hid/hid-parser.c \
+    system/dev/input/hid/hid-parser-lib.cpp \
     system/utest/hid-parser/hid-report-data.cpp
 
 MODULE_NAME := hid-test

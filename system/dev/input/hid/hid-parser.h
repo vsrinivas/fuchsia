@@ -28,8 +28,6 @@ typedef struct hid_reports {
     bool has_rpt_id;
 } hid_reports_t;
 
-zx_status_t hid_parse_reports(const uint8_t* buf, const size_t buf_len,
-                              hid_reports_t* reports);
 zx_status_t hid_lib_parse_reports(const uint8_t* buf, const size_t buf_len,
                                   hid_reports_t* reports);
 

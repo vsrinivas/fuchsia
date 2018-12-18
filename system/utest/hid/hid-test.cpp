@@ -263,7 +263,7 @@ static bool parse_device(const uint8_t* dev_desc, int size, hid_reports_t *golde
     hid_reports_t* hid_reports = allocate_hid_reports();
     ASSERT_NONNULL(hid_reports);
 
-    auto status = hid_parse_reports(dev_desc, size, hid_reports);
+    auto status = hid_lib_parse_reports(dev_desc, size, hid_reports);
     ASSERT_EQ(status, ZX_OK);
 
     ASSERT_EQ(hid_reports->num_reports, golden_reports->num_reports);
