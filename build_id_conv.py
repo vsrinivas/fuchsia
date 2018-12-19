@@ -40,8 +40,11 @@ def link(src, dst):
     os.link(src, dst)
 
 def mkdir(path):
-    if not os.path.exists(path):
+    try:
         os.makedirs(path)
+    except OSError as e:
+        if e.errno != os.errno.EEXIST:
+            raise e
 
 def touch(path):
     if os.path.exists(path):
