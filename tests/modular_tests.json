@@ -8,8 +8,8 @@
         "--account_provider=fuchsia-pkg://fuchsia.com/dev_token_manager#meta/dev_token_manager.cmx",
         "--base_shell=fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx",
         "--session_shell=fuchsia-pkg://fuchsia.com/chain_test_session_shell#meta/chain_test_session_shell.cmx",
-        "--session_shell_args=--use_memfs_for_ledger",
-        "--story_shell=fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx"
+        "--story_shell=fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx",
+        "--sessionmgr_args=--use_memfs_for_ledger"
       ]
     },
     {
@@ -20,8 +20,9 @@
         "--account_provider=fuchsia-pkg://fuchsia.com/dev_token_manager#meta/dev_token_manager.cmx",
         "--base_shell=fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx",
         "--session_shell=fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
-        "--session_shell_args=--use_memfs_for_ledger,--root_module=fuchsia-pkg://fuchsia.com/clipboard_test_module#meta/clipboard_test_module.cmx",
-        "--story_shell=fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx"
+        "--session_shell_args=--root_module=fuchsia-pkg://fuchsia.com/clipboard_test_module#meta/clipboard_test_module.cmx",
+        "--story_shell=fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx",
+        "--sessionmgr_args=--use_memfs_for_ledger"
       ]
     },
     {
@@ -31,9 +32,11 @@
         "--test",
         "--account_provider=fuchsia-pkg://fuchsia.com/dev_token_manager#meta/dev_token_manager.cmx",
         "--base_shell=fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx",
+        "--sessionmgr_args=--use_memfs_for_ledger",
         "--session_shell=fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
         "--story_shell=fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx",
-        "--session_shell_args=--use_memfs_for_ledger,--root_module=fuchsia-pkg://fuchsia.com/component_context_test_module#meta/component_context_test_module.cmx"
+        "--session_shell_args=--root_module=fuchsia-pkg://fuchsia.com/component_context_test_module#meta/component_context_test_module.cmx",
+        "--sessionmgr_args=--use_memfs_for_ledger"
       ]
     },
     {
@@ -44,8 +47,9 @@
         "--account_provider=fuchsia-pkg://fuchsia.com/dev_token_manager#meta/dev_token_manager.cmx",
         "--base_shell=fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx",
         "--session_shell=fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
-        "--session_shell_args=--use_memfs_for_ledger,--root_module=fuchsia-pkg://fuchsia.com/embed_shell_test_parent_module#meta/embed_shell_test_parent_module.cmx",
-        "--story_shell=fuchsia-pkg://fuchsia.com/embed_shell_test_story_shell#meta/embed_shell_test_story_shell.cmx"
+        "--session_shell_args=--root_module=fuchsia-pkg://fuchsia.com/embed_shell_test_parent_module#meta/embed_shell_test_parent_module.cmx",
+        "--story_shell=fuchsia-pkg://fuchsia.com/embed_shell_test_story_shell#meta/embed_shell_test_story_shell.cmx",
+        "--sessionmgr_args=--use_memfs_for_ledger"
       ]
     },
     {
@@ -57,7 +61,8 @@
         "--base_shell=fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx",
         "--session_shell=fuchsia-pkg://fuchsia.com/last_focus_time_test_session_shell#meta/last_focus_time_test_session_shell.cmx",
         "--session_shell_args=--use_memfs_for_ledger",
-        "--story_shell=fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx"
+        "--story_shell=fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx",
+        "--sessionmgr_args=--use_memfs_for_ledger"
       ]
     },
     {
@@ -69,7 +74,8 @@
         "--base_shell=fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx",
         "--session_shell=fuchsia-pkg://fuchsia.com/link_context_entities_test_session_shell#meta/link_context_entities_test_session_shell.cmx",
         "--session_shell_args=--use_memfs_for_ledger",
-        "--story_shell=fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx"
+        "--story_shell=fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx",
+        "--sessionmgr_args=--use_memfs_for_ledger"
       ]
     },
     {
@@ -81,7 +87,8 @@
         "--base_shell=fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx",
         "--session_shell=fuchsia-pkg://fuchsia.com/link_data_test_session_shell#meta/link_data_test_session_shell.cmx",
         "--session_shell_args=--use_memfs_for_ledger",
-        "--story_shell=fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx"
+        "--story_shell=fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx",
+        "--sessionmgr_args=--use_memfs_for_ledger"
       ]
     },
     {
@@ -93,7 +100,8 @@
         "--base_shell=fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx",
         "--session_shell=fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
         "--story_shell=fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx",
-        "--session_shell_args=--use_memfs_for_ledger,--root_module=fuchsia-pkg://fuchsia.com/link_passing_test_module1#meta/link_passing_test_module1.cmx"
+        "--session_shell_args=--root_module=fuchsia-pkg://fuchsia.com/link_passing_test_module1#meta/link_passing_test_module1.cmx",
+        "--sessionmgr_args=--use_memfs_for_ledger"
       ]
     },
     {
@@ -105,7 +113,8 @@
         "--base_shell=fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx",
         "--session_shell=fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
         "--story_shell=fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx",
-        "--session_shell_args=--use_memfs_for_ledger,--root_module=fuchsia-pkg://fuchsia.com/parent_child_test_parent_module#meta/parent_child_test_parent_module.cmx"
+        "--session_shell_args=--root_module=fuchsia-pkg://fuchsia.com/parent_child_test_parent_module#meta/parent_child_test_parent_module.cmx",
+        "--sessionmgr_args=--use_memfs_for_ledger"
       ]
     },
     {
@@ -116,8 +125,9 @@
         "--account_provider=fuchsia-pkg://fuchsia.com/dev_token_manager#meta/dev_token_manager.cmx",
         "--base_shell=fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx",
         "--session_shell=fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
-        "--session_shell_args=--use_memfs_for_ledger,--root_module=fuchsia-pkg://fuchsia.com/queue_persistence_test_module#meta/queue_persistence_test_module.cmx",
-        "--story_shell=fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx"
+        "--session_shell_args=--root_module=fuchsia-pkg://fuchsia.com/queue_persistence_test_module#meta/queue_persistence_test_module.cmx",
+        "--story_shell=fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx",
+        "--sessionmgr_args=--use_memfs_for_ledger"
       ]
     },
     {
@@ -129,7 +139,8 @@
         "--base_shell=fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx",
         "--session_shell=fuchsia-pkg://fuchsia.com/story_shell_test_session_shell#meta/story_shell_test_session_shell.cmx",
         "--session_shell_args=--use_memfs_for_ledger",
-        "--story_shell=fuchsia-pkg://fuchsia.com/story_shell_test_story_shell#meta/story_shell_test_story_shell.cmx"
+        "--story_shell=fuchsia-pkg://fuchsia.com/story_shell_test_story_shell#meta/story_shell_test_story_shell.cmx",
+        "--sessionmgr_args=--use_memfs_for_ledger"
       ]
     },
     {
@@ -141,7 +152,8 @@
         "--base_shell=fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx",
         "--session_shell=fuchsia-pkg://fuchsia.com/suggestion_test_session_shell#meta/suggestion_test_session_shell.cmx",
         "--session_shell_args=--use_memfs_for_ledger",
-        "--story_shell=fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx"
+        "--story_shell=fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx",
+        "--sessionmgr_args=--use_memfs_for_ledger"
       ]
     },
     {
@@ -153,7 +165,8 @@
         "--base_shell=fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx",
         "--session_shell=fuchsia-pkg://fuchsia.com/trigger_test_session_shell#meta/trigger_test_session_shell.cmx",
         "--session_shell_args=--use_memfs_for_ledger",
-        "--story_shell=fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx"
+        "--story_shell=fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx",
+        "--sessionmgr_args=--use_memfs_for_ledger"
       ]
     },
     {
@@ -165,7 +178,8 @@
         "--base_shell=fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx",
         "--session_shell=fuchsia-pkg://fuchsia.com/module_context_test_session_shell#meta/module_context_test_session_shell.cmx",
         "--session_shell_args=--use_memfs_for_ledger",
-        "--story_shell=fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx"
+        "--story_shell=fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx",
+        "--sessionmgr_args=--use_memfs_for_ledger"
       ]
     },
     {
@@ -176,8 +190,8 @@
         "--account_provider=fuchsia-pkg://fuchsia.com/dev_token_manager#meta/dev_token_manager.cmx",
         "--base_shell=fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx",
         "--session_shell=fuchsia-pkg://fuchsia.com/session_shell_test_session_shell#meta/session_shell_test_session_shell.cmx",
-        "--session_shell_args=--use_memfs_for_ledger",
-        "--story_shell=fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx"
+        "--story_shell=fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx",
+        "--sessionmgr_args=--use_memfs_for_ledger"
         ]
     },
     {
@@ -189,7 +203,8 @@
         "--base_shell=fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx",
         "--session_shell=fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
         "--story_shell=fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx",
-        "--session_shell_args=--use_memfs_for_ledger,--root_module=fuchsia-pkg://fuchsia.com/intent_test_parent_module#meta/intent_test_parent_module.cmx"
+        "--session_shell_args=--root_module=fuchsia-pkg://fuchsia.com/intent_test_parent_module#meta/intent_test_parent_module.cmx",
+        "--sessionmgr_args=--use_memfs_for_ledger"
       ]
     }
   ]
