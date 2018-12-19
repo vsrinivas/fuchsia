@@ -706,7 +706,7 @@ func zxNetError(e *tcpip.Error) zx.Status {
 
 func (s *socketServer) opGetSockOpt(ios *iostate, msg *zxsocket.Msg) zx.Status {
 	var val c_mxrio_sockopt_req_reply
-	if err := val.Decode(msg.Data[:msg.Datalen]); err != nil {
+	if err := val.Decode(msg); err != nil {
 		if debug {
 			log.Printf("getsockopt: decode argument: %v", err)
 		}
@@ -802,7 +802,7 @@ func (s *socketServer) opGetSockOpt(ios *iostate, msg *zxsocket.Msg) zx.Status {
 
 func (s *socketServer) opSetSockOpt(ios *iostate, msg *zxsocket.Msg) zx.Status {
 	var val c_mxrio_sockopt_req_reply
-	if err := val.Decode(msg.Data[:msg.Datalen]); err != nil {
+	if err := val.Decode(msg); err != nil {
 		if debug {
 			log.Printf("setsockopt: decode argument: %v", err)
 		}
