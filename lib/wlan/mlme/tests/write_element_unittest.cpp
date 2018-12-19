@@ -240,6 +240,93 @@ TEST(WriteElement, MpmConfirmWithPmk) {
     EXPECT_RANGES_EQ(expected, buf.w.WrittenData());
 }
 
+TEST(WriteElement, PreqMinimal) {
+    Buf buf;
+    WritePreq(
+        &buf.w,
+        PreqHeader {
+            .flags = {},
+            .hop_count = 0x01,
+            .element_ttl = 0x02,
+            .path_discovery_id = 0x06050403u,
+            .originator_addr = MacAddr("07:08:09:0a:0b:0c"),
+            .originator_hwmp_seqno = 0x100f0e0du,
+        },
+        nullptr,
+        PreqMiddle {
+            .lifetime = 0x1a191817u,
+            .metric = 0x1e1d1c1bu,
+            .target_count = 0x0,
+        },
+        {});
+    // clang-format off
+    const uint8_t expected[] = {
+        130, 17 + 9,
+        0x00, // flags
+        0x01, // hop count
+        0x02, // element ttl
+        0x03, 0x04, 0x05, 0x06, // path discovery ID
+        0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, // originator addr
+        0x0d, 0x0e, 0x0f, 0x10, // originator hwmp seqno
+        0x17, 0x18, 0x19, 0x1a, // lifetime
+        0x1b, 0x1c, 0x1d, 0x1e, // metric
+        // Target count
+        0,
+    };
+    // clang-format on
+
+    EXPECT_RANGES_EQ(expected, buf.w.WrittenData());
+}
+
+TEST(WriteElement, PreqFull) {
+    PreqFlags flags;
+    flags.set_addr_ext(true);
+    MacAddr ext_addr("11:12:13:14:15:16");
+    PreqPerTarget per_target = {
+        .flags = {},
+        .target_addr = MacAddr("21:22:23:24:25:26"),
+        .target_hwmp_seqno = 0x2a292827u,
+    };
+    Buf buf;
+    WritePreq(
+        &buf.w,
+        PreqHeader {
+            .flags = flags,
+            .hop_count = 0x01,
+            .element_ttl = 0x02,
+            .path_discovery_id = 0x06050403u,
+            .originator_addr = MacAddr("07:08:09:0a:0b:0c"),
+            .originator_hwmp_seqno = 0x100f0e0du,
+        },
+        &ext_addr,
+        PreqMiddle {
+            .lifetime = 0x1a191817u,
+            .metric = 0x1e1d1c1bu,
+            .target_count = 0x1,
+        },
+        { &per_target, 1 });
+    // clang-format off
+    const uint8_t expected[] = {
+        130, 17 + 6 + 9 + 11,
+        0x40, // flags: ext addr present
+        0x01, // hop count
+        0x02, // element ttl
+        0x03, 0x04, 0x05, 0x06, // path discovery ID
+        0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, // originator addr
+        0x0d, 0x0e, 0x0f, 0x10, // originator hwmp seqno
+        0x11, 0x12, 0x13, 0x14, 0x15, 0x16, // ext addr
+        0x17, 0x18, 0x19, 0x1a, // lifetime
+        0x1b, 0x1c, 0x1d, 0x1e, // metric
+        // Target count
+        1,
+        0x00, // target 1 flags
+        0x21, 0x22, 0x23, 0x24, 0x25, 0x26, // target 1 address
+        0x27, 0x28, 0x29, 0x2a, // target 1 hwmp seqno
+    };
+    // clang-format on
+    EXPECT_RANGES_EQ(expected, buf.w.WrittenData());
+}
+
 TEST(WriteElement, PrepNoExtAddr) {
     Buf buf;
     const PrepHeader header = {

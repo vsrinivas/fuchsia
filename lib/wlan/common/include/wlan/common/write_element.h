@@ -29,6 +29,9 @@ void WriteVhtOperation(BufferWriter* w, const VhtOperation& vht_op);
 void WriteMpmOpen(BufferWriter* w, MpmHeader mpm_header, const MpmPmk* pmk);
 void WriteMpmConfirm(BufferWriter* w, MpmHeader mpm_header, uint16_t peer_link_id,
                      const MpmPmk* pmk);
+void WritePreq(BufferWriter* w, const PreqHeader& header,
+               const common::MacAddr* originator_external_addr,
+               const PreqMiddle& middle, Span<const PreqPerTarget> per_target);
 void WritePrep(BufferWriter* w, const PrepHeader& header,
                const common::MacAddr* target_external_addr, const PrepTail& tail);
 

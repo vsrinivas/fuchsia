@@ -127,6 +127,15 @@ void WriteMpmConfirm(BufferWriter* w, MpmHeader mpm_header, uint16_t peer_link_i
     Write(w, element_id::kMeshPeeringManagement, mpm_header, peer_link_id, pmk_bytes);
 }
 
+void WritePreq(BufferWriter* w, const PreqHeader& header,
+               const common::MacAddr* originator_external_addr,
+               const PreqMiddle& middle, Span<const PreqPerTarget> per_target) {
+    auto ext_bytes = originator_external_addr == nullptr
+        ? Span<const uint8_t>{}
+        : Span<const uint8_t>{originator_external_addr->byte};
+    Write(w, element_id::kPreq, header, ext_bytes, middle, per_target);
+}
+
 void WritePrep(BufferWriter* w, const PrepHeader& header,
                const common::MacAddr* target_external_addr, const PrepTail& tail) {
     auto ext_bytes = target_external_addr == nullptr
