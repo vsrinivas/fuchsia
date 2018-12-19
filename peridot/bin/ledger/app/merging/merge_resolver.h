@@ -87,12 +87,54 @@ class MergeResolver : public storage::CommitWatcher {
   void CheckConflicts(DelayedStatus delayed_status);
   void ResolveConflicts(DelayedStatus delayed_status, storage::CommitId head1,
                         storage::CommitId head2);
-  void MergeCommitsWithSameContent(std::unique_ptr<const storage::Commit> head1,
-                                   std::unique_ptr<const storage::Commit> head2,
-                                   fit::closure on_successful_merge);
-  void FindCommonAncestorAndMerge(std::unique_ptr<const storage::Commit> head1,
-                                  std::unique_ptr<const storage::Commit> head2,
-                                  fit::closure on_successful_merge);
+
+  // Creates a merge of two commits with the content of the first commit.
+  void MergeCommitsToContentOfLeft(
+      std::unique_ptr<const storage::Commit> left_commit,
+      std::unique_ptr<const storage::Commit> right_commit,
+      fit::closure on_successful_merge);
+
+  // Does recursive merging, stops when one commit has been produced.
+  void RecursiveMergeOneStep(
+      std::unique_ptr<const storage::Commit> left_commit,
+      std::unique_ptr<const storage::Commit> right_commit,
+      fit::closure on_successful_merge);
+
+  storage::Status MergeCommitsToContentOfLeftSync(
+      coroutine::CoroutineHandler* handler,
+      std::unique_ptr<const storage::Commit> left_commit,
+      std::unique_ptr<const storage::Commit> right_commit);
+
+  // Synchronously gets the commit with id |commit_id|. Uses |candidate| if it
+  // has the right id, otherwise fetches it from storage.
+  storage::Status GetCommitSync(
+      coroutine::CoroutineHandler* handler, storage::CommitIdView commit_id,
+      std::unique_ptr<const storage::Commit> candidate,
+      std::unique_ptr<const storage::Commit>* result);
+
+  // Requests the merges of |right_commit| and any element of |left_commits|,
+  // and return them in |merges|.
+  storage::Status FindMergesSync(
+      coroutine::CoroutineHandler* handler,
+      const std::vector<storage::CommitId>& left_commits,
+      storage::CommitId right_commit, std::vector<storage::CommitId>* merges);
+
+  // Tries to build a merge of all commits in |ancestors|. Either the merge
+  // already exists and is returned in |final_merge| or one intermediate merge
+  // is constructed before returning.
+  storage::Status MergeSetSync(
+      coroutine::CoroutineHandler* handler,
+      std::vector<std::unique_ptr<const storage::Commit>> ancestors,
+      std::unique_ptr<const storage::Commit>* final_merge);
+
+  // Does one step of recursive merging: tries to merge |left| and |right| and
+  // either produces a merge commit, or calls itself recursively to merge some
+  // common ancestors. Assumes that |left| is older than |right| according to
+  // |storage::Commit::TimestampOrdered|.
+  storage::Status RecursiveMergeSync(
+      coroutine::CoroutineHandler* handler,
+      std::unique_ptr<const storage::Commit> left,
+      std::unique_ptr<const storage::Commit> right);
 
   coroutine::CoroutineService* coroutine_service_;
   storage::PageStorage* const storage_;

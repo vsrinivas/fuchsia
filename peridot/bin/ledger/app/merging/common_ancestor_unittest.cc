@@ -13,6 +13,7 @@
 #include <lib/fit/function.h>
 #include <lib/fxl/macros.h>
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/merging/test_utils.h"
@@ -20,6 +21,10 @@
 #include "peridot/bin/ledger/encryption/primitives/hash.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
+
+using testing::ElementsAre;
+using testing::IsEmpty;
+using testing::UnorderedElementsAre;
 
 namespace ledger {
 namespace {
@@ -87,6 +92,16 @@ class CommonAncestorTest : public TestWithPageStorage {
     return root;
   }
 
+  std::vector<storage::CommitId> GetCommitIds(
+      const std::vector<std::unique_ptr<const storage::Commit>>& commits) {
+    std::vector<storage::CommitId> ids;
+    ids.reserve(commits.size());
+    for (auto& commit : commits) {
+      ids.push_back(commit->GetId());
+    }
+    return ids;
+  }
+
   coroutine::CoroutineServiceImpl coroutine_service_;
   std::unique_ptr<storage::PageStorage> storage_;
 
@@ -100,17 +115,17 @@ TEST_F(CommonAncestorTest, TwoChildrenOfRoot) {
   std::unique_ptr<const storage::Commit> commit_2 = CreateCommit(
       storage::kFirstPageCommitId, AddKeyValueToJournal("key", "b"));
 
-  bool called;
-  Status status;
-  std::unique_ptr<const storage::Commit> result;
-  FindCommonAncestor(
-      &coroutine_service_, storage_.get(), std::move(commit_1),
-      std::move(commit_2),
-      callback::Capture(callback::SetWhenCalled(&called), &status, &result));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(storage::kFirstPageCommitId, result->GetId());
+  RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
+    storage::Status status;
+    CommitComparison comparison;
+    std::vector<std::unique_ptr<const storage::Commit>> result;
+    status = FindCommonAncestors(handler, storage_.get(), std::move(commit_1),
+                                 std::move(commit_2), &comparison, &result);
+    EXPECT_EQ(storage::Status::OK, status);
+    EXPECT_EQ(CommitComparison::UNORDERED, comparison);
+    EXPECT_THAT(GetCommitIds(result),
+                ElementsAre(storage::kFirstPageCommitId.ToString()));
+  });
 }
 
 TEST_F(CommonAncestorTest, RootAndChild) {
@@ -119,16 +134,35 @@ TEST_F(CommonAncestorTest, RootAndChild) {
   std::unique_ptr<const storage::Commit> child = CreateCommit(
       storage::kFirstPageCommitId, AddKeyValueToJournal("key", "a"));
 
-  bool called;
-  Status status;
-  std::unique_ptr<const storage::Commit> result;
-  FindCommonAncestor(
-      &coroutine_service_, storage_.get(), std::move(root), std::move(child),
-      callback::Capture(callback::SetWhenCalled(&called), &status, &result));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(storage::kFirstPageCommitId, result->GetId());
+  RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
+    storage::Status status;
+    CommitComparison comparison;
+    std::vector<std::unique_ptr<const storage::Commit>> result;
+    status = FindCommonAncestors(handler, storage_.get(), std::move(root),
+                                 std::move(child), &comparison, &result);
+    EXPECT_EQ(storage::Status::OK, status);
+    EXPECT_EQ(CommitComparison::LEFT_SUBSET_OF_RIGHT, comparison);
+    EXPECT_THAT(result, IsEmpty());
+  });
+}
+
+TEST_F(CommonAncestorTest, ChildAndRoot) {
+  std::unique_ptr<const storage::Commit> root = GetRoot();
+
+  std::unique_ptr<const storage::Commit> child = CreateCommit(
+      storage::kFirstPageCommitId, AddKeyValueToJournal("key", "a"));
+
+  RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
+    storage::Status status;
+    CommitComparison comparison;
+    std::vector<std::unique_ptr<const storage::Commit>> result;
+    status = FindCommonAncestors(handler, storage_.get(), std::move(child),
+                                 std::move(root), &comparison, &result);
+
+    EXPECT_EQ(storage::Status::OK, status);
+    EXPECT_EQ(CommitComparison::RIGHT_SUBSET_OF_LEFT, comparison);
+    EXPECT_THAT(result, IsEmpty());
+  });
 }
 
 // In this test the commits have the following structure:
@@ -151,28 +185,26 @@ TEST_F(CommonAncestorTest, MergeCommitAndSomeOthers) {
   std::unique_ptr<const storage::Commit> commit_2 =
       CreateCommit(commit_b->GetId(), AddKeyValueToJournal("key", "2"));
 
-  // Ancestor of (1) and (merge) needs to be (root).
-  bool called;
-  Status status;
-  std::unique_ptr<const storage::Commit> result;
-  FindCommonAncestor(
-      &coroutine_service_, storage_.get(), std::move(commit_1),
-      std::move(commit_merge),
-      callback::Capture(callback::SetWhenCalled(&called), &status, &result));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(storage::kFirstPageCommitId, result->GetId());
+  RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
+    // LCA of (1) and (merge) needs to be (A).
+    storage::Status status;
+    CommitComparison comparison;
+    std::vector<std::unique_ptr<const storage::Commit>> result;
+    status = FindCommonAncestors(handler, storage_.get(), std::move(commit_1),
+                                 std::move(commit_merge), &comparison, &result);
+    EXPECT_EQ(storage::Status::OK, status);
+    EXPECT_EQ(CommitComparison::UNORDERED, comparison);
+    EXPECT_THAT(GetCommitIds(result), ElementsAre(commit_a->GetId()));
 
-  // Ancestor of (2) and (A).
-  FindCommonAncestor(
-      &coroutine_service_, storage_.get(), std::move(commit_2),
-      std::move(commit_a),
-      callback::Capture(callback::SetWhenCalled(&called), &status, &result));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(storage::kFirstPageCommitId, result->GetId());
+    // LCA of (2) and (A) is (root).
+    result.clear();
+    status = FindCommonAncestors(handler, storage_.get(), std::move(commit_2),
+                                 std::move(commit_a), &comparison, &result);
+    EXPECT_EQ(storage::Status::OK, status);
+    EXPECT_EQ(CommitComparison::UNORDERED, comparison);
+    EXPECT_THAT(GetCommitIds(result),
+                ElementsAre(storage::kFirstPageCommitId.ToString()));
+  });
 }
 
 // Regression test for LE-187.
@@ -190,19 +222,135 @@ TEST_F(CommonAncestorTest, LongChain) {
                                AddKeyValueToJournal(std::to_string(i), "val"));
   }
 
-  // Ancestor of (last commit) and (b) needs to be (root).
-  bool called;
-  Status status;
-  std::unique_ptr<const storage::Commit> result;
-  FindCommonAncestor(
-      &coroutine_service_, storage_.get(), std::move(last_commit),
-      std::move(commit_b),
-      callback::Capture(callback::SetWhenCalled(&called), &status, &result));
-  // This test lasts ~2.5s on x86+qemu+kvm.
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(storage::kFirstPageCommitId, result->GetId());
+  RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
+    // Ancestor of (last commit) and (b) needs to be (root).
+    storage::Status status;
+    CommitComparison comparison;
+    std::vector<std::unique_ptr<const storage::Commit>> result;
+    status =
+        FindCommonAncestors(handler, storage_.get(), std::move(last_commit),
+                            std::move(commit_b), &comparison, &result);
+    // This test lasts ~2.5s on x86+qemu+kvm.
+    EXPECT_EQ(storage::Status::OK, status);
+    EXPECT_EQ(CommitComparison::UNORDERED, comparison);
+    EXPECT_THAT(GetCommitIds(result),
+                ElementsAre(storage::kFirstPageCommitId.ToString()));
+  });
+}
+
+// Test detection of equivalent commits.
+// In this test the commits have the following structure:
+//      (root)
+//      /   \
+//     (A) (B)
+//      |\ /|
+//      | X |
+//      |/ \|
+//     (M) (N)
+// Requesting the common ancestors of (M) and (N) should return an empty vector
+// and EQUIVALENT.
+TEST_F(CommonAncestorTest, EquivalentCommits) {
+  std::unique_ptr<const storage::Commit> commit_a = CreateCommit(
+      storage::kFirstPageCommitId, AddKeyValueToJournal("key", "a"));
+  std::unique_ptr<const storage::Commit> commit_b = CreateCommit(
+      storage::kFirstPageCommitId, AddKeyValueToJournal("key", "b"));
+  std::unique_ptr<const storage::Commit> commit_m = CreateMergeCommit(
+      commit_a->GetId(), commit_b->GetId(), AddKeyValueToJournal("key", "m"));
+  std::unique_ptr<const storage::Commit> commit_n = CreateMergeCommit(
+      commit_a->GetId(), commit_b->GetId(), AddKeyValueToJournal("key", "n"));
+
+  RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
+    storage::Status status;
+    CommitComparison comparison;
+    std::vector<std::unique_ptr<const storage::Commit>> result;
+    status = FindCommonAncestors(handler, storage_.get(), std::move(commit_m),
+                                 std::move(commit_n), &comparison, &result);
+    EXPECT_EQ(storage::Status::OK, status);
+    EXPECT_EQ(CommitComparison::EQUIVALENT, comparison);
+    EXPECT_THAT(GetCommitIds(result), IsEmpty());
+  });
+}
+
+// Multiple common ancestors from the same generation
+// In this test, the commits have the following structure:
+//       (root)
+//       /    \
+//     (A)    (B)
+//      | \  / |
+//     (C) \/ (D)
+//      |  /\  |
+//      | /  \ |
+//     (E)    (F)
+// Then the common ancestors of (E) and (F) are (A) and (B).
+TEST_F(CommonAncestorTest, TwoBasesSameGeneration) {
+  std::unique_ptr<const storage::Commit> commit_a = CreateCommit(
+      storage::kFirstPageCommitId, AddKeyValueToJournal("key", "a"));
+  std::unique_ptr<const storage::Commit> commit_b = CreateCommit(
+      storage::kFirstPageCommitId, AddKeyValueToJournal("key", "b"));
+  std::unique_ptr<const storage::Commit> commit_c =
+      CreateCommit(commit_a->GetId(), AddKeyValueToJournal("key", "c"));
+  std::unique_ptr<const storage::Commit> commit_d =
+      CreateCommit(commit_b->GetId(), AddKeyValueToJournal("key", "d"));
+  std::unique_ptr<const storage::Commit> commit_e = CreateMergeCommit(
+      commit_c->GetId(), commit_b->GetId(), AddKeyValueToJournal("key", "e"));
+  std::unique_ptr<const storage::Commit> commit_f = CreateMergeCommit(
+      commit_a->GetId(), commit_d->GetId(), AddKeyValueToJournal("key", "f"));
+
+  RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
+    // The LCAs of (E) and (F) are (A) and (B)
+    storage::Status status;
+    CommitComparison comparison;
+    std::vector<std::unique_ptr<const storage::Commit>> result;
+    status = FindCommonAncestors(handler, storage_.get(), std::move(commit_e),
+                                 std::move(commit_f), &comparison, &result);
+    EXPECT_EQ(storage::Status::OK, status);
+    EXPECT_EQ(CommitComparison::UNORDERED, comparison);
+    EXPECT_THAT(GetCommitIds(result),
+                UnorderedElementsAre(commit_a->GetId(), commit_b->GetId()));
+  });
+}
+
+// Merges with multiple common ancestors from different generations
+// In this test, the commits have the following structure:
+//       (root)
+//       /    \
+//      |     (X)
+//      |      |
+//     (A)    (B)
+//      | \  / |
+//     (C) \/ (D)
+//      |  /\  |
+//      | /  \ |
+//     (E)    (F)
+// The LCAs of (E) and (F) are (A) and (B).
+TEST_F(CommonAncestorTest, TwoBasesDifferentGenerations) {
+  std::unique_ptr<const storage::Commit> commit_a = CreateCommit(
+      storage::kFirstPageCommitId, AddKeyValueToJournal("key", "a"));
+  std::unique_ptr<const storage::Commit> commit_x = CreateCommit(
+      storage::kFirstPageCommitId, AddKeyValueToJournal("key", "x"));
+  std::unique_ptr<const storage::Commit> commit_b =
+      CreateCommit(commit_x->GetId(), AddKeyValueToJournal("key", "b"));
+  std::unique_ptr<const storage::Commit> commit_c =
+      CreateCommit(commit_a->GetId(), AddKeyValueToJournal("key", "c"));
+  std::unique_ptr<const storage::Commit> commit_d =
+      CreateCommit(commit_b->GetId(), AddKeyValueToJournal("key", "d"));
+  std::unique_ptr<const storage::Commit> commit_e = CreateMergeCommit(
+      commit_c->GetId(), commit_b->GetId(), AddKeyValueToJournal("key", "e"));
+  std::unique_ptr<const storage::Commit> commit_f = CreateMergeCommit(
+      commit_a->GetId(), commit_d->GetId(), AddKeyValueToJournal("key", "f"));
+
+  RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
+    // The LCAs of (E) and (F) are (A) and (B)
+    storage::Status status;
+    CommitComparison comparison;
+    std::vector<std::unique_ptr<const storage::Commit>> result;
+    status = FindCommonAncestors(handler, storage_.get(), std::move(commit_e),
+                                 std::move(commit_f), &comparison, &result);
+    EXPECT_EQ(storage::Status::OK, status);
+    EXPECT_EQ(CommitComparison::UNORDERED, comparison);
+    EXPECT_THAT(GetCommitIds(result),
+                UnorderedElementsAre(commit_a->GetId(), commit_b->GetId()));
+  });
 }
 
 }  // namespace
