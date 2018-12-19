@@ -42,6 +42,9 @@ enum thread_user_state_change {
     THREAD_USER_STATE_RESUME,
 };
 
+// scheduler lock
+extern spin_lock_t thread_lock;
+
 typedef int (*thread_start_routine)(void* arg);
 typedef void (*thread_trampoline_routine)(void) __NO_RETURN;
 typedef void (*thread_user_callback_t)(enum thread_user_state_change new_state,
@@ -315,13 +318,29 @@ static inline bool thread_is_signaled(thread_t* t) {
 
 // process pending signals, may never return because of kill signal
 void thread_process_pending_signals(void);
-
-void dump_thread(thread_t* t, bool full);
+void dump_thread_locked(thread_t* t, bool full) TA_REQ(thread_lock);
+void dump_thread(thread_t* t, bool full) TA_EXCL(thread_lock);
 void arch_dump_thread(thread_t* t);
-void dump_all_threads(bool full);
-void dump_all_threads_locked(bool full);
-void dump_thread_user_tid(uint64_t tid, bool full);
-void dump_thread_user_tid_locked(uint64_t tid, bool full);
+void dump_all_threads_locked(bool full) TA_REQ(thread_lock);
+void dump_all_threads(bool full) TA_EXCL(thread_lock);
+void dump_thread_user_tid(uint64_t tid, bool full) TA_EXCL(thread_lock);
+void dump_thread_user_tid_locked(uint64_t tid, bool full) TA_REQ(thread_lock);
+
+static inline void dump_thread_during_panic(thread_t* t, bool full) TA_NO_THREAD_SAFETY_ANALYSIS {
+    // Skip grabbing the lock if we are panic'ing
+    dump_thread_locked(t, full);
+}
+
+static inline void dump_all_threads_during_panic(bool full) TA_NO_THREAD_SAFETY_ANALYSIS {
+    // Skip grabbing the lock if we are panic'ing
+    dump_all_threads_locked(full);
+}
+
+static inline void dump_thread_user_tid_during_panic(uint64_t tid, bool full)
+    TA_NO_THREAD_SAFETY_ANALYSIS {
+    // Skip grabbing the lock if we are panic'ing
+    dump_thread_user_tid_locked(tid, full);
+}
 
 // find a thread based on the thread id
 // NOTE: used only for debugging, its a slow linear search through the
@@ -344,9 +363,6 @@ static inline bool thread_is_real_time_or_idle(thread_t* t) {
 #include <arch/current_thread.h>
 thread_t* get_current_thread(void);
 void set_current_thread(thread_t*);
-
-// scheduler lock
-extern spin_lock_t thread_lock;
 
 static inline bool thread_lock_held(void) {
     return spin_lock_held(&thread_lock);

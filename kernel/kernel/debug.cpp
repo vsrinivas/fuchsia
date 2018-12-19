@@ -85,7 +85,7 @@ static int cmd_thread(int argc, const cmd_args* argv, uint32_t flags) {
             dump_thread(t, true);
         } else {
             if (flags & CMD_FLAG_PANIC) {
-                dump_thread_user_tid_locked(argv[2].u, true);
+                dump_thread_user_tid_during_panic(argv[2].u, true);
             } else {
                 dump_thread_user_tid(argv[2].u, true);
             }
@@ -93,14 +93,14 @@ static int cmd_thread(int argc, const cmd_args* argv, uint32_t flags) {
     } else if (!strcmp(argv[1].str, "list")) {
         printf("thread list:\n");
         if (flags & CMD_FLAG_PANIC) {
-            dump_all_threads_locked(false);
+            dump_all_threads_during_panic(false);
         } else {
             dump_all_threads(false);
         }
     } else if (!strcmp(argv[1].str, "list_full")) {
         printf("thread list:\n");
         if (flags & CMD_FLAG_PANIC) {
-            dump_all_threads_locked(true);
+            dump_all_threads_during_panic(true);
         } else {
             dump_all_threads(true);
         }

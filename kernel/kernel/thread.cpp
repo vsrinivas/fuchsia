@@ -1191,7 +1191,7 @@ static const char* thread_state_to_str(enum thread_state state) {
 /**
  * @brief  Dump debugging info about the specified thread.
  */
-void dump_thread(thread_t* t, bool full_dump) {
+void dump_thread_locked(thread_t* t, bool full_dump) {
     if (t->magic != THREAD_MAGIC) {
         dprintf(INFO, "dump_thread WARNING: thread at %p has bad magic\n", t);
     }
@@ -1239,14 +1239,14 @@ void dump_thread(thread_t* t, bool full_dump) {
     }
 }
 
+void dump_thread(thread_t* t, bool full) {
+    Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+    dump_thread_locked(t, full);
+}
+
 /**
  * @brief  Dump debugging info about all threads
  */
-void dump_all_threads(bool full) {
-    Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-    dump_all_threads_locked(full);
-}
-
 void dump_all_threads_locked(bool full) {
     thread_t* t;
 
@@ -1256,8 +1256,13 @@ void dump_all_threads_locked(bool full) {
             hexdump(t, sizeof(thread_t));
             break;
         }
-        dump_thread(t, full);
+        dump_thread_locked(t, full);
     }
+}
+
+void dump_all_threads(bool full) {
+    Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+    dump_all_threads_locked(full);
 }
 
 void dump_thread_user_tid(uint64_t tid, bool full) {
@@ -1278,7 +1283,7 @@ void dump_thread_user_tid_locked(uint64_t tid, bool full) {
             hexdump(t, sizeof(thread_t));
             break;
         }
-        dump_thread(t, full);
+        dump_thread_locked(t, full);
     }
 }
 
