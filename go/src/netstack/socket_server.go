@@ -188,6 +188,9 @@ func (ios *iostate) loopStreamWrite(stk *stack.Stack) {
 		v = v[:n]
 		for {
 			n, resCh, err := ios.ep.Write(tcpip.SlicePayload(v), tcpip.WriteOptions{})
+			if resCh != nil {
+				panic(fmt.Sprintf("TCP Write: resCh=%v; should only happen on connect; n=%d err=%v", resCh, n, err))
+			}
 			if err != nil {
 				switch err {
 				case tcpip.ErrNoLinkAddress:
@@ -458,6 +461,7 @@ func (ios *iostate) loopDgramWrite(stk *stack.Stack) {
 				case tcpip.ErrNoLinkAddress:
 					if resCh != nil {
 						<-resCh
+						continue
 					} else {
 						panic(fmt.Sprintf("UDP Write: err=%v resCh=%v; unexpected; n=%d", err, resCh, n))
 					}
