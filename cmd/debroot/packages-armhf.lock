@@ -1,0 +1,23 @@
+hash: 6a5cfff67301c2b5fc62305d798be8b511ce875cec717186839f010647865acd
+updated: 2018-11-18T16:36:08.935822559-08:00
+packages:
+- package: libc6
+  version: 2.19-18+deb8u10
+  filename: pool/main/g/glibc/libc6_2.19-18+deb8u10_armhf.deb
+  hash: ccfc4a10a1654454ad07ac381d55dc1bfe0787ebbcd87b42ac05402777ce41b5
+- package: libc6-dev
+  version: 2.19-18+deb8u10
+  filename: pool/main/g/glibc/libc6-dev_2.19-18+deb8u10_armhf.deb
+  hash: b5af7102716127343a82dfdb42e5b9cd9dc28e28fc14653e0db8f9efdd1fe0a9
+- package: libgcc-4.9-dev
+  version: 4.9.2-10+deb8u1
+  filename: pool/main/g/gcc-4.9/libgcc-4.9-dev_4.9.2-10+deb8u1_armhf.deb
+  hash: d0ad1e86ff7369d4f43a3278975ac93c3373c1537c452f715d7440aff595f0a4
+- package: libgcc1
+  version: 1:4.9.2-10+deb8u1
+  filename: pool/main/g/gcc-4.9/libgcc1_4.9.2-10+deb8u1_armhf.deb
+  hash: a456c21c4805a3003586a492af1ddd68083de81f75f3da0807732ad44306541c
+- package: linux-libc-dev
+  version: 3.16.51-3
+  filename: pool/main/l/linux/linux-libc-dev_3.16.51-3_armhf.deb
+  hash: 14bfef400b83e2f3a587dc564b7d13bf72f27f739d6a74d77a9326f83b3d9460
