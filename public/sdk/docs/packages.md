@@ -84,7 +84,7 @@ can be published using the same command.
 
 Finally, start the amber server with:
 ```
-pm serve -repo $REPO
+pm serve -repo $REPO/repository
 ```
 This will start an amber server on the host machine at port `8083` by default.
 
