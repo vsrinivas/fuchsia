@@ -61,9 +61,9 @@ zx_status_t Device::Bind() {
   return device_add(parent_, &args, &zxdev_);
 }
 
-static void interrupt_complete(usb_request_t* req, void* cookie) {
-  if (cookie != nullptr) {
-    sync_completion_t* completion = (sync_completion_t*)cookie;
+static void interrupt_complete(void* ctx, usb_request_t* req) {
+  if (ctx != nullptr) {
+    sync_completion_t* completion = (sync_completion_t*)ctx;
     sync_completion_signal(completion);
   }
 }
@@ -86,9 +86,9 @@ zx_status_t Device::LoadNVM(const qca_version& version) {
   size_t size = std::min(count, NVM_HDR);
   size_t sent = 0;
 
-  result = usb_control(&usb_, USB_TYPE_VENDOR, DFU_DOWNLOAD, 0, 0,
-                       (void*)file.view(0, size).data(), size, ZX_TIME_INFINITE,
-                       NULL);
+  result = usb_control_out(&usb_, USB_TYPE_VENDOR, DFU_DOWNLOAD, 0, 0,
+                           ZX_TIME_INFINITE,
+                           (void*)file.view(0, size).data(), size);
   if (result != ZX_OK) {
     return result;
   }
@@ -108,7 +108,11 @@ zx_status_t Device::LoadNVM(const qca_version& version) {
     req->header.length = size;
     usb_request_copy_to(req, file.view(sent, size).data(), size, 0);
     sync_completion_reset(&completion_);
-    usb_request_queue(&usb_, req, interrupt_compelete, &completion_);
+    usb_request_complete_t complete = {
+        .callback = interrupt_complete,
+        .ctx = &completion_,
+    };
+    usb_request_queue(&usb_, req, &complete);
     sync_completion_wait(&completion_, ZX_TIME_INFINITE);
 
     if (req->response.status != ZX_OK) {
@@ -143,9 +147,9 @@ zx_status_t Device::LoadRAM(const qca_version& version) {
 
   BufferView file(reinterpret_cast<void*>(fw_addr), fw_size);
 
-  result = usb_control(&usb_, USB_TYPE_VENDOR, DFU_DOWNLOAD, 0, 0,
-                       (void*)file.view(0, size).data(), size, ZX_TIME_INFINITE,
-                       NULL);
+  result = usb_control_out(&usb_, USB_TYPE_VENDOR, DFU_DOWNLOAD, 0, 0,
+                           ZX_TIME_INFINITE,
+                           (void*)file.view(0, size).data(), size);
   usb_request_t* req;
   result = usb_request_alloc(&req, size, bulk_out_addr_, parent_req_size_);
   if (result != ZX_OK) {
@@ -161,7 +165,11 @@ zx_status_t Device::LoadRAM(const qca_version& version) {
     req->header.length = size;
     usb_request_copy_to(req, file.view(sent, size).data(), size, 0);
     sync_completion_reset(&completion_);
-    usb_request_queue(&usb_, req, interrupt_complete, &completion_);
+    usb_request_complete_t complete = {
+        .callback = interrupt_complete,
+        .ctx = &completion_,
+    };
+    usb_request_queue(&usb_, req, &complete);
     sync_completion_wait(&completion_, ZX_TIME_INFINITE);
 
     if (req->response.status != ZX_OK) {
@@ -188,8 +196,9 @@ zx_status_t Device::LoadFirmware() {
   usb_get_device_descriptor(&usb_, &dev_desc);
 
   struct qca_version ver;
-  result = usb_control(&usb_, USB_TYPE_VENDOR | USB_DIR_IN, GET_TARGET_VERSION,
-                       0, 0, &ver, sizeof(ver), ZX_TIME_INFINITE, NULL);
+  size_t actual_read;
+  result = usb_control_in(&usb_, USB_TYPE_VENDOR | USB_DIR_IN, GET_TARGET_VERSION,
+                          0, 0, ZX_TIME_INFINITE, &ver, sizeof(ver), &actual_read);
 
   if (result != ZX_OK) {
     errorf("couldn't get version");
@@ -197,8 +206,8 @@ zx_status_t Device::LoadFirmware() {
   }
 
   uint8_t status;
-  result = usb_control(&usb_, USB_TYPE_VENDOR | USB_DIR_IN, GET_STATUS, 0, 0,
-                       &status, sizeof(status), ZX_TIME_INFINITE, NULL);
+  result = usb_control_in(&usb_, USB_TYPE_VENDOR | USB_DIR_IN, GET_STATUS, 0, 0,
+                          ZX_TIME_INFINITE, &status, sizeof(status), &actual_read);
 
   usb_desc_iter_t iter;
   result = usb_desc_iter_init(&usb_, &iter);
