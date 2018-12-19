@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use account_common::{FidlLocalAccountId, LocalAccountId};
 use crate::account::Account;
+use account_common::{FidlLocalAccountId, LocalAccountId};
 use failure::Error;
 use fidl::encoding::OutOfLine;
 use fidl::endpoints::{ClientEnd, ServerEnd};
@@ -16,6 +16,8 @@ use fuchsia_async as fasync;
 use futures::prelude::*;
 use log::{error, info, warn};
 use parking_lot::RwLock;
+use std::fs;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 /// The core state of the AccountHandler, i.e. the Account (once it is known) and references to
@@ -26,6 +28,7 @@ pub struct AccountHandler {
     // This will be None until a particular Account is established over the control channel. Once
     // set, the account will never be cleared or modified.
     account: RwLock<Option<Arc<Account>>>,
+    accounts_dir: PathBuf,
     // TODO(jsankey): Add TokenManager and AccountHandlerContext.
 }
 
@@ -37,9 +40,10 @@ impl AccountHandler {
     };
 
     /// Constructs a new AccountHandler.
-    pub fn new() -> AccountHandler {
+    pub fn new(accounts_dir: PathBuf) -> AccountHandler {
         Self {
             account: RwLock::new(None),
+            accounts_dir,
         }
     }
 
@@ -104,16 +108,39 @@ impl AccountHandler {
             // than just a random number.
             let local_account_id = LocalAccountId::new(rand::random::<u64>());
             *account_lock = Some(Arc::new(Account::new(local_account_id.clone())));
-            // TODO(jsankey): Persist the account to disk.
-            info!("Created new Fuchsia account");
-            (Status::Ok, Some(local_account_id))
+
+            let account_dir = self
+                .accounts_dir
+                .join(local_account_id.to_canonical_string());
+            // TODO: Drop logs that expose the account ID
+            match fs::create_dir_all(account_dir) {
+                Err(err) => {
+                    warn!("Could not create account dir: {:?}", err);
+                    (Status::IoError, None)
+                }
+                Ok(()) => {
+                    info!("Created new Fuchsia account {:?}", local_account_id);
+                    (Status::Ok, Some(local_account_id))
+                }
+            }
         }
     }
 
-    fn load_account(&self, _id: LocalAccountId) -> Status {
-        // TODO(jsankey): Implement this method once accounts are persisted on disk.
-        warn!("LoadAccount method not yet implemented");
-        Status::InternalError
+    fn load_account(&self, id: LocalAccountId) -> Status {
+        let mut account_lock = self.account.write();
+        if account_lock.is_some() {
+            warn!("AccountHandler is already initialized");
+            Status::InvalidRequest
+        } else {
+            if self.accounts_dir.join(id.to_canonical_string()).exists() {
+                // TODO(dnordstrom): Implement reading the actual db file. Currently we get a new
+                // persona id.
+                *account_lock = Some(Arc::new(Account::new(id.clone())));
+                Status::Ok
+            } else {
+                Status::NotFound
+            }
+        }
     }
 
     fn remove_account(&self) -> Status {
@@ -161,8 +188,27 @@ mod tests {
     };
     use fuchsia_async as fasync;
     use fuchsia_zircon as zx;
+    use std::sync::{Arc, Mutex};
+    use tempfile::TempDir;
 
-    const TEST_ACCOUNT_ID: u64 = 111111;
+    // Will not match a randomly generated account id with high probability.
+    const WRONG_ACCOUNT_ID: u64 = 111111;
+
+    struct TempLocation {
+        /// A fresh temp directory that will be deleted when this object is dropped.
+        _dir: TempDir,
+        /// A path within the temp dir to use for writing the db.
+        path: PathBuf,
+    }
+
+    impl TempLocation {
+        /// Return a writable, temporary location and optionally create it as a directory.
+        fn new() -> TempLocation {
+            let dir = TempDir::new().unwrap();
+            let path = dir.path().to_path_buf();
+            TempLocation { _dir: dir, path }
+        }
+    }
 
     fn request_stream_test<TestFn, Fut>(test_object: AccountHandler, test_fn: TestFn)
     where
@@ -191,7 +237,8 @@ mod tests {
 
     #[test]
     fn test_get_account_before_initialization() {
-        request_stream_test(AccountHandler::new(), async move |proxy| {
+        let location = TempLocation::new();
+        request_stream_test(AccountHandler::new(location.path), async move |proxy| {
             let (account_server_chan, _) = zx::Channel::create().unwrap();
             let (_, acp_client_chan) = zx::Channel::create().unwrap();
             assert_eq!(
@@ -207,7 +254,8 @@ mod tests {
 
     #[test]
     fn test_double_initialize() {
-        request_stream_test(AccountHandler::new(), async move |proxy| {
+        let location = TempLocation::new();
+        request_stream_test(AccountHandler::new(location.path), async move |proxy| {
             let (status, account_id_optional) = await!(proxy.create_account())?;
             assert_eq!(status, Status::Ok);
             assert!(account_id_optional.is_some());
@@ -221,43 +269,74 @@ mod tests {
 
     #[test]
     fn test_create_and_get_account() {
-        request_stream_test(AccountHandler::new(), async move |account_handler_proxy| {
-            let (status, account_id_optional) = await!(account_handler_proxy.create_account())?;
-            assert_eq!(status, Status::Ok);
-            assert!(account_id_optional.is_some());
+        let location = TempLocation::new();
+        request_stream_test(
+            AccountHandler::new(location.path),
+            async move |account_handler_proxy| {
+                let (status, account_id_optional) = await!(account_handler_proxy.create_account())?;
+                assert_eq!(status, Status::Ok);
+                assert!(account_id_optional.is_some());
 
-            let (account_server_chan, account_client_chan) = zx::Channel::create().unwrap();
-            let (_, acp_client_chan) = zx::Channel::create().unwrap();
+                let (account_server_chan, account_client_chan) = zx::Channel::create().unwrap();
+                let (_, acp_client_chan) = zx::Channel::create().unwrap();
+                assert_eq!(
+                    await!(account_handler_proxy.get_account(
+                        ClientEnd::new(acp_client_chan),
+                        ServerEnd::new(account_server_chan)
+                    ))?,
+                    Status::Ok
+                );
+
+                // The account channel should now be usable.
+                let account_proxy =
+                    AccountProxy::new(fasync::Channel::from_channel(account_client_chan).unwrap());
+                assert_eq!(
+                    await!(account_proxy.get_auth_state())?,
+                    (
+                        Status::Ok,
+                        Some(Box::new(AccountHandler::DEFAULT_AUTH_STATE))
+                    )
+                );
+                Ok(())
+            },
+        );
+    }
+
+    #[test]
+    fn test_create_and_load_account() {
+        // Check that an account is persisted when account handlers are restarted
+        let location = TempLocation::new();
+        let acc_id = Arc::new(Mutex::new(FidlLocalAccountId { id: 0 }));
+        let acc_id_borrow = acc_id.clone();
+        request_stream_test(
+            AccountHandler::new(location.path.clone()),
+            async move |account_handler_proxy| {
+                let (status, account_id_optional) = await!(account_handler_proxy.create_account())?;
+                assert_eq!(status, Status::Ok);
+                assert!(account_id_optional.is_some());
+                let mut acc_id = acc_id_borrow.lock().unwrap();
+                *acc_id = *account_id_optional.unwrap();
+                Ok(())
+            },
+        );
+        request_stream_test(AccountHandler::new(location.path), async move |proxy| {
             assert_eq!(
-                await!(account_handler_proxy.get_account(
-                    ClientEnd::new(acp_client_chan),
-                    ServerEnd::new(account_server_chan)
-                ))?,
+                await!(proxy.load_account(&mut acc_id.lock().unwrap()))?,
                 Status::Ok
-            );
-
-            // The account channel should now be usable.
-            let account_proxy =
-                AccountProxy::new(fasync::Channel::from_channel(account_client_chan).unwrap());
-            assert_eq!(
-                await!(account_proxy.get_auth_state())?,
-                (
-                    Status::Ok,
-                    Some(Box::new(AccountHandler::DEFAULT_AUTH_STATE))
-                )
             );
             Ok(())
         });
     }
 
     #[test]
-    fn test_load_account() {
-        request_stream_test(AccountHandler::new(), async move |proxy| {
+    fn test_load_account_not_found() {
+        let location = TempLocation::new();
+        request_stream_test(AccountHandler::new(location.path), async move |proxy| {
             assert_eq!(
                 await!(proxy.load_account(&mut FidlLocalAccountId {
-                    id: TEST_ACCOUNT_ID
+                    id: WRONG_ACCOUNT_ID
                 }))?,
-                Status::InternalError
+                Status::NotFound
             );
             Ok(())
         });
