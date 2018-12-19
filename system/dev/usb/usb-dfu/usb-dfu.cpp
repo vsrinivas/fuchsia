@@ -7,7 +7,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <ddk/protocol/usb-old.h>
+#include <ddk/protocol/usb.h>
 #include <fbl/algorithm.h>
 #include <fbl/unique_ptr.h>
 #include <fuchsia/mem/c/fidl.h>
@@ -48,9 +48,19 @@ zx_status_t Dfu::ControlReq(uint8_t dir, uint8_t request, uint16_t value,
     if (dir != USB_DIR_OUT && dir != USB_DIR_IN) {
         return ZX_ERR_INVALID_ARGS;
     }
-    zx_status_t status = usb_control(&usb_, dir | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-                                     request, value, intf_num_, data, length,
-                                     ZX_SEC(kReqTimeoutSecs), out_length);
+    zx_status_t status;
+    if (dir == USB_DIR_OUT) {
+        status = usb_control_out(&usb_, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+                                 request, value, intf_num_, ZX_SEC(kReqTimeoutSecs),
+                                 data, length);
+        if (status == ZX_OK && out_length) {
+            *out_length = length;
+        }
+    } else {
+        status = usb_control_in(&usb_, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+                                request, value, intf_num_, ZX_SEC(kReqTimeoutSecs),
+                                data, length, out_length);
+    }                                
     if (status == ZX_ERR_IO_REFUSED || status == ZX_ERR_IO_INVALID) {
         usb_reset_endpoint(&usb_, 0);
     }
@@ -211,7 +221,7 @@ zx_status_t Dfu::Bind() {
 // static
 zx_status_t Dfu::Create(zx_device_t* parent) {
     usb_protocol_t usb;
-    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_USB_OLD, &usb);
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_USB, &usb);
     if (status != ZX_OK) {
         return status;
     }
@@ -281,7 +291,7 @@ static constexpr zx_driver_ops_t dfu_driver_ops = []() {
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(usb_dfu, usb::dfu_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_OLD),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
     BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_APPLICATION_SPECIFIC),
     BI_ABORT_IF(NE, BIND_USB_SUBCLASS, USB_SUBCLASS_DFU),
     BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, USB_PROTOCOL_DFU),

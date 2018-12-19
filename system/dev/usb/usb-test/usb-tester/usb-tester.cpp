@@ -8,7 +8,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/protocol/usb/composite.h>
-#include <ddk/usb/usb.h>
 #include <fbl/algorithm.h>
 #include <fbl/unique_ptr.h>
 #include <usb/usb-request.h>
@@ -85,9 +84,9 @@ TestRequest::~TestRequest() {
     }
 }
 
-void TestRequest::RequestCompleteCallback(usb_request_t* request, void* cookie) {
-    ZX_DEBUG_ASSERT(cookie != nullptr);
-    sync_completion_signal(reinterpret_cast<sync_completion_t*>(cookie));
+void TestRequest::RequestCompleteCallback(void* ctx, usb_request_t* request) {
+    ZX_DEBUG_ASSERT(ctx != nullptr);
+    sync_completion_signal(reinterpret_cast<sync_completion_t*>(ctx));
 }
 
 zx_status_t TestRequest::WaitComplete(usb_protocol_t* usb) {
@@ -200,17 +199,15 @@ void UsbTester::QueueTestReqs(const fbl::Vector<TestRequest>& test_reqs,
             usb_req->header.frame = start_frame;
             first = false;
         }
-        usb_request_queue(&usb_, usb_req, test_req.GetCompleteCb(),
-                          test_req.GetCompletionEvent());
+        usb_request_queue(&usb_, usb_req, test_req.GetCompleteCb());
     }
 }
 
 zx_status_t UsbTester::SetModeFwloader() {
-    size_t out_len;
-    zx_status_t status = usb_control(&usb_,
-                                     USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-                                     USB_TESTER_SET_MODE_FWLOADER, 0, 0, nullptr, 0,
-                                     ZX_SEC(kReqTimeoutSecs), &out_len);
+    zx_status_t status = usb_control_out(&usb_,
+                                         USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                                         USB_TESTER_SET_MODE_FWLOADER, 0, 0, ZX_SEC(kReqTimeoutSecs),
+                                         nullptr, 0);
     if (status != ZX_OK) {
         zxlogf(ERROR, "failed to set mode fwloader, err: %d\n", status);
         return status;
@@ -271,10 +268,8 @@ zx_status_t UsbTester::BulkLoopback(const zircon_usb_tester_TestParams* params,
     if (status != ZX_OK) {
         return status;
     }
-    usb_request_queue(&usb_, out_req->Get(), out_req->GetCompleteCb(),
-                      out_req->GetCompletionEvent());
-    usb_request_queue(&usb_, in_req->Get(), in_req->GetCompleteCb(),
-                      in_req->GetCompletionEvent());
+    usb_request_queue(&usb_, out_req->Get(), out_req->GetCompleteCb());
+    usb_request_queue(&usb_, in_req->Get(), in_req->GetCompleteCb());
 
     zx_status_t out_status = out_req->WaitComplete(&usb_);
     zx_status_t in_status = in_req->WaitComplete(&usb_);
@@ -472,7 +467,7 @@ zx_status_t UsbTester::Bind() {
 // static
 zx_status_t UsbTester::Create(zx_device_t* parent) {
     usb_protocol_t usb;
-    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_USB_OLD, &usb);
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_USB, &usb);
     if (status != ZX_OK) {
         return status;
     }
@@ -581,7 +576,7 @@ static zx_driver_ops_t driver_ops = [](){
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(usb_tester, usb::driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_DEVICE_OLD),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_DEVICE),
     BI_ABORT_IF(NE, BIND_USB_VID, GOOGLE_VID),
     BI_MATCH_IF(EQ, BIND_USB_PID, USB_TESTER_PID),
 ZIRCON_DRIVER_END(usb_tester)

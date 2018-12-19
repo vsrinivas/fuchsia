@@ -5,7 +5,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <ddk/usb/usb.h>
+#include <usb/usb.h>
 #include <fuchsia/mem/c/fidl.h>
 #include <zircon/assert.h>
 #include <zircon/usb/test/fwloader/c/fidl.h>
@@ -38,15 +38,12 @@ static zx_status_t fx3_write(fx3_t* fx3, uint8_t* buf, size_t len, uint32_t addr
     if (len > VENDOR_REQ_MAX_SIZE) {
         return ZX_ERR_INVALID_ARGS;
     }
-    size_t out_len;
-    zx_status_t status = usb_control(&fx3->usb, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-                                     FX3_REQ_FIRMWARE_TRANSFER, LSW(addr), MSW(addr), buf, len,
-                                     ZX_SEC(VENDOR_REQ_TIMEOUT_SECS), &out_len);
+    zx_status_t status;
+    status = usb_control_out(&fx3->usb, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                             FX3_REQ_FIRMWARE_TRANSFER, LSW(addr), MSW(addr),
+                             ZX_SEC(VENDOR_REQ_TIMEOUT_SECS), buf, len);
     if (status != ZX_OK) {
         return status;
-    } else if (out_len != len) {
-        zxlogf(ERROR, "fx3_write returned bad len, want: %lu, got: %lu\n", len, out_len);
-        return ZX_ERR_IO;
     }
     return ZX_OK;
 }
@@ -251,7 +248,7 @@ static zx_status_t fx3_bind(void* ctx, zx_device_t* device) {
     if (!fx3) {
         return ZX_ERR_NO_MEMORY;
     }
-    zx_status_t result = device_get_protocol(device, ZX_PROTOCOL_USB_OLD, &fx3->usb);
+    zx_status_t result = device_get_protocol(device, ZX_PROTOCOL_USB, &fx3->usb);
     if (result != ZX_OK) {
         fx3_free(fx3);
         return result;
@@ -280,7 +277,7 @@ static zx_driver_ops_t fx3_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(fx3, fx3_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_OLD),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
     BI_ABORT_IF(NE, BIND_USB_VID, CYPRESS_VID),
     BI_MATCH_IF(EQ, BIND_USB_PID, FX3_DEFAULT_BOOTLOADER_PID),
     BI_MATCH_IF(EQ, BIND_USB_PID, FX3_SECOND_STAGE_BOOTLOADER_PID),

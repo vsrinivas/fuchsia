@@ -6,7 +6,7 @@
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <ddk/usb/usb.h>
+#include <usb/usb.h>
 #include <lib/zx/vmo.h>
 #include <zircon/usb/test/fwloader/c/fidl.h>
 

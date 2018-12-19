@@ -12,7 +12,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/usb-dfu.cpp \
 
 MODULE_STATIC_LIBS := \
-    system/dev/lib/usb-old \
+    system/dev/lib/usb \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/fbl \
@@ -31,6 +31,7 @@ MODULE_FIDL_LIBS := \
     system/fidl/zircon-usb-test-fwloader \
 
 MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-usb \
     system/banjo/ddk-protocol-usb-composite \
     system/banjo/ddk-protocol-usb-request \
 

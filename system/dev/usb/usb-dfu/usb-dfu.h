@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <ddk/usb/usb.h>
+#include <usb/usb.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <lib/zx/vmo.h>

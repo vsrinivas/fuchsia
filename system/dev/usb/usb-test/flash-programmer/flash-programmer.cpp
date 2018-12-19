@@ -101,17 +101,13 @@ zx_status_t FlashProgrammer::DeviceWrite(uint8_t eeprom_slave_addr, uint16_t eep
     if (len_to_write > kVendorReqMaxSize) {
         return ZX_ERR_INVALID_ARGS;
     }
-    size_t out_len;
-    zx_status_t status = usb_control(&usb_, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-                                     FLASH_PROGRAMMER_WRITE, eeprom_slave_addr, eeprom_byte_addr,
-                                     buf, len_to_write, ZX_SEC(kReqTimeoutSecs), &out_len);
+    zx_status_t status = usb_control_out(&usb_, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                                         FLASH_PROGRAMMER_WRITE, eeprom_slave_addr,
+                                         eeprom_byte_addr, ZX_SEC(kReqTimeoutSecs), buf,
+                                         len_to_write);
     if (status != ZX_OK) {
         zxlogf(ERROR, "usb control returned err %d\n", status);
         return status;
-    } else if (out_len != len_to_write) {
-        zxlogf(ERROR, "DeviceWrite returned bad len, want: %lu, got: %lu\n",
-               len_to_write, out_len);
-        return ZX_ERR_IO;
     }
     return ZX_OK;
 }
@@ -228,7 +224,7 @@ zx_status_t FlashProgrammer::Bind() {
 // static
 zx_status_t FlashProgrammer::Create(zx_device_t* parent) {
     usb_protocol_t usb;
-    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_USB_OLD, &usb);
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_USB, &usb);
     if (status != ZX_OK) {
         return status;
     }
@@ -262,7 +258,7 @@ static zx_driver_ops_t flash_programmer_driver_ops = []() {
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(flash_programmer, usb::flash_programmer_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_DEVICE_OLD),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_DEVICE),
     BI_ABORT_IF(NE, BIND_USB_VID, CYPRESS_VID),
     BI_MATCH_IF(EQ, BIND_USB_PID, FLASH_PROGRAMMER_PID),
 ZIRCON_DRIVER_END(flash_programmer)

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <ddk/usb/usb.h>
+#include <usb/usb.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/array.h>
@@ -62,11 +62,14 @@ public:
 
     // Returns the underlying usb request.
     usb_request_t* Get() const { return usb_req_; }
-    sync_completion_t* GetCompletionEvent() { return &completion_; }
-    usb_request_complete_cb GetCompleteCb() { return &RequestCompleteCallback; }
+    usb_request_complete_t* GetCompleteCb() { return &req_complete_; }
 private:
     explicit TestRequest(usb_request_t* usb_req);
-    static void RequestCompleteCallback(usb_request_t* request, void* cookie);
+    static void RequestCompleteCallback(void* ctx, usb_request_t* request);
+    usb_request_complete_t req_complete_ = {
+        .callback = RequestCompleteCallback,
+        .ctx = &completion_,
+     };
     usb_request_t* usb_req_;
     sync_completion_t completion_;
 };
