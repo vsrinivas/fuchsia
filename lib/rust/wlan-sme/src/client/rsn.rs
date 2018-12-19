@@ -67,7 +67,7 @@ pub fn is_rsn_compatible(a_rsne: &Rsne) -> bool {
     let akm_supported = a_rsne.akm_suites.iter()
         .any(|a| a.has_known_algorithm() && a.suite_type == akm::PSK);
     let caps_supported = a_rsne.rsn_capabilities.as_ref().map_or(true, |caps|
-        !(caps.preauth() || caps.no_pairwise() || caps.mgmt_frame_protection_req() ||
+        !(caps.no_pairwise() || caps.mgmt_frame_protection_req() ||
             caps.joint_multiband() || caps.peerkey_enabled() || caps.ssp_amsdu_req() ||
             caps.pbac() || caps.extended_key_id()));
 
@@ -138,6 +138,9 @@ mod tests {
         assert!(is_rsn_compatible(&a_rsne));
 
         let a_rsne = wpa2_psk_ccmp_rsne_with_caps(RsnCapabilities(1));
+        assert!(is_rsn_compatible(&a_rsne));
+
+        let a_rsne = wpa2_psk_ccmp_rsne_with_caps(RsnCapabilities(2));
         assert!(!is_rsn_compatible(&a_rsne));
     }
 

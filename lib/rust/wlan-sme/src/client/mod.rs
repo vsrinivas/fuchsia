@@ -275,7 +275,7 @@ impl<T: Tokens> super::Station for ClientSme<T> {
                                         state.connect(cmd, &mut self.context)
                                     },
                                     Err(err) => {
-                                        error!("cannot join BSS {:?} {:?}", best_bss.bssid, err);
+                                        error!("cannot join BSS {:02X?} {}", best_bss.bssid, err);
                                         report_connect_finished(Some(token.user_token),
                                                                 &self.context,
                                                                 ConnectResult::Failed, None);
