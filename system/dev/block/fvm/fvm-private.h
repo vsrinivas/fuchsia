@@ -19,6 +19,7 @@
 #include <atomic>
 #include <ddktl/device.h>
 #include <ddktl/protocol/block.h>
+#include <ddktl/protocol/block/partition.h>
 #include <fbl/algorithm.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>

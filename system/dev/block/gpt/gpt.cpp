@@ -2,6 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <assert.h>
+#include <fcntl.h>
+#include <inttypes.h>
+#include <limits.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/param.h>
+#include <threads.h>
+
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -9,18 +19,9 @@
 #include <ddk/metadata.h>
 #include <ddk/metadata/gpt.h>
 #include <ddk/protocol/block.h>
-
-#include <assert.h>
-#include <fcntl.h>
-#include <inttypes.h>
+#include <ddk/protocol/block/partition.h>
 #include <lib/cksum.h>
-#include <limits.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <sys/param.h>
 #include <lib/sync/completion.h>
-#include <threads.h>
 #include <zircon/assert.h>
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>
@@ -32,7 +33,7 @@ typedef gpt_header_t gpt_t;
 
 constexpr size_t kTransactionSize = 0x4000; // 128 partition entries
 
-struct guid_t {
+struct Guid {
     uint32_t data1;
     uint16_t data2;
     uint16_t data3;
@@ -43,7 +44,7 @@ struct gptpart_device_t {
     zx_device_t* zxdev;
     zx_device_t* parent;
 
-    block_impl_protocol_t bp;
+    block_impl_protocol_t block_protocol;
 
     gpt_entry_t gpt_entry;
 
@@ -56,12 +57,13 @@ struct gptpart_device_t {
 };
 
 void uint8_to_guid_string(char* dst, uint8_t* src) {
-    guid_t* guid = (guid_t*)src;
+    Guid* guid = (Guid*)src;
     sprintf(dst, "%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X", guid->data1, guid->data2,
             guid->data3, guid->data4[0], guid->data4[1], guid->data4[2], guid->data4[3],
             guid->data4[4], guid->data4[5], guid->data4[6], guid->data4[7]);
 }
 
+// TODO(ZX-3241): Ensure the output string of this function is always null-terminated.
 void utf16_to_cstring(char* dst, uint8_t* src, size_t charcount) {
     while (charcount > 0) {
         *dst++ = *src;
@@ -126,28 +128,6 @@ zx_status_t gpt_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmdlen,
         *out_actual = sizeof(*info);
         return ZX_OK;
     }
-    case IOCTL_BLOCK_GET_TYPE_GUID: {
-        char* guid = static_cast<char*>(reply);
-        if (max < GPT_GUID_LEN) return ZX_ERR_BUFFER_TOO_SMALL;
-        memcpy(guid, device->gpt_entry.type, GPT_GUID_LEN);
-        *out_actual = GPT_GUID_LEN;
-        return ZX_OK;
-    }
-    case IOCTL_BLOCK_GET_PARTITION_GUID: {
-        char* guid = static_cast<char*>(reply);
-        if (max < GPT_GUID_LEN) return ZX_ERR_BUFFER_TOO_SMALL;
-        memcpy(guid, device->gpt_entry.guid, GPT_GUID_LEN);
-        *out_actual = GPT_GUID_LEN;
-        return ZX_OK;
-    }
-    case IOCTL_BLOCK_GET_NAME: {
-        char* name = static_cast<char*>(reply);
-        memset(name, 0, max);
-        // save room for the null terminator
-        utf16_to_cstring(name, device->gpt_entry.name, MIN((max - 1) * 2, GPT_NAME_LEN));
-        *out_actual = strnlen(name, GPT_NAME_LEN / 2);
-        return ZX_OK;
-    }
     default:
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -186,7 +166,7 @@ void gpt_queue(void* ctx, block_op_t* bop, block_impl_queue_callback completion_
         return;
     }
 
-    block_impl_queue(&gpt->bp, bop, completion_cb, cookie);
+    block_impl_queue(&gpt->block_protocol, bop, completion_cb, cookie);
 }
 
 void gpt_unbind(void* ctx) {
@@ -204,20 +184,74 @@ zx_off_t gpt_get_size(void* ctx) {
     return dev->info.block_count * dev->info.block_size;
 }
 
+block_impl_protocol_ops_t block_ops = {
+    .query = gpt_query,
+    .queue = gpt_queue,
+};
+
+static_assert(GPT_GUID_LEN == GUID_LENGTH, "GUID length mismatch");
+
+zx_status_t gpt_get_guid(void* ctx, guidtype_t guidtype, guid_t* out_guid) {
+    gptpart_device_t* device = static_cast<gptpart_device_t*>(ctx);
+    switch (guidtype) {
+    case GUIDTYPE_TYPE:
+        memcpy(out_guid, device->gpt_entry.type, GPT_GUID_LEN);
+        return ZX_OK;
+    case GUIDTYPE_INSTANCE:
+        memcpy(out_guid, device->gpt_entry.guid, GPT_GUID_LEN);
+        return ZX_OK;
+    default:
+        return ZX_ERR_INVALID_ARGS;
+    }
+}
+
+static_assert(GPT_NAME_LEN <= MAX_PARTITION_NAME_LENGTH, "Partition name length mismatch");
+
+zx_status_t gpt_get_name(void* ctx, char* out_name, size_t capacity) {
+    if (capacity < GPT_NAME_LEN) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+    }
+    gptpart_device_t* device = static_cast<gptpart_device_t*>(ctx);
+    memset(out_name, 0, GPT_NAME_LEN);
+    utf16_to_cstring(out_name, device->gpt_entry.name, GPT_NAME_LEN);
+    return ZX_OK;
+}
+
+block_partition_protocol_ops_t partition_ops = {
+    .get_guid = gpt_get_guid,
+    .get_name = gpt_get_name,
+};
+
+zx_status_t gpt_get_protocol(void* ctx, uint32_t proto_id, void* out) {
+    gptpart_device_t* device = static_cast<gptpart_device_t*>(ctx);
+    switch (proto_id) {
+    case ZX_PROTOCOL_BLOCK_IMPL: {
+        auto protocol = static_cast<block_impl_protocol_t*>(out);
+        protocol->ctx = device;
+        protocol->ops = &block_ops;
+        return ZX_OK;
+    }
+    case ZX_PROTOCOL_BLOCK_PARTITION: {
+        auto protocol = static_cast<block_partition_protocol_t*>(out);
+        protocol->ctx = device;
+        protocol->ops = &partition_ops;
+        return ZX_OK;
+    }
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+}
+
 zx_protocol_device_t gpt_proto = []() {
     zx_protocol_device_t gpt = {};
     gpt.version = DEVICE_OPS_VERSION;
+    gpt.get_protocol = gpt_get_protocol;
     gpt.unbind = gpt_unbind;
     gpt.release = gpt_release;
     gpt.get_size = gpt_get_size;
     gpt.ioctl = gpt_ioctl;
     return gpt;
 }();
-
-block_impl_protocol_ops_t block_ops = {
-    .query = gpt_query,
-    .queue = gpt_queue,
-};
 
 void gpt_read_sync_complete(void* cookie, zx_status_t status, block_op_t* bop) {
     // Pass 32bit status back to caller via 32bit command field
@@ -245,12 +279,12 @@ int gpt_bind_thread(void* arg) {
     size_t table_sz;
     sync_completion_t completion;
 
-    block_impl_protocol_t bp;
-    memcpy(&bp, &first_dev->bp, sizeof(bp));
+    block_impl_protocol_t block_protocol;
+    memcpy(&block_protocol, &first_dev->block_protocol, sizeof(block_protocol));
 
     block_info_t block_info;
     size_t block_op_size;
-    bp.ops->query(bp.ctx, &block_info, &block_op_size);
+    block_protocol.ops->query(block_protocol.ctx, &block_info, &block_op_size);
 
     zx_handle_t vmo = ZX_HANDLE_INVALID;
     block_op_t* bop = static_cast<block_op_t*>(calloc(1, block_op_size));
@@ -277,7 +311,7 @@ int gpt_bind_thread(void* arg) {
     bop->rw.offset_dev = 1;
     bop->rw.offset_vmo = 0;
 
-    bp.ops->queue(bp.ctx, bop, gpt_read_sync_complete, &completion);
+    block_protocol.ops->queue(block_protocol.ctx, bop, gpt_read_sync_complete, &completion);
     sync_completion_wait(&completion, ZX_TIME_INFINITE);
     if (bop->command != ZX_OK) {
         zxlogf(ERROR, "gpt: error %d reading partition header\n", bop->command);
@@ -314,7 +348,7 @@ int gpt_bind_thread(void* arg) {
     bop->rw.offset_vmo = 0;
 
     sync_completion_reset(&completion);
-    bp.ops->queue(bp.ctx, bop, gpt_read_sync_complete, &completion);
+    block_protocol.ops->queue(block_protocol.ctx, bop, gpt_read_sync_complete, &completion);
     sync_completion_wait(&completion, ZX_TIME_INFINITE);
     if (bop->command != ZX_OK) {
         zxlogf(ERROR, "gpt: error %d reading partition table\n", bop->command);
@@ -363,7 +397,7 @@ int gpt_bind_thread(void* arg) {
                 goto unbind;
             }
             device->parent = dev;
-            memcpy(&device->bp, &bp, sizeof(bp));
+            memcpy(&device->block_protocol, &block_protocol, sizeof(block_protocol));
         }
 
         memcpy(&device->gpt_entry, entry, sizeof(gpt_entry_t));
@@ -441,7 +475,7 @@ zx_status_t gpt_bind(void* ctx, zx_device_t* parent) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    if (device_get_protocol(parent, ZX_PROTOCOL_BLOCK, &device->bp) != ZX_OK) {
+    if (device_get_protocol(parent, ZX_PROTOCOL_BLOCK, &device->block_protocol) != ZX_OK) {
         zxlogf(ERROR, "gpt: ERROR: block device '%s': does not support block protocol\n",
                device_get_name(parent));
         free(device->guid_map);

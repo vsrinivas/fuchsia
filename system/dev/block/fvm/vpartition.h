@@ -9,6 +9,7 @@
 #include <ddk/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/block.h>
+#include <ddktl/protocol/block/partition.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
@@ -23,17 +24,22 @@ namespace fvm {
 class VPartitionManager;
 class VPartition;
 
-using PartitionDeviceType =
-    ddk::Device<VPartition, ddk::Ioctlable, ddk::GetSizable, ddk::Unbindable>;
+using PartitionDeviceType = ddk::Device<VPartition,
+                                        ddk::GetProtocolable,
+                                        ddk::Ioctlable,
+                                        ddk::GetSizable,
+                                        ddk::Unbindable>;
 
 class VPartition : public PartitionDeviceType,
-                   public ddk::BlockImplProtocol<VPartition, ddk::base_protocol> {
+                   public ddk::BlockImplProtocol<VPartition, ddk::base_protocol>,
+                   public ddk::BlockPartitionProtocol<VPartition> {
 public:
     using SliceMap = fbl::WAVLTree<size_t, fbl::unique_ptr<SliceExtent>>;
 
     static zx_status_t Create(VPartitionManager* vpm, size_t entry_index,
                               fbl::unique_ptr<VPartition>* out);
     // Device Protocol
+    zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
     zx_status_t DdkIoctl(uint32_t op, const void* cmd, size_t cmdlen, void* reply, size_t max,
                          size_t* out_actual);
     zx_off_t DdkGetSize();
@@ -43,6 +49,10 @@ public:
     // Block Protocol
     void BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out);
     void BlockImplQueue(block_op_t* txn, block_impl_queue_callback completion_cb, void* cookie);
+
+    // Partition Protocol
+    zx_status_t BlockPartitionGetGuid(guidtype_t guid_type, guid_t* out_guid);
+    zx_status_t BlockPartitionGetName(char* out_name, size_t capacity);
 
     SliceMap::iterator ExtentBegin() TA_REQ(lock_) { return slice_map_.begin(); }
 

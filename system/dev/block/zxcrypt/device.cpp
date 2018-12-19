@@ -126,15 +126,19 @@ zx_status_t Device::Init() {
         return rc;
     }
 
-    // Get the parent device's block interface
-    block_info_t blk;
-    if ((rc = device_get_protocol(parent(), ZX_PROTOCOL_BLOCK, &info->proto)) != ZX_OK) {
-        zxlogf(ERROR, "failed to get block protocol: %s\n", zx_status_get_string(rc));
-        return rc;
+    // Get the parent device's block interface.
+    info->block_protocol = ddk::BlockProtocolClient(parent());
+    if (!info->block_protocol.is_valid()) {
+        zxlogf(ERROR, "failed to get block protocol\n");
+        return ZX_ERR_BAD_STATE;
     }
-    info->proto.ops->query(info->proto.ctx, &blk, &info->op_size);
+
+    // The Partition Protocol is optional.
+    info->partition_protocol = ddk::BlockPartitionProtocolClient(parent());
 
     // Save device sizes
+    block_info_t blk;
+    info->block_protocol.Query(&blk, &info->op_size);
     info->block_size = blk.block_size;
     info->op_size += sizeof(extra_op_t);
     info->reserved_blocks = volume->reserved_blocks();
@@ -191,6 +195,21 @@ zx_status_t Device::Init() {
 
 ////////////////////////////////////////////////////////////////
 // ddk::Device methods
+
+zx_status_t Device::DdkGetProtocol(uint32_t proto_id, void* out) {
+    auto* proto = static_cast<ddk::AnyProtocol*>(out);
+    proto->ctx = this;
+    switch (proto_id) {
+    case ZX_PROTOCOL_BLOCK_IMPL:
+        proto->ops = &block_impl_protocol_ops_;
+        return ZX_OK;
+    case ZX_PROTOCOL_BLOCK_PARTITION:
+        proto->ops = &block_partition_protocol_ops_;
+        return ZX_OK;
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+}
 
 zx_status_t Device::DdkIoctl(uint32_t op, const void* in, size_t in_len, void* out, size_t out_len,
                              size_t* actual) {
@@ -329,7 +348,7 @@ void Device::BlockImplQuery(block_info_t* out_info, size_t* out_op_size) {
     LOG_ENTRY_ARGS("out_info=%p, out_op_size=%p", out_info, out_op_size);
     ZX_DEBUG_ASSERT(info_);
 
-    info_->proto.ops->query(info_->proto.ctx, out_info, out_op_size);
+    info_->block_protocol.Query(out_info, out_op_size);
     out_info->block_count -= info_->reserved_blocks;
     *out_op_size = info_->op_size;
 }
@@ -367,6 +386,22 @@ void Device::BlockImplQueue(block_op_t* block, block_impl_queue_callback complet
     }
 }
 
+zx_status_t Device::BlockPartitionGetGuid(guidtype_t guidtype, guid_t* out_guid) {
+    ZX_DEBUG_ASSERT(info_);
+    if (!info_->partition_protocol.is_valid()) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    return info_->partition_protocol.GetGuid(guidtype, out_guid);
+}
+
+zx_status_t Device::BlockPartitionGetName(char* out_name, size_t capacity) {
+    ZX_DEBUG_ASSERT(info_);
+    if (!info_->partition_protocol.is_valid()) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    return info_->partition_protocol.GetName(out_name, capacity);
+}
+
 void Device::BlockForward(block_op_t* block, zx_status_t status) {
     LOG_ENTRY_ARGS("block=%p, status=%s", block, zx_status_get_string(status));
     ZX_DEBUG_ASSERT(info_);
@@ -388,7 +423,7 @@ void Device::BlockForward(block_op_t* block, zx_status_t status) {
     }
 
     // Send the request to the parent device
-    block_impl_queue(&info_->proto, block, BlockCallback, this);
+    info_->block_protocol.Queue(block, BlockCallback, this);
 }
 
 void Device::BlockComplete(block_op_t* block, zx_status_t status) {

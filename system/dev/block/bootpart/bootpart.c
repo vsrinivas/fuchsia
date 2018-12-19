@@ -8,6 +8,7 @@
 #include <ddk/binding.h>
 #include <ddk/metadata.h>
 #include <ddk/protocol/block.h>
+#include <ddk/protocol/block/partition.h>
 
 #include <assert.h>
 #include <inttypes.h>
@@ -33,7 +34,7 @@ typedef struct {
     size_t block_op_size;
 } bootpart_device_t;
 
-struct guid {
+struct structured_guid {
     uint32_t data1;
     uint16_t data2;
     uint16_t data3;
@@ -41,7 +42,7 @@ struct guid {
 };
 
 static void uint8_to_guid_string(char* dst, uint8_t* src) {
-    struct guid* guid = (struct guid*)src;
+    struct structured_guid* guid = (struct structured_guid*)src;
     sprintf(dst, "%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X", guid->data1, guid->data2,
             guid->data3, guid->data4[0], guid->data4[1], guid->data4[2], guid->data4[3],
             guid->data4[4], guid->data4[5], guid->data4[6], guid->data4[7]);
@@ -64,26 +65,6 @@ static zx_status_t bootpart_ioctl(void* ctx, uint32_t op, const void* cmd, size_
             return ZX_ERR_BUFFER_TOO_SMALL;
         memcpy(info, &device->info, sizeof(*info));
         *out_actual = sizeof(*info);
-        return ZX_OK;
-    }
-    case IOCTL_BLOCK_GET_TYPE_GUID: {
-        char* guid = reply;
-        if (max < ZBI_PARTITION_GUID_LEN) return ZX_ERR_BUFFER_TOO_SMALL;
-        memcpy(guid, device->part.type_guid, ZBI_PARTITION_GUID_LEN);
-        *out_actual = ZBI_PARTITION_GUID_LEN;
-        return ZX_OK;
-    }
-    case IOCTL_BLOCK_GET_PARTITION_GUID: {
-        char* guid = reply;
-        if (max < ZBI_PARTITION_GUID_LEN) return ZX_ERR_BUFFER_TOO_SMALL;
-        memcpy(guid, device->part.uniq_guid, ZBI_PARTITION_GUID_LEN);
-        *out_actual = ZBI_PARTITION_GUID_LEN;
-        return ZX_OK;
-    }
-    case IOCTL_BLOCK_GET_NAME: {
-        char* name = reply;
-        strlcpy(name, device->part.name, max);
-        *out_actual = strlen(name) + 1;
         return ZX_OK;
     }
     default:
@@ -145,17 +126,71 @@ static zx_off_t bootpart_get_size(void* ctx) {
     return device_get_size(dev->parent);
 }
 
+static block_impl_protocol_ops_t block_ops = {
+    .query = bootpart_query,
+    .queue = bootpart_queue,
+};
+
+static_assert(ZBI_PARTITION_GUID_LEN == GUID_LENGTH, "GUID length mismatch");
+
+static zx_status_t bootpart_get_guid(void* ctx, guidtype_t guid_type, guid_t* out_guid) {
+    bootpart_device_t* device = ctx;
+    switch (guid_type) {
+    case GUIDTYPE_TYPE:
+        memcpy(out_guid, device->part.type_guid, ZBI_PARTITION_GUID_LEN);
+        return ZX_OK;
+    case GUIDTYPE_INSTANCE:
+        memcpy(out_guid, device->part.uniq_guid, ZBI_PARTITION_GUID_LEN);
+        return ZX_OK;
+    default:
+        return ZX_ERR_INVALID_ARGS;
+    }
+}
+
+static_assert(ZBI_PARTITION_NAME_LEN <= MAX_PARTITION_NAME_LENGTH, "Name length mismatch");
+
+static zx_status_t bootpart_get_name(void* ctx, char* out_name, size_t capacity) {
+    if (capacity < ZBI_PARTITION_NAME_LEN) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+    }
+
+    bootpart_device_t* device = ctx;
+    strlcpy(out_name, device->part.name, ZBI_PARTITION_NAME_LEN);
+    return ZX_OK;
+}
+
+static block_partition_protocol_ops_t partition_ops = {
+    .get_guid = bootpart_get_guid,
+    .get_name = bootpart_get_name,
+};
+
+static zx_status_t bootpart_get_protocol(void* ctx, uint32_t proto_id, void* out) {
+    bootpart_device_t* device = ctx;
+    switch (proto_id) {
+    case ZX_PROTOCOL_BLOCK_IMPL: {
+        block_impl_protocol_t* protocol = out;
+        protocol->ctx = device;
+        protocol->ops = &block_ops;
+        return ZX_OK;
+    }
+    case ZX_PROTOCOL_BLOCK_PARTITION: {
+        block_partition_protocol_t* protocol = out;
+        protocol->ctx = device;
+        protocol->ops = &partition_ops;
+        return ZX_OK;
+    }
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+}
+
 static zx_protocol_device_t device_proto = {
     .version = DEVICE_OPS_VERSION,
+    .get_protocol = bootpart_get_protocol,
     .ioctl = bootpart_ioctl,
     .get_size = bootpart_get_size,
     .unbind = bootpart_unbind,
     .release = bootpart_release,
-};
-
-static block_impl_protocol_ops_t block_ops = {
-    .query = bootpart_query,
-    .queue = bootpart_queue,
 };
 
 static zx_status_t bootpart_bind(void* ctx, zx_device_t* parent) {

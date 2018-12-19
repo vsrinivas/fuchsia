@@ -170,6 +170,21 @@ static zx_status_t RequestBoundCheck(const extend_request_t* request, size_t vsl
 
 // Device protocol (VPartition)
 
+zx_status_t VPartition::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {
+    auto* proto = static_cast<ddk::AnyProtocol*>(out_protocol);
+    proto->ctx = this;
+    switch (proto_id) {
+    case ZX_PROTOCOL_BLOCK_IMPL:
+        proto->ops = &block_impl_protocol_ops_;
+        return ZX_OK;
+    case ZX_PROTOCOL_BLOCK_PARTITION:
+        proto->ops = &block_partition_protocol_ops_;
+        return ZX_OK;
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+}
+
 zx_status_t VPartition::DdkIoctl(uint32_t op, const void* cmd, size_t cmdlen, void* reply,
                                  size_t max, size_t* out_actual) {
     switch (op) {
@@ -220,40 +235,6 @@ zx_status_t VPartition::DdkIoctl(uint32_t op, const void* cmd, size_t cmdlen, vo
         fvm_info_t* info = static_cast<fvm_info_t*>(reply);
         mgr_->Query(info);
         *out_actual = sizeof(fvm_info_t);
-        return ZX_OK;
-    }
-    case IOCTL_BLOCK_GET_TYPE_GUID: {
-        char* guid = static_cast<char*>(reply);
-        if (max < FVM_GUID_LEN)
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        fbl::AutoLock lock(&lock_);
-        if (IsKilledLocked())
-            return ZX_ERR_BAD_STATE;
-        memcpy(guid, mgr_->GetAllocatedVPartEntry(entry_index_)->type, FVM_GUID_LEN);
-        *out_actual = FVM_GUID_LEN;
-        return ZX_OK;
-    }
-    case IOCTL_BLOCK_GET_PARTITION_GUID: {
-        char* guid = static_cast<char*>(reply);
-        if (max < FVM_GUID_LEN)
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        fbl::AutoLock lock(&lock_);
-        if (IsKilledLocked())
-            return ZX_ERR_BAD_STATE;
-        memcpy(guid, mgr_->GetAllocatedVPartEntry(entry_index_)->guid, FVM_GUID_LEN);
-        *out_actual = FVM_GUID_LEN;
-        return ZX_OK;
-    }
-    case IOCTL_BLOCK_GET_NAME: {
-        char* name = static_cast<char*>(reply);
-        if (max < FVM_NAME_LEN + 1)
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        fbl::AutoLock lock(&lock_);
-        if (IsKilledLocked())
-            return ZX_ERR_BAD_STATE;
-        memcpy(name, mgr_->GetAllocatedVPartEntry(entry_index_)->name, FVM_NAME_LEN);
-        name[FVM_NAME_LEN] = 0;
-        *out_actual = strlen(name);
         return ZX_OK;
     }
     case IOCTL_BLOCK_FVM_EXTEND: {
@@ -453,6 +434,47 @@ void VPartition::BlockImplQueue(block_op_t* txn, block_impl_queue_callback compl
     __UNUSED auto ptr = state.release();
 }
 
+void VPartition::BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out) {
+    static_assert(fbl::is_same<decltype(info_out), decltype(&info_)>::value, "Info type mismatch");
+    memcpy(info_out, &info_, sizeof(info_));
+    *block_op_size_out = mgr_->BlockOpSize();
+}
+
+static_assert(FVM_GUID_LEN == GUID_LENGTH, "Invalid GUID length");
+
+zx_status_t VPartition::BlockPartitionGetGuid(guidtype_t guid_type, guid_t* out_guid) {
+    fbl::AutoLock lock(&lock_);
+    if (IsKilledLocked()) {
+        return ZX_ERR_BAD_STATE;
+    }
+
+    switch (guid_type) {
+    case GUIDTYPE_TYPE:
+        memcpy(out_guid, mgr_->GetAllocatedVPartEntry(entry_index_)->type, FVM_GUID_LEN);
+        return ZX_OK;
+    case GUIDTYPE_INSTANCE:
+        memcpy(out_guid, mgr_->GetAllocatedVPartEntry(entry_index_)->guid, FVM_GUID_LEN);
+        return ZX_OK;
+    default:
+        return ZX_ERR_INVALID_ARGS;
+    }
+}
+
+static_assert(FVM_NAME_LEN < MAX_PARTITION_NAME_LENGTH, "Name Length mismatch");
+
+zx_status_t VPartition::BlockPartitionGetName(char* out_name, size_t capacity) {
+    if (capacity < FVM_NAME_LEN + 1) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+    }
+    fbl::AutoLock lock(&lock_);
+    if (IsKilledLocked()) {
+        return ZX_ERR_BAD_STATE;
+    }
+    memcpy(out_name, mgr_->GetAllocatedVPartEntry(entry_index_)->name, FVM_NAME_LEN);
+    out_name[FVM_NAME_LEN] = 0;
+    return ZX_OK;
+}
+
 zx_off_t VPartition::DdkGetSize() {
     const zx_off_t sz = mgr_->VSliceMax() * mgr_->SliceSize();
     // Check for overflow; enforced when loading driver
@@ -466,12 +488,6 @@ void VPartition::DdkUnbind() {
 
 void VPartition::DdkRelease() {
     delete this;
-}
-
-void VPartition::BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out) {
-    static_assert(fbl::is_same<decltype(info_out), decltype(&info_)>::value, "Info type mismatch");
-    memcpy(info_out, &info_, sizeof(info_));
-    *block_op_size_out = mgr_->BlockOpSize();
 }
 
 zx_device_t* VPartition::GetParent() const {

@@ -8,15 +8,13 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := driver
 
-SRCS := \
+SHARED_SRCS := \
     $(LOCAL_DIR)/fvm.c \
     $(LOCAL_DIR)/fvm.cpp \
     $(LOCAL_DIR)/slice-extent.cpp \
     $(LOCAL_DIR)/vpartition.cpp \
 
-MODULE_SRCS := $(SRCS)
-
-MODULE_STATIC_LIBS := \
+SHARED_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/digest \
@@ -30,13 +28,22 @@ MODULE_STATIC_LIBS := \
     system/ulib/zxcpp \
     third_party/ulib/uboringssl \
 
-MODULE_LIBS := \
+SHARED_MODULE_LIBS := \
     system/ulib/c \
     system/ulib/driver \
     system/ulib/zircon \
 
-MODULE_BANJO_LIBS := \
-    system/banjo/ddk-protocol-block
+SHARED_BANJO_LIBS := \
+    system/banjo/ddk-protocol-block \
+    system/banjo/ddk-protocol-block-partition \
+
+MODULE_SRCS := $(SHARED_SRCS)
+
+MODULE_STATIC_LIBS := $(SHARED_STATIC_LIBS)
+
+MODULE_LIBS := $(SHARED_MODULE_LIBS)
+
+MODULE_BANJO_LIBS := $(SHARED_BANJO_LIBS)
 
 include make/module.mk
 
@@ -50,33 +57,18 @@ MODULE_TYPE := usertest
 
 TEST_DIR := $(LOCAL_DIR)/test
 
-MODULE_SRCS := $(SRCS) \
+MODULE_SRCS := $(SHARED_SRCS) \
     $(TEST_DIR)/slice-extent-test.cpp \
     $(TEST_DIR)/main.cpp \
 
 MODULE_STATIC_LIBS := \
-    system/ulib/ddk \
-    system/ulib/ddktl \
-    system/ulib/digest \
-    system/ulib/fbl \
-    system/ulib/fs \
-    system/ulib/fzl \
-    system/ulib/fvm \
-    system/ulib/gpt \
+    $(SHARED_STATIC_LIBS) \
     system/ulib/pretty \
-    system/ulib/sync \
     system/ulib/unittest \
-    system/ulib/zx \
-    system/ulib/zxcpp \
-    third_party/ulib/uboringssl \
 
-MODULE_LIBS := \
-    system/ulib/c \
-    system/ulib/driver \
-    system/ulib/zircon \
+MODULE_LIBS := $(SHARED_MODULE_LIBS)
 
-MODULE_BANJO_LIBS := \
-    system/banjo/ddk-protocol-block\
+MODULE_BANJO_LIBS := $(SHARED_BANJO_LIBS)
 
 MODULE_COMPILEFLAGS := \
     -I$(LOCAL_DIR)\

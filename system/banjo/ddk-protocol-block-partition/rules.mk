@@ -10,13 +10,13 @@ MODULE_TYPE := banjo
 
 MODULE_PACKAGE := banjo
 
-MODULE_BANJO_LIBRARY := ddk.protocol.block
+MODULE_BANJO_LIBRARY := ddk.protocol.block.partition
 
-MODULE_BANJO_NAME := block
+MODULE_BANJO_NAME := block/partition
 
 MODULE_BANJO_DEPS := \
     system/banjo/zircon-device-block \
 
-MODULE_SRCS += $(LOCAL_DIR)/block.banjo
+MODULE_SRCS += $(LOCAL_DIR)/partition.banjo
 
 include make/module.mk

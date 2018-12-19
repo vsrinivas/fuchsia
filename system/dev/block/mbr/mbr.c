@@ -17,6 +17,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/block.h>
+#include <ddk/protocol/block/partition.h>
 
 #include <gpt/gpt.h>
 #include <lib/sync/completion.h>
@@ -79,32 +80,6 @@ static zx_status_t mbr_ioctl(void* ctx, uint32_t op, const void* cmd,
             return ZX_ERR_BUFFER_TOO_SMALL;
         memcpy(info, &device->info, sizeof(*info));
         *out_actual = sizeof(*info);
-        return ZX_OK;
-    }
-    case IOCTL_BLOCK_GET_TYPE_GUID: {
-        char* guid = reply;
-        if (max < GPT_GUID_LEN)
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        if (device->partition.type == PARTITION_TYPE_DATA) {
-            memcpy(guid, data_guid, GPT_GUID_LEN);
-            *out_actual = GPT_GUID_LEN;
-            return ZX_OK;
-        } else if (device->partition.type == PARTITION_TYPE_SYS) {
-            memcpy(guid, sys_guid, GPT_GUID_LEN);
-            *out_actual = GPT_GUID_LEN;
-            return ZX_OK;
-        } else {
-            return ZX_ERR_NOT_FOUND;
-        }
-    }
-    case IOCTL_BLOCK_GET_PARTITION_GUID: {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    case IOCTL_BLOCK_GET_NAME: {
-        char* name = reply;
-        memset(name, 0, max);
-        strncpy(name, device_get_name(device->zxdev), max);
-        *out_actual = strnlen(name, max);
         return ZX_OK;
     }
     default:
@@ -172,17 +147,72 @@ static zx_off_t mbr_get_size(void* ctx) {
     return device_get_size(dev->parent);
 }
 
+static block_impl_protocol_ops_t block_ops = {
+    .query = mbr_query,
+    .queue = mbr_queue,
+};
+
+static_assert(GPT_GUID_LEN == GUID_LENGTH, "GUID length mismatch");
+
+static zx_status_t mbr_get_guid(void* ctx, guidtype_t guidtype, guid_t* out_guid) {
+    if (guidtype != GUIDTYPE_TYPE) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    mbrpart_device_t* device = ctx;
+    if (device->partition.type == PARTITION_TYPE_DATA) {
+        memcpy(out_guid, data_guid, GPT_GUID_LEN);
+        return ZX_OK;
+    } else if (device->partition.type == PARTITION_TYPE_SYS) {
+        memcpy(out_guid, sys_guid, GPT_GUID_LEN);
+        return ZX_OK;
+    } else {
+        return ZX_ERR_NOT_FOUND;
+    }
+}
+
+static_assert(GPT_NAME_LEN <= MAX_PARTITION_NAME_LENGTH, "Partition name length mismatch");
+
+static zx_status_t mbr_get_name(void* ctx, char* out_name, size_t capacity) {
+    if (capacity < GPT_NAME_LEN) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+    }
+    mbrpart_device_t* device = ctx;
+    strlcpy(out_name, device_get_name(device->zxdev), GPT_NAME_LEN);
+    return ZX_OK;
+}
+
+static block_partition_protocol_ops_t partition_ops = {
+    .get_guid = mbr_get_guid,
+    .get_name = mbr_get_name,
+};
+
+static zx_status_t mbr_get_protocol(void* ctx, uint32_t proto_id, void* out) {
+    mbrpart_device_t* device = ctx;
+    switch (proto_id) {
+    case ZX_PROTOCOL_BLOCK_IMPL: {
+        block_impl_protocol_t* protocol = out;
+        protocol->ctx = device;
+        protocol->ops = &block_ops;
+        return ZX_OK;
+    }
+    case ZX_PROTOCOL_BLOCK_PARTITION: {
+        block_partition_protocol_t* protocol = out;
+        protocol->ctx = device;
+        protocol->ops = &partition_ops;
+        return ZX_OK;
+    }
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+}
+
 static zx_protocol_device_t mbr_proto = {
     .version = DEVICE_OPS_VERSION,
+    .get_protocol = mbr_get_protocol,
     .ioctl = mbr_ioctl,
     .get_size = mbr_get_size,
     .unbind = mbr_unbind,
     .release = mbr_release,
-};
-
-static block_impl_protocol_ops_t block_ops = {
-    .query = mbr_query,
-    .queue = mbr_queue,
 };
 
 static void mbr_read_sync_complete(void* cookie, zx_status_t status, block_op_t* bop) {

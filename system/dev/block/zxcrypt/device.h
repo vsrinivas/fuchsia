@@ -15,6 +15,7 @@
 #include <ddk/protocol/block.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/block.h>
+#include <ddktl/protocol/block/partition.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 #include <lib/zx/port.h>
@@ -35,13 +36,19 @@ namespace zxcrypt {
 
 // See ddk::Device in ddktl/device.h
 class Device;
-using DeviceType = ddk::Device<Device, ddk::Ioctlable, ddk::GetSizable, ddk::Unbindable>;
+using DeviceType = ddk::Device<Device,
+                               ddk::GetProtocolable,
+                               ddk::Ioctlable,
+                               ddk::GetSizable,
+                               ddk::Unbindable>;
 
 // |zxcrypt::Device| is an encrypted block device filter driver.  It binds to a block device and
 // transparently encrypts writes to/decrypts reads from that device.  It shadows incoming requests
 // with its own |zxcrypt::Op| request structure that uses a mapped VMO as working memory for
 // cryptographic transformations.
-class Device final : public DeviceType, public ddk::BlockImplProtocol<Device, ddk::base_protocol> {
+class Device final : public DeviceType,
+                     public ddk::BlockImplProtocol<Device, ddk::base_protocol>,
+                     public ddk::BlockPartitionProtocol<Device> {
 public:
     explicit Device(zx_device_t* parent);
     ~Device();
@@ -59,6 +66,7 @@ public:
     zx_status_t Init() __TA_EXCLUDES(mtx_);
 
     // ddk::Device methods; see ddktl/device.h
+    zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
     zx_status_t DdkIoctl(uint32_t op, const void* in, size_t in_len, void* out, size_t out_len,
                          size_t* actual);
     zx_off_t DdkGetSize();
@@ -69,6 +77,10 @@ public:
     void BlockImplQuery(block_info_t* out_info, size_t* out_op_size);
     void BlockImplQueue(block_op_t* block, block_impl_queue_callback completion_cb,
                         void* cookie) __TA_EXCLUDES(mtx_);
+
+    // ddk::PartitionProtocol methods; see ddktl/protocol/block/partition.h
+    zx_status_t BlockPartitionGetGuid(guidtype_t guidtype, guid_t* out_guid);
+    zx_status_t BlockPartitionGetName(char* out_name, size_t capacity);
 
     // If |status| is |ZX_OK|, sends |block| to the parent block device; otherwise calls
     // |BlockComplete| on the |block|. Uses the extra space following the |block| to save fields
@@ -121,7 +133,9 @@ private:
         // The parent device's required block_op_t size.
         size_t op_size;
         // Callbacks to the parent's block protocol methods.
-        block_impl_protocol_t proto;
+        ddk::BlockProtocolClient block_protocol;
+        // Optional Protocols supported by zxcrypt.
+        ddk::BlockPartitionProtocolClient partition_protocol;
         // The number of blocks reserved for metadata.
         uint64_t reserved_blocks;
         // The number of slices reserved for metadata.

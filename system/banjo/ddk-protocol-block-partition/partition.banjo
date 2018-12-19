@@ -1,0 +1,32 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.block.partition;
+
+using zx;
+
+/// The length of a GUID, in bytes.
+const uint32 GUID_LENGTH = 16;
+
+/// The maximum length of a partition entry name, in bytes.
+const uint32 MAX_PARTITION_NAME_LENGTH = 128;
+
+/// A Globally Unique Identifier (GUID) used to distinguish partitions.
+struct GUID {
+    array<uint8>:GUID_LENGTH value;
+};
+
+enum GUIDType : uint8 {
+    TYPE = 0x0;
+    INSTANCE = 0x01;
+};
+
+[Layout = "ddk-protocol"]
+interface BlockPartition {
+    /// Get a GUID of the partition (if one exists).
+    GetGuid(GUIDType guid_type) -> (zx.status status, GUID guid);
+
+    /// Get the name of the partition (if one exists).
+    GetName() -> (zx.status status, string:MAX_PARTITION_NAME_LENGTH? name);
+};

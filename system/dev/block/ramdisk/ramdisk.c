@@ -6,6 +6,7 @@
 #include <ddk/driver.h>
 #include <ddk/binding.h>
 #include <ddk/protocol/block.h>
+#include <ddk/protocol/block/partition.h>
 
 #include <zircon/device/ramdisk.h>
 #include <lib/sync/completion.h>
@@ -52,7 +53,7 @@ typedef struct ramdisk_device {
     ramdisk_blk_counts_t blk_counts; // current block counts
 
     thrd_t worker;
-    char name[NAME_MAX];
+    char name[ZBI_PARTITION_NAME_LEN];
 } ramdisk_device_t;
 
 typedef struct {
@@ -282,26 +283,12 @@ static zx_status_t ramdisk_ioctl(void* ctx, uint32_t op, const void* cmd, size_t
         return ZX_OK;
     }
     // Block Protocol
-    case IOCTL_BLOCK_GET_NAME: {
-        char* name = reply;
-        memset(name, 0, max);
-        strncpy(name, ramdev->name, max);
-        *out_actual = strnlen(name, max);
-        return ZX_OK;
-    }
     case IOCTL_BLOCK_GET_INFO: {
         block_info_t* info = reply;
         if (max < sizeof(*info))
             return ZX_ERR_BUFFER_TOO_SMALL;
         ramdisk_get_info(ramdev, info);
         *out_actual = sizeof(*info);
-        return ZX_OK;
-    }
-    case IOCTL_BLOCK_GET_TYPE_GUID: {
-        if (max < ZBI_PARTITION_GUID_LEN)
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        memcpy(reply, ramdev->type_guid, sizeof(ramdev->type_guid));
-        *out_actual = sizeof(ramdev->type_guid);
         return ZX_OK;
     }
     default:
@@ -384,8 +371,58 @@ static block_impl_protocol_ops_t block_ops = {
     .queue = ramdisk_queue,
 };
 
+static_assert(ZBI_PARTITION_GUID_LEN == GUID_LENGTH, "GUID length mismatch");
+
+static zx_status_t ramdisk_get_guid(void* ctx, guidtype_t guidtype, guid_t* out_guid) {
+    if (guidtype != GUIDTYPE_TYPE) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    ramdisk_device_t* device = ctx;
+    memcpy(out_guid, device->type_guid, ZBI_PARTITION_GUID_LEN);
+    return ZX_OK;
+}
+
+static_assert(ZBI_PARTITION_NAME_LEN <= MAX_PARTITION_NAME_LENGTH, "Name length mismatch");
+
+static zx_status_t ramdisk_get_name(void* ctx, char* out_name, size_t capacity) {
+    if (capacity < ZBI_PARTITION_NAME_LEN) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+    }
+
+    ramdisk_device_t* device = ctx;
+    strlcpy(out_name, device->name, ZBI_PARTITION_NAME_LEN);
+    return ZX_OK;
+}
+
+static block_partition_protocol_ops_t partition_ops = {
+    .get_guid = ramdisk_get_guid,
+    .get_name = ramdisk_get_name,
+};
+
+static zx_status_t ramdisk_get_protocol(void* ctx, uint32_t proto_id, void* out) {
+    ramdisk_device_t* device = ctx;
+    switch (proto_id) {
+    case ZX_PROTOCOL_BLOCK_IMPL: {
+        block_impl_protocol_t* protocol = out;
+        protocol->ctx = device;
+        protocol->ops = &block_ops;
+        return ZX_OK;
+    }
+    case ZX_PROTOCOL_BLOCK_PARTITION: {
+        block_partition_protocol_t* protocol = out;
+        protocol->ctx = device;
+        protocol->ops = &partition_ops;
+        return ZX_OK;
+    }
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+}
+
 static zx_protocol_device_t ramdisk_instance_proto = {
     .version = DEVICE_OPS_VERSION,
+    .get_protocol = ramdisk_get_protocol,
     .ioctl = ramdisk_ioctl,
     .get_size = ramdisk_getsize,
     .unbind = ramdisk_unbind,

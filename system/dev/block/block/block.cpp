@@ -21,6 +21,7 @@
 #include <ddk/metadata.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/block.h>
+#include <ddktl/protocol/block/partition.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <lib/zx/fifo.h>
@@ -35,8 +36,13 @@
 
 class BlockDevice;
 
-using BlockDeviceType = ddk::Device<BlockDevice, ddk::Ioctlable, ddk::Unbindable,
-    ddk::Readable, ddk::Writable, ddk::GetSizable>;
+using BlockDeviceType = ddk::Device<BlockDevice,
+                                    ddk::GetProtocolable,
+                                    ddk::Ioctlable,
+                                    ddk::Unbindable,
+                                    ddk::Readable,
+                                    ddk::Writable,
+                                    ddk::GetSizable>;
 
 class BlockDevice : public BlockDeviceType,
                     public ddk::BlockProtocol<BlockDevice, ddk::base_protocol> {
@@ -44,12 +50,15 @@ public:
     BlockDevice(zx_device_t* parent) : BlockDeviceType(parent) {
         block_protocol_t self { &block_protocol_ops_, this };
         self_protocol_ = ddk::BlockProtocolClient(&self);
+        parent_protocol_ = ddk::BlockImplProtocolClient(parent);
+        parent_partition_protocol_ = ddk::BlockPartitionProtocolClient(parent);
     };
 
     static zx_status_t Bind(void* ctx, zx_device_t* dev);
 
     void DdkUnbind();
     void DdkRelease();
+    zx_status_t DdkGetProtocol(uint32_t proto_id, void* out_protocol);
     zx_status_t DdkIoctl(uint32_t op, const void* cmd, size_t cmd_len,
                          void* reply, size_t reply_len, size_t* out_actual);
     zx_status_t DdkRead(void* buf, size_t buf_len, zx_off_t off, size_t* actual);
@@ -71,6 +80,8 @@ private:
 
     // The block protocol of the device we are binding against.
     ddk::BlockImplProtocolClient parent_protocol_;
+    // An optional partition protocol, if supported by the parent device.
+    ddk::BlockPartitionProtocolClient parent_partition_protocol_;
     // The block protocol for ourselves, which redirects to the parent protocol,
     // but may also collect auxiliary information like statistics.
     ddk::BlockProtocolClient self_protocol_;
@@ -129,6 +140,24 @@ zx_status_t BlockDevice::Rebind() {
     return device_rebind(zxdev());
 }
 
+zx_status_t BlockDevice::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {
+    switch (proto_id) {
+    case ZX_PROTOCOL_BLOCK: {
+        self_protocol_.GetProto(static_cast<block_protocol_t*>(out_protocol));
+        return ZX_OK;
+    }
+    case ZX_PROTOCOL_BLOCK_PARTITION: {
+        if (!parent_partition_protocol_.is_valid()) {
+            return ZX_ERR_NOT_SUPPORTED;
+        }
+        parent_partition_protocol_.GetProto(static_cast<block_partition_protocol_t*>(out_protocol));
+        return ZX_OK;
+    }
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+}
+
 zx_status_t BlockDevice::DdkIoctl(uint32_t op, const void* cmd, size_t cmd_len, void* reply,
                                   size_t reply_len, size_t* out_actual) {
     switch (op) {
@@ -162,6 +191,50 @@ zx_status_t BlockDevice::DdkIoctl(uint32_t op, const void* cmd, size_t cmd_len, 
     }
     case IOCTL_BLOCK_GET_STATS: {
         return GetStats(cmd, cmd_len, reply, reply_len, out_actual);
+    }
+    case IOCTL_BLOCK_GET_TYPE_GUID: {
+        if (!parent_partition_protocol_.is_valid()) {
+            return ZX_ERR_NOT_SUPPORTED;
+        }
+
+        guid_t* guid = static_cast<guid_t*>(reply);
+        if (reply_len < GUID_LENGTH) {
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        }
+        zx_status_t status = parent_partition_protocol_.GetGuid(GUIDTYPE_TYPE, guid);
+        if (status != ZX_OK) {
+            return status;
+        }
+        *out_actual = GUID_LENGTH;
+        return ZX_OK;
+    }
+    case IOCTL_BLOCK_GET_PARTITION_GUID: {
+        if (!parent_partition_protocol_.is_valid()) {
+            return ZX_ERR_NOT_SUPPORTED;
+        }
+
+        guid_t* guid = static_cast<guid_t*>(reply);
+        if (reply_len < GUID_LENGTH) {
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        }
+        zx_status_t status = parent_partition_protocol_.GetGuid(GUIDTYPE_INSTANCE, guid);
+        if (status != ZX_OK) {
+            return status;
+        }
+        *out_actual = GUID_LENGTH;
+        return ZX_OK;
+    }
+    case IOCTL_BLOCK_GET_NAME: {
+        if (!parent_partition_protocol_.is_valid()) {
+            return ZX_ERR_NOT_SUPPORTED;
+        }
+        char* name = static_cast<char*>(reply);
+        zx_status_t status = parent_partition_protocol_.GetName(name, reply_len);
+        if (status != ZX_OK) {
+            return status;
+        }
+        *out_actual = strlen(name);
+        return status;
     }
     default:
         // TODO: this may no longer be necessary now that we handle IOCTL_BLOCK_GET_INFO here
@@ -331,14 +404,12 @@ zx_status_t BlockDevice::GetStats(const void* cmd, size_t cmd_len, void* reply,
 zx_status_t BlockDevice::Bind(void* ctx, zx_device_t* dev) {
     auto bdev = std::make_unique<BlockDevice>(dev);
 
-    block_impl_protocol_t parent_protocol;
-    if (device_get_protocol(dev, ZX_PROTOCOL_BLOCK_IMPL, &parent_protocol) != ZX_OK) {
+    // The Block Implementation Protocol is required.
+    if (!bdev->parent_protocol_.is_valid()) {
         printf("ERROR: block device '%s': does not support block protocol\n",
                device_get_name(dev));
         return ZX_ERR_NOT_SUPPORTED;
     }
-    ddk::BlockImplProtocolClient client(&parent_protocol);
-    bdev->parent_protocol_ = std::move(client);
 
     bdev->parent_protocol_.Query(&bdev->info_, &bdev->block_op_size_);
 
