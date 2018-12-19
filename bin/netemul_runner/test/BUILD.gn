@@ -6,6 +6,7 @@ import("//build/test/test_package.gni")
 
 test_package("netemul_sandbox_test") {
   deps = [
+    "//garnet/bin/netemul_runner/model:model_unittest",
     "//garnet/bin/netemul_runner/test/netstack_socks",
     "//garnet/bin/netemul_runner/test/svc_list",
   ]
@@ -27,6 +28,9 @@ test_package("netemul_sandbox_test") {
     },
     {
       name = "netstack_socks"
+    },
+    {
+      name = "model_unittest"
     },
   ]
 }
