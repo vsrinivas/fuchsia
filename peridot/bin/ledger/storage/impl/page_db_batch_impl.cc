@@ -41,6 +41,15 @@ Status PageDbBatchImpl::RemoveHead(CoroutineHandler* handler,
   return batch_->Delete(handler, HeadRow::GetKeyFor(head));
 }
 
+Status PageDbBatchImpl::AddMerge(coroutine::CoroutineHandler* handler,
+                                 CommitIdView parent1_id,
+                                 CommitIdView parent2_id,
+                                 CommitIdView merge_commit_id) {
+  return batch_->Put(
+      handler, MergeRow::GetKeyFor(merge_commit_id, parent1_id, parent2_id),
+      "");
+}
+
 Status PageDbBatchImpl::AddCommitStorageBytes(CoroutineHandler* handler,
                                               const CommitId& commit_id,
                                               fxl::StringView storage_bytes) {

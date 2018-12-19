@@ -54,6 +54,13 @@ class PageDbMutator {
   FXL_WARN_UNUSED_RESULT virtual Status RemoveHead(
       coroutine::CoroutineHandler* handler, CommitIdView head) = 0;
 
+  // Merges.
+  // Adds the commit with id |merge_commit_id| in the set of merges of commits
+  // with ids |parent1_id| and |parent2_id|.
+  FXL_WARN_UNUSED_RESULT virtual Status AddMerge(
+      coroutine::CoroutineHandler* handler, CommitIdView parent1_id,
+      CommitIdView parent2_id, CommitIdView merge_commit_id) = 0;
+
   // Commits.
   // Adds the given |commit| in the database.
   FXL_WARN_UNUSED_RESULT virtual Status AddCommitStorageBytes(
@@ -173,6 +180,13 @@ class PageDb : public PageDbMutator {
   // their id.
   FXL_WARN_UNUSED_RESULT virtual Status GetHeads(
       coroutine::CoroutineHandler* handler, std::vector<CommitId>* heads) = 0;
+
+  // Merges.
+  // Finds all merges of the commits with ids |parent1_id| and |parent2_id|, and
+  // returns their ids.
+  FXL_WARN_UNUSED_RESULT virtual Status GetMerges(
+      coroutine::CoroutineHandler* handler, CommitIdView parent1_id,
+      CommitIdView parent2_id, std::vector<CommitId>* heads) = 0;
 
   // Commits.
   // Finds the commit with the given |commit_id| and stores its represenation in

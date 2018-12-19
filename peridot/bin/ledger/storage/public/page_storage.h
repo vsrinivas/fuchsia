@@ -53,6 +53,12 @@ class PageStorage : public PageSyncClient {
   // at least one head commit, even if they are empty.
   virtual void GetHeadCommitIds(
       fit::function<void(Status, std::vector<CommitId>)> callback) = 0;
+  // Finds the ids of all merge commits that have as parents the commits with
+  // ids |parent1_id| and |parent2_id| and calls the given |callback| with the
+  // result.
+  virtual void GetMergeCommitIds(
+      CommitIdView parent1_id, CommitIdView parent2_id,
+      fit::function<void(Status, std::vector<CommitId>)> callback) = 0;
   // Finds the commit with the given |commit_id| and calls the given |callback|
   // with the result.
   virtual void GetCommit(

@@ -45,6 +45,7 @@
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 using testing::ElementsAre;
+using testing::IsEmpty;
 
 namespace storage {
 
@@ -2312,6 +2313,67 @@ TEST_F(PageStorageTest, AddCommitsMissingParent) {
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::NOT_FOUND, status);
   EXPECT_THAT(missing_ids, ElementsAre(commit_parent->GetId()));
+}
+
+TEST_F(PageStorageTest, GetMergeCommitIdsEmpty) {
+  std::unique_ptr<const Commit> parent1 =
+      TryCommitFromLocal(JournalType::EXPLICIT, 3);
+  ASSERT_TRUE(parent1);
+
+  std::unique_ptr<const Commit> parent2 =
+      TryCommitFromLocal(JournalType::EXPLICIT, 3);
+  ASSERT_TRUE(parent2);
+
+  // Check that there is no merge of |parent1| and |parent2|.
+  bool called;
+  Status status;
+  std::vector<CommitId> merges;
+  storage_->GetMergeCommitIds(
+      parent1->GetId(), parent2->GetId(),
+      callback::Capture(callback::SetWhenCalled(&called), &status, &merges));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+  EXPECT_THAT(merges, IsEmpty());
+}
+
+TEST_F(PageStorageTest, GetMergeCommitIdsNonEmpty) {
+  std::unique_ptr<const Commit> parent1 =
+      TryCommitFromLocal(JournalType::EXPLICIT, 3);
+  ASSERT_TRUE(parent1);
+
+  std::unique_ptr<const Commit> parent2 =
+      TryCommitFromLocal(JournalType::EXPLICIT, 3);
+  ASSERT_TRUE(parent2);
+
+  bool called;
+  Status status;
+  std::unique_ptr<Journal> journal;
+  storage_->StartMergeCommit(
+      parent1->GetId(), parent2->GetId(),
+      callback::Capture(callback::SetWhenCalled(&called), &status, &journal));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+
+  std::unique_ptr<const Commit> merge =
+      TryCommitJournal(std::move(journal), Status::OK);
+  ASSERT_TRUE(merge);
+
+  // Check that |merge| is in the list of merges.
+  std::vector<CommitId> merges;
+  storage_->GetMergeCommitIds(
+      parent1->GetId(), parent2->GetId(),
+      callback::Capture(callback::SetWhenCalled(&called), &status, &merges));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+  EXPECT_THAT(merges, ElementsAre(merge->GetId()));
+
+  storage_->GetMergeCommitIds(
+      parent2->GetId(), parent1->GetId(),
+      callback::Capture(callback::SetWhenCalled(&called), &status, &merges));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+  EXPECT_THAT(merges, ElementsAre(merge->GetId()));
 }
 
 }  // namespace

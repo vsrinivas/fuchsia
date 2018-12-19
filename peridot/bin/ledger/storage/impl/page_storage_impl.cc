@@ -30,7 +30,6 @@
 #include <lib/fxl/memory/ref_ptr.h>
 #include <lib/fxl/memory/weak_ptr.h>
 #include <lib/fxl/strings/concatenate.h>
-#include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <trace/event.h>
 
@@ -133,6 +132,22 @@ void PageStorageImpl::GetHeadCommitIds(
              fit::function<void(Status, std::vector<CommitId>)> callback) {
         std::vector<CommitId> commit_ids;
         Status status = db_->GetHeads(handler, &commit_ids);
+        callback(status, std::move(commit_ids));
+      });
+}
+
+void PageStorageImpl::GetMergeCommitIds(
+    CommitIdView parent1_id, CommitIdView parent2_id,
+    fit::function<void(Status, std::vector<CommitId>)> callback) {
+  coroutine_manager_.StartCoroutine(
+      std::move(callback),
+      [this, parent1_id = parent1_id.ToString(),
+       parent2_id = parent2_id.ToString()](
+          CoroutineHandler* handler,
+          fit::function<void(Status, std::vector<CommitId>)> callback) {
+        std::vector<CommitId> commit_ids;
+        Status status =
+            db_->GetMerges(handler, parent1_id, parent2_id, &commit_ids);
         callback(status, std::move(commit_ids));
       });
 }
@@ -1378,13 +1393,23 @@ Status PageStorageImpl::SynchronousAddCommits(
     }
     // Now, we know we are adding a new commit.
 
+    // If the commit is a merge, register it in the merge index.
+    std::vector<CommitIdView> parent_ids = commit->GetParentIds();
+    if (parent_ids.size() == 2) {
+      s = batch->AddMerge(handler, parent_ids[0], parent_ids[1],
+                          commit->GetId());
+      if (s != Status::OK) {
+        return s;
+      }
+    }
+
     // Commits should arrive in order. Check that the parents are either
     // present in PageDb or in the list of already processed commits.
     // If the commit arrive out of order, print an error, but skip it
-    // temporarly so that the Ledger can recover if all the needed commits
+    // temporarily so that the Ledger can recover if all the needed commits
     // are received in a single batch.
     bool orphaned_commit = false;
-    for (const CommitIdView& parent_id : commit->GetParentIds()) {
+    for (const CommitIdView& parent_id : parent_ids) {
       if (added_commits.find(&parent_id) == added_commits.end()) {
         s = ContainsCommit(handler, parent_id);
         if (s != Status::OK) {

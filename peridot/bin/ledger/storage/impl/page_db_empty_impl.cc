@@ -16,6 +16,12 @@ Status PageDbEmptyImpl::GetHeads(CoroutineHandler* /*handler*/,
                                  std::vector<CommitId>* /*heads*/) {
   return Status::NOT_IMPLEMENTED;
 }
+Status PageDbEmptyImpl::GetMerges(coroutine::CoroutineHandler* /*handler*/,
+                                  CommitIdView /*commit1_id*/,
+                                  CommitIdView /*commit2_id*/,
+                                  std::vector<CommitId>* /*merges*/) {
+  return Status::NOT_IMPLEMENTED;
+}
 Status PageDbEmptyImpl::GetCommitStorageBytes(CoroutineHandler* /*handler*/,
                                               CommitIdView /*commit_id*/,
                                               std::string* /*storage_bytes*/) {
@@ -82,6 +88,12 @@ Status PageDbEmptyImpl::AddHead(CoroutineHandler* /*handler*/,
 Status PageDbEmptyImpl::RemoveHead(CoroutineHandler* /*handler*/,
                                    CommitIdView /*head*/) {
   return Status::NOT_IMPLEMENTED;
+}
+Status PageDbEmptyImpl::AddMerge(coroutine::CoroutineHandler* /*handler*/,
+                                 CommitIdView /*parent1_id*/,
+                                 CommitIdView /*parent2_id*/,
+                                 CommitIdView /*merge_commit_id*/) {
+  return Status::ILLEGAL_STATE;
 }
 Status PageDbEmptyImpl::AddCommitStorageBytes(
     CoroutineHandler* /*handler*/, const CommitId& /*commit_id*/,

@@ -20,6 +20,23 @@ std::string HeadRow::GetKeyFor(CommitIdView head) {
   return fxl::Concatenate({kPrefix, head});
 }
 
+// MergeRow.
+
+constexpr fxl::StringView MergeRow::kPrefix;
+
+std::string MergeRow::GetEntriesPrefixFor(CommitIdView parent1_id,
+                                          CommitIdView parent2_id) {
+  auto [parent_min_id, parent_max_id] = std::minmax(parent1_id, parent2_id);
+  return fxl::Concatenate({kPrefix, parent_min_id, "/", parent_max_id, "/"});
+}
+
+std::string MergeRow::GetKeyFor(CommitIdView merge_commit_id,
+                                CommitIdView parent1_id,
+                                CommitIdView parent2_id) {
+  return fxl::Concatenate(
+      {GetEntriesPrefixFor(parent1_id, parent2_id), merge_commit_id});
+}
+
 // CommitRow.
 
 constexpr fxl::StringView CommitRow::kPrefix;

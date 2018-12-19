@@ -36,6 +36,9 @@ class FakePageStorage : public PageStorageEmptyImpl {
   PageId GetId() override;
   void GetHeadCommitIds(
       fit::function<void(Status, std::vector<CommitId>)> callback) override;
+  void GetMergeCommitIds(
+      CommitIdView parent1_id, CommitIdView parent2_id,
+      fit::function<void(Status, std::vector<CommitId>)> callback) override;
   void GetCommit(CommitIdView commit_id,
                  fit::function<void(Status, std::unique_ptr<const Commit>)>
                      callback) override;
@@ -110,6 +113,7 @@ class FakePageStorage : public PageStorageEmptyImpl {
   std::map<std::string, std::unique_ptr<FakeJournalDelegate>> journals_;
   std::map<ObjectIdentifier, std::string> objects_;
   std::set<CommitId> heads_;
+  std::map<std::pair<CommitId, CommitId>, std::vector<CommitId>> merges_;
   std::set<CommitWatcher*> watchers_;
   std::vector<fit::closure> object_requests_;
   encryption::FakeEncryptionService encryption_service_;

@@ -15,6 +15,7 @@
 #include <lib/fxl/macros.h>
 #include <lib/zx/time.h>
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/storage/impl/commit_impl.h"
@@ -27,6 +28,9 @@
 #include "peridot/bin/ledger/storage/public/constants.h"
 #include "peridot/bin/ledger/testing/test_with_environment.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
+
+using testing::IsEmpty;
+using testing::UnorderedElementsAre;
 
 namespace storage {
 namespace {
@@ -100,6 +104,35 @@ TEST_F(PageDbTest, HeadCommits) {
     EXPECT_EQ(Status::OK, page_db_.RemoveHead(handler, cid));
     EXPECT_EQ(Status::OK, page_db_.GetHeads(handler, &heads));
     EXPECT_TRUE(heads.empty());
+  });
+}
+
+TEST_F(PageDbTest, MergeCommits) {
+  RunInCoroutine([&](CoroutineHandler* handler) {
+    CommitId parent1 = RandomCommitId(environment_.random());
+    CommitId parent2 = RandomCommitId(environment_.random());
+    CommitId merge1 = RandomCommitId(environment_.random());
+    CommitId merge2 = RandomCommitId(environment_.random());
+    std::vector<CommitId> merges;
+
+    // There are no merges
+    EXPECT_EQ(Status::OK,
+              page_db_.GetMerges(handler, parent1, parent2, &merges));
+    EXPECT_THAT(merges, IsEmpty());
+
+    // Add two merges, check they are returned for both orders of the parents
+    std::unique_ptr<PageDbImpl::Batch> batch;
+    EXPECT_EQ(Status::OK, page_db_.StartBatch(handler, &batch));
+    EXPECT_EQ(Status::OK, batch->AddMerge(handler, parent1, parent2, merge1));
+    EXPECT_EQ(Status::OK, batch->AddMerge(handler, parent2, parent1, merge2));
+    EXPECT_EQ(Status::OK, batch->Execute(handler));
+
+    EXPECT_EQ(Status::OK,
+              page_db_.GetMerges(handler, parent1, parent2, &merges));
+    EXPECT_THAT(merges, UnorderedElementsAre(merge1, merge2));
+    EXPECT_EQ(Status::OK,
+              page_db_.GetMerges(handler, parent2, parent1, &merges));
+    EXPECT_THAT(merges, UnorderedElementsAre(merge1, merge2));
   });
 }
 

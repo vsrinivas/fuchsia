@@ -187,6 +187,7 @@ source_set("unittests") {
     "//peridot/bin/ledger/testing:lib",
     "//peridot/lib/rng",
     "//peridot/lib/scoped_tmpfs",
+    "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
 

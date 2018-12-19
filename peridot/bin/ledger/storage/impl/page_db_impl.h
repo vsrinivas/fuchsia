@@ -30,6 +30,9 @@ class PageDbImpl : public PageDb {
                     std::unique_ptr<PageDb::Batch>* batch) override;
   Status GetHeads(coroutine::CoroutineHandler* handler,
                   std::vector<CommitId>* heads) override;
+  Status GetMerges(coroutine::CoroutineHandler* handler,
+                   CommitIdView parent1_id, CommitIdView parent2_id,
+                   std::vector<CommitId>* merges) override;
   Status GetCommitStorageBytes(coroutine::CoroutineHandler* handler,
                                CommitIdView commit_id,
                                std::string* storage_bytes) override;
@@ -67,6 +70,9 @@ class PageDbImpl : public PageDb {
                  zx::time_utc timestamp) override;
   Status RemoveHead(coroutine::CoroutineHandler* handler,
                     CommitIdView head) override;
+  Status AddMerge(coroutine::CoroutineHandler* handler, CommitIdView parent1_id,
+                  CommitIdView parent2_id,
+                  CommitIdView merge_commit_id) override;
   Status AddCommitStorageBytes(coroutine::CoroutineHandler* handler,
                                const CommitId& commit_id,
                                fxl::StringView storage_bytes) override;

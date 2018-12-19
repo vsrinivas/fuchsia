@@ -62,6 +62,16 @@ void FakePageStorage::GetHeadCommitIds(
   callback(Status::OK, std::move(commit_ids));
 }
 
+void FakePageStorage::GetMergeCommitIds(
+    CommitIdView parent1_id, CommitIdView parent2_id,
+    fit::function<void(Status, std::vector<CommitId>)> callback) {
+  auto [parent_min_id, parent_max_id] = std::minmax(parent1_id, parent2_id);
+  auto it = merges_.find(
+      std::make_pair(parent_min_id.ToString(), parent_max_id.ToString()));
+  auto parents = it != merges_.end() ? it->second : std::vector<CommitId>{};
+  callback(Status::OK, std::move(parents));
+}
+
 void FakePageStorage::GetCommit(
     CommitIdView commit_id,
     fit::function<void(Status, std::unique_ptr<const Commit>)> callback) {
@@ -118,7 +128,13 @@ void FakePageStorage::CommitJournal(
       ->Commit([this, callback = std::move(callback)](
                    Status status,
                    std::unique_ptr<const storage::Commit> commit) {
-        for (const storage::CommitIdView& parent_id : commit->GetParentIds()) {
+        std::vector<storage::CommitIdView> parent_ids = commit->GetParentIds();
+        if (parent_ids.size() == 2) {
+          merges_[std::minmax(parent_ids[0].ToString(),
+                              parent_ids[1].ToString())]
+              .push_back(commit->GetId());
+        }
+        for (const storage::CommitIdView& parent_id : parent_ids) {
           auto it = heads_.find(parent_id.ToString());
           if (it != heads_.end()) {
             heads_.erase(it);

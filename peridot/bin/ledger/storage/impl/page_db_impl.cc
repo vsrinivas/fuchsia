@@ -141,6 +141,14 @@ Status PageDbImpl::GetHeads(CoroutineHandler* handler,
   return Status::OK;
 }
 
+Status PageDbImpl::GetMerges(coroutine::CoroutineHandler* handler,
+                             CommitIdView commit1_id, CommitIdView commit2_id,
+                             std::vector<CommitId>* merges) {
+  merges->clear();
+  return db_->GetByPrefix(
+      handler, MergeRow::GetEntriesPrefixFor(commit1_id, commit2_id), merges);
+}
+
 Status PageDbImpl::GetCommitStorageBytes(CoroutineHandler* handler,
                                          CommitIdView commit_id,
                                          std::string* storage_bytes) {
@@ -291,6 +299,13 @@ Status PageDbImpl::RemoveHead(CoroutineHandler* handler, CommitIdView head) {
   RETURN_ON_ERROR(StartBatch(handler, &batch));
   RETURN_ON_ERROR(batch->RemoveHead(handler, head));
   return batch->Execute(handler);
+}
+
+Status PageDbImpl::AddMerge(coroutine::CoroutineHandler* handler,
+                            CommitIdView parent1_id, CommitIdView parent2_id,
+                            CommitIdView merge_commit_id) {
+  // This should only be called in a batch.
+  return Status::ILLEGAL_STATE;
 }
 
 Status PageDbImpl::AddCommitStorageBytes(CoroutineHandler* handler,

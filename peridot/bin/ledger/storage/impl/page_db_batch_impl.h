@@ -24,6 +24,10 @@ class PageDbBatchImpl : public PageDb::Batch {
   Status RemoveHead(coroutine::CoroutineHandler* handler,
                     CommitIdView head) override;
 
+  // Merges.
+  Status AddMerge(coroutine::CoroutineHandler* handler, CommitIdView parent1_id,
+                  CommitIdView parent2_id,
+                  CommitIdView merge_commit_id) override;
   // Commits.
   Status AddCommitStorageBytes(coroutine::CoroutineHandler* handler,
                                const CommitId& commit_id,

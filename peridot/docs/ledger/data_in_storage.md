@@ -123,6 +123,16 @@ separate row is created:
 - Row key: `heads/{commit_id}`
 - Row value: `{creation_timestamp}`
 
+## Merge commits
+
+For each pair of parent commits, the list of their merge commits is updated and
+maintained in storage. For each merge with id `{merge_commit_id}` and parents
+`{parent1_id}` and `{parent2_id}`, a separate row is created. The ids of the
+parents are sorted so that `{parent1_id}` is less than `{parent2_id}` (this may
+be a different order than given the commit object). Then the row is:
+- Row key: `merges/{parent1_id}/{parent2_id}/{merge_commit_id}`
+- Row value: (empty value)
+
 ## Synchronization status
 
 ### Commits

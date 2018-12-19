@@ -24,6 +24,13 @@ void PageStorageEmptyImpl::GetHeadCommitIds(
   callback(Status::NOT_IMPLEMENTED, std::vector<CommitId>());
 }
 
+void PageStorageEmptyImpl::GetMergeCommitIds(
+    CommitIdView /*parent1_id*/, CommitIdView /*parent2_id*/,
+    fit::function<void(Status, std::vector<CommitId>)> callback) {
+  FXL_NOTIMPLEMENTED();
+  callback(Status::NOT_IMPLEMENTED, std::vector<CommitId>());
+}
+
 void PageStorageEmptyImpl::GetCommit(
     CommitIdView /*commit_id*/,
     fit::function<void(Status, std::unique_ptr<const Commit>)> callback) {
