@@ -32,6 +32,7 @@ struct ieee80211_frame_header {
     uint8_t addr2[ETH_ALEN];
     uint8_t addr3[ETH_ALEN];
     uint16_t seq_ctrl;
+    uint8_t addr4[0];
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.3.3.7
@@ -71,6 +72,10 @@ enum ieee80211_frame_subtype {
     IEEE80211_FRAME_SUBTYPE_PROBE_RESP = 0x50,
     IEEE80211_FRAME_SUBTYPE_QOS        = 0x80,
     IEEE80211_FRAME_SUBTYPE_QOS_NULL   = 0xc0,
+
+    /* CONTROL */
+    IEEE80211_FRAME_SUBTYPE_CTS        = 0xc0,
+    IEEE80211_FRAME_SUBTYPE_ACK        = 0xd0,
 };
 
 enum nl80211_band {
@@ -79,11 +84,16 @@ enum nl80211_band {
     NL80211_BAND_60GHZ,
 };
 
+// IEEE Std 802.11-2016, 9.2.4.1.1
 #define IEEE80211_FRAME_TYPE_MASK           0x000c
 #define IEEE80211_FRAME_SUBTYPE_MASK        0x00f0
 #define IEEE80211_FRAME_CTRL_TO_DS_MASK     0x0100
 #define IEEE80211_FRAME_CTRL_FROM_DS_MASK   0x0200
 #define IEEE80211_FRAME_PROTECTED_MASK      0x4000
+#define IEEE80211_FRAME_CTRL_HTC_ORDER_MASK 0x8000
+
+// IEEE Std 802.11-2016, 9.2.4.5.1
+#define IEEE80211_QOS_CTRL_A_MSDU_PRESENT   0x0080
 
 static inline enum ieee80211_frame_type
 ieee80211_get_frame_type(const struct ieee80211_frame_header* fh) {
@@ -99,21 +109,65 @@ static inline bool ieee80211_pkt_is_protected(const struct ieee80211_frame_heade
     return fh->frame_ctrl & IEEE80211_FRAME_PROTECTED_MASK;
 }
 
-// Caveat: for now the get_*_addr functions below only support management frames.
-// We can expand this if we need additional frame parsing ability at the driver level.
-static inline uint8_t* ieee80211_get_dst_addr(struct ieee80211_frame_header* fh) {
-    ZX_ASSERT(ieee80211_get_frame_type(fh) == IEEE80211_FRAME_TYPE_MGMT);
-    return fh->addr1;
-}
-
-static inline uint8_t* ieee80211_get_src_addr(struct ieee80211_frame_header* fh) {
-    ZX_ASSERT(ieee80211_get_frame_type(fh) == IEEE80211_FRAME_TYPE_MGMT);
-    return fh->addr2;
-}
-
 static inline uint8_t* ieee80211_get_bssid(struct ieee80211_frame_header* fh) {
     ZX_ASSERT(ieee80211_get_frame_type(fh) == IEEE80211_FRAME_TYPE_MGMT);
     return fh->addr3;
+}
+
+static bool ieee80211_has_addr4(const struct ieee80211_frame_header* hdr) {
+    uint16_t mask = IEEE80211_FRAME_CTRL_TO_DS_MASK | IEEE80211_FRAME_CTRL_FROM_DS_MASK;
+    return (hdr->frame_ctrl & mask) == mask;
+}
+
+static inline size_t ieee80211_is_qos_data(struct ieee80211_frame_header* fh) {
+    return ieee80211_get_frame_type(fh) == IEEE80211_FRAME_TYPE_DATA
+        && (ieee80211_get_frame_subtype(fh) & IEEE80211_FRAME_SUBTYPE_QOS);
+}
+
+static inline size_t ieee80211_get_qos_ctrl_offset(const struct ieee80211_frame_header* hdr) {
+    return sizeof(struct ieee80211_frame_header) + (ieee80211_has_addr4(hdr) ? ETH_ALEN : 0);
+}
+
+static inline size_t ieee80211_hdrlen(struct ieee80211_frame_header* fh) {
+    switch (ieee80211_get_frame_type(fh)) {
+    case IEEE80211_FRAME_TYPE_MGMT:
+    case IEEE80211_FRAME_TYPE_DATA:
+        return sizeof(struct ieee80211_frame_header)
+            + (ieee80211_has_addr4(fh) ? ETH_ALEN : 0)
+            + (ieee80211_is_qos_data(fh) ? 2 : 0)
+            + ((fh->frame_ctrl & IEEE80211_FRAME_CTRL_HTC_ORDER_MASK) ? 4 : 0);
+    case IEEE80211_FRAME_TYPE_CTRL:
+        // See IEEE Std. 802.11-2016, 9.3.1
+        switch (ieee80211_get_frame_subtype(fh)) {
+        case IEEE80211_FRAME_SUBTYPE_CTS:
+        case IEEE80211_FRAME_SUBTYPE_ACK:
+            return 10;
+        default:
+            return 16;
+        }
+    default:
+        return sizeof(struct ieee80211_frame_header);
+    }
+}
+
+static inline uint8_t* ieee80211_get_dest_addr(struct ieee80211_frame_header* fh) {
+    if (fh->frame_ctrl & IEEE80211_FRAME_CTRL_TO_DS_MASK) {
+        return fh->addr3;
+    } else {
+        return fh->addr1;
+    }
+}
+
+static inline uint8_t* ieee80211_get_src_addr(struct ieee80211_frame_header* fh) {
+    uint16_t mask = IEEE80211_FRAME_CTRL_TO_DS_MASK | IEEE80211_FRAME_CTRL_FROM_DS_MASK;
+    switch (fh->frame_ctrl & mask) {
+    case IEEE80211_FRAME_CTRL_TO_DS_MASK | IEEE80211_FRAME_CTRL_FROM_DS_MASK:
+        return fh->addr4;
+    case IEEE80211_FRAME_CTRL_FROM_DS_MASK:
+        return fh->addr3;
+    default:
+        return fh->addr2;
+    }
 }
 
 #define IEEE80211_HT_MAX_AMPDU_FACTOR 13

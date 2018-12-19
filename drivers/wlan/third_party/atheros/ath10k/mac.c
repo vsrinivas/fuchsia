@@ -3585,15 +3585,6 @@ static bool ath10k_tx_h_use_hwcrypto(struct ath10k* ar, struct ath10k_msg_buf* t
     return true;
 }
 
-static bool have_addr4(const struct ieee80211_frame_header* hdr) {
-    uint16_t mask = IEEE80211_FRAME_CTRL_TO_DS_MASK | IEEE80211_FRAME_CTRL_FROM_DS_MASK;
-    return (hdr->frame_ctrl & mask) == mask;
-}
-
-static size_t get_qos_ctrl_offset(const struct ieee80211_frame_header* hdr) {
-    return sizeof(struct ieee80211_frame_header) + (have_addr4(hdr) ? ETH_ALEN : 0);
-}
-
 /* HTT Tx uses Native Wifi tx mode which expects 802.11 frames without QoS
  * Control in the header. We would prefer that wlanmac allow us to specify
  * that we don't want this information in the header so that we don't have
@@ -3606,11 +3597,9 @@ static void ath10k_tx_h_nwifi(struct ath10k_msg_buf* tx_buf) {
     if (len < sizeof(struct ieee80211_frame_header)) { return; }
     struct ieee80211_frame_header* hdr = pkt;
 
-    if (ieee80211_get_frame_type(hdr) != IEEE80211_FRAME_TYPE_DATA) { return; }
+    if (!ieee80211_is_qos_data(hdr)) { return; }
 
-    if (!(ieee80211_get_frame_subtype(hdr) & IEEE80211_FRAME_SUBTYPE_QOS)) { return; }
-
-    size_t qos_offset = get_qos_ctrl_offset(hdr);
+    size_t qos_offset = ieee80211_get_qos_ctrl_offset(hdr);
     if (qos_offset + IEEE80211_QOS_CTL_LEN > len) { return; }
 
     size_t tail_len = len - (qos_offset + IEEE80211_QOS_CTL_LEN);
