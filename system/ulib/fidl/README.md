@@ -7,22 +7,12 @@ as vectors and strings.
 
 ## Dependencies
 
-This library depends only on the C standard library and the Zircon kernel
-public API. In particular, this library does not depend on the C++ standard
-library, libfbl.a, or libzx.a.
+This library depends only on the C standard library, the Zircon kernel
+public API, and some header-only parts of the C++ standard library.
+In particular, this library does not depend on libfbl.a or libzx.a.
+It also does not link against the C++ standard library.
 
 Some of the object files in this library require an implementation of the
 placement new operators. These implementations are typically provided by the
 C++ standard library, but they can also be provided by other libraries
 (e.g., libzxcpp).
-
-## Idioms
-
-In order to avoid the C++ standard library, this library uses a few unusual
-idioms:
-
-### std::move
-
-Rather than using std::move to create an rvalue reference for a type T, this
-library uses static_cast<T&&>, which is the language-level construct (rather
-than the library-level construct) for creating rvalue references.

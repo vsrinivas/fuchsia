@@ -193,6 +193,33 @@ typedef struct fidl_vector {
 // vector<T>:N   fidl_vector_t  A vector of T, up to N elements.
 // vector<T>:N?  fidl_vector_t  An optional vector of T,  up to N elements.
 
+// Envelope.
+
+// An efficient way to encapsulate uninterpreted FIDL messages.
+// - Stores a variable size uninterpreted payload out-of-line.
+// - Payload may contain an arbitrary number of bytes and handles.
+// - Allows for encapsulation of one FIDL message inside of another.
+// - Building block for derived structures such as Tables.
+
+// When encoded for transfer, |data| indicates presence of content:
+// - FIDL_ALLOC_ABSENT : envelope is null
+// - FIDL_ALLOC_PRESENT : envelope is non-null, |data| is the next out-of-line object
+// When decoded for consumption, |data| is a pointer to content.
+// - nullptr : envelope is null
+// - <valid pointer> : envelope is non-null, |data| is at indicated memory address
+
+typedef struct fidl_envelope {
+    // Number of bytes in the envelope.
+    // Always a multiple of 8; must be zero if envelope is null.
+    uint32_t num_bytes;
+
+    // Number of handles in envelope; must be zero if envelope is null.
+    uint32_t num_handles;
+
+    // Pointer to out-of-line data.
+    void* data;
+} fidl_envelope_t;
+
 // Handle types.
 
 // Handle types are encoded directly. Just like primitive types, there

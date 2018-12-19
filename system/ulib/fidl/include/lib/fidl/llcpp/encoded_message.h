@@ -9,8 +9,8 @@
 #include <cstdint>
 #include <iterator>
 #include <lib/fidl/cpp/message_part.h>
+#include <lib/fidl/internal_callable_traits.h>
 #include <lib/fidl/llcpp/traits.h>
-#include <lib/fit/traits.h>
 #include <type_traits>
 #include <utility>
 #include <zircon/fidl.h>
@@ -88,14 +88,9 @@ public:
     // |callback| is a callable object whose arguments are (BytePart&, HandlePart&).
     template <typename Callback>
     decltype(auto) Initialize(Callback callback) {
+        struct GoldenCallback { void operator()(BytePart&, HandlePart&) {} };
         static_assert(
-            fit::callable_traits<Callback>::args::size == 2 &&
-            std::is_same<
-                BytePart&,
-                typename fit::template callable_traits<Callback>::args::template at<0>>::value &&
-            std::is_same<
-                HandlePart&,
-                typename fit::template callable_traits<Callback>::args::template at<1>>::value,
+            internal::SameArguments<Callback, GoldenCallback>,
             "Callback signature must be: T(BytePart&, HandlePart&).");
         bytes_ = BytePart();
         CloseHandles();

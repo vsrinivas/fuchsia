@@ -4,6 +4,16 @@
 
 #pragma once
 
+#include <cstdint>
+#include <cstdlib>
+#include <stdalign.h>
+#include <type_traits>
+
+#include <lib/fidl/coding.h>
+#include <lib/fidl/internal.h>
+#include <zircon/assert.h>
+#include <zircon/compiler.h>
+
 namespace fidl {
 namespace internal {
 
@@ -197,11 +207,11 @@ public:
                         frame->table_state.known_index++;
                     }
                 }
-                const uint32_t tag_offset = static_cast<uint32_t>(
+                const uint32_t envelope_hdr_offset = static_cast<uint32_t>(
                     frame->offset + (frame->field - 1) * 2 * sizeof(uint64_t));
                 const uint32_t data_offset = static_cast<uint32_t>(
-                    tag_offset + sizeof(uint64_t));
-                const uint64_t packed_sizes = *TypedAt<uint64_t>(tag_offset);
+                    envelope_hdr_offset + sizeof(uint64_t));
+                const uint64_t packed_sizes = *TypedAt<uint64_t>(envelope_hdr_offset);
                 frame->field++;
                 switch (GetPointerState(TypedAt<void>(data_offset))) {
                 case PointerState::PRESENT:

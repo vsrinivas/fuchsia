@@ -12,8 +12,8 @@
 __BEGIN_CDECLS
 
 // The maximum recursion depth the fidl encoder or decoder will
-// perform. Each nested aggregate type (structs, unions, arrays, or
-// vectors) counts as one step in the recursion depth.
+// perform. Each nested aggregate type (structs, unions, arrays,
+// vectors, or tables) counts as one step in the recursion depth.
 #define FIDL_RECURSION_DEPTH 32
 
 // See https://fuchsia.googlesource.com/docs/+/master/development/languages/fidl/languages/c.md#fidl_encode-fidl_encode_msg

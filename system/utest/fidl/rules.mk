@@ -26,6 +26,7 @@ MODULE_NAME := fidl-test
 MODULE_STATIC_LIBS := \
     system/ulib/fbl \
     system/ulib/fidl \
+    system/ulib/fit \
     system/ulib/zx \
     system/ulib/zxcpp \
 
@@ -34,8 +35,5 @@ MODULE_LIBS := \
     system/ulib/fdio \
     system/ulib/unittest \
     system/ulib/zircon \
-
-MODULE_COMPILEFLAGS += \
-    -Isystem/ulib/fit/include \
 
 include make/module.mk

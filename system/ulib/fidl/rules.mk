@@ -14,18 +14,16 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/encoding.cpp \
     $(LOCAL_DIR)/epitaph.c \
     $(LOCAL_DIR)/formatting.cpp \
+    $(LOCAL_DIR)/handle_closing.cpp \
     $(LOCAL_DIR)/message_buffer.cpp \
     $(LOCAL_DIR)/message_builder.cpp \
     $(LOCAL_DIR)/message.cpp \
     $(LOCAL_DIR)/transport.cpp \
     $(LOCAL_DIR)/validating.cpp \
-    $(LOCAL_DIR)/handle_closing.cpp \
+    $(LOCAL_DIR)/walker.cpp \
 
 MODULE_LIBS := \
     system/ulib/zircon \
-
-MODULE_COMPILEFLAGS += \
-    -Isystem/ulib/fit/include \
 
 MODULE_PACKAGE := src
 
