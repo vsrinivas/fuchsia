@@ -5,7 +5,6 @@
 #include <string>
 
 #include <gmock/gmock.h>
-#include <gtest/gtest.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/string_printf.h>
 
@@ -13,45 +12,119 @@
 
 using ::testing::HasSubstr;
 
-static constexpr char kVirtioRngUtil[] = "virtio_rng_test_util";
+static constexpr char kVirtioRngUtilCmx[] = "meta/virtio_rng_test_util.cmx";
+static constexpr char kLinuxTestUtilDir[] = "/testutils";
 
-template <class T>
-T GuestTest<T>::enclosed_guest_;
-
-class SingleCpuZirconEnclosedGuest : public ZirconEnclosedGuest {
-  zx_status_t LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) override {
+class ZirconSingleCpuGuestTest : public GuestTest<ZirconSingleCpuGuestTest> {
+ public:
+  static bool LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) {
     launch_info->url = kZirconGuestUrl;
     launch_info->args.push_back("--virtio-gpu=false");
     launch_info->args.push_back("--cpus=1");
     launch_info->args.push_back("--cmdline-add=kernel.serial=none");
-    return ZX_OK;
+    return true;
+  }
+
+  static bool SetUpGuest() {
+    if (WaitForAppmgrReady() != ZX_OK) {
+      ADD_FAILURE() << "Failed to wait for appmgr";
+      return false;
+    }
+    return true;
   }
 };
 
-class SingleCpuLinuxEnclosedGuest : public LinuxEnclosedGuest {
-  zx_status_t LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) override {
+TEST_F(ZirconSingleCpuGuestTest, LaunchGuest) {
+  std::string result;
+  EXPECT_EQ(Execute("echo \"test\"", &result), ZX_OK);
+  EXPECT_EQ(result, "test\n");
+}
+
+class ZirconGuestTest : public GuestTest<ZirconGuestTest> {
+ public:
+  static bool LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) {
+    launch_info->url = kZirconGuestUrl;
+    launch_info->args.push_back("--virtio-gpu=false");
+    launch_info->args.push_back("--cmdline-add=kernel.serial=none");
+    return true;
+  }
+
+  static bool SetUpGuest() {
+    if (WaitForAppmgrReady() != ZX_OK) {
+      ADD_FAILURE() << "Failed to wait for appmgr";
+      return false;
+    }
+    return true;
+  }
+};
+
+TEST_F(ZirconGuestTest, LaunchGuest) {
+  std::string result;
+  EXPECT_EQ(Execute("echo \"test\"", &result), ZX_OK);
+  EXPECT_EQ(result, "test\n");
+}
+
+TEST_F(ZirconGuestTest, VirtioRng) {
+  std::string result;
+  EXPECT_EQ(Run(kVirtioRngUtilCmx, "", &result), ZX_OK);
+  EXPECT_THAT(result, HasSubstr("PASS"));
+}
+
+class LinuxSingleCpuGuestTest : public GuestTest<LinuxSingleCpuGuestTest> {
+ public:
+  static bool LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) {
     launch_info->url = kLinuxGuestUrl;
     launch_info->args.push_back("--virtio-gpu=false");
     launch_info->args.push_back("--cpus=1");
     launch_info->args.push_back(
         "--cmdline=loglevel=0 console=hvc0 root=/dev/vda rw");
-    return ZX_OK;
+    return true;
+  }
+
+  static bool SetUpGuest() {
+    if (WaitForShellReady() != ZX_OK) {
+      ADD_FAILURE() << "Failed to wait for shell";
+      return false;
+    }
+    return true;
   }
 };
 
-using GuestTypes =
-    ::testing::Types<ZirconEnclosedGuest, SingleCpuZirconEnclosedGuest,
-                     LinuxEnclosedGuest, SingleCpuLinuxEnclosedGuest>;
-TYPED_TEST_CASE(GuestTest, GuestTypes);
-
-TYPED_TEST(GuestTest, LaunchGuest) {
+TEST_F(LinuxSingleCpuGuestTest, LaunchGuest) {
   std::string result;
-  EXPECT_EQ(this->Execute("echo \"test\"", &result), ZX_OK);
+  EXPECT_EQ(Execute("echo \"test\"", &result), ZX_OK);
   EXPECT_EQ(result, "test\n");
 }
 
-TYPED_TEST(GuestTest, VirtioRng) {
+class LinuxGuestTest : public GuestTest<LinuxGuestTest> {
+ public:
+  static bool LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) {
+    launch_info->url = kLinuxGuestUrl;
+    launch_info->args.push_back("--virtio-gpu=false");
+    launch_info->args.push_back(
+        "--cmdline=loglevel=0 console=hvc0 root=/dev/vda rw");
+    return true;
+  }
+
+  static bool SetUpGuest() {
+    if (WaitForShellReady() != ZX_OK) {
+      ADD_FAILURE() << "Failed to wait for shell";
+      return false;
+    }
+    return true;
+  }
+};
+
+TEST_F(LinuxGuestTest, LaunchGuest) {
   std::string result;
-  EXPECT_EQ(this->RunUtil(kVirtioRngUtil, "", &result), ZX_OK);
+  EXPECT_EQ(Execute("echo \"test\"", &result), ZX_OK);
+  EXPECT_EQ(result, "test\n");
+}
+
+TEST_F(LinuxGuestTest, VirtioRng) {
+  std::string cmd =
+      fxl::StringPrintf("%s/%s", kLinuxTestUtilDir, "virtio_rng_test_util");
+  std::string result;
+  EXPECT_EQ(Execute(cmd, &result), ZX_OK);
   EXPECT_THAT(result, HasSubstr("PASS"));
 }

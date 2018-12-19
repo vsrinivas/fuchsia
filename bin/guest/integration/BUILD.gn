@@ -13,6 +13,7 @@ executable("bin") {
   sources = [
     "enclosed_guest.cc",
     "enclosed_guest.h",
+    "guest_test.cc",
     "guest_test.h",
     "main.cc",
     "test_serial.cc",

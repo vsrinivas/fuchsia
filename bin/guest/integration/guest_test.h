@@ -7,52 +7,74 @@
 
 #include "garnet/bin/guest/integration/enclosed_guest.h"
 
-#include <fbl/type_info.h>
-#include <lib/fxl/logging.h>
+static constexpr char kZirconGuestUrl[] =
+    "fuchsia-pkg://fuchsia.com/zircon_guest#meta/zircon_guest.cmx";
+static constexpr char kLinuxGuestUrl[] =
+    "fuchsia-pkg://fuchsia.com/linux_guest#meta/linux_guest.cmx";
 
-// GuestTest creates a static EnclosedGuest to be shared across all tests in a
-// test fixture. Each translation unit that uses GuestTest must instantiate
-// enclosed_guest_ for each derivation of EnclosedGuest it uses. For example:
-//    template <class T>
-//    T* GuestTest<T>::enclosed_guest_ = nullptr;
+zx_status_t GuestWaitForShellReady(EnclosedGuest& enclosed_guest);
+zx_status_t GuestWaitForAppmgrReady(EnclosedGuest& enclosed_guest);
+zx_status_t GuestRun(EnclosedGuest& enclosed_guest, const std::string& cmx,
+                     const std::string& args, std::string* result);
+
 template <class T>
 class GuestTest : public ::testing::Test {
- public:
+ protected:
   static void SetUpTestCase() {
-    FXL_LOG(INFO) << "Guest: " << fbl::TypeInfo<T>::Name();
-    ASSERT_EQ(enclosed_guest_.Start(), ZX_OK);
+    enclosed_guest_ = new EnclosedGuest();
+    fuchsia::guest::LaunchInfo launch_info;
+    ASSERT_TRUE(T::LaunchInfo(&launch_info));
+    ASSERT_EQ(enclosed_guest_->Start(std::move(launch_info)), ZX_OK);
+    ASSERT_TRUE(T::SetUpGuest());
+    setup_succeeded_ = true;
   }
 
-  static void TearDownTestCase() { enclosed_guest_.Stop(); }
+  static bool SetUpGuest() { return true; }
 
- protected:
+  static void TearDownTestCase() {
+    enclosed_guest_->Stop();
+    delete enclosed_guest_;
+  }
+
+  static zx_status_t WaitForShellReady() {
+    return GuestWaitForShellReady(*enclosed_guest_);
+  }
+
+  static zx_status_t WaitForAppmgrReady() {
+    return GuestWaitForAppmgrReady(*enclosed_guest_);
+  }
+
   void SetUp() {
     // An assertion failure in SetUpTestCase doesn't prevent tests from running,
     // so we need to check that it succeeded here.
-    ASSERT_TRUE(enclosed_guest_.Ready()) << "Guest setup failed";
+    ASSERT_TRUE(setup_succeeded_) << "Guest setup failed";
   }
 
   static zx_status_t Execute(const std::string& message,
                              std::string* result = nullptr) {
-    return enclosed_guest_.Execute(message, result);
+    return enclosed_guest_->Execute(message, result);
   }
 
-  static zx_status_t RunUtil(const std::string& util, const std::string& args,
-                             std::string* result = nullptr) {
-    return enclosed_guest_.RunUtil(util, args, result);
+  static zx_status_t Run(const std::string& cmx, const std::string& args,
+                         std::string* result = nullptr) {
+    return GuestRun(*enclosed_guest_, cmx, args, result);
   }
 
-  uint32_t GetGuestCid() { return enclosed_guest_.GetGuestCid(); }
+  uint32_t GetGuestCid() { return enclosed_guest_->GetGuestCid(); }
 
   void GetHostVsockEndpoint(
       fidl::InterfaceRequest<fuchsia::guest::HostVsockEndpoint> endpoint) {
-    enclosed_guest_.GetHostVsockEndpoint(std::move(endpoint));
+    enclosed_guest_->GetHostVsockEndpoint(std::move(endpoint));
   }
 
-  const T& GetEnclosedGuest() const { return enclosed_guest_; }
-
  private:
-  static T enclosed_guest_;
+  static bool setup_succeeded_;
+  static EnclosedGuest* enclosed_guest_;
 };
+
+template <class T>
+bool GuestTest<T>::setup_succeeded_ = false;
+template <class T>
+EnclosedGuest* GuestTest<T>::enclosed_guest_ = nullptr;
 
 #endif  // GARNET_BIN_GUEST_INTEGRATION_GUEST_TEST_H_
