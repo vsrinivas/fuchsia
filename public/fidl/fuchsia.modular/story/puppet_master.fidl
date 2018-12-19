@@ -45,7 +45,9 @@ struct ExecuteResult {
 // shells (session and story shells).
 [Discoverable]
 interface PuppetMaster {
-    // Requests a capability to control a story by name.
+    // Requests a capability to control a story by name. The name acts as the
+    // story's unique ID.  Calling ControlStory() for the same story name will
+    // control the same story.
     //
     // The story name, as well as modification to the story, are durable and
     // persist across device reboots. This allows the client to assign its own
