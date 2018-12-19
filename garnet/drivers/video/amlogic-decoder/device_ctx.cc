@@ -11,6 +11,9 @@
 
 namespace {
 
+// TODO(dustingreen): Flip the direction to accept a server channel and serve
+// that channel, instead of creating a client endpoint and returning the client
+// end.  Also switch to DDK FIDL with one "Connect" message.
 static zx_status_t amlogic_video_ioctl(void* ctx, uint32_t op,
                                        const void* in_buf, size_t in_len,
                                        void* out_buf, size_t out_len,
