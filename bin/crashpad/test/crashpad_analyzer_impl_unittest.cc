@@ -19,6 +19,8 @@
 #include <lib/zx/thread.h>
 #include <zircon/errors.h>
 
+#include "garnet/bin/crashpad/config.h"
+
 namespace fuchsia {
 namespace crash {
 namespace {
@@ -26,7 +28,9 @@ namespace {
 class CrashpadAnalyzerImplTest : public ::testing::Test {
  public:
   void SetUp() override {
-    analyzer_ = CrashpadAnalyzerImpl::TryCreate(database_path_.path());
+    analyzer_ = CrashpadAnalyzerImpl::TryCreate(
+        Config{/*local_crashpad_database_path=*/database_path_.path(),
+               /*enable_upload_to_crash_server=*/false});
   }
 
  protected:

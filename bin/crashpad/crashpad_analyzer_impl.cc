@@ -36,6 +36,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 
+#include "config.h"
 #include "report_annotations.h"
 #include "report_attachments.h"
 
@@ -64,7 +65,8 @@ zx_status_t CrashpadAnalyzerImpl::UploadReport(
        !uploads_enabled)) {
     FX_LOGS(INFO)
         << "upload to remote crash server disabled. Local crash report, ID "
-        << local_report_id.ToString() << ", available under " << database_path_;
+        << local_report_id.ToString() << ", available under "
+        << config_.local_crashpad_database_path;
     database_->SkipReportUpload(
         local_report_id,
         crashpad::Metrics::CrashSkippedReason::kUploadsDisabled);
@@ -169,7 +171,7 @@ zx_status_t CrashpadAnalyzerImpl::HandleNativeException(
   // attachments, not file objects, but we need the underlying files
   // to still be there.
   const std::map<std::string, ScopedUnlink> attachments =
-      MakeNativeExceptionAttachments(database_path_);
+      MakeNativeExceptionAttachments(config_.local_crashpad_database_path);
   std::map<std::string, base::FilePath> attachment_paths;
   for (const auto& key_file : attachments) {
     attachment_paths[key_file.first] = base::FilePath(key_file.second.get());
@@ -281,9 +283,9 @@ zx_status_t CrashpadAnalyzerImpl::ProcessKernelPanicCrashlog(
 }
 
 CrashpadAnalyzerImpl::CrashpadAnalyzerImpl(
-    const std::string& database_path,
+    const Config config,
     std::unique_ptr<crashpad::CrashReportDatabase> database)
-    : database_path_(database_path), database_(std::move(database)) {
+    : config_(config), database_(std::move(database)) {
   FXL_DCHECK(database_);
 }
 
@@ -322,30 +324,37 @@ void CrashpadAnalyzerImpl::ProcessKernelPanicCrashlog(
 }
 
 std::unique_ptr<CrashpadAnalyzerImpl> CrashpadAnalyzerImpl::TryCreate(
-    const std::string& database_path) {
-  if (!files::IsDirectory(database_path)) {
-    files::CreateDirectory(database_path);
+    const Config config) {
+  if (!files::IsDirectory(config.local_crashpad_database_path)) {
+    files::CreateDirectory(config.local_crashpad_database_path);
   }
 
   std::unique_ptr<crashpad::CrashReportDatabase> database(
-      crashpad::CrashReportDatabase::Initialize(base::FilePath(database_path)));
+      crashpad::CrashReportDatabase::Initialize(
+          base::FilePath(config.local_crashpad_database_path)));
   if (!database) {
     FX_LOGS(ERROR) << "error initializing local crash report database at "
-                   << database_path;
+                   << config.local_crashpad_database_path;
     return nullptr;
   }
 
   // Today we enable uploads here. In the future, this will most likely be set
   // in some external settings.
   // TODO(DX-714): re-enable upload once configurable.
-  database->GetSettings()->SetUploadsEnabled(false);
+  database->GetSettings()->SetUploadsEnabled(
+      config.enable_upload_to_crash_server);
 
   return std::unique_ptr<CrashpadAnalyzerImpl>(
-      new CrashpadAnalyzerImpl(database_path, std::move(database)));
+      new CrashpadAnalyzerImpl(config, std::move(database)));
 }
 
 std::unique_ptr<CrashpadAnalyzerImpl> CrashpadAnalyzerImpl::TryCreate() {
-  return CrashpadAnalyzerImpl::TryCreate("/data/crashes");
+  Config config;
+  if (ParseConfig("/pkg/data/config.json", &config) != ZX_OK) {
+    return nullptr;
+  }
+
+  return CrashpadAnalyzerImpl::TryCreate(config);
 }
 
 }  // namespace crash

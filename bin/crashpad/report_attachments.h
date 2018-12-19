@@ -11,8 +11,8 @@
 
 #include <fuchsia/crash/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
-#include <sys/types.h>
 #include <third_party/crashpad/client/crash_report_database.h>
+#include <zircon/types.h>
 
 #include "scoped_unlink.h"
 

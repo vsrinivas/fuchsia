@@ -8,7 +8,7 @@ executable("bin") {
   output_name = "crashpad_analyzer"
 
   deps = [
-    ":crashpad_analyzer_impl",
+    ":crashpad_analyzer_files",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/syslog/cpp",
     "//zircon/public/fidl/fuchsia-crash",
@@ -33,12 +33,26 @@ package("crashpad_analyzer") {
       dest = "crashpad_analyzer.cmx"
     },
   ]
+
+  resources = [
+    {
+      path = rebase_path("configs/config.json")
+      dest = "config.json"
+    },
+  ]
 }
 
-source_set("crashpad_analyzer_impl") {
+source_set("crashpad_analyzer_files") {
   sources = [
+    "config.cc",
+    "config.h",
     "crashpad_analyzer_impl.cc",
     "crashpad_analyzer_impl.h",
+    "report_annotations.cc",
+    "report_annotations.h",
+    "report_attachments.cc",
+    "report_attachments.h",
+    "scoped_unlink.h",
   ]
 
   public_deps = [
@@ -52,35 +66,14 @@ source_set("crashpad_analyzer_impl") {
   ]
 
   deps = [
-    ":report_utils",
     "//garnet/public/lib/syslog/cpp",
     "//third_party/crashpad/handler",
     "//third_party/crashpad/minidump",
     "//third_party/crashpad/third_party/mini_chromium/mini_chromium/base",
+    "//third_party/rapidjson",
+    "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/inspector",
-  ]
-}
-
-source_set("report_utils") {
-  sources = [
-    "report_annotations.cc",
-    "report_annotations.h",
-    "report_attachments.cc",
-    "report_attachments.h",
-    "scoped_unlink.h",
-  ]
-
-  deps = [
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/syslog/cpp",
-    "//third_party/crashpad/client",
-    "//third_party/crashpad/minidump",
-    "//third_party/crashpad/third_party/mini_chromium/mini_chromium/base",
-    "//zircon/public/fidl/fuchsia-crash",
-    "//zircon/public/fidl/fuchsia-mem",
-    "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
-    "//zircon/public/lib/zx",
   ]
 }

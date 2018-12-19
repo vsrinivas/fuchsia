@@ -19,6 +19,8 @@
 #include <third_party/crashpad/util/misc/uuid.h>
 #include <zircon/status.h>
 
+#include "config.h"
+
 namespace fuchsia {
 namespace crash {
 
@@ -28,8 +30,7 @@ class CrashpadAnalyzerImpl : public Analyzer {
   // Returns nullptr if the analyzer cannot be instantiated, e.g., because the
   // local report database cannot be accessed.
   static std::unique_ptr<CrashpadAnalyzerImpl> TryCreate();
-  static std::unique_ptr<CrashpadAnalyzerImpl> TryCreate(
-      const std::string& database_path);
+  static std::unique_ptr<CrashpadAnalyzerImpl> TryCreate(const Config config);
 
   void HandleNativeException(zx::process process, zx::thread thread,
                              zx::port exception_port,
@@ -46,7 +47,7 @@ class CrashpadAnalyzerImpl : public Analyzer {
 
  private:
   explicit CrashpadAnalyzerImpl(
-      const std::string& database_path,
+      const Config config,
       std::unique_ptr<crashpad::CrashReportDatabase> database);
 
   zx_status_t HandleNativeException(zx::process process, zx::thread thread,
@@ -67,7 +68,7 @@ class CrashpadAnalyzerImpl : public Analyzer {
       const std::map<std::string, std::string>* annotations,
       bool read_annotations_from_minidump);
 
-  const std::string database_path_;
+  const Config config_;
   const std::unique_ptr<crashpad::CrashReportDatabase> database_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CrashpadAnalyzerImpl);
