@@ -5,10 +5,30 @@
 
 ### start fuchsia in qemu with a FVM disk
 
+## Usage: fx run [-S <disk_size>] [-- <run-zircon options>... [-- <qemu options>...]]
+## Use `fx run -- -h` to see options available for `run-zircon`.
+## Use `fx run -- -- -h` to see option available for `qemu`.
+
 set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/image_build_vars.sh
 source "${FUCHSIA_DIR}/buildtools/vars.sh"
+
+while getopts ":S:h" FLAG; do
+  case $FLAG in
+    S) QEMU_DISK_SIZE=$OPTARG;;
+    h)
+      fx-command-help
+      exit 1
+      ;;
+    \?)
+      echo unrecognized option
+      fx-command-help
+      exit 1
+      ;;
+  esac
+done
+shift $((OPTIND-1))
 
 qemu_dir="${BUILDTOOLS_QEMU_DIR}/bin"
 
@@ -23,7 +43,7 @@ qimg="${qcowdir}/fuchsia.qcow2"
 trap 'rm "${qimg}" && rmdir "${qcowdir}"' EXIT
 
 "${qemu_dir}/qemu-img" create -f qcow2 -b "${FUCHSIA_BUILD_DIR}/${IMAGE_FVM_RAW}" \
-  "${qimg}"
+  "${qimg}" ${QEMU_DISK_SIZE}
 
 "${FUCHSIA_DIR}/zircon/scripts/run-zircon" \
   -a "${FUCHSIA_ARCH}" \
