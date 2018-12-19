@@ -491,41 +491,6 @@ struct HistogramBucket {
     uint64 count;
 };
 
-// A structured 'Count' event.
-struct CountEvent {
-    int64 period_duration_micros;
-    int64 count;
-};
-
-// The union of all possible event types.
-union Event {
-    // A Count event.
-    CountEvent event_count;
-
-    // An IntHistogram event.
-    vector<HistogramBucket> int_histogram;
-};
-
-struct CobaltEvent {
-    // ID of the metric to use. It must be one of the Metrics from the
-    // ProjectProfile used to obtain this Logger, and it must be of the correct
-    // type.
-    uint32 metric_id;
-
-    // A list of event codes for each of the event code groups in the config.
-    // The indexed set of all event code groups and their labels is specified in
-    // the metric definition.
-    vector<uint32>:5 event_codes;
-
-    // Optionally, a component associated with integer-valued measurements may
-    // also be logged. Any notion of component that makes sense may be used or
-    // use the empty string if there is no natural notion of component.
-    string:64? component;
-
-    // The event-specific information for the event to be logged.
-    Event event;
-};
-
 // Logger is an extension of the LoggerBase interface that adds some additional
 // methods that do not naturally conform to the Simple layout. We opt for
 // a natural easy-to-understand interface at the cost of not being "Simple".
@@ -574,14 +539,6 @@ interface Logger : LoggerBase {
     // be consistent with the dimensions declared in the Metric definition.
     101: LogCustomEvent(uint32 metric_id, vector<CustomEventValue> event_values)
              -> (Status status);
-
-    // Logs a structured CobaltEvent object.
-    [Transitional]
-    102: LogCobaltEvent(CobaltEvent event) -> (Status status);
-
-    // Logs a list of structured CobaltEvent objects.
-    [Transitional]
-    103: LogCobaltEvents(vector<CobaltEvent> events) -> (Status status);
 };
 
 /////////////////////////////////////////////////////////////////////
