@@ -29,8 +29,7 @@ namespace mozart {
 // It is not necessary to use this class to implement all Views.
 // This class is merely intended to make the simple apps easier to write.
 class BaseView : private ::fuchsia::ui::viewsv1::ViewListener,
-                 private ::fuchsia::ui::viewsv1::ViewContainerListener,
-                 private fuchsia::ui::input::InputListener {
+                 private ::fuchsia::ui::viewsv1::ViewContainerListener {
  public:
   BaseView(::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
            fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
@@ -100,11 +99,6 @@ class BaseView : private ::fuchsia::ui::viewsv1::ViewListener,
   // Gets the view's metrics.
   // This value is zero until the view receives metrics from its session.
   const fuchsia::ui::gfx::Metrics& metrics() const { return adjusted_metrics_; }
-
-  // Gets the input connection.
-  fuchsia::ui::input::InputConnection* input_connection() {
-    return input_connection_.get();
-  }
 
   // Sets a callback which is invoked when the view's owner releases the
   // view causing the view manager to unregister it.
@@ -178,10 +172,6 @@ class BaseView : private ::fuchsia::ui::viewsv1::ViewListener,
   void OnChildUnavailable(uint32_t child_key,
                           OnChildUnavailableCallback callback) override;
 
-  // |InputListener|:
-  void OnEvent(fuchsia::ui::input::InputEvent event,
-               OnEventCallback callback) override;
-
   void PresentScene(zx_time_t presentation_time);
   void HandleSessionEvents(fidl::VectorPtr<fuchsia::ui::scenic::Event> events);
   void AdjustMetricsAndPhysicalSize();
@@ -190,12 +180,10 @@ class BaseView : private ::fuchsia::ui::viewsv1::ViewListener,
   fidl::Binding<::fuchsia::ui::viewsv1::ViewListener> view_listener_binding_;
   fidl::Binding<::fuchsia::ui::viewsv1::ViewContainerListener>
       view_container_listener_binding_;
-  fidl::Binding<fuchsia::ui::input::InputListener> input_listener_binding_;
 
   ::fuchsia::ui::viewsv1::ViewPtr view_;
   fuchsia::sys::ServiceProviderPtr view_service_provider_;
   ::fuchsia::ui::viewsv1::ViewContainerPtr view_container_;
-  fuchsia::ui::input::InputConnectionPtr input_connection_;
   ::fuchsia::ui::viewsv1::ViewProperties properties_;
   fuchsia::math::SizeF logical_size_;
   fuchsia::math::Size physical_size_;

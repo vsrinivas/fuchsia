@@ -19,7 +19,6 @@ V1BaseView::V1BaseView(scenic::ViewContext context,
                     ::fuchsia::ui::viewsv1::ViewManager>()),
       view_listener_binding_(this),
       view_container_listener_binding_(this),
-      input_listener_binding_(this),
       incoming_services_(context.outgoing_services.Bind()),
       outgoing_services_(std::move(context.incoming_services)),
       session_(std::move(context.session_and_listener_request)),
@@ -34,10 +33,6 @@ V1BaseView::V1BaseView(scenic::ViewContext context,
   view_manager_->CreateView2(view_.NewRequest(), std::move(context.view_token),
                              view_listener_binding_.NewBinding(),
                              std::move(parent_export_token), debug_name);
-
-  component::ConnectToService(GetViewServiceProvider(),
-                              input_connection_.NewRequest());
-  input_connection_->SetEventListener(input_listener_binding_.NewBinding());
 
   session_.set_event_handler(
       std::bind(&V1BaseView::HandleSessionEvents, this, std::placeholders::_1));
@@ -211,13 +206,6 @@ void V1BaseView::OnChildUnavailable(uint32_t child_key,
   TRACE_DURATION("view", "OnChildUnavailable", "child_key", child_key);
   OnChildUnavailable(child_key);
   callback();
-}
-
-void V1BaseView::OnEvent(fuchsia::ui::input::InputEvent event,
-                         OnEventCallback callback) {
-  TRACE_DURATION("view", "OnEvent");
-  bool handled = OnInputEvent(std::move(event));
-  callback(handled);
 }
 
 }  // namespace scenic

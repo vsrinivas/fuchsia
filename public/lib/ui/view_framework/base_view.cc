@@ -31,7 +31,6 @@ BaseView::BaseView(
     : view_manager_(std::move(view_manager)),
       view_listener_binding_(this),
       view_container_listener_binding_(this),
-      input_listener_binding_(this),
       session_(GetScenic(view_manager_.get()).get()),
       parent_node_(&session_) {
   FXL_DCHECK(view_manager_);
@@ -44,10 +43,6 @@ BaseView::BaseView(
       zx::eventpair(view_owner_request.TakeChannel().release()),
       view_listener_binding_.NewBinding(), std::move(parent_export_token),
       label);
-
-  component::ConnectToService(GetViewServiceProvider(),
-                              input_connection_.NewRequest());
-  input_connection_->SetEventListener(input_listener_binding_.NewBinding());
 
   session_.set_event_handler(
       std::bind(&BaseView::HandleSessionEvents, this, std::placeholders::_1));
@@ -220,13 +215,6 @@ void BaseView::OnChildUnavailable(uint32_t child_key,
   TRACE_DURATION("view", "OnChildUnavailable", "child_key", child_key);
   OnChildUnavailable(child_key);
   callback();
-}
-
-void BaseView::OnEvent(fuchsia::ui::input::InputEvent event,
-                       OnEventCallback callback) {
-  TRACE_DURATION("view", "OnEvent");
-  bool handled = OnInputEvent(std::move(event));
-  callback(handled);
 }
 
 }  // namespace mozart
