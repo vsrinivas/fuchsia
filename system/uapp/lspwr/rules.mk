@@ -9,12 +9,16 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userapp
 MODULE_GROUP := misc
 
-MODULE_SRCS += $(LOCAL_DIR)/lspwr.c
+MODULE_SRCS += $(LOCAL_DIR)/lspwr.cpp
 
 MODULE_LIBS := \
-    system/ulib/zircon \
     system/ulib/c \
     system/ulib/fdio \
+    system/ulib/zircon
+
+MODULE_STATIC_LIBS := \
+    system/ulib/fbl \
+    system/ulib/zxcpp
 
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-power

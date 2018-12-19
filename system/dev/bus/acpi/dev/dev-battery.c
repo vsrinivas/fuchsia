@@ -46,6 +46,7 @@ typedef struct acpi_battery_device {
     atomic_bool shutdown;
 } acpi_battery_device_t;
 
+// Returns the current ON/OFF status for a power resource
 static zx_status_t call_STA(acpi_battery_device_t* dev) {
     ACPI_OBJECT obj = {
         .Type = ACPI_TYPE_INTEGER,
@@ -246,41 +247,44 @@ zx_status_t fidl_battery_get_power_info(void* ctx, fidl_txn_t* txn) {
 
     // reading state clears the signal
     zx_object_signal(dev->event, ZX_USER_SIGNAL_0, 0);
-    return fuchsia_power_SourceGetPowerInfo_reply(txn, &info);
+    return fuchsia_power_SourceGetPowerInfo_reply(txn, ZX_OK, &info);
 }
 
 zx_status_t fidl_battery_get_battery_info(void* ctx, fidl_txn_t* txn) {
     acpi_battery_device_t* dev = ctx;
-    struct fuchsia_power_BatteryInfo info;
+    zx_status_t status = call_BST(dev);
+    struct fuchsia_power_BatteryInfo info = {};
 
-    call_BST(dev);
-    mtx_lock(&dev->lock);
-    info.unit = dev->battery_info.unit;
-    info.design_capacity = dev->battery_info.design_capacity;
-    info.last_full_capacity = dev->battery_info.last_full_capacity;
-    info.design_voltage = dev->battery_info.design_voltage;
-    info.capacity_warning = dev->battery_info.capacity_warning;
-    info.capacity_low = dev->battery_info.capacity_low;
-    info.capacity_granularity_low_warning = dev->battery_info.capacity_granularity_low_warning;
-    info.capacity_granularity_warning_full = dev->battery_info.capacity_granularity_warning_full;
-    info.present_rate = dev->battery_info.present_rate;
-    info.remaining_capacity = dev->battery_info.remaining_capacity;
-    info.present_voltage = dev->battery_info.present_voltage;
-    mtx_unlock(&dev->lock);
+    if (status == ZX_OK) {
+        mtx_lock(&dev->lock);
+        info.unit = dev->battery_info.unit;
+        info.design_capacity = dev->battery_info.design_capacity;
+        info.last_full_capacity = dev->battery_info.last_full_capacity;
+        info.design_voltage = dev->battery_info.design_voltage;
+        info.capacity_warning = dev->battery_info.capacity_warning;
+        info.capacity_low = dev->battery_info.capacity_low;
+        info.capacity_granularity_low_warning = dev->battery_info.capacity_granularity_low_warning;
+        info.capacity_granularity_warning_full = dev->battery_info.capacity_granularity_warning_full;
+        info.present_rate = dev->battery_info.present_rate;
+        info.remaining_capacity = dev->battery_info.remaining_capacity;
+        info.present_voltage = dev->battery_info.present_voltage;
+        mtx_unlock(&dev->lock);
+    }
 
-    return fuchsia_power_SourceGetBatteryInfo_reply(txn, &info);
+    return fuchsia_power_SourceGetBatteryInfo_reply(txn, status, &info);
 }
 
 zx_status_t fidl_battery_get_state_change_event(void* ctx, fidl_txn_t* txn) {
     acpi_battery_device_t* dev = ctx;
     zx_handle_t out_handle;
-    zx_rights_t rights = ZX_RIGHT_READ | ZX_RIGHT_WAIT | ZX_RIGHT_TRANSFER;
+    zx_rights_t rights = ZX_RIGHT_WAIT | ZX_RIGHT_TRANSFER;
     zx_status_t status = zx_handle_duplicate(dev->event, rights, &out_handle);
 
     if (status == ZX_OK) {
         // clear the signal before returning
         zx_object_signal(dev->event, ZX_USER_SIGNAL_0, 0);
     }
+
     return fuchsia_power_SourceGetStateChangeEvent_reply(txn, status, out_handle);
 }
 

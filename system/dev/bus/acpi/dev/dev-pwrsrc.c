@@ -84,7 +84,7 @@ zx_status_t fidl_pwrsrc_get_power_info(void* ctx, fidl_txn_t* txn) {
 
     // reading state clears the signal
     zx_object_signal(dev->event, ZX_USER_SIGNAL_0, 0);
-    return fuchsia_power_SourceGetPowerInfo_reply(txn, &info);
+    return fuchsia_power_SourceGetPowerInfo_reply(txn, ZX_OK, &info);
 }
 
 zx_status_t fidl_pwrsrc_get_state_change_event(void* ctx, fidl_txn_t* txn) {
