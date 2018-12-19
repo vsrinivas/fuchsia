@@ -131,6 +131,23 @@ static zx_status_t usb_interface_control(void* ctx, uint8_t request_type, uint8_
                        write_size, out_read_buffer, read_size, out_read_actual);
 }
 
+static zx_status_t usb_interface_control_out(void* ctx, uint8_t request_type, uint8_t request,
+                                             uint16_t value, uint16_t index, zx_time_t timeout,
+                                             const void* write_buffer, size_t write_size) {
+    usb_interface_t* intf = ctx;
+    return usb_control_out(&intf->comp->usb, request_type, request, value, index, timeout,
+                           write_buffer, write_size);
+}
+
+static zx_status_t usb_interface_control_in(void* ctx, uint8_t request_type, uint8_t request,
+                                            uint16_t value, uint16_t index, zx_time_t timeout,
+                                            void* out_read_buffer, size_t read_size,
+                                            size_t* out_read_actual) {
+    usb_interface_t* intf = ctx;
+    return usb_control_in(&intf->comp->usb, request_type, request, value, index, timeout,
+                          out_read_buffer, read_size, out_read_actual);
+}
+
 static void usb_interface_request_queue(void* ctx, usb_request_t* usb_request,
                                         const usb_request_complete_t* complete_cb) {
     usb_interface_t* intf = ctx;
@@ -340,6 +357,8 @@ static size_t usb_interface_get_request_size(void* ctx) {
 
 usb_protocol_ops_t usb_device_protocol = {
     .control = usb_interface_control,
+    .control_out = usb_interface_control_out,
+    .control_in = usb_interface_control_in,
     .request_queue = usb_interface_request_queue,
     .configure_batch_callback = usb_interface_configure_batch_callback,
     .get_speed = usb_interface_get_speed,
@@ -391,7 +410,7 @@ zx_status_t usb_interface_set_alt_setting(usb_interface_t* intf, uint8_t interfa
         return status;
     }
 
-    return usb_control(&intf->comp->usb, USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_INTERFACE,
-                       USB_REQ_SET_INTERFACE, alt_setting, interface_id, ZX_TIME_INFINITE,
-                       NULL, 0, NULL, 0, NULL);
+    return usb_control_out(&intf->comp->usb, USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_INTERFACE,
+                           USB_REQ_SET_INTERFACE, alt_setting, interface_id, ZX_TIME_INFINITE,
+                           NULL, 0);
 }

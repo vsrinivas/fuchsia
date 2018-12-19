@@ -265,6 +265,27 @@ static zx_status_t usb_device_control(void* ctx, uint8_t request_type, uint8_t r
     return status;
 }
 
+static zx_status_t usb_device_control_out(void* ctx, uint8_t request_type, uint8_t request,
+                                          uint16_t value, uint16_t index, zx_time_t timeout,
+                                          const void* write_buffer, size_t write_size) {
+    if ((request_type & USB_DIR_MASK) != USB_DIR_OUT) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    return usb_device_control(ctx, request_type, request, value, index, timeout,
+                              write_buffer, write_size, NULL, 0, NULL);
+}
+
+static zx_status_t usb_device_control_in(void* ctx, uint8_t request_type, uint8_t request,
+                                         uint16_t value, uint16_t index, zx_time_t timeout,
+                                         void* out_read_buffer, size_t read_size,
+                                         size_t* out_read_actual) {
+    if ((request_type & USB_DIR_MASK) != USB_DIR_IN) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    return usb_device_control(ctx, request_type, request, value, index, timeout, NULL, 0,
+                              out_read_buffer, read_size, out_read_actual);
+}
+
 static void usb_device_request_queue(void* ctx, usb_request_t* req,
                                      const usb_request_complete_t* cb) {
     usb_device_t* dev = ctx;
@@ -429,6 +450,8 @@ static size_t usb_device_get_request_size(void* ctx) {
 
 static usb_protocol_ops_t _usb_protocol = {
     .control = usb_device_control,
+    .control_out = usb_device_control_out,
+    .control_in = usb_device_control_in,
     .request_queue = usb_device_request_queue,
     .configure_batch_callback = usb_device_configure_batch_callback,
     .get_speed = usb_device_get_speed,

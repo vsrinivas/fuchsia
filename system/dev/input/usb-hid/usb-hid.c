@@ -134,11 +134,11 @@ static zx_status_t usb_hid_control(usb_hid_device_t* hid, uint8_t req_type, uint
                                    size_t* out_length) {
     zx_status_t status;
     if ((req_type & USB_DIR_MASK) == USB_DIR_OUT) {
-        status = usb_control(&hid->usb, req_type, request, value, index, ZX_TIME_INFINITE,
-                             data, length, NULL, 0, NULL);
+        status = usb_control_out(&hid->usb, req_type, request, value, index, ZX_TIME_INFINITE,
+                             data, length);
     } else {
-        status = usb_control(&hid->usb, req_type, request, value, index, ZX_TIME_INFINITE,
-                             NULL, 0, data, length, out_length);
+        status = usb_control_in(&hid->usb, req_type, request, value, index, ZX_TIME_INFINITE,
+                                data, length, out_length);
     }
     if (status == ZX_ERR_IO_REFUSED || status == ZX_ERR_IO_INVALID) {
         usb_reset_endpoint(&hid->usb, 0);

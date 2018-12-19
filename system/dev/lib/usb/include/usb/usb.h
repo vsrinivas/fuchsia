@@ -48,27 +48,27 @@ usb_endpoint_descriptor_t* usb_desc_iter_next_endpoint(usb_desc_iter_t* iter);
 static inline zx_status_t usb_get_descriptor(const usb_protocol_t* usb, uint8_t request_type,
                                              uint16_t type, uint16_t index, void* data,
                                              size_t length, zx_time_t timeout, size_t* out_length) {
-    return usb_control(usb, request_type | USB_DIR_IN, USB_REQ_GET_DESCRIPTOR,
-                       (uint16_t)(type << 8 | index), 0, timeout, NULL, 0, data, length, out_length);
+    return usb_control_in(usb, request_type | USB_DIR_IN, USB_REQ_GET_DESCRIPTOR,
+                          (uint16_t)(type << 8 | index), 0, timeout, data, length, out_length);
 }
 
 static inline zx_status_t usb_get_status(const usb_protocol_t* usb, uint8_t request_type,
                                          uint16_t index, void* data, size_t length,
                                          zx_time_t timeout, size_t* out_length) {
-    return usb_control(usb, request_type | USB_DIR_IN, USB_REQ_GET_STATUS, 0, index, timeout,
-                       NULL, 0, data, length, out_length);
+    return usb_control_in(usb, request_type | USB_DIR_IN, USB_REQ_GET_STATUS, 0, index, timeout,
+                          data, length, out_length);
 }
 
 static inline zx_status_t usb_set_feature(const usb_protocol_t* usb, uint8_t request_type,
                                           uint16_t feature, uint16_t index, zx_time_t timeout) {
-    return usb_control(usb, request_type, USB_REQ_SET_FEATURE, feature, index, timeout, NULL, 0,
-                       NULL, 0, NULL);
+    return usb_control_out(usb, request_type, USB_REQ_SET_FEATURE, feature, index, timeout,
+                           NULL, 0);
 }
 
 static inline zx_status_t usb_clear_feature(const usb_protocol_t* usb, uint8_t request_type,
                                             uint16_t feature, uint16_t index, zx_time_t timeout) {
-    return usb_control(usb, request_type, USB_REQ_CLEAR_FEATURE, feature, index, timeout, NULL, 0,
-                       NULL, 0, NULL);
+    return usb_control_out(usb, request_type, USB_REQ_CLEAR_FEATURE, feature, index, timeout,
+                           NULL, 0);
 }
 
 __END_CDECLS;

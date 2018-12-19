@@ -311,15 +311,17 @@ static void hci_handle_cmd_read_events(hci_t* hci, zx_wait_item_t* cmd_item) {
             goto fail;
         }
 
-        status = usb_control(&hci->usb, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_DEVICE,
-                             0, 0, 0, ZX_TIME_INFINITE, buf, length, NULL, 0, NULL);
+        status = usb_control_out(&hci->usb, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_DEVICE,
+                             0, 0, 0, ZX_TIME_INFINITE, buf, length);
         if (status < 0) {
-            zxlogf(ERROR, "hci_read_thread: usb_control failed: %s\n", zx_status_get_string(status));
+            zxlogf(ERROR, "hci_read_thread: usb_control_out failed: %s\n",
+                   zx_status_get_string(status));
             goto fail;
         }
 
         mtx_lock(&hci->mutex);
-        snoop_channel_write_locked(hci, bt_hci_snoop_flags(BT_HCI_SNOOP_TYPE_CMD, false), buf, length);
+        snoop_channel_write_locked(hci, bt_hci_snoop_flags(BT_HCI_SNOOP_TYPE_CMD, false), buf,
+                                   length);
         mtx_unlock(&hci->mutex);
     }
 
