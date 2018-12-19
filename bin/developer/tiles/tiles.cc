@@ -146,6 +146,8 @@ void Tiles::ListTiles(ListTilesCallback callback) {
            fidl::VectorPtr<bool>(std::move(focusabilities)));
 }
 
+void Tiles::Quit() { exit(0); }
+
 void Tiles::OnPropertiesChanged(fuchsia::ui::viewsv1::ViewProperties properties,
                                 OnPropertiesChangedCallback callback) {
   size_ = properties.view_layout->size;

@@ -13,6 +13,7 @@
 #include <lib/fdio/util.h>
 
 #include "fuchsia/developer/tiles/cpp/fidl.h"
+#include "lib/component/cpp/environment_services_helper.h"
 #include "lib/fsl/io/fd.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/unique_fd.h"
@@ -33,9 +34,11 @@ void Usage() {
   printf(
       "Usage: tiles_ctl <command>\n"
       "  Supported commands:\n"
+      "    start\n"
       "    add [--disable-focus] <url> [<args>...]\n"
       "    remove <key>\n"
-      "    list\n");
+      "    list\n"
+      "    quit\n");
 }
 
 std::string FirstNumericEntryInDir(const UniqueDIR& dir) {
@@ -70,7 +73,7 @@ ControllerPtr FindTiles() {
   if (!tile_component.is_valid()) {
     fprintf(stderr,
             "Couldn't find tiles component in realm\n"
-            "To start tiles: run -d fuchsia-pkg://fuchsia.com/tiles#meta/tiles.cmx\n");
+            "To start a new instance of tiles, run 'tiles_ctl start'\n");
     return {};
   }
 
@@ -98,6 +101,18 @@ ControllerPtr FindTiles() {
     return {};
   }
   return tiles;
+}
+
+bool Start() {
+  auto env_services = component::GetEnvironmentServices();
+
+  fuchsia::sys::LaunchInfo launch_info;
+  launch_info.url = "fuchsia-pkg://fuchsia.com/tiles#meta/tiles.cmx";
+
+  fuchsia::sys::LauncherSyncPtr launcher;
+  env_services->ConnectToService(launcher.NewRequest());
+
+  return launcher->CreateComponent(std::move(launch_info), {}) == ZX_OK;
 }
 
 bool Add(std::string url, bool allow_focus, std::vector<std::string> args) {
@@ -145,6 +160,14 @@ bool List() {
   return true;
 }
 
+bool Quit() {
+  auto tiles = FindTiles();
+  if (!tiles)
+    return false;
+
+  return tiles->Quit() == ZX_OK;
+}
+
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
@@ -157,7 +180,11 @@ int main(int argc, const char** argv) {
 
   const auto& cmd = positional_args[0];
 
-  if (cmd == "add") {
+  if (cmd == "start") {
+    if (!Start()) {
+      return 1;
+    }
+  } else if (cmd == "add") {
     if (positional_args.size() < 2) {
       Usage();
       return 1;
@@ -191,6 +218,10 @@ int main(int argc, const char** argv) {
   } else if (cmd == "list") {
     if (!List())
       return 1;
+  } else if (cmd == "quit") {
+    if (!Quit()) {
+      return 1;
+    }
   } else {
     Usage();
     return 1;

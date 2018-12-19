@@ -66,6 +66,7 @@ class Tiles : public fuchsia::ui::viewsv1::ViewListener,
       AddTileFromViewProviderCallback callback) final;
   void RemoveTile(uint32_t key) final;
   void ListTiles(ListTilesCallback callback) final;
+  void Quit() final;
 
   // Launches initial list of views, passed as command line parameters.
 

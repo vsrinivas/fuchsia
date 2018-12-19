@@ -41,12 +41,13 @@ source_set("cpp") {
 source_set("environment_services") {
   visibility = [
     "//garnet/bin/appmgr:bin",
-    "//garnet/bin/run:bin",
-    "//garnet/bin/debugserver:bin",
-    "//garnet/bin/insntrace:bin",
+    "//garnet/bin/debug_agent/integration_tests",
     "//garnet/bin/debug_agent:bin",
     "//garnet/bin/debug_agent:tests",
-    "//garnet/bin/debug_agent/integration_tests",
+    "//garnet/bin/debugserver:bin",
+    "//garnet/bin/developer/tiles_ctl:bin",
+    "//garnet/bin/insntrace:bin",
+    "//garnet/bin/run:bin",
     "//garnet/drivers/wlan/wlan:*",
     "testing",
   ]
