@@ -48,8 +48,7 @@ class StoryProviderImpl::StopStoryCall : public Operation<> {
  public:
   using StoryRuntimesMap = std::map<std::string, struct StoryRuntimeContainer>;
 
-  StopStoryCall(fidl::StringPtr story_id,
-                const bool bulk,
+  StopStoryCall(fidl::StringPtr story_id, const bool bulk,
                 StoryRuntimesMap* const story_runtime_containers,
                 MessageQueueManager* const message_queue_manager,
                 ResultCall result_call)
@@ -194,7 +193,8 @@ class StoryProviderImpl::StopAllStoriesCall : public Operation<> {
       // OperationQueue on which we're running will block.  Moving over to
       // fit::promise will allow us to observe cancellation.
       operations_.Add(new StopStoryCall(
-          it.first, true /* bulk */, &story_provider_impl_->story_runtime_containers_,
+          it.first, true /* bulk */,
+          &story_provider_impl_->story_runtime_containers_,
           story_provider_impl_->component_context_info_.message_queue_manager,
           [flow] {}));
     }
@@ -469,7 +469,8 @@ void StoryProviderImpl::RequestStoryFocus(fidl::StringPtr story_id) {
 }
 
 void StoryProviderImpl::AttachView(
-    fidl::StringPtr story_id, fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner) {
+    fidl::StringPtr story_id,
+    fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner) {
   FXL_CHECK(session_shell_);
   fuchsia::modular::ViewIdentifier view_id;
   view_id.story_id = std::move(story_id);
@@ -573,22 +574,6 @@ void StoryProviderImpl::PreviousStories(PreviousStoriesCallback callback) {
           });
   operation_queue_.Add(WrapFutureAsOperation(
       "StoryProviderImpl::PreviousStories", on_run, done, callback));
-}
-
-// |fuchsia::modular::StoryProvider|
-void StoryProviderImpl::RunningStories(RunningStoriesCallback callback) {
-  auto on_run = Future<>::Create("StoryProviderImpl.RunningStories.on_run");
-  auto done = on_run->Map([this]() {
-    auto stories = fidl::VectorPtr<fidl::StringPtr>::New(0);
-    for (const auto& impl_container : story_runtime_containers_) {
-      if (impl_container.second.controller_impl->IsRunning()) {
-        stories.push_back(impl_container.second.controller_impl->GetStoryId());
-      }
-    }
-    return stories;
-  });
-  operation_queue_.Add(WrapFutureAsOperation(
-      "StoryProviderImpl::RunningStories", on_run, done, callback));
 }
 
 void StoryProviderImpl::OnStoryStorageUpdated(

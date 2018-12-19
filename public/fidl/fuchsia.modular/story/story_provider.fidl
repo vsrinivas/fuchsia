@@ -30,12 +30,6 @@ interface StoryProvider {
     // DEPRECATED: In favor of GetStories().
     7: PreviousStories() -> (vector<StoryInfo> story_infos);
 
-    // Returns IDs of stories on the current device that are not STOPPED. More
-    // information about the stories can be retrieved using GetStoryInfo(), or by
-    // GetController(), then StoryController.GetInfo().
-    // DEPRECATED: Use GetStories() and examine StoryInfo for running state.
-    8: RunningStories() -> (vector<string> story_ids);
-
     // Registers a watcher for changes in the story collection.
     // DEPRECATED: In favor of GetStories().
     9: Watch(StoryProviderWatcher watcher);

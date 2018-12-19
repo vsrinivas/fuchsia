@@ -84,11 +84,6 @@ class StoryProviderMock : public fuchsia::modular::StoryProvider {
     callback(fidl::VectorPtr<fuchsia::modular::StoryInfo>::New(0));
   }
 
-  // |fuchsia::modular::StoryProvider|
-  void RunningStories(RunningStoriesCallback callback) override {
-    callback(fidl::VectorPtr<fidl::StringPtr>::New(0));
-  }
-
   std::string last_created_story_;
   std::string last_created_kind_of_proto_story_;
   std::string deleted_story_;

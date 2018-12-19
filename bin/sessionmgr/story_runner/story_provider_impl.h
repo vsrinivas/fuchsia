@@ -205,9 +205,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   void PreviousStories(PreviousStoriesCallback callback) override;
 
   // |fuchsia::modular::StoryProvider|
-  void RunningStories(RunningStoriesCallback callback) override;
-
-  // |fuchsia::modular::StoryProvider|
   void Watch(fidl::InterfaceHandle<fuchsia::modular::StoryProviderWatcher>
                  watcher) override;
 
