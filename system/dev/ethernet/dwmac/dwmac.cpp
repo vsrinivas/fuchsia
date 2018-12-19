@@ -128,35 +128,31 @@ zx_status_t DWMacDevice::InitPdev() {
     }
 
     // Map mac control registers and dma control registers.
-    mmio_buffer_t mmio;
-    status = pdev_map_mmio_buffer2(&pdev_, kEthMacMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                   &mmio);
+    status = pdev_.MapMmio(kEthMacMmio, &dwmac_regs_iobuff_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "dwmac: could not map dwmac mmio: %d\n", status);
         return status;
     }
 
-    dwmac_regs_iobuff_ = ddk::MmioBuffer(mmio);
     dwmac_regs_ = static_cast<dw_mac_regs_t*>(dwmac_regs_iobuff_->get());
     dwdma_regs_ = offset_ptr<dw_dma_regs_t>(dwmac_regs_, DW_DMA_BASE_OFFSET);
 
     // Map dma interrupt.
-    status = pdev_map_interrupt(&pdev_, 0, dma_irq_.reset_and_get_address());
+    status = pdev_.GetInterrupt(0, &dma_irq_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "dwmac: could not map dma interrupt\n");
         return status;
     }
 
     // Get our bti.
-    status = pdev_get_bti(&pdev_, 0, bti_.reset_and_get_address());
+    status = pdev_.GetBti(0, &bti_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "dwmac: could not obtain bti: %d\n", status);
         return status;
     }
 
     // Get ETH_BOARD protocol.
-    status = device_get_protocol(parent_, ZX_PROTOCOL_ETH_BOARD, &eth_board_);
-    if (status != ZX_OK) {
+    if (!eth_board_.is_valid()) {
         zxlogf(ERROR, "dwmac: could not obtain ETH_BOARD protocol: %d\n", status);
         return status;
     }
@@ -164,33 +160,6 @@ zx_status_t DWMacDevice::InitPdev() {
     return status;
 }
 
-static void DdkUnbindWrapper(void* ctx) {
-    auto& self = *static_cast<DWMacDevice*>(ctx);
-    // TODO(braval): Remove all PHY devices and then call DdkUnbind()
-    self.DdkUnbind();
-}
-
-static void DdkReleaseWrapper(void* ctx) {
-    delete static_cast<DWMacDevice*>(ctx);
-}
-
-static zx_protocol_device_t eth_mac_device_ops = []() {
-    zx_protocol_device_t result;
-
-    result.version = DEVICE_OPS_VERSION;
-    result.unbind = &DdkUnbindWrapper;
-    result.release = &DdkReleaseWrapper;
-    return result;
-}();
-
-static device_add_args_t phy_device_args = []() {
-    device_add_args_t result;
-    result.version = DEVICE_ADD_ARGS_VERSION;
-    result.name = "eth_phy";
-    result.ops = &eth_mac_device_ops,
-    result.proto_id = ZX_PROTOCOL_ETH_MAC;
-    return result;
-}();
 
 zx_status_t DWMacDevice::Create(zx_device_t* device) {
     auto mac_device = fbl::make_unique<DWMacDevice>(device);
@@ -201,7 +170,7 @@ zx_status_t DWMacDevice::Create(zx_device_t* device) {
     }
 
     // Reset the phy.
-    eth_board_reset_phy(&mac_device->eth_board_);
+    mac_device->eth_board_.ResetPhy();
 
     // Get and cache the mac address.
     mac_device->GetMAC(device);
@@ -230,24 +199,6 @@ zx_status_t DWMacDevice::Create(zx_device_t* device) {
 
     sync_completion_reset(&mac_device->cb_registered_signal_);
 
-    auto mdio_write_thunk = [](void* arg, uint32_t reg, uint32_t val) -> zx_status_t {
-        return reinterpret_cast<DWMacDevice*>(arg)->MDIOWrite(reg, val);
-    };
-
-    auto mdio_read_thunk = [](void* arg, uint32_t reg, uint32_t* val) -> zx_status_t {
-        return reinterpret_cast<DWMacDevice*>(arg)->MDIORead(reg, val);
-    };
-
-    auto register_cb_thunk = [](void* arg, const eth_mac_callbacks_t* cb) -> zx_status_t {
-        return reinterpret_cast<DWMacDevice*>(arg)->RegisterCallbacks(cb);
-    };
-
-    static eth_mac_protocol_ops_t proto_ops = {
-        .mdio_read = mdio_read_thunk,
-        .mdio_write = mdio_write_thunk,
-        .register_callbacks = register_cb_thunk,
-    }; // namespace eth
-
     // Populate board specific information
     eth_dev_metadata_t phy_info;
     size_t actual;
@@ -258,16 +209,21 @@ zx_status_t DWMacDevice::Create(zx_device_t* device) {
         return status;
     }
 
-    static zx_device_prop_t props[] = {
+    zx_device_prop_t props[] = {
         {BIND_PLATFORM_DEV_VID, 0, phy_info.vid},
         {BIND_PLATFORM_DEV_DID, 0, phy_info.did},
         {BIND_PLATFORM_DEV_PID, 0, phy_info.pid},
     };
 
+    device_add_args_t phy_device_args = {};
+    phy_device_args.version = DEVICE_ADD_ARGS_VERSION;
+    phy_device_args.name = "eth_phy";
+    phy_device_args.ops = &mac_device->ddk_device_proto_,
+    phy_device_args.proto_id = ZX_PROTOCOL_ETH_MAC;
     phy_device_args.props = props;
     phy_device_args.prop_count = countof(props);
     phy_device_args.ctx = mac_device.get();
-    phy_device_args.proto_ops = &proto_ops;
+    phy_device_args.proto_ops = &mac_device->eth_mac_protocol_ops_;
 
     // TODO(braval): use proper device pointer, depending on how
     //               many PHY devices we have to load, from the metadata.
@@ -351,7 +307,7 @@ void DWMacDevice::EthmacGetBti(zx::bti* bti) {
     bti_.duplicate(ZX_RIGHT_SAME_RIGHTS, bti);
 }
 
-zx_status_t DWMacDevice::MDIOWrite(uint32_t reg, uint32_t val) {
+zx_status_t DWMacDevice::EthMacMdioWrite(uint32_t reg, uint32_t val) {
     dwmac_regs_->miidata = val;
 
     uint32_t miiaddr = (mii_addr_ << MIIADDRSHIFT) |
@@ -370,7 +326,7 @@ zx_status_t DWMacDevice::MDIOWrite(uint32_t reg, uint32_t val) {
     return ZX_ERR_TIMED_OUT;
 }
 
-zx_status_t DWMacDevice::MDIORead(uint32_t reg, uint32_t* val) {
+zx_status_t DWMacDevice::EthMacMdioRead(uint32_t reg, uint32_t* val) {
     uint32_t miiaddr = (mii_addr_ << MIIADDRSHIFT) |
                        (reg << MIIREGSHIFT);
 
@@ -387,7 +343,7 @@ zx_status_t DWMacDevice::MDIORead(uint32_t reg, uint32_t* val) {
     return ZX_ERR_TIMED_OUT;
 }
 
-zx_status_t DWMacDevice::RegisterCallbacks(const eth_mac_callbacks_t* cbs) {
+zx_status_t DWMacDevice::EthMacRegisterCallbacks(const eth_mac_callbacks_t* cbs) {
     if (cbs == nullptr) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -399,8 +355,7 @@ zx_status_t DWMacDevice::RegisterCallbacks(const eth_mac_callbacks_t* cbs) {
 }
 
 DWMacDevice::DWMacDevice(zx_device_t* device)
-    : ddk::Device<DWMacDevice, ddk::Unbindable>(device) {
-}
+    : ddk::Device<DWMacDevice, ddk::Unbindable>(device), pdev_(device), eth_board_(device) {}
 
 void DWMacDevice::ReleaseBuffers() {
     //Unpin the memory used for the dma buffers

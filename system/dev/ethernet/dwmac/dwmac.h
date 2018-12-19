@@ -6,15 +6,13 @@
 
 #include <atomic>
 #include <ddk/device.h>
-#include <ddk/protocol/ethernet/board.h>
-#include <ddk/protocol/ethernet/mac.h>
-#include <ddk/protocol/gpio.h>
-#include <ddk/protocol/i2c.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/test.h>
 #include <ddktl/device.h>
 #include <ddktl/mmio.h>
+#include <ddktl/pdev.h>
 #include <ddktl/protocol/ethernet.h>
+#include <ddktl/protocol/ethernet/board.h>
+#include <ddktl/protocol/ethernet/mac.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
 #include <lib/sync/completion.h>
@@ -85,7 +83,8 @@ typedef volatile struct dw_dmadescr {
 namespace eth {
 
 class DWMacDevice : public ddk::Device<DWMacDevice, ddk::Unbindable>,
-                    public ddk::EthmacProtocol<DWMacDevice> {
+                    public ddk::EthmacProtocol<DWMacDevice>,
+                    public ddk::EthMacProtocol<DWMacDevice> {
 public:
     DWMacDevice(zx_device_t* device);
 
@@ -94,12 +93,19 @@ public:
     void DdkRelease();
     void DdkUnbind();
 
+    // ZX_PROTOCOL_ETHMAC ops.
     zx_status_t EthmacQuery(uint32_t options, ethmac_info_t* info);
     void EthmacStop() __TA_EXCLUDES(lock_);
     zx_status_t EthmacStart(const ethmac_ifc_t* ifc) __TA_EXCLUDES(lock_);
     zx_status_t EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf) __TA_EXCLUDES(lock_);
     zx_status_t EthmacSetParam(uint32_t param, int32_t value, const void* data, size_t data_size);
     void EthmacGetBti(zx::bti* bti);
+
+    // ZX_PROTOCOL_ETH_MAC ops.
+    zx_status_t EthMacMdioWrite(uint32_t reg, uint32_t val);
+    zx_status_t EthMacMdioRead(uint32_t reg, uint32_t* val);
+    zx_status_t EthMacRegisterCallbacks(const eth_mac_callbacks_t* callbacks);
+
 
 private:
 
@@ -119,11 +125,6 @@ private:
     int WorkerThread();
 
     zx_status_t GetMAC(zx_device_t* dev);
-
-    // ZX_PROTOCOL_ETH_MAC ops.
-    zx_status_t MDIOWrite(uint32_t reg, uint32_t val);
-    zx_status_t MDIORead(uint32_t reg, uint32_t* val);
-    zx_status_t RegisterCallbacks(const eth_mac_callbacks_t* callbacks);
 
     //Number each of tx/rx transaction descriptors
     static constexpr uint32_t kNumDesc = 32;
@@ -153,8 +154,8 @@ private:
     zx::bti bti_;
     zx::interrupt dma_irq_;
 
-    pdev_protocol_t pdev_;
-    eth_board_protocol_t eth_board_;
+    ddk::PDev pdev_;
+    ddk::EthBoardProtocolProxy eth_board_;
 
     std::optional<ddk::MmioBuffer> dwmac_regs_iobuff_;
 

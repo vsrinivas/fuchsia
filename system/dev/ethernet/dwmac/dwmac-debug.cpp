@@ -9,7 +9,7 @@ namespace eth {
 void DWMacDevice::DumpRegisters() {
     uint32_t val;
     for (uint32_t i = 0; i < 31; i++) {
-        if (MDIORead(i, &val) == ZX_OK) {
+        if (EthMacMdioRead(i, &val) == ZX_OK) {
             zxlogf(INFO, "MII%02u = %08x\n", i, val);
         } else {
             zxlogf(INFO, "MDIO READ TIMEOUT%u\n", i);
@@ -22,9 +22,9 @@ void DWMacDevice::DumpRegisters() {
     zxlogf(INFO, "dma busmode   -> %08x\n", dwdma_regs_->busmode);
     zxlogf(INFO, "dma status    -> %08x\n", dwdma_regs_->status);
     uint32_t temp;
-    MDIORead(1, &temp);
+    EthMacMdioRead(1, &temp);
     zxlogf(INFO, "MII Status = %08x\n", temp);
-    MDIORead(1, &temp);
+    EthMacMdioRead(1, &temp);
     zxlogf(INFO, "MII Status = %08x\n", temp);
 }
 } //namespace eth
