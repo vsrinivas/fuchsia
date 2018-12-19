@@ -35,13 +35,15 @@ zx_status_t hid_lib_parse_reports(const uint8_t* buf, const size_t buf_len,
             input_report_size_t size = field->attr.bit_sz;
             switch (field->type) {
             case hid::kInput:
-                hiddev_rep->in_size = static_cast<input_report_id_t>(hiddev_rep->in_size + size);
+                hiddev_rep->in_size = static_cast<input_report_size_t>(hiddev_rep->in_size + size);
                 break;
             case hid::kOutput:
-                hiddev_rep->out_size = static_cast<input_report_id_t>(hiddev_rep->out_size + size);
+                hiddev_rep->out_size = static_cast<input_report_size_t>(hiddev_rep->out_size
+                                                                        + size);
                 break;
             case hid::kFeature:
-                hiddev_rep->feat_size = static_cast<input_report_id_t>(hiddev_rep->feat_size + size);
+                hiddev_rep->feat_size = static_cast<input_report_size_t>(hiddev_rep->feat_size
+                                                                         + size);
                 break;
             }
         }
