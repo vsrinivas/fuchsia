@@ -12,8 +12,13 @@ namespace ddk {
 
 class I2cChannel : public I2cProtocolProxy {
 public:
+    I2cChannel() {}
+
     I2cChannel(const i2c_protocol_t* proto)
         : I2cProtocolProxy(proto) {}
+
+    I2cChannel(zx_device_t* parent)
+        : I2cProtocolProxy(parent) {}
 
     ~I2cChannel() = default;
 

@@ -122,18 +122,18 @@ zx_status_t Sherlock::AudioInit() {
     s905d2_pll_ena(&hifi_pll);
 
     // TDM pin assignments.
-    gpio_impl_set_alt_function(&gpio_impl_, T931_GPIOZ(7), T931_GPIOZ_7_TDMC_SCLK_FN);
-    gpio_impl_set_alt_function(&gpio_impl_, T931_GPIOZ(6), T931_GPIOZ_6_TDMC_FS_FN);
-    gpio_impl_set_alt_function(&gpio_impl_, T931_GPIOZ(2), T931_GPIOZ_2_TDMC_D0_FN);
-    gpio_impl_set_alt_function(&gpio_impl_, T931_GPIOZ(3), T931_GPIOZ_3_TDMC_D1_FN);
-    gpio_impl_set_alt_function(&gpio_impl_, T931_GPIOAO(9), T931_GPIOAO_9_MCLK_FN);
+    gpio_impl_.SetAltFunction(T931_GPIOZ(7), T931_GPIOZ_7_TDMC_SCLK_FN);
+    gpio_impl_.SetAltFunction(T931_GPIOZ(6), T931_GPIOZ_6_TDMC_FS_FN);
+    gpio_impl_.SetAltFunction(T931_GPIOZ(2), T931_GPIOZ_2_TDMC_D0_FN);
+    gpio_impl_.SetAltFunction(T931_GPIOZ(3), T931_GPIOZ_3_TDMC_D1_FN);
+    gpio_impl_.SetAltFunction(T931_GPIOAO(9), T931_GPIOAO_9_MCLK_FN);
 
     // PDM pin assignments.
-    gpio_impl_set_alt_function(&gpio_impl_, T931_GPIOA(7), T931_GPIOA_7_PDM_DCLK_FN);
-    gpio_impl_set_alt_function(&gpio_impl_, T931_GPIOA(8), T931_GPIOA_8_PDM_DIN0_FN);
-    gpio_impl_set_alt_function(&gpio_impl_, T931_GPIOA(9), T931_GPIOA_9_PDM_DIN1_FN);
+    gpio_impl_.SetAltFunction(T931_GPIOA(7), T931_GPIOA_7_PDM_DCLK_FN);
+    gpio_impl_.SetAltFunction(T931_GPIOA(8), T931_GPIOA_8_PDM_DIN0_FN);
+    gpio_impl_.SetAltFunction(T931_GPIOA(9), T931_GPIOA_9_PDM_DIN1_FN);
 
-    gpio_impl_config_out(&gpio_impl_, T931_GPIOH(7), 1); // SOC_AUDIO_EN.
+    gpio_impl_.ConfigOut(T931_GPIOH(7), 1); // SOC_AUDIO_EN.
 
     status = pbus_.DeviceAdd(&tdm_dev);
     if (status != ZX_OK) {

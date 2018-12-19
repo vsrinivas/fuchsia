@@ -77,15 +77,16 @@ const pbus_dev_t bt_uart_dev = []() {
 zx_status_t Sherlock::BluetoothInit() {
     zx_status_t status;
 
-    auto gpio = ddk::GpioImplProtocolProxy(&gpio_impl_);
-    if ((status = gpio.SetAltFunction(T931_UART_A_TX, T931_UART_A_TX_FN) != ZX_OK)) return status;
-    if ((status = gpio.SetAltFunction(T931_UART_A_RX, T931_UART_A_RX_FN) != ZX_OK)) return status;
-    if ((status = gpio.SetAltFunction(T931_UART_A_CTS, T931_UART_A_CTS_FN) != ZX_OK)) return status;
-    if ((status = gpio.SetAltFunction(T931_UART_A_RTS, T931_UART_A_RTS_FN) != ZX_OK)) return status;
+    if (((status = gpio_impl_.SetAltFunction(T931_UART_A_TX, T931_UART_A_TX_FN)) != ZX_OK) ||
+        ((status = gpio_impl_.SetAltFunction(T931_UART_A_RX, T931_UART_A_RX_FN)) != ZX_OK) ||
+        ((status = gpio_impl_.SetAltFunction(T931_UART_A_CTS, T931_UART_A_CTS_FN)) != ZX_OK) ||
+        ((status = gpio_impl_.SetAltFunction(T931_UART_A_RTS, T931_UART_A_RTS_FN)) != ZX_OK)) {
+        return status;
+    }
 
-    if ((status = gpio.ConfigOut(BT_REG_ON, 0) != ZX_OK)) return status;
+    if ((status = gpio_impl_.ConfigOut(BT_REG_ON, 0) != ZX_OK)) return status;
     usleep(10 * 1000);
-    if ((status = gpio.Write(BT_REG_ON, 1) != ZX_OK)) return status;
+    if ((status = gpio_impl_.Write(BT_REG_ON, 1) != ZX_OK)) return status;
     usleep(10 * 1000);
 
     status = pbus_.DeviceAdd(&bt_uart_dev);

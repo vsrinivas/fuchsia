@@ -33,40 +33,35 @@ constexpr uint32_t kMasterClock = 288000000;
 } // namespace
 
 zx_status_t Imx227Device::InitPdev(zx_device_t* parent) {
-    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev_);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available %d \n", __FUNCTION__, status);
-        return status;
+    if (!pdev_.is_valid()) {
+        zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available\n", __FUNCTION__);
+        return ZX_ERR_NO_RESOURCES;
     }
 
     for (uint32_t i = 0; i < countof(gpios_); i++) {
-        size_t actual;
-        status = pdev_get_protocol(&pdev_, ZX_PROTOCOL_GPIO, i, &gpios_[i], sizeof(gpios_[i]),
-                                   &actual);
-        if (status != ZX_OK) {
-            return status;
+        std::optional<ddk::GpioProtocolProxy> gpio;
+        gpio = pdev_.GetGpio(i);
+        if (!gpio) {
+            return ZX_ERR_NO_RESOURCES;
         }
+        gpios_[i] = *gpio;
         // Set the GPIO to output and set initial value to 0.
-        ddk::GpioProtocolProxy gpio(&gpios_[i]);
-        gpio.ConfigOut(0);
+        gpios_[i].ConfigOut(0);
     }
 
     // I2c for communicating with the sensor.
-    status = device_get_protocol(parent, ZX_PROTOCOL_I2C, &i2c_);
-    if (status != ZX_OK) {
-        return status;
+    if (i2c_.is_valid()) {
+        return ZX_ERR_NO_RESOURCES;
     }
 
     // Clk for gating clocks for sensor.
-    status = device_get_protocol(parent, ZX_PROTOCOL_CLK, &clk_);
-    if (status != ZX_OK) {
-        return status;
+    if (clk_.is_valid()) {
+        return ZX_ERR_NO_RESOURCES;
     }
 
     // Mipi for init and de-init.
-    status = device_get_protocol(parent, ZX_PROTOCOL_MIPI_CSI, &mipi_);
-    if (status != ZX_OK) {
-        return status;
+    if (!mipi_.is_valid()) {
+        return ZX_ERR_NO_RESOURCES;
     }
 
     return ZX_OK;
@@ -77,7 +72,8 @@ uint8_t Imx227Device::ReadReg(uint16_t addr) {
     // The camera sensor expects in this format.
     uint16_t buf = htobe16(addr);
     uint8_t val = 0;
-    zx_status_t status = i2c_write_read_sync(&i2c_, &buf, sizeof(buf), &val, sizeof(val));
+    zx_status_t status = i2c_.WriteReadSync(reinterpret_cast<uint8_t*>(&buf), sizeof(buf),
+                                            &val, sizeof(val));
     if (status != ZX_OK) {
         zxlogf(ERROR, "Imx227Device: could not read reg addr: 0x%08x  status: %d\n", addr, status);
         return -1;
@@ -94,7 +90,7 @@ void Imx227Device::WriteReg(uint16_t addr, uint8_t val) {
     buf[0] = static_cast<uint8_t>((addr >> 8) & 0xFF);
     buf[2] = val;
 
-    zx_status_t status = i2c_write_sync(&i2c_, buf, 3);
+    zx_status_t status = i2c_.WriteSync(buf, 3);
     if (status != ZX_OK) {
         zxlogf(ERROR, "Imx227Device: could not write reg addr/val: 0x%08x/0x%08x status: %d\n",
                addr, val, status);
@@ -143,21 +139,17 @@ zx_status_t Imx227Device::InitSensor(uint8_t idx) {
 zx_status_t Imx227Device::Init() {
 
     // Power up sequence. Reference: Page 51- IMX227-0AQH5-C datasheet.
-    ddk::GpioProtocolProxy gpio_vana(&gpios_[VANA_ENABLE]);
-    gpio_vana.ConfigOut(1);
+    gpios_[VANA_ENABLE].ConfigOut(1);
     zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
 
-    ddk::GpioProtocolProxy gpio_vdig(&gpios_[VDIG_ENABLE]);
-    gpio_vdig.ConfigOut(1);
+    gpios_[VDIG_ENABLE].ConfigOut(1);
     zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
 
     // Enable 24M clock for sensor.
-    ddk::ClkProtocolProxy clk(&clk_);
-    clk.Enable(0);
+    clk_.Enable(0);
     zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
 
-    ddk::GpioProtocolProxy gpio_rst(&gpios_[CAM_SENSOR_RST]);
-    gpio_rst.ConfigOut(0);
+    gpios_[CAM_SENSOR_RST].ConfigOut(0);
     zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
 
     // Get Sensor ID to validate initialization sequence.
@@ -185,8 +177,7 @@ zx_status_t Imx227Device::Init() {
 }
 
 void Imx227Device::DeInit() {
-    ddk::MipiCsiProtocolProxy mipi(&mipi_);
-    mipi.DeInit();
+    mipi_.DeInit();
 }
 
 zx_status_t Imx227Device::GetInfo(zircon_camera_SensorInfo* out_info) {
@@ -242,7 +233,6 @@ zx_status_t Imx227Device::SetMode(uint8_t mode) {
     ctx_.param.bayer = supported_modes[mode].bayer;
     ctx_.wdr_mode = supported_modes[mode].wdr_mode;
 
-    ddk::MipiCsiProtocolProxy mipi(&mipi_);
     mipi_info_t mipi_info;
     mipi_adap_info_t adap_info;
 
@@ -268,7 +258,7 @@ zx_status_t Imx227Device::SetMode(uint8_t mode) {
     adap_info.resolution.height = supported_modes[mode].resolution.height;
     adap_info.path = MIPI_PATH_PATH0;
     adap_info.mode = MIPI_MODES_DDR_MODE;
-    return mipi.Init(&mipi_info, &adap_info);
+    return mipi_.Init(&mipi_info, &adap_info);
 }
 
 void Imx227Device::StartStreaming() {

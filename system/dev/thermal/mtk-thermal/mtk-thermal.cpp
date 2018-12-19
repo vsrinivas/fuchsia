@@ -45,21 +45,17 @@ namespace thermal {
 zx_status_t MtkThermal::Create(zx_device_t* parent) {
     zx_status_t status;
 
-    pdev_protocol_t pdev_proto;
-    if ((status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev_proto)) != ZX_OK) {
+    ddk::PDev pdev(parent);
+    if (!pdev.is_valid()) {
         zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available\n", __FILE__);
-        return status;
+        return ZX_ERR_NO_RESOURCES;
     }
 
-    clk_protocol_t clk_protocol;
-    if ((status = device_get_protocol(parent, ZX_PROTOCOL_CLK, &clk_protocol)) != ZX_OK) {
+    ddk::ClkProtocolProxy clk(parent);
+    if (!clk.is_valid()) {
         zxlogf(ERROR, "%s: ZX_PROTOCOL_CLK not available\n", __FILE__);
-        return status;
+        return ZX_ERR_NO_RESOURCES;
     }
-
-    ddk::ClkProtocolProxy clk(&clk_protocol);
-
-    ddk::PDev pdev(&pdev_proto);
 
     pdev_device_info_t info;
     if ((status = pdev.GetDeviceInfo(&info)) != ZX_OK) {

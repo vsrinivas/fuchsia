@@ -36,8 +36,7 @@ class Operation {
     }
 
     // Waits for the operation to complete and returns the operation's status.
-    zx_status_t Submit(const nand_protocol_t& nand_proto) {
-        ddk::NandProtocolProxy proxy(&nand_proto);
+    zx_status_t Submit(ddk::NandProtocolProxy& proxy) {
         proxy.Queue(GetOperation(), OnCompletion, this);
 
         zx_status_t status = sync_completion_wait(&event_, ZX_TIME_INFINITE);
@@ -63,7 +62,7 @@ using DeviceType = ddk::Device<Broker, ddk::Unbindable, ddk::Messageable>;
 // Exposes a control device (nand-broker) for a nand protocol device.
 class Broker : public DeviceType {
   public:
-    explicit Broker(zx_device_t* parent) : DeviceType(parent) {}
+    explicit Broker(zx_device_t* parent) : DeviceType(parent), nand_(parent) {}
     ~Broker() {}
 
     zx_status_t Bind();
@@ -92,7 +91,7 @@ class Broker : public DeviceType {
     zx_status_t Queue(uint32_t command, const fuchsia_nand_BrokerRequest& request,
                       uint32_t* corrected_bits);
 
-    nand_protocol_t nand_protocol_;
+    ddk::NandProtocolProxy nand_;
     size_t op_size_ = 0;
 };
 
@@ -130,7 +129,7 @@ fuchsia_nand_Broker_ops_t fidl_ops = {
 };
 
 zx_status_t Broker::Bind() {
-    if (device_get_protocol(parent(), ZX_PROTOCOL_NAND, &nand_protocol_) != ZX_OK) {
+    if (!nand_.is_valid()) {
         zxlogf(ERROR, "nand-broker: device '%s' does not support nand protocol\n",
                device_get_name(parent()));
         return ZX_ERR_NOT_SUPPORTED;
@@ -153,8 +152,7 @@ zx_status_t Broker::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 }
 
 zx_status_t Broker::Query(zircon_nand_Info* info) {
-    ddk::NandProtocolProxy proxy(&nand_protocol_);
-    proxy.Query(info, &op_size_);
+    nand_.Query(info, &op_size_);
     return ZX_OK;
 }
 
@@ -182,7 +180,7 @@ zx_status_t Broker::Queue(uint32_t command, const fuchsia_nand_BrokerRequest& re
         ZX_DEBUG_ASSERT(false);
     }
 
-    zx_status_t status = operation.Submit(nand_protocol_);
+    zx_status_t status = operation.Submit(nand_);
 
     if (command == NAND_OP_READ) {
         *corrected_bits = op->rw.corrected_bit_flips;

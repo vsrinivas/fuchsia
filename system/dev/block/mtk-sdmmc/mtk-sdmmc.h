@@ -7,7 +7,7 @@
 #include <threads.h>
 
 #include <ddk/phys-iter.h>
-#include <ddk/protocol/platform-device-lib.h>
+#include <ddk/io-buffer.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/mmio.h>

@@ -35,32 +35,28 @@ constexpr uint32_t kSysPll = 1;
 } // namespace
 
 zx_status_t AmlCpuFrequency::InitPdev(zx_device_t* parent) {
-    zx_status_t status = device_get_protocol(parent,
-                                             ZX_PROTOCOL_PDEV,
-                                             &pdev_);
-    if (status != ZX_OK) {
-        return status;
+    pdev_ = ddk::PDev(parent);
+    if (!pdev_.is_valid()) {
+        zxlogf(ERROR, "aml-cpufreq: failed to get clk protocol\n");
+        return ZX_ERR_NO_RESOURCES;
     }
 
     // Get the clock protocol
-    status = device_get_protocol(parent, ZX_PROTOCOL_CLK, &clk_protocol_);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "aml-cpufreq: failed to get clk protocol, status = %d", status);
-        return status;
+    clk_ = ddk::ClkProtocolProxy(parent);
+    if (!clk_.is_valid()) {
+        zxlogf(ERROR, "aml-cpufreq: failed to get clk protocol\n");
+        return ZX_ERR_NO_RESOURCES;
     }
 
     // Initialized the MMIOs
-    mmio_buffer_t mmio;
-    status = pdev_map_mmio_buffer2(&pdev_, kHiuMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                   &mmio);
+    zx_status_t status = pdev_.MapMmio(kHiuMmio, &hiu_mmio_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-cpufreq: could not map periph mmio: %d\n", status);
         return status;
     }
-    hiu_mmio_ = ddk::MmioBuffer(mmio);
 
     // Get BTI handle.
-    status = pdev_get_bti(&pdev_, 0, bti_.reset_and_get_address());
+    status = pdev_.GetBti(0, &bti_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-cpufreq: could not get BTI handle: %d\n", status);
         return status;
@@ -85,15 +81,13 @@ zx_status_t AmlCpuFrequency::Init(zx_device_t* parent) {
     // Enable the following clocks so we can measure them
     // and calculate what the actual CPU freq is set to at
     // any given point.
-    ddk::ClkProtocolProxy clk(&clk_protocol_);
-
-    status = clk.Enable(kSysPllDiv16);
+    status = clk_.Enable(kSysPllDiv16);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-cpufreq: failed to enable clock, status = %d\n", status);
         return status;
     }
 
-    status = clk.Enable(kSysCpuClkDiv16);
+    status = clk_.Enable(kSysCpuClkDiv16);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-cpufreq: failed to enable clock, status = %d\n", status);
         return status;

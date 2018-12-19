@@ -161,11 +161,10 @@ static pbus_dev_t mipi_dev = []() {
 zx_status_t Sherlock::CameraInit() {
 
     // Set GPIO alternate functions.
-    ddk::GpioImplProtocolProxy gpio_impl(&gpio_impl_);
-    gpio_impl.SetAltFunction(T931_GPIOAO(10), kClk24MAltFunc);
+    gpio_impl_.SetAltFunction(T931_GPIOAO(10), kClk24MAltFunc);
 
-    gpio_impl.SetAltFunction(T931_GPIOA(14), kI2cSDAAltFunc);
-    gpio_impl.SetAltFunction(T931_GPIOA(15), kI2cSCLAltFunc);
+    gpio_impl_.SetAltFunction(T931_GPIOA(14), kI2cSDAAltFunc);
+    gpio_impl_.SetAltFunction(T931_GPIOA(15), kI2cSCLAltFunc);
 
     zx_status_t status = pbus_.DeviceAdd(&mipi_dev);
     if (status != ZX_OK) {

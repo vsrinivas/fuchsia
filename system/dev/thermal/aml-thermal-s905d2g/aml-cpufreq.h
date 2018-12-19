@@ -5,9 +5,8 @@
 #pragma once
 
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform-device-lib.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/mmio.h>
+#include <ddktl/pdev.h>
 #include <ddktl/protocol/clk.h>
 #include <hwreg/mmio.h>
 #include <lib/zx/bti.h>
@@ -33,12 +32,11 @@ private:
     zx_status_t ConfigureSysPLL(uint32_t new_rate);
     zx_status_t ConfigureFixedPLL(uint32_t new_rate);
 
-    pdev_protocol_t pdev_;
+    ddk::PDev pdev_;
     // Initialize platform stuff.
     zx_status_t InitPdev(zx_device_t* parent);
     // Protocols.
-    clk_protocol_t clk_protocol_;
-    std::optional<ddk::ClkProtocolProxy> clk_;
+    ddk::ClkProtocolProxy clk_;
     // MMIOS.
     std::optional<ddk::MmioBuffer> hiu_mmio_;
     // BTI handle.

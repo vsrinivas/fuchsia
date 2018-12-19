@@ -19,9 +19,14 @@ namespace ddk {
 class PDev : public PDevProtocolProxy {
 
 public:
+    PDev() {}
+
     // TODO(andresoportus): pass protocol by value/const& so there is no question on lifecycle.
     PDev(pdev_protocol_t* proto)
-        : PDevProtocolProxy(proto){};
+        : PDevProtocolProxy(proto) {}
+
+    PDev(zx_device_t* parent)
+        : PDevProtocolProxy(parent) {}
 
     ~PDev() = default;
 

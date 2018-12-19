@@ -107,18 +107,18 @@ static pbus_dev_t emmc_dev = [](){
 
 zx_status_t Sherlock::EmmcInit() {
     // set alternate functions to enable EMMC
-    gpio_impl_set_alt_function(&gpio_impl_, T931_EMMC_D0, T931_EMMC_D0_FN);
-    gpio_impl_set_alt_function(&gpio_impl_, T931_EMMC_D1, T931_EMMC_D1_FN);
-    gpio_impl_set_alt_function(&gpio_impl_, T931_EMMC_D2, T931_EMMC_D2_FN);
-    gpio_impl_set_alt_function(&gpio_impl_, T931_EMMC_D3, T931_EMMC_D3_FN);
-    gpio_impl_set_alt_function(&gpio_impl_, T931_EMMC_D4, T931_EMMC_D4_FN);
-    gpio_impl_set_alt_function(&gpio_impl_, T931_EMMC_D5, T931_EMMC_D5_FN);
-    gpio_impl_set_alt_function(&gpio_impl_, T931_EMMC_D6, T931_EMMC_D6_FN);
-    gpio_impl_set_alt_function(&gpio_impl_, T931_EMMC_D7, T931_EMMC_D7_FN);
-    gpio_impl_set_alt_function(&gpio_impl_, T931_EMMC_CLK, T931_EMMC_CLK_FN);
-    gpio_impl_set_alt_function(&gpio_impl_, T931_EMMC_RST, T931_EMMC_RST_FN);
-    gpio_impl_set_alt_function(&gpio_impl_, T931_EMMC_CMD, T931_EMMC_CMD_FN);
-    gpio_impl_set_alt_function(&gpio_impl_, T931_EMMC_DS, T931_EMMC_DS_FN);
+    gpio_impl_.SetAltFunction(T931_EMMC_D0, T931_EMMC_D0_FN);
+    gpio_impl_.SetAltFunction(T931_EMMC_D1, T931_EMMC_D1_FN);
+    gpio_impl_.SetAltFunction(T931_EMMC_D2, T931_EMMC_D2_FN);
+    gpio_impl_.SetAltFunction(T931_EMMC_D3, T931_EMMC_D3_FN);
+    gpio_impl_.SetAltFunction(T931_EMMC_D4, T931_EMMC_D4_FN);
+    gpio_impl_.SetAltFunction(T931_EMMC_D5, T931_EMMC_D5_FN);
+    gpio_impl_.SetAltFunction(T931_EMMC_D6, T931_EMMC_D6_FN);
+    gpio_impl_.SetAltFunction(T931_EMMC_D7, T931_EMMC_D7_FN);
+    gpio_impl_.SetAltFunction(T931_EMMC_CLK, T931_EMMC_CLK_FN);
+    gpio_impl_.SetAltFunction(T931_EMMC_RST, T931_EMMC_RST_FN);
+    gpio_impl_.SetAltFunction(T931_EMMC_CMD, T931_EMMC_CMD_FN);
+    gpio_impl_.SetAltFunction(T931_EMMC_DS, T931_EMMC_DS_FN);
 
     auto status = pbus_.DeviceAdd(&emmc_dev);
     if (status != ZX_OK) {

@@ -109,10 +109,10 @@ zx_status_t Sherlock::GpioInit() {
     }
 #endif
 
-    status = device_get_protocol(parent(), ZX_PROTOCOL_GPIO_IMPL, &gpio_impl_);
-    if (status != ZX_OK) {
+    gpio_impl_ = ddk::GpioImplProtocolProxy(parent());
+    if (!gpio_impl_.is_valid()) {
         zxlogf(ERROR, "%s: device_get_protocol failed %d\n", __func__, status);
-        return status;
+        return ZX_ERR_INTERNAL;
     }
 
     return ZX_OK;

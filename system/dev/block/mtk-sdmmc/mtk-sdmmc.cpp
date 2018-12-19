@@ -10,7 +10,7 @@
 #include <ddk/io-buffer.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform-device-lib.h>
+#include <ddktl/pdev.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
@@ -89,28 +89,24 @@ namespace sdmmc {
 zx_status_t MtkSdmmc::Create(zx_device_t* parent) {
     zx_status_t status;
 
-    pdev_protocol_t pdev;
-    if ((status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev)) != ZX_OK) {
+    ddk::PDev pdev(parent);
+    if (!pdev.is_valid()) {
         zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available\n", __FILE__);
-        return status;
+        return ZX_ERR_NO_RESOURCES;
     }
 
-    zx_handle_t bti_handle;
-    if ((status = pdev_get_bti(&pdev, 0, &bti_handle)) != ZX_OK) {
+    zx::bti bti;
+    if ((status = pdev.GetBti(0, &bti)) != ZX_OK) {
         zxlogf(ERROR, "%s: pdev_get_bti failed\n", __FILE__);
         return status;
     }
 
-    zx::bti bti(bti_handle);
-
-    mmio_buffer_t mmio;
-    status = pdev_map_mmio_buffer2(&pdev, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+    std::optional<ddk::MmioBuffer> mmio;
+    status = pdev.MapMmio(0, &mmio);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: pdev_map_mmio_buffer2 failed\n", __FILE__);
+        zxlogf(ERROR, "%s: pdev.MapMmio failed\n", __FILE__);
         return status;
     }
-
-    ddk::MmioBuffer mmio_obj(mmio);
 
     board_mt8167::MtkSdmmcConfig config;
     size_t actual;
@@ -131,30 +127,28 @@ zx_status_t MtkSdmmc::Create(zx_device_t* parent) {
     };
 
     zx::interrupt irq;
-    if ((status = pdev_map_interrupt(&pdev, 0, irq.reset_and_get_address())) != ZX_OK) {
+    if ((status = pdev.GetInterrupt(0, &irq)) != ZX_OK) {
         zxlogf(ERROR, "%s: Failed to map interrupt\n", __FILE__);
         return status;
     }
 
     pdev_device_info_t dev_info;
-    if ((status = pdev_get_device_info(&pdev, &dev_info)) != ZX_OK) {
+    if ((status = pdev.GetDeviceInfo(&dev_info)) != ZX_OK) {
         zxlogf(ERROR, "%s: Failed to get device info\n", __FILE__);
         return status;
     }
 
     ddk::GpioProtocolProxy reset_gpio;
     if (dev_info.gpio_count > 0) {
-        gpio_protocol_t proto;
-        if ((status = device_get_protocol(parent, ZX_PROTOCOL_GPIO, &proto)) != ZX_OK) {
+        reset_gpio = ddk::GpioProtocolProxy(parent);
+        if (!reset_gpio.is_valid()) {
             zxlogf(ERROR, "%s: Failed to get reset GPIO\n", __FILE__);
-            return status;
+            return ZX_ERR_NO_RESOURCES;
         }
-
-        reset_gpio = ddk::GpioProtocolProxy(&proto);
     }
 
     fbl::AllocChecker ac;
-    fbl::unique_ptr<MtkSdmmc> device(new (&ac) MtkSdmmc(parent, std::move(mmio_obj), std::move(bti),
+    fbl::unique_ptr<MtkSdmmc> device(new (&ac) MtkSdmmc(parent, std::move(*mmio), std::move(bti),
                                                         info, std::move(irq), reset_gpio, dev_info,
                                                         config));
 

@@ -146,16 +146,16 @@ zircon_skipblock_SkipBlock_ops fidl_ops = {
 
 zx_status_t SkipBlockDevice::Create(zx_device_t* parent) {
     // Get NAND protocol.
-    nand_protocol_t nand_proto;
-    if (device_get_protocol(parent, ZX_PROTOCOL_NAND, &nand_proto) != ZX_OK) {
+    ddk::NandProtocolProxy nand(parent);
+    if (!nand.is_valid()) {
         zxlogf(ERROR, "skip-block: parent device '%s': does not support nand protocol\n",
                device_get_name(parent));
         return ZX_ERR_NOT_SUPPORTED;
     }
 
     // Get bad block protocol.
-    bad_block_protocol_t bad_block_proto;
-    if (device_get_protocol(parent, ZX_PROTOCOL_BAD_BLOCK, &bad_block_proto) != ZX_OK) {
+    ddk::BadBlockProtocolProxy bad_block(parent);
+    if (!bad_block.is_valid()) {
         zxlogf(ERROR, "skip-block: parent device '%s': does not support bad_block protocol\n",
                device_get_name(parent));
         return ZX_ERR_NOT_SUPPORTED;
@@ -177,8 +177,8 @@ zx_status_t SkipBlockDevice::Create(zx_device_t* parent) {
     }
 
     fbl::AllocChecker ac;
-    fbl::unique_ptr<SkipBlockDevice> device(new (&ac) SkipBlockDevice(parent, nand_proto,
-                                                                      bad_block_proto, copy_count));
+    fbl::unique_ptr<SkipBlockDevice> device(new (&ac) SkipBlockDevice(parent, nand, bad_block,
+                                                                      copy_count));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }

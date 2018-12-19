@@ -60,18 +60,16 @@ static pbus_dev_t i2c_dev = []() {
 
 zx_status_t Sherlock::I2cInit() {
 
-    ddk::GpioImplProtocolProxy gpio_impl(&gpio_impl_);
-
     // setup pinmux for our I2C busses
     //i2c_ao_0
-    gpio_impl.SetAltFunction(T931_GPIOAO(2), 1);
-    gpio_impl.SetAltFunction(T931_GPIOAO(3), 1);
+    gpio_impl_.SetAltFunction(T931_GPIOAO(2), 1);
+    gpio_impl_.SetAltFunction(T931_GPIOAO(3), 1);
     //i2c2
-    gpio_impl.SetAltFunction(T931_GPIOZ(14), 3);
-    gpio_impl.SetAltFunction(T931_GPIOZ(15), 3);
+    gpio_impl_.SetAltFunction(T931_GPIOZ(14), 3);
+    gpio_impl_.SetAltFunction(T931_GPIOZ(15), 3);
     //i2c3
-    gpio_impl.SetAltFunction(T931_GPIOA(14), 2);
-    gpio_impl.SetAltFunction(T931_GPIOA(15), 2);
+    gpio_impl_.SetAltFunction(T931_GPIOA(14), 2);
+    gpio_impl_.SetAltFunction(T931_GPIOA(15), 2);
 
     zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_I2C_IMPL, &i2c_dev);
     if (status != ZX_OK) {

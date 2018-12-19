@@ -3,14 +3,11 @@
 // found in the LICENSE file.
 
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/i2c-lib.h>
-#include <ddk/protocol/platform/bus.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
+#include <ddktl/i2c-channel.h>
+#include <ddktl/pdev.h>
 #include <ddktl/protocol/clk.h>
 #include <ddktl/protocol/gpio.h>
-#include <ddktl/protocol/i2c.h>
-#include <ddk/protocol/i2c-lib.h>
 #include <ddktl/protocol/mipicsi.h>
 #include <zircon/camera/c/fidl.h>
 
@@ -65,7 +62,7 @@ public:
 
     static zx_status_t Create(zx_device_t* parent);
     Imx227Device(zx_device_t* device)
-        : DeviceType(device) {
+        : DeviceType(device), pdev_(device), i2c_(device), clk_(device), mipi_(device) {
         ddk_proto_id_ = ZX_PROTOCOL_CAMERA;
     }
 
@@ -96,11 +93,11 @@ private:
     sensor_context_t ctx_;
 
     // Protocols.
-    pdev_protocol_t pdev_;
-    i2c_protocol_t i2c_;
-    gpio_protocol_t gpios_[GPIO_COUNT];
-    clk_protocol_t clk_;
-    mipi_csi_protocol_t mipi_;
+    ddk::PDev pdev_;
+    ddk::I2cChannel i2c_;
+    ddk::GpioProtocolProxy gpios_[GPIO_COUNT];
+    ddk::ClkProtocolProxy clk_;
+    ddk::MipiCsiProtocolProxy mipi_;
 
     // I2C Helpers.
     uint8_t ReadReg(uint16_t addr);

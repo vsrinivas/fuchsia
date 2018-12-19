@@ -6,8 +6,8 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <ddk/protocol/gpioimpl.h>
 #include <ddktl/device.h>
+#include <ddktl/protocol/gpioimpl.h>
 #include <ddktl/protocol/platform/bus.h>
 #include <threads.h>
 
@@ -32,7 +32,7 @@ private:
     int Thread();
 
     ddk::PBusProtocolProxy pbus_;
-    gpio_impl_protocol_t gpio_impl_ = {};
+    ddk::GpioImplProtocolProxy gpio_impl_ = {};
     thrd_t thread_ = {};
 };
 

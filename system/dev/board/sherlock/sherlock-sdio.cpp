@@ -136,8 +136,7 @@ const pbus_dev_t sdio_dev = []() {
 } // namespace
 
 zx_status_t Sherlock::BCM43458LpoClockInit() {
-    auto gpio = ddk::GpioImplProtocolProxy(&gpio_impl_);
-    auto status = gpio.SetAltFunction(T931_WIFI_LPO_CLK, T931_WIFI_LPO_CLK_FN);
+    auto status = gpio_impl_.SetAltFunction(T931_WIFI_LPO_CLK, T931_WIFI_LPO_CLK_FN);
     if (status != ZX_OK) {
         return status;
     }
@@ -173,20 +172,21 @@ zx_status_t Sherlock::SdioInit() {
     zx_status_t status;
 
     // Configure eMMC-SD soc pads.
-    auto gpio = ddk::GpioImplProtocolProxy(&gpio_impl_);
-    if ((status = gpio.SetAltFunction(T931_SDIO_D0, T931_SDIO_D0_FN)) != ZX_OK) return status;
-    if ((status = gpio.SetAltFunction(T931_SDIO_D1, T931_SDIO_D1_FN)) != ZX_OK) return status;
-    if ((status = gpio.SetAltFunction(T931_SDIO_D2, T931_SDIO_D2_FN)) != ZX_OK) return status;
-    if ((status = gpio.SetAltFunction(T931_SDIO_D3, T931_SDIO_D3_FN)) != ZX_OK) return status;
-    if ((status = gpio.SetAltFunction(T931_SDIO_CLK, T931_SDIO_CLK_FN)) != ZX_OK) return status;
-    if ((status = gpio.SetAltFunction(T931_SDIO_CMD, T931_SDIO_CMD_FN)) != ZX_OK) return status;
+    if (((status = gpio_impl_.SetAltFunction(T931_SDIO_D0, T931_SDIO_D0_FN)) != ZX_OK) ||
+        ((status = gpio_impl_.SetAltFunction(T931_SDIO_D1, T931_SDIO_D1_FN)) != ZX_OK) ||
+        ((status = gpio_impl_.SetAltFunction(T931_SDIO_D2, T931_SDIO_D2_FN)) != ZX_OK) ||
+        ((status = gpio_impl_.SetAltFunction(T931_SDIO_D3, T931_SDIO_D3_FN)) != ZX_OK) ||
+        ((status = gpio_impl_.SetAltFunction(T931_SDIO_CLK, T931_SDIO_CLK_FN)) != ZX_OK) ||
+        ((status = gpio_impl_.SetAltFunction(T931_SDIO_CMD, T931_SDIO_CMD_FN)) != ZX_OK)) {
+        return status;
+    }
 
-    status = gpio.SetAltFunction(T931_WIFI_REG_ON, T931_WIFI_REG_ON_FN);
+    status = gpio_impl_.SetAltFunction(T931_WIFI_REG_ON, T931_WIFI_REG_ON_FN);
     if (status != ZX_OK) {
         return status;
     }
 
-    status = gpio.SetAltFunction(T931_WIFI_HOST_WAKE, T931_WIFI_HOST_WAKE_FN);
+    status = gpio_impl_.SetAltFunction(T931_WIFI_HOST_WAKE, T931_WIFI_HOST_WAKE_FN);
     if (status != ZX_OK) {
         return status;
     }

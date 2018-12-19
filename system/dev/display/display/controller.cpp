@@ -17,13 +17,13 @@
 
 namespace {
 
-typedef struct i2c_bus {
-    i2c_impl_protocol_t* i2c;
+struct I2cBus {
+    ddk::I2cImplProtocolProxy i2c;
     uint32_t bus_id;
-} i2c_bus_t;
+};
 
 edid::ddc_i2c_transact ddc_tx = [](void* ctx, edid::ddc_i2c_msg_t* msgs, uint32_t count) -> bool {
-    auto i2c = static_cast<i2c_bus_t*>(ctx);
+    auto i2c = static_cast<I2cBus*>(ctx);
     i2c_impl_op_t ops[count];
     for (unsigned i = 0; i < count; i++) {
         ops[i].address = msgs[i].addr;
@@ -32,7 +32,7 @@ edid::ddc_i2c_transact ddc_tx = [](void* ctx, edid::ddc_i2c_msg_t* msgs, uint32_
         ops[i].is_read = msgs[i].is_read;
         ops[i].stop = i == (count - 1);
     }
-    return i2c_impl_transact(i2c->i2c, i2c->bus_id, ops, count) == ZX_OK;
+    return i2c->i2c.Transact(i2c->bus_id, ops, count) == ZX_OK;
 };
 
 } // namespace
@@ -293,7 +293,7 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
 
         info->has_edid = display_params.edid_present;
         if (info->has_edid) {
-            if (!has_i2c_ops_) {
+            if (!i2c_.is_valid()) {
                 zxlogf(ERROR, "Presented edid display with no i2c bus\n");
                 continue;
             }
@@ -311,7 +311,7 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
                 }
                 edid_attempt++;
 
-                struct i2c_bus i2c = { &i2c_ops_, display_params.panel.i2c_bus_id };
+                I2cBus i2c = { i2c_, display_params.panel.i2c_bus_id };
                 success = info->edid.Init(&i2c, ddc_tx, &edid_err);
             } while (!success && edid_attempt < kEdidRetries);
 
@@ -825,18 +825,13 @@ zx_status_t Controller::DdkOpenAt(zx_device_t** dev_out, const char* path, uint3
 
 zx_status_t Controller::Bind(fbl::unique_ptr<display::Controller>* device_ptr) {
     zx_status_t status;
-    display_controller_impl_protocol_t dc_proto;
-    if (device_get_protocol(parent_, ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL, &dc_proto)) {
+    dc_ = ddk::DisplayControllerImplProtocolProxy(parent_);
+    if (!dc_.is_valid()) {
         ZX_DEBUG_ASSERT_MSG(false, "Display controller bind mismatch");
         return ZX_ERR_NOT_SUPPORTED;
     }
-    dc_ = ddk::DisplayControllerImplProtocolProxy(&dc_proto);
 
-    if (device_get_protocol(parent_, ZX_PROTOCOL_I2C_IMPL, &i2c_ops_) == ZX_OK) {
-        has_i2c_ops_ = true;
-    } else {
-        has_i2c_ops_ = false;
-    }
+    i2c_ = ddk::I2cImplProtocolProxy(parent_);
 
     status = loop_.StartThread("display-client-loop", &loop_thread_);
     if (status != ZX_OK) {
