@@ -7,8 +7,8 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/serialimpl.h>
-#include <ddk/protocol/usb-old.h>
-#include <ddk/usb/usb.h>
+#include <ddk/protocol/usb.h>
+#include <usb/usb.h>
 #include <usb/usb-request.h>
 #include <zircon/device/serial.h>
 #include <zircon/listnode.h>
@@ -78,8 +78,8 @@ static uint32_t ftdi_check_state(ftdi_t* ftdi) {
     return state;
 }
 
-static void ftdi_read_complete(usb_request_t* request, void* cookie) {
-    ftdi_t* ftdi = (ftdi_t*)cookie;
+static void ftdi_read_complete(void* ctx, usb_request_t* request) {
+    ftdi_t* ftdi = (ftdi_t*)ctx;
 
     if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
         zxlogf(INFO,"FTDI: remote closed\n");
@@ -94,13 +94,17 @@ static void ftdi_read_complete(usb_request_t* request, void* cookie) {
         ZX_DEBUG_ASSERT(status == ZX_OK);
         ftdi_check_state(ftdi);
     } else {
-        usb_request_queue(&ftdi->usb, request, ftdi_read_complete, ftdi);
+        usb_request_complete_t complete = {
+            .callback = ftdi_read_complete,
+            .ctx = ftdi,
+        };
+        usb_request_queue(&ftdi->usb, request, &complete);
     }
     mtx_unlock(&ftdi->mutex);
 }
 
-static void ftdi_write_complete(usb_request_t* request, void* cookie) {
-    ftdi_t* ftdi = (ftdi_t*)cookie;
+static void ftdi_write_complete(void* ctx, usb_request_t* request) {
+    ftdi_t* ftdi = (ftdi_t*)ctx;
 
     if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
         usb_request_release(request);
@@ -161,7 +165,11 @@ static zx_status_t ftdi_write(void *ctx, const void* buf, size_t length, size_t*
     *actual = usb_request_copy_to(req, buf, length, 0);
     req->header.length = length;
 
-    usb_request_queue(&ftdi->usb,req, ftdi_write_complete, ftdi);
+    usb_request_complete_t complete = {
+        .callback = ftdi_write_complete,
+        .ctx = ftdi,
+    };
+    usb_request_queue(&ftdi->usb,req, &complete);
     ftdi_check_state(ftdi);
 
 out:
@@ -175,6 +183,11 @@ static zx_status_t ftdi_read(void* ctx, void* data, size_t len, size_t* actual) 
     size_t bytes_copied = 0;
     size_t offset = ftdi->read_offset;
     uint8_t* buffer = (uint8_t*)data;
+
+    usb_request_complete_t complete = {
+        .callback = ftdi_read_complete,
+        .ctx = ftdi,
+    };
 
     mtx_lock(&ftdi->mutex);
 
@@ -201,7 +214,7 @@ static zx_status_t ftdi_read(void* ctx, void* data, size_t len, size_t* actual) 
         } else {
             list_remove_head(&ftdi->completed_reads);
             // requeue the read request
-            usb_request_queue(&ftdi->usb, req, ftdi_read_complete, ftdi);
+            usb_request_queue(&ftdi->usb, req, &complete);
             offset = 0;
         }
 
@@ -238,9 +251,8 @@ static zx_status_t ftdi_set_baudrate(ftdi_t* ftdi, uint32_t baudrate){
     }
     value = (whole & 0x3fff) | (fraction << 14);
     index = fraction >> 2;
-    status = usb_control(&ftdi->usb, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-                         FTDI_SIO_SET_BAUDRATE, value, index, NULL, 0,
-                         ZX_TIME_INFINITE,NULL);
+    status = usb_control_out(&ftdi->usb, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                             FTDI_SIO_SET_BAUDRATE, value, index, ZX_TIME_INFINITE, NULL, 0);
     if (status == ZX_OK) {
         ftdi->baudrate = baudrate;
     }
@@ -253,15 +265,8 @@ static zx_status_t ftdi_reset(ftdi_t* ftdi) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    return usb_control(
-            &ftdi->usb,
-            USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-            FTDI_SIO_RESET_REQUEST,
-            FTDI_SIO_RESET, //value
-            0, //index
-            NULL, 0, //data,length
-            ZX_TIME_INFINITE,
-            NULL);
+    return usb_control_out(&ftdi->usb, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                           FTDI_SIO_RESET_REQUEST, FTDI_SIO_RESET, 0, ZX_TIME_INFINITE, NULL, 0);
 }
 
 
@@ -352,7 +357,7 @@ static zx_protocol_device_t ftdi_device_proto = {
 static zx_status_t ftdi_bind(void* ctx, zx_device_t* device) {
 
     usb_protocol_t usb;
-    zx_status_t status = device_get_protocol(device, ZX_PROTOCOL_USB_OLD, &usb);
+    zx_status_t status = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);
     if (status != ZX_OK) {
         return status;
     }
@@ -460,6 +465,11 @@ static zx_status_t ftdi_bind(void* ctx, zx_device_t* device) {
         goto fail;
     }
 
+    usb_request_complete_t complete = {
+        .callback = ftdi_read_complete,
+        .ctx = ftdi,
+    };
+
     //Queue the read requests
     usb_req_internal_t* req_int;
     usb_req_internal_t* prev;
@@ -468,7 +478,7 @@ static zx_status_t ftdi_bind(void* ctx, zx_device_t* device) {
                                usb_req_internal_t, node) {
         list_delete(&req_int->node);
         req = REQ_INTERNAL_TO_USB_REQ(req_int, ftdi->parent_req_size);
-        usb_request_queue(&ftdi->usb, req, ftdi_read_complete, ftdi);
+        usb_request_queue(&ftdi->usb, req, &complete);
     }
 
     zxlogf(INFO,"ftdi bind successful\n");
@@ -486,7 +496,7 @@ static zx_driver_ops_t _ftdi_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(ftdi, _ftdi_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_OLD),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
     BI_MATCH_IF(EQ, BIND_USB_VID, FTDI_VID),
     BI_MATCH_IF(EQ, BIND_USB_PID, FTDI_232R_PID),
 ZIRCON_DRIVER_END(ftdi)

@@ -9,13 +9,14 @@ MODULE_TYPE := driver
 
 MODULE_SRCS := $(LOCAL_DIR)/ftdi.c
 
-MODULE_STATIC_LIBS := system/ulib/ddk system/dev/lib/usb-old
+MODULE_STATIC_LIBS := system/ulib/ddk system/dev/lib/usb
 
 MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-serial \
     system/banjo/ddk-protocol-serial-impl \
+    system/banjo/ddk-protocol-usb \
     system/banjo/ddk-protocol-usb-composite \
     system/banjo/ddk-protocol-usb-request \
 
