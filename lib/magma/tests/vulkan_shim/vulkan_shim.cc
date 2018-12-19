@@ -407,7 +407,7 @@ VkResult VulkanShimInit()
             vulkan_shim_get_proc_addr(instance, "vkGetPhysicalDeviceWin32PresentationSupportKHR"));
 #endif
 
-#ifdef VK_USE_PLATFORM_MAGMA_KHR
+#ifdef VK_USE_PLATFORM_FUCHSIA
     vkCreateMagmaSurfaceKHR = reinterpret_cast<PFN_vkCreateMagmaSurfaceKHR>(
         vulkan_shim_get_proc_addr(instance, "vkCreateMagmaSurfaceKHR"));
     vkGetPhysicalDeviceMagmaPresentationSupportKHR =
@@ -607,7 +607,7 @@ PFN_vkCreateWin32SurfaceKHR vkCreateWin32SurfaceKHR;
 PFN_vkGetPhysicalDeviceWin32PresentationSupportKHR vkGetPhysicalDeviceWin32PresentationSupportKHR;
 #endif
 
-#ifdef VK_USE_PLATFORM_MAGMA_KHR
+#ifdef VK_USE_PLATFORM_FUCHSIA
 PFN_vkCreateMagmaSurfaceKHR vkCreateMagmaSurfaceKHR;
 PFN_vkGetPhysicalDeviceMagmaPresentationSupportKHR vkGetPhysicalDeviceMagmaPresentationSupportKHR;
 #endif

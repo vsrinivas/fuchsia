@@ -1209,7 +1209,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkBindImageMemory2KHR(
     uint32_t                                    bindInfoCount,
     const VkBindImageMemoryInfoKHR*             pBindInfos) { return VK_SUCCESS; }
 
-#ifdef VK_USE_PLATFORM_MAGMA_KHR
+#ifdef VK_USE_PLATFORM_FUCHSIA
 
 VKAPI_ATTR VkResult VKAPI_CALL vkGetMemoryFuchsiaHandleKHR(
     VkDevice                                    device,
@@ -1241,7 +1241,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceMagmaPresentationSupportKHR(
     VkPhysicalDevice                            physicalDevice,
     uint32_t                                    queueFamilyIndex);
 
-#endif /* VK_USE_PLATFORM_MAGMA_KHR */
+#endif /* VK_USE_PLATFORM_FUCHSIA */
 
 VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugReportCallbackEXT(
     VkInstance                                  instance,

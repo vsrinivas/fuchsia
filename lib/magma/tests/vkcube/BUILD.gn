@@ -7,7 +7,7 @@ import("//garnet/lib/magma/gnbuild/magma.gni")
 executable("vkcube") {
   include_dirs = [ "." ]
 
-  defines = [ "VK_USE_PLATFORM_MAGMA_KHR" ]
+  defines = [ "VK_USE_PLATFORM_FUCHSIA" ]
 
   sources = [
     "$magma_build_root/third_party/vkcube/cube.cc",

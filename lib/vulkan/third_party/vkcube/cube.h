@@ -80,7 +80,7 @@ typedef struct {
   VkImageView view;
 } SwapchainBuffers;
 
-#if defined(VK_USE_PLATFORM_MAGMA_KHR) && defined(CUBE_USE_IMAGE_PIPE)
+#if defined(VK_USE_PLATFORM_FUCHSIA) && defined(CUBE_USE_IMAGE_PIPE)
 struct FuchsiaState {
   async::Loop loop;
   uint32_t image_pipe_handle = 0;
@@ -104,7 +104,7 @@ struct demo {
   xcb_screen_t* screen;
   xcb_window_t xcb_window;
   xcb_intern_atom_reply_t* atom_wm_delete_window;
-#elif defined(VK_USE_PLATFORM_MAGMA_KHR) && defined(CUBE_USE_IMAGE_PIPE)
+#elif defined(VK_USE_PLATFORM_FUCHSIA) && defined(CUBE_USE_IMAGE_PIPE)
   std::unique_ptr<FuchsiaState> fuchsia_state;
 #endif
 

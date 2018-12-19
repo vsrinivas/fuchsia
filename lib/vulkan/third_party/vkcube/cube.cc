@@ -43,7 +43,7 @@
 #include <X11/Xutil.h>
 #endif
 
-#if defined(VK_USE_PLATFORM_MAGMA_KHR)
+#if defined(VK_USE_PLATFORM_FUCHSIA)
 #include <chrono>
 #endif
 
@@ -2243,7 +2243,7 @@ static void demo_init_vk(struct demo* demo) {
 #endif
   };
 
-#if VK_USE_PLATFORM_MAGMA_KHR
+#if VK_USE_PLATFORM_FUCHSIA
 #if CUBE_USE_IMAGE_PIPE
   const char* kMagmaLayer = "VK_LAYER_FUCHSIA_imagepipe_swapchain";
 #else
@@ -2345,7 +2345,7 @@ static void demo_init_vk(struct demo* demo) {
             VK_KHR_XCB_SURFACE_EXTENSION_NAME;
       }
 #endif
-#if defined(VK_USE_PLATFORM_MAGMA_KHR)
+#if defined(VK_USE_PLATFORM_FUCHSIA)
       if (!strcmp(VK_FUCHSIA_IMAGEPIPE_SURFACE_EXTENSION_NAME,
                   instance_extensions[i].extensionName)) {
         platformSurfaceExtFound = 1;
@@ -2417,7 +2417,7 @@ static void demo_init_vk(struct demo* demo) {
         "information.\n",
         "vkCreateInstance Failure");
 #endif
-#if defined(VK_USE_PLATFORM_MAGMA_KHR)
+#if defined(VK_USE_PLATFORM_FUCHSIA)
     ERR_EXIT(
         "vkEnumerateInstanceExtensionProperties failed to find "
         "the " VK_FUCHSIA_IMAGEPIPE_SURFACE_EXTENSION_NAME
@@ -2755,7 +2755,7 @@ void demo_init_vk_swapchain(struct demo* demo) {
     createInfo.window = demo->xcb_window;
 
     err = vkCreateXcbSurfaceKHR(demo->inst, &createInfo, NULL, &demo->surface);
-#elif defined(VK_USE_PLATFORM_MAGMA_KHR)
+#elif defined(VK_USE_PLATFORM_FUCHSIA)
     VkImagePipeSurfaceCreateInfoFUCHSIA createInfo = {
       .sType = VK_STRUCTURE_TYPE_IMAGEPIPE_SURFACE_CREATE_INFO_FUCHSIA,
 #if defined(CUBE_USE_IMAGE_PIPE)
@@ -3013,7 +3013,7 @@ void demo_init(struct demo* demo, int argc, char** argv) {
   // to Vulkan orientation.
 }
 
-#if defined(VK_USE_PLATFORM_MAGMA_KHR)
+#if defined(VK_USE_PLATFORM_FUCHSIA)
 
 #if defined(CUBE_USE_IMAGE_PIPE)
 
@@ -3093,7 +3093,7 @@ static void demo_run_magma(struct demo* demo) {
   }
 }
 #endif  // defined(CUBE_USE_IMAGE_PIPE)
-#endif  // VK_USE_PLATFORM_MAGMA_KHR
+#endif  // VK_USE_PLATFORM_FUCHSIA
 
 int cube_main(int argc, char** argv) {
   struct demo demo;
@@ -3127,7 +3127,7 @@ int cube_main(int argc, char** argv) {
   demo_run_xcb(&demo);
 #elif defined(VK_USE_PLATFORM_XLIB_KHR)
   demo_run_xlib(&demo);
-#elif defined(VK_USE_PLATFORM_MAGMA_KHR)
+#elif defined(VK_USE_PLATFORM_FUCHSIA)
   demo_run_magma(&demo);
 #endif
 

@@ -221,7 +221,7 @@ extern PFN_vkGetPhysicalDeviceWin32PresentationSupportKHR
     vkGetPhysicalDeviceWin32PresentationSupportKHR;
 #endif
 
-#ifdef VK_USE_PLATFORM_MAGMA_KHR
+#ifdef VK_USE_PLATFORM_FUCHSIA
 // VK_KHR_magma_surface
 extern PFN_vkCreateMagmaSurfaceKHR vkCreateMagmaSurfaceKHR;
 extern PFN_vkGetPhysicalDeviceMagmaPresentationSupportKHR

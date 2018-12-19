@@ -38,7 +38,7 @@ extern "C" {
 #include <X11/Xutil.h>
 #endif
 
-#if defined(VK_USE_PLATFORM_MAGMA_KHR)
+#if defined(VK_USE_PLATFORM_FUCHSIA)
 #include <chrono>
 #endif
 
@@ -2237,7 +2237,7 @@ static void demo_create_xcb_window(struct demo *demo) {
 // VK_USE_PLATFORM_XCB_KHR
 #endif
 
-#if defined(VK_USE_PLATFORM_MAGMA_KHR)
+#if defined(VK_USE_PLATFORM_FUCHSIA)
 static void demo_run_magma(struct demo *demo)
 {
     uint32_t num_frames = 60;
@@ -2414,7 +2414,7 @@ static void demo_init_vk(struct demo *demo) {
                     VK_KHR_XCB_SURFACE_EXTENSION_NAME;
             }
 #endif
-#if defined(VK_USE_PLATFORM_MAGMA_KHR)
+#if defined(VK_USE_PLATFORM_FUCHSIA)
             if (!strcmp(VK_KHR_MAGMA_SURFACE_EXTENSION_NAME,
                         instance_extensions[i].extensionName)) {
                 platformSurfaceExtFound = 1;
@@ -2454,7 +2454,7 @@ static void demo_init_vk(struct demo *demo) {
                  "information.\n",
                  "vkCreateInstance Failure");
 #endif
-#if defined(VK_USE_PLATFORM_MAGMA_KHR)
+#if defined(VK_USE_PLATFORM_FUCHSIA)
         ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
                  "the " VK_KHR_MAGMA_SURFACE_EXTENSION_NAME
                  " extension.\n\nDo you have a compatible "
@@ -2732,7 +2732,7 @@ static void demo_init_vk_swapchain(struct demo *demo) {
         createInfo.window = demo->xcb_window;
 
         err = vkCreateXcbSurfaceKHR(demo->inst, &createInfo, NULL, &demo->surface);
-#elif defined(VK_USE_PLATFORM_MAGMA_KHR)
+#elif defined(VK_USE_PLATFORM_FUCHSIA)
         VkMagmaSurfaceCreateInfoKHR createInfo = {
             .sType = VK_STRUCTURE_TYPE_MAGMA_SURFACE_CREATE_INFO_KHR,
             .pNext = nullptr,
@@ -3028,7 +3028,7 @@ int cube_main(int argc, char **argv) {
     demo_run_xcb(&demo);
 #elif defined(VK_USE_PLATFORM_XLIB_KHR)
     demo_run_xlib(&demo);
-#elif defined(VK_USE_PLATFORM_MAGMA_KHR)
+#elif defined(VK_USE_PLATFORM_FUCHSIA)
     demo_run_magma(&demo);
 #endif
 
