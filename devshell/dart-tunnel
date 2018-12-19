@@ -18,9 +18,9 @@
 ## Arguments:
 ##   -h|--help    Print out this message.
 
-DEVSHELL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DEVSHELL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 VERBOSE=false
-source "${DEVSHELL_DIR}"/lib/vars.sh
+source "${DEVSHELL_DIR}"/lib/vars.sh || exit $?
 fx-config-read
 
 case $1 in

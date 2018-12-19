@@ -3,9 +3,9 @@
 # found in the LICENSE file.
 
 if [[ -n "${ZSH_VERSION}" ]]; then
-  source "$(cd "$(dirname "${(%):-%x}")" && pwd)"/devshell/lib/vars.sh
+  source "$(cd "$(dirname "${(%):-%x}")" >/dev/null 2>&1 && pwd)"/devshell/lib/vars.sh || return $?
 else
-  source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/devshell/lib/vars.sh
+  source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/devshell/lib/vars.sh || return $?
 fi
 
 # __patched_path <old-regex> <new-component>

@@ -10,7 +10,7 @@
 ## It is useful if one has by some mechanism deleted the ninja artifacts, but
 #not the args.gn, e.g. if one CTRL+C's a regen step (gn bug).
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 fx-config-read
 
 set -ex

@@ -5,7 +5,7 @@
 if [[ -n "${ZSH_VERSION}" ]]; then
   devshell_lib_dir=${${(%):-%x}:a:h}
 else
-  devshell_lib_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  devshell_lib_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 fi
 
 export FUCHSIA_DIR="$(dirname $(dirname $(dirname "${devshell_lib_dir}")))"

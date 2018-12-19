@@ -8,7 +8,7 @@
 #
 # TODO(cramertj) remove pending fix to our builds of cargo doc to prevent this
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 readonly ROOT_DIR="$(dirname $(dirname "${SCRIPT_DIR}"))"
 
 if [[ "$(uname -s)" = "Darwin" ]]; then

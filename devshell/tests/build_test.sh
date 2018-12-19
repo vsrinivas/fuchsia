@@ -13,7 +13,7 @@ if [[ ! -d "${TEST_DIR}" ]]; then
   exit 1
 fi
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 readonly FUCHSIA_DIR="$(dirname "$(dirname "$(dirname "${SCRIPT_DIR}")")")"
 readonly BUILD_DIR="foo"
 readonly TEST_BUILD_DIR="${TEST_DIR}/${BUILD_DIR}"

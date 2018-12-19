@@ -1,28 +1,28 @@
 # _fx_set__board completes a board name
 _fx_set__board() {
-  compadd ${(u)$(cd ${fuchsia_dir};echo */boards/*.gni(N:t:r) vendor/*/boards/*.gni(N:t:r))}
+  compadd ${(u)$(cd ${fuchsia_dir} >/dev/null 2>&1;echo */boards/*.gni(N:t:r) vendor/*/boards/*.gni(N:t:r))}
 }
 
 # _fx_set__product completes a product name
 _fx_set__product() {
-  compadd ${(u)$(cd ${fuchsia_dir};echo */products/*.gni(N:t:r) vendor/*/products/*.gni(N:t:r))}
+  compadd ${(u)$(cd ${fuchsia_dir} >/dev/null 2>&1;echo */products/*.gni(N:t:r) vendor/*/products/*.gni(N:t:r))}
 }
 
 # _fx_set__package completes a package name
 _fx_set__package() {
-  compadd $(cd ${fuchsia_dir} && echo */packages/**/^*.*(.N) vendor/*/packages/**/^*.*(.N))
+  compadd $(cd ${fuchsia_dir} >/dev/null 2>&1 && echo */packages/**/^*.*(.N) vendor/*/packages/**/^*.*(.N))
 }
 
 # _packages completes a comma separated list of packages
 _packages() {
   # packages are files without extensions in */packages/ and vendor/*/packages/
-  _values -s , $(cd ${fuchsia_dir} && echo */packages/**/^*.*(.N) vendor/*/packages/**/^*.*(.N))
+  _values -s , $(cd ${fuchsia_dir} >/dev/null 2>&1 && echo */packages/**/^*.*(.N) vendor/*/packages/**/^*.*(.N))
 }
 
 # _products completes a comma separated list of products
 _products() {
   # products are .gni files in */products/ and vendor/*/products/
-  _values -s , $(cd ${fuchsia_dir} && echo */products/**/*.gni(.N) vendor/*/products/**/*.gni(.N))
+  _values -s , $(cd ${fuchsia_dir} >/dev/null 2>&1 && echo */products/**/*.gni(.N) vendor/*/products/**/*.gni(.N))
 }
 
 _gn_args_caching_policy() {

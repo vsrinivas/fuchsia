@@ -18,7 +18,7 @@
 ## --name=NAME           Name the generated update source config NAME. Defaults to the config type.
 ## --disable-source=NAME Disable the update source with NAME after adding the new update source.
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 fx-config-read
 
 function usage {

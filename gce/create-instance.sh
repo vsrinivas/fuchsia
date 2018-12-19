@@ -4,7 +4,7 @@
 # found in the LICENSE file.
 
 if [[ -z $FUCHSIA_GCE_PROJECT ]]; then
-  source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/env.sh
+  source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/env.sh
 fi
 
 # gcloud -q compute disks create "$FUCHSIA_GCE_DISK" --guest-os-features=UEFI_COMPATIBLE --image "$FUCHSIA_GCE_IMAGE" || exit

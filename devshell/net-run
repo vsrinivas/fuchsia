@@ -25,7 +25,7 @@
 ##    SSH_COMMAND   Any other argument will be passed directly to "fx ssh".
 ##                  If not specified, it will open an interactive SSH session.
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 
 # Defaults
 # If --run is set, it will overwrite this value

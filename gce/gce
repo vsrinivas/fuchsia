@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-mydir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+mydir="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 if [[ -z $FUCHSIA_GCE_PROJECT ]]; then
   source $mydir/env.sh
 fi

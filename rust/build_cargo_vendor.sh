@@ -7,7 +7,7 @@
 # cannot be built from sources in the Fuchsia tree AND cannot be installed via
 # "cargo install"...
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 readonly ROOT_DIR="$(dirname $(dirname "${SCRIPT_DIR}"))"
 
 if [[ "$(uname -s)" = "Darwin" ]]; then

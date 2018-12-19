@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 readonly ROOT_DIR="$(dirname "${SCRIPT_DIR}")"
 
 readonly HOST_ARCH="$(uname -m)"
@@ -79,10 +79,10 @@ declare JOBS="${JOBS:-$(getconf _NPROCESSORS_ONLN)}"
 while getopts "cd:j:o:s:" opt; do
   case "${opt}" in
     c) CLEAN="true" ;;
-    d) DESTDIR="$(cd "${OPTARG}"; pwd -P)" ;;
+    d) DESTDIR="$(cd "${OPTARG}" >/dev/null 2>&1; pwd -P)" ;;
     j) JOBS="${OPTARG}" ;;
-    o) OUTDIR="$(cd "${OPTARG}"; pwd -P)" ;;
-    s) SRCDIR="$(cd "${OPTARG}"; pwd -P)" ;;
+    o) OUTDIR="$(cd "${OPTARG}" >/dev/null 2>&1; pwd -P)" ;;
+    s) SRCDIR="$(cd "${OPTARG}" >/dev/null 2>&1; pwd -P)" ;;
     *) usage;;
   esac
 done

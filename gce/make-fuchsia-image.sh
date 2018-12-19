@@ -4,7 +4,7 @@
 # found in the LICENSE file.
 
 if [[ -z $FUCHSIA_GCE_PROJECT ]]; then
-  source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/env.sh
+  source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/env.sh
 fi
 
 mfv=$FUCHSIA_BUILD_DIR/tools/make-fuchsia-vol

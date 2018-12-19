@@ -12,7 +12,7 @@ set -o nounset
 set -o pipefail
 
 # Read in the tool under test. Set TESTING=1 to avoid invoking main().
-readonly PARENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly PARENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 TESTING=1 source "${PARENT_DIR}/../pave-prebuilt"
 
 # expect_archive_produces_id <archive-path> <expected-id>

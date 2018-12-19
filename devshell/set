@@ -120,7 +120,7 @@
 ##                         This flag is deprecated, please use one of
 ##                         --available, --preinstall, or --monolith.
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 
 function guess_config_within_layer {
   local config_type="$1"
@@ -432,7 +432,7 @@ function main {
     *)
       # Absolute or relative path.  Canonicalize it to source-relative.
       local abs_build_dir
-      abs_build_dir="$(cd "${build_dir%/*}"; pwd)/${build_dir##*/}" || {
+      abs_build_dir="$(cd "${build_dir%/*}" >/dev/null 2>&1; pwd)/${build_dir##*/}" || {
         echo >&2 "ERROR: Missing parent directories for ${build_dir}"
         return 1
       }

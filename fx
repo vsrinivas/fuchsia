@@ -136,7 +136,7 @@ if [[ -z "${fuchsia_dir}" ]]; then
 fi
 
 declare -r vars_sh="${fuchsia_dir}/scripts/devshell/lib/vars.sh"
-source "${vars_sh}"
+source "${vars_sh}" || exit $?
 
 while [[ $# -ne 0 ]]; do
   case $1 in

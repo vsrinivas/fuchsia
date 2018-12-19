@@ -10,7 +10,7 @@
 ## Anything that is not valid marked up is left alone. This is similar
 ## to how c++filt works for demangling C++ symbols.
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 fx-config-read
 
 if [[ $# > 1 && "$1" = "-i" ]]; then

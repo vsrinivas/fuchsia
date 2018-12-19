@@ -8,12 +8,12 @@ __fx_nodename() {
 
 __fx_amber_package() {
   # packages are directories in the build dir under amber-files/repository/targets
-  _values $(cd ${fuchsia_build_dir}/amber-files/repository/targets && echo *(/))
+  _values $(cd ${fuchsia_build_dir}/amber-files/repository/targets >/dev/null 2>&1 && echo *(/))
 }
 
 __fx_build_dir() {
   # build dirs are directories under out/ with an args.gn
-  compadd $(cd ${fuchsia_dir}; echo out/*/args.gn(N:h))
+  compadd $(cd ${fuchsia_dir} >/dev/null 2>&1; echo out/*/args.gn(N:h))
 }
 
 __fx_gn_target() {
