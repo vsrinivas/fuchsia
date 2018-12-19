@@ -16,10 +16,18 @@ annotation, simply add a new field in the map returned by
 
 ## Testing
 
-To test your changes, on a real device, we have two helper programs to simulate
-a kernel crash and a C userspace crash. After running each one of them (see
-commands in sections below), you should then look each time for the following
-line in the syslog:
+To test your changes, on a real device, we have some unit tests and two helper
+programs to simulate a kernel crash and a C userspace crash.
+
+To run the unit tests:
+
+```sh
+(host) $ fx run-test-component crashpad_analyzer_tests
+```
+
+As for the helper programs, after running each one of them (see commands in
+sections below), you should then look each time for the following line in the
+syslog:
 
 ```sh
 (host)$ fx syslog --tag crash
