@@ -12,6 +12,8 @@ struct LaunchService {
     string name;
     /// Service launch url (fuchsia component url).
     string url;
+    /// Service launch arguments
+    vector<string>? arguments;
 };
 
 /// A single virtual device to make available for child processes.

@@ -1,0 +1,99 @@
+{
+    "facets": {
+        "fuchsia.netemul": {
+            "environment": {
+                "children": [
+                    {
+                        "name": "child-1",
+                        "test": [
+                            {
+                                "arguments": [
+                                    "-t",
+                                    "1",
+                                    "-n",
+                                    "child-1-url"
+                                ],
+                                "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/env_build_run.cmx"
+                            },
+                            {
+                                "arguments": [
+                                    "-t",
+                                    "1",
+                                    "-n",
+                                    "child-1-no-url"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "inherit_services": false,
+                        "name": "child-2",
+                        "test": [
+                            {
+                                "arguments": [
+                                    "-t",
+                                    "2",
+                                    "-n",
+                                    "child-2"
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "devices": [
+                    "ep0",
+                    "ep1"
+                ],
+                "name": "root",
+                "services": {
+                    "fuchsia.net.SocketProvider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+                    "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
+                },
+                "setup": [
+                    {
+                        "arguments": [
+                            "-t",
+                            "3",
+                            "-n",
+                            "setup"
+                        ]
+                    }
+                ]
+            },
+            "networks": [
+                {
+                    "endpoints": [
+                        {
+                            "mac": "70:00:01:02:03:04",
+                            "mtu": 1000,
+                            "name": "ep0",
+                            "up": false
+                        },
+                        {
+                            "name": "ep1"
+                        }
+                    ],
+                    "name": "test-net"
+                }
+            ]
+        }
+    },
+    "program": {
+        "binary": "test/env_build"
+    },
+    "sandbox": {
+        "dev": [
+            "class/ethernet"
+        ],
+        "features": [
+            "persistent-storage"
+        ],
+        "services": [
+            "fuchsia.netemul.environment.ManagedEnvironment",
+            "fuchsia.netemul.network.NetworkContext",
+            "fuchsia.netemul.bus.BusManager",
+            "fuchsia.netstack.Netstack",
+            "fuchsia.net.SocketProvider"
+        ]
+    }
+}

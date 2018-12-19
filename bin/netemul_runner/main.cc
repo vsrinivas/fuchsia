@@ -54,7 +54,7 @@ int main(int argc, const char** argv) {
     zx_process_exit(exit_code);
   });
 
-  sandbox.Start();
+  sandbox.Start(loop.dispatcher());
   loop.Run();
 
   return 0;

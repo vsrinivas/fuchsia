@@ -11,10 +11,8 @@ using component::testing::EnvironmentServices;
 
 ManagedEnvironment::Ptr ManagedEnvironment::CreateRoot(
     const fuchsia::sys::EnvironmentPtr& parent,
-    const SandboxEnv::Ptr& sandbox_env) {
+    const SandboxEnv::Ptr& sandbox_env, Options options) {
   auto ret = ManagedEnvironment::Ptr(new ManagedEnvironment(sandbox_env));
-  Options options;
-  options.name = "root";
   ret->Create(parent, std::move(options));
   return ret;
 }
@@ -58,17 +56,22 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
   // prepare service configurations:
   service_config_.clear();
   if (options.inherit_parent_launch_services && managed_parent != nullptr) {
-    service_config_.insert(service_config_.begin(),
-                           managed_parent->service_config_.begin(),
-                           managed_parent->service_config_.end());
+    for (const auto& a : managed_parent->service_config_) {
+      LaunchService clone;
+      a.Clone(&clone);
+      service_config_.push_back(std::move(clone));
+    }
   }
-  service_config_.insert(service_config_.begin(), options.services.begin(),
-                         options.services.end());
+
+  std::move(options.services.begin(), options.services.end(),
+            std::back_inserter(service_config_));
 
   // push all the allowable launch services:
   for (const auto& svc : service_config_) {
     fuchsia::sys::LaunchInfo linfo;
     linfo.url = svc.url;
+    linfo.arguments->insert(linfo.arguments->begin(), svc.arguments->begin(),
+                            svc.arguments->end());
     services->AddServiceWithLaunchInfo(std::move(linfo), svc.name);
   }
 
@@ -81,6 +84,12 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
       .kill_on_oom = true,
       .allow_parent_runners = false,
       .inherit_parent_services = false};
+
+  // Nested environments without a name are not allowed, if empty name is
+  // provided, replace it with a default value:
+  if (options.name.empty()) {
+    options.name = "netemul-env";
+  }
 
   env_ = EnclosingEnvironment::Create(options.name, parent, std::move(services),
                                       sub_options);
@@ -103,6 +112,11 @@ zx::channel ManagedEnvironment::OpenVdataDirectory() {
     virtual_data_ = std::make_unique<VirtualData>();
   }
   return virtual_data_->GetDirectory();
+}
+
+void ManagedEnvironment::Bind(
+    fidl::InterfaceRequest<ManagedEnvironment::FManagedEnvironment> req) {
+  bindings_.AddBinding(this, std::move(req));
 }
 
 }  // namespace netemul

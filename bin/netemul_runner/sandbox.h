@@ -6,7 +6,10 @@
 #define GARNET_BIN_NETEMUL_RUNNER_SANDBOX_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <unordered_set>
 #include "managed_environment.h"
+#include "model/config.h"
 #include "sandbox_env.h"
 
 namespace netemul {
@@ -28,21 +31,52 @@ class Sandbox {
     termination_callback_ = std::move(callback);
   }
 
-  void Start();
+  void Start(async_dispatcher_t* dispatcher);
 
  private:
   void LoadPackage(fuchsia::sys::PackagePtr package);
   void Terminate(TerminationReason reason);
   void Terminate(int64_t exit_code, TerminationReason reason);
-  void StartRootEnvironment();
+  void PostTerminate(TerminationReason reason);
+  void PostTerminate(int64_t exit_code, TerminationReason reason);
 
+  void EnableTestObservation();
+  void RegisterTest(size_t ticket);
+  void UnregisterTest(size_t ticket);
+
+  template <typename T>
+  bool LaunchProcess(fuchsia::sys::LauncherSyncPtr* launcher,
+                     const std::string& url,
+                     const std::vector<std::string>& arguments, bool is_test);
+
+  bool LaunchSetup(fuchsia::sys::LauncherSyncPtr* launcher,
+                   const std::string& url,
+                   const std::vector<std::string>& arguments);
+
+  bool CreateEnvironmentOptions(const config::Environment& config,
+                                ManagedEnvironment::Options* options);
+  bool ConfigureRootEnvironment();
+  bool ConfigureEnvironment(
+      fidl::SynchronousInterfacePtr<ManagedEnvironment::FManagedEnvironment>
+          env,
+      const config::Environment& config, bool root = false);
+  bool ConfigureNetworks();
+
+  async_dispatcher_t* main_dispatcher_;
+  std::unique_ptr<async::Loop> helper_loop_;
+  config::Config env_config_;
+  bool setup_done_;
   SandboxArgs args_;
   SandboxEnv::Ptr sandbox_env_;
   TerminationCallback termination_callback_;
   fuchsia::sys::EnvironmentPtr parent_env_;
   fuchsia::sys::LoaderPtr loader_;
   ManagedEnvironment::Ptr root_;
-  fuchsia::sys::ComponentControllerPtr root_proc_;
+  // keep network handles to keep objects alive
+  std::vector<zx::channel> network_handles_;
+  // keep component controller handles to keep processes alive
+  std::vector<fuchsia::sys::ComponentControllerPtr> procs_;
+  std::unordered_set<size_t> tests_;
 };
 
 }  // namespace netemul

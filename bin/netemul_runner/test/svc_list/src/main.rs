@@ -124,6 +124,7 @@ async fn run_test() -> Result<(), Error> {
         services: vec![LaunchService {
             name: String::from(NetstackMarker::NAME),
             url: String::from(NETSTACK_URL),
+            arguments: None,
         }],
         // pass the endpoint's proxy to create a virtual device
         devices: vec![VirtualDevice {
@@ -196,6 +197,7 @@ async fn launch_grandchild() -> Result<(), Error> {
         services: vec![LaunchService {
             name: String::from(FAKE_SVC_NAME),
             url: String::from(FAKE_SVC_URL),
+            arguments: None,
         }],
         devices: vec![],
         // inherit parent configuration to check if netstack flows through

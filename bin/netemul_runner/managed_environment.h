@@ -26,7 +26,7 @@ class ManagedEnvironment
   using FManagedEnvironment = fuchsia::netemul::environment::ManagedEnvironment;
   using Ptr = std::unique_ptr<ManagedEnvironment>;
   static Ptr CreateRoot(const fuchsia::sys::EnvironmentPtr& parent,
-                        const SandboxEnv::Ptr& sandbox_env);
+                        const SandboxEnv::Ptr& sandbox_env, Options options);
 
   const SandboxEnv::Ptr& sandbox_env() const { return sandbox_env_; }
 
@@ -48,6 +48,8 @@ class ManagedEnvironment
   void SetRunningCallback(EnvironmentRunningCallback cb) {
     running_callback_ = std::move(cb);
   }
+
+  void Bind(fidl::InterfaceRequest<FManagedEnvironment> req);
 
  protected:
   friend ManagedLauncher;
