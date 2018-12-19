@@ -46,6 +46,12 @@ struct ParsedPreq {
     Span<const PreqPerTarget> per_target;
 };
 
+struct ParsedPrep {
+    const PrepHeader* header;
+    const common::MacAddr* target_external_addr; // null if absent
+    const PrepTail* tail;
+};
+
 std::optional<Span<const uint8_t>> ParseSsid(Span<const uint8_t> raw_body);
 std::optional<Span<const SupportedRate>> ParseSupportedRates(Span<const uint8_t> raw_body);
 const DsssParamSet* ParseDsssParamSet(Span<const uint8_t> raw_body);
@@ -70,6 +76,7 @@ std::optional<ParsedMpmConfirm> ParseMpmConfirm(Span<const uint8_t> raw_body);
 std::optional<ParsedMpmClose> ParseMpmClose(Span<const uint8_t> raw_body);
 
 std::optional<ParsedPreq> ParsePreq(Span<const uint8_t> raw_body);
+std::optional<ParsedPrep> ParsePrep(Span<const uint8_t> raw_body);
 
 } // namespace common
 } // namespace wlan

@@ -178,5 +178,24 @@ std::optional<ParsedPreq> ParsePreq(Span<const uint8_t> raw_body) {
     return { ret };
 }
 
+std::optional<ParsedPrep> ParsePrep(Span<const uint8_t> raw_body) {
+    ParsedPrep ret {};
+    auto r = BufferReader { raw_body };
+    ret.header = r.Read<PrepHeader>();
+    if (ret.header == nullptr) { return {}; }
+
+    if (ret.header->flags.addr_ext()) {
+        ret.target_external_addr = r.Read<common::MacAddr>();
+        if (ret.target_external_addr == nullptr) { return {}; }
+    }
+
+    ret.tail = r.Read<PrepTail>();
+    if (ret.tail == nullptr) { return {}; }
+
+    if (r.RemainingBytes() > 0) { return {}; }
+
+    return { ret };
+}
+
 } // namespace common
 } // namespace wlan

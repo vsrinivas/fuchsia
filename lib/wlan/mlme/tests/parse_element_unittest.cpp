@@ -646,6 +646,112 @@ TEST(ParseElement, PreqTooShort_PerTarget) {
     ASSERT_FALSE(preq);
 }
 
+TEST(ParseElement, PrepNoExtAddr) {
+    // clang-format off
+    const uint8_t data[] = {
+        0x00, 0x01, 0x02, // flags, hop count, elem ttl
+        0x03, 0x04, 0x05, 0x06, 0x07, 0x08, // target addr
+        0x09, 0x0a, 0x0b, 0x0c, // target hwmp seqno
+        0x0d, 0x0e, 0x0f, 0x10, // lifetime
+        0x11, 0x12, 0x13, 0x14, // metric
+        0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, // originator addr
+        0x1b, 0x1c, 0x1d, 0x1e, // originator hwmp seqno
+    };
+    // clang-format on
+    auto prep = ParsePrep(data);
+    ASSERT_TRUE(prep);
+
+    EXPECT_EQ(data, reinterpret_cast<const uint8_t*>(prep->header));
+    EXPECT_EQ(0x01u, prep->header->hop_count);
+
+    EXPECT_EQ(nullptr, prep->target_external_addr);
+
+    EXPECT_EQ(MacAddr("15:16:17:18:19:1a"), prep->tail->originator_addr);
+}
+
+TEST(ParseElement, PrepWithExtAddr) {
+    // clang-format off
+    const uint8_t data[] = {
+        0x40, 0x01, 0x02, // flags, hop count, elem ttl
+        0x03, 0x04, 0x05, 0x06, 0x07, 0x08, // target addr
+        0x09, 0x0a, 0x0b, 0x0c, // target hwmp seqno
+        0x44, 0x55, 0x66, 0x77, 0x88, 0x99, // target external addr
+        0x0d, 0x0e, 0x0f, 0x10, // lifetime
+        0x11, 0x12, 0x13, 0x14, // metric
+        0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, // originator addr
+        0x1b, 0x1c, 0x1d, 0x1e, // originator hwmp seqno
+    };
+    // clang-format on
+    auto prep = ParsePrep(data);
+    ASSERT_TRUE(prep);
+
+    EXPECT_EQ(data, reinterpret_cast<const uint8_t*>(prep->header));
+    EXPECT_EQ(0x01u, prep->header->hop_count);
+
+    ASSERT_NE(nullptr, prep->target_external_addr);
+    EXPECT_EQ(common::MacAddr("44:55:66:77:88:99"), *prep->target_external_addr);
+
+    EXPECT_EQ(MacAddr("15:16:17:18:19:1a"), prep->tail->originator_addr);
+}
+
+TEST(ParseElement, PrepTooShort_Header) {
+    // clang-format off
+    const uint8_t data[] = {
+        0x00, 0x01, 0x02, // flags, hop count, elem ttl
+        0x03, 0x04, 0x05, 0x06, 0x07, 0x08, // target addr
+        0x09, 0x0a, 0x0b, // one byte missing from target hwmp seqno
+    };
+    // clang-format on
+    auto prep = ParsePrep(data);
+    ASSERT_FALSE(prep);
+}
+
+TEST(ParseElement, PrepTooShort_Tail) {
+    // clang-format off
+    const uint8_t data[] = {
+        0x00, 0x01, 0x02, // flags, hop count, elem ttl
+        0x03, 0x04, 0x05, 0x06, 0x07, 0x08, // target addr
+        0x09, 0x0a, 0x0b, 0x0c, // target hwmp seqno
+        0x0d, 0x0e, 0x0f, 0x10, // lifetime
+        0x11, 0x12, 0x13, 0x14, // metric
+        0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, // originator addr
+        0x1b, 0x1c, 0x1d, // one byte missing from originator hwmp seqno
+    };
+    // clang-format on
+    auto prep = ParsePrep(data);
+    ASSERT_FALSE(prep);
+}
+
+TEST(ParseElement, PrepTooShort_ExtAddr) {
+    // clang-format off
+    const uint8_t data[] = {
+        0x40, 0x01, 0x02, // flags, hop count, elem ttl
+        0x03, 0x04, 0x05, 0x06, 0x07, 0x08, // target addr
+        0x09, 0x0a, 0x0b, 0x0c, // target hwmp seqno
+        0x44, 0x55, 0x66, 0x77, 0x88, // one byte missing from target external addr
+    };
+    // clang-format on
+    auto prep = ParsePrep(data);
+    ASSERT_FALSE(prep);
+}
+
+TEST(ParseElement, PrepTooLong) {
+    // clang-format off
+    const uint8_t data[] = {
+        0x00, 0x01, 0x02, // flags, hop count, elem ttl
+        0x03, 0x04, 0x05, 0x06, 0x07, 0x08, // target addr
+        0x09, 0x0a, 0x0b, 0x0c, // target hwmp seqno
+        0x0d, 0x0e, 0x0f, 0x10, // lifetime
+        0x11, 0x12, 0x13, 0x14, // metric
+        0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, // originator addr
+        0x1b, 0x1c, 0x1d, 0x1e, // originator hwmp seqno
+        0, // extra byte
+    };
+    // clang-format on
+    auto prep = ParsePrep(data);
+    ASSERT_FALSE(prep);
+}
+
 } // namespace common
 } // namespace wlan
 
