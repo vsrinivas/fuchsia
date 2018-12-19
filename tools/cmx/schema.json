@@ -162,11 +162,6 @@
         "flutter_aot_runner"
       ]
     },
-    "deprecated-bare-package-url": {
-      "$id": "/properties/deprecated-bare-package-url",
-      "type": "boolean",
-      "title": "Component launches with deprecated bare package URL"
-    },
     "facets": {
       "$id": "/properties/facets",
       "type": "object",
