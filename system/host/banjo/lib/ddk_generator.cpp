@@ -453,10 +453,10 @@ void EmitDdktlProtocolMethodImpl(std::ostream* file, const std::string& method_n
     }
 }
 
-void EmitProxyMethodImpl(std::ostream* file, const std::string& method_name,
-                         std::vector<DdkGenerator::Member>& input,
-                         std::vector<DdkGenerator::Member>& output,
-                         bool handle_wrappers) {
+void EmitClientMethodImpl(std::ostream* file, const std::string& method_name,
+                           std::vector<DdkGenerator::Member>& input,
+                          std::vector<DdkGenerator::Member>& output,
+                          bool handle_wrappers) {
     if (handle_wrappers) {
         for (auto& member : input) {
             if (member.kind == flat::Type::Kind::kHandle) {
@@ -1549,7 +1549,7 @@ void DdktlGenerator::ProduceExample(const NamedInterface& named_interface) {
     file_ << "//\n";
     file_ << "// :: Proxies ::\n";
     file_ << "//\n";
-    file_ << "// ddk::" << cc_name << "Proxy is a simple wrapper around\n";
+    file_ << "// ddk::" << cc_name << "Client is a simple wrapper around\n";
     file_ << "// " << sc_name << "_t. It does not own the pointers passed to it\n";
     file_ << "//\n";
     file_ << "// :: Mixins ::\n";
@@ -1651,9 +1651,75 @@ void DdktlGenerator::ProduceProtocolImplementation(const NamedInterface& named_i
     file_ << "};\n";
     EmitBlank(&file_);
 
+    ProduceClientImplementation(named_interface);
     ProduceProxyImplementation(named_interface);
 }
 
+void DdktlGenerator::ProduceClientImplementation(const NamedInterface& named_interface) {
+    if (named_interface.type == InterfaceType::kCallback) return;
+
+    const auto& sc_name = named_interface.snake_case_name;
+    const auto& cc_name = named_interface.camel_case_name;
+
+    const auto type = sc_name + "_t";
+    const auto proto_id = "ZX_PROTOCOL_" + ToSnakeCase(named_interface.shortname, true);
+
+    file_ << "class " << cc_name << "Client {\n";
+    file_ << "public:\n";
+    file_ << kIndent << cc_name << "Client()\n";
+    file_ << kIndent << kIndent << ": ops_(nullptr), ctx_(nullptr) {}\n";
+    file_ << kIndent << cc_name << "Client(const " << type << "* proto)\n";
+    file_ << kIndent << kIndent << ": ops_(proto->ops), ctx_(proto->ctx) {}\n";
+    if (named_interface.type != InterfaceType::kInterface) {
+        EmitBlank(&file_);
+        file_ << kIndent << cc_name << "Client(zx_device_t* parent) {\n";
+        file_ << kIndent << kIndent << type << " proto;\n";
+        file_ << kIndent << kIndent << "if (device_get_protocol(parent, " << proto_id
+              << ", &proto) == ZX_OK) {\n";
+        file_ << kIndent << kIndent << kIndent << "ops_ = proto.ops;\n";
+        file_ << kIndent << kIndent << kIndent << "ctx_ = proto.ctx;\n";
+        file_ << kIndent << kIndent << "} else {\n";
+        file_ << kIndent << kIndent << kIndent << "ops_ = nullptr;\n";
+        file_ << kIndent << kIndent << kIndent << "ctx_ = nullptr;\n";
+        file_ << kIndent << kIndent << "}\n";
+        file_ << kIndent << "}\n";
+    }
+    EmitBlank(&file_);
+    file_ << kIndent << "void GetProto(" << type << "* proto) {\n";
+    file_ << kIndent << kIndent << "proto->ctx = ctx_;\n";
+    file_ << kIndent << kIndent << "proto->ops = ops_;\n";
+    file_ << kIndent << "}\n";
+    file_ << kIndent << "bool is_valid() {\n";
+    file_ << kIndent << kIndent << "return ops_ != nullptr;\n";
+    file_ << kIndent << "}\n";
+    file_ << kIndent << "void clear() {\n";
+    file_ << kIndent << kIndent << "ctx_ = nullptr;\n";
+    file_ << kIndent << kIndent << "ops_ = nullptr;\n";
+    file_ << kIndent << "}\n";
+    for (const auto& method_info : named_interface.methods) {
+        std::vector<Member> input;
+        std::vector<Member> output;
+        GetMethodParameters(library_, method_info, &input, &output,
+                            named_interface.handle_wrappers);
+
+        EmitDocstring(&file_, method_info, true);
+        file_ << kIndent;
+        EmitProtocolMethodDecl(&file_, method_info.proxy_name, input, output);
+        file_ << ") {\n"
+              << kIndent << kIndent;
+        EmitClientMethodImpl(&file_, method_info.c_name, input, output,
+                             named_interface.handle_wrappers);
+        file_ << kIndent << "}\n";
+    }
+    EmitBlank(&file_);
+    file_ << "private:\n";
+    file_ << kIndent << sc_name << "_ops_t* ops_;\n";
+    file_ << kIndent << "void* ctx_;\n";
+    file_ << "};\n";
+    EmitBlank(&file_);
+}
+
+// TODO(surajmlhotra): Remove this once clients are migrated over.
 void DdktlGenerator::ProduceProxyImplementation(const NamedInterface& named_interface) {
     if (named_interface.type == InterfaceType::kCallback) return;
 
@@ -1706,8 +1772,8 @@ void DdktlGenerator::ProduceProxyImplementation(const NamedInterface& named_inte
         EmitProtocolMethodDecl(&file_, method_info.proxy_name, input, output);
         file_ << ") {\n"
               << kIndent << kIndent;
-        EmitProxyMethodImpl(&file_, method_info.c_name, input, output,
-                            named_interface.handle_wrappers);
+        EmitClientMethodImpl(&file_, method_info.c_name, input, output,
+                             named_interface.handle_wrappers);
         file_ << kIndent << "}\n";
     }
     EmitBlank(&file_);
