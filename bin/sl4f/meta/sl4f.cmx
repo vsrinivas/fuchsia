@@ -12,7 +12,8 @@
             "fuchsia.logger.Log",
             "fuchsia.logger.LogSink",
             "fuchsia.net.LegacySocketProvider",
-            "fuchsia.tracelink.Registry"
+            "fuchsia.tracelink.Registry",
+            "fuchsia.wlan.device.service.DeviceService"
         ]
     }
 }
