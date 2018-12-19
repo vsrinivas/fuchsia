@@ -337,16 +337,16 @@ class VirtioGpuImpl : public DeviceBase<VirtioGpuImpl>,
   // |fuchsia::guest::device::VirtioGpu|
   void Start(
       fuchsia::guest::device::StartInfo start_info,
-      fidl::InterfaceHandle<fuchsia::ui::input::InputListener> input_listener,
       fidl::InterfaceHandle<fuchsia::guest::device::ViewListener> view_listener,
       StartCallback callback) override {
     auto deferred = fit::defer(std::move(callback));
     PrepStart(std::move(start_info));
 
-    if (input_listener && view_listener) {
+    if (view_listener) {
       zx::eventpair view_owner_token, view_token;
-      if (zx::eventpair::create(0u, &view_owner_token, &view_token) != ZX_OK)
-        FXL_NOTREACHED() << "failed to create tokens.";
+      zx_status_t status =
+          zx::eventpair::create(0u, &view_owner_token, &view_token);
+      FXL_CHECK(status == ZX_OK) << "Failed to create view tokens";
 
       // Create view.
       auto scenic =
@@ -357,17 +357,15 @@ class VirtioGpuImpl : public DeviceBase<VirtioGpuImpl>,
           .view_token = std::move(view_token),
           .startup_context = &context_,
       };
-
       view_ = std::make_unique<GuestView>(std::move(view_context),
-                                          std::move(view_listener),
-                                          std::move(input_listener), &scanout_);
+                                          std::move(view_listener), &scanout_);
       view_->SetReleaseHandler([this](zx_status_t status) { view_.reset(); });
 
       // Present view.
       auto presenter =
           context_
-              .ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>();
-      presenter->Present2(std::move(view_owner_token), nullptr);
+              .ConnectToEnvironmentService<fuchsia::ui::policy::Presenter2>();
+      presenter->PresentView(std::move(view_owner_token), nullptr);
     }
 
     // Initialize streams.

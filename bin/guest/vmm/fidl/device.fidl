@@ -6,7 +6,7 @@ library fuchsia.guest.device;
 
 using fuchsia.guest;
 using fuchsia.io;
-using fuchsia.math;
+using fuchsia.ui.gfx;
 using fuchsia.ui.input;
 using zx;
 
@@ -77,18 +77,20 @@ interface VirtioConsole : VirtioDevice {
     Start(StartInfo start_info, handle<socket> socket) -> ();
 };
 
-// Provides a way for VirtioInput to listen to changes to a View.
+// Provides a way for VirtioInput to listen to view events.
 [Discoverable]
 interface ViewListener {
     // Called when a View's size is changed.
-    OnSizeChanged(fuchsia.math.SizeF size);
+    OnSizeChanged(fuchsia.ui.gfx.vec3 size);
+
+    // Called when a View receives input events.
+    OnInputEvent(fuchsia.ui.input.InputEvent event);
 };
 
 [Discoverable]
 interface VirtioGpu : VirtioDevice {
     // Start the GPU device.
-    Start(StartInfo start_info, fuchsia.ui.input.InputListener? input_listener,
-          ViewListener? view_listener) -> ();
+    Start(StartInfo start_info, ViewListener? view_listener) -> ();
 
     // Called when a device's configuration is changed.
     -> OnConfigChanged();

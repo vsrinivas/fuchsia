@@ -28,7 +28,6 @@ class VirtioInputTest : public TestWithDevice {
     // Start device execution.
     services.ConnectToService(view_listener_.NewRequest());
     services.ConnectToService(input_.NewRequest());
-    services.ConnectToService(input_listener_.NewRequest());
     status = input_->Start(std::move(start_info));
     ASSERT_EQ(ZX_OK, status);
 
@@ -44,7 +43,6 @@ class VirtioInputTest : public TestWithDevice {
   }
 
   fuchsia::guest::device::VirtioInputSyncPtr input_;
-  fuchsia::ui::input::InputListenerSyncPtr input_listener_;
   fuchsia::guest::device::ViewListenerSyncPtr view_listener_;
   VirtioQueueFake event_queue_;
 };
@@ -55,8 +53,7 @@ TEST_F(VirtioInputTest, Keyboard) {
       .phase = fuchsia::ui::input::KeyboardEventPhase::PRESSED,
       .hid_usage = 4,
   });
-  bool consumed;
-  input_listener_->OnEvent(std::move(fuchsia_event), &consumed);
+  view_listener_->OnInputEvent(std::move(fuchsia_event));
 
   virtio_input_event_t* event_1;
   virtio_input_event_t* event_2;
@@ -85,8 +82,7 @@ TEST_F(VirtioInputTest, PointerMove) {
       .x = 0.25,
       .y = 0.5,
   });
-  bool consumed;
-  input_listener_->OnEvent(std::move(fuchsia_event), &consumed);
+  view_listener_->OnInputEvent(std::move(fuchsia_event));
 
   virtio_input_event_t* event_1;
   virtio_input_event_t* event_2;
@@ -122,8 +118,7 @@ TEST_F(VirtioInputTest, PointerUp) {
       .x = 0.25,
       .y = 0.5,
   });
-  bool consumed;
-  input_listener_->OnEvent(std::move(fuchsia_event), &consumed);
+  view_listener_->OnInputEvent(std::move(fuchsia_event));
 
   virtio_input_event_t* event_1;
   virtio_input_event_t* event_2;

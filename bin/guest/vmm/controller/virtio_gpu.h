@@ -25,7 +25,6 @@ class VirtioGpu
 
   zx_status_t Start(
       const zx::guest& guest,
-      fidl::InterfaceHandle<fuchsia::ui::input::InputListener> input_listener,
       fidl::InterfaceHandle<fuchsia::guest::device::ViewListener> view_listener,
       fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher);
 

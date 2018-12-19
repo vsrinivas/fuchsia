@@ -277,11 +277,9 @@ int main(int argc, char** argv) {
     if (status != ZX_OK) {
       return status;
     }
-    fidl::InterfaceHandle<fuchsia::ui::input::InputListener> input_listener;
     fidl::InterfaceHandle<fuchsia::guest::device::ViewListener> view_listener;
-    status = input.Start(guest.object(), input_listener.NewRequest(),
-                         view_listener.NewRequest(), launcher.get(),
-                         guest.device_dispatcher());
+    status = input.Start(guest.object(), view_listener.NewRequest(),
+                         launcher.get(), guest.device_dispatcher());
     if (status != ZX_OK) {
       return status;
     }
@@ -291,8 +289,7 @@ int main(int argc, char** argv) {
     if (status != ZX_OK) {
       return status;
     }
-    status = gpu.Start(guest.object(), std::move(input_listener),
-                       std::move(view_listener), launcher.get(),
+    status = gpu.Start(guest.object(), std::move(view_listener), launcher.get(),
                        guest.device_dispatcher());
     if (status != ZX_OK) {
       return status;

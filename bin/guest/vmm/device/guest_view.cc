@@ -10,20 +10,22 @@
 GuestView::GuestView(
     scenic::ViewContext view_context,
     fidl::InterfaceHandle<fuchsia::guest::device::ViewListener> view_listener,
-    fidl::InterfaceHandle<fuchsia::ui::input::InputListener> input_listener,
     GpuScanout* scanout)
-    : V1BaseView(std::move(view_context), "Guest"),
-      background_node_(session()),
+    : BaseView(std::move(view_context), "Guest"),
+      background_(session()),
       material_(session()),
       scanout_(*scanout),
       view_listener_(view_listener.Bind()) {
-  background_node_.SetMaterial(material_);
-  parent_node().AddChild(background_node_);
-  input_connection()->SetEventListener(std::move(input_listener));
+  view().AddChild(background_);
+  background_.SetMaterial(material_);
+
+  // Request hard key events be delivered to the view.
+  fuchsia::ui::input::Command command;
+  command.set_set_hard_keyboard_delivery({ .delivery_request = true });
+  session()->Enqueue(std::move(command));
 
   scanout_.SetFlushHandler(
       [this](virtio_gpu_rect_t rect) { InvalidateScene(); });
-
   scanout_.SetUpdateSourceHandler([this](uint32_t width, uint32_t height) {
     scanout_source_width_ = width;
     scanout_source_height_ = height;
@@ -31,21 +33,15 @@ GuestView::GuestView(
   });
 }
 
-void GuestView::OnPropertiesChanged(
-    fuchsia::ui::viewsv1::ViewProperties old_properties) {
-  view_listener_->OnSizeChanged(logical_size());
-}
-
 void GuestView::OnSceneInvalidated(
     fuchsia::images::PresentationInfo presentation_info) {
   if (!has_logical_size() || !has_physical_size()) {
     return;
   }
-
-  if (static_cast<uint32_t>(physical_size().width) != image_info_.width ||
-      static_cast<uint32_t>(physical_size().height) != image_info_.height) {
-    image_info_.width = physical_size().width;
-    image_info_.height = physical_size().height;
+  if (static_cast<uint32_t>(physical_size().x) != image_info_.width ||
+      static_cast<uint32_t>(physical_size().y) != image_info_.height) {
+    image_info_.width = physical_size().x;
+    image_info_.height = physical_size().y;
     image_info_.stride = image_info_.width * 4;
     image_info_.pixel_format = fuchsia::images::PixelFormat::BGRA_8;
 
@@ -69,11 +65,10 @@ void GuestView::OnSceneInvalidated(
     FXL_CHECK(status == ZX_OK) << "Scanout target VMO flush failed " << status;
   }
 
-  const float width = logical_size().width;
-  const float height = logical_size().height;
-  scenic::Rectangle background_shape(session(), width, height);
-  background_node_.SetShape(background_shape);
-  static constexpr float kBackgroundElevation = 0.f;
+  const float width = logical_size().x;
+  const float height = logical_size().y;
+  scenic::Rectangle shape(session(), width, height);
+  background_.SetShape(shape);
   const float center_x = width * .5f;
   const float center_y = height * .5f;
   const float scale_x =
@@ -85,10 +80,23 @@ void GuestView::OnSceneInvalidated(
   // matches the image size. Ideally, this would just be a scale transform of
   // the material itself.
   // TODO(SCN-958): Materials should support transforms
-  background_node_.SetAnchor(-center_x, -center_y, 0.0f);
-  background_node_.SetTranslation(center_x, center_y, kBackgroundElevation);
-  background_node_.SetScale(scale_x, scale_y, 1.0f);
+  background_.SetAnchor(-center_x, -center_y, 0.0f);
+  background_.SetTranslation(center_x, center_y, 0.0f);
+  background_.SetScale(scale_x, scale_y, 1.0f);
 
   scenic::Image image(*memory_, 0u, image_info_);
   material_.SetTexture(image);
+}
+
+void GuestView::OnPropertiesChanged(
+    fuchsia::ui::gfx::ViewProperties old_properties) {
+  view_listener_->OnSizeChanged(logical_size());
+}
+
+void GuestView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
+  view_listener_->OnInputEvent(std::move(event));
+}
+
+void GuestView::OnScenicError(fidl::StringPtr error) {
+  FXL_LOG(ERROR) << "Scenic session failed " << error;
 }

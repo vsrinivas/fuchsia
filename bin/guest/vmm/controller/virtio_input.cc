@@ -51,8 +51,6 @@ VirtioInput::VirtioInput(const PhysMem& phys_mem)
 
 zx_status_t VirtioInput::Start(
     const zx::guest& guest,
-    fidl::InterfaceRequest<fuchsia::ui::input::InputListener>
-        input_listener_request,
     fidl::InterfaceRequest<fuchsia::guest::device::ViewListener>
         view_listener_request,
     fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher) {
@@ -63,7 +61,6 @@ zx_status_t VirtioInput::Start(
   };
   launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
   services.ConnectToService(input_.NewRequest());
-  services.ConnectToService(std::move(input_listener_request));
   services.ConnectToService(std::move(view_listener_request));
 
   fuchsia::guest::device::StartInfo start_info;

@@ -213,12 +213,9 @@ static uint32_t y_coordinate(float y, float height) {
 
 // Stream for event queue.
 class EventStream : public StreamBase,
-                    public fuchsia::ui::input::InputListener,
                     public fuchsia::guest::device::ViewListener {
  public:
   EventStream(component::StartupContext* context) {
-    context->outgoing().AddPublicService(
-        input_listener_bindings_.GetHandler(this));
     context->outgoing().AddPublicService(
         view_listener_bindings_.GetHandler(this));
   }
@@ -234,12 +231,11 @@ class EventStream : public StreamBase,
   }
 
  private:
-  fidl::BindingSet<InputListener> input_listener_bindings_;
   fidl::BindingSet<ViewListener> view_listener_bindings_;
   std::array<virtio_input_event_t, 64> event_ring_;
   size_t head_ = 0;
   size_t tail_ = 0;
-  fuchsia::math::SizeF view_size_ = {0, 0};
+  fuchsia::ui::gfx::vec3 view_size_ = {0, 0, 0};
 
   void OnKeyboard(const fuchsia::ui::input::KeyboardEvent& keyboard) {
     uint32_t hid_usage = keyboard.hid_usage;
@@ -270,12 +266,12 @@ class EventStream : public StreamBase,
             {
                 .type = VIRTIO_INPUT_EV_ABS,
                 .code = VIRTIO_INPUT_EV_ABS_X,
-                .value = x_coordinate(pointer.x, view_size_.width),
+                .value = x_coordinate(pointer.x, view_size_.x),
             },
             {
                 .type = VIRTIO_INPUT_EV_ABS,
                 .code = VIRTIO_INPUT_EV_ABS_Y,
-                .value = y_coordinate(pointer.y, view_size_.height),
+                .value = y_coordinate(pointer.y, view_size_.y),
             },
             {
                 .type = VIRTIO_INPUT_EV_SYN,
@@ -293,12 +289,12 @@ class EventStream : public StreamBase,
             {
                 .type = VIRTIO_INPUT_EV_ABS,
                 .code = VIRTIO_INPUT_EV_ABS_X,
-                .value = x_coordinate(pointer.x, view_size_.width),
+                .value = x_coordinate(pointer.x, view_size_.x),
             },
             {
                 .type = VIRTIO_INPUT_EV_ABS,
                 .code = VIRTIO_INPUT_EV_ABS_Y,
-                .value = y_coordinate(pointer.y, view_size_.height),
+                .value = y_coordinate(pointer.y, view_size_.y),
             },
             {
                 .type = VIRTIO_INPUT_EV_KEY,
@@ -320,17 +316,14 @@ class EventStream : public StreamBase,
     }
   }
 
-  // |fuchsia::ui::input::InputListener|
-  void OnEvent(fuchsia::ui::input::InputEvent event,
-               OnEventCallback callback) override {
-    auto deferred = fit::defer([&callback] { callback(false); });
-
+  // |fuchsia::guest::device::ViewListener|
+  void OnInputEvent(fuchsia::ui::input::InputEvent event) override {
     switch (event.Which()) {
       case fuchsia::ui::input::InputEvent::Tag::kKeyboard:
         OnKeyboard(event.keyboard());
         break;
       case fuchsia::ui::input::InputEvent::Tag::kPointer:
-        if (view_size_.width > 0 && view_size_.height > 0) {
+        if (view_size_.x > 0 && view_size_.y > 0) {
           OnPointer(event.pointer());
         }
         break;
@@ -342,7 +335,9 @@ class EventStream : public StreamBase,
   }
 
   // |fuchsia::guest::device::ViewListener|
-  void OnSizeChanged(fuchsia::math::SizeF size) override { view_size_ = size; }
+  void OnSizeChanged(fuchsia::ui::gfx::vec3 size) override {
+    view_size_ = size;
+  }
 
   template <size_t N>
   bool EnqueueEvents(virtio_input_event_t (&events)[N]) {

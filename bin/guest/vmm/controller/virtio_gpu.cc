@@ -16,7 +16,6 @@ VirtioGpu::VirtioGpu(const PhysMem& phys_mem)
 
 zx_status_t VirtioGpu::Start(
     const zx::guest& guest,
-    fidl::InterfaceHandle<fuchsia::ui::input::InputListener> input_listener,
     fidl::InterfaceHandle<fuchsia::guest::device::ViewListener> view_listener,
     fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher) {
   fuchsia::sys::LaunchInfo launch_info{
@@ -34,8 +33,7 @@ zx_status_t VirtioGpu::Start(
   if (status != ZX_OK) {
     return status;
   }
-  return gpu_->Start(std::move(start_info), std::move(input_listener),
-                     std::move(view_listener));
+  return gpu_->Start(std::move(start_info), std::move(view_listener));
 }
 
 zx_status_t VirtioGpu::ConfigureQueue(uint16_t queue, uint16_t size,

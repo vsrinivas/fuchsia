@@ -11,7 +11,7 @@ fidl("fuchsia.guest.device") {
 
   deps = [
     "//garnet/public/fidl/fuchsia.guest",
-    "//garnet/public/fidl/fuchsia.math",
+    "//garnet/public/fidl/fuchsia.ui.gfx",
     "//garnet/public/fidl/fuchsia.ui.input",
     "//zircon/public/fidl/fuchsia-io",
   ]
