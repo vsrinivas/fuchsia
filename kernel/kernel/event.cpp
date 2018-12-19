@@ -86,7 +86,7 @@ static zx_status_t event_wait_worker(event_t* e,
         }
     } else {
         /* unsignaled, block here */
-        ret = wait_queue_block_etc(&e->wait, deadline, slack, signal_mask);
+        ret = wait_queue_block_etc(&e->wait, deadline, slack, signal_mask, ResourceOwnership::Normal);
     }
 
     current_thread->interruptable = false;

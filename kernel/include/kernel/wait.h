@@ -38,6 +38,16 @@ typedef struct wait_queue {
         .heads = LIST_INITIAL_VALUE((q).heads), \
     }
 
+// When blocking this enum indicates the kind of resource ownership that is being waited for
+// that is causing the block.
+enum class ResourceOwnership {
+    // Blocking is either not for any particular resource, or it is to wait for
+    // exclusive access to a resource.
+    Normal,
+    // Blocking is happening whilst waiting for shared read access to a resource.
+    Reader,
+};
+
 // wait queue primitive
 // NOTE: must be inside critical section when using these
 void wait_queue_init(wait_queue_t* wait);
@@ -58,7 +68,8 @@ zx_status_t wait_queue_block(wait_queue_t*, zx_time_t deadline) TA_REQ(thread_lo
 zx_status_t wait_queue_block_etc(wait_queue_t*,
                                  zx_time_t deadline,
                                  TimerSlack slack,
-                                 uint signal_mask) TA_REQ(thread_lock);
+                                 uint signal_mask,
+                                 ResourceOwnership reason) TA_REQ(thread_lock);
 
 // returns the highest priority of all the blocked threads on this wait queue.
 // returns -1 if no threads are blocked.
@@ -109,7 +120,11 @@ public:
     WaitQueue& operator=(WaitQueue&&) = delete;
 
     zx_status_t Block(zx_time_t deadline, TimerSlack slack) TA_REQ(thread_lock) {
-        return wait_queue_block_etc(&wq_, deadline, slack, 0);
+        return wait_queue_block_etc(&wq_, deadline, slack, 0, ResourceOwnership::Normal);
+    }
+
+    zx_status_t BlockReadLock(zx_time_t deadline, TimerSlack slack) TA_REQ(thread_lock) {
+        return wait_queue_block_etc(&wq_, deadline, slack, 0, ResourceOwnership::Reader);
     }
 
     struct thread* Peek() TA_REQ(thread_lock) {

@@ -645,6 +645,7 @@ static void sched_priority_changed(thread_t* t, int old_prio,
 
         break;
     case THREAD_BLOCKED:
+    case THREAD_BLOCKED_READ_LOCK:
         // it's blocked on something, sitting in a wait queue, so we may need to move it around
         // within the wait queue.
         // note it's possible to be blocked but not in a wait queue if the thread is in transition

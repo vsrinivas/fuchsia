@@ -363,6 +363,7 @@ zx_status_t thread_suspend(thread_t* t) {
         // thread is suspended already
         break;
     case THREAD_BLOCKED:
+    case THREAD_BLOCKED_READ_LOCK:
         // thread is blocked on something and marked interruptable
         if (t->interruptable) {
             wait_queue_unblock_thread(t, ZX_ERR_INTERNAL_INTR_RETRY);
@@ -603,6 +604,7 @@ void thread_kill(thread_t* t) {
         local_resched = sched_unblock(t);
         break;
     case THREAD_BLOCKED:
+    case THREAD_BLOCKED_READ_LOCK:
         // thread is blocked on something and marked interruptable
         if (t->interruptable) {
             wait_queue_unblock_thread(t, ZX_ERR_INTERNAL_INTR_KILLED);
@@ -1178,6 +1180,7 @@ static const char* thread_state_to_str(enum thread_state state) {
     case THREAD_RUNNING:
         return "run";
     case THREAD_BLOCKED:
+    case THREAD_BLOCKED_READ_LOCK:
         return "blok";
     case THREAD_SLEEPING:
         return "slep";
@@ -1434,6 +1437,7 @@ zx_status_t thread_print_backtrace(thread_t* t) {
     void* fp = NULL;
     switch (t->state) {
     case THREAD_BLOCKED:
+    case THREAD_BLOCKED_READ_LOCK:
     case THREAD_SLEEPING:
     case THREAD_SUSPENDED:
         // thread is blocked, so ask the arch code to get us a starting point

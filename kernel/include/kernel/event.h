@@ -16,8 +16,6 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-__BEGIN_CDECLS
-
 #define EVENT_MAGIC (0x65766E74) // "evnt"
 
 typedef struct event {
@@ -86,10 +84,6 @@ static inline bool event_signaled(const event_t* e) {
     return e->signaled;
 }
 
-__END_CDECLS
-
-#ifdef __cplusplus
-
 // C++ wrapper. This should be waited on from only a single thread, but may be
 // signaled from many threads (Signal() is thread-safe).
 class Event {
@@ -124,5 +118,3 @@ public:
 private:
     event_t event_;
 };
-
-#endif // __cplusplus
