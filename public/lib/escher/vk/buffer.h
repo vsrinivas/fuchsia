@@ -14,34 +14,33 @@ namespace escher {
 class Buffer;
 typedef fxl::RefPtr<Buffer> BufferPtr;
 
-// Escher's standard interface to Vulkan buffer objects.
+// Escher's standard interface to Vulkan buffer objects. Other than subclassing
+// Resource, this class only holds onto the various pieces of state. Particular
+// subclasses may have custom deletion logic.
 class Buffer : public WaitableResource {
  public:
   static const ResourceTypeInfo kTypeInfo;
   const ResourceTypeInfo& type_info() const override { return kTypeInfo; }
 
-  static BufferPtr New(ResourceManager* manager, GpuMemPtr mem,
-                       vk::BufferUsageFlags usage_flags);
-
-  Buffer(ResourceManager* manager, GpuMemPtr mem, vk::Buffer buffer);
-
-  ~Buffer() override;
-
   // Return the underlying Vulkan buffer object.
   vk::Buffer vk() { return buffer_; }
 
   // Return the size of the buffer.
-  vk::DeviceSize size() const { return mem_->size(); }
+  vk::DeviceSize size() const { return size_; }
 
   // If the buffer is host-accessible, then this returns a direct pointer to
   // cache-coherent device memory.  Otherwise, returns nullptr.
-  uint8_t* host_ptr() const { return mem_->mapped_ptr(); }
+  uint8_t* host_ptr() const { return host_ptr_; }
+
+ protected:
+  Buffer(ResourceManager* manager, vk::Buffer buffer, vk::DeviceSize size,
+         uint8_t* host_ptr);
 
  private:
-  // Backing memory object.
-  GpuMemPtr mem_;
   // Underlying Vulkan buffer object.
-  vk::Buffer buffer_;
+  const vk::Buffer buffer_;
+  const vk::DeviceSize size_;
+  uint8_t* const host_ptr_;
 };
 
 }  // namespace escher

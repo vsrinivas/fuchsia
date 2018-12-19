@@ -7,3 +7,5 @@ Only src/vk_mem_alloc.h and LICENSE.txt files were imported.
 Modifications:
 - added README.fuchsia
 - line endings were auto-converted from CRLF
+- Mutex macros (FXL_ACQUIRE, FXL_RELEASE) added to compile with -Wthread-safety
+- Indentation removed from blank newlines

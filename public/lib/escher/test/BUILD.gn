@@ -16,11 +16,13 @@ if (is_mac) {
 } else {
   test("escher_unittests") {
     sources = [
+      "fake_gpu_allocator.cc",
       "fs/hack_filesystem_unittest.cc",
       "geometry/bounding_box_unittest.cc",
       "geometry/clip_planes_unittest.cc",
       "geometry/indexed_triangle_mesh_clip_unittest.cc",
       "geometry/plane_unittest.cc",
+      "gpu_allocator_unittest.cc",
       "gpu_mem_unittest.cc",
       "impl/glsl_compiler_unittest.cc",
       "impl/pipeline_cache_unittest.cc",

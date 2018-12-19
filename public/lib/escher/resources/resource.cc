@@ -14,9 +14,15 @@ namespace escher {
 const ResourceTypeInfo Resource::kTypeInfo("Resource", ResourceType::kResource);
 
 Resource::Resource(ResourceManager* owner)
-    : escher_(owner->escher()), uid_(GetUniqueId()) {
-  FXL_DCHECK(owner);
-  owner->BecomeOwnerOf(this);
+    : escher_(owner ? owner->escher() : nullptr), uid_(GetUniqueId()) {
+  // TODO(ES-173): It is hard to make a functional ResourceManager in a unit
+  // test without bringing up an entire Escher instance. This branch supports
+  // some tests, for now, but if it becomes easier to create an owner (i.e. if
+  // ResourceManager stops depending on Vulkan and Escher), then this
+  // if-statement should be removed.
+  if (owner) {
+    owner->BecomeOwnerOf(this);
+  }
 }
 
 const VulkanContext& Resource::vulkan_context() const {

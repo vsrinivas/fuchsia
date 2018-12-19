@@ -5,9 +5,8 @@
 #include "lib/escher/vk/gpu_mem.h"
 #include "gtest/gtest.h"
 #include "lib/escher/impl/gpu_mem_slab.h"
+#include "lib/escher/impl/vulkan_utils.h"
 #include "lib/escher/test/gtest_vulkan.h"
-#include "lib/escher/vk/gpu_allocator.h"
-#include "lib/escher/vk/naive_gpu_allocator.h"
 #include "lib/escher/vk/vulkan_context.h"
 #include "lib/escher/vk/vulkan_device_queues.h"
 
@@ -16,14 +15,40 @@
 namespace {
 using namespace escher;
 
-// Helper function to test sub-allocation of a GpuMem that was allocated in
-// different ways.
-const vk::DeviceSize kDeviceSize = 1000;
-void TestSubAllocation(GpuMemPtr mem) {
-  auto sub_alloc1 = mem->Suballocate(kDeviceSize, 0);
-  auto sub_alloc2 = mem->Suballocate(kDeviceSize + 1, 0);
-  auto sub_alloc3 = mem->Suballocate(kDeviceSize, 1);
-  auto sub_alloc4 = mem->Suballocate(kDeviceSize, 0);
+const vk::DeviceSize kTestMemorySize = 1000;
+
+class FakeGpuMem : public GpuMem {
+ public:
+  FakeGpuMem(vk::DeviceMemory base, vk::DeviceSize size, vk::DeviceSize offset,
+             uint8_t* mapped_ptr, int* obj_count = nullptr)
+      : GpuMem(base, size, offset, mapped_ptr), obj_count_(obj_count) {
+    if (obj_count_)
+      ++(*obj_count_);
+  }
+
+  ~FakeGpuMem() {
+    if (obj_count_)
+      --(*obj_count_);
+  }
+
+ private:
+  int* obj_count_;
+};
+
+TEST(GpuMem, ErroneousSuballocations) {
+  int obj_count = 0;
+  GpuMemPtr mem = fxl::AdoptRef(new FakeGpuMem(
+      vk::DeviceMemory(), kTestMemorySize, 0u, nullptr, &obj_count));
+  EXPECT_EQ(1, obj_count);
+
+  auto sub_alloc1 = mem->Suballocate(kTestMemorySize, 0);
+  auto sub_alloc2 = mem->Suballocate(kTestMemorySize + 1, 0);
+  auto sub_alloc3 = mem->Suballocate(kTestMemorySize, 1);
+  auto sub_alloc4 = mem->Suballocate(kTestMemorySize, 0);
+
+  // Creating sub-allocations does not create more "real" memory objects.
+  EXPECT_EQ(1, obj_count);
+
   // Valid sub-allocation.
   EXPECT_NE(nullptr, sub_alloc1.get());
   // Invalid sub-allocation due to increased size.
@@ -34,14 +59,15 @@ void TestSubAllocation(GpuMemPtr mem) {
   EXPECT_NE(nullptr, sub_alloc4.get());
 
   // Can sub-allocate from a sub-allocation...
-  auto sub_alloc5 = sub_alloc1->Suballocate(kDeviceSize / 2, kDeviceSize / 2);
+  auto sub_alloc5 =
+      sub_alloc1->Suballocate(kTestMemorySize / 2, kTestMemorySize / 2);
   EXPECT_NE(nullptr, sub_alloc5.get());
   // ... and sub-allocate again from that sub-allocation.  As before, the size
   // and offset of the sub-allocation must fit within the parent.
-  auto sub_alloc6 = sub_alloc5->Suballocate(kDeviceSize / 2, 0);
-  auto sub_alloc7 = sub_alloc5->Suballocate(kDeviceSize / 2 + 1, 0);
-  auto sub_alloc8 = sub_alloc5->Suballocate(kDeviceSize / 2, 1);
-  auto sub_alloc9 = sub_alloc5->Suballocate(kDeviceSize / 2, 0);
+  auto sub_alloc6 = sub_alloc5->Suballocate(kTestMemorySize / 2, 0);
+  auto sub_alloc7 = sub_alloc5->Suballocate(kTestMemorySize / 2 + 1, 0);
+  auto sub_alloc8 = sub_alloc5->Suballocate(kTestMemorySize / 2, 1);
+  auto sub_alloc9 = sub_alloc5->Suballocate(kTestMemorySize / 2, 0);
   // Valid sub-allocation.
   EXPECT_NE(nullptr, sub_alloc6.get());
   // Invalid sub-allocation due to increased size.
@@ -50,70 +76,51 @@ void TestSubAllocation(GpuMemPtr mem) {
   EXPECT_EQ(nullptr, sub_alloc8.get());
   // Valid sub-allocation, even though it has 100% overlap with |sub_alloc1|.
   EXPECT_NE(nullptr, sub_alloc9.get());
+
+  EXPECT_EQ(1, obj_count);
+  mem = nullptr;
+  // Suballocations keep the base allocation alive.
+  EXPECT_EQ(1, obj_count);
+
+  sub_alloc1 = nullptr;
+  sub_alloc4 = nullptr;
+  sub_alloc5 = nullptr;
+  sub_alloc6 = nullptr;
+  sub_alloc9 = nullptr;
+
+  // Removing all valid sub-allocations causes the base allocation to go out of
+  // scope.
+  EXPECT_EQ(0, obj_count);
 }
 
 // This test should be updated to include all hashed types used by Escher.
-TEST(GpuMem, WrapExisting) {
-  auto mem = GpuMem::AdoptVkMemory(vk::Device(), vk::DeviceMemory(),
-                                   kDeviceSize, false /* needs_mapped_ptr */);
-  TestSubAllocation(mem);
-}
-
-VK_TEST(GpuMem, NaiveAllocator) {
-  escher::VulkanInstance::Params instance_params(
+VK_TEST(GpuMem, AdoptVkMemory) {
+  VulkanInstance::Params instance_params(
       {{"VK_LAYER_LUNARG_standard_validation"},
        {VK_EXT_DEBUG_REPORT_EXTENSION_NAME},
        false});
 
-  auto vulkan_instance =
-      escher::VulkanInstance::New(std::move(instance_params));
-  auto vulkan_device = escher::VulkanDeviceQueues::New(vulkan_instance, {});
-  NaiveGpuAllocator allocator(vulkan_device->GetVulkanContext());
+  auto vulkan_instance = VulkanInstance::New(std::move(instance_params));
+  auto vulkan_queues = VulkanDeviceQueues::New(vulkan_instance, {});
+  auto device = vulkan_queues->GetVulkanContext().device;
+  auto physical_device = vulkan_queues->GetVulkanContext().physical_device;
 
-  // Standard sub-allocation tests.
-  auto alloc = allocator.AllocateMemory(
-      {kDeviceSize, 0, 0xffffffff}, vk::MemoryPropertyFlagBits::eDeviceLocal);
-  EXPECT_EQ(kDeviceSize, allocator.GetTotalBytesAllocated());
-  TestSubAllocation(alloc);
+  vk::MemoryAllocateInfo info;
+  info.allocationSize = kTestMemorySize;
+  info.memoryTypeIndex = impl::GetMemoryTypeIndex(
+      physical_device, INT32_MAX, vk::MemoryPropertyFlagBits::eHostVisible);
+  vk::DeviceMemory vk_mem =
+      ESCHER_CHECKED_VK_RESULT(device.allocateMemory(info));
 
-  // Adding sub-allocations doesn't increase slab-count.
-  EXPECT_EQ(kDeviceSize, allocator.GetTotalBytesAllocated());
-  auto sub_alloc1 = alloc->Suballocate(kDeviceSize, 0);
-  auto sub_alloc1a = sub_alloc1->Suballocate(kDeviceSize, 0);
-  auto sub_alloc1b = sub_alloc1->Suballocate(kDeviceSize, 0);
-  auto sub_alloc2 = alloc->Suballocate(kDeviceSize, 0);
-  auto sub_alloc2a = sub_alloc2->Suballocate(kDeviceSize, 0);
-  auto sub_alloc2b = sub_alloc2->Suballocate(kDeviceSize, 0);
-  EXPECT_EQ(kDeviceSize, allocator.GetTotalBytesAllocated());
-
-  // Allocating then freeing increases/decreases the slab-count.
-  auto alloc2 = allocator.AllocateMemory(
-      {kDeviceSize, 0, 0xffffffff}, vk::MemoryPropertyFlagBits::eHostVisible);
-  EXPECT_EQ(2U * kDeviceSize, allocator.GetTotalBytesAllocated());
-  alloc2 = nullptr;
-  EXPECT_EQ(kDeviceSize, allocator.GetTotalBytesAllocated());
-
-  // Sub-allocations keep parent allocations alive.
-  alloc = nullptr;
-  EXPECT_EQ(kDeviceSize, allocator.GetTotalBytesAllocated());
-  sub_alloc1 = nullptr;
-  sub_alloc1a = nullptr;
-  sub_alloc1b = nullptr;
-  sub_alloc2 = nullptr;
-  sub_alloc2a = nullptr;
-  EXPECT_EQ(kDeviceSize, allocator.GetTotalBytesAllocated());
-  sub_alloc2b = nullptr;
-  EXPECT_EQ(0U, allocator.GetTotalBytesAllocated());
+  // This test only checks for valid creation and destruction. It would need
+  // a mock Vulkan to test for memory usage.
+  auto mem = GpuMem::AdoptVkMemory(device, vk_mem, kTestMemorySize,
+                                   true /* needs_mapped_ptr */);
+  EXPECT_EQ(vk_mem, mem->base());
+  EXPECT_EQ(kTestMemorySize, mem->size());
+  EXPECT_EQ(0u, mem->offset());
+  EXPECT_NE(nullptr, mem->mapped_ptr());
 }
-
-namespace {
-class FakeGpuMem : public GpuMem {
- public:
-  FakeGpuMem(vk::DeviceMemory base, vk::DeviceSize size, vk::DeviceSize offset,
-             uint8_t* mapped_ptr)
-      : GpuMem(base, size, offset, mapped_ptr) {}
-};
-}  // anonymous namespace
 
 TEST(GpuMem, RecursiveAllocations) {
   const vk::DeviceMemory kVkMem(reinterpret_cast<VkDeviceMemory>(10000));
