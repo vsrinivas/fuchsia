@@ -7,8 +7,6 @@
 
 #include "object_dir.h"
 
-#include <lib/fxl/macros.h>
-
 namespace component {
 
 // |ExposedObject| is a base class that exposes an |ObjectDir| interface to
@@ -34,6 +32,8 @@ class ExposedObject {
 
   virtual ~ExposedObject();
 
+  ExposedObject(const ExposedObject& other) = delete;
+  ExposedObject& operator=(const ExposedObject& other) = delete;
   ExposedObject(ExposedObject&& other) = default;
   ExposedObject& operator=(ExposedObject&& other);
 
@@ -51,7 +51,7 @@ class ExposedObject {
   ObjectDir object_dir() const { return object_dir_; }
 
   // Gets the |Object| this is wrapping.
-  fbl::RefPtr<Object> object() const { return object_dir_.object(); }
+  std::shared_ptr<Object> object() const { return object_dir_.object(); }
 
  private:
   // Helper to move this object to a different parent.
@@ -62,8 +62,6 @@ class ExposedObject {
 
   // The object itself, accessible through object().
   ObjectDir object_dir_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(ExposedObject);
 };
 
 }  // namespace component

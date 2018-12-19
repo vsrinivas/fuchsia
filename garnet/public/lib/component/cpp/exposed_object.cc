@@ -3,17 +3,17 @@
 // found in the LICENSE file.
 //
 #include <optional>
+#include <sstream>
 #include <string>
 
 #include <fbl/ref_ptr.h>
-#include <lib/fxl/strings/string_printf.h>
 
 #include "exposed_object.h"
 
 namespace component {
 
 ExposedObject::ExposedObject(const std::string& name)
-    : object_dir_(fbl::MakeRefCounted<Object>(name.c_str())) {}
+    : object_dir_(Object::Make(name.c_str())) {}
 
 ExposedObject::ExposedObject(ObjectDir object_dir)
     : object_dir_(std::move(object_dir)) {}
@@ -52,10 +52,10 @@ void ExposedObject::move_parents(const ObjectDir& new_parent) {
 
 std::string ExposedObject::UniqueName(const std::string& prefix) {
   static std::atomic_uint_fast64_t next_id;
-  std::string out = prefix;
+  std::ostringstream out;
   auto value = next_id.fetch_add(1);
-  fxl::StringAppendf(&out, "0x%lx", value);
-  return out;
+  out << prefix << "0x" << std::hex << value;
+  return out.str();
 }
 
 }  // namespace component

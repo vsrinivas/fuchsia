@@ -10,7 +10,6 @@
 #include <zircon/processargs.h>
 
 #include "lib/component/cpp/connect.h"
-#include "lib/fxl/logging.h"
 
 namespace component {
 

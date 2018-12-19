@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_APP_CPP_SERVICE_PROVIDER_IMPL_H_
-#define LIB_APP_CPP_SERVICE_PROVIDER_IMPL_H_
+#ifndef LIB_COMPONENT_CPP_SERVICE_PROVIDER_IMPL_H_
+#define LIB_COMPONENT_CPP_SERVICE_PROVIDER_IMPL_H_
 
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
@@ -14,7 +14,6 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/fxl/macros.h"
 
 namespace component {
 
@@ -42,6 +41,10 @@ class ServiceProviderImpl : public fuchsia::sys::ServiceProvider {
   explicit ServiceProviderImpl(fidl::InterfaceRequest<ServiceProvider> request);
 
   ~ServiceProviderImpl() override;
+
+  // Disallow copy and assign.
+  ServiceProviderImpl(const ServiceProviderImpl&) = delete;
+  ServiceProviderImpl& operator=(const ServiceProviderImpl&) = delete;
 
   // Binds this service provider implementation to the given interface request.
   // Multiple bindings may be added.  They are automatically removed when closed
@@ -112,10 +115,8 @@ class ServiceProviderImpl : public fuchsia::sys::ServiceProvider {
 
   std::unordered_map<std::string, ServiceConnector> name_to_service_connector_;
   DefaultServiceConnector default_service_connector_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(ServiceProviderImpl);
 };
 
 }  // namespace component
 
-#endif  // LIB_APP_CPP_SERVICE_PROVIDER_IMPL_H_
+#endif  // LIB_COMPONENT_CPP_SERVICE_PROVIDER_IMPL_H_

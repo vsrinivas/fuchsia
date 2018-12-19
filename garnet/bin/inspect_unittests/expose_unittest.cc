@@ -120,12 +120,12 @@ TEST(Metric, ValueCallback) {
 }
 
 TEST(Object, Name) {
-  fbl::RefPtr<Object> object = fbl::MakeRefCounted<Object>("test");
+  std::shared_ptr<Object> object = Object::Make("test");
   EXPECT_STREQ("test", object->name().c_str());
 }
 
 TEST(Object, ReadData) {
-  fbl::RefPtr<Object> object = fbl::MakeRefCounted<Object>("test");
+  std::shared_ptr<Object> object = Object::Make("test");
   object->SetProperty("property", component::Property("value"));
   object->SetMetric("int metric", component::IntMetric(-10));
   object->SetMetric("uint metric", component::UIntMetric(0xFF));
@@ -143,7 +143,8 @@ TEST(Object, ReadData) {
                                    DoubleMetric("double metric", 0.25)));
 }
 
-component::Object::StringOutputVector ListChildren(fbl::RefPtr<Object> object) {
+component::Object::StringOutputVector ListChildren(
+    std::shared_ptr<Object> object) {
   component::Object::StringOutputVector ret;
   object->ListChildren([&ret](component::Object::StringOutputVector val) {
     ret = std::move(val);
@@ -152,10 +153,10 @@ component::Object::StringOutputVector ListChildren(fbl::RefPtr<Object> object) {
 }
 
 TEST(Object, SetTakeChild) {
-  fbl::RefPtr<Object> object = fbl::MakeRefCounted<Object>("test");
+  std::shared_ptr<Object> object = Object::Make("test");
   component::Object::StringOutputVector children_list;
 
-  object->SetChild(fbl::MakeRefCounted<Object>("child1"));
+  object->SetChild(Object::Make("child1"));
   children_list = ListChildren(object);
   EXPECT_THAT(*children_list, UnorderedElementsAre(fidl::StringPtr("child1")));
 
@@ -166,11 +167,11 @@ TEST(Object, SetTakeChild) {
 }
 
 TEST(Object, ChildrenCallback) {
-  fbl::RefPtr<Object> object = fbl::MakeRefCounted<Object>("test");
+  std::shared_ptr<Object> object = Object::Make("test");
   component::Object::StringOutputVector children_list;
 
-  object->SetChild(fbl::MakeRefCounted<Object>("concrete1"));
-  object->SetChild(fbl::MakeRefCounted<Object>("concrete2"));
+  object->SetChild(Object::Make("concrete1"));
+  object->SetChild(Object::Make("concrete2"));
 
   children_list = ListChildren(object);
   EXPECT_THAT(*children_list,
@@ -179,9 +180,9 @@ TEST(Object, ChildrenCallback) {
 
   // Set the callback and ensure it is merged with the concrete objects.
   object->SetChildrenCallback([](component::Object::ObjectVector* out) {
-    out->emplace_back(fbl::MakeRefCounted<Object>("dynamic1"));
-    out->emplace_back(fbl::MakeRefCounted<Object>("dynamic2"));
-    out->emplace_back(fbl::MakeRefCounted<Object>("dynamic3"));
+    out->emplace_back(Object::Make("dynamic1"));
+    out->emplace_back(Object::Make("dynamic2"));
+    out->emplace_back(Object::Make("dynamic3"));
   });
   children_list = ListChildren(object);
   EXPECT_THAT(*children_list,

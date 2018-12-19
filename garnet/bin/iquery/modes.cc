@@ -120,6 +120,53 @@ bool RunCat(const Options& options, std::vector<ObjectNode>* out) {
 
 namespace {
 
+// Depth-first search for children within the Inspect API, utilizing
+// ListChildren and OpenChild on the API for traversal.
+void ListFromInspectHierarchy(std::string in_path,
+                              fuchsia::inspect::InspectSyncPtr in_root,
+                              std::vector<ObjectNode>* out, bool recurse) {
+  FXL_VLOG(1) << fxl::Substitute("Opened Inspect hierarchy at $0", in_path);
+
+  if (!recurse) {
+    FXL_VLOG(1) << "  processing " << in_path;
+    auto it = out->emplace(out->end());
+    in_root->ReadData(&(it->object));
+    it->basepath = in_path;
+  } else {
+    std::stack<std::pair<std::string, fuchsia::inspect::InspectSyncPtr>> search;
+    search.push(std::make_pair(std::move(in_path), std::move(in_root)));
+
+    while (!search.empty()) {
+      auto pair = std::move(search.top());
+      search.pop();
+      FXL_VLOG(1) << "  processing " << pair.first;
+      auto it = out->emplace(out->end());
+      pair.second->ReadData(&(it->object));
+      it->basepath = pair.first;
+
+      // Continue a DFS search of children underneath the root if recurse is
+      // true.
+      fidl::VectorPtr<std::string> children;
+      pair.second->ListChildren(&children);
+
+      for (const auto& child : *children) {
+        fuchsia::inspect::InspectSyncPtr ptr;
+        bool opened;
+        pair.second->OpenChild(child, ptr.NewRequest(), &opened);
+        if (opened) {
+          FXL_VLOG(1) << "  opened child " << child;
+          search.push(std::make_pair(fxl::Concatenate({pair.first, "/", child}),
+                                     std::move(ptr)));
+        } else {
+          FXL_VLOG(1) << "  failed to open child " << child;
+        }
+      }
+    }
+  }
+
+  FXL_VLOG(1) << "Done reading inspect hierarchy";
+}
+
 // Makes a DFS search for candidate channels under the |base_directory|.
 // If |recursive| is not set, it will stop the decent of a particular branch
 // upon finding a valid channel. When it set it will search the whole tree.
@@ -154,7 +201,6 @@ bool FindObjects(const std::string& base_directory, bool recursive,
 
     // By default we continue to search. If we find a good candidate, we need
     // to define then if we're going to continue recursing.
-    bool recurse = true;
     std::vector<std::string> current_level_dirs;
     while (auto* dirent = readdir(dir)) {
       FXL_VLOG(1) << "  checking " << dirent->d_name;
@@ -171,7 +217,8 @@ bool FindObjects(const std::string& base_directory, bool recursive,
         FXL_VLOG(1) << fxl::Substitute("  will queue", path);
         current_level_dirs.emplace_back(
             fxl::Concatenate({path, "/", dirent->d_name}));
-      } else if (strcmp(".channel", dirent->d_name) == 0) {
+      } else if (strcmp(fuchsia::inspect::Inspect::Name_, dirent->d_name) ==
+                 0) {
         // We found a candidate, we check if it's a valid one.
         FXL_VLOG(1) << fxl::Substitute("  is a candidate path", path);
         Connection c(path);
@@ -180,17 +227,8 @@ bool FindObjects(const std::string& base_directory, bool recursive,
           auto ptr = c.SyncOpen();
           if (ptr) {
             FXL_VLOG(1) << "  accepted";
-            // This is a valid candidate, add it to the list.
-            auto it = out->emplace(out->end());
-            ptr->ReadData(&(it->object));
-            it->basepath = path;
 
-            // Whether we should continue after we found the first one.
-            recurse = recursive;
-            if (recurse)
-              FXL_VLOG(1) << "  continuing to recurse";
-            else
-              FXL_VLOG(1) << "  candidate valid. Stopping recursion";
+            ListFromInspectHierarchy(path, std::move(ptr), out, recursive);
           } else {
             FXL_LOG(WARNING) << "Could not open "
                              << fxl::Concatenate({path, "/", dirent->d_name});
@@ -200,12 +238,10 @@ bool FindObjects(const std::string& base_directory, bool recursive,
     }
 
     // Now that we checked all the candidates within this directory, we
-    // continue the recursion if appropriate.
-    if (recurse) {
-      FXL_VLOG(1) << fxl::Substitute("Recursing from $0", path);
-      for (const auto& child_dir : current_level_dirs) {
-        search.emplace(std::move(child_dir));
-      }
+    // continue the recursion through directories.
+    FXL_VLOG(1) << fxl::Substitute("Recursing from $0", path);
+    for (const auto& child_dir : current_level_dirs) {
+      search.emplace(std::move(child_dir));
     }
   }
 

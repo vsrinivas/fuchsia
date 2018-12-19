@@ -19,8 +19,6 @@
 #include "garnet/bin/appmgr/system_objects_directory.h"
 
 #include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/memory/ref_ptr.h"
 
 namespace component {
 
@@ -187,6 +185,10 @@ class ComponentControllerImpl : public ComponentControllerBase {
   TerminationCallback termination_callback_;
 
   SystemObjectsDirectory system_objects_directory_;
+
+  fidl::BindingSet<fuchsia::inspect::Inspect,
+                   std::shared_ptr<component::Object>>
+      system_directory_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ComponentControllerImpl);
 };

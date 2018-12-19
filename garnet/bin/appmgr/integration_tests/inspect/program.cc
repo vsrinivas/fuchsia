@@ -70,9 +70,9 @@ int main(int argc, const char** argv) {
   invalid.find({"test", "a"});
   invalid.set_prop("test1", "...");
   invalid.set_metric("test2", component::IntMetric(10));
-  invalid.set_child(fbl::MakeRefCounted<component::Object>("temp"));
+  invalid.set_child(component::Object::Make("temp"));
   invalid.set_children_callback(
-      [](std::vector<fbl::RefPtr<component::Object>>* out) {});
+      [](std::vector<std::shared_ptr<component::Object>>* out) {});
   invalid.add_metric("test2", 2);
   invalid.sub_metric("test2", 2);
 
@@ -95,10 +95,9 @@ int main(int argc, const char** argv) {
 
   context->outgoing().object_dir()->set_children_callback(
       [](component::Object::ObjectVector* out) {
-        auto obj = fbl::MakeRefCounted<component::Object>("lazy_child");
-        auto dir = component::ObjectDir::Wrap(obj.get());
+        auto dir = component::ObjectDir::Make("lazy_child");
         dir.set_prop("version", "1");
-        out->push_back(obj);
+        out->push_back(dir.object());
       });
 
   loop.Run();

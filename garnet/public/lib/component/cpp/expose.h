@@ -5,9 +5,6 @@
 #ifndef LIB_COMPONENT_CPP_EXPOSE_H_
 #define LIB_COMPONENT_CPP_EXPOSE_H_
 
-#include <fbl/auto_lock.h>
-#include <fbl/mutex.h>
-#include <fbl/string.h>
 #include <fs/lazy-dir.h>
 #include <fs/pseudo-file.h>
 #include <fuchsia/inspect/cpp/fidl.h>
@@ -180,31 +177,35 @@ Metric CallbackMetric(Metric::ValueCallback callback);
 // utilities must communicate over the FIDL interface.
 //
 // This class is thread safe.
-class Object : public fuchsia::inspect::Inspect, public fs::LazyDir {
+class Object : public fuchsia::inspect::Inspect {
  public:
-  using ObjectVector = std::vector<fbl::RefPtr<Object>>;
+  using ObjectVector = std::vector<std::shared_ptr<Object>>;
   using ChildrenCallback = fit::function<void(ObjectVector*)>;
   using StringOutputVector = fidl::VectorPtr<std::string>;
 
-  // Constructs a new |Object| with the given name.
-  // Every object requires a name, and names for children must be unique.
-  explicit Object(fbl::String name);
+  // Makes a new shared pointer to an Object.
+  static std::shared_ptr<Object> Make(std::string name) {
+    auto ret = std::shared_ptr<Object>(new Object(std::move(name)));
+    std::lock_guard<std::mutex> lock(ret->mutex_);
+    ret->self_weak_ptr_ = ret;
+    return ret;
+  };
 
   // Gets the name of this |Object|.
-  fbl::String name() { return name_; }
+  std::string name() { return name_; }
 
   // Gets a new reference to a child by name. The return value may be empty if
   // the child does not exist.
-  fbl::RefPtr<Object> GetChild(fbl::String name);
+  std::shared_ptr<Object> GetChild(std::string name);
 
   // Sets a child to a new reference. If the child already exists, the contained
   // reference will be dropped and replaced with the given one.
-  void SetChild(fbl::RefPtr<Object> child);
+  void SetChild(std::shared_ptr<Object> child);
 
   // Takes a child from this |Object|. This |Object| will no longer contain a
   // reference to the returned child. The return value may be empty if the child
   // does not exist.
-  fbl::RefPtr<Object> TakeChild(fbl::String name);
+  std::shared_ptr<Object> TakeChild(std::string name);
 
   // Sets a callback to dynamically populate children. The children returned by
   // this callback are in addition to the children already contained by this
@@ -234,7 +235,7 @@ class Object : public fuchsia::inspect::Inspect, public fs::LazyDir {
   // Adds to a numeric |Metric| on this |Object|.
   template <typename T>
   bool AddMetric(const std::string& name, T amount) {
-    fbl::AutoLock lock(&mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     auto it = metrics_.find(name);
     if (it == metrics_.end()) {
       return false;
@@ -246,7 +247,7 @@ class Object : public fuchsia::inspect::Inspect, public fs::LazyDir {
   // Subtracts from a numeric |Metric| on this |Object|.
   template <typename T>
   bool SubMetric(const std::string& name, T amount) {
-    fbl::AutoLock lock(&mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     auto it = metrics_.find(name);
     if (it == metrics_.end()) {
       return false;
@@ -268,22 +269,6 @@ class Object : public fuchsia::inspect::Inspect, public fs::LazyDir {
                  ::fidl::InterfaceRequest<Inspect> child_channel,
                  OpenChildCallback callback) override;
 
-  // |LazyDir| implementation
-
-  // Gets contents for directory listing.
-  // WARNING: Changes to the set of children, including dynamic children, is
-  // logically a removal of all directory contents followed by a repopulation of
-  // the contents. This means that readdir(3) operations may give inconsistent
-  // results in the face of rapid content changes. Use |Inspect|
-  // implementation to avoid this.
-  void GetContents(LazyEntryVector* out_vector) override;
-
-  // Gets a reference to a child object or special file as a Vnode.
-  // IMPLEMENTATION NOTE: This is safe to use even if contents change rapidly,
-  // so long as the requested |name| is present at the time it is requested.
-  zx_status_t GetFile(fbl::RefPtr<Vnode>* out_vnode, uint64_t id,
-                      fbl::String name) override;
-
   // Turn this |Object| into its FIDL representation.
   fuchsia::inspect::Object ToFidl();
 
@@ -291,7 +276,9 @@ class Object : public fuchsia::inspect::Inspect, public fs::LazyDir {
   StringOutputVector GetChildren();
 
  private:
-  enum { kChanId = 1, kSpecialIdMax };
+  // Constructs a new |Object| with the given name.
+  // Every object requires a name, and names for children must be unique.
+  explicit Object(std::string name);
 
   // Helper function to populate an output vector of children objects.
   void PopulateChildVector(StringOutputVector* out_vector)
@@ -301,16 +288,21 @@ class Object : public fuchsia::inspect::Inspect, public fs::LazyDir {
   void AddBinding(fidl::InterfaceRequest<Inspect> chan);
 
   // Mutex protecting fields below.
-  mutable fbl::Mutex mutex_;
+  mutable std::mutex mutex_;
+
   // The name of this object.
-  fbl::String name_;
+  std::string name_;
+
   // |Property| for this object, keyed by name.
   std::unordered_map<std::string, Property> properties_ __TA_GUARDED(mutex_);
+
   // |Property| for this object, keyed by name.
   std::unordered_map<std::string, Metric> metrics_ __TA_GUARDED(mutex_);
+
   // |Children| for this object, keyed by name. Ordered structure for consistent
   // iteration.
-  std::map<std::string, fbl::RefPtr<Object>> children_ __TA_GUARDED(mutex_);
+  std::map<std::string, std::shared_ptr<Object>> children_ __TA_GUARDED(mutex_);
+
   // Callback for retrieving lazily generated children. May be empty.
   ChildrenCallback lazy_object_callback_ __TA_GUARDED(mutex_);
 
@@ -319,11 +311,15 @@ class Object : public fuchsia::inspect::Inspect, public fs::LazyDir {
   fidl::BindingSet<fuchsia::inspect::Inspect, Object*> bindings_
       __TA_GUARDED(mutex_);
 
-  // A self RefPtr, held only if |bindings_| is non-empty. Allows avoiding
+  // A self shared_ptr, held only if |bindings_| is non-empty. Allows avoiding
   // circular ownership. Recursive destruction is impossible because the object
   // will not be destructed while pointing to itself.
-  // TODO(FIDL-452): change when FIDL supports storing self RefPtrs.
-  fbl::RefPtr<Object> self_if_bindings_ __TA_GUARDED(mutex_);
+  // TODO(FIDL-452): change when FIDL supports storing self shared ptrs.
+  std::shared_ptr<Object> self_if_bindings_ __TA_GUARDED(mutex_);
+
+  // A self weak_ptr, used to promote to a self shared_ptr when |bindings_| is
+  // non-empty.
+  std::weak_ptr<Object> self_weak_ptr_ __TA_GUARDED(mutex_);
 };
 
 }  // namespace component

@@ -17,7 +17,6 @@
 #include <lib/fit/function.h>
 
 #include "lib/component/cpp/testing/launcher_impl.h"
-#include "lib/fxl/logging.h"
 #include "lib/svc/cpp/services.h"
 
 namespace component {

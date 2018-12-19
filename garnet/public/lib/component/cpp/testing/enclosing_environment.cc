@@ -9,7 +9,6 @@
 
 #include "lib/component/cpp/testing/test_util.h"
 #include "lib/fidl/cpp/clone.h"
-#include "lib/fxl/logging.h"
 
 namespace component {
 namespace testing {

@@ -65,7 +65,7 @@ DEFINE_PROPERTY_METHODS(LazyByteVectorProperty, VectorValueCallback)
 
 ChildrenCallback::ChildrenCallback() {}
 
-ChildrenCallback::ChildrenCallback(fbl::RefPtr<component::Object> object)
+ChildrenCallback::ChildrenCallback(std::shared_ptr<component::Object> object)
     : parent_obj_(std::move(object)) {}
 
 ChildrenCallback::~ChildrenCallback() {

@@ -55,7 +55,7 @@ class EntityWrapper final {
  public:
   EntityWrapper() {}
   explicit EntityWrapper(std::string name) : name_(std::move(name)) {}
-  EntityWrapper(std::string name, fbl::RefPtr<::component::Object> obj)
+  EntityWrapper(std::string name, std::shared_ptr<::component::Object> obj)
       : name_(std::move(name)), parent_obj_(std::move(obj)) {}
 
   ~EntityWrapper() {
@@ -87,7 +87,7 @@ class EntityWrapper final {
   ::component::Object* ParentObject() { return parent_obj_.get(); }
 
   std::string name_;
-  fbl::RefPtr<::component::Object> parent_obj_;
+  std::shared_ptr<::component::Object> parent_obj_;
 };
 
 }  // namespace internal
@@ -272,9 +272,9 @@ class ChildrenCallback final {
  private:
   friend class ::inspect::Object;
   // Internal constructor setting an actual children callback on an object.
-  ChildrenCallback(fbl::RefPtr<::component::Object> object);
+  ChildrenCallback(std::shared_ptr<::component::Object> object);
 
-  fbl::RefPtr<::component::Object> parent_obj_;
+  std::shared_ptr<::component::Object> parent_obj_;
 };
 
 // An object under which properties, metrics, and other objects may be nested.
