@@ -9,8 +9,8 @@
 #include <ddk/driver.h>
 #include <ddk/binding.h>
 #include <ddk/protocol/ethernet.h>
-#include <ddk/protocol/usb-old.h>
-#include <ddk/usb/usb.h>
+#include <ddk/protocol/usb.h>
+#include <usb/usb.h>
 #include <usb/usb-request.h>
 #include <zircon/assert.h>
 #include <zircon/listnode.h>
@@ -77,17 +77,17 @@ typedef struct txn_info {
     list_node_t node;
 } txn_info_t;
 
-static void ax88772b_interrupt_complete(usb_request_t* request, void* cookie);
-static void ax88772b_write_complete(usb_request_t* request, void* cookie);
+static void ax88772b_interrupt_complete(void* ctx, usb_request_t* request);
+static void ax88772b_write_complete(void* ctx, usb_request_t* request);
 
 static zx_status_t ax88772b_set_value(ax88772b_t* eth, uint8_t request, uint16_t value) {
-    return usb_control(&eth->usb, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-                       request, value, 0, NULL, 0, ZX_TIME_INFINITE, NULL);
+    return usb_control_out(&eth->usb, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                           request, value, 0, ZX_TIME_INFINITE, NULL, 0);
 }
 
 static zx_status_t ax88772b_get_value(ax88772b_t* eth, uint8_t request, uint16_t* value_addr) {
-    return usb_control(&eth->usb, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-                         request, 0, 0, value_addr, sizeof(uint16_t), ZX_TIME_INFINITE, NULL);
+    return usb_control_in(&eth->usb, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                          request, 0, 0, ZX_TIME_INFINITE, value_addr, sizeof(uint16_t), NULL);
 }
 
 static zx_status_t ax88772b_mdio_read(ax88772b_t* eth, uint8_t offset, uint16_t* value) {
@@ -97,9 +97,9 @@ static zx_status_t ax88772b_mdio_read(ax88772b_t* eth, uint8_t offset, uint16_t*
         zxlogf(ERROR, "ax88772b: ASIX_REQ_SW_SERIAL_MGMT_CTRL failed: %d\n", status);
         return status;
     }
-    status = usb_control(&eth->usb, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-                         ASIX_REQ_PHY_READ, eth->phy_id, offset,
-                         value, sizeof(*value), ZX_TIME_INFINITE, NULL);
+    status = usb_control_in(&eth->usb, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                            ASIX_REQ_PHY_READ, eth->phy_id, offset, ZX_TIME_INFINITE,
+                            value, sizeof(*value), NULL);
     if (status < 0) {
         zxlogf(ERROR, "ax88772b: ASIX_REQ_PHY_READ failed: %d\n", status);
         return status;
@@ -120,9 +120,9 @@ static zx_status_t ax88772b_mdio_write(ax88772b_t* eth, uint8_t offset, uint16_t
         zxlogf(ERROR, "ax88772b: ASIX_REQ_SW_SERIAL_MGMT_CTRL failed: %d\n", status);
         return status;
     }
-    status = usb_control(&eth->usb, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-                         ASIX_REQ_PHY_WRITE, eth->phy_id, offset,
-                         &value, sizeof(value), ZX_TIME_INFINITE, NULL);
+    status = usb_control_out(&eth->usb, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                             ASIX_REQ_PHY_WRITE, eth->phy_id, offset, ZX_TIME_INFINITE,
+                             &value, sizeof(value));
     if (status < 0) {
         zxlogf(ERROR, "ax88772b: ASIX_REQ_PHY_WRITE failed: %d\n", status);
         return status;
@@ -156,8 +156,12 @@ static zx_status_t ax88772b_wait_for_phy(ax88772b_t* eth) {
 
 static void queue_interrupt_requests_locked(ax88772b_t* eth) {
     usb_request_t* req;
+    usb_request_complete_t complete = {
+        .callback = ax88772b_interrupt_complete,
+        .ctx = eth,
+    };
     while ((req = usb_req_list_remove_head(&eth->free_intr_reqs, eth->parent_req_size)) != NULL) {
-        usb_request_queue(&eth->usb, req, ax88772b_interrupt_complete, eth);
+        usb_request_queue(&eth->usb, req, &complete);
     }
 }
 
@@ -223,12 +227,16 @@ static zx_status_t ax88772b_send(ax88772b_t* eth, usb_request_t* request, ethmac
     request->header.length = length + ETH_HEADER_SIZE;
 
     zx_nanosleep(zx_deadline_after(ZX_USEC(eth->tx_endpoint_delay)));
-    usb_request_queue(&eth->usb, request, ax88772b_write_complete, eth);
+    usb_request_complete_t complete = {
+        .callback = ax88772b_write_complete,
+        .ctx = eth,
+    };
+    usb_request_queue(&eth->usb, request, &complete);
     return ZX_OK;
 }
 
-static void ax88772b_read_complete(usb_request_t* request, void* cookie) {
-    ax88772b_t* eth = (ax88772b_t*)cookie;
+static void ax88772b_read_complete(void* ctx, usb_request_t* request) {
+    ax88772b_t* eth = (ax88772b_t*)ctx;
 
     if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
         usb_request_release(request);
@@ -252,7 +260,11 @@ static void ax88772b_read_complete(usb_request_t* request, void* cookie) {
 
     if (eth->online) {
         zx_nanosleep(zx_deadline_after(ZX_USEC(eth->rx_endpoint_delay)));
-        usb_request_queue(&eth->usb, request, ax88772b_read_complete, eth);
+        usb_request_complete_t complete = {
+            .callback = ax88772b_read_complete,
+            .ctx = eth,
+        };
+        usb_request_queue(&eth->usb, request, &complete);
     } else {
         zx_status_t status = usb_req_list_add_head(&eth->free_read_reqs, request,
                                                    eth->parent_req_size);
@@ -261,8 +273,8 @@ static void ax88772b_read_complete(usb_request_t* request, void* cookie) {
     mtx_unlock(&eth->mutex);
 }
 
-static void ax88772b_write_complete(usb_request_t* request, void* cookie) {
-    ax88772b_t* eth = (ax88772b_t*)cookie;
+static void ax88772b_write_complete(void* ctx, usb_request_t* request) {
+    ax88772b_t* eth = (ax88772b_t*)ctx;
 
     if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
         usb_request_release(request);
@@ -298,8 +310,8 @@ static void ax88772b_write_complete(usb_request_t* request, void* cookie) {
     mtx_unlock(&eth->mutex);
 }
 
-static void ax88772b_interrupt_complete(usb_request_t* request, void* cookie) {
-    ax88772b_t* eth = (ax88772b_t*)cookie;
+static void ax88772b_interrupt_complete(void* ctx, usb_request_t* request) {
+    ax88772b_t* eth = (ax88772b_t*)ctx;
 
     if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
         usb_request_release(request);
@@ -333,7 +345,11 @@ static void ax88772b_interrupt_complete(usb_request_t* request, void* cookie) {
                                            node) {
                     list_delete(&req_int->node);
                     req = REQ_INTERNAL_TO_USB_REQ(req_int, eth->parent_req_size);
-                    usb_request_queue(&eth->usb, req, ax88772b_read_complete, eth);
+                    usb_request_complete_t complete = {
+                        .callback = ax88772b_read_complete,
+                        .ctx = eth,
+                    };
+                    usb_request_queue(&eth->usb, req, &complete);
                 }
             } else if (!online && was_online) {
                 if (eth->ifc.ops) {
@@ -514,9 +530,9 @@ static int ax88772b_start_thread(void* arg) {
 
     // select the PHY
     uint8_t phy_addr[2];
-    status = usb_control(&eth->usb, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-                         ASIX_REQ_PHY_ADDR, 0, 0, &phy_addr, sizeof(phy_addr), ZX_TIME_INFINITE,
-                         NULL);
+    status = usb_control_in(&eth->usb, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                            ASIX_REQ_PHY_ADDR, 0, 0, ZX_TIME_INFINITE,
+                            &phy_addr, sizeof(phy_addr), NULL);
     if (status < 0) {
         zxlogf(ERROR, "ax88772b: ASIX_REQ_READ_PHY_ADDR failed: %d\n", status);
         goto fail;
@@ -564,9 +580,9 @@ static int ax88772b_start_thread(void* arg) {
         goto fail;
     }
 
-    status = usb_control(&eth->usb, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-                         ASIX_REQ_IPG_WRITE, ASIX_IPG_DEFAULT | (ASIX_IPG1_DEFAULT << 8),
-                         ASIX_IPG2_DEFAULT, NULL, 0, ZX_TIME_INFINITE, NULL);
+    status = usb_control_out(&eth->usb, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                             ASIX_REQ_IPG_WRITE, ASIX_IPG_DEFAULT | (ASIX_IPG1_DEFAULT << 8),
+                             ASIX_IPG2_DEFAULT, ZX_TIME_INFINITE, NULL, 0);
     if (status < 0) {
         zxlogf(ERROR, "ax88772b: ASIX_REQ_IPG_WRITE failed: %d\n", status);
         goto fail;
@@ -578,9 +594,9 @@ static int ax88772b_start_thread(void* arg) {
         goto fail;
     }
 
-    status = usb_control(&eth->usb, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-                         ASIX_REQ_NODE_ID_READ, 0, 0, eth->mac_addr, sizeof(eth->mac_addr),
-                         ZX_TIME_INFINITE, NULL);
+    status = usb_control_in(&eth->usb, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                            ASIX_REQ_NODE_ID_READ, 0, 0, ZX_TIME_INFINITE,
+                            eth->mac_addr, sizeof(eth->mac_addr), NULL);
     if (status < 0) {
         zxlogf(ERROR, "ax88772b: ASIX_REQ_NODE_ID_READ failed: %d\n", status);
         goto fail;
@@ -616,7 +632,7 @@ fail:
 
 static zx_status_t ax88772b_bind(void* ctx, zx_device_t* device) {
     usb_protocol_t usb;
-    zx_status_t result = device_get_protocol(device, ZX_PROTOCOL_USB_OLD, &usb);
+    zx_status_t result = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);
     if (result != ZX_OK) {
         return result;
     }
@@ -727,7 +743,7 @@ static zx_driver_ops_t ax88772b_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(ethernet_ax88772b, ax88772b_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_OLD),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
     BI_ABORT_IF(NE, BIND_USB_VID, ASIX_VID),
     BI_MATCH_IF(EQ, BIND_USB_PID, ASIX_PID),
 ZIRCON_DRIVER_END(ethernet_ax88772b)

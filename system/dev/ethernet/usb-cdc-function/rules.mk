@@ -15,7 +15,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/fbl \
     system/ulib/sync \
-    system/dev/lib/usb-old \
+    system/dev/lib/usb \
 
 MODULE_LIBS := \
     system/ulib/driver \

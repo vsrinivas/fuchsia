@@ -9,8 +9,8 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/ethernet.h>
-#include <ddk/protocol/usb-old.h>
-#include <ddk/usb/usb.h>
+#include <ddk/protocol/usb.h>
+#include <usb/usb.h>
 #include <usb/usb-request.h>
 #include <zircon/hw/usb/cdc.h>
 #include <zircon/hw/usb.h>
@@ -97,18 +97,18 @@ static zx_status_t rndis_command(rndishost_t* eth, void* buf) {
     header->request_id = request_id;
 
     zx_status_t status;
-    status = usb_control(&eth->usb, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-                         USB_CDC_SEND_ENCAPSULATED_COMMAND,
-                         0, eth->control_intf, buf, header->msg_length, RNDIS_CONTROL_TIMEOUT,
-                         NULL);
+    status = usb_control_out(&eth->usb, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+                             USB_CDC_SEND_ENCAPSULATED_COMMAND,
+                             0, eth->control_intf, RNDIS_CONTROL_TIMEOUT, buf, header->msg_length);
 
     if (status < 0) {
         return status;
     }
 
-    status = usb_control(&eth->usb, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-                         USB_CDC_GET_ENCAPSULATED_RESPONSE,
-                         0, eth->control_intf, buf, RNDIS_BUFFER_SIZE, RNDIS_CONTROL_TIMEOUT, NULL);
+    status = usb_control_in(&eth->usb, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+                            USB_CDC_GET_ENCAPSULATED_RESPONSE,
+                            0, eth->control_intf, RNDIS_CONTROL_TIMEOUT,
+                            buf, RNDIS_BUFFER_SIZE, NULL);
 
     if (header->request_id != request_id) {
         return ZX_ERR_IO_DATA_INTEGRITY;
@@ -152,8 +152,8 @@ static void rndishost_recv(rndishost_t* eth, usb_request_t* request) {
     }
 }
 
-static void rndis_read_complete(usb_request_t* request, void* cookie) {
-    rndishost_t* eth = (rndishost_t*)cookie;
+static void rndis_read_complete(void* ctx, usb_request_t* request) {
+    rndishost_t* eth = (rndishost_t*)ctx;
 
     if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
         usb_request_release(request);
@@ -181,13 +181,17 @@ static void rndis_read_complete(usb_request_t* request, void* cookie) {
 
     // TODO: Only usb_request_queue if the device is online.
     zx_nanosleep(zx_deadline_after(ZX_USEC(eth->rx_endpoint_delay)));
-    usb_request_queue(&eth->usb, request, rndis_read_complete, eth);
+    usb_request_complete_t complete = {
+        .callback = rndis_read_complete,
+        .ctx = eth,
+    };
+    usb_request_queue(&eth->usb, request, &complete);
 
     mtx_unlock(&eth->mutex);
 }
 
-static void rndis_write_complete(usb_request_t* request, void* cookie) {
-    rndishost_t* eth = (rndishost_t*)cookie;
+static void rndis_write_complete(void* ctx, usb_request_t* request) {
+    rndishost_t* eth = (rndishost_t*)ctx;
 
     if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
         zxlogf(ERROR, "rndis_write_complete zx_err_io_not_present\n");
@@ -309,7 +313,11 @@ static zx_status_t rndishost_queue_tx(void* ctx, uint32_t options, ethmac_netbuf
         goto done;
     }
     zx_nanosleep(zx_deadline_after(ZX_USEC(eth->tx_endpoint_delay)));
-    usb_request_queue(&eth->usb, req, rndis_write_complete, eth);
+    usb_request_complete_t complete = {
+        .callback = rndis_write_complete,
+        .ctx = eth,
+    };
+    usb_request_queue(&eth->usb, req, &complete);
 
 done:
     mtx_unlock(&eth->mutex);
@@ -455,8 +463,12 @@ static int rndis_start_thread(void* arg) {
     // Queue read requests
     mtx_lock(&eth->mutex);
     usb_request_t* txn;
+    usb_request_complete_t complete = {
+        .callback = rndis_read_complete,
+        .ctx = eth,
+    };
     while ((txn = usb_req_list_remove_head(&eth->free_read_reqs, eth->parent_req_size)) != NULL) {
-        usb_request_queue(&eth->usb, txn, rndis_read_complete, eth);
+        usb_request_queue(&eth->usb, txn, &complete);
     }
     mtx_unlock(&eth->mutex);
 
@@ -472,7 +484,7 @@ fail:
 
 static zx_status_t rndishost_bind(void* ctx, zx_device_t* device) {
     usb_protocol_t usb;
-    zx_status_t status = device_get_protocol(device, ZX_PROTOCOL_USB_OLD, &usb);
+    zx_status_t status = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);
     if (status != ZX_OK) {
         return status;
     }
@@ -630,7 +642,7 @@ static zx_driver_ops_t rndis_driver_ops = {
 // covers the tethered device case.
 // clang-format off
 ZIRCON_DRIVER_BEGIN(rndishost, rndis_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_OLD),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
     BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_WIRELESS),
     BI_ABORT_IF(NE, BIND_USB_SUBCLASS, RNDIS_SUBCLASS),
     BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, RNDIS_PROTOCOL),

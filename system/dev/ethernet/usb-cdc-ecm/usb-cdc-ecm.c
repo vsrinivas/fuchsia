@@ -7,9 +7,9 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/ethernet.h>
-#include <ddk/protocol/usb-old.h>
+#include <ddk/protocol/usb.h>
 #include <ddk/protocol/usb/composite.h>
-#include <ddk/usb/usb.h>
+#include <usb/usb.h>
 #include <usb/usb-request.h>
 #include <zircon/hw/usb/cdc.h>
 #include <lib/sync/completion.h>
@@ -83,7 +83,7 @@ typedef struct txn_info {
     list_node_t node;
 } txn_info_t;
 
-static void usb_write_complete(usb_request_t* request, void* cookie);
+static void usb_write_complete(void* cookie, usb_request_t* request);
 
 static void ecm_unbind(void* cookie) {
     zxlogf(TRACE, "%s: unbinding\n", module_name);
@@ -210,7 +210,11 @@ static zx_status_t queue_request(ecm_ctx_t* ctx, const uint8_t* data, size_t len
         zxlogf(ERROR, "%s: failed to copy data into send txn (error %zd)\n", module_name, bytes_copied);
         return ZX_ERR_IO;
     }
-    usb_request_queue(&ctx->usb, req, usb_write_complete, ctx);
+    usb_request_complete_t complete = {
+        .callback = usb_write_complete,
+        .ctx = ctx,
+    };
+    usb_request_queue(&ctx->usb, req, &complete);
     return ZX_OK;
 }
 
@@ -236,7 +240,7 @@ static zx_status_t send_locked(ecm_ctx_t* ctx, ethmac_netbuf_t* netbuf) {
     return ZX_OK;
 }
 
-static void usb_write_complete(usb_request_t* request, void* cookie) {
+static void usb_write_complete(void* cookie, usb_request_t* request) {
     ecm_ctx_t* ctx = cookie;
 
     if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
@@ -308,7 +312,7 @@ static void usb_recv(ecm_ctx_t* ctx, usb_request_t* request) {
     mtx_unlock(&ctx->ethmac_mutex);
 }
 
-static void usb_read_complete(usb_request_t* request, void* cookie) {
+static void usb_read_complete(void* cookie, usb_request_t* request) {
     ecm_ctx_t* ctx = cookie;
 
     if (request->response.status != ZX_OK) {
@@ -337,7 +341,11 @@ static void usb_read_complete(usb_request_t* request, void* cookie) {
     }
 
     zx_nanosleep(zx_deadline_after(ZX_USEC(ctx->rx_endpoint_delay)));
-    usb_request_queue(&ctx->usb, request, usb_read_complete, ctx);
+    usb_request_complete_t complete = {
+        .callback = usb_read_complete,
+        .ctx = ctx,
+    };
+    usb_request_queue(&ctx->usb, request, &complete);
 }
 
 static zx_status_t ecm_ethmac_queue_tx(void* cookie, uint32_t options, ethmac_netbuf_t* netbuf) {
@@ -381,7 +389,7 @@ static ethmac_protocol_ops_t ethmac_ops = {
     .set_param = ecm_ethmac_set_param,
 };
 
-static void ecm_interrupt_complete(usb_request_t* request, void* cookie) {
+static void ecm_interrupt_complete(void* cookie, usb_request_t* request) {
     ecm_ctx_t* ctx = cookie;
     sync_completion_signal(&ctx->completion);
 }
@@ -431,9 +439,13 @@ static int ecm_int_handler_thread(void* cookie) {
     ecm_ctx_t* ctx = cookie;
     usb_request_t* txn = ctx->int_txn_buf;
 
+    usb_request_complete_t complete = {
+        .callback = ecm_interrupt_complete,
+        .ctx = ctx,
+    };
     while (true) {
         sync_completion_reset(&ctx->completion);
-        usb_request_queue(&ctx->usb, txn, ecm_interrupt_complete, ctx);
+        usb_request_queue(&ctx->usb, txn, &complete);
         sync_completion_wait(&ctx->completion, ZX_TIME_INFINITE);
         if (txn->response.status == ZX_OK) {
             ecm_handle_interrupt(ctx, txn);
@@ -529,7 +541,7 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
     zxlogf(TRACE, "%s: starting %s\n", module_name, __FUNCTION__);
 
     usb_protocol_t usb;
-    zx_status_t result = device_get_protocol(device, ZX_PROTOCOL_USB_OLD, &usb);
+    zx_status_t result = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);
     if (result != ZX_OK) {
         return result;
     }
@@ -727,6 +739,11 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
         goto fail;
     }
 #endif
+
+    usb_request_complete_t complete = {
+        .callback = usb_read_complete,
+        .ctx = ecm_ctx,
+    };
     size_t rx_buf_remain = MAX_RX_BUF_SZ;
     while (rx_buf_remain >= rx_buf_sz) {
         usb_request_t* rx_buf;
@@ -738,7 +755,7 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
             goto fail;
         }
 
-        usb_request_queue(&ecm_ctx->usb, rx_buf, usb_read_complete, ecm_ctx);
+        usb_request_queue(&ecm_ctx->usb, rx_buf, &complete);
         rx_buf_remain -= rx_buf_sz;
     }
 
@@ -781,7 +798,7 @@ static zx_driver_ops_t ecm_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(ethernet_usb_cdc_ecm, ecm_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_OLD),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
     BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_COMM),
     BI_ABORT_IF(NE, BIND_USB_SUBCLASS, USB_CDC_SUBCLASS_ETHERNET),
     BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, 0),

@@ -7,8 +7,8 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/ethernet.h>
-#include <ddk/protocol/usb-old.h>
-#include <ddk/usb/usb.h>
+#include <ddk/protocol/usb.h>
+#include <usb/usb.h>
 #include <usb/usb-request.h>
 #include <lib/cksum.h>
 #include <pretty/hexdump.h>
@@ -110,9 +110,9 @@ typedef struct txn_info {
 
 static zx_status_t ax88179_read_mac(ax88179_t* eth, uint8_t reg_addr, uint8_t reg_len, void* data) {
     size_t out_length;
-    zx_status_t status = usb_control(&eth->usb, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-                                     AX88179_REQ_MAC, reg_addr, reg_len, data, reg_len,
-                                     ZX_TIME_INFINITE, &out_length);
+    zx_status_t status = usb_control_in(&eth->usb, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                                        AX88179_REQ_MAC, reg_addr, reg_len, ZX_TIME_INFINITE,
+                                        data, reg_len, &out_length);
     if (driver_get_log_flags() & DDK_LOG_SPEW) {
         zxlogf(SPEW, "read mac %#x:\n", reg_addr);
         if (status == ZX_OK) {
@@ -127,15 +127,15 @@ static zx_status_t ax88179_write_mac(ax88179_t* eth, uint8_t reg_addr, uint8_t r
         zxlogf(SPEW, "write mac %#x:\n", reg_addr);
         hexdump8(data, reg_len);
     }
-    return usb_control(&eth->usb, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE, AX88179_REQ_MAC,
-                       reg_addr, reg_len, data, reg_len, ZX_TIME_INFINITE, NULL);
+    return usb_control_out(&eth->usb, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                           AX88179_REQ_MAC, reg_addr, reg_len, ZX_TIME_INFINITE, data, reg_len);
 }
 
 static zx_status_t ax88179_read_phy(ax88179_t* eth, uint8_t reg_addr, uint16_t* data) {
     size_t out_length;
-    zx_status_t status = usb_control(&eth->usb, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-                                     AX88179_REQ_PHY, AX88179_PHY_ID, reg_addr, data, sizeof(*data),
-                                     ZX_TIME_INFINITE, &out_length);
+    zx_status_t status = usb_control_in(&eth->usb, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                                        AX88179_REQ_PHY, AX88179_PHY_ID, reg_addr, ZX_TIME_INFINITE,
+                                        data, sizeof(*data), &out_length);
     if (out_length == sizeof(*data)) {
         zxlogf(SPEW, "read phy %#x: %#x\n", reg_addr, *data);
     }
@@ -144,8 +144,9 @@ static zx_status_t ax88179_read_phy(ax88179_t* eth, uint8_t reg_addr, uint16_t* 
 
 static zx_status_t ax88179_write_phy(ax88179_t* eth, uint8_t reg_addr, uint16_t data) {
     zxlogf(SPEW, "write phy %#x: %#x\n", reg_addr, data);
-    return usb_control(&eth->usb, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE, AX88179_REQ_PHY,
-                       AX88179_PHY_ID, reg_addr, &data, sizeof(data), ZX_TIME_INFINITE, NULL);
+    return usb_control_out(&eth->usb, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                           AX88179_REQ_PHY, AX88179_PHY_ID, reg_addr, ZX_TIME_INFINITE,
+                           &data, sizeof(data));
 }
 
 static uint8_t ax88179_media_mode[6][2] = {
@@ -313,8 +314,8 @@ static zx_status_t ax88179_recv(ax88179_t* eth, usb_request_t* request) {
     return ZX_OK;
 }
 
-static void ax88179_read_complete(usb_request_t* request, void* cookie) {
-    ax88179_t* eth = (ax88179_t*)cookie;
+static void ax88179_read_complete(void* ctx, usb_request_t* request) {
+    ax88179_t* eth = (ax88179_t*)ctx;
 
     if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
         usb_request_release(request);
@@ -338,7 +339,11 @@ static void ax88179_read_complete(usb_request_t* request, void* cookie) {
 
     if (eth->online) {
         zx_nanosleep(zx_deadline_after(ZX_USEC(eth->rx_endpoint_delay)));
-        usb_request_queue(&eth->usb, request, ax88179_read_complete, eth);
+        usb_request_complete_t complete = {
+            .callback = ax88179_read_complete,
+            .ctx = eth,
+        };
+        usb_request_queue(&eth->usb, request, &complete);
     } else {
         zx_status_t status = usb_req_list_add_head(&eth->free_read_reqs, request,
                                                    eth->parent_req_size);
@@ -362,9 +367,9 @@ static zx_status_t ax88179_append_to_tx_req(usb_protocol_t* usb, usb_request_t* 
     return ZX_OK;
 }
 
-static void ax88179_write_complete(usb_request_t* request, void* cookie) {
+static void ax88179_write_complete(void* ctx, usb_request_t* request) {
     zxlogf(DEBUG1, "ax88179: write complete\n");
-    ax88179_t* eth = (ax88179_t*)cookie;
+    ax88179_t* eth = (ax88179_t*)ctx;
 
     if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
         usb_request_release(request);
@@ -415,14 +420,18 @@ static void ax88179_write_complete(usb_request_t* request, void* cookie) {
         zxlogf(DEBUG1, "ax88179: queuing request (%p) of length %lu, %u outstanding\n",
                  next, next->header.length, eth->usb_tx_in_flight);
         zx_nanosleep(zx_deadline_after(ZX_USEC(eth->tx_endpoint_delay)));
-        usb_request_queue(&eth->usb, next, ax88179_write_complete, eth);
+        usb_request_complete_t complete = {
+            .callback = ax88179_write_complete,
+            .ctx = eth,
+        };
+        usb_request_queue(&eth->usb, next, &complete);
     }
     ZX_DEBUG_ASSERT(eth->usb_tx_in_flight <= MAX_TX_IN_FLIGHT);
     mtx_unlock(&eth->tx_lock);
 }
 
-static void ax88179_interrupt_complete(usb_request_t* request, void* cookie) {
-    ax88179_t* eth = (ax88179_t*)cookie;
+static void ax88179_interrupt_complete(void* ctx, usb_request_t* request) {
+    ax88179_t* eth = (ax88179_t*)ctx;
     sync_completion_signal(&eth->completion);
 }
 
@@ -451,7 +460,11 @@ static void ax88179_handle_interrupt(ax88179_t* eth, usb_request_t* request) {
                                            node) {
                     list_delete(&req_int->node);
                     req = REQ_INTERNAL_TO_USB_REQ(req_int, eth->parent_req_size);
-                    usb_request_queue(&eth->usb, req, ax88179_read_complete, eth);
+                    usb_request_complete_t complete = {
+                        .callback = ax88179_read_complete,
+                        .ctx = eth,
+                    };
+                    usb_request_queue(&eth->usb, req, &complete);
                 }
                 zxlogf(TRACE, "ax88179 now online\n");
                 if (eth->ifc.ops) {
@@ -540,7 +553,11 @@ static zx_status_t ax88179_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t
     req = usb_req_list_remove_head(&eth->pending_usb_tx, eth->parent_req_size);
     zxlogf(DEBUG1, "ax88179: queuing request (%p) of length %lu, %u outstanding\n",
              req, req->header.length, eth->usb_tx_in_flight);
-    usb_request_queue(&eth->usb, req, ax88179_write_complete, eth);
+    usb_request_complete_t complete = {
+        .callback = ax88179_write_complete,
+        .ctx = eth,
+    };
+    usb_request_queue(&eth->usb, req, &complete);
     eth->usb_tx_in_flight++;
     ZX_DEBUG_ASSERT(eth->usb_tx_in_flight <= MAX_TX_IN_FLIGHT);
     mtx_unlock(&eth->tx_lock);
@@ -884,9 +901,14 @@ static int ax88179_thread(void* arg) {
 
     uint64_t count = 0;
     usb_request_t* req = eth->interrupt_req;
+    usb_request_complete_t complete = {
+        .callback = ax88179_interrupt_complete,
+        .ctx = eth,
+    };
+
     while (true) {
         sync_completion_reset(&eth->completion);
-        usb_request_queue(&eth->usb, req, ax88179_interrupt_complete, eth);
+        usb_request_queue(&eth->usb, req, &complete);
         sync_completion_wait(&eth->completion, ZX_TIME_INFINITE);
         if (req->response.status != ZX_OK) {
             return req->response.status;
@@ -909,7 +931,7 @@ static zx_status_t ax88179_bind(void* ctx, zx_device_t* device) {
     zxlogf(TRACE, "ax88179_bind\n");
 
     usb_protocol_t usb;
-    zx_status_t result = device_get_protocol(device, ZX_PROTOCOL_USB_OLD, &usb);
+    zx_status_t result = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);
     if (result != ZX_OK) {
         return result;
     }
@@ -1045,7 +1067,7 @@ static zx_driver_ops_t ax88179_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(ethernet_ax88179, ax88179_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_OLD),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
     BI_ABORT_IF(NE, BIND_USB_VID, ASIX_VID),
     BI_MATCH_IF(EQ, BIND_USB_PID, AX88179_PID),
 ZIRCON_DRIVER_END(ethernet_ax88179)
