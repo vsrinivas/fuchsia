@@ -201,11 +201,22 @@ def _fuchsia_package_impl(context):
     )
 
     executable_file = context.actions.declare_file(context.attr.name + "_run.sh")
-    executable_contents = "#!/bin/sh\n"
-    executable_contents += "%s --config %s --package %s run \"$@\"" % (
+    executable_contents = """#!/bin/sh\n
+%s \\
+    --config %s \\
+    --package-name %s \\
+    --package %s \\
+    --dev-finder %s \\
+    --pm %s \\
+    run \\
+    \"$@\"
+""" % (
         context.executable._runner.short_path,
         components_file.short_path,
+        context.attr.name,
         package_archive.short_path,
+        context.executable._dev_finder.short_path,
+        context.executable._pm.short_path,
     )
     context.actions.write(
         output = executable_file,
@@ -215,6 +226,8 @@ def _fuchsia_package_impl(context):
 
     runfiles = context.runfiles(files = [
         components_file,
+        context.executable._dev_finder,
+        context.executable._pm,
         context.executable._runner,
         executable_file,
         package_archive,
@@ -248,8 +261,15 @@ fuchsia_package = rule(
             executable = True,
             cfg = "host",
         ),
+        "_dev_finder": attr.label(
+            default = Label("//tools:dev_finder"),
+            allow_single_file = True,
+            executable = True,
+            cfg = "host",
+        ),
         "_runner": attr.label(
             default = Label("//build_defs/internal/component_runner:component_runner.par"),
+            allow_single_file = True,
             executable = True,
             cfg = "host",
         ),
