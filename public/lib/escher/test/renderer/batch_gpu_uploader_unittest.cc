@@ -225,23 +225,6 @@ VK_TEST(BatchGpuUploader, ReadBufferTest) {
   verts[1] = vec3(0.f, 1.f, 0.f);
   verts[2] = vec3(1.f, 0.f, 0.f);
 
-  // Do write.
-  {
-    BatchGpuUploaderPtr uploader = BatchGpuUploader::New(escher, 0);
-    auto writer = uploader->AcquireWriter(buffer_size);
-    writer->WriteBuffer(vertex_buffer, {0, 0, vertex_buffer->size()},
-                        SemaphorePtr());
-    uploader->PostWriter(std::move(writer));
-
-    bool write_buffer_done = false;
-    uploader->Submit(SemaphorePtr(),
-                     [&write_buffer_done]() { write_buffer_done = true; });
-
-    escher->vk_device().waitIdle();
-    EXPECT_TRUE(escher->Cleanup());
-    EXPECT_TRUE(write_buffer_done);
-  }
-
   // Do read.
   BatchGpuUploaderPtr uploader = BatchGpuUploader::New(escher, 0);
   auto reader = uploader->AcquireReader(buffer_size);
@@ -259,6 +242,7 @@ VK_TEST(BatchGpuUploader, ReadBufferTest) {
 
                          read_buffer_done = true;
                        });
+
   uploader->Submit(SemaphorePtr(), []() {});
 
   escher->vk_device().waitIdle();

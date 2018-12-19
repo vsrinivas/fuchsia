@@ -169,6 +169,29 @@ config("thread_safety_warning") {
   ]
 }
 
+config("vk_mem_alloc_error_suppression") {
+  cflags = [
+    "-Wno-unused-variable",
+    "-Wno-missing-field-initializers",
+  ]
+}
+
+source_set("vk_mem_alloc") {
+  public_deps = [
+    ":vulkan",
+    "//garnet/public/lib/fxl",
+  ]
+
+  sources = [
+    "vk/vk_mem_alloc.cc",
+    "third_party/VulkanMemoryAllocator/vk_mem_alloc.h",
+  ]
+
+  public_configs = [
+    ":vk_mem_alloc_error_suppression",
+  ]
+}
+
 source_set("escher") {
   defines = [
     # Currently necessary on Fuchsia, but not Linux.
@@ -186,6 +209,7 @@ source_set("escher") {
 
   public_deps = [
     ":vulkan",
+    ":vk_mem_alloc",
     "//garnet/public/lib/escher/base:escher_base",
     "//garnet/public/lib/fxl",
   ]
@@ -245,6 +269,8 @@ source_set("escher") {
     "impl/gpu_uploader.h",
     "impl/image_cache.cc",
     "impl/image_cache.h",
+    "impl/naive_buffer.cc",
+    "impl/naive_buffer.h",
     "impl/mesh_manager.cc",
     "impl/mesh_manager.h",
     "impl/mesh_shader_binding.cc",
@@ -490,6 +516,8 @@ source_set("escher") {
     "vk/shader_variant_args.h",
     "vk/texture.cc",
     "vk/texture.h",
+    "vk/vma_gpu_allocator.cc",
+    "vk/vma_gpu_allocator.h",
     "vk/vulkan_context.h",
     "vk/vulkan_device_queues.cc",
     "vk/vulkan_device_queues.h",
