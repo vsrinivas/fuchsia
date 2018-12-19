@@ -136,7 +136,7 @@ bool gpt_is_efi_guid(uint8_t* guid, ssize_t len) {
     return len == GPT_GUID_LEN && !memcmp(guid, efi_guid, GPT_GUID_LEN);
 }
 
-int gpt_get_diffs(gpt_device_t* dev, int idx, unsigned* diffs) {
+int gpt_get_diffs(const gpt_device_t* dev, int idx, unsigned* diffs) {
     gpt_priv_t* priv = get_priv(dev);
 
     *diffs = 0;

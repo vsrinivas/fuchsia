@@ -15,12 +15,14 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#define FLAG_HIDDEN ((uint64_t) 0x2)
+namespace {
 
-static const char* bin_name;
-static bool confirm_writes = true;
+constexpr uint64_t kFlagHidden = 0x2;
 
-static void print_usage(void) {
+const char* bin_name;
+bool confirm_writes = true;
+
+void print_usage(void) {
     printf("usage:\n");
     printf("Note that for all these commands, [<dev>] is the device containing the GPT.\n");
     printf("Although using a GPT will split your device into small partitions, [<dev>] \n");
@@ -54,12 +56,14 @@ static void print_usage(void) {
     printf("to skip the write confirmation prompt.\n");
 }
 
-static int cgetc(void) {
+int cgetc(void) {
     uint8_t ch;
     for (;;) {
-        int r = read(0, &ch, 1);
-        if (r < 0) return r;
-        if (r == 1) return ch;
+        ssize_t r = read(0, &ch, 1);
+        if (r < 0)
+            return static_cast<int>(r);
+        if (r == 1)
+            return ch;
     }
 }
 
@@ -70,13 +74,13 @@ struct guid {
     uint8_t data4[8];
 };
 
-static char* guid_to_cstring(char* dst, const uint8_t* src) {
+char* guid_to_cstring(char* dst, const uint8_t* src) {
     struct guid* guid = (struct guid*)src;
     sprintf(dst, "%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X", guid->data1, guid->data2, guid->data3, guid->data4[0], guid->data4[1], guid->data4[2], guid->data4[3], guid->data4[4], guid->data4[5], guid->data4[6], guid->data4[7]);
     return dst;
 }
 
-static char* cros_flags_to_cstring(char* dst, size_t dst_len, uint64_t flags) {
+char* cros_flags_to_cstring(char* dst, size_t dst_len, uint64_t flags) {
     uint32_t priority = gpt_cros_attr_get_priority(flags);
     uint32_t tries = gpt_cros_attr_get_tries(flags);
     bool successful = gpt_cros_attr_get_successful(flags);
@@ -85,7 +89,7 @@ static char* cros_flags_to_cstring(char* dst, size_t dst_len, uint64_t flags) {
     return dst;
 }
 
-static char* flags_to_cstring(char* dst, size_t dst_len, const uint8_t* guid, uint64_t flags) {
+char* flags_to_cstring(char* dst, size_t dst_len, const uint8_t* guid, uint64_t flags) {
     if (gpt_cros_is_kernel_guid(guid, sizeof(struct guid))) {
         return cros_flags_to_cstring(dst, dst_len, flags);
     } else {
@@ -95,7 +99,7 @@ static char* flags_to_cstring(char* dst, size_t dst_len, const uint8_t* guid, ui
     return dst;
 }
 
-static gpt_device_t* init(const char* dev, int* out_fd) {
+gpt_device_t* init(const char* dev, int* out_fd) {
     int fd = open(dev, O_RDWR);
     if (fd < 0) {
         printf("error opening %s\n", dev);
@@ -124,7 +128,7 @@ static gpt_device_t* init(const char* dev, int* out_fd) {
     return gpt;
 }
 
-static void setxy(unsigned yes, const char** X, const char** Y) {
+constexpr void setxy(unsigned yes, const char** X, const char** Y) {
     if (yes) {
         *X = "\033[7m";
         *Y = "\033[0m";
@@ -134,13 +138,11 @@ static void setxy(unsigned yes, const char** X, const char** Y) {
     }
 }
 
-#define CHECK(f) setxy(diff & (f), &X, &Y)
-
-static void dump(gpt_device_t* gpt, int* count) {
+void dump(const gpt_device_t* gpt, int* count) {
     if (!gpt->valid) {
         return;
     }
-    gpt_partition_t* p;
+    const gpt_partition_t* p;
     char name[GPT_GUID_STRLEN];
     char guid[GPT_GUID_STRLEN];
     char id[GPT_GUID_STRLEN];
@@ -154,17 +156,17 @@ static void dump(gpt_device_t* gpt, int* count) {
         memset(name, 0, GPT_GUID_STRLEN);
         unsigned diff;
         gpt_get_diffs(gpt, i, &diff);
-        CHECK(GPT_DIFF_NAME);
+        setxy(diff & GPT_DIFF_NAME, &X, &Y);
         printf("Partition %d: %s%s%s\n",
                i, X, utf16_to_cstring(name, (const uint16_t*)p->name, GPT_GUID_STRLEN - 1), Y);
-        CHECK(GPT_DIFF_FIRST | GPT_DIFF_LAST);
+        setxy(diff & (GPT_DIFF_FIRST | GPT_DIFF_LAST), &X, &Y);
         printf("    Start: %s%" PRIu64 "%s, End: %s%" PRIu64 "%s (%" PRIu64 " blocks)\n",
                X, p->first, Y, X, p->last, Y, p->last - p->first + 1);
-        CHECK(GPT_DIFF_GUID);
+        setxy(diff & GPT_DIFF_GUID, &X, &Y);
         printf("    id:   %s%s%s\n", X, guid_to_cstring(guid, (const uint8_t*)p->guid), Y);
-        CHECK(GPT_DIFF_TYPE);
+        setxy(diff & GPT_DIFF_TYPE, &X, &Y);
         printf("    type: %s%s%s\n", X, guid_to_cstring(id, (const uint8_t*)p->type), Y);
-        CHECK(GPT_DIFF_NAME);
+        setxy(diff & GPT_DIFF_NAME, &X, &Y);
         printf("    flags: %s%s%s\n", X, flags_to_cstring(flags_str, sizeof(flags_str), p->type, p->flags), Y);
     }
     if (count) {
@@ -172,9 +174,7 @@ static void dump(gpt_device_t* gpt, int* count) {
     }
 }
 
-#undef CHECK
-
-static void dump_partitions(const char* dev) {
+void dump_partitions(const char* dev) {
     int fd;
     gpt_device_t* gpt = init(dev, &fd);
     if (!gpt) return;
@@ -202,7 +202,7 @@ done:
     close(fd);
 }
 
-static zx_status_t commit(gpt_device_t* gpt, int fd, const char* dev) {
+zx_status_t commit(gpt_device_t* gpt, int fd, const char* dev) {
     if (confirm_writes) {
         dump(gpt, NULL);
         printf("\n");
@@ -229,8 +229,7 @@ make_it_so:;
         printf("Error: GPT device sync failed.\n");
         return ZX_ERR_INTERNAL;
     }
-    rc = ioctl_block_rr_part(fd);
-    if (rc) {
+    if (ioctl_block_rr_part(fd)) {
         printf("Error: GPT updated but device could not be rebound. Please reboot.\n");
         return ZX_ERR_INTERNAL;
     }
@@ -238,7 +237,7 @@ make_it_so:;
     return 0;
 }
 
-static void init_gpt(const char* dev) {
+void init_gpt(const char* dev) {
     int fd;
     gpt_device_t* gpt = init(dev, &fd);
     if (!gpt) return;
@@ -250,7 +249,7 @@ static void init_gpt(const char* dev) {
     close(fd);
 }
 
-static void add_partition(const char* dev, uint64_t start, uint64_t end, const char* name) {
+void add_partition(const char* dev, uint64_t start, uint64_t end, const char* name) {
     uint8_t guid[GPT_GUID_LEN];
     zx_cprng_draw(guid, GPT_GUID_LEN);
 
@@ -277,36 +276,11 @@ static void add_partition(const char* dev, uint64_t start, uint64_t end, const c
     close(fd);
 }
 
-static void remove_partition(const char* dev, int n) {
-    int fd;
-    gpt_device_t* gpt = init(dev, &fd);
-    if (!gpt) return;
-
-    if (n >= PARTITIONS_COUNT) {
-        return;
-    }
-    gpt_partition_t* p = gpt->partitions[n];
-    if (!p) {
-        return;
-    }
-    int rc = gpt_partition_remove(gpt, p->guid);
-    if (rc == 0) {
-        char name[GPT_GUID_STRLEN];
-        printf("remove partition: n=%d name=%s\n", n,
-               utf16_to_cstring(name, (const uint16_t*)p->name,
-                                GPT_GUID_STRLEN - 1));
-        commit(gpt, fd, dev);
-    }
-
-    gpt_device_release(gpt);
-    close(fd);
-}
-
 /*
  * Given a file descriptor used to read a gpt_device_t and the corresponding
  * gpt_device_t, first release the gpt_device_t and then close the FD.
  */
-static void tear_down_gpt(int fd, gpt_device_t* gpt) {
+void tear_down_gpt(int fd, gpt_device_t* gpt) {
     if (gpt != NULL) {
         gpt_device_release(gpt);
     }
@@ -322,7 +296,7 @@ static void tear_down_gpt(int fd, gpt_device_t* gpt) {
  * returned if the GUID string is the wrong length or contains invalid
  * characters.
  */
-static bool parse_guid(char* guid, uint8_t* bytes_out) {
+bool parse_guid(const char* guid, uint8_t* bytes_out) {
     if (strlen(guid) != GPT_GUID_STRLEN - 1) {
         printf("GUID length is wrong: %zd but expected %d\n", strlen(guid),
                (GPT_GUID_STRLEN - 1));
@@ -345,17 +319,17 @@ static bool parse_guid(char* guid, uint8_t* bytes_out) {
             dashes++;
             continue;
         } else if (c >= '0' && c <= '9') {
-            char_val = c - '0';
+            char_val = static_cast<uint8_t>(c - '0');
         } else if (c >= 'A' && c <= 'F') {
-            char_val = c - 'A' + 10;
+            char_val = static_cast<uint8_t>(c - (uint8_t)'A' + (uint8_t)10);
         } else if (c >= 'a' && c <= 'f') {
-            char_val = c - 'a' + 10;
+            char_val = static_cast<uint8_t>(c - 'a' + 10);
         } else {
             fprintf(stderr, "'%c' is not a valid GUID character\n", c);
             return false;
         }
 
-        val += char_val << (4 * (1 - nibbles));
+        val = static_cast<uint8_t>(val + (char_val << (4 * (1 - nibbles))));
 
         if (++nibbles == 2) {
             bytes_out[out_idx++] = val;
@@ -396,10 +370,10 @@ static bool parse_guid(char* guid, uint8_t* bytes_out) {
  * will be set to valid values. If ZX_OK is returned, the caller should close
  * fd_out after it is done using the GPT information.
  */
-static zx_status_t get_gpt_and_part(char* path_device, long idx_part,
-                                    int* fd_out,
-                                    gpt_device_t** gpt_out,
-                                    gpt_partition_t** part_out) {
+zx_status_t get_gpt_and_part(const char* path_device, long idx_part,
+                             int* fd_out,
+                             gpt_device_t** gpt_out,
+                             gpt_partition_t** part_out) {
     if (idx_part < 0 || idx_part >= PARTITIONS_COUNT) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -423,7 +397,7 @@ static zx_status_t get_gpt_and_part(char* path_device, long idx_part,
     return ZX_OK;
 }
 
-static struct {
+constexpr struct {
     const char* name;
     const uint8_t guid[GPT_GUID_LEN];
 } nametab[] = {
@@ -441,7 +415,7 @@ static struct {
  * Match keywords "BLOBFS", "DATA", "SYSTEM", or "EFI" and convert them to their
  * corresponding byte sequences. 'out' should point to a GPT_GUID_LEN array.
  */
-static bool expand_special(char* in, uint8_t* out) {
+constexpr bool expand_special(const char* in, uint8_t* out) {
     if (in == NULL) {
         return false;
     }
@@ -456,14 +430,39 @@ static bool expand_special(char* in, uint8_t* out) {
     return false;
 }
 
-static zx_status_t adjust_partition(char* dev, int idx_part,
-                                    uint64_t start, uint64_t end) {
+void remove_partition(const char* dev, long n) {
+    int fd;
+    gpt_device_t* gpt = init(dev, &fd);
+    if (!gpt) return;
+
+    if (n >= PARTITIONS_COUNT) {
+        return;
+    }
+    gpt_partition_t* p = gpt->partitions[n];
+    if (!p) {
+        return;
+    }
+    int rc = gpt_partition_remove(gpt, p->guid);
+    if (rc == 0) {
+        char name[GPT_GUID_STRLEN];
+        printf("remove partition: n=%ld name=%s\n", n,
+               utf16_to_cstring(name, (const uint16_t*)p->name,
+                                GPT_GUID_STRLEN - 1));
+        commit(gpt, fd, dev);
+    }
+
+    gpt_device_release(gpt);
+    close(fd);
+}
+
+zx_status_t adjust_partition(const char* dev, long idx_part,
+                             uint64_t start, uint64_t end) {
     gpt_device_t* gpt = NULL;
     gpt_partition_t* part = NULL;
     int fd = -1;
 
     if (end < start) {
-        fprintf(stderr, "partition #%d would end before it started\n", idx_part);
+        fprintf(stderr, "partition #%ld would end before it started\n", idx_part);
     }
 
     zx_status_t rc = get_gpt_and_part(dev, idx_part, &fd, &gpt, &part);
@@ -477,7 +476,7 @@ static zx_status_t adjust_partition(char* dev, int idx_part,
     }
 
     if ((start < block_start) || (end > block_end)) {
-        fprintf(stderr, "partition #%d would be outside of valid block range\n", idx_part);
+        fprintf(stderr, "partition #%ld would be outside of valid block range\n", idx_part);
         rc = -1;
         goto done;
     }
@@ -492,7 +491,7 @@ static zx_status_t adjust_partition(char* dev, int idx_part,
             (end < gpt->partitions[idx]->first)) {
             continue;
         }
-        fprintf(stderr, "partition #%d would overlap partition #%d\n", idx_part, idx);
+        fprintf(stderr, "partition #%ld would overlap partition #%d\n", idx_part, idx);
         rc = -1;
         goto done;
     }
@@ -514,8 +513,8 @@ done:
  * string/human-readable form of the GUID and should be 36 characters plus a
  * null terminator.
  */
-static zx_status_t edit_partition(char* dev, long idx_part,
-                                  char* type_or_id, char* guid) {
+zx_status_t edit_partition(const char* dev, long idx_part,
+                           char* type_or_id, char* guid) {
     gpt_device_t* gpt = NULL;
     gpt_partition_t* part = NULL;
     int fd = -1;
@@ -558,10 +557,12 @@ static zx_status_t edit_partition(char* dev, long idx_part,
  *
  * argv/argc should correspond only to the arguments after the command.
  */
-static zx_status_t edit_cros_partition(char* const * argv, int argc) {
+zx_status_t edit_cros_partition(char* const* argv, int argc) {
     gpt_device_t* gpt = NULL;
     gpt_partition_t* part = NULL;
     int fd = -1;
+    zx_status_t rc;
+    char* dev;
 
     char* end;
     long idx_part = strtol(argv[0], &end, 10);
@@ -571,8 +572,8 @@ static zx_status_t edit_cros_partition(char* const * argv, int argc) {
     }
 
     // Use -1 as a sentinel for "not changing"
-    int tries = -1;
-    int priority = -1;
+    long tries = -1;
+    long priority = -1;
     int successful = -1;
 
     int c;
@@ -624,9 +625,9 @@ static zx_status_t edit_cros_partition(char* const * argv, int argc) {
         goto usage;
     }
 
-    char* dev = argv[optind];
+    dev = argv[optind];
 
-    zx_status_t rc = get_gpt_and_part(dev, idx_part, &fd, &gpt, &part);
+    rc = get_gpt_and_part(dev, idx_part, &fd, &gpt, &part);
     if (rc != ZX_OK) {
         return rc;
     }
@@ -638,14 +639,14 @@ static zx_status_t edit_cros_partition(char* const * argv, int argc) {
     }
 
     if (tries >= 0) {
-        if (gpt_cros_attr_set_tries(&part->flags, tries) < 0) {
+        if (gpt_cros_attr_set_tries(&part->flags, static_cast<uint8_t>(tries)) < 0) {
             printf("Failed to set tries\n");
             rc = ZX_ERR_INVALID_ARGS;
             goto cleanup;
         }
     }
     if (priority >= 0) {
-        if (gpt_cros_attr_set_priority(&part->flags, priority) < 0) {
+        if (gpt_cros_attr_set_priority(&part->flags, static_cast<uint8_t>(priority)) < 0) {
             printf("Failed to set priority\n");
             rc = ZX_ERR_INVALID_ARGS;
             goto cleanup;
@@ -669,7 +670,7 @@ usage:
  * partition is set as hidden, the firmware will not attempt to boot from the
  * partition.
  */
-static zx_status_t set_visibility(char* dev, long idx_part, bool visible) {
+zx_status_t set_visibility(char* dev, long idx_part, bool visible) {
     gpt_device_t* gpt = NULL;
     gpt_partition_t* part = NULL;
     int fd = -1;
@@ -680,9 +681,9 @@ static zx_status_t set_visibility(char* dev, long idx_part, bool visible) {
     }
 
     if (visible) {
-        part->flags &= ~FLAG_HIDDEN;
+        part->flags &= ~kFlagHidden;
     } else {
-        part->flags |= FLAG_HIDDEN;
+        part->flags |= kFlagHidden;
     }
 
     rc = commit(gpt, fd, dev);
@@ -693,7 +694,7 @@ static zx_status_t set_visibility(char* dev, long idx_part, bool visible) {
 // parse_size parses long integers in base 10, expanding p, t, g, m, and k
 // suffices as binary byte scales. If the suffix is %, the value is returned as
 // negative, in order to indicate a proportion.
-static int64_t parse_size(char *s) {
+int64_t parse_size(char *s) {
   char *end = s;
   long long int v = strtoll(s, &end, 10);
 
@@ -730,7 +731,7 @@ static int64_t parse_size(char *s) {
 // align finds the next block at or after base that is aligned to a physical
 // block boundary. The gpt specification requires that all partitions are
 // aligned to physical block boundaries.
-static uint64_t align(uint64_t base, uint64_t logical, uint64_t physical) {
+uint64_t align(uint64_t base, uint64_t logical, uint64_t physical) {
   uint64_t a = logical;
   if (physical > a) a = physical;
   uint64_t base_bytes = base * logical;
@@ -740,10 +741,11 @@ static uint64_t align(uint64_t base, uint64_t logical, uint64_t physical) {
 
 // repartition expects argv to start with the disk path and be followed by
 // triples of name, type and size.
-static int repartition(int argc, char** argv) {
+int repartition(int argc, char** argv) {
   int fd = -1;
-  ssize_t rc = 1;
+  int rc = 1;
   const char* dev = argv[0];
+  uint64_t logical, free_space;
   gpt_device_t* gpt = init(dev, &fd);
   if (!gpt) return 255;
 
@@ -759,14 +761,13 @@ static int repartition(int argc, char** argv) {
 
 
   block_info_t info;
-  rc = ioctl_block_get_info(fd, &info);
-  if (rc < 0) {
+  if (ioctl_block_get_info(fd, &info) < 0) {
     printf("error getting block info\n");
     rc = 255;
     goto repartition_end;
   }
-  uint64_t logical = info.block_size;
-  uint64_t free_space = info.block_count * logical;
+  logical = info.block_size;
+  free_space = info.block_count * logical;
 
   {
     // expand out any proportional sizes into absolute sizes
@@ -849,8 +850,11 @@ repartition_end:
   return rc;
 }
 
+} // namespace
+
 int main(int argc, char** argv) {
     bin_name = argv[0];
+    const char* cmd;
 
     if (argc > 1) {
         if (!strcmp(argv[1], "--live-dangerously")) {
@@ -862,7 +866,7 @@ int main(int argc, char** argv) {
 
     if (argc == 1) goto usage;
 
-    const char* cmd = argv[1];
+    cmd = argv[1];
     if (!strcmp(cmd, "dump")) {
         if (argc <= 2) goto usage;
         dump_partitions(argv[2]);

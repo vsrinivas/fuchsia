@@ -10,7 +10,7 @@ MODULE_TYPE := userapp
 MODULE_GROUP := core
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/gpt.c
+    $(LOCAL_DIR)/gpt.cpp
 
 MODULE_STATIC_LIBS := system/ulib/gpt third_party/ulib/cksum
 

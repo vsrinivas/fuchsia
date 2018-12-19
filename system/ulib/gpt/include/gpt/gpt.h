@@ -93,7 +93,7 @@ void gpt_device_get_header_guid(gpt_device_t* dev,
                                 uint8_t (*disk_guid_out)[GPT_GUID_LEN]);
 
 // return true if partition# idx has been locally modified
-int gpt_get_diffs(gpt_device_t* dev, int idx, unsigned* diffs);
+int gpt_get_diffs(const gpt_device_t* dev, int idx, unsigned* diffs);
 
 // print out the GPT
 void print_table(gpt_device_t* device);
