@@ -36,11 +36,10 @@ public:
 
     // FutexWait first verifies that the integer pointed to by |value_ptr|
     // still equals |current_value|. If the test fails, FutexWait returns ZX_ERR_BAD_STATE.
-    // Otherwise it will block the current thread until the |slack|-adjusted |deadline| passes,
-    // or until the thread is woken by a FutexWake or FutexRequeue operation
-    // on the same |value_ptr| futex.
+    // Otherwise it will block the current thread until the |deadline| passes, or until the thread
+    // is woken by a FutexWake or FutexRequeue operation on the same |value_ptr| futex.
     zx_status_t FutexWait(user_in_ptr<const zx_futex_t> value_ptr, zx_futex_t current_value,
-                          zx_handle_t new_futex_owner, zx_time_t deadline, TimerSlack slack);
+                          zx_handle_t new_futex_owner, const Deadline& deadline);
 
     // FutexWake will wake up to |wake_count| number of threads blocked on the |value_ptr| futex.
     //

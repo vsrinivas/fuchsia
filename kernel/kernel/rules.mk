@@ -21,6 +21,7 @@ MODULE_DEPS := \
 
 MODULE_SRCS := \
 	$(LOCAL_DIR)/cmdline.cpp \
+	$(LOCAL_DIR)/deadline.cpp \
 	$(LOCAL_DIR)/debug.cpp \
 	$(LOCAL_DIR)/dpc.cpp \
 	$(LOCAL_DIR)/event.cpp \

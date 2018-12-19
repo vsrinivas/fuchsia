@@ -63,11 +63,10 @@ zx_status_t wait_queue_block(wait_queue_t*, zx_time_t deadline) TA_REQ(thread_lo
 
 // block on a wait queue, ignoring existing signals in |signal_mask|.
 // return status is whatever the caller of wait_queue_wake_*() specifies or
-// ZX_ERR_TIMED_OUT if the slack-adjusted deadline has elapsed or is in the past.
+// ZX_ERR_TIMED_OUT if the deadline has elapsed or is in the past.
 // will never timeout when called with a deadline of ZX_TIME_INFINITE.
 zx_status_t wait_queue_block_etc(wait_queue_t*,
-                                 zx_time_t deadline,
-                                 TimerSlack slack,
+                                 const Deadline& deadline,
                                  uint signal_mask,
                                  ResourceOwnership reason) TA_REQ(thread_lock);
 
@@ -119,12 +118,12 @@ public:
     WaitQueue& operator=(WaitQueue&) = delete;
     WaitQueue& operator=(WaitQueue&&) = delete;
 
-    zx_status_t Block(zx_time_t deadline, TimerSlack slack) TA_REQ(thread_lock) {
-        return wait_queue_block_etc(&wq_, deadline, slack, 0, ResourceOwnership::Normal);
+    zx_status_t Block(const Deadline& deadline) TA_REQ(thread_lock) {
+        return wait_queue_block_etc(&wq_, deadline, 0, ResourceOwnership::Normal);
     }
 
-    zx_status_t BlockReadLock(zx_time_t deadline, TimerSlack slack) TA_REQ(thread_lock) {
-        return wait_queue_block_etc(&wq_, deadline, slack, 0, ResourceOwnership::Reader);
+    zx_status_t BlockReadLock(const Deadline& deadline) TA_REQ(thread_lock) {
+        return wait_queue_block_etc(&wq_, deadline, 0, ResourceOwnership::Reader);
     }
 
     struct thread* Peek() TA_REQ(thread_lock) {

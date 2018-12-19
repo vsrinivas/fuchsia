@@ -216,14 +216,13 @@ static void wait_queue_timeout_handler(timer_t* timer, zx_time_t now,
  * If the deadline is zero, this function returns immediately with
  * ZX_ERR_TIMED_OUT.  If the deadline is ZX_TIME_INFINITE, this function
  * waits indefinitely.  Otherwise, this function returns with
- * ZX_ERR_TIMED_OUT when the slack-adjusted deadline elapses.
+ * ZX_ERR_TIMED_OUT when the deadline elapses.
  *
  * @return ZX_ERR_TIMED_OUT on timeout, else returns the return
  * value specified when the queue was woken by wait_queue_wake_one().
  */
 zx_status_t wait_queue_block_etc(wait_queue_t* wait,
-                                 zx_time_t deadline,
-                                 TimerSlack slack,
+                                 const Deadline& deadline,
                                  uint signal_mask,
                                  ResourceOwnership reason) TA_REQ(thread_lock) {
     timer_t timer;
@@ -239,7 +238,7 @@ zx_status_t wait_queue_block_etc(wait_queue_t* wait,
         wait_queue_validate_queue(wait);
     }
 
-    if (deadline != ZX_TIME_INFINITE && deadline <= current_time()) {
+    if (deadline.when() != ZX_TIME_INFINITE && deadline.when() <= current_time()) {
         return ZX_ERR_TIMED_OUT;
     }
 
@@ -259,9 +258,9 @@ zx_status_t wait_queue_block_etc(wait_queue_t* wait,
     current_thread->blocked_status = ZX_OK;
 
     // if the deadline is nonzero or noninfinite, set a callback to yank us out of the queue
-    if (deadline != ZX_TIME_INFINITE) {
+    if (deadline.when() != ZX_TIME_INFINITE) {
         timer_init(&timer);
-        timer_set(&timer, deadline, slack, wait_queue_timeout_handler, (void*)current_thread);
+        timer_set(&timer, deadline, wait_queue_timeout_handler, (void*)current_thread);
     }
 
     ktrace_ptr(TAG_KWAIT_BLOCK, wait, 0, 0);
@@ -271,7 +270,7 @@ zx_status_t wait_queue_block_etc(wait_queue_t* wait,
     ktrace_ptr(TAG_KWAIT_UNBLOCK, wait, current_thread->blocked_status, 0);
 
     // we don't really know if the timer fired or not, so it's better safe to try to cancel it
-    if (deadline != ZX_TIME_INFINITE) {
+    if (deadline.when() != ZX_TIME_INFINITE) {
         timer_cancel(&timer);
     }
 
@@ -297,7 +296,7 @@ zx_status_t wait_queue_block_etc(wait_queue_t* wait,
  * value specified when the queue was woken by wait_queue_wake_one().
  */
 zx_status_t wait_queue_block(wait_queue_t* wait, zx_time_t deadline) {
-    return wait_queue_block_etc(wait, deadline, kNoSlack, 0, ResourceOwnership::Normal);
+    return wait_queue_block_etc(wait, Deadline::no_slack(deadline), 0, ResourceOwnership::Normal);
 }
 
 /**

@@ -127,7 +127,8 @@ void TimerDispatcher::SetTimerLocked(bool cancel_first) {
     if (cancel_first)
         timer_cancel(&timer_);
     const TimerSlack slack{slack_amount_, slack_mode_};
-    timer_set(&timer_, deadline_, slack, &timer_irq_callback, &timer_dpc_);
+    const Deadline slackDeadline(deadline_, slack);
+    timer_set(&timer_, slackDeadline, &timer_irq_callback, &timer_dpc_);
 }
 
 bool TimerDispatcher::CancelTimerLocked() {

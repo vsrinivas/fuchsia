@@ -146,7 +146,8 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
             timer_init(&timer);
             zx_time_t deadline = zx_time_add_duration(current_time(), ZX_SEC(1));
             const TimerSlack slack{ZX_MSEC(20), TIMER_SLACK_CENTER};
-            timer_set(&timer, deadline, slack, &pmm_dump_timer, nullptr);
+            const Deadline slackDeadline(deadline, slack);
+            timer_set(&timer, slackDeadline, &pmm_dump_timer, nullptr);
             show_mem = true;
         } else {
             timer_cancel(&timer);

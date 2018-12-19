@@ -67,6 +67,7 @@ zx_status_t sys_object_wait_one(zx_handle_t handle_value,
     ktrace(TAG_WAIT_ONE, koid, signals, (uint32_t)deadline, (uint32_t)(deadline >> 32));
 
     const TimerSlack slack = up->GetTimerSlackPolicy();
+    const Deadline slackDeadline(deadline, slack);
 
     // event_wait() will return ZX_OK if already signaled,
     // even if the deadline has passed.  It will return ZX_ERR_TIMED_OUT
@@ -74,7 +75,7 @@ zx_status_t sys_object_wait_one(zx_handle_t handle_value,
     // signaled.
     {
         ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::WAIT_ONE);
-        result = event.Wait(deadline, slack);
+        result = event.Wait(slackDeadline);
     }
 
     // Regardless of wait outcome, we must call End().
@@ -148,6 +149,7 @@ zx_status_t sys_object_wait_many(user_inout_ptr<zx_wait_item_t> user_items, size
     }
 
     const TimerSlack slack = up->GetTimerSlackPolicy();
+    const Deadline slackDeadline(deadline, slack);
 
     // event_wait() will return ZX_OK if already signaled,
     // even if deadline has passed.  It will return ZX_ERR_TIMED_OUT
@@ -155,7 +157,7 @@ zx_status_t sys_object_wait_many(user_inout_ptr<zx_wait_item_t> user_items, size
     // signaled.
     {
         ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::WAIT_MANY);
-        result = event.Wait(deadline, slack);
+        result = event.Wait(slackDeadline);
     }
 
     // Regardless of wait outcome, we must call End().

@@ -278,15 +278,15 @@ alloc_txid:
 
     auto process = ProcessDispatcher::GetCurrent();
     const TimerSlack slack = process->GetTimerSlackPolicy();
+    const Deadline slackDeadline(deadline, slack);
 
     // Reuse the code from the half-call used for retrying a Call after thread
     // suspend.
-    return ResumeInterruptedCall(waiter, deadline, slack, reply);
+    return ResumeInterruptedCall(waiter, slackDeadline, reply);
 }
 
 zx_status_t ChannelDispatcher::ResumeInterruptedCall(MessageWaiter* waiter,
-                                                     zx_time_t deadline,
-                                                     TimerSlack slack,
+                                                     const Deadline& deadline,
                                                      MessagePacketPtr* reply) {
     canary_.Assert();
 
@@ -295,7 +295,7 @@ zx_status_t ChannelDispatcher::ResumeInterruptedCall(MessageWaiter* waiter,
     {
         ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::CHANNEL);
 
-        zx_status_t status = waiter->Wait(deadline, slack);
+        zx_status_t status = waiter->Wait(deadline);
         if (status == ZX_ERR_INTERNAL_INTR_RETRY) {
             // If we got interrupted, return out to usermode, but
             // do not clear the waiter.
@@ -391,11 +391,11 @@ void ChannelDispatcher::MessageWaiter::Cancel(zx_status_t status) {
     event_.Signal(status);
 }
 
-zx_status_t ChannelDispatcher::MessageWaiter::Wait(zx_time_t deadline, TimerSlack slack) {
+zx_status_t ChannelDispatcher::MessageWaiter::Wait(const Deadline& deadline) {
     if (unlikely(!channel_)) {
         return ZX_ERR_BAD_STATE;
     }
-    return event_.Wait(deadline, slack);
+    return event_.Wait(deadline);
 }
 
 // Returns any delivered message via out and the status.

@@ -69,5 +69,5 @@ private:
     //
     // Const instances of JobPolicy must be immutable to ensure thread-safety.
     pol_cookie_t cookie_{};
-    TimerSlack slack_{kNoSlack};
+    TimerSlack slack_{TimerSlack::none()};
 };

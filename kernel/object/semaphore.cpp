@@ -25,7 +25,7 @@ void Semaphore::Post() {
         waitq_.WakeOne(true, ZX_OK);
 }
 
-zx_status_t Semaphore::Wait(zx_time_t deadline, TimerSlack slack) {
+zx_status_t Semaphore::Wait(const Deadline& deadline) {
     thread_t *current_thread = get_current_thread();
 
      // If there are no resources available then we need to
@@ -38,7 +38,7 @@ zx_status_t Semaphore::Wait(zx_time_t deadline, TimerSlack slack) {
         bool block = --count_ < 0;
 
         if (unlikely(block)) {
-            ret = waitq_.Block(deadline, slack);
+            ret = waitq_.Block(deadline);
             if (ret < ZX_OK) {
                 if ((ret == ZX_ERR_TIMED_OUT) || (ret == ZX_ERR_INTERNAL_INTR_KILLED))
                     count_++;

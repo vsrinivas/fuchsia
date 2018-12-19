@@ -22,8 +22,9 @@ zx_status_t sys_futex_wait(user_in_ptr<const zx_futex_t> value_ptr, zx_futex_t c
 
     ProcessDispatcher* dispatcher = ThreadDispatcher::GetCurrent()->process();
     const TimerSlack slack = dispatcher->GetTimerSlackPolicy();
+    const Deadline slackDeadline(deadline, slack);
     return dispatcher->futex_context()->FutexWait(value_ptr, current_value, current_futex_owner,
-                                                  deadline, slack);
+                                                  slackDeadline);
 }
 
 // zx_status_t zx_futex_wake

@@ -77,12 +77,12 @@ zx_status_t sys_port_wait(zx_handle_t handle, zx_time_t deadline,
     if (status != ZX_OK)
         return status;
 
-    const TimerSlack slack = up->GetTimerSlackPolicy();
+    const Deadline slackDeadline(deadline, up->GetTimerSlackPolicy());
 
     ktrace(TAG_PORT_WAIT, (uint32_t)port->get_koid(), 0, 0, 0);
 
     zx_port_packet_t pp;
-    zx_status_t st = port->Dequeue(deadline, slack, &pp);
+    zx_status_t st = port->Dequeue(slackDeadline, &pp);
 
     ktrace(TAG_PORT_WAIT_DONE, (uint32_t)port->get_koid(), st, 0, 0);
 

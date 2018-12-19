@@ -62,7 +62,7 @@ static bool test_in_timer_callback() {
 
     timer_t timer;
     timer_init(&timer);
-    timer_set(&timer, 0, kNoSlack, timer_callback_func, &event);
+    timer_set(&timer, Deadline::no_slack(0), timer_callback_func, &event);
 
     ASSERT_EQ(event_wait(&event), ZX_OK, "");
     event_destroy(&event);
@@ -247,7 +247,8 @@ static bool test_interrupt_with_preempt_disable() {
     fbl::atomic<bool> timer_ran(false);
     timer_t timer;
     timer_init(&timer);
-    timer_set(&timer, current_time() + ZX_USEC(100), kNoSlack,
+    const Deadline deadline = Deadline::no_slack(current_time() + ZX_USEC(100));
+    timer_set(&timer, deadline,
               timer_set_preempt_pending, reinterpret_cast<void*>(&timer_ran));
     // Spin until timer_ran is set by the interrupt handler.
     while (!timer_ran.load()) {}
@@ -271,7 +272,8 @@ static bool test_interrupt_with_resched_disable() {
     fbl::atomic<bool> timer_ran(false);
     timer_t timer;
     timer_init(&timer);
-    timer_set(&timer, current_time() + ZX_USEC(100), kNoSlack,
+    const Deadline deadline = Deadline::no_slack(current_time() + ZX_USEC(100));
+    timer_set(&timer, deadline,
               timer_set_preempt_pending, reinterpret_cast<void*>(&timer_ran));
     // Spin until timer_ran is set by the interrupt handler.
     while (!timer_ran.load()) {}

@@ -296,7 +296,7 @@ zx_status_t PortDispatcher::Queue(PortPacket* port_packet, zx_signals_t observed
     return ZX_OK;
 }
 
-zx_status_t PortDispatcher::Dequeue(zx_time_t deadline, TimerSlack slack,
+zx_status_t PortDispatcher::Dequeue(const Deadline& deadline,
                                     zx_port_packet_t* out_packet) {
     canary_.Assert();
 
@@ -339,7 +339,7 @@ zx_status_t PortDispatcher::Dequeue(zx_time_t deadline, TimerSlack slack,
 
         {
             ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::PORT);
-            zx_status_t st = sema_.Wait(deadline, slack);
+            zx_status_t st = sema_.Wait(deadline);
             if (st != ZX_OK)
                 return st;
         }

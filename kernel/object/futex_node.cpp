@@ -146,9 +146,7 @@ FutexNode* FutexNode::RemoveFromHead(FutexNode* list_head, uint32_t count,
 // This blocks the current thread.  This releases the given mutex (which
 // must be held when BlockThread() is called).  To reduce contention, it
 // does not reclaim the mutex on return.
-zx_status_t FutexNode::BlockThread(Guard<fbl::Mutex>&& adopt_guard,
-                                   zx_time_t deadline,
-                                   TimerSlack slack) {
+zx_status_t FutexNode::BlockThread(Guard<fbl::Mutex>&& adopt_guard, const Deadline& deadline) {
     // Adopt the guarded lock from the caller. This could happen before or after
     // the following locks because the underlying lock is held from the caller's
     // frame. The runtime validator state is not affected by the adoption.
@@ -165,7 +163,7 @@ zx_status_t FutexNode::BlockThread(Guard<fbl::Mutex>&& adopt_guard,
     thread_t* current_thread = get_current_thread();
     zx_status_t result;
     current_thread->interruptable = true;
-    result = wait_queue_.Block(deadline, slack);
+    result = wait_queue_.Block(deadline);
     current_thread->interruptable = false;
 
     return result;

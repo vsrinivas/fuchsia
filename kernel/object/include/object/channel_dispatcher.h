@@ -60,7 +60,7 @@ public:
 
     // Performs the wait-then-read half of Call.  This is meant for retrying
     // after an interruption caused by suspending.
-    zx_status_t ResumeInterruptedCall(MessageWaiter* waiter, zx_time_t deadline, TimerSlack slack,
+    zx_status_t ResumeInterruptedCall(MessageWaiter* waiter, const Deadline& deadline,
                                       MessagePacketPtr* reply);
 
     // MessageWaiter's state is guarded by the lock of the
@@ -86,7 +86,7 @@ public:
         fbl::RefPtr<ChannelDispatcher> get_channel() { return channel_; }
         zx_txid_t get_txid() const { return txid_; }
         void set_txid(zx_txid_t txid) { txid_ = txid; };
-        zx_status_t Wait(zx_time_t deadline, TimerSlack slack);
+        zx_status_t Wait(const Deadline& deadline);
         // Returns any delivered message via out and the status.
         zx_status_t EndWait(MessagePacketPtr* out);
 

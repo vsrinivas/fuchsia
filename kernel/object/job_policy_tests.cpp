@@ -19,7 +19,7 @@ static bool initial_state() {
         EXPECT_EQ(ZX_POL_ACTION_ALLOW, p.QueryBasicPolicy(pol), "");
     }
     const TimerSlack slack = p.GetTimerSlack();
-    EXPECT_TRUE(slack == kNoSlack, "");
+    EXPECT_TRUE(slack == TimerSlack::none(), "");
 
     END_TEST;
 }

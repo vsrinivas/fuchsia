@@ -24,9 +24,14 @@ public:
         DEBUG_ASSERT(amount_ >= 0);
     }
 
-    zx_duration_t amount() const { return amount_; }
+    // Used to indicate that a given deadline is not eligible for coalescing.
+    //
+    // Not intended to be used for timers/events that originate on behalf of usermode.
+    static constexpr const TimerSlack& none() { return none_; }
 
-    slack_mode mode() const { return mode_; }
+    constexpr zx_duration_t amount() const { return amount_; }
+
+    constexpr slack_mode mode() const { return mode_; }
 
     bool operator==(const TimerSlack& rhs) const {
         return amount_ == rhs.amount_ &&
@@ -38,14 +43,35 @@ public:
     }
 
 private:
+    static const TimerSlack none_;
+
     zx_duration_t amount_;
     slack_mode mode_;
 };
 
-// TimerSlack is passed by value so make sure it'll fit in two 64-bit registers.
-static_assert(sizeof(TimerSlack) <= 16);
-
-// Used to indicate that a given deadline is not eligible for coalescing.
+// Deadline specifies when a timer or event should occur.
 //
-// Not intended to be used for timers/events that originate on behalf of usermode.
-static constexpr TimerSlack kNoSlack = TimerSlack(0, TIMER_SLACK_CENTER);
+// This class encapsulates the point in time at which a timer/event should occur ("when") and how
+// much the timer/event is allowed to deviate from that point in time ("slack").
+class Deadline {
+public:
+    constexpr Deadline(zx_time_t when, TimerSlack slack)
+        : when_(when), slack_(slack) {}
+
+    static constexpr Deadline no_slack(zx_time_t when) {
+        return Deadline(when, TimerSlack::none());
+    }
+
+    // A deadline that will never be reached.
+    static constexpr const Deadline& infinite() { return infinite_; }
+
+    constexpr zx_time_t when() const { return when_; }
+
+    constexpr TimerSlack slack() const { return slack_; }
+
+private:
+    static const Deadline infinite_;
+
+    const zx_time_t when_;
+    const TimerSlack slack_;
+};

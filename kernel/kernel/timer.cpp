@@ -196,15 +196,16 @@ static void insert_timer_in_queue(uint cpu, timer_t* timer,
     list_add_tail(&percpu[cpu].timer_queue, &timer->node);
 }
 
-void timer_set(timer_t* timer, zx_time_t deadline, TimerSlack slack,
+void timer_set(timer_t* timer, const Deadline& deadline,
                timer_callback callback, void* arg) {
-    LTRACEF("timer %p deadline %" PRIi64 " slack.amount %" PRIi64
-            " slack.mode %u callback %p arg %p\n",
-            timer, deadline, slack.amount(), slack.mode(), callback, arg);
+    LTRACEF("timer %p deadline.when %" PRIi64 " deadline.slack.amount %" PRIi64
+            " deadline.slack.mode %u callback %p arg %p\n",
+            timer, deadline.when(), deadline.slack().amount(), deadline.slack().mode(), callback,
+            arg);
 
     DEBUG_ASSERT(timer->magic == TIMER_MAGIC);
-    DEBUG_ASSERT(slack.mode() <= TIMER_SLACK_EARLY);
-    DEBUG_ASSERT(slack.amount() >= 0);
+    DEBUG_ASSERT(deadline.slack().mode() <= TIMER_SLACK_EARLY);
+    DEBUG_ASSERT(deadline.slack().amount() >= 0);
 
     if (list_in_list(&timer->node)) {
         panic("timer %p already in list\n", timer);
@@ -213,22 +214,22 @@ void timer_set(timer_t* timer, zx_time_t deadline, TimerSlack slack,
     zx_time_t latest_deadline;
     zx_time_t earliest_deadline;
 
-    if (slack.amount() == 0u) {
-        latest_deadline = deadline;
-        earliest_deadline = deadline;
+    if (deadline.slack().amount() == 0u) {
+        latest_deadline = deadline.when();
+        earliest_deadline = deadline.when();
     } else {
-        switch (slack.mode()) {
+        switch (deadline.slack().mode()) {
         case TIMER_SLACK_CENTER:
-            latest_deadline = zx_time_add_duration(deadline, slack.amount());
-            earliest_deadline = zx_time_sub_duration(deadline, slack.amount());
+            latest_deadline = zx_time_add_duration(deadline.when(), deadline.slack().amount());
+            earliest_deadline = zx_time_sub_duration(deadline.when(), deadline.slack().amount());
             break;
         case TIMER_SLACK_LATE:
-            latest_deadline = zx_time_add_duration(deadline, slack.amount());
-            earliest_deadline = deadline;
+            latest_deadline = zx_time_add_duration(deadline.when(), deadline.slack().amount());
+            earliest_deadline = deadline.when();
             break;
         case TIMER_SLACK_EARLY:
-            earliest_deadline = zx_time_sub_duration(deadline, slack.amount());
-            latest_deadline = deadline;
+            earliest_deadline = zx_time_sub_duration(deadline.when(), deadline.slack().amount());
+            latest_deadline = deadline.when();
             break;
         default:
             panic("invalid timer mode\n");
@@ -250,7 +251,7 @@ void timer_set(timer_t* timer, zx_time_t deadline, TimerSlack slack,
     }
 
     // Set up the structure.
-    timer->scheduled_time = deadline;
+    timer->scheduled_time = deadline.when();
     timer->callback = callback;
     timer->arg = arg;
     timer->cancel = false;
@@ -263,7 +264,7 @@ void timer_set(timer_t* timer, zx_time_t deadline, TimerSlack slack,
 
     if (list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node) == timer) {
         // we just modified the head of the timer queue
-        update_platform_timer(cpu, deadline);
+        update_platform_timer(cpu, deadline.when());
     }
 }
 

@@ -172,8 +172,8 @@ void RecurringCallback::CallbackWrapper(timer_t* t, zx_time_t now, void* arg) {
         Guard<SpinLock, IrqSave> guard{&cb->lock_};
 
         if (cb->started_) {
-            zx_time_t deadline = zx_time_add_duration(now, ZX_SEC(1));
-            timer_set(t, deadline, kSlack, CallbackWrapper, arg);
+            const Deadline deadline(zx_time_add_duration(now, ZX_SEC(1)), kSlack);
+            timer_set(t, deadline, CallbackWrapper, arg);
         }
     }
 
@@ -185,9 +185,9 @@ void RecurringCallback::Toggle() {
     Guard<SpinLock, IrqSave> guard{&lock_};
 
     if (!started_) {
+        const Deadline deadline(zx_time_add_duration(current_time(), ZX_SEC(1)), kSlack);
         // start the timer
-        timer_set(&timer_, zx_time_add_duration(current_time(), ZX_SEC(1)),
-                  kSlack, CallbackWrapper, static_cast<void*>(this));
+        timer_set(&timer_, deadline, CallbackWrapper, static_cast<void*>(this));
         started_ = true;
     } else {
         timer_cancel(&timer_);

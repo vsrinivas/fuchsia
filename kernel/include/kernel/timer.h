@@ -66,22 +66,13 @@ void timer_init(timer_t*);
 // deadline passes. The function will be called one time.
 //
 // timer: the timer to use
-// deadline: absolute time, in ns, after which the timer is executed
-// mode: type of slack to apply, either symmetrical or one-sided to early or late
-// slack: specifies how much the timer may deviate from the deadline
+// deadline: specifies when the timer should be executed
 // callback: the function to call when the timer expires
 // arg: the argument to pass to the callback
 //
 // The timer function is declared as:
 //   void callback(timer_t *, zx_time_t now, void *arg) { ... }
-//
-// The |slack| parameter defines an interval in which is acceptable to fire the timer:
-//
-// - slack.mode == TIMER_SLACK_CENTER -> |deadline - slack.amount| to |deadline + slack.amount|
-// - slack.mode == TIMER_SLACK_LATE   -> |deadline| to |deadline + slack.amount|
-// - slack.mode == TIMER_SLACK_EARLY  -> |deadline - slack.amount| to |deadline|
-void timer_set(timer_t* timer, zx_time_t deadline, TimerSlack slack,
-               timer_callback callback, void* arg);
+void timer_set(timer_t* timer, const Deadline& deadline, timer_callback callback, void* arg);
 
 //
 // Cancel a pending timer
@@ -95,7 +86,7 @@ bool timer_cancel(timer_t*);
 // Equivalent to timer_set with no slack
 static inline void timer_set_oneshot(
     timer_t* timer, zx_time_t deadline, timer_callback callback, void* arg) {
-    return timer_set(timer, deadline, kNoSlack, callback, arg);
+    return timer_set(timer, Deadline::no_slack(deadline), callback, arg);
 }
 
 // Preemption Timers
