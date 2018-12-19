@@ -65,6 +65,7 @@ def main():
     }[args.current_os]
 
     output_name = os.path.join(args.root_out_dir, args.binname)
+    build_id_dir = os.path.join(args.root_out_dir, '.build-id')
     depfile_output = output_name
     if args.unstripped_binname:
         stripped_output_name = output_name
@@ -154,6 +155,9 @@ def main():
             retcode = subprocess.call([os.path.join(args.toolchain_prefix,
                                                     'llvm-objcopy'),
                                        '--strip-sections',
+                                       '--build-id-link-dir=%s' % build_id_dir,
+                                       '--build-id-link-input=.debug',
+                                       '--build-id-link-output=',
                                        output_name,
                                        stripped_output_name],
                                       env=env)
