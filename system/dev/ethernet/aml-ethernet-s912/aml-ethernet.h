@@ -3,20 +3,39 @@
 // found in the LICENSE file.
 
 #include <ddk/device.h>
-#include <ddk/protocol/ethernet/board.h>
-#include <ddk/protocol/gpio.h>
-#include <ddk/protocol/i2c.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
+#include <ddktl/i2c-channel.h>
 #include <ddktl/mmio.h>
+#include <ddktl/pdev.h>
+#include <ddktl/protocol/ethernet/board.h>
+#include <ddktl/protocol/gpio.h>
 #include <threads.h>
 
 #include <optional>
 
 namespace eth {
 
-class AmlEthernet {
+class AmlEthernet;
+using DeviceType = ddk::Device<AmlEthernet, ddk::Unbindable>;
+
+class AmlEthernet : public DeviceType,
+                    public ddk::EthBoardProtocol<AmlEthernet> {
 public:
+    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlEthernet);
+
+    explicit AmlEthernet(zx_device_t* parent)
+        : DeviceType(parent), pdev_(parent) {}
+
+    static zx_status_t Create(zx_device_t* parent);
+
+    // DDK Hooks.
+    void DdkRelease();
+    void DdkUnbind();
+
+    // ETH_BOARD protocol.
+    void EthBoardResetPhy();
+
+private:
     // GPIO Indexes.
     enum {
         PHY_RESET,
@@ -24,32 +43,18 @@ public:
         GPIO_COUNT,
     };
 
-    zx_device_t* device_;
-    gpio_protocol_t gpios_[GPIO_COUNT];
-    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlEthernet);
-    AmlEthernet(){};
-    static zx_status_t Create(zx_device_t* device);
-
-    // DDK Hooks.
-    void DdkRelease(void* ctx);
-    void DdkUnbind(void* ctx);
-    void ReleaseBuffers();
-
-    // ETH_BOARD protocol.
-    static void ResetPhy(void* ctx);
-
-private:
     // MMIO Indexes
     enum {
         MMIO_PERIPH,
         MMIO_HHI,
     };
 
-    zx_status_t InitPdev(zx_device_t* parent);
+    zx_status_t InitPdev();
+    zx_status_t Bind();
 
-    pdev_protocol_t pdev_;
-
-    i2c_protocol_t i2c_;
+    ddk::PDev pdev_;
+    std::optional<ddk::I2cChannel> i2c_;
+    std::optional<ddk::GpioProtocolProxy> gpios_[GPIO_COUNT];
 
     std::optional<ddk::MmioBuffer> periph_mmio_;
     std::optional<ddk::MmioBuffer> hhi_mmio_;

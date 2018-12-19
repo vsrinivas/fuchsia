@@ -27,135 +27,72 @@ namespace eth {
 #define MCU_I2C_REG_BOOT_EN_WOL 0x21
 #define MCU_I2C_REG_BOOT_EN_WOL_RESET_ENABLE 0x03
 
-void AmlEthernet::ResetPhy(void* ctx) {
-    auto& self = *static_cast<AmlEthernet*>(ctx);
-    gpio_write(&self.gpios_[PHY_RESET], 0);
+void AmlEthernet::EthBoardResetPhy() {
+    gpios_[PHY_RESET]->Write(0);
     zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
-    gpio_write(&self.gpios_[PHY_RESET], 1);
+    gpios_[PHY_RESET]->Write(1);
     zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
 }
 
-zx_status_t AmlEthernet::InitPdev(zx_device_t* parent) {
-
-    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev_);
-    if (status != ZX_OK) {
-        return status;
+zx_status_t AmlEthernet::InitPdev() {
+    if (!pdev_.is_valid()) {
+        return ZX_ERR_NO_RESOURCES;
     }
 
+    zx_status_t status;
     for (uint32_t i = 0; i < countof(gpios_); i++) {
-        size_t actual;
-        status = pdev_get_protocol(&pdev_, ZX_PROTOCOL_GPIO, i, &gpios_[i], sizeof(gpios_[i]),
-                                   &actual);
-        if (status != ZX_OK) {
-            return status;
+        gpios_[i] = pdev_.GetGpio(i);
+        if (!gpios_[i]) {
+            return ZX_ERR_NO_RESOURCES;
         }
     }
 
     // I2c for MCU messages.
-    status = device_get_protocol(parent, ZX_PROTOCOL_I2C, &i2c_);
-    if (status != ZX_OK) {
-        return status;
+    i2c_ = pdev_.GetI2c(0);
+    if (!i2c_) {
+        return ZX_ERR_NO_RESOURCES;
     }
 
     // Map amlogic peripheral control registers.
-    mmio_buffer_t mmio;
-    status = pdev_map_mmio_buffer2(&pdev_, MMIO_PERIPH, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                  &mmio);
+    status = pdev_.MapMmio(MMIO_PERIPH, &periph_mmio_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-dwmac: could not map periph mmio: %d\n", status);
         return status;
     }
-    periph_mmio_ = ddk::MmioBuffer(mmio);
-
 
     // Map HHI regs (clocks and power domains).
-    status = pdev_map_mmio_buffer2(&pdev_, MMIO_HHI, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                  &mmio);
+    status = pdev_.MapMmio(MMIO_HHI, &hhi_mmio_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-dwmac: could not map hiu mmio: %d\n", status);
         return status;
     }
-    hhi_mmio_ = ddk::MmioBuffer(mmio);
 
     return status;
 }
 
-void AmlEthernet::ReleaseBuffers() {
-    periph_mmio_.reset();
-    hhi_mmio_.reset();
-}
-
-static void DdkUnbind(void* ctx) {
-    auto& self = *static_cast<AmlEthernet*>(ctx);
-    device_remove(self.device_);
-}
-
-static void DdkRelease(void* ctx) {
-    auto& self = *static_cast<AmlEthernet*>(ctx);
-    self.ReleaseBuffers();
-    delete &self;
-}
-
-static eth_board_protocol_ops_t proto_ops = {
-    .reset_phy = AmlEthernet::ResetPhy,
-};
-
-static zx_protocol_device_t eth_device_ops = []() {
-    zx_protocol_device_t result;
-
-    result.version = DEVICE_OPS_VERSION;
-    result.unbind = &DdkUnbind;
-    result.release = &DdkRelease;
-    return result;
-}();
-
-static device_add_args_t eth_mac_dev_args = []() {
-    device_add_args_t result;
-
-    result.version = DEVICE_ADD_ARGS_VERSION;
-    result.name = "aml-ethernet";
-    result.ops = &eth_device_ops;
-    result.proto_id = ZX_PROTOCOL_ETH_BOARD;
-    result.proto_ops = &proto_ops;
-    return result;
-}();
-
-zx_status_t AmlEthernet::Create(zx_device_t* device) {
-    fbl::AllocChecker ac;
-    auto eth_device = fbl::make_unique_checked<AmlEthernet>(&ac);
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
-
-    zx_status_t status = eth_device->InitPdev(device);
-    if (status != ZX_OK) {
-        return status;
-    }
-
+zx_status_t AmlEthernet::Bind() {
     // Set reset line to output
-    gpio_config_out(&eth_device->gpios_[PHY_RESET], 0);
+    gpios_[PHY_RESET]->ConfigOut(0);
 
     // Initialize AMLogic peripheral registers associated with dwmac.
-    auto& pregs = eth_device->periph_mmio_;
     //Sorry about the magic...rtfm
-    pregs->Write32(0x1621, PER_ETH_REG0);
-    pregs->Write32(0x20000, PER_ETH_REG1);
+    periph_mmio_->Write32(0x1621, PER_ETH_REG0);
+    periph_mmio_->Write32(0x20000, PER_ETH_REG1);
 
-    pregs->Write32(REG2_ETH_REG2_REVERSED | REG2_INTERNAL_PHY_ID, PER_ETH_REG2);
+    periph_mmio_->Write32(REG2_ETH_REG2_REVERSED | REG2_INTERNAL_PHY_ID, PER_ETH_REG2);
 
-    pregs->Write32(REG3_CLK_IN_EN | REG3_ETH_REG3_19_RESVERD |
-                       REG3_CFG_PHY_ADDR | REG3_CFG_MODE |
-                       REG3_CFG_EN_HIGH | REG3_ETH_REG3_2_RESERVED,
-                   PER_ETH_REG3);
+    periph_mmio_->Write32(REG3_CLK_IN_EN | REG3_ETH_REG3_19_RESVERD |
+                              REG3_CFG_PHY_ADDR | REG3_CFG_MODE |
+                              REG3_CFG_EN_HIGH | REG3_ETH_REG3_2_RESERVED,
+                          PER_ETH_REG3);
 
     // Enable clocks and power domain for dwmac
-    auto& hregs = eth_device->hhi_mmio_;
-    hregs->SetBits32(1 << 3, HHI_GCLK_MPEG1);
-    hregs->ClearBits32((1 << 3) | (1 << 2), HHI_MEM_PD_REG0);
+    hhi_mmio_->SetBits32(1 << 3, HHI_GCLK_MPEG1);
+    hhi_mmio_->ClearBits32((1 << 3) | (1 << 2), HHI_MEM_PD_REG0);
 
     // WOL reset enable to MCU
     uint8_t write_buf[2] = {MCU_I2C_REG_BOOT_EN_WOL, MCU_I2C_REG_BOOT_EN_WOL_RESET_ENABLE};
-    status = i2c_write_sync(&eth_device->i2c_, write_buf, sizeof(write_buf));
+    zx_status_t status = i2c_->WriteSync(write_buf, sizeof(write_buf));
     if (status) {
         zxlogf(ERROR, "aml-ethernet: WOL reset enable to MCU failed: %d\n", status);
         return status;
@@ -164,25 +101,54 @@ zx_status_t AmlEthernet::Create(zx_device_t* device) {
     // Populate board specific information
     eth_dev_metadata_t mac_info;
     size_t actual;
-    status = device_get_metadata(device, DEVICE_METADATA_PRIVATE, &mac_info,
+    status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &mac_info,
                                  sizeof(eth_dev_metadata_t), &actual);
     if (status != ZX_OK || actual != sizeof(eth_dev_metadata_t)) {
         zxlogf(ERROR, "aml-ethernet: Could not get MAC metadata %d\n", status);
         return status;
     }
 
-    static zx_device_prop_t props[] = {
+    zx_device_prop_t props[] = {
         {BIND_PLATFORM_DEV_VID, 0, mac_info.vid},
         {BIND_PLATFORM_DEV_DID, 0, mac_info.did},
     };
 
-    eth_mac_dev_args.props = props;
-    eth_mac_dev_args.prop_count = countof(props);
-    eth_mac_dev_args.ctx = eth_device.get();
+    device_add_args_t args = {};
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.name = "aml-ethernet";
+    args.ctx = this;
+    args.ops = &ddk_device_proto_;
+    args.proto_id = ddk_proto_id_;
+    args.proto_ops = ddk_proto_ops_;
+    args.props = props;
+    args.prop_count = countof(props);
 
-    status = pdev_device_add(&eth_device->pdev_, 0, &eth_mac_dev_args, &eth_device->device_);
+    return pdev_.DeviceAdd(0, &args, &zxdev_);
+}
+
+void AmlEthernet::DdkUnbind() {
+    DdkRemove();
+}
+
+void AmlEthernet::DdkRelease() {
+    delete this;
+}
+
+zx_status_t AmlEthernet::Create(zx_device_t* parent) {
+    fbl::AllocChecker ac;
+    auto eth_device = fbl::make_unique_checked<AmlEthernet>(&ac, parent);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    zx_status_t status = eth_device->InitPdev();
     if (status != ZX_OK) {
-        zxlogf(ERROR, "aml-ethernet driver failed to get added\n");
+        return status;
+    }
+
+    status = eth_device->Bind();
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "aml-ethernet driver failed to get added: %d\n", status);
         return status;
     } else {
         zxlogf(INFO, "aml-ethernet driver added\n");
@@ -196,6 +162,6 @@ zx_status_t AmlEthernet::Create(zx_device_t* device) {
 
 } // namespace eth
 
-extern "C" zx_status_t aml_eth_bind(void* ctx, zx_device_t* device) {
-    return eth::AmlEthernet::Create(device);
+extern "C" zx_status_t aml_eth_bind(void* ctx, zx_device_t* parent) {
+    return eth::AmlEthernet::Create(parent);
 }
