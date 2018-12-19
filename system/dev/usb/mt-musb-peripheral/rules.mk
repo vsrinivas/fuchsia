@@ -33,6 +33,7 @@ MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-gpio \
     system/banjo/ddk-protocol-i2c \
     system/banjo/ddk-protocol-platform-device \
+    system/banjo/ddk-protocol-usb \
     system/banjo/ddk-protocol-usb-dci \
     system/banjo/ddk-protocol-usb-request \
 

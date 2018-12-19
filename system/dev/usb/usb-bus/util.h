@@ -25,12 +25,3 @@ zx_status_t usb_util_get_descriptor(usb_device_t* dev, uint16_t type, uint16_t i
 zx_status_t usb_util_get_string_descriptor(usb_device_t* dev, uint8_t desc_id, uint16_t lang_id,
                                            uint8_t* buf, size_t buflen, size_t* out_actual,
                                            uint16_t* out_actual_lang_id);
-
-// TODO: remove after transition to new USB protocol
-zx_status_t old_usb_util_control(usb_device_t* dev, uint8_t request_type,  uint8_t request,
-                                uint16_t value, uint16_t index, void* data, size_t length);
-zx_status_t old_usb_util_get_descriptor(usb_device_t* dev, uint16_t type, uint16_t index,
-                                        uint16_t language, void* data, size_t length);
-zx_status_t old_usb_util_get_string_descriptor(usb_device_t* dev, uint8_t desc_id, uint16_t lang_id,
-                                               uint8_t* buf, size_t buflen, size_t* out_actual,
-                                               uint16_t* out_actual_lang_id);

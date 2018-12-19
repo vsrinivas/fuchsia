@@ -15,10 +15,6 @@ interface UsbBatchRequestComplete {
 
 [Layout = "ddk-protocol", DefaultProtocol]
 interface Usb {
-    // Initiates a control transfer with the device.
-    Control(uint8 request_type, uint8 request, uint16 value, uint16 index, zx.time timeout,
-            vector<voidptr> write) -> (zx.status status, vector<voidptr> read);
-
     // Initiates a control transfer with the device in the OUT direction.
     ControlOut(uint8 request_type, uint8 request, uint16 value, uint16 index, zx.time timeout,
                vector<voidptr> write) -> (zx.status status);

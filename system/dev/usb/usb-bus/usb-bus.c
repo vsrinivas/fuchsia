@@ -20,9 +20,7 @@ static zx_status_t bus_add_device(void* ctx, uint32_t device_id, uint32_t hub_id
 
     // bus->devices[device_id] must be set before usb_device_add() creates the interface devices
     // so we pass pointer to it here rather than setting it after usb_device_add() returns.
-    zx_status_t status1 = usb_device_add(bus, device_id, hub_id, speed, &bus->new_devices[device_id]);
-    zx_status_t status2 = old_usb_device_add(bus, device_id, hub_id, speed, &bus->old_devices[device_id]);
-    return status1 == ZX_OK ? status2 : status1;
+    return usb_device_add(bus, device_id, hub_id, speed, &bus->devices[device_id]);
 }
 
 static zx_status_t bus_remove_device(void* ctx, uint32_t device_id) {
@@ -32,20 +30,12 @@ static zx_status_t bus_remove_device(void* ctx, uint32_t device_id) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    usb_device_t* device = bus->new_devices[device_id];
+    usb_device_t* device = bus->devices[device_id];
     if (!device) {
         return ZX_ERR_BAD_STATE;
     }
     device_remove(device->zxdev);
-    bus->new_devices[device_id] = NULL;
-
-    device = bus->old_devices[device_id];
-    if (!device) {
-        return ZX_ERR_BAD_STATE;
-    }
-    device_remove(device->zxdev);
-    bus->old_devices[device_id] = NULL;
-
+    bus->devices[device_id] = NULL;
 
     return ZX_OK;
 }
@@ -56,10 +46,7 @@ static zx_status_t bus_reset_hub_port(void* ctx, uint32_t hub_id, uint32_t port)
         zxlogf(ERROR, "hub_id out of range in usb_bus_reset_hub_port\n");
         return ZX_ERR_INVALID_ARGS;
     }
-    usb_device_t* device = bus->new_devices[hub_id];
-    if (!device) {
-        device = bus->old_devices[hub_id];
-    }
+    usb_device_t* device = bus->devices[hub_id];
     if (!device) {
         zxlogf(ERROR, "hub not found in usb_bus_reset_hub_port\n");
         return ZX_ERR_INVALID_ARGS;
@@ -79,10 +66,7 @@ static usb_bus_interface_ops_t _bus_interface = {
 
 static zx_status_t bus_get_device_id(zx_device_t* device, uint32_t* out) {
     usb_protocol_t usb;
-    // Here we rely on the fact that the old and new USB protocols are the same for
-    // get_device_id().
-    if (device_get_protocol(device, ZX_PROTOCOL_USB_OLD, &usb) != ZX_OK &&
-        device_get_protocol(device, ZX_PROTOCOL_USB, &usb) != ZX_OK) {
+    if (device_get_protocol(device, ZX_PROTOCOL_USB, &usb) != ZX_OK) {
         return ZX_ERR_INTERNAL;
     }
     *out = usb_get_device_id(&usb);
@@ -125,14 +109,8 @@ static zx_status_t bus_set_hub_interface(void* ctx, zx_device_t* usb_device,
     if (bus_get_device_id(usb_device, &usb_device_id) != ZX_OK) {
         return ZX_ERR_INTERNAL;
     }
-    usb_device_t* usb_dev = bus->new_devices[usb_device_id];
+    usb_device_t* usb_dev = bus->devices[usb_device_id];
     if (usb_dev) {
-        usb_device_set_hub_interface(usb_dev, hub);
-        return ZX_OK;
-    }
-    usb_dev = bus->old_devices[usb_device_id];
-    if (usb_dev) {
-        // Relying on the fact that this call is the same in both versions of the protocol.
         usb_device_set_hub_interface(usb_dev, hub);
         return ZX_OK;
     }
@@ -154,18 +132,10 @@ static void usb_bus_unbind(void* ctx) {
     usb_hci_set_bus_interface(&bus->hci, NULL);
 
     for (size_t i = 0; i < bus->max_device_count; i++) {
-        usb_device_t* device = bus->new_devices[i];
+        usb_device_t* device = bus->devices[i];
         if (device) {
             device_remove(device->zxdev);
-            bus->new_devices[i] = NULL;
-        }
-    }
-
-    for (size_t i = 0; i < bus->max_device_count; i++) {
-        usb_device_t* device = bus->old_devices[i];
-        if (device) {
-            device_remove(device->zxdev);
-            bus->old_devices[i] = NULL;
+            bus->devices[i] = NULL;
         }
     }
 
@@ -175,8 +145,7 @@ static void usb_bus_unbind(void* ctx) {
 static void usb_bus_release(void* ctx) {
     zxlogf(INFO, "usb_bus_release\n");
     usb_bus_t* bus = ctx;
-    free(bus->new_devices);
-    free(bus->old_devices);
+    free(bus->devices);
     free(bus);
 }
 
@@ -201,16 +170,8 @@ static zx_status_t usb_bus_bind(void* ctx, zx_device_t* device) {
     bus->hci_zxdev = device;
     bus->max_device_count = usb_hci_get_max_device_count(&bus->hci);
 
-    bus->new_devices = calloc(bus->max_device_count, sizeof(usb_device_t *));
-    if (!bus->new_devices) {
-        zxlogf(ERROR, "Not enough memory for usb_bus_t->devices. max_device_count: %zu\n",
-               bus->max_device_count);
-        free(bus);
-        return ZX_ERR_NO_MEMORY;
-    }
-
-    bus->old_devices = calloc(bus->max_device_count, sizeof(usb_device_t *));
-    if (!bus->old_devices) {
+    bus->devices = calloc(bus->max_device_count, sizeof(usb_device_t *));
+    if (!bus->devices) {
         zxlogf(ERROR, "Not enough memory for usb_bus_t->devices. max_device_count: %zu\n",
                bus->max_device_count);
         free(bus);
@@ -234,8 +195,7 @@ static zx_status_t usb_bus_bind(void* ctx, zx_device_t* device) {
         bus_intf.ctx = bus;
         usb_hci_set_bus_interface(&bus->hci, &bus_intf);
     } else {
-        free(bus->new_devices);
-        free(bus->old_devices);
+        free(bus->devices);
         free(bus);
     }
 

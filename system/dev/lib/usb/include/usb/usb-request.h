@@ -7,16 +7,12 @@
 #include <stdint.h>
 #include <sys/types.h>
 #include <ddk/io-buffer.h>
+#include <ddk/protocol/usb.h>
 #include <ddk/protocol/usb/request.h>
 #include <zircon/hw/usb.h>
 #include <zircon/listnode.h>
 
 #include <threads.h>
-
-// TODO(voydanoff): replace these declarations with #include <ddk/protoocl/usb/request.h>
-// after soft transition is done.
-typedef void (*usb_request_complete_cb)(usb_request_t* req, void* cookie);
-typedef struct usb_request_complete usb_request_complete_t;
 
 __BEGIN_CDECLS;
 

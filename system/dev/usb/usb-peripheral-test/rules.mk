@@ -23,6 +23,7 @@ MODULE_LIBS := \
     system/ulib/c \
 
 MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-usb \
     system/banjo/ddk-protocol-usb-function \
     system/banjo/ddk-protocol-usb-request \
 

@@ -449,7 +449,6 @@ static size_t usb_device_get_request_size(void* ctx) {
 }
 
 static usb_protocol_ops_t _usb_protocol = {
-    .control = usb_device_control,
     .control_out = usb_device_control_out,
     .control_in = usb_device_control_in,
     .request_queue = usb_device_request_queue,

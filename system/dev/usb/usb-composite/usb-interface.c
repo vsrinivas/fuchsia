@@ -121,16 +121,6 @@ zx_status_t usb_interface_configure_endpoints(usb_interface_t* intf, uint8_t int
     return status;
 }
 
-static zx_status_t usb_interface_control(void* ctx, uint8_t request_type, uint8_t request,
-                                         uint16_t value, uint16_t index, zx_time_t timeout,
-                                         const void* write_buffer, size_t write_size,
-                                         void* out_read_buffer, size_t read_size,
-                                         size_t* out_read_actual) {
-    usb_interface_t* intf = ctx;
-    return usb_control(&intf->comp->usb, request_type, request, value, index, timeout, write_buffer,
-                       write_size, out_read_buffer, read_size, out_read_actual);
-}
-
 static zx_status_t usb_interface_control_out(void* ctx, uint8_t request_type, uint8_t request,
                                              uint16_t value, uint16_t index, zx_time_t timeout,
                                              const void* write_buffer, size_t write_size) {
@@ -356,7 +346,6 @@ static size_t usb_interface_get_request_size(void* ctx) {
 }
 
 usb_protocol_ops_t usb_device_protocol = {
-    .control = usb_interface_control,
     .control_out = usb_interface_control_out,
     .control_in = usb_interface_control_in,
     .request_queue = usb_interface_request_queue,

@@ -4,7 +4,7 @@
 
 #include <limits.h>
 
-#include <ddk/protocol/usb-old.h>
+#include <ddk/protocol/usb.h>
 #include <lib/fake-bti/bti.h>
 #include <usb/usb-request.h>
 #include <unittest/unittest.h>
