@@ -21,6 +21,10 @@ import (
 	"github.com/google/netstack/tcpip/transport/udp"
 )
 
+// #cgo CFLAGS: -I${SRCDIR}/../../../../zircon/system/ulib/zxs/include
+// #include <lib/zxs/protocol.h>
+import "C"
+
 type socketProviderImpl struct {
 	ns *Netstack
 }
@@ -75,13 +79,14 @@ func (sp *socketProviderImpl) GetAddrInfo(node *string, service *string, hints *
 		hints = &net.AddrInfoHints{}
 	}
 	if hints.SockType == 0 {
-		hints.SockType = SOCK_STREAM
+		hints.SockType = C.SOCK_STREAM
 	}
 	if hints.Protocol == 0 {
-		if hints.SockType == SOCK_STREAM {
-			hints.Protocol = IPPROTO_TCP
-		} else if hints.SockType == SOCK_DGRAM {
-			hints.Protocol = IPPROTO_UDP
+		switch hints.SockType {
+		case C.SOCK_STREAM:
+			hints.Protocol = C.IPPROTO_TCP
+		case C.SOCK_DGRAM:
+			hints.Protocol = C.IPPROTO_UDP
 		}
 	}
 
@@ -109,11 +114,11 @@ func (sp *socketProviderImpl) GetAddrInfo(node *string, service *string, hints *
 		addrs = append(addrs, "\x00\x00\x00\x00")
 	case *node == "localhost" || *node == sp.ns.getNodeName():
 		switch hints.Family {
-		case AF_UNSPEC:
+		case C.AF_UNSPEC:
 			addrs = append(addrs, ipv4Loopback, ipv6Loopback)
-		case AF_INET:
+		case C.AF_INET:
 			addrs = append(addrs, ipv4Loopback)
-		case AF_INET6:
+		case C.AF_INET6:
 			addrs = append(addrs, ipv6Loopback)
 		default:
 			return net.AddrInfoStatusSystemError, 0, [4]net.AddrInfo{}, nil
@@ -144,16 +149,16 @@ func (sp *socketProviderImpl) GetAddrInfo(node *string, service *string, hints *
 
 		switch len(addr) {
 		case 4:
-			if hints.Family != AF_UNSPEC && hints.Family != AF_INET {
+			if hints.Family != C.AF_UNSPEC && hints.Family != C.AF_INET {
 				continue
 			}
-			ai.Family = AF_INET
+			ai.Family = C.AF_INET
 			ai.Addr.Len = uint32(copy(ai.Addr.Val[:], addr))
 		case 16:
-			if hints.Family != AF_UNSPEC && hints.Family != AF_INET6 {
+			if hints.Family != C.AF_UNSPEC && hints.Family != C.AF_INET6 {
 				continue
 			}
-			ai.Family = AF_INET6
+			ai.Family = C.AF_INET6
 			ai.Addr.Len = uint32(copy(ai.Addr.Val[:], addr))
 		default:
 			if debug {

@@ -29,6 +29,15 @@ import (
 	"github.com/google/netstack/waiter"
 )
 
+// #cgo CFLAGS: -D_GNU_SOURCE
+// #cgo CFLAGS: -I${SRCDIR}/../../../../zircon/system/ulib/zxs/include
+// #cgo CFLAGS: -I${SRCDIR}/../../../../zircon/third_party/ulib/musl/include/
+// #cgo CFLAGS: -I${SRCDIR}/../../../public
+// #include <lib/zxs/protocol.h>
+// #include <netinet/tcp.h>
+// #include <lib/netstack/c/netconfig.h>
+import "C"
+
 const debug = false
 
 // TODO: Replace these with a better tracing mechanism (NET-757)
@@ -385,12 +394,12 @@ func (ios *iostate) loopDgramRead(stk *stack.Stack) {
 		}
 		ios.wq.EventUnregister(&waitEntry)
 
-		out := make([]byte, c_fdio_socket_msg_hdr_len+len(v))
+		out := make([]byte, C.FDIO_SOCKET_MSG_HEADER_SIZE+len(v))
 		if err := writeSocketMsgHdr(out, sender); err != nil {
 			// TODO communicate to user
 			log.Printf("writeSocketMsgHdr failed: %v (TODO)", err)
 		}
-		copy(out[c_fdio_socket_msg_hdr_len:], v)
+		copy(out[C.FDIO_SOCKET_MSG_HEADER_SIZE:], v)
 
 	writeLoop:
 		for {
@@ -454,7 +463,7 @@ func (ios *iostate) loopDgramWrite(stk *stack.Stack) {
 			log.Printf("loopDgramWrite: bad socket msg header: %v", err)
 			continue
 		}
-		v = v[c_fdio_socket_msg_hdr_len:]
+		v = v[C.FDIO_SOCKET_MSG_HEADER_SIZE:]
 
 		if err := func() *tcpip.Error {
 			for {
@@ -705,7 +714,7 @@ func zxNetError(e *tcpip.Error) zx.Status {
 }
 
 func (s *socketServer) opGetSockOpt(ios *iostate, msg *zxsocket.Msg) zx.Status {
-	var val c_mxrio_sockopt_req_reply
+	var val C.struct_zxrio_sockopt_req_reply
 	if err := val.Decode(msg); err != nil {
 		if debug {
 			log.Printf("getsockopt: decode argument: %v", err)
@@ -713,6 +722,8 @@ func (s *socketServer) opGetSockOpt(ios *iostate, msg *zxsocket.Msg) zx.Status {
 		return errStatus(err)
 	}
 	if opt := val.Unpack(); opt != nil {
+		val.optlen = C.socklen_t(4)
+
 		switch o := opt.(type) {
 		case tcpip.ErrorOption:
 			ios.mu.Lock()
@@ -729,20 +740,16 @@ func (s *socketServer) opGetSockOpt(ios *iostate, msg *zxsocket.Msg) zx.Status {
 				// TODO: should this be a unix errno?
 				errno = uint32(zxNetError(err))
 			}
-			binary.LittleEndian.PutUint32(val.optval[:], errno)
-			val.optlen = c_socklen(4)
+			binary.LittleEndian.PutUint32(val.optBytes(), errno)
 		case tcpip.SendBufferSizeOption:
 			ios.ep.GetSockOpt(&o)
-			binary.LittleEndian.PutUint32(val.optval[:], uint32(o))
-			val.optlen = c_socklen(4)
+			binary.LittleEndian.PutUint32(val.optBytes(), uint32(o))
 		case tcpip.ReceiveBufferSizeOption:
 			ios.ep.GetSockOpt(&o)
-			binary.LittleEndian.PutUint32(val.optval[:], uint32(o))
-			val.optlen = c_socklen(4)
+			binary.LittleEndian.PutUint32(val.optBytes(), uint32(o))
 		case tcpip.ReceiveQueueSizeOption:
 			ios.ep.GetSockOpt(&o)
-			binary.LittleEndian.PutUint32(val.optval[:], uint32(o))
-			val.optlen = c_socklen(4)
+			binary.LittleEndian.PutUint32(val.optBytes(), uint32(o))
 		case tcpip.DelayOption:
 			ios.ep.GetSockOpt(&o)
 			// Socket option is TCP_NODELAY, so we need to invert the delay flag.
@@ -751,47 +758,38 @@ func (s *socketServer) opGetSockOpt(ios *iostate, msg *zxsocket.Msg) zx.Status {
 			} else {
 				o = 1
 			}
-			binary.LittleEndian.PutUint32(val.optval[:], uint32(o))
-			val.optlen = c_socklen(4)
+			binary.LittleEndian.PutUint32(val.optBytes(), uint32(o))
 		case tcpip.ReuseAddressOption:
 			ios.ep.GetSockOpt(&o)
-			binary.LittleEndian.PutUint32(val.optval[:], uint32(o))
-			val.optlen = c_socklen(4)
+			binary.LittleEndian.PutUint32(val.optBytes(), uint32(o))
 		case tcpip.V6OnlyOption:
 			ios.ep.GetSockOpt(&o)
-			binary.LittleEndian.PutUint32(val.optval[:], uint32(o))
-			val.optlen = c_socklen(4)
+			binary.LittleEndian.PutUint32(val.optBytes(), uint32(o))
 		case tcpip.MulticastTTLOption:
 			ios.ep.GetSockOpt(&o)
-			binary.LittleEndian.PutUint32(val.optval[:], uint32(o))
-			val.optlen = c_socklen(4)
+			binary.LittleEndian.PutUint32(val.optBytes(), uint32(o))
 		case tcpip.KeepaliveEnabledOption:
 			ios.ep.GetSockOpt(&o)
-			binary.LittleEndian.PutUint32(val.optval[:], uint32(o))
-			val.optlen = c_socklen(4)
+			binary.LittleEndian.PutUint32(val.optBytes(), uint32(o))
 		case tcpip.KeepaliveIdleOption:
 			ios.ep.GetSockOpt(&o)
-			binary.LittleEndian.PutUint32(val.optval[:], uint32(time.Duration(o).Seconds()))
-			val.optlen = c_socklen(4)
+			binary.LittleEndian.PutUint32(val.optBytes(), uint32(time.Duration(o).Seconds()))
 		case tcpip.KeepaliveIntervalOption:
 			ios.ep.GetSockOpt(&o)
-			binary.LittleEndian.PutUint32(val.optval[:], uint32(time.Duration(o).Seconds()))
-			val.optlen = c_socklen(4)
+			binary.LittleEndian.PutUint32(val.optBytes(), uint32(time.Duration(o).Seconds()))
 		case tcpip.KeepaliveCountOption:
 			ios.ep.GetSockOpt(&o)
-			binary.LittleEndian.PutUint32(val.optval[:], uint32(o))
-			val.optlen = c_socklen(4)
+			binary.LittleEndian.PutUint32(val.optBytes(), uint32(o))
 		case tcpip.TCPInfoOption:
 			ios.ep.GetSockOpt(&o)
-			info := c_mxrio_sockopt_tcp_info{
+			info := C.struct_tcp_info{
 				// Microseconds.
-				rtt:    uint32(o.RTT.Nanoseconds() / 1000),
-				rttvar: uint32(o.RTTVar.Nanoseconds() / 1000),
+				tcpi_rtt:    C.uint(o.RTT.Nanoseconds() / 1000),
+				tcpi_rttvar: C.uint(o.RTTVar.Nanoseconds() / 1000),
 			}
 			info.Encode(&val)
 		default:
-			binary.LittleEndian.PutUint32(val.optval[:], 0)
-			val.optlen = c_socklen(4)
+			binary.LittleEndian.PutUint32(val.optBytes(), 0)
 		}
 	} else {
 		val.optlen = 0
@@ -801,7 +799,7 @@ func (s *socketServer) opGetSockOpt(ios *iostate, msg *zxsocket.Msg) zx.Status {
 }
 
 func (s *socketServer) opSetSockOpt(ios *iostate, msg *zxsocket.Msg) zx.Status {
-	var val c_mxrio_sockopt_req_reply
+	var val C.struct_zxrio_sockopt_req_reply
 	if err := val.Decode(msg); err != nil {
 		if debug {
 			log.Printf("setsockopt: decode argument: %v", err)
@@ -847,19 +845,27 @@ func (s *socketServer) opBind(ios *iostate, msg *zxsocket.Msg) (status zx.Status
 	return zx.ErrOk
 }
 
-func (s *socketServer) buildIfInfos() *c_netc_get_if_info {
-	rep := &c_netc_get_if_info{}
+func (s *socketServer) buildIfInfos() *C.netc_get_if_info_t {
+	rep := &C.netc_get_if_info_t{}
 
 	s.ns.mu.Lock()
 	defer s.ns.mu.Unlock()
-	index := uint32(0)
+	var index C.uint
 	for nicid, ifs := range s.ns.ifStates {
 		if ifs.nic.Addr == ipv4Loopback {
 			continue
 		}
-		rep.info[index].index = uint16(index + 1)
-		rep.info[index].flags |= NETC_IFF_UP
-		copy(rep.info[index].name[:], ifs.nic.Name)
+		name := ifs.nic.Name
+		// leave one byte for the null terminator.
+		if l := len(rep.info[index].name) - 1; len(name) > l {
+			name = name[:l]
+		}
+		// memcpy with a cast to appease the type checker.
+		for i := range name {
+			rep.info[index].name[i] = C.char(name[i])
+		}
+		rep.info[index].index = C.ushort(index + 1)
+		rep.info[index].flags |= C.NETC_IFF_UP
 		if _, err := writeSockaddrStorage(&rep.info[index].addr, tcpip.FullAddress{NIC: nicid, Addr: ifs.nic.Addr}); err != nil {
 			log.Printf("writeSockaddrStorage of address failed: %v", err)
 		}
@@ -889,14 +895,14 @@ var (
 
 // We remember the interface list from the last time ioctlNetcGetNumIfs was called. This avoids
 // a race condition if the interface list changes between calls to ioctlNetcGetIfInfoAt.
-var lastIfInfo *c_netc_get_if_info
+var lastIfInfo *C.netc_get_if_info_t
 
 func (s *socketServer) opIoctl(ios *iostate, msg *zxsocket.Msg) zx.Status {
 	switch msg.IoctlOp() {
 	// TODO(ZX-766): remove when dart/runtime/bin/socket_base_fuchsia.cc uses getifaddrs().
 	case ioctlNetcGetNumIfs:
 		lastIfInfo = s.buildIfInfos()
-		binary.LittleEndian.PutUint32(msg.Data[:msg.Arg], lastIfInfo.n_info)
+		binary.LittleEndian.PutUint32(msg.Data[:msg.Arg], uint32(lastIfInfo.n_info))
 		msg.Datalen = 4
 		return zx.ErrOk
 	// TODO(ZX-766): remove when dart/runtime/bin/socket_base_fuchsia.cc uses getifaddrs().
@@ -915,7 +921,7 @@ func (s *socketServer) opIoctl(ios *iostate, msg *zxsocket.Msg) zx.Status {
 			return zx.ErrInvalidArgs
 		}
 		requestedIndex := binary.LittleEndian.Uint32(d)
-		if requestedIndex >= lastIfInfo.n_info {
+		if requestedIndex >= uint32(lastIfInfo.n_info) {
 			if debug {
 				log.Printf("ioctlNetcGetIfInfoAt: index out of range (%d vs %d)", requestedIndex, lastIfInfo.n_info)
 			}
@@ -939,7 +945,7 @@ func (s *socketServer) opIoctl(ios *iostate, msg *zxsocket.Msg) zx.Status {
 
 func fdioSockAddrReply(a tcpip.FullAddress, msg *zxsocket.Msg) zx.Status {
 	var err error
-	rep := c_mxrio_sockaddr_reply{}
+	rep := C.struct_zxrio_sockaddr_reply{}
 	rep.len, err = writeSockaddrStorage(&rep.addr, a)
 	if err != nil {
 		return errStatus(err)

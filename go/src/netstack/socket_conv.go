@@ -5,12 +5,20 @@
 package main
 
 import (
-	"encoding/binary"
 	"log"
 	"time"
 
 	"github.com/google/netstack/tcpip"
 )
+
+// #cgo CFLAGS: -D_GNU_SOURCE
+// #cgo CFLAGS: -I${SRCDIR}/../../../../zircon/system/ulib/zxs/include
+// #cgo CFLAGS: -I${SRCDIR}/../../../../zircon/third_party/ulib/musl/include/
+// #cgo CFLAGS: -I${SRCDIR}/../../../public
+// #include <lib/zxs/protocol.h>
+// #include <netinet/tcp.h>
+// #include <lib/netstack/c/netconfig.h>
+import "C"
 
 func isZeros(buf []byte) bool {
 	for i := 0; i < len(buf); i++ {
@@ -21,51 +29,49 @@ func isZeros(buf []byte) bool {
 	return true
 }
 
-func (v *c_mxrio_sockopt_req_reply) intValue() int {
-	switch v.optlen {
-	case 4:
-		return int(binary.LittleEndian.Uint32(v.optval[:]))
-	case 8:
-		return int(binary.LittleEndian.Uint64(v.optval[:]))
+func (v *C.struct_zxrio_sockopt_req_reply) intValue() int {
+	var result int
+	for i, b := range v.optBytes() {
+		result += int(b) << (uint(i) * 8)
 	}
-	return 0
+	return result
 }
 
 // TODO: create a tcpip.Option type
-func (v *c_mxrio_sockopt_req_reply) Unpack() interface{} {
+func (v *C.struct_zxrio_sockopt_req_reply) Unpack() interface{} {
 	switch v.level {
-	case SOL_SOCKET:
+	case C.SOL_SOCKET:
 		switch v.optname {
-		case SO_ERROR:
+		case C.SO_ERROR:
 			return tcpip.ErrorOption{}
-		case SO_REUSEADDR:
+		case C.SO_REUSEADDR:
 			return tcpip.ReuseAddressOption(v.intValue())
-		case SO_KEEPALIVE:
+		case C.SO_KEEPALIVE:
 			return tcpip.KeepaliveEnabledOption(v.intValue())
-		case SO_BROADCAST:
-		case SO_DEBUG:
-		case SO_SNDBUF:
-		case SO_RCVBUF:
+		case C.SO_BROADCAST:
+		case C.SO_DEBUG:
+		case C.SO_SNDBUF:
+		case C.SO_RCVBUF:
 		}
 		log.Printf("convSockOpt: TODO SOL_SOCKET optname=%d", v.optname)
-	case SOL_IP:
+	case C.SOL_IP:
 		switch v.optname {
-		case IP_TOS:
-		case IP_TTL:
-		case IP_MULTICAST_IF:
-		case IP_MULTICAST_TTL:
+		case C.IP_TOS:
+		case C.IP_TTL:
+		case C.IP_MULTICAST_IF:
+		case C.IP_MULTICAST_TTL:
 			if len(v.optval) < 1 {
 				log.Printf("sockopt: bad argument to IP_MULTICAST_TTL")
 				return nil
 			}
 			return tcpip.MulticastTTLOption(v.optval[0])
-		case IP_MULTICAST_LOOP:
-		case IP_ADD_MEMBERSHIP, IP_DROP_MEMBERSHIP:
-			mreqn := c_ip_mreqn{}
-			if err := mreqn.Decode(v.optval[:v.optlen]); err != nil {
-				// If we fail to decode a c_ip_mreqn, try to decode a c_ip_mreq.
-				mreq := c_ip_mreq{}
-				if err := mreq.Decode(v.optval[:v.optlen]); err != nil {
+		case C.IP_MULTICAST_LOOP:
+		case C.IP_ADD_MEMBERSHIP, C.IP_DROP_MEMBERSHIP:
+			mreqn := C.struct_ip_mreqn{}
+			if err := mreqn.Decode(v.optBytes()); err != nil {
+				// If we fail to decode a C.struct_ip_mreqn, try to decode a C.struct_ip_mreq.
+				mreq := C.struct_ip_mreq{}
+				if err := mreq.Decode(v.optBytes()); err != nil {
 					log.Printf("sockopt: bad argument to %d", v.optname)
 					return nil
 				}
@@ -75,18 +81,18 @@ func (v *c_mxrio_sockopt_req_reply) Unpack() interface{} {
 			}
 			option := tcpip.MembershipOption{
 				NIC:           tcpip.NICID(mreqn.imr_ifindex),
-				InterfaceAddr: tcpip.Address(mreqn.imr_address[:]),
-				MulticastAddr: tcpip.Address(mreqn.imr_multiaddr[:]),
+				InterfaceAddr: tcpip.Address(mreqn.imr_address.Bytes()),
+				MulticastAddr: tcpip.Address(mreqn.imr_multiaddr.Bytes()),
 			}
-			if v.optname == IP_ADD_MEMBERSHIP {
+			if v.optname == C.IP_ADD_MEMBERSHIP {
 				return tcpip.AddMembershipOption(option)
 			}
 			return tcpip.RemoveMembershipOption(option)
 		}
 		log.Printf("convSockOpt: TODO IPPROTO_IP optname=%d", v.optname)
-	case SOL_TCP:
+	case C.SOL_TCP:
 		switch v.optname {
-		case TCP_NODELAY:
+		case C.TCP_NODELAY:
 			var delay int
 			noDelay := v.intValue()
 			if noDelay != 0 {
@@ -95,21 +101,21 @@ func (v *c_mxrio_sockopt_req_reply) Unpack() interface{} {
 				delay = 1
 			}
 			return tcpip.DelayOption(delay)
-		case TCP_INFO:
+		case C.TCP_INFO:
 			return tcpip.TCPInfoOption{}
-		case TCP_MAXSEG:
-		case TCP_CORK:
-		case TCP_KEEPIDLE:
+		case C.TCP_MAXSEG:
+		case C.TCP_CORK:
+		case C.TCP_KEEPIDLE:
 			return tcpip.KeepaliveIdleOption(time.Duration(v.intValue()) * time.Second)
-		case TCP_KEEPINTVL:
+		case C.TCP_KEEPINTVL:
 			return tcpip.KeepaliveIntervalOption(time.Duration(v.intValue()) * time.Second)
-		case TCP_KEEPCNT:
+		case C.TCP_KEEPCNT:
 			return tcpip.KeepaliveCountOption(v.intValue())
-		case TCP_SYNCNT:
-		case TCP_LINGER2:
-		case TCP_DEFER_ACCEPT:
-		case TCP_WINDOW_CLAMP:
-		case TCP_QUICKACK:
+		case C.TCP_SYNCNT:
+		case C.TCP_LINGER2:
+		case C.TCP_DEFER_ACCEPT:
+		case C.TCP_WINDOW_CLAMP:
+		case C.TCP_QUICKACK:
 		}
 		log.Printf("convSockOpt: TODO SOL_TCP optname=%d", v.optname)
 	}
