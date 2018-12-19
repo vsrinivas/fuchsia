@@ -4,10 +4,10 @@
 
 use fidl_fuchsia_ui_gfx::Command as GfxCommand;
 use fidl_fuchsia_ui_gfx::{
-    AddChildCmd, ColorRgba, ColorRgbaValue, CreateResourceCmd, DetachCmd, ExportResourceCmd,
-    ImportResourceCmd, ImportSpec, Quaternion, QuaternionValue, ReleaseResourceCmd, ResourceArgs,
-    SetColorCmd, SetEventMaskCmd, SetMaterialCmd, SetRotationCmd, SetScaleCmd, SetShapeCmd,
-    SetTextureCmd, SetTranslationCmd, Vec3, Vector3Value,
+    AddChildCmd, AddPartCmd, ColorRgba, ColorRgbaValue, CreateResourceCmd, DetachCmd,
+    ExportResourceCmd, ImportResourceCmd, ImportSpec, Quaternion, QuaternionValue,
+    ReleaseResourceCmd, ResourceArgs, SetClipCmd, SetColorCmd, SetEventMaskCmd, SetMaterialCmd,
+    SetRotationCmd, SetScaleCmd, SetShapeCmd, SetTextureCmd, SetTranslationCmd, Vec3, Vector3Value,
 };
 use fidl_fuchsia_ui_scenic::Command;
 use fuchsia_zircon::EventPair;
@@ -35,6 +35,15 @@ pub fn release_resource(id: u32) -> Command {
 pub fn set_event_mask(id: u32, event_mask: u32) -> Command {
     let cmd = SetEventMaskCmd { id, event_mask };
     Command::Gfx(GfxCommand::SetEventMask(cmd))
+}
+
+pub fn set_clip(node_id: u32, clip_id: u32, clip_to_self: bool) -> Command {
+    let cmd = SetClipCmd {
+        node_id,
+        clip_id,
+        clip_to_self,
+    };
+    Command::Gfx(GfxCommand::SetClip(cmd))
 }
 
 pub fn set_color(material_id: u32, value: ColorRgba) -> Command {
@@ -105,6 +114,11 @@ pub fn set_rotation(id: u32, x: f32, y: f32, z: f32, w: f32) -> Command {
 pub fn add_child(node_id: u32, child_id: u32) -> Command {
     let cmd = AddChildCmd { node_id, child_id };
     Command::Gfx(GfxCommand::AddChild(cmd))
+}
+
+pub fn add_part(node_id: u32, part_id: u32) -> Command {
+    let cmd = AddPartCmd { node_id, part_id };
+    Command::Gfx(GfxCommand::AddPart(cmd))
 }
 
 pub fn detach(id: u32) -> Command {

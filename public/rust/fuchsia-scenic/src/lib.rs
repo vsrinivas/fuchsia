@@ -348,6 +348,10 @@ impl ContainerNode {
     pub fn add_child(&self, node: &Node) {
         self.enqueue(cmd::add_child(self.id(), node.id()));
     }
+
+    pub fn add_part(&self, node: &Node) {
+        self.enqueue(cmd::add_part(self.id(), node.id()));
+    }
 }
 
 impl Deref for ContainerNode {
@@ -387,6 +391,10 @@ impl EntityNode {
             session,
             ResourceArgs::EntityNode(args),
         )))
+    }
+
+    pub fn set_clip(&self, clip_id: u32, clip_to_self: bool) {
+        self.enqueue(cmd::set_clip(self.id(), clip_id, clip_to_self));
     }
 
     pub fn export_as_request(&self) -> EventPair {
