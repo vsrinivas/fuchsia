@@ -129,7 +129,7 @@ func (v *c_in_port) setPort(port uint16) {
 	v[1] = uint8(port)
 }
 
-func readSockaddrIn(data []byte) (*tcpip.FullAddress, error) {
+func readSockaddrIn(data []byte) (tcpip.FullAddress, error) {
 	// TODO: recast in terms of c_sockaddr_storage
 	// TODO: split out the not-unsafe parts into socket_conv.go.
 	family := uint16(data[0]) | uint16(data[1])<<8
@@ -139,10 +139,10 @@ func readSockaddrIn(data []byte) (*tcpip.FullAddress, error) {
 	switch family {
 	case AF_INET:
 		if len(data) < int(unsafe.Sizeof(c_sockaddr_in{})) {
-			return nil, mxerror.Errorf(zx.ErrInvalidArgs, "reading c_sockaddr_in: len(data)=%d too small", len(data))
+			return tcpip.FullAddress{}, mxerror.Errorf(zx.ErrInvalidArgs, "reading c_sockaddr_in: len(data)=%d too small", len(data))
 		}
 		v := (*c_sockaddr_in)(unsafe.Pointer(&data[0]))
-		addr := &tcpip.FullAddress{
+		addr := tcpip.FullAddress{
 			Port: uint16(data[3]) | uint16(data[2])<<8,
 		}
 		// INADDR_ANY is represented as tcpip.Address("").
@@ -155,10 +155,10 @@ func readSockaddrIn(data []byte) (*tcpip.FullAddress, error) {
 		return addr, nil
 	case AF_INET6:
 		if len(data) < int(unsafe.Sizeof(c_sockaddr_in6{})) {
-			return nil, mxerror.Errorf(zx.ErrInvalidArgs, "reading c_sockaddr_in6: len(data)=%d too small", len(data))
+			return tcpip.FullAddress{}, mxerror.Errorf(zx.ErrInvalidArgs, "reading c_sockaddr_in6: len(data)=%d too small", len(data))
 		}
 		v := (*c_sockaddr_in6)(unsafe.Pointer(&data[0]))
-		addr := &tcpip.FullAddress{
+		addr := tcpip.FullAddress{
 			Port: uint16(data[3]) | uint16(data[2])<<8,
 		}
 		if !isZeros(v.sin6_addr[:]) {
@@ -169,7 +169,7 @@ func readSockaddrIn(data []byte) (*tcpip.FullAddress, error) {
 		}
 		return addr, nil
 	default:
-		return nil, mxerror.Errorf(zx.ErrInvalidArgs, "reading c_sockaddr: unknown family: %d", family)
+		return tcpip.FullAddress{}, mxerror.Errorf(zx.ErrInvalidArgs, "reading c_sockaddr: unknown family: %d", family)
 	}
 }
 
@@ -181,7 +181,11 @@ func readSocketMsgHdr(data []byte) (*tcpip.FullAddress, error) {
 	if hdr.addrlen == 0 {
 		return nil, nil
 	}
-	return readSockaddrIn(data) // first field of c_fdio_socket_msg_hdr is c_sockaddr_storage
+	addr, err := readSockaddrIn(data) // first field of c_fdio_socket_msg_hdr is c_sockaddr_storage
+	if err != nil {
+		return nil, err
+	}
+	return &addr, nil
 }
 
 func writeSocketMsgHdr(data []byte, addr tcpip.FullAddress) error {

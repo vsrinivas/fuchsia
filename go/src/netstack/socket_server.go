@@ -828,11 +828,11 @@ func (s *socketServer) opBind(ios *iostate, msg *zxsocket.Msg) (status zx.Status
 	}
 	if debug {
 		defer func() {
-			log.Printf("bind(%+v): %v", *addr, status)
+			log.Printf("bind(%+v): %v", addr, status)
 		}()
 	}
 
-	if err := ios.ep.Bind(*addr, nil); err != nil {
+	if err := ios.ep.Bind(addr, nil); err != nil {
 		return zxNetError(err)
 	}
 
@@ -1102,7 +1102,7 @@ func (s *socketServer) opConnect(ios *iostate, msg *zxsocket.Msg) (status zx.Sta
 	}
 	if debug {
 		defer func() {
-			log.Printf("connect(%+v): %v", *addr, status)
+			log.Printf("connect(%+v): %v", addr, status)
 		}()
 	}
 
@@ -1120,7 +1120,7 @@ func (s *socketServer) opConnect(ios *iostate, msg *zxsocket.Msg) (status zx.Sta
 
 	waitEntry, notifyCh := waiter.NewChannelEntry(nil)
 	ios.wq.EventRegister(&waitEntry, waiter.EventOut)
-	e := ios.ep.Connect(*addr)
+	e := ios.ep.Connect(addr)
 
 	msg.SetOff(0)
 	msg.Datalen = 0
@@ -1153,7 +1153,7 @@ func (s *socketServer) opConnect(ios *iostate, msg *zxsocket.Msg) (status zx.Sta
 	ios.wq.EventUnregister(&waitEntry)
 	if e != nil {
 		if debug {
-			log.Printf("connect: addr=%v, %v", *addr, e)
+			log.Printf("connect: addr=%v, %v", addr, e)
 		}
 		return zxNetError(e)
 	}
