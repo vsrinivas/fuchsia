@@ -132,7 +132,7 @@ impl Completer for CmdHelper {
     // given by the Cmd enum with a closure for extracting a list from state.
     // Complete command variants
     fn complete(&self, line: &str, _pos: usize) -> Result<(usize, Vec<String>), ReadlineError> {
-        let components: Vec<_> = line.trim_left().split_whitespace().collect();
+        let components: Vec<_> = line.trim_start().split_whitespace().collect();
 
         // Check whether we have entered a command and either whitespace or a partial argument.
         // If yes, complete arguments; if no, complete commands

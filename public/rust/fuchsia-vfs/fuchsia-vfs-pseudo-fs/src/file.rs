@@ -1915,13 +1915,13 @@ mod tests {
 
                 (
                     async move {
-                        await!(start_receiver);
+                        await!(start_receiver).unwrap();
 
                         await!(open_requests_sender.send(server_end)).unwrap();
 
                         assert_read!(proxy, expected_content);
 
-                        await!(read_and_close_receiver);
+                        await!(read_and_close_receiver).unwrap();
 
                         assert_seek!(proxy, 0, Start);
                         assert_read!(proxy, expected_content);

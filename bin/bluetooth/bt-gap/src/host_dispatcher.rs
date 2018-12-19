@@ -65,9 +65,11 @@ pub struct DiscoveryRequestToken {
 }
 
 impl Drop for DiscoveryRequestToken {
+    #[allow(unused_must_use)] // FIXME(BT-643)
     fn drop(&mut self) {
         fx_vlog!(1, "DiscoveryRequestToken dropped");
         if let Some(host) = self.adap.upgrade() {
+            // FIXME(nickpollard) this should be `await!`ed, but not while holding the lock
             host.write().stop_discovery();
         }
     }
@@ -78,8 +80,10 @@ pub struct DiscoverableRequestToken {
 }
 
 impl Drop for DiscoverableRequestToken {
+    #[allow(unused_must_use)] // FIXME(nickpollard)
     fn drop(&mut self) {
         if let Some(host) = self.adap.upgrade() {
+            // FIXME(BT-643) this should be `await!`ed, but not while holding the lock
             let host = host.write();
             host.set_discoverable(false);
         }

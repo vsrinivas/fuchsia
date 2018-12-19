@@ -343,7 +343,7 @@ async fn get_ip_addrs_for_wlan_iface<'a>(
     for iface in response.ifaces {
         if wlan_iface_id == iface.iface_id {
             // trim off any leading '@'s
-            iface_path = iface.path.trim_left_matches('@').to_string();
+            iface_path = iface.path.trim_start_matches('@').to_string();
         }
     }
 
@@ -362,7 +362,7 @@ async fn get_ip_addrs_for_wlan_iface<'a>(
             continue;
         }
         // trim off any leading '@'s
-        let net_path = net_iface.properties.path.trim_left_matches('@').to_string();
+        let net_path = net_iface.properties.path.trim_start_matches('@').to_string();
         if net_path.starts_with(&iface_path) {
             // now get the ip addrs
             wlan_iface_ip_addrs.append(&mut net_iface.properties.addresses);

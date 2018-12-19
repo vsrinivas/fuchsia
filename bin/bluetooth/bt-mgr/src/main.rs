@@ -5,8 +5,6 @@
 #![deny(warnings)]
 #![feature(async_await, await_macro, futures_api, pin, arbitrary_self_types)]
 
-#[macro_use] extern crate serde_derive;
-
 use fuchsia_bluetooth::make_clones;
 use fuchsia_async as fasync;
 use fuchsia_app::{server::ServicesServer, client::Launcher};

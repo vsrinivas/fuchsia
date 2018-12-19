@@ -129,7 +129,7 @@ impl Config {
         ))?;
         let mut name = String::from(prefix);
         for digit in topological_path[..index]
-            .trim_right_matches(|c: char| !c.is_digit(16) || c == '0')
+            .trim_end_matches(|c: char| !c.is_digit(16) || c == '0')
             .chars()
             .filter(|c| c.is_digit(16))
         {
