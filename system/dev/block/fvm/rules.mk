@@ -12,6 +12,7 @@ SRCS := \
     $(LOCAL_DIR)/fvm.c \
     $(LOCAL_DIR)/fvm.cpp \
     $(LOCAL_DIR)/slice-extent.cpp \
+    $(LOCAL_DIR)/vpartition.cpp \
 
 MODULE_SRCS := $(SRCS)
 
