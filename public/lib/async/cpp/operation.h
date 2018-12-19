@@ -13,9 +13,11 @@
 #include <vector>
 
 #include <lib/async/cpp/future.h>
+#include <lib/async_promise/executor.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
 #include <lib/fxl/memory/weak_ptr.h>
+#include <lib/fit/promise.h>
 
 namespace modular {
 class OperationBase;
@@ -30,6 +32,11 @@ class OperationContainer {
 
   // Adds |o| to this container and takes ownership.
   virtual void Add(OperationBase* o) final;
+
+  // Adds |task| to be scheduled on |this|. This mirrors
+  // the interface in fit::executor, and is here only during
+  // a transition from Operations to fit::promises.
+  virtual void ScheduleTask(fit::pending_task task) = 0;
 
  protected:
   void Schedule(OperationBase* o);
@@ -54,12 +61,15 @@ class OperationCollection : public OperationContainer {
   OperationCollection();
   ~OperationCollection() override;
 
+  void ScheduleTask(fit::pending_task task) override;
+
  private:
   fxl::WeakPtr<OperationContainer> GetWeakPtr() override;
   void Hold(OperationBase* o) override;
   void Drop(OperationBase* o) override;
   void Cont() override;
 
+  async::Executor executor_;
   std::vector<std::unique_ptr<OperationBase>> operations_;
 
   // It is essential that the weak_ptr_factory is defined after the operations_
@@ -81,6 +91,8 @@ class OperationQueue : public OperationContainer {
   OperationQueue();
   ~OperationQueue() override;
 
+  void ScheduleTask(fit::pending_task task) override;
+
  private:
   fxl::WeakPtr<OperationContainer> GetWeakPtr() override;
   void Hold(OperationBase* o) override;
@@ -93,6 +105,7 @@ class OperationQueue : public OperationContainer {
   // |operations_|: its result callback could be executing.
   bool idle_ = true;
 
+  async::Executor executor_;
   std::queue<std::unique_ptr<OperationBase>> operations_;
 
   // It is essential that the weak_ptr_factory is defined after the operations_

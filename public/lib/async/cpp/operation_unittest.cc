@@ -41,6 +41,8 @@ class TestContainer : public OperationContainer {
 
   void Cont() override { ++cont_count; }
 
+  void ScheduleTask(fit::pending_task task) override {}
+
   void PretendToDie() { weak_ptr_factory_.InvalidateWeakPtrs(); }
 
   using OperationContainer::InvalidateWeakPtrs;  // Promote for testing.
@@ -185,8 +187,8 @@ class TestFlowTokenOperation : public Operation<int> {
       : Operation("Test FlowToken Operation", std::move(done)) {}
 
   // |call_before_flow_dies| is invoked before the FlowToken goes out of scope.
-  void SayDone(int result,
-               std::function<void()> call_before_flow_dies = [] {}) {
+  void SayDone(
+      int result, std::function<void()> call_before_flow_dies = [] {}) {
     // When |flow| goes out of scope, it will call Done() for us.
     FlowToken flow{this, &result_};
 
@@ -255,29 +257,47 @@ TEST_F(OperationTest, Lifecycle_FlowToken_OperationGoesAway) {
 TEST_F(OperationTest, OperationQueue) {
   // Here we test a specific implementation of OperationContainer
   // (OperationQueue), which should only allow one operation to "run" at a
-  // given time. That means that operation #2 is not scheduled until operation
-  // #1 finishes.
+  // given time.
   OperationQueue container;
 
-  // OperationQueue, unlike TestContainer, does manage its memory.
+  // OperationQueue, unlike TestContainer, does own the Operations.
   bool op1_ran = false;
   bool op1_done = false;
   auto* op1 = new TestOperation<>([&op1_ran]() { op1_ran = true; },
                                   [&op1_done]() { op1_done = true; });
 
+  bool op3_ran = false;
+  bool op3_done = false;
+  auto* op3 = new TestOperation<>([&op3_ran]() { op3_ran = true; },
+                                  [&op3_done]() { op3_done = true; });
+
+  // We'll queue |op1|, then a fit::promise ("op2") and another Operation,
+  // |op3|.
+  container.Add(op1);
+
   bool op2_ran = false;
   bool op2_done = false;
-  auto* op2 = new TestOperation<>([&op2_ran]() { op2_ran = true; },
-                                  [&op2_done]() { op2_done = true; });
+  fit::suspended_task suspended_op2;
+  container.ScheduleTask(
+      fit::make_promise([&](fit::context& c) -> fit::result<> {
+        if (op2_ran == true) {
+          op2_done = true;
+          return fit::ok();
+        }
+        op2_ran = true;
+        suspended_op2 = c.suspend_task();
+        return fit::pending();
+      }));
 
-  container.Add(op1);
-  container.Add(op2);
+  container.Add(op3);
 
   // Nothing has run yet because we haven't run the async loop.
   EXPECT_FALSE(op1_ran);
   EXPECT_FALSE(op1_done);
   EXPECT_FALSE(op2_ran);
   EXPECT_FALSE(op2_done);
+  EXPECT_FALSE(op3_ran);
+  EXPECT_FALSE(op3_done);
 
   // Running the loop we expect op1 to have run, but not completed.
   RunLoopUntilIdle();
@@ -285,24 +305,42 @@ TEST_F(OperationTest, OperationQueue) {
   EXPECT_FALSE(op1_done);
   EXPECT_FALSE(op2_ran);
   EXPECT_FALSE(op2_done);
+  EXPECT_FALSE(op3_ran);
+  EXPECT_FALSE(op3_done);
 
-  // But even if we run more, we do not expect op2 to run.
+  // But even if we run more, we do not expect any other ops to run.
   RunLoopUntilIdle();
   EXPECT_TRUE(op1_ran);
   EXPECT_FALSE(op1_done);
   EXPECT_FALSE(op2_ran);
   EXPECT_FALSE(op2_done);
+  EXPECT_FALSE(op3_ran);
+  EXPECT_FALSE(op3_done);
 
-  // If op1 says it's Done(), we expect op2 to be queued, but not run yet.
+  // If op1 says it's Done(), we expect op2 to run.
   op1->SayDone();
-  EXPECT_TRUE(op1_done);
-  EXPECT_FALSE(op2_ran);
-  EXPECT_FALSE(op2_done);
-
-  // Running the loop again we expect op2 to start, but not completed.
   RunLoopUntilIdle();
+  EXPECT_TRUE(op1_done);
   EXPECT_TRUE(op2_ran);
   EXPECT_FALSE(op2_done);
+  EXPECT_FALSE(op3_ran);
+  EXPECT_FALSE(op3_done);
+
+  // Running the loop again should do nothing, as op2 is still pending (until
+  // we resume it manuall).
+  RunLoopUntilIdle();
+  EXPECT_TRUE(suspended_op2);
+  EXPECT_FALSE(op2_done);
+  EXPECT_FALSE(op3_ran);
+  EXPECT_FALSE(op3_done);
+
+  // Resume op2, and run the loop again. We expect op3 to start, but not
+  // complete.
+  suspended_op2.resume_task();
+  RunLoopUntilIdle();
+  EXPECT_TRUE(op2_done);
+  EXPECT_TRUE(op3_ran);
+  EXPECT_FALSE(op3_done);
 }
 
 TEST_F(OperationTest, OperationCollection) {
@@ -323,19 +361,25 @@ TEST_F(OperationTest, OperationCollection) {
 
   container.Add(op1);
   container.Add(op2);
+  bool op3_ran = false;
+  container.ScheduleTask(fit::make_promise([&] { op3_ran = true; }));
 
   // Nothing has run yet because we haven't run the async loop.
   EXPECT_FALSE(op1_ran);
   EXPECT_FALSE(op1_done);
   EXPECT_FALSE(op2_ran);
   EXPECT_FALSE(op2_done);
+  EXPECT_FALSE(op3_ran);
 
-  // Running the loop we expect op1 to have run, but not completed.
+  // Running the loop we expect all ops to have run. TestOperations won't have
+  // completed because they require us to call SayDone(). The fit::promise,
+  // however, will have completed (it doesn't suspend).
   RunLoopUntilIdle();
   EXPECT_TRUE(op1_ran);
   EXPECT_FALSE(op1_done);
   EXPECT_TRUE(op2_ran);
   EXPECT_FALSE(op2_done);
+  EXPECT_TRUE(op2_ran);
 }
 
 class TestOperationNotNullPtr : public Operation<> {
