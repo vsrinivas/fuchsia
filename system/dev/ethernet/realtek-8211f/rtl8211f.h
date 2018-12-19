@@ -1,21 +1,30 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
 #pragma once
-#include <ddk/device.h>
-#include <ddk/protocol/ethernet/mac.h>
+
+#include <ddktl/device.h>
+#include <ddktl/protocol/ethernet/mac.h>
 
 namespace phy {
 
-class PhyDevice {
+class PhyDevice;
+using DeviceType = ddk::Device<PhyDevice, ddk::Unbindable>;
+
+class PhyDevice: public DeviceType {
 public:
-    zx_device_t* device_;
-    static zx_status_t ConfigPhy(void* ctx, const uint8_t mac[MAC_ARRAY_LENGTH]);
+    explicit PhyDevice(zx_device_t* parent)
+        : DeviceType(parent), eth_mac_(parent) {}
+
     static zx_status_t Create(zx_device_t* device);
 
+    void DdkRelease();
+    void DdkUnbind();
+
+    zx_status_t ConfigPhy(const uint8_t mac[MAC_ARRAY_LENGTH]);
+
 private:
-    eth_mac_protocol_t eth_mac_;
+    ddk::EthMacProtocolProxy eth_mac_;
 };
 
 } // namespace phy
