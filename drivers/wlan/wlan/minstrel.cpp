@@ -406,7 +406,9 @@ tx_vec_idx_t GetNextProbe(Peer* peer, const ProbeSequence& probe_sequence) {
     tx_vec_idx_t probe_idx = kInvalidTxVectorIdx;
     zx::duration baseline_tx_time = peer->tx_stats_map[peer->max_probability].perfect_tx_time;
     auto potential_probes = peer->tx_stats_map.size();
-    while (potential_probes-- > 0) {
+    if (potential_probes == 1) { return peer->max_tp; }
+    while (potential_probes > 0) {
+        --potential_probes;
         do {
             if (probe_sequence.Next(&peer->probe_entry, &probe_idx)) {
                 ++peer->num_probe_cycles_done;
@@ -540,7 +542,7 @@ namespace debug {
     } while (false)
 
 std::string Describe(const TxStats& tx_stats) {
-    char buf[128];
+    char buf[256];
     size_t offset = 0;
 
     BUFFER("%s", Describe(tx_stats.tx_vector_idx).c_str());
@@ -550,6 +552,8 @@ std::string Describe(const TxStats& tx_stats) {
     BUFFER("att_t: %zu", tx_stats.attempts_total);
     BUFFER("prob: %f", tx_stats.probability);
     BUFFER("tp: %f", tx_stats.cur_tp);
+    BUFFER("probes: %zu", tx_stats.probes_total);
+    BUFFER("probe_cycle_skipped: %hhu", tx_stats.probe_cycles_skipped);
 
     return std::string(buf, buf + offset);
 }

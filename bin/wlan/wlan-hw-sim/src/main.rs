@@ -239,8 +239,11 @@ fn send_association_response(
             association_id: 2, // Can be any
         },
     )?
+    // These elements will be captured in assoc_ctx to initialize Minstrel
+    // tx_vec_idx:                        129   130         131   132
     .supported_rates(&[0x82, 0x84, 0x8b, 0x0c, 0x12, 0x96, 0x18, 0x24])?
-    .extended_supported_rates(&[48, 72, 96, 108])?;
+    // tx_vec_idx:             133 134 (basic)135 136
+    .extended_supported_rates(&[48, 72, 128 + 96, 108])?;
 
     let rx_info = &mut create_rx_info(channel);
     proxy.rx(0, &mut frame_buf.iter().cloned(), rx_info)?;
@@ -372,7 +375,7 @@ mod simulation_tests {
         ok = run_test("simulate_scan", simulate_scan) && ok;
         ok = run_test("connecting_to_ap", connecting_to_ap) && ok;
         ok = run_test("ethernet_tx_rx", ethernet_tx_rx) && ok;
-        if false { ok = run_test("verify_rate_selection", verify_rate_selection) && ok; }
+        ok = run_test("verify_rate_selection", verify_rate_selection) && ok;
         assert!(ok);
     }
 
@@ -601,36 +604,51 @@ mod simulation_tests {
         };
         pin_mut!(test_fut);
 
-        let threshold = 130;  // highest tx_vec_idx that could succeed.
-        // Simulated hardware supports ERP data rate with idx 129 to 136, both inclusive.
+        // Simulated hardware supports 8 ERP tx vectors with idx 129 to 136, both inclusive.
+        // (see `fn send_association_response(...)`)
+        const MUST_USE_IDX: &[u16] = &[129, 130, 131, 132, 133, 134, 136];  // Missing 135 is OK.
+        const ALL_SUPPORTED_IDX: &[u16] = &[129, 130, 131, 132, 133, 134, 135, 136];
+        const ERP_STARTING_IDX: u16 = 129;
+        const MAX_SUCCESSFUL_IDX: u16 = 130;
         // Only the lowest ones can succeed in the simulated environment.
-        let will_succeed = |idx| {129 <= idx && idx <= threshold};
+        let will_succeed = |idx| { ERP_STARTING_IDX <= idx && idx <= MAX_SUCCESSFUL_IDX };
         let is_done = |hm: &HashMap<u16, u64>| {
-            // This hardware supports 8 tx vectors, Minstrel should try all of them.
-            if hm.keys().len() < 8 { return false; }
-            let second_largest = hm.iter().map(|(k, v)| if k == &threshold {0} else {*v})
-                .max().unwrap(); // safe to unwrap as there are 8 entries
-            let highest = hm.values().max().unwrap();
-            // One tx vector has become dominant as the number of data frames transmitted with it is
-            // at least 25 times as large as anyone else.
-            *highest >= 25 * second_largest
+            // Due to its randomness, Minstrel may skip 135. But the other 7 must be present.
+            if hm.keys().len() < MUST_USE_IDX.len() { return false; }
+            // safe to unwrap below because there are at least 7 entries
+            let max_key = hm.keys().max_by_key(|k| {hm[&k]}).unwrap();
+            let second_largest = hm.iter().map(|(k, v)| if k == max_key {0} else {*v})
+                .max().unwrap();
+            let max_val = hm[&max_key];
+            if max_val % 100 == 0 { println!("{:?}", hm); }
+            // One tx vector has become dominant as the number of data frames transmitted with it
+            // is at least 15 times as large as anyone else. 15 is the number of non-probing data
+            // frames between 2 consecutive probing data frames.
+            const NORMAL_FRAMES_PER_PROBE: u64 = 15;
+            max_val >= NORMAL_FRAMES_PER_PROBE * second_largest
         };
         let mut hm = HashMap::new();
-        let () = helper.run(&mut exec, 30.seconds(), "verify rate selection is working",
-                               |event| {
-                                   handle_rate_selection_event(event, &phy, &BSS_MINSTL, &mut hm,
-                                                               will_succeed, is_done,
-                                                               sender.clone());
-                               },
-                               test_fut).expect("running main future");
+        helper.run(&mut exec, 30.seconds(), "verify rate selection is working",
+                   |event| {
+                       handle_rate_selection_event(event, &phy, &BSS_MINSTL, &mut hm,
+                                                   will_succeed, is_done, sender.clone());
+                   },
+                   test_fut)
+            .expect("running main future");
 
         let total = hm.values().sum::<u64>();
-        let others = total - hm[&threshold];
+        let others = total - hm[&MAX_SUCCESSFUL_IDX];
         println!("{:#?}\ntotal: {}, others: {}", hm, total, others);
-        // Find the tx_vec_idx that has been used to transmit the most data frames.
-        let max = hm.keys().max_by_key(|k| {hm[&k]}).unwrap();
-        // This dominant idx must match the expected optimal.
-        assert_eq!(max, &threshold);
+        let mut tx_vec_idx_seen : Vec<_> = hm.keys().cloned().collect();
+        tx_vec_idx_seen.sort();
+        if tx_vec_idx_seen.len() == MUST_USE_IDX.len() {
+            // 135 may not be attempted due to randomness and it is OK.
+            assert_eq!(&tx_vec_idx_seen[..], MUST_USE_IDX);
+        } else {
+            assert_eq!(&tx_vec_idx_seen[..], ALL_SUPPORTED_IDX);
+        }
+        let most_frequently_used_idx = hm.keys().max_by_key(|k| {hm[&k]}).unwrap();
+        assert_eq!(most_frequently_used_idx, &MAX_SUCCESSFUL_IDX);
     }
 
     fn handle_rate_selection_event<F, G>(event: wlantap::WlantapPhyEvent,
@@ -647,6 +665,9 @@ mod simulation_tests {
                         .expect("Error sending tx_status report");
                     let count = hm.entry(tx_vec_idx).or_insert(0);
                     *count += 1;
+                    if *count == 1 {
+                        println!("new tx_vec_idx: {} at #{}",tx_vec_idx, hm.values().sum::<u64>());
+                    }
                     if is_done(hm) { sender.try_send(()).expect("Indicating test successful"); }
                 }
             },
@@ -666,7 +687,7 @@ mod simulation_tests {
             eth_type : eth_frames::EtherType::Ipv4 as u16,
         }).expect("Error creating fake ethernet frame");
 
-        const ETH_PACKETS_PER_INTERVAL : u64 = 8;
+        const ETH_PACKETS_PER_INTERVAL : u64 = 16;
 
         let mut timer_stream = fasync::Interval::new(7.millis())
         .map(|()| stream::repeat(()).take(ETH_PACKETS_PER_INTERVAL))
