@@ -51,13 +51,13 @@ bool gpt_is_install_guid(uint8_t* guid, ssize_t len);
 bool gpt_is_efi_guid(uint8_t* guid, ssize_t len);
 
 // read the partition table from the device.
-int gpt_device_init(int fd, uint64_t blocksize, uint64_t blocks, gpt_device_t** out_dev);
+int gpt_device_init(int fd, uint32_t blocksize, uint64_t blocks, gpt_device_t** out_dev);
 
 // releases the device
 void gpt_device_release(gpt_device_t* dev);
 
 // Returns the range of usable blocks within the GPT, from [block_start, block_end] (inclusive)
-int gpt_device_range(gpt_device_t* dev, uint64_t* block_start, uint64_t* block_end);
+int gpt_device_range(const gpt_device_t* dev, uint64_t* block_start, uint64_t* block_end);
 
 // writes the partition table to the device. it is the caller's responsibility to
 // rescan partitions for the block device if needed
@@ -89,14 +89,14 @@ int gpt_partition_remove_all(gpt_device_t* dev);
 void uint8_to_guid_string(char* dst, const uint8_t* src);
 
 // given a gpt device, get the GUID for the disk
-void gpt_device_get_header_guid(gpt_device_t* dev,
+void gpt_device_get_header_guid(const gpt_device_t* dev,
                                 uint8_t (*disk_guid_out)[GPT_GUID_LEN]);
 
 // return true if partition# idx has been locally modified
 int gpt_get_diffs(const gpt_device_t* dev, int idx, unsigned* diffs);
 
 // print out the GPT
-void print_table(gpt_device_t* device);
+void print_table(const gpt_device_t* device);
 
 // Sort an array of gpt_partition_t pointers in-place based on the values of
 // gpt_partition_t->first.

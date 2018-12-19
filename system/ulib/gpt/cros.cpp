@@ -7,30 +7,35 @@
 #include <gpt/gpt.h>
 #include <string.h>
 
-#define PRIORITY_SHIFT 48
-#define PRIORITY_MASK (15ull << PRIORITY_SHIFT)
+namespace libgpt {
 
-#define TRIES_SHIFT 52
-#define TRIES_MASK (15ull << TRIES_SHIFT)
+namespace {
+constexpr uint8_t kPriorityShift = 48;
+constexpr uint64_t kPriorityMask = 15ull << kPriorityShift;
 
-#define SUCCESSFUL_SHIFT 56
-#define SUCCESSFUL_MASK (1ull << SUCCESSFUL_SHIFT)
+constexpr uint8_t kTriesShift = 52;
+constexpr uint64_t kTriesMask = 15ull << kTriesShift;
 
+constexpr uint8_t kSuccessfulShift = 56;
+constexpr uint64_t kSuccessfulMask = 1ull << kSuccessfulShift;
+} // namespace
+
+__BEGIN_CDECLS
 bool gpt_cros_is_kernel_guid(const uint8_t* guid, size_t len) {
     static const uint8_t kernel_guid[GPT_GUID_LEN] = GUID_CROS_KERNEL_VALUE;
     return len == GPT_GUID_LEN && !memcmp(guid, kernel_guid, GPT_GUID_LEN);
 }
 
 bool gpt_cros_attr_get_successful(uint64_t flags) {
-    return flags & SUCCESSFUL_MASK;
+    return flags & kSuccessfulMask;
 }
 
 void gpt_cros_attr_set_successful(uint64_t* flags, bool successful) {
-    *flags = (*flags & ~SUCCESSFUL_MASK) | ((uint64_t)successful << SUCCESSFUL_SHIFT);
+    *flags = (*flags & ~kSuccessfulMask) | ((uint64_t)successful << kSuccessfulShift);
 }
 
 uint8_t gpt_cros_attr_get_tries(uint64_t flags) {
-    return (flags & TRIES_MASK) >> TRIES_SHIFT;
+    return (flags & kTriesMask) >> kTriesShift;
 }
 
 int gpt_cros_attr_set_tries(uint64_t* flags, uint8_t tries) {
@@ -38,12 +43,12 @@ int gpt_cros_attr_set_tries(uint64_t* flags, uint8_t tries) {
         return -1;
     }
 
-    *flags = (*flags & ~TRIES_MASK) | ((uint64_t)tries << TRIES_SHIFT);
+    *flags = (*flags & ~kTriesMask) | ((uint64_t)tries << kTriesShift);
     return 0;
 }
 
 uint8_t gpt_cros_attr_get_priority(uint64_t flags) {
-    return (flags & PRIORITY_MASK) >> PRIORITY_SHIFT;
+    return (flags & kPriorityMask) >> kPriorityShift;
 }
 
 int gpt_cros_attr_set_priority(uint64_t* flags, uint8_t priority) {
@@ -51,6 +56,9 @@ int gpt_cros_attr_set_priority(uint64_t* flags, uint8_t priority) {
         return -1;
     }
 
-    *flags = (*flags & ~PRIORITY_MASK) | ((uint64_t)priority << PRIORITY_SHIFT);
+    *flags = (*flags & ~kPriorityMask) | ((uint64_t)priority << kPriorityShift);
     return 0;
 }
+
+__END_CDECLS
+} // namespace libgpt

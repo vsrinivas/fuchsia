@@ -117,8 +117,8 @@ public:
         zxio_init(&storage->io, &mock_ops);
         fd_.reset(fdio_bind_to_fd(io, -1, 0));
         ASSERT_TRUE(fd_);
-        zx_status_t rc = gpt_device_init(fd_.get(), BlockSize(), BlockCount(),
-                                         &device_);
+        zx_status_t rc = gpt_device_init(fd_.get(), static_cast<uint32_t>(BlockSize()),
+                                         BlockCount(), &device_);
         ASSERT_GE(rc, 0, "Could not initialize gpt");
         rc = gpt_device_finalize(device_);
         ASSERT_GE(rc, 0, "Could not finalize gpt");

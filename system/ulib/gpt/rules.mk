@@ -11,8 +11,8 @@ MODULE_TYPE := userlib
 MODULE_COMPILEFLAGS += -fvisibility=hidden
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/cros.c \
-    $(LOCAL_DIR)/gpt.c \
+    $(LOCAL_DIR)/cros.cpp \
+    $(LOCAL_DIR)/gpt.cpp \
 
 MODULE_STATIC_LIBS := third_party/ulib/cksum
 
