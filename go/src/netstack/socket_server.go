@@ -179,36 +179,38 @@ func (ios *iostate) loopStreamWrite(stk *stack.Stack) {
 			log.Printf("socket read failed: %v", err) // TODO: communicate this
 			continue
 		}
+		v = v[:n]
 
 		if debug {
-			log.Printf("loopStreamWrite: sending packet n=%d, v=%q", n, v[:n])
+			log.Printf("loopStreamWrite: sending packet n=%d, v=%q", n, v)
 		}
-		ios.wq.EventRegister(&waitEntry, waiter.EventOut)
 
-		v = v[:n]
-		for {
-			n, resCh, err := ios.ep.Write(tcpip.SlicePayload(v), tcpip.WriteOptions{})
-			if resCh != nil {
-				panic(fmt.Sprintf("TCP Write: resCh=%v; should only happen on connect; n=%d err=%v", resCh, n, err))
-			}
-			if err != nil {
-				switch err {
-				case tcpip.ErrNoLinkAddress:
-					panic(fmt.Sprintf("TCP Write: err=%v; should only happen on connect; n=%d resCh=%v", n, resCh, err))
-				case tcpip.ErrWouldBlock:
+		if err := func() *tcpip.Error {
+			ios.wq.EventRegister(&waitEntry, waiter.EventOut)
+			defer ios.wq.EventUnregister(&waitEntry)
+
+			for {
+				n, resCh, err := ios.ep.Write(tcpip.SlicePayload(v), tcpip.WriteOptions{})
+				if resCh != nil {
+					if err != tcpip.ErrNoLinkAddress {
+						panic(fmt.Sprintf("err=%v inconsistent with presence of resCh", err))
+					}
+					panic(fmt.Sprintf("TCP link address resolutions happen on connect; saw %d/%d", n, len(v)))
+				}
+				if err == tcpip.ErrWouldBlock {
 					// Note that Close should not interrupt this wait.
 					<-notifyCh
-				default:
-					panic(fmt.Sprintf("TCP Write: err=%v; unexpected; n=%d, resCh=%v", n, resCh, err))
+					continue
+				}
+				if err != nil {
+					return err
+				}
+				v = v[n:]
+				if len(v) == 0 {
+					return nil
 				}
 			}
-			v = v[n:]
-			if len(v) == 0 {
-				break
-			}
-		}
-		ios.wq.EventUnregister(&waitEntry)
-		if err != nil {
+		}(); err != nil {
 			log.Printf("loopStreamWrite: got endpoint error: %v (TODO)", err)
 			return
 		}
@@ -452,29 +454,30 @@ func (ios *iostate) loopDgramWrite(stk *stack.Stack) {
 			log.Printf("loopDgramWrite: bad socket msg header: %v", err)
 			continue
 		}
-
 		v = v[c_fdio_socket_msg_hdr_len:]
-		for {
-			n, resCh, err := ios.ep.Write(tcpip.SlicePayload(v), tcpip.WriteOptions{To: receiver})
-			if err != nil {
-				switch err {
-				case tcpip.ErrNoLinkAddress:
-					if resCh != nil {
-						<-resCh
-						continue
-					} else {
-						panic(fmt.Sprintf("UDP Write: err=%v resCh=%v; unexpected; n=%d", err, resCh, n))
+
+		if err := func() *tcpip.Error {
+			for {
+				n, resCh, err := ios.ep.Write(tcpip.SlicePayload(v), tcpip.WriteOptions{To: receiver})
+				if resCh != nil {
+					if err != tcpip.ErrNoLinkAddress {
+						panic(fmt.Sprintf("err=%v inconsistent with presence of resCh", err))
 					}
-				default:
-					panic(fmt.Sprintf("UDP Write: err=%v; unexpected; n=%d, resCh=%v", err, n, resCh))
+					<-resCh
+					continue
 				}
+				if err == tcpip.ErrWouldBlock {
+					panic(fmt.Sprintf("UDP writes are nonblocking; saw %d/%d", n, len(v)))
+				}
+				if err != nil {
+					return err
+				}
+				if int(n) < len(v) {
+					panic(fmt.Sprintf("UDP disallowes short writes; saw: %d/%d", n, len(v)))
+				}
+				return nil
 			}
-			if int(n) < len(v) {
-				panic(fmt.Sprintf("UDP short write: %d/%d", n, len(v)))
-			}
-			break
-		}
-		if err != nil {
+		}(); err != nil {
 			log.Printf("loopDgramWrite: got endpoint error: %v (TODO)", err)
 			return
 		}
