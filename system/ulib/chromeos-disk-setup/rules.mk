@@ -11,7 +11,7 @@ MODULE_GROUP := core
 
 MODULE_COMPILEFLAGS += -fvisibility=hidden
 
-MODULE_SRCS := $(LOCAL_DIR)/chromeos-disk-setup.c
+MODULE_SRCS := $(LOCAL_DIR)/chromeos-disk-setup.cpp
 
 MODULE_LIBS := system/ulib/c
 
