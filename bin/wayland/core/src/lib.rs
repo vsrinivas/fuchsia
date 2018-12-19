@@ -9,6 +9,8 @@ use std::fmt::{self, Debug, Display};
 use std::io;
 use std::marker::PhantomData;
 
+mod fixed;
+pub use crate::fixed::*;
 mod message;
 pub use crate::message::*;
 

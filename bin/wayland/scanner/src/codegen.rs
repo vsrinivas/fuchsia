@@ -37,7 +37,7 @@ impl<W: io::Write> Codegen<W> {
 #![allow(warnings)]
 use bitflags::*;
 use failure;
-use fuchsia_wayland_core::{{ArgKind, Arg, Enum, FromArgs, IntoMessage, Message,
+use fuchsia_wayland_core::{{ArgKind, Arg, Enum, Fixed, FromArgs, IntoMessage, Message,
                             MessageGroupSpec, MessageHeader, MessageSpec, MessageType,
                             NewId, NewObject, ObjectId, EncodeError, DecodeError,
                             Interface }};"
@@ -532,7 +532,7 @@ fn format_dispatch_arg_rust(arg: &ast::Arg) -> Cow<str> {
     match arg.kind {
         ArgKind::Int => "i32".into(),
         ArgKind::Uint => "u32".into(),
-        ArgKind::Fixed => "u32".into(),
+        ArgKind::Fixed => "Fixed".into(),
         ArgKind::String => "String".into(),
         ArgKind::Object => "ObjectId".into(),
         ArgKind::NewId => {
@@ -554,7 +554,7 @@ fn format_wire_arg_rust(arg: &ast::Arg) -> Cow<str> {
     match arg.kind {
         ArgKind::Int => "i32",
         ArgKind::Uint => "u32",
-        ArgKind::Fixed => "u32",
+        ArgKind::Fixed => "Fixed",
         ArgKind::String => "String",
         ArgKind::Object => "ObjectId",
         ArgKind::NewId => "NewId",
@@ -606,7 +606,7 @@ fn arg_to_primitive(arg: &ast::Arg) -> String {
     match arg.kind {
         ArgKind::Int => "as_int()?",
         ArgKind::Uint => "as_uint()?",
-        ArgKind::Fixed => "as_fixed()?",
+        ArgKind::Fixed => "as_fixed()?.into()",
         ArgKind::String => "as_string()?",
         ArgKind::Object => "as_object()?",
         ArgKind::NewId => "as_new_id()?.into()",

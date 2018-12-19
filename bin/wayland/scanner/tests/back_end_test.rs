@@ -6,7 +6,7 @@
 
 #[cfg(test)]
 mod test {
-    use fuchsia_wayland_core::{Arg, FromArgs, IntoMessage};
+    use fuchsia_wayland_core::{Arg, Fixed, FromArgs, IntoMessage};
     use fuchsia_zircon::{self as zx, HandleBased};
     use test_protocol::{test_interface, TestInterfaceEvent, TestInterfaceRequest};
     use zerocopy::AsBytes;
@@ -88,11 +88,11 @@ mod test {
         assert_match!(request, TestInterfaceRequest::Int{arg} => assert_eq!(arg, INT_VALUE));
     }
 
-    static FIXED_VALUE: u32 = 23332125;
+    static FIXED_VALUE: i32 = 23332125;
 
     #[test]
     fn test_serialize_fixed() {
-        let (bytes, handles) = TestInterfaceEvent::Fixed { arg: FIXED_VALUE }
+        let (bytes, handles) = TestInterfaceEvent::Fixed { arg: Fixed::from_bits(FIXED_VALUE) }
             .into_message(SENDER_ID)
             .unwrap()
             .take();
@@ -106,9 +106,9 @@ mod test {
     #[test]
     fn test_deserialize_fixed() {
         let request =
-            TestInterfaceRequest::from_args(2 /* opcode */, vec![Arg::Fixed(FIXED_VALUE)]).unwrap();
+            TestInterfaceRequest::from_args(2 /* opcode */, vec![Arg::Fixed(Fixed::from_bits(FIXED_VALUE))]).unwrap();
 
-        assert_match!(request, TestInterfaceRequest::Fixed{arg} => assert_eq!(arg, FIXED_VALUE));
+        assert_match!(request, TestInterfaceRequest::Fixed{arg} => assert_eq!(arg, Fixed::from_bits(FIXED_VALUE)));
     }
 
     static STRING_VALUE: &'static str = "This is a wayland string.";

@@ -9,7 +9,7 @@ use failure::Fail;
 
 use fuchsia_zircon as zx;
 
-use crate::{NewId, ObjectId};
+use crate::{Fixed, NewId, ObjectId};
 
 #[derive(Copy, Clone, Debug)]
 pub enum ArgKind {
@@ -27,7 +27,7 @@ pub enum ArgKind {
 pub enum Arg {
     Int(i32),
     Uint(u32),
-    Fixed(u32),
+    Fixed(Fixed),
     String(String),
     Object(ObjectId),
     NewId(NewId),
@@ -67,7 +67,7 @@ macro_rules! impl_unwrap_arg(
 impl Arg {
     impl_unwrap_arg!(unwrap_int, i32, Int);
     impl_unwrap_arg!(unwrap_uint, u32, Uint);
-    impl_unwrap_arg!(unwrap_fixed, u32, Fixed);
+    impl_unwrap_arg!(unwrap_fixed, Fixed, Fixed);
     impl_unwrap_arg!(unwrap_object, ObjectId, Object);
     impl_unwrap_arg!(unwrap_new_id, ObjectId, NewId);
     impl_unwrap_arg!(unwrap_string, String, String);
@@ -103,7 +103,7 @@ macro_rules! impl_as_arg(
 impl Arg {
     impl_as_arg!(as_int, i32, Int);
     impl_as_arg!(as_uint, u32, Uint);
-    impl_as_arg!(as_fixed, u32, Fixed);
+    impl_as_arg!(as_fixed, Fixed, Fixed);
     impl_as_arg!(as_object, ObjectId, Object);
     impl_as_arg!(as_new_id, ObjectId, NewId);
     impl_as_arg!(as_string, String, String);
@@ -173,7 +173,7 @@ impl Message {
         match arg {
             Arg::Int(i) => self.byte_buf.write_i32::<NativeEndian>(i),
             Arg::Uint(i) => self.byte_buf.write_u32::<NativeEndian>(i),
-            Arg::Fixed(i) => self.byte_buf.write_u32::<NativeEndian>(i),
+            Arg::Fixed(i) => self.byte_buf.write_i32::<NativeEndian>(i.bits()),
             Arg::Object(i) => self.byte_buf.write_u32::<NativeEndian>(i),
             Arg::NewId(i) => self.byte_buf.write_u32::<NativeEndian>(i),
             Arg::String(s) => self.write_slice(s.as_bytes(), true),
@@ -190,7 +190,7 @@ impl Message {
         match arg {
             ArgKind::Int => self.byte_buf.read_i32::<NativeEndian>().map(Arg::Int),
             ArgKind::Uint => self.byte_buf.read_u32::<NativeEndian>().map(Arg::Uint),
-            ArgKind::Fixed => self.byte_buf.read_u32::<NativeEndian>().map(Arg::Fixed),
+            ArgKind::Fixed => self.byte_buf.read_i32::<NativeEndian>().map(|i| Arg::Fixed(i.into())),
             ArgKind::Object => self.byte_buf.read_u32::<NativeEndian>().map(Arg::Object),
             ArgKind::NewId => self.byte_buf.read_u32::<NativeEndian>().map(Arg::NewId),
             ArgKind::String => self
@@ -340,7 +340,7 @@ mod tests {
 
     const UINT_VALUE: u32 = 0x1234567;
     const INT_VALUE: i32 = -12345678;
-    const FIXED_VALUE: u32 = 0x11223344;
+    const FIXED_VALUE: i32 = 0x11223344;
     const OBJECT_VALUE: u32 = 0x88775566;
     const NEW_ID_VALUE: u32 = 0x55443322;
     const STRING_VALUE: &str = "Hello from a test";
@@ -354,7 +354,7 @@ mod tests {
         let mut message = Message::new();
         assert!(message.write_arg(Arg::Uint(UINT_VALUE)).is_ok());
         assert!(message.write_arg(Arg::Int(INT_VALUE)).is_ok());
-        assert!(message.write_arg(Arg::Fixed(FIXED_VALUE)).is_ok());
+        assert!(message.write_arg(Arg::Fixed(Fixed::from_bits(FIXED_VALUE))).is_ok());
         assert!(message.write_arg(Arg::Object(OBJECT_VALUE)).is_ok());
         assert!(message.write_arg(Arg::NewId(NEW_ID_VALUE)).is_ok());
         assert!(message
@@ -384,7 +384,7 @@ mod tests {
         let arg = message.read_arg(ArgKind::Int).unwrap();
         assert_matches!(arg, Arg::Int(x) => assert_eq!(x, INT_VALUE));
         let arg = message.read_arg(ArgKind::Fixed).unwrap();
-        assert_matches!(arg, Arg::Fixed(x) => assert_eq!(x, FIXED_VALUE));
+        assert_matches!(arg, Arg::Fixed(x) => assert_eq!(x, Fixed::from_bits(FIXED_VALUE)));
         let arg = message.read_arg(ArgKind::Object).unwrap();
         assert_matches!(arg, Arg::Object(x) => assert_eq!(x, OBJECT_VALUE));
         let arg = message.read_arg(ArgKind::NewId).unwrap();
