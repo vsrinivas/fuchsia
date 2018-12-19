@@ -316,15 +316,10 @@ class TestApp : public modular::testing::SessionShellBase {
   // Verifies that the story is stopped when the last module that is part of the
   // story calls ModuleContext.Done and is stopped.
   void IsStoryRunning(std::function<void(bool)> callback) {
-    story_provider()->RunningStories(
-        [this, callback](fidl::VectorPtr<fidl::StringPtr> story_ids) {
-          bool found_story = false;
-          // Check all the running stories to make sure the one created for this
-          // test is no longer running.
-          for (const auto& story_id : *story_ids) {
-            found_story |= story_id == kStoryName;
-          }
-          callback(found_story);
+    story_controller_->GetInfo(
+        [this, callback](fuchsia::modular::StoryInfo story_info,
+                         fuchsia::modular::StoryState state) {
+          callback(state == fuchsia::modular::StoryState::RUNNING);
         });
   }
 
