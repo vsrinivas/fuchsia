@@ -29,14 +29,14 @@ package("crashpad_analyzer") {
 
   meta = [
     {
-      path = rebase_path("meta/crashpad_analyzer.cmx")
+      path = "meta/crashpad_analyzer.cmx"
       dest = "crashpad_analyzer.cmx"
     },
   ]
 
   resources = [
     {
-      path = rebase_path("configs/config.json")
+      path = "configs/config.json"
       dest = "config.json"
     },
   ]

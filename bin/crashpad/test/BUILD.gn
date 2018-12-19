@@ -59,20 +59,19 @@ test_package("crashpad_analyzer_tests") {
   resources = [
     # needed for config_unittest
     {
-      path = rebase_path("configs/config_valid.json")
+      path = "configs/config_valid.json"
       dest = "config_valid.json"
     },
 
     # needed for config_unittest
     {
-      path = rebase_path("configs/config_bad_schema_spurious_field.json")
+      path = "configs/config_bad_schema_spurious_field.json"
       dest = "config_bad_schema_spurious_field.json"
     },
 
     # needed for config_unittest
     {
-      path =
-          rebase_path("configs/config_bad_schema_missing_required_field.json")
+      path = "configs/config_bad_schema_missing_required_field.json"
       dest = "config_bad_schema_missing_required_field.json"
     },
   ]
