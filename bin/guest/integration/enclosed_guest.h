@@ -17,6 +17,11 @@ static constexpr char kZirconGuestUrl[] =
 static constexpr char kLinuxGuestUrl[] =
     "fuchsia-pkg://fuchsia.com/linux_guest#meta/linux_guest.cmx";
 
+enum class GuestKernel {
+  ZIRCON,
+  LINUX,
+};
+
 // EnclosedGuest is a base class that defines an guest environment and instance
 // encapsulated in an EnclosingEnvironment. A derived class must define the
 // |LaunchInfo| to send to the guest environment controller, as well as methods
@@ -48,6 +53,8 @@ class EnclosedGuest {
   // implementation is guest specific.
   virtual zx_status_t RunUtil(const std::string& util, const std::string& args,
                               std::string* result = nullptr) = 0;
+
+  virtual GuestKernel GetGuestKernel() = 0;
 
   void GetHostVsockEndpoint(
       fidl::InterfaceRequest<fuchsia::guest::HostVsockEndpoint> endpoint) {
@@ -82,6 +89,8 @@ class ZirconEnclosedGuest : public EnclosedGuest {
   zx_status_t RunUtil(const std::string& util, const std::string& args,
                       std::string* result = nullptr) override;
 
+  GuestKernel GetGuestKernel() override { return GuestKernel::ZIRCON; }
+
  protected:
   zx_status_t LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) override;
   zx_status_t WaitForSystemReady() override;
@@ -91,6 +100,8 @@ class LinuxEnclosedGuest : public EnclosedGuest {
  public:
   zx_status_t RunUtil(const std::string& util, const std::string& args,
                       std::string* result = nullptr) override;
+
+  GuestKernel GetGuestKernel() override { return GuestKernel::LINUX; }
 
  protected:
   zx_status_t LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) override;

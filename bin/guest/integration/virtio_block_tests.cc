@@ -121,9 +121,10 @@ template <fuchsia::guest::BlockMode Mode, fuchsia::guest::BlockFormat Format>
 class VirtioBlockZirconGuest : public ZirconEnclosedGuest {
  public:
   zx_status_t LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) override {
-    launch_info->url = kZirconGuestUrl;
-    launch_info->args.push_back("--virtio-gpu=false");
-    launch_info->args.push_back("--cmdline-add=kernel.serial=none");
+    zx_status_t status = ZirconEnclosedGuest::LaunchInfo(launch_info);
+    if (status != ZX_OK) {
+      return status;
+    }
 
     fbl::unique_fd fd(mkstemp(file_path_.data()));
     if (!fd) {
@@ -131,7 +132,42 @@ class VirtioBlockZirconGuest : public ZirconEnclosedGuest {
       return ZX_ERR_IO;
     }
 
-    zx_status_t status = ZX_ERR_BAD_STATE;
+    status = ZX_ERR_BAD_STATE;
+    if (Format == fuchsia::guest::BlockFormat::RAW) {
+      status = write_raw_file(fd.get());
+    } else if (Format == fuchsia::guest::BlockFormat::QCOW) {
+      status = write_qcow_file(fd.get());
+    }
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    launch_info->block_devices = block_device(Mode, Format, fd.release());
+    return ZX_OK;
+  }
+
+  fuchsia::guest::BlockMode BlockMode() const { return Mode; }
+  const std::string& FilePath() const { return file_path_; }
+
+  std::string file_path_ = "/tmp/guest-test.XXXXXX";
+};
+
+template <fuchsia::guest::BlockMode Mode, fuchsia::guest::BlockFormat Format>
+class VirtioBlockLinuxGuest : public LinuxEnclosedGuest {
+ public:
+  zx_status_t LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) override {
+    zx_status_t status = LinuxEnclosedGuest::LaunchInfo(launch_info);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    fbl::unique_fd fd(mkstemp(file_path_.data()));
+    if (!fd) {
+      FXL_LOG(ERROR) << "Failed to create temporary file";
+      return ZX_ERR_IO;
+    }
+
+    status = ZX_ERR_BAD_STATE;
     if (Format == fuchsia::guest::BlockFormat::RAW) {
       status = write_raw_file(fd.get());
     } else if (Format == fuchsia::guest::BlockFormat::QCOW) {
@@ -171,7 +207,13 @@ using RawGuestTypes = ::testing::Types<
     VirtioBlockZirconGuest<fuchsia::guest::BlockMode::READ_WRITE,
                            fuchsia::guest::BlockFormat::RAW>,
     VirtioBlockZirconGuest<fuchsia::guest::BlockMode::VOLATILE_WRITE,
-                           fuchsia::guest::BlockFormat::RAW>>;
+                           fuchsia::guest::BlockFormat::RAW>,
+    VirtioBlockLinuxGuest<fuchsia::guest::BlockMode::READ_ONLY,
+                          fuchsia::guest::BlockFormat::RAW>,
+    VirtioBlockLinuxGuest<fuchsia::guest::BlockMode::READ_WRITE,
+                          fuchsia::guest::BlockFormat::RAW>,
+    VirtioBlockLinuxGuest<fuchsia::guest::BlockMode::VOLATILE_WRITE,
+                          fuchsia::guest::BlockFormat::RAW>>;
 TYPED_TEST_CASE(RawVirtioBlockGuestTest, RawGuestTypes);
 
 TYPED_TEST(RawVirtioBlockGuestTest, BlockDeviceExists) {
@@ -221,7 +263,15 @@ TYPED_TEST(RawVirtioBlockGuestTest, Write) {
                           kVirtioBlockCount, static_cast<int>(offset), 0xab);
     std::string result;
     EXPECT_EQ(this->RunUtil(kVirtioBlockUtil, args, &result), ZX_OK);
-    EXPECT_THAT(result, HasSubstr("PASS"));
+
+    // TODO(MAC-234): The virtio-block driver on Zircon currently doesn't inform
+    // the rest of the system when the device is read only.
+    if (this->GetGuestKernel() == GuestKernel::LINUX &&
+        this->BlockMode() == fuchsia::guest::BlockMode::READ_ONLY) {
+      EXPECT_THAT(result, HasSubstr("PermissionDenied"));
+    } else {
+      EXPECT_THAT(result, HasSubstr("PASS"));
+    }
 
     int expected_guest_read, expected_host_read;
     switch (this->BlockMode()) {
@@ -263,7 +313,11 @@ using QcowGuestTypes = ::testing::Types<
     VirtioBlockZirconGuest<fuchsia::guest::BlockMode::READ_ONLY,
                            fuchsia::guest::BlockFormat::QCOW>,
     VirtioBlockZirconGuest<fuchsia::guest::BlockMode::VOLATILE_WRITE,
-                           fuchsia::guest::BlockFormat::QCOW>>;
+                           fuchsia::guest::BlockFormat::QCOW>,
+    VirtioBlockLinuxGuest<fuchsia::guest::BlockMode::READ_ONLY,
+                          fuchsia::guest::BlockFormat::QCOW>,
+    VirtioBlockLinuxGuest<fuchsia::guest::BlockMode::VOLATILE_WRITE,
+                          fuchsia::guest::BlockFormat::QCOW>>;
 TYPED_TEST_CASE(QcowVirtioBlockGuestTest, QcowGuestTypes);
 
 TYPED_TEST(QcowVirtioBlockGuestTest, BlockDeviceExists) {
@@ -308,7 +362,15 @@ TYPED_TEST(QcowVirtioBlockGuestTest, Write) {
                                          static_cast<int>(offset), 0xab);
     std::string result;
     EXPECT_EQ(this->RunUtil(kVirtioBlockUtil, args, &result), ZX_OK);
-    EXPECT_THAT(result, HasSubstr("PASS"));
+
+    // TODO(MAC-234): The virtio-block driver on Zircon currently doesn't inform
+    // the rest of the system when the device is read only.
+    if (this->GetGuestKernel() == GuestKernel::LINUX &&
+        this->BlockMode() == fuchsia::guest::BlockMode::READ_ONLY) {
+      EXPECT_THAT(result, HasSubstr("PermissionDenied"));
+    } else {
+      EXPECT_THAT(result, HasSubstr("PASS"));
+    }
 
     int expected_read;
     switch (this->BlockMode()) {

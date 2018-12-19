@@ -46,6 +46,8 @@ class GuestTest : public ::testing::Test {
     return enclosed_guest_->RunUtil(util, args, result);
   }
 
+  GuestKernel GetGuestKernel() { return enclosed_guest_->GetGuestKernel(); }
+
   uint32_t GetGuestCid() { return enclosed_guest_->GetGuestCid(); }
 
   void GetHostVsockEndpoint(
