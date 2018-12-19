@@ -17,7 +17,8 @@ MODULES += \
     kernel/object \
     kernel/syscalls \
 
-# include all core, dev, fidl, uapp, ulib and utest from system/...
+# include all banjo, core, dev, fidl, uapp, ulib and utest from system/...
+MODULES += $(patsubst %/rules.mk,%,$(wildcard system/banjo/*/rules.mk))
 MODULES += $(patsubst %/rules.mk,%,$(wildcard system/core/*/rules.mk))
 MODULES += $(patsubst %/rules.mk,%,$(wildcard system/dev/*/*/rules.mk))
 MODULES += $(patsubst %/rules.mk,%,$(wildcard system/fidl/*/rules.mk))
