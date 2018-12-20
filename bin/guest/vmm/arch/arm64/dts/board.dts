@@ -43,7 +43,7 @@
     #clock-cells = <0>;
   };
 
-  gic: interrupt-controller@800000000 {
+  gic: interrupt-controller {
     interrupt-controller;
     #address-cells = <0>;
     ranges;

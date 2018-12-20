@@ -4,15 +4,8 @@
 
 #include "garnet/bin/guest/vmm/linux.h"
 
-#include <endian.h>
 #include <fcntl.h>
-#include <inttypes.h>
-#include <limits.h>
-#include <stdio.h>
-#include <string.h>
 #include <sys/stat.h>
-#include <unistd.h>
-#include <array>
 
 #include <fbl/unique_fd.h>
 #include <lib/fxl/strings/string_printf.h>
@@ -412,9 +405,8 @@ static zx_status_t load_device_tree(const int dtb_fd, const GuestConfig& cfg,
     return ZX_ERR_BAD_STATE;
   }
   for (uint8_t cpu = 0; cpu != cfg.cpus(); ++cpu) {
-    char subnode_name[10];
-    sprintf(subnode_name, "cpu@%u", cpu);
-    int cpu_off = fdt_add_subnode(dtb, cpus_off, subnode_name);
+    std::string name = fxl::StringPrintf("cpu@%u", cpu);
+    int cpu_off = fdt_add_subnode(dtb, cpus_off, name.c_str());
     if (cpu_off < 0) {
       device_tree_error_msg("cpu");
       return ZX_ERR_BAD_STATE;
@@ -451,9 +443,8 @@ static zx_status_t load_device_tree(const int dtb_fd, const GuestConfig& cfg,
     if (status != ZX_OK) {
       return;
     }
-    std::stringstream ss;
-    ss << "/memory@" << std::hex << range.addr;
-    int memory_off = fdt_add_subnode(dtb, root_off, ss.str().c_str());
+    std::string name = fxl::StringPrintf("memory@%lx", range.addr);
+    int memory_off = fdt_add_subnode(dtb, root_off, name.c_str());
     if (memory_off < 0) {
       status = ZX_ERR_BAD_STATE;
       return;

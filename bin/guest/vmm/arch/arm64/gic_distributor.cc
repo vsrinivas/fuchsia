@@ -543,7 +543,7 @@ static inline void gic_dtb_error(const char* reg) {
 }
 
 zx_status_t GicDistributor::ConfigureDtb(void* dtb) const {
-  int gic_off = fdt_path_offset(dtb, "/interrupt-controller@800000000");
+  int gic_off = fdt_path_offset(dtb, "/interrupt-controller");
   if (gic_off < 0) {
     FXL_LOG(ERROR) << "Failed to find \"/interrupt-controller\" in device tree";
     return ZX_ERR_BAD_STATE;
