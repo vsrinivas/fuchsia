@@ -15,7 +15,7 @@
 
 namespace pager_tests {
 
-bool PagedVmo::CheckVmar(uint64_t offset, uint64_t len, const void* expected) {
+bool Vmo::CheckVmar(uint64_t offset, uint64_t len, const void* expected) {
     ZX_ASSERT((offset + len) <= (size_ / ZX_PAGE_SIZE));
 
     len *= ZX_PAGE_SIZE;
@@ -36,13 +36,29 @@ bool PagedVmo::CheckVmar(uint64_t offset, uint64_t len, const void* expected) {
     return true;
 }
 
-void PagedVmo::GenerateBufferContents(void* dest_buffer, uint64_t len, uint64_t paged_vmo_offset) {
+void Vmo::GenerateBufferContents(void* dest_buffer, uint64_t len, uint64_t paged_vmo_offset) {
     len *= ZX_PAGE_SIZE;
     paged_vmo_offset *= ZX_PAGE_SIZE;
     auto buf = static_cast<uint64_t*>(dest_buffer);
     for (uint64_t idx = 0; idx < len / sizeof(uint64_t); idx++) {
         buf[idx] = base_val_ + (paged_vmo_offset / sizeof(uint64_t)) + idx;
     }
+}
+
+fbl::unique_ptr<Vmo> Vmo::Clone() {
+    zx::vmo clone;
+    if (vmo_.clone(ZX_VMO_CLONE_COPY_ON_WRITE, 0, size_, &clone) != ZX_OK) {
+        return nullptr;
+    }
+
+    zx_vaddr_t addr;
+    if (zx::vmar::root_self()->map(
+            0, clone, 0, size_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &addr) != ZX_OK) {
+        return nullptr;
+    }
+
+    return fbl::unique_ptr<Vmo>(new Vmo(
+        std::move(clone), size_, reinterpret_cast<uint64_t*>(addr), addr, base_val_));
 }
 
 UserPager::~UserPager() {
@@ -58,7 +74,7 @@ bool UserPager::Init() {
     return zx_pager_create(0, &pager_) == ZX_OK && zx_port_create(0, &port_) == ZX_OK;
 }
 
-bool UserPager::CreateVmo(uint64_t size, PagedVmo** vmo_out) {
+bool UserPager::CreateVmo(uint64_t size, Vmo** vmo_out) {
     zx::vmo vmo;
     size *= ZX_PAGE_SIZE;
     if (zx_pager_create_vmo(pager_, 0, port_, next_base_, size,
@@ -72,8 +88,8 @@ bool UserPager::CreateVmo(uint64_t size, PagedVmo** vmo_out) {
         return false;
     }
 
-    auto paged_vmo = fbl::unique_ptr<PagedVmo>(new PagedVmo(
-            std::move(vmo), size, reinterpret_cast<uint64_t*>(addr), addr, next_base_));
+    auto paged_vmo = fbl::unique_ptr<Vmo>(new Vmo(
+        std::move(vmo), size, reinterpret_cast<uint64_t*>(addr), addr, next_base_));
 
     next_base_ += (size / sizeof(uint64_t));
 
@@ -83,11 +99,11 @@ bool UserPager::CreateVmo(uint64_t size, PagedVmo** vmo_out) {
     return true;
 }
 
-bool UserPager::UnmapVmo(PagedVmo* vmo) {
+bool UserPager::UnmapVmo(Vmo* vmo) {
     return zx::vmar::root_self()->unmap(vmo->base_addr_, vmo->size_) == ZX_OK;
 }
 
-bool UserPager::ReplaceVmo(PagedVmo* vmo, zx::vmo* old_vmo) {
+bool UserPager::ReplaceVmo(Vmo* vmo, zx::vmo* old_vmo) {
     zx::vmo new_vmo;
     zx_status_t s;
     if ((s = zx_pager_create_vmo(pager_, 0, port_, next_base_, vmo->size_,
@@ -118,13 +134,13 @@ bool UserPager::ReplaceVmo(PagedVmo* vmo, zx::vmo* old_vmo) {
     return true;
 }
 
-void UserPager::ReleaseVmo(PagedVmo* vmo) {
+void UserPager::ReleaseVmo(Vmo* vmo) {
     zx::vmar::root_self()->unmap(vmo->base_addr_, vmo->size_);
     vmos_.erase(*vmo);
 }
 
 bool UserPager::WaitForPageRead(
-    PagedVmo* vmo, uint64_t offset, uint64_t length, zx_time_t deadline) {
+    Vmo* vmo, uint64_t offset, uint64_t length, zx_time_t deadline) {
     zx_packet_page_request_t req = {};
     req.command = ZX_PAGER_VMO_READ;
     req.offset = offset * ZX_PAGE_SIZE;
@@ -152,7 +168,7 @@ bool UserPager::WaitForRequest(
 }
 
 bool UserPager::GetPageReadRequest(
-    PagedVmo* vmo, zx_time_t deadline, uint64_t* offset, uint64_t* length) {
+    Vmo* vmo, zx_time_t deadline, uint64_t* offset, uint64_t* length) {
     return WaitForRequest([vmo, offset, length](const zx_port_packet& packet) -> bool {
         if (packet.key == vmo->base_val_ && packet.type == ZX_PKT_TYPE_PAGE_REQUEST
                 && packet.page_request.command == ZX_PAGER_VMO_READ) {
@@ -198,7 +214,7 @@ bool UserPager::WaitForRequest(fbl::Function<bool(const zx_port_packet_t& packet
     return false;
 }
 
-bool UserPager::SupplyPages(PagedVmo* paged_vmo, uint64_t dest_offset,
+bool UserPager::SupplyPages(Vmo* paged_vmo, uint64_t dest_offset,
                             uint64_t length, uint64_t src_offset) {
     zx::vmo vmo;
     if (zx::vmo::create((length + src_offset) * ZX_PAGE_SIZE, 0, &vmo) != ZX_OK) {
@@ -220,7 +236,7 @@ bool UserPager::SupplyPages(PagedVmo* paged_vmo, uint64_t dest_offset,
     return SupplyPages(paged_vmo, dest_offset, length, std::move(vmo), src_offset);
 }
 
-bool UserPager::SupplyPages(PagedVmo* paged_vmo, uint64_t dest_offset,
+bool UserPager::SupplyPages(Vmo* paged_vmo, uint64_t dest_offset,
                             uint64_t length, zx::vmo src, uint64_t src_offset) {
     zx_status_t status;
     if ((status = zx_pager_supply_pages(pager_, paged_vmo->vmo_.get(),
