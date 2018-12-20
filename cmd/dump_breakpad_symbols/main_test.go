@@ -6,6 +6,7 @@ package main
 import (
 	"archive/tar"
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -45,7 +46,12 @@ func checkTarContents(contents []byte, expectedTarFileContents map[string][]byte
 	var contentsBuffer bytes.Buffer
 	contentsBuffer.Write(contents)
 	// Open and iterate through the files in the archive.
-	tr := tar.NewReader(&contentsBuffer)
+	gzf, err := gzip.NewReader(&contentsBuffer)
+	if err != nil {
+		return fmt.Errorf("reading tarball failed, %v", err)
+	}
+
+	tr := tar.NewReader(gzf)
 	actualTarFileContents := make(map[string][]byte)
 	for {
 		hdr, err := tr.Next()

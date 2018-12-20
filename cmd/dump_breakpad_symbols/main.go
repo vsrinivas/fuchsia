@@ -7,7 +7,7 @@ package main
 import (
 	// TODO(kjharland): change crypto/sha1 to a safer hash algorithm. sha256 or sha2, etc.
 	"archive/tar"
-	"bytes"
+	"compress/gzip"
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
@@ -312,10 +312,11 @@ func createSymbolFilepath(parentDir string, binaryPath string) string {
 }
 
 func writeTarball(w io.Writer, summary map[string]string, parentDir string) error {
-	// Create the buffer to keep the contents of tarball.
-	var buf bytes.Buffer
+	gw := gzip.NewWriter(w)
+	defer gw.Close()
 	// Create a tarWriter to perform the tarring task.
-	tw := tar.NewWriter(&buf)
+	tw := tar.NewWriter(gw)
+	defer tw.Close()
 
 	// Iterate through the summary file, writting each symbol file to the tarball buffer.
 	for _, file := range summary {
@@ -342,10 +343,5 @@ func writeTarball(w io.Writer, summary map[string]string, parentDir string) erro
 		}
 	}
 
-	if err := tw.Close(); err != nil {
-		return fmt.Errorf("failed to close the tarball writer: %v", err)
-	}
-
-	_, err := w.Write(buf.Bytes())
-	return err
+	return nil
 }
