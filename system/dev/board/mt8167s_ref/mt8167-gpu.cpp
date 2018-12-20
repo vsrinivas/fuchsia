@@ -57,7 +57,6 @@ zx_status_t Mt8167::GpuInit() {
     pbus_dev_t gpu_dev = {};
     gpu_dev.name = "gpio";
     gpu_dev.vid = PDEV_VID_MEDIATEK;
-    gpu_dev.pid = PDEV_PID_MEDIATEK_8167S_REF;
     gpu_dev.did = PDEV_DID_MEDIATEK_GPU;
     gpu_dev.mmio_list = gpu_mmios;
     gpu_dev.mmio_count = countof(gpu_mmios);

@@ -21,7 +21,6 @@ zx_status_t Mt8167::ClkInit() {
     pbus_dev_t clk_dev = {};
     clk_dev.name = "clk";
     clk_dev.vid = PDEV_VID_MEDIATEK;
-    clk_dev.pid = PDEV_PID_MEDIATEK_8167S_REF;
     clk_dev.did = PDEV_DID_MEDIATEK_CLK;
     clk_dev.mmio_list = clk_mmios;
     clk_dev.mmio_count = countof(clk_mmios);

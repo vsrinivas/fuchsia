@@ -40,7 +40,6 @@ zx_status_t Mt8167::GpioInit() {
     pbus_dev_t gpio_dev = {};
     gpio_dev.name = "gpio";
     gpio_dev.vid = PDEV_VID_MEDIATEK;
-    gpio_dev.pid = PDEV_PID_MEDIATEK_8167S_REF;
     gpio_dev.did = PDEV_DID_MEDIATEK_GPIO;
     gpio_dev.mmio_list = gpio_mmios;
     gpio_dev.mmio_count = countof(gpio_mmios);

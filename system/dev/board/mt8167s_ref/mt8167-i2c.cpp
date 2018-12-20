@@ -74,7 +74,6 @@ zx_status_t Mt8167::I2cInit() {
     pbus_dev_t i2c_dev = {};
     i2c_dev.name = "i2c0";
     i2c_dev.vid = PDEV_VID_MEDIATEK;
-    i2c_dev.pid = PDEV_PID_MEDIATEK_8167S_REF;
     i2c_dev.did = PDEV_DID_MEDIATEK_I2C;
     i2c_dev.mmio_list = i2c_mmios;
     i2c_dev.mmio_count = countof(i2c_mmios);

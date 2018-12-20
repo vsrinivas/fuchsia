@@ -102,7 +102,6 @@ const pbus_dev_t thermal_dev = []() {
     pbus_dev_t thermal_dev = {};
     thermal_dev.name = "thermal";
     thermal_dev.vid = PDEV_VID_MEDIATEK;
-    thermal_dev.pid = PDEV_PID_MEDIATEK_8167S_REF;
     thermal_dev.did = PDEV_DID_MEDIATEK_THERMAL;
     thermal_dev.mmio_list = thermal_mmios;
     thermal_dev.mmio_count = countof(thermal_mmios);

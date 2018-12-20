@@ -49,14 +49,7 @@ public:
 };
 
 zx_status_t Mt8167::TouchInit() {
-    pdev_board_info_t info;
-    zx_status_t status = pbus_.GetBoardInfo(&info);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: GetBoardInfo failed\n", __FILE__);
-        return status;
-    }
-
-    if (info.vid != PDEV_VID_GOOGLE || info.pid != PDEV_PID_CLEO) {
+    if (board_info_.vid != PDEV_VID_GOOGLE || board_info_.pid != PDEV_PID_CLEO) {
         return ZX_OK;
     }
 
@@ -87,8 +80,8 @@ zx_status_t Mt8167::TouchInit() {
 
     zx::unowned_resource root_resource(get_root_resource());
     std::optional<ddk::MmioBuffer> pmic_mmio;
-    status = ddk::MmioBuffer::Create(kPmicBaseAligned, kPmicSizeAligned, *root_resource,
-                                     ZX_CACHE_POLICY_UNCACHED_DEVICE, &pmic_mmio);
+    auto status = ddk::MmioBuffer::Create(kPmicBaseAligned, kPmicSizeAligned, *root_resource,
+                                          ZX_CACHE_POLICY_UNCACHED_DEVICE, &pmic_mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: Failed to enable VGP1 regulator: %d\n", __FUNCTION__, status);
         return status;

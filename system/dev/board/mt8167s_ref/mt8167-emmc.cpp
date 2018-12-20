@@ -126,7 +126,6 @@ zx_status_t Mt8167::EmmcInit() {
     pbus_dev_t emmc_dev = {};
     emmc_dev.name = "emmc";
     emmc_dev.vid = PDEV_VID_MEDIATEK;
-    emmc_dev.pid = PDEV_PID_MEDIATEK_8167S_REF;
     emmc_dev.did = PDEV_DID_MEDIATEK_EMMC;
     emmc_dev.mmio_list = emmc_mmios;
     emmc_dev.mmio_count = countof(emmc_mmios);

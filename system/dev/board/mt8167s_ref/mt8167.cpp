@@ -31,8 +31,15 @@ zx_status_t Mt8167::Create(zx_device_t* parent) {
         return status;
     }
 
+    pdev_board_info_t board_info;
+    status = pbus_get_board_info(&pbus, &board_info);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: GetBoardInfo failed\n", __FILE__);
+        return status;
+    }
+
     fbl::AllocChecker ac;
-    auto board = fbl::make_unique_checked<Mt8167>(&ac, parent, &pbus);
+    auto board = fbl::make_unique_checked<Mt8167>(&ac, parent, &pbus, &board_info);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }

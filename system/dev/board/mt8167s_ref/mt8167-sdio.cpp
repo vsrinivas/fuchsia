@@ -110,7 +110,6 @@ zx_status_t Mt8167::SdioInit() {
     pbus_dev_t sdio_dev = {};
     sdio_dev.name = "sdio";
     sdio_dev.vid = PDEV_VID_MEDIATEK;
-    sdio_dev.pid = PDEV_PID_MEDIATEK_8167S_REF;
     sdio_dev.did = PDEV_DID_MEDIATEK_SDIO;
     sdio_dev.mmio_list = sdio_mmios;
     sdio_dev.mmio_count = countof(sdio_mmios);
