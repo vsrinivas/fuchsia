@@ -193,7 +193,7 @@ TEST_F(NetstackLaunchTest, AddEthernetInterface) {
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return list_ifs; }, zx::sec(5)));
 }
 
-TEST_F(NetstackLaunchTest, AddEthernetDevice) {
+TEST_F(NetstackLaunchTest, DISABLED_AddEthernetDevice) {
   auto services = CreateServices();
 
   // TODO(NET-1818): parameterize this over multiple netstack implementations
