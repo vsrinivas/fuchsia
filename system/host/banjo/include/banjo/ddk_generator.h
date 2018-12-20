@@ -189,7 +189,6 @@ protected:
     void ProduceExample(const NamedInterface& named_interface);
     virtual void ProduceProtocolImplementation(const NamedInterface& named_interface) override;
     void ProduceClientImplementation(const NamedInterface& named_interface);
-    void ProduceProxyImplementation(const NamedInterface& named_interface);
     void ProduceProtocolSubclass(const NamedInterface& named_interface);
 };
 
