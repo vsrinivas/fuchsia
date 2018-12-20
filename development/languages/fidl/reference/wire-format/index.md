@@ -112,11 +112,11 @@ pseudo-code:
 visit Cart:
     for each Item in Cart.items vector data:
         visit Item.product:
-                visit Product.sku
-                visit Product.name
-                visit Product.description
-                visit Product.price
-            visit Item.quantity
+            visit Product.sku
+            visit Product.name
+            visit Product.description
+            visit Product.price
+        visit Item.quantity
 ```
 
 #### Dual Forms
