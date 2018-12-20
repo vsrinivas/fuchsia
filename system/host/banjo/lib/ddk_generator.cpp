@@ -1687,11 +1687,11 @@ void DdktlGenerator::ProduceClientImplementation(const NamedInterface& named_int
         file_ << kIndent << "}\n";
     }
     EmitBlank(&file_);
-    file_ << kIndent << "void GetProto(" << type << "* proto) {\n";
+    file_ << kIndent << "void GetProto(" << type << "* proto) const {\n";
     file_ << kIndent << kIndent << "proto->ctx = ctx_;\n";
     file_ << kIndent << kIndent << "proto->ops = ops_;\n";
     file_ << kIndent << "}\n";
-    file_ << kIndent << "bool is_valid() {\n";
+    file_ << kIndent << "bool is_valid() const {\n";
     file_ << kIndent << kIndent << "return ops_ != nullptr;\n";
     file_ << kIndent << "}\n";
     file_ << kIndent << "void clear() {\n";
@@ -1707,7 +1707,7 @@ void DdktlGenerator::ProduceClientImplementation(const NamedInterface& named_int
         EmitDocstring(&file_, method_info, true);
         file_ << kIndent;
         EmitProtocolMethodDecl(&file_, method_info.proxy_name, input, output);
-        file_ << ") {\n"
+        file_ << ") const {\n"
               << kIndent << kIndent;
         EmitClientMethodImpl(&file_, method_info.c_name, input, output,
                              named_interface.handle_wrappers);
