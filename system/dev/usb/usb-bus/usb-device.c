@@ -699,6 +699,7 @@ zx_status_t usb_device_add(usb_bus_t* bus, uint32_t device_id, uint32_t hub_id,
 
     status = device_add(bus->zxdev, &args, &dev->zxdev);
     if (status == ZX_OK) {
+        *out_device = dev;
         return ZX_OK;
     } else {
         stop_callback_thread(dev);
