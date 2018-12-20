@@ -65,7 +65,6 @@ std::string NameCount(const DdkGenerator::Member& member) {
 
 bool ReturnFirst(const std::vector<DdkGenerator::Member>& output) {
     return output.size() > 0 && (output[0].kind == flat::Type::Kind::kPrimitive ||
-                                 output[0].kind == flat::Type::Kind::kString ||
                                  (output[0].kind == flat::Type::Kind::kIdentifier &&
                                   output[0].decl_kind == flat::Decl::Kind::kEnum));
 }
@@ -400,8 +399,10 @@ void EmitMethodImplHelper(std::ostream* file, StringView method_name,
         if (member->kind == flat::Type::Kind::kVector) {
             *file << "out_" << NameBuffer(*member) << ", " << NameCount(*member);
             if (member->nullability == types::Nullability::kNonnullable) {
-            *file << ", out_" << member->name << "_actual";
+                *file << ", out_" << member->name << "_actual";
             }
+        } else if (member->kind == flat::Type::Kind::kString) {
+            *file << "out_" << member->name << ", " << member->name << "_capacity";
         } else {
             *file << (member->address_of ? "&" : "") << "out_" << member->name;
         }
