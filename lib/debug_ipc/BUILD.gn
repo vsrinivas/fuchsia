@@ -55,6 +55,7 @@ source_set("tests") {
   sources = [
     "message_unittests.cc",
     "protocol_unittests.cc",
+    "records_unittest.cc",
   ]
 
   deps = [
