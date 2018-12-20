@@ -168,7 +168,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
 
   zx_device_t* parent_ = nullptr;
   pdev_protocol_t pdev_;
-  canvas_protocol_t canvas_;
+  amlogic_canvas_protocol_t canvas_;
   DeviceType device_type_ = DeviceType::kUnknown;
   std::unique_ptr<CbusRegisterIo> cbus_;
   std::unique_ptr<DosRegisterIo> dosbus_;

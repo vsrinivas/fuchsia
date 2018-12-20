@@ -235,7 +235,7 @@ std::unique_ptr<CanvasEntry> AmlogicVideo::ConfigureCanvas(
     return nullptr;
   }
   uint8_t idx;
-  status = canvas_config(&canvas_, dup_vmo.release(), offset, &info, &idx);
+  status = amlogic_canvas_config(&canvas_, dup_vmo.release(), offset, &info, &idx);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed to configure canvas, status: %d\n", status);
     return nullptr;
@@ -245,7 +245,7 @@ std::unique_ptr<CanvasEntry> AmlogicVideo::ConfigureCanvas(
 }
 
 void AmlogicVideo::FreeCanvas(CanvasEntry* canvas) {
-  canvas_free(&canvas_, canvas->index());
+  amlogic_canvas_free(&canvas_, canvas->index());
 }
 
 zx_status_t AmlogicVideo::AllocateIoBuffer(io_buffer_t* buffer, size_t size,
