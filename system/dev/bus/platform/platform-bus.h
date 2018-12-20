@@ -76,9 +76,9 @@ public:
                                uint32_t* out_size);
 
     // Protocol accessors for PlatformDevice.
-    inline ddk::ClkProtocolProxy* clk() { return &*clk_; }
-    inline ddk::GpioImplProtocolProxy* gpio() { return &*gpio_; }
-    inline ddk::I2cImplProtocolProxy* i2c() { return &*i2c_; }
+    inline ddk::ClkProtocolClient* clk() { return &*clk_; }
+    inline ddk::GpioImplProtocolClient* gpio() { return &*gpio_; }
+    inline ddk::I2cImplProtocolClient* i2c() { return &*i2c_; }
 
 private:
     // This class is a wrapper for a platform_proxy_cb_t added via pbus_register_protocol().
@@ -125,10 +125,10 @@ private:
     pdev_board_info_t board_info_;
 
     // Protocols that are optionally provided by the board driver.
-    std::optional<ddk::ClkProtocolProxy> clk_;
-    std::optional<ddk::GpioImplProtocolProxy> gpio_;
-    std::optional<ddk::IommuProtocolProxy> iommu_;
-    std::optional<ddk::I2cImplProtocolProxy> i2c_;
+    std::optional<ddk::ClkProtocolClient> clk_;
+    std::optional<ddk::GpioImplProtocolClient> gpio_;
+    std::optional<ddk::IommuProtocolClient> iommu_;
+    std::optional<ddk::I2cImplProtocolClient> i2c_;
 
     // Completion used by WaitProtocol().
     sync_completion_t proto_completion_ __TA_GUARDED(proto_completion_mutex_);

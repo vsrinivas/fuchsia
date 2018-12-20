@@ -18,7 +18,7 @@
 namespace {
 
 struct I2cBus {
-    ddk::I2cImplProtocolProxy i2c;
+    ddk::I2cImplProtocolClient i2c;
     uint32_t bus_id;
 };
 
@@ -825,13 +825,13 @@ zx_status_t Controller::DdkOpenAt(zx_device_t** dev_out, const char* path, uint3
 
 zx_status_t Controller::Bind(fbl::unique_ptr<display::Controller>* device_ptr) {
     zx_status_t status;
-    dc_ = ddk::DisplayControllerImplProtocolProxy(parent_);
+    dc_ = ddk::DisplayControllerImplProtocolClient(parent_);
     if (!dc_.is_valid()) {
         ZX_DEBUG_ASSERT_MSG(false, "Display controller bind mismatch");
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    i2c_ = ddk::I2cImplProtocolProxy(parent_);
+    i2c_ = ddk::I2cImplProtocolClient(parent_);
 
     status = loop_.StartThread("display-client-loop", &loop_thread_);
     if (status != ZX_OK) {

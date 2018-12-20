@@ -28,7 +28,7 @@ public:
     //
     // Returns an error if the block server cannot be created.
     // Returns an error if the Fifo server is already running.
-    zx_status_t StartServer(ddk::BlockProtocolProxy* protocol, zx::fifo* out_fifo);
+    zx_status_t StartServer(ddk::BlockProtocolClient* protocol, zx::fifo* out_fifo);
 
     // Ensures the FIFO server has terminated.
     //

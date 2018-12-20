@@ -155,7 +155,7 @@ private:
     zx::interrupt dma_irq_;
 
     ddk::PDev pdev_;
-    ddk::EthBoardProtocolProxy eth_board_;
+    ddk::EthBoardProtocolClient eth_board_;
 
     std::optional<ddk::MmioBuffer> dwmac_regs_iobuff_;
 
@@ -163,7 +163,7 @@ private:
     dw_dma_regs_t* dwdma_regs_ = nullptr;
 
     fbl::Mutex lock_;
-    ddk::EthmacIfcProxy ethmac_proxy_ __TA_GUARDED(lock_);
+    ddk::EthmacIfcClient ethmac_client_ __TA_GUARDED(lock_);
 
     // Only accessed from Thread, so not locked.
     bool online_ = false;

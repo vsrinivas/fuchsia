@@ -104,8 +104,8 @@ void DWMacDevice::UpdateLinkStatus() {
     bool temp = dwmac_regs_->rgmiistatus & GMAC_RGMII_STATUS_LNKSTS;
     if (temp != online_) {
         online_ = temp;
-        if (ethmac_proxy_.is_valid()) {
-            ethmac_proxy_.Status(online_ ? ETHMAC_STATUS_ONLINE : 0u);
+        if (ethmac_client_.is_valid()) {
+            ethmac_client_.Status(online_ ? ETHMAC_STATUS_ONLINE : 0u);
         } else {
             zxlogf(ERROR, "dwmac: System not ready\n");
         }
@@ -384,7 +384,7 @@ zx_status_t DWMacDevice::ShutDown() {
     thrd_join(thread_, NULL);
     fbl::AutoLock lock(&lock_);
     online_ = false;
-    ethmac_proxy_.clear();
+    ethmac_client_.clear();
     DeInitDevice();
     ReleaseBuffers();
     return ZX_OK;
@@ -430,17 +430,17 @@ zx_status_t DWMacDevice::EthmacQuery(uint32_t options, ethmac_info_t* info) {
 void DWMacDevice::EthmacStop() {
     zxlogf(INFO, "Stopping Ethermac\n");
     fbl::AutoLock lock(&lock_);
-    ethmac_proxy_.clear();
+    ethmac_client_.clear();
 }
 
 zx_status_t DWMacDevice::EthmacStart(const ethmac_ifc_t* ifc) {
     fbl::AutoLock lock(&lock_);
 
-    if (ethmac_proxy_.is_valid()) {
+    if (ethmac_client_.is_valid()) {
         zxlogf(ERROR, "dwmac:  Already bound!!!");
         return ZX_ERR_ALREADY_BOUND;
     } else {
-        ethmac_proxy_ = ddk::EthmacIfcProxy(ifc);
+        ethmac_client_ = ddk::EthmacIfcClient(ifc);
         UpdateLinkStatus();
         zxlogf(INFO, "dwmac: Started\n");
     }
@@ -519,9 +519,9 @@ void DWMacDevice::ProcRxBuffer(uint32_t int_status) {
 
         { // limit scope of autolock
             fbl::AutoLock lock(&lock_);
-            if ((ethmac_proxy_.is_valid())) {
+            if ((ethmac_client_.is_valid())) {
 
-                ethmac_proxy_.Recv(temptr, fr_len, 0);
+                ethmac_client_.Recv(temptr, fr_len, 0);
 
             } else {
                 zxlogf(ERROR, "Dropping bad packet\n");

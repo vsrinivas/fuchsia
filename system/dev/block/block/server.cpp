@@ -262,7 +262,7 @@ void BlockServer::InQueueDrainer() {
     }
 }
 
-zx_status_t BlockServer::Create(ddk::BlockProtocolProxy* bp, fzl::fifo<block_fifo_request_t,
+zx_status_t BlockServer::Create(ddk::BlockProtocolClient* bp, fzl::fifo<block_fifo_request_t,
                                 block_fifo_response_t>* fifo_out, BlockServer** out) {
     fbl::AllocChecker ac;
     BlockServer* bs = new (&ac) BlockServer(bp);
@@ -485,7 +485,7 @@ zx_status_t BlockServer::Serve() {
     }
 }
 
-BlockServer::BlockServer(ddk::BlockProtocolProxy* bp) :
+BlockServer::BlockServer(ddk::BlockProtocolClient* bp) :
     bp_(bp), block_op_size_(0), pending_count_(0), barrier_in_progress_(false),
     last_id_(VMOID_INVALID + 1) {
     size_t block_op_size;
@@ -507,7 +507,7 @@ void BlockServer::ShutDown() {
 }
 
 // C declarations
-zx_status_t blockserver_create(ddk::BlockProtocolProxy* bp, zx_handle_t* fifo_out,
+zx_status_t blockserver_create(ddk::BlockProtocolClient* bp, zx_handle_t* fifo_out,
                                BlockServer** out) {
     fzl::fifo<block_fifo_request_t, block_fifo_response_t> fifo;
     zx_status_t status = BlockServer::Create(bp, &fifo, out);

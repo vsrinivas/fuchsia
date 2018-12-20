@@ -123,17 +123,17 @@ zx_status_t TapDevice::EthmacQuery(uint32_t options, ethmac_info_t* info) {
 void TapDevice::EthmacStop() {
     ethertap_trace("EthmacStop\n");
     fbl::AutoLock lock(&lock_);
-    ethmac_proxy_.clear();
+    ethmac_client_.clear();
 }
 
 zx_status_t TapDevice::EthmacStart(const ethmac_ifc_t* ifc) {
     ethertap_trace("EthmacStart\n");
     fbl::AutoLock lock(&lock_);
-    if (ethmac_proxy_.is_valid()) {
+    if (ethmac_client_.is_valid()) {
         return ZX_ERR_ALREADY_BOUND;
     } else {
-        ethmac_proxy_ = ddk::EthmacIfcProxy(ifc);
-        ethmac_proxy_.Status(online_ ? ETHMAC_STATUS_ONLINE : 0u);
+        ethmac_client_ = ddk::EthmacIfcClient(ifc);
+        ethmac_client_.Status(online_ ? ETHMAC_STATUS_ONLINE : 0u);
     }
     return ZX_OK;
 }
@@ -292,8 +292,8 @@ zx_status_t TapDevice::UpdateLinkStatus(zx_signals_t observed) {
 
     if (was_online != online_) {
         fbl::AutoLock lock(&lock_);
-        if (ethmac_proxy_.is_valid()) {
-            ethmac_proxy_.Status(online_ ? ETHMAC_STATUS_ONLINE : 0u);
+        if (ethmac_client_.is_valid()) {
+            ethmac_client_.Status(online_ ? ETHMAC_STATUS_ONLINE : 0u);
         }
         ethertap_trace("device '%s' is now %s\n", name(), online_ ? "online" : "offline");
     }
@@ -320,8 +320,8 @@ zx_status_t TapDevice::Recv(uint8_t* buffer, uint32_t capacity) {
         ethertap_trace("received %zu bytes\n", actual);
         hexdump8_ex(buffer, actual, 0);
     }
-    if (ethmac_proxy_.is_valid()) {
-        ethmac_proxy_.Recv(buffer, actual, 0u);
+    if (ethmac_client_.is_valid()) {
+        ethmac_client_.Recv(buffer, actual, 0u);
     }
     return ZX_OK;
 }

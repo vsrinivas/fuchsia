@@ -28,7 +28,7 @@ public:
 private:
     MtkThermal(zx_device_t* parent, ddk::MmioBuffer mmio, ddk::MmioBuffer fuse_mmio,
                ddk::MmioBuffer pll_mmio, ddk::MmioBuffer pmic_mmio,
-               const ddk::ClkProtocolProxy& clk, const pdev_device_info_t& info,
+               const ddk::ClkProtocolClient& clk, const pdev_device_info_t& info,
                const thermal_device_info_t& thermal_info)
         : DeviceType(parent), mmio_(std::move(mmio)), fuse_mmio_(std::move(fuse_mmio)),
           pll_mmio_(std::move(pll_mmio)), pmic_mmio_(std::move(pmic_mmio)), clk_(clk),
@@ -47,7 +47,7 @@ private:
     ddk::MmioBuffer fuse_mmio_;
     ddk::MmioBuffer pll_mmio_;
     ddk::MmioBuffer pmic_mmio_;
-    ddk::ClkProtocolProxy clk_;
+    ddk::ClkProtocolClient clk_;
     const uint32_t clk_count_;
     const thermal_device_info_t thermal_info_;
     uint32_t current_opp_idx_ = 0;

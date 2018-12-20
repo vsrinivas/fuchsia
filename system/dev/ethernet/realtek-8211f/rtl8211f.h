@@ -24,7 +24,7 @@ public:
     zx_status_t ConfigPhy(const uint8_t mac[MAC_ARRAY_LENGTH]);
 
 private:
-    ddk::EthMacProtocolProxy eth_mac_;
+    ddk::EthMacProtocolClient eth_mac_;
 };
 
 } // namespace phy

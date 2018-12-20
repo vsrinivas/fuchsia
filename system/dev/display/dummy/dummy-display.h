@@ -71,7 +71,7 @@ private:
     bool current_image_valid_ TA_GUARDED(display_lock_);
 
     // Display controller related data
-    ddk::DisplayControllerInterfaceProxy dc_intf_ TA_GUARDED(display_lock_);
+    ddk::DisplayControllerInterfaceClient dc_intf_ TA_GUARDED(display_lock_);
 };
 
 } // namespace dummy_display

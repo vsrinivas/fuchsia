@@ -179,7 +179,7 @@ zx_status_t Board::StartGpio() {
         return status;
     }
 
-    gpio_impl_ = ddk::GpioImplProtocolProxy(parent());
+    gpio_impl_ = ddk::GpioImplProtocolClient(parent());
     if (status != ZX_OK) {
         ERROR("GetProtocol() error: %d\n", status);
         return status;

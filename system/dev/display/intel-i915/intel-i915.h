@@ -192,7 +192,7 @@ private:
     bool gpu_released_ = false;
     bool display_released_ = false;
 
-    ddk::DisplayControllerInterfaceProxy dc_intf_ __TA_GUARDED(display_lock_);
+    ddk::DisplayControllerInterfaceClient dc_intf_ __TA_GUARDED(display_lock_);
     bool ready_for_callback_ __TA_GUARDED(display_lock_) = false;
 
     Gtt gtt_ __TA_GUARDED(gtt_lock_);

@@ -36,7 +36,7 @@ class Operation {
     }
 
     // Waits for the operation to complete and returns the operation's status.
-    zx_status_t Submit(ddk::NandProtocolProxy& proxy) {
+    zx_status_t Submit(ddk::NandProtocolClient& proxy) {
         proxy.Queue(GetOperation(), OnCompletion, this);
 
         zx_status_t status = sync_completion_wait(&event_, ZX_TIME_INFINITE);
@@ -91,7 +91,7 @@ class Broker : public DeviceType {
     zx_status_t Queue(uint32_t command, const fuchsia_nand_BrokerRequest& request,
                       uint32_t* corrected_bits);
 
-    ddk::NandProtocolProxy nand_;
+    ddk::NandProtocolClient nand_;
     size_t op_size_ = 0;
 };
 

@@ -36,12 +36,12 @@ public:
     zx_status_t Bind();
 
     // Methods required by the ddk mixins.
-    zx_status_t HidbusStart(const hidbus_ifc_t* ifc) TA_EXCL(proxy_lock_);
+    zx_status_t HidbusStart(const hidbus_ifc_t* ifc) TA_EXCL(client_lock_);
     zx_status_t HidbusQuery(uint32_t options, hid_info_t* info);
-    void HidbusStop() TA_EXCL(proxy_lock_);
+    void HidbusStop() TA_EXCL(client_lock_);
     zx_status_t HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len);
     zx_status_t HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
-                                size_t len, size_t* out_len) TA_EXCL(proxy_lock_);
+                                size_t len, size_t* out_len) TA_EXCL(client_lock_);
     zx_status_t HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const void* data, size_t len);
     zx_status_t HidbusGetIdle(uint8_t rpt_id, uint8_t* duration);
     zx_status_t HidbusSetIdle(uint8_t rpt_id, uint8_t duration);
@@ -59,15 +59,15 @@ private:
     };
 
     int Thread();
-    void ShutDown() TA_EXCL(proxy_lock_);
+    void ShutDown() TA_EXCL(client_lock_);
     void ReconfigurePolarity(uint32_t idx, uint64_t int_port);
     zx_status_t ConfigureInterrupt(uint32_t idx, uint64_t int_port);
     bool MatrixScan(uint32_t row, uint32_t col, zx_duration_t delay);
 
     thrd_t thread_;
     zx::port port_;
-    fbl::Mutex proxy_lock_;
-    ddk::HidbusIfcProxy proxy_ TA_GUARDED(proxy_lock_);
+    fbl::Mutex client_lock_;
+    ddk::HidbusIfcClient client_ TA_GUARDED(client_lock_);
     fbl::Array<buttons_button_config_t> buttons_;
     fbl::Array<Gpio> gpios_;
     std::optional<uint8_t> fdr_gpio_;

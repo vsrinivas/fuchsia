@@ -138,9 +138,9 @@ zx_status_t MtkSdmmc::Create(zx_device_t* parent) {
         return status;
     }
 
-    ddk::GpioProtocolProxy reset_gpio;
+    ddk::GpioProtocolClient reset_gpio;
     if (dev_info.gpio_count > 0) {
-        reset_gpio = ddk::GpioProtocolProxy(parent);
+        reset_gpio = ddk::GpioProtocolClient(parent);
         if (!reset_gpio.is_valid()) {
             zxlogf(ERROR, "%s: Failed to get reset GPIO\n", __FILE__);
             return ZX_ERR_NO_RESOURCES;

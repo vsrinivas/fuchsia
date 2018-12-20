@@ -39,7 +39,7 @@ zx_status_t Imx227Device::InitPdev(zx_device_t* parent) {
     }
 
     for (uint32_t i = 0; i < countof(gpios_); i++) {
-        std::optional<ddk::GpioProtocolProxy> gpio;
+        std::optional<ddk::GpioProtocolClient> gpio;
         gpio = pdev_.GetGpio(i);
         if (!gpio) {
             return ZX_ERR_NO_RESOURCES;

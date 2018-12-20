@@ -33,7 +33,7 @@ using DeviceType = ddk::Device<AmlThermal, ddk::Ioctlable, ddk::Unbindable>;
 class AmlThermal : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_THERMAL> {
 public:
     AmlThermal(zx_device_t* device,
-               const ddk::PDevProtocolProxy& pdev,
+               const ddk::PDevProtocolClient& pdev,
                const gpio_protocol_t& fan0_gpio_proto,
                const gpio_protocol_t& fan1_gpio_proto,
                const scpi_protocol_t& scpi_proto,
@@ -69,10 +69,10 @@ private:
     // Notify the thermal daemon of the current settings.
     zx_status_t NotifyThermalDaemon(uint32_t trip_point) const;
 
-    ddk::PDevProtocolProxy pdev_;
-    ddk::GpioProtocolProxy fan0_gpio_;
-    ddk::GpioProtocolProxy fan1_gpio_;
-    ddk::ScpiProtocolProxy scpi_;
+    ddk::PDevProtocolClient pdev_;
+    ddk::GpioProtocolClient fan0_gpio_;
+    ddk::GpioProtocolClient fan1_gpio_;
+    ddk::ScpiProtocolClient scpi_;
 
     uint32_t sensor_id_;
     zx::port port_;

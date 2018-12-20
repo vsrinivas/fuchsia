@@ -52,7 +52,7 @@ private:
     uint32_t stride_;
     zx_pixel_format_t format_;
 
-    ddk::DisplayControllerInterfaceProxy intf_;
+    ddk::DisplayControllerInterfaceClient intf_;
 };
 
 #endif // __cplusplus

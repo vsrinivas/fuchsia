@@ -120,7 +120,7 @@ private:
     const ACPI_HANDLE acpi_handle_;
 
     // Interface the driver is currently bound to
-    ddk::HidbusIfcProxy proxy_;
+    ddk::HidbusIfcClient client_;
 
     fbl::Vector<SensorInfo> sensors_;
 

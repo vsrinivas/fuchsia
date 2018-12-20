@@ -68,7 +68,7 @@ zx_status_t PlatformBus::PBusRegisterProtocol(uint32_t proto_id, const void* pro
         if (proxy_cb->callback != nullptr) {
             return ZX_ERR_INVALID_ARGS;
         }
-        gpio_ = ddk::GpioImplProtocolProxy(static_cast<const gpio_impl_protocol_t*>(protocol));
+        gpio_ = ddk::GpioImplProtocolClient(static_cast<const gpio_impl_protocol_t*>(protocol));
         break;
     }
     case ZX_PROTOCOL_I2C_IMPL: {
@@ -81,21 +81,21 @@ zx_status_t PlatformBus::PBusRegisterProtocol(uint32_t proto_id, const void* pro
             return status;
         }
 
-        i2c_ = ddk::I2cImplProtocolProxy(proto);
+        i2c_ = ddk::I2cImplProtocolClient(proto);
         break;
     }
     case ZX_PROTOCOL_CLK: {
         if (proxy_cb->callback != nullptr) {
             return ZX_ERR_INVALID_ARGS;
         }
-        clk_ = ddk::ClkProtocolProxy(static_cast<const clk_protocol_t*>(protocol));
+        clk_ = ddk::ClkProtocolClient(static_cast<const clk_protocol_t*>(protocol));
         break;
     }
     case ZX_PROTOCOL_IOMMU: {
         if (proxy_cb->callback != nullptr) {
             return ZX_ERR_INVALID_ARGS;
         }
-        iommu_ = ddk::IommuProtocolProxy(static_cast<const iommu_protocol_t*>(protocol));
+        iommu_ = ddk::IommuProtocolClient(static_cast<const iommu_protocol_t*>(protocol));
         break;
     }
     default: {

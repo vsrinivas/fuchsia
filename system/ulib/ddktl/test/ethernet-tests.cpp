@@ -54,9 +54,9 @@ class TestEthmacIfc : public ddk::Device<TestEthmacIfc>,
 
     ethmac_ifc_t ethmac_ifc() { return {&ethmac_ifc_ops_, this}; }
 
-    zx_status_t StartProtocol(ddk::EthmacProtocolProxy* proxy) {
+    zx_status_t StartProtocol(ddk::EthmacProtocolClient* client) {
         const ethmac_ifc_t ifc = ethmac_ifc();
-        return proxy->Start(&ifc);
+        return client->Start(&ifc);
     }
 
   private:
@@ -100,7 +100,7 @@ class TestEthmacProtocol : public ddk::Device<TestEthmacProtocol, ddk::GetProtoc
 
     zx_status_t EthmacStart(const ethmac_ifc_t* ifc) {
         start_this_ = get_this();
-        proxy_ = fbl::make_unique<ddk::EthmacIfcProxy>(ifc);
+        client_ = fbl::make_unique<ddk::EthmacIfcClient>(ifc);
         start_called_ = true;
         return ZX_OK;
     }
@@ -135,11 +135,11 @@ class TestEthmacProtocol : public ddk::Device<TestEthmacProtocol, ddk::GetProtoc
     }
 
     bool TestIfc() {
-        if (!proxy_) return false;
-        // Use the provided proxy to test the ifc proxy.
-        proxy_->Status(0);
-        proxy_->Recv(nullptr, 0, 0);
-        proxy_->CompleteTx(nullptr, ZX_OK);
+        if (!client_) return false;
+        // Use the provided client to test the ifc client.
+        client_->Status(0);
+        client_->Recv(nullptr, 0, 0);
+        client_->CompleteTx(nullptr, ZX_OK);
         return true;
     }
 
@@ -156,7 +156,7 @@ class TestEthmacProtocol : public ddk::Device<TestEthmacProtocol, ddk::GetProtoc
     bool queue_tx_called_ = false;
     bool set_param_called_ = false;
 
-    fbl::unique_ptr<ddk::EthmacIfcProxy> proxy_;
+    fbl::unique_ptr<ddk::EthmacIfcClient> client_;
 };
 
 static bool test_ethmac_ifc() {
@@ -174,16 +174,16 @@ static bool test_ethmac_ifc() {
     END_TEST;
 }
 
-static bool test_ethmac_ifc_proxy() {
+static bool test_ethmac_ifc_client() {
     BEGIN_TEST;
 
     TestEthmacIfc dev;
     const ethmac_ifc_t ifc = dev.ethmac_ifc();
-    ddk::EthmacIfcProxy proxy(&ifc);
+    ddk::EthmacIfcClient client(&ifc);
 
-    proxy.Status(0);
-    proxy.Recv(nullptr, 0, 0);
-    proxy.CompleteTx(nullptr, ZX_OK);
+    client.Status(0);
+    client.Recv(nullptr, 0, 0);
+    client.CompleteTx(nullptr, ZX_OK);
 
     EXPECT_TRUE(dev.VerifyCalls(), "");
 
@@ -217,7 +217,7 @@ static bool test_ethmac_protocol() {
     END_TEST;
 }
 
-static bool test_ethmac_protocol_proxy() {
+static bool test_ethmac_protocol_client() {
     BEGIN_TEST;
 
     // The EthmacProtocol device to wrap. This would live in the parent device
@@ -227,26 +227,26 @@ static bool test_ethmac_protocol_proxy() {
     ethmac_protocol_t proto;
     auto status = protocol_dev.DdkGetProtocol(ZX_PROTOCOL_ETHMAC, reinterpret_cast<void*>(&proto));
     EXPECT_EQ(ZX_OK, status, "");
-    // The proxy device to wrap the ops + device that represent the parent
+    // The client device to wrap the ops + device that represent the parent
     // device.
-    ddk::EthmacProtocolProxy proxy(&proto);
+    ddk::EthmacProtocolClient client(&proto);
     // The EthmacIfc to hand to the parent device.
     TestEthmacIfc ifc_dev;
     ethmac_ifc_t ifc = ifc_dev.ethmac_ifc();
 
-    EXPECT_EQ(ZX_OK, proxy.Query(0, nullptr), "");
-    proxy.Stop();
-    EXPECT_EQ(ZX_OK, proxy.Start(&ifc), "");
+    EXPECT_EQ(ZX_OK, client.Query(0, nullptr), "");
+    client.Stop();
+    EXPECT_EQ(ZX_OK, client.Start(&ifc), "");
     ethmac_netbuf_t netbuf = {};
-    EXPECT_EQ(ZX_OK, proxy.QueueTx(0, &netbuf), "");
-    EXPECT_EQ(ZX_OK, proxy.SetParam(0, 0, nullptr, 0));
+    EXPECT_EQ(ZX_OK, client.QueueTx(0, &netbuf), "");
+    EXPECT_EQ(ZX_OK, client.SetParam(0, 0, nullptr, 0));
 
     EXPECT_TRUE(protocol_dev.VerifyCalls(), "");
 
     END_TEST;
 }
 
-static bool test_ethmac_protocol_ifc_proxy() {
+static bool test_ethmac_protocol_ifc_client() {
     BEGIN_TEST;
 
     // We create a protocol device that we will start from an ifc device. The protocol device will
@@ -258,9 +258,9 @@ static bool test_ethmac_protocol_ifc_proxy() {
     auto status = protocol_dev.DdkGetProtocol(ZX_PROTOCOL_ETHMAC, reinterpret_cast<void*>(&proto));
     EXPECT_EQ(ZX_OK, status, "");
 
-    ddk::EthmacProtocolProxy proxy(&proto);
+    ddk::EthmacProtocolClient client(&proto);
     TestEthmacIfc ifc_dev;
-    EXPECT_EQ(ZX_OK, ifc_dev.StartProtocol(&proxy), "");
+    EXPECT_EQ(ZX_OK, ifc_dev.StartProtocol(&client), "");
 
     // Execute the EthmacIfc methods
     ASSERT_TRUE(protocol_dev.TestIfc(), "");
@@ -275,10 +275,10 @@ static bool test_ethmac_protocol_ifc_proxy() {
 
 BEGIN_TEST_CASE(ddktl_ethernet_device)
 RUN_NAMED_TEST("ddk::EthmacIfc", test_ethmac_ifc);
-RUN_NAMED_TEST("ddk::EthmacIfcProxy", test_ethmac_ifc_proxy);
+RUN_NAMED_TEST("ddk::EthmacIfcClient", test_ethmac_ifc_client);
 RUN_NAMED_TEST("ddk::EthmacProtocol", test_ethmac_protocol);
-RUN_NAMED_TEST("ddk::EthmacProtocolProxy", test_ethmac_protocol_proxy);
-RUN_NAMED_TEST("EthmacProtocol using EthmacIfcProxy", test_ethmac_protocol_ifc_proxy);
+RUN_NAMED_TEST("ddk::EthmacProtocolClient", test_ethmac_protocol_client);
+RUN_NAMED_TEST("EthmacProtocol using EthmacIfcClient", test_ethmac_protocol_ifc_client);
 END_TEST_CASE(ddktl_ethernet_device)
 
 test_case_element* test_case_ddktl_ethernet_device = TEST_CASE_ELEMENT(ddktl_ethernet_device);

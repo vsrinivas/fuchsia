@@ -66,7 +66,7 @@ private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(NandPartDevice);
 
     nand_protocol_t nand_proto_;
-    ddk::NandProtocolProxy nand_;
+    ddk::NandProtocolClient nand_;
 
     // op_size for parent device.
     size_t parent_op_size_;

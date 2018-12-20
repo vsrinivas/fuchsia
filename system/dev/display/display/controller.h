@@ -116,7 +116,7 @@ public:
                                const char** monitor_name, const char** monitor_serial)
                                __TA_NO_THREAD_SAFETY_ANALYSIS;
 
-    ddk::DisplayControllerImplProtocolProxy* dc() { return &dc_; }
+    ddk::DisplayControllerImplProtocolClient* dc() { return &dc_; }
     async::Loop& loop() { return loop_; }
     bool current_thread_is_loop() { return thrd_current() == loop_thread_; }
     mtx_t* mtx() { return &mtx_; }
@@ -141,8 +141,8 @@ private:
 
     async::Loop loop_;
     thrd_t loop_thread_;
-    ddk::DisplayControllerImplProtocolProxy dc_;
-    ddk::I2cImplProtocolProxy i2c_;
+    ddk::DisplayControllerImplProtocolClient dc_;
+    ddk::I2cImplProtocolClient i2c_;
 };
 
 } // namespace display

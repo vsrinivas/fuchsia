@@ -16,17 +16,17 @@
 
 namespace ddk {
 
-class PDev : public PDevProtocolProxy {
+class PDev : public PDevProtocolClient {
 
 public:
     PDev() {}
 
     // TODO(andresoportus): pass protocol by value/const& so there is no question on lifecycle.
     PDev(pdev_protocol_t* proto)
-        : PDevProtocolProxy(proto) {}
+        : PDevProtocolClient(proto) {}
 
     PDev(zx_device_t* parent)
-        : PDevProtocolProxy(parent) {}
+        : PDevProtocolClient(parent) {}
 
     ~PDev() = default;
 
@@ -36,11 +36,11 @@ public:
     zx_status_t MapMmio(uint32_t index, std::optional<MmioBuffer>* mmio);
 
     zx_status_t GetInterrupt(uint32_t index, zx::interrupt* out) {
-        return PDevProtocolProxy::GetInterrupt(index, 0, out);
+        return PDevProtocolClient::GetInterrupt(index, 0, out);
     }
 
     std::optional<I2cChannel> GetI2c(uint32_t index);
-    std::optional<GpioProtocolProxy> GetGpio(uint32_t index);
+    std::optional<GpioProtocolClient> GetGpio(uint32_t index);
 };
 
 } // namespace ddk

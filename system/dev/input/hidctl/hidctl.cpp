@@ -118,10 +118,10 @@ zx_status_t HidDevice::HidbusStart(const hidbus_ifc_t* ifc) {
     zxlogf(TRACE, "hidctl: start\n");
 
     fbl::AutoLock lock(&lock_);
-    if (proxy_.is_valid()) {
+    if (client_.is_valid()) {
         return ZX_ERR_ALREADY_BOUND;
     }
-    proxy_ = ddk::HidbusIfcProxy(ifc);
+    client_ = ddk::HidbusIfcClient(ifc);
     return ZX_OK;
 }
 
@@ -129,7 +129,7 @@ void HidDevice::HidbusStop() {
     zxlogf(TRACE, "hidctl: stop\n");
 
     fbl::AutoLock lock(&lock_);
-    proxy_.clear();
+    client_.clear();
 }
 
 zx_status_t HidDevice::HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len) {
@@ -272,8 +272,8 @@ zx_status_t HidDevice::Recv(uint8_t* buffer, uint32_t capacity) {
             zxlogf(TRACE, "hidctl: received %zu bytes\n", actual);
             hexdump8_ex(buffer, actual, 0);
         }
-        if (proxy_.is_valid()) {
-            proxy_.IoQueue(buffer, actual);
+        if (client_.is_valid()) {
+            client_.IoQueue(buffer, actual);
         }
     }
     return ZX_OK;

@@ -31,8 +31,8 @@ private:
     zx_status_t StartGpio();
     int Thread();
 
-    ddk::PBusProtocolProxy pbus_;
-    ddk::GpioImplProtocolProxy gpio_impl_ = {};
+    ddk::PBusProtocolClient pbus_;
+    ddk::GpioImplProtocolClient gpio_impl_ = {};
     thrd_t thread_ = {};
 };
 

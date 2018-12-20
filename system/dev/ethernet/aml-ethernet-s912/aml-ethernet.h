@@ -54,7 +54,7 @@ private:
 
     ddk::PDev pdev_;
     std::optional<ddk::I2cChannel> i2c_;
-    std::optional<ddk::GpioProtocolProxy> gpios_[GPIO_COUNT];
+    std::optional<ddk::GpioProtocolClient> gpios_[GPIO_COUNT];
 
     std::optional<ddk::MmioBuffer> periph_mmio_;
     std::optional<ddk::MmioBuffer> hhi_mmio_;

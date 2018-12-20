@@ -126,7 +126,7 @@ private:
     DisplaySetting                      disp_setting_;
 
     // Display controller related data
-    ddk::DisplayControllerInterfaceProxy dc_intf_ TA_GUARDED(display_lock_);
+    ddk::DisplayControllerInterfaceClient dc_intf_ TA_GUARDED(display_lock_);
 
     // Simple hashtable
     ImportedImageBitmap                  imported_images_ TA_GUARDED(image_lock_);;

@@ -91,7 +91,7 @@ private:
     list_node_t imported_images_ TA_GUARDED(image_lock_);
 
     // Display controller related data
-    ddk::DisplayControllerInterfaceProxy dc_intf_ TA_GUARDED(display_lock_);
+    ddk::DisplayControllerInterfaceClient dc_intf_ TA_GUARDED(display_lock_);
 };
 
 } // namespace mt8167s_display

@@ -47,14 +47,14 @@ int Ft3x27Device::Thread() {
         uint8_t i2c_buf[kMaxPoints * kFingerRptSize + 1];
         status = Read(FTS_REG_CURPOINT, i2c_buf, kMaxPoints * kFingerRptSize + 1);
         if (status == ZX_OK) {
-            fbl::AutoLock lock(&proxy_lock_);
+            fbl::AutoLock lock(&client_lock_);
             ft_rpt_.rpt_id = FT3X27_RPT_ID_TOUCH;
             ft_rpt_.contact_count = i2c_buf[0];
             for (uint i = 0; i < kMaxPoints; i++) {
                 ParseReport(&ft_rpt_.fingers[i], &i2c_buf[i * kFingerRptSize + 1]);
             }
-            if (proxy_.is_valid()) {
-                proxy_.IoQueue(reinterpret_cast<uint8_t*>(&ft_rpt_), sizeof(ft3x27_touch_t));
+            if (client_.is_valid()) {
+                client_.IoQueue(reinterpret_cast<uint8_t*>(&ft_rpt_), sizeof(ft3x27_touch_t));
             }
         } else {
             zxlogf(ERROR, "ft3x27: i2c read error\n");
@@ -163,8 +163,8 @@ zx_status_t Ft3x27Device::ShutDown() {
     irq_.destroy();
     thrd_join(thread_, NULL);
     {
-        fbl::AutoLock lock(&proxy_lock_);
-        //proxy_.clear();
+        fbl::AutoLock lock(&client_lock_);
+        //client_.clear();
     }
     return ZX_OK;
 }
@@ -211,18 +211,17 @@ zx_status_t Ft3x27Device::HidbusSetProtocol(uint8_t protocol) {
 }
 
 void Ft3x27Device::HidbusStop() {
-    fbl::AutoLock lock(&proxy_lock_);
-    proxy_.clear();
+    fbl::AutoLock lock(&client_lock_);
+    client_.clear();
 }
 
 zx_status_t Ft3x27Device::HidbusStart(const hidbus_ifc_t* ifc) {
-    fbl::AutoLock lock(&proxy_lock_);
-    if (proxy_.is_valid()) {
+    fbl::AutoLock lock(&client_lock_);
+    if (client_.is_valid()) {
         zxlogf(ERROR, "ft3x27: Already bound!\n");
         return ZX_ERR_ALREADY_BOUND;
     } else {
-        ddk::HidbusIfcProxy proxy(ifc);
-        proxy_ = proxy;
+        client_ = ddk::HidbusIfcClient(ifc);
         zxlogf(INFO, "ft3x27: started\n");
     }
     return ZX_OK;

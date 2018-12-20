@@ -61,9 +61,9 @@ int HidButtonsDevice::Thread() {
             if (status != ZX_OK) {
                 zxlogf(ERROR, "%s HidbusGetReport failed %d\n", __FUNCTION__, status);
             } else {
-                fbl::AutoLock lock(&proxy_lock_);
-                if (proxy_.is_valid()) {
-                    proxy_.IoQueue(&input_rpt, sizeof(buttons_input_rpt_t));
+                fbl::AutoLock lock(&client_lock_);
+                if (client_.is_valid()) {
+                    client_.IoQueue(&input_rpt, sizeof(buttons_input_rpt_t));
                     // If report could not be filled, we do not ioqueue.
                 }
             }
@@ -78,11 +78,11 @@ int HidButtonsDevice::Thread() {
 }
 
 zx_status_t HidButtonsDevice::HidbusStart(const hidbus_ifc_t* ifc) {
-    fbl::AutoLock lock(&proxy_lock_);
-    if (proxy_.is_valid()) {
+    fbl::AutoLock lock(&client_lock_);
+    if (client_.is_valid()) {
         return ZX_ERR_ALREADY_BOUND;
     } else {
-        proxy_ = ddk::HidbusIfcProxy(ifc);
+        client_ = ddk::HidbusIfcClient(ifc);
     }
     return ZX_OK;
 }
@@ -99,8 +99,8 @@ zx_status_t HidButtonsDevice::HidbusQuery(uint32_t options, hid_info_t* info) {
 }
 
 void HidButtonsDevice::HidbusStop() {
-    fbl::AutoLock lock(&proxy_lock_);
-    proxy_.clear();
+    fbl::AutoLock lock(&client_lock_);
+    client_.clear();
 }
 
 zx_status_t HidButtonsDevice::HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len) {
@@ -406,8 +406,8 @@ void HidButtonsDevice::ShutDown() {
     for (uint32_t i = 0; i < gpios_.size(); ++i) {
         gpios_[i].irq.destroy();
     }
-    fbl::AutoLock lock(&proxy_lock_);
-    proxy_.clear();
+    fbl::AutoLock lock(&client_lock_);
+    client_.clear();
 }
 
 void HidButtonsDevice::DdkUnbind() {

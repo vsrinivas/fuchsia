@@ -780,7 +780,7 @@ zx_status_t MtUsb::UsbDciSetInterface(const usb_dci_interface_t* interface) {
         return ZX_ERR_BAD_STATE;
     }
 
-    dci_intf_ = ddk::UsbDciInterfaceProxy(interface);
+    dci_intf_ = ddk::UsbDciInterfaceClient(interface);
 
     // Now that the usb-peripheral driver has bound, we can start things up.
     int rc = thrd_create_with_name(&irq_thread_,

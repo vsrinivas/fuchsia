@@ -23,7 +23,7 @@ zx_status_t AmlThermal::Create(zx_device_t* device) {
     zxlogf(INFO, "aml_thermal: driver begin...\n");
     zx_status_t status;
 
-    ddk::PDevProtocolProxy pdev(device);
+    ddk::PDevProtocolClient pdev(device);
     if (!pdev.is_valid()) {
         THERMAL_ERROR("could not get platform device protocol\n");
         return ZX_ERR_NO_RESOURCES;
@@ -53,7 +53,7 @@ zx_status_t AmlThermal::Create(zx_device_t* device) {
         return status;
     }
 
-    ddk::ScpiProtocolProxy scpi(&scpi_proto);
+    ddk::ScpiProtocolClient scpi(&scpi_proto);
     uint32_t sensor_id;
     status = scpi.GetSensor("aml_thermal", &sensor_id);
     if (status != ZX_OK) {

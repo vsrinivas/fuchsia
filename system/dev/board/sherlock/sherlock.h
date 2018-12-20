@@ -83,9 +83,9 @@ private:
     zx_status_t AudioInit();
     int Thread();
 
-    ddk::PBusProtocolProxy pbus_;
-    ddk::IommuProtocolProxy iommu_;
-    ddk::GpioImplProtocolProxy gpio_impl_;
+    ddk::PBusProtocolClient pbus_;
+    ddk::IommuProtocolClient iommu_;
+    ddk::GpioImplProtocolClient gpio_impl_;
     thrd_t thread_;
 };
 

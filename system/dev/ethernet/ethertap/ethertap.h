@@ -60,7 +60,7 @@ class TapDevice : public ddk::Device<TapDevice, ddk::Unbindable>,
 
     fbl::Mutex lock_;
     bool dead_ = false;
-    ddk::EthmacIfcProxy ethmac_proxy_ __TA_GUARDED(lock_);
+    ddk::EthmacIfcClient ethmac_client_ __TA_GUARDED(lock_);
 
     // Only accessed from Thread, so not locked.
     bool online_ = false;

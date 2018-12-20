@@ -125,7 +125,7 @@ const char* MmioConfig::type(void) const {
 
 // Proxy Config Implementation
 zx_status_t ProxyConfig::Create(pci_bdf_t bdf,
-                                ddk::PcirootProtocolProxy* proto,
+                                ddk::PcirootProtocolClient* proto,
                                 fbl::RefPtr<Config>* config) {
     fbl::AllocChecker ac;
     *config = AdoptRef(new (&ac) ProxyConfig(bdf, proto));

@@ -180,7 +180,7 @@ private:
 class ProxyConfig final : public Config {
 public:
     static zx_status_t Create(pci_bdf_t bdf,
-                              ddk::PcirootProtocolProxy* proto,
+                              ddk::PcirootProtocolClient* proto,
                               fbl::RefPtr<Config>* config);
     uint8_t Read(const PciReg8 addr) const final;
     uint16_t Read(const PciReg16 addr) const final;
@@ -191,10 +191,10 @@ public:
     const char* type(void) const final;
 
 private:
-    ProxyConfig(pci_bdf_t bdf, ddk::PcirootProtocolProxy* proto)
+    ProxyConfig(pci_bdf_t bdf, ddk::PcirootProtocolClient* proto)
         : Config(bdf), pciroot_(proto) {}
     // The bus driver outlives config objects.
-    ddk::PcirootProtocolProxy* const pciroot_;
+    ddk::PcirootProtocolClient* const pciroot_;
 };
 
 } // namespace pci

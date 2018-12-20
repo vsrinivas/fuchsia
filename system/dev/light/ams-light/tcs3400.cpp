@@ -147,16 +147,16 @@ int Tcs3400Device::Thread() {
                 threshold_high = feature_rpt_.threshold_high;
             }
             {
-                fbl::AutoLock lock(&proxy_input_lock_);
-                if (FillInputRpt() == ZX_OK && proxy_.is_valid()) {
+                fbl::AutoLock lock(&client_input_lock_);
+                if (FillInputRpt() == ZX_OK && client_.is_valid()) {
                     if (input_rpt_.illuminance > threshold_high) {
                         input_rpt_.event =
                             HID_USAGE_SENSOR_EVENT_HIGH_THRESHOLD_CROSS_UPWARD_VAL;
-                        proxy_.IoQueue(&input_rpt_, sizeof(ambient_light_input_rpt_t));
+                        client_.IoQueue(&input_rpt_, sizeof(ambient_light_input_rpt_t));
                     } else if (input_rpt_.illuminance < threshold_low) {
                         input_rpt_.event =
                             HID_USAGE_SENSOR_EVENT_LOW_THRESHOLD_CROSS_DOWNWARD_VAL;
-                        proxy_.IoQueue(&input_rpt_, sizeof(ambient_light_input_rpt_t));
+                        client_.IoQueue(&input_rpt_, sizeof(ambient_light_input_rpt_t));
                     }
                 }
                 // If report could not be filled, we do not ioqueue
@@ -179,11 +179,11 @@ int Tcs3400Device::Thread() {
             break;
         case TCS_POLL:
             {
-                fbl::AutoLock lock(&proxy_input_lock_);
-                if (proxy_.is_valid()) {
+                fbl::AutoLock lock(&client_input_lock_);
+                if (client_.is_valid()) {
                     FillInputRpt(); // We ioqueue even if report filling failed reporting bad state
                     input_rpt_.event = HID_USAGE_SENSOR_EVENT_PERIOD_EXCEEDED_VAL;
-                    proxy_.IoQueue(&input_rpt_, sizeof(ambient_light_input_rpt_t));
+                    client_.IoQueue(&input_rpt_, sizeof(ambient_light_input_rpt_t));
                 }
             }
             {
@@ -234,11 +234,11 @@ zx_status_t Tcs3400Device::DdkRead(void* buf, size_t count, zx_off_t off, size_t
 }
 
 zx_status_t Tcs3400Device::HidbusStart(const hidbus_ifc_t* ifc) {
-    fbl::AutoLock lock(&proxy_input_lock_);
-    if (proxy_.is_valid()) {
+    fbl::AutoLock lock(&client_input_lock_);
+    if (client_.is_valid()) {
         return ZX_ERR_ALREADY_BOUND;
     } else {
-        proxy_ = ddk::HidbusIfcProxy(ifc);
+        client_ = ddk::HidbusIfcClient(ifc);
     }
     return ZX_OK;
 }
@@ -282,7 +282,7 @@ zx_status_t Tcs3400Device::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, voi
         return ZX_ERR_BUFFER_TOO_SMALL;
     }
     if (rpt_id == AMBIENT_LIGHT_RPT_ID_INPUT) {
-        fbl::AutoLock lock(&proxy_input_lock_);
+        fbl::AutoLock lock(&client_input_lock_);
         FillInputRpt();
         auto out = static_cast<ambient_light_input_rpt_t*>(data);
         *out = input_rpt_; // TA doesn't work on a memcpy taking an address as in &input_rpt_
@@ -409,8 +409,8 @@ void Tcs3400Device::ShutDown() {
     thrd_join(thread_, NULL);
     irq_.destroy();
     {
-        fbl::AutoLock lock(&proxy_input_lock_);
-        proxy_.clear();
+        fbl::AutoLock lock(&client_input_lock_);
+        client_.clear();
     }
 }
 

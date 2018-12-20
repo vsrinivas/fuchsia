@@ -70,8 +70,8 @@ private:
     fzl::PinnedVmo pinned_ring_buffer_;
 
     fbl::unique_ptr<AmlTdmDevice> aml_audio_;
-    std::optional<ddk::GpioProtocolProxy> audio_en_;
-    std::optional<ddk::GpioProtocolProxy> audio_fault_;
+    std::optional<ddk::GpioProtocolClient> audio_en_;
+    std::optional<ddk::GpioProtocolClient> audio_fault_;
 
     zx::bti bti_;
 };

@@ -95,9 +95,9 @@ private:
     // Protocols.
     ddk::PDev pdev_;
     ddk::I2cChannel i2c_;
-    ddk::GpioProtocolProxy gpios_[GPIO_COUNT];
-    ddk::ClkProtocolProxy clk_;
-    ddk::MipiCsiProtocolProxy mipi_;
+    ddk::GpioProtocolClient gpios_[GPIO_COUNT];
+    ddk::ClkProtocolClient clk_;
+    ddk::MipiCsiProtocolClient mipi_;
 
     // I2C Helpers.
     uint8_t ReadReg(uint16_t addr);

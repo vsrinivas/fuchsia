@@ -59,7 +59,7 @@ private:
     fbl::Mutex lock_;
 
     // Interface the driver is currently bound to
-    ddk::HidbusIfcProxy proxy_;
+    ddk::HidbusIfcClient client_;
 
     // Track the pressed state.  We don't receive up-events from ACPI, but we
     // may want to synthesize them in the future if we care about duration of
@@ -151,9 +151,9 @@ void AcpiPwrbtnDevice::NotifyHandler(ACPI_HANDLE handle, UINT32 value, void* ctx
 }
 
 void AcpiPwrbtnDevice::QueueHidReportLocked() {
-    if (proxy_.is_valid()) {
+    if (client_.is_valid()) {
         uint8_t report = 1;
-        proxy_.IoQueue(&report, sizeof(report));
+        client_.IoQueue(&report, sizeof(report));
     }
 }
 
@@ -170,10 +170,10 @@ zx_status_t AcpiPwrbtnDevice::HidbusStart(const hidbus_ifc_t* ifc) {
     zxlogf(TRACE, "acpi-pwrbtn: hid bus start\n");
 
     fbl::AutoLock guard(&lock_);
-    if (proxy_.is_valid()) {
+    if (client_.is_valid()) {
         return ZX_ERR_ALREADY_BOUND;
     }
-    proxy_ = ddk::HidbusIfcProxy(ifc);
+    client_ = ddk::HidbusIfcClient(ifc);
     return ZX_OK;
 }
 
@@ -181,7 +181,7 @@ void AcpiPwrbtnDevice::HidbusStop() {
     zxlogf(TRACE, "acpi-pwrbtn: hid bus stop\n");
 
     fbl::AutoLock guard(&lock_);
-    proxy_.clear();
+    client_.clear();
 }
 
 zx_status_t AcpiPwrbtnDevice::HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len) {

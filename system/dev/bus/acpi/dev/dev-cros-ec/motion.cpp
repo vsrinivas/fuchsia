@@ -99,8 +99,8 @@ zx_status_t AcpiCrOsEcMotionDevice::ConsumeFifoLocked() {
 
 void AcpiCrOsEcMotionDevice::QueueHidReportLocked(const uint8_t* data, size_t len) {
     // Default unit is lux
-    if (proxy_.is_valid()) {
-        proxy_.IoQueue(data, len);
+    if (client_.is_valid()) {
+        client_.IoQueue(data, len);
     }
 }
 
@@ -117,11 +117,11 @@ zx_status_t AcpiCrOsEcMotionDevice::HidbusStart(const hidbus_ifc_t* ifc) {
     zxlogf(TRACE, "acpi-cros-ec-motion: hid bus start\n");
 
     fbl::AutoLock guard(&hid_lock_);
-    if (proxy_.is_valid()) {
+    if (client_.is_valid()) {
         return ZX_ERR_ALREADY_BOUND;
     }
 
-    proxy_ = ddk::HidbusIfcProxy(ifc);
+    client_ = ddk::HidbusIfcClient(ifc);
 
     zx_status_t status = FifoInterruptEnable(true);
     if (status != ZX_OK) {
@@ -162,7 +162,7 @@ void AcpiCrOsEcMotionDevice::HidbusStop() {
 
     fbl::AutoLock guard(&hid_lock_);
 
-    proxy_.clear();
+    client_.clear();
     FifoInterruptEnable(false);
 
     // Disable all sensors

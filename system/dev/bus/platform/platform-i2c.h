@@ -41,7 +41,7 @@ private:
                   size_t data_length);
     int I2cThread();
 
-    ddk::I2cImplProtocolProxy i2c_;
+    ddk::I2cImplProtocolClient i2c_;
     const uint32_t bus_id_;
     size_t max_transfer_;
 

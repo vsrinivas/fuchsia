@@ -72,7 +72,7 @@ public:
 
     // Visible for testing.
     MtkSdmmc(zx_device_t* parent, ddk::MmioBuffer mmio, zx::bti bti, const sdmmc_host_info_t& info,
-             zx::interrupt irq, const ddk::GpioProtocolProxy& reset_gpio,
+             zx::interrupt irq, const ddk::GpioProtocolClient& reset_gpio,
              const pdev_device_info_t& dev_info, const board_mt8167::MtkSdmmcConfig& config)
         : DeviceType(parent), req_(nullptr), mmio_(std::move(mmio)), bti_(std::move(bti)),
           info_(info), irq_(std::move(irq)), cmd_status_(ZX_OK), reset_gpio_(reset_gpio),
@@ -132,7 +132,7 @@ private:
     io_buffer_t bdma_buf_;
     sync_completion_t req_completion_;
     zx_status_t cmd_status_ TA_GUARDED(mutex_);
-    ddk::GpioProtocolProxy reset_gpio_;
+    ddk::GpioProtocolClient reset_gpio_;
     const pdev_device_info_t dev_info_;
     const board_mt8167::MtkSdmmcConfig config_;
 };

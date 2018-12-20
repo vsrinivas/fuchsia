@@ -69,8 +69,8 @@ private:
     zx::vmo ring_buffer_vmo_ TA_GUARDED(domain_->token());
     fzl::PinnedVmo pinned_ring_buffer_ TA_GUARDED(domain_->token());
     fbl::unique_ptr<AmlTdmDevice> aml_audio_;
-    std::optional<ddk::GpioProtocolProxy> audio_en_ TA_GUARDED(domain_->token());
-    std::optional<ddk::GpioProtocolProxy> audio_fault_ TA_GUARDED(domain_->token());
+    std::optional<ddk::GpioProtocolClient> audio_en_ TA_GUARDED(domain_->token());
+    std::optional<ddk::GpioProtocolClient> audio_fault_ TA_GUARDED(domain_->token());
     zx::bti bti_ TA_GUARDED(domain_->token());
 };
 

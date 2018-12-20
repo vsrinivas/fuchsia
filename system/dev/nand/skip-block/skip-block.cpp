@@ -29,7 +29,7 @@ struct BlockOperationContext {
     ReadWriteOperation op;
     zircon_nand_Info* nand_info;
     LogicalToPhysicalMap* block_map;
-    ddk::NandProtocolProxy* nand;
+    ddk::NandProtocolClient* nand;
     uint32_t copy;
     uint32_t current_block;
     uint32_t physical_block;
@@ -146,7 +146,7 @@ zircon_skipblock_SkipBlock_ops fidl_ops = {
 
 zx_status_t SkipBlockDevice::Create(zx_device_t* parent) {
     // Get NAND protocol.
-    ddk::NandProtocolProxy nand(parent);
+    ddk::NandProtocolClient nand(parent);
     if (!nand.is_valid()) {
         zxlogf(ERROR, "skip-block: parent device '%s': does not support nand protocol\n",
                device_get_name(parent));
@@ -154,7 +154,7 @@ zx_status_t SkipBlockDevice::Create(zx_device_t* parent) {
     }
 
     // Get bad block protocol.
-    ddk::BadBlockProtocolProxy bad_block(parent);
+    ddk::BadBlockProtocolClient bad_block(parent);
     if (!bad_block.is_valid()) {
         zxlogf(ERROR, "skip-block: parent device '%s': does not support bad_block protocol\n",
                device_get_name(parent));

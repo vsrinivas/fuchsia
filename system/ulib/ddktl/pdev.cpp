@@ -43,14 +43,14 @@ std::optional<I2cChannel> PDev::GetI2c(uint32_t index) {
     return std::optional<I2cChannel>(&i2c);
 }
 
-std::optional<GpioProtocolProxy> PDev::GetGpio(uint32_t index) {
+std::optional<GpioProtocolClient> PDev::GetGpio(uint32_t index) {
     gpio_protocol_t gpio;
     size_t actual;
     zx_status_t res = GetProtocol(ZX_PROTOCOL_GPIO, index, &gpio, sizeof(gpio), &actual);
     if (res != ZX_OK || actual != sizeof(gpio)) {
         return {};
     }
-    return std::optional<GpioProtocolProxy>(&gpio);
+    return std::optional<GpioProtocolClient>(&gpio);
 }
 
 } // namespace ddk

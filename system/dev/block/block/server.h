@@ -147,7 +147,7 @@ class BlockServer {
 public:
     // Creates a new BlockServer.
     static zx_status_t Create(
-        ddk::BlockProtocolProxy* bp,
+        ddk::BlockProtocolClient* bp,
         fzl::fifo<block_fifo_request_t, block_fifo_response_t>* fifo_out,
         BlockServer** out);
 
@@ -173,7 +173,7 @@ public:
     ~BlockServer();
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(BlockServer);
-    BlockServer(ddk::BlockProtocolProxy* bp);
+    BlockServer(ddk::BlockProtocolClient* bp);
 
     // Helper for processing a single message read from the FIFO.
     void ProcessRequest(block_fifo_request_t* request);
@@ -198,7 +198,7 @@ private:
 
     fzl::fifo<block_fifo_response_t, block_fifo_request_t> fifo_;
     block_info_t info_;
-    ddk::BlockProtocolProxy* bp_;
+    ddk::BlockProtocolClient* bp_;
     size_t block_op_size_;
 
     // BARRIER_AFTER is implemented by sticking "BARRIER_BEFORE" on the
@@ -217,7 +217,7 @@ private:
 // TODO(smklein): The following names should be converted to their canonical C++ versions.
 
 // Allocate a new blockserver + FIFO combo
-zx_status_t blockserver_create(ddk::BlockProtocolProxy* bp, zx_handle_t* fifo_out,
+zx_status_t blockserver_create(ddk::BlockProtocolClient* bp, zx_handle_t* fifo_out,
                                BlockServer** out);
 
 // Shut down the blockserver. It will stop serving requests.

@@ -51,7 +51,7 @@ zx_status_t MtkThermal::Create(zx_device_t* parent) {
         return ZX_ERR_NO_RESOURCES;
     }
 
-    ddk::ClkProtocolProxy clk(parent);
+    ddk::ClkProtocolClient clk(parent);
     if (!clk.is_valid()) {
         zxlogf(ERROR, "%s: ZX_PROTOCOL_CLK not available\n", __FILE__);
         return ZX_ERR_NO_RESOURCES;

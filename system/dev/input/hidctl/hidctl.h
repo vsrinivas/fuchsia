@@ -59,7 +59,7 @@ class HidDevice : public ddk::Device<HidDevice, ddk::Unbindable>,
     uint32_t mtu_ = 256;  // TODO: set this based on report_desc_
 
     fbl::Mutex lock_;
-    ddk::HidbusIfcProxy proxy_ __TA_GUARDED(lock_);
+    ddk::HidbusIfcClient client_ __TA_GUARDED(lock_);
     zx::socket data_;
     thrd_t thread_;
 };

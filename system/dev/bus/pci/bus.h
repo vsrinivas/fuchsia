@@ -28,13 +28,13 @@ private:
     zx_status_t MakeConfig(pci_bdf_t bdf, fbl::RefPtr<Config>* config);
     zx_status_t MapEcam(void);
     zx_status_t ScanDownstream(void);
-    ddk::PcirootProtocolProxy& pciroot(void) { return pciroot_; }
+    ddk::PcirootProtocolClient& pciroot(void) { return pciroot_; }
     // Our constructor exists to fulfill the mixin constructors
     Bus(zx_device_t* parent, const pciroot_protocol_t* proto)
         : PciBusType(parent), pciroot_(proto) {}
     
     // members
-    ddk::PcirootProtocolProxy pciroot_;
+    ddk::PcirootProtocolClient pciroot_;
     pci_platform_info_t info_;
     mmio_buffer_t ecam_;
     bool has_ecam_;

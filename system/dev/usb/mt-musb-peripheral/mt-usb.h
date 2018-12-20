@@ -115,7 +115,7 @@ private:
     }
 
     ddk::PDev pdev_;
-    std::optional<ddk::UsbDciInterfaceProxy> dci_intf_;
+    std::optional<ddk::UsbDciInterfaceClient> dci_intf_;
 
     std::optional<ddk::MmioBuffer> usb_mmio_;
     std::optional<ddk::MmioBuffer> phy_mmio_;

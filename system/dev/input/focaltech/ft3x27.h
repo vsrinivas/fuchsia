@@ -67,7 +67,7 @@ public:
     static zx_status_t Create(zx_device_t* device);
 
     void DdkRelease();
-    void DdkUnbind() __TA_EXCLUDES(proxy_lock_);
+    void DdkUnbind() __TA_EXCLUDES(client_lock_);
 
     // Hidbus required methods
     void HidbusStop();
@@ -80,8 +80,8 @@ public:
     zx_status_t HidbusSetIdle(uint8_t rpt_id, uint8_t duration);
     zx_status_t HidbusGetProtocol(uint8_t* protocol);
     zx_status_t HidbusSetProtocol(uint8_t protocol);
-    zx_status_t HidbusStart(const hidbus_ifc_t* ifc) __TA_EXCLUDES(proxy_lock_);
-    zx_status_t HidbusQuery(uint32_t options, hid_info_t* info) __TA_EXCLUDES(proxy_lock_);
+    zx_status_t HidbusStart(const hidbus_ifc_t* ifc) __TA_EXCLUDES(client_lock_);
+    zx_status_t HidbusQuery(uint32_t options, hid_info_t* info) __TA_EXCLUDES(client_lock_);
 
 private:
     /* Note: the ft3x27 device is connected via i2c and is NOT a HID
@@ -99,14 +99,14 @@ private:
     static constexpr size_t kMaxI2cTransferLength = 8;
 
     zx_status_t InitPdev();
-    zx_status_t ShutDown() __TA_EXCLUDES(proxy_lock_);
+    zx_status_t ShutDown() __TA_EXCLUDES(client_lock_);
 
     uint8_t Read(uint8_t addr);
     zx_status_t Read(uint8_t addr, uint8_t* buf, size_t len);
 
     int Thread();
 
-    ft3x27_touch_t ft_rpt_ __TA_GUARDED(proxy_lock_);
+    ft3x27_touch_t ft_rpt_ __TA_GUARDED(client_lock_);
     void ParseReport(ft3x27_finger_t* rpt, uint8_t* buf);
 
     gpio_protocol_t gpios_[FT_PIN_COUNT];
@@ -116,7 +116,7 @@ private:
     thrd_t thread_;
     std::atomic<bool> running_;
 
-    fbl::Mutex proxy_lock_;
-    ddk::HidbusIfcProxy proxy_ __TA_GUARDED(proxy_lock_);
+    fbl::Mutex client_lock_;
+    ddk::HidbusIfcClient client_ __TA_GUARDED(client_lock_);
 };
 }

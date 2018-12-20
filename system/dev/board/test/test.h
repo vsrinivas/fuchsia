@@ -37,7 +37,7 @@ private:
     zx_status_t TestInit();
     int Thread();
 
-    ddk::PBusProtocolProxy pbus_;
+    ddk::PBusProtocolClient pbus_;
     thrd_t thread_;
 };
 

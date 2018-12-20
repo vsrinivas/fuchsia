@@ -36,7 +36,7 @@ private:
     // Initialize platform stuff.
     zx_status_t InitPdev(zx_device_t* parent);
     // Protocols.
-    ddk::ClkProtocolProxy clk_;
+    ddk::ClkProtocolClient clk_;
     // MMIOS.
     std::optional<ddk::MmioBuffer> hiu_mmio_;
     // BTI handle.

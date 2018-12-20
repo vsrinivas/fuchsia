@@ -42,7 +42,7 @@ class BlockDevice : public BlockDeviceType, public ddk::BlockProtocol<BlockDevic
 public:
     BlockDevice(zx_device_t* parent) : BlockDeviceType(parent) {
         block_protocol_t self { &ops_, this };
-        self_protocol_ = ddk::BlockProtocolProxy(&self);
+        self_protocol_ = ddk::BlockProtocolClient(&self);
     };
 
     static zx_status_t Bind(void* ctx, zx_device_t* dev);
@@ -69,10 +69,10 @@ private:
     zx_status_t DoIo(void* buf, size_t buf_len, zx_off_t off, bool write);
 
     // The block protocol of the device we are binding against.
-    ddk::BlockImplProtocolProxy parent_protocol_;
+    ddk::BlockImplProtocolClient parent_protocol_;
     // The block protocol for ourselves, which redirects to the parent protocol,
     // but may also collect auxiliary information like statistics.
-    ddk::BlockProtocolProxy self_protocol_;
+    ddk::BlockProtocolClient self_protocol_;
     block_info_t info_ = {};
     size_t block_op_size_ = 0;
     // True if we have metadata for a ZBI partition map.
@@ -336,8 +336,8 @@ zx_status_t BlockDevice::Bind(void* ctx, zx_device_t* dev) {
                device_get_name(dev));
         return ZX_ERR_NOT_SUPPORTED;
     }
-    ddk::BlockImplProtocolProxy proxy(&parent_protocol);
-    bdev->parent_protocol_ = std::move(proxy);
+    ddk::BlockImplProtocolClient client(&parent_protocol);
+    bdev->parent_protocol_ = std::move(client);
 
     bdev->parent_protocol_.Query(&bdev->info_, &bdev->block_op_size_);
 

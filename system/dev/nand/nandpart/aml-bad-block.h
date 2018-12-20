@@ -94,7 +94,7 @@ private:
     const bad_block_config_t config_;
     // Parent nand protocol implementation.
     nand_protocol_t nand_proto_;
-    ddk::NandProtocolProxy nand_;
+    ddk::NandProtocolClient nand_;
     const zircon_nand_Info nand_info_;
     // Information about blocks which store BBT entries.
     BlockListEntry block_list_[kBlockListMax];

@@ -66,7 +66,7 @@ private:
     bool tablet_mode_ = false;
 
     // Interface the driver is currently bound to
-    ddk::HidbusIfcProxy proxy_;
+    ddk::HidbusIfcClient client_;
 
     static const uint8_t kHidDescriptor[];
     static const size_t kHidDescriptorLen;
@@ -145,10 +145,10 @@ void AcpiTbmcDevice::NotifyHandler(ACPI_HANDLE handle, UINT32 value, void* ctx) 
 }
 
 zx_status_t AcpiTbmcDevice::QueueHidReportLocked() {
-    if (proxy_.is_valid()) {
+    if (client_.is_valid()) {
         zxlogf(TRACE, "acpi-tbmc:  queueing report\n");
         uint8_t report = tablet_mode_;
-        proxy_.IoQueue(&report, sizeof(report));
+        client_.IoQueue(&report, sizeof(report));
     }
     return ZX_OK;
 }
@@ -166,10 +166,10 @@ zx_status_t AcpiTbmcDevice::HidbusStart(const hidbus_ifc_t* ifc) {
     zxlogf(TRACE, "acpi-tbmc: hid bus start\n");
 
     fbl::AutoLock guard(&lock_);
-    if (proxy_.is_valid()) {
+    if (client_.is_valid()) {
         return ZX_ERR_ALREADY_BOUND;
     }
-    proxy_ = ddk::HidbusIfcProxy(ifc);
+    client_ = ddk::HidbusIfcClient(ifc);
     return ZX_OK;
 }
 
@@ -177,7 +177,7 @@ void AcpiTbmcDevice::HidbusStop() {
     zxlogf(TRACE, "acpi-tbmc: hid bus stop\n");
 
     fbl::AutoLock guard(&lock_);
-    proxy_.clear();
+    client_.clear();
 }
 
 zx_status_t AcpiTbmcDevice::HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len) {
