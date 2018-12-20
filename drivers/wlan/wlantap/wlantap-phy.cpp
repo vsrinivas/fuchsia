@@ -343,10 +343,12 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
     }
 
     virtual void WlantapMacSetChannel(uint16_t wlanmac_id, wlan_channel_t* channel) override {
-        zxlogf(INFO, "wlantap phy: WlantapMacSetChannel id=%u\n", wlanmac_id);
+        if (!phy_config_->quiet) {
+            zxlogf(INFO, "wlantap phy: WlantapMacSetChannel id=%u\n", wlanmac_id);
+        }
         std::lock_guard<std::mutex> guard(user_channel_lock_);
         event_sender_.SendSetChannelEvent(wlanmac_id, channel);
-        zxlogf(INFO, "wlantap phy: WlantapMacSetChannel done\n");
+        if (!phy_config_->quiet) { zxlogf(INFO, "wlantap phy: WlantapMacSetChannel done\n"); }
     }
 
     virtual void WlantapMacConfigureBss(uint16_t wlanmac_id, wlan_bss_config_t* config) override {
