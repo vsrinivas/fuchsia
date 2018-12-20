@@ -14,13 +14,15 @@ EXTRA_ARGS=()
 
 function HELP {
     echo "help:"
+    echo "-c <cmd line> : Extra command line options"
     echo "-m            : Add mexec option to command line"
     echo "-h for help"
     exit 1
 }
 
-while getopts "mh" FLAG; do
+while getopts "c:mh" FLAG; do
     case $FLAG in
+        c) EXTRA_ARGS+=(-c "${OPTARG}");;
         m) EXTRA_ARGS+=(-m);;
         h) HELP;;
         \?)

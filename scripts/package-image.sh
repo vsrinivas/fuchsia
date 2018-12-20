@@ -53,7 +53,7 @@ function HELP {
 DTB_OFFSET=0x03000000
 BOOT_PARTITION_SIZE=33554432
 
-while getopts "ab:B:cC::d:D:ghK:lmM:r:o:v:z:" FLAG; do
+while getopts "ab:B:c:C::d:D:ghK:lmM:r:o:v:z:" FLAG; do
     case $FLAG in
         a) USE_AVB=true;;
         b) BOARD="${OPTARG}";;
