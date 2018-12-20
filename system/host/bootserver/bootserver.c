@@ -201,6 +201,7 @@ void usage(void) {
             "             (ignored with --tftp)\n"
             "  -n         only boot device with this nodename\n"
             "  -w <sz>    tftp window size (default=%d, ignored with --netboot)\n"
+            "  --boot <file>            use the supplied file as a kernel\n"
             "  --fvm <file>             use the supplied file as a sparse FVM image (up to 4 times)\n"
             "  --bootloader <file>      use the supplied file as a BOOTLOADER image\n"
             "  --efi <file>             use the supplied file as an EFI image\n"
@@ -413,6 +414,15 @@ int main(int argc, char** argv) {
                 return -1;
             }
             authorized_keys = argv[1];
+        } else if (!strcmp(argv[1], "--boot")) {
+            argc--;
+            argv++;
+            if (argc <= 1) {
+                fprintf(stderr,
+                        "'--boot' option requires an argument (a kernel image)\n");
+                return -1;
+            }
+            kernel_fn = argv[1];
         } else if (!strcmp(argv[1], "-1")) {
             once = 1;
         } else if (!strcmp(argv[1], "-b")) {
