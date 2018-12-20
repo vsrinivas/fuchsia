@@ -4,47 +4,54 @@
 
 #pragma once
 
+typedef struct {
+    uint32_t set_offset;
+    uint32_t stat_offset;
+    uint32_t clr_offset;
+    uint32_t payload_offset;
+} aml_mailbox_block_t;
+
 static aml_mailbox_block_t vim2_mailbox_block[] = {
     // Mailbox 0
     {
-        .set_offset     = 0x1,
-        .stat_offset    = 0x2,
-        .clr_offset     = 0x3,
-        .payload_offset = 0x200,
+        .set_offset     = 0x1 << 2,
+        .stat_offset    = 0x2 << 2,
+        .clr_offset     = 0x3 << 2,
+        .payload_offset = 0x200 << 2,
     },
     // Mailbox 1
     {
-        .set_offset     = 0x4,
-        .stat_offset    = 0x5,
-        .clr_offset     = 0x6,
-        .payload_offset = 0x0,
+        .set_offset     = 0x4 << 2,
+        .stat_offset    = 0x5 << 2,
+        .clr_offset     = 0x6 << 2,
+        .payload_offset = 0x0 << 2,
     },
     // Mailbox 2
     {
-        .set_offset     = 0x7,
-        .stat_offset    = 0x8,
-        .clr_offset     = 0x9,
-        .payload_offset = 0x100,
+        .set_offset     = 0x7 << 2,
+        .stat_offset    = 0x8 << 2,
+        .clr_offset     = 0x9 << 2,
+        .payload_offset = 0x100 << 2,
     },
     // Mailbox 3
     {
-        .set_offset     = 0xA,
-        .stat_offset    = 0xB,
-        .clr_offset     = 0xC,
-        .payload_offset = 0x280,
+        .set_offset     = 0xA << 2,
+        .stat_offset    = 0xB << 2,
+        .clr_offset     = 0xC << 2,
+        .payload_offset = 0x280 << 2,
     },
     // Mailbox 4
     {
-        .set_offset     = 0xD,
-        .stat_offset    = 0xE,
-        .clr_offset     = 0xF,
-        .payload_offset = 0x80,
+        .set_offset     = 0xD << 2,
+        .stat_offset    = 0xE << 2,
+        .clr_offset     = 0xF << 2,
+        .payload_offset = 0x80 << 2,
     },
     // Mailbox 5
     {
-        .set_offset     = 0x10,
-        .stat_offset    = 0x11,
-        .clr_offset     = 0x12,
-        .payload_offset = 0x180,
+        .set_offset     = 0x10 << 2,
+        .stat_offset    = 0x11 << 2,
+        .clr_offset     = 0x12 << 2,
+        .payload_offset = 0x180 << 2,
     },
 };

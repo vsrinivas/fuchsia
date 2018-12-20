@@ -5,66 +5,76 @@
 #pragma once
 
 #include <ddk/debug.h>
-#include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/mmio-buffer.h>
 #include <ddk/platform-defs.h>
-#include <ddk/platform-defs.h>
-#include <ddk/protocol/mailbox.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/platform-device-lib.h>
+#include <ddk/protocol/platform/device.h>
+#include <ddktl/device.h>
+#include <ddktl/mmio.h>
+#include <ddktl/pdev.h>
+#include <ddktl/protocol/mailbox.h>
 #include <hw/reg.h>
 #include <lib/sync/completion.h>
+#include <lib/zx/interrupt.h>
 #include <threads.h>
 
-#define MAILBOX_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
-#define MAILBOX_INFO(fmt, ...) zxlogf(INFO, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
+#include <optional>
 
-#define NUM_MAILBOXES 6
 #define GET_NUM_WORDS(x) ((x) / 4 + (((x) % 4) ? 1 : 0))
 
-typedef struct {
-    uint32_t set_offset;
-    uint32_t stat_offset;
-    uint32_t clr_offset;
-    uint32_t payload_offset;
-} aml_mailbox_block_t;
+namespace mailbox {
 
-typedef struct {
-    zx_device_t* zxdev;
-    pdev_protocol_t pdev;
+class AmlMailbox;
+using DeviceType = ddk::Device<AmlMailbox, ddk::Unbindable>;
 
-    mmio_buffer_t mmio_mailbox;
-    mmio_buffer_t mmio_mailbox_payload;
+class AmlMailbox : public DeviceType,
+                   public ddk::MailboxProtocol<AmlMailbox> {
+public:
+    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlMailbox);
 
-    zx_handle_t inth[NUM_MAILBOXES];
+    explicit AmlMailbox(zx_device_t* parent)
+        : DeviceType(parent), pdev_(parent) {}
 
-    mtx_t mailbox_chan_lock[NUM_MAILBOXES];
-} aml_mailbox_t;
+    static zx_status_t Create(zx_device_t* parent);
 
-// MMIO Indexes
-enum {
-    MMIO_MAILBOX,
-    MMIO_MAILBOX_PAYLOAD,
+    // DDK Hooks.
+    void DdkRelease();
+    void DdkUnbind();
+
+    // ZX_PROTOCOL_MAILBOX protocol.
+    zx_status_t MailboxSendCommand(const mailbox_channel_t* channel,
+                                   const mailbox_data_buf_t* mdata);
+
+private:
+    static constexpr uint32_t kNumMailboxes = 6;
+
+    // MMIO Indexes
+    enum {
+        MMIO_MAILBOX,
+        MMIO_MAILBOX_PAYLOAD,
+    };
+
+    // IRQ Indexes
+    enum {
+        MAILBOX_IRQ_RECEIV0,
+        MAILBOX_IRQ_RECEIV1,
+        MAILBOX_IRQ_RECEIV2,
+        MAILBOX_IRQ_SEND3,
+        MAILBOX_IRQ_SEND4,
+        MAILBOX_IRQ_SEND5,
+    };
+
+    zx_status_t InitPdev();
+    zx_status_t Bind();
+    mailbox_type_t GetRxMailbox(mailbox_type_t tx_mailbox);
+    size_t GetNumWords(size_t size);
+
+    ddk::PDev pdev_;
+    zx::interrupt inth_[kNumMailboxes];
+    mtx_t mailbox_chan_lock_[kNumMailboxes];
+
+    std::optional<ddk::MmioBuffer> mailbox_mmio_;
+    std::optional<ddk::MmioBuffer> mailbox_payload_mmio_;
 };
 
-// IRQ Indexes
-enum {
-    MAILBOX_IRQ_RECEIV0,
-    MAILBOX_IRQ_RECEIV1,
-    MAILBOX_IRQ_RECEIV2,
-    MAILBOX_IRQ_SEND3,
-    MAILBOX_IRQ_SEND4,
-    MAILBOX_IRQ_SEND5,
-};
-
-// Mailboxes
-enum {
-    SCP_SECURE_MAILBOX,
-    SCP_NS_LOW_PRIORITY_MAILBOX,
-    SCP_NS_HIGH_PRIORITY_MAILBOX,
-    AP_SECURE_MAILBOX,
-    AP_NS_LOW_PRIORITY_MAILBOX,
-    AP_NS_HIGH_PRIORITY_MAILBOX,
-    INVALID_MAILBOX,
-};
+} // namespace mailbox

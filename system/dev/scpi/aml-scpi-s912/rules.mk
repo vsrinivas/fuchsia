@@ -9,16 +9,27 @@ MODULE := $(LOCAL_DIR).mailbox
 MODULE_TYPE := driver
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/aml-mailbox.c \
+    $(LOCAL_DIR)/aml-mailbox.cpp \
 
-MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
+MODULE_STATIC_LIBS := \
+    system/ulib/ddk \
+    system/ulib/ddktl \
+    system/ulib/fbl \
+    system/ulib/sync \
+    system/ulib/zx \
+    system/ulib/zxcpp \
 
-MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/zircon
+MODULE_LIBS := \
+    system/ulib/driver \
+    system/ulib/zircon \
+    system/ulib/c
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-mailbox \
     system/banjo/ddk-protocol-platform-bus \
     system/banjo/ddk-protocol-platform-device \
+    system/banjo/ddk-protocol-i2c \
+    system/banjo/ddk-protocol-gpio \
 
 include make/module.mk
 
@@ -31,9 +42,18 @@ MODULE_NAME := scpi
 MODULE_SRCS := \
     $(LOCAL_DIR)/aml-scpi.c \
 
-MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
+MODULE_STATIC_LIBS := \
+    system/ulib/ddk \
+    system/ulib/ddktl \
+    system/ulib/fbl \
+    system/ulib/sync \
+    system/ulib/zx \
+    system/ulib/zxcpp \
 
-MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
+MODULE_LIBS := \
+    system/ulib/driver \
+    system/ulib/zircon \
+    system/ulib/c
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-mailbox \

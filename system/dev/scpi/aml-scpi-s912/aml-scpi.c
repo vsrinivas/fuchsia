@@ -3,49 +3,50 @@
 // found in the LICENSE file.
 
 #include "aml-scpi.h"
-#include "aml-mailbox.h"
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
+#include <ddk/protocol/mailbox.h>
 #include <ddk/protocol/platform/device.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <zircon/assert.h>
 #include <zircon/device/thermal.h>
 
 static scpi_opp_t* scpi_opp[MAX_DVFS_DOMAINS];
 
 static zx_status_t aml_scpi_get_mailbox(uint32_t cmd,
-                                        uint32_t* mailbox) {
+                                        mailbox_type_t* mailbox) {
     if (!mailbox || !VALID_CMD(cmd)) {
         return ZX_ERR_INVALID_ARGS;
     }
 
     for (uint32_t i = 0; i < countof(aml_low_priority_cmds); i++) {
         if (cmd == aml_low_priority_cmds[i]) {
-            *mailbox = AP_NS_LOW_PRIORITY_MAILBOX;
+            *mailbox = MAILBOX_TYPE_AP_NS_LOW_PRIORITY_MAILBOX;
             return ZX_OK;
         }
     }
 
     for (uint32_t i = 0; i < countof(aml_high_priority_cmds); i++) {
         if (cmd == aml_high_priority_cmds[i]) {
-            *mailbox = AP_NS_HIGH_PRIORITY_MAILBOX;
+            *mailbox = MAILBOX_TYPE_AP_NS_HIGH_PRIORITY_MAILBOX;
             return ZX_OK;
         }
     }
 
     for (uint32_t i = 0; i < countof(aml_secure_cmds); i++) {
         if (cmd == aml_secure_cmds[i]) {
-            *mailbox = AP_SECURE_MAILBOX;
+            *mailbox = MAILBOX_TYPE_AP_SECURE_MAILBOX;
             return ZX_OK;
         }
     }
-    *mailbox = INVALID_MAILBOX;
+    *mailbox = MAILBOX_TYPE_INVALID_MAILBOX;
     return ZX_ERR_NOT_FOUND;
 }
 
@@ -335,6 +336,7 @@ static zx_driver_ops_t aml_scpi_driver_ops = {
     .bind = aml_scpi_bind,
 };
 
+// clang-format off
 ZIRCON_DRIVER_BEGIN(aml_scpi, aml_scpi_driver_ops, "zircon", "0.1", 4)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_MAILBOX),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),

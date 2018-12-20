@@ -6,17 +6,28 @@ library ddk.protocol.mailbox;
 
 using zx;
 
+// Mailboxes
+enum MailboxType : uint8 {
+    SCP_SECURE_MAILBOX = 0x0;
+    SCP_NS_LOW_PRIORITY_MAILBOX = 0x1;
+    SCP_NS_HIGH_PRIORITY_MAILBOX = 0x2;
+    AP_SECURE_MAILBOX = 0x3;
+    AP_NS_LOW_PRIORITY_MAILBOX = 0x4;
+    AP_NS_HIGH_PRIORITY_MAILBOX = 0x5;
+    INVALID_MAILBOX = 0x6;
+};
+
 struct MailboxDataBuf {
     uint32 cmd;
     vector<voidptr> tx;
 };
 
 struct MailboxChannel {
-    uint32 mailbox;
+    MailboxType mailbox;
     vector<voidptr> rx;
 };
 
-[Layout = "ddk-protocol"]
+[Layout = "ddk-protocol", DefaultProtocol]
 interface Mailbox {
     SendCommand(MailboxChannel channel, MailboxDataBuf mdata) -> (zx.status s);
 };
