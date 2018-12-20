@@ -77,7 +77,7 @@ typedef struct {
     pdev_protocol_t pdev;
     mmio_buffer_t dmc_regs;
     mtx_t lock;
-    canvas_protocol_t canvas;
+    amlogic_canvas_protocol_t canvas;
     zx_handle_t bti;
     zx_handle_t pmt_handle[NUM_CANVAS_ENTRIES];
 } aml_canvas_t;
@@ -86,5 +86,5 @@ typedef struct {
 typedef struct {
     zx_device_t* zxdev;
     platform_proxy_protocol_t proxy;
-    canvas_protocol_t canvas;
+    amlogic_canvas_protocol_t canvas;
 } aml_canvas_proxy_t;

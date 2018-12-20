@@ -120,7 +120,7 @@ zx_status_t AstroDisplay::DisplayControllerImplImportVmoImage(image_t* image, zx
     canvas_info.endianness      = 0;
 
     uint8_t local_canvas_idx;
-    status = canvas_config(&canvas_, vmo.release(), offset, &canvas_info,
+    status = amlogic_canvas_config(&canvas_, vmo.release(), offset, &canvas_info,
         &local_canvas_idx);
     if (status != ZX_OK) {
         DISP_ERROR("Could not configure canvas: %d\n", status);
@@ -142,7 +142,7 @@ void AstroDisplay::DisplayControllerImplReleaseImage(image_t* image) {
     size_t local_canvas_idx = (size_t)image->handle;
     if (imported_images_.GetOne(local_canvas_idx)) {
         imported_images_.ClearOne(local_canvas_idx);
-        canvas_free(&canvas_, static_cast<uint8_t>(local_canvas_idx));
+        amlogic_canvas_free(&canvas_, static_cast<uint8_t>(local_canvas_idx));
     }
 }
 

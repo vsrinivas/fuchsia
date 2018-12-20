@@ -89,7 +89,7 @@ private:
     // Protocol handles used in by this driver
     pdev_protocol_t          pdev_ = {};
     gpio_protocol_t                     gpio_ = {};
-    canvas_protocol_t                   canvas_ = {};
+    amlogic_canvas_protocol_t           canvas_ = {};
 
     // Board Info
     pdev_board_info_t                   board_info_;

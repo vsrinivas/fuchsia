@@ -154,7 +154,7 @@ static zx_protocol_device_t aml_canvas_device_protocol = {
     .unbind = aml_canvas_unbind,
 };
 
-static canvas_protocol_ops_t canvas_ops = {
+static amlogic_canvas_protocol_ops_t canvas_ops = {
     .config = aml_canvas_config,
     .free = aml_canvas_free,
 };

@@ -63,7 +63,7 @@ static zx_status_t aml_canvas_proxy_free(void* ctx, uint8_t canvas_idx) {
                                 &size_actual, NULL, 0, &handle_count_actual);
 }
 
-static canvas_protocol_ops_t canvas_proxy_ops = {
+static amlogic_canvas_protocol_ops_t canvas_proxy_ops = {
     .config = aml_canvas_proxy_config,
     .free   = aml_canvas_proxy_free,
 };

@@ -75,7 +75,7 @@ typedef struct vim2_display {
     zx_handle_t                         inth;
 
     gpio_protocol_t                     gpio;
-    canvas_protocol_t                   canvas;
+    amlogic_canvas_protocol_t           canvas;
 
     thrd_t                              main_thread;
     thrd_t                              vsync_thread;

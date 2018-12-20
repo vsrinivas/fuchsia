@@ -112,9 +112,9 @@ static zx_status_t vim_import_vmo_image(void* ctx, image_t* image, zx_handle_t v
         info.blkmode = 0;
         info.endianness = 0;
 
-        status = canvas_config(&display->canvas, vmo.release(),
-                               offset + image->planes[0].byte_offset,
-                               &info, &import_info->canvas_idx[0]);
+        status = amlogic_canvas_config(&display->canvas, vmo.release(),
+                                       offset + image->planes[0].byte_offset,
+                                       &info, &import_info->canvas_idx[0]);
         if (status != ZX_OK) {
             return ZX_ERR_NO_RESOURCES;
         }
@@ -141,9 +141,9 @@ static zx_status_t vim_import_vmo_image(void* ctx, image_t* image, zx_handle_t v
             return status;
         }
 
-        status = canvas_config(&display->canvas, dup_vmo.release(),
-                               offset + image->planes[0].byte_offset,
-                               &info, &import_info->canvas_idx[0]);
+        status = amlogic_canvas_config(&display->canvas, dup_vmo.release(),
+                                       offset + image->planes[0].byte_offset,
+                                       &info, &import_info->canvas_idx[0]);
         if (status != ZX_OK) {
             return ZX_ERR_NO_RESOURCES;
         }
@@ -153,11 +153,11 @@ static zx_status_t vim_import_vmo_image(void* ctx, image_t* image, zx_handle_t v
         if (info.stride_bytes == 0)
             info.stride_bytes = stride * ZX_PIXEL_FORMAT_BYTES(image->pixel_format);
 
-        status = canvas_config(&display->canvas, vmo.release(),
-                               offset + image->planes[1].byte_offset,
-                               &info, &import_info->canvas_idx[1]);
+        status = amlogic_canvas_config(&display->canvas, vmo.release(),
+                                       offset + image->planes[1].byte_offset,
+                                       &info, &import_info->canvas_idx[1]);
         if (status != ZX_OK) {
-            canvas_free(&display->canvas, import_info->canvas_idx[0]);
+            amlogic_canvas_free(&display->canvas, import_info->canvas_idx[0]);
             return ZX_ERR_NO_RESOURCES;
         }
         // The handle used by hardware is VVUUYY, so the UV plane is included twice.
@@ -189,9 +189,9 @@ static void vim_release_image(void* ctx, image_t* image) {
     mtx_unlock(&display->image_lock);
 
     if (info) {
-        canvas_free(&display->canvas, info->canvas_idx[0]);
+        amlogic_canvas_free(&display->canvas, info->canvas_idx[0]);
         if (info->format == ZX_PIXEL_FORMAT_NV12)
-            canvas_free(&display->canvas, info->canvas_idx[1]);
+            amlogic_canvas_free(&display->canvas, info->canvas_idx[1]);
         free(info);
     }
 }
