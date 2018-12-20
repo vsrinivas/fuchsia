@@ -43,6 +43,8 @@ MODULE_NAME := mtk-sdmmc-test
 
 MODULE_TYPE := usertest
 
+MODULE_DEFINES := DRIVER_TEST=1
+
 MODULE_SRCS += \
     $(LOCAL_DIR)/mtk-sdmmc.cpp \
     $(LOCAL_DIR)/mtk-sdmmc-test.cpp \
