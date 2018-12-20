@@ -20,6 +20,7 @@ import (
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/buffer"
+	"github.com/google/netstack/tcpip/header"
 	"github.com/google/netstack/tcpip/network/ipv4"
 	"github.com/google/netstack/tcpip/network/ipv6"
 	"github.com/google/netstack/tcpip/stack"
@@ -395,11 +396,24 @@ func (ios *iostate) loopDgramRead(stk *stack.Stack) {
 		ios.wq.EventUnregister(&waitEntry)
 
 		out := make([]byte, C.FDIO_SOCKET_MSG_HEADER_SIZE+len(v))
-		if err := writeSocketMsgHdr(out, sender); err != nil {
+		if err := func() error {
+			var fdioSocketMsg C.struct_fdio_socket_msg
+			n, err := fdioSocketMsg.addr.Encode(sender)
+			if err != nil {
+				return err
+			}
+			fdioSocketMsg.addrlen = C.socklen_t(n)
+			if _, err := fdioSocketMsg.MarshalTo(out[:C.FDIO_SOCKET_MSG_HEADER_SIZE]); err != nil {
+				return err
+			}
+			return nil
+		}(); err != nil {
 			// TODO communicate to user
 			log.Printf("writeSocketMsgHdr failed: %v (TODO)", err)
 		}
-		copy(out[C.FDIO_SOCKET_MSG_HEADER_SIZE:], v)
+		if n := copy(out[C.FDIO_SOCKET_MSG_HEADER_SIZE:], v); n < len(v) {
+			panic(fmt.Sprintf("copied %d/%d bytes", n, len(v)))
+		}
 
 	writeLoop:
 		for {
@@ -455,9 +469,22 @@ func (ios *iostate) loopDgramWrite(stk *stack.Stack) {
 			log.Printf("loopDgramWrite failed: %v", err) // TODO: communicate this
 			continue
 		}
-		v = v[:n:n]
+		v = v[:n]
 
-		receiver, err := readSocketMsgHdr(v)
+		receiver, err := func() (*tcpip.FullAddress, error) {
+			var fdioSocketMsg C.struct_fdio_socket_msg
+			if err := fdioSocketMsg.Unmarshal(v[:C.FDIO_SOCKET_MSG_HEADER_SIZE]); err != nil {
+				return nil, err
+			}
+			if fdioSocketMsg.addrlen == 0 {
+				return nil, nil
+			}
+			addr, err := fdioSocketMsg.addr.Decode()
+			if err != nil {
+				return nil, err
+			}
+			return &addr, nil
+		}()
 		if err != nil {
 			// TODO communicate
 			log.Printf("loopDgramWrite: bad socket msg header: %v", err)
@@ -715,101 +742,160 @@ func zxNetError(e *tcpip.Error) zx.Status {
 
 func (s *socketServer) opGetSockOpt(ios *iostate, msg *zxsocket.Msg) zx.Status {
 	var val C.struct_zxrio_sockopt_req_reply
-	if err := val.Decode(msg); err != nil {
+	if err := val.Unmarshal(msg.Data[:msg.Datalen]); err != nil {
 		if debug {
 			log.Printf("getsockopt: decode argument: %v", err)
 		}
 		return errStatus(err)
 	}
-	if opt := val.Unpack(); opt != nil {
-		val.optlen = C.socklen_t(4)
-
-		switch o := opt.(type) {
-		case tcpip.ErrorOption:
-			ios.mu.Lock()
-			err := ios.lastError
-			ios.lastError = nil
-			ios.mu.Unlock()
-
-			if err == nil {
-				err = ios.ep.GetSockOpt(o)
-			}
-
-			errno := uint32(0)
-			if err != nil {
-				// TODO: should this be a unix errno?
-				errno = uint32(zxNetError(err))
-			}
-			binary.LittleEndian.PutUint32(val.optBytes(), errno)
-		case tcpip.SendBufferSizeOption:
-			ios.ep.GetSockOpt(&o)
-			binary.LittleEndian.PutUint32(val.optBytes(), uint32(o))
-		case tcpip.ReceiveBufferSizeOption:
-			ios.ep.GetSockOpt(&o)
-			binary.LittleEndian.PutUint32(val.optBytes(), uint32(o))
-		case tcpip.ReceiveQueueSizeOption:
-			ios.ep.GetSockOpt(&o)
-			binary.LittleEndian.PutUint32(val.optBytes(), uint32(o))
-		case tcpip.DelayOption:
-			ios.ep.GetSockOpt(&o)
-			// Socket option is TCP_NODELAY, so we need to invert the delay flag.
-			if o != 0 {
-				o = 0
-			} else {
-				o = 1
-			}
-			binary.LittleEndian.PutUint32(val.optBytes(), uint32(o))
-		case tcpip.ReuseAddressOption:
-			ios.ep.GetSockOpt(&o)
-			binary.LittleEndian.PutUint32(val.optBytes(), uint32(o))
-		case tcpip.V6OnlyOption:
-			ios.ep.GetSockOpt(&o)
-			binary.LittleEndian.PutUint32(val.optBytes(), uint32(o))
-		case tcpip.MulticastTTLOption:
-			ios.ep.GetSockOpt(&o)
-			binary.LittleEndian.PutUint32(val.optBytes(), uint32(o))
-		case tcpip.KeepaliveEnabledOption:
-			ios.ep.GetSockOpt(&o)
-			binary.LittleEndian.PutUint32(val.optBytes(), uint32(o))
-		case tcpip.KeepaliveIdleOption:
-			ios.ep.GetSockOpt(&o)
-			binary.LittleEndian.PutUint32(val.optBytes(), uint32(time.Duration(o).Seconds()))
-		case tcpip.KeepaliveIntervalOption:
-			ios.ep.GetSockOpt(&o)
-			binary.LittleEndian.PutUint32(val.optBytes(), uint32(time.Duration(o).Seconds()))
-		case tcpip.KeepaliveCountOption:
-			ios.ep.GetSockOpt(&o)
-			binary.LittleEndian.PutUint32(val.optBytes(), uint32(o))
-		case tcpip.TCPInfoOption:
-			ios.ep.GetSockOpt(&o)
-			info := C.struct_tcp_info{
-				// Microseconds.
-				tcpi_rtt:    C.uint(o.RTT.Nanoseconds() / 1000),
-				tcpi_rttvar: C.uint(o.RTTVar.Nanoseconds() / 1000),
-			}
-			info.Encode(&val)
-		default:
-			binary.LittleEndian.PutUint32(val.optBytes(), 0)
-		}
-	} else {
-		val.optlen = 0
+	opt, err := val.Unpack()
+	if err != nil {
+		return errStatus(err)
 	}
-	val.Encode(msg)
+	switch o := opt.(type) {
+	case tcpip.ErrorOption:
+		ios.mu.Lock()
+		err := ios.lastError
+		ios.lastError = nil
+		ios.mu.Unlock()
+
+		if err == nil {
+			err = ios.ep.GetSockOpt(o)
+		}
+
+		errno := uint32(0)
+		if err != nil {
+			// TODO: should this be a unix errno?
+			errno = uint32(zxNetError(err))
+		}
+		binary.LittleEndian.PutUint32(val.opt(), errno)
+		val.optlen = 4
+	case tcpip.SendBufferSizeOption:
+		if err := ios.ep.GetSockOpt(&o); err != nil {
+			return zxNetError(err)
+		}
+		binary.LittleEndian.PutUint32(val.opt(), uint32(o))
+		val.optlen = 4
+	case tcpip.ReceiveBufferSizeOption:
+		if err := ios.ep.GetSockOpt(&o); err != nil {
+			return zxNetError(err)
+		}
+		binary.LittleEndian.PutUint32(val.opt(), uint32(o))
+		val.optlen = 4
+	case tcpip.ReceiveQueueSizeOption:
+		if err := ios.ep.GetSockOpt(&o); err != nil {
+			return zxNetError(err)
+		}
+		binary.LittleEndian.PutUint32(val.opt(), uint32(o))
+		val.optlen = 4
+	case tcpip.DelayOption:
+		if err := ios.ep.GetSockOpt(&o); err != nil {
+			return zxNetError(err)
+		}
+		// Socket option is TCP_NODELAY, so we need to invert the delay flag.
+		if o != 0 {
+			o = 0
+		} else {
+			o = 1
+		}
+		binary.LittleEndian.PutUint32(val.opt(), uint32(o))
+		val.optlen = 4
+	case tcpip.ReuseAddressOption:
+		if err := ios.ep.GetSockOpt(&o); err != nil {
+			return zxNetError(err)
+		}
+		binary.LittleEndian.PutUint32(val.opt(), uint32(o))
+		val.optlen = 4
+	case tcpip.V6OnlyOption:
+		if err := ios.ep.GetSockOpt(&o); err != nil {
+			return zxNetError(err)
+		}
+		binary.LittleEndian.PutUint32(val.opt(), uint32(o))
+		val.optlen = 4
+	case tcpip.MulticastTTLOption:
+		if err := ios.ep.GetSockOpt(&o); err != nil {
+			return zxNetError(err)
+		}
+		binary.LittleEndian.PutUint32(val.opt(), uint32(o))
+		val.optlen = 4
+	case tcpip.KeepaliveEnabledOption:
+		if err := ios.ep.GetSockOpt(&o); err != nil {
+			return zxNetError(err)
+		}
+		binary.LittleEndian.PutUint32(val.opt(), uint32(o))
+		val.optlen = 4
+	case tcpip.KeepaliveIdleOption:
+		if err := ios.ep.GetSockOpt(&o); err != nil {
+			return zxNetError(err)
+		}
+		binary.LittleEndian.PutUint32(val.opt(), uint32(time.Duration(o).Seconds()))
+		val.optlen = 4
+	case tcpip.KeepaliveIntervalOption:
+		if err := ios.ep.GetSockOpt(&o); err != nil {
+			return zxNetError(err)
+		}
+		binary.LittleEndian.PutUint32(val.opt(), uint32(time.Duration(o).Seconds()))
+		val.optlen = 4
+	case tcpip.KeepaliveCountOption:
+		if err := ios.ep.GetSockOpt(&o); err != nil {
+			return zxNetError(err)
+		}
+		binary.LittleEndian.PutUint32(val.opt(), uint32(o))
+		val.optlen = 4
+	case tcpip.TCPInfoOption:
+		if err := ios.ep.GetSockOpt(&o); err != nil {
+			return zxNetError(err)
+		}
+		info := C.struct_tcp_info{
+			// Microseconds.
+			tcpi_rtt:    C.uint(o.RTT.Nanoseconds() / 1000),
+			tcpi_rttvar: C.uint(o.RTTVar.Nanoseconds() / 1000),
+		}
+		n, err := info.MarshalTo(val.opt())
+		if err != nil {
+			return errStatus(err)
+		}
+		val.optlen = C.socklen_t(n)
+	default:
+		b := val.opt()
+		for i := range b {
+			b[i] = 0
+		}
+
+		if opt != nil {
+			val.optlen = 4
+		} else {
+			val.optlen = 0
+		}
+
+		log.Printf("unsupported getsockopt(%d, %d)", val.level, val.optname)
+	}
+	n, err := val.MarshalTo(msg.Data[:])
+	if err != nil {
+		return errStatus(err)
+	}
+	msg.Datalen = uint32(n)
 	return zx.ErrOk
 }
 
 func (s *socketServer) opSetSockOpt(ios *iostate, msg *zxsocket.Msg) zx.Status {
 	var val C.struct_zxrio_sockopt_req_reply
-	if err := val.Decode(msg); err != nil {
+	if err := val.Unmarshal(msg.Data[:msg.Datalen]); err != nil {
 		if debug {
 			log.Printf("setsockopt: decode argument: %v", err)
 		}
 		return errStatus(err)
 	}
-	if opt := val.Unpack(); opt != nil {
+	opt, err := val.Unpack()
+	if err != nil {
+		return errStatus(err)
+	}
+	if opt != nil {
 		if err := ios.ep.SetSockOpt(opt); err != nil {
 			return zxNetError(err)
 		}
+	} else {
+		log.Printf("unsupported setsockopt: level=%d name=%d)", val.level, val.optname)
 	}
 	msg.Datalen = 0
 	msg.SetOff(0)
@@ -817,7 +903,15 @@ func (s *socketServer) opSetSockOpt(ios *iostate, msg *zxsocket.Msg) zx.Status {
 }
 
 func (s *socketServer) opBind(ios *iostate, msg *zxsocket.Msg) (status zx.Status) {
-	addr, err := readSockaddrIn(msg.Data[:msg.Datalen])
+	// TODO(tamird): are we really sending raw sockaddr_storage here? why aren't we using
+	// zxrio_sockaddr_reply? come to think of it, why does zxrio_sockaddr_reply exist?
+	addr, err := func() (tcpip.FullAddress, error) {
+		var sockaddrStorage C.struct_sockaddr_storage
+		if err := sockaddrStorage.Unmarshal(msg.Data[:msg.Datalen]); err != nil {
+			return tcpip.FullAddress{}, err
+		}
+		return sockaddrStorage.Decode()
+	}()
 	if err != nil {
 		if debug {
 			log.Printf("bind: bad input: %v", err)
@@ -866,11 +960,11 @@ func (s *socketServer) buildIfInfos() *C.netc_get_if_info_t {
 		}
 		rep.info[index].index = C.ushort(index + 1)
 		rep.info[index].flags |= C.NETC_IFF_UP
-		if _, err := writeSockaddrStorage(&rep.info[index].addr, tcpip.FullAddress{NIC: nicid, Addr: ifs.nic.Addr}); err != nil {
-			log.Printf("writeSockaddrStorage of address failed: %v", err)
+		if _, err := rep.info[index].addr.Encode(tcpip.FullAddress{NIC: nicid, Addr: ifs.nic.Addr}); err != nil {
+			log.Printf("encoding addr failed: %v", err)
 		}
-		if _, err := writeSockaddrStorage(&rep.info[index].netmask, tcpip.FullAddress{NIC: nicid, Addr: tcpip.Address(ifs.nic.Netmask)}); err != nil {
-			log.Printf("writeSockaddrStorage of netmask failed: %v", err)
+		if _, err := rep.info[index].netmask.Encode(tcpip.FullAddress{NIC: nicid, Addr: tcpip.Address(ifs.nic.Netmask)}); err != nil {
+			log.Printf("encoding netmask failed: %v", err)
 		}
 
 		// Long-hand for: broadaddr = ifs.nic.Addr | ^ifs.nic.Netmask
@@ -878,8 +972,8 @@ func (s *socketServer) buildIfInfos() *C.netc_get_if_info_t {
 		for i := range broadaddr {
 			broadaddr[i] |= ^ifs.nic.Netmask[i]
 		}
-		if _, err := writeSockaddrStorage(&rep.info[index].broadaddr, tcpip.FullAddress{NIC: nicid, Addr: tcpip.Address(broadaddr)}); err != nil {
-			log.Printf("writeSockaddrStorage of broadaddr failed: %v", err)
+		if _, err := rep.info[index].broadaddr.Encode(tcpip.FullAddress{NIC: nicid, Addr: tcpip.Address(broadaddr)}); err != nil {
+			log.Printf("encoding broadaddr failed: %v", err)
 		}
 		index++
 	}
@@ -927,7 +1021,14 @@ func (s *socketServer) opIoctl(ios *iostate, msg *zxsocket.Msg) zx.Status {
 			}
 			return zx.ErrInvalidArgs
 		}
-		lastIfInfo.info[requestedIndex].Encode(msg)
+		n, err := lastIfInfo.info[requestedIndex].MarshalTo(msg.Data[:])
+		if err != nil {
+			if debug {
+				log.Printf("ioctlNetcGetIfInfoAt: %v", err)
+			}
+			return zx.ErrInternal
+		}
+		msg.Datalen = uint32(n)
 		return zx.ErrOk
 	case ioctlNetcGetNodename:
 		nodename := s.ns.getNodeName()
@@ -943,14 +1044,22 @@ func (s *socketServer) opIoctl(ios *iostate, msg *zxsocket.Msg) zx.Status {
 	return zx.ErrInvalidArgs
 }
 
-func fdioSockAddrReply(a tcpip.FullAddress, msg *zxsocket.Msg) zx.Status {
-	var err error
-	rep := C.struct_zxrio_sockaddr_reply{}
-	rep.len, err = writeSockaddrStorage(&rep.addr, a)
-	if err != nil {
-		return errStatus(err)
+func fdioSockAddrReply(addr tcpip.FullAddress, msg *zxsocket.Msg) zx.Status {
+	var rep C.struct_zxrio_sockaddr_reply
+	{
+		n, err := rep.addr.Encode(addr)
+		if err != nil {
+			return errStatus(err)
+		}
+		rep.len = C.socklen_t(n)
 	}
-	rep.Encode(msg)
+	{
+		n, err := rep.MarshalTo(msg.Data[:])
+		if err != nil {
+			return errStatus(err)
+		}
+		msg.Datalen = uint32(n)
+	}
 	msg.SetOff(0)
 	return zx.ErrOk
 }
@@ -960,8 +1069,17 @@ func (s *socketServer) opGetSockName(ios *iostate, msg *zxsocket.Msg) zx.Status 
 	if err != nil {
 		return zxNetError(err)
 	}
+	if len(a.Addr) == 0 {
+		switch ios.netProto {
+		case ipv4.ProtocolNumber:
+			a.Addr = header.IPv4Any
+		case ipv6.ProtocolNumber:
+			a.Addr = header.IPv6Any
+		}
+	}
+
 	if debug {
-		log.Printf("getsockname(): %v", a)
+		log.Printf("getsockname(): %+v", a)
 	}
 	return fdioSockAddrReply(a, msg)
 }
@@ -1099,7 +1217,15 @@ func (s *socketServer) opConnect(ios *iostate, msg *zxsocket.Msg) (status zx.Sta
 		}
 		return zx.ErrInvalidArgs
 	}
-	addr, err := readSockaddrIn(msg.Data[:msg.Datalen])
+	// TODO(tamird): are we really sending raw sockaddr_storage here? why aren't we using
+	// zxrio_sockaddr_reply? come to think of it, why does zxrio_sockaddr_reply exist?
+	addr, err := func() (tcpip.FullAddress, error) {
+		var sockaddrStorage C.struct_sockaddr_storage
+		if err := sockaddrStorage.Unmarshal(msg.Data[:msg.Datalen]); err != nil {
+			return tcpip.FullAddress{}, err
+		}
+		return sockaddrStorage.Decode()
+	}()
 	if err != nil {
 		if debug {
 			log.Printf("connect: bad input: %v", err)
