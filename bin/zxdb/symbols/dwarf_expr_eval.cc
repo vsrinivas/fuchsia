@@ -499,8 +499,10 @@ DwarfExprEval::Completion DwarfExprEval::OpFbreg() {
       return;
     }
 
-    if (value == 0)
+    if (value == 0) {
       weak_eval->ReportError("Base Pointer is 0, can't evaluate.");
+      return;
+    }
 
     weak_eval->result_type_ = ResultType::kPointer;
     weak_eval->Push(static_cast<uint64_t>(value + offset));
