@@ -98,10 +98,6 @@ void NamespaceBuilder::AddSandbox(
       PushDirectoryFromPath("/dev/class/gpu");
       PushDirectoryFromPathAs("/system/data/vulkan/icd.d",
                               "/config/vulkan/icd.d");
-      // TODO(jamesr): Teach the gpu devices to provide a protocol for fetching
-      // the device specific vulkan library by message, rather than loading it
-      // from the filesystem.
-      PushDirectoryFromPath("/system/lib");
     }
   }
 
