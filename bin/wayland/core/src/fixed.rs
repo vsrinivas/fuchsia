@@ -8,7 +8,7 @@ use std::fmt;
 ///
 /// Internally this is stored as a single `i32` value, with methods to convert
 /// to/from `f32` floating point values.
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 pub struct Fixed(i32);
 
 impl Fixed {
@@ -36,6 +36,12 @@ impl Fixed {
 impl fmt::Display for Fixed {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "{}", self.to_float())
+    }
+}
+
+impl fmt::Debug for Fixed {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "{:?}", self.to_float())
     }
 }
 
