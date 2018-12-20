@@ -118,12 +118,20 @@ int main(int argc, char** argv) {
     return status;
   }
 
-  // We want to avoid a collision between static and dynamic address assignment.
+  DevMem dev_mem;
   for (const MemorySpec& spec : cfg.memory()) {
+    // Avoid a collision between static and dynamic address assignment.
     if (spec.addr + spec.len > kFirstDynamicDeviceAddr) {
       FXL_LOG(ERROR) << "Requested memory should be less than "
                      << kFirstDynamicDeviceAddr;
       return ZX_ERR_INVALID_ARGS;
+    }
+    // Add device memory range.
+    if (spec.policy == MemoryPolicy::HOST_DEVICE &&
+        !dev_mem.AddRange(spec.addr, spec.len)) {
+      FXL_LOG(ERROR) << "Failed to add device memory at 0x" << std::hex
+                     << spec.addr;
+      return ZX_ERR_INTERNAL;
     }
   }
 
@@ -348,8 +356,6 @@ int main(int argc, char** argv) {
     }
   }
 
-  DevMem dev_mem;
-
   // Setup wayland device.
   VirtioWl wl(guest.phys_mem());
   if (launch_info.wayland_device) {
@@ -402,12 +408,11 @@ int main(int argc, char** argv) {
 
   // Add any trap ranges as device memory.
   for (const IoMapping& mapping : guest.mappings()) {
-    if (mapping.kind() == ZX_GUEST_TRAP_MEM ||
-        mapping.kind() == ZX_GUEST_TRAP_BELL) {
-      if (!dev_mem.AddRange(mapping.base(), mapping.size())) {
-        FXL_LOG(ERROR) << "Failed to add trap range as device memory";
-        return ZX_ERR_INTERNAL;
-      }
+    if ((mapping.kind() == ZX_GUEST_TRAP_MEM ||
+         mapping.kind() == ZX_GUEST_TRAP_BELL) &&
+        !dev_mem.AddRange(mapping.base(), mapping.size())) {
+      FXL_LOG(ERROR) << "Failed to add trap range as device memory";
+      return ZX_ERR_INTERNAL;
     }
   }
 
