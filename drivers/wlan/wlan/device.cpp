@@ -849,10 +849,8 @@ zx_status_t ValidateWlanMacInfo(const wlanmac_info& wlanmac_info) {
 }
 
 bool Device::ShouldEnableMinstrel() {
-    // TODO(WLAN-337): Remove iface_role_check and enable for AP role, too
     const auto& info = wlanmac_info_.ifc_info;
-    return (info.mac_role == WLAN_MAC_ROLE_CLIENT) &&
-           (info.driver_features & WLAN_DRIVER_FEATURE_TX_STATUS_REPORT) &&
+    return (info.driver_features & WLAN_DRIVER_FEATURE_TX_STATUS_REPORT) &&
            !(info.driver_features & WLAN_DRIVER_FEATURE_RATE_SELECTION);
 }
 
@@ -876,7 +874,6 @@ zx_status_t Device::CreateMinstrel(uint32_t features) {
 
 void Device::AddMinstrelPeer(const wlan_assoc_ctx_t& assoc_ctx) {
     if (minstrel_ == nullptr) { return; }
-    ZX_DEBUG_ASSERT(wlanmac_info_.ifc_info.mac_role == WLAN_MAC_ROLE_CLIENT);
     minstrel_->AddPeer(assoc_ctx);
 }
 
