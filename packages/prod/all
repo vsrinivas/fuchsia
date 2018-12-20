@@ -5,6 +5,7 @@
         "garnet/packages/prod/appmgr",
         "garnet/packages/prod/atheros",
         "garnet/packages/prod/auth",
+        "garnet/packages/prod/banjo",
         "garnet/packages/prod/bluetooth",
         "garnet/packages/prod/bluetooth_drivers",
         "garnet/packages/prod/boringssl_tool",
