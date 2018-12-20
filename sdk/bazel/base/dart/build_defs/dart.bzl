@@ -100,10 +100,6 @@ def compile_kernel_action(
     mappings = {}
     dart_ctxs = collect_dart_context(dart_ctx).values()
     for dc in dart_ctxs:
-        # There's no need to declare a file for the current package as it
-        # is outputed under `main_dilp_file`.
-        if dc.package == package_name:
-            continue
         dilp_file = context.actions.declare_file(
             context.label.name + "_kernel.dil-" + dc.package + ".dilp",
         )
