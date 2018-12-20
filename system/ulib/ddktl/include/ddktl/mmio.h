@@ -363,11 +363,14 @@ public:
         : MmioBuffer(mmio_buffer_t{
               .vaddr = static_cast<uint8_t*>(mmio.vaddr) + offset,
               .offset = mmio.offset + offset,
-              .size = mmio.size,
+              .size = size,
               .vmo = mmio.vmo,
           }) {
         ZX_ASSERT(size + offset <= mmio.size);
     }
+
+    MmioView(const MmioView& mmio)
+        : MmioBuffer(mmio.mmio_) {}
 
     virtual ~MmioView() override {
         // Prevent unmap operation from occurring.
