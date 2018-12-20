@@ -7,18 +7,18 @@ library fuchsia.net.policy;
 using fuchsia.net;
 
 enum Status {
-  OK = 0;
-  UNKNOWN_ERROR = 1;
-  PARSE_ERROR = 2;
+    OK = 0;
+    UNKNOWN_ERROR = 1;
+    PARSE_ERROR = 2;
 };
 
 struct NetError {
-  Status status;
+    Status status;
 };
 
 // Settings for the system-wide DNS behavior.
 struct DNSConfig {
-  vector<fuchsia.net.IpAddress> dns_servers;
+    vector<fuchsia.net.IpAddress> dns_servers;
 };
 
 // This interface is used to interact with the policy layer of the fuchsia
@@ -29,9 +29,9 @@ struct DNSConfig {
 [Discoverable]
 interface Policy {
 
-  // Set the IP address of the DNS server to use for IP resolution.
-  1: SetDNSConfig(DNSConfig config) -> (NetError result);
+    // Set the IP address of the DNS server to use for IP resolution.
+    1: SetDNSConfig(DNSConfig config) -> (NetError result);
 
-  // Get the current IP address of the DNS server.
-  2: GetDNSConfig() -> (DNSConfig current);
+    // Get the current IP address of the DNS server.
+    2: GetDNSConfig() -> (DNSConfig current);
 };
