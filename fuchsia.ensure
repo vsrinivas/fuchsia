@@ -31,7 +31,7 @@ infra/ninja/${platform} version:1.8.2
 fuchsia/tools/breakpad/${os=linux}-${arch} git_revision:9eac2058b70615519b2c4d8c6bdbfca1bd079e39
 
 # dump_breakpad_symbols
-fuchsia/tools/dump_breakpad_symbols/${os=linux}-${arch} git_revision:b96e9bc3ee78bbf8b267280c0d8b1baa29c0fca7
+fuchsia/tools/dump_breakpad_symbols/${os=linux}-${arch} git_revision:eff1e0ad7f0c03fc9c61abe7e0bf4a4db4c2a258
 
 # godepfile
 fuchsia/tools/godepfile/${platform} git_revision:6922d7833617841e853a0be52a285f6cd07a0a10
