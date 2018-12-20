@@ -1,0 +1,56 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.block.volume;
+
+using zircon.device.block;
+using zx;
+
+/// Information about the parent device of the current volume.
+struct ParentVolumeInfo {
+    /// The size of a single slice, in bytes.
+    uint64 slice_size;
+    /// The number of addressable slices within a volume.
+    uint64 virtual_slice_count;
+    /// The total number of slices which are allocatable.
+    uint64 physical_slice_count_total;
+    /// The total number of slices which are allocated.
+    uint64 physical_slice_count_used;
+};
+
+/// Describes an region within a Volume. Both units are in "slices".
+struct SliceExtent {
+    uint64 offset;
+    uint64 length;
+};
+
+const uint32 MAX_SLICE_QUERY_REQUESTS = 16;
+
+/// Information about an extent of virtual slices.
+struct SliceRegion {
+    /// True if the virtual slices are allocated, false otherwise.
+    bool allocated;
+    /// The number of contiguous virtual slices.
+    uint64 count;
+};
+
+[Layout="ddk-protocol"]
+interface BlockVolume {
+    /// Attempts to extend a virtual partition.
+    Extend(SliceExtent extent) -> (zx.status status);
+
+    /// Shrinks a virtual Partition.
+    Shrink(SliceExtent extent) -> (zx.status status);
+
+    /// Acquire slice size information about the parent volume.
+    Query() -> (zx.status status, ParentVolumeInfo info);
+
+    /// Returns the number of contiguous slices from a collection
+    /// of start offsets.
+    QuerySlices(vector<uint64>:MAX_SLICE_QUERY_REQUESTS start) -> (zx.status status, vector<SliceRegion>:MAX_SLICE_QUERY_REQUESTS responses);
+
+    /// Destroys the current partition, removing it from the Volume Manager, and
+    /// freeing all underlying storage.
+    Destroy() -> (zx.status status);
+};

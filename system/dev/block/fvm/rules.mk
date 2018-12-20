@@ -36,6 +36,7 @@ SHARED_MODULE_LIBS := \
 SHARED_BANJO_LIBS := \
     system/banjo/ddk-protocol-block \
     system/banjo/ddk-protocol-block-partition \
+    system/banjo/ddk-protocol-block-volume \
 
 MODULE_SRCS := $(SHARED_SRCS)
 

@@ -14,6 +14,7 @@
 DDK_PROTOCOL_DEF(BLOCK,          'pBLK', "block", 0)
 DDK_PROTOCOL_DEF(BLOCK_IMPL,     'pBKC', "block-impl", 0)
 DDK_PROTOCOL_DEF(BLOCK_PARTITION, 'pBKP', "block-partition", 0)
+DDK_PROTOCOL_DEF(BLOCK_VOLUME,   'pBKV', "block-volume", 0)
 DDK_PROTOCOL_DEF(CONSOLE,        'pCON', "console", 0)
 DDK_PROTOCOL_DEF(DEVICE,         'pDEV', "device", 0)
 DDK_PROTOCOL_DEF(DISPLAY_CONTROLLER, 'pDSC', "display-controller", 0)

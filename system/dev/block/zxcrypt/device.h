@@ -16,6 +16,7 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/block.h>
 #include <ddktl/protocol/block/partition.h>
+#include <ddktl/protocol/block/volume.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 #include <lib/zx/port.h>
@@ -48,7 +49,8 @@ using DeviceType = ddk::Device<Device,
 // cryptographic transformations.
 class Device final : public DeviceType,
                      public ddk::BlockImplProtocol<Device, ddk::base_protocol>,
-                     public ddk::BlockPartitionProtocol<Device> {
+                     public ddk::BlockPartitionProtocol<Device>,
+                     public ddk::BlockVolumeProtocol<Device> {
 public:
     explicit Device(zx_device_t* parent);
     ~Device();
@@ -81,6 +83,15 @@ public:
     // ddk::PartitionProtocol methods; see ddktl/protocol/block/partition.h
     zx_status_t BlockPartitionGetGuid(guidtype_t guidtype, guid_t* out_guid);
     zx_status_t BlockPartitionGetName(char* out_name, size_t capacity);
+
+    // ddk:::VolumeProtocol methods; see ddktl/protocol/block/volume.h
+    zx_status_t BlockVolumeExtend(const slice_extent_t* extent);
+    zx_status_t BlockVolumeShrink(const slice_extent_t* extent);
+    zx_status_t BlockVolumeQuery(parent_volume_info_t* out_info);
+    zx_status_t BlockVolumeQuerySlices(const uint64_t* start_list, size_t start_count,
+                                       slice_region_t* out_responses_list, size_t responses_count,
+                                       size_t* out_responses_actual);
+    zx_status_t BlockVolumeDestroy();
 
     // If |status| is |ZX_OK|, sends |block| to the parent block device; otherwise calls
     // |BlockComplete| on the |block|. Uses the extra space following the |block| to save fields
@@ -136,6 +147,7 @@ private:
         ddk::BlockProtocolClient block_protocol;
         // Optional Protocols supported by zxcrypt.
         ddk::BlockPartitionProtocolClient partition_protocol;
+        ddk::BlockVolumeProtocolClient volume_protocol;
         // The number of blocks reserved for metadata.
         uint64_t reserved_blocks;
         // The number of slices reserved for metadata.

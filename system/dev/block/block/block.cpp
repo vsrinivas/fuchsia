@@ -22,6 +22,7 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/block.h>
 #include <ddktl/protocol/block/partition.h>
+#include <ddktl/protocol/block/volume.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <lib/zx/fifo.h>
@@ -47,11 +48,13 @@ using BlockDeviceType = ddk::Device<BlockDevice,
 class BlockDevice : public BlockDeviceType,
                     public ddk::BlockProtocol<BlockDevice, ddk::base_protocol> {
 public:
-    BlockDevice(zx_device_t* parent) : BlockDeviceType(parent) {
+    BlockDevice(zx_device_t* parent)
+        : BlockDeviceType(parent),
+          parent_protocol_(parent),
+          parent_partition_protocol_(parent),
+          parent_volume_protocol_(parent) {
         block_protocol_t self { &block_protocol_ops_, this };
         self_protocol_ = ddk::BlockProtocolClient(&self);
-        parent_protocol_ = ddk::BlockImplProtocolClient(parent);
-        parent_partition_protocol_ = ddk::BlockPartitionProtocolClient(parent);
     };
 
     static zx_status_t Bind(void* ctx, zx_device_t* dev);
@@ -82,6 +85,8 @@ private:
     ddk::BlockImplProtocolClient parent_protocol_;
     // An optional partition protocol, if supported by the parent device.
     ddk::BlockPartitionProtocolClient parent_partition_protocol_;
+    // An optional volume protocol, if supported by the parent device.
+    ddk::BlockVolumeProtocolClient parent_volume_protocol_;
     // The block protocol for ourselves, which redirects to the parent protocol,
     // but may also collect auxiliary information like statistics.
     ddk::BlockProtocolClient self_protocol_;
@@ -151,6 +156,13 @@ zx_status_t BlockDevice::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {
             return ZX_ERR_NOT_SUPPORTED;
         }
         parent_partition_protocol_.GetProto(static_cast<block_partition_protocol_t*>(out_protocol));
+        return ZX_OK;
+    }
+    case ZX_PROTOCOL_BLOCK_VOLUME: {
+        if (!parent_volume_protocol_.is_valid()) {
+            return ZX_ERR_NOT_SUPPORTED;
+        }
+        parent_volume_protocol_.GetProto(static_cast<block_volume_protocol_t*>(out_protocol));
         return ZX_OK;
     }
     default:
@@ -236,6 +248,88 @@ zx_status_t BlockDevice::DdkIoctl(uint32_t op, const void* cmd, size_t cmd_len, 
         *out_actual = strlen(name);
         return status;
     }
+    case IOCTL_BLOCK_FVM_EXTEND: {
+        if (!parent_volume_protocol_.is_valid()) {
+            return ZX_ERR_NOT_SUPPORTED;
+        }
+        if (cmd_len < sizeof(extend_request_t)) {
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        }
+
+        auto request = static_cast<const extend_request_t*>(cmd);
+        slice_extent_t extent;
+        extent.offset = request->offset;
+        extent.length = request->length;
+
+        return parent_volume_protocol_.Extend(&extent);
+    }
+    case IOCTL_BLOCK_FVM_SHRINK: {
+        if (!parent_volume_protocol_.is_valid()) {
+            return ZX_ERR_NOT_SUPPORTED;
+        }
+        if (cmd_len < sizeof(extend_request_t)) {
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        }
+
+        auto request = static_cast<const extend_request_t*>(cmd);
+        slice_extent_t extent;
+        extent.offset = request->offset;
+        extent.length = request->length;
+
+        return parent_volume_protocol_.Shrink(&extent);
+    }
+    case IOCTL_BLOCK_FVM_QUERY: {
+        if (!parent_volume_protocol_.is_valid()) {
+            return ZX_ERR_NOT_SUPPORTED;
+        }
+        if (reply_len < sizeof(fvm_info_t)) {
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        }
+        auto info = static_cast<parent_volume_info_t*>(reply);
+        zx_status_t status = parent_volume_protocol_.Query(info);
+        if (status != ZX_OK) {
+            return status;
+        }
+        *out_actual = sizeof(*info);
+        return ZX_OK;
+    }
+    case IOCTL_BLOCK_FVM_VSLICE_QUERY: {
+        if (!parent_volume_protocol_.is_valid()) {
+            return ZX_ERR_NOT_SUPPORTED;
+        }
+        if (cmd_len < sizeof(query_request_t)) {
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        }
+
+        if (reply_len < sizeof(query_response_t)) {
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        }
+
+        auto request = static_cast<const query_request_t*>(cmd);
+        if (request->count > MAX_FVM_VSLICE_REQUESTS) {
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        }
+
+        static_assert(sizeof(vslice_range_t) == sizeof(slice_region_t), "Size mismatch");
+        auto response = static_cast<query_response_t*>(reply);
+        response->count = 0;
+        slice_region_t* out_regions = reinterpret_cast<slice_region_t*>(response->vslice_range);
+        zx_status_t status = parent_volume_protocol_.QuerySlices(request->vslice_start,
+                                                                 request->count,
+                                                                 out_regions,
+                                                                 MAX_FVM_VSLICE_REQUESTS,
+                                                                 &response->count);
+        if (status != ZX_OK) {
+            return status;
+        }
+        *out_actual = sizeof(query_response_t);
+        return ZX_OK;
+    }
+    case IOCTL_BLOCK_FVM_DESTROY_PARTITION:
+        if (!parent_volume_protocol_.is_valid()) {
+            return ZX_ERR_NOT_SUPPORTED;
+        }
+        return parent_volume_protocol_.Destroy();
     default:
         // TODO: this may no longer be necessary now that we handle IOCTL_BLOCK_GET_INFO here
         return device_ioctl(parent(), op, cmd, cmd_len, reply, reply_len, out_actual);

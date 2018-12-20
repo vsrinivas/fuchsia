@@ -28,5 +28,6 @@ MODULE_LIBS := system/ulib/c system/ulib/driver system/ulib/zircon
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-block \
     system/banjo/ddk-protocol-block-partition \
+    system/banjo/ddk-protocol-block-volume \
 
 include make/module.mk

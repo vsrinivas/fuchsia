@@ -156,13 +156,14 @@ void VPartition::ExtentDestroyLocked(size_t vslice) TA_REQ(lock_) {
     AddBlocksLocked(-((length * mgr_->SliceSize()) / info_.block_size));
 }
 
-static zx_status_t RequestBoundCheck(const extend_request_t* request, size_t vslice_max) {
-    if (request->offset == 0 || request->offset > vslice_max) {
+template <typename T>
+static zx_status_t RequestBoundCheck(const T& request, size_t vslice_max) {
+    if (request.offset == 0 || request.offset > vslice_max) {
         return ZX_ERR_OUT_OF_RANGE;
-    } else if (request->length > vslice_max) {
+    } else if (request.length > vslice_max) {
         return ZX_ERR_OUT_OF_RANGE;
-    } else if (request->offset + request->length < request->offset ||
-               request->offset + request->length > vslice_max) {
+    } else if (request.offset + request.length < request.offset ||
+               request.offset + request.length > vslice_max) {
         return ZX_ERR_OUT_OF_RANGE;
     }
     return ZX_OK;
@@ -179,6 +180,9 @@ zx_status_t VPartition::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {
         return ZX_OK;
     case ZX_PROTOCOL_BLOCK_PARTITION:
         proto->ops = &block_partition_protocol_ops_;
+        return ZX_OK;
+    case ZX_PROTOCOL_BLOCK_VOLUME:
+        proto->ops = &block_volume_protocol_ops_;
         return ZX_OK;
     default:
         return ZX_ERR_NOT_SUPPORTED;
@@ -198,71 +202,6 @@ zx_status_t VPartition::DdkIoctl(uint32_t op, const void* cmd, size_t cmdlen, vo
         memcpy(info, &info_, sizeof(*info));
         *out_actual = sizeof(*info);
         return ZX_OK;
-    }
-    case IOCTL_BLOCK_FVM_VSLICE_QUERY: {
-        if (cmdlen < sizeof(query_request_t)) {
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        }
-
-        if (max < sizeof(query_response_t)) {
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        }
-
-        const query_request_t* request = static_cast<const query_request_t*>(cmd);
-
-        if (request->count > MAX_FVM_VSLICE_REQUESTS) {
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        }
-
-        query_response_t* response = static_cast<query_response_t*>(reply);
-        response->count = 0;
-        for (size_t i = 0; i < request->count; i++) {
-            zx_status_t status;
-            if ((status = CheckSlices(request->vslice_start[i], &response->vslice_range[i].count,
-                                      &response->vslice_range[i].allocated)) != ZX_OK) {
-                return status;
-            }
-            response->count++;
-        }
-
-        *out_actual = sizeof(query_response_t);
-        return ZX_OK;
-    }
-    case IOCTL_BLOCK_FVM_QUERY: {
-        if (max < sizeof(fvm_info_t)) {
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        }
-        fvm_info_t* info = static_cast<fvm_info_t*>(reply);
-        mgr_->Query(info);
-        *out_actual = sizeof(fvm_info_t);
-        return ZX_OK;
-    }
-    case IOCTL_BLOCK_FVM_EXTEND: {
-        if (cmdlen < sizeof(extend_request_t))
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        const extend_request_t* request = static_cast<const extend_request_t*>(cmd);
-        zx_status_t status;
-        if ((status = RequestBoundCheck(request, mgr_->VSliceMax())) != ZX_OK) {
-            return status;
-        } else if (request->length == 0) {
-            return ZX_OK;
-        }
-        return mgr_->AllocateSlices(this, request->offset, request->length);
-    }
-    case IOCTL_BLOCK_FVM_SHRINK: {
-        if (cmdlen < sizeof(extend_request_t))
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        const extend_request_t* request = static_cast<const extend_request_t*>(cmd);
-        zx_status_t status;
-        if ((status = RequestBoundCheck(request, mgr_->VSliceMax())) != ZX_OK) {
-            return status;
-        } else if (request->length == 0) {
-            return ZX_OK;
-        }
-        return mgr_->FreeSlices(this, request->offset, request->length);
-    }
-    case IOCTL_BLOCK_FVM_DESTROY_PARTITION: {
-        return mgr_->FreeSlices(this, 0, mgr_->VSliceMax());
     }
     default:
         return ZX_ERR_NOT_SUPPORTED;
@@ -473,6 +412,61 @@ zx_status_t VPartition::BlockPartitionGetName(char* out_name, size_t capacity) {
     memcpy(out_name, mgr_->GetAllocatedVPartEntry(entry_index_)->name, FVM_NAME_LEN);
     out_name[FVM_NAME_LEN] = 0;
     return ZX_OK;
+}
+
+zx_status_t VPartition::BlockVolumeExtend(const slice_extent_t* extent) {
+    zx_status_t status = RequestBoundCheck(*extent, mgr_->VSliceMax());
+    if (status != ZX_OK) {
+        return status;
+    }
+    if (extent->length == 0) {
+        return ZX_OK;
+    }
+    return mgr_->AllocateSlices(this, extent->offset, extent->length);
+}
+
+zx_status_t VPartition::BlockVolumeShrink(const slice_extent_t* extent) {
+    zx_status_t status = RequestBoundCheck(*extent, mgr_->VSliceMax());
+    if (status != ZX_OK) {
+        return status;
+    }
+    if (extent->length == 0) {
+        return ZX_OK;
+    }
+    return mgr_->FreeSlices(this, extent->offset, extent->length);
+}
+
+zx_status_t VPartition::BlockVolumeQuery(parent_volume_info_t* out_info) {
+    // TODO(smklein): Replace fvm_info_t with parent_volume_info_t.
+    static_assert(sizeof(parent_volume_info_t) == sizeof(fvm_info_t), "Info Mismatch");
+    fvm_info_t* info = reinterpret_cast<fvm_info_t*>(out_info);
+    mgr_->Query(info);
+    return ZX_OK;
+}
+
+zx_status_t VPartition::BlockVolumeQuerySlices(const uint64_t* start_list, size_t start_count,
+                                               slice_region_t* out_responses_list,
+                                               size_t responses_count,
+                                               size_t* out_responses_actual) {
+    if ((start_count > MAX_SLICE_QUERY_REQUESTS) ||
+        (start_count > responses_count)) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+    }
+
+    for (size_t i = 0; i < start_count; i++) {
+        zx_status_t status;
+        if ((status = CheckSlices(start_list[i],
+                                  &out_responses_list[i].count,
+                                  &out_responses_list[i].allocated)) != ZX_OK) {
+            return status;
+        }
+    }
+    *out_responses_actual = start_count;
+    return ZX_OK;
+}
+
+zx_status_t VPartition::BlockVolumeDestroy() {
+    return mgr_->FreeSlices(this, 0, mgr_->VSliceMax());
 }
 
 zx_off_t VPartition::DdkGetSize() {

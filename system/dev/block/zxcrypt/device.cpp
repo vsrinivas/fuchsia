@@ -135,6 +135,9 @@ zx_status_t Device::Init() {
 
     // The Partition Protocol is optional.
     info->partition_protocol = ddk::BlockPartitionProtocolClient(parent());
+    // The Volume Protocol is optional.
+    info->volume_protocol = ddk::BlockVolumeProtocolClient(parent());
+
 
     // Save device sizes
     block_info_t blk;
@@ -206,6 +209,9 @@ zx_status_t Device::DdkGetProtocol(uint32_t proto_id, void* out) {
     case ZX_PROTOCOL_BLOCK_PARTITION:
         proto->ops = &block_partition_protocol_ops_;
         return ZX_OK;
+    case ZX_PROTOCOL_BLOCK_VOLUME:
+        proto->ops = &block_volume_protocol_ops_;
+        return ZX_OK;
     default:
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -217,38 +223,7 @@ zx_status_t Device::DdkIoctl(uint32_t op, const void* in, size_t in_len, void* o
                    in_len, out, out_len, actual);
     ZX_DEBUG_ASSERT(info_);
     zx_status_t rc;
-
-    // Modify inputs
-    switch (op) {
-    case IOCTL_BLOCK_FVM_EXTEND:
-    case IOCTL_BLOCK_FVM_SHRINK: {
-        extend_request_t mod;
-        if (!in || in_len < sizeof(mod)) {
-            zxlogf(ERROR, "bad parameter(s): in=%p, in_len=%zu\n", in, in_len);
-            return ZX_ERR_INVALID_ARGS;
-        }
-        memcpy(&mod, in, sizeof(mod));
-        mod.offset += info_->reserved_slices;
-        rc = device_ioctl(parent(), op, &mod, sizeof(mod), out, out_len, actual);
-        break;
-    }
-    case IOCTL_BLOCK_FVM_VSLICE_QUERY: {
-        query_request_t mod;
-        if (!in || in_len < sizeof(mod)) {
-            zxlogf(ERROR, "bad parameter(s): in=%p, in_len=%zu\n", in, in_len);
-            return ZX_ERR_INVALID_ARGS;
-        }
-        memcpy(&mod, in, sizeof(mod));
-        for (size_t i = 0; i < mod.count; ++i) {
-            mod.vslice_start[i] += info_->reserved_slices;
-        }
-        rc = device_ioctl(parent(), op, &mod, sizeof(mod), out, out_len, actual);
-        break;
-    }
-    default:
-        rc = device_ioctl(parent(), op, in, in_len, out, out_len, actual);
-        break;
-    }
+    rc = device_ioctl(parent(), op, in, in_len, out, out_len, actual);
     if (rc < 0) {
         zxlogf(ERROR, "parent device returned failure for ioctl 0x%" PRIx32 ": %s\n", op,
                zx_status_get_string(rc));
@@ -263,11 +238,6 @@ zx_status_t Device::DdkIoctl(uint32_t op, const void* in, size_t in_len, void* o
         if (mod->max_transfer_size > kMaxTransferSize) {
             mod->max_transfer_size = kMaxTransferSize;
         }
-        break;
-    }
-    case IOCTL_BLOCK_FVM_QUERY: {
-        fvm_info_t* mod = static_cast<fvm_info_t*>(out);
-        mod->vslice_count -= info_->reserved_slices;
         break;
     }
     default:
@@ -386,6 +356,9 @@ void Device::BlockImplQueue(block_op_t* block, block_impl_queue_callback complet
     }
 }
 
+////////////////////////////////////////////////////////////////
+// ddk::PartitionProtocol methods
+
 zx_status_t Device::BlockPartitionGetGuid(guidtype_t guidtype, guid_t* out_guid) {
     ZX_DEBUG_ASSERT(info_);
     if (!info_->partition_protocol.is_valid()) {
@@ -400,6 +373,73 @@ zx_status_t Device::BlockPartitionGetName(char* out_name, size_t capacity) {
         return ZX_ERR_NOT_SUPPORTED;
     }
     return info_->partition_protocol.GetName(out_name, capacity);
+}
+
+////////////////////////////////////////////////////////////////
+// ddk::VolumeProtocol methods
+zx_status_t Device::BlockVolumeExtend(const slice_extent_t* extent) {
+    ZX_DEBUG_ASSERT(info_);
+    if (!info_->volume_protocol.is_valid()) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    slice_extent_t modified = *extent;
+    modified.offset += info_->reserved_slices;
+    return info_->volume_protocol.Extend(&modified);
+}
+
+zx_status_t Device::BlockVolumeShrink(const slice_extent_t* extent) {
+    ZX_DEBUG_ASSERT(info_);
+    if (!info_->volume_protocol.is_valid()) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    slice_extent_t modified = *extent;
+    modified.offset += info_->reserved_slices;
+    return info_->volume_protocol.Shrink(&modified);
+}
+
+zx_status_t Device::BlockVolumeQuery(parent_volume_info_t* out_info) {
+    ZX_DEBUG_ASSERT(info_);
+    if (!info_->volume_protocol.is_valid()) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    zx_status_t status = info_->volume_protocol.Query(out_info);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    out_info->virtual_slice_count -= info_->reserved_slices;
+    out_info->physical_slice_count_total -= info_->reserved_slices;
+    out_info->physical_slice_count_used -= info_->reserved_slices;
+
+    return ZX_OK;
+}
+
+zx_status_t Device::BlockVolumeQuerySlices(const uint64_t* start_list, size_t start_count,
+                                           slice_region_t* out_responses_list,
+                                           size_t responses_count, size_t* out_responses_actual) {
+    ZX_DEBUG_ASSERT(info_);
+    if (!info_->volume_protocol.is_valid()) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    ZX_DEBUG_ASSERT(start_count <= MAX_SLICE_QUERY_REQUESTS);
+
+    uint64_t modified_list[start_count];
+    memcpy(modified_list, start_list, start_count);
+    for (size_t i = 0; i < start_count; i++) {
+        modified_list[i] = start_list[i] + info_->reserved_slices;
+    }
+    return info_->volume_protocol.QuerySlices(modified_list, start_count, out_responses_list,
+                                              responses_count, out_responses_actual);
+}
+
+zx_status_t Device::BlockVolumeDestroy() {
+    ZX_DEBUG_ASSERT(info_);
+    if (!info_->volume_protocol.is_valid()) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    return info_->volume_protocol.Destroy();
 }
 
 void Device::BlockForward(block_op_t* block, zx_status_t status) {

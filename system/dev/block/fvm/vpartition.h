@@ -10,6 +10,7 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/block.h>
 #include <ddktl/protocol/block/partition.h>
+#include <ddktl/protocol/block/volume.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
@@ -32,7 +33,8 @@ using PartitionDeviceType = ddk::Device<VPartition,
 
 class VPartition : public PartitionDeviceType,
                    public ddk::BlockImplProtocol<VPartition, ddk::base_protocol>,
-                   public ddk::BlockPartitionProtocol<VPartition> {
+                   public ddk::BlockPartitionProtocol<VPartition>,
+                   public ddk::BlockVolumeProtocol<VPartition> {
 public:
     using SliceMap = fbl::WAVLTree<size_t, fbl::unique_ptr<SliceExtent>>;
 
@@ -54,6 +56,14 @@ public:
     zx_status_t BlockPartitionGetGuid(guidtype_t guid_type, guid_t* out_guid);
     zx_status_t BlockPartitionGetName(char* out_name, size_t capacity);
 
+    // Volume Protocol
+    zx_status_t BlockVolumeExtend(const slice_extent_t* extent);
+    zx_status_t BlockVolumeShrink(const slice_extent_t* extent);
+    zx_status_t BlockVolumeQuery(parent_volume_info_t* out_info);
+    zx_status_t BlockVolumeQuerySlices(const uint64_t* start_list, size_t start_count,
+                                       slice_region_t* out_responses_list, size_t responses_count,
+                                       size_t* out_responses_actual);
+    zx_status_t BlockVolumeDestroy();
     SliceMap::iterator ExtentBegin() TA_REQ(lock_) { return slice_map_.begin(); }
 
     // Given a virtual slice, return the physical slice allocated
