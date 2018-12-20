@@ -122,7 +122,7 @@ zx_status_t Ft3x27Device::Create(zx_device_t* device) {
                                     "ft3x27-thread");
     ZX_DEBUG_ASSERT(ret == thrd_success);
 
-    status = ft_dev->DdkAdd("ft3x27 HidDevice\n");
+    status = ft_dev->DdkAdd("ft3x27 HidDevice");
     if (status != ZX_OK) {
         zxlogf(ERROR, "ft3x27: Could not create hid device: %d\n", status);
         return status;

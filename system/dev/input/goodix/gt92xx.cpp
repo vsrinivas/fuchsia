@@ -135,7 +135,7 @@ zx_status_t Gt92xxDevice::Create(zx_device_t* device) {
                                     "gt92xx-thread");
     ZX_DEBUG_ASSERT(ret == thrd_success);
 
-    status = goodix_dev->DdkAdd("gt92xx HidDevice\n");
+    status = goodix_dev->DdkAdd("gt92xx HidDevice");
     if (status != ZX_OK) {
         zxlogf(ERROR, "gt92xx: Could not create hid device: %d\n", status);
         return status;
