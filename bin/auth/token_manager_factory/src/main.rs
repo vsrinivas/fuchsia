@@ -2,22 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! TokenManager manages a set of Service Provider credentials for a Fuchsia account.
+//! TokenManagerFactory manages service provider credentials for a set of users.
 //!
 //! The interaction with each service provider is mediated by a component implementing the
-//! AuthProvider interface. Availalle AuthProviders are configured as a TokenManger is constructed.
-//! The token manager retains long lived credentials such as OAuth refresh tokens in persistent
-//! storage. These long lived credentials are used to request short lived credentials such as OAuth
-//! access tokens that are cached in memory.
+//! `AuthProvider` interface. These components are launched on demand. The set of configured
+//! AuthProviders must be consistent across all calls to `TokenManagerFactory.GetTokenManager`.
+//! The details of token management and implementation of the `TokenManager` interface are provided
+//! by the `token_manager` crate.
+//!
+//! NOTE: Once `account_manager` provides token management for Fuchsia accounts this
+//! `token_manager_factory` may be downscoped to only handle tokens that are independent of user.
 
 #![deny(warnings)]
 #![deny(missing_docs)]
 #![feature(async_await, await_macro, futures_api)]
 
-mod auth_context_client;
+mod auth_context_supplier;
 mod auth_provider_client;
-mod error;
-mod token_manager;
+mod auth_provider_supplier;
 mod token_manager_factory;
 
 use crate::token_manager_factory::TokenManagerFactory;
@@ -27,8 +29,7 @@ use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_auth::{TokenManagerFactoryMarker, TokenManagerFactoryRequestStream};
 use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
-use futures::prelude::*;
-use log::{error, info};
+use log::info;
 use std::sync::Arc;
 
 fn main() -> Result<(), Error> {
@@ -43,17 +44,11 @@ fn main() -> Result<(), Error> {
         .add_service((TokenManagerFactoryMarker::NAME, move |chan| {
             let tmf_clone = Arc::clone(&token_manager_factory);
             fasync::spawn(
-                (async move {
-                    let mut stream = TokenManagerFactoryRequestStream::from_channel(chan);
-                    while let Some(req) = await!(stream.try_next())? {
-                        await!(tmf_clone.handle_request(req))?;
-                    }
-                    Ok(())
-                })
-                    .unwrap_or_else(|e: failure::Error| {
-                        error!("Error handling TokenManagerFactory channel {:?}", e)
-                    }),
-            )
+                async move {
+                    let stream = TokenManagerFactoryRequestStream::from_channel(chan);
+                    await!(tmf_clone.handle_requests_from_stream(stream))
+                },
+            );
         }))
         .start()
         .context("Error starting token manager factory server")?;

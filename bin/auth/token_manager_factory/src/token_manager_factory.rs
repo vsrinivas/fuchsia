@@ -2,25 +2,29 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::auth_context_supplier::AuthContextSupplier;
+use crate::auth_provider_supplier::AuthProviderSupplier;
+use failure::{Error, ResultExt};
 use fidl::endpoints::ClientEnd;
-use fidl::Error;
 use fidl_fuchsia_auth::{
     AuthProviderConfig, AuthenticationContextProviderMarker, TokenManagerFactoryRequest,
+    TokenManagerFactoryRequestStream,
 };
 use fuchsia_async as fasync;
 use futures::prelude::*;
-use log::{error, info};
+use log::{info, warn};
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
-
-use crate::token_manager::{TokenManager, TokenManagerContext};
+use token_manager::{TokenManagerContext, TokenManagerError};
 
 // The directory to use for token manager databases
 const DB_DIR: &str = "/data/auth";
 // The file suffix to use for token manager databases. This string is appended to the user id.
 const DB_SUFFIX: &str = "_token_store.json";
+
+type TokenManager = token_manager::TokenManager<AuthProviderSupplier, AuthContextSupplier>;
 
 /// A factory to create instances of the TokenManager for individual users.
 pub struct TokenManagerFactory {
@@ -40,6 +44,11 @@ pub struct TokenManagerFactory {
     /// set of auth provider configuration that was used on the first call and return an error if
     /// this is not constant across future calls.
     auth_provider_configs: Mutex<Vec<AuthProviderConfig>>,
+
+    /// An object capable of launching and opening connections on components implementing the
+    /// AuthProviderFactory interface. This is populated on the first call that provides auth
+    /// provider configuration.
+    auth_provider_supplier: Mutex<Option<AuthProviderSupplier>>,
 }
 
 impl TokenManagerFactory {
@@ -48,6 +57,57 @@ impl TokenManagerFactory {
         TokenManagerFactory {
             user_to_token_manager: Mutex::new(HashMap::new()),
             auth_provider_configs: Mutex::new(Vec::new()),
+            auth_provider_supplier: Mutex::new(None),
+        }
+    }
+
+    /// Asynchronously handles the supplied stream of `TokenManagerFactoryRequest` messages.
+    ///
+    /// This method will only return an Err for errors that should be considered fatal for the
+    /// factory. Not that currently no failure modes meet this condition since requests for
+    /// different users are independant.
+    pub async fn handle_requests_from_stream(&self, mut stream: TokenManagerFactoryRequestStream) {
+        while let Ok(Some(req)) = await!(stream.try_next()) {
+            await!(self.handle_request(req)).unwrap_or_else(|err| {
+                warn!("Error handling TokenManagerFactoryRequest: {:?}", err);
+            });
+        }
+    }
+
+    /// Asynchronously handles a single request to the TokenManagerFactory.
+    async fn handle_request(&self, req: TokenManagerFactoryRequest) -> Result<(), Error> {
+        match req {
+            TokenManagerFactoryRequest::GetTokenManager {
+                user_id,
+                application_url,
+                auth_provider_configs,
+                auth_context_provider,
+                token_manager: token_manager_server_end,
+                ..
+            } => {
+                if !self.is_auth_provider_config_consistent(&auth_provider_configs) {
+                    warn!("Auth provider config inconsistent with previous request");
+                    return Ok(());
+                };
+
+                let token_manager = self
+                    .get_token_manager(user_id, auth_provider_configs, auth_context_provider)
+                    .context("Error creating TokenManager")?;
+                let context = TokenManagerContext { application_url };
+                let stream = token_manager_server_end
+                    .into_stream()
+                    .context("Error creation request stream")?;
+
+                fasync::spawn(
+                    async move {
+                        await!(token_manager.handle_requests_from_stream(&context, stream))
+                            .unwrap_or_else(|err| {
+                                warn!("Error handling TokenManager channel: {:?}", err);
+                            })
+                    },
+                );
+                Ok(())
+            }
         }
     }
 
@@ -66,86 +126,44 @@ impl TokenManagerFactory {
         }
     }
 
-    /// Returns an Ok containing a TokenManager, or an Err if any errors were encountered creating
-    /// one. The TokenManager is retrieved from the user map if one already exists, or is created
-    /// and added to the map if not.
-    fn get_or_create_token_manager(
-        &self, user_id: String, auth_provider_configs: Vec<AuthProviderConfig>,
-        auth_context_provider: ClientEnd<AuthenticationContextProviderMarker>,
-    ) -> Result<Arc<TokenManager>, failure::Error> {
-        let mut user_to_token_manager = self.user_to_token_manager.lock();
-        match user_to_token_manager.get(&user_id) {
-            Some(token_manager) => Ok(Arc::clone(token_manager)),
+    /// Returns an `AuthProviderSupplier` for the supplied `auth_provider_configs`, or any errors
+    /// encountered while creating one. If an auth provider supplier has been previously created,
+    /// it will be cloned.
+    fn get_auth_provider_supplier(
+        &self, auth_provider_configs: Vec<AuthProviderConfig>,
+    ) -> Result<AuthProviderSupplier, TokenManagerError> {
+        let mut auth_provider_supplier_lock = self.auth_provider_supplier.lock();
+        match &*auth_provider_supplier_lock {
+            Some(auth_provider_supplier) => Ok(auth_provider_supplier.clone()),
             None => {
-                info!("Creating token manager for user {}", user_id);
-                let db_path = Path::new(DB_DIR).join(user_id.clone() + DB_SUFFIX);
-                let token_manager = Arc::new(TokenManager::new(
-                    &db_path,
-                    auth_provider_configs,
-                    auth_context_provider,
-                )?);
-                user_to_token_manager.insert(user_id, Arc::clone(&token_manager));
-                Ok(token_manager)
+                let auth_provider_supplier = AuthProviderSupplier::new(auth_provider_configs);
+                auth_provider_supplier_lock.get_or_insert(auth_provider_supplier.clone());
+                Ok(auth_provider_supplier)
             }
         }
     }
 
-    /// Handles a single request to the TokenManagerFactory.
-    ///
-    /// Output is defined as a Result where Err is used for errors that should be considered
-    /// fatal for the factory. Note that currently no failure modes meet this condition since
-    /// requests for different users are independant.
-    pub async fn handle_request(&self, req: TokenManagerFactoryRequest) -> Result<(), Error> {
-        match req {
-            TokenManagerFactoryRequest::GetTokenManager {
-                user_id,
-                application_url,
-                auth_provider_configs,
-                auth_context_provider,
-                token_manager: token_manager_server_end,
-                ..
-            } => {
-                if !self.is_auth_provider_config_consistent(&auth_provider_configs) {
-                    error!("Auth provider config inconsistent with previous request");
-                    return Ok(());
-                }
+    /// Returns a Result containing a TokenManager, or any errors encountered while creating one.
+    /// The TokenManager is retrieved from the user map if one already exists, or is created
+    /// and added to the map if not.
+    fn get_token_manager(
+        &self, user_id: String, auth_provider_configs: Vec<AuthProviderConfig>,
+        auth_context_provider: ClientEnd<AuthenticationContextProviderMarker>,
+    ) -> Result<Arc<TokenManager>, Error> {
+        let mut user_to_token_manager = self.user_to_token_manager.lock();
+        if let Some(token_manager) = user_to_token_manager.get(&user_id) {
+            return Ok(Arc::clone(token_manager));
+        };
 
-                let token_manager = match self.get_or_create_token_manager(
-                    user_id,
-                    auth_provider_configs,
-                    auth_context_provider,
-                ) {
-                    Ok(token_manager) => token_manager,
-                    Err(err) => {
-                        error!("Error creating TokenManager: {:?}", err);
-                        return Ok(());
-                    }
-                };
-                let context = TokenManagerContext { application_url };
-
-                match token_manager_server_end.into_stream() {
-                    Ok(mut stream) => {
-                        fasync::spawn(
-                            (async move {
-                                while let Some(req) = await!(stream.try_next())? {
-                                    await!(token_manager.handle_request(&context, req))?;
-                                }
-                                Ok(())
-                            })
-                                .unwrap_or_else(
-                                    |e: failure::Error| {
-                                        error!("Fatal error, closing TokenManager channel: {:?}", e)
-                                    },
-                                ),
-                        );
-                    }
-                    Err(err) => {
-                        error!("Error creating TokenManager channel: {:?}", err);
-                    }
-                }
-                Ok(())
-            }
-        }
+        info!("Creating token manager for user {}", user_id);
+        let db_path = Path::new(DB_DIR).join(user_id.clone() + DB_SUFFIX);
+        let token_manager = Arc::new(TokenManager::new(
+            &db_path,
+            self.get_auth_provider_supplier(auth_provider_configs)?,
+            AuthContextSupplier::from_client_end(auth_context_provider)?,
+        )?);
+        user_to_token_manager.insert(user_id, Arc::clone(&token_manager));
+        Ok(token_manager)
     }
 }
 

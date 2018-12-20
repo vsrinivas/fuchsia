@@ -7,22 +7,34 @@ use auth_store::AuthDbError;
 use failure::{format_err, Error, Fail};
 use fidl_fuchsia_auth::{AuthProviderStatus, Status};
 
+/// An extension trait to simplify conversion of results based on general errors to
+/// TokenManagerErrors.
+pub trait ResultExt<T, E> {
+    /// Wraps the error in a non-fatal `TokenManagerError` with the supplied `Status`.
+    fn token_manager_status(self, status: Status) -> Result<T, TokenManagerError>;
+}
+
+impl<T, E> ResultExt<T, E> for Result<T, E>
+where
+    E: Fail,
+{
+    fn token_manager_status(self, status: Status) -> Result<T, TokenManagerError> {
+        self.map_err(|err| TokenManagerError::new(status).with_cause(err))
+    }
+}
+
 /// An Error type for problems encountered in the token manager. Each error contains the
-/// fuchsia.auth.Status that should be reported back to the client and an indication of whether it
-/// is fatal.
+/// `fuchsia.auth.Status` that should be reported back to the client and an indication of whether
+/// it is fatal.
 #[derive(Debug, Fail)]
-#[fail(
-    display = "TokenManager error, returning {:?}. ({:?})",
-    status,
-    cause
-)]
+#[fail(display = "TokenManager error, returning {:?}. ({:?})", status, cause)]
 pub struct TokenManagerError {
     /// The most appropriate `fuchsia.auth.Status` to describe this problem.
     pub status: Status,
     /// Whether this error should be considered fatal, i.e. whether it should terminate processing
     /// of all requests on the current channel.
     pub fatal: bool,
-    /// The root cause of this error, if available.
+    /// The cause of this error, if available.
     pub cause: Option<Error>,
 }
 

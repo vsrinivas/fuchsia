@@ -5,20 +5,20 @@
 use auth_cache::{AuthCacheError, CacheKey, FirebaseAuthToken, OAuthToken, TokenCache};
 use auth_store::file::AuthDbFile;
 use auth_store::{AuthDb, AuthDbError, CredentialKey, CredentialValue};
-use crate::auth_context_client::AuthContextClient;
-use crate::auth_provider_client::AuthProviderClient;
-use crate::error::TokenManagerError;
+use crate::{
+    AuthContextSupplier, AuthProviderSupplier, ResultExt, TokenManagerContext, TokenManagerError,
+};
 use failure::format_err;
 use fidl;
 use fidl::encoding::OutOfLine;
 use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_auth::{
     AppConfig, AssertionJwtParams, AttestationJwtParams, AttestationSignerMarker,
-    AuthProviderConfig, AuthProviderProxy, AuthProviderStatus, AuthenticationContextProviderMarker,
-    AuthenticationUiContextMarker, CredentialEcKey, Status, TokenManagerAuthorizeResponder,
-    TokenManagerDeleteAllTokensResponder, TokenManagerGetAccessTokenResponder,
-    TokenManagerGetFirebaseTokenResponder, TokenManagerGetIdTokenResponder,
-    TokenManagerListProfileIdsResponder, TokenManagerRequest, UserProfileInfo,
+    AuthProviderProxy, AuthProviderStatus, AuthenticationUiContextMarker, CredentialEcKey, Status,
+    TokenManagerAuthorizeResponder, TokenManagerDeleteAllTokensResponder,
+    TokenManagerGetAccessTokenResponder, TokenManagerGetFirebaseTokenResponder,
+    TokenManagerGetIdTokenResponder, TokenManagerListProfileIdsResponder, TokenManagerRequest,
+    TokenManagerRequestStream, UserProfileInfo,
 };
 use fuchsia_zircon as zx;
 use futures::prelude::*;
@@ -29,62 +29,52 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 
+/// The maximum number of entries to be stored in the `TokenCache`.
 const CACHE_SIZE: usize = 128;
 
-#[allow(dead_code)] // Type is incorrectly being marked unused - Potentially rust issue #54234
 type TokenManagerResult<T> = Result<T, TokenManagerError>;
 
-/// The context that a particular request to the token manager should be executed in, capturing
-/// information that was supplied on creation of the channel.
-pub struct TokenManagerContext {
-    /// The application that this request is being sent on behalf of.
-    pub application_url: String,
-}
-
-/// The mutable state used to create, store, and cache authentication tokens for a particular user
-/// across a range of third party services as configured by AuthProviderConfigs. Uses the supplied
-/// `AuthenticationContextProvider` to render UI where necessary.
-pub struct TokenManager {
-    /// A map of clients capable of communicating with each AuthProvider.
-    auth_providers: HashMap<String, AuthProviderClient>,
-    /// A client for creating new AuthenticationUIContexts.
-    auth_context: AuthContextClient,
+/// The supplier references and mutable state used to create, store, and cache authentication
+/// tokens for a particular user across a range of third party services.
+pub struct TokenManager<P: AuthProviderSupplier, C: AuthContextSupplier> {
+    /// An object capable of supplying AuthProviders connection.
+    auth_provider_supplier: P,
+    /// An object capable of supplying AuthenticationUIContexts.
+    auth_context_supplier: C,
+    /// A cache of proxies for previously used connections to AuthProviders.
+    auth_providers: Mutex<HashMap<String, Arc<AuthProviderProxy>>>,
     /// A persistent store of long term credentials.
     token_store: Mutex<Box<AuthDb + Send + Sync>>,
     /// An in-memory cache of recently used tokens.
     token_cache: Mutex<TokenCache>,
 }
 
-impl TokenManager {
+impl<P: AuthProviderSupplier, C: AuthContextSupplier> TokenManager<P, C> {
     /// Creates a new TokenManager.
     pub fn new(
-        db_path: &Path, auth_provider_configs: Vec<AuthProviderConfig>,
-        auth_context_provider: ClientEnd<AuthenticationContextProviderMarker>,
+        db_path: &Path, auth_provider_supplier: P, auth_context_supplier: C,
     ) -> Result<Self, failure::Error> {
         let token_store = AuthDbFile::new(db_path)
             .map_err(|err| format_err!("Error creating AuthDb at {:?}, {:?}", db_path, err))?;
-
         let token_cache = TokenCache::new(CACHE_SIZE);
 
-        let auth_providers = auth_provider_configs
-            .into_iter()
-            .map(|apc| {
-                (
-                    apc.auth_provider_type.clone(),
-                    AuthProviderClient::from_config(apc),
-                )
-            })
-            .collect();
-
-        let auth_context = AuthContextClient::from_client_end(auth_context_provider)
-            .map_err(|err| format_err!("Error creating AuthContext {:?}", err))?;
-
         Ok(TokenManager {
-            auth_providers,
-            auth_context,
+            auth_provider_supplier,
+            auth_context_supplier,
+            auth_providers: Mutex::new(HashMap::new()),
             token_store: Mutex::new(Box::new(token_store)),
             token_cache: Mutex::new(token_cache),
         })
+    }
+
+    /// Asynchronously handles the supplied stream of `TokenManagerRequest` messages.
+    pub async fn handle_requests_from_stream<'a>(
+        &'a self, context: &'a TokenManagerContext, mut stream: TokenManagerRequestStream,
+    ) -> Result<(), failure::Error> {
+        while let Some(req) = await!(stream.try_next())? {
+            await!(self.handle_request(context, req))?;
+        }
+        Ok(())
     }
 
     /// Handles a single request to the TokenManager by dispatching to more specific functions for
@@ -183,18 +173,14 @@ impl TokenManager {
         &self, app_config: AppConfig, user_profile_id: Option<String>, _app_scopes: Vec<String>,
         auth_code: Option<String>,
     ) -> TokenManagerResult<UserProfileInfo> {
-        let ui_context = self
-            .auth_context
-            .get_new_ui_context()
-            .map_err(|err| TokenManagerError::new(Status::InvalidAuthContext).with_cause(err))?;
-
-        let auth_provider_proxy =
-            await!(self.get_auth_provider_proxy(&app_config.auth_provider_type))?;
+        let ui_context = self.auth_context_supplier.get()?;
+        let auth_provider_type = &app_config.auth_provider_type;
+        let auth_provider_proxy = await!(self.get_auth_provider_proxy(auth_provider_type))?;
 
         // TODO(ukode): Create a new attestation signer handle for each request using the device
         // attestation key with better error handling.
         let (_server_chan, client_chan) = zx::Channel::create()
-            .map_err(|err| TokenManagerError::new(Status::InternalError).with_cause(err))
+            .token_manager_status(Status::UnknownError)
             .expect("Failed to create attestation_signer");
         let attestation_signer = ClientEnd::<AttestationSignerMarker>::new(client_chan);
 
@@ -224,7 +210,10 @@ impl TokenManager {
                 user_profile_id.as_ref().map(|x| &**x),
             )
         )
-        .map_err(|err| TokenManagerError::new(Status::AuthProviderServerError).with_cause(err))?;
+        .map_err(|err| {
+            self.discard_auth_provider_proxy(auth_provider_type);
+            TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
+        })?;
 
         match (credential, auth_challenge, user_profile_info) {
             (Some(credential), Some(_auth_challenge), Some(user_profile_info)) => {
@@ -253,20 +242,16 @@ impl TokenManager {
         &self, app_config: AppConfig, user_profile_id: Option<String>, _app_scopes: Vec<String>,
         _auth_code: Option<String>,
     ) -> TokenManagerResult<UserProfileInfo> {
-        let ui_context = self
-            .auth_context
-            .get_new_ui_context()
-            .map_err(|err| TokenManagerError::new(Status::InvalidAuthContext).with_cause(err))?;
+        let ui_context = self.auth_context_supplier.get()?;
+        let auth_provider_type = &app_config.auth_provider_type;
+        let auth_provider_proxy = await!(self.get_auth_provider_proxy(auth_provider_type))?;
 
-        let auth_provider_proxy =
-            await!(self.get_auth_provider_proxy(&app_config.auth_provider_type))?;
-        let (status, credential, user_profile_info) = await!(
-            auth_provider_proxy.get_persistent_credential(
-                Some(ui_context),
-                user_profile_id.as_ref().map(|x| &**x),
-            )
-        )
-        .map_err(|err| TokenManagerError::new(Status::AuthProviderServerError).with_cause(err))?;
+        let (status, credential, user_profile_info) = await!(auth_provider_proxy
+            .get_persistent_credential(Some(ui_context), user_profile_id.as_ref().map(|x| &**x),))
+        .map_err(|err| {
+            self.discard_auth_provider_proxy(auth_provider_type);
+            TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
+        })?;
 
         match (credential, user_profile_info) {
             (Some(credential), Some(user_profile_info)) => {
@@ -330,8 +315,8 @@ impl TokenManager {
         &self, app_config: AppConfig, user_profile_id: String, refresh_token: String,
         app_scopes: Vec<String>, cache_key: CacheKey,
     ) -> TokenManagerResult<Arc<OAuthToken>> {
-        let auth_provider_proxy =
-            await!(self.get_auth_provider_proxy(&app_config.auth_provider_type))?;
+        let auth_provider_type = &app_config.auth_provider_type;
+        let auth_provider_proxy = await!(self.get_auth_provider_proxy(auth_provider_type))?;
 
         // TODO(ukode): Retrieve the ephemeral credential key from store and add the public key
         // params here.
@@ -345,7 +330,7 @@ impl TokenManager {
         // TODO(ukode): Create a new attestation signer handle for each request using the device
         // attestation key with better error handling.
         let (_server_chan, client_chan) = zx::Channel::create()
-            .map_err(|err| TokenManagerError::new(Status::InternalError).with_cause(err))
+            .token_manager_status(Status::InternalError)
             .expect("Failed to create attestation_signer");
         let attestation_signer = ClientEnd::<AttestationSignerMarker>::new(client_chan);
 
@@ -357,15 +342,17 @@ impl TokenManager {
 
         let scopes_copy = app_scopes.iter().map(|x| &**x).collect::<Vec<_>>();
 
-        let (status, updated_credential, access_token, auth_challenge) = await!(
-            auth_provider_proxy.get_app_access_token_from_assertion_jwt(
+        let (status, updated_credential, access_token, auth_challenge) =
+            await!(auth_provider_proxy.get_app_access_token_from_assertion_jwt(
                 attestation_signer,
                 &mut assertion_jwt_params,
                 &refresh_token,
                 &mut scopes_copy.into_iter(),
-            )
-        )
-        .map_err(|err| TokenManagerError::new(Status::AuthProviderServerError).with_cause(err))?;
+            ))
+            .map_err(|err| {
+                self.discard_auth_provider_proxy(auth_provider_type);
+                TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
+            })?;
 
         match (updated_credential, access_token, auth_challenge) {
             (Some(updated_credential), Some(access_token), Some(_auth_challenge)) => {
@@ -401,15 +388,19 @@ impl TokenManager {
         &self, app_config: AppConfig, refresh_token: String, app_scopes: Vec<String>,
         cache_key: CacheKey,
     ) -> TokenManagerResult<Arc<OAuthToken>> {
-        let auth_provider_proxy =
-            await!(self.get_auth_provider_proxy(&app_config.auth_provider_type))?;
+        let auth_provider_type = &app_config.auth_provider_type;
+        let auth_provider_proxy = await!(self.get_auth_provider_proxy(auth_provider_type))?;
+
         let scopes_copy = app_scopes.iter().map(|x| &**x).collect::<Vec<_>>();
         let (status, provider_token) = await!(auth_provider_proxy.get_app_access_token(
             &refresh_token,
             app_config.client_id.as_ref().map(|x| &**x),
             &mut scopes_copy.into_iter(),
         ))
-        .map_err(|err| TokenManagerError::new(Status::AuthProviderServerError).with_cause(err))?;
+        .map_err(|err| {
+            self.discard_auth_provider_proxy(auth_provider_type);
+            TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
+        })?;
 
         let provider_token = provider_token.ok_or(TokenManagerError::from(status))?;
         let native_token = Arc::new(OAuthToken::from(*provider_token));
@@ -438,12 +429,16 @@ impl TokenManager {
         // If no cached entry was found use an auth provider to mint a new one from the refresh
         // token, then place it in the cache.
         let refresh_token = self.get_refresh_token(&db_key)?;
-        let auth_provider_proxy =
-            await!(self.get_auth_provider_proxy(&app_config.auth_provider_type))?;
-        let (status, provider_token) = await!(
-            auth_provider_proxy.get_app_id_token(&refresh_token, audience.as_ref().map(|x| &**x))
-        )
-        .map_err(|err| TokenManagerError::new(Status::AuthProviderServerError).with_cause(err))?;
+        let auth_provider_type = &app_config.auth_provider_type;
+        let auth_provider_proxy = await!(self.get_auth_provider_proxy(auth_provider_type))?;
+        let (status, provider_token) =
+            await!(auth_provider_proxy
+                .get_app_id_token(&refresh_token, audience.as_ref().map(|x| &**x)))
+            .map_err(|err| {
+                self.discard_auth_provider_proxy(auth_provider_type);
+                TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
+            })?;
+
         let provider_token = provider_token.ok_or(TokenManagerError::from(status))?;
         let native_token = Arc::new(OAuthToken::from(*provider_token));
         self.token_cache
@@ -477,7 +472,10 @@ impl TokenManager {
         let (status, provider_token) = await!(
             auth_provider_proxy.get_app_firebase_token(&*id_token, &api_key)
         )
-        .map_err(|err| TokenManagerError::new(Status::AuthProviderServerError).with_cause(err))?;
+        .map_err(|err| {
+            self.discard_auth_provider_proxy(&auth_provider_type);
+            TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
+        })?;
         let provider_token = provider_token.ok_or(TokenManagerError::from(status))?;
         let native_token = Arc::new(FirebaseAuthToken::from(*provider_token));
         self.token_cache
@@ -501,11 +499,12 @@ impl TokenManager {
         };
 
         // Request that the auth provider revoke the credential server-side.
-        let auth_provider_proxy =
-            await!(self.get_auth_provider_proxy(&app_config.auth_provider_type))?;
+        let auth_provider_type = &app_config.auth_provider_type;
+        let auth_provider_proxy = await!(self.get_auth_provider_proxy(auth_provider_type))?;
         let status =
             await!(auth_provider_proxy.revoke_app_or_persistent_credential(&refresh_token))
                 .map_err(|err| {
+                    self.discard_auth_provider_proxy(auth_provider_type);
                     TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
                 })?;
 
@@ -559,22 +558,36 @@ impl TokenManager {
         Ok((db_key, cache_key))
     }
 
-    /// Returns an `AuthProviderProxy` to handle requests for the supplied `AppConfig`.
+    /// Returns an `AuthProviderProxy` for the specified `auth_provider_type` either by returning
+    /// a previously created copy or by acquiring a new one from the `AuthProviderSupplier`.
     async fn get_auth_provider_proxy<'a>(
         &'a self, auth_provider_type: &'a str,
     ) -> TokenManagerResult<Arc<AuthProviderProxy>> {
-        let auth_provider = match self.auth_providers.get(auth_provider_type) {
-            Some(ap) => ap,
-            None => {
-                return Err(
-                    TokenManagerError::new(Status::AuthProviderServiceUnavailable)
-                        .with_cause(format_err!("Unknown auth provider {}", auth_provider_type)),
-                );
-            }
-        };
-        await!(auth_provider.get_proxy().map_err(|err| {
-            TokenManagerError::new(Status::AuthProviderServiceUnavailable).with_cause(err)
-        }))
+        if let Some(auth_provider) = self.auth_providers.lock().get(auth_provider_type) {
+            return Ok(Arc::clone(auth_provider));
+        }
+
+        let client_end = await!(self.auth_provider_supplier.get(auth_provider_type))?;
+        let proxy = Arc::new(
+            client_end
+                .into_proxy()
+                .token_manager_status(Status::UnknownError)?,
+        );
+        self.auth_providers
+            .lock()
+            .insert(auth_provider_type.to_string(), Arc::clone(&proxy));
+
+        // TODO(jsankey): AuthProviders might crash or close connections, leaving our cached proxy
+        // in an invalid state. Currently we explictly discard a proxy from each method that
+        // observes a communication failure, but we should probably also be monitoring for the
+        // close event on each channel to remove the associated proxy from the cache automatically.
+
+        Ok(proxy)
+    }
+
+    /// Removes an `AuthProviderProxy` from the local cache, if one is found.
+    fn discard_auth_provider_proxy(&self, auth_provider_type: &str) {
+        self.auth_providers.lock().remove(auth_provider_type);
     }
 
     /// Returns the current refresh token for a user from the data store.  Failure to find the user
