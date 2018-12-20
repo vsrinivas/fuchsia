@@ -155,10 +155,10 @@ template <class T>
 class VirtioBlockGuestTest : public GuestTest<T> {
  public:
   const std::string& FilePath() const {
-    return this->GetEnclosedGuest().FilePath();
+    return this->GetEnclosedGuest()->FilePath();
   }
   fuchsia::guest::BlockMode BlockMode() const {
-    return this->GetEnclosedGuest().BlockMode();
+    return this->GetEnclosedGuest()->BlockMode();
   }
 };
 

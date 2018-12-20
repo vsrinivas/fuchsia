@@ -53,7 +53,9 @@ class GuestTest : public ::testing::Test {
     enclosed_guest_->GetHostVsockEndpoint(std::move(endpoint));
   }
 
-  const T& GetEnclosedGuest() const { return *enclosed_guest_; }
+  T* GetEnclosedGuest() { return enclosed_guest_; }
+
+  const T* GetEnclosedGuest() const { return enclosed_guest_; }
 
  private:
   static T* enclosed_guest_;
