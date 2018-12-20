@@ -249,7 +249,6 @@ executable("virtio_wl_bin") {
 
   output_name = "virtio_wl"
   sources = [
-    "../bits.h",
     "virtio_magma.cc",
     "virtio_magma.h",
     "virtio_wl.cc",
