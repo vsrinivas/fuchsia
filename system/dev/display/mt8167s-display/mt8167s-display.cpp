@@ -13,7 +13,9 @@ namespace mt8167s_display {
 
 namespace {
 // List of supported pixel formats
-zx_pixel_format_t kSupportedPixelFormats[] = {ZX_PIXEL_FORMAT_RGB_x888};
+zx_pixel_format_t kSupportedPixelFormats[3] = {
+    ZX_PIXEL_FORMAT_ARGB_8888, ZX_PIXEL_FORMAT_RGB_x888, ZX_PIXEL_FORMAT_RGB_565
+};
 constexpr uint64_t kDisplayId = PANEL_DISPLAY_ID;
 
 struct ImageInfo {
@@ -83,7 +85,8 @@ zx_status_t Mt8167sDisplay::DisplayControllerImplImportVmoImage(image_t* image, 
         DISP_ERROR("Could not pin bit\n");
         return status;
     }
-
+    // Make sure paddr is allocated in the lower 4GB. (ZX-1073)
+    ZX_ASSERT((paddr + size) <= UINT32_MAX);
     import_info->paddr = paddr;
     list_add_head(&imported_images_, &import_info->node);
     image->handle = paddr;
@@ -120,21 +123,40 @@ uint32_t Mt8167sDisplay::DisplayControllerImplCheckConfiguration(
 
     fbl::AutoLock lock(&display_lock_);
 
-    bool success;
-    if (display_configs[0]->layer_count != 1) {
-        success = display_configs[0]->layer_count == 0;
+    bool success = true;
+    if (display_configs[0]->layer_count > kMaxLayer) {
+        success = false;
     } else {
-        const primary_layer_t& layer = display_configs[0]->layer_list[0]->cfg.primary;
-        frame_t frame = {
-            .x_pos = 0, .y_pos = 0, .width = width_, .height = height_,
-        };
-        success = display_configs[0]->layer_list[0]->type == LAYER_TYPE_PRIMARY &&
-                  layer.transform_mode == FRAME_TRANSFORM_IDENTITY &&
-                  layer.image.width == width_ && layer.image.height == height_ &&
-                  memcmp(&layer.dest_frame, &frame, sizeof(frame_t)) == 0 &&
-                  memcmp(&layer.src_frame, &frame, sizeof(frame_t)) == 0 &&
-                  display_configs[0]->cc_flags == 0 && layer.alpha_mode == ALPHA_DISABLE;
+        for (size_t j = 0; j < display_configs[0]->layer_count; j++) {
+            switch (display_configs[0]->layer_list[j]->type) {
+            case LAYER_TYPE_PRIMARY: {
+                const primary_layer_t& layer = display_configs[0]->layer_list[j]->cfg.primary;
+                // TODO(payamm) Add support for rotation (ZX-3227)
+                if (layer.transform_mode != 0) {
+                    layer_cfg_results[0][j] |= CLIENT_TRANSFORM;
+                }
+                // TODO(payamm) Add support for scaling (ZX-3228) :
+                if (layer.src_frame.width != layer.dest_frame.width ||
+                    layer.src_frame.height != layer.dest_frame.height ||
+                    layer.image.width != layer.dest_frame.width ||
+                    layer.image.height != layer.dest_frame.height) {
+                    layer_cfg_results[0][j] |= CLIENT_FRAME_SCALE;
+                }
+                break;
+            }
+            case LAYER_TYPE_COLOR: {
+                if (j != 0) {
+                    layer_cfg_results[0][j] |= CLIENT_USE_PRIMARY;
+                }
+                break;
+            }
+            default:
+                layer_cfg_results[0][j] |= CLIENT_USE_PRIMARY;
+                break;
+            }
+        }
     }
+
     if (!success) {
         layer_cfg_results[0][0] = CLIENT_MERGE_BASE;
         for (unsigned i = 1; i < display_configs[0]->layer_count; i++) {
@@ -148,18 +170,24 @@ uint32_t Mt8167sDisplay::DisplayControllerImplCheckConfiguration(
 void Mt8167sDisplay::DisplayControllerImplApplyConfiguration(
     const display_config_t** display_configs, size_t display_count) {
     ZX_DEBUG_ASSERT(display_configs);
-
     fbl::AutoLock lock(&display_lock_);
-    if (display_count == 1 && display_configs[0]->layer_count) {
-        //TODO(payamm): if HDMI support is added + plug n play, we need to validate configuration
-        zx_paddr_t addr =
-            reinterpret_cast<zx_paddr_t>(display_configs[0]->layer_list[0]->cfg.primary.image.handle);
-        current_image_valid_ = true;
-        // write to register and hope for the best
-        ovl_mmio_->Write32(static_cast<uint32_t>(addr), OVL_LX_ADDR(0));
+    auto* config = display_configs[0];
+    if (display_count == 1 && config->layer_count) {
+        // First stop the overlay engine
+        ovl_->Stop();
+        for (size_t j = 0; j < config->layer_count; j++) {
+            zx_paddr_t addr =
+                reinterpret_cast<zx_paddr_t>(config->layer_list[j]->cfg.primary.image.handle);
+            // Build the overlay configuration. For now we only provide format and address.
+            OvlConfig cfg;
+            cfg.paddr = addr;
+            cfg.format = config->layer_list[j]->cfg.primary.image.pixel_format;
+            ovl_->Config(static_cast<uint8_t>(j), cfg);
+        }
+        // All configurations are done. Re-start the engine
+        ovl_->Start();
     } else {
-        //TODO(payamm): Properly disable ovl in the next round of the driver
-        current_image_valid_ = false;
+        ovl_->Restart();
     }
 }
 
@@ -172,9 +200,7 @@ int Mt8167sDisplay::VSyncThread() {
     zx_status_t status;
     while (1) {
         // clear interrupt source
-        // TODO(payamm): There are several sources of interrupt. Might be a good idea to make
-        // sure the correct interrupt is being fired in the next phase of this driver
-        ovl_mmio_->Write32(0x0, 0x8);
+        ovl_->ClearIrq();
         zx::time timestamp;
         status = vsync_irq_.wait(&timestamp);
         if (status != ZX_OK) {
@@ -182,10 +208,22 @@ int Mt8167sDisplay::VSyncThread() {
             break;
         }
         fbl::AutoLock lock(&display_lock_);
-        uint64_t live = current_image_;
-        bool current_image_valid = current_image_valid_;
+        if (!ovl_->IsValidIrq()) {
+            DISP_SPEW("Spurious Interrupt\n");
+            continue;
+        }
+        uint64_t handles[kMaxLayer];
+        size_t handle_count = 0;
+        // For all 4 layers supported,obtain the handle for that layer and clear it since
+        // we are done applying the new configuration to that layer.
+        for (uint8_t i = 0; i < kMaxLayer; i++) {
+            if (ovl_->IsLayerActive(i)) {
+                handles[handle_count++] = ovl_->GetLayerHandle(i);
+                ovl_->ClearLayer(i);
+            }
+        }
         if (dc_intf_.is_valid()) {
-            dc_intf_.OnDisplayVsync(kDisplayId, timestamp.get(), &live, current_image_valid);
+            dc_intf_.OnDisplayVsync(kDisplayId, timestamp.get(), handles, handle_count);
         }
     }
     return ZX_OK;
@@ -225,25 +263,24 @@ zx_status_t Mt8167sDisplay::Bind() {
         return status;
     }
 
-    mmio_buffer_t mmio;
-    status = pdev_map_mmio_buffer2(&pdev_, MMIO_DISP_OVL, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                   &mmio);
-    if (status != ZX_OK) {
-        DISP_ERROR("Could not map OVL mmio\n");
-        return status;
-    }
+    // TODO(payamm): Move to a separate function
+    // Create internal ovl object
     fbl::AllocChecker ac;
-    ovl_mmio_ = fbl::make_unique_checked<ddk::MmioBuffer>(&ac, mmio);
+    ovl_ = fbl::make_unique_checked<mt8167s_display::Ovl>(&ac,
+                                                          height_, width_, pitch_, 0, 0);
     if (!ac.check()) {
-        DISP_ERROR("Could not mapp Overlay MMIO\n");
         return ZX_ERR_NO_MEMORY;
     }
+    // Initialize ovl object
+    status = ovl_->Init(parent_);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not initialize OVL object\n");
+        return status;
+    }
 
-    // Clear all OVL layers
-    ovl_mmio_->Write32(0, OVL_LX_ADDR(0));
-    ovl_mmio_->Write32(0, OVL_LX_ADDR(1));
-    ovl_mmio_->Write32(0, OVL_LX_ADDR(2));
-    ovl_mmio_->Write32(0, OVL_LX_ADDR(3));
+    // Reset the Overlay engine and start it.
+    ovl_->Reset();
+    ovl_->Start();
 
     auto start_thread = [](void* arg) { return static_cast<Mt8167sDisplay*>(arg)->VSyncThread(); };
     status = thrd_create_with_name(&vsync_thread_, start_thread, this, "vsync_thread");
@@ -267,8 +304,10 @@ zx_status_t Mt8167sDisplay::Bind() {
 // main bind function called from dev manager
 zx_status_t display_bind(void* ctx, zx_device_t* parent) {
     fbl::AllocChecker ac;
-    auto dev = fbl::make_unique_checked<mt8167s_display::Mt8167sDisplay>(&ac, parent, DISPLAY_WIDTH,
-                                                                         DISPLAY_HEIGHT);
+    auto dev = fbl::make_unique_checked<mt8167s_display::Mt8167sDisplay>(&ac, parent,
+                                                                         DISPLAY_WIDTH,
+                                                                         DISPLAY_HEIGHT,
+                                                                         DISPLAY_PITCH);
     if (!ac.check()) {
         DISP_ERROR("no bind\n");
         return ZX_ERR_NO_MEMORY;

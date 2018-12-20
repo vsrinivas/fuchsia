@@ -22,6 +22,8 @@
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/platform-device-lib.h>
 
+#include "ovl.h"
+
 namespace mt8167s_display {
 
 class Mt8167sDisplay;
@@ -32,8 +34,8 @@ using DeviceType = ddk::Device<Mt8167sDisplay, ddk::Unbindable>;
 class Mt8167sDisplay : public DeviceType,
                        public ddk::DisplayControllerImplProtocol<Mt8167sDisplay> {
 public:
-    Mt8167sDisplay(zx_device_t* parent, uint32_t width, uint32_t height)
-        : DeviceType(parent), width_(width), height_(height) {}
+    Mt8167sDisplay(zx_device_t* parent, uint32_t width, uint32_t height, uint32_t pitch)
+        : DeviceType(parent), width_(width), height_(height), pitch_(pitch) {}
 
     // This function is called from the c-bind function upon driver matching
     zx_status_t Bind();
@@ -78,20 +80,19 @@ private:
     fbl::Mutex display_lock_; // general display state (i.e. display_id)
     fbl::Mutex image_lock_;   // used for accessing imported_images_
 
-    uint8_t current_image_ TA_GUARDED(display_lock_);
-    bool current_image_valid_ TA_GUARDED(display_lock_);
-
-    fbl::unique_ptr<ddk::MmioBuffer> ovl_mmio_;
-
     // display dimensions and format
     const uint32_t width_;
     const uint32_t height_;
+    const uint32_t pitch_;
 
     // Imported Images
     list_node_t imported_images_ TA_GUARDED(image_lock_);
 
     // Display controller related data
     ddk::DisplayControllerInterfaceClient dc_intf_ TA_GUARDED(display_lock_);
+
+    // Objects
+    fbl::unique_ptr<mt8167s_display::Ovl>                 ovl_;
 };
 
 } // namespace mt8167s_display

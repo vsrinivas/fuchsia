@@ -66,6 +66,8 @@
 #define MT8167_PMIC_WRAP_SIZE                               0x1000
 
 // Display Subsystem
+#define MT8167_MSYS_CFG_BASE                                0x14000000
+#define MT8167_MSYS_CFG_SIZE                                0x1000
 #define MT8167_DISP_OVL_BASE                                0x14007000
 #define MT8167_DISP_OVL_SIZE                                0x1000
 #define MT8167_DISP_RDMA_BASE                               0x14009000
