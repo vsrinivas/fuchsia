@@ -3,7 +3,7 @@
         "//garnet/lib/rust/connectivity-testing:connectivity-testing-tests",
         "//garnet/lib/rust/escaped-cstring:escaped-cstring-tests",
         "//garnet/lib/rust/ethernet:ethernet-tests",
-        "//garnet/lib/rust/fuchsia-pkg-uri:fuchsia-pkg-uri-tests",
+        "//garnet/lib/rust/fuchsia_pkg_uri:fuchsia_pkg_uri_tests",
         "//garnet/public/rust:rust-crates-tests"
     ]
 }
