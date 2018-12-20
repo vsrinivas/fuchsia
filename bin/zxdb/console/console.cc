@@ -32,36 +32,6 @@ namespace {
 
 const char* kHistoryFilename = ".zxdb_history";
 
-std::filesystem::path CheckForFile(const std::filesystem::path& path,
-                                   const std::string& filename) {
-  for (auto entry : std::filesystem::directory_iterator(path)) {
-    if (!entry.is_regular_file() || entry.path().filename() != filename)
-      continue;
-
-    return entry.path();
-  }
-  return {};
-}
-
-// Searches for the history file in $HOME, if not fallback locally.
-std::filesystem::path SearchForHistoryFile(const std::string& filename) {
-  // We check home.
-  char* home = getenv("HOME");
-  if (home) {
-    if (auto filepath = CheckForFile(home, filename); !filepath.empty())
-      return filepath;
-  }
-  return {};
-}
-
-std::vector<std::string> ReadHistoryContents(const std::string& path) {
-  std::string data;
-  if (!files::ReadFileToString(path, &data))
-    return {};
-  return fxl::SplitStringCopy(data, "\n", fxl::kTrimWhitespace,
-                              fxl::kSplitWantNonEmpty);
-}
-
 }  // namespace
 
 Console* Console::singleton_ = nullptr;
@@ -81,7 +51,7 @@ Console::~Console() {
   FXL_DCHECK(singleton_ == this);
   singleton_ = nullptr;
 
-  if (!SaveHistoryToFile())
+  if (!SaveHistoryFile())
     Output(Err("Could not save history file to $HOME/%s.\n", kHistoryFilename));
 }
 
@@ -91,29 +61,29 @@ void Console::Init() {
   stdio_watch_ = debug_ipc::MessageLoop::Current()->WatchFD(
       debug_ipc::MessageLoop::WatchMode::kRead, STDIN_FILENO, this);
 
-  // Load history.
-  if (auto path = SearchForHistoryFile(kHistoryFilename); !path.empty())
-    LoadHistoryFile(path);
+  LoadHistoryFile();
 }
 
-void Console::LoadHistoryFile(const std::string& path) {
-  auto history = ReadHistoryContents(path);
-  AppendToHistory(history);
-}
+void Console::LoadHistoryFile() {
+  std::filesystem::path path(getenv("HOME"));
+  if (path.empty())
+    return;
+  path /= kHistoryFilename;
 
-void Console::AppendToHistory(const std::vector<std::string>& history) {
-  for (const std::string& cmd : history) {
+  std::string data;
+  if (!files::ReadFileToString(path, &data))
+    return;
+
+  auto history = fxl::SplitStringCopy(data, "\n", fxl::kTrimWhitespace,
+                                      fxl::kSplitWantNonEmpty);
+
+  for (const std::string& cmd : history)
     line_input_.AddToHistory(cmd);
-  }
 }
 
-bool Console::SaveHistoryToFile() {
+bool Console::SaveHistoryFile() {
   char* home = getenv("HOME");
   if (!home)
-    return false;
-
-  auto filepath = CheckForFile(home, kHistoryFilename);
-  if (filepath.empty())
     return false;
 
   // We need to invert the order the deque has the entries.
@@ -130,6 +100,7 @@ bool Console::SaveHistoryToFile() {
     history_data.append(trimmed.ToString()).append("\n");
   }
 
+  auto filepath = std::filesystem::path(home) / kHistoryFilename;
   return files::WriteFile(filepath, history_data.data(), history_data.size());
 }
 

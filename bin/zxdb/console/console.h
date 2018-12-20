@@ -62,9 +62,9 @@ class Console : public debug_ipc::FDWatcher {
   // FDWatcher implementation.
   void OnFDReadable(int fd) override;
 
-  void LoadHistoryFile(const std::string& path);
-  void AppendToHistory(const std::vector<std::string>& history);
-  bool SaveHistoryToFile();
+  // Searches for history at $HOME/.zxdb_history and loads it if found.
+  void LoadHistoryFile();
+  bool SaveHistoryFile();
 
   static Console* singleton_;
 
