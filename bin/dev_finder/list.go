@@ -7,8 +7,9 @@ import (
 	"log"
 	"strings"
 
+	mdns "mdns_lib"
+
 	"github.com/google/subcommands"
-	"mdns_lib"
 )
 
 const (
@@ -48,7 +49,8 @@ func listMDNSHandler(resp mDNSResponse, localResolve bool, devChan chan<- *fuchs
 			// This is a bit convoluted: the domain param is being used
 			// as a "service", and the Data field actually contains the
 			// domain of the device.
-			fuchsiaDomain := strings.Trim(string(a.Data[:]), "\n\r\f ")
+			nameLength := int(a.Data[0])
+			fuchsiaDomain := string(a.Data[1 : nameLength+1])
 			if localResolve {
 				recvIP, err := resp.getReceiveIP()
 				if err != nil {
