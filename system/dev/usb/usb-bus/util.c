@@ -28,7 +28,8 @@ static void usb_util_control_complete(void* ctx, usb_request_t* req) {
 }
 
 zx_status_t usb_util_control(usb_device_t* dev, uint8_t request_type, uint8_t request,
-                             uint16_t value, uint16_t index, void* data, size_t length) {
+                             uint16_t value, uint16_t index, void* data, size_t length,
+                             size_t* out_actual) {
     usb_request_t* req = NULL;
     bool use_free_list = length == 0;
     if (use_free_list) {
@@ -75,7 +76,9 @@ zx_status_t usb_util_control(usb_device_t* dev, uint8_t request_type, uint8_t re
     }
 
     if (status == ZX_OK) {
-        status = req->response.actual;
+        if (out_actual) {
+            *out_actual = req->response.actual;
+        }
 
         if (length > 0 && !out) {
             usb_request_copy_from(req, data, req->response.actual, 0);
@@ -93,9 +96,11 @@ zx_status_t usb_util_control(usb_device_t* dev, uint8_t request_type, uint8_t re
 }
 
 zx_status_t usb_util_get_descriptor(usb_device_t* dev, uint16_t type, uint16_t index,
-                                    uint16_t language, void* data, size_t length) {
+                                    uint16_t language, void* data, size_t length,
+                                    size_t* out_actual) {
     return usb_util_control(dev, USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_DEVICE,
-                           USB_REQ_GET_DESCRIPTOR, type << 8 | index, language, data, length);
+                            USB_REQ_GET_DESCRIPTOR, type << 8 | index, language, data, length,
+                            out_actual);
 }
 
 zx_status_t usb_util_get_string_descriptor(usb_device_t* dev, uint8_t desc_id, uint16_t lang_id,
@@ -103,20 +108,23 @@ zx_status_t usb_util_get_string_descriptor(usb_device_t* dev, uint8_t desc_id, u
                                            uint16_t* out_actual_lang_id) {
     //  If we have never attempted to load our language ID table, do so now.
     zx_status_t result;
+    size_t actual;
     if (!atomic_load_explicit(&dev->langids_fetched, memory_order_relaxed)) {
         usb_langid_desc_t* id_desc = calloc(1, sizeof(usb_langid_desc_t));
 
         if (id_desc != NULL) {
-            result = usb_util_get_descriptor(dev, USB_DT_STRING, 0, 0, id_desc, sizeof(*id_desc));
+            result = usb_util_get_descriptor(dev, USB_DT_STRING, 0, 0, id_desc, sizeof(*id_desc),
+                                             &actual);
             if (result == ZX_ERR_IO_REFUSED || result == ZX_ERR_IO_INVALID) {
                 // some devices do not support fetching language list
                 // in that case assume US English (0x0409)
                 usb_hci_reset_endpoint(&dev->hci, dev->device_id, 0);
                 id_desc->bLength = 4;
                 id_desc->wLangIds[0] = htole16(0x0409);
-                result = 4;
-            } else if ((result >= 0) &&
-                      ((result < 4) || (result != id_desc->bLength) || (result & 0x1))) {
+                result = ZX_OK;
+                actual = 4;
+            } else if ((result == ZX_OK) &&
+                      ((actual < 4) || (actual != id_desc->bLength) || (actual & 0x1))) {
                 result = ZX_ERR_INTERNAL;
             }
 
@@ -125,7 +133,7 @@ zx_status_t usb_util_get_string_descriptor(usb_device_t* dev, uint8_t desc_id, u
             // valid number of entires in the table, and fixup the endianness of
             // all the entires in the table.  Then, attempt to swap in the new
             // language ID table.
-            if (result >= 0) {
+            if (result == ZX_OK) {
                 id_desc->bLength = (id_desc->bLength - 2) >> 1;
 #if BYTE_ORDER != LITTLE_ENDIAN
                 for (uint8_t i = 0; i < id_desc->bLength; ++i) {
@@ -146,7 +154,7 @@ zx_status_t usb_util_get_string_descriptor(usb_device_t* dev, uint8_t desc_id, u
         }
 
         atomic_store_explicit(&dev->langids_fetched, true, memory_order_relaxed);
-        if (result < 0) {
+        if (result != ZX_OK) {
             return result;
         }
     }
@@ -164,7 +172,6 @@ zx_status_t usb_util_get_string_descriptor(usb_device_t* dev, uint8_t desc_id, u
     if (desc_id == 0) {
         size_t table_sz = (lang_ids->bLength << 1);
         buflen &= ~1;
-        
         size_t actual = MIN(table_sz, buflen);
         memcpy(buf, lang_ids->wLangIds, actual);
         *out_actual = actual;
@@ -192,7 +199,7 @@ zx_status_t usb_util_get_string_descriptor(usb_device_t* dev, uint8_t desc_id, u
     } string_desc;
 
     result = usb_util_get_descriptor(dev, USB_DT_STRING, desc_id, le16toh(lang_id),
-                                     &string_desc, sizeof(string_desc));
+                                     &string_desc, sizeof(string_desc), &actual);
 
     if (result == ZX_ERR_IO_REFUSED || result == ZX_ERR_IO_INVALID) {
         zx_status_t reset_result = usb_hci_reset_endpoint(&dev->hci, dev->device_id, 0);
@@ -201,7 +208,7 @@ zx_status_t usb_util_get_string_descriptor(usb_device_t* dev, uint8_t desc_id, u
             return result;
         }
         result = usb_util_get_descriptor(dev, USB_DT_STRING, desc_id, le16toh(lang_id),
-                                         &string_desc, sizeof(string_desc));
+                                         &string_desc, sizeof(string_desc), &actual);
         if (result == ZX_ERR_IO_REFUSED || result == ZX_ERR_IO_INVALID) {
             reset_result = usb_hci_reset_endpoint(&dev->hci, dev->device_id, 0);
             if (reset_result != ZX_OK) {
@@ -211,11 +218,11 @@ zx_status_t usb_util_get_string_descriptor(usb_device_t* dev, uint8_t desc_id, u
         }
     }
 
-    if (result < 0) {
+    if (result != ZX_OK) {
         return result;
     }
 
-    if ((result < 2) || (result != string_desc.bLength)) {
+    if ((actual < 2) || (actual != string_desc.bLength)) {
         result = ZX_ERR_INTERNAL;
     } else  {
         // Success! Convert this result from UTF16LE to UTF8 and store the

@@ -320,7 +320,7 @@ static zx_status_t usb_device_set_interface(void* ctx, uint8_t interface_number,
                                             uint8_t alt_setting) {
     usb_device_t* dev = ctx;
     return usb_util_control(dev, USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_INTERFACE,
-                            USB_REQ_SET_INTERFACE, alt_setting, interface_number, NULL, 0);
+                            USB_REQ_SET_INTERFACE, alt_setting, interface_number, NULL, 0, NULL);
 }
 
 static uint8_t usb_device_get_configuration(void* ctx) {
@@ -335,7 +335,7 @@ static zx_status_t usb_device_set_configuration(void* ctx, uint8_t configuration
         if (descriptor->bConfigurationValue == configuration) {
             zx_status_t status;
             status = usb_util_control(dev, USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE,
-                                      USB_REQ_SET_CONFIGURATION, configuration, 0, NULL, 0);
+                                      USB_REQ_SET_CONFIGURATION, configuration, 0, NULL, 0, NULL);
             if (status == ZX_OK) {
                 dev->current_config_index = i;
             }
@@ -593,9 +593,10 @@ zx_status_t usb_device_add(usb_bus_t* bus, uint32_t device_id, uint32_t hub_id,
 
     // read device descriptor
     usb_device_descriptor_t* device_desc = &dev->device_desc;
+    size_t actual;
     zx_status_t status = usb_util_get_descriptor(dev, USB_DT_DEVICE, 0, 0, device_desc,
-                                                 sizeof(*device_desc));
-    if (status != sizeof(*device_desc)) {
+                                                 sizeof(*device_desc), &actual);
+    if (status != ZX_OK || actual != sizeof(*device_desc)) {
         zxlogf(ERROR, "usb_device_add: usb_util_get_descriptor failed\n");
         free(dev);
         return status;
@@ -612,9 +613,10 @@ zx_status_t usb_device_add(usb_bus_t* bus, uint32_t device_id, uint32_t hub_id,
     for (int config = 0; config < num_configurations; config++) {
         // read configuration descriptor header to determine size
         usb_configuration_descriptor_t config_desc_header;
+        size_t actual;
         status = usb_util_get_descriptor(dev, USB_DT_CONFIG, config, 0, &config_desc_header,
-                                         sizeof(config_desc_header));
-        if (status != sizeof(config_desc_header)) {
+                                         sizeof(config_desc_header), &actual);
+        if (status != ZX_OK || actual != sizeof(config_desc_header)) {
             zxlogf(ERROR, "usb_device_add: usb_util_get_descriptor failed\n");
             goto error_exit;
         }
@@ -628,8 +630,8 @@ zx_status_t usb_device_add(usb_bus_t* bus, uint32_t device_id, uint32_t hub_id,
 
         // read full configuration descriptor
         status = usb_util_get_descriptor(dev, USB_DT_CONFIG, config, 0, config_desc,
-                                         config_desc_size);
-         if (status != config_desc_size) {
+                                         config_desc_size, &actual);
+         if (status != ZX_OK || actual != config_desc_size) {
             zxlogf(ERROR, "usb_device_add: usb_util_get_descriptor failed\n");
             goto error_exit;
         }
@@ -656,7 +658,8 @@ zx_status_t usb_device_add(usb_bus_t* bus, uint32_t device_id, uint32_t hub_id,
     // set configuration
     status = usb_util_control(dev, USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE,
                               USB_REQ_SET_CONFIGURATION,
-                              configs[dev->current_config_index]->bConfigurationValue, 0, NULL, 0);
+                              configs[dev->current_config_index]->bConfigurationValue, 0, NULL, 0,
+                              NULL);
     if (status < 0) {
         zxlogf(ERROR, "usb_device_set_configuration: USB_REQ_SET_CONFIGURATION failed\n");
         goto error_exit;
