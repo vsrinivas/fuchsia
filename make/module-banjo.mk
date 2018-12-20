@@ -16,8 +16,8 @@ endif
 
 # TODO(mcgrathr): make this error after bogons are fixed
 ifneq ($(MODULE_BANJO_LIBRARY),$(subst -,.,$(notdir $(MODULE))))
-$(warning system/banjo/foo-bar-baz name must match library name foo.bar.baz)
-$(warning $(MODULE_BANJO_LIBRARY) vs $(notdir $(MODULE)) should be $(subst .,-,$(notdir $(MODULE_BANJO_LIBRARY))))
+$(error system/banjo/foo-bar-baz name must match library name foo.bar.baz)
+$(error $(MODULE_BANJO_LIBRARY) vs $(notdir $(MODULE)) should be $(subst .,-,$(notdir $(MODULE_BANJO_LIBRARY))))
 endif
 
 ifneq ($(strip $(MODULE_PACKAGE)),)
