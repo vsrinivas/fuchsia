@@ -30,6 +30,11 @@
 namespace unwindstack {
 
 Memory* MapInfo::GetFileMemory() {
+#ifdef __Fuchsia__
+  // Unimplemented on Fuchsia since shared objects aren't actually loaded
+  // from the filesystem in the traditional way.
+  return nullptr;
+#else
   std::unique_ptr<MemoryFileAtOffset> memory(new MemoryFileAtOffset);
   if (offset == 0) {
     if (memory->Init(name, 0)) {
@@ -74,6 +79,7 @@ Memory* MapInfo::GetFileMemory() {
     return nullptr;
   }
   return memory.release();
+#endif
 }
 
 Memory* MapInfo::CreateMemory(const std::shared_ptr<Memory>& process_memory) {

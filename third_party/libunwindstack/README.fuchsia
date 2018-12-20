@@ -3,6 +3,9 @@ https://android.googlesource.com/platform/system/core/+/ef6401091fbd047abcf08511
 
 The license file is in NOTICE.
 
+The directory fuchsia includes some Fuchsia implementations of Android
+headers required by the library as well as some Fuchsia port files.
+
 Code in this directory is licensed under two different licenses:
 
 --------------------------------------------------------------------------------

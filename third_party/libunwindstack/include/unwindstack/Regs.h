@@ -19,6 +19,12 @@
 
 #include <stdint.h>
 
+#ifdef __Fuchsia__
+// TODO(brettw) upstream this addition. It's technically required by this
+// header for its use of pid_t.
+#include <unistd.h>
+#endif  // __Fuchsia__
+
 #include <functional>
 #include <string>
 #include <vector>

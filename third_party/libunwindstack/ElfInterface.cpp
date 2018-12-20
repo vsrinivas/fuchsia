@@ -21,9 +21,11 @@
 #include <string>
 #include <utility>
 
+#ifndef __Fuchsia__
 #include <7zCrc.h>
 #include <Xz.h>
 #include <XzCrc64.h>
+#endif  // __Fuchsia__
 
 #include <unwindstack/DwarfError.h>
 #include <unwindstack/DwarfSection.h>
@@ -70,6 +72,11 @@ bool ElfInterface::IsValidPc(uint64_t pc) {
 }
 
 Memory* ElfInterface::CreateGnuDebugdataMemory() {
+#ifdef __Fuchsia__
+  // Fuchsia doesn't seem to compile with a .gnu_debugdata section and
+  // therefore doesn't need this compressed data decoder.
+  return nullptr;
+#else
   if (gnu_debugdata_offset_ == 0 || gnu_debugdata_size_ == 0) {
     return nullptr;
   }
@@ -121,6 +128,7 @@ Memory* ElfInterface::CreateGnuDebugdataMemory() {
   dst->Resize(dst_offset);
 
   return dst.release();
+#endif  // __Fuchsia__
 }
 
 template <typename AddressType>

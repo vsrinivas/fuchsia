@@ -101,7 +101,13 @@ class MemoryFileAtOffset : public Memory {
 
   size_t Size() { return size_; }
 
+#ifdef __Fuchsia__
+  // TODO(brettw) upstream this "override" addition. It being missing is caught
+  // by our clang plugin.
+  void Clear() override;
+#else
   void Clear();
+#endif
 
  protected:
   size_t size_ = 0;
@@ -109,6 +115,8 @@ class MemoryFileAtOffset : public Memory {
   uint8_t* data_ = nullptr;
 };
 
+#ifndef __Fuchsia__
+// On Fuchsia this functionality is provided by MemoryFuchsia.
 class MemoryRemote : public Memory {
  public:
   MemoryRemote(pid_t pid) : pid_(pid), read_redirect_func_(0) {}
@@ -130,6 +138,7 @@ class MemoryLocal : public Memory {
 
   size_t Read(uint64_t addr, void* dst, size_t size) override;
 };
+#endif  // __Fuchsia__
 
 // MemoryRange maps one address range onto another.
 // The range [src_begin, src_begin + length) in the underlying Memory is mapped onto offset,

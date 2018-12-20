@@ -25,6 +25,10 @@
 #include <unwindstack/Maps.h>
 #include <unwindstack/Memory.h>
 
+#ifdef __Fuchsia__
+#include "garnet/third_party/libunwindstack/fuchsia/fuchsia_basename.h"
+#endif
+
 namespace unwindstack {
 
 Global::Global(std::shared_ptr<Memory>& memory) : memory_(memory) {}

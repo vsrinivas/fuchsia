@@ -36,6 +36,10 @@
 #include <unwindstack/DexFiles.h>
 #endif
 
+#ifdef __Fuchsia__
+#include "garnet/third_party/libunwindstack/fuchsia/fuchsia_basename.h"
+#endif
+
 namespace unwindstack {
 
 // Inject extra 'virtual' frame that represents the dex pc data.
