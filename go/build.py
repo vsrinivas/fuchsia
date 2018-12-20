@@ -49,6 +49,8 @@ def main():
                         required=False)
     parser.add_argument('--fdio-include', help='Path to the FDIO include directory',
                         required=False)
+    parser.add_argument('--skip-vet', help='Skip running go vet',
+                        action='store_true')
     args = parser.parse_args()
 
     goarch = {
@@ -127,9 +129,10 @@ def main():
 
     go_tool = os.path.join(build_goroot, 'bin/go')
 
-    retcode = subprocess.call([go_tool, 'vet', args.package], env=env)
-    if retcode != 0:
-      return retcode
+    if not args.skip_vet:
+        retcode = subprocess.call([go_tool, 'vet', args.package], env=env)
+        if retcode != 0:
+          return retcode
 
     cmd = [go_tool]
     if args.is_test:
