@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import argparse
+import os
 import re
 import shutil
 from subprocess import Popen, PIPE
@@ -10,11 +11,16 @@ import sys
 import tempfile
 
 
-def run_command(*args):
-    process = Popen(args, stdout=PIPE, stderr=PIPE)
+def run_command(*args, **kwargs):
+    no_redirect = kwargs.pop('no_redirect', False)
+    output = None if no_redirect else PIPE
+    process = Popen(args, stdout=output, stderr=output)
     stdout, stderr = process.communicate()
     if process.returncode:
-        raise Exception('Command %s failed: %s' % (args, stdout + stderr))
+        if no_redirect:
+            raise Exception('Command %s failed' % args)
+        else:
+            raise Exception('Command %s failed: %s' % (args, stdout + stderr))
     return stdout
 
 
@@ -26,8 +32,6 @@ def get_device_addresses(dev_finder):
         raise Exception('Could not parse target parameters in %s' % stdout)
     target_address = match.group(1)
     target_name = match.group(2)
-    # TODO(DX-844): use full name.
-    target_name = target_name[1:-1]
 
     # Get the matching host address for that device.
     stdout = run_command(dev_finder, 'resolve', '-local', target_name)
@@ -46,8 +50,16 @@ def serve_package(pm, package, directory):
     return lambda: server.kill()
 
 
+class MyParser(argparse.ArgumentParser):
+
+    def error(self, message):
+        print('Usage: bazel run <package label> -- <component name> --ssh-key '
+              '<path to private key>')
+        sys.exit(1)
+
+
 def main():
-    parser = argparse.ArgumentParser()
+    parser = MyParser()
     parser.add_argument('--config',
                         help='The path to the list of components in the package',
                         required=True)
@@ -67,9 +79,13 @@ def main():
     subparse.add_argument('component',
                           nargs=1)
     subparse.add_argument('--ssh-key',
-                          help='The path to private key for SSH communications',
+                          help='The absolute path to a private SSH key',
                           required=True)
     args = parser.parse_args()
+
+    if not os.path.isabs(args.ssh_key):
+        print('Path to SSH key must be absolute, got %s' % args.ssh_key)
+        return 1
 
     with open(args.config, 'r') as config_file:
         components = config_file.readlines()
@@ -85,14 +101,14 @@ def main():
         target_address, host_address = get_device_addresses(args.dev_finder)
         stop_server = serve_package(args.pm, args.package, staging_dir)
         try:
-            def run_ssh_command(*params):
+            def run_ssh_command(*params, **kwargs):
                 base = ['ssh', '-i', args.ssh_key, 'fuchsia@'+target_address]
-                run_command(*(base + list(params)))
+                run_command(*(base + list(params)), **kwargs)
             server_address = 'http://%s:8083/config.json' % host_address
             run_ssh_command('amber_ctl', 'add_src', '-x', '-f', server_address)
             component_uri = "fuchsia-pkg://fuchsia.com/%s#meta/%s.cmx" % (
                     args.package_name, component)
-            run_ssh_command('run', component_uri)
+            run_ssh_command('run', component_uri, no_redirect=True)
         finally:
             stop_server()
     except Exception as e:
@@ -100,8 +116,6 @@ def main():
         return 1
     finally:
         shutil.rmtree(staging_dir, ignore_errors=True)
-
-    print('One day I will run %s from %s' % (component, args.package))
 
     return 0
 
