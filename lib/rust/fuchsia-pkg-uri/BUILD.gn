@@ -27,6 +27,7 @@ test_package("fuchsia-pkg-uri-tests") {
   tests = [
     {
       name = "fuchsia_pkg_uri_lib_test_rustc"
+      dest = "fuchsia_pkg_uri_tests"
     },
   ]
 }

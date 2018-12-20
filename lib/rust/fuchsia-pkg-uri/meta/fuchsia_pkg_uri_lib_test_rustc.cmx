@@ -1,5 +1,0 @@
-{
-    "program": {
-        "binary": "test/fuchsia_pkg_uri_lib_test_rustc"
-    }
-}
