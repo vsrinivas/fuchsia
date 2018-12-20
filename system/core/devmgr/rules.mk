@@ -19,6 +19,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/devmgr/devfs.cpp \
     $(LOCAL_DIR)/devmgr/drivers.cpp \
     $(LOCAL_DIR)/devmgr/fidl.cpp \
+    $(LOCAL_DIR)/shared/env.cpp \
     $(LOCAL_DIR)/shared/fdio.cpp \
 
 # userboot supports loading via the dynamic linker, so libc (system/ulib/c)
@@ -80,6 +81,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/fshost/block-watcher.cpp \
     $(LOCAL_DIR)/fshost/main.cpp \
     $(LOCAL_DIR)/fshost/vfs-rpc.cpp \
+    $(LOCAL_DIR)/shared/env.cpp \
     $(LOCAL_DIR)/shared/fdio.cpp \
 
 MODULE_STATIC_LIBS := \

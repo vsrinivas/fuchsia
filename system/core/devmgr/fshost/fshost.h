@@ -16,6 +16,7 @@
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 
+#include "../shared/env.h"
 #include "../shared/fdio.h"
 
 namespace devmgr {

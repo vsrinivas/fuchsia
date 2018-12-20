@@ -87,8 +87,11 @@ compile flag to enable it: `ENABLE_DRIVER_TRACING=true`,
 it also requires an extra kernel command line flag to enable it:
 `driver.tracing.enable=1`
 
-`ENABLE_DRIVER_TRACING=true` is now the default. To disable driver tracing,
-pass `ENABLE_DRIVER_TRACING=false` to make.
+`ENABLE_DRIVER_TRACING=true` is now the default. To disable compiling in
+driver tracing support, pass `ENABLE_DRIVER_TRACING=false` to make.
+
+`driver.tracing.enable=1` is also now the default. To disable partipation
+of drivers in Fuchsia tracing, boot the kernel with `driver.tracing.enable=0`.
 
 Example:
 
@@ -103,13 +106,13 @@ $ fx build
 Then boot. With QEMU:
 
 ```sh
-$ fx run -k -N -c driver.tracing.enable=1
+$ fx run -k -N
 ```
 
 Or on h/w (augment with options specific to your h/w):
 
 ```sh
-$ fx serve -- -- driver.tracing.enable=1
+$ fx serve
 ```
 
 These extra requirements will be removed once tracing support stabilizes.

@@ -36,6 +36,7 @@
 #include <utility>
 
 #include "devmgr.h"
+#include "../shared/env.h"
 #include "../shared/fdio.h"
 #include "../shared/fidl_txn.h"
 #include "../shared/log.h"

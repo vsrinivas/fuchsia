@@ -4,7 +4,8 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
-DEVHOST_SRCS := system/core/devmgr/devhost
+LOCAL_DEVMGR_ROOT := system/core/devmgr
+LOCAL_DEVHOST_SRCS := $(LOCAL_DEVMGR_ROOT)/devhost
 
 MODULE := $(LOCAL_DIR)
 
@@ -18,15 +19,16 @@ MODULE_SO_NAME := driver
 MODULE_COMPILEFLAGS := -fvisibility=hidden
 
 MODULE_SRCS := \
-	$(DEVHOST_SRCS)/devhost.cpp \
-	$(DEVHOST_SRCS)/api.cpp \
-	$(DEVHOST_SRCS)/core.cpp \
-	$(DEVHOST_SRCS)/rpc-server.cpp \
-	$(DEVHOST_SRCS)/zx-device.cpp \
+	$(LOCAL_DEVHOST_SRCS)/devhost.cpp \
+	$(LOCAL_DEVHOST_SRCS)/api.cpp \
+	$(LOCAL_DEVHOST_SRCS)/core.cpp \
+	$(LOCAL_DEVHOST_SRCS)/rpc-server.cpp \
+	$(LOCAL_DEVHOST_SRCS)/zx-device.cpp \
+	$(LOCAL_DEVMGR_ROOT)/shared/env.cpp \
 
 ifeq ($(call TOBOOL,$(ENABLE_DRIVER_TRACING)),true)
 MODULE_SRCS += \
-    $(DEVHOST_SRCS)/tracing.cpp
+    $(LOCAL_DEVHOST_SRCS)/tracing.cpp
 MODULE_HEADER_DEPS := \
     system/ulib/trace-provider
 endif

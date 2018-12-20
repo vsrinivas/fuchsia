@@ -51,11 +51,6 @@ zx_status_t devmgr_launch_cmdline(
     const zx_handle_t* handles, const uint32_t* types, size_t hcount,
     zx::process* proc_out, uint32_t flags);
 
-// getenv_bool looks in the environment for |key|. If not found, it
-// returns |default_value|. If found, it returns false if the found
-// value matches "0", "off", or "false", otherwise it returns true.
-bool getenv_bool(const char* key, bool default_value);
-
 // The variable to set on the kernel command line to enable ld.so tracing
 // of the processes we launch.
 #define LDSO_TRACE_CMDLINE "ldso.trace"

@@ -12,6 +12,7 @@
 
 #include "coordinator.h"
 #include "devmgr.h"
+#include "../shared/env.h"
 #include "../shared/fdio.h"
 #include "../shared/log.h"
 

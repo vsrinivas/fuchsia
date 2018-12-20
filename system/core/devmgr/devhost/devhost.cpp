@@ -45,6 +45,7 @@
 #if ENABLE_DRIVER_TRACING
 #include "tracing.h"
 #endif
+#include "../shared/env.h"
 #include "../shared/fidl_txn.h"
 #include "../shared/log.h"
 
@@ -1182,8 +1183,7 @@ __EXPORT int device_host_main(int argc, char** argv) {
 
 #if ENABLE_DRIVER_TRACING
     {
-        const char* enable = getenv("driver.tracing.enable");
-        if (enable && strcmp(enable, "1") == 0) {
+        if (getenv_bool("driver.tracing.enable", true)) {
             r = devhost_start_trace_provider();
             if (r != ZX_OK) {
                 log(INFO, "devhost: error registering as trace provider: %d\n", r);

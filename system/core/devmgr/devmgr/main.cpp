@@ -40,6 +40,7 @@
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 
+#include "../shared/env.h"
 #include "../shared/fdio.h"
 #include "coordinator.h"
 #include "devmgr.h"

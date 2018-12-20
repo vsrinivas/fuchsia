@@ -88,6 +88,17 @@ ZIRCON\_DRIVER\_BEGIN macro. It is not, for example, the name of the device,
 which for some drivers is almost identical, except that the device may be
 named "foo-bar" whereas the driver name must use underscores, e.g., "foo_bar".
 
+## driver.tracing.enable=\<bool>
+
+Enable or disable support for tracing drivers.
+When enabled drivers may participate in [Fuchsia tracing](ddk/tracing.md).
+
+Implementation-wise, what this option does is tell each devhost whether to
+register as "trace provider".
+
+The default is enabled. This options exists to provide a quick fallback should
+a problem arise.
+
 ## gfxconsole.early=\<bool>
 
 This option (disabled by default) requests that the kernel start a graphics
