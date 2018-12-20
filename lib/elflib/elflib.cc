@@ -146,18 +146,26 @@ const std::string* ElfLib::GetString(size_t index) {
   return &strings_[index];
 }
 
-const Elf64_Sym* ElfLib::GetSymbol(const std::string& name) {
+bool ElfLib::LoadSymbols() {
   if (symbols_.empty()) {
     const std::vector<uint8_t>* symbol_data = GetSectionData(".symtab");
 
     if (!symbol_data) {
-      return nullptr;
+      return false;
     }
 
     const Elf64_Sym* start =
         reinterpret_cast<const Elf64_Sym*>(symbol_data->data());
     const Elf64_Sym* end = start + (symbol_data->size() / sizeof(Elf64_Sym));
     std::copy(start, end, std::back_inserter(symbols_));
+  }
+
+  return true;
+}
+
+const Elf64_Sym* ElfLib::GetSymbol(const std::string& name) {
+  if (!LoadSymbols()) {
+    return nullptr;
   }
 
   for (const auto& symbol : symbols_) {
@@ -169,6 +177,22 @@ const Elf64_Sym* ElfLib::GetSymbol(const std::string& name) {
   }
 
   return nullptr;
+}
+
+bool ElfLib::GetAllSymbols(std::map<std::string,Elf64_Sym>* out) {
+  if (!LoadSymbols()) {
+    return false;
+  }
+
+  for (const auto& symbol : symbols_) {
+    const std::string* got_name = GetString(symbol.st_name);
+
+    if (got_name != nullptr) {
+      (*out)[*got_name] = symbol;
+    }
+  }
+
+  return true;
 }
 
 bool ElfLib::GetSymbolValue(const std::string& name, uint64_t* out) {

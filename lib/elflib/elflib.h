@@ -50,6 +50,9 @@ class ElfLib {
   // failed.
   bool GetSymbolValue(const std::string& name, uint64_t* out);
 
+  // Get a map of all symbols and their string names.
+  bool GetAllSymbols(std::map<std::string,Elf64_Sym>* out);
+
   // Create a new ElfLib object.
   static std::unique_ptr<ElfLib> Create(
     std::unique_ptr<MemoryAccessor>&& memory);
@@ -70,6 +73,9 @@ class ElfLib {
   // Get a symbol from the symbol table. Return nullptr if there is no such
   // symbol.
   const Elf64_Sym* GetSymbol(const std::string& name);
+
+  // Load all symbols from the target. Returns true unless an error occurred.
+  bool LoadSymbols();
 
   std::unique_ptr<MemoryAccessor> memory_;
   Elf64_Ehdr header_;

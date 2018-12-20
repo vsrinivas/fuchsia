@@ -156,4 +156,21 @@ TEST(ElfLib, GetSymbolValue) {
   EXPECT_EQ(kSymbolPoison, data);
 }
 
+TEST(ElfLib, GetAllSymbols) {
+  std::unique_ptr<ElfLib> elf =
+    ElfLib::Create(std::make_unique<TestMemoryAccessor>());
+
+  ASSERT_NE(elf.get(), nullptr);
+
+  std::map<std::string,Elf64_Sym> syms;
+  ASSERT_TRUE(elf->GetAllSymbols(&syms));
+  EXPECT_EQ(1U, syms.size());
+
+  Elf64_Sym sym = syms["zx_frob_handle"];
+  EXPECT_EQ(1U, sym.st_name);
+  EXPECT_EQ(0U, sym.st_size);
+  EXPECT_EQ(SHN_COMMON, sym.st_shndx);
+  EXPECT_EQ(kSymbolPoison, sym.st_value);
+}
+
 }  // namespace elflib
