@@ -64,6 +64,7 @@ static_library("lib") {
     "//garnet/lib/process",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/svc/cpp",
+    "//garnet/third_party/libunwindstack",
     "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
     "//zircon/public/lib/ngunwind",
   ]

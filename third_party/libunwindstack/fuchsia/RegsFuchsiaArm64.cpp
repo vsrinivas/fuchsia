@@ -8,6 +8,7 @@
 #include <zircon/syscalls/debug.h>
 
 #include "unwindstack/Elf.h"
+#include "unwindstack/MachineArm64.h"
 #include "unwindstack/MachineX86_64.h"
 #include "unwindstack/Memory.h"
 
@@ -25,7 +26,7 @@ RegsFuchsia::RegsFuchsia()
 
 RegsFuchsia::~RegsFuchsia() = default;
 
-ArchEnum RegsFuchsia::Arch() { return ARCH_ARM_64; }
+ArchEnum RegsFuchsia::Arch() { return ARCH_ARM64; }
 
 zx_status_t RegsFuchsia::Read(zx_handle_t thread) {
   zx_thread_state_general_regs thread_regs;

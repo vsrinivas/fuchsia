@@ -14,6 +14,7 @@
 
 #include "garnet/bin/debug_agent/debug_agent.h"
 #include "garnet/bin/debug_agent/remote_api_adapter.h"
+#include "garnet/bin/debug_agent/unwind.h"
 #include "garnet/lib/debug_ipc/helper/buffered_fd.h"
 #include "garnet/lib/debug_ipc/helper/message_loop_zircon.h"
 #include "lib/component/cpp/environment_services_helper.h"
@@ -153,8 +154,14 @@ void PrintUsage() {
 
 Arguments
 
+  --aunwind
+      Use the experimental unwinder from AOSP.
+
+  --help
+      Print this help.
+
   --port (required)
-    TCP port number to listen to incoming connections on.
+      TCP port number to listen to incoming connections on.
 )";
 
   fprintf(stderr, "%s", kUsage);
@@ -170,6 +177,12 @@ int main(int argc, char* argv[]) {
   if (cmdline.HasOption("help")) {
     debug_agent::PrintUsage();
     return 0;
+  }
+
+  if (cmdline.HasOption("aunwind")) {
+    // Use the Android unwinder.
+    printf("Using AOSP unwinder (experimental).\n");
+    debug_agent::SetUnwinderType(debug_agent::UnwinderType::kAndroid);
   }
 
   std::string value;

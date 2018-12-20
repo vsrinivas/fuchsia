@@ -10,10 +10,83 @@
 #include <algorithm>
 
 #include "garnet/bin/debug_agent/process_info.h"
+#include "garnet/third_party/libunwindstack/fuchsia/MemoryFuchsia.h"
+#include "garnet/third_party/libunwindstack/fuchsia/RegsFuchsia.h"
+#include "garnet/third_party/libunwindstack/include/unwindstack/Unwinder.h"
 
 namespace debug_agent {
 
 namespace {
+
+using ModuleVector = std::vector<debug_ipc::Module>;
+
+// Default unwinder type to use.
+UnwinderType unwinder_type = UnwinderType::kNgUnwind;
+
+zx_status_t UnwindStackAndroid(const zx::process& process,
+                               uint64_t dl_debug_addr, const zx::thread& thread,
+                               uint64_t ip, uint64_t sp, uint64_t bp,
+                               size_t max_depth,
+                               std::vector<debug_ipc::StackFrame>* stack) {
+  ModuleVector modules;
+  zx_status_t status = GetModulesForProcess(process, dl_debug_addr, &modules);
+  if (status != ZX_OK)
+    return status;
+  std::sort(modules.begin(), modules.end(),
+            [](const debug_ipc::Module& a, const debug_ipc::Module& b) {
+              return a.base < b.base;
+            });
+
+  unwindstack::Maps maps;
+  for (size_t i = 0; i < modules.size(); i++) {
+    // Our module currently doesn't have a size so just report the next
+    // address boundary.
+    // TODO(brettw) hook up the real size.
+    uint64_t end;
+    if (i < modules.size() - 1)
+      end = modules[i + 1].base;
+    else
+      end = std::numeric_limits<uint64_t>::max();
+
+    // The offset of the module is the offset in the file where the memory map
+    // starts. For libraries, we can currently always assume 0.
+    uint64_t offset = 0;
+
+    uint64_t flags = 0;  // We don't have flags.
+
+    // Don't know what this is, it's not set by the Android impl that reads
+    // from /proc.
+    uint64_t load_bias = 0;
+
+    maps.Add(modules[i].base, end, offset, flags, modules[i].name, load_bias);
+  }
+
+  unwindstack::RegsFuchsia regs;
+  status = regs.Read(thread.get());
+  if (status != ZX_OK)
+    return status;
+
+  auto memory = std::make_shared<unwindstack::MemoryFuchsia>(process.get());
+
+  unwindstack::Unwinder unwinder(max_depth, &maps, &regs, std::move(memory));
+
+  unwinder.Unwind();
+
+  stack->resize(unwinder.NumFrames());
+  for (size_t i = 0; i < unwinder.NumFrames(); i++) {
+    const auto& src = unwinder.frames()[i];
+    debug_ipc::StackFrame* dest = &(*stack)[i];
+    dest->ip = src.pc;
+    dest->sp = src.sp;
+  }
+
+  // Add the base pointer for the top stack frame.
+  // TODO(brettw) libstackunwind should be able to give us base pointers for
+  // other frames when we're compiling with frame pointers.
+  (*stack)[0].bp = bp;
+
+  return 0;
+}
 
 // Libunwind doesn't have a cross-platform typedef for the frame pointer
 // register so define one.
@@ -27,7 +100,7 @@ namespace {
 
 using ModuleVector = std::vector<debug_ipc::Module>;
 
-// Callback for libunwind.
+// Callback for ngunwind.
 int LookupDso(void* context, unw_word_t pc, unw_word_t* base,
               const char** name) {
   // Context is a ModuleVector sorted by load address, need to find the
@@ -47,12 +120,13 @@ int LookupDso(void* context, unw_word_t pc, unw_word_t* base,
   return 0;
 }
 
-}  // namespace
+zx_status_t UnwindStackNgUnwind(const zx::process& process,
+                                uint64_t dl_debug_addr,
+                                const zx::thread& thread, uint64_t ip,
+                                uint64_t sp, uint64_t bp, size_t max_depth,
+                                std::vector<debug_ipc::StackFrame>* stack) {
+  stack->clear();
 
-zx_status_t UnwindStack(const zx::process& process, uint64_t dl_debug_addr,
-                        const zx::thread& thread, uint64_t ip, uint64_t sp,
-                        uint64_t bp, size_t max_depth,
-                        std::vector<debug_ipc::StackFrame>* stack) {
   // Get the modules sorted by load address.
   ModuleVector modules;
   zx_status_t status = GetModulesForProcess(process, dl_debug_addr, &modules);
@@ -114,6 +188,25 @@ zx_status_t UnwindStack(const zx::process& process, uint64_t dl_debug_addr,
   // which in turn allows computation of the first real frame's fingerprint.
 
   return ZX_OK;
+}
+
+}  // namespace
+
+void SetUnwinderType(UnwinderType type) { unwinder_type = type; }
+
+zx_status_t UnwindStack(const zx::process& process, uint64_t dl_debug_addr,
+                        const zx::thread& thread, uint64_t ip, uint64_t sp,
+                        uint64_t bp, size_t max_depth,
+                        std::vector<debug_ipc::StackFrame>* stack) {
+  switch (unwinder_type) {
+    case UnwinderType::kNgUnwind:
+      return UnwindStackNgUnwind(process, dl_debug_addr, thread, ip, sp, bp,
+                                 max_depth, stack);
+    case UnwinderType::kAndroid:
+      return UnwindStackAndroid(process, dl_debug_addr, thread, ip, sp, bp,
+                                max_depth, stack);
+  }
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 }  // namespace debug_agent
