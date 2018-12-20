@@ -75,29 +75,30 @@ zx_status_t TestSerial::SendBlocking(const std::string& message) {
   zx_status_t status;
   const char* data = message.data();
   size_t len = message.size();
-  do {
+  while (true) {
     zx_signals_t pending = 0;
     status = socket_.wait_one(ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED,
                               zx::deadline_after(kTestTimeout), &pending);
     if (status != ZX_OK) {
       return status;
-    }
-    if (pending & ZX_SOCKET_PEER_CLOSED) {
+    } else if (pending & ZX_SOCKET_PEER_CLOSED) {
       return ZX_ERR_PEER_CLOSED;
-    }
-    if (!(pending & ZX_SOCKET_WRITABLE)) {
+    } else if (!(pending & ZX_SOCKET_WRITABLE)) {
       continue;
     }
     size_t actual;
-    status = zx_socket_write(socket_.get(), 0, data, len, &actual);
-    if (status == ZX_OK && actual < len) {
-      data += actual;
-      len -= actual;
+    status = socket_.write(0, data, len, &actual);
+    if (status == ZX_ERR_SHOULD_WAIT) {
       continue;
+    } else if (status != ZX_OK) {
+      return status;
     }
-  } while (status == ZX_ERR_SHOULD_WAIT);
-
-  return status;
+    if (actual == len) {
+      return ZX_OK;
+    }
+    data += actual;
+    len -= actual;
+  }
 }
 
 zx_status_t TestSerial::WaitForMarker(const std::string& marker,
@@ -106,7 +107,7 @@ zx_status_t TestSerial::WaitForMarker(const std::string& marker,
   std::string output = buffer_;
   buffer_.erase();
   zx_status_t status;
-  do {
+  while (true) {
     // We strip prompts from the output as a stopgap against linux guests
     // interleaving the prompt randomly in the output.
     output = std::regex_replace(output, prompt_re, "");
@@ -140,7 +141,7 @@ zx_status_t TestSerial::WaitForMarker(const std::string& marker,
     }
     char buf[kSerialBufferSize];
     size_t actual;
-    status = zx_socket_read(socket_.get(), 0, buf, sizeof(buf), &actual);
+    status = socket_.read(0, buf, sizeof(buf), &actual);
     if (status == ZX_ERR_SHOULD_WAIT) {
       continue;
     } else if (status != ZX_OK) {
@@ -157,7 +158,7 @@ zx_status_t TestSerial::WaitForMarker(const std::string& marker,
       }
       output.push_back(buf[i]);
     }
-  } while (status == ZX_ERR_SHOULD_WAIT || status == ZX_OK);
+  }
   return status;
 }
 
@@ -175,7 +176,7 @@ zx_status_t TestSerial::WaitForAny() {
       return ZX_ERR_PEER_CLOSED;
     }
     char buf[kSerialBufferSize];
-    status = zx_socket_read(socket_.get(), 0, buf, sizeof(buf), &actual);
+    status = socket_.read(0, buf, sizeof(buf), &actual);
     if (status != ZX_OK) {
       return status;
     }
