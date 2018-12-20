@@ -3739,7 +3739,7 @@ zx_status_t Device::WlanmacStart(wlanmac_ifc_t* ifc, void* cookie) {
     status = SetRxFilter();
     if (status != ZX_OK) { return status; }
 
-    wlanmac_proxy_.reset(new WlanmacIfcProxy(ifc, cookie));
+    wlanmac_proxy_.reset(new WlanmacIfcClient(ifc, cookie));
 
     wlan_channel_t chan;
     chan.primary = 1;

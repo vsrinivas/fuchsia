@@ -48,9 +48,9 @@ struct BulkoutAggregation;
 class TxStatFifo;
 class TxStatFifoExt;
 
-class WlanmacIfcProxy {
+class WlanmacIfcClient {
    public:
-    WlanmacIfcProxy(wlanmac_ifc_t* ifc, void* cookie) : ifc_(ifc), cookie_(cookie) {}
+    WlanmacIfcClient(wlanmac_ifc_t* ifc, void* cookie) : ifc_(ifc), cookie_(cookie) {}
 
     void Status(uint32_t status) { ifc_->status(cookie_, status); }
     void Recv(uint32_t flags, const void* data, size_t length, wlan_rx_info_t* info) {
@@ -291,7 +291,7 @@ class Device {
         IFC_RUNNING,
         IFC_DESTROYING
     } iface_state_ __TA_GUARDED(lock_) = IFC_NONE;
-    fbl::unique_ptr<WlanmacIfcProxy> wlanmac_proxy_ __TA_GUARDED(lock_);
+    fbl::unique_ptr<WlanmacIfcClient> wlanmac_proxy_ __TA_GUARDED(lock_);
 
     constexpr static size_t kEepromSize = 0x0100;
     std::array<uint16_t, kEepromSize> eeprom_ = {};

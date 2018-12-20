@@ -327,7 +327,7 @@ zx_status_t Device::EthmacStart(const ethmac_ifc_t* ifc) {
 
     std::lock_guard<std::mutex> lock(lock_);
     if (ethmac_proxy_ != nullptr) { return ZX_ERR_ALREADY_BOUND; }
-    ethmac_proxy_.reset(new ddk::EthmacIfcProxy(ifc));
+    ethmac_proxy_.reset(new ddk::EthmacIfcClient(ifc));
     return ZX_OK;
 }
 

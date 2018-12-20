@@ -131,7 +131,7 @@ class Device : public DeviceInterface {
     zx_device_t* ethdev_;
 
     WlanmacProxy wlanmac_proxy_;
-    fbl::unique_ptr<ddk::EthmacIfcProxy> ethmac_proxy_;
+    fbl::unique_ptr<ddk::EthmacIfcClient> ethmac_proxy_;
 
     wlanmac_info_t wlanmac_info_ = {};
     fbl::RefPtr<DeviceState> state_;

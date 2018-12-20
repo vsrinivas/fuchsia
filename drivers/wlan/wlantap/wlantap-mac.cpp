@@ -48,7 +48,7 @@ struct WlantapMacImpl : WlantapMac {
         {
             std::lock_guard<std::mutex> guard(self.lock_);
             if (self.ifc_) { return ZX_ERR_ALREADY_BOUND; }
-            self.ifc_ = WlanmacIfcProxy{ifc, cookie};
+            self.ifc_ = WlanmacIfcClient{ifc, cookie};
         }
         self.listener_->WlantapMacStart(self.id_);
         return ZX_OK;
@@ -159,7 +159,7 @@ struct WlantapMacImpl : WlantapMac {
     uint16_t id_;
     wlan_device::MacRole role_;
     std::mutex lock_;
-    WlanmacIfcProxy ifc_ __TA_GUARDED(lock_);
+    WlanmacIfcClient ifc_ __TA_GUARDED(lock_);
     const wlantap::WlantapPhyConfig* phy_config_;
     Listener* listener_;
 };

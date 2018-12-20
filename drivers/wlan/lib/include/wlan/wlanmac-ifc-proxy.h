@@ -8,11 +8,11 @@
 
 namespace wlan {
 
-class WlanmacIfcProxy {
+class WlanmacIfcClient {
    public:
-    WlanmacIfcProxy() : ifc_(nullptr), cookie_(nullptr) {}
+    WlanmacIfcClient() : ifc_(nullptr), cookie_(nullptr) {}
 
-    WlanmacIfcProxy(wlanmac_ifc_t* ifc, void* cookie) : ifc_(ifc), cookie_(cookie) {}
+    WlanmacIfcClient(wlanmac_ifc_t* ifc, void* cookie) : ifc_(ifc), cookie_(cookie) {}
 
     operator bool() const { return ifc_; }
 
