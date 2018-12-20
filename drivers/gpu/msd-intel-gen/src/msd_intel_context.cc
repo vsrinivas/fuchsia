@@ -239,10 +239,6 @@ magma_status_t msd_context_execute_command_buffer(msd_context_t* ctx, msd_buffer
     return status.get();
 }
 
-void msd_context_release_buffer(msd_context_t* context, msd_buffer_t* buffer)
-{
-}
-
 magma_status_t msd_context_execute_immediate_commands(msd_context_t* ctx, uint64_t commands_size,
                                                       void* commands, uint64_t semaphore_count,
                                                       msd_semaphore_t** msd_semaphores)

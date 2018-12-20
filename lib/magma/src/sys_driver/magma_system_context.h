@@ -37,8 +37,6 @@ public:
     magma::Status ExecuteImmediateCommands(uint64_t commands_size, void* commands,
                                            uint64_t semaphore_count, uint64_t* semaphore_ids);
 
-    void ReleaseBuffer(std::shared_ptr<MagmaSystemBuffer> buffer);
-
 private:
     msd_context_t* msd_ctx() { return msd_ctx_.get(); }
 

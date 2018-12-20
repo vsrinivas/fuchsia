@@ -89,8 +89,6 @@ magma_status_t msd_context_execute_immediate_commands(msd_context_t* ctx, uint64
     return MAGMA_STATUS_OK;
 }
 
-void msd_context_release_buffer(msd_context_t* context, msd_buffer_t* buffer) {}
-
 void MsdMockBufferManager::SetTestBufferManager(std::unique_ptr<MsdMockBufferManager> bufmgr)
 {
     g_bufmgr = std::move(bufmgr);

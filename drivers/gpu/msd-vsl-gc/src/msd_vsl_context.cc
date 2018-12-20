@@ -20,5 +20,3 @@ magma_status_t msd_context_execute_command_buffer(msd_context_t* ctx, msd_buffer
 {
     return MAGMA_STATUS_UNIMPLEMENTED;
 }
-
-void msd_context_release_buffer(msd_context_t* context, msd_buffer_t* buffer) {}

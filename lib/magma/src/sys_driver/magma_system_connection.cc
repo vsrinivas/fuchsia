@@ -128,10 +128,6 @@ bool MagmaSystemConnection::ReleaseBuffer(uint64_t id)
     if (--iter->second.refcount > 0)
         return true;
 
-    for (auto& pair : context_map_) {
-        pair.second->ReleaseBuffer(iter->second.buffer);
-    }
-
     msd_connection_release_buffer(msd_connection(), iter->second.buffer->msd_buf());
     buffer_map_.erase(iter);
 
