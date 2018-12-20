@@ -68,6 +68,12 @@ template("rustc_macro") {
 
   crate_name = string_replace(rustc_artifact_name, "-", "_")
 
+  if (host_os == "mac") {
+    macro_extension = ".dylib"
+  } else {
+    macro_extension = ".so"
+  }
+
   # The actual host-target build of the proc macro crate.
   rustc_artifact(proc_macro_target) {
     forward_variables_from(invoker,
@@ -81,7 +87,7 @@ template("rustc_macro") {
                            ])
     name = rustc_artifact_name
     type = "proc-macro"
-    output_file_override = "lib${crate_name}_proc_macro.so"
+    output_file_override = "lib${crate_name}_proc_macro${macro_extension}"
   }
 
   # Copy the generated Cargo.toml
@@ -126,8 +132,8 @@ template("rustc_macro") {
   copy_binary_target = "${target_name}_copy_binary"
   proc_macro_target_root_out_dir =
       get_label_info(proc_macro_host_target, "root_out_dir")
-  proc_macro_target_out_bin_path = "$proc_macro_target_root_out_dir/rust_crates/lib${crate_name}_proc_macro.so"
-  out_bin_path = "${root_out_dir}/rust_crates/lib${crate_name}.so"
+  proc_macro_target_out_bin_path = "$proc_macro_target_root_out_dir/rust_crates/lib${crate_name}_proc_macro${macro_extension}"
+  out_bin_path = "${root_out_dir}/rust_crates/lib${crate_name}${macro_extension}"
   copy(copy_binary_target) {
     visibility = [ ":${target_name}" ]
     forward_variables_from(invoker, [ "testonly " ])
