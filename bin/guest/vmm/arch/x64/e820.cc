@@ -4,8 +4,6 @@
 
 #include "garnet/bin/guest/vmm/arch/x64/e820.h"
 
-#include <zircon/boot/e820.h>
-
 // clang-format off
 
 static constexpr uint64_t kAddr32kb     = 0x0000000000008000;
