@@ -199,9 +199,8 @@ zx_status_t Dfu::LoadFirmware(zx::vmo fw_vmo, size_t fw_size) {
         block_num++;
         vmo_offset += len_to_write;
     } while (len_to_write != 0);  // The device expects a zero length transfer to signify the end.
-    // TODO(jocelyndang): issue a USB Reset to enter Application Mode.
 
-    return ZX_OK;
+    return usb_reset_device(&usb_);
 }
 
 zx_status_t Dfu::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {

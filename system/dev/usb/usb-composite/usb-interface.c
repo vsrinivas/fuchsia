@@ -184,6 +184,11 @@ static zx_status_t usb_interface_reset_endpoint(void* ctx, uint8_t ep_address) {
     return usb_reset_endpoint(&intf->comp->usb, ep_address);
 }
 
+static zx_status_t usb_interface_reset_device(void* ctx) {
+    usb_interface_t* intf = ctx;
+    return usb_reset_device(&intf->comp->usb);
+}
+
 static size_t usb_interface_get_max_transfer_size(void* ctx, uint8_t ep_address) {
     usb_interface_t* intf = ctx;
     return usb_get_max_transfer_size(&intf->comp->usb, ep_address);
@@ -356,6 +361,7 @@ usb_protocol_ops_t usb_device_protocol = {
     .set_configuration = usb_interface_set_configuration,
     .enable_endpoint = usb_interface_enable_endpoint,
     .reset_endpoint = usb_interface_reset_endpoint,
+    .reset_device = usb_interface_reset_device,
     .get_max_transfer_size = usb_interface_get_max_transfer_size,
     .get_device_id = usb_interface_get_device_id,
     .get_device_descriptor = usb_interface_get_device_descriptor,

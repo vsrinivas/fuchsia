@@ -22,6 +22,8 @@ interface UsbBus {
     DeviceAdded(ddk.driver.ZxDevice? hub_device, uint32 port, UsbSpeed speed) -> (zx.status s);
     /// Informs the USB bus that a device has been removed.
     DeviceRemoved(ddk.driver.ZxDevice? hub_device, uint32 port) -> (zx.status s);
+    /// Informs the USB bus that a device has been reset.
+    DeviceReset(ddk.driver.ZxDevice? hub_device, uint32 port) -> (zx.status s);
     /// Used by USB hub driver to register its USB hub protocol with the USB bus driver.
     SetHubInterface(ddk.driver.ZxDevice? usb_device, ddk.protocol.usb.hub.UsbHubInterface hub)
 -> (zx.status s);
@@ -36,4 +38,6 @@ interface UsbBusInterface {
     RemoveDevice(uint32 device_id) -> (zx.status s);
     /// Used by the HCI controller to reset a port on a USB hub.
     ResetPort(uint32 hub_id, uint32 port) -> (zx.status s);
+    /// Used by the HCI controller to reinitialize a device after it has been reset.
+    ReinitializeDevice(uint32 device_id) -> (zx.status s);
 };

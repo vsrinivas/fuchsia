@@ -31,8 +31,12 @@ interface UsbHci {
     HubDeviceAdded(uint32 device_id, uint32 port, zircon.hw.usb.UsbSpeed speed) -> (zx.status s);
     /// Used by the USB hub driver to notify the HCI driver when a device has been removed.
     HubDeviceRemoved(uint32 device_id, uint32 port) -> (zx.status s);
+    /// Used by the USB hub driver to notify the HCI driver when a device has been reset.
+    HubDeviceReset(uint32 device_id, uint32 port) -> (zx.status s);
     /// Resets an endpoint on the specified device.
     ResetEndpoint(uint32 device_id, uint8 ep_address) -> (zx.status s);
+    /// Resets the specified device.
+    ResetDevice(uint32 hub_address, uint32 device_id) -> (zx.status s);
     /// Returns the maximum size of a packet that can be queued on the specified endpoint.
     GetMaxTransferSize(uint32 device_id, uint8 ep_address) -> (usize size);
     /// Cancels all transactions currently queued on the specified endpoint.

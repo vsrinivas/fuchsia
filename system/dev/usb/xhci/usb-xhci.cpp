@@ -110,9 +110,29 @@ static zx_status_t xhci_hub_device_removed(void* ctx, uint32_t hub_address, uint
     return ZX_OK;
 }
 
+static zx_status_t xhci_hub_device_reset(void* ctx, uint32_t hub_address, uint32_t port) {
+    auto* xhci = static_cast<xhci_t*>(ctx);
+    return xhci_device_reset(xhci, hub_address, port);
+}
+
 static zx_status_t xhci_reset_ep(void* ctx, uint32_t device_id, uint8_t ep_address) {
     auto* xhci = static_cast<xhci_t*>(ctx);
     return xhci_reset_endpoint(xhci, device_id, ep_address);
+}
+
+static zx_status_t xhci_reset_device(void* ctx, uint32_t hub_address, uint32_t device_id) {
+    auto* xhci = static_cast<xhci_t*>(ctx);
+
+    auto* slot = &xhci->slots[device_id];
+    uint32_t port = slot->port;
+    if (slot->hub_address == 0) {
+        // Convert real port number to virtual root hub number.
+        port = xhci->rh_port_map[port - 1] + 1;
+    }
+    zxlogf(TRACE, "xhci_reset_device slot_id: %u port: %u hub_address: %u\n",
+           device_id, port, hub_address);
+
+    return usb_bus_interface_reset_port(&xhci->bus, hub_address, port);
 }
 
 static size_t xhci_get_max_transfer_size(void* ctx, uint32_t device_id, uint8_t ep_address) {
@@ -147,7 +167,9 @@ usb_hci_protocol_ops_t xhci_hci_protocol = {
     .configure_hub = xhci_config_hub,
     .hub_device_added = xhci_hub_device_added,
     .hub_device_removed = xhci_hub_device_removed,
+    .hub_device_reset = xhci_hub_device_reset,
     .reset_endpoint = xhci_reset_ep,
+    .reset_device = xhci_reset_device,
     .get_max_transfer_size = xhci_get_max_transfer_size,
     .cancel_all = xhci_cancel_all,
     .get_request_size = xhci_get_request_size,

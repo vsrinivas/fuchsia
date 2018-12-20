@@ -18,6 +18,7 @@
 typedef enum {
     ENUMERATE_DEVICE,
     DISCONNECT_DEVICE,
+    RESET_DEVICE,
     START_ROOT_HUBS,
     STOP_THREAD,
 } xhci_command_t;
@@ -66,32 +67,40 @@ static zx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
     }
 
     xhci_slot_t* slot = &xhci->slots[slot_id];
-    if (slot->sc)
-        return ZX_ERR_BAD_STATE;
     slot->hub_address = hub_address;
     slot->port = port;
     slot->rh_port = (hub_address == 0 ? port : xhci->slots[hub_address].rh_port);
     slot->speed = speed;
 
-    // allocate a read-only DMA buffer for device context
-    size_t dc_length = xhci->context_size * XHCI_NUM_EPS;
-    zx_status_t status = io_buffer_init(&slot->buffer, xhci->bti_handle, dc_length,
-                                        IO_BUFFER_RO | IO_BUFFER_CONTIG | XHCI_IO_BUFFER_UNCACHED);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "xhci_address_device: failed to allocate io_buffer for slot\n");
-        return status;
-    }
-    auto* device_context = static_cast<uint8_t*>(io_buffer_virt(&slot->buffer));
     xhci_endpoint_t* ep = &slot->eps[0];
-    status = xhci_transfer_ring_init(&ep->transfer_ring, xhci->bti_handle, TRANSFER_RING_SIZE);
-    if (status < 0) return status;
-    ep->transfer_state = static_cast<xhci_transfer_state_t*>(
-                                                calloc(1, sizeof(xhci_transfer_state_t)));
-    if (!ep->transfer_state) {
-        return ZX_ERR_NO_MEMORY;
+
+    bool device_resetting = slot->sc != nullptr;
+    zx_status_t status;
+
+    // Allocate the buffers if we haven't already. They will already exist in the case of a
+    // device reset.
+    if (!device_resetting) {
+        // allocate a read-only DMA buffer for device context
+        size_t dc_length = xhci->context_size * XHCI_NUM_EPS;
+        status = io_buffer_init(&slot->buffer, xhci->bti_handle, dc_length,
+                                IO_BUFFER_RO | IO_BUFFER_CONTIG | XHCI_IO_BUFFER_UNCACHED);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "xhci_address_device: failed to allocate io_buffer for slot\n");
+            return status;
+        }
+
+        status = xhci_transfer_ring_init(&ep->transfer_ring, xhci->bti_handle, TRANSFER_RING_SIZE);
+        if (status < 0) return status;
+        ep->transfer_state = static_cast<xhci_transfer_state_t*>(
+                                               calloc(1, sizeof(xhci_transfer_state_t)));
+        if (!ep->transfer_state) {
+            return ZX_ERR_NO_MEMORY;
+        }
+        ep->ep_type = USB_ENDPOINT_CONTROL;
     }
+
+    auto* device_context = static_cast<uint8_t*>(io_buffer_virt(&slot->buffer));
     xhci_transfer_ring_t* transfer_ring = &ep->transfer_ring;
-    ep->ep_type = USB_ENDPOINT_CONTROL;
 
     mtx_lock(&xhci->input_context_lock);
     auto* icc = reinterpret_cast<xhci_input_control_context_t*>(xhci->input_context);
@@ -147,7 +156,8 @@ static zx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
                     tt_port_number);
 
     // Setup endpoint context for ep0
-    zx_paddr_t tr_dequeue = xhci_transfer_ring_start_phys(transfer_ring);
+    // If this is following a device reset, the dequeue pointer may not be the start of the ring.
+    zx_paddr_t tr_dequeue = xhci_transfer_ring_current_phys(transfer_ring);
 
     // start off with reasonable default max packet size for ep0 based on speed
     int mps;
@@ -182,7 +192,10 @@ static zx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
         if (status == ZX_OK) {
             break;
         } else if (status != ZX_ERR_TIMED_OUT) {
-            usb_bus_interface_reset_port(&xhci->bus, hub_address, port);
+            // Don't want to get into a reset loop.
+            if (!device_resetting) {
+                usb_bus_interface_reset_port(&xhci->bus, hub_address, port);
+            }
             status = xhci_send_command(xhci, TRB_CMD_ADDRESS_DEVICE, icc_phys,
                                       ((slot_id << TRB_SLOT_ID_START) | TRB_ADDRESS_DEVICE_BSR));
             if (status != ZX_OK) {
@@ -294,27 +307,13 @@ static void xhci_disable_slot(xhci_t* xhci, uint32_t slot_id) {
     slot->port = USB_SPEED_UNDEFINED;
 }
 
-static zx_status_t xhci_handle_enumerate_device(xhci_t* xhci, uint32_t hub_address, uint32_t port,
-                                                usb_speed_t speed) {
-    zxlogf(TRACE, "xhci_handle_enumerate_device hub_address:%d port %d\n", hub_address, port);
-    zx_status_t result = ZX_OK;
-    uint32_t slot_id = 0;
-
-    xhci_sync_command_t command;
-    xhci_sync_command_init(&command);
-    xhci_post_command(xhci, TRB_CMD_ENABLE_SLOT, 0, 0, &command.context);
-    int cc = xhci_sync_command_wait(&command);
-    if (cc == TRB_CC_SUCCESS) {
-        slot_id = xhci_sync_command_slot_id(&command);
-    } else {
-        zxlogf(ERROR, "xhci_handle_enumerate_device: unable to get a slot\n");
-        return ZX_ERR_NO_RESOURCES;
-    }
-
-    result = xhci_address_device(xhci, slot_id, hub_address, port, speed);
+static zx_status_t xhci_setup_slot(xhci_t* xhci, uint32_t slot_id, uint32_t hub_address,
+                                   uint32_t port, usb_speed_t speed) {
+    zx_status_t result = xhci_address_device(xhci, slot_id, hub_address, port, speed);
     if (result != ZX_OK) {
-        goto disable_slot_exit;
+        return result;
     }
+
     // Let SET_ADDRESS settle down
     zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
     // read first 8 bytes of device descriptor to fetch ep0 max packet size
@@ -325,13 +324,16 @@ static zx_status_t xhci_handle_enumerate_device(xhci_t* xhci, uint32_t hub_addre
                                      &device_descriptor, 8, &actual);
         if (result == ZX_ERR_IO_REFUSED || result == ZX_ERR_IO_INVALID) {
             xhci_reset_endpoint(xhci, slot_id, 0);
+        } else if  (result != ZX_OK) {
+            // Try again. The device may be flaky or slow recovering.
+            continue;
         } else {
             break;
         }
     }
     if (actual != 8) {
-        zxlogf(ERROR, "xhci_handle_enumerate_device: xhci_get_descriptor failed: %d\n", result);
-        goto disable_slot_exit;
+        zxlogf(ERROR, "xhci_handle_enable_device: xhci_get_descriptor failed: %d\n", result);
+        return ZX_ERR_BAD_STATE;
     }
 
     int mps;
@@ -375,7 +377,30 @@ static zx_status_t xhci_handle_enumerate_device(xhci_t* xhci, uint32_t hub_addre
                                (slot_id << TRB_SLOT_ID_START));
     mtx_unlock(&xhci->input_context_lock);
     if (result != ZX_OK) {
-        zxlogf(ERROR, "xhci_handle_enumerate_device: TRB_CMD_EVAL_CONTEXT failed\n");
+        zxlogf(ERROR, "xhci_handle_enable_device: TRB_CMD_EVAL_CONTEXT failed\n");
+    }
+    return result;
+}
+
+static zx_status_t xhci_handle_enumerate_device(xhci_t* xhci, uint32_t hub_address, uint32_t port,
+                                                usb_speed_t speed) {
+    zxlogf(TRACE, "xhci_handle_enumerate_device hub_address:%d port %d\n", hub_address, port);
+    zx_status_t result = ZX_OK;
+    uint32_t slot_id = 0;
+
+    xhci_sync_command_t command;
+    xhci_sync_command_init(&command);
+    xhci_post_command(xhci, TRB_CMD_ENABLE_SLOT, 0, 0, &command.context);
+    int cc = xhci_sync_command_wait(&command);
+    if (cc == TRB_CC_SUCCESS) {
+        slot_id = xhci_sync_command_slot_id(&command);
+    } else {
+        zxlogf(ERROR, "xhci_handle_enumerate_device: unable to get a slot\n");
+        return ZX_ERR_NO_RESOURCES;
+    }
+
+    result = xhci_setup_slot(xhci, slot_id, hub_address, port, speed);
+    if (result != ZX_OK) {
         goto disable_slot_exit;
     }
 
@@ -388,11 +413,42 @@ disable_slot_exit:
     return result;
 }
 
+static zx_status_t xhci_free_endpoint_state(xhci_t* xhci, xhci_slot_t* slot, xhci_endpoint_t* ep,
+                                            zx_status_t complete_status) {
+    xhci_transfer_ring_t* transfer_ring = &ep->transfer_ring;
+
+    mtx_lock(&ep->lock);
+    if (ep->state != EP_STATE_DISABLED && ep->state != EP_STATE_DEAD) {
+        mtx_unlock(&ep->lock);
+        return ZX_ERR_BAD_STATE;
+    }
+    mtx_unlock(&ep->lock);
+
+    free(ep->transfer_state);
+    ep->transfer_state = nullptr;
+    xhci_transfer_ring_free(transfer_ring);
+
+    // complete any remaining requests
+    usb_request_t* req = nullptr;
+    xhci_usb_request_internal_t* req_int = nullptr;
+    while ((req_int = list_remove_head_type(&ep->pending_reqs,
+                                            xhci_usb_request_internal_t, node)) != nullptr) {
+        req = XHCI_INTERNAL_TO_USB_REQ(req_int);
+        usb_request_complete(req, complete_status, 0, &req_int->complete_cb);
+    }
+    while ((req_int = list_remove_head_type(&ep->queued_reqs,
+                                            xhci_usb_request_internal_t, node)) != nullptr) {
+        req = XHCI_INTERNAL_TO_USB_REQ(req_int);
+        usb_request_complete(req, complete_status, 0, &req_int->complete_cb);
+    }
+
+    return ZX_OK;
+}
+
 static zx_status_t xhci_stop_endpoint(xhci_t* xhci, uint32_t slot_id, int ep_index,
                                       xhci_ep_state_t new_state, zx_status_t complete_status) {
     xhci_slot_t* slot = &xhci->slots[slot_id];
     xhci_endpoint_t* ep =  &slot->eps[ep_index];
-    xhci_transfer_ring_t* transfer_ring = &ep->transfer_ring;
 
     if (new_state != EP_STATE_DISABLED && new_state != EP_STATE_DEAD) {
         ZX_DEBUG_ASSERT_MSG(false, "xhci_stop_endpoint: bad state argument %d\n", new_state);
@@ -420,29 +476,13 @@ static zx_status_t xhci_stop_endpoint(xhci_t* xhci, uint32_t slot_id, int ep_ind
         return ZX_ERR_INTERNAL;
     }
 
-    free(ep->transfer_state);
-    ep->transfer_state = nullptr;
-    xhci_transfer_ring_free(transfer_ring);
-
-    // complete any remaining requests
-    usb_request_t* req = nullptr;
-    xhci_usb_request_internal_t* req_int = nullptr;
-    while ((req_int = list_remove_head_type(&ep->pending_reqs,
-                                            xhci_usb_request_internal_t, node)) != nullptr) {
-        req = XHCI_INTERNAL_TO_USB_REQ(req_int);
-        usb_request_complete(req, complete_status, 0, &req_int->complete_cb);
-    }
-    while ((req_int = list_remove_head_type(&ep->queued_reqs,
-                                            xhci_usb_request_internal_t, node)) != nullptr) {
-        req = XHCI_INTERNAL_TO_USB_REQ(req_int);
-        usb_request_complete(req, complete_status, 0, &req_int->complete_cb);
-    }
-
-    return ZX_OK;
+    return xhci_free_endpoint_state(xhci, slot, ep, complete_status);
 }
 
-static zx_status_t xhci_handle_disconnect_device(xhci_t* xhci, uint32_t hub_address, uint32_t port) {
-    zxlogf(TRACE, "xhci_handle_disconnect_device\n");
+// Returns the slot for the given |hub_address| and |port|, or nullptr if no such slot exists.
+// The slot id will be stored in |out_slot_id|.
+static xhci_slot_t* xhci_get_slot(xhci_t* xhci, uint32_t hub_address, uint32_t port,
+                                  uint32_t* out_slot_id) {
     xhci_slot_t* slot = nullptr;
     uint32_t slot_id;
 
@@ -461,6 +501,16 @@ static zx_status_t xhci_handle_disconnect_device(xhci_t* xhci, uint32_t hub_addr
             break;
         }
     }
+    if (slot) {
+        *out_slot_id = slot_id;
+    }
+    return slot;
+}
+
+static zx_status_t xhci_handle_disconnect_device(xhci_t* xhci, uint32_t hub_address, uint32_t port) {
+    zxlogf(TRACE, "xhci_handle_disconnect_device\n");
+    uint32_t slot_id;
+    xhci_slot_t* slot = xhci_get_slot(xhci, hub_address, port, &slot_id);
     if (!slot) {
         zxlogf(ERROR, "slot not found in xhci_handle_disconnect_device\n");
         return ZX_ERR_NOT_FOUND;
@@ -468,7 +518,7 @@ static zx_status_t xhci_handle_disconnect_device(xhci_t* xhci, uint32_t hub_addr
 
     uint32_t drop_flags = 0;
     for (int i = 0; i < XHCI_NUM_EPS; i++) {
-        if (slot->eps[i].state != EP_STATE_DEAD) {
+        if (slot->eps[i].state != EP_STATE_DEAD && slot->eps[i].state != EP_STATE_DISABLED) {
             zx_status_t status = xhci_stop_endpoint(xhci, slot_id, i, EP_STATE_DEAD,
                                                     ZX_ERR_IO_NOT_PRESENT);
             if (status != ZX_OK) {
@@ -497,6 +547,50 @@ static zx_status_t xhci_handle_disconnect_device(xhci_t* xhci, uint32_t hub_addr
     xhci_disable_slot(xhci, slot_id);
 
     return ZX_OK;
+}
+
+static zx_status_t xhci_handle_reset_device(xhci_t* xhci, uint32_t hub_address, uint32_t port) {
+    zxlogf(TRACE, "xhci_handle_reset_device %u %u\n", hub_address, port);
+    zx_status_t result;
+    uint32_t slot_id;
+    xhci_slot_t* slot = xhci_get_slot(xhci, hub_address, port, &slot_id);
+    if (!slot) {
+        zxlogf(ERROR, "slot not found in xhci_handle_reset_device\n");
+        result = ZX_ERR_NOT_FOUND;
+        goto done;
+    }
+    result = xhci_send_command(xhci, TRB_CMD_RESET_DEVICE, 0, (slot_id << TRB_SLOT_ID_START));
+    if (result != ZX_OK) {
+        zxlogf(ERROR, "xhci_handle_reset_device: TRB_CMD_RESET_DEVICE failed\n");
+        goto done;
+    }
+
+    // TRB_CMD_RESET_DEVICE disables all endpoints except the control endpoint.
+    for (int i = 1; i < XHCI_NUM_EPS; i++) {
+        xhci_endpoint_t* ep =  &slot->eps[i];
+
+        mtx_lock(&ep->lock);
+        ep->state = EP_STATE_DISABLED;
+        mtx_unlock(&ep->lock);
+
+        result = xhci_free_endpoint_state(xhci, slot, ep, ZX_ERR_IO_NOT_PRESENT);
+        if (result != ZX_OK) {
+            zxlogf(ERROR, "xhci_free_endpoint_state failed slot %u ep %u, err: %d\n",
+                   result, slot_id, i);
+        }
+    }
+    // The slot is now in the Default state and we need to address it again.
+    result = xhci_setup_slot(xhci, slot_id, hub_address, port, slot->speed);
+    if (result != ZX_OK) {
+        zxlogf(ERROR, "xhci_handle_reset_device: xhci_setup_slot failed: %d\n", result);
+        goto done;
+    }
+    zxlogf(TRACE, "xhci_handle_reset_device %u %u successful\n", hub_address, port);
+
+done:
+    // We should always call this so we can update the device state.
+    usb_bus_interface_reinitialize_device(&xhci->bus, slot_id);
+    return result;
 }
 
 static int xhci_device_thread(void* arg) {
@@ -529,6 +623,9 @@ static int xhci_device_thread(void* arg) {
             break;
         case DISCONNECT_DEVICE:
             xhci_handle_disconnect_device(xhci, command->hub_address, command->port);
+            break;
+        case RESET_DEVICE:
+            xhci_handle_reset_device(xhci, command->hub_address, command->port);
             break;
         case START_ROOT_HUBS:
             xhci_start_root_hubs(xhci);
@@ -592,6 +689,10 @@ zx_status_t xhci_device_disconnected(xhci_t* xhci, uint32_t hub_address, uint32_
     mtx_unlock(&xhci->command_queue_mutex);
 
     return xhci_queue_command(xhci, DISCONNECT_DEVICE, hub_address, port, USB_SPEED_UNDEFINED);
+}
+
+zx_status_t xhci_device_reset(xhci_t* xhci, uint32_t hub_address, uint32_t port) {
+    return xhci_queue_command(xhci, RESET_DEVICE, hub_address, port, USB_SPEED_UNDEFINED);
 }
 
 zx_status_t xhci_queue_start_root_hubs(xhci_t* xhci) {

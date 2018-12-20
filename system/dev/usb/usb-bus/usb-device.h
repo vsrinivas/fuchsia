@@ -41,6 +41,10 @@ typedef struct usb_device {
     atomic_bool langids_fetched;
     atomic_uintptr_t lang_ids;
 
+    bool resetting;
+    // mutex that protects the resetting state member
+    mtx_t state_lock;
+
     // thread for calling client's usb request complete callback
     thrd_t callback_thread;
     bool callback_thread_stop;
@@ -61,6 +65,8 @@ void usb_device_set_hub_interface(usb_device_t* dev, const usb_hub_interface_t* 
 
 zx_status_t usb_device_add(usb_bus_t* bus, uint32_t device_id, uint32_t hub_id,
                            usb_speed_t speed, usb_device_t** out_device);
+
+zx_status_t usb_device_reinitialize(usb_device_t* dev);
 
 #define USB_REQ_TO_DEV_INTERNAL(req, size) \
     ((usb_device_req_internal_t *)((uintptr_t)(req) + (size)))

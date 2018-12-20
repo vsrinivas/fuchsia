@@ -13,6 +13,7 @@ typedef struct xhci xhci_t;
 zx_status_t xhci_enumerate_device(xhci_t* xhci, uint32_t hub_address, uint32_t port,
                                   usb_speed_t speed);
 zx_status_t xhci_device_disconnected(xhci_t* xhci, uint32_t hub_address, uint32_t port);
+zx_status_t xhci_device_reset(xhci_t* xhci, uint32_t hub_address, uint32_t port);
 void xhci_start_device_thread(xhci_t* xhci);
 void xhci_stop_device_thread(xhci_t* xhci);
 zx_status_t xhci_queue_start_root_hubs(xhci_t* xhci);

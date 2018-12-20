@@ -58,6 +58,10 @@ interface Usb {
     /// usb_reset_endpoint() the endpoint to normal running state.
     ResetEndpoint(uint8 ep_address) -> (zx.status s);
 
+    /// Resets the device and restores the prior configuration.
+    /// Returns ZX_ERR_BAD_STATE if the device is already being reset.
+    ResetDevice() -> (zx.status s);
+
     /// Returns the maximum amount of data that can be transferred on an endpoint in a single
     /// transaction.
     GetMaxTransferSize(uint8 ep_address) -> (usize s);

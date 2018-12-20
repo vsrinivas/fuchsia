@@ -5,6 +5,7 @@
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/protocol/usb.h>
+#include <ddk/protocol/usb/bus.h>
 #include <zircon/usb/device/c/fidl.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -357,6 +358,32 @@ static zx_status_t usb_device_reset_endpoint(void* ctx, uint8_t ep_address) {
     return usb_hci_reset_endpoint(&dev->hci, dev->device_id, ep_address);
 }
 
+static zx_status_t usb_device_update_state(usb_device_t* dev, bool resetting) {
+    mtx_lock(&dev->state_lock);
+    if (dev->resetting == resetting) {
+        zxlogf(ERROR, "usb_device_update_state: already had resetting = %d\n", resetting);
+        mtx_unlock(&dev->state_lock);
+        return ZX_ERR_BAD_STATE;
+    }
+    dev->resetting = resetting;
+    mtx_unlock(&dev->state_lock);
+    return ZX_OK;
+}
+
+static zx_status_t usb_device_reset_device(void* ctx) {
+    usb_device_t* dev = ctx;
+
+    zx_status_t status = usb_device_update_state(dev, /* resetting */ true);
+    if (status != ZX_OK) {
+        return status;
+    }
+    status = usb_hci_reset_device(&dev->hci, dev->hub_id, dev->device_id);
+    if (status != ZX_OK) {
+        return status;
+    }
+    return status;
+}
+
 static size_t usb_device_get_max_transfer_size(void* ctx, uint8_t ep_address) {
     usb_device_t* dev = ctx;
     return usb_hci_get_max_transfer_size(&dev->hci, dev->device_id, ep_address);
@@ -459,6 +486,7 @@ static usb_protocol_ops_t _usb_protocol = {
     .set_configuration = usb_device_set_configuration,
     .enable_endpoint = usb_device_enable_endpoint,
     .reset_endpoint = usb_device_reset_endpoint,
+    .reset_device = usb_device_reset_device,
     .get_max_transfer_size = usb_device_get_max_transfer_size,
     .get_device_id = _usb_device_get_device_id,
     .get_device_descriptor = usb_device_get_device_descriptor,
@@ -718,4 +746,20 @@ error_exit:
     }
     free(dev);
     return status;
+}
+
+zx_status_t usb_device_reinitialize(usb_device_t* dev) {
+    zx_status_t status = usb_device_update_state(dev, /* resetting */ false);
+    if (status != ZX_OK) {
+        return status;
+    }
+    uint8_t config = dev->config_descs[dev->current_config_index]->bConfigurationValue;
+    status = usb_util_control(dev, USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE,
+                              USB_REQ_SET_CONFIGURATION, config, 0, NULL, 0, NULL);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "could not restore configuration to %u, got err: %d\n", config, status);
+        return status;
+    }
+    // TODO(jocelyndang): we should re-enable endpoints and restore alternate settings.
+    return ZX_OK;
 }
