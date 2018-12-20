@@ -14,15 +14,15 @@ use std::sync::{Arc, Mutex};
 
 use failure::{self, ResultExt};
 use fidl::endpoints::ServiceMarker;
-use fidl_fuchsia_net_policy::PolicyMarker;
+use fidl_fuchsia_net_dns::DnsPolicyMarker;
 use fuchsia_app::server::ServicesServer;
 use futures::{self, StreamExt, TryFutureExt, TryStreamExt};
 use serde_derive::Deserialize;
 
 mod device_id;
+mod dns_policy_service;
 mod interface;
 mod matchers;
-mod policy_service;
 
 #[derive(Debug, Deserialize)]
 pub struct DnsConfig {
@@ -219,8 +219,8 @@ fn main() -> Result<(), failure::Error> {
     let netstack_service = netstack.clone();
 
     let fidl_service_fut = ServicesServer::new()
-        .add_service((PolicyMarker::NAME, move |channel| {
-            policy_service::spawn_netpolicy_fidl_server(netstack_service.clone(), channel);
+        .add_service((DnsPolicyMarker::NAME, move |channel| {
+            dns_policy_service::spawn_net_dns_fidl_server(netstack_service.clone(), channel);
         }))
         .start()?;
 

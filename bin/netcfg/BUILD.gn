@@ -14,7 +14,7 @@ rustc_binary("bin") {
     "//garnet/lib/rust/fidl_fuchsia_netstack_ext",
     "//garnet/lib/rust/fidl_zircon_ethernet_ext",
     "//garnet/public/fidl/fuchsia.devicesettings:fuchsia.devicesettings-rustc",
-    "//garnet/public/fidl/fuchsia.net.policy:netpolicy-rustc",
+    "//garnet/public/fidl/fuchsia.net.dns:fuchsia.net.dns-rustc",
     "//garnet/public/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",

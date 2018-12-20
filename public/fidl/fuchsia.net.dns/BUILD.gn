@@ -4,11 +4,11 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("netpolicy") {
-  name = "fuchsia.net.policy"
+fidl("fuchsia.net.dns") {
+  name = "fuchsia.net.dns"
 
   sources = [
-    "policy.fidl",
+    "dns.fidl",
   ]
 
   public_deps = [
