@@ -72,7 +72,6 @@ protected:
 
     enum class InterfaceType {
         kProtocol,
-        kDefaultProtocol,
         // Like a protocol, but not.
         kInterface,
         // One time callback.

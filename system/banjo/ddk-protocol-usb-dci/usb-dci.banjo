@@ -8,7 +8,7 @@ using ddk.protocol.usb.request;
 using zircon.hw.usb;
 using zx;
 
-[Layout = "ddk-protocol", DefaultProtocol]
+[Layout = "ddk-protocol"]
 interface UsbDci {
     /// Queues a USB request with the DCI driver.
     RequestQueue(ddk.protocol.usb.request.UsbRequest? usb_request,

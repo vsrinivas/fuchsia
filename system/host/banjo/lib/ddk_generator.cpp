@@ -1166,9 +1166,7 @@ DdkGenerator::NameInterfaces(const std::vector<std::unique_ptr<flat::Interface>>
         std::string name = interface_info->name.name().data();
         if (layout == "ddk-protocol") {
             name += "Protocol";
-            intf_type = interface_info->HasAttribute("DefaultProtocol")
-                            ? InterfaceType::kDefaultProtocol
-                            : InterfaceType::kProtocol;
+            intf_type = InterfaceType::kProtocol;
         } else if (layout == "ddk-interface") {
             intf_type = InterfaceType::kInterface;
         } else if (layout == "ddk-callback") {
@@ -1213,9 +1211,7 @@ DdktlGenerator::NameInterfaces(const std::vector<std::unique_ptr<flat::Interface
         std::string name = interface_info->name.name().data();
         if (layout == "ddk-protocol") {
             name += "Protocol";
-            intf_type = interface_info->HasAttribute("DefaultProtocol")
-                            ? InterfaceType::kDefaultProtocol
-                            : InterfaceType::kProtocol;
+            intf_type = InterfaceType::kProtocol;
         } else if (layout == "ddk-interface") {
             intf_type = InterfaceType::kInterface;
         } else if (layout == "ddk-callback") {
@@ -1600,12 +1596,8 @@ void DdktlGenerator::ProduceProtocolImplementation(const NamedInterface& named_i
 
     const auto& ops = sc_name + "_ops_";
 
-    const auto& base_class = (named_interface.type == InterfaceType::kDefaultProtocol)
-                                 ? "internal::base_protocol"
-                                 : "internal::base_mixin";
-
     EmitDocstring(&file_, named_interface, false);
-    file_ << "template <typename D, typename Base = " << base_class << ">\n";
+    file_ << "template <typename D, typename Base = internal::base_mixin>\n";
     file_ << "class " << cc_name << " : public Base {\n";
     file_ << "public:\n";
     file_ << kIndent << cc_name << "() {\n";

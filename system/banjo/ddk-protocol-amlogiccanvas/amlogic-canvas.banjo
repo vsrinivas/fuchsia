@@ -14,7 +14,7 @@ struct CanvasInfo {
     uint32 endianness;
 };
 
-[Layout = "ddk-protocol", DefaultProtocol]
+[Layout = "ddk-protocol"]
 interface AmlogicCanvas {
     /// Configures a canvas.
     /// Adds a framebuffer to the canvas lookup table.

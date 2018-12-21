@@ -6,7 +6,7 @@ library ddk.protocol.acpi;
 
 using zx;
 
-[Layout = "ddk-protocol", DefaultProtocol]
+[Layout = "ddk-protocol"]
 interface Acpi {
     MapResource(uint32 resource_id, uint32 cache_policy) -> (zx.status s, vector<voidptr>? vaddr,
                                                              handle<resource> @handle);

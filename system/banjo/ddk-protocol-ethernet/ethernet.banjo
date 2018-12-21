@@ -101,7 +101,7 @@ const uint32 ETHMAC_SETPARAM_DUMP_REGS = 4;
 /// methods from multiple threads simultaneously, but it
 /// can call send() methods at the same time as non-send
 /// methods.
-[Layout = "ddk-protocol", DefaultProtocol, HandleWrappers]
+[Layout = "ddk-protocol", HandleWrappers]
 interface Ethmac {
     /// Obtain information about the ethermac device and supported features
     /// Safe to call at any time.

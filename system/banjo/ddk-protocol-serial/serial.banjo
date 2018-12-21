@@ -18,7 +18,7 @@ struct SerialPortInfo {
 /// When used with the platform device protocol, "port" will be relative to
 /// the list of serial ports assigned to your device rather than the global
 /// list of serial ports.
-[Layout = "ddk-protocol", DefaultProtocol]
+[Layout = "ddk-protocol"]
 interface Serial {
     GetInfo() -> (zx.status s, SerialPortInfo info);
     /// Configures the given serial port.

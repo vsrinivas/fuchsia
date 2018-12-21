@@ -22,7 +22,7 @@ struct PlatformProxyRsp {
     zx.status status;
 };
 
-[Layout = "ddk-protocol", DefaultProtocol]
+[Layout = "ddk-protocol"]
 interface PlatformProxy {
     /// Used by protocol client drivers to register their local protocol implementation
     /// with the platform proxy driver.

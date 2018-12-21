@@ -14,7 +14,7 @@ enum UsbMode : uint32 {
     OTG = 3;
 };
 
-[Layout = "ddk-protocol", DefaultProtocol]
+[Layout = "ddk-protocol"]
 interface UsbModeSwitch {
     /// Sets the current USB mode.
     SetMode(UsbMode mode) -> (zx.status s);

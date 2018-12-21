@@ -7,7 +7,7 @@ library ddk.protocol.gpioimpl;
 using ddk.protocol.gpio;
 using zx;
 
-[Layout = "ddk-protocol", DefaultProtocol, HandleWrappers]
+[Layout = "ddk-protocol", HandleWrappers]
 interface GpioImpl {
     /// Configures a GPIO for input.
     ConfigIn(uint32 index, uint32 flags) -> (zx.status s);

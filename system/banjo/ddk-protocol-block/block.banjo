@@ -68,7 +68,7 @@ const uint32 BLOCK_FL_BARRIER_BEFORE = 0x00000100;
 /// Prevents later operations from being reordered before this one.
 const uint32 BLOCK_FL_BARRIER_AFTER = 0x00000200;
 
-[Layout = "ddk-protocol", DefaultProtocol]
+[Layout = "ddk-protocol"]
 interface BlockImpl {
     /// Obtains the parameters of the block device (block_info_t) and
     /// the required size of block_txn_t.  The block_txn_t's submitted
@@ -84,7 +84,7 @@ interface BlockImpl {
     Queue(BlockOp? txn) -> (zx.status status, BlockOp? op);
 };
 
-[Layout = "ddk-protocol", DefaultProtocol]
+[Layout = "ddk-protocol"]
 interface Block {
     /// Obtains the parameters of the block device (block_info_t) and
     /// the required size of block_txn_t.  The block_txn_t's submitted

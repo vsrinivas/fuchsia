@@ -13,7 +13,7 @@ interface UsbBatchRequestComplete {
     Callback(vector<ddk.protocol.usb.request.UsbRequest> reqs) -> ();
 };
 
-[Layout = "ddk-protocol", DefaultProtocol]
+[Layout = "ddk-protocol"]
 interface Usb {
     // Initiates a control transfer with the device in the OUT direction.
     ControlOut(uint8 request_type, uint8 request, uint16 value, uint16 index, zx.time timeout,

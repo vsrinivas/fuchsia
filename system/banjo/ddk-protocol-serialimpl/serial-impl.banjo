@@ -21,7 +21,7 @@ interface SerialNotify {
     Callback(SerialState state) -> ();
 };
 
-[Layout = "ddk-protocol", DefaultProtocol]
+[Layout = "ddk-protocol"]
 interface SerialImpl {
     GetInfo() -> (zx.status s, ddk.protocol.serial.SerialPortInfo info);
     /// Configures the given serial port.
