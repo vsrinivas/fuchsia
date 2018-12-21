@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//#![deny(warnings)]
+#![deny(warnings)]
 
-use failure::Error;
+use crate::common::Error;
 use std::fs;
 use std::path::PathBuf;
 use std::process;
 use structopt::StructOpt;
 
+mod common;
 mod format;
 mod merge;
 mod opts;

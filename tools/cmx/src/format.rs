@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Error;
+use crate::common::Error;
 use serde::ser::Serialize;
 use serde_json::ser::{CompactFormatter, PrettyFormatter, Serializer};
 use serde_json::Value;
@@ -17,14 +17,17 @@ use std::str::from_utf8;
 pub fn format(file: &PathBuf, pretty: bool, output: Option<PathBuf>) -> Result<(), Error> {
     let mut buffer = String::new();
     fs::File::open(&file)?.read_to_string(&mut buffer)?;
-    let v: Value = serde_json::from_str(&buffer)?;
+    let v: Value = serde_json::from_str(&buffer)
+        .map_err(|e| Error::parse(format!("Couldn't read input as JSON: {}", e)))?;
     let mut res = Vec::new();
     if pretty {
         let mut ser = Serializer::with_formatter(&mut res, PrettyFormatter::with_indent(b"    "));
-        v.serialize(&mut ser)?;
+        v.serialize(&mut ser)
+            .map_err(|e| Error::parse(format!("Couldn't serialize JSON: {}", e)))?;
     } else {
         let mut ser = Serializer::with_formatter(&mut res, CompactFormatter {});
-        v.serialize(&mut ser)?;
+        v.serialize(&mut ser)
+            .map_err(|e| Error::parse(format!("Couldn't serialize JSON: {}", e)))?;
     }
     if let Some(output_path) = output {
         fs::OpenOptions::new()

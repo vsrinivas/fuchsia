@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{format_err, Error};
+use crate::common::Error;
 use serde_json::{json, Value};
 use std::fs;
 use std::io::{Read, Write};
@@ -14,17 +14,18 @@ use std::path::PathBuf;
 /// together, with duplicate items being removed.
 pub fn merge(files: Vec<PathBuf>, output: Option<PathBuf>) -> Result<(), Error> {
     if files.is_empty() {
-        return Err(format_err!("no files provided"));
+        return Err(Error::invalid_args(format!("no files provided")));
     }
     let mut res = json!({});
     for filename in files {
         let mut buffer = String::new();
         fs::File::open(&filename)?.read_to_string(&mut buffer)?;
 
-        let v: Value = serde_json::from_str(&buffer)?;
+        let v: Value = serde_json::from_str(&buffer)
+            .map_err(|e| Error::parse(format!("Couldn't read input as JSON: {}", e)))?;
 
         merge_json(&mut res, &v)
-            .map_err(|e| format_err!("multiple manifests setting the same key: {}", e))?;
+            .map_err(|e| Error::parse(format!("Multiple manifests set the same key: {}", e)))?;
     }
     if let Some(output_path) = output {
         fs::OpenOptions::new()

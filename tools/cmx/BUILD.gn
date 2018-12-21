@@ -7,7 +7,7 @@ import("//build/host.gni")
 
 source_set("cmx_schema_json") {
   inputs = [
-    "schema.json"
+    "cmx_schema.json"
   ]
 }
 
@@ -19,6 +19,8 @@ rustc_binary("cmx_bin_test_rustc") {
   deps = [
     "//third_party/rust-crates/rustc_deps:clap",
     "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:lazy_static",
+    "//third_party/rust-crates/rustc_deps:regex",
     "//third_party/rust-crates/rustc_deps:serde",
     "//third_party/rust-crates/rustc_deps:serde_derive",
     "//third_party/rust-crates/rustc_deps:serde_json",
