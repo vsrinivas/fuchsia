@@ -12,9 +12,8 @@ sysmgr is designed to be fairly robust.  If any of the services
 dies, they will be restarted automatically the next time an
 application attempts to connect to that service.
 
-By default, sysmgr reads configuration files from
-`/system/data/sysmgr/apps.config` and
-`/system/data/sysmgr/services.config`.
+By default, sysmgr reads all configuration files from `/system/data/sysmgr/`, which
+have one of the following formats.
 
 ## CONFIGURATION
 
