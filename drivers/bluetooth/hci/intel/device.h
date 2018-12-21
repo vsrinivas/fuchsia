@@ -18,7 +18,7 @@ class Device;
 using DeviceType =
     ddk::Device<Device, ddk::GetProtocolable, ddk::Unbindable, ddk::Ioctlable>;
 
-class Device : public DeviceType, public ddk::BtHciProtocol<Device> {
+class Device : public DeviceType, public ddk::BtHciProtocol<Device, ddk::base_protocol> {
  public:
   Device(zx_device_t* device, bt_hci_protocol_t* hci);
 
