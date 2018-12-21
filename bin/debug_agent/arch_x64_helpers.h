@@ -4,9 +4,16 @@
 
 #pragma once
 
+#include <vector>
+
 #include <zircon/syscalls/exception.h>
+#include <zx/thread.h>
 
 #include "garnet/bin/debug_agent/arch_x64.h"
+
+namespace debug_ipc {
+struct Register;
+}  // namespace debug_ipc
 
 namespace debug_agent {
 namespace arch {
@@ -24,8 +31,10 @@ zx_status_t SetupHWBreakpoint(uint64_t address,
 // Removes an installed execution HW breakpoint for |address|.
 // If the address is not installed, no functional change will happen and
 // ZX_ERR_OUT_OF_RANGE will be returned.
-zx_status_t RemoveHWBreakpoint(uint64_t address,
-                                  zx_thread_state_debug_regs_t*);
+zx_status_t RemoveHWBreakpoint(uint64_t address, zx_thread_state_debug_regs_t*);
+
+zx_status_t WriteGeneralRegisters(const std::vector<debug_ipc::Register>&,
+                                  zx_thread_state_general_regs_t*);
 
 // Useful function for debugging to keep around.
 void PrintDebugRegisters(const zx_thread_state_debug_regs_t&);

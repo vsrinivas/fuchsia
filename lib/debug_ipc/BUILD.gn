@@ -18,6 +18,8 @@ static_library("shared") {
     "register_desc.h",
     "records.cc",
     "records.h",
+    "register_test_support.cc",
+    "register_test_support.h",
     "message_writer.h",
   ]
 

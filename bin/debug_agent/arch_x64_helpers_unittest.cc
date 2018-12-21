@@ -8,6 +8,9 @@
 
 #include "garnet/lib/debug_ipc/helper/file_line_function.h"
 #include "garnet/lib/debug_ipc/helper/zx_status.h"
+#include "garnet/lib/debug_ipc/register_test_support.h"
+
+#include "lib/fxl/logging.h"
 
 namespace debug_agent {
 namespace arch {
@@ -50,7 +53,7 @@ constexpr uint64_t kAddress5 = 0xdeadbeef;
 
 }  // namespace
 
-TEST(x64Helpers, SettingBreakpoints) {
+TEST(x64Helpers, SettingHWBreakpoints) {
   auto debug_regs = GetDefaultRegs();
 
   SetupHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress1, ZX_OK);
@@ -106,7 +109,7 @@ TEST(x64Helpers, SettingBreakpoints) {
   EXPECT_EQ(debug_regs.dr7, kDR7Mask | kDR7L0 | kDR7L1 | kDR7L2 | kDR7L3);
 }
 
-TEST(x64Helpers, Removing) {
+TEST(x64Helpers, RemovingHWBreakpoint) {
   auto debug_regs = GetDefaultRegs();
 
   // Previous state verifies the state of this calls.
@@ -188,6 +191,79 @@ TEST(x64Helpers, Removing) {
   EXPECT_EQ(debug_regs.dr[3], kAddress4);
   EXPECT_EQ(debug_regs.dr6, kDR6Mask);
   EXPECT_EQ(debug_regs.dr7, kDR7Mask | kDR7L0 | kDR7L1 | kDR7L2 | kDR7L3);
+}
+
+TEST(x64Helpers, WritingGeneralRegs) {
+  std::vector<debug_ipc::Register> regs;
+  regs.push_back(CreateRegisterWithData(debug_ipc::RegisterID::kX64_rax, 8));
+  regs.push_back(CreateRegisterWithData(debug_ipc::RegisterID::kX64_rbx, 8));
+  regs.push_back(CreateRegisterWithData(debug_ipc::RegisterID::kX64_r14, 8));
+  regs.push_back(CreateRegisterWithData(debug_ipc::RegisterID::kX64_rflags, 8));
+
+  zx_thread_state_general_regs_t out = {};
+  zx_status_t res = WriteGeneralRegisters(regs, &out);
+  ASSERT_EQ(res, ZX_OK) << "Expected ZX_OK, got "
+                        << debug_ipc::ZxStatusToString(res);
+
+  EXPECT_EQ(out.rax, 0x0102030405060708u);
+  EXPECT_EQ(out.rbx, 0x0102030405060708u);
+  EXPECT_EQ(out.rcx, 0u);
+  EXPECT_EQ(out.rdx, 0u);
+  EXPECT_EQ(out.rsi, 0u);
+  EXPECT_EQ(out.rdi, 0u);
+  EXPECT_EQ(out.rbp, 0u);
+  EXPECT_EQ(out.rsp, 0u);
+  EXPECT_EQ(out.r8, 0u);
+  EXPECT_EQ(out.r9, 0u);
+  EXPECT_EQ(out.r10, 0u);
+  EXPECT_EQ(out.r11, 0u);
+  EXPECT_EQ(out.r12, 0u);
+  EXPECT_EQ(out.r13, 0u);
+  EXPECT_EQ(out.r14, 0x0102030405060708u);
+  EXPECT_EQ(out.r15, 0u);
+  EXPECT_EQ(out.rip, 0u);
+  EXPECT_EQ(out.rflags, 0x0102030405060708u);
+
+  regs.clear();
+  regs.push_back(CreateUint64Register(debug_ipc::RegisterID::kX64_rax, 0xaabb));
+  regs.push_back(CreateUint64Register(debug_ipc::RegisterID::kX64_rdx, 0xdead));
+  regs.push_back(CreateUint64Register(debug_ipc::RegisterID::kX64_r10, 0xbeef));
+
+  res = WriteGeneralRegisters(regs, &out);
+  ASSERT_EQ(res, ZX_OK) << "Expected ZX_OK, got "
+                        << debug_ipc::ZxStatusToString(res);
+
+  EXPECT_EQ(out.rax, 0xaabbu);
+  EXPECT_EQ(out.rbx, 0x0102030405060708u);
+  EXPECT_EQ(out.rcx, 0u);
+  EXPECT_EQ(out.rdx, 0xdeadu);
+  EXPECT_EQ(out.rsi, 0u);
+  EXPECT_EQ(out.rdi, 0u);
+  EXPECT_EQ(out.rbp, 0u);
+  EXPECT_EQ(out.rsp, 0u);
+  EXPECT_EQ(out.r8, 0u);
+  EXPECT_EQ(out.r9, 0u);
+  EXPECT_EQ(out.r10, 0xbeefu);
+  EXPECT_EQ(out.r11, 0u);
+  EXPECT_EQ(out.r12, 0u);
+  EXPECT_EQ(out.r13, 0u);
+  EXPECT_EQ(out.r14, 0x0102030405060708u);
+  EXPECT_EQ(out.r15, 0u);
+  EXPECT_EQ(out.rip, 0u);
+  EXPECT_EQ(out.rflags, 0x0102030405060708u);
+}
+
+TEST(x64Helpers, InvalidWritingGeneralRegs) {
+  zx_thread_state_general_regs_t out;
+  std::vector<debug_ipc::Register> regs;
+
+  // Invalid length.
+  regs.push_back(CreateRegisterWithData(debug_ipc::RegisterID::kX64_rax, 4));
+  EXPECT_EQ(WriteGeneralRegisters(regs, &out), ZX_ERR_INVALID_ARGS);
+
+  // Invalid register.
+  regs.push_back(CreateRegisterWithData(debug_ipc::RegisterID::kX64_ymm2, 8));
+  EXPECT_EQ(WriteGeneralRegisters(regs, &out), ZX_ERR_INVALID_ARGS);
 }
 
 }  // namespace arch

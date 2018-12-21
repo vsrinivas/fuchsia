@@ -91,6 +91,30 @@ zx_status_t RemoveHWBreakpoint(uint64_t address,
   return ZX_OK;
 }
 
+zx_status_t WriteGeneralRegisters(const std::vector<debug_ipc::Register>& regs,
+                                  zx_thread_state_general_regs_t* gen_regs) {
+  uint32_t begin = static_cast<uint32_t>(debug_ipc::RegisterID::kX64_rax);
+  uint32_t end = static_cast<uint32_t>(debug_ipc::RegisterID::kX64_rflags);
+  for (const debug_ipc::Register& reg : regs) {
+    if (reg.data.size() != 8)
+      return ZX_ERR_INVALID_ARGS;
+
+    // zx_thread_state_general_regs has the same layout as the RegisterID enum
+    // for x64 general registers.
+    uint32_t id = static_cast<uint32_t>(reg.id);
+    if (id > end)
+      return ZX_ERR_INVALID_ARGS;
+
+    // Insert the value to the correct offset.
+    uint32_t offset = id - begin;
+    uint64_t* reg_ptr = reinterpret_cast<uint64_t*>(gen_regs);
+    reg_ptr += offset;
+    *reg_ptr = *reinterpret_cast<const uint64_t*>(reg.data.data());
+  }
+
+  return ZX_OK;
+}
+
 void PrintDebugRegisters(const zx_thread_state_debug_regs_t& regs) {
   FXL_LOG(INFO) << "Regs: " << std::endl
                 << "DR0: 0x" << std::hex << regs.dr[0] << std::endl

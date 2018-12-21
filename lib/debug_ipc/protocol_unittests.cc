@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <gtest/gtest.h>
+
 #include "garnet/lib/debug_ipc/agent_protocol.h"
 #include "garnet/lib/debug_ipc/client_protocol.h"
 #include "garnet/lib/debug_ipc/message_reader.h"
 #include "garnet/lib/debug_ipc/message_writer.h"
 #include "garnet/lib/debug_ipc/protocol_helpers.h"
-#include "gtest/gtest.h"
+#include "garnet/lib/debug_ipc/register_test_support.h"
 
 namespace debug_ipc {
 
@@ -537,24 +539,6 @@ TEST(Protocol, WriteMemoryReply) {
 
 using debug_ipc::RegisterID;
 
-std::vector<uint8_t> CreateData(size_t length) {
-  std::vector<uint8_t> data;
-  data.reserve(length);
-  // So that we get the number backwards (0x0102...).
-  uint8_t base = length;
-  for (size_t i = 0; i < length; i++) {
-    data.emplace_back(base - i);
-  }
-  return data;
-}
-
-debug_ipc::Register CreateRegister(RegisterID id, size_t length) {
-  debug_ipc::Register reg;
-  reg.id = id;
-  reg.data = CreateData(length);
-  return reg;
-}
-
 TEST(Protocol, ReadRegistersRequest) {
   ReadRegistersRequest initial;
   initial.process_koid = 0x1234;
@@ -572,10 +556,10 @@ TEST(Protocol, ReadRegistersReply) {
 
   RegisterCategory cat1;
   cat1.type = RegisterCategory::Type::kGeneral;
-  cat1.registers.push_back(CreateRegister(RegisterID::kARMv8_lr, 1));
-  cat1.registers.push_back(CreateRegister(RegisterID::kARMv8_pc, 2));
-  cat1.registers.push_back(CreateRegister(RegisterID::kARMv8_sp, 4));
-  cat1.registers.push_back(CreateRegister(RegisterID::kARMv8_cpsr, 8));
+  cat1.registers.push_back(CreateRegisterWithData(RegisterID::kARMv8_lr, 1));
+  cat1.registers.push_back(CreateRegisterWithData(RegisterID::kARMv8_pc, 2));
+  cat1.registers.push_back(CreateRegisterWithData(RegisterID::kARMv8_sp, 4));
+  cat1.registers.push_back(CreateRegisterWithData(RegisterID::kARMv8_cpsr, 8));
   initial.categories.push_back(cat1);
 
   // Sanity check
@@ -586,11 +570,11 @@ TEST(Protocol, ReadRegistersReply) {
 
   RegisterCategory cat2;
   cat2.type = RegisterCategory::Type::kVector;
-  cat2.registers.push_back(CreateRegister(RegisterID::kARMv8_x0, 1));
-  cat2.registers.push_back(CreateRegister(RegisterID::kARMv8_x1, 2));
-  cat2.registers.push_back(CreateRegister(RegisterID::kARMv8_x2, 4));
-  cat2.registers.push_back(CreateRegister(RegisterID::kARMv8_x3, 8));
-  cat2.registers.push_back(CreateRegister(RegisterID::kARMv8_x4, 16));
+  cat2.registers.push_back(CreateRegisterWithData(RegisterID::kARMv8_x0, 1));
+  cat2.registers.push_back(CreateRegisterWithData(RegisterID::kARMv8_x1, 2));
+  cat2.registers.push_back(CreateRegisterWithData(RegisterID::kARMv8_x2, 4));
+  cat2.registers.push_back(CreateRegisterWithData(RegisterID::kARMv8_x3, 8));
+  cat2.registers.push_back(CreateRegisterWithData(RegisterID::kARMv8_x4, 16));
   initial.categories.push_back(cat2);
 
   ReadRegistersReply second;
@@ -627,11 +611,12 @@ TEST(Protocol, WriteRegistersRequest) {
   WriteRegistersRequest initial;
   initial.process_koid = 0x1234;
   initial.thread_koid = 0x5678;
-  initial.registers.push_back(CreateRegister(RegisterID::kARMv8_x0, 1));
-  initial.registers.push_back(CreateRegister(RegisterID::kARMv8_x1, 2));
-  initial.registers.push_back(CreateRegister(RegisterID::kARMv8_x2, 4));
-  initial.registers.push_back(CreateRegister(RegisterID::kARMv8_x3, 8));
-  initial.registers.push_back(CreateRegister(RegisterID::kARMv8_x4, 16));
+  initial.registers.push_back(CreateRegisterWithData(RegisterID::kARMv8_x0, 1));
+  initial.registers.push_back(CreateRegisterWithData(RegisterID::kARMv8_x1, 2));
+  initial.registers.push_back(CreateRegisterWithData(RegisterID::kARMv8_x2, 4));
+  initial.registers.push_back(CreateRegisterWithData(RegisterID::kARMv8_x3, 8));
+  initial.registers.push_back(
+      CreateRegisterWithData(RegisterID::kARMv8_x4, 16));
 
   WriteRegistersRequest second;
   ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
