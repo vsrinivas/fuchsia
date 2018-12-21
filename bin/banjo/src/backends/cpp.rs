@@ -225,7 +225,7 @@ fn get_in_args(m: &ast::Method, wrappers: bool, ast: &BanjoAst) -> Result<Vec<St
     }).collect())
 }
 
-fn get_out_args(m: &ast::Method,  proxy: bool, ast: &BanjoAst) -> Result<(Vec<String>, bool), Error> {
+fn get_out_args(m: &ast::Method,  client: bool, ast: &BanjoAst) -> Result<(Vec<String>, bool), Error> {
     if m.attributes.has_attribute("Async") {
         return Ok((vec!["callback".to_string(), "cookie".to_string()], false));
     }
@@ -250,7 +250,7 @@ fn get_out_args(m: &ast::Method,  proxy: bool, ast: &BanjoAst) -> Result<(Vec<St
                 }
             },
             ast::Ty::Handle {..} => {
-                if proxy {
+                if client {
                     format!("out_{}->reset_and_get_address()", to_c_name(name))
                 } else {
                     format!("&out_{}2", to_c_name(name))
@@ -468,7 +468,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
           .map(|fns| fns.join("\n"))
     }
 
-    fn codegen_proxy_defs(&self, name: &str, methods: &Vec<ast::Method>, ast: &BanjoAst) -> Result<String, Error> {
+    fn codegen_client_defs(&self, name: &str, methods: &Vec<ast::Method>, ast: &BanjoAst) -> Result<String, Error> {
         methods.iter().map(|m| {
             let mut accum = String::new();
             accum.push_str(get_doc_comment(&m.attributes, 1).as_str());
@@ -513,7 +513,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
                                     protocol_docs = get_doc_comment(attributes, 0),
                                     constructor_definition = self.codegen_interface_constructor_def(name, attributes, methods, ast)?,
                                     protocol_definitions = self.codegen_protocol_defs(name, methods, ast)?,
-                                    proxy_definitions = self.codegen_proxy_defs(name, methods, ast)?))
+                                    client_definitions = self.codegen_client_defs(name, methods, ast)?))
         }).collect::<Result<Vec<_>, Error>>()
           .map(|x| x.join(""))
     }
@@ -526,7 +526,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
                                     protocol_docs = get_doc_comment(attributes, 0),
                                     constructor_definition = self.codegen_protocol_constructor_def(name, attributes, methods, ast)?,
                                     protocol_definitions = self.codegen_protocol_defs(name, methods, ast)?,
-                                    proxy_definitions = self.codegen_proxy_defs(name, methods, ast)?))
+                                    client_definitions = self.codegen_client_defs(name, methods, ast)?))
         }).collect::<Result<Vec<_>, Error>>()
           .map(|x| x.join(""))
     }

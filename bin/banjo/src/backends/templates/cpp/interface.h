@@ -14,11 +14,11 @@ private:
 {protocol_definitions}
 }};
 
-class {protocol_name}Proxy {{
+class {protocol_name}Client {{
 public:
-    {protocol_name}Proxy()
+    {protocol_name}Client()
         : ops_(nullptr), ctx_(nullptr) {{}}
-    {protocol_name}Proxy(const {protocol_name_snake}_t* proto)
+    {protocol_name}Client(const {protocol_name_snake}_t* proto)
         : ops_(proto->ops), ctx_(proto->ctx) {{}}
 
     void GetProto({protocol_name_snake}_t* proto) {{
@@ -33,7 +33,7 @@ public:
         ops_ = nullptr;
     }}
 
-{proxy_definitions}
+{client_definitions}
 private:
     {protocol_name_snake}_ops_t* ops_;
     void* ctx_;
