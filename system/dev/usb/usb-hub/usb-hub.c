@@ -227,11 +227,6 @@ static zx_status_t usb_hub_port_reset(void* ctx, uint32_t port) {
     if (status != ZX_OK) {
         zxlogf(ERROR, "usb_hub_wait_for_port USB_PORT_RESET failed for USB hub, port %d\n", port);
     }
-    status = usb_bus_device_reset(&hub->bus, hub->usb_device, port);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "usb_bus_device_reset failed, err: %d\n", status);
-        return status;
-    }
     return status;
 }
 

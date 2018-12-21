@@ -132,7 +132,7 @@ static zx_status_t xhci_reset_device(void* ctx, uint32_t hub_address, uint32_t d
     zxlogf(TRACE, "xhci_reset_device slot_id: %u port: %u hub_address: %u\n",
            device_id, port, hub_address);
 
-    return usb_bus_interface_reset_port(&xhci->bus, hub_address, port);
+    return usb_bus_interface_reset_port(&xhci->bus, hub_address, port, /* enumerating */ false);
 }
 
 static size_t xhci_get_max_transfer_size(void* ctx, uint32_t device_id, uint8_t ep_address) {

@@ -74,12 +74,12 @@ static zx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
 
     xhci_endpoint_t* ep = &slot->eps[0];
 
-    bool device_resetting = slot->sc != nullptr;
+    bool enumerating = slot->sc == nullptr;
     zx_status_t status;
 
     // Allocate the buffers if we haven't already. They will already exist in the case of a
     // device reset.
-    if (!device_resetting) {
+    if (enumerating) {
         // allocate a read-only DMA buffer for device context
         size_t dc_length = xhci->context_size * XHCI_NUM_EPS;
         status = io_buffer_init(&slot->buffer, xhci->bti_handle, dc_length,
@@ -193,8 +193,8 @@ static zx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
             break;
         } else if (status != ZX_ERR_TIMED_OUT) {
             // Don't want to get into a reset loop.
-            if (!device_resetting) {
-                usb_bus_interface_reset_port(&xhci->bus, hub_address, port);
+            if (enumerating) {
+                usb_bus_interface_reset_port(&xhci->bus, hub_address, port, enumerating);
             }
             status = xhci_send_command(xhci, TRB_CMD_ADDRESS_DEVICE, icc_phys,
                                       ((slot_id << TRB_SLOT_ID_START) | TRB_ADDRESS_DEVICE_BSR));

@@ -41,7 +41,8 @@ static zx_status_t bus_remove_device(void* ctx, uint32_t device_id) {
     return ZX_OK;
 }
 
-static zx_status_t bus_reset_hub_port(void* ctx, uint32_t hub_id, uint32_t port) {
+static zx_status_t bus_reset_hub_port(void* ctx, uint32_t hub_id, uint32_t port,
+                                      bool enumerating) {
     usb_bus_t* bus = ctx;
     if (hub_id >= bus->max_device_count) {
         zxlogf(ERROR, "hub_id out of range in usb_bus_reset_hub_port\n");
@@ -56,7 +57,16 @@ static zx_status_t bus_reset_hub_port(void* ctx, uint32_t hub_id, uint32_t port)
         zxlogf(ERROR, "hub interface not set in usb_bus_reset_hub_port\n");
         return ZX_ERR_BAD_STATE;
     }
-    return usb_hub_interface_reset_port(&device->hub_intf, port);
+    zx_status_t status = usb_hub_interface_reset_port(&device->hub_intf, port);
+    if (status != ZX_OK) {
+        return status;
+    }
+    // If we are calling reset in the middle of enumerating,
+    // the XHCI would already be trying to address the device next.
+    if (!enumerating) {
+        status = usb_hci_hub_device_reset(&bus->hci, hub_id, port);
+    }
+    return status;
 }
 
 static zx_status_t bus_reinitialize_device(void* ctx, uint32_t device_id) {
@@ -139,19 +149,6 @@ static zx_status_t bus_device_removed(void* ctx, zx_device_t* hub_device, uint32
     return usb_hci_hub_device_removed(&bus->hci, hub_id, port);
 }
 
-static zx_status_t bus_device_reset(void* ctx, zx_device_t* hub_device, uint32_t port) {
-    usb_bus_t* bus = ctx;
-    uint32_t hub_id;
-    if (bus_get_device_id(hub_device, &hub_id) != ZX_OK) {
-        return ZX_ERR_INTERNAL;
-    }
-    zx_status_t status = usb_hci_hub_device_reset(&bus->hci, hub_id, port);
-    if (status != ZX_OK) {
-        return status;
-    }
-    return ZX_OK;
-}
-
 static zx_status_t bus_set_hub_interface(void* ctx, zx_device_t* usb_device,
                                          const usb_hub_interface_t* hub) {
     usb_bus_t* bus = ctx;
@@ -173,7 +170,6 @@ static usb_bus_protocol_ops_t _bus_protocol = {
     .configure_hub = bus_configure_hub,
     .device_added = bus_device_added,
     .device_removed = bus_device_removed,
-    .device_reset = bus_device_reset,
     .set_hub_interface = bus_set_hub_interface,
 };
 
