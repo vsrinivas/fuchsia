@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include <ddktl/device.h>
-#include <ddk/protocol/platform/device.h>
-#include <ddktl/protocol/empty-protocol.h>
 #include <ddk/protocol/i2c.h>
-#include <zircon/backlight/c/fidl.h>
+#include <ddk/protocol/platform/device.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/empty-protocol.h>
+#include <fuchsia/hardware/backlight/c/fidl.h>
 
 namespace ti {
 

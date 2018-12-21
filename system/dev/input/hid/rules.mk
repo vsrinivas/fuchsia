@@ -13,7 +13,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/hid-parser-lib.cpp \
     $(LOCAL_DIR)/hid.c
 
-MODULE_FIDL_LIBS := system/fidl/zircon-input
+MODULE_FIDL_LIBS := system/fidl/fuchsia-hardware-input
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \

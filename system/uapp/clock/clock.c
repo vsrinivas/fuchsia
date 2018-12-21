@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zircon/rtc/c/fidl.h>
+#include <fuchsia/hardware/rtc/c/fidl.h>
 #include <lib/fdio/util.h>
 
 #include <ctype.h>
@@ -68,9 +68,9 @@ int print_rtc(const char *path) {
     if (status != ZX_OK) {
         return -1;
     }
-    zircon_rtc_Time rtc;
+    fuchsia_hardware_rtc_Time rtc;
 
-    status = zircon_rtc_DeviceGet(handle, &rtc);
+    status = fuchsia_hardware_rtc_DeviceGet(handle, &rtc);
     if (status != ZX_OK) {
         return -1;
     }
@@ -86,7 +86,7 @@ int print_rtc(const char *path) {
 }
 
 int set_rtc(const char *path, const char* time) {
-    zircon_rtc_Time rtc;
+    fuchsia_hardware_rtc_Time rtc;
     int n = sscanf(
         time,
         "%04hd-%02hhd-%02hhdT%02hhd:%02hhd:%02hhd",
@@ -108,7 +108,7 @@ int set_rtc(const char *path, const char* time) {
     }
 
     zx_status_t set_status;
-    status = zircon_rtc_DeviceSet(handle, &rtc, &set_status);
+    status = fuchsia_hardware_rtc_DeviceSet(handle, &rtc, &set_status);
     if (status != ZX_OK) {
         return status;
     }

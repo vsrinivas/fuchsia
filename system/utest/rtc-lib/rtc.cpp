@@ -6,10 +6,9 @@
 #include <librtc.h>
 #include <stdint.h>
 
-zircon_rtc_Time make_rtc(uint16_t year, uint8_t month,
-               uint8_t day, uint8_t hours,
-               uint8_t minutes, uint8_t seconds) {
-    return zircon_rtc_Time { seconds, minutes, hours, day, month, year };
+fuchsia_hardware_rtc_Time make_rtc(uint16_t year, uint8_t month, uint8_t day, uint8_t hours,
+                                   uint8_t minutes, uint8_t seconds) {
+    return fuchsia_hardware_rtc_Time{seconds, minutes, hours, day, month, year};
 }
 
 bool santitize_rtc_test() {

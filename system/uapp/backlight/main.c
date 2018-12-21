@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <fuchsia/hardware/backlight/c/fidl.h>
 #include <lib/fdio/unsafe.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <zircon/backlight/c/fidl.h>
 
 static void usage(char* argv[]) {
     printf("Usage: %s [--read|--off|<brightness-val>]\n", argv[0]);
@@ -34,8 +34,8 @@ int main(int argc, char* argv[]) {
     zx_handle_t channel = fdio_unsafe_borrow_channel(io);
 
     if (strcmp(argv[1], "--read") == 0) {
-        zircon_backlight_State state;
-        zx_status_t status = zircon_backlight_DeviceGetState(channel, &state);
+        fuchsia_hardware_backlight_State state;
+        zx_status_t status = fuchsia_hardware_backlight_DeviceGetState(channel, &state);
         if (status != ZX_OK) {
             printf("Get backlight state failed %d\n", status);
             return -1;
@@ -63,8 +63,8 @@ int main(int argc, char* argv[]) {
         on = true;
     }
 
-    zircon_backlight_State state = { .on = on, .brightness = (uint8_t) brightness };
-    zx_status_t status = zircon_backlight_DeviceSetState(channel, &state);
+    fuchsia_hardware_backlight_State state = {.on = on, .brightness = (uint8_t)brightness};
+    zx_status_t status = fuchsia_hardware_backlight_DeviceSetState(channel, &state);
     if (status != ZX_OK) {
         printf("Set brightness failed %d\n", status);
         return -1;
