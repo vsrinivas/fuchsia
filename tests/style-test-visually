@@ -51,6 +51,12 @@ people to come to the
 aid of their country and world.
 EOF
 
+style::cat --background cyan --color black --indent 4 << EOF
+Now is the time for all good
+people to come to the
+aid of their country and world.
+EOF
+
 style::info 'INFO: Info here'
 style::warning 'WARNING: Watch out!'
 style::error 'ERROR: What went wrong now?'

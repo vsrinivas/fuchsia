@@ -1,0 +1,40 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Automated tests for //scripts/devshell/lib/common_term_styles.sh
+#
+# Usage: common_term_styles-tests
+#
+#   Returns: Error status if actual output does not match expected.
+
+TEST_NAME="$(basename "${BASH_SOURCE[0]}")"
+TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+
+verbose() {
+  echo
+  echo "======================================================="
+  echo
+  echo "$@"
+  echo
+  "$@"
+  echo
+}
+
+test_main() {
+  local expected_out="${TESTS_DIR}/expected/${TEST_NAME}.out"
+  local expected_err="${TESTS_DIR}/expected/${TEST_NAME}.err"
+  local capture_dir=$(mktemp -d)
+  local actual_out="${capture_dir}/${TEST_NAME}.out"
+  local actual_err="${capture_dir}/${TEST_NAME}.err"
+  ${TESTS_DIR}/common_term_styles-test-visually 1> "${actual_out}" 2> "${actual_err}"
+
+  local status=0
+  verbose diff "${expected_out}" "${actual_out}" || status=$?
+  verbose diff "${expected_err}" "${actual_err}" || status=$?
+
+  return $status
+}
+
+test_main "$@" || return $?

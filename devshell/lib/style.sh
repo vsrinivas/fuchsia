@@ -11,6 +11,11 @@
 # with underline. The text is written to stderr instead of the default
 # stdout.
 #
+#   style::cat --color black --background cyan --indent 4 <<EOF
+#   Multi-line text with expanded bash ${variables}
+#   can be styled and indented.
+#   EOF
+#
 # style::info, style::warning, and style::error use echo to stderr
 # with default color and bold text. For example:
 #
@@ -98,6 +103,7 @@ style options include:
   --bold, --faint, --underline, etc.
   --color <color_name>
   --background <color_name>
+  --indent <spaces_count>
   --stderr (output to standard error instead of standard out)
 
   echo "This is \$(style::echo -f --bold LOUD) and soft."
@@ -168,7 +174,9 @@ and then the command's normal parameters."
   local styles
   local semicolon
   local name
-  local -i code
+  local -i indent=0
+  local prefix
+  local -i code=0
 
   while $get_flags; do
     case "$1" in
@@ -189,6 +197,10 @@ and then the command's normal parameters."
         shift; name="$1"; shift
         styles="${styles}${semicolon}$(style::background $name || exit $?)" || return $?
         semicolon=';'
+        ;;
+      --indent)
+        shift; indent=$1; shift
+        prefix="$(printf "%${indent}s")"
         ;;
       --*)
         name="${1:2}"
@@ -216,7 +228,14 @@ and then the command's normal parameters."
 
   if [ ! -t ${fd} ] && ${STYLE_TO_TTY_ONLY}; then
     # Output is not to a TTY so don't stylize
-    >&${fd} "${command}" "$@" || return $?
+    if [[ "${prefix}" == "" ]]; then
+      >&${fd} "${command}" "$@" || status=$?
+    else
+      >&${fd} "${command}" "$@" | sed "s/^/${prefix}/"
+      if (( ${PIPESTATUS[0]} != 0 )); then
+        status=${PIPESTATUS[0]}
+      fi
+    fi
     return 0
   fi
 
@@ -225,6 +244,9 @@ and then the command's normal parameters."
 
   # Add placeholder (.) so command substitution doesn't strip trailing newlines
   text="$("${command}" "$@" || exit $?;echo -n '.')" || return $?
+  if [[ "${prefix}" != "" ]]; then
+    text="$(echo "${text}" | sed "s/^/${prefix}/;\$s/^${prefix}[.]\$/./")"
+  fi
 
   local -i len=$((${#text}-2))
   if [[ "${text:$len:1}" == $'\n' ]]; then

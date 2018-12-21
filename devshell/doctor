@@ -8,42 +8,93 @@
 ## usage: fx doctor
 
 # The goal of this script is to detect common issues with a Fuchsia
-# checkout. For example, on OS X the xcode command line tool
+# checkout and potential conflicts in the user's shell environment.
+#
+# For example, on OS X the xcode command line tool
 # installation often lapses. Ensuring that `xcode select --install` is
 # run as part of a checkout or build is problematic: the step involves
 # manual input. Detecting that it needs to be run, however, is
 # perfectly mechanizable.
+#
+# For potential issues in the user's shell initialization script
+# (such as ~/.bashrc), this script will also run a shell checkup
+# script (for example, devshell/lib/bashrc_checkup.sh)
+# under the user's bash "${SHELL}" (if different from /bin/bash),
+# load the user's shell settings, and check for any known issues.
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
-fx-config-read
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+source "${FUCHSIA_DIR}/scripts/devshell/lib/style.sh" || exit $?
+source "${FUCHSIA_DIR}/scripts/devshell/lib/common_term_styles.sh" || exit $?
 
-function dr-mac {
-    # TODO actually check the need for this
-    echo "A common issue with Fuchsia development on macOS is needing to"
-    echo "re-run the \`xcode-select install\` step. The typical symptom is"
-    echo "failure to find system C or C++ headers after a reboot or update."
-    return
+fx-config-read || exit $?
+
+dr_mac() {
+  local status=0
+  # TODO actually check the need for this
+
+  info "Make sure you've run \`xcode-select install\`"
+
+  details << EOF
+A common issue with Fuchsia development on macOS is needing to
+re-run the \`xcode-select install\` step. The typical symptom is
+failure to find system C or C++ headers after a reboot or update.
+
+See $(link 'https://fuchsia.googlesource.com/docs/getting_started.md#macos')
+for more details.
+EOF
+
+  return ${status}
 }
 
-function dr-linux {
-    return
+dr_linux() {
+  local status=0
+  return ${status}
 }
 
-function dr {
-    return
+shell_checkup() {
+  local status=0
+
+  # If the user is using bash, their default interactive "${SHELL}"
+  # may differ from the script-standard "/bin/bash", and their ~/.bashrc
+  # may depend on features of their shell that are not present in
+  # /bin/bash, so launch the shell checkup script using "${SHELL}".
+  #
+  # For example, since MacOS includes only bash version 3, Homebrew users
+  # may install bash 4 in /usr/local/bin/bash, and then select
+  # bash 4 by adding it to /etc/shells, and running the "chsh" command.
+
+  local shell_type="$(basename "${SHELL}")"
+  case "${shell_type}" in
+    bash)
+      local current_debug_flag="$(echo $-|sed -n 's/.*x.*/-x/p')"
+      eval "${SHELL}" "${current_debug_flag}" "${FUCHSIA_DIR}/scripts/devshell/lib/bashrc_checkup.sh" || status=$?
+      ;;
+    *)
+      info "No shell checkup for ${shell_type}"
+      ;;
+  esac
+
+  return ${status}
 }
 
-function main {
-    case $(uname) in
-        Darwin)
-            dr-mac
-            ;;
-        Linux)
-            dr-linux
-            ;;
-    esac
-    dr
-    return
+dr_all() {
+  local status=0
+  shell_checkup || status=$?
+  return ${status}
 }
 
-main "$@"
+main() {
+  local status=0
+  case $(uname) in
+    Darwin)
+      dr_mac || status=$?
+      ;;
+    Linux)
+      dr_linux || status=$?
+      ;;
+  esac
+  dr_all || status=$?
+  return ${status}
+}
+
+main "$@" || exit $?
