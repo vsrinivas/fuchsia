@@ -457,7 +457,7 @@ static zx_status_t load_device_tree(const int dtb_fd, const GuestConfig& cfg,
     status = add_memory_entry(dtb, memory_off, range.addr, range.size);
   };
   for (const MemorySpec& spec : cfg.memory()) {
-    dev_mem.YieldInverseRange(spec.addr, spec.len, yield);
+    dev_mem.YieldInverseRange(spec.base, spec.size, yield);
     if (status != ZX_OK) {
       return status;
     }

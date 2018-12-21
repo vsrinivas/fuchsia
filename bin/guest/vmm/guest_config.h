@@ -32,8 +32,8 @@ enum class MemoryPolicy {
 };
 
 struct MemorySpec {
-  zx_gpaddr_t addr;
-  size_t len;
+  zx_gpaddr_t base;
+  size_t size;
   MemoryPolicy policy;
 };
 

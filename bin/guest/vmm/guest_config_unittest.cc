@@ -164,8 +164,8 @@ TEST_F(GuestConfigParserTest, Memory_1024k) {
   ASSERT_EQ(ZX_OK, ParseArg("--memory=1024k"));
   const auto& memory = config_.memory();
   EXPECT_EQ(1ul, memory.size());
-  EXPECT_EQ(0ul, memory[0].addr);
-  EXPECT_EQ(1ul << 20, memory[0].len);
+  EXPECT_EQ(0ul, memory[0].base);
+  EXPECT_EQ(1ul << 20, memory[0].size);
   EXPECT_EQ(MemoryPolicy::GUEST_CACHED, memory[0].policy);
 }
 
@@ -173,8 +173,8 @@ TEST_F(GuestConfigParserTest, Memory_2M) {
   ASSERT_EQ(ZX_OK, ParseArg("--memory=2M"));
   const auto& memory = config_.memory();
   EXPECT_EQ(1ul, memory.size());
-  EXPECT_EQ(0ul, memory[0].addr);
-  EXPECT_EQ(2ul << 20, memory[0].len);
+  EXPECT_EQ(0ul, memory[0].base);
+  EXPECT_EQ(2ul << 20, memory[0].size);
   EXPECT_EQ(MemoryPolicy::GUEST_CACHED, memory[0].policy);
 }
 
@@ -182,8 +182,8 @@ TEST_F(GuestConfigParserTest, Memory_4G) {
   ASSERT_EQ(ZX_OK, ParseArg("--memory=4G"));
   const auto& memory = config_.memory();
   EXPECT_EQ(1ul, memory.size());
-  EXPECT_EQ(0ul, memory[0].addr);
-  EXPECT_EQ(4ul << 30, memory[0].len);
+  EXPECT_EQ(0ul, memory[0].base);
+  EXPECT_EQ(4ul << 30, memory[0].size);
   EXPECT_EQ(MemoryPolicy::GUEST_CACHED, memory[0].policy);
 }
 
@@ -191,8 +191,8 @@ TEST_F(GuestConfigParserTest, Memory_AddressAndSize) {
   ASSERT_EQ(ZX_OK, ParseArg("--memory=ffff,4G"));
   const auto& memory = config_.memory();
   EXPECT_EQ(1ul, memory.size());
-  EXPECT_EQ(0xfffful, memory[0].addr);
-  EXPECT_EQ(4ul << 30, memory[0].len);
+  EXPECT_EQ(0xfffful, memory[0].base);
+  EXPECT_EQ(4ul << 30, memory[0].size);
   EXPECT_EQ(MemoryPolicy::GUEST_CACHED, memory[0].policy);
 }
 
@@ -200,8 +200,8 @@ TEST_F(GuestConfigParserTest, Memory_HostCached) {
   ASSERT_EQ(ZX_OK, ParseArg("--memory=eeee,2G,cached"));
   const auto& memory = config_.memory();
   EXPECT_EQ(1ul, memory.size());
-  EXPECT_EQ(0xeeeeul, memory[0].addr);
-  EXPECT_EQ(2ul << 30, memory[0].len);
+  EXPECT_EQ(0xeeeeul, memory[0].base);
+  EXPECT_EQ(2ul << 30, memory[0].size);
   EXPECT_EQ(MemoryPolicy::HOST_CACHED, memory[0].policy);
 }
 
@@ -209,8 +209,8 @@ TEST_F(GuestConfigParserTest, Memory_HostDevice) {
   ASSERT_EQ(ZX_OK, ParseArg("--memory=dddd,1G,device"));
   const auto& memory = config_.memory();
   EXPECT_EQ(1ul, memory.size());
-  EXPECT_EQ(0xddddul, memory[0].addr);
-  EXPECT_EQ(1ul << 30, memory[0].len);
+  EXPECT_EQ(0xddddul, memory[0].base);
+  EXPECT_EQ(1ul << 30, memory[0].size);
   EXPECT_EQ(MemoryPolicy::HOST_DEVICE, memory[0].policy);
 }
 
@@ -221,11 +221,11 @@ TEST_F(GuestConfigParserTest, Memory_MultipleEntries) {
             parser_.ParseArgcArgv(arraysize(argv), const_cast<char**>(argv)));
   const auto& memory = config_.memory();
   EXPECT_EQ(2ul, memory.size());
-  EXPECT_EQ(0xf0000000ul, memory[0].addr);
-  EXPECT_EQ(1ul << 20, memory[0].len);
+  EXPECT_EQ(0xf0000000ul, memory[0].base);
+  EXPECT_EQ(1ul << 20, memory[0].size);
   EXPECT_EQ(MemoryPolicy::GUEST_CACHED, memory[0].policy);
-  EXPECT_EQ(0xfffffffful, memory[1].addr);
-  EXPECT_EQ(2ul << 20, memory[1].len);
+  EXPECT_EQ(0xfffffffful, memory[1].base);
+  EXPECT_EQ(2ul << 20, memory[1].size);
   EXPECT_EQ(MemoryPolicy::GUEST_CACHED, memory[1].policy);
 }
 

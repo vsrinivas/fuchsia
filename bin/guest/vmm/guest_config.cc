@@ -243,20 +243,20 @@ static zx_status_t parse_memory(const std::string& value, size_t* out) {
 }
 
 static zx_status_t parse_memory_spec(const std::string& spec, MemorySpec* out) {
-  out->addr = 0;
+  out->base = 0;
   out->policy = MemoryPolicy::GUEST_CACHED;
   std::vector<std::string> tokens = split(spec, ',');
   if (tokens.size() == 1) {
-    return parse_memory(tokens[0], &out->len);
+    return parse_memory(tokens[0], &out->size);
   }
   if (tokens.size() > 3) {
     return ZX_ERR_INVALID_ARGS;
   }
-  zx_status_t status = parse_number(tokens[0], &out->addr, fxl::Base::k16);
+  zx_status_t status = parse_number(tokens[0], &out->base, fxl::Base::k16);
   if (status != ZX_OK) {
     return status;
   }
-  status = parse_memory(tokens[1], &out->len);
+  status = parse_memory(tokens[1], &out->size);
   if (status != ZX_OK) {
     return status;
   }
@@ -313,7 +313,7 @@ GuestConfigParser::GuestConfigParser(GuestConfig* cfg)
 
 void GuestConfigParser::SetDefaults() {
   if (cfg_->memory_.empty()) {
-    cfg_->memory_.push_back({.len = 1ul << 30});
+    cfg_->memory_.push_back({.size = 1ul << 30});
   }
 }
 

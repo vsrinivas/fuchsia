@@ -77,7 +77,7 @@ zx_status_t Guest::Init(const std::vector<MemorySpec>& memory) {
     zx::vmo vmo;
     switch (spec.policy) {
       case MemoryPolicy::GUEST_CACHED:
-        status = zx::vmo::create(spec.len, ZX_VMO_NON_RESIZABLE, &vmo);
+        status = zx::vmo::create(spec.size, ZX_VMO_NON_RESIZABLE, &vmo);
         if (status != ZX_OK) {
           FXL_LOG(ERROR) << "Failed to create VMO " << status;
           return status;
@@ -92,7 +92,7 @@ zx_status_t Guest::Init(const std::vector<MemorySpec>& memory) {
             return status;
           }
         }
-        status = zx::vmo::create_physical(root_resource, 0, spec.len, &vmo);
+        status = zx::vmo::create_physical(root_resource, 0, spec.size, &vmo);
         if (status != ZX_OK) {
           FXL_LOG(ERROR) << "Failed to create physical VMO " << status;
           return status;
@@ -110,7 +110,7 @@ zx_status_t Guest::Init(const std::vector<MemorySpec>& memory) {
     }
 
     zx_gpaddr_t addr;
-    status = vmar_.map(spec.addr, vmo, 0, spec.len,
+    status = vmar_.map(spec.base, vmo, 0, spec.size,
                        ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_PERM_EXECUTE |
                            ZX_VM_SPECIFIC | ZX_VM_FLAG_REQUIRE_NON_RESIZABLE,
                        &addr);

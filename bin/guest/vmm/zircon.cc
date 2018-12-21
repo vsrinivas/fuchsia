@@ -213,7 +213,7 @@ static zx_status_t build_data_zbi(const GuestConfig& cfg,
     });
   };
   for (const MemorySpec& spec : cfg.memory()) {
-    dev_mem.YieldInverseRange(spec.addr, spec.len, yield);
+    dev_mem.YieldInverseRange(spec.base, spec.size, yield);
   }
 
   // Zircon only supports a limited number of peripheral ranges so for any

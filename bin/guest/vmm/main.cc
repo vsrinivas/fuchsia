@@ -121,16 +121,16 @@ int main(int argc, char** argv) {
   DevMem dev_mem;
   for (const MemorySpec& spec : cfg.memory()) {
     // Avoid a collision between static and dynamic address assignment.
-    if (spec.addr + spec.len > kFirstDynamicDeviceAddr) {
+    if (spec.base + spec.size > kFirstDynamicDeviceAddr) {
       FXL_LOG(ERROR) << "Requested memory should be less than "
                      << kFirstDynamicDeviceAddr;
       return ZX_ERR_INVALID_ARGS;
     }
     // Add device memory range.
     if (spec.policy == MemoryPolicy::HOST_DEVICE &&
-        !dev_mem.AddRange(spec.addr, spec.len)) {
+        !dev_mem.AddRange(spec.base, spec.size)) {
       FXL_LOG(ERROR) << "Failed to add device memory at 0x" << std::hex
-                     << spec.addr;
+                     << spec.base;
       return ZX_ERR_INTERNAL;
     }
   }
