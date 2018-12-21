@@ -106,7 +106,7 @@ $ fx build
 Then boot. With QEMU:
 
 ```sh
-$ fx run -k -N
+$ fx run -- -k -N
 ```
 
 Or on h/w (augment with options specific to your h/w):
