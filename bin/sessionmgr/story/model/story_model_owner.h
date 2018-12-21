@@ -34,10 +34,13 @@ class StoryModelStorage;
 // This class is not thread-safe.
 class StoryModelOwner {
  public:
+  // |story_name| is applied to StoryModel.name.
+  //
   // Uses |executor| to schedule internal mutation tasks. Delegates mutation
   // commands to and reacts to observation of applied mutations from
   // |model_storage|.
-  explicit StoryModelOwner(fit::executor* executor,
+  explicit StoryModelOwner(const std::string& story_name,
+                           fit::executor* executor,
                            std::unique_ptr<StoryModelStorage> model_storage);
   ~StoryModelOwner();
 

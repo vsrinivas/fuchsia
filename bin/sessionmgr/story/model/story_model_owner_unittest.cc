@@ -35,7 +35,7 @@ class TestPersistenceSystem : public StoryModelStorage {
 
     // Store the arguments we got.
     ExecuteCall call{.commands = std::move(commands),
-                    .completer = std::move(bridge.completer)};
+                     .completer = std::move(bridge.completer)};
     calls.push_back(std::move(call));
 
     return bridge.consumer.promise();
@@ -48,11 +48,11 @@ class StoryModelOwnerTest : public ::gtest::TestLoopFixture {
  public:
   StoryModelOwnerTest() : TestLoopFixture() { ResetExecutor(); }
 
-  std::unique_ptr<StoryModelOwner> Create() {
+  std::unique_ptr<StoryModelOwner> Create(const std::string& story_name) {
     auto model_storage = std::make_unique<TestPersistenceSystem>();
     model_storage_ = model_storage.get();
 
-    auto owner = std::make_unique<StoryModelOwner>(executor_.get(),
+    auto owner = std::make_unique<StoryModelOwner>(story_name, executor_.get(),
                                                    std::move(model_storage));
     return owner;
   }
@@ -69,7 +69,7 @@ class StoryModelOwnerTest : public ::gtest::TestLoopFixture {
 TEST_F(StoryModelOwnerTest, SuccessfulMutate) {
   // Show that a single mutation flows through the StoryModelOwner to
   // StoryModelStorage, and then applies the resulting commands.
-  auto owner = Create();
+  auto owner = Create("test_name");
 
   auto mutator = owner->NewMutator();
   bool done{false};
@@ -84,10 +84,8 @@ TEST_F(StoryModelOwnerTest, SuccessfulMutate) {
   ASSERT_EQ(1lu, model_storage()->calls.size());
   ASSERT_EQ(1lu, model_storage()->calls[0].commands.size());
   EXPECT_TRUE(model_storage()->calls[0].commands[0].is_set_visibility_state());
-  EXPECT_EQ(StoryVisibilityState::IMMERSIVE, model_storage()
-                                                  ->calls[0]
-                                                  .commands[0]
-                                                  .set_visibility_state());
+  EXPECT_EQ(StoryVisibilityState::IMMERSIVE,
+            model_storage()->calls[0].commands[0].set_visibility_state());
 
   // Complete the pending persistence call.
   model_storage()->calls[0].completer.complete_ok();
@@ -98,12 +96,13 @@ TEST_F(StoryModelOwnerTest, SuccessfulMutate) {
   // The existing model hasn't changed, because the StoryModelStorage
   // has not heard back from its storage that the mutation occurred.
   auto observer = owner->NewObserver();
-  EXPECT_EQ(StoryVisibilityState::DEFAULT, *observer->model().visibility_state());
+  EXPECT_EQ("test_name", *observer->model().name());
+  EXPECT_EQ(StoryVisibilityState::DEFAULT,
+            *observer->model().visibility_state());
 
   // Now dispatch mutations from the persistence system, and we should observe
   // that ApplyMutations() is invoked.
-  model_storage()->Observe(
-      std::move(model_storage()->calls[0].commands));
+  model_storage()->Observe(std::move(model_storage()->calls[0].commands));
 
   // And the new model value that ApplyMutations returned should be reflected in
   // the owner.
@@ -112,7 +111,7 @@ TEST_F(StoryModelOwnerTest, SuccessfulMutate) {
 }
 
 TEST_F(StoryModelOwnerTest, FailedMutate) {
-  auto owner = Create();
+  auto owner = Create("test");
   auto mutator = owner->NewMutator();
   bool task_executed{false};
   bool saw_error{false};
@@ -132,7 +131,7 @@ TEST_F(StoryModelOwnerTest, FailedMutate) {
 TEST_F(StoryModelOwnerTest, AbandonedMutate) {
   // If for some reason the underlying mutation is abandoned, we should observe
   // an error.
-  auto owner = Create();
+  auto owner = Create("test");
   auto mutator = owner->NewMutator();
   bool task_executed{false};
   bool saw_error{false};
@@ -154,7 +153,7 @@ TEST_F(StoryModelOwnerTest, AbandonedMutate) {
 TEST_F(StoryModelOwnerTest, MutatorLifecycle_OwnerDestroyed) {
   // When the StoryModelOwner is destroyed but someone is still holding onto a
   // StoryMutator that mutator should return an error on Execute().
-  auto owner = Create();
+  auto owner = Create("test");
   auto mutator = owner->NewMutator();
   owner.reset();
   bool task_executed{false};
@@ -172,7 +171,7 @@ TEST_F(StoryModelOwnerTest, MutatorLifecycle_OwnerDestroyed) {
 
 TEST_F(StoryModelOwnerTest, ObserversAreNotified) {
   // One can create an observer and learn of the new state.
-  auto owner = Create();
+  auto owner = Create("test");
   auto mutator = owner->NewMutator();
   auto observer = owner->NewObserver();
 
@@ -206,7 +205,7 @@ TEST_F(StoryModelOwnerTest, ObserversAreNotified) {
 TEST_F(StoryModelOwnerTest, ObserversLifecycle_ClientDestroyed) {
   // When the client destroys its observer object, it no longer receives
   // updates.
-  auto owner = Create();
+  auto owner = Create("test");
   auto mutator = owner->NewMutator();
   auto observer = owner->NewObserver();
 
@@ -227,7 +226,7 @@ TEST_F(StoryModelOwnerTest, ObserversLifecycle_ClientDestroyed) {
 TEST_F(StoryModelOwnerTest, ObserversLifecycle_OwnerDestroyed) {
   // When the StoryModelOwner is destroyed, clients can learn of the fact by
   // using a fit::defer on the listener callback.
-  auto owner = Create();
+  auto owner = Create("test");
   auto mutator = owner->NewMutator();
   auto observer = owner->NewObserver();
 

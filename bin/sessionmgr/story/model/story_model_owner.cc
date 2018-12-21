@@ -87,12 +87,14 @@ class StoryModelOwner::Observer : public StoryObserver {
 };
 
 StoryModelOwner::StoryModelOwner(
+    const std::string& story_name,
     fit::executor* executor,
     std::unique_ptr<StoryModelStorage> model_storage)
     : model_storage_(std::move(model_storage)),
       weak_ptr_factory_(this),
       executor_(executor) {
   FXL_CHECK(model_storage_ != nullptr);
+  model_.mutable_name()->reset(story_name);
   InitializeModelDefaults(&model_);
   model_storage_->SetObserveCallback(
       [this](std::vector<StoryModelMutation> commands) {
