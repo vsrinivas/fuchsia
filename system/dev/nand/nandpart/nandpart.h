@@ -26,7 +26,7 @@ using DeviceType = ddk::Device<NandPartDevice, ddk::GetSizable, ddk::GetProtocol
                                ddk::Unbindable>;
 
 class NandPartDevice : public DeviceType,
-                       public ddk::NandProtocol<NandPartDevice>,
+                       public ddk::NandProtocol<NandPartDevice, ddk::base_protocol>,
                        public ddk::BadBlockProtocol<NandPartDevice> {
 public:
     // Spawns device nodes based on parent node.

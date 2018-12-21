@@ -50,7 +50,7 @@ class TuneWindow;
 class MtkSdmmc;
 using DeviceType = ddk::Device<MtkSdmmc>;
 
-class MtkSdmmc : public DeviceType, public ddk::SdmmcProtocol<MtkSdmmc> {
+class MtkSdmmc : public DeviceType, public ddk::SdmmcProtocol<MtkSdmmc, ddk::base_protocol> {
 
 public:
     static zx_status_t Create(zx_device_t* parent);

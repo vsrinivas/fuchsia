@@ -19,7 +19,7 @@ class ImxI2cDevice;
 using DeviceType = ddk::Device<ImxI2cDevice, ddk::Unbindable>;
 
 class ImxI2cDevice : public DeviceType,
-                     public ddk::I2cImplProtocol<ImxI2cDevice> {
+                     public ddk::I2cImplProtocol<ImxI2cDevice, ddk::base_protocol> {
 public:
     ImxI2cDevice(zx_device_t* parent, int dev_cnt)
         : DeviceType(parent), dev_cnt_(dev_cnt) {}

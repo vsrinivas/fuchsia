@@ -20,7 +20,7 @@ class SimpleDisplay;
 using DeviceType = ddk::Device<SimpleDisplay, ddk::Unbindable>;
 
 class SimpleDisplay : public DeviceType,
-                      public ddk::DisplayControllerImplProtocol<SimpleDisplay> {
+                      public ddk::DisplayControllerImplProtocol<SimpleDisplay, ddk::base_protocol> {
 public:
     SimpleDisplay(zx_device_t* parent, ddk::MmioBuffer framebuffer_mmio,
                   uint32_t width, uint32_t height,

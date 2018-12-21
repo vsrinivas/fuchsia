@@ -28,7 +28,7 @@ using DeviceType = ddk::Device<AmlClock,
                                ddk::Ioctlable>;
 
 class AmlClock : public DeviceType,
-                 public ddk::ClkProtocol<AmlClock> {
+                 public ddk::ClkProtocol<AmlClock, ddk::base_protocol> {
 
 public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlClock);

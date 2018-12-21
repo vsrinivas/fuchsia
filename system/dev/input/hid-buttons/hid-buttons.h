@@ -28,7 +28,7 @@ class HidButtonsDevice;
 using DeviceType = ddk::Device<HidButtonsDevice, ddk::Unbindable>;
 
 class HidButtonsDevice : public DeviceType,
-                         public ddk::HidbusProtocol<HidButtonsDevice> {
+                         public ddk::HidbusProtocol<HidButtonsDevice, ddk::base_protocol> {
 public:
     explicit HidButtonsDevice(zx_device_t* device)
         : DeviceType(device) {}

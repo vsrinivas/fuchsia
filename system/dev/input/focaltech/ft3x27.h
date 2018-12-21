@@ -60,7 +60,7 @@ enum {
 
 namespace ft {
 class Ft3x27Device : public ddk::Device<Ft3x27Device, ddk::Unbindable>,
-                     public ddk::HidbusProtocol<Ft3x27Device> {
+                     public ddk::HidbusProtocol<Ft3x27Device, ddk::base_protocol> {
 public:
     Ft3x27Device(zx_device_t* device);
 

@@ -26,7 +26,8 @@ class PlatformProxy;
 class ProxyDevice;
 using ProxyDeviceType = ddk::FullDevice<ProxyDevice>;
 
-class ProxyDevice : public ProxyDeviceType, public ddk::PDevProtocol<ProxyDevice> {
+class ProxyDevice : public ProxyDeviceType,
+                    public ddk::PDevProtocol<ProxyDevice, ddk::base_protocol> {
 public:
     explicit ProxyDevice(zx_device_t* parent, uint32_t device_id, fbl::RefPtr<PlatformProxy> proxy);
 

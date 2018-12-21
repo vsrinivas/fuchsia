@@ -62,7 +62,7 @@ using DeviceType = ddk::Device<Controller, ddk::Unbindable,
                                ddk::Suspendable, ddk::Resumable, ddk::GetProtocolable>;
 
 class Controller : public DeviceType,
-                   public ddk::DisplayControllerImplProtocol<Controller> {
+                   public ddk::DisplayControllerImplProtocol<Controller, ddk::base_protocol> {
 public:
     Controller(zx_device_t* parent);
     ~Controller();

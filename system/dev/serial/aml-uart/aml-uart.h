@@ -26,7 +26,7 @@ class AmlUart;
 using DeviceType = ddk::Device<AmlUart, ddk::Unbindable>;
 
 class AmlUart : public DeviceType,
-                public ddk::SerialImplProtocol<AmlUart> {
+                public ddk::SerialImplProtocol<AmlUart, ddk::base_protocol> {
 public:
     // Spawns device node.
     static zx_status_t Create(zx_device_t* parent);

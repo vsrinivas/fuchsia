@@ -83,7 +83,7 @@ typedef volatile struct dw_dmadescr {
 namespace eth {
 
 class DWMacDevice : public ddk::Device<DWMacDevice, ddk::Unbindable>,
-                    public ddk::EthmacProtocol<DWMacDevice>,
+                    public ddk::EthmacProtocol<DWMacDevice, ddk::base_protocol>,
                     public ddk::EthMacProtocol<DWMacDevice> {
 public:
     DWMacDevice(zx_device_t* device);

@@ -26,7 +26,8 @@ class VPartition;
 using PartitionDeviceType =
     ddk::Device<VPartition, ddk::Ioctlable, ddk::GetSizable, ddk::Unbindable>;
 
-class VPartition : public PartitionDeviceType, public ddk::BlockImplProtocol<VPartition> {
+class VPartition : public PartitionDeviceType,
+                   public ddk::BlockImplProtocol<VPartition, ddk::base_protocol> {
 public:
     using SliceMap = fbl::WAVLTree<size_t, fbl::unique_ptr<SliceExtent>>;
 

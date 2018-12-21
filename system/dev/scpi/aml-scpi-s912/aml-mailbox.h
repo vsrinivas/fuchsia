@@ -28,7 +28,7 @@ class AmlMailbox;
 using DeviceType = ddk::Device<AmlMailbox, ddk::Unbindable>;
 
 class AmlMailbox : public DeviceType,
-                   public ddk::MailboxProtocol<AmlMailbox> {
+                   public ddk::MailboxProtocol<AmlMailbox, ddk::base_protocol> {
 public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlMailbox);
 

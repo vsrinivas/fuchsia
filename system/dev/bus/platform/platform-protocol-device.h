@@ -31,7 +31,8 @@ using ProtocolDeviceType = ddk::Device<ProtocolDevice, ddk::GetProtocolable>;
 // Instances of this class are created by PlatformBus at boot time when the board driver
 // calls the platform bus protocol method pbus_device_add().
 
-class ProtocolDevice : public ProtocolDeviceType, public ddk::PDevProtocol<ProtocolDevice> {
+class ProtocolDevice : public ProtocolDeviceType,
+                       public ddk::PDevProtocol<ProtocolDevice, ddk::base_protocol> {
 public:
     // Creates a new ProtocolDevice instance.
     // *flags* contains zero or more PDEV_ADD_* flags from the platform bus protocol.

@@ -14,7 +14,7 @@ namespace clk {
 class MtkClk;
 using DeviceType = ddk::Device<MtkClk, ddk::Ioctlable>;
 
-class MtkClk : public DeviceType, public ddk::ClkProtocol<MtkClk> {
+class MtkClk : public DeviceType, public ddk::ClkProtocol<MtkClk, ddk::base_protocol> {
 public:
     static zx_status_t Create(zx_device_t* parent);
 

@@ -40,7 +40,7 @@
 namespace goodix {
 
 class Gt92xxDevice : public ddk::Device<Gt92xxDevice, ddk::Unbindable>,
-                     public ddk::HidbusProtocol<Gt92xxDevice> {
+                     public ddk::HidbusProtocol<Gt92xxDevice, ddk::base_protocol> {
 public:
     Gt92xxDevice(zx_device_t* device, ddk::I2cChannel i2c,
                  ddk::GpioProtocolClient intr, ddk::GpioProtocolClient reset)

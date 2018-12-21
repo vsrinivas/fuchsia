@@ -26,7 +26,7 @@ class Mt8167I2c;
 using DeviceType = ddk::Device<Mt8167I2c, ddk::Unbindable>;
 
 class Mt8167I2c : public DeviceType,
-                  public ddk::I2cImplProtocol<Mt8167I2c> {
+                  public ddk::I2cImplProtocol<Mt8167I2c, ddk::base_protocol> {
 public:
     explicit Mt8167I2c(zx_device_t* parent)
         : DeviceType(parent) {}

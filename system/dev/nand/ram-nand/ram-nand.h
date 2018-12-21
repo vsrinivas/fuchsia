@@ -47,7 +47,7 @@ class NandDevice;
 using DeviceType = ddk::Device<NandDevice, ddk::GetSizable, ddk::Unbindable, ddk::Messageable>;
 
 // Provides the bulk of the functionality for a ram-backed NAND device.
-class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice> {
+class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice, ddk::base_protocol> {
   public:
     explicit NandDevice(const NandParams& params, zx_device_t* parent = nullptr);
     ~NandDevice();

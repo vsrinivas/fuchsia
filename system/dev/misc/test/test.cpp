@@ -22,7 +22,7 @@ class TestDevice;
 using TestDeviceType = ddk::Device<TestDevice, ddk::Messageable>;
 
 class TestDevice : public TestDeviceType,
-                   public ddk::TestProtocol<TestDevice> {
+                   public ddk::TestProtocol<TestDevice, ddk::base_protocol> {
 public:
     TestDevice(zx_device_t* parent) : TestDeviceType(parent) { }
 

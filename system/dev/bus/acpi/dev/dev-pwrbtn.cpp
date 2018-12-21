@@ -26,7 +26,8 @@
 class AcpiPwrbtnDevice;
 using DeviceType = ddk::Device<AcpiPwrbtnDevice>;
 
-class AcpiPwrbtnDevice : public DeviceType, public ddk::HidbusProtocol<AcpiPwrbtnDevice> {
+class AcpiPwrbtnDevice : public DeviceType,
+                         public ddk::HidbusProtocol<AcpiPwrbtnDevice, ddk::base_protocol> {
 public:
     static zx_status_t Create(zx_device_t* parent,
                               fbl::unique_ptr<AcpiPwrbtnDevice>* out);

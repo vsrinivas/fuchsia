@@ -29,7 +29,7 @@ using DeviceType = ddk::Device<Tcs3400Device, ddk::Unbindable, ddk::Readable>;
 // complies with a HID descriptor that was manually scripted (i.e. - not
 // reported by the device iteself).
 class Tcs3400Device : public DeviceType,
-                      public ddk::HidbusProtocol<Tcs3400Device> {
+                      public ddk::HidbusProtocol<Tcs3400Device, ddk::base_protocol> {
 public:
     Tcs3400Device(zx_device_t* device)
         : DeviceType(device) {}

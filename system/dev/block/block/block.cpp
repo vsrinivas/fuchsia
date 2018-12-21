@@ -38,7 +38,8 @@ class BlockDevice;
 using BlockDeviceType = ddk::Device<BlockDevice, ddk::Ioctlable, ddk::Unbindable,
     ddk::Readable, ddk::Writable, ddk::GetSizable>;
 
-class BlockDevice : public BlockDeviceType, public ddk::BlockProtocol<BlockDevice> {
+class BlockDevice : public BlockDeviceType,
+                    public ddk::BlockProtocol<BlockDevice, ddk::base_protocol> {
 public:
     BlockDevice(zx_device_t* parent) : BlockDeviceType(parent) {
         block_protocol_t self { &block_protocol_ops_, this };

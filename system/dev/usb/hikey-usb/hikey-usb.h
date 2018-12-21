@@ -16,7 +16,8 @@ class HikeyUsb;
 using HikeyUsbType = ddk::Device<HikeyUsb>;
 
 // This is the main class for the platform bus driver.
-class HikeyUsb : public HikeyUsbType, public ddk::UsbModeSwitchProtocol<HikeyUsb> {
+class HikeyUsb : public HikeyUsbType,
+                 public ddk::UsbModeSwitchProtocol<HikeyUsb, ddk::base_protocol> {
 public:
     explicit HikeyUsb(zx_device_t* parent)
         : HikeyUsbType(parent), usb_mode_(USB_MODE_NONE) {}

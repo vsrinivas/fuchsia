@@ -19,7 +19,7 @@ class AmlEthernet;
 using DeviceType = ddk::Device<AmlEthernet, ddk::Unbindable>;
 
 class AmlEthernet : public DeviceType,
-                    public ddk::EthBoardProtocol<AmlEthernet> {
+                    public ddk::EthBoardProtocol<AmlEthernet, ddk::base_protocol> {
 public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlEthernet);
 

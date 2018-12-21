@@ -70,7 +70,7 @@ class TestEthmacIfc : public ddk::Device<TestEthmacIfc>,
 };
 
 class TestEthmacProtocol : public ddk::Device<TestEthmacProtocol, ddk::GetProtocolable>,
-                           public ddk::EthmacProtocol<TestEthmacProtocol> {
+                           public ddk::EthmacProtocol<TestEthmacProtocol, ddk::base_protocol> {
   public:
     TestEthmacProtocol()
       : ddk::Device<TestEthmacProtocol, ddk::GetProtocolable>(nullptr) {

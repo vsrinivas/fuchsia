@@ -27,7 +27,7 @@ class HidCtl : public ddk::Device<HidCtl, ddk::Ioctlable> {
 };
 
 class HidDevice : public ddk::Device<HidDevice, ddk::Unbindable>,
-                  public ddk::HidbusProtocol<HidDevice> {
+                  public ddk::HidbusProtocol<HidDevice, ddk::base_protocol> {
   public:
     HidDevice(zx_device_t* device, const hid_ioctl_config* config, zx::socket data);
 

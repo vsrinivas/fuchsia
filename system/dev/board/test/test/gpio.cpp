@@ -21,7 +21,7 @@ class TestGpioDevice;
 using DeviceType = ddk::Device<TestGpioDevice, ddk::Unbindable>;
 
 class TestGpioDevice : public DeviceType,
-                       public ddk::GpioImplProtocol<TestGpioDevice> {
+                       public ddk::GpioImplProtocol<TestGpioDevice, ddk::base_protocol> {
 public:
     static zx_status_t Create(zx_device_t* parent);
 

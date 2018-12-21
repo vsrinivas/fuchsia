@@ -29,7 +29,7 @@ using DeviceType = ddk::Device<AcpiTbmcDevice>;
 // An instance of a GOOG0006 Tablet Motion Control device.  It presents a HID
 // interface with a single input, the state of the tablet mode switch.
 class AcpiTbmcDevice : public DeviceType,
-                       public ddk::HidbusProtocol<AcpiTbmcDevice> {
+                       public ddk::HidbusProtocol<AcpiTbmcDevice, ddk::base_protocol> {
 public:
     static zx_status_t Create(zx_device_t* parent, ACPI_HANDLE acpi_handle,
                               fbl::unique_ptr<AcpiTbmcDevice>* out);

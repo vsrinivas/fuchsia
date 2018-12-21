@@ -28,7 +28,7 @@ class DummyDisplay;
 using DeviceType = ddk::Device<DummyDisplay, ddk::Unbindable>;
 
 class DummyDisplay : public DeviceType,
-                     public ddk::DisplayControllerImplProtocol<DummyDisplay> {
+                     public ddk::DisplayControllerImplProtocol<DummyDisplay, ddk::base_protocol> {
 public:
     DummyDisplay(zx_device_t* parent)
         : DeviceType(parent) {}

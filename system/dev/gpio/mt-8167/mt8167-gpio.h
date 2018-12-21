@@ -27,7 +27,7 @@ class Mt8167GpioDevice;
 using DeviceType = ddk::Device<Mt8167GpioDevice, ddk::Unbindable>;
 
 class Mt8167GpioDevice : public DeviceType,
-                         public ddk::GpioImplProtocol<Mt8167GpioDevice> {
+                         public ddk::GpioImplProtocol<Mt8167GpioDevice, ddk::base_protocol> {
 public:
     static zx_status_t Create(zx_device_t* parent);
 

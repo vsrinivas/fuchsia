@@ -44,7 +44,7 @@ using ImportedImageBitmap = bitmap::RawBitmapGeneric<bitmap::FixedStorage<kMaxIm
 using DeviceType = ddk::Device<AstroDisplay, ddk::Unbindable>;
 
 class AstroDisplay : public DeviceType,
-                     public ddk::DisplayControllerImplProtocol<AstroDisplay> {
+                     public ddk::DisplayControllerImplProtocol<AstroDisplay, ddk::base_protocol> {
 public:
     AstroDisplay(zx_device_t* parent, uint32_t width, uint32_t height)
         : DeviceType(parent), width_(width), height_(height) {}

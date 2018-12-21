@@ -23,7 +23,7 @@ namespace mt_usb {
 class MtUsb;
 using MtUsbType = ddk::Device<MtUsb, ddk::Unbindable>;
 
-class MtUsb : public MtUsbType, public ddk::UsbDciProtocol<MtUsb> {
+class MtUsb : public MtUsbType, public ddk::UsbDciProtocol<MtUsb, ddk::base_protocol> {
 public:
     explicit MtUsb(zx_device_t* parent, pdev_protocol_t* pdev)
         : MtUsbType(parent), pdev_(pdev) {}

@@ -41,7 +41,7 @@ using DeviceType = ddk::Device<Device, ddk::Ioctlable, ddk::GetSizable, ddk::Unb
 // transparently encrypts writes to/decrypts reads from that device.  It shadows incoming requests
 // with its own |zxcrypt::Op| request structure that uses a mapped VMO as working memory for
 // cryptographic transformations.
-class Device final : public DeviceType, public ddk::BlockImplProtocol<Device> {
+class Device final : public DeviceType, public ddk::BlockImplProtocol<Device, ddk::base_protocol> {
 public:
     explicit Device(zx_device_t* parent);
     ~Device();

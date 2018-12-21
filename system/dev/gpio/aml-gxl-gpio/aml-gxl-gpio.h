@@ -60,7 +60,7 @@ class AmlGxlGpio;
 using DeviceType = ddk::Device<AmlGxlGpio, ddk::Unbindable>;
 
 class AmlGxlGpio : public DeviceType,
-                   public ddk::GpioImplProtocol<AmlGxlGpio> {
+                   public ddk::GpioImplProtocol<AmlGxlGpio, ddk::base_protocol> {
 
 public:
     static zx_status_t Create(zx_device_t* parent);

@@ -32,7 +32,8 @@ class Mt8167sDisplay;
 using DeviceType = ddk::Device<Mt8167sDisplay, ddk::Unbindable>;
 
 class Mt8167sDisplay : public DeviceType,
-                       public ddk::DisplayControllerImplProtocol<Mt8167sDisplay> {
+                       public ddk::DisplayControllerImplProtocol<Mt8167sDisplay,
+                                                                 ddk::base_protocol> {
 public:
     Mt8167sDisplay(zx_device_t* parent, uint32_t width, uint32_t height, uint32_t pitch)
         : DeviceType(parent), width_(width), height_(height), pitch_(pitch) {}
