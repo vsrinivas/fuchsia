@@ -58,20 +58,14 @@ static void timer_diag_all_cpus(void) {
 
         timer_threads[i] = thread_create_etc(
             NULL, name, timer_do_one_thread, NULL, DEFAULT_PRIORITY, NULL);
-        if (timer_threads[i] == NULL) {
-            printf("failed to create thread for cpu %u\n", i);
-            return;
-        }
+        DEBUG_ASSERT_MSG(timer_threads[i] != NULL, "failed to create thread for cpu %u\n", i);
         thread_set_cpu_affinity(timer_threads[i], cpu_num_to_mask(i));
         thread_resume(timer_threads[i]);
     }
-    uint joined = 0;
     for (i = 0; i < max; i++) {
-        if (thread_join(timer_threads[i], NULL, ZX_SEC(1)) == 0) {
-            joined += 1;
-        }
+        zx_status_t status = thread_join(timer_threads[i], NULL, ZX_TIME_INFINITE);
+        DEBUG_ASSERT_MSG(status == ZX_OK, "failed to join thread for cpu %u: %d\n", i, status);
     }
-    printf("%u threads created, %u threads joined\n", max, joined);
 }
 
 static void timer_diag_cb2(timer_t* timer, zx_time_t now, void* arg) {
