@@ -145,6 +145,9 @@ std::string ConvertUnits(const char* input_unit, std::vector<double>* vals) {
     return "sizeInBytes";
   } else if (strcmp(input_unit, "frames/second") == 0) {
     return "Hz_biggerIsBetter";
+  } else if (strcmp(input_unit, "percent") == 0) {
+    // https://github.com/catapult-project/catapult/blob/f396a42a943f4b88ed09910b092548cd254923c0/telemetry/telemetry/value/unit-info.json#L4
+    return "%";
   } else {
     fprintf(stderr, "Units not recognized: %s\n", input_unit);
     exit(1);

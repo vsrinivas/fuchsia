@@ -32,6 +32,9 @@ const (
 
 	// Frequency-based units.
 	FramesPerSecond = "frames/second"
+
+	// Percentage-based units.
+	Percent = "percent"
 )
 
 // TestCaseResults represents the results for a single test case.
