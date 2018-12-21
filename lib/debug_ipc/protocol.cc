@@ -4,6 +4,8 @@
 
 #include "garnet/lib/debug_ipc/protocol.h"
 
+#include "lib/fxl/logging.h"
+
 namespace debug_ipc {
 
 constexpr uint32_t MsgHeader::kSerializedHeaderSize;
@@ -72,6 +74,25 @@ const char* MsgHeaderTypeToString(MsgHeader::Type type) {
     case MsgHeader::Type::kNumMessages:
       return "kNumMessages";
   }
+  FXL_NOTREACHED();
+  return "";
+}
+
+const char* NotifyException::TypeToString(NotifyException::Type type) {
+  switch (type) {
+    case NotifyException::Type::kGeneral:
+      return "General";
+    case NotifyException::Type::kHardware:
+      return "Hardware";
+    case NotifyException::Type::kSingleStep:
+      return "Single Step";
+    case NotifyException::Type::kSoftware:
+      return "Software";
+    case NotifyException::Type::kLast:
+      break;
+  }
+  FXL_NOTREACHED();
+  return "";
 }
 
 }  // namespace debug_ipc

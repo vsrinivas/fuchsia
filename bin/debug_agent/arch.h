@@ -70,7 +70,7 @@ class ArchProvider {
   // different syscall anyway, there is no need to group many categories into
   // one call.
   virtual zx_status_t WriteRegisters(const debug_ipc::RegisterCategory&,
-                                     const zx::thread&);
+                                     zx::thread*);
 
   // Hardware Exceptions -------------------------------------------------------
 

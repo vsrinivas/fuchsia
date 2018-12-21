@@ -5,14 +5,15 @@
 #include <gtest/gtest.h>
 
 #include "garnet/bin/debug_agent/integration_tests/mock_stream_backend.h"
+#include "garnet/bin/debug_agent/integration_tests/message_loop_wrapper.h"
 #include "garnet/bin/debug_agent/integration_tests/so_wrapper.h"
 #include "garnet/lib/debug_ipc/message_reader.h"
 #include "garnet/lib/debug_ipc/helper/message_loop_zircon.h"
 #include "garnet/lib/debug_ipc/helper/zx_status.h"
 
-#include "lib/fxl/logging.h"
-
 namespace debug_agent {
+
+namespace {
 
 // This test is an integration test to verify that the debug agent is able to
 // successfully set breakpoints to Zircon and get the correct responses.
@@ -90,6 +91,8 @@ class BreakpointStreamBackend : public MockStreamBackend {
   debug_ipc::NotifyException exception_ = {};
 };
 
+}  // namespace
+
 TEST(BreakpointIntegration, SWBreakpoint) {
   // We attempt to load the pre-made .so.
   SoWrapper so_wrapper;
@@ -103,12 +106,12 @@ TEST(BreakpointIntegration, SWBreakpoint) {
 
   uint64_t function_offset = symbol_addr - module_base;
 
-  debug_ipc::MessageLoopZircon loop;
-  loop.Init();
+  MessageLoopWrapper loop_wrapper;
   {
+    auto* loop = loop_wrapper.loop();
     // This stream backend will take care of intercepting the calls from the
     // debug agent.
-    BreakpointStreamBackend mock_stream_backend(&loop);
+    BreakpointStreamBackend mock_stream_backend(loop);
     RemoteAPI* remote_api = mock_stream_backend.remote_api();
 
     // We launch the test binary.
@@ -121,7 +124,7 @@ TEST(BreakpointIntegration, SWBreakpoint) {
     // We run the look to get the notifications sent by the agent.
     // The stream backend will stop the loop once it has received the modules
     // notification.
-    loop.Run();
+    loop->Run();
 
     // We should have found the correct module by now.
     ASSERT_NE(mock_stream_backend.so_test_base_addr(), 0u);
@@ -154,7 +157,7 @@ TEST(BreakpointIntegration, SWBreakpoint) {
 
     // The loop will run until the stream backend receives an exception
     // notification.
-    loop.Run();
+    loop->Run();
 
     // We should have received an exception now.
     debug_ipc::NotifyException exception = mock_stream_backend.exception();
@@ -168,11 +171,12 @@ TEST(BreakpointIntegration, SWBreakpoint) {
     EXPECT_EQ(breakpoint.hit_count, 1u);
     EXPECT_TRUE(breakpoint.should_delete);
   }
-  loop.Cleanup();
 }
 
 TEST(BreakpointIntegration, HWBreakpoint) {
 #if defined(__aarch64__)
+  // TODO(donosoc): QEMU doesn't handle arm64 debug capabilities corectly.
+  //                Need to test this on hardware.
   return;
 #endif
   // We attempt to load the pre-made .so.
@@ -187,12 +191,13 @@ TEST(BreakpointIntegration, HWBreakpoint) {
 
   uint64_t function_offset = symbol_addr - module_base;
 
-  debug_ipc::MessageLoopZircon loop;
-  loop.Init();
+  MessageLoopWrapper loop_wrapper;
   {
+    auto* loop = loop_wrapper.loop();
+
     // This stream backend will take care of intercepting the calls from the
     // debug agent.
-    BreakpointStreamBackend mock_stream_backend(&loop);
+    BreakpointStreamBackend mock_stream_backend(loop);
     RemoteAPI* remote_api = mock_stream_backend.remote_api();
 
     // We launch the test binary.
@@ -205,7 +210,7 @@ TEST(BreakpointIntegration, HWBreakpoint) {
     // We run the look to get the notifications sent by the agent.
     // The stream backend will stop the loop once it has received the modules
     // notification.
-    loop.Run();
+    loop->Run();
 
     // We should have found the correct module by now.
     ASSERT_NE(mock_stream_backend.so_test_base_addr(), 0u);
@@ -240,7 +245,7 @@ TEST(BreakpointIntegration, HWBreakpoint) {
 
     // The loop will run until the stream backend receives an exception
     // notification.
-    loop.Run();
+    loop->Run();
 
     // We should have received an exception now.
     debug_ipc::NotifyException exception = mock_stream_backend.exception();
@@ -254,7 +259,6 @@ TEST(BreakpointIntegration, HWBreakpoint) {
     EXPECT_EQ(breakpoint.hit_count, 1u);
     EXPECT_TRUE(breakpoint.should_delete);
   }
-  loop.Cleanup();
 }
 
 }  // namespace debug_agent

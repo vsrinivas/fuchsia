@@ -38,6 +38,8 @@ class MockStreamBackend : public debug_ipc::StreamBuffer::Writer {
   // messages. By default they do nothing.
   virtual void HandleNotifyModules(debug_ipc::MessageReader*) {}
   virtual void HandleNotifyException(debug_ipc::MessageReader*) {}
+  virtual void HandleNotifyProcessExiting(debug_ipc::MessageReader*) {}
+  virtual void HandleNotifyThreadStarting(debug_ipc::MessageReader*) {}
 
   // The stream will call this function to send the data to whatever backend it
   // is connected to. It returns how much of the input message it could actually

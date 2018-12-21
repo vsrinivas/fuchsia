@@ -330,6 +330,7 @@ struct NotifyException {
 
     kLast  // Not an actual exception type, for range checking.
   };
+  static const char* TypeToString(Type);
 
   uint64_t process_koid = 0;
 

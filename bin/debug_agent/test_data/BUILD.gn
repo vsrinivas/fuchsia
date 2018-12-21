@@ -63,4 +63,15 @@ executable("process_loop") {
   sources = [
     "process_loop.cc"
   ]
+
+}
+
+# Platform specific test binaries ----------------------------------------------
+
+if (current_cpu == "x64") {
+  executable("write_register_test_exe") {
+    testonly = true
+    output_name = "write_register_test_exe"
+    sources = [ "x64_write_register_test_exe.cc" ]
+  }
 }

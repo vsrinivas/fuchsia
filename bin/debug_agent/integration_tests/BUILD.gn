@@ -2,15 +2,23 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+
 source_set("integration_tests") {
   testonly = true
 
   sources = [
-    "breakpoint_test.cc",
+    "message_loop_wrapper.cc",
+    "message_loop_wrapper.h",
     "mock_stream_backend.cc",
     "mock_stream_backend.h",
     "so_wrapper.cc",
     "so_wrapper.h",
+  ]
+
+  # The actual tests.
+  sources += [
+    "breakpoint_test.cc",
+    "write_registers_test.cc",
   ]
 
   deps = [

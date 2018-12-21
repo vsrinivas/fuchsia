@@ -189,7 +189,7 @@ zx_status_t ArchProvider::ReadRegisters(
 }
 
 zx_status_t ArchProvider::WriteRegisters(const debug_ipc::RegisterCategory&,
-                                         const zx::thread&) {
+                                         zx::thread*) {
   // TODO(donosoc): Implement.
   return ZX_ERR_NOT_SUPPORTED;
 }

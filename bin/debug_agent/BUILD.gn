@@ -159,14 +159,26 @@ package("debug_agent_tests") {
     "//garnet/bin/debug_agent/test_data:process_spawner",
   ]
 
+  # Test binaries
   binaries = [{
-    shell = true
-    name = "debug_agent_so_test"
-  }, {
-    name = "process_spawner"
-  }, {
-    name = "process_loop"
-  }]
+      shell = true
+      name = "debug_agent_so_test"
+    }, {
+      name = "process_loop"
+    }, {
+      name = "process_spawner"
+   }]
+
+  # Add the platform specific test binaries
+
+  if (current_cpu == "x64") {
+    deps += [
+      "//garnet/bin/debug_agent/test_data:write_register_test_exe",
+    ]
+    binaries += [{
+      name = "write_register_test_exe"
+    }]
+  }
 
   loadable_modules = [{
     name = "debug_agent_test_so.so"

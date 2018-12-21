@@ -193,10 +193,33 @@ zx_status_t ArchProvider::ReadRegisters(
   }
 }
 
-zx_status_t ArchProvider::WriteRegisters(const debug_ipc::RegisterCategory&,
-                                     const zx::thread&) {
-  // TODO(donosoc): Implement.
-  return ZX_ERR_NOT_SUPPORTED;
+zx_status_t ArchProvider::WriteRegisters(const debug_ipc::RegisterCategory& cat,
+                                         zx::thread* thread) {
+  switch (cat.type) {
+    case debug_ipc::RegisterCategory::Type::kGeneral: {
+      zx_thread_state_general_regs_t regs;
+      zx_status_t res =
+          thread->read_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
+      if (res != ZX_OK)
+        return res;
+
+      // Ovewrite the values.
+      res = WriteGeneralRegisters(cat.registers, &regs);
+      if (res != ZX_OK)
+        return res;
+
+      return thread->write_state(ZX_THREAD_STATE_GENERAL_REGS, &regs,
+                                 sizeof(regs));
+    }
+    case debug_ipc::RegisterCategory::Type::kFP:
+    case debug_ipc::RegisterCategory::Type::kVector:
+    case debug_ipc::RegisterCategory::Type::kDebug:
+      return ZX_ERR_NOT_SUPPORTED;
+    case debug_ipc::RegisterCategory::Type::kNone:
+      break;
+  }
+  FXL_NOTREACHED();
+  return ZX_ERR_INVALID_ARGS;
 }
 
 // Hardware Exceptions ---------------------------------------------------------

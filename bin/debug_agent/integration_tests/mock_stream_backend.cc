@@ -38,6 +38,12 @@ size_t MockStreamBackend::ConsumeStreamBufferData(const char* data,
     case debug_ipc::MsgHeader::Type::kNotifyException:
       HandleNotifyException(&reader);
       break;
+    case debug_ipc::MsgHeader::Type::kNotifyProcessExiting:
+      HandleNotifyProcessExiting(&reader);
+      break;
+    case debug_ipc::MsgHeader::Type::kNotifyThreadStarting:
+      HandleNotifyThreadStarting(&reader);
+      break;
     default:
       // NOTE: Here is where you add more notification handlers as they are
       //       sent by the debug agent.

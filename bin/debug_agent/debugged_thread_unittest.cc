@@ -55,7 +55,7 @@ class FakeArchProvider : public arch::ArchProvider {
   }
 
   zx_status_t WriteRegisters(const debug_ipc::RegisterCategory& cat,
-                             const zx::thread&) override {
+                             zx::thread*) override {
     auto& written_cat = regs_written_[cat.type];
     for (const Register& reg : cat.registers) {
       written_cat.push_back(reg);

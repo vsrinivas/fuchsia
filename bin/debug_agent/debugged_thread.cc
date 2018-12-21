@@ -202,7 +202,7 @@ zx_status_t DebuggedThread::WriteRegisters(
 
   for (const auto& [cat_type, cat] : categories) {
     FXL_DCHECK(cat_type != debug_ipc::RegisterCategory::Type::kNone);
-    zx_status_t res = arch::ArchProvider::Get().WriteRegisters(cat, thread_);
+    zx_status_t res = arch::ArchProvider::Get().WriteRegisters(cat, &thread_);
     if (res != ZX_OK) {
       FXL_LOG(ERROR) << "Could not write category "
                      << debug_ipc::RegisterCategory::TypeToString(cat_type)
