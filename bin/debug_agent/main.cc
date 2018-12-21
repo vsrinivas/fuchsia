@@ -81,7 +81,7 @@ bool SocketConnection::Accept(int server_fd) {
   buffer_.set_error_callback(
       []() { debug_ipc::MessageLoop::Current()->QuitNow(); });
 
-  FXL_LOG(INFO) << "Accepted connection.";
+  printf("Accepted connection.\n");
   return true;
 }
 
@@ -130,12 +130,12 @@ bool SocketServer::Run(debug_ipc::MessageLoop* message_loop, int port,
 
   while (true) {
     // Wait for one connection.
-    FXL_LOG(INFO) << "Waiting on port " << port << " for zxdb connection...";
+    printf("Waiting on port %d for zxdb connection...\n", port);
     connection_ = std::make_unique<SocketConnection>(services);
     if (!connection_->Accept(server_socket_.get()))
       return false;
 
-    FXL_LOG(INFO) << "Connection established.";
+    printf("Connection established.\n");
 
     // Run the debug agent for this connection.
     message_loop->Run();
