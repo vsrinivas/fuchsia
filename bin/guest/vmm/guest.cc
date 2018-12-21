@@ -92,7 +92,8 @@ zx_status_t Guest::Init(const std::vector<MemorySpec>& memory) {
             return status;
           }
         }
-        status = zx::vmo::create_physical(root_resource, 0, spec.size, &vmo);
+        status =
+            zx::vmo::create_physical(root_resource, spec.base, spec.size, &vmo);
         if (status != ZX_OK) {
           FXL_LOG(ERROR) << "Failed to create physical VMO " << status;
           return status;
