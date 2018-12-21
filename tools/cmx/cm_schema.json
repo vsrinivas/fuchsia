@@ -1,0 +1,229 @@
+{
+  "type": "object",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "is-capability": {
+      "pattern": "^(service|directory)$"
+    },
+    "is-name": {
+      "pattern": "^[A-Za-z0-9_-]+$"
+    },
+    "has-valid-child": {
+      "oneOf": [
+        { "properties": { "relation": { "not": { "pattern": "child" } } } },
+        { "required": [ "child_name" ] }
+      ]
+    }
+  },
+  "properties": {
+    "program": {
+      "$id": "/properties/program",
+      "type": "object",
+      "title": "Program information"
+    },
+    "uses": {
+      "$id": "/properties/uses",
+      "type": "array",
+      "title": "Used capabilities",
+      "uniqueItems": true,
+      "items": {
+        "$id": "/properties/uses/items/",
+        "type": "object",
+        "required": [
+          "type",
+          "source_path",
+          "target_path"
+        ],
+        "properties": {
+          "type": {
+            "$id": "/properties/uses/items/properties/type",
+            "type": "string",
+            "title": "Used capability type",
+            "$ref": "#/definitions/is-capability"
+          },
+          "source_path": {
+            "$id": "/properties/uses/items/properties/source_path",
+            "type": "string",
+            "title": "Used capability source path"
+          },
+          "target_path": {
+            "$id": "/properties/uses/items/properties/target_path",
+            "type": "string",
+            "title": "Used capability target path"
+          }
+        }
+      }
+    },
+    "exposes": {
+      "$id": "/properties/exposes",
+      "type": "array",
+      "title": "Exposed capabilities",
+      "uniqueItems": true,
+      "items": {
+        "$id": "/properties/exposes/items/",
+        "type": "object",
+        "required": [
+          "type",
+          "source_path",
+          "source",
+          "target_path"
+        ],
+        "properties": {
+          "type": {
+            "$id": "/properties/exposes/items/properties/type",
+            "type": "string",
+            "title": "Exposed capability type",
+            "$ref": "#/definitions/is-capability"
+          },
+          "source_path": {
+            "$id": "/properties/exposes/items/properties/source_path",
+            "type": "string",
+            "title": "Exposed capability source path"
+          },
+          "source": {
+            "$id": "/properties/exposes/items/properties/source",
+            "type": "object",
+            "title": "Exposed capability source component",
+            "required": [
+              "relation"
+            ],
+            "$ref": "#/definitions/has-valid-child",
+            "properties": {
+              "relation": {
+                "$id": "/properties/exposes/items/properties/source/properties/relation",
+                "type": "string",
+                "title": "Exposed capability source component relation",
+                "pattern": "^(self|child)$"
+              },
+              "child_name": {
+                "$id": "/properties/exposes/items/properties/source/properties/child_name",
+                "type": "string",
+                "title": "Exposed capability source component child name",
+                "$ref": "#/definitions/is-name"
+              }
+            }
+          },
+          "target_path": {
+            "$id": "/properties/exposes/items/properties/target_path",
+            "type": "string",
+            "title": "Exposed capability target path"
+          }
+        }
+      }
+    },
+    "offers": {
+      "$id": "/properties/offers",
+      "type": "array",
+      "title": "Offered capabilities",
+      "uniqueItems": true,
+      "items": {
+        "$id": "/properties/offers/items/",
+        "type": "object",
+        "required": [
+          "type",
+          "source_path",
+          "source",
+          "targets"
+        ],
+        "properties": {
+          "type": {
+            "$id": "/properties/offers/items/properties/type",
+            "type": "string",
+            "title": "Offered capability type",
+            "$ref": "#/definitions/is-capability"
+          },
+          "source_path": {
+            "$id": "/properties/exposes/items/properties/source_path",
+            "type": "string",
+            "title": "Offered capability source path"
+          },
+          "source": {
+            "$id": "/properties/exposes/items/properties/source",
+            "type": "object",
+            "title": "Offered capability source component",
+            "required": [
+              "relation"
+            ],
+            "$ref": "#/definitions/has-valid-child",
+            "properties": {
+              "relation": {
+                "$id": "/properties/offers/items/properties/source/properties/relation",
+                "type": "string",
+                "title": "Offered capability source component relation",
+                "pattern": "^(self|realm|child)$"
+              },
+              "child_name": {
+                "$id": "/properties/offers/items/properties/source/properties/child_name",
+                "type": "string",
+                "title": "Offered capability source component child name",
+                "$ref": "#/definitions/is-name"
+              }
+            }
+          },
+          "targets": {
+            "$id": "/properties/offers/items/properties/targets",
+            "type": "array",
+            "title": "Offered capability targets",
+            "uniqueItems": true,
+            "items": {
+              "$id": "/properties/offers/items/properties/targets/items",
+              "type": "object",
+              "required": [
+                "target_path",
+                "child_name"
+              ],
+              "properties": {
+                "target_path": {
+                  "$id": "/properties/offers/items/properties/targets/items/target_path",
+                  "type": "string",
+                  "title": "Offered capability target path"
+                },
+                "child_name": {
+                  "$id": "/properties/offers/items/properties/targets/items/child_name",
+                  "type": "string",
+                  "title": "Offered capability target child name",
+                  "$ref": "#/definitions/is-name"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "children": {
+      "$id": "/properties/children",
+      "type": "array",
+      "title": "Child components",
+      "uniqueItems": true,
+      "items": {
+        "$id": "/properties/children/items",
+        "type": "object",
+        "required": [
+          "name",
+          "uri"
+        ],
+        "properties": {
+          "name": {
+            "$id": "/properties/children/items/properties/name",
+            "type": "string",
+            "title": "Child component name",
+            "pattern": "^[a-zA-z0-9_-]+$",
+            "$ref": "#/definitions/is-name"
+          },
+          "uri": {
+            "$id": "/properties/children/items/properties/uri",
+            "type": "string",
+            "title": "Child component URI"
+          }
+        }
+      }
+    },
+    "facets": {
+      "$id": "/properties/facets",
+      "type": "object",
+      "title": "Facets",
+      "description": "Freeform dictionary containing third-party metadata"
+    }
+  }
+}
+

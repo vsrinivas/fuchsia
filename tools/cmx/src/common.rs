@@ -7,8 +7,13 @@ use std::fmt;
 use std::io;
 use std::str::Utf8Error;
 
-// Directly include schema in the binary. This is used to parse component manifests.
+// Directly include schemas in the binary. These are used to parse component manifests.
+pub const CM_SCHEMA: &str = include_str!("../cm_schema.json");
+pub const CML_SCHEMA: &str = include_str!("../cml_schema.json");
 pub const CMX_SCHEMA: &str = include_str!("../cmx_schema.json");
+
+/// Represents a JSON schema.
+pub type JsonSchemaStr<'a> = &'a str;
 
 /// Enum type that can represent any error encountered by a cmx operation.
 #[derive(Debug)]
