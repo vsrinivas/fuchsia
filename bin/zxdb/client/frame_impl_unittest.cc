@@ -104,7 +104,7 @@ TEST_F(FrameImplTest, AsyncBasePointer) {
   const uint8_t kSelectReg0[1] = {llvm::dwarf::DW_OP_reg0};
   VariableLocation frame_base(kSelectReg0, 1);
 
-  auto function = fxl::MakeRefCounted<Function>();
+  auto function = fxl::MakeRefCounted<Function>(Symbol::kTagSubprogram);
   function->set_frame_base(frame_base);
 
   Location location(kIP, FileLine("file.cc", 12), 0, symbol_context,

@@ -347,10 +347,9 @@ TEST_F(FormatValueTest, EmptyAndBadArray) {
 
   // Empty array with valid pointer.
   auto empty_array_type = fxl::MakeRefCounted<ArrayType>(GetInt32Type(), 0);
-  EXPECT_EQ(
-      R"({})",
-      SyncFormatValue(
-          ExprValue(empty_array_type, std::vector<uint8_t>(), source), opts));
+  EXPECT_EQ(R"({})", SyncFormatValue(ExprValue(empty_array_type,
+                                               std::vector<uint8_t>(), source),
+                                     opts));
 
   // Array type declares a size but there's no data.
   auto array_type = fxl::MakeRefCounted<ArrayType>(GetInt32Type(), 1);
@@ -639,7 +638,7 @@ TEST_F(FormatValueTest, FunctionPtr) {
 
   SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
 
-  auto function = fxl::MakeRefCounted<Function>();
+  auto function = fxl::MakeRefCounted<Function>(Symbol::kTagSubprogram);
   function->set_assigned_name("MyFunc");
 
   // Map the address to point to the function.

@@ -49,7 +49,8 @@ TEST(SymbolUtils, SymbolScopeFunctions) {
   ns->set_assigned_name("ns");
 
   // Function definition inside namespace.
-  fxl::RefPtr<Function> fn = fxl::MakeRefCounted<Function>();
+  fxl::RefPtr<Function> fn =
+      fxl::MakeRefCounted<Function>(Symbol::kTagSubprogram);
   fn->set_parent(LazySymbol(ns));
   fn->set_assigned_name("Function");
   EXPECT_EQ("ns::", GetSymbolScopePrefix(fn.get()));

@@ -62,6 +62,19 @@ void My2DArray() {
   (void)array;
 }
 
+struct ForInline {
+  int struct_val = 5;
+
+  __attribute__((always_inline)) int InlinedFunction(int param) {
+    return param * struct_val;
+  }
+};
+
+EXPORT int CallInline(int param) {
+  ForInline for_inline;
+  return for_inline.InlinedFunction(param + 1);
+}
+
 // TODO(brettw) test:
 //   stuff in an anonymous namespace
 //   typedef

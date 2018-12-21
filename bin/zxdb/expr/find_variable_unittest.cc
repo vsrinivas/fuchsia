@@ -103,7 +103,7 @@ TEST(FindVariable, FindLocalVariable) {
   ns->set_assigned_name(kNsName);
 
   // Function inside the namespace.
-  auto function = fxl::MakeRefCounted<Function>();
+  auto function = fxl::MakeRefCounted<Function>(Symbol::kTagSubprogram);
   function->set_assigned_name("function");
   uint64_t kFunctionBeginAddr = 0x1000;
   uint64_t kFunctionEndAddr = 0x2000;

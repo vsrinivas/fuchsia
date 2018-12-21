@@ -44,6 +44,9 @@ class Function final : public CodeBlock {
   const Function* AsFunction() const override;
   const std::string& GetAssignedName() const final { return assigned_name_; }
 
+  // Returns true if this function is an inlined function instance.
+  bool is_inline() const { return tag() == Symbol::kTagInlinedSubroutine; }
+
   // Unmangled name. Does not include any class or namespace qualifications.
   // (see Symbol::GetAssignedName)
   void set_assigned_name(std::string n) { assigned_name_ = std::move(n); }
@@ -66,7 +69,9 @@ class Function final : public CodeBlock {
   void set_parameters(std::vector<LazySymbol> p) { parameters_ = std::move(p); }
 
   // The frame base is the location where "fbreg" expressions are evaluated
-  // relative to (this will be most local variables in a function).
+  // relative to (this will be most local variables in a function). This can
+  // be an empty location if there's no frame base or it's not needed (e.g.
+  // for inline functions).
   //
   // When compiled with full stack frames, this will usually evaluate to the
   // contents of the CPU's "BP" register, but can be different or arbitrarily
@@ -74,20 +79,50 @@ class Function final : public CodeBlock {
   const VariableLocation& frame_base() const { return frame_base_; }
   void set_frame_base(VariableLocation base) { frame_base_ = std::move(base); }
 
-  // The object pointer will be a reference to a parameter (object type
+  // The object pointer is the "this" object for the current function.
+  // Quick summary: Use GetObjectPointerVariable() to retrieve "this".
+  //
+  // The object_pointer() will be a reference to a parameter (object type
   // Variable). It should theoretically match one of the entries in the
   // parameters() list but we can't guarantee what the compiler has generated.
   // The variable will be the implicit object ("this") pointer for member
   // functions. For nonmember or static member functions the object pointer
   // will be null.
+  //
+  // For inlined functions the location on the object_pointer variable may be
+  // wrong. Typically an inlined subroutine consists of two entries:
+  //
+  //   Shared entry for all inlined instances:
+  //   (1)  DW_TAG_subprogram "InlinedFunc"
+  //             DW_AT_object_pointer = reference to (2)
+  //   (2)    DW_TAG_formal_parameter "this"
+  //               <info on the parameter>
+  //
+  //   Specific inlined function instance:
+  //   (3)  DW_TAG_inlined_subroutine "InlinedFunc"
+  //              DW_AT_abstract_origin = reference to (1)
+  //   (4)    DW_TAG_formal_parameter "this"
+  //                DW_AT_abstract_origin = reference to (2)
+  //                <info on parameter, possibly different than (2)>
+  //
+  // Looking at the object pointer will give the variable on the abstract
+  // origin, while the inlined subroutine will have its own declaration for
+  // "this" which will have a location specific to this inlined instantiation.
+  //
+  // The GetObjectPointerVariable() function handles this case and returns the
+  // correct resulting variable. It will return null if there is no object
+  // pointer.
   const LazySymbol& object_pointer() const { return object_pointer_; }
   void set_object_pointer(const LazySymbol& op) { object_pointer_ = op; }
+  const Variable* GetObjectPointerVariable() const;
 
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(Function);
   FRIEND_MAKE_REF_COUNTED(Function);
 
-  Function();
+  // The tag must be either "subprogram" or "inlined subroutine" according to
+  // whether or not this is an inlined function.
+  explicit Function(int tag);
   ~Function();
 
   // Symbol protected overrides.

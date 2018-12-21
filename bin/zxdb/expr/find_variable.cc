@@ -127,8 +127,9 @@ std::optional<FoundMember> FindMember(const Collection* object,
   // This code will check the object and all base classes.
   std::optional<FoundMember> result;
   VisitClassHierarchy(
-      object, [ident_name, &result](const Collection* cur_collection,
-                                    uint32_t cur_offset) -> bool {
+      object,
+      [ident_name, &result](const Collection* cur_collection,
+                            uint32_t cur_offset) -> bool {
         // Called for each collection in the hierarchy.
         for (const auto& lazy : cur_collection->data_members()) {
           const DataMember* data = lazy.Get()->AsDataMember();
@@ -144,15 +145,12 @@ std::optional<FoundMember> FindMember(const Collection* object,
 
 std::optional<FoundVariable> FindMemberOnThis(const CodeBlock* block,
                                               const Identifier& identifier) {
-  // Find the function to see if it has a |this| pointer.
   const Function* function = block->GetContainingFunction();
-  if (!function || !function->object_pointer())
-    return std::nullopt;  // No "this" pointer.
-
-  // The "this" variable.
-  const Variable* this_var = function->object_pointer().Get()->AsVariable();
+  if (!function)
+    return std::nullopt;
+  const Variable* this_var = function->GetObjectPointerVariable();
   if (!this_var)
-    return std::nullopt;  // Symbols likely corrupt.
+    return std::nullopt;  // No "this" pointer.
 
   // Pointed-to type for "this".
   const Collection* collection = nullptr;
@@ -179,8 +177,7 @@ std::optional<FoundVariable> FindGlobalVariable(
   const LoadedModuleSymbols* current_module = nullptr;
   if (symbol_context) {
     // Find the module that corresponds to the symbol context.
-    uint64_t module_load_address =
-        symbol_context->RelativeToAbsolute(0);
+    uint64_t module_load_address = symbol_context->RelativeToAbsolute(0);
     for (const LoadedModuleSymbols* mod : modules) {
       if (mod->load_address() == module_load_address) {
         current_module = mod;
@@ -199,8 +196,8 @@ std::optional<FoundVariable> FindGlobalVariable(
   // Search all non-current modules.
   for (const LoadedModuleSymbols* loaded_mod : modules) {
     if (loaded_mod != current_module) {
-      if (auto found = FindGlobalVariableInModule(
-              loaded_mod->module_symbols(), current_scope, identifier))
+      if (auto found = FindGlobalVariableInModule(loaded_mod->module_symbols(),
+                                                  current_scope, identifier))
         return found;
     }
   }

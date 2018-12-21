@@ -34,7 +34,12 @@ class DwarfSymbolFactory : public SymbolFactory {
 
   // is_specification will be set when this function recursively calls itself
   // to parse the specification of a function implementation.
-  fxl::RefPtr<Symbol> DecodeFunction(const llvm::DWARFDie& die,
+  //
+  // The tag (DW_TAG_subprogram or DW_TAG_inlined_subroutine) is passed in
+  // because when recursively looking up the definitions, we want the original
+  // DIE tag rather than the specification's tag (the origina could be an
+  // inlined function while the specification will never be).
+  fxl::RefPtr<Symbol> DecodeFunction(const llvm::DWARFDie& die, int tag,
                                      bool is_specification = false);
   fxl::RefPtr<Symbol> DecodeArrayType(const llvm::DWARFDie& die);
   fxl::RefPtr<Symbol> DecodeBaseType(const llvm::DWARFDie& die);

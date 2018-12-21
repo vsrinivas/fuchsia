@@ -211,8 +211,9 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeSymbol(
     case llvm::dwarf::DW_TAG_ptr_to_member_type:
       symbol = DecodeMemberPtr(die);
       break;
+    case llvm::dwarf::DW_TAG_inlined_subroutine:
     case llvm::dwarf::DW_TAG_subprogram:
-      symbol = DecodeFunction(die);
+      symbol = DecodeFunction(die, tag);
       break;
     case llvm::dwarf::DW_TAG_structure_type:
     case llvm::dwarf::DW_TAG_class_type:
@@ -244,7 +245,7 @@ LazySymbol DwarfSymbolFactory::MakeLazy(const llvm::DWARFDie& die) {
 }
 
 fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(
-    const llvm::DWARFDie& die, bool is_specification) {
+    const llvm::DWARFDie& die, int tag, bool is_specification) {
   DwarfDieDecoder decoder(symbols_->context(), die.getDwarfUnit());
 
   llvm::DWARFDie specification;
@@ -267,8 +268,8 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(
 
   VariableLocation frame_base;
   decoder.AddCustom(llvm::dwarf::DW_AT_frame_base,
-                    [ unit = die.getDwarfUnit(),
-                      &frame_base ](const llvm::DWARFFormValue& value) {
+                    [unit = die.getDwarfUnit(),
+                     &frame_base](const llvm::DWARFFormValue& value) {
                       frame_base = DecodeVariableLocation(unit, value);
                     });
 
@@ -285,7 +286,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(
   // name, parent context, and declaration locations. Then we'll overlay our
   // values on that object.
   if (!is_specification && specification) {
-    auto spec = DecodeFunction(specification, true);
+    auto spec = DecodeFunction(specification, tag, true);
     Function* spec_function = spec->AsFunction();
     // If the specification is invalid, just ignore it and read out the values
     // that we can find in this DIE. An empty one will be created below.
@@ -293,7 +294,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(
       function = fxl::RefPtr<Function>(spec_function);
   }
   if (!function)
-    function = fxl::MakeRefCounted<Function>();
+    function = fxl::MakeRefCounted<Function>(tag);
 
   if (name)
     function->set_assigned_name(*name);
@@ -319,6 +320,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(
       case llvm::dwarf::DW_TAG_variable:
         variables.push_back(MakeLazy(child));
         break;
+      case llvm::dwarf::DW_TAG_inlined_subroutine:
       case llvm::dwarf::DW_TAG_lexical_block:
         inner_blocks.push_back(MakeLazy(child));
         break;
@@ -737,8 +739,8 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeVariable(
 
   VariableLocation location;
   decoder.AddCustom(llvm::dwarf::DW_AT_location,
-                    [ unit = die.getDwarfUnit(),
-                      &location ](const llvm::DWARFFormValue& value) {
+                    [unit = die.getDwarfUnit(),
+                     &location](const llvm::DWARFFormValue& value) {
                       location = DecodeVariableLocation(unit, value);
                     });
 

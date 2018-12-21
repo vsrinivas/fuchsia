@@ -27,6 +27,7 @@ const char kDoStructCallName[] = "DoStructCall";
 const char kGetIntPtrName[] = "GetIntPtr";
 const char kGetStructMemberPtrName[] = "GetStructMemberPtr";
 const char kPassRValueRefName[] = "PassRValueRef";
+const char kCallInlineName[] = "CallInline";
 
 // Returns the function symbol with the given name. The name is assumed to
 // exit as this function will EXPECT_* it to be valid. Returns empty refptr on
@@ -110,6 +111,42 @@ TEST(DwarfSymbolFactory, PtrToMemberFunction) {
   const Symbol* member = return_typedef->modified().Get();
   EXPECT_EQ("int (my_ns::Struct::*)(my_ns::Struct*, char)",
             member->GetFullName());
+}
+
+TEST(DwarfSymbolFactory, InlinedFunction) {
+  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "");
+  Err err = module.Load();
+  EXPECT_FALSE(err.has_error()) << err.msg();
+
+  // Find the CallInline function.
+  fxl::RefPtr<const Function> call_function =
+      GetFunctionWithName(module, kCallInlineName);
+  ASSERT_TRUE(call_function);
+
+  // It should have one inner block that's the inline function.
+  ASSERT_EQ(1u, call_function->inner_blocks().size());
+  const Function* inline_func =
+      call_function->inner_blocks()[0].Get()->AsFunction();
+  ASSERT_TRUE(inline_func);
+  EXPECT_EQ(Symbol::kTagInlinedSubroutine, inline_func->tag());
+
+  // The inline function should have two parameters, "this" and "param".
+  ASSERT_EQ(2u, inline_func->parameters().size());
+  const Variable* this_param =
+      inline_func->parameters()[0].Get()->AsVariable();
+  ASSERT_TRUE(this_param);
+  EXPECT_EQ("this", this_param->GetAssignedName());
+  const Variable* param_param =
+      inline_func->parameters()[1].Get()->AsVariable();
+  ASSERT_TRUE(param_param);
+  EXPECT_EQ("param", param_param->GetAssignedName());
+
+  // The object pointer on the function should refer to the "this" pointer
+  // retrieved above. This is tricky because normally the object pointer is
+  // on the "abstract origin" of the inlined routine, and will refer to a
+  // "this" parameter specified on the abstract origin. We need to correlate
+  // it to the one on the inlined instance to get the location correct.
+  EXPECT_EQ(this_param, inline_func->GetObjectPointerVariable());
 }
 
 TEST(DwarfSymbolFactory, ModifiedBaseType) {

@@ -77,7 +77,7 @@ void GetNamedValue(fxl::RefPtr<ExprEvalContext>& eval_context,
 
   eval_context->GetNamedValue(
       ident, [result, async](const Err& err, fxl::RefPtr<Symbol> symbol,
-                            ExprValue value) {
+                             ExprValue value) {
         result->called = true;
         result->err = err;
         result->value = std::move(value);
@@ -219,7 +219,7 @@ TEST_F(SymbolEvalContextTest, FoundThis) {
 
   // Make a function with a parameter / object pointer to Derived (this will be
   // like a member function on Derived).
-  auto function = fxl::MakeRefCounted<Function>();
+  auto function = fxl::MakeRefCounted<Function>(Symbol::kTagSubprogram);
   function->set_parameters({LazySymbol(this_var)});
   function->set_object_pointer(LazySymbol(this_var));
 
