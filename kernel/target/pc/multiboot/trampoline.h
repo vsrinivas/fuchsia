@@ -47,8 +47,9 @@ struct trampoline {
 // This is defined by the linker script.
 extern uint8_t PHYS_LOAD_ADDRESS[];
 
-noreturn void boot_zbi(zircon_kernel_t* kernel, zbi_header_t* zbi,
-                              struct trampoline* trampoline);
+noreturn void boot_zbi(const zbi_header_t* zbi,
+                       const zbi_header_t* kernel_item,
+                       struct trampoline* trampoline);
 
 // This is the entry point called from multiboot-start.S.  It's in the
 // environment required by the Multiboot spec, but given a small stack

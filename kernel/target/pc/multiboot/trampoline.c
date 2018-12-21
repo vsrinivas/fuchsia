@@ -8,12 +8,45 @@
 #include <stddef.h>
 #include <zircon/compiler.h>
 
-// Populate the trampoline area and enter the kernel in 64-bit mode.
-// Paging is already enabled.  The page tables, the kernel and ZBI images,
-// and the trampoline area are all placed safely outside the kernel's
+// Populate the trampoline area and enter the kernel in 64-bit mode.  Paging is
+// already enabled.  The page tables, the ZBI image (which includes the kernel
+// item), and the trampoline area are all placed safely outside the kernel's
 // range: PHYS_LOAD_ADDRESS + kernel image size + kernel bss size.
-noreturn void boot_zbi(zircon_kernel_t* kernel, zbi_header_t* zbi,
-                              struct trampoline* trampoline) {
+noreturn void boot_zbi(const zbi_header_t* zbi,
+                       const zbi_header_t* kernel_item,
+                       struct trampoline* trampoline) {
+    // The kernel image includes its own container and item headers.
+    const size_t kernel_size = kernel_item->length + (2 * sizeof(zbi_header_t));
+
+    // The header inside the kernel item payload gives the entry point as an
+    // absolute physical address.
+    const zbi_kernel_t* kernel_header = (void*)(kernel_item + 1);
+    uint32_t kernel_entry = kernel_header->entry;
+    if (unlikely(kernel_entry != kernel_header->entry)) {
+        panic("ZBI kernel entry point %#llx truncated to %#"PRIx32,
+              kernel_header->entry, kernel_entry);
+    }
+    if (unlikely(kernel_entry < (uintptr_t)PHYS_LOAD_ADDRESS ||
+                 kernel_entry >= (uintptr_t)PHYS_LOAD_ADDRESS + kernel_size)) {
+        panic("ZBI kernel entry point %#"PRIx32" outside kernel [%p, %p)",
+              kernel_entry, PHYS_LOAD_ADDRESS,
+              PHYS_LOAD_ADDRESS + kernel_size);
+    }
+
+    // The headers matter for the address arithmetic of where the image gets
+    // placed.  But the kernel doesn't actually look at those headers, so they
+    // don't need to be filled in.
+    const uint8_t* copy_src = (const void*)(kernel_header + 1);
+    uint8_t* copy_dest =
+        PHYS_LOAD_ADDRESS + offsetof(zircon_kernel_t, contents);
+    const size_t copy_size = kernel_item->length;
+
+    // The descriptor needed to load the new GDT can be placed on the stack.
+    const struct { uint16_t limit; void* base; } __PACKED lgdt = {
+        .base = trampoline->gdt,
+        .limit = sizeof(trampoline->gdt) - 1,
+    };
+
     // The trampoline area holds the 64-bit trampoline code we'll run, the
     // GDT with the 64-bit code segment we'll run it in, and the long jump
     // descriptor we'll use to get there.
@@ -24,28 +57,6 @@ noreturn void boot_zbi(zircon_kernel_t* kernel, zbi_header_t* zbi,
             .eip = trampoline->code,
             .cs = 1 << 3,
         },
-    };
-
-    // The kernel image includes its own container header.
-    size_t kernel_size = sizeof(kernel->hdr_file) + kernel->hdr_file.length;
-
-    // The entry point is an absolute physical address.
-    uint32_t kernel_entry = kernel->data_kernel.entry;
-    if (unlikely(kernel_entry != kernel->data_kernel.entry)) {
-        panic("ZBI kernel entry point %#llx truncated to %#"PRIx32,
-              kernel->data_kernel.entry, kernel_entry);
-    }
-    if (unlikely(kernel_entry < (uintptr_t)PHYS_LOAD_ADDRESS ||
-                 kernel_entry >= (uintptr_t)PHYS_LOAD_ADDRESS + kernel_size)) {
-        panic("ZBI kernel entry point %#"PRIx32" outside kernel [%p, %p)",
-              kernel_entry, PHYS_LOAD_ADDRESS,
-              PHYS_LOAD_ADDRESS + kernel_size);
-    }
-
-    // The descriptor needed to load the new GDT can be placed on the stack.
-    const struct { uint16_t limit; void* base; } __PACKED lgdt = {
-        .base = trampoline->gdt,
-        .limit = sizeof(trampoline->gdt) - 1,
     };
 
     // Tell the compiler all of the trampoline area is read.
@@ -66,11 +77,11 @@ noreturn void boot_zbi(zircon_kernel_t* kernel, zbi_header_t* zbi,
         :: [lgdt]"m"(lgdt), [ljmp]"m"(trampoline->ljmp),
          // The 64-bit trampoline code copies the kernel into place and
          // then jumps to its entry point, as instructed here:
-         "D"(PHYS_LOAD_ADDRESS),       // %rdi: destination pointer
-         "S"(kernel),                  // %rsi: source pointer
-         "c"(kernel_size / 8),         // %rcx: count of 8-byte words
-         "a"(kernel_entry),            // %rax: kernel entry point
-         "b"(zbi)                      // %rbx: ZBI data pointer for kernel
+         "D"(copy_dest),                // %rdi: destination pointer
+         "S"(copy_src),                 // %rsi: source pointer
+         "c"(copy_size / 8),            // %rcx: count of 8-byte words
+         "a"(kernel_entry),             // %rax: kernel entry point
+         "b"(zbi)                       // %rbx: ZBI data pointer for kernel
         );
     __builtin_unreachable();
 }

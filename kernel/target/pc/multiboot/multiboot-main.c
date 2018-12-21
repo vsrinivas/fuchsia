@@ -72,7 +72,7 @@ static void add_memory_info(void* zbi, size_t capacity,
 }
 
 static void add_cmdline(void* zbi, size_t capacity,
-                            const multiboot_info_t* info) {
+                        const multiboot_info_t* info) {
     // Boot loader command line.
     if (info->flags & MB_INFO_CMD_LINE) {
         const char* cmdline = (void*)info->cmdline;
@@ -110,15 +110,61 @@ static void add_cmdline(void* zbi, size_t capacity,
 }
 
 static void add_zbi_items(void* zbi, size_t capacity,
-                            const multiboot_info_t* info) {
+                          const multiboot_info_t* info) {
     add_memory_info(zbi, capacity, info);
     add_cmdline(zbi, capacity, info);
+}
+
+static zbi_result_t find_kernel_item(zbi_header_t* hdr, void* payload,
+                                     void* cookie) {
+    if (hdr->type == ZBI_TYPE_KERNEL_X64) {
+        *(const zbi_header_t**)cookie = hdr;
+        return ZBI_RESULT_INCOMPLETE_KERNEL;
+    }
+    return ZBI_RESULT_OK;
 }
 
 noreturn void multiboot_main(uint32_t magic, multiboot_info_t* info) {
     if (magic != MULTIBOOT_BOOTLOADER_MAGIC) {
         panic("bad multiboot magic from bootloader %#"PRIx32" != %#"PRIx32"\n",
               magic, (uint32_t)MULTIBOOT_BOOTLOADER_MAGIC);
+    }
+
+    uintptr_t upper_memory_limit = 0;
+    if (info->flags & MB_INFO_MEM_SIZE) {
+        upper_memory_limit = info->mem_upper << 10;
+        if (info->mem_upper > (UINT32_MAX >> 10)) {
+            upper_memory_limit = -4096u;
+        }
+    } else if ((info->flags & MB_INFO_MMAP) &&
+               info->mmap_addr != 0 &&
+               info->mmap_length >= sizeof(memory_map_t)) {
+        for (memory_map_t* mmap = (void*)info->mmap_addr;
+             (uintptr_t)mmap < info->mmap_addr + info->mmap_length;
+             mmap = (void*)((uintptr_t)mmap + 4 + mmap->size)) {
+            if (mmap->type == MB_MMAP_TYPE_AVAILABLE) {
+                const uint64_t addr = (((uint64_t)mmap->base_addr_high << 32) |
+                                       mmap->base_addr_low);
+                const uint64_t len = (((uint64_t)mmap->length_high << 32) |
+                                      mmap->length_low);
+                const uint64_t end = addr + len;
+                if (addr <= (uint64_t)(uintptr_t)PHYS_LOAD_ADDRESS &&
+                    end > (uint64_t)(uintptr_t)PHYS_LOAD_ADDRESS) {
+                    if (end > UINT32_MAX) {
+                        upper_memory_limit = -4096u;
+                    } else {
+                        upper_memory_limit = end;
+                    }
+                    break;
+                }
+            }
+        }
+        if (upper_memory_limit == 0) {
+            panic("multiboot memory map doesn't cover %#" PRIxPTR,
+                  (uintptr_t)PHYS_LOAD_ADDRESS);
+        }
+    } else {
+        panic("multiboot memory information missing");
     }
 
     if (!(info->flags & MB_INFO_MODS)) {
@@ -130,15 +176,28 @@ noreturn void multiboot_main(uint32_t magic, multiboot_info_t* info) {
     }
 
     module_t* const mod = (void*)info->mods_addr;
-    zircon_kernel_t* zbi = (void*)mod->mod_start;
+    zbi_header_t* zbi = (void*)mod->mod_start;
     size_t zbi_len = mod->mod_end - mod->mod_start;
 
-    if (zbi == NULL || zbi_len < sizeof(zbi->hdr_file) ||
-        zbi_len < sizeof(zbi_header_t) + zbi->hdr_file.length) {
-        panic("insufficient multiboot module [%#"PRIx32",%#"PRIx32") for ZBI",
-              mod->mod_start, mod->mod_end);
+    if (zbi == NULL || zbi_len < sizeof(*zbi)) {
+        panic("insufficient multiboot module [%#"PRIx32",%#"PRIx32")"
+              " for ZBI header", mod->mod_start, mod->mod_end);
     }
 
+    // TODO(mcgrathr): Sanity check disabled for now because Depthcharge as of
+    // https://chromium.googlesource.com/chromiumos/platform/depthcharge/+/firmware-eve-9584.B
+    // prepends items and adjusts the ZBI container header, but fails to update
+    // the Multiboot module_t header to match.
+    if (zbi_len < sizeof(*zbi) + zbi->length && 0) {
+        panic("insufficient multiboot module [%#"PRIx32",%#"PRIx32")"
+              " for ZBI length %#"PRIx32,
+              mod->mod_start, mod->mod_end, sizeof(*zbi) + zbi->length);
+    }
+
+    // Depthcharge prepends items to the ZBI, so the kernel is not necessarily
+    // first in the image seen here even though that is a requirement of the
+    // protocol with actual ZBI bootloaders.  Hence this can't use
+    // zbi_check_complete.
     zbi_header_t* bad_hdr;
     zbi_result_t result = zbi_check(zbi, &bad_hdr);
     if (result != ZBI_RESULT_OK) {
@@ -146,27 +205,27 @@ noreturn void multiboot_main(uint32_t magic, multiboot_info_t* info) {
               (int)result, (size_t)((uint8_t*)bad_hdr - (uint8_t*)zbi));
     }
 
-    if (zbi->hdr_kernel.type != ZBI_TYPE_KERNEL_X64) {
-        panic("ZBI first item has type %#"PRIx32" != %#"PRIx32"\n",
-              zbi->hdr_kernel.type, (uint32_t)ZBI_TYPE_KERNEL_X64);
+    // Find the kernel item.
+    const zbi_header_t* kernel_item_header = NULL;
+    result = zbi_for_each(zbi, &find_kernel_item, &kernel_item_header);
+    if (result != ZBI_RESULT_INCOMPLETE_KERNEL) {
+        panic("ZBI missing kernel");
     }
+
+    // This is the kernel item's payload, but it expects the whole
+    // zircon_kernel_t (i.e. starting with the container header) to be loaded
+    // at PHYS_LOAD_ADDRESS.
+    const zbi_kernel_t* kernel_header = (const void*)(kernel_item_header + 1);
 
     // The kernel will sit at PHYS_LOAD_ADDRESS, where the code now
     // running sits.  The space until kernel_memory_end is reserved
     // and can't be used for anything else.
     const size_t kernel_load_size =
-        offsetof(zircon_kernel_t, data_kernel) + zbi->hdr_kernel.length;
+        offsetof(zircon_kernel_t, data_kernel) + kernel_item_header->length;
     uint8_t* const kernel_load_end = PHYS_LOAD_ADDRESS + kernel_load_size;
     uint8_t* const kernel_memory_end =
-        kernel_load_end + ZBI_ALIGN(zbi->data_kernel.reserve_memory_size);
+        kernel_load_end + ZBI_ALIGN(kernel_header->reserve_memory_size);
 
-    if (!(info->flags & MB_INFO_MEM_SIZE)) {
-        panic("multiboot memory information missing");
-    }
-    uintptr_t upper_memory_limit = info->mem_upper << 10;
-    if (info->mem_upper > (UINT32_MAX >> 10)) {
-        upper_memory_limit = -4096u;
-    }
     if (upper_memory_limit < (uintptr_t)kernel_memory_end) {
         panic("upper memory limit %#"PRIxPTR" < kernel end %p",
               upper_memory_limit, kernel_memory_end);
@@ -185,67 +244,24 @@ noreturn void multiboot_main(uint32_t magic, multiboot_info_t* info) {
               zbi, capacity, sizeof(struct trampoline), (int)result);
     }
 
-    // Separate the kernel from the data ZBI and move it into temporary
-    // space that the trampoline code will copy it from.
-    const zbi_header_t data_zbi_hdr = ZBI_CONTAINER_HEADER(
-        zbi->hdr_file.length -
-        sizeof(zbi->hdr_kernel) -
-        zbi->hdr_kernel.length);
-    uint8_t* const zbi_end = (uint8_t*)zbi + zbi_size(&zbi->hdr_file);
-    zircon_kernel_t* kernel;
-    zbi_header_t* data;
-    uintptr_t free_memory;
+    uint8_t* const zbi_end = (uint8_t*)zbi + zbi_size(zbi);
+    uintptr_t free_memory = (uintptr_t)kernel_memory_end;
     if ((uint8_t*)zbi < kernel_memory_end) {
         // The ZBI overlaps where the kernel needs to sit.  Copy it further up.
-        if (zbi_end < kernel_memory_end) {
-            data = (void*)kernel_memory_end;
-        } else {
-            data = (void*)zbi_end;
+        zbi_header_t* new_zbi = (void*)zbi_end;
+        if ((uint8_t*)zbi_end < kernel_memory_end) {
+            new_zbi = (void*)kernel_memory_end;
         }
         // It needs to be page-aligned.
-        data = (void*)(((uintptr_t)data + 4095) & -4096);
-        // First fill in the data ZBI.
-        *data = data_zbi_hdr;
-        memcpy(data + 1,
-               (uint8_t*)&zbi->data_kernel + zbi->hdr_kernel.length,
-               data->length);
-        // Now place the kernel after that.
-        kernel = (void*)((uint8_t*)(data + 1) + data->length);
-        memcpy(kernel, zbi, kernel_load_size);
-        free_memory = (uintptr_t)kernel + kernel_load_size;
-    } else {
-        // The ZBI can stay where it is.  Find a place to copy the kernel.
-        size_t space = (uint8_t*)zbi - kernel_memory_end;
-        if (space >= kernel_load_size) {
-            // There's space right after the final kernel location.
-            kernel = (void*)kernel_memory_end;
-            free_memory = (uintptr_t)zbi_end;
-        } else {
-            // Use space after the ZBI.
-            kernel = (void*)((uint8_t*)zbi + zbi_size(&zbi->hdr_file));
-            free_memory = (uintptr_t)kernel + kernel_load_size;
-        }
-        // Copy the kernel into some available scratch space.
-        memcpy(kernel, zbi, kernel_load_size);
-        // Now clobber what was the tail end of the kernel with a new
-        // container header for just the remainder of the ZBI.
-        data = (void*)((uint8_t*)&zbi->data_kernel + zbi->hdr_kernel.length);
-        *data = data_zbi_hdr;
-        // Move the ZBI up to get it page-aligned.
-        if ((uintptr_t)data % 4096 != 0) {
-            void* orig = data;
-            data = (void*)(((uintptr_t)data + 4095) & -4096);
-            memmove(data, orig, zbi_size(data));
-        }
+        new_zbi = (void*)(((uintptr_t)new_zbi + 4096 - 1) & -4096);
+        memmove(new_zbi, zbi, zbi_size(zbi));
+        free_memory = (uintptr_t)new_zbi + zbi_size(zbi);
+        zbi = new_zbi;
     }
-
-    // Fix up the kernel container's size.
-    kernel->hdr_file.length =
-        sizeof(kernel->hdr_kernel) + kernel->hdr_kernel.length;
 
     // Set up page tables in free memory.
     enable_64bit_paging(free_memory, upper_memory_limit);
 
     // Copy the kernel into place and enter its code in 64-bit mode.
-    boot_zbi(kernel, data, trampoline);
+    boot_zbi(zbi, kernel_item_header, trampoline);
 }
