@@ -7,7 +7,7 @@
 #include <fuchsia/inspect/cpp/fidl.h>
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
-#include <lib/component/cpp/object_dir.h>
+#include <lib/component/cpp/expose.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/functional/make_copyable.h>
@@ -34,12 +34,9 @@ class LedgerRepositoryImplTest : public TestWithEnvironment {
     auto fake_page_eviction_manager =
         std::make_unique<FakeDiskCleanupManager>();
     disk_cleanup_manager_ = fake_page_eviction_manager.get();
-    component::ExposedObject exposed_object = component::ExposedObject("test");
-    object_dir_ = exposed_object.object_dir();
 
     repository_ = std::make_unique<LedgerRepositoryImpl>(
-        std::move(exposed_object), DetachedPath(tmpfs_.root_fd()),
-        &environment_,
+        DetachedPath(tmpfs_.root_fd()), &environment_,
         std::make_unique<storage::fake::FakeDbFactory>(dispatcher()), nullptr,
         nullptr, std::move(fake_page_eviction_manager), disk_cleanup_manager_);
   }
@@ -49,7 +46,6 @@ class LedgerRepositoryImplTest : public TestWithEnvironment {
  protected:
   scoped_tmpfs::ScopedTmpFS tmpfs_;
   FakeDiskCleanupManager* disk_cleanup_manager_;
-  component::ObjectDir object_dir_;
   std::unique_ptr<LedgerRepositoryImpl> repository_;
 
  private:
@@ -87,27 +83,48 @@ TEST_F(LedgerRepositoryImplTest, ConcurrentCalls) {
 }
 
 TEST_F(LedgerRepositoryImplTest, InspectAPIRequestsMetricOnMultipleBindings) {
+  // When nothing has bound to the repository, check that the "requests" metric
+  // is present and is zero.
   bool zeroth_callback_called = false;
   fuchsia::inspect::Object zeroth_read_object;
-  object_dir_.object()->ReadData(callback::Capture(
+  component::Object::ObjectVector zeroth_out;
+
+  repository_->Inspect("zeroth", &zeroth_out);
+
+  ASSERT_EQ(1UL, zeroth_out.size());
+  zeroth_out.at(0).get()->ReadData(callback::Capture(
       callback::SetWhenCalled(&zeroth_callback_called), &zeroth_read_object));
   EXPECT_TRUE(zeroth_callback_called);
   ExpectRequestsMetric(&zeroth_read_object, 0UL);
 
+  // When one binding has been made to the repository, check that the "requests"
+  // metric is present and is one.
   ledger_internal::LedgerRepositoryPtr first_ledger_repository_ptr;
-  repository_->BindRepository(first_ledger_repository_ptr.NewRequest());
   bool first_callback_called = false;
   fuchsia::inspect::Object first_read_object;
-  object_dir_.object()->ReadData(callback::Capture(
+  component::Object::ObjectVector first_out;
+  repository_->BindRepository(first_ledger_repository_ptr.NewRequest());
+
+  repository_->Inspect("first", &first_out);
+
+  ASSERT_EQ(1UL, first_out.size());
+  first_out.at(0).get()->ReadData(callback::Capture(
       callback::SetWhenCalled(&first_callback_called), &first_read_object));
   EXPECT_TRUE(first_callback_called);
   ExpectRequestsMetric(&first_read_object, 1UL);
 
+  // When two bindings have been made to the repository, check that the
+  // "requests" metric is present and is two.
   ledger_internal::LedgerRepositoryPtr second_ledger_repository_ptr;
-  repository_->BindRepository(second_ledger_repository_ptr.NewRequest());
   bool second_callback_called = false;
   fuchsia::inspect::Object second_read_object;
-  object_dir_.object()->ReadData(callback::Capture(
+  component::Object::ObjectVector second_out;
+  repository_->BindRepository(second_ledger_repository_ptr.NewRequest());
+
+  repository_->Inspect("second", &second_out);
+
+  ASSERT_EQ(1UL, second_out.size());
+  second_out.at(0).get()->ReadData(callback::Capture(
       callback::SetWhenCalled(&second_callback_called), &second_read_object));
   EXPECT_TRUE(second_callback_called);
   ExpectRequestsMetric(&second_read_object, 2UL);

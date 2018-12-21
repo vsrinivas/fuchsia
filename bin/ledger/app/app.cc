@@ -21,6 +21,7 @@
 #include <trace-provider/provider.h>
 #include <zircon/device/vfs.h>
 
+#include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
 #include "peridot/bin/ledger/cobalt/cobalt.h"
 #include "peridot/bin/ledger/environment/environment.h"
@@ -110,7 +111,16 @@ class App : public ledger_internal::LedgerController {
     startup_context_->outgoing().object_dir()->set_prop(
         "statistic_gathering", app_params_.disable_statistics ? "off" : "on");
 
+    startup_context_->outgoing().object_dir()->set_children_callback(
+        {kRepositoriesInspectPathComponent},
+        [this](component::Object::ObjectVector* out) {
+          factory_impl_->GetChildren(out);
+        });
+
     loop_.Run();
+
+    startup_context_->outgoing().object_dir()->set_children_callback(
+        {kRepositoriesInspectPathComponent}, nullptr);
 
     return true;
   }

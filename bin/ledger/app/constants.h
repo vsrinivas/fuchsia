@@ -24,6 +24,10 @@ inline constexpr fxl::StringView kServerIdFilename = "server_id";
 // The serialization version of PageUsage DB.
 inline constexpr fxl::StringView kPageUsageDbSerializationVersion = "1";
 
+inline constexpr char kRepositoriesInspectPathComponent[] = "repositories";
+inline constexpr char kRequestsInspectPathComponent[] = "requests";
+inline constexpr char kLedgersInspectPathComponent[] = "ledgers";
+
 }  // namespace ledger
 
 #endif  // PERIDOT_BIN_LEDGER_APP_CONSTANTS_H_

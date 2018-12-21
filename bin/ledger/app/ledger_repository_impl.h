@@ -7,8 +7,8 @@
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
-#include <garnet/public/lib/component/cpp/exposed_object.h>
 #include <lib/callback/auto_cleanable.h>
+#include <lib/component/cpp/expose.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/files/unique_fd.h>
@@ -38,14 +38,18 @@ class LedgerRepositoryImpl
  public:
   // Creates a new LedgerRepositoryImpl object. Guarantees that |db_factory|
   // will outlive the given |disk_cleanup_manager|.
-  LedgerRepositoryImpl(component::ExposedObject exposed_object,
-                       DetachedPath content_path, Environment* environment,
+  LedgerRepositoryImpl(DetachedPath content_path, Environment* environment,
                        std::unique_ptr<storage::DbFactory> db_factory,
                        std::unique_ptr<SyncWatcherSet> watchers,
                        std::unique_ptr<sync_coordinator::UserSync> user_sync,
                        std::unique_ptr<DiskCleanupManager> disk_cleanup_manager,
                        PageUsageListener* page_usage_listener);
   ~LedgerRepositoryImpl() override;
+
+  // Satisfies an inspection by adding to |out| an object with properties,
+  // metrics, and (callbacks affording access to) children of its own.
+  void Inspect(std::string display_name,
+               component::Object::ObjectVector* out) const;
 
   void set_on_empty(fit::closure on_empty_callback) {
     on_empty_callback_ = std::move(on_empty_callback);
@@ -101,7 +105,6 @@ class LedgerRepositoryImpl
       fidl::InterfaceRequest<ledger_internal::LedgerDebug> request,
       GetLedgerDebugCallback callback) override;
 
-  component::ExposedObject exposed_object_;
   const DetachedPath content_path_;
   Environment* const environment_;
   std::unique_ptr<storage::DbFactory> db_factory_;

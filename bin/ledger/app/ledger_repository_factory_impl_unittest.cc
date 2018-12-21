@@ -14,6 +14,7 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/testing/inspect.h"
 #include "peridot/bin/ledger/testing/test_with_environment.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
@@ -28,18 +29,26 @@ using ::testing::SizeIs;
 using ::testing::UnorderedElementsAre;
 
 constexpr fxl::StringView kObjectsName = "test objects";
-constexpr fxl::StringView kRepositoriesName = "repositories";
 constexpr fxl::StringView kUserID = "test user ID";
 
 class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
  public:
   LedgerRepositoryFactoryImplTest() {
-    object_dir_ = component::ObjectDir::Make({kObjectsName.data(), kObjectsName.size()});
+    object_dir_ =
+        component::ObjectDir::Make({kObjectsName.data(), kObjectsName.size()});
     repository_factory_ = std::make_unique<LedgerRepositoryFactoryImpl>(
         &environment_, nullptr, object_dir_);
+    object_dir_.set_children_callback(
+        {kRepositoriesInspectPathComponent},
+        [this](component::Object::ObjectVector* out) {
+          repository_factory_->GetChildren(out);
+        });
   }
 
-  ~LedgerRepositoryFactoryImplTest() override {}
+  ~LedgerRepositoryFactoryImplTest() override {
+    object_dir_.set_children_callback({kRepositoriesInspectPathComponent},
+                                      nullptr);
+  }
 
  protected:
   ::testing::AssertionResult CreateDirectory(std::string name);
@@ -145,7 +154,7 @@ LedgerRepositoryFactoryImplTest::OpenTopLevelRepositoriesChild(
   bool success = false;
 
   object_dir_.object()->OpenChild(
-      kRepositoriesName.ToString(), repositories_inspect_ptr->NewRequest(),
+      kRepositoriesInspectPathComponent, repositories_inspect_ptr->NewRequest(),
       callback::Capture(callback::SetWhenCalled(&callback_called), &success));
   RunLoopUntilIdle();
 
@@ -224,7 +233,7 @@ TEST_F(LedgerRepositoryFactoryImplTest, InspectAPINoRepositories) {
   EXPECT_EQ(kObjectsName, *object.name);
   EXPECT_THAT(*object.properties, IsEmpty());
   EXPECT_THAT(*object.metrics, IsEmpty());
-  EXPECT_THAT(*children, IsEmpty());
+  EXPECT_THAT(*children, ElementsAre(kRepositoriesInspectPathComponent));
 }
 
 TEST_F(LedgerRepositoryFactoryImplTest,
@@ -246,10 +255,9 @@ TEST_F(LedgerRepositoryFactoryImplTest,
   ledger_internal::LedgerRepositoryPtr second_ledger_repository_ptr;
   ledger_internal::LedgerRepositoryPtr first_again_ledger_repository_ptr;
 
-  // Bindings to Inspect API "Inspect" objects. Over the course of the test the
-  // top-level object_dir_ will gain a "repositories" child which itself will
-  // gain two children (one for each created repository, with names chosen by
-  // the LedgerRepositoryFactoryImpl under test).
+  // Bindings to Inspect API "Inspect" objects. Because the Ledger objects'
+  // parent-child relationships are dynamically computed, these need to be
+  // unbound and rebound for each inspection of the repositories.
   fuchsia::inspect::InspectPtr repositories_inspect_ptr;
   fuchsia::inspect::InspectPtr first_repository_inspect_ptr;
   fuchsia::inspect::InspectPtr second_repository_inspect_ptr;
@@ -267,7 +275,7 @@ TEST_F(LedgerRepositoryFactoryImplTest,
   // it is listed) and that it was requested once.
   ASSERT_TRUE(CallGetRepository(first_directory, &first_ledger_repository_ptr));
   ASSERT_TRUE(ListTopLevelChildren(&children_names));
-  EXPECT_THAT(*children_names, ElementsAre(kRepositoriesName.ToString()));
+  EXPECT_THAT(*children_names, ElementsAre(kRepositoriesInspectPathComponent));
   ASSERT_TRUE(OpenTopLevelRepositoriesChild(&repositories_inspect_ptr));
   ASSERT_TRUE(ListChildren(&repositories_inspect_ptr, &children_names));
   EXPECT_THAT(*children_names, SizeIs(1));
@@ -285,6 +293,9 @@ TEST_F(LedgerRepositoryFactoryImplTest,
   // repositories were each requested once.
   ASSERT_TRUE(
       CallGetRepository(second_directory, &second_ledger_repository_ptr));
+  ASSERT_TRUE(ListTopLevelChildren(&children_names));
+  EXPECT_THAT(*children_names, ElementsAre(kRepositoriesInspectPathComponent));
+  ASSERT_TRUE(OpenTopLevelRepositoriesChild(&repositories_inspect_ptr));
   ASSERT_TRUE(ListChildren(&repositories_inspect_ptr, &children_names));
   EXPECT_THAT(*children_names, SizeIs(2));
   second_repository_name =
@@ -295,6 +306,8 @@ TEST_F(LedgerRepositoryFactoryImplTest,
   EXPECT_THAT(*children_names, UnorderedElementsAre(first_repository_name,
                                                     second_repository_name));
   EXPECT_THAT(*second_repository_name, Not(IsEmpty()));
+  ASSERT_TRUE(OpenChild(&repositories_inspect_ptr, first_repository_name,
+                        &first_repository_inspect_ptr));
   ASSERT_TRUE(OpenChild(&repositories_inspect_ptr, second_repository_name,
                         &second_repository_inspect_ptr));
   ASSERT_TRUE(ReadData(&first_repository_inspect_ptr, &object));
@@ -310,9 +323,16 @@ TEST_F(LedgerRepositoryFactoryImplTest,
   // respectively.
   ASSERT_TRUE(
       CallGetRepository(first_directory, &first_again_ledger_repository_ptr));
+  ASSERT_TRUE(ListTopLevelChildren(&children_names));
+  EXPECT_THAT(*children_names, ElementsAre(kRepositoriesInspectPathComponent));
+  ASSERT_TRUE(OpenTopLevelRepositoriesChild(&repositories_inspect_ptr));
   ASSERT_TRUE(ListChildren(&repositories_inspect_ptr, &children_names));
   EXPECT_THAT(*children_names, UnorderedElementsAre(first_repository_name,
                                                     second_repository_name));
+  ASSERT_TRUE(OpenChild(&repositories_inspect_ptr, first_repository_name,
+                        &first_repository_inspect_ptr));
+  ASSERT_TRUE(OpenChild(&repositories_inspect_ptr, second_repository_name,
+                        &second_repository_inspect_ptr));
   ASSERT_TRUE(ReadData(&first_repository_inspect_ptr, &object));
   EXPECT_EQ(first_repository_name, *object.name);
   ExpectRequestsMetric(&object, 2UL);

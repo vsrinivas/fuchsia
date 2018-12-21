@@ -4,8 +4,11 @@
 
 #include "peridot/bin/ledger/app/ledger_repository_impl.h"
 
+#include <lib/component/cpp/expose.h>
+#include <lib/component/cpp/object_dir.h>
 #include <trace/event.h>
 
+#include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/page_utils.h"
 #include "peridot/bin/ledger/cloud_sync/impl/ledger_sync_impl.h"
 #include "peridot/bin/ledger/p2p_sync/public/ledger_communicator.h"
@@ -23,14 +26,13 @@ std::string GetDirectoryName(fxl::StringView bytes) {
 }  // namespace
 
 LedgerRepositoryImpl::LedgerRepositoryImpl(
-    component::ExposedObject exposed_object, DetachedPath content_path,
-    Environment* environment, std::unique_ptr<storage::DbFactory> db_factory,
+    DetachedPath content_path, Environment* environment,
+    std::unique_ptr<storage::DbFactory> db_factory,
     std::unique_ptr<SyncWatcherSet> watchers,
     std::unique_ptr<sync_coordinator::UserSync> user_sync,
     std::unique_ptr<DiskCleanupManager> disk_cleanup_manager,
     PageUsageListener* page_usage_listener)
-    : exposed_object_(std::move(exposed_object)),
-      content_path_(std::move(content_path)),
+    : content_path_(std::move(content_path)),
       environment_(environment),
       db_factory_(std::move(db_factory)),
       encryption_service_factory_(environment),
@@ -43,15 +45,25 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(
   ledger_repository_debug_bindings_.set_empty_set_handler(
       [this] { CheckEmpty(); });
   disk_cleanup_manager_->set_on_empty([this] { CheckEmpty(); });
-  exposed_object_.object_dir().set_metric("requests", component::UIntMetric(0));
 }
 
 LedgerRepositoryImpl::~LedgerRepositoryImpl() {}
 
+void LedgerRepositoryImpl::Inspect(std::string display_name,
+                                   component::Object::ObjectVector* out) const {
+  auto object_dir = component::ObjectDir::Make(std::move(display_name));
+  object_dir.set_metric({kRequestsInspectPathComponent},
+                        component::UIntMetric(bindings_.size()));
+  object_dir.set_children_callback(
+      [/*this*/](component::Object::ObjectVector* out) {
+        // TODO(nathaniel): This is the next level down of inspection...
+      });
+  out->push_back(object_dir.object());
+}
+
 void LedgerRepositoryImpl::BindRepository(
     fidl::InterfaceRequest<ledger_internal::LedgerRepository>
         repository_request) {
-  exposed_object_.object_dir().add_metric("requests", 1);
   bindings_.emplace(this, std::move(repository_request));
 }
 

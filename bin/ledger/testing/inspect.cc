@@ -7,6 +7,7 @@
 #include <fuchsia/inspect/cpp/fidl.h>
 
 #include "gtest/gtest.h"
+#include "peridot/bin/ledger/app/constants.h"
 
 namespace ledger {
 
@@ -17,7 +18,7 @@ void ExpectRequestsMetric(fuchsia::inspect::Object* object,
   unsigned long extra_requests_found = 0UL;
   unsigned long requests = 0UL;
   for (auto& index : *object->metrics) {
-    if (index.key == "requests") {
+    if (index.key == kRequestsInspectPathComponent) {
       if (!requests_found) {
         requests_found = true;
         requests = index.value.uint_value();

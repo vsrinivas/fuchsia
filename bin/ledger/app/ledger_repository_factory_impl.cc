@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include <lib/backoff/exponential_backoff.h>
+#include <lib/component/cpp/expose.h>
 #include <lib/component/cpp/object_dir.h>
 #include <lib/fdio/util.h>
 #include <lib/fit/function.h>
@@ -24,6 +25,7 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
+#include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/disk_cleanup_manager_impl.h"
 #include "peridot/bin/ledger/app/serialization_version.h"
 #include "peridot/bin/ledger/cloud_sync/impl/user_sync_impl.h"
@@ -76,8 +78,6 @@ constexpr fxl::StringView kLedgersPath = "ledgers";
 constexpr fxl::StringView kStagingPath = "staging";
 constexpr fxl::StringView kNamePath = "name";
 
-constexpr char kRepositoriesPath[] = "repositories";
-
 bool GetRepositoryName(rng::Random* random, const DetachedPath& content_path,
                        std::string* name) {
   DetachedPath name_path = content_path.SubPath(kNamePath);
@@ -124,6 +124,15 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
       on_empty_callback_ = std::move(on_empty_callback);
     }
   };
+
+  // Forwards to the Inspect method of the wrapped LedgerRepositoryImpl, if the
+  // wrapped LedgerRepositoryImpl is present. Otherwise does nothing.
+  void Inspect(std::string display_name,
+               component::Object::ObjectVector* out) const {
+    if (ledger_repository_) {
+      ledger_repository_->Inspect(std::move(display_name), out);
+    }
+  }
 
   // Keeps track of |request| and |callback|. Binds |request| and fires
   // |callback| when the repository is available or an error occurs.
@@ -236,6 +245,13 @@ LedgerRepositoryFactoryImpl::LedgerRepositoryFactoryImpl(
 
 LedgerRepositoryFactoryImpl::~LedgerRepositoryFactoryImpl() {}
 
+void LedgerRepositoryFactoryImpl::GetChildren(
+    component::Object::ObjectVector* out) {
+  for (const auto& [name, container] : repositories_) {
+    container.Inspect(convert::ToHex(name), out);
+  }
+}
+
 void LedgerRepositoryFactoryImpl::GetRepository(
     zx::channel repository_handle,
     fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
@@ -306,15 +322,10 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
   }
 
   DiskCleanupManagerImpl* disk_cleanup_manager_ptr = disk_cleanup_manager.get();
-  component::ExposedObject repository_exposed_object(
-      convert::ToHex(repository_information.name));
-  repository_exposed_object.set_parent(
-      inspect_object_dir_.find({kRepositoriesPath}));
   auto repository = std::make_unique<LedgerRepositoryImpl>(
-      std::move(repository_exposed_object), repository_information.ledgers_path,
-      environment_, std::move(db_factory), std::move(watchers),
-      std::move(user_sync), std::move(disk_cleanup_manager),
-      disk_cleanup_manager_ptr);
+      repository_information.ledgers_path, environment_, std::move(db_factory),
+      std::move(watchers), std::move(user_sync),
+      std::move(disk_cleanup_manager), disk_cleanup_manager_ptr);
   disk_cleanup_manager_ptr->SetPageEvictionDelegate(repository.get());
   container->SetRepository(Status::OK, std::move(repository));
 }
@@ -334,7 +345,7 @@ LedgerRepositoryFactoryImpl::CreateUserSync(
   user_config.user_directory = repository_information.content_path;
   user_config.cloud_provider = std::move(cloud_provider_ptr);
   fit::closure on_version_mismatch = [this, repository_information]() mutable {
-    OnVersionMismatch(std::move(repository_information));
+    OnVersionMismatch(repository_information);
   };
   auto cloud_sync = std::make_unique<cloud_sync::UserSyncImpl>(
       environment_, std::move(user_config), environment_->MakeBackoff(),
