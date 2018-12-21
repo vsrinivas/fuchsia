@@ -52,14 +52,25 @@
 // OVL_FLOW_CTRL_DBG Bit Definitions
 #define OVL_IDLE                        (0x1)
 
-// OVL_SRC_CON Bit Definition
+// OVL_SRC_CON Bit Definitions
 #define SRC_CON_ENABLE_LAYER(x)         (1 << x)
 
 // OVL_Lx_CON Bit Definitions
 #define Lx_CON_BYTE_SWAP                (1 << 24)
 #define Lx_CON_CLRFMT(x)                (x << 12)
 #define Lx_CON_AEN                      (1 << 8)
-#define Lx_CON_ALPHA                    (0xFF)
+#define Lx_CON_ALPHA(x)                 (x << 0)
+
+// OVL_Lx_PITCH Bit Definitions
+#define Lx_PITCH_SRFL_EN                (1 << 31)
+#define Lx_PITCH_DST_ALPHA(x)           (x << 20)
+#define Lx_PITCH_SRC_ALPHA(x)           (x << 16)
+#define Lx_PITCH_PITCH(x)               (x << 0)
+
+#define NO_SRC_ALPHA                    (0x0)
+#define SRC_ALPHA                       (0x5)
+#define INV_SRC_ALPHA                   (0xA)
+
 
 // Color Format based on OVL_Lx_CON Register definition
 enum {

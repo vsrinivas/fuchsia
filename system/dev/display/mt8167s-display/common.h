@@ -5,6 +5,7 @@
 #pragma once
 #include <hwreg/mmio.h>
 #include <zircon/pixelformat.h>
+#include <ddk/protocol/display/controller.h>
 
 #define DISP_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 #define DISP_INFO(fmt, ...) zxlogf(INFO, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
@@ -26,4 +27,6 @@ constexpr uint32_t DISPLAY_PITCH = (DISPLAY_WIDTH * 4);
 struct OvlConfig {
     zx_pixel_format_t   format;
     zx_paddr_t          paddr;
+    alpha_t             alpha_mode;
+    float               alpha_val;
 };

@@ -5,6 +5,7 @@
 #include "ovl.h"
 #include "registers-ovl.h"
 #include <fbl/alloc_checker.h>
+#include <math.h>
 
 namespace mt8167s_display {
 
@@ -174,7 +175,18 @@ zx_status_t Ovl::Config(uint8_t layer, OvlConfig &cfg) {
     }
 
     // Setup various OVL CON register <layer specific>
-    uint32_t regVal = Lx_CON_AEN | Lx_CON_ALPHA;
+    uint32_t regVal = 0;
+    if (cfg.alpha_mode != ALPHA_DISABLE) {
+        regVal = Lx_CON_AEN; // enable alpha blending
+        if (!isnan(cfg.alpha_val)) {
+            // Apply alpha value
+            regVal |= Lx_CON_ALPHA(static_cast<uint8_t>(round(cfg.alpha_val * 255)));
+        } else {
+            // Enable per-pixel only, therefore set multiplier to 1
+            regVal |= Lx_CON_ALPHA(0xFF);
+        }
+    }
+
     if (ByteSwapNeeded(cfg.format)) {
         regVal |= Lx_CON_BYTE_SWAP;
     }
@@ -192,9 +204,10 @@ zx_status_t Ovl::Config(uint8_t layer, OvlConfig &cfg) {
                          x_ * GetBytesPerPixel(cfg.format) + y_ * pitch_;
     ovl_mmio_->Write32(finaladdr, OVL_Lx_ADDR(layer));
 
-    // setup pitch (i.e. stride)
-    ovl_mmio_->ModifyBits32(pitch_, 0, 16, OVL_Lx_PITCH(layer));
-    ovl_mmio_->ModifyBits32(0xFF, 16, 16, OVL_Lx_PITCH(layer));
+    // setup Lx_PITCH_PITCH register
+    regVal = 0;
+    regVal |= Lx_PITCH_PITCH(pitch_);
+    ovl_mmio_->Write32(regVal, OVL_Lx_PITCH(layer));
 
     // Setup magical register with undocumented magic value
     ovl_mmio_->Write32(0x6070, OVL_RDMAx_MEM_GMC_SETTING(layer));

@@ -9,6 +9,7 @@
 #include <zircon/pixelformat.h>
 #include <ddk/binding.h>
 #include <ddk/platform-defs.h>
+
 namespace mt8167s_display {
 
 namespace {
@@ -142,6 +143,10 @@ uint32_t Mt8167sDisplay::DisplayControllerImplCheckConfiguration(
                     layer.image.height != layer.dest_frame.height) {
                     layer_cfg_results[0][j] |= CLIENT_FRAME_SCALE;
                 }
+                // Ony support ALPHA_HW_MULTIPLY
+                if (layer.alpha_mode == ALPHA_PREMULTIPLIED) {
+                    layer_cfg_results[0][j] |= CLIENT_ALPHA;;
+                }
                 break;
             }
             case LAYER_TYPE_COLOR: {
@@ -176,12 +181,15 @@ void Mt8167sDisplay::DisplayControllerImplApplyConfiguration(
         // First stop the overlay engine
         ovl_->Stop();
         for (size_t j = 0; j < config->layer_count; j++) {
+
             zx_paddr_t addr =
                 reinterpret_cast<zx_paddr_t>(config->layer_list[j]->cfg.primary.image.handle);
             // Build the overlay configuration. For now we only provide format and address.
             OvlConfig cfg;
             cfg.paddr = addr;
             cfg.format = config->layer_list[j]->cfg.primary.image.pixel_format;
+            cfg.alpha_mode = config->layer_list[j]->cfg.primary.alpha_mode;
+            cfg.alpha_val = config->layer_list[j]->cfg.primary.alpha_layer_val;
             ovl_->Config(static_cast<uint8_t>(j), cfg);
         }
         // All configurations are done. Re-start the engine
