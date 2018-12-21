@@ -48,3 +48,12 @@ $ ssh -i $PRIVATE_KEY fuchsia@$TARGET_ADDRESS
 Note that if you got the key from your SSH agent, or if the key is in a well
 known location (`$SSH_HOME`) under a well known name (`id_*`), you may omit the
 `-i` argument.
+
+Note also that the host keys for a Fuchsia target device are generated at first
+boot, meaning that every time the device gets paved the keys are going to
+change.
+You may want to disable host key checking when connecting to a Fuchsia device to
+avoid running into errors by adding the following flags:
+```
+-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+```
