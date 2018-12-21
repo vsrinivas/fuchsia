@@ -299,7 +299,6 @@ class Presentation1 : private ::fuchsia::ui::viewsv1::ViewTreeListener,
   ::fuchsia::ui::viewsv1::ViewTreePtr tree_;
   ::fuchsia::ui::viewsv1::ViewContainerPtr tree_container_;
   ::fuchsia::ui::viewsv1::ViewContainerPtr root_container_;
-  fuchsia::ui::input::InputDispatcherPtr input_dispatcher_;
 
   // Rotates the display 180 degrees in response to events.
   DisplayRotater display_rotater_;

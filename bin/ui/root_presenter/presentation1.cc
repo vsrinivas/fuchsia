@@ -157,20 +157,6 @@ Presentation1::Presentation1(fuchsia::ui::scenic::Scenic* scenic,
   tree_container_listener_binding_.Bind(tree_container_listener.NewRequest());
   tree_container_->SetListener(std::move(tree_container_listener));
 
-  // Get view tree services.
-  fuchsia::sys::ServiceProviderPtr tree_service_provider;
-  tree_->GetServiceProvider(tree_service_provider.NewRequest());
-  input_dispatcher_ =
-      component::ConnectToService<fuchsia::ui::input::InputDispatcher>(
-          tree_service_provider.get());
-  input_dispatcher_.set_error_handler([this](zx_status_t error) {
-    // This isn't considered a fatal error right now since it is still useful
-    // to be able to test a view system that has graphics but no input.
-    FXL_LOG(WARNING)
-        << "Input dispatcher connection error, input will not work.";
-    input_dispatcher_.Unbind();
-  });
-
   // Attach root view to view tree.
   tree_container_->AddChild2(kRootViewKey, std::move(root_view_holder_token),
                              std::move(root_view_host_import_token_));
