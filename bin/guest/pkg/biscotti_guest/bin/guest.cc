@@ -36,6 +36,7 @@ static constexpr const char* kLinuxGuestPackage = "fuchsia-pkg://fuchsia.com/bis
 static constexpr uint32_t kStartupListenerPort = 7777;
 static constexpr uint32_t kTremplinListenerPort = 7778;
 static constexpr uint32_t kMaitredPort = 8888;
+static constexpr uint32_t kGarconPort = 8889;
 static constexpr uint32_t kTremplinPort = 8890;
 static constexpr uint32_t kLogCollectorPort = 9999;
 static constexpr const char* kVmShellCommand = "/bin/sh";
@@ -196,6 +197,11 @@ void Guest::StartGrpcServer() {
       kTremplinListenerPort,
       static_cast<vm_tools::tremplin::TremplinListener::Service*>(this));
   FXL_CHECK(status == ZX_OK) << "Failed to register TremplinListener service.";
+
+  status = builder.RegisterService(
+      kGarconPort,
+      static_cast<vm_tools::container::ContainerListener::Service*>(this));
+  FXL_CHECK(status == ZX_OK) << "Failed to register ContainerListener service.";
 
   grpc_server_ = builder.Build();
 }
@@ -573,6 +579,118 @@ grpc::Status Guest::UpdateCreateStatus(
       break;
   }
   return grpc::Status::OK;
+}
+
+grpc::Status Guest::ContainerReady(
+    grpc::ServerContext* context,
+    const vm_tools::container::ContainerStartupInfo* request,
+    vm_tools::EmptyMessage* response) {
+  // TODO(tjdetwiler): validate token.
+  auto garcon_port = request->garcon_port();
+  FXL_LOG(INFO) << "Container Ready; Garcon listening on port " << garcon_port;
+  garcon_ = NewVsockStub<vm_tools::container::Garcon>(guest_cid_, garcon_port);
+
+  DumpContainerDebugInfo();
+
+  return grpc::Status::OK;
+}
+
+grpc::Status Guest::ContainerShutdown(
+    grpc::ServerContext* context,
+    const vm_tools::container::ContainerShutdownInfo* request,
+    vm_tools::EmptyMessage* response) {
+  FXL_LOG(INFO) << "Container Shutdown";
+  return grpc::Status::OK;
+}
+
+grpc::Status Guest::UpdateApplicationList(
+    grpc::ServerContext* context,
+    const vm_tools::container::UpdateApplicationListRequest* request,
+    vm_tools::EmptyMessage* response) {
+  FXL_LOG(INFO) << "Update Application List";
+  for (const auto& application : request->application()) {
+    FXL_LOG(INFO) << "ID: " << application.desktop_file_id();
+    const auto& name = application.name().values().begin();
+    if (name != application.name().values().end()) {
+      FXL_LOG(INFO) << "\tname:             " << name->value();
+    }
+    const auto& comment = application.comment().values().begin();
+    if (comment != application.comment().values().end()) {
+      FXL_LOG(INFO) << "\tcomment:          " << comment->value();
+    }
+    FXL_LOG(INFO) << "\tno_display:       " << application.no_display();
+    FXL_LOG(INFO) << "\tstartup_wm_class: " << application.startup_wm_class();
+    FXL_LOG(INFO) << "\tstartup_notify:   " << application.startup_notify();
+    FXL_LOG(INFO) << "\tpackage_id:       " << application.package_id();
+  }
+  return grpc::Status::OK;
+}
+
+grpc::Status Guest::OpenUrl(
+    grpc::ServerContext* context,
+    const vm_tools::container::OpenUrlRequest* request,
+    vm_tools::EmptyMessage* response) {
+  FXL_LOG(INFO) << "Open URL";
+  return grpc::Status::OK;
+}
+
+grpc::Status Guest::InstallLinuxPackageProgress(
+    grpc::ServerContext* context,
+    const vm_tools::container::InstallLinuxPackageProgressInfo* request,
+    vm_tools::EmptyMessage* response) {
+  FXL_LOG(INFO) << "Install Linux Package Progress";
+  return grpc::Status::OK;
+}
+
+grpc::Status Guest::UninstallPackageProgress(
+    grpc::ServerContext* context,
+    const vm_tools::container::UninstallPackageProgressInfo* request,
+    vm_tools::EmptyMessage* response) {
+  FXL_LOG(INFO) << "Uninstall Package Progress";
+  return grpc::Status::OK;
+}
+
+grpc::Status Guest::OpenTerminal(
+    grpc::ServerContext* context,
+    const vm_tools::container::OpenTerminalRequest* request,
+    vm_tools::EmptyMessage* response) {
+  FXL_LOG(INFO) << "Open Terminal";
+  return grpc::Status::OK;
+}
+
+grpc::Status Guest::UpdateMimeTypes(
+    grpc::ServerContext* context,
+    const vm_tools::container::UpdateMimeTypesRequest* request,
+    vm_tools::EmptyMessage* response) {
+  FXL_LOG(INFO) << "Update Mime Types";
+  size_t i = 0;
+  for (const auto& pair : request->mime_type_mappings()) {
+    FXL_LOG(INFO) << "\t" << pair.first << ": " << pair.second;
+    if (++i > 10) {
+      FXL_LOG(INFO) << "\t..." << (request->mime_type_mappings_size() - i) << " more.";
+      break;
+    }
+  }
+  return grpc::Status::OK;
+}
+
+void Guest::DumpContainerDebugInfo() {
+  FXL_CHECK(garcon_)
+      << "Called DumpContainerDebugInfo without a garcon connection";
+  FXL_LOG(INFO) << "Dumping Container Debug Info...";
+
+  grpc::ClientContext context;
+  vm_tools::container::GetDebugInformationRequest request;
+  vm_tools::container::GetDebugInformationResponse response;
+
+  auto grpc_status = garcon_->GetDebugInformation(&context, request, &response);
+  if (!grpc_status.ok()) {
+      FXL_LOG(ERROR) << "Failed to read container debug information: " << grpc_status.error_message();
+      return;
+  }
+
+  FXL_LOG(INFO) << "Container debug information:";
+  FXL_LOG(INFO) << response.debug_information();
 }
 
 }  // namespace biscotti

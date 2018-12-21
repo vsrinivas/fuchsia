@@ -16,13 +16,16 @@
 #include <lib/guest/scenic_wayland_dispatcher.h>
 
 #include "garnet/bin/guest/pkg/biscotti_guest/bin/log_collector.h"
+#include "garnet/bin/guest/pkg/biscotti_guest/third_party/protos/container_guest.grpc.pb.h"
+#include "garnet/bin/guest/pkg/biscotti_guest/third_party/protos/container_host.grpc.pb.h"
 #include "garnet/bin/guest/pkg/biscotti_guest/third_party/protos/tremplin.grpc.pb.h"
 #include "garnet/bin/guest/pkg/biscotti_guest/third_party/protos/vm_guest.grpc.pb.h"
 
 namespace biscotti {
 class Guest : public fuchsia::guest::HostVsockAcceptor,
               public vm_tools::StartupListener::Service,
-              public vm_tools::tremplin::TremplinListener::Service {
+              public vm_tools::tremplin::TremplinListener::Service,
+              public vm_tools::container::ContainerListener::Service {
  public:
   // Creates a new |Guest|
   static zx_status_t CreateAndStart(component::StartupContext* context,
@@ -44,6 +47,7 @@ class Guest : public fuchsia::guest::HostVsockAcceptor,
   void CreateContainer();
   void StartContainer();
   void SetupUser();
+  void DumpContainerDebugInfo();
 
   // |fuchsia::guest::HostVsockAcceptor|
   void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
@@ -67,6 +71,41 @@ class Guest : public fuchsia::guest::HostVsockAcceptor,
       const vm_tools::tremplin::ContainerCreationProgress* request,
       vm_tools::tremplin::EmptyMessage* response) override;
 
+
+  // |vm_tools::container::ContainerListener::Service|
+  grpc::Status ContainerReady(
+      grpc::ServerContext* context,
+      const vm_tools::container::ContainerStartupInfo* request,
+      vm_tools::EmptyMessage* response) override;
+  grpc::Status ContainerShutdown(
+      grpc::ServerContext* context,
+      const vm_tools::container::ContainerShutdownInfo* request,
+      vm_tools::EmptyMessage* response) override;
+  grpc::Status UpdateApplicationList(
+      grpc::ServerContext* context,
+      const vm_tools::container::UpdateApplicationListRequest* request,
+      vm_tools::EmptyMessage* response) override;
+  grpc::Status OpenUrl(
+      grpc::ServerContext* context,
+      const vm_tools::container::OpenUrlRequest* request,
+      vm_tools::EmptyMessage* response) override;
+  grpc::Status InstallLinuxPackageProgress(
+      grpc::ServerContext* context,
+      const vm_tools::container::InstallLinuxPackageProgressInfo* request,
+      vm_tools::EmptyMessage* response) override;
+  grpc::Status UninstallPackageProgress(
+      grpc::ServerContext* context,
+      const vm_tools::container::UninstallPackageProgressInfo* request,
+      vm_tools::EmptyMessage* response) override;
+  grpc::Status OpenTerminal(
+      grpc::ServerContext* context,
+      const vm_tools::container::OpenTerminalRequest* request,
+      vm_tools::EmptyMessage* response) override;
+  grpc::Status UpdateMimeTypes(
+      grpc::ServerContext* context,
+      const vm_tools::container::UpdateMimeTypesRequest* request,
+      vm_tools::EmptyMessage* response) override;
+
   template <typename Service>
   std::unique_ptr<typename Service::Stub> NewVsockStub(uint32_t cid,
                                                        uint32_t port);
@@ -80,6 +119,7 @@ class Guest : public fuchsia::guest::HostVsockAcceptor,
   uint32_t guest_cid_ = 0;
   std::unique_ptr<vm_tools::Maitred::Stub> maitred_;
   std::unique_ptr<vm_tools::tremplin::Tremplin::Stub> tremplin_;
+  std::unique_ptr<vm_tools::container::Garcon::Stub> garcon_;
   LogCollector log_collector_;
   fxl::CommandLine cl_;
   guest::ScenicWaylandDispatcher wayland_dispatcher_;

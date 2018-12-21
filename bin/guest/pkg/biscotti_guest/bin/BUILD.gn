@@ -53,6 +53,8 @@ proto_library("protos") {
   sources = [
     "../third_party/protos/common.proto",
     "../third_party/protos/tremplin.proto",
+    "../third_party/protos/container_guest.proto",
+    "../third_party/protos/container_host.proto",
     "../third_party/protos/vm_guest.proto",
     "../third_party/protos/vm_host.proto",
   ]
