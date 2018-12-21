@@ -323,7 +323,8 @@ CompositorWeakPtr GfxSystem::GetCompositor(GlobalId compositor_id) const {
 }
 
 gfx::Session* GfxSystem::GetSession(SessionId session_id) const {
-  SessionHandler* handler = engine_->session_manager()->FindSession(session_id);
+  SessionHandler* handler =
+      engine_->session_manager()->FindSessionHandler(session_id);
   return handler ? handler->session() : nullptr;
 }
 

@@ -75,6 +75,8 @@ source_set("gfx") {
     "engine/frame_scheduler.h",
     "engine/frame_timings.cc",
     "engine/frame_timings.h",
+    "engine/gfx_command_applier.cc",
+    "engine/gfx_command_applier.h",
     "engine/hardware_layer_assignment.cc",
     "engine/hardware_layer_assignment.h",
     "engine/hit.h",

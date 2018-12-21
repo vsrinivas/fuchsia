@@ -14,7 +14,7 @@ namespace test {
 class VkSessionTest : public SessionTest {
  public:
   // |SessionTest|
-  fxl::RefPtr<SessionForTest> CreateSession() override;
+  std::unique_ptr<SessionForTest> CreateSession() override;
 
  private:
   std::unique_ptr<escher::Escher> escher_;

@@ -28,9 +28,9 @@ void CommandContext::Flush() {
   }
 }
 
-SessionHandler* SessionManager::FindSession(SessionId id) {
-  auto it = session_manager_.find(id);
-  if (it != session_manager_.end()) {
+SessionHandler* SessionManager::FindSessionHandler(SessionId id) {
+  auto it = session_handlers_.find(id);
+  if (it != session_handlers_.end()) {
     return it->second;
   }
   return nullptr;
@@ -51,18 +51,23 @@ std::unique_ptr<CommandDispatcher> SessionManager::CreateCommandDispatcher(
   scenic_impl::Session* session = context.session();
   auto handler = CreateSessionHandler(std::move(context), engine, session_id,
                                       session, session->error_reporter());
-  session_manager_.insert({session_id, handler.get()});
-  ++session_count_;
-
+  InsertSessionHandler(session_id, handler.get());
   return handler;
 }
 
-void SessionManager::ScheduleUpdateForSession(UpdateScheduler* update_scheduler,
-                                              uint64_t presentation_time,
-                                              fxl::RefPtr<Session> session) {
+void SessionManager::InsertSessionHandler(SessionId session_id,
+                                          SessionHandler* session_handler) {
+  FXL_DCHECK(session_handlers_.find(session_id) == session_handlers_.end());
+  session_handlers_.insert({session_id, session_handler});
+  ++session_count_;
+}
+
+void SessionManager::ScheduleUpdateForSession(
+    UpdateScheduler* update_scheduler, uint64_t presentation_time,
+    fxl::WeakPtr<scenic_impl::gfx::Session> session) {
   FXL_DCHECK(update_scheduler);
-  if (session->is_valid()) {
-    updatable_sessions_.insert({presentation_time, std::move(session)});
+  if (session) {
+    updatable_sessions_.push({presentation_time, std::move(session)});
     update_scheduler->ScheduleUpdate(presentation_time);
   }
 }
@@ -75,14 +80,23 @@ bool SessionManager::ApplyScheduledSessionUpdates(
 
   bool needs_render = false;
   while (!updatable_sessions_.empty()) {
-    auto top = updatable_sessions_.begin();
-    if (top->first > presentation_time)
+    auto& top = updatable_sessions_.top();
+    if (top.first > presentation_time)
       break;
-    auto session = std::move(top->second);
-    updatable_sessions_.erase(top);
-    if (session) {
-      needs_render |= session->ApplyScheduledUpdates(
+    auto session = std::move(top.second);
+    updatable_sessions_.pop();
+    if (session.get() != nullptr) {
+      auto update_results = session->ApplyScheduledUpdates(
           command_context, presentation_time, presentation_interval);
+
+      needs_render |= update_results.needs_render;
+
+      // If update fails, kill the entire client session
+      if (!update_results.success) {
+        auto session_handler = FindSessionHandler(session->id());
+        FXL_DCHECK(session_handler);
+        session_handler->BeginTearDown();
+      }
     } else {
       // Corresponds to a call to ScheduleUpdate(), which always triggers a
       // render.
@@ -92,26 +106,10 @@ bool SessionManager::ApplyScheduledSessionUpdates(
   return needs_render;
 }
 
-void SessionManager::TearDownSession(SessionId id) {
-  auto it = session_manager_.find(id);
-  FXL_DCHECK(it != session_manager_.end());
-  if (it != session_manager_.end()) {
-    SessionHandler* handler = std::move(it->second);
-    session_manager_.erase(it);
-    FXL_DCHECK(session_count_ > 0);
-    --session_count_;
-
-    // Don't destroy handler immediately, since it may be the one calling
-    // TearDownSession().
-    async::PostTask(async_get_default_dispatcher(),
-                    [handler] { handler->TearDown(); });
-  }
-}
-
-void SessionManager::RemoveSession(SessionId id) {
-  auto it = session_manager_.find(id);
-  if (it != session_manager_.end()) {
-    session_manager_.erase(it);
+void SessionManager::RemoveSessionHandler(SessionId id) {
+  auto it = session_handlers_.find(id);
+  if (it != session_handlers_.end()) {
+    session_handlers_.erase(it);
     FXL_DCHECK(session_count_ > 0);
     --session_count_;
   }

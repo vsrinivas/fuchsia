@@ -9,11 +9,11 @@
 
 #include <lib/fit/function.h>
 
-#include "garnet/lib/ui/gfx/displays/display_manager.h"
 #include "garnet/lib/ui/gfx/engine/engine.h"
 #include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/gfx/tests/mocks.h"
 #include "garnet/lib/ui/scenic/event_reporter.h"
+#include "garnet/lib/ui/scenic/tests/scenic_test.h"
 #include "lib/gtest/test_loop_fixture.h"
 
 namespace scenic_impl {
@@ -42,7 +42,7 @@ class SessionTest : public ErrorReportingTest, public EventReporter {
   void EnqueueEvent(fuchsia::ui::scenic::Command unhandled) override;
 
   // Subclasses should override to provide their own Session.
-  virtual fxl::RefPtr<SessionForTest> CreateSession();
+  virtual std::unique_ptr<SessionForTest> CreateSession();
 
   // Creates a SessionContext with only a SessionManager and a
   // FakeUpdateScheduler.
@@ -60,9 +60,9 @@ class SessionTest : public ErrorReportingTest, public EventReporter {
     return session_->resources()->FindResource<ResourceT>(id);
   }
 
-  std::unique_ptr<SessionManager> session_manager_;
   std::unique_ptr<UpdateScheduler> update_scheduler_;
-  fxl::RefPtr<SessionForTest> session_;
+  std::unique_ptr<SessionForTest> session_;
+  std::unique_ptr<SessionManagerForTest> session_manager_;
   std::vector<fuchsia::ui::scenic::Event> events_;
 };
 

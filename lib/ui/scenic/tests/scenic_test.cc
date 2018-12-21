@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/ui/scenic/tests/scenic_test.h"
+#include "garnet/lib/ui/scenic/tests/scenic_gfx_test.h"
+
+#include "garnet/lib/ui/gfx/displays/display.h"
+#include "garnet/lib/ui/gfx/displays/display_manager.h"
+#include "garnet/lib/ui/scenic/tests/mocks.h"
 
 namespace scenic_impl {
 namespace test {
@@ -12,7 +16,7 @@ std::unique_ptr<component::StartupContext> ScenicTest::app_context_;
 void ScenicTest::SetUp() {
   // TODO(SCN-720): Wrap CreateFromStartupInfo using ::gtest::Environment
   // instead of this hack.  This code has the chance to break non-ScenicTests.
-  if (app_context_ == nullptr) {
+  if (app_context_.get() == nullptr) {
     app_context_ = component::StartupContext::CreateFromStartupInfo();
   }
   scenic_ =
@@ -24,9 +28,20 @@ void ScenicTest::TearDown() {
   reported_errors_.clear();
   events_.clear();
   scenic_.reset();
+  app_context_.reset();
 }
 
 void ScenicTest::InitializeScenic(Scenic* scenic) {}
+
+std::unique_ptr<::scenic::Session> ScenicTest::CreateSession() {
+  fuchsia::ui::scenic::SessionPtr session_ptr;
+  fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener_handle;
+  fidl::InterfaceRequest<fuchsia::ui::scenic::SessionListener>
+      listener_request = listener_handle.NewRequest();
+  scenic()->CreateSession(session_ptr.NewRequest(), std::move(listener_handle));
+  return std::make_unique<::scenic::Session>(std::move(session_ptr),
+                                             std::move(listener_request));
+}
 
 void ScenicTest::ReportError(fxl::LogSeverity severity,
                              std::string error_string) {

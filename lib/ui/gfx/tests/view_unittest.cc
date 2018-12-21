@@ -23,14 +23,14 @@ class ViewTest : public SessionTest {
  public:
   ViewTest() {}
 
-  fxl::RefPtr<SessionForTest> CreateSession() override {
+  std::unique_ptr<SessionForTest> CreateSession() override {
     SessionContext session_context = CreateBarebonesSessionContext();
 
     view_linker_ = std::make_unique<ViewLinker>();
     session_context.view_linker = view_linker_.get();
 
-    return fxl::MakeRefCounted<SessionForTest>(1, std::move(session_context),
-                                               this, error_reporter());
+    return std::make_unique<SessionForTest>(1, std::move(session_context), this,
+                                            error_reporter());
   }
 
   std::unique_ptr<ViewLinker> view_linker_;

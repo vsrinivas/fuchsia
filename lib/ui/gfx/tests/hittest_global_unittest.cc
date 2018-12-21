@@ -46,14 +46,10 @@ namespace test {
 class CustomSession {
  public:
   CustomSession(SessionId id, SessionContext session_context) {
-    session_ =
-        fxl::MakeRefCounted<SessionForTest>(id, std::move(session_context));
+    session_ = std::make_unique<SessionForTest>(id, std::move(session_context));
   }
 
-  ~CustomSession() {
-    session_->TearDown();
-    session_ = nullptr;
-  }
+  ~CustomSession() {}
 
   void Apply(::fuchsia::ui::gfx::Command command) {
     CommandContext empty_command_context(nullptr);
@@ -63,7 +59,7 @@ class CustomSession {
   }
 
  private:
-  fxl::RefPtr<SessionForTest> session_;
+  std::unique_ptr<SessionForTest> session_;
 };
 
 // Loop fixture provides dispatcher for Engine's EventTimestamper.

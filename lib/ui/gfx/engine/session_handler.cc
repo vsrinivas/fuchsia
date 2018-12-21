@@ -4,6 +4,8 @@
 
 #include "garnet/lib/ui/gfx/engine/session_handler.h"
 
+#include <memory>
+
 #include "garnet/lib/ui/scenic/session.h"
 #include "lib/ui/scenic/cpp/commands.h"
 
@@ -20,15 +22,18 @@ SessionHandler::SessionHandler(CommandDispatcherContext dispatcher_context,
       session_manager_(session_manager),
       event_reporter_(event_reporter),
       error_reporter_(error_reporter),
-      session_(::fxl::MakeRefCounted<scenic_impl::gfx::Session>(
-          session_id, std::move(session_context), event_reporter,
-          error_reporter)) {
+      session_(std::make_unique<Session>(session_id, std::move(session_context),
+                                         event_reporter, error_reporter)) {
   FXL_DCHECK(session_manager_);
 }
 
-SessionHandler::~SessionHandler() {
-  TearDown();
-  session_manager_->RemoveSession(session_->id());
+SessionHandler::~SessionHandler() { CleanUp(); }
+
+void SessionHandler::CleanUp() {
+  if (session_.get() != nullptr) {
+    session_manager_->RemoveSessionHandler(session_->id());
+    session_.reset();
+  }
 }
 
 void SessionHandler::Present(
@@ -40,8 +45,9 @@ void SessionHandler::Present(
           std::move(acquire_fences), std::move(release_fences),
           std::move(callback))) {
     BeginTearDown();
+  } else {
+    buffered_commands_.clear();
   }
-  buffered_commands_.clear();
 }
 
 void SessionHandler::HitTest(
@@ -65,17 +71,9 @@ void SessionHandler::DispatchCommand(fuchsia::ui::scenic::Command command) {
 }
 
 void SessionHandler::BeginTearDown() {
-  session_manager_->TearDownSession(session_->id());
-  FXL_DCHECK(!session_->is_valid());
-}
-
-void SessionHandler::TearDown() {
-  session_->TearDown();
-
-  // Close the parent Mozart session.
-  if (context() && context()->session()) {
-    context()->scenic()->CloseSession(context()->session());
-  }
+  // Since this is essentially a self destruct
+  // call, it's safest not call anything after this
+  context()->KillSession();
 }
 
 }  // namespace gfx

@@ -9,6 +9,7 @@
 #include "garnet/lib/ui/gfx/engine/engine.h"
 #include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/gfx/engine/session_handler.h"
+#include "garnet/lib/ui/scenic/scenic.h"
 #include "lib/escher/flib/release_fence_signaller.h"
 
 namespace scenic_impl {
@@ -20,15 +21,13 @@ class SessionForTest : public Session {
   SessionForTest(SessionId id, SessionContext context,
                  EventReporter* event_reporter = EventReporter::Default(),
                  ErrorReporter* error_reporter = ErrorReporter::Default());
-
-  virtual void TearDown() override;
 };
 
 class SessionHandlerForTest : public SessionHandler {
  public:
   SessionHandlerForTest(
-      CommandDispatcherContext context, SessionManager* session_manager,
-      SessionContext session_context, SessionId session_id,
+      SessionManager* session_manager, SessionContext session_context,
+      SessionId session_id, Scenic* scenic,
       EventReporter* event_reporter = EventReporter::Default(),
       ErrorReporter* error_reporter = ErrorReporter::Default());
 
@@ -70,12 +69,8 @@ class ReleaseFenceSignallerForTest : public escher::ReleaseFenceSignaller {
 class SessionManagerForTest : public SessionManager {
  public:
   SessionManagerForTest();
-
- private:
-  std::unique_ptr<SessionHandler> CreateSessionHandler(
-      CommandDispatcherContext context, Engine* engine, SessionId session_id,
-      EventReporter* event_reporter,
-      ErrorReporter* error_reporter) const override;
+  void InsertSessionHandler(SessionId session_id,
+                            SessionHandler* session_handler);
 };
 
 class EngineForTest : public Engine {

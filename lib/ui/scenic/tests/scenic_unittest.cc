@@ -3,39 +3,47 @@
 // found in the LICENSE file.
 
 #include "garnet/lib/ui/scenic/tests/dummy_system.h"
+#include "garnet/lib/ui/scenic/tests/mocks.h"
+#include "garnet/lib/ui/scenic/tests/scenic_gfx_test.h"
 #include "garnet/lib/ui/scenic/tests/scenic_test.h"
+
+#include "gtest/gtest.h"
 
 namespace scenic_impl {
 namespace test {
 
-namespace {
-
-class MockSystemWithDelayedInitialization : public DummySystem {
- public:
-  // Expose to tests.
-  using System::SetToInitialized;
-
-  explicit MockSystemWithDelayedInitialization(SystemContext context)
-      : DummySystem(std::move(context), false) {}
-};
-
-}  // anonymous namespace
-
 TEST_F(ScenicTest, SessionCreatedAfterAllSystemsInitialized) {
   auto mock_system =
-      scenic()->RegisterSystem<test::MockSystemWithDelayedInitialization>();
+      scenic()->RegisterSystem<MockSystemWithDelayedInitialization>();
 
-  EXPECT_EQ(0U, scenic()->num_sessions());
+  EXPECT_EQ(scenic()->num_sessions(), 0U);
 
   // Request session creation, which doesn't occur yet because system isn't
   // initialized.
-  fuchsia::ui::scenic::SessionPtr session;
-  scenic()->CreateSession(session.NewRequest(), nullptr);
-  EXPECT_EQ(0U, scenic()->num_sessions());
+  auto session = CreateSession();
+  EXPECT_EQ(scenic()->num_sessions(), 0U);
 
   // Initializing the system allows the session to be created.
   mock_system->SetToInitialized();
-  EXPECT_EQ(1U, scenic()->num_sessions());
+  EXPECT_EQ(scenic()->num_sessions(), 1U);
+}
+
+TEST_F(ScenicGfxTest, InvalidPresentCall_ShouldDestroySession) {
+  EXPECT_EQ(scenic()->num_sessions(), 0U);
+  auto session = CreateSession();
+  EXPECT_EQ(scenic()->num_sessions(), 1U);
+
+  session->Present(/*Presentation Time*/ 10,
+                   /*Present Callback*/ [](auto){});
+
+  // Trigger error by making a present call with an earlier presentation time
+  // than the previous call to present
+  session->Present(/*Presentation Time*/ 0,
+                   /*Present Callback*/ [](auto){});
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(scenic()->num_sessions(), 0U);
 }
 
 }  // namespace test

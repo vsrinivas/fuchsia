@@ -19,14 +19,12 @@ namespace gfx {
 namespace test {
 
 TEST_F(SessionTest, ScheduleUpdateOutOfOrder) {
-  EXPECT_TRUE(
-      session_->ScheduleUpdate(1, std::vector<::fuchsia::ui::gfx::Command>(),
-                               ::std::vector<zx::event>(),
-                               ::std::vector<zx::event>(), [](auto) {}));
-  EXPECT_FALSE(
-      session_->ScheduleUpdate(0, std::vector<::fuchsia::ui::gfx::Command>(),
-                               ::std::vector<zx::event>(),
-                               ::std::vector<zx::event>(), [](auto) {}));
+  EXPECT_TRUE(session_->ScheduleUpdate(
+      /*presentation_time*/ 1, std::vector<::fuchsia::ui::gfx::Command>(),
+      std::vector<zx::event>(), std::vector<zx::event>(), [](auto) {}));
+  EXPECT_FALSE(session_->ScheduleUpdate(
+      /*presentation_time*/ 0, std::vector<::fuchsia::ui::gfx::Command>(),
+      std::vector<zx::event>(), std::vector<zx::event>(), [](auto) {}));
   ExpectLastReportedError(
       "scenic_impl::gfx::Session: Present called with out-of-order "
       "presentation "
@@ -35,14 +33,12 @@ TEST_F(SessionTest, ScheduleUpdateOutOfOrder) {
 }
 
 TEST_F(SessionTest, ScheduleUpdateInOrder) {
-  EXPECT_TRUE(
-      session_->ScheduleUpdate(1, std::vector<::fuchsia::ui::gfx::Command>(),
-                               ::std::vector<zx::event>(),
-                               ::std::vector<zx::event>(), [](auto) {}));
-  EXPECT_TRUE(
-      session_->ScheduleUpdate(1, std::vector<::fuchsia::ui::gfx::Command>(),
-                               ::std::vector<zx::event>(),
-                               ::std::vector<zx::event>(), [](auto) {}));
+  EXPECT_TRUE(session_->ScheduleUpdate(
+      /*presentation_time*/ 1, std::vector<::fuchsia::ui::gfx::Command>(),
+      std::vector<zx::event>(), std::vector<zx::event>(), [](auto) {}));
+  EXPECT_TRUE(session_->ScheduleUpdate(
+      /*presentation_time*/ 1, std::vector<::fuchsia::ui::gfx::Command>(),
+      std::vector<zx::event>(), std::vector<zx::event>(), [](auto) {}));
   ExpectLastReportedError(nullptr);
 }
 
@@ -96,14 +92,14 @@ TEST_F(SessionTest, Labeling) {
   EXPECT_TRUE(Apply(scenic::NewSetLabelCmd(kNodeId, kLongLabel)));
   EXPECT_EQ(kLongLabel, shape_node->label());
   EXPECT_TRUE(Apply(scenic::NewSetLabelCmd(kNodeId, kTooLongLabel)));
-  EXPECT_EQ(kTooLongLabel.substr(0, ::fuchsia::ui::gfx::kLabelMaxLength),
+  EXPECT_EQ(kTooLongLabel.substr(0, fuchsia::ui::gfx::kLabelMaxLength),
             shape_node->label());
   EXPECT_TRUE(Apply(scenic::NewSetLabelCmd(kNodeId, "")));
   EXPECT_TRUE(shape_node->label().empty());
 
   // Bypass the truncation performed by session helpers.
   shape_node->SetLabel(kTooLongLabel);
-  EXPECT_EQ(kTooLongLabel.substr(0, ::fuchsia::ui::gfx::kLabelMaxLength),
+  EXPECT_EQ(kTooLongLabel.substr(0, fuchsia::ui::gfx::kLabelMaxLength),
             shape_node->label());
 }
 

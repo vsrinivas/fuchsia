@@ -38,11 +38,15 @@ void Scenic::OnSystemInitialized(System* system) {
 }
 
 void Scenic::CloseSession(Session* session) {
+  // TODO(SCN-1065): Make it so that close session removes the binding from
+  // session_bindings_, then remove num_sessions_ and return
+  // session_bindings_.size() in num_sessions() instead
   for (auto& binding : session_bindings_.bindings()) {
     // It's possible that this is called by BindingSet::CloseAndCheckForEmpty.
     // In that case, binding could be empty, so check for that.
     if (binding && binding->impl().get() == session) {
       binding->Unbind();
+      --num_sessions_;
       return;
     }
   }
@@ -67,7 +71,7 @@ void Scenic::CreateSessionImmediately(
     ::fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
     ::fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) {
   auto session =
-      std::make_unique<Session>(this, next_session_id_++, std::move(listener));
+      std::make_unique<Session>(next_session_id_++, std::move(listener));
 
   // Give each installed System an opportunity to install a CommandDispatcher in
   // the newly-created Session.
@@ -82,6 +86,7 @@ void Scenic::CreateSessionImmediately(
   session->SetCommandDispatchers(std::move(dispatchers));
 
   session_bindings_.AddBinding(std::move(session), std::move(session_request));
+  ++num_sessions_;
 }
 
 void Scenic::GetDisplayInfo(

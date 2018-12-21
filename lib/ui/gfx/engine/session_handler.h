@@ -5,13 +5,13 @@
 #ifndef GARNET_LIB_UI_GFX_ENGINE_SESSION_HANDLER_H_
 #define GARNET_LIB_UI_GFX_ENGINE_SESSION_HANDLER_H_
 
+#include "garnet/lib/ui/gfx/engine/session.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fxl/tasks/task_runner.h"
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include "garnet/lib/ui/gfx/engine/engine.h"
-#include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/scenic/command_dispatcher.h"
 #include "garnet/lib/ui/scenic/event_reporter.h"
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
@@ -66,19 +66,21 @@ class SessionHandler : public TempSessionDelegate {
  private:
   friend class SessionManager;
 
-  // Called by |binding_| when the connection closes. Must be invoked within
-  // the SessionHandler MessageLoop.
+  // Called to initiate a session crash when an update fails.
+  // Requests the destruction of client fidl session, which
+  // then triggers the actual destruction of the SessionHandler
   void BeginTearDown();
 
-  // Called only by Engine. Use BeginTearDown() instead when you need to
-  // teardown from within SessionHandler.
-  void TearDown();
+  // Remove SessionHandler reference from SessionManager
+  // and destroy gfx::Session
+  void CleanUp();
 
   SessionManager* const session_manager_;
 
   EventReporter* const event_reporter_;
   ErrorReporter* const error_reporter_;
-  scenic_impl::gfx::SessionPtr session_;
+
+  std::unique_ptr<Session> session_;
 
   // TODO(SCN-710): We reallocate this everytime we std::move it into
   // ScheduleUpdate().  The bug has some ideas about how to do better.

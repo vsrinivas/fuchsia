@@ -9,7 +9,7 @@ namespace scenic_impl {
 namespace gfx {
 namespace test {
 
-fxl::RefPtr<SessionForTest> VkSessionTest::CreateSession() {
+std::unique_ptr<SessionForTest> VkSessionTest::CreateSession() {
   SessionContext session_context = CreateBarebonesSessionContext();
 
   // Initialize Vulkan.
@@ -37,8 +37,8 @@ fxl::RefPtr<SessionForTest> VkSessionTest::CreateSession() {
   session_context.escher_image_factory = image_factory_.get();
   session_context.release_fence_signaller = release_fence_signaller_.get();
 
-  return fxl::MakeRefCounted<SessionForTest>(1, std::move(session_context),
-                                             this, error_reporter());
+  return std::make_unique<SessionForTest>(1, std::move(session_context), this,
+                                          error_reporter());
 }
 
 }  // namespace test

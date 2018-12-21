@@ -9,6 +9,7 @@
 
 #include "garnet/lib/ui/scenic/scenic.h"
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
+#include "garnet/public/lib/ui/scenic/cpp/session.h"
 #include "gtest/gtest.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/tasks/task_runner.h"
@@ -22,6 +23,9 @@ namespace test {
 class ScenicTest : public ::gtest::TestLoopFixture,
                    public ErrorReporter,
                    public EventReporter {
+ public:
+  std::unique_ptr<::scenic::Session> CreateSession();
+
  protected:
   // ::testing::Test virtual method.
   void SetUp() override;

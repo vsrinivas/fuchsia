@@ -6,6 +6,8 @@
 
 #include "garnet/lib/ui/gfx/tests/mocks.h"
 
+#include "lib/fxl/logging.h"
+
 namespace scenic_impl {
 namespace gfx {
 namespace test {
@@ -22,13 +24,15 @@ void FakeUpdateScheduler::ScheduleUpdate(uint64_t presentation_time) {
 void SessionTest::SetUp() { session_ = CreateSession(); }
 
 void SessionTest::TearDown() {
-  session_->TearDown();
-  session_ = nullptr;
+  session_manager_.reset();
+  if (session_) {
+    session_.reset();
+  }
   events_.clear();
 }
 
 SessionContext SessionTest::CreateBarebonesSessionContext() {
-  session_manager_ = std::make_unique<SessionManager>();
+  session_manager_ = std::make_unique<SessionManagerForTest>();
   update_scheduler_ =
       std::make_unique<FakeUpdateScheduler>(session_manager_.get());
   SessionContext session_context{
@@ -52,9 +56,9 @@ SessionContext SessionTest::CreateBarebonesSessionContext() {
   return session_context;
 }
 
-fxl::RefPtr<SessionForTest> SessionTest::CreateSession() {
-  return fxl::MakeRefCounted<SessionForTest>(1, CreateBarebonesSessionContext(),
-                                             this, error_reporter());
+std::unique_ptr<SessionForTest> SessionTest::CreateSession() {
+  return std::make_unique<SessionForTest>(1, CreateBarebonesSessionContext(),
+                                          this, error_reporter());
 }
 
 void SessionTest::EnqueueEvent(fuchsia::ui::gfx::Event event) {

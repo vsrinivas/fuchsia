@@ -4,6 +4,7 @@
 
 #include "garnet/lib/ui/gfx/tests/mocks.h"
 
+#include "garnet/lib/ui/gfx/tests/session_test.h"
 #include "garnet/lib/ui/scenic/command_dispatcher.h"
 
 namespace scenic_impl {
@@ -15,17 +16,15 @@ SessionForTest::SessionForTest(SessionId id, SessionContext context,
                                ErrorReporter* error_reporter)
     : Session(id, std::move(context), event_reporter, error_reporter) {}
 
-void SessionForTest::TearDown() { Session::TearDown(); }
-
-SessionHandlerForTest::SessionHandlerForTest(CommandDispatcherContext context,
-                                             SessionManager* session_manager,
+SessionHandlerForTest::SessionHandlerForTest(SessionManager* session_manager,
                                              SessionContext session_context,
                                              SessionId session_id,
+                                             Scenic* scenic,
                                              EventReporter* event_reporter,
                                              ErrorReporter* error_reporter)
-    : SessionHandler(std::move(context), session_manager,
-                     std::move(session_context), session_id, event_reporter,
-                     error_reporter),
+    : SessionHandler(CommandDispatcherContext(scenic, nullptr, session_id),
+                     session_manager, std::move(session_context), session_id,
+                     event_reporter, error_reporter),
       command_count_(0),
       present_count_(0) {}
 
@@ -56,12 +55,9 @@ void ReleaseFenceSignallerForTest::AddCPUReleaseFence(zx::event fence) {
 
 SessionManagerForTest::SessionManagerForTest() : SessionManager() {}
 
-std::unique_ptr<SessionHandler> SessionManagerForTest::CreateSessionHandler(
-    CommandDispatcherContext context, Engine* engine, SessionId session_id,
-    EventReporter* event_reporter, ErrorReporter* error_reporter) const {
-  return std::make_unique<SessionHandlerForTest>(
-      std::move(context), engine->session_manager(), engine->session_context(),
-      session_id, event_reporter, error_reporter);
+void SessionManagerForTest::InsertSessionHandler(
+    SessionId session_id, SessionHandler* session_handler) {
+  SessionManager::InsertSessionHandler(session_id, session_handler);
 }
 
 EngineForTest::EngineForTest(DisplayManager* display_manager,

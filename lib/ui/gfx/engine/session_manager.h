@@ -8,6 +8,7 @@
 #include <set>
 #include <unordered_map>
 
+#include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/scenic/command_dispatcher.h"
 #include "lib/escher/renderer/batch_gpu_uploader.h"
 
@@ -20,9 +21,9 @@ namespace scenic_impl {
 namespace gfx {
 
 using SessionId = ::scenic_impl::SessionId;
+using PresentationTime = uint64_t;
 
 class SessionHandler;
-class Session;
 class Engine;
 class UpdateScheduler;
 
@@ -55,7 +56,7 @@ class SessionManager {
   virtual ~SessionManager() = default;
 
   // Finds the session handler corresponding to the given id.
-  SessionHandler* FindSession(SessionId id);
+  SessionHandler* FindSessionHandler(SessionId id);
 
   size_t GetSessionCount() { return session_count_; }
 
@@ -66,9 +67,9 @@ class SessionManager {
 
   // Tell the UpdateScheduler to schedule a frame, and remember the Session so
   // that we can tell it to apply updates in ApplyScheduledSessionUpdates().
-  void ScheduleUpdateForSession(UpdateScheduler* update_scheduler,
-                                uint64_t presentation_time,
-                                fxl::RefPtr<Session> session);
+  void ScheduleUpdateForSession(
+      UpdateScheduler* update_scheduler, uint64_t presentation_time,
+      fxl::WeakPtr<scenic_impl::gfx::Session> session);
 
   // Executes updates that are schedule up to and including a given presentation
   // time. Returns true if rendering is needed.
@@ -76,29 +77,45 @@ class SessionManager {
                                     uint64_t presentation_time,
                                     uint64_t presentation_interval);
 
+ protected:
+  // Protected for testing subclass
+  void InsertSessionHandler(SessionId session_id,
+                            SessionHandler* session_handler);
+
  private:
-  friend class Session;
   friend class SessionHandler;
 
-  // Destroys the session with the given id.
-  void TearDownSession(SessionId id);
+  // Used to compare presentation times so that the priority_queue acts as a min
+  // heap, placing the earliest PresentationTime at the top
+  class UpdatableSessionsComparator {
+   public:
+    bool operator()(
+        std::pair<PresentationTime, fxl::WeakPtr<Session>> updatable_session1,
+        std::pair<PresentationTime, fxl::WeakPtr<Session>> updatable_session2) {
+      return updatable_session1.first > updatable_session2.first;
+    }
+  };
 
-  // Removes the session from the session_manager_ map.  We assume that the
-  // SessionHandler has already taken care of itself and its Session.
-  void RemoveSession(SessionId id);
+  // Removes the SessionHandler from the session_handlers_ map.  We assume that
+  // the SessionHandler has already taken care of itself and its Session.
+  void RemoveSessionHandler(SessionId id);
 
   virtual std::unique_ptr<SessionHandler> CreateSessionHandler(
       CommandDispatcherContext context, Engine* engine, SessionId session_id,
       EventReporter* event_reporter, ErrorReporter* error_reporter) const;
 
   // Map of all the sessions.
-  std::unordered_map<SessionId, SessionHandler*> session_manager_;
+  std::unordered_map<SessionId, SessionHandler*> session_handlers_;
   size_t session_count_ = 0;
   SessionId next_session_id_ = 1;
 
   // Lists all Session that have updates to apply, sorted by the earliest
   // requested presentation time of each update.
-  std::set<std::pair<uint64_t, fxl::RefPtr<Session>>> updatable_sessions_;
+  std::priority_queue<
+      std::pair<PresentationTime, fxl::WeakPtr<Session>>,
+      std::vector<std::pair<PresentationTime, fxl::WeakPtr<Session>>>,
+      UpdatableSessionsComparator>
+      updatable_sessions_;
 };
 
 }  // namespace gfx

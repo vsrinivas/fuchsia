@@ -76,6 +76,10 @@ package("scenic_tests") {
       dest = "input_unittests.cmx"
     },
     {
+      path = rebase_path("meta/scenic_unittests.cmx")
+      dest = "scenic_unittests.cmx"
+    },
+    {
       path = rebase_path("meta/view_manager_apptests.cmx")
       dest = "view_manager_apptests.cmx"
     },

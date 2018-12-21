@@ -10,11 +10,9 @@
 namespace scenic_impl {
 
 Session::Session(
-    Scenic* owner, SessionId id,
+    SessionId id,
     ::fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener)
-    : scenic_(owner), id_(id), listener_(listener.Bind()), weak_factory_(this) {
-  FXL_DCHECK(scenic_);
-}
+    : id_(id), listener_(listener.Bind()), weak_factory_(this) {}
 
 Session::~Session() = default;
 

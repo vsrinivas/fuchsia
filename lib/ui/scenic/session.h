@@ -32,7 +32,7 @@ class Session final : public fuchsia::ui::scenic::Session,
                       public ErrorReporter {
  public:
   Session(
-      Scenic* owner, SessionId id,
+      SessionId id,
       ::fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener);
   ~Session() override;
 
@@ -102,7 +102,6 @@ class Session final : public fuchsia::ui::scenic::Session,
   // invoke the callback for each event.
   void FlushEvents();
 
-  Scenic* const scenic_;
   const SessionId id_;
   ::fidl::InterfacePtr<fuchsia::ui::scenic::SessionListener> listener_;
 

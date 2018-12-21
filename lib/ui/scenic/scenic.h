@@ -43,7 +43,7 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
 
   component::StartupContext* app_context() const { return app_context_; }
 
-  size_t num_sessions() { return session_bindings_.size(); }
+  size_t num_sessions() { return num_sessions_; }
 
  private:
   void CreateSessionImmediately(
@@ -83,6 +83,7 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
   fidl::BindingSet<fuchsia::ui::scenic::Scenic> scenic_bindings_;
 
   size_t next_session_id_ = 1;
+  size_t num_sessions_ = 0;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Scenic);
 };

@@ -15,15 +15,26 @@ namespace scenic_impl {
 
 // Provides the capabilities that a CommandDispatcher needs to do its job,
 // without directly exposing the Session.
-class CommandDispatcherContext final {
+class CommandDispatcherContext {
  public:
   explicit CommandDispatcherContext(Scenic* scenic, Session* session);
+
+  explicit CommandDispatcherContext(Scenic* scenic, Session* session,
+                                    SessionId id);
+
   CommandDispatcherContext(CommandDispatcherContext&& context);
 
   // TODO(SCN-808): can/should we avoid exposing any/all of these?
-  Scenic* scenic() { return scenic_; }
-  Session* session() { return session_; }
-  SessionId session_id() { return session_id_; }
+  Session* session() {
+    FXL_DCHECK(session_);
+    return session_;
+  }
+  SessionId session_id() {
+    FXL_DCHECK(session_id_);
+    return session_id_;
+  }
+
+  void KillSession();
 
  private:
   Scenic* const scenic_;
