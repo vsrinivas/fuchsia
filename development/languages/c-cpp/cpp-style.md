@@ -43,7 +43,7 @@ if (x == kFoo) return new Foo();
 
 // Correct.
 if (x == kFoo)
-  return new Foo
+  return new Foo;
 ```
 
 #### Namespace Names
