@@ -5,9 +5,6 @@
 #![feature(async_await, await_macro)]
 #![deny(warnings)]
 
-mod canvas;
-
-use crate::canvas::{Canvas, Color, FontDescription, FontFace, Paint, Point, Size};
 use failure::{Error, ResultExt};
 use fidl::endpoints::{create_endpoints, create_proxy, RequestStream, ServerEnd, ServiceMarker};
 use fidl_fuchsia_images as images;
@@ -24,6 +21,7 @@ use fuchsia_app::client::connect_to_service;
 use fuchsia_app::server::ServiceFactory;
 use fuchsia_async as fasync;
 use fuchsia_scenic::{HostImageCycler, ImportNode, Session, SessionPtr};
+use fuchsia_ui::{Canvas, Color, FontDescription, FontFace, Paint, Point, Size};
 use fuchsia_zircon::{EventPair, Handle};
 use futures::{FutureExt, TryFutureExt, TryStreamExt};
 use std::env;

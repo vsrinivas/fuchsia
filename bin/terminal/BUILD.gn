@@ -24,6 +24,7 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-scenic",
+    "//garnet/public/rust/fuchsia-ui",
     "//garnet/public/rust/fuchsia-zircon",
     "//garnet/public/rust/shared-buffer",
     "//third_party/rust-crates/rustc_deps:failure",

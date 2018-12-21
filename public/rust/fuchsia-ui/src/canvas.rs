@@ -2,32 +2,39 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![deny(warnings)]
-
 use font_rs::font::{parse, Font, FontError, GlyphBitmap};
 use shared_buffer::SharedBuffer;
 use std::collections::HashMap;
 
+/// Struct representing an RGBA color value
 #[derive(Hash, Eq, PartialEq, Debug, Clone, Copy)]
+#[allow(missing_docs)]
 pub struct Color {
     pub r: u8,
     pub g: u8,
     pub b: u8,
     pub a: u8,
 }
+
+/// Struct representing an location
 #[derive(Hash, Eq, PartialEq, Debug, Clone, Copy)]
+#[allow(missing_docs)]
 pub struct Point {
     pub x: u32,
     pub y: u32,
 }
 
+/// Struct representing an size
 #[derive(Hash, Eq, PartialEq, Debug, Clone, Copy)]
+#[allow(missing_docs)]
 pub struct Size {
     pub width: u32,
     pub height: u32,
 }
 
+/// Struct representing a rectangle area.
 #[derive(Hash, Eq, PartialEq, Debug, Clone, Copy)]
+#[allow(missing_docs)]
 pub struct Rect {
     pub left: u32,
     pub top: u32,
@@ -35,32 +42,40 @@ pub struct Rect {
     pub bottom: u32,
 }
 
+/// Struct combining a foreground and background color.
 #[derive(Hash, Eq, PartialEq, Debug, Clone, Copy)]
+#[allow(missing_docs)]
 pub struct Paint {
     pub fg: Color,
     pub bg: Color,
 }
 
+/// Opaque type representing a glyph ID.
 #[derive(Hash, Eq, PartialEq, Debug, Clone, Copy)]
 struct Glyph(u16);
 
+/// Struct representing a glyph at a specific size.
 #[derive(Hash, Eq, PartialEq, Debug)]
 struct GlyphDescriptor {
     size: u32,
     glyph: Glyph,
 }
 
+/// Struct containing a font and a cache of renderered glyphs.
 pub struct FontFace<'a> {
     font: Font<'a>,
     glyph_cache: HashMap<GlyphDescriptor, GlyphBitmap>,
 }
 
+/// Struct containint font, size and baseline.
+#[allow(missing_docs)]
 pub struct FontDescription<'a, 'b: 'a> {
     pub face: &'a mut FontFace<'b>,
     pub size: u32,
     pub baseline: i32,
 }
 
+#[allow(missing_docs)]
 impl<'a> FontFace<'a> {
     pub fn new(data: &'a [u8]) -> Result<FontFace<'a>, FontError> {
         Ok(FontFace {
@@ -78,12 +93,13 @@ impl<'a> FontFace<'a> {
     }
 
     fn lookup_glyph(&self, scalar: char) -> Option<Glyph> {
-        self.font
-            .lookup_glyph_id(scalar as u32)
-            .map(|id| Glyph(id))
+        self.font.lookup_glyph_id(scalar as u32).map(|id| Glyph(id))
     }
 }
 
+/// Canvas is used to do simple graphics and text rendering into a
+/// SharedBuffer that can then be displayed using Scenic or
+/// Display Manager.
 pub struct Canvas {
     // Assumes a pixel format of BGRA8 and a color space of sRGB.
     buffer: SharedBuffer,
@@ -93,11 +109,15 @@ pub struct Canvas {
 const BYTES_PER_PIXEL: u32 = 4;
 
 impl Canvas {
+    /// Create a canvas targetting a particular shared buffer and
+    /// with a specific row stride in bytes.
     pub fn new(buffer: SharedBuffer, stride: u32) -> Canvas {
         Canvas { buffer, stride }
     }
 
     #[inline]
+    /// Update the pixel at a particular byte offset with a particular
+    /// color.
     fn write_color_at_offset(&mut self, offset: usize, color: Color) {
         let pixel = [color.b, color.g, color.r, color.a];
         self.buffer.write_at(offset, &pixel);
@@ -142,6 +162,7 @@ impl Canvas {
         }
     }
 
+    /// Fill a rectangle with a particular color.
     pub fn fill_rect(&mut self, rect: &Rect, color: Color) {
         let col_stride = BYTES_PER_PIXEL;
         let row_stride = self.stride;
@@ -153,6 +174,10 @@ impl Canvas {
         }
     }
 
+    /// Draw line of text `text` at location `point` with foreground and background colors specified
+    /// by `paint` and with the typographic characterists in `font`. Currently this method uses
+    /// fixed size cells of size `size` for each character but that is likely to change in the
+    /// future.
     pub fn fill_text(
         &mut self, text: &str, point: Point, size: Size, font: &mut FontDescription, paint: &Paint,
     ) {

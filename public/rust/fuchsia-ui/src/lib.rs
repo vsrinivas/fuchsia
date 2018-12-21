@@ -12,9 +12,11 @@
 #![deny(missing_docs)]
 
 mod app;
+mod canvas;
 mod view;
 
 pub use crate::{
     app::{App, AppAssistant, AppPtr, APP},
+    canvas::{Canvas, Color, FontDescription, FontFace, Paint, Point, Size},
     view::{ViewAssistant, ViewAssistantPtr, ViewController, ViewKey, ViewMessages},
 };

@@ -223,7 +223,9 @@ impl ViewController {
                               properties,
                               responder,
                           }| {
-                        view_controller.lock().handle_properties_changed(&properties);
+                        view_controller
+                            .lock()
+                            .handle_properties_changed(&properties);
                         futures::future::ready(responder.send())
                     },
                 )
