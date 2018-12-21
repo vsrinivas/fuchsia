@@ -6,6 +6,7 @@
 
 #include <unistd.h>
 
+#include <fuchsia/hardware/input/c/fidl.h>
 #include <hid-parser/parser.h>
 #include <hid-parser/usages.h>
 #include <hid/acer12.h>
@@ -18,7 +19,6 @@
 #include <lib/fxl/logging.h>
 #include <lib/fzl/fdio.h>
 #include <zircon/device/device.h>
-#include <zircon/input/c/fidl.h>
 
 namespace {
 
@@ -92,7 +92,7 @@ bool FdioHidDecoder::Init() {
   }
 
   uint16_t max_len = 0;
-  zx_status_t status = zircon_input_DeviceGetMaxInputReportSize(
+  zx_status_t status = fuchsia_hardware_input_DeviceGetMaxInputReportSize(
       caller.borrow_channel(), &max_len);
   caller.release().release();
   if (status != ZX_OK) {
@@ -144,36 +144,38 @@ bool FdioHidDecoder::ParseProtocol(const fzl::FdioCaller& caller,
                                    Protocol* protocol) {
   zx_handle_t svc = caller.borrow_channel();
 
-  zircon_input_BootProtocol boot_protocol;
-  zx_status_t status = zircon_input_DeviceGetBootProtocol(svc, &boot_protocol);
+  fuchsia_hardware_input_BootProtocol boot_protocol;
+  zx_status_t status =
+      fuchsia_hardware_input_DeviceGetBootProtocol(svc, &boot_protocol);
   if (status != ZX_OK)
     return log_err(status, "ioctl protocol", name_);
 
   // For most keyboards and mouses Zircon requests the boot protocol
   // which has a fixed layout. This covers the following two cases:
 
-  if (boot_protocol == zircon_input_BootProtocol_KBD) {
+  if (boot_protocol == fuchsia_hardware_input_BootProtocol_KBD) {
     *protocol = Protocol::Keyboard;
     return true;
   }
-  if (boot_protocol == zircon_input_BootProtocol_MOUSE) {
+  if (boot_protocol == fuchsia_hardware_input_BootProtocol_MOUSE) {
     *protocol = Protocol::Mouse;
     return true;
   }
 
-  // For the rest of devices (zircon_input_BootProtocol_NONE) we need to parse
-  // the report descriptor. The legacy method involves memcmp() of known
-  // descriptors which cover the next 8 devices:
+  // For the rest of devices (fuchsia_hardware_input_BootProtocol_NONE) we need
+  // to parse the report descriptor. The legacy method involves memcmp() of
+  // known descriptors which cover the next 8 devices:
 
   uint16_t report_desc_len;
-  status = zircon_input_DeviceGetReportDescSize(svc, &report_desc_len);
+  status =
+      fuchsia_hardware_input_DeviceGetReportDescSize(svc, &report_desc_len);
   if (status != ZX_OK)
     return log_err(status, "report descriptor length", name_);
 
   std::vector<uint8_t> desc(report_desc_len);
   size_t actual;
-  status =
-      zircon_input_DeviceGetReportDesc(svc, desc.data(), desc.size(), &actual);
+  status = fuchsia_hardware_input_DeviceGetReportDesc(svc, desc.data(),
+                                                      desc.size(), &actual);
   if (status != ZX_OK)
     return log_err(status, "report descriptor", name_);
   desc.resize(actual);

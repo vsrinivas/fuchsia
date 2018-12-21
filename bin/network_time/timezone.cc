@@ -5,10 +5,10 @@
 #include "garnet/bin/network_time/timezone.h"
 
 #include <fcntl.h>
+#include <fuchsia/hardware/rtc/c/fidl.h>
 #include <inttypes.h>
 #include <sys/time.h>
 #include <unistd.h>
-#include <zircon/rtc/c/fidl.h>
 
 #include <string>
 
@@ -74,7 +74,7 @@ bool Timezone::UpdateSystemTime(int tries) {
 bool Timezone::SetSystemTime(time_t epoch_seconds) {
   struct tm ptm;
   gmtime_r(&epoch_seconds, &ptm);
-  zircon_rtc_Time rtc;
+  fuchsia_hardware_rtc_Time rtc;
   rtc.seconds = ptm.tm_sec;
   rtc.minutes = ptm.tm_min;
   rtc.hours = ptm.tm_hour;
@@ -94,11 +94,11 @@ bool Timezone::SetSystemTime(time_t epoch_seconds) {
   }
 
   zx_status_t set_status;
-  status = zircon_rtc_DeviceSet(handle, &rtc, &set_status);
+  status = fuchsia_hardware_rtc_DeviceSet(handle, &rtc, &set_status);
   if ((status != ZX_OK) || (set_status != ZX_OK)) {
-    FX_LOGS(ERROR) << "zircon_rtc_DeviceSet failed: " << status << "/" << set_status << " for "
-                   << ToIso8601String(epoch_seconds) << " (" << epoch_seconds
-                   << ")";
+    FX_LOGS(ERROR) << "fuchsia_hardware_rtc_DeviceSet failed: " << status << "/"
+                   << set_status << " for " << ToIso8601String(epoch_seconds)
+                   << " (" << epoch_seconds << ")";
     return false;
   }
   FX_LOGS(INFO) << "time set to: " << ToIso8601String(epoch_seconds);

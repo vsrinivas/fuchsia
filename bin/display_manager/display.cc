@@ -6,8 +6,8 @@
 #include "lib/fxl/logging.h"
 
 #include <fcntl.h>
+#include <fuchsia/hardware/backlight/c/fidl.h>
 #include <lib/fdio/util.h>
-#include <zircon/backlight/c/fidl.h>
 
 namespace display {
 
@@ -36,8 +36,9 @@ Display* Display::GetDisplay() {
 }
 
 bool Display::GetBrightness(double* brightness) {
-  zircon_backlight_State state;
-  zx_status_t status = zircon_backlight_DeviceGetState(channel_.get(), &state);
+  fuchsia_hardware_backlight_State state;
+  zx_status_t status =
+      fuchsia_hardware_backlight_DeviceGetState(channel_.get(), &state);
 
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Getting backlight state failed";
@@ -50,9 +51,10 @@ bool Display::GetBrightness(double* brightness) {
 
 bool Display::SetBrightness(double brightness) {
   const uint32_t adjustBrightness = brightness * BRIGHTNESS_BASE;
-  zircon_backlight_State state = {.on = brightness > 0,
-                                  .brightness = (uint8_t)adjustBrightness};
-  zx_status_t status = zircon_backlight_DeviceSetState(channel_.get(), &state);
+  fuchsia_hardware_backlight_State state = {
+      .on = brightness > 0, .brightness = (uint8_t)adjustBrightness};
+  zx_status_t status =
+      fuchsia_hardware_backlight_DeviceSetState(channel_.get(), &state);
 
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Setting backlight state failed";
