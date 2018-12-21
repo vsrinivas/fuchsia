@@ -1,6 +1,6 @@
 {protocol_docs}
 template <typename D>
-class {protocol_name} : public {base_class} {{
+class {protocol_name} : public internal::base_mixin {{
 public:
     {protocol_name}() {{
         internal::Check{protocol_name}Subclass<D>();

@@ -383,45 +383,32 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
 
 impl<'a, W: io::Write> CppBackend<'a, W> {
 
-    fn codegen_base_class(&self, attributes: &ast::Attrs) -> &'static str {
-        if attributes.has_attribute("DefaultProtocol") {
-            "internal::base_protocol"
-        } else {
-            "internal::base_mixin"
-        }
-    }
-
-    fn codegen_ops_name(&self, attributes: &ast::Attrs, name: &str) -> String {
-        if let Some(layout) = attributes.get_attribute("Layout"){
-            if layout != "\"ddk-protocol\"" {
-                return to_c_name(name) + "_ops_";
-            }
-        }
-        if attributes.has_attribute("DefaultProtocol") {
-            "ops_".to_string()
-        } else {
-            to_c_name(name) + "_protocol_ops_"
-        }
-    }
-
-    fn codegen_constructor_def(&self, name: &str, attributes: &ast::Attrs, methods: &Vec<ast::Method>, _ast: &BanjoAst) -> Result<String, Error> {
+    fn codegen_protocol_constructor_def(&self, name: &str, _attributes: &ast::Attrs, methods: &Vec<ast::Method>, _ast: &BanjoAst) -> Result<String, Error> {
         let assignments = methods.into_iter().map(|m| {
-            format!("        {ops_name}.{c_name} = {protocol_name}{cpp_name};",
-                    ops_name = self.codegen_ops_name(attributes, &name),
+            format!("        {c_name}_protocol_ops_.{c_name} = {protocol_name}{cpp_name};",
                     protocol_name = to_cpp_name(&name),
                     c_name = to_c_name(&m.name),
                     cpp_name = to_cpp_name(&m.name))
         }).collect::<Vec<_>>().join("\n");
 
-        if attributes.has_attribute("DefaultProtocol") {
-            Ok(format!(include_str!("templates/cpp/default.h"),
-                       assignments = assignments,
-                       protocol_name_uppercase = to_c_name(name).to_uppercase()
-            ).trim_end().to_string())
-        } else {
-            Ok(assignments)
-        }
+        Ok(format!(include_str!("templates/cpp/base_protocol.h"),
+                   assignments = assignments,
+                   protocol_name_uppercase = to_c_name(name).to_uppercase(),
+        ).trim_end().to_string())
     }
+
+
+    fn codegen_interface_constructor_def(&self, name: &str, _attributes: &ast::Attrs, methods: &Vec<ast::Method>, _ast: &BanjoAst) -> Result<String, Error> {
+        let assignments = methods.into_iter().map(|m| {
+            format!("        {c_name}_ops_.{c_name} = {protocol_name}{cpp_name};",
+                    protocol_name = to_cpp_name(&name),
+                    c_name = to_c_name(&m.name),
+                    cpp_name = to_cpp_name(&m.name))
+        }).collect::<Vec<_>>().join("\n");
+
+        Ok(assignments)
+    }
+
     fn codegen_protocol_defs(&self, name: &str, methods: &Vec<ast::Method>, ast: &BanjoAst) -> Result<String, Error> {
         methods.iter().map(|m| {
             let mut accum = String::new();
@@ -524,8 +511,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
                                     protocol_name = to_cpp_name(name),
                                     protocol_name_snake = to_c_name(name).as_str(),
                                     protocol_docs = get_doc_comment(attributes, 0),
-                                    base_class = self.codegen_base_class(attributes),
-                                    constructor_definition = self.codegen_constructor_def(name, attributes, methods, ast)?,
+                                    constructor_definition = self.codegen_interface_constructor_def(name, attributes, methods, ast)?,
                                     protocol_definitions = self.codegen_protocol_defs(name, methods, ast)?,
                                     proxy_definitions = self.codegen_proxy_defs(name, methods, ast)?))
         }).collect::<Result<Vec<_>, Error>>()
@@ -538,9 +524,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
                                     protocol_name = to_cpp_name(name),
                                     protocol_name_snake = to_c_name(name).as_str(),
                                     protocol_docs = get_doc_comment(attributes, 0),
-                                    base_class = self.codegen_base_class(attributes),
-                                    ops_name = self.codegen_ops_name(attributes, name),
-                                    constructor_definition = self.codegen_constructor_def(name, attributes, methods, ast)?,
+                                    constructor_definition = self.codegen_protocol_constructor_def(name, attributes, methods, ast)?,
                                     protocol_definitions = self.codegen_protocol_defs(name, methods, ast)?,
                                     proxy_definitions = self.codegen_proxy_defs(name, methods, ast)?))
         }).collect::<Result<Vec<_>, Error>>()

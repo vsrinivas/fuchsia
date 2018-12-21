@@ -1,6 +1,6 @@
 {protocol_docs}
-template <typename D>
-class {protocol_name}Protocol : public {base_class} {{
+template <typename D, typename Base = internal::base_mixin>
+class {protocol_name}Protocol : public Base {{
 public:
     {protocol_name}Protocol() {{
         internal::Check{protocol_name}ProtocolSubclass<D>();
@@ -8,7 +8,7 @@ public:
     }}
 
 protected:
-    {protocol_name_snake}_protocol_ops_t {ops_name} = {{}};
+    {protocol_name_snake}_protocol_ops_t {protocol_name_snake}_protocol_ops_ = {{}};
 
 private:
 {protocol_definitions}
