@@ -11,9 +11,10 @@
 
 #include "vim.h"
 
+namespace vim {
 #define BIT_MASK(start, count) (((1 << (count)) - 1) << (start))
 #define SET_BITS(dest, start, count, value) \
-        ((dest & ~BIT_MASK(start, count)) | (((value) << (start)) & BIT_MASK(start, count)))
+    ((dest & ~BIT_MASK(start, count)) | (((value) << (start)) & BIT_MASK(start, count)))
 
 static const pbus_mmio_t xhci_mmios[] = {
     {
@@ -36,35 +37,34 @@ static const pbus_bti_t xhci_btis[] = {
     },
 };
 
-static const pbus_dev_t xhci_dev = {
-    .name = "xhci",
-    .vid = PDEV_VID_GENERIC,
-    .pid = PDEV_PID_GENERIC,
-    .did = PDEV_DID_USB_XHCI,
-    .mmio_list = xhci_mmios,
-    .mmio_count = countof(xhci_mmios),
-    .irq_list = xhci_irqs,
-    .irq_count = countof(xhci_irqs),
-    .bti_list = xhci_btis,
-    .bti_count = countof(xhci_btis),
-};
-
-zx_status_t vim_usb_init(vim_bus_t* bus) {
+zx_status_t Vim::UsbInit() {
     zx_status_t status;
+    pbus_dev_t xhci_dev = {};
 
-    zx_handle_t bti;
-    status = iommu_get_bti(&bus->iommu, 0, BTI_BOARD, &bti);
+    xhci_dev.name = "xhci";
+    xhci_dev.vid = PDEV_VID_GENERIC;
+    xhci_dev.pid = PDEV_PID_GENERIC;
+    xhci_dev.did = PDEV_DID_USB_XHCI;
+    xhci_dev.mmio_list = xhci_mmios;
+    xhci_dev.mmio_count = countof(xhci_mmios);
+    xhci_dev.irq_list = xhci_irqs;
+    xhci_dev.irq_count = countof(xhci_irqs);
+    xhci_dev.bti_list = xhci_btis;
+    xhci_dev.bti_count = countof(xhci_btis);
+
+    zx::bti bti;
+
+    status = iommu_.GetBti(0, BTI_BOARD, &bti);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "vim_bus_bind: iommu_get_bti failed: %d\n", status);
+        zxlogf(ERROR, "UsbInit: iommu_get_bti failed: %d\n", status);
         return status;
     }
     io_buffer_t usb_phy;
-    status = io_buffer_init_physical(&usb_phy, bti, S912_USB_PHY_BASE, S912_USB_PHY_LENGTH,
+    status = io_buffer_init_physical(&usb_phy, bti.get(), S912_USB_PHY_BASE, S912_USB_PHY_LENGTH,
                                      get_root_resource(),
                                      ZX_CACHE_POLICY_UNCACHED_DEVICE);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "vim_usb_init io_buffer_init_physical failed %d\n", status);
-        zx_handle_close(bti);
+        zxlogf(ERROR, "UsbInit io_buffer_init_physical failed %d\n", status);
         return status;
     }
 
@@ -72,7 +72,7 @@ zx_status_t vim_usb_init(vim_bus_t* bus) {
 
     // amlogic_new_usb2_init
     for (int i = 0; i < 4; i++) {
-        volatile void* addr = regs + (i * PHY_REGISTER_SIZE) + U2P_R0_OFFSET;
+        volatile void* addr = (uint32_t*)regs + (i * PHY_REGISTER_SIZE) + U2P_R0_OFFSET;
         uint32_t temp = readl(addr);
         temp |= U2P_R0_POR;
         temp |= U2P_R0_DMPULLDOWN;
@@ -88,25 +88,25 @@ zx_status_t vim_usb_init(vim_bus_t* bus) {
     }
 
     // amlogic_new_usb3_init
-    volatile void* addr = regs + (4 * PHY_REGISTER_SIZE);
+    volatile void* addr = (uint32_t*)regs + (4 * PHY_REGISTER_SIZE);
 
-    uint32_t temp = readl(addr + USB_R1_OFFSET);
+    uint32_t temp = readl((uint32_t*)addr + USB_R1_OFFSET);
     temp = SET_BITS(temp, USB_R1_U3H_FLADJ_30MHZ_REG_START, USB_R1_U3H_FLADJ_30MHZ_REG_BITS, 0x20);
-    writel(temp, addr + USB_R1_OFFSET);
+    writel(temp, (uint32_t*)addr + USB_R1_OFFSET);
 
-    temp = readl(addr + USB_R5_OFFSET);
+    temp = readl((uint32_t*)addr + USB_R5_OFFSET);
     temp |= USB_R5_IDDIG_EN0;
     temp |= USB_R5_IDDIG_EN1;
     temp = SET_BITS(temp, USB_R5_IDDIG_TH_START, USB_R5_IDDIG_TH_BITS, 255);
-    writel(temp, addr + USB_R5_OFFSET);
+    writel(temp, (uint32_t*)addr + USB_R5_OFFSET);
 
     io_buffer_release(&usb_phy);
-    zx_handle_close(bti);
 
-    if ((status = pbus_device_add(&bus->pbus, &xhci_dev)) != ZX_OK) {
-        zxlogf(ERROR, "vim_usb_init could not add xhci_dev: %d\n", status);
+    if ((status = pbus_.DeviceAdd(&xhci_dev)) != ZX_OK) {
+        zxlogf(ERROR, "UsbInit could not add xhci_dev: %d\n", status);
         return status;
     }
 
     return ZX_OK;
 }
+} //namespace vim

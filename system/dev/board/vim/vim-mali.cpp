@@ -9,6 +9,7 @@
 
 #include "vim.h"
 
+namespace vim {
 static const pbus_mmio_t mali_mmios[] = {
     {
         .base = S912_MALI_BASE,
@@ -46,29 +47,28 @@ static pbus_bti_t mali_btis[] = {
     },
 };
 
-static const pbus_dev_t mali_dev = {
-    .name = "mali",
-    .vid = PDEV_VID_AMLOGIC,
-    .pid = PDEV_PID_AMLOGIC_S912,
-    .did = PDEV_DID_ARM_MALI_INIT,
-    .mmio_list = mali_mmios,
-    .mmio_count = countof(mali_mmios),
-    .irq_list = mali_irqs,
-    .irq_count = countof(mali_irqs),
-    .bti_list = mali_btis,
-    .bti_count = countof(mali_btis),
-};
-
-zx_status_t vim_mali_init(vim_bus_t* bus, uint32_t bti_index) {
+zx_status_t Vim::MaliInit() {
+    pbus_dev_t mali_dev = {};
+    mali_dev.name = "mali";
+    mali_dev.vid = PDEV_VID_AMLOGIC;
+    mali_dev.pid = PDEV_PID_AMLOGIC_S912;
+    mali_dev.did = PDEV_DID_ARM_MALI_INIT;
+    mali_dev.mmio_list = mali_mmios;
+    mali_dev.mmio_count = countof(mali_mmios);
+    mali_dev.irq_list = mali_irqs;
+    mali_dev.irq_count = countof(mali_irqs);
+    mali_dev.bti_list = mali_btis;
+    mali_dev.bti_count = countof(mali_btis);
 
     // Populate the BTI information
     mali_btis[0].iommu_index = 0;
-    mali_btis[0].bti_id      = bti_index;
+    mali_btis[0].bti_id = BTI_MALI;
 
-    zx_status_t status = pbus_device_add(&bus->pbus, &mali_dev);
+    zx_status_t status = pbus_.DeviceAdd(&mali_dev);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "vim_mali_init: pbus_device_add failed: %d\n", status);
+        zxlogf(ERROR, "MaliInit: pbus_device_add failed: %d\n", status);
         return status;
     }
     return status;
 }
+} //namespace vim
