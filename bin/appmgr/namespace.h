@@ -43,7 +43,7 @@ class Namespace : public fuchsia::sys::Environment,
   //
   // fuchsia::process::Resolver implementation:
   //
-  void Resolve(fidl::StringPtr name,
+  void Resolve(std::string name,
                fuchsia::process::Resolver::ResolveCallback callback) override;
 
   //

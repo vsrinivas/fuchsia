@@ -162,9 +162,9 @@ void CodecFactoryApp::DiscoverMediaCodecDriversAndListenForMoreAsync() {
 
         discovery_entry->codec_factory->events().OnCodecList =
             [this, discovery_entry = discovery_entry.get()](
-                fidl::VectorPtr<fuchsia::mediacodec::CodecDescription>
+                std::vector<fuchsia::mediacodec::CodecDescription>
                     codec_list) {
-              discovery_entry->driver_codec_list = std::move(codec_list);
+              discovery_entry->driver_codec_list = fidl::VectorPtr(codec_list);
               // In case discovery_entry is the first item which is now ready to
               // process, process the discovery queue.
               PostDiscoveryQueueProcessing();

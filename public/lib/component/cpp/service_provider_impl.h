@@ -105,7 +105,7 @@ class ServiceProviderImpl : public fuchsia::sys::ServiceProvider {
 
  private:
   // Overridden from |ServiceProvider|:
-  void ConnectToService(fidl::StringPtr service_name,
+  void ConnectToService(std::string service_name,
                         zx::channel client_handle) override;
 
   fidl::BindingSet<fuchsia::sys::ServiceProvider> bindings_;

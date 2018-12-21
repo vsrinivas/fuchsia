@@ -86,14 +86,14 @@ void HostServer::ListDevices(ListDevicesCallback callback) {
           fidl_devices.push_back(fidl_helpers::NewRemoteDevice(dev));
         }
       });
-  callback(fidl::VectorPtr<RemoteDevice>(std::move(fidl_devices)));
+  callback(std::vector<RemoteDevice>(std::move(fidl_devices)));
 }
 
-void HostServer::SetLocalName(::fidl::StringPtr local_name,
+void HostServer::SetLocalName(::std::string local_name,
                               SetLocalNameCallback callback) {
-  ZX_DEBUG_ASSERT(!local_name.is_null());
+  ZX_DEBUG_ASSERT(!local_name.empty());
   // Make a copy of |local_name| to move separately into the lambda.
-  std::string name_copy(*local_name);
+  std::string name_copy(local_name);
   adapter()->SetLocalName(
       std::move(local_name),
       [self = weak_ptr_factory_.GetWeakPtr(), local_name = std::move(name_copy),
@@ -244,16 +244,16 @@ void HostServer::SetConnectable(bool connectable,
       });
 }
 
-void HostServer::AddBondedDevices(::fidl::VectorPtr<BondingData> bonds,
+void HostServer::AddBondedDevices(::std::vector<BondingData> bonds,
                                   AddBondedDevicesCallback callback) {
   bt_log(TRACE, "bt-host", "AddBondedDevices");
-  if (!bonds) {
+  if (bonds.empty()) {
     callback(fidl_helpers::NewFidlError(ErrorCode::NOT_SUPPORTED,
                                         "No bonds were added"));
     return;
   }
 
-  for (auto& bond : *bonds) {
+  for (auto& bond : bonds) {
     btlib::sm::PairingData bond_data;
     if (bond.le) {
       bond_data = fidl_helpers::PairingDataFromFidl(*bond.le);
@@ -283,7 +283,7 @@ void HostServer::AddBondedDevices(::fidl::VectorPtr<BondingData> bonds,
       callback(fidl_helpers::NewFidlError(
           ErrorCode::FAILED,
           fxl::StringPrintf("Failed to initialize bonded device (id: %s)",
-                            bond.identifier->c_str())));
+                            bond.identifier.c_str())));
       return;
     }
   }
@@ -418,7 +418,7 @@ void HostServer::SetPairingDelegate(
   });
 }
 
-void HostServer::Connect(::fidl::StringPtr device_id,
+void HostServer::Connect(::std::string device_id,
                          ConnectCallback callback) {
   auto device = adapter()->remote_device_cache()->FindDeviceById(device_id);
   if (!device) {
@@ -444,7 +444,7 @@ void HostServer::Connect(::fidl::StringPtr device_id,
   // refactor this into a separate ConnectLowEnergy method.
   auto self = weak_ptr_factory_.GetWeakPtr();
   auto on_complete = [self, callback = std::move(callback),
-                      peer_id = device_id.get()](auto status, auto conn_ref) {
+                      peer_id = device_id](auto status, auto conn_ref) {
     if (!status) {
       ZX_DEBUG_ASSERT(!conn_ref);
       bt_log(TRACE, "bt-host", "failed to connect to connect to device (id %s)",
@@ -459,7 +459,7 @@ void HostServer::Connect(::fidl::StringPtr device_id,
       self->OnConnect(std::move(conn_ref), false);
     }
   };
-  adapter()->le_connection_manager()->Connect(device_id.get(),
+  adapter()->le_connection_manager()->Connect(device_id,
                                               std::move(on_complete));
 }
 

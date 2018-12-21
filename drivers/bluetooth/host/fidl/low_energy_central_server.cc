@@ -34,13 +34,13 @@ LowEnergyCentralServer::~LowEnergyCentralServer() {
 }
 
 void LowEnergyCentralServer::GetPeripherals(
-    ::fidl::VectorPtr<::fidl::StringPtr> service_uuids,
+    ::fidl::VectorPtr<::std::string> service_uuids,
     GetPeripheralsCallback callback) {
   // TODO:
   bt_log(ERROR, "bt-host", "GetPeripherals() not implemented");
 }
 
-void LowEnergyCentralServer::GetPeripheral(::fidl::StringPtr identifier,
+void LowEnergyCentralServer::GetPeripheral(::std::string identifier,
                                            GetPeripheralCallback callback) {
   // TODO:
   bt_log(ERROR, "bt-host", "GetPeripheral() not implemented");
@@ -123,7 +123,7 @@ void LowEnergyCentralServer::StopScan() {
 }
 
 void LowEnergyCentralServer::ConnectPeripheral(
-    ::fidl::StringPtr identifier,
+    ::std::string identifier,
     ::fidl::InterfaceRequest<Client> client_request,
     ConnectPeripheralCallback callback) {
   bt_log(TRACE, "bt-host", "ConnectPeripheral()");
@@ -141,7 +141,7 @@ void LowEnergyCentralServer::ConnectPeripheral(
   }
 
   auto self = weak_ptr_factory_.GetWeakPtr();
-  auto conn_cb = [self, callback = callback.share(), peer_id = identifier.get(),
+  auto conn_cb = [self, callback = callback.share(), peer_id = identifier,
                   request = std::move(client_request)](auto status,
                                                        auto conn_ref) mutable {
     if (!self)
@@ -192,10 +192,10 @@ void LowEnergyCentralServer::ConnectPeripheral(
     callback(Status());
   };
 
-  if (!adapter()->le_connection_manager()->Connect(identifier.get(),
+  if (!adapter()->le_connection_manager()->Connect(identifier,
                                                    std::move(conn_cb))) {
     bt_log(TRACE, "bt-host", "cannot connect to unknown device (id: %s)",
-           identifier.get().c_str());
+           identifier.c_str());
     callback(
         fidl_helpers::NewFidlError(ErrorCode::NOT_FOUND, "unknown device ID"));
     return;
@@ -205,11 +205,11 @@ void LowEnergyCentralServer::ConnectPeripheral(
 }
 
 void LowEnergyCentralServer::DisconnectPeripheral(
-    ::fidl::StringPtr identifier, DisconnectPeripheralCallback callback) {
-  auto iter = connections_.find(identifier.get());
+    ::std::string identifier, DisconnectPeripheralCallback callback) {
+  auto iter = connections_.find(identifier);
   if (iter == connections_.end()) {
     bt_log(TRACE, "bt-host", "client not connected to device (id: %s)",
-           identifier.get().c_str());
+           identifier.c_str());
     callback(fidl_helpers::NewFidlError(ErrorCode::NOT_FOUND,
                                         "device not connected"));
     return;
@@ -222,7 +222,7 @@ void LowEnergyCentralServer::DisconnectPeripheral(
   if (was_pending) {
     bt_log(TRACE, "bt-host", "canceling connection request");
   } else {
-    const std::string& peer_id = identifier.get();
+    const std::string& peer_id = identifier;
     gatt_host_->UnbindGattClient(reinterpret_cast<uintptr_t>(this));
     NotifyPeripheralDisconnected(peer_id);
   }

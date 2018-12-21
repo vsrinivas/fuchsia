@@ -51,9 +51,9 @@ void DisplayManager::WaitForDefaultDisplay(fit::closure callback) {
           ClientOwnershipChange(change);
         };
         dispatcher->Vsync = [this](uint64_t display_id, uint64_t timestamp,
-                                   ::fidl::VectorPtr<uint64_t> images) {
+                                   ::std::vector<uint64_t> images) {
           if (display_id == default_display_->display_id() && vsync_cb_) {
-            vsync_cb_(timestamp, images.get());
+            vsync_cb_(timestamp, images);
           }
         };
 
@@ -92,13 +92,13 @@ void DisplayManager::OnAsync(async_dispatcher_t* dispatcher,
 }
 
 void DisplayManager::DisplaysChanged(
-    ::fidl::VectorPtr<fuchsia::hardware::display::Info> added,
-    ::fidl::VectorPtr<uint64_t> removed) {
+    ::std::vector<fuchsia::hardware::display::Info> added,
+    ::std::vector<uint64_t> removed) {
   if (!default_display_) {
-    FXL_DCHECK(added.get().size());
+    FXL_DCHECK(added.size());
 
-    auto& display = added.get()[0];
-    auto& mode = display.modes.get()[0];
+    auto& display = added[0];
+    auto& mode = display.modes[0];
 
     zx_status_t status;
     zx_status_t transport_status =
@@ -134,7 +134,7 @@ void DisplayManager::DisplaysChanged(
     display_available_cb_();
     display_available_cb_ = nullptr;
   } else {
-    for (uint64_t id : removed.get()) {
+    for (uint64_t id : removed) {
       if (default_display_->display_id() == id) {
         // TODO(SCN-244): handle this more robustly.
         FXL_DCHECK(false) << "Display disconnected";

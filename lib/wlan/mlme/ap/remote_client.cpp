@@ -584,7 +584,7 @@ void AssociatedState::UpdatePowerSaveMode(const FrameControl& fc) {
 }
 
 zx_status_t AssociatedState::HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRequest>& req) {
-    size_t eapol_pdu_len = req.body()->data->size();
+    size_t eapol_pdu_len = req.body()->data.size();
     size_t max_frame_len = DataFrameHeader::max_len() + LlcHeader::max_len() + eapol_pdu_len;
     auto packet = GetWlanPacket(max_frame_len);
     if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
@@ -604,7 +604,7 @@ zx_status_t AssociatedState::HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRe
     llc_hdr->control = kLlcUnnumberedInformation;
     std::memcpy(llc_hdr->oui, kLlcOui, sizeof(llc_hdr->oui));
     llc_hdr->protocol_id = htobe16(kEapolProtocolId);
-    w.Write({req.body()->data->data(), eapol_pdu_len});
+    w.Write({req.body()->data.data(), eapol_pdu_len});
 
     packet->set_len(w.WrittenBytes());
 

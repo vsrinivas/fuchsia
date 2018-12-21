@@ -129,7 +129,7 @@ class ProcessBuilder {
   fuchsia::process::LauncherSyncPtr launcher_;
   fuchsia::process::LaunchInfo launch_info_;
   fuchsia::process::ProcessStartData data_;
-  fidl::VectorPtr<fuchsia::process::HandleInfo> handles_;
+  std::vector<fuchsia::process::HandleInfo> handles_;
 };
 
 }  // namespace process

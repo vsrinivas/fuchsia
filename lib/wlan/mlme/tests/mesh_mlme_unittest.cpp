@@ -60,7 +60,7 @@ TEST(MeshMlme, HandleMpmOpen) {
 
     {
         const uint8_t expected[] = {'f', 'o', 'o'};
-        EXPECT_RANGES_EQ(*msgs[0].body()->common.mesh_id, expected);
+        EXPECT_RANGES_EQ(msgs[0].body()->common.mesh_id, expected);
     }
 
     {

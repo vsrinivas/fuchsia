@@ -96,7 +96,7 @@ class ServiceNamespace : public fuchsia::sys::ServiceProvider {
 
  private:
   // Overridden from |ServiceProvider|:
-  void ConnectToService(fidl::StringPtr service_name,
+  void ConnectToService(std::string service_name,
                         zx::channel channel) override;
 
   void Connect(fbl::StringPiece name, zx::channel channel);

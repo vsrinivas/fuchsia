@@ -18,8 +18,8 @@ Session::Session(
 
 Session::~Session() = default;
 
-void Session::Enqueue(::fidl::VectorPtr<fuchsia::ui::scenic::Command> cmds) {
-  for (auto& cmd : *cmds) {
+void Session::Enqueue(::std::vector<fuchsia::ui::scenic::Command> cmds) {
+  for (auto& cmd : cmds) {
     // TODO(SCN-710): This dispatch is far from optimal in terms of performance.
     // We need to benchmark it to figure out whether it matters.
     System::TypeId type_id = SystemTypeForCmd(cmd);
@@ -35,8 +35,8 @@ void Session::Enqueue(::fidl::VectorPtr<fuchsia::ui::scenic::Command> cmds) {
 }
 
 void Session::Present(uint64_t presentation_time,
-                      ::fidl::VectorPtr<zx::event> acquire_fences,
-                      ::fidl::VectorPtr<zx::event> release_fences,
+                      ::std::vector<zx::event> acquire_fences,
+                      ::std::vector<zx::event> release_fences,
                       PresentCallback callback) {
   // TODO(MZ-469): Move Present logic into Session.
   auto& dispatcher = dispatchers_[System::TypeId::kGfx];
@@ -66,12 +66,12 @@ void Session::HitTest(uint32_t node_id, ::fuchsia::ui::gfx::vec3 ray_origin,
                     std::move(callback));
 }
 
-void Session::SetDebugName(fidl::StringPtr debug_name) {
+void Session::SetDebugName(std::string debug_name) {
   auto& dispatcher = dispatchers_[System::TypeId::kGfx];
   FXL_DCHECK(dispatcher);
   TempSessionDelegate* delegate =
       static_cast<TempSessionDelegate*>(dispatcher.get());
-  delegate->SetDebugName(*debug_name);
+  delegate->SetDebugName(debug_name);
 }
 
 void Session::HitTestDeviceRay(::fuchsia::ui::gfx::vec3 ray_origin,
@@ -88,7 +88,7 @@ void Session::HitTestDeviceRay(::fuchsia::ui::gfx::vec3 ray_origin,
 void Session::PostFlushTask() {
   // If this is the first EnqueueEvent() since the last FlushEvent(), post a
   // task to ensure that FlushEvents() is called.
-  if (buffered_events_->empty()) {
+  if (buffered_events_.empty()) {
     async::PostTask(async_get_default_dispatcher(),
                     [weak = weak_factory_.GetWeakPtr()] {
                       if (weak) {
@@ -124,17 +124,17 @@ void Session::EnqueueEvent(fuchsia::ui::input::InputEvent event) {
 }
 
 void Session::FlushEvents() {
-  if (!buffered_events_->empty()) {
+  if (!buffered_events_.empty()) {
     if (listener_) {
       listener_->OnScenicEvent(std::move(buffered_events_));
     } else if (event_callback_) {
       // Only use the callback if there is no listener.  It is difficult to do
       // better because we std::move the argument into OnEvent().
-      for (auto& evt : *buffered_events_) {
+      for (auto& evt : buffered_events_) {
         event_callback_(std::move(evt));
       }
     }
-    buffered_events_.reset();
+    buffered_events_.clear();
   }
 }
 

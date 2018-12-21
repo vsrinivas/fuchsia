@@ -97,6 +97,6 @@ void GuestView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
   view_listener_->OnInputEvent(std::move(event));
 }
 
-void GuestView::OnScenicError(fidl::StringPtr error) {
+void GuestView::OnScenicError(std::string error) {
   FXL_LOG(ERROR) << "Scenic session failed " << error;
 }

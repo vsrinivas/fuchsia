@@ -17,8 +17,8 @@ uint8_t ConvertScanType(wlan_mlme::ScanTypes scan_type);
 uint8_t ConvertCBW(wlan_mlme::CBW cbw);
 void ConvertWlanChan(wlan_channel_t* wlanif_chan, const wlan_mlme::WlanChan& fidl_chan);
 void ConvertWlanChan(wlan_mlme::WlanChan* fidl_chan, const wlan_channel_t& wlanif_chan);
-void CopySSID(const ::fidl::VectorPtr<uint8_t>& in_ssid, wlanif_ssid_t* out_ssid);
-void CopyRSNE(const ::fidl::VectorPtr<uint8_t>& in_rsne, uint8_t* out_rsne, size_t* out_rsne_len);
+void CopySSID(const ::std::vector<uint8_t>& in_ssid, wlanif_ssid_t* out_ssid);
+void CopyRSNE(const ::std::vector<uint8_t>& in_rsne, uint8_t* out_rsne, size_t* out_rsne_len);
 void ConvertBSSDescription(wlanif_bss_description_t* wlanif_bss_desc,
                            const wlan_mlme::BSSDescription& fidl_bss_desc);
 void ConvertBSSDescription(wlan_mlme::BSSDescription* fidl_bss_desc,

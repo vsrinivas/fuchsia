@@ -144,7 +144,7 @@ void MdnsImpl::Publish(const std::string& service_name,
             << service_name << "\n";
   mdns_service_->PublishServiceInstance(
       service_name, instance_name, port,
-      fxl::To<fidl::VectorPtr<fidl::StringPtr>>(text),
+      fxl::To<fidl::VectorPtr<std::string>>(text),
       [this](fuchsia::mdns::MdnsResult result) {
         UpdateStatus(result);
         quit_callback_();
@@ -185,7 +185,7 @@ void MdnsImpl::Respond(const std::string& service_name,
   if (!announce.empty()) {
     mdns_service_->SetSubtypes(
         service_name, instance_name,
-        fxl::To<fidl::VectorPtr<fidl::StringPtr>>(announce));
+        fxl::To<fidl::VectorPtr<std::string>>(announce));
   }
 
   WaitForKeystroke();
@@ -228,7 +228,7 @@ void MdnsImpl::GetPublication(bool query, fidl::StringPtr subtype,
   auto publication = fuchsia::mdns::MdnsPublication::New();
   publication->port = publication_port_;
   publication->text =
-      fxl::To<fidl::VectorPtr<fidl::StringPtr>>(publication_text_);
+      fxl::To<fidl::VectorPtr<std::string>>(publication_text_);
 
   callback(std::move(publication));
 }

@@ -66,7 +66,7 @@ class App : public fuchsia::ui::input::InputDeviceRegistry,
   void OnSessionError();
   void OnSessionClose();
   // Deal with Events from Scenic.
-  void OnSessionEvents(fidl::VectorPtr<fuchsia::ui::scenic::Event> events);
+  void OnSessionEvents(std::vector<fuchsia::ui::scenic::Event> events);
   // Display a focus frame around the View.
   void OnFocusEvent(const fuchsia::ui::input::FocusEvent& event);
   // Blink the focus frame.

@@ -214,16 +214,16 @@ void RouterEndpoint::ConnectionStream::BeginForkRead() {
           return;
         }
         if (fork_frame_status->introduction.has_service_name() &&
-            fork_frame_status->introduction.service_name()->get().find(
+            fork_frame_status->introduction.service_name()->find(
                 kOvernetSystemNamespace) == 0) {
           const auto& svc =
-              fork_frame_status->introduction.service_name()->get();
+              fork_frame_status->introduction.service_name();
           enum class SystemService {
             NO_IDEA,
             GOSSIP,
           };
           auto svc_type = SystemService::NO_IDEA;
-          if (svc == kOvernetGossipService) {
+          if (*svc == kOvernetGossipService) {
             svc_type = SystemService::GOSSIP;
           }
           // fork_frame_status, and therefore svc is no longer valid after this

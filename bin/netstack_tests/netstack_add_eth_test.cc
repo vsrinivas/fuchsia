@@ -153,8 +153,8 @@ TEST_F(NetstackLaunchTest, AddEthernetInterface) {
   fuchsia::net::stack::StackPtr stack;
   env->ConnectToService(stack.NewRequest());
   stack->ListInterfaces(
-      [&](::fidl::VectorPtr<::fuchsia::net::stack::InterfaceInfo> interfaces) {
-        for (const auto& iface : *interfaces) {
+      [&](::std::vector<::fuchsia::net::stack::InterfaceInfo> interfaces) {
+        for (const auto& iface : interfaces) {
           ASSERT_TRUE(iface.properties.features &
                       ::fuchsia::hardware::ethernet::INFO_FEATURE_LOOPBACK);
         }
@@ -181,8 +181,8 @@ TEST_F(NetstackLaunchTest, AddEthernetInterface) {
 
   list_ifs = false;
   stack->ListInterfaces(
-      [&](::fidl::VectorPtr<::fuchsia::net::stack::InterfaceInfo> interfaces) {
-        for (const auto& iface : *interfaces) {
+      [&](::std::vector<::fuchsia::net::stack::InterfaceInfo> interfaces) {
+        for (const auto& iface : interfaces) {
           if (iface.properties.features &
               ::fuchsia::hardware::ethernet::INFO_FEATURE_LOOPBACK) {
             continue;
@@ -227,8 +227,8 @@ TEST_F(NetstackLaunchTest, DISABLED_AddEthernetDevice) {
   config.name = interface_name;
   config.ip_address_config.set_dhcp(true);
   netstack->GetInterfaces(
-      [&](::fidl::VectorPtr<::fuchsia::netstack::NetInterface> interfaces) {
-        for (const auto& iface : *interfaces) {
+      [&](::std::vector<::fuchsia::netstack::NetInterface> interfaces) {
+        for (const auto& iface : interfaces) {
           ASSERT_TRUE(iface.features &
                       ::fuchsia::hardware::ethernet::INFO_FEATURE_LOOPBACK);
         }
@@ -247,8 +247,8 @@ TEST_F(NetstackLaunchTest, DISABLED_AddEthernetDevice) {
 
   list_ifs = false;
   netstack->GetInterfaces(
-      [&](::fidl::VectorPtr<::fuchsia::netstack::NetInterface> interfaces) {
-        for (const auto& iface : *interfaces) {
+      [&](::std::vector<::fuchsia::netstack::NetInterface> interfaces) {
+        for (const auto& iface : interfaces) {
           if (iface.features &
               ::fuchsia::hardware::ethernet::INFO_FEATURE_LOOPBACK) {
             continue;

@@ -84,10 +84,10 @@ std::vector<uint8_t> MakeMeasurementPayload(int rate,
   return payload;
 }
 
-void PrintBytes(const fidl::VectorPtr<uint8_t>& value) {
+void PrintBytes(const std::vector<uint8_t>& value) {
   const auto fmtflags = std::cout.flags();
   std::cout << std::hex;
-  std::copy(value->begin(), value->end(),
+  std::copy(value.begin(), value.end(),
             std::ostream_iterator<unsigned>(std::cout));
   std::cout.flags(fmtflags);
 }
@@ -190,7 +190,7 @@ void Service::ScheduleNotification() {
 }
 
 void Service::OnCharacteristicConfiguration(uint64_t characteristic_id,
-                                            fidl::StringPtr peer_id,
+                                            std::string peer_id,
                                             bool notify, bool indicate) {
   std::cout << "CharacteristicConfiguration on peer " << peer_id
             << " (notify: " << notify << ", indicate: " << indicate << ")"
@@ -236,7 +236,7 @@ void Service::OnReadValue(uint64_t id, int32_t offset,
 }
 
 void Service::OnWriteValue(uint64_t id, uint16_t offset,
-                           fidl::VectorPtr<uint8_t> value,
+                           std::vector<uint8_t> value,
                            OnWriteValueCallback callback) {
   std::cout << "WriteValue on characteristic " << id << " at offset " << offset
             << " (";
@@ -257,13 +257,13 @@ void Service::OnWriteValue(uint64_t id, uint16_t offset,
     return;
   }
 
-  if (value->size() != 1) {
+  if (value.size() != 1) {
     std::cout << "Write to control point of invalid length" << std::endl;
     callback(gatt::ErrorCode::INVALID_VALUE_LENGTH);
     return;
   }
 
-  if ((*value)[0] != kResetEnergyExpendedValue) {
+  if (value[0] != kResetEnergyExpendedValue) {
     std::cout << "Write value other than \"Reset Energy Expended\" to "
                  "Heart Rate Control Point characteristic"
               << std::endl;
@@ -277,7 +277,7 @@ void Service::OnWriteValue(uint64_t id, uint16_t offset,
 }
 
 void Service::OnWriteWithoutResponse(uint64_t id, uint16_t offset,
-                                     fidl::VectorPtr<uint8_t> value) {
+                                     std::vector<uint8_t> value) {
   std::cout << "WriteWithoutResponse on characteristic " << id << " at offset "
             << offset << " (";
   PrintBytes(value);

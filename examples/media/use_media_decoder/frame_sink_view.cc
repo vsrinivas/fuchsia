@@ -216,10 +216,8 @@ void FrameSinkView::PutFrame(
   // TODO(dustingreen): When release_frame_server_hack is gone, change these to
   // use "auto".  For now, we'll leave the types explicit to make the temp hack
   // as obvious as possible.
-  ::fidl::VectorPtr<::zx::event> acquire_fences =
-      ::fidl::VectorPtr<::zx::event>::New(0);
-  ::fidl::VectorPtr<::zx::event> release_fences =
-      ::fidl::VectorPtr<::zx::event>::New(0);
+  ::std::vector<::zx::event> acquire_fences;
+  ::std::vector<::zx::event> release_fences;
   release_fences.push_back(std::move(release_frame_server_hack));
 
   // For the moment we just display every frame asap.  This will hopefully tend

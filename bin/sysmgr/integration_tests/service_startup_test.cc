@@ -21,7 +21,7 @@ TEST_F(TestSysmgr, ServiceStartup) {
   zx::channel h1, h2;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
 
-  fidl::VectorPtr<fidl::StringPtr> sysmgr_args;
+  fidl::VectorPtr<std::string> sysmgr_args;
   // When auto_update_packages=true, this tests that the presence of amber
   // in the sys environment allows component loading to succeed. It should work
   // with a mocked amber.

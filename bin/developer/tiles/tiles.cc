@@ -61,8 +61,8 @@ Tiles::Tiles(component::StartupContext* startup_context,
       tiles_binding_.GetHandler(this));
 }
 
-void Tiles::AddTileFromURL(fidl::StringPtr url, bool allow_focus,
-                           fidl::VectorPtr<fidl::StringPtr> args,
+void Tiles::AddTileFromURL(std::string url, bool allow_focus,
+                           fidl::VectorPtr<std::string> args,
                            AddTileFromURLCallback callback) {
   FXL_VLOG(2) << "AddTile " << url;
   component::Services services;
@@ -91,7 +91,7 @@ void Tiles::AddTileFromURL(fidl::StringPtr url, bool allow_focus,
 }
 
 void Tiles::AddTileFromViewProvider(
-    fidl::StringPtr url,
+    std::string url,
     fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> provider,
     AddTileFromViewProviderCallback callback) {
   FXL_VLOG(2) << "AddTile " << url;
@@ -125,7 +125,7 @@ void Tiles::RemoveTile(uint32_t child_key) {
 
 void Tiles::ListTiles(ListTilesCallback callback) {
   std::vector<uint32_t> child_keys;
-  std::vector<fidl::StringPtr> child_urls;
+  std::vector<std::string> child_urls;
   std::vector<fuchsia::math::SizeF> child_sizes;
   std::vector<bool> focusabilities;
 
@@ -141,7 +141,7 @@ void Tiles::ListTiles(ListTilesCallback callback) {
     }
   }
   callback(fidl::VectorPtr<uint32_t>(std::move(child_keys)),
-           fidl::VectorPtr<fidl::StringPtr>(std::move(child_urls)),
+           fidl::VectorPtr<std::string>(std::move(child_urls)),
            fidl::VectorPtr<fuchsia::math::SizeF>(std::move(child_sizes)),
            fidl::VectorPtr<bool>(std::move(focusabilities)));
 }

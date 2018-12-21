@@ -46,7 +46,7 @@ class TzUtil {
       return;
     }
     if (command_line.HasOption(kGetTimezoneIdCmd)) {
-      fidl::StringPtr timezone_id;
+      std::string timezone_id;
       if (timezone_->GetTimezoneId(&timezone_id) == ZX_OK) {
         std::cout << timezone_id << std::endl;
       } else {

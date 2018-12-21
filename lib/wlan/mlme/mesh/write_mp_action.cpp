@@ -28,13 +28,13 @@ static void WriteFixed(BufferWriter* w, const MacHeaderWriter& mac_header_writer
 
 static void WriteCommonElementsHead(BufferWriter* w, const wlan_mlme::MeshPeeringCommon& c) {
     RatesWriter rates_writer({
-        reinterpret_cast<const SupportedRate*>(c.rates->data()),
-        c.rates->size(),
+        reinterpret_cast<const SupportedRate*>(c.rates.data()),
+        c.rates.size(),
     });
     rates_writer.WriteSupportedRates(w);
     rates_writer.WriteExtendedSupportedRates(w);
 
-    common::WriteMeshId(w, *c.mesh_id);
+    common::WriteMeshId(w, c.mesh_id);
     common::WriteMeshConfiguration(w, MeshConfiguration::FromFidl(c.mesh_config));
 }
 

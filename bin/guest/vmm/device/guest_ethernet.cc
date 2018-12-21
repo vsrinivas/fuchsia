@@ -169,7 +169,7 @@ void GuestEthernet::ListenStart(ListenStartCallback callback) {
 
 void GuestEthernet::ListenStop(ListenStopCallback callback) { callback(); }
 
-void GuestEthernet::SetClientName(fidl::StringPtr name,
+void GuestEthernet::SetClientName(std::string name,
                                   SetClientNameCallback callback) {
   FXL_LOG(INFO) << "Guest ethernet client set to " << name;
   callback(ZX_OK);

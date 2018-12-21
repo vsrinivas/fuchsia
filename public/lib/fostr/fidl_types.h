@@ -10,6 +10,8 @@
 #include "lib/fidl/cpp/vector.h"
 #include "lib/fostr/indent.h"
 
+#include <sstream>
+
 #ifdef __Fuchsia__
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_handle.h"
@@ -73,6 +75,21 @@ std::ostream& operator<<(std::ostream& os, const Array<int8_t, N>& value) {
 }
 
 template <typename T>
+std::ostream& operator<<(std::ostream& os, const std::vector<T>& value) {
+  if (value.is_null()) {
+    return os << "<null>";
+  }
+
+  if (value.get().empty()) {
+    return os << "<empty>";
+  }
+
+  fostr::internal::insert_sequence_container(os, value.get().cbegin(),
+                                             value.get().cend());
+  return os;
+}
+
+template <typename T>
 std::ostream& operator<<(std::ostream& os, const VectorPtr<T>& value) {
   if (value.is_null()) {
     return os << "<null>";
@@ -132,5 +149,35 @@ std::ostream& operator<<(std::ostream& os, const InterfaceRequest<T>& value) {
 #endif
 
 }  // namespace fidl
+
+namespace fostr {
+
+template <typename T> std::string PrintVector(const std::vector<T>& value);
+
+template <typename T>
+std::string PrintVector(const std::vector<std::vector<T>>& value) {
+  std::stringstream os;
+
+  if (value.empty()) {
+    return "<empty>";
+  }
+
+  int index = 0;
+  for (const std::vector<T>& item : value) {
+    os << NewLine << "[" << index++ << "] " << PrintVector(item);
+  }
+  return os.str();
+}
+
+template <typename T>
+std::string PrintVector(const std::vector<T>& value) {
+  std::stringstream os;
+
+  fostr::internal::insert_sequence_container(os, value.cbegin(),
+                                             value.cend());
+  return os.str();
+}
+
+}  // namespace fostr
 
 #endif  // LIB_FOSTR_FIDL_TYPES_H_

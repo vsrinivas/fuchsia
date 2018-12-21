@@ -106,7 +106,7 @@ bool Tracee::operator==(TraceProviderBundle* bundle) const {
   return bundle_ == bundle;
 }
 
-bool Tracee::Start(fidl::VectorPtr<fidl::StringPtr> categories,
+bool Tracee::Start(fidl::VectorPtr<std::string> categories,
                    size_t buffer_size,
                    fuchsia::tracelink::BufferingMode buffering_mode,
                    fit::closure started_callback,

@@ -65,8 +65,8 @@ class FakeImagePipe : public fuchsia::images::ImagePipe {
   void RemoveImage(uint32_t image_id) override;
 
   void PresentImage(uint32_t image_id, uint64_t presentation_time,
-                    fidl::VectorPtr<zx::event> acquire_fences,
-                    fidl::VectorPtr<zx::event> release_fences,
+                    std::vector<zx::event> acquire_fences,
+                    std::vector<zx::event> release_fences,
                     PresentImageCallback callback) override;
 
  private:
@@ -82,7 +82,7 @@ class FakeImagePipe : public fuchsia::images::ImagePipe {
 
   struct ImagePresentation {
     ImagePresentation(uint32_t image_id, uint64_t presentation_time,
-                      fidl::VectorPtr<zx::event> release_fences)
+                      std::vector<zx::event> release_fences)
         : image_id_(image_id),
           presentation_time_(presentation_time),
           release_fences_(std::move(release_fences)) {}

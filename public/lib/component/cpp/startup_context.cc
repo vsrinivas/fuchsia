@@ -45,13 +45,13 @@ StartupContext::CreateFromStartupInfoNotChecked() {
 std::unique_ptr<StartupContext> StartupContext::CreateFrom(
     fuchsia::sys::StartupInfo startup_info) {
   fuchsia::sys::FlatNamespace& flat = startup_info.flat_namespace;
-  if (flat.paths->size() != flat.directories->size())
+  if (flat.paths.size() != flat.directories.size())
     return nullptr;
 
   zx::channel service_root;
-  for (size_t i = 0; i < flat.paths->size(); ++i) {
-    if (flat.paths->at(i) == kServiceRootPath) {
-      service_root = std::move(flat.directories->at(i));
+  for (size_t i = 0; i < flat.paths.size(); ++i) {
+    if (flat.paths.at(i) == kServiceRootPath) {
+      service_root = std::move(flat.directories.at(i));
       break;
     }
   }

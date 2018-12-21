@@ -70,7 +70,7 @@ void InfraBss::Start(const MlmeMsg<wlan_mlme::StartRequest>& req) {
     }
 
     debugbss("[infra-bss] [%s] starting BSS\n", bssid_.ToString().c_str());
-    debugbss("    SSID: \"%s\"\n", debug::ToAsciiOrHexStr(*req.body()->ssid).c_str());
+    debugbss("    SSID: \"%s\"\n", debug::ToAsciiOrHexStr(req.body()->ssid).c_str());
     debugbss("    Beacon Period: %u\n", req.body()->beacon_period);
     debugbss("    DTIM Period: %u\n", req.body()->dtim_period);
     debugbss("    Channel: %u\n", req.body()->channel);
@@ -268,7 +268,7 @@ zx_status_t InfraBss::HandleMlmeSetKeysReq(const MlmeMsg<wlan_mlme::SetKeysReque
         return ZX_ERR_BAD_STATE;
     }
 
-    for (auto& key_desc : *req.body()->keylist) {
+    for (auto& key_desc : req.body()->keylist) {
         auto key_config = ToKeyConfig(key_desc);
         if (!key_config.has_value()) { return ZX_ERR_NOT_SUPPORTED; }
 

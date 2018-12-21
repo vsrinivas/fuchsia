@@ -39,9 +39,9 @@ zx_status_t VideoDisplay::IncomingBufferFilled(
   // TODO(garratt): these are supposed to be fire and forget:
   frame_buffers_[buffer_id]->DuplicateAcquireFence(&acquire_fence);
   frame_buffers_[buffer_id]->DuplicateReleaseFence(&release_fence);
-  fidl::VectorPtr<zx::event> acquire_fences;
+  std::vector<zx::event> acquire_fences;
   acquire_fences.push_back(std::move(acquire_fence));
-  fidl::VectorPtr<zx::event> release_fences;
+  std::vector<zx::event> release_fences;
   release_fences.push_back(std::move(release_fence));
   FXL_VLOG(4) << "presenting Buffer " << buffer_id << " at " << pres_time;
 
@@ -255,7 +255,7 @@ zx_status_t VideoDisplay::ConnectToCamera(
     uint32_t total_format_count;
     uint32_t format_index = 0;
     do {
-      fidl::VectorPtr<fuchsia::camera::VideoFormat> formats_ptr;
+      std::vector<fuchsia::camera::VideoFormat> formats_ptr;
       status = camera_client_->control_->GetFormats(
           format_index, &formats_ptr, &total_format_count, &driver_status);
       if (status != ZX_OK || driver_status != ZX_OK) {
@@ -265,7 +265,7 @@ zx_status_t VideoDisplay::ConnectToCamera(
         return status;
       }
       const std::vector<fuchsia::camera::VideoFormat>& call_formats =
-          formats_ptr.get();
+          formats_ptr;
       for (auto&& f : call_formats) {
         formats.push_back(f);
       }

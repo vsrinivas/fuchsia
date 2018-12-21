@@ -469,22 +469,22 @@ void use_aac_decoder(async::Loop* main_loop,
         // to handle at least one video format, or create a separate example for
         // video with some of the code in this file moved to a source_set.
         const fuchsia::mediacodec::PcmFormat& pcm = uncompressed.pcm();
-        if (pcm.channel_map->size() < 1 || pcm.channel_map->size() > 2) {
+        if (pcm.channel_map.size() < 1 || pcm.channel_map.size() > 2) {
           Exit(
               "pcm.channel_map->size() outside range [1, 2] - unexpected - "
               "actual: %zu\n",
-              pcm.channel_map->size());
+              pcm.channel_map.size());
         }
         if (static_cast<fuchsia::mediacodec::AudioChannelId>(
-                (*pcm.channel_map)[0]) !=
+                pcm.channel_map[0]) !=
             fuchsia::mediacodec::AudioChannelId::LF) {
           Exit(
               "pcm.channel_map[0] is unexpected given the input data used in "
               "this example");
         }
-        if (pcm.channel_map->size() >= 2 &&
+        if (pcm.channel_map.size() >= 2 &&
             static_cast<fuchsia::mediacodec::AudioChannelId>(
-                (*pcm.channel_map)[1]) !=
+                pcm.channel_map[1]) !=
                 fuchsia::mediacodec::AudioChannelId::RF) {
           Exit(
               "pcm.channel_map[1] is unexpected given the input data used in "
@@ -502,7 +502,7 @@ void use_aac_decoder(async::Loop* main_loop,
           if (!wav_writer.Initialize(
                   output_wav_file.c_str(),
                   fuchsia::media::AudioSampleFormat::SIGNED_16,
-                  pcm.channel_map->size(), pcm.frames_per_second,
+                  pcm.channel_map.size(), pcm.frames_per_second,
                   pcm.bits_per_sample)) {
             Exit("wav_writer.Initialize() failed");
           }

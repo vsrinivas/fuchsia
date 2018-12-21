@@ -42,10 +42,10 @@ class TraceManager : public fuchsia::tracelink::Registry,
       fidl::InterfaceHandle<fuchsia::tracelink::Provider> provider) override;
   void RegisterTraceProvider(
       fidl::InterfaceHandle<fuchsia::tracelink::Provider> provider,
-      uint64_t pid, fidl::StringPtr name) override;
+      uint64_t pid, std::string name) override;
   void RegisterTraceProviderSynchronously(
       fidl::InterfaceHandle<fuchsia::tracelink::Provider> provider,
-      uint64_t pid, fidl::StringPtr name,
+      uint64_t pid, std::string name,
       RegisterTraceProviderSynchronouslyCallback callback) override;
 
   void FinalizeTracing();

@@ -42,9 +42,9 @@ class HostServer : public AdapterServerBase<fuchsia::bluetooth::host::Host>,
   void GetInfo(GetInfoCallback callback) override;
   void ListDevices(ListDevicesCallback callback) override;
   void AddBondedDevices(
-      ::fidl::VectorPtr<fuchsia::bluetooth::host::BondingData> bonds,
+      ::std::vector<fuchsia::bluetooth::host::BondingData> bonds,
       AddBondedDevicesCallback callback) override;
-  void SetLocalName(::fidl::StringPtr local_name,
+  void SetLocalName(::std::string local_name,
                     SetLocalNameCallback callback) override;
 
   void StartDiscovery(StartDiscoveryCallback callback) override;
@@ -59,7 +59,7 @@ class HostServer : public AdapterServerBase<fuchsia::bluetooth::host::Host>,
       ::fuchsia::bluetooth::control::OutputCapabilityType output,
       ::fidl::InterfaceHandle<::fuchsia::bluetooth::control::PairingDelegate>
           delegate) override;
-  void Connect(::fidl::StringPtr device_id, ConnectCallback callback) override;
+  void Connect(::std::string device_id, ConnectCallback callback) override;
 
   void RequestLowEnergyCentral(
       ::fidl::InterfaceRequest<fuchsia::bluetooth::le::Central> central)

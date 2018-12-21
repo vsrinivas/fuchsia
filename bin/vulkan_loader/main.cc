@@ -30,9 +30,9 @@ class LoaderImpl : public fuchsia::vulkan::loader::Loader {
 
  private:
   // fuchsia::vulkan::loader::Loader impl
-  void Get(fidl::StringPtr name, GetCallback callback) {
+  void Get(std::string name, GetCallback callback) {
     // TODO(MA-470): Load this from a package's data directory, not /system/lib
-    std::string load_path = "/system/lib/" + *name;
+    std::string load_path = "/system/lib/" + name;
     int fd = open(load_path.c_str(), O_RDONLY);
     if (fd < 0) {
       FXL_LOG(ERROR) << "Could not open path " << load_path;

@@ -33,7 +33,7 @@ App::App(std::unique_ptr<HeartModel> heart_model)
 void App::StartAdvertising() {
   ble::AdvertisingData ad;
   ad.name = kDeviceName;
-  ad.service_uuids = fidl::VectorPtr<fidl::StringPtr>({Service::kServiceUuid});
+  ad.service_uuids = fidl::VectorPtr<std::string>({Service::kServiceUuid});
 
   const auto start_adv_result_cb = [](fuchsia::bluetooth::Status status,
                                       fidl::StringPtr advertisement_id) {

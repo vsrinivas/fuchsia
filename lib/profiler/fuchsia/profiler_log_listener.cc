@@ -21,10 +21,9 @@ ProfilerLogListener::ProfilerLogListener(fit::function<void()> all_done) : all_d
 ProfilerLogListener::~ProfilerLogListener() {}
 
 void ProfilerLogListener::LogMany(
-    ::fidl::VectorPtr<fuchsia::logger::LogMessage> logs) {
-  const std::vector<fuchsia::logger::LogMessage>& logs_vec = logs.get();
-  for (auto&& log_entry : logs_vec) {
-    log_entry_kind token = parse_log_entry(std::move(log_entry.msg.get()));
+    ::std::vector<fuchsia::logger::LogMessage> logs) {
+  for (auto&& log_entry : logs) {
+    log_entry_kind token = parse_log_entry(std::move(log_entry.msg));
     if (token == DONE) {
       all_done_();
     }
@@ -124,7 +123,7 @@ ProfilerLogListener::log_entry_kind ProfilerLogListener::parse_log_entry(const s
 }
 
 void ProfilerLogListener::Log(fuchsia::logger::LogMessage log) {
-  log_entry_kind token = parse_log_entry(std::move(log.msg.get()));
+  log_entry_kind token = parse_log_entry(std::move(log.msg));
   if (token == DONE) {
     all_done_();
   }

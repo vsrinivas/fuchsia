@@ -56,15 +56,15 @@ class Service final : fuchsia::bluetooth::gatt::LocalServiceDelegate {
 
   // Implement LocalServiceDelegate.
   void OnCharacteristicConfiguration(uint64_t characteristic_id,
-                                     fidl::StringPtr peer_id, bool notify,
+                                     std::string peer_id, bool notify,
                                      bool indicate) override;
   void OnReadValue(uint64_t id, int32_t offset,
                    OnReadValueCallback callback) override;
   void OnWriteValue(uint64_t id, uint16_t offset,
-                    fidl::VectorPtr<uint8_t> value,
+                    std::vector<uint8_t> value,
                     OnWriteValueCallback callback) override;
   void OnWriteWithoutResponse(uint64_t id, uint16_t offset,
-                              fidl::VectorPtr<uint8_t> value) override;
+                              std::vector<uint8_t> value) override;
 
   std::unique_ptr<HeartModel> heart_model_;
   fidl::Binding<fuchsia::bluetooth::gatt::LocalServiceDelegate> binding_;

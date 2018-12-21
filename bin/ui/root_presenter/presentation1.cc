@@ -850,9 +850,9 @@ void Presentation1::PresentScene() {
 void Presentation1::Shutdown() { shutdown_callback_(); }
 
 void Presentation1::SetRendererParams(
-    ::fidl::VectorPtr<fuchsia::ui::gfx::RendererParam> params) {
-  for (size_t i = 0; i < params->size(); ++i) {
-    switch (params->at(i).Which()) {
+    ::std::vector<fuchsia::ui::gfx::RendererParam> params) {
+  for (size_t i = 0; i < params.size(); ++i) {
+    switch (params.at(i).Which()) {
       case ::fuchsia::ui::gfx::RendererParam::Tag::kShadowTechnique:
         if (renderer_params_override_.shadow_technique.has_value()) {
           FXL_LOG(WARNING)
@@ -872,7 +872,7 @@ void Presentation1::SetRendererParams(
       case fuchsia::ui::gfx::RendererParam::Tag::Invalid:
         continue;
     }
-    renderer_.SetParam(std::move(params->at(i)));
+    renderer_.SetParam(std::move(params.at(i)));
   }
   session_->Present(0, [](fuchsia::images::PresentationInfo info) {});
 }

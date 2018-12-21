@@ -73,24 +73,24 @@ void ConvertWlanChan(wlan_channel_t* wlanif_chan, const wlan_mlme::WlanChan& fid
     wlanif_chan->secondary80 = fidl_chan.secondary80;
 }
 
-void CopySSID(const ::fidl::VectorPtr<uint8_t>& in_ssid, wlanif_ssid_t* out_ssid) {
-    size_t ssid_len = in_ssid->size();
+void CopySSID(const ::std::vector<uint8_t>& in_ssid, wlanif_ssid_t* out_ssid) {
+    size_t ssid_len = in_ssid.size();
     if (ssid_len > WLAN_MAX_SSID_LEN) {
         warnf("wlanif: truncating ssid from %zu to %d\n", ssid_len, WLAN_MAX_SSID_LEN);
         ssid_len = WLAN_MAX_SSID_LEN;
     }
-    std::memcpy(out_ssid->data, in_ssid->data(), ssid_len);
+    std::memcpy(out_ssid->data, in_ssid.data(), ssid_len);
     out_ssid->len = ssid_len;
 }
 
-void CopyRSNE(const ::fidl::VectorPtr<uint8_t>& in_rsne, uint8_t* out_rsne, size_t* out_rsne_len) {
-    if (in_rsne->size() > WLAN_RSNE_MAX_LEN) {
-        warnf("wlanif: RSNE length truncated from %lu to %d\n", in_rsne->size(), WLAN_RSNE_MAX_LEN);
+void CopyRSNE(const ::std::vector<uint8_t>& in_rsne, uint8_t* out_rsne, size_t* out_rsne_len) {
+    if (in_rsne.size() > WLAN_RSNE_MAX_LEN) {
+        warnf("wlanif: RSNE length truncated from %lu to %d\n", in_rsne.size(), WLAN_RSNE_MAX_LEN);
         *out_rsne_len = WLAN_RSNE_MAX_LEN;
     } else {
-        *out_rsne_len = in_rsne->size();
+        *out_rsne_len = in_rsne.size();
     }
-    std::memcpy(out_rsne, in_rsne->data(), *out_rsne_len);
+    std::memcpy(out_rsne, in_rsne.data(), *out_rsne_len);
 }
 
 void ConvertRateSets(wlanif_bss_description_t* wlanif_desc,
@@ -212,7 +212,7 @@ static void ArrayToVector(::fidl::VectorPtr<T>* vecptr, const T* data, size_t le
     if (len > 0) { (*vecptr)->assign(data, data + len); }
 }
 
-void ConvertRateSets(::fidl::VectorPtr<uint8_t>* basic, ::fidl::VectorPtr<uint8_t>* op,
+void ConvertRateSets(::std::vector<uint8_t>* basic, ::std::vector<uint8_t>* op,
                      const wlanif_bss_description_t& wlanif_desc) {
     (*basic).resize(0);
     (*op).resize(0);
@@ -237,7 +237,7 @@ void ConvertBSSDescription(wlan_mlme::BSSDescription* fidl_desc,
     // ssid
     auto in_ssid = &wlanif_desc.ssid;
     std::vector<uint8_t> ssid(in_ssid->data, in_ssid->data + in_ssid->len);
-    fidl_desc->ssid.reset(std::move(ssid));
+    fidl_desc->ssid = std::move(ssid);
 
     // bss_type
     fidl_desc->bss_type = ConvertBSSType(wlanif_desc.bss_type);
@@ -480,10 +480,10 @@ uint8_t ConvertKeyType(wlan_mlme::KeyType key_type) {
 void ConvertSetKeyDescriptor(set_key_descriptor_t* key_desc,
                              const wlan_mlme::SetKeyDescriptor& fidl_key_desc) {
     // key
-    key_desc->key = const_cast<uint8_t*>(fidl_key_desc.key->data());
+    key_desc->key = const_cast<uint8_t*>(fidl_key_desc.key.data());
 
     // length
-    key_desc->length = fidl_key_desc.key->size();
+    key_desc->length = fidl_key_desc.key.size();
 
     // key_id
     key_desc->key_id = fidl_key_desc.key_id;
@@ -820,14 +820,14 @@ void ConvertBandCapabilities(wlan_mlme::BandCapabilities* fidl_band,
 
     // basic_rates
     fidl_band->basic_rates.resize(0);
-    fidl_band->basic_rates->assign(band.basic_rates, band.basic_rates + band.num_basic_rates);
+    fidl_band->basic_rates.assign(band.basic_rates, band.basic_rates + band.num_basic_rates);
 
     // base_frequency
     fidl_band->base_frequency = band.base_frequency;
 
     // channels
     fidl_band->channels.resize(0);
-    fidl_band->channels->assign(band.channels, band.channels + band.num_channels);
+    fidl_band->channels.assign(band.channels, band.channels + band.num_channels);
 
     if (band.ht_supported) {
         fidl_band->ht_cap = std::make_unique<wlan_mlme::HtCapabilities>(
@@ -843,10 +843,9 @@ void ConvertBandCapabilities(wlan_mlme::BandCapabilities* fidl_band,
 void ConvertCounter(wlan_stats::Counter* fidl_counter, const wlanif_counter_t& counter) {
     fidl_counter->count = counter.count;
     if (counter.name != nullptr) {
-        std::string str(counter.name);
-        fidl_counter->name.reset(str);
+        fidl_counter->name = counter.name;
     } else {
-        fidl_counter->name.reset("");
+        fidl_counter->name = "";
     }
 }
 
@@ -870,7 +869,7 @@ void ConvertDispatcherStats(wlan_stats::DispatcherStats* fidl_stats,
 
 void ConvertRssiStats(wlan_stats::RssiStats* fidl_stats, const wlanif_rssi_stats& stats) {
     fidl_stats->hist.resize(0);
-    fidl_stats->hist->assign(stats.hist, stats.hist + stats.hist_len);
+    fidl_stats->hist.assign(stats.hist, stats.hist + stats.hist_len);
 }
 
 wlan_stats::ClientMlmeStats BuildClientMlmeStats(const wlanif_client_mlme_stats_t& client_stats) {

@@ -14,8 +14,6 @@ namespace wlan {
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
 std::optional<wlan_key_config_t> ToKeyConfig(const wlan_mlme::SetKeyDescriptor& key_descriptor) {
-    if (key_descriptor.key.is_null()) { return std::nullopt; }
-
     uint8_t key_type;
     switch (key_descriptor.key_type) {
     case wlan_mlme::KeyType::PAIRWISE:
@@ -33,9 +31,9 @@ std::optional<wlan_key_config_t> ToKeyConfig(const wlan_mlme::SetKeyDescriptor& 
     }
 
     wlan_key_config_t key_config = {};
-    memcpy(key_config.key, key_descriptor.key->data(), key_descriptor.key->size());
+    memcpy(key_config.key, key_descriptor.key.data(), key_descriptor.key.size());
     key_config.key_type = key_type;
-    key_config.key_len = static_cast<uint8_t>(key_descriptor.key->size());
+    key_config.key_len = static_cast<uint8_t>(key_descriptor.key.size());
     key_config.key_idx = key_descriptor.key_id;
     key_config.protection = WLAN_PROTECTION_RX_TX;
     key_config.cipher_type = key_descriptor.cipher_suite_type;

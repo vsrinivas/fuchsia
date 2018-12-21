@@ -37,7 +37,7 @@ class DelegatingLoader : public fuchsia::sys::Loader {
   ~DelegatingLoader() override;
 
   // |Loader|:
-  void LoadUrl(fidl::StringPtr url, LoadUrlCallback callback) override;
+  void LoadUrl(std::string url, LoadUrlCallback callback) override;
 
  private:
   // |fallback| xor |resolver| is set.

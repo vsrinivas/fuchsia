@@ -66,7 +66,7 @@ void MdnsServiceImpl::Start() {
   // Publish this device as "_fuchsia._udp.".
   // TODO(dalesat): Make this a config item or delegate to another party.
   PublishServiceInstance(kPublishAs, host_name, kPublishPort,
-                         fidl::VectorPtr<fidl::StringPtr>(),
+                         fidl::VectorPtr<std::string>(),
                          [this](fuchsia::mdns::MdnsResult result) {
                            if (result != fuchsia::mdns::MdnsResult::OK) {
                              FXL_LOG(ERROR) << "Failed to publish as "
@@ -76,7 +76,7 @@ void MdnsServiceImpl::Start() {
                          });
 }
 
-void MdnsServiceImpl::ResolveHostName(fidl::StringPtr host_name,
+void MdnsServiceImpl::ResolveHostName(std::string host_name,
                                       uint32_t timeout_ms,
                                       ResolveHostNameCallback callback) {
   if (!MdnsNames::IsValidHostName(host_name)) {
@@ -96,7 +96,7 @@ void MdnsServiceImpl::ResolveHostName(fidl::StringPtr host_name,
 }
 
 void MdnsServiceImpl::SubscribeToService(
-    fidl::StringPtr service_name,
+    std::string service_name,
     fidl::InterfaceRequest<fuchsia::mdns::MdnsServiceSubscription>
         subscription_request) {
   if (!MdnsNames::IsValidServiceName(service_name)) {
@@ -114,8 +114,8 @@ void MdnsServiceImpl::SubscribeToService(
 }
 
 void MdnsServiceImpl::PublishServiceInstance(
-    fidl::StringPtr service_name, fidl::StringPtr instance_name, uint16_t port,
-    fidl::VectorPtr<fidl::StringPtr> text,
+    std::string service_name, std::string instance_name, uint16_t port,
+    fidl::VectorPtr<std::string> text,
     PublishServiceInstanceCallback callback) {
   if (!MdnsNames::IsValidServiceName(service_name)) {
     callback(fuchsia::mdns::MdnsResult::INVALID_SERVICE_NAME);
@@ -150,8 +150,8 @@ void MdnsServiceImpl::PublishServiceInstance(
                                             std::move(publisher));
 }
 
-void MdnsServiceImpl::UnpublishServiceInstance(fidl::StringPtr service_name,
-                                               fidl::StringPtr instance_name) {
+void MdnsServiceImpl::UnpublishServiceInstance(std::string service_name,
+                                               std::string instance_name) {
   if (!MdnsNames::IsValidServiceName(service_name) ||
       !MdnsNames::IsValidInstanceName(instance_name)) {
     return;
@@ -165,7 +165,7 @@ void MdnsServiceImpl::UnpublishServiceInstance(fidl::StringPtr service_name,
 }
 
 void MdnsServiceImpl::AddResponder(
-    fidl::StringPtr service_name, fidl::StringPtr instance_name,
+    std::string service_name, std::string instance_name,
     fidl::InterfaceHandle<fuchsia::mdns::MdnsResponder> responder_handle) {
   FXL_DCHECK(responder_handle);
 
@@ -208,9 +208,9 @@ void MdnsServiceImpl::AddResponder(
                                             std::move(publisher));
 }
 
-void MdnsServiceImpl::SetSubtypes(fidl::StringPtr service_name,
-                                  fidl::StringPtr instance_name,
-                                  fidl::VectorPtr<fidl::StringPtr> subtypes) {
+void MdnsServiceImpl::SetSubtypes(std::string service_name,
+                                  std::string instance_name,
+                                  std::vector<std::string> subtypes) {
   if (!MdnsNames::IsValidServiceName(service_name) ||
       !MdnsNames::IsValidInstanceName(instance_name)) {
     return;
@@ -224,11 +224,11 @@ void MdnsServiceImpl::SetSubtypes(fidl::StringPtr service_name,
     return;
   }
 
-  iter->second->SetSubtypes(fxl::To<std::vector<std::string>>(subtypes));
+  iter->second->SetSubtypes(std::move(subtypes));
 }
 
-void MdnsServiceImpl::ReannounceInstance(fidl::StringPtr service_name,
-                                         fidl::StringPtr instance_name) {
+void MdnsServiceImpl::ReannounceInstance(std::string service_name,
+                                         std::string instance_name) {
   if (!MdnsNames::IsValidServiceName(service_name) ||
       !MdnsNames::IsValidInstanceName(instance_name)) {
     return;
@@ -259,12 +259,12 @@ MdnsServiceImpl::Subscriber::Subscriber(
 
   instances_publisher_.SetCallbackRunner(
       [this](GetInstancesCallback callback, uint64_t version) {
-        fidl::VectorPtr<fuchsia::mdns::MdnsServiceInstance> instances(
+        std::vector<fuchsia::mdns::MdnsServiceInstance> instances(
             instances_by_name_.size());
 
         size_t i = 0;
         for (auto& pair : instances_by_name_) {
-          pair.second->Clone(&instances->at(i++));
+          pair.second->Clone(&instances.at(i++));
         }
 
         callback(version, std::move(instances));
@@ -310,7 +310,7 @@ void MdnsServiceImpl::Subscriber::GetInstances(uint64_t version_last_seen,
 }
 
 MdnsServiceImpl::SimplePublisher::SimplePublisher(
-    inet::IpPort port, fidl::VectorPtr<fidl::StringPtr> text,
+    inet::IpPort port, fidl::VectorPtr<std::string> text,
     PublishServiceInstanceCallback callback)
     : port_(port),
       text_(fxl::To<std::vector<std::string>>(text)),

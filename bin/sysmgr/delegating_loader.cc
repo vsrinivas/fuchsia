@@ -62,7 +62,7 @@ DelegatingLoader::DelegatingLoader(
 
 DelegatingLoader::~DelegatingLoader() = default;
 
-void DelegatingLoader::LoadUrl(fidl::StringPtr url, LoadUrlCallback callback) {
+void DelegatingLoader::LoadUrl(std::string url, LoadUrlCallback callback) {
   std::string scheme = GetScheme(url);
   if (!scheme.empty()) {
     auto it = delegates_by_scheme_.find(scheme);

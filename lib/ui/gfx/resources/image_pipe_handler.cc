@@ -30,8 +30,8 @@ void ImagePipeHandler::RemoveImage(uint32_t image_id) {
 
 void ImagePipeHandler::PresentImage(uint32_t image_id,
                                     uint64_t presentation_time,
-                                    ::fidl::VectorPtr<zx::event> acquire_fences,
-                                    ::fidl::VectorPtr<zx::event> release_fences,
+                                    ::std::vector<zx::event> acquire_fences,
+                                    ::std::vector<zx::event> release_fences,
                                     PresentImageCallback callback) {
   image_pipe_->PresentImage(image_id, presentation_time,
                             std::move(acquire_fences),

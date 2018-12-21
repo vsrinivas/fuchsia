@@ -13,7 +13,7 @@
 namespace tracing {
 
 TraceSession::TraceSession(zx::socket destination,
-                           fidl::VectorPtr<fidl::StringPtr> categories,
+                           std::vector<std::string> categories,
                            size_t trace_buffer_size,
                            fuchsia::tracelink::BufferingMode buffering_mode,
                            fit::closure abort_handler)
@@ -43,7 +43,7 @@ void TraceSession::AddProvider(TraceProviderBundle* bundle) {
   FXL_VLOG(1) << "Adding provider " << *bundle;
 
   tracees_.emplace_back(std::make_unique<Tracee>(this, bundle));
-  fidl::VectorPtr<fidl::StringPtr> categories_clone;
+  fidl::VectorPtr<std::string> categories_clone;
   fidl::Clone(categories_, &categories_clone);
   if (!tracees_.back()->Start(
           std::move(categories_clone), trace_buffer_size_, buffering_mode_,

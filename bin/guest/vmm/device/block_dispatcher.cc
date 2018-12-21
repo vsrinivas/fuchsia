@@ -34,13 +34,13 @@ class RawBlockDispatcher : public BlockDispatcher {
     for (uint64_t at = 0; at < size; at += fuchsia::io::MAX_BUF) {
       auto len = std::min<uint64_t>(size - at, fuchsia::io::MAX_BUF);
       auto read = [io_guard, len, begin = addr + at](
-                      zx_status_t status, fidl::VectorPtr<uint8_t> buf) {
+                      zx_status_t status, std::vector<uint8_t> buf) {
         if (status != ZX_OK) {
           io_guard->SetStatus(status);
-        } else if (buf->size() != len) {
+        } else if (buf.size() != len) {
           io_guard->SetStatus(ZX_ERR_IO);
         } else {
-          memcpy(begin, buf->data(), buf->size());
+          memcpy(begin, buf.data(), buf.size());
         }
       };
       file_->ReadAt(len, off + at, read);

@@ -120,7 +120,7 @@ bool Add(std::string url, bool allow_focus, std::vector<std::string> args) {
   if (!tiles)
     return false;
   uint32_t key = 0;
-  fidl::VectorPtr<fidl::StringPtr> arguments;
+  fidl::VectorPtr<std::string> arguments;
   for (const auto& it : args) {
     arguments.push_back(it);
   }
@@ -143,19 +143,19 @@ bool List() {
   if (!tiles)
     return false;
 
-  fidl::VectorPtr<uint32_t> keys;
-  fidl::VectorPtr<::fidl::StringPtr> urls;
-  fidl::VectorPtr<::fuchsia::math::SizeF> sizes;
-  fidl::VectorPtr<bool> focusabilities;
+  std::vector<uint32_t> keys;
+  std::vector<::std::string> urls;
+  std::vector<::fuchsia::math::SizeF> sizes;
+  std::vector<bool> focusabilities;
 
   if (tiles->ListTiles(&keys, &urls, &sizes, &focusabilities) != ZX_OK)
     return false;
 
-  printf("Found %lu tiles:\n", keys->size());
-  for (size_t i = 0u; i < keys->size(); ++i) {
-    printf("Tile key %u url %s size %.1fx%.1f%s\n", keys->at(i),
-           (*urls->at(i)).c_str(), sizes->at(i).width, sizes->at(i).height,
-           focusabilities->at(i) ? " (unfocusable)" : "");
+  printf("Found %lu tiles:\n", keys.size());
+  for (size_t i = 0u; i < keys.size(); ++i) {
+    printf("Tile key %u url %s size %.1fx%.1f%s\n", keys.at(i),
+           (urls.at(i)).c_str(), sizes.at(i).width, sizes.at(i).height,
+           focusabilities.at(i) ? " (unfocusable)" : "");
   }
   return true;
 }

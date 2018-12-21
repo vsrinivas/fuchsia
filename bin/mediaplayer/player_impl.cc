@@ -94,7 +94,7 @@ PlayerImpl::PlayerImpl(
         os << fostr::NewLine << "can seek:           " << status_.can_seek;
 
         if (status_.metadata) {
-          for (auto& property : *status_.metadata->properties) {
+          for (auto& property : status_.metadata->properties) {
             os << fostr::NewLine << property.label << ": " << property.value;
           }
         }
@@ -403,7 +403,7 @@ void PlayerImpl::SetTimelineFunction(float rate, int64_t reference_time,
 }
 
 void PlayerImpl::SetHttpSource(
-    fidl::StringPtr http_url,
+    std::string http_url,
     fidl::VectorPtr<fuchsia::net::oldhttp::HttpHeader> headers) {
   BeginSetSource(CreateSource(
       HttpReader::Create(startup_context_, http_url, std::move(headers)),
@@ -529,7 +529,7 @@ void PlayerImpl::AddBinding(
 }
 
 void PlayerImpl::CreateHttpSource(
-    fidl::StringPtr http_url,
+    std::string http_url,
     fidl::VectorPtr<fuchsia::net::oldhttp::HttpHeader> headers,
     fidl::InterfaceRequest<fuchsia::mediaplayer::Source> source_request) {
   FXL_DCHECK(source_request);

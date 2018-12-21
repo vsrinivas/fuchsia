@@ -42,16 +42,16 @@ void ServiceSubscriber::HandleInstanceUpdates(
   subscription_->GetInstances(
       version,
       [this](uint64_t version,
-             fidl::VectorPtr<fuchsia::mdns::MdnsServiceInstance> instances) {
-        HandleInstanceUpdates(version, std::move(instances));
+             std::vector<fuchsia::mdns::MdnsServiceInstance> instances) {
+        HandleInstanceUpdates(version, fidl::VectorPtr(std::move(instances)));
       });
 }
 
 void ServiceSubscriber::IssueCallbacks(
-    const fidl::VectorPtr<fuchsia::mdns::MdnsServiceInstance>& instances) {
+    const std::vector<fuchsia::mdns::MdnsServiceInstance>& instances) {
   // For each instance in the update, see if it represents a new instance or
   // a change with respect to an old instance.
-  for (auto& new_instance : *instances) {
+  for (auto& new_instance : instances) {
     bool found = false;
 
     // Search the old instances to see if there's a match.
@@ -82,7 +82,7 @@ void ServiceSubscriber::IssueCallbacks(
     bool found = false;
 
     // Search the new instances to see if there's a match.
-    for (auto& new_instance : *instances) {
+    for (auto& new_instance : instances) {
       if (new_instance.service_name == old_instance.service_name &&
           new_instance.instance_name == old_instance.instance_name) {
         found = true;

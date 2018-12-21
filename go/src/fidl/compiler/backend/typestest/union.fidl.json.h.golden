@@ -31,51 +31,58 @@ class Union {
   static void Decode(::fidl::Decoder* decoder, Union* value, size_t offset);
   zx_status_t Clone(Union* result) const;
 
-  bool has_invalid_tag() const { return tag_ == ::std::numeric_limits<::fidl_union_tag_t>::max(); }
+  bool has_invalid_tag() const { return Which() == Tag::Invalid; }
 
-  bool is_Primitive() const { return tag_ == 0; }
+  bool is_Primitive() const { return Which() == Tag(0); }
   
   int32_t& Primitive() {
-    EnsureStorageInitialized(0);
-    return Primitive_;
+    if (!is_Primitive()) {
+      value_.emplace<0 + 1>();
+    }
+    return value_.template get<0 + 1>();
   }
   
-  const int32_t& Primitive() const { return Primitive_; }
+  const int32_t& Primitive() const { return value_.template get<0 + 1>(); }
   void set_Primitive(int32_t value);
 
-  bool is_StringNeedsConstructor() const { return tag_ == 1; }
+  bool is_StringNeedsConstructor() const { return Which() == Tag(1); }
   
-  ::fidl::StringPtr& StringNeedsConstructor() {
-    EnsureStorageInitialized(1);
-    return StringNeedsConstructor_;
+  ::std::string& StringNeedsConstructor() {
+    if (!is_StringNeedsConstructor()) {
+      value_.emplace<1 + 1>();
+    }
+    return value_.template get<1 + 1>();
   }
   
-  const ::fidl::StringPtr& StringNeedsConstructor() const { return StringNeedsConstructor_; }
-  void set_StringNeedsConstructor(::fidl::StringPtr value);
+  const ::std::string& StringNeedsConstructor() const { return value_.template get<1 + 1>(); }
+  void set_StringNeedsConstructor(::std::string value);
 
-  bool is_VectorStringAlsoNeedsConstructor() const { return tag_ == 2; }
+  bool is_VectorStringAlsoNeedsConstructor() const { return Which() == Tag(2); }
   
-  ::fidl::VectorPtr<::fidl::StringPtr>& VectorStringAlsoNeedsConstructor() {
-    EnsureStorageInitialized(2);
-    return VectorStringAlsoNeedsConstructor_;
+  ::std::vector<::std::string>& VectorStringAlsoNeedsConstructor() {
+    if (!is_VectorStringAlsoNeedsConstructor()) {
+      value_.emplace<2 + 1>();
+    }
+    return value_.template get<2 + 1>();
   }
   
-  const ::fidl::VectorPtr<::fidl::StringPtr>& VectorStringAlsoNeedsConstructor() const { return VectorStringAlsoNeedsConstructor_; }
-  void set_VectorStringAlsoNeedsConstructor(::fidl::VectorPtr<::fidl::StringPtr> value);
+  const ::std::vector<::std::string>& VectorStringAlsoNeedsConstructor() const { return value_.template get<2 + 1>(); }
+  void set_VectorStringAlsoNeedsConstructor(::std::vector<::std::string> value);
 
-  Tag Which() const { return Tag(tag_); }
+  Tag Which() const {
+    size_t index = value_.index();
+    if (index == 0) {
+      return Tag::Invalid;
+    } else {
+      return Tag(index - 1);
+    }
+  }
 
  private:
   friend bool operator==(const Union& lhs, const Union& rhs);
-  void Destroy();
-  void EnsureStorageInitialized(::fidl_union_tag_t tag);
 
-  ::fidl_union_tag_t tag_;
-  union {
-    int32_t Primitive_;
-    ::fidl::StringPtr StringNeedsConstructor_;
-    ::fidl::VectorPtr<::fidl::StringPtr> VectorStringAlsoNeedsConstructor_;
-  };
+  using Variant = fit::internal::variant<fit::internal::monostate, int32_t, ::std::string, ::std::vector<::std::string>>;
+  Variant value_;
 };
 
 bool operator==(const Union& lhs, const Union& rhs);

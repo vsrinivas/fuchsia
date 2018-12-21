@@ -25,7 +25,7 @@ class App : public fuchsia::sys::ServiceProvider {
   App& operator=(const App&) = delete;
 
   // |sys::ServiceProvider|
-  void ConnectToService(fidl::StringPtr service_name, ::zx::channel channel) {}
+  void ConnectToService(std::string service_name, ::zx::channel channel) {}
 
  private:
   // Called asynchronously when the session dies.

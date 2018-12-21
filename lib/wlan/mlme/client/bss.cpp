@@ -60,7 +60,7 @@ std::string Bss::ToString() const {
         bss_desc_.bss_type == wlan_mlme::BSSTypes::INFRASTRUCTURE ? "Y" : "N", bss_desc_.rssi_dbm,
         bss_desc_.country.is_null() ? "---"
                                     : reinterpret_cast<const char*>(bss_desc_.country->data()),
-        common::ChanStr(bcn_rx_chan_).c_str(), debug::ToAsciiOrHexStr(*bss_desc_.ssid).c_str());
+        common::ChanStr(bcn_rx_chan_).c_str(), debug::ToAsciiOrHexStr(bss_desc_.ssid).c_str());
     return std::string(buf);
 }
 

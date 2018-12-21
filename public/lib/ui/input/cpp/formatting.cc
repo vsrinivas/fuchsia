@@ -147,12 +147,12 @@ std::ostream& operator<<(std::ostream& os,
                          const fuchsia::ui::input::KeyboardDescriptor& value) {
   os << "{Keyboard:";
   bool first = true;
-  for (size_t index = 0; index < value.keys->size(); ++index) {
+  for (size_t index = 0; index < value.keys.size(); ++index) {
     if (first) {
       first = false;
-      os << value.keys->at(index);
+      os << value.keys.at(index);
     } else {
-      os << ", " << value.keys->at(index);
+      os << ", " << value.keys.at(index);
     }
   }
   return os << "}";
@@ -261,12 +261,12 @@ std::ostream& operator<<(std::ostream& os,
                          const fuchsia::ui::input::KeyboardReport& value) {
   os << "{KeyboardReport: pressed_keys=[";
   bool first = true;
-  for (size_t index = 0; index < value.pressed_keys->size(); ++index) {
+  for (size_t index = 0; index < value.pressed_keys.size(); ++index) {
     if (first) {
       first = false;
-      os << value.pressed_keys->at(index);
+      os << value.pressed_keys.at(index);
     } else {
-      os << ", " << value.pressed_keys->at(index);
+      os << ", " << value.pressed_keys.at(index);
     }
   }
   return os << "]}";
@@ -314,12 +314,12 @@ std::ostream& operator<<(std::ostream& os,
                          const fuchsia::ui::input::TouchscreenReport& value) {
   os << "{TouchscreenReport: touches=[";
   bool first = true;
-  for (size_t index = 0; index < value.touches->size(); ++index) {
+  for (size_t index = 0; index < value.touches.size(); ++index) {
     if (first) {
       first = false;
-      os << value.touches->at(index);
+      os << value.touches.at(index);
     } else {
-      os << ", " << value.touches->at(index);
+      os << ", " << value.touches.at(index);
     }
   }
 

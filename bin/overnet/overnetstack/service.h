@@ -20,10 +20,10 @@ class Service final : public fuchsia::overnet::Overnet,
   // Method implementations
 
   void ListPeers(ListPeersCallback callback) override;
-  void RegisterService(fidl::StringPtr service_name,
+  void RegisterService(std::string service_name,
                        fidl::InterfaceHandle<fuchsia::overnet::ServiceProvider>
                            provider) override;
-  void ConnectToService(uint64_t node, fidl::StringPtr service_name,
+  void ConnectToService(uint64_t node, std::string service_name,
                         zx::channel channel) override;
 
  private:

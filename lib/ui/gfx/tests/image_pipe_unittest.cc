@@ -364,8 +364,8 @@ TEST_F(ImagePipeTest, ImagePipeUpdateTwoFrames) {
       imageIdB, std::move(image_info_b), CopyVmo(gradient_b->vmo()), 0,
       GetVmoSize(gradient_b->vmo()), fuchsia::images::MemoryType::HOST_MEMORY);
 
-  image_pipe->PresentImage(imageIdA, 0, nullptr, nullptr, nullptr);
-  image_pipe->PresentImage(imageIdB, 0, nullptr, nullptr, nullptr);
+  image_pipe->PresentImage(imageIdA, 0, std::vector<zx::event>(), std::vector<zx::event>(), nullptr);
+  image_pipe->PresentImage(imageIdB, 0, std::vector<zx::event>(), std::vector<zx::event>(), nullptr);
 
   RunLoopUntilIdle();
 
@@ -384,9 +384,9 @@ TEST_F(ImagePipeTest, ImagePipeUpdateTwoFrames) {
   // In this case, we need to run to idle after presenting image A, so that
   // image B is returned by the pool, marked dirty, and is free to be acquired
   // again.
-  image_pipe->PresentImage(imageIdA, 0, nullptr, nullptr, nullptr);
+  image_pipe->PresentImage(imageIdA, 0, std::vector<zx::event>(), std::vector<zx::event>(), nullptr);
   RunLoopUntilIdle();
-  image_pipe->PresentImage(imageIdB, 0, nullptr, nullptr, nullptr);
+  image_pipe->PresentImage(imageIdB, 0, std::vector<zx::event>(), std::vector<zx::event>(), nullptr);
   RunLoopUntilIdle();
 
   image_out = image_pipe->GetEscherImage();

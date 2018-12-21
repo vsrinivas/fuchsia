@@ -23,8 +23,8 @@ class FrobinatorImpl : public fidl::test::frobinator::Frobinator {
   std::vector<std::string> grobs;
   fit::closure on_destroy_;
 
-  void Frob(StringPtr value) override;
-  void Grob(StringPtr value, GrobCallback callback) override;
+  void Frob(std::string value) override;
+  void Grob(std::string value, GrobCallback callback) override;
 };
 
 }  // namespace test

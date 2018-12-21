@@ -63,9 +63,9 @@ class SemanticTree : public fuchsia::accessibility::SemanticsRoot {
       override;
   void UpdateSemanticNodes(
       int32_t view_id,
-      fidl::VectorPtr<fuchsia::accessibility::Node> nodes) override;
+      std::vector<fuchsia::accessibility::Node> nodes) override;
   void DeleteSemanticNodes(int32_t view_id,
-                           fidl::VectorPtr<int32_t> node_ids) override;
+                           std::vector<int32_t> node_ids) override;
   void Commit(int32_t view_id) override;
 
   // Internal recursive hit-test function using the cached tree. Returns a

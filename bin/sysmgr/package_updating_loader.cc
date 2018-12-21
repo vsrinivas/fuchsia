@@ -38,7 +38,7 @@ PackageUpdatingLoader::PackageUpdatingLoader(
 
 PackageUpdatingLoader::~PackageUpdatingLoader() = default;
 
-void PackageUpdatingLoader::LoadUrl(fidl::StringPtr url,
+void PackageUpdatingLoader::LoadUrl(std::string url,
                                     LoadUrlCallback callback) {
   EnsureConnectedToResolver();
 
@@ -81,7 +81,7 @@ void PackageUpdatingLoader::LoadUrl(fidl::StringPtr url,
 
   fuchsia::pkg::UpdatePolicy update_policy;
   update_policy.fetch_if_absent = true;
-  fidl::VectorPtr<fidl::StringPtr> selectors;
+  fidl::VectorPtr<std::string> selectors;
   selectors.reset({});
 
   // TODO: if the resolver became unavailable in between the start of this

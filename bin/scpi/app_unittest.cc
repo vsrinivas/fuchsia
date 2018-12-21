@@ -33,9 +33,9 @@ TEST_F(AppTest, GetDvfsInfo) {
   SystemControllerPtr scpi_ = GetSystemController();
   Status st;
   int size;
-  scpi_->GetDvfsInfo(0, [&](Status err, fidl::VectorPtr<DvfsOpp> opps) {
+  scpi_->GetDvfsInfo(0, [&](Status err, std::vector<DvfsOpp> opps) {
     st = err;
-    size = (int)opps->size();
+    size = (int)opps.size();
   });
   RunLoopUntilIdle();
   EXPECT_EQ(fuchsia::scpi::Status::OK, st);

@@ -24,9 +24,9 @@ class TestRunnerStoreImpl : public TestRunnerStore {
 
  private:
   // |TestRunnerStore|
-  void Get(fidl::StringPtr key, GetCallback cb) override;
+  void Get(std::string key, GetCallback cb) override;
   // |TestRunnerStore|
-  void Put(fidl::StringPtr key, fidl::StringPtr value, PutCallback cb) override;
+  void Put(std::string key, std::string value, PutCallback cb) override;
 
   void MaybeNotify(const std::string& key);
 

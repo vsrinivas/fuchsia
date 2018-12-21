@@ -22,7 +22,7 @@ class DemoKeyDispatcher : public fuchsia::ui::input::InputDevice {
   // |fuchsia::ui::input::InputDevice|
   void DispatchReport(fuchsia::ui::input::InputReport report) override {
     if (report.keyboard) {
-      DispatchDelta(report.keyboard->pressed_keys.take());
+      DispatchDelta(std::move(report.keyboard->pressed_keys));
     }
   }
 

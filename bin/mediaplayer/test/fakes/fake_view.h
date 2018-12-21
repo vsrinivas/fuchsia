@@ -38,14 +38,14 @@ class FakeView : public ::fuchsia::ui::viewsv1::View,
 
   void OfferServiceProvider(
       fidl::InterfaceHandle<::fuchsia::sys::ServiceProvider> service_provider,
-      fidl::VectorPtr<fidl::StringPtr> service_names) override;
+      std::vector<std::string> service_names) override;
 
   void GetContainer(
       fidl::InterfaceRequest<::fuchsia::ui::viewsv1::ViewContainer> container)
       override;
 
   // ServiceProvider implementation.
-  void ConnectToService(fidl::StringPtr name, zx::channel channel) override;
+  void ConnectToService(std::string name, zx::channel channel) override;
 
  private:
   async_dispatcher_t* dispatcher_;

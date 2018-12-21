@@ -21,7 +21,7 @@ struct AppmgrArgs {
   zx_handle_t pa_directory_request;
   const std::shared_ptr<component::Services> environment_services;
   std::string sysmgr_url;
-  fidl::VectorPtr<fidl::StringPtr> sysmgr_args;
+  fidl::VectorPtr<std::string> sysmgr_args;
   bool run_virtual_console;
   bool retry_sysmgr_crash;
 };
@@ -38,7 +38,7 @@ class Appmgr {
 
   fuchsia::sys::ComponentControllerPtr sysmgr_;
   std::string sysmgr_url_;
-  fidl::VectorPtr<fidl::StringPtr> sysmgr_args_;
+  fidl::VectorPtr<std::string> sysmgr_args_;
   RestartBackOff sysmgr_backoff_;
   bool sysmgr_permanently_failed_;
 

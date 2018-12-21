@@ -150,11 +150,11 @@ void App::OnSessionClose() {
   message_loop_->Quit();
 }
 
-void App::OnSessionEvents(fidl::VectorPtr<fuchsia::ui::scenic::Event> events) {
+void App::OnSessionEvents(std::vector<fuchsia::ui::scenic::Event> events) {
   using InputEvent = fuchsia::ui::input::InputEvent;
   using InputType = fuchsia::ui::input::InputEvent::Tag;
 
-  for (const auto& event : *events) {
+  for (const auto& event : events) {
     if (event.is_input()) {
       const InputEvent& input_event = event.input();
       switch (input_event.Which()) {

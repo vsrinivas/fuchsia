@@ -36,7 +36,7 @@ void Service::ListPeers(ListPeersCallback callback) {
 }
 
 void Service::RegisterService(
-    fidl::StringPtr service_name,
+    std::string service_name,
     fidl::InterfaceHandle<fuchsia::overnet::ServiceProvider> provider) {
   class ServiceProvider final : public OvernetApp::ServiceProvider {
    public:
@@ -55,14 +55,14 @@ void Service::RegisterService(
     const fuchsia::overnet::ServiceProviderPtr provider_;
   };
   app_->RegisterServiceProvider(
-      service_name.get(), std::make_unique<ServiceProvider>(provider.Bind()));
+      service_name, std::make_unique<ServiceProvider>(provider.Bind()));
 }
 
-void Service::ConnectToService(uint64_t node, fidl::StringPtr service_name,
+void Service::ConnectToService(uint64_t node, std::string service_name,
                                zx::channel channel) {
   auto node_id = overnet::NodeId(node);
   fuchsia::overnet::protocol::Introduction intro;
-  intro.set_service_name(service_name.get());
+  intro.set_service_name(service_name);
   if (app_->endpoint()->node_id() == node_id) {
     app_->ConnectToLocalService(intro, std::move(channel));
   } else {

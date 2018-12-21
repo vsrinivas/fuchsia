@@ -25,7 +25,7 @@ class NetstackClient {
     NetstackClient* client = new NetstackClient();
     client->netstack_->GetInterfaces(
         [client, callback = std::move(callback)](
-            fidl::VectorPtr<fuchsia::netstack::NetInterface> interfaces) {
+            std::vector<fuchsia::netstack::NetInterface> interfaces) {
           callback(std::move(interfaces));
           delete client;
         });
@@ -53,8 +53,8 @@ inet::IpAddress GetHostAddress() {
     return ip_address;
 
   NetstackClient::GetInterfaces(
-      [](const fidl::VectorPtr<fuchsia::netstack::NetInterface>& interfaces) {
-        for (const auto& interface : *interfaces) {
+      [](const std::vector<fuchsia::netstack::NetInterface>& interfaces) {
+        for (const auto& interface : interfaces) {
           if (interface.addr.Which() == fuchsia::net::IpAddress::Tag::kIpv4) {
             ip_address = inet::IpAddress(&interface.addr);
             break;

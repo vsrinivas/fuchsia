@@ -61,7 +61,7 @@ void KeyboardState::Update(fuchsia::ui::input::InputReport input_report) {
   keys_.clear();
   repeat_keys_.clear();
 
-  for (uint32_t key : *input_report.keyboard->pressed_keys) {
+  for (uint32_t key : input_report.keyboard->pressed_keys) {
     keys_.push_back(key);
     auto it = std::find(old_keys.begin(), old_keys.end(), key);
     if (it != old_keys.end()) {
@@ -350,7 +350,7 @@ void TouchscreenState::Update(fuchsia::ui::input::InputReport input_report,
 
   uint64_t now = input_report.event_time;
 
-  for (auto& touch : *input_report.touchscreen->touches) {
+  for (auto& touch : input_report.touchscreen->touches) {
     fuchsia::ui::input::InputEvent ev;
     fuchsia::ui::input::PointerEvent pt;
     pt.event_time = now;

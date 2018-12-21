@@ -108,7 +108,7 @@ class FakeLoggerImpl : public fuchsia::cobalt::Logger {
   }
 
   void LogEventCount(uint32_t metric_id, uint32_t event_code,
-                     fidl::StringPtr component, int64_t period_duration_micros,
+                     std::string component, int64_t period_duration_micros,
                      int64_t count, LogEventCountCallback callback) override {
     RecordCall(EventType::EVENT_COUNT,
                std::make_unique<CountEvent>(metric_id, event_code, component,
@@ -117,7 +117,7 @@ class FakeLoggerImpl : public fuchsia::cobalt::Logger {
   }
 
   void LogElapsedTime(uint32_t metric_id, uint32_t event_code,
-                      fidl::StringPtr component, int64_t elapsed_micros,
+                      std::string component, int64_t elapsed_micros,
                       LogElapsedTimeCallback callback) override {
     RecordCall(EventType::ELAPSED_TIME,
                std::make_unique<ElapsedTimeEvent>(metric_id, event_code,
@@ -126,7 +126,7 @@ class FakeLoggerImpl : public fuchsia::cobalt::Logger {
   }
 
   void LogFrameRate(uint32_t metric_id, uint32_t event_code,
-                    fidl::StringPtr component, float fps,
+                    std::string component, float fps,
                     LogFrameRateCallback callback) override {
     RecordCall(EventType::FRAME_RATE,
                std::make_unique<FrameRateEvent>(metric_id, event_code,
@@ -135,7 +135,7 @@ class FakeLoggerImpl : public fuchsia::cobalt::Logger {
   }
 
   void LogMemoryUsage(uint32_t metric_id, uint32_t event_code,
-                      fidl::StringPtr component, int64_t bytes,
+                      std::string component, int64_t bytes,
                       LogMemoryUsageCallback callback) override {
     RecordCall(EventType::MEMORY_USAGE,
                std::make_unique<MemoryUsageEvent>(metric_id, event_code,
@@ -143,7 +143,7 @@ class FakeLoggerImpl : public fuchsia::cobalt::Logger {
     callback(fuchsia::cobalt::Status::OK);
   }
 
-  void LogString(uint32_t metric_id, fidl::StringPtr s,
+  void LogString(uint32_t metric_id, std::string s,
                  LogStringCallback callback) override {
     RecordCall(EventType::STRING_USED,
                std::make_unique<StringUsedEvent>(metric_id, s));
@@ -151,7 +151,7 @@ class FakeLoggerImpl : public fuchsia::cobalt::Logger {
   }
 
   void StartTimer(uint32_t metric_id, uint32_t event_code,
-                  fidl::StringPtr component, fidl::StringPtr timer_id,
+                  std::string component, std::string timer_id,
                   uint64_t timestamp, uint32_t timeout_s,
                   StartTimerCallback callback) override {
     RecordCall(EventType::START_TIMER, std::make_unique<StartTimerEvent>(
@@ -160,7 +160,7 @@ class FakeLoggerImpl : public fuchsia::cobalt::Logger {
     callback(fuchsia::cobalt::Status::OK);
   }
 
-  void EndTimer(fidl::StringPtr timer_id, uint64_t timestamp,
+  void EndTimer(std::string timer_id, uint64_t timestamp,
                 uint32_t timeout_s, EndTimerCallback callback) override {
     RecordCall(EventType::END_TIMER,
                std::make_unique<EndTimerEvent>(timer_id, timestamp, timeout_s));
@@ -168,8 +168,8 @@ class FakeLoggerImpl : public fuchsia::cobalt::Logger {
   }
 
   void LogIntHistogram(
-      uint32_t metric_id, uint32_t event_code, fidl::StringPtr component,
-      fidl::VectorPtr<fuchsia::cobalt::HistogramBucket> histogram,
+      uint32_t metric_id, uint32_t event_code, std::string component,
+      std::vector<fuchsia::cobalt::HistogramBucket> histogram,
       LogIntHistogramCallback callback) override {
     RecordCall(EventType::INT_HISTOGRAM,
                std::make_unique<IntHistogramEvent>(
@@ -179,7 +179,7 @@ class FakeLoggerImpl : public fuchsia::cobalt::Logger {
 
   void LogCustomEvent(
       uint32_t metric_id,
-      fidl::VectorPtr<fuchsia::cobalt::CustomEventValue> event_values,
+      std::vector<fuchsia::cobalt::CustomEventValue> event_values,
       LogCustomEventCallback callback) override {
     RecordCall(EventType::CUSTOM, std::make_unique<CustomEvent>(
                                       metric_id, std::move(event_values)));
@@ -269,12 +269,12 @@ class FakeLoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
   }
 
   void CreateLoggerFromProjectName(
-      fidl::StringPtr project_name, fuchsia::cobalt::ReleaseStage stage,
+      std::string project_name, fuchsia::cobalt::ReleaseStage stage,
       fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
       CreateLoggerFromProjectNameCallback callback) override {}
 
   void CreateLoggerSimpleFromProjectName(
-      fidl::StringPtr project_name, fuchsia::cobalt::ReleaseStage stage,
+      std::string project_name, fuchsia::cobalt::ReleaseStage stage,
       fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
       CreateLoggerSimpleFromProjectNameCallback callback) override {}
 
@@ -435,15 +435,15 @@ TEST_F(CobaltLoggerTest, LogIntHistogram) {
 }
 
 TEST_F(CobaltLoggerTest, LogCustomEvent) {
-  fidl::VectorPtr<fuchsia::cobalt::CustomEventValue> event_values(1);
-  event_values->at(0).dimension_name = "some_dimension";
-  event_values->at(0).value.set_int_value(234);
+  std::vector<fuchsia::cobalt::CustomEventValue> event_values(1);
+  event_values.at(0).dimension_name = "some_dimension";
+  event_values.at(0).value.set_int_value(234);
 
-  fidl::VectorPtr<fuchsia::cobalt::CustomEventValue> event_values_clone;
+  std::vector<fuchsia::cobalt::CustomEventValue> event_values_clone;
   ASSERT_EQ(ZX_OK, fidl::Clone(event_values, &event_values_clone));
 
   CustomEvent event(kFakeCobaltMetricId, std::move(event_values_clone));
-  cobalt_logger()->LogCustomEvent(event.metric_id(), event_values.take());
+  cobalt_logger()->LogCustomEvent(event.metric_id(), std::move(event_values));
   RunLoopUntilIdle();
   logger()->ExpectCalledOnceWith(EventType::CUSTOM, &event);
 }

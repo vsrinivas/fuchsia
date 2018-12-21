@@ -146,7 +146,7 @@ bool CobaltTestAppLogger::LogIntHistogramAndSend(
     bool use_request_send_soon) {
   for (int i = 0; i < num_observations_per_batch_; i++) {
     Status status = Status::INTERNAL_ERROR;
-    fidl::VectorPtr<fuchsia::cobalt::HistogramBucket> histogram;
+    std::vector<fuchsia::cobalt::HistogramBucket> histogram;
     for (auto it = histogram_map.begin(); histogram_map.end() != it; it++) {
       fuchsia::cobalt::HistogramBucket entry;
       entry.index = it->first;
@@ -173,11 +173,11 @@ bool CobaltTestAppLogger::LogStringPairAndSend(uint32_t metric_id,
                                                bool use_request_send_soon) {
   for (int i = 0; i < num_observations_per_batch_; i++) {
     Status status = Status::INTERNAL_ERROR;
-    fidl::VectorPtr<fuchsia::cobalt::CustomEventValue> parts(2);
-    parts->at(0).dimension_name = part0;
-    parts->at(0).value.set_string_value(val0);
-    parts->at(1).dimension_name = part1;
-    parts->at(1).value.set_string_value(val1);
+    std::vector<fuchsia::cobalt::CustomEventValue> parts(2);
+    parts.at(0).dimension_name = part0;
+    parts.at(0).value.set_string_value(val0);
+    parts.at(1).dimension_name = part1;
+    parts.at(1).value.set_string_value(val1);
     logger_->LogCustomEvent(metric_id, std::move(parts), &status);
     FXL_VLOG(1) << "LogCustomEvent(" << val0 << ", " << val1 << ") => "
                 << StatusToString(status);

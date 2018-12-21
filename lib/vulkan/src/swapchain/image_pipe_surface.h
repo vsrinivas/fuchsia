@@ -51,8 +51,8 @@ class ImagePipeSurface {
                         uint64_t size_bytes) = 0;
   virtual void RemoveImage(uint32_t image_id) = 0;
   virtual void PresentImage(uint32_t image_id,
-                            fidl::VectorPtr<zx::event> acquire_fences,
-                            fidl::VectorPtr<zx::event> release_fences) = 0;
+                            std::vector<zx::event> acquire_fences,
+                            std::vector<zx::event> release_fences) = 0;
 
  private:
   SupportedImageProperties supported_image_properties_;

@@ -74,16 +74,16 @@ TEST_F(MinstrelTest, AddPeer) {
     wlan_minstrel::Peers peers;
     zx_status_t status = minstrel_.GetListToFidl(&peers);
     EXPECT_EQ(ZX_OK, status);
-    EXPECT_EQ(1ULL, peers.peers->size());
+    EXPECT_EQ(1ULL, peers.peers.size());
 
     wlan_minstrel::Peer peer;
     status = minstrel_.GetStatsToFidl(kTestMacAddr, &peer);
     EXPECT_EQ(ZX_OK, status);
     EXPECT_EQ(kTestMacAddr, common::MacAddr(peer.mac_addr.data()));
     // TODO(eyw): size would be 40 if 40 MHz is supported, 72 if 40 MHz and SGI are both supported.
-    EXPECT_EQ(24ULL, peer.entries->size());
+    EXPECT_EQ(24ULL, peer.entries.size());
     EXPECT_EQ(16, peer.max_tp);
-    EXPECT_EQ((*peer.entries)[0].tx_vector_idx, peer.max_probability);
+    EXPECT_EQ(peer.entries[0].tx_vector_idx, peer.max_probability);
     EXPECT_EQ(kErpStartIdx + kErpNumTxVector - 1, peer.basic_highest);
     EXPECT_EQ(kErpStartIdx + kErpNumTxVector - 1, peer.basic_max_probability);
 }
@@ -96,7 +96,7 @@ TEST_F(MinstrelTest, RemovePeer) {
     wlan_minstrel::Peers peers;
     zx_status_t status = minstrel_.GetListToFidl(&peers);
     EXPECT_EQ(ZX_OK, status);
-    EXPECT_EQ(1ULL, peers.peers->size());
+    EXPECT_EQ(1ULL, peers.peers.size());
 
     // Remove the peer using its mac address.
     minstrel_.RemovePeer(kTestMacAddr);
@@ -104,7 +104,7 @@ TEST_F(MinstrelTest, RemovePeer) {
 
     status = minstrel_.GetListToFidl(&peers);
     EXPECT_EQ(ZX_OK, status);
-    EXPECT_TRUE(peers.peers->empty());
+    EXPECT_TRUE(peers.peers.empty());
 
     wlan_minstrel::Peer peer;
     status = minstrel_.GetStatsToFidl(kTestMacAddr, &peer);
@@ -147,7 +147,7 @@ TEST_F(MinstrelTest, UpdateStats) {
     // tx_status collected but NOT been processed yet
     // it will be processed every 100 ms, when HandleTimeout() is called.
     EXPECT_EQ(16, peer.max_tp);
-    EXPECT_EQ((*peer.entries)[0].tx_vector_idx, peer.max_probability);
+    EXPECT_EQ(peer.entries[0].tx_vector_idx, peer.max_probability);
 
     AdvanceTimeBy(zx::msec(100));
     EXPECT_TRUE(minstrel_.HandleTimeout());  // tx_status are processed at HandleTimeout()
@@ -237,7 +237,7 @@ TEST_F(MinstrelTest, HtIsMyFavorite) {
 
 std::unordered_set<tx_vec_idx_t> GetAllIndices(const wlan_minstrel::Peer& peer) {
     std::unordered_set<tx_vec_idx_t> indices;
-    for (const auto& entry : *peer.entries) {
+    for (const auto& entry : peer.entries) {
         indices.emplace(entry.tx_vector_idx);
     }
     return indices;

@@ -81,7 +81,7 @@ DescriptorResult NewDescriptor(const Descriptor& fidl_desc) {
   auto write_reqs = ParseSecurityRequirements(fidl_desc.permissions->write);
 
   ::btlib::common::UUID type;
-  if (!::btlib::common::StringToUuid(fidl_desc.type.get(), &type)) {
+  if (!::btlib::common::StringToUuid(fidl_desc.type, &type)) {
     return DescriptorResult("Invalid descriptor UUID");
   }
 
@@ -111,7 +111,7 @@ CharacteristicResult NewCharacteristic(const Characteristic& fidl_chrc) {
   auto update_reqs = ParseSecurityRequirements(fidl_chrc.permissions->update);
 
   ::btlib::common::UUID type;
-  if (!::btlib::common::StringToUuid(fidl_chrc.type.get(), &type)) {
+  if (!::btlib::common::StringToUuid(fidl_chrc.type, &type)) {
     return CharacteristicResult("Invalid characteristic UUID");
   }
 
@@ -168,8 +168,8 @@ class GattServerServer::LocalServiceImpl
     owner_->RemoveService(id_);
   }
 
-  void NotifyValue(uint64_t characteristic_id, ::fidl::StringPtr peer_id,
-                   ::fidl::VectorPtr<uint8_t> value, bool confirm) override {
+  void NotifyValue(uint64_t characteristic_id, ::std::string peer_id,
+                   ::std::vector<uint8_t> value, bool confirm) override {
     gatt()->SendNotification(id_, characteristic_id, peer_id, std::move(value),
                              confirm);
   }
@@ -230,7 +230,7 @@ void GattServerServer::PublishService(
   }
 
   ::btlib::common::UUID service_type;
-  if (!::btlib::common::StringToUuid(service_info.type.get(), &service_type)) {
+  if (!::btlib::common::StringToUuid(service_info.type, &service_type)) {
     auto error = fidl_helpers::NewFidlError(ErrorCode::INVALID_ARGUMENTS,
                                             "Invalid service UUID");
     callback(std::move(error));

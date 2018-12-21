@@ -36,7 +36,7 @@ class GuestView : public scenic::BaseView {
   void OnInputEvent(fuchsia::ui::input::InputEvent event) override;
 
   // |fuchsia::ui::scenic::SessionListener|
-  void OnScenicError(fidl::StringPtr error) override;
+  void OnScenicError(std::string error) override;
 };
 
 #endif  // GARNET_BIN_GUEST_VMM_DEVICE_GUEST_VIEW_H_

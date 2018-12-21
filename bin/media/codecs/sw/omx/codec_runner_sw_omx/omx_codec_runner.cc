@@ -343,7 +343,7 @@ void OmxCodecRunner::SetDecoderParams(
   const AudioDecoder* dec = nullptr;
   for (size_t i = 0; i < arraysize(known_audio_decoders); i++) {
     if (known_audio_decoders[i].codec_mime_type ==
-        audio_decoder_params.input_details.mime_type.get()) {
+        audio_decoder_params.input_details.mime_type) {
       dec = &known_audio_decoders[i];
       break;
     }
@@ -932,7 +932,7 @@ void OmxCodecRunner::PopulateFormatDetailsFromOmxOutputFormat_Audio(
         channel_map[i] =
             AudioChannelIdFromOmxAudioChannelType(omx_pcm.eChannelMapping[i]);
       }
-      pcm.channel_map.reset(channel_map);
+      pcm.channel_map = std::move(channel_map);
       fuchsia::mediacodec::AudioUncompressedFormat uncompressed{};
       uncompressed.set_pcm(std::move(pcm));
       audio_format.set_uncompressed(std::move(uncompressed));

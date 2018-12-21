@@ -60,7 +60,7 @@ class ViewTreeImpl : public ::fuchsia::ui::viewsv1::ViewTree,
                            RequestSnapshotHACKCallback callback) override;
 
   // |fuchsia::sys::ServiceProvider|:
-  void ConnectToService(fidl::StringPtr service_name,
+  void ConnectToService(std::string service_name,
                         zx::channel client_handle) override;
 
   ViewRegistry* const registry_;

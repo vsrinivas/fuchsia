@@ -76,44 +76,44 @@ TEST_F(TilesTest, AddFromURL) {
 
   ASSERT_NE(0u, key) << "Key should be nonzero";
 
-  tiles()->ListTiles([key](::fidl::VectorPtr<uint32_t> keys,
-                           ::fidl::VectorPtr<::fidl::StringPtr> urls,
-                           ::fidl::VectorPtr<::fuchsia::math::SizeF> sizes,
-                           ::fidl::VectorPtr<bool> focusabilities) {
-    ASSERT_EQ(1u, keys->size());
-    EXPECT_EQ(1u, urls->size());
-    EXPECT_EQ(1u, sizes->size());
-    EXPECT_EQ(1u, focusabilities->size());
-    EXPECT_EQ(key, keys->at(0));
-    EXPECT_EQ("test_tile", urls->at(0));
-    EXPECT_EQ(true, focusabilities->at(0));
+  tiles()->ListTiles([key](::std::vector<uint32_t> keys,
+                           ::std::vector<::std::string> urls,
+                           ::std::vector<::fuchsia::math::SizeF> sizes,
+                           ::std::vector<bool> focusabilities) {
+    ASSERT_EQ(1u, keys.size());
+    EXPECT_EQ(1u, urls.size());
+    EXPECT_EQ(1u, sizes.size());
+    EXPECT_EQ(1u, focusabilities.size());
+    EXPECT_EQ(key, keys.at(0));
+    EXPECT_EQ("test_tile", urls.at(0));
+    EXPECT_EQ(true, focusabilities.at(0));
   });
 
   tiles()->RemoveTile(key);
 
-  tiles()->ListTiles([](::fidl::VectorPtr<uint32_t> keys,
-                        ::fidl::VectorPtr<::fidl::StringPtr> urls,
-                        ::fidl::VectorPtr<::fuchsia::math::SizeF> sizes,
-                        ::fidl::VectorPtr<bool> focusabilities) {
-    EXPECT_EQ(0u, keys->size());
-    EXPECT_EQ(0u, urls->size());
-    EXPECT_EQ(0u, sizes->size());
-    EXPECT_EQ(0u, focusabilities->size());
+  tiles()->ListTiles([](::std::vector<uint32_t> keys,
+                        ::std::vector<::std::string> urls,
+                        ::std::vector<::fuchsia::math::SizeF> sizes,
+                        ::std::vector<bool> focusabilities) {
+    EXPECT_EQ(0u, keys.size());
+    EXPECT_EQ(0u, urls.size());
+    EXPECT_EQ(0u, sizes.size());
+    EXPECT_EQ(0u, focusabilities.size());
   });
 
   tiles()->AddTileFromURL("test_nofocus_tile", /* allow_focus */ false, {},
                           [&key](uint32_t _cb_key) {
                             // noop
                           });
-  tiles()->ListTiles([key](::fidl::VectorPtr<uint32_t> keys,
-                           ::fidl::VectorPtr<::fidl::StringPtr> urls,
-                           ::fidl::VectorPtr<::fuchsia::math::SizeF> sizes,
-                           ::fidl::VectorPtr<bool> focusabilities) {
-    EXPECT_EQ(1u, keys->size());
-    EXPECT_EQ(1u, urls->size());
-    EXPECT_EQ(1u, sizes->size());
-    EXPECT_EQ(1u, focusabilities->size());
-    EXPECT_EQ(false, focusabilities->at(0));
+  tiles()->ListTiles([](::std::vector<uint32_t> keys,
+                           ::std::vector<::std::string> urls,
+                           ::std::vector<::fuchsia::math::SizeF> sizes,
+                           ::std::vector<bool> focusabilities) {
+    EXPECT_EQ(1u, keys.size());
+    EXPECT_EQ(1u, urls.size());
+    EXPECT_EQ(1u, sizes.size());
+    EXPECT_EQ(1u, focusabilities.size());
+    EXPECT_EQ(false, focusabilities.at(0));
   });
 }
 

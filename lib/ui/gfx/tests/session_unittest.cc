@@ -21,12 +21,12 @@ namespace test {
 TEST_F(SessionTest, ScheduleUpdateOutOfOrder) {
   EXPECT_TRUE(
       session_->ScheduleUpdate(1, std::vector<::fuchsia::ui::gfx::Command>(),
-                               ::fidl::VectorPtr<zx::event>(),
-                               ::fidl::VectorPtr<zx::event>(), [](auto) {}));
+                               ::std::vector<zx::event>(),
+                               ::std::vector<zx::event>(), [](auto) {}));
   EXPECT_FALSE(
       session_->ScheduleUpdate(0, std::vector<::fuchsia::ui::gfx::Command>(),
-                               ::fidl::VectorPtr<zx::event>(),
-                               ::fidl::VectorPtr<zx::event>(), [](auto) {}));
+                               ::std::vector<zx::event>(),
+                               ::std::vector<zx::event>(), [](auto) {}));
   ExpectLastReportedError(
       "scenic_impl::gfx::Session: Present called with out-of-order "
       "presentation "
@@ -37,12 +37,12 @@ TEST_F(SessionTest, ScheduleUpdateOutOfOrder) {
 TEST_F(SessionTest, ScheduleUpdateInOrder) {
   EXPECT_TRUE(
       session_->ScheduleUpdate(1, std::vector<::fuchsia::ui::gfx::Command>(),
-                               ::fidl::VectorPtr<zx::event>(),
-                               ::fidl::VectorPtr<zx::event>(), [](auto) {}));
+                               ::std::vector<zx::event>(),
+                               ::std::vector<zx::event>(), [](auto) {}));
   EXPECT_TRUE(
       session_->ScheduleUpdate(1, std::vector<::fuchsia::ui::gfx::Command>(),
-                               ::fidl::VectorPtr<zx::event>(),
-                               ::fidl::VectorPtr<zx::event>(), [](auto) {}));
+                               ::std::vector<zx::event>(),
+                               ::std::vector<zx::event>(), [](auto) {}));
   ExpectLastReportedError(nullptr);
 }
 

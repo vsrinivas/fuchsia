@@ -6,64 +6,33 @@
 namespace test {
 namespace name {
 
-Union::Union() : tag_(::std::numeric_limits<::fidl_union_tag_t>::max()) {}
+Union::Union() : value_() {}
 
 Union::~Union() {
-  Destroy();
 }
 
-Union::Union(Union&& other) : tag_(other.tag_) {
-  switch (tag_) {
-   case 0:
-    Primitive_ = std::move(other.Primitive_);
-    break;
-   case 1:
-    new (&StringNeedsConstructor_) ::fidl::StringPtr();
-    StringNeedsConstructor_ = std::move(other.StringNeedsConstructor_);
-    break;
-   case 2:
-    new (&VectorStringAlsoNeedsConstructor_) ::fidl::VectorPtr<::fidl::StringPtr>();
-    VectorStringAlsoNeedsConstructor_ = std::move(other.VectorStringAlsoNeedsConstructor_);
-    break;
-   default:
-    break;
-  }
+Union::Union(Union&& other) : value_(std::move(other.value_)) {
 }
 
 Union& Union::operator=(Union&& other) {
   if (this != &other) {
-    Destroy();
-    tag_ = other.tag_;
-    switch (tag_) {
-     case 0:
-      Primitive_ = std::move(other.Primitive_);
-      break;
-     case 1:
-      new (&StringNeedsConstructor_) ::fidl::StringPtr();
-      StringNeedsConstructor_ = std::move(other.StringNeedsConstructor_);
-      break;
-     case 2:
-      new (&VectorStringAlsoNeedsConstructor_) ::fidl::VectorPtr<::fidl::StringPtr>();
-      VectorStringAlsoNeedsConstructor_ = std::move(other.VectorStringAlsoNeedsConstructor_);
-      break;
-     default:
-      break;
-    }
+    value_ = std::move(other.value_);
   }
   return *this;
 }
 
 void Union::Encode(::fidl::Encoder* encoder, size_t offset) {
-  ::fidl::Encode(encoder, &tag_, offset);
-  switch (tag_) {
+  fidl_union_tag_t tag = static_cast<fidl_union_tag_t>(Which());
+  ::fidl::Encode(encoder, &tag, offset);
+  switch (tag) {
    case 0:
-    ::fidl::Encode(encoder, &Primitive_, offset + 8);
+    ::fidl::Encode(encoder, &Primitive(), offset + 8);
     break;
    case 1:
-    ::fidl::Encode(encoder, &StringNeedsConstructor_, offset + 8);
+    ::fidl::Encode(encoder, &StringNeedsConstructor(), offset + 8);
     break;
    case 2:
-    ::fidl::Encode(encoder, &VectorStringAlsoNeedsConstructor_, offset + 8);
+    ::fidl::Encode(encoder, &VectorStringAlsoNeedsConstructor(), offset + 8);
     break;
    default:
     break;
@@ -71,54 +40,84 @@ void Union::Encode(::fidl::Encoder* encoder, size_t offset) {
 }
 
 void Union::Decode(::fidl::Decoder* decoder, Union* value, size_t offset) {
-  value->Destroy();
-  ::fidl::Decode(decoder, &value->tag_, offset);
-  switch (value->tag_) {
+  fidl_union_tag_t tag;
+  ::fidl::Decode(decoder, &tag, offset);
+  switch (tag) {
    case 0:
-    ::fidl::Decode(decoder, &value->Primitive_, offset + 8);
-    break;
+    {
+      int32_t member{};
+      ::fidl::Decode(decoder, &member, offset + 8);
+      value->set_Primitive(std::move(member));
+      break;
+    }
    case 1:
-    new (&value->StringNeedsConstructor_) ::fidl::StringPtr();
-    ::fidl::Decode(decoder, &value->StringNeedsConstructor_, offset + 8);
-    break;
+    {
+      ::std::string member{};
+      ::fidl::Decode(decoder, &member, offset + 8);
+      value->set_StringNeedsConstructor(std::move(member));
+      break;
+    }
    case 2:
-    new (&value->VectorStringAlsoNeedsConstructor_) ::fidl::VectorPtr<::fidl::StringPtr>();
-    ::fidl::Decode(decoder, &value->VectorStringAlsoNeedsConstructor_, offset + 8);
-    break;
+    {
+      ::std::vector<::std::string> member{};
+      ::fidl::Decode(decoder, &member, offset + 8);
+      value->set_VectorStringAlsoNeedsConstructor(std::move(member));
+      break;
+    }
    default:
-    break;
+    value->value_.emplace<0>();
   }
 }
 
 zx_status_t Union::Clone(Union* result) const {
-  result->Destroy();
-  result->tag_ = tag_;
-  switch (tag_) {
-    case 0:
-      return ::fidl::Clone(Primitive_, &result->Primitive_);
-    case 1:
-      new (&result->StringNeedsConstructor_) ::fidl::StringPtr();
-      return ::fidl::Clone(StringNeedsConstructor_, &result->StringNeedsConstructor_);
-    case 2:
-      new (&result->VectorStringAlsoNeedsConstructor_) ::fidl::VectorPtr<::fidl::StringPtr>();
-      return ::fidl::Clone(VectorStringAlsoNeedsConstructor_, &result->VectorStringAlsoNeedsConstructor_);
-    default:
-      return ZX_OK;
+  zx_status_t status = ZX_OK;
+  switch (Which()) {
+    case Tag::kPrimitive:
+      {
+        int32_t member{};
+        status = ::fidl::Clone(Primitive(), &member);
+        if (status == ZX_OK) {
+	  result->set_Primitive(std::move(member));
+        }
+      }
+      break;
+    case Tag::kStringNeedsConstructor:
+      {
+        ::std::string member{};
+        status = ::fidl::Clone(StringNeedsConstructor(), &member);
+        if (status == ZX_OK) {
+	  result->set_StringNeedsConstructor(std::move(member));
+        }
+      }
+      break;
+    case Tag::kVectorStringAlsoNeedsConstructor:
+      {
+        ::std::vector<::std::string> member{};
+        status = ::fidl::Clone(VectorStringAlsoNeedsConstructor(), &member);
+        if (status == ZX_OK) {
+	  result->set_VectorStringAlsoNeedsConstructor(std::move(member));
+        }
+      }
+      break;
+    case Tag::Invalid:
+      result->value_.emplace<0>();
+      break;
   }
+  return status;
 }
 
 bool operator==(const Union& lhs, const Union& rhs) {
-  if (lhs.tag_ != rhs.tag_) {
+  if (lhs.Which() != rhs.Which()) {
     return false;
   }
-  switch (lhs.tag_) {
-    case 0:
-      return ::fidl::Equals(lhs.Primitive_, rhs.Primitive_);
-    case 1:
-      return ::fidl::Equals(lhs.StringNeedsConstructor_, rhs.StringNeedsConstructor_);
-    case 2:
-      return ::fidl::Equals(lhs.VectorStringAlsoNeedsConstructor_, rhs.VectorStringAlsoNeedsConstructor_);
-    case ::std::numeric_limits<::fidl_union_tag_t>::max():
+  switch (lhs.Which()) {
+    case Union::Tag::kPrimitive:
+      return ::fidl::Equals(lhs.Primitive(), rhs.Primitive());
+    case Union::Tag::kStringNeedsConstructor:
+      return ::fidl::Equals(lhs.StringNeedsConstructor(), rhs.StringNeedsConstructor());
+    case Union::Tag::kVectorStringAlsoNeedsConstructor:
+      return ::fidl::Equals(lhs.VectorStringAlsoNeedsConstructor(), rhs.VectorStringAlsoNeedsConstructor());
+    case Union::Tag::Invalid:
       return true;
     default:
       return false;
@@ -126,51 +125,15 @@ bool operator==(const Union& lhs, const Union& rhs) {
 }
 
 void Union::set_Primitive(int32_t value) {
-  EnsureStorageInitialized(0);
-  Primitive_ = std::move(value);
+  value_.emplace<static_cast<size_t>(Tag::kPrimitive) + 1>(std::move(value));
 }
 
-void Union::set_StringNeedsConstructor(::fidl::StringPtr value) {
-  EnsureStorageInitialized(1);
-  StringNeedsConstructor_ = std::move(value);
+void Union::set_StringNeedsConstructor(::std::string value) {
+  value_.emplace<static_cast<size_t>(Tag::kStringNeedsConstructor) + 1>(std::move(value));
 }
 
-void Union::set_VectorStringAlsoNeedsConstructor(::fidl::VectorPtr<::fidl::StringPtr> value) {
-  EnsureStorageInitialized(2);
-  VectorStringAlsoNeedsConstructor_ = std::move(value);
-}
-
-void Union::Destroy() {
-  switch (tag_) {
-   case 0:
-    break;
-   case 1:
-    StringNeedsConstructor_.~StringPtr();
-    break;
-   case 2:
-    VectorStringAlsoNeedsConstructor_.~VectorPtr();
-    break;
-   default:
-    break;
-  }
-  tag_ = ::std::numeric_limits<::fidl_union_tag_t>::max();
-}
-
-void Union::EnsureStorageInitialized(::fidl_union_tag_t tag) {
-  if (tag_ != tag) {
-    Destroy();
-    tag_ = tag;
-    switch (tag_) {
-      case 1:
-        new (&StringNeedsConstructor_) ::fidl::StringPtr();
-        break;
-      case 2:
-        new (&VectorStringAlsoNeedsConstructor_) ::fidl::VectorPtr<::fidl::StringPtr>();
-        break;
-      default:
-        break;
-    }
-  }
+void Union::set_VectorStringAlsoNeedsConstructor(::std::vector<::std::string> value) {
+  value_.emplace<static_cast<size_t>(Tag::kVectorStringAlsoNeedsConstructor) + 1>(std::move(value));
 }
 }  // namespace name
 }  // namespace test

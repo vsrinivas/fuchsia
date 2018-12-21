@@ -30,7 +30,7 @@ class CanvasImpl final : public ::fuchsia::ui::sketchy::Canvas {
   void Init(::fidl::InterfaceHandle<::fuchsia::ui::sketchy::CanvasListener>
                 listener) override;
   void Enqueue(
-      ::fidl::VectorPtr<::fuchsia::ui::sketchy::Command> commands) override;
+      ::std::vector<::fuchsia::ui::sketchy::Command> commands) override;
   void Present(uint64_t presentation_time, PresentCallback callback) override;
 
  private:

@@ -26,14 +26,13 @@ Canvas::Canvas(::fuchsia::ui::sketchy::CanvasPtr canvas, async::Loop* loop)
 ResourceId Canvas::AllocateResourceId() { return next_resource_id_++; }
 
 void Canvas::Present(uint64_t time, scenic::Session::PresentCallback callback) {
-  if (!commands_->empty()) {
-    FXL_DCHECK(static_cast<bool>(commands_));
+  if (!commands_.empty()) {
     canvas_->Enqueue(std::move(commands_));
 
     // After being moved, |commands_| is in a "valid but unspecified state";
     // see http://en.cppreference.com/w/cpp/utility/move.  Calling reset() makes
     // it safe to continue using.
-    commands_.reset();
+    commands_.clear();
   }
   canvas_->Present(time, fxl::MakeCopyable(std::move(callback)));
 }

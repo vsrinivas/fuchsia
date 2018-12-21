@@ -95,7 +95,7 @@ void ViewTreeImpl::RequestSnapshotHACK(uint32_t child_key,
   registry_->RequestSnapshotHACK(state_, child_key, std::move(callback));
 }
 
-void ViewTreeImpl::ConnectToService(fidl::StringPtr service_name,
+void ViewTreeImpl::ConnectToService(std::string service_name,
                                     zx::channel client_handle) {
   registry_->ConnectToViewTreeService(state_, service_name,
                                       std::move(client_handle));

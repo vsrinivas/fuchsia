@@ -32,7 +32,7 @@ GattClientServer::GattClientServer(std::string peer_id,
       weak_ptr_factory_(this) {}
 
 void GattClientServer::ListServices(
-    ::fidl::VectorPtr<::fidl::StringPtr> fidl_uuids,
+    ::fidl::VectorPtr<::std::string> fidl_uuids,
     ListServicesCallback callback) {
   // Parse the UUID list.
   std::vector<btlib::common::UUID> uuids;
@@ -40,11 +40,11 @@ void GattClientServer::ListServices(
     // Allocate all at once and convert in-place.
     uuids.resize(fidl_uuids->size());
     for (size_t i = 0; i < uuids.size(); ++i) {
-      if (!StringToUuid(fidl_uuids.get()[i].get(), &uuids[i])) {
+      if (!StringToUuid(fidl_uuids.get()[i], &uuids[i])) {
         callback(fidl_helpers::NewFidlError(
                      ErrorCode::INVALID_ARGUMENTS,
-                     "Invalid UUID: " + fidl_uuids.get()[i].get()),
-                 fidl::VectorPtr<ServiceInfo>((size_t)0u));
+                     "Invalid UUID: " + fidl_uuids.get()[i]),
+                 std::vector<ServiceInfo>((size_t)0u));
         return;
       }
     }
@@ -56,8 +56,7 @@ void GattClientServer::ListServices(
     if (!status) {
       auto fidl_status =
           fidl_helpers::StatusToFidl(status, "Failed to discover services");
-      callback(std::move(fidl_status),
-               fidl::VectorPtr<ServiceInfo>(std::move(out)));
+      callback(std::move(fidl_status), std::move(out));
       return;
     }
 
@@ -71,7 +70,7 @@ void GattClientServer::ListServices(
       service_info.type = svc->uuid().ToString();
       out[i++] = std::move(service_info);
     }
-    callback(Status(), fidl::VectorPtr<ServiceInfo>(std::move(out)));
+    callback(Status(), std::move(out));
   };
 
   gatt()->ListServices(peer_id_, std::move(uuids), std::move(cb));

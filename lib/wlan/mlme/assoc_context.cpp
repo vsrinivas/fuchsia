@@ -42,11 +42,11 @@ const wlan_band_info_t* FindBand(const wlan_info_t& ifc_info, bool is_5ghz) {
 }
 
 std::optional<std::vector<SupportedRate>> BuildAssocReqSuppRates(
-    const ::fidl::VectorPtr<uint8_t>& ap_basic_rate_set,
-    const ::fidl::VectorPtr<uint8_t>& ap_op_rate_set,
+    const std::vector<uint8_t>& ap_basic_rate_set,
+    const std::vector<uint8_t>& ap_op_rate_set,
     const std::vector<SupportedRate>& client_rates) {
-    std::set<uint8_t> basic(ap_basic_rate_set->cbegin(), ap_basic_rate_set->cend());
-    std::set<uint8_t> op(ap_op_rate_set->cbegin(), ap_op_rate_set->cend());
+    std::set<uint8_t> basic(ap_basic_rate_set.cbegin(), ap_basic_rate_set.cend());
+    std::set<uint8_t> op(ap_op_rate_set.cbegin(), ap_op_rate_set.cend());
 
     std::vector<SupportedRate> ap_rates(op.size());
     std::transform(op.cbegin(), op.cend(), ap_rates.begin(), [&basic](uint8_t r) {

@@ -25,7 +25,7 @@ class ShadertoyImpl : public fuchsia::examples::shadertoy::Shadertoy {
 
   // |Shadertoy|
   void SetShaderCode(
-      ::fidl::StringPtr glsl,
+      ::std::string glsl,
       fuchsia::examples::shadertoy::Shadertoy::SetShaderCodeCallback callback)
       override;
 

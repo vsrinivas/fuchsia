@@ -61,7 +61,7 @@ class TileView : public scenic::V1BaseView,
                     presentation) final;
   void HACK_SetRendererParams(
       bool enable_clipping,
-      fidl::VectorPtr<fuchsia::ui::gfx::RendererParam> params) override {}
+      std::vector<fuchsia::ui::gfx::RendererParam> params) override {}
 
   // Set up environment with a |Presenter| service.
   // We launch apps with this environment.

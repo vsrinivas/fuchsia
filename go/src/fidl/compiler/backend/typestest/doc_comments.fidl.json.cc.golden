@@ -113,42 +113,27 @@ bool operator==(const Struct& lhs, const Struct& rhs) {
   }
   return true;
 }
-Union::Union() : tag_(::std::numeric_limits<::fidl_union_tag_t>::max()) {}
+Union::Union() : value_() {}
 
 Union::~Union() {
-  Destroy();
 }
 
-Union::Union(Union&& other) : tag_(other.tag_) {
-  switch (tag_) {
-   case 0:
-    Field_ = std::move(other.Field_);
-    break;
-   default:
-    break;
-  }
+Union::Union(Union&& other) : value_(std::move(other.value_)) {
 }
 
 Union& Union::operator=(Union&& other) {
   if (this != &other) {
-    Destroy();
-    tag_ = other.tag_;
-    switch (tag_) {
-     case 0:
-      Field_ = std::move(other.Field_);
-      break;
-     default:
-      break;
-    }
+    value_ = std::move(other.value_);
   }
   return *this;
 }
 
 void Union::Encode(::fidl::Encoder* encoder, size_t offset) {
-  ::fidl::Encode(encoder, &tag_, offset);
-  switch (tag_) {
+  fidl_union_tag_t tag = static_cast<fidl_union_tag_t>(Which());
+  ::fidl::Encode(encoder, &tag, offset);
+  switch (tag) {
    case 0:
-    ::fidl::Encode(encoder, &Field_, offset + 4);
+    ::fidl::Encode(encoder, &Field(), offset + 4);
     break;
    default:
     break;
@@ -156,36 +141,48 @@ void Union::Encode(::fidl::Encoder* encoder, size_t offset) {
 }
 
 void Union::Decode(::fidl::Decoder* decoder, Union* value, size_t offset) {
-  value->Destroy();
-  ::fidl::Decode(decoder, &value->tag_, offset);
-  switch (value->tag_) {
+  fidl_union_tag_t tag;
+  ::fidl::Decode(decoder, &tag, offset);
+  switch (tag) {
    case 0:
-    ::fidl::Decode(decoder, &value->Field_, offset + 4);
-    break;
+    {
+      int32_t member{};
+      ::fidl::Decode(decoder, &member, offset + 4);
+      value->set_Field(std::move(member));
+      break;
+    }
    default:
-    break;
+    value->value_.emplace<0>();
   }
 }
 
 zx_status_t Union::Clone(Union* result) const {
-  result->Destroy();
-  result->tag_ = tag_;
-  switch (tag_) {
-    case 0:
-      return ::fidl::Clone(Field_, &result->Field_);
-    default:
-      return ZX_OK;
+  zx_status_t status = ZX_OK;
+  switch (Which()) {
+    case Tag::kField:
+      {
+        int32_t member{};
+        status = ::fidl::Clone(Field(), &member);
+        if (status == ZX_OK) {
+	  result->set_Field(std::move(member));
+        }
+      }
+      break;
+    case Tag::Invalid:
+      result->value_.emplace<0>();
+      break;
   }
+  return status;
 }
 
 bool operator==(const Union& lhs, const Union& rhs) {
-  if (lhs.tag_ != rhs.tag_) {
+  if (lhs.Which() != rhs.Which()) {
     return false;
   }
-  switch (lhs.tag_) {
-    case 0:
-      return ::fidl::Equals(lhs.Field_, rhs.Field_);
-    case ::std::numeric_limits<::fidl_union_tag_t>::max():
+  switch (lhs.Which()) {
+    case Union::Tag::kField:
+      return ::fidl::Equals(lhs.Field(), rhs.Field());
+    case Union::Tag::Invalid:
       return true;
     default:
       return false;
@@ -193,29 +190,7 @@ bool operator==(const Union& lhs, const Union& rhs) {
 }
 
 void Union::set_Field(int32_t value) {
-  EnsureStorageInitialized(0);
-  Field_ = std::move(value);
-}
-
-void Union::Destroy() {
-  switch (tag_) {
-   case 0:
-    break;
-   default:
-    break;
-  }
-  tag_ = ::std::numeric_limits<::fidl_union_tag_t>::max();
-}
-
-void Union::EnsureStorageInitialized(::fidl_union_tag_t tag) {
-  if (tag_ != tag) {
-    Destroy();
-    tag_ = tag;
-    switch (tag_) {
-      default:
-        break;
-    }
-  }
+  value_.emplace<static_cast<size_t>(Tag::kField) + 1>(std::move(value));
 }
 extern "C" const fidl_type_t test_name_TableTable;
 const fidl_type_t* Table::FidlType = &test_name_TableTable;

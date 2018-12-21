@@ -21,8 +21,8 @@ wlan_mlme::MeshPeeringCommon FakeCommonFields() {
     common::MacAddr("b0:b1:b2:b3:b4:b5").CopyTo(&ret.peer_sta_address);
     ret.protocol_id = 0x2211;
     ret.local_link_id = 0x4433;
-    ret.mesh_id.reset({ 'f', 'o', 'o' });
-    ret.rates.reset({ 0x81, 0x82, 0x83, 0x84, 0x05, 0x06, 0x07, 0x08, 0x09 });
+    ret.mesh_id = { 'f', 'o', 'o' };
+    ret.rates = { 0x81, 0x82, 0x83, 0x84, 0x05, 0x06, 0x07, 0x08, 0x09 };
 
     ret.mesh_config.active_path_sel_proto_id = 1;
     ret.mesh_config.active_path_sel_metric_id = 2;

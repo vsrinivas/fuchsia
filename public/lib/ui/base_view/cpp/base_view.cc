@@ -54,7 +54,7 @@ BaseView::EmbeddedViewInfo BaseView::LaunchComponentAndCreateView(
 
   launcher->CreateComponent(
       {.url = component_url,
-       .arguments = fidl::VectorPtr(std::vector<fidl::StringPtr>(
+       .arguments = fidl::VectorPtr(std::vector<std::string>(
            component_args.begin(), component_args.end())),
        .directory_request = info.app_services.NewRequest()},
       info.controller.NewRequest());
@@ -89,8 +89,8 @@ void BaseView::InvalidateScene() {
 }
 
 void BaseView::OnScenicEvent(
-    fidl::VectorPtr<fuchsia::ui::scenic::Event> events) {
-  for (auto& event : *events) {
+    std::vector<fuchsia::ui::scenic::Event> events) {
+  for (auto& event : events) {
     switch (event.Which()) {
       case ::fuchsia::ui::scenic::Event::Tag::kGfx:
         switch (event.gfx().Which()) {

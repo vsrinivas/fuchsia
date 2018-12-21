@@ -17,14 +17,12 @@ FrobinatorImpl::FrobinatorImpl(fit::closure on_destroy)
 
 FrobinatorImpl::~FrobinatorImpl() { on_destroy_(); };
 
-void FrobinatorImpl::Frob(StringPtr value) {
-  EXPECT_FALSE(value.is_null());
-  frobs.push_back(std::move(*value));
+void FrobinatorImpl::Frob(std::string value) {
+  frobs.push_back(std::move(value));
 }
 
-void FrobinatorImpl::Grob(StringPtr value, GrobCallback callback) {
-  EXPECT_FALSE(value.is_null());
-  grobs.push_back(std::move(*value));
+void FrobinatorImpl::Grob(std::string value, GrobCallback callback) {
+  grobs.push_back(std::move(value));
   callback("response");
 }
 

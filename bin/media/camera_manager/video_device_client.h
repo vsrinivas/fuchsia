@@ -59,7 +59,7 @@ class VideoDeviceClient : public fbl::RefCounted<VideoDeviceClient> {
   // Called asynchronously by the driver in response to GetFormats.
   // Because GetFormats has a paginated response, OnGetFormatsResp may be
   // called multiple times.
-  void OnGetFormatsResp(fidl::VectorPtr<fuchsia::camera::VideoFormat> formats,
+  void OnGetFormatsResp(std::vector<fuchsia::camera::VideoFormat> formats,
                         uint32_t total_format_count, zx_status_t device_status);
 
   // Global counter to keep camera ids unique:

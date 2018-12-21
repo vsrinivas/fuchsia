@@ -73,10 +73,9 @@ void FakeSession::SetExpectations(
 }
 
 void FakeSession::Enqueue(
-    fidl::VectorPtr<::fuchsia::ui::scenic::Command> cmds) {
-  FXL_DCHECK(cmds);
+    std::vector<::fuchsia::ui::scenic::Command> cmds) {
 
-  for (auto& command : *cmds) {
+  for (auto& command : cmds) {
     switch (command.Which()) {
       case fuchsia::ui::scenic::Command::Tag::kGfx:
         switch (command.gfx().Which()) {
@@ -119,16 +118,14 @@ void FakeSession::Enqueue(
 }
 
 void FakeSession::Present(uint64_t presentation_time,
-                          fidl::VectorPtr<::zx::event> acquire_fences,
-                          fidl::VectorPtr<::zx::event> release_fences,
+                          std::vector<::zx::event> acquire_fences,
+                          std::vector<::zx::event> release_fences,
                           PresentCallback callback) {
-  FXL_DCHECK(acquire_fences);
-  FXL_DCHECK(release_fences);
   // The video renderer doesn't use these fences, so we don't support them in
   // the fake.
-  FXL_CHECK(acquire_fences->empty())
+  FXL_CHECK(acquire_fences.empty())
       << "Present: acquire_fences not supported.";
-  FXL_CHECK(release_fences->empty())
+  FXL_CHECK(release_fences.empty())
       << "Present: release_fences not supported.";
 
   async::PostTask(dispatcher_, [this, callback = std::move(callback),

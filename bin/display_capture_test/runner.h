@@ -56,17 +56,17 @@ class Runner {
   void OnCameraAvailable(int dir_fd, std::string filename);
 
   void OnShutdownCallback();
-  void GetFormatCallback(::fidl::VectorPtr<fuchsia::camera::VideoFormat> fmts,
+  void GetFormatCallback(::std::vector<fuchsia::camera::VideoFormat> fmts,
                          uint32_t total_count, zx_status_t status);
   void FrameNotifyCallback(const fuchsia::camera::FrameAvailableEvent& resp);
 
   void InitDisplay();
   void OnDisplaysChanged(
-      ::fidl::VectorPtr<fuchsia::hardware::display::Info> added,
-      ::fidl::VectorPtr<uint64_t> removed);
+      ::std::vector<fuchsia::hardware::display::Info> added,
+      ::std::vector<uint64_t> removed);
   void OnClientOwnershipChange(bool is_owner);
   void OnVsync(uint64_t display_id, uint64_t timestamp,
-               ::fidl::VectorPtr<uint64_t> image_ids);
+               ::std::vector<uint64_t> image_ids);
 
   void SendFrameConfig(uint32_t frame_idx);
   void CheckFrameConfig(uint32_t frame_idx);

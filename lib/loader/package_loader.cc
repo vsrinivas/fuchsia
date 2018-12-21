@@ -22,8 +22,8 @@ namespace component {
 PackageLoader::PackageLoader() = default;
 PackageLoader::~PackageLoader() = default;
 
-void PackageLoader::LoadUrl(fidl::StringPtr url, LoadUrlCallback callback) {
-  TRACE_DURATION("appmgr", "PackageLoader::LoadUrl", "url", url.get());
+void PackageLoader::LoadUrl(std::string url, LoadUrlCallback callback) {
+  TRACE_DURATION("appmgr", "PackageLoader::LoadUrl", "url", url);
 
   // package is our result. We're going to build it up iteratively.
   fuchsia::sys::Package package;

@@ -28,19 +28,19 @@ static void HandleCommonMpElement(element_id::ElementId id, Span<const uint8_t> 
     switch (id) {
     case element_id::kSuppRates:
         if (auto rates = common::ParseSupportedRates(raw_body)) {
-            out->rates->insert(out->rates->end(), rates->begin(), rates->end());
+            out->rates.insert(out->rates.end(), rates->begin(), rates->end());
             required_ies->have_supp_rates = true;
         }
         break;
     case element_id::kExtSuppRates:
         if (auto rates = common::ParseExtendedSupportedRates(raw_body)) {
-            out->rates->insert(out->rates->end(), rates->begin(), rates->end());
+            out->rates.insert(out->rates.end(), rates->begin(), rates->end());
         }
         break;
     case element_id::kMeshId:
         if (auto mesh_id = common::ParseMeshId(raw_body)) {
             out->mesh_id.resize(0);
-            out->mesh_id->assign(mesh_id->begin(), mesh_id->end());
+            out->mesh_id.assign(mesh_id->begin(), mesh_id->end());
             required_ies->have_mesh_id = true;
         }
         break;

@@ -37,7 +37,7 @@ void FakeView::GetServiceProvider(
 
 void FakeView::OfferServiceProvider(
     fidl::InterfaceHandle<::fuchsia::sys::ServiceProvider> service_provider,
-    fidl::VectorPtr<fidl::StringPtr> service_names) {
+    std::vector<std::string> service_names) {
   FXL_NOTIMPLEMENTED();
 }
 
@@ -46,7 +46,7 @@ void FakeView::GetContainer(
   FXL_NOTIMPLEMENTED();
 }
 
-void FakeView::ConnectToService(fidl::StringPtr name, zx::channel channel) {
+void FakeView::ConnectToService(std::string name, zx::channel channel) {
   FXL_LOG(ERROR) << "ServiceProvider::ConnectToService: name " << name
                  << "  not recognized";
 }

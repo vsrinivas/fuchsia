@@ -124,20 +124,20 @@ TEST_F(ReaderInterpreterInputTest, KeyboardTest) {
   EXPECT_EQ(1, report_count_);
   ASSERT_TRUE(last_report_.keyboard);
   EXPECT_EQ(std::vector<uint32_t>{HID_USAGE_KEY_A},
-            *last_report_.keyboard->pressed_keys);
+            last_report_.keyboard->pressed_keys);
 
   device->Send({0, 0, HID_USAGE_KEY_A, HID_USAGE_KEY_Z, 0, 0, 0, 0}, 8);
   RunLoopUntilIdle();
   EXPECT_EQ(2, report_count_);
   EXPECT_EQ(
       std::multiset<uint32_t>({HID_USAGE_KEY_A, HID_USAGE_KEY_Z}),
-      std::multiset<uint32_t>(last_report_.keyboard->pressed_keys->begin(),
-                              last_report_.keyboard->pressed_keys->end()));
+      std::multiset<uint32_t>(last_report_.keyboard->pressed_keys.begin(),
+                              last_report_.keyboard->pressed_keys.end()));
 
   device->Send({0, 0, HID_USAGE_KEY_Z, 0, 0, 0, 0, 0}, 8);
   RunLoopUntilIdle();
   EXPECT_EQ(std::vector<uint32_t>{HID_USAGE_KEY_Z},
-            *last_report_.keyboard->pressed_keys);
+            last_report_.keyboard->pressed_keys);
 }
 
 TEST_F(ReaderInterpreterInputTest, LightSensorTest) {

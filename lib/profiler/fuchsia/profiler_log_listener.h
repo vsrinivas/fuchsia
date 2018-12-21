@@ -19,7 +19,7 @@ class ProfilerLogListener : public fuchsia::logger::LogListener {
  public:
   ProfilerLogListener(fit::function<void()> all_done);
 
-  void LogMany(::fidl::VectorPtr<fuchsia::logger::LogMessage> Log) override;
+  void LogMany(::std::vector<fuchsia::logger::LogMessage> Log) override;
   void Log(fuchsia::logger::LogMessage Log) override;
   void Done() override;
   ~ProfilerLogListener() override;

@@ -55,7 +55,7 @@ class App : public fuchsia::ui::policy::Presenter,
   // |Presenter|
   void HACK_SetRendererParams(
       bool enable_clipping,
-      fidl::VectorPtr<fuchsia::ui::gfx::RendererParam> params) override;
+      std::vector<fuchsia::ui::gfx::RendererParam> params) override;
 
   // |Presenter2|
   void PresentView(zx::eventpair view_holder_token,

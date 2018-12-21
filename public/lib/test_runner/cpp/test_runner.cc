@@ -85,7 +85,7 @@ void TestRunnerImpl::TeardownAfterTermination() {
   teardown_after_termination_ = true;
 }
 
-void TestRunnerImpl::Identify(fidl::StringPtr program_name,
+void TestRunnerImpl::Identify(std::string program_name,
                               IdentifyCallback callback) {
   program_name_ = program_name;
   callback();
@@ -95,7 +95,7 @@ void TestRunnerImpl::ReportResult(TestResult result) {
   test_run_context_->ReportResult(std::move(result));
 }
 
-void TestRunnerImpl::Fail(fidl::StringPtr log_message) {
+void TestRunnerImpl::Fail(std::string log_message) {
   test_run_context_->Fail(log_message);
 }
 
@@ -181,7 +181,7 @@ TestRunContext::TestRunContext(
 
   fuchsia::sys::LaunchInfo info;
   info.url = url;
-  info.arguments = fxl::To<fidl::VectorPtr<fidl::StringPtr>>(args);
+  info.arguments = fxl::To<fidl::VectorPtr<std::string>>(args);
   launcher->CreateComponent(std::move(info), child_controller_.NewRequest());
 
   // If the child app closes, the test is reported as a failure.

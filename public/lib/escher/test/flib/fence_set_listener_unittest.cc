@@ -17,7 +17,7 @@ class FenceSetListenerTest : public gtest::TestLoopFixture {};
 
 TEST_F(FenceSetListenerTest, EmptySet) {
   // Create an empty FenceSetListener.
-  ::fidl::VectorPtr<zx::event> fence_listeners;
+  ::std::vector<zx::event> fence_listeners;
 
   FenceSetListener fence_set_listener(std::move(fence_listeners));
 
@@ -33,7 +33,7 @@ TEST_F(FenceSetListenerTest, EmptySet) {
 
 TEST_F(FenceSetListenerTest, ReadyStateSignalled) {
   // Create an FenceSetListener.
-  ::fidl::VectorPtr<zx::event> fence_listeners;
+  ::std::vector<zx::event> fence_listeners;
   zx::event fence1;
   ASSERT_EQ(ZX_OK, zx::event::create(0, &fence1));
   fence_listeners.push_back(CopyEvent(fence1));
@@ -77,7 +77,7 @@ TEST_F(FenceSetListenerTest, ReadyStateSignalled) {
 
 TEST_F(FenceSetListenerTest, DestroyWhileWaiting) {
   // Create an FenceSetListener.
-  ::fidl::VectorPtr<zx::event> fence_listeners;
+  ::std::vector<zx::event> fence_listeners;
   zx::event fence1;
   ASSERT_EQ(ZX_OK, zx::event::create(0, &fence1));
   fence_listeners.push_back(CopyEvent(fence1));

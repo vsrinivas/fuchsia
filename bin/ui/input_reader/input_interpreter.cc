@@ -76,7 +76,7 @@ bool InputInterpreter::Initialize() {
                                       HID_USAGE_KEY_A + 1);
     for (size_t index = HID_USAGE_KEY_A; index <= HID_USAGE_KEY_RIGHT_GUI;
          ++index) {
-      keyboard_descriptor_->keys->at(index - HID_USAGE_KEY_A) = index;
+      keyboard_descriptor_->keys.at(index - HID_USAGE_KEY_A) = index;
     }
 
     keyboard_report_ = fuchsia::ui::input::InputReport::New();
@@ -757,7 +757,7 @@ bool InputInterpreter::ParseTouchscreenReport(Touchscreen::Report* report) {
     // TODO(SCN-1188): Add support for contact ellipse.
     touch.width = 5;
     touch.height = 5;
-    touchscreen_report_->touchscreen->touches->at(i) = std::move(touch);
+    touchscreen_report_->touchscreen->touches.at(i) = std::move(touch);
   }
 
   return true;
@@ -830,7 +830,7 @@ bool InputInterpreter::ParseAcer12TouchscreenReport(uint8_t* r, size_t len) {
       touch.width = acer12_touch_reports_[i].fingers[c].width;
       touch.height = acer12_touch_reports_[i].fingers[c].height;
       touchscreen_report_->touchscreen->touches.resize(index + 1);
-      touchscreen_report_->touchscreen->touches->at(index++) = std::move(touch);
+      touchscreen_report_->touchscreen->touches.at(index++) = std::move(touch);
     }
   }
   FXL_VLOG(2) << name() << " parsed: " << *touchscreen_report_;
@@ -861,7 +861,7 @@ bool InputInterpreter::ParseSamsungTouchscreenReport(uint8_t* r, size_t len) {
     touch.width = report.fingers[i].width;
     touch.height = report.fingers[i].height;
     touchscreen_report_->touchscreen->touches.resize(index + 1);
-    touchscreen_report_->touchscreen->touches->at(index++) = std::move(touch);
+    touchscreen_report_->touchscreen->touches.at(index++) = std::move(touch);
   }
 
   return true;
@@ -891,7 +891,7 @@ bool InputInterpreter::ParseParadiseTouchscreenReport(uint8_t* r, size_t len) {
     touch.width = 5;  // TODO(cpu): Don't hardcode |width| or |height|.
     touch.height = 5;
     touchscreen_report_->touchscreen->touches.resize(index + 1);
-    touchscreen_report_->touchscreen->touches->at(index++) = std::move(touch);
+    touchscreen_report_->touchscreen->touches.at(index++) = std::move(touch);
   }
 
   FXL_VLOG(2) << name() << " parsed: " << *touchscreen_report_;
@@ -915,7 +915,7 @@ bool InputInterpreter::ParseEGalaxTouchscreenReport(uint8_t* r, size_t len) {
     touch.width = 5;
     touch.height = 5;
     touchscreen_report_->touchscreen->touches.resize(1);
-    touchscreen_report_->touchscreen->touches->at(0) = std::move(touch);
+    touchscreen_report_->touchscreen->touches.at(0) = std::move(touch);
   } else {
     // if the button isn't pressed, send an empty report, this will terminate
     // the finger session
@@ -1098,7 +1098,7 @@ bool InputInterpreter::ParseEyoyoTouchscreenReport(uint8_t* r, size_t len) {
     touch.width = 5;
     touch.height = 5;
     touchscreen_report_->touchscreen->touches.resize(index + 1);
-    touchscreen_report_->touchscreen->touches->at(index++) = std::move(touch);
+    touchscreen_report_->touchscreen->touches.at(index++) = std::move(touch);
   }
 
   return true;
@@ -1128,7 +1128,7 @@ bool InputInterpreter::ParseFt3x27TouchscreenReport(uint8_t* r, size_t len) {
     touch.width = 5;
     touch.height = 5;
     touchscreen_report_->touchscreen->touches.resize(index + 1);
-    touchscreen_report_->touchscreen->touches->at(index++) = std::move(touch);
+    touchscreen_report_->touchscreen->touches.at(index++) = std::move(touch);
     FXL_VLOG(2) << name()
                 << " parsed (sensor=" << static_cast<uint16_t>(touch.finger_id)
                 << ") x=" << touch.x << ", y=" << touch.y;

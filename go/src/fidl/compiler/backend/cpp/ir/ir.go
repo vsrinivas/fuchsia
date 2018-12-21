@@ -434,13 +434,21 @@ func (c *compiler) compileType(val types.Type) Type {
 		r.Dtor = fmt.Sprintf("~Array")
 	case types.VectorType:
 		t := c.compileType(*val.ElementType)
-		r.Decl = fmt.Sprintf("::fidl::VectorPtr<%s>", t.Decl)
 		r.LLDecl = fmt.Sprintf("::fidl::VectorView<%s>", t.LLDecl)
-		r.Dtor = fmt.Sprintf("~VectorPtr")
+		if val.Nullable {
+			r.Decl = fmt.Sprintf("::fidl::VectorPtr<%s>", t.Decl)
+			r.Dtor = fmt.Sprintf("~VectorPtr")
+		} else {
+			r.Decl = fmt.Sprintf("::std::vector<%s>", t.Decl)
+		}
 	case types.StringType:
-		r.Decl = "::fidl::StringPtr"
 		r.LLDecl = "::fidl::StringView"
-		r.Dtor = "~StringPtr"
+		if val.Nullable {
+			r.Decl = "::fidl::StringPtr"
+			r.Dtor = "~StringPtr"
+		} else {
+			r.Decl = "::std::string"
+		}
 	case types.HandleType:
 		c.handleTypes[val.HandleSubtype] = true
 		r.Decl = fmt.Sprintf("::zx::%s", val.HandleSubtype)

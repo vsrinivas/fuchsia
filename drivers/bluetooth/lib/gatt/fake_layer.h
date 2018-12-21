@@ -34,7 +34,7 @@ class FakeLayer final : public GATT {
   void SendNotification(IdType service_id,
                         IdType chrc_id,
                         std::string peer_id,
-                        ::fidl::VectorPtr<uint8_t> value,
+                        ::std::vector<uint8_t> value,
                         bool indicate) override;
   void DiscoverServices(std::string peer_id) override;
   void RegisterRemoteServiceWatcher(RemoteServiceWatcher callback,

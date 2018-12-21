@@ -22,10 +22,10 @@ NamespaceBuilder::NamespaceBuilder() = default;
 NamespaceBuilder::~NamespaceBuilder() = default;
 
 void NamespaceBuilder::AddFlatNamespace(fuchsia::sys::FlatNamespacePtr ns) {
-  if (ns && ns->paths->size() == ns->directories->size()) {
-    for (size_t i = 0; i < ns->paths->size(); ++i) {
-      AddDirectoryIfNotPresent(ns->paths->at(i),
-                               std::move(ns->directories->at(i)));
+  if (ns && ns->paths.size() == ns->directories.size()) {
+    for (size_t i = 0; i < ns->paths.size(); ++i) {
+      AddDirectoryIfNotPresent(ns->paths.at(i),
+                               std::move(ns->directories.at(i)));
     }
   }
 }
@@ -155,8 +155,8 @@ fdio_flat_namespace_t* NamespaceBuilder::Build() {
 
 fuchsia::sys::FlatNamespace NamespaceBuilder::BuildForRunner() {
   fuchsia::sys::FlatNamespace flat_namespace;
-  flat_namespace.paths.reset({});
-  flat_namespace.directories.reset({});
+  flat_namespace.paths.clear();
+  flat_namespace.directories.clear();
 
   for (auto& path : paths_) {
     flat_namespace.paths.push_back(std::move(path));

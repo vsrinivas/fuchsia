@@ -142,35 +142,40 @@ class Union {
   static void Decode(::fidl::Decoder* decoder, Union* value, size_t offset);
   zx_status_t Clone(Union* result) const;
 
-  bool has_invalid_tag() const { return tag_ == ::std::numeric_limits<::fidl_union_tag_t>::max(); }
+  bool has_invalid_tag() const { return Which() == Tag::Invalid; }
 
-  bool is_Field() const { return tag_ == 0; }
+  bool is_Field() const { return Which() == Tag(0); }
   
   // union member comment #1
   //
   // union member comment #3
   int32_t& Field() {
-    EnsureStorageInitialized(0);
-    return Field_;
+    if (!is_Field()) {
+      value_.emplace<0 + 1>();
+    }
+    return value_.template get<0 + 1>();
   }
   
   // union member comment #1
   //
   // union member comment #3
-  const int32_t& Field() const { return Field_; }
+  const int32_t& Field() const { return value_.template get<0 + 1>(); }
   void set_Field(int32_t value);
 
-  Tag Which() const { return Tag(tag_); }
+  Tag Which() const {
+    size_t index = value_.index();
+    if (index == 0) {
+      return Tag::Invalid;
+    } else {
+      return Tag(index - 1);
+    }
+  }
 
  private:
   friend bool operator==(const Union& lhs, const Union& rhs);
-  void Destroy();
-  void EnsureStorageInitialized(::fidl_union_tag_t tag);
 
-  ::fidl_union_tag_t tag_;
-  union {
-    int32_t Field_;
-  };
+  using Variant = fit::internal::variant<fit::internal::monostate, int32_t>;
+  Variant value_;
 };
 
 bool operator==(const Union& lhs, const Union& rhs);

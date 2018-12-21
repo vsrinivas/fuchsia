@@ -133,7 +133,7 @@ class Presentation2 : public Presentation {
   // Dispatches events to HandleScenicEvent(). Expected to be called on the same
   // thread the Session was created on (which also creates a SessionListener),
   // which is our main thread.
-  void HandleScenicEvents(fidl::VectorPtr<fuchsia::ui::scenic::Event>);
+  void HandleScenicEvents(std::vector<fuchsia::ui::scenic::Event>);
 
   // Sets |display_metrics_| and updates view_manager and Scenic.
   // Returns false if the updates were skipped (if display initialization hasn't
@@ -153,7 +153,7 @@ class Presentation2 : public Presentation {
 
   // |Presentation|
   void SetRendererParams(
-      ::fidl::VectorPtr<fuchsia::ui::gfx::RendererParam> params) override;
+      ::std::vector<fuchsia::ui::gfx::RendererParam> params) override;
 
   // Used internally by Presenter. Allows overriding of renderer params.
   void OverrideRendererParams(RendererParams renderer_params,

@@ -11,16 +11,16 @@ class MockImagePipeSurface : public image_pipe_swapchain::ImagePipeSurface {
                 zx::vmo buffer, uint64_t size_bytes) override {}
   void RemoveImage(uint32_t image_id) override {}
   void PresentImage(uint32_t image_id,
-                    fidl::VectorPtr<zx::event> acquire_fences,
-                    fidl::VectorPtr<zx::event> release_fences) override {
+                    std::vector<zx::event> acquire_fences,
+                    std::vector<zx::event> release_fences) override {
     presented_.push_back(
         {image_id, std::move(acquire_fences), std::move(release_fences)});
   }
 
   struct Presented {
     uint32_t image_id;
-    fidl::VectorPtr<zx::event> acquire_fences;
-    fidl::VectorPtr<zx::event> release_fences;
+    std::vector<zx::event> acquire_fences;
+    std::vector<zx::event> release_fences;
   };
 
   std::vector<Presented> presented_;
@@ -211,9 +211,9 @@ class TestSwapchain {
     };
     EXPECT_EQ(VK_SUCCESS, queue_present_khr_(queue, &present_info));
     EXPECT_EQ(1u, surface.presented_.size());
-    EXPECT_EQ(1u, surface.presented_[0].acquire_fences->size());
-    ASSERT_EQ(1u, surface.presented_[0].release_fences->size());
-    (*surface.presented_[0].release_fences)[0].signal(0, ZX_EVENT_SIGNALED);
+    EXPECT_EQ(1u, surface.presented_[0].acquire_fences.size());
+    ASSERT_EQ(1u, surface.presented_[0].release_fences.size());
+    surface.presented_[0].release_fences[0].signal(0, ZX_EVENT_SIGNALED);
     surface.presented_.erase(surface.presented_.begin());
 
     EXPECT_EQ(VK_SUCCESS,

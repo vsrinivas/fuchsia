@@ -222,7 +222,7 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
 
  private:
   // |fuchsia::guest::device::VirtioBlock|
-  void Start(fuchsia::guest::device::StartInfo start_info, fidl::StringPtr id,
+  void Start(fuchsia::guest::device::StartInfo start_info, std::string id,
              fuchsia::guest::BlockMode mode, fuchsia::guest::BlockFormat format,
              fidl::InterfaceHandle<fuchsia::io::File> file,
              StartCallback callback) override {

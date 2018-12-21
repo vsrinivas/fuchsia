@@ -30,7 +30,7 @@ class ViewImpl : public ::fuchsia::ui::viewsv1::View,
                               service_provider_request) override;
   void OfferServiceProvider(
       fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> service_provider,
-      fidl::VectorPtr<fidl::StringPtr> service_names) override;
+      std::vector<std::string> service_names) override;
   void GetContainer(
       fidl::InterfaceRequest<::fuchsia::ui::viewsv1::ViewContainer>
           view_container_request) override;
@@ -61,7 +61,7 @@ class ViewImpl : public ::fuchsia::ui::viewsv1::View,
                            RequestSnapshotHACKCallback callback) override;
 
   // |fuchsia::sys::ServiceProvider|:
-  void ConnectToService(fidl::StringPtr service_name,
+  void ConnectToService(std::string service_name,
                         zx::channel client_handle) override;
 
   ViewRegistry* const registry_;

@@ -138,8 +138,8 @@ zx_status_t SendEapolIndication(DeviceInterface* device, const EapolHdr& eapol,
     if (frame_len > 255) { return ZX_OK; }
 
     wlan_mlme::EapolIndication ind;
-    ind.data = ::fidl::VectorPtr<uint8_t>::New(frame_len);
-    std::memcpy(ind.data->data(), &eapol, frame_len);
+    ind.data = ::std::vector<uint8_t>(frame_len);
+    std::memcpy(ind.data.data(), &eapol, frame_len);
     src.CopyTo(ind.src_addr.mutable_data());
     dst.CopyTo(ind.dst_addr.mutable_data());
     return SendServiceMsg(device, &ind, fuchsia_wlan_mlme_MLMEEapolIndOrdinal);

@@ -82,24 +82,24 @@ void SemanticTree::RegisterSemanticsProvider(
 }
 
 void SemanticTree::UpdateSemanticNodes(
-    int32_t view_id, fidl::VectorPtr<fuchsia::accessibility::Node> nodes) {
+    int32_t view_id, std::vector<fuchsia::accessibility::Node> nodes) {
   auto it = uncommitted_nodes_.find(view_id);
   if (it == uncommitted_nodes_.end()) {
     return;
   }
-  it->second.insert(it->second.end(), std::make_move_iterator(nodes->begin()),
-                    std::make_move_iterator(nodes->end()));
+  it->second.insert(it->second.end(), std::make_move_iterator(nodes.begin()),
+                    std::make_move_iterator(nodes.end()));
 }
 
 void SemanticTree::DeleteSemanticNodes(int32_t view_id,
-                                       fidl::VectorPtr<int32_t> node_ids) {
+                                       std::vector<int32_t> node_ids) {
   auto it = uncommitted_deletes_.find(view_id);
   if (it == uncommitted_deletes_.end()) {
     return;
   }
   it->second.insert(it->second.end(),
-                    std::make_move_iterator(node_ids->begin()),
-                    std::make_move_iterator(node_ids->end()));
+                    std::make_move_iterator(node_ids.begin()),
+                    std::make_move_iterator(node_ids.end()));
 }
 
 void SemanticTree::Commit(int32_t view_id) {
@@ -135,7 +135,7 @@ fuchsia::accessibility::Node* SemanticTree::HitTest(
   if (!BoxContainsPoint(it->second.data.location, point)) {
     return nullptr;
   }
-  for (auto child : it->second.children_hit_test_order.get()) {
+  for (auto child : it->second.children_hit_test_order) {
     fuchsia::accessibility::Node* node =
         HitTest(nodes, child, local_coordinates);
     if (node != nullptr) {

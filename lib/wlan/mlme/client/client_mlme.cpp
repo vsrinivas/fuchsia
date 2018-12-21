@@ -103,7 +103,7 @@ zx_status_t ClientMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
     // For now, shortcut into the STA and leave this change as a follow-up.
     if (auto setkeys_req = msg.As<wlan_mlme::SetKeysRequest>()) {
         if (sta_ != nullptr) {
-            return sta_->SetKeys(*setkeys_req->body()->keylist);
+            return sta_->SetKeys(setkeys_req->body()->keylist);
         } else {
             warnf("rx'ed MLME message (ordinal: %u) before authenticating with a BSS\n",
                   msg.ordinal());
@@ -148,7 +148,7 @@ zx_status_t ClientMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
         return sta_->Associate(*assoc_req->body()->rsn);
     } else if (auto eapol_req = msg.As<wlan_mlme::EapolRequest>()) {
         auto body = eapol_req->body();
-        return sta_->SendEapolFrame(*body->data, common::MacAddr(body->src_addr),
+        return sta_->SendEapolFrame(body->data, common::MacAddr(body->src_addr),
                                     common::MacAddr(body->dst_addr));
     } else if (auto setctrlport_req = msg.As<wlan_mlme::SetControlledPortRequest>()) {
         sta_->UpdateControlledPort(setctrlport_req->body()->state);

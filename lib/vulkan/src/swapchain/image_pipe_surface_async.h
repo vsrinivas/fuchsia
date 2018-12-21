@@ -28,8 +28,8 @@ class ImagePipeSurfaceAsync : public ImagePipeSurface {
   void RemoveImage(uint32_t image_id) override;
 
   void PresentImage(uint32_t image_id,
-                    fidl::VectorPtr<zx::event> acquire_fences,
-                    fidl::VectorPtr<zx::event> release_fences) override;
+                    std::vector<zx::event> acquire_fences,
+                    std::vector<zx::event> release_fences) override;
 
  private:
   void PresentNextImageLocked();
@@ -39,8 +39,8 @@ class ImagePipeSurfaceAsync : public ImagePipeSurface {
   fuchsia::images::ImagePipePtr image_pipe_;
   struct PendingPresent {
     uint32_t image_id;
-    fidl::VectorPtr<zx::event> acquire_fences;
-    fidl::VectorPtr<zx::event> release_fences;
+    std::vector<zx::event> acquire_fences;
+    std::vector<zx::event> release_fences;
   };
   std::vector<PendingPresent> queue_;
   bool present_pending_ = false;

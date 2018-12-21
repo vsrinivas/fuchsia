@@ -42,7 +42,7 @@ class Session : private fuchsia::ui::scenic::SessionListener {
 
   // Called when session events are received.
   using EventHandler =
-      fit::function<void(fidl::VectorPtr<fuchsia::ui::scenic::Event>)>;
+      fit::function<void(std::vector<fuchsia::ui::scenic::Event>)>;
 
   // Wraps the provided session and session listener.
   // The listener is optional.
@@ -125,9 +125,9 @@ class Session : private fuchsia::ui::scenic::SessionListener {
 
  private:
   // |fuchsia::ui::scenic::SessionListener|
-  void OnScenicError(fidl::StringPtr error) override;
+  void OnScenicError(std::string error) override;
   void OnScenicEvent(
-      fidl::VectorPtr<fuchsia::ui::scenic::Event> events) override;
+      std::vector<fuchsia::ui::scenic::Event> events) override;
 
   fuchsia::ui::scenic::SessionPtr session_;
   // |session_handle_| is stored only when |session_| is unbound/invalid.
@@ -135,9 +135,9 @@ class Session : private fuchsia::ui::scenic::SessionListener {
   uint32_t next_resource_id_ = 1u;
   uint32_t resource_count_ = 0u;
 
-  fidl::VectorPtr<fuchsia::ui::scenic::Command> commands_;
-  fidl::VectorPtr<zx::event> acquire_fences_;
-  fidl::VectorPtr<zx::event> release_fences_;
+  std::vector<fuchsia::ui::scenic::Command> commands_;
+  std::vector<zx::event> acquire_fences_;
+  std::vector<zx::event> release_fences_;
 
   EventHandler event_handler_;
   fidl::Binding<fuchsia::ui::scenic::SessionListener> session_listener_binding_;

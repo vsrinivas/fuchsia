@@ -54,7 +54,7 @@ class ServiceSubscriber {
       fidl::VectorPtr<fuchsia::mdns::MdnsServiceInstance> instances = nullptr);
 
   void IssueCallbacks(
-      const fidl::VectorPtr<fuchsia::mdns::MdnsServiceInstance>& instances);
+      const std::vector<fuchsia::mdns::MdnsServiceInstance>& instances);
 
   fuchsia::mdns::MdnsServiceSubscriptionPtr subscription_;
   UpdateCallback callback_;

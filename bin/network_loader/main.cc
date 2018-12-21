@@ -106,7 +106,7 @@ class RetryingLoader {
   }
 
   void SendResponse(fuchsia::sys::PackagePtr package) {
-    FXL_DCHECK(!package || package->resolved_url);
+    FXL_DCHECK(!package || package->resolved_url.empty());
     callback_(std::move(package));
     deleter_();
   }
@@ -131,7 +131,7 @@ class NetworkLoader : public fuchsia::sys::Loader {
     context_->ConnectToEnvironmentService(http_.NewRequest());
   }
 
-  void LoadUrl(fidl::StringPtr url, LoadUrlCallback callback) override {
+  void LoadUrl(std::string url, LoadUrlCallback callback) override {
     http::URLLoaderPtr loader;
     http_->CreateURLLoader(loader.NewRequest());
 

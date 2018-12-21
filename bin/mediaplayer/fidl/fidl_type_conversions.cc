@@ -333,7 +333,7 @@ TypeConverter<fuchsia::mediaplayer::Metadata, media_player::Metadata>::Convert(
     fuchsia::mediaplayer::Property property;
     property.label = pair.first;
     property.value = pair.second;
-    result.properties->push_back(property);
+    result.properties.push_back(property);
   }
 
   return result;
@@ -342,8 +342,8 @@ TypeConverter<fuchsia::mediaplayer::Metadata, media_player::Metadata>::Convert(
 media_player::Metadata
 TypeConverter<media_player::Metadata, fuchsia::mediaplayer::Metadata>::Convert(
     const fuchsia::mediaplayer::Metadata& input) {
-  media_player::Metadata result(input.properties->size());
-  for (auto& property : *input.properties) {
+  media_player::Metadata result(input.properties.size());
+  for (auto& property : input.properties) {
     result.emplace(property.label, property.value);
   }
   return result;
@@ -447,7 +447,7 @@ TypeConverter<std::unique_ptr<media_player::StreamType>,
 
     return media_player::AudioStreamType::Create(
         media_player::StreamType::kAudioEncodingLpcm, nullptr, sample_format,
-        format.channel_map->size(), format.frames_per_second);
+        format.channel_map.size(), format.frames_per_second);
   }
 
   if (input.mime_type == kVideoMimeTypeUncompressed) {

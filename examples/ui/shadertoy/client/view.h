@@ -107,7 +107,7 @@ class NewView : public scenic::BaseView {
   void OnInputEvent(fuchsia::ui::input::InputEvent event) override;
 
   // |scenic::SessionListener|
-  virtual void OnScenicError(::fidl::StringPtr error) override;
+  virtual void OnScenicError(::std::string error) override;
 
   scenic::EntityNode root_node_;
   ViewImpl impl_;

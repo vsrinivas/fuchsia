@@ -101,7 +101,7 @@ void CobaltLoggerImpl::LogCustomEvent(
     uint32_t metric_id,
     std::vector<fuchsia::cobalt::CustomEventValue> event_values) {
   LogEvent(std::make_unique<CustomEvent>(
-      metric_id, fidl::VectorPtr<fuchsia::cobalt::CustomEventValue>(
+      metric_id, std::vector<fuchsia::cobalt::CustomEventValue>(
                      std::move(event_values))));
 }
 

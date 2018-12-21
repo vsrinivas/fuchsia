@@ -133,13 +133,13 @@ void TraceManager::RegisterTraceProviderDeprecated(
 
 void TraceManager::RegisterTraceProvider(
     fidl::InterfaceHandle<fuchsia::tracelink::Provider> provider,
-    uint64_t pid, fidl::StringPtr name) {
+    uint64_t pid, std::string name) {
   RegisterTraceProviderWorker(std::move(provider), pid, std::move(name));
 }
 
 void TraceManager::RegisterTraceProviderSynchronously(
     fidl::InterfaceHandle<fuchsia::tracelink::Provider> provider,
-    uint64_t pid, fidl::StringPtr name,
+    uint64_t pid, std::string name,
     RegisterTraceProviderSynchronouslyCallback callback) {
   RegisterTraceProviderWorker(std::move(provider), pid, std::move(name));
   callback(ZX_OK, trace_running_);

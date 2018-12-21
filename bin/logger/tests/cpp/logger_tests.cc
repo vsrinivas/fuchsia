@@ -19,7 +19,7 @@ class LogListenerMock : public fuchsia::logger::LogListener {
  public:
   LogListenerMock();
 
-  void LogMany(::fidl::VectorPtr<fuchsia::logger::LogMessage> Log) override;
+  void LogMany(::std::vector<fuchsia::logger::LogMessage> Log) override;
   void Log(fuchsia::logger::LogMessage Log) override;
   void Done() override;
   ~LogListenerMock() override;
@@ -44,8 +44,8 @@ LogListenerMock::LogListenerMock() : binding_(this) {
 LogListenerMock::~LogListenerMock() {}
 
 void LogListenerMock::LogMany(
-    ::fidl::VectorPtr<fuchsia::logger::LogMessage> logs) {
-  std::move(logs->begin(), logs->end(), std::back_inserter(log_messages_));
+    ::std::vector<fuchsia::logger::LogMessage> logs) {
+  std::move(logs.begin(), logs.end(), std::back_inserter(log_messages_));
 }
 
 void LogListenerMock::Log(fuchsia::logger::LogMessage log) {
@@ -131,8 +131,8 @@ TEST_F(LoggerTest, Integration) {
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&logs] { return logs.size() >= 1u; },
                                         zx::sec(5)));
   ASSERT_EQ(logs.size(), 1u);
-  ASSERT_EQ(logs[0].tags->size(), 1u);
-  EXPECT_EQ(logs[0].tags.get()[0].get(), tag);
+  ASSERT_EQ(logs[0].tags.size(), 1u);
+  EXPECT_EQ(logs[0].tags[0], tag);
   EXPECT_EQ(logs[0].severity, FX_LOG_INFO);
   EXPECT_EQ(logs[0].pid, pid);
 }

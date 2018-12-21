@@ -37,8 +37,8 @@ class CrashpadAnalyzerImpl : public Analyzer {
                              HandleNativeExceptionCallback callback) override;
 
   void HandleManagedRuntimeException(
-      ManagedRuntimeLanguage language, fidl::StringPtr component_url,
-      fidl::StringPtr exception, fuchsia::mem::Buffer stack_trace,
+      ManagedRuntimeLanguage language, std::string component_url,
+      std::string exception, fuchsia::mem::Buffer stack_trace,
       HandleManagedRuntimeExceptionCallback callback) override;
 
   void ProcessKernelPanicCrashlog(
@@ -53,8 +53,8 @@ class CrashpadAnalyzerImpl : public Analyzer {
   zx_status_t HandleNativeException(zx::process process, zx::thread thread,
                                     zx::port exception_port);
   zx_status_t HandleManagedRuntimeException(ManagedRuntimeLanguage language,
-                                            fidl::StringPtr component_url,
-                                            fidl::StringPtr exception,
+                                            std::string component_url,
+                                            std::string exception,
                                             fuchsia::mem::Buffer stack_trace);
   zx_status_t ProcessKernelPanicCrashlog(fuchsia::mem::Buffer crashlog);
 

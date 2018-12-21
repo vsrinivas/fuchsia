@@ -41,12 +41,12 @@ class Session final : public fuchsia::ui::scenic::Session,
                                  dispatchers);
 
   // |fuchsia::ui::scenic::Session|
-  void Enqueue(::fidl::VectorPtr<fuchsia::ui::scenic::Command> cmds) override;
+  void Enqueue(::std::vector<fuchsia::ui::scenic::Command> cmds) override;
 
   // |fuchsia::ui::scenic::Session|
   void Present(uint64_t presentation_time,
-               ::fidl::VectorPtr<zx::event> acquire_fences,
-               ::fidl::VectorPtr<zx::event> release_fences,
+               ::std::vector<zx::event> acquire_fences,
+               ::std::vector<zx::event> release_fences,
                PresentCallback callback) override;
 
   // |fuchsia::ui::scenic::Session|
@@ -62,7 +62,7 @@ class Session final : public fuchsia::ui::scenic::Session,
                         HitTestCallback callback) override;
 
   // |fuchsia::ui::scenic::Session|
-  void SetDebugName(fidl::StringPtr debug_name) override;
+  void SetDebugName(std::string debug_name) override;
 
   // |EventReporter|
   // Enqueues the gfx/cmd event and schedules call to FlushEvents().
@@ -110,7 +110,7 @@ class Session final : public fuchsia::ui::scenic::Session,
       dispatchers_;
 
   // Holds events from EnqueueEvent() until they are flushed by FlushEvents().
-  fidl::VectorPtr<fuchsia::ui::scenic::Event> buffered_events_;
+  std::vector<fuchsia::ui::scenic::Event> buffered_events_;
 
   // Callbacks for testing.
   fit::function<void(fuchsia::ui::scenic::Event)> event_callback_;

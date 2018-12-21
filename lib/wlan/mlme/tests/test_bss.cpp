@@ -64,7 +64,7 @@ wlan_mlme::BSSDescription CreateBssDescription(bool rsn, wlan_channel_t chan) {
     wlan_mlme::BSSDescription bss_desc;
     std::memcpy(bss_desc.bssid.mutable_data(), bssid.byte, common::kMacAddrLen);
     std::vector<uint8_t> ssid(kSsid, kSsid + sizeof(kSsid));
-    bss_desc.ssid.reset(std::move(ssid));
+    bss_desc.ssid = std::move(ssid);
     bss_desc.bss_type = wlan_mlme::BSSTypes::INFRASTRUCTURE;
     bss_desc.beacon_period = kBeaconPeriodTu;
     bss_desc.dtim_period = kDtimPeriodTu;
@@ -105,7 +105,7 @@ MlmeMsg<wlan_mlme::ScanRequest> CreateScanRequest(uint32_t max_channel_time) {
     req->txn_id = 0;
     req->bss_type = wlan_mlme::BSSTypes::ANY_BSS;
     std::memcpy(req->bssid.mutable_data(), kBroadcastBssid, sizeof(kBroadcastBssid));
-    req->ssid.reset({0});
+    req->ssid = {0};
     req->scan_type = wlan_mlme::ScanTypes::PASSIVE;
     req->channel_list.reset({11});
     req->max_channel_time = max_channel_time;
@@ -116,7 +116,7 @@ MlmeMsg<wlan_mlme::ScanRequest> CreateScanRequest(uint32_t max_channel_time) {
 MlmeMsg<wlan_mlme::StartRequest> CreateStartRequest(bool protected_ap) {
     auto req = wlan_mlme::StartRequest::New();
     std::vector<uint8_t> ssid(kSsid, kSsid + sizeof(kSsid));
-    req->ssid.reset(std::move(ssid));
+    req->ssid = std::move(ssid);
     req->bss_type = wlan_mlme::BSSTypes::INFRASTRUCTURE;
     req->beacon_period = kBeaconPeriodTu;
     req->dtim_period = kDtimPeriodTu;
@@ -129,7 +129,7 @@ MlmeMsg<wlan_mlme::StartRequest> CreateStartRequest(bool protected_ap) {
 
 MlmeMsg<wlan_mlme::StopRequest> CreateStopRequest() {
     auto req = wlan_mlme::StopRequest::New();
-    req->ssid.reset(std::vector<uint8_t>(kSsid, kSsid + sizeof(kSsid)));
+    req->ssid = std::vector<uint8_t>(kSsid, kSsid + sizeof(kSsid));
     return {std::move(*req), fuchsia_wlan_mlme_MLMEStopReqOrdinal};
 }
 
@@ -137,11 +137,11 @@ MlmeMsg<wlan_mlme::JoinRequest> CreateJoinRequest(bool rsn) {
     auto req = wlan_mlme::JoinRequest::New();
     req->join_failure_timeout = kJoinTimeout;
     req->nav_sync_delay = 20;
-    req->op_rate_set.reset({12, 24, 48});
+    req->op_rate_set = {12, 24, 48};
     req->phy = wlan::common::ToFidl(kBssPhy);
     req->cbw = wlan::common::ToFidl(kBssChannel).cbw;
     req->selected_bss = CreateBssDescription(rsn);
-    req->selected_bss.op_rate_set.reset({12, 24, 48});
+    req->selected_bss.op_rate_set = {12, 24, 48};
 
     return {std::move(*req), fuchsia_wlan_mlme_MLMEJoinReqOrdinal};
 }
@@ -204,7 +204,7 @@ MlmeMsg<wlan_mlme::EapolRequest> CreateEapolRequest(common::MacAddr src_addr,
     std::memcpy(req->src_addr.mutable_data(), src_addr.byte, common::kMacAddrLen);
     std::memcpy(req->dst_addr.mutable_data(), dst_addr.byte, common::kMacAddrLen);
     std::vector<uint8_t> eapol_pdu(kEapolPdu, kEapolPdu + sizeof(kEapolPdu));
-    req->data.reset(std::move(eapol_pdu));
+    req->data = std::move(eapol_pdu);
 
     return {std::move(*req), fuchsia_wlan_mlme_MLMEEapolReqOrdinal};
 }
@@ -213,7 +213,7 @@ MlmeMsg<wlan_mlme::SetKeysRequest> CreateSetKeysRequest(common::MacAddr addr,
                                                         std::vector<uint8_t> key_data,
                                                         wlan_mlme::KeyType key_type) {
     wlan_mlme::SetKeyDescriptor key;
-    key.key.reset(key_data);
+    key.key = key_data;
     key.key_id = 1;
     key.key_type = key_type;
     std::memcpy(key.address.mutable_data(), addr.byte, sizeof(addr));
@@ -223,7 +223,7 @@ MlmeMsg<wlan_mlme::SetKeysRequest> CreateSetKeysRequest(common::MacAddr addr,
     std::vector<wlan_mlme::SetKeyDescriptor> keylist;
     keylist.emplace_back(std::move(key));
     auto req = wlan_mlme::SetKeysRequest::New();
-    req->keylist.reset(std::move(keylist));
+    req->keylist = std::move(keylist);
 
     return {std::move(*req), fuchsia_wlan_mlme_MLMESetKeysReqOrdinal};
 }

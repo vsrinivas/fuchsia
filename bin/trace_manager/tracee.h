@@ -59,7 +59,7 @@ class Tracee {
   ~Tracee();
 
   bool operator==(TraceProviderBundle* bundle) const;
-  bool Start(fidl::VectorPtr<fidl::StringPtr> categories, size_t buffer_size,
+  bool Start(fidl::VectorPtr<std::string> categories, size_t buffer_size,
              fuchsia::tracelink::BufferingMode buffering_mode,
              fit::closure started_callback, fit::closure stopped_callback);
   void Stop();

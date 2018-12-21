@@ -48,11 +48,11 @@ class FakeSession : public ::fuchsia::ui::scenic::Session {
   }
 
   // Session implementation.
-  void Enqueue(fidl::VectorPtr<::fuchsia::ui::scenic::Command> cmds) override;
+  void Enqueue(std::vector<::fuchsia::ui::scenic::Command> cmds) override;
 
   void Present(uint64_t presentation_time,
-               fidl::VectorPtr<::zx::event> acquire_fences,
-               fidl::VectorPtr<::zx::event> release_fences,
+               std::vector<::zx::event> acquire_fences,
+               std::vector<::zx::event> release_fences,
                PresentCallback callback) override;
 
   void HitTest(uint32_t node_id, ::fuchsia::ui::gfx::vec3 ray_origin,
@@ -63,7 +63,7 @@ class FakeSession : public ::fuchsia::ui::scenic::Session {
                         ::fuchsia::ui::gfx::vec3 ray_direction,
                         HitTestDeviceRayCallback callback) override;
 
-  void SetDebugName(fidl::StringPtr debug_name) override {}
+  void SetDebugName(std::string debug_name) override {}
 
  private:
   static constexpr uint32_t kNullResourceId = 0;

@@ -114,10 +114,8 @@ void YuvView::StartYuv() {
                         kMemoryOffset, image_vmo_bytes,
                         fuchsia::images::MemoryType::HOST_MEMORY);
 
-  ::fidl::VectorPtr<::zx::event> acquire_fences =
-      ::fidl::VectorPtr<::zx::event>::New(0);
-  ::fidl::VectorPtr<::zx::event> release_fences =
-      ::fidl::VectorPtr<::zx::event>::New(0);
+  ::std::vector<::zx::event> acquire_fences;
+  ::std::vector<::zx::event> release_fences;
   uint64_t now_ns = zx_clock_get(ZX_CLOCK_MONOTONIC);
   image_pipe_->PresentImage(
       kImageId, now_ns, std::move(acquire_fences), std::move(release_fences),

@@ -6,6 +6,7 @@
 #define GARNET_PUBLIC_LIB_FIDL_CPP_COMPARISON_H_
 
 #include <memory>
+#include <vector>
 
 // Comparisons that uses structure equality on on std::unique_ptr instead of
 // pointer equality.
@@ -23,6 +24,22 @@ inline bool Equals(const std::unique_ptr<T>& lhs,
     return rhs == lhs;
   }
   return Equals<T>(*lhs, *rhs);
+}
+
+template <class T>
+inline bool Equals(const std::vector<std::unique_ptr<T>>& lhs,
+                   const std::vector<std::unique_ptr<T>>& rhs) {
+  if (lhs.size() != rhs.size()) {
+    return false;
+  }
+  for (size_t i = 0; i < lhs.size(); i++) {
+    const std::unique_ptr<T>& lptr = lhs.at(i);
+    const std::unique_ptr<T>& rptr = rhs.at(i);
+    if (!Equals<T>(lptr, rptr)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 }  // namespace fidl

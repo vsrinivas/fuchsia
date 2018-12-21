@@ -27,11 +27,11 @@ class EchoServerApp : public Echo {
 
   ~EchoServerApp() {}
 
-  void EchoStruct(Struct value, fidl::StringPtr forward_to_server,
+  void EchoStruct(Struct value, std::string forward_to_server,
                   EchoStructCallback callback) override {
-    if (!forward_to_server->empty()) {
+    if (!forward_to_server.empty()) {
       EchoClientApp app;
-      app.Start(forward_to_server.get());
+      app.Start(forward_to_server);
       bool called_back = false;
       app.echo()->EchoStruct(std::move(value), "",
                              [this, &called_back, &callback](Struct resp) {
@@ -49,10 +49,10 @@ class EchoServerApp : public Echo {
   }
 
   void EchoStructNoRetVal(Struct value,
-                          fidl::StringPtr forward_to_server) override {
-    if (!forward_to_server->empty()) {
+                          std::string forward_to_server) override {
+    if (!forward_to_server.empty()) {
       std::unique_ptr<EchoClientApp> app(new EchoClientApp);
-      app->Start(forward_to_server.get());
+      app->Start(forward_to_server);
       app->echo().events().EchoEvent = [this](Struct resp) {
         this->HandleEchoEvent(std::move(resp));
       };

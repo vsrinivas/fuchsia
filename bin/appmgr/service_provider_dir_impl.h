@@ -60,7 +60,7 @@ class ServiceProviderDirImpl : public fuchsia::sys::ServiceProvider,
   // Overridden from |fuchsia::sys::ServiceProvider|:
   //
 
-  void ConnectToService(fidl::StringPtr service_name,
+  void ConnectToService(std::string service_name,
                         zx::channel channel) override;
 
  private:

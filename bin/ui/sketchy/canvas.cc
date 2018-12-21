@@ -28,10 +28,10 @@ void CanvasImpl::Init(
 }
 
 void CanvasImpl::Enqueue(
-    fidl::VectorPtr<::fuchsia::ui::sketchy::Command> commands) {
+    std::vector<::fuchsia::ui::sketchy::Command> commands) {
   // TODO: Use `AddAll()` when fidl::VectorPtr supports it.
-  for (size_t i = 0; i < commands->size(); ++i) {
-    commands_.push_back(std::move(commands->at(i)));
+  for (size_t i = 0; i < commands.size(); ++i) {
+    commands_.push_back(std::move(commands.at(i)));
   }
 }
 
@@ -206,8 +206,8 @@ bool CanvasImpl::ApplyExtendStrokeCmd(
     return false;
   }
   std::vector<glm::vec2> pts;
-  pts.reserve(command.touches->size());
-  for (const auto& touch : *command.touches) {
+  pts.reserve(command.touches.size());
+  for (const auto& touch : command.touches) {
     pts.push_back({touch.position.x, touch.position.y});
   }
   return stroke_manager_.ExtendStroke(stroke, std::move(pts));

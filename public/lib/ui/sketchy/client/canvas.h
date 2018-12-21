@@ -28,7 +28,7 @@ class Canvas final {
 
   ::fuchsia::ui::sketchy::CanvasPtr canvas_;
   async::Loop* const loop_;
-  fidl::VectorPtr<::fuchsia::ui::sketchy::Command> commands_;
+  std::vector<::fuchsia::ui::sketchy::Command> commands_;
   ResourceId next_resource_id_;
 };
 

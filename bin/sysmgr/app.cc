@@ -42,7 +42,7 @@ App::App(Config config)
   for (auto& pair : config.TakeServices()) {
     if (std::find(update_dependencies.begin(), update_dependencies.end(),
                   pair.first) != std::end(update_dependencies)) {
-      update_dependency_urls.insert(*pair.second->url);
+      update_dependency_urls.insert(pair.second->url);
     }
     RegisterSingleton(pair.first, std::move(pair.second));
   }

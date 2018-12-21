@@ -29,13 +29,13 @@ void RunnerImpl::StartComponent(
   launch_info.directory_request =
       std::move(startup_info.launch_info.directory_request);
   launch_info.flat_namespace = fuchsia::sys::FlatNamespace::New();
-  for (size_t i = 0; i < startup_info.flat_namespace.paths->size(); ++i) {
-    const auto& path = (*startup_info.flat_namespace.paths)[i];
+  for (size_t i = 0; i < startup_info.flat_namespace.paths.size(); ++i) {
+    const auto& path = startup_info.flat_namespace.paths[i];
     if (path == "/pkg") {
       // Expose the specific guest package under the /guest namespace.
       launch_info.flat_namespace->paths.push_back("/guest");
       launch_info.flat_namespace->directories.push_back(
-          std::move((*startup_info.flat_namespace.directories)[i]));
+          std::move(startup_info.flat_namespace.directories[i]));
     } else if (path == "/svc") {
       // Hack: We've provided some 'additional_services' to the vmm, but those
       // are loaded in the /svc in the provided flat_namespace here. Appmgr
@@ -62,7 +62,7 @@ void RunnerImpl::StartComponent(
       service_list->names.push_back(
           fuchsia::guest::vmm::LaunchInfoProvider::Name_);
       bridge->set_backing_dir(
-          std::move((*startup_info.flat_namespace.directories)[i]));
+          std::move(startup_info.flat_namespace.directories[i]));
       service_list->provider = bridge->AddBinding();
       launch_info.additional_services = std::move(service_list);
     }

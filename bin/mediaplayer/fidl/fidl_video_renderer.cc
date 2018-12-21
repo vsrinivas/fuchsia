@@ -579,8 +579,8 @@ void FidlVideoRenderer::View::PresentBlackImage(uint32_t image_id,
   }
 
   image_pipe_->PresentImage(
-      image_id, presentation_time, fidl::VectorPtr<zx::event>::New(0),
-      fidl::VectorPtr<zx::event>::New(0),
+      image_id, presentation_time, std::vector<zx::event>(),
+      std::vector<zx::event>(),
       [](fuchsia::images::PresentationInfo presentation_info) {});
 }
 
@@ -620,8 +620,8 @@ void FidlVideoRenderer::View::PresentImage(
 
   image.release_tracker_ = release_tracker;
 
-  auto acquire_fences = fidl::VectorPtr<zx::event>::New(0);
-  auto release_fences = fidl::VectorPtr<zx::event>::New(0);
+  std::vector<zx::event> acquire_fences;
+  std::vector<zx::event> release_fences;
   release_fences.push_back(std::move(release_fence));
 
   image.wait_.set_object(image.release_fence_.get());

@@ -75,7 +75,7 @@ void Session::Enqueue(fuchsia::ui::input::Command command) {
 
 void Session::Enqueue(fuchsia::ui::scenic::Command command) {
   commands_.push_back(std::move(command));
-  if (commands_->size() >= kCommandsPerMessage ||
+  if (commands_.size() >= kCommandsPerMessage ||
       command.Which() == fuchsia::ui::scenic::Command::Tag::kInput) {
     Flush();
   }
@@ -92,15 +92,13 @@ void Session::EnqueueReleaseFence(zx::event fence) {
 }
 
 void Session::Flush() {
-  ZX_DEBUG_ASSERT(session_);
-  if (!commands_->empty()) {
-    ZX_DEBUG_ASSERT(static_cast<bool>(commands_));
+  if (!commands_.empty()) {
     session_->Enqueue(std::move(commands_));
 
     // After being moved, |commands_| is in a "valid but unspecified state";
     // see http://en.cppreference.com/w/cpp/utility/move.  Calling reset() makes
     // it safe to continue using.
-    commands_.reset();
+    commands_.clear();
   }
 }
 
@@ -108,10 +106,6 @@ void Session::Present(uint64_t presentation_time, PresentCallback callback) {
   ZX_DEBUG_ASSERT(session_);
   Flush();
 
-  if (acquire_fences_.is_null())
-    acquire_fences_.resize(0u);
-  if (release_fences_.is_null())
-    release_fences_.resize(0u);
   session_->Present(presentation_time, std::move(acquire_fences_),
                     std::move(release_fences_), std::move(callback));
 }
@@ -165,14 +159,14 @@ void Session::Rebind() {
   session_handle_ = nullptr;
 }
 
-void Session::OnScenicError(fidl::StringPtr error) {
+void Session::OnScenicError(std::string error) {
   // TODO(SCN-903): replace fprintf with SDK-approved logging mechanism.  Also
   // remove "#include <stdio.h>".
-  fprintf(stderr, "Session error: %s", error->c_str());
+  fprintf(stderr, "Session error: %s", error.c_str());
 }
 
 void Session::OnScenicEvent(
-    fidl::VectorPtr<fuchsia::ui::scenic::Event> events) {
+    std::vector<fuchsia::ui::scenic::Event> events) {
   if (event_handler_)
     event_handler_(std::move(events));
 }

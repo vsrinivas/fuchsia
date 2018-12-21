@@ -92,7 +92,7 @@ void SHA256_Update_AudioParameters(SHA256_CTX* sha256_ctx,
                      sizeof(frames_per_second_le))) {
     assert(false);
   }
-  for (fuchsia::mediacodec::AudioChannelId channel_id : *pcm.channel_map) {
+  for (fuchsia::mediacodec::AudioChannelId channel_id : pcm.channel_map) {
     uint32_t channel_id_le = htole32(channel_id);
     if (!SHA256_Update(sha256_ctx, &channel_id_le, sizeof(channel_id_le))) {
       assert(false);

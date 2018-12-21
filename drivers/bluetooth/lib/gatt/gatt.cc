@@ -150,10 +150,10 @@ class Impl final : public GATT, common::TaskDomain<Impl, GATT> {
   void SendNotification(IdType service_id,
                         IdType chrc_id,
                         std::string peer_id,
-                        ::fidl::VectorPtr<uint8_t> value,
+                        ::std::vector<uint8_t> value,
                         bool indicate) override {
     PostMessage([this, svc_id = service_id, chrc_id, indicate,
-                 peer_id = std::move(peer_id), value = value.take()] {
+                 peer_id = std::move(peer_id), value = std::move(value)] {
       if (!initialized_) {
         bt_log(SPEW, "gatt", "cannot notify after shutdown");
         return;

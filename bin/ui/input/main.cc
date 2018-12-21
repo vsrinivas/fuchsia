@@ -190,10 +190,10 @@ For further details, see README.md.
   fuchsia::ui::input::InputDevicePtr RegisterKeyboard() {
     fuchsia::ui::input::KeyboardDescriptorPtr keyboard =
         fuchsia::ui::input::KeyboardDescriptor::New();
-    keyboard->keys->reserve(HID_USAGE_KEY_RIGHT_GUI - HID_USAGE_KEY_A);
+    keyboard->keys.reserve(HID_USAGE_KEY_RIGHT_GUI - HID_USAGE_KEY_A);
     for (uint32_t usage = HID_USAGE_KEY_A; usage < HID_USAGE_KEY_RIGHT_GUI;
          ++usage) {
-      keyboard->keys->push_back(usage);
+      keyboard->keys.push_back(usage);
     }
     fuchsia::ui::input::DeviceDescriptor descriptor;
     descriptor.keyboard = std::move(keyboard);

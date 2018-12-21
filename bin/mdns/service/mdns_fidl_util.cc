@@ -24,7 +24,7 @@ fuchsia::mdns::MdnsServiceInstancePtr MdnsFidlUtil::CreateServiceInstance(
 
   service_instance->service_name = service_name;
   service_instance->instance_name = instance_name;
-  service_instance->text = fxl::To<fidl::VectorPtr<fidl::StringPtr>>(text);
+  service_instance->text = fxl::To<fidl::VectorPtr<std::string>>(text);
 
   if (v4_address.is_valid()) {
     service_instance->v4_address = CreateSocketAddressIPv4(v4_address);
@@ -43,7 +43,7 @@ void MdnsFidlUtil::UpdateServiceInstance(
     const inet::SocketAddress& v4_address,
     const inet::SocketAddress& v6_address,
     const std::vector<std::string>& text) {
-  service_instance->text = fxl::To<fidl::VectorPtr<fidl::StringPtr>>(text);
+  service_instance->text = fxl::To<fidl::VectorPtr<std::string>>(text);
 
   if (v4_address.is_valid()) {
     service_instance->v4_address = CreateSocketAddressIPv4(v4_address);

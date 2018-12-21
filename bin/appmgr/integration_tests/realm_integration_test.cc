@@ -243,9 +243,9 @@ class RealmFakeLoaderTest : public RealmTest, public fuchsia::sys::Loader {
         kRealm, CreateServicesWithCustomLoader(loader_service_));
   }
 
-  void LoadUrl(fidl::StringPtr url, LoadUrlCallback callback) override {
+  void LoadUrl(std::string url, LoadUrlCallback callback) override {
     ASSERT_TRUE(component_url_.empty());
-    component_url_ = url.get();
+    component_url_ = url;
   }
 
   bool WaitForComponentLoad() {

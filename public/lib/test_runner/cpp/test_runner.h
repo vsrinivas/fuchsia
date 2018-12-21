@@ -52,12 +52,12 @@ class TestRunnerImpl : public TestRunner {
 
  private:
   // |TestRunner|
-  void Identify(fidl::StringPtr program_name,
+  void Identify(std::string program_name,
                 IdentifyCallback callback) override;
   // |TestRunner|
   void ReportResult(TestResult result) override;
   // |TestRunner|
-  void Fail(fidl::StringPtr log_message) override;
+  void Fail(std::string log_message) override;
   // |TestRunner|
   void Done(DoneCallback callback) override;
   // |TestRunner|

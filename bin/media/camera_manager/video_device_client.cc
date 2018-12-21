@@ -56,13 +56,13 @@ std::unique_ptr<VideoDeviceClient> VideoDeviceClient::Create(
 }
 
 void VideoDeviceClient::OnGetFormatsResp(
-    fidl::VectorPtr<fuchsia::camera::VideoFormat> formats,
+    std::vector<fuchsia::camera::VideoFormat> formats,
     uint32_t total_format_count, zx_status_t device_status) {
-  auto& new_formats = formats.get();
+  auto& new_formats = formats;
   formats_.insert(formats_.end(), new_formats.begin(), new_formats.end());
   if (formats_.size() < total_format_count) {
     camera_control_->GetFormats(
-        formats->size(),
+        formats.size(),
         fbl::BindMember(this, &VideoDeviceClient::OnGetFormatsResp));
   } else {
     ready_callback_->Signal(ReadyCallbackHandler::kFormatsReady);

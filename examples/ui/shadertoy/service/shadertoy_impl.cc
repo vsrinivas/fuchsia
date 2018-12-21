@@ -14,7 +14,7 @@ ShadertoyImpl::~ShadertoyImpl() = default;
 void ShadertoyImpl::SetPaused(bool paused) { state_->SetPaused(paused); }
 
 void ShadertoyImpl::SetShaderCode(
-    ::fidl::StringPtr glsl,
+    ::std::string glsl,
     fuchsia::examples::shadertoy::Shadertoy::SetShaderCodeCallback callback) {
   state_->SetShaderCode(std::string(glsl), std::move(callback));
 }

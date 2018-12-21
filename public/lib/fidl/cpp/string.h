@@ -81,6 +81,9 @@ class StringPtr {
   void Encode(Encoder* encoder, size_t offset);
   static void Decode(Decoder* decoder, StringPtr* value, size_t offset);
 
+  static void EncodeString(Encoder* encoder, const std::string& value, size_t offset);
+  static void DecodeString(Decoder* decoder, std::string* value, size_t offset);
+
  private:
   std::string str_;
   bool is_null_;
@@ -180,6 +183,17 @@ inline std::ostream& operator<<(std::ostream& out, const StringPtr& str) {
 template <>
 struct CodingTraits<StringPtr>
     : public EncodableCodingTraits<StringPtr, sizeof(fidl_string_t)> {};
+
+template <>
+struct CodingTraits<::std::string> {
+  static constexpr size_t encoded_size = sizeof(fidl_string_t);
+  static void Encode(Encoder* encoder, std::string* value, size_t offset) {
+    ::fidl::StringPtr::EncodeString(encoder, *value, offset);
+  }
+  static void Decode(Decoder* decoder, std::string* value, size_t offset) {
+    ::fidl::StringPtr::DecodeString(decoder, value, offset);
+  }
+};
 
 }  // namespace fidl
 

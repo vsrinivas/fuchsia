@@ -28,7 +28,7 @@ class DeviceServiceProvider : public fuchsia::sys::ServiceProvider {
 
   ~DeviceServiceProvider() override;
 
-  void ConnectToService(fidl::StringPtr service_name,
+  void ConnectToService(std::string service_name,
                         zx::channel channel) override;
 
  private:

@@ -47,12 +47,12 @@ TEST(ParseMpOpen, Full) {
     {
         // Rates are expected to be a concatenation of Supp Rates and Ext Supp Rates
         const uint8_t expected[9] = { 0x81, 0x82, 0x83, 0x84, 0x05, 0x06, 0x07, 0x08, 0x09 };
-        EXPECT_RANGES_EQ(*action.common.rates, expected);
+        EXPECT_RANGES_EQ(action.common.rates, expected);
     }
 
     {
         const uint8_t expected[3] = { 'f', 'o', 'o' };
-        EXPECT_RANGES_EQ(*action.common.mesh_id, expected);
+        EXPECT_RANGES_EQ(action.common.mesh_id, expected);
     }
 
     EXPECT_EQ(action.common.mesh_config.active_path_sel_proto_id, 0xa1u);
@@ -89,12 +89,12 @@ TEST(ParseMpOpen, Minimal) {
     {
         // Rates are expected to be a concatenation of Supp Rates and Ext Supp Rates
         const uint8_t expected[1] = { 0x81 };
-        EXPECT_RANGES_EQ(*action.common.rates, expected);
+        EXPECT_RANGES_EQ(action.common.rates, expected);
     }
 
     {
         const uint8_t expected[3] = { 'f', 'o', 'o' };
-        EXPECT_RANGES_EQ(*action.common.mesh_id, expected);
+        EXPECT_RANGES_EQ(action.common.mesh_id, expected);
     }
 
     EXPECT_EQ(action.common.mesh_config.active_path_sel_proto_id, 0xa1u);
@@ -116,9 +116,8 @@ TEST(ParseMpOpen, EmptyMeshId) {
     BufferReader reader { data };
     ASSERT_TRUE(ParseMpOpenAction(&reader, &action));
 
-    // Make sure that mesh_id is empty but not null.
-    EXPECT_TRUE(action.common.mesh_id->empty());
-    EXPECT_FALSE(action.common.mesh_id.is_null());
+    // Make sure that mesh_id is empty.
+    EXPECT_TRUE(action.common.mesh_id.empty());
 }
 
 TEST(ParseMpOpen, TooShort) {

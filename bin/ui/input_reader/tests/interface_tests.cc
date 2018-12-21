@@ -22,7 +22,7 @@ fuchsia::ui::input::DeviceDescriptor GenerateKeyboardDescriptor() {
   keyboard->keys.resize(HID_USAGE_KEY_RIGHT_GUI - HID_USAGE_KEY_A);
   for (size_t index = HID_USAGE_KEY_A; index < HID_USAGE_KEY_RIGHT_GUI;
        ++index) {
-    keyboard->keys->at(index - HID_USAGE_KEY_A) = index;
+    keyboard->keys.at(index - HID_USAGE_KEY_A) = index;
   }
   fuchsia::ui::input::DeviceDescriptor descriptor;
   descriptor.keyboard = std::move(keyboard);
@@ -56,7 +56,7 @@ TEST_F(InputInterfaceTest, InputKeyboardTest) {
   mozart::test::MockInputDeviceRegistry registry(
       nullptr, [&on_report_count](fuchsia::ui::input::InputReport report) {
         EXPECT_TRUE(report.keyboard);
-        EXPECT_EQ(HID_USAGE_KEY_A, report.keyboard->pressed_keys->at(0));
+        EXPECT_EQ(HID_USAGE_KEY_A, report.keyboard->pressed_keys.at(0));
         on_report_count++;
       });
 

@@ -26,7 +26,7 @@ class SystemDataUpdaterImpl : public fuchsia::cobalt::SystemDataUpdater {
   // arms the device belongs to for each of them. These are the only
   // experiments the device can collect data for.
   void SetExperimentState(
-      fidl::VectorPtr<fuchsia::cobalt::Experiment> experiments,
+      std::vector<fuchsia::cobalt::Experiment> experiments,
       SetExperimentStateCallback callback);
 
   encoder::SystemData* system_data_;  // Not owned.

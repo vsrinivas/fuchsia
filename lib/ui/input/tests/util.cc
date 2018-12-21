@@ -81,8 +81,8 @@ SessionWrapper::SessionWrapper(Scenic* scenic) {
                                                std::move(listener_request));
   root_node_ = std::make_unique<scenic::EntityNode>(session_.get());
 
-  session_->set_event_handler([this](fidl::VectorPtr<ScenicEvent> events) {
-    for (ScenicEvent& event : *events) {
+  session_->set_event_handler([this](std::vector<ScenicEvent> events) {
+    for (ScenicEvent& event : events) {
       if (event.is_input()) {
         events_.push_back(std::move(event.input()));
       }

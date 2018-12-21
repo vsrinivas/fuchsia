@@ -59,13 +59,13 @@ Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
     auto& names = additional_services->names;
     service_provider_ = additional_services->provider.Bind();
     service_host_directory_ = std::move(additional_services->host_directory);
-    for (auto& name : *names) {
+    for (auto& name : names) {
       if (service_host_directory_) {
         services_->AddService(
             name,
             fbl::AdoptRef(new fs::Service([this, name](zx::channel channel) {
               fdio_service_connect_at(service_host_directory_.get(),
-                                      name->c_str(), channel.release());
+                                      name.c_str(), channel.release());
               return ZX_OK;
             })));
       } else {
@@ -126,7 +126,7 @@ zx::channel Namespace::OpenServicesAsDirectory() {
   return Util::OpenAsDirectory(&vfs_, services_);
 }
 
-void Namespace::Resolve(fidl::StringPtr name,
+void Namespace::Resolve(std::string name,
                         fuchsia::process::Resolver::ResolveCallback callback) {
   realm_->Resolve(name, std::move(callback));
 }

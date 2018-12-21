@@ -57,11 +57,11 @@ class Tiles : public fuchsia::ui::viewsv1::ViewListener,
                           OnChildUnavailableCallback callback) final;
 
   // |fuchsia::developer::tiles::Controller|:
-  void AddTileFromURL(fidl::StringPtr url, bool allow_focus,
-                      fidl::VectorPtr<fidl::StringPtr> args,
+  void AddTileFromURL(std::string url, bool allow_focus,
+                      fidl::VectorPtr<std::string> args,
                       AddTileFromURLCallback callback) final;
   void AddTileFromViewProvider(
-      fidl::StringPtr url,
+      std::string url,
       fidl::InterfaceHandle<::fuchsia::ui::app::ViewProvider> provider,
       AddTileFromViewProviderCallback callback) final;
   void RemoveTile(uint32_t key) final;

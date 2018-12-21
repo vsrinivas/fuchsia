@@ -57,8 +57,8 @@ struct AssocContext {
 };
 
 std::optional<std::vector<SupportedRate>> BuildAssocReqSuppRates(
-    const ::fidl::VectorPtr<uint8_t>& ap_basic_rate_set,
-    const ::fidl::VectorPtr<uint8_t>& ap_op_rate_set,
+    const std::vector<uint8_t>& ap_basic_rate_set,
+    const std::vector<uint8_t>& ap_op_rate_set,
     const std::vector<SupportedRate>& client_rates);
 
 // Visable only for unit testing.

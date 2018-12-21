@@ -204,8 +204,8 @@ void Presentation2::HandleScenicEvent(const fuchsia::ui::scenic::Event& event) {
 }
 
 void Presentation2::HandleScenicEvents(
-    fidl::VectorPtr<fuchsia::ui::scenic::Event> events) {
-  for (auto& event : *events) {
+    std::vector<fuchsia::ui::scenic::Event> events) {
+  for (auto& event : events) {
     HandleScenicEvent(event);
   }
 }
@@ -781,9 +781,9 @@ void Presentation2::PresentScene() {
 void Presentation2::Shutdown() { shutdown_callback_(); }
 
 void Presentation2::SetRendererParams(
-    ::fidl::VectorPtr<fuchsia::ui::gfx::RendererParam> params) {
-  for (size_t i = 0; i < params->size(); ++i) {
-    switch (params->at(i).Which()) {
+    ::std::vector<fuchsia::ui::gfx::RendererParam> params) {
+  for (size_t i = 0; i < params.size(); ++i) {
+    switch (params.at(i).Which()) {
       case ::fuchsia::ui::gfx::RendererParam::Tag::kShadowTechnique:
         if (renderer_params_override_.shadow_technique.has_value()) {
           FXL_LOG(WARNING)
@@ -803,7 +803,7 @@ void Presentation2::SetRendererParams(
       case fuchsia::ui::gfx::RendererParam::Tag::Invalid:
         continue;
     }
-    renderer_.SetParam(std::move(params->at(i)));
+    renderer_.SetParam(std::move(params.at(i)));
   }
   session_->Present(0, [](fuchsia::images::PresentationInfo info) {});
 }

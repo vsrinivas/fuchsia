@@ -57,12 +57,12 @@ class NetConnectorImpl : public fuchsia::netconnector::NetConnector {
 
   // NetConnector implementation.
   void RegisterServiceProvider(
-      fidl::StringPtr name,
+      std::string name,
       fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> service_provider)
       override;
 
   void GetDeviceServiceProvider(
-      fidl::StringPtr device_name,
+      std::string device_name,
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> service_provider)
       override;
 

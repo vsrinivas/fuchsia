@@ -39,7 +39,7 @@ bool RecursiveRunCat(const fuchsia::inspect::InspectSyncPtr& channel_ptr,
 
   // We check one level.
   FXL_VLOG(1) << "  attempting to list children";
-  fidl::VectorPtr<fidl::StringPtr> children;
+  fidl::VectorPtr<std::string> children;
   auto status = channel_ptr->ListChildren(&children);
   if (status != ZX_OK) {
     FXL_LOG(WARNING) << "Failed listing children for " << current_path;
@@ -238,7 +238,7 @@ bool RunLs(const Options& options, std::vector<ObjectNode>* out) {
 
     FXL_VLOG(1) << "  listing children";
 
-    ::fidl::VectorPtr<fidl::StringPtr> result;
+    ::fidl::VectorPtr<std::string> result;
     auto status = ptr->ListChildren(&result);
     if (status != ZX_OK) {
       FXL_LOG(WARNING) << "Failed listing children for " << path;

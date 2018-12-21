@@ -214,8 +214,8 @@ zx_status_t CrashpadAnalyzerImpl::HandleNativeException(
 }
 
 zx_status_t CrashpadAnalyzerImpl::HandleManagedRuntimeException(
-    ManagedRuntimeLanguage language, fidl::StringPtr component_url,
-    fidl::StringPtr exception, fuchsia::mem::Buffer stack_trace) {
+    ManagedRuntimeLanguage language, std::string component_url,
+    std::string exception, fuchsia::mem::Buffer stack_trace) {
   FX_LOGS(INFO) << "generating crash report for exception thrown by "
                 << component_url;
 
@@ -308,8 +308,8 @@ void CrashpadAnalyzerImpl::HandleNativeException(
 }
 
 void CrashpadAnalyzerImpl::HandleManagedRuntimeException(
-    ManagedRuntimeLanguage language, fidl::StringPtr component_url,
-    fidl::StringPtr exception, fuchsia::mem::Buffer stack_trace,
+    ManagedRuntimeLanguage language, std::string component_url,
+    std::string exception, fuchsia::mem::Buffer stack_trace,
     HandleManagedRuntimeExceptionCallback callback) {
   const zx_status_t status = HandleManagedRuntimeException(
       language, component_url, exception, std::move(stack_trace));

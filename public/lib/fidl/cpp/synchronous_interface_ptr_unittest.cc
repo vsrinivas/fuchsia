@@ -27,11 +27,10 @@ TEST(SynchronousInterfacePtr, Control) {
   std::thread client([ptr = std::move(ptr)]() mutable {
     ptr->Frob("one");
 
-    fidl::StringPtr result;
+    std::string result;
     ptr->Grob("two", &result);
 
-    EXPECT_FALSE(result.is_null());
-    EXPECT_EQ("response", *result);
+    EXPECT_EQ("response", result);
   });
 
   fidl::test::AsyncLoopForTest loop;

@@ -58,7 +58,7 @@ void TtsServiceImpl::Client::Shutdown() {
   owner_->clients_.erase(owner_->clients_.find(this));
 }
 
-void TtsServiceImpl::Client::Say(fidl::StringPtr words, uint64_t token,
+void TtsServiceImpl::Client::Say(std::string words, uint64_t token,
                                  SayCallback cbk) {
   auto cleanup = fit::defer([this] { Shutdown(); });
   auto speaker = std::make_shared<TtsSpeaker>(owner_->dispatcher_);

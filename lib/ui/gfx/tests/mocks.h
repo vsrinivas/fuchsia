@@ -37,8 +37,8 @@ class SessionHandlerForTest : public SessionHandler {
 
   // |fuchsia::ui::scenic::Session / scenic::TempSessionDelegate|
   void Present(uint64_t presentation_time,
-               ::fidl::VectorPtr<zx::event> acquire_fences,
-               ::fidl::VectorPtr<zx::event> release_fences,
+               ::std::vector<zx::event> acquire_fences,
+               ::std::vector<zx::event> release_fences,
                fuchsia::ui::scenic::Session::PresentCallback callback) override;
 
   // Return the number of commands that have been enqueued.

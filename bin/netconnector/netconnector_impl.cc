@@ -53,15 +53,15 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params,
 
     if (params_->show_devices()) {
       uint64_t version;
-      fidl::VectorPtr<fidl::StringPtr> device_names;
+      std::vector<std::string> device_names;
       net_connector->GetKnownDeviceNames(
           fuchsia::netconnector::kInitialKnownDeviceNames, &version,
           &device_names);
 
-      if (device_names->size() == 0) {
+      if (device_names.size() == 0) {
         std::cout << "No remote devices found\n";
       } else {
-        for (auto& device_name : *device_names) {
+        for (auto& device_name : device_names) {
           std::cout << device_name << "\n";
         }
       }
@@ -76,8 +76,8 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params,
 
   device_names_publisher_.SetCallbackRunner(
       [this](const GetKnownDeviceNamesCallback& callback, uint64_t version) {
-        fidl::VectorPtr<fidl::StringPtr> device_names =
-            fidl::VectorPtr<fidl::StringPtr>::New(0);
+        fidl::VectorPtr<std::string> device_names =
+            fidl::VectorPtr<std::string>::New(0);
 
         for (auto& pair : params_->devices()) {
           device_names.push_back(pair.first);
@@ -116,7 +116,7 @@ void NetConnectorImpl::StartListener() {
 
   mdns_service_->PublishServiceInstance(
       kFuchsiaServiceName, host_name_, kPort.as_uint16_t(),
-      fidl::VectorPtr<fidl::StringPtr>(),
+      fidl::VectorPtr<std::string>(),
       [this](fuchsia::mdns::MdnsResult result) {
         switch (result) {
           case fuchsia::mdns::MdnsResult::OK:
@@ -192,7 +192,7 @@ void NetConnectorImpl::ReleaseServiceAgent(ServiceAgent* service_agent) {
 }
 
 void NetConnectorImpl::GetDeviceServiceProvider(
-    fidl::StringPtr device_name,
+    std::string device_name,
     fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> request) {
   if (device_name == host_name_ || device_name == kLocalDeviceName) {
     responding_service_host_.AddBinding(std::move(request));
@@ -216,7 +216,7 @@ void NetConnectorImpl::GetKnownDeviceNames(
 }
 
 void NetConnectorImpl::RegisterServiceProvider(
-    fidl::StringPtr name,
+    std::string name,
     fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> handle) {
   FXL_LOG(INFO) << "Service '" << name << "' provider registered.";
   responding_service_host_.RegisterProvider(name, std::move(handle));

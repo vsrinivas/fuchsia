@@ -101,18 +101,18 @@ wlan_device::PhyInfo get_info() {
     info.caps.resize(0);
     info.bands.resize(0);
 
-    info.supported_phys->push_back(wlan_device::SupportedPhy::DSSS);
-    info.supported_phys->push_back(wlan_device::SupportedPhy::CCK);
-    info.supported_phys->push_back(wlan_device::SupportedPhy::OFDM);
-    info.supported_phys->push_back(wlan_device::SupportedPhy::HT);
+    info.supported_phys.push_back(wlan_device::SupportedPhy::DSSS);
+    info.supported_phys.push_back(wlan_device::SupportedPhy::CCK);
+    info.supported_phys.push_back(wlan_device::SupportedPhy::OFDM);
+    info.supported_phys.push_back(wlan_device::SupportedPhy::HT);
 
-    info.driver_features->push_back(wlan_device::DriverFeature::SYNTH);
+    info.driver_features.push_back(wlan_device::DriverFeature::SYNTH);
 
-    info.mac_roles->push_back(wlan_device::MacRole::CLIENT);
-    info.mac_roles->push_back(wlan_device::MacRole::AP);
+    info.mac_roles.push_back(wlan_device::MacRole::CLIENT);
+    info.mac_roles.push_back(wlan_device::MacRole::AP);
 
-    info.caps->push_back(wlan_device::Capability::SHORT_PREAMBLE);
-    info.caps->push_back(wlan_device::Capability::SHORT_SLOT_TIME);
+    info.caps.push_back(wlan_device::Capability::SHORT_PREAMBLE);
+    info.caps.push_back(wlan_device::Capability::SHORT_SLOT_TIME);
 
     wlan_device::BandInfo band24;
     band24.band_id = wlan_mlme::Band::WLAN_BAND_2GHZ;
@@ -124,12 +124,12 @@ wlan_device::PhyInfo get_info() {
     ht_caps.mcs_set.tx_mcs.set_val(0x10);
     band24.ht_caps = std::make_unique<wlan_mlme::HtCapabilities>(ht_caps.ToFidl());
 
-    band24.basic_rates.reset(std::vector<uint8_t>({2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108}));
+    band24.basic_rates = {2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108};
     band24.supported_channels.base_freq = 2417;
-    band24.supported_channels.channels.reset(
-        std::vector<uint8_t>({1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}));
+    band24.supported_channels.channels =
+        {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
 
-    info.bands->push_back(std::move(band24));
+    info.bands.push_back(std::move(band24));
 
     wlan_device::BandInfo band5;
     band5.band_id = wlan_mlme::Band::WLAN_BAND_5GHZ;
@@ -141,14 +141,14 @@ wlan_device::PhyInfo get_info() {
     ht_caps.mcs_set.tx_mcs.set_val(0x10);
     band5.ht_caps = std::make_unique<wlan_mlme::HtCapabilities>(ht_caps.ToFidl());
 
-    band5.basic_rates.reset(std::vector<uint8_t>({12, 18, 24, 36, 48, 72, 96, 108}));
+    band5.basic_rates = {12, 18, 24, 36, 48, 72, 96, 108};
     band5.supported_channels.base_freq = 5000;
-    band5.supported_channels.channels.reset(std::vector<uint8_t>(
+    band5.supported_channels.channels = 
         {36,  38,  40,  42,  44,  46,  48,  50,  52,  54,  56,  58,  60,  62,  64,  100,
          102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124, 126, 128, 130, 132,
-         134, 136, 138, 140, 149, 151, 153, 155, 157, 159, 161, 165, 184, 188, 192, 196}));
+         134, 136, 138, 140, 149, 151, 153, 155, 157, 159, 161, 165, 184, 188, 192, 196};
 
-    info.bands->push_back(std::move(band5));
+    info.bands.push_back(std::move(band5));
     return info;
 }
 }  // namespace

@@ -209,49 +209,49 @@ class IntHistogramEvent : public Event {
  public:
   IntHistogramEvent(uint32_t metric_id, uint32_t event_code,
                     const std::string& component,
-                    fidl::VectorPtr<fuchsia::cobalt::HistogramBucket> histogram)
+                    std::vector<fuchsia::cobalt::HistogramBucket> histogram)
       : Event(metric_id),
         event_code_(event_code),
         component_(component),
         histogram_(std::move(histogram)) {}
   void Log(fuchsia::cobalt::LoggerPtr* logger,
            fit::function<void(fuchsia::cobalt::Status)> callback) {
-    fidl::VectorPtr<fuchsia::cobalt::HistogramBucket> histogram;
+    std::vector<fuchsia::cobalt::HistogramBucket> histogram;
     FXL_CHECK(fidl::Clone(histogram_, &histogram) == ZX_OK);
     (*logger)->LogIntHistogram(metric_id(), event_code_, component_,
                                std::move(histogram), std::move(callback));
   }
   uint32_t event_code() const { return event_code_; }
   const std::string& component() const { return component_; }
-  const fidl::VectorPtr<fuchsia::cobalt::HistogramBucket>& histogram() const {
+  const std::vector<fuchsia::cobalt::HistogramBucket>& histogram() const {
     return histogram_;
   }
 
  private:
   const uint32_t event_code_;
   const std::string component_;
-  const fidl::VectorPtr<fuchsia::cobalt::HistogramBucket> histogram_;
+  const std::vector<fuchsia::cobalt::HistogramBucket> histogram_;
 };
 
 class CustomEvent : public Event {
  public:
   CustomEvent(uint32_t metric_id,
-              fidl::VectorPtr<fuchsia::cobalt::CustomEventValue> event_values)
+              std::vector<fuchsia::cobalt::CustomEventValue> event_values)
       : Event(metric_id), event_values_(std::move(event_values)) {}
   void Log(fuchsia::cobalt::LoggerPtr* logger,
            fit::function<void(fuchsia::cobalt::Status)> callback) {
-    fidl::VectorPtr<fuchsia::cobalt::CustomEventValue> event_values;
+    std::vector<fuchsia::cobalt::CustomEventValue> event_values;
     FXL_CHECK(fidl::Clone(event_values_, &event_values) == ZX_OK);
     (*logger)->LogCustomEvent(metric_id(), std::move(event_values),
                               std::move(callback));
   }
-  const fidl::VectorPtr<fuchsia::cobalt::CustomEventValue>& event_values()
+  const std::vector<fuchsia::cobalt::CustomEventValue>& event_values()
       const {
     return event_values_;
   }
 
  private:
-  const fidl::VectorPtr<fuchsia::cobalt::CustomEventValue> event_values_;
+  const std::vector<fuchsia::cobalt::CustomEventValue> event_values_;
 };
 
 class CobaltLoggerImpl : public CobaltLogger {

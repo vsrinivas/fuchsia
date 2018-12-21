@@ -33,7 +33,7 @@ class TtsServiceImpl {
     void Shutdown();
 
     // TtsService
-    void Say(fidl::StringPtr words, uint64_t token, SayCallback cbk) override;
+    void Say(std::string words, uint64_t token, SayCallback cbk) override;
 
    private:
     void OnSpeakComplete(std::shared_ptr<TtsSpeaker> speaker, uint64_t token,

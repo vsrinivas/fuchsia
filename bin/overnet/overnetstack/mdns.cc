@@ -41,58 +41,56 @@ class MdnsIntroducer::Impl : public fbl::RefCounted<MdnsIntroducer> {
         version,
         [self = fbl::RefPtr<Impl>(this)](
             uint64_t new_version,
-            fidl::VectorPtr<fuchsia::mdns::MdnsServiceInstance> services) {
+            std::vector<fuchsia::mdns::MdnsServiceInstance> services) {
           // Convert list of services into a service map.
           ServiceMap new_service_map;
-          if (!services.is_null()) {
-            for (const auto& svc : services.get()) {
-              if (svc.service_name != kServiceName) {
-                std::cout << "Unexpected service name (ignored): "
-                          << svc.service_name << "\n";
-                continue;
-              }
-              auto parsed_instance_name =
-                  overnet::NodeId::FromString(svc.instance_name);
-              if (parsed_instance_name.is_error()) {
-                std::cout << "Failed to parse instance name: "
-                          << parsed_instance_name.AsStatus() << "\n";
-                continue;
-              }
-              auto instance_id = *parsed_instance_name.get();
-              if (new_service_map.count(instance_id) != 0) {
-                std::cout << "WARNING: Duplicate mdns definition for "
-                          << instance_id << "; only using first\n";
-                continue;
-              }
-              std::vector<fuchsia::netstack::SocketAddress> addresses;
-              if (svc.v4_address) {
-                addresses.emplace_back();
-                auto result =
-                    overnet::Status::FromZx(svc.v4_address->Clone(&addresses.back()));
-                if (result.is_error()) {
-                  std::cout << "Failed to clone v4_address: " << result << "\n";
-                  addresses.pop_back();
-                }
-              }
-              if (svc.v6_address) {
-                addresses.emplace_back();
-                auto result =
-                    overnet::Status::FromZx(svc.v6_address->Clone(&addresses.back()));
-                if (result.is_error()) {
-                  std::cout << "Failed to clone v6_address: " << result << "\n";
-                  addresses.pop_back();
-                }
-              }
-              std::vector<std::string> text;
-              if (!svc.text.is_null()) {
-                for (const auto& line : svc.text.get()) {
-                  text.push_back(line);
-                }
-              }
-              new_service_map.emplace(
-                  std::piecewise_construct, std::forward_as_tuple(instance_id),
-                  std::forward_as_tuple(std::move(text), std::move(addresses)));
+          for (const auto& svc : services) {
+            if (svc.service_name != kServiceName) {
+              std::cout << "Unexpected service name (ignored): "
+                        << svc.service_name << "\n";
+              continue;
             }
+            auto parsed_instance_name =
+                overnet::NodeId::FromString(svc.instance_name);
+            if (parsed_instance_name.is_error()) {
+              std::cout << "Failed to parse instance name: "
+                        << parsed_instance_name.AsStatus() << "\n";
+              continue;
+            }
+            auto instance_id = *parsed_instance_name.get();
+            if (new_service_map.count(instance_id) != 0) {
+              std::cout << "WARNING: Duplicate mdns definition for "
+                        << instance_id << "; only using first\n";
+              continue;
+            }
+            std::vector<fuchsia::netstack::SocketAddress> addresses;
+            if (svc.v4_address) {
+              addresses.emplace_back();
+              auto result =
+                  overnet::Status::FromZx(svc.v4_address->Clone(&addresses.back()));
+              if (result.is_error()) {
+                std::cout << "Failed to clone v4_address: " << result << "\n";
+                addresses.pop_back();
+              }
+            }
+            if (svc.v6_address) {
+              addresses.emplace_back();
+              auto result =
+                  overnet::Status::FromZx(svc.v6_address->Clone(&addresses.back()));
+              if (result.is_error()) {
+                std::cout << "Failed to clone v6_address: " << result << "\n";
+                addresses.pop_back();
+              }
+            }
+            std::vector<std::string> text;
+            if (!svc.text.is_null()) {
+              for (const auto& line : svc.text.get()) {
+                text.push_back(line);
+              }
+            }
+            new_service_map.emplace(
+                std::piecewise_construct, std::forward_as_tuple(instance_id),
+                std::forward_as_tuple(std::move(text), std::move(addresses)));
           }
 
           // Compare new and old service maps and form new connections for any

@@ -81,25 +81,23 @@ const std::string& ViewState::FormattedLabel() const {
 
 fuchsia::sys::ServiceProvider* ViewState::GetServiceProviderIfSupports(
     std::string service_name) {
-  if (service_names_) {
-    auto& v = *service_names_;
-    if (std::find(v.begin(), v.end(), service_name) != v.end()) {
-      return service_provider_.get();
-    }
+  auto& v = service_names_;
+  if (std::find(v.begin(), v.end(), service_name) != v.end()) {
+    return service_provider_.get();
   }
   return nullptr;
 }
 
 void ViewState::SetServiceProvider(
     fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> service_provider,
-    fidl::VectorPtr<fidl::StringPtr> service_names) {
+    std::vector<std::string> service_names) {
   if (service_provider) {
     service_provider_ = service_provider.Bind();
     service_names_ = std::move(service_names);
 
   } else {
     service_provider_.Unbind();
-    service_names_.reset();
+    service_names_.clear();
   }
 }
 

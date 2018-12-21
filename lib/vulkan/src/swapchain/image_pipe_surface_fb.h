@@ -27,8 +27,8 @@ class ImagePipeSurfaceFb : public ImagePipeSurface {
   void RemoveImage(uint32_t image_id) override;
 
   void PresentImage(uint32_t image_id,
-                    fidl::VectorPtr<zx::event> acquire_fences,
-                    fidl::VectorPtr<zx::event> release_fences) override;
+                    std::vector<zx::event> acquire_fences,
+                    std::vector<zx::event> release_fences) override;
 
  private:
   std::map<uint64_t, uint64_t> image_id_map;

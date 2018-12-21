@@ -137,7 +137,7 @@ void AudioPlayer::GetKeystroke() {
 void AudioPlayer::MaybeLogMetadataProperty(
     const fuchsia::mediaplayer::Metadata& metadata,
     const std::string& property_label, const std::string& prefix) {
-  for (auto& property : *metadata.properties) {
+  for (auto& property : metadata.properties) {
     if (property.label == property_label) {
       FXL_LOG(INFO) << prefix << property.value;
       return;

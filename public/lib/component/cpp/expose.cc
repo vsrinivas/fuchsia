@@ -143,10 +143,10 @@ void Object::ListChildren(ListChildrenCallback callback) {
   callback(std::move(out));
 }
 
-void Object::OpenChild(::fidl::StringPtr name,
+void Object::OpenChild(std::string name,
                        ::fidl::InterfaceRequest<Inspect> child_channel,
                        OpenChildCallback callback) {
-  auto child = GetChild(name->data());
+  auto child = GetChild(name.data());
   if (!child) {
     callback(false);
     return;

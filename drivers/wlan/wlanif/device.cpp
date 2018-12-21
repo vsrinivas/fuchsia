@@ -322,14 +322,14 @@ void Device::JoinReq(wlan_mlme::JoinRequest req) {
     impl_req.nav_sync_delay = req.nav_sync_delay;
 
     // op_rates
-    if (req.op_rate_set->size() > WLAN_MAX_OP_RATES) {
+    if (req.op_rate_set.size() > WLAN_MAX_OP_RATES) {
         warnf("wlanif: truncating operational rates set from %zu to %d members\n",
-              req.op_rate_set->size(), WLAN_MAX_OP_RATES);
+              req.op_rate_set.size(), WLAN_MAX_OP_RATES);
         impl_req.num_op_rates = WLAN_MAX_OP_RATES;
     } else {
-        impl_req.num_op_rates = req.op_rate_set->size();
+        impl_req.num_op_rates = req.op_rate_set.size();
     }
-    std::memcpy(impl_req.op_rates, req.op_rate_set->data(), impl_req.num_op_rates);
+    std::memcpy(impl_req.op_rates, req.op_rate_set.data(), impl_req.num_op_rates);
 
     wlanif_impl_.ops->join_req(wlanif_impl_.ctx, &impl_req);
 }
@@ -480,7 +480,7 @@ void Device::SetKeysReq(wlan_mlme::SetKeysRequest req) {
     wlanif_set_keys_req_t impl_req = {};
 
     // keylist
-    size_t num_keys = req.keylist->size();
+    size_t num_keys = req.keylist.size();
     if (num_keys > WLAN_MAX_KEYLIST_SIZE) {
         warnf("wlanif: truncating key list from %zu to %d members\n", num_keys,
               WLAN_MAX_KEYLIST_SIZE);
@@ -489,7 +489,7 @@ void Device::SetKeysReq(wlan_mlme::SetKeysRequest req) {
         impl_req.num_keys = num_keys;
     }
     for (size_t desc_ndx = 0; desc_ndx < num_keys; desc_ndx++) {
-        ConvertSetKeyDescriptor(&impl_req.keylist[desc_ndx], (*req.keylist)[desc_ndx]);
+        ConvertSetKeyDescriptor(&impl_req.keylist[desc_ndx], req.keylist[desc_ndx]);
     }
 
     wlanif_impl_.ops->set_keys_req(wlanif_impl_.ctx, &impl_req);
@@ -499,7 +499,7 @@ void Device::DeleteKeysReq(wlan_mlme::DeleteKeysRequest req) {
     wlanif_del_keys_req_t impl_req = {};
 
     // keylist
-    size_t num_keys = req.keylist->size();
+    size_t num_keys = req.keylist.size();
     if (num_keys > WLAN_MAX_KEYLIST_SIZE) {
         warnf("wlanif: truncating key list from %zu to %d members\n", num_keys,
               WLAN_MAX_KEYLIST_SIZE);
@@ -508,7 +508,7 @@ void Device::DeleteKeysReq(wlan_mlme::DeleteKeysRequest req) {
         impl_req.num_keys = num_keys;
     }
     for (size_t desc_ndx = 0; desc_ndx < num_keys; desc_ndx++) {
-        ConvertDeleteKeyDescriptor(&impl_req.keylist[desc_ndx], (*req.keylist)[desc_ndx]);
+        ConvertDeleteKeyDescriptor(&impl_req.keylist[desc_ndx], req.keylist[desc_ndx]);
     }
 
     wlanif_impl_.ops->del_keys_req(wlanif_impl_.ctx, &impl_req);
@@ -524,8 +524,8 @@ void Device::EapolReq(wlan_mlme::EapolRequest req) {
     std::memcpy(impl_req.dst_addr, req.dst_addr.data(), ETH_ALEN);
 
     // data
-    impl_req.data_len = req.data->size();
-    impl_req.data = req.data->data();
+    impl_req.data_len = req.data.size();
+    impl_req.data = req.data.data();
 
     wlanif_impl_.ops->eapol_req(wlanif_impl_.ctx, &impl_req);
 }
@@ -553,7 +553,7 @@ void Device::QueryDeviceInfo(QueryDeviceInfoCallback cb) {
     // bands
     fidl_resp.bands.resize(query_info_.num_bands);
     for (size_t ndx = 0; ndx < query_info_.num_bands; ndx++) {
-        ConvertBandCapabilities(&(*fidl_resp.bands)[ndx], query_info_.bands[ndx]);
+        ConvertBandCapabilities(&fidl_resp.bands[ndx], query_info_.bands[ndx]);
     }
 
     cb(std::move(fidl_resp));
@@ -895,8 +895,8 @@ void Device::EapolInd(wlanif_eapol_indication_t* ind) {
     std::memcpy(fidl_ind.dst_addr.mutable_data(), ind->dst_addr, ETH_ALEN);
 
     // data
-    fidl_ind.data->resize(ind->data_len);
-    fidl_ind.data->assign(ind->data, ind->data + ind->data_len);
+    fidl_ind.data.resize(ind->data_len);
+    fidl_ind.data.assign(ind->data, ind->data + ind->data_len);
 
     binding_.events().EapolInd(std::move(fidl_ind));
 }

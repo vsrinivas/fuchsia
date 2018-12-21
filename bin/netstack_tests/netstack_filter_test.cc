@@ -154,9 +154,9 @@ fuchsia::sys::ComponentControllerPtr RunComponent(
 
 bool WaitForNewInterface(
     const inet::IpAddress& test_static_ip,
-    fidl::VectorPtr<fuchsia::netstack::NetInterface> interfaces) {
+    std::vector<fuchsia::netstack::NetInterface> interfaces) {
   inet::IpAddress ip_address;
-  for (const auto& interface : *interfaces) {
+  for (const auto& interface : interfaces) {
     ip_address = inet::IpAddress(&interface.addr);
     if (test_static_ip == ip_address) {
       return true;
@@ -235,7 +235,7 @@ TEST_F(NetstackFilterTest, TestRuleset) {
   bool found_static_ip_on_interface = false;
   netstack.events().OnInterfacesChanged =
       [&test_static_ip, &found_static_ip_on_interface](
-          fidl::VectorPtr<fuchsia::netstack::NetInterface> interfaces) {
+          std::vector<fuchsia::netstack::NetInterface> interfaces) {
         found_static_ip_on_interface =
             WaitForNewInterface(test_static_ip, std::move(interfaces));
       };

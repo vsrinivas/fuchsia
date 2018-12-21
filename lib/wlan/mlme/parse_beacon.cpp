@@ -89,7 +89,7 @@ static void DoParseBeaconElements(Span<const uint8_t> ies, uint8_t rx_channel,
         switch (id) {
         case element_id::kSsid:
             if (auto ssid = common::ParseSsid(raw_body)) {
-                bss_desc->ssid->assign(ssid->begin(), ssid->end());
+                bss_desc->ssid.assign(ssid->begin(), ssid->end());
             }
             break;
         case element_id::kSuppRates:
@@ -146,8 +146,8 @@ static void DoParseBeaconElements(Span<const uint8_t> ies, uint8_t rx_channel,
     }
 }
 
-static void ClassifyRates(Span<const SupportedRate> rates, ::fidl::VectorPtr<uint8_t>* basic,
-                          ::fidl::VectorPtr<uint8_t>* op) {
+static void ClassifyRates(Span<const SupportedRate> rates, ::std::vector<uint8_t>* basic,
+                          ::std::vector<uint8_t>* op) {
     for (SupportedRate r : rates) {
         if (r.is_basic()) { basic->push_back(r.rate()); }
         op->push_back(r.rate());
@@ -155,7 +155,7 @@ static void ClassifyRates(Span<const SupportedRate> rates, ::fidl::VectorPtr<uin
 }
 
 void FillRates(Span<const SupportedRate> supp_rates, Span<const SupportedRate> ext_supp_rates,
-               ::fidl::VectorPtr<uint8_t>* basic, ::fidl::VectorPtr<uint8_t>* op) {
+               ::std::vector<uint8_t>* basic, ::std::vector<uint8_t>* op) {
     basic->resize(0);
     op->resize(0);
     ClassifyRates(supp_rates, basic, op);

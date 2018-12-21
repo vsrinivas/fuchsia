@@ -40,8 +40,8 @@ class ImagePipe : public ImageBase {
   void RemoveImage(uint32_t image_id);
 
   void PresentImage(uint32_t image_id, uint64_t presentation_time,
-                    ::fidl::VectorPtr<zx::event> acquire_fences,
-                    ::fidl::VectorPtr<zx::event> release_fences,
+                    ::std::vector<zx::event> acquire_fences,
+                    ::std::vector<zx::event> release_fences,
                     fuchsia::images::ImagePipe::PresentImageCallback callback);
 
   void Accept(class ResourceVisitor* visitor) override;

@@ -133,7 +133,7 @@ TEST_F(ConfigTest, Parse) {
 
   auto loaders = config.TakeAppLoaders();
   EXPECT_THAT(loaders, UnorderedElementsAre(Key("http")));
-  EXPECT_EQ(*loaders["http"]->url, "network_loader");
+  EXPECT_EQ(loaders["http"]->url, "network_loader");
 }
 
 }  // namespace

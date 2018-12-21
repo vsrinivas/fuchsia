@@ -30,7 +30,7 @@ class TimezoneImpl : public fuchsia::timezone::Timezone {
   // |Timezone|:
   void GetTimezoneOffsetMinutes(
       int64_t milliseconds, GetTimezoneOffsetMinutesCallback callback) override;
-  void SetTimezone(fidl::StringPtr timezone_id,
+  void SetTimezone(std::string timezone_id,
                    SetTimezoneCallback callback) override;
   void GetTimezoneId(GetTimezoneIdCallback callback) override;
   void Watch(fidl::InterfaceHandle<fuchsia::timezone::TimezoneWatcher> watcher)

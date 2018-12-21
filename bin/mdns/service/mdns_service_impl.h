@@ -25,31 +25,31 @@ class MdnsServiceImpl : public fuchsia::mdns::MdnsService {
   ~MdnsServiceImpl() override;
 
   // MdnsService implementation.
-  void ResolveHostName(fidl::StringPtr host_name, uint32_t timeout_ms,
+  void ResolveHostName(std::string host_name, uint32_t timeout_ms,
                        ResolveHostNameCallback callback) override;
 
   void SubscribeToService(
-      fidl::StringPtr service_name,
+      std::string service_name,
       fidl::InterfaceRequest<fuchsia::mdns::MdnsServiceSubscription>
           subscription_request) override;
 
-  void PublishServiceInstance(fidl::StringPtr service_name,
-                              fidl::StringPtr instance_name, uint16_t port,
-                              fidl::VectorPtr<fidl::StringPtr> text,
+  void PublishServiceInstance(std::string service_name,
+                              std::string instance_name, uint16_t port,
+                              fidl::VectorPtr<std::string> text,
                               PublishServiceInstanceCallback callback) override;
 
-  void UnpublishServiceInstance(fidl::StringPtr service_name,
-                                fidl::StringPtr instance_name) override;
+  void UnpublishServiceInstance(std::string service_name,
+                                std::string instance_name) override;
 
-  void AddResponder(fidl::StringPtr service_name, fidl::StringPtr instance_name,
+  void AddResponder(std::string service_name, std::string instance_name,
                     fidl::InterfaceHandle<fuchsia::mdns::MdnsResponder>
                         responder_handle) override;
 
-  void SetSubtypes(fidl::StringPtr service_name, fidl::StringPtr instance_name,
-                   fidl::VectorPtr<fidl::StringPtr> subtypes) override;
+  void SetSubtypes(std::string service_name, std::string instance_name,
+                   std::vector<std::string> subtypes) override;
 
-  void ReannounceInstance(fidl::StringPtr service_name,
-                          fidl::StringPtr instance_name) override;
+  void ReannounceInstance(std::string service_name,
+                          std::string instance_name) override;
 
   void SetVerbose(bool value) override;
 
@@ -97,7 +97,7 @@ class MdnsServiceImpl : public fuchsia::mdns::MdnsService {
   // Publisher for PublishServiceInstance.
   class SimplePublisher : public Mdns::Publisher {
    public:
-    SimplePublisher(inet::IpPort port, fidl::VectorPtr<fidl::StringPtr> text,
+    SimplePublisher(inet::IpPort port, fidl::VectorPtr<std::string> text,
                     PublishServiceInstanceCallback callback);
 
    private:

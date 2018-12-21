@@ -45,7 +45,7 @@ DeviceServiceProvider::DeviceServiceProvider(
 
 DeviceServiceProvider::~DeviceServiceProvider() {}
 
-void DeviceServiceProvider::ConnectToService(fidl::StringPtr service_name,
+void DeviceServiceProvider::ConnectToService(std::string service_name,
                                              zx::channel channel) {
   std::unique_ptr<RequestorAgent> requestor_agent = RequestorAgent::Create(
       address_, service_name, std::move(channel), owner_);

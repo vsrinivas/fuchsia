@@ -81,22 +81,22 @@ void ServiceProviderDirImpl::AddBinding(
   bindings_.AddBinding(this, std::move(request));
 }
 
-void ServiceProviderDirImpl::ConnectToService(fidl::StringPtr service_name,
+void ServiceProviderDirImpl::ConnectToService(std::string service_name,
                                               zx::channel channel) {
-  if (!IsServiceWhitelisted(service_name.get())) {
-    FXL_LOG(WARNING) << ServiceNotInSandbox(component_url_, service_name.get());
+  if (!IsServiceWhitelisted(service_name)) {
+    FXL_LOG(WARNING) << ServiceNotInSandbox(component_url_, service_name);
     return;
   }
   fbl::RefPtr<fs::Vnode> child;
-  zx_status_t status = root_->Lookup(&child, service_name.get());
+  zx_status_t status = root_->Lookup(&child, service_name);
   if (status == ZX_OK) {
     status = child->Serve(&vfs_, std::move(channel), 0);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << ErrorServingService(component_url_, service_name.get(),
+      FXL_LOG(ERROR) << ErrorServingService(component_url_, service_name,
                                             status);
     }
   } else {
-    FXL_LOG(ERROR) << ErrorServingService(component_url_, service_name.get(),
+    FXL_LOG(ERROR) << ErrorServingService(component_url_, service_name,
                                           status);
   }
 }

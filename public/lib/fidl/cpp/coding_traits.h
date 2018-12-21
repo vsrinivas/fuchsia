@@ -95,12 +95,8 @@ struct CodingTraits<VectorPtr<T>> {
   static void Encode(Encoder* encoder, VectorPtr<T>* value, size_t offset) {
     if (value->is_null())
       return EncodeNullVector(encoder, offset);
-    size_t count = (*value)->size();
-    EncodeVectorPointer(encoder, count, offset);
-    size_t stride = CodingTraits<T>::encoded_size;
-    size_t base = encoder->Alloc(count * stride);
-    for (size_t i = 0; i < count; ++i)
-      CodingTraits<T>::Encode(encoder, &(*value)->at(i), base + i * stride);
+    std::vector<T>& vector = **value;
+    CodingTraits<::std::vector<T>>::Encode(encoder, &vector, offset);
   }
   static void Decode(Decoder* decoder, VectorPtr<T>* value, size_t offset) {
     fidl_vector_t* encoded = decoder->GetPtr<fidl_vector_t>(offset);
@@ -108,12 +104,31 @@ struct CodingTraits<VectorPtr<T>> {
       *value = VectorPtr<T>();
       return;
     }
+    std::vector<T> vector;
+    CodingTraits<std::vector<T>>::Decode(decoder, &vector, offset);
+    value->reset(std::move(vector));
+  }
+};
+
+template <typename T>
+struct CodingTraits<::std::vector<T>> {
+  static constexpr size_t encoded_size = sizeof(fidl_vector_t);
+  static void Encode(Encoder* encoder, ::std::vector<T>* value, size_t offset) {
+    size_t count = value->size();
+    EncodeVectorPointer(encoder, count, offset);
+    size_t stride = CodingTraits<T>::encoded_size;
+    size_t base = encoder->Alloc(count * stride);
+    for (size_t i = 0; i < count; ++i)
+      CodingTraits<T>::Encode(encoder, &value->at(i), base + i * stride);
+  }
+  static void Decode(Decoder* decoder, ::std::vector<T>* value, size_t offset) {
+    fidl_vector_t* encoded = decoder->GetPtr<fidl_vector_t>(offset);
     value->resize(encoded->count);
     size_t stride = CodingTraits<T>::encoded_size;
     size_t base = decoder->GetOffset(encoded->data);
     size_t count = encoded->count;
     for (size_t i = 0; i < count; ++i)
-      CodingTraits<T>::Decode(decoder, &(*value)->at(i), base + i * stride);
+      CodingTraits<T>::Decode(decoder, &value->at(i), base + i * stride);
   }
 };
 

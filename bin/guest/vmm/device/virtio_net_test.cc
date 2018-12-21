@@ -21,11 +21,11 @@ static constexpr size_t kVmoSize = 1024;
 class VirtioNetTest : public TestWithDevice,
                       public fuchsia::netstack::Netstack {
  public:
-  void GetPortForService(::fidl::StringPtr service,
+  void GetPortForService(::std::string service,
                          fuchsia::netstack::Protocol protocol,
                          GetPortForServiceCallback callback) override {}
 
-  void GetAddress(::fidl::StringPtr address, uint16_t port,
+  void GetAddress(::std::string address, uint16_t port,
                   GetAddressCallback callback) override {}
 
   void GetInterfaces(GetInterfacesCallback callback) override {}
@@ -49,14 +49,14 @@ class VirtioNetTest : public TestWithDevice,
   void SetDhcpClientStatus(uint32_t nicid, bool enabled,
                            SetDhcpClientStatusCallback callback) override {}
 
-  void BridgeInterfaces(::fidl::VectorPtr<uint32_t> nicids,
+  void BridgeInterfaces(::std::vector<uint32_t> nicids,
                         BridgeInterfacesCallback callback) override {}
 
   void SetNameServers(
-      ::fidl::VectorPtr<fuchsia::net::IpAddress> servers) override {}
+      ::std::vector<fuchsia::net::IpAddress> servers) override {}
 
   void AddEthernetDevice(
-      ::fidl::StringPtr topological_path,
+      ::std::string topological_path,
       fuchsia::netstack::InterfaceConfig interfaceConfig,
       ::fidl::InterfaceHandle<::fuchsia::hardware::ethernet::Device> device,
       AddEthernetDeviceCallback callback) override {

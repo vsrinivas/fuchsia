@@ -111,8 +111,8 @@ zx_status_t BeaconSender::BuildBeacon(const PsCfg& ps_cfg, MgmtFrame<Beacon>* fr
                                       size_t* tim_ele_offset) {
     BeaconConfig c = {
         .bssid = bss_->bssid(),
-        .ssid = req_.ssid->data(),
-        .ssid_len = req_.ssid->size(),
+        .ssid = req_.ssid.data(),
+        .ssid_len = req_.ssid.size(),
         .rsne = req_.rsne.is_null() ? nullptr : req_.rsne->data(),
         .rsne_len = req_.rsne->size(),
         .beacon_period = req_.beacon_period,
@@ -146,12 +146,12 @@ zx_status_t BeaconSender::UpdateBeacon(const PsCfg& ps_cfg) {
 void BeaconSender::SendProbeResponse(const common::MacAddr& recv_addr,
                                      Span<const uint8_t> ie_chain) {
     if (!IsStarted()) { return; }
-    if (!ShouldSendProbeResponse(ie_chain, *req_.ssid)) { return; }
+    if (!ShouldSendProbeResponse(ie_chain, req_.ssid)) { return; }
 
     BeaconConfig c = {
         .bssid = bss_->bssid(),
-        .ssid = req_.ssid->data(),
-        .ssid_len = req_.ssid->size(),
+        .ssid = req_.ssid.data(),
+        .ssid_len = req_.ssid.size(),
         .rsne = req_.rsne.is_null() ? nullptr : req_.rsne->data(),
         .rsne_len = req_.rsne->size(),
         .beacon_period = req_.beacon_period,

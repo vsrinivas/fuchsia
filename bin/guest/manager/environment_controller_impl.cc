@@ -48,7 +48,7 @@ void EnvironmentControllerImpl::LaunchInstance(
   info.arguments = std::move(launch_info.args);
   info.directory_request = services.NewRequest();
   info.flat_namespace = std::move(launch_info.flat_namespace);
-  std::string label = launch_info.label ? launch_info.label : launch_info.url;
+  std::string label = launch_info.label ? launch_info.label.get() : launch_info.url;
   auto guest_services = std::make_unique<GuestServices>(std::move(launch_info));
   info.additional_services = guest_services->ServeDirectory();
   launcher_->CreateComponent(std::move(info),

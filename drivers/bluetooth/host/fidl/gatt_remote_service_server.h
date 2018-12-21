@@ -37,14 +37,14 @@ class GattRemoteServiceServer
   void ReadLongCharacteristic(uint64_t id, uint16_t offset, uint16_t max_bytes,
                               ReadLongCharacteristicCallback callback) override;
   void WriteCharacteristic(uint64_t id, uint16_t offset,
-                           ::fidl::VectorPtr<uint8_t> value,
+                           ::std::vector<uint8_t> value,
                            WriteCharacteristicCallback callback) override;
   void WriteCharacteristicWithoutResponse(
-      uint64_t id, ::fidl::VectorPtr<uint8_t> value) override;
+      uint64_t id, ::std::vector<uint8_t> value) override;
   void ReadDescriptor(uint64_t id, ReadDescriptorCallback callback) override;
   void ReadLongDescriptor(uint64_t id, uint16_t offset, uint16_t max_bytes,
                           ReadLongDescriptorCallback callback) override;
-  void WriteDescriptor(uint64_t _id, ::fidl::VectorPtr<uint8_t> value,
+  void WriteDescriptor(uint64_t _id, ::std::vector<uint8_t> value,
                        WriteDescriptorCallback callback) override;
   void NotifyCharacteristic(uint64_t id, bool enable,
                             NotifyCharacteristicCallback callback) override;

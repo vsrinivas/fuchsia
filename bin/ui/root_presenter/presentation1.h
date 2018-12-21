@@ -165,7 +165,7 @@ class Presentation1 : private ::fuchsia::ui::viewsv1::ViewTreeListener,
 
   // |Presentation|
   void SetRendererParams(
-      ::fidl::VectorPtr<fuchsia::ui::gfx::RendererParam> params) override;
+      ::std::vector<fuchsia::ui::gfx::RendererParam> params) override;
 
   // Used internally by Presenter. Allows overriding of renderer params.
   void OverrideRendererParams(RendererParams renderer_params,

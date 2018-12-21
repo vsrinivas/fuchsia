@@ -882,7 +882,7 @@ bool Session::ApplyDetachLightsCmd(
 
 bool Session::ApplySetLabelCmd(::fuchsia::ui::gfx::SetLabelCmd command) {
   if (auto r = resources_.FindResource<Resource>(command.id)) {
-    return r->SetLabel(command.label.get());
+    return r->SetLabel(command.label);
   }
   return false;
 }
@@ -1423,7 +1423,7 @@ void Session::TearDown() {
   // were not closed, we would have to invoke those callbacks before destroying
   // them.
   scheduled_updates_ = {};
-  fences_to_release_on_next_update_.reset();
+  fences_to_release_on_next_update_.clear();
 
   if (resource_count_ != 0) {
     auto exported_count =
@@ -1472,8 +1472,8 @@ bool Session::AssertValueIsOfType(const ::fuchsia::ui::gfx::Value& value,
 bool Session::ScheduleUpdate(
     uint64_t requested_presentation_time,
     std::vector<::fuchsia::ui::gfx::Command> commands,
-    ::fidl::VectorPtr<zx::event> acquire_fences,
-    ::fidl::VectorPtr<zx::event> release_events,
+    ::std::vector<zx::event> acquire_fences,
+    ::std::vector<zx::event> release_events,
     fuchsia::ui::scenic::Session::PresentCallback callback) {
   if (is_valid()) {
     uint64_t last_scheduled_presentation_time =
@@ -1595,9 +1595,9 @@ bool Session::ApplyScheduledUpdates(CommandContext* command_context,
       last_applied_update_presentation_time_ =
           scheduled_updates_.front().presentation_time;
 
-      for (size_t i = 0; i < fences_to_release_on_next_update_->size(); ++i) {
+      for (size_t i = 0; i < fences_to_release_on_next_update_.size(); ++i) {
         session_context_.release_fence_signaller->AddCPUReleaseFence(
-            std::move(fences_to_release_on_next_update_->at(i)));
+            std::move(fences_to_release_on_next_update_.at(i)));
       }
       fences_to_release_on_next_update_ =
           std::move(scheduled_updates_.front().release_fences);

@@ -218,23 +218,23 @@ zx_status_t Dispatcher::HandleQueryDeviceInfo(zx_txid_t txid) {
 
     auto wlanmac_info = device_->GetWlanInfo().ifc_info;
 
-    resp.bands->resize(0);
+    resp.bands.resize(0);
     for (uint8_t band_idx = 0; band_idx < info.num_bands; band_idx++) {
         const wlan_band_info_t& band_info = info.bands[band_idx];
         wlan_mlme::BandCapabilities band;
         band.band_id = wlan::common::BandToFidl(band_info.band_id);
-        band.basic_rates->resize(0);
+        band.basic_rates.resize(0);
         for (size_t rate_idx = 0; rate_idx < sizeof(band_info.basic_rates); rate_idx++) {
             if (band_info.basic_rates[rate_idx] != 0) {
-                band.basic_rates->push_back(band_info.basic_rates[rate_idx]);
+                band.basic_rates.push_back(band_info.basic_rates[rate_idx]);
             }
         }
         const wlan_chan_list_t& chan_list = band_info.supported_channels;
         band.base_frequency = chan_list.base_freq;
-        band.channels->resize(0);
+        band.channels.resize(0);
         for (size_t chan_idx = 0; chan_idx < sizeof(chan_list.channels); chan_idx++) {
             if (chan_list.channels[chan_idx] != 0) {
-                band.channels->push_back(chan_list.channels[chan_idx]);
+                band.channels.push_back(chan_list.channels[chan_idx]);
             }
         }
 
@@ -249,7 +249,7 @@ zx_status_t Dispatcher::HandleQueryDeviceInfo(zx_txid_t txid) {
             band.vht_cap = std::make_unique<wlan_mlme::VhtCapabilities>(vht_cap.ToFidl());
         }
 
-        resp.bands->push_back(std::move(band));
+        resp.bands.push_back(std::move(band));
     }
 
     return SendServiceMsg(device_, &resp, fuchsia_wlan_mlme_MLMEQueryDeviceInfoOrdinal, txid);

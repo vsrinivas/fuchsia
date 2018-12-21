@@ -36,16 +36,12 @@ StringPtr& StringPtr::operator=(StringPtr&& other) {
 }
 
 void StringPtr::Encode(Encoder* encoder, size_t offset) {
-  fidl_string_t* string = encoder->GetPtr<fidl_string_t>(offset);
   if (is_null()) {
+    fidl_string_t* string = encoder->GetPtr<fidl_string_t>(offset);
     string->size = 0u;
     string->data = reinterpret_cast<char*>(FIDL_ALLOC_ABSENT);
   } else {
-    string->size = str_.size();
-    string->data = reinterpret_cast<char*>(FIDL_ALLOC_PRESENT);
-    size_t base = encoder->Alloc(str_.size());
-    char* payload = encoder->GetPtr<char>(base);
-    memcpy(payload, str_.data(), str_.size());
+    EncodeString(encoder, str_, offset);
   }
 }
 
@@ -56,6 +52,21 @@ void StringPtr::Decode(Decoder* decoder, StringPtr* value, size_t offset) {
   } else {
     *value = StringPtr();
   }
+}
+
+void StringPtr::EncodeString(Encoder* encoder, const std::string& value, size_t offset) {
+  fidl_string_t* string = encoder->GetPtr<fidl_string_t>(offset);
+  string->size = value.size();
+  string->data = reinterpret_cast<char*>(FIDL_ALLOC_PRESENT);
+  size_t base = encoder->Alloc(value.size());
+  char* payload = encoder->GetPtr<char>(base);
+  memcpy(payload, value.data(), value.size());
+}
+
+void StringPtr::DecodeString(Decoder* decoder, std::string* value, size_t offset) {
+  fidl_string_t* string = decoder->GetPtr<fidl_string_t>(offset);
+  ZX_ASSERT(string->data != nullptr);
+  *value = std::string(string->data, string->size);
 }
 
 }  // namespace fidl

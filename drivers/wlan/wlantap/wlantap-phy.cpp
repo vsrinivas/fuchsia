@@ -70,13 +70,13 @@ struct EventSender {
         tx_args_.wlanmac_id = wlanmac_id;
         ConvertTxInfo(pkt->info, &tx_args_.packet.info);
         auto& data = tx_args_.packet.data;
-        data->clear();
+        data.clear();
         auto head = static_cast<const uint8_t*>(pkt->packet_head.data_buffer);
-        std::copy_n(head, pkt->packet_head.data_size, std::back_inserter(*data));
+        std::copy_n(head, pkt->packet_head.data_size, std::back_inserter(data));
         if (pkt->packet_tail != nullptr) {
             auto tail = static_cast<const uint8_t*>(pkt->packet_tail->data_buffer);
             std::copy_n(tail + pkt->tail_offset, pkt->packet_tail->data_size - pkt->tail_offset,
-                        std::back_inserter(*data));
+                        std::back_inserter(data));
         }
         Send(EventOrdinal::Tx, &tx_args_);
     }
@@ -107,9 +107,9 @@ struct EventSender {
         set_key_args_.config.peer_addr = ToFidlArray(config->peer_addr);
         set_key_args_.config.key_idx = config->key_idx;
         auto& key = set_key_args_.config.key;
-        key->clear();
-        key->reserve(config->key_len);
-        std::copy_n(config->key, config->key_len, std::back_inserter(*key));
+        key.clear();
+        key.reserve(config->key_len);
+        std::copy_n(config->key, config->key_len, std::back_inserter(key));
         Send(EventOrdinal::SetKey, &set_key_args_);
     }
 
@@ -262,7 +262,7 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
     zx_status_t CreateIface(uint16_t role, uint16_t* id) {
         zxlogf(INFO, "wlantap phy: received a 'CreateIface' DDK request\n");
         wlan_device::MacRole dev_role = ConvertMacRole(role);
-        if (!contains(*phy_config_->phy_info.mac_roles, dev_role)) {
+        if (!contains(phy_config_->phy_info.mac_roles, dev_role)) {
             zxlogf(ERROR, "wlantap phy: CreateIface: role not supported\n");
             return ZX_ERR_NOT_SUPPORTED;
         }
@@ -296,9 +296,9 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
 
     // wlantap::WlantapPhy impl
 
-    virtual void Rx(uint16_t wlanmac_id, ::fidl::VectorPtr<uint8_t> data,
+    virtual void Rx(uint16_t wlanmac_id, ::std::vector<uint8_t> data,
                     wlantap::WlanRxInfo info) override {
-        zxlogf(INFO, "wlantap phy: Rx(%zu bytes)\n", data->size());
+        zxlogf(INFO, "wlantap phy: Rx(%zu bytes)\n", data.size());
         std::lock_guard<std::mutex> guard(wlanmac_lock_);
         if (WlantapMac* wlanmac = wlanmac_devices_.Get(wlanmac_id)) { wlanmac->Rx(data, info); }
         zxlogf(INFO, "wlantap phy: Rx done\n");
@@ -399,7 +399,7 @@ zx_status_t CreatePhy(zx_device_t* wlantapctl, zx::channel user_channel,
                                               .unbind = &WlantapPhy::DdkUnbind,
                                               .release = &WlantapPhy::DdkRelease};
     device_add_args_t args = {.version = DEVICE_ADD_ARGS_VERSION,
-                              .name = phy->phy_config_->name->c_str(),
+                              .name = phy->phy_config_->name.c_str(),
                               .ctx = phy.get(),
                               .ops = &device_ops,
                               .proto_id = ZX_PROTOCOL_WLANPHY_IMPL,

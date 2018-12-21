@@ -23,7 +23,7 @@ void ViewImpl::GetServiceProvider(
 
 void ViewImpl::OfferServiceProvider(
     fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> service_provider,
-    fidl::VectorPtr<fidl::StringPtr> service_names) {
+    std::vector<std::string> service_names) {
   state_->SetServiceProvider(std::move(service_provider),
                              std::move(service_names));
 }
@@ -99,7 +99,7 @@ void ViewImpl::RequestSnapshotHACK(uint32_t child_key,
   registry_->RequestSnapshotHACK(state_, child_key, std::move(callback));
 }
 
-void ViewImpl::ConnectToService(fidl::StringPtr service_name,
+void ViewImpl::ConnectToService(std::string service_name,
                                 zx::channel client_handle) {
   registry_->ConnectToViewService(state_, service_name,
                                   std::move(client_handle));

@@ -539,7 +539,7 @@ void Record::Start(const fxl::CommandLine& command_line) {
 
   fuchsia::tracing::TraceOptions trace_options;
   trace_options.categories =
-      fxl::To<fidl::VectorPtr<fidl::StringPtr>>(options_.categories);
+      fxl::To<fidl::VectorPtr<std::string>>(options_.categories);
   trace_options.buffer_size_megabytes_hint = options_.buffer_size_megabytes;
   // TODO(dje): start_timeout_milliseconds
   trace_options.buffering_mode = options_.buffering_mode;
@@ -661,7 +661,7 @@ void Record::LaunchApp() {
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = fidl::StringPtr(options_.app);
   launch_info.arguments =
-      fxl::To<fidl::VectorPtr<fidl::StringPtr>>(options_.args);
+      fxl::To<fidl::VectorPtr<std::string>>(options_.args);
 
   if (FXL_VLOG_IS_ON(1)) {
     FXL_VLOG(1) << "Launching: " << launch_info.url << " "

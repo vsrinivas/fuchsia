@@ -62,7 +62,7 @@ std::vector<const char*> GetArgv(const std::string& argv0,
   argv.reserve(launch_info.arguments->size() + 2);
   argv.push_back(argv0.c_str());
   for (const auto& argument : *launch_info.arguments)
-    argv.push_back(argument->c_str());
+    argv.push_back(argument.c_str());
   argv.push_back(nullptr);
   return argv;
 }
@@ -100,7 +100,7 @@ zx::process CreateProcess(const zx::job& job, fsl::SizedVmo data,
                           zx::channel loader_service,
                           fdio_flat_namespace_t* flat) {
   TRACE_DURATION("appmgr", "Realm::CreateProcess", "launch_info.url",
-                 launch_info.url.get());
+                 launch_info.url);
   if (!data)
     return zx::process();
 
@@ -433,7 +433,7 @@ void Realm::CreateComponent(
     fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller,
     ComponentObjectCreatedCallback callback) {
   TRACE_DURATION("appmgr", "Realm::CreateComponent", "launch_info.url",
-                 launch_info.url.get());
+                 launch_info.url);
   ComponentRequestWrapper component_request(
       std::move(controller), MakeForwardingTerminationCallback());
   if (launch_info.additional_services &&
@@ -444,7 +444,7 @@ void Realm::CreateComponent(
                                       TerminationReason::UNSUPPORTED);
     return;
   }
-  if (launch_info.url.get().empty()) {
+  if (launch_info.url.empty()) {
     FXL_LOG(ERROR) << "Cannot create application because launch_info contains"
                       " an empty url";
     component_request.SetReturnValues(kComponentCreationFailed,
@@ -562,7 +562,7 @@ void Realm::CreateComponentWithRunnerForScheme(
     ComponentObjectCreatedCallback callback) {
   TRACE_DURATION("appmgr", "Realm::CreateComponentWithRunnerForScheme",
                  "runner_url", runner_url, "launch_info.url",
-                 launch_info.url.get());
+                 launch_info.url);
   // Use "web_runner" if it is installed, otherwise fall back to using
   // "web_runner_prototype" instead.
   // TODO(CP-71): Remove web_runner_prototype scaffolding once there is a real
@@ -609,8 +609,8 @@ void Realm::CreateComponentFromPackage(
     ComponentRequestWrapper component_request,
     ComponentObjectCreatedCallback callback) {
   TRACE_DURATION("appmgr", "Realm::CreateComponentFromPackage",
-                 "package.resolved_url", package->resolved_url.get(),
-                 "launch_info.url", launch_info.url.get());
+                 "package.resolved_url", package->resolved_url,
+                 "launch_info.url", launch_info.url);
   fxl::UniqueFD fd =
       fsl::OpenChannelAsFileDescriptor(std::move(package->directory));
 
@@ -619,7 +619,7 @@ void Realm::CreateComponentFromPackage(
   std::string cmx_path;
   FuchsiaPkgUrl fp;
   bool is_fuchsia_pkg_url = false;
-  if (fp.Parse(package->resolved_url.get())) {
+  if (fp.Parse(package->resolved_url)) {
     if (!fp.resource_path().empty()) {
       // If the url has a resource, assume that's the cmx.
       cmx_path = fp.resource_path();
@@ -633,7 +633,7 @@ void Realm::CreateComponentFromPackage(
       cmx_path = fp.GetDefaultComponentCmxPath();
     }
   } else {
-    FXL_LOG(ERROR) << "invalid component url: " << package->resolved_url.get();
+    FXL_LOG(ERROR) << "invalid component url: " << package->resolved_url;
     component_request.SetReturnValues(kComponentCreationFailed,
                                       TerminationReason::INTERNAL_ERROR);
     return;
@@ -651,7 +651,7 @@ void Realm::CreateComponentFromPackage(
     }
   } else {
     TRACE_DURATION_END("appmgr", "Realm::CreateComponentFromPackage:IsFileAt");
-    FXL_LOG(ERROR) << "Component " << package->resolved_url.get()
+    FXL_LOG(ERROR) << "Component " << package->resolved_url
                    << " does not have a component manifest (a.k.a. cmx file)! "
                    << "Please add a cmx file to your component. "
                    << "https://fuchsia.googlesource.com/docs/+/master/the-book/"
@@ -666,7 +666,7 @@ void Realm::CreateComponentFromPackage(
     std::string pkg_url_error =
         "Component " + fp.GetDefaultComponentName() +
         " was launched without using fuchsia-pkg URLs! Use " +
-        package->resolved_url.get() + "#" + fp.GetDefaultComponentCmxPath() +
+        package->resolved_url + "#" + fp.GetDefaultComponentCmxPath() +
         " instead. See https://fuchsia.googlesource.com/docs/+/master/" +
         "glossary.md#fuchsia_pkg-url for more information.";
     if (!cmx.deprecated_bare_package_url()) {
@@ -710,7 +710,7 @@ void Realm::CreateComponentFromPackage(
     TRACE_DURATION_END("appmgr",
                        "Realm::CreateComponentFromPackage:VmoFromFilenameAt");
     if (!app_data) {
-      FXL_LOG(ERROR) << "component '" << package->resolved_url.get()
+      FXL_LOG(ERROR) << "component '" << package->resolved_url
                      << "' has neither runner (error: '" << runtime_parse_error
                      << "') nor elf binary: '" << bin_path << "'";
       component_request.SetReturnValues(kComponentCreationFailed,
@@ -807,7 +807,7 @@ void Realm::CreateElfBinaryComponentFromPackage(
     ComponentRequestWrapper component_request, fxl::RefPtr<Namespace> ns,
     ComponentObjectCreatedCallback callback) {
   TRACE_DURATION("appmgr", "Realm::CreateElfBinaryComponentFromPackage",
-                 "launch_info.url", launch_info.url.get());
+                 "launch_info.url", launch_info.url);
 
   zx::job child_job;
   zx_status_t status = zx::job::create(job_, 0u, &child_job);
@@ -846,8 +846,8 @@ void Realm::CreateRunnerComponentFromPackage(
     ComponentRequestWrapper component_request, fxl::RefPtr<Namespace> ns,
     fidl::VectorPtr<fuchsia::sys::ProgramMetadata> program_metadata) {
   TRACE_DURATION("appmgr", "Realm::CreateRunnerComponentFromPackage",
-                 "package.resolved_url", package->resolved_url.get(),
-                 "launch_info.url", launch_info.url.get());
+                 "package.resolved_url", package->resolved_url,
+                 "launch_info.url", launch_info.url);
 
   fuchsia::sys::Package inner_package;
   inner_package.resolved_url = package->resolved_url;

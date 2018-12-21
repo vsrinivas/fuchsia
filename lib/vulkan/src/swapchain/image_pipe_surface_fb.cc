@@ -51,10 +51,8 @@ void ImagePipeSurfaceFb::RemoveImage(uint32_t image_id) {
 }
 
 void ImagePipeSurfaceFb::PresentImage(
-    uint32_t image_id, fidl::VectorPtr<zx::event> acquire_fences,
-    fidl::VectorPtr<zx::event> release_fences) {
-  std::vector<zx::event> wait_events = acquire_fences.take();
-  std::vector<zx::event> signal_events = release_fences.take();
+    uint32_t image_id, std::vector<zx::event> wait_events,
+    std::vector<zx::event> signal_events) {
 
   assert(wait_events.size() <= 1);
   assert(signal_events.size() <= 1);

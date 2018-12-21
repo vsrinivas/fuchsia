@@ -68,7 +68,7 @@ class LowEnergyPeripheralServer
       uint32_t interval, bool anonymous,
       StartAdvertisingCallback callback) override;
 
-  void StopAdvertising(::fidl::StringPtr advertisement_id,
+  void StopAdvertising(::std::string advertisement_id,
                        StopAdvertisingCallback callback) override;
   bool StopAdvertisingInternal(const std::string& id);
 

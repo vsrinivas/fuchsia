@@ -113,7 +113,7 @@ class NetworkWrapperImpl::RunningRequest {
   void HandleRedirect(http::URLResponse response) {
     // Follow the redirect if a Location header is found.
     for (const auto& header : *response.headers) {
-      if (fxl::EqualsCaseInsensitiveASCII(header.name.get(), "location")) {
+      if (fxl::EqualsCaseInsensitiveASCII(header.name, "location")) {
         ++redirect_count_;
         if (redirect_count_ >= kMaxRedirectCount) {
           callback_(NewErrorResponse(kTooManyRedirectErrorCode,

@@ -30,6 +30,18 @@ template <> struct IsPrimitive<float> : public std::true_type {};
 template <> struct IsPrimitive<double> : public std::true_type {};
 // clang-format on
 
+template <typename T>
+struct IsStdVector : public std::false_type {};
+
+template <typename V, typename A>
+struct IsStdVector<std::vector<V, A>> : public std::true_type{};
+
+template <typename T>
+struct IsStdString : public std::false_type {};
+
+template <>
+struct IsStdString<std::string> : public std::true_type{};
+
 }  // namespace fidl
 
 #endif  // LIB_FIDL_CPP_TRAITS_H_

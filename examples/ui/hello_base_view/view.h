@@ -36,7 +36,7 @@ class ShadertoyEmbedderView : public scenic::BaseView {
 
  private:
   // |scenic::SessionListener|.
-  void OnScenicError(fidl::StringPtr error) override {}
+  void OnScenicError(std::string error) override {}
 
   async::Loop* const message_loop_;
 

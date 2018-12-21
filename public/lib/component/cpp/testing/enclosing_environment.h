@@ -116,7 +116,7 @@ class EnvironmentServices {
 
   std::unique_ptr<fs::SynchronousVfs> vfs_;
   fbl::RefPtr<fs::PseudoDir> svc_;
-  fidl::VectorPtr<fidl::StringPtr> svc_names_;
+  fidl::VectorPtr<std::string> svc_names_;
   fuchsia::sys::ServiceProviderPtr parent_svc_;
   // Pointer to containing environment. Not owned.
   EnclosingEnvironment* enclosing_env_ = nullptr;

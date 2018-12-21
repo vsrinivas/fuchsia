@@ -58,7 +58,7 @@ class App {
 
   fs::ManagedVfs vfs_;
   fbl::RefPtr<fs::PseudoDir> svc_root_;
-  fidl::VectorPtr<fidl::StringPtr> svc_names_;
+  fidl::VectorPtr<std::string> svc_names_;
 
   std::unique_ptr<DelegatingLoader> app_loader_;
   fidl::BindingSet<fuchsia::sys::Loader> app_loader_bindings_;

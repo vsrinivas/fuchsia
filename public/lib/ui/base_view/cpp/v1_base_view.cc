@@ -107,10 +107,10 @@ void V1BaseView::PresentScene(zx_time_t presentation_time) {
 }
 
 void V1BaseView::HandleSessionEvents(
-    fidl::VectorPtr<fuchsia::ui::scenic::Event> events) {
+    std::vector<fuchsia::ui::scenic::Event> events) {
   const fuchsia::ui::gfx::Metrics* new_metrics = nullptr;
-  for (size_t i = 0; i < events->size(); ++i) {
-    const auto& event = (*events)[i];
+  for (size_t i = 0; i < events.size(); ++i) {
+    const auto& event = events[i];
     if (event.is_gfx()) {
       const fuchsia::ui::gfx::Event& scenic_event = event.gfx();
       if (scenic_event.is_metrics() &&
@@ -119,12 +119,12 @@ void V1BaseView::HandleSessionEvents(
       }
     } else if (event.is_input()) {
       // Act on input event just once.
-      OnInputEvent(std::move((*events)[i].input()));
+      OnInputEvent(std::move(events[i].input()));
       // Create a dummy event to safely take its place.
       fuchsia::ui::scenic::Command unhandled;
       fuchsia::ui::scenic::Event unhandled_event;
       unhandled_event.set_unhandled(std::move(unhandled));
-      (*events)[i] = std::move(unhandled_event);
+      events[i] = std::move(unhandled_event);
     }
   }
 
@@ -163,7 +163,7 @@ void V1BaseView::OnSceneInvalidated(
     fuchsia::images::PresentationInfo presentation_info) {}
 
 void V1BaseView::OnScenicEvent(
-    fidl::VectorPtr<fuchsia::ui::scenic::Event> events) {}
+    std::vector<fuchsia::ui::scenic::Event> events) {}
 
 bool V1BaseView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
   return false;

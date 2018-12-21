@@ -39,7 +39,7 @@ class PlayerImpl : public fuchsia::mediaplayer::Player {
 
   // Player implementation.
   void SetHttpSource(
-      fidl::StringPtr http_url,
+      std::string http_url,
       fidl::VectorPtr<fuchsia::net::oldhttp::HttpHeader> headers) override;
 
   void SetFileSource(zx::channel file_channel) override;
@@ -64,7 +64,7 @@ class PlayerImpl : public fuchsia::mediaplayer::Player {
       fidl::InterfaceRequest<fuchsia::mediaplayer::Player> request) override;
 
   void CreateHttpSource(
-      fidl::StringPtr http_url,
+      std::string http_url,
       fidl::VectorPtr<fuchsia::net::oldhttp::HttpHeader> headers,
       fidl::InterfaceRequest<fuchsia::mediaplayer::Source> source_request)
       override;

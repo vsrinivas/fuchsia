@@ -25,8 +25,8 @@ class ImagePipeHandler : public fuchsia::images::ImagePipe {
   void RemoveImage(uint32_t image_id) override;
 
   void PresentImage(uint32_t image_id, uint64_t presentation_time,
-                    ::fidl::VectorPtr<zx::event> acquire_fences,
-                    ::fidl::VectorPtr<zx::event> release_fences,
+                    ::std::vector<zx::event> acquire_fences,
+                    ::std::vector<zx::event> release_fences,
                     PresentImageCallback callback) override;
 
   ::fidl::Binding<fuchsia::images::ImagePipe> binding_;

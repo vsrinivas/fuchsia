@@ -141,7 +141,7 @@ void LowEnergyPeripheralServer::StartAdvertising(
 }
 
 void LowEnergyPeripheralServer::StopAdvertising(
-    ::fidl::StringPtr id, StopAdvertisingCallback callback) {
+    ::std::string id, StopAdvertisingCallback callback) {
   if (StopAdvertisingInternal(id)) {
     callback(Status());
   } else {

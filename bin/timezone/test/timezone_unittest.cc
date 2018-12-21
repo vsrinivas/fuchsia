@@ -106,10 +106,10 @@ TEST_F(TimezoneUnitTest, SetTimezone_GetTimezoneOffsetMinutes) {
 
 class TimezoneWatcherForTest : TimezoneWatcher {
  public:
-  void OnTimezoneOffsetChange(fidl::StringPtr timezone_id) {
+  void OnTimezoneOffsetChange(std::string timezone_id) override {
     last_seen_timezone = timezone_id;
   }
-  fidl::StringPtr last_seen_timezone;
+  std::string last_seen_timezone;
   void AddBinding(fidl::InterfaceRequest<TimezoneWatcher> request) {
     bindings_.AddBinding(this, std::move(request));
   }
@@ -126,7 +126,7 @@ TEST_F(TimezoneUnitTest, SetTimezone_Watcher) {
   auto timezone_ptr = timezone();
   timezone_ptr->Watch(watcher_ptr.Unbind());
   RunLoopUntilIdle();
-  fidl::StringPtr expected_timezone = "America/Los_Angeles";
+  std::string expected_timezone = "America/Los_Angeles";
   ASSERT_NE(expected_timezone, watcher.last_seen_timezone);
 
   bool success = false;

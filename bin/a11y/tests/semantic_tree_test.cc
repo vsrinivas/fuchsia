@@ -72,8 +72,8 @@ TEST_F(SemanticTreeTest, NodeUpdateDelete) {
       tree_.GetAccessibilityNode(view_id, 0);
   EXPECT_NE(returned_node, nullptr);
   EXPECT_EQ(node.node_id, returned_node->node_id);
-  EXPECT_STREQ(node.data.label.get().data(),
-               returned_node->data.label.get().data());
+  EXPECT_STREQ(node.data.label.data(),
+               returned_node->data.label.data());
 
   // Deleting: The node should be deleted and not be found.
   fidl::VectorPtr<int32_t> delete_nodes;

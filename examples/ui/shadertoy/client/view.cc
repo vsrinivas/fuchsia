@@ -275,7 +275,7 @@ void NewView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
   }
 }
 
-void NewView::OnScenicError(::fidl::StringPtr error) {
+void NewView::OnScenicError(::std::string error) {
   FXL_LOG(ERROR) << "Received Scenic Session error: " << error;
 }
 

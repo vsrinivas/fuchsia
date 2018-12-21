@@ -34,38 +34,45 @@ class {{ .Name }} {
   static void Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t offset);
   zx_status_t Clone({{ .Name }}* result) const;
 
-  bool has_invalid_tag() const { return tag_ == ::std::numeric_limits<::fidl_union_tag_t>::max(); }
+  bool has_invalid_tag() const { return Which() == Tag::Invalid; }
 
   {{- range $index, $member := .Members }}
 
-  bool is_{{ .Name }}() const { return tag_ == {{ $index }}; }
+  bool is_{{ .Name }}() const { return Which() == Tag({{ $index }}); }
   {{range .DocComments}}
   //{{ . }}
   {{- end}}
   {{ .Type.Decl }}& {{ .Name }}() {
-    EnsureStorageInitialized({{ $index }});
-    return {{ .StorageName }};
+    if (!is_{{ .Name }}()) {
+      value_.emplace<{{ $index }} + 1>();
+    }
+    return value_.template get<{{ $index }} + 1>();
   }
   {{range .DocComments}}
   //{{ . }}
   {{- end}}
-  const {{ .Type.Decl }}& {{ .Name }}() const { return {{ .StorageName }}; }
+  const {{ .Type.Decl }}& {{ .Name }}() const { return value_.template get<{{ $index }} + 1>(); }
   void set_{{ .Name }}({{ .Type.Decl }} value);
   {{- end }}
 
-  Tag Which() const { return Tag(tag_); }
+  Tag Which() const {
+    size_t index = value_.index();
+    if (index == 0) {
+      return Tag::Invalid;
+    } else {
+      return Tag(index - 1);
+    }
+  }
 
  private:
   friend bool operator==(const {{ .Name }}& lhs, const {{ .Name }}& rhs);
-  void Destroy();
-  void EnsureStorageInitialized(::fidl_union_tag_t tag);
 
-  ::fidl_union_tag_t tag_;
-  union {
-  {{- range .Members }}
-    {{ .Type.Decl }} {{ .StorageName }};
-  {{- end }}
-  };
+  using Variant = fit::internal::variant<fit::internal::monostate
+  {{- range .Members -}}
+    , {{ .Type.Decl -}}
+  {{- end -}}
+  >;
+  Variant value_;
 };
 
 bool operator==(const {{ .Name }}& lhs, const {{ .Name }}& rhs);
@@ -82,53 +89,28 @@ using {{ .Name }}Ptr = ::std::unique_ptr<{{ .Name }}>;
 {{- end }}
 
 {{- define "UnionDefinition" }}
-{{ .Name }}::{{ .Name }}() : tag_(::std::numeric_limits<::fidl_union_tag_t>::max()) {}
+{{ .Name }}::{{ .Name }}() : value_() {}
 
 {{ .Name }}::~{{ .Name }}() {
-  Destroy();
 }
 
-{{ .Name }}::{{ .Name }}({{ .Name }}&& other) : tag_(other.tag_) {
-  switch (tag_) {
-  {{- range $index, $member := .Members }}
-   case {{ $index }}:
-    {{- if .Type.Dtor }}
-    new (&{{ .StorageName }}) {{ .Type.Decl }}();
-    {{- end }}
-    {{ .StorageName }} = std::move(other.{{ .StorageName }});
-    break;
-  {{- end }}
-   default:
-    break;
-  }
+{{ .Name }}::{{ .Name }}({{ .Name }}&& other) : value_(std::move(other.value_)) {
 }
 
 {{ .Name }}& {{ .Name }}::operator=({{ .Name }}&& other) {
   if (this != &other) {
-    Destroy();
-    tag_ = other.tag_;
-    switch (tag_) {
-    {{- range $index, $member := .Members }}
-     case {{ $index }}:
-      {{- if .Type.Dtor }}
-      new (&{{ .StorageName }}) {{ .Type.Decl }}();
-      {{- end }}
-      {{ .StorageName }} = std::move(other.{{ .StorageName }});
-      break;
-    {{- end }}
-     default:
-      break;
-    }
+    value_ = std::move(other.value_);
   }
   return *this;
 }
 
 void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset) {
-  ::fidl::Encode(encoder, &tag_, offset);
-  switch (tag_) {
+  fidl_union_tag_t tag = static_cast<fidl_union_tag_t>(Which());
+  ::fidl::Encode(encoder, &tag, offset);
+  switch (tag) {
   {{- range $index, $member := .Members }}
    case {{ $index }}:
-    ::fidl::Encode(encoder, &{{ .StorageName }}, offset + {{ .Offset }});
+    ::fidl::Encode(encoder, &{{ .Name }}(), offset + {{ .Offset }});
     break;
   {{- end }}
    default:
@@ -137,48 +119,54 @@ void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset) {
 }
 
 void {{ .Name }}::Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t offset) {
-  value->Destroy();
-  ::fidl::Decode(decoder, &value->tag_, offset);
-  switch (value->tag_) {
+  fidl_union_tag_t tag;
+  ::fidl::Decode(decoder, &tag, offset);
+  switch (tag) {
   {{- range $index, $member := .Members }}
    case {{ $index }}:
-    {{- if .Type.Dtor }}
-    new (&value->{{ .StorageName }}) {{ .Type.Decl }}();
-    {{- end }}
-    ::fidl::Decode(decoder, &value->{{ .StorageName }}, offset + {{ .Offset }});
-    break;
+    {
+      {{ .Type.Decl }} member{};
+      ::fidl::Decode(decoder, &member, offset + {{ .Offset }});
+      value->set_{{ .Name }}(std::move(member));
+      break;
+    }
   {{- end }}
    default:
-    break;
+    value->value_.emplace<0>();
   }
 }
 
 zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
-  result->Destroy();
-  result->tag_ = tag_;
-  switch (tag_) {
+  zx_status_t status = ZX_OK;
+  switch (Which()) {
     {{- range $index, $member := .Members }}
-    case {{ $index }}:
-      {{- if .Type.Dtor }}
-      new (&result->{{ .StorageName }}) {{ .Type.Decl }}();
-      {{- end }}
-      return ::fidl::Clone({{ .StorageName }}, &result->{{ .StorageName }});
+    case Tag::{{ .TagName }}:
+      {
+        {{ .Type.Decl }} member{};
+        status = ::fidl::Clone({{ .Name }}(), &member);
+        if (status == ZX_OK) {
+	  result->set_{{ .Name }}(std::move(member));
+        }
+      }
+      break;
     {{- end }}
-    default:
-      return ZX_OK;
+    case Tag::Invalid:
+      result->value_.emplace<0>();
+      break;
   }
+  return status;
 }
 
 bool operator==(const {{ .Name }}& lhs, const {{ .Name }}& rhs) {
-  if (lhs.tag_ != rhs.tag_) {
+  if (lhs.Which() != rhs.Which()) {
     return false;
   }
-  switch (lhs.tag_) {
+  switch (lhs.Which()) {
     {{- range $index, $member := .Members }}
-    case {{ $index }}:
-      return ::fidl::Equals(lhs.{{ .StorageName }}, rhs.{{ .StorageName }});
+    case {{ $.Name }}::Tag::{{ .TagName }}:
+      return ::fidl::Equals(lhs.{{ .Name }}(), rhs.{{ .Name }}());
     {{- end }}
-    case ::std::numeric_limits<::fidl_union_tag_t>::max():
+    case {{ .Name }}::Tag::Invalid:
       return true;
     default:
       return false;
@@ -188,44 +176,10 @@ bool operator==(const {{ .Name }}& lhs, const {{ .Name }}& rhs) {
 {{- range $index, $member := .Members }}
 
 void {{ $.Name }}::set_{{ .Name }}({{ .Type.Decl }} value) {
-  EnsureStorageInitialized({{ $index }});
-  {{ .StorageName }} = std::move(value);
+  value_.emplace<static_cast<size_t>(Tag::{{ .TagName }}) + 1>(std::move(value));
 }
 
 {{- end }}
-
-void {{ .Name }}::Destroy() {
-  switch (tag_) {
-  {{- range $index, $member := .Members }}
-   case {{ $index }}:
-    {{- if .Type.Dtor }}
-    {{ .StorageName }}.{{ .Type.Dtor }}();
-    {{- end }}
-    break;
-  {{- end }}
-   default:
-    break;
-  }
-  tag_ = ::std::numeric_limits<::fidl_union_tag_t>::max();
-}
-
-void {{ .Name }}::EnsureStorageInitialized(::fidl_union_tag_t tag) {
-  if (tag_ != tag) {
-    Destroy();
-    tag_ = tag;
-    switch (tag_) {
-      {{- range $index, $member := .Members }}
-      {{- if .Type.Dtor }}
-      case {{ $index }}:
-        new (&{{ .StorageName }}) {{ .Type.Decl }}();
-        break;
-      {{- end }}
-      {{- end }}
-      default:
-        break;
-    }
-  }
-}
 
 {{- end }}
 

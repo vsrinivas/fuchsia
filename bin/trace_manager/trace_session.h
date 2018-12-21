@@ -39,7 +39,7 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
   // |abort_handler| is invoked whenever the session encounters
   // unrecoverable errors that render the session dead.
   explicit TraceSession(zx::socket destination,
-                        fidl::VectorPtr<fidl::StringPtr> categories,
+                        std::vector<std::string> categories,
                         size_t trace_buffer_size,
                         fuchsia::tracelink::BufferingMode buffering_mode,
                         fit::closure abort_handler);
@@ -85,7 +85,7 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
 
   State state_ = State::kReady;
   zx::socket destination_;
-  fidl::VectorPtr<fidl::StringPtr> categories_;
+  fidl::VectorPtr<std::string> categories_;
   size_t trace_buffer_size_;
   fuchsia::tracelink::BufferingMode buffering_mode_;
   std::list<std::unique_ptr<Tracee>> tracees_;

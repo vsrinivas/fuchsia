@@ -480,7 +480,7 @@ class VolApp {
       return ChooseDeviceToControl([uid_ptr = selected_uid_.c_str(),
                                     uid_len = selected_uid_.length()](
                                        const AudioDeviceInfo& info) -> bool {
-        return (strncmp(info.unique_id.get().c_str(), uid_ptr, uid_len) == 0);
+        return (strncmp(info.unique_id.c_str(), uid_ptr, uid_len) == 0);
       });
     } else if (selected_token_ != ZX_KOID_INVALID) {
       return ChooseDeviceToControl(

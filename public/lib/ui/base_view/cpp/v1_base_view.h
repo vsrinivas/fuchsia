@@ -133,7 +133,7 @@ class V1BaseView : private ::fuchsia::ui::viewsv1::ViewListener,
   //
   // The default implementation does nothing.
   virtual void OnScenicEvent(
-      fidl::VectorPtr<fuchsia::ui::scenic::Event> events);
+      std::vector<fuchsia::ui::scenic::Event> events);
 
   // Called to handle an input event.
   // Returns true if the view will handle the event, false if the event
@@ -175,7 +175,7 @@ class V1BaseView : private ::fuchsia::ui::viewsv1::ViewListener,
                           OnChildUnavailableCallback callback) override;
 
   void PresentScene(zx_time_t presentation_time);
-  void HandleSessionEvents(fidl::VectorPtr<fuchsia::ui::scenic::Event> events);
+  void HandleSessionEvents(std::vector<fuchsia::ui::scenic::Event> events);
   void AdjustMetricsAndPhysicalSize();
 
   component::StartupContext* const startup_context_;

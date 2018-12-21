@@ -12,14 +12,11 @@ SystemDataUpdaterImpl::SystemDataUpdaterImpl(encoder::SystemData* system_data)
     : system_data_(system_data) {}
 
 void SystemDataUpdaterImpl::SetExperimentState(
-    fidl::VectorPtr<fuchsia::cobalt::Experiment> experiments,
+    std::vector<fuchsia::cobalt::Experiment> experiments,
     SetExperimentStateCallback callback) {
-  if (experiments.is_null()) {
-    callback(Status::INVALID_ARGUMENTS);
-  }
 
   std::vector<Experiment> experiment_proto_vector;
-  for (const auto& experiment_fidl : experiments.get()) {
+  for (const auto& experiment_fidl : experiments) {
     Experiment experiment_proto;
     experiment_proto.set_experiment_id(experiment_fidl.experiment_id);
     experiment_proto.set_arm_id(experiment_fidl.arm_id);

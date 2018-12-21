@@ -32,16 +32,16 @@ class PackageResolverMock : public fuchsia::pkg::PackageResolver {
  public:
   explicit PackageResolverMock(zx_status_t status) : status_(status) {}
 
-  virtual void Resolve(::fidl::StringPtr package_uri,
-                       ::fidl::VectorPtr<::fidl::StringPtr> selectors,
+  virtual void Resolve(::std::string package_uri,
+                       ::std::vector<::std::string> selectors,
                        fuchsia::pkg::UpdatePolicy update_policy,
                        ::fidl::InterfaceRequest<fuchsia::io::Directory> dir,
                        ResolveCallback callback) override {
     std::vector<std::string> v_selectors;
-    for (const auto& s : selectors.get()) {
-      v_selectors.push_back(s.get());
+    for (const auto& s : selectors) {
+      v_selectors.push_back(s);
     }
-    args_ = std::make_tuple(package_uri.get(), v_selectors, update_policy);
+    args_ = std::make_tuple(package_uri, v_selectors, update_policy);
     dir_channels_.push_back(dir.TakeChannel());
     callback(status_);
   }
@@ -69,7 +69,7 @@ class ServiceProviderMock : fuchsia::sys::ServiceProvider {
   explicit ServiceProviderMock(PackageResolverMock* resolver_service)
       : num_connections_made_(0), resolver_service_(resolver_service) {}
 
-  void ConnectToService(::fidl::StringPtr service_name,
+  void ConnectToService(::std::string service_name,
                         ::zx::channel channel) override {
     if (service_name != fuchsia::pkg::PackageResolver::Name_) {
       FXL_LOG(FATAL) << "ServiceProviderMock asked to connect to '"

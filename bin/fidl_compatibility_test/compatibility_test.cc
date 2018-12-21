@@ -139,96 +139,96 @@ void ExpectEq(const Struct& a, const Struct& b) {
     }
   }
   // vectors
-  EXPECT_EQ(a.vectors.b_0.get(), b.vectors.b_0.get());
-  EXPECT_EQ(a.vectors.i8_0.get(), b.vectors.i8_0.get());
-  EXPECT_EQ(a.vectors.i16_0.get(), b.vectors.i16_0.get());
-  EXPECT_EQ(a.vectors.i32_0.get(), b.vectors.i32_0.get());
-  EXPECT_EQ(a.vectors.i64_0.get(), b.vectors.i64_0.get());
-  EXPECT_EQ(a.vectors.u8_0.get(), b.vectors.u8_0.get());
-  EXPECT_EQ(a.vectors.u16_0.get(), b.vectors.u16_0.get());
-  EXPECT_EQ(a.vectors.u32_0.get(), b.vectors.u32_0.get());
-  EXPECT_EQ(a.vectors.u64_0.get(), b.vectors.u64_0.get());
-  EXPECT_EQ(a.vectors.f32_0.get(), b.vectors.f32_0.get());
-  EXPECT_EQ(a.vectors.f64_0.get(), b.vectors.f64_0.get());
+  EXPECT_EQ(a.vectors.b_0, b.vectors.b_0);
+  EXPECT_EQ(a.vectors.i8_0, b.vectors.i8_0);
+  EXPECT_EQ(a.vectors.i16_0, b.vectors.i16_0);
+  EXPECT_EQ(a.vectors.i32_0, b.vectors.i32_0);
+  EXPECT_EQ(a.vectors.i64_0, b.vectors.i64_0);
+  EXPECT_EQ(a.vectors.u8_0, b.vectors.u8_0);
+  EXPECT_EQ(a.vectors.u16_0, b.vectors.u16_0);
+  EXPECT_EQ(a.vectors.u32_0, b.vectors.u32_0);
+  EXPECT_EQ(a.vectors.u64_0, b.vectors.u64_0);
+  EXPECT_EQ(a.vectors.f32_0, b.vectors.f32_0);
+  EXPECT_EQ(a.vectors.f64_0, b.vectors.f64_0);
   for (uint8_t i = 0; i < kArbitraryVectorSize; ++i) {
     EXPECT_TRUE(
-        HandlesEq(a.vectors.handle_0.get()[i], b.vectors.handle_0.get()[i]));
+        HandlesEq(a.vectors.handle_0[i], b.vectors.handle_0[i]));
   }
 
   for (uint8_t i = 0; i < kArbitraryVectorSize; ++i) {
-    EXPECT_EQ(a.vectors.b_1.get()[i].get(), b.vectors.b_1.get()[i].get());
-    EXPECT_EQ(a.vectors.i8_1.get()[i].get(), b.vectors.i8_1.get()[i].get());
-    EXPECT_EQ(a.vectors.i16_1.get()[i].get(), b.vectors.i16_1.get()[i].get());
-    EXPECT_EQ(a.vectors.i32_1.get()[i].get(), b.vectors.i32_1.get()[i].get());
-    EXPECT_EQ(a.vectors.i64_1.get()[i].get(), b.vectors.i64_1.get()[i].get());
-    EXPECT_EQ(a.vectors.u8_1.get()[i].get(), b.vectors.u8_1.get()[i].get());
-    EXPECT_EQ(a.vectors.u16_1.get()[i].get(), b.vectors.u16_1.get()[i].get());
-    EXPECT_EQ(a.vectors.u32_1.get()[i].get(), b.vectors.u32_1.get()[i].get());
-    EXPECT_EQ(a.vectors.u64_1.get()[i].get(), b.vectors.u64_1.get()[i].get());
-    EXPECT_EQ(a.vectors.f32_1.get()[i].get(), b.vectors.f32_1.get()[i].get());
-    EXPECT_EQ(a.vectors.f64_1.get()[i].get(), b.vectors.f64_1.get()[i].get());
+    EXPECT_EQ(a.vectors.b_1[i], b.vectors.b_1[i]);
+    EXPECT_EQ(a.vectors.i8_1[i], b.vectors.i8_1[i]);
+    EXPECT_EQ(a.vectors.i16_1[i], b.vectors.i16_1[i]);
+    EXPECT_EQ(a.vectors.i32_1[i], b.vectors.i32_1[i]);
+    EXPECT_EQ(a.vectors.i64_1[i], b.vectors.i64_1[i]);
+    EXPECT_EQ(a.vectors.u8_1[i], b.vectors.u8_1[i]);
+    EXPECT_EQ(a.vectors.u16_1[i], b.vectors.u16_1[i]);
+    EXPECT_EQ(a.vectors.u32_1[i], b.vectors.u32_1[i]);
+    EXPECT_EQ(a.vectors.u64_1[i], b.vectors.u64_1[i]);
+    EXPECT_EQ(a.vectors.f32_1[i], b.vectors.f32_1[i]);
+    EXPECT_EQ(a.vectors.f64_1[i], b.vectors.f64_1[i]);
     for (uint8_t j = 0; j < kArbitraryConstant; ++j) {
-      EXPECT_TRUE(HandlesEq(a.vectors.handle_1.get()[i].get()[j],
-                            b.vectors.handle_1.get()[i].get()[j]));
+      EXPECT_TRUE(HandlesEq(a.vectors.handle_1[i][j],
+                            b.vectors.handle_1[i][j]));
     }
   }
 
-  EXPECT_EQ(a.vectors.b_sized_0.get(), b.vectors.b_sized_0.get());
-  EXPECT_EQ(a.vectors.i8_sized_0.get(), b.vectors.i8_sized_0.get());
-  EXPECT_EQ(a.vectors.i16_sized_0.get(), b.vectors.i16_sized_0.get());
-  EXPECT_EQ(a.vectors.i32_sized_0.get(), b.vectors.i32_sized_0.get());
-  EXPECT_EQ(a.vectors.i64_sized_0.get(), b.vectors.i64_sized_0.get());
-  EXPECT_EQ(a.vectors.u8_sized_0.get(), b.vectors.u8_sized_0.get());
-  EXPECT_EQ(a.vectors.u16_sized_0.get(), b.vectors.u16_sized_0.get());
-  EXPECT_EQ(a.vectors.u32_sized_0.get(), b.vectors.u32_sized_0.get());
-  EXPECT_EQ(a.vectors.u64_sized_0.get(), b.vectors.u64_sized_0.get());
-  EXPECT_EQ(a.vectors.f32_sized_0.get(), b.vectors.f32_sized_0.get());
-  EXPECT_EQ(a.vectors.f64_sized_0.get(), b.vectors.f64_sized_0.get());
-  EXPECT_TRUE(HandlesEq(a.vectors.handle_sized_0.get()[0],
-                        b.vectors.handle_sized_0.get()[0]));
+  EXPECT_EQ(a.vectors.b_sized_0, b.vectors.b_sized_0);
+  EXPECT_EQ(a.vectors.i8_sized_0, b.vectors.i8_sized_0);
+  EXPECT_EQ(a.vectors.i16_sized_0, b.vectors.i16_sized_0);
+  EXPECT_EQ(a.vectors.i32_sized_0, b.vectors.i32_sized_0);
+  EXPECT_EQ(a.vectors.i64_sized_0, b.vectors.i64_sized_0);
+  EXPECT_EQ(a.vectors.u8_sized_0, b.vectors.u8_sized_0);
+  EXPECT_EQ(a.vectors.u16_sized_0, b.vectors.u16_sized_0);
+  EXPECT_EQ(a.vectors.u32_sized_0, b.vectors.u32_sized_0);
+  EXPECT_EQ(a.vectors.u64_sized_0, b.vectors.u64_sized_0);
+  EXPECT_EQ(a.vectors.f32_sized_0, b.vectors.f32_sized_0);
+  EXPECT_EQ(a.vectors.f64_sized_0, b.vectors.f64_sized_0);
+  EXPECT_TRUE(HandlesEq(a.vectors.handle_sized_0[0],
+                        b.vectors.handle_sized_0[0]));
 
-  EXPECT_EQ(a.vectors.b_sized_1.get(), b.vectors.b_sized_1.get());
-  EXPECT_EQ(a.vectors.i8_sized_1.get(), b.vectors.i8_sized_1.get());
-  EXPECT_EQ(a.vectors.i16_sized_1.get(), b.vectors.i16_sized_1.get());
-  EXPECT_EQ(a.vectors.i32_sized_1.get(), b.vectors.i32_sized_1.get());
-  EXPECT_EQ(a.vectors.i64_sized_1.get(), b.vectors.i64_sized_1.get());
-  EXPECT_EQ(a.vectors.u8_sized_1.get(), b.vectors.u8_sized_1.get());
-  EXPECT_EQ(a.vectors.u16_sized_1.get(), b.vectors.u16_sized_1.get());
-  EXPECT_EQ(a.vectors.u32_sized_1.get(), b.vectors.u32_sized_1.get());
-  EXPECT_EQ(a.vectors.u64_sized_1.get(), b.vectors.u64_sized_1.get());
-  EXPECT_EQ(a.vectors.f32_sized_1.get(), b.vectors.f32_sized_1.get());
-  EXPECT_EQ(a.vectors.f64_sized_1.get(), b.vectors.f64_sized_1.get());
+  EXPECT_EQ(a.vectors.b_sized_1, b.vectors.b_sized_1);
+  EXPECT_EQ(a.vectors.i8_sized_1, b.vectors.i8_sized_1);
+  EXPECT_EQ(a.vectors.i16_sized_1, b.vectors.i16_sized_1);
+  EXPECT_EQ(a.vectors.i32_sized_1, b.vectors.i32_sized_1);
+  EXPECT_EQ(a.vectors.i64_sized_1, b.vectors.i64_sized_1);
+  EXPECT_EQ(a.vectors.u8_sized_1, b.vectors.u8_sized_1);
+  EXPECT_EQ(a.vectors.u16_sized_1, b.vectors.u16_sized_1);
+  EXPECT_EQ(a.vectors.u32_sized_1, b.vectors.u32_sized_1);
+  EXPECT_EQ(a.vectors.u64_sized_1, b.vectors.u64_sized_1);
+  EXPECT_EQ(a.vectors.f32_sized_1, b.vectors.f32_sized_1);
+  EXPECT_EQ(a.vectors.f64_sized_1, b.vectors.f64_sized_1);
   for (uint32_t i = 0; i < fidl::test::compatibility::vectors_size; ++i) {
-    EXPECT_TRUE(HandlesEq(a.vectors.handle_sized_1.get()[i],
-                          b.vectors.handle_sized_1.get()[i]));
+    EXPECT_TRUE(HandlesEq(a.vectors.handle_sized_1[i],
+                          b.vectors.handle_sized_1[i]));
   }
 
   for (uint32_t i = 0; i < fidl::test::compatibility::vectors_size; ++i) {
-    EXPECT_EQ(a.vectors.b_sized_2.get()[i].get(),
-              b.vectors.b_sized_2.get()[i].get());
-    EXPECT_EQ(a.vectors.i8_sized_2.get()[i].get(),
-              b.vectors.i8_sized_2.get()[i].get());
-    EXPECT_EQ(a.vectors.i16_sized_2.get()[i].get(),
-              b.vectors.i16_sized_2.get()[i].get());
-    EXPECT_EQ(a.vectors.i32_sized_2.get()[i].get(),
-              b.vectors.i32_sized_2.get()[i].get());
-    EXPECT_EQ(a.vectors.i64_sized_2.get()[i].get(),
-              b.vectors.i64_sized_2.get()[i].get());
-    EXPECT_EQ(a.vectors.u8_sized_2.get()[i].get(),
-              b.vectors.u8_sized_2.get()[i].get());
-    EXPECT_EQ(a.vectors.u16_sized_2.get()[i].get(),
-              b.vectors.u16_sized_2.get()[i].get());
-    EXPECT_EQ(a.vectors.u32_sized_2.get()[i].get(),
-              b.vectors.u32_sized_2.get()[i].get());
-    EXPECT_EQ(a.vectors.u64_sized_2.get()[i].get(),
-              b.vectors.u64_sized_2.get()[i].get());
-    EXPECT_EQ(a.vectors.f32_sized_2.get()[i].get(),
-              b.vectors.f32_sized_2.get()[i].get());
-    EXPECT_EQ(a.vectors.f64_sized_2.get()[i].get(),
-              b.vectors.f64_sized_2.get()[i].get());
+    EXPECT_EQ(a.vectors.b_sized_2[i],
+              b.vectors.b_sized_2[i]);
+    EXPECT_EQ(a.vectors.i8_sized_2[i],
+              b.vectors.i8_sized_2[i]);
+    EXPECT_EQ(a.vectors.i16_sized_2[i],
+              b.vectors.i16_sized_2[i]);
+    EXPECT_EQ(a.vectors.i32_sized_2[i],
+              b.vectors.i32_sized_2[i]);
+    EXPECT_EQ(a.vectors.i64_sized_2[i],
+              b.vectors.i64_sized_2[i]);
+    EXPECT_EQ(a.vectors.u8_sized_2[i],
+              b.vectors.u8_sized_2[i]);
+    EXPECT_EQ(a.vectors.u16_sized_2[i],
+              b.vectors.u16_sized_2[i]);
+    EXPECT_EQ(a.vectors.u32_sized_2[i],
+              b.vectors.u32_sized_2[i]);
+    EXPECT_EQ(a.vectors.u64_sized_2[i],
+              b.vectors.u64_sized_2[i]);
+    EXPECT_EQ(a.vectors.f32_sized_2[i],
+              b.vectors.f32_sized_2[i]);
+    EXPECT_EQ(a.vectors.f64_sized_2[i],
+              b.vectors.f64_sized_2[i]);
     for (uint8_t j = 0; j < kArbitraryConstant; ++j) {
-      EXPECT_TRUE(HandlesEq(a.vectors.handle_sized_2.get()[i].get()[j],
-                            b.vectors.handle_sized_2.get()[i].get()[j]));
+      EXPECT_TRUE(HandlesEq(a.vectors.handle_sized_2[i][j],
+                            b.vectors.handle_sized_2[i][j]));
     }
   }
 
@@ -281,8 +281,8 @@ void ExpectEq(const Struct& a, const Struct& b) {
             b.vectors.handle_nullable_1.is_null());
 
   for (uint8_t i = 0; i < kArbitraryVectorSize; ++i) {
-    EXPECT_EQ(a.vectors.i8_nullable_1.get()[i].get(),
-              b.vectors.i8_nullable_1.get()[i].get());
+    EXPECT_EQ(a.vectors.i8_nullable_1.get()[i],
+              b.vectors.i8_nullable_1.get()[i]);
   }
 
   EXPECT_EQ(a.vectors.b_nullable_sized_0.is_null(),
@@ -369,8 +369,8 @@ void ExpectEq(const Struct& a, const Struct& b) {
   for (uint32_t i = 0; i < fidl::test::compatibility::vectors_size; ++i) {
     for (uint8_t j = 0; j < kArbitraryConstant; ++j) {
       EXPECT_TRUE(
-          HandlesEq(a.vectors.handle_nullable_sized_2.get()[i].get()[j],
-                    b.vectors.handle_nullable_sized_2.get()[i].get()[j]));
+          HandlesEq(a.vectors.handle_nullable_sized_2.get()[i][j],
+                    b.vectors.handle_nullable_sized_2.get()[i][j]));
     }
   }
 
@@ -609,78 +609,78 @@ void Initialize(Struct* s) {
     for (uint8_t i = 0; i < kArbitraryVectorSize; ++i) {
       underlying_vec.emplace_back(Handle());
     }
-    s->vectors.handle_0 = VectorPtr<zx::handle>(std::move(underlying_vec));
+    s->vectors.handle_0 = std::vector<zx::handle>(std::move(underlying_vec));
   }
 
   {
-    std::vector<VectorPtr<bool>> bool_outer_vector;
-    std::vector<VectorPtr<int8_t>> int8_outer_vector;
-    std::vector<VectorPtr<int16_t>> int16_outer_vector;
-    std::vector<VectorPtr<int32_t>> int32_outer_vector;
-    std::vector<VectorPtr<int64_t>> int64_outer_vector;
-    std::vector<VectorPtr<uint8_t>> uint8_outer_vector;
-    std::vector<VectorPtr<uint16_t>> uint16_outer_vector;
-    std::vector<VectorPtr<uint32_t>> uint32_outer_vector;
-    std::vector<VectorPtr<uint64_t>> uint64_outer_vector;
-    std::vector<VectorPtr<float>> float_outer_vector;
-    std::vector<VectorPtr<double>> double_outer_vector;
-    std::vector<VectorPtr<zx::handle>> handle_outer_vector;
+    std::vector<std::vector<bool>> bool_outer_vector;
+    std::vector<std::vector<int8_t>> int8_outer_vector;
+    std::vector<std::vector<int16_t>> int16_outer_vector;
+    std::vector<std::vector<int32_t>> int32_outer_vector;
+    std::vector<std::vector<int64_t>> int64_outer_vector;
+    std::vector<std::vector<uint8_t>> uint8_outer_vector;
+    std::vector<std::vector<uint16_t>> uint16_outer_vector;
+    std::vector<std::vector<uint32_t>> uint32_outer_vector;
+    std::vector<std::vector<uint64_t>> uint64_outer_vector;
+    std::vector<std::vector<float>> float_outer_vector;
+    std::vector<std::vector<double>> double_outer_vector;
+    std::vector<std::vector<zx::handle>> handle_outer_vector;
     for (uint8_t i = 0; i < kArbitraryVectorSize; ++i) {
-      bool_outer_vector.emplace_back(VectorPtr<bool>(std::vector<bool>(
+      bool_outer_vector.emplace_back(std::vector<bool>(std::vector<bool>(
           kArbitraryConstant, bool_distribution(rand_engine))));
-      int8_outer_vector.emplace_back(VectorPtr<int8_t>(std::vector<int8_t>(
+      int8_outer_vector.emplace_back(std::vector<int8_t>(std::vector<int8_t>(
           kArbitraryConstant, int8_distribution(rand_engine))));
-      int16_outer_vector.emplace_back(VectorPtr<int16_t>(std::vector<int16_t>(
+      int16_outer_vector.emplace_back(std::vector<int16_t>(std::vector<int16_t>(
           kArbitraryConstant, int16_distribution(rand_engine))));
-      int32_outer_vector.emplace_back(VectorPtr<int32_t>(std::vector<int32_t>(
+      int32_outer_vector.emplace_back(std::vector<int32_t>(std::vector<int32_t>(
           kArbitraryConstant, int32_distribution(rand_engine))));
-      int64_outer_vector.emplace_back(VectorPtr<int64_t>(std::vector<int64_t>(
+      int64_outer_vector.emplace_back(std::vector<int64_t>(std::vector<int64_t>(
           kArbitraryConstant, int64_distribution(rand_engine))));
-      uint8_outer_vector.emplace_back(VectorPtr<uint8_t>(std::vector<uint8_t>(
+      uint8_outer_vector.emplace_back(std::vector<uint8_t>(std::vector<uint8_t>(
           kArbitraryConstant, uint8_distribution(rand_engine))));
       uint16_outer_vector.emplace_back(
-          VectorPtr<uint16_t>(std::vector<uint16_t>(
+          std::vector<uint16_t>(std::vector<uint16_t>(
               kArbitraryConstant, uint16_distribution(rand_engine))));
       uint32_outer_vector.emplace_back(
-          VectorPtr<uint32_t>(std::vector<uint32_t>(
+          std::vector<uint32_t>(std::vector<uint32_t>(
               kArbitraryConstant, uint32_distribution(rand_engine))));
       uint64_outer_vector.emplace_back(
-          VectorPtr<uint64_t>(std::vector<uint64_t>(
+          std::vector<uint64_t>(std::vector<uint64_t>(
               kArbitraryConstant, uint64_distribution(rand_engine))));
-      float_outer_vector.emplace_back(VectorPtr<float>(std::vector<float>(
+      float_outer_vector.emplace_back(std::vector<float>(std::vector<float>(
           kArbitraryConstant, float_distribution(rand_engine))));
-      double_outer_vector.emplace_back(VectorPtr<double>(std::vector<double>(
+      double_outer_vector.emplace_back(std::vector<double>(std::vector<double>(
           kArbitraryConstant, double_distribution(rand_engine))));
       std::vector<zx::handle> handle_inner_vector;
       for (uint8_t i = 0; i < kArbitraryConstant; ++i) {
         handle_inner_vector.emplace_back(Handle());
       }
       handle_outer_vector.emplace_back(
-          VectorPtr<zx::handle>(std::move(handle_inner_vector)));
+          std::vector<zx::handle>(std::move(handle_inner_vector)));
     }
-    s->vectors.b_1 = VectorPtr<VectorPtr<bool>>(std::move(bool_outer_vector));
+    s->vectors.b_1 = std::vector<std::vector<bool>>(std::move(bool_outer_vector));
     s->vectors.i8_1 =
-        VectorPtr<VectorPtr<int8_t>>(std::move(int8_outer_vector));
+        std::vector<std::vector<int8_t>>(std::move(int8_outer_vector));
     s->vectors.i16_1 =
-        VectorPtr<VectorPtr<int16_t>>(std::move(int16_outer_vector));
+        std::vector<std::vector<int16_t>>(std::move(int16_outer_vector));
     s->vectors.i32_1 =
-        VectorPtr<VectorPtr<int32_t>>(std::move(int32_outer_vector));
+        std::vector<std::vector<int32_t>>(std::move(int32_outer_vector));
     s->vectors.i64_1 =
-        VectorPtr<VectorPtr<int64_t>>(std::move(int64_outer_vector));
+        std::vector<std::vector<int64_t>>(std::move(int64_outer_vector));
     s->vectors.u8_1 =
-        VectorPtr<VectorPtr<uint8_t>>(std::move(uint8_outer_vector));
+        std::vector<std::vector<uint8_t>>(std::move(uint8_outer_vector));
     s->vectors.u16_1 =
-        VectorPtr<VectorPtr<uint16_t>>(std::move(uint16_outer_vector));
+        std::vector<std::vector<uint16_t>>(std::move(uint16_outer_vector));
     s->vectors.u32_1 =
-        VectorPtr<VectorPtr<uint32_t>>(std::move(uint32_outer_vector));
+        std::vector<std::vector<uint32_t>>(std::move(uint32_outer_vector));
     s->vectors.u64_1 =
-        VectorPtr<VectorPtr<uint64_t>>(std::move(uint64_outer_vector));
+        std::vector<std::vector<uint64_t>>(std::move(uint64_outer_vector));
     s->vectors.f32_1 =
-        VectorPtr<VectorPtr<float>>(std::move(float_outer_vector));
+        std::vector<std::vector<float>>(std::move(float_outer_vector));
     s->vectors.f64_1 =
-        VectorPtr<VectorPtr<double>>(std::move(double_outer_vector));
+        std::vector<std::vector<double>>(std::move(double_outer_vector));
     s->vectors.handle_1 =
-        VectorPtr<VectorPtr<zx::handle>>(std::move(handle_outer_vector));
+        std::vector<std::vector<zx::handle>>(std::move(handle_outer_vector));
   }
 
   s->vectors.b_sized_0 =
@@ -710,7 +710,7 @@ void Initialize(Struct* s) {
     std::vector<zx::handle> underlying_vec;
     underlying_vec.emplace_back(Handle());
     s->vectors.handle_sized_0 =
-        VectorPtr<zx::handle>(std::move(underlying_vec));
+        std::vector<zx::handle>(std::move(underlying_vec));
   }
 
   s->vectors.b_sized_1 = VectorPtr<bool>(std::vector<bool>(
@@ -750,78 +750,78 @@ void Initialize(Struct* s) {
       underlying_vec.emplace_back(Handle());
     }
     s->vectors.handle_sized_1 =
-        VectorPtr<zx::handle>(std::move(underlying_vec));
+        std::vector<zx::handle>(std::move(underlying_vec));
   }
   {
-    std::vector<VectorPtr<bool>> bool_outer_vector;
-    std::vector<VectorPtr<int8_t>> int8_outer_vector;
-    std::vector<VectorPtr<int16_t>> int16_outer_vector;
-    std::vector<VectorPtr<int32_t>> int32_outer_vector;
-    std::vector<VectorPtr<int64_t>> int64_outer_vector;
-    std::vector<VectorPtr<uint8_t>> uint8_outer_vector;
-    std::vector<VectorPtr<uint16_t>> uint16_outer_vector;
-    std::vector<VectorPtr<uint32_t>> uint32_outer_vector;
-    std::vector<VectorPtr<uint64_t>> uint64_outer_vector;
-    std::vector<VectorPtr<float>> float_outer_vector;
-    std::vector<VectorPtr<double>> double_outer_vector;
-    std::vector<VectorPtr<zx::handle>> handle_outer_vector;
+    std::vector<std::vector<bool>> bool_outer_vector;
+    std::vector<std::vector<int8_t>> int8_outer_vector;
+    std::vector<std::vector<int16_t>> int16_outer_vector;
+    std::vector<std::vector<int32_t>> int32_outer_vector;
+    std::vector<std::vector<int64_t>> int64_outer_vector;
+    std::vector<std::vector<uint8_t>> uint8_outer_vector;
+    std::vector<std::vector<uint16_t>> uint16_outer_vector;
+    std::vector<std::vector<uint32_t>> uint32_outer_vector;
+    std::vector<std::vector<uint64_t>> uint64_outer_vector;
+    std::vector<std::vector<float>> float_outer_vector;
+    std::vector<std::vector<double>> double_outer_vector;
+    std::vector<std::vector<zx::handle>> handle_outer_vector;
     for (uint32_t i = 0; i < fidl::test::compatibility::vectors_size; ++i) {
-      bool_outer_vector.emplace_back(VectorPtr<bool>(std::vector<bool>(
+      bool_outer_vector.emplace_back(std::vector<bool>(std::vector<bool>(
           kArbitraryConstant, bool_distribution(rand_engine))));
-      int8_outer_vector.emplace_back(VectorPtr<int8_t>(std::vector<int8_t>(
+      int8_outer_vector.emplace_back(std::vector<int8_t>(std::vector<int8_t>(
           kArbitraryConstant, int8_distribution(rand_engine))));
-      int16_outer_vector.emplace_back(VectorPtr<int16_t>(std::vector<int16_t>(
+      int16_outer_vector.emplace_back(std::vector<int16_t>(std::vector<int16_t>(
           kArbitraryConstant, int16_distribution(rand_engine))));
-      int32_outer_vector.emplace_back(VectorPtr<int32_t>(std::vector<int32_t>(
+      int32_outer_vector.emplace_back(std::vector<int32_t>(std::vector<int32_t>(
           kArbitraryConstant, int32_distribution(rand_engine))));
-      int64_outer_vector.emplace_back(VectorPtr<int64_t>(std::vector<int64_t>(
+      int64_outer_vector.emplace_back(std::vector<int64_t>(std::vector<int64_t>(
           kArbitraryConstant, int64_distribution(rand_engine))));
-      uint8_outer_vector.emplace_back(VectorPtr<uint8_t>(std::vector<uint8_t>(
+      uint8_outer_vector.emplace_back(std::vector<uint8_t>(std::vector<uint8_t>(
           kArbitraryConstant, uint8_distribution(rand_engine))));
       uint16_outer_vector.emplace_back(
-          VectorPtr<uint16_t>(std::vector<uint16_t>(
+          std::vector<uint16_t>(std::vector<uint16_t>(
               kArbitraryConstant, uint16_distribution(rand_engine))));
       uint32_outer_vector.emplace_back(
-          VectorPtr<uint32_t>(std::vector<uint32_t>(
+          std::vector<uint32_t>(std::vector<uint32_t>(
               kArbitraryConstant, uint32_distribution(rand_engine))));
       uint64_outer_vector.emplace_back(
-          VectorPtr<uint64_t>(std::vector<uint64_t>(
+          std::vector<uint64_t>(std::vector<uint64_t>(
               kArbitraryConstant, uint64_distribution(rand_engine))));
-      float_outer_vector.emplace_back(VectorPtr<float>(std::vector<float>(
+      float_outer_vector.emplace_back(std::vector<float>(std::vector<float>(
           kArbitraryConstant, float_distribution(rand_engine))));
-      double_outer_vector.emplace_back(VectorPtr<double>(std::vector<double>(
+      double_outer_vector.emplace_back(std::vector<double>(std::vector<double>(
           kArbitraryConstant, double_distribution(rand_engine))));
       std::vector<zx::handle> handle_inner_vector;
       for (uint8_t i = 0; i < kArbitraryConstant; ++i) {
         handle_inner_vector.emplace_back(Handle());
       }
       handle_outer_vector.emplace_back(
-          VectorPtr<zx::handle>(std::move(handle_inner_vector)));
+          std::vector<zx::handle>(std::move(handle_inner_vector)));
     }
     s->vectors.b_sized_2 =
-        VectorPtr<VectorPtr<bool>>(std::move(bool_outer_vector));
+        std::vector<std::vector<bool>>(std::move(bool_outer_vector));
     s->vectors.i8_sized_2 =
-        VectorPtr<VectorPtr<int8_t>>(std::move(int8_outer_vector));
+        std::vector<std::vector<int8_t>>(std::move(int8_outer_vector));
     s->vectors.i16_sized_2 =
-        VectorPtr<VectorPtr<int16_t>>(std::move(int16_outer_vector));
+        std::vector<std::vector<int16_t>>(std::move(int16_outer_vector));
     s->vectors.i32_sized_2 =
-        VectorPtr<VectorPtr<int32_t>>(std::move(int32_outer_vector));
+        std::vector<std::vector<int32_t>>(std::move(int32_outer_vector));
     s->vectors.i64_sized_2 =
-        VectorPtr<VectorPtr<int64_t>>(std::move(int64_outer_vector));
+        std::vector<std::vector<int64_t>>(std::move(int64_outer_vector));
     s->vectors.u8_sized_2 =
-        VectorPtr<VectorPtr<uint8_t>>(std::move(uint8_outer_vector));
+        std::vector<std::vector<uint8_t>>(std::move(uint8_outer_vector));
     s->vectors.u16_sized_2 =
-        VectorPtr<VectorPtr<uint16_t>>(std::move(uint16_outer_vector));
+        std::vector<std::vector<uint16_t>>(std::move(uint16_outer_vector));
     s->vectors.u32_sized_2 =
-        VectorPtr<VectorPtr<uint32_t>>(std::move(uint32_outer_vector));
+        std::vector<std::vector<uint32_t>>(std::move(uint32_outer_vector));
     s->vectors.u64_sized_2 =
-        VectorPtr<VectorPtr<uint64_t>>(std::move(uint64_outer_vector));
+        std::vector<std::vector<uint64_t>>(std::move(uint64_outer_vector));
     s->vectors.f32_sized_2 =
-        VectorPtr<VectorPtr<float>>(std::move(float_outer_vector));
+        std::vector<std::vector<float>>(std::move(float_outer_vector));
     s->vectors.f64_sized_2 =
-        VectorPtr<VectorPtr<double>>(std::move(double_outer_vector));
+        std::vector<std::vector<double>>(std::move(double_outer_vector));
     s->vectors.handle_sized_2 =
-        VectorPtr<VectorPtr<zx::handle>>(std::move(handle_outer_vector));
+        std::vector<std::vector<zx::handle>>(std::move(handle_outer_vector));
   }
 
   // intentionally leave most of the nullable vectors as null, just set one
@@ -829,13 +829,13 @@ void Initialize(Struct* s) {
   s->vectors.b_nullable_0 =
       VectorPtr<bool>(std::vector<bool>{bool_distribution(rand_engine)});
   {
-    std::vector<VectorPtr<int8_t>> int8_outer_vector;
+    std::vector<std::vector<int8_t>> int8_outer_vector;
     for (uint8_t i = 0; i < kArbitraryVectorSize; ++i) {
       int8_outer_vector.emplace_back(VectorPtr<int8_t>(std::vector<int8_t>(
           kArbitraryConstant, int8_distribution(rand_engine))));
     }
     s->vectors.i8_nullable_1 =
-        VectorPtr<VectorPtr<int8_t>>(std::move(int8_outer_vector));
+        VectorPtr<std::vector<int8_t>>(std::move(int8_outer_vector));
   }
   s->vectors.i16_nullable_sized_0 =
       VectorPtr<int16_t>(std::vector<int16_t>{int16_distribution(rand_engine)});
@@ -843,17 +843,17 @@ void Initialize(Struct* s) {
       std::vector<double>(fidl::test::compatibility::vectors_size,
                           double_distribution(rand_engine)));
   {
-    std::vector<VectorPtr<zx::handle>> handle_outer_vector;
+    std::vector<std::vector<zx::handle>> handle_outer_vector;
     for (uint32_t i = 0; i < fidl::test::compatibility::vectors_size; ++i) {
       std::vector<zx::handle> handle_inner_vector;
       for (uint8_t i = 0; i < kArbitraryConstant; ++i) {
         handle_inner_vector.emplace_back(Handle());
       }
       handle_outer_vector.emplace_back(
-          VectorPtr<zx::handle>(std::move(handle_inner_vector)));
+          std::vector<zx::handle>(std::move(handle_inner_vector)));
     }
     s->vectors.handle_nullable_sized_2 =
-        VectorPtr<VectorPtr<zx::handle>>(std::move(handle_outer_vector));
+        VectorPtr<std::vector<zx::handle>>(std::move(handle_outer_vector));
   }
 
   // handles

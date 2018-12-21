@@ -44,7 +44,6 @@ void OvernetApp::RegisterServiceProvider(
 
 void OvernetApp::UpdateDescription() {
   fuchsia::overnet::PeerDescription desc;
-  desc.services = desc.services.New(0);
   for (const auto& svc : service_providers_) {
     desc.services.push_back(svc.first);
   }

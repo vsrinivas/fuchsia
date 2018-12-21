@@ -38,7 +38,7 @@ ExportedDirChannels Util::BindDirectory(fuchsia::sys::LaunchInfo* launch_info) {
 }
 
 std::string Util::GetArgsString(
-    const ::fidl::VectorPtr<::fidl::StringPtr>& arguments) {
+    const ::fidl::VectorPtr<::std::string>& arguments) {
   std::string args = "";
   if (!arguments->empty()) {
     std::ostringstream buf;

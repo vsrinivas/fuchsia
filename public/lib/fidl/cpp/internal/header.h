@@ -10,6 +10,7 @@
 
 #include <lib/fidl/cpp/array.h>
 #include <lib/fit/function.h>
+#include <lib/fit/variant.h>
 
 #ifdef __Fuchsia__
 #include <lib/zx/bti.h>
@@ -58,5 +59,10 @@
 // defined, so that calls to Clone in clone.h are referencing the ADL
 // implementation and are not ambiguous.
 #include "lib/fidl/cpp/clone.h"
+
+// This is defined to temporarilly allow external users to know if they're
+// compiled against a version of the FIDL library that uses std::vector and
+// std::string. This will be removed once the transition is complete.
+#define USE_STD_FOR_NON_NULLABLE_FIDL_FIELDS
 
 #endif  // LIB_FIDL_CPP_INTERNAL_HEADER_H_

@@ -105,7 +105,7 @@ class DevTokenManagerAppTest
     fuchsia::auth::AuthProviderConfig dev_auth_provider_config;
     dev_auth_provider_config.auth_provider_type = auth_provider_type;
     dev_auth_provider_config.url = GetParam().auth_provider_params.url;
-    fidl::VectorPtr<fuchsia::auth::AuthProviderConfig> auth_provider_configs;
+    std::vector<fuchsia::auth::AuthProviderConfig> auth_provider_configs;
     auth_provider_configs.push_back(std::move(dev_auth_provider_config));
 
     token_mgr_factory_->GetTokenManager(
@@ -146,7 +146,7 @@ class DevTokenManagerAppTest
   fidl::StringPtr user_profile_id_;
 
   void RegisterUser(fuchsia::auth::AppConfig app_config) {
-    auto scopes = fidl::VectorPtr<fidl::StringPtr>::New(0);
+    auto scopes = fidl::VectorPtr<std::string>::New(0);
     scopes.push_back("test_scope");
 
     Status status;
@@ -167,7 +167,7 @@ class DevTokenManagerAppTest
 };
 
 TEST_P(DevTokenManagerAppTest, Authorize) {
-  auto scopes = fidl::VectorPtr<fidl::StringPtr>::New(0);
+  auto scopes = fidl::VectorPtr<std::string>::New(0);
   scopes.push_back("test_scope");
 
   Status status;
@@ -182,14 +182,14 @@ TEST_P(DevTokenManagerAppTest, Authorize) {
                         &user_info);
   ASSERT_EQ(Status::OK, status);
   ASSERT_FALSE(!user_info);
-  EXPECT_FALSE(user_info->id.get().empty());
+  EXPECT_FALSE(user_info->id.empty());
   EXPECT_FALSE(user_info->display_name.get().empty());
   EXPECT_FALSE(user_info->url.get().empty());
   EXPECT_FALSE(user_info->image_url.get().empty());
 }
 
 TEST_P(DevTokenManagerAppTest, GetAccessToken) {
-  auto scopes = fidl::VectorPtr<fidl::StringPtr>::New(0);
+  auto scopes = fidl::VectorPtr<std::string>::New(0);
   Status status;
   fidl::StringPtr access_token;
 
@@ -231,7 +231,7 @@ TEST_P(DevTokenManagerAppTest, GetFirebaseToken) {
   } else {
     ASSERT_EQ(Status::OK, status);
     if (firebase_token) {
-      EXPECT_TRUE(firebase_token->id_token.get().find(":fbt_") !=
+      EXPECT_TRUE(firebase_token->id_token.find(":fbt_") !=
                   std::string::npos);
       EXPECT_TRUE(firebase_token->email.get().find("@firebase.example.com") !=
                   std::string::npos);
@@ -275,7 +275,7 @@ TEST_P(DevTokenManagerAppTest, EraseAllTokens) {
   if (dev_app_config_.auth_provider_type == kDevIotIDIdp) {
     return;
   }
-  auto scopes = fidl::VectorPtr<fidl::StringPtr>::New(0);
+  auto scopes = fidl::VectorPtr<std::string>::New(0);
   Status status;
 
   fidl::StringPtr id_token;
@@ -303,7 +303,7 @@ TEST_P(DevTokenManagerAppTest, EraseAllTokens) {
                          &id_token);
   ASSERT_EQ(Status::USER_NOT_FOUND, status);
 
-  scopes = fidl::VectorPtr<fidl::StringPtr>::New(0);
+  scopes = fidl::VectorPtr<std::string>::New(0);
   token_mgr_->GetAccessToken(dev_app_config_, user_profile_id_,
                              std::move(scopes), &status, &access_token);
   ASSERT_EQ(Status::USER_NOT_FOUND, status);
@@ -346,7 +346,7 @@ TEST_P(DevTokenManagerAppTest, GetIdTokenFromCache) {
 }
 
 TEST_P(DevTokenManagerAppTest, GetAccessTokenFromCache) {
-  auto scopes = fidl::VectorPtr<fidl::StringPtr>::New(0);
+  auto scopes = fidl::VectorPtr<std::string>::New(0);
   Status status;
   fidl::StringPtr access_token;
   fidl::StringPtr cached_access_token;
@@ -357,7 +357,7 @@ TEST_P(DevTokenManagerAppTest, GetAccessTokenFromCache) {
                              std::move(scopes), &status, &access_token);
   ASSERT_EQ(Status::OK, status);
 
-  scopes = fidl::VectorPtr<fidl::StringPtr>::New(0);
+  scopes = fidl::VectorPtr<std::string>::New(0);
   token_mgr_->GetAccessToken(dev_app_config_, user_profile_id_,
                              std::move(scopes), &status, &cached_access_token);
   ASSERT_EQ(Status::OK, status);
@@ -371,7 +371,7 @@ TEST_P(DevTokenManagerAppTest, GetAccessTokenFromCache) {
 // lived credentials.
 TEST_P(DevTokenManagerAppTest, Reauthorize) {
   fidl::StringPtr token;
-  auto scopes = fidl::VectorPtr<fidl::StringPtr>::New(0);
+  auto scopes = fidl::VectorPtr<std::string>::New(0);
 
   Status status;
   fuchsia::auth::UserProfileInfoPtr user_info;
@@ -381,7 +381,7 @@ TEST_P(DevTokenManagerAppTest, Reauthorize) {
   ASSERT_EQ(Status::OK, status);
   fidl::StringPtr user_profile_id = user_info->id;
 
-  scopes = fidl::VectorPtr<fidl::StringPtr>::New(0);
+  scopes = fidl::VectorPtr<std::string>::New(0);
   token_mgr_->GetAccessToken(dev_app_config_, user_profile_id,
                              std::move(scopes), &status, &token);
   ASSERT_EQ(Status::OK, status);
@@ -391,14 +391,14 @@ TEST_P(DevTokenManagerAppTest, Reauthorize) {
   ASSERT_EQ(Status::OK, status);
 
   // Verify that the credential and cache should now be cleared
-  scopes = fidl::VectorPtr<fidl::StringPtr>::New(0);
+  scopes = fidl::VectorPtr<std::string>::New(0);
   token_mgr_->GetAccessToken(dev_app_config_, user_profile_id,
                              std::move(scopes), &status, &token);
   ASSERT_EQ(Status::USER_NOT_FOUND, status);
   EXPECT_TRUE(token.get().empty());
 
   // Re-authorize and obtain a fresh credential for the same |user_profile_id|
-  scopes = fidl::VectorPtr<fidl::StringPtr>::New(0);
+  scopes = fidl::VectorPtr<std::string>::New(0);
   token_mgr_->Authorize(dev_app_config_, nullptr, std::move(scopes),
                         user_profile_id, "", &status, &user_info);
   ASSERT_EQ(Status::OK, status);
@@ -406,7 +406,7 @@ TEST_P(DevTokenManagerAppTest, Reauthorize) {
 
   // Verify that the new access token is not based on the old credential
   fidl::StringPtr token2;
-  scopes = fidl::VectorPtr<fidl::StringPtr>::New(0);
+  scopes = fidl::VectorPtr<std::string>::New(0);
   token_mgr_->GetAccessToken(dev_app_config_, user_profile_id,
                              std::move(scopes), &status, &token2);
   ASSERT_EQ(Status::OK, status);

@@ -128,9 +128,9 @@ zx_status_t ProcessBuilder::LoadPath(const std::string& path) {
 void ProcessBuilder::AddArgs(const std::vector<std::string>& argv) {
   if (argv.empty())
     return;
-  if (launch_info_.name->empty())
-    launch_info_.name.reset(argv[0]);
-  fidl::VectorPtr<fidl::StringPtr> args;
+  if (launch_info_.name.empty())
+    launch_info_.name = argv[0];
+  fidl::VectorPtr<std::string> args;
   for (const auto& arg : argv)
     args.push_back(arg);
   launcher_->AddArgs(std::move(args));
@@ -145,7 +145,7 @@ void ProcessBuilder::AddHandle(uint32_t id, zx::handle handle) {
 
 void ProcessBuilder::AddHandles(
     std::vector<fuchsia::process::HandleInfo> handles) {
-  handles_->insert(handles_->end(), std::make_move_iterator(handles.begin()),
+  handles_.insert(handles_.end(), std::make_move_iterator(handles.begin()),
                    std::make_move_iterator(handles.end()));
 }
 
@@ -157,7 +157,7 @@ void ProcessBuilder::SetDefaultJob(zx::job job) {
 }
 
 void ProcessBuilder::SetName(std::string name) {
-  launch_info_.name.reset(std::move(name));
+  launch_info_.name = std::move(name);
 }
 
 void ProcessBuilder::CloneJob() {
@@ -173,7 +173,7 @@ void ProcessBuilder::CloneNamespace() {
   fdio_flat_namespace_t* flat = nullptr;
   zx_status_t status = fdio_ns_export_root(&flat);
   if (status == ZX_OK) {
-    fidl::VectorPtr<fuchsia::process::NameInfo> names;
+    std::vector<fuchsia::process::NameInfo> names;
     for (size_t i = 0; i < flat->count; ++i) {
       names.push_back(fuchsia::process::NameInfo{
           flat->path[i],
@@ -194,7 +194,7 @@ void ProcessBuilder::CloneStdio() {
 }
 
 void ProcessBuilder::CloneEnvironment() {
-  auto env = fidl::VectorPtr<fidl::StringPtr>::New(0);
+  auto env = fidl::VectorPtr<std::string>::New(0);
   for (size_t i = 0; environ[i]; ++i)
     env.push_back(environ[i]);
   launcher_->AddEnvirons(std::move(env));

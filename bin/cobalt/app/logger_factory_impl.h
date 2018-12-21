@@ -46,12 +46,12 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
       CreateLoggerSimpleCallback callback);
 
   void CreateLoggerFromProjectName(
-      fidl::StringPtr project_name, fuchsia::cobalt::ReleaseStage stage,
+      std::string project_name, fuchsia::cobalt::ReleaseStage stage,
       fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
       CreateLoggerFromProjectNameCallback callback);
 
   void CreateLoggerSimpleFromProjectName(
-      fidl::StringPtr project_name, fuchsia::cobalt::ReleaseStage stage,
+      std::string project_name, fuchsia::cobalt::ReleaseStage stage,
       fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
       CreateLoggerSimpleFromProjectNameCallback callback);
 

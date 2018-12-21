@@ -57,7 +57,7 @@ class GuestEthernet : public fuchsia::hardware::ethernet::Device {
   void ListenStop(ListenStopCallback callback) override;
 
   // |fuchsia::hardware::ethernet::Device|
-  void SetClientName(fidl::StringPtr name,
+  void SetClientName(std::string name,
                      SetClientNameCallback callback) override;
 
   // |fuchsia::hardware::ethernet::Device|

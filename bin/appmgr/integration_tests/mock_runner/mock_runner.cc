@@ -50,7 +50,7 @@ void FakeSubComponent::SendReturnCodeIfTerminated() {
 
 void FakeSubComponent::Detach() { binding_.set_error_handler(nullptr); }
 
-void FakeSubComponent::PublishService(::fidl::StringPtr service_name,
+void FakeSubComponent::PublishService(::std::string service_name,
                                       PublishServiceCallback callback) {
   // publish to root as appmgr assumes that all the components started by
   // runners publish services using legacy style

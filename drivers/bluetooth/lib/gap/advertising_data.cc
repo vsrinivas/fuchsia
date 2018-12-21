@@ -308,25 +308,25 @@ bool AdvertisingData::FromFidl(const ::ble::AdvertisingData& fidl_ad,
   for (const auto& uuid_str : *fidl_ad.service_uuids) {
     if (!StringToUuid(uuid_str, &uuid)) {
       bt_log(WARN, "gap-le", "FIDL advertising data contains malformd UUID: %s",
-             uuid_str->c_str());
+             uuid_str.c_str());
       return false;
     }
     out_ad->AddServiceUuid(uuid);
   }
 
   for (const auto& it : *fidl_ad.manufacturer_specific_data) {
-    const fidl::VectorPtr<uint8_t>& data = it.data;
-    BufferView manuf_view(data->data(), data->size());
+    const std::vector<uint8_t>& data = it.data;
+    BufferView manuf_view(data.data(), data.size());
     out_ad->SetManufacturerData(it.company_id, manuf_view);
   }
 
   for (const auto& it : *fidl_ad.service_data) {
-    const fidl::VectorPtr<uint8_t>& data = it.data;
-    BufferView service_data_bytes(data->data(), data->size());
+    const std::vector<uint8_t>& data = it.data;
+    BufferView service_data_bytes(data.data(), data.size());
     UUID service_data_uuid;
-    if (!StringToUuid(it.uuid.get(), &service_data_uuid)) {
+    if (!StringToUuid(it.uuid, &service_data_uuid)) {
       bt_log(WARN, "gap-le", "FIDL service data contains malformed UUID: %s",
-             it.uuid->c_str());
+             it.uuid.c_str());
       return false;
     }
 

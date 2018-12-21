@@ -213,7 +213,7 @@ zx_status_t Station::Deauthenticate(wlan_mlme::ReasonCode reason_code) {
         // Deauthenticate nevertheless. IEEE isn't clear on what we are supposed to do.
     }
     infof("deauthenticating from \"%s\" (%s), reason=%hu\n",
-          debug::ToAsciiOrHexStr(*join_ctx_->bss()->ssid).c_str(),
+          debug::ToAsciiOrHexStr(join_ctx_->bss()->ssid).c_str(),
           join_ctx_->bssid().ToString().c_str(), reason_code);
 
     if (state_ == WlanState::kAssociated) { device_->ClearAssoc(join_ctx_->bssid()); }
@@ -281,7 +281,7 @@ zx_status_t Station::Associate(Span<const uint8_t> rsne) {
     }
 
     BufferWriter elem_w(w.RemainingBuffer());
-    common::WriteSsid(&elem_w, *join_ctx_->bss()->ssid);
+    common::WriteSsid(&elem_w, join_ctx_->bss()->ssid);
     RatesWriter rates_writer{*rates};
     rates_writer.WriteSupportedRates(&elem_w);
     rates_writer.WriteExtendedSupportedRates(&elem_w);
@@ -427,7 +427,7 @@ zx_status_t Station::HandleDeauthentication(MgmtFrame<Deauthentication>&& frame)
 
     auto deauth = frame.body();
     infof("deauthenticating from \"%s\" (%s), reason=%hu\n",
-          debug::ToAsciiOrHexStr(*join_ctx_->bss()->ssid).c_str(),
+          debug::ToAsciiOrHexStr(join_ctx_->bss()->ssid).c_str(),
           join_ctx_->bssid().ToString().c_str(), deauth->reason_code);
 
     if (state_ == WlanState::kAssociated) { device_->ClearAssoc(join_ctx_->bssid()); }
@@ -499,7 +499,7 @@ zx_status_t Station::HandleAssociationResponse(MgmtFrame<AssociationResponse>&& 
     }
 
     infof("NIC %s associated with \"%s\"(%s) in channel %s, %s, %s\n",
-          self_addr().ToString().c_str(), debug::ToAsciiOrHexStr(*join_ctx_->bss()->ssid).c_str(),
+          self_addr().ToString().c_str(), debug::ToAsciiOrHexStr(join_ctx_->bss()->ssid).c_str(),
           assoc_ctx_.bssid.ToString().c_str(), common::ChanStrLong(assoc_ctx_.chan).c_str(),
           common::BandStr(assoc_ctx_.chan).c_str(), common::GetPhyStr(assoc_ctx_.phy).c_str());
 
@@ -522,7 +522,7 @@ zx_status_t Station::HandleDisassociation(MgmtFrame<Disassociation>&& frame) {
 
     auto disassoc = frame.body();
     infof("disassociating from \"%s\"(%s), reason=%u\n",
-          debug::ToAsciiOrHexStr(*join_ctx_->bss()->ssid).c_str(),
+          debug::ToAsciiOrHexStr(join_ctx_->bss()->ssid).c_str(),
           join_ctx_->bssid().ToString().c_str(), disassoc->reason_code);
 
     state_ = WlanState::kAuthenticated;

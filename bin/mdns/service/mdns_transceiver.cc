@@ -78,7 +78,7 @@ void MdnsTransceiver::LogTraffic() {
 }
 
 void MdnsTransceiver::InterfacesChanged(
-    fidl::VectorPtr<fuchsia::netstack::NetInterface> interfaces) {
+    std::vector<fuchsia::netstack::NetInterface> interfaces) {
   bool link_change = false;
 
   std::unordered_map<inet::IpAddress, std::unique_ptr<MdnsInterfaceTransceiver>>
@@ -86,7 +86,7 @@ void MdnsTransceiver::InterfacesChanged(
 
   interface_transceivers_by_address_.swap(prev);
 
-  for (const auto& if_info : *interfaces) {
+  for (const auto& if_info : interfaces) {
     inet::IpAddress address = MdnsFidlUtil::IpAddressFrom(&if_info.addr);
 
     if ((if_info.flags & fuchsia::netstack::NetInterfaceFlagUp) == 0 ||
@@ -95,10 +95,10 @@ void MdnsTransceiver::InterfacesChanged(
     }
 
     inet::IpAddress alternate_address;
-    if (!if_info.ipv6addrs->empty()) {
+    if (!if_info.ipv6addrs.empty()) {
       // TODO(dalesat): Is the first V6 address the right one?
       alternate_address =
-          MdnsFidlUtil::IpAddressFrom(&if_info.ipv6addrs->front().addr);
+          MdnsFidlUtil::IpAddressFrom(&if_info.ipv6addrs.front().addr);
     }
 
     // Ensure that there's an interface transceiver for the V4 address, if it's
@@ -110,7 +110,7 @@ void MdnsTransceiver::InterfacesChanged(
 
     // Ensure that there's an interface transceiver for each valid V6 address.
     // TODO(dalesat): What does it mean if there's more than one of these?
-    for (auto& subnet : *if_info.ipv6addrs) {
+    for (auto& subnet : if_info.ipv6addrs) {
       if (EnsureInterfaceTransceiver(MdnsFidlUtil::IpAddressFrom(&subnet.addr),
                                      address, if_info.id, if_info.name,
                                      &prev)) {

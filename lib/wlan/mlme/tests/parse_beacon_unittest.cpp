@@ -93,11 +93,11 @@ TEST(ParseBeaconTest, FillRates) {
         // clang-format on
     };
     for (auto tv : tvs) {
-        fidl::VectorPtr<uint8_t> got_basic{};
-        fidl::VectorPtr<uint8_t> got_op{};
+        std::vector<uint8_t> got_basic{};
+        std::vector<uint8_t> got_op{};
         FillRates(tv.supp_rates, tv.ext_supp_rates, &got_basic, &got_op);
-        EXPECT_EQ(*got_basic, tv.want_basic);
-        EXPECT_EQ(*got_op, tv.want_op);
+        EXPECT_EQ(got_basic, tv.want_basic);
+        EXPECT_EQ(got_op, tv.want_op);
     }
 }
 
@@ -133,9 +133,9 @@ TEST(ParseBeaconTest, ParseBeaconElements) {
     wlan_mlme::BSSDescription bss_desc;
     ParseBeaconElements(ies, 40, &bss_desc);
 
-    EXPECT_EQ(*bss_desc.ssid, std::vector<uint8_t>({'f', 'o', 'o'}));
-    EXPECT_EQ(*bss_desc.basic_rate_set, std::vector<uint8_t>({0x01, 0x02, 0x03, 0x04}));
-    EXPECT_EQ(*bss_desc.op_rate_set, std::vector<uint8_t>({0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+    EXPECT_EQ(bss_desc.ssid, std::vector<uint8_t>({'f', 'o', 'o'}));
+    EXPECT_EQ(bss_desc.basic_rate_set, std::vector<uint8_t>({0x01, 0x02, 0x03, 0x04}));
+    EXPECT_EQ(bss_desc.op_rate_set, std::vector<uint8_t>({0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
                                                            0x08, 0x09, 0x0a, 0x0b}));
     EXPECT_EQ(bss_desc.chan.primary, 36);
     EXPECT_EQ(*bss_desc.country, std::vector<uint8_t>({'A', 'B', 'C'}));

@@ -61,15 +61,15 @@ int ServiceProviderBridge::OpenAsFileDescriptor() {
   return fdio_bind_to_fd(io, -1, 0);
 }
 
-void ServiceProviderBridge::ConnectToService(fidl::StringPtr service_name,
+void ServiceProviderBridge::ConnectToService(std::string service_name,
                                              zx::channel channel) {
-  auto it = name_to_service_connector_.find(service_name.get());
+  auto it = name_to_service_connector_.find(service_name);
   if (it != name_to_service_connector_.end())
     it->second(std::move(channel));
   else if (backend_)
-    backend_->ConnectToService(*service_name, std::move(channel));
+    backend_->ConnectToService(service_name, std::move(channel));
   else if (backing_dir_)
-    fdio_service_connect_at(backing_dir_.get(), service_name->c_str(),
+    fdio_service_connect_at(backing_dir_.get(), service_name.c_str(),
                             channel.release());
 }
 

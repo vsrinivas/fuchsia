@@ -94,7 +94,7 @@ bool FidlToDataElement(const fidlbredr::DataElement& fidl,
       }
       bool success = true;
       std::vector<btlib::sdp::DataElement> elems;
-      for (const auto& fidl_elem : *fidl.data.sequence()) {
+      for (const auto& fidl_elem : fidl.data.sequence()) {
         btlib::sdp::DataElement it;
         success = FidlToDataElement(*fidl_elem, &it);
         if (!success) {
@@ -178,9 +178,7 @@ fidlbredr::DataElementPtr DataElementToFidl(const btlib::sdp::DataElement* in) {
       for (size_t idx = 0; (it = in->At(idx)); ++idx) {
         elems.emplace_back(DataElementToFidl(it));
       }
-      auto to = fidl::VectorPtr<fidlbredr::DataElementPtr>::New(elems.size());
-      to.reset(std::move(elems));
-      elem->data.set_sequence(std::move(to));
+      elem->data.set_sequence(std::move(elems));
       return elem;
     }
     case btlib::sdp::DataElement::Type::kAlternative: {
@@ -190,9 +188,7 @@ fidlbredr::DataElementPtr DataElementToFidl(const btlib::sdp::DataElement* in) {
       for (size_t idx = 0; (it = in->At(idx)); ++idx) {
         elems.emplace_back(DataElementToFidl(it));
       }
-      auto to = fidl::VectorPtr<fidlbredr::DataElementPtr>::New(elems.size());
-      to.reset(std::move(elems));
-      elem->data.set_sequence(std::move(to));
+      elem->data.set_sequence(std::move(elems));
       return elem;
     }
     case btlib::sdp::DataElement::Type::kUrl: {
@@ -224,20 +220,20 @@ fidlbredr::ProtocolDescriptorPtr DataElementToProtocolDescriptor(
 void AddProtocolDescriptorList(
     btlib::sdp::ServiceRecord* rec,
     btlib::sdp::ServiceRecord::ProtocolListId id,
-    const ::fidl::VectorPtr<fidlbredr::ProtocolDescriptor>& descriptor_list) {
+    const ::std::vector<fidlbredr::ProtocolDescriptor>& descriptor_list) {
   bt_log(SPEW, "profile_server", "ProtocolDescriptorList %d", id);
-  for (auto& descriptor : *descriptor_list) {
+  for (auto& descriptor : descriptor_list) {
     btlib::sdp::DataElement protocol_params;
-    if (descriptor.params->size() > 1) {
+    if (descriptor.params.size() > 1) {
       std::vector<btlib::sdp::DataElement> params;
-      for (auto& fidl_param : *descriptor.params) {
+      for (auto& fidl_param : descriptor.params) {
         btlib::sdp::DataElement bt_param;
         FidlToDataElement(fidl_param, &bt_param);
         params.emplace_back(std::move(bt_param));
       }
       protocol_params.Set(std::move(params));
-    } else if (descriptor.params->size() == 1) {
-      FidlToDataElement(descriptor.params->front(), &protocol_params);
+    } else if (descriptor.params.size() == 1) {
+      FidlToDataElement(descriptor.params.front(), &protocol_params);
     }
 
     bt_log(SPEW, "profile_server", "%d : %s",
@@ -275,10 +271,10 @@ void ProfileServer::AddService(fidlbredr::ServiceDefinition definition,
 
   btlib::sdp::ServiceRecord rec;
   std::vector<btlib::common::UUID> classes;
-  for (auto& uuid_str : *definition.service_class_uuids) {
+  for (auto& uuid_str : definition.service_class_uuids) {
     btlib::common::UUID uuid;
     bt_log(SPEW, "profile_server", "Setting Service Class UUID %s",
-           uuid_str->c_str());
+           uuid_str.c_str());
     bool success = btlib::common::StringToUuid(uuid_str, &uuid);
     ZX_DEBUG_ASSERT(success);
     classes.emplace_back(std::move(uuid));
@@ -297,16 +293,16 @@ void ProfileServer::AddService(fidlbredr::ServiceDefinition definition,
     protocol_list_id++;
   }
 
-  for (const auto& profile : *definition.profile_descriptors) {
+  for (const auto& profile : definition.profile_descriptors) {
     bt_log(SPEW, "profile_server", "Adding Profile %#x v%d.%d",
            profile.profile_id, profile.major_version, profile.minor_version);
     rec.AddProfile(btlib::common::UUID(uint16_t(profile.profile_id)),
                    profile.major_version, profile.minor_version);
   }
 
-  for (const auto& info : *definition.information) {
+  for (const auto& info : definition.information) {
     bt_log(SPEW, "profile_server", "Adding Info (%s): (%s, %s, %s)",
-           info.language->c_str(), info.name->c_str(),
+           info.language.c_str(), info.name->c_str(),
            info.description->c_str(), info.provider->c_str());
     rec.AddInfo(info.language, info.name, info.description, info.provider);
   }

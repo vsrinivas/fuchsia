@@ -29,7 +29,7 @@ class PackageLoader : public fuchsia::sys::Loader {
 
   // Tries to locate a resource at the given URL, and then invokes the callback
   // with the package and any associated resource data.
-  void LoadUrl(fidl::StringPtr url, LoadUrlCallback callback) override;
+  void LoadUrl(std::string url, LoadUrlCallback callback) override;
 
   // Binds FIDL requests to Loader.
   void AddBinding(fidl::InterfaceRequest<fuchsia::sys::Loader> request);

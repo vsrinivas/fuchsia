@@ -10,6 +10,9 @@ namespace root_presenter {
 
 bool PresentationSwitcher::OnEvent(const fuchsia::ui::input::InputEvent& event,
                                    Presentation* presentation) {
+  if (!event.is_keyboard()) {
+    return false;
+  }
   const fuchsia::ui::input::KeyboardEvent& kbd = event.keyboard();
   if (kbd.modifiers & fuchsia::ui::input::kModifierControl &&
       kbd.modifiers & fuchsia::ui::input::kModifierAlt &&

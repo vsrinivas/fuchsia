@@ -36,8 +36,8 @@ void SessionHandlerForTest::DispatchCommand(
 }
 
 void SessionHandlerForTest::Present(
-    uint64_t presentation_time, ::fidl::VectorPtr<zx::event> acquire_fences,
-    ::fidl::VectorPtr<zx::event> release_fences,
+    uint64_t presentation_time, ::std::vector<zx::event> acquire_fences,
+    ::std::vector<zx::event> release_fences,
     fuchsia::ui::scenic::Session::PresentCallback callback) {
   SessionHandler::Present(presentation_time, std::move(acquire_fences),
                           std::move(release_fences), std::move(callback));

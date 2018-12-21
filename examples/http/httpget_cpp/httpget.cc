@@ -36,8 +36,8 @@ class ResponsePrinter {
     printf("  %s\n", response.status_line.get().c_str());
     if (response.headers) {
       for (size_t i = 0; i < response.headers->size(); ++i)
-        printf("  %s=%s\n", response.headers->at(i).name->data(),
-               response.headers->at(i).value->data());
+        printf("  %s=%s\n", response.headers->at(i).name.c_str(),
+               response.headers->at(i).value.c_str());
     }
   }
 

@@ -35,8 +35,8 @@ void ImagePipeSurfaceAsync::RemoveImage(uint32_t image_id) {
 }
 
 void ImagePipeSurfaceAsync::PresentImage(
-    uint32_t image_id, fidl::VectorPtr<zx::event> acquire_fences,
-    fidl::VectorPtr<zx::event> release_fences) {
+    uint32_t image_id, std::vector<zx::event> acquire_fences,
+    std::vector<zx::event> release_fences) {
   std::lock_guard<std::mutex> lock(mutex_);
   queue_.push_back(
       {image_id, std::move(acquire_fences), std::move(release_fences)});

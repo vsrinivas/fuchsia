@@ -64,8 +64,8 @@ static zx_status_t BuildMeshBeacon(wlan_channel_t channel, DeviceInterface* devi
                 .ready = false,
             },
         .mesh_config = &mesh_config,
-        .mesh_id = req.body()->mesh_id->data(),
-        .mesh_id_len = req.body()->mesh_id->size(),
+        .mesh_id = req.body()->mesh_id.data(),
+        .mesh_id_len = req.body()->mesh_id.size(),
     };
     auto rates = GetRatesByChannel(device->GetWlanInfo().ifc_info, channel.primary);
     static_assert(sizeof(SupportedRate) == sizeof(rates[0]));
@@ -163,12 +163,12 @@ void MeshMlme::ConfigurePeering(const MlmeMsg<wlan_mlme::MeshPeeringParams>& req
     wlan_assoc_ctx ctx = {
         .aid = req.body()->local_aid,
         .qos = true,  // all mesh nodes are expected to support QoS frames
-        .rates_cnt = static_cast<uint16_t>(std::min(req.body()->rates->size(), sizeof(ctx.rates))),
+        .rates_cnt = static_cast<uint16_t>(std::min(req.body()->rates.size(), sizeof(ctx.rates))),
         .chan = device_->GetState()->channel(),
         .phy = WLAN_PHY_OFDM,  // TODO(gbonik): get PHY from MeshPeeringParams
     };
     memcpy(ctx.bssid, req.body()->peer_sta_address.data(), sizeof(ctx.bssid));
-    memcpy(ctx.rates, req.body()->rates->data(), ctx.rates_cnt);
+    memcpy(ctx.rates, req.body()->rates.data(), ctx.rates_cnt);
     auto status = device_->ConfigureAssoc(&ctx);
     if (status != ZX_OK) {
         errorf("[mesh-mlme] failed to configure association for mesh peer %s: %s",

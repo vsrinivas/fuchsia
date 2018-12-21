@@ -30,7 +30,7 @@ class PackageUpdatingLoader final : public component::PackageLoader {
                         async_dispatcher_t* dispatcher);
   ~PackageUpdatingLoader() override;
 
-  void LoadUrl(fidl::StringPtr url, LoadUrlCallback callback) override;
+  void LoadUrl(std::string url, LoadUrlCallback callback) override;
 
  private:
   const std::unordered_set<std::string> update_dependency_urls_;

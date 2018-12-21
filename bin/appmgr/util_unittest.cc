@@ -22,13 +22,13 @@ TEST(UtilTests, GetLabelFromURL) {
 }
 
 TEST(UtilTests, GetArgsString) {
-  ::fidl::VectorPtr<::fidl::StringPtr> null_vec;
+  ::fidl::VectorPtr<::std::string> null_vec;
   EXPECT_EQ(Util::GetArgsString(null_vec), "");
 
-  ::fidl::VectorPtr<::fidl::StringPtr> empty_vec(3);
+  ::fidl::VectorPtr<::std::string> empty_vec(3);
   EXPECT_EQ(Util::GetArgsString(empty_vec), "  ");
 
-  ::fidl::VectorPtr<::fidl::StringPtr> vec;
+  ::fidl::VectorPtr<::std::string> vec;
   vec.push_back("foo");
   EXPECT_EQ(Util::GetArgsString(vec), "foo");
   vec.push_back("bar");

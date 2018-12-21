@@ -170,8 +170,8 @@ static bool LaunchApp(component::StartupContext* context,
                       const std::string& app,
                       const std::vector<std::string>& args) {
   fuchsia::sys::LaunchInfo launch_info;
-  launch_info.url = fidl::StringPtr(app);
-  launch_info.arguments = fxl::To<fidl::VectorPtr<fidl::StringPtr>>(args);
+  launch_info.url = std::string(app);
+  launch_info.arguments = fxl::To<fidl::VectorPtr<std::string>>(args);
 
   if (FXL_VLOG_IS_ON(1)) {
     FXL_VLOG(1) << "Launching: " << launch_info.url << " "

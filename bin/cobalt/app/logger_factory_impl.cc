@@ -178,11 +178,11 @@ void LoggerFactoryImpl::CreateLoggerSimple(
 }
 
 void LoggerFactoryImpl::CreateLoggerFromProjectName(
-    fidl::StringPtr project_name, fuchsia::cobalt::ReleaseStage release_stage,
+    std::string project_name, fuchsia::cobalt::ReleaseStage release_stage,
     fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
     CreateLoggerFromProjectNameCallback callback) {
   auto project_context_or = logger::ProjectContext::ConstructWithProjectConfigs(
-      kFuchsiaCustomerName, project_name.get(), project_configs_,
+      kFuchsiaCustomerName, project_name, project_configs_,
       ToReleaseStageProto(release_stage));
 
   if (!project_context_or.ok()) {
@@ -201,11 +201,11 @@ void LoggerFactoryImpl::CreateLoggerFromProjectName(
 }
 
 void LoggerFactoryImpl::CreateLoggerSimpleFromProjectName(
-    fidl::StringPtr project_name, fuchsia::cobalt::ReleaseStage release_stage,
+    std::string project_name, fuchsia::cobalt::ReleaseStage release_stage,
     fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
     CreateLoggerSimpleFromProjectNameCallback callback) {
   auto project_context_or = logger::ProjectContext::ConstructWithProjectConfigs(
-      kFuchsiaCustomerName, project_name.get(), project_configs_,
+      kFuchsiaCustomerName, project_name, project_configs_,
       ToReleaseStageProto(release_stage));
 
   if (!project_context_or.ok()) {

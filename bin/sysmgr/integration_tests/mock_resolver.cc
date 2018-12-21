@@ -22,8 +22,8 @@ class PackageResolverMock : public fuchsia::pkg::PackageResolver {
     context_->outgoing().AddPublicService(bindings_.GetHandler(this));
   }
 
-  void Resolve(::fidl::StringPtr package_uri,
-               ::fidl::VectorPtr<::fidl::StringPtr> selectors,
+  void Resolve(::std::string package_uri,
+               ::std::vector<::std::string> selectors,
                fuchsia::pkg::UpdatePolicy update_policy,
                ::fidl::InterfaceRequest<fuchsia::io::Directory> dir,
                ResolveCallback callback) override {

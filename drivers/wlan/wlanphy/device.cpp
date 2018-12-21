@@ -102,7 +102,7 @@ void Device::Unbind() {
     dispatcher_.InitiateShutdown([this] { device_remove(zxdev_); });
 }
 
-static void ConvertPhySupportedPhyInfo(::fidl::VectorPtr<wlan_device::SupportedPhy>* SupportedPhys,
+static void ConvertPhySupportedPhyInfo(::std::vector<wlan_device::SupportedPhy>* SupportedPhys,
                                        uint16_t supported_phys_mask) {
     SupportedPhys->resize(0);
     if (supported_phys_mask & WLAN_PHY_DSSS) {
@@ -123,7 +123,7 @@ static void ConvertPhySupportedPhyInfo(::fidl::VectorPtr<wlan_device::SupportedP
 }
 
 static void ConvertPhyDriverFeaturesInfo(
-    ::fidl::VectorPtr<wlan_device::DriverFeature>* DriverFeatures, uint32_t driver_features_mask) {
+    ::std::vector<wlan_device::DriverFeature>* DriverFeatures, uint32_t driver_features_mask) {
     DriverFeatures->resize(0);
     if (driver_features_mask & WLAN_DRIVER_FEATURE_SCAN_OFFLOAD) {
         DriverFeatures->push_back(wlan_device::DriverFeature::SCAN_OFFLOAD);
@@ -133,7 +133,7 @@ static void ConvertPhyDriverFeaturesInfo(
     }
 }
 
-static void ConvertPhyRolesInfo(::fidl::VectorPtr<wlan_device::MacRole>* MacRoles,
+static void ConvertPhyRolesInfo(::std::vector<wlan_device::MacRole>* MacRoles,
                                 uint16_t mac_roles_mask) {
     MacRoles->resize(0);
     if (mac_roles_mask & WLAN_MAC_ROLE_CLIENT) {
@@ -143,7 +143,7 @@ static void ConvertPhyRolesInfo(::fidl::VectorPtr<wlan_device::MacRole>* MacRole
     if (mac_roles_mask & WLAN_MAC_ROLE_MESH) { MacRoles->push_back(wlan_device::MacRole::MESH); }
 }
 
-static void ConvertPhyCaps(::fidl::VectorPtr<wlan_device::Capability>* Capabilities,
+static void ConvertPhyCaps(::std::vector<wlan_device::Capability>* Capabilities,
                            uint32_t phy_caps_mask) {
     Capabilities->resize(0);
     if (phy_caps_mask & WLAN_CAP_SHORT_PREAMBLE) {
@@ -175,7 +175,7 @@ static void ConvertPhyChannels(wlan_device::ChannelList* Channels,
     }
 }
 
-static void ConvertPhyBandInfo(::fidl::VectorPtr<wlan_device::BandInfo>* BandInfo,
+static void ConvertPhyBandInfo(::std::vector<wlan_device::BandInfo>* BandInfo,
                                uint8_t num_bands, const wlan_band_info_t* phy_bands) {
     BandInfo->resize(0);
     for (uint8_t band_num = 0; band_num < num_bands; band_num++) {

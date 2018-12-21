@@ -89,7 +89,7 @@ MATCHER_P2(StringProperty, name, value, "") {
 }
 
 MATCHER_P2(VectorProperty, name, value, "") {
-  return arg.value.is_bytes() && arg.key == name && *arg.value.bytes() == value;
+  return arg.value.is_bytes() && arg.key == name && arg.value.bytes() == value;
 }
 
 MATCHER_P2(UIntMetric, name, value, "") {
@@ -109,7 +109,7 @@ TEST_F(InspectTest, InspectOpenRead) {
             fdio_service_connect(GetObjectPath("table-t1/.channel").c_str(),
                                  inspect.NewRequest().TakeChannel().release()));
 
-  fidl::VectorPtr<fidl::StringPtr> children;
+  fidl::VectorPtr<std::string> children;
   ASSERT_EQ(ZX_OK, inspect->ListChildren(&children));
   EXPECT_THAT(*children, UnorderedElementsAre("item-0x0", "item-0x1"));
 

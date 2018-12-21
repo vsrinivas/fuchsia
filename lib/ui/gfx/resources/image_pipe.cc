@@ -113,8 +113,8 @@ void ImagePipe::RemoveImage(uint32_t image_id) {
 
 void ImagePipe::PresentImage(
     uint32_t image_id, uint64_t presentation_time,
-    ::fidl::VectorPtr<zx::event> acquire_fences,
-    ::fidl::VectorPtr<zx::event> release_fences,
+    ::std::vector<zx::event> acquire_fences,
+    ::std::vector<zx::event> release_fences,
     fuchsia::images::ImagePipe::PresentImageCallback callback) {
   if (!frames_.empty() &&
       presentation_time < frames_.back().presentation_time) {
@@ -148,7 +148,7 @@ void ImagePipe::PresentImage(
       });
   frames_.push(Frame{image_it->second, presentation_time,
                      std::move(acquire_fences_listener),
-                     std::move(release_fences), std::move(callback)});
+                     fidl::VectorPtr(std::move(release_fences)), std::move(callback)});
 };
 
 bool ImagePipe::Update(escher::ReleaseFenceSignaller* release_fence_signaller,

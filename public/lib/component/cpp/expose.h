@@ -184,7 +184,7 @@ class Object : public fuchsia::inspect::Inspect, public fs::LazyDir {
  public:
   using ObjectVector = std::vector<fbl::RefPtr<Object>>;
   using ChildrenCallback = fit::function<void(ObjectVector*)>;
-  using StringOutputVector = fidl::VectorPtr<fidl::StringPtr>;
+  using StringOutputVector = fidl::VectorPtr<std::string>;
 
   // Constructs a new |Object| with the given name.
   // Every object requires a name, and names for children must be unique.
@@ -256,7 +256,7 @@ class Object : public fuchsia::inspect::Inspect, public fs::LazyDir {
   void ListChildren(ListChildrenCallback callback) override;
 
   // Opens a channel with the requested child
-  void OpenChild(::fidl::StringPtr name,
+  void OpenChild(std::string name,
                  ::fidl::InterfaceRequest<Inspect> child_channel,
                  OpenChildCallback callback) override;
 

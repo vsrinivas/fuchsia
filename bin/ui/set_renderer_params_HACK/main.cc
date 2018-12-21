@@ -31,7 +31,7 @@ int main(int argc, const char** argv) {
     clipping_enabled = presenter_renderer_params.clipping_enabled.value();
   }
 
-  fidl::VectorPtr<fuchsia::ui::gfx::RendererParam> renderer_params;
+  std::vector<fuchsia::ui::gfx::RendererParam> renderer_params;
   if (presenter_renderer_params.render_frequency.has_value()) {
     fuchsia::ui::gfx::RendererParam param;
     param.set_render_frequency(

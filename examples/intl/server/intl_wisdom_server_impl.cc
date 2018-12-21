@@ -35,18 +35,18 @@ const Locale LocaleIdToLocale(const std::string locale_id) {
 }
 
 const Locale LocaleIdToLocale(const LocaleId& locale_id) {
-  return LocaleIdToLocale(locale_id.id.get());
+  return LocaleIdToLocale(locale_id.id);
 }
 
 std::unique_ptr<TimeZone> TimeZoneIdToTimeZone(const TimeZoneId& time_zone_id) {
   return std::unique_ptr<TimeZone>(
-      TimeZone::createTimeZone(UnicodeString::fromUTF8(time_zone_id.id.get())));
+      TimeZone::createTimeZone(UnicodeString::fromUTF8(time_zone_id.id)));
 }
 
 std::unique_ptr<Calendar> CalendarIdToCalendar(const CalendarId& calendar_id,
                                                const TimeZone& time_zone) {
   // Calendar ID strings are just locale IDs with an undefined language
-  Locale as_locale = LocaleIdToLocale(calendar_id.id.get());
+  Locale as_locale = LocaleIdToLocale(calendar_id.id);
   UErrorCode error_code = U_ZERO_ERROR;
   return std::unique_ptr<Calendar>(
       Calendar::createInstance(time_zone, as_locale, error_code));
@@ -64,22 +64,22 @@ void IntlWisdomServerImpl::AskForWisdom(Profile intl_profile,
                                         int64_t timestamp_ms,
                                         AskForWisdomCallback callback) {
   // Parse the requested locale IDs
-  auto& locale_ids = intl_profile.locales.get();
+  auto& locale_ids = intl_profile.locales;
   std::vector<Locale> locales;
   std::transform(
       locale_ids.begin(), locale_ids.end(), std::back_inserter(locales),
       [](LocaleId locale_id) { return LocaleIdToLocale(locale_id); });
 
   std::unique_ptr<TimeZone> time_zone;
-  if (intl_profile.time_zones->size() > 0) {
-    time_zone = TimeZoneIdToTimeZone(intl_profile.time_zones->at(0));
+  if (intl_profile.time_zones.size() > 0) {
+    time_zone = TimeZoneIdToTimeZone(intl_profile.time_zones.at(0));
   } else {
     time_zone = std::unique_ptr<TimeZone>(TimeZone::detectHostTimeZone());
   }
 
   // Parse the requested calendar IDs, using the first requested timezone (or
   // device timezone as a fallback).
-  auto& calendar_ids = intl_profile.calendars.get();
+  auto& calendar_ids = intl_profile.calendars;
   std::vector<std::unique_ptr<Calendar>> calendars;
   std::transform(calendar_ids.begin(), calendar_ids.end(),
                  std::back_inserter(calendars), [&](CalendarId calendar_id) {

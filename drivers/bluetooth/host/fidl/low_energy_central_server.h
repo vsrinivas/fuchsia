@@ -31,18 +31,18 @@ class LowEnergyCentralServer
 
  private:
   // fuchsia::bluetooth::le::Central overrides:
-  void GetPeripherals(::fidl::VectorPtr<::fidl::StringPtr> service_uuids,
+  void GetPeripherals(::fidl::VectorPtr<::std::string> service_uuids,
                       GetPeripheralsCallback callback) override;
-  void GetPeripheral(::fidl::StringPtr identifier,
+  void GetPeripheral(::std::string identifier,
                      GetPeripheralCallback callback) override;
   void StartScan(fuchsia::bluetooth::le::ScanFilterPtr filter,
                  StartScanCallback callback) override;
   void StopScan() override;
   void ConnectPeripheral(
-      ::fidl::StringPtr identifier,
+      ::std::string identifier,
       ::fidl::InterfaceRequest<fuchsia::bluetooth::gatt::Client> client_request,
       ConnectPeripheralCallback callback) override;
-  void DisconnectPeripheral(::fidl::StringPtr identifier,
+  void DisconnectPeripheral(::std::string identifier,
                             DisconnectPeripheralCallback callback) override;
 
   // Called by |scan_session_| when a device is discovered.

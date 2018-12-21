@@ -76,8 +76,8 @@ class DisplayManager {
   async::WaitMethod<DisplayManager, &DisplayManager::OnAsync> wait_{this};
 
   void DisplaysChanged(
-      ::fidl::VectorPtr<fuchsia::hardware::display::Info> added,
-      ::fidl::VectorPtr<uint64_t> removed);
+      ::std::vector<fuchsia::hardware::display::Info> added,
+      ::std::vector<uint64_t> removed);
   void ClientOwnershipChange(bool has_ownership);
 
   fxl::UniqueFD dc_fd_;

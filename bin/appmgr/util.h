@@ -31,7 +31,7 @@ class Util {
       fuchsia::sys::LaunchInfo* launch_info);
 
   static std::string GetArgsString(
-      const ::fidl::VectorPtr<::fidl::StringPtr>& arguments);
+      const ::fidl::VectorPtr<::std::string>& arguments);
 
   static zx::channel OpenAsDirectory(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> node);
 };

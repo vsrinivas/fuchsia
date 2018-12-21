@@ -34,8 +34,7 @@ void CheckKeySequence(const KeySequence& actual,
   ASSERT_EQ(actual.size(), expected.size());
 
   for (size_t i = 0; i < actual.size(); ++i) {
-    ASSERT_TRUE(actual[i]->pressed_keys);
-    const std::vector<uint32_t>& pressed_keys = *actual[i]->pressed_keys;
+    const std::vector<uint32_t>& pressed_keys = actual[i]->pressed_keys;
 
     uint32_t key = 0;
     bool shift = false;

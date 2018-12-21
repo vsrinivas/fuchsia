@@ -27,7 +27,7 @@ class GattClientServer
 
  private:
   // bluetooth::gatt::Client overrides:
-  void ListServices(::fidl::VectorPtr<::fidl::StringPtr> uuids,
+  void ListServices(::fidl::VectorPtr<::std::string> uuids,
                     ListServicesCallback callback) override;
   void ConnectToService(
       uint64_t id,

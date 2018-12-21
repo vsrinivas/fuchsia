@@ -83,8 +83,8 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   // applying them; they will later be applied by ApplyScheduledUpdates().
   bool ScheduleUpdate(uint64_t presentation_time,
                       std::vector<::fuchsia::ui::gfx::Command> commands,
-                      ::fidl::VectorPtr<zx::event> acquire_fences,
-                      ::fidl::VectorPtr<zx::event> release_fences,
+                      ::std::vector<zx::event> acquire_fences,
+                      ::std::vector<zx::event> release_fences,
                       fuchsia::ui::scenic::Session::PresentCallback callback);
 
   // Called by ImagePipe::PresentImage().  Stashes the arguments without
@@ -314,7 +314,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
 
     std::vector<::fuchsia::ui::gfx::Command> commands;
     std::unique_ptr<escher::FenceSetListener> acquire_fences;
-    ::fidl::VectorPtr<zx::event> release_fences;
+    ::std::vector<zx::event> release_fences;
 
     // Callback to report when the update has been applied in response to
     // an invocation of |Session.Present()|.
@@ -323,7 +323,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   bool ApplyUpdate(CommandContext* command_context,
                    std::vector<::fuchsia::ui::gfx::Command> commands);
   std::queue<Update> scheduled_updates_;
-  ::fidl::VectorPtr<zx::event> fences_to_release_on_next_update_;
+  ::std::vector<zx::event> fences_to_release_on_next_update_;
 
   uint64_t last_applied_update_presentation_time_ = 0;
   uint64_t last_presentation_time_ = 0;

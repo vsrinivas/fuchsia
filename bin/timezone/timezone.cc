@@ -103,7 +103,7 @@ bool TimezoneImpl::IsValidTimezoneId(const fidl::StringPtr& timezone_id) {
   return true;
 }
 
-void TimezoneImpl::SetTimezone(fidl::StringPtr timezone_id,
+void TimezoneImpl::SetTimezone(std::string timezone_id,
                                SetTimezoneCallback callback) {
   if (!valid_) {
     FXL_LOG(ERROR) << "Time service is not valid.";

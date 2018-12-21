@@ -229,7 +229,7 @@ void LegacyLoggerImpl::LogEvent(
 }
 
 void LegacyLoggerImpl::LogEventCount(
-    uint32_t metric_id, uint32_t event_code, fidl::StringPtr component,
+    uint32_t metric_id, uint32_t event_code, std::string component,
     int64_t period_duration_micros, int64_t count,
     fuchsia::cobalt::LoggerBase::LogEventCountCallback callback) {
   const Metric* metric = encoder_.GetMetric(metric_id);
@@ -252,7 +252,7 @@ void LegacyLoggerImpl::LogEventCount(
 }
 
 void LegacyLoggerImpl::LogElapsedTime(
-    uint32_t metric_id, uint32_t event_code, fidl::StringPtr component,
+    uint32_t metric_id, uint32_t event_code, std::string component,
     int64_t elapsed_micros,
     fuchsia::cobalt::LoggerBase::LogElapsedTimeCallback callback) {
   LogThreePartMetric("elapsed time", metric_id, event_code, component,
@@ -260,14 +260,14 @@ void LegacyLoggerImpl::LogElapsedTime(
 }
 
 void LegacyLoggerImpl::LogFrameRate(
-    uint32_t metric_id, uint32_t event_code, fidl::StringPtr component,
+    uint32_t metric_id, uint32_t event_code, std::string component,
     float fps, fuchsia::cobalt::LoggerBase::LogFrameRateCallback callback) {
   LogThreePartMetric("frame rate", metric_id, event_code, component, fps,
                      std::move(callback), true);
 }
 
 void LegacyLoggerImpl::LogMemoryUsage(
-    uint32_t metric_id, uint32_t event_code, fidl::StringPtr component,
+    uint32_t metric_id, uint32_t event_code, std::string component,
     int64_t bytes,
     fuchsia::cobalt::LoggerBase::LogMemoryUsageCallback callback) {
   LogThreePartMetric("memory usage", metric_id, event_code, component, bytes,
@@ -275,7 +275,7 @@ void LegacyLoggerImpl::LogMemoryUsage(
 }
 
 void LegacyLoggerImpl::LogString(
-    uint32_t metric_id, fidl::StringPtr s,
+    uint32_t metric_id, std::string s,
     fuchsia::cobalt::LoggerBase::LogStringCallback callback) {
   uint32_t encoding_id = GetSinglePartMetricEncoding(metric_id);
   if (encoding_id == 0) {
@@ -304,10 +304,10 @@ void LegacyLoggerImpl::AddTimerObservationIfReady(
 }
 
 void LegacyLoggerImpl::StartTimer(
-    uint32_t metric_id, uint32_t event_code, fidl::StringPtr component,
-    fidl::StringPtr timer_id, uint64_t timestamp, uint32_t timeout_s,
+    uint32_t metric_id, uint32_t event_code, std::string component,
+    std::string timer_id, uint64_t timestamp, uint32_t timeout_s,
     fuchsia::cobalt::LoggerBase::StartTimerCallback callback) {
-  if (event_code != 0 || !component->empty()) {
+  if (event_code != 0 || !component.empty()) {
     FXL_LOG(ERROR) << "event_code and component are not currently "
                       "consumed. Pass in 0 and empty string respectively.";
     callback(Status::INVALID_ARGUMENTS);
@@ -319,7 +319,7 @@ void LegacyLoggerImpl::StartTimer(
     return;
   }
   auto status = timer_manager_->GetTimerValWithStart(
-      metric_id, 0, "", encoding_id, timer_id.get(), timestamp, timeout_s,
+      metric_id, 0, "", encoding_id, timer_id, timestamp, timeout_s,
       &timer_val_ptr);
 
   if (status != Status::OK) {
@@ -331,10 +331,10 @@ void LegacyLoggerImpl::StartTimer(
 }
 
 void LegacyLoggerImpl::EndTimer(
-    fidl::StringPtr timer_id, uint64_t timestamp, uint32_t timeout_s,
+    std::string timer_id, uint64_t timestamp, uint32_t timeout_s,
     fuchsia::cobalt::LoggerBase::EndTimerCallback callback) {
   std::unique_ptr<TimerVal> timer_val_ptr;
-  auto status = timer_manager_->GetTimerValWithEnd(timer_id.get(), timestamp,
+  auto status = timer_manager_->GetTimerValWithEnd(timer_id, timestamp,
                                                    timeout_s, &timer_val_ptr);
 
   if (status != Status::OK) {
@@ -346,8 +346,8 @@ void LegacyLoggerImpl::EndTimer(
 }
 
 void LegacyLoggerImpl::LogIntHistogram(
-    uint32_t metric_id, uint32_t event_code, fidl::StringPtr component,
-    fidl::VectorPtr<fuchsia::cobalt::HistogramBucket> histogram,
+    uint32_t metric_id, uint32_t event_code, std::string component,
+    std::vector<fuchsia::cobalt::HistogramBucket> histogram,
     fuchsia::cobalt::Logger::LogIntHistogramCallback callback) {
   const Metric* metric = encoder_.GetMetric(metric_id);
   if (!metric) {
@@ -364,7 +364,7 @@ void LegacyLoggerImpl::LogIntHistogram(
     callback(Status::INVALID_ARGUMENTS);
     return;
   }
-  if (!component->empty()) {
+  if (!component.empty()) {
     FXL_LOG(ERROR) << "The parameter |component| in the method LogIntHistogram "
                       "is unsupported in the current version of Cobalt. Pass "
                       "in an empty string for now. Metric="
@@ -380,8 +380,8 @@ void LegacyLoggerImpl::LogIntHistogram(
   }
 
   std::map<uint32_t, uint64_t> histogram_map;
-  for (auto it = histogram->begin(); histogram->end() != it; it++) {
-    histogram_map[(*it).index] = (*it).count;
+  for (auto it : histogram) {
+    histogram_map[it.index] = it.count;
   }
   auto result = encoder_.EncodeIntBucketDistribution(metric_id, encoding_id,
                                                      histogram_map);
@@ -389,9 +389,9 @@ void LegacyLoggerImpl::LogIntHistogram(
 }
 
 void LegacyLoggerImpl::LogIntHistogram(
-    uint32_t metric_id, uint32_t event_code, fidl::StringPtr component,
-    fidl::VectorPtr<uint32_t> bucket_indices,
-    fidl::VectorPtr<uint64_t> bucket_counts,
+    uint32_t metric_id, uint32_t event_code, std::string component,
+    std::vector<uint32_t> bucket_indices,
+    std::vector<uint64_t> bucket_counts,
     fuchsia::cobalt::LoggerSimple::LogIntHistogramCallback callback) {
   const Metric* metric = encoder_.GetMetric(metric_id);
   if (!metric) {
@@ -408,7 +408,7 @@ void LegacyLoggerImpl::LogIntHistogram(
     callback(Status::INVALID_ARGUMENTS);
     return;
   }
-  if (!component->empty()) {
+  if (!component.empty()) {
     FXL_LOG(ERROR) << "The parameter |component| in the method LogIntHistogram "
                       "is unsupported in the current version of Cobalt. Pass "
                       "in an empty string for now. Metric="
@@ -423,7 +423,7 @@ void LegacyLoggerImpl::LogIntHistogram(
     return;
   }
 
-  if (bucket_indices->size() != bucket_counts->size()) {
+  if (bucket_indices.size() != bucket_counts.size()) {
     FXL_LOG(ERROR) << "[" << metric_id
                    << "]: bucket_indices.size() != bucket_counts.size().";
     callback(Status::INVALID_ARGUMENTS);
@@ -431,8 +431,8 @@ void LegacyLoggerImpl::LogIntHistogram(
   }
 
   std::map<uint32_t, uint64_t> histogram_map;
-  for (auto i = 0; i < bucket_indices->size(); i++) {
-    histogram_map[bucket_indices->at(i)] = bucket_counts->at(i);
+  for (auto i = 0; i < bucket_indices.size(); i++) {
+    histogram_map[bucket_indices.at(i)] = bucket_counts.at(i);
   }
   auto result = encoder_.EncodeIntBucketDistribution(metric_id, encoding_id,
                                                      histogram_map);
@@ -441,11 +441,11 @@ void LegacyLoggerImpl::LogIntHistogram(
 
 void LegacyLoggerImpl::LogCustomEvent(
     uint32_t metric_id,
-    fidl::VectorPtr<fuchsia::cobalt::CustomEventValue> event_values,
+    std::vector<fuchsia::cobalt::CustomEventValue> event_values,
     fuchsia::cobalt::Logger::LogCustomEventCallback callback) {
   auto encodings = encoder_.DefaultEncodingsForMetric(metric_id);
   cobalt::encoder::Encoder::Value value;
-  for (const auto& event_val : *event_values) {
+  for (const auto& event_val : event_values) {
     switch (event_val.value.Which()) {
       case fuchsia::cobalt::Value::Tag::kStringValue: {
         value.AddStringPart(encodings[event_val.dimension_name],

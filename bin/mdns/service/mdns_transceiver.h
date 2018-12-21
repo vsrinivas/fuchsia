@@ -53,7 +53,7 @@ class MdnsTransceiver {
 
   // Handles |OnInterfaceChanged| events from |Netstack|.
   void InterfacesChanged(
-      fidl::VectorPtr<fuchsia::netstack::NetInterface> interfaces);
+      std::vector<fuchsia::netstack::NetInterface> interfaces);
 
   // Ensures that an interface transciever exists for |address| if |address|
   // is valid. Returns true if a change was made, false otherwise.

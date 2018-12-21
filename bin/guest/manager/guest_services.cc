@@ -16,7 +16,7 @@ GuestServices::GuestServices(fuchsia::guest::LaunchInfo launch_info)
 
 fuchsia::sys::ServiceListPtr GuestServices::ServeDirectory() {
   auto services = fuchsia::sys::ServiceList::New();
-  services->names->push_back(fuchsia::guest::vmm::LaunchInfoProvider::Name_);
+  services->names.push_back(fuchsia::guest::vmm::LaunchInfoProvider::Name_);
   services->provider = services_.AddBinding();
   return services;
 }

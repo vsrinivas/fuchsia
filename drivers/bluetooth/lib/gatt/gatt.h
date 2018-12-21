@@ -120,7 +120,7 @@ class GATT : public fbl::RefCounted<GATT> {
   virtual void SendNotification(IdType service_id,
                                 IdType chrc_id,
                                 std::string peer_id,
-                                ::fidl::VectorPtr<uint8_t> value,
+                                ::std::vector<uint8_t> value,
                                 bool indicate) = 0;
 
   // ===============

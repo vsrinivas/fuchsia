@@ -31,19 +31,19 @@ std::string RecursiveFormatCat(const Options& options, const ObjectNode& root,
   std::ostringstream ss;
   const auto& object = root.object;
   for (const auto& property : *object.properties) {
-    ss << Indent(indent) << FormatStringHexFallback(*property.key) << " = ";
+    ss << Indent(indent) << FormatStringHexFallback(property.key) << " = ";
 
     if (property.value.is_str()) {
-      ss << FormatStringHexFallback(*property.value.str()) << std::endl;
+      ss << FormatStringHexFallback(property.value.str()) << std::endl;
     } else {
       auto& val = property.value.bytes();
-      ss << FormatStringHexFallback({(char*)val->data(), val->size()})
+      ss << FormatStringHexFallback({(char*)val.data(), val.size()})
          << std::endl;
     }
   }
 
   for (const auto& metric : *object.metrics) {
-    ss << Indent(indent) << FormatStringHexFallback(*metric.key) << " = "
+    ss << Indent(indent) << FormatStringHexFallback(metric.key) << " = "
        << FormatMetricValue(metric) << std::endl;
   }
 

@@ -127,11 +127,11 @@ void Runner::OnCameraAvailable(int dir_fd, std::string filename) {
 }
 
 void Runner::GetFormatCallback(
-    ::fidl::VectorPtr<fuchsia::camera::VideoFormat> fmts, uint32_t total_count,
+    ::std::vector<fuchsia::camera::VideoFormat> fmts, uint32_t total_count,
     zx_status_t status) {
   uint32_t idx;
-  for (idx = 0; idx < fmts->size(); idx++) {
-    auto& format = fmts.get()[idx];
+  for (idx = 0; idx < fmts.size(); idx++) {
+    auto& format = fmts[idx];
     uint32_t capture_fps = round(1.0 * format.rate.frames_per_sec_numerator /
                                  format.rate.frames_per_sec_denominator);
     if (capture_fps != kDisplayRate) {
@@ -146,7 +146,7 @@ void Runner::GetFormatCallback(
     ZX_ASSERT(format.format.width % 2 == 0);
   }
 
-  if (idx >= fmts->size()) {
+  if (idx >= fmts.size()) {
     // Technically we should call GetFormat again, but we can handle that
     // when it comes it, since this is just a test program.
     printf("Failed to find matching capture format\n");
@@ -156,7 +156,7 @@ void Runner::GetFormatCallback(
   // We found a camera, so stop watching the dir for new cameras.
   camera_watcher_.reset();
 
-  auto& format = fmts.get()[idx];
+  auto& format = fmts[idx];
   camera_stride_ = format.format.planes[0].bytes_per_row;
   width_ = format.format.width;
   height_ = format.format.height;
@@ -230,14 +230,14 @@ void Runner::InitDisplay() {
 }
 
 void Runner::OnDisplaysChanged(
-    ::fidl::VectorPtr<fuchsia::hardware::display::Info> added,
-    ::fidl::VectorPtr<uint64_t> removed) {
+    ::std::vector<fuchsia::hardware::display::Info> added,
+    ::std::vector<uint64_t> removed) {
   ZX_ASSERT_MSG(!display_id_, "Display change while tests are running");
-  for (auto& info : added.get()) {
-    if (strcmp(info.monitor_name.get().c_str(), display_name_)) {
+  for (auto& info : added) {
+    if (strcmp(info.monitor_name.c_str(), display_name_)) {
       continue;
     }
-    for (auto& mode : info.modes.get()) {
+    for (auto& mode : info.modes) {
       if (mode.horizontal_resolution != width_ ||
           mode.vertical_resolution != height_ ||
           mode.refresh_rate_e2 != kDisplayRate * 100) {
@@ -351,7 +351,7 @@ void Runner::CheckFrameConfig(uint32_t frame_idx) {
       frame_idx == frames_.size() - 1,
       [this, frame_idx](
           fuchsia::hardware::display::ConfigResult result,
-          ::fidl::VectorPtr<fuchsia::hardware::display::ClientCompositionOp>) {
+          ::std::vector<fuchsia::hardware::display::ClientCompositionOp>) {
         if (result == fuchsia::hardware::display::ConfigResult::OK) {
           if (frame_idx + 1 < frames_.size()) {
             CheckFrameConfig(frame_idx + 1);
@@ -370,8 +370,8 @@ void Runner::ApplyFrame(uint32_t frame_idx) {
 }
 
 void Runner::OnVsync(uint64_t display_id, uint64_t timestamp,
-                     ::fidl::VectorPtr<uint64_t> image_ids) {
-  if (!test_running_ || image_ids.get().empty()) {
+                     ::std::vector<uint64_t> image_ids) {
+  if (!test_running_ || image_ids.empty()) {
     return;
   }
 
@@ -380,7 +380,7 @@ void Runner::OnVsync(uint64_t display_id, uint64_t timestamp,
   for (auto layer : frame) {
     uint64_t expected_image = layer.first->image_id(layer.second);
     if (expected_image) {
-      if (image_ids.get()[image_idx++] != expected_image) {
+      if (image_ids[image_idx++] != expected_image) {
         if (display_idx_ != 0) {
           FinishTest(kTestVsyncFail);
         }

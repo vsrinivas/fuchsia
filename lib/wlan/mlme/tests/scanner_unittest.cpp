@@ -180,10 +180,10 @@ TEST_F(ScannerTest, ScanResponse) {
     results[0].body()->bss.Clone(&bss);
 
     EXPECT_EQ(0, std::memcmp(kBeacon + 16, bss.bssid.data(), 6));
-    EXPECT_EQ(bss.ssid->size(), static_cast<size_t>(9));
+    EXPECT_EQ(bss.ssid.size(), static_cast<size_t>(9));
 
     const uint8_t ssid[] = {'t', 'e', 's', 't', ' ', 's', 's', 'i', 'd'};
-    EXPECT_EQ(0, std::memcmp(ssid, bss.ssid->data(), sizeof(ssid)));
+    EXPECT_EQ(0, std::memcmp(ssid, bss.ssid.data(), sizeof(ssid)));
     EXPECT_EQ(wlan_mlme::BSSTypes::INFRASTRUCTURE, bss.bss_type);
     EXPECT_EQ(100u, bss.beacon_period);
     EXPECT_EQ(1024u, bss.timestamp);

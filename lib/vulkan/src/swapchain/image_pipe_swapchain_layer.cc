@@ -460,10 +460,10 @@ VkResult ImagePipeSwapchain::Present(VkQueue queue, uint32_t index,
 
     pending_images_.push_back({std::move(image_release_fence), index});
 
-    fidl::VectorPtr<zx::event> acquire_fences;
+    std::vector<zx::event> acquire_fences;
     acquire_fences.push_back(std::move(acquire_fence));
 
-    fidl::VectorPtr<zx::event> release_fences;
+    std::vector<zx::event> release_fences;
     release_fences.push_back(std::move(release_fence));
 
     surface()->PresentImage(images_[index].id, std::move(acquire_fences),

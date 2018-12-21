@@ -32,8 +32,8 @@ SessionHandler::~SessionHandler() {
 }
 
 void SessionHandler::Present(
-    uint64_t presentation_time, ::fidl::VectorPtr<zx::event> acquire_fences,
-    ::fidl::VectorPtr<zx::event> release_fences,
+    uint64_t presentation_time, ::std::vector<zx::event> acquire_fences,
+    ::std::vector<zx::event> release_fences,
     fuchsia::ui::scenic::Session::PresentCallback callback) {
   if (!session_->ScheduleUpdate(
           presentation_time, std::move(buffered_commands_),

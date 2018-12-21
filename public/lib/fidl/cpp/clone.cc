@@ -15,4 +15,9 @@ zx_status_t Clone(const StringPtr& value, StringPtr* result) {
   return ZX_OK;
 }
 
+zx_status_t Clone(const ::std::string& value, std::string* result) {
+  *result = value;
+  return ZX_OK;
+}
+
 }  // namespace fidl

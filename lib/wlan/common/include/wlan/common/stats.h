@@ -93,8 +93,8 @@ struct RssiStats {
     ::fuchsia::wlan::stats::RssiStats ToFidl() const {
         std::lock_guard<std::mutex> guard(lock);
         ::fuchsia::wlan::stats::RssiStats rssi_stats{};
-        rssi_stats.hist.reset(
-            std::vector<uint64_t>(hist, hist + ::fuchsia::wlan::stats::RSSI_BINS));
+        rssi_stats.hist =
+            std::vector<uint64_t>(hist, hist + ::fuchsia::wlan::stats::RSSI_BINS);
         return rssi_stats;
     };
     void Reset() {

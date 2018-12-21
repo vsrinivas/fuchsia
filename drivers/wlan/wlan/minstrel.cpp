@@ -487,8 +487,8 @@ zx_status_t MinstrelRateSelector::GetListToFidl(wlan_minstrel::Peers* peers_fidl
     peers_fidl->peers.resize(peer_map_.size());
     size_t idx = 0;
     for (const auto& iter : peer_map_) {
-        (*peers_fidl->peers)[idx]->resize(common::kMacAddrLen);
-        iter.first.CopyTo((*peers_fidl->peers)[idx]->data());
+        peers_fidl->peers[idx].resize(common::kMacAddrLen);
+        iter.first.CopyTo(peers_fidl->peers[idx].data());
         ++idx;
     }
     return ZX_OK;
@@ -520,7 +520,7 @@ zx_status_t MinstrelRateSelector::GetStatsToFidl(const common::MacAddr& peer_add
 
     size_t idx = 0;
     for (const auto& [_, tx_stats] : peer->tx_stats_map) {
-        (*peer_fidl->entries)[idx++] = tx_stats.ToFidl();
+        peer_fidl->entries[idx++] = tx_stats.ToFidl();
     }
     peer_fidl->max_tp = peer->max_tp;
     peer_fidl->max_probability = peer->max_probability;

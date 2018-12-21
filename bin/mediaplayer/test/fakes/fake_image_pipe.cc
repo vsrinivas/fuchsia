@@ -122,15 +122,13 @@ void FakeImagePipe::RemoveImage(uint32_t image_id) {
 }
 
 void FakeImagePipe::PresentImage(uint32_t image_id, uint64_t presentation_time,
-                                 fidl::VectorPtr<zx::event> acquire_fences,
-                                 fidl::VectorPtr<zx::event> release_fences,
+                                 std::vector<zx::event> acquire_fences,
+                                 std::vector<zx::event> release_fences,
                                  PresentImageCallback callback) {
-  FXL_DCHECK(acquire_fences);
-  FXL_DCHECK(release_fences);
   FXL_DCHECK(callback);
   // The video renderer doesn't use the acquire fences, so we don't support
   // them in the fake.
-  FXL_CHECK(acquire_fences->empty())
+  FXL_CHECK(acquire_fences.empty())
       << "PresentImage: acquire_fences not supported.";
 
   if (prev_presentation_time_ > presentation_time) {
