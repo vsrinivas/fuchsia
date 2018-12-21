@@ -122,27 +122,7 @@ zx_status_t ZirconEnclosedGuest::RunUtil(const std::string& util,
   std::string cmd =
       fxl::StringPrintf("/bin/run %s#meta/%s.cmx %s", kFuchsiaTestUtilsUrl,
                         util.c_str(), args.c_str());
-  // Even after checking for pkgfs to start up, the guest might not be ready to
-  // accept run commands. We loop here to give it some time and reduce test
-  // flakiness.
-  // TODO(MAC-230): Verify whether this is still necessary.
-  for (size_t i = 0; i != kNumRetries; ++i) {
-    std::string output;
-    zx_status_t status = Execute(cmd, &output);
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to run `" << cmd << "` " << status;
-      return status;
-    }
-    auto not_found = output.find("run: not found");
-    if (not_found != std::string::npos) {
-      zx::nanosleep(zx::deadline_after(kRetryStep));
-      continue;
-    } else if (result != nullptr) {
-      *result = output;
-    }
-    return ZX_OK;
-  }
-  return ZX_ERR_TIMED_OUT;
+  return Execute(cmd, result);
 }
 
 zx_status_t LinuxEnclosedGuest::LaunchInfo(
