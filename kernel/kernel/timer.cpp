@@ -31,6 +31,7 @@
 #include <kernel/stats.h>
 #include <kernel/thread.h>
 #include <kernel/timer.h>
+#include <lib/counters.h>
 #include <list.h>
 #include <malloc.h>
 #include <platform.h>
@@ -40,6 +41,19 @@
 #include <zircon/types.h>
 
 #define LOCAL_TRACE 0
+
+// Total number of timers set. Always increasing.
+KCOUNTER(timer_created_counter, "kernel.timer.created");
+
+// Number of timers merged into an existing timer because of slack.
+KCOUNTER(timer_coalesced_counter, "kernel.timer.coalesced");
+
+// Number of timers that have fired (i.e. callback was invoked).
+KCOUNTER(timer_fired_counter, "kernel.timer.fired");
+
+// Number of timers that were successfully canceled. Attempts to cancel a timer that is currently
+// firing are not counted.
+KCOUNTER(timer_canceled_counter, "kernel.timer.canceled");
 
 namespace {
 
@@ -108,6 +122,7 @@ static void insert_timer_in_queue(uint cpu, timer_t* timer,
             //
             timer->slack = zx_time_sub_time(entry->scheduled_time, timer->scheduled_time);
             timer->scheduled_time = entry->scheduled_time;
+            kcounter_add(timer_coalesced_counter, 1);
             list_add_after(&entry->node, &timer->node);
             return;
         }
@@ -171,6 +186,7 @@ static void insert_timer_in_queue(uint cpu, timer_t* timer,
         //
         timer->slack = zx_time_sub_time(entry->scheduled_time, timer->scheduled_time);
         timer->scheduled_time = entry->scheduled_time;
+        kcounter_add(timer_coalesced_counter, 1);
         list_add_after(&entry->node, &timer->node);
         return;
     }
@@ -243,6 +259,7 @@ void timer_set(timer_t* timer, zx_time_t deadline, TimerSlack slack,
     LTRACEF("scheduled time %" PRIi64 "\n", timer->scheduled_time);
 
     insert_timer_in_queue(cpu, timer, earliest_deadline, latest_deadline);
+    kcounter_add(timer_created_counter, 1);
 
     if (list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node) == timer) {
         // we just modified the head of the timer queue
@@ -307,6 +324,7 @@ bool timer_cancel(timer_t* timer) {
 
         // remove our timer from the queue
         list_delete(&timer->node);
+        kcounter_add(timer_canceled_counter, 1);
 
         // TODO(cpu): if  after removing |timer| there is one other single timer with
         // the same scheduled_time and slack non-zero then it is possible to return
@@ -395,6 +413,7 @@ void timer_tick(zx_time_t now) {
                 LTRACEF("dequeued timer %p, scheduled %" PRIi64 "\n", timer, timer->scheduled_time);
 
                 CPU_STATS_INC(timers);
+                kcounter_add(timer_fired_counter, 1);
 
                 LTRACEF("timer %p firing callback %p, arg %p\n", timer, timer->callback, timer->arg);
                 timer->callback(timer, now, timer->arg);
@@ -457,6 +476,9 @@ void timer_transition_off_cpu(uint old_cpu) {
         // with the other timer queue they are not coalesced again.
         // TODO(cpu): figure how important this case is.
         insert_timer_in_queue(cpu, entry, entry->scheduled_time, entry->scheduled_time);
+        // Note, we do not increment the "created" counter here because we are simply moving these
+        // timers from one queue to another and we already counted them when they were first
+        // created.
     }
 
     timer_t* new_head = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
