@@ -428,6 +428,9 @@ func newHTTPClient(cfg *amber.TransportConfig) (*http.Client, error) {
 		TLSHandshakeTimeout:   10 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
 		TLSClientConfig:       nil,
+		// A workaround for TC-243 where closed connections are not being
+		// properly detected. This is a mitigation for PKG-400
+		ResponseHeaderTimeout: 15 * time.Second,
 	}
 
 	if cfg == nil {
