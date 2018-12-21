@@ -89,7 +89,12 @@ pub struct SeqControl {
 
 impl SeqControl {
     #[cfg(test)]
-    fn decode(num: u16) -> Self { Self{frag_num: num & 0x0F, seq_num: num >> 4} }
+    fn decode(num: u16) -> Self {
+        Self {
+            frag_num: num & 0x0F,
+            seq_num: num >> 4,
+        }
+    }
     fn encode(&self) -> u16 {
         self.frag_num | (self.seq_num << 4)
     }
@@ -112,7 +117,7 @@ pub struct DataHeader {
 #[cfg(test)]
 impl DataHeader {
     pub fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
-        const DATA_SUBTYPE_QOS_BIT:u16 = 0b1000;
+        const DATA_SUBTYPE_QOS_BIT: u16 = 0b1000;
         let frame_control = FrameControl(reader.read_u16::<LittleEndian>()?);
         let duration = reader.read_u16::<LittleEndian>()?;
         let mut addr1 = [0u8; 6];
@@ -127,17 +132,19 @@ impl DataHeader {
                 let mut addr4 = [0u8; 6];
                 reader.read(&mut addr4)?;
                 Some(addr4)
-            },
+            }
             false => None,
         };
-        let qos_control =
-            if (frame_control.subtype() & DATA_SUBTYPE_QOS_BIT) != 0 {
+        let qos_control = if (frame_control.subtype() & DATA_SUBTYPE_QOS_BIT) != 0 {
             Some(reader.read_u16::<LittleEndian>()?)
-        }
-        else {None};
+        } else {
+            None
+        };
         let ht_control = if frame_control.htc_order() {
             Some(reader.read_u32::<LittleEndian>()?)
-        } else { None };
+        } else {
+            None
+        };
         Ok(Self {
             frame_control,
             duration,
@@ -286,8 +293,9 @@ impl<W: io::Write> MacFrameWriter<W> {
     }
 
     #[cfg(test)]
-    pub fn data(mut self, data_header: &DataHeader, llc_header: &LlcHeader, payload: &[u8])
-        -> io::Result<Self> {
+    pub fn data(
+        mut self, data_header: &DataHeader, llc_header: &LlcHeader, payload: &[u8],
+    ) -> io::Result<Self> {
         self.write_data_header(data_header, DataSubtype::Data)?;
         self.write_llc_header(llc_header)?;
         self.w.write_all(payload)?;
@@ -305,9 +313,12 @@ impl<W: io::Write> MacFrameWriter<W> {
         self.w.write_all(&header.addr1)?;
         self.w.write_all(&header.addr2)?;
         self.w.write_all(&header.addr3)?;
-        self.w.write_u16::<LittleEndian>(header.seq_control.encode())?;
-        if let Some(addr4) = header.addr4 { self.w.write_all(&addr4)?; }
-        if let Some(qos_control) = header.qos_control{
+        self.w
+            .write_u16::<LittleEndian>(header.seq_control.encode())?;
+        if let Some(addr4) = header.addr4 {
+            self.w.write_all(&addr4)?;
+        }
+        if let Some(qos_control) = header.qos_control {
             self.w.write_u16::<LittleEndian>(qos_control)?;
         };
         if let Some(ht_control) = header.ht_control {
@@ -397,7 +408,8 @@ mod tests {
                     beacon_interval: 0xBEAC,
                     capability_info: CapabilityInfo(0xCAFE),
                 },
-            ).unwrap()
+            )
+            .unwrap()
             .ssid(&[0xAA, 0xBB, 0xCC, 0xDD, 0xEE])
             .unwrap()
             .into_writer();
@@ -436,7 +448,8 @@ mod tests {
                     auth_txn_seq_number: 0x23AB,
                     status_code: 0xC3D4,
                 },
-            ).unwrap()
+            )
+            .unwrap()
             .into_writer();
         #[cfg_attr(rustfmt, rustfmt_skip)]
         let expected_frame: &[u8] = &[
@@ -471,7 +484,8 @@ mod tests {
                     status_code: 0x9876,
                     association_id: 0x6543,
                 },
-            ).unwrap()
+            )
+            .unwrap()
             .into_writer();
         #[cfg_attr(rustfmt, rustfmt_skip)]
         let expected_frame: &[u8] = &[
@@ -491,18 +505,24 @@ mod tests {
             8u8, 1, // FrameControl
             0, 0, // Duration
             101, 116, 104, 110, 101, 116, // Addr1
-            103, 98, 111, 110, 105, 107,  // Addr2
-            98, 115, 115, 98, 115, 115,   // Addr3
+            103, 98, 111, 110, 105, 107, // Addr2
+            98, 115, 115, 98, 115, 115, // Addr3
             48, 0, // SeqControl
             // LLC Header
             170, 170, 3, // dsap, ssap and control
             0, 0, 0, // OUI
             0, 8, // protocol ID
-            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 // payload
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, // payload
         ] as &[u8];
         let data_header = DataHeader::from_reader(&mut bytes).expect("reading data header");
-        assert_eq!(data_header.frame_control.typ(), FrameControlType::Data as u16);
-        assert_eq!(data_header.frame_control.subtype(), DataSubtype::Data as u16);
+        assert_eq!(
+            data_header.frame_control.typ(),
+            FrameControlType::Data as u16
+        );
+        assert_eq!(
+            data_header.frame_control.subtype(),
+            DataSubtype::Data as u16
+        );
         assert_eq!(data_header.addr1, [0x65, 0x74, 0x68, 0x6e, 0x65, 0x74]);
         assert_eq!(data_header.addr2, [0x67, 0x62, 0x6f, 0x6e, 0x69, 0x6b]);
         assert_eq!(data_header.addr3, [0x62, 0x73, 0x73, 0x62, 0x73, 0x73]);
@@ -517,7 +537,10 @@ mod tests {
         let mut payload = vec![];
         let bytes_read = io::Read::read_to_end(&mut bytes, &mut payload).expect("reading payload");
         assert_eq!(bytes_read, 15);
-        assert_eq!(&payload[..], &[1u8, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
+        assert_eq!(
+            &payload[..],
+            &[1u8, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+        );
     }
 
     #[test]
@@ -545,8 +568,9 @@ mod tests {
                     oui: [0xff, 0xfe, 0xfd],
                     protocol_id: 0x3456,
                 },
-                &[11, 12, 13, 14, 15, 16, 17]
-            ).unwrap()
+                &[11, 12, 13, 14, 15, 16, 17],
+            )
+            .unwrap()
             .into_writer();
         #[cfg_attr(rustfmt, rustfmt_skip)]
         let expected_frame: &[u8] = &[

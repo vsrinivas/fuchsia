@@ -4,21 +4,9 @@
 
 use {
     fidl_fuchsia_wlan_tap as wlantap,
-    fuchsia_async::{
-        self as fasync,
-        TimeoutExt,
-        temp::TempStreamExt
-    },
-    fuchsia_zircon::{
-        self as zx,
-        prelude::*
-    },
-    futures::{
-        channel::mpsc,
-        Poll, Future, FutureExt, StreamExt,
-        ready,
-        task::LocalWaker,
-    },
+    fuchsia_async::{self as fasync, temp::TempStreamExt, TimeoutExt},
+    fuchsia_zircon::{self as zx, prelude::*},
+    futures::{channel::mpsc, ready, task::LocalWaker, Future, FutureExt, Poll, StreamExt},
     std::{
         pin::{Pin, Unpin},
         sync::Arc,
@@ -48,7 +36,8 @@ impl<F, H> Unpin for TestHelperFuture<F, H>
 where
     F: Future + Unpin,
     H: FnMut(wlantap::WlantapPhyEvent),
-{}
+{
+}
 
 impl<T, E, F, H> Future for TestHelperFuture<F, H>
 where
@@ -76,15 +65,16 @@ where
 }
 
 impl TestHelper {
-    pub fn begin_test(exec: &mut fasync::Executor,
-                      config: wlantap::WlantapPhyConfig) -> Self {
+    pub fn begin_test(exec: &mut fasync::Executor, config: wlantap::WlantapPhyConfig) -> Self {
         let wlantap = Wlantap::open().expect("Failed to open wlantapctl");
-        let proxy = wlantap.create_phy(config).expect("Failed to create wlantap PHY");
+        let proxy = wlantap
+            .create_phy(config)
+            .expect("Failed to create wlantap PHY");
         let event_stream = Some(proxy.take_event_stream());
         let mut helper = TestHelper {
             _wlantap: wlantap,
             proxy: Arc::new(proxy),
-            event_stream
+            event_stream,
         };
         helper.wait_for_wlanmac_start(exec);
         helper
@@ -92,26 +82,29 @@ impl TestHelper {
 
     fn wait_for_wlanmac_start(&mut self, exec: &mut fasync::Executor) {
         let (mut sender, receiver) = mpsc::channel::<()>(1);
-        self.run(exec, 5.seconds(), "receive a WlanmacStart event",
-            move |event| {
-                match event {
-                    wlantap::WlantapPhyEvent::WlanmacStart{ .. } => {
-                        sender.try_send(()).unwrap();
-                    },
-                    _ => {}
+        self.run(
+            exec,
+            5.seconds(),
+            "receive a WlanmacStart event",
+            move |event| match event {
+                wlantap::WlantapPhyEvent::WlanmacStart { .. } => {
+                    sender.try_send(()).unwrap();
                 }
+                _ => {}
             },
-            receiver.map(Ok).try_into_future()
-        ).unwrap_or_else(|()| unreachable!());
+            receiver.map(Ok).try_into_future(),
+        )
+        .unwrap_or_else(|()| unreachable!());
     }
 
     pub fn proxy(&self) -> Arc<wlantap::WlantapPhyProxy> {
         self.proxy.clone()
     }
 
-    pub fn run<T, E, F, H>(&mut self, exec: &mut fasync::Executor, timeout: zx::Duration,
-                             context: &str, event_handler: H, future: F)
-        -> Result<T, E>
+    pub fn run<T, E, F, H>(
+        &mut self, exec: &mut fasync::Executor, timeout: zx::Duration, context: &str,
+        event_handler: H, future: F,
+    ) -> Result<T, E>
     where
         H: FnMut(wlantap::WlantapPhyEvent),
         F: Future<Output = Result<T, E>> + Unpin,
@@ -122,13 +115,15 @@ impl TestHelper {
                 event_handler,
                 main_future: future,
             }
-            .on_timeout(timeout.after_now(),
-                        || panic!("Did not complete in time: {}", context)));
+            .on_timeout(timeout.after_now(), || {
+                panic!("Did not complete in time: {}", context)
+            }),
+        );
         match res {
             Ok((item, stream)) => {
                 self.event_stream = Some(stream);
                 Ok(item)
-            },
+            }
             Err((err, stream)) => {
                 self.event_stream = Some(stream);
                 Err(err)

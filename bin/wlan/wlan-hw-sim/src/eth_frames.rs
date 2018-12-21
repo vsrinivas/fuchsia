@@ -27,7 +27,7 @@ impl EthHeader {
         let mut src = [0u8; 6];
         reader.read(&mut src)?;
         let eth_type = reader.read_u16::<LittleEndian>()?;
-        Ok(Self { dst, src, eth_type})
+        Ok(Self { dst, src, eth_type })
     }
 }
 
@@ -45,11 +45,15 @@ mod tests {
     #[test]
     fn simple_eth_header() {
         let mut buf = vec![];
-        write_eth_header(&mut buf, &EthHeader{
-            dst: [0x01, 0x02, 0x03, 0x04, 0x05, 0x06],
-            src: [0x11, 0x12, 0x13, 0x14, 0x15, 0x16],
-            eth_type: EtherType::Ipv4 as u16,
-        }).expect("Error writing ethernet header");
+        write_eth_header(
+            &mut buf,
+            &EthHeader {
+                dst: [0x01, 0x02, 0x03, 0x04, 0x05, 0x06],
+                src: [0x11, 0x12, 0x13, 0x14, 0x15, 0x16],
+                eth_type: EtherType::Ipv4 as u16,
+            },
+        )
+        .expect("Error writing ethernet header");
         #[cfg_attr(rustfmt, rustfmt_skip)]
         let expected_frame: &[u8] = &[
             // dst
@@ -66,8 +70,8 @@ mod tests {
     fn parse_eth_header() {
         let mut bytes = &[
             0x01u8, 0x02, 0x03, 0x04, 0x05, 0x06, // dst
-              0x11, 0x12, 0x13, 0x14, 0x15, 0x16, // src
-              0x00, 0x08, // ether_type
+            0x11, 0x12, 0x13, 0x14, 0x15, 0x16, // src
+            0x00, 0x08, // ether_type
         ] as &[u8];
         let eth_header = EthHeader::from_reader(&mut bytes).expect("reading eth_header");
         assert_eq!(eth_header.dst, [0x01, 0x02, 0x03, 0x04, 0x05, 0x06]);
