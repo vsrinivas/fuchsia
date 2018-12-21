@@ -3537,10 +3537,9 @@ zx_status_t Device::Query(wlan_info_t* info) {
             .vht_supported = false,
             .vht_caps = {},
             // TODO(NET-1375):
-            // Unmark the "BasicRate" bit for the first 4 rates.
             // Rename ".basic_rates" to ".supported_rates"
             // See IEEE Std 802.11-2016, 9.4.2.3 for encoding
-            .basic_rates = {0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c},
+            .basic_rates = {0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c},
             .supported_channels =
                 {
                     .base_freq = 5000,
