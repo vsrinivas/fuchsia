@@ -72,7 +72,7 @@ fn main() -> Result<(), Error> {
         .input
         .iter()
         .map(|filename| {
-            let mut f = File::open(filename).expect("file not found");
+            let mut f = File::open(filename).expect(&format!("{} not found", filename.display()));
             let mut contents = String::new();
             f.read_to_string(&mut contents)
                 .expect("something went wrong reading the file");
