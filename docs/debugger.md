@@ -65,7 +65,7 @@ Boot the target system with networking support. For
 you may get some prompts for extra steps required:
 
 ```sh
-fx run -N -u scripts/start-dhcp-server.sh
+fx run -- -N -u scripts/start-dhcp-server.sh
 ```
 
 ### 2. Run the debug agent on the target
