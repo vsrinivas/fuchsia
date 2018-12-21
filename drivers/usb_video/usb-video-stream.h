@@ -7,6 +7,7 @@
 
 #include <ddktl/device-internal.h>
 #include <ddktl/device.h>
+#include <ddktl/protocol/empty-protocol.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/vector.h>
@@ -26,15 +27,12 @@ namespace usb {
 
 static constexpr int USB_ENDPOINT_INVALID = -1;
 
-struct VideoStreamProtocol : public ddk::internal::base_protocol {
-  explicit VideoStreamProtocol() { ddk_proto_id_ = ZX_PROTOCOL_CAMERA; }
-};
-
 class UsbVideoStream;
 using UsbVideoStreamBase =
     ddk::Device<UsbVideoStream, ddk::Ioctlable, ddk::Unbindable>;
 
-class UsbVideoStream : public UsbVideoStreamBase, public VideoStreamProtocol {
+class UsbVideoStream : public UsbVideoStreamBase,
+                       public ddk::EmptyProtocol<ZX_PROTOCOL_CAMERA> {
  public:
   static zx_status_t Create(zx_device_t* device, usb_protocol_t* usb, int index,
                             usb_interface_descriptor_t* intf,
