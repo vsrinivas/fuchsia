@@ -41,7 +41,7 @@ use {
     fidl_fuchsia_io::{
         FileObject, FileRequest, FileRequestStream, NodeAttributes, NodeInfo, SeekOrigin,
         INO_UNKNOWN, MODE_PROTECTION_MASK, MODE_TYPE_FILE, OPEN_FLAG_APPEND, OPEN_FLAG_DESCRIBE,
-        OPEN_FLAG_DIRECTORY, OPEN_FLAG_STATUS, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE,
+        OPEN_FLAG_DIRECTORY, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE,
         OPEN_RIGHT_WRITABLE,
     },
     fuchsia_async::Channel,
@@ -357,8 +357,7 @@ where
             return Err(Status::NOT_DIR);
         }
 
-        let allowed_flags = OPEN_FLAG_STATUS
-            | OPEN_FLAG_DESCRIBE
+        let allowed_flags = OPEN_FLAG_DESCRIBE
             | if self.on_read.is_some() {
                 OPEN_RIGHT_READABLE
             } else {
@@ -446,11 +445,11 @@ where
                 // still send OnOpen() if it was initially requested.
                 let clone_control_handle = clone_stream.control_handle();
                 let status = self.add_request_stream_clone(connection, flags, clone_stream);
-                if flags & OPEN_FLAG_STATUS != 0 {
+                if flags & OPEN_FLAG_DESCRIBE != 0 {
                     let mut info = NodeInfo::File(FileObject { event: None });
                     clone_control_handle.send_on_open_(
                         status.into_raw(),
-                        if flags & OPEN_FLAG_DESCRIBE != 0 {
+                        if status == Status::OK {
                             Some(OutOfLine(&mut info))
                         } else {
                             None
@@ -1562,7 +1561,7 @@ mod tests {
                 // ServerEnd<NodeMarker> :(
                 first_proxy
                     .clone(
-                        OPEN_RIGHT_READABLE | OPEN_FLAG_STATUS,
+                        OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
                         ServerEnd::new(second_server_end.into_channel()),
                     )
                     .unwrap();
@@ -1573,7 +1572,8 @@ mod tests {
                 match await!(event_stream.into_future()) {
                     (Some(Ok(FileEvent::OnOpen_ { s, info })), _) => {
                         assert_eq!(s, ZX_OK);
-                        assert_eq!(info, None);
+                        assert!(info.is_some());
+                        assert_eq!(*info.unwrap(), NodeInfo::File(FileObject { event: None }));
                     }
                     (unexpected, _) => {
                         panic!("Unexpected event: {:?}", unexpected);
@@ -1785,7 +1785,7 @@ mod tests {
                 // compiler output?
                 first_proxy
                     .clone(
-                        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_STATUS,
+                        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE,
                         ServerEnd::new(second_server_end.into_channel()),
                     )
                     .unwrap();
