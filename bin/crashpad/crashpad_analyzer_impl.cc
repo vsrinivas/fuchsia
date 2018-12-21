@@ -39,6 +39,7 @@
 #include "config.h"
 #include "report_annotations.h"
 #include "report_attachments.h"
+#include "scoped_unlink.h"
 
 namespace fuchsia {
 namespace crash {
@@ -170,12 +171,16 @@ zx_status_t CrashpadAnalyzerImpl::HandleNativeException(
   // The Crashpad exception handler expects filepaths for the passed
   // attachments, not file objects, but we need the underlying files
   // to still be there.
-  const std::map<std::string, ScopedUnlink> attachments =
-      MakeNativeExceptionAttachments(config_.local_crashpad_database_path);
-  std::map<std::string, base::FilePath> attachment_paths;
-  for (const auto& key_file : attachments) {
-    attachment_paths[key_file.first] = base::FilePath(key_file.second.get());
+  std::map<std::string, base::FilePath> attachments;
+  const ScopedUnlink tmp_kernel_log_file(
+      WriteKernelLogToFile(config_.local_crashpad_database_path));
+  if (tmp_kernel_log_file.is_valid()) {
+    attachments[kAttachmentKernelLog] =
+        base::FilePath(tmp_kernel_log_file.get());
   }
+  attachments[kAttachmentBuildInfoSnapshot] =
+      base::FilePath("/config/build-info/snapshot");
+  // TODO(DX-581): attach syslog as well.
 
   // Set minidump and create local crash report.
   //   * The annotations will be stored in the minidump of the report and
@@ -184,8 +189,7 @@ zx_status_t CrashpadAnalyzerImpl::HandleNativeException(
   // We don't pass an upload_thread so we can do the upload ourselves
   // synchronously.
   crashpad::CrashReportExceptionHandler exception_handler(
-      database_.get(), /*upload_thread=*/nullptr, &annotations,
-      &attachment_paths,
+      database_.get(), /*upload_thread=*/nullptr, &annotations, &attachments,
       /*user_stream_data_sources=*/nullptr);
   crashpad::UUID local_report_id;
   if (!exception_handler.HandleExceptionHandles(

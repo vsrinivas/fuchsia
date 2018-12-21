@@ -8,22 +8,27 @@
 #include <string>
 
 #include <fuchsia/mem/cpp/fidl.h>
+#include <lib/fxl/files/file.h>
 #include <lib/fxl/files/path.h>
 #include <lib/fxl/strings/concatenate.h>
+#include <lib/fxl/strings/trim.h>
 #include <lib/syslog/cpp/logger.h>
-#include <sys/types.h>
 #include <third_party/crashpad/minidump/minidump_file_writer.h>
+#include <third_party/crashpad/util/file/file_writer.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/log.h>
+#include <zircon/types.h>
 
 namespace fuchsia {
 namespace crash {
-namespace {
 
-std::string WriteKernelLogToFile(const std::string& tmp_dir) {
+const char kAttachmentKernelLog[] = "kernel_log";
+const char kAttachmentBuildInfoSnapshot[] = "build.snapshot";
+
+std::string WriteKernelLogToFile(const std::string& dir) {
   std::string filename =
-      files::SimplifyPath(fxl::Concatenate({tmp_dir, "/kernel_log.XXXXXX"}));
+      files::SimplifyPath(fxl::Concatenate({dir, "/kernel_log.XXXXXX"}));
   base::ScopedFD fd(mkstemp(filename.data()));
   if (fd.get() < 0) {
     FX_LOGS(ERROR) << "could not create temp file";
@@ -53,6 +58,8 @@ std::string WriteKernelLogToFile(const std::string& tmp_dir) {
   return filename;
 }
 
+namespace {
+
 zx_status_t WriteVMO(crashpad::FileWriter* writer,
                      const fuchsia::mem::Buffer vmo) {
   // TODO(frousseau): make crashpad::FileWriter VMO-aware.
@@ -66,14 +73,14 @@ zx_status_t WriteVMO(crashpad::FileWriter* writer,
 }
 
 zx_status_t AddAttachment(crashpad::CrashReportDatabase::NewReport* report,
-                          const std::string& filename,
-                          fuchsia::mem::Buffer buffer,
+                          const std::string& attachment_filename,
+                          fuchsia::mem::Buffer content_buffer,
                           const std::string& debug_name) {
-  crashpad::FileWriter* writer = report->AddAttachment(filename);
+  crashpad::FileWriter* writer = report->AddAttachment(attachment_filename);
   if (!writer) {
     return ZX_ERR_INTERNAL;
   }
-  if (zx_status_t status = WriteVMO(writer, std::move(buffer));
+  if (zx_status_t status = WriteVMO(writer, std::move(content_buffer));
       status != ZX_OK) {
     FX_LOGS(ERROR) << "error writing " << debug_name
                    << " to file: " << zx_status_get_string(status);
@@ -82,19 +89,25 @@ zx_status_t AddAttachment(crashpad::CrashReportDatabase::NewReport* report,
   return ZX_OK;
 }
 
-}  // namespace
-
-std::map<std::string, ScopedUnlink> MakeNativeExceptionAttachments(
-    const std::string& tmp_dir) {
-  std::map<std::string, ScopedUnlink> attachments;
-  const std::string tmp_kernel_log_filename = WriteKernelLogToFile(tmp_dir);
-  if (!tmp_kernel_log_filename.empty()) {
-    attachments["kernel_log"] = ScopedUnlink(tmp_kernel_log_filename);
+zx_status_t AddAttachment(crashpad::CrashReportDatabase::NewReport* report,
+                          const std::string& attachment_filename,
+                          const std::string& content_filepath) {
+  crashpad::FileWriter* writer = report->AddAttachment(attachment_filename);
+  if (!writer) {
+    return ZX_ERR_INTERNAL;
   }
-  // TODO(DX-581): attach syslog as well.
-  // TODO(DX-839): attach /config/build-info/snapshot as well.
-  return attachments;
+  std::string content;
+  if (!files::ReadFileToString(content_filepath, &content)) {
+    FX_LOGS(ERROR) << "Failed to read content from '" << content_filepath
+                   << "'.";
+    return ZX_ERR_INTERNAL;
+  }
+  content = fxl::TrimString(content, "\r\n").ToString();
+  writer->Write(content.data(), content.size());
+  return ZX_OK;
 }
+
+}  // namespace
 
 zx_status_t AddManagedRuntimeExceptionAttachments(
     crashpad::CrashReportDatabase::NewReport* report,
@@ -105,9 +118,10 @@ zx_status_t AddManagedRuntimeExceptionAttachments(
           : "stack_trace";
   AddAttachment(report, stack_trace_filename, std::move(stack_trace),
                 "stack trace");
+  AddAttachment(report, kAttachmentBuildInfoSnapshot,
+                "/config/build-info/snapshot");
   // TODO(DX-581): attach syslog as well.
   // TODO(DX-748): attach kernel log as well.
-  // TODO(DX-839): attach /config/build-info/snapshot as well.
   return ZX_OK;
 }
 
@@ -115,7 +129,8 @@ zx_status_t AddKernelPanicAttachments(
     crashpad::CrashReportDatabase::NewReport* report,
     fuchsia::mem::Buffer crashlog) {
   AddAttachment(report, "log", std::move(crashlog), "kernel panic crashlog");
-  // TODO(DX-839): attach /config/build-info/snapshot as well.
+  AddAttachment(report, kAttachmentBuildInfoSnapshot,
+                "/config/build-info/snapshot");
   return ZX_OK;
 }
 

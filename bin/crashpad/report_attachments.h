@@ -14,18 +14,16 @@
 #include <third_party/crashpad/client/crash_report_database.h>
 #include <zircon/types.h>
 
-#include "scoped_unlink.h"
-
 namespace fuchsia {
 namespace crash {
 
-// Returns the set of file attachments we want in a crash report for native
-// exceptions.
-//
-// |tmp_dir| is used to locally store the attachments until upload to the remote
-// crash server.
-std::map<std::string, ScopedUnlink> MakeNativeExceptionAttachments(
-    const std::string& tmp_dir);
+extern const char kAttachmentKernelLog[];
+extern const char kAttachmentBuildInfoSnapshot[];
+
+// Writes the kernel log to a file under |dir|.
+// Returns the absolute filepath to the newly created file, empty if something
+// went wrong.
+std::string WriteKernelLogToFile(const std::string& dir);
 
 // Adds the set of file attachments we want in a crash report for managed
 // runtime exceptions for the given |language| to the |report|.

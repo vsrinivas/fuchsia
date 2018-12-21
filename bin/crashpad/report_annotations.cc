@@ -49,12 +49,12 @@ std::string GetBoardName() {
 }
 
 std::string ReadStringFromFile(const std::string& filepath) {
-  std::string build_timestamp;
-  if (!files::ReadFileToString(filepath, &build_timestamp)) {
+  std::string content;
+  if (!files::ReadFileToString(filepath, &content)) {
     FX_LOGS(ERROR) << "Failed to read content from '" << filepath << "'.";
     return "unknown";
   }
-  return fxl::TrimString(build_timestamp, "\r\n").ToString();
+  return fxl::TrimString(content, "\r\n").ToString();
 }
 
 }  // namespace
