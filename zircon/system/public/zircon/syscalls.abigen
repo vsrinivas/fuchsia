@@ -1091,20 +1091,32 @@ syscall system_powerctl
 
 # User pager
 
+#^ create a new pager object
+#! None.
 syscall pager_create
     (options: uint32_t)
-    returns (zx_status_t, out_pager: zx_handle_t pager);
+    returns (zx_status_t, out: zx_handle_t handle_acquire);
 
+#^ create a pager owned vmo
+#! pager must be of type ZX_OBJ_TYPE_PAGER.
+#! port must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_WRITE.
 syscall pager_create_vmo
     (pager: zx_handle_t, options: uint32_t, port: zx_handle_t, key: uint64_t, size: uint64_t)
-    returns (zx_status_t, out_pager_vmo: zx_handle_t out_pager_vmo);
+    returns (zx_status_t, out: zx_handle_t handle_acquire);
 
+#^ detaches a vmo from a pager
+#! pager must be of type ZX_OBJ_TYPE_PAGER.
+#! vmo must be of type ZX_OBJ_TYPE_VMO.
 syscall pager_detach_vmo
     (pager: zx_handle_t, vmo: zx_handle_t)
     returns (zx_status_t);
 
+#^ supply pages into a pager owned vmo
+#! pager must be of type ZX_OBJ_TYPE_PAGER.
+#! pager_vmo must be of type ZX_OBJ_TYPE_VMO.
+#! aux_vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ and have ZX_RIGHT_WRITE.
 syscall pager_supply_pages
-    (pager: zx_handle_t, pager_vmo: zx_handle_t, offset: uint64_t, length: uint64_t, aux_vmo_handle: zx_handle_t, aux_offset : uint64_t)
+    (pager: zx_handle_t, pager_vmo: zx_handle_t, offset: uint64_t, length: uint64_t, aux_vmo: zx_handle_t, aux_offset : uint64_t)
     returns (zx_status_t);
 
 # Test syscalls (keep at the end)
