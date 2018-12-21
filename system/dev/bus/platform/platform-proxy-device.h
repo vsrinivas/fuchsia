@@ -6,12 +6,11 @@
 
 #include "platform-proxy-device.h"
 
-#include <ddk/protocol/clk.h>
-#include <ddk/protocol/gpio.h>
-#include <ddk/protocol/i2c.h>
 #include <ddktl/device.h>
+#include <ddktl/protocol/clk.h>
+#include <ddktl/protocol/gpio.h>
+#include <ddktl/protocol/i2c.h>
 #include <ddktl/protocol/platform/device.h>
-#include <fbl/array.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
@@ -23,13 +22,82 @@
 namespace platform_bus {
 
 class PlatformProxy;
+
+class ProxyGpio : public ddk::GpioProtocol<ProxyGpio> {
+public:
+    explicit ProxyGpio(uint32_t device_id, uint32_t index, fbl::RefPtr<PlatformProxy> proxy)
+        : device_id_(device_id), index_(index), proxy_(proxy) {}
+
+    // GPIO protocol implementation.
+    zx_status_t GpioConfigIn(uint32_t flags);
+    zx_status_t GpioConfigOut(uint8_t initial_value);
+    zx_status_t GpioSetAltFunction(uint64_t function);
+    zx_status_t GpioRead(uint8_t* out_value);
+    zx_status_t GpioWrite(uint8_t value);
+    zx_status_t GpioGetInterrupt(uint32_t flags, zx::interrupt* out_irq);
+    zx_status_t GpioReleaseInterrupt();
+    zx_status_t GpioSetPolarity(uint32_t polarity);
+
+    void GetProtocol(gpio_protocol_t* proto) {
+        proto->ops = &gpio_protocol_ops_;
+        proto->ctx = this;
+    }
+
+private:
+    uint32_t device_id_;
+    uint32_t index_;
+    fbl::RefPtr<PlatformProxy> proxy_;
+};
+
+class ProxyI2c : public ddk::I2cProtocol<ProxyI2c> {
+public:
+    explicit ProxyI2c(uint32_t device_id, uint32_t index, fbl::RefPtr<PlatformProxy> proxy)
+        : device_id_(device_id), index_(index), proxy_(proxy) {}
+
+    // I2C protocol implementation.
+    void I2cTransact(const i2c_op_t* ops, size_t cnt, i2c_transact_callback transact_cb,
+                     void* cookie);
+    zx_status_t I2cGetMaxTransferSize(size_t* out_size);
+    zx_status_t I2cGetInterrupt(uint32_t flags, zx::interrupt* out_irq);
+
+    void GetProtocol(i2c_protocol_t* proto) {
+        proto->ops = &i2c_protocol_ops_;
+        proto->ctx = this;
+    }
+
+private:
+    uint32_t device_id_;
+    uint32_t index_;
+    fbl::RefPtr<PlatformProxy> proxy_;
+};
+
+class ProxyClk : public ddk::ClkProtocol<ProxyClk> {
+public:
+    explicit ProxyClk(uint32_t device_id, fbl::RefPtr<PlatformProxy> proxy)
+        : device_id_(device_id), proxy_(proxy) {}
+
+    // Clock protocol implementation.
+    zx_status_t ClkEnable(uint32_t index);
+    zx_status_t ClkDisable(uint32_t index);
+
+    void GetProtocol(clk_protocol_t* proto) {
+        proto->ops = &clk_protocol_ops_;
+        proto->ctx = this;
+    }
+
+private:
+    uint32_t device_id_;
+    fbl::RefPtr<PlatformProxy> proxy_;
+};
+
 class ProxyDevice;
 using ProxyDeviceType = ddk::FullDevice<ProxyDevice>;
 
 class ProxyDevice : public ProxyDeviceType,
                     public ddk::PDevProtocol<ProxyDevice, ddk::base_protocol> {
 public:
-    explicit ProxyDevice(zx_device_t* parent, uint32_t device_id, fbl::RefPtr<PlatformProxy> proxy);
+    explicit ProxyDevice(zx_device_t* parent, uint32_t device_id, fbl::RefPtr<PlatformProxy> proxy)
+        : ProxyDeviceType(parent), device_id_(device_id), proxy_(proxy), clk_(device_id, proxy) {}
 
     // Creates a ProxyDevice to be the root platform device.
     static zx_status_t CreateRoot(zx_device_t* parent, fbl::RefPtr<PlatformProxy> proxy);
@@ -69,27 +137,6 @@ public:
     zx_status_t PDevGetProtocol(uint32_t proto_id, uint32_t index, void* out_protocol,
                                 size_t protocol_size, size_t* protocol_actual);
 
-    // Clock protocol implementation.
-    static zx_status_t ClkEnable(void* ctx, uint32_t index);
-    static zx_status_t ClkDisable(void* ctx, uint32_t index);
-
-    // GPIO protocol implementation.
-    static zx_status_t GpioConfigIn(void* ctx, uint32_t flags);
-    static zx_status_t GpioConfigOut(void* ctx, uint8_t initial_value);
-    static zx_status_t GpioSetAltFunction(void* ctx, uint64_t function);
-    static zx_status_t GpioRead(void* ctx, uint8_t* out_value);
-    static zx_status_t GpioWrite(void* ctx, uint8_t value);
-    static zx_status_t GpioGetInterrupt(void* ctx, uint32_t flags,
-                                        zx_handle_t* out_handle);
-    static zx_status_t GpioReleaseInterrupt(void* ctx);
-    static zx_status_t GpioSetPolarity(void* ctx, uint32_t polarity);
-
-    // I2C protocol implementation.
-    static void I2cTransact(void* ctx, const i2c_op_t* ops, size_t cnt,
-                            i2c_transact_callback transact_cb, void* cookie);
-    static zx_status_t I2cGetMaxTransferSize(void* ctx, size_t* out_size);
-    static zx_status_t I2cGetInterrupt(void* ctx, uint32_t flags, zx_handle_t* out_handle);
-
 private:
     struct Mmio {
         zx_paddr_t base;
@@ -102,14 +149,6 @@ private:
         uint32_t mode;
         zx::resource resource;
     };
-    struct GpioCtx {
-        ProxyDevice* thiz;
-        uint32_t index;
-    };
-    struct I2cCtx {
-        ProxyDevice* thiz;
-        uint32_t index;
-    };
 
     zx_status_t InitCommon();
     zx_status_t InitRoot();
@@ -121,18 +160,12 @@ private:
     fbl::RefPtr<PlatformProxy> proxy_;
     fbl::Vector<Mmio> mmios_;
     fbl::Vector<Irq> irqs_;
+    fbl::Vector<ProxyGpio> gpios_;
+    fbl::Vector<ProxyI2c> i2cs_;
+    ProxyClk clk_;
+
     char name_[ZX_MAX_NAME_LEN];
     uint32_t metadata_count_;
-
-    // We can't used ddktl for these because ddktl only allows a device to implement one protocol,
-    // and we are using ddktl for the platform device protocol.
-    clk_protocol_ops_t clk_proto_ops_;
-    gpio_protocol_ops_t gpio_proto_ops_;
-    i2c_protocol_ops_t i2c_proto_ops_;
-
-    // Contexts
-    fbl::Array<GpioCtx> gpio_ctxs_;
-    fbl::Array<I2cCtx> i2c_ctxs_;
 
     // These fields are saved values from the device_add_args_t passed to pdev_device_add().
     // These are unused for top level devices created via pbus_device_add().
