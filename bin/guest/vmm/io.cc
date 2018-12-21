@@ -12,12 +12,12 @@
 
 static constexpr IoValue kBellValue = {};
 
-IoMapping::IoMapping(uint32_t kind, uint64_t base, size_t size, uint64_t offset,
-                     IoHandler* handler)
+IoMapping::IoMapping(uint32_t kind, zx_gpaddr_t base, size_t size,
+                     zx_gpaddr_t off, IoHandler* handler)
     : kind_(kind),
       base_(base),
       size_(size),
-      offset_(offset),
+      off_(off),
       handler_(handler),
       async_trap_(this) {}
 

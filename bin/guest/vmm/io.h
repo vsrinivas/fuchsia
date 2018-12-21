@@ -32,10 +32,10 @@ class IoHandler {
   virtual ~IoHandler() = default;
 
   // Read |value.access_size| bytes from |addr| into |value|.
-  virtual zx_status_t Read(uint64_t addr, IoValue* value) const = 0;
+  virtual zx_status_t Read(zx_gpaddr_t addr, IoValue* value) const = 0;
 
   // Write |value.access_size| bytes to |addr| from |value|.
-  virtual zx_status_t Write(uint64_t addr, const IoValue& value) = 0;
+  virtual zx_status_t Write(zx_gpaddr_t addr, const IoValue& value) = 0;
 };
 
 // Represents a single mapping of an |IoHandler| to an address range.
@@ -43,26 +43,25 @@ class IoHandler {
 // A single handler may be mapped to multiple distinct address ranges.
 class IoMapping {
  public:
-  static IoMapping* FromPortKey(uint64_t key) {
+  static IoMapping* FromPortKey(zx_gpaddr_t key) {
     return reinterpret_cast<IoMapping*>(key);
   }
 
   // Constructs an IoMapping.
   //
   // Any accesses starting at |base| for |size| bytes are to be handled by
-  // |handler|. When invoking |handler| the address is provides as relative
-  // to |base|. Additionally an |offset| can also be provided to add a
-  // displacement into |handler|.
+  // |handler|. When invoking |handler| the address is provides as relative to
+  // |base|. Additionally an |off| can also be provided to add a displacement
+  // into |handler|.
   //
   // Specifically, an access to |base| would invoke the |handler| with the
-  // address |offset| and increase linearly from there with additional
-  // displacement into |base|. This implies that |handler| should be prepared
-  // handle accesses between |offset| (inclusive) and |offset| + |size|
-  // (exclusive).
-  IoMapping(uint32_t kind, uint64_t base, size_t size, uint64_t offset,
+  // address |off| and increase linearly from there with additional displacement
+  // into |base|. This implies that |handler| should be prepared handle accesses
+  // between |off| (inclusive) and |off| + |size| (exclusive).
+  IoMapping(uint32_t kind, zx_gpaddr_t base, size_t size, zx_gpaddr_t off,
             IoHandler* handler);
 
-  uint64_t base() const {
+  zx_gpaddr_t base() const {
     canary_.Assert();
     return base_;
   }
@@ -77,17 +76,17 @@ class IoMapping {
     return kind_;
   }
 
-  zx_status_t Read(uint64_t addr, IoValue* value) const {
+  zx_status_t Read(zx_gpaddr_t addr, IoValue* value) const {
     canary_.Assert();
-    const uint64_t address = addr - base_ + offset_;
+    const zx_gpaddr_t address = addr - base_ + off_;
     TRACE_DURATION("machina", "read", "address", address, "access_size",
                    value->access_size);
     return handler_->Read(address, value);
   }
 
-  zx_status_t Write(uint64_t addr, const IoValue& value) {
+  zx_status_t Write(zx_gpaddr_t addr, const IoValue& value) {
     canary_.Assert();
-    const uint64_t address = addr - base_ + offset_;
+    const zx_gpaddr_t address = addr - base_ + off_;
     TRACE_DURATION("machina", "write", "address", address, "access_size",
                    value.access_size);
     return handler_->Write(address, value);
@@ -95,16 +94,16 @@ class IoMapping {
 
   zx_status_t SetTrap(Guest* guest);
 
- protected:
+ private:
   void CallIoHandlerAsync(async_dispatcher_t* dispatcher,
                           async::GuestBellTrapBase* trap, zx_status_t status,
                           const zx_packet_guest_bell_t* bell);
 
   fbl::Canary<fbl::magic("IOMP")> canary_;
   const uint32_t kind_;
-  const uint64_t base_;
+  const zx_gpaddr_t base_;
   const size_t size_;
-  const uint64_t offset_;
+  const zx_gpaddr_t off_;
   IoHandler* handler_;
   async::GuestBellTrapMethod<IoMapping, &IoMapping::CallIoHandlerAsync>
       async_trap_;
