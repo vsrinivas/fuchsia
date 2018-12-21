@@ -76,10 +76,7 @@ const uint32 OPEN_FLAG_NO_REMOTE = 0x00200000;
 const uint32 OPEN_FLAG_NODE_REFERENCE = 0x00400000;
 // Requests that an "OnOpen" event is sent, with
 // a non-null NodeInfo (if the open is successful).
-// Implies "OPEN_FLAG_STATUS".
 const uint32 OPEN_FLAG_DESCRIBE = 0x00800000;
-// Requests that an "OnOpen" event is sent.
-const uint32 OPEN_FLAG_STATUS = 0x01000000;
 
 // Node defines the minimal interface for entities which can be accessed in a filesystem.
 [Layout="Simple", FragileBase]
