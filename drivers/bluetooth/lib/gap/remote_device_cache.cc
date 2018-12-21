@@ -196,7 +196,7 @@ RemoteDevice* RemoteDeviceCache::FindDeviceByAddress(
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 
   std::optional<DeviceAddress> address;
-  if (in_address.IsResolvable()) {
+  if (in_address.IsResolvablePrivate()) {
     address = le_resolving_list_.Resolve(in_address);
   }
 

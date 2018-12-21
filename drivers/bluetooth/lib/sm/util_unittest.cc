@@ -380,10 +380,10 @@ TEST(SMP_UtilTest, IrkCanResolveRpa) {
   const DeviceAddress kMatchingResolvable(DeviceAddress::Type::kLERandom,
                                           "70:81:94:0D:FB:AA");
 
-  ASSERT_FALSE(kStaticRandom.IsResolvable());
-  ASSERT_FALSE(kNonResolvable.IsResolvable());
-  ASSERT_TRUE(kNonMatchingResolvable.IsResolvable());
-  ASSERT_TRUE(kMatchingResolvable.IsResolvable());
+  ASSERT_FALSE(kStaticRandom.IsResolvablePrivate());
+  ASSERT_FALSE(kNonResolvable.IsResolvablePrivate());
+  ASSERT_TRUE(kNonMatchingResolvable.IsResolvablePrivate());
+  ASSERT_TRUE(kMatchingResolvable.IsResolvablePrivate());
 
   EXPECT_FALSE(IrkCanResolveRpa(kIRK, kStaticRandom));
   EXPECT_FALSE(IrkCanResolveRpa(kIRK, kNonResolvable));
@@ -398,7 +398,7 @@ TEST(SMP_UtilTest, GenerateRpa) {
   DeviceAddress rpa = GenerateRpa(irk);
 
   EXPECT_EQ(DeviceAddress::Type::kLERandom, rpa.type());
-  EXPECT_TRUE(rpa.IsResolvable());
+  EXPECT_TRUE(rpa.IsResolvablePrivate());
 
   // It should be possible to resolve the RPA with the IRK used to generate it.
   EXPECT_TRUE(IrkCanResolveRpa(irk, rpa));

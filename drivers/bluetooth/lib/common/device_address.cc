@@ -102,12 +102,25 @@ DeviceAddress::DeviceAddress(Type type, const std::string& bdaddr_string)
 DeviceAddress::DeviceAddress(Type type, const DeviceAddressBytes& value)
     : type_(type), value_(value) {}
 
-bool DeviceAddress::IsResolvable() const {
-  // "The most significant bits of [a RPA] shall be equal to 0 and 1" where as
-  // those of a non-resolvable address "shall be equal to 0" (Vol 6, Part B,
-  // 1.3.2.2).
+bool DeviceAddress::IsResolvablePrivate() const {
+  // "The two most significant bits of [a RPA] shall be equal to 0 and 1".
+  // (Vol 6, Part B, 1.3.2.2).
   uint8_t msb = value_.bytes()[5];
-  return type_ == Type::kLERandom && (msb & 0x40) && (~msb & 0x80);
+  return type_ == Type::kLERandom && (msb & 0b01000000) && (~msb & 0b10000000);
+}
+
+bool DeviceAddress::IsNonResolvablePrivate() const {
+  // "The two most significant bits of [a NRPA] shall be equal to 0".
+  // (Vol 6, Part B, 1.3.2.2).
+  uint8_t msb = value_.bytes()[5];
+  return type_ == Type::kLERandom && !(msb & 0b11000000);
+}
+
+bool DeviceAddress::IsStaticRandom() const {
+  // "The two most significant bits of [a static random address] shall be equal
+  // to 1". (Vol 6, Part B, 1.3.2.1).
+  uint8_t msb = value_.bytes()[5];
+  return type_ == Type::kLERandom && ((msb & 0b11000000) == 0b11000000);
 }
 
 std::size_t DeviceAddress::Hash() const {

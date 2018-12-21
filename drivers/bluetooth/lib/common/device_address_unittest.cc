@@ -13,6 +13,16 @@ namespace btlib {
 namespace common {
 namespace {
 
+const DeviceAddress kClassic(DeviceAddress::Type::kBREDR, "41:11:22:33:44:55");
+const DeviceAddress kPublic(DeviceAddress::Type::kLEPublic,
+                            "42:11:22:33:44:55");
+const DeviceAddress kNonResolvable(DeviceAddress::Type::kLERandom,
+                                   "00:11:22:33:44:55");
+const DeviceAddress kResolvable(DeviceAddress::Type::kLERandom,
+                                "43:11:22:33:44:55");
+const DeviceAddress kStatic(DeviceAddress::Type::kLERandom,
+                            "C3:11:22:33:44:55");
+
 struct TestPayload {
   uint8_t arg0;
   DeviceAddressBytes bdaddr;
@@ -134,18 +144,28 @@ TEST(DeviceAddressTest, UnorderedMap) {
   EXPECT_EQ(3, map[address4]);
 }
 
-TEST(DeviceAddressTest, IsResolvable) {
-  DeviceAddress kClassic(DeviceAddress::Type::kBREDR, "41:11:22:33:44:55");
-  DeviceAddress kPublic(DeviceAddress::Type::kLEPublic, "42:11:22:33:44:55");
-  DeviceAddress kNonResolvable(DeviceAddress::Type::kLERandom,
-                               "00:11:22:33:44:55");
-  DeviceAddress kResolvable(DeviceAddress::Type::kLERandom,
-                            "43:11:22:33:44:55");
+TEST(DeviceAddressTest, IsResolvablePrivate) {
+  EXPECT_FALSE(kClassic.IsResolvablePrivate());
+  EXPECT_FALSE(kPublic.IsResolvablePrivate());
+  EXPECT_FALSE(kNonResolvable.IsResolvablePrivate());
+  EXPECT_TRUE(kResolvable.IsResolvablePrivate());
+  EXPECT_FALSE(kStatic.IsResolvablePrivate());
+}
 
-  EXPECT_FALSE(kClassic.IsResolvable());
-  EXPECT_FALSE(kPublic.IsResolvable());
-  EXPECT_FALSE(kNonResolvable.IsResolvable());
-  EXPECT_TRUE(kResolvable.IsResolvable());
+TEST(DeviceAddressTest, IsNonResolvablePrivate) {
+  EXPECT_FALSE(kClassic.IsNonResolvablePrivate());
+  EXPECT_FALSE(kPublic.IsNonResolvablePrivate());
+  EXPECT_TRUE(kNonResolvable.IsNonResolvablePrivate());
+  EXPECT_FALSE(kResolvable.IsNonResolvablePrivate());
+  EXPECT_FALSE(kStatic.IsNonResolvablePrivate());
+}
+
+TEST(DeviceAddressTest, IsStatic) {
+  EXPECT_FALSE(kClassic.IsStaticRandom());
+  EXPECT_FALSE(kPublic.IsStaticRandom());
+  EXPECT_FALSE(kNonResolvable.IsStaticRandom());
+  EXPECT_FALSE(kResolvable.IsStaticRandom());
+  EXPECT_TRUE(kStatic.IsStaticRandom());
 }
 
 }  // namespace

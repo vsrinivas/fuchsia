@@ -248,7 +248,7 @@ uint32_t Ah(const UInt128& k, uint32_t r) {
 }
 
 bool IrkCanResolveRpa(const UInt128& irk, const DeviceAddress& rpa) {
-  if (!rpa.IsResolvable()) {
+  if (!rpa.IsResolvablePrivate()) {
     return false;
   }
 

@@ -119,7 +119,13 @@ class DeviceAddress {
   }
 
   // Returns true if this address is a Resolvable Private Address.
-  bool IsResolvable() const;
+  bool IsResolvablePrivate() const;
+
+  // Returns true if this address is a Non-resolvable Private Address.
+  bool IsNonResolvablePrivate() const;
+
+  // Returns true if this is a static random device address.
+  bool IsStaticRandom() const;
 
   // Returns a hash of the contents of this address.
   std::size_t Hash() const;

@@ -20,7 +20,7 @@ void IdentityResolvingList::Add(const DeviceAddress& identity,
 
 std::optional<DeviceAddress> IdentityResolvingList::Resolve(
     const DeviceAddress& rpa) const {
-  if (!rpa.IsResolvable()) {
+  if (!rpa.IsResolvablePrivate()) {
     return std::nullopt;
   }
 
