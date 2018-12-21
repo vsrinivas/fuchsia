@@ -16,8 +16,6 @@
 
 namespace root_presenter {
 
-using HACK_QueryInputPathCallback = fit::function<void(bool)>;
-
 // Base class for Presentation. Exposes only what is needed by
 // |root_presenter::App|.
 class Presentation : protected fuchsia::ui::policy::Presentation {
@@ -39,12 +37,6 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
 
   virtual void OverrideRendererParams(RendererParams renderer_params,
                                       bool present_changes = true) = 0;
-
-  // TODO(SCN-1013) Remove this wart.
-  virtual void HACK_SetInputPath(bool use_legacy) {}
-  virtual void HACK_QueryInputPath(HACK_QueryInputPathCallback callback) {
-    callback(false);
-  }
 
  protected:
   virtual float display_rotation_desired() const = 0;
