@@ -287,7 +287,7 @@ zx_status_t Mt8167GpioDevice::Init() {
         return status;
     }
     gpio_impl_protocol_t gpio_proto = {
-        .ops = &ops_,
+        .ops = &gpio_impl_protocol_ops_,
         .ctx = this,
     };
     const platform_proxy_cb_t kCallback = {nullptr, nullptr};

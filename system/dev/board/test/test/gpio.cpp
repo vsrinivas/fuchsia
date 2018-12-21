@@ -54,7 +54,7 @@ zx_status_t TestGpioDevice::Init() {
         return status;
     }
     gpio_impl_protocol_t gpio_proto = {
-        .ops = &ops_,
+        .ops = &gpio_impl_protocol_ops_,
         .ctx = this,
     };
     constexpr platform_proxy_cb_t kCallback = {nullptr, nullptr};

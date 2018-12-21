@@ -718,7 +718,7 @@ zx_status_t ProxyDevice::DdkGetProtocol(uint32_t proto_id, void* out) {
     proto->ctx = this;
     switch (proto_id) {
     case ZX_PROTOCOL_PDEV: {
-        proto->ops = &ops_;
+        proto->ops = &pdev_protocol_ops_;
         break;
     }
     case ZX_PROTOCOL_GPIO: {

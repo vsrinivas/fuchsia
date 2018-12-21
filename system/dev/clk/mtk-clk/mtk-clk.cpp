@@ -96,7 +96,7 @@ zx_status_t MtkClk::Bind() {
     }
 
     clk_protocol_t clk_proto = {
-        .ops = &ops_,
+        .ops = &clk_protocol_ops_,
         .ctx = this,
     };
 

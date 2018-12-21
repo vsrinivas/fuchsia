@@ -166,7 +166,7 @@ zx_status_t AmlGxlGpio::Create(zx_device_t* parent) {
 
 void AmlGxlGpio::Bind(const pbus_protocol_t& pbus) {
     gpio_impl_protocol_t gpio_proto = {
-        .ops = &ops_,
+        .ops = &gpio_impl_protocol_ops_,
         .ctx = this
     };
 

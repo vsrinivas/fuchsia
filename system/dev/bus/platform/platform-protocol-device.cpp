@@ -247,7 +247,7 @@ zx_status_t ProtocolDevice::PDevGetProtocol(uint32_t proto_id, uint32_t index, v
 zx_status_t ProtocolDevice::DdkGetProtocol(uint32_t proto_id, void* out) {
     if (proto_id == ZX_PROTOCOL_PDEV) {
         auto proto = static_cast<pdev_protocol_t*>(out);
-        proto->ops = &ops_;
+        proto->ops = &pdev_protocol_ops_;
         proto->ctx = this;
         return ZX_OK;
     } else if (proto_id == ZX_PROTOCOL_PBUS) {

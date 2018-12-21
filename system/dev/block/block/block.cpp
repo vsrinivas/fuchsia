@@ -41,7 +41,7 @@ using BlockDeviceType = ddk::Device<BlockDevice, ddk::Ioctlable, ddk::Unbindable
 class BlockDevice : public BlockDeviceType, public ddk::BlockProtocol<BlockDevice> {
 public:
     BlockDevice(zx_device_t* parent) : BlockDeviceType(parent) {
-        block_protocol_t self { &ops_, this };
+        block_protocol_t self { &block_protocol_ops_, this };
         self_protocol_ = ddk::BlockProtocolClient(&self);
     };
 

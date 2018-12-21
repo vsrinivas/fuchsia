@@ -281,7 +281,7 @@ zx_status_t ImxI2cDevice::Bind(int id) {
     }
 
     i2c_impl_protocol_t i2c_proto = {
-        .ops = &ops_,
+        .ops = &i2c_impl_protocol_ops_,
         .ctx = this,
     };
     const platform_proxy_cb_t kCallback = {NULL, NULL};

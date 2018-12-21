@@ -152,7 +152,7 @@ zx_status_t AmlClock::InitPdev(zx_device_t* parent) {
     }
 
     clk_protocol_t clk_proto = {
-        .ops = &ops_,
+        .ops = &clk_protocol_ops_,
         .ctx = this,
     };
 

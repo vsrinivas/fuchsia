@@ -1598,9 +1598,7 @@ void DdktlGenerator::ProduceProtocolImplementation(const NamedInterface& named_i
     const auto& sc_name = named_interface.snake_case_name;
     const auto& cc_name = named_interface.camel_case_name;
 
-    const auto& ops = (named_interface.type == InterfaceType::kDefaultProtocol)
-                          ? "ops_"
-                          : sc_name + "_ops_";
+    const auto& ops = sc_name + "_ops_";
 
     const auto& base_class = (named_interface.type == InterfaceType::kDefaultProtocol)
                                  ? "internal::base_protocol"

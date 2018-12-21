@@ -80,7 +80,7 @@ class TestEthmacProtocol : public ddk::Device<TestEthmacProtocol, ddk::GetProtoc
     zx_status_t DdkGetProtocol(uint32_t proto_id, void* out) {
         if (proto_id != ZX_PROTOCOL_ETHMAC) return ZX_ERR_INVALID_ARGS;
         ddk::AnyProtocol* proto = static_cast<ddk::AnyProtocol*>(out);
-        proto->ops = &ops_;
+        proto->ops = &ethmac_protocol_ops_;
         proto->ctx = this;
         return ZX_OK;
     }

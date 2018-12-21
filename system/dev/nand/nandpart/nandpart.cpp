@@ -296,7 +296,7 @@ zx_status_t NandPartDevice::DdkGetProtocol(uint32_t proto_id, void* protocol) {
     proto->ctx = this;
     switch (proto_id) {
     case ZX_PROTOCOL_NAND:
-        proto->ops = &ops_;
+        proto->ops = &nand_protocol_ops_;
         break;
     case ZX_PROTOCOL_BAD_BLOCK:
         proto->ops = &bad_block_protocol_ops_;

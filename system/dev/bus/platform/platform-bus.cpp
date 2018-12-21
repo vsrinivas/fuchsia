@@ -211,7 +211,7 @@ zx_status_t PlatformBus::DdkGetProtocol(uint32_t proto_id, void* out) {
     case ZX_PROTOCOL_PBUS: {
         auto proto = static_cast<pbus_protocol_t*>(out);
         proto->ctx = this;
-        proto->ops = &ops_;
+        proto->ops = &pbus_protocol_ops_;
         return ZX_OK;
     }
     case ZX_PROTOCOL_GPIO_IMPL:
