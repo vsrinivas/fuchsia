@@ -37,6 +37,12 @@ struct base_protocol {
     base_protocol() = default;
 };
 
+template <typename T>
+using is_base_protocol = std::is_base_of<internal::base_protocol, T>;
+
+template <typename T>
+using is_base_proto = std::is_same<internal::base_protocol, T>;
+
 // Deprecation helpers: transition a DDKTL protocol interface when there are implementations outside
 // of zircon without breaking any builds.
 //

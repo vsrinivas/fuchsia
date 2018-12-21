@@ -1607,8 +1607,8 @@ void DdktlGenerator::ProduceProtocolImplementation(const NamedInterface& named_i
                                  : "internal::base_mixin";
 
     EmitDocstring(&file_, named_interface, false);
-    file_ << "template <typename D>\n";
-    file_ << "class " << cc_name << " : public " << base_class << " {\n";
+    file_ << "template <typename D, typename Base = " << base_class << ">\n";
+    file_ << "class " << cc_name << " : public Base {\n";
     file_ << "public:\n";
     file_ << kIndent << cc_name << "() {\n";
     file_ << kIndent << kIndent << "internal::Check" << cc_name << "Subclass<D>();\n";
@@ -1616,13 +1616,17 @@ void DdktlGenerator::ProduceProtocolImplementation(const NamedInterface& named_i
         file_ << kIndent << kIndent << ops << "." << method_info.c_name
               << " = " << method_info.protocol_name << ";\n";
     }
-    if (named_interface.type == InterfaceType::kDefaultProtocol) {
+    if (named_interface.type != InterfaceType::kInterface) {
         EmitBlank(&file_);
-        file_ << kIndent << kIndent << "// Can only inherit from one base_protocol implementation.\n";
-        file_ << kIndent << kIndent << "ZX_ASSERT(ddk_proto_id_ == 0);\n";
-        file_ << kIndent << kIndent << "ddk_proto_id_ = ZX_PROTOCOL_"
+        file_ << kIndent << kIndent << "if constexpr (internal::is_base_proto<Base>::value) {\n";
+        file_ << kIndent << kIndent << kIndent << "auto dev = static_cast<D*>(this);\n";
+        file_ << kIndent << kIndent << kIndent
+              << "// Can only inherit from one base_protocol implementation.\n";
+        file_ << kIndent << kIndent << kIndent << "ZX_ASSERT(dev->ddk_proto_id_ == 0);\n";
+        file_ << kIndent << kIndent << kIndent << "dev->ddk_proto_id_ = ZX_PROTOCOL_"
             << ToSnakeCase(named_interface.shortname, true) << ";\n";
-        file_ << kIndent << kIndent << "ddk_proto_ops_ = &ops_;\n";
+        file_ << kIndent << kIndent << kIndent << "dev->ddk_proto_ops_ = &" << ops << ";\n";
+        file_ << kIndent << kIndent << "}\n";
     }
     file_ << kIndent << "}\n";
     EmitBlank(&file_);
