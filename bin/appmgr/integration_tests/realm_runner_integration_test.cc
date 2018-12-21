@@ -25,9 +25,8 @@ using testing::TestWithEnvironment;
 
 const char kRealm[] = "realmrunnerintegrationtest";
 const auto kTimeout = zx::sec(5);
-const char kComponentForRunner[] = "fake_component_for_runner";
-const std::string kComponentForRunnerUrl =
-    std::string("file://") + kComponentForRunner;
+const char kComponentForRunner[] = "fuchsia-pkg://fuchsia.com/fake_component_for_runner#meta/fake_component_for_runner.cmx";
+const char kComponentForRunnerProcessName[] = "fake_component_for_runner.cmx";
 
 class RealmRunnerTest : public TestWithEnvironment {
  protected:
@@ -108,7 +107,7 @@ TEST_F(RealmRunnerTest, RunnerLaunched) {
   ASSERT_TRUE(WaitForRunnerToRegister());
   ASSERT_TRUE(WaitForComponentCount(1));
   auto components = runner_registry_.runner()->components();
-  ASSERT_EQ(components[0].url, kComponentForRunnerUrl);
+  ASSERT_EQ(components[0].url, kComponentForRunner);
 }
 
 TEST_F(RealmRunnerTest, RunnerLaunchedOnlyOnce) {
@@ -129,7 +128,7 @@ TEST_F(RealmRunnerTest, RunnerLaunchedAgainWhenKilled) {
   ASSERT_TRUE(WaitForRunnerToRegister());
 
   auto glob_str =
-      fxl::StringPrintf("/hub/r/%s/*/c/appmgr_mock_runner/*", kRealm);
+      fxl::StringPrintf("/hub/r/%s/*/c/appmgr_mock_runner.cmx/*", kRealm);
   files::Glob glob(glob_str);
   ASSERT_EQ(glob.size(), 1u);
   std::string runner_path_in_hub = *(glob.begin());
@@ -160,7 +159,7 @@ TEST_F(RealmRunnerTest, RunnerLaunchedAgainWhenKilled) {
   // make sure component was also launched
   ASSERT_TRUE(WaitForComponentCount(1));
   auto components = runner_registry_.runner()->components();
-  ASSERT_EQ(components[0].url, kComponentForRunnerUrl);
+  ASSERT_EQ(components[0].url, kComponentForRunner);
 }
 
 TEST_F(RealmRunnerTest, RunnerLaunchedForEachEnvironment) {
@@ -334,8 +333,8 @@ TEST_F(RealmRunnerTest, ComponentCanPublishServices) {
 }
 
 TEST_F(RealmRunnerTest, ProbeHub) {
-  auto glob_str = fxl::StringPrintf("/hub/r/%s/*/c/appmgr_mock_runner/*/c/%s/*",
-                                    kRealm, kComponentForRunner);
+  auto glob_str = fxl::StringPrintf("/hub/r/%s/*/c/appmgr_mock_runner.cmx/*/c/%s/*",
+                                    kRealm, kComponentForRunnerProcessName);
   // launch two components and make sure both show up in /hub.
   auto component1 =
       enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);

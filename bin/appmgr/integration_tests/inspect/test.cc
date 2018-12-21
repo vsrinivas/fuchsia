@@ -25,7 +25,8 @@ using testing::EnclosingEnvironment;
 using ::testing::UnorderedElementsAre;
 using ByteVector = ::component::Property::ByteVector;
 
-const char kTestComponent[] = "inspect_test_app";
+const char kTestComponent[] = "fuchsia-pkg://fuchsia.com/inspect_test_app#meta/inspect_test_app.cmx";
+const char kTestProcessName[] = "inspect_test_app.cmx";
 
 class InspectTest : public component::testing::TestWithEnvironment {
  protected:
@@ -56,7 +57,7 @@ class InspectTest : public component::testing::TestWithEnvironment {
 
   std::string GetObjectPath(const std::string& relative_path) {
     files::Glob glob(
-        Substitute("/hub/r/test/*/c/$0/*/out/objects", kTestComponent));
+        Substitute("/hub/r/test/*/c/$0/*/out/objects", kTestProcessName));
     if (glob.size() == 0) {
       return "";
     }

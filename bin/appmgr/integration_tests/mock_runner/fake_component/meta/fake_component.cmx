@@ -2,7 +2,7 @@
     "program": {
         "binary": "bin/app"
     },
-    "runner": "appmgr_mock_runner",
+    "runner": "fuchsia-pkg://fuchsia.com/appmgr_mock_runner#meta/appmgr_mock_runner.cmx",
     "sandbox": {
         "services": [ "fuchsia.sys.Environment", "fidl.examples.echo.Echo" ]
     }
