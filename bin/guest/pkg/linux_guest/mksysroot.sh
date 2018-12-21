@@ -92,14 +92,14 @@ generate_init() {
   local sysroot_dir="$1"
 
   mkdir -p "${sysroot_dir}/etc"
-  mkdir -p "${sysroot_dir}/testutils"
+  mkdir -p "${sysroot_dir}/test_utils"
 
   # Write an init script for toybox.
   cat > "${sysroot_dir}/etc/init" <<'_EOF'
 #!/bin/sh
 mount -t proc proc /proc
 mount -t sysfs sysfs /sys
-mount -t ext2 /dev/vdb /testutils
+mount -t ext2 /dev/vdb /test_utils
 echo Launched init
 exec /bin/sh
 _EOF
