@@ -10,6 +10,7 @@
 #include "aml-voltage.h"
 #include <ddk/device.h>
 #include <ddktl/device.h>
+#include <ddktl/protocol/empty-protocol.h>
 #include <fbl/unique_ptr.h>
 #include <threads.h>
 
@@ -23,7 +24,7 @@ using DeviceType = ddk::Device<AmlThermal,
                                ddk::Ioctlable>;
 
 class AmlThermal : public DeviceType,
-                   public ddk::internal::base_protocol {
+                   public ddk::EmptyProtocol<ZX_PROTOCOL_THERMAL> {
 
 public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlThermal);
@@ -36,9 +37,8 @@ public:
           voltage_regulator_(std::move(voltage_regulator)),
           cpufreq_scaling_(std::move(cpufreq_scaling)),
           opp_info_(std::move(opp_info)),
-          thermal_config_(std::move(thermal_config)) {
-        ddk_proto_id_ = ZX_PROTOCOL_THERMAL;
-    };
+          thermal_config_(std::move(thermal_config)) {}
+
     static zx_status_t Create(zx_device_t* device);
 
     // Ddk Hooks

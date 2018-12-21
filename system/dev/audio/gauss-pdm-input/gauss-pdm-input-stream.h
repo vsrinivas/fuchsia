@@ -6,6 +6,7 @@
 
 #include <ddktl/device-internal.h>
 #include <ddktl/device.h>
+#include <ddktl/protocol/empty-protocol.h>
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
 
@@ -25,18 +26,12 @@
 namespace audio {
 namespace gauss {
 
-struct PdmInputStreamProtocol : public ddk::internal::base_protocol {
-    explicit PdmInputStreamProtocol() {
-        ddk_proto_id_ = ZX_PROTOCOL_AUDIO_INPUT;
-    }
-};
-
 class GaussPdmInputStream;
 using GaussPdmInputStreamBase =
     ddk::Device<GaussPdmInputStream, ddk::Ioctlable, ddk::Unbindable>;
 
 class GaussPdmInputStream : public GaussPdmInputStreamBase,
-                            public PdmInputStreamProtocol,
+                            public ddk::EmptyProtocol<ZX_PROTOCOL_AUDIO_INPUT>,
                             public fbl::RefCounted<GaussPdmInputStream> {
 public:
     static zx_status_t Create(zx_device_t* parent);

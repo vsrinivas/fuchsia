@@ -7,6 +7,7 @@
 #include <ddktl/i2c-channel.h>
 #include <ddktl/pdev.h>
 #include <ddktl/protocol/clk.h>
+#include <ddktl/protocol/empty-protocol.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/mipicsi.h>
 #include <zircon/camera/c/fidl.h>
@@ -50,7 +51,7 @@ using DeviceType = ddk::Device<Imx227Device,
                                ddk::Messageable>;
 
 class Imx227Device : public DeviceType,
-                     public ddk::internal::base_protocol {
+                     public ddk::EmptyProtocol<ZX_PROTOCOL_CAMERA> {
 public:
     // GPIO Indexes.
     enum {
@@ -62,9 +63,7 @@ public:
 
     static zx_status_t Create(zx_device_t* parent);
     Imx227Device(zx_device_t* device)
-        : DeviceType(device), pdev_(device), i2c_(device), clk_(device), mipi_(device) {
-        ddk_proto_id_ = ZX_PROTOCOL_CAMERA;
-    }
+        : DeviceType(device), pdev_(device), i2c_(device), clk_(device), mipi_(device) {}
 
     // Methods required by the ddk mixins.
     void DdkUnbind();

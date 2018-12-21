@@ -10,6 +10,7 @@
 #include <ddktl/device-internal.h>
 #include <ddktl/device.h>
 #include <ddktl/mmio.h>
+#include <ddktl/protocol/empty-protocol.h>
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
 #include <lib/zx/bti.h>
@@ -28,20 +29,14 @@
 namespace audio {
 namespace gauss {
 
-struct TdmOutputStreamProtocol : public ddk::internal::base_protocol {
-    explicit TdmOutputStreamProtocol() {
-        ddk_proto_id_ = ZX_PROTOCOL_AUDIO_OUTPUT;
-    }
-};
-
 class TdmOutputStream;
 using TdmAudioStreamBase = ddk::Device<TdmOutputStream,
                                        ddk::Ioctlable,
                                        ddk::Unbindable>;
 
 class TdmOutputStream : public TdmAudioStreamBase,
-                       public TdmOutputStreamProtocol,
-                       public fbl::RefCounted<TdmOutputStream> {
+                        public ddk::EmptyProtocol<ZX_PROTOCOL_AUDIO_OUTPUT>,
+                        public fbl::RefCounted<TdmOutputStream> {
 public:
     static zx_status_t Create(zx_device_t* parent);
 
@@ -69,7 +64,6 @@ private:
     TdmOutputStream(zx_device_t* parent,
                    fbl::RefPtr<dispatcher::ExecutionDomain>&& default_domain)
         : TdmAudioStreamBase(parent),
-          TdmOutputStreamProtocol(),
           default_domain_(std::move(default_domain)),
           create_time_(zx_clock_get_monotonic()) { }
 
