@@ -380,6 +380,7 @@ enum ConnectionResultLabel {
     ScanNotSupportedId = 4000,
     ScanInvalidArgsId = 4001,
     ScanInternalErrorId = 4002,
+    RsnaTimeout = 5000,
 }
 
 fn convert_connect_failure(result: &ConnectFailure) -> Option<ConnectionResultLabel> {
@@ -420,6 +421,7 @@ fn convert_connect_failure(result: &ConnectFailure) -> Option<ConnectionResultLa
             RejectedEmergencyServicesNotSupported => AssocRejectedEmergencyServicesNotSupportedId,
             RefusedTemporarily => AssocRefusedTemporarilyId,
         },
+        ConnectFailure::RsnaTimeout => RsnaTimeout,
     };
 
     Some(result)

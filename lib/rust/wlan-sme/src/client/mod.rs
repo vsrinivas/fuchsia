@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 mod bss;
+mod event;
 mod rsn;
 mod scan;
 mod state;
@@ -18,14 +19,15 @@ use std::sync::Arc;
 
 use super::{DeviceInfo, InfoStream, MlmeRequest, MlmeStream, Ssid};
 
+use self::bss::{get_best_bss, get_channel_map, get_standard_map, group_networks};
+use self::event::Event;
 use self::scan::{DiscoveryScan, JoinScan, JoinScanFailure, ScanResult, ScanScheduler};
 use self::rsn::get_rsna;
 use self::state::{ConnectCommand, State};
 
-use crate::client::bss::{get_best_bss, get_channel_map, get_standard_map, group_networks};
 use crate::clone_utils::clone_bss_desc;
 use crate::sink::{InfoSink, MlmeSink};
-use crate::timer::TimedEvent;
+use crate::timer::{self, TimedEvent};
 
 pub use self::bss::{BssInfo, EssInfo};
 pub use self::scan::{DiscoveryError};
@@ -46,8 +48,9 @@ mod internal {
     use std::sync::Arc;
 
     use crate::DeviceInfo;
-    use crate::client::{ConnectionAttemptId, Tokens};
+    use crate::client::{ConnectionAttemptId, event::Event, Tokens};
     use crate::sink::{InfoSink, MlmeSink, UnboundedSink};
+    use crate::timer::Timer;
 
     pub type UserSink<T> = UnboundedSink<super::UserEvent<T>>;
     pub struct Context<T: Tokens> {
@@ -55,6 +58,7 @@ mod internal {
         pub mlme_sink: MlmeSink,
         pub user_sink: UserSink<T>,
         pub info_sink: InfoSink,
+        pub(crate) timer: Timer<Event>,
         pub att_id: ConnectionAttemptId,
     }
 }
@@ -62,6 +66,7 @@ mod internal {
 use self::internal::*;
 
 pub type UserStream<T> = mpsc::UnboundedReceiver<UserEvent<T>>;
+pub type TimeStream = timer::TimeStream<Event>;
 
 #[derive(Debug, PartialEq)]
 pub struct ConnectPhyParams {
@@ -104,6 +109,7 @@ pub enum ConnectFailure {
     JoinFailure(fidl_mlme::JoinResultCodes),
     AuthenticationFailure(fidl_mlme::AuthenticateResultCodes),
     AssociationFailure(fidl_mlme::AssociateResultCodes),
+    RsnaTimeout,
 }
 
 pub type EssDiscoveryResult = Result<Vec<EssInfo>, DiscoveryError>;
@@ -170,11 +176,12 @@ pub enum Standard {
 }
 
 impl<T: Tokens> ClientSme<T> {
-    pub fn new(info: DeviceInfo) -> (Self, MlmeStream, UserStream<T>, InfoStream) {
+    pub fn new(info: DeviceInfo) -> (Self, MlmeStream, UserStream<T>, InfoStream, TimeStream) {
         let device_info = Arc::new(info);
         let (mlme_sink, mlme_stream) = mpsc::unbounded();
         let (user_sink, user_stream) = mpsc::unbounded();
         let (info_sink, info_stream) = mpsc::unbounded();
+        let (timer, time_stream) = timer::create_timer();
         (
             ClientSme {
                 state: Some(State::Idle),
@@ -184,12 +191,14 @@ impl<T: Tokens> ClientSme<T> {
                     user_sink: UserSink::new(user_sink),
                     info_sink: InfoSink::new(info_sink),
                     device_info,
+                    timer,
                     att_id: 0,
                 },
             },
             mlme_stream,
             user_stream,
             info_stream,
+            time_stream,
         )
     }
 
@@ -246,7 +255,7 @@ impl<T: Tokens> ClientSme<T> {
 }
 
 impl<T: Tokens> super::Station for ClientSme<T> {
-    type Event = ();
+    type Event = Event;
 
     fn on_mlme_event(&mut self, event: MlmeEvent) {
         self.state = self.state.take().map(|state| match event {
@@ -341,8 +350,13 @@ impl<T: Tokens> super::Station for ClientSme<T> {
         });
     }
 
-    fn on_timeout(&mut self, _timed_event: TimedEvent<()>) {
-        unimplemented!();
+    fn on_timeout(&mut self, timed_event: TimedEvent<Event>) {
+        self.state = self.state.take().map(|state| match timed_event.event {
+            event @ Event::EstablishingRsnaTimeout
+            | event @ Event::KeyFrameExchangeTimeout { .. } => {
+                state.handle_timeout(timed_event.id, event, &mut self.context)
+            },
+        });
     }
 }
 
@@ -380,7 +394,7 @@ mod tests {
 
     #[test]
     fn status_connecting_to() {
-        let (mut sme, _mlme_stream, _user_stream, _info_stream) = create_sme();
+        let (mut sme, _mlme_stream, _user_stream, _info_stream, _time_stream) = create_sme();
         assert_eq!(Status{ connected_to: None, connecting_to: None },
                    sme.status());
 
@@ -432,7 +446,7 @@ mod tests {
 
     #[test]
     fn connecting_password_supplied_for_protected_network() {
-        let (mut sme, mut mlme_stream, _user_stream, _info_stream) = create_sme();
+        let (mut sme, mut mlme_stream, _user_stream, _info_stream, _time_stream) = create_sme();
         assert_eq!(Status{ connected_to: None, connecting_to: None },
                    sme.status());
 
@@ -479,7 +493,7 @@ mod tests {
 
     #[test]
     fn connecting_password_supplied_for_unprotected_network() {
-        let (mut sme, mut mlme_stream, mut user_stream, _info_stream) = create_sme();
+        let (mut sme, mut mlme_stream, mut user_stream, _info_stream, _time_stream) = create_sme();
         assert_eq!(Status{ connected_to: None, connecting_to: None },
                    sme.status());
 
@@ -537,7 +551,7 @@ mod tests {
 
     #[test]
     fn connecting_no_password_supplied_for_protected_network() {
-        let (mut sme, mut mlme_stream, mut user_stream, _info_stream) = create_sme();
+        let (mut sme, mut mlme_stream, mut user_stream, _info_stream, _time_stream) = create_sme();
         assert_eq!(Status{ connected_to: None, connecting_to: None },
                    sme.status());
 
@@ -593,7 +607,7 @@ mod tests {
 
     #[test]
     fn connecting_generates_info_events() {
-        let (mut sme, _mlme_stream, _user_stream, mut info_stream) = create_sme();
+        let (mut sme, _mlme_stream, _user_stream, mut info_stream, _time_stream) = create_sme();
 
         sme.on_connect_command(b"foo".to_vec(), vec![], 10,
                                ConnectPhyParams { phy: None, cbw: None });
@@ -622,7 +636,8 @@ mod tests {
         type ConnectToken = i32;
     }
 
-    fn create_sme() -> (ClientSme<FakeTokens>, MlmeStream, UserStream<FakeTokens>, InfoStream) {
+    fn create_sme() -> (ClientSme<FakeTokens>, MlmeStream, UserStream<FakeTokens>, InfoStream,
+                        TimeStream) {
         ClientSme::new(DeviceInfo {
             addr: CLIENT_ADDR,
             bands: vec![],
