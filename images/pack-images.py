@@ -29,14 +29,9 @@ set -x
     switches = dict((switch, '"$dir/%s"' % image['path'])
                     for image in images if type in image
                     for switch in image[type])
-    primary = switches.get('')
-    if primary:
-        del switches['']
     cmd = ['exec', '"$dir/%s"' % bootserver]
     for switch, path in sorted(switches.iteritems()):
         cmd += [switch, path]
-    if primary:
-        cmd.append(primary)
     cmd.append('"$@"')
     script += ' '.join(cmd) + '\n'
     return script

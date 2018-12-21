@@ -584,12 +584,12 @@ images += [
 
       bootserver_pave = []
 
-      # The empty string means "kernel", i.e. the primary ZBI. On arm64 systems
-      # where `fx reboot -r` works, and users don't default into zedboot, we
-      # prefer not to use mexec, but instead to reboot after paving. x64 will
-      # follow suit once all of the relevant plumbing is done (ZX-2220).
+      # On arm64 systems where `fx reboot -r` works, and users don't default
+      # into zedboot, we prefer not to use mexec, but instead to reboot after
+      # paving. x64 will follow suit once all of the relevant plumbing is done
+      # (ZX-2220).
       if (current_cpu != "arm64") {
-        bootserver_pave += [ "" ]
+        bootserver_pave += [ "--boot" ]
       }
       if (custom_signing_script == "") {
         bootserver_pave += [
@@ -840,7 +840,7 @@ images += [
   {
     default = false
     json = {
-      bootserver_netboot = [ "" ]
+      bootserver_netboot = [ "--boot" ]
       name = "netboot"
       type = "zbi"
     }
