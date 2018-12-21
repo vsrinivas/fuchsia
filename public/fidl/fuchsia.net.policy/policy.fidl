@@ -1,0 +1,110 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.net.policy;
+
+using fuchsia.net;
+using fuchsia.net.stack;
+using fuchsia.hardware.ethernet;
+using zx;
+
+struct InterfaceInfo {
+    /// Interface name.
+    string name;
+
+    /// All info of an interface except the interface name.
+    fuchsia.net.stack.InterfaceProperties properties;
+};
+
+/// Event for interface name update.
+struct InterfaceNameUpdate {
+    /// The new name.
+    string name;
+};
+
+table Events {
+    /// InterfaceStatus event is triggered whenever an interface's status is changed.
+    1: fuchsia.net.stack.InterfaceStatus status;
+
+    /// InterfaceAddressDiff event is triggered whenever the interface's addresses are changed.
+    2: fuchsia.net.stack.InterfaceAddressDiff addressDiff;
+
+    /// InterfaceNameUpdate event is triggered whenever an interface's name is changed.
+    3: InterfaceNameUpdate name;
+};
+
+union EthernetControllerRequest {
+    request<StandardInterfaceController> standard;
+    request<BridgeInterfaceController> bridge;
+};
+
+[FragileBase]
+interface BaseInterfaceController {
+    /// Retrieve info about an interface.
+    GetInterfaceInfo() -> (InterfaceInfo info);
+
+    /// Set the administrative enablement for an interfance.
+    /// If enabled, the interface starts processing packets.
+    /// If disabled, the interface stops processing packets.
+    SetInterfaceStatus(fuchsia.net.stack.EnablementStatus status) -> (zx.status status);
+
+    /// Set DHCP client enablement for a specific interface.
+    /// If enabled, the interface acquires a dynamic IP address through DHCP server.
+    /// If disabled, the interface uses the assigned static IP address.
+    SetDHCPClientStatus(fuchsia.net.stack.EnablementStatus status) -> (zx.status status);
+
+    /// Add/Remove IP address for an interface.
+    /// Remove only if IP address is an exact match.
+    UpdateAddress(fuchsia.net.stack.InterfaceAddressDiff addressDiff) -> (zx.status status);
+
+    /// Set a name for an interface.
+    SetName(string name) -> (zx.status status);
+
+    -> OnChange(Events events);
+};
+
+/// Controller of physical and virtual interfaces.
+interface StandardInterfaceController : BaseInterfaceController {
+};
+
+/// Controller of  bridging interfaces.
+interface BridgeInterfaceController : BaseInterfaceController {
+};
+
+[Discoverable]
+// Observer receives events from all interfaces and queries interface info.
+// It is used by clients like mdns which only care about interface change events
+// and the first-class clients like sysUI and net_ctl.
+interface Observer {
+    /// Retrieve info of all the interfaces.
+    ListInterfaces() -> (vector<InterfaceInfo> info);
+
+    /// Retrieve info of a specific interface.
+    GetInterfaceInfo(string name) -> (InterfaceInfo?info, zx.status status);
+
+    -> OnChange(string interface, Events events);
+};
+
+[Discoverable]
+interface BasePolicy {
+    /// Add virtual interfaces.
+    // Physical interfaces are added by watching the events in /dev/class/ethernet directory.
+    // The networking interface added through this API are tied to the lifetime of the fidl channel.
+    // If the client crashes/exits, the channel is closed,
+    // and then the interface created by this method over the channel will be destructed.
+    AddInterface(fuchsia.hardware.ethernet.Device device, request<StandardInterfaceController> interfaceCtl) -> (zx.status status);
+
+    /// Create bridging interface.
+    CreateBridge(vector<string> interfaces, request<BridgeInterfaceController> interfaceCtl) -> (zx.status status);
+};
+
+[Discoverable]
+// PrivilegedPolicy provides any interface's controller.
+// It is used by clients such as SysUI and net_ctl.
+// Infrastructure team is working on capability control mechanism and details can be found:
+// https://docs.google.com/document/d/1pOPFRfdh6AnWt2d37F1k7YH0AhJ1AnrGEdUU3zyzCkQ/edit#
+// That said, the component infrastrastructure will block unqualified client from accessing the PrivilegedPolicy interface.
+interface PrivilegedPolicy {
+    GetInterfaceController(string interface, EthernetControllerRequest controller)-> (zx.status status);
+};
