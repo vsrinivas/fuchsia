@@ -172,6 +172,69 @@ TEST_F(MinstrelTest, UpdateStats) {
     EXPECT_EQ(9, peer.max_tp);
 }
 
+TEST_F(MinstrelTest, HtIsMyFavorite) {
+    wlan_tx_status_t failed_ht_tx_status {
+      .success = false,
+      .tx_status_entry =
+          {
+              // MCS 8-15 all fail
+              {kHtStartIdx + 15, 1},
+              {kHtStartIdx + 14, 1},
+              {kHtStartIdx + 13, 1},
+              {kHtStartIdx + 12, 1},
+              {kHtStartIdx + 11, 1},
+              {kHtStartIdx + 10, 1},
+              {kHtStartIdx + 9, 1},
+              {kHtStartIdx + 8, 1},
+          }
+    };
+
+    wlan_tx_status_t ht_tx_status{
+        .success = true,
+        .tx_status_entry =
+            {
+                // MCS 1-7 all fail, only MCS 0 succeeds.
+                {kHtStartIdx + 7, 1},
+                {kHtStartIdx + 6, 1},
+                {kHtStartIdx + 5, 1},
+                {kHtStartIdx + 4, 1},
+                {kHtStartIdx + 3, 1},
+                {kHtStartIdx + 2, 1},
+                {kHtStartIdx + 1, 1},
+                // Lowest HT MCS with success probability 11% == (1/9) note: 0.1f < 1 - 0.9f
+                {kHtStartIdx + 0, 9},
+            },
+    };
+
+    wlan_tx_status_t erp_tx_status {
+        .success = true,
+        .tx_status_entry =
+        {
+            // Highest ERP rate with success probability 100% == (1/1)
+            {kErpStartIdx + kErpNumTxVector - 1, 1},
+        },
+    };
+
+    clock.Set(zx::time(0));
+    minstrel_.AddPeer(assoc_ctx_ht_);
+    kTestMacAddr.CopyTo(failed_ht_tx_status.peer_addr);
+    kTestMacAddr.CopyTo(ht_tx_status.peer_addr);
+    kTestMacAddr.CopyTo(erp_tx_status.peer_addr);
+
+    minstrel_.HandleTxStatusReport(failed_ht_tx_status);
+    minstrel_.HandleTxStatusReport(ht_tx_status);
+    minstrel_.HandleTxStatusReport(erp_tx_status);
+    AdvanceTimeBy(zx::msec(100));
+    ASSERT_TRUE(minstrel_.HandleTimeout());  // tx_status are processed at HandleTimeout()
+    wlan_minstrel::Peer peer;
+    EXPECT_EQ(ZX_OK, minstrel_.GetStatsToFidl(kTestMacAddr, &peer));
+    // HT is selected for max_tp even though it has lower throughput
+    EXPECT_EQ(kHtStartIdx, peer.max_tp);
+    // HT is selected for max_probability even though it has lower probability
+    EXPECT_EQ(kHtStartIdx, peer.max_probability);
+}
+
+
 std::unordered_set<tx_vec_idx_t> GetAllIndices(const wlan_minstrel::Peer& peer) {
     std::unordered_set<tx_vec_idx_t> indices;
     for (const auto& entry : *peer.entries) {

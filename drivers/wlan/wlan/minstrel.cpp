@@ -314,25 +314,29 @@ void MinstrelRateSelector::HandleTxStatusReport(const wlan_tx_status_t& tx_statu
     outdated_peers_.emplace(peer_addr);
 }
 
-constexpr bool TxStats::PhyPreferredOver(const wlan::TxStats& other) const {
+inline constexpr bool TxStats::PhyPreferredOver(const wlan::TxStats& other) const {
     // based on experiment, If HT is supported, it is better not to use ERP for data frames.
     // With ralink RT5592 and Netgear Nighthawk X10, approximately 80 feet away,
     // HT/ERP tx throughput < 1 Mbps, HT only tx 4-8 Mbps
     // TODO(WLAN-868): Revisit with VHT support.
-    return IsHt(tx_vector_idx) || IsHt(tx_vector_idx) == IsHt(other.tx_vector_idx);
+    return IsHt(tx_vector_idx) && !IsHt(other.tx_vector_idx);
 }
 
-constexpr bool TxStats::ThroughputHigherThan(const TxStats& other) const {
+inline constexpr bool TxStats::ThroughputHigherThan(const TxStats& other) const {
     return cur_tp > other.cur_tp || (cur_tp == other.cur_tp && probability > other.probability);
 }
 
-constexpr bool TxStats::ProbabilityHigherThan(const TxStats& other) const {
+inline constexpr bool TxStats::ProbabilityHigherThan(const TxStats& other) const {
     if (probability >= kMinstrelProbabilityThreshold &&
         other.probability >= kMinstrelProbabilityThreshold) {
         // When probability is "high enough", consider throughput instead.
         return cur_tp > other.cur_tp;
     }
     return probability > other.probability;
+}
+
+inline constexpr bool IsTxUnlikely(const TxStats& ts) {
+    return ts.probability < 1.0f - kMinstrelProbabilityThreshold;
 }
 
 void UpdateStatsPeer(Peer* peer) {
@@ -373,11 +377,11 @@ void UpdateStatsPeer(Peer* peer) {
     tx_vec_idx_t max_probability = max_tp;
     tx_vec_idx_t basic_max_probability = peer->basic_highest;
     for (const auto& [idx, stats] : peer->tx_stats_map) {
-        if (stats.PhyPreferredOver(ctsm.at(max_tp)) &&
+        if ((!IsTxUnlikely(stats) && stats.PhyPreferredOver(ctsm.at(max_tp))) ||
             stats.ThroughputHigherThan(ctsm.at(max_tp))) {
             max_tp = idx;
         }
-        if (stats.PhyPreferredOver(ctsm.at(max_probability)) &&
+        if ((!IsTxUnlikely(stats) && stats.PhyPreferredOver(ctsm.at(max_probability))) ||
             stats.ProbabilityHigherThan(ctsm.at(max_probability))) {
             max_probability = idx;
         }
@@ -425,7 +429,7 @@ tx_vec_idx_t GetNextProbe(Peer* peer, const ProbeSequence& probe_sequence) {
             ((tx_stats.perfect_tx_time > baseline_tx_time) &&
              (tx_stats.attempts_cur >= kMaxSlowProbe)) ||
             // It is almost guaranteed to fail, defer until enough cycles pass
-            (tx_stats.probability < 1.0f - kMinstrelProbabilityThreshold &&
+            (IsTxUnlikely(tx_stats) &&
              (tx_stats.probe_cycles_skipped < kDeadProbeCycleCount || tx_stats.attempts_cur > 0));
         if (!skip) { break; }
     }
