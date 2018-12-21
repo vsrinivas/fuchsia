@@ -1,7 +1,7 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-package ssh
+package botanist
 
 import (
 	"context"
@@ -50,7 +50,7 @@ func GenerateKeyPair(bitSize int) ([]byte, []byte, error) {
 
 // Connect establishes a new SSH connection to a server with the given
 // address and port, using the provided user name and private key.
-func Connect(ctx context.Context, addr *net.UDPAddr, user string, privateKey []byte) (*ssh.Client, error) {
+func ConnectSSH(ctx context.Context, addr *net.UDPAddr, user string, privateKey []byte) (*ssh.Client, error) {
 	signer, err := ssh.ParsePrivateKey(privateKey)
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse the private key: %v", err)
