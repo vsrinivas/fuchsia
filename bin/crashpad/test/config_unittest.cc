@@ -14,7 +14,7 @@ namespace {
 
 TEST(ConfigTest, ParseConfig_ValidConfig) {
   Config config;
-  ASSERT_EQ(ParseConfig("/pkg/data/config_valid.json", &config), ZX_OK);
+  ASSERT_EQ(ParseConfig("/pkg/data/valid_config.json", &config), ZX_OK);
   EXPECT_EQ(config.local_crashpad_database_path, "/data/crashes");
   EXPECT_FALSE(config.enable_upload_to_crash_server);
 }
@@ -27,14 +27,14 @@ TEST(ConfigTest, ParseConfig_MissingConfig) {
 TEST(ConfigTest, ParseConfig_BadSchemaSpuriousFieldConfig) {
   Config config;
   ASSERT_EQ(
-      ParseConfig("/pkg/data/config_bad_schema_spurious_field.json", &config),
+      ParseConfig("/pkg/data/bad_schema_spurious_field_config.json", &config),
       ZX_ERR_INTERNAL);
 }
 
 TEST(ConfigTest, ParseConfig_BadSchemaMissingRequiredConfig) {
   Config config;
   ASSERT_EQ(
-      ParseConfig("/pkg/data/config_bad_schema_missing_required_field.json",
+      ParseConfig("/pkg/data/bad_schema_missing_required_field_config.json",
                   &config),
       ZX_ERR_INTERNAL);
 }

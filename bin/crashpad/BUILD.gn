@@ -36,8 +36,8 @@ package("crashpad_analyzer") {
 
   resources = [
     {
-      path = "configs/config.json"
-      dest = "config.json"
+      path = "configs/default.json"
+      dest = "default_config.json"
     },
   ]
 }

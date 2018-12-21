@@ -350,7 +350,7 @@ std::unique_ptr<CrashpadAnalyzerImpl> CrashpadAnalyzerImpl::TryCreate(
 
 std::unique_ptr<CrashpadAnalyzerImpl> CrashpadAnalyzerImpl::TryCreate() {
   Config config;
-  if (ParseConfig("/pkg/data/config.json", &config) != ZX_OK) {
+  if (ParseConfig("/pkg/data/default_config.json", &config) != ZX_OK) {
     return nullptr;
   }
 
