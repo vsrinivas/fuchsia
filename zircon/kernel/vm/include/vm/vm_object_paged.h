@@ -59,7 +59,7 @@ public:
     // to create multiple VMOs for the same region using this method.
     static zx_status_t CreateFromROData(const void* data, size_t size, fbl::RefPtr<VmObject>* vmo);
 
-    static zx_status_t CreateExternal(fbl::RefPtr<PageSource> src,
+    static zx_status_t CreateExternal(fbl::RefPtr<PageSource> src, uint32_t options,
                                       uint64_t size, fbl::RefPtr<VmObject>* vmo);
 
     zx_status_t Resize(uint64_t size) override;

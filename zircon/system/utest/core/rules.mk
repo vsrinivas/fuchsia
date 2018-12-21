@@ -20,6 +20,7 @@ MODULE_NAME := core-tests
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/fbl \
+    system/ulib/fzl \
     system/ulib/runtime \
     system/ulib/sync \
     system/ulib/zx \

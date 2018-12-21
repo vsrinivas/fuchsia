@@ -20,6 +20,7 @@ MODULE_NAME := pager-test
 MODULE_STATIC_LIBS := \
     system/ulib/elf-search \
     system/ulib/fbl \
+    system/ulib/fzl \
     system/ulib/inspector \
     system/ulib/sync \
     system/ulib/zx \

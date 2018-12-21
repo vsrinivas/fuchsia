@@ -248,7 +248,7 @@ zx_status_t VmObjectPaged::CreateFromROData(const void* data, size_t size, fbl::
     return ZX_OK;
 }
 
-zx_status_t VmObjectPaged::CreateExternal(fbl::RefPtr<PageSource> src,
+zx_status_t VmObjectPaged::CreateExternal(fbl::RefPtr<PageSource> src, uint32_t options,
                                           uint64_t size, fbl::RefPtr<VmObject>* obj) {
     // make sure size is page aligned
     zx_status_t status = RoundSize(size, &size);
@@ -258,7 +258,7 @@ zx_status_t VmObjectPaged::CreateExternal(fbl::RefPtr<PageSource> src,
 
     fbl::AllocChecker ac;
     auto vmo = fbl::AdoptRef<VmObject>(new (&ac) VmObjectPaged(
-            kResizable, PMM_ALLOC_FLAG_ANY, size, nullptr, ktl::move(src)));
+            options, PMM_ALLOC_FLAG_ANY, size, nullptr, ktl::move(src)));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
