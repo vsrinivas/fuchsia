@@ -24,6 +24,7 @@ executable("bin") {
     "pthreads.cc",
     "random_memcpy.cc",
     "round_trips.cc",
+    "slab_alloc_static.cc",
     "sockets.cc",
     "test_runner.cc",
     "threads.cc",
