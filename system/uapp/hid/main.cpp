@@ -15,10 +15,10 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/unique_ptr.h>
+#include <fuchsia/hardware/input/c/fidl.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/fdio.h>
 #include <zircon/assert.h>
-#include <zircon/input/c/fidl.h>
 #include <zircon/listnode.h>
 #include <zircon/threads.h>
 #include <zircon/types.h>
@@ -84,18 +84,19 @@ static zx_status_t parse_uint_arg(const char* arg, uint32_t min, uint32_t max, u
     return ZX_OK;
 }
 
-static zx_status_t parse_input_report_type(const char* arg, zircon_input_ReportType* out_type) {
+static zx_status_t parse_input_report_type(const char* arg,
+                                           fuchsia_hardware_input_ReportType* out_type) {
     if ((arg == NULL) || (out_type == NULL)) {
         return ZX_ERR_INVALID_ARGS;
     }
 
     static const struct {
         const char* name;
-        zircon_input_ReportType type;
+        fuchsia_hardware_input_ReportType type;
     } LUT[] = {
-        { .name = "in",      .type = zircon_input_ReportType_INPUT },
-        { .name = "out",     .type = zircon_input_ReportType_OUTPUT },
-        { .name = "feature", .type = zircon_input_ReportType_FEATURE },
+        {.name = "in", .type = fuchsia_hardware_input_ReportType_INPUT},
+        {.name = "out", .type = fuchsia_hardware_input_ReportType_OUTPUT},
+        {.name = "feature", .type = fuchsia_hardware_input_ReportType_FEATURE},
     };
 
     for (size_t i = 0; i < fbl::count_of(LUT); ++i) {
@@ -108,10 +109,8 @@ static zx_status_t parse_input_report_type(const char* arg, zircon_input_ReportT
     return ZX_ERR_INVALID_ARGS;
 }
 
-static zx_status_t parse_set_get_report_args(int argc,
-                                             const char** argv,
-                                             uint8_t* out_id,
-                                             zircon_input_ReportType* out_type) {
+static zx_status_t parse_set_get_report_args(int argc, const char** argv, uint8_t* out_id,
+                                             fuchsia_hardware_input_ReportType* out_type) {
     if ((argc < 3) || (argv == NULL) || (out_id == NULL) || (out_type == NULL)) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -128,10 +127,10 @@ static zx_status_t parse_set_get_report_args(int argc,
     return parse_input_report_type(argv[1], out_type);
 }
 
-
 static zx_status_t get_hid_protocol(const fzl::FdioCaller& caller, const char* name) {
     uint32_t proto;
-    zx_status_t status = zircon_input_DeviceGetBootProtocol(caller.borrow_channel(), &proto);
+    zx_status_t status =
+        fuchsia_hardware_input_DeviceGetBootProtocol(caller.borrow_channel(), &proto);
     if (status != ZX_OK) {
         lprintf("hid: could not get protocol from %s (status=%d)\n", name, status);
     } else {
@@ -143,7 +142,8 @@ static zx_status_t get_hid_protocol(const fzl::FdioCaller& caller, const char* n
 static zx_status_t get_report_desc_len(const fzl::FdioCaller& caller, const char* name,
                                        size_t* report_desc_len) {
     uint16_t len;
-    zx_status_t status = zircon_input_DeviceGetReportDescSize(caller.borrow_channel(), &len);
+    zx_status_t status =
+        fuchsia_hardware_input_DeviceGetReportDescSize(caller.borrow_channel(), &len);
     if (status != ZX_OK) {
         lprintf("hid: could not get report descriptor length from %s (status=%d)\n", name, status);
     } else {
@@ -158,8 +158,8 @@ static zx_status_t get_report_desc(const fzl::FdioCaller& caller, const char* na
     fbl::unique_ptr<uint8_t[]> buf(new uint8_t[report_desc_len]);
 
     size_t actual;
-    zx_status_t status = zircon_input_DeviceGetReportDesc(caller.borrow_channel(), buf.get(),
-                                                          report_desc_len, &actual);
+    zx_status_t status = fuchsia_hardware_input_DeviceGetReportDesc(
+        caller.borrow_channel(), buf.get(), report_desc_len, &actual);
     if (status != ZX_OK) {
         lprintf("hid: could not get report descriptor from %s (status=%d)\n", name, status);
         return status;
@@ -182,7 +182,8 @@ static zx_status_t get_report_desc(const fzl::FdioCaller& caller, const char* na
 static zx_status_t get_num_reports(const fzl::FdioCaller& caller, const char* name,
                                    size_t* num_reports) {
     uint16_t count;
-    zx_status_t status = zircon_input_DeviceGetNumReports(caller.borrow_channel(), &count);
+    zx_status_t status =
+        fuchsia_hardware_input_DeviceGetNumReports(caller.borrow_channel(), &count);
     if (status != ZX_OK) {
         lprintf("hid: could not get number of reports from %s (status=%d)\n", name, status);
     } else {
@@ -197,8 +198,8 @@ static zx_status_t get_report_ids(const fzl::FdioCaller& caller, const char* nam
     fbl::unique_ptr<uint8_t[]> ids(new uint8_t[num_reports]);
 
     size_t actual;
-    zx_status_t status = zircon_input_DeviceGetReportIds(caller.borrow_channel(), ids.get(),
-                                                         num_reports, &actual);
+    zx_status_t status = fuchsia_hardware_input_DeviceGetReportIds(caller.borrow_channel(),
+                                                                   ids.get(), num_reports, &actual);
     if (status != ZX_OK) {
         lprintf("hid: could not get report ids from %s (status=%d)\n", name, status);
         return status;
@@ -212,12 +213,12 @@ static zx_status_t get_report_ids(const fzl::FdioCaller& caller, const char* nam
     printf("hid: %s report ids...\n", name);
     for (size_t i = 0; i < num_reports; i++) {
         static const struct {
-            zircon_input_ReportType type;
+            fuchsia_hardware_input_ReportType type;
             const char* tag;
         } TYPES[] = {
-            { .type = zircon_input_ReportType_INPUT, .tag = "Input" },
-            { .type = zircon_input_ReportType_OUTPUT, .tag = "Output" },
-            { .type = zircon_input_ReportType_FEATURE, .tag = "Feature" },
+            {.type = fuchsia_hardware_input_ReportType_INPUT, .tag = "Input"},
+            {.type = fuchsia_hardware_input_ReportType_OUTPUT, .tag = "Output"},
+            {.type = fuchsia_hardware_input_ReportType_FEATURE, .tag = "Feature"},
         };
 
         bool found = false;
@@ -225,8 +226,8 @@ static zx_status_t get_report_ids(const fzl::FdioCaller& caller, const char* nam
             uint16_t size;
 
             zx_status_t call_status;
-            status = zircon_input_DeviceGetReportSize(caller.borrow_channel(), TYPES[j].type, ids[i],
-                                                      &call_status, &size);
+            status = fuchsia_hardware_input_DeviceGetReportSize(
+                caller.borrow_channel(), TYPES[j].type, ids[i], &call_status, &size);
             if (status == ZX_OK && call_status == ZX_OK) {
                 printf("  ID 0x%02x : TYPE %7s : SIZE %u bytes\n", ids[i], TYPES[j].tag, size);
                 found = true;
@@ -249,8 +250,8 @@ static zx_status_t get_max_report_len(const fzl::FdioCaller& caller, const char*
     if (max_report_len == NULL) {
         max_report_len = &tmp;
     }
-    zx_status_t status = zircon_input_DeviceGetMaxInputReportSize(caller.borrow_channel(),
-                                                                  max_report_len);
+    zx_status_t status =
+        fuchsia_hardware_input_DeviceGetMaxInputReportSize(caller.borrow_channel(), max_report_len);
     if (status != ZX_OK) {
         lprintf("hid: could not get max report size from %s (status=%d)\n", name, status);
     } else {
@@ -422,7 +423,7 @@ int get_report(int argc, const char** argv) {
     }
 
     uint8_t id;
-    zircon_input_ReportType type;
+    fuchsia_hardware_input_ReportType type;
     zx_status_t res = parse_set_get_report_args(argc, argv, &id, &type);
     if (res != ZX_OK) {
         printf("Failed to parse type/id for get report operation (res %d)\n", res);
@@ -441,8 +442,8 @@ int get_report(int argc, const char** argv) {
 
     uint16_t size;
     zx_status_t call_status;
-    res = zircon_input_DeviceGetReportSize(caller.borrow_channel(), type, id,
-                                           &call_status, &size);
+    res = fuchsia_hardware_input_DeviceGetReportSize(caller.borrow_channel(), type, id,
+                                                     &call_status, &size);
     if (res != ZX_OK || call_status != ZX_OK) {
         printf("hid: could not get report (id 0x%02x type %u) size from %s (status=%d, %d)\n",
                 id, type, argv[0], res, call_status);
@@ -473,8 +474,8 @@ int get_report(int argc, const char** argv) {
     size_t bufsz = 4u << 10;
     size_t actual;
     fbl::unique_ptr<uint8_t[]> buf(new uint8_t[bufsz]);
-    res = zircon_input_DeviceGetReport(caller.borrow_channel(), type, id,
-                                       &call_status, buf.get(), bufsz, &actual);
+    res = fuchsia_hardware_input_DeviceGetReport(caller.borrow_channel(), type, id, &call_status,
+                                                 buf.get(), bufsz, &actual);
     if (res != ZX_OK || call_status != ZX_OK) {
         printf("hid: could not get report: %d, %d\n", res, call_status);
         return -1;
@@ -494,7 +495,7 @@ int set_report(int argc, const char** argv) {
     }
 
     uint8_t id;
-    zircon_input_ReportType type;
+    fuchsia_hardware_input_ReportType type;
     zx_status_t res = parse_set_get_report_args(argc, argv, &id, &type);
     if (res != ZX_OK) {
         printf("Failed to parse type/id for get report operation (res %d)\n", res);
@@ -517,8 +518,8 @@ int set_report(int argc, const char** argv) {
 
     uint16_t size;
     zx_status_t call_status;
-    res = zircon_input_DeviceGetReportSize(caller.borrow_channel(), type, id,
-                                           &call_status, &size);
+    res = fuchsia_hardware_input_DeviceGetReportSize(caller.borrow_channel(), type, id,
+                                                     &call_status, &size);
     if (res != ZX_OK || call_status != ZX_OK) {
         printf("hid: could not get report (id 0x%02x type %u) size from %s (status=%d, %d)\n",
                 id, type, argv[0], res, call_status);
@@ -539,8 +540,8 @@ int set_report(int argc, const char** argv) {
         report[i] = static_cast<uint8_t>(tmp);
     }
 
-    res = zircon_input_DeviceSetReport(caller.borrow_channel(), type, id, report.get(),
-                                       payload_size, &call_status);
+    res = fuchsia_hardware_input_DeviceSetReport(caller.borrow_channel(), type, id, report.get(),
+                                                 payload_size, &call_status);
     if (res != ZX_OK || call_status != ZX_OK) {
         printf("hid: could not set report: %d, %d\n", res, call_status);
         return -1;

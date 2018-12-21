@@ -11,6 +11,7 @@
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <fcntl.h>
+#include <fuchsia/hardware/input/c/fidl.h>
 #include <gfx/gfx.h>
 #include <hid/paradise.h>
 #include <hid/usages.h>
@@ -29,7 +30,6 @@
 #include <trace/event.h>
 #include <unistd.h>
 #include <zircon/device/display-controller.h>
-#include <zircon/input/c/fidl.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -1073,7 +1073,8 @@ int main(int argc, char* argv[]) {
         fzl::FdioCaller caller{fbl::unique_fd(fd)};
 
         uint16_t rpt_desc_len;
-        status = zircon_input_DeviceGetReportDescSize(caller.borrow_channel(), &rpt_desc_len);
+        status =
+            fuchsia_hardware_input_DeviceGetReportDescSize(caller.borrow_channel(), &rpt_desc_len);
         if (status != ZX_OK) {
             fprintf(stderr, "failed to get report descriptor length for %s: %d\n", devname, status);
             continue;
@@ -1081,9 +1082,8 @@ int main(int argc, char* argv[]) {
 
         uint8_t rpt_desc[rpt_desc_len];
         size_t actual_rpt_desc_len;
-        status = zircon_input_DeviceGetReportDesc(caller.borrow_channel(),
-                                                  rpt_desc, sizeof(rpt_desc),
-                                                  &actual_rpt_desc_len);
+        status = fuchsia_hardware_input_DeviceGetReportDesc(caller.borrow_channel(), rpt_desc,
+                                                            sizeof(rpt_desc), &actual_rpt_desc_len);
         if (status != ZX_OK) {
             fprintf(stderr, "failed to get report descriptor for %s: %d\n", devname, status);
             continue;
@@ -1117,15 +1117,15 @@ int main(int argc, char* argv[]) {
     uint16_t max_touchpad_rpt_sz = 0;
     if (touchfd >= 0) {
         fzl::FdioCaller caller{fbl::unique_fd(touchfd)};
-        status = zircon_input_DeviceGetMaxInputReportSize(caller.borrow_channel(),
-                                                          &max_touch_rpt_sz);
+        status = fuchsia_hardware_input_DeviceGetMaxInputReportSize(caller.borrow_channel(),
+                                                                    &max_touch_rpt_sz);
         touchfd = caller.release().release();
         ZX_ASSERT(status == ZX_OK);
     }
     if (touchpadfd >= 0) {
         fzl::FdioCaller caller{fbl::unique_fd(touchpadfd)};
-        status = zircon_input_DeviceGetMaxInputReportSize(caller.borrow_channel(),
-                                                          &max_touchpad_rpt_sz);
+        status = fuchsia_hardware_input_DeviceGetMaxInputReportSize(caller.borrow_channel(),
+                                                                    &max_touchpad_rpt_sz);
         touchpadfd = caller.release().release();
         ZX_ASSERT(status == ZX_OK);
     }

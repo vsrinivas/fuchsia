@@ -15,7 +15,7 @@ MODULE_SRCS += \
 
 MODULE_NAME := hid-test
 
-MODULE_FIDL_LIBS := system/fidl/zircon-input
+MODULE_FIDL_LIBS := system/fidl/fuchsia-hardware-input
 
 MODULE_STATIC_LIBS := \
     system/ulib/hid-parser \

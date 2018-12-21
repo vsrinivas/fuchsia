@@ -16,14 +16,14 @@
 
 namespace {
 
-zx_status_t set_utc_offset(const zircon_rtc_Time* rtc) {
+zx_status_t set_utc_offset(const fuchsia_hardware_rtc_Time* rtc) {
     uint64_t rtc_nanoseconds = seconds_since_epoch(rtc) * 1000000000;;
     int64_t offset = rtc_nanoseconds - zx_clock_get_monotonic();
     return zx_clock_adjust(get_root_resource(), ZX_CLOCK_UTC, offset);
 }
 
 static zx_status_t fidl_Get(void* ctx, fidl_txn_t* txn);
-static zx_status_t fidl_Set(void* ctx, const zircon_rtc_Time* rtc, fidl_txn_t* txn);
+static zx_status_t fidl_Set(void* ctx, const fuchsia_hardware_rtc_Time* rtc, fidl_txn_t* txn);
 
 class FallbackRtc;
 using RtcDevice = ddk::Device<FallbackRtc, ddk::Messageable>;
@@ -54,57 +54,57 @@ class FallbackRtc : public RtcDevice,
     }
 
     zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-        return zircon_rtc_Device_dispatch(this, txn, msg, &fidl_ops_);
+        return fuchsia_hardware_rtc_Device_dispatch(this, txn, msg, &fidl_ops_);
     }
 
   private:
-    zx_status_t Get(zircon_rtc_Time& rtc) {
+      zx_status_t Get(fuchsia_hardware_rtc_Time& rtc) {
 
-        // TODO(cpu): Advance the clock. This is not strictly necessary at the
-        // moment because this driver basically serves as a rendezvous between
-        // a Internet time server and the rest of the system.
+          // TODO(cpu): Advance the clock. This is not strictly necessary at the
+          // moment because this driver basically serves as a rendezvous between
+          // a Internet time server and the rest of the system.
 
-        rtc = rtc_last_;
-        return ZX_OK;
-    }
+          rtc = rtc_last_;
+          return ZX_OK;
+      }
 
-    zx_status_t Set(const zircon_rtc_Time& rtc) {
-        if (rtc_is_invalid(&rtc)) {
-            return ZX_ERR_OUT_OF_RANGE;
-        }
+      zx_status_t Set(const fuchsia_hardware_rtc_Time& rtc) {
+          if (rtc_is_invalid(&rtc)) {
+              return ZX_ERR_OUT_OF_RANGE;
+          }
 
-        rtc_last_ = rtc;
+          rtc_last_ = rtc;
 
-        auto status = set_utc_offset(&rtc_last_);
-        if (status != ZX_OK) {
-            zxlogf(ERROR, "The RTC driver was unable to set the UTC clock!\n");
-        }
+          auto status = set_utc_offset(&rtc_last_);
+          if (status != ZX_OK) {
+              zxlogf(ERROR, "The RTC driver was unable to set the UTC clock!\n");
+          }
 
-        return ZX_OK;
-    }
+          return ZX_OK;
+      }
 
     friend zx_status_t fidl_Get(void*, fidl_txn_t*);
-    friend zx_status_t fidl_Set(void*, const zircon_rtc_Time*, fidl_txn_t*);
+    friend zx_status_t fidl_Set(void*, const fuchsia_hardware_rtc_Time*, fidl_txn_t*);
 
-    const zircon_rtc_Device_ops_t fidl_ops_ = {
+    const fuchsia_hardware_rtc_Device_ops_t fidl_ops_ = {
         .Get = fidl_Get,
         .Set = fidl_Set,
     };
 
-    zircon_rtc_Time rtc_last_;
+    fuchsia_hardware_rtc_Time rtc_last_;
 };
 
 zx_status_t fidl_Get(void* ctx, fidl_txn_t* txn) {
     auto dev = static_cast<FallbackRtc*>(ctx);
-    zircon_rtc_Time rtc;
+    fuchsia_hardware_rtc_Time rtc;
     dev->Get(rtc);
-    return zircon_rtc_DeviceGet_reply(txn, &rtc);
+    return fuchsia_hardware_rtc_DeviceGet_reply(txn, &rtc);
 }
 
-zx_status_t fidl_Set(void* ctx, const zircon_rtc_Time* rtc, fidl_txn_t* txn) {
+zx_status_t fidl_Set(void* ctx, const fuchsia_hardware_rtc_Time* rtc, fidl_txn_t* txn) {
     auto dev = static_cast<FallbackRtc*>(ctx);
     auto status = dev->Set(*rtc);
-    return zircon_rtc_DeviceSet_reply(txn, status);
+    return fuchsia_hardware_rtc_DeviceSet_reply(txn, status);
 }
 
 }  // namespace

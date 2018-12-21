@@ -32,7 +32,7 @@ LOCAL_LIBS := \
 LOCAL_FIDL_LIBS := \
     system/fidl/fuchsia-display \
     system/fidl/fuchsia-io \
-    system/fidl/zircon-input \
+    system/fidl/fuchsia-hardware-input \
 
 # virtual-console
 

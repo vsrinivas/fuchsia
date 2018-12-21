@@ -37,6 +37,6 @@ MODULE_LIBS := \
 
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-display \
-    system/fidl/zircon-input \
+    system/fidl/fuchsia-hardware-input \
 
 include make/module.mk
