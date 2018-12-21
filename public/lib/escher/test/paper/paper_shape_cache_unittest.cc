@@ -40,7 +40,7 @@ VK_TEST(PaperShapeCache, TestCaching) {
     EXPECT_NE(entry1.mesh, MeshPtr());
     EXPECT_NE(entry1.mesh, entry0.mesh);
 
-    uploader->Submit(SemaphorePtr());
+    uploader->Submit();
     cache.EndFrame();
 
     frame->EndFrame(SemaphorePtr(), []() {});
@@ -65,7 +65,7 @@ VK_TEST(PaperShapeCache, TestCaching) {
     EXPECT_NE(entry2.mesh, MeshPtr());
     EXPECT_NE(entry2.mesh, entry0.mesh);
 
-    uploader->Submit(SemaphorePtr());
+    uploader->Submit();
     cache.EndFrame();
 
     frame->EndFrame(SemaphorePtr(), []() {});
@@ -82,7 +82,7 @@ VK_TEST(PaperShapeCache, TestCaching) {
 
     cache.BeginFrame(uploader.get(), frame_number);
 
-    uploader->Submit(SemaphorePtr());
+    uploader->Submit();
     cache.EndFrame();
 
     frame->EndFrame(SemaphorePtr(), []() {});
@@ -100,7 +100,7 @@ VK_TEST(PaperShapeCache, TestCaching) {
 
     cache.BeginFrame(uploader.get(), frame_number);
 
-    uploader->Submit(SemaphorePtr());
+    uploader->Submit();
     cache.EndFrame();
 
     frame->EndFrame(SemaphorePtr(), []() {});
@@ -118,7 +118,7 @@ VK_TEST(PaperShapeCache, TestCaching) {
 
     cache.BeginFrame(uploader.get(), frame_number);
 
-    uploader->Submit(SemaphorePtr());
+    uploader->Submit();
     cache.EndFrame();
 
     frame->EndFrame(SemaphorePtr(), []() {});

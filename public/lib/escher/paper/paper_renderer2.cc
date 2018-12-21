@@ -167,7 +167,7 @@ void PaperRenderer2::EndFrame() {
   TRACE_DURATION("gfx", "PaperRenderer2::EndFrame");
   FXL_DCHECK(frame_data_);
 
-  frame_data_->gpu_uploader->Submit(SemaphorePtr());
+  frame_data_->gpu_uploader->Submit();
 
   render_queue_.Sort();
   {

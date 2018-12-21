@@ -50,8 +50,7 @@ MeshPtr RoundedRectFactory::NewRoundedRect(
       auto writer = batch_gpu_uploader->AcquireWriter(vertex_buffer_size);
       GenerateRoundedRectVertices(spec, mesh_spec, writer->host_ptr(),
                                   writer->size());
-      writer->WriteBuffer(vertex_buffer, {0, 0, vertex_buffer->size()},
-                          Semaphore::New(vk_device()));
+      writer->WriteBuffer(vertex_buffer, {0, 0, vertex_buffer->size()});
       batch_gpu_uploader->PostWriter(std::move(writer));
 
       return fxl::MakeRefCounted<Mesh>(
@@ -65,8 +64,7 @@ MeshPtr RoundedRectFactory::NewRoundedRect(
           vertex_count * primary_buffer_stride,
           writer->host_ptr() + vertex_count * primary_buffer_stride,
           vertex_count * secondary_buffer_stride);
-      writer->WriteBuffer(vertex_buffer, {0, 0, vertex_buffer->size()},
-                          Semaphore::New(vk_device()));
+      writer->WriteBuffer(vertex_buffer, {0, 0, vertex_buffer->size()});
       batch_gpu_uploader->PostWriter(std::move(writer));
 
       return fxl::MakeRefCounted<Mesh>(
@@ -101,8 +99,7 @@ BufferPtr RoundedRectFactory::GetIndexBuffer(
     auto writer = batch_gpu_uploader->AcquireWriter(index_buffer_size);
     GenerateRoundedRectIndices(spec, mesh_spec, writer->host_ptr(),
                                writer->size());
-    writer->WriteBuffer(index_buffer_, {0, 0, index_buffer_->size()},
-                        SemaphorePtr());
+    writer->WriteBuffer(index_buffer_, {0, 0, index_buffer_->size()});
     batch_gpu_uploader->PostWriter(std::move(writer));
   }
   return index_buffer_;

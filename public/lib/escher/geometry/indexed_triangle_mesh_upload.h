@@ -63,8 +63,7 @@ MeshPtr IndexedTriangleMeshUpload(Escher* escher, BatchGpuUploader* uploader,
       memcpy(base + attr3_offset, mesh.attributes3.data(), attr3_bytes);
     }
   }
-  writer->WriteBuffer(buffer, {0, 0, total_bytes},
-                      Semaphore::New(escher->vk_device()));
+  writer->WriteBuffer(buffer, {0, 0, total_bytes});
   uploader->PostWriter(std::move(writer));
 
   return fxl::MakeRefCounted<Mesh>(

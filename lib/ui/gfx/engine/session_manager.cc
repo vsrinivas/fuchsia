@@ -24,7 +24,7 @@ void CommandContext::Flush() {
     // Submit regardless of whether or not there are updates to release the
     // underlying CommandBuffer so the pool and sequencer don't stall out.
     // TODO(ES-115) to remove this restriction.
-    batch_gpu_uploader_->Submit(escher::SemaphorePtr());
+    batch_gpu_uploader_->Submit();
   }
 }
 

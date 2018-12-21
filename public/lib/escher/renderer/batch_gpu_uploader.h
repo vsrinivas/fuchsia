@@ -23,7 +23,11 @@ using BatchGpuUploaderPtr = fxl::RefPtr<BatchGpuUploader>;
 // Provides host-accessible GPU memory for clients to upload Images and Buffers
 // to the GPU. Offers the ability to batch uploads into consolidated submissions
 // to the GPU driver.
+//
 // TODO(SCN-844) Migrate users of impl::GpuUploader to this class.
+//
+// TODO (SCN-1197) Add memory barriers so the BatchGpuUploader can handle
+// reads and writes on the same Resource in the same batch.
 class BatchGpuUploader : public Reffable {
  public:
   static BatchGpuUploaderPtr New(EscherWeakPtr weak_escher,
@@ -35,20 +39,21 @@ class BatchGpuUploader : public Reffable {
   // memory into optimally-formatted Images and Buffers.
   class Writer {
    public:
-    Writer(CommandBufferPtr command_buffer, BufferPtr buffer);
+    Writer(CommandBufferPtr command_buffer, BufferPtr buffer,
+           SemaphorePtr batch_done_semaphore);
     ~Writer();
 
     // Schedule a buffer-to-buffer copy that will be submitted when Submit()
     // is called.  Retains a reference to the target until the submission's
-    // CommandBuffer is retired.
-    void WriteBuffer(const BufferPtr& target, vk::BufferCopy region,
-                     SemaphorePtr semaphore);
+    // CommandBuffer is retired. Places the "BatchDone" Semaphore on the target,
+    // which is signaled when the batched commands are done.
+    void WriteBuffer(const BufferPtr& target, vk::BufferCopy region);
 
     // Schedule a buffer-to-image copy that will be submitted when Submit()
     // is called.  Retains a reference to the target until the submission's
-    // CommandBuffer is retired.
-    void WriteImage(const ImagePtr& target, vk::BufferImageCopy region,
-                    SemaphorePtr semaphore);
+    // CommandBuffer is retired. Places the "BatchDone" Semaphore on the target,
+    // which is signaled when the batched commands are done.
+    void WriteImage(const ImagePtr& target, vk::BufferImageCopy region);
 
     uint8_t* host_ptr() const { return buffer_->host_ptr(); }
     vk::DeviceSize size() const { return buffer_->size(); }
@@ -61,6 +66,7 @@ class BatchGpuUploader : public Reffable {
 
     CommandBufferPtr command_buffer_;
     BufferPtr buffer_;
+    SemaphorePtr batch_done_semaphore_;
 
     FXL_DISALLOW_COPY_AND_ASSIGN(Writer);
   };
@@ -69,20 +75,21 @@ class BatchGpuUploader : public Reffable {
   // this memory from Images and Buffers on the GPU.
   class Reader {
    public:
-    Reader(CommandBufferPtr command_buffer, BufferPtr buffer);
+    Reader(CommandBufferPtr command_buffer, BufferPtr buffer,
+           SemaphorePtr batch_done_semaphore);
     ~Reader();
 
     // Schedule a buffer-to-buffer copy that will be submitted when Submit()
-    // is called.  Retains a reference to the target until the submission's
-    // CommandBuffer is retired.
-    void ReadBuffer(const BufferPtr& source, vk::BufferCopy region,
-                    SemaphorePtr semaphore);
+    // is called.  Retains a reference to the source until the submission's
+    // CommandBuffer is retired. Places the "BatchDone" Semaphore on the source,
+    // which is signaled when the batched commands are done.
+    void ReadBuffer(const BufferPtr& source, vk::BufferCopy region);
 
     // Schedule a image-to-buffer copy that will be submitted when Submit()
-    // is called.  Retains a reference to the target until the submission's
-    // CommandBuffer is retired.
-    void ReadImage(const ImagePtr& source, vk::BufferImageCopy region,
-                   SemaphorePtr semaphore);
+    // is called.  Retains a reference to the source until the submission's
+    // CommandBuffer is retired. Places the "BatchDone" Semaphore on the source,
+    // which is signaled when the batched commands are done.
+    void ReadImage(const ImagePtr& source, vk::BufferImageCopy region);
 
     const BufferPtr buffer() { return buffer_; }
 
@@ -94,6 +101,7 @@ class BatchGpuUploader : public Reffable {
 
     CommandBufferPtr command_buffer_;
     BufferPtr buffer_;
+    SemaphorePtr batch_done_semaphore_;
 
     FXL_DISALLOW_COPY_AND_ASSIGN(Reader);
   };
@@ -118,15 +126,24 @@ class BatchGpuUploader : public Reffable {
   void PostReader(std::unique_ptr<Reader> reader,
                   std::function<void(escher::BufferPtr buffer)> callback);
 
+  // The "BatchDone" Semaphore that is signaled when all posted batches are
+  // complete. This is non-null after the first Reader or Writer is acquired,
+  // and before Submit().
+  SemaphorePtr GetBatchDoneSemaphore() {
+    return batched_commands_done_semaphore_;
+  }
+
   // Submits all Writers' and Reader's work to the GPU. No Writers or Readers
   // can be posted once Submit is called.
-  void Submit(
-      const escher::SemaphorePtr& upload_done_semaphore,
-      std::function<void()> callback = [] {});
+  void Submit(const std::function<void()>& callback = nullptr);
 
  private:
   BatchGpuUploader(EscherWeakPtr weak_escher, int64_t frame_trace_number);
   BatchGpuUploader() : frame_trace_number_(0) { dummy_for_tests_ = true; }
+
+  static void SemaphoreAssignmentHelper(SemaphorePtr batch_done_semaphore,
+                                        WaitableResource* resource,
+                                        CommandBuffer* command_buffer);
 
   void Initialize();
 
@@ -140,6 +157,7 @@ class BatchGpuUploader : public Reffable {
   // Lazily created when the first Reader or Writer is acquired.
   BufferCacheWeakPtr buffer_cache_;
   FramePtr frame_;
+  SemaphorePtr batched_commands_done_semaphore_;
 
   // Temporary flag for tests that need to build and run with a null escher.
   // Allows the uploader to be created and skips submit without crashing, but

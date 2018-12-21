@@ -88,7 +88,6 @@ void Snapshotter::TakeSnapshot(Resource* resource,
 
   // Submit all images/buffers to be read from GPU.
   gpu_uploader_->Submit(
-      escher::SemaphorePtr(),
       fxl::MakeCopyable([node_serializer = current_node_serializer_,
                          callback = std::move(callback)]() {
         TRACE_DURATION("gfx", "Snapshotter::Serialize");
@@ -346,7 +345,7 @@ void Snapshotter::ReadImage(
   region.bufferOffset = 0;
 
   auto reader = gpu_uploader_->AcquireReader(image->size());
-  reader->ReadImage(image, region, escher::SemaphorePtr());
+  reader->ReadImage(image, region);
   gpu_uploader_->PostReader(std::move(reader), std::move(callback));
 }
 
@@ -354,7 +353,7 @@ void Snapshotter::ReadBuffer(
     escher::BufferPtr buffer,
     std::function<void(escher::BufferPtr buffer)> callback) {
   auto reader = gpu_uploader_->AcquireReader(buffer->size());
-  reader->ReadBuffer(buffer, {0, 0, buffer->size()}, escher::SemaphorePtr());
+  reader->ReadBuffer(buffer, {0, 0, buffer->size()});
   gpu_uploader_->PostReader(std::move(reader), std::move(callback));
 }
 

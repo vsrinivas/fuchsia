@@ -76,7 +76,7 @@ void RingTricks2::Init(escher::Stage* stage) {
   }
 
   // Upload mesh data to the GPU.
-  gpu_uploader->Submit(escher::SemaphorePtr());
+  gpu_uploader->Submit();
 }
 
 RingTricks2::~RingTricks2() {}

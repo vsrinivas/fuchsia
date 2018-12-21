@@ -19,7 +19,7 @@ VK_TEST(RoundedRectFactory, NegativeBounds) {
   auto factory = std::make_unique<RoundedRectFactory>(escher);
 
   auto mesh = factory->NewRoundedRect(rect_spec, mesh_spec, uploader.get());
-  uploader->Submit(SemaphorePtr());
+  uploader->Submit();
   EXPECT_NE(MeshPtr(), mesh);
 
   escher->vk_device().waitIdle();
