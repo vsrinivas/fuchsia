@@ -64,6 +64,8 @@ Commands
     system_update - check for, download, and apply any available system update
 
     gc - trigger a garbage collection
+
+    print_state - print go routine state of amber process
 `
 
 var (
@@ -322,6 +324,45 @@ func disableAllSources(a *amber.ControlInterface, except string) error {
 	return nil
 }
 
+func printState(proxy *amber.ControlInterface) error {
+	rd, wr, e := zx.NewChannel(0)
+	if e != nil {
+		return fmt.Errorf("channel creation failed: %s", e)
+	}
+
+	err := proxy.GetProcessState(wr)
+	if err != nil {
+		log.Printf("Error getting state from service")
+		return err
+	}
+
+	defer rd.Close()
+	b := make([]byte, 64*1024)
+	for {
+		sigs, err := zxwait.Wait(*rd.Handle(), zx.SignalChannelReadable|zx.SignalChannelPeerClosed,
+			zx.TimensecInfinite)
+		if err != nil {
+			log.Printf("Unexpected error waiting on channel: %s", err)
+			return NewErrDaemon(
+				fmt.Sprintf("unknown error while waiting for response from channel: %s", err))
+		}
+
+		if sigs&zx.SignalChannelReadable != 0 {
+			sz, _, err := rd.Read(b, []zx.Handle{}, 0)
+			if err != nil {
+				return NewErrDaemon(fmt.Sprintf("error reading channel: %s", err))
+			}
+			fmt.Printf(string(b[:sz]))
+			continue
+		}
+
+		if sigs&zx.SignalChannelPeerClosed != 0 {
+			break
+		}
+	}
+	return nil
+}
+
 func do(proxy *amber.ControlInterface) int {
 	switch os.Args[1] {
 	case "get_up":
@@ -419,6 +460,12 @@ func do(proxy *amber.ControlInterface) int {
 			return 1
 		}
 		log.Printf("Started garbage collection. See logs for details")
+	case "print_state":
+		err := printState(proxy)
+		if err != nil {
+			log.Printf("Error printing process state: %s", err)
+			return 1
+		}
 	default:
 
 		log.Printf("Error, %q is not a recognized command\n%s",

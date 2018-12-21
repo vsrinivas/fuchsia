@@ -131,24 +131,26 @@ enum Status {
 [Discoverable]
 interface Control {
     // simple no-op that can be used to test the connection
-    1: DoTest(int32 input) -> (string output);
+    DoTest(int32 input) -> (string output);
+
+    GetProcessState(handle<channel> ch);
 
     // Add a TUF source repository.
-    2: AddSrc(SourceConfig source) -> (bool res);
+    AddSrc(SourceConfig source) -> (bool res);
 
     // Remove a TUF source repository. SourceConfigs that were bundled when the
     // system was built may be removed, but that funcionality may change in the
     // future. See PKG-150.
-    3: RemoveSrc(string id) -> (Status res);
+    RemoveSrc(string id) -> (Status res);
 
     // Get the list of URLs of the current set of sources
-    5: ListSrcs() -> (vector<SourceConfig> srcs);
+    ListSrcs() -> (vector<SourceConfig> srcs);
 
     // Get a content blob identified by the given hashed Merkle root.
     // This operation is asynchronous and provides no results.
-    7: GetBlob(string merkle);
+    GetBlob(string merkle);
 
-    8: PackagesActivated(vector<string> merkle);
+    PackagesActivated(vector<string> merkle);
 
     // Get an update for the package identified by 'name' which has the
     // provided version. If no version is supplied, the latest available
@@ -159,20 +161,20 @@ interface Control {
     // set on the channel, the result is an error string that may be read from
     // the channel, otherwise the result is success, and the new merkleroot can
     // be read from the channel.
-    9: GetUpdateComplete(string name, string? version, string? merkle)
+    GetUpdateComplete(string name, string? version, string? merkle)
         -> (handle<channel> rplyChan);
 
-    10: CheckForSystemUpdate() -> (bool res);
+    CheckForSystemUpdate() -> (bool res);
 
     // Log into the source specified by the source id. Returns the oauth2
     // device flow code if the source is configured for authentication, or null
     // if not.
-    11: Login(string sourceId) -> (DeviceCode? device);
+    Login(string sourceId) -> (DeviceCode? device);
 
-    12: SetSrcEnabled(string id, bool enabled) -> (Status res);
+    SetSrcEnabled(string id, bool enabled) -> (Status res);
 
     // Trigger a garbage collection.
-    13: GC();
+    GC();
 };
 
 [Discoverable]
