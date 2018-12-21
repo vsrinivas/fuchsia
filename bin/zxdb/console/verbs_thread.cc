@@ -39,12 +39,13 @@ namespace zxdb {
 namespace {
 
 constexpr int kStepIntoUnsymbolized = 1;
-constexpr int kForceTypes = 2;
-constexpr int kForceNumberChar = 3;
-constexpr int kForceNumberSigned = 4;
-constexpr int kForceNumberUnsigned = 5;
-constexpr int kForceNumberHex = 6;
-constexpr int kMaxArraySize = 7;
+constexpr int kVerboseFormat = 2;
+constexpr int kForceAllTypes = 3;
+constexpr int kForceNumberChar = 4;
+constexpr int kForceNumberSigned = 5;
+constexpr int kForceNumberUnsigned = 6;
+constexpr int kForceNumberHex = 7;
+constexpr int kMaxArraySize = 8;
 
 // If the system has at least one running process, returns true. If not,
 // returns false and sets the err.
@@ -63,8 +64,15 @@ bool VerifySystemHasRunningProcess(System* system, Err* err) {
 
 // Populates the formatting options with the given command's switches.
 Err GetFormatValueOptions(const Command& cmd, FormatValueOptions* options) {
-  options->always_show_types = cmd.HasSwitch(kForceTypes);
+  // Verbosity.
+  if (cmd.HasSwitch(kForceAllTypes))
+    options->verbosity = FormatValueOptions::Verbosity::kAllTypes;
+  else if (cmd.HasSwitch(kVerboseFormat))
+    options->verbosity = FormatValueOptions::Verbosity::kMedium;
+  else
+    options->verbosity = FormatValueOptions::Verbosity::kMinimal;
 
+  // Array size.
   if (cmd.HasSwitch(kMaxArraySize)) {
     int size = 0;
     Err err = StringToInt(cmd.GetSwitchValue(kMaxArraySize), &size);
@@ -105,7 +113,12 @@ Err GetFormatValueOptions(const Command& cmd, FormatValueOptions* options) {
   "  -t\n"                                                                    \
   "  --types\n"                                                               \
   "      Force type printing on. The type of every value printed will be\n"   \
-  "      explicitly shown.\n"                                                 \
+  "      explicitly shown. Implies -v.\n"                                     \
+  "\n"                                                                        \
+  "  -v\n"                                                                    \
+  "  --verbose\n"                                                             \
+  "      Don't elide type names. Show reference addresses and pointer\n"      \
+  "      types.\n"                                                            \
   "\n"                                                                        \
   "Number formatting options\n"                                               \
   "\n"                                                                        \
@@ -145,7 +158,9 @@ Err DoBacktrace(ConsoleContext* context, const Command& cmd) {
   if (!cmd.thread())
     return Err("There is no thread to have frames.");
 
-  bool show_params = cmd.HasSwitch(kForceTypes);
+  // TODO(brettw) this should share formatting options and parsing with the
+  // printing commands.
+  bool show_params = cmd.HasSwitch(kForceAllTypes);
   OutputFrameList(cmd.thread(), show_params, true);
   return Err();
 }
@@ -1011,9 +1026,10 @@ Err DoUntil(ConsoleContext* context, const Command& cmd) {
 
 void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
   // Shared options for value printing.
-  SwitchRecord force_types(kForceTypes, false, "types", 't');
+  SwitchRecord force_types(kForceAllTypes, false, "types", 't');
   const std::vector<SwitchRecord> format_switches{
       force_types,
+      SwitchRecord(kVerboseFormat, false, "verbose", 'v'),
       SwitchRecord(kForceNumberChar, false, "", 'c'),
       SwitchRecord(kForceNumberSigned, false, "", 'd'),
       SwitchRecord(kForceNumberUnsigned, false, "", 'u'),

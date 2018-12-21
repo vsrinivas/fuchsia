@@ -34,6 +34,20 @@ class Variable;
 struct FormatValueOptions {
   enum class NumFormat { kDefault, kUnsigned, kSigned, kHex, kChar };
 
+  // This has numeric values so one can compare verbosity levels.
+  enum class Verbosity : int {
+    // Show as little as possible without being misleading. Some long types
+    // will be elided with "...", references won't have addresses.
+    kMinimal = 0,
+
+    // Print like GDB does. Show the full names of base classes, reference
+    // addresses, and pointer types.
+    kMedium = 1,
+
+    // All full type information and pointer values are shown for everything.
+    kAllTypes = 2
+  };
+
   // Maximum number of elements to print in an array. For strings we'll
   // speculatively fetch this much data since we don't know mow long the string
   // will be in advance. This means that increasing this will make all string
@@ -47,8 +61,7 @@ struct FormatValueOptions {
   // Format to apply to numeric types.
   NumFormat num_format = NumFormat::kDefault;
 
-  // Set to force printing type information for every value.
-  bool always_show_types = false;
+  Verbosity verbosity = Verbosity::kMedium;
 };
 
 // Manages formatting of variables and ExprValues (the results of expressions).

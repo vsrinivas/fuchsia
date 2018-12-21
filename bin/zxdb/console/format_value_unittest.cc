@@ -249,12 +249,16 @@ TEST_F(FormatValueTest, Pointer) {
 
   // Print with type printing forced on. The result should be the same (the
   // type shouldn't be duplicated).
-  opts.always_show_types = true;
+  opts.verbosity = FormatValueOptions::Verbosity::kAllTypes;
   EXPECT_EQ("(int*) 0x807060504030201", SyncFormatValue(value, opts));
+
+  // Minimal formatting should omit the type name
+  opts.verbosity = FormatValueOptions::Verbosity::kMinimal;
+  EXPECT_EQ("(*) 0x807060504030201", SyncFormatValue(value, opts));
 
   // Test an invalid one with an incorrect size.
   data.resize(7);
-  opts.always_show_types = false;
+  opts.verbosity = FormatValueOptions::Verbosity::kMedium;
   ExprValue bad_value(ptr_type, data);
   EXPECT_EQ(
       "(int*) <The value of type 'int*' is the incorrect size (expecting 8, "
@@ -281,18 +285,18 @@ TEST_F(FormatValueTest, GoodStrings) {
             SyncFormatValue(ExprValue(ptr_type, address_data), opts));
 
   // Force type info.
-  opts.always_show_types = true;
+  opts.verbosity = FormatValueOptions::Verbosity::kAllTypes;
   EXPECT_EQ(std::string("(char*) ") + kExpected,
             SyncFormatValue(ExprValue(ptr_type, address_data), opts));
 
   // This string has the same data but is type encoded as char[12], it should
   // give the same output (except for type info).
-  opts.always_show_types = false;
+  opts.verbosity = FormatValueOptions::Verbosity::kMedium;
   auto array_type = fxl::MakeRefCounted<ArrayType>(GetCharType(), 12);
   EXPECT_EQ(kExpected, SyncFormatValue(ExprValue(array_type, data), opts));
 
   // Force type info.
-  opts.always_show_types = true;
+  opts.verbosity = FormatValueOptions::Verbosity::kAllTypes;
   EXPECT_EQ(std::string("(char[12]) ") + kExpected,
             SyncFormatValue(ExprValue(array_type, data), opts));
 }
@@ -373,7 +377,7 @@ TEST_F(FormatValueTest, TruncatedArray) {
 
   // Try one with type info forced on. Only the root array type should have the
   // type, not each individual element.
-  opts.always_show_types = true;
+  opts.verbosity = FormatValueOptions::Verbosity::kAllTypes;
   EXPECT_EQ("(int32_t[2]) {1, 2}",
             SyncFormatValue(ExprValue(array_type, data, source), opts));
 
@@ -399,11 +403,16 @@ TEST_F(FormatValueTest, Reference) {
   EXPECT_EQ("(int&) 0x1100 = 123", SyncFormatValue(value, opts));
 
   // Forcing type info on shouldn't duplicate the type.
-  opts.always_show_types = true;
+  opts.verbosity = FormatValueOptions::Verbosity::kAllTypes;
   EXPECT_EQ("(int&) 0x1100 = 123", SyncFormatValue(value, opts));
+
+  // Force with minimal formatting (no addr ot type info).
+  opts.verbosity = FormatValueOptions::Verbosity::kMinimal;
+  EXPECT_EQ("123", SyncFormatValue(value, opts));
 
   // Test an invalid one with an invalid address.
   std::vector<uint8_t> bad_data = {0x00, 0x22, 0, 0, 0, 0, 0, 0};
+  opts.verbosity = FormatValueOptions::Verbosity::kMedium;
   value = ExprValue(ref_type, bad_data);
   EXPECT_EQ("(int&) 0x2200 = <Invalid pointer 0x2200>",
             SyncFormatValue(value, opts));
@@ -413,8 +422,11 @@ TEST_F(FormatValueTest, Reference) {
   auto rvalue_ref_type = fxl::MakeRefCounted<ModifiedType>(
       Symbol::kTagRvalueReferenceType, LazySymbol(base_type));
   value = ExprValue(rvalue_ref_type, data);
-  opts.always_show_types = false;
+  opts.verbosity = FormatValueOptions::Verbosity::kMedium;
   EXPECT_EQ("(int&&) 0x1100 = 123", SyncFormatValue(value, opts));
+
+  opts.verbosity = FormatValueOptions::Verbosity::kMinimal;
+  EXPECT_EQ("123", SyncFormatValue(value, opts));
 }
 
 TEST_F(FormatValueTest, Structs) {
@@ -454,7 +466,7 @@ TEST_F(FormatValueTest, Structs) {
 
   // Force type info. Now the reference types move before the member names like
   // the other types.
-  opts.always_show_types = true;
+  opts.verbosity = FormatValueOptions::Verbosity::kAllTypes;
   EXPECT_EQ(
       "(Pair) {(Foo) first = {(int32_t) a = 0x110011, (int32_t&) b = 0x1100 = "
       "0x12}, "
@@ -540,7 +552,7 @@ TEST_F(FormatValueTest, DerivedClasses) {
             SyncFormatValue(value, opts));
 
   // Force types on. The type of the base class should not be duplicated.
-  opts.always_show_types = true;
+  opts.verbosity = FormatValueOptions::Verbosity::kAllTypes;
   EXPECT_EQ(
       "(Derived) {Base = {(int32_t) a = 1, (int32_t) b = 2}, (int32_t) c = 3, "
       "(int32_t) d = 4}",
@@ -606,7 +618,7 @@ TEST_F(FormatValueTest, Enumeration) {
 
   // Force type info.
   FormatValueOptions type_opts;
-  type_opts.always_show_types = true;
+  type_opts.verbosity = FormatValueOptions::Verbosity::kAllTypes;
   EXPECT_EQ("(SignedEnum) kZero",
             SyncFormatValue(ExprValue(signed_enum, {0, 0, 0, 0}), type_opts));
   EXPECT_EQ("(SignedEnum) -4",
@@ -618,8 +630,8 @@ TEST_F(FormatValueTest, FunctionPtr) {
   // This is a function type. There isn't a corresponding C/C++ type for a
   // function type (without a pointer modifier) but we define it anyway in
   // case it comes up (possibly another language).
-  auto func_type = fxl::MakeRefCounted<FunctionType>(
-      LazySymbol(), std::vector<LazySymbol>());
+  auto func_type = fxl::MakeRefCounted<FunctionType>(LazySymbol(),
+                                                     std::vector<LazySymbol>());
 
   // This type is "void (*)()"
   auto func_ptr_type = fxl::MakeRefCounted<ModifiedType>(
@@ -638,7 +650,7 @@ TEST_F(FormatValueTest, FunctionPtr) {
 
   // Function.
   FormatValueOptions type_opts;
-  type_opts.always_show_types = true;
+  type_opts.verbosity = FormatValueOptions::Verbosity::kAllTypes;
   ExprValue null_func(func_type, {0, 0, 0, 0, 0, 0, 0, 0});
   EXPECT_EQ("(void()) 0x0", SyncFormatValue(null_func, type_opts));
 
@@ -702,7 +714,7 @@ TEST_F(FormatValueTest, MemberPtr) {
 
   // Regular pointer with types forced on.
   FormatValueOptions type_opts;
-  type_opts.always_show_types = true;
+  type_opts.verbosity = FormatValueOptions::Verbosity::kAllTypes;
   ExprValue good_member_ptr(member_int32, {0x34, 0x12, 0, 0, 0, 0, 0, 0});
   EXPECT_EQ("(int32_t MyClass::*) 0x1234",
             SyncFormatValue(good_member_ptr, type_opts));

@@ -32,6 +32,10 @@ void ListCompletedFrames(Thread* thread, bool include_params,
   auto helper = fxl::MakeRefCounted<FormatValue>(
       std::make_unique<FormatValueProcessContextImpl>(thread->GetProcess()));
 
+  // Formatting used for long format mode.
+  FormatValueOptions format_options;
+  format_options.verbosity = FormatValueOptions::Verbosity::kMinimal;
+
   // This doesn't use table output since the format of the stack frames is
   // usually so unpredictable.
   const auto& frames = thread->GetFrames();
@@ -62,7 +66,7 @@ void ListCompletedFrames(Thread* thread, bool include_params,
       // did it above).
       if (long_format) {
         FormatFrameLong(frames[i], include_params, helper.get(),
-                        FormatValueOptions(), -1);
+                        format_options, -1);
       } else {
         OutputBuffer out;
         FormatFrame(frames[i], include_params, &out, -1);

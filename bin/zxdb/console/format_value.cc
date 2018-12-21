@@ -33,6 +33,9 @@ namespace zxdb {
 
 namespace {
 
+using NumFormat = FormatValueOptions::NumFormat;
+using Verbosity = FormatValueOptions::Verbosity;
+
 // When there are errors during value printing we can't just print them since
 // they're associated with a value. This function formats the error in a way
 // appropriate for value output.
@@ -50,6 +53,20 @@ OutputBuffer InvalidPointerToOutput(TargetPointer address) {
   out.Append(OutputBuffer(fxl::StringPrintf("0x%" PRIx64 " ", address)));
   out.Append(ErrStringToOutput("invalid pointer"));
   return out;
+}
+
+// Get a possibly-elided version of the type name for a medium verbosity level.
+std::string GetElidedTypeName(const std::string& name) {
+  // Names shorter than this are always displayed in full.
+  if (name.size() <= 32)
+    return name;
+
+  // This value was picked to be smaller than the above value so we don't elide
+  // one or two characters (which looks dumb). It was selected to be long
+  // enough so that with the common prefix of "std::__2::" (which occurs on
+  // many long types), you still get enough to read approximately what the
+  // type is.
+  return name.substr(0, 20) + "…";
 }
 
 // Returns true if the base type is some kind of number such that the NumFormat
@@ -185,7 +202,7 @@ void FormatValue::FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
   }
 
   // First output the type if required.
-  if (options.always_show_types && !suppress_type_printing) {
+  if (options.verbosity == Verbosity::kAllTypes && !suppress_type_printing) {
     AppendToOutputKey(
         output_key,
         OutputBuffer(Syntax::kComment,
@@ -254,7 +271,7 @@ void FormatValue::FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
       case BaseType::kBaseTypeAddress: {
         // Always print addresses as unsigned hex.
         FormatValueOptions overridden(options);
-        overridden.num_format = FormatValueOptions::NumFormat::kHex;
+        overridden.num_format = NumFormat::kHex;
         FormatUnsignedInt(value, options, &out);
         break;
       }
@@ -341,8 +358,10 @@ void FormatValue::FormatCollection(
       needs_comma = true;
 
     // Print "ClassName = "
-    AppendToOutputKey(output_key,
-                      OutputBuffer(Syntax::kComment, from->GetFullName()));
+    std::string base_name = from->GetFullName();
+    if (options.verbosity == Verbosity::kMinimal)
+      base_name = GetElidedTypeName(base_name);
+    AppendToOutputKey(output_key, OutputBuffer(Syntax::kComment, base_name));
     AppendToOutputKey(output_key, OutputBuffer(" = "));
 
     // Pass "true" to suppress type printing since we just printed the type.
@@ -367,7 +386,7 @@ void FormatValue::FormatCollection(
     Err err = ResolveMember(value, member, &member_value);
 
     // Type info if requested.
-    if (options.always_show_types && member_value.type()) {
+    if (options.verbosity == Verbosity::kAllTypes && member_value.type()) {
       AppendToOutputKey(
           output_key,
           OutputBuffer(
@@ -551,20 +570,20 @@ void FormatValue::FormatArray(fxl::RefPtr<SymbolDataProvider> data_provider,
 void FormatValue::FormatNumeric(const ExprValue& value,
                                 const FormatValueOptions& options,
                                 OutputBuffer* out) {
-  if (options.num_format != FormatValueOptions::NumFormat::kDefault) {
+  if (options.num_format != NumFormat::kDefault) {
     // Overridden format option.
     switch (options.num_format) {
-      case FormatValueOptions::NumFormat::kUnsigned:
-      case FormatValueOptions::NumFormat::kHex:
+      case NumFormat::kUnsigned:
+      case NumFormat::kHex:
         FormatUnsignedInt(value, options, out);
         break;
-      case FormatValueOptions::NumFormat::kSigned:
+      case NumFormat::kSigned:
         FormatSignedInt(value, out);
         break;
-      case FormatValueOptions::NumFormat::kChar:
+      case NumFormat::kChar:
         FormatChar(value, out);
         break;
-      case FormatValueOptions::NumFormat::kDefault:
+      case NumFormat::kDefault:
         // Prevent warning for unused enum type.
         break;
     }
@@ -625,7 +644,7 @@ void FormatValue::FormatEnum(const ExprValue& value,
 
   // When the output is marked for a specific numeric type, always skip name
   // lookup and output the numeric value below instead.
-  if (options.num_format == FormatValueOptions::NumFormat::kDefault) {
+  if (options.num_format == NumFormat::kDefault) {
     const auto& map = enum_type->values();
     auto found = map.find(numeric_value);
     if (found != map.end()) {
@@ -639,12 +658,11 @@ void FormatValue::FormatEnum(const ExprValue& value,
   // Invalid enum values of explicitly overridden numeric formatting gets
   // printed as a number.
   FormatValueOptions modified_opts = options;
-  if (modified_opts.num_format == FormatValueOptions::NumFormat::kDefault) {
+  if (modified_opts.num_format == NumFormat::kDefault) {
     // Compute the formatting for invalid enum values when there is no numeric
     // override.
-    modified_opts.num_format = enum_type->is_signed()
-                                   ? FormatValueOptions::NumFormat::kSigned
-                                   : FormatValueOptions::NumFormat::kUnsigned;
+    modified_opts.num_format =
+        enum_type->is_signed() ? NumFormat::kSigned : NumFormat::kUnsigned;
   }
   FormatNumeric(value, modified_opts, out);
 }
@@ -681,7 +699,7 @@ void FormatValue::FormatUnsignedInt(const ExprValue& value,
   Err err = value.PromoteTo64(&int_val);
   if (err.has_error())
     out->Append(ErrToOutput(err));
-  else if (options.num_format == FormatValueOptions::NumFormat::kHex)
+  else if (options.num_format == NumFormat::kHex)
     out->Append(fxl::StringPrintf("0x%" PRIx64, int_val));
   else
     out->Append(fxl::StringPrintf("%" PRIu64, int_val));
@@ -707,9 +725,11 @@ void FormatValue::FormatPointer(const ExprValue& value,
   // necessarily a ModifiedType representing a pointer, but could be other
   // things like a pointer to a member.
 
-  // Always show types for pointers, so if type printing wasn't forced always
-  // on (in which case it was added by our caller), we need to output it now.
-  if (!options.always_show_types) {
+  // Type info. The caller will have handled the case when type printing was
+  // forced always on, so we need only ahndle the lower verbosities.
+  if (options.verbosity == Verbosity::kMinimal) {
+    out->Append(Syntax::kComment, "(*) ");
+  } else if (options.verbosity == Verbosity::kMedium) {
     out->Append(
         Syntax::kComment,
         fxl::StringPrintf("(%s) ", value.type()->GetFullName().c_str()));
@@ -735,25 +755,29 @@ void FormatValue::FormatReference(fxl::RefPtr<SymbolDataProvider> data_provider,
 
     OutputBuffer out;
 
-    // First show the type. As with pointers, only do this when type info is
-    // not forced on. When forced on, it will have already been printed.
-    if (!options.always_show_types) {
-      out.Append(Syntax::kComment,
-                 fxl::StringPrintf(
-                     "(%s) ", original_value.type()->GetFullName().c_str()));
+    // First show the type if desired. As with pointers, the calling code will
+    // have printed the type for the "all types" case.
+    if (options.verbosity == Verbosity::kMedium) {
+      out.Append(
+          Syntax::kComment,
+          fxl::StringPrintf(
+              "(%s) ",
+              GetElidedTypeName(original_value.type()->GetFullName()).c_str()));
     }
 
-    // Followed by the address.
-    TargetPointer address = 0;
-    Err addr_err = original_value.PromoteTo64(&address);
-    if (addr_err.has_error()) {
-      // Invalid data in the reference.
-      out.Append(ErrToOutput(addr_err));
-      weak_this->OutputKeyComplete(output_key, std::move(out));
-      return;
+    // Followed by the address (only in non-minimal modes).
+    if (options.verbosity != Verbosity::kMinimal) {
+      TargetPointer address = 0;
+      Err addr_err = original_value.PromoteTo64(&address);
+      if (addr_err.has_error()) {
+        // Invalid data in the reference.
+        out.Append(ErrToOutput(addr_err));
+        weak_this->OutputKeyComplete(output_key, std::move(out));
+        return;
+      }
+      out.Append(Syntax::kComment,
+                 fxl::StringPrintf("0x%" PRIx64 " = ", address));
     }
-    out.Append(Syntax::kComment,
-               fxl::StringPrintf("0x%" PRIx64 " = ", address));
 
     // Follow with the resolved value.
     if (err.has_error()) {
@@ -786,7 +810,7 @@ void FormatValue::FormatFunctionPointer(const ExprValue& value,
   // Allow overrides for the number format. Normally one would expect to
   // provide a hex override to get the address rather than the resolved
   // function name.
-  if (options.num_format != FormatValueOptions::NumFormat::kDefault) {
+  if (options.num_format != NumFormat::kDefault) {
     FormatNumeric(value, options, out);
     return;
   }
