@@ -487,7 +487,9 @@ zx_status_t MinstrelRateSelector::GetListToFidl(wlan_minstrel::Peers* peers_fidl
     peers_fidl->peers.resize(peer_map_.size());
     size_t idx = 0;
     for (const auto& iter : peer_map_) {
-        iter.first.CopyTo((*peers_fidl->peers)[idx++].mutable_data());
+        (*peers_fidl->peers)[idx]->resize(common::kMacAddrLen);
+        iter.first.CopyTo((*peers_fidl->peers)[idx]->data());
+        ++idx;
     }
     return ZX_OK;
 }

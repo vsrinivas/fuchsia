@@ -395,7 +395,11 @@ async fn list_minstrel_peers(wlan_svc: WlanSvc, iface_id: u16) -> Result<Vec<Mac
     let (status, resp) = await!(wlan_svc.get_minstrel_list(iface_id))
         .context(format!("Error getting minstrel peer list iface {}", iface_id))?;
     if status == zx::sys::ZX_OK {
-        Ok(resp.peers.into_iter().map(MacAddr).collect())
+        Ok(resp.peers.into_iter().map(|v| {
+            let mut arr = [0u8; 6];
+            arr.copy_from_slice(v.as_slice());
+            MacAddr(arr)
+            }).collect())
     } else {
         println!("Error getting minstrel peer list from iface {}: {}", iface_id, status);
         Ok(vec![])
