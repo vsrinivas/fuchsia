@@ -19,6 +19,7 @@
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/sdio.h>
 #include <ddk/metadata.h>
+#include <ddk/trace/event.h>
 #include <wifi/wifi-config.h>
 #include <ddk/protocol/gpio.h>
 #include <lib/sync/completion.h>
@@ -289,6 +290,11 @@ static zx_status_t brcmf_sdiod_transfer(struct brcmf_sdio_dev* sdiodev, uint8_t 
     sdio_rw_txn_t txn;
     zx_status_t result;
 
+    TRACE_DURATION("brcmfmac:isr", "sdiod_transfer",
+                   "func", TA_UINT32((uint32_t)func),
+                   "type", TA_STRING(write ? "write" : "read"),
+                   "size", TA_UINT64((uint64_t)size));
+
     txn.addr = addr;
     txn.write = write;
     txn.virt_buffer = data;
@@ -405,6 +411,10 @@ void brcmf_sdiod_func1_wl(struct brcmf_sdio_dev* sdiodev, uint32_t addr, uint32_
 zx_status_t brcmf_sdiod_read(struct brcmf_sdio_dev* sdiodev, uint8_t func, uint32_t addr,
                              void* data, size_t size) {
     zx_status_t err = ZX_OK;
+    TRACE_DURATION("brcmfmac:isr", "sdiod_read",
+                   "func", TA_UINT32((uint32_t)func),
+                   "size", TA_UINT64((uint64_t)size));
+
     while (func == 2 && size > F2_XFER_SIZE) {
         err = brcmf_sdiod_transfer(sdiodev, func, addr, false, data, F2_XFER_SIZE, false);
         if (err != ZX_OK) {
@@ -423,6 +433,10 @@ zx_status_t brcmf_sdiod_read(struct brcmf_sdio_dev* sdiodev, uint8_t func, uint3
 zx_status_t brcmf_sdiod_write(struct brcmf_sdio_dev* sdiodev, uint8_t func, uint32_t addr,
                               void* data, size_t size) {
     zx_status_t err = ZX_OK;
+    TRACE_DURATION("brcmfmac:isr", "sdiod_write",
+                   "func", TA_UINT32((uint32_t)func),
+                   "size", TA_UINT64((uint64_t)size));
+
     while (func == 2 && size > F2_XFER_SIZE) {
         err = brcmf_sdiod_transfer(sdiodev, func, addr, true, data, F2_XFER_SIZE, false);
         if (err != ZX_OK) {
@@ -441,6 +455,10 @@ zx_status_t brcmf_sdiod_write(struct brcmf_sdio_dev* sdiodev, uint8_t func, uint
 zx_status_t brcmf_sdiod_read_fifo(struct brcmf_sdio_dev* sdiodev, uint8_t func, uint32_t addr,
                                   void* data, size_t size) {
     zx_status_t err = ZX_OK;
+    TRACE_DURATION("brcmfmac:isr", "sdiod_read_fifo",
+                   "func", TA_UINT32((uint32_t)func),
+                   "size", TA_UINT64((uint64_t)size));
+
     while (func == 2 && size > F2_XFER_SIZE) {
         err = brcmf_sdiod_transfer(sdiodev, func, addr, false, data, F2_XFER_SIZE, true);
         if (err != ZX_OK) {
@@ -459,6 +477,9 @@ static zx_status_t brcmf_sdiod_netbuf_read(struct brcmf_sdio_dev* sdiodev, uint3
                                            uint32_t addr, struct brcmf_netbuf* netbuf) {
     unsigned int req_sz;
     zx_status_t err;
+
+    TRACE_DURATION("brcmfmac:isr", "netbuf_read",
+                   "func", TA_UINT32((uint32_t)func));
 
     /* Single netbuf use the standard mmc interface */
     req_sz = netbuf->len + 3;
@@ -488,6 +509,9 @@ static zx_status_t brcmf_sdiod_netbuf_write(struct brcmf_sdio_dev* sdiodev, uint
                                             uint32_t addr, struct brcmf_netbuf* netbuf) {
     unsigned int req_sz;
     zx_status_t err;
+
+    TRACE_DURATION("brcmfmac:isr", "sdiod_netbuf_write",
+                   "func", TA_UINT32((uint32_t)func));
 
     /* Single netbuf use the standard mmc interface */
     req_sz = netbuf->len + 3;
@@ -524,6 +548,8 @@ zx_status_t brcmf_sdiod_recv_buf(struct brcmf_sdio_dev* sdiodev, uint8_t* buf, u
 zx_status_t brcmf_sdiod_recv_pkt(struct brcmf_sdio_dev* sdiodev, struct brcmf_netbuf* pkt) {
     uint32_t addr = sdiodev->cc_core->base;
     zx_status_t err = ZX_OK;
+
+    TRACE_DURATION("brcmfmac:isr", "recv_pkt");
 
     err = brcmf_sdiod_set_backplane_window(sdiodev, addr);
     if (err != ZX_OK) {
@@ -584,6 +610,8 @@ zx_status_t brcmf_sdiod_send_buf(struct brcmf_sdio_dev* sdiodev, uint8_t* buf, u
     uint32_t addr = sdiodev->cc_core->base;
     zx_status_t err;
 
+    TRACE_DURATION("brcmfmac:isr", "sdiod_send_buf");
+
     mypkt = brcmu_pkt_buf_get_netbuf(nbytes);
 
     if (!mypkt) {
@@ -616,6 +644,8 @@ zx_status_t brcmf_sdiod_send_pkt(struct brcmf_sdio_dev* sdiodev, struct brcmf_ne
     zx_status_t err;
 
     brcmf_dbg(SDIO, "addr = 0x%x, size = %d\n", addr, brcmf_netbuf_list_length(pktq));
+
+    TRACE_DURATION("brcmfmac:isr", "sdiod_send_pkt");
 
     err = brcmf_sdiod_set_backplane_window(sdiodev, addr);
     if (err != ZX_OK) {

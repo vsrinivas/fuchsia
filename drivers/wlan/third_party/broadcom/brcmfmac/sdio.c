@@ -16,6 +16,7 @@
 
 #include "sdio.h"
 
+#include <ddk/trace/event.h>
 #include <lib/sync/completion.h>
 #include <zircon/status.h>
 
@@ -1728,7 +1729,7 @@ static uint brcmf_sdio_readframes(struct brcmf_sdio* bus, uint maxframes) {
     struct brcmf_sdio_hdrinfo rd_new;
     uint8_t head_read = 0;
 
-   // THROTTLE(20, brcmf_dbg(TRACE, "Enter\n"););
+    TRACE_DURATION("brcmfmac:isr", "readframes");
 
     /* Not finished unless we encounter no more frames indication */
     bus->rxpending = true;
@@ -1752,6 +1753,7 @@ static uint brcmf_sdio_readframes(struct brcmf_sdio* bus, uint maxframes) {
         /* read header first for unknow frame length */
         sdio_claim_host(bus->sdiodev->func1);
         if (!rd->len) {
+            TRACE_DURATION("brcmfmac:isr", "read packet headers");
             ret = brcmf_sdiod_recv_buf(bus->sdiodev, bus->rxhdr, BRCMF_FIRSTREAD);
             bus->sdcnt.f2rxhdrs++;
             if (ret != ZX_OK) {
@@ -2144,7 +2146,7 @@ static zx_status_t brcmf_sdio_txpkt(struct brcmf_sdio* bus, struct brcmf_netbuf_
     struct brcmf_netbuf* pkt_next;
     struct brcmf_netbuf* tmp;
 
-    brcmf_dbg(TRACE, "Enter\n");
+    TRACE_DURATION("brcmfmac:isr", "sdio_txpkt");
 
     ret = brcmf_sdio_txpkt_prep(bus, pktq, chan);
     if (ret != ZX_OK) {
@@ -2183,7 +2185,7 @@ static uint brcmf_sdio_sendfromq(struct brcmf_sdio* bus, uint maxframes) {
     uint cnt = 0;
     uint8_t tx_prec_map, pkt_num;
 
-    brcmf_dbg(TRACE, "Enter\n");
+    TRACE_DURATION("brcmfmac:isr", "sendfromq");
 
     tx_prec_map = ~bus->flowcontrol;
 
@@ -2248,7 +2250,7 @@ static zx_status_t brcmf_sdio_tx_ctrlframe(struct brcmf_sdio* bus, uint8_t* fram
     // TODO(cphoenix): ret, err, rv, error, status - more consistency is better.
     zx_status_t ret;
 
-    brcmf_dbg(TRACE, "Enter\n");
+    TRACE_DURATION("brcmfmac:isr", "sdio_tx_ctrlframe");
 
     /* Back the pointer to make room for bus header */
     frame -= bus->tx_hdrlen;
@@ -2419,7 +2421,7 @@ static void brcmf_sdio_dpc(struct brcmf_sdio* bus) {
     uint framecnt;               /* Temporary counter of tx/rx frames */
     zx_status_t err = ZX_OK;
 
-    //THROTTLE(20, brcmf_dbg(TRACE, "Enter\n"););
+    TRACE_DURATION("brcmfmac:isr", "dpc");
 
     sdio_claim_host(bus->sdiodev->func1);
 

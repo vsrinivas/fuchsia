@@ -24,6 +24,7 @@ source_set("brcmfmac_srcs") {
     "CONFIG_BRCMFMAC_SDIO=1",
     "CONFIG_BRCMFMAC_PCIE=1",
     "CONFIG_BRCMFMAC_DBG=0",
+    "ENABLE_DRIVER_TRACING=true",
   ]
 
   sources = [
@@ -101,8 +102,11 @@ source_set("brcmfmac_srcs") {
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/driver",
     "//zircon/public/lib/sync",
+    "//zircon/public/lib/trace",
+    "//zircon/public/lib/trace-engine",
     "//zircon/public/lib/usb",
     "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxcpp",
   ]
 
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
