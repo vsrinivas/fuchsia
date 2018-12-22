@@ -85,6 +85,9 @@ bool IrkCanResolveRpa(const common::UInt128& irk,
 // Part B, 1.3.2.2.
 common::DeviceAddress GenerateRpa(const common::UInt128& irk);
 
+// Generates a static or non-resolvable private random device address.
+common::DeviceAddress GenerateRandomAddress(bool is_static);
+
 }  // namespace util
 }  // namespace sm
 }  // namespace btlib

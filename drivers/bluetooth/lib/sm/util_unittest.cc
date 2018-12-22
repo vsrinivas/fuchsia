@@ -404,6 +404,16 @@ TEST(SMP_UtilTest, GenerateRpa) {
   EXPECT_TRUE(IrkCanResolveRpa(irk, rpa));
 }
 
+TEST(SMP_UtilTest, GenerateRandomAddress) {
+  DeviceAddress addr = GenerateRandomAddress(false);
+  EXPECT_EQ(DeviceAddress::Type::kLERandom, addr.type());
+  EXPECT_TRUE(addr.IsNonResolvablePrivate());
+
+  addr = GenerateRandomAddress(true);
+  EXPECT_EQ(DeviceAddress::Type::kLERandom, addr.type());
+  EXPECT_TRUE(addr.IsStaticRandom());
+}
+
 }  // namespace
 }  // namespace util
 }  // namespace sm

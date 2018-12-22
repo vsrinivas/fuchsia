@@ -19,6 +19,8 @@ using common::MutableBufferView;
 using common::StaticByteBuffer;
 using common::UInt128;
 
+using common::kDeviceAddressSize;
+
 namespace sm {
 namespace util {
 namespace {
@@ -292,9 +294,31 @@ DeviceAddress GenerateRpa(const UInt128& irk) {
 
   // The |rpa_hash| and |prand| values generated below take up the least
   // and most significant 3 bytes of |rpa|, respectively.
-  StaticByteBuffer<common::kDeviceAddressSize> addr_bytes;
+  StaticByteBuffer<kDeviceAddressSize> addr_bytes;
   addr_bytes.Write(hash_bytes);
   addr_bytes.Write(prand_bytes, hash_bytes.size());
+
+  return DeviceAddress(DeviceAddress::Type::kLERandom,
+                       DeviceAddressBytes(addr_bytes));
+}
+
+DeviceAddress GenerateRandomAddress(bool is_static) {
+  StaticByteBuffer<kDeviceAddressSize> addr_bytes;
+
+  // The specification requires that at least one bit of the address is 1 and at
+  // least one bit is 0. We expect that zx_cprng_draw() satisfies these
+  // requirements.
+  // TODO(SEC-87): Maybe generate within a range to enforce this?
+  addr_bytes.FillWithRandomBytes();
+
+  if (is_static) {
+    // The highest two bits of a static random address are both 1 (see Vol 3,
+    // Part B, 1.3.2.1).
+    addr_bytes[kDeviceAddressSize - 1] |= 0b11000000;
+  } else {
+    // The highest two bits of a NRPA are both 0 (see Vol 3, Part B, 1.3.2.2).
+    addr_bytes[kDeviceAddressSize - 1] &= ~0b11000000;
+  }
 
   return DeviceAddress(DeviceAddress::Type::kLERandom,
                        DeviceAddressBytes(addr_bytes));
