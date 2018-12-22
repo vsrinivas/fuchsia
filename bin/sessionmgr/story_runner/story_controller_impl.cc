@@ -490,8 +490,7 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
 
 class StoryControllerImpl::StopCall : public Operation<> {
  public:
-  StopCall(StoryControllerImpl* const story_controller_impl,
-           const bool bulk,
+  StopCall(StoryControllerImpl* const story_controller_impl, const bool bulk,
            std::function<void()> done)
       : Operation("StoryControllerImpl::StopCall", done),
         story_controller_impl_(story_controller_impl),
@@ -542,27 +541,26 @@ class StoryControllerImpl::StopCall : public Operation<> {
     auto cont = [this, weak_this = GetWeakPtr(),
                  did_run = std::make_shared<bool>(false),
                  story_id = story_controller_impl_->story_id_](
-                     const bool from_timeout) {
-                  if (*did_run) {
-                    return;
-                  }
+                    const bool from_timeout) {
+      if (*did_run) {
+        return;
+      }
 
-                  *did_run = true;
+      *did_run = true;
 
-                  if (from_timeout) {
-                    FXL_LOG(INFO) << "DetachView() timed out: story_id=" << story_id;
-                  }
+      if (from_timeout) {
+        FXL_LOG(INFO) << "DetachView() timed out: story_id=" << story_id;
+      }
 
-                  if (weak_this) {
-                    StopStory();
-                  }
-                };
+      if (weak_this) {
+        StopStory();
+      }
+    };
 
     story_controller_impl_->DetachView([cont] { cont(false); });
 
     async::PostDelayedTask(
-        async_get_default_dispatcher(), [cont] { cont(true); },
-        kBasicTimeout);
+        async_get_default_dispatcher(), [cont] { cont(true); }, kBasicTimeout);
   }
 
   void StopStory() {
@@ -677,8 +675,8 @@ class StoryControllerImpl::StopModuleAndStoryIfEmptyCall : public Operation<> {
         story_controller_impl_->FindRunningModInfo(module_path_);
     if (running_mod_info &&
         story_controller_impl_->running_mod_infos_.size() == 1) {
-      operation_queue_.Add(new StopCall(story_controller_impl_, false /* bulk */,
-                                        [flow] {}));
+      operation_queue_.Add(
+          new StopCall(story_controller_impl_, false /* bulk */, [flow] {}));
     } else {
       // Otherwise, stop this one module.
       operation_queue_.Add(new StopModuleCall(
@@ -1457,30 +1455,12 @@ void StoryControllerImpl::GetInfo(GetInfoCallback callback) {
   // Synced such that if GetInfo() is called after Start() or Stop(), the
   // state after the previously invoked operation is returned.
   //
-  // If this call enters a race with a StoryProvider.DeleteStory() call, it
-  // may silently not return or return null, or return the story info before
-  // it was deleted, depending on where it gets sequenced in the operation
-  // queues of StoryControllerImpl and StoryProviderImpl. The queues do not
-  // block each other, however, because the call on the second queue is made
-  // in the done callback of the operation on the first queue.
-  //
-  // This race is normal fidl concurrency behavior.
+  // If this call enters a race with a StoryProvider.DeleteStory() call, resulting in |this|
+  // being destroyed, |callback| will be dropped.
   operation_queue_.Add(new SyncCall([this, callback] {
-    story_provider_impl_->GetStoryInfo(
-        story_id_,
-        // We capture only |state_| and not |this| because (1) we want the
-        // state after SyncCall finishes, not after GetStoryInfo returns (i.e.
-        // we want the state after the previous operation before GetInfo(),
-        // but not after the operation following GetInfo()), and (2) |this|
-        // may have been deleted when GetStoryInfo returned if there was a
-        // Delete operation in the queue before GetStoryInfo().
-        [state = state_, callback](fuchsia::modular::StoryInfoPtr story_info) {
-          if (story_info) {
-            callback(std::move(*story_info), state);
-          } else {
-            callback(fuchsia::modular::StoryInfo(), state);
-          }
-        });
+    auto story_info = story_provider_impl_->GetCachedStoryInfo(story_id_);
+    FXL_CHECK(story_info);
+    callback(std::move(*story_info), state_);
   }));
 }
 
@@ -1490,8 +1470,8 @@ void StoryControllerImpl::Start(
 }
 
 void StoryControllerImpl::RequestStart() {
-  operation_queue_.Add(new StartCall(this, story_storage_,
-                                     nullptr /* ViewOwner request */));
+  operation_queue_.Add(
+      new StartCall(this, story_storage_, nullptr /* ViewOwner request */));
 }
 
 void StoryControllerImpl::Stop(StopCallback done) {

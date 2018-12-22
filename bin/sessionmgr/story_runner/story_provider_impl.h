@@ -117,7 +117,12 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
       fidl::StringPtr story_id,
       fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> request);
 
-  // |fuchsia::modular::StoryProvider|, also used by StoryControllerImpl.
+  // Called by StoryControllerImpl.
+  //
+  // Returns nullptr if the StoryInfo for |story_id| is not cached.
+  fuchsia::modular::StoryInfoPtr GetCachedStoryInfo(fidl::StringPtr story_id);
+
+  // |fuchsia::modular::StoryProvider|.
   void GetStoryInfo(fidl::StringPtr story_id,
                     GetStoryInfoCallback callback) override;
 

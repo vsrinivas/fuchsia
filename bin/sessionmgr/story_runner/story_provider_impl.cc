@@ -442,6 +442,16 @@ void StoryProviderImpl::MaybeLoadStoryShell() {
           user_environment_->GetLauncher(), CloneStruct(story_shell_));
 }
 
+fuchsia::modular::StoryInfoPtr StoryProviderImpl::GetCachedStoryInfo(
+    fidl::StringPtr story_id) {
+  auto it = story_runtime_containers_.find(story_id);
+  if (it == story_runtime_containers_.end()) {
+    return nullptr;
+  }
+
+  return CloneOptional(it->second.current_data->story_info);
+}
+
 // |fuchsia::modular::StoryProvider|
 void StoryProviderImpl::GetStoryInfo(fidl::StringPtr story_id,
                                      GetStoryInfoCallback callback) {
