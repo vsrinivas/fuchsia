@@ -20,7 +20,10 @@ type FidlGenerator struct {
 }
 
 func NewFidlGenerator() *FidlGenerator {
-	tmpls := template.New("CPPTemplates")
+	tmpls := template.New("CPPTemplates").Funcs(template.FuncMap{
+		"Kinds": func() interface{} { return ir.Kinds },
+		"Eq": func(a interface{}, b interface{}) bool { return a == b },
+	})
 	template.Must(tmpls.Parse(templates.Const))
 	template.Must(tmpls.Parse(templates.Enum))
 	template.Must(tmpls.Parse(templates.Header))
@@ -37,82 +40,16 @@ func NewFidlGenerator() *FidlGenerator {
 
 // GenerateHeader generates the C++ bindings header.
 func (gen *FidlGenerator) GenerateHeader(wr io.Writer, tree ir.Root) error {
-	tmpls := gen.tmpls
-	if err := tmpls.ExecuteTemplate(wr, "GenerateHeaderPreamble", tree); err != nil {
-		return err
-	}
-
-	for _, d := range tree.Decls {
-		if err := d.ForwardDeclaration(tmpls, wr); err != nil {
-			return err
-		}
-	}
-
-	for _, d := range tree.Decls {
-		if err := d.Declaration(tmpls, wr); err != nil {
-			return err
-		}
-	}
-
-	if err := tmpls.ExecuteTemplate(wr, "GenerateHeaderPostamble", tree); err != nil {
-		return err
-	}
-
-	if err := tmpls.ExecuteTemplate(wr, "GenerateTraitsPreamble", tree); err != nil {
-		return err
-	}
-
-	for _, d := range tree.Decls {
-		if err := d.Traits(tmpls, wr); err != nil {
-			return err
-		}
-	}
-
-	if err := tmpls.ExecuteTemplate(wr, "GenerateTraitsPostamble", tree); err != nil {
-		return err
-	}
-
-	return nil
+	return gen.tmpls.ExecuteTemplate(wr, "Header", tree)
 }
 
 // GenerateSource generates the C++ bindings source, i.e. implementation.
 func (gen *FidlGenerator) GenerateSource(wr io.Writer, tree ir.Root) error {
-	tmpls := gen.tmpls
-	if err := tmpls.ExecuteTemplate(wr, "GenerateImplementationPreamble", tree); err != nil {
-		return err
-	}
-
-	for _, d := range tree.Decls {
-		if err := d.Definition(tmpls, wr); err != nil {
-			return err
-		}
-	}
-
-	if err := tmpls.ExecuteTemplate(wr, "GenerateImplementationPostamble", tree); err != nil {
-		return err
-	}
-
-	return nil
+	return gen.tmpls.ExecuteTemplate(wr, "Implementation", tree)
 }
 
 func (gen *FidlGenerator) GenerateTestBase(wr io.Writer, tree ir.Root) error {
-	tmpls := gen.tmpls
-
-	if err := tmpls.ExecuteTemplate(wr, "GenerateTestBasePreamble", tree); err != nil {
-		return err
-	}
-
-	for _, d := range tree.Decls {
-		if err := d.TestBase(tmpls, wr); err != nil {
-			return err
-		}
-	}
-
-	if err := tmpls.ExecuteTemplate(wr, "GenerateTestBasePostamble", tree); err != nil {
-		return err
-	}
-
-	return nil
+	return gen.tmpls.ExecuteTemplate(wr, "TestBase", tree)
 }
 
 // GenerateFidl generates all files required for the C++ bindings.

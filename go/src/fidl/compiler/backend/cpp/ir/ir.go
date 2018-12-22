@@ -7,12 +7,10 @@ package ir
 import (
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"math"
 	"sort"
 	"strings"
-	"text/template"
 
 	"fidl/compiler/backend/common"
 	"fidl/compiler/backend/types"
@@ -21,13 +19,24 @@ import (
 var legacyCallbacks = flag.Bool("cpp-legacy-callbacks", false,
 	"use std::function instead of fit::function in C++ callbacks")
 
-type Decl interface {
-	ForwardDeclaration(*template.Template, io.Writer) error
-	Declaration(*template.Template, io.Writer) error
-	Traits(*template.Template, io.Writer) error
-	Definition(*template.Template, io.Writer) error
-	TestBase(*template.Template, io.Writer) error
-}
+// These are used in header/impl templates to select the correct type-specific template
+type constKind struct{}
+type enumKind struct{}
+type interfaceKind struct{}
+type structKind struct{}
+type tableKind struct{}
+type unionKind struct{}
+
+var Kinds = struct {
+	Const     constKind
+	Enum      enumKind
+	Interface interfaceKind
+	Struct    structKind
+	Table     tableKind
+	Union     unionKind
+}{}
+
+type Decl interface{}
 
 type Type struct {
 	Decl     string
@@ -43,6 +52,7 @@ type Const struct {
 	Type      Type
 	Name      string
 	Value     string
+	Kind      constKind
 }
 
 type Enum struct {
@@ -50,6 +60,7 @@ type Enum struct {
 	Type      string
 	Name      string
 	Members   []EnumMember
+	Kind      enumKind
 }
 
 type EnumMember struct {
@@ -66,6 +77,7 @@ type Union struct {
 	Size         int
 	MaxHandles   int
 	MaxOutOfLine int
+	Kind         unionKind
 }
 
 type UnionMember struct {
@@ -87,6 +99,7 @@ type Table struct {
 	BiggestOrdinal int
 	MaxHandles     int
 	MaxOutOfLine   int
+	Kind           tableKind
 }
 
 type TableMember struct {
@@ -111,6 +124,7 @@ type Struct struct {
 	Size         int
 	MaxHandles   int
 	MaxOutOfLine int
+	Kind         structKind
 }
 
 type StructMember struct {
@@ -133,6 +147,7 @@ type Interface struct {
 	SyncName        string
 	SyncProxyName   string
 	Methods         []Method
+	Kind            interfaceKind
 }
 
 type Method struct {
@@ -172,126 +187,6 @@ type Root struct {
 	Library         types.LibraryIdentifier
 	LibraryReversed types.LibraryIdentifier
 	Decls           []Decl
-}
-
-func (c *Const) ForwardDeclaration(tmpls *template.Template, wr io.Writer) error {
-	return nil
-}
-
-func (c *Const) Declaration(tmpls *template.Template, wr io.Writer) error {
-	return tmpls.ExecuteTemplate(wr, "ConstDeclaration", c)
-}
-
-func (c *Const) Traits(tmpls *template.Template, wr io.Writer) error {
-	return nil
-}
-
-func (c *Const) Definition(tmpls *template.Template, wr io.Writer) error {
-	return tmpls.ExecuteTemplate(wr, "ConstDefinition", c)
-}
-
-func (c *Const) TestBase(tmpls *template.Template, wr io.Writer) error {
-	return nil
-}
-
-func (e *Enum) ForwardDeclaration(tmpls *template.Template, wr io.Writer) error {
-	return tmpls.ExecuteTemplate(wr, "EnumForwardDeclaration", e)
-}
-
-func (e *Enum) Declaration(tmpls *template.Template, wr io.Writer) error {
-	return nil
-}
-
-func (e *Enum) Traits(tmpls *template.Template, wr io.Writer) error {
-	return tmpls.ExecuteTemplate(wr, "EnumTraits", e)
-}
-
-func (e *Enum) Definition(tmpls *template.Template, wr io.Writer) error {
-	return nil
-}
-
-func (e *Enum) TestBase(tmpls *template.Template, wr io.Writer) error {
-	return nil
-}
-
-func (u *Union) ForwardDeclaration(tmpls *template.Template, wr io.Writer) error {
-	return tmpls.ExecuteTemplate(wr, "UnionForwardDeclaration", u)
-}
-
-func (u *Union) Declaration(tmpls *template.Template, wr io.Writer) error {
-	return tmpls.ExecuteTemplate(wr, "UnionDeclaration", u)
-}
-
-func (u *Union) Traits(tmpls *template.Template, wr io.Writer) error {
-	return tmpls.ExecuteTemplate(wr, "UnionTraits", u)
-}
-
-func (u *Union) Definition(tmpls *template.Template, wr io.Writer) error {
-	return tmpls.ExecuteTemplate(wr, "UnionDefinition", u)
-}
-
-func (u *Union) TestBase(tmpls *template.Template, wr io.Writer) error {
-	return nil
-}
-
-func (t *Table) ForwardDeclaration(tmpls *template.Template, wr io.Writer) error {
-	return tmpls.ExecuteTemplate(wr, "TableForwardDeclaration", t)
-}
-
-func (t *Table) Declaration(tmpls *template.Template, wr io.Writer) error {
-	return tmpls.ExecuteTemplate(wr, "TableDeclaration", t)
-}
-
-func (t *Table) Traits(tmpls *template.Template, wr io.Writer) error {
-	return tmpls.ExecuteTemplate(wr, "TableTraits", t)
-}
-
-func (t *Table) Definition(tmpls *template.Template, wr io.Writer) error {
-	return tmpls.ExecuteTemplate(wr, "TableDefinition", t)
-}
-
-func (t *Table) TestBase(tmpls *template.Template, wr io.Writer) error {
-	return nil
-}
-
-func (s *Struct) ForwardDeclaration(tmpls *template.Template, wr io.Writer) error {
-	return tmpls.ExecuteTemplate(wr, "StructForwardDeclaration", s)
-}
-
-func (s *Struct) Declaration(tmpls *template.Template, wr io.Writer) error {
-	return tmpls.ExecuteTemplate(wr, "StructDeclaration", s)
-}
-
-func (s *Struct) Traits(tmpls *template.Template, wr io.Writer) error {
-	return tmpls.ExecuteTemplate(wr, "StructTraits", s)
-}
-
-func (s *Struct) Definition(tmpls *template.Template, wr io.Writer) error {
-	return tmpls.ExecuteTemplate(wr, "StructDefinition", s)
-}
-
-func (s *Struct) TestBase(tmpls *template.Template, wr io.Writer) error {
-	return nil
-}
-
-func (i *Interface) ForwardDeclaration(tmpls *template.Template, wr io.Writer) error {
-	return tmpls.ExecuteTemplate(wr, "InterfaceForwardDeclaration", i)
-}
-
-func (i *Interface) Declaration(tmpls *template.Template, wr io.Writer) error {
-	return tmpls.ExecuteTemplate(wr, "InterfaceDeclaration", i)
-}
-
-func (i *Interface) Traits(tmpls *template.Template, wr io.Writer) error {
-	return tmpls.ExecuteTemplate(wr, "InterfaceTraits", i)
-}
-
-func (i *Interface) Definition(tmpls *template.Template, wr io.Writer) error {
-	return tmpls.ExecuteTemplate(wr, "InterfaceDefinition", i)
-}
-
-func (i *Interface) TestBase(tmpls *template.Template, wr io.Writer) error {
-	return tmpls.ExecuteTemplate(wr, "InterfaceTestBase", i)
 }
 
 func (m *Method) CallbackWrapper() string {
@@ -397,9 +292,10 @@ var reservedWords = map[string]bool{
 	"while":            true,
 	"xor":              true,
 	"xor_eq":           true,
+
 	// names used in specific contexts e.g. union accessors
-	"which":            true,
-	"has_invalid_tag":  true,
+	"which":           true,
+	"has_invalid_tag": true,
 }
 
 var primitiveTypes = map[types.PrimitiveSubtype]string{
@@ -598,34 +494,34 @@ func (c *compiler) compileType(val types.Type) Type {
 func (c *compiler) compileConst(val types.Const) Const {
 	if val.Type.Kind == types.StringType {
 		return Const{
-			val.Attributes,
-			true,
-			"const",
-			Type{
+			Attributes: val.Attributes,
+			Extern:     true,
+			Decorator:  "const",
+			Type: Type{
 				Decl: "char",
 			},
-			c.compileCompoundIdentifier(val.Name, "[]"),
-			c.compileConstant(val.Value, nil),
+			Name:  c.compileCompoundIdentifier(val.Name, "[]"),
+			Value: c.compileConstant(val.Value, nil),
 		}
 	} else {
 		t := c.compileType(val.Type)
 		return Const{
-			val.Attributes,
-			false,
-			"constexpr",
-			t,
-			c.compileCompoundIdentifier(val.Name, ""),
-			c.compileConstant(val.Value, &t),
+			Attributes: val.Attributes,
+			Extern:     false,
+			Decorator:  "constexpr",
+			Type:       t,
+			Name:       c.compileCompoundIdentifier(val.Name, ""),
+			Value:      c.compileConstant(val.Value, &t),
 		}
 	}
 }
 
 func (c *compiler) compileEnum(val types.Enum) Enum {
 	r := Enum{
-		c.namespace,
-		c.compilePrimitiveSubtype(val.Type),
-		c.compileCompoundIdentifier(val.Name, ""),
-		[]EnumMember{},
+		Namespace: c.namespace,
+		Type:      c.compilePrimitiveSubtype(val.Type),
+		Name:      c.compileCompoundIdentifier(val.Name, ""),
+		Members:   []EnumMember{},
 	}
 	for _, v := range val.Members {
 		r.Members = append(r.Members, EnumMember{
@@ -749,14 +645,14 @@ func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 func (c *compiler) compileStruct(val types.Struct) Struct {
 	name := c.compileCompoundIdentifier(val.Name, "")
 	r := Struct{
-		val.Attributes,
-		c.namespace,
-		name,
-		fmt.Sprintf("%s_%sTable", c.symbolPrefix, name),
-		[]StructMember{},
-		val.Size,
-		val.MaxHandles,
-		val.MaxOutOfLine,
+		Attributes:   val.Attributes,
+		Namespace:    c.namespace,
+		Name:         name,
+		TableType:    fmt.Sprintf("%s_%sTable", c.symbolPrefix, name),
+		Members:      []StructMember{},
+		Size:         val.Size,
+		MaxHandles:   val.MaxHandles,
+		MaxOutOfLine: val.MaxOutOfLine,
 	}
 
 	for _, v := range val.Members {
@@ -847,14 +743,14 @@ func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 func (c *compiler) compileUnion(val types.Union) Union {
 	name := c.compileCompoundIdentifier(val.Name, "")
 	r := Union{
-		val.Attributes,
-		c.namespace,
-		name,
-		fmt.Sprintf("%s_%sTable", c.symbolPrefix, name),
-		[]UnionMember{},
-		val.Size,
-		val.MaxHandles,
-		val.MaxOutOfLine,
+		Attributes:   val.Attributes,
+		Namespace:    c.namespace,
+		Name:         name,
+		TableType:    fmt.Sprintf("%s_%sTable", c.symbolPrefix, name),
+		Members:      []UnionMember{},
+		Size:         val.Size,
+		MaxHandles:   val.MaxHandles,
+		MaxOutOfLine: val.MaxOutOfLine,
 	}
 
 	for _, v := range val.Members {
