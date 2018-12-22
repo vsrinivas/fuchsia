@@ -39,6 +39,10 @@ class StoryMutator {
   // A failure guarantees that the mutation was not applied and it is safe to
   // retry.
 
+  // Sets the value of |StoryModel.runtime_state|.
+  fit::consumer<> set_runtime_state(
+      fuchsia::modular::StoryState state);
+
   // Sets the value of |StoryModel.visibility_state|.
   fit::consumer<> set_visibility_state(
       fuchsia::modular::StoryVisibilityState state);

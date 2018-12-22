@@ -17,16 +17,21 @@ table StoryModel {
   // Always set. Immutable.
   1: string:MAX_STORY_NAME_LENGTH name;
 
+  // An enum describing if the story is RUNNING, STOPPING, STOPPED.
+  //
+  // Always set. Defaults to StoryState::STOPPED.
+  2: fuchsia.modular.StoryState runtime_state;
+
   // An enum describing how the story should be displayed, when focused,
   // in the StoryShell.
   //
   // Always set. Defaults to StoryVisibilityState::DEFAULT.
-  2: fuchsia.modular.StoryVisibilityState visibility_state;
+  3: fuchsia.modular.StoryVisibilityState visibility_state;
 
   // A list of modules present in the story.
   //
   // Always set. Defaults to an empty list.
-  3: vector<ModuleModel>:MAX_MODULES_PER_STORY modules;
+  4: vector<ModuleModel>:MAX_MODULES_PER_STORY modules;
 };
 
 table ModuleModel {

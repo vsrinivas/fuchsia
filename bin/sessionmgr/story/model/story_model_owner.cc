@@ -18,8 +18,11 @@ using fuchsia::modular::storymodel::ModuleModel;
 namespace modular {
 
 namespace {
-// Sets default values for all fields of a new StoryModel.
+// Sets default values for all fields of a new StoryModel. Defaults are
+// documented in
+// peridot/lib/fidl/public/fuchsia.modular.storymodel/story_model.fidl.
 void InitializeModelDefaults(StoryModel* model) {
+  model->set_runtime_state(fuchsia::modular::StoryState::STOPPED);
   model->set_visibility_state(fuchsia::modular::StoryVisibilityState::DEFAULT);
   model->set_modules(fidl::VectorPtr<ModuleModel>::New(0));
 }

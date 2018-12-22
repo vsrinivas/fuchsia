@@ -13,6 +13,13 @@ namespace modular {
 StoryMutator::StoryMutator() = default;
 StoryMutator::~StoryMutator() = default;
 
+fit::consumer<> StoryMutator::set_runtime_state(
+    fuchsia::modular::StoryState state) {
+  std::vector<StoryModelMutation> commands(1);
+  commands[0].set_set_runtime_state(state);
+  return ExecuteInternal(std::move(commands));
+}
+
 fit::consumer<> StoryMutator::set_visibility_state(
     fuchsia::modular::StoryVisibilityState state) {
   std::vector<StoryModelMutation> commands(1);

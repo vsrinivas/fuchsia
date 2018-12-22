@@ -7,6 +7,7 @@
 #include "peridot/bin/sessionmgr/story/model/apply_mutations.h"
 
 using fuchsia::modular::StoryVisibilityState;
+using fuchsia::modular::StoryState;
 using fuchsia::modular::storymodel::StoryModel;
 using fuchsia::modular::storymodel::StoryModelMutation;
 
@@ -16,6 +17,10 @@ namespace {
 
 void ApplySetVisibilityState(const StoryVisibilityState visibility_state, StoryModel* story_model) {
   story_model->set_visibility_state(visibility_state);
+}
+
+void ApplySetRuntimeState(const StoryState story_state, StoryModel* story_model) {
+  story_model->set_runtime_state(story_state);
 }
 
 }  // namespace
@@ -29,6 +34,9 @@ StoryModel ApplyMutations(const StoryModel& current_model,
     switch (command.Which()) {
       case StoryModelMutation::Tag::kSetVisibilityState:
         ApplySetVisibilityState(command.set_visibility_state(), &new_model);
+        break;
+      case StoryModelMutation::Tag::kSetRuntimeState:
+        ApplySetRuntimeState(command.set_runtime_state(), &new_model);
         break;
       default:
         FXL_LOG(FATAL) << "Unsupported StoryModelMutation: "

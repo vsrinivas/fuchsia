@@ -28,9 +28,9 @@
 #include "peridot/bin/sessionmgr/agent_runner/agent_runner.h"
 #include "peridot/bin/sessionmgr/component_context_impl.h"
 #include "peridot/bin/sessionmgr/message_queue/message_queue_manager.h"
-#include "peridot/bin/sessionmgr/story/system.h"
-#include "peridot/bin/sessionmgr/story/model/story_model_owner.h"
 #include "peridot/bin/sessionmgr/story/model/noop_story_model_storage.h"
+#include "peridot/bin/sessionmgr/story/model/story_model_owner.h"
+#include "peridot/bin/sessionmgr/story/system.h"
 #include "peridot/bin/sessionmgr/story_runner/story_entity_provider.h"
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/fidl/environment.h"
@@ -144,9 +144,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   void DetachView(fidl::StringPtr story_id, std::function<void()> done);
 
   // Called by StoryControllerImpl.
-  void NotifyStoryStateChange(fidl::StringPtr story_id);
-
-  // Called by StoryControllerImpl.
   void NotifyStoryActivityChange(
       fidl::StringPtr story_id,
       fidl::VectorPtr<fuchsia::modular::OngoingActivityType>
@@ -226,6 +223,10 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   void OnStoryStorageDeleted(fidl::StringPtr story_id);
   void OnStoryStorageUpdated(fidl::StringPtr story_id,
                              fuchsia::modular::internal::StoryData story_data);
+
+  // Called indirectly through observation of loaded StoryModels. Calls
+  // NotifyStoryWatchers().
+  void NotifyStoryStateChange(fidl::StringPtr story_id);
 
   void NotifyStoryWatchers(
       const fuchsia::modular::internal::StoryData* story_data,

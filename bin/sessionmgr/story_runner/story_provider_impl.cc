@@ -166,7 +166,9 @@ class StoryProviderImpl::LoadStoryRuntimeCall
                       container.model_owner->NewMutator());
 
               container.controller_impl = std::make_unique<StoryControllerImpl>(
-                  story_id_, session_storage_, container.storage.get(),
+                  session_storage_, container.storage.get(),
+                  container.model_owner->NewMutator(),
+                  container.model_owner->NewObserver(),
                   story_visibility_system.get(), story_provider_impl_);
               container.entity_provider = std::make_unique<StoryEntityProvider>(
                   container.storage.get());
@@ -400,7 +402,7 @@ void StoryProviderImpl::Watch(
     const auto& container = item.second;
     watcher_ptr->OnChange(
         CloneStruct(container.current_data->story_info),
-        container.controller_impl->GetStoryState(),
+        *container.model_observer->model().runtime_state(),
         *container.model_observer->model().visibility_state());
   }
   watchers_.AddInterfacePtr(std::move(watcher_ptr));
@@ -413,7 +415,7 @@ void StoryProviderImpl::WatchActivity(
   for (const auto& item : story_runtime_containers_) {
     const auto& container = item.second;
     watcher_ptr->OnStoryActivityChange(
-        container.controller_impl->GetStoryId(),
+        *container.model_observer->model().name(),
         container.controller_impl->GetOngoingActivities());
   }
   activity_watchers_.AddInterfacePtr(std::move(watcher_ptr));
@@ -534,7 +536,7 @@ void StoryProviderImpl::NotifyStoryStateChange(fidl::StringPtr story_id) {
     return;
   }
   NotifyStoryWatchers(it->second.current_data.get(),
-                      it->second.controller_impl->GetStoryState(),
+                      *it->second.model_observer->model().runtime_state(),
                       *it->second.model_observer->model().visibility_state());
 }
 
@@ -622,16 +624,16 @@ void StoryProviderImpl::OnStoryStorageUpdated(
   // StoryData and get runtime state available from it.
   //
   // Otherwise, use defaults for an unloaded story.
-  fuchsia::modular::StoryState state = fuchsia::modular::StoryState::STOPPED;
+  fuchsia::modular::StoryState runtime_state = fuchsia::modular::StoryState::STOPPED;
   fuchsia::modular::StoryVisibilityState visibility_state =
       fuchsia::modular::StoryVisibilityState::DEFAULT;
   auto i = story_runtime_containers_.find(story_data.story_info.id);
   if (i != story_runtime_containers_.end()) {
-    state = i->second.controller_impl->GetStoryState();
+    runtime_state = *i->second.model_observer->model().runtime_state();
     visibility_state = *i->second.model_observer->model().visibility_state();
     i->second.current_data = CloneOptional(story_data);
   }
-  NotifyStoryWatchers(&story_data, state, visibility_state);
+  NotifyStoryWatchers(&story_data, runtime_state, visibility_state);
 }
 
 void StoryProviderImpl::OnStoryStorageDeleted(fidl::StringPtr story_id) {

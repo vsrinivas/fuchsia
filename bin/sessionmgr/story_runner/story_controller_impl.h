@@ -31,6 +31,8 @@
 #include <lib/fxl/macros.h>
 
 #include "peridot/bin/sessionmgr/storage/session_storage.h"
+#include "peridot/bin/sessionmgr/story/model/story_observer.h"
+#include "peridot/bin/sessionmgr/story/model/story_mutator.h"
 #include "peridot/bin/sessionmgr/story_runner/link_impl.h"
 #include "peridot/bin/sessionmgr/story_runner/ongoing_activity_impl.h"
 #include "peridot/bin/sessionmgr/story_runner/story_shell_context_impl.h"
@@ -54,8 +56,10 @@ class StoryVisibilitySystem;
 // clients control over the story.
 class StoryControllerImpl : fuchsia::modular::StoryController {
  public:
-  StoryControllerImpl(fidl::StringPtr story_id, SessionStorage* session_storage,
+  StoryControllerImpl(SessionStorage* session_storage,
                       StoryStorage* story_storage,
+                      std::unique_ptr<StoryMutator> story_mutator,
+                      std::unique_ptr<StoryObserver> story_observer,
                       StoryVisibilitySystem* story_visibility_system,
                       StoryProviderImpl* story_provider_impl);
   ~StoryControllerImpl() override;
@@ -66,9 +70,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
 
   // Called by StoryProviderImpl.
   bool IsRunning();
-
-  // Called by StoryProviderImpl.
-  fuchsia::modular::StoryState GetStoryState() const;
 
   // Called by StoryProviderImpl.
   //
@@ -93,7 +94,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   // storage. It is the caller's responsibility to delete |controller|.
   void ReleaseModule(ModuleControllerImpl* module_controller_impl);
 
-  // Called by ModuleContextImpl and StoryProviderImpl.
+  // Called by ModuleContextImpl.
   fidl::StringPtr GetStoryId() const;
 
   // Called by ModuleContextImpl.
@@ -199,8 +200,12 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   void OnModuleDataUpdated(fuchsia::modular::ModuleData module_data);
 
   // Misc internal helpers.
-  void SetState(fuchsia::modular::StoryState new_state);
-  void UpdateStoryState(fuchsia::modular::ModuleState state);
+  void SetRuntimeState(fuchsia::modular::StoryState new_state);
+  void NotifyStoryWatchers(
+      const fuchsia::modular::storymodel::StoryModel& model);
+  void NotifyOneStoryWatcher(
+      const fuchsia::modular::storymodel::StoryModel& model,
+      fuchsia::modular::StoryWatcher* watcher);
   void ProcessPendingViews();
   std::set<fuchsia::modular::LinkPath> GetActiveLinksInternal();
 
@@ -219,8 +224,9 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   // processes.
   void DestroyStoryEnvironment();
 
-  // The ID of the story, its state and the context to obtain it from and
-  // persist it to.
+  // The ID of the story, copied from |story_observer_| for convenience in
+  // transitioning clients.  TODO(thatguy): Remove users of this in favor of
+  // reading from the |story_observer_| directly.
   const fidl::StringPtr story_id_;
 
   // True once AttachView() was called. Temporarily needed during transition
@@ -228,15 +234,13 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   // Cf. MF-121.
   bool needs_detach_view_{};
 
-  // This is the canonical source for state. This state is per device and only
-  // kept in memory.
-  fuchsia::modular::StoryState state_{fuchsia::modular::StoryState::STOPPED};
-
   StoryProviderImpl* const story_provider_impl_;  // Not owned.
 
   SessionStorage* const session_storage_;  // Not owned.
   StoryStorage* const story_storage_;  // Not owned.
 
+  std::unique_ptr<StoryMutator> story_mutator_;
+  std::unique_ptr<StoryObserver> story_observer_;
   StoryVisibilitySystem* const story_visibility_system_;  // Not owned.
 
   // The application environment (which abstracts a zx::job) in which the

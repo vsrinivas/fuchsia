@@ -506,7 +506,8 @@ class StoryControllerImpl::StopCall : public Operation<> {
       return;
     }
 
-    story_controller_impl_->SetState(fuchsia::modular::StoryState::STOPPING);
+    story_controller_impl_->SetRuntimeState(
+        fuchsia::modular::StoryState::STOPPING);
 
     // If this StopCall is part of a bulk operation of story provider that stops
     // all stories at once, no DetachView() notification is given to the session
@@ -611,7 +612,7 @@ class StoryControllerImpl::StopCall : public Operation<> {
           // been destroyed at this point.
           FXL_DCHECK(story_controller_impl_->ongoing_activities_.size() == 0);
 
-          story_controller_impl_->SetState(
+          story_controller_impl_->SetRuntimeState(
               fuchsia::modular::StoryState::STOPPED);
 
           story_controller_impl_->DestroyStoryEnvironment();
@@ -1050,7 +1051,7 @@ class StoryControllerImpl::StartCall : public Operation<> {
                 nullptr /* module_controller_request */, [flow] {}));
           }
 
-          story_controller_impl_->SetState(
+          story_controller_impl_->SetRuntimeState(
               fuchsia::modular::StoryState::RUNNING);
         });
   }
@@ -1185,19 +1186,22 @@ class StoryControllerImpl::StartSnapshotLoaderCall : public Operation<> {
 };
 
 StoryControllerImpl::StoryControllerImpl(
-    fidl::StringPtr story_id, SessionStorage* const session_storage,
-    StoryStorage* const story_storage,
+    SessionStorage* const session_storage, StoryStorage* const story_storage,
+    std::unique_ptr<StoryMutator> story_mutator,
+    std::unique_ptr<StoryObserver> story_observer,
     StoryVisibilitySystem* const story_visibility_system,
     StoryProviderImpl* const story_provider_impl)
-    : story_id_(story_id),
+    : story_id_(*story_observer->model().name()),
       story_provider_impl_(story_provider_impl),
       session_storage_(session_storage),
       story_storage_(story_storage),
+      story_mutator_(std::move(story_mutator)),
+      story_observer_(std::move(story_observer)),
       story_visibility_system_(story_visibility_system),
-      story_shell_context_impl_{story_id, story_provider_impl, this},
+      story_shell_context_impl_{story_id_, story_provider_impl, this},
       weak_factory_(this) {
   auto story_scope = fuchsia::modular::StoryScope::New();
-  story_scope->story_id = story_id;
+  story_scope->story_id = story_id_;
   auto scope = fuchsia::modular::ComponentScope::New();
   scope->set_story_scope(std::move(*story_scope));
   story_provider_impl_->user_intelligence_provider()
@@ -1206,6 +1210,11 @@ StoryControllerImpl::StoryControllerImpl(
   story_storage_->set_on_module_data_updated(
       [this](fuchsia::modular::ModuleData module_data) {
         OnModuleDataUpdated(std::move(module_data));
+      });
+
+  story_observer_->RegisterListener(
+      [this](const fuchsia::modular::storymodel::StoryModel& model) {
+        NotifyStoryWatchers(model);
       });
 }
 
@@ -1217,17 +1226,13 @@ void StoryControllerImpl::Connect(
 }
 
 bool StoryControllerImpl::IsRunning() {
-  switch (state_) {
+  switch (*story_observer_->model().runtime_state()) {
     case fuchsia::modular::StoryState::RUNNING:
       return true;
     case fuchsia::modular::StoryState::STOPPING:
     case fuchsia::modular::StoryState::STOPPED:
       return false;
   }
-}
-
-fuchsia::modular::StoryState StoryControllerImpl::GetStoryState() const {
-  return state_;
 }
 
 fidl::VectorPtr<fuchsia::modular::OngoingActivityType>
@@ -1274,7 +1279,9 @@ void StoryControllerImpl::ReleaseModule(
   running_mod_infos_.erase(fit);
 }
 
-fidl::StringPtr StoryControllerImpl::GetStoryId() const { return story_id_; }
+fidl::StringPtr StoryControllerImpl::GetStoryId() const {
+  return *story_observer_->model().name();
+}
 
 void StoryControllerImpl::RequestStoryFocus() {
   story_provider_impl_->RequestStoryFocus(story_id_);
@@ -1455,12 +1462,12 @@ void StoryControllerImpl::GetInfo(GetInfoCallback callback) {
   // Synced such that if GetInfo() is called after Start() or Stop(), the
   // state after the previously invoked operation is returned.
   //
-  // If this call enters a race with a StoryProvider.DeleteStory() call, resulting in |this|
-  // being destroyed, |callback| will be dropped.
+  // If this call enters a race with a StoryProvider.DeleteStory() call,
+  // resulting in |this| being destroyed, |callback| will be dropped.
   operation_queue_.Add(new SyncCall([this, callback] {
     auto story_info = story_provider_impl_->GetCachedStoryInfo(story_id_);
     FXL_CHECK(story_info);
-    callback(std::move(*story_info), state_);
+    callback(std::move(*story_info), *story_observer_->model().runtime_state());
   }));
 }
 
@@ -1495,7 +1502,7 @@ void StoryControllerImpl::TakeAndLoadSnapshot(
 void StoryControllerImpl::Watch(
     fidl::InterfaceHandle<fuchsia::modular::StoryWatcher> watcher) {
   auto ptr = watcher.Bind();
-  ptr->OnStateChange(state_);
+  NotifyOneStoryWatcher(story_observer_->model(), ptr.get());
   watchers_.AddInterfacePtr(std::move(ptr));
 }
 
@@ -1601,19 +1608,22 @@ void StoryControllerImpl::DetachView(std::function<void()> done) {
   }
 }
 
-void StoryControllerImpl::SetState(
+void StoryControllerImpl::SetRuntimeState(
     const fuchsia::modular::StoryState new_state) {
-  if (new_state == state_) {
-    return;
-  }
+  story_mutator_->set_runtime_state(new_state);
+}
 
-  state_ = new_state;
-
+void StoryControllerImpl::NotifyStoryWatchers(
+    const fuchsia::modular::storymodel::StoryModel& model) {
   for (auto& i : watchers_.ptrs()) {
-    (*i)->OnStateChange(state_);
+    NotifyOneStoryWatcher(model, (*i).get());
   }
+}
 
-  story_provider_impl_->NotifyStoryStateChange(story_id_);
+void StoryControllerImpl::NotifyOneStoryWatcher(
+    const fuchsia::modular::storymodel::StoryModel& model,
+    fuchsia::modular::StoryWatcher* watcher) {
+  watcher->OnStateChange(*model.runtime_state());
 }
 
 bool StoryControllerImpl::IsExternalModule(
