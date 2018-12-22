@@ -25,8 +25,8 @@ interface AccountHandlerControl {
     // Returns: |status| A |Status| indicating whether the operation was
     //                   successful
     //          |id| The new account's local identifier, if successful
-    1: CreateAccount() -> (fuchsia.auth.account.Status status,
-                           fuchsia.auth.account.LocalAccountId? id);
+    CreateAccount() -> (fuchsia.auth.account.Status status,
+                        fuchsia.auth.account.LocalAccountId? id);
 
     // Loads information about a Fuchsia account that was previously provisioned
     // on the current device.
@@ -35,8 +35,8 @@ interface AccountHandlerControl {
     //
     // Returns: |status| A |Status| indicating whether the operation was
     //                   successful
-    2: LoadAccount(fuchsia.auth.account.LocalAccountId id)
-           -> (fuchsia.auth.account.Status status);
+    LoadAccount(fuchsia.auth.account.LocalAccountId id)
+        -> (fuchsia.auth.account.Status status);
 
     // Deletes all persistent information about the Fuchsia account handled by
     // this handler, including all credentials and global identifiers. After a
@@ -46,7 +46,7 @@ interface AccountHandlerControl {
     //
     // Returns: |status| A |Status| indicating whether the operation was
     //                   successful
-    3: RemoveAccount() -> (fuchsia.auth.account.Status status);
+    RemoveAccount() -> (fuchsia.auth.account.Status status);
 
     // TODO(jsankey): Add methods to cover adding an existing account and
     // handling an account where the disk is not yet decrpyted.
@@ -63,15 +63,15 @@ interface AccountHandlerControl {
     //
     // Returns: |status| A |Status| indicating whether the operation was
     //                   successful
-    4: GetAccount(
-           fuchsia.auth.AuthenticationContextProvider auth_context_provider,
-           request<fuchsia.auth.account.Account> account)
-           -> (fuchsia.auth.account.Status status);
+    GetAccount(
+        fuchsia.auth.AuthenticationContextProvider auth_context_provider,
+        request<fuchsia.auth.account.Account> account)
+        -> (fuchsia.auth.account.Status status);
 
     // Signals that the AccountHandler should tear itself down. After the
     // receiver responds by closing its handle, the caller may terminate the
     // component if it hasn't already exited.
-    5: Terminate();
+    Terminate();
 };
 
 // An interface that supplies the account and authentication services that
@@ -88,7 +88,7 @@ interface AccountHandlerContext {
     //
     // Returns: |status| A |Status| indicating whether the operation was
     //                   successful
-    1: GetAuthProvider(string auth_provider_type,
-                       request<fuchsia.auth.AuthProvider> auth_provider)
-           -> (fuchsia.auth.account.Status status);
+    GetAuthProvider(string auth_provider_type,
+                    request<fuchsia.auth.AuthProvider> auth_provider)
+        -> (fuchsia.auth.account.Status status);
 };
