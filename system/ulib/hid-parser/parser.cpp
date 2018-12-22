@@ -258,8 +258,7 @@ public:
         UsageIterator usage_it(this, flags);
 
         for (uint32_t ix = 0; ix != table_.report_count; ++ ix) {
-            if (!usage_it.next_usage(&attributes.usage.usage))
-                return kParseInvalidUsage;
+            attributes.usage.usage = usage_it.next_usage();
 
             auto curr_col = &coll_[coll_.size() - 1];
 
@@ -443,18 +442,19 @@ private:
             }
         }
 
-        bool next_usage(uint32_t* usage) {
+        uint32_t next_usage() {
+            uint32_t usage;
             if (usages_ == nullptr) {
-                *usage = static_cast<uint32_t>(usage_range_.min + index_);
-                if (*usage > static_cast<uint32_t>(usage_range_.max))
-                    return false;
+                usage = static_cast<uint32_t>(usage_range_.min + index_);
+                if (usage > static_cast<uint32_t>(usage_range_.max))
+                    usage = usage_range_.max;
             } else {
-                *usage = (index_ < usages_->size()) ? (*usages_)[index_] : last_usage_;
-                last_usage_ = *usage;
+                usage = (index_ < usages_->size()) ? (*usages_)[index_] : last_usage_;
+                last_usage_ = usage;
             }
             if (!is_array_)
                 ++index_;
-            return true;
+            return usage;
         }
 
     private:

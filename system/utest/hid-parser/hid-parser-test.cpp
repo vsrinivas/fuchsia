@@ -14,6 +14,7 @@
 
 // See hid-report-data.cpp for the definitions of the test data.
 extern "C" const uint8_t boot_mouse_r_desc[50];
+extern "C" const uint8_t hp_mouse_r_desc[46];
 extern "C" const uint8_t trinket_r_desc[173];
 extern "C" const uint8_t ps3_ds_r_desc[148];
 extern "C" const uint8_t acer12_touch_r_desc[660];
@@ -175,6 +176,96 @@ static bool parse_boot_mouse() {
     auto app_col = hid::GetAppCollection(first_input);
     EXPECT_EQ(app_col, collection);
 
+
+    hid::FreeDeviceDescriptor(dev);
+    END_TEST;
+}
+
+static bool parse_hp_mouse() {
+    BEGIN_TEST;
+
+    hid::DeviceDescriptor* dev = nullptr;
+    auto res = hid::ParseReportDescriptor(
+        hp_mouse_r_desc, sizeof(hp_mouse_r_desc), &dev);
+
+    ASSERT_EQ(res, hid::ParseResult::kParseOk);
+
+    // A single report with id zero, this means no report id.
+    ASSERT_EQ(dev->rep_count, 1u);
+    EXPECT_EQ(dev->report[0].report_id, 0);
+
+    // The only report has 11 fields.
+    EXPECT_EQ(dev->report[0].count, 11);
+    const auto fields = dev->report[0].first_field;
+
+    // All fields are input type with report id = 0.
+    for (uint8_t ix = 0; ix != dev->report[0].count; ++ix) {
+        EXPECT_EQ(fields[ix].report_id, 0);
+        EXPECT_EQ(fields[ix].type, hid::kInput);
+    }
+
+    // First 8 fields are the buttons, with usages 1, 2, 3, 3 .. 3 in the button page.
+    auto expected_flags = hid::kData | hid::kAbsolute | hid::kScalar;
+
+    for (uint8_t ix = 0; ix != 8; ++ix) {
+        auto usage = (ix < 3) ? uint32_t(ix + 1) : uint32_t(3);
+        EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kButton);
+        EXPECT_EQ(fields[ix].attr.usage.usage, usage);
+        EXPECT_EQ(fields[ix].attr.bit_sz, 1);
+        EXPECT_EQ(fields[ix].attr.logc_mm.min, 0);
+        EXPECT_EQ(fields[ix].attr.logc_mm.max, 1);
+        EXPECT_EQ(expected_flags & fields[ix].flags, expected_flags);
+    }
+
+    // Next comes 'X' field, 8 bits data, relative.
+    expected_flags = hid::kData | hid::kRelative | hid::kScalar;
+
+    EXPECT_EQ(fields[8].attr.usage.page, hid::usage::Page::kGenericDesktop);
+    EXPECT_EQ(fields[8].attr.usage.usage, hid::usage::GenericDesktop::kX);
+    EXPECT_EQ(fields[8].attr.bit_sz, 8);
+    EXPECT_EQ(fields[8].attr.logc_mm.min, -127);
+    EXPECT_EQ(fields[8].attr.logc_mm.max, 127);
+    EXPECT_EQ(fields[8].attr.phys_mm.min, 0);
+    EXPECT_EQ(fields[8].attr.phys_mm.max, 0);
+    EXPECT_EQ(expected_flags & fields[8].flags, expected_flags);
+
+    // Next comes 'Y' field, same as 'X'.
+    EXPECT_EQ(fields[9].attr.usage.page, hid::usage::Page::kGenericDesktop);
+    EXPECT_EQ(fields[9].attr.usage.usage, hid::usage::GenericDesktop::kY);
+    EXPECT_EQ(fields[9].attr.bit_sz, 8);
+    EXPECT_EQ(fields[9].attr.logc_mm.min, -127);
+    EXPECT_EQ(fields[9].attr.logc_mm.max, 127);
+    EXPECT_EQ(fields[9].attr.phys_mm.min, 0);
+    EXPECT_EQ(fields[9].attr.phys_mm.max, 0);
+    EXPECT_EQ(expected_flags & fields[9].flags, expected_flags);
+
+    // Last comes 'Wheel' field.
+    EXPECT_EQ(fields[10].attr.usage.page, hid::usage::Page::kGenericDesktop);
+    EXPECT_EQ(fields[10].attr.usage.usage, hid::usage::GenericDesktop::kWheel);
+    EXPECT_EQ(fields[10].attr.bit_sz, 8);
+    EXPECT_EQ(fields[10].attr.logc_mm.min, -127);
+    EXPECT_EQ(fields[10].attr.logc_mm.max, 127);
+    EXPECT_EQ(fields[10].attr.phys_mm.min, 0);
+    EXPECT_EQ(fields[10].attr.phys_mm.max, 0);
+    EXPECT_EQ(expected_flags & fields[10].flags, expected_flags);
+
+    // Now test the collections.
+    // Inner collection is physical GeneticDesktop|Pointer.
+    auto collection = fields[0].col;
+    ASSERT_TRUE(collection != nullptr);
+    EXPECT_EQ(collection->type, hid::CollectionType::kPhysical);
+    EXPECT_EQ(collection->usage.page, hid::usage::Page::kGenericDesktop);
+    EXPECT_EQ(collection->usage.usage, hid::usage::GenericDesktop::kPointer);
+
+    // Outer collection is the application.
+    collection = collection->parent;
+    ASSERT_TRUE(collection != nullptr);
+    EXPECT_EQ(collection->type, hid::CollectionType::kApplication);
+    EXPECT_EQ(collection->usage.page, hid::usage::Page::kGenericDesktop);
+    EXPECT_EQ(collection->usage.usage, hid::usage::GenericDesktop::kMouse);
+
+    // No parent collection.
+    EXPECT_TRUE(collection->parent == nullptr);
 
     hid::FreeDeviceDescriptor(dev);
     END_TEST;
@@ -879,6 +970,7 @@ BEGIN_TEST_CASE(hidparser_tests)
 RUN_TEST(itemize_acer12_rpt1)
 RUN_TEST(itemize_eve_tablet_rpt)
 RUN_TEST(parse_boot_mouse)
+RUN_TEST(parse_hp_mouse)
 RUN_TEST(parse_push_pop)
 RUN_TEST(parse_adaf_trinket)
 RUN_TEST(parse_ps3_controller)
