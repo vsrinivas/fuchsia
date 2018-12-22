@@ -11,6 +11,7 @@ import (
 
 	"fidl/compiler/backend/cmdline"
 	"fidl/compiler/backend/cpp"
+	"fidl/compiler/backend/llcpp"
 	"fidl/compiler/backend/golang"
 	"fidl/compiler/backend/rust"
 	"fidl/compiler/backend/syzkaller"
@@ -23,6 +24,7 @@ type GenerateFidl interface {
 
 var generators = map[string]GenerateFidl{
 	"cpp":       cpp.NewFidlGenerator(),
+	"llcpp":     llcpp.NewFidlGenerator(),
 	"go":        golang.NewFidlGenerator(),
 	"rust":      rust.NewFidlGenerator(),
 	"syzkaller": syzkaller.FidlGenerator{},

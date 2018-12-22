@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"sort"
 	"strings"
 	"text/template"
@@ -30,6 +31,7 @@ type Decl interface {
 
 type Type struct {
 	Decl     string
+	LLDecl   string
 	Dtor     string
 	DeclType types.DeclType
 }
@@ -57,10 +59,13 @@ type EnumMember struct {
 
 type Union struct {
 	types.Attributes
-	Namespace string
-	Name      string
-	Members   []UnionMember
-	Size      int
+	Namespace    string
+	Name         string
+	TableType    string
+	Members      []UnionMember
+	Size         int
+	MaxHandles   int
+	MaxOutOfLine int
 }
 
 type UnionMember struct {
@@ -80,6 +85,8 @@ type Table struct {
 	Members        []TableMember
 	Size           int
 	BiggestOrdinal int
+	MaxHandles     int
+	MaxOutOfLine   int
 }
 
 type TableMember struct {
@@ -97,11 +104,13 @@ type TableMember struct {
 
 type Struct struct {
 	types.Attributes
-	Namespace string
-	Name      string
-	TableType string
-	Members   []StructMember
-	Size      int
+	Namespace    string
+	Name         string
+	TableType    string
+	Members      []StructMember
+	Size         int
+	MaxHandles   int
+	MaxOutOfLine int
 }
 
 type StructMember struct {
@@ -128,21 +137,25 @@ type Interface struct {
 
 type Method struct {
 	types.Attributes
-	Ordinal             types.Ordinal
-	OrdinalName         string
-	Name                string
-	HasRequest          bool
-	Request             []Parameter
-	RequestSize         int
-	RequestTypeName     string
-	HasResponse         bool
-	Response            []Parameter
-	ResponseSize        int
-	ResponseTypeName    string
-	CallbackType        string
-	ResponseHandlerType string
-	ResponderType       string
-	Transitional        bool
+	Ordinal              types.Ordinal
+	OrdinalName          string
+	Name                 string
+	HasRequest           bool
+	Request              []Parameter
+	RequestSize          int
+	RequestTypeName      string
+	RequestMaxHandles    int
+	RequestMaxOutOfLine  int
+	HasResponse          bool
+	Response             []Parameter
+	ResponseSize         int
+	ResponseTypeName     string
+	ResponseMaxHandles   int
+	ResponseMaxOutOfLine int
+	CallbackType         string
+	ResponseHandlerType  string
+	ResponderType        string
+	Transitional         bool
 }
 
 type Parameter struct {
@@ -154,6 +167,8 @@ type Parameter struct {
 type Root struct {
 	PrimaryHeader   string
 	Headers         []string
+	LLHeaders       []string
+	HandleTypes     []string
 	Library         types.LibraryIdentifier
 	LibraryReversed types.LibraryIdentifier
 	Decls           []Decl
@@ -268,7 +283,7 @@ func (i *Interface) Declaration(tmpls *template.Template, wr io.Writer) error {
 }
 
 func (i *Interface) Traits(tmpls *template.Template, wr io.Writer) error {
-	return nil
+	return tmpls.ExecuteTemplate(wr, "InterfaceTraits", i)
 }
 
 func (i *Interface) Definition(tmpls *template.Template, wr io.Writer) error {
@@ -382,6 +397,9 @@ var reservedWords = map[string]bool{
 	"while":            true,
 	"xor":              true,
 	"xor_eq":           true,
+	// names used in specific contexts e.g. union accessors
+	"which":            true,
+	"has_invalid_tag":  true,
 }
 
 var primitiveTypes = map[types.PrimitiveSubtype]string{
@@ -441,6 +459,7 @@ type compiler struct {
 	symbolPrefix string
 	decls        *types.DeclMap
 	library      types.LibraryIdentifier
+	handleTypes  map[types.HandleSubtype]bool
 }
 
 func (c *compiler) isInExternalLibrary(ci types.CompoundIdentifier) bool {
@@ -513,23 +532,30 @@ func (c *compiler) compileType(val types.Type) Type {
 	case types.ArrayType:
 		t := c.compileType(*val.ElementType)
 		r.Decl = fmt.Sprintf("::fidl::Array<%s, %v>", t.Decl, *val.ElementCount)
+		r.LLDecl = fmt.Sprintf("::fidl::ArrayWrapper<%s, %v>", t.LLDecl, *val.ElementCount)
 		r.Dtor = fmt.Sprintf("~Array")
 	case types.VectorType:
 		t := c.compileType(*val.ElementType)
 		r.Decl = fmt.Sprintf("::fidl::VectorPtr<%s>", t.Decl)
+		r.LLDecl = fmt.Sprintf("::fidl::VectorView<%s>", t.LLDecl)
 		r.Dtor = fmt.Sprintf("~VectorPtr")
 	case types.StringType:
 		r.Decl = "::fidl::StringPtr"
+		r.LLDecl = "::fidl::StringView"
 		r.Dtor = "~StringPtr"
 	case types.HandleType:
+		c.handleTypes[val.HandleSubtype] = true
 		r.Decl = fmt.Sprintf("::zx::%s", val.HandleSubtype)
+		r.LLDecl = r.Decl
 		r.Dtor = fmt.Sprintf("~%s", val.HandleSubtype)
 	case types.RequestType:
 		t := c.compileCompoundIdentifier(val.RequestSubtype, "")
 		r.Decl = fmt.Sprintf("::fidl::InterfaceRequest<%s>", t)
+		r.LLDecl = r.Decl
 		r.Dtor = "~InterfaceRequest"
 	case types.PrimitiveType:
 		r.Decl = c.compilePrimitiveSubtype(val.PrimitiveSubtype)
+		r.LLDecl = r.Decl
 	case types.IdentifierType:
 		t := c.compileCompoundIdentifier(val.Identifier, "")
 		declType, ok := (*c.decls)[val.Identifier]
@@ -548,13 +574,16 @@ func (c *compiler) compileType(val types.Type) Type {
 		case types.UnionDeclType:
 			if val.Nullable {
 				r.Decl = fmt.Sprintf("::std::unique_ptr<%s>", t)
+				r.LLDecl = fmt.Sprintf("%s*", t)
 				r.Dtor = fmt.Sprintf("~unique_ptr")
 			} else {
 				r.Decl = t
+				r.LLDecl = r.Decl
 				r.Dtor = formatDestructor(val.Identifier)
 			}
 		case types.InterfaceDeclType:
 			r.Decl = fmt.Sprintf("::fidl::InterfaceHandle<%s>", t)
+			r.LLDecl = r.Decl
 			r.Dtor = fmt.Sprintf("~InterfaceHandle")
 		default:
 			log.Fatal("Unknown declaration type: ", declType)
@@ -622,6 +651,30 @@ func (c *compiler) compileParameterArray(val []types.Parameter) []Parameter {
 	return r
 }
 
+func (c *compiler) maxHandlesFromParameterArray(val []types.Parameter) int {
+	numHandles := int64(0)
+	for _, v := range val {
+		numHandles += int64(v.MaxHandles)
+	}
+	if numHandles > math.MaxUint32 {
+		return math.MaxUint32
+	} else {
+		return int(numHandles)
+	}
+}
+
+func (c *compiler) maxOutOfLineFromParameterArray(val []types.Parameter) int {
+	maxOutOfLine := int64(0)
+	for _, v := range val {
+		maxOutOfLine += int64(v.MaxOutOfLine)
+	}
+	if maxOutOfLine > math.MaxUint32 {
+		return math.MaxUint32
+	} else {
+		return int(maxOutOfLine)
+	}
+}
+
 func (c *compiler) compileInterface(val types.Interface) Interface {
 	r := Interface{
 		Attributes:      val.Attributes,
@@ -657,10 +710,14 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 			c.compileParameterArray(v.Request),
 			v.RequestSize,
 			fmt.Sprintf("%s_%s%sRequestTable", c.symbolPrefix, r.Name, v.Name),
+			c.maxHandlesFromParameterArray(v.Request),
+			c.maxOutOfLineFromParameterArray(v.Request),
 			v.HasResponse,
 			c.compileParameterArray(v.Response),
 			v.ResponseSize,
 			fmt.Sprintf("%s_%s%s%s", c.symbolPrefix, r.Name, v.Name, responseTypeNameSuffix),
+			c.maxHandlesFromParameterArray(v.Response),
+			c.maxOutOfLineFromParameterArray(v.Response),
 			callbackType,
 			fmt.Sprintf("%s_%s_ResponseHandler", r.Name, v.Name),
 			fmt.Sprintf("%s_%s_Responder", r.Name, v.Name),
@@ -698,6 +755,8 @@ func (c *compiler) compileStruct(val types.Struct) Struct {
 		fmt.Sprintf("%s_%sTable", c.symbolPrefix, name),
 		[]StructMember{},
 		val.Size,
+		val.MaxHandles,
+		val.MaxOutOfLine,
 	}
 
 	for _, v := range val.Members {
@@ -786,12 +845,16 @@ func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 }
 
 func (c *compiler) compileUnion(val types.Union) Union {
+	name := c.compileCompoundIdentifier(val.Name, "")
 	r := Union{
 		val.Attributes,
 		c.namespace,
-		c.compileCompoundIdentifier(val.Name, ""),
+		name,
+		fmt.Sprintf("%s_%sTable", c.symbolPrefix, name),
 		[]UnionMember{},
 		val.Size,
+		val.MaxHandles,
+		val.MaxOutOfLine,
 	}
 
 	for _, v := range val.Members {
@@ -809,6 +872,7 @@ func Compile(r types.Root) Root {
 		formatLibraryPrefix(library),
 		&r.Decls,
 		types.ParseLibraryName(r.Name),
+		make(map[types.HandleSubtype]bool),
 	}
 
 	root.Library = library
@@ -869,7 +933,16 @@ func Compile(r types.Root) Root {
 		libraryIdent := types.ParseLibraryName(l.Name)
 		h := fmt.Sprintf("%s/cpp/fidl.h", formatLibraryPath(libraryIdent))
 		root.Headers = append(root.Headers, h)
+		h = fmt.Sprintf("%s/llcpp/fidl.h", formatLibraryPath(libraryIdent))
+		root.LLHeaders = append(root.LLHeaders, h)
 	}
+
+	// find all unique handle types referenced by the library
+	var handleTypes []string
+	for k := range c.handleTypes {
+		handleTypes = append(handleTypes, string(k))
+	}
+	root.HandleTypes = handleTypes
 
 	return root
 }

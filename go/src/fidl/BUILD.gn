@@ -38,6 +38,12 @@ go_test("fidlgen_cpp_test") {
   deps = [ ":fidl_lib" ]
 }
 
+go_test("fidlgen_llcpp_test") {
+  gopackage = "fidl/compiler/backend/llcpp"
+
+  deps = [ ":fidl_lib" ]
+}
+
 go_test("fidlgen_cpp_ir_test") {
   gopackage = "fidl/compiler/backend/cpp/ir"
 

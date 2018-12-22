@@ -312,28 +312,32 @@ func (el Attributes) DocComments() []string {
 // Union represents the declaration of a FIDL union.
 type Union struct {
 	Attributes
-	Name       EncodedCompoundIdentifier `json:"name"`
-	Members    []UnionMember             `json:"members"`
-	Size       int                       `json:"size"`
-	Alignment  int                       `json:"alignment"`
-	MaxHandles int                       `json:"max_handles"`
+	Name         EncodedCompoundIdentifier `json:"name"`
+	Members      []UnionMember             `json:"members"`
+	Size         int                       `json:"size"`
+	Alignment    int                       `json:"alignment"`
+	MaxHandles   int                       `json:"max_handles"`
+	MaxOutOfLine int                       `json:"max_out_of_line"`
 }
 
 // UnionMember represents the declaration of a field in a FIDL union.
 type UnionMember struct {
 	Attributes
-	Type   Type       `json:"type"`
-	Name   Identifier `json:"name"`
-	Offset int        `json:"offset"`
+	Type         Type       `json:"type"`
+	Name         Identifier `json:"name"`
+	Offset       int        `json:"offset"`
+	MaxOutOfLine int        `json:"max_out_of_line"`
 }
 
 // Table represents a declaration of a FIDL table.
 type Table struct {
 	Attributes
-	Name      EncodedCompoundIdentifier `json:"name"`
-	Members   []TableMember             `json:"members"`
-	Size      int                       `json:"size"`
-	Alignment int                       `json:"alignment"`
+	Name         EncodedCompoundIdentifier `json:"name"`
+	Members      []TableMember             `json:"members"`
+	Size         int                       `json:"size"`
+	Alignment    int                       `json:"alignment"`
+	MaxHandles   int                       `json:"max_handles"`
+	MaxOutOfLine int                       `json:"max_out_of_line"`
 }
 
 // TableMember represents the declaration of a field in a FIDL table.
@@ -344,16 +348,18 @@ type TableMember struct {
 	Name              Identifier `json:"name"`
 	Ordinal           int        `json:"ordinal"`
 	MaybeDefaultValue *Constant  `json:"maybe_default_value,omitempty"`
+	MaxOutOfLine      int        `json:"max_out_of_line"`
 }
 
 // Struct represents a declaration of a FIDL struct.
 type Struct struct {
 	Attributes
-	Name       EncodedCompoundIdentifier `json:"name"`
-	Members    []StructMember            `json:"members"`
-	Size       int                       `json:"size"`
-	Alignment  int                       `json:"alignment"`
-	MaxHandles int                       `json:"max_handles"`
+	Name         EncodedCompoundIdentifier `json:"name"`
+	Members      []StructMember            `json:"members"`
+	Size         int                       `json:"size"`
+	Alignment    int                       `json:"alignment"`
+	MaxHandles   int                       `json:"max_handles"`
+	MaxOutOfLine int                       `json:"max_out_of_line"`
 }
 
 // StructMember represents the declaration of a field in a FIDL struct.
@@ -364,6 +370,7 @@ type StructMember struct {
 	Offset            int        `json:"offset"`
 	MaybeDefaultValue *Constant  `json:"maybe_default_value,omitempty"`
 	MaxHandles        int        `json:"max_handles"`
+	MaxOutOfLine      int        `json:"max_out_of_line"`
 }
 
 // EmptyStructMember returns a StructMember that's suitable as the sole member
@@ -431,12 +438,14 @@ func (m *Method) IsTransitional() bool {
 
 // Parameter represents a parameter to a FIDL method.
 type Parameter struct {
-	Type   Type       `json:"type"`
-	Name   Identifier `json:"name"`
-	Offset int        `json:"offset"`
+	Type         Type       `json:"type"`
+	Name         Identifier `json:"name"`
+	Offset       int        `json:"offset"`
+	MaxHandles   int        `json:"max_handles"`
+	MaxOutOfLine int        `json:"max_out_of_line"`
 }
 
-// Enum represents a FIDL delcaration of an enum.
+// Enum represents a FIDL declaration of an enum.
 type Enum struct {
 	Attributes
 	Type    PrimitiveSubtype          `json:"type"`

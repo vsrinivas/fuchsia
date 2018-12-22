@@ -90,6 +90,7 @@ func TestCompileInterface(t *testing.T) {
 							{
 								Type: Type{
 									Decl: "int16_t",
+									LLDecl: "int16_t",
 								},
 								Name:   "Value",
 								Offset: 0,
@@ -97,10 +98,12 @@ func TestCompileInterface(t *testing.T) {
 						},
 						RequestSize:         18,
 						RequestTypeName:     "_TestFirstRequestTable",
+						RequestMaxHandles:   0,
 						HasResponse:         false,
 						Response:            []Parameter{},
 						ResponseSize:        0,
 						ResponseTypeName:    "_TestFirstResponseTable",
+						ResponseMaxHandles:  0,
 						CallbackType:        "",
 						ResponseHandlerType: "Test_First_ResponseHandler",
 						ResponderType:       "Test_First_Responder",
@@ -113,20 +116,23 @@ func TestCompileInterface(t *testing.T) {
 						Request: []Parameter{
 							{
 								Type: Type{
-									Decl: "::fidl::StringPtr",
-									Dtor: "~StringPtr",
+									Decl:   "::fidl::StringPtr",
+									LLDecl: "::fidl::StringView",
+									Dtor:   "~StringPtr",
 								},
 								Name:   "Value",
 								Offset: 0,
 							},
 						},
-						RequestSize:     32,
-						RequestTypeName: "_TestSecondRequestTable",
-						HasResponse:     true,
+						RequestSize:       32,
+						RequestTypeName:   "_TestSecondRequestTable",
+						RequestMaxHandles: 0,
+						HasResponse:       true,
 						Response: []Parameter{
 							{
 								Type: Type{
-									Decl: "uint32_t",
+									Decl:   "uint32_t",
+									LLDecl: "uint32_t",
 								},
 								Name:   "Value",
 								Offset: 0,
@@ -134,6 +140,7 @@ func TestCompileInterface(t *testing.T) {
 						},
 						ResponseSize:        20,
 						ResponseTypeName:    "_TestSecondResponseTable",
+						ResponseMaxHandles:  0,
 						CallbackType:        "SecondCallback",
 						ResponseHandlerType: "Test_Second_ResponseHandler",
 						ResponderType:       "Test_Second_Responder",
@@ -203,10 +210,12 @@ func TestCompileTable(t *testing.T) {
 				Name:           "Test",
 				TableType:      "_TestTable",
 				BiggestOrdinal: 2,
+				MaxHandles:     0,
 				Members: []TableMember{
 					{
 						Type: Type{
 							Decl:     "int64_t",
+							LLDecl:   "int64_t",
 							Dtor:     "",
 							DeclType: "",
 						},

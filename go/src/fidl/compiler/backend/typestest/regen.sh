@@ -22,6 +22,8 @@ for src_path in `find "${EXAMPLE_DIR}" -name '*.fidl'`; do
     cpp_header_name=${json_name}.h
     cpp_test_header_name=${json_name}_test_base.h
     cpp_source_name=${json_name}.cc
+    llcpp_header_name=${json_name}.llcpp.h
+    llcpp_source_name=${json_name}.llcpp.cpp
     go_impl_name=${json_name}.go
     rust_name=${json_name}.rs
 
@@ -41,6 +43,15 @@ for src_path in `find "${EXAMPLE_DIR}" -name '*.fidl'`; do
     mv "${EXAMPLE_DIR}/${cpp_header_name}" "${EXAMPLE_DIR}/${cpp_header_name}.golden"
     mv "${EXAMPLE_DIR}/${cpp_source_name}" "${EXAMPLE_DIR}/${cpp_source_name}.golden"
     mv "${EXAMPLE_DIR}/${cpp_test_header_name}" "${EXAMPLE_DIR}/${cpp_test_header_name}.golden"
+
+    echo "  llcpp: ${json_name} > ${llcpp_header_name} and ${llcpp_source_name}"
+    ${FIDLGEN} \
+        -generators llcpp \
+        -json "${EXAMPLE_DIR}/${json_name}" \
+        -output-base "${EXAMPLE_DIR}/${json_name}.llcpp" \
+        -include-base "${EXAMPLE_DIR}"
+    mv "${EXAMPLE_DIR}/${llcpp_header_name}" "${EXAMPLE_DIR}/${llcpp_header_name}.golden"
+    mv "${EXAMPLE_DIR}/${llcpp_source_name}" "${EXAMPLE_DIR}/${llcpp_source_name}.golden"
 
     echo "  go: ${json_name} > ${go_impl_name}"
     ${FIDLGEN} \

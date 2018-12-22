@@ -437,6 +437,9 @@ zx_status_t {{ $.SyncProxyName }}::{{ template "SyncRequestMethodSignature" . }}
 
 {{ end }}
 
+{{- define "InterfaceTraits" }}
+{{- end }}
+
 {{- define "InterfaceTestBase" }}
 class {{ .Name }}_TestBase : public {{ .Name }} {
   public:
