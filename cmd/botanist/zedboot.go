@@ -335,8 +335,10 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs []botanist.Image, 
 		Zone: addr.Zone,
 	}
 
-	// TODO(INTK-736): Delete condition of fvmImage being empty after transition.
-	if cmd.netboot || cmd.fvmImage == "" {
+	// TODO(INTK-736): Delete condition on fvm after transition.
+	fvm := botanist.GetImage(imgs, "storage-sparse")
+	fvmSupplied := fvm != nil && fvm.Path != ""
+	if cmd.netboot || !fvmSupplied {
 		err = botanist.Netboot(ctx, t, tftpAddr, imgs, cmdlineArgs, "")
 	} else {
 		err = botanist.Pave(ctx, t, tftpAddr, imgs, cmdlineArgs, "")

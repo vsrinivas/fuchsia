@@ -250,7 +250,11 @@ func (cmd *QEMUCommand) execute(ctx context.Context, cmdlineArgs []string) error
 	}
 
 	storageFull := botanist.GetImage(imgs, "storage-full")
-	if storageFull != nil {
+	// TODO(INTK-736): Remove condition on storage-full path being nonempty
+	// after the transition. It is needed for the case where we construct the
+	// images from flags, but the storage-full flag is not passed.
+	// while the path is empty
+	if storageFull != nil && storageFull.Path != "" {
 		qemuImgToolPath := filepath.Join(cmd.qemuBinDir, qemuImgTool)
 		qcowDir, err := ioutil.TempDir("", "qcow-dir")
 		if err != nil {
