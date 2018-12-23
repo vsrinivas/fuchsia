@@ -22,9 +22,13 @@
 #
 #   export STYLE_WARNING="--stderr --faint --dark_red --background dark_yellow"
 #
+# Visual tests (and demonstration of capabilities) can be run from:
+#   //scripts/tests/style-test-visually
 
 # This script should be sourced. It is compatible with Bash 3.
 # MacOS still comes with Bash 3, so unfortunately no associative arrays.
+
+STYLE_TO_TTY_ONLY=false  # Set to true to suppress styling if output is redirected
 
 [[ "${STYLE_ERROR}" != "" ]] || STYLE_ERROR="--stderr --bold --color red"
 [[ "${STYLE_WARNING}" != "" ]] || STYLE_WARNING="--stderr --bold --color dark_yellow"
@@ -57,6 +61,53 @@ declare -i TERM_COLORS__magenta=95
 declare -i TERM_COLORS__pink=95
 declare -i TERM_COLORS__cyan=96
 declare -i TERM_COLORS__white=97
+
+style::colors() {
+  set | sed -n "s/^TERM_COLORS__\([^=]*\)=.*$/\1/p" >&2
+}
+
+style::attributes() {
+  set | sed -n "s/^TERM_ATTRIBUTES__\([^=]*\)=.*$/--\1/p" >&2
+}
+
+style::usage() {
+  local help_option="$1"; shift
+  if [[ "${help_option}" == "colors" ]]; then
+    style::colors
+    return
+  elif [[ "${help_option}" == "attributes" ]]; then
+    style::attributes
+    return
+  fi
+  local function_call="$1"
+  local -a words=( $function_call )
+  local funcname="${words[0]}"
+  local command="$2"
+  local specifics="$3"
+
+  >&2 echo "
+Usage: ${function_call} [style options] [command parameters]"
+
+  if [[ "${specifics}" != "" ]]; then
+    >&2 echo "
+${specifics}"
+  fi
+  >&2 cat << EOF
+
+style options include:
+  --bold, --faint, --underline, etc.
+  --color <color_name>
+  --background <color_name>
+  --stderr (output to standard error instead of standard out)
+
+  echo "This is \$(style::echo -f --bold LOUD) and soft."
+
+command parameters are those supported by the ${command} command.
+
+Use ${funcname} --help colors for a list of colors or backgrounds
+Use ${funcname} --help attributes for a list of style attribute flags
+EOF
+}
 
 style::attribute() {
   local name="$1"
@@ -98,10 +149,19 @@ style::background() {
   echo $((10+${color}))
 }
 
-_STYLE_RESET="\033[0m"
-
 style::stylize() {
+  if [[ "$1" == --* || "$1" == "" ]]; then
+    style::usage "$2" "${FUNCNAME[0]} <command>" "stylized" "\
+<command> is any command with output to stylize, followed by style options,
+and then the command's normal parameters."
+    return
+  fi
+
   local command="$1"; shift
+  if [[ "$1" == "--help" ]]; then
+    style::usage "$2" "style::${command}" "'${command}'"
+    return
+  fi
 
   local get_flags=true
   local -i fd=1
@@ -114,6 +174,10 @@ style::stylize() {
     case "$1" in
       --stderr)
         fd=2
+        shift
+        ;;
+      --stdout)
+        fd=1
         shift
         ;;
       --color)
@@ -150,33 +214,36 @@ style::stylize() {
     esac
   done
 
-  local status=0
-
-  if [ ! -t $fd ]; then
+  if [ ! -t ${fd} ] && ${STYLE_TO_TTY_ONLY}; then
     # Output is not to a TTY so don't stylize
-    >&${fd} "${command}" "$@" || status=$?
-    return $status
+    >&${fd} "${command}" "$@" || return $?
+    return 0
   fi
 
   local if_newline=''
   local text
+
   # Add placeholder (.) so command substitution doesn't strip trailing newlines
-  text="$("${command}" "$@" || exit $?;echo '.')" || status=$?
+  text="$("${command}" "$@" || exit $?;echo -n '.')" || return $?
+
   local -i len=$((${#text}-2))
   if [[ "${text:$len:1}" == $'\n' ]]; then
+    # Save last newline to add back after styling.
     if_newline='\n'
   else
     ((len++))
   fi
-  # Strip trailing newline, if any, and placeholder
-  # Last newline should not be stylized.
-  # TODO(richkadel): We may want to remove style from all newlines.
-  # Background color looks odd when newlines are styled.
+  # Strip trailing newline, if any, and placeholder.
   text="${text:0:$((len))}"
 
-  >&${fd} printf "\033[${styles}m%s${_STYLE_RESET}${if_newline}" "${text}"
+  # Style everything except newlines, otherwise background color highlights
+  # entire line. Add extra line with a character so sed does not add it's own
+  # last newline, then delete the line after substitutions.
+  local styled=$(printf '%s\n.' "${text}" | sed -e $'s/$/\033[0m/;s/^/\033['"${styles}"'m/;$d')
 
-  return $status
+  >&${fd} printf "%s${if_newline}" "${styled}"
+
+  return 0
 }
 
 style::echo() {
@@ -191,18 +258,32 @@ style::printf() {
   style::stylize "${FUNCNAME[0]:7}" "$@" || return $?
 }
 
+style::_echo_with_styles() {
+  local funcname="$1";shift
+  local style_options="$1";shift
+  if [[ "$1" == "--help" ]]; then
+
+    style::usage "$2" "${funcname}" "echo" "\
+Default style options for ${funcname}:
+  $(style::echo ${style_options} --stdout \"${style_options}\")"
+
+    return
+  fi
+  style::echo ${style_options} "$@" || return $?
+}
+
 style::error() {
-  style::echo ${STYLE_ERROR} "$@" || return $?
+  style::_echo_with_styles "${FUNCNAME[0]}" "${STYLE_ERROR}" "$@" || return $?
 }
 
 style::warning() {
-  style::echo ${STYLE_WARNING} "$@" || return $?
+  style::_echo_with_styles "${FUNCNAME[0]}" "${STYLE_WARNING}" "$@" || return $?
 }
 
 style::info() {
-  style::echo ${STYLE_INFO} "$@" || return $?
+  style::_echo_with_styles "${FUNCNAME[0]}" "${STYLE_INFO}" "$@" || return $?
 }
 
 style::link() {
-  style::echo ${STYLE_LINK} "$@" || return $?
+  style::_echo_with_styles "${FUNCNAME[0]}" "${STYLE_LINK}" "$@" || return $?
 }
