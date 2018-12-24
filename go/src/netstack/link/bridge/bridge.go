@@ -16,7 +16,7 @@ var _ stack.LinkEndpoint = (*endpoint)(nil)
 var _ stack.NetworkDispatcher = (*endpoint)(nil)
 
 type endpoint struct {
-	links           []stack.LinkEndpoint
+	links           map[tcpip.LinkAddress]*BridgeableEndpoint
 	dispatcher      stack.NetworkDispatcher
 	mtu             uint32
 	capabilities    stack.LinkEndpointCapabilities
@@ -24,15 +24,17 @@ type endpoint struct {
 	linkAddress     tcpip.LinkAddress
 }
 
-// New creates a new link from a list of links.  The new link will
-// have the minumum of the MTUs, the maximum of the max header
-// lengths, and minimum set of the capabilities.  This function takes
-// ownership of the argument.
-func New(links []stack.LinkEndpoint) stack.LinkEndpoint {
+// New creates a new link from a list of BridgeableEndpoints that bridges
+// packets written to it and received from any of its constituent links.
+//
+// The new link will have the minumum of the MTUs, the maximum of the max
+// header lengths, and minimum set of the capabilities.  This function takes
+// ownership of `links`.
+func New(links []*BridgeableEndpoint) stack.LinkEndpoint {
 	sort.Slice(links, func(i, j int) bool {
 		return strings.Compare(string(links[i].LinkAddress()), string(links[j].LinkAddress())) > 0
 	})
-	ep := &endpoint{links: links}
+	ep := &endpoint{links: make(map[tcpip.LinkAddress]*BridgeableEndpoint)}
 	h := fnv.New64()
 	if len(links) > 0 {
 		l := links[0]
@@ -41,7 +43,9 @@ func New(links []stack.LinkEndpoint) stack.LinkEndpoint {
 		ep.maxHeaderLength = l.MaxHeaderLength()
 	}
 	for _, l := range links {
-		// Only capabilities that exist on all the link endpoints should be reported.
+		linkAddress := l.LinkAddress()
+		ep.links[linkAddress] = l
+		// Only capabilities that exist on all the links should be reported.
 		ep.capabilities = CombineCapabilities(ep.capabilities, l.Capabilities())
 		if mtu := l.MTU(); mtu < ep.mtu {
 			ep.mtu = mtu
@@ -51,7 +55,7 @@ func New(links []stack.LinkEndpoint) stack.LinkEndpoint {
 		if maxHeaderLength := l.MaxHeaderLength(); maxHeaderLength > ep.maxHeaderLength {
 			ep.maxHeaderLength = maxHeaderLength
 		}
-		if _, err := h.Write([]byte(l.LinkAddress())); err != nil {
+		if _, err := h.Write([]byte(linkAddress)); err != nil {
 			panic(err)
 		}
 	}
@@ -99,9 +103,11 @@ func (ep *endpoint) WritePacket(r *stack.Route, hdr buffer.Prependable, payload 
 }
 
 func (ep *endpoint) Attach(d stack.NetworkDispatcher) {
+	// The value passed to attach is the bridge's own network dispatcher.
+	// Packets addressed to the bridge's link address should be delegated to it.
 	ep.dispatcher = d
 	for _, l := range ep.links {
-		l.Attach(ep)
+		l.SetBridge(ep)
 	}
 }
 
@@ -110,36 +116,51 @@ func (ep *endpoint) IsAttached() bool {
 }
 
 func (ep *endpoint) DeliverNetworkPacket(rxEP stack.LinkEndpoint, srcLinkAddr, dstLinkAddr tcpip.LinkAddress, p tcpip.NetworkProtocolNumber, vv buffer.VectorisedView) {
-	for _, l := range ep.links {
-		if dstLinkAddr == l.LinkAddress() {
-			// The destination of the packet is this port on the bridge.  We
-			// assume that the MAC address is unique.
-			ep.dispatcher.DeliverNetworkPacket(l, srcLinkAddr, dstLinkAddr, p, vv)
+	broadcast := false
+
+	switch dstLinkAddr {
+	case "\xff\xff\xff\xff\xff\xff":
+		broadcast = true
+	case ep.linkAddress:
+		ep.dispatcher.DeliverNetworkPacket(ep, srcLinkAddr, dstLinkAddr, p, vv)
+		return
+	default:
+		if l, ok := ep.links[dstLinkAddr]; ok {
+			l.Dispatcher().DeliverNetworkPacket(l, srcLinkAddr, dstLinkAddr, p, vv)
 			return
 		}
 	}
 
+	// The bridge `ep` isn't included in ep.links below and we don't want to write
+	// out of rxEP, otherwise the rest of this function would just be
+	// "ep.WritePacket and if broadcast, also deliver to ep.links."
+	if broadcast {
+		ep.dispatcher.DeliverNetworkPacket(ep, srcLinkAddr, dstLinkAddr, p, vv)
+	}
+
 	payload := vv
 	hdr := buffer.NewPrependableFromView(payload.First())
-	payload.RemoveFirst()
+	payload.RemoveFirst() // doesn't mutate vv
 
-	// None of the links is the destination so forward to all links, like a hub.
+	// NB: This isn't really a valid Route; Route is a public type but cannot
+	// be instantiated fully outside of the stack package, because its
+	// underlying referencedNetworkEndpoint cannot be accessed.
+	// This means that methods on Route that depend on accessing the
+	// underlying LinkEndpoint like MTU() will panic, but it would be
+	// extremely strange for the LinkEndpoint we're calling WritePacket on to
+	// access itself so indirectly.
+	r := stack.Route{LocalLinkAddress: srcLinkAddr, RemoteLinkAddress: dstLinkAddr, NetProto: p}
+
 	// TODO(NET-690): Learn which destinations are on which links and restrict transmission, like a bridge.
-	for _, l := range ep.links {
-		if l == rxEP {
-			// Don't send back to the interface from which the frame arrived
-			// because that causes interoperability issues with a router.
-			continue
+	rxaddr := rxEP.LinkAddress()
+	for linkaddr, l := range ep.links {
+		if broadcast {
+			l.Dispatcher().DeliverNetworkPacket(l, srcLinkAddr, dstLinkAddr, p, vv)
 		}
-		// NB: This isn't really a valid Route; Route is a public type but cannot
-		// be instantiated fully outside of the stack package, because its
-		// underlying referencedNetworkEndpoint cannot be accessed.
-		// This means that methods on Route that depend on accessing the
-		// underlying LinkEndpoint like MTU() will panic, but it would be
-		// extremely strange for the LinkEndpoint we're calling WritePacket on to
-		// access itself so indirectly.
-		r := stack.Route{LocalLinkAddress: srcLinkAddr, RemoteLinkAddress: dstLinkAddr, NetProto: p}
-
-		l.WritePacket(&r, hdr, payload, p)
+		// Don't write back out interface from which the frame arrived
+		// because that causes interoperability issues with a router.
+		if linkaddr != rxaddr {
+			l.WritePacket(&r, hdr, payload, p)
+		}
 	}
 }

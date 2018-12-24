@@ -89,6 +89,8 @@ type ifState struct {
 
 	// LinkEndpoint responsible to track traffic statistics
 	statsEP stats.StatsEndpoint
+
+	bridgeable bridge.BridgeableEndpoint
 }
 
 func defaultRouteTable(nicid tcpip.NICID, gateway tcpip.Address) []tcpip.Route {
@@ -444,7 +446,7 @@ func (ns *Netstack) addLoopback() error {
 
 func (ns *Netstack) Bridge(nics []tcpip.NICID) (*ifState, error) {
 	// TODO(stijlist): save bridge in netstack state as NetInterface
-	links := make([]stack.LinkEndpoint, 0, len(nics))
+	links := make([]*bridge.BridgeableEndpoint, 0, len(nics))
 	for _, nicid := range nics {
 		nic, ok := ns.ifStates[nicid]
 		if !ok {
@@ -453,7 +455,7 @@ func (ns *Netstack) Bridge(nics []tcpip.NICID) (*ifState, error) {
 		if err := nic.eth.SetPromiscuousMode(true); err != nil {
 			return nil, err
 		}
-		links = append(links, &nic.statsEP)
+		links = append(links, &nic.bridgeable)
 	}
 
 	return ns.addEndpoint(func(*ifState) (stack.LinkEndpoint, error) {
@@ -530,8 +532,8 @@ func (ns *Netstack) addEndpoint(makeEndpoint func(*ifState) (stack.LinkEndpoint,
 	}
 
 	linkID = filter.NewEndpoint(ns.filter, linkID)
-
 	linkID = ifs.statsEP.Wrap(linkID)
+	linkID = ifs.bridgeable.Wrap(linkID)
 
 	ns.mu.Lock()
 	ifs.nic.Ipv6addrs = []tcpip.Address{lladdr}
