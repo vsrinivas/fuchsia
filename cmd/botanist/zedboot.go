@@ -124,7 +124,7 @@ func (cmd *ZedbootCommand) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&cmd.cmdlineFile, "cmdline-file", "", "path to a file containing additional kernel command-line arguments")
 	f.StringVar(&cmd.fastbootTool, "fastboot-tool", "./fastboot/fastboot", "path to the fastboot tool.")
 	f.BoolVar(&cmd.fastboot, "fastboot", false, "If set, -fastboot-tool will be used to put the device into zedboot before "+
-		"doing anything else. Must be set together with -zedboot")
+		"doing anything else. A zedboot image must also be supplied via -images or -zedboot")
 	f.StringVar(&cmd.hackyHostCommand, "hacky-host-cmd", "", "host command to run after paving. To be removed on completion of IN-831")
 }
 
@@ -508,14 +508,14 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 	} else {
 		imgs = cmd.getImagesFromFlags()
 	}
-	zirconR := botanist.GetImage(imgs, "zircon-r")
-	if zirconR == nil {
-		return fmt.Errorf("zircon-r not provided")
-	}
-
 	errs := make(chan error)
 	go func() {
 		if cmd.fastboot {
+			zirconR := botanist.GetImage(imgs, "zircon-r")
+			if zirconR == nil {
+				errs <- fmt.Errorf("zircon-r not provided")
+				return
+			}
 			if err := cmd.fastbootToZedboot(ctx, zirconR.Path); err != nil {
 				errs <- err
 				return
@@ -539,10 +539,6 @@ func (cmd *ZedbootCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...in
 	log.Printf("properties flag: %v", propertiesFlag.Value)
 
 	if cmd.fastboot {
-		if cmd.zedbootImage == "" {
-			log.Print("-fastboot is set but -zedboot is not")
-			return subcommands.ExitFailure
-		}
 		if cmd.fastbootTool == "" {
 			log.Print("-fastboot is set but -fastboot-tool is empty")
 			return subcommands.ExitFailure
