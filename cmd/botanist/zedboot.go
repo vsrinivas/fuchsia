@@ -42,26 +42,8 @@ type ZedbootCommand struct {
 	// ImageManifests is a list of paths to image manifests (e.g., images.json)
 	imageManifests botanist.StringsFlag
 
-	// NoPave tells botanist not to pave.
+	// Netboot tells botanist to netboot (and not to pave).
 	netboot bool
-
-	// KernelImage is the path to a kernel image.
-	kernelImage string
-
-	// RamdiskImage is the path to a ramdisk image.
-	ramdiskImage string
-
-	// EfiImage is the path to an EFI image.
-	efiImage string
-
-	// KerncImage is the path to a kernc image.
-	kerncImage string
-
-	// FVMImage is the path to a sparse fvm image to be paved.
-	fvmImage string
-
-	// ZedbootImage is the path to the zedboot image.
-	zedbootImage string
 
 	// PropertiesFile is the path to a file where deviceProperties have been written.
 	propertiesFile string
@@ -110,12 +92,6 @@ func (*ZedbootCommand) Synopsis() string {
 func (cmd *ZedbootCommand) SetFlags(f *flag.FlagSet) {
 	f.Var(&cmd.imageManifests, "images", "paths to image manifests")
 	f.BoolVar(&cmd.netboot, "netboot", false, "if set, botanist will not pave; but will netboot instead")
-	f.StringVar(&cmd.kernelImage, "kernel", "", "path to kernel image")
-	f.StringVar(&cmd.ramdiskImage, "ramdisk", "", "path to ramdisk image")
-	f.StringVar(&cmd.efiImage, "efi", "", "path to EFI image to be paved")
-	f.StringVar(&cmd.kerncImage, "kernc", "", "path to kernc image to be paved")
-	f.StringVar(&cmd.fvmImage, "fvm", "", "path to a sparse FVM image to be paved")
-	f.StringVar(&cmd.zedbootImage, "zedboot", "", "path to zedboot image to be flashed. Must be set together with -fastboot")
 	f.StringVar(&cmd.testResultsDir, "results-dir", "/test", "path on target to where test results will be written")
 	f.StringVar(&cmd.outputArchive, "out", "output.tar", "path on host to output tarball of test results")
 	f.StringVar(&cmd.summaryFilename, "summary-name", botanist.TestSummaryFilename, "name of the file in the test directory")
@@ -124,41 +100,8 @@ func (cmd *ZedbootCommand) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&cmd.cmdlineFile, "cmdline-file", "", "path to a file containing additional kernel command-line arguments")
 	f.StringVar(&cmd.fastbootTool, "fastboot-tool", "./fastboot/fastboot", "path to the fastboot tool.")
 	f.BoolVar(&cmd.fastboot, "fastboot", false, "If set, -fastboot-tool will be used to put the device into zedboot before "+
-		"doing anything else. A zedboot image must also be supplied via -images or -zedboot")
+		"doing anything else. A zedboot image must also be supplied via -images")
 	f.StringVar(&cmd.hackyHostCommand, "hacky-host-cmd", "", "host command to run after paving. To be removed on completion of IN-831")
-}
-
-// TODO(INTK-736): Temporary measure. Delete along with flags when botanist is only
-// passing image manifests, and not a flat list of flags.
-// Note that this function reverse engineers the current recipe logic.
-func (cmd *ZedbootCommand) getImagesFromFlags() []botanist.Image {
-	return []botanist.Image{
-		{
-			Name:     "zircon-a",
-			Path:     cmd.kernelImage,
-			PaveArgs: []string{"--boot"},
-		},
-		{
-			Name:        "netboot",
-			Path:        cmd.kernelImage,
-			NetbootArgs: []string{"--boot"},
-		},
-		{
-			Name:     "efi",
-			Path:     cmd.efiImage,
-			PaveArgs: []string{"--efi"},
-		},
-		{
-			Name:     "storage-sparse",
-			Path:     cmd.fvmImage,
-			PaveArgs: []string{"--fvm"},
-		},
-		{
-			Name:     "zircon-r",
-			Path:     cmd.zedbootImage,
-			PaveArgs: []string{"--zircon-r"},
-		},
-	}
 }
 
 // Creates TAR archive from existing file or directory(recursive).
@@ -335,10 +278,7 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs []botanist.Image, 
 		Zone: addr.Zone,
 	}
 
-	// TODO(INTK-736): Delete condition on fvm after transition.
-	fvm := botanist.GetImage(imgs, "storage-sparse")
-	fvmSupplied := fvm != nil && fvm.Path != ""
-	if cmd.netboot || !fvmSupplied {
+	if cmd.netboot {
 		err = botanist.Netboot(ctx, t, tftpAddr, imgs, cmdlineArgs, "")
 	} else {
 		err = botanist.Pave(ctx, t, tftpAddr, imgs, cmdlineArgs, "")
@@ -502,11 +442,9 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGTERM)
 
-	var imgs []botanist.Image
-	if len(cmd.imageManifests) > 0 {
-		imgs, _ = botanist.LoadImages(cmd.imageManifests...)
-	} else {
-		imgs = cmd.getImagesFromFlags()
+	imgs, err := botanist.LoadImages(cmd.imageManifests...)
+	if err != nil {
+		return err
 	}
 	errs := make(chan error)
 	go func() {

@@ -137,6 +137,9 @@ func openNetsvcFile(path, name string) (*netsvcFile, error) {
 // Transfers images with the appropriate netboot prefixes over TFTP to a node at a given
 // address.
 func transfer(ctx context.Context, t *tftp.Client, tftpAddr *net.UDPAddr, imgs []Image, kernel *Image, cmdlineArgs []string, sshKey string) error {
+	if kernel == nil {
+		return fmt.Errorf("No kernel found in the image manifest")
+	}
 	// Prepare all files to be tranferred, minding the order, which follows that of the
 	// bootserver host tool.
 	netsvcFiles := []*netsvcFile{}
@@ -160,28 +163,28 @@ func transfer(ctx context.Context, t *tftp.Client, tftpAddr *net.UDPAddr, imgs [
 			return fmt.Errorf("Could not find associated netsvc name for %s", img.Name)
 		}
 		imgNetsvcFile, err := openNetsvcFile(img.Path, netsvcName)
-		defer imgNetsvcFile.close()
 		if err != nil {
 			return err
 		}
+		defer imgNetsvcFile.close()
 		netsvcFiles = append(netsvcFiles, imgNetsvcFile)
 	}
 
 	if sshKey != "" {
 		sshNetsvcFile, err := openNetsvcFile(sshKey, sshNetsvcName)
-		defer sshNetsvcFile.close()
 		if err != nil {
 			return err
 		}
+		defer sshNetsvcFile.close()
 		netsvcFiles = append(netsvcFiles, sshNetsvcFile)
 	}
 
 	if kernel != nil {
 		kernelNetsvcFile, err := openNetsvcFile(kernel.Path, kernelNetsvcName)
-		defer kernelNetsvcFile.close()
 		if err != nil {
 			return err
 		}
+		defer kernelNetsvcFile.close()
 		netsvcFiles = append(netsvcFiles, kernelNetsvcFile)
 	}
 
