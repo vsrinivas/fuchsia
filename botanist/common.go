@@ -12,8 +12,6 @@ import (
 	"fuchsia.googlesource.com/tools/pdu"
 )
 
-const TestSummaryFilename = "summary.json"
-
 // StringsFlag implements flag.Value so it may be treated as a flag type.
 type StringsFlag []string
 
@@ -48,21 +46,4 @@ func LoadDeviceProperties(propertiesFile string, properties *DeviceProperties) e
 	}
 
 	return json.NewDecoder(file).Decode(properties)
-}
-
-// TestDetails contain test specific information
-type TestDetails struct {
-	Name       string `json:"name"`
-	OutputFile string `json:"output_file"`
-	Result     string `json:"result"`
-	DataSinks  map[string][]struct {
-		Name string `json:"name"`
-		File string `json:"file"`
-	} `json:"data_sinks,omitempty"`
-}
-
-// TestSummary is the runtest summary output file format.
-type TestSummary struct {
-	Tests   []TestDetails     `json:"tests"`
-	Outputs map[string]string `json:"outputs,omitempty"`
 }

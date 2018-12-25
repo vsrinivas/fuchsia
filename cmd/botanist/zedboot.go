@@ -28,12 +28,9 @@ import (
 	"fuchsia.googlesource.com/tools/netboot"
 	"fuchsia.googlesource.com/tools/pdu"
 	"fuchsia.googlesource.com/tools/retry"
+	"fuchsia.googlesource.com/tools/runtests"
 	"fuchsia.googlesource.com/tools/tftp"
 	"github.com/google/subcommands"
-)
-
-const (
-	hostCmdOutputFilepath = "stdout-and-stderr.txt" // relative path w.r.t TAR archive
 )
 
 // ZedbootCommand is a Command implementation for running the testing workflow on a device
@@ -94,7 +91,7 @@ func (cmd *ZedbootCommand) SetFlags(f *flag.FlagSet) {
 	f.BoolVar(&cmd.netboot, "netboot", false, "if set, botanist will not pave; but will netboot instead")
 	f.StringVar(&cmd.testResultsDir, "results-dir", "/test", "path on target to where test results will be written")
 	f.StringVar(&cmd.outputArchive, "out", "output.tar", "path on host to output tarball of test results")
-	f.StringVar(&cmd.summaryFilename, "summary-name", botanist.TestSummaryFilename, "name of the file in the test directory")
+	f.StringVar(&cmd.summaryFilename, "summary-name", runtests.TestSummaryFilename, "name of the file in the test directory")
 	f.DurationVar(&cmd.filePollInterval, "poll-interval", 1*time.Minute, "time between checking for summary.json on the target")
 	f.StringVar(&cmd.propertiesFile, "properties", "/etc/botanist/config.json", "path to file of device properties")
 	f.StringVar(&cmd.cmdlineFile, "cmdline-file", "", "path to a file containing additional kernel command-line arguments")
@@ -177,25 +174,25 @@ func (cmd *ZedbootCommand) getOutputArchiveFile() (*os.File, error) {
 // Creates and returns Summary file object for Host Cmds.
 func (cmd *ZedbootCommand) getHostCmdSummaryBuffer(output []byte, err error) (*bytes.Buffer, error) {
 
-	var cmdResult string
+	var cmdResult runtests.TestResult
 
 	if err != nil {
-		cmdResult = "FAIL"
+		cmdResult = runtests.TestFailure
 		log.Printf("Command failed! %v - %v", err, string(output))
 	} else {
-		cmdResult = "PASS"
+		cmdResult = runtests.TestSuccess
 		log.Printf("Command succeeded! %v", string(output))
 	}
 
 	// Create coarse-grained summary based on host command exit code
-	testDetail := botanist.TestDetails{
+	testDetail := runtests.TestDetails{
 		Name:       cmd.hackyHostCommand,
-		OutputFile: hostCmdOutputFilepath,
+		OutputFile: runtests.TestOutputFilename,
 		Result:     cmdResult,
 	}
 
-	result := botanist.TestSummary{
-		Tests: []botanist.TestDetails{testDetail},
+	result := runtests.TestSummary{
+		Tests: []runtests.TestDetails{testDetail},
 	}
 
 	b, err := json.Marshal(result)
@@ -223,7 +220,7 @@ func (cmd *ZedbootCommand) tarHostCmdArtifacts(summary []byte, cmdOutput []byte,
 	}
 
 	// Write combined stdout & stderr output to archive
-	if err = writeFileToTar(tw, cmdOutput, hostCmdOutputFilepath); err != nil {
+	if err = writeFileToTar(tw, cmdOutput, runtests.TestOutputFilename); err != nil {
 		return err
 	}
 
@@ -341,7 +338,7 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs []botanist.Image, 
 	}
 
 	// Parse and save the summary.json file.
-	var result botanist.TestSummary
+	var result runtests.TestSummary
 	if err := json.Unmarshal(buffer.Bytes(), &result); err != nil {
 		return fmt.Errorf("cannot unmarshall test results: %v\n", err)
 	}
