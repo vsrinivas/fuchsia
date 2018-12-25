@@ -51,6 +51,10 @@ public:
         std::string element_type;
         std::vector<uint32_t> array_counts;
         types::Nullability nullability;
+        // Bound on the element count for string and vector collection types.
+        // When there is no limit, its value is UINT32_MAX.
+        // Method parameters are pre-validated against this bound at the beginning of a FIDL call.
+        uint32_t max_num_elements;
     };
 
     struct NamedMessage {

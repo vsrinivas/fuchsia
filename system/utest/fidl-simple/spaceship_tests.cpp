@@ -129,6 +129,24 @@ static bool spaceship_test(void) {
     }
 
     {
+        constexpr uint32_t kNumStarsOverflow = fidl_test_spaceship_MaxStarsAdjustHeading * 2;
+        const uint32_t stars[kNumStarsOverflow] = {};
+        int8_t result = 0;
+        ASSERT_EQ(ZX_ERR_INVALID_ARGS,
+                  fidl_test_spaceship_SpaceShipAdjustHeading(client.get(),
+                                                             stars,
+                                                             kNumStarsOverflow,
+                                                             &result));
+    }
+
+    {
+        int8_t result = 0;
+        ASSERT_EQ(
+            ZX_ERR_INVALID_ARGS,
+            fidl_test_spaceship_SpaceShipAdjustHeading(client.get(), nullptr, 1 << 31, &result));
+    }
+
+    {
         uint32_t lifesigns[64];
         size_t actual = 0;
         ASSERT_EQ(ZX_OK, fidl_test_spaceship_SpaceShipScanForLifeforms(client.get(), lifesigns,

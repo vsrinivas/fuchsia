@@ -41,6 +41,7 @@ CGenerator::Member MessageHeader() {
         {},
         {},
         types::Nullability::kNonnullable,
+        {},
     };
 }
 
@@ -273,6 +274,25 @@ void EmitMeasureInParams(std::ostream* file,
     }
 }
 
+void EmitParameterSizeValidation(std::ostream* file,
+                                 const std::vector<CGenerator::Member>& params) {
+    for (const auto& member : params) {
+        if (member.max_num_elements == std::numeric_limits<uint32_t>::max()) continue;
+        std::string param_name;
+        if (member.kind == flat::Type::Kind::kVector) {
+            param_name = member.name + "_count";
+        } else if (member.kind == flat::Type::Kind::kString) {
+            param_name = member.name + "_size";
+        } else {
+            assert(false && "only vector/string has size limit");
+        }
+        *file << kIndent
+            << "if (" << param_name << " > " << member.max_num_elements << ") {\n";
+        *file << kIndent << kIndent << "return ZX_ERR_INVALID_ARGS;\n";
+        *file << kIndent << "}\n";
+    }
+}
+
 void EmitMeasureOutParams(std::ostream* file,
                           const std::vector<CGenerator::Member>& params) {
     for (const auto& member : params) {
@@ -480,6 +500,7 @@ CGenerator::Member CreateMember(const flat::Library* library, const T& decl) {
     std::string element_type_name;
     std::vector<uint32_t> array_counts;
     types::Nullability nullability = types::Nullability::kNonnullable;
+    uint32_t max_num_elements = std::numeric_limits<uint32_t>::max();
     switch (type->kind) {
     case flat::Type::Kind::kArray: {
         ArrayCountsAndElementTypeName(library,
@@ -493,6 +514,8 @@ CGenerator::Member CreateMember(const flat::Library* library, const T& decl) {
         const flat::Type* element_type = vector_type->element_type.get();
         element_type_name =
             NameFlatCType(element_type, GetDeclKind(library, element_type));
+        max_num_elements =
+            static_cast<const flat::Size&>(vector_type->element_count.get()->Value()).value;
         break;
     }
     case flat::Type::Kind::kIdentifier: {
@@ -504,6 +527,8 @@ CGenerator::Member CreateMember(const flat::Library* library, const T& decl) {
     case flat::Type::Kind::kString: {
         auto string_type = static_cast<const flat::StringType*>(type);
         nullability = string_type->nullability;
+        max_num_elements =
+            static_cast<const flat::Size&>(string_type->max_size.get()->Value()).value;
         break;
     }
     case flat::Type::Kind::kHandle:
@@ -521,6 +546,7 @@ CGenerator::Member CreateMember(const flat::Library* library, const T& decl) {
         std::move(element_type_name),
         std::move(array_counts),
         nullability,
+        max_num_elements,
     };
 }
 
@@ -945,6 +971,7 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
 
         EmitClientMethodDecl(&file_, method_info.c_name, request, response);
         file_ << " {\n";
+        EmitParameterSizeValidation(&file_, request);
         file_ << kIndent << "uint32_t _wr_num_bytes = sizeof(" << method_info.request->c_name << ")";
         EmitMeasureInParams(&file_, request);
         file_ << ";\n";
