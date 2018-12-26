@@ -133,7 +133,7 @@
 + [system_get_version](syscalls/system_get_version.md) - get version string
 
 ## Logging
-+ [log_create](syscalls/log_create.md) - create a kernel managed log reader or writer
++ [debuglog_create](syscalls/debuglog_create.md) - create a kernel managed log reader or writer
 + [log_write](syscalls/log_write.md) - write log entry to log
 + [log_read](syscalls/log_read.md) - read log entries from log
 
