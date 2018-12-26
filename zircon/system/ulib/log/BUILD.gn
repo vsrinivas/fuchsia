@@ -1,0 +1,17 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("log") {
+  shared = true
+  host = true
+  sources = [
+    "log.cpp",
+  ]
+  deps = [
+    "$zx/system/ulib/c",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zxcpp",
+  ]
+}

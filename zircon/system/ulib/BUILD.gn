@@ -109,6 +109,8 @@ if (current_cpu != "") {
       "libzbi",
       "loader-service",
       "lockdep",
+      "log",
+      "log-writer-textfile",
       "logger",
       "memfs",
       "minfs",

@@ -107,6 +107,7 @@ if (current_cpu != "") {
       "libgpt",
       "libhwreg",
       "libzx",
+      "log",
       "logger",
       "memfs",
       "msd",
