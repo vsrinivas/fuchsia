@@ -20,10 +20,10 @@ import (
 
 const (
 	// Default SSH server port.
-	Port = 22
+	SSHPort = 22
 
 	// Default RSA key size.
-	KeySize = 2048
+	RSAKeySize = 2048
 )
 
 // GenerateKeyPair generates a pair of private/public keys.
