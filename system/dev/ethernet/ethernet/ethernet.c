@@ -941,6 +941,7 @@ static void eth_kill_locked(ethdev_t* edev) {
 static void eth_release(void* ctx) {
     ethdev_t* edev = ctx;
     if (edev) {
+        free(edev->all_tx_bufs);
         free(edev->paddr_map);
     }
     free(edev);

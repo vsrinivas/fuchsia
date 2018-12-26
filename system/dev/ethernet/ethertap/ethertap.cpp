@@ -16,12 +16,16 @@
 
 // This macro allows for per-device tracing rather than enabling tracing for the whole driver
 // TODO(tkilbourn): decide whether this is worth the effort
-#define ethertap_trace(args...) \
-  do { if (unlikely(options_ & ETHERTAP_OPT_TRACE)) zxlogf(INFO, "ethertap: " args); } while (0)
+#define ethertap_trace(args...)                      \
+    do {                                             \
+        if (unlikely(options_ & ETHERTAP_OPT_TRACE)) \
+            zxlogf(INFO, "ethertap: " args);         \
+    } while (0)
 
 namespace eth {
 
-TapCtl::TapCtl(zx_device_t* device) : ddk::Device<TapCtl, ddk::Ioctlable>(device) {}
+TapCtl::TapCtl(zx_device_t* device)
+    : ddk::Device<TapCtl, ddk::Ioctlable>(device) {}
 
 void TapCtl::DdkRelease() {
     delete this;
@@ -54,7 +58,7 @@ zx_status_t TapCtl::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, voi
         config.name[ETHERTAP_MAX_NAME_LEN] = '\0';
 
         auto tap = fbl::unique_ptr<eth::TapDevice>(
-                new eth::TapDevice(zxdev(), &config, std::move(local)));
+            new eth::TapDevice(zxdev(), &config, std::move(local)));
 
         status = tap->DdkAdd(config.name);
         if (status != ZX_OK) {
@@ -83,11 +87,11 @@ int tap_device_thread(void* arg) {
 #define TAP_SHUTDOWN ZX_USER_SIGNAL_7
 
 TapDevice::TapDevice(zx_device_t* device, const ethertap_ioctl_config* config, zx::socket data)
-  : ddk::Device<TapDevice, ddk::Unbindable>(device),
-    options_(config->options),
-    features_(config->features | ETHMAC_FEATURE_SYNTH),
-    mtu_(config->mtu),
-    data_(std::move(data)) {
+    : ddk::Device<TapDevice, ddk::Unbindable>(device),
+      options_(config->options),
+      features_(config->features | ETHMAC_FEATURE_SYNTH),
+      mtu_(config->mtu),
+      data_(std::move(data)) {
     ZX_DEBUG_ASSERT(data_.is_valid());
     memcpy(mac_, config->mac, 6);
 
@@ -98,8 +102,8 @@ TapDevice::TapDevice(zx_device_t* device, const ethertap_ioctl_config* config, z
 
 void TapDevice::DdkRelease() {
     ethertap_trace("DdkRelease\n");
-    // Only the thread can call DdkRemove(), which means the thread is exiting on its own. No need
-    // to join the thread.
+    int ret = thrd_join(thread_, nullptr);
+    ZX_DEBUG_ASSERT(ret == thrd_success);
     delete this;
 }
 
@@ -220,8 +224,7 @@ int TapDevice::Thread() {
     fbl::unique_ptr<uint8_t[]> buf(new uint8_t[mtu_]);
 
     zx_status_t status = ZX_OK;
-    const zx_signals_t wait = ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED | ETHERTAP_SIGNAL_ONLINE
-        | ETHERTAP_SIGNAL_OFFLINE | TAP_SHUTDOWN;
+    const zx_signals_t wait = ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED | ETHERTAP_SIGNAL_ONLINE | ETHERTAP_SIGNAL_OFFLINE | TAP_SHUTDOWN;
     while (true) {
         status = data_.wait_one(wait, zx::time::infinite(), &pending);
         if (status != ZX_OK) {
@@ -326,7 +329,7 @@ zx_status_t TapDevice::Recv(uint8_t* buffer, uint32_t capacity) {
     return ZX_OK;
 }
 
-}  // namespace eth
+} // namespace eth
 
 extern "C" zx_status_t tapctl_bind(void* ctx, zx_device_t* device, void** cookie) {
     auto dev = fbl::unique_ptr<eth::TapCtl>(new eth::TapCtl(device));
