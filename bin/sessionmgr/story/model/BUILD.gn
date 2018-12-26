@@ -60,6 +60,7 @@ source_set("apply_mutations") {
 
   public_deps = [
     "//peridot/public/fidl/fuchsia.modular.storymodel",
+    "//peridot/public/lib/fostr/fidl/fuchsia.modular.storymodel",
   ]
 
   deps = [

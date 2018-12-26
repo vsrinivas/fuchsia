@@ -6,6 +6,8 @@
 
 #include "peridot/bin/sessionmgr/story/model/apply_mutations.h"
 
+#include "lib/fostr/fidl/fuchsia/modular/storymodel/formatting.h"
+
 using fuchsia::modular::StoryVisibilityState;
 using fuchsia::modular::StoryState;
 using fuchsia::modular::storymodel::StoryModel;
@@ -38,9 +40,8 @@ StoryModel ApplyMutations(const StoryModel& current_model,
       case StoryModelMutation::Tag::kSetRuntimeState:
         ApplySetRuntimeState(command.set_runtime_state(), &new_model);
         break;
-      default:
-        FXL_LOG(FATAL) << "Unsupported StoryModelMutation: "
-                       << fidl::ToUnderlying(command.Which());
+      case StoryModelMutation::Tag::Invalid:
+        FXL_LOG(FATAL) << "Encountered invalid StoryModelMutation: " << command;
     }
   }
 
