@@ -646,7 +646,7 @@ class StoryControllerImpl::StopModuleCall : public Operation<> {
     story_storage_->UpdateModuleData(
         module_path_, [flow](fuchsia::modular::ModuleDataPtr* module_data_ptr) {
           FXL_DCHECK(*module_data_ptr);
-          (*module_data_ptr)->module_stopped = true;
+          (*module_data_ptr)->module_deleted = true;
         });
   }
 
@@ -710,7 +710,7 @@ class StoryControllerImpl::OnModuleDataUpdatedCall : public Operation<> {
     // Check for existing module at the given path.
     auto* const running_mod_info =
         story_controller_impl_->FindRunningModInfo(module_data_.module_path);
-    if (module_data_.module_stopped) {
+    if (module_data_.module_deleted) {
       // If the module is running, kill it.
       if (running_mod_info) {
         operation_queue_.Add(new KillModuleCall(
@@ -1038,7 +1038,7 @@ class StoryControllerImpl::StartCall : public Operation<> {
           story_controller_impl_->InitStoryEnvironment();
 
           for (auto& module_data : *data) {
-            if (module_data.module_stopped) {
+            if (module_data.module_deleted) {
               continue;
             }
             FXL_CHECK(module_data.intent);

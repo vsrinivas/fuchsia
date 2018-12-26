@@ -250,7 +250,7 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult,
     out_module_data_.module_path->insert(out_module_data_.module_path->end(),
                                          mod_name_->begin(), mod_name_->end());
     out_module_data_.module_source = module_source_;
-    out_module_data_.module_stopped = false;
+    out_module_data_.module_deleted = false;
     fidl::Clone(surface_relation_, &out_module_data_.surface_relation);
     out_module_data_.intent =
         std::make_unique<fuchsia::modular::Intent>(std::move(intent_));

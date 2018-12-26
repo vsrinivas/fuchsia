@@ -147,7 +147,7 @@ void XdrModuleData_v1(XdrContext* const xdr,
   xdr->Field("module_path", &data->module_path);
   xdr->Field("module_source", &data->module_source);
   xdr->Field("surface_relation", &data->surface_relation, XdrSurfaceRelation);
-  xdr->Field("module_stopped", &data->module_stopped);
+  xdr->Field("module_stopped", &data->module_deleted);
   xdr->Field("intent", &data->intent, XdrIntent);
 
   // In previous versions we did not have these fields.
@@ -161,7 +161,7 @@ void XdrModuleData_v2(XdrContext* const xdr,
   xdr->Field("module_path", &data->module_path);
   xdr->Field("module_source", &data->module_source);
   xdr->Field("surface_relation", &data->surface_relation, XdrSurfaceRelation);
-  xdr->Field("module_stopped", &data->module_stopped);
+  xdr->Field("module_stopped", &data->module_deleted);
   xdr->Field("intent", &data->intent, XdrIntent);
   // NOTE: the JSON field naming doesn't match the FIDL struct naming because
   // the field name in FIDL was changed.
@@ -177,7 +177,7 @@ void XdrModuleData_v3(XdrContext* const xdr,
   xdr->Field("module_path", &data->module_path);
   xdr->Field("module_source", &data->module_source);
   xdr->Field("surface_relation", &data->surface_relation, XdrSurfaceRelation);
-  xdr->Field("module_stopped", &data->module_stopped);
+  xdr->Field("module_stopped", &data->module_deleted);
   xdr->Field("intent", &data->intent, XdrIntent);
   // NOTE: the JSON field naming doesn't match the FIDL struct naming because
   // the field name in FIDL was changed.
@@ -194,7 +194,24 @@ void XdrModuleData_v4(XdrContext* const xdr,
   xdr->Field("module_path", &data->module_path);
   xdr->Field("module_source", &data->module_source);
   xdr->Field("surface_relation", &data->surface_relation, XdrSurfaceRelation);
-  xdr->Field("module_stopped", &data->module_stopped);
+  xdr->Field("module_stopped", &data->module_deleted);
+  xdr->Field("intent", &data->intent, XdrIntent);
+  // NOTE: the JSON field naming doesn't match the FIDL struct naming because
+  // the field name in FIDL was changed.
+  xdr->Field("chain_data", &data->parameter_map, XdrModuleParameterMap);
+  xdr->Field("module_manifest", &data->module_manifest, XdrModuleManifest_v2);
+}
+
+void XdrModuleData_v5(XdrContext* const xdr,
+                      fuchsia::modular::ModuleData* const data) {
+  if (!xdr->Version(5)) {
+    return;
+  }
+  xdr->Field("url", &data->module_url);
+  xdr->Field("module_path", &data->module_path);
+  xdr->Field("module_source", &data->module_source);
+  xdr->Field("surface_relation", &data->surface_relation, XdrSurfaceRelation);
+  xdr->Field("module_deleted", &data->module_deleted);
   xdr->Field("intent", &data->intent, XdrIntent);
   // NOTE: the JSON field naming doesn't match the FIDL struct naming because
   // the field name in FIDL was changed.
@@ -203,8 +220,8 @@ void XdrModuleData_v4(XdrContext* const xdr,
 }
 
 XdrFilterType<fuchsia::modular::ModuleData> XdrModuleData[] = {
-    XdrModuleData_v4, XdrModuleData_v3, XdrModuleData_v2,
-    XdrModuleData_v1, nullptr,
+    XdrModuleData_v5, XdrModuleData_v4, XdrModuleData_v3,
+    XdrModuleData_v2, XdrModuleData_v1, nullptr,
 };
 
 }  // namespace modular

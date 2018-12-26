@@ -307,7 +307,7 @@ TEST_F(AddModCommandRunnerTest, ExecuteIntentWithIntentHandler) {
       ->Then([&](fuchsia::modular::ModuleDataPtr module_data) {
         EXPECT_EQ("mod_url", module_data->module_url);
         EXPECT_EQ(full_path, module_data->module_path);
-        EXPECT_FALSE(module_data->module_stopped);
+        EXPECT_FALSE(module_data->module_deleted);
         EXPECT_EQ(fuchsia::modular::ModuleSource::EXTERNAL,
                   module_data->module_source);
         EXPECT_EQ(0.5, module_data->surface_relation->emphasis);
@@ -365,7 +365,7 @@ TEST_F(AddModCommandRunnerTest, ExecuteIntentWithIntentHandler_NoParent) {
       ->Then([&](fuchsia::modular::ModuleDataPtr module_data) {
         EXPECT_EQ("mod_url", module_data->module_url);
         EXPECT_EQ(full_path, module_data->module_path);
-        EXPECT_FALSE(module_data->module_stopped);
+        EXPECT_FALSE(module_data->module_deleted);
         EXPECT_EQ(fuchsia::modular::ModuleSource::EXTERNAL,
                   module_data->module_source);
         EXPECT_EQ(0.5, module_data->surface_relation->emphasis);
@@ -448,7 +448,7 @@ TEST_F(AddModCommandRunnerTest, ExecuteIntentThatNeedsResolution) {
 
   EXPECT_EQ("mod_url", module_data->module_url);
   EXPECT_EQ(full_path, module_data->module_path);
-  EXPECT_FALSE(module_data->module_stopped);
+  EXPECT_FALSE(module_data->module_deleted);
   EXPECT_EQ(fuchsia::modular::ModuleSource::EXTERNAL,
             module_data->module_source);
   EXPECT_EQ(0.5, module_data->surface_relation->emphasis);

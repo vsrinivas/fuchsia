@@ -28,11 +28,9 @@ struct ModuleData {
     /// instance (started by EmbedModule()) that is not managed by the story shell.
     SurfaceRelation? surface_relation;
 
-    /// True if an externally-started module has has been stopped by the story
-    /// runner through ModuleController.Stop() called on some connection, or if an
-    /// internally-started module was stopped by its parent module using
-    /// ModuleController.Stop().
-    bool module_stopped;
+    /// True if this module was removed from its story either through
+    /// ModuleController.Stop() or ModuleContext.RemoveSelfFromStory().
+    bool module_deleted;
 
     /// The intent that was issued to start add this Module instance to the story.
     /// Some Module instances may have been added not by an Intent, for example as
