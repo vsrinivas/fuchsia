@@ -17,13 +17,13 @@ typedef struct {
     i2c_protocol_t i2c;
 } pcf8563_context;
 
-static zx_status_t set_utc_offset(const fuchsia_hardware_rtc_Time* rtc) {
+static zx_status_t set_utc_offset(const zircon_rtc_Time* rtc) {
     uint64_t rtc_nanoseconds = seconds_since_epoch(rtc) * 1000000000;;
     int64_t offset = rtc_nanoseconds - zx_clock_get_monotonic();
     return zx_clock_adjust(get_root_resource(), ZX_CLOCK_UTC, offset);
 }
 
-static zx_status_t pcf8563_rtc_get(void* ctx, fuchsia_hardware_rtc_Time* rtc) {
+static zx_status_t pcf8563_rtc_get(void *ctx, zircon_rtc_Time* rtc) {
     ZX_DEBUG_ASSERT(ctx);
 
     pcf8563_context *context = ctx;
@@ -45,7 +45,7 @@ static zx_status_t pcf8563_rtc_get(void* ctx, fuchsia_hardware_rtc_Time* rtc) {
     return ZX_OK;
 }
 
-static zx_status_t pcf8563_rtc_set(void* ctx, const fuchsia_hardware_rtc_Time* rtc) {
+static zx_status_t pcf8563_rtc_set(void *ctx, const zircon_rtc_Time* rtc) {
     ZX_DEBUG_ASSERT(ctx);
 
     // An invalid time was supplied.
@@ -87,23 +87,23 @@ static zx_status_t pcf8563_rtc_set(void* ctx, const fuchsia_hardware_rtc_Time* r
 }
 
 static zx_status_t fidl_Get(void* ctx, fidl_txn_t* txn) {
-    fuchsia_hardware_rtc_Time rtc;
+    zircon_rtc_Time rtc;
     pcf8563_rtc_get(ctx, &rtc);
-    return fuchsia_hardware_rtc_DeviceGet_reply(txn, &rtc);
+    return zircon_rtc_DeviceGet_reply(txn, &rtc);
 }
 
-static zx_status_t fidl_Set(void* ctx, const fuchsia_hardware_rtc_Time* rtc, fidl_txn_t* txn) {
+static zx_status_t fidl_Set(void* ctx, const zircon_rtc_Time* rtc, fidl_txn_t* txn) {
     zx_status_t status = pcf8563_rtc_set(ctx, rtc);
-    return fuchsia_hardware_rtc_DeviceSet_reply(txn, status);
+    return zircon_rtc_DeviceSet_reply(txn, status);
 }
 
-static fuchsia_hardware_rtc_Device_ops_t fidl_ops = {
+static zircon_rtc_Device_ops_t fidl_ops = {
     .Get = fidl_Get,
     .Set = fidl_Set,
 };
 
 static zx_status_t pcf8563_rtc_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
-    return fuchsia_hardware_rtc_Device_dispatch(ctx, txn, msg, &fidl_ops);
+    return zircon_rtc_Device_dispatch(ctx, txn, msg, &fidl_ops);
 }
 
 static zx_protocol_device_t pcf8563_rtc_device_proto = {
@@ -141,7 +141,7 @@ static zx_status_t pcf8563_bind(void* ctx, zx_device_t* parent)
         return status;
     }
 
-    fuchsia_hardware_rtc_Time rtc;
+    zircon_rtc_Time rtc;
     sanitize_rtc(context, &rtc, pcf8563_rtc_get, pcf8563_rtc_set);
     status = set_utc_offset(&rtc);
     if (status != ZX_OK) {

@@ -26,7 +26,7 @@ MODULE_LIBS := \
     system/ulib/zircon \
 
 MODULE_FIDL_LIBS := \
-    system/fidl/fuchsia-hardware-backlight \
+    system/fidl/zircon-backlight \
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-platform-bus \

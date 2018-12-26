@@ -26,6 +26,6 @@ MODULE_LIBS := \
     system/ulib/c
 
 MODULE_FIDL_LIBS := \
-    system/fidl/fuchsia-hardware-input \
+    system/fidl/zircon-input \
 
 include make/module.mk

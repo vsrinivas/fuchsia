@@ -11,8 +11,8 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <fuchsia/hardware/input/c/fidl.h>
 #include <lib/fdio/unsafe.h>
+#include <zircon/input/c/fidl.h>
 #include <zircon/types.h>
 
 #define CLEAR_SCREEN printf("\033[2J")
@@ -65,7 +65,7 @@ int main(int argc, char* argv[]) {
     int ret;
     uint16_t rpt_desc_len = 0;
 
-    zx_status_t status = fuchsia_hardware_input_DeviceGetReportDescSize(svc, &rpt_desc_len);
+    zx_status_t status = zircon_input_DeviceGetReportDescSize(svc, &rpt_desc_len);
     if (status != ZX_OK) {
         printf("failed to get report descriptor length for %s: %d\n", devname, status);
         ret = -1;
@@ -80,7 +80,7 @@ int main(int argc, char* argv[]) {
     }
 
     size_t actual = 0;
-    status = fuchsia_hardware_input_DeviceGetReportDesc(svc, rpt_desc, rpt_desc_len, &actual);
+    status = zircon_input_DeviceGetReportDesc(svc, rpt_desc, rpt_desc_len, &actual);
     if (status != ZX_OK) {
         printf("failed to get report descriptor for %s: %d\n", devname, status);
         ret = -1;
@@ -92,7 +92,7 @@ int main(int argc, char* argv[]) {
     assert(rpt_desc);
 
     uint16_t max_rpt_sz = 0;
-    status = fuchsia_hardware_input_DeviceGetMaxInputReportSize(svc, &max_rpt_sz);
+    status = zircon_input_DeviceGetMaxInputReportSize(svc, &max_rpt_sz);
     if (status != ZX_OK) {
         printf("failed to get max report size: %d\n", status);
         ret = -1;

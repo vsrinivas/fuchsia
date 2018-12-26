@@ -24,6 +24,6 @@ MODULE_LIBS := \
     system/ulib/unittest
 
 MODULE_FIDL_LIBS := \
-    system/fidl/fuchsia-hardware-rtc
+    system/fidl/zircon-rtc
 
 include make/module.mk

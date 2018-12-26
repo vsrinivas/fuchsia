@@ -8,10 +8,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <fuchsia/hardware/input/c/fidl.h>
 #include <hid/hid.h>
 #include <hid/usages.h>
 #include <lib/fzl/fdio.h>
+#include <zircon/input/c/fidl.h>
 #include <zircon/syscalls.h>
 
 #include <port/port.h>
@@ -53,14 +53,14 @@ static void set_caps_lock_led(int keyboard_fd, bool caps_lock) {
     // Temporarily wrap keyboard_fd, we will release it after the call so we don't close it.
     fzl::FdioCaller caller{fbl::unique_fd(keyboard_fd)};
     zx_status_t call_status;
-    zx_status_t status = fuchsia_hardware_input_DeviceSetReport(
-        caller.borrow_channel(), fuchsia_hardware_input_ReportType_OUTPUT, 0, report_body,
-        sizeof(report_body), &call_status);
+    zx_status_t status = zircon_input_DeviceSetReport(caller.borrow_channel(),
+                                                      zircon_input_ReportType_OUTPUT, 0,
+                                                      report_body, sizeof(report_body),
+                                                      &call_status);
     caller.release().release();
     if (status != ZX_OK || call_status != ZX_OK) {
 #if !BUILD_FOR_TEST
-        printf("fuchsia.hardware.input.Device.SetReport() failed (returned %d, %d)\n", status,
-               call_status);
+        printf("zircon.input.Device.SetReport() failed (returned %d, %d)\n", status, call_status);
 #endif
     }
 }
@@ -232,14 +232,13 @@ zx_status_t vc_input_create(vc_input_t** out, keypress_handler_t handler, int fd
 #if !BUILD_FOR_TEST
 zx_status_t new_input_device(int fd, keypress_handler_t handler) {
     // test to see if this is a device we can read
-    uint32_t proto = fuchsia_hardware_input_BootProtocol_NONE;
+    uint32_t proto = zircon_input_BootProtocol_NONE;
 
     // Temporarily wrap fd, we will release it after the call so we don't close it.
     fzl::FdioCaller caller{fbl::unique_fd(fd)};
-    zx_status_t status =
-        fuchsia_hardware_input_DeviceGetBootProtocol(caller.borrow_channel(), &proto);
+    zx_status_t status = zircon_input_DeviceGetBootProtocol(caller.borrow_channel(), &proto);
     caller.release().release();
-    if ((status != ZX_OK) || (proto != fuchsia_hardware_input_BootProtocol_KBD)) {
+    if ((status != ZX_OK) || (proto != zircon_input_BootProtocol_KBD)) {
         // skip devices that aren't keyboards
         close(fd);
         return ZX_ERR_NOT_SUPPORTED;

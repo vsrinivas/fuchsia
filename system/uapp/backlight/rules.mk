@@ -13,6 +13,6 @@ MODULE_SRCS += $(LOCAL_DIR)/main.c
 
 MODULE_LIBS := system/ulib/fdio system/ulib/c system/ulib/zircon
 
-MODULE_FIDL_LIBS := system/fidl/fuchsia-hardware-backlight
+MODULE_FIDL_LIBS := system/fidl/zircon-backlight
 
 include make/module.mk

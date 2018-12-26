@@ -9,9 +9,9 @@
 #include <hw/inout.h>
 #include <librtc.h>
 
-#include <fuchsia/hardware/rtc/c/fidl.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
+#include <zircon/rtc/c/fidl.h>
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -132,7 +132,7 @@ static void write_reg_hour(uint8_t hour, bool reg_is_binary, bool reg_is_24_hour
     write_reg_raw(REG_HOURS, data);
 }
 
-static zx_status_t set_utc_offset(const fuchsia_hardware_rtc_Time* rtc) {
+static zx_status_t set_utc_offset(const zircon_rtc_Time* rtc) {
     uint64_t rtc_nanoseconds = seconds_since_epoch(rtc) * 1000000000;;
     int64_t offset = rtc_nanoseconds - zx_clock_get_monotonic();
     return zx_clock_adjust(get_root_resource(), ZX_CLOCK_UTC, offset);
@@ -148,7 +148,7 @@ static void rtc_mode(bool* reg_is_24_hour, bool* reg_is_binary) {
     *reg_is_binary = reg_b & REG_B_DATA_MODE_BIT;
 }
 
-static void read_time(fuchsia_hardware_rtc_Time* rtc) {
+static void read_time(zircon_rtc_Time* rtc) {
     mtx_lock(&lock);
     bool reg_is_24_hour;
     bool reg_is_binary;
@@ -165,7 +165,7 @@ static void read_time(fuchsia_hardware_rtc_Time* rtc) {
     mtx_unlock(&lock);
 }
 
-static void write_time(const fuchsia_hardware_rtc_Time* rtc) {
+static void write_time(const zircon_rtc_Time* rtc) {
     mtx_lock(&lock);
     bool reg_is_24_hour;
     bool reg_is_binary;
@@ -186,9 +186,9 @@ static void write_time(const fuchsia_hardware_rtc_Time* rtc) {
     mtx_unlock(&lock);
 }
 
-static zx_status_t intel_rtc_get(void* ctx, fuchsia_hardware_rtc_Time* rtc) {
+static zx_status_t intel_rtc_get(void *ctx, zircon_rtc_Time *rtc) {
     // Ensure we have a consistent time.
-    fuchsia_hardware_rtc_Time prev;
+    zircon_rtc_Time prev;
     do {
         // Using memcpy, as we use memcmp to compare.
         memcpy(&prev, rtc, sizeof prev);
@@ -197,7 +197,7 @@ static zx_status_t intel_rtc_get(void* ctx, fuchsia_hardware_rtc_Time* rtc) {
     return ZX_OK;
 }
 
-static zx_status_t intel_rtc_set(void* ctx, const fuchsia_hardware_rtc_Time* rtc) {
+static zx_status_t intel_rtc_set(void *ctx, const zircon_rtc_Time *rtc) {
     // An invalid time was supplied.
     if (rtc_is_invalid(rtc)) {
         return ZX_ERR_OUT_OF_RANGE;
@@ -213,23 +213,23 @@ static zx_status_t intel_rtc_set(void* ctx, const fuchsia_hardware_rtc_Time* rtc
 }
 
 static zx_status_t fidl_Get(void* ctx, fidl_txn_t* txn) {
-    fuchsia_hardware_rtc_Time rtc;
+    zircon_rtc_Time rtc;
     intel_rtc_get(ctx, &rtc);
-    return fuchsia_hardware_rtc_DeviceGet_reply(txn, &rtc);
+    return zircon_rtc_DeviceGet_reply(txn, &rtc);
 }
 
-static zx_status_t fidl_Set(void* ctx, const fuchsia_hardware_rtc_Time* rtc, fidl_txn_t* txn) {
+static zx_status_t fidl_Set(void* ctx, const zircon_rtc_Time* rtc, fidl_txn_t* txn) {
     zx_status_t status = intel_rtc_set(ctx, rtc);
-    return fuchsia_hardware_rtc_DeviceSet_reply(txn, status);
+    return zircon_rtc_DeviceSet_reply(txn, status);
 }
 
-static fuchsia_hardware_rtc_Device_ops_t fidl_ops = {
+static zircon_rtc_Device_ops_t fidl_ops = {
     .Get = fidl_Get,
     .Set = fidl_Set,
 };
 
 static zx_status_t intel_rtc_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
-    return fuchsia_hardware_rtc_Device_dispatch(ctx, txn, msg, &fidl_ops);
+    return zircon_rtc_Device_dispatch(ctx, txn, msg, &fidl_ops);
 }
 
 static zx_protocol_device_t intel_rtc_device_proto __UNUSED = {
@@ -261,7 +261,7 @@ static zx_status_t intel_rtc_bind(void* ctx, zx_device_t* parent) {
         return status;
     }
 
-    fuchsia_hardware_rtc_Time rtc;
+    zircon_rtc_Time rtc;
     sanitize_rtc(NULL, &rtc, intel_rtc_get, intel_rtc_set);
     status = set_utc_offset(&rtc);
     if (status != ZX_OK) {

@@ -8,7 +8,7 @@
 #include <ddk/protocol/hidbus.h>
 #include <hw/inout.h>
 
-#include <fuchsia/hardware/input/c/fidl.h>
+#include <zircon/input/c/fidl.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
@@ -33,7 +33,7 @@ typedef struct i8042_device {
 
     int last_code;
 
-    fuchsia_hardware_input_BootProtocol type;
+    zircon_input_BootProtocol type;
     union {
         hid_boot_kbd_report_t kbd;
         hid_boot_mouse_report_t mouse;
@@ -525,11 +525,11 @@ static int i8042_irq_thread(void* arg) {
                 uint8_t data = i8042_read_data();
                 // TODO: should we check (str & I8042_STR_AUXDATA) before
                 // handling this byte?
-                if (device->type == fuchsia_hardware_input_BootProtocol_KBD) {
+                if (device->type == zircon_input_BootProtocol_KBD) {
                     i8042_process_scode(device, data,
                                         ((str & I8042_STR_PARITY) ? I8042_STR_PARITY : 0) |
                                         ((str & I8042_STR_TIMEOUT) ? I8042_STR_TIMEOUT : 0));
-                } else if (device->type == fuchsia_hardware_input_BootProtocol_MOUSE) {
+                } else if (device->type == zircon_input_BootProtocol_MOUSE) {
                     i8042_process_mouse(device, data, 0);
                 }
                 retry = true;
@@ -653,10 +653,10 @@ static zx_status_t i8042_get_descriptor(void* ctx, uint8_t desc_type,
     i8042_device_t* device = ctx;
     const uint8_t* buf = NULL;
     size_t buflen = 0;
-    if (device->type == fuchsia_hardware_input_BootProtocol_KBD) {
+    if (device->type == zircon_input_BootProtocol_KBD) {
         buf = (void*)&kbd_hid_report_desc;
         buflen = sizeof(kbd_hid_report_desc);
-    } else if (device->type == fuchsia_hardware_input_BootProtocol_MOUSE) {
+    } else if (device->type == zircon_input_BootProtocol_MOUSE) {
         buf = (void*)&mouse_hid_report_desc;
         buflen = sizeof(mouse_hid_report_desc);
     } else {
@@ -727,21 +727,21 @@ static zx_protocol_device_t i8042_dev_proto = {
 
 static zx_status_t i8042_dev_init(i8042_device_t* dev, const char* name, zx_device_t* parent) {
     // enable device port
-    int cmd = dev->type == fuchsia_hardware_input_BootProtocol_KBD ? I8042_CMD_CTL_KBD_DIS
-                                                                   : I8042_CMD_CTL_MOUSE_DIS;
+    int cmd = dev->type == zircon_input_BootProtocol_KBD ?
+        I8042_CMD_CTL_KBD_DIS : I8042_CMD_CTL_MOUSE_DIS;
     i8042_command(NULL, cmd);
 
     // TODO: use identity to determine device type, rather than assuming aux ==
     // mouse
-    i8042_identify(dev->type == fuchsia_hardware_input_BootProtocol_KBD ? i8042_dev_command
-                                                                        : i8042_aux_command);
+    i8042_identify(dev->type == zircon_input_BootProtocol_KBD ?
+            i8042_dev_command : i8042_aux_command);
 
-    cmd = dev->type == fuchsia_hardware_input_BootProtocol_KBD ? I8042_CMD_CTL_KBD_EN
-                                                               : I8042_CMD_CTL_MOUSE_EN;
+    cmd = dev->type == zircon_input_BootProtocol_KBD ?
+        I8042_CMD_CTL_KBD_EN : I8042_CMD_CTL_MOUSE_EN;
     i8042_command(NULL, cmd);
 
-    uint32_t interrupt =
-        dev->type == fuchsia_hardware_input_BootProtocol_KBD ? ISA_IRQ_KEYBOARD : ISA_IRQ_MOUSE;
+    uint32_t interrupt = dev->type == zircon_input_BootProtocol_KBD ?
+        ISA_IRQ_KEYBOARD : ISA_IRQ_MOUSE;
 
     zx_status_t status = zx_interrupt_create(get_root_resource(), interrupt,
                         ZX_INTERRUPT_REMAP_IRQ, &dev->irq);
@@ -750,8 +750,8 @@ static zx_status_t i8042_dev_init(i8042_device_t* dev, const char* name, zx_devi
     }
 
         // create irq thread
-    const char* tname =
-        dev->type == fuchsia_hardware_input_BootProtocol_KBD ? "i8042-kbd-irq" : "i8042-mouse-irq";
+    const char* tname = dev->type == zircon_input_BootProtocol_KBD ?
+        "i8042-kbd-irq" : "i8042-mouse-irq";
     int ret = thrd_create_with_name(&dev->irq_thread, i8042_irq_thread, dev, tname);
     if (ret != thrd_success) {
         zx_handle_close(dev->irq);
@@ -804,7 +804,7 @@ static int i8042_init_thread(void* arg) {
         return ZX_ERR_NO_MEMORY;
 
     mtx_init(&kbd_device->lock, mtx_plain);
-    kbd_device->type = fuchsia_hardware_input_BootProtocol_KBD;
+    kbd_device->type = zircon_input_BootProtocol_KBD;
     status = i8042_dev_init(kbd_device, "i8042-keyboard", parent);
     if (status != ZX_OK) {
         free(kbd_device);
@@ -816,7 +816,7 @@ static int i8042_init_thread(void* arg) {
         mouse_device = calloc(1, sizeof(i8042_device_t));
         if (mouse_device) {
             mtx_init(&mouse_device->lock, mtx_plain);
-            mouse_device->type = fuchsia_hardware_input_BootProtocol_MOUSE;
+            mouse_device->type = zircon_input_BootProtocol_MOUSE;
             status = i8042_dev_init(mouse_device, "i8042-mouse", parent);
             if (status != ZX_OK) {
                 free(mouse_device);

@@ -11,7 +11,7 @@ MODULE_TYPE := fidl
 MODULE_PACKAGE := fidl
 
 
-MODULE_FIDL_LIBRARY := fuchsia.hardware.backlight
+MODULE_FIDL_LIBRARY := zircon.backlight
 MODULE_SRCS += $(LOCAL_DIR)/backlight.fidl
 
 

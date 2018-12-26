@@ -33,7 +33,7 @@ static bool is_leap_year(uint16_t year) {
     return ((year % 4) == 0 && (year % 100) != 0) || ((year % 400) == 0);
 }
 
-uint64_t seconds_since_epoch(const fuchsia_hardware_rtc_Time* rtc) {
+uint64_t seconds_since_epoch(const zircon_rtc_Time* rtc) {
     // First add all of the prior years.
     uint64_t days_since_local_epoch = 0;
     for (uint16_t year = local_epoch_year; year < rtc->year; year++) {
@@ -60,7 +60,7 @@ uint64_t seconds_since_epoch(const fuchsia_hardware_rtc_Time* rtc) {
     return rtc_seconds;
 }
 
-void seconds_to_rtc(uint64_t seconds, fuchsia_hardware_rtc_Time* rtc) {
+void seconds_to_rtc(uint64_t seconds, zircon_rtc_Time* rtc) {
     // subtract local epoch offset to get to rtc time
     uint64_t epoch = seconds - local_epoch;
 
@@ -106,7 +106,7 @@ uint8_t from_bcd(uint8_t bcd) {
     return ((bcd >> 4) * 10) + (bcd & 0xf);
 }
 
-bool rtc_is_invalid(const fuchsia_hardware_rtc_Time* rtc) {
+bool rtc_is_invalid(const zircon_rtc_Time* rtc) {
     return rtc->seconds > 59 ||
         rtc->minutes > 59 ||
         rtc->hours > 23 ||
@@ -118,11 +118,12 @@ bool rtc_is_invalid(const fuchsia_hardware_rtc_Time* rtc) {
 
 // Validate that the RTC is set to a valid time, and to a relatively
 // sane one. Report the validated or reset time back via rtc.
-void sanitize_rtc(void* ctx, fuchsia_hardware_rtc_Time* rtc,
-                  zx_status_t (*rtc_get)(void*, fuchsia_hardware_rtc_Time*),
-                  zx_status_t (*rtc_set)(void*, const fuchsia_hardware_rtc_Time*)) {
+void sanitize_rtc(void* ctx,
+    zircon_rtc_Time* rtc,
+    zx_status_t (*rtc_get)(void *, zircon_rtc_Time*),
+    zx_status_t (*rtc_set)(void *, const zircon_rtc_Time*)) {
     // January 1, 2016 00:00:00
-    static const fuchsia_hardware_rtc_Time default_rtc = {
+    static const zircon_rtc_Time default_rtc = {
         .day = 1,
         .month = 1,
         .year = default_year,

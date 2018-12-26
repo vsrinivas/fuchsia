@@ -36,20 +36,20 @@ typedef struct pl031 {
     pl031_regs_t* regs;
 } pl031_t;
 
-static zx_status_t set_utc_offset(const fuchsia_hardware_rtc_Time* rtc) {
+static zx_status_t set_utc_offset(const zircon_rtc_Time* rtc) {
     uint64_t rtc_nanoseconds = seconds_since_epoch(rtc) * 1000000000;
     int64_t offset = rtc_nanoseconds - zx_clock_get_monotonic();
     return zx_clock_adjust(get_root_resource(), ZX_CLOCK_UTC, offset);
 }
 
-static zx_status_t pl031_rtc_get(void* ctx, fuchsia_hardware_rtc_Time* rtc) {
+static zx_status_t pl031_rtc_get(void *ctx, zircon_rtc_Time* rtc) {
     ZX_DEBUG_ASSERT(ctx);
     pl031_t *context = ctx;
     seconds_to_rtc(context->regs->dr, rtc);
     return ZX_OK;
 }
 
-static zx_status_t pl031_rtc_set(void* ctx, const fuchsia_hardware_rtc_Time* rtc) {
+static zx_status_t pl031_rtc_set(void *ctx, const zircon_rtc_Time* rtc) {
     ZX_DEBUG_ASSERT(ctx);
 
     // An invalid time was supplied.
@@ -69,23 +69,23 @@ static zx_status_t pl031_rtc_set(void* ctx, const fuchsia_hardware_rtc_Time* rtc
 }
 
 static zx_status_t fidl_Get(void* ctx, fidl_txn_t* txn) {
-    fuchsia_hardware_rtc_Time rtc;
+    zircon_rtc_Time rtc;
     pl031_rtc_get(ctx, &rtc);
-    return fuchsia_hardware_rtc_DeviceGet_reply(txn, &rtc);
+    return zircon_rtc_DeviceGet_reply(txn, &rtc);
 }
 
-static zx_status_t fidl_Set(void* ctx, const fuchsia_hardware_rtc_Time* rtc, fidl_txn_t* txn) {
+static zx_status_t fidl_Set(void* ctx, const zircon_rtc_Time* rtc, fidl_txn_t* txn) {
     zx_status_t status = pl031_rtc_set(ctx, rtc);
-    return fuchsia_hardware_rtc_DeviceSet_reply(txn, status);
+    return zircon_rtc_DeviceSet_reply(txn, status);
 }
 
-static fuchsia_hardware_rtc_Device_ops_t fidl_ops = {
+static zircon_rtc_Device_ops_t fidl_ops = {
     .Get = fidl_Get,
     .Set = fidl_Set,
 };
 
 static zx_status_t pl031_rtc_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
-    return fuchsia_hardware_rtc_Device_dispatch(ctx, txn, msg, &fidl_ops);
+    return zircon_rtc_Device_dispatch(ctx, txn, msg, &fidl_ops);
 }
 
 static zx_protocol_device_t pl031_rtc_device_proto = {
@@ -136,7 +136,7 @@ static zx_status_t pl031_rtc_bind(void* ctx, zx_device_t* parent) {
     }
 
     // set the current RTC offset in the kernel
-    fuchsia_hardware_rtc_Time rtc;
+    zircon_rtc_Time rtc;
     sanitize_rtc(pl031, &rtc, pl031_rtc_get, pl031_rtc_set);
     st = set_utc_offset(&rtc);
     if (st != ZX_OK) {

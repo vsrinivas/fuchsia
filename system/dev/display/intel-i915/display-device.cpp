@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <float.h>
-#include <fuchsia/hardware/backlight/c/fidl.h>
 #include <lib/zx/vmo.h>
+#include <float.h>
 #include <math.h>
+#include <zircon/backlight/c/fidl.h>
 
 #include "display-device.h"
 #include "intel-i915.h"
@@ -18,16 +18,16 @@
 namespace {
 
 zx_status_t get_state(void* ctx, fidl_txn_t* txn) {
-    fuchsia_hardware_backlight_State state;
+    zircon_backlight_State state;
     {
         fbl::AutoLock lock(&static_cast<i915::display_ref_t*>(ctx)->mtx);
         static_cast<i915::display_ref_t*>(ctx)->display_device
                 ->GetBacklightState(&state.on, &state.brightness);
     }
-    return fuchsia_hardware_backlight_DeviceGetState_reply(txn, &state);
+    return zircon_backlight_DeviceGetState_reply(txn, &state);
 }
 
-zx_status_t set_state(void* ctx, const fuchsia_hardware_backlight_State* state) {
+zx_status_t set_state(void* ctx, const zircon_backlight_State* state) {
     fbl::AutoLock lock(&static_cast<i915::display_ref_t*>(ctx)->mtx);
 
     static_cast<i915::display_ref_t*>(ctx)->display_device
@@ -35,13 +35,13 @@ zx_status_t set_state(void* ctx, const fuchsia_hardware_backlight_State* state) 
     return ZX_OK;
 }
 
-static fuchsia_hardware_backlight_Device_ops_t fidl_ops = {
+static zircon_backlight_Device_ops_t fidl_ops = {
     .GetState = get_state,
     .SetState = set_state,
 };
 
 zx_status_t backlight_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
-    return fuchsia_hardware_backlight_Device_dispatch(ctx, txn, msg, &fidl_ops);
+    return zircon_backlight_Device_dispatch(ctx, txn, msg, &fidl_ops);
 }
 
 void backlight_release(void* ctx) {

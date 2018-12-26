@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/input/c/fidl.h>
 #include <hid/samsung.h>
 #include <lib/fdio/unsafe.h>
-#include <string.h>
 #include <zircon/errors.h>
+#include <zircon/input/c/fidl.h>
+#include <string.h>
 
 static const uint8_t samsung_touch_report_desc[] = {
     0x05, 0x0D,        // Usage Page (Digitizer)
@@ -447,9 +447,10 @@ zx_status_t setup_samsung_touch(int fd) {
 
     zx_handle_t svc = fdio_unsafe_borrow_channel(io);
     zx_status_t call_status;
-    zx_status_t status = fuchsia_hardware_input_DeviceSetReport(
-        svc, fuchsia_hardware_input_ReportType_FEATURE, report_id, enable_multitouch,
-        sizeof(enable_multitouch), &call_status);
+    zx_status_t status = zircon_input_DeviceSetReport(svc,
+                                                      zircon_input_ReportType_FEATURE, report_id,
+                                                      enable_multitouch, sizeof(enable_multitouch),
+                                                      &call_status);
     fdio_unsafe_release(io);
     if (status != ZX_OK) {
         return status;

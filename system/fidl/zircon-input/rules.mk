@@ -8,7 +8,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := fidl
 MODULE_PACKAGE := fidl
 
-MODULE_FIDL_LIBRARY := fuchsia.hardware.input
+MODULE_FIDL_LIBRARY := zircon.input
 MODULE_SRCS += $(LOCAL_DIR)/input.fidl
 
 include make/module.mk

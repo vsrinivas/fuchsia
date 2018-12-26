@@ -88,25 +88,25 @@ zx_status_t Lp8556Device::SetBacklightState(bool power, uint8_t brightness) {
 }
 
 static zx_status_t GetState(void* ctx, fidl_txn_t* txn) {
-    fuchsia_hardware_backlight_State state;
+    zircon_backlight_State state;
     auto& self = *static_cast<ti::Lp8556Device*>(ctx);
     self.GetBacklightState(&state.on, &state.brightness);
-    return fuchsia_hardware_backlight_DeviceGetState_reply(txn, &state);
+    return zircon_backlight_DeviceGetState_reply(txn, &state);
 }
 
-static zx_status_t SetState(void* ctx, const fuchsia_hardware_backlight_State* state) {
+static zx_status_t SetState(void* ctx, const zircon_backlight_State* state) {
     auto& self = *static_cast<ti::Lp8556Device*>(ctx);
     self.SetBacklightState(state->on, state->brightness);
     return ZX_OK;
 }
 
-static fuchsia_hardware_backlight_Device_ops_t fidl_ops = {
+static zircon_backlight_Device_ops_t fidl_ops = {
     .GetState = GetState,
     .SetState = SetState,
 };
 
 zx_status_t Lp8556Device::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-    return fuchsia_hardware_backlight_Device_dispatch(this, txn, msg, &fidl_ops);
+    return zircon_backlight_Device_dispatch(this, txn, msg, &fidl_ops);
 }
 
 zx_status_t ti_lp8556_bind(void* ctx, zx_device_t* parent) {
