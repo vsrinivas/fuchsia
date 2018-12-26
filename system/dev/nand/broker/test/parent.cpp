@@ -15,7 +15,7 @@ ParentDevice::ParentDevice(const TestConfig& config) : config_(config) {
         device_.reset(open(config_.path, O_RDWR));
         path_.Append(config_.path);
     } else {
-        zircon_nand_RamNandInfo ram_nand_config = {};
+        fuchsia_hardware_nand_RamNandInfo ram_nand_config = {};
         ram_nand_config.nand_info = config_.info;
         ram_nand_config.vmo = ZX_HANDLE_INVALID;
         if (config_.partition_map.partition_count > 0) {
@@ -32,7 +32,7 @@ ParentDevice::ParentDevice(const TestConfig& config) : config_(config) {
     }
 }
 
-void ParentDevice::SetInfo(const zircon_nand_Info& info) {
+void ParentDevice::SetInfo(const fuchsia_hardware_nand_Info& info) {
     ZX_DEBUG_ASSERT(!ram_nand_);
     config_.info = info;
     if (!config_.num_blocks) {

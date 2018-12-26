@@ -12,9 +12,9 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
+#include <fuchsia/hardware/nand/c/fidl.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <zircon/compiler.h>
-#include <zircon/nand/c/fidl.h>
 
 namespace fs_mgmt {
 
@@ -42,14 +42,16 @@ private:
 class RamNand {
 public:
     // Creates a ram_nand under ram_nand_ctl running under the main devmgr.
-    static zx_status_t Create(const zircon_nand_RamNandInfo* config, std::optional<RamNand>* out);
+    static zx_status_t Create(const fuchsia_hardware_nand_RamNandInfo* config,
+                              std::optional<RamNand>* out);
 
     // Creates a ram_nand device underneath the ram_nand_ctl.
-    static zx_status_t Create(fbl::RefPtr<RamNandCtl> ctl, const zircon_nand_RamNandInfo* config,
+    static zx_status_t Create(fbl::RefPtr<RamNandCtl> ctl,
+                              const fuchsia_hardware_nand_RamNandInfo* config,
                               std::optional<RamNand>* out);
 
     // Creates a ram_nand_ctl device and then a ram_device underneath.
-    static zx_status_t CreateIsolated(const zircon_nand_RamNandInfo* config,
+    static zx_status_t CreateIsolated(const fuchsia_hardware_nand_RamNandInfo* config,
                                       std::optional<RamNand>* out);
 
     // Not copyable.

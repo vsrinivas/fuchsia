@@ -73,9 +73,7 @@ class Broker : public DeviceType {
     zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
     // fidl interface.
-    zx_status_t GetInfo(zircon_nand_Info* info) {
-        return Query(info);
-    }
+    zx_status_t GetInfo(fuchsia_hardware_nand_Info* info) { return Query(info); }
     zx_status_t Read(const fuchsia_nand_BrokerRequest& request, uint32_t* corrected_bits) {
         return Queue(NAND_OP_READ, request, corrected_bits);
     }
@@ -87,17 +85,17 @@ class Broker : public DeviceType {
     }
 
   private:
-    zx_status_t Query(zircon_nand_Info* info);
-    zx_status_t Queue(uint32_t command, const fuchsia_nand_BrokerRequest& request,
-                      uint32_t* corrected_bits);
+      zx_status_t Query(fuchsia_hardware_nand_Info* info);
+      zx_status_t Queue(uint32_t command, const fuchsia_nand_BrokerRequest& request,
+                        uint32_t* corrected_bits);
 
-    ddk::NandProtocolClient nand_;
-    size_t op_size_ = 0;
+      ddk::NandProtocolClient nand_;
+      size_t op_size_ = 0;
 };
 
 zx_status_t GetInfo(void* ctx, fidl_txn_t* txn)  {
     Broker* device = reinterpret_cast<Broker*>(ctx);
-    zircon_nand_Info info;
+    fuchsia_hardware_nand_Info info;
     zx_status_t status = device->GetInfo(&info);
     return fuchsia_nand_BrokerGetInfo_reply(txn, status, &info);
 }
@@ -135,7 +133,7 @@ zx_status_t Broker::Bind() {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    zircon_nand_Info info;
+    fuchsia_hardware_nand_Info info;
     Query(&info);
     if (!op_size_) {
         zxlogf(ERROR, "nand-broker: unable to query the nand driver\n");
@@ -151,7 +149,7 @@ zx_status_t Broker::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     return fuchsia_nand_Broker_dispatch(this, txn, msg, &fidl_ops);
 }
 
-zx_status_t Broker::Query(zircon_nand_Info* info) {
+zx_status_t Broker::Query(fuchsia_hardware_nand_Info* info) {
     nand_.Query(info, &op_size_);
     return ZX_OK;
 }

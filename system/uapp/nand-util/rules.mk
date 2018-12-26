@@ -29,6 +29,6 @@ MODULE_LIBS := \
 
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-nand \
-    system/fidl/zircon-nand \
+    system/fidl/fuchsia-hardware-nand \
 
 include make/module.mk

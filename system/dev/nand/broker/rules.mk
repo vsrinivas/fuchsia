@@ -30,7 +30,7 @@ MODULE_LIBS := \
 
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-nand \
-    system/fidl/zircon-nand \
+    system/fidl/fuchsia-hardware-nand \
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-nand \
@@ -69,7 +69,7 @@ MODULE_LIBS := \
 
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-nand \
-    system/fidl/zircon-nand \
+    system/fidl/fuchsia-hardware-nand \
 
 include make/module.mk
 
@@ -103,6 +103,6 @@ MODULE_LIBS := \
 
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-nand \
-    system/fidl/zircon-nand \
+    system/fidl/fuchsia-hardware-nand \
 
 include make/module.mk

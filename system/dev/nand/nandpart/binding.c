@@ -18,6 +18,6 @@ static zx_driver_ops_t nandpart_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(nandpart, nandpart_driver_ops, "zircon", "0.1", 2)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_NAND),
-    BI_MATCH_IF(EQ, BIND_NAND_CLASS, zircon_nand_Class_PARTMAP),
-ZIRCON_DRIVER_END(nandpart)
+BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_NAND),
+    BI_MATCH_IF(EQ, BIND_NAND_CLASS, fuchsia_hardware_nand_Class_PARTMAP),
+    ZIRCON_DRIVER_END(nandpart)

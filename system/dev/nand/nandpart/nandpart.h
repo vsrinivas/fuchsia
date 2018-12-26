@@ -45,7 +45,7 @@ public:
     void DdkRelease() { delete this; }
 
     // nand protocol implementation.
-    void NandQuery(zircon_nand_Info* info_out, size_t* nand_op_size_out);
+    void NandQuery(fuchsia_hardware_nand_Info* info_out, size_t* nand_op_size_out);
     void NandQueue(nand_operation_t* op, nand_queue_callback completion_cb, void* cookie);
     zx_status_t NandGetFactoryBadBlockList(uint32_t* bad_blocks, size_t bad_block_len,
                                            size_t* num_bad_blocks);
@@ -58,7 +58,7 @@ public:
 private:
     explicit NandPartDevice(zx_device_t* parent, const nand_protocol_t& nand_proto,
                             fbl::RefPtr<BadBlock> bad_block, size_t parent_op_size,
-                            const zircon_nand_Info& nand_info, uint32_t erase_block_start)
+                            const fuchsia_hardware_nand_Info& nand_info, uint32_t erase_block_start)
         : DeviceType(parent), nand_proto_(nand_proto), nand_(&nand_proto_),
           parent_op_size_(parent_op_size), nand_info_(nand_info),
           erase_block_start_(erase_block_start), bad_block_(std::move(bad_block)) {}
@@ -71,7 +71,7 @@ private:
     // op_size for parent device.
     size_t parent_op_size_;
     // info about nand.
-    zircon_nand_Info nand_info_;
+    fuchsia_hardware_nand_Info nand_info_;
     // First erase block for the partition.
     uint32_t erase_block_start_;
     // Device specific bad block info. Shared between all devices for a given

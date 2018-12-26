@@ -34,7 +34,7 @@ MODULE_LIBS := \
     system/ulib/zircon \
 
 MODULE_FIDL_LIBS := \
-    system/fidl/zircon-nand \
+    system/fidl/fuchsia-hardware-nand \
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-badblock \
@@ -87,7 +87,7 @@ MODULE_LIBS := \
     system/ulib/zircon \
 
 MODULE_FIDL_LIBS := \
-    system/fidl/zircon-nand \
+    system/fidl/fuchsia-hardware-nand \
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-badblock \

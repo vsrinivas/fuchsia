@@ -14,12 +14,12 @@
 #include <fbl/unique_ptr.h>
 #include <fs-management/ram-nand.h>
 #include <fs-management/ramdisk.h>
+#include <fuchsia/hardware/nand/c/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <unittest/unittest.h>
 #include <zircon/boot/image.h>
 #include <zircon/device/device.h>
 #include <zircon/hw/gpt.h>
-#include <zircon/nand/c/fidl.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
@@ -41,102 +41,107 @@ constexpr uint32_t kOobSize = 8;
 constexpr uint32_t kPageSize = 1024;
 constexpr uint32_t kPagesPerBlock = 16;
 constexpr uint32_t kNumBlocks = 18;
-constexpr zircon_nand_RamNandInfo kNandInfo = {
-    .vmo = ZX_HANDLE_INVALID,
-    .nand_info = {
-        .page_size = kPageSize,
-        .pages_per_block = kPagesPerBlock,
-        .num_blocks = kNumBlocks,
-        .ecc_bits = 8,
-        .oob_size = kOobSize,
-        .nand_class = zircon_nand_Class_PARTMAP,
-        .partition_guid = {},
-    },
-    .partition_map = {
-        .device_guid = {},
-        .partition_count = 7,
-        .partitions = {
-            {
-                .type_guid = {},
-                .unique_guid = {},
-                .first_block = 0,
-                .last_block = 3,
-                .copy_count = 0,
-                .copy_byte_offset = 0,
-                .name = {},
-                .hidden = true,
-                .bbt = true,
-            },
-            {
-                .type_guid = GUID_BOOTLOADER_VALUE,
-                .unique_guid = {},
-                .first_block = 4,
-                .last_block = 7,
-                .copy_count = 0,
-                .copy_byte_offset = 0,
-                .name = {'b', 'o', 'o', 't', 'l', 'o', 'a', 'd', 'e', 'r'},
-                .hidden = false,
-                .bbt = false,
-            },
-            {
-                .type_guid = GUID_ZIRCON_A_VALUE,
-                .unique_guid = {},
-                .first_block = 8,
-                .last_block = 9,
-                .copy_count = 0,
-                .copy_byte_offset = 0,
-                .name = {'z', 'i', 'r', 'c', 'o', 'n', '-', 'a'},
-                .hidden = false,
-                .bbt = false,
-            },
-            {
-                .type_guid = GUID_ZIRCON_B_VALUE,
-                .unique_guid = {},
-                .first_block = 10,
-                .last_block = 11,
-                .copy_count = 0,
-                .copy_byte_offset = 0,
-                .name = {'z', 'i', 'r', 'c', 'o', 'n', '-', 'b'},
-                .hidden = false,
-                .bbt = false,
-            },
-            {
-                .type_guid = GUID_ZIRCON_R_VALUE,
-                .unique_guid = {},
-                .first_block = 12,
-                .last_block = 13,
-                .copy_count = 0,
-                .copy_byte_offset = 0,
-                .name = {'z', 'i', 'r', 'c', 'o', 'n', '-', 'r'},
-                .hidden = false,
-                .bbt = false,
-            },
-            {
-                .type_guid = GUID_VBMETA_A_VALUE,
-                .unique_guid = {},
-                .first_block = 14,
-                .last_block = 15,
-                .copy_count = 0,
-                .copy_byte_offset = 0,
-                .name = {'v', 'b', 'm', 'e', 't', 'a', '-', 'a'},
-                .hidden = false,
-                .bbt = false,
-            },
-            {
-                .type_guid = GUID_VBMETA_B_VALUE,
-                .unique_guid = {},
-                .first_block = 16,
-                .last_block = 17,
-                .copy_count = 0,
-                .copy_byte_offset = 0,
-                .name = {'v', 'b', 'm', 'e', 't', 'a', '-', 'b'},
-                .hidden = false,
-                .bbt = false,
-            },
-        },
-    },
-    .export_nand_config = true,
-    .export_partition_map = true,
+constexpr fuchsia_hardware_nand_RamNandInfo
+    kNandInfo =
+        {
+            .vmo = ZX_HANDLE_INVALID,
+            .nand_info =
+                {
+                    .page_size = kPageSize,
+                    .pages_per_block = kPagesPerBlock,
+                    .num_blocks = kNumBlocks,
+                    .ecc_bits = 8,
+                    .oob_size = kOobSize,
+                    .nand_class = fuchsia_hardware_nand_Class_PARTMAP,
+                    .partition_guid = {},
+                },
+            .partition_map =
+                {
+                    .device_guid = {},
+                    .partition_count = 7,
+                    .partitions =
+                        {
+                            {
+                                .type_guid = {},
+                                .unique_guid = {},
+                                .first_block = 0,
+                                .last_block = 3,
+                                .copy_count = 0,
+                                .copy_byte_offset = 0,
+                                .name = {},
+                                .hidden = true,
+                                .bbt = true,
+                            },
+                            {
+                                .type_guid = GUID_BOOTLOADER_VALUE,
+                                .unique_guid = {},
+                                .first_block = 4,
+                                .last_block = 7,
+                                .copy_count = 0,
+                                .copy_byte_offset = 0,
+                                .name = {'b', 'o', 'o', 't', 'l', 'o', 'a', 'd', 'e', 'r'},
+                                .hidden = false,
+                                .bbt = false,
+                            },
+                            {
+                                .type_guid = GUID_ZIRCON_A_VALUE,
+                                .unique_guid = {},
+                                .first_block = 8,
+                                .last_block = 9,
+                                .copy_count = 0,
+                                .copy_byte_offset = 0,
+                                .name = {'z', 'i', 'r', 'c', 'o', 'n', '-', 'a'},
+                                .hidden = false,
+                                .bbt = false,
+                            },
+                            {
+                                .type_guid = GUID_ZIRCON_B_VALUE,
+                                .unique_guid = {},
+                                .first_block = 10,
+                                .last_block = 11,
+                                .copy_count = 0,
+                                .copy_byte_offset = 0,
+                                .name = {'z', 'i', 'r', 'c', 'o', 'n', '-', 'b'},
+                                .hidden = false,
+                                .bbt = false,
+                            },
+                            {
+                                .type_guid = GUID_ZIRCON_R_VALUE,
+                                .unique_guid = {},
+                                .first_block = 12,
+                                .last_block = 13,
+                                .copy_count = 0,
+                                .copy_byte_offset = 0,
+                                .name = {'z', 'i', 'r', 'c', 'o', 'n', '-', 'r'},
+                                .hidden = false,
+                                .bbt = false,
+                            },
+                            {
+                                .type_guid = GUID_VBMETA_A_VALUE,
+                                .unique_guid = {},
+                                .first_block = 14,
+                                .last_block = 15,
+                                .copy_count = 0,
+                                .copy_byte_offset = 0,
+                                .name = {'v', 'b', 'm', 'e', 't', 'a', '-', 'a'},
+                                .hidden = false,
+                                .bbt = false,
+                            },
+                            {
+                                .type_guid = GUID_VBMETA_B_VALUE,
+                                .unique_guid = {},
+                                .first_block = 16,
+                                .last_block = 17,
+                                .copy_count = 0,
+                                .copy_byte_offset = 0,
+                                .name = {'v', 'b', 'm', 'e', 't', 'a', '-', 'b'},
+                                .hidden = false,
+                                .bbt = false,
+                            },
+                        },
+                },
+            .export_nand_config = true,
+            .export_partition_map = true,
 };
 
 static fbl::Vector<fbl::String> test_block_devices;
@@ -228,7 +233,7 @@ public:
         zx::vmo dup;
         ASSERT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup), ZX_OK);
 
-        zircon_nand_RamNandInfo info = kNandInfo;
+        fuchsia_hardware_nand_RamNandInfo info = kNandInfo;
         info.vmo = dup.release();
         fbl::RefPtr<fs_mgmt::RamNandCtl> ctl;
         ASSERT_EQ(fs_mgmt::RamNandCtl::Create(&ctl), ZX_OK);

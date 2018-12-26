@@ -10,11 +10,9 @@ MODULE_TYPE := fidl
 
 MODULE_PACKAGE := fidl
 
-MODULE_FIDL_LIBRARY := fuchsia.nand
+MODULE_FIDL_LIBRARY := fuchsia.hardware.block
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/broker.fidl \
-
-MODULE_FIDL_DEPS := system/fidl/fuchsia-hardware-nand
+    $(LOCAL_DIR)/ftl.fidl \
 
 include make/module.mk

@@ -14,13 +14,13 @@
 #include <unistd.h>
 #include <limits.h>
 
+#include <fuchsia/hardware/skipblock/c/fidl.h>
 #include <lib/fdio/unsafe.h>
+#include <pretty/hexdump.h>
 #include <zircon/device/block.h>
-#include <zircon/skipblock/c/fidl.h>
 #include <zircon/device/device.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
-#include <pretty/hexdump.h>
 
 #define DEV_BLOCK "/dev/class/block"
 #define DEV_SKIP_BLOCK "/dev/class/skip-block"
@@ -147,8 +147,8 @@ static int cmd_list_skip_blk(void) {
         zx_handle_t channel = fdio_unsafe_borrow_channel(io);
 
         zx_status_t status;
-        zircon_skipblock_PartitionInfo partition_info;
-        zircon_skipblock_SkipBlockGetPartitionInfo(channel, &status, &partition_info);
+        fuchsia_hardware_skipblock_PartitionInfo partition_info;
+        fuchsia_hardware_skipblock_SkipBlockGetPartitionInfo(channel, &status, &partition_info);
         if (status == ZX_OK) {
             size_to_cstring(info.sizestr, sizeof(info.sizestr),
                             partition_info.block_size_bytes * partition_info.partition_block_count);
@@ -172,8 +172,8 @@ static int try_read_skip_blk(int fd, off_t offset, size_t count) {
     // check that count and offset are aligned to block size
     uint64_t blksize;
     zx_status_t status;
-    zircon_skipblock_PartitionInfo info;
-    zircon_skipblock_SkipBlockGetPartitionInfo(channel, &status, &info);
+    fuchsia_hardware_skipblock_PartitionInfo info;
+    fuchsia_hardware_skipblock_SkipBlockGetPartitionInfo(channel, &status, &info);
     if (status != ZX_OK) {
         return status;
     }
@@ -208,14 +208,14 @@ static int try_read_skip_blk(int fd, off_t offset, size_t count) {
     }
 
     // read the data
-    zircon_skipblock_ReadWriteOperation op = {
+    fuchsia_hardware_skipblock_ReadWriteOperation op = {
         .vmo = dup,
         .vmo_offset = 0,
         .block = offset / blksize,
         .block_count = count / blksize,
     };
 
-    zircon_skipblock_SkipBlockRead(channel, &op, &status);
+    fuchsia_hardware_skipblock_SkipBlockRead(channel, &op, &status);
     if (status != ZX_OK) {
         fprintf(stderr, "Error %d in SkipBlockRead()\n", status);
         rc = status;

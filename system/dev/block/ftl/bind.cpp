@@ -39,7 +39,5 @@ static constexpr zx_driver_ops_t ftl_driver_ops = []() {
 }();
 
 ZIRCON_DRIVER_BEGIN(ftl, ftl_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF_AUTOBIND,
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_NAND),
-    BI_MATCH_IF(EQ, BIND_NAND_CLASS, zircon_nand_Class_FTL),
-ZIRCON_DRIVER_END(ftl)
+BI_ABORT_IF_AUTOBIND, BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_NAND),
+    BI_MATCH_IF(EQ, BIND_NAND_CLASS, fuchsia_hardware_nand_Class_FTL), ZIRCON_DRIVER_END(ftl)

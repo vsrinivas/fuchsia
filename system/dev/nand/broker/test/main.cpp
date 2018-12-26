@@ -45,15 +45,13 @@ Existing broker device:
 
 )""";
 
-const zircon_nand_Info kDefaultNandInfo = {
-    .page_size = 4096,
-    .pages_per_block = 4,
-    .num_blocks = 5,
-    .ecc_bits = 6,
-    .oob_size = 4,
-    .nand_class = zircon_nand_Class_TEST,
-    .partition_guid = {}
-};
+const fuchsia_hardware_nand_Info kDefaultNandInfo = {.page_size = 4096,
+                                                     .pages_per_block = 4,
+                                                     .num_blocks = 5,
+                                                     .ecc_bits = 6,
+                                                     .oob_size = 4,
+                                                     .nand_class = fuchsia_hardware_nand_Class_TEST,
+                                                     .partition_guid = {}};
 
 // The test can operate over either a ram-nand, or a real device. The simplest
 // way to control what's going on is to have a place outside the test framework

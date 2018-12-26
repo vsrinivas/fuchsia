@@ -28,7 +28,7 @@ class NandTester : public ddk::NandProtocol<NandTester> {
     nand_protocol_t* proto() { return &proto_; }
     nand_operation_t* operation() { return &operation_; }
 
-    void NandQuery(zircon_nand_Info* out_info, size_t* out_nand_op_size) {
+    void NandQuery(fuchsia_hardware_nand_Info* out_info, size_t* out_nand_op_size) {
         *out_info = info_;
         *out_nand_op_size = kOpSize;
     }
@@ -44,7 +44,7 @@ class NandTester : public ddk::NandProtocol<NandTester> {
 
   private:
     nand_protocol_t proto_;
-    zircon_nand_Info info_ = {};
+    fuchsia_hardware_nand_Info info_ = {};
     nand_operation_t operation_ = {};
 };
 
@@ -60,7 +60,7 @@ bool QueryDisabledTest() {
     NandTester tester;
     ftl::OobDoubler doubler(tester.proto(), false);
 
-    zircon_nand_Info info;
+    fuchsia_hardware_nand_Info info;
     size_t op_size;
     doubler.Query(&info, &op_size);
     EXPECT_EQ(kPageSize, info.page_size);
@@ -77,7 +77,7 @@ bool QueryEnabledTest() {
     NandTester tester;
     ftl::OobDoubler doubler(tester.proto(), true);
 
-    zircon_nand_Info info;
+    fuchsia_hardware_nand_Info info;
     size_t op_size;
     doubler.Query(&info, &op_size);
     EXPECT_EQ(kPageSize * 2, info.page_size);

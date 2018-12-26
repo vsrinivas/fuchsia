@@ -19,8 +19,9 @@
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
 #include <fs-management/ramdisk.h>
-#include <fvm/sparse-reader.h>
+#include <fuchsia/hardware/skipblock/c/fidl.h>
 #include <fvm/fvm-sparse.h>
+#include <fvm/sparse-reader.h>
 #include <lib/cksum.h>
 #include <lib/fzl/fdio.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
@@ -30,7 +31,6 @@
 #include <zircon/boot/image.h>
 #include <zircon/device/block.h>
 #include <zircon/device/device.h>
-#include <zircon/skipblock/c/fidl.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zxcrypt/volume.h>
@@ -293,7 +293,7 @@ zx_status_t WriteVmoToSkipBlock(const zx::vmo& vmo, size_t vmo_size,
         return status;
     }
 
-    zircon_skipblock_ReadWriteOperation operation = {
+    fuchsia_hardware_skipblock_ReadWriteOperation operation = {
         .vmo = dup.release(),
         .vmo_offset = 0,
         .block = 0,
@@ -301,7 +301,8 @@ zx_status_t WriteVmoToSkipBlock(const zx::vmo& vmo, size_t vmo_size,
     };
     bool bad_block_grown;
 
-    zircon_skipblock_SkipBlockWrite(caller.borrow_channel(), &operation, &status, &bad_block_grown);
+    fuchsia_hardware_skipblock_SkipBlockWrite(caller.borrow_channel(), &operation, &status,
+                                              &bad_block_grown);
     if (status != ZX_OK) {
         ERROR("Error writing partition data: %s\n", zx_status_get_string(status));
         return status;

@@ -10,9 +10,9 @@
 
 #include <ddk/protocol/badblock.h>
 #include <ddk/protocol/nand.h>
+#include <fuchsia/hardware/nand/c/fidl.h>
 #include <lib/ftl/ndm-driver.h>
 #include <zircon/compiler.h>
-#include <zircon/nand/c/fidl.h>
 #include <zircon/types.h>
 
 namespace ftl {
@@ -23,7 +23,7 @@ class NandDriver : public ftl::NdmBaseDriver {
     static std::unique_ptr<NandDriver> Create(const nand_protocol_t* parent,
                                               const bad_block_protocol_t* bad_block);
 
-    virtual const zircon_nand_Info& info() const =  0;
+    virtual const fuchsia_hardware_nand_Info& info() const = 0;
 };
 
 }  // namespace ftl.

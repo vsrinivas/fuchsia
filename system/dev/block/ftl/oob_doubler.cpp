@@ -8,7 +8,7 @@
 
 namespace ftl {
 
-void OobDoubler::Query(zircon_nand_Info* info_out, size_t* nand_op_size_out) {
+void OobDoubler::Query(fuchsia_hardware_nand_Info* info_out, size_t* nand_op_size_out) {
     parent_.Query(info_out, nand_op_size_out);
     if (active_) {
         info_out->page_size *= 2;

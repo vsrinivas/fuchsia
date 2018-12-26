@@ -38,7 +38,7 @@ class FakeNand : public ddk::NandProtocol<FakeNand> {
     void set_ecc_bits(uint32_t ecc_bits) { ecc_bits_ = ecc_bits; }
 
     // Nand protocol:
-    void NandQuery(zircon_nand_Info* out_info, size_t* out_nand_op_size) {
+    void NandQuery(fuchsia_hardware_nand_Info* out_info, size_t* out_nand_op_size) {
         *out_info = info_;
         *out_nand_op_size = sizeof(*operation_);
     }
@@ -78,7 +78,7 @@ class FakeNand : public ddk::NandProtocol<FakeNand> {
 
   private:
     nand_protocol_t proto_;
-    zircon_nand_Info info_ = {};
+    fuchsia_hardware_nand_Info info_ = {};
     nand_operation_t* operation_;
     zx_status_t result_ = ZX_OK;
     uint32_t ecc_bits_ = 0;

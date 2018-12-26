@@ -11,8 +11,8 @@
 
 #include <fbl/unique_fd.h>
 #include <fs-management/ram-nand.h>
+#include <fuchsia/hardware/nand/c/fidl.h>
 #include <lib/fzl/owned-vmo-mapper.h>
-#include <zircon/nand/c/fidl.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
@@ -80,18 +80,18 @@ bool ValidateOptions(const Config& config) {
     return true;
 }
 
-zircon_nand_Info GetNandInfo(const Config& config) {
-    zircon_nand_Info info = {};
+fuchsia_hardware_nand_Info GetNandInfo(const Config& config) {
+    fuchsia_hardware_nand_Info info = {};
     info.page_size = config.page_size;
     info.pages_per_block = config.block_size;
     info.ecc_bits = 8;
     info.oob_size = 8;
-    info.nand_class = zircon_nand_Class_FTL;
+    info.nand_class = fuchsia_hardware_nand_Class_FTL;
     return info;
 };
 
 // Sets the vmo and nand size from the contents of the input file.
-bool FinishDeviceConfig(const char* path, zircon_nand_RamNandInfo* device_config) {
+bool FinishDeviceConfig(const char* path, fuchsia_hardware_nand_RamNandInfo* device_config) {
     fbl::unique_fd in(open(path, O_RDONLY));
     if (!in) {
         printf("Unable to open image file\n");
@@ -103,7 +103,7 @@ bool FinishDeviceConfig(const char* path, zircon_nand_RamNandInfo* device_config
         printf("Unable to get file length\n");
         return false;
     }
-    zircon_nand_Info& info = device_config->nand_info;
+    fuchsia_hardware_nand_Info& info = device_config->nand_info;
 
     uint32_t block_size = info.pages_per_block * (info.oob_size + info.page_size);
     if (in_size % block_size != 0) {
@@ -147,7 +147,7 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    zircon_nand_RamNandInfo ram_nand_config = {};
+    fuchsia_hardware_nand_RamNandInfo ram_nand_config = {};
     ram_nand_config.nand_info = GetNandInfo(config);
     if (!FinishDeviceConfig(config.path, &ram_nand_config)) {
         return -1;

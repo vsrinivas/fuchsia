@@ -9,4 +9,5 @@
 #include <zircon/boot/image.h>
 #include <zircon/types.h>
 
-zx_status_t SanitizePartitionMap(zbi_partition_map_t* pmap, const zircon_nand_Info& nand_info);
+zx_status_t SanitizePartitionMap(zbi_partition_map_t* pmap,
+                                 const fuchsia_hardware_nand_Info& nand_info);

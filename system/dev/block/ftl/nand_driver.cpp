@@ -35,14 +35,14 @@ class NandDriverImpl : public ftl::NandDriver {
     int IsBadBlock(uint32_t page_num) final;
     bool IsEmptyPage(uint32_t page_num, const uint8_t* data, const uint8_t* spare) final;
 
-    const zircon_nand_Info& info() const final { return info_; }
+    const fuchsia_hardware_nand_Info& info() const final { return info_; }
 
-  private:
+private:
     bool GetBadBlocks();
 
     ftl::OobDoubler parent_;
     size_t op_size_ = 0;
-    zircon_nand_Info info_ = {};
+    fuchsia_hardware_nand_Info info_ = {};
     const bad_block_protocol_t* bad_block_protocol_;
     fbl::Array<uint32_t> bad_blocks_;
 };

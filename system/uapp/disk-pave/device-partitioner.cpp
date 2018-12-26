@@ -11,13 +11,13 @@
 #include <fbl/auto_call.h>
 #include <fbl/function.h>
 #include <fs-management/fvm.h>
+#include <fuchsia/hardware/block/c/fidl.h>
+#include <fuchsia/hardware/skipblock/c/fidl.h>
 #include <gpt/cros.h>
-#include <lib/fdio/watcher.h>
 #include <lib/fdio/util.h>
+#include <lib/fdio/watcher.h>
 #include <lib/fzl/fdio.h>
 #include <zircon/device/device.h>
-#include <zircon/block/c/fidl.h>
-#include <zircon/skipblock/c/fidl.h>
 #include <zircon/status.h>
 #include <zxcrypt/volume.h>
 
@@ -192,8 +192,9 @@ zx_status_t OpenSkipBlockPartition(const fbl::unique_fd& devfs_root, const uint8
         fzl::FdioCaller caller(fbl::unique_fd(fd.get()));
 
         zx_status_t status;
-        zircon_skipblock_PartitionInfo info;
-        zircon_skipblock_SkipBlockGetPartitionInfo(caller.borrow_channel(), &status, &info);
+        fuchsia_hardware_skipblock_PartitionInfo info;
+        fuchsia_hardware_skipblock_SkipBlockGetPartitionInfo(caller.borrow_channel(), &status,
+                                                             &info);
         caller.release().release();
         if (status != ZX_OK || memcmp(info.partition_guid, type_guid, GUID_LEN) != 0) {
             return true;
@@ -1065,7 +1066,7 @@ zx_status_t SkipBlockDevicePartitioner::WipePartitions() {
         return status;
     }
     zx_status_t status2;
-    status = zircon_block_FtlFormat(svc.get(), &status2);
+    status = fuchsia_hardware_block_FtlFormat(svc.get(), &status2);
 
     return status == ZX_OK ? status2 : status;
 }
@@ -1083,8 +1084,9 @@ zx_status_t SkipBlockDevicePartitioner::GetBlockSize(const fbl::unique_fd& devic
     fzl::FdioCaller caller(fbl::unique_fd(device_fd.get()));
 
     zx_status_t status;
-    zircon_skipblock_PartitionInfo part_info;
-    zircon_skipblock_SkipBlockGetPartitionInfo(caller.borrow_channel(), &status, &part_info);
+    fuchsia_hardware_skipblock_PartitionInfo part_info;
+    fuchsia_hardware_skipblock_SkipBlockGetPartitionInfo(caller.borrow_channel(), &status,
+                                                         &part_info);
     caller.release().release();
     if (status != ZX_OK) {
         ERROR("Failed to get partition info with status: %d\n", status);

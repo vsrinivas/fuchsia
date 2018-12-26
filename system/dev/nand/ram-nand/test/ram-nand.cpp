@@ -8,10 +8,10 @@
 #include <ddk/metadata/nand.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
+#include <fuchsia/hardware/nand/c/fidl.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <unittest/unittest.h>
 #include <zircon/boot/image.h>
-#include <zircon/nand/c/fidl.h>
 #include <zircon/process.h>
 
 #include <utility>
@@ -26,10 +26,10 @@ constexpr int kBlockSize = 4;
 constexpr int kNumBlocks = 5;
 constexpr int kNumPages = kBlockSize * kNumBlocks;
 
-zircon_nand_RamNandInfo BuildConfig() {
-    zircon_nand_RamNandInfo config = {};
+fuchsia_hardware_nand_RamNandInfo BuildConfig() {
+    fuchsia_hardware_nand_RamNandInfo config = {};
     config.vmo = ZX_HANDLE_INVALID;
-    config.nand_info = {4096, 4, 5, 6, 0, zircon_nand_Class_TEST, {}};
+    config.nand_info = {4096, 4, 5, 6, 0, fuchsia_hardware_nand_Class_TEST, {}};
     return config;
 }
 
@@ -72,7 +72,7 @@ bool ExportNandConfigTest() {
     NandParams params(kPageSize, kBlockSize, kNumBlocks, 6, 0);
     NandDevice device(params, fake_ddk::kFakeParent);
 
-    zircon_nand_RamNandInfo config = BuildConfig();
+    fuchsia_hardware_nand_RamNandInfo config = BuildConfig();
     config.export_nand_config = true;
     config.partition_map.partition_count = 3;
 
@@ -116,7 +116,7 @@ bool ExportPartitionMapTest() {
     NandParams params(kPageSize, kBlockSize, kNumBlocks, 6, 0);
     NandDevice device(params, fake_ddk::kFakeParent);
 
-    zircon_nand_RamNandInfo config = BuildConfig();
+    fuchsia_hardware_nand_RamNandInfo config = BuildConfig();
     config.export_partition_map = true;
     config.partition_map.partition_count = 3;
     memset(config.partition_map.device_guid, 33, ZBI_PARTITION_GUID_LEN);
@@ -176,7 +176,7 @@ bool AddMetadataTest() {
     NandParams params(kPageSize, kBlockSize, kNumBlocks, 6, 0);
     NandDevice device(params, fake_ddk::kFakeParent);
 
-    zircon_nand_RamNandInfo config = BuildConfig();
+    fuchsia_hardware_nand_RamNandInfo config = BuildConfig();
     config.export_nand_config = true;
     config.export_partition_map = true;
 
@@ -200,7 +200,7 @@ fbl::unique_ptr<NandDevice> CreateDevice(size_t* operation_size) {
     }
 
     if (operation_size) {
-        zircon_nand_Info info;
+        fuchsia_hardware_nand_Info info;
         device->NandQuery(&info, operation_size);
     }
 
@@ -244,7 +244,7 @@ bool QueryTest() {
     NandParams params(kPageSize, kBlockSize, kNumBlocks, 6, 8);  // 6 bits of ECC, 8 OOB bytes.
     NandDevice device(params);
 
-    zircon_nand_Info info;
+    fuchsia_hardware_nand_Info info;
     size_t operation_size;
     device.NandQuery(&info, &operation_size);
     ASSERT_EQ(0, memcmp(&info, &params, sizeof(info)));

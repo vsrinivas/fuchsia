@@ -12,17 +12,17 @@
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
+#include <fuchsia/hardware/nand/c/fidl.h>
 #include <fuchsia/nand/c/fidl.h>
+#include <lib/cksum.h>
 #include <lib/fdio/util.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/owned-vmo-mapper.h>
-#include <lib/cksum.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <pretty/hexdump.h>
 #include <zircon/assert.h>
 #include <zircon/device/device.h>
-#include <zircon/nand/c/fidl.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
@@ -112,7 +112,7 @@ class NandBroker {
     const char* data() const { return reinterpret_cast<char*>(mapping_.start()); }
     const char* oob() const { return data() + info_.page_size * info_.pages_per_block; }
 
-    const zircon_nand_Info& Info() const { return info_; }
+    const fuchsia_hardware_nand_Info& Info() const { return info_; }
 
     // The operations to perform (return true on success):
     bool Query();
@@ -131,7 +131,7 @@ class NandBroker {
     const char* path_;
     fbl::unique_fd device_;
     zx::channel caller_;
-    zircon_nand_Info info_ = {};
+    fuchsia_hardware_nand_Info info_ = {};
     fzl::OwnedVmoMapper mapping_;
 };
 
@@ -423,7 +423,7 @@ bool ValidateOptionsWithNand(const NandBroker& nand, const Config& config) {
         return false;
     }
 
-    if (config.erase && nand.Info().nand_class == zircon_nand_Class_PARTMAP &&
+    if (config.erase && nand.Info().nand_class == fuchsia_hardware_nand_Class_PARTMAP &&
         config.block_num < 24) {
         printf("Erasing the restricted area is not a good idea, sorry\n");
         return false;

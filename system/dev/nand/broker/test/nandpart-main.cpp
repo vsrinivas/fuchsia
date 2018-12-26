@@ -8,32 +8,33 @@
 #include <unittest/unittest.h>
 #include <zircon/hw/gpt.h>
 
-constexpr zircon_nand_Info kNandInfo = {
+constexpr fuchsia_hardware_nand_Info kNandInfo = {
     .page_size = 4096,
     .pages_per_block = 4,
     .num_blocks = 5,
     .ecc_bits = 6,
     .oob_size = 4,
-    .nand_class = zircon_nand_Class_PARTMAP,
+    .nand_class = fuchsia_hardware_nand_Class_PARTMAP,
     .partition_guid = {},
 };
 
-constexpr zircon_nand_PartitionMap kPartitionMap = {
+constexpr fuchsia_hardware_nand_PartitionMap kPartitionMap = {
     .device_guid = {},
     .partition_count = 1,
-    .partitions = {
+    .partitions =
         {
-            .type_guid = GUID_TEST_VALUE,
-            .unique_guid = {},
-            .first_block = 0,
-            .last_block = 4,
-            .copy_count = 0,
-            .copy_byte_offset = 0,
-            .name = {'t', 'e', 's', 't'},
-            .hidden = false,
-            .bbt = false,
+            {
+                .type_guid = GUID_TEST_VALUE,
+                .unique_guid = {},
+                .first_block = 0,
+                .last_block = 4,
+                .copy_count = 0,
+                .copy_byte_offset = 0,
+                .name = {'t', 'e', 's', 't'},
+                .hidden = false,
+                .bbt = false,
+            },
         },
-    },
 };
 
 // The test can operate over either a ram-nand, or a real device. The simplest

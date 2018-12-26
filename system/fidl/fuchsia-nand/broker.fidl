@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 library fuchsia.nand;
-using zircon.nand;
+using fuchsia.hardware.nand;
 using zx;
 
 // Defines a Read/Write/Erase request to be sent to the nand driver.
@@ -20,7 +20,7 @@ struct BrokerRequest {
 [Layout = "Simple"]
 interface Broker {
     // Retrieves the nand info from the underlying device.
-    1: GetInfo() -> (zx.status status, zircon.nand.Info? info);
+    1: GetInfo() -> (zx.status status, fuchsia.hardware.nand.Info? info);
 
     // Reads from the nand device.
     2: Read(BrokerRequest request) -> (zx.status status, uint32 corrected_bit_flips);

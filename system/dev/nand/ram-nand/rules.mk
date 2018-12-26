@@ -27,7 +27,7 @@ MODULE_LIBS := \
     system/ulib/driver \
     system/ulib/zircon \
 
-MODULE_FIDL_LIBS := system/fidl/zircon-nand
+MODULE_FIDL_LIBS := system/fidl/fuchsia-hardware-nand
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-nand \
@@ -71,7 +71,7 @@ MODULE_LIBS := \
     system/ulib/unittest \
     system/ulib/zircon \
 
-MODULE_FIDL_LIBS := system/fidl/zircon-nand
+MODULE_FIDL_LIBS := system/fidl/fuchsia-hardware-nand
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-nand \

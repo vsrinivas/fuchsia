@@ -28,8 +28,8 @@ MODULE_LIBS := \
     system/ulib/zircon \
 
 MODULE_FIDL_LIBS := \
-    system/fidl/zircon-nand \
-    system/fidl/zircon-skipblock
+    system/fidl/fuchsia-hardware-nand \
+    system/fidl/fuchsia-hardware-skipblock
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-badblock \

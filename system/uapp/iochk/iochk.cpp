@@ -23,11 +23,11 @@
 #include <lib/zx/fifo.h>
 #include <lib/zx/thread.h>
 
+#include <fuchsia/hardware/skipblock/c/fidl.h>
+#include <lib/zircon-internal/xorshiftrand.h>
 #include <zircon/assert.h>
 #include <zircon/device/block.h>
-#include <lib/zircon-internal/xorshiftrand.h>
 #include <zircon/process.h>
-#include <zircon/skipblock/c/fidl.h>
 #include <zircon/syscalls.h>
 #include <zircon/threads.h>
 
@@ -109,7 +109,7 @@ public:
         fbl::unique_fd fd;
     } block;
     struct {
-        zircon_skipblock_PartitionInfo info = {};
+        fuchsia_hardware_skipblock_PartitionInfo info = {};
         fzl::FdioCaller caller;
     } skip;
     // Protects |iochk_failure| and |progress|
@@ -298,7 +298,8 @@ std::atomic<uint16_t> BlockChecker::next_txid_;
 
 class SkipBlockChecker : public Checker {
 public:
-    static zx_status_t Initialize(fzl::FdioCaller& caller, zircon_skipblock_PartitionInfo info,
+    static zx_status_t Initialize(fzl::FdioCaller& caller,
+                                  fuchsia_hardware_skipblock_PartitionInfo info,
                                   fbl::unique_ptr<Checker>* checker) {
         fzl::VmoMapper mapping;
         zx::vmo vmo;
@@ -329,15 +330,15 @@ public:
             }
 
             GenerateBlockData(block_idx, block_size);
-            zircon_skipblock_ReadWriteOperation request = {
+            fuchsia_hardware_skipblock_ReadWriteOperation request = {
                 .vmo = dup.release(),
                 .vmo_offset = 0,
                 .block = static_cast<uint32_t>((block_idx * block_size) / info_.block_size_bytes),
                 .block_count = static_cast<uint32_t>(length / info_.block_size_bytes),
             };
             bool bad_block_grown;
-            zircon_skipblock_SkipBlockWrite(caller_.borrow_channel(), &request, &st,
-                                            &bad_block_grown);
+            fuchsia_hardware_skipblock_SkipBlockWrite(caller_.borrow_channel(), &request, &st,
+                                                      &bad_block_grown);
             if (st != ZX_OK) {
                 printf("SkipBlockWrite error %d\n", st);
                 return st;
@@ -361,13 +362,13 @@ public:
                 return st;
             }
 
-            zircon_skipblock_ReadWriteOperation request = {
+            fuchsia_hardware_skipblock_ReadWriteOperation request = {
                 .vmo = dup.release(),
                 .vmo_offset = 0,
                 .block = static_cast<uint32_t>((block_idx * block_size) / info_.block_size_bytes),
                 .block_count = static_cast<uint32_t>(length / info_.block_size_bytes),
             };
-            zircon_skipblock_SkipBlockRead(caller_.borrow_channel(), &request, &st);
+            fuchsia_hardware_skipblock_SkipBlockRead(caller_.borrow_channel(), &request, &st);
             if (st != ZX_OK) {
                 printf("SkipBlockRead error %d\n", st);
                 return st;
@@ -383,7 +384,7 @@ public:
 
 private:
     SkipBlockChecker(fzl::VmoMapper mapper, zx::vmo vmo, fzl::FdioCaller& caller,
-                     zircon_skipblock_PartitionInfo info)
+                     fuchsia_hardware_skipblock_PartitionInfo info)
         : Checker(mapper.start()), mapper_(std::move(mapper)), vmo_(std::move(vmo)),
           caller_(caller), info_(info) {}
     ~SkipBlockChecker() = default;
@@ -391,7 +392,7 @@ private:
     fzl::VmoMapper mapper_;
     zx::vmo vmo_;
     fzl::FdioCaller& caller_;
-    zircon_skipblock_PartitionInfo info_;
+    fuchsia_hardware_skipblock_PartitionInfo info_;
 };
 
 zx_status_t InitializeChecker(WorkContext& ctx, fbl::unique_ptr<Checker>* checker) {
@@ -577,9 +578,9 @@ int iochk(int argc, char** argv) {
         ctx.skip.caller.reset(std::move(fd));
         // Skip Block Device Setup.
         zx_status_t status;
-        zircon_skipblock_PartitionInfo info;
-        zircon_skipblock_SkipBlockGetPartitionInfo(ctx.skip.caller.borrow_channel(), &status,
-                                                   &info);
+        fuchsia_hardware_skipblock_PartitionInfo info;
+        fuchsia_hardware_skipblock_SkipBlockGetPartitionInfo(ctx.skip.caller.borrow_channel(),
+                                                             &status, &info);
         if (status != ZX_OK) {
             printf("unable to get skip-block partition info: %d\n", status);
             printf("fd: %d\n", ctx.skip.caller.release().get());

@@ -35,7 +35,7 @@ struct Page0 {
 uint32_t g_bbt_size = 0;
 
 // Returns the number of valid bad block tables found.
-int GetNumTables(const char* oob, const zircon_nand_Info& info) {
+int GetNumTables(const char* oob, const fuchsia_hardware_nand_Info& info) {
     int found = 0;
     for (uint32_t page = 0; page < info.pages_per_block; page++) {
         if (memcmp(oob + page * info.oob_size, "nbbt", 4) != 0) {
@@ -68,7 +68,7 @@ void GetBbtLocation(const void* data, uint32_t* first_block, uint32_t* num_block
     *num_blocks = 4;
 }
 
-int DumpBbt(const void* data, const void* oob, const zircon_nand_Info& info) {
+int DumpBbt(const void* data, const void* oob, const fuchsia_hardware_nand_Info& info) {
     if (g_bbt_size * info.page_size < info.num_blocks) {
         printf("BBT too small\n");
         return 0;

@@ -318,7 +318,7 @@ static zx_status_t nand_worker_thread(void* arg) {
     return ZX_OK;
 }
 
-static void _nand_query(void* ctx, zircon_nand_Info* info_out, size_t* nand_op_size_out) {
+static void _nand_query(void* ctx, fuchsia_hardware_nand_Info* info_out, size_t* nand_op_size_out) {
     nand_device_t* dev = (nand_device_t*)ctx;
 
     memcpy(info_out, &dev->nand_info, sizeof(*info_out));
@@ -454,8 +454,8 @@ static zx_status_t nand_bind(void* ctx, zx_device_t* parent) {
     }
 
     zx_device_prop_t props[] = {
-        { BIND_PROTOCOL, 0, ZX_PROTOCOL_NAND },
-        { BIND_NAND_CLASS, 0, zircon_nand_Class_PARTMAP },
+        {BIND_PROTOCOL, 0, ZX_PROTOCOL_NAND},
+        {BIND_NAND_CLASS, 0, fuchsia_hardware_nand_Class_PARTMAP},
     };
 
     device_add_args_t args = {

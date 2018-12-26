@@ -39,7 +39,7 @@ MODULE_LIBS := \
 
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-io \
-    system/fidl/zircon-nand \
+    system/fidl/fuchsia-hardware-nand \
 
 MODULE_EXPORT := so
 MODULE_SO_NAME := fs-management

@@ -15,7 +15,7 @@ typedef struct nand_device {
     nand_protocol_t nand_proto;
     raw_nand_protocol_t host;
 
-    zircon_nand_Info nand_info;
+    fuchsia_hardware_nand_Info nand_info;
     uint32_t num_nand_pages;
 
     // Protects the IO request list.

@@ -47,8 +47,8 @@ MODULE_PACKAGE := src
 
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-io \
-    system/fidl/zircon-block \
-    system/fidl/zircon-skipblock \
+    system/fidl/fuchsia-hardware-block \
+    system/fidl/fuchsia-hardware-skipblock \
 
 include make/module.mk
 
@@ -96,8 +96,8 @@ MODULE_LIBS := \
     system/ulib/zxcrypt \
 
 MODULE_FIDL_LIBS := \
-    system/fidl/zircon-nand \
-    system/fidl/zircon-block \
-    system/fidl/zircon-skipblock \
+    system/fidl/fuchsia-hardware-nand \
+    system/fidl/fuchsia-hardware-block \
+    system/fidl/fuchsia-hardware-skipblock \
 
 include make/module.mk

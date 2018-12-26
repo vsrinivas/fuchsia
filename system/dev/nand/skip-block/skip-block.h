@@ -16,7 +16,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
-#include <zircon/skipblock/c/fidl.h>
+#include <fuchsia/hardware/skipblock/c/fidl.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 
@@ -24,8 +24,8 @@
 
 namespace nand {
 
-using PartitionInfo = zircon_skipblock_PartitionInfo;
-using ReadWriteOperation = zircon_skipblock_ReadWriteOperation;
+using PartitionInfo = fuchsia_hardware_skipblock_PartitionInfo;
+using ReadWriteOperation = fuchsia_hardware_skipblock_ReadWriteOperation;
 
 class SkipBlockDevice;
 using DeviceType = ddk::Device<SkipBlockDevice, ddk::GetSizable, ddk::Unbindable,
@@ -70,7 +70,7 @@ private:
     ddk::BadBlockProtocolClient bad_block_ __TA_GUARDED(lock_);
     LogicalToPhysicalMap block_map_ __TA_GUARDED(lock_);
     fbl::Mutex lock_;
-    zircon_nand_Info nand_info_;
+    fuchsia_hardware_nand_Info nand_info_;
     size_t parent_op_size_;
     // Operation buffer of size parent_op_size_.
     fbl::Array<uint8_t> nand_op_ __TA_GUARDED(lock_);

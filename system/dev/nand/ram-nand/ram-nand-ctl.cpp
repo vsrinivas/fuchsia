@@ -10,8 +10,8 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
+#include <fuchsia/hardware/nand/c/fidl.h>
 #include <lib/zx/vmo.h>
-#include <zircon/nand/c/fidl.h>
 #include <zircon/types.h>
 
 #include "ram-nand.h"
@@ -33,27 +33,27 @@ class RamNandCtl : public RamNandCtlDeviceType {
     zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
                          void* out_buf, size_t out_len, size_t* out_actual);
 
-    zx_status_t CreateDevice(const zircon_nand_RamNandInfo* info, const char** name);
+    zx_status_t CreateDevice(const fuchsia_hardware_nand_RamNandInfo* info, const char** name);
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(RamNandCtl);
 };
 
-zx_status_t CreateDevice(void* ctx, const zircon_nand_RamNandInfo* info, fidl_txn_t* txn) {
+zx_status_t CreateDevice(void* ctx, const fuchsia_hardware_nand_RamNandInfo* info,
+                         fidl_txn_t* txn) {
     RamNandCtl* device = reinterpret_cast<RamNandCtl*>(ctx);
     const char* name = nullptr;
     zx_status_t status = device->CreateDevice(info, &name);
-    return zircon_nand_RamNandCtlCreateDevice_reply(txn, status, name, strlen(name));
+    return fuchsia_hardware_nand_RamNandCtlCreateDevice_reply(txn, status, name, strlen(name));
 }
 
-zircon_nand_RamNandCtl_ops_t fidl_ops = {
-    .CreateDevice = CreateDevice
-};
+fuchsia_hardware_nand_RamNandCtl_ops_t fidl_ops = {.CreateDevice = CreateDevice};
 
 zx_status_t RamNandCtl::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-    return zircon_nand_RamNandCtl_dispatch(this, txn, msg, &fidl_ops);
+    return fuchsia_hardware_nand_RamNandCtl_dispatch(this, txn, msg, &fidl_ops);
 }
 
-zx_status_t RamNandCtl::CreateDevice(const zircon_nand_RamNandInfo* info, const char** name) {
+zx_status_t RamNandCtl::CreateDevice(const fuchsia_hardware_nand_RamNandInfo* info,
+                                     const char** name) {
     const auto& params = static_cast<const NandParams>(info->nand_info);
     fbl::AllocChecker checker;
     fbl::unique_ptr<NandDevice> device(new (&checker) NandDevice(params, zxdev()));

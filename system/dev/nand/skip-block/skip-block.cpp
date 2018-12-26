@@ -27,7 +27,7 @@ namespace {
 
 struct BlockOperationContext {
     ReadWriteOperation op;
-    zircon_nand_Info* nand_info;
+    fuchsia_hardware_nand_Info* nand_info;
     LogicalToPhysicalMap* block_map;
     ddk::NandProtocolClient* nand;
     uint32_t copy;
@@ -120,23 +120,23 @@ zx_status_t GetPartitionInfo(void* ctx, fidl_txn_t* txn) {
     auto* device = reinterpret_cast<SkipBlockDevice*>(ctx);
     PartitionInfo info;
     zx_status_t status = device->GetPartitionInfo(&info);
-    return zircon_skipblock_SkipBlockGetPartitionInfo_reply(txn, status, &info);
+    return fuchsia_hardware_skipblock_SkipBlockGetPartitionInfo_reply(txn, status, &info);
 }
 
 zx_status_t Read(void* ctx, const ReadWriteOperation* op, fidl_txn_t* txn) {
     auto* device = reinterpret_cast<SkipBlockDevice*>(ctx);
     zx_status_t status = device->Read(*op);
-    return zircon_skipblock_SkipBlockRead_reply(txn, status);
+    return fuchsia_hardware_skipblock_SkipBlockRead_reply(txn, status);
 }
 
 zx_status_t Write(void* ctx, const ReadWriteOperation* op, fidl_txn_t* txn) {
     auto* device = reinterpret_cast<SkipBlockDevice*>(ctx);
     bool bad_block_grown;
     zx_status_t status = device->Write(*op, & bad_block_grown);
-    return zircon_skipblock_SkipBlockWrite_reply(txn, status, bad_block_grown);
+    return fuchsia_hardware_skipblock_SkipBlockWrite_reply(txn, status, bad_block_grown);
 }
 
-zircon_skipblock_SkipBlock_ops fidl_ops = {
+fuchsia_hardware_skipblock_SkipBlock_ops fidl_ops = {
     .GetPartitionInfo = GetPartitionInfo,
     .Read = Read,
     .Write = Write,
@@ -399,7 +399,7 @@ zx_off_t SkipBlockDevice::DdkGetSize() {
 }
 
 zx_status_t SkipBlockDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-    return zircon_skipblock_SkipBlock_dispatch(this, txn, msg, &fidl_ops);
+    return fuchsia_hardware_skipblock_SkipBlock_dispatch(this, txn, msg, &fidl_ops);
 }
 
 } // namespace nand

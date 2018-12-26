@@ -78,7 +78,7 @@ public:
     // pattern for the desired number of pages, skipping the pages before start.
     bool CheckPattern(uint8_t expected, int start, int num_pages, const void* memory);
 
-    const zircon_nand_Info& Info() const { return parent_->Info(); }
+    const fuchsia_hardware_nand_Info& Info() const { return parent_->Info(); }
 
     uint32_t PageSize() const { return parent_->Info().page_size; }
     uint32_t OobSize() const { return parent_->Info().oob_size; }
@@ -209,7 +209,7 @@ bool NandDevice::ValidateNandDevice() {
         // This looks like using code under test to setup the test, but this
         // path is for external devices, not really the broker. The issue is that
         // ParentDevice cannot query a nand device for the actual parameters.
-        zircon_nand_Info info;
+        fuchsia_hardware_nand_Info info;
         zx_status_t status;
         if (fuchsia_nand_BrokerGetInfo(channel(), &status, &info) != ZX_OK || status != ZX_OK) {
             printf("Failed to query nand device\n");
@@ -246,7 +246,7 @@ bool QueryTest() {
     NandDevice device;
     ASSERT_TRUE(device.IsValid());
 
-    zircon_nand_Info info;
+    fuchsia_hardware_nand_Info info;
     zx_status_t status;
     ASSERT_EQ(ZX_OK, fuchsia_nand_BrokerGetInfo(device.channel(), &status, &info));
     ASSERT_EQ(ZX_OK, status);

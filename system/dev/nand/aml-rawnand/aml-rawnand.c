@@ -772,7 +772,7 @@ static int aml_raw_nand_irq_thread(void* arg) {
     return 0;
 }
 
-static zx_status_t aml_get_nand_info(void* ctx, zircon_nand_Info* nand_info) {
+static zx_status_t aml_get_nand_info(void* ctx, fuchsia_hardware_nand_Info* nand_info) {
     aml_raw_nand_t* raw_nand = (aml_raw_nand_t*)ctx;
     uint64_t capacity;
     zx_status_t status = ZX_OK;
@@ -784,7 +784,7 @@ static zx_status_t aml_get_nand_info(void* ctx, zircon_nand_Info* nand_info) {
     nand_info->num_blocks = (uint32_t)capacity;
     nand_info->ecc_bits = raw_nand->controller_params.ecc_strength;
 
-    nand_info->nand_class = zircon_nand_Class_PARTMAP;
+    nand_info->nand_class = fuchsia_hardware_nand_Class_PARTMAP;
     memset(&nand_info->partition_guid, 0, sizeof(nand_info->partition_guid));
 
     if (raw_nand->controller_params.user_mode == 2)

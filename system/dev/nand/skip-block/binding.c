@@ -18,6 +18,5 @@ static zx_driver_ops_t skip_block_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(skip_block, skip_block_driver_ops, "zircon", "0.1", 2)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_NAND),
-    BI_MATCH_IF(EQ, BIND_NAND_CLASS, zircon_nand_Class_BBS),
-ZIRCON_DRIVER_END(skip_block)
+BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_NAND),
+    BI_MATCH_IF(EQ, BIND_NAND_CLASS, fuchsia_hardware_nand_Class_BBS), ZIRCON_DRIVER_END(skip_block)

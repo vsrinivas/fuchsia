@@ -12,11 +12,11 @@
 #include <fbl/auto_call.h>
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
-#include <lib/fzl/fdio.h>
+#include <fuchsia/hardware/nand/c/fidl.h>
 #include <lib/fdio/util.h>
+#include <lib/fzl/fdio.h>
 #include <zircon/device/device.h>
 #include <zircon/types.h>
-#include <zircon/nand/c/fidl.h>
 
 #include <utility>
 
@@ -53,18 +53,19 @@ zx_status_t RamNandCtl::Create(fbl::RefPtr<RamNandCtl>* out) {
     return ZX_OK;
 }
 
-zx_status_t RamNand::Create(const zircon_nand_RamNandInfo* config, std::optional<RamNand>* out) {
+zx_status_t RamNand::Create(const fuchsia_hardware_nand_RamNandInfo* config,
+                            std::optional<RamNand>* out) {
     fbl::unique_fd control(open(kBasePath, O_RDWR));
 
     zx::channel ctl_svc;
     zx_status_t st = fdio_get_service_handle(control.release(),
                                              ctl_svc.reset_and_get_address());
 
-    char name[zircon_nand_NAME_LEN + 1];
+    char name[fuchsia_hardware_nand_NAME_LEN + 1];
     size_t out_name_size;
     zx_status_t status;
-    st = zircon_nand_RamNandCtlCreateDevice(ctl_svc.get(), config, &status, name,
-                                            zircon_nand_NAME_LEN, &out_name_size);
+    st = fuchsia_hardware_nand_RamNandCtlCreateDevice(
+        ctl_svc.get(), config, &status, name, fuchsia_hardware_nand_NAME_LEN, &out_name_size);
     if (st != ZX_OK || status != ZX_OK) {
         st = st != ZX_OK ? st : status;
         fprintf(stderr, "Could not create ram_nand device, %d\n", st);
@@ -86,7 +87,8 @@ zx_status_t RamNand::Create(const zircon_nand_RamNandInfo* config, std::optional
     return ZX_OK;
 }
 
-zx_status_t RamNand::Create(fbl::RefPtr<RamNandCtl> ctl, const zircon_nand_RamNandInfo* config,
+zx_status_t RamNand::Create(fbl::RefPtr<RamNandCtl> ctl,
+                            const fuchsia_hardware_nand_RamNandInfo* config,
                             std::optional<RamNand>* out) {
 
     fdio_t* io = fdio_unsafe_fd_to_io(ctl->fd().get());
@@ -96,11 +98,11 @@ zx_status_t RamNand::Create(fbl::RefPtr<RamNandCtl> ctl, const zircon_nand_RamNa
     }
     zx_handle_t ctl_svc = fdio_unsafe_borrow_channel(io);
 
-    char name[zircon_nand_NAME_LEN + 1];
+    char name[fuchsia_hardware_nand_NAME_LEN + 1];
     size_t out_name_size;
     zx_status_t status;
-    zx_status_t st = zircon_nand_RamNandCtlCreateDevice(ctl_svc, config, &status, name,
-                                                        zircon_nand_NAME_LEN, &out_name_size);
+    zx_status_t st = fuchsia_hardware_nand_RamNandCtlCreateDevice(
+        ctl_svc, config, &status, name, fuchsia_hardware_nand_NAME_LEN, &out_name_size);
     fdio_unsafe_release(io);
     if (st != ZX_OK || status != ZX_OK) {
         st = st != ZX_OK ? st : status;
@@ -129,7 +131,7 @@ zx_status_t RamNand::Create(fbl::RefPtr<RamNandCtl> ctl, const zircon_nand_RamNa
     return ZX_OK;
 }
 
-zx_status_t RamNand::CreateIsolated(const zircon_nand_RamNandInfo* config,
+zx_status_t RamNand::CreateIsolated(const fuchsia_hardware_nand_RamNandInfo* config,
                                     std::optional<RamNand>* out) {
     fbl::RefPtr<RamNandCtl> ctl;
     zx_status_t st = RamNandCtl::Create(&ctl);

@@ -26,6 +26,6 @@ MODULE_LIBS := \
     system/ulib/zircon \
 
 MODULE_FIDL_LIBS := \
-    system/fidl/zircon-skipblock \
+    system/fidl/fuchsia-hardware-skipblock \
 
 include make/module.mk

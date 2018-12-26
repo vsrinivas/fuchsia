@@ -56,7 +56,7 @@ class NandTester : public ddk::NandProtocol<NandTester> {
 
     void set_result(zx_status_t result) { result_ = result; }
 
-    void NandQuery(zircon_nand_Info* out_info, size_t* out_nand_op_size) {
+    void NandQuery(fuchsia_hardware_nand_Info* out_info, size_t* out_nand_op_size) {
         *out_info = {};
         *out_nand_op_size = 0;
     }
