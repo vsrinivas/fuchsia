@@ -17,6 +17,7 @@ hermetic_tests_package("story_model_unittests") {
   deps = [
     ":apply_mutations_unittest",
     ":story_model_owner_unittest",
+    ":ledger_story_model_storage_unittest",
   ]
 }
 
@@ -95,6 +96,47 @@ source_set("noop_story_model_storage") {
   deps = [
     ":story_model_storage",
     "//garnet/public/lib/fxl",
+  ]
+}
+
+source_set("ledger_story_model_storage") {
+  sources = [
+    "ledger_story_model_storage.h",
+    "ledger_story_model_storage.cc",
+  ]
+
+  public_deps = [
+    "//peridot/public/fidl/fuchsia.modular.storymodel",
+  ]
+
+  deps = [
+    ":apply_mutations",
+    ":story_model_storage",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/lib/ledger_client:page_client",
+    "//peridot/lib/ledger_client:promise",
+    "//peridot/lib/fidl:array_to_string",
+    "//peridot/public/fidl/fuchsia.ledger",
+  ]
+}
+
+executable("ledger_story_model_storage_unittest") {
+  testonly = true
+
+  sources = [
+    "ledger_story_model_storage_unittest.cc",
+  ]
+
+  deps = [
+    ":apply_mutations",
+    ":ledger_story_model_storage",
+    "testing",
+    "//garnet/public/lib/async_promise",
+    "//peridot/lib/ledger_client:page_client",
+    "//peridot/lib/testing:test_with_ledger",
+    "//third_party/googletest:gtest",
+    "//third_party/googletest:gtest_main",
   ]
 }
 

@@ -3,6 +3,8 @@
     "binary": "test/ledger_story_model_storage_unittest"
   },
   "sandbox": {
-    "services": []
+    "services": [
+      "fuchsia.sys.Launcher"
+    ]
   }
 }
