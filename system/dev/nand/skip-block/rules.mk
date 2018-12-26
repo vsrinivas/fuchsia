@@ -29,7 +29,7 @@ MODULE_LIBS := \
 
 MODULE_FIDL_LIBS := \
     system/fidl/zircon-nand \
-    system/fidl/zircon-nand.skipblock
+    system/fidl/zircon-skipblock
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-badblock \

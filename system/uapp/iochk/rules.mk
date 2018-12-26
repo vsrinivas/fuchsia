@@ -26,6 +26,6 @@ MODULE_LIBS := \
     system/ulib/zircon \
 
 MODULE_FIDL_LIBS := \
-    system/fidl/zircon-nand.skipblock \
+    system/fidl/zircon-skipblock \
 
 include make/module.mk

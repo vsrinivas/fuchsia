@@ -19,6 +19,6 @@ MODULE_STATIC_LIBS := \
 
 MODULE_LIBS := system/ulib/zircon system/ulib/fdio system/ulib/c
 
-MODULE_FIDL_LIBS := system/fidl/zircon-nand.skipblock
+MODULE_FIDL_LIBS := system/fidl/zircon-skipblock
 
 include make/module.mk
