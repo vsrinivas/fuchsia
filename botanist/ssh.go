@@ -48,51 +48,18 @@ func GenerateKeyPair(bitSize int) ([]byte, []byte, error) {
 	return pembuf, buf, nil
 }
 
-// ConnectSSH establishes a new SSH connection to a server with the given
-// address and port, using the provided user name and private key.
-func ConnectSSH(ctx context.Context, addr *net.UDPAddr, user string, privateKey []byte) (*ssh.Client, error) {
-	signer, err := ssh.ParsePrivateKey(privateKey)
-	if err != nil {
-		return nil, fmt.Errorf("cannot parse the private key: %v", err)
-	}
-
-	config := &ssh.ClientConfig{
-		User: user,
-		Auth: []ssh.AuthMethod{
-			ssh.PublicKeys(signer),
-		},
-		Timeout:         time.Minute, // TODO: allow passing the timeout
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-	}
-
-	address := addr.String()
-	protocol, err := protocol(addr)
-	if err != nil {
-		return nil, err
-	}
-
+func ConnectSSH(ctx context.Context, address net.Addr, config *ssh.ClientConfig) (*ssh.Client, error) {
 	var client *ssh.Client
+
 	// TODO: figure out optimal backoff time and number of retries
-	err = retry.Retry(ctx, retry.WithMaxRetries(retry.NewConstantBackoff(time.Second), 10), func() error {
-		client, err = ssh.Dial(protocol, address, config)
+	err := retry.Retry(ctx, retry.WithMaxRetries(retry.NewConstantBackoff(time.Second), 10), func() error {
+		var err error
+		client, err = ssh.Dial(address.Network(), address.String(), config)
 		return err
 	}, nil)
 	if err != nil {
-		return nil, fmt.Errorf("cannot connect to '%s' address, '%s': %v", protocol, address, err)
+		return nil, fmt.Errorf("cannot connect to address '%s': %v", address, err)
 	}
 
 	return client, nil
-}
-
-// Returns the protocol to use to SSH into a device.
-func protocol(address *net.UDPAddr) (string, error) {
-	if address.IP.To4() != nil {
-		return "tcp", nil // IPv4
-	}
-
-	if address.IP.To16() != nil {
-		return "tcp6", nil // IPv6
-	}
-
-	return "", fmt.Errorf("cannot infer protocol for address '%s'", address.String())
 }
