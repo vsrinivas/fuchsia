@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::{ResultExt as TokenManagerResultExt, TokenManagerError};
 use failure::{format_err, ResultExt};
 use fidl::endpoints::{ClientEnd, ServerEnd};
 use fidl_fuchsia_auth::{
@@ -13,7 +14,6 @@ use fuchsia_zircon as zx;
 use log::info;
 use parking_lot::Mutex;
 use std::sync::Arc;
-use token_manager::{ResultExt as TokenManagerResultExt, TokenManagerError};
 
 /// The information neccesary to retain an open connection to the `AuthProviderFactory` interface
 /// of a launched component.
@@ -27,7 +27,10 @@ struct ConnectionState {
 /// A type capable of launching a particular component implementing the `AuthProviderFactory`
 /// interface and acquiring `AuthProvider` connections from that component. Launching is
 /// performed on demand.
-pub struct AuthProviderClient {
+///
+/// Note: This type is not used by TokenManager directly, but is helpful for clients needing to
+/// implement the `AuthProviderSupplier` trait.
+pub struct AuthProviderConnection {
     /// The URL that should be used to launch the component.
     component_url: String,
     /// Optional params to be passed to the component at launch.
@@ -36,10 +39,10 @@ pub struct AuthProviderClient {
     connection_state: Mutex<Option<ConnectionState>>,
 }
 
-impl AuthProviderClient {
-    /// Creates a new `AuthProviderClient` from the supplied `AuthProviderConfig`.
+impl AuthProviderConnection {
+    /// Creates a new `AuthProviderConnection` from the supplied `AuthProviderConfig`.
     pub fn from_config(config: AuthProviderConfig) -> Self {
-        AuthProviderClient {
+        AuthProviderConnection {
             component_url: config.url,
             params: config.params,
             connection_state: Mutex::new(None),

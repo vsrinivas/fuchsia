@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use auth_cache::{AuthCacheError, CacheKey, FirebaseAuthToken, OAuthToken, TokenCache};
-use auth_store::file::AuthDbFile;
-use auth_store::{AuthDb, AuthDbError, CredentialKey, CredentialValue};
 use crate::{
     AuthContextSupplier, AuthProviderSupplier, ResultExt, TokenManagerContext, TokenManagerError,
 };
+use auth_cache::{AuthCacheError, CacheKey, FirebaseAuthToken, OAuthToken, TokenCache};
+use auth_store::file::AuthDbFile;
+use auth_store::{AuthDb, AuthDbError, CredentialKey, CredentialValue};
 use failure::format_err;
 use fidl;
 use fidl::encoding::OutOfLine;

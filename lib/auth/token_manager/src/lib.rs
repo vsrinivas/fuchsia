@@ -19,9 +19,11 @@ use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_auth::{AuthProviderMarker, AuthenticationUiContextMarker};
 use futures::future::FutureObj;
 
+mod auth_provider_connection;
 mod error;
 mod token_manager;
 
+pub use crate::auth_provider_connection::AuthProviderConnection;
 pub use crate::error::{ResultExt, TokenManagerError};
 pub use crate::token_manager::TokenManager;
 
