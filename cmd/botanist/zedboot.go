@@ -96,67 +96,6 @@ func (cmd *ZedbootCommand) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&cmd.hostCmd, "hacky-host-cmd", "", "host command to run after paving. To be removed on completion of IN-831")
 }
 
-// Creates tar archive from existing path - file or directory(recursive).
-func tarPath(tw *tar.Writer, source string) error {
-	info, err := os.Stat(source)
-	if err != nil {
-		return err
-	}
-
-	var baseDir string
-	if info.IsDir() {
-		baseDir = filepath.Base(source)
-	}
-
-	return filepath.Walk(source, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		file, err := os.Open(path)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-
-		header, err := tar.FileInfoHeader(info, info.Name())
-		if err != nil {
-			return err
-		}
-
-		if baseDir != "" {
-			header.Name = filepath.Join(baseDir, strings.TrimPrefix(path, source))
-		}
-
-		if err := tw.WriteHeader(header); err != nil {
-			return err
-		}
-
-		if info.IsDir() {
-			return nil
-		}
-
-		_, err = io.Copy(tw, file)
-		return err
-	})
-}
-
-// Writes a file to archive.
-func tarFile(tw *tar.Writer, content []byte, filepath string) error {
-	hdr := &tar.Header{
-		Name: filepath,
-		Size: int64(len(content)),
-		Mode: 0666,
-	}
-	if err := tw.WriteHeader(hdr); err != nil {
-		return fmt.Errorf("failed to write %v header: %v\n", filepath, err)
-	}
-	if _, err := tw.Write(content); err != nil {
-		return fmt.Errorf("failed to write %v content: %v\n", filepath, err)
-	}
-	return nil
-}
-
 // Creates and returns archive file handle.
 func (cmd *ZedbootCommand) createTarFile() (*os.File, error) {
 	file, err := os.OpenFile(cmd.outputArchive, os.O_WRONLY|os.O_CREATE, 0666)
@@ -210,17 +149,17 @@ func (cmd *ZedbootCommand) tarHostCmdArtifacts(summary []byte, cmdOutput []byte,
 	defer tw.Close()
 
 	// Write summary to archive
-	if err = tarFile(tw, summary, cmd.summaryFilename); err != nil {
+	if err = botanist.ArchiveBuffer(tw, summary, cmd.summaryFilename); err != nil {
 		return err
 	}
 
 	// Write combined stdout & stderr output to archive
-	if err = tarFile(tw, cmdOutput, runtests.TestOutputFilename); err != nil {
+	if err = botanist.ArchiveBuffer(tw, cmdOutput, runtests.TestOutputFilename); err != nil {
 		return err
 	}
 
 	// Write all output files from the host cmd to the archive.
-	return tarPath(tw, outputDir)
+	return botanist.ArchiveDirectory(tw, outputDir)
 }
 
 // Executes host command and creates result tar from command output
@@ -371,8 +310,7 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs []botanist.Image, 
 	tw := tar.NewWriter(outFile)
 	defer tw.Close()
 
-	// Write summary to archive
-	if err = tarFile(tw, buffer.Bytes(), cmd.summaryFilename); err != nil {
+	if err = botanist.ArchiveBuffer(tw, buffer.Bytes(), cmd.summaryFilename); err != nil {
 		return err
 	}
 
@@ -384,20 +322,23 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs []botanist.Image, 
 	go func() {
 		// Copy test output from the node.
 		for _, output := range result.Outputs {
-			if err = botanist.FetchAndTar(t, tftpAddr, tw, cmd.testResultsDir, output); err != nil {
+			remote := filepath.Join(cmd.testResultsDir, output)
+			if err = botanist.FetchAndArchiveFile(t, tftpAddr, tw, remote); err != nil {
 				c <- err
 				return
 			}
 		}
 		for _, test := range result.Tests {
-			if err = botanist.FetchAndTar(t, tftpAddr, tw, cmd.testResultsDir, test.OutputFile); err != nil {
+			remote := filepath.Join(cmd.testResultsDir, test.OutputFile)
+			if err = botanist.FetchAndArchiveFile(t, tftpAddr, tw, remote); err != nil {
 				c <- err
 				return
 			}
 			// Copy data sinks if any are present.
 			for _, sinks := range test.DataSinks {
 				for _, sink := range sinks {
-					if err = botanist.FetchAndTar(t, tftpAddr, tw, cmd.testResultsDir, sink.File); err != nil {
+					remote := filepath.Join(cmd.testResultsDir, sink.File)
+					if err = botanist.FetchAndArchiveFile(t, tftpAddr, tw, remote); err != nil {
 						c <- err
 						return
 					}

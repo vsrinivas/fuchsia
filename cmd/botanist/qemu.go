@@ -8,7 +8,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -36,44 +35,6 @@ const qemuBinPrefix = "qemu-system"
 var targetToQEMUArch = map[string]string{
 	"x64":   "x86_64",
 	"arm64": "aarch64",
-}
-
-func copyFile(src, dst string) error {
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer in.Close()
-
-	out, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	_, err = io.Copy(out, in)
-	return err
-}
-
-// OverwriteFileWithCopy overwrites a given file with a copy of it.
-//
-// This is used to break any hard linking that might back the provided MinFS image.
-// For example, Swarming hard links cached isolate downloads - and modifying those will
-// modify the cache contents themselves.
-func overwriteFileWithCopy(filepath string) error {
-	copy, err := ioutil.TempFile("", "file-copy")
-	if err != nil {
-		return err
-	}
-	if err = copyFile(filepath, copy.Name()); err != nil {
-		return err
-	}
-
-	if err = os.Remove(filepath); err != nil {
-		return err
-	}
-
-	return os.Rename(copy.Name(), filepath)
 }
 
 // QEMUCommand is a Command implementation for running the testing workflow on an emulated
@@ -187,8 +148,10 @@ func (cmd *QEMUCommand) execute(ctx context.Context, cmdlineArgs []string) error
 			return err
 		}
 
-		// See function documentation for the reason behind this step.
-		if err := overwriteFileWithCopy(absMinFSImage); err != nil {
+		// Swarming hard-links Isolate downloads with a cache and the very same cached minfs
+		// image will be used across multiple task. To ensure that it remains blank, we
+		// must break its link.
+		if err := botanist.OverwriteFileWithCopy(absMinFSImage); err != nil {
 			return err
 		}
 
