@@ -17,10 +17,27 @@ namespace testing {
 CommandTransaction::CommandTransaction(
     const common::ByteBuffer& expected,
     const std::vector<const common::ByteBuffer*>& replies)
-    : expected_(expected) {
+    : prefix_(false), expected_(expected) {
   for (const auto* buffer : replies) {
     replies_.push(common::DynamicByteBuffer(*buffer));
   }
+}
+
+CommandTransaction::CommandTransaction(
+    hci::OpCode expected_opcode,
+    const std::vector<const common::ByteBuffer*>& replies)
+    : prefix_(true) {
+  hci::OpCode le_opcode = htole16(expected_opcode);
+  const common::BufferView expected(&le_opcode, sizeof(expected_opcode));
+  expected_ = common::DynamicByteBuffer(expected);
+  for (const auto* buffer : replies) {
+    replies_.push(common::DynamicByteBuffer(*buffer));
+  }
+}
+
+bool CommandTransaction::Match(const common::BufferView& cmd) {
+  return ContainersEqual(expected_,
+                         (prefix_ ? cmd.view(0, expected_.size()) : cmd));
 }
 
 TestController::TestController()
@@ -59,9 +76,14 @@ void TestController::ClearDataCallback() {
   data_callback_ = nullptr;
 }
 
-void TestController::SetTransactionCallback(
-    fit::closure callback,
-    async_dispatcher_t* dispatcher) {
+void TestController::SetTransactionCallback(fit::closure callback,
+                                            async_dispatcher_t* dispatcher) {
+  SetTransactionCallback([f = std::move(callback)](const auto&) { f(); },
+                         dispatcher);
+}
+
+void TestController::SetTransactionCallback(TransactionCallback callback,
+                                            async_dispatcher_t* dispatcher) {
   ZX_DEBUG_ASSERT(callback);
   ZX_DEBUG_ASSERT(dispatcher);
   ZX_DEBUG_ASSERT(!transaction_callback_);
@@ -89,7 +111,7 @@ void TestController::OnCommandPacketReceived(
       << static_cast<uint16_t>(ogf) << ", OCF: 0x" << std::hex << ocf;
 
   auto& current = cmd_transactions_.front();
-  ASSERT_TRUE(ContainersEqual(current.expected_, command_packet.data()));
+  ASSERT_TRUE(current.Match(command_packet.data()));
 
   while (!current.replies_.empty()) {
     auto& reply = current.replies_.front();
@@ -98,10 +120,14 @@ void TestController::OnCommandPacketReceived(
         << "Failed to send reply: " << zx_status_get_string(status);
     current.replies_.pop();
   }
-
   cmd_transactions_.pop();
-  if (transaction_callback_)
-    async::PostTask(transaction_dispatcher_, transaction_callback_.share());
+
+  if (transaction_callback_) {
+    common::DynamicByteBuffer rx(command_packet.data());
+    async::PostTask(
+        transaction_dispatcher_,
+        [rx = std::move(rx), f = transaction_callback_.share()] { f(rx); });
+  }
 }
 
 void TestController::OnACLDataPacketReceived(

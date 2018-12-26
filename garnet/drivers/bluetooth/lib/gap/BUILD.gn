@@ -21,6 +21,8 @@ static_library("gap") {
     "gap.h",
     "identity_resolving_list.cc",
     "identity_resolving_list.h",
+    "low_energy_address_manager.cc",
+    "low_energy_address_manager.h",
     "low_energy_advertising_manager.cc",
     "low_energy_advertising_manager.h",
     "low_energy_connection_manager.cc",
@@ -46,9 +48,9 @@ static_library("gap") {
     "//garnet/drivers/bluetooth/lib/l2cap",
     "//garnet/drivers/bluetooth/lib/sdp",
     "//garnet/drivers/bluetooth/lib/sm",
+    "//garnet/public/lib/fxl",
     "//sdk/fidl/fuchsia.bluetooth",
     "//sdk/fidl/fuchsia.bluetooth.le",
-    "//garnet/public/lib/fxl",
     "//zircon/public/lib/fit",
   ]
 }
@@ -63,6 +65,7 @@ source_set("tests") {
     "bredr_discovery_manager_unittest.cc",
     "discovery_filter_unittest.cc",
     "identity_resolving_list_unittest.cc",
+    "low_energy_address_manager_unittest.cc",
     "low_energy_advertising_manager_unittest.cc",
     "low_energy_connection_manager_unittest.cc",
     "low_energy_discovery_manager_unittest.cc",

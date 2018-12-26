@@ -27,13 +27,21 @@ class CommandTransaction final {
   CommandTransaction(const common::ByteBuffer& expected,
                      const std::vector<const common::ByteBuffer*>& replies);
 
+  // Match by opcode only.
+  CommandTransaction(hci::OpCode expected_opcode,
+                     const std::vector<const common::ByteBuffer*>& replies);
+
   // Move constructor and assignment operator.
   CommandTransaction(CommandTransaction&& other) = default;
   CommandTransaction& operator=(CommandTransaction&& other) = default;
 
+  // Returns true if the transaction matches the given HCI command packet.
+  bool Match(const common::BufferView& cmd);
+
  private:
   friend class TestController;
 
+  bool prefix_ = false;
   common::DynamicByteBuffer expected_;
   std::queue<common::DynamicByteBuffer> replies_;
 
@@ -68,6 +76,9 @@ class TestController : public FakeControllerBase {
   // Callback invoked when a transaction completes. Care should be taken to
   // ensure that a callback with a reference to test case variables is not
   // invoked when tearing down.
+  using TransactionCallback = fit::function<void(const common::ByteBuffer& rx)>;
+  void SetTransactionCallback(TransactionCallback callback,
+                              async_dispatcher_t* dispatcher);
   void SetTransactionCallback(fit::closure callback,
                               async_dispatcher_t* dispatcher);
   void ClearTransactionCallback();
@@ -82,7 +93,7 @@ class TestController : public FakeControllerBase {
   std::queue<CommandTransaction> cmd_transactions_;
   DataCallback data_callback_;
   async_dispatcher_t* data_dispatcher_;
-  fit::closure transaction_callback_;
+  TransactionCallback transaction_callback_;
   async_dispatcher_t* transaction_dispatcher_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestController);
