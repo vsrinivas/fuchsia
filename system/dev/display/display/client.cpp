@@ -16,11 +16,12 @@
 #include "client.h"
 
 #define SELECT_TABLE_CASE(NAME) case NAME ## Ordinal: table = &NAME ## RequestTable; break
-#define HANDLE_REQUEST_CASE(NAME) \
-    case fuchsia_display_Controller ## NAME ## Ordinal: { \
-        auto req = reinterpret_cast<const fuchsia_display_Controller ## NAME ## Request*>(msg.bytes().data()); \
-        Handle ## NAME (req, &builder, &out_type); \
-        break; \
+#define HANDLE_REQUEST_CASE(NAME)                                                                  \
+    case fuchsia_hardware_display_Controller##NAME##Ordinal: {                                     \
+        auto req = reinterpret_cast<const fuchsia_hardware_display_Controller##NAME##Request*>(    \
+            msg.bytes().data());                                                                   \
+        Handle##NAME(req, &builder, &out_type);                                                    \
+        break;                                                                                     \
     }
 
 namespace {
@@ -29,28 +30,28 @@ zx_status_t decode_message(fidl::Message* msg) {
     zx_status_t res;
     const fidl_type_t* table = nullptr;
     switch (msg->ordinal()) {
-    SELECT_TABLE_CASE(fuchsia_display_ControllerImportVmoImage);
-    SELECT_TABLE_CASE(fuchsia_display_ControllerReleaseImage);
-    SELECT_TABLE_CASE(fuchsia_display_ControllerImportEvent);
-    SELECT_TABLE_CASE(fuchsia_display_ControllerReleaseEvent);
-    SELECT_TABLE_CASE(fuchsia_display_ControllerCreateLayer);
-    SELECT_TABLE_CASE(fuchsia_display_ControllerDestroyLayer);
-    SELECT_TABLE_CASE(fuchsia_display_ControllerSetDisplayMode);
-    SELECT_TABLE_CASE(fuchsia_display_ControllerSetDisplayColorConversion);
-    SELECT_TABLE_CASE(fuchsia_display_ControllerSetDisplayLayers);
-    SELECT_TABLE_CASE(fuchsia_display_ControllerSetLayerPrimaryConfig);
-    SELECT_TABLE_CASE(fuchsia_display_ControllerSetLayerPrimaryPosition);
-    SELECT_TABLE_CASE(fuchsia_display_ControllerSetLayerPrimaryAlpha);
-    SELECT_TABLE_CASE(fuchsia_display_ControllerSetLayerCursorConfig);
-    SELECT_TABLE_CASE(fuchsia_display_ControllerSetLayerCursorPosition);
-    SELECT_TABLE_CASE(fuchsia_display_ControllerSetLayerColorConfig);
-    SELECT_TABLE_CASE(fuchsia_display_ControllerSetLayerImage);
-    SELECT_TABLE_CASE(fuchsia_display_ControllerCheckConfig);
-    SELECT_TABLE_CASE(fuchsia_display_ControllerApplyConfig);
-    SELECT_TABLE_CASE(fuchsia_display_ControllerEnableVsync);
-    SELECT_TABLE_CASE(fuchsia_display_ControllerSetVirtconMode);
-    SELECT_TABLE_CASE(fuchsia_display_ControllerComputeLinearImageStride);
-    SELECT_TABLE_CASE(fuchsia_display_ControllerAllocateVmo);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerImportVmoImage);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerReleaseImage);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerImportEvent);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerReleaseEvent);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerCreateLayer);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerDestroyLayer);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetDisplayMode);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetDisplayColorConversion);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetDisplayLayers);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetLayerPrimaryConfig);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetLayerPrimaryPosition);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetLayerPrimaryAlpha);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetLayerCursorConfig);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetLayerCursorPosition);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetLayerColorConfig);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetLayerImage);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerCheckConfig);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerApplyConfig);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerEnableVsync);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetVirtconMode);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerComputeLinearImageStride);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerAllocateVmo);
     }
     if (table != nullptr) {
         const char* err;
@@ -95,17 +96,20 @@ static void do_early_retire(list_node_t* list, display::image_node_t* end = null
     }
 }
 
-static void populate_image(const fuchsia_display_ImageConfig& image, image_t* image_out) {
-    static_assert(offsetof(image_t, width) ==
-            offsetof(fuchsia_display_ImageConfig, width), "Struct mismatch");
+static void populate_image(const fuchsia_hardware_display_ImageConfig& image, image_t* image_out) {
+    static_assert(offsetof(image_t, width) == offsetof(fuchsia_hardware_display_ImageConfig, width),
+                  "Struct mismatch");
     static_assert(offsetof(image_t, height) ==
-            offsetof(fuchsia_display_ImageConfig, height), "Struct mismatch");
+                      offsetof(fuchsia_hardware_display_ImageConfig, height),
+                  "Struct mismatch");
     static_assert(offsetof(image_t, pixel_format) ==
-            offsetof(fuchsia_display_ImageConfig, pixel_format), "Struct mismatch");
-    static_assert(sizeof(image_plane_t) == sizeof(fuchsia_display_ImagePlane), "Struct mismatch");
-    static_assert(offsetof(image_t, type) ==
-            offsetof(fuchsia_display_ImageConfig, type), "Struct mismatch");
-    memcpy(image_out, &image, sizeof(fuchsia_display_ImageConfig));
+                      offsetof(fuchsia_hardware_display_ImageConfig, pixel_format),
+                  "Struct mismatch");
+    static_assert(sizeof(image_plane_t) == sizeof(fuchsia_hardware_display_ImagePlane),
+                  "Struct mismatch");
+    static_assert(offsetof(image_t, type) == offsetof(fuchsia_hardware_display_ImageConfig, type),
+                  "Struct mismatch");
+    memcpy(image_out, &image, sizeof(fuchsia_hardware_display_ImageConfig));
 }
 
 static void populate_fidl_string(fidl_string_t* dest, fidl::Builder* dest_builder,
@@ -176,8 +180,9 @@ void Client::HandleControllerApi(async_dispatcher_t* dispatcher, async::WaitBase
     HANDLE_REQUEST_CASE(EnableVsync);
     HANDLE_REQUEST_CASE(SetVirtconMode);
     HANDLE_REQUEST_CASE(ComputeLinearImageStride);
-    case fuchsia_display_ControllerAllocateVmoOrdinal: {
-        auto r = reinterpret_cast<const fuchsia_display_ControllerAllocateVmoRequest*>(msg.bytes().data());
+    case fuchsia_hardware_display_ControllerAllocateVmoOrdinal: {
+        auto r = reinterpret_cast<const fuchsia_hardware_display_ControllerAllocateVmoRequest*>(
+            msg.bytes().data());
         HandleAllocateVmo(r, &builder, &out_handle, &has_out_handle, &out_type);
         break;
     }
@@ -202,10 +207,11 @@ void Client::HandleControllerApi(async_dispatcher_t* dispatcher, async::WaitBase
     }
 }
 
-void Client::HandleImportVmoImage(const fuchsia_display_ControllerImportVmoImageRequest* req,
-                                  fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
-    auto resp = resp_builder->New<fuchsia_display_ControllerImportVmoImageResponse>();
-    *resp_table = &fuchsia_display_ControllerImportVmoImageResponseTable;
+void Client::HandleImportVmoImage(
+    const fuchsia_hardware_display_ControllerImportVmoImageRequest* req,
+    fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    auto resp = resp_builder->New<fuchsia_hardware_display_ControllerImportVmoImageResponse>();
+    *resp_table = &fuchsia_hardware_display_ControllerImportVmoImageResponseTable;
 
     zx::vmo vmo(req->vmo);
 
@@ -241,7 +247,7 @@ void Client::HandleImportVmoImage(const fuchsia_display_ControllerImportVmoImage
     }
 }
 
-void Client::HandleReleaseImage(const fuchsia_display_ControllerReleaseImageRequest* req,
+void Client::HandleReleaseImage(const fuchsia_hardware_display_ControllerReleaseImageRequest* req,
                                 fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
     auto image = images_.find(req->image_id);
     if (!image.IsValid()) {
@@ -253,7 +259,7 @@ void Client::HandleReleaseImage(const fuchsia_display_ControllerReleaseImageRequ
     }
 }
 
-void Client::HandleImportEvent(const fuchsia_display_ControllerImportEventRequest* req,
+void Client::HandleImportEvent(const fuchsia_hardware_display_ControllerImportEventRequest* req,
                                fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
     zx::event event(req->event);
     zx_status_t status = ZX_ERR_INVALID_ARGS;
@@ -283,7 +289,7 @@ void Client::HandleImportEvent(const fuchsia_display_ControllerImportEventReques
     }
 }
 
-void Client::HandleReleaseEvent(const fuchsia_display_ControllerReleaseEventRequest* req,
+void Client::HandleReleaseEvent(const fuchsia_hardware_display_ControllerReleaseEventRequest* req,
                                 fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
     // Hold a ref to prevent double locking if this destroys the fence.
     auto fence_ref = GetFence(req->id);
@@ -293,10 +299,10 @@ void Client::HandleReleaseEvent(const fuchsia_display_ControllerReleaseEventRequ
     }
 }
 
-void Client::HandleCreateLayer(const fuchsia_display_ControllerCreateLayerRequest* req,
+void Client::HandleCreateLayer(const fuchsia_hardware_display_ControllerCreateLayerRequest* req,
                                fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
-    auto resp = resp_builder->New<fuchsia_display_ControllerCreateLayerResponse>();
-    *resp_table = &fuchsia_display_ControllerCreateLayerResponseTable;
+    auto resp = resp_builder->New<fuchsia_hardware_display_ControllerCreateLayerResponse>();
+    *resp_table = &fuchsia_hardware_display_ControllerCreateLayerResponseTable;
 
     if (layers_.size() == kMaxLayers) {
         resp->res = ZX_ERR_NO_RESOURCES;
@@ -326,7 +332,7 @@ void Client::HandleCreateLayer(const fuchsia_display_ControllerCreateLayerReques
     resp->res = ZX_OK;
 }
 
-void Client::HandleDestroyLayer(const fuchsia_display_ControllerDestroyLayerRequest* req,
+void Client::HandleDestroyLayer(const fuchsia_hardware_display_ControllerDestroyLayerRequest* req,
                                 fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
     auto layer = layers_.find(req->layer_id);
     if (!layer.IsValid()) {
@@ -351,8 +357,9 @@ void Client::HandleDestroyLayer(const fuchsia_display_ControllerDestroyLayerRequ
     }
 }
 
-void Client::HandleSetDisplayMode(const fuchsia_display_ControllerSetDisplayModeRequest* req,
-                                  fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+void Client::HandleSetDisplayMode(
+    const fuchsia_hardware_display_ControllerSetDisplayModeRequest* req,
+    fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
     auto config = configs_.find(req->display_id);
     if (!config.IsValid()) {
         return;
@@ -383,8 +390,8 @@ void Client::HandleSetDisplayMode(const fuchsia_display_ControllerSetDisplayMode
 }
 
 void Client::HandleSetDisplayColorConversion(
-        const fuchsia_display_ControllerSetDisplayColorConversionRequest* req,
-        fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    const fuchsia_hardware_display_ControllerSetDisplayColorConversionRequest* req,
+    fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
     auto config = configs_.find(req->display_id);
     if (!config.IsValid()) {
         return;
@@ -413,8 +420,9 @@ void Client::HandleSetDisplayColorConversion(
     pending_config_valid_ = false;
 }
 
-void Client::HandleSetDisplayLayers(const fuchsia_display_ControllerSetDisplayLayersRequest* req,
-                                    fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+void Client::HandleSetDisplayLayers(
+    const fuchsia_hardware_display_ControllerSetDisplayLayersRequest* req,
+    fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
     auto config = configs_.find(req->display_id);
     if (!config.IsValid()) {
         return;
@@ -438,8 +446,8 @@ void Client::HandleSetDisplayLayers(const fuchsia_display_ControllerSetDisplayLa
 }
 
 void Client::HandleSetLayerPrimaryConfig(
-        const fuchsia_display_ControllerSetLayerPrimaryConfigRequest* req,
-        fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    const fuchsia_hardware_display_ControllerSetLayerPrimaryConfigRequest* req,
+    fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
     auto layer = layers_.find(req->layer_id);
     if (!layer.IsValid()) {
         zxlogf(ERROR, "SetLayerPrimaryConfig on invalid layer\n");
@@ -469,30 +477,30 @@ void Client::HandleSetLayerPrimaryConfig(
 }
 
 void Client::HandleSetLayerPrimaryPosition(
-        const fuchsia_display_ControllerSetLayerPrimaryPositionRequest* req,
-        fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    const fuchsia_hardware_display_ControllerSetLayerPrimaryPositionRequest* req,
+    fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
     auto layer = layers_.find(req->layer_id);
     if (!layer.IsValid() || layer->pending_layer_.type != LAYER_TYPE_PRIMARY) {
         zxlogf(ERROR, "SetLayerPrimaryPosition on invalid layer\n");
         TearDown();
         return;
     }
-    if (req->transform > fuchsia_display_Transform_ROT_90_REFLECT_Y) {
+    if (req->transform > fuchsia_hardware_display_Transform_ROT_90_REFLECT_Y) {
         zxlogf(ERROR, "Invalid transform %d\n", req->transform);
         TearDown();
         return;
     }
     primary_layer_t* primary_layer = &layer->pending_layer_.cfg.primary;
 
-    static_assert(sizeof(fuchsia_display_Frame) == sizeof(frame_t), "Struct mismatch");
-    static_assert(offsetof(fuchsia_display_Frame, x_pos) ==
-            offsetof(frame_t, x_pos), "Struct mismatch");
-    static_assert(offsetof(fuchsia_display_Frame, y_pos) ==
-            offsetof(frame_t, y_pos), "Struct mismatch");
-    static_assert(offsetof(fuchsia_display_Frame, width) ==
-            offsetof(frame_t, width), "Struct mismatch");
-    static_assert(offsetof(fuchsia_display_Frame, height) ==
-            offsetof(frame_t, height), "Struct mismatch");
+    static_assert(sizeof(fuchsia_hardware_display_Frame) == sizeof(frame_t), "Struct mismatch");
+    static_assert(offsetof(fuchsia_hardware_display_Frame, x_pos) == offsetof(frame_t, x_pos),
+                  "Struct mismatch");
+    static_assert(offsetof(fuchsia_hardware_display_Frame, y_pos) == offsetof(frame_t, y_pos),
+                  "Struct mismatch");
+    static_assert(offsetof(fuchsia_hardware_display_Frame, width) == offsetof(frame_t, width),
+                  "Struct mismatch");
+    static_assert(offsetof(fuchsia_hardware_display_Frame, height) == offsetof(frame_t, height),
+                  "Struct mismatch");
 
     memcpy(&primary_layer->src_frame, &req->src_frame, sizeof(frame_t));
     memcpy(&primary_layer->dest_frame, &req->dest_frame, sizeof(frame_t));
@@ -503,8 +511,8 @@ void Client::HandleSetLayerPrimaryPosition(
 }
 
 void Client::HandleSetLayerPrimaryAlpha(
-        const fuchsia_display_ControllerSetLayerPrimaryAlphaRequest* req,
-        fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    const fuchsia_hardware_display_ControllerSetLayerPrimaryAlphaRequest* req,
+    fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
     auto layer = layers_.find(req->layer_id);
     if (!layer.IsValid() || layer->pending_layer_.type != LAYER_TYPE_PRIMARY) {
         zxlogf(ERROR, "SetLayerPrimaryAlpha on invalid layer\n");
@@ -512,8 +520,8 @@ void Client::HandleSetLayerPrimaryAlpha(
         return;
     }
 
-    if (req->mode > fuchsia_display_AlphaMode_HW_MULTIPLY ||
-            (!isnan(req->val) && (req->val < 0 || req->val > 1))) {
+    if (req->mode > fuchsia_hardware_display_AlphaMode_HW_MULTIPLY ||
+        (!isnan(req->val) && (req->val < 0 || req->val > 1))) {
         zxlogf(ERROR, "Invalid args %d %f\n", req->mode, req->val);
         TearDown();
         return;
@@ -521,9 +529,11 @@ void Client::HandleSetLayerPrimaryAlpha(
 
     primary_layer_t* primary_layer = &layer->pending_layer_.cfg.primary;
 
-    static_assert(fuchsia_display_AlphaMode_DISABLE == ALPHA_DISABLE, "Bad constant");
-    static_assert(fuchsia_display_AlphaMode_PREMULTIPLIED == ALPHA_PREMULTIPLIED, "Bad constant");
-    static_assert(fuchsia_display_AlphaMode_HW_MULTIPLY== ALPHA_HW_MULTIPLY, "Bad constant");
+    static_assert(fuchsia_hardware_display_AlphaMode_DISABLE == ALPHA_DISABLE, "Bad constant");
+    static_assert(fuchsia_hardware_display_AlphaMode_PREMULTIPLIED == ALPHA_PREMULTIPLIED,
+                  "Bad constant");
+    static_assert(fuchsia_hardware_display_AlphaMode_HW_MULTIPLY == ALPHA_HW_MULTIPLY,
+                  "Bad constant");
 
     primary_layer->alpha_mode = req->mode;
     primary_layer->alpha_layer_val = req->val;
@@ -533,8 +543,8 @@ void Client::HandleSetLayerPrimaryAlpha(
 }
 
 void Client::HandleSetLayerCursorConfig(
-        const fuchsia_display_ControllerSetLayerCursorConfigRequest* req,
-        fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    const fuchsia_hardware_display_ControllerSetLayerCursorConfigRequest* req,
+    fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
     auto layer = layers_.find(req->layer_id);
     if (!layer.IsValid()) {
         zxlogf(ERROR, "SetLayerCursorConfig on invalid layer\n");
@@ -556,8 +566,8 @@ void Client::HandleSetLayerCursorConfig(
 }
 
 void Client::HandleSetLayerCursorPosition(
-        const fuchsia_display_ControllerSetLayerCursorPositionRequest* req,
-        fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    const fuchsia_hardware_display_ControllerSetLayerCursorPositionRequest* req,
+    fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
     auto layer = layers_.find(req->layer_id);
     if (!layer.IsValid() || layer->pending_layer_.type != LAYER_TYPE_CURSOR) {
         zxlogf(ERROR, "SetLayerCursorPosition on invalid layer\n");
@@ -572,8 +582,8 @@ void Client::HandleSetLayerCursorPosition(
 }
 
 void Client::HandleSetLayerColorConfig(
-        const fuchsia_display_ControllerSetLayerColorConfigRequest* req,
-        fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    const fuchsia_hardware_display_ControllerSetLayerColorConfigRequest* req,
+    fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
     auto layer = layers_.find(req->layer_id);
     if (!layer.IsValid()) {
         zxlogf(ERROR, "SetLayerColorConfig on invalid layer\n");
@@ -599,7 +609,7 @@ void Client::HandleSetLayerColorConfig(
     pending_config_valid_ = false;
 }
 
-void Client::HandleSetLayerImage(const fuchsia_display_ControllerSetLayerImageRequest* req,
+void Client::HandleSetLayerImage(const fuchsia_hardware_display_ControllerSetLayerImageRequest* req,
                                  fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
     auto layer = layers_.find(req->layer_id);
     if (!layer.IsValid()) {
@@ -639,9 +649,9 @@ void Client::HandleSetLayerImage(const fuchsia_display_ControllerSetLayerImageRe
     layer->pending_signal_event_id_ = req->signal_event_id;
 }
 
-void Client::HandleCheckConfig(const fuchsia_display_ControllerCheckConfigRequest* req,
+void Client::HandleCheckConfig(const fuchsia_hardware_display_ControllerCheckConfigRequest* req,
                                fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
-    *resp_table = &fuchsia_display_ControllerCheckConfigResponseTable;
+    *resp_table = &fuchsia_hardware_display_ControllerCheckConfigResponseTable;
 
     pending_config_valid_ = CheckConfig(resp_builder);
 
@@ -687,7 +697,7 @@ void Client::HandleCheckConfig(const fuchsia_display_ControllerCheckConfigReques
     }
 }
 
-void Client::HandleApplyConfig(const fuchsia_display_ControllerApplyConfigRequest* req,
+void Client::HandleApplyConfig(const fuchsia_hardware_display_ControllerApplyConfigRequest* req,
                                fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
     if (!pending_config_valid_) {
         pending_config_valid_ = CheckConfig(nullptr);
@@ -838,14 +848,15 @@ void Client::HandleApplyConfig(const fuchsia_display_ControllerApplyConfigReques
     ApplyConfig();
 }
 
-void Client::HandleEnableVsync(const fuchsia_display_ControllerEnableVsyncRequest* req,
+void Client::HandleEnableVsync(const fuchsia_hardware_display_ControllerEnableVsyncRequest* req,
                                fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
     fbl::AutoLock lock(controller_->mtx());
     proxy_->EnableVsync(req->enable);
 }
 
-void Client::HandleSetVirtconMode(const fuchsia_display_ControllerSetVirtconModeRequest* req,
-                                fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+void Client::HandleSetVirtconMode(
+    const fuchsia_hardware_display_ControllerSetVirtconModeRequest* req,
+    fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
     if (!is_vc_) {
         zxlogf(ERROR, "Illegal non-virtcon ownership\n");
         TearDown();
@@ -855,19 +866,19 @@ void Client::HandleSetVirtconMode(const fuchsia_display_ControllerSetVirtconMode
 }
 
 void Client::HandleComputeLinearImageStride(
-        const fuchsia_display_ControllerComputeLinearImageStrideRequest* req,
-        fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
-    auto resp = resp_builder->New<fuchsia_display_ControllerComputeLinearImageStrideResponse>();
-    *resp_table = &fuchsia_display_ControllerComputeLinearImageStrideResponseTable;
+    const fuchsia_hardware_display_ControllerComputeLinearImageStrideRequest* req,
+    fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    auto resp =
+        resp_builder->New<fuchsia_hardware_display_ControllerComputeLinearImageStrideResponse>();
+    *resp_table = &fuchsia_hardware_display_ControllerComputeLinearImageStrideResponseTable;
     resp->stride = controller_->dc()->ComputeLinearStride(req->width, req->pixel_format);
 }
 
-void Client::HandleAllocateVmo(const fuchsia_display_ControllerAllocateVmoRequest* req,
-                               fidl::Builder* resp_builder,
-                               zx_handle_t* handle_out, bool* has_handle_out,
-                               const fidl_type_t** resp_table) {
-    auto resp = resp_builder->New<fuchsia_display_ControllerAllocateVmoResponse>();
-    *resp_table = &fuchsia_display_ControllerAllocateVmoResponseTable;
+void Client::HandleAllocateVmo(const fuchsia_hardware_display_ControllerAllocateVmoRequest* req,
+                               fidl::Builder* resp_builder, zx_handle_t* handle_out,
+                               bool* has_handle_out, const fidl_type_t** resp_table) {
+    auto resp = resp_builder->New<fuchsia_hardware_display_ControllerAllocateVmoResponse>();
+    *resp_table = &fuchsia_hardware_display_ControllerAllocateVmoResponseTable;
 
     zx::vmo vmo;
     resp->res = controller_->dc()->AllocateVmo(req->size, &vmo);
@@ -883,10 +894,10 @@ bool Client::CheckConfig(fidl::Builder* resp_builder) {
     uint32_t* display_layer_cfg_results[configs_.size()];
     memset(layer_cfg_results, 0, layers_.size() * sizeof(uint32_t));
 
-    fuchsia_display_ControllerCheckConfigResponse* resp = nullptr;
+    fuchsia_hardware_display_ControllerCheckConfigResponse* resp = nullptr;
     if (resp_builder) {
-        resp = resp_builder->New<fuchsia_display_ControllerCheckConfigResponse>();
-        resp->res = fuchsia_display_ConfigResult_OK;
+        resp = resp_builder->New<fuchsia_hardware_display_ControllerCheckConfigResponse>();
+        resp->res = fuchsia_hardware_display_ConfigResult_OK;
         resp->ops.count = 0;
         resp->ops.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
     }
@@ -971,7 +982,7 @@ bool Client::CheckConfig(fidl::Builder* resp_builder) {
 
     if (config_fail) {
         if (resp) {
-            resp->res = fuchsia_display_ConfigResult_INVALID_CONFIG;
+            resp->res = fuchsia_hardware_display_ConfigResult_INVALID_CONFIG;
         }
         // If the config is invalid, there's no point in sending it to the impl driver.
         return false;
@@ -985,8 +996,8 @@ bool Client::CheckConfig(fidl::Builder* resp_builder) {
     if (display_cfg_result != CONFIG_DISPLAY_OK) {
         if (resp) {
             resp->res = display_cfg_result == CONFIG_DISPLAY_TOO_MANY
-                    ? fuchsia_display_ConfigResult_TOO_MANY_DISPLAYS
-                    : fuchsia_display_ConfigResult_UNSUPPORTED_DISPLAY_MODES;
+                            ? fuchsia_hardware_display_ConfigResult_TOO_MANY_DISPLAYS
+                            : fuchsia_hardware_display_ConfigResult_UNSUPPORTED_DISPLAY_MODES;
         }
         return false;
     }
@@ -1006,24 +1017,32 @@ bool Client::CheckConfig(fidl::Builder* resp_builder) {
     } else if (!resp_builder) {
         return false;
     }
-    resp->res = fuchsia_display_ConfigResult_UNSUPPORTED_CONFIG;
+    resp->res = fuchsia_hardware_display_ConfigResult_UNSUPPORTED_CONFIG;
 
-    static_assert((1 << fuchsia_display_ClientCompositionOpcode_CLIENT_USE_PRIMARY)
-            == CLIENT_USE_PRIMARY, "Const mismatch");
-    static_assert((1 << fuchsia_display_ClientCompositionOpcode_CLIENT_MERGE_BASE)
-            == CLIENT_MERGE_BASE, "Const mismatch");
-    static_assert((1 << fuchsia_display_ClientCompositionOpcode_CLIENT_MERGE_SRC)
-            == CLIENT_MERGE_SRC, "Const mismatch");
-    static_assert((1 << fuchsia_display_ClientCompositionOpcode_CLIENT_FRAME_SCALE)
-            == CLIENT_FRAME_SCALE, "Const mismatch");
-    static_assert((1 << fuchsia_display_ClientCompositionOpcode_CLIENT_SRC_FRAME)
-            == CLIENT_SRC_FRAME, "Const mismatch");
-    static_assert((1 << fuchsia_display_ClientCompositionOpcode_CLIENT_TRANSFORM)
-            == CLIENT_TRANSFORM, "Const mismatch");
-    static_assert((1 << fuchsia_display_ClientCompositionOpcode_CLIENT_COLOR_CONVERSION)
-            == CLIENT_COLOR_CONVERSION, "Const mismatch");
-    static_assert((1 << fuchsia_display_ClientCompositionOpcode_CLIENT_ALPHA)
-            == CLIENT_ALPHA, "Const mismatch");
+    static_assert((1 << fuchsia_hardware_display_ClientCompositionOpcode_CLIENT_USE_PRIMARY) ==
+                      CLIENT_USE_PRIMARY,
+                  "Const mismatch");
+    static_assert((1 << fuchsia_hardware_display_ClientCompositionOpcode_CLIENT_MERGE_BASE) ==
+                      CLIENT_MERGE_BASE,
+                  "Const mismatch");
+    static_assert((1 << fuchsia_hardware_display_ClientCompositionOpcode_CLIENT_MERGE_SRC) ==
+                      CLIENT_MERGE_SRC,
+                  "Const mismatch");
+    static_assert((1 << fuchsia_hardware_display_ClientCompositionOpcode_CLIENT_FRAME_SCALE) ==
+                      CLIENT_FRAME_SCALE,
+                  "Const mismatch");
+    static_assert((1 << fuchsia_hardware_display_ClientCompositionOpcode_CLIENT_SRC_FRAME) ==
+                      CLIENT_SRC_FRAME,
+                  "Const mismatch");
+    static_assert((1 << fuchsia_hardware_display_ClientCompositionOpcode_CLIENT_TRANSFORM) ==
+                      CLIENT_TRANSFORM,
+                  "Const mismatch");
+    static_assert((1 << fuchsia_hardware_display_ClientCompositionOpcode_CLIENT_COLOR_CONVERSION) ==
+                      CLIENT_COLOR_CONVERSION,
+                  "Const mismatch");
+    static_assert((1 << fuchsia_hardware_display_ClientCompositionOpcode_CLIENT_ALPHA) ==
+                      CLIENT_ALPHA,
+                  "Const mismatch");
     constexpr uint32_t kAllErrors = (CLIENT_ALPHA << 1) - 1;
 
 
@@ -1049,7 +1068,7 @@ bool Client::CheckConfig(fidl::Builder* resp_builder) {
 
             for (uint8_t i = 0; i < 32; i++) {
                 if (err & (1 << i)) {
-                    auto op = resp_builder->New<fuchsia_display_ClientCompositionOp>();
+                    auto op = resp_builder->New<fuchsia_hardware_display_ClientCompositionOp>();
                     op->display_id = display_config.id;
                     op->layer_id = layer_node.layer->id;
                     op->opcode = i;
@@ -1161,8 +1180,8 @@ void Client::SetOwnership(bool is_owner) {
 
     is_owner_ = is_owner;
 
-    fuchsia_display_ControllerClientOwnershipChangeEvent msg = {};
-    msg.hdr.ordinal = fuchsia_display_ControllerClientOwnershipChangeOrdinal;
+    fuchsia_hardware_display_ControllerClientOwnershipChangeEvent msg = {};
+    msg.hdr.ordinal = fuchsia_hardware_display_ControllerClientOwnershipChangeOrdinal;
     msg.has_ownership = is_owner;
 
     zx_status_t status = zx_channel_write(server_handle_, 0, &msg, sizeof(msg), nullptr, 0);
@@ -1180,10 +1199,10 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
 
     uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
     fidl::Builder builder(bytes, ZX_CHANNEL_MAX_MSG_BYTES);
-    auto req = builder.New<fuchsia_display_ControllerDisplaysChangedEvent>();
+    auto req = builder.New<fuchsia_hardware_display_ControllerDisplaysChangedEvent>();
     zx_status_t status;
     req->hdr = {};
-    req->hdr.ordinal = fuchsia_display_ControllerDisplaysChangedOrdinal;
+    req->hdr.ordinal = fuchsia_hardware_display_ControllerDisplaysChangedOrdinal;
     req->added.count = 0;
     req->added.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
     req->removed.count = 0;
@@ -1248,10 +1267,10 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
 
     // We need 2 loops, since we need to make sure we allocate the
     // correct size array in the fidl response.
-    fuchsia_display_Info* coded_configs = nullptr;
+    fuchsia_hardware_display_Info* coded_configs = nullptr;
     if (req->added.count > 0) {
-        coded_configs =
-                builder.NewArray<fuchsia_display_Info>(static_cast<uint32_t>(req->added.count));
+        coded_configs = builder.NewArray<fuchsia_hardware_display_Info>(
+            static_cast<uint32_t>(req->added.count));
     }
 
     for (unsigned i = 0; i < added_count; i++) {
@@ -1272,7 +1291,7 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
         if (edid_timings) {
             coded_configs[i].modes.count = edid_timings->size();
             for (auto timing : *edid_timings) {
-                auto mode = builder.New<fuchsia_display_Mode>();
+                auto mode = builder.New<fuchsia_hardware_display_Mode>();
 
                 mode->horizontal_resolution = timing.horizontal_addressable;
                 mode->vertical_resolution = timing.vertical_addressable;
@@ -1280,7 +1299,7 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
             }
         } else {
             coded_configs[i].modes.count = 1;
-            auto mode = builder.New<fuchsia_display_Mode>();
+            auto mode = builder.New<fuchsia_hardware_display_Mode>();
             mode->horizontal_resolution = params->width;
             mode->vertical_resolution = params->height;
             mode->refresh_rate_e2 = params->refresh_rate_e2;
@@ -1294,15 +1313,19 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
                sizeof(zx_pixel_format_t) * config->pixel_formats_.size());
 
         static_assert(offsetof(cursor_info_t, width) ==
-                offsetof(fuchsia_display_CursorInfo, width), "Bad struct");
+                          offsetof(fuchsia_hardware_display_CursorInfo, width),
+                      "Bad struct");
         static_assert(offsetof(cursor_info_t, height) ==
-                offsetof(fuchsia_display_CursorInfo, height), "Bad struct");
+                          offsetof(fuchsia_hardware_display_CursorInfo, height),
+                      "Bad struct");
         static_assert(offsetof(cursor_info_t, format) ==
-                offsetof(fuchsia_display_CursorInfo, pixel_format), "Bad struct");
-        static_assert(sizeof(cursor_info_t) <= sizeof(fuchsia_display_CursorInfo), "Bad size");
+                          offsetof(fuchsia_hardware_display_CursorInfo, pixel_format),
+                      "Bad struct");
+        static_assert(sizeof(cursor_info_t) <= sizeof(fuchsia_hardware_display_CursorInfo),
+                      "Bad size");
         coded_configs[i].cursor_configs.count = config->cursor_infos_.size();
-        auto coded_cursor_configs = builder.NewArray<fuchsia_display_CursorInfo>(
-                static_cast<uint32_t>(config->cursor_infos_.size()));
+        auto coded_cursor_configs = builder.NewArray<fuchsia_hardware_display_CursorInfo>(
+            static_cast<uint32_t>(config->cursor_infos_.size()));
         for (unsigned i = 0; i < config->cursor_infos_.size(); i++) {
             memcpy(&coded_cursor_configs[i], &config->cursor_infos_[i], sizeof(cursor_info_t));
         }
@@ -1316,12 +1339,12 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
             ZX_DEBUG_ASSERT(false);
         }
 
-        populate_fidl_string(&coded_configs[i].manufacturer_name,
-                              &builder, manufacturer_name, fuchsia_display_identifierMaxLen);
-        populate_fidl_string(&coded_configs[i].monitor_name,
-                              &builder, monitor_name, fuchsia_display_identifierMaxLen);
-        populate_fidl_string(&coded_configs[i].monitor_serial,
-                              &builder, monitor_serial, fuchsia_display_identifierMaxLen);
+        populate_fidl_string(&coded_configs[i].manufacturer_name, &builder, manufacturer_name,
+                             fuchsia_hardware_display_identifierMaxLen);
+        populate_fidl_string(&coded_configs[i].monitor_name, &builder, monitor_name,
+                             fuchsia_hardware_display_identifierMaxLen);
+        populate_fidl_string(&coded_configs[i].monitor_serial, &builder, monitor_serial,
+                             fuchsia_hardware_display_identifierMaxLen);
     }
 
     if (req->removed.count > 0) {
@@ -1341,8 +1364,9 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
         fidl::Message msg(builder.Finalize(), fidl::HandlePart());
         const char* err;
         ZX_DEBUG_ASSERT_MSG(
-                msg.Validate(&fuchsia_display_ControllerDisplaysChangedEventTable, &err) == ZX_OK,
-                "Failed to validate \"%s\"", err);
+            msg.Validate(&fuchsia_hardware_display_ControllerDisplaysChangedEventTable, &err) ==
+                ZX_OK,
+            "Failed to validate \"%s\"", err);
 
         if ((status = msg.Write(server_handle_, 0)) != ZX_OK) {
             zxlogf(ERROR, "Error writing remove message %d\n", status);
@@ -1548,14 +1572,14 @@ void ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
     if (!enable_vsync_) {
         return;
     }
-    uint32_t size = static_cast<uint32_t>(
-            sizeof(fuchsia_display_ControllerVsyncEvent) + sizeof(uint64_t) * count);
+    uint32_t size = static_cast<uint32_t>(sizeof(fuchsia_hardware_display_ControllerVsyncEvent) +
+                                          sizeof(uint64_t) * count);
     uint8_t data[size];
 
-    fuchsia_display_ControllerVsyncEvent* msg =
-            reinterpret_cast<fuchsia_display_ControllerVsyncEvent*>(data);
+    fuchsia_hardware_display_ControllerVsyncEvent* msg =
+        reinterpret_cast<fuchsia_hardware_display_ControllerVsyncEvent*>(data);
     msg->hdr = {};
-    msg->hdr.ordinal = fuchsia_display_ControllerVsyncOrdinal;
+    msg->hdr.ordinal = fuchsia_hardware_display_ControllerVsyncOrdinal;
     msg->display_id = display_id;
     msg->timestamp = timestamp;
     msg->images.count = count;

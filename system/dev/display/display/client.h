@@ -22,7 +22,7 @@
 
 #include "controller.h"
 #include "fence.h"
-#include "fuchsia/display/c/fidl.h"
+#include "fuchsia/hardware/display/c/fidl.h"
 #include "id-map.h"
 #include "image.h"
 
@@ -142,60 +142,60 @@ public:
 
     bool IsValid() { return server_handle_ != ZX_HANDLE_INVALID; }
 private:
-    void HandleImportVmoImage(const fuchsia_display_ControllerImportVmoImageRequest* req,
+    void HandleImportVmoImage(const fuchsia_hardware_display_ControllerImportVmoImageRequest* req,
                               fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-    void HandleReleaseImage(const fuchsia_display_ControllerReleaseImageRequest* req,
+    void HandleReleaseImage(const fuchsia_hardware_display_ControllerReleaseImageRequest* req,
                             fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-    void HandleImportEvent(const fuchsia_display_ControllerImportEventRequest* req,
+    void HandleImportEvent(const fuchsia_hardware_display_ControllerImportEventRequest* req,
                            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-    void HandleReleaseEvent(const fuchsia_display_ControllerReleaseEventRequest* req,
+    void HandleReleaseEvent(const fuchsia_hardware_display_ControllerReleaseEventRequest* req,
                             fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-    void HandleCreateLayer(const fuchsia_display_ControllerCreateLayerRequest* req,
+    void HandleCreateLayer(const fuchsia_hardware_display_ControllerCreateLayerRequest* req,
                            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-    void HandleDestroyLayer(const fuchsia_display_ControllerDestroyLayerRequest* req,
+    void HandleDestroyLayer(const fuchsia_hardware_display_ControllerDestroyLayerRequest* req,
                             fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-    void HandleSetDisplayMode(const fuchsia_display_ControllerSetDisplayModeRequest* req,
+    void HandleSetDisplayMode(const fuchsia_hardware_display_ControllerSetDisplayModeRequest* req,
                               fidl::Builder* resp_builder, const fidl_type_t** resp_table);
     void HandleSetDisplayColorConversion(
-            const fuchsia_display_ControllerSetDisplayColorConversionRequest* req,
-            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-    void HandleSetDisplayLayers(const fuchsia_display_ControllerSetDisplayLayersRequest* req,
-                                fidl::Builder* resp_builder, const fidl_type_t** resp_table);
+        const fuchsia_hardware_display_ControllerSetDisplayColorConversionRequest* req,
+        fidl::Builder* resp_builder, const fidl_type_t** resp_table);
+    void
+    HandleSetDisplayLayers(const fuchsia_hardware_display_ControllerSetDisplayLayersRequest* req,
+                           fidl::Builder* resp_builder, const fidl_type_t** resp_table);
     void HandleSetLayerPrimaryConfig(
-            const fuchsia_display_ControllerSetLayerPrimaryConfigRequest* req,
-            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
+        const fuchsia_hardware_display_ControllerSetLayerPrimaryConfigRequest* req,
+        fidl::Builder* resp_builder, const fidl_type_t** resp_table);
     void HandleSetLayerPrimaryPosition(
-            const fuchsia_display_ControllerSetLayerPrimaryPositionRequest* req,
-            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
+        const fuchsia_hardware_display_ControllerSetLayerPrimaryPositionRequest* req,
+        fidl::Builder* resp_builder, const fidl_type_t** resp_table);
     void HandleSetLayerPrimaryAlpha(
-            const fuchsia_display_ControllerSetLayerPrimaryAlphaRequest* req,
-            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
+        const fuchsia_hardware_display_ControllerSetLayerPrimaryAlphaRequest* req,
+        fidl::Builder* resp_builder, const fidl_type_t** resp_table);
     void HandleSetLayerCursorConfig(
-            const fuchsia_display_ControllerSetLayerCursorConfigRequest* req,
-            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
+        const fuchsia_hardware_display_ControllerSetLayerCursorConfigRequest* req,
+        fidl::Builder* resp_builder, const fidl_type_t** resp_table);
     void HandleSetLayerCursorPosition(
-            const fuchsia_display_ControllerSetLayerCursorPositionRequest* req,
-            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
+        const fuchsia_hardware_display_ControllerSetLayerCursorPositionRequest* req,
+        fidl::Builder* resp_builder, const fidl_type_t** resp_table);
     void HandleSetLayerColorConfig(
-            const fuchsia_display_ControllerSetLayerColorConfigRequest* req,
-            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-    void HandleSetLayerImage(const fuchsia_display_ControllerSetLayerImageRequest* req,
+        const fuchsia_hardware_display_ControllerSetLayerColorConfigRequest* req,
+        fidl::Builder* resp_builder, const fidl_type_t** resp_table);
+    void HandleSetLayerImage(const fuchsia_hardware_display_ControllerSetLayerImageRequest* req,
                              fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-    void HandleCheckConfig(const fuchsia_display_ControllerCheckConfigRequest* req,
+    void HandleCheckConfig(const fuchsia_hardware_display_ControllerCheckConfigRequest* req,
                            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-    void HandleApplyConfig(const fuchsia_display_ControllerApplyConfigRequest* req,
+    void HandleApplyConfig(const fuchsia_hardware_display_ControllerApplyConfigRequest* req,
                            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-    void HandleEnableVsync(const fuchsia_display_ControllerEnableVsyncRequest* req,
+    void HandleEnableVsync(const fuchsia_hardware_display_ControllerEnableVsyncRequest* req,
                            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-    void HandleSetVirtconMode(const fuchsia_display_ControllerSetVirtconModeRequest* req,
+    void HandleSetVirtconMode(const fuchsia_hardware_display_ControllerSetVirtconModeRequest* req,
                               fidl::Builder* resp_builder, const fidl_type_t** resp_table);
     void HandleComputeLinearImageStride(
-            const fuchsia_display_ControllerComputeLinearImageStrideRequest* req,
-            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-    void HandleAllocateVmo(const fuchsia_display_ControllerAllocateVmoRequest* req,
-                           fidl::Builder* resp_builder,
-                           zx_handle_t* handle_out, bool* has_handle_out,
-                           const fidl_type_t** resp_table);
+        const fuchsia_hardware_display_ControllerComputeLinearImageStrideRequest* req,
+        fidl::Builder* resp_builder, const fidl_type_t** resp_table);
+    void HandleAllocateVmo(const fuchsia_hardware_display_ControllerAllocateVmoRequest* req,
+                           fidl::Builder* resp_builder, zx_handle_t* handle_out,
+                           bool* has_handle_out, const fidl_type_t** resp_table);
 
     // Cleans up layer state associated with an image. If image == nullptr, then
     // cleans up all image state. Return true if a current layer was modified.

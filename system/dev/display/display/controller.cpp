@@ -11,9 +11,9 @@
 
 #include <utility>
 
-#include "controller.h"
 #include "client.h"
-#include "fuchsia/display/c/fidl.h"
+#include "controller.h"
+#include "fuchsia/hardware/display/c/fidl.h"
 
 namespace {
 
@@ -653,8 +653,8 @@ void Controller::SetVcMode(uint8_t vc_mode) {
 
 void Controller::HandleClientOwnershipChanges() {
     ClientProxy* new_active;
-    if (vc_mode_ == fuchsia_display_VirtconMode_FORCED
-            || (vc_mode_ == fuchsia_display_VirtconMode_FALLBACK && primary_client_ == nullptr)) {
+    if (vc_mode_ == fuchsia_hardware_display_VirtconMode_FORCED ||
+        (vc_mode_ == fuchsia_hardware_display_VirtconMode_FALLBACK && primary_client_ == nullptr)) {
         new_active = vc_client_;
     } else {
         new_active = primary_client_;
@@ -675,7 +675,7 @@ void Controller::OnClientDead(ClientProxy* client) {
     fbl::AutoLock lock(&mtx_);
     if (client == vc_client_) {
         vc_client_ = nullptr;
-        vc_mode_ = fuchsia_display_VirtconMode_INACTIVE;
+        vc_mode_ = fuchsia_hardware_display_VirtconMode_INACTIVE;
     } else if (client == primary_client_) {
         primary_client_ = nullptr;
     }

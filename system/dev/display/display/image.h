@@ -12,8 +12,8 @@
 
 #include <atomic>
 
-#include "fuchsia/display/c/fidl.h"
 #include "fence.h"
+#include "fuchsia/hardware/display/c/fidl.h"
 #include "id-map.h"
 
 namespace display {

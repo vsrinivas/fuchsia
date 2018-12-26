@@ -18,7 +18,7 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
-#include "fuchsia/display/c/fidl.h"
+#include "fuchsia/hardware/display/c/fidl.h"
 #include "vc.h"
 
 static constexpr const char* kDisplayControllerDir = "/dev/class/display-controller";
@@ -49,7 +49,7 @@ static struct list_node display_list = LIST_INITIAL_VALUE(display_list);
 static bool displays_bound = false;
 // Owned by vc_gfx, only valid when displays_bound is true
 static zx_handle_t image_vmo = ZX_HANDLE_INVALID;
-static fuchsia_display_ImageConfig image_config;
+static fuchsia_hardware_display_ImageConfig image_config;
 
 // remember whether the virtual console controls the display
 bool g_vc_owns_display = false;
@@ -57,8 +57,8 @@ bool g_vc_owns_display = false;
 static void vc_find_display_controller();
 
 static zx_status_t vc_set_mode(uint8_t mode) {
-    fuchsia_display_ControllerSetVirtconModeRequest request;
-    request.hdr.ordinal = fuchsia_display_ControllerSetVirtconModeOrdinal;
+    fuchsia_hardware_display_ControllerSetVirtconModeRequest request;
+    request.hdr.ordinal = fuchsia_hardware_display_ControllerSetVirtconModeOrdinal;
     request.mode = mode;
 
     return zx_channel_write(dc_ph.handle, 0, &request, sizeof(request), nullptr, 0);
@@ -69,8 +69,9 @@ void vc_toggle_framebuffer() {
         return;
     }
 
-    zx_status_t status = vc_set_mode(!g_vc_owns_display ?
-            fuchsia_display_VirtconMode_FORCED : fuchsia_display_VirtconMode_FALLBACK);
+    zx_status_t status =
+        vc_set_mode(!g_vc_owns_display ? fuchsia_hardware_display_VirtconMode_FORCED
+                                       : fuchsia_hardware_display_VirtconMode_FALLBACK);
     if (status != ZX_OK) {
         printf("vc: Failed to toggle ownership %d\n", status);
     }
@@ -86,10 +87,10 @@ static zx_status_t decode_message(void* bytes, uint32_t num_bytes) {
     zx_status_t res;
 
     const fidl_type_t* table = nullptr;
-    if (header->ordinal == fuchsia_display_ControllerDisplaysChangedOrdinal) {
-        table = &fuchsia_display_ControllerDisplaysChangedEventTable;
-    } else if (header->ordinal == fuchsia_display_ControllerClientOwnershipChangeOrdinal) {
-        table = &fuchsia_display_ControllerClientOwnershipChangeEventTable;
+    if (header->ordinal == fuchsia_hardware_display_ControllerDisplaysChangedOrdinal) {
+        table = &fuchsia_hardware_display_ControllerDisplaysChangedEventTable;
+    } else if (header->ordinal == fuchsia_hardware_display_ControllerClientOwnershipChangeOrdinal) {
+        table = &fuchsia_hardware_display_ControllerClientOwnershipChangeEventTable;
     }
     if (table != nullptr) {
         const char* err;
@@ -103,7 +104,8 @@ static zx_status_t decode_message(void* bytes, uint32_t num_bytes) {
     return res;
 }
 
-static void handle_ownership_change(fuchsia_display_ControllerClientOwnershipChangeEvent* evt) {
+static void
+handle_ownership_change(fuchsia_hardware_display_ControllerClientOwnershipChangeEvent* evt) {
     g_vc_owns_display = evt->has_ownership;
 
     // If we've gained it, repaint
@@ -114,10 +116,10 @@ static void handle_ownership_change(fuchsia_display_ControllerClientOwnershipCha
 }
 
 static zx_status_t create_layer(uint64_t display_id, uint64_t* layer_id) {
-    fuchsia_display_ControllerCreateLayerRequest create_layer_msg;
-    create_layer_msg.hdr.ordinal = fuchsia_display_ControllerCreateLayerOrdinal;
+    fuchsia_hardware_display_ControllerCreateLayerRequest create_layer_msg;
+    create_layer_msg.hdr.ordinal = fuchsia_hardware_display_ControllerCreateLayerOrdinal;
 
-    fuchsia_display_ControllerCreateLayerResponse create_layer_rsp;
+    fuchsia_hardware_display_ControllerCreateLayerResponse create_layer_rsp;
     zx_channel_call_args_t call_args = {};
     call_args.wr_bytes = &create_layer_msg;
     call_args.rd_bytes = &create_layer_rsp;
@@ -142,8 +144,8 @@ static zx_status_t create_layer(uint64_t display_id, uint64_t* layer_id) {
 
 
 static void destroy_layer(uint64_t layer_id) {
-    fuchsia_display_ControllerDestroyLayerRequest destroy_msg;
-    destroy_msg.hdr.ordinal = fuchsia_display_ControllerDestroyLayerOrdinal;
+    fuchsia_hardware_display_ControllerDestroyLayerRequest destroy_msg;
+    destroy_msg.hdr.ordinal = fuchsia_hardware_display_ControllerDestroyLayerOrdinal;
     destroy_msg.layer_id = layer_id;
 
     if (zx_channel_write(dc_ph.handle, 0, &destroy_msg, sizeof(destroy_msg), nullptr, 0) != ZX_OK) {
@@ -152,8 +154,8 @@ static void destroy_layer(uint64_t layer_id) {
 }
 
 static void release_image(uint64_t image_id) {
-    fuchsia_display_ControllerReleaseImageRequest release_msg;
-    release_msg.hdr.ordinal = fuchsia_display_ControllerReleaseImageOrdinal;
+    fuchsia_hardware_display_ControllerReleaseImageRequest release_msg;
+    release_msg.hdr.ordinal = fuchsia_hardware_display_ControllerReleaseImageOrdinal;
     release_msg.image_id = image_id;
 
     if (zx_channel_write(dc_ph.handle, 0, &release_msg, sizeof(release_msg), nullptr, 0)) {
@@ -161,14 +163,14 @@ static void release_image(uint64_t image_id) {
     }
 }
 
-static zx_status_t handle_display_added(fuchsia_display_Info* info, fuchsia_display_Mode* mode,
-                                        int32_t pixel_format) {
-    fuchsia_display_ControllerComputeLinearImageStrideRequest stride_msg;
-    stride_msg.hdr.ordinal = fuchsia_display_ControllerComputeLinearImageStrideOrdinal;
+static zx_status_t handle_display_added(fuchsia_hardware_display_Info* info,
+                                        fuchsia_hardware_display_Mode* mode, int32_t pixel_format) {
+    fuchsia_hardware_display_ControllerComputeLinearImageStrideRequest stride_msg;
+    stride_msg.hdr.ordinal = fuchsia_hardware_display_ControllerComputeLinearImageStrideOrdinal;
     stride_msg.width = mode->horizontal_resolution;
     stride_msg.pixel_format = pixel_format;
 
-    fuchsia_display_ControllerComputeLinearImageStrideResponse stride_rsp;
+    fuchsia_hardware_display_ControllerComputeLinearImageStrideResponse stride_rsp;
     zx_channel_call_args_t stride_call = {};
     stride_call.wr_bytes = &stride_msg;
     stride_call.rd_bytes = &stride_rsp;
@@ -243,11 +245,11 @@ static void handle_display_removed(uint64_t id) {
 }
 
 static zx_status_t allocate_vmo(uint32_t size, zx_handle_t* vmo_out) {
-    fuchsia_display_ControllerAllocateVmoRequest alloc_msg;
-    alloc_msg.hdr.ordinal = fuchsia_display_ControllerAllocateVmoOrdinal;
+    fuchsia_hardware_display_ControllerAllocateVmoRequest alloc_msg;
+    alloc_msg.hdr.ordinal = fuchsia_hardware_display_ControllerAllocateVmoOrdinal;
     alloc_msg.size = size;
 
-    fuchsia_display_ControllerAllocateVmoResponse alloc_rsp;
+    fuchsia_hardware_display_ControllerAllocateVmoResponse alloc_rsp;
     zx_channel_call_args_t call_args = {};
     call_args.wr_bytes = &alloc_msg;
     call_args.rd_bytes = &alloc_rsp;
@@ -269,7 +271,8 @@ static zx_status_t allocate_vmo(uint32_t size, zx_handle_t* vmo_out) {
     return actual_handles == 1 ? ZX_OK : ZX_ERR_INTERNAL;
 }
 
-static zx_status_t import_vmo(zx_handle_t vmo, fuchsia_display_ImageConfig* config, uint64_t* id) {
+static zx_status_t import_vmo(zx_handle_t vmo, fuchsia_hardware_display_ImageConfig* config,
+                              uint64_t* id) {
     zx_handle_t vmo_dup;
     zx_status_t status;
     if ((status = zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &vmo_dup)) != ZX_OK) {
@@ -277,13 +280,13 @@ static zx_status_t import_vmo(zx_handle_t vmo, fuchsia_display_ImageConfig* conf
         return status;
     }
 
-    fuchsia_display_ControllerImportVmoImageRequest import_msg = {};
-    import_msg.hdr.ordinal = fuchsia_display_ControllerImportVmoImageOrdinal;
+    fuchsia_hardware_display_ControllerImportVmoImageRequest import_msg = {};
+    import_msg.hdr.ordinal = fuchsia_hardware_display_ControllerImportVmoImageOrdinal;
     import_msg.image_config = *config;
     import_msg.vmo = FIDL_HANDLE_PRESENT;
     import_msg.offset = 0;
 
-    fuchsia_display_ControllerImportVmoImageResponse import_rsp;
+    fuchsia_hardware_display_ControllerImportVmoImageResponse import_rsp;
     zx_channel_call_args_t call_args = {};
     call_args.wr_bytes = &import_msg;
     call_args.wr_handles = &vmo_dup;
@@ -310,12 +313,13 @@ static zx_status_t import_vmo(zx_handle_t vmo, fuchsia_display_ImageConfig* conf
 static zx_status_t set_display_layer(uint64_t display_id, uint64_t layer_id) {
     zx_status_t status;
     // Put the layer on the display
-    uint8_t fidl_bytes[sizeof(fuchsia_display_ControllerSetDisplayLayersRequest)
-            + FIDL_ALIGN(sizeof(uint64_t))];
+    uint8_t fidl_bytes[sizeof(fuchsia_hardware_display_ControllerSetDisplayLayersRequest) +
+                       FIDL_ALIGN(sizeof(uint64_t))];
     auto set_display_layer_request =
-            reinterpret_cast<fuchsia_display_ControllerSetDisplayLayersRequest*>(fidl_bytes);
+        reinterpret_cast<fuchsia_hardware_display_ControllerSetDisplayLayersRequest*>(fidl_bytes);
 
-    set_display_layer_request->hdr.ordinal = fuchsia_display_ControllerSetDisplayLayersOrdinal;
+    set_display_layer_request->hdr.ordinal =
+        fuchsia_hardware_display_ControllerSetDisplayLayersOrdinal;
     set_display_layer_request->display_id = display_id;
     set_display_layer_request->layer_ids.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
 
@@ -326,7 +330,7 @@ static zx_status_t set_display_layer(uint64_t display_id, uint64_t layer_id) {
         size = sizeof(fidl_bytes);
     } else {
         set_display_layer_request->layer_ids.count = 0;
-        size = sizeof(fuchsia_display_ControllerSetDisplayLayersRequest);
+        size = sizeof(fuchsia_hardware_display_ControllerSetDisplayLayersRequest);
     }
     if ((status = zx_channel_write(dc_ph.handle, 0,
                                    fidl_bytes, size, nullptr, 0)) != ZX_OK) {
@@ -337,11 +341,11 @@ static zx_status_t set_display_layer(uint64_t display_id, uint64_t layer_id) {
     return ZX_OK;
 }
 
-static zx_status_t configure_layer(display_info_t* display, uint64_t layer_id,
-                                   uint64_t image_id, fuchsia_display_ImageConfig* config) {
+static zx_status_t configure_layer(display_info_t* display, uint64_t layer_id, uint64_t image_id,
+                                   fuchsia_hardware_display_ImageConfig* config) {
     zx_status_t status;
-    fuchsia_display_ControllerSetLayerPrimaryConfigRequest layer_cfg_msg;
-    layer_cfg_msg.hdr.ordinal = fuchsia_display_ControllerSetLayerPrimaryConfigOrdinal;
+    fuchsia_hardware_display_ControllerSetLayerPrimaryConfigRequest layer_cfg_msg;
+    layer_cfg_msg.hdr.ordinal = fuchsia_hardware_display_ControllerSetLayerPrimaryConfigOrdinal;
     layer_cfg_msg.layer_id = layer_id;
     layer_cfg_msg.image_config = *config;
     if ((status = zx_channel_write(dc_ph.handle, 0, &layer_cfg_msg,
@@ -350,10 +354,10 @@ static zx_status_t configure_layer(display_info_t* display, uint64_t layer_id,
         return status;
     }
 
-    fuchsia_display_ControllerSetLayerPrimaryPositionRequest layer_pos_msg = {};
-    layer_pos_msg.hdr.ordinal = fuchsia_display_ControllerSetLayerPrimaryPositionOrdinal;
+    fuchsia_hardware_display_ControllerSetLayerPrimaryPositionRequest layer_pos_msg = {};
+    layer_pos_msg.hdr.ordinal = fuchsia_hardware_display_ControllerSetLayerPrimaryPositionOrdinal;
     layer_pos_msg.layer_id = layer_id;
-    layer_pos_msg.transform = fuchsia_display_Transform_IDENTITY;
+    layer_pos_msg.transform = fuchsia_hardware_display_Transform_IDENTITY;
     layer_pos_msg.src_frame.width = config->width;
     layer_pos_msg.src_frame.height = config->height;
     layer_pos_msg.dest_frame.width = display->width;
@@ -364,8 +368,8 @@ static zx_status_t configure_layer(display_info_t* display, uint64_t layer_id,
         return status;
     }
 
-    fuchsia_display_ControllerSetLayerImageRequest set_msg;
-    set_msg.hdr.ordinal = fuchsia_display_ControllerSetLayerImageOrdinal;
+    fuchsia_hardware_display_ControllerSetLayerImageRequest set_msg;
+    set_msg.hdr.ordinal = fuchsia_hardware_display_ControllerSetLayerImageOrdinal;
     set_msg.layer_id = layer_id;
     set_msg.image_id = image_id;
     if ((status = zx_channel_write(dc_ph.handle, 0,
@@ -379,12 +383,12 @@ static zx_status_t configure_layer(display_info_t* display, uint64_t layer_id,
 static zx_status_t apply_configuration() {
     // Validate and then apply the new configuration
     zx_status_t status;
-    fuchsia_display_ControllerCheckConfigRequest check_msg;
+    fuchsia_hardware_display_ControllerCheckConfigRequest check_msg;
     uint8_t check_rsp_bytes[ZX_CHANNEL_MAX_MSG_BYTES];
     auto check_rsp =
-            reinterpret_cast<fuchsia_display_ControllerCheckConfigResponse*>(check_rsp_bytes);
+        reinterpret_cast<fuchsia_hardware_display_ControllerCheckConfigResponse*>(check_rsp_bytes);
     check_msg.discard = false;
-    check_msg.hdr.ordinal = fuchsia_display_ControllerCheckConfigOrdinal;
+    check_msg.hdr.ordinal = fuchsia_hardware_display_ControllerCheckConfigOrdinal;
     zx_channel_call_args_t call_args = {};
     call_args.wr_bytes = &check_msg;
     call_args.rd_bytes = check_rsp;
@@ -398,13 +402,13 @@ static zx_status_t apply_configuration() {
         return status;
     }
 
-    if (check_rsp->res != fuchsia_display_ConfigResult_OK) {
+    if (check_rsp->res != fuchsia_hardware_display_ConfigResult_OK) {
         printf("vc: Config not valid %d\n", check_rsp->res);
         return ZX_ERR_INTERNAL;
     }
 
-    fuchsia_display_ControllerApplyConfigRequest apply_msg;
-    apply_msg.hdr.ordinal = fuchsia_display_ControllerApplyConfigOrdinal;
+    fuchsia_hardware_display_ControllerApplyConfigRequest apply_msg;
+    apply_msg.hdr.ordinal = fuchsia_hardware_display_ControllerApplyConfigOrdinal;
     if ((status = zx_channel_write(dc_ph.handle, 0,
                                    &apply_msg, sizeof(apply_msg), nullptr, 0)) != ZX_OK) {
         printf("vc: Applying config failed %d\n", status);
@@ -496,10 +500,13 @@ static zx_status_t rebind_display(bool use_all) {
     }
 }
 
-static zx_status_t handle_display_changed(fuchsia_display_ControllerDisplaysChangedEvent* evt) {
+static zx_status_t
+handle_display_changed(fuchsia_hardware_display_ControllerDisplaysChangedEvent* evt) {
     for (unsigned i = 0; i < evt->added.count; i++) {
-        fuchsia_display_Info* info = reinterpret_cast<fuchsia_display_Info*>(evt->added.data) + i;
-        fuchsia_display_Mode* mode = reinterpret_cast<fuchsia_display_Mode*>(info->modes.data);
+        fuchsia_hardware_display_Info* info =
+            reinterpret_cast<fuchsia_hardware_display_Info*>(evt->added.data) + i;
+        fuchsia_hardware_display_Mode* mode =
+            reinterpret_cast<fuchsia_hardware_display_Mode*>(info->modes.data);
         int32_t pixel_format = reinterpret_cast<int32_t*>(info->pixel_format.data)[0];
         zx_status_t status = handle_display_added(info, mode, pixel_format);
         if (status != ZX_OK) {
@@ -546,14 +553,15 @@ static zx_status_t dc_callback_handler(port_handler_t* ph, zx_signals_t signals,
 
     fidl_message_header_t* header = (fidl_message_header_t*) fidl_buffer;
     switch (header->ordinal) {
-    case fuchsia_display_ControllerDisplaysChangedOrdinal: {
+    case fuchsia_hardware_display_ControllerDisplaysChangedOrdinal: {
         handle_display_changed(
-                reinterpret_cast<fuchsia_display_ControllerDisplaysChangedEvent*>(fidl_buffer));
+            reinterpret_cast<fuchsia_hardware_display_ControllerDisplaysChangedEvent*>(
+                fidl_buffer));
         break;
     }
-    case fuchsia_display_ControllerClientOwnershipChangeOrdinal: {
-        auto evt = reinterpret_cast<fuchsia_display_ControllerClientOwnershipChangeEvent*>(
-                fidl_buffer);
+    case fuchsia_hardware_display_ControllerClientOwnershipChangeOrdinal: {
+        auto evt = reinterpret_cast<fuchsia_hardware_display_ControllerClientOwnershipChangeEvent*>(
+            fidl_buffer);
         handle_ownership_change(evt);
         break;
     }
@@ -591,8 +599,9 @@ static zx_status_t vc_dc_event(uint32_t evt, const char* name) {
     dc_fd = fd.release();
     dc_ph.handle = dc_channel.release();
 
-    zx_status_t status = vc_set_mode(getenv("virtcon.hide-on-boot") == nullptr ?
-            fuchsia_display_VirtconMode_FALLBACK : fuchsia_display_VirtconMode_INACTIVE);
+    zx_status_t status = vc_set_mode(getenv("virtcon.hide-on-boot") == nullptr
+                                         ? fuchsia_hardware_display_VirtconMode_FALLBACK
+                                         : fuchsia_hardware_display_VirtconMode_INACTIVE);
     if (status != ZX_OK) {
         printf("vc: Failed to set initial ownership %d\n", status);
         vc_find_display_controller();

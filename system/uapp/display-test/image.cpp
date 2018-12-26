@@ -12,7 +12,7 @@
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
-#include "fuchsia/display/c/fidl.h"
+#include "fuchsia/hardware/display/c/fidl.h"
 #include "image.h"
 #include "utils.h"
 
@@ -27,12 +27,12 @@ Image::Image(uint32_t width, uint32_t height, int32_t stride,
 Image* Image::Create(zx_handle_t dc_handle,
                      uint32_t width, uint32_t height, zx_pixel_format_t format,
                      uint32_t fg_color, uint32_t bg_color, bool cursor) {
-    fuchsia_display_ControllerComputeLinearImageStrideRequest stride_msg;
-    stride_msg.hdr.ordinal = fuchsia_display_ControllerComputeLinearImageStrideOrdinal;
+    fuchsia_hardware_display_ControllerComputeLinearImageStrideRequest stride_msg;
+    stride_msg.hdr.ordinal = fuchsia_hardware_display_ControllerComputeLinearImageStrideOrdinal;
     stride_msg.width = width;
     stride_msg.pixel_format = format;
 
-    fuchsia_display_ControllerComputeLinearImageStrideResponse stride_rsp;
+    fuchsia_hardware_display_ControllerComputeLinearImageStrideResponse stride_rsp;
     zx_channel_call_args_t stride_call = {};
     stride_call.wr_bytes = &stride_msg;
     stride_call.rd_bytes = &stride_rsp;
@@ -51,8 +51,8 @@ Image* Image::Create(zx_handle_t dc_handle,
     }
 
     zx::vmo vmo;
-    fuchsia_display_ControllerAllocateVmoRequest alloc_msg;
-    alloc_msg.hdr.ordinal = fuchsia_display_ControllerAllocateVmoOrdinal;
+    fuchsia_hardware_display_ControllerAllocateVmoRequest alloc_msg;
+    alloc_msg.hdr.ordinal = fuchsia_hardware_display_ControllerAllocateVmoOrdinal;
     if (format == ZX_PIXEL_FORMAT_NV12) {
         alloc_msg.size = stride_rsp.stride * height * ZX_PIXEL_FORMAT_BYTES(format) * 3 / 2;
     } else if (!USE_INTEL_Y_TILING || cursor) {
@@ -63,7 +63,7 @@ Image* Image::Create(zx_handle_t dc_handle,
                 fbl::round_up(height, TILE_PIXEL_HEIGHT) * TILE_BYTES_PER_PIXEL;
     }
 
-    fuchsia_display_ControllerAllocateVmoResponse alloc_rsp;
+    fuchsia_hardware_display_ControllerAllocateVmoResponse alloc_rsp;
     zx_channel_call_args_t call_args = {};
     call_args.wr_bytes = &alloc_msg;
     call_args.rd_bytes = &alloc_rsp;
@@ -184,7 +184,7 @@ void Image::Render(int32_t prev_step, int32_t step_num) {
     }
 }
 
-void Image::GetConfig(fuchsia_display_ImageConfig* config_out) {
+void Image::GetConfig(fuchsia_hardware_display_ImageConfig* config_out) {
     config_out->height = height_;
     config_out->width = width_;
     config_out->pixel_format = format_;
@@ -212,8 +212,8 @@ bool Image::Import(zx_handle_t dc_handle, image_import_t* info_out) {
             return false;
         }
 
-        fuchsia_display_ControllerImportEventRequest import_evt_msg;
-        import_evt_msg.hdr.ordinal = fuchsia_display_ControllerImportEventOrdinal;
+        fuchsia_hardware_display_ControllerImportEventRequest import_evt_msg;
+        import_evt_msg.hdr.ordinal = fuchsia_hardware_display_ControllerImportEventOrdinal;
         import_evt_msg.id = event_id++;
         import_evt_msg.event = FIDL_HANDLE_PRESENT;
 
@@ -231,8 +231,8 @@ bool Image::Import(zx_handle_t dc_handle, image_import_t* info_out) {
         info_out->event_ids[i] = import_evt_msg.id;
     }
 
-    fuchsia_display_ControllerImportVmoImageRequest import_msg;
-    import_msg.hdr.ordinal = fuchsia_display_ControllerImportVmoImageOrdinal;
+    fuchsia_hardware_display_ControllerImportVmoImageRequest import_msg;
+    import_msg.hdr.ordinal = fuchsia_hardware_display_ControllerImportVmoImageOrdinal;
     GetConfig(&import_msg.image_config);
     import_msg.vmo = FIDL_HANDLE_PRESENT;
     import_msg.offset = 0;
@@ -242,7 +242,7 @@ bool Image::Import(zx_handle_t dc_handle, image_import_t* info_out) {
         return false;
     }
 
-    fuchsia_display_ControllerImportVmoImageResponse import_rsp;
+    fuchsia_hardware_display_ControllerImportVmoImageResponse import_rsp;
     zx_channel_call_args_t import_call = {};
     import_call.wr_bytes = &import_msg;
     import_call.wr_handles = &vmo_dup;

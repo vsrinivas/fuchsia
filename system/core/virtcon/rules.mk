@@ -30,7 +30,7 @@ LOCAL_LIBS := \
     system/ulib/c
 
 LOCAL_FIDL_LIBS := \
-    system/fidl/fuchsia-display \
+    system/fidl/fuchsia-hardware-display \
     system/fidl/fuchsia-io \
     system/fidl/fuchsia-hardware-input \
 

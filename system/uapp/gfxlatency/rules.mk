@@ -26,7 +26,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/hid \
     system/ulib/zx \
     system/ulib/zxcpp \
-    system/fidl/fuchsia-display
+    system/fidl/fuchsia-hardware-display
 
 MODULE_LIBS := \
     system/ulib/async.default \
@@ -36,7 +36,7 @@ MODULE_LIBS := \
     system/ulib/trace-engine
 
 MODULE_FIDL_LIBS := \
-    system/fidl/fuchsia-display \
+    system/fidl/fuchsia-hardware-display \
     system/fidl/fuchsia-hardware-input \
 
 include make/module.mk

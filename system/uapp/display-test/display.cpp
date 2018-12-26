@@ -6,7 +6,7 @@
 #include <math.h>
 #include <zircon/syscalls.h>
 
-Display::Display(fuchsia_display_Info* info) {
+Display::Display(fuchsia_hardware_display_Info* info) {
     id_ = info->id;
 
     auto pixel_format = reinterpret_cast<int32_t*>(info->pixel_format.data);
@@ -14,12 +14,13 @@ Display::Display(fuchsia_display_Info* info) {
         pixel_formats_.push_back(pixel_format[i]);
     }
 
-    auto mode = reinterpret_cast<fuchsia_display_Mode*>(info->modes.data);
+    auto mode = reinterpret_cast<fuchsia_hardware_display_Mode*>(info->modes.data);
     for (unsigned i = 0; i < info->modes.count; i++) {
         modes_.push_back(mode[i]);
     }
 
-    auto cursors = reinterpret_cast<fuchsia_display_CursorInfo*>(info->cursor_configs.data);
+    auto cursors =
+        reinterpret_cast<fuchsia_hardware_display_CursorInfo*>(info->cursor_configs.data);
     for (unsigned i = 0; i < info->cursor_configs.count; i++) {
         cursors_.push_back(cursors[i]);
     }
@@ -57,8 +58,8 @@ void Display::Dump() {
 
 void Display::Init(zx_handle_t dc_handle) {
     if (mode_idx_ != 0) {
-        fuchsia_display_ControllerSetDisplayModeRequest set_mode_msg;
-        set_mode_msg.hdr.ordinal = fuchsia_display_ControllerSetDisplayModeOrdinal;
+        fuchsia_hardware_display_ControllerSetDisplayModeRequest set_mode_msg;
+        set_mode_msg.hdr.ordinal = fuchsia_hardware_display_ControllerSetDisplayModeOrdinal;
         set_mode_msg.display_id = id_;
         set_mode_msg.mode = modes_[mode_idx_];
         ZX_ASSERT(zx_channel_write(dc_handle, 0,
@@ -66,8 +67,8 @@ void Display::Init(zx_handle_t dc_handle) {
     }
 
     if (grayscale_) {
-        fuchsia_display_ControllerSetDisplayColorConversionRequest cc_msg;
-        cc_msg.hdr.ordinal = fuchsia_display_ControllerSetDisplayColorConversionOrdinal;
+        fuchsia_hardware_display_ControllerSetDisplayColorConversionRequest cc_msg;
+        cc_msg.hdr.ordinal = fuchsia_hardware_display_ControllerSetDisplayColorConversionOrdinal;
         cc_msg.display_id = id_;
         cc_msg.postoffsets[0] = nanf("post");
         cc_msg.preoffsets[0] = nanf("pre");

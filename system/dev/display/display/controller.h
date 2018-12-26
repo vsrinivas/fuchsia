@@ -136,7 +136,7 @@ private:
     bool vc_ready_ __TA_GUARDED(mtx_) ;
     ClientProxy* primary_client_ __TA_GUARDED(mtx_) = nullptr;
     bool primary_ready_ __TA_GUARDED(mtx_) ;
-    uint8_t vc_mode_ __TA_GUARDED(mtx_) = fuchsia_display_VirtconMode_INACTIVE;
+    uint8_t vc_mode_ __TA_GUARDED(mtx_) = fuchsia_hardware_display_VirtconMode_INACTIVE;
     ClientProxy* active_client_ __TA_GUARDED(mtx_) = nullptr;
 
     async::Loop loop_;

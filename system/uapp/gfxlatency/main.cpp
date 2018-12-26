@@ -36,7 +36,7 @@
 
 #include <utility>
 
-#include "fuchsia/display/c/fidl.h"
+#include "fuchsia/hardware/display/c/fidl.h"
 
 #define DEV_INPUT "/dev/class/input"
 #define NUM_FINGERS 5u
@@ -358,14 +358,13 @@ static zx_status_t compute_linear_image_stride(uint32_t width,
                                                uint32_t* stride_out) {
     zx_status_t status;
 
-    fuchsia_display_ControllerComputeLinearImageStrideRequest stride_msg;
-    stride_msg.hdr.ordinal =
-        fuchsia_display_ControllerComputeLinearImageStrideOrdinal;
+    fuchsia_hardware_display_ControllerComputeLinearImageStrideRequest stride_msg;
+    stride_msg.hdr.ordinal = fuchsia_hardware_display_ControllerComputeLinearImageStrideOrdinal;
     stride_msg.hdr.txid = txid++;
     stride_msg.width = width;
     stride_msg.pixel_format = format;
 
-    fuchsia_display_ControllerComputeLinearImageStrideResponse stride_rsp;
+    fuchsia_hardware_display_ControllerComputeLinearImageStrideResponse stride_rsp;
     zx_channel_call_args_t stride_call = {};
     stride_call.wr_bytes = &stride_msg;
     stride_call.rd_bytes = &stride_rsp;
@@ -389,8 +388,8 @@ static zx_status_t import_image(zx_handle_t handle, uint32_t width,
     status = zx_handle_duplicate(handle, ZX_RIGHT_SAME_RIGHTS, &dup);
     ZX_ASSERT(status == ZX_OK);
 
-    fuchsia_display_ControllerImportVmoImageRequest import_msg = {};
-    import_msg.hdr.ordinal = fuchsia_display_ControllerImportVmoImageOrdinal;
+    fuchsia_hardware_display_ControllerImportVmoImageRequest import_msg = {};
+    import_msg.hdr.ordinal = fuchsia_hardware_display_ControllerImportVmoImageOrdinal;
     import_msg.hdr.txid = txid++;
     import_msg.image_config.height = height;
     import_msg.image_config.width = width;
@@ -399,7 +398,7 @@ static zx_status_t import_image(zx_handle_t handle, uint32_t width,
     import_msg.vmo = FIDL_HANDLE_PRESENT;
     import_msg.offset = 0;
 
-    fuchsia_display_ControllerImportVmoImageResponse import_rsp;
+    fuchsia_hardware_display_ControllerImportVmoImageResponse import_rsp;
     zx_channel_call_args_t import_call = {};
     import_call.wr_bytes = &import_msg;
     import_call.wr_handles = &dup;
@@ -422,8 +421,8 @@ static zx_status_t import_image(zx_handle_t handle, uint32_t width,
 }
 
 static void release_image(uint64_t image_id) {
-    fuchsia_display_ControllerReleaseEventRequest release_img_msg;
-    release_img_msg.hdr.ordinal = fuchsia_display_ControllerReleaseEventOrdinal;
+    fuchsia_hardware_display_ControllerReleaseEventRequest release_img_msg;
+    release_img_msg.hdr.ordinal = fuchsia_hardware_display_ControllerReleaseEventOrdinal;
     release_img_msg.hdr.txid = txid++;
     release_img_msg.id = image_id;
     zx_channel_write(dc_handle, 0, &release_img_msg, sizeof(release_img_msg),
@@ -436,8 +435,8 @@ static zx_status_t import_event(zx_handle_t handle, uint64_t id) {
     status = zx_handle_duplicate(handle, ZX_RIGHT_SAME_RIGHTS, &dup);
     ZX_ASSERT(status == ZX_OK);
 
-    fuchsia_display_ControllerImportEventRequest import_evt_msg;
-    import_evt_msg.hdr.ordinal = fuchsia_display_ControllerImportEventOrdinal;
+    fuchsia_hardware_display_ControllerImportEventRequest import_evt_msg;
+    import_evt_msg.hdr.ordinal = fuchsia_hardware_display_ControllerImportEventOrdinal;
     import_evt_msg.hdr.txid = txid++;
     import_evt_msg.id = id;
     import_evt_msg.event = FIDL_HANDLE_PRESENT;
@@ -446,8 +445,8 @@ static zx_status_t import_event(zx_handle_t handle, uint64_t id) {
 }
 
 static void release_event(uint64_t id) {
-    fuchsia_display_ControllerReleaseEventRequest release_evt_msg;
-    release_evt_msg.hdr.ordinal = fuchsia_display_ControllerReleaseEventOrdinal;
+    fuchsia_hardware_display_ControllerReleaseEventRequest release_evt_msg;
+    release_evt_msg.hdr.ordinal = fuchsia_hardware_display_ControllerReleaseEventOrdinal;
     release_evt_msg.hdr.txid = txid++;
     release_evt_msg.id = id;
     zx_channel_write(dc_handle, 0, &release_evt_msg, sizeof(release_evt_msg),
@@ -457,10 +456,10 @@ static void release_event(uint64_t id) {
 static zx_status_t create_layer(uint64_t* layer_id_out) {
     zx_status_t status;
 
-    fuchsia_display_ControllerCreateLayerRequest create_layer_msg;
-    create_layer_msg.hdr.ordinal = fuchsia_display_ControllerCreateLayerOrdinal;
+    fuchsia_hardware_display_ControllerCreateLayerRequest create_layer_msg;
+    create_layer_msg.hdr.ordinal = fuchsia_hardware_display_ControllerCreateLayerOrdinal;
 
-    fuchsia_display_ControllerCreateLayerResponse create_layer_rsp;
+    fuchsia_hardware_display_ControllerCreateLayerResponse create_layer_rsp;
     zx_channel_call_args_t call_args = {};
     call_args.wr_bytes = &create_layer_msg;
     call_args.rd_bytes = &create_layer_rsp;
@@ -481,13 +480,11 @@ static zx_status_t create_layer(uint64_t* layer_id_out) {
 
 static zx_status_t set_display_layers(uint64_t display_id, uint64_t layer_id,
                                       uint64_t sprite_layer_id) {
-    uint8_t
-        fidl_bytes[sizeof(fuchsia_display_ControllerSetDisplayLayersRequest) +
-                   FIDL_ALIGN(sizeof(uint64_t) * 2)];
-    fuchsia_display_ControllerSetDisplayLayersRequest* display_layers_msg =
-        (fuchsia_display_ControllerSetDisplayLayersRequest*)fidl_bytes;
-    display_layers_msg->hdr.ordinal =
-        fuchsia_display_ControllerSetDisplayLayersOrdinal;
+    uint8_t fidl_bytes[sizeof(fuchsia_hardware_display_ControllerSetDisplayLayersRequest) +
+                       FIDL_ALIGN(sizeof(uint64_t) * 2)];
+    fuchsia_hardware_display_ControllerSetDisplayLayersRequest* display_layers_msg =
+        (fuchsia_hardware_display_ControllerSetDisplayLayersRequest*)fidl_bytes;
+    display_layers_msg->hdr.ordinal = fuchsia_hardware_display_ControllerSetDisplayLayersOrdinal;
     display_layers_msg->display_id = display_id;
     display_layers_msg->layer_ids.count = 2;
     display_layers_msg->layer_ids.data = (void*)FIDL_ALLOC_PRESENT;
@@ -500,9 +497,8 @@ static zx_status_t set_display_layers(uint64_t display_id, uint64_t layer_id,
 
 static zx_status_t set_layer_config(uint64_t layer_id, uint32_t width,
                                     uint32_t height, zx_pixel_format_t format) {
-    fuchsia_display_ControllerSetLayerPrimaryConfigRequest layer_cfg_msg = {};
-    layer_cfg_msg.hdr.ordinal =
-        fuchsia_display_ControllerSetLayerPrimaryConfigOrdinal;
+    fuchsia_hardware_display_ControllerSetLayerPrimaryConfigRequest layer_cfg_msg = {};
+    layer_cfg_msg.hdr.ordinal = fuchsia_hardware_display_ControllerSetLayerPrimaryConfigOrdinal;
     layer_cfg_msg.layer_id = layer_id;
     layer_cfg_msg.image_config.width = width;
     layer_cfg_msg.image_config.height = height;
@@ -513,12 +509,11 @@ static zx_status_t set_layer_config(uint64_t layer_id, uint32_t width,
 }
 
 static zx_status_t set_layer_alpha(uint64_t layer_id, bool alpha) {
-    fuchsia_display_ControllerSetLayerPrimaryAlphaRequest alpha_msg;
-    alpha_msg.hdr.ordinal =
-        fuchsia_display_ControllerSetLayerPrimaryAlphaOrdinal;
+    fuchsia_hardware_display_ControllerSetLayerPrimaryAlphaRequest alpha_msg;
+    alpha_msg.hdr.ordinal = fuchsia_hardware_display_ControllerSetLayerPrimaryAlphaOrdinal;
     alpha_msg.layer_id = layer_id;
-    alpha_msg.mode = alpha ? fuchsia_display_AlphaMode_HW_MULTIPLY
-                           : fuchsia_display_AlphaMode_DISABLE;
+    alpha_msg.mode = alpha ? fuchsia_hardware_display_AlphaMode_HW_MULTIPLY
+                           : fuchsia_hardware_display_AlphaMode_DISABLE;
     alpha_msg.val = 1.0;
     return zx_channel_write(dc_handle, 0, &alpha_msg, sizeof(alpha_msg), NULL,
                             0);
@@ -528,11 +523,10 @@ static zx_status_t set_layer_position(uint64_t layer_id, uint32_t src_x,
                                       uint32_t src_y, uint32_t dest_x,
                                       uint32_t dest_y, uint32_t width,
                                       uint32_t height) {
-    fuchsia_display_ControllerSetLayerPrimaryPositionRequest pos_msg;
-    pos_msg.hdr.ordinal =
-        fuchsia_display_ControllerSetLayerPrimaryPositionOrdinal;
+    fuchsia_hardware_display_ControllerSetLayerPrimaryPositionRequest pos_msg;
+    pos_msg.hdr.ordinal = fuchsia_hardware_display_ControllerSetLayerPrimaryPositionOrdinal;
     pos_msg.layer_id = layer_id;
-    pos_msg.transform = fuchsia_display_Transform_IDENTITY;
+    pos_msg.transform = fuchsia_hardware_display_Transform_IDENTITY;
     pos_msg.src_frame.width = width;
     pos_msg.src_frame.height = height;
     pos_msg.src_frame.x_pos = src_x;
@@ -546,8 +540,8 @@ static zx_status_t set_layer_position(uint64_t layer_id, uint32_t src_x,
 
 static zx_status_t set_layer_image(uint64_t layer_id, uint64_t image_id,
                                    uint64_t wait_event_id) {
-    fuchsia_display_ControllerSetLayerImageRequest set_msg;
-    set_msg.hdr.ordinal = fuchsia_display_ControllerSetLayerImageOrdinal;
+    fuchsia_hardware_display_ControllerSetLayerImageRequest set_msg;
+    set_msg.hdr.ordinal = fuchsia_hardware_display_ControllerSetLayerImageOrdinal;
     set_msg.hdr.txid = txid++;
     set_msg.layer_id = layer_id;
     set_msg.image_id = image_id;
@@ -557,10 +551,10 @@ static zx_status_t set_layer_image(uint64_t layer_id, uint64_t image_id,
 }
 
 static zx_status_t check_config() {
-    fuchsia_display_ControllerCheckConfigRequest check_msg;
+    fuchsia_hardware_display_ControllerCheckConfigRequest check_msg;
     uint8_t check_resp_bytes[ZX_CHANNEL_MAX_MSG_BYTES];
     check_msg.discard = false;
-    check_msg.hdr.ordinal = fuchsia_display_ControllerCheckConfigOrdinal;
+    check_msg.hdr.ordinal = fuchsia_hardware_display_ControllerCheckConfigOrdinal;
     zx_channel_call_args_t check_call = {};
     check_call.wr_bytes = &check_msg;
     check_call.rd_bytes = check_resp_bytes;
@@ -574,18 +568,16 @@ static zx_status_t check_config() {
     }
 
     const char* err_msg;
-    if ((status = fidl_decode(
-             &fuchsia_display_ControllerCheckConfigResponseTable,
-             check_resp_bytes, actual_bytes, NULL, 0, &err_msg)) != ZX_OK) {
+    if ((status = fidl_decode(&fuchsia_hardware_display_ControllerCheckConfigResponseTable,
+                              check_resp_bytes, actual_bytes, NULL, 0, &err_msg)) != ZX_OK) {
         return ZX_ERR_STOP;
     }
 
-    fuchsia_display_ControllerCheckConfigResponse* check_rsp =
-        (fuchsia_display_ControllerCheckConfigResponse*)check_resp_bytes;
-    if (check_rsp->res != fuchsia_display_ConfigResult_OK) {
+    fuchsia_hardware_display_ControllerCheckConfigResponse* check_rsp =
+        (fuchsia_hardware_display_ControllerCheckConfigResponse*)check_resp_bytes;
+    if (check_rsp->res != fuchsia_hardware_display_ConfigResult_OK) {
         fprintf(stderr, "config not valid (%d)\n", check_rsp->res);
-        auto* arr = static_cast<fuchsia_display_ClientCompositionOp*>(
-            check_rsp->ops.data);
+        auto* arr = static_cast<fuchsia_hardware_display_ClientCompositionOp*>(check_rsp->ops.data);
         for (unsigned i = 0; i < check_rsp->ops.count; i++) {
             fprintf(stderr,
                     "client composition op (display %ld, layer %ld): %d\n",
@@ -597,20 +589,20 @@ static zx_status_t check_config() {
 }
 
 static zx_status_t apply_config() {
-    fuchsia_display_ControllerApplyConfigRequest apply_msg;
+    fuchsia_hardware_display_ControllerApplyConfigRequest apply_msg;
     apply_msg.hdr.txid = txid++;
-    apply_msg.hdr.ordinal = fuchsia_display_ControllerApplyConfigOrdinal;
+    apply_msg.hdr.ordinal = fuchsia_hardware_display_ControllerApplyConfigOrdinal;
     return zx_channel_write(dc_handle, 0, &apply_msg, sizeof(apply_msg), NULL,
                             0);
 }
 
 static zx_status_t alloc_image_buffer(uint32_t size, zx_handle_t* vmo_out) {
-    fuchsia_display_ControllerAllocateVmoRequest alloc_msg;
-    alloc_msg.hdr.ordinal = fuchsia_display_ControllerAllocateVmoOrdinal;
+    fuchsia_hardware_display_ControllerAllocateVmoRequest alloc_msg;
+    alloc_msg.hdr.ordinal = fuchsia_hardware_display_ControllerAllocateVmoOrdinal;
     alloc_msg.hdr.txid = txid++;
     alloc_msg.size = size;
 
-    fuchsia_display_ControllerAllocateVmoResponse alloc_rsp;
+    fuchsia_hardware_display_ControllerAllocateVmoResponse alloc_rsp;
     zx_channel_call_args_t call_args = {};
     call_args.wr_bytes = &alloc_msg;
     call_args.rd_bytes = &alloc_rsp;
@@ -631,8 +623,8 @@ static zx_status_t alloc_image_buffer(uint32_t size, zx_handle_t* vmo_out) {
 }
 
 zx_status_t enable_vsync(bool enable) {
-    fuchsia_display_ControllerEnableVsyncRequest enable_vsync;
-    enable_vsync.hdr.ordinal = fuchsia_display_ControllerEnableVsyncOrdinal;
+    fuchsia_hardware_display_ControllerEnableVsyncRequest enable_vsync;
+    enable_vsync.hdr.ordinal = fuchsia_hardware_display_ControllerEnableVsyncOrdinal;
     enable_vsync.enable = enable;
     return zx_channel_write(dc_handle, 0, &enable_vsync, sizeof(enable_vsync),
                             NULL, 0);
@@ -665,24 +657,24 @@ zx_status_t wait_for_vsync(zx_time_t* timestamp, uint64_t image_ids[2]) {
     fidl_message_header_t* header = (fidl_message_header_t*)bytes;
 
     switch (header->ordinal) {
-    case fuchsia_display_ControllerDisplaysChangedOrdinal:
+    case fuchsia_hardware_display_ControllerDisplaysChangedOrdinal:
         return ZX_ERR_STOP;
-    case fuchsia_display_ControllerClientOwnershipChangeOrdinal:
+    case fuchsia_hardware_display_ControllerClientOwnershipChangeOrdinal:
         return ZX_ERR_NEXT;
-    case fuchsia_display_ControllerVsyncOrdinal:
+    case fuchsia_hardware_display_ControllerVsyncOrdinal:
         break;
     default:
         return ZX_ERR_STOP;
     }
 
     const char* err_msg;
-    if ((status = fidl_decode(&fuchsia_display_ControllerVsyncEventTable, bytes,
+    if ((status = fidl_decode(&fuchsia_hardware_display_ControllerVsyncEventTable, bytes,
                               actual_bytes, NULL, 0, &err_msg)) != ZX_OK) {
         return ZX_ERR_STOP;
     }
 
-    fuchsia_display_ControllerVsyncEvent* vsync =
-        (fuchsia_display_ControllerVsyncEvent*)bytes;
+    fuchsia_hardware_display_ControllerVsyncEvent* vsync =
+        (fuchsia_hardware_display_ControllerVsyncEvent*)bytes;
     *timestamp = vsync->timestamp;
     image_ids[0] = vsync->images.count > 0 ? ((uint64_t*)vsync->images.data)[0]
                                            : INVALID_ID;
@@ -801,13 +793,12 @@ int main(int argc, char* argv[]) {
         }
 
         fidl_message_header_t* hdr = (fidl_message_header_t*)bytes;
-        if (hdr->ordinal != fuchsia_display_ControllerDisplaysChangedOrdinal) {
+        if (hdr->ordinal != fuchsia_hardware_display_ControllerDisplaysChangedOrdinal) {
             continue;
         }
         const char* err_msg;
-        if ((status = fidl_decode(
-                 &fuchsia_display_ControllerDisplaysChangedEventTable, bytes,
-                 actual_bytes, NULL, 0, &err_msg)) != ZX_OK) {
+        if ((status = fidl_decode(&fuchsia_hardware_display_ControllerDisplaysChangedEventTable,
+                                  bytes, actual_bytes, NULL, 0, &err_msg)) != ZX_OK) {
             fprintf(stderr, "%s\n", err_msg);
             return -1;
         }
@@ -816,10 +807,10 @@ int main(int argc, char* argv[]) {
 
     // We're guaranteed that added contains at least one display, since we
     // haven't been notified of any displays to remove.
-    fuchsia_display_ControllerDisplaysChangedEvent* changes =
-        (fuchsia_display_ControllerDisplaysChangedEvent*)bytes;
-    fuchsia_display_Info* display = (fuchsia_display_Info*)changes->added.data;
-    fuchsia_display_Mode* mode = (fuchsia_display_Mode*)display->modes.data;
+    fuchsia_hardware_display_ControllerDisplaysChangedEvent* changes =
+        (fuchsia_hardware_display_ControllerDisplaysChangedEvent*)bytes;
+    fuchsia_hardware_display_Info* display = (fuchsia_hardware_display_Info*)changes->added.data;
+    fuchsia_hardware_display_Mode* mode = (fuchsia_hardware_display_Mode*)display->modes.data;
 
     uint32_t width = mode->horizontal_resolution;
     uint32_t height = mode->vertical_resolution;

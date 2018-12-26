@@ -68,10 +68,10 @@ layer_t* VirtualLayer::CreateLayer(zx_handle_t dc_handle) {
     layers_.push_back(layer_t());
     layers_[layers_.size() - 1].active = false;
 
-    fuchsia_display_ControllerCreateLayerRequest create_layer_msg;
-    create_layer_msg.hdr.ordinal = fuchsia_display_ControllerCreateLayerOrdinal;
+    fuchsia_hardware_display_ControllerCreateLayerRequest create_layer_msg;
+    create_layer_msg.hdr.ordinal = fuchsia_hardware_display_ControllerCreateLayerOrdinal;
 
-    fuchsia_display_ControllerCreateLayerResponse create_layer_rsp;
+    fuchsia_hardware_display_ControllerCreateLayerResponse create_layer_rsp;
     zx_channel_call_args_t call_args = {};
     call_args.wr_bytes = &create_layer_msg;
     call_args.rd_bytes = &create_layer_rsp;
@@ -140,8 +140,8 @@ bool PrimaryLayer::Init(zx_handle_t dc_handle) {
                              0, ZX_EVENT_SIGNALED);
         }
 
-        fuchsia_display_ControllerSetLayerPrimaryConfigRequest config;
-        config.hdr.ordinal = fuchsia_display_ControllerSetLayerPrimaryConfigOrdinal;
+        fuchsia_hardware_display_ControllerSetLayerPrimaryConfigRequest config;
+        config.hdr.ordinal = fuchsia_hardware_display_ControllerSetLayerPrimaryConfigOrdinal;
         config.layer_id = layer->id;
         images_[0]->GetConfig(&config.image_config);
 
@@ -150,11 +150,11 @@ bool PrimaryLayer::Init(zx_handle_t dc_handle) {
             return false;
         }
 
-        fuchsia_display_ControllerSetLayerPrimaryAlphaRequest alpha_config;
-        alpha_config.hdr.ordinal = fuchsia_display_ControllerSetLayerPrimaryAlphaOrdinal;
+        fuchsia_hardware_display_ControllerSetLayerPrimaryAlphaRequest alpha_config;
+        alpha_config.hdr.ordinal = fuchsia_hardware_display_ControllerSetLayerPrimaryAlphaOrdinal;
         alpha_config.layer_id = layer->id;
-        alpha_config.mode = alpha_enable_ ?
-                fuchsia_display_AlphaMode_HW_MULTIPLY : fuchsia_display_AlphaMode_DISABLE;
+        alpha_config.mode = alpha_enable_ ? fuchsia_hardware_display_AlphaMode_HW_MULTIPLY
+                                          : fuchsia_hardware_display_AlphaMode_DISABLE;
         alpha_config.val = alpha_val_;
 
         if (zx_channel_write(dc_handle, 0,
@@ -190,10 +190,18 @@ void PrimaryLayer::StepLayout(int32_t frame_num) {
     }
     if (rotates_) {
         switch ((frame_num / kRotationPeriod) % 4) {
-            case 0: rotation_ = fuchsia_display_Transform_IDENTITY; break;
-            case 1: rotation_ = fuchsia_display_Transform_ROT_90; break;
-            case 2: rotation_ = fuchsia_display_Transform_ROT_180; break;
-            case 3: rotation_ = fuchsia_display_Transform_ROT_270; break;
+        case 0:
+            rotation_ = fuchsia_hardware_display_Transform_IDENTITY;
+            break;
+        case 1:
+            rotation_ = fuchsia_hardware_display_Transform_ROT_90;
+            break;
+        case 2:
+            rotation_ = fuchsia_hardware_display_Transform_ROT_180;
+            break;
+        case 3:
+            rotation_ = fuchsia_hardware_display_Transform_ROT_270;
+            break;
         }
 
         if (frame_num % kRotationPeriod == 0 && frame_num != 0) {
@@ -211,8 +219,8 @@ void PrimaryLayer::StepLayout(int32_t frame_num) {
         // Calculate the portion of the dest frame which shows up on this display
         if (compute_intersection(display, dest_frame_, &layers_[i].dest)) {
             // Find the subset of the src region which shows up on this display
-            if (rotation_ == fuchsia_display_Transform_IDENTITY
-                    || rotation_ == fuchsia_display_Transform_ROT_180) {
+            if (rotation_ == fuchsia_hardware_display_Transform_IDENTITY ||
+                rotation_ == fuchsia_hardware_display_Transform_ROT_180) {
                 if (!scaling_) {
                     layers_[i].src.x_pos =
                             src_frame_.x_pos + (layers_[i].dest.x_pos - dest_frame_.x_pos);
@@ -275,8 +283,8 @@ void PrimaryLayer::Render(int32_t frame_num) {
 }
 
 void PrimaryLayer::SetLayerPositions(zx_handle_t dc_handle) {
-    fuchsia_display_ControllerSetLayerPrimaryPositionRequest msg;
-    msg.hdr.ordinal = fuchsia_display_ControllerSetLayerPrimaryPositionOrdinal;
+    fuchsia_hardware_display_ControllerSetLayerPrimaryPositionRequest msg;
+    msg.hdr.ordinal = fuchsia_hardware_display_ControllerSetLayerPrimaryPositionOrdinal;
 
     for (auto& layer : layers_) {
         msg.layer_id = layer.id;
@@ -299,8 +307,8 @@ void PrimaryLayer::SetLayerPositions(zx_handle_t dc_handle) {
 }
 
 void VirtualLayer::SetLayerImages(zx_handle_t dc_handle, bool alt_image) {
-    fuchsia_display_ControllerSetLayerImageRequest msg;
-    msg.hdr.ordinal = fuchsia_display_ControllerSetLayerImageOrdinal;
+    fuchsia_hardware_display_ControllerSetLayerImageRequest msg;
+    msg.hdr.ordinal = fuchsia_hardware_display_ControllerSetLayerImageOrdinal;
 
     for (auto& layer : layers_) {
         msg.layer_id = layer.id;
@@ -339,7 +347,7 @@ CursorLayer::CursorLayer(Display* display) : VirtualLayer(display) { }
 CursorLayer::CursorLayer(const fbl::Vector<Display>& displays) : VirtualLayer(displays) { }
 
 bool CursorLayer::Init(zx_handle_t dc_handle) {
-    fuchsia_display_CursorInfo info = displays_[0]->cursor();
+    fuchsia_hardware_display_CursorInfo info = displays_[0]->cursor();
     uint32_t bg_color = 0xffffffff;
     image_ = Image::Create(
             dc_handle, info.width, info.height, info.pixel_format, get_fg_color(), bg_color, true);
@@ -360,8 +368,8 @@ bool CursorLayer::Init(zx_handle_t dc_handle) {
         }
         zx_object_signal(layer->import_info[0].events[WAIT_EVENT], 0, ZX_EVENT_SIGNALED);
 
-        fuchsia_display_ControllerSetLayerCursorConfigRequest config;
-        config.hdr.ordinal = fuchsia_display_ControllerSetLayerCursorConfigOrdinal;
+        fuchsia_hardware_display_ControllerSetLayerCursorConfigRequest config;
+        config.hdr.ordinal = fuchsia_hardware_display_ControllerSetLayerCursorConfigOrdinal;
         config.layer_id = layer->id;
         config.image_config.height = info.height;
         config.image_config.width = info.width;
@@ -380,15 +388,15 @@ bool CursorLayer::Init(zx_handle_t dc_handle) {
 }
 
 void CursorLayer::StepLayout(int32_t frame_num) {
-    fuchsia_display_CursorInfo info = displays_[0]->cursor();
+    fuchsia_hardware_display_CursorInfo info = displays_[0]->cursor();
 
     x_pos_ = interpolate(width_ + info.width, frame_num, kDestFrameBouncePeriod) - info.width;
     y_pos_ = interpolate(height_ + info.height, frame_num, kDestFrameBouncePeriod) - info.height;
 }
 
 void CursorLayer::SendLayout(zx_handle_t dc_handle) {
-    fuchsia_display_ControllerSetLayerCursorPositionRequest msg;
-    msg.hdr.ordinal = fuchsia_display_ControllerSetLayerCursorPositionOrdinal;
+    fuchsia_hardware_display_ControllerSetLayerCursorPositionRequest msg;
+    msg.hdr.ordinal = fuchsia_hardware_display_ControllerSetLayerCursorPositionOrdinal;
 
     uint32_t display_start = 0;
     for (unsigned i = 0; i < displays_.size(); i++) {
@@ -420,12 +428,13 @@ bool ColorLayer::Init(zx_handle_t dc_handle) {
         constexpr uint32_t kColorLayerFormat = ZX_PIXEL_FORMAT_ARGB_8888;
         uint32_t kColorLayerColor = get_fg_color();
 
-        uint32_t size = sizeof(fuchsia_display_ControllerSetLayerColorConfigRequest)
-                + FIDL_ALIGN(ZX_PIXEL_FORMAT_BYTES(kColorLayerFormat));
+        uint32_t size = sizeof(fuchsia_hardware_display_ControllerSetLayerColorConfigRequest) +
+                        FIDL_ALIGN(ZX_PIXEL_FORMAT_BYTES(kColorLayerFormat));
         uint8_t data[size];
 
-        auto config = reinterpret_cast<fuchsia_display_ControllerSetLayerColorConfigRequest*>(data);
-        config->hdr.ordinal = fuchsia_display_ControllerSetLayerColorConfigOrdinal;
+        auto config =
+            reinterpret_cast<fuchsia_hardware_display_ControllerSetLayerColorConfigRequest*>(data);
+        config->hdr.ordinal = fuchsia_hardware_display_ControllerSetLayerColorConfigOrdinal;
         config->layer_id = layer->id;
         config->pixel_format = kColorLayerFormat;
         config->color_bytes.count = ZX_PIXEL_FORMAT_BYTES(kColorLayerFormat);

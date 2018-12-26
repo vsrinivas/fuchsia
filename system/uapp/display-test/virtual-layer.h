@@ -9,7 +9,7 @@
 #include <lib/zx/channel.h>
 
 #include "display.h"
-#include "fuchsia/display/c/fidl.h"
+#include "fuchsia/hardware/display/c/fidl.h"
 #include "image.h"
 
 typedef struct frame {
@@ -160,7 +160,7 @@ private:
     uint32_t image_format_ = 0;
     frame_t src_frame_ = {};
     frame_t dest_frame_ = {};
-    uint8_t rotation_ = fuchsia_display_Transform_IDENTITY;
+    uint8_t rotation_ = fuchsia_hardware_display_Transform_IDENTITY;
     bool layer_flipping_ = false;
     bool pan_src_ = false;
     bool pan_dest_ = false;

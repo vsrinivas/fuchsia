@@ -24,7 +24,7 @@ MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-scpi \
 
 MODULE_FIDL_LIBS := \
-    system/fidl/fuchsia-gpu-clock \
+    system/fidl/fuchsia-hardware-gpu-clock \
 
 MODULE_HEADER_DEPS := \
     system/dev/lib/amlogic

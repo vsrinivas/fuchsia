@@ -25,7 +25,7 @@
 #include <zircon/syscalls.h>
 
 #include "display.h"
-#include "fuchsia/display/c/fidl.h"
+#include "fuchsia/hardware/display/c/fidl.h"
 #include "virtual-layer.h"
 
 static zx_handle_t dc_handle;
@@ -72,32 +72,36 @@ static bool bind_display(fbl::Vector<Display>* displays) {
             return false;
         }
 
-        if (msg.ordinal() == fuchsia_display_ControllerDisplaysChangedOrdinal) {
+        if (msg.ordinal() == fuchsia_hardware_display_ControllerDisplaysChangedOrdinal) {
             const char* err_msg;
-            if (msg.Decode(&fuchsia_display_ControllerDisplaysChangedEventTable,
+            if (msg.Decode(&fuchsia_hardware_display_ControllerDisplaysChangedEventTable,
                            &err_msg) != ZX_OK) {
                 printf("Fidl decode error %d %s\n", msg.ordinal(), err_msg);
                 return false;
             }
 
-            auto changes = reinterpret_cast<fuchsia_display_ControllerDisplaysChangedEvent*>(
+            auto changes =
+                reinterpret_cast<fuchsia_hardware_display_ControllerDisplaysChangedEvent*>(
                     msg.bytes().data());
-            auto display_info = reinterpret_cast<fuchsia_display_Info*>(changes->added.data);
+            auto display_info =
+                reinterpret_cast<fuchsia_hardware_display_Info*>(changes->added.data);
 
             for (unsigned i = 0; i < changes->added.count; i++) {
                 displays->push_back(Display(display_info + i));
             }
-        } else if (msg.ordinal() == fuchsia_display_ControllerClientOwnershipChangeOrdinal) {
-            has_ownership = ((fuchsia_display_ControllerClientOwnershipChangeEvent*)
-                    msg.bytes().data())->has_ownership;
+        } else if (msg.ordinal() ==
+                   fuchsia_hardware_display_ControllerClientOwnershipChangeOrdinal) {
+            has_ownership =
+                ((fuchsia_hardware_display_ControllerClientOwnershipChangeEvent*)msg.bytes().data())
+                    ->has_ownership;
         } else {
             printf("Got unexpected message %d\n", msg.ordinal());
             return false;
         }
     }
 
-    fuchsia_display_ControllerEnableVsyncRequest enable_vsync;
-    enable_vsync.hdr.ordinal = fuchsia_display_ControllerEnableVsyncOrdinal;
+    fuchsia_hardware_display_ControllerEnableVsyncRequest enable_vsync;
+    enable_vsync.hdr.ordinal = fuchsia_hardware_display_ControllerEnableVsyncOrdinal;
     enable_vsync.enable = true;
     if (zx_channel_write(dc_handle, 0, &enable_vsync, sizeof(enable_vsync), nullptr, 0) != ZX_OK) {
         printf("Failed to enable vsync\n");
@@ -144,13 +148,14 @@ bool update_display_layers(const fbl::Vector<VirtualLayer*>& layers,
         current_layers->swap(new_layers);
 
         uint32_t size = static_cast<int32_t>(
-                sizeof(fuchsia_display_ControllerSetDisplayLayersRequest) +
-                FIDL_ALIGN(sizeof(uint64_t) * current_layers->size()));
+            sizeof(fuchsia_hardware_display_ControllerSetDisplayLayersRequest) +
+            FIDL_ALIGN(sizeof(uint64_t) * current_layers->size()));
         uint8_t fidl_bytes[size];
 
         auto set_layers_msg =
-                reinterpret_cast<fuchsia_display_ControllerSetDisplayLayersRequest*>(fidl_bytes);
-        set_layers_msg->hdr.ordinal = fuchsia_display_ControllerSetDisplayLayersOrdinal;
+            reinterpret_cast<fuchsia_hardware_display_ControllerSetDisplayLayersRequest*>(
+                fidl_bytes);
+        set_layers_msg->hdr.ordinal = fuchsia_hardware_display_ControllerSetDisplayLayersOrdinal;
         set_layers_msg->layer_ids.count = current_layers->size();
         set_layers_msg->layer_ids.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
         set_layers_msg->display_id = display.id();
@@ -169,10 +174,10 @@ bool update_display_layers(const fbl::Vector<VirtualLayer*>& layers,
 }
 
 bool apply_config() {
-    fuchsia_display_ControllerCheckConfigRequest check_msg;
+    fuchsia_hardware_display_ControllerCheckConfigRequest check_msg;
     uint8_t check_resp_bytes[ZX_CHANNEL_MAX_MSG_BYTES];
     check_msg.discard = false;
-    check_msg.hdr.ordinal = fuchsia_display_ControllerCheckConfigOrdinal;
+    check_msg.hdr.ordinal = fuchsia_hardware_display_ControllerCheckConfigOrdinal;
     zx_channel_call_args_t check_call = {};
     check_call.wr_bytes = &check_msg;
     check_call.rd_bytes = check_resp_bytes;
@@ -189,15 +194,16 @@ bool apply_config() {
     fidl::Message msg(fidl::BytePart(check_resp_bytes, ZX_CHANNEL_MAX_MSG_BYTES, actual_bytes),
                       fidl::HandlePart());
     const char* err_msg;
-    if (msg.Decode(&fuchsia_display_ControllerCheckConfigResponseTable, &err_msg) != ZX_OK) {
+    if (msg.Decode(&fuchsia_hardware_display_ControllerCheckConfigResponseTable, &err_msg) !=
+        ZX_OK) {
         return false;
     }
-    auto check_rsp =
-            reinterpret_cast<fuchsia_display_ControllerCheckConfigResponse*>(msg.bytes().data());
+    auto check_rsp = reinterpret_cast<fuchsia_hardware_display_ControllerCheckConfigResponse*>(
+        msg.bytes().data());
 
-    if (check_rsp->res != fuchsia_display_ConfigResult_OK) {
+    if (check_rsp->res != fuchsia_hardware_display_ConfigResult_OK) {
         printf("Config not valid (%d)\n", check_rsp->res);
-        auto* arr = static_cast<fuchsia_display_ClientCompositionOp*>(check_rsp->ops.data);
+        auto* arr = static_cast<fuchsia_hardware_display_ClientCompositionOp*>(check_rsp->ops.data);
         for (unsigned i = 0; i < check_rsp->ops.count; i++) {
             printf("Client composition op (display %ld, layer %ld): %d\n",
                    arr[i].display_id, arr[i].layer_id, arr[i].opcode);
@@ -205,8 +211,8 @@ bool apply_config() {
         return false;
     }
 
-    fuchsia_display_ControllerApplyConfigRequest apply_msg;
-    apply_msg.hdr.ordinal = fuchsia_display_ControllerApplyConfigOrdinal;
+    fuchsia_hardware_display_ControllerApplyConfigRequest apply_msg;
+    apply_msg.hdr.ordinal = fuchsia_hardware_display_ControllerApplyConfigOrdinal;
     if (zx_channel_write(dc_handle, 0, &apply_msg, sizeof(apply_msg), nullptr, 0) != ZX_OK) {
         printf("Apply failed\n");
         return false;
@@ -229,15 +235,16 @@ zx_status_t wait_for_vsync(const fbl::Vector<VirtualLayer*>& layers) {
     }
 
     switch (msg.ordinal()) {
-    case fuchsia_display_ControllerDisplaysChangedOrdinal:
+    case fuchsia_hardware_display_ControllerDisplaysChangedOrdinal:
         printf("Display disconnected\n");
         return ZX_ERR_STOP;
-    case fuchsia_display_ControllerClientOwnershipChangeOrdinal:
+    case fuchsia_hardware_display_ControllerClientOwnershipChangeOrdinal:
         printf("Ownership change\n");
-        has_ownership = ((fuchsia_display_ControllerClientOwnershipChangeEvent*) msg.bytes().data())
+        has_ownership =
+            ((fuchsia_hardware_display_ControllerClientOwnershipChangeEvent*)msg.bytes().data())
                 ->has_ownership;
         return ZX_ERR_NEXT;
-    case fuchsia_display_ControllerVsyncOrdinal:
+    case fuchsia_hardware_display_ControllerVsyncOrdinal:
         break;
     default:
         printf("Unknown ordinal %d\n", msg.ordinal());
@@ -245,12 +252,13 @@ zx_status_t wait_for_vsync(const fbl::Vector<VirtualLayer*>& layers) {
     }
 
     const char* err_msg;
-    if (msg.Decode(&fuchsia_display_ControllerVsyncEventTable, &err_msg) != ZX_OK) {
+    if (msg.Decode(&fuchsia_hardware_display_ControllerVsyncEventTable, &err_msg) != ZX_OK) {
         printf("Fidl decode error %s\n", err_msg);
         return ZX_ERR_STOP;
     }
 
-    auto vsync = reinterpret_cast<fuchsia_display_ControllerVsyncEvent*>(msg.bytes().data());
+    auto vsync =
+        reinterpret_cast<fuchsia_hardware_display_ControllerVsyncEvent*>(msg.bytes().data());
     uint64_t* image_ids = reinterpret_cast<uint64_t*>(vsync->images.data);
 
     for (auto& layer : layers) {
