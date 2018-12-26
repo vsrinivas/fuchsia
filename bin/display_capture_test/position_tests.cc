@@ -27,7 +27,7 @@ DISPLAY_TEST(two_layer_test_dest_frame, [](Context* context) {
   auto image2 = context->CreateImage(context->display_width(),
                                      context->display_height() / 2);
   layer2->SetPosition(
-      fuchsia::display::Transform::IDENTITY,
+      fuchsia::hardware::display::Transform::IDENTITY,
       {0, 0, image2->width(), image2->height()},
       {0, context->display_height() / 4, image2->width(), image2->height()});
   layer2->SetImage(image2);
@@ -57,7 +57,7 @@ DISPLAY_TEST(two_layer_test_dest_frame_progressive, [](Context* context) {
   for (unsigned i = 0; i < kIterCount; i++) {
     uint32_t x = interpolate(i, kIterCount, width_limit);
     uint32_t y = interpolate(i, kIterCount, height_limit);
-    layer2->SetPosition(fuchsia::display::Transform::IDENTITY,
+    layer2->SetPosition(fuchsia::hardware::display::Transform::IDENTITY,
                         {0, 0, image2->width(), image2->height()},
                         {x, y, image2->width(), image2->height()});
     context->ApplyConfig();
@@ -71,7 +71,7 @@ DISPLAY_TEST(single_layer_src_frame, [](Context* context) {
   auto image = context->CreateImage(context->display_width() + offset,
                                     context->display_height() + offset);
   layer->SetPosition(
-      fuchsia::display::Transform::IDENTITY,
+      fuchsia::hardware::display::Transform::IDENTITY,
       {offset, offset, context->display_width(), context->display_height()},
       {0, 0, context->display_width(), context->display_height()});
   layer->SetImage(image);
@@ -96,14 +96,14 @@ DISPLAY_TEST(single_layer_src_frame_progressive, [](Context* context) {
   for (unsigned i = 0; i < kNumIters; i++) {
     uint32_t offset = i * kStepSize;
     layer->SetPosition(
-        fuchsia::display::Transform::IDENTITY,
+        fuchsia::hardware::display::Transform::IDENTITY,
         {offset, offset, context->display_width(), context->display_height()},
         {0, 0, context->display_width(), context->display_height()});
     context->ApplyConfig();
   }
 });
 
-Test rotation_test(fuchsia::display::Transform mode) {
+Test rotation_test(fuchsia::hardware::display::Transform mode) {
   return [mode](Context* context) {
     auto layer = context->CreatePrimaryLayer(context->display_width(),
                                              context->display_height());
@@ -120,19 +120,21 @@ Test rotation_test(fuchsia::display::Transform mode) {
 }
 
 DISPLAY_TEST(rotate_90_test,
-             rotation_test(fuchsia::display::Transform::ROT_90));
+             rotation_test(fuchsia::hardware::display::Transform::ROT_90));
 DISPLAY_TEST(rotate_180_test,
-             rotation_test(fuchsia::display::Transform::ROT_180));
+             rotation_test(fuchsia::hardware::display::Transform::ROT_180));
 DISPLAY_TEST(rotate_270_test,
-             rotation_test(fuchsia::display::Transform::ROT_270));
-DISPLAY_TEST(rotate_90_reflectx_test,
-             rotation_test(fuchsia::display::Transform::ROT_90_REFLECT_X));
-DISPLAY_TEST(rotate_90_reflecty_test,
-             rotation_test(fuchsia::display::Transform::ROT_90_REFLECT_Y));
+             rotation_test(fuchsia::hardware::display::Transform::ROT_270));
+DISPLAY_TEST(
+    rotate_90_reflectx_test,
+    rotation_test(fuchsia::hardware::display::Transform::ROT_90_REFLECT_X));
+DISPLAY_TEST(
+    rotate_90_reflecty_test,
+    rotation_test(fuchsia::hardware::display::Transform::ROT_90_REFLECT_Y));
 DISPLAY_TEST(rotate_reflectx_test,
-             rotation_test(fuchsia::display::Transform::REFLECT_X));
+             rotation_test(fuchsia::hardware::display::Transform::REFLECT_X));
 DISPLAY_TEST(rotate_reflecty_test,
-             rotation_test(fuchsia::display::Transform::REFLECT_Y));
+             rotation_test(fuchsia::hardware::display::Transform::REFLECT_Y));
 
 DISPLAY_TEST(scale_up_test, [](Context* context) {
   auto layer = context->CreatePrimaryLayer(context->display_width() / 2,
@@ -140,7 +142,7 @@ DISPLAY_TEST(scale_up_test, [](Context* context) {
   auto image = context->CreateScalableImage(context->display_width() / 2,
                                             context->display_height() / 2);
   layer->SetPosition(
-      fuchsia::display::Transform::IDENTITY,
+      fuchsia::hardware::display::Transform::IDENTITY,
       {0, 0, image->width(), image->height()},
       {0, 0, context->display_width(), context->display_height()});
   layer->SetImage(image);
@@ -155,7 +157,7 @@ DISPLAY_TEST(scale_down_test, [](Context* context) {
   auto image = context->CreateScalableImage(context->display_width() * 2,
                                             context->display_height() * 2);
   layer->SetPosition(
-      fuchsia::display::Transform::IDENTITY,
+      fuchsia::hardware::display::Transform::IDENTITY,
       {0, 0, image->width(), image->height()},
       {0, 0, context->display_width(), context->display_height()});
   layer->SetImage(image);
@@ -187,7 +189,7 @@ DISPLAY_TEST(variable_scale_test, [](Context* context) {
   for (unsigned i = 0; i < kIterCount; i++) {
     uint32_t width = interpolate(i, kIterCount, width_range) + min_width;
     uint32_t height = interpolate(i, kIterCount, height_range) + min_height;
-    layer2->SetPosition(fuchsia::display::Transform::IDENTITY,
+    layer2->SetPosition(fuchsia::hardware::display::Transform::IDENTITY,
                         {0, 0, image2->width(), image2->height()},
                         {0, 0, width, height});
     context->ApplyConfig();

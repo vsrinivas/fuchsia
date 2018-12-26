@@ -7,12 +7,16 @@
 use failure::{format_err, Error, ResultExt};
 use fdio::fdio_sys::{fdio_ioctl, IOCTL_FAMILY_DISPLAY_CONTROLLER, IOCTL_KIND_GET_HANDLE};
 use fdio::make_ioctl;
-use fidl_fuchsia_display::{ControllerEvent, ControllerProxy, ImageConfig, ImagePlane};
+use fidl_fuchsia_hardware_display::{ControllerEvent, ControllerProxy, ImageConfig, ImagePlane};
 use fuchsia_async as fasync;
-use fuchsia_zircon::{self as zx,
-                     sys::{zx_cache_flush, zx_cache_policy_t::ZX_CACHE_POLICY_WRITE_COMBINING,
-                           zx_handle_t, ZX_CACHE_FLUSH_DATA},
-                     Handle, Vmar, VmarFlags, Vmo};
+use fuchsia_zircon::{
+    self as zx,
+    sys::{
+        zx_cache_flush, zx_cache_policy_t::ZX_CACHE_POLICY_WRITE_COMBINING, zx_handle_t,
+        ZX_CACHE_FLUSH_DATA,
+    },
+    Handle, Vmar, VmarFlags, Vmo,
+};
 use futures::{future, StreamExt, TryFutureExt, TryStreamExt};
 use shared_buffer::SharedBuffer;
 use std::cell::RefCell;
@@ -135,7 +139,9 @@ impl Frame {
                     vmo.replace(allocated_vmo);
                 }
             });
-        executor.run_singlethreaded(vmo_response).context("allocate_image_vmo - run_singlethreaded")?;
+        executor
+            .run_singlethreaded(vmo_response)
+            .context("allocate_image_vmo - run_singlethreaded")?;
         let vmo = vmo.replace(None);
         if let Some(vmo) = vmo {
             Ok(vmo)
@@ -184,7 +190,9 @@ impl Frame {
                 }
             });
 
-        executor.run_singlethreaded(import_response).context("import_image_vmo - run_singlethreaded")?;
+        executor
+            .run_singlethreaded(import_response)
+            .context("import_image_vmo - run_singlethreaded")?;
 
         let image_id = image_id.replace(None);
         if let Some(image_id) = image_id {
@@ -195,9 +203,12 @@ impl Frame {
     }
 
     pub fn new(framebuffer: &FrameBuffer, executor: &mut fasync::Executor) -> Result<Frame, Error> {
-        let image_vmo = Self::allocate_image_vmo(framebuffer, executor).context("Frame::new() allocate_image_vmo")?;
+        let image_vmo = Self::allocate_image_vmo(framebuffer, executor)
+            .context("Frame::new() allocate_image_vmo")?;
 
-        image_vmo.set_cache_policy(ZX_CACHE_POLICY_WRITE_COMBINING).unwrap_or_else(|_err| println!("set_cache_policy failed"));
+        image_vmo
+            .set_cache_policy(ZX_CACHE_POLICY_WRITE_COMBINING)
+            .unwrap_or_else(|_err| println!("set_cache_policy failed"));
 
         // map image VMO
         let pixel_buffer_addr = Vmar::root_self().map(
@@ -209,7 +220,8 @@ impl Frame {
         )?;
 
         // import image VMO
-        let image_id = Self::import_image_vmo(framebuffer, executor, image_vmo).context("Frame::new() import_image_vmo")?;
+        let image_id = Self::import_image_vmo(framebuffer, executor, image_vmo)
+            .context("Frame::new() import_image_vmo")?;
 
         // construct frame
         let frame_buffer_pixel_ptr = pixel_buffer_addr as *mut u8;
@@ -258,8 +270,12 @@ impl Frame {
         }
         framebuffer
             .controller
-            .set_layer_image(framebuffer.layer_id, self.image_id, 0, 0).context("Frame::present() set_layer_image")?;
-        framebuffer.controller.apply_config().context("Frame::present() apply_config")?;
+            .set_layer_image(framebuffer.layer_id, self.image_id, 0, 0)
+            .context("Frame::present() set_layer_image")?;
+        framebuffer
+            .controller
+            .apply_config()
+            .context("Frame::present() apply_config")?;
         Ok(())
     }
 

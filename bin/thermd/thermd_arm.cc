@@ -4,7 +4,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/gpu/clock/c/fidl.h>
+#include <fuchsia/hardware/gpu/clock/c/fidl.h>
 #include <inttypes.h>
 #include <lib/fdio/util.h>
 #include <lib/fdio/watcher.h>
@@ -166,7 +166,7 @@ int main(int argc, char** argv) {
           info.trip_point_info[trip_idx].gpu_clk_freq_source;
       if (gpu_clk_freq_source != -1) {
         zx_status_t status2;
-        st = fuchsia_gpu_clock_ClockSetFrequencySource(
+        st = fuchsia_hardware_gpu_clock_ClockSetFrequencySource(
             gpu_handle.get(), gpu_clk_freq_source, &status2);
         if (st != ZX_OK || status2 != ZX_OK) {
           fprintf(stderr,

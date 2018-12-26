@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_DISPLAY_CAPTURE_TEST_RUNNER_H_
 #define GARNET_BIN_DISPLAY_CAPTURE_TEST_RUNNER_H_
 
-#include <fuchsia/display/cpp/fidl.h>
+#include <fuchsia/hardware/display/cpp/fidl.h>
 #include <garnet/drivers/usb_video/usb-video-camera.h>
 #include <inttypes.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -47,7 +47,9 @@ class Runner {
   uint32_t height() const { return height_; }
   zx_pixel_format_t format() const;
 
-  fuchsia::display::ControllerPtr& display() { return display_controller_; }
+  fuchsia::hardware::display::ControllerPtr& display() {
+    return display_controller_;
+  }
   void OnResourceReady();
 
  private:
@@ -59,8 +61,9 @@ class Runner {
   void FrameNotifyCallback(const fuchsia::camera::FrameAvailableEvent& resp);
 
   void InitDisplay();
-  void OnDisplaysChanged(::fidl::VectorPtr<fuchsia::display::Info> added,
-                         ::fidl::VectorPtr<uint64_t> removed);
+  void OnDisplaysChanged(
+      ::fidl::VectorPtr<fuchsia::hardware::display::Info> added,
+      ::fidl::VectorPtr<uint64_t> removed);
   void OnClientOwnershipChange(bool is_owner);
   void OnVsync(uint64_t display_id, uint64_t timestamp,
                ::fidl::VectorPtr<uint64_t> image_ids);
@@ -80,7 +83,7 @@ class Runner {
 
   const char* display_name_;
   fxl::UniqueFD dc_fd_;
-  fuchsia::display::ControllerPtr display_controller_;
+  fuchsia::hardware::display::ControllerPtr display_controller_;
   uint64_t display_id_ = 0;
 
   bool display_ownership_ = false;

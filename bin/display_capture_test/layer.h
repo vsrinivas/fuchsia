@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_DISPLAY_CAPTURE_TEST_LAYER_H_
 #define GARNET_BIN_DISPLAY_CAPTURE_TEST_LAYER_H_
 
-#include <fuchsia/display/cpp/fidl.h>
+#include <fuchsia/hardware/display/cpp/fidl.h>
 #include <inttypes.h>
 
 #include "image.h"
@@ -31,7 +31,7 @@ class LayerImpl {
   virtual uint64_t image_id(const void* state) const = 0;
 
  protected:
-  fuchsia::display::ControllerPtr& controller() const;
+  fuchsia::hardware::display::ControllerPtr& controller() const;
   const ImageImpl* get_image_impl(const Image* image) const;
 
  private:
@@ -61,9 +61,10 @@ class PrimaryLayer : public Layer {
  public:
   ~PrimaryLayer() {}
 
-  void SetPosition(fuchsia::display::Transform transform,
-                   fuchsia::display::Frame src, fuchsia::display::Frame dest);
-  void SetAlpha(fuchsia::display::AlphaMode mode, float val);
+  void SetPosition(fuchsia::hardware::display::Transform transform,
+                   fuchsia::hardware::display::Frame src,
+                   fuchsia::hardware::display::Frame dest);
+  void SetAlpha(fuchsia::hardware::display::AlphaMode mode, float val);
   void SetImage(const Image* image);
 
  private:
@@ -78,16 +79,16 @@ class PrimaryLayer : public Layer {
   void DeleteState(const void* state) const override;
   uint64_t image_id(const void* state) const override;
 
-  fuchsia::display::ImageConfig config_;
+  fuchsia::hardware::display::ImageConfig config_;
 
   struct state {
     bool set_config = true;
     bool set_position;
-    fuchsia::display::Transform transform;
-    fuchsia::display::Frame src;
-    fuchsia::display::Frame dest;
+    fuchsia::hardware::display::Transform transform;
+    fuchsia::hardware::display::Frame src;
+    fuchsia::hardware::display::Frame dest;
     bool set_alpha;
-    fuchsia::display::AlphaMode alpha_mode;
+    fuchsia::hardware::display::AlphaMode alpha_mode;
     float alpha_val;
     bool flip_image;
     const internal::ImageImpl* image;

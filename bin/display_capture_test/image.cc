@@ -82,7 +82,7 @@ void ImageImpl::AllocateVmoCallback(zx_status_t status, zx::vmo vmo) {
   status = zx::vmar::root_self()->unmap(addr, size);
   ZX_ASSERT(status == ZX_OK);
 
-  fuchsia::display::ImageConfig config{
+  fuchsia::hardware::display::ImageConfig config{
       .width = width_,
       .height = height_,
       .pixel_format = kFormat,

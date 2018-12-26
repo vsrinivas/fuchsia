@@ -36,7 +36,7 @@ executable("unittests") {
     "//garnet/public/lib/ui/input/cpp",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/public/fidl/fuchsia-display",
+    "//zircon/public/fidl/fuchsia-hardware-display",
     "//zircon/public/lib/hid",
   ]
 }

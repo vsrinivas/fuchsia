@@ -7,7 +7,7 @@
 
 #include <cstdint>
 
-#include "fuchsia/display/cpp/fidl.h"
+#include "fuchsia/hardware/display/cpp/fidl.h"
 #include "garnet/lib/ui/gfx/displays/display.h"
 #include "garnet/lib/ui/gfx/displays/display_watcher.h"
 #include "lib/async/cpp/wait.h"
@@ -53,8 +53,8 @@ class DisplayManager {
   // to be signaled before presenting. Will signal |frame_signal_event_id| when
   // the image is retired.
   //
-  // fuchsia::display::invalidId can be passed for any of the event_ids if
-  // there is no corresponding event to signal.
+  // fuchsia::hardware::display::invalidId can be passed for any of the
+  // event_ids if there is no corresponding event to signal.
   void Flip(Display* display, uint64_t buffer,
             uint64_t render_finished_event_id, uint64_t frame_signal_event_id);
 
@@ -75,16 +75,17 @@ class DisplayManager {
                zx_status_t status, const zx_packet_signal_t* signal);
   async::WaitMethod<DisplayManager, &DisplayManager::OnAsync> wait_{this};
 
-  void DisplaysChanged(::fidl::VectorPtr<fuchsia::display::Info> added,
-                       ::fidl::VectorPtr<uint64_t> removed);
+  void DisplaysChanged(
+      ::fidl::VectorPtr<fuchsia::hardware::display::Info> added,
+      ::fidl::VectorPtr<uint64_t> removed);
   void ClientOwnershipChange(bool has_ownership);
 
   fxl::UniqueFD dc_fd_;
-  fuchsia::display::ControllerSyncPtr display_controller_;
-  fidl::InterfacePtr<fuchsia::display::Controller> event_dispatcher_;
+  fuchsia::hardware::display::ControllerSyncPtr display_controller_;
+  fidl::InterfacePtr<fuchsia::hardware::display::Controller> event_dispatcher_;
   zx_handle_t dc_channel_;  // display_controller_ owns the zx::channel
 
-  uint64_t next_event_id_ = fuchsia::display::invalidId + 1;
+  uint64_t next_event_id_ = fuchsia::hardware::display::invalidId + 1;
 
   DisplayWatcher display_watcher_;
   fit::closure display_available_cb_;
@@ -93,7 +94,7 @@ class DisplayManager {
   // controller (not just individual displays). The default is no.
   bool owns_display_controller_ = false;
 
-  fuchsia::display::ImageConfig image_config_;
+  fuchsia::hardware::display::ImageConfig image_config_;
   uint64_t layer_id_;
   VsyncCallback vsync_cb_;
 

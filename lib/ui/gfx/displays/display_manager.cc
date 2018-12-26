@@ -41,8 +41,9 @@ void DisplayManager::WaitForDefaultDisplay(fit::closure callback) {
 
         // TODO(FIDL-183): Resolve this hack when synchronous interfaces
         // support events.
-        auto dispatcher = static_cast<fuchsia::display::Controller::Proxy_*>(
-            event_dispatcher_.get());
+        auto dispatcher =
+            static_cast<fuchsia::hardware::display::Controller::Proxy_*>(
+                event_dispatcher_.get());
         dispatcher->DisplaysChanged = [this](auto added, auto removed) {
           DisplaysChanged(std::move(added), std::move(removed));
         };
@@ -85,12 +86,13 @@ void DisplayManager::OnAsync(async_dispatcher_t* dispatcher,
 
   // TODO(FIDL-183): Resolve this hack when synchronous interfaces
   // support events.
-  static_cast<fuchsia::display::Controller::Proxy_*>(event_dispatcher_.get())
+  static_cast<fuchsia::hardware::display::Controller::Proxy_*>(
+      event_dispatcher_.get())
       ->Dispatch_(std::move(msg));
 }
 
 void DisplayManager::DisplaysChanged(
-    ::fidl::VectorPtr<fuchsia::display::Info> added,
+    ::fidl::VectorPtr<fuchsia::hardware::display::Info> added,
     ::fidl::VectorPtr<uint64_t> removed) {
   if (!default_display_) {
     FXL_DCHECK(added.get().size());
@@ -165,7 +167,7 @@ uint64_t DisplayManager::ImportEvent(const zx::event& event) {
       display_controller_->ImportEvent(std::move(dup), event_id) == ZX_OK) {
     return event_id;
   }
-  return fuchsia::display::invalidId;
+  return fuchsia::hardware::display::invalidId;
 }
 
 void DisplayManager::ReleaseEvent(uint64_t id) {
@@ -207,7 +209,7 @@ uint64_t DisplayManager::ImportImage(const zx::vmo& vmo) {
       status == ZX_OK) {
     return id;
   }
-  return fuchsia::display::invalidId;
+  return fuchsia::hardware::display::invalidId;
 }
 
 void DisplayManager::ReleaseImage(uint64_t id) {

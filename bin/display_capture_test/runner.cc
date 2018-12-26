@@ -229,8 +229,9 @@ void Runner::InitDisplay() {
   runner_context_.SetLayers(std::vector<Layer*>({calibration_layer_}));
 }
 
-void Runner::OnDisplaysChanged(::fidl::VectorPtr<fuchsia::display::Info> added,
-                               ::fidl::VectorPtr<uint64_t> removed) {
+void Runner::OnDisplaysChanged(
+    ::fidl::VectorPtr<fuchsia::hardware::display::Info> added,
+    ::fidl::VectorPtr<uint64_t> removed) {
   ZX_ASSERT_MSG(!display_id_, "Display change while tests are running");
   for (auto& info : added.get()) {
     if (strcmp(info.monitor_name.get().c_str(), display_name_)) {
@@ -349,9 +350,9 @@ void Runner::CheckFrameConfig(uint32_t frame_idx) {
   display_controller_->CheckConfig(
       frame_idx == frames_.size() - 1,
       [this, frame_idx](
-          fuchsia::display::ConfigResult result,
-          ::fidl::VectorPtr<fuchsia::display::ClientCompositionOp>) {
-        if (result == fuchsia::display::ConfigResult::OK) {
+          fuchsia::hardware::display::ConfigResult result,
+          ::fidl::VectorPtr<fuchsia::hardware::display::ClientCompositionOp>) {
+        if (result == fuchsia::hardware::display::ConfigResult::OK) {
           if (frame_idx + 1 < frames_.size()) {
             CheckFrameConfig(frame_idx + 1);
           } else {

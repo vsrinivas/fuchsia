@@ -30,7 +30,7 @@ LayerImpl::LayerImpl(Runner* runner) : runner_(runner) {
   });
 }
 
-fuchsia::display::ControllerPtr& LayerImpl::controller() const {
+fuchsia::hardware::display::ControllerPtr& LayerImpl::controller() const {
   return runner_->display();
 }
 
@@ -45,13 +45,13 @@ PrimaryLayer::PrimaryLayer(internal::Runner* runner, uint32_t width,
   config_.pixel_format = internal::ImageImpl::kFormat;
 
   pending_state_.set_position = false;
-  pending_state_.transform = fuchsia::display::Transform::IDENTITY;
+  pending_state_.transform = fuchsia::hardware::display::Transform::IDENTITY;
   pending_state_.src = {};
   pending_state_.src.width = width;
   pending_state_.src.height = height;
   pending_state_.dest = pending_state_.src;
   pending_state_.set_alpha = false;
-  pending_state_.alpha_mode = fuchsia::display::AlphaMode::DISABLE;
+  pending_state_.alpha_mode = fuchsia::hardware::display::AlphaMode::DISABLE;
   pending_state_.image = nullptr;
   pending_state_.flip_image = false;
 }
@@ -61,9 +61,9 @@ void PrimaryLayer::SetImage(const Image* image) {
   pending_state_.flip_image = true;
 }
 
-void PrimaryLayer::SetPosition(fuchsia::display::Transform transform,
-                               fuchsia::display::Frame src,
-                               fuchsia::display::Frame dest) {
+void PrimaryLayer::SetPosition(fuchsia::hardware::display::Transform transform,
+                               fuchsia::hardware::display::Frame src,
+                               fuchsia::hardware::display::Frame dest) {
   src.x_pos = src.x_pos & ~1;
   dest.x_pos = dest.x_pos & ~1;
   src.width = src.width & ~1;
@@ -78,7 +78,8 @@ void PrimaryLayer::SetPosition(fuchsia::display::Transform transform,
   pending_state_.set_position = true;
 }
 
-void PrimaryLayer::SetAlpha(fuchsia::display::AlphaMode mode, float val) {
+void PrimaryLayer::SetAlpha(fuchsia::hardware::display::AlphaMode mode,
+                            float val) {
   pending_state_.alpha_mode = mode;
   pending_state_.alpha_val = val;
   pending_state_.set_alpha = true;
@@ -99,26 +100,26 @@ bool PrimaryLayer::GetPixel(const void* state, uint32_t x, uint32_t y,
   uint32_t dest_height = s->dest.height;
 
   // Undo x reflection if necessary
-  if (s->transform == fuchsia::display::Transform::REFLECT_X ||
-      s->transform == fuchsia::display::Transform::ROT_180 ||
-      s->transform == fuchsia::display::Transform::ROT_270 ||
-      s->transform == fuchsia::display::Transform::ROT_90_REFLECT_X) {
+  if (s->transform == fuchsia::hardware::display::Transform::REFLECT_X ||
+      s->transform == fuchsia::hardware::display::Transform::ROT_180 ||
+      s->transform == fuchsia::hardware::display::Transform::ROT_270 ||
+      s->transform == fuchsia::hardware::display::Transform::ROT_90_REFLECT_X) {
     x = (dest_width - 1) - x;
   }
 
   // Undo y reflection if necessary
-  if (s->transform == fuchsia::display::Transform::REFLECT_Y ||
-      s->transform == fuchsia::display::Transform::ROT_180 ||
-      s->transform == fuchsia::display::Transform::ROT_270 ||
-      s->transform == fuchsia::display::Transform::ROT_90_REFLECT_Y) {
+  if (s->transform == fuchsia::hardware::display::Transform::REFLECT_Y ||
+      s->transform == fuchsia::hardware::display::Transform::ROT_180 ||
+      s->transform == fuchsia::hardware::display::Transform::ROT_270 ||
+      s->transform == fuchsia::hardware::display::Transform::ROT_90_REFLECT_Y) {
     y = (dest_height - 1) - y;
   }
 
   // Undo 90-degree counterclockwise rotation if necessary
-  if (s->transform == fuchsia::display::Transform::ROT_90 ||
-      s->transform == fuchsia::display::Transform::ROT_90_REFLECT_X ||
-      s->transform == fuchsia::display::Transform::ROT_90_REFLECT_Y ||
-      s->transform == fuchsia::display::Transform::ROT_270) {
+  if (s->transform == fuchsia::hardware::display::Transform::ROT_90 ||
+      s->transform == fuchsia::hardware::display::Transform::ROT_90_REFLECT_X ||
+      s->transform == fuchsia::hardware::display::Transform::ROT_90_REFLECT_Y ||
+      s->transform == fuchsia::hardware::display::Transform::ROT_270) {
     dest_width = s->dest.height;
     dest_height = s->dest.width;
     uint32_t tmp = x;
@@ -155,15 +156,16 @@ bool PrimaryLayer::GetPixel(const void* state, uint32_t x, uint32_t y,
 
     // If the mode is premultiplied, the hardware is supposed to
     // premultiply the alpha value before blending.
-    if (s->alpha_mode == fuchsia::display::AlphaMode::PREMULTIPLIED) {
+    if (s->alpha_mode == fuchsia::hardware::display::AlphaMode::PREMULTIPLIED) {
       val = internal::premultiply_color_channels(val, plane_alpha);
     }
   }
 
-  if (s->alpha_mode == fuchsia::display::AlphaMode::DISABLE) {
+  if (s->alpha_mode == fuchsia::hardware::display::AlphaMode::DISABLE) {
     // Clobber the alpha value if it's disabled
     val |= 0xff000000;
-  } else if (s->alpha_mode == fuchsia::display::AlphaMode::HW_MULTIPLY) {
+  } else if (s->alpha_mode ==
+             fuchsia::hardware::display::AlphaMode::HW_MULTIPLY) {
     // If blending is hwmultiply, then do the the channel multiplication
     // here so the caller of GetPixel can treat everything is premultiplied.
     val = internal::premultiply_color_channels(val, val >> 24);

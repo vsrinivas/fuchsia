@@ -231,7 +231,7 @@ bool DisplaySwapchain::InitializeFramebuffers(
 
     buffer.vmo = zx::vmo(export_result.value);
     buffer.fb_id = display_manager_->ImportImage(buffer.vmo);
-    if (buffer.fb_id == fuchsia::display::invalidId) {
+    if (buffer.fb_id == fuchsia::hardware::display::invalidId) {
       FXL_LOG(ERROR) << "Importing image failed.";
       return false;
     }
@@ -287,7 +287,7 @@ std::unique_ptr<DisplaySwapchain::FrameRecord> DisplaySwapchain::NewFrameRecord(
       display_manager_->ImportEvent(render_finished_event);
 
   if (!render_finished_escher_semaphore ||
-      render_finished_event_id == fuchsia::display::invalidId) {
+      render_finished_event_id == fuchsia::hardware::display::invalidId) {
     FXL_LOG(ERROR)
         << "DisplaySwapchain::NewFrameRecord() failed to create semaphores";
     return std::unique_ptr<FrameRecord>();
@@ -302,7 +302,7 @@ std::unique_ptr<DisplaySwapchain::FrameRecord> DisplaySwapchain::NewFrameRecord(
   }
 
   uint64_t retired_event_id = display_manager_->ImportEvent(retired_event);
-  if (retired_event_id == fuchsia::display::invalidId) {
+  if (retired_event_id == fuchsia::hardware::display::invalidId) {
     FXL_LOG(ERROR)
         << "DisplaySwapchain::NewFrameRecord() failed to import retired event";
     return std::unique_ptr<FrameRecord>();
