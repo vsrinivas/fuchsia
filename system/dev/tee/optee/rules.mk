@@ -16,7 +16,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/shared-memory.cpp \
     $(LOCAL_DIR)/util.cpp \
 
-MODULE_FIDL_LIBS := system/fidl/zircon-tee
+MODULE_FIDL_LIBS := system/fidl/fuchsia-hardware-tee
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \

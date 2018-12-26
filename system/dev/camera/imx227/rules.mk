@@ -30,7 +30,7 @@ MODULE_LIBS := \
     system/ulib/c \
 
 MODULE_FIDL_LIBS := \
-    system/fidl/zircon-camera \
+    system/fidl/fuchsia-hardware-camera \
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-clk \

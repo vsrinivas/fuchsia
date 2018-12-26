@@ -10,9 +10,8 @@ MODULE_TYPE := fidl
 
 MODULE_PACKAGE := fidl
 
-MODULE_FIDL_LIBRARY := zircon.camera
+MODULE_FIDL_LIBRARY := fuchsia.hardware.tee
 
-MODULE_SRCS += \
-    $(LOCAL_DIR)/camera_sensor.fidl \
+MODULE_SRCS += $(LOCAL_DIR)/tee.fidl
 
 include make/module.mk

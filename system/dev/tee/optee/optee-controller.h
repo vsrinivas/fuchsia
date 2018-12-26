@@ -4,16 +4,16 @@
 
 #pragma once
 
-#include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/platform-device-lib.h>
+#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
+#include <fuchsia/hardware/tee/c/fidl.h>
 #include <zircon/thread_annotations.h>
-#include <zircon/tee/c/fidl.h>
 
 #include "optee-message.h"
 #include "optee-smc.h"
@@ -75,7 +75,7 @@ private:
     // craft a resource object dedicated only to secure monitor calls targetting the Trusted OS.
     zx_handle_t secure_monitor_ = ZX_HANDLE_INVALID;
     uint32_t secure_world_capabilities_ = 0;
-    zircon_tee_OsRevision os_revision_ = {};
+    fuchsia_hardware_tee_OsRevision os_revision_ = {};
     fbl::Mutex clients_lock_;
     fbl::DoublyLinkedList<OpteeClient*> clients_ TA_GUARDED(clients_lock_);
     fbl::unique_ptr<SharedMemoryManager> shared_memory_manager_;

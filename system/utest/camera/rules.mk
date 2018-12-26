@@ -34,6 +34,6 @@ MODULE_LIBS := \
     system/ulib/zircon \
 
 MODULE_FIDL_LIBS := \
-    system/fidl/zircon-camera \
+    system/fidl/fuchsia-hardware-camera \
 
 include make/module.mk

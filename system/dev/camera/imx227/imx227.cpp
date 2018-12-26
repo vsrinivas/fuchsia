@@ -180,7 +180,7 @@ void Imx227Device::DeInit() {
     mipi_.DeInit();
 }
 
-zx_status_t Imx227Device::GetInfo(zircon_camera_SensorInfo* out_info) {
+zx_status_t Imx227Device::GetInfo(fuchsia_hardware_camera_SensorInfo* out_info) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -291,7 +291,7 @@ zx_status_t Imx227Device::DdkIoctl(uint32_t op, const void* in_buf, size_t in_le
                                    void* out_buf, size_t out_len, size_t* out_actual) {
     switch (op) {
     case CAMERA_IOCTL_GET_SUPPORTED_MODES: {
-        if (out_len < sizeof(zircon_camera_SensorMode) * MAX_SUPPORTED_MODES) {
+        if (out_len < sizeof(fuchsia_hardware_camera_SensorMode) * MAX_SUPPORTED_MODES) {
             return ZX_ERR_BUFFER_TOO_SMALL;
         }
         memcpy(out_buf, &supported_modes, sizeof(supported_modes));
@@ -307,7 +307,7 @@ zx_status_t Imx227Device::DdkIoctl(uint32_t op, const void* in_buf, size_t in_le
 static zx_status_t Init(void* ctx, fidl_txn_t* txn) {
     auto& self = *static_cast<Imx227Device*>(ctx);
     zx_status_t status = self.Init();
-    return zircon_camera_CameraSensorInit_reply(txn, status);
+    return fuchsia_hardware_camera_CameraSensorInit_reply(txn, status);
 }
 
 static zx_status_t DeInit(void* ctx) {
@@ -319,7 +319,7 @@ static zx_status_t DeInit(void* ctx) {
 static zx_status_t SetMode(void* ctx, uint8_t mode, fidl_txn_t* txn) {
     auto& self = *static_cast<Imx227Device*>(ctx);
     zx_status_t status = self.SetMode(mode);
-    return zircon_camera_CameraSensorSetMode_reply(txn, status);
+    return fuchsia_hardware_camera_CameraSensorSetMode_reply(txn, status);
 }
 
 static zx_status_t StartStreaming(void* ctx) {
@@ -337,13 +337,13 @@ static zx_status_t StopStreaming(void* ctx) {
 static zx_status_t SetAnalogGain(void* ctx, int32_t gain, fidl_txn_t* txn) {
     auto& self = *static_cast<Imx227Device*>(ctx);
     int32_t actual_gain = self.SetAnalogGain(gain);
-    return zircon_camera_CameraSensorSetAnalogGain_reply(txn, actual_gain);
+    return fuchsia_hardware_camera_CameraSensorSetAnalogGain_reply(txn, actual_gain);
 }
 
 static zx_status_t SetDigitalGain(void* ctx, int32_t gain, fidl_txn_t* txn) {
     auto& self = *static_cast<Imx227Device*>(ctx);
     int32_t actual_gain = self.SetDigitalGain(gain);
-    return zircon_camera_CameraSensorSetDigitalGain_reply(txn, actual_gain);
+    return fuchsia_hardware_camera_CameraSensorSetDigitalGain_reply(txn, actual_gain);
 }
 
 static zx_status_t SetIntegrationTime(void* ctx,
@@ -361,7 +361,7 @@ static zx_status_t Update(void* ctx) {
     return ZX_OK;
 }
 
-zircon_camera_CameraSensor_ops_t fidl_ops = {
+fuchsia_hardware_camera_CameraSensor_ops_t fidl_ops = {
     .Init = Init,
     .DeInit = DeInit,
     .SetMode = SetMode,
@@ -374,7 +374,7 @@ zircon_camera_CameraSensor_ops_t fidl_ops = {
 };
 
 zx_status_t Imx227Device::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-    return zircon_camera_CameraSensor_dispatch(this, txn, msg, &fidl_ops);
+    return fuchsia_hardware_camera_CameraSensor_dispatch(this, txn, msg, &fidl_ops);
 }
 
 zx_status_t Imx227Device::Create(zx_device_t* parent) {

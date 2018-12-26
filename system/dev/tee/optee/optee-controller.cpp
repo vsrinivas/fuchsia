@@ -290,7 +290,7 @@ void OpteeController::DdkRelease() {
 }
 
 zx_status_t OpteeController::GetOsInfo(fidl_txn_t* txn) const {
-    zircon_tee_OsInfo os_info;
+    fuchsia_hardware_tee_OsInfo os_info;
     ::memset(&os_info, 0, sizeof(os_info));
 
     os_info.uuid.time_low = kOpteeOsUuid.timeLow;
@@ -302,7 +302,7 @@ zx_status_t OpteeController::GetOsInfo(fidl_txn_t* txn) const {
 
     os_info.revision = os_revision_;
     os_info.is_global_platform_compliant = true;
-    return zircon_tee_DeviceGetOsInfo_reply(txn, &os_info);
+    return fuchsia_hardware_tee_DeviceGetOsInfo_reply(txn, &os_info);
 }
 
 void OpteeController::RemoveClient(OpteeClient* client) {

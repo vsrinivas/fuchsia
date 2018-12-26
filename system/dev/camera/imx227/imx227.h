@@ -10,7 +10,7 @@
 #include <ddktl/protocol/empty-protocol.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/mipicsi.h>
-#include <zircon/camera/c/fidl.h>
+#include <fuchsia/hardware/camera/c/fidl.h>
 
 namespace camera {
 
@@ -41,7 +41,7 @@ typedef struct sensor_context {
     uint8_t dgain_change;
     uint8_t change_flag;
     uint8_t hdr_flag;
-    zircon_camera_SensorInfo param;
+    fuchsia_hardware_camera_SensorInfo param;
 } sensor_context_t;
 
 class Imx227Device;
@@ -73,7 +73,7 @@ public:
     zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
     // Methods for IOCTLs.
-    zx_status_t GetInfo(zircon_camera_SensorInfo* out_info);
+    zx_status_t GetInfo(fuchsia_hardware_camera_SensorInfo* out_info);
     void GetSupportedModes(void* out_buf, size_t* out_actual);
 
     // Methods for FIDL Message.

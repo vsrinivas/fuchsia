@@ -5,10 +5,10 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <fuchsia/hardware/camera/c/fidl.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <unittest/unittest.h>
-#include <zircon/camera/c/fidl.h>
 #include <zircon/device/camera.h>
 
 namespace {
@@ -49,12 +49,11 @@ bool TestSupportedModes(void) {
     ASSERT_EQ(StartCameraTest(&fd), ZX_OK, "");
 
     // Get the modes supported.
-    auto* supported_modes = new zircon_camera_SensorMode[MAX_SUPPORTED_MODES];
+    auto* supported_modes = new fuchsia_hardware_camera_SensorMode[MAX_SUPPORTED_MODES];
     ASSERT_NE(supported_modes, nullptr, "");
 
-    ssize_t rc = ioctl_camera_get_supported_modes(fd, supported_modes,
-                                                  sizeof(zircon_camera_SensorMode) *
-                                                      MAX_SUPPORTED_MODES);
+    ssize_t rc = ioctl_camera_get_supported_modes(
+        fd, supported_modes, sizeof(fuchsia_hardware_camera_SensorMode) * MAX_SUPPORTED_MODES);
     ASSERT_GE(rc, 0, "");
 
     close(fd);

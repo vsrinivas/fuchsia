@@ -588,16 +588,17 @@ const init_seq_fmt_t* kSEQUENCE_TABLE[] = {
     setting_2400_2720_2lane_1g_28fps,
 };
 
-constexpr zircon_camera_SensorMode supported_modes[] = {
+constexpr fuchsia_hardware_camera_SensorMode supported_modes[] = {
     {
         // NOTE: SW reference consumes this as (30fps * 256)
         //       We are representing this as fpms.
         //       Take account of the multiplier when needed.
         .fpms = 30000,
-        .resolution = {
-            .width = 2200,
-            .height = 2720,
-        },
+        .resolution =
+            {
+                .width = 2200,
+                .height = 2720,
+            },
         .exposures = 1,
         .wdr_mode = kWDR_MODE_LINEAR,
         .bits = 10,
@@ -611,10 +612,11 @@ constexpr zircon_camera_SensorMode supported_modes[] = {
         //       We are representing this as fpms.
         //       Take account of the multiplier when needed.
         .fpms = 30000,
-        .resolution = {
-            .width = 1920,
-            .height = 1080,
-        },
+        .resolution =
+            {
+                .width = 1920,
+                .height = 1080,
+            },
         .exposures = 1,
         .wdr_mode = kWDR_MODE_LINEAR,
         .bits = 10,
@@ -628,10 +630,11 @@ constexpr zircon_camera_SensorMode supported_modes[] = {
         //       We are representing this as fpms.
         //       Take account of the multiplier when needed.
         .fpms = 28000,
-        .resolution = {
-            .width = 2400,
-            .height = 2720,
-        },
+        .resolution =
+            {
+                .width = 2400,
+                .height = 2720,
+            },
         .exposures = 1,
         .wdr_mode = kWDR_MODE_LINEAR,
         .bits = 10,
