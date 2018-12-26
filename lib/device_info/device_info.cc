@@ -40,7 +40,6 @@ std::string LoadDeviceProfile() {
 
 // TODO(security): this is a temporary implementation. audit the revocability
 // of this ID for syncing.
-// TODO(zbowling): refactor to use flatbuffer for storage
 std::string LoadDeviceID(const std::string& user) {
   std::string device_id;
 
@@ -48,7 +47,6 @@ std::string LoadDeviceID(const std::string& user) {
     files::CreateDirectory(kDeviceInfoDirectory);
   }
 
-  // FIXME(zbowling): this isn't scalable
   std::string path = fxl::StringPrintf(kDeviceIDFile, user.c_str());
 
   if (!files::ReadFileToString(path, &device_id)) {
