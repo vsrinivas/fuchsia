@@ -36,9 +36,9 @@ class StoryProviderWatcherImpl : public modular::StoryProviderWatcherBase {
 
  private:
   TestPoint last_focus_time_created_{
-      "fuchsia::modular::StoryInfo::last_focus_time increased after create"};
+      "StoryInfo::last_focus_time increased after create"};
   TestPoint last_focus_time_focused_{
-      "fuchsia::modular::StoryInfo::last_focus_time increased after focus"};
+      "StoryInfo::last_focus_time increased after focus"};
 
   // |fuchsia::modular::StoryProviderWatcher|
   void OnChange(
@@ -173,15 +173,13 @@ class TestApp : public modular::testing::SessionShellBase {
   void CreateStory() {
     puppet_master_->ControlStory(kStoryName, story_puppet_master_.NewRequest());
 
-    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
     fuchsia::modular::AddMod add_mod;
     add_mod.mod_name.push_back("mod1");
     add_mod.intent.handler = kCommonNullModule;
     add_mod.intent.action = kCommonNullAction;
 
-    fuchsia::modular::StoryCommand command;
-    command.set_add_mod(std::move(add_mod));
-    commands.push_back(std::move(command));
+    auto commands = fidl::VectorPtr<fuchsia::modular::StoryCommand>::New(1);
+    commands->at(0).set_add_mod(std::move(add_mod));
 
     story_puppet_master_->Enqueue(std::move(commands));
     story_puppet_master_->Execute(
