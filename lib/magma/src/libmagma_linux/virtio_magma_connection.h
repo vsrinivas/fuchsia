@@ -17,7 +17,6 @@ public:
     {
     }
 
-    static bool WriteDriverToFilesystem(int32_t virtio_fd);
     static magma_status_t Query(int32_t virtio_fd, uint64_t id, uint64_t* value_out);
     static std::unique_ptr<magma_connection_t> Create(int32_t virtio_fd);
     void Release();

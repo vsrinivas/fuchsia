@@ -138,30 +138,18 @@ source_set("mmio") {
   ]
 }
 
-source_set("futex_header") {
+source_set("futex") {
   public_configs = [ ":platform_include_config" ]
 
   sources = [
     "platform_futex.h",
   ]
-}
 
-source_set("futex") {
-  public_configs = [ ":platform_include_config" ]
-
-  public_deps = [
-    ":futex_header",
+  deps = [
+    "zircon:futex",
   ]
 
-  if ("$current_toolchain" == "//build/toolchain:linux_x64") {
-    deps = [
-      "linux:futex",
-    ]
-  } else {
-    deps = [
-      "zircon:futex",
-    ]
-  }
+  allow_circular_includes_from = [ "zircon:futex" ]
 }
 
 source_set("connection_header") {

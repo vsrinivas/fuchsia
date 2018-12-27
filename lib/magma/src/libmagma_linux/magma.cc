@@ -5,11 +5,6 @@
 #include "magma.h"
 #include "virtio_magma_connection.h"
 
-bool magma_write_driver_to_filesystem(int32_t file_descriptor)
-{
-    return magma::VirtioMagmaConnection::WriteDriverToFilesystem(file_descriptor);
-}
-
 magma_status_t magma_query(int32_t file_descriptor, uint64_t id, uint64_t* value_out)
 {
     return magma::VirtioMagmaConnection::Query(file_descriptor, id, value_out);
@@ -112,7 +107,7 @@ magma_status_t magma_unmap(magma_connection_t* connection, magma_buffer_t buffer
     return conn->Unmap(buffer);
 }
 
-void magma_map_buffer_gpu(magma_connection_t* connection, magma_buffer_t buffer,
+void magma_map_buffer_gpu(struct magma_connection_t* connection, magma_buffer_t buffer,
                           uint64_t page_offset, uint64_t page_count, uint64_t gpu_va,
                           uint64_t map_flags)
 {
@@ -120,13 +115,14 @@ void magma_map_buffer_gpu(magma_connection_t* connection, magma_buffer_t buffer,
     return conn->MapBufferGpu(buffer, page_offset, page_count, gpu_va, map_flags);
 }
 
-void magma_unmap_buffer_gpu(magma_connection_t* connection, magma_buffer_t buffer, uint64_t gpu_va)
+void magma_unmap_buffer_gpu(struct magma_connection_t* connection, magma_buffer_t buffer,
+                            uint64_t gpu_va)
 {
     auto conn = magma::VirtioMagmaConnection::cast(connection);
     conn->UnmapBufferGpu(buffer, gpu_va);
 }
 
-void magma_commit_buffer(magma_connection_t* connection, magma_buffer_t buffer,
+void magma_commit_buffer(struct magma_connection_t* connection, magma_buffer_t buffer,
                          uint64_t page_offset, uint64_t page_count)
 {
     auto conn = magma::VirtioMagmaConnection::cast(connection);
@@ -154,7 +150,8 @@ magma_status_t magma_create_command_buffer(magma_connection_t* connection, uint6
     return conn->CreateCommandBuffer(size, buffer_out);
 }
 
-void magma_release_command_buffer(magma_connection_t* connection, magma_buffer_t command_buffer)
+void magma_release_command_buffer(struct magma_connection_t* connection,
+                                  magma_buffer_t command_buffer)
 {
     auto conn = magma::VirtioMagmaConnection::cast(connection);
     conn->ReleaseCommandBuffer(command_buffer);

@@ -119,7 +119,5 @@ interface VirtioWayland : VirtioDevice {
     // Start the wayland device.
     Start(StartInfo start_info,
           handle<vmar> vmar,
-          fuchsia.guest.WaylandDispatcher dispatcher,
-          string device_path,
-          string driver_path) -> ();
+          fuchsia.guest.WaylandDispatcher dispatcher) -> ();
 };

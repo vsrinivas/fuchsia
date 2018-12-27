@@ -5,7 +5,7 @@
 import("//garnet/bin/guest/pkg/guest_package.gni")
 
 guest_package("biscotti_guest") {
-  cmdline = "console=hvc0 earlycon=uart,io,0x3f8 root=/dev/vda rw"
+  cmdline = "console=hvc0 root=/dev/vda rw"
   linux = "images/${target_cpu}/Image"
 
   rootfs_name = "rootfs.img"
@@ -15,5 +15,7 @@ guest_package("biscotti_guest") {
       dest = "${rootfs_name}"
     },
   ]
-  block_devices = [ "/guest/data/${rootfs_name},ro,volatile" ]
+  block_devices = [
+    "/guest/data/${rootfs_name},ro,volatile",
+  ]
 }
