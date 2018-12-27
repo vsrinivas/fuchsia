@@ -25,7 +25,7 @@ MODULE_SRCS := \
 	$(LOCAL_DIR)/backends/pci_legacy.cpp \
 	$(LOCAL_DIR)/backends/pci_modern.cpp \
 
-MODULE_FIDL_LIBS := system/fidl/fuchsia-device-vsock
+MODULE_FIDL_LIBS := system/fidl/fuchsia-hardware-vsock
 
 MODULE_STATIC_LIBS := \
     system/ulib/async \

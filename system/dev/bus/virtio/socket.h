@@ -22,12 +22,12 @@
 #include <utility>
 #include <virtio/vsock.h>
 
-#include <fuchsia/device/vsock/c/fidl.h>
+#include <fuchsia/hardware/vsock/c/fidl.h>
 #include <zircon/thread_annotations.h>
 
 namespace virtio {
 
-using vsock_Addr = fuchsia_device_vsock_Addr;
+using vsock_Addr = fuchsia_hardware_vsock_Addr;
 
 class SocketDevice : public Device {
 public:

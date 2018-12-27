@@ -10,7 +10,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include <fuchsia/device/vsock/c/fidl.h>
+#include <fuchsia/hardware/vsock/c/fidl.h>
 
 #include <ddk/debug.h>
 #include <ddk/io-buffer.h>
@@ -53,42 +53,42 @@ static void virtio_net_release(void* ctx) {
 static zx_status_t fidl_Start(void* ctx, zx_handle_t cb, fidl_txn_t* txn) {
     virtio::SocketDevice* sock = static_cast<virtio::SocketDevice*>(ctx);
     sock->MessageStart(zx::channel(cb));
-    return fuchsia_device_vsock_DeviceStart_reply(txn, ZX_OK);
+    return fuchsia_hardware_vsock_DeviceStart_reply(txn, ZX_OK);
 }
 static zx_status_t fidl_SendRequest(void* ctx, const vsock_Addr* addr, zx_handle_t socket,
                                     fidl_txn_t* txn) {
     virtio::SocketDevice* sock = static_cast<virtio::SocketDevice*>(ctx);
     zx_status_t status = sock->MessageSendRequest(*addr, zx::socket(socket));
-    return fuchsia_device_vsock_DeviceSendRequest_reply(txn, status);
+    return fuchsia_hardware_vsock_DeviceSendRequest_reply(txn, status);
 }
 static zx_status_t fidl_SendShutdown(void* ctx, const vsock_Addr* addr, fidl_txn_t* txn) {
     virtio::SocketDevice* sock = static_cast<virtio::SocketDevice*>(ctx);
     zx_status_t status = sock->MessageSendShutdown(*addr);
-    return fuchsia_device_vsock_DeviceSendShutdown_reply(txn, status);
+    return fuchsia_hardware_vsock_DeviceSendShutdown_reply(txn, status);
 }
 static zx_status_t fidl_SendRst(void* ctx, const vsock_Addr* addr, fidl_txn_t* txn) {
     virtio::SocketDevice* sock = static_cast<virtio::SocketDevice*>(ctx);
     zx_status_t status = sock->MessageSendRst(*addr);
-    return fuchsia_device_vsock_DeviceSendRst_reply(txn, status);
+    return fuchsia_hardware_vsock_DeviceSendRst_reply(txn, status);
 }
 static zx_status_t fidl_SendResponse(void* ctx, const vsock_Addr* addr, zx_handle_t socket,
                                      fidl_txn_t* txn) {
     virtio::SocketDevice* sock = static_cast<virtio::SocketDevice*>(ctx);
     zx_status_t status = sock->MessageSendResponse(*addr, zx::socket(socket));
-    return fuchsia_device_vsock_DeviceSendResponse_reply(txn, status);
+    return fuchsia_hardware_vsock_DeviceSendResponse_reply(txn, status);
 }
 static zx_status_t fidl_GetCid(void* ctx, fidl_txn_t* txn) {
     virtio::SocketDevice* sock = static_cast<virtio::SocketDevice*>(ctx);
-    return fuchsia_device_vsock_DeviceGetCid_reply(txn, sock->MessageGetCid());
+    return fuchsia_hardware_vsock_DeviceGetCid_reply(txn, sock->MessageGetCid());
 }
 static zx_status_t fidl_SendVmo(void* ctx, const vsock_Addr* addr, zx_handle_t vmo, uint64_t off,
                                 uint64_t len, fidl_txn_t* txn) {
     virtio::SocketDevice* sock = static_cast<virtio::SocketDevice*>(ctx);
     zx_status_t status = sock->MessageSendVmo(*addr, zx::vmo(vmo), off, len);
-    return fuchsia_device_vsock_DeviceSendVmo_reply(txn, status);
+    return fuchsia_hardware_vsock_DeviceSendVmo_reply(txn, status);
 }
 
-static fuchsia_device_vsock_Device_ops_t fidl_ops = {
+static fuchsia_hardware_vsock_Device_ops_t fidl_ops = {
     .Start = fidl_Start,
     .SendRequest = fidl_SendRequest,
     .SendShutdown = fidl_SendShutdown,
@@ -99,7 +99,7 @@ static fuchsia_device_vsock_Device_ops_t fidl_ops = {
 };
 
 static zx_status_t virtio_net_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
-    zx_status_t status = fuchsia_device_vsock_Device_dispatch(ctx, txn, msg, &fidl_ops);
+    zx_status_t status = fuchsia_hardware_vsock_Device_dispatch(ctx, txn, msg, &fidl_ops);
     return status;
 }
 
@@ -350,7 +350,7 @@ void SocketDevice::IrqRingUpdate() {
             auto conn = connections_.find(key);
             if (conn != connections_.end()) {
                 if (conn->NotifyVmoTxComplete(payload)) {
-                    PerformCallbackLocked(fuchsia_device_vsock_CallbacksSendVmoComplete, key);
+                    PerformCallbackLocked(fuchsia_hardware_vsock_CallbacksSendVmoComplete, key);
                 }
             }
         });
@@ -435,7 +435,7 @@ void SocketDevice::RxOpLocked(ConnectionIterator conn, const ConnectionKey& key,
     case VIRTIO_VSOCK_OP_REQUEST:
         // Don't care if we have a connection or not, just send it to the
         // service.
-        PerformCallbackLocked(fuchsia_device_vsock_CallbacksRequest, key);
+        PerformCallbackLocked(fuchsia_hardware_vsock_CallbacksRequest, key);
         break;
     case VIRTIO_VSOCK_OP_RESPONSE: {
         // Check for existing partial connection.
@@ -447,14 +447,14 @@ void SocketDevice::RxOpLocked(ConnectionIterator conn, const ConnectionKey& key,
         }
         // Upgrade the channel.
         conn->MakeActive(dispatch_loop_.dispatcher());
-        PerformCallbackLocked(fuchsia_device_vsock_CallbacksResponse, key);
+        PerformCallbackLocked(fuchsia_hardware_vsock_CallbacksResponse, key);
         break;
     }
     case VIRTIO_VSOCK_OP_RST:
         if (conn != connections_.end()) {
             CleanupConLocked(conn.CopyPointer());
         }
-        PerformCallbackLocked(fuchsia_device_vsock_CallbacksRst, key);
+        PerformCallbackLocked(fuchsia_hardware_vsock_CallbacksRst, key);
         break;
     case VIRTIO_VSOCK_OP_SHUTDOWN:
         if (conn != connections_.end()) {
@@ -464,7 +464,7 @@ void SocketDevice::RxOpLocked(ConnectionIterator conn, const ConnectionKey& key,
             DequeueTxLocked(conn.CopyPointer());
             DequeueOpLocked(conn.CopyPointer());
         }
-        PerformCallbackLocked(fuchsia_device_vsock_CallbacksShutdown, key);
+        PerformCallbackLocked(fuchsia_hardware_vsock_CallbacksShutdown, key);
         break;
     case VIRTIO_VSOCK_OP_CREDIT_UPDATE:
         if (conn == connections_.end()) {
@@ -559,7 +559,7 @@ void SocketDevice::CleanupConLocked(fbl::RefPtr<Connection> conn) {
 }
 
 void SocketDevice::NotifyAndCleanupConLocked(fbl::RefPtr<Connection> conn) {
-    PerformCallbackLocked(fuchsia_device_vsock_CallbacksRst, conn->GetKey());
+    PerformCallbackLocked(fuchsia_hardware_vsock_CallbacksRst, conn->GetKey());
     CleanupConLocked(conn);
 }
 
@@ -711,7 +711,7 @@ void SocketDevice::TransportResetLocked() {
     has_pending_op_.clear();
     UpdateCidLocked();
     if (callbacks_.is_valid()) {
-        fuchsia_device_vsock_CallbacksTransportReset(callbacks_.get(), cid_);
+        fuchsia_hardware_vsock_CallbacksTransportReset(callbacks_.get(), cid_);
     }
 }
 

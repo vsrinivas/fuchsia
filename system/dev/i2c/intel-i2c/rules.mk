@@ -22,7 +22,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/fidl \
     system/ulib/sync \
 
-MODULE_FIDL_LIBS := system/fidl/fuchsia-i2c
+MODULE_FIDL_LIBS := system/fidl/fuchsia-hardware-i2c
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-i2c \

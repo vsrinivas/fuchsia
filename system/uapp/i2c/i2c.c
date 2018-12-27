@@ -4,9 +4,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/i2c/c/fidl.h>
-#include <zircon/syscalls.h>
-#include <zircon/types.h>
+#include <fuchsia/hardware/i2c/c/fidl.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/util.h>
 #include <stddef.h>
@@ -14,6 +12,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 const char* prog_name;
 
@@ -115,11 +115,11 @@ cmd_write_finish:
 }
 
 int cmd_transfer(int fd, int argc, const char** argv) {
-    const size_t base_size = sizeof(fuchsia_i2c_Segment);
+    const size_t base_size = sizeof(fuchsia_hardware_i2c_Segment);
     int ret = ZX_OK;
 
     // Figure out how big our buffers need to be.
-    // Start the counters with enough space for the fuchsia_i2c_SegmentType_END
+    // Start the counters with enough space for the fuchsia_hardware_i2c_SegmentType_END
     // segment.
     size_t in_len = base_size;
     size_t out_len = 0;
@@ -179,17 +179,17 @@ int cmd_transfer(int fd, int argc, const char** argv) {
     // Fill the "input" buffer which is sent via FIDL.
     uintptr_t in_addr = (uintptr_t)in_buf;
     int i = 0;
-    fuchsia_i2c_Segment* segment = (fuchsia_i2c_Segment*)in_addr;
+    fuchsia_hardware_i2c_Segment* segment = (fuchsia_hardware_i2c_Segment*)in_addr;
     while (i < argc) {
         if (!strcmp(argv[i++], "r")) {
-            segment->type = fuchsia_i2c_SegmentType_READ;
+            segment->type = fuchsia_hardware_i2c_SegmentType_READ;
             segment->len = strtol(argv[i++], NULL, 10);
             if (errno) {
                 print_usage();
                 return errno;
             }
         } else {
-            segment->type = fuchsia_i2c_SegmentType_WRITE;
+            segment->type = fuchsia_hardware_i2c_SegmentType_WRITE;
             segment->len = strtol(argv[i++], NULL, 10);
             if (errno) {
                 print_usage();
@@ -206,7 +206,7 @@ int cmd_transfer(int fd, int argc, const char** argv) {
         }
         segment++;
     }
-    segment->type = fuchsia_i2c_SegmentType_END;
+    segment->type = fuchsia_hardware_i2c_SegmentType_END;
     segment->len = 0;
     segment++;
     // We should be at the start of the data section now.
@@ -219,9 +219,8 @@ int cmd_transfer(int fd, int argc, const char** argv) {
     if (io == NULL) return ZX_ERR_INVALID_ARGS;
     zx_status_t status;
     size_t out_actual;
-    zx_status_t res =
-        fuchsia_i2c_DeviceSlaveTransfer(fdio_unsafe_borrow_channel(io), in_buf, in_len,
-                                       &status, out_buf, out_len, &out_actual);
+    zx_status_t res = fuchsia_hardware_i2c_DeviceSlaveTransfer(
+        fdio_unsafe_borrow_channel(io), in_buf, in_len, &status, out_buf, out_len, &out_actual);
     fdio_unsafe_release(io); // Release the channel manually.
     if (out_actual < out_len) {
         status = ZX_ERR_BUFFER_TOO_SMALL;

@@ -5,13 +5,10 @@
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
-
 MODULE_TYPE := fidl
-
 MODULE_PACKAGE := fidl
 
-MODULE_FIDL_LIBRARY := fuchsia.device.vsock
-
-MODULE_SRCS += $(LOCAL_DIR)/vsock.fidl
+MODULE_FIDL_LIBRARY := fuchsia.hardware.i2c
+MODULE_SRCS += $(LOCAL_DIR)/i2c.fidl
 
 include make/module.mk
