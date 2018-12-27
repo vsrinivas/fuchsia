@@ -31,5 +31,5 @@ package("wlan-sme-tests") {
     ":wlan-sme"
   ]
 
-  tests = [ { name = "wlan_sme_lib_test_rustc" } ]
+  tests = [ { name = "wlan_sme_lib_test" } ]
 }

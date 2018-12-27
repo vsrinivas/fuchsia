@@ -116,7 +116,7 @@ impl<I: Iterator> Iterator for MultiZip<I> {
     }
 }
 
-/// Run tests on a target device with "fx run-test rolldice_lib_test_rustc"
+/// Run tests on a target device with "fx run-test rolldice_lib_test"
 #[cfg(test)]
 mod tests {
     use super::*;

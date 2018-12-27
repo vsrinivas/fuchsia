@@ -46,5 +46,5 @@ package("wlantool2-tests") {
     ":bin"
   ]
 
-  tests = [ { name = "wlantool2_bin_test_rustc" } ]
+  tests = [ { name = "wlantool2_bin_test" } ]
 }

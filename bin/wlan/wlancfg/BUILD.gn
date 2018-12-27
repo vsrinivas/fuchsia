@@ -83,8 +83,8 @@ package("wlancfg-tests") {
   ]
   tests = [
     {
-      name = "wlancfg_bin_test_rustc"
-      dest = "wlancfg_bin_test_rustc"
+      name = "wlancfg_bin_test"
+      dest = "wlancfg_bin_test"
     },
   ]
 }

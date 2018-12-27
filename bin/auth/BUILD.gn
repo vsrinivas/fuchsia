@@ -61,8 +61,8 @@ package("auth_bin_unittests") {
   ]
 
   tests = [
-    { name = "account_manager_bin_test_rustc" },
-    { name = "dev_auth_provider_bin_test_rustc"},
-    { name = "dev_auth_provider_iotid_bin_test_rustc"},
+    { name = "account_manager_bin_test" },
+    { name = "dev_auth_provider_bin_test"},
+    { name = "dev_auth_provider_iotid_bin_test"},
   ]
 }

@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/test_wayland_bridge_test_lib_test_rustc"
+        "binary": "test/test_wayland_bridge_test_lib_test"
     },
     "sandbox": {
         "services": [

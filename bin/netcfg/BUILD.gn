@@ -78,8 +78,8 @@ package("netcfg_tests") {
   ]
   tests = [
     {
-      name = "netcfg_bin_test_rustc"
-      dest = "netcfg_bin_test_rustc"
+      name = "netcfg_bin_test"
+      dest = "netcfg_bin_test"
     },
   ]
 }

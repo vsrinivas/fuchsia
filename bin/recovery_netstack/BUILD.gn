@@ -46,10 +46,10 @@ package("recovery_netstack_tests") {
   ]
   tests = [
     {
-      name = "recovery_netstack_bin_test_rustc"
+      name = "recovery_netstack_bin_test"
     },
     {
-      name = "netstack_core_lib_test_rustc"
+      name = "netstack_core_lib_test"
     },
   ]
 }

@@ -31,7 +31,7 @@ package("ethernet-tests") {
 
   tests = [
     {
-      name = "ethernet_lib_test_rustc"
+      name = "ethernet_lib_test"
     },
   ]
 }

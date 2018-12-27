@@ -53,7 +53,7 @@ package("tests") {
 
   tests = [
     {
-      name = "bt_snoop_bin_test_rustc"
+      name = "bt_snoop_bin_test"
       dest = "bt-snoop-unittests"
     }
   ]

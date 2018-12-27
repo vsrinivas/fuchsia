@@ -49,7 +49,7 @@ package("logger_tests") {
 
   tests = [
     {
-      name = "logger_bin_test_rustc"
+      name = "logger_bin_test"
     },
   ]
 }

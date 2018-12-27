@@ -62,8 +62,8 @@ package("sl4f-tests") {
 
     tests = [
         {
-            name = "sl4f_bin_test_rustc"
-            dest =  "sl4f_bin_test_rustc"
+            name = "sl4f_bin_test"
+            dest =  "sl4f_bin_test"
         }
     ]
 }

@@ -53,6 +53,6 @@ package("rolldice-tests") {
   ]
 
   tests = [
-    { name = "rolldice_lib_lib_test_rustc" },
+    { name = "rolldice_lib_lib_test" },
   ]
 }

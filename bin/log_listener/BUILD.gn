@@ -65,7 +65,7 @@ package("log_listener_tests") {
 
   tests = [
     {
-      name = "log_listener_bin_test_rustc"
+      name = "log_listener_bin_test"
     },
   ]
 }

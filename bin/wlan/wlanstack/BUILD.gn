@@ -82,8 +82,8 @@ package("wlanstack2-tests") {
 
   tests = [
     {
-      name = "wlanstack2_bin_test_rustc"
-      dest = "wlanstack2_bin_test_rustc"
+      name = "wlanstack2_bin_test"
+      dest = "wlanstack2_bin_test"
     },
   ]
 }

@@ -31,7 +31,7 @@ package("connectivity-testing-tests") {
   ]
   tests = [
     {
-      name = "connectivity_testing_lib_test_rustc"
+      name = "connectivity_testing_lib_test"
     },
   ]
 }

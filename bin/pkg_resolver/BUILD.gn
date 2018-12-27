@@ -58,7 +58,7 @@ test_package("pkg_resolver_tests") {
 
   tests = [
     {
-      name = "pkg_resolver_bin_test_rustc"
+      name = "pkg_resolver_bin_test"
     },
   ]
 }

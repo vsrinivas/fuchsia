@@ -52,7 +52,7 @@ test_package("pkg_ctl_tests") {
 
   tests = [
     {
-      name = "pkgctl_bin_test_rustc"
+      name = "pkgctl_bin_test"
     },
   ]
 }

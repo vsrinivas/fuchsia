@@ -21,7 +21,7 @@ package("fidl_fuchsia_net_ext_tests") {
   ]
   tests = [
     {
-      name = "fidl_fuchsia_net_ext_lib_test_rustc"
+      name = "fidl_fuchsia_net_ext_lib_test"
     },
   ]
 }

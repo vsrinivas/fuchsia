@@ -36,5 +36,5 @@ package("wlan-rsn-tests") {
     ":wlan-rsn"
   ]
 
-  tests = [ { name = "wlan_rsn_lib_test_rustc" } ]
+  tests = [ { name = "wlan_rsn_lib_test" } ]
 }

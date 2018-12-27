@@ -60,7 +60,7 @@ package("stash_tests") {
 
   tests = [
     {
-      name = "stash_bin_test_rustc"
+      name = "stash_bin_test"
     },
   ]
 }

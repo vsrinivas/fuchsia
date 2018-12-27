@@ -55,8 +55,8 @@ package("wlan-hw-sim-tests") {
 
   tests = [
     {
-      name = "wlan_hw_sim_bin_test_rustc"
-      dest = "wlan-hw-sim_bin_test_rustc"
+      name = "wlan_hw_sim_bin_test"
+      dest = "wlan-hw-sim_bin_test"
     },
   ]
 }

@@ -25,7 +25,7 @@ package("fidl_fuchsia_hardware_ethernet_ext_tests") {
   ]
   tests = [
     {
-      name = "fidl_fuchsia_hardware_ethernet_ext_lib_test_rustc"
+      name = "fidl_fuchsia_hardware_ethernet_ext_lib_test"
     },
   ]
 }

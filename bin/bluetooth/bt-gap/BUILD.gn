@@ -61,7 +61,7 @@ test_package("tests") {
 
   tests = [
     {
-      name = "bt_gap_bin_test_rustc"
+      name = "bt_gap_bin_test"
       dest = "bt-gap-unittests"
     }
   ]

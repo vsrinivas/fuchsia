@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/fuchsia_wayland_core_lib_test_rustc"
+        "binary": "test/fuchsia_wayland_core_lib_test"
     },
     "sandbox": {
         "features": [],

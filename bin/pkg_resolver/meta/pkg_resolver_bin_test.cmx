@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/pkg_resolver_bin_test"
+    }
+}

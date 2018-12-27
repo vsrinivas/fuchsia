@@ -50,7 +50,7 @@ package("power_manager_tests") {
 
   tests = [
     {
-      name = "power_manager_bin_test_rustc"
+      name = "power_manager_bin_test"
     },
   ]
 }

@@ -54,7 +54,7 @@ package("ril-qmi-tests") {
 
   tests = [
     {
-      name = "ril_qmi_bin_test_rustc"
+      name = "ril_qmi_bin_test"
       dest = "ril-qmi-tests"
     }
   ]

@@ -13,7 +13,7 @@ package("garnet-rust-examples") {
 
   # You need to include these for them to end up in the final image
   tests = [
-    { name = "testing_lib_test_rustc" },
+    { name = "testing_lib_test" },
     { name = "testing_integration_test" },
     { name = "testing_integration_test_two" },
   ]

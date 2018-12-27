@@ -35,7 +35,7 @@ package("tests") {
 
   tests = [
     {
-      name = "fuchsia_bluetooth_lib_test_rustc"
+      name = "fuchsia_bluetooth_lib_test"
       dest = "bt-crate-unittests"
     }
   ]

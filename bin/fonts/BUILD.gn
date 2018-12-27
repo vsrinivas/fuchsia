@@ -171,7 +171,7 @@ package("font_provider_tests") {
 
   tests = [
     { name = "font_provider_test" },
-    { name = "font_server_bin_test_rustc" },
+    { name = "font_server_bin_test" },
   ]
 
   resources = [

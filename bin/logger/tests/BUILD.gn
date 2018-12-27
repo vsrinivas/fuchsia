@@ -13,7 +13,7 @@ test_package("logger_integration_tests") {
 
   tests = [
     {
-      name = "logger_integration_bin_test_rustc"
+      name = "logger_integration_bin_test"
     },
     {
       name = "logger_integration_cpp_tests"

@@ -25,7 +25,7 @@ test_package("escaped-cstring-tests") {
 
   tests = [
     {
-      name = "escaped_cstring_lib_test_rustc"
+      name = "escaped_cstring_lib_test"
     },
   ]
 }

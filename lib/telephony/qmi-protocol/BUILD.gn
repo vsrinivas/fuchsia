@@ -80,7 +80,7 @@ if (host_toolchain == current_toolchain) {
     testonly = true
 
     sources = [
-      "$root_out_dir/qmigen_unittests_lib_test_rustc",
+      "$root_out_dir/qmigen_unittests_lib_test",
     ]
 
     outputs = [

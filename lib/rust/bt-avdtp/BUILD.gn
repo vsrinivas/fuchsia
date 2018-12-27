@@ -34,7 +34,7 @@ package("tests") {
 
   tests = [
     {
-      name = "bt_avdtp_lib_test_rustc"
+      name = "bt_avdtp_lib_test"
       dest = "bt-avdtp-unittests"
     }
   ]

@@ -50,7 +50,7 @@ package("device_settings_manager_tests") {
 
   tests = [
     {
-      name = "device_settings_manager_bin_test_rustc"
+      name = "device_settings_manager_bin_test"
     },
   ]
 }
