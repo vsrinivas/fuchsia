@@ -3242,7 +3242,7 @@ static zx_status_t ath10k_update_channel_list(struct ath10k* ar) {
     }
 
     size_t len = sizeof(struct wmi_channel_arg) * arg.n_channels;
-    arg.channels = malloc(len);
+    arg.channels = calloc(1, len);
     if (!arg.channels) { return ZX_ERR_NO_MEMORY; }
 
     struct wmi_channel_arg* ch = arg.channels;
