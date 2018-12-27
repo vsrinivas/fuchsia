@@ -11,8 +11,8 @@
 #include <lib/async/cpp/task.h>
 #include <trace-engine/buffer_internal.h>
 #include <trace-engine/instrumentation.h>
-#include <trace/event.h>
 #include <trace-vthread/event_vthread.h>
+#include <trace/event.h>
 
 #include "handler.h"
 #include "runner.h"
@@ -39,16 +39,17 @@ public:
 
             loop.StartThread("trace-engine loop", nullptr);
 
-            RunAndMeasure(name, spec_->name, spec_->num_iterations, benchmark,
-                          [&handler] () { handler.Start(); },
-                          [&handler] () { handler.Stop(); });
+            RunAndMeasure(
+                name, spec_->name, spec_->num_iterations, benchmark,
+                [&handler]() { handler.Start(); },
+                [&handler]() { handler.Stop(); });
 
             loop.Quit();
             loop.JoinThreads();
         } else {
             // For the disabled benchmarks we just use the default number
             // of iterations.
-            RunAndMeasure(name, spec_->name, benchmark, [](){}, [](){});
+            RunAndMeasure(name, spec_->name, benchmark, []() {}, []() {});
         }
     }
 
@@ -57,6 +58,62 @@ private:
     // nullptr if |!enabled_|.
     const BenchmarkSpec* spec_;
 };
+
+#define DURATION_TEST(DURATION_MACRO, category_literal)               \
+    runner.Run(#DURATION_MACRO " macro with 0 arguments", [] {        \
+        DURATION_MACRO(category_literal, "name");                     \
+    });                                                               \
+                                                                      \
+    runner.Run(#DURATION_MACRO " macro with 1 int32 argument", [] {   \
+        DURATION_MACRO(category_literal, "name",                      \
+                       "k1", 1);                                      \
+    });                                                               \
+                                                                      \
+    runner.Run(#DURATION_MACRO " macro with 1 double argument", [] {  \
+        DURATION_MACRO(category_literal, "name",                      \
+                       "k1", 1.);                                     \
+    });                                                               \
+                                                                      \
+    runner.Run(#DURATION_MACRO " macro with 1 string argument", [] {  \
+        DURATION_MACRO(category_literal, "name",                      \
+                       "k1", "string1");                              \
+    });                                                               \
+                                                                      \
+    runner.Run(#DURATION_MACRO " macro with 4 int32 arguments", [] {  \
+        DURATION_MACRO(category_literal, "name",                      \
+                       "k1", 1, "k2", 2, "k3", 3, "k4", 4);           \
+    });                                                               \
+                                                                      \
+    runner.Run(#DURATION_MACRO " macro with 4 double arguments", [] { \
+        DURATION_MACRO(category_literal, "name",                      \
+                       "k1", 1., "k2", 2., "k3", 3., "k4", 4.);       \
+    });                                                               \
+                                                                      \
+    runner.Run(#DURATION_MACRO " macro with 4 string arguments", [] { \
+        DURATION_MACRO(category_literal, "name",                      \
+                       "k1", "string1", "k2", "string2", "k3",        \
+                       "string3", "k4", "string4");                   \
+    });                                                               \
+                                                                      \
+    runner.Run(#DURATION_MACRO " macro with 8 int32 arguments", [] {  \
+        DURATION_MACRO(category_literal, "name",                      \
+                       "k1", 1, "k2", 2, "k3", 3, "k4", 4,            \
+                       "k5", 5, "k6", 6, "k7", 7, "k8", 8);           \
+    });                                                               \
+                                                                      \
+    runner.Run(#DURATION_MACRO " macro with 8 double arguments", [] { \
+        DURATION_MACRO(category_literal, "name",                      \
+                       "k1", 1., "k2", 2., "k3", 3., "k4", 4.,        \
+                       "k5", 4., "k6", 5., "k7", 7., "k8", 8.);       \
+    });                                                               \
+                                                                      \
+    runner.Run(#DURATION_MACRO " macro with 8 string arguments", [] { \
+        DURATION_MACRO(category_literal, "name",                      \
+                       "k1", "string1", "k2", "string2",              \
+                       "k3", "string3", "k4", "string4",              \
+                       "k5", "string5", "k6", "string6",              \
+                       "k7", "string7", "k8", "string8");             \
+    });
 
 void RunBenchmarks(bool tracing_enabled, const BenchmarkSpec* spec) {
     Runner runner(tracing_enabled, spec);
@@ -98,83 +155,16 @@ void RunBenchmarks(bool tracing_enabled, const BenchmarkSpec* spec) {
         });
     }
 
-    runner.Run("TRACE_DURATION_BEGIN macro with 0 arguments", [] {
-        TRACE_DURATION_BEGIN("+enabled", "name");
-    });
-
-    runner.Run("TRACE_DURATION_BEGIN macro with 1 int32 argument", [] {
-        TRACE_DURATION_BEGIN("+enabled", "name",
-                             "k1", 1);
-    });
-
-    runner.Run("TRACE_DURATION_BEGIN macro with 1 double argument", [] {
-        TRACE_DURATION_BEGIN("+enabled", "name",
-                             "k1", 1.);
-    });
-
-    runner.Run("TRACE_DURATION_BEGIN macro with 1 string argument", [] {
-        TRACE_DURATION_BEGIN("+enabled", "name",
-                             "k1", "string1");
-    });
-
-    runner.Run("TRACE_DURATION_BEGIN macro with 4 int32 arguments", [] {
-        TRACE_DURATION_BEGIN("+enabled", "name",
-                             "k1", 1, "k2", 2, "k3", 3, "k4", 4);
-    });
-
-    runner.Run("TRACE_DURATION_BEGIN macro with 4 double arguments", [] {
-        TRACE_DURATION_BEGIN("+enabled", "name",
-                             "k1", 1., "k2", 2., "k3", 3., "k4", 4.);
-    });
-
-    runner.Run("TRACE_DURATION_BEGIN macro with 4 string arguments", [] {
-        TRACE_DURATION_BEGIN("+enabled", "name",
-                             "k1", "string1", "k2", "string2", "k3", "string3", "k4", "string4");
-    });
-
-    runner.Run("TRACE_DURATION_BEGIN macro with 8 int32 arguments", [] {
-        TRACE_DURATION_BEGIN("+enabled", "name",
-                             "k1", 1, "k2", 2, "k3", 3, "k4", 4,
-                             "k5", 5, "k6", 6, "k7", 7, "k8", 8);
-    });
-
-    runner.Run("TRACE_DURATION_BEGIN macro with 8 double arguments", [] {
-        TRACE_DURATION_BEGIN("+enabled", "name",
-                             "k1", 1., "k2", 2., "k3", 3., "k4", 4.,
-                             "k5", 4., "k6", 5., "k7", 7., "k8", 8.);
-    });
-
-    runner.Run("TRACE_DURATION_BEGIN macro with 8 string arguments", [] {
-        TRACE_DURATION_BEGIN("+enabled", "name",
-                             "k1", "string1", "k2", "string2", "k3", "string3", "k4", "string4",
-                             "k5", "string5", "k6", "string6", "k7", "string7", "k8", "string8");
-    });
+    DURATION_TEST(TRACE_DURATION_BEGIN, "+enabled");
+    DURATION_TEST(TRACE_DURATION, "+enabled");
 
     runner.Run("TRACE_VTHREAD_DURATION_BEGIN macro with 0 arguments", [] {
         TRACE_VTHREAD_DURATION_BEGIN("+enabled", "name", "vthread", 1, zx_ticks_get());
     });
 
-
     if (tracing_enabled) {
-        runner.Run("TRACE_DURATION_BEGIN macro with 0 arguments for disabled category", [] {
-            TRACE_DURATION_BEGIN("-disabled", "name");
-        });
-
-        runner.Run("TRACE_DURATION_BEGIN macro with 1 int32 argument for disabled category", [] {
-            TRACE_DURATION_BEGIN("-disabled", "name",
-                                 "k1", 1);
-        });
-
-        runner.Run("TRACE_DURATION_BEGIN macro with 4 int32 arguments for disabled category", [] {
-            TRACE_DURATION_BEGIN("-disabled", "name",
-                                 "k1", 1, "k2", 2, "k3", 3, "k4", 4);
-        });
-
-        runner.Run("TRACE_DURATION_BEGIN macro with 8 int32 arguments for disabled category", [] {
-            TRACE_DURATION_BEGIN("-disabled", "name",
-                                 "k1", 1, "k2", 2, "k3", 3, "k4", 4,
-                                 "k5", 5, "k6", 6, "k7", 7, "k8", 8);
-        });
+        DURATION_TEST(TRACE_DURATION_BEGIN, "-disabled");
+        DURATION_TEST(TRACE_DURATION, "-disabled");
 
         runner.Run("TRACE_VTHREAD_DURATION_BEGIN macro with 0 arguments for disabled category", [] {
             TRACE_VTHREAD_DURATION_BEGIN("-disabled", "name", "vthread", 1, zx_ticks_get());
