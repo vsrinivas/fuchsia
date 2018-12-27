@@ -180,6 +180,30 @@ std::string BrEdrConnectionManager::GetPeerId(
   return device->identifier();
 }
 
+bool BrEdrConnectionManager::OpenL2capChannel(const std::string& device_id,
+                                              l2cap::PSM psm, SocketCallback cb,
+                                              async_dispatcher_t* dispatcher) {
+  auto* device = cache_->FindDeviceById(device_id);
+  if (!device || !device->bredr() || !device->bredr()->connected()) {
+    return false;
+  }
+
+  auto it = std::find_if(connections_.begin(), connections_.end(),
+                         [&](const auto& x) {
+                           return x.second->peer_address() == device->address();
+                         });
+
+  // If we're connected we must have an ID
+  ZX_DEBUG_ASSERT_MSG(it != connections_.end(),
+                      "couldn't find handle for device %s", device_id.c_str());
+
+  data_domain_->OpenL2capChannel(
+      it->first, psm,
+      [cb = std::move(cb)](zx::socket s, auto) { cb(std::move(s)); },
+      dispatcher);
+  return true;
+}
+
 void BrEdrConnectionManager::WritePageScanSettings(uint16_t interval,
                                                    uint16_t window,
                                                    bool interlaced,

@@ -32,6 +32,14 @@ interface Profile {
     // Removes a previously-registered service, disconnecting all clients.
     RemoveService(uint64 service_id);
 
+    // Connect a channel to the connected remote device |remote_id| using the
+    // protocol and channel listed. For L2CAP, dynamic PSMs can be specified.
+    // See the defined PSMs in `service.fidl`
+    // Returns the channel after it has been connected. |status| will indicate
+    // an error if the channel could not be connected.
+    ConnectL2cap(string remote_id, uint16 psm)
+        -> (fuchsia.bluetooth.Status status, handle<socket> channel);
+
     // Produced when a protocol channel is connected for this profile.
     // |channel| contains the channel connected to, and information about the
     // protocol is provided in |protocol|. All protocols supported internally will

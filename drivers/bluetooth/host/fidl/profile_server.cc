@@ -302,8 +302,8 @@ void ProfileServer::AddService(fidlbredr::ServiceDefinition definition,
 
   for (const auto& info : definition.information) {
     bt_log(SPEW, "profile_server", "Adding Info (%s): (%s, %s, %s)",
-           info.language.c_str(), info.name->c_str(),
-           info.description->c_str(), info.provider->c_str());
+           info.language.c_str(), info.name->c_str(), info.description->c_str(),
+           info.provider->c_str());
     rec.AddInfo(info.language, info.name, info.description, info.provider);
   }
 
@@ -343,6 +343,22 @@ void ProfileServer::RemoveService(uint64_t service_id) {
     ZX_DEBUG_ASSERT(server);
     server->UnregisterService(it->second);
     registered_.erase(it);
+  }
+}
+
+void ProfileServer::ConnectL2cap(std::string remote_id, uint16_t channel,
+                                 ConnectL2capCallback callback) {
+  auto connected_cb = [cb = callback.share()](zx::socket channel) {
+    cb(fidl_helpers::StatusToFidl(btlib::sdp::Status()), std::move(channel));
+  };
+  bool connecting = adapter()->bredr_connection_manager()->OpenL2capChannel(
+      std::move(remote_id), channel, std::move(connected_cb),
+      async_get_default_dispatcher());
+  if (!connecting) {
+    callback(
+        fidl_helpers::NewFidlError(
+            ErrorCode::NOT_FOUND, "Remote device not found - is it connected?"),
+        zx::socket());
   }
 }
 

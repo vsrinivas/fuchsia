@@ -49,6 +49,12 @@ class BrEdrConnectionManager final {
   // Retrieves the device id that is connected to the connection |handle|.
   std::string GetPeerId(hci::ConnectionHandle handle) const;
 
+  // Opens a new L2CAP channel to the already-connected |device_id| on psm
+  // |psm|.  Returns false if the device is not already connected.
+  using SocketCallback = fit::function<void(zx::socket)>;
+  bool OpenL2capChannel(const std::string& device_id, l2cap::PSM psm,
+                        SocketCallback cb, async_dispatcher_t* dispatcher);
+
  private:
   // Reads the controller page scan settings.
   void ReadPageScanSettings();
@@ -56,10 +62,8 @@ class BrEdrConnectionManager final {
   // Writes page scan parameters to the controller.
   // If |interlaced| is true, and the controller does not support interlaced
   // page scan mode, standard mode is used.
-  void WritePageScanSettings(uint16_t interval,
-                             uint16_t window,
-                             bool interlaced,
-                             hci::StatusCallback cb);
+  void WritePageScanSettings(uint16_t interval, uint16_t window,
+                             bool interlaced, hci::StatusCallback cb);
 
   // Helper to register an event handler to run.
   hci::CommandChannel::EventHandlerId AddEventHandler(

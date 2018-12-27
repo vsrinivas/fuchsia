@@ -31,6 +31,8 @@ class ProfileServer
                   fuchsia::bluetooth::bredr::SecurityLevel sec_level,
                   bool devices, AddServiceCallback callback) override;
   void RemoveService(uint64_t service_id) override;
+  void ConnectL2cap(std::string remote_id, uint16_t psm,
+                    ConnectL2capCallback callback) override;
 
   // Callback for incoming connections
   void OnChannelConnected(uint64_t service_id, zx::socket connection,
