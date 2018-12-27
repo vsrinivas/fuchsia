@@ -96,7 +96,9 @@ AutoGich::AutoGich(GichState* gich_state)
 
     // Load
     gic_write_gich_vmcr(gich_state_->vmcr);
-    gic_write_gich_apr(gich_state_->apr);
+    for (uint32_t i = 0; i < gich_state_->num_aprs; i++) {
+        gic_write_gich_apr(i, gich_state_->apr[i]);
+    }
     for (uint32_t i = 0; i < gich_state_->num_lrs; i++) {
         uint64_t lr = gich_state->lr[i];
         gic_write_gich_lr(i, lr);
@@ -120,7 +122,9 @@ AutoGich::~AutoGich() {
     // Save
     gich_state_->vmcr = gic_read_gich_vmcr();
     gich_state_->elrsr = gic_read_gich_elrsr();
-    gich_state_->apr = gic_read_gich_apr();
+    for (uint32_t i = 0; i < gich_state_->num_aprs; i++) {
+        gich_state_->apr[i] = gic_read_gich_apr(i);
+    }
     for (uint32_t i = 0; i < gich_state_->num_lrs; i++) {
         gich_state_->lr[i] = !BIT(gich_state_->elrsr, i) ? gic_read_gich_lr(i) : 0;
     }
@@ -135,6 +139,21 @@ zx_status_t El2StatePtr::Alloc() {
     }
     state_ = page_.VirtualAddress<El2State>();
     return ZX_OK;
+}
+
+// Returns the number of active priorities registers, based on the number of
+// preemption bits.
+//
+// From ARM GIC v2, Section 5.3.2: The number of preemption bits implemented,
+// minus one. In GICv2, the only valid value is 5 bits.
+//
+// From ARM GIC v3/v4, Section 8.4.2: If 5 bits of preemption are implemented
+// (bits [7:3] of priority), then there are 32 preemption levels... If 6 bits of
+// preemption are implemented (bits [7:2] of priority), then there are 64
+// preemption levels... If 7 bits of preemption are implemented (bits [7:1] of
+// priority), then there are 128 preemption levels...
+static uint32_t num_aprs(uint32_t num_pres) {
+    return 1u << (num_pres - 5u);
 }
 
 // static
@@ -172,10 +191,10 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
     }
 
     vcpu->gich_state_.active_interrupts.Reset(kNumInterrupts);
+    vcpu->gich_state_.num_aprs = num_aprs(gic_get_num_pres());
     vcpu->gich_state_.num_lrs = gic_get_num_lrs();
     vcpu->gich_state_.vmcr = gic_default_gich_vmcr();
     vcpu->gich_state_.elrsr = (1ul << gic_get_num_lrs()) - 1;
-    vcpu->gich_state_.apr = 0;
     vcpu->el2_state_->guest_state.system_state.elr_el2 = entry;
     vcpu->el2_state_->guest_state.system_state.spsr_el2 = kSpsrDaif | kSpsrEl1h;
     uint64_t mpidr = __arm_rsr64("mpidr_el1");

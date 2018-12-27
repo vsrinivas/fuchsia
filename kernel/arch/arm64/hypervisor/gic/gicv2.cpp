@@ -54,7 +54,7 @@ static uint32_t gicv2_read_gich_vtr() {
 }
 
 static uint32_t gicv2_default_gich_vmcr() {
-    return GICH_VMCR_VPMR_MASK | GICH_VMCR_VENG0;
+    return GICH_VMCR_VPMR | GICH_VMCR_VENG0;
 }
 
 static uint32_t gicv2_read_gich_vmcr() {
@@ -73,11 +73,13 @@ static uint64_t gicv2_read_gich_elrsr() {
     return gich->elrsr0 | (static_cast<uint64_t>(gich->elrsr1) << 32);
 }
 
-static uint32_t gicv2_read_gich_apr() {
+static uint32_t gicv2_read_gich_apr(uint32_t idx) {
+    DEBUG_ASSERT(idx == 0);
     return gich->apr;
 }
 
-static void gicv2_write_gich_apr(uint32_t val) {
+static void gicv2_write_gich_apr(uint32_t idx, uint32_t val) {
+    DEBUG_ASSERT(idx == 0);
     gich->apr = val;
 }
 
@@ -121,8 +123,12 @@ static uint32_t gicv2_get_vector_from_lr(uint64_t lr) {
     return lr & GICH_LR_VIRTUAL_ID(UINT64_MAX);
 }
 
+static uint32_t gicv2_get_num_pres() {
+    return GICH_VTR_PRES(gicv2_read_gich_vtr());
+}
+
 static uint32_t gicv2_get_num_lrs() {
-    return (gicv2_read_gich_vtr() & GICH_VTR_LIST_REGS_MASK) + 1;
+    return GICH_VTR_LRS(gicv2_read_gich_vtr());
 }
 
 static const struct arm_gic_hw_interface_ops gic_hw_register_ops = {
@@ -140,6 +146,7 @@ static const struct arm_gic_hw_interface_ops gic_hw_register_ops = {
     .get_gicv = gicv2_get_gicv,
     .get_lr_from_vector = gicv2_get_lr_from_vector,
     .get_vector_from_lr = gicv2_get_vector_from_lr,
+    .get_num_pres = gicv2_get_num_pres,
     .get_num_lrs = gicv2_get_num_lrs,
 };
 

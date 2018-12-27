@@ -64,10 +64,11 @@ struct GichState {
     bitmap::RawBitmapGeneric<bitmap::FixedStorage<kNumInterrupts>> active_interrupts;
 
     // GICH state to be restored between VM exits.
+    uint32_t num_aprs;
     uint32_t num_lrs;
     uint32_t vmcr;
     uint64_t elrsr;
-    uint32_t apr;
+    uint32_t apr[4] = {};
     uint64_t lr[64] = {};
 };
 

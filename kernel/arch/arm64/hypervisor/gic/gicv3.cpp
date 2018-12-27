@@ -10,6 +10,7 @@
 #include <dev/interrupt/arm_gic_hw_interface.h>
 #include <dev/interrupt/arm_gicv3_regs.h>
 
+static constexpr uint32_t kNumAprs = 4;
 static constexpr uint32_t kNumLrs = 16;
 
 static void gicv3_write_gich_hcr(uint32_t val) {
@@ -21,7 +22,7 @@ static uint32_t gicv3_read_gich_vtr() {
 }
 
 static uint32_t gicv3_default_gich_vmcr() {
-    return ICH_VMCR_VPMR_MASK | ICH_VMCR_VENG1;
+    return ICH_VMCR_VPMR | ICH_VMCR_VENG1;
 }
 
 static uint32_t gicv3_read_gich_vmcr() {
@@ -40,12 +41,14 @@ static uint64_t gicv3_read_gich_elrsr() {
     return arm64_el2_gicv3_read_gich_elrsr();
 }
 
-static uint32_t gicv3_read_gich_apr() {
-    return arm64_el2_gicv3_read_gich_apr();
+static uint32_t gicv3_read_gich_apr(uint32_t idx) {
+    DEBUG_ASSERT(idx < kNumAprs);
+    return arm64_el2_gicv3_read_gich_apr(idx);
 }
 
-static void gicv3_write_gich_apr(uint32_t val) {
-    arm64_el2_gicv3_write_gich_apr(val);
+static void gicv3_write_gich_apr(uint32_t idx, uint32_t val) {
+    DEBUG_ASSERT(idx < kNumAprs);
+    arm64_el2_gicv3_write_gich_apr(val, idx);
 }
 
 static uint64_t gicv3_read_gich_lr(uint32_t idx) {
@@ -95,8 +98,12 @@ static uint32_t gicv3_get_vector_from_lr(uint64_t lr) {
     return lr & ICH_LR_VIRTUAL_ID(UINT64_MAX);
 }
 
+static uint32_t gicv3_get_num_pres() {
+    return ICH_VTR_PRES(gicv3_read_gich_vtr());
+}
+
 static uint32_t gicv3_get_num_lrs() {
-    return (gicv3_read_gich_vtr() & ICH_VTR_LIST_REGS_MASK) + 1;
+    return ICH_VTR_LRS(gicv3_read_gich_vtr());
 }
 
 static const struct arm_gic_hw_interface_ops gic_hw_register_ops = {
@@ -114,6 +121,7 @@ static const struct arm_gic_hw_interface_ops gic_hw_register_ops = {
     .get_gicv = gicv3_get_gicv,
     .get_lr_from_vector = gicv3_get_lr_from_vector,
     .get_vector_from_lr = gicv3_get_vector_from_lr,
+    .get_num_pres = gicv3_get_num_pres,
     .get_num_lrs = gicv3_get_num_lrs,
 };
 

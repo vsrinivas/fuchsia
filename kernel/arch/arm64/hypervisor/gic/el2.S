@@ -8,64 +8,71 @@
 #include <asm.h>
 #include <zircon/errors.h>
 
-// For details please refer to ARM Generic Interrupt Controller Architecture Specification,
-// GIC architecture version 3.0 and version 4.0. Table 8-6 Mapping of MSR and MRS to
-// virtual interface control registers, AArch64 state and Table 8-8 Mapping of MCR and
-// MRC to virtual interface control registers, AArch32 state.
-#define ICH_AP0R0_EL2                   S3_4_C12_C8_0
-#define ICH_HCR_EL2                     S3_4_C12_C11_0
-#define ICH_VTR_EL2                     S3_4_C12_C11_1
-#define ICH_MISR_EL2                    S3_4_C12_C11_2
-#define ICH_ELRSR_EL2                   S3_4_C12_C11_5
-#define ICH_VMCR_EL2                    S3_4_C12_C11_7
+// For details please refer to ARM Generic Interrupt Controller Architecture
+// Specification, version 3.0 and version 4.0. Table 8-6 Mapping of MSR and MRS
+// to virtual interface control registers, AArch64 state and Table 8-8 Mapping
+// of MCR and MRC to virtual interface control registers, AArch32 state.
 
-#define ICH_AP0R0_EL2_ID                0
-#define ICH_HCR_EL2_ID                  1
-#define ICH_VTR_EL2_ID                  2
-#define ICH_MISR_EL2_ID                 3
-#define ICH_ELRSR_EL2_ID                4
-#define ICH_VMCR_EL2_ID                 5
-#define ICH_LR_EL2_ID                   6
+#define ICH_HCR_EL2         S3_4_C12_C11_0
+#define ICH_VTR_EL2         S3_4_C12_C11_1
+#define ICH_MISR_EL2        S3_4_C12_C11_2
+#define ICH_ELRSR_EL2       S3_4_C12_C11_5
+#define ICH_VMCR_EL2        S3_4_C12_C11_7
 
-#define LR0_EL2(x)                      S3_4_C12_C12_ ## x
-#define LR8_EL2(x)                      S3_4_C12_C13_ ## x
+#define ICH_AP1R0_EL2_ID    0
+#define ICH_HCR_EL2_ID      1
+#define ICH_VTR_EL2_ID      2
+#define ICH_MISR_EL2_ID     3
+#define ICH_ELRSR_EL2_ID    4
+#define ICH_VMCR_EL2_ID     5
+#define ICH_LR_EL2_ID       6
 
-#define ICH_LR0                         LR0_EL2(0)
-#define ICH_LR1                         LR0_EL2(1)
-#define ICH_LR2                         LR0_EL2(2)
-#define ICH_LR3                         LR0_EL2(3)
-#define ICH_LR4                         LR0_EL2(4)
-#define ICH_LR5                         LR0_EL2(5)
-#define ICH_LR6                         LR0_EL2(6)
-#define ICH_LR7                         LR0_EL2(7)
-#define ICH_LR8                         LR8_EL2(0)
-#define ICH_LR9                         LR8_EL2(1)
-#define ICH_LR10                        LR8_EL2(2)
-#define ICH_LR11                        LR8_EL2(3)
-#define ICH_LR12                        LR8_EL2(4)
-#define ICH_LR13                        LR8_EL2(5)
-#define ICH_LR14                        LR8_EL2(6)
-#define ICH_LR15                        LR8_EL2(7)
+#define ICH_AP1R(x)         S3_4_C12_C9_ ## x
 
-#define ICH_LR(x)                       ICH_LR ## x
+#define LR0_EL2(x)          S3_4_C12_C12_ ## x
+#define LR8_EL2(x)          S3_4_C12_C13_ ## x
 
-#define READ_SYSREG_ID            0
-#define WRITE_SYSREG_ID           1
+#define ICH_LR0             LR0_EL2(0)
+#define ICH_LR1             LR0_EL2(1)
+#define ICH_LR2             LR0_EL2(2)
+#define ICH_LR3             LR0_EL2(3)
+#define ICH_LR4             LR0_EL2(4)
+#define ICH_LR5             LR0_EL2(5)
+#define ICH_LR6             LR0_EL2(6)
+#define ICH_LR7             LR0_EL2(7)
+#define ICH_LR8             LR8_EL2(0)
+#define ICH_LR9             LR8_EL2(1)
+#define ICH_LR10            LR8_EL2(2)
+#define ICH_LR11            LR8_EL2(3)
+#define ICH_LR12            LR8_EL2(4)
+#define ICH_LR13            LR8_EL2(5)
+#define ICH_LR14            LR8_EL2(6)
+#define ICH_LR15            LR8_EL2(7)
+
+#define ICH_LR(x)           ICH_LR ## x
+
+#define READ_SYSREG_ID      0
+#define WRITE_SYSREG_ID     1
 
 .section .text.el2,"ax",@progbits
 .align 12
 
-.macro read_sysreg literal
+.macro entry_read_sysreg literal
     mrs x0, \literal
     b el2_gicv3_done
 .endm
 
-.macro write_sysreg literal
+.macro entry_write_sysreg literal
     msr \literal, x0
     b el2_gicv3_done
 .endm
 
-.macro invalid_entry
+.macro entry_branch_to label
+    b \label
+    nop
+.endm
+
+.macro entry_invalid
     b el2_gicv3_done
     nop
 .endm
@@ -88,41 +95,63 @@ FUNCTION_LABEL(el2_hvc_sysreg)
     gic_jump .Lread_sys x3
 
 .Lread_sys:
-    read_sysreg ICH_AP0R0_EL2
-    invalid_entry   // ICH_HCR_EL2 is write-only.
-    read_sysreg ICH_VTR_EL2
-    read_sysreg ICH_MISR_EL2
-    read_sysreg ICH_ELRSR_EL2
-    read_sysreg ICH_VMCR_EL2
-    b el2_gicv3_read_lr
+    entry_branch_to el2_gicv3_read_apr
+    entry_invalid   // ICH_HCR_EL2 is write-only.
+    entry_read_sysreg ICH_VTR_EL2
+    entry_read_sysreg ICH_MISR_EL2
+    entry_read_sysreg ICH_ELRSR_EL2
+    entry_read_sysreg ICH_VMCR_EL2
+    entry_branch_to el2_gicv3_read_lr
 
 .write_sys:
     gic_jump .Lwrite_sys x3
 
 .Lwrite_sys:
-    write_sysreg ICH_AP0R0_EL2
-    write_sysreg ICH_HCR_EL2
-    invalid_entry   // ICH_VTR_EL2 is read-only.
-    invalid_entry   // ICH_MISR_EL2 is read-only.
-    invalid_entry   // ICH_ELRSR_EL2 is read-only.
-    write_sysreg ICH_VMCR_EL2
-    b el2_gicv3_write_lr
+    entry_branch_to el2_gicv3_write_apr
+    entry_write_sysreg ICH_HCR_EL2
+    entry_invalid   // ICH_VTR_EL2 is read-only.
+    entry_invalid   // ICH_MISR_EL2 is read-only.
+    entry_invalid   // ICH_ELRSR_EL2 is read-only.
+    entry_write_sysreg ICH_VMCR_EL2
+    entry_branch_to el2_gicv3_write_lr
 
-// uint32_t arm64_el2_gicv3_read_gich_apr();
+// uint32_t arm64_el2_gicv3_read_gich_apr(uint32_t idx);
 FUNCTION(arm64_el2_gicv3_read_gich_apr)
+    mov x1, x0
     mov x2, READ_SYSREG_ID
-    mov x3, ICH_AP0R0_EL2_ID
+    mov x3, ICH_AP1R0_EL2_ID
     hvc 5
     ret
 END_FUNCTION(arm64_el2_gicv3_read_gich_apr)
 
-// void arm64_el2_gicv3_write_gich_apr(uint32_t val)
+// void arm64_el2_gicv3_write_gich_apr(uint32_t val, uint32_t idx)
 FUNCTION(arm64_el2_gicv3_write_gich_apr)
     mov x2, WRITE_SYSREG_ID
-    mov x3, ICH_AP0R0_EL2_ID
+    mov x3, ICH_AP1R0_EL2_ID
     hvc 5
     ret
 END_FUNCTION(arm64_el2_gicv3_write_gich_apr)
+
+// x1 - Index for APR register
+FUNCTION_LABEL(el2_gicv3_read_apr)
+    gic_jump .Lapr_read_table x1
+
+.Lapr_read_table:
+    entry_read_sysreg ICH_AP1R(0)
+    entry_read_sysreg ICH_AP1R(1)
+    entry_read_sysreg ICH_AP1R(2)
+    entry_read_sysreg ICH_AP1R(3)
+
+// x0 - Value to write
+// x1 - Index for APR register
+FUNCTION_LABEL(el2_gicv3_write_apr)
+    gic_jump .Lapr_write_table x1
+
+.Lapr_write_table:
+    entry_write_sysreg ICH_AP1R(0)
+    entry_write_sysreg ICH_AP1R(1)
+    entry_write_sysreg ICH_AP1R(2)
+    entry_write_sysreg ICH_AP1R(3)
 
 // uint32_t arm64_el2_gicv3_read_gich_hcr();
 FUNCTION(arm64_el2_gicv3_read_gich_hcr)
@@ -202,22 +231,22 @@ FUNCTION_LABEL(el2_gicv3_read_lr)
     gic_jump .Llr_read_table x1
 
 .Llr_read_table:
-    read_sysreg ICH_LR(0)
-    read_sysreg ICH_LR(1)
-    read_sysreg ICH_LR(2)
-    read_sysreg ICH_LR(3)
-    read_sysreg ICH_LR(4)
-    read_sysreg ICH_LR(5)
-    read_sysreg ICH_LR(6)
-    read_sysreg ICH_LR(7)
-    read_sysreg ICH_LR(8)
-    read_sysreg ICH_LR(9)
-    read_sysreg ICH_LR(10)
-    read_sysreg ICH_LR(11)
-    read_sysreg ICH_LR(12)
-    read_sysreg ICH_LR(13)
-    read_sysreg ICH_LR(14)
-    read_sysreg ICH_LR(15)
+    entry_read_sysreg ICH_LR(0)
+    entry_read_sysreg ICH_LR(1)
+    entry_read_sysreg ICH_LR(2)
+    entry_read_sysreg ICH_LR(3)
+    entry_read_sysreg ICH_LR(4)
+    entry_read_sysreg ICH_LR(5)
+    entry_read_sysreg ICH_LR(6)
+    entry_read_sysreg ICH_LR(7)
+    entry_read_sysreg ICH_LR(8)
+    entry_read_sysreg ICH_LR(9)
+    entry_read_sysreg ICH_LR(10)
+    entry_read_sysreg ICH_LR(11)
+    entry_read_sysreg ICH_LR(12)
+    entry_read_sysreg ICH_LR(13)
+    entry_read_sysreg ICH_LR(14)
+    entry_read_sysreg ICH_LR(15)
 
 // x0 - Value to write
 // x1 - Index for LR register
@@ -225,22 +254,22 @@ FUNCTION_LABEL(el2_gicv3_write_lr)
     gic_jump .Llr_write_table x1
 
 .Llr_write_table:
-    write_sysreg ICH_LR(0)
-    write_sysreg ICH_LR(1)
-    write_sysreg ICH_LR(2)
-    write_sysreg ICH_LR(3)
-    write_sysreg ICH_LR(4)
-    write_sysreg ICH_LR(5)
-    write_sysreg ICH_LR(6)
-    write_sysreg ICH_LR(7)
-    write_sysreg ICH_LR(8)
-    write_sysreg ICH_LR(9)
-    write_sysreg ICH_LR(10)
-    write_sysreg ICH_LR(11)
-    write_sysreg ICH_LR(12)
-    write_sysreg ICH_LR(13)
-    write_sysreg ICH_LR(14)
-    write_sysreg ICH_LR(15)
+    entry_write_sysreg ICH_LR(0)
+    entry_write_sysreg ICH_LR(1)
+    entry_write_sysreg ICH_LR(2)
+    entry_write_sysreg ICH_LR(3)
+    entry_write_sysreg ICH_LR(4)
+    entry_write_sysreg ICH_LR(5)
+    entry_write_sysreg ICH_LR(6)
+    entry_write_sysreg ICH_LR(7)
+    entry_write_sysreg ICH_LR(8)
+    entry_write_sysreg ICH_LR(9)
+    entry_write_sysreg ICH_LR(10)
+    entry_write_sysreg ICH_LR(11)
+    entry_write_sysreg ICH_LR(12)
+    entry_write_sysreg ICH_LR(13)
+    entry_write_sysreg ICH_LR(14)
+    entry_write_sysreg ICH_LR(15)
 
 FUNCTION_LABEL(el2_gicv3_done)
     msr vttbr_el2, xzr
