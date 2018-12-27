@@ -14,6 +14,37 @@ device and its processes. Samples are collected for global and per-process CPU,
 memory usage, and process list which are relayed to the Host computer for
 display.
 
+## Terms
+
+#### Logical Sample Value
+A mathematically generated summary of 0 to many (physical) Samples. E.g. if we
+render 3 columns on the screen for 12 actual Samples, each Logical Sample Value
+will be computed from 4 actual Samples. If no scaling is done by GUI, then each
+Logical Sample will naturally align with one column of the rendered graph.
+
+#### Normalize
+#### Sample
+The physical Samples that taken together make up a Logical Sample.
+
+#### Sample Set
+A portion of a |Sample Stream|.
+
+#### Sample Category
+The logical, named idea of where Samples come from. E.g. "cpu0", "physMem",
+"procCount" are Sample Categories.
+
+#### Sample Stream
+An ordered set of Samples for a given Sample Category. E.g. all the Samples for
+"cpu0".
+
+#### Sample Stream ID
+#### Sample Stream Name
+#### Smooth
+
+#### Request
+#### Response
+
+
 ## Main Components
 
 The main components of the System Monitor execute as separate processes (either
