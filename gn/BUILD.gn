@@ -146,12 +146,9 @@ action("breakpad_symbols") {
     "$root_out_dir/ids.txt",
   ]
 
-  # This action generates a single xxx.sym file for each binary in the ids file.
-  # These symbol files are not used as the input to another build step, so we
-  # don't list them as outputs. The summary file is all we need for infra to
-  # find and upload the symbol files.
+  # This action generates a single xxx.sym file for each binary in the ids file
+  # and produces an archived output of them all.
   outputs = [
-    "$root_out_dir/breakpad_symbols/symbol_file_mappings.json",
     "$root_out_dir/breakpad_symbols/breakpad_symbols.tar.gz",
   ]
 
@@ -162,12 +159,10 @@ action("breakpad_symbols") {
            rebase_path("$root_out_dir/breakpad_symbols"),
            "-dump-syms-path",
            rebase_path("//buildtools/${host_platform}/dump_syms/dump_syms"),
-           "-summary-file",
-           rebase_path(outputs[0], root_build_dir),
            "-depfile",
            rebase_path(depfile, root_build_dir),
            "-tar-file",
-           rebase_path(outputs[1], root_build_dir),
+           rebase_path(outputs[0], root_build_dir),
          ] + rebase_path(sources, root_build_dir)
 }
 
