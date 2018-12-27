@@ -67,33 +67,34 @@ std::vector<ActiveSession> FindAllSessions() {
 }
 
 std::string GetUsage() {
-  return R"(sessionctl <flags> <command>
+  return R"(sessionctl <flags> <command> <argument>
     Example:
-    sessionctl --mod_url=slider_mod --mod_name=mod1 --story_name=story1
-               --focus_mod --focus_story add_mod
+    sessionctl add_mod slider_mod
+
+    sessionctl --mod_name=mod1 --story_name=story1 --focus_mod=false 
+               --focus_story=false add_mod slider_mod
 
     sessionctl --mod_name=mod1 --story_name=story1 remove_mod
 
     <flags>
     --story_name=STORY_NAME
     --mod_name=MOD_NAME
-    --mod_url=MOD_URL
-        mods have a unique "mod_url".
-        It is the mod package's name.
-        In BUILD.gn fuchsia_package_name = "mod_url" or mod_url comes from
-        flutter_app("mod_url") when there is no fuchsia_package_name set.
-    --focus_mod
-        If flag is set then the mod is focused.
-    --focus_story
-        If flag is set then the story is focused.
+    --focus_mod=false
+        Don't focus the mod.
+    --focus_story=false
+        Don't focus the story.
     --json_out
         If flag is set output json for consuming instead of text.
 
     <command>
     add_mod
-      Add new mod or update an existing mod if found.
-        required: --story_name, --mod_name, --mod_url
-        optional: --focus_mod, --focus_story, --json_out
+      [--story_name=foo] [--mod_name=bar] [--focus_mod=false] [--focus_story=false] add_mod MOD_URL
+        Add new mod or update an existing mod if a mod with --mod_name already 
+        exists in --story_name.
+        Defaults --story_name and --mod_name to MOD_URL. 
+        Defaults --focus_mod and --focus_story to 'true'.
+        optional: --story_name, --mod_name, --focus_mod, --focus_story, 
+                  --json_out
 
     remove_mod
       Remove the mod.
@@ -103,9 +104,15 @@ std::string GetUsage() {
       Delete the story.
         required: --story_name
         optional: --json_out
-    
+
     list_stories
-      List all the stories in the current session.)";
+      List all the stories in the current session.
+      
+    <argument>
+    MOD_URL
+      Mods have a unique "mod_url". It's the mod package's name.
+      In BUILD.gn fuchsia_package_name = "mod_url" or mod_url comes from
+      flutter_app("mod_url") when there is no fuchsia_package_name set.)";
 }
 
 PuppetMasterPtr ConnectToPuppetMaster(const ActiveSession& session) {

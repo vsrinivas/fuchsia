@@ -69,43 +69,34 @@ std::string SessionCtlApp::ExecuteRemoveModCommand(
 
 std::string SessionCtlApp::ExecuteAddModCommand(
     const fxl::CommandLine& command_line) {
-  std::string mod_url;
-  std::string story_name;
-  std::string mod_name;
-
-  std::vector<std::string> missing_flags;
-
-  if (command_line.HasOption(kModUrlFlagString)) {
-    command_line.GetOptionValue(kModUrlFlagString, &mod_url);
-  } else {
-    missing_flags.emplace_back(kModUrlFlagString);
-  }
-
-  if (command_line.HasOption(kStoryNameFlagString)) {
-    command_line.GetOptionValue(kStoryNameFlagString, &story_name);
-  } else {
-    missing_flags.emplace_back(kStoryNameFlagString);
-  }
-
-  if (command_line.HasOption(kModNameFlagString)) {
-    command_line.GetOptionValue(kModNameFlagString, &mod_name);
-  } else {
-    missing_flags.emplace_back(kModNameFlagString);
-  }
-
-  std::string parsing_error = GenerateMissingFlagString(missing_flags);
-  if (!parsing_error.empty()) {
+  if (command_line.positional_args().size() == 1) {
+    auto parsing_error = "Missing mod_url. Ex: sessionctl add_mod slider_mod";
     logger_.LogError(kAddModCommandString, parsing_error);
     return parsing_error;
   }
 
+  // Get the mod url and default the mod name and story name to the mod url
+  std::string mod_url = command_line.positional_args().at(1);
+  std::string mod_name = mod_url;
+  std::string story_name = mod_url;
+
+  // If the following options aren't specified, their respective values will
+  // remain unchanged.
+  command_line.GetOptionValue(kStoryNameFlagString, &story_name);
+  command_line.GetOptionValue(kModNameFlagString, &mod_name);
+
   auto commands = MakeAddModCommands(mod_url, mod_name);
 
-  if (command_line.HasOption(kFocusModFlagString)) {
+  // Focus the mod and story by default
+  std::string focus_mod;
+  command_line.GetOptionValue(kFocusModFlagString, &focus_mod);
+  if (focus_mod == "" || focus_mod == "true") {
     commands.push_back(MakeFocusModCommand(mod_name));
   }
 
-  if (command_line.HasOption(kFocusStoryFlagString)) {
+  std::string focus_story;
+  command_line.GetOptionValue(kFocusStoryFlagString, &focus_story);
+  if (focus_story == "" || focus_story == "true") {
     commands.push_back(MakeFocusStoryCommand());
   }
 
@@ -118,7 +109,7 @@ std::string SessionCtlApp::ExecuteAddModCommand(
   PostTaskExecuteStoryCommand(kAddModCommandString, std::move(commands),
                               params);
 
-  return parsing_error;
+  return "";
 }
 
 std::string SessionCtlApp::ExecuteDeleteStoryCommand(
