@@ -829,7 +829,7 @@ void StoryStorage::OnPageDelete(const std::string& key) {
 
 void StoryStorage::OnPageConflict(Conflict* conflict) {
   // TODO(thatguy): Add basic conflict resolution. We can force a conflict for
-  // link data in tests by using Page.StartTranscation() in UpdateLinkValue().
+  // link data in tests by using Page.StartTransaction() in UpdateLinkValue().
   FXL_LOG(WARNING) << "StoryStorage::OnPageConflict() for link key "
                    << to_string(conflict->key);
 }
