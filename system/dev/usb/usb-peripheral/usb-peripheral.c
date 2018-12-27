@@ -17,11 +17,11 @@
 #include <ddk/protocol/usb/dci.h>
 #include <ddk/protocol/usb/function.h>
 #include <ddk/protocol/usb/modeswitch.h>
-#include <zircon/listnode.h>
+#include <fuchsia/hardware/usb/peripheral/c/fidl.h>
 #include <zircon/device/usb-peripheral.h>
-#include <zircon/usb/peripheral/c/fidl.h>
-#include <zircon/hw/usb/cdc.h>
 #include <zircon/hw/usb.h>
+#include <zircon/hw/usb/cdc.h>
+#include <zircon/listnode.h>
 
 /*
     THEORY OF OPERATION
@@ -74,7 +74,7 @@
 
 #define MAX_INTERFACES 32
 
-typedef zircon_usb_peripheral_FunctionDescriptor usb_function_descriptor_t;
+typedef fuchsia_hardware_usb_peripheral_FunctionDescriptor usb_function_descriptor_t;
 
 typedef struct {
     zx_device_t* zxdev;
@@ -611,9 +611,9 @@ usb_dci_interface_ops_t dci_ops = {
     .set_speed = usb_dev_set_speed,
 };
 
-static zx_status_t usb_dev_set_device_desc(void* ctx,
-                                           const zircon_usb_peripheral_DeviceDescriptor* desc,
-                                           fidl_txn_t* txn) {
+static zx_status_t
+usb_dev_set_device_desc(void* ctx, const fuchsia_hardware_usb_peripheral_DeviceDescriptor* desc,
+                        fidl_txn_t* txn) {
     usb_device_t* dev = ctx;
 
     zx_status_t status;
@@ -639,7 +639,7 @@ static zx_status_t usb_dev_set_device_desc(void* ctx,
         status = ZX_OK;
     }
 
-    return zircon_usb_peripheral_DeviceSetDeviceDescriptor_reply(txn, status);
+    return fuchsia_hardware_usb_peripheral_DeviceSetDeviceDescriptor_reply(txn, status);
 }
 
 static zx_status_t usb_dev_alloc_string_desc(void* ctx, const char* name_data, size_t name_size,
@@ -648,7 +648,7 @@ static zx_status_t usb_dev_alloc_string_desc(void* ctx, const char* name_data, s
 
     uint8_t index = 0;
     zx_status_t status = usb_device_alloc_string_desc(dev, name_data, &index);
-    return zircon_usb_peripheral_DeviceAllocStringDesc_reply(txn, status, index);
+    return fuchsia_hardware_usb_peripheral_DeviceAllocStringDesc_reply(txn, status, index);
 }
 
 static zx_status_t usb_dev_do_add_function(usb_device_t* dev,
@@ -674,7 +674,7 @@ static zx_status_t usb_dev_add_function(void* ctx, const usb_function_descriptor
     usb_device_t* dev = ctx;
 
     zx_status_t status = usb_dev_do_add_function(dev, desc);
-    return zircon_usb_peripheral_DeviceAddFunction_reply(txn, status);
+    return fuchsia_hardware_usb_peripheral_DeviceAddFunction_reply(txn, status);
 }
 
 static void usb_dev_remove_function_devices_locked(usb_device_t* dev) {
@@ -825,7 +825,7 @@ static zx_status_t usb_dev_bind_functions(void* ctx, fidl_txn_t* txn) {
     usb_device_t* dev = ctx;
 
     zx_status_t status = usb_dev_do_bind_functions(dev);
-    return zircon_usb_peripheral_DeviceBindFunctions_reply(txn, status);
+    return fuchsia_hardware_usb_peripheral_DeviceBindFunctions_reply(txn, status);
 }
 
 
@@ -865,7 +865,7 @@ static zx_status_t usb_dev_clear_functions(void* ctx, fidl_txn_t* txn) {
     zxlogf(TRACE, "usb_dev_clear_functions\n");
 
     zx_status_t status = usb_dev_do_clear_functions(dev);
-    return zircon_usb_peripheral_DeviceClearFunctions_reply(txn, status);
+    return fuchsia_hardware_usb_peripheral_DeviceClearFunctions_reply(txn, status);
 }
 
 static zx_status_t usb_dev_get_mode(void* ctx, fidl_txn_t* txn) {
@@ -875,7 +875,7 @@ static zx_status_t usb_dev_get_mode(void* ctx, fidl_txn_t* txn) {
     uint32_t mode = dev->usb_mode;
     mtx_unlock(&dev->lock);
 
-    return zircon_usb_peripheral_DeviceGetMode_reply(txn, ZX_OK, mode);
+    return fuchsia_hardware_usb_peripheral_DeviceGetMode_reply(txn, ZX_OK, mode);
 }
 
 static zx_status_t usb_dev_set_mode(void* ctx, uint32_t mode, fidl_txn_t* txn) {
@@ -886,10 +886,10 @@ static zx_status_t usb_dev_set_mode(void* ctx, uint32_t mode, fidl_txn_t* txn) {
     zx_status_t status = usb_dev_state_changed_locked(dev);
     mtx_unlock(&dev->lock);
 
-    return zircon_usb_peripheral_DeviceSetMode_reply(txn, status);
+    return fuchsia_hardware_usb_peripheral_DeviceSetMode_reply(txn, status);
 }
 
-static zircon_usb_peripheral_Device_ops_t fidl_ops = {
+static fuchsia_hardware_usb_peripheral_Device_ops_t fidl_ops = {
     .SetDeviceDescriptor = usb_dev_set_device_desc,
     .AllocStringDesc = usb_dev_alloc_string_desc,
     .AddFunction = usb_dev_add_function,
@@ -900,7 +900,7 @@ static zircon_usb_peripheral_Device_ops_t fidl_ops = {
 };
 
 zx_status_t usb_dev_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
-    return zircon_usb_peripheral_Device_dispatch(ctx, txn, msg, &fidl_ops);
+    return fuchsia_hardware_usb_peripheral_Device_dispatch(ctx, txn, msg, &fidl_ops);
 }
 
 static void usb_dev_unbind(void* ctx) {

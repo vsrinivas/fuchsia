@@ -2,21 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/protocol/usb/modeswitch.h>
 #include <dirent.h>
 #include <fcntl.h>
+#include <fuchsia/hardware/usb/peripheral/c/fidl.h>
+#include <lib/fdio/util.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <lib/fdio/util.h>
-#include <ddk/protocol/usb/modeswitch.h>
 #include <zircon/device/usb-peripheral.h>
 #include <zircon/hw/usb.h>
 #include <zircon/hw/usb/cdc.h>
-#include <zircon/usb/peripheral/c/fidl.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
-
 
 #include <zircon/types.h>
 
@@ -28,7 +27,7 @@
 #define TEST_PRODUCT_STRING  "USB Function Test"
 #define SERIAL_STRING       "12345678"
 
-typedef zircon_usb_peripheral_FunctionDescriptor usb_function_descriptor_t;
+typedef fuchsia_hardware_usb_peripheral_FunctionDescriptor usb_function_descriptor_t;
 
 const usb_function_descriptor_t cdc_function_desc = {
     .interface_class = USB_CLASS_COMM,
@@ -77,15 +76,15 @@ static const usb_function_t test_function = {
     .pid = GOOGLE_USB_PERIPHERAL_TEST_PID,
 };
 
-static zircon_usb_peripheral_DeviceDescriptor device_desc = {
+static fuchsia_hardware_usb_peripheral_DeviceDescriptor device_desc = {
     .bcdUSB = htole16(0x0200),
     .bDeviceClass = 0,
     .bDeviceSubClass = 0,
     .bDeviceProtocol = 0,
     .bMaxPacketSize0 = 64,
-//   idVendor and idProduct are filled in later
+    //   idVendor and idProduct are filled in later
     .bcdDevice = htole16(0x0100),
-//    iManufacturer, iProduct and iSerialNumber are filled in later
+    //    iManufacturer, iProduct and iSerialNumber are filled in later
     .bNumConfigurations = 1,
 };
 
@@ -122,49 +121,53 @@ static zx_status_t device_init(zx_handle_t svc, const usb_function_t* function) 
     device_desc.idProduct = htole16(function->pid);
 
     // allocate string descriptors
-    zx_status_t status = zircon_usb_peripheral_DeviceAllocStringDesc(svc, MANUFACTURER_STRING,
-                                                                     strlen(MANUFACTURER_STRING) + 1,
-                                                                     &status2, &device_desc.iManufacturer);
+    zx_status_t status = fuchsia_hardware_usb_peripheral_DeviceAllocStringDesc(
+        svc, MANUFACTURER_STRING, strlen(MANUFACTURER_STRING) + 1, &status2,
+        &device_desc.iManufacturer);
     if (status == ZX_OK) status = status2;
     if (status != ZX_OK) {
-        fprintf(stderr, "zircon_usb_peripheral_DeviceAllocStringDesc failed: %d\n", status);
+        fprintf(stderr, "fuchsia_hardware_usb_peripheral_DeviceAllocStringDesc failed: %d\n",
+                status);
         return status;
     }
-    status = zircon_usb_peripheral_DeviceAllocStringDesc(svc, function->product_string,
-                                                         strlen(function->product_string) + 1,
-                                                         &status2, &device_desc.iProduct);
+    status = fuchsia_hardware_usb_peripheral_DeviceAllocStringDesc(
+        svc, function->product_string, strlen(function->product_string) + 1, &status2,
+        &device_desc.iProduct);
     if (status == ZX_OK) status = status2;
     if (status != ZX_OK) {
-        fprintf(stderr, "zircon_usb_peripheral_DeviceAllocStringDesc failed: %d\n", status);
+        fprintf(stderr, "fuchsia_hardware_usb_peripheral_DeviceAllocStringDesc failed: %d\n",
+                status);
         return status;
     }
-    status = zircon_usb_peripheral_DeviceAllocStringDesc(svc, SERIAL_STRING, strlen(SERIAL_STRING) + 1,
-                                                         &status2, &device_desc.iSerialNumber);
+    status = fuchsia_hardware_usb_peripheral_DeviceAllocStringDesc(
+        svc, SERIAL_STRING, strlen(SERIAL_STRING) + 1, &status2, &device_desc.iSerialNumber);
     if (status == ZX_OK) status = status2;
     if (status != ZX_OK) {
-        fprintf(stderr, "zircon_usb_peripheral_DeviceAllocStringDesc failed: %d\n", status);
+        fprintf(stderr, "fuchsia_hardware_usb_peripheral_DeviceAllocStringDesc failed: %d\n",
+                status);
         return status;
     }
 
     // set device descriptor
-    status = zircon_usb_peripheral_DeviceSetDeviceDescriptor(svc, &device_desc, &status2);
+    status = fuchsia_hardware_usb_peripheral_DeviceSetDeviceDescriptor(svc, &device_desc, &status2);
     if (status == ZX_OK) status = status2;
     if (status != ZX_OK) {
-        fprintf(stderr, "zircon_usb_peripheral_DeviceSetDeviceDescriptor failed: %d\n", status);
+        fprintf(stderr, "fuchsia_hardware_usb_peripheral_DeviceSetDeviceDescriptor failed: %d\n",
+                status);
         return status;
     }
 
-    status = zircon_usb_peripheral_DeviceAddFunction(svc, function->desc, &status2);
+    status = fuchsia_hardware_usb_peripheral_DeviceAddFunction(svc, function->desc, &status2);
     if (status == ZX_OK) status = status2;
     if (status != ZX_OK) {
-        fprintf(stderr, "zircon_usb_peripheral_DeviceAddFunction failed: %d\n", status);
+        fprintf(stderr, "fuchsia_hardware_usb_peripheral_DeviceAddFunction failed: %d\n", status);
         return status;
     }
 
-    status = zircon_usb_peripheral_DeviceBindFunctions(svc, &status2);
+    status = fuchsia_hardware_usb_peripheral_DeviceBindFunctions(svc, &status2);
     if (status == ZX_OK) status = status2;
     if (status != ZX_OK) {
-        fprintf(stderr, "zircon_usb_peripheral_DeviceBindFunctions failed: %d\n", status);
+        fprintf(stderr, "fuchsia_hardware_usb_peripheral_DeviceBindFunctions failed: %d\n", status);
     }
 
     return status;
@@ -173,7 +176,7 @@ static zx_status_t device_init(zx_handle_t svc, const usb_function_t* function) 
 static int ums_command(zx_handle_t svc, int argc, const char* argv[]) {
     zx_status_t status, status2;
 
-    status = zircon_usb_peripheral_DeviceClearFunctions(svc, &status2);
+    status = fuchsia_hardware_usb_peripheral_DeviceClearFunctions(svc, &status2);
     if (status == ZX_OK) status = status2;
     if (status == ZX_OK) {
         status = device_init(svc, &ums_function);
@@ -185,7 +188,7 @@ static int ums_command(zx_handle_t svc, int argc, const char* argv[]) {
 static int cdc_command(zx_handle_t svc, int argc, const char* argv[]) {
     zx_status_t status, status2;
 
-    status = zircon_usb_peripheral_DeviceClearFunctions(svc, &status2);
+    status = fuchsia_hardware_usb_peripheral_DeviceClearFunctions(svc, &status2);
     if (status == ZX_OK) status = status2;
     if (status == ZX_OK) {
         status = device_init(svc, &cdc_function);
@@ -197,7 +200,7 @@ static int cdc_command(zx_handle_t svc, int argc, const char* argv[]) {
 static int test_command(zx_handle_t svc, int argc, const char* argv[]) {
     zx_status_t status, status2;
 
-    status = zircon_usb_peripheral_DeviceClearFunctions(svc, &status2);
+    status = fuchsia_hardware_usb_peripheral_DeviceClearFunctions(svc, &status2);
     if (status == ZX_OK) status = status2;
     if (status == ZX_OK) {
         status = device_init(svc, &test_function);
@@ -213,10 +216,10 @@ static int mode_command(zx_handle_t svc, int argc, const char* argv[]) {
     if (argc == 1) {
         // print current mode
         usb_mode_t mode;
-        status = zircon_usb_peripheral_DeviceGetMode(svc, &status2, &mode);
+        status = fuchsia_hardware_usb_peripheral_DeviceGetMode(svc, &status2, &mode);
         if (status == ZX_OK) status = status2;
         if (status != ZX_OK) {
-            fprintf(stderr, "zircon_usb_peripheral_DeviceGetMode failed: %d\n", status);
+            fprintf(stderr, "fuchsia_hardware_usb_peripheral_DeviceGetMode failed: %d\n", status);
         } else {
             switch (mode) {
             case USB_MODE_NONE:
@@ -252,10 +255,11 @@ static int mode_command(zx_handle_t svc, int argc, const char* argv[]) {
         }
 
         if (status == ZX_OK) {
-            status = zircon_usb_peripheral_DeviceSetMode(svc, mode, &status2);
+            status = fuchsia_hardware_usb_peripheral_DeviceSetMode(svc, mode, &status2);
             if (status == ZX_OK) status = status2;
             if (status != ZX_OK) {
-                fprintf(stderr, "zircon_usb_peripheral_DeviceSetMode failed: %d\n", status);
+                fprintf(stderr, "fuchsia_hardware_usb_peripheral_DeviceSetMode failed: %d\n",
+                        status);
             }
         }
     }
