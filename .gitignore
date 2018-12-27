@@ -16,4 +16,6 @@ Session.vim
 .netrwhist
 *~
 
+cipd.gni
 last-update
+third_party/
