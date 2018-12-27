@@ -132,6 +132,25 @@ void FakeDomain::OpenL2capChannel(hci::ConnectionHandle handle, l2cap::PSM psm,
       std::make_pair(std::move(cb), dispatcher));
 }
 
+void FakeDomain::OpenL2capChannel(hci::ConnectionHandle handle, l2cap::PSM psm,
+                                  SocketCallback socket_callback,
+                                  async_dispatcher_t* cb_dispatcher) {
+  ZX_DEBUG_ASSERT(cb_dispatcher);
+  OpenL2capChannel(
+      handle, psm,
+      [this, cb = std::move(socket_callback),
+       cb_dispatcher](auto channel) mutable {
+        zx::socket s = socket_factory_.MakeSocketForChannel(channel);
+        // Called every time the service is connected, cb must be shared.
+        async::PostTask(cb_dispatcher,
+                        [s = std::move(s), cb = cb.share(),
+                         handle = channel->link_handle()]() mutable {
+                          cb(std::move(s), handle);
+                        });
+      },
+      async_get_default_dispatcher());
+}
+
 void FakeDomain::RegisterService(l2cap::PSM psm,
                                  l2cap::ChannelCallback channel_callback,
                                  async_dispatcher_t* dispatcher) {

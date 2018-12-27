@@ -101,6 +101,20 @@ class Domain : public fbl::RefCounted<Domain> {
                                 l2cap::ChannelCallback cb,
                                 async_dispatcher_t* dispatcher) = 0;
 
+  // Open an outbound dynamic channel against a peer's Protocol/Service
+  // Multiplexing (PSM) code |psm| on a link identified by |handle|.
+  //
+  // |cb| will be called on |dispatcher| with a zx::socket corresponding to the
+  // channel created to the remote or ZX_INVALID_HANDLE if the channel creation
+  // resulted in an error.
+  //
+  // Has no effect if this Domain is uninitialized or shut down.
+  using SocketCallback =
+      fit::function<void(zx::socket, hci::ConnectionHandle link_handle)>;
+  virtual void OpenL2capChannel(hci::ConnectionHandle handle, l2cap::PSM psm,
+                                SocketCallback socket_callback,
+                                async_dispatcher_t* dispatcher) = 0;
+
   // Registers a handler for peer-initiated dynamic channel requests that have
   // the Protocol/Service Multiplexing (PSM) code |psm|.
   //
@@ -132,8 +146,6 @@ class Domain : public fbl::RefCounted<Domain> {
   // additional meta-data about the connection, such as its link type and
   // channel configuration parameters (see NET-1084 and TODOs for
   // RegisterService above.
-  using SocketCallback =
-      fit::function<void(zx::socket, hci::ConnectionHandle link_handle)>;
   virtual void RegisterService(l2cap::PSM psm, SocketCallback socket_callback,
                                async_dispatcher_t* dispatcher) = 0;
 
