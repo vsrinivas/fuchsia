@@ -405,72 +405,13 @@ void brcmf_sdiod_func1_wl(struct brcmf_sdio_dev* sdiodev, uint32_t addr, uint32_
     }
 }
 
-// TODO(ZX-2598): This is a workaround for a low-level SDIO bug.
-#define F2_XFER_SIZE 512
-
-zx_status_t brcmf_sdiod_read(struct brcmf_sdio_dev* sdiodev, uint8_t func, uint32_t addr,
-                             void* data, size_t size) {
-    zx_status_t err = ZX_OK;
-    TRACE_DURATION("brcmfmac:isr", "sdiod_read",
-                   "func", TA_UINT32((uint32_t)func),
-                   "size", TA_UINT64((uint64_t)size));
-
-    while (func == 2 && size > F2_XFER_SIZE) {
-        err = brcmf_sdiod_transfer(sdiodev, func, addr, false, data, F2_XFER_SIZE, false);
-        if (err != ZX_OK) {
-            break;
-        }
-        data += F2_XFER_SIZE;
-        size -= F2_XFER_SIZE;
-        addr += F2_XFER_SIZE;
-    }
-    if (err == ZX_OK) {
-        err = brcmf_sdiod_transfer(sdiodev, func, addr, false, data, size, false);
-    }
-    return err;
-}
-
 zx_status_t brcmf_sdiod_write(struct brcmf_sdio_dev* sdiodev, uint8_t func, uint32_t addr,
                               void* data, size_t size) {
-    zx_status_t err = ZX_OK;
     TRACE_DURATION("brcmfmac:isr", "sdiod_write",
                    "func", TA_UINT32((uint32_t)func),
                    "size", TA_UINT64((uint64_t)size));
 
-    while (func == 2 && size > F2_XFER_SIZE) {
-        err = brcmf_sdiod_transfer(sdiodev, func, addr, true, data, F2_XFER_SIZE, false);
-        if (err != ZX_OK) {
-            break;
-        }
-        data += F2_XFER_SIZE;
-        size -= F2_XFER_SIZE;
-        addr += F2_XFER_SIZE;
-    }
-    if (err == ZX_OK) {
-        err = brcmf_sdiod_transfer(sdiodev, func, addr, true, data, size, false);
-    }
-    return err;
-}
-
-zx_status_t brcmf_sdiod_read_fifo(struct brcmf_sdio_dev* sdiodev, uint8_t func, uint32_t addr,
-                                  void* data, size_t size) {
-    zx_status_t err = ZX_OK;
-    TRACE_DURATION("brcmfmac:isr", "sdiod_read_fifo",
-                   "func", TA_UINT32((uint32_t)func),
-                   "size", TA_UINT64((uint64_t)size));
-
-    while (func == 2 && size > F2_XFER_SIZE) {
-        err = brcmf_sdiod_transfer(sdiodev, func, addr, false, data, F2_XFER_SIZE, true);
-        if (err != ZX_OK) {
-            break;
-        }
-        data += F2_XFER_SIZE;
-        size -= F2_XFER_SIZE;
-    }
-    if (err == ZX_OK) {
-        err = brcmf_sdiod_transfer(sdiodev, func, addr, false, data, size, true);
-    }
-    return err;
+    return brcmf_sdiod_transfer(sdiodev, func, addr, true, data, size, false);
 }
 
 static zx_status_t brcmf_sdiod_netbuf_read(struct brcmf_sdio_dev* sdiodev, uint32_t func,
@@ -479,7 +420,8 @@ static zx_status_t brcmf_sdiod_netbuf_read(struct brcmf_sdio_dev* sdiodev, uint3
     zx_status_t err;
 
     TRACE_DURATION("brcmfmac:isr", "netbuf_read",
-                   "func", TA_UINT32((uint32_t)func));
+                   "func", TA_UINT32((uint32_t)func),
+                   "len", TA_UINT32(netbuf->len));
 
     /* Single netbuf use the standard mmc interface */
     req_sz = netbuf->len + 3;
@@ -487,10 +429,10 @@ static zx_status_t brcmf_sdiod_netbuf_read(struct brcmf_sdio_dev* sdiodev, uint3
 
     switch (func) {
     case SDIO_FN_1:
-        err = brcmf_sdiod_read(sdiodev, func, addr, netbuf->data, req_sz);
+        err = brcmf_sdiod_transfer(sdiodev, func, addr, false, netbuf->data, req_sz, false);
         break;
     case SDIO_FN_2:
-        err = brcmf_sdiod_read_fifo(sdiodev, func, addr, netbuf->data, req_sz);
+        err = brcmf_sdiod_transfer(sdiodev, func, addr, false, netbuf->data, req_sz, true);
         break;
     default:
         /* bail out as things are really fishy here */
@@ -511,13 +453,14 @@ static zx_status_t brcmf_sdiod_netbuf_write(struct brcmf_sdio_dev* sdiodev, uint
     zx_status_t err;
 
     TRACE_DURATION("brcmfmac:isr", "sdiod_netbuf_write",
-                   "func", TA_UINT32((uint32_t)func));
+                   "func", TA_UINT32((uint32_t)func),
+                   "len", TA_UINT32(netbuf->len));
 
     /* Single netbuf use the standard mmc interface */
     req_sz = netbuf->len + 3;
     req_sz &= (uint)~3;
 
-    err = brcmf_sdiod_write(sdiodev, func, addr, netbuf->data, req_sz);
+    err = brcmf_sdiod_transfer(sdiodev, func, addr, true, netbuf->data, req_sz, false);
 
     if (err == ZX_ERR_IO_REFUSED) {
         brcmf_sdiod_change_state(sdiodev, BRCMF_SDIOD_NOMEDIUM);
