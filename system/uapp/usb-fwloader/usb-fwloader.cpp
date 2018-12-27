@@ -6,6 +6,7 @@
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <fuchsia/hardware/usb/tester/c/fidl.h>
+#include <fuchsia/hardware/usb/fwloader/c/fidl.h>
 #include <fuchsia/mem/c/fidl.h>
 #include <lib/fdio/util.h>
 #include <lib/fdio/watcher.h>
@@ -15,7 +16,6 @@
 #include <zircon/device/device.h>
 #include <zircon/hw/usb.h>
 #include <zircon/types.h>
-#include <zircon/usb/test/fwloader/c/fidl.h>
 
 #include <dirent.h>
 #include <errno.h>
@@ -189,7 +189,8 @@ zx_status_t read_firmware(fbl::unique_fd& file_fd, zx::vmo& vmo, size_t* out_fw_
 // Loads the given firmware onto the device.
 // |firmware| should either be the firmware file path, or a prebuilt type.
 zx_status_t device_load_firmware(
-    fbl::unique_fd fd, std::variant<const char*, zircon_usb_test_fwloader_PrebuiltType> firmware) {
+    fbl::unique_fd fd,
+    std::variant<const char*, fuchsia_hardware_usb_fwloader_PrebuiltType> firmware) {
 
     zx::channel svc;
     zx_status_t status = fdio_get_service_handle(fd.release(), svc.reset_and_get_address());
@@ -212,8 +213,8 @@ zx_status_t device_load_firmware(
             return status;
         }
         fuchsia_mem_Buffer firmware = { .vmo = fw_vmo.release(), .size = fw_size };
-        zx_status_t res = zircon_usb_test_fwloader_DeviceLoadFirmware(svc.get(), &firmware,
-                                                                      &status);
+        zx_status_t res =
+            fuchsia_hardware_usb_fwloader_DeviceLoadFirmware(svc.get(), &firmware, &status);
         if (res == ZX_OK) {
             res = status;
         }
@@ -221,11 +222,10 @@ zx_status_t device_load_firmware(
             fprintf(stderr, "Failed to load firmware, err: %d\n", res);
             return res;
         }
-    } else if (auto type = std::get_if<zircon_usb_test_fwloader_PrebuiltType>(&firmware)) {
+    } else if (auto type = std::get_if<fuchsia_hardware_usb_fwloader_PrebuiltType>(&firmware)) {
         zx_status_t status;
-        zx_status_t res = zircon_usb_test_fwloader_DeviceLoadPrebuiltFirmware(svc.get(),
-                                                                              *type,
-                                                                              &status);
+        zx_status_t res =
+            fuchsia_hardware_usb_fwloader_DeviceLoadPrebuiltFirmware(svc.get(), *type, &status);
         if (res == ZX_OK) {
             res = status;
         }
@@ -242,9 +242,9 @@ zx_status_t device_load_firmware(
 
 // Loads the firmware image to the FX3 device RAM.
 // |firmware| should either be the firmware file path, or a prebuilt type.
-zx_status_t load_to_ram(
-    const char* firmware_path,
-    std::variant<const char*, zircon_usb_test_fwloader_PrebuiltType> firmware) {
+zx_status_t
+load_to_ram(const char* firmware_path,
+            std::variant<const char*, fuchsia_hardware_usb_fwloader_PrebuiltType> firmware) {
 
     fbl::unique_fd fd;
     zx_status_t status = open_test_fwloader_dev(&fd);
@@ -283,11 +283,11 @@ zx_status_t load_to_ram(
 }
 
 zx_status_t load_test_firmware(const char* firmware_path) {
-    std::variant<const char*, zircon_usb_test_fwloader_PrebuiltType> firmware;
+    std::variant<const char*, fuchsia_hardware_usb_fwloader_PrebuiltType> firmware;
     if (firmware_path) {
         firmware = firmware_path;
     } else {
-        firmware = zircon_usb_test_fwloader_PrebuiltType_TESTER;
+        firmware = fuchsia_hardware_usb_fwloader_PrebuiltType_TESTER;
     }
     zx_status_t status = load_to_ram(firmware_path, firmware);
     if (status != ZX_OK) {
@@ -318,11 +318,11 @@ zx_status_t load_test_firmware(const char* firmware_path) {
 }
 
 zx_status_t load_bootloader(const char* flash_prog_image_path, const char* firmware_path) {
-    std::variant<const char*, zircon_usb_test_fwloader_PrebuiltType> firmware;
+    std::variant<const char*, fuchsia_hardware_usb_fwloader_PrebuiltType> firmware;
     if (flash_prog_image_path) {
         firmware = flash_prog_image_path;
     } else {
-        firmware = zircon_usb_test_fwloader_PrebuiltType_FLASH;
+        firmware = fuchsia_hardware_usb_fwloader_PrebuiltType_FLASH;
     }
 
     zx_status_t status = load_to_ram(flash_prog_image_path, firmware);
@@ -340,7 +340,7 @@ zx_status_t load_bootloader(const char* flash_prog_image_path, const char* firmw
     if (firmware_path) {
         firmware = firmware_path;
     } else {
-        firmware = zircon_usb_test_fwloader_PrebuiltType_BOOT;
+        firmware = fuchsia_hardware_usb_fwloader_PrebuiltType_BOOT;
     }
     status = device_load_firmware(std::move(updated_dev), firmware);
     if (status != ZX_OK) {
@@ -359,7 +359,7 @@ zx_status_t device_firmware_upgrade(const char* firmware_path) {
         return status;
     }
     // TODO(jocelyndang): support prebuilts.
-    std::variant<const char*, zircon_usb_test_fwloader_PrebuiltType> firmware = firmware_path;
+    std::variant<const char*, fuchsia_hardware_usb_fwloader_PrebuiltType> firmware = firmware_path;
     status = device_load_firmware(std::move(fd), firmware);
     if (status != ZX_OK) {
         fprintf(stderr, "Device firmware upgrade failed, err: %d\n", status);

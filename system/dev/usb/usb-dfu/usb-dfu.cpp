@@ -10,10 +10,10 @@
 #include <ddk/protocol/usb.h>
 #include <fbl/algorithm.h>
 #include <fbl/unique_ptr.h>
+#include <fuchsia/hardware/usb/fwloader/c/fidl.h>
 #include <fuchsia/mem/c/fidl.h>
 #include <lib/zx/vmo.h>
 #include <zircon/hw/usb/dfu.h>
-#include <zircon/usb/test/fwloader/c/fidl.h>
 
 namespace {
 
@@ -22,19 +22,20 @@ constexpr uint32_t kReqTimeoutSecs = 1;
 inline uint8_t MSB(int n) { return static_cast<uint8_t>(n >> 8); }
 inline uint8_t LSB(int n) { return static_cast<uint8_t>(n & 0xFF); }
 
-zx_status_t fidl_LoadPrebuiltFirmware(void* ctx, zircon_usb_test_fwloader_PrebuiltType type,
+zx_status_t fidl_LoadPrebuiltFirmware(void* ctx, fuchsia_hardware_usb_fwloader_PrebuiltType type,
                                       fidl_txn_t* txn) {
     // TODO(jocelyndang): implement this.
-    return zircon_usb_test_fwloader_DeviceLoadPrebuiltFirmware_reply(txn, ZX_ERR_NOT_SUPPORTED);
+    return fuchsia_hardware_usb_fwloader_DeviceLoadPrebuiltFirmware_reply(txn,
+                                                                          ZX_ERR_NOT_SUPPORTED);
 }
 
 zx_status_t fidl_LoadFirmware(void* ctx, const fuchsia_mem_Buffer* firmware, fidl_txn_t* txn) {
     auto fp = static_cast<usb::Dfu*>(ctx);
     zx_status_t status = fp->LoadFirmware(zx::vmo(firmware->vmo), firmware->size);
-    return zircon_usb_test_fwloader_DeviceLoadFirmware_reply(txn, status);
+    return fuchsia_hardware_usb_fwloader_DeviceLoadFirmware_reply(txn, status);
 }
 
-zircon_usb_test_fwloader_Device_ops_t fidl_ops = {
+fuchsia_hardware_usb_fwloader_Device_ops_t fidl_ops = {
     .LoadPrebuiltFirmware = fidl_LoadPrebuiltFirmware,
     .LoadFirmware = fidl_LoadFirmware,
 };
@@ -204,7 +205,7 @@ zx_status_t Dfu::LoadFirmware(zx::vmo fw_vmo, size_t fw_size) {
 }
 
 zx_status_t Dfu::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-    return zircon_usb_test_fwloader_Device_dispatch(this, txn, msg, &fidl_ops);
+    return fuchsia_hardware_usb_fwloader_Device_dispatch(this, txn, msg, &fidl_ops);
 }
 
 zx_status_t Dfu::Bind() {

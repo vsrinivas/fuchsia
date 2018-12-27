@@ -10,7 +10,7 @@ MODULE_TYPE := fidl
 
 MODULE_PACKAGE := fidl
 
-MODULE_FIDL_LIBRARY := zircon.usb.test.fwloader
+MODULE_FIDL_LIBRARY := fuchsia.hardware.usb.fwloader
 
 MODULE_FIDL_DEPS := system/fidl/fuchsia-mem
 

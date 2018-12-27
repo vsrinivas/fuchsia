@@ -9,10 +9,10 @@
 #include <ddk/device.h>
 #include <fbl/algorithm.h>
 #include <fbl/unique_ptr.h>
+#include <fuchsia/hardware/usb/fwloader/c/fidl.h>
 #include <fuchsia/mem/c/fidl.h>
 #include <lib/zx/vmo.h>
 #include <limits>
-#include <zircon/usb/test/fwloader/c/fidl.h>
 
 #include "flash-programmer-hw.h"
 
@@ -74,20 +74,20 @@ zx_status_t ParseImageHeader(const zx::vmo& fw_vmo, uint32_t* out_i2c_size) {
     return ZX_OK;
 }
 
-zx_status_t fidl_LoadPrebuiltFirmware(void* ctx, zircon_usb_test_fwloader_PrebuiltType type,
+zx_status_t fidl_LoadPrebuiltFirmware(void* ctx, fuchsia_hardware_usb_fwloader_PrebuiltType type,
                                       fidl_txn_t* txn) {
     auto fp = static_cast<usb::FlashProgrammer*>(ctx);
     zx_status_t status = fp->LoadPrebuiltFirmware(type);
-    return zircon_usb_test_fwloader_DeviceLoadPrebuiltFirmware_reply(txn, status);
+    return fuchsia_hardware_usb_fwloader_DeviceLoadPrebuiltFirmware_reply(txn, status);
 }
 
 zx_status_t fidl_LoadFirmware(void* ctx, const fuchsia_mem_Buffer* firmware, fidl_txn_t* txn) {
     auto fp = static_cast<usb::FlashProgrammer*>(ctx);
     zx_status_t status = fp->LoadFirmware(zx::vmo(firmware->vmo), firmware->size);
-    return zircon_usb_test_fwloader_DeviceLoadFirmware_reply(txn, status);
+    return fuchsia_hardware_usb_fwloader_DeviceLoadFirmware_reply(txn, status);
 }
 
-zircon_usb_test_fwloader_Device_ops_t fidl_ops = {
+fuchsia_hardware_usb_fwloader_Device_ops_t fidl_ops = {
     .LoadPrebuiltFirmware = fidl_LoadPrebuiltFirmware,
     .LoadFirmware = fidl_LoadFirmware,
 };
@@ -147,10 +147,10 @@ zx_status_t FlashProgrammer::EEPROMSlaveWrite(uint8_t eeprom_slave_addr,
     return ZX_OK;
 }
 
-zx_status_t FlashProgrammer::LoadPrebuiltFirmware(zircon_usb_test_fwloader_PrebuiltType type) {
+zx_status_t FlashProgrammer::LoadPrebuiltFirmware(fuchsia_hardware_usb_fwloader_PrebuiltType type) {
     const char* fw_path = nullptr;
     switch (type) {
-    case zircon_usb_test_fwloader_PrebuiltType_BOOT:
+    case fuchsia_hardware_usb_fwloader_PrebuiltType_BOOT:
         fw_path = kBootFirmwarePath;
         break;
     default:
@@ -214,7 +214,7 @@ zx_status_t FlashProgrammer::LoadFirmware(zx::vmo fw_vmo, size_t fw_size) {
 }
 
 zx_status_t FlashProgrammer::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-    return zircon_usb_test_fwloader_Device_dispatch(this, txn, msg, &fidl_ops);
+    return fuchsia_hardware_usb_fwloader_Device_dispatch(this, txn, msg, &fidl_ops);
 }
 
 zx_status_t FlashProgrammer::Bind() {

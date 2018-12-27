@@ -28,7 +28,7 @@ MODULE_LIBS := \
 
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-mem \
-    system/fidl/zircon-usb-test-fwloader \
+    system/fidl/fuchsia-hardware-usb-fwloader \
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-usb \

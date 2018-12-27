@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library zircon.usb.test.fwloader;
+library fuchsia.hardware.usb.fwloader;
 
 using fuchsia.mem;
 using zx;
