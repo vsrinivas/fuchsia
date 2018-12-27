@@ -39,8 +39,7 @@ constexpr uint64_t kMoveCallDelay = zx::msec(17).to_nsecs();
 //   that is on the screen.
 class GestureDetector {
  public:
-  explicit GestureDetector(component::StartupContext* startup_context,
-                           GestureListener* listener);
+  explicit GestureDetector(GestureListener* listener);
   ~GestureDetector() = default;
 
  private:
@@ -142,8 +141,6 @@ class GestureDetector {
   // return a clone of the currently stored |finger1_pointer_event|
   // with PointerEventPhase CANCEL.
   void SimulateCancel();
-
-  component::StartupContext* startup_context_;
 
   GestureListener* listener_;
 

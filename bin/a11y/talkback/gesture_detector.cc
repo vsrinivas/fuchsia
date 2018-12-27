@@ -6,11 +6,8 @@
 
 namespace talkback {
 
-GestureDetector::GestureDetector(component::StartupContext* startup_context,
-                                 GestureListener* listener)
-    : startup_context_(startup_context),
-      listener_(listener),
-      tap_dispatcher_(async_get_default_dispatcher()) {}
+GestureDetector::GestureDetector(GestureListener* listener)
+    : listener_(listener), tap_dispatcher_(async_get_default_dispatcher()) {}
 
 void GestureDetector::OnInputEvent(fuchsia::ui::input::PointerEvent event) {
   if (event.phase == fuchsia::ui::input::PointerEventPhase::CANCEL) {

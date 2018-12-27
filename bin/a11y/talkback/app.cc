@@ -9,7 +9,6 @@ namespace talkback {
 App::App()
     : startup_context_(component::StartupContext::CreateFromStartupInfo()),
       talkback_(std::make_unique<TalkbackImpl>(startup_context_.get())),
-      gesture_detector_(std::make_unique<GestureDetector>(
-          startup_context_.get(), talkback_.get())) {}
+      gesture_detector_(std::make_unique<GestureDetector>(talkback_.get())) {}
 
 }  // namespace talkback

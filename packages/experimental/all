@@ -1,5 +1,6 @@
 {
     "imports": [
+        "garnet/packages/experimental/a11y",
         "garnet/packages/experimental/auth",
         "garnet/packages/experimental/zircon_guest",
         "garnet/packages/experimental/linux_guest",
