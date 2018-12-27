@@ -21,6 +21,6 @@ MODULE_STATIC_LIBS := \
     system/ulib/zxcpp
 
 MODULE_FIDL_LIBS := \
-    system/fidl/fuchsia-power
+    system/fidl/fuchsia-hardware-power
 
 include make/module.mk

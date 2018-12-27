@@ -7,7 +7,7 @@
 #include <fbl/string_buffer.h>
 #include <fbl/vector.h>
 #include <fcntl.h>
-#include <fuchsia/power/c/fidl.h>
+#include <fuchsia/hardware/power/c/fidl.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/util.h>
 #include <stdio.h>
@@ -32,11 +32,11 @@ struct arg_data {
 
 static const char* type_to_string[] = {"AC", "battery"};
 
-zx_status_t get_source_info(zx_handle_t channel, struct fuchsia_power_SourceInfo* info) {
+zx_status_t get_source_info(zx_handle_t channel, struct fuchsia_hardware_power_SourceInfo* info) {
     zx_status_t status, op_status;
 
     // If either fails return the error we see (0 is success, errors are negative)
-    status = fuchsia_power_SourceGetPowerInfo(channel, &op_status, info);
+    status = fuchsia_hardware_power_SourceGetPowerInfo(channel, &op_status, info);
     zx_status_t result = fbl::min(status, op_status);
     if (result != ZX_OK) {
         fprintf(stderr, "SourceGetPowerInfo failed (transport: %d, operation: %d)\n",
@@ -62,15 +62,15 @@ const char* get_state_string(uint32_t state, fbl::StringBuffer<256>* buf) {
 }
 
 static zx_status_t get_battery_info(zx_handle_t ch) {
-    struct fuchsia_power_BatteryInfo binfo = {};
+    struct fuchsia_hardware_power_BatteryInfo binfo = {};
     zx_status_t op_status;
-    zx_status_t status = fuchsia_power_SourceGetBatteryInfo(ch, &op_status, &binfo);
+    zx_status_t status = fuchsia_hardware_power_SourceGetBatteryInfo(ch, &op_status, &binfo);
     if (status != ZX_OK) {
         printf("GetBatteryInfo returned %d\n", status);
         return status;
     }
 
-    const char* unit = (binfo.unit == fuchsia_power_BatteryUnit_MW) ? "mW" : "mA";
+    const char* unit = (binfo.unit == fuchsia_hardware_power_BatteryUnit_MW) ? "mW" : "mA";
     printf("             design capacity: %d %s\n", binfo.design_capacity, unit);
     printf("          last full capacity: %d %s\n", binfo.last_full_capacity, unit);
     printf("              design voltage: %d mV\n", binfo.design_voltage);
@@ -110,7 +110,7 @@ void parse_arguments(int argc, char** argv, struct arg_data* args) {
 
 void handle_event(pwrdev_t& interface) {
     zx_status_t status;
-    struct fuchsia_power_SourceInfo info;
+    struct fuchsia_hardware_power_SourceInfo info;
     if ((status = get_source_info(interface.fidl_channel, &info)) != ZX_OK) {
         exit(EXIT_FAILURE);
     }
@@ -122,8 +122,8 @@ void handle_event(pwrdev_t& interface) {
             get_state_string(interface.state, &old_buf), interface.state,
             get_state_string(info.state, &new_buf), info.state);
 
-    if (interface.type == fuchsia_power_PowerType_BATTERY &&
-        (info.state & fuchsia_power_POWER_STATE_ONLINE)) {
+    if (interface.type == fuchsia_hardware_power_PowerType_BATTERY &&
+        (info.state & fuchsia_hardware_power_POWER_STATE_ONLINE)) {
         if (get_battery_info(interface.fidl_channel) != ZX_OK) {
             exit(EXIT_FAILURE);
         }
@@ -178,7 +178,7 @@ int main(int argc, char** argv) {
             continue;
         }
 
-        struct fuchsia_power_SourceInfo pinfo;
+        struct fuchsia_hardware_power_SourceInfo pinfo;
         zx_handle_t ch;
         zx_status_t status;
         zx_status_t op_status;
@@ -199,8 +199,8 @@ int main(int argc, char** argv) {
         printf("[%s] type: %s, state: %s (%#x)\n", de->d_name, type_to_string[pinfo.type],
                 get_state_string(pinfo.state, &state_str), pinfo.state);
 
-        if (pinfo.type == fuchsia_power_PowerType_BATTERY &&
-            (pinfo.state & fuchsia_power_POWER_STATE_ONLINE)) {
+        if (pinfo.type == fuchsia_hardware_power_PowerType_BATTERY &&
+            (pinfo.state & fuchsia_hardware_power_POWER_STATE_ONLINE)) {
             if (get_battery_info(ch) != ZX_OK) {
                 fprintf(stderr, "Couldn't read battery information for %s, skipping\n", de->d_name);
                 continue;
@@ -209,7 +209,7 @@ int main(int argc, char** argv) {
 
         if (args.poll_events) {
             zx_handle_t h = ZX_HANDLE_INVALID;
-            status = fuchsia_power_SourceGetStateChangeEvent(ch, &op_status, &h);
+            status = fuchsia_hardware_power_SourceGetStateChangeEvent(ch, &op_status, &h);
             if (status != ZX_OK || op_status != ZX_OK) {
                 printf("failed to get event: %d / %d\n", status, op_status);
                 return status;

@@ -7,7 +7,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 
-#include <fuchsia/power/c/fidl.h>
+#include <fuchsia/hardware/power/c/fidl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <threads.h>
@@ -238,7 +238,7 @@ static zx_status_t acpi_battery_suspend(void* ctx, uint32_t flags) {
 
 zx_status_t fidl_battery_get_power_info(void* ctx, fidl_txn_t* txn) {
     acpi_battery_device_t* dev = ctx;
-    struct fuchsia_power_SourceInfo info;
+    struct fuchsia_hardware_power_SourceInfo info;
 
     mtx_lock(&dev->lock);
     info.state = dev->power_info.state;
@@ -247,13 +247,13 @@ zx_status_t fidl_battery_get_power_info(void* ctx, fidl_txn_t* txn) {
 
     // reading state clears the signal
     zx_object_signal(dev->event, ZX_USER_SIGNAL_0, 0);
-    return fuchsia_power_SourceGetPowerInfo_reply(txn, ZX_OK, &info);
+    return fuchsia_hardware_power_SourceGetPowerInfo_reply(txn, ZX_OK, &info);
 }
 
 zx_status_t fidl_battery_get_battery_info(void* ctx, fidl_txn_t* txn) {
     acpi_battery_device_t* dev = ctx;
     zx_status_t status = call_BST(dev);
-    struct fuchsia_power_BatteryInfo info = {};
+    struct fuchsia_hardware_power_BatteryInfo info = {};
 
     if (status == ZX_OK) {
         mtx_lock(&dev->lock);
@@ -271,7 +271,7 @@ zx_status_t fidl_battery_get_battery_info(void* ctx, fidl_txn_t* txn) {
         mtx_unlock(&dev->lock);
     }
 
-    return fuchsia_power_SourceGetBatteryInfo_reply(txn, status, &info);
+    return fuchsia_hardware_power_SourceGetBatteryInfo_reply(txn, status, &info);
 }
 
 zx_status_t fidl_battery_get_state_change_event(void* ctx, fidl_txn_t* txn) {
@@ -285,17 +285,17 @@ zx_status_t fidl_battery_get_state_change_event(void* ctx, fidl_txn_t* txn) {
         zx_object_signal(dev->event, ZX_USER_SIGNAL_0, 0);
     }
 
-    return fuchsia_power_SourceGetStateChangeEvent_reply(txn, status, out_handle);
+    return fuchsia_hardware_power_SourceGetStateChangeEvent_reply(txn, status, out_handle);
 }
 
-static fuchsia_power_Source_ops_t fidl_ops = {
+static fuchsia_hardware_power_Source_ops_t fidl_ops = {
     .GetPowerInfo = fidl_battery_get_power_info,
     .GetStateChangeEvent = fidl_battery_get_state_change_event,
     .GetBatteryInfo = fidl_battery_get_battery_info,
 };
 
 static zx_status_t fuchsia_battery_message_instance(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
-    return fuchsia_power_Source_dispatch(ctx, txn, msg, &fidl_ops);
+    return fuchsia_hardware_power_Source_dispatch(ctx, txn, msg, &fidl_ops);
 }
 
 static zx_protocol_device_t acpi_battery_device_proto = {

@@ -8,7 +8,7 @@
 #include <ddk/driver.h>
 
 #include <acpica/acpi.h>
-#include <fuchsia/power/c/fidl.h>
+#include <fuchsia/hardware/power/c/fidl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <threads.h>
@@ -75,7 +75,7 @@ static void acpi_pwrsrc_release(void* ctx) {
 
 zx_status_t fidl_pwrsrc_get_power_info(void* ctx, fidl_txn_t* txn) {
     acpi_pwrsrc_device_t* dev = ctx;
-    struct fuchsia_power_SourceInfo info;
+    struct fuchsia_hardware_power_SourceInfo info;
 
     mtx_lock(&dev->lock);
     info.state = dev->info.state;
@@ -84,7 +84,7 @@ zx_status_t fidl_pwrsrc_get_power_info(void* ctx, fidl_txn_t* txn) {
 
     // reading state clears the signal
     zx_object_signal(dev->event, ZX_USER_SIGNAL_0, 0);
-    return fuchsia_power_SourceGetPowerInfo_reply(txn, ZX_OK, &info);
+    return fuchsia_hardware_power_SourceGetPowerInfo_reply(txn, ZX_OK, &info);
 }
 
 zx_status_t fidl_pwrsrc_get_state_change_event(void* ctx, fidl_txn_t* txn) {
@@ -97,21 +97,22 @@ zx_status_t fidl_pwrsrc_get_state_change_event(void* ctx, fidl_txn_t* txn) {
         // clear the signal before returning
         zx_object_signal(dev->event, ZX_USER_SIGNAL_0, 0);
     }
-    return fuchsia_power_SourceGetStateChangeEvent_reply(txn, status, out_handle);
+    return fuchsia_hardware_power_SourceGetStateChangeEvent_reply(txn, status, out_handle);
 }
 
-static fuchsia_power_Source_ops_t fidl_ops = {
+static fuchsia_hardware_power_Source_ops_t fidl_ops = {
     .GetPowerInfo = fidl_pwrsrc_get_power_info,
     .GetStateChangeEvent = fidl_pwrsrc_get_state_change_event,
 };
 
-static zx_status_t fuchsia_power_message_instance(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
-    return fuchsia_power_Source_dispatch(ctx, txn, msg, &fidl_ops);
+static zx_status_t fuchsia_hardware_power_message_instance(void* ctx, fidl_msg_t* msg,
+                                                           fidl_txn_t* txn) {
+    return fuchsia_hardware_power_Source_dispatch(ctx, txn, msg, &fidl_ops);
 }
 
 static zx_protocol_device_t acpi_pwrsrc_device_proto = {
     .version = DEVICE_OPS_VERSION,
-    .message = fuchsia_power_message_instance,
+    .message = fuchsia_hardware_power_message_instance,
     .release = acpi_pwrsrc_release,
 };
 

@@ -9,7 +9,7 @@ MODULE_TYPE := fidl
 MODULE_PACKAGE := fidl
 
 
-MODULE_FIDL_LIBRARY := fuchsia.power
+MODULE_FIDL_LIBRARY := fuchsia.hardware.power
 MODULE_SRCS += $(LOCAL_DIR)/power.fidl
 
 include make/module.mk
