@@ -341,20 +341,19 @@ zx_status_t GptDevicePartitioner::InitializeGpt(fbl::unique_fd devfs_root,
         return ZX_ERR_NOT_FOUND;
     }
 
-    gpt_device_t* gpt;
-    if (gpt_device_init(fd.get(), block_info.block_size, block_info.block_count, &gpt)) {
+    fbl::unique_ptr<GptDevice> gpt;
+    if (GptDevice::Create(fd.get(), block_info.block_size, block_info.block_count, &gpt) != ZX_OK) {
         ERROR("Failed to get GPT info\n");
         return ZX_ERR_BAD_STATE;
     }
 
-    auto releaser = fbl::MakeAutoCall([&]() { gpt_device_release(gpt); });
-    if (!gpt->valid) {
+    if (!gpt->Valid()) {
         ERROR("Located GPT is invalid; Attempting to initialize\n");
-        if (gpt_partition_remove_all(gpt)) {
+        if (gpt->RemoveAllPartitions()) {
             ERROR("Failed to create empty GPT\n");
             return ZX_ERR_BAD_STATE;
         }
-        if (gpt_device_sync(gpt)) {
+        if (gpt->Sync() != 0) {
             ERROR("Failed to sync empty GPT\n");
             return ZX_ERR_BAD_STATE;
         }
@@ -372,9 +371,8 @@ zx_status_t GptDevicePartitioner::InitializeGpt(fbl::unique_fd devfs_root,
         }
     }
 
-    releaser.cancel();
-    *gpt_out = WrapUnique(new GptDevicePartitioner(std::move(devfs_root), std::move(fd), gpt,
-                                                   block_info));
+    *gpt_out = WrapUnique(new GptDevicePartitioner(std::move(devfs_root), std::move(fd),
+                                                   std::move(gpt), block_info));
     return ZX_OK;
 }
 
@@ -394,15 +392,15 @@ zx_status_t GptDevicePartitioner::FindFirstFit(size_t bytes_requested, size_t* s
     // For simplicity, include the 'start' and 'end' reserved spots as
     // partitions.
     size_t partition_count = 0;
-    PartitionPosition partitions[PARTITIONS_COUNT + 2];
+    PartitionPosition partitions[gpt::kPartitionCount + 2];
     const size_t reserved_blocks = ReservedHeaderBlocks(block_info_.block_size);
     partitions[partition_count].start = 0;
     partitions[partition_count++].length = reserved_blocks;
     partitions[partition_count].start = block_info_.block_count - reserved_blocks;
     partitions[partition_count++].length = reserved_blocks;
 
-    for (size_t i = 0; i < PARTITIONS_COUNT; i++) {
-        const gpt_partition_t* p = gpt_->partitions[i];
+    for (uint32_t i = 0; i < gpt::kPartitionCount; i++) {
+        const gpt_partition_t* p = gpt_->GetPartition(i);
         if (!p) {
             continue;
         }
@@ -450,15 +448,15 @@ zx_status_t GptDevicePartitioner::CreateGptPartition(const char* name, uint8_t* 
     zx_cprng_draw(out_guid, GPT_GUID_LEN);
 
     zx_status_t status;
-    if ((status = gpt_partition_add(gpt_, name, type, out_guid, offset, blocks, 0))) {
+    if ((status = gpt_->AddPartition(name, type, out_guid, offset, blocks, 0))) {
         ERROR("Failed to add partition\n");
         return ZX_ERR_IO;
     }
-    if ((status = gpt_device_sync(gpt_))) {
+    if ((status = gpt_->Sync())) {
         ERROR("Failed to sync GPT\n");
         return ZX_ERR_IO;
     }
-    if ((status = gpt_partition_clear(gpt_, offset, 1))) {
+    if ((status = gpt_->ClearPartition(offset, 1))) {
         ERROR("Failed to clear first block of new partition\n");
         return ZX_ERR_IO;
     }
@@ -514,14 +512,14 @@ zx_status_t GptDevicePartitioner::AddPartition(
 
 zx_status_t GptDevicePartitioner::FindPartition(FilterCallback filter, gpt_partition_t** out,
                                                 fbl::unique_fd* out_fd) {
-    for (size_t i = 0; i < PARTITIONS_COUNT; i++) {
-        gpt_partition_t* p = gpt_->partitions[i];
+    for (uint32_t i = 0; i < gpt::kPartitionCount; i++) {
+        gpt_partition_t* p = gpt_->GetPartition(i);
         if (!p) {
             continue;
         }
 
         if (filter(*p)) {
-            LOG("Found partition in GPT, partition %zu\n", i);
+            LOG("Found partition in GPT, partition %u\n", i);
             if (out) {
                 *out = p;
             }
@@ -541,14 +539,14 @@ zx_status_t GptDevicePartitioner::FindPartition(FilterCallback filter, gpt_parti
 
 zx_status_t GptDevicePartitioner::FindPartition(FilterCallback filter,
                                                 fbl::unique_fd* out_fd) const {
-    for (size_t i = 0; i < PARTITIONS_COUNT; i++) {
-        const gpt_partition_t* p = gpt_->partitions[i];
+    for (uint32_t i = 0; i < gpt::kPartitionCount; i++) {
+        const gpt_partition_t* p = gpt_->GetPartition(i);
         if (!p) {
             continue;
         }
 
         if (filter(*p)) {
-            LOG("Found partition in GPT, partition %zu\n", i);
+            LOG("Found partition in GPT, partition %u\n", i);
             if (out_fd) {
                 zx_status_t status;
                 status = OpenBlockPartition(devfs_root_, p->guid, p->type, ZX_SEC(5), out_fd);
@@ -565,8 +563,8 @@ zx_status_t GptDevicePartitioner::FindPartition(FilterCallback filter,
 
 zx_status_t GptDevicePartitioner::WipePartitions(FilterCallback filter) {
     bool modify = false;
-    for (size_t i = 0; i < PARTITIONS_COUNT; i++) {
-        const gpt_partition_t* p = gpt_->partitions[i];
+    for (uint32_t i = 0; i < gpt::kPartitionCount; i++) {
+        const gpt_partition_t* p = gpt_->GetPartition(i);
         if (!p) {
             continue;
         }
@@ -579,7 +577,7 @@ zx_status_t GptDevicePartitioner::WipePartitions(FilterCallback filter) {
         // Ignore the return status; wiping is a best-effort approach anyway.
         WipeBlockPartition(devfs_root_, p->guid, p->type);
 
-        if (gpt_partition_remove(gpt_, p->guid)) {
+        if (gpt_->RemovePartition(p->guid)) {
             ERROR("Warning: Could not remove partition\n");
         } else {
             // If we successfully clear the partition, then all subsequent
@@ -590,7 +588,7 @@ zx_status_t GptDevicePartitioner::WipePartitions(FilterCallback filter) {
         }
     }
     if (modify) {
-        gpt_device_sync(gpt_);
+        gpt_->Sync();
         LOG("Immediate reboot strongly recommended\n");
     }
     ioctl_block_rr_part(fd_.get());
@@ -732,7 +730,7 @@ zx_status_t CrosDevicePartitioner::Initialize(fbl::unique_fd devfs_root,
         return status;
     }
 
-    gpt_device_t* gpt = gpt_partitioner->GetGpt();
+    GptDevice* gpt = gpt_partitioner->GetGpt();
     if (!is_cros(gpt)) {
         return ZX_ERR_NOT_FOUND;
     }
@@ -745,7 +743,7 @@ zx_status_t CrosDevicePartitioner::Initialize(fbl::unique_fd devfs_root,
             ERROR("Failed to configure CrOS for Fuchsia.\n");
             return status;
         }
-        gpt_device_sync(gpt);
+        gpt->Sync();
         ioctl_block_rr_part(gpt_partitioner->GetFd());
     }
 
@@ -816,8 +814,8 @@ zx_status_t CrosDevicePartitioner::FinalizePartition(Partition partition_type) {
     uint16_t zircon_prefix[strlen(kPrefix)*2];
     cstring_to_utf16(&zircon_prefix[0], kPrefix, strlen(kPrefix));
 
-    for(size_t i = 0; i < PARTITIONS_COUNT; ++i) {
-        const gpt_partition_t* part = gpt_->GetGpt()->partitions[i];
+    for (uint32_t i = 0; i < gpt::kPartitionCount; ++i) {
+        const gpt_partition_t* part = gpt_->GetGpt()->GetPartition(i);
         if (part == NULL) {
             continue;
         }
@@ -865,7 +863,7 @@ zx_status_t CrosDevicePartitioner::FinalizePartition(Partition partition_type) {
         ERROR("Cannot set CrOS partition 'tries' for KERN-C\n");
         return ZX_ERR_OUT_OF_RANGE;
     }
-    gpt_device_sync(gpt_->GetGpt());
+    gpt_->GetGpt()->Sync();
     return ZX_OK;
 }
 

@@ -4,10 +4,10 @@
 
 #include <gpt/cros.h>
 
-#include <gpt/gpt.h>
+#include <gpt/c/gpt.h>
 #include <string.h>
 
-namespace libgpt {
+namespace gpt {
 
 namespace {
 constexpr uint8_t kPriorityShift = 48;
@@ -61,4 +61,4 @@ int gpt_cros_attr_set_priority(uint64_t* flags, uint8_t priority) {
 }
 
 __END_CDECLS
-} // namespace libgpt
+} // namespace gpt

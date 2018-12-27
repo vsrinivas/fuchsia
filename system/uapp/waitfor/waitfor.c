@@ -11,7 +11,7 @@
 #include <lib/fdio/watcher.h>
 
 // for guid printing
-#include <gpt/gpt.h>
+#include <gpt/c/gpt.h>
 
 #include <zircon/listnode.h>
 #include <zircon/syscalls.h>

@@ -21,12 +21,12 @@
 __BEGIN_CDECLS
 
 // determine if this looks like a ChromeOS partition layout
-bool is_cros(const gpt_device_t* gpt);
+bool is_cros(const gpt::GptDevice* gpt);
 
 // We define that we're ready to pave if
 //  - ZIRCON-A, ZIRCON-B, and ZIRCON-R are present and at least sz_kern bytes
 //  - An FVM a partition is present
-bool is_ready_to_pave(const gpt_device_t* gpt, const block_info_t* block_info,
+bool is_ready_to_pave(const gpt::GptDevice* gpt, const block_info_t* block_info,
                       const uint64_t sz_kern);
 
 // Configure the GPT for a dual-boot of Fuchsia and ChromeOS.
@@ -40,7 +40,7 @@ bool is_ready_to_pave(const gpt_device_t* gpt, const block_info_t* block_info,
 // persisted. Returns ZX_ERR_BAD_STATE if the partition table can't be
 // reconfigured. In the case of error, the GPT should NOT be written back to
 // disk and should be discarded.
-zx_status_t config_cros_for_fuchsia(gpt_device_t* gpt,
+zx_status_t config_cros_for_fuchsia(gpt::GptDevice* gpt,
                                     const block_info_t* blk_info,
                                     const uint64_t sz_kern);
 

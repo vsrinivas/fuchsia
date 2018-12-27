@@ -17,6 +17,7 @@
 #include <utility>
 
 namespace paver {
+using gpt::GptDevice;
 
 enum class Partition {
     kUnknown,
@@ -85,19 +86,13 @@ public:
     static zx_status_t InitializeGpt(fbl::unique_fd devfs_root,
                                      fbl::unique_ptr<GptDevicePartitioner>* gpt_out);
 
-    virtual ~GptDevicePartitioner() {
-        if (gpt_) {
-            gpt_device_release(gpt_);
-        }
-    }
-
     // Returns block info for a specified block device.
     zx_status_t GetBlockInfo(block_info_t* block_info) const {
         memcpy(block_info, &block_info_, sizeof(*block_info));
         return ZX_OK;
     }
 
-    gpt_device_t* GetGpt() const { return gpt_; }
+    GptDevice* GetGpt() const { return gpt_.get(); }
     int GetFd() const { return fd_.get(); }
 
     // Find the first spot that has at least |bytes_requested| of space.
@@ -126,9 +121,9 @@ private:
     // Find and return the topological path of the GPT which we will pave.
     static bool FindTargetGptPath(const fbl::unique_fd& devfs_root, fbl::String* out);
 
-    GptDevicePartitioner(fbl::unique_fd devfs_root, fbl::unique_fd fd, gpt_device_t* gpt,
-                         block_info_t block_info)
-        : devfs_root_(std::move(devfs_root)), fd_(std::move(fd)), gpt_(gpt),
+    GptDevicePartitioner(fbl::unique_fd devfs_root, fbl::unique_fd fd,
+                         fbl::unique_ptr<GptDevice> gpt, block_info_t block_info)
+        : devfs_root_(std::move(devfs_root)), fd_(std::move(fd)), gpt_(std::move(gpt)),
           block_info_(block_info) {}
 
     zx_status_t CreateGptPartition(const char* name, uint8_t* type, uint64_t offset,
@@ -136,7 +131,7 @@ private:
 
     fbl::unique_fd devfs_root_;
     fbl::unique_fd fd_;
-    gpt_device_t* gpt_;
+    fbl::unique_ptr<GptDevice> gpt_;
     block_info_t block_info_;
 };
 

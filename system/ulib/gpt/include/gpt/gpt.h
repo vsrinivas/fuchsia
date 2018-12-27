@@ -4,112 +4,13 @@
 
 #pragma once
 
-#include <stdbool.h>
-#include <stdint.h>
-#include <unistd.h>
+#include <fbl/unique_ptr.h>
+#include <gpt/c/gpt.h>
 
-#include <zircon/compiler.h>
-#include <zircon/device/block.h>
-#include <zircon/hw/gpt.h>
+namespace gpt {
 
-typedef gpt_entry_t gpt_partition_t;
-
-__BEGIN_CDECLS
-
-#define PARTITIONS_COUNT 128
-#define GPT_GUID_STRLEN 37
-
-// Helpers for translating the |name| field of "gpt_partition_t".
-// Assumes UTF-16LE.
-// Assumes all code points are less than or equal to U+007F, and
-// discards any upper bits, forcing all inputs to be in this
-// range.
-//
-// |len| refers to the length of the input string, in chars.
-void cstring_to_utf16(uint16_t* dst, const char* src, size_t len);
-// |len| refers to the length of the input string, in 16-bit pairs.
-char* utf16_to_cstring(char* dst, const uint16_t* src, size_t len);
-
-typedef struct gpt_device {
-    // true if the partition table on the device is valid
-    bool valid;
-
-    // pointer to a list of partitions
-    gpt_partition_t* partitions[PARTITIONS_COUNT];
-} gpt_device_t;
-
-// determines whether guid is system guid
-bool gpt_is_sys_guid(uint8_t* guid, ssize_t len);
-
-// determines whether guid is data guid
-bool gpt_is_data_guid(uint8_t* guid, ssize_t len);
-
-// determines whether guid is install guid
-bool gpt_is_install_guid(uint8_t* guid, ssize_t len);
-
-// determines whether guid is efi guid
-bool gpt_is_efi_guid(uint8_t* guid, ssize_t len);
-
-// read the partition table from the device.
-int gpt_device_init(int fd, uint32_t blocksize, uint64_t blocks, gpt_device_t** out_dev);
-
-// releases the device
-void gpt_device_release(gpt_device_t* dev);
-
-// Returns the range of usable blocks within the GPT, from [block_start, block_end] (inclusive)
-int gpt_device_range(const gpt_device_t* dev, uint64_t* block_start, uint64_t* block_end);
-
-// writes the partition table to the device. it is the caller's responsibility to
-// rescan partitions for the block device if needed
-int gpt_device_sync(gpt_device_t* dev);
-
-// perform all checks and computations on the in-memory representation, but DOES
-// NOT write it out to disk. To perform checks AND write to disk, use
-// gpt_device_sync
-int gpt_device_finalize(gpt_device_t* dev);
-
-// adds a partition
-int gpt_partition_add(gpt_device_t* dev, const char* name, const uint8_t* type,
-                      const uint8_t* guid, uint64_t offset, uint64_t blocks,
-                      uint64_t flags);
-
-// Writes zeroed blocks at an arbitrary offset (in blocks) within the device.
-//
-// Can be used alongside gpt_partition_add to ensure a newly created partition
-// will not read stale superblock data.
-int gpt_partition_clear(gpt_device_t* dev, uint64_t offset, uint64_t blocks);
-
-// removes a partition
-int gpt_partition_remove(gpt_device_t* dev, const uint8_t* guid);
-
-// removes all partitions
-int gpt_partition_remove_all(gpt_device_t* dev);
-
-// converts GUID to a string
-void uint8_to_guid_string(char* dst, const uint8_t* src);
-
-// given a gpt device, get the GUID for the disk
-void gpt_device_get_header_guid(const gpt_device_t* dev,
-                                uint8_t (*disk_guid_out)[GPT_GUID_LEN]);
-
-// return true if partition# idx has been locally modified
-int gpt_get_diffs(const gpt_device_t* dev, int idx, unsigned* diffs);
-
-// print out the GPT
-void print_table(const gpt_device_t* device);
-
-// Sort an array of gpt_partition_t pointers in-place based on the values of
-// gpt_partition_t->first.
-void gpt_sort_partitions(gpt_partition_t** partitions, size_t count);
-
-// Attempt to read a GPT from the file descriptor. dev_out will be NULL if
-// the read fails or read succeeds and GPT is invalid.
-int gpt_device_read_gpt(int fd, gpt_device_t** dev_out);
-
-void gpt_set_debug_output_enabled(bool enabled);
-
-// Return the human-readable version of the type GUID.
-const char* gpt_guid_to_type(const char* guid);
+constexpr uint32_t kPartitionCount = 128;
+constexpr uint64_t kGuidStrLength = 37;
 
 #define GPT_DIFF_TYPE    (0x01u)
 #define GPT_DIFF_GUID    (0x02u)
@@ -118,4 +19,96 @@ const char* gpt_guid_to_type(const char* guid);
 #define GPT_DIFF_FLAGS   (0x10u)
 #define GPT_DIFF_NAME    (0x20u)
 
-__END_CDECLS
+class GptDevice {
+public:
+    static zx_status_t Create(int fd, uint32_t blocksize, uint64_t blocks,
+                              fbl::unique_ptr<GptDevice>* out_dev);
+
+    // returns true if the partition table on the device is valid
+    bool Valid() const { return valid_; }
+
+    // Returns the range of usable blocks within the GPT, from [block_start, block_end] (inclusive)
+    int Range(uint64_t* block_start, uint64_t* block_end) const;
+
+    // Writes changes to partition table to the device. If the device does not contain valid
+    // GPT, a gpt header gets created. Sync doesn't nudge block device driver to rescan the
+    // partitions. So it is the caller's responsibility to rescan partitions for the changes
+    // if needed.
+    int Sync();
+
+    // perform all checks and computations on the in-memory representation, but DOES
+    // NOT write it out to disk. To perform checks AND write to disk, use Sync
+    int Finalize();
+
+    // Adds a partition to in-memory instance of GptDevice. The changes stay visible
+    // only to this instace. Needs a Sync to write the changes to the device.
+    int AddPartition(const char* name, const uint8_t* type,
+                     const uint8_t* guid, uint64_t offset, uint64_t blocks,
+                     uint64_t flags);
+
+    // Writes zeroed blocks at an arbitrary offset (in blocks) within the device.
+    //
+    // Can be used alongside gpt_partition_add to ensure a newly created partition
+    // will not read stale superblock data.
+    int ClearPartition(uint64_t offset, uint64_t blocks);
+
+    // Removes a partition from in-memory instance of GptDevice. The changes stay visible
+    // only to this instace. Needs a Sync to write the changes to the device.
+    int RemovePartition(const uint8_t* guid);
+
+    // Removes all partitions from in-memory instance of GptDevice. The changes stay visible
+    // only to this instace. Needs a Sync to write the changes to the device.
+    int RemoveAllPartitions();
+
+    // given a gpt device, get the GUID for the disk
+    void GetHeaderGuid(uint8_t (*disk_guid_out)[GPT_GUID_LEN]) const;
+
+    // return true if partition# idx has been locally modified
+    int GetDiffs(uint32_t idx, uint32_t* diffs) const;
+
+    // returns a pointer to partition at index pindex
+    gpt_partition_t* GetPartition(uint32_t pindex) const {
+        ZX_ASSERT(pindex < kPartitionCount);
+        return partitions_[pindex];
+    }
+
+    // print out the GPT
+    void PrintTable() const;
+
+private:
+    GptDevice() { valid_ = false; };
+
+    int FinalizeAndSync(bool persist);
+
+    // read the partition table from the device.
+    zx_status_t Init(int fd, uint32_t blocksize, uint64_t blocks);
+
+    // true if the partition table on the device is valid
+    bool valid_;
+
+    // pointer to a list of partitions
+    gpt_partition_t* partitions_[kPartitionCount] = {};
+
+    // device to use
+    int fd_ = -1;
+
+    // block size in bytes
+    uint64_t blocksize_ = 0;
+
+    // number of blocks
+    uint64_t blocks_ = 0;
+
+    // true if valid mbr exists on disk
+    bool mbr_ = false;
+
+    // header buffer, should be primary copy
+    gpt_header_t header_ = {};
+
+    // partition table buffer
+    gpt_partition_t ptable_[kPartitionCount] = {};
+
+    // copy of buffer from when last init'd or sync'd.
+    gpt_partition_t ptable_backup_[kPartitionCount] = {};
+};
+
+} // namespace gpt

@@ -5,7 +5,6 @@
 #pragma once
 
 #include <digest/digest.h>
-#include <gpt/gpt.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -13,13 +12,15 @@
 #define FVM_VERSION 0x00000001
 #define FVM_SLICE_ENTRY_FREE 0
 #define FVM_BLOCK_SIZE 8192lu
-#define FVM_GUID_LEN GPT_GUID_LEN
-#define FVM_GUID_STRLEN GPT_GUID_STRLEN
 #define FVM_NAME_LEN 24
 
 #ifdef __cplusplus
 
 #include <fbl/algorithm.h>
+#include <gpt/gpt.h>
+
+#define FVM_GUID_LEN GPT_GUID_LEN
+#define FVM_GUID_STRLEN GPT_GUID_STRLEN
 
 namespace fvm {
 

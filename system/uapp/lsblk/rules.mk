@@ -13,8 +13,11 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/main.c
 
 MODULE_STATIC_LIBS := \
+    system/ulib/fbl \
     system/ulib/gpt \
     system/ulib/pretty \
+    system/ulib/zx \
+    system/ulib/zxcpp \
     third_party/ulib/cksum \
 
 MODULE_LIBS := system/ulib/zircon system/ulib/fdio system/ulib/c

@@ -15,6 +15,11 @@ MODULE_NAME := waitfor
 
 MODULE_LIBS := system/ulib/fdio system/ulib/c system/ulib/zircon
 
-MODULE_STATIC_LIBS := system/ulib/gpt third_party/ulib/cksum
+MODULE_STATIC_LIBS := \
+    system/ulib/fbl \
+    system/ulib/gpt \
+    system/ulib/zx \
+    system/ulib/zxcpp \
+    third_party/ulib/cksum \
 
 include make/module.mk

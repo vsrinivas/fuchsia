@@ -19,7 +19,7 @@
 #include <ddk/protocol/block.h>
 #include <ddk/protocol/block/partition.h>
 
-#include <gpt/gpt.h>
+#include <gpt/c/gpt.h>
 #include <lib/sync/completion.h>
 #include <zircon/device/block.h>
 #include <zircon/threads.h>
