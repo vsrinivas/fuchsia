@@ -65,7 +65,12 @@ package("a11y_touch_dispatcher") {
     "a11y_touch_dispatcher",
   ]
 
-  binary = "a11y_touch_dispatcher"
+  binaries = [
+    {
+      name = "a11y_touch_dispatcher"
+      shell = true
+    },
+  ]
 
   meta = [
     {

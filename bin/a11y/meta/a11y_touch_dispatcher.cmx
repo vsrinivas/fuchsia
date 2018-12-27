@@ -3,6 +3,8 @@
         "binary": "bin/a11y_touch_dispatcher"
     },
     "sandbox": {
-        "services": []
+        "services": [
+            "fuchsia.tracelink.Registry"
+        ]
     }
 }
