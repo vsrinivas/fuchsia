@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/ethernet/c/fidl.h>
 #include <inet6/inet6.h>
 #include <lib/fdio/util.h>
 #include <zircon/assert.h>
 #include <zircon/boot/netboot.h>
-#include <zircon/ethernet/c/fidl.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
@@ -152,10 +152,10 @@ zx_handle_t initialize_ethernet(ethtool_options_t* options) {
         return ZX_HANDLE_INVALID;
     }
 
-    zircon_ethernet_Fifos fifos;
+    fuchsia_hardware_ethernet_Fifos fifos;
 
     zx_status_t call_status = ZX_OK;
-    status = zircon_ethernet_DeviceGetFifos(svc, &call_status, &fifos);
+    status = fuchsia_hardware_ethernet_DeviceGetFifos(svc, &call_status, &fifos);
     if (status != ZX_OK || call_status != ZX_OK) {
         fprintf(stderr, "ethtool: failed to get fifos: %d, %d\n", status, call_status);
         return ZX_HANDLE_INVALID;
@@ -168,18 +168,18 @@ zx_handle_t initialize_ethernet(ethtool_options_t* options) {
         return ZX_HANDLE_INVALID;
     }
 
-    status = zircon_ethernet_DeviceSetIOBuffer(svc, iovmo, &call_status);
+    status = fuchsia_hardware_ethernet_DeviceSetIOBuffer(svc, iovmo, &call_status);
     if (status != ZX_OK || call_status != ZX_OK) {
         fprintf(stderr, "ethtool: failed to set iobuf: %d, %d\n", status, call_status);
         return ZX_HANDLE_INVALID;
     }
 
-    status = zircon_ethernet_DeviceSetClientName(svc, "ethtool", 7, &call_status);
+    status = fuchsia_hardware_ethernet_DeviceSetClientName(svc, "ethtool", 7, &call_status);
     if (status != ZX_OK || call_status != ZX_OK) {
         fprintf(stderr, "ethtool: failed to set client name %d, %d\n", status, call_status);
     }
 
-    status = zircon_ethernet_DeviceStart(svc, &call_status);
+    status = fuchsia_hardware_ethernet_DeviceStart(svc, &call_status);
     if (status != ZX_OK || call_status != ZX_OK) {
         fprintf(stderr, "ethtool: failed to start network interface\n");
         return ZX_HANDLE_INVALID;
@@ -201,7 +201,8 @@ int main(int argc, const char** argv) {
     }
     zx_status_t status, call_status;
     if (options.setting_promisc) {
-        status = zircon_ethernet_DeviceSetPromiscuousMode(svc, options.promisc_on, &call_status);
+        status = fuchsia_hardware_ethernet_DeviceSetPromiscuousMode(svc, options.promisc_on,
+                                                                    &call_status);
         if (status != ZX_OK || call_status != ZX_OK) {
             fprintf(stderr, "ethtool: failed to set promiscuous mode to %s: %d, %d\n",
                     options.promisc_on ? "on" : "off", status, call_status);
@@ -212,17 +213,18 @@ int main(int argc, const char** argv) {
         }
     }
     if (options.filter_macs) {
-        status = zircon_ethernet_DeviceConfigMulticastTestFilter(svc, &call_status);
+        status = fuchsia_hardware_ethernet_DeviceConfigMulticastTestFilter(svc, &call_status);
         if (status != ZX_OK || call_status != ZX_OK) {
             fprintf(stderr, "ethtool: failed to config multicast test\n");
             return -1;
         }
         for (int i = 0; i < options.n_filter_macs; i++) {
-            zircon_ethernet_MacAddress addr;
+            fuchsia_hardware_ethernet_MacAddress addr;
             memcpy(&addr.octets, options.filter_macs + i * ETH_MAC_SIZE, ETH_MAC_SIZE);
             printf("Sending addr %d %d %d %d %d %d\n", addr.octets[0], addr.octets[1],
                    addr.octets[2], addr.octets[3], addr.octets[4], addr.octets[5]);
-            status = zircon_ethernet_DeviceConfigMulticastAddMac(svc, &addr, &call_status);
+            status =
+                fuchsia_hardware_ethernet_DeviceConfigMulticastAddMac(svc, &addr, &call_status);
             if (status != ZX_OK || call_status != ZX_OK) {
                 fprintf(stderr, "ethtool: failed to add multicast addr\n");
                 return -1;
@@ -230,7 +232,7 @@ int main(int argc, const char** argv) {
         }
     }
     if (options.dump_regs) {
-        status = zircon_ethernet_DeviceDumpRegisters(svc, &call_status);
+        status = fuchsia_hardware_ethernet_DeviceDumpRegisters(svc, &call_status);
         if (status != ZX_OK || call_status != ZX_OK) {
             fprintf(stderr, "ethtool: failed to request reg dump\n");
             return -1;

@@ -10,7 +10,7 @@ MODULE_TYPE := driver
 
 MODULE_SRCS := $(LOCAL_DIR)/ethernet.c
 
-MODULE_FIDL_LIBS := system/fidl/zircon-ethernet
+MODULE_FIDL_LIBS := system/fidl/fuchsia-hardware-ethernet
 
 MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/fidl
 

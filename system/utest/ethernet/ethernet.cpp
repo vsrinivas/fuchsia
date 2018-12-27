@@ -3,20 +3,14 @@
 // found in the LICENSE file.
 
 #include <ddk/protocol/ethernet.h>
-#include <fbl/auto_call.h>
 #include <fbl/algorithm.h>
+#include <fbl/auto_call.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
+#include <fuchsia/hardware/ethernet/c/fidl.h>
 #include <lib/fdio/util.h>
 #include <lib/fdio/watcher.h>
-#include <unittest/unittest.h>
-#include <zircon/compiler.h>
-#include <zircon/device/device.h>
-#include <zircon/device/ethertap.h>
-#include <zircon/ethernet/c/fidl.h>
-#include <zircon/status.h>
-#include <zircon/types.h>
 #include <lib/fzl/fdio.h>
 #include <lib/fzl/fifo.h>
 #include <lib/zx/channel.h>
@@ -24,6 +18,12 @@
 #include <lib/zx/time.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
+#include <unittest/unittest.h>
+#include <zircon/compiler.h>
+#include <zircon/device/device.h>
+#include <zircon/device/ethertap.h>
+#include <zircon/status.h>
+#include <zircon/types.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -110,15 +110,15 @@ zx_status_t WatchCb(int dirfd, int event, const char* fn, void* cookie) {
     }
 
     // See if this device is our ethertap device
-    zircon_ethernet_Info info;
-    zx_status_t status = zircon_ethernet_DeviceGetInfo(svc.get(), &info);
+    fuchsia_hardware_ethernet_Info info;
+    zx_status_t status = fuchsia_hardware_ethernet_DeviceGetInfo(svc.get(), &info);
     if (status != ZX_OK) {
         fprintf(stderr, "could not get ethernet info for %s/%s: %s\n", kEthernetDir, fn,
                 mxstrerror(status));
         // Return ZX_OK to keep watching for devices.
         return ZX_OK;
     }
-    if (!(info.features & zircon_ethernet_INFO_FEATURE_SYNTH)) {
+    if (!(info.features & fuchsia_hardware_ethernet_INFO_FEATURE_SYNTH)) {
         // Not a match, keep looking.
         return ZX_OK;
     }
@@ -154,7 +154,7 @@ zx_status_t OpenEthertapDev(zx::channel* svc) {
 }
 
 struct FifoEntry : public fbl::SinglyLinkedListable<fbl::unique_ptr<FifoEntry>> {
-    zircon_ethernet_FifoEntry e;
+    fuchsia_hardware_ethernet_FifoEntry e;
 };
 
 struct EthernetOpenInfo {
@@ -183,16 +183,17 @@ public:
     zx_status_t Register(zx::channel svc, const char* name, uint32_t nbufs, uint16_t bufsize) {
         svc_ = std::move(svc);
         zx_status_t call_status = ZX_OK;
-        size_t name_len = fbl::min<size_t>(strlen(name), zircon_ethernet_MAX_CLIENT_NAME_LEN);
-        zx_status_t status = zircon_ethernet_DeviceSetClientName(svc_.get(), name,
-                                                                 name_len, &call_status);
+        size_t name_len =
+            fbl::min<size_t>(strlen(name), fuchsia_hardware_ethernet_MAX_CLIENT_NAME_LEN);
+        zx_status_t status =
+            fuchsia_hardware_ethernet_DeviceSetClientName(svc_.get(), name, name_len, &call_status);
         if (status != ZX_OK || call_status != ZX_OK) {
             fprintf(stderr, "could not set client name to %s: %d, %d\n", name, status, call_status);
             return status == ZX_OK ? call_status : status;
         }
 
-        zircon_ethernet_Fifos fifos;
-        status = zircon_ethernet_DeviceGetFifos(svc_.get(), &call_status, &fifos);
+        fuchsia_hardware_ethernet_Fifos fifos;
+        status = fuchsia_hardware_ethernet_DeviceGetFifos(svc_.get(), &call_status, &fifos);
         if (status != ZX_OK || call_status != ZX_OK) {
             fprintf(stderr, "could not get fifos: %d, %d\n", status, call_status);
             return status == ZX_OK ? call_status : status;
@@ -230,7 +231,7 @@ public:
         }
 
         zx_handle_t bufh = buf_copy.release();
-        status = zircon_ethernet_DeviceSetIOBuffer(svc_.get(), bufh, &call_status);
+        status = fuchsia_hardware_ethernet_DeviceSetIOBuffer(svc_.get(), bufh, &call_status);
         if (status != ZX_OK || call_status != ZX_OK) {
             fprintf(stderr, "failed to set eth iobuf: %d, %d\n", status, call_status);
             return status == ZX_OK ? call_status : status;
@@ -238,7 +239,7 @@ public:
 
         uint32_t idx = 0;
         for (; idx < nbufs; idx++) {
-            zircon_ethernet_FifoEntry entry = {
+            fuchsia_hardware_ethernet_FifoEntry entry = {
                 .offset = idx * bufsize_,
                 .length = bufsize_,
                 .flags = 0,
@@ -265,24 +266,23 @@ public:
 
     zx_status_t Start() {
         zx_status_t call_status = ZX_OK;
-        zx_status_t status = zircon_ethernet_DeviceStart(svc_.get(), &call_status);
+        zx_status_t status = fuchsia_hardware_ethernet_DeviceStart(svc_.get(), &call_status);
         if (status != ZX_OK) {
             return status;
         }
         return call_status;
     }
 
-    zx_status_t Stop() {
-        return zircon_ethernet_DeviceStop(svc_.get());
-    }
+    zx_status_t Stop() { return fuchsia_hardware_ethernet_DeviceStop(svc_.get()); }
 
     zx_status_t GetStatus(uint32_t* eth_status) {
-        return zircon_ethernet_DeviceGetStatus(svc_.get(), eth_status);
+        return fuchsia_hardware_ethernet_DeviceGetStatus(svc_.get(), eth_status);
     }
 
     zx_status_t SetPromisc(bool on) {
         zx_status_t call_status = ZX_OK;
-        zx_status_t status = zircon_ethernet_DeviceSetPromiscuousMode(svc_.get(), on, &call_status);
+        zx_status_t status =
+            fuchsia_hardware_ethernet_DeviceSetPromiscuousMode(svc_.get(), on, &call_status);
         if (status != ZX_OK) {
             return status;
         }
@@ -291,8 +291,8 @@ public:
 
     zx_status_t SetMulticastPromisc(bool on) {
         zx_status_t call_status, status;
-        status = zircon_ethernet_DeviceConfigMulticastSetPromiscuousMode(svc_.get(), on,
-                                                                         &call_status);
+        status = fuchsia_hardware_ethernet_DeviceConfigMulticastSetPromiscuousMode(svc_.get(), on,
+                                                                                   &call_status);
         if (status != ZX_OK) {
             return status;
         }
@@ -300,11 +300,12 @@ public:
     }
 
     zx_status_t MulticastAddressAdd(uint8_t* mac_addr) {
-        zircon_ethernet_MacAddress mac;
+        fuchsia_hardware_ethernet_MacAddress mac;
         memcpy(mac.octets, mac_addr, 6);
 
         zx_status_t call_status, status;
-        status = zircon_ethernet_DeviceConfigMulticastAddMac(svc_.get(), &mac, &call_status);
+        status =
+            fuchsia_hardware_ethernet_DeviceConfigMulticastAddMac(svc_.get(), &mac, &call_status);
         if (status != ZX_OK) {
             return status;
         }
@@ -312,11 +313,12 @@ public:
     }
 
     zx_status_t MulticastAddressDel(uint8_t* mac_addr) {
-        zircon_ethernet_MacAddress mac;
+        fuchsia_hardware_ethernet_MacAddress mac;
         memcpy(mac.octets, mac_addr, 6);
 
         zx_status_t call_status, status;
-        status = zircon_ethernet_DeviceConfigMulticastDeleteMac(svc_.get(), &mac, &call_status);
+        status = fuchsia_hardware_ethernet_DeviceConfigMulticastDeleteMac(svc_.get(), &mac,
+                                                                          &call_status);
         if (status != ZX_OK) {
             return status;
         }
@@ -327,15 +329,16 @@ public:
     // This tells the driver to turn off the on-by-default multicast-promisc.
     zx_status_t MulticastInitForTest() {
         zx_status_t call_status, status;
-        status = zircon_ethernet_DeviceConfigMulticastTestFilter(svc_.get(), &call_status);
+        status =
+            fuchsia_hardware_ethernet_DeviceConfigMulticastTestFilter(svc_.get(), &call_status);
         if (status != ZX_OK) {
             return status;
         }
         return call_status;
     }
 
-    fzl::fifo<zircon_ethernet_FifoEntry>* tx_fifo() { return &tx_; }
-    fzl::fifo<zircon_ethernet_FifoEntry>* rx_fifo() { return &rx_; }
+    fzl::fifo<fuchsia_hardware_ethernet_FifoEntry>* tx_fifo() { return &tx_; }
+    fzl::fifo<fuchsia_hardware_ethernet_FifoEntry>* rx_fifo() { return &rx_; }
     uint32_t tx_depth() { return tx_depth_; }
     uint32_t rx_depth() { return rx_depth_; }
 
@@ -343,9 +346,9 @@ public:
         return reinterpret_cast<uint8_t*>(mapped_) + offset;
     }
 
-    zircon_ethernet_FifoEntry* GetTxBuffer() {
+    fuchsia_hardware_ethernet_FifoEntry* GetTxBuffer() {
         auto entry_ptr = tx_available_.pop_front();
-        zircon_ethernet_FifoEntry* entry = nullptr;
+        fuchsia_hardware_ethernet_FifoEntry* entry = nullptr;
         if (entry_ptr != nullptr) {
             entry = &entry_ptr->e;
             tx_pending_.push_front(std::move(entry_ptr));
@@ -353,7 +356,7 @@ public:
         return entry;
     }
 
-    void ReturnTxBuffer(zircon_ethernet_FifoEntry* entry) {
+    void ReturnTxBuffer(fuchsia_hardware_ethernet_FifoEntry* entry) {
         auto entry_ptr = tx_pending_.erase_if(
                 [entry](const FifoEntry& tx_entry) { return tx_entry.e.cookie == entry->cookie; });
         if (entry_ptr != nullptr) {
@@ -370,8 +373,8 @@ public:
     uint32_t nbufs_ = 0;
     uint16_t bufsize_ = 0;
 
-    fzl::fifo<zircon_ethernet_FifoEntry> tx_;
-    fzl::fifo<zircon_ethernet_FifoEntry> rx_;
+    fzl::fifo<fuchsia_hardware_ethernet_FifoEntry> tx_;
+    fzl::fifo<fuchsia_hardware_ethernet_FifoEntry> rx_;
     uint32_t tx_depth_ = 0;
     uint32_t rx_depth_ = 0;
 
@@ -518,16 +521,17 @@ static bool EthernetStartTest() {
 
     // Verify no signals asserted on the rx fifo
     zx_signals_t obs = 0;
-    client.rx_fifo()->wait_one(zircon_ethernet_SIGNAL_STATUS, zx::time(), &obs);
-    EXPECT_FALSE(obs & zircon_ethernet_SIGNAL_STATUS);
+    client.rx_fifo()->wait_one(fuchsia_hardware_ethernet_SIGNAL_STATUS, zx::time(), &obs);
+    EXPECT_FALSE(obs & fuchsia_hardware_ethernet_SIGNAL_STATUS);
 
     // Start the ethernet client
     EXPECT_EQ(ZX_OK, client.Start());
 
     // Verify that the ethernet driver signaled a status change for the initial state.
     obs = 0;
-    EXPECT_EQ(ZX_OK, client.rx_fifo()->wait_one(zircon_ethernet_SIGNAL_STATUS, FAIL_TIMEOUT, &obs));
-    EXPECT_TRUE(obs & zircon_ethernet_SIGNAL_STATUS);
+    EXPECT_EQ(ZX_OK, client.rx_fifo()->wait_one(fuchsia_hardware_ethernet_SIGNAL_STATUS,
+                                                FAIL_TIMEOUT, &obs));
+    EXPECT_TRUE(obs & fuchsia_hardware_ethernet_SIGNAL_STATUS);
 
     // Default link status should be OFFLINE
     uint32_t eth_status = 0;
@@ -537,11 +541,12 @@ static bool EthernetStartTest() {
     // Set the link status to online and verify
     sock.signal_peer(0, ETHERTAP_SIGNAL_ONLINE);
 
-    EXPECT_EQ(ZX_OK, client.rx_fifo()->wait_one(zircon_ethernet_SIGNAL_STATUS, FAIL_TIMEOUT, &obs));
-    EXPECT_TRUE(obs & zircon_ethernet_SIGNAL_STATUS);
+    EXPECT_EQ(ZX_OK, client.rx_fifo()->wait_one(fuchsia_hardware_ethernet_SIGNAL_STATUS,
+                                                FAIL_TIMEOUT, &obs));
+    EXPECT_TRUE(obs & fuchsia_hardware_ethernet_SIGNAL_STATUS);
 
     EXPECT_EQ(ZX_OK, client.GetStatus(&eth_status));
-    EXPECT_EQ(zircon_ethernet_DEVICE_STATUS_ONLINE, eth_status);
+    EXPECT_EQ(fuchsia_hardware_ethernet_DEVICE_STATUS_ONLINE, eth_status);
 
     ASSERT_TRUE(EthernetCleanupHelper(&sock, &client));
     END_TEST;
@@ -557,21 +562,23 @@ static bool EthernetLinkStatusTest() {
 
     // Verify that the ethernet driver signaled a status change for the initial state.
     zx_signals_t obs = 0;
-    EXPECT_EQ(ZX_OK, client.rx_fifo()->wait_one(zircon_ethernet_SIGNAL_STATUS, FAIL_TIMEOUT, &obs));
-    EXPECT_TRUE(obs & zircon_ethernet_SIGNAL_STATUS);
+    EXPECT_EQ(ZX_OK, client.rx_fifo()->wait_one(fuchsia_hardware_ethernet_SIGNAL_STATUS,
+                                                FAIL_TIMEOUT, &obs));
+    EXPECT_TRUE(obs & fuchsia_hardware_ethernet_SIGNAL_STATUS);
 
     // Link status should be ONLINE since it's set in OpenFirstClientHelper
     uint32_t eth_status = 0;
     EXPECT_EQ(ZX_OK, client.GetStatus(&eth_status));
-    EXPECT_EQ(zircon_ethernet_DEVICE_STATUS_ONLINE, eth_status);
+    EXPECT_EQ(fuchsia_hardware_ethernet_DEVICE_STATUS_ONLINE, eth_status);
 
     // Now the device goes offline
     sock.signal_peer(0, ETHERTAP_SIGNAL_OFFLINE);
 
     // Verify the link status
     obs = 0;
-    EXPECT_EQ(ZX_OK, client.rx_fifo()->wait_one(zircon_ethernet_SIGNAL_STATUS, FAIL_TIMEOUT, &obs));
-    EXPECT_TRUE(obs & zircon_ethernet_SIGNAL_STATUS);
+    EXPECT_EQ(ZX_OK, client.rx_fifo()->wait_one(fuchsia_hardware_ethernet_SIGNAL_STATUS,
+                                                FAIL_TIMEOUT, &obs));
+    EXPECT_TRUE(obs & fuchsia_hardware_ethernet_SIGNAL_STATUS);
 
     EXPECT_EQ(ZX_OK, client.GetStatus(&eth_status));
     EXPECT_EQ(0, eth_status);
@@ -838,17 +845,17 @@ static bool EthernetDataTest_Send() {
     EXPECT_EQ(ZX_OK, client.tx_fifo()->wait_one(ZX_FIFO_READABLE, FAIL_TIMEOUT, &obs));
     ASSERT_TRUE(obs & ZX_FIFO_READABLE);
 
-    zircon_ethernet_FifoEntry return_entry;
+    fuchsia_hardware_ethernet_FifoEntry return_entry;
     ASSERT_EQ(ZX_OK, client.tx_fifo()->read_one(&return_entry));
 
     // Check the flags on the returned entry
-    EXPECT_TRUE(return_entry.flags & zircon_ethernet_FIFO_TX_OK);
+    EXPECT_TRUE(return_entry.flags & fuchsia_hardware_ethernet_FIFO_TX_OK);
     return_entry.flags = 0;
 
     // Verify the bytes from the rest of the entry match what we wrote
     auto expected_entry = reinterpret_cast<uint8_t*>(entry);
     auto actual_entry = reinterpret_cast<uint8_t*>(&return_entry);
-    EXPECT_BYTES_EQ(expected_entry, actual_entry, sizeof(zircon_ethernet_FifoEntry), "");
+    EXPECT_BYTES_EQ(expected_entry, actual_entry, sizeof(fuchsia_hardware_ethernet_FifoEntry), "");
 
     // Return the buffer to our client; the client destructor will make sure no TXs are still
     // pending at the end of te test.
@@ -884,7 +891,7 @@ static bool EthernetDataTest_Recv() {
     ASSERT_TRUE(obs & ZX_FIFO_READABLE);
 
     // Read the RX fifo
-    zircon_ethernet_FifoEntry entry;
+    fuchsia_hardware_ethernet_FifoEntry entry;
     EXPECT_EQ(ZX_OK, client.rx_fifo()->read_one(&entry));
 
     // Check the bytes in the VMO compared to what we sent through the socket

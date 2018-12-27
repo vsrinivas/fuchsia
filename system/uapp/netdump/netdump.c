@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/ethernet/c/fidl.h>
 #include <inet6/inet6.h>
 #include <lib/fdio/util.h>
 #include <pretty/hexdump.h>
 #include <zircon/assert.h>
 #include <zircon/boot/netboot.h>
-#include <zircon/ethernet/c/fidl.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
@@ -274,7 +274,7 @@ int write_packet(int fd, void* data, size_t len) {
 }
 
 void handle_rx(zx_handle_t rx_fifo, char* iobuf, unsigned count, netdump_options_t* options) {
-    zircon_ethernet_FifoEntry entries[count];
+    fuchsia_hardware_ethernet_FifoEntry entries[count];
 
     if (write_shb(options->dumpfile)) {
         return;
@@ -295,9 +295,9 @@ void handle_rx(zx_handle_t rx_fifo, char* iobuf, unsigned count, netdump_options
             return;
         }
 
-        zircon_ethernet_FifoEntry* e = entries;
+        fuchsia_hardware_ethernet_FifoEntry* e = entries;
         for (size_t i = 0; i < n; i++, e++) {
-            if (e->flags & zircon_ethernet_FIFO_RX_OK) {
+            if (e->flags & fuchsia_hardware_ethernet_FIFO_RX_OK) {
                 if (options->raw) {
                     printf("---\n");
                     hexdump8_ex(iobuf + e->offset, e->length, 0);
@@ -423,10 +423,9 @@ int main(int argc, const char** argv) {
         return -1;
     }
 
-
-    zircon_ethernet_Fifos fifos;
+    fuchsia_hardware_ethernet_Fifos fifos;
     zx_status_t call_status = ZX_OK;
-    status = zircon_ethernet_DeviceGetFifos(svc, &call_status, &fifos);
+    status = fuchsia_hardware_ethernet_DeviceGetFifos(svc, &call_status, &fifos);
     if (status != ZX_OK || call_status != ZX_OK) {
         fprintf(stderr, "netdump: failed to get fifos: %d, %d\n", status, call_status);
         return -1;
@@ -446,19 +445,19 @@ int main(int argc, const char** argv) {
         return -1;
     }
 
-    status = zircon_ethernet_DeviceSetIOBuffer(svc, iovmo, &call_status);
+    status = fuchsia_hardware_ethernet_DeviceSetIOBuffer(svc, iovmo, &call_status);
     if (status != ZX_OK || call_status != ZX_OK) {
         fprintf(stderr, "netdump: failed to set iobuf: %d, %d\n", status, call_status);
         return -1;
     }
 
-    status = zircon_ethernet_DeviceSetClientName(svc, "netdump", 7, &call_status);
+    status = fuchsia_hardware_ethernet_DeviceSetClientName(svc, "netdump", 7, &call_status);
     if (status != ZX_OK || call_status != ZX_OK) {
         fprintf(stderr, "netdump: failed to set client name %d, %d\n", status, call_status);
     }
 
     if (options.promisc) {
-        status = zircon_ethernet_DeviceSetPromiscuousMode(svc, true, &call_status);
+        status = fuchsia_hardware_ethernet_DeviceSetPromiscuousMode(svc, true, &call_status);
         if (status != ZX_OK || call_status != ZX_OK) {
             fprintf(stderr, "netdump: failed to set promisc mode: %d, %d\n", status, call_status);
         }
@@ -466,7 +465,7 @@ int main(int argc, const char** argv) {
 
     // assign data chunks to ethbufs
     for (unsigned n = 0; n < count; n++) {
-        zircon_ethernet_FifoEntry entry = {
+        fuchsia_hardware_ethernet_FifoEntry entry = {
             .offset = n * BUFSIZE,
             .length = BUFSIZE,
             .flags = 0,
@@ -478,13 +477,13 @@ int main(int argc, const char** argv) {
         }
     }
 
-    status = zircon_ethernet_DeviceStart(svc, &call_status);
+    status = fuchsia_hardware_ethernet_DeviceStart(svc, &call_status);
     if (status != ZX_OK || call_status != ZX_OK) {
         fprintf(stderr, "netdump: failed to start network interface\n");
         return -1;
     }
 
-    status = zircon_ethernet_DeviceListenStart(svc, &call_status);
+    status = fuchsia_hardware_ethernet_DeviceListenStart(svc, &call_status);
     if (status != ZX_OK || call_status != ZX_OK) {
         fprintf(stderr, "netdump: failed to start listening\n");
         return -1;

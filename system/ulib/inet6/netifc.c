@@ -16,8 +16,8 @@
 
 #include "eth-client.h"
 
+#include <fuchsia/hardware/ethernet/c/fidl.h>
 #include <zircon/device/device.h>
-#include <zircon/ethernet/c/fidl.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/time.h>
@@ -289,11 +289,12 @@ static zx_status_t netifc_open_cb(int dirfd, int event, const char* fn, void* co
         goto finish;
     }
 
-    zircon_ethernet_Info info;
-    if (zircon_ethernet_DeviceGetInfo(netsvc, &info) != ZX_OK) {
+    fuchsia_hardware_ethernet_Info info;
+    if (fuchsia_hardware_ethernet_DeviceGetInfo(netsvc, &info) != ZX_OK) {
         goto fail_close_svc;
     }
-    if (info.features & (zircon_ethernet_INFO_FEATURE_WLAN | zircon_ethernet_INFO_FEATURE_SYNTH)) {
+    if (info.features & (fuchsia_hardware_ethernet_INFO_FEATURE_WLAN |
+                         fuchsia_hardware_ethernet_INFO_FEATURE_SYNTH)) {
         // Don't run netsvc for wireless or synthetic network devices
         goto fail_close_svc;
     }
@@ -342,7 +343,7 @@ static zx_status_t netifc_open_cb(int dirfd, int event, const char* fn, void* co
     }
 
     zx_status_t call_status = ZX_OK;
-    status = zircon_ethernet_DeviceStart(netsvc, &call_status);
+    status = fuchsia_hardware_ethernet_DeviceStart(netsvc, &call_status);
     if (status != ZX_OK || call_status != ZX_OK) {
         printf("netifc: ethernet_start(): %d, %d\n", status, call_status);
         goto fail_destroy_client;

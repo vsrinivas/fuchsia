@@ -10,7 +10,7 @@ MODULE_TYPE := fidl
 
 MODULE_PACKAGE := fidl
 
-MODULE_FIDL_LIBRARY := zircon.ethernet
+MODULE_FIDL_LIBRARY := fuchsia.hardware.ethernet
 
 MODULE_SRCS += $(LOCAL_DIR)/ethernet.fidl
 

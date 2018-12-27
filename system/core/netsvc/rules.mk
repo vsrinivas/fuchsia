@@ -34,6 +34,6 @@ MODULE_LIBS := \
 
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-device-manager \
-    system/fidl/zircon-ethernet \
+    system/fidl/fuchsia-hardware-ethernet \
 
 include make/module.mk

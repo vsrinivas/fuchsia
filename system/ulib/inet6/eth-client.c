@@ -4,7 +4,7 @@
 
 #include "eth-client.h"
 
-#include <zircon/ethernet/c/fidl.h>
+#include <fuchsia/hardware/ethernet/c/fidl.h>
 #include <zircon/syscalls.h>
 
 #include <limits.h>
@@ -31,10 +31,10 @@ zx_status_t eth_create(zx_handle_t svc, zx_handle_t io_vmo, void* io_mem, eth_cl
         return ZX_ERR_NO_MEMORY;
     }
 
-    zircon_ethernet_Fifos fifos;
+    fuchsia_hardware_ethernet_Fifos fifos;
     zx_status_t status, call_status;
 
-    status = zircon_ethernet_DeviceGetFifos(svc, &call_status, &fifos);
+    status = fuchsia_hardware_ethernet_DeviceGetFifos(svc, &call_status, &fifos);
     if (status != ZX_OK || call_status != ZX_OK) {
         fprintf(stderr, "eth_create: failed to get fifos: %d, %d\n", status, call_status);
         return status == ZX_OK ? call_status : status;
@@ -45,7 +45,7 @@ zx_status_t eth_create(zx_handle_t svc, zx_handle_t io_vmo, void* io_mem, eth_cl
         fprintf(stderr, "eth_create: failed to duplicate vmo\n");
         goto fail;
     }
-    status = zircon_ethernet_DeviceSetIOBuffer(svc, vmo, &call_status);
+    status = fuchsia_hardware_ethernet_DeviceSetIOBuffer(svc, vmo, &call_status);
     if (status != ZX_OK || call_status != ZX_OK) {
         fprintf(stderr, "eth_create: failed to set iobuf: %d, %d\n", status, call_status);
         if (status == ZX_OK) {
@@ -53,7 +53,7 @@ zx_status_t eth_create(zx_handle_t svc, zx_handle_t io_vmo, void* io_mem, eth_cl
         }
         goto fail;
     }
-    status = zircon_ethernet_DeviceSetClientName(svc, "netsvc", 6, &call_status);
+    status = fuchsia_hardware_ethernet_DeviceSetClientName(svc, "netsvc", 6, &call_status);
     if (status != ZX_OK || call_status != ZX_OK) {
         fprintf(stderr, "eth_create: failed to set client name %d, %d\n", status, call_status);
     }
@@ -76,7 +76,7 @@ fail:
 
 zx_status_t eth_queue_tx(eth_client_t* eth, void* cookie,
                          void* data, size_t len, uint32_t options) {
-    zircon_ethernet_FifoEntry e = {
+    fuchsia_hardware_ethernet_FifoEntry e = {
         .offset = data - eth->iobuf,
         .length = len,
         .flags = options,
@@ -89,7 +89,7 @@ zx_status_t eth_queue_tx(eth_client_t* eth, void* cookie,
 
 zx_status_t eth_queue_rx(eth_client_t* eth, void* cookie,
                          void* data, size_t len, uint32_t options) {
-    zircon_ethernet_FifoEntry e = {
+    fuchsia_hardware_ethernet_FifoEntry e = {
         .offset = data - eth->iobuf,
         .length = len,
         .flags = options,
@@ -102,7 +102,7 @@ zx_status_t eth_queue_rx(eth_client_t* eth, void* cookie,
 
 zx_status_t eth_complete_tx(eth_client_t* eth, void* ctx,
                             void (*func)(void* ctx, void* cookie)) {
-    zircon_ethernet_FifoEntry entries[eth->tx_size];
+    fuchsia_hardware_ethernet_FifoEntry entries[eth->tx_size];
     zx_status_t status;
     size_t count;
     if ((status = zx_fifo_read(eth->tx_fifo, sizeof(entries[0]), entries, countof(entries), &count)) < 0) {
@@ -113,7 +113,7 @@ zx_status_t eth_complete_tx(eth_client_t* eth, void* ctx,
         }
     }
 
-    for (zircon_ethernet_FifoEntry* e = entries; count-- > 0; e++) {
+    for (fuchsia_hardware_ethernet_FifoEntry* e = entries; count-- > 0; e++) {
         IORING_TRACE("eth:tx- c=%p o=%u l=%u f=%u\n",
                      e->cookie, e->offset, e->length, e->flags);
         func(ctx, (void*)e->cookie);
@@ -123,7 +123,7 @@ zx_status_t eth_complete_tx(eth_client_t* eth, void* ctx,
 
 zx_status_t eth_complete_rx(eth_client_t* eth, void* ctx,
                             void (*func)(void* ctx, void* cookie, size_t len, uint32_t flags)) {
-    zircon_ethernet_FifoEntry entries[eth->rx_size];
+    fuchsia_hardware_ethernet_FifoEntry entries[eth->rx_size];
     zx_status_t status;
     size_t count;
     if ((status = zx_fifo_read(eth->rx_fifo, sizeof(entries[0]), entries, countof(entries), &count)) < 0) {
@@ -134,7 +134,7 @@ zx_status_t eth_complete_rx(eth_client_t* eth, void* ctx,
         }
     }
 
-    for (zircon_ethernet_FifoEntry* e = entries; count-- > 0; e++) {
+    for (fuchsia_hardware_ethernet_FifoEntry* e = entries; count-- > 0; e++) {
         IORING_TRACE("eth:rx- c=%p o=%u l=%u f=%u\n",
                      e->cookie, e->offset, e->length, e->flags);
         func(ctx, (void*)e->cookie, e->length, e->flags);

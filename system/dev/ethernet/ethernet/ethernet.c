@@ -8,7 +8,7 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/ethernet.h>
 
-#include <zircon/ethernet/c/fidl.h>
+#include <fuchsia/hardware/ethernet/c/fidl.h>
 
 #include <zircon/assert.h>
 #include <zircon/listnode.h>
@@ -24,7 +24,7 @@
 #include <threads.h>
 
 #define FIFO_DEPTH 256
-#define FIFO_ESIZE sizeof(zircon_ethernet_FifoEntry)
+#define FIFO_ESIZE sizeof(fuchsia_hardware_ethernet_FifoEntry)
 
 #define PAGE_MASK (PAGE_SIZE - 1)
 
@@ -95,7 +95,7 @@ typedef struct ethdev {
     ethdev0_t* edev0;
 
     uint32_t state;
-    char name[zircon_ethernet_MAX_CLIENT_NAME_LEN+1];
+    char name[fuchsia_hardware_ethernet_MAX_CLIENT_NAME_LEN + 1];
 
     // fifos are named from the perspective
     // of the packet from from the client
@@ -104,7 +104,7 @@ typedef struct ethdev {
     uint32_t tx_depth;
     zx_handle_t rx_fifo;
     uint32_t rx_depth;
-    zircon_ethernet_FifoEntry rx_entries[FIFO_BATCH_SZ];
+    fuchsia_hardware_ethernet_FifoEntry rx_entries[FIFO_BATCH_SZ];
     size_t rx_entry_count;
 
     // io buffer
@@ -288,19 +288,19 @@ static void eth_handle_rx(ethdev_t* edev, const void* data, size_t len, uint32_t
         edev->rx_entry_count = count;
     }
 
-    zircon_ethernet_FifoEntry* e = &edev->rx_entries[--edev->rx_entry_count];
+    fuchsia_hardware_ethernet_FifoEntry* e = &edev->rx_entries[--edev->rx_entry_count];
     if ((e->offset >= edev->io_size) || ((e->length > (edev->io_size - e->offset)))) {
         // invalid offset/length. report error. drop packet
         e->length = 0;
-        e->flags = zircon_ethernet_FIFO_INVALID;
+        e->flags = fuchsia_hardware_ethernet_FIFO_INVALID;
     } else if (len > e->length) {
         e->length = 0;
-        e->flags = zircon_ethernet_FIFO_INVALID;
+        e->flags = fuchsia_hardware_ethernet_FIFO_INVALID;
     } else {
         // packet fits. deliver it
         memcpy(edev->io_buf + e->offset, data, len);
         e->length = len;
-        e->flags = zircon_ethernet_FIFO_RX_OK | extra;
+        e->flags = fuchsia_hardware_ethernet_FIFO_RX_OK | extra;
     }
 
     if ((status = zx_fifo_write(edev->rx_fifo, sizeof(*e), e, 1, NULL)) < 0) {
@@ -323,22 +323,24 @@ static void eth0_status(void* cookie, uint32_t status) {
     ethdev0_t* edev0 = cookie;
     mtx_lock(&edev0->lock);
 
-    static_assert(ETHMAC_STATUS_ONLINE == zircon_ethernet_DEVICE_STATUS_ONLINE, "");
+    static_assert(ETHMAC_STATUS_ONLINE == fuchsia_hardware_ethernet_DEVICE_STATUS_ONLINE, "");
     edev0->status = status;
 
-    static_assert(zircon_ethernet_SIGNAL_STATUS == ZX_USER_SIGNAL_0, "");
+    static_assert(fuchsia_hardware_ethernet_SIGNAL_STATUS == ZX_USER_SIGNAL_0, "");
     ethdev_t* edev;
     list_for_every_entry(&edev0->list_active, edev, ethdev_t, node) {
-        zx_object_signal_peer(edev->rx_fifo, 0, zircon_ethernet_SIGNAL_STATUS);
+        zx_object_signal_peer(edev->rx_fifo, 0, fuchsia_hardware_ethernet_SIGNAL_STATUS);
     }
     mtx_unlock(&edev0->lock);
 }
 
-static int tx_fifo_write(ethdev_t* edev, zircon_ethernet_FifoEntry* entries, size_t count) {
+static int tx_fifo_write(ethdev_t* edev, fuchsia_hardware_ethernet_FifoEntry* entries,
+                         size_t count) {
     zx_status_t status;
     size_t actual;
     // Writing should never fail, or fail to write all entries
-    status = zx_fifo_write(edev->tx_fifo, sizeof(zircon_ethernet_FifoEntry), entries, count, &actual);
+    status = zx_fifo_write(edev->tx_fifo, sizeof(fuchsia_hardware_ethernet_FifoEntry), entries,
+                           count, &actual);
     if (status < 0) {
         zxlogf(ERROR, "eth [%s]: tx_fifo write failed %d\n", edev->name, status);
         return -1;
@@ -385,10 +387,11 @@ static void eth0_complete_tx(void* cookie, ethmac_netbuf_t* netbuf, zx_status_t 
     ethdev0_t* edev0 = cookie;
     tx_info_t* tx_info = netbuf_to_tx_info(edev0, netbuf);
     ethdev_t* edev = tx_info->edev;
-    zircon_ethernet_FifoEntry entry = {.offset = netbuf->data_buffer - edev->io_buf,
-                              .length = netbuf->data_size,
-                              .flags = status == ZX_OK ? zircon_ethernet_FIFO_TX_OK : 0,
-                              .cookie = tx_info->fifo_cookie};
+    fuchsia_hardware_ethernet_FifoEntry entry = {
+        .offset = netbuf->data_buffer - edev->io_buf,
+        .length = netbuf->data_size,
+        .flags = status == ZX_OK ? fuchsia_hardware_ethernet_FIFO_TX_OK : 0,
+        .cookie = tx_info->fifo_cookie};
 
     // Now that we've copied all pertinent data from the netbuf, return it to the free list so
     // it is available immediately for the next request.
@@ -409,7 +412,7 @@ static void eth_tx_echo(ethdev0_t* edev0, const void* data, size_t len) {
     mtx_lock(&edev0->lock);
     list_for_every_entry(&edev0->list_active, edev, ethdev_t, node) {
         if (edev->state & ETHDEV_TX_LISTEN) {
-            eth_handle_rx(edev, data, len, zircon_ethernet_FIFO_RX_TX);
+            eth_handle_rx(edev, data, len, fuchsia_hardware_ethernet_FIFO_RX_TX);
         }
     }
     mtx_unlock(&edev0->lock);
@@ -446,7 +449,7 @@ static zx_status_t eth_tx_listen_locked(ethdev_t* edev, bool yes) {
 }
 
 // The array of entries is invalidated after the call
-static int eth_send(ethdev_t* edev, zircon_ethernet_FifoEntry* entries, uint32_t count) {
+static int eth_send(ethdev_t* edev, fuchsia_hardware_ethernet_FifoEntry* entries, uint32_t count) {
     tx_info_t* tx_info = NULL;
     ethdev0_t* edev0 = edev->edev0;
     // The entries that we can't send back to the fifo immediately are filtered
@@ -455,9 +458,9 @@ static int eth_send(ethdev_t* edev, zircon_ethernet_FifoEntry* entries, uint32_t
     // will be written back to the fifo. The rest will be written later by
     // the eth0_complete_tx callback.
     uint32_t to_write = 0;
-    for (zircon_ethernet_FifoEntry* e = entries; count > 0; e++) {
+    for (fuchsia_hardware_ethernet_FifoEntry* e = entries; count > 0; e++) {
         if ((e->offset > edev->io_size) || ((e->length > (edev->io_size - e->offset)))) {
-            e->flags = zircon_ethernet_FIFO_INVALID;
+            e->flags = fuchsia_hardware_ethernet_FIFO_INVALID;
             entries[to_write++] = *e;
         } else {
             zx_status_t status;
@@ -487,7 +490,7 @@ static int eth_send(ethdev_t* edev, zircon_ethernet_FifoEntry* entries, uint32_t
                 // Transmission completed. To avoid extra mutex locking/unlocking,
                 // we don't return the buffer to the pool immediately, but reuse
                 // it on the next iteration of the loop.
-                e->flags = status == ZX_OK ? zircon_ethernet_FIFO_TX_OK : 0;
+                e->flags = status == ZX_OK ? fuchsia_hardware_ethernet_FIFO_TX_OK : 0;
                 entries[to_write++] = *e;
             } else {
                 // The ownership of the TX buffer is transferred to mac.ops->queue_tx().
@@ -508,7 +511,7 @@ static int eth_send(ethdev_t* edev, zircon_ethernet_FifoEntry* entries, uint32_t
 
 static int eth_tx_thread(void* arg) {
     ethdev_t* edev = (ethdev_t*)arg;
-    zircon_ethernet_FifoEntry entries[FIFO_DEPTH / 2];
+    fuchsia_hardware_ethernet_FifoEntry entries[FIFO_DEPTH / 2];
     zx_status_t status;
     size_t count;
 
@@ -543,7 +546,8 @@ static int eth_tx_thread(void* arg) {
     return 0;
 }
 
-static zx_status_t eth_get_fifos_locked(ethdev_t* edev, struct zircon_ethernet_Fifos* fifos) {
+static zx_status_t eth_get_fifos_locked(ethdev_t* edev,
+                                        struct fuchsia_hardware_ethernet_Fifos* fifos) {
     zx_status_t status;
     if ((status = zx_fifo_create(FIFO_DEPTH, FIFO_ESIZE, 0, &fifos->tx, &edev->tx_fifo)) < 0) {
         zxlogf(ERROR, "eth_create  [%s]: failed to create tx fifo: %d\n", edev->name, status);
@@ -680,7 +684,7 @@ static zx_status_t eth_start_locked(ethdev_t* edev) TA_NO_THREAD_SAFETY_ANALYSIS
         // TODO - After we get IGMP, don't automatically set multicast promisc true
         eth_set_multicast_promisc_locked(edev, true);
         // Trigger the status signal so the client will query the status at the start.
-        zx_object_signal_peer(edev->rx_fifo, 0, zircon_ethernet_SIGNAL_STATUS);
+        zx_object_signal_peer(edev->rx_fifo, 0, fuchsia_hardware_ethernet_SIGNAL_STATUS);
     } else {
         zxlogf(ERROR, "eth [%s]: failed to start mac: %d\n", edev->name, status);
     }
@@ -736,7 +740,7 @@ static zx_status_t eth_get_status_locked(ethdev_t* edev, void* out_buf, size_t o
     if (edev->rx_fifo == ZX_HANDLE_INVALID) {
         return ZX_ERR_BAD_STATE;
     }
-    if (zx_object_signal_peer(edev->rx_fifo, zircon_ethernet_SIGNAL_STATUS, 0) != ZX_OK) {
+    if (zx_object_signal_peer(edev->rx_fifo, fuchsia_hardware_ethernet_SIGNAL_STATUS, 0) != ZX_OK) {
         return ZX_ERR_INTERNAL;
     }
 
@@ -746,18 +750,18 @@ static zx_status_t eth_get_status_locked(ethdev_t* edev, void* out_buf, size_t o
     return ZX_OK;
 }
 
-#define REPLY(x) zircon_ethernet_Device ## x ## _reply
+#define REPLY(x) fuchsia_hardware_ethernet_Device##x##_reply
 
 static zx_status_t fidl_GetInfo_locked(void* ctx, fidl_txn_t* txn) {
     ethdev_t* edev = ctx;
-    zircon_ethernet_Info info;
+    fuchsia_hardware_ethernet_Info info;
     memset(&info, 0, sizeof(info));
     memcpy(info.mac.octets, edev->edev0->info.mac, ETH_MAC_SIZE);
     if (edev->edev0->info.features & ETHMAC_FEATURE_WLAN) {
-        info.features |= zircon_ethernet_INFO_FEATURE_WLAN;
+        info.features |= fuchsia_hardware_ethernet_INFO_FEATURE_WLAN;
     }
     if (edev->edev0->info.features & ETHMAC_FEATURE_SYNTH) {
-        info.features |= zircon_ethernet_INFO_FEATURE_SYNTH;
+        info.features |= fuchsia_hardware_ethernet_INFO_FEATURE_SYNTH;
     }
     info.mtu = edev->edev0->info.mtu;
     return REPLY(GetInfo)(txn, &info);
@@ -765,7 +769,7 @@ static zx_status_t fidl_GetInfo_locked(void* ctx, fidl_txn_t* txn) {
 
 static zx_status_t fidl_GetFifos_locked(void* ctx, fidl_txn_t* txn) {
     ethdev_t* edev = ctx;
-    zircon_ethernet_Fifos fifos;
+    fuchsia_hardware_ethernet_Fifos fifos;
     return REPLY(GetFifos)(txn, eth_get_fifos_locked(edev, &fifos), &fifos);
 }
 
@@ -804,7 +808,7 @@ static zx_status_t fidl_SetClientName_locked(void* ctx, const char* buf, size_t 
 
 static zx_status_t fidl_GetStatus_locked(void* ctx, fidl_txn_t* txn) {
     ethdev_t* edev = ctx;
-    if (zx_object_signal_peer(edev->rx_fifo, zircon_ethernet_SIGNAL_STATUS, 0) != ZX_OK) {
+    if (zx_object_signal_peer(edev->rx_fifo, fuchsia_hardware_ethernet_SIGNAL_STATUS, 0) != ZX_OK) {
         return ZX_ERR_INTERNAL;
     }
     return REPLY(GetStatus)(txn, edev->edev0->status);
@@ -815,17 +819,17 @@ static zx_status_t fidl_SetPromisc_locked(void* ctx, bool enabled, fidl_txn_t* t
     return REPLY(SetPromiscuousMode)(txn, eth_set_promisc_locked(edev, enabled));
 }
 
-static zx_status_t fidl_ConfigMulticastAddMac_locked(void* ctx,
-                                                     const zircon_ethernet_MacAddress* mac,
-                                                     fidl_txn_t* txn) {
+static zx_status_t
+fidl_ConfigMulticastAddMac_locked(void* ctx, const fuchsia_hardware_ethernet_MacAddress* mac,
+                                  fidl_txn_t* txn) {
     ethdev_t* edev = ctx;
     zx_status_t status = eth_add_multicast_address_locked(edev, mac->octets);
     return REPLY(ConfigMulticastAddMac)(txn, status);
 }
 
-static zx_status_t fidl_ConfigMulticastDeleteMac_locked(void* ctx,
-                                                        const zircon_ethernet_MacAddress* mac,
-                                                        fidl_txn_t* txn) {
+static zx_status_t
+fidl_ConfigMulticastDeleteMac_locked(void* ctx, const fuchsia_hardware_ethernet_MacAddress* mac,
+                                     fidl_txn_t* txn) {
     ethdev_t* edev = ctx;
     zx_status_t status = eth_del_multicast_address_locked(edev, mac->octets);
     return REPLY(ConfigMulticastDeleteMac)(txn, status);
@@ -854,7 +858,7 @@ static zx_status_t fidl_DumpRegisters_locked(void* ctx, fidl_txn_t* txn) {
 
 #undef REPLY
 
-zircon_ethernet_Device_ops_t fidl_ops = {
+fuchsia_hardware_ethernet_Device_ops_t fidl_ops = {
     .GetInfo = fidl_GetInfo_locked,
     .GetFifos = fidl_GetFifos_locked,
     .SetIOBuffer = fidl_SetIOBuffer_locked,
@@ -875,7 +879,7 @@ zircon_ethernet_Device_ops_t fidl_ops = {
 static zx_status_t eth_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
     ethdev_t* edev = ctx;
     mtx_lock(&edev->edev0->lock);
-    zx_status_t status = zircon_ethernet_Device_dispatch(ctx, txn, msg, &fidl_ops);
+    zx_status_t status = fuchsia_hardware_ethernet_Device_dispatch(ctx, txn, msg, &fidl_ops);
     mtx_unlock(&edev->edev0->lock);
     return status;
 }
