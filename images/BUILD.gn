@@ -860,49 +860,47 @@ images += [
   },
 ]
 
-# ChromeOS vboot images.
-vboot("vboot") {
-  testonly = true
-  output_name = "fuchsia"
-  deps = [
-    ":fuchsia",
-  ]
-}
-images += [
-  {
-    json = {
-      name = "zircon-vboot"
-      type = "vboot"
-      if (current_cpu != "arm64") {
+if (target_cpu != "arm64") {
+  # ChromeOS vboot images.
+  vboot("vboot") {
+    testonly = true
+    output_name = "fuchsia"
+    deps = [
+      ":fuchsia",
+    ]
+  }
+  images += [
+    {
+      json = {
+        name = "zircon-vboot"
+        type = "vboot"
         bootserver_pave = [ "--kernc" ]
       }
-    }
-    deps = [
-      ":vboot",
-    ]
-    installer = "zircon.vboot"
-    sdk = "zircon.vboot"
-    updater = "kernc"
-    public = [
-      "IMAGE_ZIRCON_VBOOT",
-    ]
-  },
-]
+      deps = [
+        ":vboot",
+      ]
+      installer = "zircon.vboot"
+      sdk = "zircon.vboot"
+      updater = "kernc"
+      public = [
+        "IMAGE_ZIRCON_VBOOT",
+      ]
+    },
+  ]
 
-# The installer also wants the zedboot vboot image.
-images += [
-  {
-    deps = [
-      "zedboot:vboot",
-    ]
-    sources = [
-      "$root_out_dir/zedboot.vboot",
-    ]
-    installer = "zedboot.vboot"
-  },
-]
+  # The installer also wants the zedboot vboot image.
+  images += [
+    {
+      deps = [
+        "zedboot:vboot",
+      ]
+      sources = [
+        "$root_out_dir/zedboot.vboot",
+      ]
+      installer = "zedboot.vboot"
+    },
+  ]
 
-if (target_cpu != "arm64") {
   # EFI ESP images.
   esp("esp") {
     output_name = "fuchsia"

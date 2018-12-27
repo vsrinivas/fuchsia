@@ -61,13 +61,12 @@ template("vboot") {
     inputs += zbi
     assert(zbi == [ zbi[0] ], "vboot() requires exactly one zbi() in deps")
 
-    # TODO(mcgrathr): Figure out how to reconcile vboot with the unitary
-    # complete ZBI case.  The tool requires both a kernel and a "bootloader"
-    # (which is actually the RAM disk).  So pack a separate copy into the
-    # vboot image.  The kernel is already in the ZBI but that copy will just
-    # be ignored at runtime.
-    zircon_bin = "${zircon_build_dir}/zircon.bin"
-    inputs += [ zircon_bin ]
+    # The CrOS bootloader supports Multiboot (with `--flags 0x2` below).
+    # The Multiboot trampoline is the "kernel" (`--vmlinuz` switch) and the
+    # ZBI is the RAM disk (`--bootloader` switch).
+    assert(current_cpu == "x64")
+    kernel = "${zircon_build_dir}/multiboot.bin"
+    inputs += [ kernel ]
 
     args = [
       "vbutil_kernel",
@@ -80,7 +79,7 @@ template("vboot") {
       "--bootloader",
       rebase_path(zbi[0]),
       "--vmlinuz",
-      rebase_path(zircon_bin),
+      rebase_path(kernel),
       "--version",
       "1",
       "--flags",

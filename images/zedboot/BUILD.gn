@@ -166,29 +166,29 @@ if (custom_signing_script != "") {
   ]
 }
 
-vboot("vboot") {
-  output_name = "zedboot"
-  deps = [
-    ":zbi",
-  ]
-}
-
-zedboot_images += [
-  {
-    deps = [
-      ":vboot",
-    ]
-    public = [
-      "IMAGE_ZEDBOOT_VBOOT",
-    ]
-    json = {
-      name = "zedboot"
-      type = "vboot"
-    }
-  },
-]
-
 if (target_cpu != "arm64") {
+  vboot("vboot") {
+    output_name = "zedboot"
+    deps = [
+      ":zbi",
+    ]
+  }
+
+  zedboot_images += [
+    {
+      deps = [
+        ":vboot",
+      ]
+      public = [
+        "IMAGE_ZEDBOOT_VBOOT",
+      ]
+      json = {
+        name = "zedboot"
+        type = "vboot"
+      }
+    },
+  ]
+
   esp("esp") {
     output_name = "zedboot"
     cmdline = "efi_cmdline.txt"
@@ -216,11 +216,13 @@ if (target_cpu != "arm64") {
 
 group("zedboot") {
   deps = [
-    ":vboot",
     ":zbi",
   ]
   if (target_cpu != "arm64") {
-    deps += [ ":esp" ]
+    deps += [
+      ":esp",
+      ":vboot",
+    ]
   }
   if (custom_signing_script != "") {
     deps += [ ":signed" ]
