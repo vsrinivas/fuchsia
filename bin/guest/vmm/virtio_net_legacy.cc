@@ -9,11 +9,11 @@
 #include <atomic>
 
 #include <fbl/unique_fd.h>
+#include <fuchsia/hardware/ethernet/c/fidl.h>
 #include <lib/fdio/util.h>
 #include <lib/fxl/logging.h>
 #include <trace-engine/types.h>
 #include <trace/event.h>
-#include <zircon/ethernet/c/fidl.h>
 #include <zx/fifo.h>
 
 constexpr size_t kMaxPacketSize = 2048;
@@ -238,7 +238,7 @@ void VirtioNetLegacy::Stream::OnFifoReadable(async_dispatcher_t* dispatcher,
 
   // Dequeue entries for the Ethernet device.
   size_t num_entries_read;
-  zircon_ethernet_FifoEntry entries[fifo_entries_.size()];
+  fuchsia_hardware_ethernet_FifoEntry entries[fifo_entries_.size()];
   status = zx_fifo_read(fifo_, sizeof(entries[0]), entries,
                         fifo_entries_.size(), &num_entries_read);
   if (status == ZX_ERR_SHOULD_WAIT) {
@@ -364,8 +364,9 @@ zx_status_t VirtioNetLegacy::Start(const char* path) {
     }
   }
 
-  zircon_ethernet_Info info;
-  zx_status_t status = zircon_ethernet_DeviceGetInfo(net_svc_.get(), &info);
+  fuchsia_hardware_ethernet_Info info;
+  zx_status_t status =
+      fuchsia_hardware_ethernet_DeviceGetInfo(net_svc_.get(), &info);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to get Ethernet device info";
     return status;
@@ -374,8 +375,8 @@ zx_status_t VirtioNetLegacy::Start(const char* path) {
   memcpy(config_.mac, info.mac.octets, sizeof(config_.mac));
 
   zx_status_t call_status = ZX_OK;
-  status =
-      zircon_ethernet_DeviceGetFifos(net_svc_.get(), &call_status, &fifos_);
+  status = fuchsia_hardware_ethernet_DeviceGetFifos(net_svc_.get(),
+                                                    &call_status, &fifos_);
   if (status != ZX_OK || call_status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to get FIFOs from Ethernet device";
     return status == ZX_OK ? call_status : status;
@@ -403,19 +404,19 @@ zx_status_t VirtioNetLegacy::Start(const char* path) {
     return status;
   }
 
-  status = zircon_ethernet_DeviceSetIOBuffer(net_svc_.get(), vmo_dup.release(),
-                                             &call_status);
+  status = fuchsia_hardware_ethernet_DeviceSetIOBuffer(
+      net_svc_.get(), vmo_dup.release(), &call_status);
   if (status != ZX_OK || call_status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to set VMO for Ethernet device";
     return status == ZX_OK ? call_status : status;
   }
-  status = zircon_ethernet_DeviceSetClientName(net_svc_.get(), "machina", 7,
-                                               &call_status);
+  status = fuchsia_hardware_ethernet_DeviceSetClientName(
+      net_svc_.get(), "machina", 7, &call_status);
   if (status != ZX_OK || call_status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to set client name for Ethernet device";
     return status == ZX_OK ? call_status : status;
   }
-  status = zircon_ethernet_DeviceStart(net_svc_.get(), &call_status);
+  status = fuchsia_hardware_ethernet_DeviceStart(net_svc_.get(), &call_status);
   if (status != ZX_OK || call_status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to start communication with Ethernet device";
     return status == ZX_OK ? call_status : status;
@@ -425,7 +426,8 @@ zx_status_t VirtioNetLegacy::Start(const char* path) {
   return WaitOnFifos(fifos_);
 }
 
-zx_status_t VirtioNetLegacy::WaitOnFifos(const zircon_ethernet_Fifos& fifos) {
+zx_status_t VirtioNetLegacy::WaitOnFifos(
+    const fuchsia_hardware_ethernet_Fifos& fifos) {
   zx_status_t status = rx_stream_.Start(fifos.rx, fifos.rx_depth, true);
   if (status == ZX_OK) {
     status = tx_stream_.Start(fifos.tx, fifos.tx_depth, false);

@@ -53,7 +53,7 @@ fn derive_device_name(interfaces: Vec<fidl_fuchsia_netstack::NetInterface>) -> O
     interfaces
         .iter()
         .filter(|iface| {
-            fidl_zircon_ethernet_ext::EthernetFeatures::from_bits_truncate(iface.features)
+            fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures::from_bits_truncate(iface.features)
                 .is_physical()
         })
         .min_by(|a, b| a.id.cmp(&b.id))
@@ -154,18 +154,18 @@ fn main() -> Result<(), failure::Error> {
                         fuchsia_zircon::Handle::from_raw(client)
                     });
 
-                    let device =
-                        fidl::endpoints::ClientEnd::<fidl_zircon_ethernet::DeviceMarker>::new(
-                            client,
-                        )
-                        .into_proxy()?;
+                    let device = fidl::endpoints::ClientEnd::<
+                        fidl_fuchsia_hardware_ethernet::DeviceMarker,
+                    >::new(client)
+                    .into_proxy()?;
                     let device_info = await!(device.get_info())?;
-                    let device_info: fidl_zircon_ethernet_ext::EthernetInfo = device_info.into();
+                    let device_info: fidl_fuchsia_hardware_ethernet_ext::EthernetInfo =
+                        device_info.into();
 
                     if device_info.features.is_physical() {
                         let client = device
                             .into_channel()
-                            .map_err(|fidl_zircon_ethernet::DeviceProxy { .. }| {
+                            .map_err(|fidl_fuchsia_hardware_ethernet::DeviceProxy { .. }| {
                                 failure::err_msg("failed to convert device proxy into channel")
                             })?
                             .into_zx_channel();
@@ -174,9 +174,9 @@ fn main() -> Result<(), failure::Error> {
                             topological_path.clone(), /* TODO(tamird): we can probably do
                                                        * better with std::borrow::Cow. */
                             device_info.mac,
-                            device_info
-                                .features
-                                .contains(fidl_zircon_ethernet_ext::EthernetFeatures::WLAN),
+                            device_info.features.contains(
+                                fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures::WLAN,
+                            ),
                         )?;
 
                         let mut derived_interface_config = matchers::config_for_device(
@@ -189,9 +189,9 @@ fn main() -> Result<(), failure::Error> {
                         let nic_id = await!(netstack.add_ethernet_device(
                             &topological_path,
                             &mut derived_interface_config,
-                            fidl::endpoints::ClientEnd::<fidl_zircon_ethernet::DeviceMarker>::new(
-                                client
-                            ),
+                            fidl::endpoints::ClientEnd::<
+                                fidl_fuchsia_hardware_ethernet::DeviceMarker,
+                            >::new(client),
                         ))
                         .with_context(|_| {
                             format!(

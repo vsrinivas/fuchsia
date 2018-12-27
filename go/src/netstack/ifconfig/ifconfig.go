@@ -14,10 +14,10 @@ import (
 	"app/context"
 	"netstack/fidlconv"
 
+	"fidl/fuchsia/hardware/ethernet"
 	netfidl "fidl/fuchsia/net"
 	"fidl/fuchsia/netstack"
 	"fidl/fuchsia/wlan/service"
-	"fidl/zircon/ethernet"
 
 	"github.com/google/netstack/tcpip"
 )

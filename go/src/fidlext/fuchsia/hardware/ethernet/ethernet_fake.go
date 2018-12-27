@@ -8,7 +8,7 @@ import (
 	"syscall/zx"
 	"testing"
 
-	"fidl/zircon/ethernet"
+	"fidl/fuchsia/hardware/ethernet"
 )
 
 var _ ethernet.Device = (*Device)(nil)

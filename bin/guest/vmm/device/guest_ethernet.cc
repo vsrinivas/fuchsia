@@ -24,8 +24,8 @@ zx_status_t GuestEthernet::Send(void* data, size_t length) {
   if (rx_entries_count_ == 0) {
     size_t count;
     zx_status_t status =
-        rx_fifo_.read(sizeof(zircon::ethernet::FifoEntry), rx_entries_.data(),
-                      rx_entries_.size(), &count);
+        rx_fifo_.read(sizeof(fuchsia::hardware::ethernet::FifoEntry),
+                      rx_entries_.data(), rx_entries_.size(), &count);
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to read from rx fifo: " << status;
       return status;
@@ -34,20 +34,21 @@ zx_status_t GuestEthernet::Send(void* data, size_t length) {
   }
 
   rx_entries_count_--;
-  zircon::ethernet::FifoEntry entry = rx_entries_[rx_entries_count_];
+  fuchsia::hardware::ethernet::FifoEntry entry = rx_entries_[rx_entries_count_];
   if (entry.offset >= io_size_ || entry.length > (io_size_ - entry.offset) ||
       length > entry.length) {
     FXL_LOG(ERROR) << "Invalid fifo entry for packet";
     entry.length = 0;
-    entry.flags = zircon::ethernet::FIFO_INVALID;
+    entry.flags = fuchsia::hardware::ethernet::FIFO_INVALID;
   } else {
     memcpy(reinterpret_cast<void*>(io_addr_ + entry.offset), data, length);
     entry.length = length;
-    entry.flags = zircon::ethernet::FIFO_RX_OK;
+    entry.flags = fuchsia::hardware::ethernet::FIFO_RX_OK;
   }
 
-  zx_status_t status = rx_fifo_.write(sizeof(zircon::ethernet::FifoEntry),
-                                      &entry, 1, nullptr /* actual count */);
+  zx_status_t status =
+      rx_fifo_.write(sizeof(fuchsia::hardware::ethernet::FifoEntry), &entry, 1,
+                     nullptr /* actual count */);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to write to rx fifo";
     return status;
@@ -59,11 +60,12 @@ void GuestEthernet::OnTxFifoReadable(async_dispatcher_t* dispatcher,
                                      async::WaitBase* wait, zx_status_t status,
                                      const zx_packet_signal_t* signal) {
   FXL_CHECK(status == ZX_OK) << "Wait for tx fifo readable failed " << status;
-  std::vector<zircon::ethernet::FifoEntry> entries(kVirtioNetQueueSize / 2);
+  std::vector<fuchsia::hardware::ethernet::FifoEntry> entries(
+      kVirtioNetQueueSize / 2);
   size_t count;
   while (true) {
-    status = tx_fifo_.read(sizeof(zircon::ethernet::FifoEntry), entries.data(),
-                           entries.size(), &count);
+    status = tx_fifo_.read(sizeof(fuchsia::hardware::ethernet::FifoEntry),
+                           entries.data(), entries.size(), &count);
     if (status == ZX_ERR_SHOULD_WAIT) {
       status = tx_fifo_wait_.Begin(async_get_default_dispatcher());
       FXL_CHECK(status == ZX_OK) << "Failed to wait on tx fifo";
@@ -77,35 +79,36 @@ void GuestEthernet::OnTxFifoReadable(async_dispatcher_t* dispatcher,
   }
 }
 
-void GuestEthernet::Complete(const zircon::ethernet::FifoEntry& entry) {
+void GuestEthernet::Complete(
+    const fuchsia::hardware::ethernet::FifoEntry& entry) {
   size_t count;
-  zx_status_t status =
-      tx_fifo_.write(sizeof(zircon::ethernet::FifoEntry), &entry, 1, &count);
+  zx_status_t status = tx_fifo_.write(
+      sizeof(fuchsia::hardware::ethernet::FifoEntry), &entry, 1, &count);
   FXL_CHECK(status == ZX_OK);
   FXL_CHECK(count == 1);
 }
 
 void GuestEthernet::GetInfo(GetInfoCallback callback) {
-  zircon::ethernet::Info info;
-  info.features = zircon::ethernet::INFO_FEATURE_SYNTH;
+  fuchsia::hardware::ethernet::Info info;
+  info.features = fuchsia::hardware::ethernet::INFO_FEATURE_SYNTH;
   info.mtu = kMtu;
   memcpy(&info.mac, kHostMacAddress, sizeof(info.mac));
   callback(info);
 }
 
 void GuestEthernet::GetFifos(GetFifosCallback callback) {
-  auto fifos = std::make_unique<zircon::ethernet::Fifos>();
-  zx_status_t status =
-      zx::fifo::create(kVirtioNetQueueSize, sizeof(zircon::ethernet::FifoEntry),
-                       /* options */ 0u, &fifos->rx, &rx_fifo_);
+  auto fifos = std::make_unique<fuchsia::hardware::ethernet::Fifos>();
+  zx_status_t status = zx::fifo::create(
+      kVirtioNetQueueSize, sizeof(fuchsia::hardware::ethernet::FifoEntry),
+      /* options */ 0u, &fifos->rx, &rx_fifo_);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create fifo";
     callback(status, nullptr);
     return;
   }
-  status =
-      zx::fifo::create(kVirtioNetQueueSize, sizeof(zircon::ethernet::FifoEntry),
-                       /* options */ 0u, &fifos->tx, &tx_fifo_);
+  status = zx::fifo::create(kVirtioNetQueueSize,
+                            sizeof(fuchsia::hardware::ethernet::FifoEntry),
+                            /* options */ 0u, &fifos->tx, &tx_fifo_);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create fifo";
     FXL_CHECK(rx_fifo_.release() == ZX_OK) << "Failed to release fifo";
@@ -180,12 +183,13 @@ void GuestEthernet::SetPromiscuousMode(bool enabled,
 }
 
 void GuestEthernet::ConfigMulticastAddMac(
-    zircon::ethernet::MacAddress addr, ConfigMulticastAddMacCallback callback) {
+    fuchsia::hardware::ethernet::MacAddress addr,
+    ConfigMulticastAddMacCallback callback) {
   callback(ZX_ERR_NOT_SUPPORTED);
 }
 
 void GuestEthernet::ConfigMulticastDeleteMac(
-    zircon::ethernet::MacAddress addr,
+    fuchsia::hardware::ethernet::MacAddress addr,
     ConfigMulticastDeleteMacCallback callback) {
   callback(ZX_ERR_NOT_SUPPORTED);
 }

@@ -5,12 +5,12 @@
 #include "ethernet_client.h"
 #include <fbl/intrusive_single_list.h>
 #include <fbl/unique_ptr.h>
+#include <fuchsia/hardware/ethernet/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/default.h>
 #include <lib/fdio/util.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/fifo.h>
-#include <zircon/ethernet/cpp/fidl.h>
 #include <zircon/status.h>
 
 #include <fcntl.h>
@@ -18,9 +18,9 @@
 #include <iostream>
 
 namespace netemul {
-using ZDevice = zircon::ethernet::Device;
-using ZFifos = zircon::ethernet::Fifos;
-using ZFifoEntry = zircon::ethernet::FifoEntry;
+using ZDevice = fuchsia::hardware::ethernet::Device;
+using ZFifos = fuchsia::hardware::ethernet::Fifos;
+using ZFifoEntry = fuchsia::hardware::ethernet::FifoEntry;
 const char kEthernetDir[] = "/dev/class/ethernet";
 
 struct WatchCbArgs {
@@ -158,7 +158,7 @@ class FifoHolder {
       if (tx_.read_one(&return_entry) != ZX_OK) {
         break;
       }
-      if (!(return_entry.flags & zircon::ethernet::FIFO_TX_OK)) {
+      if (!(return_entry.flags & fuchsia::hardware::ethernet::FIFO_TX_OK)) {
         break;
       }
       ReturnTxBuffer(&return_entry);
@@ -203,7 +203,6 @@ class FifoHolder {
         fprintf(stderr, "Ethernet client can't return rx buffer %s\n",
                 zx_status_get_string(status));
       }
-
     }
 
     if (signal->observed & ZX_FIFO_PEER_CLOSED) {
@@ -266,7 +265,7 @@ static zx_status_t WatchCb(int dirfd, int event, const char* fn, void* cookie) {
   handle.set_channel(std::move(svc));
   fidl::SynchronousInterfacePtr<ZDevice> iface = handle.BindSync();
 
-  zircon::ethernet::Info info;
+  fuchsia::hardware::ethernet::Info info;
   zx_status_t status = iface->GetInfo(&info);
   if (status != ZX_OK) {
     fprintf(stderr, "could not get ethernet info for %s/%s: %s\n", kEthernetDir,
@@ -274,7 +273,7 @@ static zx_status_t WatchCb(int dirfd, int event, const char* fn, void* cookie) {
     // Return ZX_OK to keep watching for devices.
     return ZX_OK;
   }
-  if (!(info.features & zircon::ethernet::INFO_FEATURE_SYNTH)) {
+  if (!(info.features & fuchsia::hardware::ethernet::INFO_FEATURE_SYNTH)) {
     // Not a match, keep looking.
     return ZX_OK;
   }
@@ -336,7 +335,8 @@ EthernetClient::Ptr EthernetClient::RetrieveWithMAC(const Mac& mac) {
     return nullptr;
   }
 }
-EthernetClient::EthernetClient(fidl::InterfacePtr<zircon::ethernet::Device> ptr)
+EthernetClient::EthernetClient(
+    fidl::InterfacePtr<fuchsia::hardware::ethernet::Device> ptr)
     : device_(std::move(ptr)) {
   device_.set_error_handler([this](zx_status_t status) {
     fprintf(stderr, "EthernetClient error = %s\n",
@@ -353,11 +353,11 @@ EthernetClient::~EthernetClient() {
   }
 }
 
-fzl::fifo<zircon::ethernet::FifoEntry>& EthernetClient::tx_fifo() {
+fzl::fifo<fuchsia::hardware::ethernet::FifoEntry>& EthernetClient::tx_fifo() {
   return fifos_->tx_fifo();
 }
 
-fzl::fifo<zircon::ethernet::FifoEntry>& EthernetClient::rx_fifo() {
+fzl::fifo<fuchsia::hardware::ethernet::FifoEntry>& EthernetClient::rx_fifo() {
   return fifos_->rx_fifo();
 }
 

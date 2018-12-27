@@ -11,7 +11,7 @@ import (
 	"syscall/zx"
 	"unsafe"
 
-	"fidl/zircon/ethernet"
+	"fidl/fuchsia/hardware/ethernet"
 )
 
 // numBuffers is size of freebufs in arena

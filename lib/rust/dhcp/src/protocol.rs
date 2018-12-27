@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 #![deny(warnings)]
 
-use fidl_zircon_ethernet_ext::MacAddress as MacAddr;
+use fidl_fuchsia_hardware_ethernet_ext::MacAddress as MacAddr;
 use std::iter::Iterator;
 use std::net::Ipv4Addr;
 

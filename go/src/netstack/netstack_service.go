@@ -15,9 +15,9 @@ import (
 	"netstack/fidlconv"
 	"netstack/link/eth"
 
+	"fidl/fuchsia/hardware/ethernet"
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/netstack"
-	"fidl/zircon/ethernet"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/transport/tcp"

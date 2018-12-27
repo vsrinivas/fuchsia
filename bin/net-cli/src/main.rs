@@ -10,7 +10,7 @@ use fdio;
 use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_stack::{self as netstack, StackMarker, StackProxy};
 use fidl_fuchsia_net_stack_ext as pretty;
-use fidl_zircon_ethernet as zx_eth;
+use fidl_fuchsia_hardware_ethernet as zx_eth;
 use fuchsia_app::client::connect_to_service;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;

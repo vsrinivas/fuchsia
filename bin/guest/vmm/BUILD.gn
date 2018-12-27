@@ -105,7 +105,7 @@ source_set("lib") {
   public_deps = [
     "//garnet/bin/guest/vmm/device",
     "//garnet/public/lib/component/cpp",
-    "//zircon/public/fidl/zircon-ethernet:zircon-ethernet_c",
+    "//zircon/public/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet_c",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/virtio",
     "//zircon/public/lib/zx",

@@ -8,8 +8,8 @@
 #![deny(warnings)]
 #![deny(missing_docs)]
 
-use fidl_zircon_ethernet as sys;
-use fidl_zircon_ethernet_ext::{EthernetInfo, EthernetQueueFlags, EthernetStatus};
+use fidl_fuchsia_hardware_ethernet_ext::{EthernetInfo, EthernetQueueFlags, EthernetStatus};
+use fidl_fuchsia_hardware_ethernet as sys;
 use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, AsHandleRef};
 use futures::{ready, task::LocalWaker, try_ready, FutureExt, Poll, Stream};
@@ -171,8 +171,9 @@ impl Client {
     }
 
     /// Poll the Ethernet client to receive a packet from the Ethernet device.
-    pub fn poll_complete_rx(&self, cx: &LocalWaker)
-        -> Poll<Result<(buffer::RxBuffer, EthernetQueueFlags), zx::Status>> {
+    pub fn poll_complete_rx(
+        &self, cx: &LocalWaker,
+    ) -> Poll<Result<(buffer::RxBuffer, EthernetQueueFlags), zx::Status>> {
         self.inner.poll_complete_rx(cx)
     }
 }
@@ -339,8 +340,9 @@ impl ClientInner {
     }
 
     /// Receive a buffer from the Ethernet device representing a packet from the network.
-    fn poll_complete_rx(&self, lw: &LocalWaker)
-        -> Poll<Result<(buffer::RxBuffer, EthernetQueueFlags), zx::Status>> {
+    fn poll_complete_rx(
+        &self, lw: &LocalWaker,
+    ) -> Poll<Result<(buffer::RxBuffer, EthernetQueueFlags), zx::Status>> {
         Poll::Ready(match try_ready!(self.rx_fifo.try_read(lw)) {
             Some(entry) => {
                 let mut pool_guard = self.pool.lock().unwrap();

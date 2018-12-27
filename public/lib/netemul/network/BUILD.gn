@@ -14,7 +14,7 @@ source_set("ethertap") {
   ]
 
   deps = [
-    "//zircon/public/fidl/zircon-ethernet",
+    "//zircon/public/fidl/fuchsia-hardware-ethernet",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",

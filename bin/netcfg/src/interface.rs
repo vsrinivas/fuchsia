@@ -4,7 +4,7 @@
 
 use {
     failure::{self, ResultExt},
-    fidl_zircon_ethernet_ext::MacAddress,
+    fidl_fuchsia_hardware_ethernet_ext::MacAddress,
     serde_derive::{Deserialize, Serialize},
     std::{fs, io, path},
 };

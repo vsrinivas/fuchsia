@@ -58,7 +58,7 @@ class VirtioNetTest : public TestWithDevice,
   void AddEthernetDevice(
       ::fidl::StringPtr topological_path,
       fuchsia::netstack::InterfaceConfig interfaceConfig,
-      ::fidl::InterfaceHandle<::zircon::ethernet::Device> device,
+      ::fidl::InterfaceHandle<::fuchsia::hardware::ethernet::Device> device,
       AddEthernetDeviceCallback callback) override {
     eth_device_ = device.Bind();
     eth_device_added_ = true;
@@ -98,7 +98,7 @@ class VirtioNetTest : public TestWithDevice,
     // Get fifos.
     eth_device_->GetFifos(
         [this](zx_status_t status,
-               std::unique_ptr<zircon::ethernet::Fifos> fifos) {
+               std::unique_ptr<fuchsia::hardware::ethernet::Fifos> fifos) {
           ASSERT_EQ(status, ZX_OK);
           rx_ = std::move(fifos->rx);
           tx_ = std::move(fifos->tx);
@@ -136,7 +136,7 @@ class VirtioNetTest : public TestWithDevice,
   VirtioQueueFake rx_queue_;
   VirtioQueueFake tx_queue_;
   ::fidl::BindingSet<fuchsia::netstack::Netstack> bindings_;
-  zircon::ethernet::DevicePtr eth_device_;
+  fuchsia::hardware::ethernet::DevicePtr eth_device_;
   bool eth_device_added_ = false;
 
   zx::fifo rx_;
@@ -158,7 +158,7 @@ TEST_F(VirtioNetTest, SendToGuest) {
   vmo_.write(static_cast<const void*>(&expected_packet), 0,
              sizeof(expected_packet));
 
-  zircon::ethernet::FifoEntry entry{
+  fuchsia::hardware::ethernet::FifoEntry entry{
       .offset = 0,
       .length = packet_size,
       .flags = 0,
@@ -216,7 +216,7 @@ TEST_F(VirtioNetTest, ReceiveFromGuest) {
   const uint8_t expected_packet[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
   memcpy(reinterpret_cast<void*>(&data), expected_packet, packet_size);
 
-  zircon::ethernet::FifoEntry entry{
+  fuchsia::hardware::ethernet::FifoEntry entry{
       .offset = 0,
       .length = packet_size,
       .flags = 0,
@@ -250,6 +250,6 @@ TEST_F(VirtioNetTest, ReceiveFromGuest) {
 
   EXPECT_EQ(entry.offset, 0u);
   EXPECT_EQ(entry.length, packet_size);
-  EXPECT_EQ(entry.flags, zircon::ethernet::FIFO_RX_OK);
+  EXPECT_EQ(entry.flags, fuchsia::hardware::ethernet::FIFO_RX_OK);
   EXPECT_EQ(entry.cookie, 0xdeadbeef);
 }

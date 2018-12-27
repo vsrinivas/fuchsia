@@ -5,8 +5,8 @@
 #ifndef LIB_NETEMUL_NETWORK_ETHERNET_CLIENT_H_
 #define LIB_NETEMUL_NETWORK_ETHERNET_CLIENT_H_
 
+#include <fuchsia/hardware/ethernet/cpp/fidl.h>
 #include <lib/fzl/fifo.h>
-#include <zircon/ethernet/cpp/fidl.h>
 #include <memory>
 #include "ethertap_types.h"
 
@@ -26,14 +26,17 @@ class EthernetClient {
   using DataCallback = fit::function<void(const void* buf, size_t len)>;
   using PeerClosedCallback = fit::function<void()>;
 
-  explicit EthernetClient(fidl::InterfacePtr<zircon::ethernet::Device> ptr);
+  explicit EthernetClient(
+      fidl::InterfacePtr<fuchsia::hardware::ethernet::Device> ptr);
   ~EthernetClient();
   void Setup(const EthernetConfig& config,
              fit::function<void(zx_status_t)> callback);
 
-  fidl::InterfacePtr<zircon::ethernet::Device>& device() { return device_; }
-  fzl::fifo<zircon::ethernet::FifoEntry>& tx_fifo();
-  fzl::fifo<zircon::ethernet::FifoEntry>& rx_fifo();
+  fidl::InterfacePtr<fuchsia::hardware::ethernet::Device>& device() {
+    return device_;
+  }
+  fzl::fifo<fuchsia::hardware::ethernet::FifoEntry>& tx_fifo();
+  fzl::fifo<fuchsia::hardware::ethernet::FifoEntry>& rx_fifo();
 
   void SetDataCallback(DataCallback cb);
 
@@ -46,7 +49,7 @@ class EthernetClient {
 
  private:
   PeerClosedCallback peer_closed_callback_;
-  fidl::InterfacePtr<zircon::ethernet::Device> device_;
+  fidl::InterfacePtr<fuchsia::hardware::ethernet::Device> device_;
   std::unique_ptr<FifoHolder> fifos_;
 };
 

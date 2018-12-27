@@ -4,6 +4,7 @@
 
 #include <ddk/protocol/ethernet.h>
 #include <fbl/auto_call.h>
+#include <fuchsia/hardware/ethernet/cpp/fidl.h>
 #include <fuchsia/net/stack/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/fdio/util.h>
@@ -11,7 +12,6 @@
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/zx/socket.h>
 #include <zircon/device/ethertap.h>
-#include <zircon/ethernet/cpp/fidl.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 
@@ -79,9 +79,9 @@ zx_status_t WatchCb(int dirfd, int event, const char* fn, void* cookie) {
     }
   }
 
-  ::zircon::ethernet::Device_SyncProxy dev(std::move(svc));
+  ::fuchsia::hardware::ethernet::Device_SyncProxy dev(std::move(svc));
   // See if this device is our ethertap device
-  zircon::ethernet::Info info;
+  fuchsia::hardware::ethernet::Info info;
   zx_status_t status = dev.GetInfo(&info);
   if (status != ZX_OK) {
     fprintf(stderr, "could not get ethernet info for %s/%s: %s\n", kEthernetDir,
@@ -89,7 +89,7 @@ zx_status_t WatchCb(int dirfd, int event, const char* fn, void* cookie) {
     // Return ZX_OK to keep watching for devices.
     return ZX_OK;
   }
-  if (!(info.features & zircon::ethernet::INFO_FEATURE_SYNTH)) {
+  if (!(info.features & fuchsia::hardware::ethernet::INFO_FEATURE_SYNTH)) {
     // Not a match, keep looking.
     return ZX_OK;
   }
@@ -156,7 +156,7 @@ TEST_F(NetstackLaunchTest, AddEthernetInterface) {
       [&](::fidl::VectorPtr<::fuchsia::net::stack::InterfaceInfo> interfaces) {
         for (const auto& iface : *interfaces) {
           ASSERT_TRUE(iface.properties.features &
-                      ::zircon::ethernet::INFO_FEATURE_LOOPBACK);
+                      ::fuchsia::hardware::ethernet::INFO_FEATURE_LOOPBACK);
         }
         list_ifs = true;
       });
@@ -166,7 +166,8 @@ TEST_F(NetstackLaunchTest, AddEthernetInterface) {
   fidl::StringPtr topo_path = "/fake/device";
   stack->AddEthernetInterface(
       std::move(topo_path),
-      fidl::InterfaceHandle<::zircon::ethernet::Device>(std::move(svc)),
+      fidl::InterfaceHandle<::fuchsia::hardware::ethernet::Device>(
+          std::move(svc)),
       [&](std::unique_ptr<::fuchsia::net::stack::Error> err, uint64_t id) {
         if (err != nullptr) {
           fprintf(stderr, "error adding ethernet interface: %u\n",
@@ -183,7 +184,7 @@ TEST_F(NetstackLaunchTest, AddEthernetInterface) {
       [&](::fidl::VectorPtr<::fuchsia::net::stack::InterfaceInfo> interfaces) {
         for (const auto& iface : *interfaces) {
           if (iface.properties.features &
-              ::zircon::ethernet::INFO_FEATURE_LOOPBACK) {
+              ::fuchsia::hardware::ethernet::INFO_FEATURE_LOOPBACK) {
             continue;
           }
           ASSERT_EQ(eth_id, iface.id);
@@ -229,7 +230,7 @@ TEST_F(NetstackLaunchTest, DISABLED_AddEthernetDevice) {
       [&](::fidl::VectorPtr<::fuchsia::netstack::NetInterface> interfaces) {
         for (const auto& iface : *interfaces) {
           ASSERT_TRUE(iface.features &
-                      ::zircon::ethernet::INFO_FEATURE_LOOPBACK);
+                      ::fuchsia::hardware::ethernet::INFO_FEATURE_LOOPBACK);
         }
         list_ifs = true;
       });
@@ -238,7 +239,8 @@ TEST_F(NetstackLaunchTest, DISABLED_AddEthernetDevice) {
   uint32_t eth_id = 0;
   netstack->AddEthernetDevice(
       std::move(topo_path), std::move(config),
-      fidl::InterfaceHandle<::zircon::ethernet::Device>(std::move(svc)),
+      fidl::InterfaceHandle<::fuchsia::hardware::ethernet::Device>(
+          std::move(svc)),
       [&](uint32_t id) { eth_id = id; });
   ASSERT_TRUE(
       RunLoopWithTimeoutOrUntil([&] { return eth_id > 0; }, zx::sec(5)));
@@ -247,7 +249,8 @@ TEST_F(NetstackLaunchTest, DISABLED_AddEthernetDevice) {
   netstack->GetInterfaces(
       [&](::fidl::VectorPtr<::fuchsia::netstack::NetInterface> interfaces) {
         for (const auto& iface : *interfaces) {
-          if (iface.features & ::zircon::ethernet::INFO_FEATURE_LOOPBACK) {
+          if (iface.features &
+              ::fuchsia::hardware::ethernet::INFO_FEATURE_LOOPBACK) {
             continue;
           }
           ASSERT_EQ(eth_id, iface.id);
@@ -299,7 +302,8 @@ TEST_F(NetstackLaunchTest, DISABLED_DHCPRequestSent) {
   // migrate netcfg to use AddEthernetInterface.
   netstack->AddEthernetDevice(
       std::move(topo_path), std::move(config),
-      fidl::InterfaceHandle<::zircon::ethernet::Device>(std::move(svc)),
+      fidl::InterfaceHandle<::fuchsia::hardware::ethernet::Device>(
+          std::move(svc)),
       [&](uint32_t id) {});
 
   // Give zx_channel_write 10ms to enqueue whatever it needs, then run

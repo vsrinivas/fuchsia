@@ -6,8 +6,8 @@ use serde::de::Error;
 use serde::Deserialize;
 
 pub fn config_for_device(
-    device_info: &fidl_zircon_ethernet_ext::EthernetInfo, name: String, topological_path: &str,
-    rules: &Vec<InterfaceSpec>,
+    device_info: &fidl_fuchsia_hardware_ethernet_ext::EthernetInfo, name: String,
+    topological_path: &str, rules: &Vec<InterfaceSpec>,
 ) -> fidl_fuchsia_netstack::InterfaceConfig {
     rules
         .iter()
@@ -27,14 +27,15 @@ pub fn config_for_device(
 }
 
 fn matches_info<'a>(
-    spec: &'a InterfaceSpec, topological_path: &str, info: &fidl_zircon_ethernet_ext::EthernetInfo,
+    spec: &'a InterfaceSpec, topological_path: &str,
+    info: &fidl_fuchsia_hardware_ethernet_ext::EthernetInfo,
 ) -> Option<&'a ConfigOption> {
     let matches = match &spec.matcher {
         InterfaceMatcher::All => true,
         InterfaceMatcher::TopoPath(path) => path == topological_path,
         InterfaceMatcher::MacAddress(address) => {
             address
-                == &fidl_zircon_ethernet_ext::MacAddress {
+                == &fidl_fuchsia_hardware_ethernet_ext::MacAddress {
                     octets: info.mac.octets,
                 }
         }
@@ -51,8 +52,8 @@ fn matches_info<'a>(
 pub enum InterfaceMatcher {
     All,
     TopoPath(String),
-    MacAddress(fidl_zircon_ethernet_ext::MacAddress),
-    Feature(fidl_zircon_ethernet_ext::EthernetFeatures),
+    MacAddress(fidl_fuchsia_hardware_ethernet_ext::MacAddress),
+    Feature(fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures),
 }
 
 impl InterfaceMatcher {
@@ -61,10 +62,10 @@ impl InterfaceMatcher {
             ("all", _) => Ok(InterfaceMatcher::All),
             ("topological_path", p) => Ok(InterfaceMatcher::TopoPath(p.to_string())),
             ("mac_address", address) => Ok(InterfaceMatcher::MacAddress(
-                address.parse::<fidl_zircon_ethernet_ext::MacAddress>()?,
+                address.parse::<fidl_fuchsia_hardware_ethernet_ext::MacAddress>()?,
             )),
             ("feature", feature) => Ok(InterfaceMatcher::Feature(
-                feature.parse::<fidl_zircon_ethernet_ext::EthernetFeatures>()?,
+                feature.parse::<fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures>()?,
             )),
             (unknown, _) => Err(failure::format_err!(
                 "invalid matcher option for interface: {}",
@@ -150,14 +151,16 @@ mod tests {
                 .expect("parse matcher should succeed")
         );
         assert_eq!(
-            InterfaceMatcher::MacAddress(fidl_zircon_ethernet_ext::MacAddress {
+            InterfaceMatcher::MacAddress(fidl_fuchsia_hardware_ethernet_ext::MacAddress {
                 octets: [170, 187, 204, 221, 238, 255]
             }),
             InterfaceMatcher::parse_as_tuple(("mac_address", "AA:BB:CC:DD:EE:FF"))
                 .expect("parse matcher should succeed")
         );
         assert_eq!(
-            InterfaceMatcher::Feature(fidl_zircon_ethernet_ext::EthernetFeatures::SYNTHETIC),
+            InterfaceMatcher::Feature(
+                fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures::SYNTHETIC
+            ),
             InterfaceMatcher::parse_as_tuple(("feature", "synthetic"))
                 .expect("parse matcher should succeed")
         );
@@ -186,9 +189,9 @@ mod tests {
     #[test]
     fn test_rule_overrides() {
         let got = config_for_device(
-            &fidl_zircon_ethernet_ext::EthernetInfo {
-                features: fidl_zircon_ethernet_ext::EthernetFeatures::empty(),
-                mac: fidl_zircon_ethernet_ext::MacAddress { octets: [0; 6] },
+            &fidl_fuchsia_hardware_ethernet_ext::EthernetInfo {
+                features: fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures::empty(),
+                mac: fidl_fuchsia_hardware_ethernet_ext::MacAddress { octets: [0; 6] },
                 mtu: 0,
             },
             "".to_string(),

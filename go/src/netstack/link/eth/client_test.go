@@ -9,8 +9,8 @@ import (
 	"syscall/zx"
 	"testing"
 
-	"fidl/zircon/ethernet"
-	ethernetext "fidlext/zircon/ethernet"
+	"fidl/fuchsia/hardware/ethernet"
+	ethernetext "fidlext/fuchsia/hardware/ethernet"
 
 	"netstack/link/eth"
 )

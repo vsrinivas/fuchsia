@@ -24,7 +24,7 @@ pub enum IfCmd {
     /// adds a network interface by path
     Add {
         #[structopt(raw(required = "true"))]
-        // The path must yield a handle to a zircon.ethernet.Device interface.
+        // The path must yield a handle to a fuchsia.hardware.ethernet.Device interface.
         // Currently this means paths under /dev/class/ethernet.
         /// path to the device to add
         path: String,

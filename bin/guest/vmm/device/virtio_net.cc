@@ -80,7 +80,7 @@ class RxStream : public StreamBase {
   }
 
   void Receive(uintptr_t addr, size_t length,
-               const zircon::ethernet::FifoEntry& entry) {
+               const fuchsia::hardware::ethernet::FifoEntry& entry) {
     packet_queue_.push(Packet{addr, length, entry});
     Notify();
   }
@@ -89,7 +89,7 @@ class RxStream : public StreamBase {
   struct Packet {
     uintptr_t addr;
     size_t length;
-    zircon::ethernet::FifoEntry entry;
+    fuchsia::hardware::ethernet::FifoEntry entry;
   };
 
   GuestEthernet* guest_ethernet_ = nullptr;
@@ -160,7 +160,7 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
   // Called by GuestEthernet to notify us when the netstack is trying to send a
   // packet to the guest.
   void Receive(uintptr_t addr, size_t length,
-               const zircon::ethernet::FifoEntry& entry) override {
+               const fuchsia::hardware::ethernet::FifoEntry& entry) override {
     rx_stream_.Receive(addr, length, entry);
   }
 
@@ -218,8 +218,8 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
 
   component::StartupContext& context_;
   GuestEthernet guest_ethernet_{this};
-  fidl::Binding<zircon::ethernet::Device> device_binding_ =
-      fidl::Binding<zircon::ethernet::Device>(&guest_ethernet_);
+  fidl::Binding<fuchsia::hardware::ethernet::Device> device_binding_ =
+      fidl::Binding<fuchsia::hardware::ethernet::Device>(&guest_ethernet_);
   fuchsia::netstack::NetstackPtr netstack_;
 
   RxStream rx_stream_;

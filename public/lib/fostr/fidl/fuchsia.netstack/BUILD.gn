@@ -8,7 +8,7 @@ fostr_fidl("fuchsia.netstack") {
   fidl_target = "//garnet/public/fidl/fuchsia.netstack"
 
   deps = [
+    "//garnet/public/lib/fostr/fidl/fuchsia.hardware.ethernet",
     "//garnet/public/lib/fostr/fidl/fuchsia.net",
-    "//garnet/public/lib/fostr/fidl/zircon.ethernet",
   ]
 }

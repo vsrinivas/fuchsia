@@ -5,10 +5,10 @@
 import("//build/go/go_library.gni")
 import("//build/go/toolchain.gni")
 
-go_library("fidlext_zircon_ethernet_fake_lib") {
-  name = "fidlext/zircon/ethernet"
+go_library("fidlext_fuchsia_hardware_ethernet_fake_lib") {
+  name = "fidlext/fuchsia/hardware/ethernet"
 
   deps = [
-    "//zircon/public/fidl/zircon-ethernet($go_toolchain)",
+    "//zircon/public/fidl/fuchsia-hardware-ethernet($go_toolchain)",
   ]
 }

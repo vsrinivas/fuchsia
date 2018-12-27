@@ -202,7 +202,7 @@ executable("virtio_net_bin") {
   deps = [
     ":virtio",
     "//garnet/public/fidl/fuchsia.netstack",
-    "//zircon/public/fidl/zircon-ethernet:zircon-ethernet",
+    "//zircon/public/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet",
   ]
 }
 

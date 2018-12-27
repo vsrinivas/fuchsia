@@ -138,9 +138,9 @@ impl std::fmt::Display for PhysicalStatus {
 
 pub struct InterfaceProperties {
     path: String,
-    mac: Option<fidl_zircon_ethernet_ext::MacAddress>,
+    mac: Option<fidl_fuchsia_hardware_ethernet_ext::MacAddress>,
     mtu: u32,
-    features: fidl_zircon_ethernet_ext::EthernetFeatures,
+    features: fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures,
     enablement_status: EnablementStatus,
     physical_status: PhysicalStatus,
     addresses: Vec<InterfaceAddress>,
@@ -159,7 +159,8 @@ impl From<fidl::InterfaceProperties> for InterfaceProperties {
         }: fidl::InterfaceProperties,
     ) -> Self {
         let mac = mac.map(|mac| (*mac).into());
-        let features = fidl_zircon_ethernet_ext::EthernetFeatures::from_bits_truncate(features);
+        let features =
+            fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures::from_bits_truncate(features);
         let enablement_status = EnablementStatus::from(enablement_status);
         let physical_status = PhysicalStatus::from(physical_status);
         let addresses = addresses.into_iter().map(Into::into).collect();
@@ -235,11 +236,11 @@ fn test_display_interfaceinfo() {
                 id: 1,
                 properties: InterfaceProperties {
                     path: "/all/the/way/home".to_owned(),
-                    mac: Some(fidl_zircon_ethernet_ext::MacAddress {
+                    mac: Some(fidl_fuchsia_hardware_ethernet_ext::MacAddress {
                         octets: [0, 1, 2, 255, 254, 253]
                     }),
                     mtu: 1500,
-                    features: fidl_zircon_ethernet_ext::EthernetFeatures::all(),
+                    features: fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures::all(),
                     enablement_status: EnablementStatus::ENABLED,
                     physical_status: PhysicalStatus::UP,
                     addresses: vec![InterfaceAddress {

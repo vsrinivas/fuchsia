@@ -51,14 +51,14 @@ import (
 
 	"netstack/trace"
 
-	"fidl/zircon/ethernet"
+	"fidl/fuchsia/hardware/ethernet"
 )
 
 const ZXSIO_ETH_SIGNAL_STATUS = zx.SignalUser0
 
 // A Client is an ethernet client.
 // It connects to a zircon ethernet driver using a FIFO-based protocol.
-// The protocol is described in system/fidl/zircon-ethernet/ethernet.fidl.
+// The protocol is described in system/fidl/fuchsia-hardware-ethernet/ethernet.fidl.
 type Client struct {
 	Path string
 	Info ethernet.Info

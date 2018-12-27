@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use byteorder::{BigEndian, ByteOrder};
 use crate::configuration::ServerConfig;
 use crate::protocol::{self, ConfigOption, Message, MessageType, OpCode, OptionCode};
-use fidl_zircon_ethernet_ext::MacAddress as MacAddr;
+use byteorder::{BigEndian, ByteOrder};
+use fidl_fuchsia_hardware_ethernet_ext::MacAddress as MacAddr;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::net::Ipv4Addr;
 use std::ops::Fn;

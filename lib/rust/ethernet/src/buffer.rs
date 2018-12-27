@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_zircon_ethernet as sys;
+use fidl_fuchsia_hardware_ethernet as sys;
 use fuchsia_zircon as zx;
 use shared_buffer::SharedBuffer;
 use std::fmt;

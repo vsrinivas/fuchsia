@@ -4,6 +4,7 @@
 
 #include <ddk/protocol/ethernet.h>
 #include <fbl/auto_call.h>
+#include <fuchsia/hardware/ethernet/cpp/fidl.h>
 #include <fuchsia/net/filter/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <garnet/lib/inet/ip_address.h>
@@ -12,7 +13,6 @@
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/zx/socket.h>
 #include <zircon/device/ethertap.h>
-#include <zircon/ethernet/cpp/fidl.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 
@@ -86,9 +86,9 @@ zx_status_t WatchCb(int dirfd, int event, const char* fn, void* cookie) {
     }
   }
 
-  ::zircon::ethernet::Device_SyncProxy dev(std::move(svc));
+  ::fuchsia::hardware::ethernet::Device_SyncProxy dev(std::move(svc));
   // See if this device is our ethertap device
-  zircon::ethernet::Info info;
+  fuchsia::hardware::ethernet::Info info;
   zx_status_t status = dev.GetInfo(&info);
   if (status != ZX_OK) {
     fprintf(stderr, "could not get ethernet info for %s/%s: %s\n", kEthernetDir,
@@ -96,7 +96,7 @@ zx_status_t WatchCb(int dirfd, int event, const char* fn, void* cookie) {
     // Return ZX_OK to keep watching for devices.
     return ZX_OK;
   }
-  if (!(info.features & zircon::ethernet::INFO_FEATURE_SYNTH)) {
+  if (!(info.features & fuchsia::hardware::ethernet::INFO_FEATURE_SYNTH)) {
     // Not a match, keep looking.
     return ZX_OK;
   }
@@ -224,7 +224,8 @@ TEST_F(NetstackFilterTest, TestRuleset) {
   config.ip_address_config.set_static_ip(std::move(subnet));
   netstack->AddEthernetDevice(
       std::move(topo_path), std::move(config),
-      fidl::InterfaceHandle<::zircon::ethernet::Device>(std::move(svc)),
+      fidl::InterfaceHandle<::fuchsia::hardware::ethernet::Device>(
+          std::move(svc)),
       [&](uint32_t id) {});
   fprintf(stderr, "added new ethernet device\n");
 

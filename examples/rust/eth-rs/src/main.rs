@@ -5,7 +5,7 @@
 #![feature(async_await, await_macro)]
 
 use failure::{Error, ResultExt};
-use fidl_zircon_ethernet_ext::EthernetQueueFlags;
+use fidl_fuchsia_hardware_ethernet_ext::EthernetQueueFlags;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::prelude::*;
@@ -41,8 +41,12 @@ fn main() -> Result<(), Error> {
                 let mut buf = [0; 64];
                 let r = rx.read(&mut buf);
                 let is_tx_echo = flags.intersects(EthernetQueueFlags::TX_ECHO);
-                println!("{} first {} bytes:\n{:02x?}", if is_tx_echo {"TX_ECHO"} else {"RX     "},
-                         r, &buf[0..r]);
+                println!(
+                    "{} first {} bytes:\n{:02x?}",
+                    if is_tx_echo { "TX_ECHO" } else { "RX     " },
+                    r,
+                    &buf[0..r]
+                );
             }
         }
         Ok(())

@@ -7,7 +7,7 @@
 use {
     dhcp::protocol::{ConfigOption, Message, MessageType, OptionCode, CLIENT_PORT, SERVER_PORT},
     failure::{Error, ResultExt},
-    fidl_zircon_ethernet_ext::MacAddress as MacAddr,
+    fidl_fuchsia_hardware_ethernet_ext::MacAddress as MacAddr,
     fuchsia_async::{net::UdpSocket, Executor},
     std::net::SocketAddr,
 };

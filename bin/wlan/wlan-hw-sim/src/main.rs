@@ -979,7 +979,7 @@ mod simulation_tests {
     async fn send_and_receive<'a>(
         client: &'a mut ethernet::Client, buf: &'a Vec<u8>,
     ) -> Result<(eth_frames::EthHeader, Vec<u8>), failure::Error> {
-        use fidl_zircon_ethernet_ext::EthernetQueueFlags;
+        use fidl_fuchsia_hardware_ethernet_ext::EthernetQueueFlags;
         let mut client_stream = client.get_stream();
         client.send(&buf);
         loop {

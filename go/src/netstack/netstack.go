@@ -22,9 +22,9 @@ import (
 	"netstack/util"
 
 	"fidl/fuchsia/devicesettings"
+	"fidl/fuchsia/hardware/ethernet"
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/netstack"
-	"fidl/zircon/ethernet"
 
 	"github.com/google/netstack/dhcp"
 	"github.com/google/netstack/tcpip"

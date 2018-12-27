@@ -12,8 +12,8 @@ import (
 
 	"netstack/link/eth"
 
-	"fidl/zircon/ethernet"
-	ethernetext "fidlext/zircon/ethernet"
+	"fidl/fuchsia/hardware/ethernet"
+	ethernetext "fidlext/fuchsia/hardware/ethernet"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/buffer"

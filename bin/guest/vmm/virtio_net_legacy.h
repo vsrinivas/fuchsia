@@ -9,12 +9,12 @@
 #include <vector>
 
 #include <fbl/unique_fd.h>
+#include <fuchsia/hardware/ethernet/c/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/channel.h>
 #include <trace-engine/types.h>
 #include <virtio/net.h>
 #include <virtio/virtio_ids.h>
-#include <zircon/ethernet/c/fidl.h>
 
 #include "garnet/bin/guest/vmm/virtio_device.h"
 #include "garnet/bin/guest/vmm/virtio_queue_waiter.h"
@@ -47,11 +47,11 @@ class VirtioNetLegacy
   // the ethdriver. This is protected to allow for a mock VirtioNet to be easily
   // constructed for testing without needing a fully mocked ethernet driver.
   zx_status_t InitIoBuffer(size_t count, size_t elem_size);
-  zx_status_t WaitOnFifos(const zircon_ethernet_Fifos& fifos);
+  zx_status_t WaitOnFifos(const fuchsia_hardware_ethernet_Fifos& fifos);
 
  private:
   // Ethernet control plane.
-  zircon_ethernet_Fifos fifos_ = {};
+  fuchsia_hardware_ethernet_Fifos fifos_ = {};
   // Connection to the Ethernet device.
   zx::channel net_svc_;
 
@@ -110,7 +110,7 @@ class VirtioNetLegacy
     bool rx_ = false;
     IoBuffer* io_buf_;
 
-    std::vector<zircon_ethernet_FifoEntry> fifo_entries_;
+    std::vector<fuchsia_hardware_ethernet_FifoEntry> fifo_entries_;
     // Number of entries in |fifo_entries_| that have not yet been written
     // to the fifo.
     size_t fifo_num_entries_ = 0;
