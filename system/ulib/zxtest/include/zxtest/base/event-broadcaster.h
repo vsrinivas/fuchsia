@@ -11,6 +11,7 @@ namespace zxtest {
 // Forward declaration.
 class TestCase;
 class TestInfo;
+class Runner;
 
 namespace internal {
 
@@ -23,6 +24,15 @@ public:
 
     EventBroadcaster& operator=(const EventBroadcaster&) = delete;
     EventBroadcaster& operator=(EventBroadcaster&&) = delete;
+
+    // Reports before any test is executed.
+    void OnProgramStart(const Runner& runner) final;
+
+    // Reports before every iteration starts.
+    void OnIterationStart(const Runner& runner, int iteration) final;
+
+    // Reports before any environment is set up.
+    void OnEnvironmentSetUp(const Runner& runner) final;
 
     // Reports before every TestCase is set up.
     void OnTestCaseStart(const TestCase& test_case) final;
@@ -44,6 +54,15 @@ public:
 
     // Adds a lifecycle observer to the registered list of observers.
     void Subscribe(LifecycleObserver* observer);
+
+    // Reports before any environment is torn down.
+    void OnEnvironmentTearDown(const Runner& runner) final;
+
+    // Reports before every iteration starts.
+    void OnIterationEnd(const Runner& runner, int iteration) final;
+
+    // Reports after all test executed.
+    void OnProgramEnd(const Runner& runner) final;
 
 private:
     fbl::Vector<LifecycleObserver*> lifecycle_observers_;

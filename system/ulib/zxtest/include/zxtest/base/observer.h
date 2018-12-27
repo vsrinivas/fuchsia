@@ -6,6 +6,7 @@
 
 namespace zxtest {
 // Forward declaration.
+class Runner;
 class TestCase;
 class TestInfo;
 
@@ -21,23 +22,41 @@ class LifecycleObserver {
 public:
     virtual ~LifecycleObserver() = default;
 
-    // Reports before every TestCase is set up.
+    // Reports before any test is executed.
+    virtual void OnProgramStart(const Runner& runner) {}
+
+    // Reports before every iteration starts.
+    virtual void OnIterationStart(const Runner& runner, int iteration) {}
+
+    // Reports before any environment is set up.
+    virtual void OnEnvironmentSetUp(const Runner& runner) {}
+
+    // Reports before a TestCase is set up.
     virtual void OnTestCaseStart(const TestCase& test_case) {}
 
-    // Reports before every test starts.
+    // Reports before a test starts.
     virtual void OnTestStart(const TestCase& test_case, const TestInfo& test) {}
 
-    // Reports before every test starts.
+    // Reports after a test execution was skipped.
     virtual void OnTestSkip(const TestCase& test_case, const TestInfo& test) {}
 
-    // Reports before every TestCase is set up.
+    // Reports after test execution completed with failures.
     virtual void OnTestFailure(const TestCase& test_case, const TestInfo& test) {}
 
-    // Reports before every TestCase is set up.
+    // Reports after test execution completed with no failures.
     virtual void OnTestSuccess(const TestCase& test_case, const TestInfo& test) {}
 
-    // Reports before every TestCase is torn down.
+    // Reports before a TestCase is torn down.
     virtual void OnTestCaseEnd(const TestCase& test_case) {}
+
+    // Reports before any environment is torn down.
+    virtual void OnEnvironmentTearDown(const Runner& runner) {}
+
+    // Reports before every iteration starts.
+    virtual void OnIterationEnd(const Runner& runner, int iteration) {}
+
+    // Reports after all test executed.
+    virtual void OnProgramEnd(const Runner& runner) {}
 };
 
 } // namespace zxtest

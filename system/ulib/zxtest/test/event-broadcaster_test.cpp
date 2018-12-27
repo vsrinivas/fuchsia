@@ -9,9 +9,34 @@
 #include <fbl/function.h>
 #include <zxtest/base/event-broadcaster.h>
 #include <zxtest/base/observer.h>
+#include <zxtest/base/runner.h>
 #include <zxtest/base/test-case.h>
 #include <zxtest/base/test-info.h>
 #include <zxtest/base/types.h>
+
+#define ITERATION_EVENT_OBSERVER(Event)                                                            \
+    class FakeObserver : public LifecycleObserver {                                                \
+    public:                                                                                        \
+        void OnIteration##Event(const Runner& runner, int iter) final {                            \
+            on_notify(runner, iter);                                                               \
+            called = true;                                                                         \
+        }                                                                                          \
+                                                                                                   \
+        fbl::Function<void(const Runner& runner, int iter)> on_notify;                             \
+        bool called = false;                                                                       \
+    }
+
+#define RUNNER_EVENT_OBSERVER(Event)                                                               \
+    class FakeObserver : public LifecycleObserver {                                                \
+    public:                                                                                        \
+        void On##Event(const Runner& runner) final {                                               \
+            on_notify(runner);                                                                     \
+            called = true;                                                                         \
+        }                                                                                          \
+                                                                                                   \
+        fbl::Function<void(const Runner& runner)> on_notify;                                       \
+        bool called = false;                                                                       \
+    }
 
 // Defines a FakeObserver class which tracks call to OnTestCaseEvent methods.
 #define TESTCASE_EVENT_OBSERVER(Event)                                                             \
@@ -71,6 +96,64 @@ void ValidateAllObserversNotified(const T& observers) {
 }
 
 } // namespace
+
+void EventBroadcasterOnProgramStart() {
+    RUNNER_EVENT_OBSERVER(ProgramStart);
+
+    internal::EventBroadcaster event_broadcaster;
+    fbl::Vector<FakeObserver> observers;
+    observers.reserve(kNumObservers);
+    Runner runner;
+
+    REGISTER_OBSERVERS(observers, event_broadcaster, [&runner](const Runner& actual_runner) {
+        ZX_ASSERT_MSG(&actual_runner == &runner,
+                      "EventBroadcaster::OnProgramStart propagated the wrong runner.\n");
+    });
+
+    event_broadcaster.OnProgramStart(runner);
+
+    ValidateAllObserversNotified(observers);
+}
+
+void EventBroadcasterOnIterationStart() {
+    ITERATION_EVENT_OBSERVER(Start);
+
+    internal::EventBroadcaster event_broadcaster;
+    fbl::Vector<FakeObserver> observers;
+    observers.reserve(kNumObservers);
+    Runner runner;
+
+    REGISTER_OBSERVERS(
+        observers, event_broadcaster, [&runner](const Runner& actual_runner, int iteration) {
+            ZX_ASSERT_MSG(&actual_runner == &runner,
+                          "EventBroadcaster::OnIterationStart propagated the wrong runner.\n");
+            ZX_ASSERT_MSG(
+                iteration == 4,
+                "EventBroadcaster::OnIterationStart propagated the wron iteration number.\n");
+        });
+
+    event_broadcaster.OnIterationStart(runner, 4);
+
+    ValidateAllObserversNotified(observers);
+}
+
+void EventBroadcasterOnEnvironmentSetUp() {
+    RUNNER_EVENT_OBSERVER(EnvironmentSetUp);
+
+    internal::EventBroadcaster event_broadcaster;
+    fbl::Vector<FakeObserver> observers;
+    observers.reserve(kNumObservers);
+    Runner runner;
+
+    REGISTER_OBSERVERS(observers, event_broadcaster, [&runner](const Runner& actual_runner) {
+        ZX_ASSERT_MSG(&actual_runner == &runner,
+                      "EventBroadcaster::OnEnvironmentSetUp propagated the wrong runner.\n");
+    });
+
+    event_broadcaster.OnEnvironmentSetUp(runner);
+
+    ValidateAllObserversNotified(observers);
+}
 
 void EventBroadcasterOnTestCaseStart() {
     TESTCASE_EVENT_OBSERVER(Start);
@@ -192,6 +275,64 @@ void EventBroadcasterOnTestCaseEnd() {
     });
 
     event_broadcaster.OnTestCaseEnd(test_case);
+
+    ValidateAllObserversNotified(observers);
+}
+
+void EventBroadcasterOnEnvironmentTearDown() {
+    RUNNER_EVENT_OBSERVER(EnvironmentTearDown);
+
+    internal::EventBroadcaster event_broadcaster;
+    fbl::Vector<FakeObserver> observers;
+    observers.reserve(kNumObservers);
+    Runner runner;
+
+    REGISTER_OBSERVERS(observers, event_broadcaster, [&runner](const Runner& actual_runner) {
+        ZX_ASSERT_MSG(&actual_runner == &runner,
+                      "EventBroadcaster::OnIterationStart propagated the wrong runner.\n");
+    });
+
+    event_broadcaster.OnEnvironmentTearDown(runner);
+
+    ValidateAllObserversNotified(observers);
+}
+
+void EventBroadcasterOnIterationEnd() {
+    ITERATION_EVENT_OBSERVER(End);
+
+    internal::EventBroadcaster event_broadcaster;
+    fbl::Vector<FakeObserver> observers;
+    observers.reserve(kNumObservers);
+    Runner runner;
+
+    REGISTER_OBSERVERS(
+        observers, event_broadcaster, [&runner](const Runner& actual_runner, int iteration) {
+            ZX_ASSERT_MSG(&actual_runner == &runner,
+                          "EventBroadcaster::OnEnvironmentTearDown propagated the wrong runner.\n");
+            ZX_ASSERT_MSG(
+                iteration == 4,
+                "EventBroadcaster::OnEnvironmentTearDown propagated the wron iteration number.\n");
+        });
+
+    event_broadcaster.OnIterationEnd(runner, 4);
+
+    ValidateAllObserversNotified(observers);
+}
+
+void EventBroadcasterOnProgramEnd() {
+    RUNNER_EVENT_OBSERVER(ProgramEnd);
+
+    internal::EventBroadcaster event_broadcaster;
+    fbl::Vector<FakeObserver> observers;
+    observers.reserve(kNumObservers);
+    Runner runner;
+
+    REGISTER_OBSERVERS(observers, event_broadcaster, [&runner](const Runner& actual_runner) {
+        ZX_ASSERT_MSG(&actual_runner == &runner,
+                      "EventBroadcaster::OnProgramEnd propagated the wrong runner.\n");
+    });
+
+    event_broadcaster.OnProgramEnd(runner);
 
     ValidateAllObserversNotified(observers);
 }

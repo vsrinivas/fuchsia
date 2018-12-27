@@ -25,6 +25,21 @@ EventBroadcaster::EventBroadcaster() = default;
 EventBroadcaster::EventBroadcaster(EventBroadcaster&&) = default;
 EventBroadcaster::~EventBroadcaster() = default;
 
+// Reports before any test is executed.
+void EventBroadcaster::OnProgramStart(const Runner& runner) {
+    Broadcast<&LifecycleObserver::OnProgramStart>(&lifecycle_observers_, runner);
+}
+
+// Reports before every iteration starts.
+void EventBroadcaster::OnIterationStart(const Runner& runner, int iteration) {
+    Broadcast<&LifecycleObserver::OnIterationStart>(&lifecycle_observers_, runner, iteration);
+}
+
+// Reports before any environment is set up.
+void EventBroadcaster::OnEnvironmentSetUp(const Runner& runner) {
+    Broadcast<&LifecycleObserver::OnEnvironmentSetUp>(&lifecycle_observers_, runner);
+}
+
 // Reports before every TestCase is set up.
 void EventBroadcaster::OnTestCaseStart(const TestCase& test_case) {
     Broadcast<&LifecycleObserver::OnTestCaseStart>(&lifecycle_observers_, test_case);
@@ -59,6 +74,21 @@ void EventBroadcaster::Subscribe(LifecycleObserver* observer) {
     ZX_DEBUG_ASSERT_MSG(observer != this, "EventBroadcaster cannot observe itself.");
     ZX_DEBUG_ASSERT_MSG(observer != nullptr, "Canno register nullptr as a LifecycleObserver");
     lifecycle_observers_.push_back(observer);
+}
+
+// Reports before any environment is torn down.
+void EventBroadcaster::OnEnvironmentTearDown(const Runner& runner) {
+    Broadcast<&LifecycleObserver::OnEnvironmentTearDown>(&lifecycle_observers_, runner);
+}
+
+// Reports before every iteration starts.
+void EventBroadcaster::OnIterationEnd(const Runner& runner, int iteration) {
+    Broadcast<&LifecycleObserver::OnIterationEnd>(&lifecycle_observers_, runner, iteration);
+}
+
+// Reports after all test executed.
+void EventBroadcaster::OnProgramEnd(const Runner& runner) {
+    Broadcast<&LifecycleObserver::OnProgramEnd>(&lifecycle_observers_, runner);
 }
 
 } // namespace internal

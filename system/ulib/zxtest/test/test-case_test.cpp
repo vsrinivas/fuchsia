@@ -4,6 +4,8 @@
 
 #include "test-registry.h"
 
+#include <cstring>
+
 #include <fbl/function.h>
 #include <zircon/assert.h>
 #include <zxtest/base/observer.h>
@@ -94,9 +96,15 @@ void TestCaseRegisterTest() {
 
     ZX_ASSERT_MSG(test_case.RegisterTest(kTestName, kLocation, &Test::Create<FakeTest>),
                   "TestCase failed to register a test.");
+    const TestInfo& registered_test = test_case.GetTestInfo(/*index*/ 0);
 
-    ZX_ASSERT_MSG(test_case.TestCount() == 1, "TestCase matching count does not match.");
-    ZX_ASSERT_MSG(test_case.MatchingTestCount() == 1, "TestCase .");
+    ZX_ASSERT_MSG(test_case.TestCount() == 1, "TestCase test count does not match.");
+    ZX_ASSERT_MSG(test_case.MatchingTestCount() == 1,
+                  "TestCase matching test count does not match.");
+    ZX_ASSERT_MSG(registered_test.name() == kTestName,
+                  "TestCase expected TestInfo name is incorrect.");
+    ZX_ASSERT_MSG(memcmp(&registered_test.location(), &kLocation, sizeof(SourceLocation)) == 0,
+                  "TestCase expected TestInfo name is incorrect.");
 }
 
 void TestCaseRun() {

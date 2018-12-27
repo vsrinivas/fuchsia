@@ -60,6 +60,14 @@ public:
     // Returns the name of test case.
     const fbl::String& name() const { return name_; }
 
+    const TestInfo& GetTestInfo(size_t index) const { return test_infos_[index]; }
+
+    // Returns TestInfo of the registered test that matches the filter, at a given
+    // offset. If All tests match the filter, then it is equivalent to |TestCase::GetTestInfo|.
+    const TestInfo& GetMatchingTestInfo(size_t index) const {
+        return test_infos_[selected_indexes_[index]];
+    }
+
 private:
     // Keeps track of the tests that were selected
     fbl::Vector<unsigned long> selected_indexes_;

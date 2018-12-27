@@ -4,6 +4,8 @@
 
 #include "test-registry.h"
 
+#include <cstdio>
+
 int main(int argc, char** argv) {
     // TODO(gevalentino): Make it print some meaningful output.
     for (auto& test : zxtest::test::kRegisteredTests) {

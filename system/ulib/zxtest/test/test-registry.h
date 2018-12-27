@@ -79,12 +79,26 @@ void TestCaseUnShuffle();
 
 // Verify that the broadcasting is working for all LifecycleObserver
 // events.
+void EventBroadcasterOnProgramStart();
+void EventBroadcasterOnIterationStart();
+void EventBroadcasterOnEnvironmentSetUp();
 void EventBroadcasterOnTestCaseStart();
 void EventBroadcasterOnTestStart();
 void EventBroadcasterOnTestSkip();
 void EventBroadcasterOnTestSuccess();
 void EventBroadcasterOnTestFailure();
 void EventBroadcasterOnTestCaseEnd();
+void EventBroadcasterOnEnvironmentTearDown();
+void EventBroadcasterOnIterationEnd();
+void EventBroadcasterOnProgramEnd();
+
+// Verify that Runner behaves appropiately with the defined options.
+void RunnerRegisterTest();
+void RunnerRegisterTestWithCustomFactory();
+void RunnerRunAllTests();
+void RunnerRunAllTestsSameTestCase();
+void RunnerRepeatTests();
+void RunnerListTests();
 
 struct RegisteredTest {
     const char* name = nullptr;
@@ -92,7 +106,7 @@ struct RegisteredTest {
 };
 
 // Just so we capture the function name.
-#define RUN_TEST(test_function)                                                                    \
+#define RUN_TEST(test_function) \
     RegisteredTest { .name = #test_function, .test_fn = &test_function }
 
 // List of tests to run.
@@ -113,12 +127,23 @@ static constexpr RegisteredTest kRegisteredTests[] = {
     RUN_TEST(TestCaseFilterDoNotAccumulate),
     RUN_TEST(TestCaseShuffle),
     RUN_TEST(TestCaseUnShuffle),
+    RUN_TEST(EventBroadcasterOnProgramStart),
+    RUN_TEST(EventBroadcasterOnIterationStart),
+    RUN_TEST(EventBroadcasterOnEnvironmentSetUp),
     RUN_TEST(EventBroadcasterOnTestCaseStart),
     RUN_TEST(EventBroadcasterOnTestStart),
     RUN_TEST(EventBroadcasterOnTestSkip),
     RUN_TEST(EventBroadcasterOnTestSuccess),
     RUN_TEST(EventBroadcasterOnTestFailure),
     RUN_TEST(EventBroadcasterOnTestCaseEnd),
+    RUN_TEST(EventBroadcasterOnEnvironmentTearDown),
+    RUN_TEST(EventBroadcasterOnIterationEnd),
+    RUN_TEST(EventBroadcasterOnProgramEnd),
+    RUN_TEST(RunnerRegisterTest),
+    RUN_TEST(RunnerRegisterTestWithCustomFactory),
+    RUN_TEST(RunnerRunAllTests),
+    RUN_TEST(RunnerRunAllTestsSameTestCase),
+    RUN_TEST(RunnerListTests),
 };
 
 #undef RUN_TEST
