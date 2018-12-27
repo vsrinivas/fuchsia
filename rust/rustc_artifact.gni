@@ -130,7 +130,7 @@ template("rustc_artifact") {
   }
   output_file = "${first_party_crate_root}/$output_filename"
   output_depfile = "${first_party_crate_root}/${prefix}${crate_name}.d"
-  test_output_file = "${root_out_dir}/${crate_name}_${invoker.type}_test_rustc"
+  test_output_file = "${root_out_dir}/${crate_name}_${invoker.type}_test"
 
   build_target_name = "${target_name}_build"
   group_deps += [ ":${build_target_name}" ]
