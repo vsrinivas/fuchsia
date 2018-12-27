@@ -18,6 +18,6 @@ MODULE_LIBS := \
     system/ulib/fdio \
     system/ulib/c \
 
-MODULE_FIDL_LIBS := system/fidl/zircon-usb-tester
+MODULE_FIDL_LIBS := system/fidl/fuchsia-hardware-usb-tester
 
 include make/module.mk

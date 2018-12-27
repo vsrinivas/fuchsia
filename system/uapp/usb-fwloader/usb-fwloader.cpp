@@ -5,6 +5,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
+#include <fuchsia/hardware/usb/tester/c/fidl.h>
 #include <fuchsia/mem/c/fidl.h>
 #include <lib/fdio/util.h>
 #include <lib/fdio/watcher.h>
@@ -15,7 +16,6 @@
 #include <zircon/hw/usb.h>
 #include <zircon/types.h>
 #include <zircon/usb/test/fwloader/c/fidl.h>
-#include <zircon/usb/tester/c/fidl.h>
 
 #include <dirent.h>
 #include <errno.h>
@@ -264,7 +264,8 @@ zx_status_t load_to_ram(
             return status;
         }
         printf("Switching usb tester device to fwloader mode\n");
-        zx_status_t res = zircon_usb_tester_DeviceSetModeFwloader(usb_tester_svc.get(), &status);
+        zx_status_t res =
+            fuchsia_hardware_usb_tester_DeviceSetModeFwloader(usb_tester_svc.get(), &status);
         if (res == ZX_OK) {
             res = status;
         }
@@ -306,7 +307,8 @@ zx_status_t load_test_firmware(const char* firmware_path) {
     }
     uint8_t major_version;
     uint8_t minor_version;
-    status = zircon_usb_tester_DeviceGetVersion(svc.get(), &major_version, &minor_version);
+    status =
+        fuchsia_hardware_usb_tester_DeviceGetVersion(svc.get(), &major_version, &minor_version);
     if (status != ZX_OK) {
         fprintf(stderr, "Failed to get updated device version, err: %d\n", status);
         return status;

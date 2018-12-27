@@ -8,7 +8,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := fidl
 MODULE_PACKAGE := fidl
 
-MODULE_FIDL_LIBRARY := zircon.usb.device
+MODULE_FIDL_LIBRARY := fuchsia.hardware.usb.device
 MODULE_SRCS += $(LOCAL_DIR)/usb-device.fidl
 
 include make/module.mk

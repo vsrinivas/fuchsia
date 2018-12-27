@@ -15,12 +15,12 @@
 #include <unistd.h>
 #include <limits.h>
 
+#include <fuchsia/hardware/usb/device/c/fidl.h>
+#include <pretty/hexdump.h>
 #include <zircon/assert.h>
-#include <zircon/syscalls.h>
 #include <zircon/hw/usb.h>
 #include <zircon/hw/usb/hid.h>
-#include <zircon/usb/device/c/fidl.h>
-#include <pretty/hexdump.h>
+#include <zircon/syscalls.h>
 
 #define DEV_USB "/dev/class/usb-device"
 
@@ -34,9 +34,8 @@ static void get_string_desc(zx_handle_t svc, uint8_t desc_id, char* buffer, size
         zx_status_t status;
         size_t actual;
         uint16_t actual_lang_id;
-        zx_status_t res = zircon_usb_device_DeviceGetStringDescriptor(svc, desc_id, EN_US, &status,
-                                                                      (uint8_t*)buffer, buffer_size,
-                                                                      &actual, &actual_lang_id);
+        zx_status_t res = fuchsia_hardware_usb_device_DeviceGetStringDescriptor(
+            svc, desc_id, EN_US, &status, (uint8_t*)buffer, buffer_size, &actual, &actual_lang_id);
         if (res == ZX_OK) res = status;
         if (res == ZX_OK) {
             if (actual < buffer_size) {
@@ -61,18 +60,19 @@ static const char* usb_speeds[] = {
 static int do_list_device(zx_handle_t svc, int configuration, bool verbose, const char* devname,
                           int depth, int max_depth) {
     usb_device_descriptor_t device_desc;
-    char manufacturer[zircon_usb_device_MAX_STRING_DESC_SIZE];
-    char product[zircon_usb_device_MAX_STRING_DESC_SIZE];;
+    char manufacturer[fuchsia_hardware_usb_device_MAX_STRING_DESC_SIZE];
+    char product[fuchsia_hardware_usb_device_MAX_STRING_DESC_SIZE];
+    ;
     ssize_t ret = 0;
 
-    ret = zircon_usb_device_DeviceGetDeviceDescriptor(svc, (uint8_t*)&device_desc);
+    ret = fuchsia_hardware_usb_device_DeviceGetDeviceDescriptor(svc, (uint8_t*)&device_desc);
     if (ret != ZX_OK) {
         printf("DeviceGetDeviceDescriptor failed for %s/%s\n", DEV_USB, devname);
         return ret;
     }
 
     uint32_t speed;
-    ret = zircon_usb_device_DeviceGetDeviceSpeed(svc, &speed);
+    ret = fuchsia_hardware_usb_device_DeviceGetDeviceSpeed(svc, &speed);
     if (ret != ZX_OK || speed >= countof(usb_speeds)) {
         printf("DeviceGetDeviceSpeed failed for %s/%s\n", DEV_USB, devname);
         return ret;
@@ -88,7 +88,8 @@ static int do_list_device(zx_handle_t svc, int configuration, bool verbose, cons
            manufacturer, product);
 
     if (verbose) {
-        char string_buf[zircon_usb_device_MAX_STRING_DESC_SIZE];;
+        char string_buf[fuchsia_hardware_usb_device_MAX_STRING_DESC_SIZE];
+        ;
 
         // print device descriptor
         printf("Device Descriptor:\n");
@@ -112,7 +113,7 @@ static int do_list_device(zx_handle_t svc, int configuration, bool verbose, cons
 
         if (configuration == -1) {
             uint8_t config;
-            ret = zircon_usb_device_DeviceGetConfiguration(svc, &config);
+            ret = fuchsia_hardware_usb_device_DeviceGetConfiguration(svc, &config);
             if (ret != ZX_OK) return ret;
             configuration = config;
         }
@@ -120,8 +121,8 @@ static int do_list_device(zx_handle_t svc, int configuration, bool verbose, cons
         // Read header of configuration descriptor to get total length.
         zx_status_t status;
         uint16_t desc_size;
-        ret = zircon_usb_device_DeviceGetConfigurationDescriptorSize(svc, configuration, &status,
-                                                                     &desc_size);
+        ret = fuchsia_hardware_usb_device_DeviceGetConfigurationDescriptorSize(svc, configuration,
+                                                                               &status, &desc_size);
         if (ret == ZX_OK) ret = status;
         if (ret != ZX_OK) {
             printf("GetConfigurationDescriptor failed for %s/%s\n", DEV_USB, devname);
@@ -135,8 +136,8 @@ static int do_list_device(zx_handle_t svc, int configuration, bool verbose, cons
         }
 
         size_t actual;
-        ret = zircon_usb_device_DeviceGetConfigurationDescriptor(svc, configuration, &status, desc,
-                                                                 desc_size, &actual);
+        ret = fuchsia_hardware_usb_device_DeviceGetConfigurationDescriptor(
+            svc, configuration, &status, desc, desc_size, &actual);
         if (ret == ZX_OK) ret = status;
         if (ret != ZX_OK || actual != desc_size) {
             printf("GetConfigurationDescriptor failed for %s/%s\n", DEV_USB, devname);
@@ -352,7 +353,7 @@ static int list_tree(void) {
         struct device_node* node = (struct device_node *)malloc(sizeof(struct device_node));
         if (!node) return -1;
 
-        int ret = zircon_usb_device_DeviceGetDeviceId(svc, &node->device_id);
+        int ret = fuchsia_hardware_usb_device_DeviceGetDeviceId(svc, &node->device_id);
         if (ret != ZX_OK) {
             printf("DeviceGetDeviceId failed for %s\n", devname);
             free(node);
@@ -360,7 +361,7 @@ static int list_tree(void) {
             close(fd);
             continue;
         }
-        ret = zircon_usb_device_DeviceGetHubDeviceId(svc, &node->hub_id);
+        ret = fuchsia_hardware_usb_device_DeviceGetHubDeviceId(svc, &node->hub_id);
         if (ret != ZX_OK) {
             printf("DeviceGetHubDeviceId failed for %s\n", devname);
             free(node);

@@ -24,6 +24,6 @@ MODULE_LIBS := \
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-mem \
     system/fidl/zircon-usb-test-fwloader \
-    system/fidl/zircon-usb-tester
+    system/fidl/fuchsia-hardware-usb-tester
 
 include make/module.mk

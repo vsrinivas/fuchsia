@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "usb-device.h"
+#include "usb-bus.h"
+#include "util.h"
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/protocol/usb.h>
 #include <ddk/protocol/usb/bus.h>
-#include <zircon/usb/device/c/fidl.h>
+#include <fuchsia/hardware/usb/device/c/fidl.h>
 #include <stdint.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include "usb-bus.h"
-#include "usb-device.h"
-#include "util.h"
 
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
@@ -502,79 +502,83 @@ static usb_protocol_ops_t _usb_protocol = {
 
 static zx_status_t fidl_GetDeviceSpeed(void* ctx, fidl_txn_t* txn) {
     usb_device_t* dev = ctx;
-    return zircon_usb_device_DeviceGetDeviceSpeed_reply(txn, dev->speed);
+    return fuchsia_hardware_usb_device_DeviceGetDeviceSpeed_reply(txn, dev->speed);
 }
 
 static zx_status_t fidl_GetDeviceDescriptor(void* ctx, fidl_txn_t* txn) {
     usb_device_t* dev = ctx;
-    return zircon_usb_device_DeviceGetDeviceDescriptor_reply(txn, (uint8_t*)&dev->device_desc);
+    return fuchsia_hardware_usb_device_DeviceGetDeviceDescriptor_reply(txn,
+                                                                       (uint8_t*)&dev->device_desc);
 }
 
 static zx_status_t fidl_GetConfigurationDescriptorSize(void* ctx, uint8_t config, fidl_txn_t* txn) {
     usb_device_t* dev = ctx;
     usb_configuration_descriptor_t* descriptor = get_config_desc(dev, config);
     if (!descriptor) {
-        return zircon_usb_device_DeviceGetConfigurationDescriptorSize_reply(txn,
-                                                                            ZX_ERR_INVALID_ARGS, 0);
+        return fuchsia_hardware_usb_device_DeviceGetConfigurationDescriptorSize_reply(
+            txn, ZX_ERR_INVALID_ARGS, 0);
     }
 
     size_t length = le16toh(descriptor->wTotalLength);
-    return zircon_usb_device_DeviceGetConfigurationDescriptorSize_reply(txn, ZX_OK, length);
+    return fuchsia_hardware_usb_device_DeviceGetConfigurationDescriptorSize_reply(txn, ZX_OK,
+                                                                                  length);
 }
 
 static zx_status_t fidl_GetConfigurationDescriptor(void* ctx, uint8_t config, fidl_txn_t* txn) {
     usb_device_t* dev = ctx;
     usb_configuration_descriptor_t* descriptor = get_config_desc(dev, config);
     if (!descriptor) {
-        return zircon_usb_device_DeviceGetConfigurationDescriptor_reply(txn, ZX_ERR_INVALID_ARGS,
-                                                                        NULL, 0);
+        return fuchsia_hardware_usb_device_DeviceGetConfigurationDescriptor_reply(
+            txn, ZX_ERR_INVALID_ARGS, NULL, 0);
     }
 
     size_t length = le16toh(descriptor->wTotalLength);
-    return zircon_usb_device_DeviceGetConfigurationDescriptor_reply(txn, ZX_OK,
-                                                                    (uint8_t*)descriptor, length);
+    return fuchsia_hardware_usb_device_DeviceGetConfigurationDescriptor_reply(
+        txn, ZX_OK, (uint8_t*)descriptor, length);
 }
 
 static zx_status_t fidl_GetStringDescriptor(void* ctx, uint8_t desc_id, uint16_t lang_id,
                                             fidl_txn_t* txn) {
     usb_device_t* dev = ctx;
-    uint8_t buffer[zircon_usb_device_MAX_STRING_DESC_SIZE];
+    uint8_t buffer[fuchsia_hardware_usb_device_MAX_STRING_DESC_SIZE];
     size_t actual;
     zx_status_t status = usb_util_get_string_descriptor(dev, desc_id, lang_id, buffer,
                                                         sizeof(buffer), &actual, &lang_id);
-    return zircon_usb_device_DeviceGetStringDescriptor_reply(txn, status, buffer, actual, lang_id);
+    return fuchsia_hardware_usb_device_DeviceGetStringDescriptor_reply(txn, status, buffer, actual,
+                                                                       lang_id);
 }
 
 static zx_status_t fidl_SetInterface(void* ctx, uint8_t interface_number, uint8_t alt_setting,
                                      fidl_txn_t* txn) {
     usb_device_t* dev = ctx;
     zx_status_t status = usb_device_set_interface(dev, interface_number, alt_setting);
-    return zircon_usb_device_DeviceSetInterface_reply(txn, status);
+    return fuchsia_hardware_usb_device_DeviceSetInterface_reply(txn, status);
 }
 
 static zx_status_t fidl_GetDeviceId(void* ctx, fidl_txn_t* txn) {
     usb_device_t* dev = ctx;
-    return zircon_usb_device_DeviceGetDeviceId_reply(txn, dev->device_id);
+    return fuchsia_hardware_usb_device_DeviceGetDeviceId_reply(txn, dev->device_id);
 }
 
 static zx_status_t fidl_GetHubDeviceId(void* ctx, fidl_txn_t* txn) {
     usb_device_t* dev = ctx;
-    return zircon_usb_device_DeviceGetHubDeviceId_reply(txn, dev->hub_id);
+    return fuchsia_hardware_usb_device_DeviceGetHubDeviceId_reply(txn, dev->hub_id);
 }
 
 static zx_status_t fidl_GetConfiguration(void* ctx, fidl_txn_t* txn) {
     usb_device_t* dev = ctx;
     usb_configuration_descriptor_t* descriptor = dev->config_descs[dev->current_config_index];
-    return zircon_usb_device_DeviceGetConfiguration_reply(txn, descriptor->bConfigurationValue);
+    return fuchsia_hardware_usb_device_DeviceGetConfiguration_reply(
+        txn, descriptor->bConfigurationValue);
 }
 
 static zx_status_t fidl_SetConfiguration(void* ctx, uint8_t configuration, fidl_txn_t* txn) {
     usb_device_t* dev = ctx;
     zx_status_t status = usb_device_set_configuration(dev, configuration);
-    return zircon_usb_device_DeviceSetConfiguration_reply(txn, status);
+    return fuchsia_hardware_usb_device_DeviceSetConfiguration_reply(txn, status);
 }
 
-static zircon_usb_device_Device_ops_t fidl_ops = {
+static fuchsia_hardware_usb_device_Device_ops_t fidl_ops = {
     .GetDeviceSpeed = fidl_GetDeviceSpeed,
     .GetDeviceDescriptor = fidl_GetDeviceDescriptor,
     .GetConfigurationDescriptorSize = fidl_GetConfigurationDescriptorSize,
@@ -588,7 +592,7 @@ static zircon_usb_device_Device_ops_t fidl_ops = {
 };
 
 zx_status_t usb_device_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
-    return zircon_usb_device_Device_dispatch(ctx, txn, msg, &fidl_ops);
+    return fuchsia_hardware_usb_device_Device_dispatch(ctx, txn, msg, &fidl_ops);
 }
 
 static zx_protocol_device_t usb_device_proto = {

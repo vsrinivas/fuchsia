@@ -10,10 +10,10 @@
 #include <ddk/protocol/usb/composite.h>
 #include <fbl/algorithm.h>
 #include <fbl/unique_ptr.h>
-#include <usb/usb-request.h>
+#include <fuchsia/hardware/usb/tester/c/fidl.h>
 #include <lib/sync/completion.h>
+#include <usb/usb-request.h>
 #include <zircon/hw/usb.h>
-#include <zircon/usb/tester/c/fidl.h>
 
 #include <optional>
 #include <stdlib.h>
@@ -47,7 +47,7 @@ std::optional<TestRequest> TestRequest::Create(size_t len, uint8_t ep_address, s
     return TestRequest(usb_req);
 }
 
-std::optional<TestRequest> TestRequest::Create(const zircon_usb_tester_SgList& sg_list,
+std::optional<TestRequest> TestRequest::Create(const fuchsia_hardware_usb_tester_SgList& sg_list,
                                                uint8_t ep_address, size_t req_size) {
     size_t buffer_size = 0;
     // We need to allocate a usb request buffer that covers all the scatter gather entries.
@@ -119,7 +119,7 @@ zx_status_t TestRequest::WaitComplete(usb_protocol_t* usb) {
     }
 }
 
-zx_status_t TestRequest::FillData(zircon_usb_tester_DataPatternType data_pattern) {
+zx_status_t TestRequest::FillData(fuchsia_hardware_usb_tester_DataPatternType data_pattern) {
     uint8_t* buf;
     zx_status_t status = usb_request_mmap(Get(), (void**)&buf);
     if (status != ZX_OK) {
@@ -139,10 +139,10 @@ zx_status_t TestRequest::FillData(zircon_usb_tester_DataPatternType data_pattern
         for (size_t j = 0; j < sg_entry.length; ++j) {
             uint8_t* elem = buf + sg_entry.offset + j;
             switch (data_pattern) {
-            case zircon_usb_tester_DataPatternType_CONSTANT:
+            case fuchsia_hardware_usb_tester_DataPatternType_CONSTANT:
                 *elem = kTestDummyData;
                 break;
-            case zircon_usb_tester_DataPatternType_RANDOM:
+            case fuchsia_hardware_usb_tester_DataPatternType_RANDOM:
                 *elem = static_cast<uint8_t>(rand() % 256);
                 break;
             default:
@@ -178,7 +178,7 @@ void UsbTester::WaitTestReqs(const fbl::Vector<TestRequest>& test_reqs) {
 }
 
 zx_status_t UsbTester::FillTestReqs(const fbl::Vector<TestRequest>& test_reqs,
-                                    zircon_usb_tester_DataPatternType data_pattern) {
+                                    fuchsia_hardware_usb_tester_DataPatternType data_pattern) {
     for (auto& test_req : test_reqs) {
         zx_status_t status = test_req.FillData(data_pattern);
         if (status != ZX_OK) {
@@ -246,9 +246,9 @@ zx_status_t TestRequest::GetDataUnscattered(fbl::Array<uint8_t>* out_data) {
     return ZX_OK;
 }
 
-zx_status_t UsbTester::BulkLoopback(const zircon_usb_tester_TestParams* params,
-                                    const zircon_usb_tester_SgList* out_sg_list,
-                                    const zircon_usb_tester_SgList* in_sg_list) {
+zx_status_t UsbTester::BulkLoopback(const fuchsia_hardware_usb_tester_TestParams* params,
+                                    const fuchsia_hardware_usb_tester_SgList* out_sg_list,
+                                    const fuchsia_hardware_usb_tester_SgList* in_sg_list) {
     if (params->len > kReqMaxLen) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -342,8 +342,8 @@ zx_status_t UsbTester::VerifyLoopback(const fbl::Vector<TestRequest>& out_reqs,
     return ZX_OK;
 }
 
-zx_status_t UsbTester::IsochLoopback(const zircon_usb_tester_TestParams* params,
-                                     zircon_usb_tester_IsochResult* result) {
+zx_status_t UsbTester::IsochLoopback(const fuchsia_hardware_usb_tester_TestParams* params,
+                                     fuchsia_hardware_usb_tester_IsochResult* result) {
     if (params->len > kReqMaxLen) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -419,25 +419,27 @@ void UsbTester::GetVersion(uint8_t* major_version, uint8_t* minor_version) {
 
 static zx_status_t fidl_SetModeFwloader(void* ctx, fidl_txn_t* txn) {
     auto* usb_tester = static_cast<UsbTester*>(ctx);
-    return zircon_usb_tester_DeviceSetModeFwloader_reply(
-        txn, usb_tester->SetModeFwloader());
+    return fuchsia_hardware_usb_tester_DeviceSetModeFwloader_reply(txn,
+                                                                   usb_tester->SetModeFwloader());
 }
 
-static zx_status_t fidl_BulkLoopback(void* ctx, const zircon_usb_tester_TestParams* params,
-                                     const zircon_usb_tester_SgList* out_sg_list,
-                                     const zircon_usb_tester_SgList* in_sg_list,
+static zx_status_t fidl_BulkLoopback(void* ctx,
+                                     const fuchsia_hardware_usb_tester_TestParams* params,
+                                     const fuchsia_hardware_usb_tester_SgList* out_sg_list,
+                                     const fuchsia_hardware_usb_tester_SgList* in_sg_list,
                                      fidl_txn_t* txn) {
     auto* usb_tester = static_cast<UsbTester*>(ctx);
-    return zircon_usb_tester_DeviceBulkLoopback_reply(
+    return fuchsia_hardware_usb_tester_DeviceBulkLoopback_reply(
         txn, usb_tester->BulkLoopback(params, out_sg_list, in_sg_list));
 }
 
-static zx_status_t fidl_IsochLoopback(void* ctx, const zircon_usb_tester_TestParams* params,
+static zx_status_t fidl_IsochLoopback(void* ctx,
+                                      const fuchsia_hardware_usb_tester_TestParams* params,
                                       fidl_txn_t* txn) {
     auto* usb_tester = static_cast<UsbTester*>(ctx);
-    zircon_usb_tester_IsochResult result = {};
+    fuchsia_hardware_usb_tester_IsochResult result = {};
     zx_status_t status = usb_tester->IsochLoopback(params, &result);
-    return zircon_usb_tester_DeviceIsochLoopback_reply(txn, status, &result);
+    return fuchsia_hardware_usb_tester_DeviceIsochLoopback_reply(txn, status, &result);
 }
 
 static zx_status_t fidl_GetVersion(void* ctx, fidl_txn_t* txn) {
@@ -445,10 +447,10 @@ static zx_status_t fidl_GetVersion(void* ctx, fidl_txn_t* txn) {
     uint8_t major_version;
     uint8_t minor_version;
     usb_tester->GetVersion(&major_version, &minor_version);
-    return zircon_usb_tester_DeviceGetVersion_reply(txn, major_version, minor_version);
+    return fuchsia_hardware_usb_tester_DeviceGetVersion_reply(txn, major_version, minor_version);
 }
 
-static zircon_usb_tester_Device_ops_t fidl_ops = {
+static fuchsia_hardware_usb_tester_Device_ops_t fidl_ops = {
     .SetModeFwloader = fidl_SetModeFwloader,
     .BulkLoopback = fidl_BulkLoopback,
     .IsochLoopback = fidl_IsochLoopback,
@@ -456,7 +458,7 @@ static zircon_usb_tester_Device_ops_t fidl_ops = {
 };
 
 zx_status_t UsbTester::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-    return zircon_usb_tester_Device_dispatch(this, txn, msg, &fidl_ops);
+    return fuchsia_hardware_usb_tester_Device_dispatch(this, txn, msg, &fidl_ops);
 }
 
 

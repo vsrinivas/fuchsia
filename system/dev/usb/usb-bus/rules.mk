@@ -26,7 +26,7 @@ MODULE_LIBS := \
     system/ulib/c \
 
 MODULE_FIDL_LIBS := \
-    system/fidl/zircon-usb-device \
+    system/fidl/fuchsia-hardware-usb-device \
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-usb \

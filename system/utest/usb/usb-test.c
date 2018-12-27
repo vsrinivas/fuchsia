@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/usb/tester/c/fidl.h>
 #include <lib/fdio/util.h>
 #include <unittest/unittest.h>
-#include <zircon/usb/tester/c/fidl.h>
 
 #include <dirent.h>
 #include <fcntl.h>
@@ -93,18 +93,16 @@ static bool usb_bulk_loopback_test(void) {
     }
     ASSERT_NE(dev_svc, ZX_HANDLE_INVALID, "invalid device service handle");
 
-    zircon_usb_tester_TestParams params = {
-        .data_pattern = zircon_usb_tester_DataPatternType_CONSTANT,
-        .len = 64 * 1024
-    };
+    fuchsia_hardware_usb_tester_TestParams params = {
+        .data_pattern = fuchsia_hardware_usb_tester_DataPatternType_CONSTANT, .len = 64 * 1024};
     zx_status_t status;
-    ASSERT_EQ(zircon_usb_tester_DeviceBulkLoopback(dev_svc, &params, NULL, NULL, &status), ZX_OK,
-              "failed to call DeviceBulkLoopback");
+    ASSERT_EQ(fuchsia_hardware_usb_tester_DeviceBulkLoopback(dev_svc, &params, NULL, NULL, &status),
+              ZX_OK, "failed to call DeviceBulkLoopback");
     ASSERT_EQ(status, ZX_OK, "bulk loopback failed: USB_TESTER_DATA_PATTERN_CONSTANT 64 K");
 
-    params.data_pattern = zircon_usb_tester_DataPatternType_RANDOM;
-    ASSERT_EQ(zircon_usb_tester_DeviceBulkLoopback(dev_svc, &params, NULL, NULL, &status), ZX_OK,
-              "failed to call DeviceBulkLoopback");
+    params.data_pattern = fuchsia_hardware_usb_tester_DataPatternType_RANDOM;
+    ASSERT_EQ(fuchsia_hardware_usb_tester_DeviceBulkLoopback(dev_svc, &params, NULL, NULL, &status),
+              ZX_OK, "failed to call DeviceBulkLoopback");
     ASSERT_EQ(status, ZX_OK, "bulk loopback failed: USB_TESTER_DATA_PATTERN_RANDOM 64 K");
 
     close(dev_svc);
@@ -121,28 +119,29 @@ static bool usb_bulk_scatter_gather_test(void) {
     }
     ASSERT_NE(dev_svc, ZX_HANDLE_INVALID, "invalid device service handle");
 
-    zircon_usb_tester_TestParams params = {
-        .data_pattern = zircon_usb_tester_DataPatternType_RANDOM,
+    fuchsia_hardware_usb_tester_TestParams params = {
+        .data_pattern = fuchsia_hardware_usb_tester_DataPatternType_RANDOM,
         .len = 230,
     };
-    zircon_usb_tester_SgList sg_list = {
-        .entries = {
-            { .length = 10, .offset = 100 },
-            { .length = 30, .offset = 1000 },
-            { .length = 100, .offset = 4000 },
-            { .length = 40, .offset = 5000 },
-            { .length = 50, .offset = 10000 },
-        },
-        .len = 5
-    };
+    fuchsia_hardware_usb_tester_SgList sg_list = {.entries =
+                                                      {
+                                                          {.length = 10, .offset = 100},
+                                                          {.length = 30, .offset = 1000},
+                                                          {.length = 100, .offset = 4000},
+                                                          {.length = 40, .offset = 5000},
+                                                          {.length = 50, .offset = 10000},
+                                                      },
+                                                  .len = 5};
     zx_status_t status;
-    ASSERT_EQ(zircon_usb_tester_DeviceBulkLoopback(dev_svc, &params, &sg_list, NULL, &status),
-              ZX_OK, "failed to call DeviceBulkLoopback");
+    ASSERT_EQ(
+        fuchsia_hardware_usb_tester_DeviceBulkLoopback(dev_svc, &params, &sg_list, NULL, &status),
+        ZX_OK, "failed to call DeviceBulkLoopback");
     ASSERT_EQ(status, ZX_OK,
               "bulk loopback failed: USB_TESTER_DATA_PATTERN_RANDOM 64 K with scatter gather OUT");
 
-    ASSERT_EQ(zircon_usb_tester_DeviceBulkLoopback(dev_svc, &params, NULL, &sg_list, &status),
-              ZX_OK, "failed to call DeviceBulkLoopback");
+    ASSERT_EQ(
+        fuchsia_hardware_usb_tester_DeviceBulkLoopback(dev_svc, &params, NULL, &sg_list, &status),
+        ZX_OK, "failed to call DeviceBulkLoopback");
     ASSERT_EQ(status, ZX_OK,
               "bulk loopback failed: USB_TESTER_DATA_PATTERN_RANDOM 64 K with scatter gather IN");
 
@@ -150,8 +149,8 @@ static bool usb_bulk_scatter_gather_test(void) {
     END_TEST;
 }
 
-static bool usb_isoch_verify_result(zircon_usb_tester_TestParams* params,
-                                    zircon_usb_tester_IsochResult* result) {
+static bool usb_isoch_verify_result(fuchsia_hardware_usb_tester_TestParams* params,
+                                    fuchsia_hardware_usb_tester_IsochResult* result) {
     BEGIN_HELPER;
 
     ASSERT_GT(result->num_packets, 0lu, "didn't transfer any isochronous packets");
@@ -174,22 +173,20 @@ static bool usb_isoch_loopback_test(void) {
     }
     ASSERT_NE(dev_svc, ZX_HANDLE_INVALID, "Invalid device service handle");
 
-    zircon_usb_tester_TestParams params = {
-        .data_pattern = zircon_usb_tester_DataPatternType_CONSTANT,
-        .len =  64 * 1024
-    };
+    fuchsia_hardware_usb_tester_TestParams params = {
+        .data_pattern = fuchsia_hardware_usb_tester_DataPatternType_CONSTANT, .len = 64 * 1024};
     char err_msg1[] = "isoch loopback failed: USB_TESTER_DATA_PATTERN_CONSTANT 64 K";
     zx_status_t status;
-    zircon_usb_tester_IsochResult result = {};
-    ASSERT_EQ(zircon_usb_tester_DeviceIsochLoopback(dev_svc, &params, &status, &result), ZX_OK,
-              "failed to call DeviceIsochLoopback");
+    fuchsia_hardware_usb_tester_IsochResult result = {};
+    ASSERT_EQ(fuchsia_hardware_usb_tester_DeviceIsochLoopback(dev_svc, &params, &status, &result),
+              ZX_OK, "failed to call DeviceIsochLoopback");
     ASSERT_EQ(status, ZX_OK, err_msg1);
     ASSERT_TRUE(usb_isoch_verify_result(&params, &result), err_msg1);
 
     char err_msg2[] = "isoch loopback failed: USB_TESTER_DATA_PATTERN_RANDOM 64 K";
-    params.data_pattern = zircon_usb_tester_DataPatternType_RANDOM;
-    ASSERT_EQ(zircon_usb_tester_DeviceIsochLoopback(dev_svc, &params, &status, &result), ZX_OK,
-              "failed to call DeviceIsochLoopback");
+    params.data_pattern = fuchsia_hardware_usb_tester_DataPatternType_RANDOM;
+    ASSERT_EQ(fuchsia_hardware_usb_tester_DeviceIsochLoopback(dev_svc, &params, &status, &result),
+              ZX_OK, "failed to call DeviceIsochLoopback");
     ASSERT_EQ(status, ZX_OK, err_msg2);
     ASSERT_TRUE(usb_isoch_verify_result(&params, &result), err_msg2);
 

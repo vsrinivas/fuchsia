@@ -4,15 +4,15 @@
 
 #pragma once
 
-#include <usb/usb.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/array.h>
 #include <fbl/vector.h>
+#include <fuchsia/hardware/usb/tester/c/fidl.h>
 #include <lib/sync/completion.h>
 #include <optional>
 #include <usb/usb-request.h>
-#include <zircon/usb/tester/c/fidl.h>
+#include <usb/usb.h>
 
 namespace usb {
 
@@ -33,7 +33,7 @@ public:
                                              size_t parent_req_size);
 
     // Creates a request for transferring data using the given scatter gather list.
-    static std::optional<TestRequest> Create(const zircon_usb_tester_SgList& sg_list,
+    static std::optional<TestRequest> Create(const fuchsia_hardware_usb_tester_SgList& sg_list,
                                              uint8_t ep_address, size_t parent_req_size);
     ~TestRequest();
 
@@ -55,7 +55,7 @@ public:
     // requested length.
     zx_status_t WaitComplete(usb_protocol_t* usb);
     // Fills the given test request with data of the requested pattern.
-    zx_status_t FillData(zircon_usb_tester_DataPatternType data_pattern);
+    zx_status_t FillData(fuchsia_hardware_usb_tester_DataPatternType data_pattern);
     // Copies the request data into a newly created array where the data will be contiguous,
     // and populates |out_scattered| with the array address.
     zx_status_t GetDataUnscattered(fbl::Array<uint8_t>* out_unscattered);
@@ -91,11 +91,11 @@ public:
     // FIDL message implementation.
     zx_status_t SetModeFwloader();
     // Tests the loopback of data from the bulk OUT EP to the bulk IN EP.
-    zx_status_t BulkLoopback(const zircon_usb_tester_TestParams* params,
-                             const zircon_usb_tester_SgList* out_sg_list,
-                             const zircon_usb_tester_SgList* in_sg_list);
-    zx_status_t IsochLoopback(const zircon_usb_tester_TestParams* params,
-                              zircon_usb_tester_IsochResult* result);
+    zx_status_t BulkLoopback(const fuchsia_hardware_usb_tester_TestParams* params,
+                             const fuchsia_hardware_usb_tester_SgList* out_sg_list,
+                             const fuchsia_hardware_usb_tester_SgList* in_sg_list);
+    zx_status_t IsochLoopback(const fuchsia_hardware_usb_tester_TestParams* params,
+                              fuchsia_hardware_usb_tester_IsochResult* result);
     void GetVersion(uint8_t* major_version, uint8_t* minor_version);
 
 private:
@@ -130,7 +130,7 @@ private:
     void WaitTestReqs(const fbl::Vector<TestRequest>& test_reqs);
     // Fills each request in the test_reqs list with data of the requested data_pattern.
     zx_status_t FillTestReqs(const fbl::Vector<TestRequest>& test_reqs,
-                             zircon_usb_tester_DataPatternType data_pattern);
+                             fuchsia_hardware_usb_tester_DataPatternType data_pattern);
     // Queues all requests contained in the test_reqs list.
     void QueueTestReqs(const fbl::Vector<TestRequest>& test_reqs,
                        uint64_t start_frame);
