@@ -2,81 +2,122 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod text;
-
-use crate::text::Face;
-use failure::Fail;
+use failure::{bail, Error, Fail, ResultExt};
 use fidl_fuchsia_amber as amber;
 use fuchsia_app as app;
 use fuchsia_async::{self as fasync, futures::TryFutureExt};
 use fuchsia_framebuffer::{Config, Frame, FrameBuffer, PixelFormat};
-use fuchsia_zircon as zx;
+use fuchsia_ui::{Canvas, Color, FontDescription, FontFace, Paint, PixelSink, Point, Rect};
+use futures::future;
 use std::{cell::RefCell, rc::Rc};
 
 static FONT_DATA: &'static [u8] =
     include_bytes!("../../../fonts/third_party/robotoslab/RobotoSlab-Regular.ttf");
 
 struct RecoveryUI<'a> {
-    face: Face<'a>,
-    frame: Frame,
+    face: FontFace<'a>,
+    canvas: Canvas<FramePixelSink>,
     config: Config,
     text_size: u32,
 }
 
 impl<'a> RecoveryUI<'a> {
     fn draw(&mut self, url: &str, user_code: &str) {
-        let values565 = &[31, 248];
-        let values8888 = &[255, 0, 255, 255];
+        let r = Rect {
+            top: 0,
+            left: 0,
+            bottom: self.config.height,
+            right: self.config.width,
+        };
 
-        for y in 0..self.config.height {
-            for x in 0..self.config.width {
-                match self.config.format {
-                    PixelFormat::RgbX888 => self.frame.write_pixel(x, y, values8888),
-                    PixelFormat::Argb8888 => self.frame.write_pixel(x, y, values8888),
-                    PixelFormat::Rgb565 => self.frame.write_pixel(x, y, values565),
-                    _ => {}
-                }
-            }
-        }
+        let bg = Color {
+            r: 255,
+            g: 0,
+            b: 255,
+            a: 255,
+        };
+        self.canvas.fill_rect(&r, bg);
 
-        let (width, height) = self.face.measure_text(self.text_size, url);
-
-        self.face.draw_text_at(
-            &mut self.frame,
-            (self.config.width / 2) as i32 - width / 2,
-            (self.config.height / 4) as i32 + height / 2,
-            self.text_size,
+        let mut font_description = FontDescription {
+            baseline: 0,
+            face: &mut self.face,
+            size: self.text_size,
+        };
+        let (width, height) = self.canvas.measure_text(url, &mut font_description);
+        let paint = Paint {
+            fg: Color {
+                r: 255,
+                g: 255,
+                b: 255,
+                a: 255,
+            },
+            bg: bg,
+        };
+        self.canvas.fill_text(
             url,
+            Point {
+                x: ((self.config.width / 2) as i32 - width / 2) as u32,
+                y: ((self.config.height / 4) as i32 + height / 2) as u32,
+            },
+            &mut font_description,
+            &paint,
         );
 
-        let (width, height) = self.face.measure_text(self.text_size, user_code);
+        let (width, height) = self.canvas.measure_text(user_code, &mut font_description);
 
-        self.face.draw_text_at(
-            &mut self.frame,
-            (self.config.width / 2) as i32 - width / 2,
-            (self.config.height / 2 + self.config.height / 4) as i32 + height / 2,
-            self.text_size,
+        self.canvas.fill_text(
             user_code,
+            Point {
+                x: ((self.config.width / 2) as i32 - width / 2) as u32,
+                y: ((self.config.height / 2 + self.config.height / 4) as i32 + height / 2) as u32,
+            },
+            &mut font_description,
+            &paint,
         );
     }
 }
 
-fn main() {
+const BYTES_PER_PIXEL: u32 = 4;
+
+struct FramePixelSink {
+    frame: Frame,
+}
+
+impl PixelSink for FramePixelSink {
+    fn write_pixel_at_location(&mut self, x: u32, y: u32, value: &[u8]) {
+        let stride = self.frame.linear_stride_bytes() as u32;
+        let offset = (y * stride + x * BYTES_PER_PIXEL) as usize;
+        self.frame.write_pixel_at_offset(offset, &value);
+    }
+
+    fn write_pixel_at_offset(&mut self, offset: usize, value: &[u8]) {
+        self.frame.write_pixel_at_offset(offset, &value);
+    }
+}
+
+fn main() -> Result<(), Error> {
     println!("Recovery UI");
 
-    let face = Face::new(FONT_DATA).unwrap();
+    let face = FontFace::new(FONT_DATA).unwrap();
 
-    let mut executor = fasync::Executor::new().unwrap();
+    let mut executor = fasync::Executor::new().context("Failed to create executor")?;
 
-    let fb = FrameBuffer::new(None, &mut executor).unwrap();
+    let fb = FrameBuffer::new(None, &mut executor).context("Failed to create framebuffer")?;
     let config = fb.get_config();
+    if config.format != PixelFormat::Argb8888 {
+        bail!("Unsupported pixel format {:#?}", config.format);
+    }
 
-    let frame = fb.new_frame(&mut executor).unwrap();
-    frame.present(&fb).unwrap();
+    let frame = fb.new_frame(&mut executor)?;
+    frame.present(&fb)?;
+
+    let stride = frame.linear_stride_bytes() as u32;
+    let sink = FramePixelSink { frame };
+    let canvas = Canvas::new_with_sink(sink, stride);
 
     let mut ui = RecoveryUI {
-        face,
-        frame,
+        face: face,
+        canvas,
         config,
         text_size: config.height / 12,
     };
@@ -86,7 +127,7 @@ fn main() {
     let ui_login = Rc::new(RefCell::new(ui));
     let ui_fail = ui_login.clone();
 
-    let amber_control = app::client::connect_to_service::<amber::ControlMarker>().unwrap();
+    let amber_control = app::client::connect_to_service::<amber::ControlMarker>()?;
 
     let list_srcs = amber_control
         .list_srcs()
@@ -113,9 +154,6 @@ fn main() {
         list_srcs.unwrap_or_else(|err| println!("in list_srcs recover {:#?}", err)),
     );
 
-    loop {
-        let timeout = fasync::Timer::new(zx::Time::INFINITE);
-        executor.run_singlethreaded(timeout);
-        println!("tick");
-    }
+    executor.run_singlethreaded(future::empty::<()>());
+    unreachable!();
 }

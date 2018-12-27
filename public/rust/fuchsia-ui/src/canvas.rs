@@ -4,7 +4,7 @@
 
 use font_rs::font::{parse, Font, FontError, GlyphBitmap};
 use shared_buffer::SharedBuffer;
-use std::collections::HashMap;
+use std::{cmp::max, collections::HashMap};
 
 /// Struct representing an RGBA color value
 #[derive(Hash, Eq, PartialEq, Debug, Clone, Copy)]
@@ -97,22 +97,56 @@ impl<'a> FontFace<'a> {
     }
 }
 
-/// Canvas is used to do simple graphics and text rendering into a
-/// SharedBuffer that can then be displayed using Scenic or
-/// Display Manager.
-pub struct Canvas {
-    // Assumes a pixel format of BGRA8 and a color space of sRGB.
+const BYTES_PER_PIXEL: u32 = 4;
+
+/// Trait abstracting a target to which pixels can be written.
+pub trait PixelSink {
+    /// Write an RGBA pixel at an x,y location in the sink.
+    fn write_pixel_at_location(&mut self, x: u32, y: u32, value: &[u8]);
+    /// Write an RGBA pixel at a byte offset within the sink.
+    fn write_pixel_at_offset(&mut self, offset: usize, value: &[u8]);
+}
+
+/// Pixel sink targetting a shared buffer.
+pub struct SharedBufferPixelSink {
     buffer: SharedBuffer,
     stride: u32,
 }
 
-const BYTES_PER_PIXEL: u32 = 4;
+impl PixelSink for SharedBufferPixelSink {
+    fn write_pixel_at_location(&mut self, x: u32, y: u32, value: &[u8]) {
+        let offset = (y * self.stride + x * BYTES_PER_PIXEL) as usize;
+        self.write_pixel_at_offset(offset, &value);
+    }
 
-impl Canvas {
-    /// Create a canvas targetting a particular shared buffer and
+    fn write_pixel_at_offset(&mut self, offset: usize, value: &[u8]) {
+        self.buffer.write_at(offset, &value);
+    }
+}
+
+/// Canvas is used to do simple graphics and text rendering into a
+/// SharedBuffer that can then be displayed using Scenic or
+/// Display Manager.
+pub struct Canvas<T: PixelSink> {
+    // Assumes a pixel format of BGRA8 and a color space of sRGB.
+    pixel_sink: T,
+    stride: u32,
+}
+
+impl<T: PixelSink> Canvas<T> {
+    /// Create a canvas targetting a shared buffer with stride.
+    pub fn new(buffer: SharedBuffer, stride: u32) -> Canvas<SharedBufferPixelSink> {
+        let sink = SharedBufferPixelSink { buffer, stride };
+        Canvas {
+            pixel_sink: sink,
+            stride,
+        }
+    }
+
+    /// Create a canvas targetting a particular pixel sink and
     /// with a specific row stride in bytes.
-    pub fn new(buffer: SharedBuffer, stride: u32) -> Canvas {
-        Canvas { buffer, stride }
+    pub fn new_with_sink(pixel_sink: T, stride: u32) -> Canvas<T> {
+        Canvas { pixel_sink, stride }
     }
 
     #[inline]
@@ -120,7 +154,7 @@ impl Canvas {
     /// color.
     fn write_color_at_offset(&mut self, offset: usize, color: Color) {
         let pixel = [color.b, color.g, color.r, color.a];
-        self.buffer.write_at(offset, &pixel);
+        self.pixel_sink.write_pixel_at_offset(offset, &pixel);
     }
 
     #[inline]
@@ -139,7 +173,7 @@ impl Canvas {
                     (((bg.r as u32) * blend_factor + (fg.r as u32) * a) >> 8) as u8,
                     (blend_factor + (fg.a as u32)) as u8,
                 ];
-                self.buffer.write_at(offset, &pixel);
+                self.pixel_sink.write_pixel_at_offset(offset, &pixel);
             }
         }
     }
@@ -175,10 +209,9 @@ impl Canvas {
     }
 
     /// Draw line of text `text` at location `point` with foreground and background colors specified
-    /// by `paint` and with the typographic characterists in `font`. Currently this method uses
-    /// fixed size cells of size `size` for each character but that is likely to change in the
-    /// future.
-    pub fn fill_text(
+    /// by `paint` and with the typographic characterists in `font`. This method uses
+    /// fixed size cells of size `size` for each character.
+    pub fn fill_text_cells(
         &mut self, text: &str, point: Point, size: Size, font: &mut FontDescription, paint: &Paint,
     ) {
         let mut x = point.x;
@@ -201,5 +234,69 @@ impl Canvas {
             }
             x += advance;
         }
+    }
+
+    /// Draw line of text `text` at location `point` with foreground and background colors specified
+    /// by `paint` and with the typographic characterists in `font`.
+    pub fn fill_text(
+        &mut self, text: &str, point: Point, font: &mut FontDescription, paint: &Paint,
+    ) {
+        let mut x = point.x;
+        let padding: u32 = max(font.size / 16, 2);
+        for scalar in text.chars() {
+            if scalar != ' ' {
+                if let Some(glyph_id) = font.face.lookup_glyph(scalar) {
+                    let glyph = font.face.get_glyph(glyph_id, font.size);
+                    let glyph_x = x as i32 + glyph.left;
+                    let y = point.y as i32 + font.baseline + glyph.top;
+                    let cell = Rect {
+                        left: x,
+                        top: point.y,
+                        right: x + glyph.width as u32,
+                        bottom: point.y + glyph.height as u32,
+                    };
+                    self.fill_rect(&cell, paint.bg);
+                    self.draw_glyph_at(glyph, glyph_x, y, paint);
+                    x += glyph.width as u32 + padding;
+                }
+            } else {
+                let space_width = (font.size / 3) + padding;
+                let cell = Rect {
+                    left: x,
+                    top: point.y,
+                    right: x + space_width,
+                    bottom: point.y + font.size,
+                };
+                self.fill_rect(&cell, paint.bg);
+                x += space_width;
+            }
+        }
+    }
+
+    /// Measure a line of text `text` and with the typographic characterists in `font`.
+    /// Returns a tuple containing the measured width and height.
+    pub fn measure_text(&mut self, text: &str, font: &mut FontDescription) -> (i32, i32) {
+        let mut max_top = 0;
+        let mut x = 0;
+        const EMPIRICALLY_CHOSEN_PADDING_AMOUNT_DIVISOR: i32 = 16;
+        const EMPIRICALLY_CHOSEN_MINIMUM_PADDING: i32 = 2;
+        let padding: i32 = max(
+            font.size as i32 / EMPIRICALLY_CHOSEN_PADDING_AMOUNT_DIVISOR,
+            EMPIRICALLY_CHOSEN_MINIMUM_PADDING,
+        );
+        for one_char in text.chars() {
+            if one_char != ' ' {
+                if let Some(glyph_id) = font.face.lookup_glyph(one_char) {
+                    let glyph = font.face.get_glyph(glyph_id, font.size as u32);
+                    max_top = max(max_top, -glyph.top);
+                    x += glyph.width as i32 + padding;
+                }
+            } else {
+                const EMPIRICALLY_CHOSEN_SPACE_CHARACTER_WIDTH_DIVIDER: u32 = 3;
+                x +=
+                    (font.size / EMPIRICALLY_CHOSEN_SPACE_CHARACTER_WIDTH_DIVIDER) as i32 + padding;
+            }
+        }
+        (x, max_top)
     }
 }

@@ -239,8 +239,12 @@ impl Frame {
         if x < self.config.width && y < self.config.height {
             let pixel_size = self.config.pixel_size_bytes as usize;
             let offset = self.linear_stride_bytes() * y as usize + x as usize * pixel_size;
-            self.pixel_buffer.write_at(offset, value);
+            self.write_pixel_at_offset(offset, value);
         }
+    }
+
+    pub fn write_pixel_at_offset(&mut self, offset: usize, value: &[u8]) {
+        self.pixel_buffer.write_at(offset, value);
     }
 
     pub fn fill_rectangle(&mut self, x: u32, y: u32, width: u32, height: u32, value: &[u8]) {
@@ -283,7 +287,7 @@ impl Frame {
         self.linear_stride_bytes() * self.config.height as usize
     }
 
-    fn linear_stride_bytes(&self) -> usize {
+    pub fn linear_stride_bytes(&self) -> usize {
         self.config.linear_stride_pixels as usize * self.config.pixel_size_bytes as usize
     }
 

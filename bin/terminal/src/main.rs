@@ -21,7 +21,7 @@ use fuchsia_app::client::connect_to_service;
 use fuchsia_app::server::ServiceFactory;
 use fuchsia_async as fasync;
 use fuchsia_scenic::{HostImageCycler, ImportNode, Session, SessionPtr};
-use fuchsia_ui::{Canvas, Color, FontDescription, FontFace, Paint, Point, Size};
+use fuchsia_ui::{Canvas, Color, FontDescription, FontFace, Paint, Point, SharedBufferPixelSink, Size};
 use fuchsia_zircon::{EventPair, Handle};
 use term_model::term::{SizeInfo, Term};
 use term_model::config::{Config};
@@ -154,7 +154,7 @@ impl ViewController {
                 .acquire(info)
                 .expect("failed to allocate buffer");
             let mut face = self.face.lock().unwrap();
-            let mut canvas = Canvas::new(guard.image().buffer(), stride);
+            let mut canvas = Canvas::<SharedBufferPixelSink>::new(guard.image().buffer(), stride);
             let size = Size {
                 width: 14,
                 height: 22,
@@ -179,7 +179,7 @@ impl ViewController {
             }
             for cell in term.renderable_cells(&Config::default(), None, true) {
                 let mut buffer: [u8; 4] = [0, 0, 0, 0];
-                canvas.fill_text(
+                canvas.fill_text_cells(
                     cell.c.encode_utf8(&mut buffer),
                     Point { x: size.width * cell.column.0 as u32, y: size.height * cell.line.0 as u32 },
                     size, &mut font,

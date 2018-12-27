@@ -17,6 +17,9 @@ mod view;
 
 pub use crate::{
     app::{App, AppAssistant, AppPtr, APP},
-    canvas::{Canvas, Color, FontDescription, FontFace, Paint, Point, Size},
+    canvas::{
+        Canvas, Color, FontDescription, FontFace, Paint, PixelSink, Point, Rect,
+        SharedBufferPixelSink, Size,
+    },
     view::{ViewAssistant, ViewAssistantPtr, ViewController, ViewKey, ViewMessages},
 };
