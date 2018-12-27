@@ -10,6 +10,8 @@
 #include <dev/interrupt/arm_gic_hw_interface.h>
 #include <dev/interrupt/arm_gicv3_regs.h>
 
+static constexpr uint32_t kNumLrs = 16;
+
 static void gicv3_write_gich_hcr(uint32_t val) {
     arm64_el2_gicv3_write_gich_hcr(val);
 }
@@ -47,10 +49,12 @@ static void gicv3_write_gich_apr(uint32_t val) {
 }
 
 static uint64_t gicv3_read_gich_lr(uint32_t idx) {
+    DEBUG_ASSERT(idx < kNumLrs);
     return arm64_el2_gicv3_read_gich_lr(idx);
 }
 
 static void gicv3_write_gich_lr(uint32_t idx, uint64_t val) {
+    DEBUG_ASSERT(idx < kNumLrs);
     if (val & ICH_LR_HARDWARE) {
         // We are adding a physical interrupt to a list register, therefore we
         // mark the physical interrupt as active on the physical distributor so

@@ -8,7 +8,6 @@
 #include <asm.h>
 #include <zircon/errors.h>
 
-
 // For details please refer to ARM Generic Interrupt Controller Architecture Specification,
 // GIC architecture version 3.0 and version 4.0. Table 8-6 Mapping of MSR and MRS to
 // virtual interface control registers, AArch64 state and Table 8-8 Mapping of MCR and
@@ -181,7 +180,7 @@ FUNCTION(arm64_el2_gicv3_read_gich_misr)
     ret
 END_FUNCTION(arm64_el2_gicv3_read_gich_misr)
 
-// uint64_t arm64_el2_gicv3_read_gich_lr(uint32_t index);
+// uint64_t arm64_el2_gicv3_read_gich_lr(uint32_t idx);
 FUNCTION(arm64_el2_gicv3_read_gich_lr)
     mov x1, x0
     mov x2, READ_SYSREG_ID
@@ -190,7 +189,7 @@ FUNCTION(arm64_el2_gicv3_read_gich_lr)
     ret
 END_FUNCTION(arm64_el2_gicv3_read_gich_lr)
 
-// void arm64_el2_gicv3_write_gich_lr(uint64_t val, uint32_t index)
+// void arm64_el2_gicv3_write_gich_lr(uint64_t val, uint32_t idx)
 FUNCTION(arm64_el2_gicv3_write_gich_lr)
     mov x2, WRITE_SYSREG_ID
     mov x3, ICH_LR_EL2_ID

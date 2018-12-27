@@ -4,9 +4,12 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <assert.h>
 #include <arch/arm64/hypervisor/gic/gicv2.h>
 #include <dev/interrupt/arm_gic_hw_interface.h>
 #include <dev/interrupt/arm_gicv2_regs.h>
+
+static constexpr uint32_t kNumLrs = 64;
 
 // Representation of GICH registers. For details please refer to ARM Generic Interrupt
 // Controller Architecture Specification Version 2, 5.3 GIC virtual interface control
@@ -26,7 +29,7 @@ typedef struct Gich {
     uint32_t reserved3[46];
     uint32_t apr;
     uint32_t reserved4[3];
-    uint32_t lr[64];
+    uint32_t lr[kNumLrs];
 } __attribute__((__packed__)) Gich;
 
 static_assert(__offsetof(Gich, hcr) == 0x00, "");
@@ -79,10 +82,12 @@ static void gicv2_write_gich_apr(uint32_t val) {
 }
 
 static uint64_t gicv2_read_gich_lr(uint32_t idx) {
+    DEBUG_ASSERT(idx < kNumLrs);
     return gich->lr[idx];
 }
 
 static void gicv2_write_gich_lr(uint32_t idx, uint64_t val) {
+    DEBUG_ASSERT(idx < kNumLrs);
     if (val & GICH_LR_HARDWARE) {
         // We are adding a physical interrupt to a list register, therefore we
         // mark the physical interrupt as active on the physical distributor so
