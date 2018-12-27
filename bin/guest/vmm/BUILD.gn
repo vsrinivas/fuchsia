@@ -211,6 +211,12 @@ test_package("vmm_tests") {
             device_type = "Intel NUC Kit NUC7i5DNHE"
           }
         },
+        {
+          dimensions = {
+            device_type = "Khadas Vim2 Max"
+          }
+          label = "vim2"
+        },
       ]
     },
     {
