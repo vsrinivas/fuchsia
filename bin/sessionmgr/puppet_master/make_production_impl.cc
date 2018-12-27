@@ -31,7 +31,7 @@ std::unique_ptr<StoryCommandExecutor> MakeProductionStoryCommandExecutor(
     // TODO(miguelfrde): we shouldn't create this dependency here. Instead
     // an interface similar to StoryStorage should be created for Runtime
     // use cases.
-    fit::function<void(fidl::StringPtr, fidl::VectorPtr<fidl::StringPtr>)>
+    fit::function<void(std::string, std::vector<std::string>)>
         module_focuser) {
   std::map<fuchsia::modular::StoryCommand::Tag, std::unique_ptr<CommandRunner>>
       command_runners;

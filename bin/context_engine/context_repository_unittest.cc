@@ -214,7 +214,7 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates) {
                               fuchsia::modular::SubscriptionDebugInfo());
   auto maybe_result = TakeContextValue(listener.last_update.get(), "a");
   ASSERT_TRUE(maybe_result.has_value());
-  EXPECT_TRUE(maybe_result.value()->empty());
+  EXPECT_TRUE(maybe_result.value().empty());
   listener.reset();
 
   // (a)
@@ -247,8 +247,8 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates) {
   ASSERT_TRUE(maybe_result.has_value());
   {
     auto& result = maybe_result.value();
-    EXPECT_EQ(1lu, result->size());
-    EXPECT_EQ("match", result->at(0).content);
+    EXPECT_EQ(1lu, result.size());
+    EXPECT_EQ("match", result.at(0).content);
   }
   listener.reset();
 
@@ -269,9 +269,9 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates) {
   ASSERT_TRUE(maybe_result.has_value());
   {
     auto& result = maybe_result.value();
-    EXPECT_EQ(2lu, result->size());
-    EXPECT_EQ("now it matches", result->at(0).content);
-    EXPECT_EQ("match", result->at(1).content);
+    EXPECT_EQ(2lu, result.size());
+    EXPECT_EQ("now it matches", result.at(0).content);
+    EXPECT_EQ("match", result.at(1).content);
   }
   listener.reset();
 
@@ -282,8 +282,8 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates) {
   ASSERT_TRUE(maybe_result.has_value());
   {
     auto& result = maybe_result.value();
-    EXPECT_EQ(1lu, result->size());
-    EXPECT_EQ("match", result->at(0).content);
+    EXPECT_EQ(1lu, result.size());
+    EXPECT_EQ("match", result.at(0).content);
   }
   listener.reset();
 }
@@ -305,7 +305,7 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates_WhenParentsUpdated) {
   ASSERT_TRUE(maybe_result.has_value());
   {
     auto& result = maybe_result.value();
-    EXPECT_EQ(0lu, result->size());
+    EXPECT_EQ(0lu, result.size());
     listener.reset();
   }
 
@@ -343,11 +343,11 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates_WhenParentsUpdated) {
   ASSERT_TRUE(maybe_result.has_value());
   {
     auto& result = maybe_result.value();
-    EXPECT_EQ(1lu, result->size());
-    EXPECT_EQ("content", result->at(0).content);
+    EXPECT_EQ(1lu, result.size());
+    EXPECT_EQ("content", result.at(0).content);
     // Make sure we adopted the parent metadata from the story node.
-    ASSERT_TRUE(result->at(0).meta.story);
-    EXPECT_EQ("match", result->at(0).meta.story->id);
+    ASSERT_TRUE(result.at(0).meta.story);
+    EXPECT_EQ("match", result.at(0).meta.story->id);
   }
   listener.reset();
 
@@ -357,7 +357,7 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates_WhenParentsUpdated) {
   ASSERT_TRUE(listener.last_update);
   maybe_result = TakeContextValue(listener.last_update.get(), "a");
   ASSERT_TRUE(maybe_result.has_value());
-  EXPECT_EQ(0lu, maybe_result.value()->size());
+  EXPECT_EQ(0lu, maybe_result.value().size());
   listener.reset();
 
   // Set it back to something that matched, and this time remove the value
@@ -366,14 +366,14 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates_WhenParentsUpdated) {
   ASSERT_TRUE(listener.last_update);
   maybe_result = TakeContextValue(listener.last_update.get(), "a");
   ASSERT_TRUE(maybe_result.has_value());
-  EXPECT_EQ(1lu, maybe_result.value()->size());
+  EXPECT_EQ(1lu, maybe_result.value().size());
   listener.reset();
 
   repository_.Remove(story_value_id);
   ASSERT_TRUE(listener.last_update);
   maybe_result = TakeContextValue(listener.last_update.get(), "a");
   ASSERT_TRUE(maybe_result.has_value());
-  EXPECT_TRUE(maybe_result.value()->empty());
+  EXPECT_TRUE(maybe_result.value().empty());
   listener.reset();
 }
 

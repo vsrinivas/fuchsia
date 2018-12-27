@@ -41,7 +41,7 @@ class NetConnectorFactory : public FakeNetConnector::Delegate {
   // FakeNetConnector::Delegate:
   void GetDevicesNames(
       uint64_t last_version,
-      fit::function<void(uint64_t, fidl::VectorPtr<fidl::StringPtr>)> callback)
+      fit::function<void(uint64_t, std::vector<std::string>)> callback)
       override;
   void ConnectToServiceProvider(
       std::string device_name,
@@ -50,7 +50,7 @@ class NetConnectorFactory : public FakeNetConnector::Delegate {
   // Counter incremented each time a NetConnector is added or removed; denotes
   // the version of the current device list.
   uint64_t current_version_ = 0;
-  std::vector<fit::function<void(uint64_t, fidl::VectorPtr<fidl::StringPtr>)>>
+  std::vector<fit::function<void(uint64_t, std::vector<std::string>)>>
       pending_device_list_callbacks_;
   callback::AutoCleanableMap<std::string, Holder> net_connectors_;
 

@@ -277,7 +277,6 @@ void SessionmgrImpl::InitializeLedger(
     // for syncing.
     fuchsia::modular::AppConfig cloud_provider_config;
     cloud_provider_config.url = kCloudProviderFirestoreAppUrl;
-    cloud_provider_config.args = fidl::VectorPtr<fidl::StringPtr>::New(0);
     cloud_provider_app_ =
         std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
             user_environment_->GetLauncher(), std::move(cloud_provider_config));
@@ -478,8 +477,8 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
 
   user_intelligence_provider_impl_->StartAgents(
       std::move(maxwell_app_component_context),
-      fxl::To<fidl::VectorPtr<fidl::StringPtr>>(options_.session_agents),
-      fxl::To<fidl::VectorPtr<fidl::StringPtr>>(options_.startup_agents));
+      options_.session_agents,
+      options_.startup_agents);
 
   // Setup for kModuleResolverUrl
   {
@@ -590,7 +589,7 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
   // similar to Story/SessionStorage but for runtime management.
   auto module_focuser =
       [story_provider = std::move(story_provider_puppet_master)](
-          fidl::StringPtr story_id, fidl::VectorPtr<fidl::StringPtr> mod_name) {
+          std::string story_id, std::vector<std::string> mod_name) {
         fuchsia::modular::StoryControllerPtr story_controller;
         story_provider->GetController(story_id, story_controller.NewRequest());
 
@@ -781,7 +780,7 @@ void SessionmgrImpl::GetComponentContext(
 }
 
 void SessionmgrImpl::GetDeviceName(
-    std::function<void(::fidl::StringPtr)> callback) {
+    std::function<void(::std::string)> callback) {
   callback(device_name_);
 }
 

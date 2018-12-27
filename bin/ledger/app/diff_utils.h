@@ -52,7 +52,7 @@ void ComputeThreeWayDiff(
     const storage::Commit& left, const storage::Commit& right,
     std::string prefix_key, std::string min_key, DiffType diff_type,
     fit::function<void(Status,
-                       std::pair<fidl::VectorPtr<DiffEntry>, std::string>)>
+                       std::pair<std::vector<DiffEntry>, std::string>)>
         callback);
 
 }  // namespace diff_utils

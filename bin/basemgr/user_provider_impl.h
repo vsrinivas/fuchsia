@@ -86,7 +86,7 @@ class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
   void PreviousUsers(PreviousUsersCallback callback) override;
 
   // |fuchsia::modular::UserProvider|, also called by |basemgr_impl|.
-  void RemoveUser(fidl::StringPtr account_id,
+  void RemoveUser(std::string account_id,
                   RemoveUserCallback callback) override;
 
  private:
@@ -101,7 +101,7 @@ class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
 
   // Returns a new |fuchsia::auth::TokenManager| handle for the given user
   // account |account_id|.
-  fuchsia::auth::TokenManagerPtr CreateTokenManager(fidl::StringPtr account_id);
+  fuchsia::auth::TokenManagerPtr CreateTokenManager(std::string account_id);
 
   bool AddUserToAccountsDB(const fuchsia::modular::auth::Account* account,
                            std::string* error);

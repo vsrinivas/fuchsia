@@ -111,7 +111,7 @@ class SessionStorage : public PageClient {
   //
   // TODO(thatguy): If the return value grows large, an dispatcher stream would
   // be a more appropriate return value.
-  FuturePtr<fidl::VectorPtr<fuchsia::modular::internal::StoryData>>
+  FuturePtr<std::vector<fuchsia::modular::internal::StoryData>>
   GetAllStoryData();
 
   FuturePtr<> UpdateStoryOptions(fidl::StringPtr story_id,

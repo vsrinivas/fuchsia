@@ -129,7 +129,7 @@ TEST_F(AppClientTest, RunWithParams_Success) {
           fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
         EXPECT_EQ(kTestUrl, launch_info.url);
         auto additional_services = std::move(launch_info.additional_services);
-        EXPECT_EQ(kServiceName, additional_services->names->at(0));
+        EXPECT_EQ(kServiceName, additional_services->names.at(0));
         callback_called = true;
       });
 

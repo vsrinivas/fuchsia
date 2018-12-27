@@ -58,15 +58,12 @@ fuchsia::ledger::PageSnapshotPtr PageClient::NewSnapshot(
 void PageClient::OnChange(fuchsia::ledger::PageChange page,
                           fuchsia::ledger::ResultState result_state,
                           OnChangeCallback callback) {
-  // According to their fidl spec, neither page nor page->changed_entries
-  // should be null.
-  FXL_DCHECK(page.changed_entries);
-  for (auto& entry : *page.changed_entries) {
+  for (auto& entry : page.changed_entries) {
     // Remove key prefix maybe?
     OnPageChange(to_string(entry.key), std::move(entry.value));
   }
 
-  for (auto& key : *page.deleted_keys) {
+  for (auto& key : page.deleted_keys) {
     OnPageDelete(to_string(key));
   }
 
@@ -102,7 +99,7 @@ void GetEntriesRecursive(fuchsia::ledger::PageSnapshot* const snapshot,
                          std::unique_ptr<fuchsia::ledger::Token> next_token,
                          std::function<void(fuchsia::ledger::Status)> done) {
   snapshot->GetEntries(
-      fidl::VectorPtr<uint8_t>::New(0) /* key_start */, std::move(next_token),
+      std::vector<uint8_t>{} /* key_start */, std::move(next_token),
       fxl::MakeCopyable([snapshot, entries, done = std::move(done)](
                             fuchsia::ledger::Status status, auto new_entries,
                             auto next_token) mutable {
@@ -112,8 +109,8 @@ void GetEntriesRecursive(fuchsia::ledger::PageSnapshot* const snapshot,
           return;
         }
 
-        for (size_t i = 0; i < new_entries->size(); ++i) {
-          entries->push_back(std::move(new_entries->at(i)));
+        for (size_t i = 0; i < new_entries.size(); ++i) {
+          entries->push_back(std::move(new_entries.at(i)));
         }
 
         if (status == fuchsia::ledger::Status::OK) {

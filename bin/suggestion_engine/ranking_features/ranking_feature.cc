@@ -34,9 +34,9 @@ fuchsia::modular::ContextSelectorPtr RankingFeature::CreateContextSelector() {
 }
 
 void RankingFeature::UpdateContext(
-    const fidl::VectorPtr<fuchsia::modular::ContextValue>&
+    const std::vector<fuchsia::modular::ContextValue>&
         context_update_values) {
-  fidl::Clone(context_update_values, &context_values_);
+  context_values_.reset(fidl::Clone(context_update_values));
 }
 
 fuchsia::modular::ContextSelectorPtr

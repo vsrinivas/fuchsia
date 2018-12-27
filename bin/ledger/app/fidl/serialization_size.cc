@@ -18,10 +18,10 @@ size_t GetEntrySize(size_t key_length) {
 }
 
 size_t GetInlinedEntrySize(const InlinedEntry& entry) {
-  size_t key_size = GetByteVectorSize(entry.key->size());
+  size_t key_size = GetByteVectorSize(entry.key.size());
   size_t object_size = kPointerSize;
   if (entry.inlined_value) {
-    object_size += GetByteVectorSize(entry.inlined_value->value->size());
+    object_size += GetByteVectorSize(entry.inlined_value->value.size());
   }
   return key_size + object_size + Align(kPriorityEnumSize);
 }

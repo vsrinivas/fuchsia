@@ -118,7 +118,7 @@ void DeviceMapImpl::GetCurrentDevice(GetCurrentDeviceCallback callback) {
   callback(devices_[current_device_id_]);
 }
 
-void DeviceMapImpl::SetCurrentDeviceProfile(::fidl::StringPtr profile) {
+void DeviceMapImpl::SetCurrentDeviceProfile(::std::string profile) {
   devices_[current_device_id_].profile = profile;
   Notify(current_device_id_);
   SaveCurrentDevice();

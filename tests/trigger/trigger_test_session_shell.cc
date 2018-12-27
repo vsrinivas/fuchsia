@@ -45,7 +45,7 @@ class TestApp : public modular::testing::SessionShellBase {
   TestPoint story_create_{"Created story."};
 
   void CreateStory() {
-    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+    std::vector<fuchsia::modular::StoryCommand> commands;
     fuchsia::modular::AddMod add_mod;
     add_mod.mod_name.push_back("root");
 

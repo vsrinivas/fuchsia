@@ -50,21 +50,21 @@ class PageSnapshotIntegrationTest : public IntegrationTest {
 
   // Returns all keys from |snapshot|, starting at |start|. If |num_queries| is
   // not null, stores the number of calls to GetKeys.
-  std::vector<fidl::VectorPtr<uint8_t>> SnapshotGetKeys(
+  std::vector<std::vector<uint8_t>> SnapshotGetKeys(
       PageSnapshotPtr* snapshot,
-      fidl::VectorPtr<uint8_t> start = fidl::VectorPtr<uint8_t>::New(0),
+      std::vector<uint8_t> start = std::vector<uint8_t>(),
       int* num_queries = nullptr) {
-    std::vector<fidl::VectorPtr<uint8_t>> result;
+    std::vector<std::vector<uint8_t>> result;
     std::unique_ptr<Token> token;
     if (num_queries) {
       *num_queries = 0;
     }
     do {
       Status status;
-      fidl::VectorPtr<fidl::VectorPtr<uint8_t>> keys;
+      std::vector<std::vector<uint8_t>> keys;
       auto waiter = NewWaiter();
       (*snapshot)->GetKeys(
-          start.Clone(), std::move(token),
+          start, std::move(token),
           callback::Capture(waiter->GetCallback(), &status, &keys, &token));
       if (!waiter->RunUntilCalled()) {
         ADD_FAILURE() << "|GetKeys| failed to call back.";
@@ -74,7 +74,7 @@ class PageSnapshotIntegrationTest : public IntegrationTest {
       if (num_queries) {
         (*num_queries)++;
       }
-      for (auto& key : keys.take()) {
+      for (auto& key : keys) {
         result.push_back(std::move(key));
       }
     } while (token);
@@ -82,7 +82,7 @@ class PageSnapshotIntegrationTest : public IntegrationTest {
   }
 
   std::string SnapshotFetchPartial(PageSnapshotPtr* snapshot,
-                                   fidl::VectorPtr<uint8_t> key, int64_t offset,
+                                   std::vector<uint8_t> key, int64_t offset,
                                    int64_t max_size) {
     Status status;
     fuchsia::mem::BufferPtr buffer;
@@ -246,12 +246,12 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeys) {
   // Grab a snapshot before adding any entries and verify that GetKeys()
   // returns empty results.
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
-  std::vector<fidl::VectorPtr<uint8_t>> result = SnapshotGetKeys(&snapshot);
+  std::vector<std::vector<uint8_t>> result = SnapshotGetKeys(&snapshot);
   EXPECT_EQ(0u, result.size());
 
   // Add entries and grab a new snapshot.
   const size_t N = 4;
-  fidl::VectorPtr<uint8_t> keys[N] = {
+  std::vector<uint8_t> keys[N] = {
       RandomArray(GetRandom(), 20, {0, 0, 0}),
       RandomArray(GetRandom(), 20, {0, 0, 1}),
       RandomArray(GetRandom(), 20, {0, 1, 0}),
@@ -260,7 +260,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeys) {
   Status status;
   for (auto& key : keys) {
     auto waiter = NewWaiter();
-    page->Put(key.Clone(), RandomArray(GetRandom(), 50),
+    page->Put(key, RandomArray(GetRandom(), 50),
               callback::Capture(waiter->GetCallback(), &status));
     ASSERT_TRUE(waiter->RunUntilCalled());
     EXPECT_EQ(Status::OK, status);
@@ -309,7 +309,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeys) {
   snapshot =
       PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0}));
   result = SnapshotGetKeys(
-      &snapshot, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0, 1, 0}));
+      &snapshot, std::vector<uint8_t>(std::vector<uint8_t>{0, 1, 0}));
   EXPECT_EQ(2u, result.size());
 }
 
@@ -321,8 +321,8 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeysMultiPart) {
   // returns empty results.
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   int num_queries;
-  std::vector<fidl::VectorPtr<uint8_t>> result = SnapshotGetKeys(
-      &snapshot, fidl::VectorPtr<uint8_t>::New(0), &num_queries);
+  std::vector<std::vector<uint8_t>> result = SnapshotGetKeys(
+      &snapshot, std::vector<uint8_t>(), &num_queries);
   EXPECT_EQ(0u, result.size());
   EXPECT_EQ(1, num_queries);
 
@@ -331,7 +331,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeysMultiPart) {
   // multiple queries.
   const size_t key_size = kMaxKeySize;
   const size_t N = fidl_serialization::kMaxInlineDataSize / key_size + 1;
-  fidl::VectorPtr<uint8_t> keys[N];
+  std::vector<uint8_t> keys[N];
   for (size_t i = 0; i < N; ++i) {
     // Generate keys so that they are in increasing order to match the order
     // of results from GetKeys().
@@ -343,7 +343,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeysMultiPart) {
   Status status;
   for (auto& key : keys) {
     auto waiter = NewWaiter();
-    page->Put(key.Clone(), RandomArray(GetRandom(), 10),
+    page->Put(key, RandomArray(GetRandom(), 10),
               callback::Capture(waiter->GetCallback(), &status));
     ASSERT_TRUE(waiter->RunUntilCalled());
     EXPECT_EQ(Status::OK, status);
@@ -372,13 +372,13 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
 
   // Add entries and grab a new snapshot.
   const size_t N = 4;
-  fidl::VectorPtr<uint8_t> keys[N] = {
+  std::vector<uint8_t> keys[N] = {
       RandomArray(GetRandom(), 20, {0, 0, 0}),
       RandomArray(GetRandom(), 20, {0, 0, 1}),
       RandomArray(GetRandom(), 20, {0, 1, 0}),
       RandomArray(GetRandom(), 20, {0, 1, 1}),
   };
-  fidl::VectorPtr<uint8_t> values[N] = {
+  std::vector<uint8_t> values[N] = {
       RandomArray(GetRandom(), 50),
       RandomArray(GetRandom(), 50),
       RandomArray(GetRandom(), 50),
@@ -387,7 +387,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
   Status status;
   for (size_t i = 0; i < N; ++i) {
     auto waiter = NewWaiter();
-    page->Put(keys[i].Clone(), values[i].Clone(),
+    page->Put(keys[i], values[i],
               callback::Capture(waiter->GetCallback(), &status));
     ASSERT_TRUE(waiter->RunUntilCalled());
     EXPECT_EQ(Status::OK, status);
@@ -458,8 +458,8 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartSize) {
   const size_t key_size = kMaxKeySize;
   const size_t N =
       fidl_serialization::kMaxInlineDataSize / (key_size + value_size) + 1;
-  fidl::VectorPtr<uint8_t> keys[N];
-  fidl::VectorPtr<uint8_t> values[N];
+  std::vector<uint8_t> keys[N];
+  std::vector<uint8_t> values[N];
   for (size_t i = 0; i < N; ++i) {
     // Generate keys so that they are in increasing order to match the order
     // of results from GetEntries().
@@ -472,7 +472,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartSize) {
   Status status;
   for (size_t i = 0; i < N; ++i) {
     auto waiter = NewWaiter();
-    page->Put(keys[i].Clone(), values[i].Clone(),
+    page->Put(keys[i], values[i],
               callback::Capture(waiter->GetCallback(), &status));
 
     ASSERT_TRUE(waiter->RunUntilCalled());
@@ -507,8 +507,8 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartHandles) {
 
   // Add entries and grab a new snapshot.
   const size_t N = 100;
-  fidl::VectorPtr<uint8_t> keys[N];
-  fidl::VectorPtr<uint8_t> values[N];
+  std::vector<uint8_t> keys[N];
+  std::vector<uint8_t> values[N];
   for (size_t i = 0; i < N; ++i) {
     // Generate keys so that they are in increasing order to match the order
     // of results from GetEntries().
@@ -521,7 +521,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartHandles) {
   for (size_t i = 0; i < N; ++i) {
     Status status;
     auto waiter = NewWaiter();
-    page->Put(keys[i].Clone(), values[i].Clone(),
+    page->Put(keys[i], values[i],
               callback::Capture(waiter->GetCallback(), &status));
     ASSERT_TRUE(waiter->RunUntilCalled());
     EXPECT_EQ(Status::OK, status);
@@ -544,13 +544,13 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGettersReturnSortedEntries) {
   PagePtr page = instance->GetTestPage();
 
   const size_t N = 4;
-  fidl::VectorPtr<uint8_t> keys[N] = {
+  std::vector<uint8_t> keys[N] = {
       RandomArray(GetRandom(), 20, {2}),
       RandomArray(GetRandom(), 20, {5}),
       RandomArray(GetRandom(), 20, {3}),
       RandomArray(GetRandom(), 20, {0}),
   };
-  fidl::VectorPtr<uint8_t> values[N] = {
+  std::vector<uint8_t> values[N] = {
       RandomArray(GetRandom(), 20),
       RandomArray(GetRandom(), 20),
       RandomArray(GetRandom(), 20),
@@ -559,7 +559,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGettersReturnSortedEntries) {
   for (size_t i = 0; i < N; ++i) {
     Status status;
     auto waiter = NewWaiter();
-    page->Put(keys[i].Clone(), values[i].Clone(),
+    page->Put(keys[i], values[i],
               callback::Capture(waiter->GetCallback(), &status));
     ASSERT_TRUE(waiter->RunUntilCalled());
     EXPECT_EQ(Status::OK, status);
@@ -569,7 +569,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGettersReturnSortedEntries) {
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
 
   // Verify that GetKeys() results are sorted.
-  std::vector<fidl::VectorPtr<uint8_t>> result = SnapshotGetKeys(&snapshot);
+  std::vector<std::vector<uint8_t>> result = SnapshotGetKeys(&snapshot);
   EXPECT_EQ(keys[3], result.at(0));
   EXPECT_EQ(keys[0], result.at(1));
   EXPECT_EQ(keys[2], result.at(2));

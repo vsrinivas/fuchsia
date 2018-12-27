@@ -94,7 +94,7 @@ TEST_F(SessionCtlAppTest, AddMod) {
   ASSERT_TRUE(story_data);
   EXPECT_EQ("mod_url", story_data->story_name);
   EXPECT_EQ("mod_url",
-            test_executor_.last_commands().at(0).add_mod().mod_name->at(0));
+            test_executor_.last_commands().at(0).add_mod().mod_name.at(0));
   EXPECT_EQ(1, test_executor_.execute_count());
 }
 
@@ -112,7 +112,7 @@ TEST_F(SessionCtlAppTest, AddModOverrideDefaults) {
   ASSERT_TRUE(story_data);
   EXPECT_EQ("s", story_data->story_name);
   EXPECT_EQ("m",
-            test_executor_.last_commands().at(0).add_mod().mod_name->at(0));
+            test_executor_.last_commands().at(0).add_mod().mod_name.at(0));
   EXPECT_EQ(1, test_executor_.execute_count());
 }
 
@@ -149,7 +149,7 @@ TEST_F(SessionCtlAppTest, RemoveMod) {
   ASSERT_TRUE(story_data);
   EXPECT_EQ("mod", story_data->story_name);
   EXPECT_EQ("mod",
-            test_executor_.last_commands().at(0).remove_mod().mod_name->at(0));
+            test_executor_.last_commands().at(0).remove_mod().mod_name.at(0));
   EXPECT_EQ(2, test_executor_.execute_count());
 }
 
@@ -174,7 +174,7 @@ TEST_F(SessionCtlAppTest, RemoveModOverrideDefault) {
   ASSERT_TRUE(story_data);
   EXPECT_EQ("s", story_data->story_name);
   EXPECT_EQ("m",
-            test_executor_.last_commands().at(0).remove_mod().mod_name->at(0));
+            test_executor_.last_commands().at(0).remove_mod().mod_name.at(0));
   EXPECT_EQ(2, test_executor_.execute_count());
 }
 

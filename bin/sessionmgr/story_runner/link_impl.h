@@ -63,11 +63,11 @@ class LinkImpl : public Link {
 
   ~LinkImpl() override;
 
-  void Set(fidl::VectorPtr<fidl::StringPtr> path,
+  void Set(fidl::VectorPtr<std::string> path,
            fuchsia::mem::Buffer json) override;
-  void Get(fidl::VectorPtr<fidl::StringPtr> path,
+  void Get(fidl::VectorPtr<std::string> path,
            GetCallback callback) override;
-  void Erase(fidl::VectorPtr<fidl::StringPtr> path) override;
+  void Erase(std::vector<std::string> path) override;
   void GetEntity(GetEntityCallback callback) override;
   void SetEntity(fidl::StringPtr entity_reference) override;
   void Watch(fidl::InterfaceHandle<LinkWatcher> watcher) override;
@@ -82,7 +82,7 @@ class LinkImpl : public Link {
   void OnLinkValueChanged(const fidl::StringPtr& value, const void* context);
 
   // Convenience method which interacts with the story storage.
-  void Set(fidl::VectorPtr<fidl::StringPtr> path, const std::string& json);
+  void Set(fidl::VectorPtr<std::string> path, const std::string& json);
 
   fxl::WeakPtr<LinkImpl> GetWeakPtr();
 

@@ -16,7 +16,7 @@ void SimpleImpl::Connect(fidl::InterfaceRequest<Simple> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
-void SimpleImpl::SetMessageQueue(fidl::StringPtr queue_token) {
+void SimpleImpl::SetMessageQueue(std::string queue_token) {
   token_ = queue_token;
 }
 

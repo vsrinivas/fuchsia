@@ -94,7 +94,7 @@ class TestModule : fuchsia::modular::ProposalListener {
   }
 
   // |fuchsia::modular::ProposalListener|
-  void OnProposalAccepted(fidl::StringPtr proposal_id,
+  void OnProposalAccepted(std::string proposal_id,
                           fidl::StringPtr story_id) override {
     Signal("proposal_was_accepted");
   }

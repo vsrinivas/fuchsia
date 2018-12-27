@@ -13,7 +13,7 @@ namespace modular {
 
 void AddInitializeChainOperation(
     OperationContainer* operation_container, StoryStorage* story_storage,
-    fidl::VectorPtr<fidl::StringPtr> module_path,
+    std::vector<std::string> module_path,
     fuchsia::modular::CreateModuleParameterMapInfoPtr create_parameter_map_info,
     std::function<void(fuchsia::modular::ExecuteResult,
                        fuchsia::modular::ModuleParameterMapPtr)>

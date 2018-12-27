@@ -27,7 +27,7 @@ namespace {
 
 PageClient::Conflict ToConflict(const fuchsia::ledger::DiffEntry* entry) {
   PageClient::Conflict conflict;
-  conflict.key = entry->key.Clone();
+  conflict.key = entry->key;
   if (entry->left) {
     conflict.has_left = true;
     std::string value;
@@ -61,9 +61,9 @@ void GetDiffRecursive(
     fit::closure callback) {
   auto cont = [result_provider, conflicts, callback = std::move(callback)](
                   fuchsia::ledger::IterationStatus status,
-                  fidl::VectorPtr<fuchsia::ledger::DiffEntry> change_delta,
+                  std::vector<fuchsia::ledger::DiffEntry> change_delta,
                   LedgerToken token) mutable {
-    for (auto& diff_entry : *change_delta) {
+    for (auto& diff_entry : change_delta) {
       (*conflicts)[to_string(diff_entry.key)] = ToConflict(&diff_entry);
     }
 
@@ -157,7 +157,7 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : public Operation<> {
 
     for (auto& pair : conflicts_) {
       const PageClient::Conflict& conflict = pair.second;
-      fidl::VectorPtr<fuchsia::ledger::MergedValue> merge_changes;
+      std::vector<fuchsia::ledger::MergedValue> merge_changes;
 
       if (conflict.has_left && conflict.has_right) {
         for (PageClient* const page_client : page_clients) {
@@ -166,7 +166,7 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : public Operation<> {
 
             if (pair.second.resolution != PageClient::LEFT) {
               fuchsia::ledger::MergedValue merged_value;
-              merged_value.key = conflict.key.Clone();
+              merged_value.key = conflict.key;
               if (pair.second.resolution == PageClient::RIGHT) {
                 merged_value.source = fuchsia::ledger::ValueSource::RIGHT;
               } else {
@@ -198,7 +198,7 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : public Operation<> {
         }
       }
 
-      if (!merge_changes->empty()) {
+      if (!merge_changes.empty()) {
         result_provider_->MergeNew(std::move(merge_changes));
       }
     }

@@ -15,19 +15,12 @@ namespace modular {
 namespace {
 
 TEST(Storage, EncodeModulePath) {
-  fidl::VectorPtr<fidl::StringPtr> fidl_array;
-  for (auto s : {"foo", ":bar", "/baz"}) {
-    fidl_array.push_back(s);
-  }
+  std::vector<std::string> fidl_array = {"foo", ":bar", "/baz"};
   EXPECT_EQ("foo:\\:bar:\\/baz", EncodeModulePath(fidl_array));
 }
 
 TEST(Storage, EncodeLinkPath) {
-  fidl::VectorPtr<fidl::StringPtr> fidl_array;
-  for (auto s : {"foo", ":bar"}) {
-    fidl_array.push_back(s);
-  }
-
+  std::vector<std::string> fidl_array = {"foo", ":bar"};
   fuchsia::modular::LinkPath link_path;
   link_path.link_name = "Fred";
   link_path.module_path = std::move(fidl_array);

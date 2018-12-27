@@ -35,18 +35,18 @@ void StoryEntityProvider::Connect(
   provider_bindings_.AddBinding(this, std::move(provider_request));
 }
 
-void StoryEntityProvider::GetTypes(fidl::StringPtr cookie,
+void StoryEntityProvider::GetTypes(std::string cookie,
                                    GetTypesCallback callback) {
   story_storage_->GetEntityType(cookie)->Then(
       [callback = std::move(callback)](StoryStorage::Status status,
                                        std::string type) {
-        fidl::VectorPtr<fidl::StringPtr> types;
+        std::vector<std::string> types;
         types.push_back(type);
         callback(std::move(types));
       });
 }
 
-void StoryEntityProvider::GetData(fidl::StringPtr cookie, fidl::StringPtr type,
+void StoryEntityProvider::GetData(std::string cookie, std::string type,
                                   GetDataCallback callback) {
   story_storage_->GetEntityData(cookie, type)
       ->Then([callback = std::move(callback)](StoryStorage::Status status,
@@ -55,8 +55,8 @@ void StoryEntityProvider::GetData(fidl::StringPtr cookie, fidl::StringPtr type,
       });
 }
 
-void StoryEntityProvider::WriteData(fidl::StringPtr cookie,
-                                    fidl::StringPtr type,
+void StoryEntityProvider::WriteData(std::string cookie,
+                                    std::string type,
                                     fuchsia::mem::Buffer data,
                                     WriteDataCallback callback) {
   story_storage_->SetEntityData(cookie, type, std::move(data))
@@ -79,7 +79,7 @@ void StoryEntityProvider::WriteData(fidl::StringPtr cookie,
 }
 
 void StoryEntityProvider::Watch(
-    fidl::StringPtr cookie, fidl::StringPtr type,
+    std::string cookie, std::string type,
     fidl::InterfaceHandle<fuchsia::modular::EntityWatcher> watcher) {
   fuchsia::modular::EntityWatcherPtr entity_watcher = watcher.Bind();
   story_storage_->WatchEntity(cookie, type, std::move(entity_watcher));

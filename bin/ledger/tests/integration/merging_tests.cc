@@ -110,7 +110,7 @@ class ConflictResolverImpl : public ConflictResolver {
                                            size_t min_queries = 0) {
       return GetDiff(
           [this](std::unique_ptr<Token> token,
-                 fit::function<void(IterationStatus, fidl::VectorPtr<DiffEntry>,
+                 fit::function<void(IterationStatus, std::vector<DiffEntry>,
                                     std::unique_ptr<Token>)>
                      callback) mutable {
             result_provider->GetFullDiffNew(std::move(token),
@@ -123,7 +123,7 @@ class ConflictResolverImpl : public ConflictResolver {
         std::vector<DiffEntry>* entries, size_t min_queries = 0) {
       return GetDiff(
           [this](std::unique_ptr<Token> token,
-                 fit::function<void(IterationStatus, fidl::VectorPtr<DiffEntry>,
+                 fit::function<void(IterationStatus, std::vector<DiffEntry>,
                                     std::unique_ptr<Token>)>
                      callback) mutable {
             result_provider->GetConflictingDiffNew(std::move(token),
@@ -135,9 +135,9 @@ class ConflictResolverImpl : public ConflictResolver {
     // Resolves the conflict by sending the given merge results. If
     // |merge_type| is MULTIPART, the merge will be send in two parts, each
     // sending half of |results|' elements.
-    ::testing::AssertionResult Merge(fidl::VectorPtr<MergedValue> results,
+    ::testing::AssertionResult Merge(std::vector<MergedValue> results,
                                      MergeType merge_type = MergeType::SIMPLE) {
-      FXL_DCHECK(merge_type == MergeType::SIMPLE || results->size() >= 2);
+      FXL_DCHECK(merge_type == MergeType::SIMPLE || results.size() >= 2);
 
       if (!result_provider) {
         return ::testing::AssertionFailure()
@@ -151,10 +151,10 @@ class ConflictResolverImpl : public ConflictResolver {
           return merge_status;
         }
       } else {
-        size_t part1_size = results->size() / 2;
-        fidl::VectorPtr<MergedValue> part2;
-        for (size_t i = part1_size; i < results->size(); ++i) {
-          part2.push_back(std::move(results->at(i)));
+        size_t part1_size = results.size() / 2;
+        std::vector<MergedValue> part2;
+        for (size_t i = part1_size; i < results.size(); ++i) {
+          part2.push_back(std::move(results.at(i)));
         }
         results.resize(part1_size);
 
@@ -204,7 +204,7 @@ class ConflictResolverImpl : public ConflictResolver {
     ::testing::AssertionResult GetDiff(
         fit::function<
             void(std::unique_ptr<Token>,
-                 fit::function<void(IterationStatus, fidl::VectorPtr<DiffEntry>,
+                 fit::function<void(IterationStatus, std::vector<DiffEntry>,
                                     std::unique_ptr<Token>)>)>
             get_diff,
         std::vector<DiffEntry>* entries, size_t min_queries) {
@@ -212,7 +212,7 @@ class ConflictResolverImpl : public ConflictResolver {
       size_t num_queries = 0u;
       std::unique_ptr<Token> token;
       do {
-        fidl::VectorPtr<DiffEntry> new_entries;
+        std::vector<DiffEntry> new_entries;
         IterationStatus status;
         auto waiter = loop_controller_->NewWaiter();
         std::unique_ptr<Token> new_token;
@@ -231,8 +231,8 @@ class ConflictResolverImpl : public ConflictResolver {
                  << ", but status is:" << fidl::ToUnderlying(status);
         }
         entries->insert(entries->end(),
-                        std::make_move_iterator(new_entries->begin()),
-                        std::make_move_iterator(new_entries->end()));
+                        std::make_move_iterator(new_entries.begin()),
+                        std::make_move_iterator(new_entries.end()));
         ++num_queries;
       } while (token);
 
@@ -246,7 +246,7 @@ class ConflictResolverImpl : public ConflictResolver {
     }
 
     ::testing::AssertionResult PartialMerge(
-        fidl::VectorPtr<MergedValue> partial_result) {
+        std::vector<MergedValue> partial_result) {
       result_provider->MergeNew(std::move(partial_result));
       return Sync();
     }
@@ -508,11 +508,11 @@ TEST_P(MergingIntegrationTest, Merging) {
   ASSERT_TRUE(watcher1_waiter->RunUntilCalled());
   EXPECT_EQ(1u, watcher1.changes_seen);
   PageChange change = std::move(watcher1.last_page_change_);
-  ASSERT_EQ(2u, change.changed_entries->size());
-  EXPECT_EQ("city", convert::ToString(change.changed_entries->at(0).key));
-  EXPECT_EQ("Paris", ToString(change.changed_entries->at(0).value));
-  EXPECT_EQ("name", convert::ToString(change.changed_entries->at(1).key));
-  EXPECT_EQ("Alice", ToString(change.changed_entries->at(1).value));
+  ASSERT_EQ(2u, change.changed_entries.size());
+  EXPECT_EQ("city", convert::ToString(change.changed_entries.at(0).key));
+  EXPECT_EQ("Paris", ToString(change.changed_entries.at(0).value));
+  EXPECT_EQ("name", convert::ToString(change.changed_entries.at(1).key));
+  EXPECT_EQ("Alice", ToString(change.changed_entries.at(1).value));
 
   waiter = NewWaiter();
   page2->Commit(callback::Capture(waiter->GetCallback(), &status));
@@ -522,11 +522,11 @@ TEST_P(MergingIntegrationTest, Merging) {
 
   EXPECT_EQ(1u, watcher2.changes_seen);
   change = std::move(watcher2.last_page_change_);
-  ASSERT_EQ(2u, change.changed_entries->size());
-  EXPECT_EQ("name", convert::ToString(change.changed_entries->at(0).key));
-  EXPECT_EQ("Bob", ToString(change.changed_entries->at(0).value));
-  EXPECT_EQ("phone", convert::ToString(change.changed_entries->at(1).key));
-  EXPECT_EQ("0123456789", ToString(change.changed_entries->at(1).value));
+  ASSERT_EQ(2u, change.changed_entries.size());
+  EXPECT_EQ("name", convert::ToString(change.changed_entries.at(0).key));
+  EXPECT_EQ("Bob", ToString(change.changed_entries.at(0).value));
+  EXPECT_EQ("phone", convert::ToString(change.changed_entries.at(1).key));
+  EXPECT_EQ("0123456789", ToString(change.changed_entries.at(1).value));
 
   ASSERT_TRUE(watcher1_waiter->RunUntilCalled());
   ASSERT_TRUE(watcher2_waiter->RunUntilCalled());
@@ -534,17 +534,17 @@ TEST_P(MergingIntegrationTest, Merging) {
   // Each change is seen once, and by the correct watcher only.
   EXPECT_EQ(2u, watcher1.changes_seen);
   change = std::move(watcher1.last_page_change_);
-  ASSERT_EQ(2u, change.changed_entries->size());
-  EXPECT_EQ("name", convert::ToString(change.changed_entries->at(0).key));
-  EXPECT_EQ("Bob", ToString(change.changed_entries->at(0).value));
-  EXPECT_EQ("phone", convert::ToString(change.changed_entries->at(1).key));
-  EXPECT_EQ("0123456789", ToString(change.changed_entries->at(1).value));
+  ASSERT_EQ(2u, change.changed_entries.size());
+  EXPECT_EQ("name", convert::ToString(change.changed_entries.at(0).key));
+  EXPECT_EQ("Bob", ToString(change.changed_entries.at(0).value));
+  EXPECT_EQ("phone", convert::ToString(change.changed_entries.at(1).key));
+  EXPECT_EQ("0123456789", ToString(change.changed_entries.at(1).value));
 
   EXPECT_EQ(2u, watcher2.changes_seen);
   change = std::move(watcher2.last_page_change_);
-  ASSERT_EQ(1u, change.changed_entries->size());
-  EXPECT_EQ("city", convert::ToString(change.changed_entries->at(0).key));
-  EXPECT_EQ("Paris", ToString(change.changed_entries->at(0).value));
+  ASSERT_EQ(1u, change.changed_entries.size());
+  EXPECT_EQ("city", convert::ToString(change.changed_entries.at(0).key));
+  EXPECT_EQ("Paris", ToString(change.changed_entries.at(0).value));
 }
 
 TEST_P(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
@@ -638,11 +638,11 @@ TEST_P(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
   ASSERT_TRUE(watcher1_waiter->RunUntilCalled());
   EXPECT_EQ(1u, watcher1.changes_seen);
   PageChange change = std::move(watcher1.last_page_change_);
-  ASSERT_EQ(2u, change.changed_entries->size());
-  EXPECT_EQ("city", convert::ToString(change.changed_entries->at(0).key));
-  EXPECT_EQ("Paris", ToString(change.changed_entries->at(0).value));
-  EXPECT_EQ("name", convert::ToString(change.changed_entries->at(1).key));
-  EXPECT_EQ("Alice", ToString(change.changed_entries->at(1).value));
+  ASSERT_EQ(2u, change.changed_entries.size());
+  EXPECT_EQ("city", convert::ToString(change.changed_entries.at(0).key));
+  EXPECT_EQ("Paris", ToString(change.changed_entries.at(0).value));
+  EXPECT_EQ("name", convert::ToString(change.changed_entries.at(1).key));
+  EXPECT_EQ("Alice", ToString(change.changed_entries.at(1).value));
 
   waiter = NewWaiter();
   page2->Commit(callback::Capture(waiter->GetCallback(), &status));
@@ -652,11 +652,11 @@ TEST_P(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
   ASSERT_TRUE(watcher2_waiter->RunUntilCalled());
   EXPECT_EQ(1u, watcher2.changes_seen);
   change = std::move(watcher2.last_page_change_);
-  ASSERT_EQ(2u, change.changed_entries->size());
-  EXPECT_EQ("name", convert::ToString(change.changed_entries->at(0).key));
-  EXPECT_EQ("Bob", ToString(change.changed_entries->at(0).value));
-  EXPECT_EQ("phone", convert::ToString(change.changed_entries->at(1).key));
-  EXPECT_EQ("0123456789", ToString(change.changed_entries->at(1).value));
+  ASSERT_EQ(2u, change.changed_entries.size());
+  EXPECT_EQ("name", convert::ToString(change.changed_entries.at(0).key));
+  EXPECT_EQ("Bob", ToString(change.changed_entries.at(0).value));
+  EXPECT_EQ("phone", convert::ToString(change.changed_entries.at(1).key));
+  EXPECT_EQ("0123456789", ToString(change.changed_entries.at(1).value));
 
   // Check that the resolver fectory GetPolicy method is not called.
   RunLoopFor(zx::sec(1));
@@ -683,17 +683,17 @@ TEST_P(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
   // Each change is seen once, and by the correct watcher only.
   EXPECT_EQ(2u, watcher1.changes_seen);
   change = std::move(watcher1.last_page_change_);
-  ASSERT_EQ(2u, change.changed_entries->size());
-  EXPECT_EQ("name", convert::ToString(change.changed_entries->at(0).key));
-  EXPECT_EQ("Bob", ToString(change.changed_entries->at(0).value));
-  EXPECT_EQ("phone", convert::ToString(change.changed_entries->at(1).key));
-  EXPECT_EQ("0123456789", ToString(change.changed_entries->at(1).value));
+  ASSERT_EQ(2u, change.changed_entries.size());
+  EXPECT_EQ("name", convert::ToString(change.changed_entries.at(0).key));
+  EXPECT_EQ("Bob", ToString(change.changed_entries.at(0).value));
+  EXPECT_EQ("phone", convert::ToString(change.changed_entries.at(1).key));
+  EXPECT_EQ("0123456789", ToString(change.changed_entries.at(1).value));
 
   EXPECT_EQ(2u, watcher2.changes_seen);
   change = std::move(watcher2.last_page_change_);
-  ASSERT_EQ(1u, change.changed_entries->size());
-  EXPECT_EQ("city", convert::ToString(change.changed_entries->at(0).key));
-  EXPECT_EQ("Paris", ToString(change.changed_entries->at(0).value));
+  ASSERT_EQ(1u, change.changed_entries.size());
+  EXPECT_EQ("city", convert::ToString(change.changed_entries.at(0).key));
+  EXPECT_EQ("Paris", ToString(change.changed_entries.at(0).value));
 
   EXPECT_EQ(1u, resolver_factory->get_policy_calls);
 }
@@ -795,7 +795,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
   EXPECT_EQ(0u, entries.size());
 
   // Prepare the merged values
-  fidl::VectorPtr<MergedValue> merged_values;
+  std::vector<MergedValue> merged_values;
   {
     MergedValue merged_value;
     merged_value.key = convert::ToArray("name");
@@ -1020,8 +1020,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionClosingPipe) {
   RunLoopFor(zx::msec(500));
 
   // Resolution should not crash the Ledger
-  fidl::VectorPtr<MergedValue> merged_values =
-      fidl::VectorPtr<MergedValue>::New(0);
+  std::vector<MergedValue> merged_values;
   EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values)));
   RunLoopFor(zx::msec(200));
 }
@@ -1124,8 +1123,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionResetFactory) {
   RunLoopFor(zx::msec(500));
 
   // Resolution should not crash the Ledger
-  fidl::VectorPtr<MergedValue> merged_values =
-      fidl::VectorPtr<MergedValue>::New(0);
+  std::vector<MergedValue> merged_values;
 
   EXPECT_TRUE(resolver_impl2->requests[0].Merge(std::move(merged_values)));
   RunLoopFor(zx::msec(200));
@@ -1195,8 +1193,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionMultipartMerge) {
   ASSERT_EQ(1u, resolver_impl->requests.size());
 
   // Prepare the merged values
-  fidl::VectorPtr<MergedValue> merged_values =
-      fidl::VectorPtr<MergedValue>::New(0);
+  std::vector<MergedValue> merged_values;
   {
     MergedValue merged_value;
     merged_value.key = convert::ToArray("name");
@@ -1435,8 +1432,7 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
   EXPECT_EQ(0u, entries.size());
 
   // Prepare the merged values
-  fidl::VectorPtr<MergedValue> merged_values =
-      fidl::VectorPtr<MergedValue>::New(0);
+  std::vector<MergedValue> merged_values;
   {
     MergedValue merged_value;
     merged_value.key = convert::ToArray("city");
@@ -1539,8 +1535,7 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionMultipartMerge) {
   ASSERT_EQ(1u, resolver_impl->requests.size());
 
   // Prepare the merged values
-  fidl::VectorPtr<MergedValue> merged_values =
-      fidl::VectorPtr<MergedValue>::New(0);
+  std::vector<MergedValue> merged_values;
   {
     MergedValue merged_value;
     merged_value.key = convert::ToArray("city");
@@ -1774,8 +1769,7 @@ TEST_P(MergingIntegrationTest, WaitForCustomMerge) {
   EXPECT_TRUE(conflicts_resolved_callback_waiter->NotCalledYet());
 
   // Merge manually.
-  fidl::VectorPtr<MergedValue> merged_values =
-      fidl::VectorPtr<MergedValue>::New(0);
+  std::vector<MergedValue> merged_values;
   EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values),
                                                MergeType::SIMPLE));
   EXPECT_TRUE(conflicts_resolved_callback_waiter->NotCalledYet());
@@ -1868,8 +1862,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionConflictingMerge) {
                           Optional<std::string>("Alice"), changes[0]));
 
   // Prepare the merged values
-  fidl::VectorPtr<MergedValue> merged_values =
-      fidl::VectorPtr<MergedValue>::New(0);
+  std::vector<MergedValue> merged_values;
   {
     MergedValue merged_value;
     merged_value.key = convert::ToArray("name");
@@ -2090,9 +2083,9 @@ TEST_P(MergingIntegrationTest,
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
   EXPECT_EQ(1u, watcher1.changes_seen);
   PageChange change = std::move(watcher1.last_page_change_);
-  ASSERT_EQ(1u, change.changed_entries->size());
-  EXPECT_EQ("name", convert::ToString(change.changed_entries->at(0).key));
-  EXPECT_EQ("Alice", ToString(change.changed_entries->at(0).value));
+  ASSERT_EQ(1u, change.changed_entries.size());
+  EXPECT_EQ("name", convert::ToString(change.changed_entries.at(0).key));
+  EXPECT_EQ("Alice", ToString(change.changed_entries.at(0).value));
 
   waiter = NewWaiter();
   page_conn2->Commit(callback::Capture(waiter->GetCallback(), &status));
@@ -2102,9 +2095,9 @@ TEST_P(MergingIntegrationTest,
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
   EXPECT_EQ(1u, watcher2.changes_seen);
   change = std::move(watcher2.last_page_change_);
-  ASSERT_EQ(1u, change.changed_entries->size());
-  EXPECT_EQ("name", convert::ToString(change.changed_entries->at(0).key));
-  EXPECT_EQ("Bob", ToString(change.changed_entries->at(0).value));
+  ASSERT_EQ(1u, change.changed_entries.size());
+  EXPECT_EQ("name", convert::ToString(change.changed_entries.at(0).key));
+  EXPECT_EQ("Bob", ToString(change.changed_entries.at(0).value));
 
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
   PageSnapshotPtr snapshot3;
@@ -2229,9 +2222,9 @@ TEST_P(MergingIntegrationTest,
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
   EXPECT_EQ(1u, watcher1.changes_seen);
   PageChange change = std::move(watcher1.last_page_change_);
-  ASSERT_EQ(1u, change.changed_entries->size());
-  EXPECT_EQ("name", convert::ToString(change.changed_entries->at(0).key));
-  EXPECT_EQ("Alice", ToString(change.changed_entries->at(0).value));
+  ASSERT_EQ(1u, change.changed_entries.size());
+  EXPECT_EQ("name", convert::ToString(change.changed_entries.at(0).key));
+  EXPECT_EQ("Alice", ToString(change.changed_entries.at(0).value));
 
   waiter = NewWaiter();
   page_conn2->Commit(callback::Capture(waiter->GetCallback(), &status));
@@ -2241,9 +2234,9 @@ TEST_P(MergingIntegrationTest,
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
   EXPECT_EQ(1u, watcher2.changes_seen);
   change = std::move(watcher2.last_page_change_);
-  ASSERT_EQ(1u, change.changed_entries->size());
-  EXPECT_EQ("name", convert::ToString(change.changed_entries->at(0).key));
-  EXPECT_EQ("Bob", ToString(change.changed_entries->at(0).value));
+  ASSERT_EQ(1u, change.changed_entries.size());
+  EXPECT_EQ("name", convert::ToString(change.changed_entries.at(0).key));
+  EXPECT_EQ("Bob", ToString(change.changed_entries.at(0).value));
 
   RunLoopFor(zx::sec(1));
   EXPECT_TRUE(watcher_waiter->NotCalledYet());

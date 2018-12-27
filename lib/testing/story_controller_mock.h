@@ -66,7 +66,7 @@ class StoryControllerMock : public fuchsia::modular::StoryController {
 
   // |fuchsia::modular::StoryController|
   void GetModuleController(
-      fidl::VectorPtr<fidl::StringPtr> module_path,
+      std::vector<std::string> module_path,
       fidl::InterfaceRequest<fuchsia::modular::ModuleController> request)
       override {
     FXL_NOTIMPLEMENTED();

@@ -272,7 +272,7 @@ void AgentContextImpl::ScheduleTask(fuchsia::modular::TaskInfo task_info) {
   agent_runner_->ScheduleTask(url_, std::move(task_info));
 }
 
-void AgentContextImpl::DeleteTask(fidl::StringPtr task_id) {
+void AgentContextImpl::DeleteTask(std::string task_id) {
   agent_runner_->DeleteTask(url_, task_id);
 }
 
@@ -280,7 +280,7 @@ void AgentContextImpl::Authorize(
     fuchsia::auth::AppConfig app_config,
     fidl::InterfaceHandle<fuchsia::auth::AuthenticationUIContext>
         auth_ui_context,
-    fidl::VectorPtr<::fidl::StringPtr> app_scopes,
+    std::vector<::std::string> app_scopes,
     fidl::StringPtr user_profile_id, fidl::StringPtr auth_code,
     AuthorizeCallback callback) {
   FXL_LOG(ERROR) << "AgentContextImpl::Authorize() not supported from agent "
@@ -289,8 +289,8 @@ void AgentContextImpl::Authorize(
 }
 
 void AgentContextImpl::GetAccessToken(
-    fuchsia::auth::AppConfig app_config, fidl::StringPtr user_profile_id,
-    fidl::VectorPtr<::fidl::StringPtr> app_scopes,
+    fuchsia::auth::AppConfig app_config, std::string user_profile_id,
+    std::vector<::std::string> app_scopes,
     GetAccessTokenCallback callback) {
   FXL_CHECK(token_manager_);
 
@@ -302,7 +302,7 @@ void AgentContextImpl::GetAccessToken(
 }
 
 void AgentContextImpl::GetIdToken(fuchsia::auth::AppConfig app_config,
-                                  fidl::StringPtr user_profile_id,
+                                  std::string user_profile_id,
                                   fidl::StringPtr audience,
                                   GetIdTokenCallback callback) {
   FXL_CHECK(token_manager_);
@@ -314,9 +314,9 @@ void AgentContextImpl::GetIdToken(fuchsia::auth::AppConfig app_config,
 }
 
 void AgentContextImpl::GetFirebaseToken(fuchsia::auth::AppConfig app_config,
-                                        fidl::StringPtr user_profile_id,
-                                        fidl::StringPtr audience,
-                                        fidl::StringPtr firebase_api_key,
+                                        std::string user_profile_id,
+                                        std::string audience,
+                                        std::string firebase_api_key,
                                         GetFirebaseTokenCallback callback) {
   FXL_CHECK(token_manager_);
 
@@ -328,7 +328,7 @@ void AgentContextImpl::GetFirebaseToken(fuchsia::auth::AppConfig app_config,
 }
 
 void AgentContextImpl::DeleteAllTokens(fuchsia::auth::AppConfig app_config,
-                                       fidl::StringPtr user_profile_id,
+                                       std::string user_profile_id,
                                        DeleteAllTokensCallback callback) {
   FXL_LOG(ERROR) << "AgentContextImpl::DeleteAllTokens() not supported from "
                  << "agent context";

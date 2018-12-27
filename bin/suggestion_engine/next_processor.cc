@@ -165,11 +165,9 @@ void NextProcessor::NotifyOfResults(
     const size_t max_results) {
   const auto& suggestion_vector = suggestions_.Get();
 
-  fidl::VectorPtr<fuchsia::modular::Suggestion> window;
-  // Prefer to return an array of size 0 vs. null
-  window.resize(0);
+  std::vector<fuchsia::modular::Suggestion> window;
   for (size_t i = 0;
-       window->size() < max_results && i < suggestion_vector.size(); i++) {
+       window.size() < max_results && i < suggestion_vector.size(); i++) {
     if (!suggestion_vector[i]->hidden) {
       window.push_back(CreateSuggestion(*suggestion_vector[i]));
     }

@@ -194,7 +194,7 @@ void ConvergenceBenchmark::Start(int step) {
   }
 
   for (int device_id = 0; device_id < device_count_; device_id++) {
-    fidl::VectorPtr<uint8_t> key =
+    std::vector<uint8_t> key =
         generator_.MakeKey(device_count_ * step + device_id, kKeySize);
     // Insert each key N times, as we will receive N notifications - one for
     // each connection, sender included.
@@ -218,7 +218,7 @@ void ConvergenceBenchmark::OnChange(PageChange page_change,
                                     ResultState result_state,
                                     OnChangeCallback callback) {
   FXL_DCHECK(result_state == ResultState::COMPLETED);
-  for (auto& change : *page_change.changed_entries) {
+  for (auto& change : page_change.changed_entries) {
     auto find_one = remaining_keys_.find(convert::ToString(change.key));
     remaining_keys_.erase(find_one);
   }

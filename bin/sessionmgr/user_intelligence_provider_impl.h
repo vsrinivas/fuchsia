@@ -56,10 +56,10 @@ class UserIntelligenceProviderImpl
 
   void StartAgents(fidl::InterfaceHandle<fuchsia::modular::ComponentContext>
                        component_context_handle,
-                   fidl::VectorPtr<fidl::StringPtr> session_agents,
-                   fidl::VectorPtr<fidl::StringPtr> startup_agents) override;
+                   std::vector<std::string> session_agents,
+                   std::vector<std::string> startup_agents) override;
 
-  void GetServicesForAgent(fidl::StringPtr url,
+  void GetServicesForAgent(std::string url,
                            GetServicesForAgentCallback callback) override;
 
  private:
@@ -94,7 +94,7 @@ class UserIntelligenceProviderImpl
   // A ServiceProviderInitializer that adds standard agent services, including
   // attributed context and suggestion service entry points. Returns the names
   // of the services added.
-  fidl::VectorPtr<fidl::StringPtr> AddAgentServices(
+  std::vector<std::string> AddAgentServices(
       const std::string& url, component::ServiceNamespace* agent_host);
 
   // Starts suggestion engine.

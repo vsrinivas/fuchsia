@@ -36,8 +36,8 @@ StoryInfoAcquirer::StoryInfoAcquirer(modular::AgentHost* const agent_host)
       story_provider_.NewRequest());
   story_provider_->GetStories(
       story_provider_watcher_binding_.NewBinding(),
-      [this](fidl::VectorPtr<fuchsia::modular::StoryInfo> stories) {
-        for (const auto& story : *stories) {
+      [this](std::vector<fuchsia::modular::StoryInfo> stories) {
+        for (const auto& story : stories) {
           stories_.emplace(
               std::make_pair(story.id, std::make_unique<StoryWatcherImpl>(
                                            this, context_writer_.get(),
@@ -95,7 +95,7 @@ void StoryInfoAcquirer::OnFocusChange(fuchsia::modular::FocusInfoPtr info) {
 }
 
 void StoryInfoAcquirer::OnVisibleStoriesChange(
-    fidl::VectorPtr<fidl::StringPtr> ids) {
+    fidl::VectorPtr<std::string> ids) {
   // TODO(thatguy)
 }
 
@@ -115,8 +115,8 @@ void StoryInfoAcquirer::OnChange(fuchsia::modular::StoryInfo info,
   it->second->OnStoryStateChange(std::move(info), state);
 }
 
-void StoryInfoAcquirer::OnDelete(fidl::StringPtr story_id) {
-  const std::string id = story_id.get();
+void StoryInfoAcquirer::OnDelete(std::string story_id) {
+  const std::string id = story_id;
   // TODO(thatguy)
 }
 

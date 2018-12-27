@@ -19,7 +19,7 @@
 
 namespace todo {
 
-using Key = fidl::VectorPtr<uint8_t>;
+using Key = std::vector<uint8_t>;
 
 class TodoApp : public fuchsia::ledger::PageWatcher,
                 fuchsia::modular::Lifecycle {
@@ -37,11 +37,11 @@ class TodoApp : public fuchsia::ledger::PageWatcher,
 
   void List(fuchsia::ledger::PageSnapshotPtr snapshot);
 
-  void GetKeys(std::function<void(fidl::VectorPtr<Key>)> callback);
+  void GetKeys(std::function<void(std::vector<Key>)> callback);
 
   void AddNew();
 
-  void DeleteOne(fidl::VectorPtr<Key> keys);
+  void DeleteOne(std::vector<Key> keys);
 
   void Act();
 

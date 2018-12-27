@@ -7,7 +7,7 @@
 namespace modular {
 
 FocusModCommandRunner::FocusModCommandRunner(
-    fit::function<void(fidl::StringPtr, fidl::VectorPtr<fidl::StringPtr>)>
+    fit::function<void(std::string, std::vector<std::string>)>
         module_focuser)
     : module_focuser_(std::move(module_focuser)) {}
 
@@ -19,7 +19,7 @@ void FocusModCommandRunner::Execute(
     std::function<void(fuchsia::modular::ExecuteResult)> done) {
   fuchsia::modular::ExecuteResult result;
 
-  if (command.focus_mod().mod_name->empty()) {
+  if (command.focus_mod().mod_name.empty()) {
     result.status = fuchsia::modular::ExecuteStatus::INVALID_COMMAND;
     result.error_message = "No mod_name provided.";
     done(std::move(result));

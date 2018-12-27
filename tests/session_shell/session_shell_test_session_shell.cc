@@ -63,7 +63,7 @@ class StoryProviderStateWatcherImpl : fuchsia::modular::StoryProviderWatcher {
   int on_delete_called_{};
 
   // |fuchsia::modular::StoryProviderWatcher|
-  void OnDelete(fidl::StringPtr story_id) override {
+  void OnDelete(std::string story_id) override {
     FXL_LOG(INFO) << "StoryProviderStateWatcherImpl::OnDelete() " << story_id;
 
     if (++on_delete_called_ == 1) {
@@ -230,7 +230,7 @@ class TestApp : public modular::testing::SessionShellBase {
 
   void TestStoryProvider_GetStories() {
     story_provider()->GetStories(
-        nullptr, [this](fidl::VectorPtr<fuchsia::modular::StoryInfo> stories) {
+        nullptr, [this](std::vector<fuchsia::modular::StoryInfo> stories) {
           previous_stories_.Pass();
           TestStoryProvider_GetStoryInfo(std::move(stories));
         });
@@ -239,12 +239,12 @@ class TestApp : public modular::testing::SessionShellBase {
   TestPoint get_story_info_{"StoryProvider.GetStoryInfo()"};
 
   void TestStoryProvider_GetStoryInfo(
-      fidl::VectorPtr<fuchsia::modular::StoryInfo> stories) {
-    if (stories->empty()) {
+      std::vector<fuchsia::modular::StoryInfo> stories) {
+    if (stories.empty()) {
       get_story_info_.Pass();
     } else {
-      FXL_LOG(ERROR) << "StoryProvider.GetStoryInfo() " << stories->size();
-      for (const auto& item : stories.get()) {
+      FXL_LOG(ERROR) << "StoryProvider.GetStoryInfo() " << stories.size();
+      for (const auto& item : stories) {
         FXL_LOG(INFO) << item.id;
       }
     }
@@ -276,7 +276,7 @@ class TestApp : public modular::testing::SessionShellBase {
     fuchsia::modular::StoryCommand command;
     command.set_add_mod(std::move(add_mod));
 
-    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+    std::vector<fuchsia::modular::StoryCommand> commands;
     commands.push_back(std::move(command));
 
     story_puppet_master_->Enqueue(std::move(commands));
@@ -338,7 +338,7 @@ class TestApp : public modular::testing::SessionShellBase {
     fuchsia::modular::StoryCommand command;
     command.set_add_mod(std::move(add_mod));
 
-    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+    std::vector<fuchsia::modular::StoryCommand> commands;
     commands.push_back(std::move(command));
 
     story_puppet_master_->Enqueue(std::move(commands));
@@ -365,8 +365,8 @@ class TestApp : public modular::testing::SessionShellBase {
 
   void TestStory2_GetModules() {
     story_controller_->GetModules(
-        [this](fidl::VectorPtr<fuchsia::modular::ModuleData> modules) {
-          if (modules->size() == 1) {
+        [this](std::vector<fuchsia::modular::ModuleData> modules) {
+          if (modules.size() == 1) {
             story2_get_modules_.Pass();
           }
 
@@ -463,15 +463,15 @@ class TestApp : public modular::testing::SessionShellBase {
 
   void TestStory3_GetStories() {
     story_provider()->GetStories(
-        nullptr, [this](fidl::VectorPtr<fuchsia::modular::StoryInfo> stories) {
+        nullptr, [this](std::vector<fuchsia::modular::StoryInfo> stories) {
           // Since this is a kind-of-proto story, it shouldn't appear in
           // GetStories calls. Note that we still expect 1 story to be here
           // since Story1 wasn't deleted.
-          if (stories->size() == 1 && stories->at(0).id != story_info_.id) {
+          if (stories.size() == 1 && stories.at(0).id != story_info_.id) {
             story3_previous_stories_.Pass();
           } else {
-            FXL_LOG(ERROR) << "StoryProvider.GetStories() " << stories->size();
-            for (const auto& item : stories.get()) {
+            FXL_LOG(ERROR) << "StoryProvider.GetStories() " << stories.size();
+            for (const auto& item : stories) {
               FXL_LOG(INFO) << item.id;
             }
           }
@@ -547,7 +547,7 @@ class TestApp : public modular::testing::SessionShellBase {
     fuchsia::modular::StoryCommand command;
     command.set_add_mod(std::move(add_mod));
 
-    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+    std::vector<fuchsia::modular::StoryCommand> commands;
     commands.push_back(std::move(command));
 
     story_puppet_master_->Enqueue(std::move(commands));
@@ -644,7 +644,7 @@ class TestApp : public modular::testing::SessionShellBase {
     fuchsia::modular::StoryCommand command;
     command.set_add_mod(std::move(add_mod));
 
-    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+    std::vector<fuchsia::modular::StoryCommand> commands;
     commands.push_back(std::move(command));
 
     story_puppet_master_->Enqueue(std::move(commands));
@@ -745,7 +745,7 @@ class TestApp : public modular::testing::SessionShellBase {
     fuchsia::modular::StoryCommand command;
     command.set_add_mod(std::move(add_mod));
 
-    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+    std::vector<fuchsia::modular::StoryCommand> commands;
     commands.push_back(std::move(command));
 
     story_puppet_master_->Enqueue(std::move(commands));

@@ -167,17 +167,17 @@ class MyEntityProvider : AgentImpl::Delegate,
   }
 
   // |fuchsia::modular::EntityProvider|
-  void GetTypes(fidl::StringPtr cookie, GetTypesCallback callback) override {
-    fidl::VectorPtr<fidl::StringPtr> types;
+  void GetTypes(std::string cookie, GetTypesCallback callback) override {
+    std::vector<std::string> types;
     types.push_back("MyType");
     callback(std::move(types));
   }
 
   // |fuchsia::modular::EntityProvider|
-  void GetData(fidl::StringPtr cookie, fidl::StringPtr type,
+  void GetData(std::string cookie, std::string type,
                GetDataCallback callback) override {
     fsl::SizedVmo vmo;
-    FXL_CHECK(fsl::VmoFromString(type.get() + ":MyData", &vmo));
+    FXL_CHECK(fsl::VmoFromString(type + ":MyData", &vmo));
     auto vmo_ptr =
         std::make_unique<fuchsia::mem::Buffer>(std::move(vmo).ToTransport());
 
@@ -185,7 +185,7 @@ class MyEntityProvider : AgentImpl::Delegate,
   }
 
   // |fuchsia::modular::EntityProvider|
-  void WriteData(fidl::StringPtr cookie, fidl::StringPtr type,
+  void WriteData(std::string cookie, std::string type,
                  fuchsia::mem::Buffer data,
                  WriteDataCallback callback) override {
     // TODO(MI4-1301)
@@ -194,7 +194,7 @@ class MyEntityProvider : AgentImpl::Delegate,
 
   // |fuchsia::modular::EntityProvider|
   void Watch(
-      fidl::StringPtr cookie, fidl::StringPtr type,
+      std::string cookie, std::string type,
       fidl::InterfaceHandle<fuchsia::modular::EntityWatcher> watcher) override {
     // TODO(MI4-1301)
     FXL_NOTIMPLEMENTED();
@@ -259,9 +259,9 @@ TEST_F(EntityProviderRunnerTest, Basic) {
                                                 entity.NewRequest());
 
   std::map<std::string, uint32_t> counts;
-  entity->GetTypes([&counts](const fidl::VectorPtr<fidl::StringPtr>& types) {
-    EXPECT_EQ(1u, types->size());
-    EXPECT_EQ("MyType", types->at(0));
+  entity->GetTypes([&counts](const std::vector<std::string>& types) {
+    EXPECT_EQ(1u, types.size());
+    EXPECT_EQ("MyType", types.at(0));
     counts["GetTypes"]++;
   });
   entity->GetData("MyType",
@@ -288,9 +288,9 @@ TEST_F(EntityProviderRunnerTest, DataEntity) {
   fuchsia::modular::EntityPtr entity;
   entity_resolver->ResolveEntity(entity_ref, entity.NewRequest());
 
-  fidl::VectorPtr<fidl::StringPtr> output_types;
-  entity->GetTypes([&output_types](fidl::VectorPtr<fidl::StringPtr> result) {
-    output_types = std::move(result);
+  fidl::VectorPtr<std::string> output_types;
+  entity->GetTypes([&output_types](std::vector<std::string> result) {
+    output_types.reset(std::move(result));
   });
   RunLoopWithTimeoutOrUntil(
       [&output_types] { return !output_types.is_null(); });

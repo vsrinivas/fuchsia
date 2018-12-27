@@ -82,8 +82,8 @@ class AgentRunnerStorageImpl::InitializeCall : public Operation<> {
     }
 
     for (const auto& entry : entries_) {
-      std::string key(reinterpret_cast<const char*>(entry.key->data()),
-                      entry.key->size());
+      std::string key(reinterpret_cast<const char*>(entry.key.data()),
+                      entry.key.size());
       std::string value;
       if (!fsl::StringFromVmo(*entry.value, &value)) {
         FXL_LOG(ERROR) << trace_name() << " " << key << " "

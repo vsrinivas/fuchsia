@@ -43,7 +43,7 @@ class DeviceMapImpl : fuchsia::modular::DeviceMap, PageClient {
   void GetCurrentDevice(GetCurrentDeviceCallback callback) override;
 
   // |fuchsia::modular::DeviceMap|
-  void SetCurrentDeviceProfile(::fidl::StringPtr profile) override;
+  void SetCurrentDeviceProfile(::std::string profile) override;
 
   // |fuchsia::modular::DeviceMap|
   void WatchDeviceMap(fidl::InterfaceHandle<fuchsia::modular::DeviceMapWatcher>

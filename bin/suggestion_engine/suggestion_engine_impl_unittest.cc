@@ -20,20 +20,20 @@ namespace {
 class TestNextListener : public fuchsia::modular::NextListener {
  public:
   void OnNextResults(
-      fidl::VectorPtr<fuchsia::modular::Suggestion> suggestions) override {
+      std::vector<fuchsia::modular::Suggestion> suggestions) override {
     last_suggestions_ = std::move(suggestions);
   }
 
-  void Reset() { last_suggestions_->clear(); }
+  void Reset() { last_suggestions_.clear(); }
 
   void OnProcessingChange(bool processing) override{};
 
-  fidl::VectorPtr<fuchsia::modular::Suggestion>& last_suggestions() {
+  std::vector<fuchsia::modular::Suggestion>& last_suggestions() {
     return last_suggestions_;
   }
 
  private:
-  fidl::VectorPtr<fuchsia::modular::Suggestion> last_suggestions_;
+  std::vector<fuchsia::modular::Suggestion> last_suggestions_;
 };
 
 class TestInterruptionListener : public fuchsia::modular::InterruptionListener {
@@ -246,8 +246,8 @@ TEST_F(SuggestionEngineTest, AddNextProposal) {
 
   // We should see proposal in listener.
   auto& results = next_listener_.last_suggestions();
-  ASSERT_EQ(1u, results->size());
-  EXPECT_EQ("test_proposal", results->at(0).display.headline);
+  ASSERT_EQ(1u, results.size());
+  EXPECT_EQ("test_proposal", results.at(0).display.headline);
 }
 
 TEST_F(SuggestionEngineTest, OnlyGetsMaxProposals) {
@@ -262,9 +262,9 @@ TEST_F(SuggestionEngineTest, OnlyGetsMaxProposals) {
 
   // We should see 2 proposals in listener.
   auto& results = next_listener_.last_suggestions();
-  ASSERT_EQ(2u, results->size());
-  EXPECT_EQ("foo", results->at(0).display.headline);
-  EXPECT_EQ("bar", results->at(1).display.headline);
+  ASSERT_EQ(2u, results.size());
+  EXPECT_EQ("foo", results.at(0).display.headline);
+  EXPECT_EQ("bar", results.at(1).display.headline);
 }
 
 TEST_F(SuggestionEngineTest, AddNextProposalInterruption) {
@@ -282,7 +282,7 @@ TEST_F(SuggestionEngineTest, AddNextProposalInterruption) {
 
   // Suggestion shouldn't be in NEXT yet since it's interrupting.
   auto& results = next_listener_.last_suggestions();
-  EXPECT_TRUE(results->empty());
+  EXPECT_TRUE(results.empty());
 }
 
 TEST_F(SuggestionEngineTest, AddNextProposalRichNotAllowed) {
@@ -298,9 +298,9 @@ TEST_F(SuggestionEngineTest, AddNextProposalRichNotAllowed) {
 
   // Suggestion shouldn't be rich: it has no preloaded story_id.
   auto& results = next_listener_.last_suggestions();
-  ASSERT_EQ(1u, results->size());
-  EXPECT_EQ("foo", results->at(0).display.headline);
-  EXPECT_TRUE(results->at(0).preloaded_story_id->empty());
+  ASSERT_EQ(1u, results.size());
+  EXPECT_EQ("foo", results.at(0).display.headline);
+  EXPECT_TRUE(results.at(0).preloaded_story_id->empty());
 }
 
 TEST_F(SuggestionEngineTest, AddNextProposalRich) {
@@ -312,13 +312,13 @@ TEST_F(SuggestionEngineTest, AddNextProposalRich) {
                      fuchsia::modular::SurfaceArrangement::ONTOP);
   proposal_publisher_->Propose(std::move(proposal));
 
-  RunLoopUntil([&] { return next_listener_.last_suggestions()->size() == 1; });
+  RunLoopUntil([&] { return next_listener_.last_suggestions().size() == 1; });
 
   // Suggestion should be rich: it has a preloaded story_id.
   auto& results = next_listener_.last_suggestions();
-  EXPECT_EQ("foo_rich", results->at(0).display.headline);
-  EXPECT_FALSE(results->at(0).preloaded_story_id->empty());
-  auto story_name = results->at(0).preloaded_story_id;
+  EXPECT_EQ("foo_rich", results.at(0).display.headline);
+  EXPECT_FALSE(results.at(0).preloaded_story_id->empty());
+  auto story_name = results.at(0).preloaded_story_id;
 
   // The executor should have been called with a command to add a mod and
   // created a story.
@@ -329,8 +329,8 @@ TEST_F(SuggestionEngineTest, AddNextProposalRich) {
   ASSERT_TRUE(commands.at(0).is_add_mod());
 
   auto& command = commands.at(0).add_mod();
-  ASSERT_EQ(1u, command.mod_name->size());
-  EXPECT_EQ("mod_name", command.mod_name->at(0));
+  ASSERT_EQ(1u, command.mod_name.size());
+  EXPECT_EQ("mod_name", command.mod_name.at(0));
   EXPECT_EQ("mod_url", command.intent.handler);
   EXPECT_EQ(fuchsia::modular::SurfaceArrangement::ONTOP,
             command.surface_relation.arrangement);
@@ -361,7 +361,7 @@ TEST_F(SuggestionEngineTest, AddNextProposalRichReusesStory) {
     proposal_publisher_->Propose(std::move(proposal));
   }
 
-  RunLoopUntil([&] { return next_listener_.last_suggestions()->size() == 1; });
+  RunLoopUntil([&] { return next_listener_.last_suggestions().size() == 1; });
 
   // Up to here we expect the same as in the previous test (AddNextProposalRich)
   // Submitting a new proposal with the same story_name should result on its
@@ -377,7 +377,7 @@ TEST_F(SuggestionEngineTest, AddNextProposalRichReusesStory) {
   }
 
   RunLoopUntil([&] { return test_executor_.execute_count() == 1; });
-  EXPECT_TRUE(next_listener_.last_suggestions()->empty());
+  EXPECT_TRUE(next_listener_.last_suggestions().empty());
 
   // The executor should have been called with a command to add a mod and
   // created a story.
@@ -388,8 +388,8 @@ TEST_F(SuggestionEngineTest, AddNextProposalRichReusesStory) {
   ASSERT_TRUE(commands.at(0).is_add_mod());
 
   auto& command = commands.at(0).add_mod();
-  ASSERT_EQ(1u, command.mod_name->size());
-  EXPECT_EQ("mod_name", command.mod_name->at(0));
+  ASSERT_EQ(1u, command.mod_name.size());
+  EXPECT_EQ("mod_name", command.mod_name.at(0));
   EXPECT_EQ("mod_url", command.intent.handler);
   EXPECT_EQ(fuchsia::modular::SurfaceArrangement::COPRESENT,
             command.surface_relation.arrangement);
@@ -417,11 +417,11 @@ TEST_F(SuggestionEngineTest, AddNextProposalRichRespectsStoryName) {
                      fuchsia::modular::SurfaceArrangement::ONTOP);
   proposal_publisher_->Propose(std::move(proposal));
 
-  RunLoopUntil([&] { return next_listener_.last_suggestions()->size() == 1; });
+  RunLoopUntil([&] { return next_listener_.last_suggestions().size() == 1; });
 
   // Suggestion should be rich: it has a preloaded story_id.
   auto& results = next_listener_.last_suggestions();
-  EXPECT_EQ("foo_story", results->at(0).preloaded_story_id);
+  EXPECT_EQ("foo_story", results.at(0).preloaded_story_id);
 
   // The executor should have been called with a command to add a mod and
   // created a story.
@@ -451,7 +451,7 @@ TEST_F(SuggestionEngineTest, RemoveNextProposal) {
   RunLoopUntilIdle();
 
   auto& results = next_listener_.last_suggestions();
-  EXPECT_TRUE(results->empty());
+  EXPECT_TRUE(results.empty());
 }
 
 TEST_F(SuggestionEngineTest, RemoveNextProposalRich) {
@@ -464,12 +464,12 @@ TEST_F(SuggestionEngineTest, RemoveNextProposalRich) {
 
   // TODO(miguelfrde): add an operation queue in the suggestion engine and
   // remove this wait.
-  RunLoopUntil([&] { return next_listener_.last_suggestions()->size() == 1; });
+  RunLoopUntil([&] { return next_listener_.last_suggestions().size() == 1; });
 
   // Remove proposal.
   proposal_publisher_->Remove("1");
 
-  RunLoopUntil([&] { return next_listener_.last_suggestions()->empty(); });
+  RunLoopUntil([&] { return next_listener_.last_suggestions().empty(); });
 
   // The story that at some point was created when adding the rich suggestion
   // (not tested since other tests already cover it) should have been deleted.
@@ -499,8 +499,8 @@ TEST_F(SuggestionEngineTest, NotifyInteractionSelected) {
 
   // Get id of the resulting suggestion.
   auto& results = next_listener_.last_suggestions();
-  ASSERT_EQ(1u, results->size());
-  auto suggestion_id = results->at(0).uuid;
+  ASSERT_EQ(1u, results.size());
+  auto suggestion_id = results.at(0).uuid;
 
   fuchsia::modular::Interaction interaction;
   interaction.type = fuchsia::modular::InteractionType::SELECTED;
@@ -520,20 +520,20 @@ TEST_F(SuggestionEngineTest, NotifyInteractionSelected) {
   EXPECT_TRUE(commands.at(3).is_set_link_value());
 
   auto& add_mod = commands.at(0).add_mod();
-  ASSERT_EQ(1u, add_mod.mod_name->size());
-  EXPECT_EQ("mod_name", add_mod.mod_name->at(0));
+  ASSERT_EQ(1u, add_mod.mod_name.size());
+  EXPECT_EQ("mod_name", add_mod.mod_name.at(0));
   EXPECT_EQ("mod_url", add_mod.intent.handler);
 
   auto& set_focus_state = commands.at(1).set_focus_state();
   EXPECT_TRUE(set_focus_state.focused);
 
   auto& focus_mod = commands.at(2).focus_mod();
-  ASSERT_EQ(1u, focus_mod.mod_name->size());
-  EXPECT_EQ("mod_name", focus_mod.mod_name->at(0));
+  ASSERT_EQ(1u, focus_mod.mod_name.size());
+  EXPECT_EQ("mod_name", focus_mod.mod_name.at(0));
 
   auto& set_link_value = commands.at(3).set_link_value();
-  ASSERT_EQ(1u, set_link_value.path.module_path->size());
-  EXPECT_EQ("mod_name", set_link_value.path.module_path->at(0));
+  ASSERT_EQ(1u, set_link_value.path.module_path.size());
+  EXPECT_EQ("mod_name", set_link_value.path.module_path.at(0));
   EXPECT_EQ("foo_link_name", set_link_value.path.link_name);
   std::string link_value;
   FXL_CHECK(fsl::StringFromVmo(*set_link_value.value, &link_value));
@@ -552,7 +552,7 @@ TEST_F(SuggestionEngineTest, NotifyInteractionSelected) {
   // We should have been notified with no suggestions after selecting this
   // suggestion.
   auto& listener_results = next_listener_.last_suggestions();
-  EXPECT_TRUE(listener_results->empty());
+  EXPECT_TRUE(listener_results.empty());
 }
 
 TEST_F(SuggestionEngineTest, NotifyInteractionSelectedWithStoryName) {
@@ -568,8 +568,8 @@ TEST_F(SuggestionEngineTest, NotifyInteractionSelectedWithStoryName) {
 
   // Get id of the resulting suggestion.
   auto& results = next_listener_.last_suggestions();
-  ASSERT_EQ(1u, results->size());
-  auto suggestion_id = results->at(0).uuid;
+  ASSERT_EQ(1u, results.size());
+  auto suggestion_id = results.at(0).uuid;
 
   // Select suggestion.
   fuchsia::modular::Interaction interaction;
@@ -587,8 +587,8 @@ TEST_F(SuggestionEngineTest, NotifyInteractionSelectedWithStoryName) {
   ASSERT_EQ(1u, commands.size());
   EXPECT_TRUE(commands.at(0).is_focus_mod());
   auto& focus_mod = commands.at(0).focus_mod();
-  ASSERT_EQ(1u, focus_mod.mod_name->size());
-  EXPECT_EQ("mod_name", focus_mod.mod_name->at(0));
+  ASSERT_EQ(1u, focus_mod.mod_name.size());
+  EXPECT_EQ("mod_name", focus_mod.mod_name.at(0));
 
   // Ensure a regular story was created when we executed the proposal.
   bool done{};
@@ -603,7 +603,7 @@ TEST_F(SuggestionEngineTest, NotifyInteractionSelectedWithStoryName) {
   // We should have been notified with no suggestions after selecting this
   // suggestion.
   auto& listener_results = next_listener_.last_suggestions();
-  EXPECT_TRUE(listener_results->empty());
+  EXPECT_TRUE(listener_results.empty());
 }
 
 TEST_F(SuggestionEngineTest, NotifyInteractionDismissed) {
@@ -618,8 +618,8 @@ TEST_F(SuggestionEngineTest, NotifyInteractionDismissed) {
 
   // Get id of the resulting suggestion.
   auto& results = next_listener_.last_suggestions();
-  ASSERT_EQ(1u, results->size());
-  auto suggestion_id = results->at(0).uuid;
+  ASSERT_EQ(1u, results.size());
+  auto suggestion_id = results.at(0).uuid;
 
   fuchsia::modular::Interaction interaction;
   interaction.type = fuchsia::modular::InteractionType::DISMISSED;
@@ -634,7 +634,7 @@ TEST_F(SuggestionEngineTest, NotifyInteractionDismissed) {
   // We should have been notified with no suggestions after dismissing this
   // suggestion.
   auto& listener_results = next_listener_.last_suggestions();
-  EXPECT_TRUE(listener_results->empty());
+  EXPECT_TRUE(listener_results.empty());
 }
 
 TEST_F(SuggestionEngineTest, NotifyInteractionDismissedWithStoryName) {
@@ -650,8 +650,8 @@ TEST_F(SuggestionEngineTest, NotifyInteractionDismissedWithStoryName) {
 
   // Get id of the resulting suggestion.
   auto& results = next_listener_.last_suggestions();
-  ASSERT_EQ(1u, results->size());
-  auto suggestion_id = results->at(0).uuid;
+  ASSERT_EQ(1u, results.size());
+  auto suggestion_id = results.at(0).uuid;
 
   fuchsia::modular::Interaction interaction;
   interaction.type = fuchsia::modular::InteractionType::DISMISSED;
@@ -666,7 +666,7 @@ TEST_F(SuggestionEngineTest, NotifyInteractionDismissedWithStoryName) {
   // We should have been notified with no suggestions after dismissing this
   // suggestion.
   auto& listener_results = next_listener_.last_suggestions();
-  EXPECT_TRUE(listener_results->empty());
+  EXPECT_TRUE(listener_results.empty());
 
   // Ensure no story was created when we executed the proposal.
   bool done{};
@@ -686,13 +686,13 @@ TEST_F(SuggestionEngineTest, NotifyInteractionSelectedRich) {
   AddFocusModuleAction(&proposal, "mod_name");
   proposal_publisher_->Propose(std::move(proposal));
 
-  RunLoopUntil([&] { return next_listener_.last_suggestions()->size() == 1; });
+  RunLoopUntil([&] { return next_listener_.last_suggestions().size() == 1; });
 
   // Get id of the resulting suggestion.
   auto& results = next_listener_.last_suggestions();
-  auto suggestion_id = results->at(0).uuid;
-  EXPECT_FALSE(results->at(0).preloaded_story_id->empty());
-  auto story_name = results->at(0).preloaded_story_id;
+  auto suggestion_id = results.at(0).uuid;
+  EXPECT_FALSE(results.at(0).preloaded_story_id->empty());
+  auto story_name = results.at(0).preloaded_story_id;
 
   test_executor_.Reset();
 
@@ -726,15 +726,15 @@ TEST_F(SuggestionEngineTest, NotifyInteractionDismissedRich) {
   AddFocusModuleAction(&proposal, "mod_name");
   proposal_publisher_->Propose(std::move(proposal));
 
-  RunLoopUntil([&] { return next_listener_.last_suggestions()->size() == 1; });
+  RunLoopUntil([&] { return next_listener_.last_suggestions().size() == 1; });
 
   // Get id and story of the resulting suggestion.
   auto& results = next_listener_.last_suggestions();
   EXPECT_EQ(1, test_executor_.execute_count());
-  auto suggestion_id = results->at(0).uuid;
+  auto suggestion_id = results.at(0).uuid;
 
-  EXPECT_FALSE(results->at(0).preloaded_story_id->empty());
-  auto story_name = results->at(0).preloaded_story_id;
+  EXPECT_FALSE(results.at(0).preloaded_story_id->empty());
+  auto story_name = results.at(0).preloaded_story_id;
 
   test_executor_.Reset();
 
@@ -743,7 +743,7 @@ TEST_F(SuggestionEngineTest, NotifyInteractionDismissedRich) {
   suggestion_engine_impl_->NotifyInteraction(suggestion_id,
                                              std::move(interaction));
 
-  RunLoopUntil([&] { return next_listener_.last_suggestions()->empty(); });
+  RunLoopUntil([&] { return next_listener_.last_suggestions().empty(); });
 
   // The executor shouldn't have been called again.
   EXPECT_EQ(0, test_executor_.execute_count());
@@ -769,21 +769,21 @@ TEST_F(SuggestionEngineTest, NotifyInteractionSnoozedInterruption) {
 
   // Get id of the resulting suggestion.
   auto& suggestion = interruption_listener_.last_suggestion();
-  EXPECT_FALSE(suggestion.uuid->empty());
+  EXPECT_FALSE(suggestion.uuid.empty());
   auto suggestion_id = suggestion.uuid;
 
-  EXPECT_TRUE(next_listener_.last_suggestions()->empty());
+  EXPECT_TRUE(next_listener_.last_suggestions().empty());
 
   fuchsia::modular::Interaction interaction;
   interaction.type = fuchsia::modular::InteractionType::SNOOZED;
   suggestion_engine_impl_->NotifyInteraction(suggestion_id,
                                              std::move(interaction));
 
-  RunLoopUntil([&] { return next_listener_.last_suggestions()->size() == 1; });
+  RunLoopUntil([&] { return next_listener_.last_suggestions().size() == 1; });
 
   // The suggestion should still be there after being notified.
   auto& listener_results = next_listener_.last_suggestions();
-  EXPECT_EQ(suggestion_id, listener_results->at(0).uuid);
+  EXPECT_EQ(suggestion_id, listener_results.at(0).uuid);
 }
 
 TEST_F(SuggestionEngineTest, NotifyInteractionExpiredInterruption) {
@@ -797,10 +797,10 @@ TEST_F(SuggestionEngineTest, NotifyInteractionExpiredInterruption) {
 
   // Get id of the resulting suggestion.
   auto& suggestion = interruption_listener_.last_suggestion();
-  EXPECT_FALSE(suggestion.uuid->empty());
+  EXPECT_FALSE(suggestion.uuid.empty());
   auto suggestion_id = suggestion.uuid;
 
-  EXPECT_TRUE(next_listener_.last_suggestions()->empty());
+  EXPECT_TRUE(next_listener_.last_suggestions().empty());
 
   fuchsia::modular::Interaction interaction;
   interaction.type = fuchsia::modular::InteractionType::EXPIRED;
@@ -811,8 +811,8 @@ TEST_F(SuggestionEngineTest, NotifyInteractionExpiredInterruption) {
 
   // The suggestion should still be there after being notified.
   auto& listener_results = next_listener_.last_suggestions();
-  EXPECT_EQ(1u, listener_results->size());
-  EXPECT_EQ(suggestion_id, listener_results->at(0).uuid);
+  EXPECT_EQ(1u, listener_results.size());
+  EXPECT_EQ(suggestion_id, listener_results.at(0).uuid);
 }
 
 TEST_F(SuggestionEngineTest, NotifyInteractionSelectedInterruption) {
@@ -827,7 +827,7 @@ TEST_F(SuggestionEngineTest, NotifyInteractionSelectedInterruption) {
   RunLoopUntilIdle();
 
   auto& suggestion = interruption_listener_.last_suggestion();
-  EXPECT_FALSE(suggestion.uuid->empty());
+  EXPECT_FALSE(suggestion.uuid.empty());
   auto suggestion_id = suggestion.uuid;
 
   fuchsia::modular::Interaction interaction;
@@ -843,8 +843,8 @@ TEST_F(SuggestionEngineTest, NotifyInteractionSelectedInterruption) {
   auto& commands = test_executor_.last_commands();
   ASSERT_EQ(1u, commands.size());
   auto& focus_mod = commands.at(0).focus_mod();
-  ASSERT_EQ(1u, focus_mod.mod_name->size());
-  EXPECT_EQ("mod_name", focus_mod.mod_name->at(0));
+  ASSERT_EQ(1u, focus_mod.mod_name.size());
+  EXPECT_EQ("mod_name", focus_mod.mod_name.at(0));
 
   // Ensure a regular story was created when we executed the proposal.
   bool done{};
@@ -857,7 +857,7 @@ TEST_F(SuggestionEngineTest, NotifyInteractionSelectedInterruption) {
   RunLoopUntil([&] { return done; });
 
   // The suggestion shouldn't be there anymore.
-  EXPECT_TRUE(next_listener_.last_suggestions()->empty());
+  EXPECT_TRUE(next_listener_.last_suggestions().empty());
 }
 
 TEST_F(SuggestionEngineTest, NotifyInteractionDismissedInterruption) {
@@ -872,7 +872,7 @@ TEST_F(SuggestionEngineTest, NotifyInteractionDismissedInterruption) {
   RunLoopUntilIdle();
 
   auto& suggestion = interruption_listener_.last_suggestion();
-  EXPECT_FALSE(suggestion.uuid->empty());
+  EXPECT_FALSE(suggestion.uuid.empty());
   auto suggestion_id = suggestion.uuid;
 
   fuchsia::modular::Interaction interaction;
@@ -886,7 +886,7 @@ TEST_F(SuggestionEngineTest, NotifyInteractionDismissedInterruption) {
   EXPECT_EQ(0, test_executor_.execute_count());
 
   // The suggestion shouldn't be there anymore.
-  EXPECT_TRUE(next_listener_.last_suggestions()->empty());
+  EXPECT_TRUE(next_listener_.last_suggestions().empty());
 }
 
 TEST_F(SuggestionEngineTest, ProposeNavigation) {

@@ -22,7 +22,7 @@ void TestCloudProvider::GetDeviceSet(
 }
 
 void TestCloudProvider::GetPageCloud(
-    fidl::VectorPtr<uint8_t> /*app_id*/, fidl::VectorPtr<uint8_t> /*page_id*/,
+    std::vector<uint8_t> /*app_id*/, std::vector<uint8_t> /*page_id*/,
     fidl::InterfaceRequest<cloud_provider::PageCloud> /*page_cloud*/,
     GetPageCloudCallback /*callback*/) {
   FXL_NOTIMPLEMENTED();

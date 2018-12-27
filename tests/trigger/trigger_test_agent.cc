@@ -73,7 +73,7 @@ class TestApp : TriggerTestService {
   }
 
   // |TriggerTestService|
-  void ObserveMessageQueueDeletion(fidl::StringPtr queue_token) override {
+  void ObserveMessageQueueDeletion(std::string queue_token) override {
     fuchsia::modular::TaskInfo task_info;
     task_info.task_id = queue_token;
     task_info.trigger_condition.set_queue_deleted(queue_token);

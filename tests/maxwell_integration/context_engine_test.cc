@@ -126,7 +126,7 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
   auto maybe_results =
       modular::TakeContextValue(listener.last_update.get(), "a");
   ASSERT_TRUE(maybe_results.has_value());
-  auto results = maybe_results.value().take();
+  auto results = std::move(maybe_results.value());
   ASSERT_EQ(3u, results.size());
   EXPECT_EQ(std::set<std::string>({"topic", "frob", "borf"}),
             GetTopicSet(results));
@@ -141,7 +141,7 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
   ASSERT_TRUE(listener.last_update);
   maybe_results = modular::TakeContextValue(listener.last_update.get(), "a");
   ASSERT_TRUE(maybe_results.has_value());
-  results = maybe_results.value().take();
+  results = std::move(maybe_results.value());
   ASSERT_EQ(1u, results.size());
   EXPECT_EQ("frob", results[0].meta.entity->topic);
 
@@ -169,7 +169,7 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
   WaitUntilIdle();
   maybe_results = modular::TakeContextValue(listener.last_update.get(), "a");
   ASSERT_TRUE(maybe_results.has_value());
-  results = maybe_results.value().take();
+  results = std::move(maybe_results.value());
   ASSERT_EQ(2u, results.size());
 
   fuchsia::modular::ContextValue entity_result, story_result;
@@ -193,7 +193,7 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
   ASSERT_TRUE(listener.last_update);
   maybe_results = modular::TakeContextValue(listener.last_update.get(), "a");
   ASSERT_TRUE(maybe_results.has_value());
-  results = maybe_results.value().take();
+  results = std::move(maybe_results.value());
   ASSERT_EQ(1u, results.size());
   EXPECT_EQ("frob", results[0].meta.entity->topic);
 }
@@ -226,7 +226,7 @@ TEST_F(ContextEngineTest, WriteNullEntity) {
   auto maybe_result =
       modular::TakeContextValue(listener.last_update.get(), "a");
   ASSERT_TRUE(maybe_result.has_value());
-  auto result = maybe_result.value().take();
+  auto result = std::move(maybe_result.value());
   ASSERT_EQ(1u, result.size());
   EXPECT_EQ(value1, result[0].content);
 
@@ -244,7 +244,7 @@ TEST_F(ContextEngineTest, WriteNullEntity) {
 
   maybe_result = modular::TakeContextValue(listener.last_update.get(), "a");
   ASSERT_TRUE(maybe_result.has_value());
-  result = maybe_result.value().take();
+  result = std::move(maybe_result.value());
   ASSERT_EQ(1u, result.size());
   EXPECT_EQ(value2, result[0].content);
 }
@@ -331,7 +331,7 @@ TEST_F(ContextEngineTest, GetContext) {
 
     auto maybe_results = modular::TakeContextValue(&update, "a");
     ASSERT_TRUE(maybe_results.has_value());
-    auto results = maybe_results.value().take();
+    auto results = std::move(maybe_results.value());
     ASSERT_EQ(2u, results.size());
     EXPECT_EQ(std::set<std::string>({"topic", "frob"}), GetTopicSet(results));
   });

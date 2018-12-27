@@ -21,6 +21,10 @@ inline std::string to_string(const fidl::VectorPtr<uint8_t>& data) {
   return std::string(reinterpret_cast<const char*>(data->data()), data->size());
 }
 
+inline std::string to_string(const std::vector<uint8_t>& data) {
+  return std::string(reinterpret_cast<const char*>(data.data()), data.size());
+}
+
 inline std::string to_hex_string(const uint8_t* data, size_t size) {
   constexpr char kHexadecimalCharacters[] = "0123456789abcdef";
   std::string ret;

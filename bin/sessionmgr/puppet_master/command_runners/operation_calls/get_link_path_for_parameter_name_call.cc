@@ -13,8 +13,8 @@ class GetLinkPathForParameterNameCall
     : public Operation<fuchsia::modular::LinkPathPtr> {
  public:
   GetLinkPathForParameterNameCall(StoryStorage* const story_storage,
-                                  fidl::VectorPtr<fidl::StringPtr> module_name,
-                                  fidl::StringPtr link_name,
+                                  std::vector<std::string> module_name,
+                                  std::string link_name,
                                   ResultCall result_call)
       : Operation("AddModCommandRunner::GetLinkPathForParameterNameCall",
                   std::move(result_call)),
@@ -33,17 +33,17 @@ class GetLinkPathForParameterNameCall
           }
           auto& param_map = module_data->parameter_map;
           auto it = std::find_if(
-              param_map.entries->begin(), param_map.entries->end(),
+              param_map.entries.begin(), param_map.entries.end(),
               [this](const fuchsia::modular::ModuleParameterMapEntry& entry) {
                 return entry.name == link_name_;
               });
-          if (it != param_map.entries->end()) {
+          if (it != param_map.entries.end()) {
             link_path_ = CloneOptional(it->link_path);
           }
 
           if (!link_path_) {
             link_path_ = fuchsia::modular::LinkPath::New();
-            link_path_->module_path = module_name_.Clone();
+            link_path_->module_path = module_name_;
             link_path_->link_name = link_name_;
           }
           // Flow goes out of scope, finish operation returning link_path.
@@ -51,8 +51,8 @@ class GetLinkPathForParameterNameCall
   }
 
   StoryStorage* const story_storage_;  // Not owned.
-  fidl::VectorPtr<fidl::StringPtr> module_name_;
-  fidl::StringPtr link_name_;
+  std::vector<std::string> module_name_;
+  std::string link_name_;
   fuchsia::modular::LinkPathPtr link_path_;
 };
 
@@ -61,7 +61,7 @@ class GetLinkPathForParameterNameCall
 void AddGetLinkPathForParameterNameOperation(
     OperationContainer* const operation_container,
     StoryStorage* const story_storage,
-    fidl::VectorPtr<fidl::StringPtr> module_name, fidl::StringPtr link_name,
+    std::vector<std::string> module_name, std::string link_name,
     std::function<void(fuchsia::modular::LinkPathPtr)> result_call) {
   operation_container->Add(new GetLinkPathForParameterNameCall(
       story_storage, std::move(module_name), std::move(link_name),

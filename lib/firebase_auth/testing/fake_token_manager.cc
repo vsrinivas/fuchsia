@@ -18,7 +18,7 @@ FakeTokenManager::FakeTokenManager(rng::Random* random)
 void FakeTokenManager::Authorize(
     AppConfig app_config,
     fidl::InterfaceHandle<AuthenticationUIContext> auth_ui_context,
-    fidl::VectorPtr<fidl::StringPtr> /*app_scopes*/,
+    std::vector<std::string> /*app_scopes*/,
     fidl::StringPtr /*user_profile_id*/, fidl::StringPtr /*auth_code*/,
     AuthorizeCallback callback /*callback*/) {
   FXL_NOTIMPLEMENTED() << "FakeTokenManager::Authorize not implemented";
@@ -26,25 +26,25 @@ void FakeTokenManager::Authorize(
 }
 
 void FakeTokenManager::GetAccessToken(
-    AppConfig app_config, fidl::StringPtr /*user_profile_id*/,
-    fidl::VectorPtr<fidl::StringPtr> /*app_scopes*/,
+    AppConfig app_config, std::string /*user_profile_id*/,
+    std::vector<std::string> /*app_scopes*/,
     GetAccessTokenCallback callback /*callback*/) {
   FXL_NOTIMPLEMENTED() << "FakeTokenManager::GetAccessToken not implemented";
   callback(fuchsia::auth::Status::INTERNAL_ERROR, nullptr);
 }
 
 void FakeTokenManager::GetIdToken(AppConfig app_config,
-                                  fidl::StringPtr /*user_profile_id*/,
+                                  std::string /*user_profile_id*/,
                                   fidl::StringPtr /*audience*/,
                                   GetIdTokenCallback callback /*callback*/) {
   FXL_NOTIMPLEMENTED() << "FakeTokenManager::GetIdToken not implemented";
-  callback(fuchsia::auth::Status::INTERNAL_ERROR, nullptr);
+  callback(fuchsia::auth::Status::INTERNAL_ERROR, {});
 }
 
 void FakeTokenManager::GetFirebaseToken(AppConfig /*app_config*/,
-                                        fidl::StringPtr /*user_profile_id*/,
-                                        fidl::StringPtr /*audience*/,
-                                        fidl::StringPtr /*firebase_api_key*/,
+                                        std::string /*user_profile_id*/,
+                                        std::string /*audience*/,
+                                        std::string /*firebase_api_key*/,
                                         GetFirebaseTokenCallback callback) {
   if (firebase_local_id_.empty()) {
     callback(fuchsia::auth::Status::OK, nullptr);
@@ -58,7 +58,7 @@ void FakeTokenManager::GetFirebaseToken(AppConfig /*app_config*/,
 }
 
 void FakeTokenManager::DeleteAllTokens(AppConfig /*app_config*/,
-                                       fidl::StringPtr /*user_profile_id*/,
+                                       std::string /*user_profile_id*/,
                                        DeleteAllTokensCallback callback) {
   FXL_NOTIMPLEMENTED() << "FakeTokenManager::DeleteAllTokens not implemented";
   callback(fuchsia::auth::Status::INTERNAL_ERROR);
@@ -67,7 +67,7 @@ void FakeTokenManager::DeleteAllTokens(AppConfig /*app_config*/,
 void FakeTokenManager::ListProfileIds(AppConfig app_config,
                                       ListProfileIdsCallback callback) {
   FXL_NOTIMPLEMENTED() << "FakeTokenManager::ListProifleIds not implemented";
-  callback(fuchsia::auth::Status::INTERNAL_ERROR, nullptr);
+  callback(fuchsia::auth::Status::INTERNAL_ERROR, {});
 }
 
 }  // namespace firebase_auth

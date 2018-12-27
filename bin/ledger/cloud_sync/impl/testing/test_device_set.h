@@ -30,14 +30,14 @@ class TestDeviceSet : public cloud_provider::DeviceSet {
 
  private:
   // cloud_provider::DeviceSet:
-  void CheckFingerprint(fidl::VectorPtr<uint8_t> fingerprint,
+  void CheckFingerprint(std::vector<uint8_t> fingerprint,
                         CheckFingerprintCallback callback) override;
 
-  void SetFingerprint(fidl::VectorPtr<uint8_t> fingerprint,
+  void SetFingerprint(std::vector<uint8_t> fingerprint,
                       SetFingerprintCallback callback) override;
 
   void SetWatcher(
-      fidl::VectorPtr<uint8_t> fingerprint,
+      std::vector<uint8_t> fingerprint,
       fidl::InterfaceHandle<cloud_provider::DeviceSetWatcher> watcher,
       SetWatcherCallback callback) override;
 

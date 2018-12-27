@@ -255,7 +255,7 @@ void LedgerRepositoryFactoryImpl::GetChildren(
 void LedgerRepositoryFactoryImpl::GetRepository(
     zx::channel repository_handle,
     fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
-    fidl::StringPtr user_id,
+    std::string user_id,
     fidl::InterfaceRequest<ledger_internal::LedgerRepository>
         repository_request,
     fit::function<void(Status)> callback) {
@@ -265,7 +265,7 @@ void LedgerRepositoryFactoryImpl::GetRepository(
     callback(Status::IO_ERROR);
     return;
   }
-  GetRepositoryByFD(std::move(root_fd), std::move(cloud_provider), *user_id,
+  GetRepositoryByFD(std::move(root_fd), std::move(cloud_provider), user_id,
                     std::move(repository_request), std::move(callback));
 }
 

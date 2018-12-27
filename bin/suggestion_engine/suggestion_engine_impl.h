@@ -132,18 +132,18 @@ class SuggestionEngineImpl : public fuchsia::modular::ContextListener,
   //    it came from there.
   //
   // |fuchsia::modular::SuggestionProvider|
-  void NotifyInteraction(fidl::StringPtr suggestion_uuid,
+  void NotifyInteraction(std::string suggestion_uuid,
                          fuchsia::modular::Interaction interaction) override;
 
   // |fuchsia::modular::SuggestionEngine|
   void RegisterProposalPublisher(
-      fidl::StringPtr url,
+      std::string url,
       fidl::InterfaceRequest<fuchsia::modular::ProposalPublisher> publisher)
       override;
 
   // |fuchsia::modular::SuggestionEngine|
   void RegisterQueryHandler(
-      fidl::StringPtr url, fidl::InterfaceHandle<fuchsia::modular::QueryHandler>
+      std::string url, fidl::InterfaceHandle<fuchsia::modular::QueryHandler>
                                query_handler_handle) override;
 
   void Terminate(std::function<void()> done) { done(); }

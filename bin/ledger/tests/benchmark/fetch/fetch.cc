@@ -109,7 +109,7 @@ class FetchBenchmark : public SyncWatcher {
   PageId page_id_;
   PagePtr writer_page_;
   PagePtr reader_page_;
-  std::vector<fidl::VectorPtr<uint8_t>> keys_;
+  std::vector<std::vector<uint8_t>> keys_;
   fit::function<void(SyncState, SyncState)> on_sync_state_changed_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FetchBenchmark);
@@ -185,7 +185,7 @@ void FetchBenchmark::Run() {
 void FetchBenchmark::Populate() {
   auto keys = generator_.MakeKeys(entry_count_, kKeySize, entry_count_);
   for (size_t i = 0; i < entry_count_; i++) {
-    keys_.push_back(keys[i].Clone());
+    keys_.push_back(keys[i]);
   }
 
   page_data_generator_.Populate(
@@ -293,7 +293,7 @@ void FetchBenchmark::FetchPart(PageSnapshotPtr snapshot, size_t i,
   auto trace_event_id = TRACE_NONCE();
   TRACE_ASYNC_BEGIN("benchmark", "FetchPartial", trace_event_id);
   snapshot_ptr->FetchPartial(
-      keys_[i].Clone(), part * part_size_, part_size_,
+      keys_[i], part * part_size_, part_size_,
       [this, snapshot = std::move(snapshot), i, part, trace_event_id](
           Status status, fuchsia::mem::BufferPtr value) mutable {
         if (QuitOnError(QuitLoopClosure(), status,

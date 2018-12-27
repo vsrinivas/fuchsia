@@ -32,7 +32,7 @@ void ProposalPublisherImpl::ProposeNavigation(
   engine_->ProposeNavigation(navigation);
 }
 
-void ProposalPublisherImpl::Remove(fidl::StringPtr proposal_id) {
+void ProposalPublisherImpl::Remove(std::string proposal_id) {
   engine_->RemoveNextProposal(component_url_, proposal_id);
 }
 

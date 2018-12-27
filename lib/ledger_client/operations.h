@@ -188,7 +188,7 @@ class ReadDataCall : public PageOperation<DataPtr> {
   FXL_DISALLOW_COPY_AND_ASSIGN(ReadDataCall);
 };
 
-template <typename Data, typename DataArray = fidl::VectorPtr<Data>,
+template <typename Data, typename DataArray = std::vector<Data>,
           typename DataFilter = XdrFilterList<Data>>
 class ReadAllDataCall : public PageOperation<DataArray> {
  public:

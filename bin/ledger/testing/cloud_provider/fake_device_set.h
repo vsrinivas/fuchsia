@@ -27,14 +27,14 @@ class FakeDeviceSet : public cloud_provider::DeviceSet {
   void set_on_empty(fit::closure on_empty) { on_empty_ = std::move(on_empty); }
 
  private:
-  void CheckFingerprint(fidl::VectorPtr<uint8_t> fingerprint,
+  void CheckFingerprint(std::vector<uint8_t> fingerprint,
                         CheckFingerprintCallback callback) override;
 
-  void SetFingerprint(fidl::VectorPtr<uint8_t> fingerprint,
+  void SetFingerprint(std::vector<uint8_t> fingerprint,
                       SetFingerprintCallback callback) override;
 
   void SetWatcher(
-      fidl::VectorPtr<uint8_t> fingerprint,
+      std::vector<uint8_t> fingerprint,
       fidl::InterfaceHandle<cloud_provider::DeviceSetWatcher> watcher,
       SetWatcherCallback callback) override;
 

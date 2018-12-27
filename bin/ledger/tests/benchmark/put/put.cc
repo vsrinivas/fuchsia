@@ -64,13 +64,13 @@ class PutBenchmark : public PageWatcher {
   // on updating entries, it also adds these keys in the ledger with some
   // initial values.
   void InitializeKeys(
-      fit::function<void(std::vector<fidl::VectorPtr<uint8_t>>)> on_done);
+      fit::function<void(std::vector<std::vector<uint8_t>>)> on_done);
 
-  void BindWatcher(std::vector<fidl::VectorPtr<uint8_t>> keys);
-  void RunSingle(int i, std::vector<fidl::VectorPtr<uint8_t>> keys);
+  void BindWatcher(std::vector<std::vector<uint8_t>> keys);
+  void RunSingle(int i, std::vector<std::vector<uint8_t>> keys);
   void CommitAndRunNext(int i, size_t key_number,
-                        std::vector<fidl::VectorPtr<uint8_t>> keys);
-  void PutEntry(fidl::VectorPtr<uint8_t> key, fidl::VectorPtr<uint8_t> value,
+                        std::vector<std::vector<uint8_t>> keys);
+  void PutEntry(std::vector<uint8_t> key, std::vector<uint8_t> value,
                 fit::function<void()> on_done);
 
   void ShutDown();
@@ -163,7 +163,7 @@ void PutBenchmark::Run() {
         page_ = std::move(page);
 
         InitializeKeys(
-            [this](std::vector<fidl::VectorPtr<uint8_t>> keys) mutable {
+            [this](std::vector<std::vector<uint8_t>> keys) mutable {
               if (transaction_size_ > 0) {
                 page_->StartTransaction(
                     [this, keys = std::move(keys)](Status status) mutable {
@@ -184,7 +184,7 @@ void PutBenchmark::Run() {
 void PutBenchmark::OnChange(PageChange page_change,
                             ResultState /*result_state*/,
                             OnChangeCallback callback) {
-  for (auto const& change : *page_change.changed_entries) {
+  for (auto const& change : page_change.changed_entries) {
     size_t key_number = std::stoul(convert::ToString(change.key));
     if (keys_to_receive_.find(key_number) != keys_to_receive_.end()) {
       TRACE_ASYNC_END("benchmark", "local_change_notification", key_number);
@@ -198,12 +198,12 @@ void PutBenchmark::OnChange(PageChange page_change,
 }
 
 void PutBenchmark::InitializeKeys(
-    fit::function<void(std::vector<fidl::VectorPtr<uint8_t>>)> on_done) {
-  std::vector<fidl::VectorPtr<uint8_t>> keys =
+    fit::function<void(std::vector<std::vector<uint8_t>>)> on_done) {
+  std::vector<std::vector<uint8_t>> keys =
       generator_.MakeKeys(entry_count_, key_size_, entry_count_);
-  std::vector<fidl::VectorPtr<uint8_t>> keys_cloned;
+  std::vector<std::vector<uint8_t>> keys_cloned;
   for (int i = 0; i < entry_count_; ++i) {
-    keys_cloned.push_back(keys[i].Clone());
+    keys_cloned.push_back(keys[i]);
     if (transaction_size_ == 0 ||
         i % transaction_size_ == transaction_size_ - 1) {
       keys_to_receive_.insert(std::stoul(convert::ToString(keys[i])));
@@ -229,7 +229,7 @@ void PutBenchmark::InitializeKeys(
       });
 }
 
-void PutBenchmark::BindWatcher(std::vector<fidl::VectorPtr<uint8_t>> keys) {
+void PutBenchmark::BindWatcher(std::vector<std::vector<uint8_t>> keys) {
   PageSnapshotPtr snapshot;
   page_->GetSnapshot(
       snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
@@ -243,7 +243,7 @@ void PutBenchmark::BindWatcher(std::vector<fidl::VectorPtr<uint8_t>> keys) {
 }
 
 void PutBenchmark::RunSingle(int i,
-                             std::vector<fidl::VectorPtr<uint8_t>> keys) {
+                             std::vector<std::vector<uint8_t>> keys) {
   if (i == entry_count_) {
     // All sent, waiting for watcher notification before shutting down.
     return;
@@ -266,8 +266,8 @@ void PutBenchmark::RunSingle(int i,
            });
 }
 
-void PutBenchmark::PutEntry(fidl::VectorPtr<uint8_t> key,
-                            fidl::VectorPtr<uint8_t> value,
+void PutBenchmark::PutEntry(std::vector<uint8_t> key,
+                            std::vector<uint8_t> value,
                             fit::function<void()> on_done) {
   auto trace_event_id = TRACE_NONCE();
   TRACE_ASYNC_BEGIN("benchmark", "put", trace_event_id);
@@ -313,7 +313,7 @@ void PutBenchmark::PutEntry(fidl::VectorPtr<uint8_t> key,
 }
 
 void PutBenchmark::CommitAndRunNext(
-    int i, size_t key_number, std::vector<fidl::VectorPtr<uint8_t>> keys) {
+    int i, size_t key_number, std::vector<std::vector<uint8_t>> keys) {
   TRACE_ASYNC_BEGIN("benchmark", "local_change_notification", key_number);
   TRACE_ASYNC_BEGIN("benchmark", "commit", i / transaction_size_);
   page_->Commit([this, i, keys = std::move(keys)](Status status) mutable {

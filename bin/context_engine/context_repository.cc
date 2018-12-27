@@ -310,7 +310,7 @@ ContextRepository::QueryInternal(const fuchsia::modular::ContextQuery& query) {
   // For each entry in |query->selector|, query the index for matching values.
   IdAndVersionSet matching_id_version;
   fuchsia::modular::ContextUpdate update;
-  for (const auto& entry : *query.selector) {
+  for (const auto& entry : query.selector) {
     const auto& key = entry.key;
     const auto& selector = entry.value;
 
@@ -318,14 +318,12 @@ ContextRepository::QueryInternal(const fuchsia::modular::ContextQuery& query) {
 
     fuchsia::modular::ContextUpdateEntry update_entry;
     update_entry.key = key;
-    update_entry.value =
-        fidl::VectorPtr<fuchsia::modular::ContextValue>::New(0);
     update.values.push_back(std::move(update_entry));
     for (const auto& id : values) {
       auto it = values_.find(id);
       FXL_DCHECK(it != values_.end()) << id;
       matching_id_version.insert(std::make_pair(id, it->second.version));
-      for (auto& it : *update.values) {
+      for (auto& it : update.values) {
         if (it.key == key) {
           it.value.push_back(std::move(*GetMerged(id)));
         }

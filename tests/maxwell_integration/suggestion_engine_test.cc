@@ -38,7 +38,7 @@ class NWriter {
 
 fuchsia::modular::Proposal CreateProposal(
     const std::string& id, const std::string& headline,
-    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands,
+    std::vector<fuchsia::modular::StoryCommand> commands,
     fuchsia::modular::AnnoyanceType annoyance) {
   fuchsia::modular::Proposal p;
   p.id = id;
@@ -65,16 +65,14 @@ class Proposinator {
   virtual ~Proposinator() = default;
 
   void Propose(const std::string& id,
-               fidl::VectorPtr<fuchsia::modular::StoryCommand> commands =
-                   fidl::VectorPtr<fuchsia::modular::StoryCommand>::New(0)) {
+               std::vector<fuchsia::modular::StoryCommand> commands ={}) {
     Propose(id, id, fuchsia::modular::AnnoyanceType::NONE, std::move(commands));
   }
 
   void Propose(const std::string& id, const std::string& headline,
                fuchsia::modular::AnnoyanceType annoyance =
                    fuchsia::modular::AnnoyanceType::NONE,
-               fidl::VectorPtr<fuchsia::modular::StoryCommand> commands =
-                   fidl::VectorPtr<fuchsia::modular::StoryCommand>::New(0)) {
+               std::vector<fuchsia::modular::StoryCommand> commands = {}) {
     Propose(CreateProposal(id, headline, std::move(commands), annoyance));
   }
 
@@ -128,7 +126,7 @@ class AskProposinator : public Proposinator,
   fidl::StringPtr query() const { return query_ ? query_->text : nullptr; }
 
   void ProposeForAsk(const std::string& id) {
-    auto commands = fidl::VectorPtr<fuchsia::modular::StoryCommand>::New(0);
+    std::vector<fuchsia::modular::StoryCommand> commands;
     ProposeForAsk(id, id, fuchsia::modular::AnnoyanceType::NONE,
                   std::move(commands));
   }
@@ -137,8 +135,7 @@ class AskProposinator : public Proposinator,
       const std::string& id, const std::string& headline,
       fuchsia::modular::AnnoyanceType annoyance =
           fuchsia::modular::AnnoyanceType::NONE,
-      fidl::VectorPtr<fuchsia::modular::StoryCommand> commands =
-          fidl::VectorPtr<fuchsia::modular::StoryCommand>::New(0)) {
+      std::vector<fuchsia::modular::StoryCommand> commands ={}) {
     query_proposals_.push_back(
         CreateProposal(id, headline, std::move(commands), annoyance));
   }
@@ -147,7 +144,7 @@ class AskProposinator : public Proposinator,
   async::Loop* const loop_;
   fidl::Binding<fuchsia::modular::QueryHandler> ask_binding_;
   fuchsia::modular::UserInputPtr query_;
-  fidl::VectorPtr<fuchsia::modular::Proposal> query_proposals_;
+  std::vector<fuchsia::modular::Proposal> query_proposals_;
   OnQueryCallback query_callback_;
   bool waiting_for_query_ = false;
 };
@@ -179,10 +176,10 @@ class NProposals : public Proposinator,
       FXL_LOG(INFO) << "Expect an update key for every query key.";
     }
     auto& r = maybe_result.value();
-    if (r->empty()) {
+    if (r.empty()) {
       return;
     }
-    int n = std::stoi(r->at(0).content);
+    int n = std::stoi(r.at(0).content);
 
     for (int i = n_; i < n; i++) {
       Propose(std::to_string(i));
@@ -308,7 +305,7 @@ class SuggestionEngineTest : public ContextEngineTestBase,
   }
 
   // |fuchsia::modular::ProposalListener|
-  void OnProposalAccepted(fidl::StringPtr proposal_id,
+  void OnProposalAccepted(std::string proposal_id,
                           fidl::StringPtr story_id) override {
     accepted_proposal_id_ = proposal_id;
     if (!story_id->empty()) {
@@ -885,7 +882,7 @@ TEST_F(SuggestionFilteringTest, Baseline) {
 
   fuchsia::modular::StoryCommand command;
   command.set_add_mod(std::move(add_mod));
-  fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+  std::vector<fuchsia::modular::StoryCommand> commands;
   commands.push_back(std::move(command));
   p.Propose("1", std::move(commands));
   WaitUntilIdle();
@@ -915,7 +912,7 @@ TEST_F(SuggestionFilteringTest, Baseline_FilterDoesntMatch) {
 
   fuchsia::modular::StoryCommand command;
   command.set_add_mod(std::move(add_mod));
-  fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+  std::vector<fuchsia::modular::StoryCommand> commands;
   commands.push_back(std::move(command));
   p.Propose("1", std::move(commands));
   WaitUntilIdle();

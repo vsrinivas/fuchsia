@@ -81,7 +81,7 @@ class PageClient : fuchsia::ledger::PageWatcher {
   // The argument to OnPageConflict(). It's mutated in place so it's easier to
   // extend without having to alter clients.
   struct Conflict {
-    fidl::VectorPtr<uint8_t> key;
+    std::vector<uint8_t> key;
 
     bool has_left{};
     std::string left;

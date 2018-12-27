@@ -60,7 +60,7 @@ FuturePtr<> StoryStorage::WriteModuleData(ModuleData module_data) {
 namespace {
 
 struct UpdateModuleDataState {
-  fidl::VectorPtr<fidl::StringPtr> module_path;
+  std::vector<std::string> module_path;
   std::function<void(ModuleDataPtr*)> mutate_fn;
   OperationQueue sub_operations;
 };
@@ -68,10 +68,10 @@ struct UpdateModuleDataState {
 }  // namespace
 
 FuturePtr<> StoryStorage::UpdateModuleData(
-    const fidl::VectorPtr<fidl::StringPtr>& module_path,
+    const std::vector<std::string>& module_path,
     std::function<void(ModuleDataPtr*)> mutate_fn) {
   auto op_state = std::make_shared<UpdateModuleDataState>();
-  op_state->module_path = fidl::Clone(module_path);
+  op_state->module_path = module_path;
   op_state->mutate_fn = std::move(mutate_fn);
 
   auto key = MakeModuleKey(module_path);
@@ -141,7 +141,7 @@ FuturePtr<> StoryStorage::UpdateModuleData(
 }
 
 FuturePtr<ModuleDataPtr> StoryStorage::ReadModuleData(
-    const fidl::VectorPtr<fidl::StringPtr>& module_path) {
+    const std::vector<std::string>& module_path) {
   auto key = MakeModuleKey(module_path);
   auto ret = Future<ModuleDataPtr>::Create("StoryStorage.ReadModuleData.ret");
   operation_queue_.Add(
@@ -150,8 +150,8 @@ FuturePtr<ModuleDataPtr> StoryStorage::ReadModuleData(
   return ret;
 }
 
-FuturePtr<fidl::VectorPtr<ModuleData>> StoryStorage::ReadAllModuleData() {
-  auto ret = Future<fidl::VectorPtr<ModuleData>>::Create(
+FuturePtr<std::vector<ModuleData>> StoryStorage::ReadAllModuleData() {
+  auto ret = Future<std::vector<ModuleData>>::Create(
       "StoryStorage.ReadAllModuleData.ret");
   operation_queue_.Add(new ReadAllDataCall<ModuleData>(
       page(), kModuleKeyPrefix, XdrModuleData, ret->Completer()));

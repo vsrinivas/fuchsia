@@ -55,34 +55,34 @@ class ConflictResolverClient
   // |IterationStatus|.
   void GetDiff(
       diff_utils::DiffType type, std::unique_ptr<Token> token,
-      fit::function<void(Status, IterationStatus, fidl::VectorPtr<DiffEntry>,
+      fit::function<void(Status, IterationStatus, std::vector<DiffEntry>,
                          std::unique_ptr<Token>)>
           callback);
 
   // MergeResultProviderNotifierDelegate:
   void GetFullDiff(
       std::unique_ptr<Token> token,
-      fit::function<void(Status, Status, fidl::VectorPtr<DiffEntry>,
+      fit::function<void(Status, Status, std::vector<DiffEntry>,
                          std::unique_ptr<Token>)>
           callback) override;
   void GetFullDiffNew(
       std::unique_ptr<Token> token,
-      fit::function<void(Status, IterationStatus, fidl::VectorPtr<DiffEntry>,
+      fit::function<void(Status, IterationStatus, std::vector<DiffEntry>,
                          std::unique_ptr<Token>)>
           callback) override;
   void GetConflictingDiff(
       std::unique_ptr<Token> token,
-      fit::function<void(Status, Status, fidl::VectorPtr<DiffEntry>,
+      fit::function<void(Status, Status, std::vector<DiffEntry>,
                          std::unique_ptr<Token>)>
           callback) override;
   void GetConflictingDiffNew(
       std::unique_ptr<Token> token,
-      fit::function<void(Status, IterationStatus, fidl::VectorPtr<DiffEntry>,
+      fit::function<void(Status, IterationStatus, std::vector<DiffEntry>,
                          std::unique_ptr<Token>)>
           callback) override;
-  void Merge(fidl::VectorPtr<MergedValue> merged_values,
+  void Merge(std::vector<MergedValue> merged_values,
              fit::function<void(Status, Status)> callback) override;
-  void MergeNew(fidl::VectorPtr<MergedValue> merged_values,
+  void MergeNew(std::vector<MergedValue> merged_values,
                 fit::function<void(Status)> callback) override;
   void MergeNonConflictingEntries(
       fit::function<void(Status, Status)> callback) override;

@@ -21,7 +21,7 @@ std::unique_ptr<StoryCommandExecutor> MakeProductionStoryCommandExecutor(
     fuchsia::modular::ModuleResolver* module_resolver,
     fuchsia::modular::EntityResolver* entity_resolver,
     modular::ModuleFacetReader* module_facet_reader,
-    fit::function<void(fidl::StringPtr, fidl::VectorPtr<fidl::StringPtr>)>
+    fit::function<void(std::string, std::vector<std::string>)>
         module_focuser);
 
 }  // namespace modular

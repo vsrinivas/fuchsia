@@ -110,7 +110,7 @@ Reference PageManager::CreateReference(
 
 Status PageManager::ResolveReference(
     Reference reference, storage::ObjectIdentifier* object_identifier) {
-  if (reference.opaque_id->size() != sizeof(uint64_t)) {
+  if (reference.opaque_id.size() != sizeof(uint64_t)) {
     return Status::REFERENCE_NOT_FOUND;
   }
   uint64_t index = storage::DeserializeData<uint64_t>(

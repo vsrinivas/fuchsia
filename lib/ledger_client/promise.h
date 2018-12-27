@@ -134,7 +134,7 @@ class PageSnapshotPromise {
               if (value) {
                 // Convert the result to a unique_ptr instead of a VectorPtr.
                 auto ret =
-                    std::make_unique<std::vector<uint8_t>>(value->value.take());
+                    std::make_unique<std::vector<uint8_t>>(value->value);
                 completer.complete_ok(std::move(ret));
               } else {
                 completer.complete_ok(nullptr);

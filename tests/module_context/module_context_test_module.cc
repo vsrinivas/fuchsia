@@ -37,7 +37,7 @@ class TestModule {
     initialized_.Pass();
 
     module_host->module_context()->GetLink(kLinkName, link_.NewRequest());
-    fidl::VectorPtr<fidl::StringPtr> name;
+    fidl::VectorPtr<std::string> name;
     name.push_back(kLinkKey);
     link_->Get(name.Clone(), [this, module_context](
                                  std::unique_ptr<fuchsia::mem::Buffer> value) {

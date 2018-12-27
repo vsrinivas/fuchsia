@@ -34,8 +34,8 @@ class ModulePackageSource : public ModuleManifestSource,
 
  private:
   // |ModulePackageIndexer|
-  void IndexManifest(fidl::StringPtr package_name,
-                     fidl::StringPtr module_manifest_path) override;
+  void IndexManifest(std::string package_name,
+                     std::string module_manifest_path) override;
 
   const std::string dir_;
   NewEntryFn new_entry_fn_;

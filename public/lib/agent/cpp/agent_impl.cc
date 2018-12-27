@@ -30,13 +30,13 @@ AgentImpl::AgentImpl(fbl::RefPtr<fs::PseudoDir> directory,
 
 // |fuchsia::modular::Agent|
 void AgentImpl::Connect(
-    fidl::StringPtr requestor_url,
+    std::string requestor_url,
     fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> services_request) {
   delegate_->Connect(std::move(services_request));
 }
 
 // |fuchsia::modular::Agent|
-void AgentImpl::RunTask(fidl::StringPtr task_id, RunTaskCallback callback) {
+void AgentImpl::RunTask(std::string task_id, RunTaskCallback callback) {
   delegate_->RunTask(task_id, callback);
 }
 

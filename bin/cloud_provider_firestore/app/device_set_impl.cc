@@ -86,7 +86,7 @@ void DeviceSetImpl::ScopedGetCredentials(
       weak_ptr_factory_.GetWeakPtr(), std::move(callback)));
 }
 
-void DeviceSetImpl::CheckFingerprint(fidl::VectorPtr<uint8_t> fingerprint,
+void DeviceSetImpl::CheckFingerprint(std::vector<uint8_t> fingerprint,
                                      CheckFingerprintCallback callback) {
   auto request = google::firestore::v1beta1::GetDocumentRequest();
   request.set_name(
@@ -108,7 +108,7 @@ void DeviceSetImpl::CheckFingerprint(fidl::VectorPtr<uint8_t> fingerprint,
       });
 }
 
-void DeviceSetImpl::SetFingerprint(fidl::VectorPtr<uint8_t> fingerprint,
+void DeviceSetImpl::SetFingerprint(std::vector<uint8_t> fingerprint,
                                    SetFingerprintCallback callback) {
   auto request = google::firestore::v1beta1::CreateDocumentRequest();
   request.set_parent(user_path_);
@@ -136,7 +136,7 @@ void DeviceSetImpl::SetFingerprint(fidl::VectorPtr<uint8_t> fingerprint,
 }
 
 void DeviceSetImpl::SetWatcher(
-    fidl::VectorPtr<uint8_t> fingerprint,
+    std::vector<uint8_t> fingerprint,
     fidl::InterfaceHandle<cloud_provider::DeviceSetWatcher> watcher,
     SetWatcherCallback callback) {
   watcher_ = watcher.Bind();

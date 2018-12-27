@@ -13,6 +13,7 @@
     "facets": {
         "fuchsia.module": {
             "@version": 2,
+            "binary": "bin/app",
             "composition_pattern": "ticker",
             "intent_filters": [
                 {

@@ -16,8 +16,8 @@ class FocusModCommandRunnerTest : public gtest::TestLoopFixture {
   void SetUp() override {
     focused_called_ = false;
     runner_ = std::make_unique<FocusModCommandRunner>(
-        [&](fidl::StringPtr story_id,
-            fidl::VectorPtr<fidl::StringPtr> mod_name) {
+        [&](std::string story_id,
+            std::vector<std::string> mod_name) {
           focused_called_ = true;
         });
   }

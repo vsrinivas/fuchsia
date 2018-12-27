@@ -20,17 +20,17 @@ class ContextMetadataBuilder {
 
   ContextMetadataBuilder& SetModuleUrl(const fidl::StringPtr& url);
   ContextMetadataBuilder& SetModulePath(
-      const fidl::VectorPtr<fidl::StringPtr>& path);
+      const std::vector<std::string>& path);
   ContextMetadataBuilder& SetModuleFocused(bool focused);
 
   ContextMetadataBuilder& SetEntityTopic(const fidl::StringPtr& topic);
   ContextMetadataBuilder& AddEntityType(const fidl::StringPtr& type);
   ContextMetadataBuilder& SetEntityTypes(
-      const fidl::VectorPtr<fidl::StringPtr>& types);
+      const std::vector<std::string>& types);
 
   ContextMetadataBuilder& SetLinkPath(
-      const fidl::VectorPtr<fidl::StringPtr>& module_path,
-      const fidl::StringPtr& name);
+      const std::vector<std::string>& module_path,
+      const std::string& name);
 
   // Build() or BuildPtr() can be called only once, as they move |m_|.
   fuchsia::modular::ContextMetadata Build();

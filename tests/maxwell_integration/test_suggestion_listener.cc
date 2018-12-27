@@ -14,9 +14,9 @@ bool suggestion_less(const fuchsia::modular::Suggestion* a,
 namespace modular {
 
 template <typename T>
-std::ostream& operator<<(std::ostream& os, const fidl::VectorPtr<T>& value) {
+std::ostream& operator<<(std::ostream& os, const std::vector<T>& value) {
   os << "[ ";
-  for (const T& element : *value) {
+  for (const T& element : value) {
     os << element << " ";
   }
   return os << "]";
@@ -42,25 +42,25 @@ void TestSuggestionListener::OnInterrupt(
 }
 
 void TestSuggestionListener::OnNextResults(
-    fidl::VectorPtr<fuchsia::modular::Suggestion> suggestions) {
+    std::vector<fuchsia::modular::Suggestion> suggestions) {
   FXL_LOG(INFO) << "OnNextResults(" << suggestions << ")";
 
   OnAnyResults(suggestions);
 }
 
 void TestSuggestionListener::OnQueryResults(
-    fidl::VectorPtr<fuchsia::modular::Suggestion> suggestions) {
+    std::vector<fuchsia::modular::Suggestion> suggestions) {
   FXL_LOG(INFO) << "OnQueryResults(" << suggestions << ")";
 
   OnAnyResults(suggestions);
 }
 
 void TestSuggestionListener::OnAnyResults(
-    fidl::VectorPtr<fuchsia::modular::Suggestion>& suggestions) {
+    std::vector<fuchsia::modular::Suggestion>& suggestions) {
   ClearSuggestions();
 
   auto insert_head = ordered_suggestions_.begin();
-  for (auto& suggestion : *suggestions) {
+  for (auto& suggestion : suggestions) {
     insert_head = std::upper_bound(insert_head, ordered_suggestions_.end(),
                                    &suggestion, suggestion_less);
     suggestions_by_id_[suggestion.uuid] = fuchsia::modular::Suggestion();

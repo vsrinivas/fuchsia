@@ -88,7 +88,7 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
   // |fuchsia::modular::AgentContext|
   void ScheduleTask(fuchsia::modular::TaskInfo task_info) override;
   // |fuchsia::modular::AgentContext|
-  void DeleteTask(fidl::StringPtr task_id) override;
+  void DeleteTask(std::string task_id) override;
   // |fuchsia::modular::AgentContext|
   void GetEntityReferenceFactory(
       fidl::InterfaceRequest<fuchsia::modular::EntityReferenceFactory> request)
@@ -98,31 +98,31 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
   void Authorize(fuchsia::auth::AppConfig app_config,
                  fidl::InterfaceHandle<fuchsia::auth::AuthenticationUIContext>
                      auth_ui_context,
-                 fidl::VectorPtr<::fidl::StringPtr> app_scopes,
+                 std::vector<::std::string> app_scopes,
                  fidl::StringPtr user_profile_id, fidl::StringPtr auth_code,
                  AuthorizeCallback callback) override;
 
   // |fuchsia::auth::TokenManager|
   void GetAccessToken(fuchsia::auth::AppConfig app_config,
-                      fidl::StringPtr user_profile_id,
-                      fidl::VectorPtr<::fidl::StringPtr> app_scopes,
+                      std::string user_profile_id,
+                      std::vector<::std::string> app_scopes,
                       GetAccessTokenCallback callback) override;
 
   // |fuchsia::auth::TokenManager|
   void GetIdToken(fuchsia::auth::AppConfig app_config,
-                  fidl::StringPtr user_profile_id, fidl::StringPtr audience,
+                  std::string user_profile_id, fidl::StringPtr audience,
                   GetIdTokenCallback callback) override;
 
   // |fuchsia::auth::TokenManager|
   void GetFirebaseToken(fuchsia::auth::AppConfig app_config,
-                        fidl::StringPtr user_profile_id,
-                        fidl::StringPtr audience,
-                        fidl::StringPtr firebase_api_key,
+                        std::string user_profile_id,
+                        std::string audience,
+                        std::string firebase_api_key,
                         GetFirebaseTokenCallback callback) override;
 
   // |fuchsia::auth::TokenManager|
   void DeleteAllTokens(fuchsia::auth::AppConfig app_config,
-                       fidl::StringPtr user_profile_id,
+                       std::string user_profile_id,
                        DeleteAllTokensCallback callback) override;
 
   // |fuchsia::auth::TokenManager|

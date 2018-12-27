@@ -20,7 +20,7 @@ class ModuleResolverFake : fuchsia::modular::ModuleResolver {
                    FindModulesCallback callback) override;
 
   // |ModuleResolver|
-  void GetModuleManifest(fidl::StringPtr module_id,
+  void GetModuleManifest(std::string module_id,
                          GetModuleManifestCallback callback) override;
 
   // |ModuleResolver|

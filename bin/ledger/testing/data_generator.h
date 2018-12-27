@@ -25,7 +25,7 @@ class DataGenerator {
   // Builds a key of the given length as "<the given int>-<random data>", so
   // that deterministic ordering of entries can be ensured by using a different
   // |i| value each time, but the resulting B-tree nodes are always distinct.
-  fidl::VectorPtr<uint8_t> MakeKey(int i, size_t size);
+  std::vector<uint8_t> MakeKey(int i, size_t size);
 
   // Builds a random value that can be used as a page id.
   PageId MakePageId();
@@ -35,7 +35,7 @@ class DataGenerator {
 
   // Builds a vector of length |key_count| containing keys of size |key_size|,
   // |unique_key_count| of which are unique.
-  std::vector<fidl::VectorPtr<uint8_t>> MakeKeys(size_t key_count,
+  std::vector<std::vector<uint8_t>> MakeKeys(size_t key_count,
                                                  size_t key_size,
                                                  size_t unique_key_count);
 

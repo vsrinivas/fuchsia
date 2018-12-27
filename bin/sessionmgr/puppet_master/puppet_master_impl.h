@@ -31,12 +31,12 @@ class PuppetMasterImpl : public fuchsia::modular::PuppetMaster {
 
  private:
   // |PuppetMaster|
-  void ControlStory(fidl::StringPtr story_name,
+  void ControlStory(std::string story_name,
                     fidl::InterfaceRequest<fuchsia::modular::StoryPuppetMaster>
                         request) override;
 
   // |PuppetMaster|
-  void DeleteStory(fidl::StringPtr story_name,
+  void DeleteStory(std::string story_name,
                    DeleteStoryCallback done) override;
 
   // |PuppetMaster|

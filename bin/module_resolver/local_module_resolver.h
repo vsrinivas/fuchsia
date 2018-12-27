@@ -42,7 +42,7 @@ class LocalModuleResolver : fuchsia::modular::ModuleResolver,
   void FindModulesByTypes(fuchsia::modular::FindModulesByTypesQuery query,
                           FindModulesByTypesCallback callback) override;
   // |ModuleResolver|
-  void GetModuleManifest(fidl::StringPtr module_id,
+  void GetModuleManifest(std::string module_id,
                          GetModuleManifestCallback callback) override;
 
  private:

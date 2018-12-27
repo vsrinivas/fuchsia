@@ -26,7 +26,7 @@ void makeProposalSummary(const SuggestionPrototype* suggestion,
 
 void makeProposalSummaries(
     const RankedSuggestionsList* suggestions,
-    fidl::VectorPtr<fuchsia::modular::ProposalSummary>* summaries) {
+    std::vector<fuchsia::modular::ProposalSummary>* summaries) {
   for (const auto& suggestion : suggestions->Get()) {
     fuchsia::modular::ProposalSummary summary;
     makeProposalSummary(suggestion->prototype, &summary);
@@ -37,7 +37,7 @@ void makeProposalSummaries(
 void SuggestionDebugImpl::OnAskStart(std::string query,
                                      const RankedSuggestionsList* suggestions) {
   for (auto& listener : ask_proposal_listeners_.ptrs()) {
-    auto proposals = fidl::VectorPtr<fuchsia::modular::ProposalSummary>::New(0);
+    std::vector<fuchsia::modular::ProposalSummary> proposals;
     makeProposalSummaries(suggestions, &proposals);
     (*listener)->OnAskStart(query, std::move(proposals));
   }
@@ -68,10 +68,10 @@ void SuggestionDebugImpl::OnInterrupt(
 void SuggestionDebugImpl::OnNextUpdate(
     const RankedSuggestionsList* suggestions) {
   for (auto& listener : next_proposal_listeners_.ptrs()) {
-    auto proposals = fidl::VectorPtr<fuchsia::modular::ProposalSummary>::New(0);
+    std::vector<fuchsia::modular::ProposalSummary> proposals;
     makeProposalSummaries(suggestions, &proposals);
     (*listener)->OnNextUpdate(std::move(proposals));
-    cached_next_proposals_ = std::move(proposals);
+    cached_next_proposals_.reset(std::move(proposals));
   }
 }
 
@@ -95,7 +95,7 @@ void SuggestionDebugImpl::WatchNextProposals(
   auto listener_ptr = listener.Bind();
   next_proposal_listeners_.AddInterfacePtr(std::move(listener_ptr));
   if (cached_next_proposals_) {
-    listener_ptr->OnNextUpdate(std::move(cached_next_proposals_));
+    listener_ptr->OnNextUpdate(cached_next_proposals_.take());
   }
 }
 

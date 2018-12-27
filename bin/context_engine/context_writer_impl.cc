@@ -37,8 +37,9 @@ ContextWriterImpl::ContextWriterImpl(
     parent_value_selector_.meta->story->id =
         client_info.module_scope().story_id;
     parent_value_selector_.meta->mod = fuchsia::modular::ModuleMetadata::New();
-    fidl::Clone(client_info.module_scope().module_path,
-                &parent_value_selector_.meta->mod->path);
+    std::vector<std::string> module_path;
+    fidl::Clone(client_info.module_scope().module_path, &module_path);
+    parent_value_selector_.meta->mod->path = fidl::VectorPtr(std::move(module_path));
   }
 }
 
@@ -46,7 +47,7 @@ ContextWriterImpl::~ContextWriterImpl() {}
 
 namespace {
 
-fidl::VectorPtr<fidl::StringPtr> Deprecated_GetTypesFromJsonEntity(
+fidl::VectorPtr<std::string> Deprecated_GetTypesFromJsonEntity(
     const fidl::StringPtr& content) {
   // If the content has the @type attribute, take its contents and populate the
   // fuchsia::modular::EntityMetadata appropriately, overriding whatever is
@@ -56,25 +57,19 @@ fidl::VectorPtr<fidl::StringPtr> Deprecated_GetTypesFromJsonEntity(
     FXL_LOG(WARNING) << "Invalid entity metadata in JSON value: " << content;
     return {};
   }
-  if (types.empty())
-    return {};
 
-  auto result = fidl::VectorPtr<fidl::StringPtr>();
-  for (const auto& it : types) {
-    result.push_back(it);
-  }
-  return result;
+  return fidl::VectorPtr(types);
 }
 
-void MaybeFillEntityTypeMetadata(const fidl::VectorPtr<fidl::StringPtr>& types,
+void MaybeFillEntityTypeMetadata(const std::vector<std::string>& types,
                                  fuchsia::modular::ContextValue& value) {
-  if (value.type != fuchsia::modular::ContextValueType::ENTITY || !types)
+  if (value.type != fuchsia::modular::ContextValueType::ENTITY)
     return;
 
   if (!value.meta.entity) {
     value.meta.entity = fuchsia::modular::EntityMetadata::New();
   }
-  fidl::Clone(types, &value.meta.entity->type);
+  value.meta.entity->type = fidl::VectorPtr(types);
 }
 
 bool MaybeFindParentValueId(ContextRepository* repository,
@@ -126,7 +121,7 @@ void ContextWriterImpl::DestroyContextValueWriter(ContextValueWriterImpl* ptr) {
   value_writer_storage_.erase(it, value_writer_storage_.end());
 }
 
-void ContextWriterImpl::WriteEntityTopic(fidl::StringPtr topic,
+void ContextWriterImpl::WriteEntityTopic(std::string topic,
                                          fidl::StringPtr value) {
   auto activity =
       repository_->debug()->GetIdleWaiter()->RegisterOngoingActivity();
@@ -142,13 +137,13 @@ void ContextWriterImpl::WriteEntityTopic(fidl::StringPtr topic,
 
   GetEntityTypesFromEntityReference(
       value, [this, activity, topic,
-              value](const fidl::VectorPtr<fidl::StringPtr>& types) {
+              value](const std::vector<std::string>& types) {
         fuchsia::modular::ContextValue context_value;
         context_value.type = fuchsia::modular::ContextValueType::ENTITY;
         context_value.content = value;
         context_value.meta.entity = fuchsia::modular::EntityMetadata::New();
         context_value.meta.entity->topic = topic;
-        fidl::Clone(types, &context_value.meta.entity->type);
+        context_value.meta.entity->type = fidl::VectorPtr(types);
 
         auto it = topic_value_ids_.find(topic);
         if (it == topic_value_ids_.end()) {
@@ -169,7 +164,7 @@ void ContextWriterImpl::WriteEntityTopic(fidl::StringPtr topic,
 
 void ContextWriterImpl::GetEntityTypesFromEntityReference(
     const fidl::StringPtr& reference,
-    std::function<void(const fidl::VectorPtr<fidl::StringPtr>&)> done) {
+    std::function<void(const std::vector<std::string>&)> done) {
   auto activity =
       repository_->debug()->GetIdleWaiter()->RegisterOngoingActivity();
 
@@ -188,7 +183,7 @@ void ContextWriterImpl::GetEntityTypesFromEntityReference(
   (*entity)->GetTypes(fxl::MakeCopyable(
       [this, activity, id = entities_.GetId(&entity), done = std::move(done),
        fallback = std::move(fallback)](
-          const fidl::VectorPtr<fidl::StringPtr>& types) mutable {
+          const std::vector<std::string>& types) mutable {
         done(types);
         fallback.cancel();
         entities_.erase(id);
@@ -254,7 +249,7 @@ void ContextValueWriterImpl::Set(
   auto done_getting_types =
       [weak_this = weak_factory_.GetWeakPtr(), activity, content,
        metadata = std::move(metadata)](
-          const fidl::VectorPtr<fidl::StringPtr>& entity_types) mutable {
+          const std::vector<std::string>& entity_types) mutable {
         if (!weak_this)
           return;
 

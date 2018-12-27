@@ -466,13 +466,13 @@ TEST_F(PageManagerTest, GetHeadCommitEntries) {
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
 
-  fidl::VectorPtr<ledger_internal::CommitId> heads1;
+  std::vector<ledger_internal::CommitId> heads1;
   page_debug->GetHeadCommitsIds(
       callback::Capture(callback::SetWhenCalled(&called), &status, &heads1));
   DrainLoop();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(1u, heads1->size());
+  EXPECT_EQ(1u, heads1.size());
 
   std::string key2("002-some_key2");
   std::string value2("another value");
@@ -483,20 +483,20 @@ TEST_F(PageManagerTest, GetHeadCommitEntries) {
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
 
-  fidl::VectorPtr<ledger_internal::CommitId> heads2;
+  std::vector<ledger_internal::CommitId> heads2;
   page_debug->GetHeadCommitsIds(
       callback::Capture(callback::SetWhenCalled(&called), &status, &heads2));
   DrainLoop();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(1u, heads2->size());
+  EXPECT_EQ(1u, heads2.size());
 
-  EXPECT_NE(convert::ToString(heads1->at(0).id),
-            convert::ToString(heads2->at(0).id));
+  EXPECT_NE(convert::ToString(heads1.at(0).id),
+            convert::ToString(heads2.at(0).id));
 
   PageSnapshotPtr snapshot1;
   page_debug->GetSnapshot(
-      std::move(heads1->at(0)), snapshot1.NewRequest(),
+      std::move(heads1.at(0)), snapshot1.NewRequest(),
       callback::Capture(callback::SetWhenCalled(&called), &status));
   DrainLoop();
   EXPECT_TRUE(called);
@@ -504,13 +504,13 @@ TEST_F(PageManagerTest, GetHeadCommitEntries) {
 
   PageSnapshotPtr snapshot2;
   page_debug->GetSnapshot(
-      std::move(heads2->at(0)), snapshot2.NewRequest(),
+      std::move(heads2.at(0)), snapshot2.NewRequest(),
       callback::Capture(callback::SetWhenCalled(&called), &status));
   DrainLoop();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
 
-  fidl::VectorPtr<Entry> expected_entries1;
+  std::vector<Entry> expected_entries1;
   std::unique_ptr<Token> next_token;
   snapshot1->GetEntries(
       fidl::VectorPtr<uint8_t>::New(0), nullptr,
@@ -519,11 +519,11 @@ TEST_F(PageManagerTest, GetHeadCommitEntries) {
   DrainLoop();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(1u, expected_entries1->size());
-  EXPECT_EQ(key1, convert::ToString(expected_entries1->at(0).key));
-  EXPECT_EQ(value1, ToString(expected_entries1->at(0).value));
+  EXPECT_EQ(1u, expected_entries1.size());
+  EXPECT_EQ(key1, convert::ToString(expected_entries1.at(0).key));
+  EXPECT_EQ(value1, ToString(expected_entries1.at(0).value));
 
-  fidl::VectorPtr<Entry> expected_entries2;
+  std::vector<Entry> expected_entries2;
   snapshot2->GetEntries(
       fidl::VectorPtr<uint8_t>::New(0), nullptr,
       callback::Capture(callback::SetWhenCalled(&called), &status,
@@ -531,11 +531,11 @@ TEST_F(PageManagerTest, GetHeadCommitEntries) {
   DrainLoop();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(2u, expected_entries2->size());
-  EXPECT_EQ(key1, convert::ToString(expected_entries2->at(0).key));
-  EXPECT_EQ(value1, ToString(expected_entries2->at(0).value));
-  EXPECT_EQ(key2, convert::ToString(expected_entries2->at(1).key));
-  EXPECT_EQ(value2, ToString(expected_entries2->at(1).value));
+  EXPECT_EQ(2u, expected_entries2.size());
+  EXPECT_EQ(key1, convert::ToString(expected_entries2.at(0).key));
+  EXPECT_EQ(value1, ToString(expected_entries2.at(0).value));
+  EXPECT_EQ(key2, convert::ToString(expected_entries2.at(1).key));
+  EXPECT_EQ(value2, ToString(expected_entries2.at(1).value));
 }
 
 TEST_F(PageManagerTest, GetCommit) {
@@ -573,13 +573,13 @@ TEST_F(PageManagerTest, GetCommit) {
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
 
-  fidl::VectorPtr<ledger_internal::CommitId> heads1;
+  std::vector<ledger_internal::CommitId> heads1;
   page_debug->GetHeadCommitsIds(
       callback::Capture(callback::SetWhenCalled(&called), &status, &heads1));
   DrainLoop();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(1u, heads1->size());
+  EXPECT_EQ(1u, heads1.size());
 
   std::string key2("002-some_key2");
   std::string value2("another value");
@@ -590,26 +590,26 @@ TEST_F(PageManagerTest, GetCommit) {
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
 
-  fidl::VectorPtr<ledger_internal::CommitId> heads2;
+  std::vector<ledger_internal::CommitId> heads2;
   page_debug->GetHeadCommitsIds(
       callback::Capture(callback::SetWhenCalled(&called), &status, &heads2));
   DrainLoop();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(1u, heads2->size());
+  EXPECT_EQ(1u, heads2.size());
 
   ledger_internal::CommitPtr commit_struct;
-  ledger_internal::CommitId currHeadCommit = fidl::Clone(heads2->at(0));
+  ledger_internal::CommitId currHeadCommit = fidl::Clone(heads2.at(0));
   page_debug->GetCommit(std::move(currHeadCommit),
                         callback::Capture(callback::SetWhenCalled(&called),
                                           &status, &commit_struct));
   DrainLoop();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(heads2->at(0).id, commit_struct->commit_id.id);
-  EXPECT_EQ(1u, commit_struct->parents_ids->size());
+  EXPECT_EQ(heads2.at(0).id, commit_struct->commit_id.id);
+  EXPECT_EQ(1u, commit_struct->parents_ids.size());
   EXPECT_EQ(1u, commit_struct->generation);
-  EXPECT_EQ(heads1->at(0).id, commit_struct->parents_ids->at(0).id);
+  EXPECT_EQ(heads1.at(0).id, commit_struct->parents_ids.at(0).id);
 }
 
 TEST_F(PageManagerTest, GetCommitError) {

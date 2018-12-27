@@ -25,7 +25,7 @@ void PageImpl::GetId(GetIdCallback callback) {
 
 void PageImpl::GetSnapshot(
     fidl::InterfaceRequest<PageSnapshot> snapshot_request,
-    fidl::VectorPtr<uint8_t> key_prefix,
+    std::vector<uint8_t> key_prefix,
     fidl::InterfaceHandle<PageWatcher> watcher, GetSnapshotCallback callback) {
   auto timed_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "page_get_snapshot");
@@ -34,14 +34,14 @@ void PageImpl::GetSnapshot(
                                 std::move(timed_callback));
 }
 
-void PageImpl::Put(fidl::VectorPtr<uint8_t> key, fidl::VectorPtr<uint8_t> value,
+void PageImpl::Put(std::vector<uint8_t> key, std::vector<uint8_t> value,
                    PutCallback callback) {
   PutWithPriority(std::move(key), std::move(value), Priority::EAGER,
                   std::move(callback));
 }
 
-void PageImpl::PutWithPriority(fidl::VectorPtr<uint8_t> key,
-                               fidl::VectorPtr<uint8_t> value,
+void PageImpl::PutWithPriority(std::vector<uint8_t> key,
+                               std::vector<uint8_t> value,
                                Priority priority,
                                PutWithPriorityCallback callback) {
   auto timed_callback =
@@ -50,7 +50,7 @@ void PageImpl::PutWithPriority(fidl::VectorPtr<uint8_t> key,
                                     std::move(timed_callback));
 }
 
-void PageImpl::PutReference(fidl::VectorPtr<uint8_t> key, Reference reference,
+void PageImpl::PutReference(std::vector<uint8_t> key, Reference reference,
                             Priority priority, PutReferenceCallback callback) {
   auto timed_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "page_put_reference");
@@ -58,7 +58,7 @@ void PageImpl::PutReference(fidl::VectorPtr<uint8_t> key, Reference reference,
                                  std::move(timed_callback));
 }
 
-void PageImpl::Delete(fidl::VectorPtr<uint8_t> key, DeleteCallback callback) {
+void PageImpl::Delete(std::vector<uint8_t> key, DeleteCallback callback) {
   auto timed_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "page_delete");
   delaying_facade_->Delete(std::move(key), std::move(timed_callback));

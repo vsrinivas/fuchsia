@@ -77,7 +77,7 @@ std::string MakeTriggerKey(const std::string& agent_url,
                            const std::string& task_id);
 std::string MakeLinkKey(const fuchsia::modular::LinkPathPtr& link_path);
 std::string MakeLinkKey(const fuchsia::modular::LinkPath& link_path);
-std::string MakeModuleKey(const fidl::VectorPtr<fidl::StringPtr>& module_path);
+std::string MakeModuleKey(const std::vector<std::string>& module_path);
 
 // 3. The slash separator is escaped by a backslash inside the ID
 //    values. Backslashes inside the ID values are escaped by backslash too.
@@ -93,7 +93,7 @@ constexpr char kSubSeparator[] = ":";
 
 std::string EncodeLinkPath(const fuchsia::modular::LinkPath& link_path);
 std::string EncodeModulePath(
-    const fidl::VectorPtr<fidl::StringPtr>& module_path);
+    const std::vector<std::string>& module_path);
 std::string EncodeModuleComponentNamespace(const std::string& story_id);
 
 // More notes:

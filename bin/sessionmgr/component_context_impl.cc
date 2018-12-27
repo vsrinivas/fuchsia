@@ -49,7 +49,7 @@ void ComponentContextImpl::GetLedger(
 }
 
 void ComponentContextImpl::ConnectToAgent(
-    fidl::StringPtr url,
+    std::string url,
     fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
         incoming_services_request,
     fidl::InterfaceRequest<fuchsia::modular::AgentController>
@@ -60,19 +60,19 @@ void ComponentContextImpl::ConnectToAgent(
 }
 
 void ComponentContextImpl::ObtainMessageQueue(
-    fidl::StringPtr name,
+    std::string name,
     fidl::InterfaceRequest<fuchsia::modular::MessageQueue> request) {
   message_queue_manager_->ObtainMessageQueue(
       component_namespace_, component_instance_id_, name, std::move(request));
 }
 
-void ComponentContextImpl::DeleteMessageQueue(fidl::StringPtr name) {
+void ComponentContextImpl::DeleteMessageQueue(std::string name) {
   message_queue_manager_->DeleteMessageQueue(component_namespace_,
                                              component_instance_id_, name);
 }
 
 void ComponentContextImpl::GetMessageSender(
-    fidl::StringPtr queue_token,
+    std::string queue_token,
     fidl::InterfaceRequest<fuchsia::modular::MessageSender> request) {
   message_queue_manager_->GetMessageSender(queue_token, std::move(request));
 }
@@ -83,10 +83,10 @@ void ComponentContextImpl::GetEntityResolver(
 }
 
 void ComponentContextImpl::CreateEntityWithData(
-    fidl::VectorPtr<fuchsia::modular::TypeToDataEntry> type_to_data,
+    std::vector<fuchsia::modular::TypeToDataEntry> type_to_data,
     CreateEntityWithDataCallback result) {
   std::map<std::string, std::string> copy;
-  for (const auto& it : *type_to_data) {
+  for (const auto& it : type_to_data) {
     copy[it.type] = it.data;
   }
   result(entity_provider_runner_->CreateReferenceFromData(std::move(copy)));

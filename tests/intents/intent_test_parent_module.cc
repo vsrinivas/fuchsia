@@ -147,7 +147,7 @@ class TestModule {
     // the handler will be given the link name in its own namespace, in this
     // case first_parameter_name.
     path.link_name = "does_not_matter_either";
-    fidl::VectorPtr<fidl::StringPtr> module_path;
+    std::vector<std::string> module_path;
     module_path.push_back("nor_does_this_matter");
     path.module_path = std::move(module_path);
     intent_parameter2.data.set_link_path(std::move(path));

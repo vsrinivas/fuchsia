@@ -16,14 +16,14 @@ class RemoveModCommandRunnerTest : public testing::TestWithSessionStorage {
     return std::make_unique<RemoveModCommandRunner>();
   }
 
-  fidl::VectorPtr<fidl::StringPtr> MakeModulePath(fidl::StringPtr path) {
-    fidl::VectorPtr<fidl::StringPtr> module_path;
+  std::vector<std::string> MakeModulePath(std::string path) {
+    std::vector<std::string> module_path;
     module_path.push_back(path);
     return module_path;
   }
 
   void InitModuleData(StoryStorage* const story_storage,
-                      fidl::VectorPtr<fidl::StringPtr> path) {
+                      std::vector<std::string> path) {
     fuchsia::modular::ModuleData module_data;
     module_data.module_path = std::move(path);
     module_data.intent = fuchsia::modular::Intent::New();
@@ -40,10 +40,10 @@ TEST_F(RemoveModCommandRunnerTest, Execute) {
   auto story_storage = GetStoryStorage(storage.get(), story_id);
 
   auto mod_name = MakeModulePath("mod");
-  InitModuleData(story_storage.get(), mod_name.Clone());
+  InitModuleData(story_storage.get(), mod_name);
 
   fuchsia::modular::RemoveMod remove_mod;
-  remove_mod.mod_name = mod_name.Clone();
+  remove_mod.mod_name = mod_name;
   fuchsia::modular::StoryCommand command;
   command.set_remove_mod(std::move(remove_mod));
 

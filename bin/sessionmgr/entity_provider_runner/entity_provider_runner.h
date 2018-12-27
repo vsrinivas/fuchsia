@@ -77,7 +77,7 @@ class EntityProviderRunner : public fuchsia::modular::EntityResolver {
 
   // |fuchsia::modular::EntityResolver|
   void ResolveEntity(
-      fidl::StringPtr entity_reference,
+      std::string entity_reference,
       fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request) override;
 
   void ResolveDataEntity(

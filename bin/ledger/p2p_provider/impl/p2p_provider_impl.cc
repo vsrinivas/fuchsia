@@ -176,9 +176,9 @@ void P2PProviderImpl::ProcessHandshake(RemoteConnection* connection,
 void P2PProviderImpl::ListenForNewDevices(uint64_t version) {
   net_connector_->GetKnownDeviceNames(
       version,
-      [this](uint64_t new_version, fidl::VectorPtr<fidl::StringPtr> devices) {
+      [this](uint64_t new_version, std::vector<std::string> devices) {
         std::vector<std::string> seen_devices;
-        for (auto& remote_name : *devices) {
+        for (auto& remote_name : devices) {
           seen_devices.push_back(remote_name);
           if (contacted_hosts_.find(remote_name) != contacted_hosts_.end()) {
             continue;

@@ -60,7 +60,7 @@ class TestPageCloudWatcher : public cloud_provider::PageCloudWatcher {
     pending_on_new_commit_callback = std::move(callback);
   }
 
-  void OnNewObject(fidl::VectorPtr<uint8_t> /*id*/,
+  void OnNewObject(std::vector<uint8_t> /*id*/,
                    fuchsia::mem::Buffer /*buffer*/,
                    OnNewObjectCallback /*callback*/) override {
     FXL_NOTIMPLEMENTED();

@@ -36,11 +36,11 @@ class AgentImpl : public fuchsia::modular::Agent {
 
  private:
   // |fuchsia::modular::Agent|
-  void Connect(fidl::StringPtr requestor_url,
+  void Connect(std::string requestor_url,
                fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
                    services_request) override;
   // |fuchsia::modular::Agent|
-  void RunTask(fidl::StringPtr task_id, RunTaskCallback callback) override;
+  void RunTask(std::string task_id, RunTaskCallback callback) override;
 
   Delegate* const delegate_;
   fidl::Binding<fuchsia::modular::Agent> binding_;

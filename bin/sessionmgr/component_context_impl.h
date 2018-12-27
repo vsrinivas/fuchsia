@@ -61,7 +61,7 @@ class ComponentContextImpl : public fuchsia::modular::ComponentContext {
       fidl::InterfaceRequest<fuchsia::ledger::Ledger> request) override;
 
   // |fuchsia::modular::ComponentContext|
-  void ConnectToAgent(fidl::StringPtr url,
+  void ConnectToAgent(std::string url,
                       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
                           incoming_services_request,
                       fidl::InterfaceRequest<fuchsia::modular::AgentController>
@@ -69,15 +69,15 @@ class ComponentContextImpl : public fuchsia::modular::ComponentContext {
 
   // |fuchsia::modular::ComponentContext|
   void ObtainMessageQueue(
-      fidl::StringPtr name,
+      std::string name,
       fidl::InterfaceRequest<fuchsia::modular::MessageQueue> request) override;
 
   // |fuchsia::modular::ComponentContext|
-  void DeleteMessageQueue(fidl::StringPtr name) override;
+  void DeleteMessageQueue(std::string name) override;
 
   // |fuchsia::modular::ComponentContext|
   void GetMessageSender(
-      fidl::StringPtr queue_token,
+      std::string queue_token,
       fidl::InterfaceRequest<fuchsia::modular::MessageSender> request) override;
 
   // |fuchsia::modular::ComponentContext|
@@ -87,7 +87,7 @@ class ComponentContextImpl : public fuchsia::modular::ComponentContext {
 
   // |fuchsia::modular::ComponentContext|
   void CreateEntityWithData(
-      fidl::VectorPtr<fuchsia::modular::TypeToDataEntry> type_to_data,
+      std::vector<fuchsia::modular::TypeToDataEntry> type_to_data,
       CreateEntityWithDataCallback result) override;
 
   // |fuchsia::modular::ComponentContext|

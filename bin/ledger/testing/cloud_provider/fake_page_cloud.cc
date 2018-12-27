@@ -44,18 +44,18 @@ bool TokenToPosition(const std::unique_ptr<cloud_provider::Token>& token,
     return true;
   }
 
-  if (token->opaque_id->size() != sizeof(*result)) {
+  if (token->opaque_id.size() != sizeof(*result)) {
     return false;
   }
 
-  memcpy(result, token->opaque_id->data(), sizeof(*result));
+  memcpy(result, token->opaque_id.data(), sizeof(*result));
   return true;
 }
 
-uint64_t GetVectorSignature(const fidl::VectorPtr<uint8_t>& vector,
+uint64_t GetVectorSignature(const std::vector<uint8_t>& vector,
                             uint32_t seed) {
-  return murmurhash(reinterpret_cast<const char*>(vector.get().data()),
-                    vector.get().size(), seed);
+  return murmurhash(reinterpret_cast<const char*>(vector.data()),
+                    vector.size(), seed);
 }
 
 uint64_t GetCommitsSignature(
@@ -200,7 +200,7 @@ void FakePageCloud::GetCommits(
     std::unique_ptr<cloud_provider::Token> min_position_token,
     GetCommitsCallback callback) {
   if (MustReturnError(GetVectorSignature(
-          min_position_token ? min_position_token->opaque_id.Clone() : nullptr,
+          min_position_token ? min_position_token->opaque_id : std::vector<uint8_t>(),
           kGetCommitsSeed))) {
     callback(cloud_provider::Status::NETWORK_ERROR, nullptr, nullptr);
     return;
@@ -231,7 +231,7 @@ void FakePageCloud::GetCommits(
            fidl::MakeOptional(std::move(commit_pack)), std::move(token));
 }
 
-void FakePageCloud::AddObject(fidl::VectorPtr<uint8_t> id,
+void FakePageCloud::AddObject(std::vector<uint8_t> id,
                               fuchsia::mem::Buffer data,
                               AddObjectCallback callback) {
   if (MustReturnError(GetVectorSignature(id, kAddObjectSeed))) {
@@ -248,7 +248,7 @@ void FakePageCloud::AddObject(fidl::VectorPtr<uint8_t> id,
   callback(cloud_provider::Status::OK);
 }
 
-void FakePageCloud::GetObject(fidl::VectorPtr<uint8_t> id,
+void FakePageCloud::GetObject(std::vector<uint8_t> id,
                               GetObjectCallback callback) {
   if (MustReturnError(GetVectorSignature(id, kGetObjectSeed))) {
     callback(cloud_provider::Status::NETWORK_ERROR, nullptr);

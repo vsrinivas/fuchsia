@@ -55,7 +55,7 @@ class ModuleContextImpl : fuchsia::modular::ModuleContext {
 
   // |fuchsia::modular::ModuleContext|
   void EmbedModule(
-      fidl::StringPtr name, fuchsia::modular::Intent intent,
+      std::string name, fuchsia::modular::Intent intent,
       fidl::InterfaceRequest<fuchsia::modular::ModuleController>
           module_controller,
       fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> view_owner,
@@ -63,7 +63,7 @@ class ModuleContextImpl : fuchsia::modular::ModuleContext {
 
   // |fuchsia::modular::ModuleContext|
   void AddModuleToStory(
-      fidl::StringPtr name, fuchsia::modular::Intent intent,
+      std::string name, fuchsia::modular::Intent intent,
       fidl::InterfaceRequest<fuchsia::modular::ModuleController>
           module_controller,
       fuchsia::modular::SurfaceRelationPtr surface_relation,
@@ -71,10 +71,10 @@ class ModuleContextImpl : fuchsia::modular::ModuleContext {
 
   // |fuchsia::modular::ModuleContext|
   void StartContainerInShell(
-      fidl::StringPtr name, fuchsia::modular::SurfaceRelation parent_relation,
-      fidl::VectorPtr<fuchsia::modular::ContainerLayout> layout,
-      fidl::VectorPtr<fuchsia::modular::ContainerRelationEntry> relationships,
-      fidl::VectorPtr<fuchsia::modular::ContainerNode> nodes) override;
+      std::string name, fuchsia::modular::SurfaceRelation parent_relation,
+      std::vector<fuchsia::modular::ContainerLayout> layout,
+      std::vector<fuchsia::modular::ContainerRelationEntry> relationships,
+      std::vector<fuchsia::modular::ContainerNode> nodes) override;
 
   // |fuchsia::modular::ModuleContext|
   void GetComponentContext(
@@ -105,7 +105,7 @@ class ModuleContextImpl : fuchsia::modular::ModuleContext {
 
   // |fuchsia::modular::ModuleContext|
   void CreateEntity(
-      fidl::StringPtr type, fuchsia::mem::Buffer data,
+      std::string type, fuchsia::mem::Buffer data,
       fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request,
       CreateEntityCallback callback) override;
 

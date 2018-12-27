@@ -64,7 +64,7 @@ void XdrIntentParameterData(XdrContext* const xdr,
         FXL_CHECK(fsl::VmoFromString(*value, &vmo));
         data->set_json(std::move(vmo).ToTransport());
       } else if (tag == kEntityType) {
-        ::fidl::VectorPtr<::fidl::StringPtr> value;
+        ::std::vector<::std::string> value;
         xdr->Field(kEntityType, &value);
         data->set_entity_type(std::move(value));
       } else if (tag == kLinkName) {
@@ -102,7 +102,7 @@ void XdrIntentParameterData(XdrContext* const xdr,
         }
         case fuchsia::modular::IntentParameterData::Tag::kEntityType: {
           tag = kEntityType;
-          fidl::VectorPtr<fidl::StringPtr> value = Clone(data->entity_type());
+          std::vector<std::string> value = data->entity_type();
           xdr->Field(kEntityType, &value);
           break;
         }

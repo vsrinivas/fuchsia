@@ -37,7 +37,7 @@ TEST_F(StoryStorageTest, ReadModuleData_NonexistentModule) {
   auto storage = CreateStorage("page");
 
   bool read_done{};
-  fidl::VectorPtr<fidl::StringPtr> path;
+  std::vector<std::string> path;
   path.push_back("a");
   storage->ReadModuleData(path)->Then([&](ModuleDataPtr data) {
     read_done = true;
@@ -52,9 +52,9 @@ TEST_F(StoryStorageTest, ReadAllModuleData_Empty) {
 
   bool read_done{};
   fidl::VectorPtr<ModuleData> all_module_data;
-  storage->ReadAllModuleData()->Then([&](fidl::VectorPtr<ModuleData> data) {
+  storage->ReadAllModuleData()->Then([&](std::vector<ModuleData> data) {
     read_done = true;
-    all_module_data = std::move(data);
+    all_module_data.reset(std::move(data));
   });
 
   RunLoopUntil([&] { return read_done; });
@@ -108,8 +108,8 @@ TEST_F(StoryStorageTest, WriteReadModuleData) {
 
   // Read the same data back with ReadAllModuleData().
   fidl::VectorPtr<ModuleData> all_module_data;
-  storage->ReadAllModuleData()->Then([&](fidl::VectorPtr<ModuleData> data) {
-    all_module_data = std::move(data);
+  storage->ReadAllModuleData()->Then([&](std::vector<ModuleData> data) {
+    all_module_data.reset(std::move(data));
   });
   RunLoopUntil([&] { return !!all_module_data; });
   EXPECT_EQ(2u, all_module_data->size());
@@ -134,7 +134,7 @@ TEST_F(StoryStorageTest, UpdateModuleData) {
     notified_module_data = std::move(data);
   });
 
-  fidl::VectorPtr<fidl::StringPtr> path;
+  std::vector<std::string> path;
   path.push_back("a");
 
   // Case 1: Don't mutate anything.
@@ -162,7 +162,7 @@ TEST_F(StoryStorageTest, UpdateModuleData) {
                            EXPECT_FALSE(*ptr);
 
                            *ptr = ModuleData::New();
-                           (*ptr)->module_path = path.Clone();
+                           (*ptr)->module_path = path;
                            (*ptr)->module_url = "foobar";
                          })
       ->Then([&] { update_done = true; });

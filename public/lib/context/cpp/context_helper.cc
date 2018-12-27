@@ -6,9 +6,9 @@
 
 namespace modular {
 
-std::optional<fidl::VectorPtr<fuchsia::modular::ContextValue>> TakeContextValue(
+std::optional<std::vector<fuchsia::modular::ContextValue>> TakeContextValue(
     fuchsia::modular::ContextUpdate* const update, const std::string& key) {
-  for (auto& it : update->values.take()) {
+  for (auto& it : update->values) {
     if (it.key == key) {
       return std::move(it.value);
     }
@@ -27,7 +27,7 @@ void AddToContextQuery(fuchsia::modular::ContextQuery* const query,
 
 bool HasSelectorKey(fuchsia::modular::ContextQuery* const query,
                     const std::string& key) {
-  for (auto& it : *query->selector) {
+  for (auto& it : query->selector) {
     if (it.key == key) {
       return true;
     }

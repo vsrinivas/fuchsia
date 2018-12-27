@@ -110,7 +110,7 @@ class EntityProviderRunner::EntityReferenceFactoryImpl
 
  private:
   // |fuchsia::modular::EntityReferenceFactory|
-  void CreateReference(fidl::StringPtr cookie,
+  void CreateReference(std::string cookie,
                        CreateReferenceCallback callback) override {
     entity_provider_runner_->CreateReference(agent_url_, cookie, callback);
   }
@@ -150,10 +150,10 @@ class EntityProviderRunner::DataEntity : fuchsia::modular::Entity {
  private:
   // |fuchsia::modular::Entity|
   void GetTypes(GetTypesCallback result) override {
-    result(fxl::To<fidl::VectorPtr<fidl::StringPtr>>(types_));
+    result(types_);
   }
   // |fuchsia::modular::Entity|
-  void GetData(fidl::StringPtr type, GetDataCallback result) override {
+  void GetData(std::string type, GetDataCallback result) override {
     auto it = data_.find(type);
     if (it != data_.end()) {
       fsl::SizedVmo vmo;
@@ -167,7 +167,7 @@ class EntityProviderRunner::DataEntity : fuchsia::modular::Entity {
     }
   }
   // |fuchsia::modular::Entity|
-  void WriteData(fidl::StringPtr type, fuchsia::mem::Buffer data,
+  void WriteData(std::string type, fuchsia::mem::Buffer data,
                  WriteDataCallback callback) override {
     // TODO(MI4-1301)
     callback(fuchsia::modular::EntityWriteStatus::READ_ONLY);
@@ -179,7 +179,7 @@ class EntityProviderRunner::DataEntity : fuchsia::modular::Entity {
   }
   // |fuchsia::modular::Entity|
   void Watch(
-      fidl::StringPtr type,
+      std::string type,
       fidl::InterfaceHandle<fuchsia::modular::EntityWatcher> watcher) override {
     // TODO(MI4-1301)
     FXL_NOTIMPLEMENTED();
@@ -282,9 +282,9 @@ void EntityProviderRunner::OnDataEntityFinished(
 }
 
 void EntityProviderRunner::ResolveEntity(
-    fidl::StringPtr entity_reference,
+    std::string entity_reference,
     fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request) {
-  if (entity_reference.get().find(kEntityDataReferencePrefix) == 0ul) {
+  if (entity_reference.find(kEntityDataReferencePrefix) == 0ul) {
     ResolveDataEntity(entity_reference, std::move(entity_request));
     return;
   }

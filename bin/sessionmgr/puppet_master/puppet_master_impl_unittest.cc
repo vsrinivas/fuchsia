@@ -50,7 +50,7 @@ TEST_F(PuppetMasterTest, CommandsAreSentToExecutor) {
 
   // Enqueue some commands. Do this twice and show that all the commands show
   // up as one batch.
-  fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+  std::vector<fuchsia::modular::StoryCommand> commands;
   commands.push_back(MakeRemoveModCommand("one"));
   story->Enqueue(std::move(commands));
   commands.push_back(MakeRemoveModCommand("two"));
@@ -77,11 +77,11 @@ TEST_F(PuppetMasterTest, CommandsAreSentToExecutor) {
   EXPECT_EQ("foo", executor_.last_story_id());
   ASSERT_EQ(3u, executor_.last_commands().size());
   EXPECT_EQ("one",
-            executor_.last_commands().at(0).remove_mod().mod_name->at(0));
+            executor_.last_commands().at(0).remove_mod().mod_name.at(0));
   EXPECT_EQ("two",
-            executor_.last_commands().at(1).remove_mod().mod_name->at(0));
+            executor_.last_commands().at(1).remove_mod().mod_name.at(0));
   EXPECT_EQ("three",
-            executor_.last_commands().at(2).remove_mod().mod_name->at(0));
+            executor_.last_commands().at(2).remove_mod().mod_name.at(0));
 }
 
 TEST_F(PuppetMasterTest, CommandsAreSentToExecutor_IfWeCloseStoryChannel) {
@@ -92,7 +92,7 @@ TEST_F(PuppetMasterTest, CommandsAreSentToExecutor_IfWeCloseStoryChannel) {
 
   // Enqueue some commands. Do this twice and show that all the commands show
   // up as one batch.
-  fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+  std::vector<fuchsia::modular::StoryCommand> commands;
   commands.push_back(MakeRemoveModCommand("one"));
   story->Enqueue(std::move(commands));
 
@@ -117,7 +117,7 @@ TEST_F(PuppetMasterTest, MultipleExecuteCalls) {
   // execution.
   auto story = ControlStory("foo");
 
-  fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+  std::vector<fuchsia::modular::StoryCommand> commands;
   commands.push_back(MakeRemoveModCommand("one"));
   executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK,
                                    nullptr);
@@ -141,7 +141,7 @@ TEST_F(PuppetMasterTest, NewStoriesAreKeptSeparate) {
   auto story1 = ControlStory("story1");
   auto story2 = ControlStory("story2");
 
-  fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+  std::vector<fuchsia::modular::StoryCommand> commands;
   commands.push_back(MakeRemoveModCommand("one"));
   story1->Enqueue(std::move(commands));
   // We must run the loop to ensure that our message is dispatched.
@@ -164,7 +164,7 @@ TEST_F(PuppetMasterTest, NewStoriesAreKeptSeparate) {
   auto story1_id = executor_.last_story_id();
   ASSERT_EQ(1u, executor_.last_commands().size());
   EXPECT_EQ("one",
-            executor_.last_commands().at(0).remove_mod().mod_name->at(0));
+            executor_.last_commands().at(0).remove_mod().mod_name.at(0));
 
   executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK,
                                    nullptr);
@@ -178,7 +178,7 @@ TEST_F(PuppetMasterTest, NewStoriesAreKeptSeparate) {
   auto story2_id = executor_.last_story_id();
   ASSERT_EQ(1u, executor_.last_commands().size());
   EXPECT_EQ("two",
-            executor_.last_commands().at(0).remove_mod().mod_name->at(0));
+            executor_.last_commands().at(0).remove_mod().mod_name.at(0));
 
   // The two IDs should be different, because we gave the two stories different
   // names.
@@ -192,7 +192,7 @@ TEST_F(PuppetMasterTest, ControlExistingStory) {
   auto story1 = ControlStory("foo");
   auto story2 = ControlStory("foo");
 
-  fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+  std::vector<fuchsia::modular::StoryCommand> commands;
   commands.push_back(MakeRemoveModCommand("one"));
   story1->Enqueue(std::move(commands));
   // We must run the loop to ensure that our message is dispatched.
@@ -215,7 +215,7 @@ TEST_F(PuppetMasterTest, ControlExistingStory) {
   auto story_id = executor_.last_story_id();
   ASSERT_EQ(1u, executor_.last_commands().size());
   EXPECT_EQ("one",
-            executor_.last_commands().at(0).remove_mod().mod_name->at(0));
+            executor_.last_commands().at(0).remove_mod().mod_name.at(0));
 
   executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK,
                                    nullptr);
@@ -229,7 +229,7 @@ TEST_F(PuppetMasterTest, ControlExistingStory) {
   EXPECT_EQ(story_id, executor_.last_story_id());
   ASSERT_EQ(1u, executor_.last_commands().size());
   EXPECT_EQ("two",
-            executor_.last_commands().at(0).remove_mod().mod_name->at(0));
+            executor_.last_commands().at(0).remove_mod().mod_name.at(0));
 }
 
 TEST_F(PuppetMasterTest, CreateStoryWithOptions) {
@@ -242,7 +242,7 @@ TEST_F(PuppetMasterTest, CreateStoryWithOptions) {
   story->SetCreateOptions(std::move(options));
 
   // Enqueue some commands.
-  fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+  std::vector<fuchsia::modular::StoryCommand> commands;
   commands.push_back(MakeRemoveModCommand("one"));
   story->Enqueue(std::move(commands));
 
@@ -278,7 +278,7 @@ TEST_F(PuppetMasterTest, CreateStoryWithOptions) {
   story->SetCreateOptions(std::move(options2));
 
   // Enqueue some commands.
-  fidl::VectorPtr<fuchsia::modular::StoryCommand> commands2;
+  std::vector<fuchsia::modular::StoryCommand> commands2;
   commands2.push_back(MakeRemoveModCommand("two"));
   story->Enqueue(std::move(commands2));
 
@@ -329,8 +329,8 @@ TEST_F(PuppetMasterTest, DeleteStory) {
 TEST_F(PuppetMasterTest, GetStories) {
   // Zero stories to should exist.
   bool done{};
-  ptr_->GetStories([&](fidl::VectorPtr<fidl::StringPtr> story_names) {
-    EXPECT_EQ(0u, story_names->size());
+  ptr_->GetStories([&](std::vector<std::string> story_names) {
+    EXPECT_EQ(0u, story_names.size());
     done = true;
   });
   RunLoopUntil([&] { return done; });
@@ -340,9 +340,9 @@ TEST_F(PuppetMasterTest, GetStories) {
 
   // "foo" should be listed.
   done = false;
-  ptr_->GetStories([&](fidl::VectorPtr<fidl::StringPtr> story_names) {
-    ASSERT_EQ(1u, story_names->size());
-    EXPECT_EQ("foo", story_names->at(0));
+  ptr_->GetStories([&](std::vector<std::string> story_names) {
+    ASSERT_EQ(1u, story_names.size());
+    EXPECT_EQ("foo", story_names.at(0));
     done = true;
   });
   RunLoopUntil([&] { return done; });

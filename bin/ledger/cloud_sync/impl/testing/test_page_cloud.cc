@@ -78,7 +78,7 @@ void TestPageCloud::GetCommits(
            std::move(position_token_to_return));
 }
 
-void TestPageCloud::AddObject(fidl::VectorPtr<uint8_t> id,
+void TestPageCloud::AddObject(std::vector<uint8_t> id,
                               fuchsia::mem::Buffer data,
                               AddObjectCallback callback) {
   add_object_calls++;
@@ -103,7 +103,7 @@ void TestPageCloud::AddObject(fidl::VectorPtr<uint8_t> id,
   }
 }
 
-void TestPageCloud::GetObject(fidl::VectorPtr<uint8_t> id,
+void TestPageCloud::GetObject(std::vector<uint8_t> id,
                               GetObjectCallback callback) {
   get_object_calls++;
   if (status_to_return != cloud_provider::Status::OK) {

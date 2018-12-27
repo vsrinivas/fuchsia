@@ -181,7 +181,7 @@ void SuggestionEngineImpl::SubscribeToNext(
 
 // |fuchsia::modular::SuggestionProvider|
 void SuggestionEngineImpl::NotifyInteraction(
-    fidl::StringPtr suggestion_uuid,
+    std::string suggestion_uuid,
     fuchsia::modular::Interaction interaction) {
   // Find the suggestion
   bool suggestion_in_ask = false;
@@ -248,7 +248,7 @@ void SuggestionEngineImpl::NotifyInteraction(
 
 // |fuchsia::modular::SuggestionEngine|
 void SuggestionEngineImpl::RegisterProposalPublisher(
-    fidl::StringPtr url,
+    std::string url,
     fidl::InterfaceRequest<fuchsia::modular::ProposalPublisher> publisher) {
   // Check to see if a fuchsia::modular::ProposalPublisher has already been
   // created for the component with this url. If not, create one.
@@ -262,7 +262,7 @@ void SuggestionEngineImpl::RegisterProposalPublisher(
 
 // |fuchsia::modular::SuggestionEngine|
 void SuggestionEngineImpl::RegisterQueryHandler(
-    fidl::StringPtr url, fidl::InterfaceHandle<fuchsia::modular::QueryHandler>
+    std::string url, fidl::InterfaceHandle<fuchsia::modular::QueryHandler>
                              query_handler_handle) {
   query_processor_.RegisterQueryHandler(url, std::move(query_handler_handle));
 }
@@ -335,7 +335,7 @@ void SuggestionEngineImpl::RegisterRankingFeatures() {
 
 void SuggestionEngineImpl::OnContextUpdate(
     fuchsia::modular::ContextUpdate update) {
-  for (auto& entry : update.values.take()) {
+  for (auto& entry : update.values) {
     for (const auto& rf_it : ranking_features) {
       if (entry.key == rf_it.first) {  // Update key == rf key
         rf_it.second->UpdateContext(entry.value);

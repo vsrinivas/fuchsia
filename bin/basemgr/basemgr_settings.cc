@@ -88,7 +88,7 @@ std::string BasemgrSettings::GetUsage() {
 }
 
 void BasemgrSettings::ParseShellArgs(const std::string& value,
-                                     fidl::VectorPtr<fidl::StringPtr>* args) {
+                                     fidl::VectorPtr<std::string>* args) {
   bool escape = false;
   std::string arg;
   for (char i : value) {
@@ -119,12 +119,11 @@ void BasemgrSettings::ParseShellArgs(const std::string& value,
 
 std::string BasemgrSettings::FindTestName(
     const fidl::StringPtr& session_shell,
-    const fidl::VectorPtr<fidl::StringPtr>& session_shell_args) {
+    const fidl::VectorPtr<std::string>& session_shell_args) {
   const std::string kRootModule = "--root_module";
   std::string result = session_shell;
 
-  for (const auto& session_shell_arg : *session_shell_args) {
-    const auto& arg = session_shell_arg.get();
+  for (const auto& arg : *session_shell_args) {
     if (arg.substr(0, kRootModule.size()) == kRootModule) {
       result = arg.substr(kRootModule.size());
     }

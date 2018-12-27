@@ -20,7 +20,7 @@ class EntityResolverFake::EntityImpl : fuchsia::modular::Entity {
  private:
   // |fuchsia::modular::Entity|
   void GetTypes(GetTypesCallback callback) override {
-    fidl::VectorPtr<fidl::StringPtr> types;
+    std::vector<std::string> types;
     for (const auto& entry : types_and_data_) {
       types.push_back(entry.first);
     }
@@ -28,7 +28,7 @@ class EntityResolverFake::EntityImpl : fuchsia::modular::Entity {
   }
 
   // |fuchsia::modular::Entity|
-  void GetData(fidl::StringPtr type, GetDataCallback callback) override {
+  void GetData(std::string type, GetDataCallback callback) override {
     auto it = types_and_data_.find(type);
     if (it == types_and_data_.end()) {
       callback(nullptr);
@@ -43,7 +43,7 @@ class EntityResolverFake::EntityImpl : fuchsia::modular::Entity {
   }
 
   // |fuchsia::modular::Entity|
-  void WriteData(fidl::StringPtr type, fuchsia::mem::Buffer data,
+  void WriteData(std::string type, fuchsia::mem::Buffer data,
                  WriteDataCallback callback) override {
     // TODO(rosswang)
     callback(fuchsia::modular::EntityWriteStatus::READ_ONLY);
@@ -57,7 +57,7 @@ class EntityResolverFake::EntityImpl : fuchsia::modular::Entity {
 
   // |fuchsia::modular::Entity|
   void Watch(
-      fidl::StringPtr type,
+      std::string type,
       fidl::InterfaceHandle<fuchsia::modular::EntityWatcher> watcher) override {
     // TODO(MI4-1301)
     FXL_NOTIMPLEMENTED();
@@ -89,7 +89,7 @@ fidl::StringPtr EntityResolverFake::AddEntity(
 }
 
 void EntityResolverFake::ResolveEntity(
-    fidl::StringPtr entity_reference,
+    std::string entity_reference,
     fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request) {
   auto it = entities_.find(entity_reference);
   if (it == entities_.end()) {

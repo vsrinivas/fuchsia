@@ -28,7 +28,7 @@ std::ostream& operator<<(
   } else if (parameter_data.is_entity_reference()) {
     os << "[ref: " << parameter_data.entity_reference() << "]";
   } else if (parameter_data.is_entity_type()) {
-    for (const auto& type : *parameter_data.entity_type()) {
+    for (const auto& type : parameter_data.entity_type()) {
       os << type << ", ";
     }
   }

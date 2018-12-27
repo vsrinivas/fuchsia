@@ -51,8 +51,8 @@ StoryWatcherImpl::StoryWatcherImpl(
 
   story_controller_->GetActiveLinks(
       story_links_watcher_binding_.NewBinding(),
-      [this](fidl::VectorPtr<fuchsia::modular::LinkPath> links) mutable {
-        for (fuchsia::modular::LinkPath& link_path : *links) {
+      [this](std::vector<fuchsia::modular::LinkPath> links) mutable {
+        for (fuchsia::modular::LinkPath& link_path : links) {
           WatchLink(std::move(link_path));
         }
       });
@@ -80,7 +80,7 @@ void StoryWatcherImpl::OnModuleAdded(fuchsia::modular::ModuleData module_data) {
 }
 
 void StoryWatcherImpl::OnModuleFocused(
-    fidl::VectorPtr<fidl::StringPtr> module_path) {
+    std::vector<std::string> module_path) {
   auto key = modular::EncodeModulePath(module_path);
   auto it = module_values_.find(key);
   if (it == module_values_.end()) {

@@ -222,7 +222,7 @@ void AgentRunner::ScheduleTask(const std::string& agent_url,
                                fuchsia::modular::TaskInfo task_info) {
   AgentRunnerStorage::TriggerInfo data;
   data.agent_url = agent_url;
-  data.task_id = task_info.task_id.get();
+  data.task_id = task_info.task_id;
 
   if (task_info.trigger_condition.is_message_on_queue()) {
     data.queue_name = task_info.trigger_condition.message_on_queue();
@@ -462,7 +462,7 @@ void AgentRunner::DeleteTask(const std::string& agent_url,
   agent_runner_storage_->DeleteTask(agent_url, task_id, [](bool) {});
 }
 
-fidl::VectorPtr<fidl::StringPtr> AgentRunner::GetAllAgents() {
+std::vector<std::string> AgentRunner::GetAllAgents() {
   // A set of all agents that are either running or scheduled to be run.
   std::set<std::string> agents;
   for (auto const& it : running_agents_) {
@@ -475,9 +475,7 @@ fidl::VectorPtr<fidl::StringPtr> AgentRunner::GetAllAgents() {
     agents.insert(it.first);
   }
 
-  fidl::VectorPtr<fidl::StringPtr> agent_urls;
-  // Initialize the size to force non-null.
-  agent_urls.resize(0);
+  std::vector<std::string> agent_urls;
   for (auto const& it : agents) {
     agent_urls.push_back(it);
   }

@@ -31,7 +31,7 @@ class RankingFeature {
   fuchsia::modular::ContextSelectorPtr CreateContextSelector();
 
   // Updates the context that the feature needs.
-  void UpdateContext(const fidl::VectorPtr<fuchsia::modular::ContextValue>&
+  void UpdateContext(const std::vector<fuchsia::modular::ContextValue>&
                          context_update_values);
 
  protected:

@@ -34,15 +34,15 @@ bool LogOnError(Status status, fxl::StringView description) {
 PageDataGenerator::PageDataGenerator(rng::Random* random)
     : generator_(random) {}
 
-void PageDataGenerator::PutEntry(PagePtr* page, fidl::VectorPtr<uint8_t> key,
-                                 fidl::VectorPtr<uint8_t> value,
+void PageDataGenerator::PutEntry(PagePtr* page, std::vector<uint8_t> key,
+                                 std::vector<uint8_t> value,
                                  ReferenceStrategy ref_strategy,
                                  Priority priority,
                                  fit::function<void(Status)> callback) {
   if (ref_strategy == ReferenceStrategy::INLINE) {
-    if (value->size() >= kMaxInlineDataSize) {
+    if (value.size() >= kMaxInlineDataSize) {
       FXL_LOG(ERROR)
-          << "Value too large (" << value->size()
+          << "Value too large (" << value.size()
           << ") to be put inline. Consider putting as reference instead.";
       callback(Status::IO_ERROR);
       return;
@@ -77,7 +77,7 @@ void PageDataGenerator::PutEntry(PagePtr* page, fidl::VectorPtr<uint8_t> key,
 }
 
 void PageDataGenerator::Populate(PagePtr* page,
-                                 std::vector<fidl::VectorPtr<uint8_t>> keys,
+                                 std::vector<std::vector<uint8_t>> keys,
                                  size_t value_size, size_t transaction_size,
                                  ReferenceStrategy ref_strategy,
                                  Priority priority,
@@ -92,7 +92,7 @@ void PageDataGenerator::Populate(PagePtr* page,
 }
 
 void PageDataGenerator::PutInTransaction(
-    PagePtr* page, std::vector<fidl::VectorPtr<uint8_t>> keys,
+    PagePtr* page, std::vector<std::vector<uint8_t>> keys,
     size_t current_key_index, size_t value_size, size_t transaction_size,
     ReferenceStrategy ref_strategy, Priority priority,
     fit::function<void(Status)> callback) {
@@ -102,7 +102,7 @@ void PageDataGenerator::PutInTransaction(
   }
   size_t this_transaction_size =
       std::min(transaction_size, keys.size() - current_key_index);
-  std::vector<fidl::VectorPtr<uint8_t>> partial_keys;
+  std::vector<std::vector<uint8_t>> partial_keys;
   std::move(keys.begin() + current_key_index,
             keys.begin() + current_key_index + this_transaction_size,
             std::back_inserter(partial_keys));
@@ -143,12 +143,12 @@ void PageDataGenerator::PutInTransaction(
 }
 
 void PageDataGenerator::PutMultipleEntries(
-    PagePtr* page, std::vector<fidl::VectorPtr<uint8_t>> keys,
+    PagePtr* page, std::vector<std::vector<uint8_t>> keys,
     size_t value_size, ReferenceStrategy ref_strategy, Priority priority,
     fit::function<void(Status)> callback) {
   auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
   for (auto& key : keys) {
-    fidl::VectorPtr<uint8_t> value = generator_.MakeValue(value_size);
+    std::vector<uint8_t> value = generator_.MakeValue(value_size);
     PutEntry(page, std::move(key), std::move(value), ref_strategy, priority,
              waiter->NewCallback());
   }

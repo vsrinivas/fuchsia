@@ -15,7 +15,7 @@ FakeDeviceSet::FakeDeviceSet(CloudEraseOnCheck cloud_erase_on_check,
 
 FakeDeviceSet::~FakeDeviceSet() {}
 
-void FakeDeviceSet::CheckFingerprint(fidl::VectorPtr<uint8_t> fingerprint,
+void FakeDeviceSet::CheckFingerprint(std::vector<uint8_t> fingerprint,
                                      CheckFingerprintCallback callback) {
   if (cloud_erase_on_check_ == CloudEraseOnCheck::YES ||
       !fingerprints_.count(convert::ToString(fingerprint))) {
@@ -26,14 +26,14 @@ void FakeDeviceSet::CheckFingerprint(fidl::VectorPtr<uint8_t> fingerprint,
   callback(cloud_provider::Status::OK);
 }
 
-void FakeDeviceSet::SetFingerprint(fidl::VectorPtr<uint8_t> fingerprint,
+void FakeDeviceSet::SetFingerprint(std::vector<uint8_t> fingerprint,
                                    SetFingerprintCallback callback) {
   fingerprints_.insert(convert::ToString(fingerprint));
   callback(cloud_provider::Status::OK);
 }
 
 void FakeDeviceSet::SetWatcher(
-    fidl::VectorPtr<uint8_t> /*fingerprint*/,
+    std::vector<uint8_t> /*fingerprint*/,
     fidl::InterfaceHandle<cloud_provider::DeviceSetWatcher> watcher,
     SetWatcherCallback callback) {
   watcher_ = watcher.Bind();

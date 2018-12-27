@@ -93,10 +93,10 @@ class SysLoaderForTest : fuchsia::sys::Loader {
 
  private:
   // |fuchsia::sys::Loader|
-  void LoadUrl(fidl::StringPtr url, LoadUrlCallback cb) {
-    if (load_info_.find(url.get()) != load_info_.end()) {
-      auto retval = std::move(load_info_[url.get()]);
-      load_info_.erase(url.get());
+  void LoadUrl(std::string url, LoadUrlCallback cb) {
+    if (load_info_.find(url) != load_info_.end()) {
+      auto retval = std::move(load_info_[url]);
+      load_info_.erase(url);
 
       cb(std::move(retval));
     } else {

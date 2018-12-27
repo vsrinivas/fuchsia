@@ -78,7 +78,7 @@ class TestModule {
   modular::ModuleHost* const module_host_;
   fuchsia::modular::LinkPtr link_;
 
-  fidl::VectorPtr<fidl::StringPtr> path_;
+  fidl::VectorPtr<std::string> path_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestModule);
 };

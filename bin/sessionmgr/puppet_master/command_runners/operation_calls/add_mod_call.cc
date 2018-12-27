@@ -27,10 +27,10 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult,
              fuchsia::modular::ModuleResolver* const module_resolver,
              fuchsia::modular::EntityResolver* const entity_resolver,
              modular::ModuleFacetReader* const module_facet_reader,
-             fidl::VectorPtr<fidl::StringPtr> mod_name,
+             std::vector<std::string> mod_name,
              fuchsia::modular::Intent intent,
              fuchsia::modular::SurfaceRelationPtr surface_relation,
-             fidl::VectorPtr<fidl::StringPtr> surface_parent_mod_name,
+             std::vector<std::string> surface_parent_mod_name,
              fuchsia::modular::ModuleSource module_source, ResultCall done)
       : Operation("AddModCommandRunner::AddModCall", std::move(done)),
         story_storage_(story_storage),
@@ -47,10 +47,6 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult,
   void Run() override {
     FlowToken flow{this, &out_result_, &out_module_data_};
 
-    if (!surface_parent_mod_name_) {
-      surface_parent_mod_name_.resize(0);
-    }
-
     // Success status by default, it will be update it if an error state is
     // found.
     out_result_.status = fuchsia::modular::ExecuteStatus::OK;
@@ -62,7 +58,7 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult,
     if (!intent_.action.is_null()) {
       AddFindModulesOperation(
           &operation_queue_, story_storage_, module_resolver_, entity_resolver_,
-          CloneOptional(intent_), surface_parent_mod_name_.Clone(),
+          CloneOptional(intent_), surface_parent_mod_name_,
           [this, flow](fuchsia::modular::ExecuteResult result,
                        fuchsia::modular::FindModulesResponse response) {
             if (result.status != fuchsia::modular::ExecuteStatus::OK) {
@@ -75,7 +71,7 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult,
             // compiler will make sure we're handling all error cases.
             switch (response.status) {
               case fuchsia::modular::FindModulesStatus::SUCCESS: {
-                if (response.results->empty()) {
+                if (response.results.empty()) {
                   out_result_.status =
                       fuchsia::modular::ExecuteStatus::NO_MODULES_FOUND;
                   out_result_.error_message =
@@ -84,7 +80,7 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult,
                   // Operation finishes since |flow| goes out of scope.
                 }
 
-                candidate_module_ = std::move(response.results->at(0));
+                candidate_module_ = std::move(response.results.at(0));
               } break;
 
               case fuchsia::modular::FindModulesStatus::UNKNOWN_HANDLER: {
@@ -115,9 +111,9 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult,
         return;
         // Operation finishes since |flow| goes out of scope.
       }
-      auto full_module_path = surface_parent_mod_name_.Clone();
-      full_module_path->insert(full_module_path->end(), mod_name_->begin(),
-                               mod_name_->end());
+      auto full_module_path = surface_parent_mod_name_;
+      full_module_path.insert(full_module_path.end(), mod_name_.begin(),
+                               mod_name_.end());
       AddInitializeChainOperation(
           &operation_queue_, story_storage_, std::move(full_module_path),
           std::move(parameter_info_),
@@ -181,7 +177,7 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult,
           // way. Maybe INVALID status should be returned here since using
           // this parameter in a StoryCommand doesn't make much sense.
           AddGetLinkPathForParameterNameOperation(
-              &operations_, story_storage_, surface_parent_mod_name_.Clone(),
+              &operations_, story_storage_, surface_parent_mod_name_,
               param.data.link_name(), did_get_lp->Completer());
 
           did_get_entries.emplace_back(
@@ -245,9 +241,9 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult,
                        fuchsia::modular::ModuleParameterMapPtr map) {
     fidl::Clone(*map, &out_module_data_.parameter_map);
     out_module_data_.module_url = candidate_module_.module_id;
-    out_module_data_.module_path = surface_parent_mod_name_.Clone();
-    out_module_data_.module_path->insert(out_module_data_.module_path->end(),
-                                         mod_name_->begin(), mod_name_->end());
+    out_module_data_.module_path = surface_parent_mod_name_;
+    out_module_data_.module_path.insert(out_module_data_.module_path.end(),
+                                         mod_name_.begin(), mod_name_.end());
     out_module_data_.module_source = module_source_;
     out_module_data_.module_deleted = false;
     fidl::Clone(surface_relation_, &out_module_data_.surface_relation);
@@ -284,10 +280,10 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult,
   fuchsia::modular::ModuleResolver* const module_resolver_;  // Not owned.
   fuchsia::modular::EntityResolver* const entity_resolver_;  // Not owned.
   modular::ModuleFacetReader* const module_facet_reader_;    // Not owned.
-  fidl::VectorPtr<fidl::StringPtr> mod_name_;
+  std::vector<std::string> mod_name_;
   fuchsia::modular::Intent intent_;
   fuchsia::modular::SurfaceRelationPtr surface_relation_;
-  fidl::VectorPtr<fidl::StringPtr> surface_parent_mod_name_;
+  std::vector<std::string> surface_parent_mod_name_;
   fuchsia::modular::ModuleSource module_source_;
   fuchsia::modular::FindModulesResult candidate_module_;
   fuchsia::modular::CreateModuleParameterMapInfoPtr parameter_info_;
@@ -309,9 +305,9 @@ void AddAddModOperation(
     fuchsia::modular::ModuleResolver* const module_resolver,
     fuchsia::modular::EntityResolver* const entity_resolver,
     modular::ModuleFacetReader* const module_facet_reader,
-    fidl::VectorPtr<fidl::StringPtr> mod_name, fuchsia::modular::Intent intent,
+    std::vector<std::string> mod_name, fuchsia::modular::Intent intent,
     fuchsia::modular::SurfaceRelationPtr surface_relation,
-    fidl::VectorPtr<fidl::StringPtr> surface_parent_mod_name,
+    std::vector<std::string> surface_parent_mod_name,
     fuchsia::modular::ModuleSource module_source,
     std::function<void(fuchsia::modular::ExecuteResult,
                        fuchsia::modular::ModuleData)>

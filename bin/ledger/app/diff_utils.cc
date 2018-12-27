@@ -152,8 +152,8 @@ void ComputePageChange(
       callback(PageUtils::ConvertStatus(status), std::make_pair(nullptr, ""));
       return;
     }
-    if (context->page_change->changed_entries->empty()) {
-      if (context->page_change->deleted_keys->empty()) {
+    if (context->page_change->changed_entries.empty()) {
+      if (context->page_change->deleted_keys.empty()) {
         callback(Status::OK, std::make_pair(nullptr, ""));
       } else {
         callback(Status::OK,
@@ -177,10 +177,10 @@ void ComputePageChange(
         return;
       }
       FXL_DCHECK(results.size() ==
-                 context->page_change->changed_entries->size());
+                 context->page_change->changed_entries.size());
       for (size_t i = 0; i < results.size(); i++) {
         FXL_DCHECK(results[i].vmo());
-        context->page_change->changed_entries->at(i).value =
+        context->page_change->changed_entries.at(i).value =
             fidl::MakeOptional(std::move(results[i]).ToTransport());
       }
       callback(Status::OK, std::make_pair(std::move(context->page_change),
@@ -197,11 +197,11 @@ void ComputeThreeWayDiff(
     const storage::Commit& left, const storage::Commit& right,
     std::string prefix_key, std::string min_key, DiffType diff_type,
     fit::function<void(Status,
-                       std::pair<fidl::VectorPtr<DiffEntry>, std::string>)>
+                       std::pair<std::vector<DiffEntry>, std::string>)>
         callback) {
   struct Context {
     // The array to be returned through the callback.
-    fidl::VectorPtr<DiffEntry> changes = fidl::VectorPtr<DiffEntry>::New(0);
+    std::vector<DiffEntry> changes;
     // The serialization size of all entries.
     size_t fidl_size = fidl_serialization::kVectorHeaderSize;
     // The number of handles.
@@ -272,12 +272,12 @@ void ComputeThreeWayDiff(
       FXL_LOG(ERROR) << "Unable to compute diff for PageChange: "
                      << fidl::ToUnderlying(status);
       callback(PageUtils::ConvertStatus(status),
-               std::make_pair(fidl::VectorPtr<DiffEntry>::New(0), ""));
+               std::make_pair(std::vector<DiffEntry>(), ""));
       return;
     }
-    if (context->changes->empty()) {
+    if (context->changes.empty()) {
       callback(Status::OK,
-               std::make_pair(fidl::VectorPtr<DiffEntry>::New(0), ""));
+               std::make_pair(std::vector<DiffEntry>(), ""));
       return;
     }
 
@@ -293,21 +293,21 @@ void ComputeThreeWayDiff(
             << "Error while reading changed values when computing PageChange: "
             << fidl::ToUnderlying(status);
         callback(status,
-                 std::make_pair(fidl::VectorPtr<DiffEntry>::New(0), ""));
+                 std::make_pair(std::vector<DiffEntry>(), ""));
         return;
       }
-      FXL_DCHECK(results.size() == 3 * context->changes->size());
-      for (size_t i = 0; i < context->changes->size(); i++) {
+      FXL_DCHECK(results.size() == 3 * context->changes.size());
+      for (size_t i = 0; i < context->changes.size(); i++) {
         if (results[3 * i]) {
-          context->changes->at(i).base->value =
+          context->changes.at(i).base->value =
               fidl::MakeOptional(std::move(results[3 * i]).ToTransport());
         }
         if (results[3 * i + 1]) {
-          context->changes->at(i).left->value =
+          context->changes.at(i).left->value =
               fidl::MakeOptional(std::move(results[3 * i + 1]).ToTransport());
         }
         if (results[3 * i + 2]) {
-          context->changes->at(i).right->value =
+          context->changes.at(i).right->value =
               fidl::MakeOptional(std::move(results[3 * i + 2]).ToTransport());
         }
       }

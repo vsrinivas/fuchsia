@@ -137,7 +137,7 @@ class AgentRunner : fuchsia::modular::AgentProvider,
                        const std::string& task_id);
 
   // A set of all agents that are either running or scheduled to be run.
-  fidl::VectorPtr<fidl::StringPtr> GetAllAgents();
+  std::vector<std::string> GetAllAgents();
 
   // |UpdateWatchers| will not notify watchers if we are tearing down.
   void UpdateWatchers();

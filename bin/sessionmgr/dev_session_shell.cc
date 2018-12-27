@@ -120,7 +120,7 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
     puppet_master_->ControlStory(settings_.story_id,
                                  story_puppet_master_.NewRequest());
 
-    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+    std::vector<fuchsia::modular::StoryCommand> commands;
     fuchsia::modular::AddMod add_mod;
     add_mod.mod_name.push_back("root");
     add_mod.intent.handler = settings_.root_module;
@@ -187,7 +187,7 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
 
     story_controller_->RequestStart();
     focus_controller_->Set(story_id);
-    auto visible_stories = fidl::VectorPtr<fidl::StringPtr>::New(0);
+    auto visible_stories = fidl::VectorPtr<std::string>::New(0);
     visible_stories.push_back(story_id);
     visible_stories_controller_->Set(std::move(visible_stories));
 
@@ -195,7 +195,6 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
       fuchsia::modular::LinkPtr root;
 
       fuchsia::modular::LinkPath link_path = fuchsia::modular::LinkPath();
-      link_path.module_path = ::fidl::VectorPtr<::fidl::StringPtr>::New(0);
       link_path.link_name = "root";
       story_controller_->GetLink(std::move(link_path), root.NewRequest());
 
@@ -230,14 +229,14 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
 
   // |fuchsia::modular::StoryWatcher|
   void OnModuleFocused(
-      fidl::VectorPtr<fidl::StringPtr> /*module_path*/) override {}
+      std::vector<std::string> /*module_path*/) override {}
 
   // |fuchsia::modular::NextListener|
   void OnNextResults(
-      fidl::VectorPtr<fuchsia::modular::Suggestion> suggestions) override {
+      std::vector<fuchsia::modular::Suggestion> suggestions) override {
     FXL_VLOG(4)
         << "DevSessionShell/fuchsia::modular::NextListener::OnNextResults()";
-    for (auto& suggestion : *suggestions) {
+    for (auto& suggestion : suggestions) {
       FXL_LOG(INFO) << "  " << suggestion.uuid << " "
                     << suggestion.display.headline;
     }

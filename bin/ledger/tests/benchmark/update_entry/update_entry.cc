@@ -68,8 +68,8 @@ class UpdateEntryBenchmark {
   void Run();
 
  private:
-  void RunSingle(int i, fidl::VectorPtr<uint8_t> key);
-  void CommitAndRunNext(int i, fidl::VectorPtr<uint8_t> key);
+  void RunSingle(int i, std::vector<uint8_t> key);
+  void CommitAndRunNext(int i, std::vector<uint8_t> key);
 
   void ShutDown();
   fit::closure QuitLoopClosure();
@@ -130,7 +130,7 @@ void UpdateEntryBenchmark::Run() {
           return;
         }
         page_ = std::move(page);
-        fidl::VectorPtr<uint8_t> key = generator_.MakeKey(0, key_size_);
+        std::vector<uint8_t> key = generator_.MakeKey(0, key_size_);
         if (transaction_size_ > 0) {
           page_->StartTransaction(
               [this, key = std::move(key)](Status status) mutable {
@@ -147,15 +147,15 @@ void UpdateEntryBenchmark::Run() {
       });
 }
 
-void UpdateEntryBenchmark::RunSingle(int i, fidl::VectorPtr<uint8_t> key) {
+void UpdateEntryBenchmark::RunSingle(int i, std::vector<uint8_t> key) {
   if (i == entry_count_) {
     ShutDown();
     return;
   }
 
-  fidl::VectorPtr<uint8_t> value = generator_.MakeValue(value_size_);
+  std::vector<uint8_t> value = generator_.MakeValue(value_size_);
   TRACE_ASYNC_BEGIN("benchmark", "put", i);
-  page_->Put(fidl::Clone(key), std::move(value),
+  page_->Put(key, std::move(value),
              [this, i, key = std::move(key)](Status status) mutable {
                if (QuitOnError(QuitLoopClosure(), status, "Page::Put")) {
                  return;
@@ -172,7 +172,7 @@ void UpdateEntryBenchmark::RunSingle(int i, fidl::VectorPtr<uint8_t> key) {
 }
 
 void UpdateEntryBenchmark::CommitAndRunNext(int i,
-                                            fidl::VectorPtr<uint8_t> key) {
+                                            std::vector<uint8_t> key) {
   TRACE_ASYNC_BEGIN("benchmark", "commit", i / transaction_size_);
   page_->Commit([this, i, key = std::move(key)](Status status) mutable {
     if (QuitOnError(QuitLoopClosure(), status, "Page::Commit")) {

@@ -18,7 +18,7 @@ class ExecuteOperation : public Operation<fuchsia::modular::ExecuteResult> {
  public:
   ExecuteOperation(SessionStorage* const session_storage,
                    StoryCommandExecutor* const executor,
-                   fidl::StringPtr story_name,
+                   std::string story_name,
                    fuchsia::modular::StoryOptions story_options,
                    std::vector<fuchsia::modular::StoryCommand> commands,
                    ResultCall done)
@@ -65,7 +65,7 @@ class ExecuteOperation : public Operation<fuchsia::modular::ExecuteResult> {
 
   SessionStorage* const session_storage_;
   StoryCommandExecutor* const executor_;
-  fidl::StringPtr story_name_;
+  std::string story_name_;
   fuchsia::modular::StoryOptions story_options_;
   std::vector<fuchsia::modular::StoryCommand> commands_;
 
@@ -75,7 +75,7 @@ class ExecuteOperation : public Operation<fuchsia::modular::ExecuteResult> {
 }  // namespace
 
 StoryPuppetMasterImpl::StoryPuppetMasterImpl(
-    fidl::StringPtr story_name, OperationContainer* const operations,
+    std::string story_name, OperationContainer* const operations,
     SessionStorage* const session_storage, StoryCommandExecutor* const executor)
     : story_name_(story_name),
       session_storage_(session_storage),
@@ -88,13 +88,10 @@ StoryPuppetMasterImpl::StoryPuppetMasterImpl(
 StoryPuppetMasterImpl::~StoryPuppetMasterImpl() = default;
 
 void StoryPuppetMasterImpl::Enqueue(
-    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands) {
-  if (!commands) {
-    return;
-  }
+    std::vector<fuchsia::modular::StoryCommand> commands) {
   enqueued_commands_.insert(enqueued_commands_.end(),
-                            make_move_iterator(commands->begin()),
-                            make_move_iterator(commands->end()));
+                            make_move_iterator(commands.begin()),
+                            make_move_iterator(commands.end()));
 }
 
 void StoryPuppetMasterImpl::Execute(ExecuteCallback done) {

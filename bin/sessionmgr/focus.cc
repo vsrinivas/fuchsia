@@ -69,7 +69,7 @@ void FocusHandler::AddControllerBinding(
 void FocusHandler::Query(QueryCallback callback) {
   operation_queue_.Add(new ReadAllDataCall<fuchsia::modular::FocusInfo>(
       page(), kFocusKeyPrefix, XdrFocusInfo,
-      [callback](fidl::VectorPtr<fuchsia::modular::FocusInfo> infos) {
+      [callback](std::vector<fuchsia::modular::FocusInfo> infos) {
         callback(std::move(infos));
       }));
 }
@@ -117,8 +117,7 @@ void FocusHandler::OnPageChange(const std::string& /*key*/,
   }
 }
 
-VisibleStoriesHandler::VisibleStoriesHandler()
-    : visible_stories_(fidl::VectorPtr<fidl::StringPtr>::New(0)) {}
+VisibleStoriesHandler::VisibleStoriesHandler() {}
 
 VisibleStoriesHandler::~VisibleStoriesHandler() = default;
 
@@ -134,7 +133,7 @@ void VisibleStoriesHandler::AddControllerBinding(
 }
 
 void VisibleStoriesHandler::Query(QueryCallback callback) {
-  callback(visible_stories_.Clone());
+  callback(visible_stories_);
 }
 
 void VisibleStoriesHandler::Watch(
@@ -142,7 +141,7 @@ void VisibleStoriesHandler::Watch(
   change_watchers_.push_back(watcher.Bind());
 }
 
-void VisibleStoriesHandler::Set(fidl::VectorPtr<fidl::StringPtr> story_ids) {
+void VisibleStoriesHandler::Set(fidl::VectorPtr<std::string> story_ids) {
   visible_stories_ = std::move(story_ids);
   for (const auto& watcher : change_watchers_) {
     watcher->OnVisibleStoriesChange(visible_stories_.Clone());

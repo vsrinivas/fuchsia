@@ -16,7 +16,7 @@ void AddFindModulesOperation(
     fuchsia::modular::ModuleResolver* module_resolver,
     fuchsia::modular::EntityResolver* entity_resolver,
     fuchsia::modular::IntentPtr intent,
-    fidl::VectorPtr<fidl::StringPtr> requesting_module_path,
+    std::vector<std::string> requesting_module_path,
     std::function<void(fuchsia::modular::ExecuteResult,
                        fuchsia::modular::FindModulesResponse)>
         result_call);

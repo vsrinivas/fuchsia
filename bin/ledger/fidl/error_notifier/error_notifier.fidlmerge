@@ -61,7 +61,11 @@ std::unique_ptr<{{- template "QualifiedId" .Identifier }}>
 {{- template "CppHandleType" . }}
   {{- end -}}
   {{- if eq .Kind "vector" -}}
+    {{- if .Nullable }}
 ::fidl::VectorPtr<{{- template "CppType" .ElementType }}>
+    {{- else }}
+::std::vector<{{- template "CppType" .ElementType }}>
+    {{- end }}
   {{- end -}}
   {{- if eq .Kind "request" -}}
 ::fidl::InterfaceRequest<{{- template "QualifiedId" .RequestSubtype }}>
@@ -70,7 +74,11 @@ std::unique_ptr<{{- template "QualifiedId" .Identifier }}>
 {{ .PrimitiveSubtype }}_t
   {{- end }}
   {{- if eq .Kind "string" -}}
+    {{- if .Nullable }}
 ::fidl::StringPtr
+    {{- else }}
+::std::string
+    {{- end }}
   {{- end }}
 {{- end -}}
 

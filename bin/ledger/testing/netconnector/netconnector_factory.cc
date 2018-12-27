@@ -82,19 +82,19 @@ void NetConnectorFactory::UpdatedHostList() {
   if (pending_device_list_callbacks_.empty()) {
     return;
   }
-  fidl::VectorPtr<fidl::StringPtr> device_names;
+  std::vector<std::string> device_names;
   for (const auto& holder_pair : net_connectors_) {
     device_names.push_back(holder_pair.first);
   }
   for (const auto& callback : pending_device_list_callbacks_) {
-    callback(current_version_, fidl::Clone(device_names));
+    callback(current_version_, device_names);
   }
   pending_device_list_callbacks_.clear();
 }
 
 void NetConnectorFactory::GetDevicesNames(
     uint64_t last_version,
-    fit::function<void(uint64_t, fidl::VectorPtr<fidl::StringPtr>)> callback) {
+    fit::function<void(uint64_t, std::vector<std::string>)> callback) {
   FXL_CHECK(last_version <= current_version_)
       << "Last seen version (" << last_version
       << ") is more recent than current version (" << current_version_
@@ -103,7 +103,7 @@ void NetConnectorFactory::GetDevicesNames(
     pending_device_list_callbacks_.push_back(std::move(callback));
     return;
   }
-  fidl::VectorPtr<fidl::StringPtr> device_names;
+  std::vector<std::string> device_names;
   for (const auto& holder_pair : net_connectors_) {
     device_names.push_back(holder_pair.first);
   }

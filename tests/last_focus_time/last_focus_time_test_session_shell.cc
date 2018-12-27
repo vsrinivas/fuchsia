@@ -115,7 +115,7 @@ class StoryWatcherImpl : fuchsia::modular::StoryWatcher {
 
   // |fuchsia::modular::StoryWatcher|
   void OnModuleFocused(
-      fidl::VectorPtr<fidl::StringPtr> /*module_path*/) override {}
+      std::vector<std::string> /*module_path*/) override {}
 
   fidl::Binding<fuchsia::modular::StoryWatcher> binding_;
   std::function<void()> continue_;
@@ -178,8 +178,8 @@ class TestApp : public modular::testing::SessionShellBase {
     add_mod.intent.handler = kCommonNullModule;
     add_mod.intent.action = kCommonNullAction;
 
-    auto commands = fidl::VectorPtr<fuchsia::modular::StoryCommand>::New(1);
-    commands->at(0).set_add_mod(std::move(add_mod));
+    std::vector<fuchsia::modular::StoryCommand> commands(1);
+    commands.at(0).set_add_mod(std::move(add_mod));
 
     story_puppet_master_->Enqueue(std::move(commands));
     story_puppet_master_->Execute(

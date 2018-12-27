@@ -21,7 +21,7 @@ DataGenerator::DataGenerator(rng::Random* random)
 
 DataGenerator::~DataGenerator() {}
 
-fidl::VectorPtr<uint8_t> DataGenerator::MakeKey(int i, size_t size) {
+std::vector<uint8_t> DataGenerator::MakeKey(int i, size_t size) {
   std::string i_str = std::to_string(i);
   FXL_DCHECK(i_str.size() + 1 <= size);
   auto rand_bytes = MakeValue(size - i_str.size() - 1);
@@ -42,15 +42,15 @@ fidl::VectorPtr<uint8_t> DataGenerator::MakeValue(size_t size) {
   return data;
 }
 
-std::vector<fidl::VectorPtr<uint8_t>> DataGenerator::MakeKeys(
+std::vector<std::vector<uint8_t>> DataGenerator::MakeKeys(
     size_t key_count, size_t key_size, size_t unique_key_count) {
   FXL_DCHECK(unique_key_count <= key_count);
-  std::vector<fidl::VectorPtr<uint8_t>> keys(key_count);
+  std::vector<std::vector<uint8_t>> keys(key_count);
   for (size_t i = 0; i < unique_key_count; i++) {
     keys[i] = MakeKey(i, key_size);
   }
   for (size_t i = unique_key_count; i < key_count; i++) {
-    keys[i] = fidl::Clone(keys[i - unique_key_count]);
+    keys[i] = keys[i - unique_key_count];
   }
   return keys;
 }

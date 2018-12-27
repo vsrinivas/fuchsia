@@ -89,7 +89,7 @@ class StoryWatcherImpl : fuchsia::modular::StoryWatcher {
   void OnModuleAdded(fuchsia::modular::ModuleData module_data) override {}
 
   // |fuchsia::modular::StoryWatcher|
-  void OnModuleFocused(fidl::VectorPtr<fidl::StringPtr> module_path) override {}
+  void OnModuleFocused(std::vector<std::string> module_path) override {}
 
   fidl::Binding<fuchsia::modular::StoryWatcher> binding_;
 
@@ -185,7 +185,7 @@ class TestApp : public modular::ViewApp {
     std::string story_name = std::string(kStoryNamePrefix) + std::to_string(story_count_);
     puppet_master_->ControlStory(story_name, story_puppet_master_.NewRequest());
 
-    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+    std::vector<fuchsia::modular::StoryCommand> commands;
     fuchsia::modular::AddMod add_mod;
     add_mod.mod_name.push_back("root");
     add_mod.intent.handler = settings_.module_url;
@@ -219,7 +219,7 @@ class TestApp : public modular::ViewApp {
     FXL_LOG(INFO) << "Link()";
 
     fuchsia::modular::LinkPath link_path = fuchsia::modular::LinkPath();
-    fidl::VectorPtr<fidl::StringPtr> root_module_path;
+    std::vector<std::string> root_module_path;
     root_module_path.push_back(modular::kRootModuleName);
     link_path.module_path = std::move(root_module_path);
     link_path.link_name = nullptr;

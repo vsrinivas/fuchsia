@@ -18,9 +18,9 @@ void AddAddModOperation(
     fuchsia::modular::ModuleResolver* module_resolver,
     fuchsia::modular::EntityResolver* entity_resolver,
     modular::ModuleFacetReader* module_facet_reader,
-    fidl::VectorPtr<fidl::StringPtr> mod_name, fuchsia::modular::Intent intent,
+    std::vector<std::string> mod_name, fuchsia::modular::Intent intent,
     fuchsia::modular::SurfaceRelationPtr surface_relation,
-    fidl::VectorPtr<fidl::StringPtr> surface_parent_mod_name,
+    std::vector<std::string> surface_parent_mod_name,
     fuchsia::modular::ModuleSource module_source,
     std::function<void(fuchsia::modular::ExecuteResult,
                        fuchsia::modular::ModuleData)>

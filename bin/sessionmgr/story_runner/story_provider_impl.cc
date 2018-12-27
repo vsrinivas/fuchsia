@@ -475,7 +475,7 @@ void StoryProviderImpl::MaybeLoadStoryShell() {
 }
 
 fuchsia::modular::StoryInfoPtr StoryProviderImpl::GetCachedStoryInfo(
-    fidl::StringPtr story_id) {
+    std::string story_id) {
   auto it = story_runtime_containers_.find(story_id);
   if (it == story_runtime_containers_.end()) {
     return nullptr;
@@ -485,7 +485,7 @@ fuchsia::modular::StoryInfoPtr StoryProviderImpl::GetCachedStoryInfo(
 }
 
 // |fuchsia::modular::StoryProvider|
-void StoryProviderImpl::GetStoryInfo(fidl::StringPtr story_id,
+void StoryProviderImpl::GetStoryInfo(std::string story_id,
                                      GetStoryInfoCallback callback) {
   auto on_run = Future<>::Create("StoryProviderImpl.GetStoryInfo.on_run");
   auto done =
@@ -550,7 +550,7 @@ void StoryProviderImpl::NotifyStoryActivityChange(
 
 // |fuchsia::modular::StoryProvider|
 void StoryProviderImpl::GetController(
-    fidl::StringPtr story_id,
+    std::string story_id,
     fidl::InterfaceRequest<fuchsia::modular::StoryController> request) {
   operation_queue_.Add(new LoadStoryRuntimeCall(
       this, session_storage_, story_id,
@@ -574,13 +574,11 @@ void StoryProviderImpl::GetStories(
       on_run->AsyncMap([this] { return session_storage_->GetAllStoryData(); })
           ->Map(fxl::MakeCopyable(
               [this, watcher_ptr = std::move(watcher_ptr)](
-                  fidl::VectorPtr<fuchsia::modular::internal::StoryData>
+                  std::vector<fuchsia::modular::internal::StoryData>
                       all_story_data) mutable {
-                FXL_DCHECK(all_story_data);
-                auto result =
-                    fidl::VectorPtr<fuchsia::modular::StoryInfo>::New(0);
+                std::vector<fuchsia::modular::StoryInfo> result;
 
-                for (auto& story_data : *all_story_data) {
+                for (auto& story_data : all_story_data) {
                   if (!story_data.story_options.kind_of_proto_story) {
                     result.push_back(std::move(story_data.story_info));
                   }
@@ -601,12 +599,11 @@ void StoryProviderImpl::PreviousStories(PreviousStoriesCallback callback) {
   auto on_run = Future<>::Create("StoryProviderImpl.PreviousStories.on_run");
   auto done =
       on_run->AsyncMap([this] { return session_storage_->GetAllStoryData(); })
-          ->Map([](fidl::VectorPtr<fuchsia::modular::internal::StoryData>
+          ->Map([](std::vector<fuchsia::modular::internal::StoryData>
                        all_story_data) {
-            FXL_DCHECK(all_story_data);
-            auto result = fidl::VectorPtr<fuchsia::modular::StoryInfo>::New(0);
+            std::vector<fuchsia::modular::StoryInfo> result;
 
-            for (auto& story_data : *all_story_data) {
+            for (auto& story_data : all_story_data) {
               if (!story_data.story_options.kind_of_proto_story) {
                 result.push_back(std::move(story_data.story_info));
               }
@@ -650,7 +647,7 @@ void StoryProviderImpl::OnStoryStorageDeleted(fidl::StringPtr story_id) {
 void StoryProviderImpl::OnFocusChange(fuchsia::modular::FocusInfoPtr info) {
   operation_queue_.Add(
       new SyncCall(fxl::MakeCopyable([this, info = std::move(info)]() {
-        if (info->device_id.get() != device_id_) {
+        if (info->device_id != device_id_) {
           return;
         }
 

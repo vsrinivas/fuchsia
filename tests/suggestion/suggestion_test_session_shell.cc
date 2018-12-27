@@ -49,7 +49,7 @@ class TestApp : fuchsia::modular::NextListener,
 
  private:
   void CreateStory() {
-    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+    std::vector<fuchsia::modular::StoryCommand> commands;
     fuchsia::modular::AddMod add_mod;
     add_mod.mod_name.push_back("root");
     add_mod.intent.action = kSuggestionTestAction;
@@ -86,8 +86,8 @@ class TestApp : fuchsia::modular::NextListener,
 
   // |fuchsia::modular::NextListener|
   void OnNextResults(
-      fidl::VectorPtr<fuchsia::modular::Suggestion> suggestions) override {
-    for (auto& suggestion : *suggestions) {
+      std::vector<fuchsia::modular::Suggestion> suggestions) override {
+    for (auto& suggestion : suggestions) {
       auto& display = suggestion.display;
       if (display.headline == "foo" && display.subheadline == "bar" &&
           display.details == "baz") {

@@ -58,7 +58,7 @@ class ModuleResolverApp : fuchsia::modular::ContextListener {
     fuchsia::modular::ContextQueryEntry selector_entry;
     selector_entry.key = kContextListenerEntitiesKey;
     selector_entry.value = std::move(selector);
-    fidl::VectorPtr<fuchsia::modular::ContextQueryEntry> selector_array;
+    std::vector<fuchsia::modular::ContextQueryEntry> selector_array;
     selector_array.push_back(std::move(selector_entry));
     query.selector = std::move(selector_array);
     context_reader_->Subscribe(std::move(query),
@@ -78,14 +78,14 @@ class ModuleResolverApp : fuchsia::modular::ContextListener {
 
   // |ContextListener|
   void OnContextUpdate(fuchsia::modular::ContextUpdate update) override {
-    fidl::VectorPtr<fuchsia::modular::ContextValue> values;
-    for (auto& entry : *update.values) {
+    std::vector<fuchsia::modular::ContextValue> values;
+    for (auto& entry : update.values) {
       if (entry.key == kContextListenerEntitiesKey) {
         values = std::move(entry.value);
         break;
       }
     }
-    if (values->empty()) {
+    if (values.empty()) {
       return;
     }
 
@@ -94,7 +94,7 @@ class ModuleResolverApp : fuchsia::modular::ContextListener {
     std::string story_id;
 
     std::map<QueryParamName, fuchsia::modular::LinkMetadata> remember;
-    for (const auto& value : *values) {
+    for (const auto& value : values) {
       if (!value.meta.story || !value.meta.link || !value.meta.entity) {
         continue;
       }
@@ -115,7 +115,7 @@ class ModuleResolverApp : fuchsia::modular::ContextListener {
               std::vector<fuchsia::modular::Intent>
                   new_intents;  // Only for comparison.
               int proposal_count = 0;
-              for (const auto& module_result : *response.results) {
+              for (const auto& module_result : response.results) {
                 fuchsia::modular::Intent intent;
                 new_proposals.push_back(CreateProposalFromModuleResolverResult(
                     module_result, story_id, proposal_count++, remember,
@@ -158,13 +158,13 @@ class ModuleResolverApp : fuchsia::modular::ContextListener {
     fuchsia::modular::Intent intent;
     intent.handler = module_result.module_id;
     fidl::VectorPtr<fuchsia::modular::IntentParameter> parameters;
-    fidl::VectorPtr<fidl::StringPtr> parent_mod_path;
+    fidl::VectorPtr<std::string> parent_mod_path;
 
-    for (const auto& mapping : *module_result.parameter_mappings) {
+    for (const auto& mapping : module_result.parameter_mappings) {
       fuchsia::modular::IntentParameter parameter;
       parameter.name = mapping.result_param_name;
 
-      const auto& metadata = remember.at(mapping.query_constraint_name.get());
+      const auto& metadata = remember.at(mapping.query_constraint_name);
       fuchsia::modular::LinkPath link_path;
       link_path.module_path = metadata.module_path.Clone();
       link_path.link_name = metadata.name;

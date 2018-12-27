@@ -23,14 +23,14 @@ class TestSuggestionListener : public fuchsia::modular::NextListener,
 
   // |fuchsia::modular::NextListener|
   void OnNextResults(
-      fidl::VectorPtr<fuchsia::modular::Suggestion> suggestions) override;
+      std::vector<fuchsia::modular::Suggestion> suggestions) override;
 
   // |fuchsia::modular::NextListener|
   void OnProcessingChange(bool processing) override;
 
   // |fuchsia::modular::QueryListener|
   void OnQueryResults(
-      fidl::VectorPtr<fuchsia::modular::Suggestion> suggestions) override;
+      std::vector<fuchsia::modular::Suggestion> suggestions) override;
 
   // |fuchsia::modular::QueryListener|
   void OnQueryComplete() override;
@@ -68,7 +68,7 @@ class TestSuggestionListener : public fuchsia::modular::NextListener,
   }
 
  private:
-  void OnAnyResults(fidl::VectorPtr<fuchsia::modular::Suggestion>& suggestions);
+  void OnAnyResults(std::vector<fuchsia::modular::Suggestion>& suggestions);
 
   std::map<std::string, fuchsia::modular::Suggestion> suggestions_by_id_;
   std::vector<fuchsia::modular::Suggestion*> ordered_suggestions_;
@@ -84,10 +84,10 @@ class TestProposalListener {
 
  protected:
   void UpdateProposals(
-      fidl::VectorPtr<fuchsia::modular::ProposalSummary> proposals) {
+      std::vector<fuchsia::modular::ProposalSummary> proposals) {
     proposals_.clear();
-    for (size_t i = 0; i < proposals->size(); ++i) {
-      proposals_.push_back(std::move(proposals->at(i)));
+    for (size_t i = 0; i < proposals.size(); ++i) {
+      proposals_.push_back(std::move(proposals.at(i)));
     }
   }
   std::vector<fuchsia::modular::ProposalSummary> proposals_;
@@ -97,7 +97,7 @@ class TestDebugNextListener : public fuchsia::modular::NextProposalListener,
                               public TestProposalListener {
  public:
   void OnNextUpdate(
-      fidl::VectorPtr<fuchsia::modular::ProposalSummary> proposals) override {
+      std::vector<fuchsia::modular::ProposalSummary> proposals) override {
     FXL_LOG(INFO) << "In OnNextUpdate debug";
     UpdateProposals(std::move(proposals));
   }
@@ -107,10 +107,10 @@ class TestDebugAskListener : public fuchsia::modular::AskProposalListener,
                              public TestProposalListener {
  public:
   void OnAskStart(
-      fidl::StringPtr query,
-      fidl::VectorPtr<fuchsia::modular::ProposalSummary> proposals) override {
+      std::string query,
+      std::vector<fuchsia::modular::ProposalSummary> proposals) override {
     UpdateProposals(std::move(proposals));
-    query_ = query.get();
+    query_ = query;
   }
   void OnProposalSelected(
       fuchsia::modular::ProposalSummaryPtr selectedProposal) override {

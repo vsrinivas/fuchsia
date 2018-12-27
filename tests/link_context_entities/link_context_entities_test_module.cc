@@ -49,7 +49,7 @@ class TestModule {
 
  private:
   void SetLink(fuchsia::modular::Link* link,
-               fidl::VectorPtr<fidl::StringPtr> path,
+               fidl::VectorPtr<std::string> path,
                const std::string& value) {
     fsl::SizedVmo vmo;
     FXL_CHECK(fsl::VmoFromString(value, &vmo));

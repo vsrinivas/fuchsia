@@ -40,14 +40,14 @@ class DeviceSetImpl : public cloud_provider::DeviceSet, ListenCallClient {
       fit::function<void(std::shared_ptr<grpc::CallCredentials>)> callback);
 
   // cloud_provider::DeviceSet:
-  void CheckFingerprint(fidl::VectorPtr<uint8_t> fingerprint,
+  void CheckFingerprint(std::vector<uint8_t> fingerprint,
                         CheckFingerprintCallback callback) override;
 
-  void SetFingerprint(fidl::VectorPtr<uint8_t> fingerprint,
+  void SetFingerprint(std::vector<uint8_t> fingerprint,
                       SetFingerprintCallback callback) override;
 
   void SetWatcher(
-      fidl::VectorPtr<uint8_t> fingerprint,
+      std::vector<uint8_t> fingerprint,
       fidl::InterfaceHandle<cloud_provider::DeviceSetWatcher> watcher,
       SetWatcherCallback callback) override;
 

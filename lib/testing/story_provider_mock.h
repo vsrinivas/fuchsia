@@ -48,8 +48,7 @@ class StoryProviderMock : public fuchsia::modular::StoryProvider {
   void GetStories(
       fidl::InterfaceHandle<fuchsia::modular::StoryProviderWatcher> watcher,
       GetStoriesCallback callback) override {
-    fidl::VectorPtr<fuchsia::modular::StoryInfo> stories;
-    stories.resize(0);
+    std::vector<fuchsia::modular::StoryInfo> stories;
     callback(std::move(stories));
   }
 
@@ -67,13 +66,13 @@ class StoryProviderMock : public fuchsia::modular::StoryProvider {
   }
 
   // |fuchsia::modular::StoryProvider|
-  void GetStoryInfo(fidl::StringPtr story_id,
+  void GetStoryInfo(std::string story_id,
                     GetStoryInfoCallback callback) override {
     callback(nullptr);
   }
 
   // |fuchsia::modular::StoryProvider|
-  void GetController(fidl::StringPtr story_id,
+  void GetController(std::string story_id,
                      fidl::InterfaceRequest<fuchsia::modular::StoryController>
                          story) override {
     binding_set_.AddBinding(&controller_mock_, std::move(story));
@@ -81,7 +80,7 @@ class StoryProviderMock : public fuchsia::modular::StoryProvider {
 
   // |fuchsia::modular::StoryProvider|
   void PreviousStories(PreviousStoriesCallback callback) override {
-    callback(fidl::VectorPtr<fuchsia::modular::StoryInfo>::New(0));
+    callback(std::vector<fuchsia::modular::StoryInfo>());
   }
 
   std::string last_created_story_;

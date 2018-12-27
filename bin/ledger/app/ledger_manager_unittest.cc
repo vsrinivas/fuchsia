@@ -705,9 +705,9 @@ TEST_F(LedgerManagerTest, CallGetPagesList) {
 
   Status status;
 
-  fidl::VectorPtr<PageId> actual_pages_list;
+  std::vector<PageId> actual_pages_list;
 
-  EXPECT_EQ(0u, actual_pages_list->size());
+  EXPECT_EQ(0u, actual_pages_list.size());
 
   auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
   for (size_t i = 0; i < pages.size(); ++i) {
@@ -727,13 +727,13 @@ TEST_F(LedgerManagerTest, CallGetPagesList) {
 
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
-  EXPECT_EQ(pages.size(), actual_pages_list->size());
+  EXPECT_EQ(pages.size(), actual_pages_list.size());
 
   std::sort(ids.begin(), ids.end(), [](const PageId& lhs, const PageId& rhs) {
     return convert::ToStringView(lhs.id) < convert::ToStringView(rhs.id);
   });
   for (size_t i = 0; i < ids.size(); i++)
-    EXPECT_EQ(ids[i].id, actual_pages_list->at(i).id);
+    EXPECT_EQ(ids[i].id, actual_pages_list.at(i).id);
 }
 
 TEST_F(LedgerManagerTest, OnPageOpenedClosedCalls) {

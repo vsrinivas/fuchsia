@@ -19,7 +19,7 @@ class MaxwellServiceProviderBridge {
   MaxwellServiceProviderBridge(fuchsia::sys::Environment* parent_env);
 
   zx::channel OpenAsDirectory();
-  const fidl::VectorPtr<fidl::StringPtr>& service_names() {
+  const std::vector<std::string>& service_names() {
     return service_names_;
   }
 
@@ -38,7 +38,7 @@ class MaxwellServiceProviderBridge {
  private:
   fs::SynchronousVfs vfs_;
   fbl::RefPtr<fs::PseudoDir> services_dir_;
-  fidl::VectorPtr<fidl::StringPtr> service_names_;
+  std::vector<std::string> service_names_;
 };
 
 }  // namespace maxwell

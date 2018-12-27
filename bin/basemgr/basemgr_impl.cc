@@ -431,8 +431,7 @@ void BasemgrImpl::SetShadowTechnique(
   fuchsia::ui::gfx::RendererParam param;
   param.set_shadow_technique(presentation_state_.shadow_technique);
 
-  auto renderer_params =
-      fidl::VectorPtr<fuchsia::ui::gfx::RendererParam>::New(0);
+  std::vector<fuchsia::ui::gfx::RendererParam> renderer_params;
   renderer_params.push_back(std::move(param));
 
   presentation_state_.presentation->SetRendererParams(
@@ -480,12 +479,12 @@ void BasemgrImpl::ShowSetupOrLogin() {
       user_provider_impl_->Login(fuchsia::modular::UserLoginParams());
     } else {
       user_provider_impl_->PreviousUsers(
-          [this](fidl::VectorPtr<fuchsia::modular::auth::Account> accounts) {
-            if (accounts->empty()) {
+          [this](std::vector<fuchsia::modular::auth::Account> accounts) {
+            if (accounts.empty()) {
               StartBaseShell();
             } else {
               fuchsia::modular::UserLoginParams params;
-              params.account_id = accounts->at(0).id;
+              params.account_id = accounts.at(0).id;
               user_provider_impl_->Login(std::move(params));
             }
           });
@@ -514,11 +513,11 @@ void BasemgrImpl::ShowSetupOrLogin() {
 
           user_provider_impl_->PreviousUsers(
               [this](
-                  fidl::VectorPtr<fuchsia::modular::auth::Account> accounts) {
+                  std::vector<fuchsia::modular::auth::Account> accounts) {
                 std::vector<FuturePtr<>> did_remove_users;
-                did_remove_users.reserve(accounts->size());
+                did_remove_users.reserve(accounts.size());
 
-                for (const auto& account : *accounts) {
+                for (const auto& account : accounts) {
                   auto did_remove_user = Future<>::Create(
                       "BasemgrImpl.ShowSetupOrLogin.did_remove_user");
                   user_provider_impl_->RemoveUser(

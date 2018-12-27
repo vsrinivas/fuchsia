@@ -375,20 +375,20 @@ void BacklogBenchmark::GetEntriesStep(std::unique_ptr<Token> token,
   TRACE_ASYNC_BEGIN("benchmark", "get_entries_partial", entries_left);
   if (reference_strategy_ == PageDataGenerator::ReferenceStrategy::INLINE) {
     reader_snapshot_->GetEntriesInline(
-        fidl::VectorPtr<uint8_t>::New(0), std::move(token),
+        std::vector<uint8_t>(), std::move(token),
         [this, entries_left](Status status, auto entries,
                              auto next_token) mutable {
           TRACE_ASYNC_END("benchmark", "get_entries_partial", entries_left);
-          CheckStatusAndGetMore(status, entries_left - entries->size(),
+          CheckStatusAndGetMore(status, entries_left - entries.size(),
                                 std::move(next_token));
         });
   } else {
     reader_snapshot_->GetEntries(
-        fidl::VectorPtr<uint8_t>::New(0), std::move(token),
+        std::vector<uint8_t>(), std::move(token),
         [this, entries_left](Status status, auto entries,
                              auto next_token) mutable {
           TRACE_ASYNC_END("benchmark", "get_entries_partial", entries_left);
-          CheckStatusAndGetMore(status, entries_left - entries->size(),
+          CheckStatusAndGetMore(status, entries_left - entries.size(),
                                 std::move(next_token));
         });
   }

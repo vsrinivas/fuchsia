@@ -33,24 +33,24 @@ class FakeTokenManager : public fuchsia::auth::TokenManager {
   // fuchsia::auth::TokenManager:
   void Authorize(AppConfig app_config,
                  fidl::InterfaceHandle<AuthenticationUIContext> auth_ui_context,
-                 fidl::VectorPtr<fidl::StringPtr> app_scopes,
+                 std::vector<std::string> app_scopes,
                  fidl::StringPtr user_profile_id, fidl::StringPtr auth_code,
                  AuthorizeCallback callback) override;
 
-  void GetAccessToken(AppConfig app_config, fidl::StringPtr user_profile_id,
-                      fidl::VectorPtr<fidl::StringPtr> app_scopes,
+  void GetAccessToken(AppConfig app_config, std::string user_profile_id,
+                      std::vector<std::string> app_scopes,
                       GetAccessTokenCallback callback) override;
 
-  void GetIdToken(AppConfig app_config, fidl::StringPtr user_profile_id,
+  void GetIdToken(AppConfig app_config, std::string user_profile_id,
                   fidl::StringPtr audience,
                   GetIdTokenCallback callback) override;
 
-  void GetFirebaseToken(AppConfig app_config, fidl::StringPtr user_profile_id,
-                        fidl::StringPtr audience,
-                        fidl::StringPtr firebase_api_key,
+  void GetFirebaseToken(AppConfig app_config, std::string user_profile_id,
+                        std::string audience,
+                        std::string firebase_api_key,
                         GetFirebaseTokenCallback callback) override;
 
-  void DeleteAllTokens(AppConfig app_config, fidl::StringPtr user_profile_id,
+  void DeleteAllTokens(AppConfig app_config, std::string user_profile_id,
                        DeleteAllTokensCallback callback) override;
 
   void ListProfileIds(AppConfig app_config,

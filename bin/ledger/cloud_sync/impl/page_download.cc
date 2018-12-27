@@ -236,7 +236,7 @@ void PageDownload::OnNewCommits(cloud_provider::CommitPack commits,
                 std::move(callback));
 }
 
-void PageDownload::OnNewObject(fidl::VectorPtr<uint8_t> /*id*/,
+void PageDownload::OnNewObject(std::vector<uint8_t> /*id*/,
                                fuchsia::mem::Buffer /*data*/,
                                OnNewObjectCallback /*callback*/) {
   // No known cloud provider implementations use this method.

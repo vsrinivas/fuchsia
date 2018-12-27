@@ -23,19 +23,19 @@ class PageSnapshotImpl : public PageSnapshot {
 
  private:
   // PageSnapshot:
-  void GetEntries(fidl::VectorPtr<uint8_t> key_start,
+  void GetEntries(std::vector<uint8_t> key_start,
                   std::unique_ptr<Token> token,
                   GetEntriesCallback callback) override;
-  void GetEntriesInline(fidl::VectorPtr<uint8_t> key_start,
+  void GetEntriesInline(std::vector<uint8_t> key_start,
                         std::unique_ptr<Token> token,
                         GetEntriesInlineCallback callback) override;
-  void GetKeys(fidl::VectorPtr<uint8_t> key_start, std::unique_ptr<Token> token,
+  void GetKeys(std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
                GetKeysCallback callback) override;
-  void Get(fidl::VectorPtr<uint8_t> key, GetCallback callback) override;
-  void GetInline(fidl::VectorPtr<uint8_t> key,
+  void Get(std::vector<uint8_t> key, GetCallback callback) override;
+  void GetInline(std::vector<uint8_t> key,
                  GetInlineCallback callback) override;
-  void Fetch(fidl::VectorPtr<uint8_t> key, FetchCallback callback) override;
-  void FetchPartial(fidl::VectorPtr<uint8_t> key, int64_t offset,
+  void Fetch(std::vector<uint8_t> key, FetchCallback callback) override;
+  void FetchPartial(std::vector<uint8_t> key, int64_t offset,
                     int64_t max_size, FetchPartialCallback callback) override;
 
   storage::PageStorage* page_storage_;

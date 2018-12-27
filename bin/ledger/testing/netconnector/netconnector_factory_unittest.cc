@@ -38,7 +38,7 @@ TEST_F(NetConnectorFactoryTest, HostList_OneHost) {
 
   bool called = false;
   uint64_t version = 0;
-  fidl::VectorPtr<fidl::StringPtr> host_list;
+  std::vector<std::string> host_list;
   netconnector1->GetKnownDeviceNames(
       fuchsia::netconnector::kInitialKnownDeviceNames,
       callback::Capture(callback::SetWhenCalled(&called), &version,
@@ -48,9 +48,9 @@ TEST_F(NetConnectorFactoryTest, HostList_OneHost) {
 
   EXPECT_TRUE(called);
   EXPECT_NE(fuchsia::netconnector::kInitialKnownDeviceNames, version);
-  ASSERT_GE(1u, host_list->size());
-  EXPECT_EQ(1u, host_list->size());
-  EXPECT_EQ("host1", host_list->at(0));
+  ASSERT_GE(1u, host_list.size());
+  EXPECT_EQ(1u, host_list.size());
+  EXPECT_EQ("host1", host_list.at(0));
 
   called = false;
   netconnector1->GetKnownDeviceNames(
@@ -68,7 +68,7 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts_Sequence) {
 
   bool called = false;
   uint64_t version = 0;
-  fidl::VectorPtr<fidl::StringPtr> host_list;
+  std::vector<std::string> host_list;
   netconnector1->GetKnownDeviceNames(
       fuchsia::netconnector::kInitialKnownDeviceNames,
       callback::Capture(callback::SetWhenCalled(&called), &version,
@@ -92,10 +92,10 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts_Sequence) {
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_NE(new_version, version);
-  ASSERT_GE(2u, host_list->size());
-  EXPECT_EQ(2u, host_list->size());
-  EXPECT_EQ("host1", host_list->at(0));
-  EXPECT_EQ("host2", host_list->at(1));
+  ASSERT_GE(2u, host_list.size());
+  EXPECT_EQ(2u, host_list.size());
+  EXPECT_EQ("host1", host_list.at(0));
+  EXPECT_EQ("host2", host_list.at(1));
 
   called = false;
   netconnector2->GetKnownDeviceNames(
@@ -105,10 +105,10 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts_Sequence) {
 
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
-  ASSERT_GE(2u, host_list->size());
-  EXPECT_EQ(2u, host_list->size());
-  EXPECT_EQ("host1", host_list->at(0));
-  EXPECT_EQ("host2", host_list->at(1));
+  ASSERT_GE(2u, host_list.size());
+  EXPECT_EQ(2u, host_list.size());
+  EXPECT_EQ("host1", host_list.at(0));
+  EXPECT_EQ("host2", host_list.at(1));
 
   netconnector2.Unbind();
 
@@ -117,9 +117,9 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts_Sequence) {
                                      &new_version, &host_list));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
-  ASSERT_GE(1u, host_list->size());
-  EXPECT_EQ(1u, host_list->size());
-  EXPECT_EQ("host1", host_list->at(0));
+  ASSERT_GE(1u, host_list.size());
+  EXPECT_EQ(1u, host_list.size());
+  EXPECT_EQ("host1", host_list.at(0));
 }
 
 // Verifies that the host list is correct for two hosts when calls are chained,
@@ -131,7 +131,7 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts_Chained) {
 
   bool called = false;
   uint64_t version = 0;
-  fidl::VectorPtr<fidl::StringPtr> host_list;
+  std::vector<std::string> host_list;
   netconnector1->GetKnownDeviceNames(
       fuchsia::netconnector::kInitialKnownDeviceNames,
       callback::Capture(callback::SetWhenCalled(&called), &version,
@@ -155,10 +155,10 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts_Chained) {
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_NE(new_version, version);
-  ASSERT_GE(2u, host_list->size());
-  EXPECT_EQ(2u, host_list->size());
-  EXPECT_EQ("host1", host_list->at(0));
-  EXPECT_EQ("host2", host_list->at(1));
+  ASSERT_GE(2u, host_list.size());
+  EXPECT_EQ(2u, host_list.size());
+  EXPECT_EQ("host1", host_list.at(0));
+  EXPECT_EQ("host2", host_list.at(1));
 
   netconnector1->GetKnownDeviceNames(
       new_version, callback::Capture(callback::SetWhenCalled(&called),
@@ -171,9 +171,9 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts_Chained) {
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
 
-  ASSERT_GE(1u, host_list->size());
-  EXPECT_EQ(1u, host_list->size());
-  EXPECT_EQ("host1", host_list->at(0));
+  ASSERT_GE(1u, host_list.size());
+  EXPECT_EQ(1u, host_list.size());
+  EXPECT_EQ("host1", host_list.at(0));
 }
 
 TEST_F(NetConnectorFactoryTest, HostList_TwoHosts_Callback) {
@@ -182,7 +182,7 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts_Callback) {
 
   bool called = false;
   uint64_t version = 0;
-  fidl::VectorPtr<fidl::StringPtr> host_list;
+  std::vector<std::string> host_list;
   netconnector1->GetKnownDeviceNames(
       fuchsia::netconnector::kInitialKnownDeviceNames,
       callback::Capture(callback::SetWhenCalled(&called), &version,
@@ -206,10 +206,10 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts_Callback) {
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_NE(new_version, version);
-  ASSERT_GE(2u, host_list->size());
-  EXPECT_EQ(2u, host_list->size());
-  EXPECT_EQ("host1", host_list->at(0));
-  EXPECT_EQ("host2", host_list->at(1));
+  ASSERT_GE(2u, host_list.size());
+  EXPECT_EQ(2u, host_list.size());
+  EXPECT_EQ("host1", host_list.at(0));
+  EXPECT_EQ("host2", host_list.at(1));
 
   bool called2;
   netconnector1->GetKnownDeviceNames(
@@ -228,9 +228,9 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts_Callback) {
   EXPECT_TRUE(called);
   EXPECT_FALSE(called2);
 
-  ASSERT_GE(1u, host_list->size());
-  EXPECT_EQ(1u, host_list->size());
-  EXPECT_EQ("host1", host_list->at(0));
+  ASSERT_GE(1u, host_list.size());
+  EXPECT_EQ(1u, host_list.size());
+  EXPECT_EQ("host1", host_list.at(0));
 }
 
 // Tests that two "hosts" can talk to each other through the NetConnector

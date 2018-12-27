@@ -23,8 +23,8 @@ class GetTypesFromEntityCall : public Operation<std::vector<std::string>> {
  private:
   void Run() override {
     entity_resolver_->ResolveEntity(entity_reference_, entity_.NewRequest());
-    entity_->GetTypes([this](const fidl::VectorPtr<fidl::StringPtr>& types) {
-      Done(fxl::To<std::vector<std::string>>(types));
+    entity_->GetTypes([this](const std::vector<std::string>& types) {
+      Done(types);
     });
   }
 

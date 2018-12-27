@@ -133,7 +133,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   void GetComponentContext(
       fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request)
       override;
-  void GetDeviceName(std::function<void(::fidl::StringPtr)> callback) override;
+  void GetDeviceName(std::function<void(::std::string)> callback) override;
   void GetFocusController(
       fidl::InterfaceRequest<fuchsia::modular::FocusController> request)
       override;

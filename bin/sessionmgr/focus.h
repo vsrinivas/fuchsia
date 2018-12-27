@@ -87,7 +87,7 @@ class VisibleStoriesHandler : fuchsia::modular::VisibleStoriesProvider,
                  watcher) override;
 
   // |fuchsia::modular::VisibleStoriesController|
-  void Set(fidl::VectorPtr<fidl::StringPtr> story_ids) override;
+  void Set(fidl::VectorPtr<std::string> story_ids) override;
 
   fidl::BindingSet<fuchsia::modular::VisibleStoriesProvider> provider_bindings_;
   fidl::BindingSet<fuchsia::modular::VisibleStoriesController>
@@ -95,7 +95,7 @@ class VisibleStoriesHandler : fuchsia::modular::VisibleStoriesProvider,
 
   std::vector<fuchsia::modular::VisibleStoriesWatcherPtr> change_watchers_;
 
-  fidl::VectorPtr<fidl::StringPtr> visible_stories_;
+  fidl::VectorPtr<std::string> visible_stories_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(VisibleStoriesHandler);
 };

@@ -47,7 +47,7 @@ class TestApp
     story_shell_context_.Bind(std::move(story_shell_context));
     story_shell_context_->GetPresentation(presentation_.NewRequest());
     story_shell_context_->GetLink(story_shell_link_.NewRequest());
-    fidl::VectorPtr<fidl::StringPtr> link_path;
+    fidl::VectorPtr<std::string> link_path;
     link_path.push_back("path");
 
     story_shell_link_->Get(
@@ -61,7 +61,7 @@ class TestApp
           document.SetObject();
           document.AddMember("label", "value", document.GetAllocator());
           fsl::SizedVmo vmo;
-          fidl::VectorPtr<fidl::StringPtr> path_to_write;
+          fidl::VectorPtr<std::string> path_to_write;
           path_to_write.push_back("path");
           fsl::VmoFromString(modular::JsonValueToString(document), &vmo);
           fuchsia::mem::Buffer buffer = std::move(vmo).ToTransport();
@@ -110,25 +110,25 @@ class TestApp
   }
 
   // |fuchsia::modular::StoryShell|
-  void FocusSurface(fidl::StringPtr /*surface_id*/) override {}
+  void FocusSurface(std::string /*surface_id*/) override {}
 
   // |fuchsia::modular::StoryShell|
-  void DefocusSurface(fidl::StringPtr /*surface_id*/,
+  void DefocusSurface(std::string /*surface_id*/,
                    DefocusSurfaceCallback callback) override {
     callback();
   }
 
   // |fuchsia::modular::StoryShell|
   void AddContainer(
-      fidl::StringPtr /*container_name*/, fidl::StringPtr /*parent_id*/,
+      std::string /*container_name*/, fidl::StringPtr /*parent_id*/,
       fuchsia::modular::SurfaceRelation /*relation*/,
-      fidl::VectorPtr<fuchsia::modular::ContainerLayout> /*layout*/,
-      fidl::VectorPtr<
+      std::vector<fuchsia::modular::ContainerLayout> /*layout*/,
+      std::vector<
           fuchsia::modular::ContainerRelationEntry> /* relationships */,
-      fidl::VectorPtr<fuchsia::modular::ContainerView> /* views */) override {}
+      std::vector<fuchsia::modular::ContainerView> /* views */) override {}
 
   // |fuchsia::modular::StoryShell|
-  void RemoveSurface(fidl::StringPtr /*surface_id*/) override {}
+  void RemoveSurface(std::string /*surface_id*/) override {}
 
   // |fuchsia::modular::StoryShell|
   void ReconnectView(fuchsia::modular::ViewConnection view_connection) override {}

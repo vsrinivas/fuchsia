@@ -54,13 +54,13 @@ class StoryInfoAcquirer : public fuchsia::modular::VisibleStoriesWatcher,
   void OnFocusChange(fuchsia::modular::FocusInfoPtr info) override;
 
   // |fuchsia::modular::VisibleStoriesWatcher|
-  void OnVisibleStoriesChange(fidl::VectorPtr<fidl::StringPtr> ids) override;
+  void OnVisibleStoriesChange(fidl::VectorPtr<std::string> ids) override;
 
   // |fuchsia::modular::StoryProviderWatcher|
   void OnChange(
       fuchsia::modular::StoryInfo info, fuchsia::modular::StoryState state,
       fuchsia::modular::StoryVisibilityState visibility_state) override;
-  void OnDelete(fidl::StringPtr story_id) override;
+  void OnDelete(std::string story_id) override;
 
   fuchsia::modular::ContextWriterPtr context_writer_;
   fuchsia::modular::ContextReaderPtr context_reader_;

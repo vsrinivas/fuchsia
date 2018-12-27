@@ -156,11 +156,11 @@ Status LedgerRepositoryImpl::GetLedgerManager(
 }
 
 void LedgerRepositoryImpl::GetLedger(
-    fidl::VectorPtr<uint8_t> ledger_name,
+    std::vector<uint8_t> ledger_name,
     fidl::InterfaceRequest<Ledger> ledger_request,
     fit::function<void(Status)> callback) {
   TRACE_DURATION("ledger", "repository_get_ledger");
-  if (ledger_name->empty()) {
+  if (ledger_name.empty()) {
     callback(Status::INVALID_ARGUMENT);
     return;
   }
@@ -229,8 +229,7 @@ DetachedPath LedgerRepositoryImpl::GetPathFor(fxl::StringView ledger_name) {
 }
 
 void LedgerRepositoryImpl::GetInstancesList(GetInstancesListCallback callback) {
-  fidl::VectorPtr<fidl::VectorPtr<uint8_t>> result =
-      fidl::VectorPtr<fidl::VectorPtr<uint8_t>>::New(0);
+  std::vector<std::vector<uint8_t>> result;
   for (const auto& key_value : ledger_managers_) {
     result.push_back(convert::ToArray(key_value.first));
   }
@@ -238,7 +237,7 @@ void LedgerRepositoryImpl::GetInstancesList(GetInstancesListCallback callback) {
 }
 
 void LedgerRepositoryImpl::GetLedgerDebug(
-    fidl::VectorPtr<uint8_t> ledger_name,
+    std::vector<uint8_t> ledger_name,
     fidl::InterfaceRequest<ledger_internal::LedgerDebug> request,
     GetLedgerDebugCallback callback) {
   auto it = ledger_managers_.find(ledger_name);

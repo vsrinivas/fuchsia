@@ -18,14 +18,14 @@ namespace ledger {
 
 // Builds an array of length |size|, starting with |prefix| and completed with
 // random data.
-fidl::VectorPtr<uint8_t> RandomArray(rng::Random* random, size_t size,
+std::vector<uint8_t> RandomArray(rng::Random* random, size_t size,
                                      const std::vector<uint8_t>& prefix = {});
 
 // Extracts the content of |vmo| as a std::string.
 std::string ToString(const fuchsia::mem::BufferPtr& vmo);
 
 // Extracts the content of |vmo| as a FIDL vector.
-fidl::VectorPtr<uint8_t> ToArray(const fuchsia::mem::BufferPtr& vmo);
+std::vector<uint8_t> ToArray(const fuchsia::mem::BufferPtr& vmo);
 
 // Retrieves all entries from the snapshot with a key greater of equals to
 // |start|. If |num_queries| is not null, returns the number of calls to

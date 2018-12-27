@@ -138,8 +138,8 @@ class LocalModuleResolver::FindModulesCall
     // 3. For each parameter in the FindModulesQuery, try to filter
     // |candidates_| to only the modules that provide the types in the parameter
     // constraints.
-    if (!candidates_.empty() && !query_.parameter_constraints.is_null()) {
-      for (const auto& parameter_entry : *query_.parameter_constraints) {
+    if (!candidates_.empty()) {
+      for (const auto& parameter_entry : query_.parameter_constraints) {
         ProcessParameterTypes(parameter_entry.param_name,
                               parameter_entry.param_types);
       }
@@ -151,9 +151,9 @@ class LocalModuleResolver::FindModulesCall
  private:
   // |parameter_name| and |types| come from the FindModulesQuery.
   void ProcessParameterTypes(const std::string& parameter_name,
-                             const fidl::VectorPtr<fidl::StringPtr>& types) {
+                             const std::vector<std::string>& types) {
     std::set<ManifestId> parameter_type_entries;
-    for (const auto& type : *types) {
+    for (const auto& type : types) {
       std::set<ManifestId> found_entries =
           GetManifestsMatchingParameterByTypeAndName(type, parameter_name);
       parameter_type_entries.insert(found_entries.begin(), found_entries.end());
@@ -247,11 +247,11 @@ class LocalModuleResolver::FindModulesByTypesCall
     response_ = CreateEmptyResponseWithStatus();
 
     std::set<ManifestId> candidates;
-    for (auto& constraint : *query_.parameter_constraints) {
+    for (auto& constraint : query_.parameter_constraints) {
       std::set<ManifestId> param_type_entries;
       parameter_types_cache_[constraint.constraint_name] =
-          constraint.param_types.Clone();
-      for (auto& type : *constraint.param_types) {
+          constraint.param_types;
+      for (auto& type : constraint.param_types) {
         auto found_entries = GetManifestsMatchingParameterByType(type);
         candidates.insert(found_entries.begin(), found_entries.end());
       }
@@ -262,7 +262,7 @@ class LocalModuleResolver::FindModulesByTypesCall
           local_module_resolver_->manifests_[candidate]);
 
       using iter = decltype(results->begin());
-      response_.results->insert(response_.results->end(),
+      response_.results.insert(response_.results.end(),
                                 std::move_iterator<iter>(results->begin()),
                                 std::move_iterator<iter>(results->end()));
     }
@@ -305,8 +305,8 @@ class LocalModuleResolver::FindModulesByTypesCall
     modules.resize(0);
 
     for (const auto& intent_filter : *manifest.intent_filters) {
-      if (query_.parameter_constraints->size() <
-          intent_filter.parameter_constraints->size()) {
+      if (query_.parameter_constraints.size() <
+          intent_filter.parameter_constraints.size()) {
         return modules;
       }
 
@@ -355,15 +355,15 @@ class LocalModuleResolver::FindModulesByTypesCall
     std::map<ParameterName, std::vector<ParameterName>>
         intent_filter_param_to_query_constraints;
     for (const auto& intent_filter_param :
-         *intent_filter.parameter_constraints) {
+         intent_filter.parameter_constraints) {
       std::vector<ParameterName> matching_query_constraints;
-      for (const auto& query_constraint : *query_.parameter_constraints) {
+      for (const auto& query_constraint : query_.parameter_constraints) {
         const auto& this_query_constraint_cache =
             parameter_types_cache_[query_constraint.constraint_name];
-        if (std::find(this_query_constraint_cache->begin(),
-                      this_query_constraint_cache->end(),
+        if (std::find(this_query_constraint_cache.begin(),
+                      this_query_constraint_cache.end(),
                       intent_filter_param.type) !=
-            this_query_constraint_cache->end()) {
+            this_query_constraint_cache.end()) {
           matching_query_constraints.push_back(
               query_constraint.constraint_name);
         }
@@ -455,7 +455,7 @@ class LocalModuleResolver::FindModulesByTypesCall
   fuchsia::modular::FindModulesByTypesQuery const query_;
   fuchsia::modular::FindModulesByTypesResponse response_;
   // A cache of the parameter types for each parameter name in |query_|.
-  std::map<std::string, fidl::VectorPtr<fidl::StringPtr>>
+  std::map<std::string, std::vector<std::string>>
       parameter_types_cache_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FindModulesByTypesCall);
@@ -463,8 +463,6 @@ class LocalModuleResolver::FindModulesByTypesCall
 
 void LocalModuleResolver::FindModules(fuchsia::modular::FindModulesQuery query,
                                       FindModulesCallback callback) {
-  FXL_DCHECK(!query.action.is_null());
-
   operations_.Add(new FindModulesCall(this, std::move(query), callback));
 }
 
@@ -475,9 +473,7 @@ void LocalModuleResolver::FindModulesByTypes(
 }
 
 void LocalModuleResolver::GetModuleManifest(
-    fidl::StringPtr module_id, GetModuleManifestCallback callback) {
-  FXL_DCHECK(!module_id.is_null());
-
+    std::string module_id, GetModuleManifestCallback callback) {
   auto found_handlers = FindHandlers(module_id);
   if (!found_handlers.empty()) {
     callback(CloneOptional(manifests_[*found_handlers.begin()]));
@@ -501,8 +497,8 @@ void LocalModuleResolver::OnQuery(fuchsia::modular::UserInput query,
   // please split the index-building & querying portion of LocalModuleResolver
   // out into its own class. Then, make a new class to handle OnQuery() and
   // share the same index instance here and there.
-  auto proposals = fidl::VectorPtr<fuchsia::modular::Proposal>::New(0);
-  if (query.text->empty()) {
+  std::vector<fuchsia::modular::Proposal> proposals;
+  if (query.text.empty()) {
     fuchsia::modular::QueryResponse response;
     response.proposals = std::move(proposals);
     done(std::move(response));
@@ -546,7 +542,7 @@ void LocalModuleResolver::OnQuery(fuchsia::modular::UserInput query,
     }
   }
 
-  if (proposals->size() > 10) {
+  if (proposals.size() > 10) {
     proposals.resize(10);
   }
 
@@ -593,7 +589,7 @@ void LocalModuleResolver::OnNewManifestEntry(
   for (const auto& intent_filter : *manifest.intent_filters) {
     action_to_manifests_[intent_filter.action].insert(manifest_id);
 
-    for (const auto& constraint : *intent_filter.parameter_constraints) {
+    for (const auto& constraint : intent_filter.parameter_constraints) {
       parameter_type_and_name_to_manifests_[std::make_pair(constraint.type,
                                                            constraint.name)]
           .insert(manifest_id);
@@ -616,7 +612,7 @@ void LocalModuleResolver::OnRemoveManifestEntry(const std::string& source_name,
   for (const auto& intent_filter : *manifest.intent_filters) {
     action_to_manifests_[intent_filter.action].erase(manifest_id);
 
-    for (const auto& constraint : *intent_filter.parameter_constraints) {
+    for (const auto& constraint : intent_filter.parameter_constraints) {
       parameter_type_and_name_to_manifests_[std::make_pair(constraint.type,
                                                            constraint.name)]
           .erase(manifest_id);

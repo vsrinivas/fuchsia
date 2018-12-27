@@ -36,7 +36,7 @@ class StoryProviderWatcherBase : fuchsia::modular::StoryProviderWatcher {
 
  private:
   // |fuchsia::modular::StoryProviderWatcher|
-  void OnDelete(::fidl::StringPtr story_id) override;
+  void OnDelete(::std::string story_id) override;
 
   // |fuchsia::modular::StoryProviderWatcher|
   void OnChange(

@@ -107,9 +107,9 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherSimple) {
   EXPECT_EQ(1u, watcher.changes_seen);
   EXPECT_EQ(ResultState::COMPLETED, watcher.last_result_state_);
   PageChange change = std::move(watcher.last_page_change_);
-  ASSERT_EQ(1u, change.changed_entries->size());
-  EXPECT_EQ("name", convert::ToString(change.changed_entries->at(0).key));
-  EXPECT_EQ("Alice", ToString(change.changed_entries->at(0).value));
+  ASSERT_EQ(1u, change.changed_entries.size());
+  EXPECT_EQ("name", convert::ToString(change.changed_entries.at(0).key));
+  EXPECT_EQ("Alice", ToString(change.changed_entries.at(0).value));
 }
 
 TEST_P(PageWatcherIntegrationTest, PageWatcherAggregatedNotifications) {
@@ -139,9 +139,9 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherAggregatedNotifications) {
   EXPECT_EQ(1u, watcher.changes_seen);
   EXPECT_EQ(ResultState::COMPLETED, watcher.last_result_state_);
   auto changed_entries = std::move(watcher.last_page_change_.changed_entries);
-  ASSERT_THAT(*changed_entries, SizeIs(1));
-  EXPECT_EQ("key", convert::ToString(changed_entries->at(0).key));
-  EXPECT_EQ("value1", ToString(changed_entries->at(0).value));
+  ASSERT_THAT(changed_entries, SizeIs(1));
+  EXPECT_EQ("key", convert::ToString(changed_entries.at(0).key));
+  EXPECT_EQ("value1", ToString(changed_entries.at(0).value));
 
   // Update the value of "key" initially to "value2" and then to "value3".
   page->Put(convert::ToArray("key"), convert::ToArray("value2"),
@@ -166,9 +166,9 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherAggregatedNotifications) {
   EXPECT_EQ(2u, watcher.changes_seen);
   EXPECT_EQ(ResultState::COMPLETED, watcher.last_result_state_);
   changed_entries = std::move(watcher.last_page_change_.changed_entries);
-  ASSERT_THAT(*changed_entries, SizeIs(1));
-  EXPECT_EQ("key", convert::ToString(changed_entries->at(0).key));
-  EXPECT_EQ("value3", ToString(changed_entries->at(0).value));
+  ASSERT_THAT(changed_entries, SizeIs(1));
+  EXPECT_EQ("key", convert::ToString(changed_entries.at(0).key));
+  EXPECT_EQ("value3", ToString(changed_entries.at(0).value));
 }
 
 TEST_P(PageWatcherIntegrationTest, PageWatcherDisconnectClient) {
@@ -268,9 +268,9 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherDelete) {
   ASSERT_EQ(1u, watcher.changes_seen);
   EXPECT_EQ(ResultState::COMPLETED, watcher.last_result_state_);
   PageChange change = std::move(watcher.last_page_change_);
-  EXPECT_EQ(0u, change.changed_entries->size());
-  ASSERT_EQ(1u, change.deleted_keys->size());
-  EXPECT_EQ("foo", convert::ToString(change.deleted_keys->at(0)));
+  EXPECT_EQ(0u, change.changed_entries.size());
+  ASSERT_EQ(1u, change.deleted_keys.size());
+  EXPECT_EQ("foo", convert::ToString(change.deleted_keys.at(0)));
 }
 
 TEST_P(PageWatcherIntegrationTest, PageWatcherBigChangeSize) {
@@ -329,12 +329,12 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherBigChangeSize) {
   EXPECT_EQ(1u, watcher.changes_seen);
   EXPECT_EQ(watcher.last_result_state_, ResultState::PARTIAL_STARTED);
   PageChange change = std::move(watcher.last_page_change_);
-  size_t initial_size = change.changed_entries->size();
+  size_t initial_size = change.changed_entries.size();
   for (size_t i = 0; i < initial_size; ++i) {
     EXPECT_EQ(key_generator(i),
-              convert::ToString(change.changed_entries->at(i).key));
-    EXPECT_EQ("value", ToString(change.changed_entries->at(i).value));
-    EXPECT_EQ(Priority::EAGER, change.changed_entries->at(i).priority);
+              convert::ToString(change.changed_entries.at(i).key));
+    EXPECT_EQ("value", ToString(change.changed_entries.at(i).value));
+    EXPECT_EQ(Priority::EAGER, change.changed_entries.at(i).priority);
   }
 
   // Get the second OnChagne call.
@@ -343,12 +343,12 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherBigChangeSize) {
   EXPECT_EQ(ResultState::PARTIAL_COMPLETED, watcher.last_result_state_);
   change = std::move(watcher.last_page_change_);
 
-  ASSERT_EQ(entry_count, initial_size + change.changed_entries->size());
-  for (size_t i = 0; i < change.changed_entries->size(); ++i) {
+  ASSERT_EQ(entry_count, initial_size + change.changed_entries.size());
+  for (size_t i = 0; i < change.changed_entries.size(); ++i) {
     EXPECT_EQ(key_generator(i + initial_size),
-              convert::ToString(change.changed_entries->at(i).key));
-    EXPECT_EQ("value", ToString(change.changed_entries->at(i).value));
-    EXPECT_EQ(Priority::EAGER, change.changed_entries->at(i).priority);
+              convert::ToString(change.changed_entries.at(i).key));
+    EXPECT_EQ("value", ToString(change.changed_entries.at(i).value));
+    EXPECT_EQ(Priority::EAGER, change.changed_entries.at(i).priority);
   }
 }
 
@@ -395,12 +395,12 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherBigChangeHandles) {
   EXPECT_EQ(1u, watcher.changes_seen);
   EXPECT_EQ(watcher.last_result_state_, ResultState::PARTIAL_STARTED);
   PageChange change = std::move(watcher.last_page_change_);
-  size_t initial_size = change.changed_entries->size();
+  size_t initial_size = change.changed_entries.size();
   for (size_t i = 0; i < initial_size; ++i) {
     EXPECT_EQ(fxl::StringPrintf("key%02" PRIuMAX, i),
-              convert::ToString(change.changed_entries->at(i).key));
-    EXPECT_EQ("value", ToString(change.changed_entries->at(i).value));
-    EXPECT_EQ(Priority::EAGER, change.changed_entries->at(i).priority);
+              convert::ToString(change.changed_entries.at(i).key));
+    EXPECT_EQ("value", ToString(change.changed_entries.at(i).value));
+    EXPECT_EQ(Priority::EAGER, change.changed_entries.at(i).priority);
   }
 
   // Get the second OnChagne call.
@@ -409,12 +409,12 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherBigChangeHandles) {
   EXPECT_EQ(ResultState::PARTIAL_COMPLETED, watcher.last_result_state_);
   change = std::move(watcher.last_page_change_);
 
-  ASSERT_EQ(entry_count, initial_size + change.changed_entries->size());
-  for (size_t i = 0; i < change.changed_entries->size(); ++i) {
+  ASSERT_EQ(entry_count, initial_size + change.changed_entries.size());
+  for (size_t i = 0; i < change.changed_entries.size(); ++i) {
     EXPECT_EQ(fxl::StringPrintf("key%02" PRIuMAX, i + initial_size),
-              convert::ToString(change.changed_entries->at(i).key));
-    EXPECT_EQ("value", ToString(change.changed_entries->at(i).value));
-    EXPECT_EQ(Priority::EAGER, change.changed_entries->at(i).priority);
+              convert::ToString(change.changed_entries.at(i).key));
+    EXPECT_EQ("value", ToString(change.changed_entries.at(i).value));
+    EXPECT_EQ(Priority::EAGER, change.changed_entries.at(i).priority);
   }
 }
 
@@ -488,9 +488,9 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherTransaction) {
   EXPECT_EQ(1u, watcher.changes_seen);
   EXPECT_EQ(ResultState::COMPLETED, watcher.last_result_state_);
   PageChange change = std::move(watcher.last_page_change_);
-  ASSERT_EQ(1u, change.changed_entries->size());
-  EXPECT_EQ("name", convert::ToString(change.changed_entries->at(0).key));
-  EXPECT_EQ("Alice", ToString(change.changed_entries->at(0).value));
+  ASSERT_EQ(1u, change.changed_entries.size());
+  EXPECT_EQ("name", convert::ToString(change.changed_entries.at(0).key));
+  EXPECT_EQ("Alice", ToString(change.changed_entries.at(0).value));
 }
 
 TEST_P(PageWatcherIntegrationTest, PageWatcherParallel) {
@@ -557,9 +557,9 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherParallel) {
   EXPECT_EQ(1u, watcher1.changes_seen);
   EXPECT_EQ(ResultState::COMPLETED, watcher1.last_result_state_);
   PageChange change = std::move(watcher1.last_page_change_);
-  ASSERT_EQ(1u, change.changed_entries->size());
-  EXPECT_EQ("name", convert::ToString(change.changed_entries->at(0).key));
-  EXPECT_EQ("Alice", ToString(change.changed_entries->at(0).value));
+  ASSERT_EQ(1u, change.changed_entries.size());
+  EXPECT_EQ("name", convert::ToString(change.changed_entries.at(0).key));
+  EXPECT_EQ("Alice", ToString(change.changed_entries.at(0).value));
 
   waiter = NewWaiter();
   page2->Commit(callback::Capture(waiter->GetCallback(), &status));
@@ -570,9 +570,9 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherParallel) {
   EXPECT_EQ(1u, watcher2.changes_seen);
   EXPECT_EQ(ResultState::COMPLETED, watcher2.last_result_state_);
   change = std::move(watcher2.last_page_change_);
-  ASSERT_EQ(1u, change.changed_entries->size());
-  EXPECT_EQ("name", convert::ToString(change.changed_entries->at(0).key));
-  EXPECT_EQ("Bob", ToString(change.changed_entries->at(0).value));
+  ASSERT_EQ(1u, change.changed_entries.size());
+  EXPECT_EQ("name", convert::ToString(change.changed_entries.at(0).key));
+  EXPECT_EQ("Bob", ToString(change.changed_entries.at(0).value));
 
   RunLoopFor(zx::msec(100));
 
@@ -583,9 +583,9 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherParallel) {
   EXPECT_EQ(1u, watcher2.changes_seen);
 
   change = std::move(watcher1.last_page_change_);
-  ASSERT_EQ(1u, change.changed_entries->size());
-  EXPECT_EQ("name", convert::ToString(change.changed_entries->at(0).key));
-  EXPECT_EQ("Bob", ToString(change.changed_entries->at(0).value));
+  ASSERT_EQ(1u, change.changed_entries.size());
+  EXPECT_EQ("name", convert::ToString(change.changed_entries.at(0).key));
+  EXPECT_EQ("Bob", ToString(change.changed_entries.at(0).value));
 }
 
 TEST_P(PageWatcherIntegrationTest, PageWatcherEmptyTransaction) {
@@ -663,16 +663,16 @@ TEST_P(PageWatcherIntegrationTest, PageWatcher1Change2Pages) {
   ASSERT_EQ(1u, watcher1.changes_seen);
   EXPECT_EQ(ResultState::COMPLETED, watcher1.last_result_state_);
   PageChange change = std::move(watcher1.last_page_change_);
-  ASSERT_EQ(1u, change.changed_entries->size());
-  EXPECT_EQ("name", convert::ToString(change.changed_entries->at(0).key));
-  EXPECT_EQ("Alice", ToString(change.changed_entries->at(0).value));
+  ASSERT_EQ(1u, change.changed_entries.size());
+  EXPECT_EQ("name", convert::ToString(change.changed_entries.at(0).key));
+  EXPECT_EQ("Alice", ToString(change.changed_entries.at(0).value));
 
   ASSERT_EQ(1u, watcher2.changes_seen);
   EXPECT_EQ(ResultState::COMPLETED, watcher2.last_result_state_);
   change = std::move(watcher2.last_page_change_);
-  ASSERT_EQ(1u, change.changed_entries->size());
-  EXPECT_EQ("name", convert::ToString(change.changed_entries->at(0).key));
-  EXPECT_EQ("Alice", ToString(change.changed_entries->at(0).value));
+  ASSERT_EQ(1u, change.changed_entries.size());
+  EXPECT_EQ("name", convert::ToString(change.changed_entries.at(0).key));
+  EXPECT_EQ("Alice", ToString(change.changed_entries.at(0).value));
 }
 
 class WaitingWatcher : public PageWatcher {
@@ -816,8 +816,8 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherPrefix) {
   EXPECT_EQ(1u, watcher.changes_seen);
   EXPECT_EQ(ResultState::COMPLETED, watcher.last_result_state_);
   PageChange change = std::move(watcher.last_page_change_);
-  ASSERT_EQ(1u, change.changed_entries->size());
-  EXPECT_EQ("01-key", convert::ToString(change.changed_entries->at(0).key));
+  ASSERT_EQ(1u, change.changed_entries.size());
+  EXPECT_EQ("01-key", convert::ToString(change.changed_entries.at(0).key));
 }
 
 TEST_P(PageWatcherIntegrationTest, PageWatcherPrefixNoChange) {

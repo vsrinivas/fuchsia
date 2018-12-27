@@ -64,7 +64,7 @@ void PageDelegate::Init(fit::function<void(Status)> on_done) {
 
 void PageDelegate::GetSnapshot(
     fidl::InterfaceRequest<PageSnapshot> snapshot_request,
-    fidl::VectorPtr<uint8_t> key_prefix,
+    std::vector<uint8_t> key_prefix,
     fidl::InterfaceHandle<PageWatcher> watcher,
     Page::GetSnapshotCallback callback) {
   // TODO(qsr): Update this so that only |GetCurrentCommitId| is done in a the
@@ -101,18 +101,18 @@ void PageDelegate::GetSnapshot(
       });
 }
 
-void PageDelegate::Put(fidl::VectorPtr<uint8_t> key,
-                       fidl::VectorPtr<uint8_t> value,
+void PageDelegate::Put(std::vector<uint8_t> key,
+                       std::vector<uint8_t> value,
                        Page::PutCallback callback) {
   PutWithPriority(std::move(key), std::move(value), Priority::EAGER,
                   std::move(callback));
 }
 
-void PageDelegate::PutWithPriority(fidl::VectorPtr<uint8_t> key,
-                                   fidl::VectorPtr<uint8_t> value,
+void PageDelegate::PutWithPriority(std::vector<uint8_t> key,
+                                   std::vector<uint8_t> value,
                                    Priority priority,
                                    Page::PutWithPriorityCallback callback) {
-  FXL_DCHECK(key->size() <= kMaxKeySize);
+  FXL_DCHECK(key.size() <= kMaxKeySize);
   auto promise = fxl::MakeRefCounted<
       callback::Promise<storage::Status, storage::ObjectIdentifier>>(
       storage::Status::ILLEGAL_STATE);
@@ -144,10 +144,10 @@ void PageDelegate::PutWithPriority(fidl::VectorPtr<uint8_t> key,
       });
 }
 
-void PageDelegate::PutReference(fidl::VectorPtr<uint8_t> key,
+void PageDelegate::PutReference(std::vector<uint8_t> key,
                                 Reference reference, Priority priority,
                                 Page::PutReferenceCallback callback) {
-  FXL_DCHECK(key->size() <= kMaxKeySize);
+  FXL_DCHECK(key.size() <= kMaxKeySize);
   // |ResolveReference| also makes sure that the reference was created for this
   // page.
   storage::ObjectIdentifier object_identifier;
@@ -170,7 +170,7 @@ void PageDelegate::PutReference(fidl::VectorPtr<uint8_t> key,
       });
 }
 
-void PageDelegate::Delete(fidl::VectorPtr<uint8_t> key,
+void PageDelegate::Delete(std::vector<uint8_t> key,
                           Page::DeleteCallback callback) {
   operation_serializer_.Serialize<Status>(
       std::move(callback),
@@ -318,7 +318,7 @@ const storage::CommitId& PageDelegate::GetCurrentCommitId() {
   return journal_parent_commit_;
 }
 
-void PageDelegate::PutInCommit(fidl::VectorPtr<uint8_t> key,
+void PageDelegate::PutInCommit(std::vector<uint8_t> key,
                                storage::ObjectIdentifier object_identifier,
                                storage::KeyPriority priority,
                                fit::function<void(Status)> callback) {

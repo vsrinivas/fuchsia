@@ -19,7 +19,7 @@ class InitializeChainCall
                        fuchsia::modular::ModuleParameterMapPtr> {
  public:
   InitializeChainCall(StoryStorage* const story_storage,
-                      fidl::VectorPtr<fidl::StringPtr> module_path,
+                      std::vector<std::string> module_path,
                       fuchsia::modular::CreateModuleParameterMapInfoPtr
                           create_parameter_map_info,
                       ResultCall result_call)
@@ -53,7 +53,7 @@ class InitializeChainCall
         info.link_path().Clone(&mapping->link_path);
       } else {  // info->is_create_link()
         mapping->link_path.module_path.resize(0);
-        for (const auto& i : *module_path_) {
+        for (const auto& i : module_path_) {
           mapping->link_path.module_path.push_back(i);
         }
         mapping->link_path.link_name = key;
@@ -83,7 +83,7 @@ class InitializeChainCall
   }
 
   StoryStorage* const story_storage_;
-  const fidl::VectorPtr<fidl::StringPtr> module_path_;
+  const std::vector<std::string> module_path_;
   const fuchsia::modular::CreateModuleParameterMapInfoPtr
       create_parameter_map_info_;
   fuchsia::modular::ModuleParameterMapPtr parameter_map_;
@@ -98,7 +98,7 @@ class InitializeChainCall
 void AddInitializeChainOperation(
     OperationContainer* const operation_container,
     StoryStorage* const story_storage,
-    fidl::VectorPtr<fidl::StringPtr> module_path,
+    std::vector<std::string> module_path,
     fuchsia::modular::CreateModuleParameterMapInfoPtr create_parameter_map_info,
     std::function<void(fuchsia::modular::ExecuteResult,
                        fuchsia::modular::ModuleParameterMapPtr)>

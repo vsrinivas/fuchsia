@@ -175,7 +175,7 @@ class PageImplTest : public TestWithEnvironment {
   }
 
   PageSnapshotPtr GetSnapshot(
-      fidl::VectorPtr<uint8_t> prefix = fidl::VectorPtr<uint8_t>::New(0)) {
+      std::vector<uint8_t> prefix = std::vector<uint8_t>()) {
     bool called;
     Status status;
     PageSnapshotPtr snapshot;
@@ -794,24 +794,24 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntries) {
 
   PageSnapshotPtr snapshot = GetSnapshot();
 
-  fidl::VectorPtr<Entry> actual_entries;
+  std::vector<Entry> actual_entries;
   std::unique_ptr<Token> next_token;
   snapshot->GetEntries(
-      fidl::VectorPtr<uint8_t>::New(0), nullptr,
+      std::vector<uint8_t>(), nullptr,
       callback::Capture(callback::SetWhenCalled(&called), &status,
                         &actual_entries, &next_token));
   DrainLoop();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_FALSE(next_token);
-  ASSERT_EQ(2u, actual_entries->size());
-  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries->at(0).key));
-  EXPECT_EQ(eager_value, ToString(actual_entries->at(0).value));
-  EXPECT_EQ(Priority::EAGER, actual_entries->at(0).priority);
+  ASSERT_EQ(2u, actual_entries.size());
+  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries.at(0).key));
+  EXPECT_EQ(eager_value, ToString(actual_entries.at(0).value));
+  EXPECT_EQ(Priority::EAGER, actual_entries.at(0).priority);
 
-  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries->at(1).key));
-  EXPECT_EQ(lazy_value, ToString(actual_entries->at(1).value));
-  EXPECT_EQ(Priority::LAZY, actual_entries->at(1).priority);
+  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries.at(1).key));
+  EXPECT_EQ(lazy_value, ToString(actual_entries.at(1).value));
+  EXPECT_EQ(Priority::LAZY, actual_entries.at(1).priority);
 }
 
 TEST_F(PageImplTest, PutGetSnapshotGetEntriesInline) {
@@ -839,7 +839,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInline) {
   PageSnapshotPtr snapshot = GetSnapshot();
 
   std::unique_ptr<Token> next_token;
-  fidl::VectorPtr<InlinedEntry> actual_entries;
+  std::vector<InlinedEntry> actual_entries;
   snapshot->GetEntriesInline(
       fidl::VectorPtr<uint8_t>::New(0), nullptr,
       callback::Capture(callback::SetWhenCalled(&called), &status,
@@ -849,18 +849,18 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInline) {
   EXPECT_EQ(Status::OK, status);
   EXPECT_FALSE(next_token);
 
-  ASSERT_EQ(2u, actual_entries->size());
-  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries->at(0).key));
-  EXPECT_TRUE(actual_entries->at(0).inlined_value);
+  ASSERT_EQ(2u, actual_entries.size());
+  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries.at(0).key));
+  EXPECT_TRUE(actual_entries.at(0).inlined_value);
   EXPECT_EQ(eager_value,
-            convert::ToString(actual_entries->at(0).inlined_value->value));
-  EXPECT_EQ(Priority::EAGER, actual_entries->at(0).priority);
+            convert::ToString(actual_entries.at(0).inlined_value->value));
+  EXPECT_EQ(Priority::EAGER, actual_entries.at(0).priority);
 
-  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries->at(1).key));
-  EXPECT_TRUE(actual_entries->at(1).inlined_value);
+  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries.at(1).key));
+  EXPECT_TRUE(actual_entries.at(1).inlined_value);
   EXPECT_EQ(lazy_value,
-            convert::ToString(actual_entries->at(1).inlined_value->value));
-  EXPECT_EQ(Priority::LAZY, actual_entries->at(1).priority);
+            convert::ToString(actual_entries.at(1).inlined_value->value));
+  EXPECT_EQ(Priority::LAZY, actual_entries.at(1).priority);
 }
 
 TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForSize) {
@@ -881,10 +881,10 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForSize) {
   // Call GetEntries and find a partial result.
   bool called;
   Status status;
-  fidl::VectorPtr<Entry> actual_entries;
+  std::vector<Entry> actual_entries;
   std::unique_ptr<Token> actual_next_token;
   snapshot->GetEntries(
-      fidl::VectorPtr<uint8_t>::New(0), nullptr,
+      std::vector<uint8_t>(), nullptr,
       callback::Capture(callback::SetWhenCalled(&called), &status,
                         &actual_entries, &actual_next_token));
   DrainLoop();
@@ -893,9 +893,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForSize) {
   EXPECT_TRUE(actual_next_token);
 
   // Call GetEntries with the previous token and receive the remaining results.
-  fidl::VectorPtr<Entry> actual_next_entries;
+  std::vector<Entry> actual_next_entries;
   snapshot->GetEntries(
-      fidl::VectorPtr<uint8_t>::New(0), std::move(actual_next_token),
+      std::vector<uint8_t>(), std::move(actual_next_token),
       callback::Capture(callback::SetWhenCalled(&called), &status,
                         &actual_next_entries, &actual_next_token));
   DrainLoop();
@@ -903,17 +903,17 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForSize) {
   EXPECT_EQ(Status::OK, status);
   EXPECT_FALSE(actual_next_token);
 
-  for (auto& entry : actual_next_entries.take()) {
+  for (auto& entry : actual_next_entries) {
     actual_entries.push_back(std::move(entry));
   }
-  EXPECT_EQ(static_cast<size_t>(entry_count), actual_entries->size());
+  EXPECT_EQ(static_cast<size_t>(entry_count), actual_entries.size());
 
   // Check that the correct values of the keys are all present in the result and
   // in the correct order.
-  for (int i = 0; i < static_cast<int>(actual_entries->size()); ++i) {
+  for (int i = 0; i < static_cast<int>(actual_entries.size()); ++i) {
     ASSERT_EQ(GetKey(i, min_key_size),
-              convert::ToString(actual_entries->at(i).key));
-    ASSERT_EQ(GetValue(i, 0), ToString(actual_entries->at(i).value));
+              convert::ToString(actual_entries.at(i).key));
+    ASSERT_EQ(GetValue(i, 0), ToString(actual_entries.at(i).value));
   }
 }
 
@@ -927,10 +927,10 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForSize) {
   // Call GetEntries and find a partial result.
   bool called;
   Status status;
-  fidl::VectorPtr<InlinedEntry> actual_entries;
+  std::vector<InlinedEntry> actual_entries;
   std::unique_ptr<Token> actual_next_token;
   snapshot->GetEntriesInline(
-      fidl::VectorPtr<uint8_t>::New(0), nullptr,
+      std::vector<uint8_t>(), nullptr,
       callback::Capture(callback::SetWhenCalled(&called), &status,
                         &actual_entries, &actual_next_token));
   DrainLoop();
@@ -939,28 +939,28 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForSize) {
   EXPECT_TRUE(actual_next_token);
 
   // Call GetEntries with the previous token and receive the remaining results.
-  fidl::VectorPtr<InlinedEntry> actual_entries2;
+  std::vector<InlinedEntry> actual_entries2;
   std::unique_ptr<Token> actual_next_token2;
   snapshot->GetEntriesInline(
-      fidl::VectorPtr<uint8_t>::New(0), std::move(actual_next_token),
+      std::vector<uint8_t>(), std::move(actual_next_token),
       callback::Capture(callback::SetWhenCalled(&called), &status,
                         &actual_entries2, &actual_next_token2));
   DrainLoop();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_FALSE(actual_next_token2);
-  for (auto& entry : actual_entries2.take()) {
+  for (auto& entry : actual_entries2) {
     actual_entries.push_back(std::move(entry));
   }
-  EXPECT_EQ(static_cast<size_t>(entry_count), actual_entries->size());
+  EXPECT_EQ(static_cast<size_t>(entry_count), actual_entries.size());
 
   // Check that the correct values of the keys are all present in the result and
   // in the correct order.
-  for (int i = 0; i < static_cast<int>(actual_entries->size()); ++i) {
-    ASSERT_EQ(GetKey(i, 0), convert::ToString(actual_entries->at(i).key));
-    ASSERT_TRUE(actual_entries->at(i).inlined_value);
+  for (int i = 0; i < static_cast<int>(actual_entries.size()); ++i) {
+    ASSERT_EQ(GetKey(i, 0), convert::ToString(actual_entries.at(i).key));
+    ASSERT_TRUE(actual_entries.at(i).inlined_value);
     ASSERT_EQ(GetValue(i, min_value_size),
-              convert::ToString(actual_entries->at(i).inlined_value->value));
+              convert::ToString(actual_entries.at(i).inlined_value->value));
   }
 }
 
@@ -984,10 +984,10 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForEntryCount) {
   // Call GetEntries and find a partial result.
   bool called;
   Status status;
-  fidl::VectorPtr<InlinedEntry> actual_entries;
+  std::vector<InlinedEntry> actual_entries;
   std::unique_ptr<Token> actual_next_token;
   snapshot->GetEntriesInline(
-      fidl::VectorPtr<uint8_t>::New(0), nullptr,
+      std::vector<uint8_t>(), nullptr,
       callback::Capture(callback::SetWhenCalled(&called), &status,
                         &actual_entries, &actual_next_token));
   DrainLoop();
@@ -996,28 +996,28 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForEntryCount) {
   EXPECT_TRUE(actual_next_token);
 
   // Call GetEntries with the previous token and receive the remaining results.
-  fidl::VectorPtr<InlinedEntry> actual_entries2;
+  std::vector<InlinedEntry> actual_entries2;
   std::unique_ptr<Token> actual_next_token2;
   snapshot->GetEntriesInline(
-      fidl::VectorPtr<uint8_t>::New(0), std::move(actual_next_token),
+      std::vector<uint8_t>(), std::move(actual_next_token),
       callback::Capture(callback::SetWhenCalled(&called), &status,
                         &actual_entries2, &actual_next_token2));
   DrainLoop();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_FALSE(actual_next_token2);
-  for (auto& entry : actual_entries2.take()) {
+  for (auto& entry : actual_entries2) {
     actual_entries.push_back(std::move(entry));
   }
-  EXPECT_EQ(static_cast<size_t>(entry_count), actual_entries->size());
+  EXPECT_EQ(static_cast<size_t>(entry_count), actual_entries.size());
 
   // Check that the correct values of the keys are all present in the result and
   // in the correct order.
-  for (int i = 0; i < static_cast<int>(actual_entries->size()); ++i) {
-    ASSERT_EQ(GetKey(i, 0), convert::ToString(actual_entries->at(i).key));
-    ASSERT_TRUE(actual_entries->at(i).inlined_value);
+  for (int i = 0; i < static_cast<int>(actual_entries.size()); ++i) {
+    ASSERT_EQ(GetKey(i, 0), convert::ToString(actual_entries.at(i).key));
+    ASSERT_TRUE(actual_entries.at(i).inlined_value);
     ASSERT_EQ(GetValue(i, min_value_size),
-              convert::ToString(actual_entries->at(i).inlined_value->value));
+              convert::ToString(actual_entries.at(i).inlined_value->value));
   }
 }
 
@@ -1029,10 +1029,10 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForHandles) {
   // Call GetEntries and find a partial result.
   bool called;
   Status status;
-  fidl::VectorPtr<Entry> actual_entries;
+  std::vector<Entry> actual_entries;
   std::unique_ptr<Token> actual_next_token;
   snapshot->GetEntries(
-      fidl::VectorPtr<uint8_t>::New(0), nullptr,
+      std::vector<uint8_t>(), nullptr,
       callback::Capture(callback::SetWhenCalled(&called), &status,
                         &actual_entries, &actual_next_token));
   DrainLoop();
@@ -1041,25 +1041,25 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForHandles) {
   EXPECT_TRUE(actual_next_token);
 
   // Call GetEntries with the previous token and receive the remaining results.
-  fidl::VectorPtr<Entry> actual_next_entries;
+  std::vector<Entry> actual_next_entries;
   snapshot->GetEntries(
-      fidl::VectorPtr<uint8_t>::New(0), std::move(actual_next_token),
+      std::vector<uint8_t>(), std::move(actual_next_token),
       callback::Capture(callback::SetWhenCalled(&called), &status,
                         &actual_next_entries, &actual_next_token));
   DrainLoop();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_FALSE(actual_next_token);
-  for (auto& entry : actual_next_entries.take()) {
+  for (auto& entry : actual_next_entries) {
     actual_entries.push_back(std::move(entry));
   }
-  EXPECT_EQ(static_cast<size_t>(entry_count), actual_entries->size());
+  EXPECT_EQ(static_cast<size_t>(entry_count), actual_entries.size());
 
   // Check that the correct values of the keys are all present in the result and
   // in the correct order.
-  for (int i = 0; i < static_cast<int>(actual_entries->size()); ++i) {
-    ASSERT_EQ(GetKey(i), convert::ToString(actual_entries->at(i).key));
-    ASSERT_EQ(GetValue(i, 0), ToString(actual_entries->at(i).value));
+  for (int i = 0; i < static_cast<int>(actual_entries.size()); ++i) {
+    ASSERT_EQ(GetKey(i), convert::ToString(actual_entries.at(i).key));
+    ASSERT_EQ(GetValue(i, 0), ToString(actual_entries.at(i).value));
   }
 }
 
@@ -1092,24 +1092,24 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithFetch) {
 
   PageSnapshotPtr snapshot = GetSnapshot();
 
-  fidl::VectorPtr<Entry> actual_entries;
+  std::vector<Entry> actual_entries;
   std::unique_ptr<Token> actual_next_token;
   snapshot->GetEntries(
-      fidl::VectorPtr<uint8_t>::New(0), nullptr,
+      std::vector<uint8_t>(), nullptr,
       callback::Capture(callback::SetWhenCalled(&called), &status,
                         &actual_entries, &actual_next_token));
   DrainLoop();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_FALSE(actual_next_token);
-  ASSERT_EQ(2u, actual_entries->size());
-  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries->at(0).key));
-  EXPECT_EQ(eager_value, ToString(actual_entries->at(0).value));
-  EXPECT_EQ(Priority::EAGER, actual_entries->at(0).priority);
+  ASSERT_EQ(2u, actual_entries.size());
+  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries.at(0).key));
+  EXPECT_EQ(eager_value, ToString(actual_entries.at(0).value));
+  EXPECT_EQ(Priority::EAGER, actual_entries.at(0).priority);
 
-  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries->at(1).key));
-  EXPECT_FALSE(actual_entries->at(1).value);
-  EXPECT_EQ(Priority::LAZY, actual_entries->at(1).priority);
+  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries.at(1).key));
+  EXPECT_FALSE(actual_entries.at(1).value);
+  EXPECT_EQ(Priority::LAZY, actual_entries.at(1).priority);
 }
 
 TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithPrefix) {
@@ -1135,30 +1135,30 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithPrefix) {
   EXPECT_EQ(Status::OK, status);
 
   PageSnapshotPtr snapshot = GetSnapshot(convert::ToArray("001"));
-  fidl::VectorPtr<Entry> actual_entries;
+  std::vector<Entry> actual_entries;
   std::unique_ptr<Token> actual_next_token;
   snapshot->GetEntries(
-      fidl::VectorPtr<uint8_t>::New(0), nullptr,
+      std::vector<uint8_t>(), nullptr,
       callback::Capture(callback::SetWhenCalled(&called), &status,
                         &actual_entries, &actual_next_token));
   DrainLoop();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_FALSE(actual_next_token);
-  ASSERT_EQ(1u, actual_entries->size());
-  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries->at(0).key));
+  ASSERT_EQ(1u, actual_entries.size());
+  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries.at(0).key));
 
   snapshot = GetSnapshot(convert::ToArray("00"));
   snapshot->GetEntries(
-      fidl::VectorPtr<uint8_t>::New(0), nullptr,
+      std::vector<uint8_t>(), nullptr,
       callback::Capture(callback::SetWhenCalled(&called), &status,
                         &actual_entries, &actual_next_token));
   DrainLoop();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
-  ASSERT_EQ(2u, actual_entries->size());
-  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries->at(0).key));
-  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries->at(1).key));
+  ASSERT_EQ(2u, actual_entries.size());
+  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries.at(0).key));
+  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries.at(1).key));
 }
 
 TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithStart) {
@@ -1184,7 +1184,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithStart) {
   EXPECT_EQ(Status::OK, status);
 
   PageSnapshotPtr snapshot = GetSnapshot();
-  fidl::VectorPtr<Entry> actual_entries;
+  std::vector<Entry> actual_entries;
   std::unique_ptr<Token> actual_next_token;
   snapshot->GetEntries(
       convert::ToArray("002"), nullptr,
@@ -1194,8 +1194,8 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithStart) {
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_FALSE(actual_next_token);
-  ASSERT_EQ(1u, actual_entries->size());
-  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries->at(0).key));
+  ASSERT_EQ(1u, actual_entries.size());
+  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries.at(0).key));
 
   snapshot->GetEntries(
       convert::ToArray("001"), nullptr,
@@ -1205,9 +1205,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithStart) {
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_FALSE(actual_next_token);
-  ASSERT_EQ(2u, actual_entries->size());
-  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries->at(0).key));
-  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries->at(1).key));
+  ASSERT_EQ(2u, actual_entries.size());
+  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries.at(0).key));
+  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries.at(1).key));
 }
 
 TEST_F(PageImplTest, PutGetSnapshotGetKeys) {
@@ -1244,17 +1244,17 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeys) {
 
   PageSnapshotPtr snapshot = GetSnapshot();
 
-  fidl::VectorPtr<fidl::VectorPtr<uint8_t>> actual_keys;
+  std::vector<std::vector<uint8_t>> actual_keys;
   std::unique_ptr<Token> actual_next_token;
-  snapshot->GetKeys(fidl::VectorPtr<uint8_t>::New(0), nullptr,
+  snapshot->GetKeys(std::vector<uint8_t>(), nullptr,
                     callback::Capture(callback::SetWhenCalled(&called), &status,
                                       &actual_keys, &actual_next_token));
   DrainLoop();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_FALSE(actual_next_token);
-  EXPECT_EQ(key1, convert::ExtendedStringView(actual_keys->at(0)));
-  EXPECT_EQ(key2, convert::ExtendedStringView(actual_keys->at(1)));
+  EXPECT_EQ(key1, convert::ExtendedStringView(actual_keys.at(0)));
+  EXPECT_EQ(key2, convert::ExtendedStringView(actual_keys.at(1)));
 }
 
 TEST_F(PageImplTest, PutGetSnapshotGetKeysWithToken) {
@@ -1269,9 +1269,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithToken) {
   // Call GetKeys and find a partial result.
   bool called;
   Status status;
-  fidl::VectorPtr<fidl::VectorPtr<uint8_t>> actual_keys;
+  std::vector<std::vector<uint8_t>> actual_keys;
   std::unique_ptr<Token> actual_next_token;
-  snapshot->GetKeys(fidl::VectorPtr<uint8_t>::New(0), nullptr,
+  snapshot->GetKeys(std::vector<uint8_t>(), nullptr,
                     callback::Capture(callback::SetWhenCalled(&called), &status,
                                       &actual_keys, &actual_next_token));
 
@@ -1281,8 +1281,8 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithToken) {
   EXPECT_TRUE(actual_next_token);
 
   // Call GetKeys with the previous token and receive the remaining results.
-  fidl::VectorPtr<fidl::VectorPtr<uint8_t>> actual_next_keys;
-  snapshot->GetKeys(fidl::VectorPtr<uint8_t>::New(0),
+  std::vector<std::vector<uint8_t>> actual_next_keys;
+  snapshot->GetKeys(std::vector<uint8_t>(),
                     std::move(actual_next_token),
                     callback::Capture(callback::SetWhenCalled(&called), &status,
                                       &actual_next_keys, &actual_next_token));
@@ -1291,15 +1291,15 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithToken) {
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_FALSE(actual_next_token);
-  for (auto& key : actual_next_keys.take()) {
+  for (auto& key : actual_next_keys) {
     actual_keys.push_back(std::move(key));
   }
-  EXPECT_EQ(static_cast<size_t>(key_count), actual_keys->size());
+  EXPECT_EQ(static_cast<size_t>(key_count), actual_keys.size());
 
   // Check that the correct values of the keys are all present in the result and
   // in the correct order.
-  for (size_t i = 0; i < actual_keys->size(); ++i) {
-    ASSERT_EQ(GetKey(i, min_key_size), convert::ToString(actual_keys->at(i)));
+  for (size_t i = 0; i < actual_keys.size(); ++i) {
+    ASSERT_EQ(GetKey(i, min_key_size), convert::ToString(actual_keys.at(i)));
   }
 }
 
@@ -1337,9 +1337,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithPrefix) {
 
   PageSnapshotPtr snapshot = GetSnapshot(convert::ToArray("001"));
 
-  fidl::VectorPtr<fidl::VectorPtr<uint8_t>> actual_keys;
+  std::vector<std::vector<uint8_t>> actual_keys;
   std::unique_ptr<Token> actual_next_token;
-  snapshot->GetKeys(fidl::VectorPtr<uint8_t>::New(0), nullptr,
+  snapshot->GetKeys(std::vector<uint8_t>(), nullptr,
                     callback::Capture(callback::SetWhenCalled(&called), &status,
                                       &actual_keys, &actual_next_token));
 
@@ -1347,20 +1347,20 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithPrefix) {
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_FALSE(actual_next_token);
-  EXPECT_EQ(1u, actual_keys->size());
-  EXPECT_EQ(key1, convert::ExtendedStringView(actual_keys->at(0)));
+  EXPECT_EQ(1u, actual_keys.size());
+  EXPECT_EQ(key1, convert::ExtendedStringView(actual_keys.at(0)));
 
   snapshot = GetSnapshot(convert::ToArray("00"));
-  snapshot->GetKeys(fidl::VectorPtr<uint8_t>::New(0), nullptr,
+  snapshot->GetKeys(std::vector<uint8_t>(), nullptr,
                     callback::Capture(callback::SetWhenCalled(&called), &status,
                                       &actual_keys, &actual_next_token));
   DrainLoop();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_FALSE(actual_next_token);
-  EXPECT_EQ(2u, actual_keys->size());
-  EXPECT_EQ(key1, convert::ExtendedStringView(actual_keys->at(0)));
-  EXPECT_EQ(key2, convert::ExtendedStringView(actual_keys->at(1)));
+  EXPECT_EQ(2u, actual_keys.size());
+  EXPECT_EQ(key1, convert::ExtendedStringView(actual_keys.at(0)));
+  EXPECT_EQ(key2, convert::ExtendedStringView(actual_keys.at(1)));
 }
 
 TEST_F(PageImplTest, PutGetSnapshotGetKeysWithStart) {
@@ -1397,7 +1397,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithStart) {
 
   PageSnapshotPtr snapshot = GetSnapshot();
 
-  fidl::VectorPtr<fidl::VectorPtr<uint8_t>> actual_keys;
+  std::vector<std::vector<uint8_t>> actual_keys;
   std::unique_ptr<Token> actual_next_token;
   snapshot->GetKeys(convert::ToArray("002"), nullptr,
                     callback::Capture(callback::SetWhenCalled(&called), &status,
@@ -1406,8 +1406,8 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithStart) {
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_FALSE(actual_next_token);
-  EXPECT_EQ(1u, actual_keys->size());
-  EXPECT_EQ(key2, convert::ExtendedStringView(actual_keys->at(0)));
+  EXPECT_EQ(1u, actual_keys.size());
+  EXPECT_EQ(key2, convert::ExtendedStringView(actual_keys.at(0)));
 
   snapshot = GetSnapshot();
   snapshot->GetKeys(convert::ToArray("001"), nullptr,
@@ -1417,9 +1417,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithStart) {
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_FALSE(actual_next_token);
-  EXPECT_EQ(2u, actual_keys->size());
-  EXPECT_EQ(key1, convert::ExtendedStringView(actual_keys->at(0)));
-  EXPECT_EQ(key2, convert::ExtendedStringView(actual_keys->at(1)));
+  EXPECT_EQ(2u, actual_keys.size());
+  EXPECT_EQ(key1, convert::ExtendedStringView(actual_keys.at(0)));
+  EXPECT_EQ(key2, convert::ExtendedStringView(actual_keys.at(1)));
 }
 
 TEST_F(PageImplTest, SnapshotGetSmall) {

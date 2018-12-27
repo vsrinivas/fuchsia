@@ -26,7 +26,7 @@ class Logger {
   void LogError(const std::string& command, const std::string& error) const;
 
   void Log(const std::string& command,
-           const fidl::VectorPtr<fidl::StringPtr>& params) const;
+           const std::vector<std::string>& params) const;
 
   void Log(const std::string& command,
            const std::map<std::string, std::string>& params) const;
@@ -36,7 +36,7 @@ class Logger {
   // |params| to be logged.
   std::string GenerateJsonLogString(
       const std::string& command,
-      const fidl::VectorPtr<fidl::StringPtr>& params) const;
+      const std::vector<std::string>& params) const;
 
   std::string GenerateJsonLogString(
       const std::string& command,

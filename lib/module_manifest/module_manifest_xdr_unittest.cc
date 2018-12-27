@@ -14,9 +14,9 @@ void ExpectBasicManifest(const char manifest_str[]) {
   EXPECT_EQ("suggestion_headline", m.suggestion_headline);
 
   EXPECT_EQ(1u, m.intent_filters->size());
-  EXPECT_EQ(1u, m.intent_filters->at(0).parameter_constraints->size());
-  EXPECT_EQ("name", m.intent_filters->at(0).parameter_constraints->at(0).name);
-  EXPECT_EQ("type", m.intent_filters->at(0).parameter_constraints->at(0).type);
+  EXPECT_EQ(1u, m.intent_filters->at(0).parameter_constraints.size());
+  EXPECT_EQ("name", m.intent_filters->at(0).parameter_constraints.at(0).name);
+  EXPECT_EQ("type", m.intent_filters->at(0).parameter_constraints.at(0).type);
 }
 
 // Tests version 4 of the manifest

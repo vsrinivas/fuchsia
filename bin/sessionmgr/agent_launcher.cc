@@ -18,7 +18,7 @@ component::Services AgentLauncher::StartAgent(
     std::unique_ptr<maxwell::MaxwellServiceProviderBridge> bridge) {
   bridge_ = std::move(bridge);
   fuchsia::sys::ServiceListPtr service_list(new fuchsia::sys::ServiceList);
-  service_list->names = bridge_->service_names().Clone();
+  service_list->names = bridge_->service_names();
   service_list->host_directory = bridge_->OpenAsDirectory();
   fuchsia::sys::EnvironmentPtr agent_env;
   environment_->CreateNestedEnvironment(

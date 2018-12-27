@@ -21,7 +21,7 @@ fuchsia::modular::IntentFilter MakeIntentFilter(
     std::vector<fuchsia::modular::ParameterConstraint> param_constraints) {
   fuchsia::modular::IntentFilter f;
   f.action = action;
-  f.parameter_constraints.reset(param_constraints);
+  f.parameter_constraints = param_constraints;
   return f;
 }
 
@@ -73,7 +73,7 @@ class FindModulesTest : public gtest::TestLoopFixture {
     ASSERT_TRUE(got_response);
   }
 
-  const fidl::VectorPtr<fuchsia::modular::FindModulesResult>& results() const {
+  const std::vector<fuchsia::modular::FindModulesResult>& results() const {
     return response_.results;
   }
 
@@ -93,7 +93,7 @@ class FindModulesTest : public gtest::TestLoopFixture {
                                std::vector<std::string> types) {
       fuchsia::modular::FindModulesParameterConstraint constraint;
       constraint.param_name = name;
-      constraint.param_types = fxl::To<fidl::VectorPtr<fidl::StringPtr>>(types);
+      constraint.param_types = types;
       query.parameter_constraints.push_back(std::move(constraint));
       return *this;
     }
@@ -144,7 +144,7 @@ class FindModulesByTypesTest : public gtest::TestLoopFixture {
     ASSERT_TRUE(got_response);
   }
 
-  const fidl::VectorPtr<fuchsia::modular::FindModulesByTypesResult>& results()
+  const std::vector<fuchsia::modular::FindModulesByTypesResult>& results()
       const {
     return response_.results;
   }
@@ -159,7 +159,7 @@ class FindModulesByTypesTest : public gtest::TestLoopFixture {
                                std::vector<std::string> types) {
       fuchsia::modular::FindModulesByTypesParameterConstraint constraint;
       constraint.constraint_name = name;
-      constraint.param_types = fxl::To<fidl::VectorPtr<fidl::StringPtr>>(types);
+      constraint.param_types = types;
       query.parameter_constraints.push_back(std::move(constraint));
       return *this;
     }
@@ -169,10 +169,10 @@ class FindModulesByTypesTest : public gtest::TestLoopFixture {
   };
 
   std::string GetMappingFromQuery(
-      const fidl::VectorPtr<
+      const std::vector<
           fuchsia::modular::FindModulesByTypesParameterMapping>& mapping,
       std::string query_constraint_name) {
-    for (auto& item : *mapping) {
+    for (auto& item : mapping) {
       if (item.query_constraint_name == query_constraint_name) {
         return item.result_param_name;
       }
@@ -201,7 +201,7 @@ TEST_F(FindModulesTest, Null) {
   FindModules(QueryBuilder("no matchy!").build());
 
   // The Resolver returns an empty candidate list
-  ASSERT_EQ(0lu, results()->size());
+  ASSERT_EQ(0lu, results().size());
 }
 
 TEST_F(FindModulesTest, Simpleaction) {
@@ -253,9 +253,9 @@ TEST_F(FindModulesTest, Simpleaction) {
   RunLoopUntilIdle();
   ASSERT_TRUE(got_response);
 
-  ASSERT_EQ(2lu, results()->size());
-  EXPECT_EQ("module1", results()->at(0).module_id);
-  EXPECT_EQ("module2", results()->at(1).module_id);
+  ASSERT_EQ(2lu, results().size());
+  EXPECT_EQ("module1", results().at(0).module_id);
+  EXPECT_EQ("module2", results().at(1).module_id);
 
   // Remove the entries and we should see no more results. Our
   // TestManifestSource implementation above doesn't send its tasks to the
@@ -264,7 +264,7 @@ TEST_F(FindModulesTest, Simpleaction) {
   source2->remove("module2");
 
   FindModules(QueryBuilder("com.google.fuchsia.navigate.v1").build());
-  ASSERT_EQ(0lu, results()->size());
+  ASSERT_EQ(0lu, results().size());
 }
 
 TEST_F(FindModulesTest, SimpleParameterTypes) {
@@ -316,8 +316,8 @@ TEST_F(FindModulesTest, SimpleParameterTypes) {
   FindModules(QueryBuilder("com.google.fuchsia.navigate.v1")
                   .AddParameter("start", {"foo", "tangoTown"})
                   .build());
-  ASSERT_EQ(1lu, results()->size());
-  EXPECT_EQ("module1", results()->at(0).module_id);
+  ASSERT_EQ(1lu, results().size());
+  EXPECT_EQ("module1", results().at(0).module_id);
 
   // This one will match one of the two parameter constraints on module1, but
   // not both, so no match at all is expected.
@@ -325,15 +325,15 @@ TEST_F(FindModulesTest, SimpleParameterTypes) {
                   .AddParameter("start", {"foo", "tangoTown"})
                   .AddParameter("destination", {"notbaz"})
                   .build());
-  ASSERT_EQ(0lu, results()->size());
+  ASSERT_EQ(0lu, results().size());
 
   // Given parameter of type "frob", find a module with action
   // com.google.fuchsia.navigate.v1.
   FindModules(QueryBuilder("com.google.fuchsia.navigate.v1")
                   .AddParameter("start", {"frob"})
                   .build());
-  ASSERT_EQ(1u, results()->size());
-  auto& res = results()->at(0);
+  ASSERT_EQ(1u, results().size());
+  auto& res = results().at(0);
   EXPECT_EQ("module2", res.module_id);
 }
 
@@ -352,15 +352,15 @@ TEST_F(FindModulesTest, ReAddExistingEntries) {
   source->add("1", std::move(entry1));
   source->idle();
   FindModules(QueryBuilder("action1").build());
-  ASSERT_EQ(1lu, results()->size());
-  EXPECT_EQ("id1", results()->at(0).module_id);
+  ASSERT_EQ(1lu, results().size());
+  EXPECT_EQ("id1", results().at(0).module_id);
 
   fuchsia::modular::ModuleManifest entry2;
   entry.Clone(&entry2);
   source->add("1", std::move(entry2));
   FindModules(QueryBuilder("action1").build());
-  ASSERT_EQ(1lu, results()->size());
-  EXPECT_EQ("id1", results()->at(0).module_id);
+  ASSERT_EQ(1lu, results().size());
+  EXPECT_EQ("id1", results().at(0).module_id);
 }
 
 // Tests that a query that does not contain a action or a URL matches a
@@ -385,8 +385,8 @@ TEST_F(FindModulesByTypesTest, MatchingParameterWithNoactionOrUrl) {
   FindModulesByTypes(
       QueryBuilder().AddParameter("start", {"foo", "bar"}).build());
 
-  ASSERT_EQ(1lu, results()->size());
-  EXPECT_EQ("module1", results()->at(0).module_id);
+  ASSERT_EQ(1lu, results().size());
+  EXPECT_EQ("module1", results().at(0).module_id);
 }
 
 // Tests that a query that does not contain a action or a URL matches when the
@@ -411,8 +411,8 @@ TEST_F(FindModulesByTypesTest, CorrectParameterTypeWithNoactionOrUrl) {
   FindModulesByTypes(
       QueryBuilder().AddParameter("start", {"foo", "bar"}).build());
 
-  ASSERT_EQ(1lu, results()->size());
-  EXPECT_EQ("module1", results()->at(0).module_id);
+  ASSERT_EQ(1lu, results().size());
+  EXPECT_EQ("module1", results().at(0).module_id);
 }
 
 // Tests that a query that does not contain a action or a URL returns results
@@ -448,9 +448,9 @@ TEST_F(FindModulesByTypesTest,
   FindModulesByTypes(
       QueryBuilder().AddParameter("start", {"foo", "bar"}).build());
 
-  ASSERT_EQ(2lu, results()->size());
-  EXPECT_EQ("module1", results()->at(0).module_id);
-  EXPECT_EQ("module2", results()->at(1).module_id);
+  ASSERT_EQ(2lu, results().size());
+  EXPECT_EQ("module1", results().at(0).module_id);
+  EXPECT_EQ("module2", results().at(1).module_id);
 }
 
 // Tests that a query that does not contain a action or a URL does not match
@@ -475,7 +475,7 @@ TEST_F(FindModulesByTypesTest, IncorrectParameterTypeWithNoactionOrUrl) {
   FindModulesByTypes(
       QueryBuilder().AddParameter("start", {"foo", "bar"}).build());
 
-  EXPECT_EQ(0lu, results()->size());
+  EXPECT_EQ(0lu, results().size());
 }
 
 // Tests that a query without a action or url, that contains more parameters
@@ -502,7 +502,7 @@ TEST_F(FindModulesByTypesTest, QueryWithMoreParametersThanEntry) {
                          .AddParameter("end", {"foo", "bar"})
                          .build());
 
-  EXPECT_EQ(1lu, results()->size());
+  EXPECT_EQ(1lu, results().size());
 }
 
 // Tests that for a query with multiple parameters, each parameter gets assigned
@@ -533,8 +533,8 @@ TEST_F(FindModulesByTypesTest, QueryWithoutActionAndMultipleParameters) {
                          .AddParameter("parameter2", {"not_gps"})
                          .build());
 
-  ASSERT_EQ(1lu, results()->size());
-  auto& result = results()->at(0);
+  ASSERT_EQ(1lu, results().size());
+  auto& result = results().at(0);
 
   EXPECT_EQ("start",
             GetMappingFromQuery(result.parameter_mappings, "parameter1"));
@@ -570,12 +570,12 @@ TEST_F(FindModulesByTypesTest, FindModulesByTypeWithTwoParametersOfSameType) {
                          .AddParameter("parameter2", {"gps"})
                          .build());
 
-  EXPECT_EQ(2lu, results()->size());
+  EXPECT_EQ(2lu, results().size());
 
   bool found_first_mapping = false;
   bool found_second_mapping = false;
 
-  for (const auto& result : *results()) {
+  for (const auto& result : results()) {
     bool start_mapped_to_p1 =
         GetMappingFromQuery(result.parameter_mappings, "parameter1") == "start";
 
@@ -628,7 +628,7 @@ TEST_F(FindModulesByTypesTest, QueryWithoutActionAndThreeParametersOfSameType) {
                          .AddParameter("parameter3", {"gps"})
                          .build());
 
-  EXPECT_EQ(6lu, results()->size());
+  EXPECT_EQ(6lu, results().size());
 }
 
 // Tests that a query with three parameters of the same type matches an entry
@@ -661,7 +661,7 @@ TEST_F(FindModulesByTypesTest,
                          .AddParameter("parameter3", {"gps"})
                          .build());
 
-  EXPECT_EQ(6lu, results()->size());
+  EXPECT_EQ(6lu, results().size());
 }
 
 // Tests that a query without a action does not match a module that requires a
@@ -693,7 +693,7 @@ TEST_F(FindModulesByTypesTest,
   FindModulesByTypes(
       QueryBuilder().AddParameter("parameter1", {"gps"}).build());
 
-  EXPECT_EQ(0lu, results()->size());
+  EXPECT_EQ(0lu, results().size());
 }
 
 // Tests that a query without a action does not match an entry where the
@@ -720,7 +720,7 @@ TEST_F(FindModulesByTypesTest, QueryWithoutActionIncompatibleParameterTypes) {
   FindModulesByTypes(
       QueryBuilder().AddParameter("parameter1", {"not_gps"}).build());
 
-  EXPECT_EQ(0lu, results()->size());
+  EXPECT_EQ(0lu, results().size());
 }
 
 // Tests that a query with a action requires parameter name and type to match
@@ -747,7 +747,7 @@ TEST_F(FindModulesTest, QueryWithActionMatchesBothParameterNamesAndTypes) {
                   .AddParameter("start", {"foo", "baz"})
                   .build());
 
-  EXPECT_EQ(0lu, results()->size());
+  EXPECT_EQ(0lu, results().size());
 }
 
 TEST_F(FindModulesTest, MultipleIntentFilters) {
@@ -773,19 +773,19 @@ TEST_F(FindModulesTest, MultipleIntentFilters) {
   FindModules(QueryBuilder("com.google.fuchsia.navigate.v1")
                   .AddParameter("end", {"foo"})
                   .build());
-  ASSERT_EQ(1lu, results()->size());
-  EXPECT_EQ("module1", results()->at(0).module_id);
+  ASSERT_EQ(1lu, results().size());
+  EXPECT_EQ("module1", results().at(0).module_id);
 
   FindModules(QueryBuilder("com.google.fuchsia.navigate.v2")
                   .AddParameter("end", {"foo"})
                   .build());
-  ASSERT_EQ(1lu, results()->size());
-  EXPECT_EQ("module1", results()->at(0).module_id);
+  ASSERT_EQ(1lu, results().size());
+  EXPECT_EQ("module1", results().at(0).module_id);
 
   FindModules(QueryBuilder("com.google.fuchsia.navigate.v3")
                   .AddParameter("end", {"foo"})
                   .build());
-  ASSERT_EQ(0lu, results()->size());
+  ASSERT_EQ(0lu, results().size());
 }
 
 TEST_F(FindModulesByTypesTest, MultipleIntentFilters) {
@@ -810,12 +810,12 @@ TEST_F(FindModulesByTypesTest, MultipleIntentFilters) {
 
   FindModulesByTypes(QueryBuilder().AddParameter("end", {"foo"}).build());
 
-  ASSERT_EQ(2lu, results()->size());
+  ASSERT_EQ(2lu, results().size());
   // expected action =>.
   std::set<std::string> actual_actions;
   for (size_t i = 0; i < 2u; i++) {
-    EXPECT_EQ("module1", results()->at(i).module_id);
-    actual_actions.insert(results()->at(i).action);
+    EXPECT_EQ("module1", results().at(i).module_id);
+    actual_actions.insert(results().at(i).action);
   }
   EXPECT_EQ(1u, actual_actions.count("com.google.fuchsia.navigate.v1"));
   EXPECT_EQ(1u, actual_actions.count("com.google.fuchsia.navigate.v2"));

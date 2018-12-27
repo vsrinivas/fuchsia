@@ -79,13 +79,13 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   void Sync(const std::function<void()>& done);
 
   // Called by ModuleControllerImpl and ModuleContextImpl.
-  void FocusModule(const fidl::VectorPtr<fidl::StringPtr>& module_path);
+  void FocusModule(const std::vector<std::string>& module_path);
 
   // Called by ModuleControllerImpl.
-  void DefocusModule(const fidl::VectorPtr<fidl::StringPtr>& module_path);
+  void DefocusModule(const std::vector<std::string>& module_path);
 
   // Called by ModuleControllerImpl.
-  void StopModule(const fidl::VectorPtr<fidl::StringPtr>& module_path,
+  void StopModule(const std::vector<std::string>& module_path,
                   const std::function<void()>& done);
 
   // Called by ModuleControllerImpl.
@@ -106,13 +106,13 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
 
   // Called by ModuleContextImpl.
   fuchsia::modular::LinkPathPtr GetLinkPathForParameterName(
-      const fidl::VectorPtr<fidl::StringPtr>& module_path,
-      fidl::StringPtr name);
+      const std::vector<std::string>& module_path,
+      std::string name);
 
   // Called by ModuleContextImpl.
   void EmbedModule(
-      const fidl::VectorPtr<fidl::StringPtr>& parent_module_path,
-      fidl::StringPtr module_name, fuchsia::modular::IntentPtr intent,
+      const std::vector<std::string>& parent_module_path,
+      std::string module_name, fuchsia::modular::IntentPtr intent,
       fidl::InterfaceRequest<fuchsia::modular::ModuleController>
           module_controller_request,
       fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
@@ -122,8 +122,8 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
 
   // Called by ModuleContextImpl.
   void StartModule(
-      const fidl::VectorPtr<fidl::StringPtr>& parent_module_path,
-      fidl::StringPtr module_name, fuchsia::modular::IntentPtr intent,
+      const std::vector<std::string>& parent_module_path,
+      std::string module_name, fuchsia::modular::IntentPtr intent,
       fidl::InterfaceRequest<fuchsia::modular::ModuleController>
           module_controller_request,
       fuchsia::modular::SurfaceRelationPtr surface_relation,
@@ -132,17 +132,17 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
 
   // Called by ModuleContextImpl.
   void StartContainerInShell(
-      const fidl::VectorPtr<fidl::StringPtr>& parent_module_path,
-      fidl::StringPtr name,
+      const std::vector<std::string>& parent_module_path,
+      std::string name,
       fuchsia::modular::SurfaceRelationPtr parent_relation,
-      fidl::VectorPtr<fuchsia::modular::ContainerLayout> layout,
-      fidl::VectorPtr<fuchsia::modular::ContainerRelationEntry> relationships,
-      fidl::VectorPtr<fuchsia::modular::ContainerNodePtr> nodes);
+      std::vector<fuchsia::modular::ContainerLayout> layout,
+      std::vector<fuchsia::modular::ContainerRelationEntry> relationships,
+      std::vector<fuchsia::modular::ContainerNodePtr> nodes);
 
   // Stops the module at |module_path| in response to a call to
   // |ModuleContext.RemoveSelfFromStory|.
   void RemoveModuleFromStory(
-      const fidl::VectorPtr<fidl::StringPtr>& module_path);
+      const std::vector<std::string>& module_path);
 
   // Called by ModuleContextImpl.
   void StartOngoingActivity(
@@ -151,7 +151,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
 
   // Called by ModuleContextImpl.
   void CreateEntity(
-      fidl::StringPtr type, fuchsia::mem::Buffer data,
+      std::string type, fuchsia::mem::Buffer data,
       fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request,
       std::function<void(std::string /* entity_reference */)> callback);
 
@@ -175,7 +175,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   void GetActiveModules(GetActiveModulesCallback callback) override;
   void GetModules(GetModulesCallback callback) override;
   void GetModuleController(
-      fidl::VectorPtr<fidl::StringPtr> module_path,
+      std::vector<std::string> module_path,
       fidl::InterfaceRequest<fuchsia::modular::ModuleController> request)
       override;
   void GetActiveLinks(
@@ -202,7 +202,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   void ProcessPendingViews();
   std::set<fuchsia::modular::LinkPath> GetActiveLinksInternal();
 
-  bool IsExternalModule(const fidl::VectorPtr<fidl::StringPtr>& module_path);
+  bool IsExternalModule(const std::vector<std::string>& module_path);
 
   // Handles SessionShell OnModuleFocused event that indicates whether or not a
   // surface was focused.
@@ -259,13 +259,13 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   // serialized module path) until its parent is connected to story shell. Story
   // shell cannot display views whose parents are not yet displayed.
   struct PendingView {
-    fidl::VectorPtr<fidl::StringPtr> module_path;
+   std::vector<std::string> module_path;
     fuchsia::modular::ModuleManifestPtr module_manifest;
     fuchsia::modular::SurfaceRelationPtr surface_relation;
     fuchsia::modular::ModuleSource module_source;
     fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner;
   };
-  std::map<fidl::StringPtr, PendingView> pending_views_;
+  std::map<std::string, PendingView> pending_views_;
 
   // The first ingredient of a story: Modules. For each *running* Module in the
   // Story, there is one RunningModInfo.
@@ -295,7 +295,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   // return nullptr if the module at the path is not running, regardless of
   // whether a module at that path is known to the story.
   RunningModInfo* FindRunningModInfo(
-      const fidl::VectorPtr<fidl::StringPtr>& module_path);
+      const std::vector<std::string>& module_path);
 
   // Finds the active RunningModInfo for the story shell anchor of a module
   // with the given |running_mod_info|. The anchor is the closest ancestor

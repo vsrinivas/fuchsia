@@ -21,7 +21,7 @@ class StoryCommandExecutor;
 // story command execution to a StoryCommandExecutor.
 class StoryPuppetMasterImpl : public fuchsia::modular::StoryPuppetMaster {
  public:
-  StoryPuppetMasterImpl(fidl::StringPtr story_name,
+  StoryPuppetMasterImpl(std::string story_name,
                         OperationContainer* operations,
                         SessionStorage* session_storage,
                         StoryCommandExecutor* executor);
@@ -30,7 +30,7 @@ class StoryPuppetMasterImpl : public fuchsia::modular::StoryPuppetMaster {
  private:
   // |StoryPuppetMaster|
   void Enqueue(
-      fidl::VectorPtr<fuchsia::modular::StoryCommand> commands) override;
+      std::vector<fuchsia::modular::StoryCommand> commands) override;
 
   // |StoryPuppetMaster|
   void Execute(ExecuteCallback done) override;
@@ -38,7 +38,7 @@ class StoryPuppetMasterImpl : public fuchsia::modular::StoryPuppetMaster {
   // |StoryPuppetMaster|
   void SetCreateOptions(fuchsia::modular::StoryOptions story_options) override;
 
-  fidl::StringPtr story_name_;
+  std::string story_name_;
   SessionStorage* const session_storage_;  // Not owned.
   StoryCommandExecutor* const executor_;   // Not owned.
 

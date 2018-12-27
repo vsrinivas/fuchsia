@@ -89,7 +89,7 @@ class DeleteEntryBenchmark {
   fuchsia::sys::ComponentControllerPtr component_controller_;
   LedgerPtr ledger_;
   PagePtr page_;
-  std::vector<fidl::VectorPtr<uint8_t>> keys_;
+  std::vector<std::vector<uint8_t>> keys_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DeleteEntryBenchmark);
 };
@@ -139,7 +139,7 @@ void DeleteEntryBenchmark::Run() {
 void DeleteEntryBenchmark::Populate() {
   auto keys = generator_.MakeKeys(entry_count_, key_size_, entry_count_);
   for (size_t i = 0; i < entry_count_; i++) {
-    keys_.push_back(keys[i].Clone());
+    keys_.push_back(keys[i]);
   }
 
   page_data_generator_.Populate(

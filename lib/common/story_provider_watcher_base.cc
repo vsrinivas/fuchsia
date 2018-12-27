@@ -25,7 +25,7 @@ void StoryProviderWatcherBase::Watch(
 
 void StoryProviderWatcherBase::Reset() { binding_.Unbind(); }
 
-void StoryProviderWatcherBase::OnDelete(::fidl::StringPtr /*story_id*/) {}
+void StoryProviderWatcherBase::OnDelete(::std::string /*story_id*/) {}
 
 void StoryProviderWatcherBase::OnChange(
     fuchsia::modular::StoryInfo /*story_info*/,

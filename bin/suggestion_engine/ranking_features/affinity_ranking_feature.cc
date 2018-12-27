@@ -14,7 +14,7 @@ namespace modular {
 namespace {
 
 bool MatchesMod(const fuchsia::modular::ModuleAffinity& affinity,
-                const fidl::VectorPtr<fidl::StringPtr>& mod_path,
+                const std::vector<std::string>& mod_path,
                 const std::string& affinity_story) {
   // If the stories are not the same return early.
   if (affinity.story_name != affinity_story) {
@@ -33,11 +33,11 @@ bool MatchesMod(const fuchsia::modular::ModuleAffinity& affinity,
   // meaningful confidence that represents this behavior and supports cases such
   // as a/b/c vs a/d. For the case above it could be 0.66 and for the case of
   // a/d 0.33.
-  for (uint32_t i = 0; i < mod_path->size(); i++) {
-    if (i >= affinity.module_name->size()) {
+  for (uint32_t i = 0; i < mod_path.size(); i++) {
+    if (i >= affinity.module_name.size()) {
       break;
     }
-    if (mod_path->at(i) != affinity.module_name->at(i)) {
+    if (mod_path.at(i) != affinity.module_name.at(i)) {
       return false;
     }
   }
@@ -55,12 +55,12 @@ double AffinityRankingFeature::ComputeFeatureInternal(
     const fuchsia::modular::UserInput& query,
     const RankedSuggestion& suggestion) {
   const auto& proposal = suggestion.prototype->proposal;
-  if (proposal.affinity->empty()) {
+  if (proposal.affinity.empty()) {
     return kMaxConfidence;
   }
   for (const auto& context_value : *ContextValues()) {
     const auto& affinity_story_id = context_value.meta.story->id;
-    for (const auto& affinity : *proposal.affinity) {
+    for (const auto& affinity : proposal.affinity) {
       if (affinity.is_story_affinity() &&
           affinity_story_id == affinity.story_affinity().story_name) {
         return kMaxConfidence;

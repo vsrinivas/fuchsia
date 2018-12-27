@@ -68,8 +68,7 @@ void ContextDebugImpl::Watch(
   FXL_LOG(INFO) << "Watch(): entered";
   auto listener_ptr = listener.Bind();
   // Build a complete state snapshot and send it to |listener|.
-  auto all_values =
-      fidl::VectorPtr<fuchsia::modular::ContextDebugValue>::New(0);
+  std::vector<fuchsia::modular::ContextDebugValue> all_values;
   for (const auto& entry : repository_->values_) {
     fuchsia::modular::ContextDebugValue update;
     update.id = entry.first;
@@ -104,7 +103,7 @@ void ContextDebugImpl::DispatchValues(
   for (const auto& listener : listeners_.ptrs()) {
     fidl::VectorPtr<fuchsia::modular::ContextDebugValue> values_clone;
     fidl::Clone(values, &values_clone);
-    (*listener)->OnValuesChanged(std::move(values_clone));
+    (*listener)->OnValuesChanged(values_clone.take());
   }
 }
 
@@ -121,7 +120,7 @@ void ContextDebugImpl::DispatchSubscriptions(
     fidl::VectorPtr<fuchsia::modular::ContextDebugSubscription>
         subscriptions_clone;
     fidl::Clone(subscriptions, &subscriptions_clone);
-    (*listener)->OnSubscriptionsChanged(std::move(subscriptions_clone));
+    (*listener)->OnSubscriptionsChanged(subscriptions_clone.take());
   }
 }
 

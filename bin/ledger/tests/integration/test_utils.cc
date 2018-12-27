@@ -23,14 +23,14 @@
 
 namespace ledger {
 
-fidl::VectorPtr<uint8_t> RandomArray(rng::Random* random, size_t size,
+std::vector<uint8_t> RandomArray(rng::Random* random, size_t size,
                                      const std::vector<uint8_t>& prefix) {
   EXPECT_TRUE(size >= prefix.size());
-  fidl::VectorPtr<uint8_t> array = fidl::VectorPtr<uint8_t>::New(size);
+  std::vector<uint8_t> array(size);
   for (size_t i = 0; i < prefix.size(); ++i) {
-    array->at(i) = prefix[i];
+    array.at(i) = prefix[i];
   }
-  random->Draw(&(*array)[prefix.size()], size - prefix.size());
+  random->Draw(&array[prefix.size()], size - prefix.size());
   return array;
 }
 
@@ -41,7 +41,7 @@ std::string ToString(const fuchsia::mem::BufferPtr& vmo) {
   return value;
 }
 
-fidl::VectorPtr<uint8_t> ToArray(const fuchsia::mem::BufferPtr& vmo) {
+std::vector<uint8_t> ToArray(const fuchsia::mem::BufferPtr& vmo) {
   return convert::ToArray(ToString(vmo));
 }
 
@@ -56,7 +56,7 @@ std::vector<Entry> SnapshotGetEntries(LoopController* loop_controller,
   }
   do {
     Status status;
-    fidl::VectorPtr<Entry> entries;
+    std::vector<Entry> entries;
     auto waiter = loop_controller->NewWaiter();
     (*snapshot)->GetEntries(
         start.Clone(), std::move(token),
@@ -72,7 +72,7 @@ std::vector<Entry> SnapshotGetEntries(LoopController* loop_controller,
     if (num_queries) {
       (*num_queries)++;
     }
-    for (auto& entry : entries.take()) {
+    for (auto& entry : entries) {
       result.push_back(std::move(entry));
     }
   } while (token);

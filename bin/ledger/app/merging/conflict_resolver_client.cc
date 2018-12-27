@@ -165,7 +165,7 @@ void ConflictResolverClient::Finalize(Status status) {
 
 void ConflictResolverClient::GetFullDiffNew(
     std::unique_ptr<Token> token,
-    fit::function<void(Status, IterationStatus, fidl::VectorPtr<DiffEntry>,
+    fit::function<void(Status, IterationStatus, std::vector<DiffEntry>,
                        std::unique_ptr<Token>)>
         callback) {
   GetDiff(diff_utils::DiffType::FULL, std::move(token), std::move(callback));
@@ -173,14 +173,14 @@ void ConflictResolverClient::GetFullDiffNew(
 
 void ConflictResolverClient::GetFullDiff(
     std::unique_ptr<Token> token,
-    fit::function<void(Status, Status, fidl::VectorPtr<DiffEntry>,
+    fit::function<void(Status, Status, std::vector<DiffEntry>,
                        std::unique_ptr<Token>)>
         callback) {
   GetFullDiffNew(
       std::move(token),
       [callback = std::move(callback)](
           Status status, IterationStatus diff_status,
-          fidl::VectorPtr<DiffEntry> entries, std::unique_ptr<Token> token) {
+          std::vector<DiffEntry> entries, std::unique_ptr<Token> token) {
         if (status != Status::OK && status != Status::PARTIAL_RESULT) {
           callback(status, status, std::move(entries), std::move(token));
           return;
@@ -194,7 +194,7 @@ void ConflictResolverClient::GetFullDiff(
 
 void ConflictResolverClient::GetConflictingDiffNew(
     std::unique_ptr<Token> token,
-    fit::function<void(Status, IterationStatus, fidl::VectorPtr<DiffEntry>,
+    fit::function<void(Status, IterationStatus, std::vector<DiffEntry>,
                        std::unique_ptr<Token>)>
         callback) {
   GetDiff(diff_utils::DiffType::CONFLICTING, std::move(token),
@@ -203,14 +203,14 @@ void ConflictResolverClient::GetConflictingDiffNew(
 
 void ConflictResolverClient::GetConflictingDiff(
     std::unique_ptr<Token> token,
-    fit::function<void(Status, Status, fidl::VectorPtr<DiffEntry>,
+    fit::function<void(Status, Status, std::vector<DiffEntry>,
                        std::unique_ptr<Token>)>
         callback) {
   GetConflictingDiffNew(
       std::move(token),
       [callback = std::move(callback)](
           Status status, IterationStatus diff_status,
-          fidl::VectorPtr<DiffEntry> entries, std::unique_ptr<Token> token) {
+          std::vector<DiffEntry> entries, std::unique_ptr<Token> token) {
         if (status != Status::OK && status != Status::PARTIAL_RESULT) {
           callback(status, status, std::move(entries), std::move(token));
           return;
@@ -224,7 +224,7 @@ void ConflictResolverClient::GetConflictingDiff(
 
 void ConflictResolverClient::GetDiff(
     diff_utils::DiffType type, std::unique_ptr<Token> token,
-    fit::function<void(Status, IterationStatus, fidl::VectorPtr<DiffEntry>,
+    fit::function<void(Status, IterationStatus, std::vector<DiffEntry>,
                        std::unique_ptr<Token>)>
         callback) {
   diff_utils::ComputeThreeWayDiff(
@@ -234,10 +234,10 @@ void ConflictResolverClient::GetDiff(
           weak_factory_.GetWeakPtr(),
           [this, callback = std::move(callback)](
               Status status,
-              std::pair<fidl::VectorPtr<DiffEntry>, std::string> page_change) {
+              std::pair<std::vector<DiffEntry>, std::string> page_change) {
             if (cancelled_) {
               callback(Status::INTERNAL_ERROR, IterationStatus::OK,
-                       fidl::VectorPtr<DiffEntry>::New(0), nullptr);
+                       {}, nullptr);
               Finalize(Status::INTERNAL_ERROR);
               return;
             }
@@ -245,7 +245,7 @@ void ConflictResolverClient::GetDiff(
               FXL_LOG(ERROR) << "Unable to compute diff due to error "
                              << fidl::ToUnderlying(status) << ", aborting.";
               callback(status, IterationStatus::OK,
-                       fidl::VectorPtr<DiffEntry>::New(0), nullptr);
+                       {}, nullptr);
               Finalize(status);
               return;
             }
@@ -265,7 +265,7 @@ void ConflictResolverClient::GetDiff(
 }
 
 void ConflictResolverClient::MergeNew(
-    fidl::VectorPtr<MergedValue> merged_values,
+    std::vector<MergedValue> merged_values,
     fit::function<void(Status)> callback) {
   has_merged_values_ = true;
   operation_serializer_.Serialize<Status>(
@@ -278,7 +278,7 @@ void ConflictResolverClient::MergeNew(
         auto waiter = fxl::MakeRefCounted<
             callback::Waiter<storage::Status, storage::ObjectIdentifier>>(
             storage::Status::OK);
-        for (const MergedValue& merged_value : *merged_values) {
+        for (const MergedValue& merged_value : merged_values) {
           OnNextMergeResult(merged_value, waiter);
         }
         waiter->Finalize([this, weak_this,
@@ -299,8 +299,8 @@ void ConflictResolverClient::MergeNew(
             if (!object_identifiers[i].object_digest().IsValid()) {
               continue;
             }
-            journal_->Put(merged_values->at(i).key, object_identifiers[i],
-                          merged_values->at(i).priority == Priority::EAGER
+            journal_->Put(merged_values.at(i).key, object_identifiers[i],
+                          merged_values.at(i).priority == Priority::EAGER
                               ? storage::KeyPriority::EAGER
                               : storage::KeyPriority::LAZY,
                           waiter->NewCallback());
@@ -314,7 +314,7 @@ void ConflictResolverClient::MergeNew(
 }
 
 void ConflictResolverClient::Merge(
-    fidl::VectorPtr<MergedValue> merged_values,
+    std::vector<MergedValue> merged_values,
     fit::function<void(Status, Status)> callback) {
   MergeNew(std::move(merged_values),
            [callback = std::move(callback)](Status status) {

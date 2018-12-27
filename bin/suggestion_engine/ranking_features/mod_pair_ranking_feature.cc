@@ -50,7 +50,7 @@ double ModPairRankingFeature::ComputeFeatureInternal(
     const RankedSuggestion& suggestion) {
   double prob = 0.0;
 
-  for (auto& command : *suggestion.prototype->proposal.on_selected) {
+  for (auto& command : suggestion.prototype->proposal.on_selected) {
     fidl::StringPtr module_url;
     switch (command.Which()) {
       case fuchsia::modular::StoryCommand::Tag::kAddMod: {

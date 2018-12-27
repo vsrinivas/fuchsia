@@ -39,7 +39,7 @@ class LedgerAppInstanceFactory {
    public:
     LedgerAppInstance(
         LoopController* loop_controller,
-        fidl::VectorPtr<uint8_t> test_ledger_name,
+        std::vector<uint8_t> test_ledger_name,
         ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory);
     virtual ~LedgerAppInstance();
 
@@ -62,7 +62,7 @@ class LedgerAppInstanceFactory {
     virtual std::string GetUserId() = 0;
 
     LoopController* loop_controller_;
-    fidl::VectorPtr<uint8_t> test_ledger_name_;
+    std::vector<uint8_t> test_ledger_name_;
     ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory_;
 
     scoped_tmpfs::ScopedTmpFS tmpfs_;

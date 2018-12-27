@@ -24,7 +24,7 @@ namespace modular {
 
 namespace {
 std::ostream& operator<<(std::ostream& o, const LinkPath& link_path) {
-  for (const auto& part : *link_path.module_path) {
+  for (const auto& part : link_path.module_path) {
     o << part << ":";
   }
   o << link_path.link_name;
@@ -34,19 +34,19 @@ std::ostream& operator<<(std::ostream& o, const LinkPath& link_path) {
 // Applies a JSON mutation operation using |apply_fn|. Its parameters are
 // references because we treat |apply_fn| as part of ApplyOp's body.
 void ApplyOp(
-    fidl::StringPtr* value_str, const fidl::VectorPtr<fidl::StringPtr>& path,
+    fidl::StringPtr* value_str, const std::vector<std::string>& path,
     std::function<void(CrtJsonDoc& doc, CrtJsonPointer& pointer)> apply_fn) {
   CrtJsonDoc value;
   if (!value_str->is_null()) {
     value.Parse(*value_str);
   }
-  auto pointer = CreatePointer(value, *path);
+  auto pointer = CreatePointer(value, path);
   apply_fn(value, pointer);
   *value_str = JsonValueToString(value);
 }
 
 bool ApplySetOp(fidl::StringPtr* value_str,
-                const fidl::VectorPtr<fidl::StringPtr>& path,
+                const fidl::VectorPtr<std::string>& path,
                 const fidl::StringPtr& new_value_at_path_str) {
   CrtJsonDoc new_value_at_path;
   new_value_at_path.Parse(new_value_at_path_str);
@@ -62,7 +62,7 @@ bool ApplySetOp(fidl::StringPtr* value_str,
 }
 
 void ApplyEraseOp(fidl::StringPtr* value_str,
-                  const fidl::VectorPtr<fidl::StringPtr>& path) {
+                  const std::vector<std::string>& path) {
   auto apply_fn = [](CrtJsonDoc& doc, CrtJsonPointer& p) { p.Erase(doc); };
   ApplyOp(value_str, path, apply_fn);
 }
@@ -92,7 +92,7 @@ LinkImpl::LinkImpl(StoryStorage* const story_storage, LinkPath link_path)
 
 LinkImpl::~LinkImpl() = default;
 
-void LinkImpl::Get(fidl::VectorPtr<fidl::StringPtr> path,
+void LinkImpl::Get(fidl::VectorPtr<std::string> path,
                    GetCallback callback) {
   // TODO: Need error reporting. MI4-1082
   story_storage_->GetLinkValue(link_path_)
@@ -133,14 +133,14 @@ void LinkImpl::Get(fidl::VectorPtr<fidl::StringPtr> path,
                  });
 }
 
-void LinkImpl::Set(fidl::VectorPtr<fidl::StringPtr> path,
+void LinkImpl::Set(fidl::VectorPtr<std::string> path,
                    fuchsia::mem::Buffer json) {
   std::string json_string;
   FXL_CHECK(fsl::StringFromVmo(json, &json_string));
   Set(std::move(path), json_string);
 }
 
-void LinkImpl::Set(fidl::VectorPtr<fidl::StringPtr> path,
+void LinkImpl::Set(fidl::VectorPtr<std::string> path,
                    const std::string& json) {
   // TODO: Need error reporting. MI4-1082
   story_storage_
@@ -159,7 +159,7 @@ void LinkImpl::Set(fidl::VectorPtr<fidl::StringPtr> path,
       });
 }
 
-void LinkImpl::Erase(fidl::VectorPtr<fidl::StringPtr> path) {
+void LinkImpl::Erase(std::vector<std::string> path) {
   // TODO: Need error reporting. MI4-1082
   story_storage_
       ->UpdateLinkValue(

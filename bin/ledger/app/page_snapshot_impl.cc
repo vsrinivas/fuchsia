@@ -62,7 +62,7 @@ size_t HandleUsed<InlinedEntry>() {
 
 // Computes the size of an Entry.
 size_t ComputeEntrySize(const Entry& entry) {
-  return fidl_serialization::GetEntrySize(entry.key->size());
+  return fidl_serialization::GetEntrySize(entry.key.size());
 }
 
 // Computes the size of an InlinedEntry.
@@ -101,9 +101,9 @@ storage::Status FillSingleEntry(const storage::Object& object,
 template <typename EntryType>
 void FillEntries(storage::PageStorage* page_storage,
                  const std::string& key_prefix, const storage::Commit* commit,
-                 fidl::VectorPtr<uint8_t> key_start,
+                 std::vector<uint8_t> key_start,
                  std::unique_ptr<Token> token,
-                 fit::function<void(Status, fidl::VectorPtr<EntryType>,
+                 fit::function<void(Status, std::vector<EntryType>,
                                     std::unique_ptr<Token>)>
                      callback) {
   // |token| represents the first key to be returned in the list of entries.
@@ -120,7 +120,7 @@ void FillEntries(storage::PageStorage* page_storage,
 
   // Represents information shared between on_next and on_done callbacks.
   struct Context {
-    fidl::VectorPtr<EntryType> entries = fidl::VectorPtr<EntryType>::New(0);
+    std::vector<EntryType> entries;
     // The serialization size of all entries.
     size_t size = fidl_serialization::kVectorHeaderSize;
     // The number of handles used.
@@ -150,7 +150,7 @@ void FillEntries(storage::PageStorage* page_storage,
     context->handle_count += HandleUsed<EntryType>();
     if ((context->size > fidl_serialization::kMaxInlineDataSize ||
          context->handle_count > fidl_serialization::kMaxMessageHandles) &&
-        !context->entries->empty()) {
+        !context->entries.empty()) {
       context->next_token = std::make_unique<Token>();
       context->next_token->opaque_id = convert::ToArray(entry.key);
       return false;
@@ -176,7 +176,7 @@ void FillEntries(storage::PageStorage* page_storage,
                      storage::Status status) mutable {
     if (status != storage::Status::OK) {
       FXL_LOG(ERROR) << "Error while reading: " << status;
-      callback(Status::IO_ERROR, fidl::VectorPtr<EntryType>::New(0), nullptr);
+      callback(Status::IO_ERROR, std::vector<EntryType>(), nullptr);
       return;
     }
     fit::function<void(storage::Status,
@@ -188,20 +188,19 @@ void FillEntries(storage::PageStorage* page_storage,
                     results) mutable {
               if (status != storage::Status::OK) {
                 FXL_LOG(ERROR) << "Error while reading: " << status;
-                callback(Status::IO_ERROR, fidl::VectorPtr<EntryType>::New(0),
-                         nullptr);
+                callback(Status::IO_ERROR, std::vector<EntryType>(), nullptr);
                 return;
               }
-              FXL_DCHECK(context->entries->size() == results.size());
+              FXL_DCHECK(context->entries.size() == results.size());
               size_t real_size = 0;
               size_t i = 0;
               for (; i < results.size(); i++) {
-                EntryType& entry = context->entries->at(i);
+                EntryType& entry = context->entries.at(i);
                 size_t next_token_size =
                     i + 1 >= results.size()
                         ? 0
                         : fidl_serialization::GetByteVectorSize(
-                              context->entries->at(i + 1).key->size());
+                              context->entries.at(i + 1).key.size());
                 if (!results[i]) {
                   size_t entry_size = ComputeEntrySize(entry);
                   if (real_size + entry_size + next_token_size >
@@ -220,8 +219,7 @@ void FillEntries(storage::PageStorage* page_storage,
                 storage::Status read_status =
                     FillSingleEntry(*results[i], &entry);
                 if (read_status != storage::Status::OK) {
-                  callback(PageUtils::ConvertStatus(read_status),
-                           fidl::VectorPtr<EntryType>::New(0), nullptr);
+                  callback(PageUtils::ConvertStatus(read_status), std::vector<EntryType>(), nullptr);
                   return;
                 }
                 size_t entry_size = ComputeEntrySize(entry);
@@ -233,15 +231,14 @@ void FillEntries(storage::PageStorage* page_storage,
               }
               if (i != results.size()) {
                 if (i == 0) {
-                  callback(Status::VALUE_TOO_LARGE,
-                           fidl::VectorPtr<EntryType>::New(0), nullptr);
+                  callback(Status::VALUE_TOO_LARGE, std::vector<EntryType>(), nullptr);
                   return;
                 }
                 // We had to bail out early because the result would be too big
                 // otherwise.
                 context->next_token = std::make_unique<Token>();
                 context->next_token->opaque_id =
-                    std::move(context->entries->at(i).key);
+                    std::move(context->entries.at(i).key);
                 context->entries.resize(i);
               }
               if (context->next_token) {
@@ -267,7 +264,7 @@ PageSnapshotImpl::PageSnapshotImpl(
 
 PageSnapshotImpl::~PageSnapshotImpl() {}
 
-void PageSnapshotImpl::GetEntries(fidl::VectorPtr<uint8_t> key_start,
+void PageSnapshotImpl::GetEntries(std::vector<uint8_t> key_start,
                                   std::unique_ptr<Token> token,
                                   GetEntriesCallback callback) {
   FillEntries<Entry>(page_storage_, key_prefix_, commit_.get(),
@@ -275,7 +272,7 @@ void PageSnapshotImpl::GetEntries(fidl::VectorPtr<uint8_t> key_start,
                      std::move(callback));
 }
 
-void PageSnapshotImpl::GetEntriesInline(fidl::VectorPtr<uint8_t> key_start,
+void PageSnapshotImpl::GetEntriesInline(std::vector<uint8_t> key_start,
                                         std::unique_ptr<Token> token,
                                         GetEntriesInlineCallback callback) {
   FillEntries<InlinedEntry>(page_storage_, key_prefix_, commit_.get(),
@@ -283,15 +280,14 @@ void PageSnapshotImpl::GetEntriesInline(fidl::VectorPtr<uint8_t> key_start,
                             std::move(callback));
 }
 
-void PageSnapshotImpl::GetKeys(fidl::VectorPtr<uint8_t> key_start,
+void PageSnapshotImpl::GetKeys(std::vector<uint8_t> key_start,
                                std::unique_ptr<Token> token,
                                GetKeysCallback callback) {
   // Represents the information that needs to be shared between on_next and
   // on_done callbacks.
   struct Context {
     // The result of GetKeys. New keys from on_next are appended to this array.
-    fidl::VectorPtr<fidl::VectorPtr<uint8_t>> keys =
-        fidl::VectorPtr<fidl::VectorPtr<uint8_t>>::New(0);
+    std::vector<std::vector<uint8_t>> keys;
     // The total size in number of bytes of the |keys| array.
     size_t size = fidl_serialization::kVectorHeaderSize;
     // If the |keys| array size exceeds the maximum allowed inlined data size,
@@ -323,7 +319,7 @@ void PageSnapshotImpl::GetKeys(fidl::VectorPtr<uint8_t> key_start,
     if (status != storage::Status::OK) {
       FXL_LOG(ERROR) << "Error while reading: " << status;
       callback(Status::IO_ERROR,
-               fidl::VectorPtr<fidl::VectorPtr<uint8_t>>::New(0), nullptr);
+               std::vector<std::vector<uint8_t>>(), nullptr);
       return;
     }
     if (context->next_token) {
@@ -344,7 +340,7 @@ void PageSnapshotImpl::GetKeys(fidl::VectorPtr<uint8_t> key_start,
   }
 }
 
-void PageSnapshotImpl::Get(fidl::VectorPtr<uint8_t> key, GetCallback callback) {
+void PageSnapshotImpl::Get(std::vector<uint8_t> key, GetCallback callback) {
   auto timed_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "snapshot_get");
 
@@ -368,7 +364,7 @@ void PageSnapshotImpl::Get(fidl::VectorPtr<uint8_t> key, GetCallback callback) {
       });
 }
 
-void PageSnapshotImpl::GetInline(fidl::VectorPtr<uint8_t> key,
+void PageSnapshotImpl::GetInline(std::vector<uint8_t> key,
                                  GetInlineCallback callback) {
   auto timed_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "snapshot_get_inline");
@@ -404,7 +400,7 @@ void PageSnapshotImpl::GetInline(fidl::VectorPtr<uint8_t> key,
       });
 }
 
-void PageSnapshotImpl::Fetch(fidl::VectorPtr<uint8_t> key,
+void PageSnapshotImpl::Fetch(std::vector<uint8_t> key,
                              FetchCallback callback) {
   auto timed_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "snapshot_fetch");
@@ -429,7 +425,7 @@ void PageSnapshotImpl::Fetch(fidl::VectorPtr<uint8_t> key,
       });
 }
 
-void PageSnapshotImpl::FetchPartial(fidl::VectorPtr<uint8_t> key,
+void PageSnapshotImpl::FetchPartial(std::vector<uint8_t> key,
                                     int64_t offset, int64_t max_size,
                                     FetchPartialCallback callback) {
   auto timed_callback =

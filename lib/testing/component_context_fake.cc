@@ -23,7 +23,7 @@ void ComponentContextFake::GetLedger(
 }
 
 void ComponentContextFake::ConnectToAgent(
-    fidl::StringPtr url,
+    std::string url,
     fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
         incoming_services_request,
     fidl::InterfaceRequest<fuchsia::modular::AgentController>
@@ -32,17 +32,17 @@ void ComponentContextFake::ConnectToAgent(
 }
 
 void ComponentContextFake::ObtainMessageQueue(
-    fidl::StringPtr name,
+    std::string name,
     fidl::InterfaceRequest<fuchsia::modular::MessageQueue> request) {
   FXL_NOTIMPLEMENTED();
 }
 
-void ComponentContextFake::DeleteMessageQueue(fidl::StringPtr name) {
+void ComponentContextFake::DeleteMessageQueue(std::string name) {
   FXL_NOTIMPLEMENTED();
 }
 
 void ComponentContextFake::GetMessageSender(
-    fidl::StringPtr queue_token,
+    std::string queue_token,
     fidl::InterfaceRequest<fuchsia::modular::MessageSender> request) {
   FXL_NOTIMPLEMENTED();
 }
@@ -53,7 +53,7 @@ void ComponentContextFake::GetEntityResolver(
 }
 
 void ComponentContextFake::CreateEntityWithData(
-    fidl::VectorPtr<fuchsia::modular::TypeToDataEntry> type_to_data,
+    std::vector<fuchsia::modular::TypeToDataEntry> type_to_data,
     CreateEntityWithDataCallback result) {
   FXL_NOTIMPLEMENTED();
 }

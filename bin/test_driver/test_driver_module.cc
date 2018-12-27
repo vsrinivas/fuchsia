@@ -56,7 +56,7 @@ class TestModule {
   void SetUp() {
     module_host_->module_context()->GetLink(
         modular::testing::kTestDriverLinkName, link_.NewRequest());
-    link_->Get(sub_module_url_path_.Clone(),
+    link_->Get(fidl::VectorPtr(sub_module_url_path_),
                [this](std::unique_ptr<fuchsia::mem::Buffer> link_data) {
                  std::string sub_module_url;
                  FXL_CHECK(fsl::StringFromVmo(*link_data, &sub_module_url));
@@ -113,7 +113,7 @@ class TestModule {
   // is a failure, whereas zero is a success.
   void RunTestDriver() {
     link_->Get(
-        test_driver_url_path_.Clone(),
+        fidl::VectorPtr(test_driver_url_path_),
         [this](std::unique_ptr<fuchsia::mem::Buffer> link_data) {
           if (link_data == nullptr) {
             Signal(modular::testing::kTestShutdown);
@@ -155,8 +155,8 @@ class TestModule {
   fuchsia::sys::LauncherPtr test_driver_launcher_;
   fuchsia::sys::ComponentControllerPtr test_driver_component_controller_;
 
-  fidl::VectorPtr<fidl::StringPtr> sub_module_url_path_;
-  fidl::VectorPtr<fidl::StringPtr> test_driver_url_path_;
+  std::vector<std::string> sub_module_url_path_;
+  std::vector<std::string> test_driver_url_path_;
 
   fuchsia::modular::ModuleControllerPtr sub_module_;
 

@@ -59,25 +59,25 @@ class TestApp
   }
 
   // |fuchsia::modular::StoryShell|
-  void FocusSurface(fidl::StringPtr /*surface_id*/) override {}
+  void FocusSurface(std::string /*surface_id*/) override {}
 
   // |fuchsia::modular::StoryShell|
-  void DefocusSurface(fidl::StringPtr /*surface_id*/,
+  void DefocusSurface(std::string /*surface_id*/,
                    DefocusSurfaceCallback callback) override {
     callback();
   }
 
   // |fuchsia::modular::StoryShell|
   void AddContainer(
-      fidl::StringPtr /*container_name*/, fidl::StringPtr /*parent_id*/,
+      std::string /*container_name*/, fidl::StringPtr /*parent_id*/,
       fuchsia::modular::SurfaceRelation /*relation*/,
-      fidl::VectorPtr<fuchsia::modular::ContainerLayout> /*layout*/,
-      fidl::VectorPtr<
+      std::vector<fuchsia::modular::ContainerLayout> /*layout*/,
+      std::vector<
           fuchsia::modular::ContainerRelationEntry> /* relationships */,
-      fidl::VectorPtr<fuchsia::modular::ContainerView> /* views */) override {}
+      std::vector<fuchsia::modular::ContainerView> /* views */) override {}
 
   // |fuchsia::modular::StoryShell|
-  void RemoveSurface(fidl::StringPtr /*surface_id*/) override {}
+  void RemoveSurface(std::string /*surface_id*/) override {}
 
   // |fuchsia::modular::StoryShell|
   void ReconnectView(fuchsia::modular::ViewConnection view_connection) override {}

@@ -19,7 +19,7 @@ ClipboardImpl::ClipboardImpl(LedgerClient* ledger_client)
 
 ClipboardImpl::~ClipboardImpl() = default;
 
-void ClipboardImpl::Push(fidl::StringPtr text) { storage_.Push(text); }
+void ClipboardImpl::Push(std::string text) { storage_.Push(text); }
 
 void ClipboardImpl::Peek(PeekCallback callback) { storage_.Peek(callback); }
 

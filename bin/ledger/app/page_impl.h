@@ -23,21 +23,21 @@ class PageImpl : public Page {
   void GetId(GetIdCallback callback) override;
 
   void GetSnapshot(fidl::InterfaceRequest<PageSnapshot> snapshot_request,
-                   fidl::VectorPtr<uint8_t> key_prefix,
+                   std::vector<uint8_t> key_prefix,
                    fidl::InterfaceHandle<PageWatcher> watcher,
                    GetSnapshotCallback callback) override;
 
-  void Put(fidl::VectorPtr<uint8_t> key, fidl::VectorPtr<uint8_t> value,
+  void Put(std::vector<uint8_t> key, std::vector<uint8_t> value,
            PutCallback callback) override;
 
-  void PutWithPriority(fidl::VectorPtr<uint8_t> key,
-                       fidl::VectorPtr<uint8_t> value, Priority priority,
+  void PutWithPriority(std::vector<uint8_t> key,
+                       std::vector<uint8_t> value, Priority priority,
                        PutWithPriorityCallback callback) override;
 
-  void PutReference(fidl::VectorPtr<uint8_t> key, Reference reference,
+  void PutReference(std::vector<uint8_t> key, Reference reference,
                     Priority priority, PutReferenceCallback callback) override;
 
-  void Delete(fidl::VectorPtr<uint8_t> key, DeleteCallback callback) override;
+  void Delete(std::vector<uint8_t> key, DeleteCallback callback) override;
 
   void Clear(ClearCallback callback) override;
 

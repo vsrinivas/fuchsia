@@ -34,8 +34,8 @@ ContextMetadataBuilder& ContextMetadataBuilder::SetModuleUrl(
   return *this;
 }
 ContextMetadataBuilder& ContextMetadataBuilder::SetModulePath(
-    const fidl::VectorPtr<fidl::StringPtr>& path) {
-  fidl::Clone(path, &ModuleMetadata()->path);
+    const std::vector<std::string>& path) {
+  ModuleMetadata()->path.reset(path);
   return *this;
 }
 
@@ -59,14 +59,14 @@ ContextMetadataBuilder& ContextMetadataBuilder::AddEntityType(
   return *this;
 }
 ContextMetadataBuilder& ContextMetadataBuilder::SetEntityTypes(
-    const fidl::VectorPtr<fidl::StringPtr>& types) {
-  fidl::Clone(types, &EntityMetadata()->type);
+    const std::vector<std::string>& types) {
+  EntityMetadata()->type.reset(types);
   return *this;
 }
 ContextMetadataBuilder& ContextMetadataBuilder::SetLinkPath(
-    const fidl::VectorPtr<fidl::StringPtr>& module_path,
-    const fidl::StringPtr& name) {
-  fidl::Clone(module_path, &LinkMetadata()->module_path);
+    const std::vector<std::string>& module_path,
+    const std::string& name) {
+  LinkMetadata()->module_path.reset(module_path);
   LinkMetadata()->name = name;
   return *this;
 }

@@ -23,11 +23,10 @@ AppClientBase::AppClientBase(fuchsia::sys::Launcher* const launcher,
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.directory_request = services_.NewRequest();
   launch_info.url = config.url;
-  fidl::VectorPtr<fidl::StringPtr> args;
+  std::vector<std::string> args;
   for (const auto& arg : *config.args) {
-    args.push_back(arg);
+    launch_info.arguments.push_back(arg);
   }
-  launch_info.arguments = std::move(args);
 
   if (!data_origin.empty()) {
     if (!files::CreateDirectory(data_origin)) {
@@ -46,7 +45,7 @@ AppClientBase::AppClientBase(fuchsia::sys::Launcher* const launcher,
 
     launch_info.flat_namespace->directories.push_back(
         fsl::CloneChannelFromFileDescriptor(dir.get()));
-    if (!launch_info.flat_namespace->directories->at(0)) {
+    if (!launch_info.flat_namespace->directories.at(0)) {
       FXL_LOG(ERROR) << "Unable create a handle from  " << data_origin;
       return;
     }

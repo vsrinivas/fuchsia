@@ -335,7 +335,7 @@ class MessageQueueManager::GetMessageSenderCall : public PageOperation<> {
   void Run() override {
     FlowToken flow{this};
 
-    page()->GetSnapshot(snapshot_.NewRequest(), nullptr, nullptr,
+    page()->GetSnapshot(snapshot_.NewRequest(), std::vector<uint8_t>(), nullptr,
                         Protect([this, flow](fuchsia::ledger::Status status) {
                           if (status != fuchsia::ledger::Status::OK) {
                             FXL_LOG(ERROR) << trace_name() << " "

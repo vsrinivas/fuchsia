@@ -24,7 +24,7 @@ namespace {
 void InitializeModelDefaults(StoryModel* model) {
   model->set_runtime_state(fuchsia::modular::StoryState::STOPPED);
   model->set_visibility_state(fuchsia::modular::StoryVisibilityState::DEFAULT);
-  model->set_modules(fidl::VectorPtr<ModuleModel>::New(0));
+  model->set_modules({});
 }
 }  // namespace
 
@@ -97,7 +97,7 @@ StoryModelOwner::StoryModelOwner(
       weak_ptr_factory_(this),
       executor_(executor) {
   FXL_CHECK(model_storage_ != nullptr);
-  model_.mutable_name()->reset(story_name);
+  model_.mutable_name()->assign(story_name);
   InitializeModelDefaults(&model_);
   model_storage_->SetObserveCallback(
       [this](std::vector<StoryModelMutation> commands) {

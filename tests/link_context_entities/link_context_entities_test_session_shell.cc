@@ -69,7 +69,7 @@ class ContextListenerImpl : fuchsia::modular::ContextListener {
   void OnContextUpdate(fuchsia::modular::ContextUpdate update) override {
     FXL_LOG(INFO) << "ContextListenerImpl::OnUpdate()";
     if (auto values = modular::TakeContextValue(&update, "all")) {
-      for (const auto& value : **values) {
+      for (const auto& value : *values) {
         FXL_LOG(INFO) << "ContextListenerImpl::OnUpdate() " << value;
         handler_(value);
       }
@@ -111,7 +111,7 @@ class TestApp : public modular::testing::SessionShellBase {
   void CreateStory() {
     puppet_master_->ControlStory(kStoryName, story_puppet_master_.NewRequest());
 
-    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+    std::vector<fuchsia::modular::StoryCommand> commands;
     fuchsia::modular::AddMod add_mod;
     add_mod.mod_name.push_back("root");
     add_mod.intent.handler = kModuleUrl;

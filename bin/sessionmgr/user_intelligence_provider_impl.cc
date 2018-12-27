@@ -106,18 +106,18 @@ void UserIntelligenceProviderImpl::GetSpeechToText(
 void UserIntelligenceProviderImpl::StartAgents(
     fidl::InterfaceHandle<fuchsia::modular::ComponentContext>
         component_context_handle,
-    fidl::VectorPtr<fidl::StringPtr> session_agents,
-    fidl::VectorPtr<fidl::StringPtr> startup_agents) {
+    std::vector<std::string> session_agents,
+    std::vector<std::string> startup_agents) {
   component_context_.Bind(std::move(component_context_handle));
 
   FXL_LOG(INFO) << "Starting session_agents:";
-  for (const auto& agent : *session_agents) {
+  for (const auto& agent : session_agents) {
     FXL_LOG(INFO) << " " << agent;
     StartSessionAgent(agent);
   }
 
   FXL_LOG(INFO) << "Starting startup_agents:";
-  for (const auto& agent : *startup_agents) {
+  for (const auto& agent : startup_agents) {
     FXL_LOG(INFO) << " " << agent;
     StartAgent(agent);
   }
@@ -126,7 +126,7 @@ void UserIntelligenceProviderImpl::StartAgents(
 }
 
 void UserIntelligenceProviderImpl::GetServicesForAgent(
-    fidl::StringPtr url, GetServicesForAgentCallback callback) {
+    std::string url, GetServicesForAgentCallback callback) {
   fuchsia::sys::ServiceList service_list;
   agent_namespaces_.emplace_back(service_list.provider.NewRequest());
   auto* agent_host = &agent_namespaces_.back();
@@ -232,13 +232,13 @@ void UserIntelligenceProviderImpl::StartSessionAgent(const std::string& url) {
   });
 }
 
-fidl::VectorPtr<fidl::StringPtr> UserIntelligenceProviderImpl::AddAgentServices(
+std::vector<std::string> UserIntelligenceProviderImpl::AddAgentServices(
     const std::string& url, component::ServiceNamespace* agent_host) {
   fuchsia::modular::ComponentScope agent_info;
   fuchsia::modular::AgentScope agent_scope;
   agent_scope.url = url;
   agent_info.set_agent_scope(std::move(agent_scope));
-  fidl::VectorPtr<fidl::StringPtr> service_names;
+  std::vector<std::string> service_names;
 
   service_names.push_back(fuchsia::modular::ContextWriter::Name_);
   agent_host->AddService<fuchsia::modular::ContextWriter>(fxl::MakeCopyable(

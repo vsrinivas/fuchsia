@@ -34,7 +34,7 @@ class ProposalPublisherImpl : public fuchsia::modular::ProposalPublisher {
       fidl::InterfaceRequest<fuchsia::modular::ProposalPublisher> request);
 
   void Propose(fuchsia::modular::Proposal proposal) override;
-  void Remove(fidl::StringPtr proposal_id) override;
+  void Remove(std::string proposal_id) override;
 
   void ProposeNavigation(
       fuchsia::modular::NavigationAction navigation) override;

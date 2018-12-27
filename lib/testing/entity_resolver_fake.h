@@ -34,7 +34,7 @@ class EntityResolverFake : public fuchsia::modular::EntityResolver {
   class EntityImpl;
 
   void ResolveEntity(
-      fidl::StringPtr entity_reference,
+      std::string entity_reference,
       fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request) override;
 
   int next_entity_id_{0};

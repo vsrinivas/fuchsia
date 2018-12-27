@@ -68,12 +68,12 @@ class TestApp : ComponentContextTestService {
 
  private:
   // |Agent1Interface|
-  void SendToMessageQueue(fidl::StringPtr message_queue_token,
-                          fidl::StringPtr message_to_send) override {
+  void SendToMessageQueue(std::string message_queue_token,
+                          std::string message_to_send) override {
     modular::MessageSenderClient message_sender;
     component_context_->GetMessageSender(message_queue_token,
                                          message_sender.NewRequest());
-    message_sender.Send(message_to_send.get());
+    message_sender.Send(message_to_send);
   }
 
   fuchsia::modular::ComponentContextPtr component_context_;

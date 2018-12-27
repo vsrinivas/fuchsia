@@ -18,7 +18,7 @@ double DeadStoryRankingFeature::ComputeFeatureInternal(
   const auto& proposal = ranked_suggestion.prototype->proposal;
 
   // Proposal not tied to any story.
-  if (proposal.affinity->empty()) {
+  if (proposal.affinity.empty()) {
     return kMinConfidence;
   }
 
@@ -26,7 +26,7 @@ double DeadStoryRankingFeature::ComputeFeatureInternal(
   // average O(1) lookup.
   for (const auto& context_value : *ContextValues()) {
     const auto& story_name = context_value.meta.story->id;
-    for (const auto& affinity : *proposal.affinity) {
+    for (const auto& affinity : proposal.affinity) {
       switch (affinity.Which()) {
         case fuchsia::modular::ProposalAffinity::Tag::kModuleAffinity:
           if (story_name == affinity.module_affinity().story_name) {

@@ -38,7 +38,7 @@ ServiceAccountTokenManager::~ServiceAccountTokenManager() {}
 void ServiceAccountTokenManager::Authorize(
     AppConfig app_config,
     fidl::InterfaceHandle<AuthenticationUIContext> auth_ui_context,
-    fidl::VectorPtr<fidl::StringPtr> /*app_scopes*/,
+    std::vector<std::string> /*app_scopes*/,
     fidl::StringPtr /*user_profile_id*/, fidl::StringPtr /*auth_code*/,
     AuthorizeCallback callback /*callback*/) {
   FXL_NOTIMPLEMENTED();
@@ -46,23 +46,23 @@ void ServiceAccountTokenManager::Authorize(
 }
 
 void ServiceAccountTokenManager::GetAccessToken(
-    AppConfig app_config, fidl::StringPtr /*user_profile_id*/,
-    fidl::VectorPtr<fidl::StringPtr> /*app_scopes*/,
+    AppConfig app_config, std::string /*user_profile_id*/,
+    std::vector<std::string> /*app_scopes*/,
     GetAccessTokenCallback callback) {
   FXL_NOTIMPLEMENTED();
   callback(fuchsia::auth::Status::INTERNAL_ERROR /*Not implemented*/, nullptr);
 }
 
 void ServiceAccountTokenManager::GetIdToken(
-    AppConfig app_config, fidl::StringPtr /*user_profile_id*/,
+    AppConfig app_config, std::string /*user_profile_id*/,
     fidl::StringPtr /*audience*/, GetIdTokenCallback callback /*callback*/) {
   FXL_NOTIMPLEMENTED();
   callback(fuchsia::auth::Status::INTERNAL_ERROR /*Not implemented*/, nullptr);
 }
 
 void ServiceAccountTokenManager::GetFirebaseToken(
-    AppConfig /*app_config*/, fidl::StringPtr /*user_profile_id*/,
-    fidl::StringPtr /*audience*/, fidl::StringPtr firebase_api_key,
+    AppConfig /*app_config*/, std::string /*user_profile_id*/,
+    std::string /*audience*/, std::string firebase_api_key,
     GetFirebaseTokenCallback callback) {
   service_account_token_minter_.GetFirebaseToken(
       std::move(firebase_api_key),
@@ -85,7 +85,7 @@ void ServiceAccountTokenManager::GetFirebaseToken(
 }
 
 void ServiceAccountTokenManager::DeleteAllTokens(
-    AppConfig app_config, fidl::StringPtr /*user_profile_id*/,
+    AppConfig app_config, std::string /*user_profile_id*/,
     DeleteAllTokensCallback callback /*callback*/) {
   FXL_NOTIMPLEMENTED();
   callback(fuchsia::auth::Status::INTERNAL_ERROR /*Not implemented*/);
@@ -94,7 +94,7 @@ void ServiceAccountTokenManager::DeleteAllTokens(
 void ServiceAccountTokenManager::ListProfileIds(
     AppConfig app_config, ListProfileIdsCallback callback /*callback*/) {
   FXL_NOTIMPLEMENTED();
-  callback(fuchsia::auth::Status::INTERNAL_ERROR /*Not implemented*/, nullptr);
+  callback(fuchsia::auth::Status::INTERNAL_ERROR /*Not implemented*/, {});
 }
 
 }  // namespace service_account

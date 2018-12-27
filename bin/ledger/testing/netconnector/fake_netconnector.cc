@@ -13,7 +13,7 @@ void FakeNetConnector::ConnectToServiceProvider(
 }
 
 void FakeNetConnector::RegisterServiceProvider(
-    fidl::StringPtr name,
+    std::string name,
     fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> service_provider) {
   fuchsia::sys::ServiceProviderPtr service_provider_ptr =
       service_provider.Bind();
@@ -26,7 +26,7 @@ void FakeNetConnector::RegisterServiceProvider(
 }
 
 void FakeNetConnector::GetDeviceServiceProvider(
-    fidl::StringPtr device_name,
+    std::string device_name,
     fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> service_provider) {
   delegate_->ConnectToServiceProvider(device_name, std::move(service_provider));
 }

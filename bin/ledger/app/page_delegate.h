@@ -53,21 +53,21 @@ class PageDelegate {
   // From Page interface, called by PageDelayingFacade:
 
   void GetSnapshot(fidl::InterfaceRequest<PageSnapshot> snapshot_request,
-                   fidl::VectorPtr<uint8_t> key_prefix,
+                   std::vector<uint8_t> key_prefix,
                    fidl::InterfaceHandle<PageWatcher> watcher,
                    Page::GetSnapshotCallback callback);
 
-  void Put(fidl::VectorPtr<uint8_t> key, fidl::VectorPtr<uint8_t> value,
+  void Put(std::vector<uint8_t> key, std::vector<uint8_t> value,
            Page::PutCallback callback);
 
-  void PutWithPriority(fidl::VectorPtr<uint8_t> key,
-                       fidl::VectorPtr<uint8_t> value, Priority priority,
+  void PutWithPriority(std::vector<uint8_t> key,
+                       std::vector<uint8_t> value, Priority priority,
                        Page::PutWithPriorityCallback callback);
 
-  void PutReference(fidl::VectorPtr<uint8_t> key, Reference reference,
+  void PutReference(std::vector<uint8_t> key, Reference reference,
                     Priority priority, Page::PutReferenceCallback callback);
 
-  void Delete(fidl::VectorPtr<uint8_t> key, Page::DeleteCallback callback);
+  void Delete(std::vector<uint8_t> key, Page::DeleteCallback callback);
 
   void Clear(Page::ClearCallback callback);
 
@@ -91,7 +91,7 @@ class PageDelegate {
 
   const storage::CommitId& GetCurrentCommitId();
 
-  void PutInCommit(fidl::VectorPtr<uint8_t> key,
+  void PutInCommit(std::vector<uint8_t> key,
                    storage::ObjectIdentifier object_identifier,
                    storage::KeyPriority priority, StatusCallback callback);
 

@@ -68,7 +68,7 @@ inline rapidjson::GenericPointer<typename Doc::ValueType> CreatePointer(
     const Doc& doc, const Collection& path) {
   rapidjson::GenericPointer<typename Doc::ValueType> pointer;
   for (const auto& it : path) {
-    pointer = pointer.Append(it.get(), nullptr);
+    pointer = pointer.Append(it, nullptr);
   }
   return pointer;
 }

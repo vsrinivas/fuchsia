@@ -63,7 +63,7 @@ struct less<fuchsia::modular::LinkPath> {
     if (left.module_path == right.module_path) {
       return left.link_name < right.link_name;
     }
-    return *left.module_path < *right.module_path;
+    return left.module_path < right.module_path;
   }
 };
 }  // namespace std
@@ -77,33 +77,32 @@ namespace {
 
 constexpr char kSurfaceIDSeparator[] = ":";
 fidl::StringPtr ModulePathToSurfaceID(
-    const fidl::VectorPtr<fidl::StringPtr>& module_path) {
+    const std::vector<std::string>& module_path) {
   std::vector<std::string> path;
   // Sanitize all the |module_name|s that make up this |module_path|.
-  for (const auto& module_name : module_path.get()) {
-    path.push_back(StringEscape(module_name.get(), kSurfaceIDSeparator));
+  for (const auto& module_name : module_path) {
+    path.push_back(StringEscape(module_name, kSurfaceIDSeparator));
   }
   return fxl::JoinStrings(path, kSurfaceIDSeparator);
 }
 
-fidl::VectorPtr<fidl::StringPtr> ModulePathFromSurfaceID(
-    const fidl::StringPtr& surface_id) {
+std::vector<std::string> ModulePathFromSurfaceID(
+    const std::string& surface_id) {
   std::vector<std::string> path;
-  for (const auto& parts : SplitEscapedString(fxl::StringView(surface_id.get()),
+  for (const auto& parts : SplitEscapedString(fxl::StringView(surface_id),
                                               kSurfaceIDSeparator[0])) {
     path.push_back(parts.ToString());
   }
-  return fxl::To<fidl::VectorPtr<fidl::StringPtr>>(path);
+  return path;
 }
 
-fidl::VectorPtr<fidl::StringPtr> ParentModulePath(
-    const fidl::VectorPtr<fidl::StringPtr>& module_path) {
-  fidl::VectorPtr<fidl::StringPtr> ret =
-      fidl::VectorPtr<fidl::StringPtr>::New(0);
+std::vector<std::string> ParentModulePath(
+    const std::vector<std::string>& module_path) {
+  std::vector<std::string> ret;
 
-  if (module_path->size() > 0) {
-    for (size_t i = 0; i < module_path->size() - 1; i++) {
-      ret.push_back(module_path->at(i));
+  if (module_path.size() > 0) {
+    for (size_t i = 0; i < module_path.size() - 1; i++) {
+      ret.push_back(module_path.at(i));
     }
   }
   return ret;
@@ -142,7 +141,6 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
         module_controller_request_(std::move(module_controller_request)),
         view_owner_request_(std::move(view_owner_request)),
         start_time_(zx_clock_get(ZX_CLOCK_UTC)) {
-    FXL_DCHECK(!module_data_.module_path.is_null());
   }
 
  private:
@@ -416,7 +414,7 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
     // We only add a module to story shell if its either a root module or its
     // anchor is already known to story shell.
 
-    if (module_data_.module_path->size() == 1) {
+    if (module_data_.module_path.size() == 1) {
       ConnectView(flow, "");
       return;
     }
@@ -441,7 +439,7 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
     module_data_.surface_relation->Clone(surface_relation_clone.get());
     story_controller_impl_->pending_views_.emplace(
         ModulePathToSurfaceID(module_data_.module_path),
-        PendingView{module_data_.module_path.Clone(), std::move(manifest_clone),
+        PendingView{module_data_.module_path, std::move(manifest_clone),
                     std::move(surface_relation_clone),
                     module_data_.module_source, std::move(view_owner_)});
   }
@@ -621,11 +619,11 @@ class StoryControllerImpl::StopCall : public Operation<> {
 class StoryControllerImpl::StopModuleCall : public Operation<> {
  public:
   StopModuleCall(StoryStorage* const story_storage,
-                 const fidl::VectorPtr<fidl::StringPtr>& module_path,
+                 const std::vector<std::string>& module_path,
                  const std::function<void()>& done)
       : Operation("StoryControllerImpl::StopModuleCall", done),
         story_storage_(story_storage),
-        module_path_(module_path.Clone()) {}
+        module_path_(module_path) {}
 
  private:
   void Run() override {
@@ -643,7 +641,7 @@ class StoryControllerImpl::StopModuleCall : public Operation<> {
   }
 
   StoryStorage* const story_storage_;  // not owned
-  const fidl::VectorPtr<fidl::StringPtr> module_path_;
+  const std::vector<std::string> module_path_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StopModuleCall);
 };
@@ -652,11 +650,11 @@ class StoryControllerImpl::StopModuleAndStoryIfEmptyCall : public Operation<> {
  public:
   StopModuleAndStoryIfEmptyCall(
       StoryControllerImpl* const story_controller_impl,
-      const fidl::VectorPtr<fidl::StringPtr>& module_path,
+      const std::vector<std::string>& module_path,
       const std::function<void()>& done)
       : Operation("StoryControllerImpl::StopModuleAndStoryIfEmptyCall", done),
         story_controller_impl_(story_controller_impl),
-        module_path_(module_path.Clone()) {}
+        module_path_(module_path) {}
 
  private:
   void Run() override {
@@ -677,7 +675,7 @@ class StoryControllerImpl::StopModuleAndStoryIfEmptyCall : public Operation<> {
   }
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
-  const fidl::VectorPtr<fidl::StringPtr> module_path_;
+  const std::vector<std::string> module_path_;
 
   OperationQueue operation_queue_;
 
@@ -741,7 +739,7 @@ class StoryControllerImpl::OnModuleDataUpdatedCall : public Operation<> {
 class StoryControllerImpl::FocusCall : public Operation<> {
  public:
   FocusCall(StoryControllerImpl* const story_controller_impl,
-            fidl::VectorPtr<fidl::StringPtr> module_path)
+            std::vector<std::string> module_path)
       : Operation("StoryControllerImpl::FocusCall", [] {}),
         story_controller_impl_(story_controller_impl),
         module_path_(std::move(module_path)) {}
@@ -760,7 +758,7 @@ class StoryControllerImpl::FocusCall : public Operation<> {
 
   OperationQueue operation_queue_;
   StoryControllerImpl* const story_controller_impl_;  // not owned
-  const fidl::VectorPtr<fidl::StringPtr> module_path_;
+  const std::vector<std::string> module_path_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FocusCall);
 };
@@ -768,7 +766,7 @@ class StoryControllerImpl::FocusCall : public Operation<> {
 class StoryControllerImpl::DefocusCall : public Operation<> {
  public:
   DefocusCall(StoryControllerImpl* const story_controller_impl,
-              fidl::VectorPtr<fidl::StringPtr> module_path)
+              std::vector<std::string> module_path)
       : Operation("StoryControllerImpl::DefocusCall", [] {}),
         story_controller_impl_(story_controller_impl),
         module_path_(std::move(module_path)) {}
@@ -789,7 +787,7 @@ class StoryControllerImpl::DefocusCall : public Operation<> {
 
   OperationQueue operation_queue_;
   StoryControllerImpl* const story_controller_impl_;  // not owned
-  const fidl::VectorPtr<fidl::StringPtr> module_path_;
+  const std::vector<std::string> module_path_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DefocusCall);
 };
@@ -801,7 +799,7 @@ class StoryControllerImpl::AddIntentCall
     : public Operation<fuchsia::modular::StartModuleStatus> {
  public:
   AddIntentCall(StoryControllerImpl* const story_controller_impl,
-                fidl::VectorPtr<fidl::StringPtr> requesting_module_path,
+                std::vector<std::string> requesting_module_path,
                 const std::string& module_name,
                 fuchsia::modular::IntentPtr intent,
                 fidl::InterfaceRequest<fuchsia::modular::ModuleController>
@@ -829,7 +827,7 @@ class StoryControllerImpl::AddIntentCall
         story_controller_impl_->story_provider_impl_->module_resolver(),
         story_controller_impl_->story_provider_impl_->entity_resolver(),
         story_controller_impl_->story_provider_impl_->module_facet_reader(),
-        fidl::VectorPtr<fidl::StringPtr>({module_name_}), std::move(*intent_),
+        std::vector<std::string>({module_name_}), std::move(*intent_),
         std::move(surface_relation_), std::move(requesting_module_path_),
         module_source_,
         [this, flow](fuchsia::modular::ExecuteResult result,
@@ -885,7 +883,7 @@ class StoryControllerImpl::AddIntentCall
 
   // Arguments passed in from the constructor. Some are used to initialize
   // module_data_ in AddModuleFromResult().
-  fidl::VectorPtr<fidl::StringPtr> requesting_module_path_;
+  std::vector<std::string> requesting_module_path_;
   const std::string module_name_;
   fuchsia::modular::IntentPtr intent_;
   fidl::InterfaceRequest<fuchsia::modular::ModuleController>
@@ -908,12 +906,12 @@ class StoryControllerImpl::StartContainerInShellCall : public Operation<> {
  public:
   StartContainerInShellCall(
       StoryControllerImpl* const story_controller_impl,
-      fidl::VectorPtr<fidl::StringPtr> parent_module_path,
-      fidl::StringPtr container_name,
+      std::vector<std::string> parent_module_path,
+      std::string container_name,
       fuchsia::modular::SurfaceRelationPtr parent_relation,
-      fidl::VectorPtr<fuchsia::modular::ContainerLayout> layout,
-      fidl::VectorPtr<fuchsia::modular::ContainerRelationEntry> relationships,
-      fidl::VectorPtr<fuchsia::modular::ContainerNodePtr> nodes)
+      std::vector<fuchsia::modular::ContainerLayout> layout,
+      std::vector<fuchsia::modular::ContainerRelationEntry> relationships,
+      std::vector<fuchsia::modular::ContainerNodePtr> nodes)
       : Operation("StoryControllerImpl::StartContainerInShellCall", [] {}),
         story_controller_impl_(story_controller_impl),
         parent_module_path_(std::move(parent_module_path)),
@@ -922,7 +920,7 @@ class StoryControllerImpl::StartContainerInShellCall : public Operation<> {
         layout_(std::move(layout)),
         relationships_(std::move(relationships)),
         nodes_(std::move(nodes)) {
-    for (auto& relationship : *relationships_) {
+    for (auto& relationship : relationships_) {
       relation_map_[relationship.node_name] = CloneOptional(relationship);
     }
   }
@@ -932,26 +930,26 @@ class StoryControllerImpl::StartContainerInShellCall : public Operation<> {
     FlowToken flow{this};
     // parent + container used as module path of requesting module for
     // containers
-    fidl::VectorPtr<fidl::StringPtr> module_path = parent_module_path_.Clone();
+    std::vector<std::string> module_path = parent_module_path_;
     // module_path.push_back(container_name_);
     // Adding non-module 'container_name_' to the module path results in
     // Ledger Client issuing a ReadData() call and failing with a fatal error
     // when module_data cannot be found
     // TODO(djmurphy): follow up, probably make containers modules
     std::vector<FuturePtr<fuchsia::modular::StartModuleStatus>> did_add_intents;
-    did_add_intents.reserve(nodes_->size());
+    did_add_intents.reserve(nodes_.size());
 
-    for (size_t i = 0; i < nodes_->size(); ++i) {
+    for (size_t i = 0; i < nodes_.size(); ++i) {
       auto did_add_intent = Future<fuchsia::modular::StartModuleStatus>::Create(
           "StoryControllerImpl.StartContainerInShellCall.Run.did_add_intent");
       auto intent = fuchsia::modular::Intent::New();
-      nodes_->at(i)->intent.Clone(intent.get());
+      nodes_.at(i)->intent.Clone(intent.get());
       operation_queue_.Add(new AddIntentCall(
-          story_controller_impl_, parent_module_path_.Clone(),
-          nodes_->at(i)->node_name, std::move(intent),
+          story_controller_impl_, parent_module_path_,
+          nodes_.at(i)->node_name, std::move(intent),
           nullptr /* module_controller_request */,
           fidl::MakeOptional(
-              relation_map_[nodes_->at(i)->node_name]->relationship),
+              relation_map_[nodes_.at(i)->node_name]->relationship),
           nullptr /* view_owner_request */,
           fuchsia::modular::ModuleSource::INTERNAL,
           did_add_intent->Completer()));
@@ -965,13 +963,12 @@ class StoryControllerImpl::StartContainerInShellCall : public Operation<> {
           if (!story_controller_impl_->story_shell_) {
             return;
           }
-          auto views = fidl::VectorPtr<fuchsia::modular::ContainerView>::New(
-              nodes_->size());
-          for (size_t i = 0; i < nodes_->size(); i++) {
+          std::vector<fuchsia::modular::ContainerView> views(nodes_.size());
+          for (size_t i = 0; i < nodes_.size(); i++) {
             fuchsia::modular::ContainerView view;
-            view.node_name = nodes_->at(i)->node_name;
-            view.owner = std::move(node_views_[nodes_->at(i)->node_name]);
-            views->at(i) = std::move(view);
+            view.node_name = nodes_.at(i)->node_name;
+            view.owner = std::move(node_views_[nodes_.at(i)->node_name]);
+            views.at(i) = std::move(view);
           }
           story_controller_impl_->story_shell_->AddContainer(
               container_name_, ModulePathToSurfaceID(parent_module_path_),
@@ -982,18 +979,18 @@ class StoryControllerImpl::StartContainerInShellCall : public Operation<> {
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
   OperationQueue operation_queue_;
-  const fidl::VectorPtr<fidl::StringPtr> parent_module_path_;
-  const fidl::StringPtr container_name_;
+  const std::vector<std::string> parent_module_path_;
+  const std::string container_name_;
 
   fuchsia::modular::SurfaceRelationPtr parent_relation_;
-  fidl::VectorPtr<fuchsia::modular::ContainerLayout> layout_;
-  fidl::VectorPtr<fuchsia::modular::ContainerRelationEntry> relationships_;
-  const fidl::VectorPtr<fuchsia::modular::ContainerNodePtr> nodes_;
+  std::vector<fuchsia::modular::ContainerLayout> layout_;
+  std::vector<fuchsia::modular::ContainerRelationEntry> relationships_;
+  const std::vector<fuchsia::modular::ContainerNodePtr> nodes_;
   std::map<std::string, fuchsia::modular::ContainerRelationEntryPtr>
       relation_map_;
 
   // map of node_name to view_owners
-  std::map<fidl::StringPtr, fuchsia::ui::viewsv1token::ViewOwnerPtr>
+  std::map<std::string, fuchsia::ui::viewsv1token::ViewOwnerPtr>
       node_views_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StartContainerInShellCall);
@@ -1024,10 +1021,10 @@ class StoryControllerImpl::StartCall : public Operation<> {
     // Start all modules that were not themselves explicitly started by another
     // module.
     storage_->ReadAllModuleData()->Then(
-        [this, flow](fidl::VectorPtr<fuchsia::modular::ModuleData> data) {
+        [this, flow](std::vector<fuchsia::modular::ModuleData> data) {
           story_controller_impl_->InitStoryEnvironment();
 
-          for (auto& module_data : *data) {
+          for (auto& module_data : data) {
             if (module_data.module_deleted) {
               continue;
             }
@@ -1236,17 +1233,17 @@ void StoryControllerImpl::Sync(const std::function<void()>& done) {
 }
 
 void StoryControllerImpl::FocusModule(
-    const fidl::VectorPtr<fidl::StringPtr>& module_path) {
-  operation_queue_.Add(new FocusCall(this, module_path.Clone()));
+    const std::vector<std::string>& module_path) {
+  operation_queue_.Add(new FocusCall(this, module_path));
 }
 
 void StoryControllerImpl::DefocusModule(
-    const fidl::VectorPtr<fidl::StringPtr>& module_path) {
-  operation_queue_.Add(new DefocusCall(this, module_path.Clone()));
+    const std::vector<std::string>& module_path) {
+  operation_queue_.Add(new DefocusCall(this, module_path));
 }
 
 void StoryControllerImpl::StopModule(
-    const fidl::VectorPtr<fidl::StringPtr>& module_path,
+    const std::vector<std::string>& module_path,
     const std::function<void()>& done) {
   operation_queue_.Add(new StopModuleCall(story_storage_, module_path, done));
 }
@@ -1298,7 +1295,7 @@ void StoryControllerImpl::ConnectLinkPath(
 }
 
 fuchsia::modular::LinkPathPtr StoryControllerImpl::GetLinkPathForParameterName(
-    const fidl::VectorPtr<fidl::StringPtr>& module_path, fidl::StringPtr name) {
+    const std::vector<std::string>& module_path, std::string name) {
   auto mod_info = FindRunningModInfo(module_path);
   // NOTE: |mod_info| will only be valid if the module at |module_path| is
   // running. Strictly speaking, this is unsafe. The source of truth is the
@@ -1309,19 +1306,19 @@ fuchsia::modular::LinkPathPtr StoryControllerImpl::GetLinkPathForParameterName(
 
   const auto& param_map = mod_info->module_data->parameter_map;
   auto it = std::find_if(
-      param_map.entries->begin(), param_map.entries->end(),
+      param_map.entries.begin(), param_map.entries.end(),
       [&name](const fuchsia::modular::ModuleParameterMapEntry& data) {
         return data.name == name;
       });
 
   fuchsia::modular::LinkPathPtr link_path = nullptr;
-  if (it != param_map.entries->end()) {
+  if (it != param_map.entries.end()) {
     link_path = CloneOptional(it->link_path);
   }
 
   if (!link_path) {
     link_path = fuchsia::modular::LinkPath::New();
-    link_path->module_path = module_path.Clone();
+    link_path->module_path = module_path;
     link_path->link_name = name;
   }
 
@@ -1329,8 +1326,8 @@ fuchsia::modular::LinkPathPtr StoryControllerImpl::GetLinkPathForParameterName(
 }
 
 void StoryControllerImpl::EmbedModule(
-    const fidl::VectorPtr<fidl::StringPtr>& parent_module_path,
-    fidl::StringPtr module_name, fuchsia::modular::IntentPtr intent,
+    const std::vector<std::string>& parent_module_path,
+    std::string module_name, fuchsia::modular::IntentPtr intent,
     fidl::InterfaceRequest<fuchsia::modular::ModuleController>
         module_controller_request,
     fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
@@ -1338,35 +1335,35 @@ void StoryControllerImpl::EmbedModule(
     fuchsia::modular::ModuleSource module_source,
     std::function<void(fuchsia::modular::StartModuleStatus)> callback) {
   operation_queue_.Add(new AddIntentCall(
-      this, parent_module_path.Clone(), module_name, std::move(intent),
+      this, parent_module_path, module_name, std::move(intent),
       std::move(module_controller_request), nullptr /* surface_relation */,
       std::move(view_owner_request), std::move(module_source),
       std::move(callback)));
 }
 
 void StoryControllerImpl::StartModule(
-    const fidl::VectorPtr<fidl::StringPtr>& parent_module_path,
-    fidl::StringPtr module_name, fuchsia::modular::IntentPtr intent,
+    const std::vector<std::string>& parent_module_path,
+    std::string module_name, fuchsia::modular::IntentPtr intent,
     fidl::InterfaceRequest<fuchsia::modular::ModuleController>
         module_controller_request,
     fuchsia::modular::SurfaceRelationPtr surface_relation,
     fuchsia::modular::ModuleSource module_source,
     std::function<void(fuchsia::modular::StartModuleStatus)> callback) {
   operation_queue_.Add(new AddIntentCall(
-      this, parent_module_path.Clone(), module_name, std::move(intent),
+      this, parent_module_path, module_name, std::move(intent),
       std::move(module_controller_request), std::move(surface_relation),
       nullptr /* view_owner_request */, std::move(module_source),
       std::move(callback)));
 }
 
 void StoryControllerImpl::StartContainerInShell(
-    const fidl::VectorPtr<fidl::StringPtr>& parent_module_path,
-    fidl::StringPtr name, fuchsia::modular::SurfaceRelationPtr parent_relation,
-    fidl::VectorPtr<fuchsia::modular::ContainerLayout> layout,
-    fidl::VectorPtr<fuchsia::modular::ContainerRelationEntry> relationships,
-    fidl::VectorPtr<fuchsia::modular::ContainerNodePtr> nodes) {
+    const std::vector<std::string>& parent_module_path,
+    std::string name, fuchsia::modular::SurfaceRelationPtr parent_relation,
+    std::vector<fuchsia::modular::ContainerLayout> layout,
+    std::vector<fuchsia::modular::ContainerRelationEntry> relationships,
+    std::vector<fuchsia::modular::ContainerNodePtr> nodes) {
   operation_queue_.Add(new StartContainerInShellCall(
-      this, parent_module_path.Clone(), name, std::move(parent_relation),
+      this, parent_module_path, name, std::move(parent_relation),
       std::move(layout), std::move(relationships), std::move(nodes)));
 }
 
@@ -1491,10 +1488,11 @@ void StoryControllerImpl::GetActiveModules(GetActiveModulesCallback callback) {
   // collection during some Operation.
   operation_queue_.Add(
       new SyncCall(fxl::MakeCopyable([this, callback]() mutable {
-        fidl::VectorPtr<fuchsia::modular::ModuleData> result;
+        std::vector<fuchsia::modular::ModuleData> result;
+
         result.resize(running_mod_infos_.size());
         for (size_t i = 0; i < running_mod_infos_.size(); i++) {
-          running_mod_infos_[i].module_data->Clone(&result->at(i));
+          running_mod_infos_[i].module_data->Clone(&result.at(i));
         }
         callback(std::move(result));
       })));
@@ -1509,7 +1507,7 @@ void StoryControllerImpl::GetModules(GetModulesCallback callback) {
 }
 
 void StoryControllerImpl::GetModuleController(
-    fidl::VectorPtr<fidl::StringPtr> module_path,
+    std::vector<std::string> module_path,
     fidl::InterfaceRequest<fuchsia::modular::ModuleController> request) {
   operation_queue_.Add(new SyncCall(
       fxl::MakeCopyable([this, module_path = std::move(module_path),
@@ -1589,7 +1587,7 @@ void StoryControllerImpl::NotifyOneStoryWatcher(
 }
 
 bool StoryControllerImpl::IsExternalModule(
-    const fidl::VectorPtr<fidl::StringPtr>& module_path) {
+    const std::vector<std::string>& module_path) {
   auto* const i = FindRunningModInfo(module_path);
   if (!i) {
     return false;
@@ -1600,7 +1598,7 @@ bool StoryControllerImpl::IsExternalModule(
 }
 
 StoryControllerImpl::RunningModInfo* StoryControllerImpl::FindRunningModInfo(
-    const fidl::VectorPtr<fidl::StringPtr>& module_path) {
+    const std::vector<std::string>& module_path) {
   for (auto& c : running_mod_infos_) {
     if (c.module_data->module_path == module_path) {
       return &c;
@@ -1630,7 +1628,7 @@ StoryControllerImpl::RunningModInfo* StoryControllerImpl::FindAnchor(
 }
 
 void StoryControllerImpl::RemoveModuleFromStory(
-    const fidl::VectorPtr<fidl::StringPtr>& module_path) {
+    const std::vector<std::string>& module_path) {
   operation_queue_.Add(
       new StopModuleAndStoryIfEmptyCall(this, module_path, [] {}));
 }
@@ -1681,7 +1679,7 @@ void StoryControllerImpl::StartOngoingActivity(
 }
 
 void StoryControllerImpl::CreateEntity(
-    fidl::StringPtr type, fuchsia::mem::Buffer data,
+    std::string type, fuchsia::mem::Buffer data,
     fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request,
     std::function<void(std::string /* entity_reference */)> callback) {
   story_provider_impl_->CreateEntity(story_id_, type, std::move(data),

@@ -129,7 +129,7 @@ void CloudProviderImpl::GetDeviceSet(
 }
 
 void CloudProviderImpl::GetPageCloud(
-    fidl::VectorPtr<uint8_t> app_id, fidl::VectorPtr<uint8_t> page_id,
+    std::vector<uint8_t> app_id, std::vector<uint8_t> page_id,
     fidl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
     GetPageCloudCallback callback) {
   const std::string user_path =

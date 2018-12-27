@@ -51,14 +51,14 @@ TEST(IndexTest, Encode_Differences) {
   meta1.story->focused->state = fuchsia::modular::FocusedStateState::FOCUSED;
   meta1.mod = fuchsia::modular::ModuleMetadata::New();
   meta1.mod->url = "url1";
-  meta1.mod->path = fidl::VectorPtr<fidl::StringPtr>::New(0);
+  meta1.mod->path = fidl::VectorPtr<std::string>::New(0);
   meta1.mod->path.push_back("1");
   meta1.mod->path.push_back("2");
   meta1.mod->focused = fuchsia::modular::FocusedState::New();
   meta1.mod->focused->state = fuchsia::modular::FocusedStateState::FOCUSED;
   meta1.entity = fuchsia::modular::EntityMetadata::New();
   meta1.entity->topic = "topic1";
-  meta1.entity->type = fidl::VectorPtr<fidl::StringPtr>::New(0);
+  meta1.entity->type = fidl::VectorPtr<std::string>::New(0);
   meta1.entity->type.push_back("type1");
   meta1.entity->type.push_back("type2");
 
@@ -70,13 +70,13 @@ TEST(IndexTest, Encode_Differences) {
       fuchsia::modular::FocusedStateState::NOT_FOCUSED;
   meta2->mod = fuchsia::modular::ModuleMetadata::New();
   meta2->mod->url = "url2";
-  meta2->mod->path = fidl::VectorPtr<fidl::StringPtr>::New(0);
+  meta2->mod->path = fidl::VectorPtr<std::string>::New(0);
   meta2->mod->path.push_back("2");
   meta2->mod->focused = fuchsia::modular::FocusedState::New();
   meta2->mod->focused->state = fuchsia::modular::FocusedStateState::NOT_FOCUSED;
   meta2->entity = fuchsia::modular::EntityMetadata::New();
   meta2->entity->topic = "topic2";
-  meta2->entity->type = fidl::VectorPtr<fidl::StringPtr>::New(0);
+  meta2->entity->type = fidl::VectorPtr<std::string>::New(0);
   meta2->entity->type.push_back("type3");
   meta2->entity->type.push_back("type4");
   meta2->entity->type.push_back("type5");
@@ -123,7 +123,7 @@ TEST(IndexTest, AddRemoveQuery) {
   meta1.story->id = "story1";
   meta1.entity = fuchsia::modular::EntityMetadata::New();
   meta1.entity->topic = "topic1";
-  meta1.entity->type = fidl::VectorPtr<fidl::StringPtr>::New(0);
+  meta1.entity->type = fidl::VectorPtr<std::string>::New(0);
   meta1.entity->type.push_back("type1");
   meta1.entity->type.push_back("type2");
 

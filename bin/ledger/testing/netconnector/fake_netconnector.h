@@ -24,7 +24,7 @@ class FakeNetConnector : public fuchsia::netconnector::NetConnector {
     // for more details.
     virtual void GetDevicesNames(
         uint64_t last_version,
-        fit::function<void(uint64_t, fidl::VectorPtr<fidl::StringPtr>)>
+        fit::function<void(uint64_t, std::vector<std::string>)>
             callback) = 0;
 
     // Connects to the ServiceProvider from host |device_name|.
@@ -43,11 +43,11 @@ class FakeNetConnector : public fuchsia::netconnector::NetConnector {
  private:
   // NetConnector implementation:
   void RegisterServiceProvider(
-      fidl::StringPtr name,
+      std::string name,
       fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> service_provider)
       override;
   void GetDeviceServiceProvider(
-      fidl::StringPtr device_name,
+      std::string device_name,
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> service_provider)
       override;
   void GetKnownDeviceNames(uint64_t version_last_seen,

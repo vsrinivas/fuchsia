@@ -44,7 +44,7 @@ ModuleContextImpl::ModuleContextImpl(
       [this](fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices>
                  request) {
         auto module_scope = fuchsia::modular::ModuleScope::New();
-        module_scope->module_path = module_data_->module_path.Clone();
+        module_scope->module_path = module_data_->module_path;
         module_scope->url = module_data_->module_url;
         module_scope->story_id = story_controller_impl_->GetStoryId();
 
@@ -70,7 +70,7 @@ void ModuleContextImpl::GetLink(
 }
 
 void ModuleContextImpl::EmbedModule(
-    fidl::StringPtr name, fuchsia::modular::Intent intent,
+    std::string name, fuchsia::modular::Intent intent,
     fidl::InterfaceRequest<fuchsia::modular::ModuleController>
         module_controller,
     fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> view_owner,
@@ -82,7 +82,7 @@ void ModuleContextImpl::EmbedModule(
 }
 
 void ModuleContextImpl::AddModuleToStory(
-    fidl::StringPtr name, fuchsia::modular::Intent intent,
+    std::string name, fuchsia::modular::Intent intent,
     fidl::InterfaceRequest<fuchsia::modular::ModuleController>
         module_controller,
     fuchsia::modular::SurfaceRelationPtr surface_relation,
@@ -94,13 +94,13 @@ void ModuleContextImpl::AddModuleToStory(
 }
 
 void ModuleContextImpl::StartContainerInShell(
-    fidl::StringPtr name, fuchsia::modular::SurfaceRelation parent_relation,
-    fidl::VectorPtr<fuchsia::modular::ContainerLayout> layout,
-    fidl::VectorPtr<fuchsia::modular::ContainerRelationEntry> relationships,
-    fidl::VectorPtr<fuchsia::modular::ContainerNode> nodes) {
-  fidl::VectorPtr<fuchsia::modular::ContainerNodePtr> node_ptrs;
-  node_ptrs->reserve(nodes->size());
-  for (auto& i : *nodes) {
+    std::string name, fuchsia::modular::SurfaceRelation parent_relation,
+    std::vector<fuchsia::modular::ContainerLayout> layout,
+    std::vector<fuchsia::modular::ContainerRelationEntry> relationships,
+    std::vector<fuchsia::modular::ContainerNode> nodes) {
+  std::vector<fuchsia::modular::ContainerNodePtr> node_ptrs;
+  node_ptrs.reserve(nodes.size());
+  for (auto& i : nodes) {
     node_ptrs.push_back(fidl::MakeOptional(std::move(i)));
   }
   story_controller_impl_->StartContainerInShell(
@@ -143,7 +143,7 @@ void ModuleContextImpl::StartOngoingActivity(
 }
 
 void ModuleContextImpl::CreateEntity(
-    fidl::StringPtr type, fuchsia::mem::Buffer data,
+    std::string type, fuchsia::mem::Buffer data,
     fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request,
     CreateEntityCallback callback) {
   story_controller_impl_->CreateEntity(

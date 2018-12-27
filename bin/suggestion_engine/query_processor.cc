@@ -129,8 +129,8 @@ void QueryProcessor::OnQueryResponse(fuchsia::modular::UserInput input,
                                      const std::string& handler_url,
                                      fuchsia::modular::QueryResponse response) {
   // Ranking currently happens as each set of proposals are added.
-  for (size_t i = 0; i < response.proposals->size(); ++i) {
-    AddProposal(handler_url, std::move(response.proposals->at(i)));
+  for (size_t i = 0; i < response.proposals.size(); ++i) {
+    AddProposal(handler_url, std::move(response.proposals.at(i)));
   }
   suggestions_.Refresh(input);
 
@@ -150,13 +150,13 @@ void QueryProcessor::OnQueryEndRequest(fuchsia::modular::UserInput input) {
 void QueryProcessor::NotifyOfResults() {
   const auto& suggestion_vector = suggestions_.Get();
 
-  fidl::VectorPtr<fuchsia::modular::Suggestion> window;
+  std::vector<fuchsia::modular::Suggestion> window;
   for (size_t i = 0;
        i < active_query_->max_results() && i < suggestion_vector.size(); i++) {
     window.push_back(CreateSuggestion(*suggestion_vector[i]));
   }
 
-  if (window) {
+  if (!window.empty()) {
     active_query_->listener()->OnQueryResults(std::move(window));
   }
 }

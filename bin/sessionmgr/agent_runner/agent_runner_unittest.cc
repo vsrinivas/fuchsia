@@ -107,14 +107,14 @@ class MyDummyAgent : fuchsia::modular::Agent,
 
   // |fuchsia::modular::Agent|
   void Connect(
-      fidl::StringPtr /*requestor_url*/,
+      std::string /*requestor_url*/,
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*services*/)
       override {
     ++counts["Connect"];
   }
 
   // |fuchsia::modular::Agent|
-  void RunTask(fidl::StringPtr /*task_id*/,
+  void RunTask(std::string /*task_id*/,
                RunTaskCallback /*callback*/) override {
     ++counts["RunTask"];
   }

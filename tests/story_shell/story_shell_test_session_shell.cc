@@ -72,7 +72,7 @@ class TestApp : public modular::testing::SessionShellBase,
   bool story2_presentation_request_received_{};
 
   // |fuchsia::modular::SessionShellPresentationProvider|
-  void GetPresentation(fidl::StringPtr story_id,
+  void GetPresentation(std::string story_id,
                        fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
                            request) override {
     if (story_id == kStoryName1 && !story1_presentation_request_received_) {
@@ -90,7 +90,7 @@ class TestApp : public modular::testing::SessionShellBase,
 
   // |fuchsia::modular::SessionShellPresentationProvider|
   void WatchVisualState(
-      fidl::StringPtr story_id,
+      std::string story_id,
       fidl::InterfaceHandle<fuchsia::modular::StoryVisualStateWatcher> watcher)
       override {}
 
@@ -109,7 +109,7 @@ class TestApp : public modular::testing::SessionShellBase,
   TestPoint story1_create_{"Story1 Create"};
 
   void Story1_Create() {
-    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+    std::vector<fuchsia::modular::StoryCommand> commands;
     auto addMod = [&commands](fidl::StringPtr name,
                               std::vector<fidl::StringPtr> parent) {
       fuchsia::modular::AddMod add_mod;
@@ -194,7 +194,7 @@ class TestApp : public modular::testing::SessionShellBase,
   TestPoint story2_create_{"Story2 Create"};
 
   void Story2_Create() {
-    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+    std::vector<fuchsia::modular::StoryCommand> commands;
     auto addMod = [&commands](fidl::StringPtr name,
                               std::vector<fidl::StringPtr> parent) {
       fuchsia::modular::AddMod add_mod;

@@ -38,12 +38,12 @@ class EntityProviderController::EntityImpl : fuchsia::modular::Entity {
   }
 
   // |fuchsia::modular::Entity|
-  void GetData(fidl::StringPtr type, GetDataCallback callback) override {
+  void GetData(std::string type, GetDataCallback callback) override {
     entity_provider_->GetData(cookie_, type, callback);
   }
 
   // |fuchsia::modular::Entity|
-  void WriteData(fidl::StringPtr type, fuchsia::mem::Buffer data,
+  void WriteData(std::string type, fuchsia::mem::Buffer data,
                  WriteDataCallback callback) override {
     entity_provider_->WriteData(cookie_, type, std::move(data), callback);
   }
@@ -55,7 +55,7 @@ class EntityProviderController::EntityImpl : fuchsia::modular::Entity {
 
   // |fuchsia::modular::Entity|
   void Watch(
-      fidl::StringPtr type,
+      std::string type,
       fidl::InterfaceHandle<fuchsia::modular::EntityWatcher> watcher) override {
     entity_provider_->Watch(cookie_, type, std::move(watcher));
   }

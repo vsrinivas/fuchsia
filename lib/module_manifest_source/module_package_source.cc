@@ -45,15 +45,15 @@ ModulePackageSource::ModulePackageSource(
 
 ModulePackageSource::~ModulePackageSource() {}
 
-void ModulePackageSource::IndexManifest(fidl::StringPtr package_name,
-                                        fidl::StringPtr module_manifest_path) {
+void ModulePackageSource::IndexManifest(std::string package_name,
+                                        std::string module_manifest_path) {
   FXL_DCHECK(dispatcher_);
   FXL_DCHECK(new_entry_fn_);
 
   std::string data;
-  if (!files::ReadFileToString(module_manifest_path.get(), &data)) {
+  if (!files::ReadFileToString(module_manifest_path, &data)) {
     FXL_LOG(ERROR) << "Couldn't read module manifest from: "
-                   << module_manifest_path.get();
+                   << module_manifest_path;
     return;
   }
 

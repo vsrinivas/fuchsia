@@ -90,7 +90,7 @@ std::string MapIdentityProviderToAuthProviderType(
 // Returns a list of supported auth provider configurations that includes the
 // type, startup parameters and the url of the auth provider component.
 // TODO(ukode): This list will be derived from a config package in the future.
-fidl::VectorPtr<fuchsia::auth::AuthProviderConfig> GetAuthProviderConfigs() {
+std::vector<fuchsia::auth::AuthProviderConfig> GetAuthProviderConfigs() {
   fuchsia::auth::AuthProviderConfig dev_auth_provider_config;
   dev_auth_provider_config.auth_provider_type = kDevAuthProviderType;
   dev_auth_provider_config.url = kDevAuthProviderUrl;
@@ -99,7 +99,7 @@ fidl::VectorPtr<fuchsia::auth::AuthProviderConfig> GetAuthProviderConfigs() {
   google_auth_provider_config.auth_provider_type = kGoogleAuthProviderType;
   google_auth_provider_config.url = kGoogleAuthProviderUrl;
 
-  fidl::VectorPtr<fuchsia::auth::AuthProviderConfig> auth_provider_configs;
+  std::vector<fuchsia::auth::AuthProviderConfig> auth_provider_configs;
   auth_provider_configs.push_back(std::move(google_auth_provider_config));
   auth_provider_configs.push_back(std::move(dev_auth_provider_config));
 
@@ -243,7 +243,7 @@ void UserProviderImpl::AddUser(
   fuchsia::auth::AppConfig fuchsia_app_config;
   fuchsia_app_config.auth_provider_type =
       MapIdentityProviderToAuthProviderType(identity_provider);
-  auto scopes = fidl::VectorPtr<fidl::StringPtr>::New(0);
+  std::vector<std::string> scopes;
   token_manager->Authorize(
       std::move(fuchsia_app_config), nullptr, std::move(scopes), "", "",
       [this, identity_provider, account_id,
@@ -290,7 +290,7 @@ void UserProviderImpl::AddUser(
       });
 }
 
-void UserProviderImpl::RemoveUser(fidl::StringPtr account_id,
+void UserProviderImpl::RemoveUser(std::string account_id,
                                   RemoveUserCallback callback) {
   fuchsia::modular::auth::AccountPtr account;
   if (users_storage_) {
@@ -435,8 +435,7 @@ void UserProviderImpl::GetAuthenticationUIContext(
 }
 
 fuchsia::auth::TokenManagerPtr UserProviderImpl::CreateTokenManager(
-    fidl::StringPtr account_id) {
-  FXL_DCHECK(account_id);
+    std::string account_id) {
   FXL_DCHECK(token_manager_factory_);
 
   fuchsia::auth::TokenManagerPtr token_mgr;
@@ -489,7 +488,7 @@ bool UserProviderImpl::Parse(const std::string& serialized_users) {
 
 void UserProviderImpl::LoginInternal(fuchsia::modular::auth::AccountPtr account,
                                      fuchsia::modular::UserLoginParams params) {
-  auto account_id = account ? account->id.get() : GetRandomId();
+  auto account_id = account ? account->id : GetRandomId();
   FXL_DLOG(INFO) << "Login() User:" << account_id;
 
   // Instead of passing token_manager_factory all the way to agents and

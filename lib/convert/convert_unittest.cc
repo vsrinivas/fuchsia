@@ -10,8 +10,8 @@
 namespace convert {
 namespace {
 
-fidl::VectorPtr<uint8_t> CreateArray(const char* data, size_t size) {
-  fidl::VectorPtr<uint8_t> result;
+std::vector<uint8_t> CreateArray(const char* data, size_t size) {
+  std::vector<uint8_t> result;
   for (size_t i = 0; i < size; ++i) {
     result.push_back(data[i]);
   }
@@ -23,21 +23,21 @@ TEST(Convert, ToSlice) {
   leveldb::Slice slice = ToSlice(str);
   EXPECT_EQ(str, std::string(slice.data(), slice.size()));
 
-  fidl::VectorPtr<uint8_t> array = CreateArray(str.data(), str.size());
+  std::vector<uint8_t> array = CreateArray(str.data(), str.size());
   slice = ToSlice(str);
   EXPECT_EQ(str, std::string(slice.data(), slice.size()));
 }
 
 TEST(Convert, ToArray) {
   std::string str = "Hello";
-  fidl::VectorPtr<uint8_t> array = ToArray(str);
+  std::vector<uint8_t> array = ToArray(str);
   EXPECT_EQ(str,
-            std::string(reinterpret_cast<char*>(array->data()), array->size()));
+            std::string(reinterpret_cast<char*>(array.data()), array.size()));
 
   leveldb::Slice slice(str.data(), str.size());
   array = ToArray(slice);
   EXPECT_EQ(str,
-            std::string(reinterpret_cast<char*>(array->data()), array->size()));
+            std::string(reinterpret_cast<char*>(array.data()), array.size()));
 }
 
 TEST(Convert, ToString) {
@@ -46,7 +46,7 @@ TEST(Convert, ToString) {
   std::string result = ToString(slice);
   EXPECT_EQ(str, result);
 
-  fidl::VectorPtr<uint8_t> array = ToArray(str);
+  std::vector<uint8_t> array = ToArray(str);
   result = ToString(array);
   EXPECT_EQ(str, result);
 }
@@ -57,7 +57,7 @@ TEST(Convert, ToStringView) {
   ExtendedStringView result = slice;
   EXPECT_EQ(str, result.ToString());
 
-  fidl::VectorPtr<uint8_t> array = ToArray(str);
+  std::vector<uint8_t> array = ToArray(str);
   result = array;
   EXPECT_EQ(str, result.ToString());
 }

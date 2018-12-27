@@ -225,7 +225,7 @@ void PageCloudImpl::GetCommits(
   });
 }
 
-void PageCloudImpl::AddObject(fidl::VectorPtr<uint8_t> id,
+void PageCloudImpl::AddObject(std::vector<uint8_t> id,
                               fuchsia::mem::Buffer data,
                               AddObjectCallback callback) {
   std::string data_str;
@@ -263,7 +263,7 @@ void PageCloudImpl::AddObject(fidl::VectorPtr<uint8_t> id,
       });
 }
 
-void PageCloudImpl::GetObject(fidl::VectorPtr<uint8_t> id,
+void PageCloudImpl::GetObject(std::vector<uint8_t> id,
                               GetObjectCallback callback) {
   auto request = google::firestore::v1beta1::GetDocumentRequest();
   request.set_name(GetObjectPath(page_path_, convert::ToString(id)));

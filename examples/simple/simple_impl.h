@@ -27,7 +27,7 @@ class SimpleImpl : ::fuchsia::modular::examples::simple::Simple {
 
  private:
   // |Simple| interface method.
-  void SetMessageQueue(fidl::StringPtr queue_token) override;
+  void SetMessageQueue(std::string queue_token) override;
 
   // The bindings to the Simple service.
   fidl::BindingSet<Simple> bindings_;

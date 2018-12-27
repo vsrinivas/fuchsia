@@ -14,7 +14,7 @@ namespace modular {
 class FocusModCommandRunner : public CommandRunner {
  public:
   FocusModCommandRunner(
-      fit::function<void(fidl::StringPtr, fidl::VectorPtr<fidl::StringPtr>)>
+      fit::function<void(std::string, std::vector<std::string>)>
           module_focuser);
   ~FocusModCommandRunner();
 
@@ -24,7 +24,7 @@ class FocusModCommandRunner : public CommandRunner {
       std::function<void(fuchsia::modular::ExecuteResult)> done) override;
 
  private:
-  fit::function<void(fidl::StringPtr, fidl::VectorPtr<fidl::StringPtr>)>
+  fit::function<void(std::string, std::vector<std::string>)>
       module_focuser_;
 };
 

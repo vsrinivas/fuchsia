@@ -35,13 +35,13 @@ class BasemgrSettings {
 
  private:
   void ParseShellArgs(const std::string& value,
-                      fidl::VectorPtr<fidl::StringPtr>* args);
+                      fidl::VectorPtr<std::string>* args);
 
   // Extract the test name using knowledge of how Modular structures its
   // command lines for testing.
   static std::string FindTestName(
       const fidl::StringPtr& session_shell,
-      const fidl::VectorPtr<fidl::StringPtr>& session_shell_args);
+      const fidl::VectorPtr<std::string>& session_shell_args);
 
   FXL_DISALLOW_COPY_AND_ASSIGN(BasemgrSettings);
 };

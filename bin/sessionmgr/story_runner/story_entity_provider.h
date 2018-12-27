@@ -35,20 +35,20 @@ class StoryEntityProvider : public fuchsia::modular::EntityProvider {
 
  private:
   // |fuchsia::modular::EntityProvider|
-  void GetTypes(fidl::StringPtr cookie, GetTypesCallback callback) override;
+  void GetTypes(std::string cookie, GetTypesCallback callback) override;
 
   // |fuchsia::modular::EntityProvider|
-  void GetData(fidl::StringPtr cookie, fidl::StringPtr type,
+  void GetData(std::string cookie, std::string type,
                GetDataCallback callback) override;
 
   // |fuchsia::modular::EntityProvider|
-  void WriteData(fidl::StringPtr cookie, fidl::StringPtr type,
+  void WriteData(std::string cookie, std::string type,
                  fuchsia::mem::Buffer data,
                  WriteDataCallback callback) override;
 
   // |fuchsia::modular::EntityProvider|
   void Watch(
-      fidl::StringPtr cookie, fidl::StringPtr type,
+      std::string cookie, std::string type,
       fidl::InterfaceHandle<fuchsia::modular::EntityWatcher> watcher) override;
 
   const std::string story_id_;

@@ -34,7 +34,7 @@ class FindModulesCall
                   fuchsia::modular::ModuleResolver* const module_resolver,
                   fuchsia::modular::EntityResolver* const entity_resolver,
                   fuchsia::modular::IntentPtr intent,
-                  fidl::VectorPtr<fidl::StringPtr> requesting_module_path,
+                  std::vector<std::string> requesting_module_path,
                   ResultCall result_call)
       : Operation("FindModulesCall", std::move(result_call)),
         story_storage_(story_storage),
@@ -79,8 +79,7 @@ class FindModulesCall
               ->Map([this, name = param.name](std::vector<std::string> types) {
                 fuchsia::modular::FindModulesParameterConstraint constraint;
                 constraint.param_name = name;
-                constraint.param_types =
-                    fxl::To<fidl::VectorPtr<fidl::StringPtr>>(std::move(types));
+                constraint.param_types = std::move(types);
                 return constraint;
               }));
     }
@@ -93,8 +92,7 @@ class FindModulesCall
             // Operation finishes since |flow| goes out of scope.
             return;
           }
-          resolver_query_.parameter_constraints.reset(
-              std::move(constraint_params));
+          resolver_query_.parameter_constraints = std::move(constraint_params);
           module_resolver_->FindModules(
               std::move(resolver_query_),
               [this, flow](fuchsia::modular::FindModulesResponse response) {
@@ -142,7 +140,7 @@ class FindModulesCall
         auto did_get_lp = Future<fuchsia::modular::LinkPathPtr>::Create(
             "AddModCommandRunner::GetTypesFromIntentParameter.did_get_lp");
         AddGetLinkPathForParameterNameOperation(
-            &operations_, story_storage_, requesting_module_path_.Clone(),
+            &operations_, story_storage_, requesting_module_path_,
             input.link_name(), did_get_lp->Completer());
         did_get_lp->Then([this, fut,
                           param_name](fuchsia::modular::LinkPathPtr lp) {
@@ -220,7 +218,7 @@ class FindModulesCall
   fuchsia::modular::ModuleResolver* const module_resolver_;  // Not Owned
   fuchsia::modular::EntityResolver* const entity_resolver_;  // Not owned.
   const fuchsia::modular::IntentPtr intent_;
-  const fidl::VectorPtr<fidl::StringPtr> requesting_module_path_;
+  const std::vector<std::string> requesting_module_path_;
 
   fuchsia::modular::FindModulesQuery resolver_query_;
   std::vector<FuturePtr<fuchsia::modular::FindModulesParameterConstraint>>
@@ -240,7 +238,7 @@ void AddFindModulesOperation(
     fuchsia::modular::ModuleResolver* const module_resolver,
     fuchsia::modular::EntityResolver* const entity_resolver,
     fuchsia::modular::IntentPtr intent,
-    fidl::VectorPtr<fidl::StringPtr> requesting_module_path,
+    std::vector<std::string> requesting_module_path,
     std::function<void(fuchsia::modular::ExecuteResult,
                        fuchsia::modular::FindModulesResponse)>
         result_call) {

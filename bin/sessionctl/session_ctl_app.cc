@@ -137,7 +137,7 @@ std::string SessionCtlApp::ExecuteDeleteStoryCommand(
 std::string SessionCtlApp::ExecuteListStoriesCommand() {
   async::PostTask(dispatcher_, [this]() mutable {
     puppet_master_->GetStories(
-        [this](fidl::VectorPtr<fidl::StringPtr> story_names) {
+        [this](std::vector<std::string> story_names) {
           logger_.Log(kListStoriesCommandString, std::move(story_names));
           on_command_executed_();
         });
@@ -148,7 +148,7 @@ std::string SessionCtlApp::ExecuteListStoriesCommand() {
 
 std::string SessionCtlApp::ExecuteRestartSessionCommand() {
   basemgr_->RestartSession();
-  logger_.Log(kRestartSessionCommandString, nullptr);
+  logger_.Log(kRestartSessionCommandString, std::vector<std::string>());
   on_command_executed_();
 
   return "";
@@ -171,13 +171,13 @@ fuchsia::modular::StoryCommand SessionCtlApp::MakeFocusModCommand(
   return command;
 }
 
-fidl::VectorPtr<fuchsia::modular::StoryCommand>
+std::vector<fuchsia::modular::StoryCommand>
 SessionCtlApp::MakeAddModCommands(const std::string& mod_url,
                                   const std::string& mod_name) {
   fuchsia::modular::Intent intent;
   intent.handler = mod_url;
 
-  fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+  std::vector<fuchsia::modular::StoryCommand> commands;
   fuchsia::modular::StoryCommand command;
 
   // Add command to add or update the mod (it will be updated if the mod_name
@@ -193,9 +193,9 @@ SessionCtlApp::MakeAddModCommands(const std::string& mod_url,
   return commands;
 }
 
-fidl::VectorPtr<fuchsia::modular::StoryCommand>
+std::vector<fuchsia::modular::StoryCommand>
 SessionCtlApp::MakeRemoveModCommands(const std::string& mod_name) {
-  fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+  std::vector<fuchsia::modular::StoryCommand> commands;
   fuchsia::modular::StoryCommand command;
 
   fuchsia::modular::RemoveMod remove_mod;
@@ -207,7 +207,7 @@ SessionCtlApp::MakeRemoveModCommands(const std::string& mod_name) {
 
 void SessionCtlApp::PostTaskExecuteStoryCommand(
     const std::string command_name,
-    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands,
+    std::vector<fuchsia::modular::StoryCommand> commands,
     std::map<std::string, std::string> params) {
   async::PostTask(dispatcher_, [this, command_name,
                                 commands = std::move(commands),
@@ -228,7 +228,7 @@ void SessionCtlApp::PostTaskExecuteStoryCommand(
 }
 
 modular::FuturePtr<bool, std::string> SessionCtlApp::ExecuteStoryCommand(
-    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands,
+    std::vector<fuchsia::modular::StoryCommand> commands,
     const std::string& story_name) {
   story_puppet_master_->Enqueue(std::move(commands));
 

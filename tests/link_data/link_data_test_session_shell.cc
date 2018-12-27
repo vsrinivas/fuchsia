@@ -52,7 +52,7 @@ class TestApp : public modular::testing::SessionShellBase {
   TestPoint story1_create_{"Story1 Create"};
 
   void TestStory1() {
-    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+    std::vector<fuchsia::modular::StoryCommand> commands;
     fuchsia::modular::AddMod add_mod;
     add_mod.mod_name.push_back(kModule0Name);
     add_mod.intent.action = kModule0Action;
@@ -95,7 +95,7 @@ class TestApp : public modular::testing::SessionShellBase {
   TestPoint story1_get_module0_link_{"Story1 Get Module0 link"};
 
   void TestStory1_GetModule0Link() {
-    fidl::VectorPtr<fidl::StringPtr> module_path;
+    fidl::VectorPtr<std::string> module_path;
     module_path.push_back(kModule0Name);
     fuchsia::modular::LinkPath link_path = fuchsia::modular::LinkPath();
     link_path.module_path = std::move(module_path);
@@ -177,11 +177,11 @@ class TestApp : public modular::testing::SessionShellBase {
 
   void TestStory1_GetActiveModules() {
     story_controller_->GetActiveModules(
-        [this](fidl::VectorPtr<fuchsia::modular::ModuleData> modules) {
-          if (modules->size() == 0) {
+        [this](std::vector<fuchsia::modular::ModuleData> modules) {
+          if (modules.size() == 0) {
             story1_get_active_modules_.Pass();
           } else {
-            FXL_LOG(ERROR) << "ACTIVE MODULES " << modules->size()
+            FXL_LOG(ERROR) << "ACTIVE MODULES " << modules.size()
                            << " EXPECTED " << 0;
           }
           TestStory1_GetActiveLinks();
@@ -192,11 +192,11 @@ class TestApp : public modular::testing::SessionShellBase {
 
   void TestStory1_GetActiveLinks() {
     story_controller_->GetActiveLinks(
-        nullptr, [this](fidl::VectorPtr<fuchsia::modular::LinkPath> links) {
-          if (links->size() == 0) {
+        nullptr, [this](std::vector<fuchsia::modular::LinkPath> links) {
+          if (links.size() == 0) {
             story1_get_active_links_.Pass();
           } else {
-            FXL_LOG(ERROR) << "ACTIVE LINKS " << links->size() << " EXPECTED "
+            FXL_LOG(ERROR) << "ACTIVE LINKS " << links.size() << " EXPECTED "
                            << 0;
           }
           TestStory2_Run();

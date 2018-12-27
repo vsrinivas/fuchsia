@@ -33,7 +33,7 @@ void PageDelayingFacade::GetId(Page::GetIdCallback callback) {
 
 void PageDelayingFacade::GetSnapshot(
     fidl::InterfaceRequest<PageSnapshot> snapshot_request,
-    fidl::VectorPtr<uint8_t> key_prefix,
+    std::vector<uint8_t> key_prefix,
     fidl::InterfaceHandle<PageWatcher> watcher,
     Page::GetSnapshotCallback callback) {
   delaying_facade_.EnqueueCall(
@@ -41,21 +41,21 @@ void PageDelayingFacade::GetSnapshot(
       std::move(key_prefix), std::move(watcher), std::move(callback));
 }
 
-void PageDelayingFacade::Put(fidl::VectorPtr<uint8_t> key,
-                             fidl::VectorPtr<uint8_t> value,
+void PageDelayingFacade::Put(std::vector<uint8_t> key,
+                             std::vector<uint8_t> value,
                              Page::PutCallback callback) {
   delaying_facade_.EnqueueCall(&PageDelegate::Put, std::move(key),
                                std::move(value), std::move(callback));
 }
 
 void PageDelayingFacade::PutWithPriority(
-    fidl::VectorPtr<uint8_t> key, fidl::VectorPtr<uint8_t> value,
+    std::vector<uint8_t> key, std::vector<uint8_t> value,
     Priority priority, Page::PutWithPriorityCallback callback) {
   delaying_facade_.EnqueueCall(&PageDelegate::PutWithPriority, std::move(key),
                                std::move(value), priority, std::move(callback));
 }
 
-void PageDelayingFacade::PutReference(fidl::VectorPtr<uint8_t> key,
+void PageDelayingFacade::PutReference(std::vector<uint8_t> key,
                                       Reference reference, Priority priority,
                                       Page::PutReferenceCallback callback) {
   delaying_facade_.EnqueueCall(&PageDelegate::PutReference, std::move(key),
@@ -63,7 +63,7 @@ void PageDelayingFacade::PutReference(fidl::VectorPtr<uint8_t> key,
                                std::move(callback));
 }
 
-void PageDelayingFacade::Delete(fidl::VectorPtr<uint8_t> key,
+void PageDelayingFacade::Delete(std::vector<uint8_t> key,
                                 Page::DeleteCallback callback) {
   delaying_facade_.EnqueueCall(&PageDelegate::Delete, std::move(key),
                                std::move(callback));

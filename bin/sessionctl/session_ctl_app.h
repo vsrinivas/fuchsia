@@ -62,10 +62,10 @@ class SessionCtlApp {
   fuchsia::modular::StoryCommand MakeFocusModCommand(
       const std::string& mod_name);
 
-  fidl::VectorPtr<fuchsia::modular::StoryCommand> MakeAddModCommands(
+  std::vector<fuchsia::modular::StoryCommand> MakeAddModCommands(
       const std::string& mod_url, const std::string& mod_name);
 
-  fidl::VectorPtr<fuchsia::modular::StoryCommand> MakeRemoveModCommands(
+  std::vector<fuchsia::modular::StoryCommand> MakeRemoveModCommands(
       const std::string& mod_name);
 
   // Does a PostTask to Execute the commands on StoryPuppetMaster.
@@ -76,11 +76,11 @@ class SessionCtlApp {
   // |params| map of {command_line arg : command_line value}. Used for logging.
   void PostTaskExecuteStoryCommand(
       const std::string command_name,
-      fidl::VectorPtr<fuchsia::modular::StoryCommand> commands,
+      std::vector<fuchsia::modular::StoryCommand> commands,
       std::map<std::string, std::string> params);
 
   modular::FuturePtr<bool, std::string> ExecuteStoryCommand(
-      fidl::VectorPtr<fuchsia::modular::StoryCommand> commands,
+      std::vector<fuchsia::modular::StoryCommand> commands,
       const std::string& story_name);
 
   std::string GenerateMissingFlagString(

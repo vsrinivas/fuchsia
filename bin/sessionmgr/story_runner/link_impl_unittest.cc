@@ -77,11 +77,11 @@ class LinkImplTest : public testing::TestWithLedger {
     link->WatchAll(std::move(ptr));
   }
 
-  void SetLink(Link* link, fidl::VectorPtr<fidl::StringPtr> path,
+  void SetLink(Link* link, std::vector<std::string> path,
                const std::string& value) {
     fsl::SizedVmo vmo;
     FXL_CHECK(fsl::VmoFromString(value, &vmo));
-    link->Set(std::move(path), std::move(vmo).ToTransport());
+    link->Set(fidl::VectorPtr(std::move(path)), std::move(vmo).ToTransport());
   }
 
   fidl::BindingSet<Link, std::unique_ptr<LinkImpl>> links_;
@@ -103,7 +103,7 @@ TEST_F(LinkImplTest, GetNull) {
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] { return get_done; }));
 
   get_done = false;
-  fidl::VectorPtr<fidl::StringPtr> path;
+  fidl::VectorPtr<std::string> path;
   path->push_back("one");
   link->Get(std::move(path), [&](std::unique_ptr<fuchsia::mem::Buffer> value) {
     std::string content_string;
@@ -154,7 +154,7 @@ TEST_F(LinkImplTest, SetAndWatch) {
     ++notified_count;
   });
 
-  SetLink(link.get(), nullptr, "42");
+  SetLink(link.get(), {}, "42");
 
   bool synced{};
   link->Sync([&synced] { synced = true; });
@@ -175,11 +175,11 @@ TEST_F(LinkImplTest, SetAndWatchAndGet) {
     ++notified_count;
   });
 
-  SetLink(link.get(), nullptr, R"({
+  SetLink(link.get(), {}, R"({
     "one": 1,
     "two": 2
   })");
-  fidl::VectorPtr<fidl::StringPtr> path;
+  fidl::VectorPtr<std::string> path;
   path->push_back("two");
   SetLink(link.get(), std::move(path), R"("two")");
 
@@ -210,7 +210,7 @@ TEST_F(LinkImplTest, SetNonJsonAndGetJsonPointer) {
   auto storage = MakeStorage("page");
   auto link = MakeLink(storage.get(), "mylink");
 
-  SetLink(link.get(), nullptr, R"({
+  SetLink(link.get(), {}, R"({
     "one": 1,
     "two": 2invalidjson
   })");
@@ -219,7 +219,7 @@ TEST_F(LinkImplTest, SetNonJsonAndGetJsonPointer) {
   link->Sync([&synced] { synced = true; });
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] { return synced; }));
 
-  fidl::VectorPtr<fidl::StringPtr> path;
+  fidl::VectorPtr<std::string> path;
   path->push_back("one");
   bool get_done{};
   link->Get(std::move(path), [&](std::unique_ptr<fuchsia::mem::Buffer> value) {
@@ -235,11 +235,11 @@ TEST_F(LinkImplTest, Erase) {
   auto storage = MakeStorage("page");
   auto link = MakeLink(storage.get(), "mylink");
 
-  SetLink(link.get(), nullptr, R"({
+  SetLink(link.get(), {}, R"({
     "one": 1,
     "two": 2
   })");
-  fidl::VectorPtr<fidl::StringPtr> path;
+  std::vector<std::string> path;
   path.push_back("two");
   link->Erase(std::move(path));
 
@@ -286,8 +286,8 @@ TEST_F(LinkImplTest, MultipleConnections) {
 
   // Set two values on |link2|. On |link1|, we are guaranteed to get a
   // notification about the second value, eventually.
-  SetLink(link2.get(), nullptr, "3");
-  SetLink(link2.get(), nullptr, "4");
+  SetLink(link2.get(), {}, "3");
+  SetLink(link2.get(), {}, "4");
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] { return last_value == "4"; }));
   // There is always an initial notification of the current state, so we
   // will have been notified either 2 or 3 times: 2 if we only got a

@@ -64,7 +64,7 @@ class ExtendedStringView : public fxl::StringView {
     return leveldb::Slice(data(), size());
   }
 
-  fidl::VectorPtr<uint8_t> ToArray();
+  std::vector<uint8_t> ToArray();
 
   flatbuffers::Offset<flatbuffers::Vector<uint8_t>> ToFlatBufferVector(
       flatbuffers::FlatBufferBuilder* builder);
@@ -80,8 +80,8 @@ inline ExtendedStringView ToStringView(ExtendedStringView value) {
 // Returns the representation of the given value in LevelDB.
 inline leveldb::Slice ToSlice(ExtendedStringView value) { return value; }
 
-// Returns the fidl::VectorPtr representation of the given value.
-fidl::VectorPtr<uint8_t> ToArray(ExtendedStringView value);
+// Returns the std::vector representation of the given value.
+std::vector<uint8_t> ToArray(ExtendedStringView value);
 
 // Returns the fidl::Array representation of the given value.
 template <size_t N>

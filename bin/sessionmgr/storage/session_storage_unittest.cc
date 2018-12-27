@@ -112,8 +112,8 @@ TEST_F(SessionStorageTest, Create_VerifyData) {
   fidl::VectorPtr<fuchsia::modular::internal::StoryData> all_data;
   auto future_all_data = storage->GetAllStoryData();
   future_all_data->Then(
-      [&](fidl::VectorPtr<fuchsia::modular::internal::StoryData> data) {
-        all_data = std::move(data);
+      [&](std::vector<fuchsia::modular::internal::StoryData> data) {
+        all_data.reset(std::move(data));
       });
   RunLoopUntil([&] { return !!all_data; });
 
@@ -141,8 +141,8 @@ TEST_F(SessionStorageTest, CreateGetAllDelete) {
   auto future_all_data = storage->GetAllStoryData();
   fidl::VectorPtr<fuchsia::modular::internal::StoryData> all_data;
   future_all_data->Then(
-      [&](fidl::VectorPtr<fuchsia::modular::internal::StoryData> data) {
-        all_data = std::move(data);
+      [&](std::vector<fuchsia::modular::internal::StoryData> data) {
+        all_data.reset(std::move(data));
       });
 
   RunLoopUntil([&] { return !!all_data; });
@@ -154,8 +154,8 @@ TEST_F(SessionStorageTest, CreateGetAllDelete) {
   future_all_data = storage->GetAllStoryData();
   all_data.reset();
   future_all_data->Then(
-      [&](fidl::VectorPtr<fuchsia::modular::internal::StoryData> data) {
-        all_data = std::move(data);
+      [&](std::vector<fuchsia::modular::internal::StoryData> data) {
+        all_data.reset(std::move(data));
       });
   RunLoopUntil([&] { return !!all_data; });
   EXPECT_EQ(0u, all_data->size());
@@ -196,8 +196,8 @@ TEST_F(SessionStorageTest, CreateMultipleAndDeleteOne) {
   auto future_all_data = storage->GetAllStoryData();
   fidl::VectorPtr<fuchsia::modular::internal::StoryData> all_data;
   future_all_data->Then(
-      [&](fidl::VectorPtr<fuchsia::modular::internal::StoryData> data) {
-        all_data = std::move(data);
+      [&](std::vector<fuchsia::modular::internal::StoryData> data) {
+        all_data.reset(std::move(data));
       });
   RunLoopUntil([&] { return !!all_data; });
 
@@ -211,8 +211,8 @@ TEST_F(SessionStorageTest, CreateMultipleAndDeleteOne) {
   future_all_data = storage->GetAllStoryData();
   all_data.reset();
   future_all_data->Then(
-      [&](fidl::VectorPtr<fuchsia::modular::internal::StoryData> data) {
-        all_data = std::move(data);
+      [&](std::vector<fuchsia::modular::internal::StoryData> data) {
+        all_data.reset(std::move(data));
       });
   RunLoopUntil([&] { return !!all_data; });
 
@@ -282,11 +282,11 @@ TEST_F(SessionStorageTest, DeleteStoryDeletesStoryPage) {
   done = false;
   snapshot->GetEntries(to_array("") /* key_start */, nullptr /* token */,
                        [&](fuchsia::ledger::Status status,
-                           fidl::VectorPtr<fuchsia::ledger::Entry> entries,
+                           std::vector<fuchsia::ledger::Entry> entries,
                            fuchsia::ledger::TokenPtr next_token) {
                          ASSERT_EQ(fuchsia::ledger::Status::OK, status);
                          EXPECT_EQ(nullptr, next_token);
-                         EXPECT_TRUE(entries->empty());
+                         EXPECT_TRUE(entries.empty());
                          done = true;
                        });
   RunLoopUntil([&] { return done; });

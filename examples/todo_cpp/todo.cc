@@ -84,8 +84,8 @@ void GetEntries(fuchsia::ledger::PageSnapshotPtr snapshot,
               callback(status, {});
               return;
             }
-            for (size_t i = 0; i < new_entries->size(); ++i) {
-              entries.push_back(std::move(new_entries->at(i)));
+            for (size_t i = 0; i < new_entries.size(); ++i) {
+              entries.push_back(std::move(new_entries.at(i)));
             }
             if (status == fuchsia::ledger::Status::OK) {
               callback(fuchsia::ledger::Status::OK, std::move(entries));
@@ -166,14 +166,13 @@ void TodoApp::List(fuchsia::ledger::PageSnapshotPtr snapshot) {
              });
 }
 
-void TodoApp::GetKeys(std::function<void(fidl::VectorPtr<Key>)> callback) {
+void TodoApp::GetKeys(std::function<void(std::vector<Key>)> callback) {
   fuchsia::ledger::PageSnapshotPtr snapshot;
-  page_->GetSnapshot(snapshot.NewRequest(), nullptr, nullptr,
+  page_->GetSnapshot(snapshot.NewRequest(), {}, nullptr,
                      HandleResponse([this] { loop_->Quit(); }, "GetSnapshot"));
 
   fuchsia::ledger::PageSnapshot* snapshot_ptr = snapshot.get();
-  snapshot_ptr->GetKeys(
-      fidl::VectorPtr<uint8_t>::New(0), nullptr,
+  snapshot_ptr->GetKeys({}, nullptr,
       fxl::MakeCopyable([snapshot = std::move(snapshot), callback](
                             fuchsia::ledger::Status status, auto keys,
                             auto next_token) { callback(std::move(keys)); }));
@@ -184,17 +183,17 @@ void TodoApp::AddNew() {
              HandleResponse([this] { loop_->Quit(); }, "Put"));
 }
 
-void TodoApp::DeleteOne(fidl::VectorPtr<Key> keys) {
-  FXL_DCHECK(keys->size());
-  std::uniform_int_distribution<> distribution(0, keys->size() - 1);
-  page_->Delete(std::move(keys->at(distribution(rng_))),
+void TodoApp::DeleteOne(std::vector<Key> keys) {
+  FXL_DCHECK(keys.size());
+  std::uniform_int_distribution<> distribution(0, keys.size() - 1);
+  page_->Delete(std::move(keys.at(distribution(rng_))),
                 HandleResponse([this] { loop_->Quit(); }, "Delete"));
 }
 
 void TodoApp::Act() {
-  GetKeys([this](fidl::VectorPtr<Key> keys) {
+  GetKeys([this](std::vector<Key> keys) {
     size_t target_size = std::round(size_distribution_(rng_));
-    if (keys->size() > std::max(static_cast<size_t>(0), target_size)) {
+    if (keys.size() > std::max(static_cast<size_t>(0), target_size)) {
       DeleteOne(std::move(keys));
     } else {
       AddNew();

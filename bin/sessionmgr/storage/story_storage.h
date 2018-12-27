@@ -68,7 +68,7 @@ class StoryStorage : public PageClient {
   // Returns the current ModuleData for |module_path|. If not found, the
   // returned value is null.
   FuturePtr<ModuleDataPtr> ReadModuleData(
-      const fidl::VectorPtr<fidl::StringPtr>& module_path);
+      const std::vector<std::string>& module_path);
 
   // Writes |module_data| to storage. The returned future is completed
   // once |module_data| has been written and a notification confirming the
@@ -87,11 +87,11 @@ class StoryStorage : public PageClient {
   // It is illegal to change ModuleDataPtr->module_path in |mutate_fn| or to
   // reset to null an otherwise initialized ModuleDataPtr.
   FuturePtr<> UpdateModuleData(
-      const fidl::VectorPtr<fidl::StringPtr>& module_path,
+      const std::vector<std::string>& module_path,
       std::function<void(ModuleDataPtr*)> mutate_fn);
 
   // Returns all ModuleData entries for all mods.
-  FuturePtr<fidl::VectorPtr<ModuleData>> ReadAllModuleData();
+  FuturePtr<std::vector<ModuleData>> ReadAllModuleData();
 
   // =========================================================================
   // Link data

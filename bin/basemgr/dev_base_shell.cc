@@ -156,18 +156,18 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell>,
       }
 
       user_provider_->PreviousUsers(
-          [this](fidl::VectorPtr<fuchsia::modular::auth::Account> accounts) {
-            FXL_LOG(INFO) << "Found " << accounts->size()
+          [this](std::vector<fuchsia::modular::auth::Account> accounts) {
+            FXL_LOG(INFO) << "Found " << accounts.size()
                           << " users in the user "
                           << "database";
 
             // Not running in incognito mode. Add the user if not already
             // added.
             std::string account_id;
-            for (const auto& account : *accounts) {
+            for (const auto& account : accounts) {
               FXL_LOG(INFO) << "Found user " << account.display_name;
-              if (account.display_name->size() >= settings_.user.size() &&
-                  account.display_name->substr(0, settings_.user.size()) ==
+              if (account.display_name.size() >= settings_.user.size() &&
+                  account.display_name.substr(0, settings_.user.size()) ==
                       settings_.user) {
                 account_id = account.id;
                 break;

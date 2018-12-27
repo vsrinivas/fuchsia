@@ -48,15 +48,12 @@ std::string MakeMessageQueueKey(const std::string& queue_token) {
 }
 
 std::string EncodeModulePath(
-    const fidl::VectorPtr<fidl::StringPtr>& module_path) {
-  if (!module_path)
-    return "";
-
+    const std::vector<std::string>& module_path) {
   std::vector<std::string> segments;
-  segments.reserve(module_path->size());
-  for (const auto& module_path_part : *module_path) {
+  segments.reserve(module_path.size());
+  for (const auto& module_path_part : module_path) {
     segments.emplace_back(
-        StringEscape(module_path_part.get(), kCharsToEscape, kEscaper));
+        StringEscape(module_path_part, kCharsToEscape, kEscaper));
   }
   return fxl::JoinStrings(segments, kSubSeparator);
 }
@@ -95,10 +92,10 @@ std::string MakeLinkKey(const fuchsia::modular::LinkPath& link_path) {
   return key;
 }
 
-std::string MakeModuleKey(const fidl::VectorPtr<fidl::StringPtr>& module_path) {
-  FXL_DCHECK(!module_path.is_null() && module_path->size() > 0)
+std::string MakeModuleKey(const std::vector<std::string>& module_path) {
+  FXL_DCHECK(module_path.size() > 0)
       << EncodeModulePath(module_path);
-  FXL_DCHECK(module_path->at(0)->size() > 0) << EncodeModulePath(module_path);
+  FXL_DCHECK(module_path.at(0).size() > 0) << EncodeModulePath(module_path);
   std::string key{kModuleKeyPrefix};
   key.append(EncodeModulePath(module_path));
   return key;

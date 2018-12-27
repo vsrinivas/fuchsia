@@ -33,7 +33,7 @@ void Logger::LogError(const std::string& command,
 }
 
 void Logger::Log(const std::string& command,
-                 const fidl::VectorPtr<fidl::StringPtr>& params) const {
+                 const std::vector<std::string>& params) const {
   std::stringstream output;
 
   if (json_out_) {
@@ -43,7 +43,7 @@ void Logger::Log(const std::string& command,
       output << "Stories in this session:" << std::endl;
     }
 
-    for (auto& param : *params) {
+    for (auto& param : params) {
       output << param << std::endl;
     }
 
@@ -62,15 +62,15 @@ void Logger::Log(const std::string& command,
 
 std::string Logger::GenerateJsonLogString(
     const std::string& command,
-    const fidl::VectorPtr<fidl::StringPtr>& params) const {
+    const std::vector<std::string>& params) const {
   rapidjson::Document document = GetDocument(command);
 
   // Generate array of |params| strings.
   rapidjson::Document stories;
   stories.SetArray();
-  for (auto& param : *params) {
+  for (auto& param : params) {
     rapidjson::Value story;
-    story.SetString(param.get().data(), param.get().size());
+    story.SetString(param.data(), param.size());
     stories.PushBack(story, stories.GetAllocator());
   }
 

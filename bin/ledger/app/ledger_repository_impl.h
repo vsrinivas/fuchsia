@@ -74,7 +74,7 @@ class LedgerRepositoryImpl
                          fit::function<void(Status)> callback) override;
 
   // LedgerRepository:
-  void GetLedger(fidl::VectorPtr<uint8_t> ledger_name,
+  void GetLedger(std::vector<uint8_t> ledger_name,
                  fidl::InterfaceRequest<Ledger> ledger_request,
                  fit::function<void(Status)> callback) override;
   void Duplicate(
@@ -101,7 +101,7 @@ class LedgerRepositoryImpl
   void GetInstancesList(GetInstancesListCallback callback) override;
 
   void GetLedgerDebug(
-      fidl::VectorPtr<uint8_t> ledger_name,
+      std::vector<uint8_t> ledger_name,
       fidl::InterfaceRequest<ledger_internal::LedgerDebug> request,
       GetLedgerDebugCallback callback) override;
 

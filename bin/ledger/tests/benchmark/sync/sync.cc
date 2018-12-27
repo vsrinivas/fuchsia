@@ -209,10 +209,10 @@ void SyncBenchmark::Run() {
 
 void SyncBenchmark::OnChange(PageChange page_change, ResultState result_state,
                              OnChangeCallback callback) {
-  FXL_DCHECK(!page_change.changed_entries->empty());
+  FXL_DCHECK(!page_change.changed_entries.empty());
   size_t i =
-      std::stoul(convert::ToString(page_change.changed_entries->at(0).key));
-  changed_entries_received_ += page_change.changed_entries->size();
+      std::stoul(convert::ToString(page_change.changed_entries.at(0).key));
+  changed_entries_received_ += page_change.changed_entries.size();
   if (result_state == ResultState::COMPLETED ||
       result_state == ResultState::PARTIAL_STARTED) {
     TRACE_ASYNC_END("benchmark", "sync latency", i);
@@ -231,7 +231,7 @@ void SyncBenchmark::RunSingleChange(size_t change_number) {
     return;
   }
 
-  std::vector<fidl::VectorPtr<uint8_t>> keys(entries_per_change_);
+  std::vector<std::vector<uint8_t>> keys(entries_per_change_);
   for (size_t i = 0; i < entries_per_change_; i++) {
     // Keys are distinct, but have the common prefix <i>.
     keys[i] = generator_.MakeKey(change_number, kKeySize);

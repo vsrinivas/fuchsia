@@ -25,7 +25,7 @@ class ClipboardImpl : fuchsia::modular::Clipboard {
 
  private:
   // |fuchsia::modular::Clipboard|
-  void Push(fidl::StringPtr text) override;
+  void Push(std::string text) override;
 
   // |fuchsia::modular::Clipboard|
   void Peek(PeekCallback callback) override;
