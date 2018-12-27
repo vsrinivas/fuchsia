@@ -3226,6 +3226,19 @@ zx_status_t ath10k_mac_ap_disassoc_sta(struct ath10k* ar, const uint8_t* peer_ad
 /* Regulatory */
 /**************/
 
+static bool interested_channel(const struct ath10k_channel* channel) {
+    if (channel->flags & IEEE80211_CHAN_DISABLED) {
+        return false;
+    }
+
+    // For scan purposes, we only want to consider CBW20 channels
+    if (channel->center_freq.cbw20 == 0) {
+        return false;
+    }
+
+    return true;
+}
+
 static zx_status_t ath10k_update_channel_list(struct ath10k* ar) {
     ASSERT_MTX_HELD(&ar->conf_mutex);
 
@@ -3234,10 +3247,9 @@ static zx_status_t ath10k_update_channel_list(struct ath10k* ar) {
 
     for (unsigned band = 0; band < num_bands; band++) {
         for (unsigned i = 0; i < ath10k_supported_bands[band].n_channels; i++) {
-            if (ath10k_supported_bands[band].channels[i].flags & IEEE80211_CHAN_DISABLED) {
-                continue;
+            if (interested_channel(&ath10k_supported_bands[band].channels[i])) {
+                arg.n_channels++;
             }
-            arg.n_channels++;
         }
     }
 
@@ -3250,10 +3262,9 @@ static zx_status_t ath10k_update_channel_list(struct ath10k* ar) {
         for (unsigned i = 0; i < ath10k_supported_bands[band].n_channels; i++) {
             const struct ath10k_channel* channel = &ath10k_supported_bands[band].channels[i];
 
-            if (channel->flags & IEEE80211_CHAN_DISABLED) { continue; }
-
-            // For scan purposes, we only want to consider CBW20 channels
-            if (channel->center_freq.cbw20 == 0) { continue; }
+            if (!interested_channel(channel)) {
+                continue;
+            }
 
             ch->allow_ht = ath10k_supported_bands[band].ht_supported;
             ch->allow_vht = ath10k_supported_bands[band].vht_supported;
