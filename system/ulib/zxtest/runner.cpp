@@ -44,7 +44,10 @@ void TestDriverImpl::Reset() {
 
 } // namespace internal
 
-Runner::Runner() = default;
+Runner::Runner(Reporter&& reporter) : reporter_(std::move(reporter)) {
+    event_broadcaster_.Subscribe(&test_driver_);
+    event_broadcaster_.Subscribe(&reporter_);
+}
 Runner::~Runner() = default;
 
 TestRef Runner::RegisterTest(const fbl::String& test_case_name, const fbl::String& test_name,
@@ -82,6 +85,7 @@ TestRef Runner::RegisterTest(const fbl::String& test_case_name, const fbl::Strin
 }
 
 int Runner::Run(const Runner::Options& options) {
+    summary_.total_iterations = options.repeat;
     Filter(options.filter);
 
     event_broadcaster_.OnProgramStart(*this);
@@ -107,8 +111,15 @@ int Runner::Run(const Runner::Options& options) {
     return test_driver_.HadAnyFailures() ? -1 : 0;
 }
 
-void Runner::List(const Runner::Options& options, FILE* output) {
+void Runner::List(const Runner::Options& options) {
+    summary_.total_iterations = options.repeat;
     Filter(options.filter);
+    FILE* output = reporter_.stream();
+
+    if (output == nullptr) {
+        return;
+    }
+
     for (const auto& test_case : test_cases_) {
         if (test_case.MatchingTestCount() == 0) {
             continue;

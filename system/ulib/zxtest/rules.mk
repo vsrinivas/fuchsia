@@ -10,6 +10,7 @@ MODULE_COMPILEFLAGS += -fvisibility=hidden
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/event-broadcaster.cpp \
+    $(LOCAL_DIR)/reporter.cpp \
     $(LOCAL_DIR)/runner.cpp \
     $(LOCAL_DIR)/test-case.cpp \
     $(LOCAL_DIR)/test.cpp \

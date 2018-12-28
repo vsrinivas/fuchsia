@@ -12,12 +12,15 @@
 #include <utility>
 
 #include <zircon/assert.h>
+#include <zxtest/base/reporter.h>
 #include <zxtest/base/runner.h>
 #include <zxtest/base/test-driver.h>
 #include <zxtest/base/test.h>
 
 namespace zxtest {
+
 using internal::TestDriver;
+
 namespace test {
 namespace {
 
@@ -48,7 +51,7 @@ private:
 } // namespace
 
 void RunnerRegisterTest() {
-    Runner runner;
+    Runner runner(Reporter(/*stream*/ nullptr));
 
     TestRef ref =
         runner.RegisterTest<Test, FakeTest>(kTestCaseName, kTestName, kFileName, kLineNumber);
@@ -70,7 +73,7 @@ void RunnerRegisterTest() {
 }
 
 void RunnerRegisterTestWithCustomFactory() {
-    Runner runner;
+    Runner runner(Reporter(/*stream*/ nullptr));
     int test_counter = 0;
 
     TestRef ref = runner.RegisterTest<Test, FakeTest>(
@@ -93,7 +96,7 @@ void RunnerRegisterTestWithCustomFactory() {
 }
 
 void RunnerRunAllTests() {
-    Runner runner;
+    Runner runner(Reporter(/*stream*/ nullptr));
     int test_counter = 0;
     int test_2_counter = 0;
 
@@ -123,7 +126,7 @@ void RunnerRunAllTests() {
 }
 
 void RunnerRunAllTestsSameTestCase() {
-    Runner runner;
+    Runner runner(Reporter(/*stream*/ nullptr));
     int test_counter = 0;
     int test_2_counter = 0;
 
@@ -153,13 +156,13 @@ void RunnerRunAllTestsSameTestCase() {
 }
 
 void RunnerListTests() {
-    Runner runner;
     // Should produce the following output.
     constexpr char kExpectedOutput[] =
         "TestCase\n  .TestName\n  .TestName2\nTestCase2\n  .TestName\n  .TestName2\n";
     char buffer[100];
     memset(buffer, '\0', 100);
     FILE* memfile = fmemopen(buffer, 1024, "a");
+    Runner runner((Reporter(/*stream*/ memfile)));
 
     // Register 2 testcases and 2 tests.
     runner.RegisterTest<Test, FakeTest>(kTestCaseName, kTestName, kFileName, kLineNumber);
@@ -167,7 +170,7 @@ void RunnerListTests() {
     runner.RegisterTest<Test, FakeTest>(kTestCaseName2, kTestName, kFileName, kLineNumber);
     runner.RegisterTest<Test, FakeTest>(kTestCaseName2, kTestName2, kFileName, kLineNumber);
 
-    runner.List(Runner::kDefaultOptions, memfile);
+    runner.List(Runner::kDefaultOptions);
     fflush(memfile);
     ZX_ASSERT_MSG(strcmp(kExpectedOutput, buffer) == 0, "List output mismatch.");
 

@@ -5,10 +5,12 @@
 #pragma once
 
 #include <cstdio>
+
 #include <fbl/string.h>
 #include <fbl/vector.h>
 #include <zxtest/base/event-broadcaster.h>
 #include <zxtest/base/observer.h>
+#include <zxtest/base/reporter.h>
 #include <zxtest/base/test-case.h>
 #include <zxtest/base/test-driver.h>
 #include <zxtest/base/test-info.h>
@@ -73,6 +75,8 @@ struct TestRef {
 
 // Returns the amount of registered and active test and testcases.
 struct RunnerSummary {
+    // Number of iterations to run.
+    size_t total_iterations = 1;
     // Number of registered tests that match a filter.
     size_t active_test_count = 0;
     // Number of registered test cases that match a filter.
@@ -109,7 +113,8 @@ public:
     // Default Runner options.
     static const Options kDefaultOptions;
 
-    Runner();
+    Runner() = delete;
+    explicit Runner(Reporter&& reporter);
     Runner(const Runner&) = delete;
     Runner(Runner&&) = delete;
     ~Runner();
@@ -139,7 +144,7 @@ public:
     int Run(const Options& options);
 
     // List tests according to options.
-    void List(const Options& options, FILE* file);
+    void List(const Options& options);
 
     const RunnerSummary& summary() const { return summary_; }
 
@@ -165,6 +170,9 @@ private:
     // and exposure of the internal classes, so we can propagate errors in Helper methods
     // or those that are not within a Fixture scope.
     internal::TestDriverImpl test_driver_;
+
+    // Provides human readable output.
+    Reporter reporter_;
 
     // Runner information.
     RunnerSummary summary_;
