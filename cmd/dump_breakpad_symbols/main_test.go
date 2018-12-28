@@ -7,7 +7,6 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -83,9 +82,8 @@ func checkTarContents(contents []byte, expectedTarFileContents map[string][]byte
 func TestRunCommand(t *testing.T) {
 	// Expects dump_breakpad_symbols to produce the specified summary and
 	// ninja depfile from the given input sources.
-	expectOutputs := func(t *testing.T, inputs []*FakeFile, expectedSummary string, expectedDepFile string, expectedTarFileContents map[string][]byte, outDir string) {
+	expectOutputs := func(t *testing.T, inputs []*FakeFile, expectedDepFile string, expectedTarFileContents map[string][]byte, outDir string) {
 		depFile := NewFakeFile("deps.d", "")
-		summaryFile := NewFakeFile("summary.json", "")
 		tarFile := NewFakeFile("breakpad_symbols.tar.gz", "")
 
 		// Callback to mock executing the breakpad dump_syms binary.
@@ -103,11 +101,9 @@ func TestRunCommand(t *testing.T) {
 		for i := range inputs {
 			fileReaders[i] = inputs[i]
 		}
+
 		// Process the input files.
 		summary := processIdsFiles(fileReaders, outDir, execDumpSyms, createFile)
-		if err := writeSummary(summaryFile, summary); err != nil {
-			t.Fatalf("failed to write summary %s: %v", summaryFile.Name(), err)
-		}
 
 		// Write the tarball file.
 		if err := writeTarball(tarFile, summary, outDir); err != nil {
@@ -119,18 +115,10 @@ func TestRunCommand(t *testing.T) {
 		for i := range inputs {
 			inputPaths[i] = inputs[i].Name()
 		}
-		// Write the dep file.
-		if err := writeDepFile(depFile, summaryFile.Name(), inputPaths); err != nil {
-			t.Fatalf("failed to write depfile %s: %v", depFile.Name(), err)
-		}
 
-		// Expect matching summary.
-		actualSummary, err := ioutil.ReadAll(summaryFile)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if string(actualSummary) != expectedSummary {
-			t.Errorf("expected summary: %s. Got %s", expectedSummary, actualSummary)
+		// Write the dep file.
+		if err := writeDepFile(depFile, tarFile.Name(), inputPaths); err != nil {
+			t.Fatalf("failed to write depfile %s: %v", depFile.Name(), err)
 		}
 
 		// Expect matching depfile.
@@ -157,9 +145,8 @@ func TestRunCommand(t *testing.T) {
 			NewFakeFile("idsA.txt", ""),
 			NewFakeFile("idsB.txt", ""),
 		}
-		expectedSummary := "{}"
-		expectedDepFile := fmt.Sprintf("summary.json: %s %s\n", "idsA.txt", "idsB.txt")
-		expectOutputs(t, inputSources, expectedSummary, expectedDepFile, make(map[string][]byte), "out/")
+		expectedDepFile := fmt.Sprintf("breakpad_symbols.tar.gz: %s %s\n", "idsA.txt", "idsB.txt")
+		expectOutputs(t, inputSources, expectedDepFile, make(map[string][]byte), "out/")
 	})
 
 	t.Run("should handle a single input file", func(t *testing.T) {
@@ -181,6 +168,9 @@ func TestRunCommand(t *testing.T) {
 
 		os.MkdirAll("out/", os.ModePerm)
 		outDir, err := filepath.Abs("out/")
+		if err != nil {
+			t.Fatal(err)
+		}
 		defer os.RemoveAll(outDir)
 		for i := 0; i < 3; i++ {
 			ioutil.WriteFile(path.Join(outDir, files[i]), []byte(files[i]), 0644)
@@ -188,17 +178,8 @@ func TestRunCommand(t *testing.T) {
 			defer os.Remove(path.Join(outDir, files[i]))
 		}
 
-		expectedSummary, err := json.MarshalIndent(map[string]string{
-			"/path/to/binaryA.elf": path.Join(outDir, files[0]),
-			"/path/to/binaryB":     path.Join(outDir, files[1]),
-			"/path/to/binaryC.so":  path.Join(outDir, files[2]),
-		}, "", "  ")
-
-		if err != nil {
-			t.Fatal(err)
-		}
-		expectedDepFile := "summary.json: ids.txt\n"
-		expectOutputs(t, inputSources, string(expectedSummary), expectedDepFile, expectedTarFileContents, outDir)
+		expectedDepFile := "breakpad_symbols.tar.gz: ids.txt\n"
+		expectOutputs(t, inputSources, expectedDepFile, expectedTarFileContents, outDir)
 	})
 
 	t.Run("should handle multiple input files", func(t *testing.T) {
@@ -226,6 +207,9 @@ func TestRunCommand(t *testing.T) {
 
 		os.MkdirAll("out/", os.ModePerm)
 		outDir, err := filepath.Abs("out/")
+		if err != nil {
+			t.Fatal(err)
+		}
 		defer os.RemoveAll(outDir)
 		for i := 0; i < 6; i++ {
 			ioutil.WriteFile(path.Join(outDir, files[i]), []byte(files[i]), 0644)
@@ -233,19 +217,8 @@ func TestRunCommand(t *testing.T) {
 			defer os.Remove(path.Join(outDir, files[i]))
 		}
 
-		expectedSummary, err := json.MarshalIndent(map[string]string{
-			"/path/to/binaryA.elf": path.Join(outDir, files[0]),
-			"/path/to/binaryB":     path.Join(outDir, files[1]),
-			"/path/to/binaryC.so":  path.Join(outDir, files[2]),
-			"/path/to/binaryD":     path.Join(outDir, files[3]),
-			"/path/to/binaryE":     path.Join(outDir, files[4]),
-			"/path/to/binaryF":     path.Join(outDir, files[5]),
-		}, "", "  ")
-		if err != nil {
-			t.Fatal(err)
-		}
-		expectedDepFile := "summary.json: idsA.txt idsB.txt\n"
-		expectOutputs(t, inputSources, string(expectedSummary), expectedDepFile, expectedTarFileContents, outDir)
+		expectedDepFile := "breakpad_symbols.tar.gz: idsA.txt idsB.txt\n"
+		expectOutputs(t, inputSources, expectedDepFile, expectedTarFileContents, outDir)
 	})
 
 	t.Run("should skip duplicate binary paths", func(t *testing.T) {
@@ -276,23 +249,18 @@ func TestRunCommand(t *testing.T) {
 
 		os.MkdirAll("out/", os.ModePerm)
 		outDir, err := filepath.Abs("out/")
+		if err != nil {
+			t.Fatal(err)
+		}
 		defer os.RemoveAll(outDir)
 		for i := 0; i < 3; i++ {
 			ioutil.WriteFile(path.Join(outDir, files[i]), []byte(files[i]), 0644)
 			expectedTarFileContents[files[i]] = []byte(files[i])
 			defer os.Remove(path.Join(outDir, files[i]))
 		}
-		expectedSummary, err := json.MarshalIndent(map[string]string{
-			"/path/to/binaryA": path.Join(outDir, files[0]),
-			"/path/to/binaryB": path.Join(outDir, files[1]),
-			"/path/to/binaryC": path.Join(outDir, files[2]),
-		}, "", "  ")
-		if err != nil {
-			t.Fatal(err)
-		}
-		expectedDepFile := "summary.json: idsA.txt idsB.txt idsC.txt\n"
+		expectedDepFile := "breakpad_symbols.tar.gz: idsA.txt idsB.txt idsC.txt\n"
 
-		expectOutputs(t, inputSources, string(expectedSummary), expectedDepFile, expectedTarFileContents, outDir)
+		expectOutputs(t, inputSources, expectedDepFile, expectedTarFileContents, outDir)
 	})
 }
 

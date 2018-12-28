@@ -10,7 +10,6 @@ import (
 	"compress/gzip"
 	"crypto/sha1"
 	"encoding/hex"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -52,11 +51,10 @@ $ dump_breakpad_symbols \
 
 // Command line flag values
 var (
-	summaryFilepath string
-	depFilepath     string
-	dumpSymsPath    string
-	outdir          string
-	tarFilepath     string
+	depFilepath  string
+	dumpSymsPath string
+	outdir       string
+	tarFilepath  string
 )
 
 // ExecDumpSyms runs the beakpad `dump_syms` command and returns the output.
@@ -73,9 +71,6 @@ func init() {
 	}
 
 	// First set the flags ...
-	flag.StringVar(&summaryFilepath, "summary-file", "",
-		"Path to a JSON file to write that maps each binary to its symbol file. "+
-			"The output looks like {'/path/to/binary': '$out-dir/path/to/file'}. ")
 	flag.StringVar(&outdir, "out-dir", "",
 		"The directory where symbol output should be written")
 	flag.StringVar(&dumpSymsPath, "dump-syms-path", "",
@@ -128,28 +123,8 @@ func main() {
 	// Process the IDsFiles.
 	summary := processIdsFiles(inputReaders, outdir, execDumpSyms, createFile)
 
-	if summaryFilepath != "" {
-		// Create and open summary file.
-		summaryFile, err := os.Create(summaryFilepath)
-		if err != nil {
-			log.Fatalf("could not create file %s: %v", summaryFilepath, err)
-		}
-		defer summaryFile.Close()
-
-		// Write the summary.
-		if err := writeSummary(summaryFile, summary); err != nil {
-			fmt.Fprintf(os.Stderr, "failed to write summary %s: %v", summaryFilepath, err)
-			os.Exit(1)
-		}
-	}
-
-	outputFilepath := tarFilepath
-	if summaryFilepath != "" {
-		outputFilepath = summaryFilepath
-	}
-
 	// Write the dep file.
-	if err := writeDepFile(depFile, outputFilepath, inputPaths); err != nil {
+	if err := writeDepFile(depFile, tarFilepath, inputPaths); err != nil {
 		fmt.Fprintf(os.Stderr, "failed to write depfile %s: %v", depFilepath, err)
 		os.Exit(1)
 	}
@@ -226,25 +201,6 @@ func processIdsFiles(idsFiles []io.Reader, outdir string, execDumpSyms ExecDumpS
 	}
 
 	return binaryToSymbolFile
-}
-
-// writeSummary writes the summary file to the given io.Writer.
-func writeSummary(w io.Writer, summary map[string]string) error {
-	// TODO(kjharland): Sort the keys before printing to ensure predictable
-	// output or use a different data structure with a consistent ordering.
-
-	// Serialize the summary.
-	summaryBytes, err := json.MarshalIndent(summary, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal summary: %v", err)
-	}
-
-	// Write the summary.
-	if _, err := w.Write(summaryBytes); err != nil {
-		return fmt.Errorf("write failed: %v", err)
-	}
-
-	return nil
 }
 
 // writeDepFile writes a ninja dep file to the given io.Writer.
