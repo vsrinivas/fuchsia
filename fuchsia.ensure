@@ -16,13 +16,13 @@ $ResolvedVersions fuchsia.versions
 gn/gn/${platform} git_revision:bdb0fd02324b120cacde634a9235405061c8ea06
 
 # vpython
-infra/tools/luci/vpython/${platform} git_revision:00e2d8b49a4e7505d1c71f19d15c9e7c5b9245a5
+infra/tools/luci/vpython/${platform} git_revision:2237a617181dbfcee8b37f94a5b7d834f0f69fb0
 
 # LUCI editor
-infra/tools/luci/led/${platform} git_revision:522debceb9aeba7dbce7f811687a640656d4e8cd
+infra/tools/luci/led/${platform} git_revision:2237a617181dbfcee8b37f94a5b7d834f0f69fb0
 
 # LogDog CLI client
-infra/tools/luci/logdog/logdog/${platform} git_revision:cf9d281c2ff478928ff11dfa4995d09a97046990
+infra/tools/luci/logdog/logdog/${platform} git_revision:2237a617181dbfcee8b37f94a5b7d834f0f69fb0
 
 # Ninja
 infra/ninja/${platform} version:1.8.2
