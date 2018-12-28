@@ -8,10 +8,28 @@
 #include <asm.h>
 #include <arch/asm_macros.h>
 
-#define HCR_EL2_RW  (1 << 31)
-#define SCR_EL3_NS  (1 << 0)
-#define SCR_EL3_HCE (1 << 8)
-#define SCR_EL3_RW  (1 << 10)
+#define CURRENTEL_EL1           (0b01 << 2)
+#define CURRENTEL_EL2           (0b10 << 2)
+
+#define CPACR_EL1_FPEN          (0b11 << 20)
+#define ID_AA64PFR0_EL1_GIC     (0b1111 << 24)
+
+#define CNTHCTL_EL2_EL1PCEN     (1 << 1)
+#define CNTHCTL_EL2_EL1PCTEN    (1 << 0)
+#define CPTR_EL2_RES1           0x33ff
+#define HCR_EL2_RW              (1 << 31)
+#define ICC_SRE_EL2_SRE         (1 << 0)
+#define ICC_SRE_EL2_ENABLE      (1 << 3)
+
+#define SCR_EL3_HCE             (1 << 8)
+#define SCR_EL3_NS              (1 << 0)
+#define SCR_EL3_RW              (1 << 10)
+
+#define SPSR_ELX_DAIF           (0b1111 << 6)
+#define SPSR_ELX_EL1H           (0b0101)
+
+#define ICH_HCR_EL2             S3_4_C12_C11_0
+#define ICC_SRE_EL2             S3_4_C12_C9_5
 
 /* void arm64_context_switch(vaddr_t *old_sp, vaddr_t new_sp); */
 FUNCTION(arm64_context_switch)
@@ -51,66 +69,71 @@ END_FUNCTION(arm64_context_switch)
 FUNCTION(arm64_elX_to_el1)
     mrs x9, CurrentEL
 
-    cmp x9, #(0b01 << 2)
-    bne .notEL1
-    /* Already in EL1 */
-    ret
+    // Check the current exception level.
+    cmp x9, CURRENTEL_EL1
+    beq .Ltarget
+    cmp x9, CURRENTEL_EL2
+    beq .Lin_el2
+    // Otherwise, we are in EL3.
 
-.notEL1:
-    cmp x9, #(0b10 << 2)
-    beq .inEL2
-
-    /* set EL2 to 64bit and enable HVC instruction */
+    // Set EL2 to 64bit and enable the HVC instruction.
     mrs x9, scr_el3
-    orr x9, x9, #SCR_EL3_NS
-    orr x9, x9, #SCR_EL3_HCE
-    orr x9, x9, #SCR_EL3_RW
+    mov x10, SCR_EL3_NS | SCR_EL3_HCE | SCR_EL3_RW
+    orr x9, x9, x10
     msr scr_el3, x9
 
+    // Set the return address and exception level.
     adr x9, .Ltarget
     msr elr_el3, x9
-
-    mov x9, #((0b1111 << 6) | (0b0101)) /* EL1h runlevel */
+    mov x9, SPSR_ELX_DAIF | SPSR_ELX_EL1H
     msr spsr_el3, x9
-    b   .confEL1
 
-.inEL2:
-    /* Setup the init vector table for EL2. */
+.Lin_el2:
+    // Set the init vector table for EL2.
     adr_global x9, arm64_el2_init_table
     msr vbar_el2, x9
 
-    /* Ensure EL1 timers are properly configured, disable EL2 trapping of
-        EL1 access to timer control registers.  Also clear virtual offset.
-    */
+    // Disable EL1 timer traps and the timer offset.
     mrs x9, cnthctl_el2
-    orr x9, x9, #3
+    orr x9, x9, CNTHCTL_EL2_EL1PCEN | CNTHCTL_EL2_EL1PCTEN
     msr cnthctl_el2, x9
     msr cntvoff_el2, xzr
 
-    /* clear out stage 2 translations */
+    // Disable stage 2 translations.
     msr vttbr_el2, xzr
 
-    adr x9, .Ltarget
-    msr elr_el2, x9
-    mov x9, #((0b1111 << 6) | (0b0101)) /* EL1h runlevel */
-    msr spsr_el2, x9
-
-.confEL1:
-    /* disable EL2 coprocessor traps */
-    mov x9, #0x33ff
+    // Disable EL2 coprocessor traps.
+    mov x9, CPTR_EL2_RES1
     msr cptr_el2, x9
 
-    /* set EL1 to 64bit */
-    mov x9, #HCR_EL2_RW
-    msr hcr_el2, x9
-
-    /* disable EL1 FPU traps */
-    mov x9, #(0b11<<20)
+    // Disable EL1 FPU traps.
+    mov x9, CPACR_EL1_FPEN
     msr cpacr_el1, x9
 
-    /* set up the EL1 bounce interrupt */
-    mov x9, sp
-    msr sp_el1, x9
+    // Check whether the GIC system registers are supported.
+    mrs x9, id_aa64pfr0_el1
+    and x9, x9, ID_AA64PFR0_EL1_GIC
+    cbz x9, .Lno_gic_sr
+
+    // Enable the GIC system registers in EL2, and allow their use in EL1.
+    mrs x9, ICC_SRE_EL2
+    mov x10, ICC_SRE_EL2_ENABLE | ICC_SRE_EL2_SRE
+    orr x9, x9, x10
+    msr ICC_SRE_EL2, x9
+
+    // Disable the GIC virtual CPU interface.
+    msr ICH_HCR_EL2, xzr
+
+.Lno_gic_sr:
+    // Set EL1 to 64bit.
+    mov x9, HCR_EL2_RW
+    msr hcr_el2, x9
+
+    // Set the return address and exception level.
+    adr x9, .Ltarget
+    msr elr_el2, x9
+    mov x9, SPSR_ELX_DAIF | SPSR_ELX_EL1H
+    msr spsr_el2, x9
 
     isb
     eret
@@ -121,7 +144,7 @@ END_FUNCTION(arm64_elX_to_el1)
 
 FUNCTION(arm64_get_secondary_sp)
     mrs     x9, mpidr_el1
-    and     x9, x9, #0xffff             /* only use id/cluster */
+    and     x9, x9, #0xffff             /* Only use ID/cluster */
     mov     x10, #SMP_MAX_CPUS
 
     adr_global x11, arm64_secondary_sp_list
