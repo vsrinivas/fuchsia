@@ -50,7 +50,7 @@ fuchsia/go/${platform} git_revision:b8bd7d94a2ae6c80ab8b6ed5900d3eeba8a777c3
 
 # Rust
 @Subdir rust
-fuchsia/rust/${platform} git_revision:0a4a4ffc69f2d05eb8b8a32eaf9bd0607b69fe38
+fuchsia/rust/${platform} git_revision:79bbce488e115f9a553e932832991a14b7bfe20f
 
 # QEMU
 @Subdir qemu
