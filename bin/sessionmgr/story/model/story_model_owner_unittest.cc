@@ -202,6 +202,25 @@ TEST_F(StoryModelOwnerTest, ObserversAreNotified) {
   EXPECT_TRUE(got_update3);
 }
 
+TEST_F(StoryModelOwnerTest, ObserversAreNotNotifiedOnNoChange) {
+  // Observers aren't told when an observed mutation doesn't change the model.
+  auto owner = Create("test");
+  auto mutator = owner->NewMutator();
+  auto observer = owner->NewObserver();
+
+  bool got_update{false};
+  observer->RegisterListener([&](const StoryModel& model) {
+    got_update = true;
+  });
+
+  std::vector<StoryModelMutation> commands;
+  commands.resize(1);
+  commands[0].set_set_visibility_state(StoryVisibilityState::DEFAULT);
+  model_storage()->Observe(std::move(commands));
+  RunLoopUntilIdle();
+  EXPECT_FALSE(got_update);
+}
+
 TEST_F(StoryModelOwnerTest, ObserversLifecycle_ClientDestroyed) {
   // When the client destroys its observer object, it no longer receives
   // updates.

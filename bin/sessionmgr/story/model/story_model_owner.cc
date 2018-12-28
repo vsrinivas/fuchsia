@@ -148,7 +148,12 @@ void StoryModelOwner::HandleObservedMutations(
   // HandleObservedMutations() will only be called on a single thread.
   StoryModel old_model;
   FXL_CHECK(fidl::Clone(model_, &old_model) == ZX_OK);
-  model_ = ApplyMutations(std::move(old_model), std::move(commands));
+  model_ = ApplyMutations(old_model, std::move(commands));
+
+  // Don't notify anyone if the model didn't change.
+  if (model_ == old_model) {
+    return;
+  }
 
   executor_->schedule_task(fit::make_promise([this] {
                              for (auto& listener : listeners_) {
