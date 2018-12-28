@@ -1042,7 +1042,7 @@ void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
   (*verbs)[Verb::kBacktrace] = std::move(backtrace);
 
   (*verbs)[Verb::kContinue] =
-      VerbRecord(&DoContinue, {"continue", "c"}, kContinueShortHelp,
+      VerbRecord(&DoContinue, {"continue", "cont", "c"}, kContinueShortHelp,
                  kContinueHelp, CommandGroup::kStep, SourceAffinity::kSource);
   (*verbs)[Verb::kFinish] =
       VerbRecord(&DoFinish, {"finish", "fi"}, kFinishShortHelp, kFinishHelp,
