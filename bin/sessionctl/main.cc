@@ -68,51 +68,63 @@ std::vector<ActiveSession> FindAllSessions() {
 
 std::string GetUsage() {
   return R"(sessionctl <flags> <command> <argument>
-    Example:
-    sessionctl add_mod slider_mod
+Example:
+sessionctl add_mod slider_mod
 
-    sessionctl --mod_name=mod1 --story_name=story1 --focus_mod=false 
-               --focus_story=false add_mod slider_mod
+sessionctl --mod_name=mod1 --story_name=story1 --focus_mod=false
+            --focus_story=false add_mod slider_mod
 
-    sessionctl --mod_name=mod1 --story_name=story1 remove_mod
+sessionctl --story_name=story1 remove_mod slider_mod
 
-    <flags>
-    --story_name=STORY_NAME
-    --mod_name=MOD_NAME
-    --focus_mod=false
-        Don't focus the mod.
-    --focus_story=false
-        Don't focus the story.
-    --json_out
-        If flag is set output json for consuming instead of text.
+<flags>
+--story_name=STORY_NAME
+--mod_name=MOD_NAME
+--focus_mod=false
+    Don't focus the mod.
+--focus_story=false
+    Don't focus the story.
+--json_out
+    If flag is set output json for consuming instead of text.
 
-    <command>
-    add_mod
-      [--story_name=foo] [--mod_name=bar] [--focus_mod=false] [--focus_story=false] add_mod MOD_URL
-        Add new mod or update an existing mod if a mod with --mod_name already 
-        exists in --story_name.
-        Defaults --story_name and --mod_name to MOD_URL. 
-        Defaults --focus_mod and --focus_story to 'true'.
-        optional: --story_name, --mod_name, --focus_mod, --focus_story, 
-                  --json_out
+<command>
+add_mod
+  Usage: [--story_name=foo] [--mod_name=bar] [--focus_mod=false] [--focus_story=false] add_mod MOD_URL
 
-    remove_mod
-      Remove the mod.
-        required: --mod_name, --story_name
+  Add a new mod or update an existing mod if a mod with --mod_name already
+  exists in --story_name.
+  Defaults --story_name and --mod_name to MOD_URL.
+  Defaults --focus_mod and --focus_story to 'true'.
 
-    delete_story
-      Delete the story.
-        required: --story_name
-        optional: --json_out
+  MOD_URL
+    Mods have a unique "mod_url". It's the mod package's name.
+    In BUILD.gn fuchsia_package_name = "mod_url" or mod_url comes from
+    flutter_app("mod_url") when there is no fuchsia_package_name set.
 
-    list_stories
-      List all the stories in the current session.
-      
-    <argument>
-    MOD_URL
-      Mods have a unique "mod_url". It's the mod package's name.
-      In BUILD.gn fuchsia_package_name = "mod_url" or mod_url comes from
-      flutter_app("mod_url") when there is no fuchsia_package_name set.)";
+  optional: --story_name, --mod_name, --focus_mod, --focus_story
+
+remove_mod
+  Usage: [--story_name=foo] remove_mod MOD_NAME
+
+  Removes an existing mod by name. If the mod was added with add_mod, 
+  use the value you passed to add_mod's --mod_name flag or the default
+  value which would be the mod_url.
+  Defaults --story_name to MOD_NAME.
+
+  MOD_NAME
+      The name of the mod.
+
+  optional: --story_name
+
+delete_story
+  Usage: delete_story STORY_NAME
+
+  Deletes the story.
+
+  STORY_NAME
+    The name of the story.
+
+list_stories
+  List all the stories in the current session.)";
 }
 
 PuppetMasterPtr ConnectToPuppetMaster(const ActiveSession& session) {

@@ -33,27 +33,20 @@ std::string SessionCtlApp::ExecuteCommand(
 
 std::string SessionCtlApp::ExecuteRemoveModCommand(
     const fxl::CommandLine& command_line) {
-  std::string story_name;
-  std::string mod_name;
-  std::vector<std::string> missing_flags;
-
-  if (command_line.HasOption(kStoryNameFlagString)) {
-    command_line.GetOptionValue(kStoryNameFlagString, &story_name);
-  } else {
-    missing_flags.push_back(kStoryNameFlagString);
-  }
-
-  if (command_line.HasOption(kModNameFlagString)) {
-    command_line.GetOptionValue(kModNameFlagString, &mod_name);
-  } else {
-    missing_flags.push_back(kModNameFlagString);
-  }
-
-  std::string parsing_error = GenerateMissingFlagString(missing_flags);
-  if (!parsing_error.empty()) {
-    logger_.LogError(kAddModCommandString, parsing_error);
+  if (command_line.positional_args().size() == 1) {
+    auto parsing_error =
+        "Missing MOD_NAME. Ex: sessionctl remove_mod slider_mod";
+    logger_.LogError(kRemoveModCommandString, parsing_error);
     return parsing_error;
   }
+
+  // Get the mod name and default the story name to the mod name
+  std::string mod_name = command_line.positional_args().at(1);
+  std::string story_name = mod_name;
+
+  // If the story_name flag isn't set, the story name will remain defaulted to
+  // the mod name
+  command_line.GetOptionValue(kStoryNameFlagString, &story_name);
 
   auto commands = MakeRemoveModCommands(mod_name);
 
@@ -64,13 +57,13 @@ std::string SessionCtlApp::ExecuteRemoveModCommand(
   PostTaskExecuteStoryCommand(kRemoveModCommandString, std::move(commands),
                               params);
 
-  return parsing_error;
+  return "";
 }
 
 std::string SessionCtlApp::ExecuteAddModCommand(
     const fxl::CommandLine& command_line) {
   if (command_line.positional_args().size() == 1) {
-    auto parsing_error = "Missing mod_url. Ex: sessionctl add_mod slider_mod";
+    auto parsing_error = "Missing MOD_URL. Ex: sessionctl add_mod slider_mod";
     logger_.LogError(kAddModCommandString, parsing_error);
     return parsing_error;
   }
@@ -114,20 +107,15 @@ std::string SessionCtlApp::ExecuteAddModCommand(
 
 std::string SessionCtlApp::ExecuteDeleteStoryCommand(
     const fxl::CommandLine& command_line) {
-  std::string story_name;
-  std::vector<std::string> missing_flags;
-
-  if (command_line.HasOption(kStoryNameFlagString)) {
-    command_line.GetOptionValue(kStoryNameFlagString, &story_name);
-  } else {
-    missing_flags.emplace_back(kStoryNameFlagString);
-  }
-
-  std::string parsing_error = GenerateMissingFlagString(missing_flags);
-  if (!parsing_error.empty()) {
-    logger_.LogError(kDeleteStoryCommandString, parsing_error);
+  if (command_line.positional_args().size() == 1) {
+    auto parsing_error =
+        "Missing STORY_NAME. Ex. sessionctl delete_story story";
+    logger_.LogError(kStoryNameFlagString, parsing_error);
     return parsing_error;
   }
+
+  // Get the story name
+  std::string story_name = command_line.positional_args().at(1);
 
   std::map<std::string, std::string> params = {
       {kStoryNameFlagString, story_name}};
@@ -139,7 +127,7 @@ std::string SessionCtlApp::ExecuteDeleteStoryCommand(
     });
   });
 
-  return parsing_error;
+  return "";
 }
 
 std::string SessionCtlApp::ExecuteListStoriesCommand() {

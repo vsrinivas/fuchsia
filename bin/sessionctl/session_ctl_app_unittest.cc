@@ -125,21 +125,21 @@ TEST_F(SessionCtlAppTest, AddModMissingModUrl) {
       sessionctl.ExecuteCommand(kAddModCommandString, command_line);
 
   RunLoopUntilIdle();
-  EXPECT_EQ("Missing mod_url. Ex: sessionctl add_mod slider_mod", error);
+  EXPECT_EQ("Missing MOD_URL. Ex: sessionctl add_mod slider_mod", error);
 }
 
 TEST_F(SessionCtlAppTest, RemoveMod) {
   // Add a mod
-  auto command_line = fxl::CommandLineFromInitializerList(
-      {"sessionctl", "add_mod", "mod"});
+  auto command_line =
+      fxl::CommandLineFromInitializerList({"sessionctl", "add_mod", "mod"});
   SessionCtlApp sessionctl = CreateSessionCtl(command_line);
   RunLoopUntilCommandExecutes([&] {
     return sessionctl.ExecuteCommand(kAddModCommandString, command_line);
   });
 
   // Remove the mod
-  command_line = fxl::CommandLineFromInitializerList(
-      {"sessionctl", "--mod_name=mod", "--story_name=mod"});
+  command_line =
+      fxl::CommandLineFromInitializerList({"sessionctl", "remove_mod", "mod"});
   RunLoopUntilCommandExecutes([&] {
     return sessionctl.ExecuteCommand(kRemoveModCommandString, command_line);
   });
@@ -153,29 +153,55 @@ TEST_F(SessionCtlAppTest, RemoveMod) {
   EXPECT_EQ(2, test_executor_.execute_count());
 }
 
-TEST_F(SessionCtlAppTest, RemoveModMissingFlags) {
-  // Attempt to remove a mod without the required flags
-  auto command_line = fxl::CommandLineFromInitializerList({"sessionctl"});
+TEST_F(SessionCtlAppTest, RemoveModOverrideDefault) {
+  // Add a mod with overridden story and mod names
+  auto command_line = fxl::CommandLineFromInitializerList(
+      {"sessionctl", "--story_name=s", "--mod_name=m", "add_mod", "mod"});
+  SessionCtlApp sessionctl = CreateSessionCtl(command_line);
+  RunLoopUntilCommandExecutes([&] {
+    return sessionctl.ExecuteCommand(kAddModCommandString, command_line);
+  });
+
+  // Remove the mod with an overridden story name
+  command_line = fxl::CommandLineFromInitializerList(
+      {"sessionctl", "--story_name=s", "remove_mod", "m"});
+  RunLoopUntilCommandExecutes([&] {
+    return sessionctl.ExecuteCommand(kRemoveModCommandString, command_line);
+  });
+
+  // Assert session_storage still contains the story
+  auto story_data = GetStoryData("s");
+  ASSERT_TRUE(story_data);
+  EXPECT_EQ("s", story_data->story_name);
+  EXPECT_EQ("m",
+            test_executor_.last_commands().at(0).remove_mod().mod_name->at(0));
+  EXPECT_EQ(2, test_executor_.execute_count());
+}
+
+TEST_F(SessionCtlAppTest, RemoveModMissingModName) {
+  // Attempt to remove a mod without a mod name
+  auto command_line =
+      fxl::CommandLineFromInitializerList({"sessionctl", "remove_mod"});
   SessionCtlApp sessionctl = CreateSessionCtl(command_line);
   std::string error =
       sessionctl.ExecuteCommand(kRemoveModCommandString, command_line);
 
   RunLoopUntilIdle();
-  EXPECT_EQ("flags missing: --story_name --mod_name", error);
+  EXPECT_EQ("Missing MOD_NAME. Ex: sessionctl remove_mod slider_mod", error);
 }
 
 TEST_F(SessionCtlAppTest, DeleteStory) {
-  // Add a mod
+  // Add a mod with overridden story name
   auto command_line = fxl::CommandLineFromInitializerList(
-      {"sessionctl", "add_mod", "mod"});
+      {"sessionctl", "--story_name=story", "add_mod", "mod"});
   SessionCtlApp sessionctl = CreateSessionCtl(command_line);
   RunLoopUntilCommandExecutes([&] {
     return sessionctl.ExecuteCommand(kAddModCommandString, command_line);
   });
 
   // Remove the story
-  command_line =
-      fxl::CommandLineFromInitializerList({"sessionctl", "--story_name=mod"});
+  command_line = fxl::CommandLineFromInitializerList(
+      {"sessionctl", "delete_story", "story"});
   RunLoopUntilCommandExecutes([&] {
     return sessionctl.ExecuteCommand(kDeleteStoryCommandString, command_line);
   });
@@ -185,15 +211,16 @@ TEST_F(SessionCtlAppTest, DeleteStory) {
   EXPECT_EQ(1, test_executor_.execute_count());
 }
 
-TEST_F(SessionCtlAppTest, DeleteStoryMissingFlags) {
+TEST_F(SessionCtlAppTest, DeleteStoryMissingStoryName) {
   // Attempt to delete a story without the required flags
-  auto command_line = fxl::CommandLineFromInitializerList({"sessionctl"});
+  auto command_line =
+      fxl::CommandLineFromInitializerList({"sessionctl", "delete_story"});
   SessionCtlApp sessionctl = CreateSessionCtl(command_line);
   std::string error =
       sessionctl.ExecuteCommand(kDeleteStoryCommandString, command_line);
 
   RunLoopUntilIdle();
-  EXPECT_EQ("flags missing: --story_name", error);
+  EXPECT_EQ("Missing STORY_NAME. Ex. sessionctl delete_story story", error);
 }
 
 }  // namespace
