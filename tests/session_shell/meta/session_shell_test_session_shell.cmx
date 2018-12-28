@@ -5,6 +5,7 @@
     "sandbox": {
         "services": [
             "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.modular.ComponentContext",
             "fuchsia.modular.ModuleContext",
             "fuchsia.modular.PuppetMaster",
             "fuchsia.modular.SessionShellContext",

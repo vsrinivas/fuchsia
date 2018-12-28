@@ -210,8 +210,8 @@ void SessionmgrImpl::InitializeUser(
     fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
     fidl::InterfaceHandle<fuchsia::modular::internal::UserContext>
         user_context) {
-    agent_token_manager_ = agent_token_manager.Bind();
-    AtEnd(Reset(&agent_token_manager_));
+  agent_token_manager_ = agent_token_manager.Bind();
+  AtEnd(Reset(&agent_token_manager_));
 
   user_context_ = user_context.Bind();
   AtEnd(Reset(&user_context_));
@@ -664,6 +664,11 @@ void SessionmgrImpl::RunSessionShell(
                  request) {
         session_shell_context_bindings_.AddBinding(this, std::move(request));
       });
+  session_shell_services_.AddService<fuchsia::modular::ComponentContext>(
+      [this](
+          fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request) {
+        session_shell_component_context_impl_->Connect(std::move(request));
+      });
   session_shell_services_.AddService<fuchsia::modular::PuppetMaster>(
       [this](fidl::InterfaceRequest<fuchsia::modular::PuppetMaster> request) {
         puppet_master_impl_->Connect(std::move(request));
@@ -685,9 +690,10 @@ void SessionmgrImpl::RunSessionShell(
   // |service_list| specifies which services are available to the child
   // component from which ServiceProvicer. There is a lot of indirection here.
   auto service_list = fuchsia::sys::ServiceList::New();
-  service_list->names.push_back(fuchsia::modular::SessionShellContext::Name_);
-  service_list->names.push_back(fuchsia::modular::PuppetMaster::Name_);
+  service_list->names.push_back(fuchsia::modular::ComponentContext::Name_);
   service_list->names.push_back(fuchsia::modular::IntelligenceServices::Name_);
+  service_list->names.push_back(fuchsia::modular::PuppetMaster::Name_);
+  service_list->names.push_back(fuchsia::modular::SessionShellContext::Name_);
   service_list->provider = std::move(session_shell_service_provider_ptr_);
 
   session_shell_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(

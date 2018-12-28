@@ -140,8 +140,7 @@ class StoryProviderStateWatcherImpl : fuchsia::modular::StoryProviderWatcher {
 
 // Cf. README.md for what this test does in general and how. The test cases are
 // described in detail in comments below.
-class TestApp : public modular::testing::SessionShellBase
-{
+class TestApp : public modular::testing::SessionShellBase {
  public:
   using ViewId = fuchsia::modular::ViewIdentifier;
 
@@ -150,20 +149,18 @@ class TestApp : public modular::testing::SessionShellBase
     TestInit(__FILE__);
 
     startup_context->ConnectToEnvironmentService(puppet_master_.NewRequest());
+    startup_context->ConnectToEnvironmentService(
+        component_context_.NewRequest());
     story_provider_state_watcher_.Watch(story_provider());
 
     // Until we use RequestStart() for the first time, there must be no calls on
     // the SessionShell service.
     session_shell_impl()->set_on_attach_view(
-        [](ViewId) {
-          Fail("AttachView() called without RequestStart().");
-        });
+        [](ViewId) { Fail("AttachView() called without RequestStart()."); });
     session_shell_impl()->set_on_detach_view(
-        [](ViewId) {
-          Fail("DetachView() called without RequestStart().");
-        });
+        [](ViewId) { Fail("DetachView() called without RequestStart()."); });
 
-    TestStoryProvider_GetStoryInfo_Null();
+    TestComponentContext_GetPackageName_Works();
   }
 
   ~TestApp() override = default;
@@ -179,6 +176,22 @@ class TestApp : public modular::testing::SessionShellBase
       fidl::InterfaceHandle<
           fuchsia::sys::ServiceProvider> /*outgoing_services*/) override {
     create_view_.Pass();
+  }
+
+  // Test Case: When we call GetPackageName() on ComponentContext acquired from
+  // our environment, it works.
+
+  TestPoint component_context_package_name_{
+      "ComponentContext.GetPackageName() works"};
+
+  void TestComponentContext_GetPackageName_Works() {
+    component_context_->GetPackageName([this](fidl::StringPtr name) {
+      if (name) {
+        component_context_package_name_.Pass();
+      }
+
+      TestStoryProvider_GetStoryInfo_Null();
+    });
   }
 
   // Test Case: The story info of a story that does not exist is null.
@@ -569,9 +582,7 @@ class TestApp : public modular::testing::SessionShellBase
     story_controller_->RequestStart();
 
     session_shell_impl()->set_on_attach_view(
-        [this](ViewId) {
-          story4_attach_view_.Pass();
-        });
+        [this](ViewId) { story4_attach_view_.Pass(); });
 
     story_controller_->GetInfo([this](fuchsia::modular::StoryInfo info,
                                       fuchsia::modular::StoryState state) {
@@ -587,9 +598,7 @@ class TestApp : public modular::testing::SessionShellBase
 
   void TestStory4_Stop() {
     session_shell_impl()->set_on_detach_view(
-        [this](ViewId) {
-          story4_detach_view_.Pass();
-        });
+        [this](ViewId) { story4_detach_view_.Pass(); });
 
     story_controller_->Stop([this] {
       TeardownStoryController();
@@ -609,7 +618,6 @@ class TestApp : public modular::testing::SessionShellBase
         story_info_.id, [this](fuchsia::modular::StoryInfoPtr info) {
           TestStory4_InfoAfterDeleteIsNull(std::move(info));
         });
-
   }
 
   TestPoint story4_info_after_delete_{"Story4 Info after Delete is null"};
@@ -673,9 +681,7 @@ class TestApp : public modular::testing::SessionShellBase
     story_controller_->RequestStart();
 
     session_shell_impl()->set_on_attach_view(
-        [this](ViewId) {
-          story5_attach_view_.Pass();
-        });
+        [this](ViewId) { story5_attach_view_.Pass(); });
 
     story_controller_->GetInfo([this](fuchsia::modular::StoryInfo info,
                                       fuchsia::modular::StoryState state) {
@@ -714,7 +720,6 @@ class TestApp : public modular::testing::SessionShellBase
         story_info_.id, [this](fuchsia::modular::StoryInfoPtr info) {
           TestStory5_InfoAfterDeleteIsNull(std::move(info));
         });
-
   }
 
   TestPoint story5_info_after_delete_{"Story5 Info after Delete is null"};
@@ -777,9 +782,7 @@ class TestApp : public modular::testing::SessionShellBase
     story_controller_->RequestStart();
 
     session_shell_impl()->set_on_attach_view(
-        [this](ViewId) {
-          story6_attach_view_.Pass();
-        });
+        [this](ViewId) { story6_attach_view_.Pass(); });
 
     story_controller_->GetInfo([this](fuchsia::modular::StoryInfo info,
                                       fuchsia::modular::StoryState state) {
@@ -794,9 +797,7 @@ class TestApp : public modular::testing::SessionShellBase
     // If we get a DetachView() call during logout, that's a failure.
     session_shell_impl()->set_detach_delay(zx::sec(0));
     session_shell_impl()->set_on_detach_view(
-        [](ViewId) {
-          Fail("DetachView() Received on Logout");
-        });
+        [](ViewId) { Fail("DetachView() Received on Logout"); });
 
     Signal(modular::testing::kTestShutdown);
   }
@@ -806,6 +807,7 @@ class TestApp : public modular::testing::SessionShellBase
   StoryProviderStateWatcherImpl story_provider_state_watcher_;
 
   fuchsia::modular::PuppetMasterPtr puppet_master_;
+  fuchsia::modular::ComponentContextPtr component_context_;
   fuchsia::modular::StoryPuppetMasterPtr story_puppet_master_;
   fuchsia::modular::StoryControllerPtr story_controller_;
   fuchsia::modular::LinkPtr session_shell_link_;
