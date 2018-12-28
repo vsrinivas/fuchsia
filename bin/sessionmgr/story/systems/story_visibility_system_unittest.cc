@@ -19,9 +19,8 @@ namespace {
 class StoryVisibilitySystemTest : public ::testing::Test {
  protected:
   StoryVisibilitySystemTest() {
-    auto mutator = std::make_unique<TestMutator>();
-    mutator_ = mutator.get();
-    system_ = std::make_unique<StoryVisibilitySystem>(std::move(mutator));
+    system_ =
+        std::make_unique<StoryVisibilitySystem>(TestMutator::Create(&mutator_));
   }
 
   std::unique_ptr<StoryVisibilitySystem> system_;

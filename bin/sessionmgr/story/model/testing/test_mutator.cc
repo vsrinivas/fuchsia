@@ -6,6 +6,13 @@
 
 namespace modular {
 
+
+std::unique_ptr<StoryMutator> TestMutator::Create(TestMutator** ptr) {
+  auto mutator = std::make_unique<TestMutator>();
+  *ptr = mutator.get();
+  return mutator;
+}
+
 fit::consumer<> TestMutator::ExecuteInternal(
     std::vector<fuchsia::modular::storymodel::StoryModelMutation> commands) {
   fit::bridge<> bridge;

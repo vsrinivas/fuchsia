@@ -24,6 +24,15 @@ namespace modular {
 // unblock.
 class TestMutator : public StoryMutator {
  public:
+  // Convenience factory allowing the caller to retain a pointer to the TestMutator
+  // when constructing a class that accepts a StoryMutator as a constructor argument.
+  //
+  // Usage:
+  //
+  // TestMutator* test_mutator;
+  // Foo foo(TestMutator::Create(&test_mutator));
+  static std::unique_ptr<StoryMutator> Create(TestMutator** ptr);
+
   fit::consumer<> ExecuteInternal(
       std::vector<fuchsia::modular::storymodel::StoryModelMutation> commands)
       override;
