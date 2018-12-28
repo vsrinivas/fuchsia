@@ -75,6 +75,10 @@ class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
   FuturePtr<> SwapSessionShell(
       fuchsia::modular::AppConfig session_shell_config);
 
+  // Restarts the current session by logging out the current user and logging
+  // that user back in.
+  void RestartSession();
+
   // |fuchsia::modular::UserProvider|, also called by |basemgr_impl|.
   void Login(fuchsia::modular::UserLoginParams params) override;
 

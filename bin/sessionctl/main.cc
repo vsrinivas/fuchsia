@@ -11,6 +11,7 @@
 #include <vector>
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/modular/internal/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/future.h>
 #include <lib/async/cpp/task.h>
@@ -28,43 +29,10 @@
 using ::fuchsia::modular::PuppetMaster;
 using ::fuchsia::modular::PuppetMasterPtr;
 
-struct ActiveSession {
+struct DebugService {
   std::string name;
   std::string service_path;
 };
-
-void FindSessionsForPath(const char* glob_str, const char* regex_str,
-                         std::vector<ActiveSession>* sessions) {
-  glob_t globbuf;
-  bool sessionmgr_exists = glob(glob_str, 0, nullptr, &globbuf) == 0;
-  std::regex name_regex(regex_str);
-  if (sessionmgr_exists) {
-    for (size_t i = 0; i < globbuf.gl_pathc; ++i) {
-      ActiveSession s;
-      s.service_path = globbuf.gl_pathv[i];
-      std::smatch match;
-      FXL_CHECK(std::regex_search(s.service_path, match, name_regex))
-          << s.service_path;
-      s.name = match[1];
-      sessions->push_back(std::move(s));
-    }
-    globfree(&globbuf);
-  }
-}
-
-// Returns a list of all running sessions.
-std::vector<ActiveSession> FindAllSessions() {
-  const char kRegex[] = "/sessionmgr.cmx/(\\d+)";
-  // See peridot/bin/sessionmgr/sessionmgr_impl.cc's definition of
-  // kSessionCtlDir for "sessionctl". These must match.
-  std::vector<ActiveSession> sessions;
-  FindSessionsForPath("/hub/c/sessionmgr.cmx/*/out/debug/sessionctl", kRegex,
-                      &sessions);
-
-  FindSessionsForPath("/hub/r/sys/*/c/sessionmgr.cmx/*/out/debug/sessionctl",
-                      kRegex, &sessions);
-  return sessions;
-}
 
 std::string GetUsage() {
   return R"(sessionctl <flags> <command> <argument>
@@ -124,10 +92,47 @@ delete_story
     The name of the story.
 
 list_stories
-  List all the stories in the current session.)";
+  List all the stories in the current session.
+
+restart_session
+  Restarts the current session.)";
 }
 
-PuppetMasterPtr ConnectToPuppetMaster(const ActiveSession& session) {
+void FindDebugServicesForPath(const char* glob_str, const char* regex_str,
+                              std::vector<DebugService>* services) {
+  glob_t globbuf;
+  bool service_exists = glob(glob_str, 0, nullptr, &globbuf) == 0;
+  std::regex name_regex(regex_str);
+  if (service_exists) {
+    for (size_t i = 0; i < globbuf.gl_pathc; ++i) {
+      DebugService s;
+      s.service_path = globbuf.gl_pathv[i];
+      std::smatch match;
+      FXL_CHECK(std::regex_search(s.service_path, match, name_regex))
+          << s.service_path;
+      s.name = match[1];
+      services->push_back(std::move(s));
+    }
+    globfree(&globbuf);
+  }
+}
+
+// Returns a list of all running sessions.
+std::vector<DebugService> FindAllSessions() {
+  const char kRegex[] = "/sessionmgr.cmx/(\\d+)";
+  // See peridot/bin/sessionmgr/sessionmgr_impl.cc's definition of
+  // kSessionCtlDir for "sessionctl". These must match.
+  std::vector<DebugService> sessions;
+  FindDebugServicesForPath("/hub/c/sessionmgr.cmx/*/out/debug/sessionctl",
+                           kRegex, &sessions);
+
+  FindDebugServicesForPath(
+      "/hub/r/sys/*/c/sessionmgr.cmx/*/out/debug/sessionctl", kRegex,
+      &sessions);
+  return sessions;
+}
+
+PuppetMasterPtr ConnectToPuppetMaster(const DebugService& session) {
   PuppetMasterPtr puppet_master;
   auto request = puppet_master.NewRequest().TakeChannel();
   std::string service_path = session.service_path + "/" + PuppetMaster::Name_;
@@ -136,6 +141,25 @@ PuppetMasterPtr ConnectToPuppetMaster(const ActiveSession& session) {
                    << session.service_path;
   }
   return puppet_master;
+}
+
+fuchsia::modular::internal::BasemgrDebugPtr ConnectToBasemgr() {
+  fuchsia::modular::internal::BasemgrDebugPtr basemgr;
+  auto request = basemgr.NewRequest().TakeChannel();
+
+  std::vector<DebugService> services;
+  FindDebugServicesForPath("/hub/c/basemgr/*/out/debug/basemgr", "basemgr",
+                           &services);
+  // There should only be one basemgr
+  FXL_CHECK(services.size() == 1);
+
+  std::string service_path = services[0].service_path;
+  if (fdio_service_connect(service_path.c_str(), request.get()) != ZX_OK) {
+    FXL_LOG(FATAL) << "Could not connect to basemgr service in "
+                   << service_path;
+  }
+
+  return basemgr;
 }
 
 int main(int argc, const char** argv) {
@@ -165,10 +189,13 @@ int main(int argc, const char** argv) {
     std::cout << std::endl;
   }
 
+  auto basemgr = ConnectToBasemgr();
+
   // To get a PuppetMaster service for a session, use the following code:
   PuppetMasterPtr puppet_master = ConnectToPuppetMaster(sessions[0]);
-  modular::SessionCtlApp app(puppet_master.get(), logger, loop.dispatcher(),
-                             [&loop] { loop.Quit(); });
+
+  modular::SessionCtlApp app(basemgr.get(), puppet_master.get(), logger,
+                             loop.dispatcher(), [&loop] { loop.Quit(); });
 
   std::string parsing_error = app.ExecuteCommand(cmd, command_line);
   if (parsing_error == modular::kGetUsageErrorString) {

@@ -37,8 +37,8 @@ class SessionCtlAppTest : public testing::TestWithSessionStorage {
   SessionCtlApp CreateSessionCtl(fxl::CommandLine command_line) {
     logger_ =
         std::make_unique<Logger>(command_line.HasOption(kJsonOutFlagString));
-    SessionCtlApp sessionctl(puppet_master_impl_.get(), *(logger_.get()),
-                             async_get_default_dispatcher(),
+    SessionCtlApp sessionctl(nullptr /* basemgr */, puppet_master_impl_.get(),
+                             *(logger_.get()), async_get_default_dispatcher(),
                              [&] { done_ = true; });
     return sessionctl;
   }

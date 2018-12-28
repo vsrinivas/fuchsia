@@ -8,6 +8,7 @@ fidl("fuchsia.modular.internal") {
   cpp_legacy_callbacks = true
 
   sources = [
+    "basemgr_debug.fidl",
     "sessionmgr.fidl",
     "story_data.fidl",
   ]

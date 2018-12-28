@@ -492,10 +492,10 @@ void UserProviderImpl::LoginInternal(fuchsia::modular::auth::AccountPtr account,
   auto account_id = account ? account->id.get() : GetRandomId();
   FXL_DLOG(INFO) << "Login() User:" << account_id;
 
-    // Instead of passing token_manager_factory all the way to agents and
-    // runners with all auth provider configurations, send two
-    // |fuchsia::auth::TokenManager| handles, one for ledger and one for agents
-    // for the given user account |account_id|.
+  // Instead of passing token_manager_factory all the way to agents and
+  // runners with all auth provider configurations, send two
+  // |fuchsia::auth::TokenManager| handles, one for ledger and one for agents
+  // for the given user account |account_id|.
   fuchsia::auth::TokenManagerPtr ledger_token_manager =
       CreateTokenManager(account_id);
   fuchsia::auth::TokenManagerPtr agent_token_manager =
@@ -508,10 +508,10 @@ void UserProviderImpl::LoginInternal(fuchsia::modular::auth::AccountPtr account,
 
   auto controller = std::make_unique<UserControllerImpl>(
       launcher_, CloneStruct(sessionmgr_), CloneStruct(session_shell_),
-      CloneStruct(story_shell_),
-      std::move(ledger_token_manager), std::move(agent_token_manager),
-      std::move(account), std::move(view_owner), std::move(service_provider),
-      std::move(params.user_controller), [this](UserControllerImpl* c) {
+      CloneStruct(story_shell_), std::move(ledger_token_manager),
+      std::move(agent_token_manager), std::move(account), std::move(view_owner),
+      std::move(service_provider), std::move(params.user_controller),
+      [this](UserControllerImpl* c) {
         user_controllers_.erase(c);
         delegate_->DidLogout();
       });
@@ -532,6 +532,22 @@ FuturePtr<> UserProviderImpl::SwapSessionShell(
 
   auto user_controller = user_controllers_.begin()->first;
   return user_controller->SwapSessionShell(std::move(session_shell_config));
+}
+
+void UserProviderImpl::RestartSession() {
+  // Callback to log the user back in if login is not automatic
+  auto login = [this] {
+    if (user_controllers_.size() < 1 && users_storage_) {
+      auto account = Convert(users_storage_->users()->Get(0));
+
+      fuchsia::modular::UserLoginParams params;
+      params.account_id = account->id;
+      Login(std::move(params));
+    }
+  };
+
+  // Log the user out to shut down sessionmgr
+  user_controllers_.begin()->first->Logout(login);
 }
 
 }  // namespace modular

@@ -62,6 +62,11 @@ BasemgrImpl::BasemgrImpl(
 
 BasemgrImpl::~BasemgrImpl() = default;
 
+void BasemgrImpl::Connect(
+    fidl::InterfaceRequest<fuchsia::modular::internal::BasemgrDebug> request) {
+  basemgr_bindings_.AddBinding(this, std::move(request));
+}
+
 void BasemgrImpl::InitializePresentation(
     fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> view_owner) {
   if (settings_.test && !settings_.enable_presenter) {
@@ -251,13 +256,13 @@ void BasemgrImpl::Shutdown() {
   // to.
   user_provider_impl_.Teardown(kUserProviderTimeout, [this] {
     FXL_DLOG(INFO) << "- fuchsia::modular::UserProvider down";
-      StopTokenManagerFactoryApp()->Then([this] {
-        FXL_DLOG(INFO) << "- fuchsia::auth::TokenManagerFactory down";
-        StopBaseShell()->Then([this] {
-          FXL_LOG(INFO) << "Clean Shutdown";
-          on_shutdown_();
-        });
+    StopTokenManagerFactoryApp()->Then([this] {
+      FXL_DLOG(INFO) << "- fuchsia::auth::TokenManagerFactory down";
+      StopBaseShell()->Then([this] {
+        FXL_LOG(INFO) << "Clean Shutdown";
+        on_shutdown_();
       });
+    });
   });
 }
 
@@ -525,5 +530,7 @@ void BasemgrImpl::ShowSetupOrLogin() {
         }
       });
 }
+
+void BasemgrImpl::RestartSession() { user_provider_impl_->RestartSession(); }
 
 }  // namespace modular

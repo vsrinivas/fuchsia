@@ -27,6 +27,8 @@ fit::deferred_action<fit::closure> SetupCobalt(
   return modular::InitializeCobalt(dispatcher, context);
 };
 
+constexpr char kBasemgrDir[] = "basemgr";
+
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   if (command_line.HasOption("help")) {
@@ -55,13 +57,23 @@ int main(int argc, const char** argv) {
   fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager;
   context->ConnectToEnvironmentService(device_settings_manager.NewRequest());
 
-  modular::BasemgrImpl basemgr(settings, session_shell_settings,
-                               context->launcher().get(), std::move(presenter),
-                               std::move(device_settings_manager),
-                               [&loop, &cobalt_cleanup] {
-                                 cobalt_cleanup.call();
-                                 loop.Quit();
-                               });
+  modular::BasemgrImpl basemgr(
+      settings, session_shell_settings, context->launcher().get(),
+      std::move(presenter), std::move(device_settings_manager),
+      [&loop, &cobalt_cleanup, &context] {
+        cobalt_cleanup.call();
+        context->outgoing().debug_dir()->RemoveEntry(kBasemgrDir);
+        loop.Quit();
+      });
+  context->outgoing().debug_dir()->AddEntry(
+      kBasemgrDir,
+      fbl::AdoptRef(new fs::Service([&basemgr](zx::channel channel) {
+        fidl::InterfaceRequest<fuchsia::modular::internal::BasemgrDebug>
+            request(std::move(channel));
+        basemgr.Connect(std::move(request));
+        return ZX_OK;
+      })));
+
   loop.Run();
 
   return 0;

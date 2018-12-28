@@ -40,6 +40,7 @@ namespace modular {
 // 3) Manages the lifecycle of sessions, represented as |sessionmgr| processes.
 class BasemgrImpl : fuchsia::modular::BaseShellContext,
                     fuchsia::auth::AuthenticationContextProvider,
+                    fuchsia::modular::internal::BasemgrDebug,
                     fuchsia::ui::policy::KeyboardCaptureListenerHACK,
                     modular::UserProviderImpl::Delegate {
  public:
@@ -63,6 +64,9 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
       std::function<void()> on_shutdown);
 
   ~BasemgrImpl() override;
+
+  void Connect(
+      fidl::InterfaceRequest<fuchsia::modular::internal::BasemgrDebug> request);
 
  private:
   void InitializePresentation(
@@ -127,6 +131,9 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   // on initialization and every time the session shells are swapped.
   void UpdateSessionShellConfig();
 
+  // |BasemgrDebug|
+  void RestartSession() override;
+
   const modular::BasemgrSettings& settings_;  // Not owned nor copied.
   const std::vector<SessionShellSettings>& session_shell_settings_;
   fuchsia::modular::AppConfig session_shell_config_;
@@ -145,6 +152,7 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
 
   AsyncHolder<UserProviderImpl> user_provider_impl_;
 
+  fidl::BindingSet<fuchsia::modular::internal::BasemgrDebug> basemgr_bindings_;
   fidl::Binding<fuchsia::modular::BaseShellContext> base_shell_context_binding_;
   fidl::Binding<fuchsia::auth::AuthenticationContextProvider>
       authentication_context_provider_binding_;

@@ -8,10 +8,12 @@
 namespace modular {
 
 SessionCtlApp::SessionCtlApp(
+    fuchsia::modular::internal::BasemgrDebug* const basemgr,
     fuchsia::modular::PuppetMaster* const puppet_master,
     const modular::Logger& logger, async_dispatcher_t* const dispatcher,
     const std::function<void()>& on_command_executed)
-    : puppet_master_(puppet_master),
+    : basemgr_(basemgr),
+      puppet_master_(puppet_master),
       logger_(logger),
       dispatcher_(dispatcher),
       on_command_executed_(on_command_executed) {}
@@ -26,6 +28,8 @@ std::string SessionCtlApp::ExecuteCommand(
     return ExecuteDeleteStoryCommand(command_line);
   } else if (cmd == kListStoriesCommandString) {
     return ExecuteListStoriesCommand();
+  } else if (cmd == kRestartSessionCommandString) {
+    return ExecuteRestartSessionCommand();
   } else {
     return kGetUsageErrorString;
   }
@@ -142,6 +146,14 @@ std::string SessionCtlApp::ExecuteListStoriesCommand() {
   return "";
 }
 
+std::string SessionCtlApp::ExecuteRestartSessionCommand() {
+  basemgr_->RestartSession();
+  logger_.Log(kRestartSessionCommandString, nullptr);
+  on_command_executed_();
+
+  return "";
+}
+
 fuchsia::modular::StoryCommand SessionCtlApp::MakeFocusStoryCommand() {
   fuchsia::modular::StoryCommand command;
   fuchsia::modular::SetFocusState set_focus_state;
@@ -238,18 +250,6 @@ modular::FuturePtr<bool, std::string> SessionCtlApp::ExecuteStoryCommand(
       }));
 
   return fut;
-}
-
-std::string SessionCtlApp::GenerateMissingFlagString(
-    const std::vector<std::string>& missing_flags) {
-  std::string error;
-  if (!missing_flags.empty()) {
-    error += "flags missing:";
-    for (auto flag : missing_flags) {
-      error += " --" + flag;
-    }
-  }
-  return error;
 }
 
 }  // namespace modular

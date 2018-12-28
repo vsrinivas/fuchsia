@@ -20,6 +20,7 @@ executable_package("sessionctl") {
     "//garnet/public/lib/fxl",
     "//peridot/lib/rapidjson",
     "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/fidl/fuchsia.modular.internal",
     "//peridot/public/lib/async/cpp:future",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fdio",
@@ -45,6 +46,7 @@ source_set("lib") {
   deps = [
     "//peridot/lib/rapidjson",
     "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/fidl/fuchsia.modular.internal",
     "//peridot/public/lib/async/cpp:future",
     "//zircon/public/lib/async-loop-cpp",
   ]
