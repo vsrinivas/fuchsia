@@ -17,5 +17,6 @@ Session.vim
 *~
 
 cipd.gni
+.cipd/*
 last-update
 third_party/
