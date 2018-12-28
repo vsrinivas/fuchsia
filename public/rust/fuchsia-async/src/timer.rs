@@ -17,7 +17,8 @@ use {
     },
     pin_utils::{unsafe_pinned, unsafe_unpinned},
     std::{
-        pin::{Pin, Unpin},
+        marker::Unpin,
+        pin::Pin,
         sync::{
             atomic::{AtomicBool, Ordering},
             Arc,
@@ -74,7 +75,7 @@ where
             return Poll::Ready(item);
         }
         if let Poll::Ready(()) = self.as_mut().timer().poll_unpin(lw) {
-            let ot = OnTimeout::on_timeout(&mut self)
+            let ot = OnTimeout::on_timeout(self.as_mut())
                 .take()
                 .expect("polled withtimeout after completion");
             let item = (ot)();

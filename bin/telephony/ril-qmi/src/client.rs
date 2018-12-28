@@ -14,8 +14,8 @@ use {
     qmi_protocol::{Decodable, Encodable, QmiResult},
     std::collections::HashMap,
     std::fmt::Debug,
+    std::marker::Unpin,
     std::ops::Deref,
-    std::pin::Unpin,
     std::sync::Arc,
 };
 

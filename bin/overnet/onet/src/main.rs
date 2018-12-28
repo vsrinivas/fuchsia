@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #![deny(warnings)]
-#![feature(futures_api, pin, arbitrary_self_types)]
+#![feature(futures_api)]
 
 use {
     clap::{App, SubCommand},

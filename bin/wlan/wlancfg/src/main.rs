@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro, futures_api, pin, arbitrary_self_types, transpose_result)]
+#![feature(async_await, await_macro, futures_api, transpose_result)]
 #![deny(warnings)]
 
 mod config;

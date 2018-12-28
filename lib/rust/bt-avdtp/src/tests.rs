@@ -214,12 +214,12 @@ fn exhaust_request_ids() {
     let mut response_futures = Vec::new();
     // There are only 16 labels, so fill up the "outgoing requests pending" buffer
     for _ in 0..16 {
-        let mut response_fut = Box::pinned(peer.discover());
+        let mut response_fut = Box::pin(peer.discover());
         assert!(exec.run_until_stalled(&mut response_fut).is_pending());
         response_futures.push(response_fut);
     }
 
-    let mut should_fail_fut = Box::pinned(peer.discover());
+    let mut should_fail_fut = Box::pin(peer.discover());
     let res = exec.run_until_stalled(&mut should_fail_fut);
     assert!(res.is_ready());
 
@@ -251,7 +251,7 @@ fn exhaust_request_ids() {
     }
 
     // We should be able to make new requests now.
-    let mut another_fut = Box::pinned(peer.discover());
+    let mut another_fut = Box::pin(peer.discover());
     assert!(exec.run_until_stalled(&mut another_fut).is_pending());
 }
 
@@ -259,7 +259,7 @@ fn exhaust_request_ids() {
 fn command_timeout() {
     let mut exec = fasync::Executor::new().expect("failed to create an executor");
     let (peer, remote) = setup_peer();
-    let mut response_fut = Box::pinned(peer.discover());
+    let mut response_fut = Box::pin(peer.discover());
     assert!(exec.run_until_stalled(&mut response_fut).is_pending());
 
     let received = recv_remote(&remote).unwrap();
@@ -278,7 +278,7 @@ fn command_timeout() {
     );
 
     // We should be able to make a new request now.
-    let mut another_fut = Box::pinned(peer.discover());
+    let mut another_fut = Box::pin(peer.discover());
     assert!(exec.run_until_stalled(&mut another_fut).is_pending());
 
     // Responding to the first command after it timed out doesn't complete the new command
@@ -360,7 +360,7 @@ fn discover_event_responder_reject_works() {
 fn discover_command_works() {
     let mut exec = fasync::Executor::new().expect("failed to create an executor");
     let (peer, remote) = setup_peer();
-    let mut response_fut = Box::pinned(peer.discover());
+    let mut response_fut = Box::pin(peer.discover());
     assert!(exec.run_until_stalled(&mut response_fut).is_pending());
 
     let received = recv_remote(&remote).unwrap();
@@ -403,7 +403,7 @@ fn discover_command_works() {
 fn discover_command_rejected() {
     let mut exec = fasync::Executor::new().expect("failed to create an executor");
     let (peer, remote) = setup_peer();
-    let mut response_fut = Box::pinned(peer.discover());
+    let mut response_fut = Box::pin(peer.discover());
     assert!(exec.run_until_stalled(&mut response_fut).is_pending());
 
     let received = recv_remote(&remote).unwrap();
@@ -562,7 +562,7 @@ fn get_capabilities_command_works() {
     let mut exec = fasync::Executor::new().expect("failed to create an executor");
     let (peer, remote) = setup_peer();
     let seid = &StreamEndpointId::try_from(1).unwrap();
-    let mut response_fut = Box::pinned(peer.get_capabilities(&seid));
+    let mut response_fut = Box::pin(peer.get_capabilities(&seid));
     assert!(exec.run_until_stalled(&mut response_fut).is_pending());
 
     let received = recv_remote(&remote).unwrap();
@@ -622,7 +622,7 @@ fn get_capabilities_reject_command() {
     let mut exec = fasync::Executor::new().expect("failed to create an executor");
     let (peer, remote) = setup_peer();
     let seid = &StreamEndpointId::try_from(1).unwrap();
-    let mut response_fut = Box::pinned(peer.get_capabilities(&seid));
+    let mut response_fut = Box::pin(peer.get_capabilities(&seid));
     assert!(exec.run_until_stalled(&mut response_fut).is_pending());
 
     let received = recv_remote(&remote).unwrap();
@@ -782,7 +782,7 @@ fn get_all_capabilities_command_works() {
     let mut exec = fasync::Executor::new().expect("failed to create an executor");
     let (peer, remote) = setup_peer();
     let seid = StreamEndpointId::try_from(1).unwrap();
-    let mut response_fut = Box::pinned(peer.get_all_capabilities(&seid));
+    let mut response_fut = Box::pin(peer.get_all_capabilities(&seid));
     assert!(exec.run_until_stalled(&mut response_fut).is_pending());
 
     let received = recv_remote(&remote).unwrap();
@@ -842,7 +842,7 @@ fn get_all_capabilities_reject_command() {
     let mut exec = fasync::Executor::new().expect("failed to create an executor");
     let (peer, remote) = setup_peer();
     let seid = StreamEndpointId::try_from(1).unwrap();
-    let mut response_fut = Box::pinned(peer.get_all_capabilities(&seid));
+    let mut response_fut = Box::pin(peer.get_all_capabilities(&seid));
     assert!(exec.run_until_stalled(&mut response_fut).is_pending());
 
     let received = recv_remote(&remote).unwrap();
@@ -906,7 +906,7 @@ macro_rules! seid_command_test {
             let mut exec = fasync::Executor::new().expect("failed to create an executor");
             let (peer, remote) = setup_peer();
             let seid = StreamEndpointId::try_from(1).unwrap();
-            let mut response_fut = Box::pinned(peer.$peer_function(&seid));
+            let mut response_fut = Box::pin(peer.$peer_function(&seid));
             assert!(exec.run_until_stalled(&mut response_fut).is_pending());
 
             let received = recv_remote(&remote).unwrap();
@@ -940,7 +940,7 @@ macro_rules! seids_command_test {
             let seid1 = StreamEndpointId::try_from(1).unwrap();
             let seid2 = StreamEndpointId::try_from(16).unwrap();
             let seids = [seid1, seid2];
-            let mut response_fut = Box::pinned(peer.$peer_function(&seids));
+            let mut response_fut = Box::pin(peer.$peer_function(&seids));
             assert!(exec.run_until_stalled(&mut response_fut).is_pending());
 
             let received = recv_remote(&remote).unwrap();
@@ -973,7 +973,7 @@ macro_rules! seid_command_reject_test {
             let mut exec = fasync::Executor::new().expect("failed to create an executor");
             let (peer, remote) = setup_peer();
             let seid = StreamEndpointId::try_from(1).unwrap();
-            let mut response_fut = Box::pinned(peer.$peer_function(&seid));
+            let mut response_fut = Box::pin(peer.$peer_function(&seid));
             assert!(exec.run_until_stalled(&mut response_fut).is_pending());
 
             let received = recv_remote(&remote).unwrap();
@@ -1014,7 +1014,7 @@ macro_rules! seids_command_reject_test {
             let seid1 = StreamEndpointId::try_from(1).unwrap();
             let seid2 = StreamEndpointId::try_from(16).unwrap();
             let seids = [seid1, seid2];
-            let mut response_fut = Box::pinned(peer.$peer_function(&seids));
+            let mut response_fut = Box::pin(peer.$peer_function(&seids));
             assert!(exec.run_until_stalled(&mut response_fut).is_pending());
 
             let received = recv_remote(&remote).unwrap();
@@ -1276,7 +1276,7 @@ fn abort_sent_no_response() {
     let mut exec = fasync::Executor::new().expect("failed to create an executor");
     let (peer, remote) = setup_peer();
     let seid = StreamEndpointId::try_from(1).unwrap();
-    let mut response_fut = Box::pinned(peer.abort(&seid));
+    let mut response_fut = Box::pin(peer.abort(&seid));
     assert!(exec.run_until_stalled(&mut response_fut).is_pending());
 
     let received = recv_remote(&remote).unwrap();
@@ -1421,7 +1421,7 @@ fn set_config_command_works() {
         ServiceCapability::DelayReporting,
     ];
     let mut response_fut =
-        Box::pinned(peer.set_configuration(&StreamEndpointId(1), &StreamEndpointId(2), &caps));
+        Box::pin(peer.set_configuration(&StreamEndpointId(1), &StreamEndpointId(2), &caps));
     assert!(exec.run_until_stalled(&mut response_fut).is_pending());
 
     let received = recv_remote(&remote).unwrap();
@@ -1477,7 +1477,7 @@ fn set_config_error_response() {
         },
     ];
     let mut response_fut =
-        Box::pinned(peer.set_configuration(&StreamEndpointId(1), &StreamEndpointId(2), &caps));
+        Box::pin(peer.set_configuration(&StreamEndpointId(1), &StreamEndpointId(2), &caps));
     assert!(exec.run_until_stalled(&mut response_fut).is_pending());
 
     let received = recv_remote(&remote).unwrap();
@@ -1828,7 +1828,7 @@ fn reconfigure_command_works() {
             extra: vec![0xF0, 0x0D],
         },
     ];
-    let mut response_fut = Box::pinned(peer.reconfigure(&StreamEndpointId(1), &caps));
+    let mut response_fut = Box::pin(peer.reconfigure(&StreamEndpointId(1), &caps));
     assert!(exec.run_until_stalled(&mut response_fut).is_pending());
 
     let received = recv_remote(&remote).unwrap();
@@ -1874,7 +1874,7 @@ fn reconfigure_error_response() {
             codec_extra: vec![0xDE, 0xAD, 0xBE, 0xEF],
         },
     ];
-    let mut response_fut = Box::pinned(peer.reconfigure(&StreamEndpointId(1), &caps));
+    let mut response_fut = Box::pin(peer.reconfigure(&StreamEndpointId(1), &caps));
     // This isn't valid, you can't reconfigure Media Transport
     assert_eq!(
         Poll::Ready(Err(Error::Encoding)),
@@ -1886,7 +1886,7 @@ fn reconfigure_error_response() {
         codec_type: MediaCodecType::new(0x40),
         codec_extra: vec![0xDE, 0xAD, 0xBE, 0xEF],
     }];
-    let mut response_fut = Box::pinned(peer.reconfigure(&StreamEndpointId(1), &caps));
+    let mut response_fut = Box::pin(peer.reconfigure(&StreamEndpointId(1), &caps));
     assert!(exec.run_until_stalled(&mut response_fut).is_pending());
 
     let received = recv_remote(&remote).unwrap();

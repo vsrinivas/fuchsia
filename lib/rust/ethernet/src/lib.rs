@@ -4,7 +4,7 @@
 
 //! Fuchsia Ethernet client
 
-#![feature(arbitrary_self_types, async_await, await_macro, futures_api, pin)]
+#![feature(async_await, await_macro, futures_api)]
 #![deny(warnings)]
 #![deny(missing_docs)]
 
@@ -15,8 +15,9 @@ use fuchsia_zircon::{self as zx, AsHandleRef};
 use futures::{ready, task::LocalWaker, try_ready, FutureExt, Poll, Stream};
 
 use std::fs::File;
+use std::marker::Unpin;
 use std::os::unix::io::AsRawFd;
-use std::pin::{Pin, Unpin};
+use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 
 mod buffer;

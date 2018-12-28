@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #![deny(warnings)]
-#![feature(arbitrary_self_types, async_await, await_macro, futures_api, pin)]
+#![feature(async_await, await_macro, futures_api)]
 
 #[macro_use]
 extern crate failure;
@@ -23,8 +23,9 @@ use {
     slab::Slab,
     std::{
         collections::VecDeque,
+        marker::Unpin,
         mem,
-        pin::{Pin, Unpin},
+        pin::Pin,
         result,
         sync::Arc,
     },

@@ -19,8 +19,9 @@ use {
     },
     pin_utils::unsafe_pinned,
     std::{
+        marker::Unpin,
         mem,
-        pin::{Pin, Unpin},
+        pin::Pin,
     },
 };
 
@@ -50,7 +51,7 @@ impl<St> FirstElem<St> {
 impl<St: Stream> Future for FirstElem<St> {
     type Output = Option<St::Item>;
 
-    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
+    fn poll(self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
         self.stream().poll_next(lw)
     }
 }
@@ -303,7 +304,7 @@ impl<A: Future, B: Future<Output = A::Output>> Future for Either<A, B> {
     fn poll(self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
         unsafe {
             // Safety: neither child future is ever moved
-            match Pin::get_mut_unchecked(self) {
+            match Pin::get_unchecked_mut(self) {
                 Either::Left(a) => Pin::new_unchecked(a).poll(lw),
                 Either::Right(b) => Pin::new_unchecked(b).poll(lw),
             }
@@ -324,10 +325,10 @@ impl<A, B> Select<A, B> {
 impl<A: Future, B: Future> Future for Select<A, B> {
     type Output = Either<A::Output, B::Output>;
     fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
-        if let Poll::Ready(a) = self.a().poll(lw) {
+        if let Poll::Ready(a) = self.as_mut().a().poll(lw) {
             return Poll::Ready(Either::Left(a));
         }
-        if let Poll::Ready(b) = self.b().poll(lw) {
+        if let Poll::Ready(b) = self.as_mut().b().poll(lw) {
             return Poll::Ready(Either::Right(b));
         }
         Poll::Pending

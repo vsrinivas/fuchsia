@@ -377,7 +377,7 @@ impl<T: {{ $interface.Name }}> futures::Future for {{ $interface.Name }}Server<T
 	) -> futures::Poll<Self::Output> {
 		// safety: the only potentially !Unpin field is on_open_fut, which we make sure
 		// isn't moved below
-		let this = unsafe { ::std::pin::Pin::get_mut_unchecked(self) };
+		let this = unsafe { ::std::pin::Pin::get_unchecked_mut(self) };
 		loop {
 		let mut made_progress_this_loop_iter = false;
 

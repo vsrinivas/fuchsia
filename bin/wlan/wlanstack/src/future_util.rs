@@ -40,15 +40,15 @@ where
         mut self: Pin<&mut Self>,
         lw: &LocalWaker,
     ) -> Poll<Option<Self::Item>> {
-        if let Some(e) = self.error().take() {
+        if let Some(e) = self.as_mut().error().take() {
             return Poll::Ready(Some(Err(e)));
         }
-        let mut batch = match ready!(self.stream().poll_next(lw)?) {
+        let mut batch = match ready!(self.as_mut().stream().poll_next(lw)?) {
             Some(item) => vec![item],
             None => return Poll::Ready(None),
         };
         loop {
-            match self.stream().poll_next(lw) {
+            match self.as_mut().stream().poll_next(lw) {
                 Poll::Ready(Some(Ok(item))) => batch.push(item),
                 Poll::Ready(None) | Poll::Pending => break,
                 Poll::Ready(Some(Err(e))) => {

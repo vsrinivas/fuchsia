@@ -4,7 +4,7 @@
 
 //! System service for wireless networking
 
-#![feature(async_await, await_macro, futures_api, arbitrary_self_types, pin)]
+#![feature(async_await, await_macro, futures_api)]
 #![deny(warnings)]
 #![deny(missing_docs)]
 

@@ -10,7 +10,8 @@ use {
         ready,
         task::{LocalWaker, Poll},
     },
-    std::pin::{Pin, Unpin},
+    std::marker::Unpin,
+    std::pin::Pin,
 };
 
 pub struct State<E>(FutureObj<'static, Result<State<E>, E>>);

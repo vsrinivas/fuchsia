@@ -14,7 +14,8 @@ use parking_lot::Mutex;
 use slab::Slab;
 use std::collections::HashMap;
 use std::io::Cursor;
-use std::pin::{Pin, Unpin};
+use std::marker::Unpin;
+use std::pin::Pin;
 use std::sync::Arc;
 
 /// A client ID indicating the endpoint

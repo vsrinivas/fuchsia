@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #![deny(warnings)]
-#![feature(futures_api, pin, async_await, arbitrary_self_types, await_macro)]
+#![feature(futures_api, async_await, await_macro)]
 
 #[macro_use]
 extern crate failure;

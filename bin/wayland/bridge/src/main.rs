@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #![deny(warnings)]
-#![feature(async_await, await_macro, futures_api, pin)]
+#![feature(async_await, await_macro, futures_api)]
 
 use std::sync::Arc;
 

@@ -5,7 +5,7 @@
 //! Stream-based Fuchsia VFS directory watcher
 
 #![deny(missing_docs, warnings)]
-#![feature(futures_api, pin, arbitrary_self_types)]
+#![feature(futures_api)]
 
 use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, assoc_values};

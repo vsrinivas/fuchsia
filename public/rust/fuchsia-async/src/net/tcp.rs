@@ -16,10 +16,11 @@ use {
     net2::{TcpBuilder, TcpStreamExt},
     std::{
         io::{self, Read, Write},
+        marker::Unpin,
         net::{self, SocketAddr},
         ops::Deref,
         os::unix::io::AsRawFd,
-        pin::{Pin, Unpin},
+        pin::Pin,
     },
 };
 

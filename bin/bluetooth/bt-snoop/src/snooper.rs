@@ -11,8 +11,9 @@ use {
     futures::{task::LocalWaker, Poll, Stream},
     std::{
         fs::OpenOptions,
+        marker::Unpin,
         path::PathBuf,
-        pin::{Pin, Unpin},
+        pin::Pin,
         time::{SystemTime, UNIX_EPOCH},
     },
 };

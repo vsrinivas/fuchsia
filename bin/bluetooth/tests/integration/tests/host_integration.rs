@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #![deny(warnings)]
-#![feature(arbitrary_self_types, async_await, await_macro, futures_api, pin)]
+#![feature(async_await, await_macro, futures_api)]
 
 use fidl_fuchsia_bluetooth::Bool;
 use fidl_fuchsia_bluetooth_control::{AdapterInfo, AdapterState, RemoteDevice, TechnologyType};

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(futures_api, pin, arbitrary_self_types)]
+#![feature(futures_api)]
 #![deny(warnings)]
 
 use fuchsia_app::server::ServicesServer;

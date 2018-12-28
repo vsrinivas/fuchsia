@@ -59,8 +59,9 @@ use {
     std::{
         io::Write,
         iter::ExactSizeIterator,
+        marker::Unpin,
         mem,
-        pin::{Pin, Unpin},
+        pin::Pin,
     },
 };
 

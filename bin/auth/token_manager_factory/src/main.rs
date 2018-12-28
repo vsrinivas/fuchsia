@@ -12,7 +12,7 @@
 
 #![deny(warnings)]
 #![deny(missing_docs)]
-#![feature(async_await, await_macro, futures_api, pin)]
+#![feature(async_await, await_macro, futures_api)]
 
 mod auth_context_client;
 mod auth_provider_client;

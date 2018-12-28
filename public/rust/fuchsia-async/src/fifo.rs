@@ -8,8 +8,8 @@ use {
     futures::{ready, task::LocalWaker, Future, Poll},
     std::{
         fmt,
-        marker::PhantomData,
-        pin::{Pin, Unpin},
+        marker::{PhantomData, Unpin},
+        pin::Pin,
     },
 };
 

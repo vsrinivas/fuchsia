@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #![deny(warnings)]
-#![feature(async_await, await_macro, futures_api, pin)]
+#![feature(async_await, await_macro, futures_api)]
 
 use {
     failure::{format_err, Error, ResultExt},
@@ -32,7 +32,7 @@ fn launch_and_connect_to_echo(launcher: &Launcher, url: String) -> Result<(EchoP
 
 async fn echo_server(chan: fasync::Channel, launcher: &Launcher) -> Result<(), Error> {
     const CONCURRENT_REQ_LIMIT: Option<usize> = None;
-    let handler = move |request| Box::pinned(async move {
+    let handler = move |request| Box::pin(async move {
         match request {
             EchoRequest::EchoStruct { mut value, forward_to_server, responder } => {
                 if !forward_to_server.is_empty() {

@@ -4,7 +4,7 @@
 
 //! A futures-rs executor design specifically for Fuchsia OS.
 
-#![feature(async_await, await_macro, futures_api, pin, arbitrary_self_types)]
+#![feature(async_await, await_macro, futures_api)]
 #![deny(warnings)]
 #![deny(missing_docs)]
 
@@ -68,7 +68,7 @@ macro_rules! unsafe_many_futures {
                     lw: &$crate::futures::task::LocalWaker,
             ) -> $crate::futures::Poll<Self::Output> {
                 unsafe {
-                    match ::std::pin::Pin::get_mut_unchecked(self) {
+                    match ::std::pin::Pin::get_unchecked_mut(self) {
                         $future::$first(x) =>
                             $crate::futures::Future::poll(
                                 ::std::pin::Pin::new_unchecked(x), lw),

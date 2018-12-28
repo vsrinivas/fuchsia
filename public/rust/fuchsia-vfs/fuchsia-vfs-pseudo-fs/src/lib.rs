@@ -5,7 +5,7 @@
 //! A helper to create files backed by in process callbacks.  For example to expose component
 //! configuration, debug information or statistics.
 
-#![feature(arbitrary_self_types, async_await, await_macro, futures_api, pin)]
+#![feature(async_await, await_macro, futures_api)]
 #![warn(missing_docs)]
 
 use {
@@ -13,7 +13,7 @@ use {
     fidl_fuchsia_io::FileRequestStream,
     fuchsia_zircon::Status,
     futures::future::{FusedFuture, Future},
-    std::pin::Unpin,
+    std::marker::Unpin,
 };
 
 #[cfg(test)]

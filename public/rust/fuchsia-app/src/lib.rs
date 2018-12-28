@@ -4,7 +4,7 @@
 
 //! Connect to or provide Fuchsia services.
 
-#![feature(futures_api, pin, arbitrary_self_types)]
+#![feature(futures_api)]
 
 #![deny(warnings)]
 #![deny(missing_docs)]
@@ -36,9 +36,10 @@ use {
     },
     fuchsia_zircon::{self as zx, Peered, Signals},
     std::{
-        os::unix::io::IntoRawFd,
         fs::File,
-        pin::{Pin, Unpin},
+        marker::Unpin,
+        os::unix::io::IntoRawFd,
+        pin::Pin,
     },
 };
 
