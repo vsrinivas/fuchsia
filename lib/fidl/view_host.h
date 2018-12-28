@@ -30,6 +30,7 @@ class ViewHost : public scenic::V1BaseView {
   // multiple views and lays them out horizontally next to each other.
   // This is experimental to establish data flow patterns in toy
   // applications and can be changed or extended as needed.
+  void ConnectView(zx::eventpair view_holder_token);
   void ConnectView(
       fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> view_owner);
 

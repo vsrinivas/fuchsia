@@ -23,8 +23,7 @@ ViewHost::ViewHost(scenic::ViewContext view_context)
 
 ViewHost::~ViewHost() = default;
 
-void ViewHost::ConnectView(
-    fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> view_owner) {
+void ViewHost::ConnectView(zx::eventpair view_holder_token) {
   const uint32_t child_key = next_child_key_++;
 
   auto view_data = std::make_unique<ViewData>(session());
@@ -34,10 +33,14 @@ void ViewHost::ConnectView(
   container_node_.AddChild(view_data->host_node);
   views_.emplace(child_key, std::move(view_data));
 
-  GetViewContainer()->AddChild2(
-      child_key, zx::eventpair(view_owner.TakeChannel().release()),
-      std::move(host_import_token));
+  GetViewContainer()->AddChild2(child_key, std::move(view_holder_token),
+                                std::move(host_import_token));
   UpdateScene();
+}
+
+void ViewHost::ConnectView(
+    fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> view_owner) {
+  ConnectView(zx::eventpair(view_owner.TakeChannel().release()));
 }
 
 void ViewHost::OnPropertiesChanged(
