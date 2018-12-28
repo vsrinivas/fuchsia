@@ -37,7 +37,7 @@ executable("story_visibility_system_unittest") {
   deps = [
     ":story_visibility_system",
     "//peridot/bin/sessionmgr/story/model",
-    "//peridot/public/lib/fostr/fidl/fuchsia.modular.storymodel",
+    "//peridot/bin/sessionmgr/story/model/testing",
     "//third_party/googletest:gtest",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest_main",

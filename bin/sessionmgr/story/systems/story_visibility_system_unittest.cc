@@ -6,8 +6,8 @@
 
 #include "gmock/gmock.h"  // For EXPECT_THAT and matchers.
 #include "gtest/gtest.h"
-#include "lib/fostr/fidl/fuchsia/modular/storymodel/formatting.h"
-#include "peridot/bin/sessionmgr/story/model/story_mutator.h"
+#include "peridot/bin/sessionmgr/story/model/testing/mutation_matchers.h"
+#include "peridot/bin/sessionmgr/story/model/testing/test_mutator.h"
 #include "peridot/bin/sessionmgr/story/systems/story_visibility_system.h"
 
 using fuchsia::modular::storymodel::StoryModel;
@@ -15,36 +15,6 @@ using fuchsia::modular::storymodel::StoryModelMutation;
 
 namespace modular {
 namespace {
-
-// TODO(thatguy): Move these matchers into a shared file.
-
-// |arg| is a StoryModelMutation |expected| is a StoryVisibilitystate.
-MATCHER_P(IsSetVisibilityMutation, expected, "") {
-  *result_listener << "is set_visibility_state { "
-                   << fidl::ToUnderlying(expected) << "}";
-  if (!arg.is_set_visibility_state())
-    return false;
-  return expected == arg.set_visibility_state();
-}
-
-// TODO(thatguy): Move this test mutator into a shared file.
-class TestMutator : public StoryMutator {
- public:
-  fit::consumer<> ExecuteInternal(
-      std::vector<StoryModelMutation> commands) override {
-    fit::bridge<> bridge;
-    ExecuteCall call{.completer = std::move(bridge.completer),
-                     .commands = std::move(commands)};
-    execute_calls.push_back(std::move(call));
-    return std::move(bridge.consumer);
-  }
-
-  struct ExecuteCall {
-    fit::completer<> completer;
-    std::vector<StoryModelMutation> commands;
-  };
-  std::vector<ExecuteCall> execute_calls;
-};
 
 class StoryVisibilitySystemTest : public ::testing::Test {
  protected:
