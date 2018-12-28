@@ -957,10 +957,15 @@ $(ALL_TARGET_OBJS): $(TARGET_MODDEPS)
 # any extra top level build dependencies that someone may have declared
 all:: $(EXTRA_BUILDDEPS)
 
+define RM_ONE
+@rm -f $(1)
+
+endef
+
 clean: $(EXTRA_CLEANDEPS)
-	rm -f $(ALLOBJS)
-	rm -f $(DEPS)
-	rm -f $(GENERATED)
+	$(foreach o,$(ALLOBJS), $(call RM_ONE,$o))
+	$(foreach o,$(DEPS), $(call RM_ONE,$o))
+	$(foreach o,$(GENERATED), $(call RM_ONE,$o))
 	rm -f $(KERNEL_ZBI) $(KERNEL_IMAGE) $(KERNEL_ELF) $(KERNEL_ELF).lst $(KERNEL_ELF).debug.lst $(KERNEL_ELF).sym $(KERNEL_ELF).sym.sorted $(KERNEL_ELF).size $(KERNEL_ELF).hex $(KERNEL_ELF).dump $(KERNEL_ELF)-gdb.py
 	rm -f $(foreach app,$(ALLUSER_APPS),$(app) $(app).lst $(app).dump $(app).strip)
 
