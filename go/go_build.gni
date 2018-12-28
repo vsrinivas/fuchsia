@@ -6,6 +6,7 @@ import("//build/config/clang/clang.gni")
 import("//build/config/sysroot.gni")
 import("//build/host.gni")
 import("//build/sdk/sdk_atom.gni")
+import("//build/testing/test_spec.gni")
 
 # A template for an action that builds a Go binary. Users should instead use the
 # go_binary or go_test rules.
@@ -89,7 +90,7 @@ template("go_build") {
       rebase_path(
           get_label_info("//default($shlib_toolchain)", "root_out_dir")),
       "--sysroot",
-      sysroot
+      sysroot,
     ]
 
     if (defined(invoker.skip_vet) && invoker.skip_vet) {
@@ -145,6 +146,14 @@ template("go_build") {
       "--package",
       invoker.gopackage,
     ]
+  }
+
+  # For linux and mac tests, record metadata for testing instruction.
+  if (is_linux || is_mac) {
+    test_spec("${target_name}_spec") {
+      name = invoker.target_name
+      location = output_path
+    }
   }
 
   # Allow host binaries to be published in SDKs.
