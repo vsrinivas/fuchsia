@@ -19,7 +19,7 @@
 #define ICH_ELRSR_EL2       S3_4_C12_C11_5
 #define ICH_VMCR_EL2        S3_4_C12_C11_7
 
-#define ICH_AP1R0_EL2_ID    0
+#define ICH_AP1R_EL2_ID     0
 #define ICH_HCR_EL2_ID      1
 #define ICH_VTR_EL2_ID      2
 #define ICH_MISR_EL2_ID     3
@@ -57,6 +57,13 @@
 .section .text.el2,"ax",@progbits
 .align 12
 
+// Read or write the register.
+reg_rw  .req x11
+// ID of the register.
+reg_id  .req x12
+// Number of the register (for APRs or LRs).
+reg_num .req x13
+
 .macro entry_read_sysreg literal
     mrs x0, \literal
     b el2_gicv3_done
@@ -85,14 +92,10 @@
     br x9
 .endm
 
-// x0 - Value to write
-// x1 - Index for ICH register
-// x2 - READ/WRITE
-// x3 - Register name/enum
 FUNCTION_LABEL(el2_hvc_sysreg)
-    cbnz x2, .write_sys
+    cbnz reg_rw, .write_sys
 
-    gic_jump .Lread_sys x3
+    gic_jump .Lread_sys reg_id
 
 .Lread_sys:
     entry_branch_to el2_gicv3_read_apr
@@ -104,7 +107,7 @@ FUNCTION_LABEL(el2_hvc_sysreg)
     entry_branch_to el2_gicv3_read_lr
 
 .write_sys:
-    gic_jump .Lwrite_sys x3
+    gic_jump .Lwrite_sys reg_id
 
 .Lwrite_sys:
     entry_branch_to el2_gicv3_write_apr
@@ -117,24 +120,24 @@ FUNCTION_LABEL(el2_hvc_sysreg)
 
 // uint32_t arm64_el2_gicv3_read_gich_apr(uint32_t idx);
 FUNCTION(arm64_el2_gicv3_read_gich_apr)
-    mov x1, x0
-    mov x2, READ_SYSREG_ID
-    mov x3, ICH_AP1R0_EL2_ID
+    mov reg_rw, READ_SYSREG_ID
+    mov reg_id, ICH_AP1R_EL2_ID
+    mov reg_num, x0
     hvc 5
     ret
 END_FUNCTION(arm64_el2_gicv3_read_gich_apr)
 
 // void arm64_el2_gicv3_write_gich_apr(uint32_t val, uint32_t idx)
 FUNCTION(arm64_el2_gicv3_write_gich_apr)
-    mov x2, WRITE_SYSREG_ID
-    mov x3, ICH_AP1R0_EL2_ID
+    mov reg_rw, WRITE_SYSREG_ID
+    mov reg_id, ICH_AP1R_EL2_ID
+    mov reg_num, x1
     hvc 5
     ret
 END_FUNCTION(arm64_el2_gicv3_write_gich_apr)
 
-// x1 - Index for APR register
 FUNCTION_LABEL(el2_gicv3_read_apr)
-    gic_jump .Lapr_read_table x1
+    gic_jump .Lapr_read_table reg_num
 
 .Lapr_read_table:
     entry_read_sysreg ICH_AP1R(0)
@@ -142,10 +145,8 @@ FUNCTION_LABEL(el2_gicv3_read_apr)
     entry_read_sysreg ICH_AP1R(2)
     entry_read_sysreg ICH_AP1R(3)
 
-// x0 - Value to write
-// x1 - Index for APR register
 FUNCTION_LABEL(el2_gicv3_write_apr)
-    gic_jump .Lapr_write_table x1
+    gic_jump .Lapr_write_table reg_num
 
 .Lapr_write_table:
     entry_write_sysreg ICH_AP1R(0)
@@ -155,80 +156,80 @@ FUNCTION_LABEL(el2_gicv3_write_apr)
 
 // uint32_t arm64_el2_gicv3_read_gich_hcr();
 FUNCTION(arm64_el2_gicv3_read_gich_hcr)
-    mov x2, READ_SYSREG_ID
-    mov x3, ICH_HCR_EL2_ID
+    mov reg_rw, READ_SYSREG_ID
+    mov reg_id, ICH_HCR_EL2_ID
     hvc 5
     ret
 END_FUNCTION(arm64_el2_gicv3_read_gich_hcr)
 
 // void arm64_el2_gicv3_write_gich_hcr(uint32_t val)
 FUNCTION(arm64_el2_gicv3_write_gich_hcr)
-    mov x2, WRITE_SYSREG_ID
-    mov x3, ICH_HCR_EL2_ID
+    mov reg_rw, WRITE_SYSREG_ID
+    mov reg_id, ICH_HCR_EL2_ID
     hvc 5
     ret
 END_FUNCTION(arm64_el2_gicv3_write_gich_hcr)
 
 // uint32_t arm64_el2_gicv3_read_gich_vtr();
 FUNCTION(arm64_el2_gicv3_read_gich_vtr)
-    mov x2, READ_SYSREG_ID
-    mov x3, ICH_VTR_EL2_ID
+    mov reg_rw, READ_SYSREG_ID
+    mov reg_id, ICH_VTR_EL2_ID
     hvc 5
     ret
 END_FUNCTION(arm64_el2_gicv3_read_gich_vtr)
 
 // uint32_t arm64_el2_gicv3_read_gich_vmcr();
 FUNCTION(arm64_el2_gicv3_read_gich_vmcr)
-    mov x2, READ_SYSREG_ID
-    mov x3, ICH_VMCR_EL2_ID
+    mov reg_rw, READ_SYSREG_ID
+    mov reg_id, ICH_VMCR_EL2_ID
     hvc 5
     ret
 END_FUNCTION(arm64_el2_gicv3_read_gich_vmcr)
 
 // void arm64_el2_gicv3_write_gich_vmcr(uint32_t val)
 FUNCTION(arm64_el2_gicv3_write_gich_vmcr)
-    mov x2, WRITE_SYSREG_ID
-    mov x3, ICH_VMCR_EL2_ID
+    mov reg_rw, WRITE_SYSREG_ID
+    mov reg_id, ICH_VMCR_EL2_ID
     hvc 5
     ret
 END_FUNCTION(arm64_el2_gicv3_write_gich_vmcr)
 
 // uint32_t arm64_el2_gicv3_read_gich_elrsr();
 FUNCTION(arm64_el2_gicv3_read_gich_elrsr)
-    mov x2, READ_SYSREG_ID
-    mov x3, ICH_ELRSR_EL2_ID
+    mov reg_rw, READ_SYSREG_ID
+    mov reg_id, ICH_ELRSR_EL2_ID
     hvc 5
     ret
 END_FUNCTION(arm64_el2_gicv3_read_gich_elrsr)
 
 // uint32_t arm64_el2_gicv3_read_gich_misr();
 FUNCTION(arm64_el2_gicv3_read_gich_misr)
-    mov x2, READ_SYSREG_ID
-    mov x3, ICH_MISR_EL2_ID
+    mov reg_rw, READ_SYSREG_ID
+    mov reg_id, ICH_MISR_EL2_ID
     hvc 5
     ret
 END_FUNCTION(arm64_el2_gicv3_read_gich_misr)
 
 // uint64_t arm64_el2_gicv3_read_gich_lr(uint32_t idx);
 FUNCTION(arm64_el2_gicv3_read_gich_lr)
-    mov x1, x0
-    mov x2, READ_SYSREG_ID
-    mov x3, ICH_LR_EL2_ID
+    mov reg_rw, READ_SYSREG_ID
+    mov reg_id, ICH_LR_EL2_ID
+    mov reg_num, x0
     hvc 5
     ret
 END_FUNCTION(arm64_el2_gicv3_read_gich_lr)
 
 // void arm64_el2_gicv3_write_gich_lr(uint64_t val, uint32_t idx)
 FUNCTION(arm64_el2_gicv3_write_gich_lr)
-    mov x2, WRITE_SYSREG_ID
-    mov x3, ICH_LR_EL2_ID
+    mov reg_rw, WRITE_SYSREG_ID
+    mov reg_id, ICH_LR_EL2_ID
+    mov reg_num, x1
     hvc 5
     ret
 END_FUNCTION(arm64_el2_gicv3_write_gich_lr)
 
-// x1 - Index for LR register
 FUNCTION_LABEL(el2_gicv3_read_lr)
-    gic_jump .Llr_read_table x1
+    gic_jump .Llr_read_table reg_num
 
 .Llr_read_table:
     entry_read_sysreg ICH_LR(0)
@@ -248,10 +249,8 @@ FUNCTION_LABEL(el2_gicv3_read_lr)
     entry_read_sysreg ICH_LR(14)
     entry_read_sysreg ICH_LR(15)
 
-// x0 - Value to write
-// x1 - Index for LR register
 FUNCTION_LABEL(el2_gicv3_write_lr)
-    gic_jump .Llr_write_table x1
+    gic_jump .Llr_write_table reg_num
 
 .Llr_write_table:
     entry_write_sysreg ICH_LR(0)

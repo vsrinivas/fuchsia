@@ -406,14 +406,14 @@ FUNCTION_LABEL(el2_hvc_off)
 
 // zx_status_t arm64_el2_tlbi_ipa(zx_paddr_t vttbr, zx_vaddr_t addr, bool terminal);
 FUNCTION(arm64_el2_tlbi_ipa)
-    mov x7, 0
+    mov x11, 0
     hvc 3
     ret
 END_FUNCTION(arm64_el2_tlbi_ipa)
 
 // zx_status_t arm64_el2_tlbi_vmid(zx_paddr_t vttbr);
 FUNCTION(arm64_el2_tlbi_vmid)
-    mov x7, 1
+    mov x11, 1
     hvc 3
     ret
 END_FUNCTION(arm64_el2_tlbi_vmid)
@@ -421,7 +421,7 @@ END_FUNCTION(arm64_el2_tlbi_vmid)
 FUNCTION_LABEL(el2_hvc_tlbi)
     switch_to_guest
 
-    cbz x7, el2_hvc_tlbi_ipa
+    cbz x11, el2_hvc_tlbi_ipa
     b el2_hvc_tlbi_vmid
 
 .Ltlbi_exit:
