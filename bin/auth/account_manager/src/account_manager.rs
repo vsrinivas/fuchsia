@@ -10,6 +10,7 @@ use fidl_fuchsia_auth_account::{
     AccountAuthState, AccountListenerMarker, AccountListenerOptions, AccountManagerRequest,
     AccountManagerRequestStream, AccountMarker, Status,
 };
+use fuchsia_zircon as zx;
 
 use failure::Error;
 use futures::lock::Mutex;
@@ -197,8 +198,19 @@ impl AccountManager {
                 return (err.status, None);
             }
         };
+        // TODO(jsankey): Supply a real AccountHandlerContext
+        let dummy_context = match zx::Channel::create() {
+            Ok((_, client_chan)) => client_chan,
+            Err(err) => {
+                warn!("Failure to create AccountHandlerContext channel: {:?}", err);
+                return (Status::IoError, None);
+            }
+        };
 
-        let account_id = match await!(account_handler.proxy().create_account()) {
+        let account_id = match await!(account_handler
+            .proxy()
+            .create_account(ClientEnd::new(dummy_context)))
+        {
             Ok((Status::Ok, Some(account_id))) => LocalAccountId::from(*account_id),
             Ok((Status::Ok, None)) => {
                 warn!("Failure creating account, handler returned success without ID");

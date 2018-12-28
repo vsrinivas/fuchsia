@@ -61,7 +61,10 @@ impl AccountHandler {
     /// based on its type.
     pub fn handle_request(&self, req: AccountHandlerControlRequest) -> Result<(), fidl::Error> {
         match req {
-            AccountHandlerControlRequest::CreateAccount { responder } => {
+            AccountHandlerControlRequest::CreateAccount {
+                context: _,
+                responder,
+            } => {
                 let response = self.create_account();
                 responder.send(
                     response.0,
@@ -72,7 +75,11 @@ impl AccountHandler {
                         .map(OutOfLine),
                 )?;
             }
-            AccountHandlerControlRequest::LoadAccount { id, responder } => {
+            AccountHandlerControlRequest::LoadAccount {
+                context: _,
+                id,
+                responder,
+            } => {
                 let response = self.load_account(id.into());
                 responder.send(response)?;
             }
@@ -256,11 +263,15 @@ mod tests {
     fn test_double_initialize() {
         let location = TempLocation::new();
         request_stream_test(AccountHandler::new(location.path), async move |proxy| {
-            let (status, account_id_optional) = await!(proxy.create_account())?;
+            let (_, ahc_client_chan_1) = zx::Channel::create().unwrap();
+            let (status, account_id_optional) =
+                await!(proxy.create_account(ClientEnd::new(ahc_client_chan_1)))?;
             assert_eq!(status, Status::Ok);
             assert!(account_id_optional.is_some());
+
+            let (_, ahc_client_chan_2) = zx::Channel::create().unwrap();
             assert_eq!(
-                await!(proxy.create_account())?,
+                await!(proxy.create_account(ClientEnd::new(ahc_client_chan_2)))?,
                 (Status::InvalidRequest, None)
             );
             Ok(())
@@ -273,7 +284,9 @@ mod tests {
         request_stream_test(
             AccountHandler::new(location.path),
             async move |account_handler_proxy| {
-                let (status, account_id_optional) = await!(account_handler_proxy.create_account())?;
+                let (_, ahc_client_chan) = zx::Channel::create().unwrap();
+                let (status, account_id_optional) =
+                    await!(account_handler_proxy.create_account(ClientEnd::new(ahc_client_chan)))?;
                 assert_eq!(status, Status::Ok);
                 assert!(account_id_optional.is_some());
 
@@ -311,7 +324,9 @@ mod tests {
         request_stream_test(
             AccountHandler::new(location.path.clone()),
             async move |account_handler_proxy| {
-                let (status, account_id_optional) = await!(account_handler_proxy.create_account())?;
+                let (_, ahc_client_chan) = zx::Channel::create().unwrap();
+                let (status, account_id_optional) =
+                    await!(account_handler_proxy.create_account(ClientEnd::new(ahc_client_chan)))?;
                 assert_eq!(status, Status::Ok);
                 assert!(account_id_optional.is_some());
                 let mut acc_id = acc_id_borrow.lock().unwrap();
@@ -320,8 +335,10 @@ mod tests {
             },
         );
         request_stream_test(AccountHandler::new(location.path), async move |proxy| {
+            let (_, ahc_client_chan) = zx::Channel::create().unwrap();
             assert_eq!(
-                await!(proxy.load_account(&mut acc_id.lock().unwrap()))?,
+                await!(proxy
+                    .load_account(ClientEnd::new(ahc_client_chan), &mut acc_id.lock().unwrap()))?,
                 Status::Ok
             );
             Ok(())
@@ -332,10 +349,14 @@ mod tests {
     fn test_load_account_not_found() {
         let location = TempLocation::new();
         request_stream_test(AccountHandler::new(location.path), async move |proxy| {
+            let (_, ahc_client_chan) = zx::Channel::create().unwrap();
             assert_eq!(
-                await!(proxy.load_account(&mut FidlLocalAccountId {
-                    id: WRONG_ACCOUNT_ID
-                }))?,
+                await!(proxy.load_account(
+                    ClientEnd::new(ahc_client_chan),
+                    &mut FidlLocalAccountId {
+                        id: WRONG_ACCOUNT_ID
+                    }
+                ))?,
                 Status::NotFound
             );
             Ok(())

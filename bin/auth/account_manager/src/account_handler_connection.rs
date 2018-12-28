@@ -4,9 +4,11 @@
 
 use account_common::{AccountManagerError, LocalAccountId};
 use failure::{format_err, ResultExt};
+use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_auth_account::Status;
 use fidl_fuchsia_auth_account_internal::{AccountHandlerControlMarker, AccountHandlerControlProxy};
 use fuchsia_app::client::{App, Launcher};
+use fuchsia_zircon as zx;
 use futures::prelude::*;
 use log::{info, warn};
 
@@ -51,8 +53,14 @@ impl AccountHandlerConnection {
     pub async fn new_for_account(account_id: &LocalAccountId) -> Result<Self, AccountManagerError> {
         let connection = Self::new()?;
         let mut fidl_account_id = account_id.clone().into();
-        match await!(connection.proxy.load_account(&mut fidl_account_id))
-            .map_err(|err| AccountManagerError::new(Status::IoError).with_cause(err))?
+        // TODO(jsankey): Supply a real AccountHandlerContext
+        let (_, dummy_context) = zx::Channel::create()
+            .context("Failed to create AccountHandlerContext channel")
+            .map_err(|err| AccountManagerError::new(Status::IoError).with_cause(err))?;
+        match await!(connection
+            .proxy
+            .load_account(ClientEnd::new(dummy_context), &mut fidl_account_id))
+        .map_err(|err| AccountManagerError::new(Status::IoError).with_cause(err))?
         {
             Status::Ok => Ok(connection),
             stat => Err(AccountManagerError::new(stat)

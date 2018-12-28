@@ -22,20 +22,28 @@ using fuchsia.auth.account;
 interface AccountHandlerControl {
     // Creates a completely new Fuchsia account.
     //
+    // |context| An |AccountHandlerContext| that can supply account and
+    //           authentication services and contextual state.
+    //
     // Returns: |status| A |Status| indicating whether the operation was
     //                   successful
     //          |id| The new account's local identifier, if successful
-    CreateAccount() -> (fuchsia.auth.account.Status status,
-                        fuchsia.auth.account.LocalAccountId? id);
+    CreateAccount(AccountHandlerContext context)
+        -> (fuchsia.auth.account.Status status,
+            fuchsia.auth.account.LocalAccountId? id);
 
     // Loads information about a Fuchsia account that was previously provisioned
     // on the current device.
     //
+    // |context| An |AccountHandlerContext| that can supply account and
+    //           authentication services and contextual state.
     // |id| The account's local identifier
     //
     // Returns: |status| A |Status| indicating whether the operation was
     //                   successful
-    LoadAccount(fuchsia.auth.account.LocalAccountId id)
+    LoadAccount(
+        AccountHandlerContext context,
+        fuchsia.auth.account.LocalAccountId id)
         -> (fuchsia.auth.account.Status status);
 
     // Deletes all persistent information about the Fuchsia account handled by
@@ -75,9 +83,12 @@ interface AccountHandlerControl {
 };
 
 // An interface that supplies the account and authentication services that
-// an AccountHandler needs to perform its role in the system. This service is
-// supplied to the AccountHandler by the component that launches it, i.e. the
-// AccountManager.
+// an AccountHandler needs to perform its role in the system.
+//
+// In the v2 Component architecture this service will be supplied into the
+// namespace of AccountHandler by the component that launches it (i.e. the
+// AccountManager).  Until then an AccountHandlerContext is supplied explicitly
+// in the initialization calls on the AccountHandlerControl interface.
 interface AccountHandlerContext {
     // Connects an interface to a particular AuthProvider, launching it if
     // necessary.

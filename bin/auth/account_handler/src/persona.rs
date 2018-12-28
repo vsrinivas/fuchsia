@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use account_common::{LocalAccountId, LocalPersonaId};
 use crate::account_handler::AccountHandler;
+use account_common::{LocalAccountId, LocalPersonaId};
 use failure::Error;
 use fidl::encoding::OutOfLine;
 use fidl::endpoints::{ClientEnd, ServerEnd};
