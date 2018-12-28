@@ -86,6 +86,8 @@ func (v *C.struct_zxrio_sockopt_req_reply) Unpack() (interface{}, error) {
 			return tcpip.ErrorOption{}, nil
 		case C.SO_REUSEADDR:
 			return tcpip.ReuseAddressOption(v.ToInt()), nil
+		case C.SO_REUSEPORT:
+			return tcpip.ReusePortOption(v.ToInt()), nil
 		case C.SO_KEEPALIVE:
 			return tcpip.KeepaliveEnabledOption(v.ToInt()), nil
 		case C.SO_BROADCAST:

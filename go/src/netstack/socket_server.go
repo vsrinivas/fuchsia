@@ -806,6 +806,12 @@ func (s *socketServer) opGetSockOpt(ios *iostate, msg *zxsocket.Msg) zx.Status {
 		}
 		binary.LittleEndian.PutUint32(val.opt(), uint32(o))
 		val.optlen = 4
+	case tcpip.ReusePortOption:
+		if err := ios.ep.GetSockOpt(&o); err != nil {
+			return zxNetError(err)
+		}
+		binary.LittleEndian.PutUint32(val.opt(), uint32(o))
+		val.optlen = 4
 	case tcpip.V6OnlyOption:
 		if err := ios.ep.GetSockOpt(&o); err != nil {
 			return zxNetError(err)
