@@ -5,6 +5,7 @@
 import("//build/config/clang/clang.gni")
 import("//build/fidl/toolchain.gni")
 import("//build/rust/config.gni")  # for rust_config
+import("//build/testing/test_spec.gni")
 
 template("rustc_third_party_artifact") {
   # Dummy build target to match the one in rustc_artifact
@@ -136,6 +137,14 @@ template("rustc_artifact") {
   group_deps += [ ":${build_target_name}" ]
 
   with_unit_tests = defined(invoker.with_unit_tests) && invoker.with_unit_tests
+
+  # If host-side tests are present, record metadata for testing instruction.
+  if (with_unit_tests && (is_linux || is_mac)) {
+    test_spec("${target_name}_spec") {
+      name = invoker.target_name
+      location = test_output_file
+    }
+  }
 
   # Iterate through the deps collecting a list of the outputs
   # of their build targets, which will be passed to rustc as
