@@ -12,7 +12,7 @@ group("model") {
   ]
 }
 
-tests_package("story_model_unittests") {
+hermetic_tests_package("story_model_unittests") {
   deps = [
     ":apply_mutations_unittest",
     ":story_model_owner_unittest",

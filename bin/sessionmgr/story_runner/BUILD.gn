@@ -5,7 +5,7 @@
 import("//peridot/build/executable_package.gni")
 import("//peridot/build/tests_package.gni")
 
-tests_package("story_runner_unittests") {
+hermetic_tests_package("story_runner_unittests") {
   deps = [
     ":link_impl_unittest",
     ":story_controller_impl_unittest",  # incomplete, for now.
