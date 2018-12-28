@@ -104,7 +104,7 @@ func (v *C.struct_zxrio_sockopt_req_reply) Unpack() (interface{}, error) {
 		case C.IP_ADD_MEMBERSHIP, C.IP_DROP_MEMBERSHIP:
 			var o tcpip.MembershipOption
 
-			b := v.opt()
+			b := v.opt()[:v.optlen]
 			switch len(b) {
 			case C.sizeof_struct_ip_mreq:
 				var mreq C.struct_ip_mreq
