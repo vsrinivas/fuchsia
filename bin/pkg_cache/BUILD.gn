@@ -7,55 +7,53 @@ import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
 
 rustc_binary("bin") {
-  name = "pkgctl"
+  name = "pkg_cache"
   with_unit_tests = true
   edition = "2018"
 
   deps = [
+    "//garnet/lib/rust/fidl_fuchsia_pkg_ext",
     "//garnet/public/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
-    "//garnet/lib/rust/fidl_fuchsia_pkg_ext",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures-preview",
-    "//third_party/rust-crates/rustc_deps:structopt",
     "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
 
-package("pkg_ctl") {
-  deprecated_bare_package_url = "//build"
-
+package("pkg_cache") {
   deps = [
     ":bin",
   ]
 
   binaries = [
     {
-      name = "rust_crates/pkgctl"
-      dest = "pkgctl"
-      shell = true
+      name = "rust_crates/pkg_cache"
+      dest = "pkg_cache"
     },
   ]
 
   meta = [
     {
-      path = rebase_path("meta/pkgctl.cmx")
-      dest = "pkgctl.cmx"
+      path = rebase_path("meta/pkg_cache.cmx")
+      dest = "pkg_cache.cmx"
     },
   ]
 }
 
-test_package("pkg_ctl_tests") {
+test_package("pkg_cache_tests") {
   deps = [
     ":bin",
   ]
 
   tests = [
     {
-      name = "pkgctl_bin_test"
+      name = "pkg_cache_bin_test"
     },
   ]
 }

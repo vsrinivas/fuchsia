@@ -23,6 +23,7 @@
     "garnet/packages/prod/network_time",
     "garnet/packages/prod/openssh",
     "garnet/packages/prod/power_manager",
+    "garnet/packages/prod/pkg_cache",
     "garnet/packages/prod/pkg_resolver",
     "garnet/packages/prod/root_ssl_certificates",
     "garnet/packages/prod/runtime",

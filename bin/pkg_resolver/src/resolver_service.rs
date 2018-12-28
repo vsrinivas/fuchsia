@@ -5,8 +5,11 @@
 use failure::Error;
 use fidl::endpoints::{RequestStream, ServerEnd};
 use fidl_fuchsia_amber::ControlProxy as AmberProxy;
-use fidl_fuchsia_io::{self, DirectoryMarker, DirectoryProxy};
-use fidl_fuchsia_pkg::{PackageResolverRequest, PackageResolverRequestStream, UpdatePolicy};
+use fidl_fuchsia_io::{self, DirectoryMarker};
+use fidl_fuchsia_pkg::{
+    PackageCacheProxy, PackageResolverRequest, PackageResolverRequestStream, UpdatePolicy,
+};
+use fidl_fuchsia_pkg_ext::BlobId;
 use fuchsia_async as fasync;
 use fuchsia_pkg_uri::PackageUri;
 use fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn};
@@ -14,7 +17,7 @@ use fuchsia_zircon::{Channel, MessageBuf, Signals, Status};
 use futures::prelude::*;
 
 pub async fn run_resolver_service(
-    amber: AmberProxy, pkgfs: DirectoryProxy, chan: fasync::Channel,
+    amber: AmberProxy, cache: PackageCacheProxy, chan: fasync::Channel,
 ) -> Result<(), Error> {
     let mut stream = PackageResolverRequestStream::from_channel(chan);
 
@@ -29,7 +32,7 @@ pub async fn run_resolver_service(
 
         let status = await!(resolve(
             &amber,
-            &pkgfs,
+            &cache,
             package_uri,
             selectors,
             update_policy,
@@ -46,7 +49,7 @@ pub async fn run_resolver_service(
 /// FIXME: at the moment, we are proxying to Amber to resolve a package name and variant to a
 /// merkleroot. Because of this, we cant' implement the update policy, so we just ignore it.
 async fn resolve<'a>(
-    amber: &'a AmberProxy, pkgfs: &'a DirectoryProxy, pkg_uri: String, selectors: Vec<String>,
+    amber: &'a AmberProxy, cache: &'a PackageCacheProxy, pkg_uri: String, selectors: Vec<String>,
     _update_policy: UpdatePolicy, dir_request: ServerEnd<DirectoryMarker>,
 ) -> Result<(), Status> {
     fx_log_info!("resolving {:?} with the selectors {:?}", pkg_uri, selectors);
@@ -72,6 +75,8 @@ async fn resolve<'a>(
         Err(Status::INVALID_ARGS)
     })?;
 
+    // FIXME: use the package cache to fetch the package instead of amber.
+
     // Ask amber to cache the package.
     let chan =
         await!(amber.get_update_complete(&name, uri.variant(), uri.hash())).map_err(|err| {
@@ -86,12 +91,12 @@ async fn resolve<'a>(
 
     fx_log_info!("success: {} has a merkle of {}", name, merkle);
 
-    // FIXME: this is a bit of a hack but there isn't a formal way to convert a Directory request
-    // into a Node request.
-    let node_request = ServerEnd::new(dir_request.into_channel());
-
-    let flags = fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_FLAG_DIRECTORY;
-    pkgfs.open(flags, 0, &merkle, node_request).map_err(|err| {
+    await!(cache.open(
+        &mut merkle.into(),
+        &mut selectors.iter().map(|s| s.as_str()),
+        dir_request
+    ))
+    .map_err(|err| {
         fx_log_err!("error opening {}: {:?}", merkle, err);
         Status::INTERNAL
     })?;
@@ -99,7 +104,7 @@ async fn resolve<'a>(
     Ok(())
 }
 
-async fn wait_for_update_to_complete(chan: Channel) -> Result<String, Status> {
+async fn wait_for_update_to_complete(chan: Channel) -> Result<BlobId, Status> {
     let mut buf = MessageBuf::new();
 
     let sigs = await!(fasync::OnSignals::new(
@@ -121,6 +126,19 @@ async fn wait_for_update_to_complete(chan: Channel) -> Result<String, Status> {
             Ok(merkle) => merkle,
             Err(err) => {
                 let merkle = String::from_utf8_lossy(err.as_bytes());
+                fx_log_err!(
+                    "{:?} is not a valid UTF-8 encoded merkleroot: {:?}",
+                    merkle,
+                    err
+                );
+
+                return Err(Status::INTERNAL);
+            }
+        };
+
+        let merkle = match merkle.parse() {
+            Ok(merkle) => merkle,
+            Err(err) => {
                 fx_log_err!("{:?} is not a valid merkleroot: {:?}", merkle, err);
 
                 return Err(Status::INTERNAL);

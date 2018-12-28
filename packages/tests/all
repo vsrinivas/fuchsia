@@ -65,6 +65,7 @@
         "garnet/packages/tests/network_time",
         "garnet/packages/tests/overnet",
         "garnet/packages/tests/pkg_ctl",
+        "garnet/packages/tests/pkg_cache",
         "garnet/packages/tests/pkg_resolver",
         "garnet/packages/tests/pm",
         "garnet/packages/tests/pmd",

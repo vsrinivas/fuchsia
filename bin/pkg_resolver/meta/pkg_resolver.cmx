@@ -3,12 +3,10 @@
         "binary": "bin/pkg_resolver"
     },
     "sandbox": {
-        "pkgfs": [
-            "versions"
-        ],
         "services": [
             "fuchsia.amber.Control",
-            "fuchsia.logger.LogSink"
+            "fuchsia.logger.LogSink",
+            "fuchsia.pkg.PackageCache"
         ]
     }
 }

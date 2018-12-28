@@ -57,6 +57,7 @@
         "garnet/packages/prod/openssh",
         "garnet/packages/prod/overnetstack",
         "garnet/packages/prod/pkg_ctl",
+        "garnet/packages/prod/pkg_cache",
         "garnet/packages/prod/pkg_resolver",
         "garnet/packages/prod/pkgsvr",
         "garnet/packages/prod/pm",

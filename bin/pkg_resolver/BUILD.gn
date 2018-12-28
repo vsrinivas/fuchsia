@@ -12,6 +12,7 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
+    "//garnet/lib/rust/fidl_fuchsia_pkg_ext",
     "//garnet/lib/rust/fuchsia_pkg_uri",
     "//garnet/public/fidl/fuchsia.amber:fuchsia.amber-rustc",
     "//garnet/public/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
