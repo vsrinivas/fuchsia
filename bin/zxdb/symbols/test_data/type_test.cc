@@ -75,6 +75,20 @@ EXPORT int CallInline(int param) {
   return for_inline.InlinedFunction(param + 1);
 }
 
+struct StructWithEnums {
+  // "Regular" enum but with no values.
+  enum RegularEnum {} regular;
+
+  // Amonymous enum (should be forced to be signed).
+  enum { ANON_A = -1, ANON_B = 1 } anon;
+
+  // Typed enum class.
+  enum class TypedEnum : signed char { TYPED_A = -1, TYPED_B = 1} typed;
+};
+StructWithEnums GetStructWithEnums() {
+  return StructWithEnums();
+}
+
 // TODO(brettw) test:
 //   stuff in an anonymous namespace
 //   typedef

@@ -9,9 +9,10 @@
 #include "garnet/bin/zxdb/symbols/collection.h"
 #include "garnet/bin/zxdb/symbols/data_member.h"
 #include "garnet/bin/zxdb/symbols/dwarf_test_util.h"
-#include "garnet/bin/zxdb/symbols/inherited_from.h"
+#include "garnet/bin/zxdb/symbols/enumeration.h"
 #include "garnet/bin/zxdb/symbols/function.h"
 #include "garnet/bin/zxdb/symbols/function_type.h"
+#include "garnet/bin/zxdb/symbols/inherited_from.h"
 #include "garnet/bin/zxdb/symbols/modified_type.h"
 #include "garnet/bin/zxdb/symbols/module_symbols_impl.h"
 #include "garnet/bin/zxdb/symbols/symbol.h"
@@ -340,6 +341,73 @@ TEST(DwarfSymbolFactory, Collection) {
   EXPECT_EQ("const void*", member_v_type->GetFullName());
   EXPECT_LT(member_b->member_location(), member_v->member_location());
   EXPECT_TRUE(member_v->member_location() % 4 == 0);
+}
+
+TEST(DwarfSymbolFactory, Enum) {
+  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "");
+  Err err = module.Load();
+  EXPECT_FALSE(err.has_error()) << err.msg();
+
+  // Find the GetStruct function.
+  const char kGetStruct[] = "GetStructWithEnums";
+  fxl::RefPtr<const Function> function =
+      GetFunctionWithName(module, kGetStruct);
+  ASSERT_TRUE(function);
+
+  // The return type should be the struct.
+  auto* struct_type = function->return_type().Get()->AsCollection();
+  ASSERT_TRUE(struct_type);
+  EXPECT_EQ("StructWithEnums", struct_type->GetFullName());
+
+  // There are three enum members defined in the struct.
+  ASSERT_EQ(3u, struct_type->data_members().size());
+
+  // First is a regular enum with no values.
+  auto regular_enum = struct_type->data_members()[0]
+                          .Get()
+                          ->AsDataMember()
+                          ->type()
+                          .Get()
+                          ->AsEnumeration();
+  ASSERT_TRUE(regular_enum);
+  EXPECT_EQ("StructWithEnums::RegularEnum", regular_enum->GetFullName());
+  EXPECT_TRUE(regular_enum->values().empty());
+
+  // Second is an anonymous signed enum with two values. We don't bother to
+  // test the enumerator values on this one since some aspects will be
+  // compiler-dependent.
+  auto anon_enum = struct_type->data_members()[1]
+                       .Get()
+                       ->AsDataMember()
+                       ->type()
+                       .Get()
+                       ->AsEnumeration();
+  ASSERT_TRUE(anon_enum);
+  EXPECT_EQ("StructWithEnums::(anon enum)", anon_enum->GetFullName());
+  EXPECT_TRUE(anon_enum->is_signed());
+  EXPECT_EQ(2u, anon_enum->values().size());
+
+  // Third is a type enum with two values.
+  auto typed_enum = struct_type->data_members()[2]
+                        .Get()
+                        ->AsDataMember()
+                        ->type()
+                        .Get()
+                        ->AsEnumeration();
+  ASSERT_TRUE(typed_enum);
+  EXPECT_EQ("StructWithEnums::TypedEnum", typed_enum->GetFullName());
+  EXPECT_TRUE(typed_enum->is_signed());
+  ASSERT_EQ(2u, typed_enum->values().size());
+  EXPECT_EQ(1u, typed_enum->byte_size());
+
+  // Since this is typed, the values should be known. The map contains the
+  // signed values casted to an unsigned int.
+  auto first_value = *typed_enum->values().begin();
+  auto second_value = *(++typed_enum->values().begin());
+  EXPECT_EQ(1u, first_value.first);
+  EXPECT_EQ("TYPED_B", first_value.second);
+  EXPECT_EQ(static_cast<uint64_t>(-1), second_value.first);
+  EXPECT_EQ("TYPED_A", second_value.second);
 }
 
 // Tests nested code blocks, variables, and parameters.

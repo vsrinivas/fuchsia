@@ -516,6 +516,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeDataMember(
 fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeEnum(const llvm::DWARFDie& die) {
   DwarfDieDecoder main_decoder(symbols_->context(), die.getDwarfUnit());
 
+  // Name is optional (enums can be anonymous).
   llvm::Optional<const char*> type_name;
   main_decoder.AddCString(llvm::dwarf::DW_AT_name, &type_name);
 
@@ -555,7 +556,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeEnum(const llvm::DWARFDie& die) {
         }
       });
 
-  if (!main_decoder.Decode(die) || !type_name || !byte_size)
+  if (!main_decoder.Decode(die) || !byte_size)
     return fxl::MakeRefCounted<Symbol>();
 
   Enumeration::Map map;
@@ -574,7 +575,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeEnum(const llvm::DWARFDie& die) {
   LazySymbol lazy_type;
   if (type)
     lazy_type = MakeLazy(type);
-  const char* type_name_str = type_name ? *type_name : nullptr;
+  const char* type_name_str = type_name ? *type_name : "";
   return fxl::MakeRefCounted<Enumeration>(type_name_str, std::move(lazy_type),
                                           *byte_size, is_signed,
                                           std::move(map));
