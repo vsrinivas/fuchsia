@@ -1409,6 +1409,9 @@ static uint8_t brcmf_sdio_rxglom(struct brcmf_sdio* bus, uint8_t rxseq) {
 
     struct brcmf_sdio_hdrinfo rd_new;
 
+    TRACE_DURATION("brcmfmac:isr", "sdio_rxglom",
+                   "rxseq", TA_UINT32((uint32_t)rxseq));
+
     /* If packets, issue read(s) and send up packet chain */
     /* Return sequence numbers consumed? */
 
@@ -1427,7 +1430,7 @@ static uint8_t brcmf_sdio_rxglom(struct brcmf_sdio* bus, uint8_t rxseq) {
 
         for (totlen = num = 0; dlen; num++) {
             /* Get (and move past) next length */
-            sublen = *(uint16_t*)&(dptr);
+            sublen = *(uint16_t*)(dptr);
             dlen -= sizeof(uint16_t);
             dptr += sizeof(uint16_t);
             if ((sublen < SDPCM_HDRLEN) || ((num == 0) && (sublen < (2 * SDPCM_HDRLEN)))) {
@@ -1561,7 +1564,7 @@ static uint8_t brcmf_sdio_rxglom(struct brcmf_sdio* bus, uint8_t rxseq) {
 
         brcmf_netbuf_list_for_every_safe(&bus->glom, pfirst, pnext) {
             dptr = (uint8_t*)(pfirst->data);
-            sublen = *(uint16_t*)&dptr;
+            sublen = *(uint16_t*)dptr;
             doff = brcmf_sdio_getdatoffset(&dptr[SDPCM_HWHDR_LEN]);
 
             brcmf_dbg_hex_dump(BRCMF_BYTES_ON() && BRCMF_DATA_ON(), dptr, pfirst->len,
@@ -1764,8 +1767,12 @@ static uint brcmf_sdio_readframes(struct brcmf_sdio* bus, uint maxframes) {
                 continue;
             }
 
-            //THROTTLE(20, brcmf_dbg_hex_dump(BRCMF_BYTES_ON() || BRCMF_HDRS_ON(), bus->rxhdr,
-            //                                SDPCM_HDRLEN, "RxHdr:\n"););
+            TRACE_INSTANT("brcmfmac:isr", "rxhdr", TRACE_SCOPE_THREAD,
+                          "frame length", TA_UINT32((uint32_t)*(uint16_t*)&bus->rxhdr[0]),
+                          "checksum", TA_UINT32((uint32_t)*(uint16_t*)&bus->rxhdr[2]),
+                          "seq num", TA_UINT32((uint32_t)bus->rxhdr[SDPCM_HWHDR_LEN + 0]),
+                          "channel", TA_UINT32((uint32_t)bus->rxhdr[SDPCM_HWHDR_LEN + 1] & 0xf),
+                          "data offset", TA_UINT32((uint32_t)bus->rxhdr[SDPCM_HWHDR_LEN + 3]));
 
             if (brcmf_sdio_hdparse(bus, bus->rxhdr, rd, BRCMF_SDIO_FT_NORMAL) != ZX_OK) {
                 sdio_release_host(bus->sdiodev->func1);
@@ -1803,8 +1810,11 @@ static uint brcmf_sdio_readframes(struct brcmf_sdio* bus, uint maxframes) {
         brcmf_netbuf_shrink_head(pkt, head_read);
         pkt_align(pkt, rd->len_left, bus->head_align);
 
-        ret = brcmf_sdiod_recv_pkt(bus->sdiodev, pkt);
-        bus->sdcnt.f2rxdata++;
+        if (pkt->len > 0) {
+            ret = brcmf_sdiod_recv_pkt(bus->sdiodev, pkt);
+            bus->sdcnt.f2rxdata++;
+        }
+
         sdio_release_host(bus->sdiodev->func1);
 
         if (ret != ZX_OK) {
@@ -3294,7 +3304,7 @@ static zx_status_t brcmf_sdio_bus_preinit(struct brcmf_device* dev) {
      * a device perspective, ie. bus:txglom affects the
      * bus transfers from device to host.
      */
-    if (1 || core->rev < 12) { // TODO(cphoenix): Get glomming working
+    if (core->rev < 12) {
         /* for sdio core rev < 12, disable txgloming */
         value = 0;
         err = brcmf_iovar_data_set(dev, "bus:txglom", &value, sizeof(uint32_t));
