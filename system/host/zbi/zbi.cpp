@@ -50,7 +50,6 @@ constexpr size_t kLZ4FMaxHeaderFrameSize = 128;
 // iovec.iov_base is void* but we only use pointers to const.
 template <typename T>
 iovec Iovec(const T* buffer, size_t size = sizeof(T)) {
-    assert(size > 0);
     return {const_cast<void*>(static_cast<const void*>(buffer)), size};
 }
 
@@ -115,7 +114,9 @@ public:
     // object may refer to buffer.iov_base until Flush() completes.
     void Write(const iovec& buffer,
                std::unique_ptr<std::byte[]> owned = nullptr) {
-        assert(buffer.iov_len > 0);
+        if (buffer.iov_len == 0) {
+            return;
+        }
         if (buffer.iov_len + total_ > UINT32_MAX - sizeof(zbi_header_t) + 1) {
             fprintf(stderr, "output size exceeds format maximum\n");
             exit(1);
@@ -654,6 +655,10 @@ public:
             return pagesize;
         }();
 
+        if (size == 0) {
+            return {};
+        }
+
         void* map = mmap(nullptr, size,
                          PROT_READ, MAP_FILE | MAP_PRIVATE, fd.get(), 0);
         if (map == MAP_FAILED) {
@@ -670,15 +675,13 @@ public:
     }
 
     const iovec View(size_t offset, size_t length) const {
-        assert(length > 0);
-        assert(offset < exact_size_);
+        assert(offset <= exact_size_);
         assert(exact_size_ - offset >= length);
         return Iovec(static_cast<const std::byte*>(mapped_) + offset, length);
     }
 
     const iovec PageRoundedView(size_t offset, size_t length) const {
-        assert(length > 0);
-        assert(offset < mapped_size_);
+        assert(offset <= mapped_size_);
         assert(mapped_size_ - offset >= length);
         return Iovec(static_cast<const std::byte*>(mapped_) + offset, length);
     }
