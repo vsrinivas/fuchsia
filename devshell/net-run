@@ -7,31 +7,36 @@
 
 ## Run Fuchsia on QEMU (using standard fx setup) in background and pings the
 ## target until netstack is up running. If successful, issues the given SSH
-## command.
+## command. Always kills QEMU before exiting. Redirects kernel logs to out/ and
+## by default runs:
 ##
-## usage: fx net-run [--klog PATH]
-##                   [--run RUN_OPTIONS]
-##                   [--target TARGET]
-##                   [--] SSH_COMMAND
+## `fx run -- -N -u "${FUCHSIA_DIR}"/scripts/start-dhcp-server.sh`
 ##
-##    --klog        Path where to pipe kernel log. Defaults to stdout.
-##                  stderr will still be visible.
-##    --run         The options to be passed to "fx run". If not set, it will
-##                  attempt to load ${FX_NET_RUN_OPTIONS}. Finally, defaults to
-##                  "-N -u ${FUCHSIA_DIR}/scripts/start-dhcp-server.sh".
-##    --target      IP or hostname to connect to. If not supplied, it will
-##                  attempt to guess it from ${FX_NET_RUN_TARGET}.
+## These options can be overridden with the FX_NET_RUN_OPTIONS environment
+## variable.
 ##
-##    SSH_COMMAND   Any other argument will be passed directly to "fx ssh".
+## usage: fx net-run [--target TARGET] SSH_COMMAND
+##
+##    --target      IP address to connect to on launching. Defaults to the
+##                  value of the FX_NET_RUN_TARGET environment variable.
+##
+##    SSH_COMMAND   Any argument will be passed directly to "fx ssh".
 ##                  If not specified, it will open an interactive SSH session.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+
+# make sure to terminate qemu and any other children when this script exits!
+trap 'kill 0 &>/dev/null' INT EXIT TERM
+
+klog="$FUCHSIA_DIR/out/qemu-klog"
 
 # Defaults
 # If --run is set, it will overwrite this value
 run_options="${FX_NET_RUN_OPTIONS}"
 if [[ -z "${run_options}" ]]; then
-  run_options="-N -u "${FUCHSIA_DIR}"/scripts/start-dhcp-server.sh"
+  # NOTE: this script could tell us about the hostname this qemu instance
+  # is assigned using dnsmasq's leasefile, rather than using --target/envvars
+  run_options="-N -u ${FUCHSIA_DIR}/scripts/start-dhcp-server.sh"
 fi
 target="${FX_NET_RUN_TARGET}"
 
@@ -42,20 +47,9 @@ while [[ "$1" =~ ^- ]]; do
       fx-command-help
       exit 0
       ;;
-    --run)
-      shift
-      run_options="$1"
-      ;;
     --target)
       shift
       target="$1"
-      ;;
-    --klog)
-      shift
-      klog="$1"
-      ;;
-    --)
-      break
       ;;
     *)
       break
@@ -70,40 +64,35 @@ if [[ -z "${target}" ]]; then
 fi
 
 # Run fx run in background. If successful, it will be sent to background.
+echo "Running sudo now in case the DHCP server asks for it..."
+sudo echo "sudo successful."
+
 echo "Using \"${run_options}\" to boot Fuchsia."
-echo "You might need to run sudo beforehand."
-if [[ -z "$klog" ]]; then
-  fx-command-run "run" ${run_options} &
-else
-  # Only pipe stdout
-  fx-command-run "run" ${run_options} > "${klog}" &
-  echo "Piping Fuchsia output to \"${klog}\"."
-fi
-fx_pid="$!"
+echo
+echo "To see live kernel logs, run \`tail -f $klog\`."
+echo
+fx-command-run "run" ${run_options} &> "$klog" &
 
-# Wait until netstack is on
 ping_count=1
-ping_max=120  # 2 Minute
-echo "Waiting for device on ${target}."
-while true; do
-  echo "Ping ${ping_count}/${ping_max}"
-  ping -c1 -W1 "${target}" > /dev/null &
-  # We wait so we can ctrl-c kill it
-  wait "$!"
+ping_max=120
+ping_wait=1
+max_wait=$((ping_wait * ping_max))
 
-  # If the ping is successful, we break
-  if [[ "$?" -eq 0 ]]; then
-    break
+echo "Waiting for device (started at $(date +%X), timeout in ${max_wait}s)."
+while ((ping_count <= ping_max)); do
+  # check for network first, then for ssh-ability
+  if ping -c1 -W1 "$target" &>/dev/null
+    then
+    if fx-command-run ssh "$target" echo &>/dev/null
+    then
+      break
+    fi
   fi
 
-  # Check for exit condition
-  ping_count=$(expr "${ping_count}" + 1)
-  if [[ "${ping_count}" -gt "${ping_max}" ]]; then
-    echo -e "Timed out waiting for Fuchsia. Exiting."
-    kill "${fx_pid}"
-    exit 1
-  fi
+  ping_count=$((ping_count + 1))
+  sleep $ping_wait
 done
 
-# Run the SSH command
+echo "Running \`$*\`:"
+echo
 fx-command-run "ssh" "${target}" "$@"
