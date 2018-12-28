@@ -293,7 +293,7 @@ func (f *Filter) runForUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 			// Reserve a new port.
 			netProtos := []tcpip.NetworkProtocolNumber{header.IPv4ProtocolNumber, header.IPv6ProtocolNumber}
 			var e *tcpip.Error
-			newPort, e = f.portManager.ReservePort(netProtos, header.UDPProtocolNumber, newAddr, 0)
+			newPort, e = f.portManager.ReservePort(netProtos, header.UDPProtocolNumber, newAddr, 0, false)
 			if e != nil {
 				if debug {
 					log.Printf("packet filter: ReservePort: %v", e)
@@ -430,7 +430,7 @@ func (f *Filter) runForTCP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 			// Reserve a new port.
 			netProtos := []tcpip.NetworkProtocolNumber{header.IPv4ProtocolNumber, header.IPv6ProtocolNumber}
 			var e *tcpip.Error
-			newPort, e = f.portManager.ReservePort(netProtos, header.TCPProtocolNumber, newAddr, 0)
+			newPort, e = f.portManager.ReservePort(netProtos, header.TCPProtocolNumber, newAddr, 0, false)
 			if e != nil {
 				if debug {
 					log.Printf("packet filter: ReservePort: %v", e)
