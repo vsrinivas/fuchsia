@@ -17,12 +17,15 @@ if (target_os == "") {
 if (target_cpu == "") {
   target_cpu = host_cpu
 }
+target_platform = "${target_os}-${target_cpu}"
 if (current_cpu == "") {
   current_cpu = target_cpu
 }
 if (current_os == "") {
   current_os = target_os
 }
+current_platform = "${current_os}-${current_cpu}"
+
 host_platform = "${host_os}-${host_cpu}"
 
 if (target_os == "fuchsia") {

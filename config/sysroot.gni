@@ -15,7 +15,7 @@ if (current_os == target_os && target_sysroot != "") {
                      "target_out_dir")
   sysroot = rebase_path("$_out_dir/sysroot")
 } else if (is_linux) {
-  sysroot = rebase_path("//buildtools/${host_platform}/sysroot")
+  sysroot = rebase_path("//build/third_party/sysroot/${current_platform}")
 } else if (is_mac) {
   import("//build/config/mac/config.gni")
   sysroot = mac_sdk_path
