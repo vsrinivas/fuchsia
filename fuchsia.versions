@@ -76,27 +76,3 @@ infra/ninja/linux-amd64
 infra/ninja/mac-amd64
 	version:1.8.2
 	04d426fab9a5bd493dc03ce7274c30c4148a1cbe
-
-infra/tools/luci/led/linux-amd64
-	git_revision:2237a617181dbfcee8b37f94a5b7d834f0f69fb0
-	QjpbpKqfXrts-rBr7AqPJCvyGz8si0fxWVmDTlihL3EC
-
-infra/tools/luci/led/mac-amd64
-	git_revision:2237a617181dbfcee8b37f94a5b7d834f0f69fb0
-	yIIHI2fa-iM1DEGuMFhRxaLxPT0OF4OqrNcj9EsR6JcC
-
-infra/tools/luci/logdog/logdog/linux-amd64
-	git_revision:2237a617181dbfcee8b37f94a5b7d834f0f69fb0
-	tnjAbeRvm9f5FVvrANeC0SqdfdMaLSM8sggz-BKQejsC
-
-infra/tools/luci/logdog/logdog/mac-amd64
-	git_revision:2237a617181dbfcee8b37f94a5b7d834f0f69fb0
-	FECGprBL97kv-nyskQ3f5bf_QhMoVGhxkjc5z1TPXi4C
-
-infra/tools/luci/vpython/linux-amd64
-	git_revision:2237a617181dbfcee8b37f94a5b7d834f0f69fb0
-	NglR1XIJ_Ms6wDy27DWZAmVtpoR7B19MdDHINzKDYCIC
-
-infra/tools/luci/vpython/mac-amd64
-	git_revision:2237a617181dbfcee8b37f94a5b7d834f0f69fb0
-	i3UHNVEezuZVei_BQYZ7aQcX9zb3iN5AsaDO9TZnB8YC
