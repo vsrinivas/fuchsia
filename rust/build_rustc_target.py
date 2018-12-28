@@ -32,12 +32,10 @@ def create_base_directory(file):
         # Already existed.
         pass
 
-# Runs the given command and returns its return code and output.
-def run_command(args, env):
-    job = subprocess.Popen(args, env=env, stdout=subprocess.PIPE,
+# Starts the given command and returns the newly created job.
+def start_command(args, env):
+    return subprocess.Popen(args, env=env, stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE)
-    stdout, stderr = job.communicate()
-    return (job.returncode, stdout, stderr)
 
 def main():
     parser = argparse.ArgumentParser("Compiles a Rust crate")
@@ -240,18 +238,11 @@ def main():
     ]
     if args.with_unit_tests:
         depfile_args += ["--test"]
-    retcode, stdout, stderr = run_command(depfile_args, env)
-    if retcode != 0:
-        print(stdout + stderr)
-        return retcode
-    fix_depfile(args.depfile, os.getcwd(), args.output_file)
+    depfile_job = start_command(depfile_args, env)
 
     # Build the desired output
     build_args = call_args + ["-o%s" % args.output_file]
-    retcode, stdout, stderr = run_command(build_args, env)
-    if retcode != 0:
-        print(stdout + stderr)
-        return retcode
+    build_job = start_command(build_args, env)
 
     # Build the test harness
     if args.with_unit_tests:
@@ -259,10 +250,7 @@ def main():
             "-o%s" % args.test_output_file,
             "--test",
         ]
-        retcode, stdout, stderr = run_command(build_test_args, env)
-        if retcode != 0:
-            print(stdout + stderr)
-            return retcode
+        test_job = start_command(build_test_args, env)
 
     # Write output dependency info
     create_base_directory(args.out_info)
@@ -275,6 +263,25 @@ def main():
             "lib_path": args.output_file,
             "version": args.version,
         }, sort_keys=True, indent=4, separators=(",", ": ")))
+
+    # Wait for build jobs to complete
+
+    stdout, stderr = depfile_job.communicate()
+    if depfile_job.returncode != 0:
+        print(stdout + stderr)
+        return depfile_job.returncode
+    fix_depfile(args.depfile, os.getcwd(), args.output_file)
+
+    stdout, stderr = build_job.communicate()
+    if build_job.returncode != 0:
+        print(stdout + stderr)
+        return build_job.returncode
+
+    if args.with_unit_tests:
+        stdout, stderr = test_job.communicate()
+        if test_job.returncode != 0:
+            print(stdout + stderr)
+            return test_job.returncode
 
 if __name__ == '__main__':
     sys.exit(main())
