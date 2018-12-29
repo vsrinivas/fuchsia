@@ -96,8 +96,10 @@ AutoGich::AutoGich(GichState* gich_state)
 
     // Load
     gic_write_gich_vmcr(gich_state_->vmcr);
-    for (uint32_t i = 0; i < gich_state_->num_aprs; i++) {
-        gic_write_gich_apr(i, gich_state_->apr[i]);
+    for (uint8_t grp = 0; grp < kNumGroups; grp++) {
+        for (uint32_t i = 0; i < gich_state_->num_aprs; i++) {
+            gic_write_gich_apr(grp, i, gich_state_->apr[grp][i]);
+        }
     }
     for (uint32_t i = 0; i < gich_state_->num_lrs; i++) {
         uint64_t lr = gich_state->lr[i];
@@ -121,10 +123,12 @@ AutoGich::~AutoGich() {
 
     // Save
     gich_state_->vmcr = gic_read_gich_vmcr();
-    gich_state_->elrsr = gic_read_gich_elrsr();
-    for (uint32_t i = 0; i < gich_state_->num_aprs; i++) {
-        gich_state_->apr[i] = gic_read_gich_apr(i);
+    for (uint8_t grp = 0; grp < kNumGroups; grp++) {
+        for (uint32_t i = 0; i < gich_state_->num_aprs; i++) {
+            gich_state_->apr[grp][i] = gic_read_gich_apr(grp, i);
+        }
     }
+    gich_state_->elrsr = gic_read_gich_elrsr();
     for (uint32_t i = 0; i < gich_state_->num_lrs; i++) {
         gich_state_->lr[i] = !BIT(gich_state_->elrsr, i) ? gic_read_gich_lr(i) : 0;
     }
@@ -144,8 +148,7 @@ zx_status_t El2StatePtr::Alloc() {
 // Returns the number of active priorities registers, based on the number of
 // preemption bits.
 //
-// From ARM GIC v2, Section 5.3.2: The number of preemption bits implemented,
-// minus one. In GICv2, the only valid value is 5 bits.
+// From ARM GIC v2, Section 5.3.2: In GICv2, the only valid value is 5 bits.
 //
 // From ARM GIC v3/v4, Section 8.4.2: If 5 bits of preemption are implemented
 // (bits [7:3] of priority), then there are 32 preemption levels... If 6 bits of

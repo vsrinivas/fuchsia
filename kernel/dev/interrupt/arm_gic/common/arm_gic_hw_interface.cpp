@@ -47,12 +47,12 @@ uint64_t gic_read_gich_elrsr() {
     return gic_ops->read_gich_elrsr();
 }
 
-void gic_write_gich_apr(uint32_t idx, uint32_t val) {
-    return gic_ops->write_gich_apr(idx, val);
+void gic_write_gich_apr(uint8_t grp, uint32_t idx, uint32_t val) {
+    return gic_ops->write_gich_apr(grp, idx, val);
 }
 
-uint32_t gic_read_gich_apr(uint32_t idx) {
-    return gic_ops->read_gich_apr(idx);
+uint32_t gic_read_gich_apr(uint8_t grp, uint32_t idx) {
+    return gic_ops->read_gich_apr(grp, idx);
 }
 
 uint32_t gic_read_gich_misr() {

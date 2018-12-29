@@ -18,6 +18,7 @@
 #include <kernel/spinlock.h>
 #include <zircon/types.h>
 
+static constexpr uint8_t kNumGroups = 2;
 // See CoreLink GIC-400, Section 2.3.2 PPIs.
 static constexpr uint32_t kMaintenanceVector = 25;
 static constexpr uint32_t kTimerVector = 27;
@@ -68,7 +69,7 @@ struct GichState {
     uint32_t num_lrs;
     uint32_t vmcr;
     uint64_t elrsr;
-    uint32_t apr[4] = {};
+    uint32_t apr[kNumGroups][4] = {};
     uint64_t lr[64] = {};
 };
 

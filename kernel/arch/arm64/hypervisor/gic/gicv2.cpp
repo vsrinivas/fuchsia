@@ -73,14 +73,16 @@ static uint64_t gicv2_read_gich_elrsr() {
     return gich->elrsr0 | (static_cast<uint64_t>(gich->elrsr1) << 32);
 }
 
-static uint32_t gicv2_read_gich_apr(uint32_t idx) {
+static uint32_t gicv2_read_gich_apr(uint8_t grp, uint32_t idx) {
     DEBUG_ASSERT(idx == 0);
-    return gich->apr;
+    return grp == 0 ? gich->apr : 0;
 }
 
-static void gicv2_write_gich_apr(uint32_t idx, uint32_t val) {
+static void gicv2_write_gich_apr(uint8_t grp, uint32_t idx, uint32_t val) {
     DEBUG_ASSERT(idx == 0);
-    gich->apr = val;
+    if (grp == 0) {
+        gich->apr = val;
+    }
 }
 
 static uint64_t gicv2_read_gich_lr(uint32_t idx) {
