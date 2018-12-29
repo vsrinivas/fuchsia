@@ -22,7 +22,9 @@ static uint32_t gicv3_read_gich_vtr() {
 }
 
 static uint32_t gicv3_default_gich_vmcr() {
-    return ICH_VMCR_VPMR | ICH_VMCR_VENG1;
+    // From ARM GIC v3/v4, Section 8.4.8: VFIQEn - In implementations where the
+    // Non-secure copy of ICC_SRE_EL1.SRE is always 1, this bit is RES 1.
+    return ICH_VMCR_VPMR | ICH_VMCR_VFIQEN | ICH_VMCR_VENG1;
 }
 
 static uint32_t gicv3_read_gich_vmcr() {

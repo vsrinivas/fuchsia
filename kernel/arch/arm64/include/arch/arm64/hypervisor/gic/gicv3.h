@@ -15,6 +15,7 @@
 #define ICH_LR_HARDWARE         (1ul << 61)
 #define ICH_LR_PENDING          (1ul << 62)
 #define ICH_VMCR_VENG1          (1u << 1)
+#define ICH_VMCR_VFIQEN         (1u << 3)
 #define ICH_VMCR_VPMR           (0xffu << 24)
 #define ICH_VTR_PRES(vtr)       (((vtr & (0x7u << 26)) >> 26) + 1)
 #define ICH_VTR_LRS(vtr)        ((vtr & 0x1fu) + 1)
