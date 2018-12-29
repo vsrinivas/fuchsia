@@ -69,7 +69,7 @@ static zx_status_t get_service_with_retries(const char* path, zx_handle_t* saved
 static zx_status_t get_socket_provider(zx_handle_t* out) {
     static zx_handle_t saved = ZX_HANDLE_INVALID;
     static mtx_t lock = MTX_INIT;
-    return get_service_with_retries("/svc/fuchsia.net.LegacySocketProvider", &saved, &lock, out);
+    return get_service_with_retries("/svc/" fuchsia_net_LegacySocketProvider_Name, &saved, &lock, out);
 }
 
 __EXPORT
