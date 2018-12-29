@@ -3,23 +3,43 @@
 // found in the LICENSE file.
 
 use account_common::{AccountManagerError, FidlLocalAccountId, LocalAccountId};
+use failure::Error;
 use fidl::encoding::OutOfLine;
 use fidl::endpoints::{ClientEnd, ServerEnd};
+use fidl_fuchsia_auth::AuthProviderConfig;
 use fidl_fuchsia_auth::{AuthState, AuthStateSummary, AuthenticationContextProviderMarker};
 use fidl_fuchsia_auth_account::{
     AccountAuthState, AccountListenerMarker, AccountListenerOptions, AccountManagerRequest,
     AccountManagerRequestStream, AccountMarker, Status,
 };
-use fuchsia_zircon as zx;
-
-use failure::Error;
 use futures::lock::Mutex;
 use futures::prelude::*;
+use lazy_static::lazy_static;
 use log::{info, warn};
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use crate::account_handler_connection::AccountHandlerConnection;
+use crate::account_handler_context::AccountHandlerContext;
+
+/// (Temporary) A fixed AuthState that is used for all accounts until authenticators are
+/// available.
+const DEFAULT_AUTH_STATE: AuthState = AuthState {
+    summary: AuthStateSummary::Unknown,
+};
+
+lazy_static! {
+    /// (Temporary) Configuration for a fixed set of auth providers used until file-based
+    /// configuration is available.
+    static ref DEFAULT_AUTH_PROVIDER_CONFIG: Vec<AuthProviderConfig> = {
+        vec![AuthProviderConfig {
+            auth_provider_type: "google".to_string(),
+            url: "fuchsia-pkg://fuchsia.com/google_auth_provider#meta/google_auth_provider.cmx"
+                .to_string(),
+            params: None
+        }]
+    };
+}
 
 /// The core component of the account system for Fuchsia.
 ///
@@ -32,19 +52,17 @@ pub struct AccountManager {
     /// `Option` containing the `AcountHandlerConnection` used to communicate with the associated
     /// AccountHandler if a connecton exists, or None otherwise.
     ids_to_handlers: Mutex<BTreeMap<LocalAccountId, Option<Arc<AccountHandlerConnection>>>>,
+
+    /// An object to service requests for contextual information from AccountHandlers.
+    context: Arc<AccountHandlerContext>,
 }
 
 impl AccountManager {
-    /// (Temporary) A fixed AuthState that is used for all accounts until authenticators are
-    /// available.
-    const DEFAULT_AUTH_STATE: AuthState = AuthState {
-        summary: AuthStateSummary::Unknown,
-    };
-
     /// Constructs a new AccountManager with no accounts.
     pub fn new() -> AccountManager {
         AccountManager {
             ids_to_handlers: Mutex::new(BTreeMap::new()),
+            context: Arc::new(AccountHandlerContext::new(&DEFAULT_AUTH_PROVIDER_CONFIG)),
         }
     }
 
@@ -114,9 +132,9 @@ impl AccountManager {
             Some(None) => { /* ID is valid but a handler doesn't exist yet */ }
         }
 
-        // Initialize a new account handler if not.
-        let new_handler = Arc::new(await!(AccountHandlerConnection::new_for_account(
-            account_id
+        let new_handler = Arc::new(await!(AccountHandlerConnection::load_account(
+            account_id,
+            Arc::clone(&self.context)
         ))?);
         ids_to_handlers_lock.insert(account_id.clone(), Some(Arc::clone(&new_handler)));
         Ok(new_handler)
@@ -141,7 +159,7 @@ impl AccountManager {
                 .keys()
                 .map(|id| AccountAuthState {
                     account_id: id.clone().into(),
-                    auth_state: Self::DEFAULT_AUTH_STATE,
+                    auth_state: DEFAULT_AUTH_STATE,
                 })
                 .collect(),
         )
@@ -191,42 +209,18 @@ impl AccountManager {
     }
 
     async fn provision_new_account(&self) -> (Status, Option<FidlLocalAccountId>) {
-        let account_handler = match AccountHandlerConnection::new() {
-            Ok(connection) => Arc::new(connection),
+        let (account_handler, account_id) = match await!(AccountHandlerConnection::create_account(
+            Arc::clone(&self.context)
+        )) {
+            Ok((connection, account_id)) => (Arc::new(connection), account_id),
             Err(err) => {
-                warn!("Failure creating account handler connection: {:?}", err);
+                warn!("Failure creating account: {:?}", err);
                 return (err.status, None);
-            }
-        };
-        // TODO(jsankey): Supply a real AccountHandlerContext
-        let dummy_context = match zx::Channel::create() {
-            Ok((_, client_chan)) => client_chan,
-            Err(err) => {
-                warn!("Failure to create AccountHandlerContext channel: {:?}", err);
-                return (Status::IoError, None);
-            }
-        };
-
-        let account_id = match await!(account_handler
-            .proxy()
-            .create_account(ClientEnd::new(dummy_context)))
-        {
-            Ok((Status::Ok, Some(account_id))) => LocalAccountId::from(*account_id),
-            Ok((Status::Ok, None)) => {
-                warn!("Failure creating account, handler returned success without ID");
-                return (Status::InternalError, None);
-            }
-            Ok((stat, _)) => {
-                warn!("Failure creating new account, handler returned {:?}", stat);
-                return (stat, None);
-            }
-            Err(err) => {
-                warn!("Failure calling create account: {:?}", err);
-                return (Status::IoError, None);
             }
         };
 
         info!("Adding new local account {:?}", account_id);
+
         // TODO(jsankey): Persist the change in installed accounts, ensuring this has succeeded
         // before adding to our in-memory state.
 
@@ -293,6 +287,7 @@ mod tests {
                     .map(|id| (LocalAccountId::new(id), None))
                     .collect(),
             ),
+            context: Arc::new(AccountHandlerContext::new(&vec![])),
         }
     }
 
@@ -304,7 +299,7 @@ mod tests {
 
     /// Note: Many AccountManager methods launch instances of an AccountHandler. Since its
     /// currently not convenient to mock out this component launching in Rust, we rely on the
-    /// hermertic component test to provide coverage for these areas and only cover the in-process
+    /// hermetic component test to provide coverage for these areas and only cover the in-process
     /// behavior with this unit-test.
 
     #[test]

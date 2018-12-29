@@ -12,8 +12,8 @@
 // to be more ergonomic and remove the need for this module.
 
 use std::cmp::Ordering;
-use std::hash::{Hash, Hasher};
 use std::fmt::{Debug, Formatter};
+use std::hash::{Hash, Hasher};
 
 /// Implements `$name` as a new wrapper type.
 ///
@@ -125,7 +125,6 @@ wrapper_type!(GlobalAccountId, Vec<u8>, fidl_fuchsia_auth_account);
 pub type FidlGlobalAccountId = fidl_fuchsia_auth_account::GlobalAccountId;
 
 impl LocalAccountId {
-
     /// A string representing the account in a canonical way, safe for file/directory names
     pub fn to_canonical_string(&self) -> String {
         self.inner.id.to_string()

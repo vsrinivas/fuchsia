@@ -12,8 +12,10 @@ mod error;
 mod identifiers;
 
 /// Directory of all accounts.
-pub const ACCOUNT_DIR : &'static str = "/data/account";
+pub const ACCOUNT_DIR: &'static str = "/data/account";
 
-pub use crate::error::AccountManagerError;
-pub use crate::identifiers::{FidlGlobalAccountId, FidlLocalAccountId, FidlLocalPersonaId,
-                             GlobalAccountId, LocalAccountId, LocalPersonaId};
+pub use crate::error::{AccountManagerError, ResultExt};
+pub use crate::identifiers::{
+    FidlGlobalAccountId, FidlLocalAccountId, FidlLocalPersonaId, GlobalAccountId, LocalAccountId,
+    LocalPersonaId,
+};

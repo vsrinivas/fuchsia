@@ -49,6 +49,20 @@ impl AuthProviderConnection {
         }
     }
 
+    /// Creates a new `AuthProviderClient` from the supplied `AuthProviderConfig` reference.
+    pub fn from_config_ref(config: &AuthProviderConfig) -> Self {
+        AuthProviderConnection {
+            component_url: config.url.clone(),
+            params: config.params.clone(),
+            connection_state: Mutex::new(None),
+        }
+    }
+
+    /// Returns the component_url supplied at construction
+    pub fn component_url(&self) -> &str {
+        &self.component_url
+    }
+
     /// Returns an `AuthProviderFactoryProxy` for opening new `AuthProvider` connections. If
     /// a component has previously been launched this is used, otherwise a fresh component is
     /// launched and its proxy is stored for future use.
@@ -80,16 +94,15 @@ impl AuthProviderConnection {
         Ok(factory_proxy)
     }
 
-    /// Returns a `ClientEnd` for communicating with the `AuthProvider`. If a component has
-    /// previously been launched this is used, otherwise a fresh component is launched.
-    pub async fn get(&self) -> Result<ClientEnd<AuthProviderMarker>, TokenManagerError> {
+    /// Connects the supplied `ServerEnd` to the `AuthProvider`. If a component has previously been
+    /// launched this is used, otherwise a fresh component is launched.
+    pub async fn connect(
+        &self, server_end: ServerEnd<AuthProviderMarker>,
+    ) -> Result<(), TokenManagerError> {
         let factory_proxy = self.get_factory_proxy()?;
-        let (server_chan, client_chan) =
-            zx::Channel::create().token_manager_status(Status::UnknownError)?;
 
-        // Connect to the factory and request an auth provider.
-        match await!(factory_proxy.get_auth_provider(ServerEnd::new(server_chan))) {
-            Ok(AuthProviderStatus::Ok) => Ok(ClientEnd::new(client_chan)),
+        match await!(factory_proxy.get_auth_provider(server_end)) {
+            Ok(AuthProviderStatus::Ok) => Ok(()),
             Ok(status) => Err(
                 TokenManagerError::new(Status::AuthProviderServiceUnavailable)
                     .with_cause(format_err!("Error getting auth provider: {:?}", status)),
@@ -99,5 +112,14 @@ impl AuthProviderConnection {
                     .with_cause(format_err!("GetAuthProvider method failed with {:?}", err)),
             ),
         }
+    }
+
+    /// Returns a `ClientEnd` for communicating with the `AuthProvider`. If a component has
+    /// previously been launched this is used, otherwise a fresh component is launched.
+    pub async fn get(&self) -> Result<ClientEnd<AuthProviderMarker>, TokenManagerError> {
+        let (server_chan, client_chan) =
+            zx::Channel::create().token_manager_status(Status::UnknownError)?;
+        await!(self.connect(ServerEnd::new(server_chan)))?;
+        Ok(ClientEnd::new(client_chan))
     }
 }

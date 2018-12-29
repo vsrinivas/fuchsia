@@ -5,15 +5,27 @@
 use failure::{Error, Fail};
 use fidl_fuchsia_auth_account::Status;
 
+/// An extension trait to simplify conversion of results based on general errors to
+/// AccountManagerErrors.
+pub trait ResultExt<T, E> {
+    /// Wraps the error in a non-fatal `AccountManagerError` with the supplied `Status`.
+    fn account_manager_status(self, status: Status) -> Result<T, AccountManagerError>;
+}
+
+impl<T, E> ResultExt<T, E> for Result<T, E>
+where
+    E: Into<Error> + Send + Sync + Sized,
+{
+    fn account_manager_status(self, status: Status) -> Result<T, AccountManagerError> {
+        self.map_err(|err| AccountManagerError::new(status).with_cause(err))
+    }
+}
+
 /// An Error type for problems encountered in the account manager and account handler. Each error
 /// contains the fuchsia.auth.account.Status that should be reported back to the client and an
 /// indication of whether it is fatal.
 #[derive(Debug, Fail)]
-#[fail(
-    display = "AccounManager error, returning {:?}. ({:?})",
-    status,
-    cause
-)]
+#[fail(display = "AccountManager error, returning {:?}. ({:?})", status, cause)]
 pub struct AccountManagerError {
     /// The most appropriate `fuchsia.auth.account.Status` to describe this problem.
     pub status: Status,
@@ -54,6 +66,10 @@ mod tests {
 
     const TEST_STATUS: Status = Status::UnknownError;
 
+    fn create_test_error() -> Error {
+        format_err!("Test error")
+    }
+
     #[test]
     fn test_new() {
         let cause = format_err!("Example cause");
@@ -69,5 +85,15 @@ mod tests {
         assert_eq!(error.status, TEST_STATUS);
         assert!(!error.fatal);
         assert!(error.cause.is_none());
+    }
+
+    #[test]
+    fn test_account_manager_status() {
+        let test_result: Result<(), Error> = Err(create_test_error());
+        let wrapped_result = test_result.account_manager_status(TEST_STATUS);
+        assert_eq!(wrapped_result.as_ref().unwrap_err().status, TEST_STATUS);
+        assert_eq!(
+            format!("{:?}", wrapped_result.unwrap_err().cause.unwrap()),
+            format!("{:?}", create_test_error()));
     }
 }
