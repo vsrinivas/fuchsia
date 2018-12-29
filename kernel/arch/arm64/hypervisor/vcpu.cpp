@@ -91,8 +91,20 @@ static VcpuExit vmexit_interrupt_ktrace_meta() {
 
 AutoGich::AutoGich(GichState* gich_state)
     : gich_state_(gich_state) {
+    // Underflow maintenance interrupt is signalled if there is one or no free
+    // LRs. We use it in case when there is not enough free LRs to inject all
+    // pending interrupts, so when guest finishes processing most of them, a
+    // maintenance interrupt will cause VM exit and will give us a chance to
+    // inject the remaining interrupts. The point of this is to reduce latency
+    // when processing interrupts.
+    uint32_t gich_hcr = kGichHcrEn;
+    if (gich_state_->interrupt_tracker.Pending() && gich_state_->num_lrs > 1) {
+        gich_hcr |= kGichHcrUie;
+    }
+
     DEBUG_ASSERT(!arch_ints_disabled());
     arch_disable_ints();
+    gic_write_gich_hcr(gich_hcr);
 
     // Load
     gic_write_gich_vmcr(gich_state_->vmcr);
@@ -105,34 +117,24 @@ AutoGich::AutoGich(GichState* gich_state)
         uint64_t lr = gich_state->lr[i];
         gic_write_gich_lr(i, lr);
     }
-
-    // Underflow maintenance interrupt is signalled if there is one or no free
-    // LRs. We use it in case when there is not enough free LRs to inject all
-    // pending interrupts, so when guest finishes processing most of them, a maintenance
-    // interrupt will cause VM exit and will give us a chance to inject the remaining
-    // interrupts. The point of this is to reduce latency when processing interrupts.
-    uint32_t gich_hcr = kGichHcrEn;
-    if (gich_state_->interrupt_tracker.Pending() && gich_state_->num_lrs > 1) {
-        gich_hcr |= kGichHcrUie;
-    }
-    gic_write_gich_hcr(gich_hcr);
 }
 
 AutoGich::~AutoGich() {
     DEBUG_ASSERT(arch_ints_disabled());
 
     // Save
-    gich_state_->vmcr = gic_read_gich_vmcr();
+    gich_state_->elrsr = gic_read_gich_elrsr();
+    for (uint32_t i = 0; i < gich_state_->num_lrs; i++) {
+        gich_state_->lr[i] = !BIT(gich_state_->elrsr, i) ? gic_read_gich_lr(i) : 0;
+    }
     for (uint8_t grp = 0; grp < kNumGroups; grp++) {
         for (uint32_t i = 0; i < gich_state_->num_aprs; i++) {
             gich_state_->apr[grp][i] = gic_read_gich_apr(grp, i);
         }
     }
-    gich_state_->elrsr = gic_read_gich_elrsr();
-    for (uint32_t i = 0; i < gich_state_->num_lrs; i++) {
-        gich_state_->lr[i] = !BIT(gich_state_->elrsr, i) ? gic_read_gich_lr(i) : 0;
-    }
+    gich_state_->vmcr = gic_read_gich_vmcr();
 
+    gic_write_gich_hcr(0);
     arch_enable_ints();
 }
 
