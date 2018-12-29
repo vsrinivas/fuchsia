@@ -12,7 +12,8 @@
 namespace fidl {
 namespace ordinals {
 
-std::string GetSelector(const raw::AttributeList* attributes, SourceLocation name) {
+std::string GetSelector(const raw::AttributeList* attributes,
+                        SourceLocation name) {
     if (attributes != nullptr) {
         const size_t size = attributes->attributes.size();
         for (int i = 0; i < size; i++) {
@@ -24,11 +25,27 @@ std::string GetSelector(const raw::AttributeList* attributes, SourceLocation nam
     return std::string(name.data().data(), name.data().size());
 }
 
-raw::Ordinal GetGeneratedOrdinal(
-    const std::vector<StringView>& library_name,
-    const StringView& interface_name,
-    const raw::InterfaceMethod& method) {
-    std::string method_name = GetSelector(method.attributes.get(), method.identifier->location());
+raw::Ordinal GetGeneratedOrdinal(const StringView& full_name,
+                                 const raw::SourceElement& source_element) {
+    uint8_t digest[SHA256_DIGEST_LENGTH];
+    SHA256(reinterpret_cast<const uint8_t*>(full_name.data()), full_name.size(), digest);
+    // The following dance ensures that we treat the bytes as a little-endian
+    // int32 regardless of host byte order.
+    uint32_t ordinal = static_cast<uint32_t>(digest[0]) |
+                       static_cast<uint32_t>(digest[1]) << 8 |
+                       static_cast<uint32_t>(digest[2]) << 16 |
+                       static_cast<uint32_t>(digest[3]) << 24;
+
+    ordinal &= 0x7fffffff;
+    return raw::Ordinal(source_element, ordinal);
+}
+
+raw::Ordinal GetGeneratedOrdinal(const std::vector<StringView>& library_name,
+                                 const StringView& container_name,
+                                 const raw::AttributeList* attributes,
+                                 SourceLocation name,
+                                 const raw::SourceElement& source_element) {
+    std::string method_name = GetSelector(attributes, name);
     std::string full_name;
     bool once = false;
     for (StringView id : library_name) {
@@ -40,21 +57,17 @@ raw::Ordinal GetGeneratedOrdinal(
         full_name.append(id.data(), id.size());
     }
     full_name.append(".");
-    full_name.append(interface_name.data(), interface_name.size());
+    full_name.append(container_name.data(), container_name.size());
     full_name.append("/");
     full_name.append(method_name);
 
-    uint8_t digest[SHA256_DIGEST_LENGTH];
-    SHA256(reinterpret_cast<const uint8_t*>(full_name.data()), full_name.size(), digest);
-    // The following dance ensures that we treat the bytes as a little-endian
-    // int32 regardless of host byte order.
-    uint32_t ordinal = static_cast<uint32_t>(digest[0]) |
-                       static_cast<uint32_t>(digest[1]) << 8 |
-                       static_cast<uint32_t>(digest[2]) << 16 |
-                       static_cast<uint32_t>(digest[3]) << 24;
+    return GetGeneratedOrdinal(StringView(full_name), source_element);
+}
 
-    ordinal &= 0x7fffffff;
-    return raw::Ordinal(*method.identifier, ordinal);
+raw::Ordinal GetGeneratedOrdinal(const std::vector<StringView>& library_name,
+                                 const StringView& interface_name,
+                                 const raw::InterfaceMethod& method) {
+    return GetGeneratedOrdinal(library_name, interface_name, method.attributes.get(), method.identifier->location(), method);
 }
 
 raw::Ordinal GetOrdinal(const std::vector<StringView>& library_name,
@@ -62,7 +75,16 @@ raw::Ordinal GetOrdinal(const std::vector<StringView>& library_name,
                         const raw::InterfaceMethod& method) {
     if (method.ordinal != nullptr)
         return *method.ordinal;
+
     return GetGeneratedOrdinal(library_name, interface_name, method);
+}
+
+raw::Ordinal GetOrdinal(const std::vector<StringView>& library_name,
+                        const StringView& xunion_declaration_name,
+                        const raw::XUnionMember& xunion_member) {
+    // Note that this ordinal hashing for xunion members uses the same ordinal
+    // hashing algorithm as for FIDL methods, which results in 31 bits, not 32.
+    return GetGeneratedOrdinal(library_name, xunion_declaration_name, xunion_member.attributes.get(), xunion_member.identifier->location(), xunion_member);
 }
 
 } // namespace ordinals

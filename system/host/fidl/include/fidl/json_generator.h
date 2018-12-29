@@ -96,6 +96,8 @@ private:
     void Generate(const flat::Table::Member& value);
     void Generate(const flat::Union& value);
     void Generate(const flat::Union::Member& value);
+    void Generate(const flat::XUnion& value);
+    void Generate(const flat::XUnion::Member& value);
     void Generate(const flat::Library* library);
 
     void GenerateDeclarationsEntry(int count, const flat::Name& name, StringView decl);

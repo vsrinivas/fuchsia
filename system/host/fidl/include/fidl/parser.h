@@ -180,7 +180,7 @@ private:
     std::unique_ptr<raw::TrueLiteral> ParseTrueLiteral();
     std::unique_ptr<raw::FalseLiteral> ParseFalseLiteral();
     std::unique_ptr<raw::Literal> ParseLiteral();
-    std::unique_ptr<raw::Ordinal> ParseOrdinal();
+    std::unique_ptr<raw::Ordinal> MaybeParseOrdinal();
 
     std::unique_ptr<raw::Constant> ParseConstant();
 
@@ -225,6 +225,10 @@ private:
     std::unique_ptr<raw::UnionMember> ParseUnionMember();
     std::unique_ptr<raw::UnionDeclaration>
     ParseUnionDeclaration(std::unique_ptr<raw::AttributeList> attributes, ASTScope&);
+
+    std::unique_ptr<raw::XUnionMember> ParseXUnionMember();
+    std::unique_ptr<raw::XUnionDeclaration>
+    ParseXUnionDeclaration(std::unique_ptr<raw::AttributeList> attributes, ASTScope&);
 
     std::unique_ptr<raw::File> ParseFile();
 

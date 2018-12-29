@@ -61,6 +61,7 @@ KEYWORD(Interface, "interface")
 KEYWORD(Struct, "struct")
 KEYWORD(Table, "table")
 KEYWORD(Union, "union")
+KEYWORD(XUnion, "xunion")
 
 KEYWORD(True, "true")
 KEYWORD(False, "false")

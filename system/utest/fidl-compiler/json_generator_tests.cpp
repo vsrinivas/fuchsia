@@ -119,6 +119,7 @@ struct Simple {
   ],
   "table_declarations": [],
   "union_declarations": [],
+  "xunion_declarations": [],
   "declaration_order": [
     "fidl.test.json/Simple"
   ],
@@ -264,6 +265,7 @@ interface EmptyInterface {
   ],
   "table_declarations": [],
   "union_declarations": [],
+  "xunion_declarations": [],
   "declaration_order": [
     "fidl.test.json/Empty",
     "fidl.test.json/EmptyInterface"
@@ -344,6 +346,7 @@ table Simple {
     }
   ],
   "union_declarations": [],
+  "xunion_declarations": [],
   "declaration_order": [
     "fidl.test.json/Simple"
   ],
@@ -474,6 +477,7 @@ union PizzaOrPasta {
       "max_handles": 0
     }
   ],
+  "xunion_declarations": [],
   "declaration_order": [
     "fidl.test.json/Pizza",
     "fidl.test.json/Pasta",
@@ -483,6 +487,78 @@ union PizzaOrPasta {
     "fidl.test.json/Pizza": "struct",
     "fidl.test.json/Pasta": "struct",
     "fidl.test.json/PizzaOrPasta": "union"
+  }
+}
+)JSON"));
+    }
+
+    END_TEST;
+}
+
+bool json_generator_test_xunion() {
+    BEGIN_TEST;
+
+    for (int i = 0; i < kRepeatTestCount; i++) {
+        EXPECT_TRUE(checkJSONGenerator(R"FIDL(
+library fidl.test.json;
+
+xunion xu {
+  string s;
+  int32 i;
+};
+
+)FIDL",
+                                       R"JSON(
+{
+  "version": "0.0.1",
+  "name": "fidl.test.json",
+  "library_dependencies": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "interface_declarations": [],
+  "struct_declarations": [],
+  "table_declarations": [],
+  "union_declarations": [],
+  "xunion_declarations": [
+    {
+      "name": "fidl.test.json/xu",
+      "members": [
+        {
+          "ordinal": 730795057,
+          "type": {
+            "kind": "string",
+            "nullable": false
+          },
+          "name": "s",
+          "size": 16,
+          "max_out_of_line": 4294967295,
+          "alignment": 8,
+          "offset": 0
+        },
+        {
+          "ordinal": 243975053,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32"
+          },
+          "name": "i",
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 0
+        }
+      ],
+      "size": 24,
+      "max_out_of_line": 4294967295,
+      "alignment": 8,
+      "max_handles": 0
+    }
+  ],
+  "declaration_order": [
+    "fidl.test.json/xu"
+  ],
+  "declarations": {
+    "fidl.test.json/xu": "xunion"
   }
 }
 )JSON"));
@@ -614,6 +690,7 @@ interface sub : super {
   "struct_declarations": [],
   "table_declarations": [],
   "union_declarations": [],
+  "xunion_declarations": [],
   "declaration_order": [
     "fidl.test.json/super",
     "fidl.test.json/sub"
@@ -744,6 +821,7 @@ interface Child : Parent {
   "struct_declarations": [],
   "table_declarations": [],
   "union_declarations": [],
+  "xunion_declarations": [],
   "declaration_order": [
     "fidl.test.json/Parent",
     "fidl.test.json/Child"
@@ -764,6 +842,7 @@ RUN_TEST(json_generator_test_empty_struct);
 RUN_TEST(json_generator_test_struct);
 RUN_TEST(json_generator_test_table);
 RUN_TEST(json_generator_test_union);
+RUN_TEST(json_generator_test_xunion);
 RUN_TEST(json_generator_test_inheritance);
 RUN_TEST(json_generator_test_inheritance_with_recursive_decl);
 END_TEST_CASE(json_generator_tests);

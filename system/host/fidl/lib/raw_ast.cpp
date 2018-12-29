@@ -24,8 +24,8 @@ SourceElementMark::~SourceElementMark() {
 
 void CompoundIdentifier::Accept(TreeVisitor& visitor) {
     SourceElementMark sem(visitor, *this);
-    for (auto i = components.begin(); i != components.end(); ++i) {
-        visitor.OnIdentifier(*i);
+    for (auto& i : components) {
+        visitor.OnIdentifier(i);
     }
 }
 
@@ -65,8 +65,8 @@ void Attribute::Accept(TreeVisitor& visitor) {
 
 void AttributeList::Accept(TreeVisitor& visitor) {
     SourceElementMark sem(visitor, *this);
-    for (auto i = attributes.begin(); i != attributes.end(); ++i) {
-        visitor.OnAttribute(*i);
+    for (auto& i : attributes) {
+        visitor.OnAttribute(i);
     }
 }
 
@@ -281,43 +281,53 @@ void UnionDeclaration::Accept(TreeVisitor& visitor) {
     }
 }
 
+void XUnionMember::Accept(TreeVisitor& visitor) {
+    SourceElementMark sem(visitor, *this);
+    if (attributes != nullptr) {
+        visitor.OnAttributeList(attributes);
+    }
+
+    visitor.OnType(type);
+    visitor.OnIdentifier(identifier);
+}
+
+void XUnionDeclaration::Accept(TreeVisitor& visitor) {
+    SourceElementMark sem(visitor, *this);
+    if (attributes != nullptr) {
+        visitor.OnAttributeList(attributes);
+    }
+    visitor.OnIdentifier(identifier);
+    for (auto& member : members) {
+        visitor.OnXUnionMember(member);
+    }
+}
+
 void File::Accept(TreeVisitor& visitor) {
     SourceElementMark sem(visitor, *this);
     visitor.OnCompoundIdentifier(library_name);
-    for (auto i = using_list.begin();
-         i != using_list.end();
-         ++i) {
-        visitor.OnUsing(*i);
+    for (auto& i : using_list) {
+        visitor.OnUsing(i);
     }
-    for (auto i = const_declaration_list.begin();
-         i != const_declaration_list.end();
-         ++i) {
-        visitor.OnConstDeclaration(*i);
+    for (auto& i : const_declaration_list) {
+        visitor.OnConstDeclaration(i);
     }
-    for (auto i = enum_declaration_list.begin();
-         i != enum_declaration_list.end();
-         ++i) {
-        visitor.OnEnumDeclaration(*i);
+    for (auto& i : enum_declaration_list) {
+        visitor.OnEnumDeclaration(i);
     }
-    for (auto i = interface_declaration_list.begin();
-         i != interface_declaration_list.end();
-         ++i) {
-        visitor.OnInterfaceDeclaration(*i);
+    for (auto& i : interface_declaration_list) {
+        visitor.OnInterfaceDeclaration(i);
     }
-    for (auto i = struct_declaration_list.begin();
-         i != struct_declaration_list.end();
-         ++i) {
-        visitor.OnStructDeclaration(*i);
+    for (auto& i : struct_declaration_list) {
+        visitor.OnStructDeclaration(i);
     }
-    for (auto i = table_declaration_list.begin();
-         i != table_declaration_list.end();
-         ++i) {
-        visitor.OnTableDeclaration(*i);
+    for (auto& i : table_declaration_list) {
+        visitor.OnTableDeclaration(i);
     }
-    for (auto i = union_declaration_list.begin();
-         i != union_declaration_list.end();
-         ++i) {
-        visitor.OnUnionDeclaration(*i);
+    for (auto& i : union_declaration_list) {
+        visitor.OnUnionDeclaration(i);
+    }
+    for (auto& i : xunion_declaration_list) {
+        visitor.OnXUnionDeclaration(i);
     }
 }
 

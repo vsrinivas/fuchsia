@@ -81,6 +81,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/types_tests.cpp \
     $(LOCAL_DIR)/using_tests.cpp \
     $(LOCAL_DIR)/visitor_unittests.cpp \
+    $(LOCAL_DIR)/xunion_tests.cpp \
     $(BUILDGEN_DIR)/examples.cpp \
 
 MODULE_COMPILEFLAGS := \

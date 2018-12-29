@@ -46,8 +46,25 @@ struct StructField {
     const uint32_t offset;
 };
 
+// This carries the same information as the XUnionField struct below and
+// arguably violates DRY, but it's useful to make it a different type to
+// distinguish its use-case in code, and also to make it easier to change later
+// if necessary. (Gotta do something at least three times before we abstract it
+// out, right?)
 struct TableField {
     TableField(const Type* type, uint32_t ordinal)
+        : type(type), ordinal(ordinal) {}
+
+    const Type* type;
+    const uint32_t ordinal;
+};
+
+// This carries the same information as the TableField struct above and arguably
+// violates DRY, but it's useful to make it a different type to distinguish its
+// use-case in code, and also to make it easier to change later if necessary.
+// (Gotta do something at least three times before we abstract it out, right?)
+struct XUnionField {
+    XUnionField(const Type* type, uint32_t ordinal)
         : type(type), ordinal(ordinal) {}
 
     const Type* type;
@@ -68,6 +85,8 @@ struct Type {
         kTablePointer,
         kUnion,
         kUnionPointer,
+        kXUnion,
+        kXUnionPointer,
         kMessage,
         kInterface,
         kArray,
@@ -179,6 +198,27 @@ struct UnionPointerType : public Type {
           union_type(union_type) {}
 
     const UnionType* union_type;
+};
+
+struct XUnionType : public Type {
+    XUnionType(std::string name, std::vector<XUnionField> fields,
+               std::string pointer_name, std::string qname)
+        : Type(Kind::kXUnion, std::move(name), 24u, CodingNeeded::kNeeded), fields(std::move(fields)),
+          pointer_name(std::move(pointer_name)), qname(std::move(qname)) {
+    }
+
+    std::vector<XUnionField> fields;
+    const std::string pointer_name;
+    const std::string qname;
+    bool referenced_by_pointer = false;
+};
+
+struct XUnionPointerType : public Type {
+    XUnionPointerType(std::string name, const XUnionType* xunion_type)
+        : Type(Kind::kXUnionPointer, std::move(name), 8u, CodingNeeded::kNeeded),
+          xunion_type(xunion_type) {}
+
+    const XUnionType* const xunion_type;
 };
 
 struct MessageType : public Type {

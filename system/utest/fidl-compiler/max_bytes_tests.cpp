@@ -168,10 +168,44 @@ table TableWithAnArray {
   1: array<int64>:5 a;
 };
 
+xunion EmptyXUnion {
+};
+
+xunion XUnionWithOneBool {
+  bool b;
+};
+
+xunion XUnionWithBoolAndU32 {
+  bool b;
+  uint32 u;
+};
+
+xunion XUnionWithBoundedOutOfLineObject {
+  // smaller than |v| below, so will not be selected for max-out-of-line
+  // calculation.
+  bool b;
+
+  // 1. vector<int32>:5 = 20 bytes
+  //                    = 24 bytes for 8-byte boundary alignment
+  //                    +  8 bytes for vector element count
+  //                    +  8 bytes for data pointer
+  //                    = 40 bytes total
+  // 1. vector<vector<int32>:5>:6 = vector<int32>:5 (40) * 6
+  //                              = 240 bytes
+  //                              +   8 bytes for vector element count
+  //                              +   8 bytes for data pointer
+  //                              = 256 bytes total
+  vector<vector<int32>:5>:6 v;
+};
+
+xunion XUnionWithUnboundedOutOfLineObject {
+  string s;
+};
+
 )FIDL") {}
 };
 
-static bool simple_structs(void) {
+static bool simple_structs() {
     BEGIN_TEST;
 
     MaxBytesLibrary test_library;
@@ -200,7 +234,7 @@ static bool simple_structs(void) {
     END_TEST;
 }
 
-static bool simple_tables(void) {
+static bool simple_tables() {
     BEGIN_TEST;
 
     MaxBytesLibrary test_library;
@@ -229,7 +263,7 @@ static bool simple_tables(void) {
     END_TEST;
 }
 
-static bool optional_structs(void) {
+static bool optional_structs() {
     BEGIN_TEST;
 
     MaxBytesLibrary test_library;
@@ -258,7 +292,7 @@ static bool optional_structs(void) {
     END_TEST;
 }
 
-static bool optional_tables(void) {
+static bool optional_tables() {
     BEGIN_TEST;
 
     MaxBytesLibrary test_library;
@@ -307,7 +341,7 @@ static bool optional_tables(void) {
     END_TEST;
 }
 
-static bool unions(void) {
+static bool unions() {
     BEGIN_TEST;
 
     MaxBytesLibrary test_library;
@@ -331,7 +365,7 @@ static bool unions(void) {
     END_TEST;
 }
 
-static bool vectors(void) {
+static bool vectors() {
     BEGIN_TEST;
 
     MaxBytesLibrary test_library;
@@ -370,7 +404,7 @@ static bool vectors(void) {
     END_TEST;
 }
 
-static bool strings(void) {
+static bool strings() {
     BEGIN_TEST;
 
     MaxBytesLibrary test_library;
@@ -399,7 +433,7 @@ static bool strings(void) {
     END_TEST;
 }
 
-static bool arrays(void) {
+static bool arrays() {
     BEGIN_TEST;
 
     MaxBytesLibrary test_library;
@@ -418,6 +452,33 @@ static bool arrays(void) {
     END_TEST;
 }
 
+static bool xunions() {
+    BEGIN_TEST;
+
+    MaxBytesLibrary test_library;
+    EXPECT_TRUE(test_library.Compile());
+
+    auto empty = test_library.LookupXUnion("EmptyXUnion");
+    EXPECT_EQ(empty->typeshape.Size(), 24);
+    EXPECT_EQ(empty->typeshape.MaxOutOfLine(), 0);
+
+    auto one_bool = test_library.LookupXUnion("XUnionWithOneBool");
+    EXPECT_EQ(one_bool->typeshape.Size(), 24);
+    EXPECT_EQ(one_bool->typeshape.MaxOutOfLine(), 8);
+
+    auto xu = test_library.LookupXUnion("XUnionWithBoundedOutOfLineObject");
+    EXPECT_EQ(xu->typeshape.Size(), 24);
+    EXPECT_EQ(xu->typeshape.MaxOutOfLine(), 256);
+
+    auto unbounded = test_library.LookupXUnion("XUnionWithUnboundedOutOfLineObject");
+    EXPECT_EQ(unbounded->typeshape.Size(), 24);
+    EXPECT_EQ(unbounded->typeshape.MaxOutOfLine(), std::numeric_limits<uint32_t>::max());
+
+    // TODO(apang): More tests here
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(max_bytes_tests);
@@ -429,4 +490,5 @@ RUN_TEST(unions);
 RUN_TEST(vectors);
 RUN_TEST(strings);
 RUN_TEST(arrays);
+RUN_TEST(xunions);
 END_TEST_CASE(max_bytes_tests);

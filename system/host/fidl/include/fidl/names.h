@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_C_NAMES_H_
-#define ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_C_NAMES_H_
+#ifndef ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_NAMES_H_
+#define ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_NAMES_H_
 
 #include <string>
 
@@ -34,6 +34,7 @@ std::string NameRawLiteralKind(raw::Literal::Kind kind);
 std::string NameFlatConstantKind(flat::Constant::Kind kind);
 std::string NameFlatTypeKind(flat::Type::Kind kind);
 std::string NameUnionTag(StringView union_name, const flat::Union::Member& member);
+std::string NameXUnionTag(StringView xunion_name, const flat::XUnion::Member& member);
 std::string NameFlatConstant(const flat::Constant* constant);
 std::string NameFlatType(const flat::Type* type);
 std::string NameFlatCType(const flat::Type* type, flat::Decl::Kind decl_kind);
@@ -51,6 +52,7 @@ std::string NameFields(StringView name);
 std::string NameCodedStruct(const flat::Struct* struct_decl);
 std::string NameCodedTable(const flat::Table* table_decl);
 std::string NameCodedUnion(const flat::Union* union_decl);
+std::string NameCodedXUnion(const flat::XUnion* xunion_decl);
 std::string NameCodedHandle(types::HandleSubtype subtype, types::Nullability nullability);
 std::string NameCodedInterfaceHandle(StringView interface_name, types::Nullability nullability);
 std::string NameCodedRequestHandle(StringView interface_name, types::Nullability nullability);
@@ -61,4 +63,4 @@ std::string NameCodedString(uint64_t max_size, types::Nullability nullability);
 
 } // namespace fidl
 
-#endif // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_C_NAMES_H_
+#endif // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_NAMES_H_

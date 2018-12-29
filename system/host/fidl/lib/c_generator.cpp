@@ -46,15 +46,15 @@ CGenerator::Member MessageHeader() {
 }
 
 CGenerator::Member EmptyStructMember() {
-  return {
-    .kind = flat::Type::Kind::kPrimitive,
-    .type = NamePrimitiveCType(types::PrimitiveSubtype::kUint8),
+    return {
+        .kind = flat::Type::Kind::kPrimitive,
+        .type = NamePrimitiveCType(types::PrimitiveSubtype::kUint8),
 
-    // Prepend the reserved uint8_t field with a single underscore, which is
-    // for reserved identifiers (see ISO C standard, section 7.1.3
-    // <http://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf>).
-    .name = "_reserved",
-  };
+        // Prepend the reserved uint8_t field with a single underscore, which is
+        // for reserved identifiers (see ISO C standard, section 7.1.3
+        // <http://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf>).
+        .name = "_reserved",
+    };
 }
 
 CGenerator::Transport ParseTransport(StringView view) {
@@ -137,6 +137,7 @@ void EmitMethodInParamDecl(std::ostream* file, const CGenerator::Member& member)
         case flat::Decl::Kind::kStruct:
         case flat::Decl::Kind::kTable:
         case flat::Decl::Kind::kUnion:
+        case flat::Decl::Kind::kXUnion:
             switch (member.nullability) {
             case types::Nullability::kNullable:
                 *file << "const " << member.type << " " << member.name;
@@ -186,6 +187,7 @@ void EmitMethodOutParamDecl(std::ostream* file, const CGenerator::Member& member
         case flat::Decl::Kind::kStruct:
         case flat::Decl::Kind::kTable:
         case flat::Decl::Kind::kUnion:
+        case flat::Decl::Kind::kXUnion:
             switch (member.nullability) {
             case types::Nullability::kNullable:
                 *file << member.type << " out_" << member.name;
@@ -257,7 +259,7 @@ bool IsStoredOutOfLine(const CGenerator::Member& member) {
         return true;
     if (member.kind == flat::Type::Kind::kIdentifier) {
         return member.nullability == types::Nullability::kNullable &&
-               (member.decl_kind == flat::Decl::Kind::kStruct || member.decl_kind == flat::Decl::Kind::kUnion);
+               (member.decl_kind == flat::Decl::Kind::kStruct || member.decl_kind == flat::Decl::Kind::kUnion || member.decl_kind == flat::Decl::Kind::kXUnion);
     }
     return false;
 }
@@ -277,7 +279,8 @@ void EmitMeasureInParams(std::ostream* file,
 void EmitParameterSizeValidation(std::ostream* file,
                                  const std::vector<CGenerator::Member>& params) {
     for (const auto& member : params) {
-        if (member.max_num_elements == std::numeric_limits<uint32_t>::max()) continue;
+        if (member.max_num_elements == std::numeric_limits<uint32_t>::max())
+            continue;
         std::string param_name;
         if (member.kind == flat::Type::Kind::kVector) {
             param_name = member.name + "_count";
@@ -287,7 +290,7 @@ void EmitParameterSizeValidation(std::ostream* file,
             assert(false && "only vector/string has size limit");
         }
         *file << kIndent
-            << "if (" << param_name << " > " << member.max_num_elements << ") {\n";
+              << "if (" << param_name << " > " << member.max_num_elements << ") {\n";
         *file << kIndent << kIndent << "return ZX_ERR_INVALID_ARGS;\n";
         *file << kIndent << "}\n";
     }
@@ -379,6 +382,9 @@ void EmitLinearizeMessage(std::ostream* file,
                 break;
             case flat::Decl::Kind::kTable:
                 assert(false && "c-codegen for tables not yet implemented");
+                break;
+            case flat::Decl::Kind::kXUnion:
+                assert(false && "c-codegen for extensible unions not yet implemented");
                 break;
             case flat::Decl::Kind::kStruct:
             case flat::Decl::Kind::kUnion:
@@ -561,6 +567,17 @@ GenerateMembers(const flat::Library* library,
     return members;
 }
 
+std::vector<CGenerator::Member>
+GenerateMembers(const flat::Library* library,
+                const std::vector<flat::XUnion::Member>& xunion_members) {
+    std::vector<CGenerator::Member> members;
+    members.reserve(xunion_members.size());
+    for (const auto& xunion_member : xunion_members) {
+        members.push_back(CreateMember(library, xunion_member));
+    }
+    return members;
+}
+
 void GetMethodParameters(const flat::Library* library,
                          const CGenerator::NamedMethod& method_info,
                          std::vector<CGenerator::Member>* request,
@@ -698,6 +715,11 @@ void CGenerator::GenerateTaggedUnionDeclaration(StringView name,
     file_ << "};\n";
 }
 
+void CGenerator::GenerateTaggedXUnionDeclaration(StringView name,
+                                                 const std::vector<Member>& members) {
+    // XUnions are (intentionally) unimplemented for C bindings.
+}
+
 // TODO(TO-702) These should maybe check for global name
 // collisions? Otherwise, is there some other way they should fail?
 std::map<const flat::Decl*, CGenerator::NamedConst>
@@ -807,6 +829,16 @@ CGenerator::NameUnions(const std::vector<std::unique_ptr<flat::Union>>& union_in
     return named_unions;
 }
 
+std::map<const flat::Decl*, CGenerator::NamedXUnion>
+CGenerator::NameXUnions(const std::vector<std::unique_ptr<flat::XUnion>>& xunion_infos) {
+    std::map<const flat::Decl*, NamedXUnion> named_xunions;
+    for (const auto& xunion_info : xunion_infos) {
+        std::string xunion_name = NameName(xunion_info->name, "_", "_");
+        named_xunions.emplace(xunion_info.get(), NamedXUnion{std::move(xunion_name), *xunion_info});
+    }
+    return named_xunions;
+}
+
 void CGenerator::ProduceConstForwardDeclaration(const NamedConst& named_const) {
     // TODO(TO-702)
 }
@@ -851,6 +883,10 @@ void CGenerator::ProduceTableForwardDeclaration(const NamedTable& named_struct) 
 
 void CGenerator::ProduceUnionForwardDeclaration(const NamedUnion& named_union) {
     GenerateStructTypedef(named_union.name);
+}
+
+void CGenerator::ProduceXUnionForwardDeclaration(const NamedXUnion& named_xunion) {
+    GenerateStructTypedef(named_xunion.name);
 }
 
 void CGenerator::ProduceInterfaceExternDeclaration(const NamedInterface& named_interface) {
@@ -937,6 +973,24 @@ void CGenerator::ProduceUnionDeclaration(const NamedUnion& named_union) {
         std::ostringstream value;
         value << tag;
         GenerateIntegerDefine(std::move(tag_name), union_tag_type, value.str());
+        ++tag;
+    }
+
+    EmitBlank(&file_);
+}
+
+void CGenerator::ProduceXUnionDeclaration(const NamedXUnion& named_xunion) {
+    std::vector<CGenerator::Member> members =
+        GenerateMembers(library_, named_xunion.xunion_info.members);
+    GenerateTaggedXUnionDeclaration(named_xunion.name, members);
+
+    uint32_t tag = 0u;
+    for (const auto& member : named_xunion.xunion_info.members) {
+        std::string tag_name = NameXUnionTag(named_xunion.name, member);
+        auto xunion_tag_type = types::PrimitiveSubtype::kUint32;
+        std::ostringstream value;
+        value << tag;
+        GenerateIntegerDefine(std::move(tag_name), xunion_tag_type, value.str());
         ++tag;
     }
 
@@ -1158,6 +1212,9 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
                     case flat::Decl::Kind::kTable:
                         assert(false && "c-codegen for tables not yet implemented");
                         break;
+                    case flat::Decl::Kind::kXUnion:
+                        assert(false && "c-codegen for extensible unions not yet implemented");
+                        break;
                     case flat::Decl::Kind::kStruct:
                     case flat::Decl::Kind::kUnion:
                         switch (member.nullability) {
@@ -1273,6 +1330,9 @@ void CGenerator::ProduceInterfaceServerImplementation(const NamedInterface& name
                 case flat::Decl::Kind::kTable:
                     assert(false && "c-codegen for tables not yet implemented");
                     break;
+                case flat::Decl::Kind::kXUnion:
+                    assert(false && "c-codegen for extensible unions not yet implemented");
+                    break;
                 case flat::Decl::Kind::kStruct:
                 case flat::Decl::Kind::kUnion:
                     switch (member.nullability) {
@@ -1380,6 +1440,8 @@ std::ostringstream CGenerator::ProduceHeader() {
         NameTables(library_->table_declarations_);
     std::map<const flat::Decl*, NamedUnion> named_unions =
         NameUnions(library_->union_declarations_);
+    std::map<const flat::Decl*, NamedXUnion> named_xunions =
+        NameXUnions(library_->xunion_declarations_);
 
     file_ << "\n// Forward declarations\n\n";
 
@@ -1427,6 +1489,13 @@ std::ostringstream CGenerator::ProduceHeader() {
             }
             break;
         }
+        case flat::Decl::Kind::kXUnion: {
+            auto iter = named_xunions.find(decl);
+            if (iter != named_xunions.end()) {
+                ProduceXUnionForwardDeclaration(iter->second);
+            }
+            break;
+        }
         default:
             abort();
         }
@@ -1441,6 +1510,7 @@ std::ostringstream CGenerator::ProduceHeader() {
         case flat::Decl::Kind::kStruct:
         case flat::Decl::Kind::kTable:
         case flat::Decl::Kind::kUnion:
+        case flat::Decl::Kind::kXUnion:
             // Only messages have extern fidl_type_t declarations.
             break;
         case flat::Decl::Kind::kInterface: {
@@ -1495,6 +1565,13 @@ std::ostringstream CGenerator::ProduceHeader() {
             }
             break;
         }
+        case flat::Decl::Kind::kXUnion: {
+            auto iter = named_xunions.find(decl);
+            if (iter != named_xunions.end()) {
+                ProduceXUnionDeclaration(iter->second);
+            }
+            break;
+        }
         default:
             abort();
         }
@@ -1509,6 +1586,7 @@ std::ostringstream CGenerator::ProduceHeader() {
         case flat::Decl::Kind::kStruct:
         case flat::Decl::Kind::kTable:
         case flat::Decl::Kind::kUnion:
+        case flat::Decl::Kind::kXUnion:
             // Only interfaces have client declarations.
             break;
         case flat::Decl::Kind::kInterface: {
@@ -1550,6 +1628,7 @@ std::ostringstream CGenerator::ProduceClient() {
         case flat::Decl::Kind::kStruct:
         case flat::Decl::Kind::kTable:
         case flat::Decl::Kind::kUnion:
+        case flat::Decl::Kind::kXUnion:
             // Only interfaces have client implementations.
             break;
         case flat::Decl::Kind::kInterface: {
@@ -1587,6 +1666,7 @@ std::ostringstream CGenerator::ProduceServer() {
         case flat::Decl::Kind::kStruct:
         case flat::Decl::Kind::kTable:
         case flat::Decl::Kind::kUnion:
+        case flat::Decl::Kind::kXUnion:
             // Only interfaces have client implementations.
             break;
         case flat::Decl::Kind::kInterface: {

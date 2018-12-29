@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
 #include <stdalign.h>
 #include <utility>
-#include <memory>
 
 #include <lib/fidl/internal.h>
 #include <lib/fidl/llcpp/array_wrapper.h>
@@ -22,7 +22,7 @@ extern const fidl_type_t NonnullableChannelMessageType;
 
 struct NonnullableChannelMessage {
     alignas(FIDL_ALIGNMENT)
-    fidl_message_header_t header;
+        fidl_message_header_t header;
     zx::channel channel;
 
     static constexpr uint32_t MaxNumHandles = 1;
@@ -38,28 +38,28 @@ struct NonnullableChannelMessage {
 
 const fidl_type_t NonnullableChannelType =
     fidl_type_t(fidl::FidlCodedHandle(ZX_OBJ_TYPE_CHANNEL, fidl::kNonnullable));
-const fidl::FidlField NonnullableChannelMessageFields[] = {
-    fidl::FidlField(&NonnullableChannelType,
-                    offsetof(NonnullableChannelMessage, channel)),
+const fidl::FidlStructField NonnullableChannelMessageFields[] = {
+    fidl::FidlStructField(&NonnullableChannelType,
+                          offsetof(NonnullableChannelMessage, channel)),
 };
 const fidl_type_t NonnullableChannelMessageType = fidl_type_t(fidl::FidlCodedStruct(
     NonnullableChannelMessageFields, /* field_count */ 1,
     sizeof(NonnullableChannelMessage),
     "NonnullableChannelMessage"));
-}
+} // namespace
 
 namespace fidl {
 
 // Manually specialize the templates.
 // These will match the llcpp codegen output.
 
-template<>
+template <>
 struct IsFidlType<NonnullableChannelMessage> : public std::true_type {};
 
-template<>
+template <>
 struct IsFidlMessage<NonnullableChannelMessage> : public std::true_type {};
 
-}
+} // namespace fidl
 
 namespace {
 
@@ -67,7 +67,7 @@ namespace {
 // Zircon system call instead of calling a destructor, we indirectly test for handle closure
 // via the ZX_ERR_PEER_CLOSED error message.
 
-bool HelperExpectPeerValid(zx::channel &channel) {
+bool HelperExpectPeerValid(zx::channel& channel) {
     BEGIN_HELPER;
 
     const char* foo = "A";
@@ -76,7 +76,7 @@ bool HelperExpectPeerValid(zx::channel &channel) {
     END_HELPER;
 }
 
-bool HelperExpectPeerInvalid(zx::channel &channel) {
+bool HelperExpectPeerInvalid(zx::channel& channel) {
     BEGIN_HELPER;
 
     const char* foo = "A";
@@ -98,8 +98,8 @@ bool EncodedMessageTest() {
 
     {
         fidl::EncodedMessage<NonnullableChannelMessage> encoded_message;
-        encoded_message.Initialize([&buf, &channel_1] (fidl::BytePart& msg_bytes,
-                                                       fidl::HandlePart& msg_handles) {
+        encoded_message.Initialize([&buf, &channel_1](fidl::BytePart& msg_bytes,
+                                                      fidl::HandlePart& msg_handles) {
             msg_bytes = fidl::BytePart(buf, sizeof(buf), sizeof(buf));
             zx_handle_t* handle = msg_handles.data();
 
@@ -169,10 +169,9 @@ bool RoundTripTest() {
         new fidl::EncodedMessage<NonnullableChannelMessage>();
     zx_handle_t unsafe_handle_backup;
 
-    encoded_message->Initialize([&buf, &channel_1, &unsafe_handle_backup] (
-        fidl::BytePart& msg_bytes,
-        fidl::HandlePart& msg_handles
-    ) {
+    encoded_message->Initialize([&buf, &channel_1, &unsafe_handle_backup](
+                                    fidl::BytePart& msg_bytes,
+                                    fidl::HandlePart& msg_handles) {
         msg_bytes = fidl::BytePart(buf, sizeof(buf), sizeof(buf));
         zx_handle_t* handle = msg_handles.data();
 
@@ -189,13 +188,12 @@ bool RoundTripTest() {
     });
 
     uint8_t golden_encoded[] = {
-        10, 0, 0, 0, // txid
-        0, 0, 0, 0, // reserved
-        0, 0, 0, 0, // flags
-        42, 0, 0, 0, // ordinal
+        10, 0, 0, 0,        // txid
+        0, 0, 0, 0,         // reserved
+        0, 0, 0, 0,         // flags
+        42, 0, 0, 0,        // ordinal
         255, 255, 255, 255, // handle present
-        0, 0, 0, 0
-    };
+        0, 0, 0, 0};
 
     // Byte-accurate comparison
     EXPECT_EQ(memcmp(golden_encoded, buf, sizeof(buf)), 0);
@@ -254,11 +252,11 @@ bool ArrayLayoutTest() {
     END_TEST;
 }
 
-}  // namespace
+} // namespace
 
 BEGIN_TEST_CASE(llcpp_types_tests)
-    RUN_NAMED_TEST("EncodedMessage test", EncodedMessageTest)
-    RUN_NAMED_TEST("DecodedMessage test", DecodedMessageTest)
-    RUN_NAMED_TEST("Round trip test", RoundTripTest)
-    RUN_NAMED_TEST("Array layout test", ArrayLayoutTest)
+RUN_NAMED_TEST("EncodedMessage test", EncodedMessageTest)
+RUN_NAMED_TEST("DecodedMessage test", DecodedMessageTest)
+RUN_NAMED_TEST("Round trip test", RoundTripTest)
+RUN_NAMED_TEST("Array layout test", ArrayLayoutTest)
 END_TEST_CASE(llcpp_types_tests);

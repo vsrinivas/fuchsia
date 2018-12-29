@@ -533,6 +533,34 @@ public:
     std::vector<std::unique_ptr<UnionMember>> members;
 };
 
+class XUnionMember : public SourceElement {
+public:
+    XUnionMember(SourceElement const& element, std::unique_ptr<Type> type, std::unique_ptr<Identifier> identifier,
+                 std::unique_ptr<AttributeList> attributes)
+        : SourceElement(element), type(std::move(type)), identifier(std::move(identifier)), attributes(std::move(attributes)) {}
+
+    void Accept(TreeVisitor& visitor);
+
+    std::unique_ptr<Type> type;
+    std::unique_ptr<Identifier> identifier;
+    std::unique_ptr<AttributeList> attributes;
+};
+
+class XUnionDeclaration : public SourceElement {
+public:
+    XUnionDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
+                      std::unique_ptr<Identifier> identifier,
+                      std::vector<std::unique_ptr<XUnionMember>> members)
+        : SourceElement(element), attributes(std::move(attributes)), identifier(std::move(identifier)),
+          members(std::move(members)) {}
+
+    void Accept(TreeVisitor& visitor);
+
+    std::unique_ptr<AttributeList> attributes;
+    std::unique_ptr<Identifier> identifier;
+    std::vector<std::unique_ptr<XUnionMember>> members;
+};
+
 class File : public SourceElement {
 public:
     File(SourceElement const& element, Token end,
@@ -544,7 +572,8 @@ public:
          std::vector<std::unique_ptr<InterfaceDeclaration>> interface_declaration_list,
          std::vector<std::unique_ptr<StructDeclaration>> struct_declaration_list,
          std::vector<std::unique_ptr<TableDeclaration>> table_declaration_list,
-         std::vector<std::unique_ptr<UnionDeclaration>> union_declaration_list)
+         std::vector<std::unique_ptr<UnionDeclaration>> union_declaration_list,
+         std::vector<std::unique_ptr<XUnionDeclaration>> xunion_declaration_list)
         : SourceElement(element),
           attributes(std::move(attributes)),
           library_name(std::move(library_name)),
@@ -555,6 +584,7 @@ public:
           struct_declaration_list(std::move(struct_declaration_list)),
           table_declaration_list(std::move(table_declaration_list)),
           union_declaration_list(std::move(union_declaration_list)),
+          xunion_declaration_list(std::move(xunion_declaration_list)),
           end_(end) {}
 
     void Accept(TreeVisitor& visitor);
@@ -568,6 +598,7 @@ public:
     std::vector<std::unique_ptr<StructDeclaration>> struct_declaration_list;
     std::vector<std::unique_ptr<TableDeclaration>> table_declaration_list;
     std::vector<std::unique_ptr<UnionDeclaration>> union_declaration_list;
+    std::vector<std::unique_ptr<XUnionDeclaration>> xunion_declaration_list;
     Token end_;
 };
 

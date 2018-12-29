@@ -19,6 +19,8 @@
 #include "fidl/raw_ast.h"
 #include "fidl/utils.h"
 
+#include "zircon/fidl.h"
+
 namespace fidl {
 namespace flat {
 
@@ -28,8 +30,8 @@ constexpr uint32_t kMessageAlign = 8u;
 
 class ScopeInsertResult {
 public:
-    explicit ScopeInsertResult(std::unique_ptr<SourceLocation> previous_occurance)
-        : previous_occurance_(std::move(previous_occurance)) {}
+    explicit ScopeInsertResult(std::unique_ptr<SourceLocation> previous_occurrence)
+        : previous_occurrence_(std::move(previous_occurrence)) {}
 
     static ScopeInsertResult Ok() { return ScopeInsertResult(nullptr); }
     static ScopeInsertResult FailureAt(SourceLocation previous) {
@@ -37,16 +39,16 @@ public:
     }
 
     bool ok() const {
-        return previous_occurance_ == nullptr;
+        return previous_occurrence_ == nullptr;
     }
 
-    const SourceLocation& previous_occurance() const {
+    const SourceLocation& previous_occurrence() const {
         assert(!ok());
-        return *previous_occurance_;
+        return *previous_occurrence_;
     }
 
 private:
-    std::unique_ptr<SourceLocation> previous_occurance_;
+    std::unique_ptr<SourceLocation> previous_occurrence_;
 };
 
 template <typename T>
@@ -191,11 +193,11 @@ TypeShape FidlStructTypeShape(std::vector<FieldShape*>* fields) {
 }
 
 TypeShape FidlMessageTypeShape(std::vector<FieldShape*>* fields) {
-    auto struct_shape =  FidlStructTypeShape(fields);
+    auto struct_shape = FidlStructTypeShape(fields);
     return AlignTypeshape(struct_shape, kMessageAlign);
 }
 
-TypeShape PointerTypeShape(TypeShape element, uint32_t max_element_count = 1u) {
+TypeShape PointerTypeShape(const TypeShape& element, uint32_t max_element_count = 1u) {
     // Because FIDL supports recursive data structures, we might not have
     // computed the TypeShape for the element we're pointing to. In that case,
     // the size will be zero and we'll use |numeric_limits<uint32_t>::max()| as
@@ -222,7 +224,7 @@ TypeShape PointerTypeShape(TypeShape element, uint32_t max_element_count = 1u) {
     return TypeShape(8u, 8u, depth, max_handles, max_out_of_line);
 }
 
-TypeShape CEnvelopeTypeShape(TypeShape contained_type) {
+TypeShape CEnvelopeTypeShape(const TypeShape& contained_type) {
     auto packed_sizes_field = FieldShape(kUint64TypeShape);
     auto pointer_type = FieldShape(PointerTypeShape(contained_type));
     std::vector<FieldShape*> header{&packed_sizes_field, &pointer_type};
@@ -251,6 +253,22 @@ TypeShape CTableTypeShape(std::vector<TypeShape*>* fields, uint32_t extra_handle
     auto data_field = FieldShape(PointerTypeShape(pointer_element));
     std::vector<FieldShape*> header{&num_fields, &data_field};
     return CStructTypeShape(&header, extra_handles);
+}
+
+TypeShape CXUnionTypeShape(const std::vector<flat::XUnion::Member>& members, uint32_t extra_handles = 0u) {
+    uint32_t depth = 0u;
+    uint32_t max_handles = 0u;
+    uint32_t max_out_of_line = 0u;
+
+    for (const auto& member : members) {
+        const auto& envelope = CEnvelopeTypeShape(member.fieldshape.Typeshape());
+
+        depth = ClampedAdd(depth, envelope.Depth());
+        max_handles = ClampedAdd(max_handles, envelope.MaxHandles());
+        max_out_of_line = std::max(max_out_of_line, envelope.MaxOutOfLine());
+    }
+
+    return TypeShape(sizeof(fidl_xunion_t), 8u, depth, max_handles, max_out_of_line);
 }
 
 TypeShape ArrayTypeShape(TypeShape element, uint32_t count) {
@@ -403,6 +421,12 @@ Type* Typespace::Lookup(const flat::Name& name, types::Nullability nullability,
     }
 }
 
+Type* Typespace::CreateForwardDeclaredType(const flat::Name& name, types::Nullability nullability) {
+    // TODO(pascallouis): Implement :-).
+
+    return nullptr;
+}
+
 bool NoOpConstraint(ErrorReporter* error_reporter,
                     const raw::Attribute* attribute,
                     const Decl* decl) {
@@ -412,9 +436,9 @@ bool NoOpConstraint(ErrorReporter* error_reporter,
 AttributeSchema::AttributeSchema(const std::set<Placement>& allowed_placements,
                                  const std::set<std::string> allowed_values,
                                  Constraint constraint)
-        : allowed_placements_(allowed_placements),
-          allowed_values_(allowed_values),
-          constraint_(std::move(constraint)) {}
+    : allowed_placements_(allowed_placements),
+      allowed_values_(allowed_values),
+      constraint_(std::move(constraint)) {}
 
 void AttributeSchema::ValidatePlacement(ErrorReporter* error_reporter,
                                         const raw::Attribute* attribute,
@@ -517,24 +541,29 @@ bool MaxBytesConstraint(ErrorReporter* error_reporter,
         return false;
     uint32_t max_bytes = std::numeric_limits<uint32_t>::max();
     switch (decl->kind) {
-        case Decl::Kind::kStruct: {
-            auto struct_decl = static_cast<const Struct*>(decl);
-            max_bytes = struct_decl->typeshape.Size() + struct_decl->typeshape.MaxOutOfLine();
-            break;
-        }
-        case Decl::Kind::kTable: {
-            auto table_decl = static_cast<const Table*>(decl);
-            max_bytes = table_decl->typeshape.Size() + table_decl->typeshape.MaxOutOfLine();
-            break;
-        }
-        case Decl::Kind::kUnion: {
-            auto union_decl = static_cast<const Union*>(decl);
-            max_bytes = union_decl->typeshape.Size() + union_decl->typeshape.MaxOutOfLine();
-            break;
-        }
-        default:
-            assert(false && "unexpected kind");
-            return false;
+    case Decl::Kind::kStruct: {
+        auto struct_decl = static_cast<const Struct*>(decl);
+        max_bytes = struct_decl->typeshape.Size() + struct_decl->typeshape.MaxOutOfLine();
+        break;
+    }
+    case Decl::Kind::kTable: {
+        auto table_decl = static_cast<const Table*>(decl);
+        max_bytes = table_decl->typeshape.Size() + table_decl->typeshape.MaxOutOfLine();
+        break;
+    }
+    case Decl::Kind::kUnion: {
+        auto union_decl = static_cast<const Union*>(decl);
+        max_bytes = union_decl->typeshape.Size() + union_decl->typeshape.MaxOutOfLine();
+        break;
+    }
+    case Decl::Kind::kXUnion: {
+        auto xunion_decl = static_cast<const XUnion*>(decl);
+        max_bytes = xunion_decl->typeshape.Size() + xunion_decl->typeshape.MaxOutOfLine();
+        break;
+    }
+    default:
+        assert(false && "unexpected kind");
+        return false;
     }
     if (max_bytes > bound) {
         std::ostringstream message;
@@ -557,24 +586,29 @@ bool MaxHandlesConstraint(ErrorReporter* error_reporter,
         return false;
     uint32_t max_handles = std::numeric_limits<uint32_t>::max();
     switch (decl->kind) {
-        case Decl::Kind::kStruct: {
-            auto struct_decl = static_cast<const Struct*>(decl);
-            max_handles = struct_decl->typeshape.MaxHandles();
-            break;
-        }
-        case Decl::Kind::kTable: {
-            auto table_decl = static_cast<const Table*>(decl);
-            max_handles = table_decl->typeshape.MaxHandles();
-            break;
-        }
-        case Decl::Kind::kUnion: {
-            auto union_decl = static_cast<const Union*>(decl);
-            max_handles = union_decl->typeshape.MaxHandles();
-            break;
-        }
-        default:
-            assert(false && "unexpected kind");
-            return false;
+    case Decl::Kind::kStruct: {
+        auto struct_decl = static_cast<const Struct*>(decl);
+        max_handles = struct_decl->typeshape.MaxHandles();
+        break;
+    }
+    case Decl::Kind::kTable: {
+        auto table_decl = static_cast<const Table*>(decl);
+        max_handles = table_decl->typeshape.MaxHandles();
+        break;
+    }
+    case Decl::Kind::kUnion: {
+        auto union_decl = static_cast<const Union*>(decl);
+        max_handles = union_decl->typeshape.MaxHandles();
+        break;
+    }
+    case Decl::Kind::kXUnion: {
+        auto xunion_decl = static_cast<const XUnion*>(decl);
+        max_handles = xunion_decl->typeshape.MaxHandles();
+        break;
+    }
+    default:
+        assert(false && "unexpected kind");
+        return false;
     }
     if (max_handles > bound) {
         std::ostringstream message;
@@ -590,6 +624,7 @@ bool MaxHandlesConstraint(ErrorReporter* error_reporter,
 }
 
 Libraries::Libraries() {
+    // clang-format off
     AddAttributeSchema("Discoverable", AttributeSchema({
         AttributeSchema::Placement::kInterfaceDecl,
     }, {
@@ -617,6 +652,7 @@ Libraries::Libraries() {
         AttributeSchema::Placement::kStructDecl,
         AttributeSchema::Placement::kTableDecl,
         AttributeSchema::Placement::kUnionDecl,
+        AttributeSchema::Placement::kXUnionDecl,
     }, {
         /* any value */
     },
@@ -627,12 +663,14 @@ Libraries::Libraries() {
         AttributeSchema::Placement::kStructDecl,
         AttributeSchema::Placement::kTableDecl,
         AttributeSchema::Placement::kUnionDecl,
+        AttributeSchema::Placement::kXUnionDecl,
     }, {
         /* any value */
     },
     MaxHandlesConstraint));
     AddAttributeSchema("Selector", AttributeSchema({
         AttributeSchema::Placement::kMethod,
+        AttributeSchema::Placement::kXUnionMember,
     }, {
         /* any value */
     }));
@@ -643,6 +681,7 @@ Libraries::Libraries() {
         "SocketControl",
         "OvernetStream",
     }));
+    // clang-format on
 }
 
 bool Libraries::Insert(std::unique_ptr<Library> library) {
@@ -665,8 +704,8 @@ bool Libraries::Lookup(const std::vector<StringView>& library_name,
 size_t EditDistance(const std::string& sequence1, const std::string& sequence2) {
     size_t s1_length = sequence1.length();
     size_t s2_length = sequence2.length();
-    size_t row1[s1_length+1];
-    size_t row2[s1_length+1];
+    size_t row1[s1_length + 1];
+    size_t row2[s1_length + 1];
     size_t* last_row = row1;
     size_t* this_row = row2;
     for (size_t i = 0; i <= s1_length; i++)
@@ -677,7 +716,8 @@ size_t EditDistance(const std::string& sequence1, const std::string& sequence2) 
         for (size_t i = 1; i <= s1_length; i++) {
             auto s1c = sequence1[i - 1];
             this_row[i] = std::min(std::min(
-                last_row[i] + 1, this_row[i - 1] + 1), last_row[i - 1] + (s1c == s2c ? 0 : 1));
+                                       last_row[i] + 1, this_row[i - 1] + 1),
+                                   last_row[i - 1] + (s1c == s2c ? 0 : 1));
         }
         std::swap(last_row, this_row);
     }
@@ -1244,6 +1284,31 @@ bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
     return RegisterDecl(union_declarations_.back().get());
 }
 
+bool Library::ConsumeXUnionDeclaration(std::unique_ptr<raw::XUnionDeclaration> xunion_declaration) {
+    auto name = Name(this, xunion_declaration->identifier->location());
+
+    std::vector<XUnion::Member> members;
+    for (auto& member : xunion_declaration->members) {
+        std::unique_ptr<raw::Ordinal> ordinal =
+            std::make_unique<raw::Ordinal>(fidl::ordinals::GetOrdinal(library_name_, name.name_part(), *member));
+
+        auto location = member->identifier->location();
+        std::unique_ptr<Type> type;
+        if (!ConsumeType(std::move(member->type), location, &type))
+            return false;
+
+        if (type->nullability != types::Nullability::kNonnullable) {
+            return Fail(member->location(), "Extensible union members cannot be nullable");
+        }
+
+        members.emplace_back(std::move(ordinal), std::move(type), location, std::move(member->attributes));
+    }
+
+    xunion_declarations_.push_back(
+        std::make_unique<XUnion>(std::move(xunion_declaration->attributes), std::move(name), std::move(members)));
+    return RegisterDecl(xunion_declarations_.back().get());
+}
+
 bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
     if (file->attributes) {
         ValidateAttributesPlacement(AttributeSchema::Placement::kLibrary, file->attributes.get());
@@ -1319,6 +1384,13 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
     auto union_declaration_list = std::move(file->union_declaration_list);
     for (auto& union_declaration : union_declaration_list) {
         if (!ConsumeUnionDeclaration(std::move(union_declaration))) {
+            return false;
+        }
+    }
+
+    auto xunion_declaration_list = std::move(file->xunion_declaration_list);
+    for (auto& xunion_declaration : xunion_declaration_list) {
+        if (!ConsumeXUnionDeclaration(std::move(xunion_declaration))) {
             return false;
         }
     }
@@ -1762,8 +1834,8 @@ bool Library::ParseNumericLiteral(const raw::NumericLiteral* literal,
 // of D1 before the declaration of D2. For instance, given the fidl
 //     struct D2 { D1 d; };
 //     struct D1 { int32 x; };
-// D1 has an edge pointing to D2. Note that struct and union pointers,
-// unlike inline structs or unions, do not have dependency edges.
+// D1 has an edge pointing to D2. Note that struct, union, and xunion pointers,
+// unlike inline structs/unions/xunions, do not have dependency edges.
 bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
     std::set<Decl*> edges;
     auto maybe_add_decl = [this, &edges](const Type* type, LookupOption option) {
@@ -1854,6 +1926,13 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
     case Decl::Kind::kUnion: {
         auto union_decl = static_cast<const Union*>(decl);
         for (const auto& member : union_decl->members) {
+            maybe_add_decl(member.type.get(), LookupOption::kIgnoreNullable);
+        }
+        break;
+    }
+    case Decl::Kind::kXUnion: {
+        auto xunion_decl = static_cast<const XUnion*>(decl);
+        for (const auto& member : xunion_decl->members) {
             maybe_add_decl(member.type.get(), LookupOption::kIgnoreNullable);
         }
         break;
@@ -2073,7 +2152,7 @@ bool Library::CompileInterface(Interface* interface_declaration) {
             if (!name_result.ok())
                 return Fail(method.name,
                             "Multiple methods with the same name in an interface; last occurrence was at " +
-                                name_result.previous_occurance().position());
+                                name_result.previous_occurrence().position());
             auto ordinal_result = method_scope.ordinals.Insert(method.ordinal->value, method.name);
             if (method.ordinal->value == 0)
                 return Fail(method.ordinal->location(), "Ordinal value 0 disallowed.");
@@ -2083,7 +2162,7 @@ bool Library::CompileInterface(Interface* interface_declaration) {
                 replacement_method.push_back('_');
                 return Fail(method.ordinal->location(),
                             "Multiple methods with the same ordinal in an interface; previous was at " +
-                                ordinal_result.previous_occurance().position() + ". If these " +
+                                ordinal_result.previous_occurrence().position() + ". If these " +
                                 "were automatically generated, consider using attribute " +
                                 "[Selector=\"" + replacement_method + "\"] to change the " +
                                 "name used to calculate the ordinal.");
@@ -2179,7 +2258,7 @@ bool Library::CompileStruct(Struct* struct_declaration) {
         if (!name_result.ok())
             return Fail(member.name,
                         "Multiple struct fields with the same name; previous was at " +
-                            name_result.previous_occurance().position());
+                            name_result.previous_occurrence().position());
         if (!CompileType(member.type.get(), &member.fieldshape.Typeshape()))
             return false;
         fidl_struct.push_back(&member.fieldshape);
@@ -2225,13 +2304,13 @@ bool Library::CompileTable(Table* table_declaration) {
         if (!ordinal_result.ok())
             return Fail(member.ordinal->location(),
                         "Multiple table fields with the same ordinal; previous was at " +
-                            ordinal_result.previous_occurance().position());
+                            ordinal_result.previous_occurrence().position());
         if (member.maybe_used) {
             auto name_result = name_scope.Insert(member.maybe_used->name.data(), member.maybe_used->name);
             if (!name_result.ok())
                 return Fail(member.maybe_used->name,
                             "Multiple table fields with the same name; previous was at " +
-                                name_result.previous_occurance().position());
+                                name_result.previous_occurrence().position());
             if (!CompileType(member.maybe_used->type.get(), &member.maybe_used->typeshape))
                 return false;
         }
@@ -2292,7 +2371,7 @@ bool Library::CompileUnion(Union* union_declaration) {
         if (!name_result.ok())
             return Fail(member.name,
                         "Multiple union members with the same name; previous was at " +
-                            name_result.previous_occurance().position());
+                            name_result.previous_occurrence().position());
         if (!CompileType(member.type.get(), &member.fieldshape.Typeshape()))
             return false;
     }
@@ -2328,6 +2407,58 @@ bool Library::CompileUnion(Union* union_declaration) {
         ValidateAttributesConstraints(
             union_declaration,
             union_declaration->attributes.get());
+    }
+
+    return true;
+}
+
+bool Library::CompileXUnion(XUnion* xunion_declaration) {
+    Compiling guard(xunion_declaration);
+    Scope<StringView> scope;
+    Scope<uint32_t> ordinal_scope;
+
+    for (auto& member : xunion_declaration->members) {
+        auto ordinal_result = ordinal_scope.Insert(member.ordinal->value, member.ordinal->location());
+        if (!ordinal_result.ok())
+            return Fail(member.ordinal->location(),
+                        "Multiple xunion fields with the same ordinal; previous was at " +
+                            ordinal_result.previous_occurrence().position());
+
+        auto name_result = scope.Insert(member.name.data(), member.name);
+        if (!name_result.ok())
+            return Fail(member.name,
+                        "Multiple xunion members with the same name; previous was at " +
+                            name_result.previous_occurrence().position());
+
+        if (!CompileType(member.type.get(), &member.fieldshape.Typeshape()))
+            return false;
+    }
+
+    uint32_t max_member_handles;
+    if (xunion_declaration->recursive) {
+        max_member_handles = std::numeric_limits<uint32_t>::max();
+    } else {
+        // Member handles will be counted by CXUnionTypeShape.
+        max_member_handles = 0u;
+    }
+
+    xunion_declaration->typeshape = CXUnionTypeShape(xunion_declaration->members, max_member_handles);
+
+    auto placement_ok = error_reporter_->Checkpoint();
+    // Attributes: check placement.
+    ValidateAttributesPlacement(
+        AttributeSchema::Placement::kXUnionDecl,
+        xunion_declaration->attributes.get());
+    for (const auto& member : xunion_declaration->members) {
+        ValidateAttributesPlacement(
+            AttributeSchema::Placement::kXUnionMember,
+            member.attributes.get());
+    }
+    if (placement_ok.NoNewErrors()) {
+        // Attributes: check constraint.
+        ValidateAttributesConstraints(
+            xunion_declaration,
+            xunion_declaration->attributes.get());
     }
 
     return true;
@@ -2401,6 +2532,13 @@ bool Library::Compile() {
         case Decl::Kind::kUnion: {
             auto union_decl = static_cast<Union*>(decl);
             if (!CompileUnion(union_decl)) {
+                return false;
+            }
+            break;
+        }
+        case Decl::Kind::kXUnion: {
+            auto xunion_decl = static_cast<XUnion*>(decl);
+            if (!CompileXUnion(xunion_decl)) {
                 return false;
             }
             break;
@@ -2566,6 +2704,22 @@ bool Library::CompileIdentifierType(flat::IdentifierType* identifier_type,
             typeshape = PointerTypeShape(typeshape);
         break;
     }
+    case Decl::Kind::kXUnion: {
+        XUnion* xunion_decl = static_cast<XUnion*>(named_decl);
+        if (!xunion_decl->compiled) {
+            if (xunion_decl->compiling) {
+                xunion_decl->recursive = true;
+            } else {
+                if (!CompileXUnion(xunion_decl)) {
+                    return false;
+                }
+            }
+        }
+        typeshape = xunion_decl->typeshape;
+        if (identifier_type->nullability == types::Nullability::kNullable)
+            typeshape = PointerTypeShape(typeshape);
+        break;
+    }
     default: {
         abort();
     }
@@ -2651,7 +2805,7 @@ bool Library::ValidateEnumMembers(Enum* enum_decl) {
             std::ostringstream msg_stream;
             msg_stream << "value of member " << name;
             msg_stream << " conflicts with previously declared member ";
-            msg_stream << NameIdentifier(value_result.previous_occurance()) << " in the enum ";
+            msg_stream << NameIdentifier(value_result.previous_occurrence()) << " in the enum ";
             msg_stream << enum_decl->GetName();
 
             // We can log the error and then continue validating other members for other bugs

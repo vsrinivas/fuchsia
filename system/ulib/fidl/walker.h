@@ -42,6 +42,7 @@ constexpr uint32_t TypeSize(const fidl_type_t* type) {
         case fidl::kFidlTypeStructPointer:
         case fidl::kFidlTypeTablePointer:
         case fidl::kFidlTypeUnionPointer:
+        case fidl::kFidlTypeXUnionPointer:
             return sizeof(uint64_t);
         case fidl::kFidlTypeHandle:
             return sizeof(zx_handle_t);
@@ -51,15 +52,16 @@ constexpr uint32_t TypeSize(const fidl_type_t* type) {
             return sizeof(fidl_vector_t);
         case fidl::kFidlTypeUnion:
             return type->coded_union.size;
+        case fidl::kFidlTypeXUnion:
+            return sizeof(fidl_xunion_t);
         case fidl::kFidlTypeString:
             return sizeof(fidl_string_t);
         case fidl::kFidlTypeArray:
             return type->coded_array.array_size;
         case fidl::kFidlTypeVector:
             return sizeof(fidl_vector_t);
-        default:
-            __builtin_unreachable();
     }
+    __builtin_unreachable();
 }
 
 // The Walker class traverses through a FIDL message by following its encoding table and
@@ -134,6 +136,15 @@ private:
                     state = kStateUnionPointer;
                     union_pointer_state.union_type = fidl_type->coded_union_pointer.union_type;
                     break;
+                case fidl::kFidlTypeXUnion:
+                    state = kStateXUnion;
+                    xunion_state.fields = fidl_type->coded_xunion.fields;
+                    xunion_state.field_count = fidl_type->coded_xunion.field_count;
+                    break;
+                case fidl::kFidlTypeXUnionPointer:
+                    state = kStateXUnionPointer;
+                    xunion_pointer_state.xunion_type = fidl_type->coded_xunion_pointer.xunion_type;
+                    break;
                 case fidl::kFidlTypeArray:
                     state = kStateArray;
                     array_state.element = fidl_type->coded_array.element;
@@ -185,6 +196,15 @@ private:
             union_state.data_offset = coded_union->data_offset;
         }
 
+        Frame(const fidl::FidlCodedXUnion* coded_xunion, Position position)
+            : state(kStateXUnion), position(position) {
+            // This initialization is done in the ctor body instead of in an
+            // initialization list since we need to set fields in unions, which
+            // is much more involved in a ctor initialization list.
+            xunion_state.fields = coded_xunion->fields;
+            xunion_state.field_count = coded_xunion->field_count;
+        }
+
         Frame(const fidl_type_t* element, uint32_t array_size, uint32_t element_size,
               Position position)
             : position(position) {
@@ -227,6 +247,8 @@ private:
             kStateTablePointer,
             kStateUnion,
             kStateUnionPointer,
+            kStateXUnion,
+            kStateXUnionPointer,
             kStateArray,
             kStateString,
             kStateHandle,
@@ -281,6 +303,13 @@ private:
             struct {
                 const fidl::FidlCodedUnion* union_type;
             } union_pointer_state;
+            struct {
+                const fidl::FidlXUnionField* fields;
+                uint32_t field_count;
+            } xunion_state;
+            struct {
+                const fidl::FidlCodedXUnion* xunion_type;
+            } xunion_pointer_state;
             struct {
                 const fidl_type_t* element;
                 // Size of the entire array in bytes
@@ -525,6 +554,14 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
                 FIDL_STATUS_GUARD(status);
                 const fidl::FidlCodedUnion* coded_union = frame->union_pointer_state.union_type;
                 *frame = Frame(coded_union, frame->position);
+                continue;
+            }
+            case Frame::kStateXUnion: {
+                assert(false && "xunions not implemented yet");
+                continue;
+            }
+            case Frame::kStateXUnionPointer: {
+                assert(false && "xunion pointers not implemented yet");
                 continue;
             }
             case Frame::kStateArray: {

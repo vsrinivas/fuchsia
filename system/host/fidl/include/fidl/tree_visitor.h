@@ -211,6 +211,12 @@ public:
     virtual void OnUnionDeclaration(std::unique_ptr<UnionDeclaration> const& element) {
         element->Accept(*this);
     }
+    virtual void OnXUnionMember(std::unique_ptr<XUnionMember> const& element) {
+        element->Accept(*this);
+    }
+    virtual void OnXUnionDeclaration(std::unique_ptr<XUnionDeclaration> const& element) {
+        element->Accept(*this);
+    }
     virtual void OnFile(std::unique_ptr<File> const& element) {
         element->Accept(*this);
     }

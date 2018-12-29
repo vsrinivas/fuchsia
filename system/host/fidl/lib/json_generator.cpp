@@ -526,6 +526,33 @@ void JSONGenerator::Generate(const flat::Union::Member& value) {
     });
 }
 
+void JSONGenerator::Generate(const flat::XUnion& value) {
+    GenerateObject([&]() {
+        GenerateObjectMember("name", value.name, Position::kFirst);
+        if (value.attributes)
+            GenerateObjectMember("maybe_attributes", value.attributes);
+        GenerateObjectMember("members", value.members);
+        GenerateObjectMember("size", value.typeshape.Size());
+        GenerateObjectMember("max_out_of_line", value.typeshape.MaxOutOfLine());
+        GenerateObjectMember("alignment", value.typeshape.Alignment());
+        GenerateObjectMember("max_handles", value.typeshape.MaxHandles());
+    });
+}
+
+void JSONGenerator::Generate(const flat::XUnion::Member& value) {
+    GenerateObject([&]() {
+        GenerateObjectMember("ordinal", value.ordinal, Position::kFirst);
+        GenerateObjectMember("type", value.type);
+        GenerateObjectMember("name", value.name);
+        if (value.attributes)
+            GenerateObjectMember("maybe_attributes", value.attributes);
+        GenerateObjectMember("size", value.fieldshape.Size());
+        GenerateObjectMember("max_out_of_line", value.fieldshape.MaxOutOfLine());
+        GenerateObjectMember("alignment", value.fieldshape.Alignment());
+        GenerateObjectMember("offset", value.fieldshape.Offset());
+    });
+}
+
 void JSONGenerator::Generate(const flat::Library* library) {
     GenerateObject([&]() {
         auto library_name = flat::LibraryName(library, ".");
@@ -568,6 +595,9 @@ void JSONGenerator::GenerateDeclarationsMember(const flat::Library* library, Pos
 
         for (const auto& decl : library->union_declarations_)
             GenerateDeclarationsEntry(count++, decl->name, "union");
+
+        for (const auto& decl : library->xunion_declarations_)
+            GenerateDeclarationsEntry(count++, decl->name, "xunion");
     });
 }
 
@@ -595,6 +625,7 @@ std::ostringstream JSONGenerator::Produce() {
         GenerateObjectMember("struct_declarations", library_->struct_declarations_);
         GenerateObjectMember("table_declarations", library_->table_declarations_);
         GenerateObjectMember("union_declarations", library_->union_declarations_);
+        GenerateObjectMember("xunion_declarations", library_->xunion_declarations_);
 
         // The library's declaration_order_ contains all the declarations for all
         // transitive dependencies. The backend only needs the declaration order

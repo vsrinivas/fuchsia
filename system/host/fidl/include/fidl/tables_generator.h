@@ -48,6 +48,7 @@ private:
     void Generate(const coded::StructType& struct_type);
     void Generate(const coded::TableType& table_type);
     void Generate(const coded::UnionType& union_type);
+    void Generate(const coded::XUnionType& xunion_type);
     void Generate(const coded::MessageType& message_type);
     void Generate(const coded::HandleType& handle_type);
     void Generate(const coded::InterfaceHandleType& interface_type);
@@ -59,14 +60,17 @@ private:
     void Generate(const coded::Type* type);
     void Generate(const coded::StructField& field);
     void Generate(const coded::TableField& field);
+    void Generate(const coded::XUnionField& field);
 
     void GeneratePointerIfNeeded(const coded::StructType& struct_type);
     void GeneratePointerIfNeeded(const coded::TableType& table_type);
     void GeneratePointerIfNeeded(const coded::UnionType& union_type);
+    void GeneratePointerIfNeeded(const coded::XUnionType& xunion_type);
 
     void GenerateForward(const coded::StructType& struct_type);
     void GenerateForward(const coded::TableType& table_type);
     void GenerateForward(const coded::UnionType& union_type);
+    void GenerateForward(const coded::XUnionType& xunion_type);
 
     // Returns a pointer owned by coded_types_.
     const coded::Type* CompileType(const flat::Type* type);

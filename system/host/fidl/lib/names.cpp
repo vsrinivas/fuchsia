@@ -255,6 +255,10 @@ std::string NameUnionTag(StringView union_name, const flat::Union::Member& membe
     return std::string(union_name) + "Tag_" + NameIdentifier(member.name);
 }
 
+std::string NameXUnionTag(StringView xunion_name, const flat::XUnion::Member& member) {
+    return std::string(xunion_name) + "Tag_" + NameIdentifier(member.name);
+}
+
 std::string NameFlatConstant(const flat::Constant* constant) {
     switch (constant->kind) {
     case flat::Constant::Kind::kLiteral: {
@@ -376,7 +380,8 @@ std::string NameFlatCType(const flat::Type* type, flat::Decl::Kind decl_kind) {
             case flat::Decl::Kind::kEnum:
             case flat::Decl::Kind::kStruct:
             case flat::Decl::Kind::kTable:
-            case flat::Decl::Kind::kUnion: {
+            case flat::Decl::Kind::kUnion:
+            case flat::Decl::Kind::kXUnion: {
                 std::string name = NameName(identifier_type->name, "_", "_");
                 if (identifier_type->nullability == types::Nullability::kNullable) {
                     name.push_back('*');
@@ -481,6 +486,10 @@ std::string NameCodedTable(const flat::Table* table_decl) {
 
 std::string NameCodedUnion(const flat::Union* union_decl) {
     return NameName(union_decl->name, "_", "_");
+}
+
+std::string NameCodedXUnion(const flat::XUnion* xunion_decl) {
+    return NameName(xunion_decl->name, "_", "_");
 }
 
 std::string NameCodedHandle(types::HandleSubtype subtype, types::Nullability nullability) {

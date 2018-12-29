@@ -4,8 +4,8 @@
 
 #include <errno.h>
 
-#include "fidl/parser.h"
 #include "fidl/attributes.h"
+#include "fidl/parser.h"
 
 namespace fidl {
 
@@ -146,7 +146,7 @@ std::unique_ptr<raw::NumericLiteral> Parser::ParseNumericLiteral() {
     return std::make_unique<raw::NumericLiteral>(scope.GetSourceElement());
 }
 
-std::unique_ptr<raw::Ordinal> Parser::ParseOrdinal() {
+std::unique_ptr<raw::Ordinal> Parser::MaybeParseOrdinal() {
     ASTScope scope(this);
 
     if (Peek().kind() != Token::Kind::kNumericLiteral) {
@@ -683,7 +683,7 @@ std::unique_ptr<raw::ParameterList> Parser::ParseParameterList() {
 }
 
 std::unique_ptr<raw::InterfaceMethod> Parser::ParseInterfaceMethod(std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope) {
-    auto ordinal = ParseOrdinal();
+    auto ordinal = MaybeParseOrdinal();
     if (!Ok())
         return Fail();
 
@@ -875,7 +875,7 @@ Parser::ParseTableMember() {
     if (!Ok())
         return Fail();
 
-    auto ordinal = ParseOrdinal();
+    auto ordinal = MaybeParseOrdinal();
     if (!Ok())
         return Fail();
 
@@ -1014,6 +1014,75 @@ Parser::ParseUnionDeclaration(std::unique_ptr<raw::AttributeList> attributes, AS
                                                    std::move(members));
 }
 
+std::unique_ptr<raw::XUnionMember> Parser::ParseXUnionMember() {
+    ASTScope scope(this);
+
+    auto attributes = MaybeParseAttributeList();
+    if (!Ok())
+        return Fail();
+
+    auto type = ParseType();
+    if (!Ok())
+        return Fail();
+
+    auto identifier = ParseIdentifier();
+    if (!Ok())
+        return Fail();
+
+    return std::make_unique<raw::XUnionMember>(scope.GetSourceElement(),
+                                               std::move(type),
+                                               std::move(identifier),
+                                               std::move(attributes));
+}
+
+std::unique_ptr<raw::XUnionDeclaration>
+Parser::ParseXUnionDeclaration(std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope) {
+    std::vector<std::unique_ptr<raw::XUnionMember>> members;
+
+    ConsumeToken(IdentifierOfSubkind(Token::Subkind::kXUnion));
+    if (!Ok())
+        return Fail();
+
+    auto identifier = ParseIdentifier();
+    if (!Ok())
+        return Fail();
+
+    ConsumeToken(OfKind(Token::Kind::kLeftCurly));
+    if (!Ok())
+        return Fail();
+
+    auto parse_member = [&]() {
+        switch (Peek().combined()) {
+        default:
+            ConsumeToken(OfKind(Token::Kind::kRightCurly));
+            return Done;
+
+        case Token::Kind::kNumericLiteral: // Ordinal
+        TOKEN_ATTR_CASES:
+            // intentional fallthrough for attribute parsing
+        TOKEN_TYPE_CASES:
+            members.emplace_back(ParseXUnionMember());
+            return More;
+        }
+    };
+
+    while (parse_member() == More) {
+        if (!Ok())
+            Fail();
+
+        ConsumeToken(OfKind(Token::Kind::kSemicolon));
+        if (!Ok())
+            return Fail();
+    }
+
+    if (!Ok())
+        Fail();
+
+    return std::make_unique<raw::XUnionDeclaration>(scope.GetSourceElement(),
+                                                    std::move(attributes), std::move(identifier),
+                                                    std::move(members));
+}
+
 std::unique_ptr<raw::File> Parser::ParseFile() {
     ASTScope scope(this);
     std::vector<std::unique_ptr<raw::Using>> using_list;
@@ -1023,6 +1092,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
     std::vector<std::unique_ptr<raw::StructDeclaration>> struct_declaration_list;
     std::vector<std::unique_ptr<raw::TableDeclaration>> table_declaration_list;
     std::vector<std::unique_ptr<raw::UnionDeclaration>> union_declaration_list;
+    std::vector<std::unique_ptr<raw::XUnionDeclaration>> xunion_declaration_list;
 
     auto attributes = MaybeParseAttributeList();
     if (!Ok())
@@ -1058,7 +1128,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
 
     auto parse_declaration = [&const_declaration_list, &enum_declaration_list,
                               &interface_declaration_list, &struct_declaration_list,
-                              &table_declaration_list, &union_declaration_list, this]() {
+                              &table_declaration_list, &union_declaration_list, &xunion_declaration_list, this]() {
         ASTScope scope(this);
         std::unique_ptr<raw::AttributeList> attributes = MaybeParseAttributeList();
         if (!Ok())
@@ -1092,6 +1162,10 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
         case CASE_IDENTIFIER(Token::Subkind::kUnion):
             union_declaration_list.emplace_back(ParseUnionDeclaration(std::move(attributes), scope));
             return More;
+
+        case CASE_IDENTIFIER(Token::Subkind::kXUnion):
+            xunion_declaration_list.emplace_back(ParseXUnionDeclaration(std::move(attributes), scope));
+            return More;
         }
     };
 
@@ -1111,7 +1185,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
         scope.GetSourceElement(), end,
         std::move(attributes), std::move(library_name), std::move(using_list), std::move(const_declaration_list),
         std::move(enum_declaration_list), std::move(interface_declaration_list),
-        std::move(struct_declaration_list), std::move(table_declaration_list), std::move(union_declaration_list));
+        std::move(struct_declaration_list), std::move(table_declaration_list), std::move(union_declaration_list), std::move(xunion_declaration_list));
 }
 
 } // namespace fidl

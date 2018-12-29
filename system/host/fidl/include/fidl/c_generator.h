@@ -108,6 +108,11 @@ private:
         const flat::Union& union_info;
     };
 
+    struct NamedXUnion {
+        std::string name;
+        const flat::XUnion& xunion_info;
+    };
+
     enum class StructKind {
         kMessage,
         kNonmessage,
@@ -124,6 +129,7 @@ private:
 
     void GenerateStructDeclaration(StringView name, const std::vector<Member>& members, StructKind kind);
     void GenerateTaggedUnionDeclaration(StringView name, const std::vector<Member>& members);
+    void GenerateTaggedXUnionDeclaration(StringView name, const std::vector<Member>& members);
 
     std::map<const flat::Decl*, NamedConst>
     NameConsts(const std::vector<std::unique_ptr<flat::Const>>& const_infos);
@@ -137,6 +143,8 @@ private:
     NameTables(const std::vector<std::unique_ptr<flat::Table>>& table_infos);
     std::map<const flat::Decl*, NamedUnion>
     NameUnions(const std::vector<std::unique_ptr<flat::Union>>& union_infos);
+    std::map<const flat::Decl*, NamedXUnion>
+    NameXUnions(const std::vector<std::unique_ptr<flat::XUnion>>& xunion_infos);
 
     void ProduceConstForwardDeclaration(const NamedConst& named_const);
     void ProduceEnumForwardDeclaration(const NamedEnum& named_enum);
@@ -144,6 +152,7 @@ private:
     void ProduceStructForwardDeclaration(const NamedStruct& named_struct);
     void ProduceTableForwardDeclaration(const NamedTable& named_table);
     void ProduceUnionForwardDeclaration(const NamedUnion& named_union);
+    void ProduceXUnionForwardDeclaration(const NamedXUnion& named_xunion);
 
     void ProduceInterfaceExternDeclaration(const NamedInterface& named_interface);
 
@@ -153,6 +162,7 @@ private:
     void ProduceStructDeclaration(const NamedStruct& named_struct);
     void ProduceTableDeclaration(const NamedStruct& named_struct);
     void ProduceUnionDeclaration(const NamedUnion& named_union);
+    void ProduceXUnionDeclaration(const NamedXUnion& named_xunion);
 
     void ProduceInterfaceClientDeclaration(const NamedInterface& named_interface);
     void ProduceInterfaceClientImplementation(const NamedInterface& named_interface);

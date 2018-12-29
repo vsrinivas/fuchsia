@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_FIDL_BUFFER_WALKER_H_
+#define ZIRCON_SYSTEM_ULIB_FIDL_BUFFER_WALKER_H_
+
+#include <lib/fidl/internal.h>
+#include <cstdlib>
 
 #include <cstdint>
 #include <cstdlib>
@@ -125,7 +129,7 @@ public:
                     Pop();
                     continue;
                 }
-                const fidl::FidlField& field = frame->struct_state.fields[field_index];
+                const fidl::FidlStructField& field = frame->struct_state.fields[field_index];
                 const fidl_type_t* field_type = field.type;
                 const uint32_t field_offset = frame->offset + field.offset;
                 if (!Push(Frame(field_type, field_offset))) {
@@ -235,12 +239,12 @@ public:
                 const uint32_t table_bytes = static_cast<uint32_t>(packed_sizes & 0xffffffffu);
                 const uint32_t table_handles = static_cast<uint32_t>(packed_sizes >> 32);
                 if (add_overflow(out_of_line_offset_, table_bytes, &offset) || offset > num_bytes()) {
-                    SetError("integer overflow decoding table field");
+                    SetError("table is larger than expected");
                     FIDL_POP_AND_CONTINUE_OR_RETURN;
                 }
                 if (add_overflow(handle_idx_, table_handles, &handles) ||
                     handles > num_handles()) {
-                    SetError("integer overflow decoding table handles");
+                    SetError("table has more handles than expected");
                     FIDL_POP_AND_CONTINUE_OR_RETURN;
                 }
                 frame->table_state.end_offset = offset;
@@ -293,6 +297,125 @@ public:
                 UpdatePointer(table_ptr_ptr, TypedAt<void>(frame->offset));
                 const fidl::FidlCodedTable* coded_table = frame->table_pointer_state.table_type;
                 *frame = Frame(coded_table, frame->offset);
+                continue;
+            }
+            case Frame::kStateXUnion: {
+                auto xunion = TypedAt<fidl_xunion_t>(frame->offset);
+
+                if (xunion->padding != 0) {
+                    SetError("xunion padding after discriminant are non-zero");
+                    FIDL_POP_AND_CONTINUE_OR_RETURN;
+                }
+
+                uint32_t end_offset;
+                if (add_overflow(out_of_line_offset_, xunion->envelope.num_bytes, &end_offset) || end_offset > num_bytes()) {
+                    SetError("xunion size is larger than expected");
+                    FIDL_POP_AND_CONTINUE_OR_RETURN;
+                }
+
+                uint32_t total_handle_count;
+                if (add_overflow(handle_idx_, xunion->envelope.num_handles, &total_handle_count) ||
+                    total_handle_count > num_handles()) {
+                    SetError("xunion has more handles than expected");
+                    FIDL_POP_AND_CONTINUE_OR_RETURN;
+                }
+
+                switch (GetPointerState(&xunion->envelope.data)) {
+                case PointerState::PRESENT:
+                    if (xunion->tag == 0) {
+                        SetError("xunion has zero discriminant but envelope is present");
+                        FIDL_POP_AND_CONTINUE_OR_RETURN;
+                    }
+                    break;
+                case PointerState::ABSENT:
+                    if (xunion->tag != 0) {
+                        SetError("xunion has non-zero discriminant but no data");
+                        FIDL_POP_AND_CONTINUE_OR_RETURN;
+                    }
+
+                    // Empty xunion.
+                    frame->offset += static_cast<uint32_t>(sizeof(fidl_xunion_t));
+                    Pop();
+                    continue;
+                case PointerState::INVALID:
+                default:
+                    SetError("xunion has invalid envelope pointer");
+                    FIDL_POP_AND_CONTINUE_OR_RETURN;
+                    break;
+                }
+
+                const FidlXUnionField* known_field = nullptr;
+                for (size_t i = 0; i < frame->xunion_state.field_count; i++) {
+                    const auto field = frame->xunion_state.fields + i;
+
+                    if (field->ordinal == xunion->tag) {
+                        known_field = field;
+                        break;
+                    }
+                }
+
+                auto claim_data = [&](uint32_t known_size, uint32_t* envelope_offset) {
+                    if (!ClaimOutOfLineStorage(known_size, xunion->envelope.data, envelope_offset)) {
+                        SetError("xunion out-of-line storage claim couldn't be validated");
+                        return false;
+                    }
+
+                    if (*envelope_offset + xunion->envelope.num_bytes != end_offset) {
+                        SetError("expected xunion end offset doesn't match envelope offset + recursive size");
+                        return false;
+                    }
+
+                    UpdatePointer(&xunion->envelope.data, TypedAt<void>(*envelope_offset));
+
+                    return true;
+                };
+
+                uint32_t envelope_offset;
+                if (known_field != nullptr) {
+                    if (!claim_data(TypeSize(known_field->type), &envelope_offset)) {
+                        FIDL_POP_AND_CONTINUE_OR_RETURN;
+                    }
+
+                    frame->offset = envelope_offset;
+                    *frame = Frame(known_field->type, envelope_offset);
+                } else {
+                    if (!claim_data(xunion->envelope.num_bytes, &envelope_offset)) {
+                        FIDL_POP_AND_CONTINUE_OR_RETURN;
+                    }
+
+                    for (uint32_t i = 0; i < xunion->envelope.num_handles; i++) {
+                        if (!ClaimHandle(nullptr)) {
+                            SetError("expected handle not present");
+                            FIDL_POP_AND_CONTINUE_OR_RETURN;
+                        }
+                    }
+
+                    frame->offset = end_offset;
+                    Pop();
+                }
+
+                continue;
+            }
+            case Frame::kStateXUnionPointer: {
+                auto xunion_ptr_ptr = TypedAt<fidl_xunion_tag_t*>(frame->offset);
+                switch (GetPointerState(TypedAt<void>(frame->offset))) {
+                case PointerState::PRESENT:
+                    break;
+                case PointerState::ABSENT:
+                    Pop();
+                    continue;
+                default:
+                    SetError("Tried to decode a bad xunion pointer");
+                    FIDL_POP_AND_CONTINUE_OR_RETURN;
+                }
+                if (!ClaimOutOfLineStorage(sizeof(fidl_xunion_t), *xunion_ptr_ptr,
+                                           &frame->offset)) {
+                    SetError("message wanted to store too large of a nullable xunion");
+                    FIDL_POP_AND_CONTINUE_OR_RETURN;
+                }
+                UpdatePointer(xunion_ptr_ptr, TypedAt<fidl_xunion_tag_t>(frame->offset));
+                const fidl::FidlCodedXUnion* coded_xunion = frame->xunion_pointer_state.xunion_type;
+                *frame = Frame(coded_xunion, frame->offset);
                 continue;
             }
             case Frame::kStateUnion: {
@@ -403,10 +526,12 @@ public:
                     }
                     Pop();
                     continue;
-                default:
+                case HandleState::INVALID:
+                default: {
                     // The value at the handle was garbage.
                     SetError("message tried to decode a garbage handle");
                     FIDL_POP_AND_CONTINUE_OR_RETURN;
+                }
                 }
             }
             case Frame::kStateVector: {
@@ -578,6 +703,7 @@ private:
         case fidl::kFidlTypeStructPointer:
         case fidl::kFidlTypeTablePointer:
         case fidl::kFidlTypeUnionPointer:
+        case fidl::kFidlTypeXUnionPointer:
             return sizeof(uint64_t);
         case fidl::kFidlTypeHandle:
             return sizeof(zx_handle_t);
@@ -587,6 +713,8 @@ private:
             return sizeof(fidl_vector_t);
         case fidl::kFidlTypeUnion:
             return type->coded_union.size;
+        case fidl::kFidlTypeXUnion:
+            return sizeof(fidl_xunion_t);
         case fidl::kFidlTypeString:
             return sizeof(fidl_string_t);
         case fidl::kFidlTypeArray:
@@ -631,6 +759,15 @@ private:
             case fidl::kFidlTypeUnionPointer:
                 state = kStateUnionPointer;
                 union_pointer_state.union_type = fidl_type->coded_union_pointer.union_type;
+                break;
+            case fidl::kFidlTypeXUnion:
+                state = kStateXUnion;
+                xunion_state.fields = fidl_type->coded_xunion.fields;
+                xunion_state.field_count = fidl_type->coded_xunion.field_count;
+                break;
+            case fidl::kFidlTypeXUnionPointer:
+                state = kStateXUnionPointer;
+                xunion_pointer_state.xunion_type = fidl_type->coded_xunion_pointer.xunion_type;
                 break;
             case fidl::kFidlTypeArray:
                 state = kStateArray;
@@ -679,6 +816,15 @@ private:
             union_state.data_offset = coded_union->data_offset;
         }
 
+        Frame(const fidl::FidlCodedXUnion* coded_xunion, uint32_t offset)
+            : state(kStateXUnion), offset(offset) {
+            // This initialization is done in the ctor body instead of in an
+            // initialization list since we need to set fields in unions, which
+            // is much more involved in a ctor initialization list.
+            xunion_state.fields = coded_xunion->fields;
+            xunion_state.field_count = coded_xunion->field_count;
+        }
+
         Frame(const fidl_type_t* element, uint32_t array_size, uint32_t element_size,
               uint32_t offset)
             : offset(offset) {
@@ -724,6 +870,8 @@ private:
             kStateString,
             kStateHandle,
             kStateVector,
+            kStateXUnion,
+            kStateXUnionPointer,
 
             kStateDone,
         } state;
@@ -735,7 +883,7 @@ private:
         // example, struct sizes do not need to be present here.
         union {
             struct {
-                const fidl::FidlField* fields;
+                const fidl::FidlStructField* fields;
                 uint32_t field_count;
             } struct_state;
             struct {
@@ -760,6 +908,13 @@ private:
             struct {
                 const fidl::FidlCodedUnion* union_type;
             } union_pointer_state;
+            struct {
+                const fidl::FidlXUnionField* fields;
+                uint32_t field_count;
+            } xunion_state;
+            struct {
+                const fidl::FidlCodedXUnion* xunion_type;
+            } xunion_pointer_state;
             struct {
                 const fidl_type_t* element;
                 uint32_t array_size;
@@ -817,3 +972,5 @@ private:
 
 } // namespace internal
 } // namespace fidl
+
+#endif // ZIRCON_SYSTEM_ULIB_FIDL_BUFFER_WALKER_H_

@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <limits.h>
-#include <stddef.h>
 #include <new>
+#include <stddef.h>
 
 #include <lib/fidl/coding.h>
 #include <lib/fidl/internal.h>
@@ -269,8 +269,8 @@ struct unbounded_too_large_nullable_vector_of_handles_message_layout {
 const fidl_type_t unbounded_too_large_nullable_vector_of_handles =
     fidl_type_t(fidl::FidlCodedVector(&nullable_handle, FIDL_MAX_SIZE, sizeof(zx_handle_t),
                                       fidl::kNullable));
-static const ::fidl::FidlField unbounded_too_large_nullable_vector_of_handles_fields[] = {
-    ::fidl::FidlField(
+static const ::fidl::FidlStructField unbounded_too_large_nullable_vector_of_handles_fields[] = {
+    ::fidl::FidlStructField(
         &unbounded_too_large_nullable_vector_of_handles,
         offsetof(unbounded_too_large_nullable_vector_of_handles_message_layout,
                  inline_struct.vector)),

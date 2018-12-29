@@ -5,9 +5,9 @@
 #ifndef ZIRCON_FIDL_H_
 #define ZIRCON_FIDL_H_
 
-#include <assert.h>
-#include <stdalign.h>
-#include <stdint.h>
+#include <assert.h>   // NOLINT(modernize-deprecated-headers, foobar)
+#include <stdalign.h> // NOLINT(modernize-deprecated-headers)
+#include <stdint.h>   // NOLINT(modernize-*)
 
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -15,7 +15,7 @@
 __BEGIN_CDECLS
 
 // Fidl data types have a representation in a wire format. This wire
-// format is shared by all language bindings, including C11 and C++14.
+// format is shared by all language bindings, including C11 and C++.
 //
 // The C bindings also define a representation of fidl data types. For
 // a given type, the size and alignment of all parts of the type agree
@@ -199,7 +199,8 @@ typedef struct fidl_vector {
 // - Stores a variable size uninterpreted payload out-of-line.
 // - Payload may contain an arbitrary number of bytes and handles.
 // - Allows for encapsulation of one FIDL message inside of another.
-// - Building block for derived structures such as Tables.
+// - Building block for extensible structures such as tables & extensible
+//   unions.
 
 // When encoded for transfer, |data| indicates presence of content:
 // - FIDL_ALLOC_ABSENT : envelope is null
@@ -208,16 +209,24 @@ typedef struct fidl_vector {
 // - nullptr : envelope is null
 // - <valid pointer> : envelope is non-null, |data| is at indicated memory address
 
-typedef struct fidl_envelope {
-    // Number of bytes in the envelope.
-    // Always a multiple of 8; must be zero if envelope is null.
+typedef struct {
+    // The size of the entire envelope contents, including any additional
+    // out-of-line objects that the envelope may contain. For example, a
+    // vector<string>'s num_bytes for ["hello", "world"] would include the
+    // string contents in the size, not just the outer vector. Always a multiple
+    // of 8; must be zero if envelope is null.
     uint32_t num_bytes;
 
-    // Number of handles in envelope; must be zero if envelope is null.
+    // The number of handles in the envelope, including any additional
+    // out-of-line objects that the envelope contains. Must be zero if envelope is null.
     uint32_t num_handles;
 
-    // Pointer to out-of-line data.
-    void* data;
+    // A pointer to the out-of-line envelope data in decoded form, or
+    // FIDL_ALLOC_(ABSENT|PRESENT) in encoded form.
+    union {
+        void* data;
+        uintptr_t presence;
+    };
 } fidl_envelope_t;
 
 // Handle types.
@@ -304,6 +313,22 @@ typedef uint32_t fidl_union_tag_t;
 // union foo {...}?     struct union_foo*            A pointer to a
 //                                                   union_foo, or else
 //                                                   FIDL_ALLOC_ABSENT.
+
+// Extensible unions.
+
+// Extensible unions, or "xunions" (colloquially pronounced "zoo-nions") are
+// similar to unions, except that storage for union members are out-of-line
+// rather than inline. This enables union members to be added and removed while
+// preserving ABI compatibility with the existing xunion definition. Like
+// unions, xunions have a 4-byte tag, and may be nullable.
+
+typedef uint32_t fidl_xunion_tag_t;
+
+typedef struct {
+    fidl_xunion_tag_t tag;
+    uint32_t padding; // Should always be zero.
+    fidl_envelope_t envelope;
+} fidl_xunion_t;
 
 // Messages.
 

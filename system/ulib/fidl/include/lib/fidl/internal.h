@@ -35,13 +35,17 @@ inline uint64_t FidlAlign(uint32_t offset) {
     return (offset + alignment_mask) & ~alignment_mask;
 }
 
-struct FidlField {
+struct FidlStructField {
     const fidl_type* type;
     uint32_t offset;
 
-    constexpr FidlField(const fidl_type* type, uint32_t offset)
+    constexpr FidlStructField(const fidl_type* type, uint32_t offset)
         : type(type), offset(offset) {}
 };
+
+// TODO(apang): Remove this backward-compatible typedef after all dependencies
+// have been updated from FidlField to FidlStructField.
+using FidlField = FidlStructField;
 
 struct FidlTableField {
     const fidl_type* type;
@@ -51,28 +55,38 @@ struct FidlTableField {
         : type(type), ordinal(ordinal) {}
 };
 
+struct FidlXUnionField {
+    const fidl_type* type;
+    uint32_t ordinal;
+
+    constexpr FidlXUnionField(const fidl_type* type, uint32_t ordinal)
+        : type(type), ordinal(ordinal) {}
+};
+
 enum FidlTypeTag : uint32_t {
-    kFidlTypeStruct = 0u,
-    kFidlTypeStructPointer = 1u,
-    kFidlTypeTable = 8u,
-    kFidlTypeTablePointer = 9u,
-    kFidlTypeUnion = 2u,
-    kFidlTypeUnionPointer = 3u,
-    kFidlTypeArray = 4u,
-    kFidlTypeString = 5u,
-    kFidlTypeHandle = 6u,
-    kFidlTypeVector = 7u,
+    kFidlTypeStruct,
+    kFidlTypeStructPointer,
+    kFidlTypeUnion,
+    kFidlTypeUnionPointer,
+    kFidlTypeArray,
+    kFidlTypeString,
+    kFidlTypeHandle,
+    kFidlTypeVector,
+    kFidlTypeTable,
+    kFidlTypeTablePointer,
+    kFidlTypeXUnion,
+    kFidlTypeXUnionPointer,
 };
 
 // Though the |size| is implied by the fields, computing that information is not the purview of this
 // library. It's easier for the compiler to stash it.
 struct FidlCodedStruct {
-    const FidlField* const fields;
+    const FidlStructField* const fields;
     const uint32_t field_count;
     const uint32_t size;
     const char* name; // may be nullptr if omitted at compile time
 
-    constexpr FidlCodedStruct(const FidlField* fields, uint32_t field_count, uint32_t size,
+    constexpr FidlCodedStruct(const FidlStructField* fields, uint32_t field_count, uint32_t size,
                               const char* name)
         : fields(fields), field_count(field_count), size(size), name(name) {}
 };
@@ -101,8 +115,8 @@ struct FidlCodedTablePointer {
         : table_type(table_type) {}
 };
 
-// Unlike structs, union members do not have different offsets, so this points to an array of
-// |fidl_type*| rather than |FidlField|.
+// Unlike structs, union members do not have different offsets, so this points
+// to an array of |fidl_type*| rather than |FidlStructField|.
 //
 // On-the-wire unions begin with a tag which is an index into |types|.
 // |data_offset| is the offset of the data in the wire format (tag + padding).
@@ -123,6 +137,22 @@ struct FidlCodedUnionPointer {
 
     constexpr explicit FidlCodedUnionPointer(const FidlCodedUnion* union_type)
         : union_type(union_type) {}
+};
+
+struct FidlCodedXUnion {
+    const uint32_t field_count;
+    const FidlXUnionField* const fields;
+    const char* name; // may be nullptr if omitted at compile time
+
+    constexpr FidlCodedXUnion(uint32_t field_count, const FidlXUnionField* fields, const char* name)
+        : field_count(field_count), fields(fields), name(name) {}
+};
+
+struct FidlCodedXUnionPointer {
+    const FidlCodedXUnion* const xunion_type;
+
+    constexpr explicit FidlCodedXUnionPointer(const FidlCodedXUnion* xunion_type)
+        : xunion_type(xunion_type) {}
 };
 
 // An array is essentially a struct with |array_size / element_size| of the same field, named at
@@ -202,6 +232,8 @@ struct fidl_type {
         const fidl::FidlCodedTablePointer coded_table_pointer;
         const fidl::FidlCodedUnion coded_union;
         const fidl::FidlCodedUnionPointer coded_union_pointer;
+        const fidl::FidlCodedXUnion coded_xunion;
+        const fidl::FidlCodedXUnionPointer coded_xunion_pointer;
         const fidl::FidlCodedHandle coded_handle;
         const fidl::FidlCodedString coded_string;
         const fidl::FidlCodedArray coded_array;
@@ -225,6 +257,12 @@ struct fidl_type {
 
     constexpr fidl_type(fidl::FidlCodedUnionPointer coded_union_pointer)
         : type_tag(fidl::kFidlTypeUnionPointer), coded_union_pointer(coded_union_pointer) {}
+
+    constexpr fidl_type(fidl::FidlCodedXUnion coded_xunion)
+        : type_tag(fidl::kFidlTypeXUnion), coded_xunion(coded_xunion) {}
+
+    constexpr fidl_type(fidl::FidlCodedXUnionPointer coded_xunion_pointer)
+        : type_tag(fidl::kFidlTypeXUnionPointer), coded_xunion_pointer(coded_xunion_pointer) {}
 
     constexpr fidl_type(fidl::FidlCodedHandle coded_handle)
         : type_tag(fidl::kFidlTypeHandle), coded_handle(coded_handle) {}

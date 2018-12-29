@@ -149,9 +149,22 @@ public:
     }
 
     virtual void OnUnionMember(std::unique_ptr<UnionMember> const& element) override {
-        ScopedBool mem(is_member_decl_);
         OnBlankLineRespectingNode();
+        ScopedBool mem(is_member_decl_);
         TreeVisitor::OnUnionMember(element);
+    }
+
+    virtual void OnXUnionDeclaration(std::unique_ptr<XUnionDeclaration> const& element) override {
+        OnBlankLineRequiringNode();
+        TreeVisitor::OnXUnionDeclaration(element);
+    }
+
+    virtual void OnXUnionMember(std::unique_ptr<XUnionMember> const& element) override {
+        OnBlankLineRespectingNode();
+        ScopedBool mem(is_member_decl_);
+        ScopedBool before_colon(blank_space_before_colon_, false);
+        ScopedBool after_colon(blank_space_after_colon_, true);
+        TreeVisitor::OnXUnionMember(element);
     }
 
     virtual void OnType(std::unique_ptr<Type> const& element) override {

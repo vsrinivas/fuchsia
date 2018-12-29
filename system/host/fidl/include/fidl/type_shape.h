@@ -39,7 +39,7 @@ public:
         : FieldShape(TypeShape()) {}
 
     TypeShape& Typeshape() { return typeshape_; }
-    TypeShape Typeshape() const { return typeshape_; }
+    const TypeShape& Typeshape() const { return typeshape_; }
 
     uint32_t Size() const { return typeshape_.Size(); }
     uint32_t Alignment() const { return typeshape_.Alignment(); }

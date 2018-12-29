@@ -10,7 +10,7 @@
 //   --files system/fidl/fuchsia-tracelink/tracelink.fidl
 //
 // and then this header (up to "End of additions ...") manually inserted.
-//   
+//
 // There are *no* differences with the machine generated version except the
 // addition of this text.
 // Minimizing differences with generated code is critical to lessening the
@@ -29,8 +29,6 @@
 
 extern "C" {
 
-
-
 static const fidl_type_t HandlevmononnullableTable = fidl_type_t(::fidl::FidlCodedHandle(ZX_OBJ_TYPE_VMO, ::fidl::kNonnullable));
 
 static const fidl_type_t HandlefifononnullableTable = fidl_type_t(::fidl::FidlCodedHandle(ZX_OBJ_TYPE_FIFO, ::fidl::kNonnullable));
@@ -40,41 +38,37 @@ static const fidl_type_t String100nonnullableTable = fidl_type_t(::fidl::FidlCod
 static const fidl_type_t VectorString100nonnullable100nonnullableTable = fidl_type_t(::fidl::FidlCodedVector(&String100nonnullableTable, 100, 16, ::fidl::kNonnullable));
 
 extern const fidl_type_t fuchsia_tracelink_ProviderStartRequestTable;
-static const ::fidl::FidlField fuchsia_tracelink_ProviderStartRequestFields[] = {
-    ::fidl::FidlField(&HandlevmononnullableTable, 20),
-    ::fidl::FidlField(&HandlefifononnullableTable, 24),
-    ::fidl::FidlField(&VectorString100nonnullable100nonnullableTable, 32)
-};
+static const ::fidl::FidlStructField fuchsia_tracelink_ProviderStartRequestFields[] = {
+    ::fidl::FidlStructField(&HandlevmononnullableTable, 20),
+    ::fidl::FidlStructField(&HandlefifononnullableTable, 24),
+    ::fidl::FidlStructField(&VectorString100nonnullable100nonnullableTable, 32)};
 const fidl_type_t fuchsia_tracelink_ProviderStartRequestTable = fidl_type_t(::fidl::FidlCodedStruct(fuchsia_tracelink_ProviderStartRequestFields, 3, 48, "fuchsia.tracelink/ProviderStartRequest"));
 
 extern const fidl_type_t fuchsia_tracelink_ProviderStopRequestTable;
-static const ::fidl::FidlField fuchsia_tracelink_ProviderStopRequestFields[] = {};
+static const ::fidl::FidlStructField fuchsia_tracelink_ProviderStopRequestFields[] = {};
 const fidl_type_t fuchsia_tracelink_ProviderStopRequestTable = fidl_type_t(::fidl::FidlCodedStruct(fuchsia_tracelink_ProviderStopRequestFields, 0, 16, "fuchsia.tracelink/ProviderStopRequest"));
 
 static const fidl_type_t fuchsia_tracelink_ProviderInterfacenonnullableTable = fidl_type_t(::fidl::FidlCodedHandle(ZX_OBJ_TYPE_CHANNEL, ::fidl::kNonnullable));
 
 extern const fidl_type_t fuchsia_tracelink_RegistryRegisterTraceProviderDeprecatedRequestTable;
-static const ::fidl::FidlField fuchsia_tracelink_RegistryRegisterTraceProviderDeprecatedRequestFields[] = {
-    ::fidl::FidlField(&fuchsia_tracelink_ProviderInterfacenonnullableTable, 16)
-};
+static const ::fidl::FidlStructField fuchsia_tracelink_RegistryRegisterTraceProviderDeprecatedRequestFields[] = {
+    ::fidl::FidlStructField(&fuchsia_tracelink_ProviderInterfacenonnullableTable, 16)};
 const fidl_type_t fuchsia_tracelink_RegistryRegisterTraceProviderDeprecatedRequestTable = fidl_type_t(::fidl::FidlCodedStruct(fuchsia_tracelink_RegistryRegisterTraceProviderDeprecatedRequestFields, 1, 20, "fuchsia.tracelink/RegistryRegisterTraceProviderDeprecatedRequest"));
 
 extern const fidl_type_t fuchsia_tracelink_RegistryRegisterTraceProviderRequestTable;
-static const ::fidl::FidlField fuchsia_tracelink_RegistryRegisterTraceProviderRequestFields[] = {
-    ::fidl::FidlField(&fuchsia_tracelink_ProviderInterfacenonnullableTable, 16),
-    ::fidl::FidlField(&String100nonnullableTable, 32)
-};
+static const ::fidl::FidlStructField fuchsia_tracelink_RegistryRegisterTraceProviderRequestFields[] = {
+    ::fidl::FidlStructField(&fuchsia_tracelink_ProviderInterfacenonnullableTable, 16),
+    ::fidl::FidlStructField(&String100nonnullableTable, 32)};
 const fidl_type_t fuchsia_tracelink_RegistryRegisterTraceProviderRequestTable = fidl_type_t(::fidl::FidlCodedStruct(fuchsia_tracelink_RegistryRegisterTraceProviderRequestFields, 2, 48, "fuchsia.tracelink/RegistryRegisterTraceProviderRequest"));
 
 extern const fidl_type_t fuchsia_tracelink_RegistryRegisterTraceProviderSynchronouslyRequestTable;
-static const ::fidl::FidlField fuchsia_tracelink_RegistryRegisterTraceProviderSynchronouslyRequestFields[] = {
-    ::fidl::FidlField(&fuchsia_tracelink_ProviderInterfacenonnullableTable, 16),
-    ::fidl::FidlField(&String100nonnullableTable, 32)
-};
+static const ::fidl::FidlStructField fuchsia_tracelink_RegistryRegisterTraceProviderSynchronouslyRequestFields[] = {
+    ::fidl::FidlStructField(&fuchsia_tracelink_ProviderInterfacenonnullableTable, 16),
+    ::fidl::FidlStructField(&String100nonnullableTable, 32)};
 const fidl_type_t fuchsia_tracelink_RegistryRegisterTraceProviderSynchronouslyRequestTable = fidl_type_t(::fidl::FidlCodedStruct(fuchsia_tracelink_RegistryRegisterTraceProviderSynchronouslyRequestFields, 2, 48, "fuchsia.tracelink/RegistryRegisterTraceProviderSynchronouslyRequest"));
 
 extern const fidl_type_t fuchsia_tracelink_RegistryRegisterTraceProviderSynchronouslyResponseTable;
-static const ::fidl::FidlField fuchsia_tracelink_RegistryRegisterTraceProviderSynchronouslyResponseFields[] = {};
+static const ::fidl::FidlStructField fuchsia_tracelink_RegistryRegisterTraceProviderSynchronouslyResponseFields[] = {};
 const fidl_type_t fuchsia_tracelink_RegistryRegisterTraceProviderSynchronouslyResponseTable = fidl_type_t(::fidl::FidlCodedStruct(fuchsia_tracelink_RegistryRegisterTraceProviderSynchronouslyResponseFields, 0, 24, "fuchsia.tracelink/RegistryRegisterTraceProviderSynchronouslyResponse"));
 
 } // extern "C"

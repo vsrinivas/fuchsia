@@ -12,7 +12,7 @@ namespace {
 
 // All the data in coding tables should be pure data.
 static_assert(std::is_standard_layout<fidl_type>::value, "");
-static_assert(std::is_standard_layout<FidlField>::value, "");
+static_assert(std::is_standard_layout<FidlStructField>::value, "");
 static_assert(std::is_standard_layout<FidlTableField>::value, "");
 static_assert(std::is_standard_layout<FidlTypeTag>::value, "");
 static_assert(std::is_standard_layout<FidlCodedStruct>::value, "");

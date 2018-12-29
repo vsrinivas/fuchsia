@@ -11,6 +11,7 @@
         "struct_declarations",
         "table_declarations",
         "union_declarations",
+        "xunion_declarations",
         "declaration_order",
         "declarations",
         "library_dependencies"
@@ -64,6 +65,13 @@
             "type": "array",
             "items": {
                 "$ref": "#/definitions/union"
+            }
+        },
+        "xunion_declarations": {
+            "description": "List of extensible unions",
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/xunion"
             }
         },
         "declaration_order": {
@@ -555,6 +563,97 @@
                 }
             }
         },
+        "xunion": {
+            "description": "Definition of an extensible union",
+            "type": "object",
+            "required": [
+                "name",
+                "members",
+                "size",
+                "max_out_of_line",
+                "alignment"
+            ],
+            "properties": {
+                "max_handles": {
+                    "description": "Maximum number of handles present in the extensible union",
+                    "$ref": "#/definitions/count"
+                },
+                "maybe_attributes": {
+                    "description": "Optional list of extensible union attributes",
+                    "$ref": "#/definitions/attributes-list"
+                },
+                "name": {
+                    "description": "Name of extensible union",
+                    "$ref": "#/definitions/compound-identifier"
+                },
+                "members": {
+                    "description": "List of extensible union members",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/xunion-member"
+                    }
+                },
+                "size": {
+                    "description": "Size of extensible union",
+                    "$ref": "#/definitions/count"
+                },
+                "max_out_of_line": {
+                    "description": "Maximum size of the out-of-line payload",
+                    "$ref": "#/definitions/count"
+                },
+                "alignment": {
+                    "description": "Alignment of extensible union",
+                    "$ref": "#/definitions/count"
+                }
+            }
+        },
+        "xunion-member": {
+            "description": "Definition of an extensible union member",
+            "type": "object",
+            "required": [
+                "ordinal",
+                "type",
+                "name",
+                "size",
+                "max_out_of_line",
+                "alignment",
+                "offset"
+            ],
+            "properties": {
+                "ordinal": {
+                    "description": "Ordinal value of extensible union member",
+                    "$ref": "#/definitions/ordinal"
+                },
+                "type": {
+                    "description": "Type of extensible union member",
+                    "$ref": "#/definitions/type"
+                },
+                "name": {
+                    "description": "Name of extensible union member",
+                    "$ref": "#/definitions/identifier"
+                },
+                "size": {
+                    "description": "Size of extensible union member",
+                    "$ref": "#/definitions/count"
+                },
+                "max_out_of_line": {
+                    "description": "Maximum size of the out-of-line payload",
+                    "$ref": "#/definitions/count"
+                },
+                "alignment": {
+                    "description": "Alignment of extensible union member",
+                    "$ref": "#/definitions/count"
+                },
+                "offset": {
+                    "description": "Offset of extensible union member",
+                    "$ref": "#/definitions/count"
+                },
+                "maybe_attributes": {
+                    "description": "Optional list of extensible union member attributes",
+                    "$ref": "#/definitions/attributes-list"
+                }
+            }
+        },
         "declarations-map": {
             "description": "Definition of declarations of a library",
             "type": "object",
@@ -567,7 +666,8 @@
                         "interface",
                         "struct",
                         "table",
-                        "union"
+                        "union",
+                        "xunion"
                     ]
                 }
             }

@@ -26,6 +26,7 @@ void DeclarationOrderTreeVisitor::OnFile(std::unique_ptr<File> const& element) {
     auto struct_decls_it = element->struct_declaration_list.begin();
     auto table_decls_it = element->table_declaration_list.begin();
     auto union_decls_it = element->union_declaration_list.begin();
+    auto xunion_decls_it = element->xunion_declaration_list.begin();
 
     enum Next {
         const_t,
@@ -33,7 +34,8 @@ void DeclarationOrderTreeVisitor::OnFile(std::unique_ptr<File> const& element) {
         interface_t,
         struct_t,
         table_t,
-        union_t
+        union_t,
+        xunion_t,
     };
 
     std::map<const char*, Next> m;
@@ -69,6 +71,9 @@ void DeclarationOrderTreeVisitor::OnFile(std::unique_ptr<File> const& element) {
         if (union_decls_it != element->union_declaration_list.end()) {
             m[(*union_decls_it)->start_.previous_end().data().data()] = union_t;
         }
+        if (xunion_decls_it != element->xunion_declaration_list.end()) {
+            m[(*xunion_decls_it)->start_.previous_end().data().data()] = xunion_t;
+        }
         if (m.size() == 0)
             break;
 
@@ -97,6 +102,10 @@ void DeclarationOrderTreeVisitor::OnFile(std::unique_ptr<File> const& element) {
         case union_t:
             OnUnionDeclaration(*union_decls_it);
             ++union_decls_it;
+            break;
+        case xunion_t:
+            OnXUnionDeclaration(*xunion_decls_it);
+            ++xunion_decls_it;
             break;
         }
     } while (1);

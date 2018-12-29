@@ -425,6 +425,7 @@ struct Decl {
         kStruct,
         kTable,
         kUnion,
+        kXUnion,
     };
 
     Decl(Kind kind, std::unique_ptr<raw::AttributeList> attributes, Name name)
@@ -765,6 +766,25 @@ struct Union : public Decl {
     bool recursive = false;
 };
 
+struct XUnion : public Decl {
+    struct Member {
+        Member(std::unique_ptr<raw::Ordinal> ordinal, std::unique_ptr<Type> type, SourceLocation name, std::unique_ptr<raw::AttributeList> attributes)
+            : ordinal(std::move(ordinal)), type(std::move(type)), name(std::move(name)), attributes(std::move(attributes)) {}
+        std::unique_ptr<raw::Ordinal> ordinal;
+        std::unique_ptr<Type> type;
+        SourceLocation name;
+        std::unique_ptr<raw::AttributeList> attributes;
+        FieldShape fieldshape;
+    };
+
+    XUnion(std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Member> members)
+        : Decl(Kind::kXUnion, std::move(attributes), std::move(name)), members(std::move(members)) {}
+
+    std::vector<Member> members;
+    TypeShape typeshape;
+    bool recursive = false;
+};
+
 struct Interface : public Decl {
     struct Method {
         Method(Method&&) = default;
@@ -964,6 +984,8 @@ public:
         kTableMember,
         kUnionDecl,
         kUnionMember,
+        kXUnionDecl,
+        kXUnionMember,
     };
 
     AttributeSchema(const std::set<Placement>& allowed_placements,
@@ -1094,6 +1116,7 @@ private:
     bool ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> struct_declaration);
     bool ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> table_declaration);
     bool ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> union_declaration);
+    bool ConsumeXUnionDeclaration(std::unique_ptr<raw::XUnionDeclaration> xunion_declaration);
 
     bool TypeCanBeConst(const Type* type);
     const Type* TypeResolve(const Type* type);
@@ -1134,6 +1157,7 @@ private:
     bool CompileStruct(Struct* struct_declaration);
     bool CompileTable(Table* table_declaration);
     bool CompileUnion(Union* union_declaration);
+    bool CompileXUnion(XUnion* xunion_declaration);
 
     // Compiling a type both validates the type, and computes shape
     // information for the type. In particular, we validate that
@@ -1176,6 +1200,7 @@ public:
     std::vector<std::unique_ptr<Struct>> struct_declarations_;
     std::vector<std::unique_ptr<Table>> table_declarations_;
     std::vector<std::unique_ptr<Union>> union_declarations_;
+    std::vector<std::unique_ptr<XUnion>> xunion_declarations_;
 
     // All Decl pointers here are non-null and are owned by the
     // various foo_declarations_.

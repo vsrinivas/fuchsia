@@ -368,6 +368,29 @@ union MyUnion {
     END_TEST;
 }
 
+bool selector_incorrect_placement() {
+    BEGIN_TEST;
+
+    TestLibrary library(R"FIDL(
+library fidl.test;
+
+[Selector = "Nonsense"]
+union MyUnion {
+  uint8 hello;
+};
+
+)FIDL");
+    EXPECT_FALSE(library.Compile());
+    auto errors = library.errors();
+    ASSERT_EQ(errors.size(), 1);
+    ASSERT_STR_STR(errors[0].c_str(),
+        "placement of attribute");
+    ASSERT_STR_STR(errors[0].c_str(),
+        "disallowed here");
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(attributes_tests);
@@ -385,4 +408,5 @@ RUN_TEST(constraint_only_three_members_on_method);
 RUN_TEST(constraint_only_three_members_on_interface);
 RUN_TEST(max_bytes);
 RUN_TEST(max_handles);
+RUN_TEST(selector_incorrect_placement);
 END_TEST_CASE(attributes_tests);
