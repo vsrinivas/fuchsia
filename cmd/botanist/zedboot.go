@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"fuchsia.googlesource.com/tools/botanist"
-	"fuchsia.googlesource.com/tools/fastboot"
 	"fuchsia.googlesource.com/tools/netboot"
 	"fuchsia.googlesource.com/tools/pdu"
 	"fuchsia.googlesource.com/tools/retry"
@@ -63,11 +62,9 @@ type ZedbootCommand struct {
 	// CmdlineFile is the path to a file of additional kernel command-line arguments.
 	cmdlineFile string
 
-	// FastbootTool is the path to the fastboot tool.
-	fastbootTool string
-
-	// Fastboot is true iff we will use first use fastboot to flash Zedboot and boot into Zedboot.
-	fastboot bool
+	// Fastboot is a path to the fastboot tool. If set, botanist will flash
+	// the device into zedboot.
+	fastboot string
 
 	// Host command to run after paving device
 	// TODO(IN-831): Remove when host-target-interaction infra is ready
@@ -95,9 +92,7 @@ func (cmd *ZedbootCommand) SetFlags(f *flag.FlagSet) {
 	f.DurationVar(&cmd.filePollInterval, "poll-interval", 1*time.Minute, "time between checking for summary.json on the target")
 	f.StringVar(&cmd.propertiesFile, "properties", "/etc/botanist/config.json", "path to file of device properties")
 	f.StringVar(&cmd.cmdlineFile, "cmdline-file", "", "path to a file containing additional kernel command-line arguments")
-	f.StringVar(&cmd.fastbootTool, "fastboot-tool", "./fastboot/fastboot", "path to the fastboot tool.")
-	f.BoolVar(&cmd.fastboot, "fastboot", false, "If set, -fastboot-tool will be used to put the device into zedboot before "+
-		"doing anything else. A zedboot image must also be supplied via -images")
+	f.StringVar(&cmd.fastboot, "fastboot", "", "path to the fastboot tool; if set, the device will be flashed into Zedboot. A zircon-r must be supplied via -images")
 	f.StringVar(&cmd.hackyHostCommand, "hacky-host-cmd", "", "host command to run after paving. To be removed on completion of IN-831")
 }
 
@@ -400,23 +395,6 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs []botanist.Image, 
 	}
 }
 
-func (cmd *ZedbootCommand) fastbootToZedboot(ctx context.Context, zirconRPath string) error {
-	// If it can't find any fastboot device, the fastboot tool will hang waiting, so we add a timeout.
-	// All fastboot operations take less than a second on a developer workstation, so a
-	// minute per each operation is very generous.
-	ctx, _ = context.WithTimeout(ctx, 2*time.Minute)
-	f := fastboot.Fastboot{cmd.fastbootTool}
-	log.Printf("fastboot flashing zedboot image")
-	if _, err := f.Flash(ctx, "boot", zirconRPath); err != nil {
-		return fmt.Errorf("failed to flash the fastboot device: %v", err)
-	}
-	log.Printf("continuing from fastboot into zedboot")
-	if _, err := f.Continue(ctx); err != nil {
-		return fmt.Errorf("failed to boot the device with \"fastboot continue\": %v", err)
-	}
-	return nil
-}
-
 func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) error {
 	var properties botanist.DeviceProperties
 	if err := botanist.LoadDeviceProperties(cmd.propertiesFile, &properties); err != nil {
@@ -445,13 +423,13 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 	}
 	errs := make(chan error)
 	go func() {
-		if cmd.fastboot {
+		if cmd.fastboot != "" {
 			zirconR := botanist.GetImage(imgs, "zircon-r")
 			if zirconR == nil {
 				errs <- fmt.Errorf("zircon-r not provided")
 				return
 			}
-			if err := cmd.fastbootToZedboot(ctx, zirconR.Path); err != nil {
+			if err := botanist.FastbootToZedboot(ctx, cmd.fastboot, zirconR.Path); err != nil {
 				errs <- err
 				return
 			}
@@ -473,12 +451,6 @@ func (cmd *ZedbootCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...in
 	propertiesFlag := f.Lookup("properties")
 	log.Printf("properties flag: %v", propertiesFlag.Value)
 
-	if cmd.fastboot {
-		if cmd.fastbootTool == "" {
-			log.Print("-fastboot is set but -fastboot-tool is empty")
-			return subcommands.ExitFailure
-		}
-	}
 	// Aggregate command-line arguments.
 	cmdlineArgs := f.Args()
 	if cmd.cmdlineFile != "" {
