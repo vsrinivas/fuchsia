@@ -38,12 +38,14 @@ zx_status_t fidl_validate(const fidl_type_t* type, const void* bytes, uint32_t n
 zx_status_t fidl_validate_msg(const fidl_type_t* type, const fidl_msg_t* msg,
                               const char** out_error_msg);
 
-// Traverses a linearized FIDL message, closing all handles within it.
-// This function is a no-op on host side.
+// Traverses a FIDL message starting at |value|, closing all handles within it.
+// If the message is non-contiguous in memory, the function will follow pointers and close handles
+// in any scattered out-of-line objects.
 //
-// Handle values in |bytes| are replaced with ZX_HANDLE_INVALID.
-zx_status_t fidl_close_handles(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
-                               const char** out_error_msg);
+// Handle values in |value| are replaced with ZX_HANDLE_INVALID.
+//
+// This function is a no-op on host side.
+zx_status_t fidl_close_handles(const fidl_type_t* type, void* value, const char** out_error_msg);
 zx_status_t fidl_close_handles_msg(const fidl_type_t* type, const fidl_msg_t* msg,
                                    const char** out_error_msg);
 

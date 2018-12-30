@@ -75,8 +75,7 @@ bool close_single_present_handle() {
     EXPECT_TRUE(helper_expect_peer_valid(channel_1.get()));
 
     const char* error = nullptr;
-    auto status = fidl_close_handles(&nonnullable_handle_message_type,
-                                     &message, sizeof(message), &error);
+    auto status = fidl_close_handles(&nonnullable_handle_message_type, &message, &error);
 
     EXPECT_EQ(status, ZX_OK);
     EXPECT_NULL(error, error);
@@ -114,11 +113,13 @@ bool close_multiple_present_handles_with_some_invalid() {
     message.inline_struct.handle_2 = channels_0[2];
 
     const char* error = nullptr;
-    auto status = fidl_close_handles(&multiple_nonnullable_handles_message_type,
-                                     &message, sizeof(message), &error);
+    auto status = fidl_close_handles(&multiple_nonnullable_handles_message_type, &message, &error);
 
-    EXPECT_EQ(status, ZX_OK);
-    EXPECT_NULL(error, error);
+    // Since the message is invalid, fidl_close_handles will error, but all the handles
+    // in the message must still be closed despite the error.
+    EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+    const char expected_error_msg[] = "non-nullable handle is not present";
+    EXPECT_STR_EQ(expected_error_msg, error, "wrong error msg");
 
     // Second channel should remain valid, since it was inaccessible to fidl_close_handles
     EXPECT_TRUE(helper_expect_peer_invalid(channels_1[0].get()));
@@ -169,8 +170,7 @@ bool close_array_of_present_handles() {
     EXPECT_TRUE(helper_expect_peer_valid(channels_1[3].get()));
 
     const char* error = nullptr;
-    auto status = fidl_close_handles(&array_of_nonnullable_handles_message_type,
-                                     &message, sizeof(message), &error);
+    auto status = fidl_close_handles(&array_of_nonnullable_handles_message_type, &message, &error);
 
     EXPECT_EQ(status, ZX_OK);
     EXPECT_NULL(error, error);
@@ -225,7 +225,7 @@ bool close_out_of_line_array_of_nonnullable_handles() {
 
     const char* error = nullptr;
     auto status = fidl_close_handles(&out_of_line_array_of_nonnullable_handles_message_type,
-                                     &message, sizeof(message), &error);
+                                     &message, &error);
 
     EXPECT_EQ(status, ZX_OK);
     EXPECT_NULL(error, error);
@@ -306,7 +306,7 @@ bool close_present_too_large_nullable_vector_of_handles() {
     const char* error = nullptr;
     auto status =
         fidl_close_handles(&unbounded_too_large_nullable_vector_of_handles_message_type,
-                           &message, sizeof(message),
+                           &message,
                            &error);
 
     EXPECT_EQ(status, ZX_OK);

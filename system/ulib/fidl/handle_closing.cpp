@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fidl/coding.h>
 
+#include <cstdint>
+#include <cstdlib>
 #include <limits>
 #include <stdalign.h>
-#include <stdint.h>
-#include <stdlib.h>
-
-#include <lib/fidl/coding.h>
 
 #ifdef __Fuchsia__
 
@@ -17,71 +16,94 @@
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
 
-#include "buffer_walker.h"
+#include "visitor.h"
+#include "walker.h"
 
 namespace {
 
-class FidlHandleCloser final : public fidl::internal::BufferWalker<FidlHandleCloser, true, true> {
-    typedef fidl::internal::BufferWalker<FidlHandleCloser, true, true> Super;
+struct Position;
 
+struct StartingPoint {
+    uint8_t* const addr;
+    Position ToPosition() const;
+};
+
+struct Position {
+    void* addr;
+    Position operator+(uint32_t size) const {
+        return Position { reinterpret_cast<void*>(reinterpret_cast<uint8_t*>(addr) + size) };
+    }
+    Position& operator+=(uint32_t size) {
+        *this = *this + size;
+        return *this;
+    }
+    template <typename T>
+    constexpr T* Get(StartingPoint start) const {
+        return reinterpret_cast<T*>(addr);
+    }
+};
+
+Position StartingPoint::ToPosition() const {
+    return Position { reinterpret_cast<void*>(addr) };
+}
+
+class FidlHandleCloser final : public fidl::Visitor<
+    fidl::MutatingVisitorTrait, StartingPoint, Position> {
 public:
-    FidlHandleCloser(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
-                     const char** out_error_msg)
-        : Super(type), bytes_(static_cast<uint8_t*>(bytes)), num_bytes_(num_bytes),
-          out_error_msg_(out_error_msg) {}
+    FidlHandleCloser(const char** out_error_msg)
+        : out_error_msg_(out_error_msg) {}
 
-    void Walk() {
-        Super::Walk();
+    using StartingPoint = StartingPoint;
+
+    using Position = Position;
+
+    static constexpr bool kContinueAfterConstraintViolation = true;
+
+    Status VisitPointer(Position ptr_position,
+                        ObjectPointerPointer object_ptr_ptr,
+                        size_t inline_size,
+                        Position* out_position) {
+        // Just follow the pointer into the child object
+        *out_position = Position { *object_ptr_ptr };
+        return Status::kSuccess;
     }
 
-    uint8_t* bytes() const { return bytes_; }
-    uint32_t num_bytes() const { return num_bytes_; }
-    uint32_t num_handles() const { return std::numeric_limits<uint32_t>::max(); }
-
-    bool ValidateOutOfLineStorageClaim(const void* a, void* b) {
-        return true;
-    }
-
-    void UnclaimedHandle(zx_handle_t* out_handle) {
-        // This will never happen since we are returning numeric_limits::max() in num_handles.
-        // We want to claim (close) all the handles.
-        ZX_DEBUG_ASSERT(false);
-    }
-
-    void ClaimedHandle(zx_handle_t* out_handle, uint32_t idx) {
-        if (*out_handle != ZX_HANDLE_INVALID) {
-            zx_handle_close(*out_handle);
+    Status VisitHandle(Position handle_position, HandlePointer handle) {
+        // Close the handle and mark it as invalid
+        if (*handle != ZX_HANDLE_INVALID) {
+            zx_handle_close(*handle);
+            *handle = ZX_HANDLE_INVALID;
         }
-        *out_handle = ZX_HANDLE_INVALID;
+        return Status::kSuccess;
     }
 
-    template <class T>
-    void UpdatePointer(T* const* p, T* v) {}
-
-    PointerState GetPointerState(const void* ptr) const {
-        return *static_cast<const uintptr_t*>(ptr) == 0
-               ? PointerState::ABSENT
-               : PointerState::PRESENT;
+    Status EnterEnvelope(Position envelope_position,
+                         EnvelopePointer envelope,
+                         const fidl_type_t* payload_type) {
+        return Status::kSuccess;
     }
 
-    HandleState GetHandleState(zx_handle_t p) const {
-        // Treat all handles as present to keep the buffer walker going.
-        return HandleState::PRESENT;
+    Status LeaveEnvelope(Position envelope_position, EnvelopePointer envelope) {
+        return Status::kSuccess;
     }
 
-    void SetError(const char* error_msg) {
-        status_ = ZX_ERR_INVALID_ARGS;
-        if (out_error_msg_ != nullptr) {
-            *out_error_msg_ = error_msg;
-        }
+    void OnError(const char* error) {
+        SetError(error);
     }
 
     zx_status_t status() const { return status_; }
 
 private:
+    void SetError(const char* error_msg) {
+        if (status_ == ZX_OK) {
+            status_ = ZX_ERR_INVALID_ARGS;
+            if (out_error_msg_ != nullptr) {
+                *out_error_msg_ = error_msg;
+            }
+        }
+    }
+
     // Message state passed in to the constructor.
-    uint8_t* const bytes_;
-    const uint32_t num_bytes_;
     const char** const out_error_msg_;
     zx_status_t status_ = ZX_OK;
 };
@@ -90,11 +112,25 @@ private:
 
 #endif  // __Fuchsia__
 
-zx_status_t fidl_close_handles(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
-                               const char** out_error_msg) {
+zx_status_t fidl_close_handles(const fidl_type_t* type, void* value, const char** out_error_msg) {
 #if __Fuchsia__
-    FidlHandleCloser handle_closer(type, bytes, num_bytes, out_error_msg);
-    handle_closer.Walk();
+    auto set_error = [&out_error_msg] (const char* msg) {
+        if (out_error_msg) *out_error_msg = msg;
+    };
+    if (value == nullptr) {
+        set_error("Cannot close handles for null message");
+        return ZX_ERR_INVALID_ARGS;
+    }
+    if (type == nullptr) {
+        set_error("Cannot close handles for a null fidl type");
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    FidlHandleCloser handle_closer(out_error_msg);
+    fidl::Walk(handle_closer,
+               type,
+               StartingPoint { reinterpret_cast<uint8_t*>(value) });
+
     return handle_closer.status();
 #else
     return ZX_OK;  // there can't be any handles on the host
@@ -103,6 +139,6 @@ zx_status_t fidl_close_handles(const fidl_type_t* type, void* bytes, uint32_t nu
 
 zx_status_t fidl_close_handles_msg(const fidl_type_t* type, const fidl_msg_t* msg,
                                    const char** out_error_msg) {
-    return fidl_close_handles(type, msg->bytes, msg->num_bytes, out_error_msg);
+    return fidl_close_handles(type, msg->bytes, out_error_msg);
 }
 

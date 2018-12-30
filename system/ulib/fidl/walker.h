@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <cstdlib>
+#include <limits>
 #include <stdalign.h>
 #include <type_traits>
 
@@ -556,6 +557,10 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
                 }
                 uint64_t bound = frame->string_state.max_size;
                 uint64_t size = string_ptr->size;
+                if (size > std::numeric_limits<uint32_t>::max()) {
+                    visitor.OnError("string size overflows 32 bits");
+                    FIDL_STATUS_GUARD(Status::kMemoryError);
+                }
                 if (size > bound) {
                     visitor.OnError("message tried to access too large of a bounded string");
                     FIDL_STATUS_GUARD(Status::kConstraintViolationError);

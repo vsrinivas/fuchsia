@@ -105,7 +105,7 @@ private:
     void CloseHandles() {
 #ifdef __Fuchsia__
         if (bytes_.data()) {
-            fidl_close_handles(FidlType::type, bytes_.data(), bytes_.actual(), nullptr);
+            fidl_close_handles(FidlType::type, bytes_.data(), nullptr);
         }
 #endif
     }
