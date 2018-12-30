@@ -1078,6 +1078,7 @@ type ZxChannel = zx::Channel;
 type ZxEvent = zx::Event;
 type ZxEventPair = zx::EventPair;
 type ZxFifo = zx::Fifo;
+type ZxGuest = zx::Guest;
 type ZxInterrupt = zx::Interrupt;
 type ZxJob = zx::Job;
 type ZxLog = zx::Log;
@@ -1093,6 +1094,7 @@ handle_based_codable![
     ZxEvent,
     ZxEventPair,
     ZxFifo,
+    ZxGuest,
     ZxInterrupt,
     ZxJob,
     ZxLog,
