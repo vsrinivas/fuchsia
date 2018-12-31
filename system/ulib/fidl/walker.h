@@ -491,7 +491,7 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
                 }
                 auto status = visitor.VisitPointer(frame->position,
                                                    PtrTo<void*>(frame->position),
-                                                   sizeof(fidl_vector_t),
+                                                   static_cast<uint32_t>(sizeof(fidl_vector_t)),
                                                    &frame->position);
                 FIDL_STATUS_GUARD(status);
                 const fidl::FidlCodedTable* coded_table = frame->table_pointer_state.table_type;
@@ -579,7 +579,7 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
                 auto handle_ptr = PtrTo<zx_handle_t>(frame->position);
                 if (*handle_ptr == ZX_HANDLE_INVALID) {
                     if (!frame->handle_state.nullable) {
-                        visitor.OnError("non-nullable handle is not present");
+                        visitor.OnError("message is missing a non-nullable handle");
                         FIDL_STATUS_GUARD(Status::kConstraintViolationError);
                     }
                     Pop();

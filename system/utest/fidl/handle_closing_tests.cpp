@@ -118,7 +118,7 @@ bool close_multiple_present_handles_with_some_invalid() {
     // Since the message is invalid, fidl_close_handles will error, but all the handles
     // in the message must still be closed despite the error.
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-    const char expected_error_msg[] = "non-nullable handle is not present";
+    const char expected_error_msg[] = "message is missing a non-nullable handle";
     EXPECT_STR_EQ(expected_error_msg, error, "wrong error msg");
 
     // Second channel should remain valid, since it was inaccessible to fidl_close_handles

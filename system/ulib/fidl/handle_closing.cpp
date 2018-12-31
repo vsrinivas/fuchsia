@@ -61,7 +61,7 @@ public:
 
     Status VisitPointer(Position ptr_position,
                         ObjectPointerPointer object_ptr_ptr,
-                        size_t inline_size,
+                        uint32_t inline_size,
                         Position* out_position) {
         // Just follow the pointer into the child object
         *out_position = Position { *object_ptr_ptr };
@@ -70,10 +70,8 @@ public:
 
     Status VisitHandle(Position handle_position, HandlePointer handle) {
         // Close the handle and mark it as invalid
-        if (*handle != ZX_HANDLE_INVALID) {
-            zx_handle_close(*handle);
-            *handle = ZX_HANDLE_INVALID;
-        }
+        zx_handle_close(*handle);
+        *handle = ZX_HANDLE_INVALID;
         return Status::kSuccess;
     }
 

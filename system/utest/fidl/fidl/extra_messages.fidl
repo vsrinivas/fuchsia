@@ -1,0 +1,58 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// A set of structs and interface methods designed to exercise FIDL code.
+// For now covering fidl_linearize.
+
+// NOTE: Refer to README.md to regenerate the coding tables whenever these definitions change.
+
+library fidl.test.coding;
+
+interface LinearizerTest {
+    VectorOfUint32(vector<uint32> v);
+    VectorOfString(vector<string> v);
+};
+
+struct IntStruct {
+    int64 v;
+};
+
+table SimpleTable {
+    1: IntStruct x;
+    2: reserved;
+    3: reserved;
+    4: reserved;
+    5: IntStruct y;
+};
+
+table OlderSimpleTable {
+    1: IntStruct x;
+    2: reserved;
+};
+
+table NewerSimpleTable {
+    1: IntStruct x;
+    2: reserved;
+    3: reserved;
+    4: reserved;
+    5: IntStruct y;
+    6: IntStruct z;
+    7: reserved;
+};
+
+struct StructWithHandle {
+    handle h;
+    int32 foo;
+};
+
+struct StructWithManyHandles {
+    handle h1;
+    handle h2;
+    vector<handle>:2 hs;
+};
+
+table TableOfStructWithHandle {
+    1: StructWithHandle a;
+    2: StructWithManyHandles b;
+};

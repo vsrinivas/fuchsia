@@ -53,8 +53,8 @@ Position StartingPoint::ToPosition() const {
 class FidlEncoder final : public fidl::Visitor<
     fidl::MutatingVisitorTrait, StartingPoint, Position> {
 public:
-    FidlEncoder(const fidl_type_t* type, void* bytes, uint32_t num_bytes, zx_handle_t* handles,
-                uint32_t max_handles, uint32_t next_out_of_line, const char** out_error_msg)
+    FidlEncoder(void* bytes, uint32_t num_bytes, zx_handle_t* handles, uint32_t max_handles,
+                uint32_t next_out_of_line, const char** out_error_msg)
         : bytes_(static_cast<uint8_t*>(bytes)), num_bytes_(num_bytes),
           handles_(handles), max_handles_(max_handles), next_out_of_line_(next_out_of_line),
           out_error_msg_(out_error_msg) {}
@@ -67,7 +67,7 @@ public:
 
     Status VisitPointer(Position ptr_position,
                         ObjectPointerPointer object_ptr_ptr,
-                        size_t inline_size,
+                        uint32_t inline_size,
                         Position* out_position) {
         if (inline_size > std::numeric_limits<uint32_t>::max()) {
             SetError("inline size is too big");
@@ -85,10 +85,6 @@ public:
     }
 
     Status VisitHandle(Position handle_position, HandlePointer handle) {
-        if (*handle == ZX_HANDLE_INVALID) {
-            SetError("message tried to encode a null handle");
-            return Status::kConstraintViolationError;
-        }
         if (handle_idx_ == max_handles_) {
             SetError("message tried to encode too many handles");
             ThrowAwayHandle(handle);
@@ -282,7 +278,7 @@ zx_status_t fidl_encode(const fidl_type_t* type, void* bytes, uint32_t num_bytes
         return ZX_ERR_INVALID_ARGS;
     }
 
-    FidlEncoder encoder(type, bytes, num_bytes, handles, max_handles,
+    FidlEncoder encoder(bytes, num_bytes, handles, max_handles,
                         static_cast<uint32_t>(next_out_of_line), out_error_msg);
     fidl::Walk(encoder,
                type,

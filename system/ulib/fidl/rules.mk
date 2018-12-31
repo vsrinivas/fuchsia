@@ -15,6 +15,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/epitaph.c \
     $(LOCAL_DIR)/formatting.cpp \
     $(LOCAL_DIR)/handle_closing.cpp \
+    $(LOCAL_DIR)/linearizing.cpp \
     $(LOCAL_DIR)/message_buffer.cpp \
     $(LOCAL_DIR)/message_builder.cpp \
     $(LOCAL_DIR)/message.cpp \

@@ -99,6 +99,7 @@ public:
 private:
     // Visit an indirection, which can be the data pointer of a string/vector, the data pointer
     // of an envelope from a table, the pointer in a nullable type, etc.
+    // Only called when the pointer is non-null.
     //
     // |ptr_position|   Position of the pointer.
     // |object_ptr_ptr| Pointer to the data pointer, obtained from |ptr_position.Get(start)|.
@@ -109,12 +110,13 @@ private:
     // |out_position|   Returns the position where the walker will continue its object traversal.
     Status VisitPointer(Position ptr_position,
                         ObjectPointerPointer object_ptr_ptr,
-                        size_t inline_size,
+                        uint32_t inline_size,
                         Position* out_position) {
         return Status::kSuccess;
     }
 
     // Visit a handle. The handle pointer will be mutable if the visitor is mutating.
+    // Only called when the handle is valid.
     // The handle pointer is derived from |handle_position.Get(start)|.
     Status VisitHandle(Position handle_position, HandlePointer handle_ptr) {
         return Status::kSuccess;
