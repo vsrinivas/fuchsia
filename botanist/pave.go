@@ -73,7 +73,7 @@ func containsBootSwitch(strs []string) bool {
 func Pave(ctx context.Context, t *tftp.Client, tftpAddr *net.UDPAddr, imgs []Image, cmdlineArgs []string, sshKey string) error {
 	// Key on whether bootserver paving args are present to determine if the image is used
 	// to pave.
-	kernel := new(Image)
+	var kernel *Image
 	paveImgs := []Image{}
 	for i, _ := range imgs {
 		if len(imgs[i].PaveArgs) > 0 {
@@ -93,7 +93,7 @@ func Pave(ctx context.Context, t *tftp.Client, tftpAddr *net.UDPAddr, imgs []Ima
 func Netboot(ctx context.Context, t *tftp.Client, tftpAddr *net.UDPAddr, imgs []Image, cmdlineArgs []string, sshKey string) error {
 	// Key on whether bootserver netbooting args are present to determine if the image is
 	// used to netboot.
-	kernel := new(Image)
+	var kernel *Image
 	for i, _ := range imgs {
 		if len(imgs[i].NetbootArgs) > 0 {
 			if containsBootSwitch(imgs[i].NetbootArgs) {
@@ -137,9 +137,6 @@ func openNetsvcFile(path, name string) (*netsvcFile, error) {
 // Transfers images with the appropriate netboot prefixes over TFTP to a node at a given
 // address.
 func transfer(ctx context.Context, t *tftp.Client, tftpAddr *net.UDPAddr, imgs []Image, kernel *Image, cmdlineArgs []string, sshKey string) error {
-	if kernel == nil {
-		return fmt.Errorf("No kernel found in the image manifest")
-	}
 	// Prepare all files to be tranferred, minding the order, which follows that of the
 	// bootserver host tool.
 	netsvcFiles := []*netsvcFile{}
