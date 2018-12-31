@@ -191,6 +191,20 @@ void SessionmgrImpl::Initialize(
     fidl::InterfaceHandle<fuchsia::modular::internal::UserContext> user_context,
     fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request) {
+  Initialize2(std::move(account), std::move(session_shell),
+              std::move(story_shell), std::move(ledger_token_manager),
+              std::move(agent_token_manager), std::move(user_context),
+              zx::eventpair(view_owner_request.TakeChannel().release()));
+}
+
+void SessionmgrImpl::Initialize2(
+    fuchsia::modular::auth::AccountPtr account,
+    fuchsia::modular::AppConfig session_shell,
+    fuchsia::modular::AppConfig story_shell,
+    fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager,
+    fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
+    fidl::InterfaceHandle<fuchsia::modular::internal::UserContext> user_context,
+    zx::eventpair session_shell_view_token) {
   InitializeUser(std::move(account), std::move(agent_token_manager),
                  std::move(user_context));
   InitializeLedger(std::move(ledger_token_manager));
@@ -198,9 +212,8 @@ void SessionmgrImpl::Initialize(
   InitializeMessageQueueManager();
   InitializeMaxwellAndModular(session_shell.url, std::move(story_shell));
   InitializeClipboard();
-  InitializeSessionShell(
-      std::move(session_shell),
-      zx::eventpair(view_owner_request.TakeChannel().release()));
+  InitializeSessionShell(std::move(session_shell),
+                         std::move(session_shell_view_token));
 
   ReportEvent(ModularEvent::BOOTED_TO_SESSIONMGR);
 }
@@ -706,11 +719,14 @@ void SessionmgrImpl::RunSessionShell(
     Logout();
   });
 
-  fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner;
-  fuchsia::ui::viewsv1::ViewProviderPtr view_provider;
+  zx::eventpair view_token, view_holder_token;
+  if (zx::eventpair::create(0u, &view_token, &view_holder_token) != ZX_OK)
+    FXL_NOTREACHED() << "Failed to create view tokens";
+
+  fuchsia::ui::app::ViewProviderPtr view_provider;
   session_shell_app_->services().ConnectToService(view_provider.NewRequest());
-  view_provider->CreateView(view_owner.NewRequest(), nullptr);
-  session_shell_view_host_->ConnectView(std::move(view_owner));
+  view_provider->CreateView(std::move(view_token), nullptr, nullptr);
+  session_shell_view_host_->ConnectView(std::move(view_holder_token));
 
   fuchsia::modular::SessionShellPtr session_shell;
   session_shell_app_->services().ConnectToService(session_shell.NewRequest());

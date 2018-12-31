@@ -96,6 +96,17 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
           view_owner_request) override;
 
   // |Sessionmgr|
+  void Initialize2(
+      fuchsia::modular::auth::AccountPtr account,
+      fuchsia::modular::AppConfig session_shell,
+      fuchsia::modular::AppConfig story_shell,
+      fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager,
+      fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
+      fidl::InterfaceHandle<fuchsia::modular::internal::UserContext>
+          user_context,
+      zx::eventpair session_shell_view_token) override;
+
+  // |Sessionmgr|
   void SwapSessionShell(fuchsia::modular::AppConfig session_shell_config,
                         SwapSessionShellCallback callback) override;
 
