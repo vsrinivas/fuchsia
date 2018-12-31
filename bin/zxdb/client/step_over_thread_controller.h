@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <functional>
 #include <memory>
 
 #include "garnet/bin/zxdb/client/frame_fingerprint.h"
@@ -14,6 +15,7 @@
 namespace zxdb {
 
 class FinishThreadController;
+class Frame;
 class StepThreadController;
 
 // This controller causes the thread to single-step as long as the CPU is in
@@ -37,6 +39,20 @@ class StepOverThreadController : public ThreadController {
 
   ~StepOverThreadController() override;
 
+  // Sets a callback that the caller can use to control whether excecution
+  // stops in a given subframe. The subframe will be one called directly from
+  // the code range being stopped over.
+  //
+  // This allows implementation of operations like
+  // "step until you get to a function". When the callback returns true, the
+  // "step over" operation will complete at the current location (this will
+  // then destroy the controller and indirectly the callback object).
+  //
+  // When empty (the default), all subframes will be continued.
+  void set_subframe_should_stop_callback(std::function<bool(const Frame*)> cb) {
+    subframe_should_stop_callback_ = std::move(cb);
+  }
+
   // ThreadController implementation.
   void InitWithThread(Thread* thread,
                       std::function<void(const Err&)> cb) override;
@@ -47,6 +63,10 @@ class StepOverThreadController : public ThreadController {
   const char* GetName() const override { return "Step Over"; }
 
  private:
+  // When non-null indicates callback to check for stopping in subframes. See
+  // the setter above.
+  std::function<bool(const Frame*)> subframe_should_stop_callback_;
+
   // The fingerprint of the frame we're stepping in. Anything newer than this
   // is a child frame we should step through, and anything older than this
   // means we exited the function and should stop stepping.

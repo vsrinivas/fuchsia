@@ -81,7 +81,7 @@ ThreadController::StopOp StepOverThreadController::OnThreadStop(
   // frame that we need to step out of.
   FrameFingerprint current_fingerprint = thread()->GetFrameFingerprint(0);
   if (!FrameFingerprint::Newer(current_fingerprint, frame_fingerprint_)) {
-    Log("Not in range or a newer frame.");
+    Log("Neither in range nor in a newer frame.");
     return kStop;
   }
 
@@ -89,6 +89,17 @@ ThreadController::StopOp StepOverThreadController::OnThreadStop(
   if (frames.size() < 2) {
     Log("In a newer frame but there are not enough frames to step out.");
     return kStop;
+  }
+
+  // Got into a sub-frame. The calling code may have added a filter to stop
+  // at one of them.
+  if (subframe_should_stop_callback_) {
+    if (subframe_should_stop_callback_(frames[0])) {
+      Log("should_stop callback returned true, stopping.");
+      return kStop;
+    } else {
+      Log("should_stop callback returned false, continuing.");
+    }
   }
 
   // Begin stepping out of the sub-frame. The "finish" command initialization
