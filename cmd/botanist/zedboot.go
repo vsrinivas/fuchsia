@@ -429,6 +429,14 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 				errs <- fmt.Errorf("zircon-r not provided")
 				return
 			}
+			// If it can't find any fastboot device, the fastboot
+			// tool will hang waiting, so we add a timeout.
+			// All fastboot operations take less than a second on
+			// a developer workstation, so two minutes to flash and
+			// continue is very generous.
+			ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+			defer cancel()
+			log.Printf("flashing to zedboot with fastboot")
 			if err := botanist.FastbootToZedboot(ctx, cmd.fastboot, zirconR.Path); err != nil {
 				errs <- err
 				return
