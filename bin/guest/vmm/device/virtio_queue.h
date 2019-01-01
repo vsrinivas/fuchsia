@@ -7,6 +7,7 @@
 
 #include <mutex>
 
+#include <fuchsia/guest/device/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/function.h>
 #include <lib/zx/event.h>
@@ -65,12 +66,9 @@ class VirtioQueue {
 
   // Sets the interrupt callback from the queue.
   enum InterruptAction : uint8_t {
-    // Set a flag to inspect queues on the next interrupt.
-    SET_QUEUE = 1 << 0,
-    // Set a flag to inspect configs on the next interrupt.
-    SET_CONFIG = 1 << 1,
-    // If a flag is set, send an interrupt to the device.
-    TRY_INTERRUPT = 1 << 2,
+    SET_QUEUE = 1 << fuchsia::guest::device::EVENT_SET_QUEUE,
+    SET_CONFIG = 1 << fuchsia::guest::device::EVENT_SET_CONFIG,
+    TRY_INTERRUPT = 1 << fuchsia::guest::device::EVENT_SET_INTERRUPT,
   };
   using InterruptFn = fit::function<zx_status_t(uint8_t actions)>;
   void set_interrupt(InterruptFn fn) { interrupt_ = std::move(fn); }

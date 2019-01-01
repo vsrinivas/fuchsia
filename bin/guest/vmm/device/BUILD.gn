@@ -16,6 +16,7 @@ source_set("device") {
   ]
   defines = [ "_ALL_SOURCE=1" ]
   public_deps = [
+    "//garnet/bin/guest/vmm/fidl:fuchsia.guest.device",
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fit",

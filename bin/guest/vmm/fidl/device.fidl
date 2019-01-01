@@ -10,6 +10,16 @@ using fuchsia.ui.gfx;
 using fuchsia.ui.input;
 using zx;
 
+// The following EVENT_* constants indicate which user signal is associated with an event.
+// The value 0 is ZX_USER_SIGNAL_0, 1 is ZX_USER_SIGNAL_1 etc.
+
+// Set a flag to inspect queues on the next interrupt.
+const uint32 EVENT_SET_QUEUE = 0;
+// Set a flag to inspect configs on the next interrupt.
+const uint32 EVENT_SET_CONFIG = 1;
+// If a flag is set, send an interrupt to the device.
+const uint32 EVENT_SET_INTERRUPT = 2;
+
 // Contains the details of a device trap.
 struct Trap {
     // The address of the device trap. This must be page-aligned.
@@ -31,6 +41,9 @@ struct StartInfo {
 
     // The event associated with a device interrupt. This is how the device will
     // notify the guest of events it should process.
+    //
+    // The meaning of the different signals that can be raised on the event are
+    // documented by the EVENT_* constants above.
     handle<event> event;
 
     // The VMO used to represent guest physical memory.
