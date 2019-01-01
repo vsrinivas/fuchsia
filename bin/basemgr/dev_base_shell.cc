@@ -2,16 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Implementation of the fuchsia::modular::BaseShell service that passes a
-// command line configurable user name to its fuchsia::modular::UserProvider,
-// and is able to run a story with a single module through its life cycle.
-
 #include <memory>
 #include <utility>
 
 #include <fuchsia/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/callback/scoped_callback.h>
@@ -20,7 +15,8 @@
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
 #include <lib/fxl/memory/weak_ptr.h>
-#include "lib/fxl/strings/string_number_conversions.h"
+#include <lib/fxl/strings/string_number_conversions.h>
+#include <lib/zx/eventpair.h>
 
 #include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/public/lib/integration_testing/cpp/reporting.h"
@@ -59,6 +55,9 @@ class Settings {
   bool test{};
 };
 
+// Implementation of the fuchsia::modular::BaseShell service that passes a
+// command line configurable user name to its fuchsia::modular::UserProvider,
+// and is able to run a story with a single module through its life cycle.
 class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell>,
                         fuchsia::modular::UserWatcher {
  public:
@@ -106,9 +105,7 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell>,
           fuchsia::sys::ServiceProvider> /*incoming_services*/,
       fidl::InterfaceHandle<
           fuchsia::sys::ServiceProvider> /*outgoing_services*/) override {
-    view_owner_request_ =
-        fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>(
-            zx::channel(view_token.release()));
+    view_token_ = std::move(view_token);
     Connect();
   }
 
@@ -141,14 +138,14 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell>,
   void Login(const std::string& account_id) {
     fuchsia::modular::UserLoginParams params;
     params.account_id = account_id;
-    params.view_owner = std::move(view_owner_request_);
+    params.view_token = std::move(view_token_);
     params.user_controller = user_controller_.NewRequest();
     user_provider_->Login(std::move(params));
     user_controller_->Watch(user_watcher_binding_.NewBinding());
   }
 
   void Connect() {
-    if (user_provider_ && view_owner_request_) {
+    if (user_provider_ && view_token_) {
       if (settings_.user.empty()) {
         // Incognito mode.
         Login("");
@@ -187,11 +184,10 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell>,
 
   const Settings settings_;
   fidl::Binding<fuchsia::modular::UserWatcher> user_watcher_binding_;
-  fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
-      view_owner_request_;
   fuchsia::modular::BaseShellContextPtr base_shell_context_;
   fuchsia::modular::UserControllerPtr user_controller_;
   fuchsia::modular::UserProviderPtr user_provider_;
+  zx::eventpair view_token_;
   fxl::WeakPtrFactory<DevBaseShellApp> weak_ptr_factory_;
   FXL_DISALLOW_COPY_AND_ASSIGN(DevBaseShellApp);
 };

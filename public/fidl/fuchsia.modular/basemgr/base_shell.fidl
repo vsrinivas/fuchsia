@@ -13,31 +13,31 @@ using fuchsia.ui.policy;
 // teardown.
 //
 // In one component instance there can only be one BaseShell service instance.
-// The ViewOwner request is sent to the separate ViewProvider service. This way,
+// The view token is sent to the separate ViewProvider service. This way,
 // the base shell may be implemented as a flutter component.
 //
 // Teardown may be initiated by the base shell calling
 // BaseShellContext.Shutdown(), or by the system shutting down.
 [Discoverable]
 interface BaseShell {
-    1: Initialize(BaseShellContext base_shell_context,
-                  BaseShellParams base_shell_params);
+    Initialize(BaseShellContext base_shell_context,
+               BaseShellParams base_shell_params);
 
     // This method may be invoked by the basemgr to request an
     // AuthenticationUIContext. |request| will then be used to request the base
     // shell to show login screen during a UserProvider.AddUser() or if a token
     // needs to be refreshed.
-    3: GetAuthenticationUIContext(request<fuchsia.auth.AuthenticationUIContext> request);
+    GetAuthenticationUIContext(request<fuchsia.auth.AuthenticationUIContext> request);
 };
 
 // This interface allows the |BaseShell| to request capabilities from the
 // |Basemgr| in a way that is more explicit about the services that are
 // offered than a generic |ServiceProvider|.
 interface BaseShellContext {
-    1: GetUserProvider(request<UserProvider> request);
+    GetUserProvider(request<UserProvider> request);
 
     // This requests the shutdown of the basemgr.
-    2: Shutdown();
+    Shutdown();
 };
 
 // These params are passed to |BaseShell.Initialize|.

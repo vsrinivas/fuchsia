@@ -7,6 +7,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/component/cpp/testing/fake_launcher.h>
 #include <lib/gtest/test_loop_fixture.h>
+#include <lib/zx/eventpair.h>
 
 #include "peridot/lib/fidl/clone.h"
 
@@ -39,7 +40,7 @@ TEST_F(UserControllerImplTest, StartSessionmgrWithTokenManagers) {
       &launcher, CloneStruct(app_config), CloneStruct(app_config),
       CloneStruct(app_config), std::move(ledger_token_manager),
       std::move(agent_token_manager), nullptr /* account */,
-      nullptr /* view_owner_request */, nullptr /* base_shell_services */,
+      zx::eventpair() /* view_token */, nullptr /* base_shell_services */,
       user_controller.NewRequest(), nullptr /* done_callback */);
 
   EXPECT_TRUE(callback_called);
@@ -69,7 +70,7 @@ TEST_F(UserControllerImplTest, SessionmgrCrashInvokesDoneCallback) {
       &launcher, CloneStruct(app_config), CloneStruct(app_config),
       CloneStruct(app_config), std::move(ledger_token_manager),
       std::move(agent_token_manager), nullptr /* account */,
-      nullptr /* view_owner_request */, nullptr /* base_shell_services */,
+      zx::eventpair() /* view_token */, nullptr /* base_shell_services */,
       user_controller.NewRequest(),
       /* done_callback = */ [&done_callback_called](UserControllerImpl*) {
         done_callback_called = true;

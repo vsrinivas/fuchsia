@@ -501,15 +501,19 @@ void UserProviderImpl::LoginInternal(fuchsia::modular::auth::AccountPtr account,
   fuchsia::auth::TokenManagerPtr agent_token_manager =
       CreateTokenManager(account_id);
 
-  auto view_owner =
-      delegate_->GetSessionShellViewOwner(std::move(params.view_owner));
+  zx::eventpair default_view_token =
+      params.view_token
+          ? std::move(params.view_token)
+          : zx::eventpair(params.view_owner.TakeChannel().release());
+  auto view_token =
+      delegate_->GetSessionShellViewToken(std::move(default_view_token));
   auto service_provider =
       delegate_->GetSessionShellServiceProvider(std::move(params.services));
 
   auto controller = std::make_unique<UserControllerImpl>(
       launcher_, CloneStruct(sessionmgr_), CloneStruct(session_shell_),
       CloneStruct(story_shell_), std::move(ledger_token_manager),
-      std::move(agent_token_manager), std::move(account), std::move(view_owner),
+      std::move(agent_token_manager), std::move(account), std::move(view_token),
       std::move(service_provider), std::move(params.user_controller),
       [this](UserControllerImpl* c) {
         user_controllers_.erase(c);

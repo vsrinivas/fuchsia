@@ -13,8 +13,6 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/async/cpp/future.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
@@ -22,6 +20,7 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fidl/cpp/string.h>
 #include <lib/fxl/macros.h>
+#include <lib/zx/eventpair.h>
 
 #include "peridot/bin/basemgr/basemgr_settings.h"
 #include "peridot/bin/basemgr/cobalt/cobalt.h"
@@ -69,8 +68,7 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
       fidl::InterfaceRequest<fuchsia::modular::internal::BasemgrDebug> request);
 
  private:
-  void InitializePresentation(
-      fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> view_owner);
+  void InitializePresentation(zx::eventpair view_holder_token);
 
   void StartBaseShell();
 
@@ -99,15 +97,14 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   void DidLogout() override;
 
   // |UserProviderImpl::Delegate|
-  fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
-      GetSessionShellViewOwner(
-          fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>)
-          override;
+  zx::eventpair GetSessionShellViewToken(
+      zx::eventpair /*default_view_token*/) override;
 
   // |UserProviderImpl::Delegate|
   fidl::InterfaceHandle<fuchsia::sys::ServiceProvider>
       GetSessionShellServiceProvider(
-          fidl::InterfaceHandle<fuchsia::sys::ServiceProvider>) override;
+          fidl::InterfaceHandle<
+              fuchsia::sys::ServiceProvider> /*default_services*/) override;
 
   // |KeyboardCaptureListenerHACK|
   void OnEvent(fuchsia::ui::input::KeyboardEvent event) override;
@@ -168,7 +165,7 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   fidl::BindingSet<fuchsia::ui::policy::KeyboardCaptureListenerHACK>
       keyboard_capture_listener_bindings_;
 
-  fuchsia::ui::viewsv1token::ViewOwnerPtr session_shell_view_owner_;
+  zx::eventpair session_shell_view_holder_token_;
 
   struct {
     fuchsia::ui::policy::PresentationPtr presentation;

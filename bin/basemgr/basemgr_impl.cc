@@ -10,9 +10,8 @@
 #include <fuchsia/modular/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/async/cpp/future.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/interface_handle.h>
@@ -67,8 +66,7 @@ void BasemgrImpl::Connect(
   basemgr_bindings_.AddBinding(this, std::move(request));
 }
 
-void BasemgrImpl::InitializePresentation(
-    fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> view_owner) {
+void BasemgrImpl::InitializePresentation(zx::eventpair view_holder_token) {
   if (settings_.test && !settings_.enable_presenter) {
     return;
   }
@@ -78,7 +76,7 @@ void BasemgrImpl::InitializePresentation(
           ? presentation_state_.presentation.Unbind().NewRequest()
           : presentation_state_.presentation.NewRequest();
 
-  presenter_->Present2(zx::eventpair(view_owner.TakeChannel().release()),
+  presenter_->Present2(std::move(view_holder_token),
                        std::move(presentation_request));
 
   AddGlobalKeyboardShortcuts(presentation_state_.presentation);
@@ -128,17 +126,21 @@ void BasemgrImpl::StartBaseShell() {
       launcher_, CloneStruct(settings_.base_shell));
   base_shell_app_->services().ConnectToService(base_shell_.NewRequest());
 
-  fuchsia::ui::viewsv1::ViewProviderPtr base_shell_view_provider;
+  fuchsia::ui::app::ViewProviderPtr base_shell_view_provider;
   base_shell_app_->services().ConnectToService(
       base_shell_view_provider.NewRequest());
 
-  // We still need to pass a request for root view to base shell since
-  // dev_base_shell (which mimics flutter behavior) blocks until it receives
-  // the root view request.
-  fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> root_view;
-  base_shell_view_provider->CreateView(root_view.NewRequest(), nullptr);
+  zx::eventpair root_view_token, root_view_holder_token;
+  if (zx::eventpair::create(0u, &root_view_token, &root_view_holder_token) !=
+      ZX_OK)
+    FXL_NOTREACHED() << "Failed to create view tokens";
 
-  InitializePresentation(std::move(root_view));
+  // We still need to pass a token for root view to base shell since
+  // dev_base_shell (which mimics flutter behavior) blocks until it receives
+  // the root view token.
+  base_shell_view_provider->CreateView(std::move(root_view_token), nullptr,
+                                       nullptr);
+  InitializePresentation(std::move(root_view_holder_token));
 
   // Populate parameters and initialize the base shell.
   fuchsia::modular::BaseShellParams params;
@@ -291,7 +293,7 @@ void BasemgrImpl::DidLogin() {
     StopBaseShell();
   }
 
-  InitializePresentation(session_shell_view_owner_);
+  InitializePresentation(std::move(session_shell_view_holder_token_));
 }
 
 void BasemgrImpl::DidLogout() {
@@ -308,17 +310,23 @@ void BasemgrImpl::DidLogout() {
   StartBaseShell();
 }
 
-fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
-BasemgrImpl::GetSessionShellViewOwner(
-    fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>) {
-  return session_shell_view_owner_.is_bound()
-             ? session_shell_view_owner_.Unbind().NewRequest()
-             : session_shell_view_owner_.NewRequest();
+zx::eventpair BasemgrImpl::GetSessionShellViewToken(
+    zx::eventpair /*default_view_token*/) {
+  if (session_shell_view_holder_token_.is_valid()) {
+    session_shell_view_holder_token_.reset();
+  }
+
+  zx::eventpair session_shell_view_token;
+  if (zx::eventpair::create(0u, &session_shell_view_token,
+                            &session_shell_view_holder_token_) != ZX_OK)
+    FXL_NOTREACHED() << "Failed to create view tokens";
+
+  return session_shell_view_token;
 }
 
 fidl::InterfaceHandle<fuchsia::sys::ServiceProvider>
 BasemgrImpl::GetSessionShellServiceProvider(
-    fidl::InterfaceHandle<fuchsia::sys::ServiceProvider>) {
+    fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> /*default_services*/) {
   fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> handle;
   service_namespace_.AddBinding(handle.NewRequest());
   return handle;
