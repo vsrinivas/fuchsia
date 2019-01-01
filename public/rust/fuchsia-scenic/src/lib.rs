@@ -75,6 +75,14 @@ impl Session {
         self.resource_count -= 1;
         self.enqueue(cmd::release_resource(id))
     }
+
+    pub fn add_acquire_fence(&mut self, fence: Event) {
+        self.acquire_fences.push(fence)
+    }
+
+    pub fn add_release_fence(&mut self, fence: Event) {
+        self.release_fences.push(fence)
+    }
 }
 
 pub struct Resource {
