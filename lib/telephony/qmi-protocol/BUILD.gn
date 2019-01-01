@@ -69,13 +69,6 @@ if (host_toolchain == current_toolchain) {
     source_root = "tests/codegen_tests.rs"
   }
 
-  group("qmi_host_tests_actual") {
-    public_deps = [
-      ":qmigen_unittests($host_toolchain)",
-    ]
-    testonly = true
-  }
-
   copy("qmi_host_tests") {
     testonly = true
 
@@ -84,11 +77,11 @@ if (host_toolchain == current_toolchain) {
     ]
 
     outputs = [
-      "$root_build_dir/host_x64/qmi_host_tests",
+      "$root_out_dir/qmi_host_tests",
     ]
 
-    deps = [
-      ":qmi_host_tests_actual",
+    public_deps = [
+      ":qmigen_unittests($host_toolchain)",
     ]
   }
 }
