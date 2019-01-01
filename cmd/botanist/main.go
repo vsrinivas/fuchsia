@@ -17,6 +17,7 @@ func main() {
 	subcommands.Register(subcommands.FlagsCommand(), "")
 	subcommands.Register(&ZedbootCommand{}, "")
 	subcommands.Register(&QEMUCommand{}, "")
+	subcommands.Register(&RunCommand{}, "")
 
 	flag.Parse()
 	os.Exit(int(subcommands.Execute(context.Background())))
