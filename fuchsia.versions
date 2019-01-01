@@ -42,8 +42,8 @@ fuchsia/tools/breakpad/linux-amd64
 	06a7be742e031741bedb5fc71b5fc389374aabfd
 
 fuchsia/tools/dump_breakpad_symbols/linux-amd64
-	git_revision:0529dcae9df15323bc3e19879c47c287788d4a2d
-	Y0YZ5aElGEt-lntvK3uaYbbGtOLou7hNS5UFxnWDm7oC
+	git_revision:078c34aaee784ec4737e5fe71c0392d54de0f02d
+	Ydzhx1QSmK9d8IG83TVY_cPQmYkk2dMY3vjmA5yNy64C
 
 fuchsia/tools/godepfile/linux-amd64
 	git_revision:6922d7833617841e853a0be52a285f6cd07a0a10
