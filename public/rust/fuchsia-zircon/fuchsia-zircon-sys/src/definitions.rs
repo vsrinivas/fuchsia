@@ -800,8 +800,8 @@ extern {
     pub fn zx_guest_create(
         resource: zx_handle_t,
         options: u32,
-        physmem_vmo: zx_handle_t,
-        out: *mut zx_handle_t
+        guest_handle: *mut zx_handle_t,
+        vmar_handle: *mut zx_handle_t
         ) -> zx_status_t;
 
     pub fn zx_guest_set_trap(
@@ -809,7 +809,8 @@ extern {
         kind: u32,
         addr: zx_vaddr_t,
         len: usize,
-        fifo: zx_handle_t
+        port: zx_handle_t,
+        key: u64
         ) -> zx_status_t;
 
     pub fn zx_vcpu_create(
