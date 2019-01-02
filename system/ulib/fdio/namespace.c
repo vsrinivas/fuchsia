@@ -186,10 +186,6 @@ static zx_status_t mxdir_close(fdio_t* io) {
     return ZX_OK;
 }
 
-static zx_status_t mxdir_clone(fdio_t* io, zx_handle_t* handles, uint32_t* types) {
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
 static zx_status_t ns_walk_locked(mxvn_t** _vn, const char** _path) {
     mxvn_t* vn = *_vn;
     const char* path = *_path;
@@ -392,11 +388,6 @@ static zx_status_t mxdir_unlink(fdio_t* io, const char* path, size_t len) {
     return ZX_ERR_UNAVAILABLE;
 }
 
-static ssize_t mxdir_ioctl(fdio_t* io, uint32_t op, const void* in_buf,
-                           size_t in_len, void* out_buf, size_t out_len) {
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
 static fdio_ops_t dir_ops = {
     .read = fdio_default_read,
     .read_at = fdio_default_read_at,
@@ -407,8 +398,8 @@ static fdio_ops_t dir_ops = {
     .misc = fdio_default_misc,
     .close = mxdir_close,
     .open = mxdir_open,
-    .clone = mxdir_clone,
-    .ioctl = mxdir_ioctl,
+    .clone = fdio_default_clone,
+    .ioctl = fdio_default_ioctl,
     .wait_begin = fdio_default_wait_begin,
     .wait_end = fdio_default_wait_end,
     .unwrap = fdio_default_unwrap,
