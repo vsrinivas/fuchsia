@@ -5,6 +5,7 @@
 #include "lib/callback/auto_cleanable.h"
 
 #include <lib/fit/function.h>
+#include <zircon/compiler.h>
 
 #include "gtest/gtest.h"
 
@@ -185,6 +186,12 @@ TEST(AutoCleanableMap, GetBegin) {
   p2->second.Clean();
 
   EXPECT_EQ(map.begin(), map.end());
+}
+
+TEST(AutoCleanableMap, ConstIteration) {
+  const AutoCleanableMap<int, Cleanable> map;
+  for (__UNUSED const auto& [key, value] : map) {
+  }
 }
 
 }  // namespace

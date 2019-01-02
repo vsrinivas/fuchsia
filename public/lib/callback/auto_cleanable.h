@@ -162,10 +162,7 @@ class AutoCleanableMap {
 
   iterator end() { return map_.end(); }
 
-  template <class KR>
-  const_iterator end() const {
-    return map_.end();
-  }
+  const_iterator end() const { return map_.end(); }
 
   void set_on_empty(fit::closure on_empty_callback) {
     on_empty_callback_ = std::move(on_empty_callback);
