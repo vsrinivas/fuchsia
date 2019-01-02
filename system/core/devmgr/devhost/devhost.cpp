@@ -799,13 +799,16 @@ static ssize_t devhost_log_write_internal(uint32_t flags, const void* void_data,
     const char* data = static_cast<const char*>(void_data);
     size_t r = len;
 
+    auto flush_context = [&]() {
+        ctx->handle->write(flags, ctx->data, ctx->next);
+        ctx->next = 0;
+    };
+
     while (len-- > 0) {
         char c = *data++;
         if (c == '\n') {
             if (ctx->next) {
-flush_ctx:
-                ctx->handle->write(flags, ctx->data, ctx->next);
-                ctx->next = 0;
+                flush_context();
             }
             continue;
         }
@@ -814,7 +817,7 @@ flush_ctx:
         }
         ctx->data[ctx->next++] = c;
         if (ctx->next == LOGBUF_MAX) {
-            goto flush_ctx;
+            flush_context();
         }
     }
     return r;

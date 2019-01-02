@@ -494,12 +494,15 @@ static zx_status_t fidl_file_writeat(void* ctx, const uint8_t* data, size_t coun
 static zx_status_t fidl_file_seek(void* ctx, int64_t offset, fuchsia_io_SeekOrigin start,
                                   fidl_txn_t* txn) {
     auto conn = static_cast<DevfsConnection*>(ctx);
-    size_t end, n;
-    end = conn->dev->GetSizeOp();
+    auto bad_args = [&]() {
+        return fuchsia_io_FileSeek_reply(txn, ZX_ERR_INVALID_ARGS, 0);
+    };
+    size_t end = conn->dev->GetSizeOp();
+    size_t n;
     switch (start) {
     case fuchsia_io_SeekOrigin_START:
         if ((offset < 0) || ((size_t)offset > end)) {
-            goto bad_args;
+            return bad_args();
         }
         n = offset;
         break;
@@ -511,13 +514,13 @@ static zx_status_t fidl_file_seek(void* ctx, int64_t offset, fuchsia_io_SeekOrig
             // if negative seek
             if (n > conn->io_off) {
                 // wrapped around
-                goto bad_args;
+                return bad_args();
             }
         } else {
             // positive seek
             if (n < conn->io_off) {
                 // wrapped around
-                goto bad_args;
+                return bad_args();
             }
         }
         break;
@@ -527,27 +530,24 @@ static zx_status_t fidl_file_seek(void* ctx, int64_t offset, fuchsia_io_SeekOrig
             // if negative or exact-end seek
             if (n > end) {
                 // wrapped around
-                goto bad_args;
+                return bad_args();
             }
         } else {
             if (n < end) {
                 // wrapped around
-                goto bad_args;
+                return bad_args();
             }
         }
         break;
     default:
-        goto bad_args;
+        return bad_args();
     }
     if (n > end) {
         // devices may not seek past the end
-        goto bad_args;
+        return bad_args();
     }
     conn->io_off = n;
     return fuchsia_io_FileSeek_reply(txn, ZX_OK, conn->io_off);
-
-bad_args:
-    return fuchsia_io_FileSeek_reply(txn, ZX_ERR_INVALID_ARGS, 0);
 }
 
 static zx_status_t fidl_file_truncate(void* ctx, uint64_t length, fidl_txn_t* txn) {
