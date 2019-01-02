@@ -57,17 +57,15 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/nand_driver.cpp \
     $(LOCAL_DIR)/nand_operation.cpp \
     $(LOCAL_DIR)/oob_doubler.cpp \
+    $(TEST_DIR)/block_device_test.cpp \
     $(TEST_DIR)/driver-test.cpp \
     $(TEST_DIR)/main.cpp \
     $(TEST_DIR)/ftl-shell.cpp \
     $(TEST_DIR)/ftl-test.cpp \
+    $(TEST_DIR)/nand_driver_test.cpp \
     $(TEST_DIR)/nand_operation_test.cpp \
     $(TEST_DIR)/ndm-ram-driver.cpp \
     $(TEST_DIR)/oob_doubler_test.cpp \
-
-    # TODO(rvargas): enable these tests:
-    # $(TEST_DIR)/block_device_test.cpp \
-    # $(TEST_DIR)/nand_driver_test.cpp \
 
 MODULE_STATIC_LIBS := \
     system/dev/lib/fake_ddk \

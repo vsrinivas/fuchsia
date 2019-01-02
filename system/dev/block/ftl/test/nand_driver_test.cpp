@@ -14,9 +14,12 @@
 
 namespace {
 
-constexpr uint32_t kPageSize = 1024;
-constexpr uint32_t kOobSize = 8;
-constexpr uint32_t kBlockSize = 4;
+constexpr uint32_t kRealPageSize = 1024;
+constexpr uint32_t kRealOobSize = 8;
+constexpr uint32_t kRealBlockSize = 4;
+constexpr uint32_t kPageSize = kRealPageSize * 2;
+constexpr uint32_t kOobSize = kRealOobSize * 2;
+constexpr uint32_t kBlockSize = kRealBlockSize / 2;
 constexpr uint32_t kNumBlocks = 3;
 constexpr uint32_t kEccBits = 12;
 
@@ -24,15 +27,15 @@ constexpr uint32_t kEccBits = 12;
 class FakeNand : public ddk::NandProtocol<FakeNand> {
   public:
     FakeNand() : proto_({&nand_protocol_ops_, this}) {
-        info_.page_size = kPageSize;
-        info_.oob_size = kOobSize;
-        info_.pages_per_block = kBlockSize;
+        info_.page_size = kRealPageSize;
+        info_.oob_size = kRealOobSize;
+        info_.pages_per_block = kRealBlockSize;
         info_.num_blocks = kNumBlocks;
         info_.ecc_bits = kEccBits;
     }
 
     nand_protocol_t* proto() { return &proto_; }
-    nand_operation_t* operation() { return operation_; }
+    nand_operation_t& operation() { return operation_; }
 
     void set_result(zx_status_t result) { result_ = result; }
     void set_ecc_bits(uint32_t ecc_bits) { ecc_bits_ = ecc_bits; }
@@ -40,29 +43,29 @@ class FakeNand : public ddk::NandProtocol<FakeNand> {
     // Nand protocol:
     void NandQuery(fuchsia_hardware_nand_Info* out_info, size_t* out_nand_op_size) {
         *out_info = info_;
-        *out_nand_op_size = sizeof(*operation_);
+        *out_nand_op_size = sizeof(operation_);
     }
 
     void NandQueue(nand_operation_t* operation, nand_queue_callback callback, void* cookie) {
-        operation_ = operation;
+        operation_ = *operation;
         if (operation->rw.command == NAND_OP_READ) {
             uint8_t data = 'd';
-            uint64_t vmo_addr = operation->rw.offset_data_vmo * kPageSize;
+            uint64_t vmo_addr = operation->rw.offset_data_vmo * kRealPageSize;
             zx_vmo_write(operation->rw.data_vmo, &data, vmo_addr, sizeof(data));
 
             data = 'o';
-            vmo_addr = operation->rw.offset_oob_vmo * kPageSize;
+            vmo_addr = operation->rw.offset_oob_vmo * kRealPageSize;
             zx_vmo_write(operation->rw.oob_vmo, &data, vmo_addr, sizeof(data));
             operation->rw.corrected_bit_flips = ecc_bits_;
         } else if (operation->rw.command == NAND_OP_WRITE) {
             uint8_t data;
-            uint64_t vmo_addr = operation->rw.offset_data_vmo * kPageSize;
+            uint64_t vmo_addr = operation->rw.offset_data_vmo * kRealPageSize;
             zx_vmo_read(operation->rw.data_vmo, &data, vmo_addr, sizeof(data));
             if (data != 'd') {
                 result_ = ZX_ERR_IO;
             }
 
-            vmo_addr = operation->rw.offset_oob_vmo * kPageSize;
+            vmo_addr = operation->rw.offset_oob_vmo * kRealPageSize;
             zx_vmo_read(operation->rw.oob_vmo, &data, vmo_addr, sizeof(data));
             if (data != 'o') {
                 result_ = ZX_ERR_IO;
@@ -79,7 +82,7 @@ class FakeNand : public ddk::NandProtocol<FakeNand> {
   private:
     nand_protocol_t proto_;
     fuchsia_hardware_nand_Info info_ = {};
-    nand_operation_t* operation_;
+    nand_operation_t operation_ = {};
     zx_status_t result_ = ZX_OK;
     uint32_t ecc_bits_ = 0;
 };
@@ -121,7 +124,7 @@ class NandTester {
 
     nand_protocol_t* nand_proto() { return nand_proto_.proto(); }
     bad_block_protocol_t* bad_block_proto() { return bad_block_proto_.proto(); }
-    nand_operation_t* operation() { return nand_proto_.operation(); }
+    nand_operation_t& operation() { return nand_proto_.operation(); }
     FakeNand* nand() { return &nand_proto_; }
     FakeBadBlock* bad_block() { return &bad_block_proto_; }
 
@@ -166,12 +169,12 @@ bool ReadTest() {
 
     ASSERT_EQ(ftl::kNdmOk, driver->NandRead(5, 2, data.get(), oob.get()));
 
-    nand_operation_t* operation = tester.operation();
-    EXPECT_EQ(NAND_OP_READ, operation->command);
-    EXPECT_EQ(2 * 2, operation->rw.length);
-    EXPECT_EQ(5 * 2, operation->rw.offset_nand);
-    EXPECT_EQ(0, operation->rw.offset_data_vmo);
-    EXPECT_EQ(2 * 2, operation->rw.offset_oob_vmo);
+    nand_operation_t& operation = tester.operation();
+    EXPECT_EQ(NAND_OP_READ, operation.command);
+    EXPECT_EQ(2 * 2, operation.rw.length);
+    EXPECT_EQ(5 * 2, operation.rw.offset_nand);
+    EXPECT_EQ(0, operation.rw.offset_data_vmo);
+    EXPECT_EQ(2 * 2, operation.rw.offset_oob_vmo);
     EXPECT_EQ('d', data[0]);
     EXPECT_EQ('o', oob[0]);
     END_TEST;
@@ -232,12 +235,12 @@ bool WriteTest() {
 
     ASSERT_EQ(ftl::kNdmOk, driver->NandWrite(5, 2, data.get(), oob.get()));
 
-    nand_operation_t* operation = tester.operation();
-    EXPECT_EQ(NAND_OP_WRITE, operation->command);
-    EXPECT_EQ(2 * 2, operation->rw.length);
-    EXPECT_EQ(5 * 2, operation->rw.offset_nand);
-    EXPECT_EQ(0, operation->rw.offset_data_vmo);
-    EXPECT_EQ(2 * 2, operation->rw.offset_oob_vmo);
+    nand_operation_t& operation = tester.operation();
+    EXPECT_EQ(NAND_OP_WRITE, operation.command);
+    EXPECT_EQ(2 * 2, operation.rw.length);
+    EXPECT_EQ(5 * 2, operation.rw.offset_nand);
+    EXPECT_EQ(0, operation.rw.offset_data_vmo);
+    EXPECT_EQ(2 * 2, operation.rw.offset_oob_vmo);
     END_TEST;
 }
 
@@ -262,12 +265,12 @@ bool EraseTest() {
     auto driver = ftl::NandDriver::Create(tester.nand_proto(), tester.bad_block_proto());
     ASSERT_EQ(nullptr, driver->Init());
 
-    ASSERT_EQ(ftl::kNdmOk, driver->NandErase(5 * kBlockSize / 2));
+    ASSERT_EQ(ftl::kNdmOk, driver->NandErase(5 * kBlockSize));
 
-    nand_operation_t* operation = tester.operation();
-    EXPECT_EQ(NAND_OP_ERASE, operation->command);
-    EXPECT_EQ(1, operation->erase.num_blocks);
-    EXPECT_EQ(5, operation->erase.first_block);
+    nand_operation_t& operation = tester.operation();
+    EXPECT_EQ(NAND_OP_ERASE, operation.command);
+    EXPECT_EQ(1, operation.erase.num_blocks);
+    EXPECT_EQ(5, operation.erase.first_block);
     END_TEST;
 }
 
@@ -278,7 +281,7 @@ bool EraseFailureTest() {
     ASSERT_EQ(nullptr, driver->Init());
 
     tester.nand()->set_result(ZX_ERR_BAD_STATE);
-    ASSERT_EQ(ftl::kNdmError, driver->NandErase(5 * kBlockSize / 2));
+    ASSERT_EQ(ftl::kNdmError, driver->NandErase(5 * kBlockSize));
     END_TEST;
 }
 
@@ -289,8 +292,8 @@ bool IsBadBlockTest() {
     ASSERT_EQ(nullptr, driver->Init());
 
     ASSERT_FALSE(driver->IsBadBlock(0));
-    ASSERT_TRUE(driver->IsBadBlock(1 * kBlockSize / 2));
-    ASSERT_FALSE(driver->IsBadBlock(2 * kBlockSize / 2));
+    ASSERT_TRUE(driver->IsBadBlock(1 * kBlockSize));
+    ASSERT_FALSE(driver->IsBadBlock(2 * kBlockSize));
     END_TEST;
 }
 

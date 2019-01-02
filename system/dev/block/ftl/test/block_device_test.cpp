@@ -57,7 +57,7 @@ bool DdkLifetimeTest() {
     device->SetVolumeForTest(std::make_unique<FakeVolume>(device));
 
     fake_ddk::Bind ddk;
-    fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry, 1);
+    fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[1], 1);
     protocols[0] = {ZX_PROTOCOL_NAND, {nullptr, nullptr}};
     ddk.SetProtocols(std::move(protocols));
 
