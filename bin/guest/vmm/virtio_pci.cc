@@ -375,8 +375,7 @@ zx_status_t VirtioPci::CommonCfgWrite(uint64_t addr, const IoValue& value) {
       std::lock_guard<std::mutex> lock(device_config_->mutex);
       VirtioQueueConfig* cfg = &device_config_->queue_configs[idx];
       cfg->size = value.u16;
-      return device_config_->config_queue(idx, cfg->size, cfg->desc, cfg->avail,
-                                          cfg->used);
+      return ZX_OK;
     }
     case VIRTIO_PCI_COMMON_CFG_QUEUE_DESC_LOW ... VIRTIO_PCI_COMMON_CFG_QUEUE_USED_HIGH: {
       if (value.access_size != 4) {
@@ -393,13 +392,29 @@ zx_status_t VirtioPci::CommonCfgWrite(uint64_t addr, const IoValue& value) {
       std::lock_guard<std::mutex> lock(device_config_->mutex);
       VirtioQueueConfig* cfg = &device_config_->queue_configs[idx];
       cfg->words[word] = value.u32;
+      return ZX_OK;
+    }
+    case VIRTIO_PCI_COMMON_CFG_QUEUE_ENABLE: {
+      if (value.access_size != 2) {
+        return ZX_ERR_IO_DATA_INTEGRITY;
+      }
+      const uint16_t idx = queue_sel();
+      if (idx >= device_config_->num_queues) {
+        return ZX_ERR_BAD_STATE;
+      }
+      if (value.u16 == 0) {
+        // Don't support disabling queues once enabled
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+      // Configure the queue now that its enabled.
+      std::lock_guard<std::mutex> lock(device_config_->mutex);
+      VirtioQueueConfig* cfg = &device_config_->queue_configs[idx];
       return device_config_->config_queue(idx, cfg->size, cfg->desc, cfg->avail,
                                           cfg->used);
     }
     // Not implemented registers.
     case VIRTIO_PCI_COMMON_CFG_QUEUE_MSIX_VECTOR:
     case VIRTIO_PCI_COMMON_CFG_MSIX_CONFIG:
-    case VIRTIO_PCI_COMMON_CFG_QUEUE_ENABLE:
       return ZX_OK;
     // Read-only registers.
     case VIRTIO_PCI_COMMON_CFG_QUEUE_NOTIFY_OFF:
