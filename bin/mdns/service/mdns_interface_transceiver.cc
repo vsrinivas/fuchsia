@@ -4,15 +4,14 @@
 
 #include "garnet/bin/mdns/service/mdns_interface_transceiver.h"
 
-#include <iostream>
-
 #include <arpa/inet.h>
 #include <errno.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <poll.h>
 #include <sys/socket.h>
-
+#include <algorithm>
+#include <iostream>
 #include "garnet/bin/mdns/service/dns_formatting.h"
 #include "garnet/bin/mdns/service/dns_reading.h"
 #include "garnet/bin/mdns/service/dns_writing.h"
@@ -258,20 +257,66 @@ std::shared_ptr<DnsResource> MdnsInterfaceTransceiver::MakeAddressResource(
 
 void MdnsInterfaceTransceiver::FixUpAddresses(
     std::vector<std::shared_ptr<DnsResource>>* resources) {
-  for (auto iter = resources->begin(); iter != resources->end(); ++iter) {
-    // Agents shouldn't produce AAAA resources, just A resource placeholders.
-    FXL_DCHECK((*iter)->type_ != DnsType::kAaaa);
+  FXL_DCHECK(resources);
 
-    if ((*iter)->type_ == DnsType::kA) {
-      auto name = (*iter)->name_.dotted_string_;
-      *iter = GetAddressResource(name);
+  // This method is called from |SendMessage| to 'fix up' address resources in
+  // a DNS message. |SendMessage| calls this method once for each of the three
+  // resource lists in a message.
+  //
+  // If the resource list passed to this method contains no A or AAAA resources,
+  // this method returns without making any modifications to the list.
+  //
+  // If the resource list does contain A or AAAA resources, those resources are
+  // replaced with one or two new A or AAAA resources. The first of those new
+  // resources contains the address bound by this instance (A if the address is
+  // v4, AAAA if the address is v6). This address resource is returned by
+  // |GetAddressResource|. If there is an 'alternate' address, a second new
+  // address resource is added for that alternate address. That address resource
+  // is returned by |GetAlternateAddressResource|.
+  //
+  // A/AAAA addresses in the orginal message come from two sources:
+  // 1) The agent that sent the message may insert a placeholder A message that
+  //    contains an invalid address.
+  // 2) A different transceiver that sent the message previously may have
+  //    inserted its own A/AAAA message(s). Because the mutated message is
+  //    reused, we have to allow for this.
 
-      if (alternate_address_.is_valid()) {
-        // Insert the alternate address record after the first one.
-        iter = resources->insert(++iter, GetAlternateAddressResource(name));
-      }
-    }
+  // Move A/AAAA resources to the end of the vector.
+  auto iter = std::remove_if(resources->begin(), resources->end(),
+                             [](const std::shared_ptr<DnsResource>& resource) {
+                               return resource->type_ == DnsType::kA ||
+                                      resource->type_ == DnsType::kAaaa;
+                             });
+
+  if (iter == resources->end()) {
+    // No address resources found/moved.
+    return;
   }
+
+  // Replace the first A/AAAA resource with the address resource for this
+  // interface.
+  auto name = (*iter)->name_.dotted_string_;
+  *iter++ = GetAddressResource(name);
+
+  if (!alternate_address_.is_valid()) {
+    // No alternate address. Clean up the remainder of the vector, and we're
+    // done.
+    resources->erase(iter, resources->end());
+    return;
+  }
+
+  if (iter == resources->end()) {
+    // We're at the end of the vector. Push the alternate address resource to
+    // the back of the vector, and we're done.
+    resources->push_back(GetAlternateAddressResource(name));
+    return;
+  }
+
+  // Replace the second A/AAAA resource with the alternate address resource.
+  *iter++ = GetAlternateAddressResource(name);
+
+  // Clean up the remainder of the vector, and we're done.
+  resources->erase(iter, resources->end());
 }
 
 }  // namespace mdns
