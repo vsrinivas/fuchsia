@@ -56,7 +56,7 @@ where
 ///
 /// This trait should be implemented by users who wish to write their own
 /// types which receive asynchronous notifications from a `zx::Port`.
-/// Implementors of this trait generally contain a `futures::task::AtomicTask` which
+/// Implementors of this trait generally contain a `futures::task::AtomicWaker` which
 /// is used to wake up the task which can make progress due to the arrival of
 /// the packet.
 ///
