@@ -34,7 +34,7 @@ public:
         : remote_histogram_(internal::RemoteMetricInfo::From(options)), options_(options),
           collector_(collector) {
         ZX_DEBUG_ASSERT_MSG(!options_.IsLazy(),
-                            "Cannot initialize hisotgram with |kLazy| options.");
+                            "Cannot initialize histogram with |kLazy| options.");
         if (collector_ != nullptr) {
             collector_->Subscribe(&remote_histogram_);
         }
@@ -43,7 +43,7 @@ public:
     Histogram(const HistogramOptions& options, internal::FlushInterface** flush_interface)
         : remote_histogram_(internal::RemoteMetricInfo::From(options)), options_(options) {
         ZX_DEBUG_ASSERT_MSG(!options_.IsLazy(),
-                            "Cannot initialize hisotgram with |kLazy| options.");
+                            "Cannot initialize histogram with |kLazy| options.");
         *flush_interface = &remote_histogram_;
     }
     Histogram(const Histogram&) = delete;
@@ -60,7 +60,7 @@ public:
     // in the constructor or function body.
     void Initialize(const HistogramOptions& options, Collector* collector) {
         ZX_DEBUG_ASSERT_MSG(!options.IsLazy(),
-                            "Cannot initialize hisotgram with |kLazy| options.");
+                            "Cannot initialize histogram with |kLazy| options.");
         options_ = options;
         collector_ = collector;
         remote_histogram_.Initialize(options_);
