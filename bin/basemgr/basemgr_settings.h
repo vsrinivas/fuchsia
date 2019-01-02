@@ -48,4 +48,4 @@ class BasemgrSettings {
 
 }  // namespace modular
 
-#endif  // PERIDOT_BIN_BASEMGR_BASEMGR_IMPL_H_
+#endif  // PERIDOT_BIN_BASEMGR_BASEMGR_SETTINGS_H_

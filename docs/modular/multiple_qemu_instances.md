@@ -18,7 +18,7 @@ serves DNS on *all* interfaces.
 
 We also set up persistent storage for the ledger. Notice, however, that with
 ledger sync state is preserved in the cloud sync location for the ledger, so
-it's usually not lost when the device is rebooted. The only thing persitent
+it's usually not lost when the device is rebooted. The only thing persistent
 storage buys is to preserve the ledger cloud sync configuration.
 
 ### Prerequisites on host
