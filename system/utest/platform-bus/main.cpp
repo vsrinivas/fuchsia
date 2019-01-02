@@ -72,31 +72,32 @@ bool enumeration_test() {
 
     const int dirfd = devmgr->devfs_root().get();
     struct stat st;
-    ASSERT_EQ(fstatat(dirfd, "sys/platform/test-board", &st, 0), 0);
-    ASSERT_EQ(fstatat(dirfd, "sys/platform/11:01:1", &st, 0), 0);
+    EXPECT_EQ(fstatat(dirfd, "sys/platform/test-board", &st, 0), 0);
+    EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:1", &st, 0), 0);
+    EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:1/child-1", &st, 0), 0);
+    EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:1/child-1/child-2", &st, 0), 0);
+    EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:1/child-1/child-3", &st, 0), 0);
 
-    // TODO(surajmalhotra): Following will fail due to bugs in openat.
+    // TODO(surajmalhotra): Following will fail due to devhost no implementing
+    // fuchisia.io.Directory FIDL interface.
 #if 0
-    ASSERT_EQ(fstatat(dirfd, "sys/platform/11:01:1/child-1", &st, 0), 0);
-    ASSERT_EQ(fstatat(dirfd, "sys/platform/11:01:1/child-1/child-2", &st, 0), 0);
-    ASSERT_EQ(fstatat(dirfd, "sys/platform/11:01:1/child-1/child-3", &st, 0), 0);
-    ASSERT_EQ(RecursiveWaitForFile(devmgr->devfs_root(), "sys/platform/test-board",
+    EXPECT_EQ(RecursiveWaitForFile(devmgr->devfs_root(), "sys/platform/test-board",
                                    zx::deadline_after(zx::sec(5)), &fd),
               ZX_OK);
 
-    ASSERT_EQ(RecursiveWaitForFile(devmgr->devfs_root(), "sys/platform/test-parent",
+    EXPECT_EQ(RecursiveWaitForFile(devmgr->devfs_root(), "sys/platform/11:01:1",
                                    zx::deadline_after(zx::sec(5)), &fd),
               ZX_OK);
 
-    ASSERT_EQ(RecursiveWaitForFile(devmgr->devfs_root(), "sys/platform/test-parent/child-1",
+    EXPECT_EQ(RecursiveWaitForFile(devmgr->devfs_root(), "sys/platform/11:01:1/child-1",
                                    zx::deadline_after(zx::sec(5)), &fd),
               ZX_OK);
 
-    ASSERT_EQ(RecursiveWaitForFile(devmgr->devfs_root(), "sys/platform/test-parent/child-1/child-2",
+    EXPECT_EQ(RecursiveWaitForFile(devmgr->devfs_root(), "sys/platform/11:01:1/child-1/child-2",
                                    zx::deadline_after(zx::sec(5)), &fd),
               ZX_OK);
 
-    ASSERT_EQ(RecursiveWaitForFile(devmgr->devfs_root(), "sys/platform/test-parent/child-1/child-3",
+    EXPECT_EQ(RecursiveWaitForFile(devmgr->devfs_root(), "sys/platform/11:01:1/child-1/child-3",
                                    zx::deadline_after(zx::sec(5)), &fd),
               ZX_OK);
 #endif

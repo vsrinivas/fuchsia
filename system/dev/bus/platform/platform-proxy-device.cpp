@@ -761,7 +761,7 @@ zx_status_t ProxyDevice::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
     if (device_ops_ && device_ops_->open) {
         return device_ops_->open(ctx_, dev_out, flags);
     }
-    return ZX_ERR_NOT_SUPPORTED;
+    return ZX_OK;
 }
 
 zx_status_t ProxyDevice::DdkOpenAt(zx_device_t** dev_out, const char* path, uint32_t flags) {
@@ -775,7 +775,7 @@ zx_status_t ProxyDevice::DdkClose(uint32_t flags) {
     if (device_ops_ && device_ops_->close) {
         return device_ops_->close(ctx_, flags);
     }
-    return ZX_ERR_NOT_SUPPORTED;
+    return ZX_OK;
 }
 
 void ProxyDevice::DdkUnbind() {
