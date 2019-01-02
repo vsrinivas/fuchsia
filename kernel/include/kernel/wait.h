@@ -10,9 +10,9 @@
 #include <arch/defines.h>
 #include <arch/ops.h>
 #include <arch/thread.h>
+#include <kernel/deadline.h>
 #include <kernel/spinlock.h>
 #include <kernel/timer.h>
-#include <kernel/timer_slack.h>
 #include <list.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>

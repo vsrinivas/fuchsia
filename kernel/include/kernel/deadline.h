@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <assert.h>
 #include <zircon/types.h>
 
 enum slack_mode : uint32_t {

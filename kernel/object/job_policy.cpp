@@ -6,7 +6,7 @@
 
 #include <assert.h>
 #include <err.h>
-#include <kernel/timer_slack.h>
+#include <kernel/deadline.h>
 #include <zircon/syscalls/policy.h>
 
 namespace {

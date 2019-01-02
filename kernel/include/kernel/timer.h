@@ -7,8 +7,8 @@
 
 #pragma once
 
+#include <kernel/deadline.h>
 #include <kernel/spinlock.h>
-#include <kernel/timer_slack.h>
 #include <list.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
