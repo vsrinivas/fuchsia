@@ -15,19 +15,19 @@ library fuchsia.ui.input;
 // how to handle focus and gestures.
 [Discoverable]
 interface InputConnection {
-  // Sets the listener for receiving input events.
-  //
-  // If |listener| is null, then the previously set listener is removed.
-  1: SetEventListener(InputListener? listener);
+    // Sets the listener for receiving input events.
+    //
+    // If |listener| is null, then the previously set listener is removed.
+    SetEventListener(InputListener? listener);
 
-  // Retrieves an |InputMethodEditor| to handle text editing.
-  2: GetInputMethodEditor(KeyboardType keyboard_type,
+    // Retrieves an |InputMethodEditor| to handle text editing.
+    GetInputMethodEditor(KeyboardType keyboard_type,
                          InputMethodAction action,
                          TextInputState initial_state,
                          InputMethodEditorClient client,
                          request<InputMethodEditor> editor);
-  3: ShowKeyboard();
-  4: HideKeyboard();
+    ShowKeyboard();
+    HideKeyboard();
 };
 
 // An interface applications may implement to receive events from an
@@ -35,10 +35,10 @@ interface InputConnection {
 // TODO(MZ-33): This should include hit testing and an input arena.
 [Discoverable]
 interface InputListener {
-  // Called to deliver an input event.
-  //
-  // The |consumed| result should indicate whether the input event was
-  // consumed by the connection.  If |consumed| is false, the system may
-  // apply default behavior of its own in response to the event.
-  1: OnEvent(InputEvent event) -> (bool consumed);
+    // Called to deliver an input event.
+    //
+    // The |consumed| result should indicate whether the input event was
+    // consumed by the connection.  If |consumed| is false, the system may
+    // apply default behavior of its own in response to the event.
+    OnEvent(InputEvent event) -> (bool consumed);
 };

@@ -11,10 +11,10 @@ library fuchsia.ui.input;
 [Discoverable]
 interface InputDeviceRegistry {
     // Register a device with the capabilities described by |DeviceDescriptor|
-    1: RegisterDevice(DeviceDescriptor descriptor, request<InputDevice> input_device);
+    RegisterDevice(DeviceDescriptor descriptor, request<InputDevice> input_device);
 };
 
 interface InputDevice {
     // Dispatch an |InputReport| from the device |token|
-    1: DispatchReport(InputReport report);
+    DispatchReport(InputReport report);
 };

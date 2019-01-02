@@ -16,23 +16,23 @@ library fuchsia.ui.input;
 // input coming from multiple sources concurrently.
 [Discoverable]
 interface InputDispatcher {
-  // Dispatches an event through the view tree.  The dispatcher will deliver
-  // the event to the appropriate views based on the current state of the
-  // tree, such as focus and the structure of the scene graph.
-  //
-  // The dispatcher expects the stream of events that it receives to be
-  // internally consistent.  For example, each pointer down must be matched
-  // by a corresponding pointer up.
-  //
-  // It is an error to supply an inconsistent stream events to the dispatcher;
-  // the connection will be closed.
-  //
-  // TODO(jeffbrown): Is this the right policy?  It would certainly help
-  // diagnose faults earlier.
-  // TODO(jeffbrown): Decide whether there should be a way to track the
-  // progress of input events.  For testing purposes it is often desirable
-  // to block the test until a sequence of events have been delivered and
-  // handled.  However these same mechanisms have proven to be brittle in
-  // the past so it might be better to solve the problem some other way.
-  1: DispatchEvent(InputEvent event);
+    // Dispatches an event through the view tree.  The dispatcher will deliver
+    // the event to the appropriate views based on the current state of the
+    // tree, such as focus and the structure of the scene graph.
+    //
+    // The dispatcher expects the stream of events that it receives to be
+    // internally consistent.  For example, each pointer down must be matched
+    // by a corresponding pointer up.
+    //
+    // It is an error to supply an inconsistent stream events to the dispatcher;
+    // the connection will be closed.
+    //
+    // TODO(jeffbrown): Is this the right policy?  It would certainly help
+    // diagnose faults earlier.
+    // TODO(jeffbrown): Decide whether there should be a way to track the
+    // progress of input events.  For testing purposes it is often desirable
+    // to block the test until a sequence of events have been delivered and
+    // handled.  However these same mechanisms have proven to be brittle in
+    // the past so it might be better to solve the problem some other way.
+    DispatchEvent(InputEvent event);
 };

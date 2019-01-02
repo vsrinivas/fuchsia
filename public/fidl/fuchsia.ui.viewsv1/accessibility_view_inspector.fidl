@@ -16,7 +16,7 @@ using fuchsia.math;
 
 [Discoverable]
 interface AccessibilityViewInspector {
-  // Provides a FIDL interface to expose the hit test mechanism from view manager.
-  1: PerformHitTest(ViewTreeToken token, fuchsia.math.Point3F origin,
-                    fuchsia.math.Point3F direction) -> (vector<fuchsia.ui.gfx.Hit> hits);
+    // Provides a FIDL interface to expose the hit test mechanism from view manager.
+    PerformHitTest(ViewTreeToken token, fuchsia.math.Point3F origin,
+                   fuchsia.math.Point3F direction) -> (vector<fuchsia.ui.gfx.Hit> hits);
 };
