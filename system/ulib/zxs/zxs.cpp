@@ -395,15 +395,6 @@ static zx_status_t zxs_read(const zxs_socket_t* socket, void* buffer,
     for (;;) {
         zx_status_t status = zx_socket_read(socket->socket, 0, buffer, capacity,
                                             out_actual);
-        if (status == ZX_OK) {
-            if (capacity == 0u) {
-                // zx_socket_read() sets *out_actual to the number of bytes in
-                // the buffer when data is NULL and len is 0. zxio_read() should
-                // return 0u in that case.
-                *out_actual = 0u;
-            }
-            return ZX_OK;
-        }
         if (status == ZX_ERR_PEER_CLOSED || status == ZX_ERR_BAD_STATE) {
             *out_actual = 0u;
             return ZX_OK;

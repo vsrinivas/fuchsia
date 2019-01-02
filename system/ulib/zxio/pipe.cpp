@@ -59,13 +59,6 @@ static zx_status_t zxio_pipe_read(zxio_t* io, void* buffer, size_t capacity,
     zxio_pipe_t* pipe = reinterpret_cast<zxio_pipe_t*>(io);
     zx_status_t status = zx_socket_read(pipe->socket, 0, buffer, capacity,
                                         out_actual);
-    if (status == ZX_OK && capacity == 0u) {
-        // zx_socket_read() sets *out_actual to the number of bytes in the
-        // buffer when data is NULL and len is 0. zxio_read() should return
-        // 0u in that case.
-        *out_actual = 0u;
-        return ZX_OK;
-    }
     // We've reached end-of-file, which is signaled by successfully reading zero
     // bytes.
     //
