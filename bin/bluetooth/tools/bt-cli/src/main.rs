@@ -32,6 +32,7 @@ use {
     },
     pin_utils::{pin_mut},
     parking_lot::Mutex,
+    regex::Regex,
     rustyline::{
         error::ReadlineError,
         CompletionType,
@@ -57,7 +58,6 @@ static PROMPT: &str = "\x1b[34mbt>\x1b[0m ";
 /// Escape code to clear the pty line on which the cursor is located.
 /// Used when evented output is intermingled with the REPL prompt.
 static CLEAR_LINE: &str = "\x1b[2K";
-
 
 async fn get_active_adapter(control_svc: &ControlProxy) -> Result<String, Error> {
     if let Some(adapter) = await!(control_svc.get_active_adapter_info())? {
@@ -102,16 +102,14 @@ fn get_devices(state: &Mutex<State>) -> String {
     }
 }
 
+/// Get the string representation of a device from either an identifier or address
 fn get_device<'a>(args: &'a [&'a str], state: &Mutex<State>) -> String {
     if args.len() != 1 {
         return format!("usage: {}", Cmd::GetDevice.cmd_help());
     }
-    state
-        .lock()
-        .devices
-        .values()
-        .find(|device| device.0.address == args[0])
-        .map(|device| device.to_string())
+
+    to_identifier(state, args[0])
+        .and_then(|id| state.lock().devices.get(&id).map(|device| device.to_string()))
         .unwrap_or_else(|| String::from("No known device"))
 }
 
@@ -125,12 +123,37 @@ async fn set_discovery(discovery: bool, control_svc: &ControlProxy) -> Result<St
     }
 }
 
-async fn connect<'a>(args: &'a [&'a str], control_svc: &'a ControlProxy) -> Result<String, Error> {
+// Find the identifier for a `RemoteDevice` based on a `key` that is either an identifier or an
+// address.
+// Returns `None` if the given address does not belong to a known device.
+fn to_identifier(state: &Mutex<State>, key: &str) -> Option<String> {
+    // Compile regex inline because it is not ever expected to be a bottleneck
+    let address_pattern = Regex::new(r"^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$")
+        .expect("Could not compile mac address regex pattern.");
+    if address_pattern.is_match(key) {
+        state
+            .lock()
+            .devices
+            .values()
+            .find(|device| device.0.address == key)
+            .map(|device| device.0.identifier.to_string())
+    } else {
+        Some(key.to_string())
+    }
+}
+
+async fn connect<'a>(args: &'a [&'a str], state: &'a Mutex<State>, control_svc: &'a ControlProxy)
+    -> Result<String, Error>
+{
     if args.len() != 1 {
         return Ok(format!("usage: {}", Cmd::Connect.cmd_help()));
     }
     // `args[0]` is the identifier of the remote device to connect to
-    let response = await!(control_svc.connect(args[0]))?;
+    let id = match to_identifier(state, args[0]) {
+        Some(id) => id,
+        None => return Ok(format!("Unable to connect: Unknown address {}", args[0])),
+    };
+    let response = await!(control_svc.connect(&id))?;
     if response.error.is_some() {
         Ok(Status::from(response).to_string())
     } else {
@@ -211,7 +234,7 @@ async fn handle_cmd(bt_svc: &ControlProxy, state: Arc<Mutex<State>>, line: Strin
     if let Some((raw_cmd, args)) = components.split_first() {
         let cmd = raw_cmd.parse();
         let res = match cmd {
-            Ok(Cmd::Connect) => await!(connect(args, &bt_svc)),
+            Ok(Cmd::Connect) => await!(connect(args, &state, &bt_svc)),
             Ok(Cmd::StartDiscovery) => await!(set_discovery(true, &bt_svc)),
             Ok(Cmd::StopDiscovery) => await!(set_discovery(false, &bt_svc)),
             Ok(Cmd::Discoverable) => await!(set_discoverable(true, &bt_svc)),

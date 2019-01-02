@@ -90,12 +90,12 @@ macro_rules! gen_commands {
 // `Cmd` is the declarative specification of all commands that bt-cli accepts.
 gen_commands! {
     Cmd {
-        Connect = ("connect", ["id"], "connect to a remote device"),
+        Connect = ("connect", ["id|addr"], "connect to a remote device"),
         ActiveAdapter = ("adapter", [], "Show the Active Adapter"),
         SetActiveAdapter = ("set-adapter", ["id"], "Set the Active Adapter"),
         GetAdapters = ("list-adapters", [], "Show all known bluetooth adapters"),
         GetDevices = ("list-devices", [], "Show all known remote devices"),
-        GetDevice = ("device", ["addr"], "Show details for a known remote device"),
+        GetDevice = ("device", ["id|addr"], "Show details for a known remote device"),
         StartDiscovery = ("start-discovery", [], "Start Discovery"),
         StopDiscovery = ("stop-discovery", [], "Stop Discovery"),
         Discoverable = ("discoverable", [], "Set this device to be discoverable"),
@@ -136,18 +136,14 @@ impl Completer for CmdHelper {
             let partial_argument = components.get(1).unwrap_or(&"");
             let devices = &self.state.lock().devices;
             let mut candidates = vec![];
-            if command == "connect" {
-                // connect has an 'id' argument
-                for id in devices.keys() {
-                    if id.starts_with(partial_argument) {
-                        candidates.push(format!("connect {}", id));
-                    }
-                }
-            } else if command == "device" {
-                // device has an 'addr' argument
+            if command == "connect" || command == "device" {
+                // connect and device have 'id|addr' arguments
+                // can match against remote device identifier or address
                 for device in devices.values() {
-                    if device.0.address.starts_with(partial_argument) {
-                        candidates.push(format!("device {}", device.0.address));
+                    for key in &[&device.0.identifier, &device.0.address] {
+                        if key.starts_with(partial_argument) {
+                            candidates.push(format!("{} {}", command, key));
+                        }
                     }
                 }
             }
