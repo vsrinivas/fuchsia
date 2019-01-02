@@ -1250,14 +1250,17 @@ static inline void brcmf_chip_cr4_set_passive(struct brcmf_chip_priv* chip) {
     brcmf_chip_disable_arm(chip, CHIPSET_ARM_CR4_CORE);
     brcmf_dbg(TEMP, "2");
 
-    core = brcmf_chip_get_core(&chip->pub, CHIPSET_80211_CORE);
-    brcmf_dbg(TEMP, "resetcore, id %d, val %d, PHYCLOCKEN", CHIPSET_80211_CORE,
-              D11_BCMA_IOCTL_PHYRESET | D11_BCMA_IOCTL_PHYCLOCKEN);
-    PAUSE;
-    brcmf_chip_resetcore(core, D11_BCMA_IOCTL_PHYRESET | D11_BCMA_IOCTL_PHYCLOCKEN,
-                         D11_BCMA_IOCTL_PHYCLOCKEN, D11_BCMA_IOCTL_PHYCLOCKEN);
-    brcmf_dbg(TEMP, "4");
-    PAUSE;
+    // WLAN-745
+    if (chip->pub.chip != BRCM_CC_4359_CHIP_ID) {
+        core = brcmf_chip_get_core(&chip->pub, CHIPSET_80211_CORE);
+        brcmf_dbg(TEMP, "resetcore, id %d, val %d, PHYCLOCKEN", CHIPSET_80211_CORE,
+                D11_BCMA_IOCTL_PHYRESET | D11_BCMA_IOCTL_PHYCLOCKEN);
+        PAUSE;
+        brcmf_chip_resetcore(core, D11_BCMA_IOCTL_PHYRESET | D11_BCMA_IOCTL_PHYCLOCKEN,
+                            D11_BCMA_IOCTL_PHYCLOCKEN, D11_BCMA_IOCTL_PHYCLOCKEN);
+        brcmf_dbg(TEMP, "4");
+        PAUSE;
+    }
 }
 
 static bool brcmf_chip_cr4_set_active(struct brcmf_chip_priv* chip, uint32_t rstvec) {
