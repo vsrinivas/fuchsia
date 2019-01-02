@@ -28,6 +28,7 @@
 
 #include <fs/connection.h>
 #include <fs/handler.h>
+#include <fuchsia/device/manager/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/debug.h>
 #include <lib/fdio/io.h>
@@ -351,9 +352,21 @@ static zx_status_t fidl_directory_link(void* ctx, const char* src_data,
 }
 
 static zx_status_t fidl_directory_watch(void* ctx, uint32_t mask, uint32_t options,
-                                        zx_handle_t watcher, fidl_txn_t* txn) {
-    zx_handle_close(watcher);
-    return fuchsia_io_DirectoryWatch_reply(txn, ZX_ERR_NOT_SUPPORTED);
+                                        zx_handle_t raw_watcher, fidl_txn_t* txn) {
+    auto conn = static_cast<DevfsConnection*>(ctx);
+    auto dev = conn->dev;
+    zx::channel watcher(raw_watcher);
+
+    const zx::channel& rpc = *dev->rpc;
+    if (!rpc.is_valid()) {
+        return fuchsia_io_DirectoryWatch_reply(txn, ZX_ERR_INTERNAL);
+    }
+
+    zx_status_t call_status;
+    zx_status_t status = fuchsia_device_manager_CoordinatorDirectoryWatch(
+        rpc.get(), mask, options, watcher.release(), &call_status);
+
+    return fuchsia_io_DirectoryWatch_reply(txn, status != ZX_OK ? status : call_status);
 }
 
 static const fuchsia_io_Directory_ops_t kDirectoryOps = []() {
