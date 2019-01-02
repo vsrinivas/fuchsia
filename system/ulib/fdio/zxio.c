@@ -199,17 +199,17 @@ fdio_ops_t fdio_zxio_ops = {
 
 __EXPORT
 fdio_t* fdio_zxio_create(zxio_storage_t** out_storage) {
-    fdio_zxio_t* fv = fdio_alloc(sizeof(fdio_zxio_t));
-    if (fv == NULL) {
+    fdio_t* io = fdio_alloc(sizeof(fdio_t));
+    if (io == NULL) {
         return NULL;
     }
-    fv->io.ops = &fdio_zxio_ops;
-    fv->io.magic = FDIO_MAGIC;
-    atomic_init(&fv->io.refcount, 1);
-    memset(&fv->storage, 0, sizeof(fv->storage));
-    zxio_null_init(&fv->storage.io);
-    *out_storage = &fv->storage;
-    return &fv->io;
+    io->ops = &fdio_zxio_ops;
+    io->magic = FDIO_MAGIC;
+    atomic_init(&io->refcount, 1);
+    memset(&io->storage, 0, sizeof(io->storage));
+    zxio_null_init(&io->storage.io);
+    *out_storage = &io->storage;
+    return io;
 }
 
 // Null ------------------------------------------------------------------------
@@ -445,20 +445,20 @@ static fdio_ops_t fdio_zxio_remote_ops = {
 
 __EXPORT
 fdio_t* fdio_remote_create(zx_handle_t control, zx_handle_t event) {
-    fdio_zxio_t* fv = fdio_alloc(sizeof(fdio_zxio_t));
-    if (fv == NULL) {
+    fdio_t* io = fdio_alloc(sizeof(fdio_t));
+    if (io == NULL) {
         zx_handle_close(control);
         zx_handle_close(event);
         return NULL;
     }
-    fv->io.ops = &fdio_zxio_remote_ops;
-    fv->io.magic = FDIO_MAGIC;
-    atomic_init(&fv->io.refcount, 1);
-    zx_status_t status = zxio_remote_init(&fv->storage, control, event);
+    io->ops = &fdio_zxio_remote_ops;
+    io->magic = FDIO_MAGIC;
+    atomic_init(&io->refcount, 1);
+    zx_status_t status = zxio_remote_init(&io->storage, control, event);
     if (status != ZX_OK) {
         return NULL;
     }
-    return &fv->io;
+    return io;
 }
 
 __EXPORT
@@ -579,21 +579,21 @@ fdio_ops_t fdio_zxio_vmofile_ops = {
 fdio_t* fdio_vmofile_create(zx_handle_t control, zx_handle_t vmo,
                             zx_off_t offset, zx_off_t length,
                             zx_off_t seek) {
-    fdio_zxio_t* fv = fdio_alloc(sizeof(fdio_zxio_t));
-    if (fv == NULL) {
+    fdio_t* io = fdio_alloc(sizeof(fdio_t));
+    if (io == NULL) {
         zx_handle_close(control);
         zx_handle_close(vmo);
         return NULL;
     }
-    fv->io.ops = &fdio_zxio_vmofile_ops;
-    fv->io.magic = FDIO_MAGIC;
-    atomic_init(&fv->io.refcount, 1);
-    zx_status_t status = zxio_vmofile_init(&fv->storage, control, vmo, offset,
+    io->ops = &fdio_zxio_vmofile_ops;
+    io->magic = FDIO_MAGIC;
+    atomic_init(&io->refcount, 1);
+    zx_status_t status = zxio_vmofile_init(&io->storage, control, vmo, offset,
                                            length, seek);
     if (status != ZX_OK) {
         return NULL;
     }
-    return &fv->io;
+    return io;
 }
 
 __EXPORT
@@ -853,19 +853,19 @@ static fdio_ops_t fdio_zxio_pipe_ops = {
 };
 
 fdio_t* fdio_pipe_create(zx_handle_t socket) {
-    fdio_zxio_t* fv = fdio_alloc(sizeof(fdio_zxio_t));
-    if (fv == NULL) {
+    fdio_t* io = fdio_alloc(sizeof(fdio_t));
+    if (io == NULL) {
         zx_handle_close(socket);
         return NULL;
     }
-    fv->io.ops = &fdio_zxio_pipe_ops;
-    fv->io.magic = FDIO_MAGIC;
-    atomic_init(&fv->io.refcount, 1);
-    zx_status_t status = zxio_pipe_init(&fv->storage, socket);
+    io->ops = &fdio_zxio_pipe_ops;
+    io->magic = FDIO_MAGIC;
+    atomic_init(&io->refcount, 1);
+    zx_status_t status = zxio_pipe_init(&io->storage, socket);
     if (status != ZX_OK) {
         return NULL;
     }
-    return &fv->io;
+    return io;
 }
 
 fdio_t* fdio_socketpair_create(zx_handle_t h) {
@@ -975,17 +975,17 @@ static fdio_ops_t fdio_zxio_debuglog_ops = {
 
 __EXPORT
 fdio_t* fdio_logger_create(zx_handle_t handle) {
-    fdio_zxio_t* fv = fdio_alloc(sizeof(fdio_zxio_t));
-    if (fv == NULL) {
+    fdio_t* io = fdio_alloc(sizeof(fdio_t));
+    if (io == NULL) {
         zx_handle_close(handle);
         return NULL;
     }
-    fv->io.ops = &fdio_zxio_debuglog_ops;
-    fv->io.magic = FDIO_MAGIC;
-    atomic_init(&fv->io.refcount, 1);
-    zx_status_t status = zxio_debuglog_init(&fv->storage, handle);
+    io->ops = &fdio_zxio_debuglog_ops;
+    io->magic = FDIO_MAGIC;
+    atomic_init(&io->refcount, 1);
+    zx_status_t status = zxio_debuglog_init(&io->storage, handle);
     if (status != ZX_OK) {
         return NULL;
     }
-    return &fv->io;
+    return io;
 }

@@ -431,20 +431,20 @@ static fdio_ops_t dir_ops = {
 };
 
 static fdio_t* fdio_dir_create_locked(fdio_ns_t* ns, mxvn_t* vn) {
-    fdio_zxio_t* fv = fdio_alloc(sizeof(fdio_zxio_t));
-    if (fv == NULL) {
+    fdio_t* io = fdio_alloc(sizeof(fdio_t));
+    if (io == NULL) {
         return NULL;
     }
-    fv->io.ops = &dir_ops;
-    fv->io.magic = FDIO_MAGIC;
-    atomic_init(&fv->io.refcount, 1);
-    memset(&fv->storage, 0, sizeof(fv->storage));
-    zxio_null_init(&fv->storage.io);
-    zxio_dir_t* dir = fdio_get_zxio_dir(&fv->io);
+    io->ops = &dir_ops;
+    io->magic = FDIO_MAGIC;
+    atomic_init(&io->refcount, 1);
+    memset(&io->storage, 0, sizeof(io->storage));
+    zxio_null_init(&io->storage.io);
+    zxio_dir_t* dir = fdio_get_zxio_dir(io);
     dir->ns = ns;
     dir->vn = vn;
     atomic_init(&dir->seq, 0);
-    return &fv->io;
+    return io;
 }
 
 __EXPORT

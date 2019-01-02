@@ -420,24 +420,24 @@ static fdio_ops_t fdio_socket_dgram_ops = {
 
 static fdio_t* fdio_socket_create(zx_handle_t socket, int flags,
                                   fdio_ops_t* ops) {
-    fdio_zxio_t* fv = fdio_alloc(sizeof(fdio_zxio_t));
-    if (fv == NULL) {
+    fdio_t* io = fdio_alloc(sizeof(fdio_t));
+    if (io == NULL) {
         zx_handle_close(socket);
         return NULL;
     }
-    fv->io.ops = ops;
-    fv->io.magic = FDIO_MAGIC;
-    atomic_init(&fv->io.refcount, 1);
-    fv->io.ioflag = IOFLAG_SOCKET | flags;
+    io->ops = ops;
+    io->magic = FDIO_MAGIC;
+    atomic_init(&io->refcount, 1);
+    io->ioflag = IOFLAG_SOCKET | flags;
     zxs_socket_t zs = {
         .socket = socket,
         .flags = ops == &fdio_socket_dgram_ops ? ZXS_FLAG_DATAGRAM : 0u,
     };
-    zx_status_t status = zxio_socket_init(&fv->storage, zs);
+    zx_status_t status = zxio_socket_init(&io->storage, zs);
     if (status != ZX_OK) {
         return NULL;
     }
-    return &fv->io;
+    return io;
 }
 
 fdio_t* fdio_socket_create_stream(zx_handle_t s, int flags) {

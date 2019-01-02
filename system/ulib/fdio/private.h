@@ -96,7 +96,12 @@ typedef struct fdio {
     atomic_int_fast32_t refcount;
     int32_t dupcount;
     uint32_t ioflag;
+    zxio_storage_t storage;
 } fdio_t;
+
+static inline zxio_t* fdio_get_zxio(fdio_t* io) {
+    return &io->storage.io;
+}
 
 // Lifecycle notes:
 //
@@ -227,25 +232,6 @@ zx_status_t fdio_default_unwrap(fdio_t* io, zx_handle_t* handles, uint32_t* type
 zx_status_t fdio_default_shutdown(fdio_t* io, int how);
 ssize_t fdio_default_posix_ioctl(fdio_t* io, int req, va_list va);
 zx_status_t fdio_default_get_vmo(fdio_t* io, int flags, zx_handle_t* out);
-
-// Initial memory layout for types that bridge between |fdio_t| and |zxio_t|.
-//
-// Every |fdio_t| implementation starts with an embedded |fdio_t|, which the
-// callers use to find the fdio |ops| table. There are several |fdio_t|
-// implementations that use zxio as a backed. All of them have a memory layout
-// that matches this structure. Defining this structure lets us define
-// most of the fdio ops that use the zxio backend in a generic way.
-//
-// Will be removed once the transition to the zxio backend is complete.
-typedef struct fdio_zxio {
-    fdio_t io;
-    zxio_storage_t storage;
-} fdio_zxio_t;
-
-static inline zxio_t* fdio_get_zxio(fdio_t* io) {
-    fdio_zxio_t* wrapper = (fdio_zxio_t*)io;
-    return &wrapper->storage.io;
-}
 
 typedef struct {
     mtx_t lock;
