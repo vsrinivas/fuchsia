@@ -7,6 +7,7 @@
 #include <wlan/common/bitfield.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/logging.h>
+#include <wlan/mlme/client/client_factory.h>
 #include <wlan/mlme/client/scanner.h>
 #include <wlan/mlme/client/station.h>
 #include <wlan/mlme/debug.h>
@@ -100,9 +101,9 @@ zx_status_t ClientMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
 
     // TODO(hahnr): Keys should not be handled in the STA and instead in the MLME.
     // For now, shortcut into the STA and leave this change as a follow-up.
-    if (msg.As<wlan_mlme::SetKeysRequest>()) {
+    if (auto setkeys_req = msg.As<wlan_mlme::SetKeysRequest>()) {
         if (sta_ != nullptr) {
-            return sta_->HandleAnyMlmeMsg(msg);
+            return sta_->SetKeys(*setkeys_req->body()->keylist);
         } else {
             warnf("rx'ed MLME message (ordinal: %u) before authenticating with a BSS\n",
                   msg.ordinal());
@@ -131,16 +132,29 @@ zx_status_t ClientMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
         }
 
         // Let station handle the request itself.
-        sta_->HandleAnyMlmeMsg(*auth_req);
-        return ZX_OK;
+        return sta_->Authenticate(auth_req->body()->auth_type,
+                                  auth_req->body()->auth_failure_timeout);
     }
 
     // If the STA exists, forward all incoming MLME messages.
-    if (sta_ != nullptr) {
-        sta_->HandleAnyMlmeMsg(msg);
+    if (sta_ == nullptr) {
+        warnf("rx'ed MLME message (ordinal: %u) before authenticating with a BSS\n", msg.ordinal());
+        return ZX_ERR_BAD_STATE;
+    }
+
+    if (auto deauth_req = msg.As<wlan_mlme::DeauthenticateRequest>()) {
+        return sta_->Deauthenticate(deauth_req->body()->reason_code);
+    } else if (auto assoc_req = msg.As<wlan_mlme::AssociateRequest>()) {
+        return sta_->Associate(*assoc_req->body()->rsn);
+    } else if (auto eapol_req = msg.As<wlan_mlme::EapolRequest>()) {
+        auto body = eapol_req->body();
+        return sta_->SendEapolFrame(*body->data, common::MacAddr(body->src_addr),
+                                    common::MacAddr(body->dst_addr));
+    } else if (auto setctrlport_req = msg.As<wlan_mlme::SetControlledPortRequest>()) {
+        sta_->UpdateControlledPort(setctrlport_req->body()->state);
         return ZX_OK;
     } else {
-        warnf("rx'ed MLME message (ordinal: %u) before authenticating with a BSS\n", msg.ordinal());
+        warnf("rx'ed unsupported MLME message for client; ordinal: %u\n", msg.ordinal());
         return ZX_ERR_BAD_STATE;
     }
 }
@@ -212,19 +226,9 @@ zx_status_t ClientMlme::HandleMlmeJoinReq(const MlmeMsg<wlan_mlme::JoinRequest>&
 zx_status_t ClientMlme::SpawnStation() {
     if (!join_ctx_.has_value()) { return ZX_ERR_BAD_STATE; }
 
-    fbl::unique_ptr<Timer> timer;
-    ObjectId timer_id;
-    timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
-    timer_id.set_target(to_enum_type(ObjectTarget::kStation));
-    timer_id.set_mac(join_ctx_->bssid().ToU64());
-    auto status = device_->GetTimer(ToPortKey(PortKeyType::kMlme, timer_id.val()), &timer);
-    if (status != ZX_OK) {
-        errorf("could not create STA timer: %d\n", status);
-        return status;
-    }
-
-    sta_.reset(new Station(device_, TimerManager(std::move(timer)), chan_sched_.get(),
-                           &join_ctx_.value()));
+    auto client = CreateDefaultClient(device_, &join_ctx_.value(), chan_sched_.get());
+    if (!client) { return ZX_ERR_INTERNAL; }
+    sta_ = std::move(client);
     return ZX_OK;
 }
 
@@ -245,7 +249,7 @@ void ClientMlme::OnChannelHandlerImpl::HandleOnChannelFrame(fbl::unique_ptr<Pack
         }
     }
 
-    if (mlme_->sta_ != nullptr) { mlme_->sta_->HandleAnyWlanFrame(std::move(packet)); }
+    if (mlme_->sta_ != nullptr) { mlme_->sta_->HandleWlanFrame(std::move(packet)); }
 }
 
 void ClientMlme::OnChannelHandlerImpl::ReturnedOnChannel() {

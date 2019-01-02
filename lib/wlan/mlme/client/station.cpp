@@ -58,32 +58,7 @@ void Station::Reset() {
     bu_queue_.clear();
 }
 
-zx_status_t Station::HandleAnyMlmeMsg(const BaseMlmeMsg& mlme_msg) {
-    WLAN_STATS_INC(svc_msg.in);
-
-    if (auto auth_req = mlme_msg.As<wlan_mlme::AuthenticateRequest>()) {
-        return HandleMlmeAuthReq(*auth_req);
-    } else if (auto deauth_req = mlme_msg.As<wlan_mlme::DeauthenticateRequest>()) {
-        return HandleMlmeDeauthReq(*deauth_req);
-    } else if (auto assoc_req = mlme_msg.As<wlan_mlme::AssociateRequest>()) {
-        return HandleMlmeAssocReq(*assoc_req);
-    } else if (auto eapol_req = mlme_msg.As<wlan_mlme::EapolRequest>()) {
-        return HandleMlmeEapolReq(*eapol_req);
-    } else if (auto setkeys_req = mlme_msg.As<wlan_mlme::SetKeysRequest>()) {
-        return HandleMlmeSetKeysReq(*setkeys_req);
-    } else if (auto set_ctrl_port_req = mlme_msg.As<wlan_mlme::SetControlledPortRequest>()) {
-        if (set_ctrl_port_req->body()->state == wlan_mlme::ControlledPortState::OPEN) {
-            controlled_port_ = eapol::PortState::kOpen;
-            device_->SetStatus(ETHMAC_STATUS_ONLINE);
-        } else {
-            controlled_port_ = eapol::PortState::kBlocked;
-            device_->SetStatus(0);
-        }
-    }
-    return ZX_OK;
-}
-
-zx_status_t Station::HandleAnyWlanFrame(fbl::unique_ptr<Packet> pkt) {
+zx_status_t Station::HandleWlanFrame(fbl::unique_ptr<Packet> pkt) {
     ZX_DEBUG_ASSERT(pkt->peer() == Packet::Peer::kWlan);
     WLAN_STATS_INC(rx_frame.in);
     WLAN_STATS_ADD(pkt->len(), rx_frame.in_bytes);
@@ -92,18 +67,18 @@ zx_status_t Station::HandleAnyWlanFrame(fbl::unique_ptr<Packet> pkt) {
         auto mgmt_frame = possible_mgmt_frame.CheckLength();
         if (!mgmt_frame) { return ZX_ERR_BUFFER_TOO_SMALL; }
 
-        HandleAnyMgmtFrame(mgmt_frame.IntoOwned(std::move(pkt)));
+        HandleMgmtFrame(mgmt_frame.IntoOwned(std::move(pkt)));
     } else if (auto possible_data_frame = DataFrameView<>::CheckType(pkt.get())) {
         auto data_frame = possible_data_frame.CheckLength();
         if (!data_frame) { return ZX_ERR_BUFFER_TOO_SMALL; }
 
-        HandleAnyDataFrame(data_frame.IntoOwned(std::move(pkt)));
+        HandleDataFrame(data_frame.IntoOwned(std::move(pkt)));
     }
 
     return ZX_OK;
 }
 
-zx_status_t Station::HandleAnyMgmtFrame(MgmtFrame<>&& frame) {
+zx_status_t Station::HandleMgmtFrame(MgmtFrame<>&& frame) {
     auto mgmt_frame = frame.View();
 
     WLAN_STATS_INC(mgmt_frame.in);
@@ -142,7 +117,7 @@ zx_status_t Station::HandleAnyMgmtFrame(MgmtFrame<>&& frame) {
     return ZX_OK;
 }
 
-zx_status_t Station::HandleAnyDataFrame(DataFrame<>&& frame) {
+zx_status_t Station::HandleDataFrame(DataFrame<>&& frame) {
     auto data_frame = frame.View();
     if (kFinspectEnabled) { DumpDataFrame(data_frame); }
 
@@ -163,8 +138,9 @@ zx_status_t Station::HandleAnyDataFrame(DataFrame<>&& frame) {
     return ZX_OK;
 }
 
-zx_status_t Station::HandleMlmeAuthReq(const MlmeMsg<wlan_mlme::AuthenticateRequest>& req) {
+zx_status_t Station::Authenticate(wlan_mlme::AuthenticationTypes auth_type, uint32_t timeout) {
     debugfn();
+    WLAN_STATS_INC(svc_msg.in);
 
     if (state_ != WlanState::kIdle) {
         errorf("received AUTHENTICATE.request in unexpected state: %u\n", state_);
@@ -172,7 +148,7 @@ zx_status_t Station::HandleMlmeAuthReq(const MlmeMsg<wlan_mlme::AuthenticateRequ
                                         wlan_mlme::AuthenticateResultCodes::REFUSED);
     }
 
-    if (req.body()->auth_type != wlan_mlme::AuthenticationTypes::OPEN_SYSTEM) {
+    if (auth_type != wlan_mlme::AuthenticationTypes::OPEN_SYSTEM) {
         errorf("only OpenSystem authentication is supported\n");
         return service::SendAuthConfirm(device_, join_ctx_->bssid(),
                                         wlan_mlme::AuthenticateResultCodes::REFUSED);
@@ -199,7 +175,7 @@ zx_status_t Station::HandleMlmeAuthReq(const MlmeMsg<wlan_mlme::AuthenticateRequ
     auth->auth_txn_seq_number = 1;
     auth->status_code = 0;  // Reserved: explicitly set to 0
 
-    zx::time deadline = deadline_after_bcn_period(req.body()->auth_failure_timeout);
+    zx::time deadline = deadline_after_bcn_period(timeout);
     auto status = timer_mgr_.Schedule(deadline, &auth_timeout_);
     if (status != ZX_OK) {
         errorf("could not set authentication timeout event: %s\n", zx_status_get_string(status));
@@ -224,22 +200,23 @@ zx_status_t Station::HandleMlmeAuthReq(const MlmeMsg<wlan_mlme::AuthenticateRequ
     return status;
 }
 
-zx_status_t Station::HandleMlmeDeauthReq(const MlmeMsg<wlan_mlme::DeauthenticateRequest>& req) {
+zx_status_t Station::Deauthenticate(wlan_mlme::ReasonCode reason_code) {
     debugfn();
+    WLAN_STATS_INC(svc_msg.in);
 
     if (state_ != WlanState::kAssociated && state_ != WlanState::kAuthenticated) {
         errorf("not associated or authenticated; ignoring deauthenticate request\n");
         return ZX_OK;
     }
 
-    auto status = SendDeauthFrame(req.body()->reason_code);
+    auto status = SendDeauthFrame(reason_code);
     if (status != ZX_OK) {
         errorf("could not send deauth packet: %d\n", status);
         // Deauthenticate nevertheless. IEEE isn't clear on what we are supposed to do.
     }
     infof("deauthenticating from \"%s\" (%s), reason=%hu\n",
           debug::ToAsciiOrHexStr(*join_ctx_->bss()->ssid).c_str(),
-          join_ctx_->bssid().ToString().c_str(), req.body()->reason_code);
+          join_ctx_->bssid().ToString().c_str(), reason_code);
 
     if (state_ == WlanState::kAssociated) { device_->ClearAssoc(join_ctx_->bssid()); }
     state_ = WlanState::kIdle;
@@ -251,8 +228,9 @@ zx_status_t Station::HandleMlmeDeauthReq(const MlmeMsg<wlan_mlme::Deauthenticate
     return ZX_OK;
 }
 
-zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateRequest>& req) {
+zx_status_t Station::Associate(Span<const uint8_t> rsne) {
     debugfn();
+    WLAN_STATS_INC(svc_msg.in);
 
     if (state_ != WlanState::kAuthenticated) {
         if (state_ == WlanState::kAssociated) {
@@ -300,7 +278,7 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
     rates_writer.WriteExtendedSupportedRates(&elem_w);
 
     // Write RSNE from MLME-Association.request if available.
-    if (req.body()->rsn) { elem_w.Write(*req.body()->rsn); }
+    if (!rsne.empty()) { elem_w.Write(rsne); }
 
     if (join_ctx_->IsHt() || join_ctx_->IsVht()) {
         auto ht_cap = client_capability.ht_cap.value_or(HtCapabilities{});
@@ -945,15 +923,17 @@ zx_status_t Station::SendAddBaRequestFrame() {
     return ZX_OK;
 }
 
-zx_status_t Station::HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRequest>& req) {
+zx_status_t Station::SendEapolFrame(Span<const uint8_t> eapol_frame, const common::MacAddr& src,
+                                    const common::MacAddr& dst) {
     debugfn();
+    WLAN_STATS_INC(svc_msg.in);
 
     if (state_ != WlanState::kAssociated) {
         debugf("dropping MLME-EAPOL.request while not being associated. STA in state %d\n", state_);
         return ZX_OK;
     }
 
-    const size_t llc_payload_len = req.body()->data->size();
+    const size_t llc_payload_len = eapol_frame.size_bytes();
     const size_t max_frame_len =
         DataFrameHeader::max_len() + LlcHeader::max_len() + llc_payload_len;
     auto packet = GetWlanPacket(max_frame_len);
@@ -967,9 +947,9 @@ zx_status_t Station::HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRequest>& 
     data_hdr->fc.set_type(FrameType::kData);
     data_hdr->fc.set_to_ds(1);
     data_hdr->fc.set_protected_frame(needs_protection);
-    data_hdr->addr1.Set(req.body()->dst_addr.data());
-    data_hdr->addr2.Set(req.body()->src_addr.data());
-    data_hdr->addr3.Set(req.body()->dst_addr.data());
+    data_hdr->addr1 = dst;
+    data_hdr->addr2 = src;
+    data_hdr->addr3 = dst;
     SetSeqNo(data_hdr, &seq_);
 
     auto llc_hdr = w.Write<LlcHeader>();
@@ -978,7 +958,7 @@ zx_status_t Station::HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRequest>& 
     llc_hdr->control = kLlcUnnumberedInformation;
     std::memcpy(llc_hdr->oui, kLlcOui, sizeof(llc_hdr->oui));
     llc_hdr->protocol_id = htobe16(kEapolProtocolId);
-    w.Write({req.body()->data->data(), llc_payload_len});
+    w.Write(eapol_frame);
 
     packet->set_len(w.WrittenBytes());
 
@@ -995,10 +975,11 @@ zx_status_t Station::HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRequest>& 
     return status;
 }
 
-zx_status_t Station::HandleMlmeSetKeysReq(const MlmeMsg<wlan_mlme::SetKeysRequest>& req) {
+zx_status_t Station::SetKeys(Span<const wlan_mlme::SetKeyDescriptor> keys) {
     debugfn();
+    WLAN_STATS_INC(svc_msg.in);
 
-    for (auto& keyDesc : *req.body()->keylist) {
+    for (auto& keyDesc : keys) {
         auto key_config = ToKeyConfig(keyDesc);
         if (!key_config.has_value()) { return ZX_ERR_NOT_SUPPORTED; }
 
@@ -1010,6 +991,18 @@ zx_status_t Station::HandleMlmeSetKeysReq(const MlmeMsg<wlan_mlme::SetKeysReques
     }
 
     return ZX_OK;
+}
+
+void Station::UpdateControlledPort(wlan_mlme::ControlledPortState state) {
+    WLAN_STATS_INC(svc_msg.in);
+
+    if (state == wlan_mlme::ControlledPortState::OPEN) {
+        controlled_port_ = eapol::PortState::kOpen;
+        device_->SetStatus(ETHMAC_STATUS_ONLINE);
+    } else {
+        controlled_port_ = eapol::PortState::kBlocked;
+        device_->SetStatus(0);
+    }
 }
 
 void Station::PreSwitchOffChannel() {

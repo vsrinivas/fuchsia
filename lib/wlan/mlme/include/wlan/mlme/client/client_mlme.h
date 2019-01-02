@@ -6,6 +6,7 @@
 #define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_CLIENT_CLIENT_MLME_H_
 
 #include <wlan/mlme/client/channel_scheduler.h>
+#include <wlan/mlme/client/client_interface.h>
 #include <wlan/mlme/client/join_context.h>
 #include <wlan/mlme/mlme.h>
 #include <wlan/mlme/service.h>
@@ -63,7 +64,7 @@ class ClientMlme : public Mlme {
     fbl::unique_ptr<ChannelScheduler> chan_sched_;
     fbl::unique_ptr<Scanner> scanner_;
     // TODO(tkilbourn): track other STAs
-    fbl::unique_ptr<Station> sta_;
+    fbl::unique_ptr<ClientInterface> sta_;
     // The BSS the MLME synchronized with.
     // The MLME must synchronize to a BSS before it can start the association flow.
     std::optional<JoinContext> join_ctx_;

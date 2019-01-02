@@ -7,6 +7,7 @@
 
 #include <wlan/mlme/assoc_context.h>
 #include <wlan/mlme/client/channel_scheduler.h>
+#include <wlan/mlme/client/client_interface.h>
 #include <wlan/mlme/client/join_context.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/eapol.h>
@@ -33,10 +34,11 @@ namespace wlan {
 
 class Packet;
 
-class Station {
+class Station : public ClientInterface {
    public:
     Station(DeviceInterface* device, TimerManager&& timer_mgr, ChannelScheduler* chan_sched,
             JoinContext* join_ctx);
+    ~Station() = default;
 
     enum class WlanState {
         kIdle,
@@ -46,20 +48,23 @@ class Station {
         // 802.1X's controlled port is not handled here.
     };
 
-    void Reset();
+    zx_status_t HandleEthFrame(EthFrame&&) override;
+    zx_status_t HandleWlanFrame(fbl::unique_ptr<Packet>) override;
+    zx_status_t HandleTimeout() override;
+    zx_status_t Authenticate(::fuchsia::wlan::mlme::AuthenticationTypes auth_type,
+                             uint32_t timeout) override;
+    zx_status_t Deauthenticate(::fuchsia::wlan::mlme::ReasonCode reason_code) override;
+    zx_status_t Associate(Span<const uint8_t> rsne) override;
+    zx_status_t SendEapolFrame(Span<const uint8_t> eapol_frame, const common::MacAddr& src,
+                               const common::MacAddr& dst) override;
+    zx_status_t SetKeys(Span<const ::fuchsia::wlan::mlme::SetKeyDescriptor> keys) override;
+    void UpdateControlledPort(::fuchsia::wlan::mlme::ControlledPortState state) override;
 
-    zx_status_t SendKeepAliveResponse();
+    void PreSwitchOffChannel() override;
+    void BackToMainChannel() override;
 
-    zx_status_t HandleAnyMlmeMsg(const BaseMlmeMsg&);
-    zx_status_t HandleEthFrame(EthFrame&&);
-    zx_status_t HandleAnyWlanFrame(fbl::unique_ptr<Packet>);
-    zx_status_t HandleTimeout();
-
-    void PreSwitchOffChannel();
-    void BackToMainChannel();
-
-    ::fuchsia::wlan::stats::ClientMlmeStats stats() const;
-    void ResetStats();
+    ::fuchsia::wlan::stats::ClientMlmeStats stats() const override;
+    void ResetStats() override;
 
    private:
     static constexpr size_t kAssocBcnCountTimeout = 20;
@@ -70,8 +75,10 @@ class Station {
     // TODO(NET-687): Find good BU limit.
     static constexpr size_t kMaxPowerSavingQueueSize = 30;
 
-    zx_status_t HandleAnyMgmtFrame(MgmtFrame<>&&);
-    zx_status_t HandleAnyDataFrame(DataFrame<>&&);
+    void Reset();
+
+    zx_status_t HandleMgmtFrame(MgmtFrame<>&&);
+    zx_status_t HandleDataFrame(DataFrame<>&&);
     bool ShouldDropMgmtFrame(const MgmtFrameView<>&);
     void HandleBeacon(MgmtFrame<Beacon>&&);
     zx_status_t HandleAuthentication(MgmtFrame<Authentication>&&);
@@ -87,15 +94,8 @@ class Station {
     zx_status_t HandleAmsduFrame(DataFrame<AmsduSubframeHeader>&&);
     zx_status_t HandleAddBaRequest(const AddBaRequestFrame&);
 
-    zx_status_t HandleMlmeJoinReq(const MlmeMsg<::fuchsia::wlan::mlme::JoinRequest>& req);
-    zx_status_t HandleMlmeAuthReq(const MlmeMsg<::fuchsia::wlan::mlme::AuthenticateRequest>& req);
-    zx_status_t HandleMlmeDeauthReq(
-        const MlmeMsg<::fuchsia::wlan::mlme::DeauthenticateRequest>& req);
-    zx_status_t HandleMlmeAssocReq(const MlmeMsg<::fuchsia::wlan::mlme::AssociateRequest>& req);
-    zx_status_t HandleMlmeEapolReq(const MlmeMsg<::fuchsia::wlan::mlme::EapolRequest>& req);
-    zx_status_t HandleMlmeSetKeysReq(const MlmeMsg<::fuchsia::wlan::mlme::SetKeysRequest>& req);
-
     zx_status_t SendAddBaRequestFrame();
+    zx_status_t SendKeepAliveResponse();
 
     zx_status_t SendCtrlFrame(fbl::unique_ptr<Packet> packet, CBW cbw, PHY phy);
     zx_status_t SendMgmtFrame(fbl::unique_ptr<Packet> packet);
