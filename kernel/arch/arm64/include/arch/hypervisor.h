@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <arch/arm64/el2_state.h>
+#include <arch/arm64/hypervisor/el2_state.h>
 #include <fbl/ref_ptr.h>
 #include <ktl/unique_ptr.h>
 #include <hypervisor/guest_physical_address_space.h>
@@ -63,41 +63,16 @@ struct GichState {
     hypervisor::InterruptTracker<kNumInterrupts> interrupt_tracker;
     // Tracks active interrupts.
     bitmap::RawBitmapGeneric<bitmap::FixedStorage<kNumInterrupts>> active_interrupts;
-
-    // GICH state to be restored between VM exits.
-    uint32_t num_aprs;
-    uint32_t num_lrs;
-    uint32_t vmcr;
-    uint64_t elrsr;
-    uint32_t apr[kNumGroups][4] = {};
-    uint64_t lr[64] = {};
 };
 
-// Loads a GICH within a given scope.
+// Loads GICH within a given scope.
 class AutoGich {
 public:
-    AutoGich(GichState* gich_state);
+    AutoGich(IchState* ich_state, bool pending);
     ~AutoGich();
 
 private:
-    GichState* gich_state_;
-};
-
-// Provides a smart pointer to an EL2State allocated in its own page.
-//
-// We allocate an EL2State into its own page as the structure is passed between
-// EL1 and EL2, which have different address spaces mappings. This ensures that
-// EL2State will not cross a page boundary and be incorrectly accessed in EL2.
-class El2StatePtr {
-public:
-    zx_status_t Alloc();
-
-    paddr_t PhysicalAddress() const { return page_.PhysicalAddress(); }
-    El2State* operator->() const { return state_; }
-
-private:
-    hypervisor::Page page_;
-    El2State* state_ = nullptr;
+    IchState* ich_state_;
 };
 
 class Vcpu {
@@ -117,8 +92,11 @@ private:
     const uint8_t vpid_;
     const thread_t* thread_;
     fbl::atomic_bool running_;
+    // We allocate El2State in its own page as it is passed between EL1 and EL2,
+    // which have different address space mappings. This ensures that El2State
+    // will not cross a page boundary and be incorrectly accessed in EL2.
+    hypervisor::PagePtr<El2State> el2_state_;
     GichState gich_state_;
-    El2StatePtr el2_state_;
     uint64_t hcr_;
 
     Vcpu(Guest* guest, uint8_t vpid, const thread_t* thread);

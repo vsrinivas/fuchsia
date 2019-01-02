@@ -6,7 +6,6 @@
 
 #include "el2_cpu_state_priv.h"
 
-#include <arch/arm64/el2_state.h>
 #include <arch/arm64/mmu.h>
 #include <arch/hypervisor.h>
 #include <dev/interrupt.h>

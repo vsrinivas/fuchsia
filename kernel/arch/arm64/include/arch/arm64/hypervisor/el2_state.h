@@ -92,6 +92,19 @@
 #define HS_FP_STATE         (HS_X18 + HS_X(HS_NUM_REGS) + 8)
 #define HS_SYSTEM_STATE     (HS_FP_STATE + FS_FPCR + 8)
 
+#define IS_NUM_APRS         0
+#define IS_NUM_LRS          (IS_NUM_APRS + 1)
+#define IS_VMCR             (IS_NUM_LRS + 7)
+#define IS_MISR             (IS_VMCR + 8)
+#define IS_ELRSR            (IS_MISR + 8)
+#define IS_AP0R0            (IS_ELRSR + 8)
+#define IS_MAX_APRS         4
+#define IS_APR(group, num)  (IS_AP0R0 + ((((group) * IS_MAX_APRS) + (num)) * 8))
+#define IS_MAX_APR_GROUPS   2
+#define IS_LR0              IS_APR(IS_MAX_APR_GROUPS - 1, IS_MAX_APRS)
+#define IS_LR(num)          (IS_LR0 + ((num) * 8))
+#define IS_MAX_LRS          64
+
 // clang-format on
 
 #ifndef __ASSEMBLER__
@@ -157,62 +170,84 @@ struct HostState {
     SystemState system_state;
 };
 
+struct IchState {
+    uint8_t num_aprs;
+    uint8_t num_lrs;
+    algn32_t vmcr;
+    algn32_t misr;
+    uint64_t elrsr;
+    uint64_t apr[IS_MAX_APR_GROUPS][IS_MAX_APRS];
+    uint64_t lr[IS_MAX_LRS];
+};
+
 struct El2State {
     bool resume;
     GuestState guest_state;
     HostState host_state;
+    IchState ich_state;
 };
 
-static_assert(sizeof(El2State) <= PAGE_SIZE, "");
+static_assert(sizeof(El2State) <= PAGE_SIZE);
 
-static_assert(__offsetof(FpState, q) == FS_Q0, "");
-static_assert(__offsetof(FpState, q[FS_NUM_REGS - 1]) == FS_Q(FS_NUM_REGS - 1), "");
-static_assert(__offsetof(FpState, fpsr) == FS_FPSR, "");
-static_assert(__offsetof(FpState, fpcr) == FS_FPCR, "");
+static_assert(offsetof(FpState, q) == FS_Q0);
+static_assert(offsetof(FpState, q[FS_NUM_REGS - 1]) == FS_Q(FS_NUM_REGS - 1));
+static_assert(offsetof(FpState, fpsr) == FS_FPSR);
+static_assert(offsetof(FpState, fpcr) == FS_FPCR);
 
-static_assert(__offsetof(SystemState, sp_el0) == SS_SP_EL0, "");
-static_assert(__offsetof(SystemState, tpidr_el0) == SS_TPIDR_EL0, "");
-static_assert(__offsetof(SystemState, tpidrro_el0) == SS_TPIDRRO_EL0, "");
-static_assert(__offsetof(SystemState, cntkctl_el1) == SS_CNTKCTL_EL1, "");
-static_assert(__offsetof(SystemState, contextidr_el1) == SS_CONTEXTIDR_EL1, "");
-static_assert(__offsetof(SystemState, cpacr_el1) == SS_CPACR_EL1, "");
-static_assert(__offsetof(SystemState, csselr_el1) == SS_CSSELR_EL1, "");
-static_assert(__offsetof(SystemState, elr_el1) == SS_ELR_EL1, "");
-static_assert(__offsetof(SystemState, esr_el1) == SS_ESR_EL1, "");
-static_assert(__offsetof(SystemState, far_el1) == SS_FAR_EL1, "");
-static_assert(__offsetof(SystemState, mair_el1) == SS_MAIR_EL1, "");
-static_assert(__offsetof(SystemState, mdscr_el1) == SS_MDSCR_EL1, "");
-static_assert(__offsetof(SystemState, par_el1) == SS_PAR_EL1, "");
-static_assert(__offsetof(SystemState, sctlr_el1) == SS_SCTLR_EL1, "");
-static_assert(__offsetof(SystemState, sp_el1) == SS_SP_EL1, "");
-static_assert(__offsetof(SystemState, spsr_el1) == SS_SPSR_EL1, "");
-static_assert(__offsetof(SystemState, tcr_el1) == SS_TCR_EL1, "");
-static_assert(__offsetof(SystemState, tpidr_el1) == SS_TPIDR_EL1, "");
-static_assert(__offsetof(SystemState, ttbr0_el1) == SS_TTBR0_EL1, "");
-static_assert(__offsetof(SystemState, ttbr1_el1) == SS_TTBR1_EL1, "");
-static_assert(__offsetof(SystemState, vbar_el1) == SS_VBAR_EL1, "");
-static_assert(__offsetof(SystemState, elr_el2) == SS_ELR_EL2, "");
-static_assert(__offsetof(SystemState, spsr_el2) == SS_SPSR_EL2, "");
-static_assert(__offsetof(SystemState, vmpidr_el2) == SS_VMPIDR_EL2, "");
+static_assert(offsetof(SystemState, sp_el0) == SS_SP_EL0);
+static_assert(offsetof(SystemState, tpidr_el0) == SS_TPIDR_EL0);
+static_assert(offsetof(SystemState, tpidrro_el0) == SS_TPIDRRO_EL0);
+static_assert(offsetof(SystemState, cntkctl_el1) == SS_CNTKCTL_EL1);
+static_assert(offsetof(SystemState, contextidr_el1) == SS_CONTEXTIDR_EL1);
+static_assert(offsetof(SystemState, cpacr_el1) == SS_CPACR_EL1);
+static_assert(offsetof(SystemState, csselr_el1) == SS_CSSELR_EL1);
+static_assert(offsetof(SystemState, elr_el1) == SS_ELR_EL1);
+static_assert(offsetof(SystemState, esr_el1) == SS_ESR_EL1);
+static_assert(offsetof(SystemState, far_el1) == SS_FAR_EL1);
+static_assert(offsetof(SystemState, mair_el1) == SS_MAIR_EL1);
+static_assert(offsetof(SystemState, mdscr_el1) == SS_MDSCR_EL1);
+static_assert(offsetof(SystemState, par_el1) == SS_PAR_EL1);
+static_assert(offsetof(SystemState, sctlr_el1) == SS_SCTLR_EL1);
+static_assert(offsetof(SystemState, sp_el1) == SS_SP_EL1);
+static_assert(offsetof(SystemState, spsr_el1) == SS_SPSR_EL1);
+static_assert(offsetof(SystemState, tcr_el1) == SS_TCR_EL1);
+static_assert(offsetof(SystemState, tpidr_el1) == SS_TPIDR_EL1);
+static_assert(offsetof(SystemState, ttbr0_el1) == SS_TTBR0_EL1);
+static_assert(offsetof(SystemState, ttbr1_el1) == SS_TTBR1_EL1);
+static_assert(offsetof(SystemState, vbar_el1) == SS_VBAR_EL1);
+static_assert(offsetof(SystemState, elr_el2) == SS_ELR_EL2);
+static_assert(offsetof(SystemState, spsr_el2) == SS_SPSR_EL2);
+static_assert(offsetof(SystemState, vmpidr_el2) == SS_VMPIDR_EL2);
 
-static_assert(__offsetof(El2State, resume) == ES_RESUME, "");
+static_assert(offsetof(El2State, resume) == ES_RESUME);
 
-static_assert(__offsetof(El2State, guest_state.x) == GS_X0, "");
-static_assert(__offsetof(El2State, guest_state.x[GS_NUM_REGS - 1]) == GS_X(GS_NUM_REGS - 1), "");
-static_assert(__offsetof(El2State, guest_state.fp_state) == GS_FP_STATE, "");
-static_assert(__offsetof(El2State, guest_state.fp_state.q) == GS_FP_STATE + FS_Q0, "");
-static_assert(__offsetof(El2State, guest_state.system_state) == GS_SYSTEM_STATE, "");
-static_assert(__offsetof(El2State, guest_state.cntv_ctl_el0) == GS_CNTV_CTL_EL0, "");
-static_assert(__offsetof(El2State, guest_state.cntv_cval_el0) == GS_CNTV_CVAL_EL0, "");
-static_assert(__offsetof(El2State, guest_state.esr_el2) == GS_ESR_EL2, "");
-static_assert(__offsetof(El2State, guest_state.far_el2) == GS_FAR_EL2, "");
-static_assert(__offsetof(El2State, guest_state.hpfar_el2) == GS_HPFAR_EL2, "");
+static_assert(offsetof(El2State, guest_state.x) == GS_X0);
+static_assert(offsetof(El2State, guest_state.x[GS_NUM_REGS - 1]) == GS_X(GS_NUM_REGS - 1));
+static_assert(offsetof(El2State, guest_state.fp_state) == GS_FP_STATE);
+static_assert(offsetof(El2State, guest_state.fp_state.q) == GS_FP_STATE + FS_Q0);
+static_assert(offsetof(El2State, guest_state.system_state) == GS_SYSTEM_STATE);
+static_assert(offsetof(El2State, guest_state.cntv_ctl_el0) == GS_CNTV_CTL_EL0);
+static_assert(offsetof(El2State, guest_state.cntv_cval_el0) == GS_CNTV_CVAL_EL0);
+static_assert(offsetof(El2State, guest_state.esr_el2) == GS_ESR_EL2);
+static_assert(offsetof(El2State, guest_state.far_el2) == GS_FAR_EL2);
+static_assert(offsetof(El2State, guest_state.hpfar_el2) == GS_HPFAR_EL2);
 
-static_assert(__offsetof(El2State, host_state.x) == HS_X18, "");
-static_assert(__offsetof(El2State, host_state.x[HS_NUM_REGS - 1]) == HS_X18 + HS_X(HS_NUM_REGS - 1), "");
-static_assert(__offsetof(El2State, host_state.fp_state) == HS_FP_STATE, "");
-static_assert(__offsetof(El2State, host_state.fp_state.q) == HS_FP_STATE + FS_Q0, "");
-static_assert(__offsetof(El2State, host_state.system_state) == HS_SYSTEM_STATE, "");
+static_assert(offsetof(El2State, host_state.x) == HS_X18);
+static_assert(offsetof(El2State, host_state.x[HS_NUM_REGS - 1]) == HS_X18 + HS_X(HS_NUM_REGS - 1));
+static_assert(offsetof(El2State, host_state.fp_state) == HS_FP_STATE);
+static_assert(offsetof(El2State, host_state.fp_state.q) == HS_FP_STATE + FS_Q0);
+static_assert(offsetof(El2State, host_state.system_state) == HS_SYSTEM_STATE);
+
+static_assert(offsetof(IchState, num_aprs) == IS_NUM_APRS);
+static_assert(offsetof(IchState, num_lrs) == IS_NUM_LRS);
+static_assert(offsetof(IchState, vmcr) == IS_VMCR);
+static_assert(offsetof(IchState, misr) == IS_MISR);
+static_assert(offsetof(IchState, elrsr) == IS_ELRSR);
+static_assert(offsetof(IchState, apr) == IS_AP0R0);
+static_assert(offsetof(IchState, apr[IS_MAX_APR_GROUPS - 1][IS_MAX_APRS - 1]) ==
+    IS_APR(IS_MAX_APR_GROUPS - 1, IS_MAX_APRS - 1));
+static_assert(offsetof(IchState, lr) == IS_LR0);
+static_assert(offsetof(IchState, lr[IS_MAX_LRS - 1]) == IS_LR(IS_MAX_LRS - 1));
 
 __BEGIN_CDECLS
 

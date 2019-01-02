@@ -7,64 +7,33 @@
 
 #pragma once
 
-#include <vm/pmm.h>
 #include <zircon/types.h>
+
+struct IchState;
 
 // GIC HW interface
 struct arm_gic_hw_interface_ops {
-    void (*write_gich_hcr)(uint32_t val);
-    uint32_t (*read_gich_vtr)();
-    uint32_t (*default_gich_vmcr)();
-    uint32_t (*read_gich_vmcr)();
-    void (*write_gich_vmcr)(uint32_t val);
-    uint32_t (*read_gich_misr)();
-    uint64_t (*read_gich_elrsr)();
-    uint32_t (*read_gich_apr)(uint8_t grp, uint32_t idx);
-    void (*write_gich_apr)(uint8_t grp, uint32_t idx, uint32_t val);
-    uint64_t (*read_gich_lr)(uint32_t idx);
-    void (*write_gich_lr)(uint32_t idx, uint64_t val);
     zx_status_t (*get_gicv)(paddr_t* gicv_paddr);
+    void (*read_gich_state)(IchState* state);
+    void (*write_gich_state)(IchState* state, uint32_t hcr);
+    uint32_t (*default_gich_vmcr)();
     uint64_t (*get_lr_from_vector)(bool hw, uint8_t prio, uint32_t vector);
     uint32_t (*get_vector_from_lr)(uint64_t lr);
-    uint32_t (*get_num_pres)();
-    uint32_t (*get_num_lrs)();
+    uint8_t (*get_num_pres)();
+    uint8_t (*get_num_lrs)();
 };
-
-// Writes to the GICH_HCR register.
-void gic_write_gich_hcr(uint32_t val);
-
-// Returns the GICH_VTR value.
-uint32_t gic_read_gich_vtr();
-
-// Returns the default GICH_VMCR value. Used to initialize GICH_VMCR.
-uint32_t gic_default_gich_vmcr();
-
-// Returns the GICH_VMCR value.
-uint32_t gic_read_gich_vmcr();
-
-// Writes to the GICH_VMCR register.
-void gic_write_gich_vmcr(uint32_t val);
-
-// Returns the GICH_MISR value.
-uint32_t gic_read_gich_misr();
-
-// Returns the GICH_ELRS value.
-uint64_t gic_read_gich_elrsr();
-
-// Returns the GICH_APR value.
-uint32_t gic_read_gich_apr(uint8_t grp, uint32_t idx);
-
-// Writes to the GICH_APR register.
-void gic_write_gich_apr(uint8_t grp, uint32_t idx, uint32_t val);
-
-// Returns the GICH_LRn value.
-uint64_t gic_read_gich_lr(uint32_t idx);
-
-// Writes to the GICH_LR register.
-void gic_write_gich_lr(uint32_t idx, uint64_t val);
 
 // Get the GICV physical address.
 zx_status_t gic_get_gicv(paddr_t* gicv_paddr);
+
+// Reads the GICH state.
+void gic_read_gich_state(IchState* state);
+
+// Writes the GICH state.
+void gic_write_gich_state(IchState* state, uint32_t hcr);
+
+// Returns the default GICH_VMCR value. Used to initialize GICH_VMCR.
+uint32_t gic_default_gich_vmcr();
 
 // Returns a list register based on the given interrupt vector.
 uint64_t gic_get_lr_from_vector(bool hw, uint8_t prio, uint32_t vector);
@@ -73,12 +42,13 @@ uint64_t gic_get_lr_from_vector(bool hw, uint8_t prio, uint32_t vector);
 uint32_t gic_get_vector_from_lr(uint64_t lr);
 
 // Returns the number of preemption bits.
-uint32_t gic_get_num_pres();
+uint8_t gic_get_num_pres();
 
 // Returns the number of list registers.
-uint32_t gic_get_num_lrs();
+uint8_t gic_get_num_lrs();
 
 // Registers the ops of the GIC driver initialized with HW interface layer.
 void arm_gic_hw_interface_register(const struct arm_gic_hw_interface_ops* ops);
 
+// Returns whether the GIC driver has been registered.
 bool arm_gic_is_registered();

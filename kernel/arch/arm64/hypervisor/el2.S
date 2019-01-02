@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <arch/arm64/el2_state.h>
+#include <arch/arm64/hypervisor/el2_state.h>
 #include <arch/arm64/mmu.h>
 #include <arch/asm_macros.h>
 #include <asm.h>
@@ -241,14 +241,15 @@
 
     // If we got to here, the exception came from the host or EL2.
     // Continue execution through a jump table based on the HVC index.
-    hvc_jump .Lsync_table 6
+    hvc_jump .Lsync_table 7
 .Lsync_table:
     b el2_hvc_psci
     b el2_hvc_mexec
     b el2_hvc_off
     b el2_hvc_tlbi
     b el2_hvc_resume
-    b el2_hvc_sysreg
+    b el2_hvc_gich_state
+    b el2_hvc_gich_vtr
 .endm
 
 .macro entry_irq return_code

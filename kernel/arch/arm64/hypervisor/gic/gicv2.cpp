@@ -5,9 +5,11 @@
 // https://opensource.org/licenses/MIT
 
 #include <assert.h>
+#include <arch/arm64/hypervisor/el2_state.h>
 #include <arch/arm64/hypervisor/gic/gicv2.h>
 #include <dev/interrupt/arm_gic_hw_interface.h>
 #include <dev/interrupt/arm_gicv2_regs.h>
+#include <vm/pmm.h>
 
 static constexpr uint32_t kNumLrs = 64;
 
@@ -45,65 +47,6 @@ static_assert(__offsetof(Gich, lr) == 0x100, "");
 
 static volatile Gich* gich = NULL;
 
-static void gicv2_write_gich_hcr(uint32_t val) {
-    gich->hcr = val;
-}
-
-static uint32_t gicv2_read_gich_vtr() {
-    return gich->vtr;
-}
-
-static uint32_t gicv2_default_gich_vmcr() {
-    return GICH_VMCR_VPMR | GICH_VMCR_VENG0;
-}
-
-static uint32_t gicv2_read_gich_vmcr() {
-    return gich->vmcr;
-}
-
-static void gicv2_write_gich_vmcr(uint32_t val) {
-    gich->vmcr = val;
-}
-
-static uint32_t gicv2_read_gich_misr() {
-    return gich->misr;
-}
-
-static uint64_t gicv2_read_gich_elrsr() {
-    return gich->elrsr0 | (static_cast<uint64_t>(gich->elrsr1) << 32);
-}
-
-static uint32_t gicv2_read_gich_apr(uint8_t grp, uint32_t idx) {
-    DEBUG_ASSERT(idx == 0);
-    return grp == 0 ? gich->apr : 0;
-}
-
-static void gicv2_write_gich_apr(uint8_t grp, uint32_t idx, uint32_t val) {
-    DEBUG_ASSERT(idx == 0);
-    if (grp == 0) {
-        gich->apr = val;
-    }
-}
-
-static uint64_t gicv2_read_gich_lr(uint32_t idx) {
-    DEBUG_ASSERT(idx < kNumLrs);
-    return gich->lr[idx];
-}
-
-static void gicv2_write_gich_lr(uint32_t idx, uint64_t val) {
-    DEBUG_ASSERT(idx < kNumLrs);
-    if (val & GICH_LR_HARDWARE) {
-        // We are adding a physical interrupt to a list register, therefore we
-        // mark the physical interrupt as active on the physical distributor so
-        // that the guest can deactivate it directly.
-        uint32_t vector = GICH_LR_VIRTUAL_ID(val);
-        uint32_t reg = vector / 32;
-        uint32_t mask = 1u << (vector % 32);
-        GICREG(0, GICD_ISACTIVER(reg)) = mask;
-    }
-    gich->lr[idx] = static_cast<uint32_t>(val);
-}
-
 static zx_status_t gicv2_get_gicv(paddr_t* gicv_paddr) {
     // Check for presence of GICv2 virtualisation extensions.
     if (GICV_OFFSET == 0) {
@@ -111,6 +54,44 @@ static zx_status_t gicv2_get_gicv(paddr_t* gicv_paddr) {
     }
     *gicv_paddr = vaddr_to_paddr(reinterpret_cast<void*>(GICV_ADDRESS));
     return ZX_OK;
+}
+
+static void giv2_read_gich_state(IchState* state) {
+    DEBUG_ASSERT(state->num_aprs == 1);
+    DEBUG_ASSERT(state->num_lrs <= kNumLrs);
+    gich->hcr = 0;
+    state->vmcr = gich->vmcr;
+    state->misr = gich->misr;
+    state->elrsr = gich->elrsr0 | (static_cast<uint64_t>(gich->elrsr1) << 32);
+    state->apr[0][0] = gich->apr;
+    for (uint8_t i = 0; i < state->num_lrs; i++) {
+        state->lr[i] = gich->lr[i];
+    }
+}
+
+static void giv2_write_gich_state(IchState* state, uint32_t hcr) {
+    DEBUG_ASSERT(state->num_aprs == 1);
+    DEBUG_ASSERT(state->num_lrs <= kNumLrs);
+    gich->hcr = hcr;
+    gich->vmcr = state->vmcr;
+    gich->apr = static_cast<uint32_t>(state->apr[0][0]);
+    for (uint8_t i = 0; i < state->num_lrs; i++) {
+        uint32_t lr = static_cast<uint32_t>(state->lr[i]);
+        if (lr & GICH_LR_HARDWARE) {
+            // We are adding a physical interrupt to a list register, therefore
+            // we mark the physical interrupt as active on the physical
+            // distributor so that the guest can deactivate it directly.
+            uint32_t vector = GICH_LR_VIRTUAL_ID(lr);
+            uint32_t reg = vector / 32;
+            uint32_t mask = 1u << (vector % 32);
+            GICREG(0, GICD_ISACTIVER(reg)) = mask;
+        }
+        gich->lr[i] = lr;
+    }
+}
+
+static uint32_t gicv2_default_gich_vmcr() {
+    return GICH_VMCR_VPMR | GICH_VMCR_VENG0;
 }
 
 static uint64_t gicv2_get_lr_from_vector(bool hw, uint8_t prio, uint32_t vector) {
@@ -125,27 +106,19 @@ static uint32_t gicv2_get_vector_from_lr(uint64_t lr) {
     return lr & GICH_LR_VIRTUAL_ID(UINT64_MAX);
 }
 
-static uint32_t gicv2_get_num_pres() {
-    return GICH_VTR_PRES(gicv2_read_gich_vtr());
+static uint8_t gicv2_get_num_pres() {
+    return static_cast<uint8_t>(GICH_VTR_PRES(gich->vtr));
 }
 
-static uint32_t gicv2_get_num_lrs() {
-    return GICH_VTR_LRS(gicv2_read_gich_vtr());
+static uint8_t gicv2_get_num_lrs() {
+    return static_cast<uint8_t>(GICH_VTR_LRS(gich->vtr));
 }
 
 static const struct arm_gic_hw_interface_ops gic_hw_register_ops = {
-    .write_gich_hcr = gicv2_write_gich_hcr,
-    .read_gich_vtr = gicv2_read_gich_vtr,
-    .default_gich_vmcr = gicv2_default_gich_vmcr,
-    .read_gich_vmcr = gicv2_read_gich_vmcr,
-    .write_gich_vmcr = gicv2_write_gich_vmcr,
-    .read_gich_misr = gicv2_read_gich_misr,
-    .read_gich_elrsr = gicv2_read_gich_elrsr,
-    .read_gich_apr = gicv2_read_gich_apr,
-    .write_gich_apr = gicv2_write_gich_apr,
-    .read_gich_lr = gicv2_read_gich_lr,
-    .write_gich_lr = gicv2_write_gich_lr,
     .get_gicv = gicv2_get_gicv,
+    .read_gich_state = giv2_read_gich_state,
+    .write_gich_state = giv2_write_gich_state,
+    .default_gich_vmcr = gicv2_default_gich_vmcr,
     .get_lr_from_vector = gicv2_get_lr_from_vector,
     .get_vector_from_lr = gicv2_get_vector_from_lr,
     .get_num_pres = gicv2_get_num_pres,

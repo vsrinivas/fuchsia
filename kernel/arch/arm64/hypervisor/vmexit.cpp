@@ -10,7 +10,7 @@
 #include <platform.h>
 #include <trace.h>
 
-#include <arch/arm64/el2_state.h>
+#include <arch/arm64/hypervisor/el2_state.h>
 #include <arch/hypervisor.h>
 #include <dev/psci.h>
 #include <dev/timer/arm_generic.h>

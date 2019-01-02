@@ -44,7 +44,7 @@ public:
         return static_cast<T*>(VirtualAddress());
     }
 
-    paddr_t PhysicalAddress() const {
+    zx_paddr_t PhysicalAddress() const {
         DEBUG_ASSERT(pa_ != 0);
         return pa_;
     }
@@ -54,6 +54,28 @@ public:
 private:
     vm_page* page_ = nullptr;
     zx_paddr_t pa_ = 0;
+};
+
+template<typename T>
+class PagePtr {
+public:
+    zx_status_t Alloc() {
+        zx_status_t status = page_.Alloc(0);
+        if (status != ZX_OK) {
+            return status;
+        }
+        ptr_ = page_.VirtualAddress<T>();
+        new(ptr_) T;
+        return ZX_OK;
+    }
+
+    zx_paddr_t PhysicalAddress() const { return page_.PhysicalAddress(); }
+    T* get() const { return ptr_; }
+    T* operator->() const { return ptr_; }
+
+private:
+    Page page_;
+    T* ptr_;
 };
 
 } // namespace hypervisor
