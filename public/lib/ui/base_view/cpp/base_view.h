@@ -40,12 +40,16 @@ class BaseView : private fuchsia::ui::scenic::SessionListener {
 
   BaseView(const BaseView&) = delete;
 
-  const View& view() const { return view_; }
+  const scenic::View& view() const { return view_; }
   Session* session() { return &session_; }
   component::StartupContext* startup_context() { return startup_context_; }
 
   fuchsia::ui::gfx::ViewProperties view_properties() const {
     return view_properties_;
+  }
+
+  const fuchsia::ui::app::ViewConfig& view_config() const {
+    return view_config_;
   }
 
   // Returns true if the view has a non-empty size in logical pixels.
@@ -72,6 +76,13 @@ class BaseView : private fuchsia::ui::scenic::SessionListener {
     // by Scenic.
     return logical_size();
   }
+
+  // Sets the view's presentation configuration (i18n profile, etc.). If the new
+  // |ViewConfig| differs at all from the existing one, |OnConfigChanged()|
+  // will be called.
+  //
+  // This method should be called at least once before the view is displayed.
+  void SetConfig(fuchsia::ui::app::ViewConfig view_config);
 
   // Sets a callback which is invoked when the view's owner releases the
   // view causing the view manager to unregister it.
@@ -143,6 +154,15 @@ class BaseView : private fuchsia::ui::scenic::SessionListener {
   virtual void OnPropertiesChanged(
       fuchsia::ui::gfx::ViewProperties old_properties) {}
 
+  // Called when the view's |ViewConfig| is first set or has changed.
+  //
+  // This is not called unless there was an actual value change between the old
+  // and the new config. The new config can be accessed at |view_config()|.
+  //
+  // The default implementation does nothing. Subclasses will usually want to
+  // call |InvalidateScene()|.
+  virtual void OnConfigChanged(fuchsia::ui::app::ViewConfig old_config) {}
+
   // Called to handle an input event.
   //
   // The default implementation does nothing.
@@ -190,10 +210,11 @@ class BaseView : private fuchsia::ui::scenic::SessionListener {
 
   fidl::Binding<fuchsia::ui::scenic::SessionListener> listener_binding_;
   Session session_;
-  View view_;
+  scenic::View view_;
 
   fuchsia::ui::gfx::vec3 logical_size_;
   fuchsia::ui::gfx::ViewProperties view_properties_;
+  fuchsia::ui::app::ViewConfig view_config_;
 
   zx_time_t last_presentation_time_ = 0;
   bool invalidate_pending_ = false;

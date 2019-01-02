@@ -10,10 +10,13 @@ fidl("fuchsia.ui.app") {
   sdk_category = "partner"
 
   sources = [
+    "view.fidl",
+    "view_config.fidl",
     "view_provider.fidl",
   ]
 
   public_deps = [
+    "//garnet/public/fidl/fuchsia.intl",
     "//garnet/public/fidl/fuchsia.sys",
   ]
 }
