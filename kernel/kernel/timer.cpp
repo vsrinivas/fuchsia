@@ -211,30 +211,8 @@ void timer_set(timer_t* timer, const Deadline& deadline,
         panic("timer %p already in list\n", timer);
     }
 
-    zx_time_t latest_deadline;
-    zx_time_t earliest_deadline;
-
-    if (deadline.slack().amount() == 0u) {
-        latest_deadline = deadline.when();
-        earliest_deadline = deadline.when();
-    } else {
-        switch (deadline.slack().mode()) {
-        case TIMER_SLACK_CENTER:
-            latest_deadline = zx_time_add_duration(deadline.when(), deadline.slack().amount());
-            earliest_deadline = zx_time_sub_duration(deadline.when(), deadline.slack().amount());
-            break;
-        case TIMER_SLACK_LATE:
-            latest_deadline = zx_time_add_duration(deadline.when(), deadline.slack().amount());
-            earliest_deadline = deadline.when();
-            break;
-        case TIMER_SLACK_EARLY:
-            earliest_deadline = zx_time_sub_duration(deadline.when(), deadline.slack().amount());
-            latest_deadline = deadline.when();
-            break;
-        default:
-            panic("invalid timer mode\n");
-        };
-    }
+    const zx_time_t latest_deadline = deadline.latest();
+    const zx_time_t earliest_deadline = deadline.earliest();
 
     Guard<spin_lock_t, IrqSave> guard{TimerLock::Get()};
 

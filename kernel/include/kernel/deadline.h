@@ -69,6 +69,12 @@ public:
 
     constexpr TimerSlack slack() const { return slack_; }
 
+    // Returns the earliest point in time at which this deadline may occur.
+    zx_time_t earliest() const;
+
+    // Returns the latest point in time at which this deadline may occur.
+    zx_time_t latest() const;
+
 private:
     static const Deadline infinite_;
 
