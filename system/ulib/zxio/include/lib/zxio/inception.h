@@ -6,9 +6,10 @@
 #define LIB_ZXIO_INCEPTION_H_
 
 #include <lib/zxio/ops.h>
+#include <lib/zxs/zxs.h>
+#include <threads.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
-#include <threads.h>
 
 // This header exposes some guts of zxio in order to transition fdio to build on
 // top of zxio.
@@ -71,9 +72,25 @@ typedef struct zxio_pipe {
 } zxio_pipe_t;
 
 static_assert(sizeof(zxio_pipe_t) <= sizeof(zxio_storage_t),
-              "zxio_vmofile_t must fit inside zxio_storage_t.");
+              "zxio_pipe_t must fit inside zxio_storage_t.");
 
 zx_status_t zxio_pipe_init(zxio_storage_t* pipe, zx_handle_t socket);
+
+// socket ----------------------------------------------------------------------
+
+// A |zxio_t| backend that uses a zxs object.
+//
+// Will eventually be an implementation detail of zxio once fdio completes its
+// transition to the zxio backend.
+typedef struct zxio_socket {
+    zxio_t io;
+    zxs_socket_t socket;
+} zxio_socket_t;
+
+static_assert(sizeof(zxio_socket_t) <= sizeof(zxio_storage_t),
+              "zxio_socket_t must fit inside zxio_storage_t.");
+
+zx_status_t zxio_socket_init(zxio_storage_t* pipe, zxs_socket_t socket);
 
 // debuglog --------------------------------------------------------------------
 

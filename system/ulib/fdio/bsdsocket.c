@@ -161,8 +161,7 @@ int listen(int fd, int backlog) {
     zx_status_t status = zxs_listen(socket, backlog);
 
     if (status == ZX_OK) {
-        zxsio_t* sio = (zxsio_t*)io;
-        sio->flags |= ZXSIO_DID_LISTEN;
+        io->ioflag |= IOFLAG_SOCKET_DID_LISTEN;
     }
 
     fdio_release(io);
@@ -182,8 +181,7 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
         return ERRNO(EBADF);
     }
 
-    zxsio_t* sio = (zxsio_t*)io;
-    if (!(sio->flags & ZXSIO_DID_LISTEN)) {
+    if (!(io->ioflag & IOFLAG_SOCKET_DID_LISTEN)) {
         fdio_release(io);
         return ERROR(ZX_ERR_BAD_STATE);
     }

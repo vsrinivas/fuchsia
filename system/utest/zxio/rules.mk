@@ -18,9 +18,11 @@ MODULE_SRCS := \
 
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-io \
+    system/fidl/fuchsia-net \
 
 MODULE_STATIC_LIBS := \
     system/ulib/zxio \
+    system/ulib/zxs \
     system/ulib/zx \
 
 MODULE_LIBS := \

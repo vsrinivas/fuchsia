@@ -84,6 +84,7 @@ typedef struct fdio_ops {
 #define IOFLAG_SOCKET_CONNECTING    (1 << 4)
 #define IOFLAG_SOCKET_CONNECTED     (1 << 5)
 #define IOFLAG_NONBLOCK             (1 << 6)
+#define IOFLAG_SOCKET_DID_LISTEN    (1 << 7)
 
 // The subset of fdio_t per-fd flags queryable via fcntl.
 // Static assertions in unistd.c ensure we aren't colliding.

@@ -11,26 +11,6 @@
 
 __BEGIN_CDECLS
 
-// Flags for zxsio.flags
-
-// Set if listen() was called for this socket.
-#define ZXSIO_DID_LISTEN (1<<0)
-
-typedef struct zxsio zxsio_t;
-
-struct zxsio {
-    // base fdio io object
-    fdio_t io;
-
-    // The underlying |zxs_socket_t|.
-    //
-    // The Zircon socket is contained in this structure.
-    zxs_socket_t s;
-
-    // see ZXSIO flags above
-    uint32_t flags;
-};
-
 // Returns a pointer to the |zxs_socket_t| inside the given |fd|, if such a
 // struct exists.
 //

@@ -13,6 +13,9 @@
 
 __BEGIN_CDECLS
 
+struct msghdr;
+struct sockaddr;
+
 // Flags that describe how the |zxs| library will interact with the kernel
 // socket object.
 typedef uint32_t zxs_flags_t;
