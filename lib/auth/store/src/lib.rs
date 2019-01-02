@@ -8,6 +8,8 @@
 mod macros;
 pub mod file;
 mod serializer;
+/// FIXME remove when https://github.com/rust-lang/rust/issues/57264 is fixed
+pub use self::serializer::JsonSerializer;
 
 use failure::{format_err, Error, Fail};
 use std::result;

@@ -47,15 +47,6 @@ macro_rules! gen_commands {
                 }
             }
 
-            /// Return string value for a given command varient.
-            pub fn as_str(&self) -> &'static str {
-                match self {
-                    $(
-                        $name::$variant => $val
-                    ),*
-                }
-            }
-
             /// Help string for a given varient. The format is "command <arg>.. -- help message"
             pub fn cmd_help(&self) -> &'static str {
                 match self {
