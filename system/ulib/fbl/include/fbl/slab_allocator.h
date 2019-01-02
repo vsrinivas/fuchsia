@@ -243,7 +243,7 @@
 //
 // class MyObject : public fbl::SlabAllocated<AllocatorTraits>,
 //                  public fbl::RefCounted<MyObject>,
-//                  public fbl::SinglyLinkedListable<fbl::RefCounted<MyObject>> {
+//                  public fbl::SinglyLinkedListable<fbl::RefPtr<MyObject>> {
 // public:
 //     explicit MyObject(int val) : my_int_(val) { }
 //     explicit MyObject(const char* val) : my_string_(val) { }
