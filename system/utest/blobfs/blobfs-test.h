@@ -27,6 +27,13 @@ enum class FsTestState {
     kError, // Indicates that an error has occurred.
 };
 
+struct BlobfsUsage {
+    uint64_t used_bytes;
+    uint64_t total_bytes;
+    uint64_t used_nodes;
+    uint64_t total_nodes;
+};
+
 class BlobfsTest {
 public:
     BlobfsTest(FsTestType type) : type_(type) {}
@@ -111,9 +118,8 @@ public:
 
     // Checks info of mounted blobfs.
     //
-    // Returns total number of bytes available as |total_bytes|.
-    // Returns total number of used bytes as |used_bytes|.
-    bool CheckInfo(uint64_t* total_bytes = nullptr, uint64_t* used_bytes = nullptr);
+    // Returns total and used byte and node counts in |usage| if it is supplied.
+    bool CheckInfo(BlobfsUsage* usage = nullptr);
 
 private:
     // Mounts the blobfs partition.

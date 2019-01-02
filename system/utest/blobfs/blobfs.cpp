@@ -460,7 +460,7 @@ bool BlobfsTest::GetRamdiskCount(uint64_t* blk_count) const {
     END_HELPER;
 }
 
-bool BlobfsTest::CheckInfo(uint64_t* total_bytes, uint64_t* used_bytes) {
+bool BlobfsTest::CheckInfo(BlobfsUsage* usage) {
     fbl::unique_fd fd(open(MOUNT_PATH, O_RDONLY | O_DIRECTORY));
     ASSERT_TRUE(fd);
 
@@ -477,11 +477,11 @@ bool BlobfsTest::CheckInfo(uint64_t* total_bytes, uint64_t* used_bytes) {
     ASSERT_LE(info.used_bytes, info.total_bytes, "Used bytes greater than free bytes");
     ASSERT_EQ(close(caller.release().release()), 0);
 
-    if (total_bytes != nullptr) {
-        *total_bytes = info.total_bytes;
-    }
-    if (used_bytes != nullptr) {
-        *used_bytes = info.used_bytes;
+    if (usage != nullptr) {
+        usage->used_bytes = info.used_bytes;
+        usage->total_bytes = info.total_bytes;
+        usage->used_nodes = info.used_nodes;
+        usage->total_nodes = info.total_nodes;
     }
 
     return true;
@@ -2176,11 +2176,17 @@ static bool TestFragmentation(BlobfsTest* blobfsTest) {
     // Observe that we cannot add another large blob.
     fbl::unique_ptr<blob_info_t> info;
     ASSERT_TRUE(GenerateRandomBlob(kLargeSize, &info));
-    uint64_t total_bytes, used_bytes;
+
+    // Calculate actual number of blocks required to store the blob (including the merkle tree).
+    blobfs::Inode large_inode;
+    large_inode.blob_size = kLargeSize;
+    size_t kLargeBlocks = blobfs::MerkleTreeBlocks(large_inode)
+                          + blobfs::BlobDataBlocks(large_inode);
 
     // We shouldn't have space (before we try allocating) ...
-    ASSERT_TRUE(blobfsTest->CheckInfo(&total_bytes, &used_bytes));
-    ASSERT_LT(total_bytes - used_bytes, kLargeSize);
+    BlobfsUsage usage;
+    ASSERT_TRUE(blobfsTest->CheckInfo(&usage));
+    ASSERT_LT(usage.total_bytes - usage.used_bytes, kLargeBlocks * blobfs::kBlobfsBlockSize);
 
     // ... and we don't have space (as we try allocating).
     fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
@@ -2198,9 +2204,9 @@ static bool TestFragmentation(BlobfsTest* blobfsTest) {
     // should provde enough space.
     ASSERT_GT(kSmallSize * (small_blobs.size() - 1), kLargeSize);
 
-    // Validate the we have enough space (before we try allocating)...
-    ASSERT_TRUE(blobfsTest->CheckInfo(&total_bytes, &used_bytes));
-    ASSERT_GE(total_bytes - used_bytes, kLargeSize);
+    // Validate that we have enough space (before we try allocating)...
+    ASSERT_TRUE(blobfsTest->CheckInfo(&usage));
+    ASSERT_GE(usage.total_bytes - usage.used_bytes, kLargeBlocks * blobfs::kBlobfsBlockSize);
 
     // Now that blobfs supports extents, verify that we can still allocate
     // a large blob, even if it is fragmented.
@@ -2525,22 +2531,23 @@ static bool TestExtendFailure(void) {
     blobfsTest.SetStdio(false);
     ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
 
-    uint64_t original_bytes;
-    blobfsTest.CheckInfo(&original_bytes);
+    BlobfsUsage original_usage;
+    blobfsTest.CheckInfo(&original_usage);
 
     // Create a blob of the maximum size possible without causing an FVM extension.
-    fbl::unique_ptr<blob_info_t> info;
-    ASSERT_TRUE(GenerateRandomBlob(original_bytes - blobfs::kBlobfsBlockSize, &info));
+    fbl::unique_ptr<blob_info_t> old_info;
+    ASSERT_TRUE(GenerateRandomBlob(original_usage.total_bytes - blobfs::kBlobfsBlockSize,
+                                   &old_info));
 
     fbl::unique_fd fd;
-    ASSERT_TRUE(MakeBlob(info.get(), &fd));
+    ASSERT_TRUE(MakeBlob(old_info.get(), &fd));
     ASSERT_EQ(syncfs(fd.get()), 0);
     ASSERT_EQ(close(fd.release()), 0);
 
     // Ensure that an FVM extension did not occur.
-    uint64_t current_bytes;
-    blobfsTest.CheckInfo(&current_bytes);
-    ASSERT_EQ(current_bytes, original_bytes);
+    BlobfsUsage current_usage;
+    blobfsTest.CheckInfo(&current_usage);
+    ASSERT_EQ(current_usage.total_bytes, original_usage.total_bytes);
 
     // Generate another blob of the smallest size possible.
     fbl::unique_ptr<blob_info_t> new_info;
@@ -2581,7 +2588,7 @@ static bool TestExtendFailure(void) {
         ASSERT_TRUE(blobfsTest.Remount());
 
         // Check that the original blob still exists.
-        fd.reset(open(info->path, O_RDONLY));
+        fd.reset(open(old_info->path, O_RDONLY));
         ASSERT_TRUE(fd);
 
         // Once file creation is successful, break out of the loop.
@@ -2589,7 +2596,7 @@ static bool TestExtendFailure(void) {
         if (fd) {
             struct stat stats;
             ASSERT_EQ(fstat(fd.get(), &stats), 0);
-            ASSERT_EQ(static_cast<uint64_t>(stats.st_size), info->size_data);
+            ASSERT_EQ(static_cast<uint64_t>(stats.st_size), old_info->size_data);
             break;
         }
 
@@ -2601,8 +2608,8 @@ static bool TestExtendFailure(void) {
     }
 
     // Ensure that an FVM extension occurred.
-    blobfsTest.CheckInfo(&current_bytes);
-    ASSERT_GT(current_bytes, original_bytes);
+    blobfsTest.CheckInfo(&current_usage);
+    ASSERT_GT(current_usage.total_bytes, original_usage.total_bytes);
 
     ASSERT_TRUE(blobfsTest.Teardown(), "Unmounting Blobfs");
     END_TEST;
