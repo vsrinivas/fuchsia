@@ -18,7 +18,10 @@
 
 namespace devmgr {
 
+struct Devnode;
+
 void devfs_init(const zx::job& root_job);
+zx_status_t devfs_watch(Devnode* dn, zx::channel h, uint32_t mask);
 
 void devmgr_svc_init();
 void devmgr_vfs_init();

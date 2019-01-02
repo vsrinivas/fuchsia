@@ -17,6 +17,7 @@
 #include <driver-info/driver-info.h>
 #include <fbl/unique_ptr.h>
 #include <fuchsia/device/manager/c/fidl.h>
+#include <fuchsia/io/c/fidl.h>
 #include <launchpad/launchpad.h>
 #include <lib/async/cpp/receiver.h>
 #include <lib/async/cpp/wait.h>
@@ -1418,6 +1419,19 @@ static zx_status_t fidl_DmMexec(void* ctx, zx_handle_t raw_kernel, zx_handle_t r
     return ZX_OK;
 }
 
+static zx_status_t fidl_DirectoryWatch(void* ctx, uint32_t mask, uint32_t options,
+                                       zx_handle_t raw_watcher, fidl_txn_t* txn) {
+    auto dev = static_cast<Device*>(ctx);
+    zx::channel watcher(raw_watcher);
+
+    if (mask & (~fuchsia_io_WATCH_MASK_ALL) || options != 0) {
+        return fuchsia_device_manager_CoordinatorDirectoryWatch_reply(txn, ZX_ERR_INVALID_ARGS);
+    }
+
+    zx_status_t status = devfs_watch(dev->self, std::move(watcher), mask);
+    return fuchsia_device_manager_CoordinatorDirectoryWatch_reply(txn, status);
+}
+
 static fuchsia_device_manager_Coordinator_ops_t fidl_ops = {
     .AddDevice = fidl_AddDevice,
     .AddDeviceInvisible = fidl_AddDeviceInvisible,
@@ -1432,6 +1446,7 @@ static fuchsia_device_manager_Coordinator_ops_t fidl_ops = {
     .DmCommand = fidl_DmCommand,
     .DmOpenVirtcon = fidl_DmOpenVirtcon,
     .DmMexec = fidl_DmMexec,
+    .DirectoryWatch = fidl_DirectoryWatch,
 };
 
 zx_status_t Coordinator::HandleDeviceRead(Device* dev) {

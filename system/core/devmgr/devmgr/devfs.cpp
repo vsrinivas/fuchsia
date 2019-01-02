@@ -277,6 +277,8 @@ void devfs_notify(Devnode* dn, const fbl::String& name, unsigned op) {
     }
 }
 
+} // namespace
+
 zx_status_t devfs_watch(Devnode* dn, zx::channel h, uint32_t mask) {
     auto watcher = fbl::make_unique<Watcher>(dn, std::move(h), mask);
     if (watcher == nullptr) {
@@ -303,6 +305,8 @@ zx_status_t devfs_watch(Devnode* dn, zx::channel h, uint32_t mask) {
     }
     return ZX_OK;
 }
+
+namespace {
 
 fbl::unique_ptr<Devnode> devfs_mknode(Device* dev, const char* name) {
     auto dn = fbl::make_unique<Devnode>(name);
