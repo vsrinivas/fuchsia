@@ -139,8 +139,8 @@ zx_status_t OpteeController::InitializeSharedMemory() {
     // physical sub range to use.
     static constexpr uint32_t kSecureWorldMemoryMmioIndex = 0;
     mmio_buffer_t mmio;
-    status = pdev_map_mmio_buffer2(&pdev_proto_, kSecureWorldMemoryMmioIndex, ZX_CACHE_POLICY_CACHED,
-                                   &mmio);
+    status = pdev_map_mmio_buffer2(&pdev_proto_, kSecureWorldMemoryMmioIndex,
+                                   ZX_CACHE_POLICY_CACHED, &mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "optee: Unable to map secure world memory\n");
         return status;
@@ -153,7 +153,7 @@ zx_status_t OpteeController::InitializeSharedMemory() {
                                          &shared_memory_manager_);
 
     if (status != ZX_OK) {
-        zxlogf(ERROR, "optee: Unable to initialaze SharedMemoryManager\n");
+        zxlogf(ERROR, "optee: Unable to initialize SharedMemoryManager\n");
         return status;
     }
 
