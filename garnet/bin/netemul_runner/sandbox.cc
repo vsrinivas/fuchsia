@@ -409,8 +409,6 @@ bool Sandbox::LaunchProcess(fuchsia::sys::LauncherSyncPtr* launcher,
   linfo.url = url;
   linfo.arguments->insert(linfo.arguments->end(), arguments.begin(),
                           arguments.end());
-  linfo.out = component::testing::CloneFileDescriptor(STDOUT_FILENO);
-  linfo.err = component::testing::CloneFileDescriptor(STDERR_FILENO);
 
   auto& proc = procs_.emplace_back();
   auto ticket = procs_.size();
@@ -454,8 +452,6 @@ bool Sandbox::LaunchSetup(fuchsia::sys::LauncherSyncPtr* launcher,
   linfo.url = url;
   linfo.arguments->insert(linfo.arguments->end(), arguments.begin(),
                           arguments.end());
-  linfo.out = component::testing::CloneFileDescriptor(STDOUT_FILENO);
-  linfo.err = component::testing::CloneFileDescriptor(STDERR_FILENO);
 
   fuchsia::sys::ComponentControllerPtr proc;
   bool done = false;

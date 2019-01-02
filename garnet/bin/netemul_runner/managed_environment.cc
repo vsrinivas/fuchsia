@@ -44,6 +44,8 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
                                 const ManagedEnvironment* managed_parent) {
   auto services = EnvironmentServices::Create(parent);
 
+  loggers_ = std::make_unique<ManagedLoggerCollection>(options.name);
+
   // add network context service:
   services->AddService(sandbox_env_->network_context().GetHandler());
 
@@ -68,11 +70,21 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
 
   // push all the allowable launch services:
   for (const auto& svc : service_config_) {
-    fuchsia::sys::LaunchInfo linfo;
-    linfo.url = svc.url;
-    linfo.arguments->insert(linfo.arguments->begin(), svc.arguments->begin(),
-                            svc.arguments->end());
-    services->AddServiceWithLaunchInfo(std::move(linfo), svc.name);
+    LaunchService copy;
+    ZX_ASSERT(svc.Clone(&copy) == ZX_OK);
+    services->AddServiceWithLaunchInfo(
+        svc.url,
+        [this, svc = std::move(copy)]() {
+          fuchsia::sys::LaunchInfo linfo;
+          linfo.url = svc.url;
+          linfo.arguments->insert(linfo.arguments->begin(),
+                                  svc.arguments->begin(), svc.arguments->end());
+          linfo.out = loggers_->CreateLogger(svc.url, false);
+          linfo.err = loggers_->CreateLogger(svc.url, true);
+          loggers_->IncrementCounter();
+          return linfo;
+        },
+        svc.name);
   }
 
   // save all handles for virtual devices
@@ -117,6 +129,11 @@ zx::channel ManagedEnvironment::OpenVdataDirectory() {
 void ManagedEnvironment::Bind(
     fidl::InterfaceRequest<ManagedEnvironment::FManagedEnvironment> req) {
   bindings_.AddBinding(this, std::move(req));
+}
+
+ManagedLoggerCollection& ManagedEnvironment::loggers() {
+  ZX_ASSERT(loggers_);
+  return *loggers_;
 }
 
 }  // namespace netemul

@@ -116,12 +116,15 @@ void ManagedLauncher::CreateComponent(
   }
 
   if (!launch_info.out) {
-    launch_info.out = component::testing::CloneFileDescriptor(STDOUT_FILENO);
+    launch_info.out =
+        env_->loggers().CreateLogger(package->resolved_url, false);
   }
   if (!launch_info.err) {
-    launch_info.err = component::testing::CloneFileDescriptor(STDERR_FILENO);
+    launch_info.err = env_->loggers().CreateLogger(package->resolved_url, true);
   }
 
+  // increment counter
+  env_->loggers().IncrementCounter();
   real_launcher_->CreateComponent(std::move(launch_info),
                                   std::move(controller));
 }

@@ -11,6 +11,7 @@
 #include <lib/svc/cpp/services.h>
 #include <memory>
 #include "managed_launcher.h"
+#include "managed_logger.h"
 #include "sandbox_env.h"
 #include "virtual_data.h"
 #include "virtual_devices.h"
@@ -55,6 +56,7 @@ class ManagedEnvironment
   friend ManagedLauncher;
 
   component::testing::EnclosingEnvironment& environment();
+  ManagedLoggerCollection& loggers();
   zx::channel OpenVdevDirectory();
   zx::channel OpenVdataDirectory();
 
@@ -65,6 +67,7 @@ class ManagedEnvironment
 
   SandboxEnv::Ptr sandbox_env_;
   std::unique_ptr<component::testing::EnclosingEnvironment> env_;
+  std::unique_ptr<ManagedLoggerCollection> loggers_;
   std::unique_ptr<ManagedLauncher> launcher_;
   std::shared_ptr<component::Services> services_;
   EnvironmentRunningCallback running_callback_;

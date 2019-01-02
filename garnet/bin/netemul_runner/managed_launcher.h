@@ -9,6 +9,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fxl/macros.h>
 #include <string>
+#include "managed_logger.h"
 
 namespace netemul {
 class ManagedEnvironment;
@@ -31,7 +32,6 @@ class ManagedLauncher : public fuchsia::sys::Launcher {
       fuchsia::sys::PackagePtr package, fuchsia::sys::LaunchInfo launch_info,
       fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller);
 
- private:
   // Pointer to parent environment. Not owned.
   ManagedEnvironment* env_;
   fuchsia::sys::LauncherPtr real_launcher_;

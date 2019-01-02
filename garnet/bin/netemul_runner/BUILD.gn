@@ -11,6 +11,8 @@ source_set("src") {
     "managed_environment.h",
     "managed_launcher.cc",
     "managed_launcher.h",
+    "managed_logger.cc",
+    "managed_logger.h",
     "sandbox.cc",
     "sandbox.h",
     "sandbox_env.h",
