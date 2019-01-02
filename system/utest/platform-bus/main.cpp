@@ -63,24 +63,11 @@ bool enumeration_test() {
     fbl::unique_ptr<IsolatedDevmgr> devmgr;
     ASSERT_EQ(IsolatedDevmgr::Create(std::move(args), &devmgr), ZX_OK);
 
-    sleep(3);
-    // Wait for /dev/platform/sys to appear
     fbl::unique_fd fd;
     ASSERT_EQ(RecursiveWaitForFile(devmgr->devfs_root(), "sys/platform",
                                    zx::deadline_after(zx::sec(5)), &fd),
               ZX_OK);
 
-    const int dirfd = devmgr->devfs_root().get();
-    struct stat st;
-    EXPECT_EQ(fstatat(dirfd, "sys/platform/test-board", &st, 0), 0);
-    EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:1", &st, 0), 0);
-    EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:1/child-1", &st, 0), 0);
-    EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:1/child-1/child-2", &st, 0), 0);
-    EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:1/child-1/child-3", &st, 0), 0);
-
-    // TODO(surajmalhotra): Following will fail due to devhost no implementing
-    // fuchisia.io.Directory FIDL interface.
-#if 0
     EXPECT_EQ(RecursiveWaitForFile(devmgr->devfs_root(), "sys/platform/test-board",
                                    zx::deadline_after(zx::sec(5)), &fd),
               ZX_OK);
@@ -100,7 +87,14 @@ bool enumeration_test() {
     EXPECT_EQ(RecursiveWaitForFile(devmgr->devfs_root(), "sys/platform/11:01:1/child-1/child-3",
                                    zx::deadline_after(zx::sec(5)), &fd),
               ZX_OK);
-#endif
+
+    const int dirfd = devmgr->devfs_root().get();
+    struct stat st;
+    EXPECT_EQ(fstatat(dirfd, "sys/platform/test-board", &st, 0), 0);
+    EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:1", &st, 0), 0);
+    EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:1/child-1", &st, 0), 0);
+    EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:1/child-1/child-2", &st, 0), 0);
+    EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:1/child-1/child-3", &st, 0), 0);
 
     END_TEST;
 }
