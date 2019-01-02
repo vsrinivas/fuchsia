@@ -85,6 +85,21 @@ void Reporter::OnTestStart(const TestCase& test_case, const TestInfo& test) {
     fprintf(stream_, "[ RUN      ] %s.%s\n", test_case.name().c_str(), test.name().c_str());
 }
 
+void Reporter::OnAssertion(const Assertion& assertion) {
+    fprintf(stream_, "%s:%ld: error: Failure:\n    Expected: %s\n", assertion.location().filename,
+            assertion.location().line_number, assertion.expected().c_str());
+    // When it is not a literal.
+    if (assertion.expected() != assertion.expected_eval()) {
+        fprintf(stream_, "    Which is: %s\n", assertion.expected_eval().c_str());
+    }
+
+    fprintf(stream_, "    Actual  : %s\n", assertion.actual().c_str());
+    // When it is not a literal.
+    if (assertion.actual() != assertion.actual_eval()) {
+        fprintf(stream_, "    Which is: %s\n", assertion.actual_eval().c_str());
+    }
+}
+
 void Reporter::OnTestSkip(const TestCase& test_case, const TestInfo& test) {
 
     if (stream_ == nullptr) {

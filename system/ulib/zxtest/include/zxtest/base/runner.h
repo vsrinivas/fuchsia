@@ -8,6 +8,7 @@
 
 #include <fbl/string.h>
 #include <fbl/vector.h>
+#include <zxtest/base/assertion.h>
 #include <zxtest/base/event-broadcaster.h>
 #include <zxtest/base/observer.h>
 #include <zxtest/base/reporter.h>
@@ -21,15 +22,12 @@ namespace internal {
 
 // Test Driver implementation for the runner. Observes lifecycle events to
 // reset the test state correctly.
-// TODO(gevalentino): Add interface for observing errors, which is how we can
-// pipe all assertions from runner into the specifics handlers. This allows
-// defining whether a test should return or continue.
 class TestDriverImpl : public TestDriver, public LifecycleObserver {
 public:
     TestDriverImpl();
     ~TestDriverImpl() final;
 
-    // Called when a test is skipped..
+    // Called when a test is skipped.
     void Skip() final;
 
     // Return true if the is allowed to continue execution.
@@ -40,6 +38,9 @@ public:
 
     // Reports before every test starts.
     void OnTestStart(const TestCase& test_case, const TestInfo& test) final;
+
+    // Reports when current test assert condition fails.
+    void OnAssertion(const Assertion& assertion) final;
 
     // Reports after a test execution was skipped.
     void OnTestSkip(const TestCase& test_case, const TestInfo& test) final;
@@ -151,6 +152,12 @@ public:
     const TestInfo& GetTestInfo(const TestRef& test_ref) {
         return test_cases_[test_ref.test_case_index].GetTestInfo(test_ref.test_index);
     }
+
+    // Provides an entry point for asertions. The runner will propagate the assertion to the
+    // interested parties. This is needed in a global scope, because helper methods do not have
+    // access to a |Test| instance and legacy tests are not part of a Fixture, but wrapped by one.
+    // If this is called without any test running, it will have no effect.
+    void NotifyAssertion(const Assertion& assertion);
 
 private:
     TestRef RegisterTest(const fbl::String& test_case_name, const fbl::String& test_name,

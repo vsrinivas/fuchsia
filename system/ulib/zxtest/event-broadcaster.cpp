@@ -50,7 +50,12 @@ void EventBroadcaster::OnTestStart(const TestCase& test_case, const TestInfo& te
     Broadcast<&LifecycleObserver::OnTestStart>(&lifecycle_observers_, test_case, test);
 }
 
-// Reports before every test starts.
+// Reports when an assertion on the running tests fails.
+void EventBroadcaster::OnAssertion(const Assertion& assertion) {
+    Broadcast<&LifecycleObserver::OnAssertion>(&lifecycle_observers_, assertion);
+}
+
+// Reports before every test is skipped.
 void EventBroadcaster::OnTestSkip(const TestCase& test_case, const TestInfo& test) {
     Broadcast<&LifecycleObserver::OnTestSkip>(&lifecycle_observers_, test_case, test);
 }

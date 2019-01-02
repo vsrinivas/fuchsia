@@ -5,6 +5,7 @@
 #pragma once
 
 #include <cstdint>
+#include <memory>
 
 #include <fbl/function.h>
 
@@ -17,7 +18,7 @@ class Test;
 // error reporting.
 struct SourceLocation {
     const char* filename = nullptr;
-    std::int64_t line_number = -1;
+    int64_t line_number = -1;
 };
 
 namespace internal {

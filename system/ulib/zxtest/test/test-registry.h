@@ -84,6 +84,7 @@ void EventBroadcasterOnIterationStart();
 void EventBroadcasterOnEnvironmentSetUp();
 void EventBroadcasterOnTestCaseStart();
 void EventBroadcasterOnTestStart();
+void EventBroadcasterOnAssertion();
 void EventBroadcasterOnTestSkip();
 void EventBroadcasterOnTestSuccess();
 void EventBroadcasterOnTestFailure();
@@ -100,13 +101,20 @@ void RunnerRunAllTestsSameTestCase();
 void RunnerRepeatTests();
 void RunnerListTests();
 
+// Verify that TestDriverImpl actually resets on the right spots,
+// and behaves correctly on fatal and non fatal failure(EXPECT_*, ASSERT_*).
+void TestDriverImplFatalFailureEndsTest();
+void TestDriverImplNonFatalFailureDoesNotEndTest();
+void TestDriverImplResetOnTestCompletion();
+void TestDriverImplReset();
+
 struct RegisteredTest {
     const char* name = nullptr;
     void (*test_fn)() = nullptr;
 };
 
 // Just so we capture the function name.
-#define RUN_TEST(test_function) \
+#define RUN_TEST(test_function)                                                                    \
     RegisteredTest { .name = #test_function, .test_fn = &test_function }
 
 // List of tests to run.
@@ -132,6 +140,7 @@ static constexpr RegisteredTest kRegisteredTests[] = {
     RUN_TEST(EventBroadcasterOnEnvironmentSetUp),
     RUN_TEST(EventBroadcasterOnTestCaseStart),
     RUN_TEST(EventBroadcasterOnTestStart),
+    RUN_TEST(EventBroadcasterOnAssertion),
     RUN_TEST(EventBroadcasterOnTestSkip),
     RUN_TEST(EventBroadcasterOnTestSuccess),
     RUN_TEST(EventBroadcasterOnTestFailure),
@@ -144,6 +153,10 @@ static constexpr RegisteredTest kRegisteredTests[] = {
     RUN_TEST(RunnerRunAllTests),
     RUN_TEST(RunnerRunAllTestsSameTestCase),
     RUN_TEST(RunnerListTests),
+    RUN_TEST(TestDriverImplFatalFailureEndsTest),
+    RUN_TEST(TestDriverImplNonFatalFailureDoesNotEndTest),
+    RUN_TEST(TestDriverImplReset),
+    RUN_TEST(TestDriverImplResetOnTestCompletion),
 };
 
 #undef RUN_TEST

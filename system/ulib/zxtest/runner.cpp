@@ -37,6 +37,12 @@ void TestDriverImpl::OnTestFailure(const TestCase& test_case, const TestInfo& te
     Reset();
 }
 
+void TestDriverImpl::OnAssertion(const Assertion& assertion) {
+    status_ = TestStatus::kFailed;
+    has_fatal_failures_ = assertion.is_fatal();
+    had_any_failures_ = true;
+}
+
 void TestDriverImpl::Reset() {
     has_fatal_failures_ = false;
     status_ = TestStatus::kPassed;
@@ -144,6 +150,10 @@ void Runner::Filter(const fbl::String& pattern) {
             summary_.active_test_count += test_case.MatchingTestCount();
         }
     }
+}
+
+void Runner::NotifyAssertion(const Assertion& assertion) {
+    event_broadcaster_.OnAssertion(assertion);
 }
 
 } // namespace zxtest

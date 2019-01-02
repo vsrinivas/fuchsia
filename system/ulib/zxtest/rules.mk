@@ -9,6 +9,7 @@ MODULE_TYPE := userlib
 MODULE_COMPILEFLAGS += -fvisibility=hidden
 
 MODULE_SRCS := \
+    $(LOCAL_DIR)/assertion.cpp \
     $(LOCAL_DIR)/event-broadcaster.cpp \
     $(LOCAL_DIR)/reporter.cpp \
     $(LOCAL_DIR)/runner.cpp \

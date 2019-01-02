@@ -7,6 +7,7 @@
 #include "test-registry.h"
 
 #include <fbl/function.h>
+#include <zxtest/base/assertion.h>
 #include <zxtest/base/event-broadcaster.h>
 #include <zxtest/base/observer.h>
 #include <zxtest/base/runner.h>
@@ -23,6 +24,18 @@
         }                                                                                          \
                                                                                                    \
         fbl::Function<void(const Runner& runner, int iter)> on_notify;                             \
+        bool called = false;                                                                       \
+    }
+
+#define ASSERTION_OBSERVER                                                                         \
+    class FakeObserver : public LifecycleObserver {                                                \
+    public:                                                                                        \
+        void OnAssertion(const Assertion& assertion) final {                                       \
+            on_notify(assertion);                                                                  \
+            called = true;                                                                         \
+        }                                                                                          \
+                                                                                                   \
+        fbl::Function<void(const Assertion& assertion)> on_notify;                                 \
         bool called = false;                                                                       \
     }
 
@@ -191,6 +204,25 @@ void EventBroadcasterOnTestStart() {
         });
 
     event_broadcaster.OnTestStart(test_case, test_info);
+
+    ValidateAllObserversNotified(observers);
+}
+
+void EventBroadcasterOnAssertion() {
+    ASSERTION_OBSERVER;
+
+    internal::EventBroadcaster event_broadcaster;
+    Assertion assertion("kExpectedValue", "5", "actual_value", "10",
+                        {.filename = "test.cpp", .line_number = 99999}, /*is_fatal*/ false);
+    fbl::Vector<FakeObserver> observers;
+    observers.reserve(kNumObservers);
+
+    REGISTER_OBSERVERS(observers, event_broadcaster, [&](const Assertion& actual) {
+        ZX_ASSERT_MSG(&actual == &assertion,
+                      "EventBroadcaster::OnAssertion propagated wrong assertion.\n");
+    });
+
+    event_broadcaster.OnAssertion(assertion);
 
     ValidateAllObserversNotified(observers);
 }

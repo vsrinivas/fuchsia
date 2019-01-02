@@ -14,6 +14,7 @@
 namespace zxtest {
 
 // Forward declarations.
+class Assertion;
 class Runner;
 class TestCase;
 class TestInfo;
@@ -78,6 +79,9 @@ public:
 
     // Reports before every test starts.
     void OnTestStart(const TestCase& test_case, const TestInfo& test) final;
+
+    // Reports when an assertion failed on the current running test.
+    void OnAssertion(const Assertion& assertion) final;
 
     // Reports before every test starts.
     void OnTestSkip(const TestCase& test_case, const TestInfo& test) final;

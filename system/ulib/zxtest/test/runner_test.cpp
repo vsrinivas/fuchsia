@@ -20,6 +20,7 @@
 namespace zxtest {
 
 using internal::TestDriver;
+using internal::TestDriverImpl;
 
 namespace test {
 namespace {
@@ -37,15 +38,34 @@ public:
     static fbl::Function<std::unique_ptr<Test>(TestDriver*)> MakeFactory(int* counter) {
         return [counter](TestDriver* driver) {
             std::unique_ptr<FakeTest> test = zxtest::Test::Create<FakeTest>(driver);
-            test->counter = counter;
+            test->counter_ = counter;
             return test;
         };
     }
 
 private:
-    void TestBody() final { ++*counter; }
+    void TestBody() final { ++*counter_; }
 
-    int* counter;
+    int* counter_;
+};
+
+class FailingTest : public zxtest::Test {
+public:
+    static fbl::Function<std::unique_ptr<Test>(TestDriver*)> MakeFactory(Runner* runner) {
+        return [runner](TestDriver* driver) {
+            std::unique_ptr<FailingTest> test = zxtest::Test::Create<FailingTest>(driver);
+            test->runner_ = runner;
+            return test;
+        };
+    }
+
+private:
+    void TestBody() {
+        Assertion assertion("a", "1", "b", "2", {.filename = __FILE__, .line_number = __LINE__},
+                            /*is_fatal=*/true);
+        runner_->NotifyAssertion(assertion);
+    }
+    Runner* runner_;
 };
 
 } // namespace
@@ -155,6 +175,15 @@ void RunnerRunAllTestsSameTestCase() {
     ZX_ASSERT_MSG(test_2_counter == 1, "test_2 was not executed.\n");
 }
 
+void RunnerRunReturnsNonZeroOnTestFailure() {
+    Runner runner(Reporter(/*stream*/ nullptr));
+    runner.RegisterTest<Test, FailingTest>(kTestCaseName, kTestName, kFileName, kLineNumber,
+                                           FailingTest::MakeFactory(&runner));
+
+    ZX_ASSERT_MSG(runner.Run(Runner::kDefaultOptions) != 0,
+                  "Runner::Run must return non zero when at least one test fails.\n");
+}
+
 void RunnerListTests() {
     // Should produce the following output.
     constexpr char kExpectedOutput[] =
@@ -175,6 +204,92 @@ void RunnerListTests() {
     ZX_ASSERT_MSG(strcmp(kExpectedOutput, buffer) == 0, "List output mismatch.");
 
     fclose(memfile);
+}
+
+void TestDriverImplReset() {
+    TestDriverImpl driver;
+    Assertion assertion("A", "A", "B", "B", {.filename = kFileName, .line_number = kLineNumber},
+                        /*is_fatal*/ true);
+
+    driver.OnAssertion(assertion);
+    ZX_ASSERT_MSG(!driver.Continue(),
+                  "TestDriverImpl::Continue should return false after a fatal failure.\n");
+    ZX_ASSERT_MSG(driver.HadAnyFailures(),
+                  "TestDriverImpl::HadAnyFailures should return true after a fatal failure.\n");
+
+    driver.Reset();
+
+    ZX_ASSERT_MSG(driver.Continue(),
+                  "TestDriverImpl::Continue should return true after TestDriverImpl::Reset.\n");
+    ZX_ASSERT_MSG(
+        driver.HadAnyFailures(),
+        "TestDriverImpl::HadAnyFailures should not be affected by TestDriverImpl::Reset.\n");
+}
+
+void TestDriverImplFatalFailureEndsTest() {
+    TestDriverImpl driver;
+    Assertion assertion("A", "A", "B", "B", {.filename = kFileName, .line_number = kLineNumber},
+                        /*is_fatal*/ true);
+
+    ZX_ASSERT_MSG(driver.Continue(), "TestDriverImpl::Continue should return true by default.\n");
+    ZX_ASSERT_MSG(!driver.HadAnyFailures(),
+                  "TestDriverImpl::HadAnyFailures should return false by default.\n");
+    driver.OnAssertion(assertion);
+    ZX_ASSERT_MSG(!driver.Continue(),
+                  "TestDriverImpl::Continue should return false after a fatal failure.\n");
+    ZX_ASSERT_MSG(driver.HadAnyFailures(),
+                  "TestDriverImpl::HadAnyFailures should return true after a fatal failure.\n");
+}
+
+void TestDriverImplNonFatalFailureDoesNotEndTest() {
+    TestDriverImpl driver;
+    Assertion assertion("A", "A", "B", "B", {.filename = kFileName, .line_number = kLineNumber},
+                        /*is_fatal*/ false);
+
+    ZX_ASSERT_MSG(driver.Continue(), "TestDriverImpl::Continue should return true by default.\n");
+    ZX_ASSERT_MSG(!driver.HadAnyFailures(),
+                  "TestDriverImpl::HadAnyFailures should return false by default.\n");
+    driver.OnAssertion(assertion);
+    ZX_ASSERT_MSG(driver.Continue(),
+                  "TestDriverImpl::Continue should return false after a fatal failure.\n");
+    ZX_ASSERT_MSG(driver.HadAnyFailures(),
+                  "TestDriverImpl::HadAnyFailures should return true after a fatal failure.\n");
+}
+
+void TestDriverImplResetOnTestCompletion() {
+    class FakeTest : public zxtest::Test {
+    private:
+        void TestBody() final {}
+    };
+
+    TestInfo test_info(kTestName, {.filename = kFileName, .line_number = kLineNumber},
+                       &Test::Create<FakeTest>);
+    TestCase test_case(kTestCaseName, Test::SetUpTestCase, Test::TearDownTestCase);
+    struct CompleteFn {
+        const char* name;
+        void (TestDriverImpl::*complete)(const TestCase&, const TestInfo&);
+    };
+// Helper macro to generate appropiate error for each function.
+#define CFN(fn)                                                                                    \
+    { .name = #fn, .complete = &fn, }
+    static constexpr CompleteFn complete_fns[] = {CFN(TestDriverImpl::OnTestSuccess),
+                                                  CFN(TestDriverImpl::OnTestFailure),
+                                                  CFN(TestDriverImpl::OnTestSkip)};
+#undef CFN
+
+    for (auto complete_fn : complete_fns) {
+        TestDriverImpl driver;
+        Assertion assertion("A", "A", "B", "B", {.filename = kFileName, .line_number = kLineNumber},
+                            /*is_fatal*/ false);
+
+        driver.OnAssertion(assertion);
+        (driver.*complete_fn.complete)(test_case, test_info);
+
+        ZX_ASSERT_MSG(driver.Continue(), "%s should return true after test completion.\n",
+                      complete_fn.name);
+        ZX_ASSERT_MSG(driver.HadAnyFailures(), "%s should not reset on test completion.\n",
+                      complete_fn.name);
+    }
 }
 
 } // namespace test
