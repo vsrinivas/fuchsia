@@ -118,7 +118,7 @@ type {{.TransitionalBaseName}} struct {}
 			)
 			{{- if $method.Response -}}
 				{{- if len $method.Response.Members }} (
-					{{- range $method.Response.Members }}{{ $method.Type }}, {{ end -}}
+					{{- range $method.Response.Members }}{{ .Type }}, {{ end -}}
 						error)
 				{{- else -}}
 					error
