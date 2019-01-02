@@ -22,6 +22,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/mt8167-usb.cpp \
     $(LOCAL_DIR)/mt8167-thermal.cpp \
     $(LOCAL_DIR)/mt8167-touch.cpp \
+    $(LOCAL_DIR)/mt8167-sensors.cpp \
 
 MODULE_STATIC_LIBS := \
     system/dev/lib/mt8167 \

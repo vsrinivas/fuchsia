@@ -54,6 +54,7 @@ private:
     zx_status_t UsbInit();
     zx_status_t ThermalInit();
     zx_status_t TouchInit();
+    zx_status_t SensorsInit();
     int Thread();
 
     ddk::PBusProtocolClient pbus_;

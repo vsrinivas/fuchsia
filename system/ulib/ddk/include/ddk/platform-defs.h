@@ -34,6 +34,7 @@ __BEGIN_CDECLS;
 #define PDEV_DID_MUSB_HOST          21  // MUSB in host role
 #define PDEV_DID_DUMMY_DISPLAY      22  // Dummy display
 #define PDEV_DID_FOCALTOUCH         23  // FocalTech touch device
+#define PDEV_DID_LITE_ON_ALS        24  // Lite-On ambient light sensor
 
 // QEMU emulator
 #define PDEV_VID_QEMU               1
