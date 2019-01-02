@@ -174,6 +174,28 @@ or a package resource. The syntax is
 directory, from the `fuchsia.com` repository, its URL is
 `fuchsia-pkg://fuchsia.com/echo_dart#meta/echo_client_dart.cmx`.
 
+#### **Fuchsia API Surface**
+
+The Fuchsia API Surface is the combination of the [Fuchsia System Interface](#fuchsia-system-interface)
+and the client libraries included in the [Fuchsia SDK](#fuchsia-sdk).
+
+#### **Fuchsia SDK**
+
+The Fuchsia SDK is a collection of libraries and tools that the Fuchsia project provides to people
+writing software for Fuchsia.  Among other things, the Fuchsia SDK contains a definition of
+the [Fuchsia System Interface](#fuchsia-system-interface) as well as a number of client libraries.
+
+#### **Fuchsia Source Tree**
+
+The Fuchsia Source Tree is the open source code hosted on fuchsia.googlesource.com, which comprises
+the source code for Fuchsia. A given Fuchsia system can include additional software from outside
+the Fuchsia Source Tree by adding the appropriate [Fuchsia Package](#fuchsia-package).
+
+#### **Fuchsia System Interface**
+
+The Fuchsia System Interface is the binary interface that the Fuchsia operating system presents to
+software it runs.  For example, the entry points into the vDSO as well as all the FIDL protocols
+are part of the Fuchsia System Interface.
 
 #### **FVM**
 
@@ -362,13 +384,13 @@ Topaz is one of the four layers of the Fuchsia codebase.
 - [The Fuchsia layer cake](development/source_code/layers.md)
 - [Source](https://fuchsia.googlesource.com/topaz/+/master)
 
-#### **VDSO**
+#### **vDSO**
 
-The VDSO is a Virtual Shared Library -- it is provided by the [Zircon](#Zircon) kernel and does not
+The vDSO is a Virtual Shared Library -- it is provided by the [Zircon](#Zircon) kernel and does not
 appear in the filesystem or a package.  It provides the Zircon System Call API/ABI to userspace
 processes in the form of an ELF library that's "always there." In the Fuchsia SDK and [Zircon DDK]
 (#DDK) it exists as `libzircon.so` for the purpose of having something to pass to the linker
-representing the VDSO.
+representing the vDSO.
 
 #### **VMAR**
 
