@@ -53,30 +53,44 @@ zx_status_t EnvironmentServices::AddService(
 
 zx_status_t EnvironmentServices::AddServiceWithLaunchInfo(
     fuchsia::sys::LaunchInfo launch_info, const std::string& service_name) {
-  auto child = fbl::AdoptRef(
-      new fs::Service([this, service_name, launch_info = std::move(launch_info),
-                       controller = fuchsia::sys::ComponentControllerPtr()](
-                          zx::channel client_handle) mutable {
-        auto it = singleton_services_.find(launch_info.url);
+  return AddServiceWithLaunchInfo(
+      launch_info.url,
+      [launch_info = std::move(launch_info)]() {
+        // clone only URL and Arguments
+        fuchsia::sys::LaunchInfo dup_launch_info;
+        fidl::Clone(launch_info.url, &dup_launch_info.url);
+        fidl::Clone(launch_info.arguments, &dup_launch_info.arguments);
+        return dup_launch_info;
+      },
+      service_name);
+}
+
+zx_status_t EnvironmentServices::AddServiceWithLaunchInfo(
+    const std::string& singleton_id,
+    fit::function<fuchsia::sys::LaunchInfo()> handler,
+    const std::string& service_name) {
+  auto child = fbl::AdoptRef(new fs::Service(
+      [this, service_name, handler = std::move(handler), singleton_id,
+       controller = fuchsia::sys::ComponentControllerPtr()](
+          zx::channel client_handle) mutable {
+        auto it = singleton_services_.find(singleton_id);
         if (it == singleton_services_.end()) {
           component::Services services;
 
-          fuchsia::sys::LaunchInfo dup_launch_info;
-          dup_launch_info.url = launch_info.url;
-          fidl::Clone(launch_info.arguments, &dup_launch_info.arguments);
-          dup_launch_info.directory_request = services.NewRequest();
+          fuchsia::sys::LaunchInfo launch_info = handler();
+          launch_info.directory_request = services.NewRequest();
 
-          enclosing_env_->CreateComponent(std::move(dup_launch_info),
+          enclosing_env_->CreateComponent(std::move(launch_info),
                                           controller.NewRequest());
           controller.set_error_handler(
-              [this, url = launch_info.url, &controller](zx_status_t status) {
+              [this, singleton_id, &controller](zx_status_t status) {
                 // TODO: show error? where on stderr?
                 controller.Unbind();  // kills the singleton application
-                singleton_services_.erase(url);
+                singleton_services_.erase(singleton_id);
               });
 
           std::tie(it, std::ignore) =
-              singleton_services_.emplace(launch_info.url, std::move(services));
+              singleton_services_.emplace(singleton_id, std::move(services));
         }
 
         it->second.ConnectToService(std::move(client_handle), service_name);

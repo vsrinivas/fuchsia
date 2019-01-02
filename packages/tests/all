@@ -48,6 +48,7 @@
         "garnet/packages/tests/iquery_test",
         "garnet/packages/tests/json",
         "garnet/packages/tests/lib",
+        "garnet/packages/tests/lib_component",
         "garnet/packages/tests/libc",
         "garnet/packages/tests/log_listener",
         "garnet/packages/tests/logger",

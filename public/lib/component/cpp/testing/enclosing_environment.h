@@ -81,8 +81,23 @@ class EnvironmentServices {
   // Adds a supported service with the given |service_name|, using the given
   // |launch_info|, it only starts the component when the service is
   // requested.
+  // Note: Only url and arguments fields of provided launch_info are used, if
+  // you need to use other fields, use the Handler signature.
   zx_status_t AddServiceWithLaunchInfo(fuchsia::sys::LaunchInfo launch_info,
                                        const std::string& service_name);
+
+  // Adds the specified service to the set of services.
+  //
+  // Adds a supported service with the given |service_name|, using the given
+  // handler to generate launch info, it only starts the component when the
+  // service is requested.
+  // The provided singleton_id argument is used to keep track of singleton
+  // instances, generally you want to use the URL that'll be used for launch
+  // info.
+  zx_status_t AddServiceWithLaunchInfo(
+      const std::string& singleton_id,
+      fit::function<fuchsia::sys::LaunchInfo()> handler,
+      const std::string& service_name);
 
   // Allows child components to access parent service with name
   // |service_name|.
