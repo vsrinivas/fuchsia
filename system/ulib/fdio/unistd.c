@@ -1056,13 +1056,14 @@ ssize_t read(int fd, void* buf, size_t count) {
     if (io == NULL) {
         return ERRNO(EBADF);
     }
+    bool nonblocking = io->ioflag & IOFLAG_NONBLOCK;
     zx_status_t status;
     for (;;) {
         status = io->ops->read(io, buf, count);
-        if (status != ZX_ERR_SHOULD_WAIT || io->ioflag & IOFLAG_NONBLOCK) {
+        if (status != ZX_ERR_SHOULD_WAIT || nonblocking) {
             break;
         }
-        fdio_wait_fd(fd, FDIO_EVT_READABLE | FDIO_EVT_PEER_CLOSED, NULL, ZX_TIME_INFINITE);
+        fdio_wait(io, FDIO_EVT_READABLE | FDIO_EVT_PEER_CLOSED, ZX_TIME_INFINITE, NULL);
     }
     fdio_release(io);
     return status < 0 ? STATUS(status) : status;
@@ -1078,13 +1079,14 @@ ssize_t write(int fd, const void* buf, size_t count) {
     if (io == NULL) {
         return ERRNO(EBADF);
     }
+    bool nonblocking = io->ioflag & IOFLAG_NONBLOCK;
     zx_status_t status;
     for (;;) {
         status = io->ops->write(io, buf, count);
-        if ((status != ZX_ERR_SHOULD_WAIT) || (io->ioflag & IOFLAG_NONBLOCK)) {
+        if ((status != ZX_ERR_SHOULD_WAIT) || nonblocking) {
             break;
         }
-        fdio_wait_fd(fd, FDIO_EVT_WRITABLE | FDIO_EVT_PEER_CLOSED, NULL, ZX_TIME_INFINITE);
+        fdio_wait(io, FDIO_EVT_WRITABLE | FDIO_EVT_PEER_CLOSED, ZX_TIME_INFINITE, NULL);
     }
     fdio_release(io);
     return status < 0 ? STATUS(status) : status;
@@ -1122,13 +1124,14 @@ ssize_t pread(int fd, void* buf, size_t size, off_t ofs) {
     if (io == NULL) {
         return ERRNO(EBADF);
     }
+    bool nonblocking = io->ioflag & IOFLAG_NONBLOCK;
     zx_status_t status;
     for (;;) {
         status = io->ops->read_at(io, buf, size, ofs);
-        if ((status != ZX_ERR_SHOULD_WAIT) || (io->ioflag & IOFLAG_NONBLOCK)) {
+        if ((status != ZX_ERR_SHOULD_WAIT) || nonblocking) {
             break;
         }
-        fdio_wait_fd(fd, FDIO_EVT_READABLE | FDIO_EVT_PEER_CLOSED, NULL, ZX_TIME_INFINITE);
+        fdio_wait(io, FDIO_EVT_READABLE | FDIO_EVT_PEER_CLOSED, ZX_TIME_INFINITE, NULL);
     }
     fdio_release(io);
     return status < 0 ? STATUS(status) : status;
@@ -1166,13 +1169,14 @@ ssize_t pwrite(int fd, const void* buf, size_t size, off_t ofs) {
     if (io == NULL) {
         return ERRNO(EBADF);
     }
+    bool nonblocking = io->ioflag & IOFLAG_NONBLOCK;
     zx_status_t status;
     for (;;) {
         status = io->ops->write_at(io, buf, size, ofs);
-        if ((status != ZX_ERR_SHOULD_WAIT) || (io->ioflag & IOFLAG_NONBLOCK)) {
+        if ((status != ZX_ERR_SHOULD_WAIT) || nonblocking) {
             break;
         }
-        fdio_wait_fd(fd, FDIO_EVT_WRITABLE | FDIO_EVT_PEER_CLOSED, NULL, ZX_TIME_INFINITE);
+        fdio_wait(io, FDIO_EVT_WRITABLE | FDIO_EVT_PEER_CLOSED, ZX_TIME_INFINITE, NULL);
     }
     fdio_release(io);
     return status < 0 ? STATUS(status) : status;
@@ -2046,7 +2050,7 @@ int fdio_handle_fd(zx_handle_t h, zx_signals_t signals_in, zx_signals_t signals_
 
 __EXPORT
 void fdio_unsafe_wait_begin(fdio_t* io, uint32_t events,
-                       zx_handle_t* handle_out, zx_signals_t* signals_out) {
+                            zx_handle_t* handle_out, zx_signals_t* signals_out) {
     return io->ops->wait_begin(io, events, handle_out, signals_out);
 }
 
@@ -2303,9 +2307,17 @@ ssize_t sendto(int fd, const void* buf, size_t buflen, int flags, const struct s
     if (io == NULL) {
         return ERRNO(EBADF);
     }
-    ssize_t r = io->ops->sendto(io, buf, buflen, flags, addr, addrlen);
+    bool nonblocking = (io->ioflag & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT);
+    zx_status_t status;
+    for (;;) {
+        status = io->ops->sendto(io, buf, buflen, flags, addr, addrlen);
+        if (status != ZX_ERR_SHOULD_WAIT || nonblocking) {
+            break;
+        }
+        fdio_wait(io, FDIO_EVT_WRITABLE | FDIO_EVT_PEER_CLOSED, ZX_TIME_INFINITE, NULL);
+    }
     fdio_release(io);
-    return r < 0 ? STATUS(r) : r;
+    return status < 0 ? STATUS(status) : status;
 }
 
 __EXPORT
@@ -2317,9 +2329,17 @@ ssize_t recvfrom(int fd, void* restrict buf, size_t buflen, int flags, struct so
     if (addr != NULL && addrlen == NULL) {
         return ERRNO(EFAULT);
     }
-    ssize_t r = io->ops->recvfrom(io, buf, buflen, flags, addr, addrlen);
+    bool nonblocking = (io->ioflag & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT);
+    zx_status_t status;
+    for (;;) {
+        status = io->ops->recvfrom(io, buf, buflen, flags, addr, addrlen);
+        if (status != ZX_ERR_SHOULD_WAIT || nonblocking) {
+            break;
+        }
+        fdio_wait(io, FDIO_EVT_READABLE | FDIO_EVT_PEER_CLOSED, ZX_TIME_INFINITE, NULL);
+    }
     fdio_release(io);
-    return r < 0 ? STATUS(r) : r;
+    return status < 0 ? STATUS(status) : status;
 }
 
 __EXPORT
@@ -2328,9 +2348,17 @@ ssize_t sendmsg(int fd, const struct msghdr *msg, int flags) {
     if (io == NULL) {
         return ERRNO(EBADF);
     }
-    ssize_t r = io->ops->sendmsg(io, msg, flags);
+    bool nonblocking = (io->ioflag & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT);
+    zx_status_t status;
+    for (;;) {
+        status = io->ops->sendmsg(io, msg, flags);
+        if (status != ZX_ERR_SHOULD_WAIT || nonblocking) {
+            break;
+        }
+        fdio_wait(io, FDIO_EVT_WRITABLE | FDIO_EVT_PEER_CLOSED, ZX_TIME_INFINITE, NULL);
+    }
     fdio_release(io);
-    return r < 0 ? STATUS(r) : r;
+    return status < 0 ? STATUS(status) : status;
 }
 
 __EXPORT
@@ -2339,9 +2367,17 @@ ssize_t recvmsg(int fd, struct msghdr* msg, int flags) {
     if (io == NULL) {
         return ERRNO(EBADF);
     }
-    ssize_t r = io->ops->recvmsg(io, msg, flags);
+    bool nonblocking = (io->ioflag & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT);
+    zx_status_t status;
+    for (;;) {
+        status = io->ops->recvmsg(io, msg, flags);
+        if (status != ZX_ERR_SHOULD_WAIT || nonblocking) {
+            break;
+        }
+        fdio_wait(io, FDIO_EVT_READABLE | FDIO_EVT_PEER_CLOSED, ZX_TIME_INFINITE, NULL);
+    }
     fdio_release(io);
-    return r < 0 ? STATUS(r) : r;
+    return status < 0 ? STATUS(status) : status;
 }
 
 __EXPORT
