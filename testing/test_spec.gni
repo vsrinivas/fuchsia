@@ -135,6 +135,8 @@ template("test_spec") {
     test = {
       name = get_label_info(":$target_name", "label_no_toolchain")
       location = invoker.location
+      os = current_os
+      cpu = current_cpu
     }
     environments = target_envs
   }
