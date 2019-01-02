@@ -26,6 +26,9 @@ namespace zxdb {
 
 // Decodes the desired attributes of a given DWARF Debug Info Entry ("DIE").
 //
+// This transparently follows DW_AT_abstract_origin attributes. This is used
+// to implement "inheritance" of DIEs.
+//
 // To use, create once for the unit and register the output variables with the
 // Add* functions. Then loop through the relevant entries. In the loop first
 // reset() the output variables (so you can tell which were set), then call
@@ -81,12 +84,12 @@ class DwarfDieDecoder {
   // To accommodate both, this function will fill in the corresponding output
   // variable according to the storage form of the attribute.
   //
-  // See also the DIE wrapper below.
+  // Most callers will want to use the next variant which returns a DIE.
   void AddReference(llvm::dwarf::Attribute attribute,
                     llvm::Optional<uint64_t>* unit_offset,
                     llvm::Optional<uint64_t>* global_offset);
 
-  // Variant ot the above AddReference that automatically converts a reference
+  // Variant of the above AddReference that automatically converts a reference
   // to an actual DIE. If the attribute doesn't exist or is invalid, this DIE
   // will be !isValid().
   void AddReference(llvm::dwarf::Attribute attribute, llvm::DWARFDie* output);
@@ -106,16 +109,28 @@ class DwarfDieDecoder {
 
   // Decode one info entry. Returns true on success, false means the DIE
   // was corrupt. The outputs for each encountered attribute will be set.
-  //
-  // A return value of false means either that the entry was a null one (which
-  // is used as a placeholder internally), or that it contained none of the
-  // attributes that were requested.
   bool Decode(const llvm::DWARFDie& die);
   bool Decode(const llvm::DWARFDebugInfoEntry& die);
 
  public:
   using Dispatch = std::pair<llvm::dwarf::Attribute,
                              std::function<void(const llvm::DWARFFormValue&)>>;
+
+  // Backend for Decode() above.
+  //
+  // This additionally takes a list of all attributes seen which will be added
+  // to (in/out var). Once seen, an attribute is not considered again. This is
+  // used to implement DW_AT_abstract_origin where a DIE can reference another
+  // one for attributes not specified.
+  //
+  // Following abstract origins generates a recursive call. To prevent infinite
+  // recursion for corrupt symbols, this function takes a maximum number of
+  // abstract origin references to follow which is decremented each time a
+  // recursive call is made. When this gets to 0, no more abstract origin
+  // references will be followed.
+  bool DecodeInternal(const llvm::DWARFDebugInfoEntry& die,
+                      int abstract_origin_refs_to_follow,
+                      std::vector<llvm::dwarf::Attribute>* seen_attrs);
 
   llvm::DWARFContext* context_;
   llvm::DWARFUnit* unit_;
