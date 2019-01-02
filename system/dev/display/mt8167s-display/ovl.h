@@ -36,8 +36,8 @@ constexpr uint32_t kMaxLayer = 4;
 class Ovl {
 public:
     // Contructor
-    Ovl(uint32_t height, uint32_t width, uint32_t pitch, uint32_t x, uint32_t y)
-        : height_(height), width_(width), pitch_(pitch), x_(x), y_(y) {
+    Ovl(uint32_t height, uint32_t width)
+        : height_(height), width_(width) {
         ZX_DEBUG_ASSERT(height_ < kMaxHeight);
         ZX_DEBUG_ASSERT(width_ < kMaxWidth);
     }
@@ -124,11 +124,8 @@ private:
     pdev_protocol_t                     pdev_ = {nullptr, nullptr};
     zx::bti                             bti_;
 
-    const uint32_t                      height_; // height of buffer
-    const uint32_t                      width_; // width of buffer
-    const uint32_t                      pitch_; // i.e. stride
-    const uint32_t                      x_; // x-offset for the actual start of image in buffer
-    const uint32_t                      y_; // y-offset for the actual start of image in buffer
+    const uint32_t                      height_; // Display height
+    const uint32_t                      width_; // Display width
 
     bool                                initialized_ = false;
 

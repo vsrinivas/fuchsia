@@ -147,6 +147,9 @@ void Ovl::Stop() {
 zx_status_t Ovl::Config(uint8_t layer, OvlConfig &cfg) {
     ZX_DEBUG_ASSERT(initialized_);
     ZX_DEBUG_ASSERT(layer < kMaxLayer);
+    // Overlay does not support scaling.
+    ZX_DEBUG_ASSERT(cfg.src_frame.height == cfg.dest_frame.height &&
+                    cfg.src_frame.width == cfg.dest_frame.width);
 
     // Configure ROI first. ROI abbreviation is not clarified in docs. Assuming it means
     // Region Of Interest. Also, ROI does not seem to be "layer" related. So it might mean the
@@ -194,19 +197,23 @@ zx_status_t Ovl::Config(uint8_t layer, OvlConfig &cfg) {
     ovl_mmio_->Write32(regVal, OVL_Lx_CON(layer));
 
     // write the height and width of source buffer for this layer
-    ovl_mmio_->Write32(height_ << 16 | width_, OVL_Lx_SRC_SIZE(layer));
+    // Since scaling is not support in OVL, it doesn't matter where we get
+    // the height and width from. Picking source height and width
+    ovl_mmio_->Write32(cfg.src_frame.height << 16 |
+                       cfg.src_frame.width, OVL_Lx_SRC_SIZE(layer));
 
-    // set the offset of actual image within the buffer
-    ovl_mmio_->Write32(y_ << 16 | x_, OVL_Lx_OFFSET(layer));
+    // Set destination frame to be display on display
+    ovl_mmio_->Write32(cfg.dest_frame.y_pos << 16 | cfg.dest_frame.x_pos, OVL_Lx_OFFSET(layer));
 
-    // set the physical address of the buffer for this layer
+    // set the physical address of the buffer for this layer based on source offset
     uint32_t finaladdr = static_cast<uint32_t>(cfg.paddr) +
-                         x_ * GetBytesPerPixel(cfg.format) + y_ * pitch_;
+                         cfg.src_frame.x_pos * GetBytesPerPixel(cfg.format) +
+                         cfg.src_frame.y_pos * cfg.pitch;
     ovl_mmio_->Write32(finaladdr, OVL_Lx_ADDR(layer));
 
     // setup Lx_PITCH_PITCH register
     regVal = 0;
-    regVal |= Lx_PITCH_PITCH(pitch_);
+    regVal |= Lx_PITCH_PITCH(cfg.pitch);
     ovl_mmio_->Write32(regVal, OVL_Lx_PITCH(layer));
 
     // Setup magical register with undocumented magic value

@@ -138,9 +138,7 @@ uint32_t Mt8167sDisplay::DisplayControllerImplCheckConfiguration(
                 }
                 // TODO(payamm) Add support for scaling (ZX-3228) :
                 if (layer.src_frame.width != layer.dest_frame.width ||
-                    layer.src_frame.height != layer.dest_frame.height ||
-                    layer.image.width != layer.dest_frame.width ||
-                    layer.image.height != layer.dest_frame.height) {
+                    layer.src_frame.height != layer.dest_frame.height) {
                     layer_cfg_results[0][j] |= CLIENT_FRAME_SCALE;
                 }
                 // Ony support ALPHA_HW_MULTIPLY
@@ -181,15 +179,18 @@ void Mt8167sDisplay::DisplayControllerImplApplyConfiguration(
         // First stop the overlay engine
         ovl_->Stop();
         for (size_t j = 0; j < config->layer_count; j++) {
-
-            zx_paddr_t addr =
-                reinterpret_cast<zx_paddr_t>(config->layer_list[j]->cfg.primary.image.handle);
+            const primary_layer_t& layer = config->layer_list[j]->cfg.primary;
+            zx_paddr_t addr = reinterpret_cast<zx_paddr_t>(layer.image.handle);
             // Build the overlay configuration. For now we only provide format and address.
             OvlConfig cfg;
             cfg.paddr = addr;
-            cfg.format = config->layer_list[j]->cfg.primary.image.pixel_format;
-            cfg.alpha_mode = config->layer_list[j]->cfg.primary.alpha_mode;
-            cfg.alpha_val = config->layer_list[j]->cfg.primary.alpha_layer_val;
+            cfg.format = layer.image.pixel_format;
+            cfg.alpha_mode = layer.alpha_mode;
+            cfg.alpha_val = layer.alpha_layer_val;
+            cfg.src_frame = layer.src_frame;
+            cfg.dest_frame = layer.dest_frame;
+            cfg.pitch = DisplayControllerImplComputeLinearStride(layer.image.width, cfg.format) *
+                        ZX_PIXEL_FORMAT_BYTES(cfg.format);
             ovl_->Config(static_cast<uint8_t>(j), cfg);
         }
         // All configurations are done. Re-start the engine
@@ -274,8 +275,7 @@ zx_status_t Mt8167sDisplay::Bind() {
     // TODO(payamm): Move to a separate function
     // Create internal ovl object
     fbl::AllocChecker ac;
-    ovl_ = fbl::make_unique_checked<mt8167s_display::Ovl>(&ac,
-                                                          height_, width_, pitch_, 0, 0);
+    ovl_ = fbl::make_unique_checked<mt8167s_display::Ovl>(&ac, height_, width_);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -314,8 +314,7 @@ zx_status_t display_bind(void* ctx, zx_device_t* parent) {
     fbl::AllocChecker ac;
     auto dev = fbl::make_unique_checked<mt8167s_display::Mt8167sDisplay>(&ac, parent,
                                                                          DISPLAY_WIDTH,
-                                                                         DISPLAY_HEIGHT,
-                                                                         DISPLAY_PITCH);
+                                                                         DISPLAY_HEIGHT);
     if (!ac.check()) {
         DISP_ERROR("no bind\n");
         return ZX_ERR_NO_MEMORY;

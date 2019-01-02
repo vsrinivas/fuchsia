@@ -22,11 +22,13 @@ constexpr uint8_t PANEL_DISPLAY_ID = 1;
 // mt8167s_ref Display dimension
 constexpr uint32_t DISPLAY_WIDTH = 720;
 constexpr uint32_t DISPLAY_HEIGHT = 1280;
-constexpr uint32_t DISPLAY_PITCH = (DISPLAY_WIDTH * 4);
 
 struct OvlConfig {
     zx_pixel_format_t   format;
     zx_paddr_t          paddr;
     alpha_t             alpha_mode;
     float               alpha_val;
+    frame_t             src_frame;
+    frame_t             dest_frame;
+    uint32_t            pitch;
 };
