@@ -38,7 +38,8 @@ const (
 	cmdRead     = uint32(8)  // read data
 	cmdWrite    = uint32(9)  // write data
 	cmdClose    = uint32(10) // close file
-	cmdLastData = uint32(11)
+	cmdLastData = uint32(11) //
+	cmdReboot   = uint32(12) // reboot command
 )
 
 // Client implements the netboot protocol.
@@ -210,22 +211,47 @@ func (n *Client) Beacon() (*net.UDPAddr, error) {
 	return nil, errors.New("no valid beacon")
 }
 
-// Boot sends the boot packet to the addr.
+// Boot sends a boot packet to the address.
 func (n *Client) Boot(addr *net.UDPAddr) error {
 	n.Cookie++
-	msg := netbootHeader{
+	msg := &netbootHeader{
 		Magic:  magic,
 		Cookie: n.Cookie,
 		Cmd:    cmdBoot,
 		Arg:    0,
 	}
+	if err := sendPacket(msg, addr); err != nil {
+		return fmt.Errorf("failed to send boot command: %v\n", err)
+	}
+	return nil
+}
 
+// Reboot sends a reboot packet the address.
+func (n *Client) Reboot(addr *net.UDPAddr) error {
+	n.Cookie++
+	msg := &netbootHeader{
+		Magic:  magic,
+		Cookie: n.Cookie,
+		Cmd:    cmdReboot,
+		Arg:    0,
+	}
+	if err := sendPacket(msg, addr); err != nil {
+		return fmt.Errorf("failed to send reboot command: %v\n", err)
+	}
+	return nil
+}
+
+func sendPacket(msg *netbootHeader, addr *net.UDPAddr) error {
+	if msg == nil {
+		return errors.New("no message provided")
+	}
 	var buf bytes.Buffer
-	if err := binary.Write(&buf, binary.LittleEndian, msg); err != nil {
+	if err := binary.Write(&buf, binary.LittleEndian, *msg); err != nil {
 		return err
 	}
 
 	conn, err := net.ListenUDP("udp6", &net.UDPAddr{IP: net.IPv6zero})
+	defer conn.Close()
 	if err != nil {
 		return fmt.Errorf("failed to create a socket: %v\n", err)
 	}
@@ -235,11 +261,7 @@ func (n *Client) Boot(addr *net.UDPAddr) error {
 		Port: serverPort,
 		Zone: addr.Zone,
 	})
-	if err != nil {
-		return fmt.Errorf("failed to send boot command: %v\n", err)
-	}
-
-	return nil
+	return err
 }
 
 func netbootString(bs []byte) (string, error) {
