@@ -53,6 +53,7 @@ var specFoo1 = testsharder.TestSpec{
 	Test: testsharder.Test{
 		Name:     "//obsidian/bin/foo:foo_unittests",
 		Location: "/system/test/foo_unittests",
+		OS:       "linux",
 	},
 	Envs: []testsharder.Environment{qemuEnv},
 }
@@ -61,6 +62,7 @@ var specFoo2 = testsharder.TestSpec{
 	Test: testsharder.Test{
 		Name:     "//obsidian/bin/foo:foo_integration_tests",
 		Location: "/system/test/foo_integration_tests",
+		OS:       "linux",
 	},
 	Envs: []testsharder.Environment{qemuEnv, nucEnv},
 }
@@ -69,6 +71,7 @@ var specBar = testsharder.TestSpec{
 	Test: testsharder.Test{
 		Name:     "//obsidian/lib/bar:bar_tests",
 		Location: "/system/test/bar_tests",
+		OS:       "linux",
 	},
 	Envs: []testsharder.Environment{qemuEnv},
 }
@@ -77,6 +80,7 @@ var specBaz = testsharder.TestSpec{
 	Test: testsharder.Test{
 		Name:     "//obsidian/public/lib/baz:baz_host_tests",
 		Location: "/$root_build_dir/baz_host_tests",
+		OS:       "linux",
 	},
 	Envs: []testsharder.Environment{linuxEnv, macEnv},
 }
@@ -281,19 +285,28 @@ func TestValidateTestSpecs(t *testing.T) {
 	noTestNameSpec := testsharder.TestSpec{
 		Test: testsharder.Test{
 			Location: "/system/test/baz_tests",
+			OS:       "linux",
 		},
 		Envs: []testsharder.Environment{qemuEnv},
 	}
 	noTestLocationSpec := testsharder.TestSpec{
 		Test: testsharder.Test{
 			Name: "//obsidian/public/lib/baz:baz_tests",
+			OS:   "linux",
 		},
 		Envs: []testsharder.Environment{qemuEnv},
+	}
+	noOSSpec := testsharder.TestSpec{
+		Test: testsharder.Test{
+			Name:     "//obsidian/bin/foo:foo_unittests",
+			Location: "/system/test/foo_unittests",
+		},
 	}
 	badEnvSpec := testsharder.TestSpec{
 		Test: testsharder.Test{
 			Name:     "//obsidian/public/lib/baz:baz_tests",
 			Location: "/system/test/baz_tests",
+			OS:       "linux",
 		},
 		Envs: []testsharder.Environment{
 			testsharder.Environment{
@@ -320,7 +333,7 @@ func TestValidateTestSpecs(t *testing.T) {
 
 	t.Run("invalid specs are invalidated", func(t *testing.T) {
 		invalidSpecLists := [][]testsharder.TestSpec{
-			{noTestNameSpec}, {noTestLocationSpec}, {badEnvSpec},
+			{noOSSpec}, {noTestNameSpec}, {noTestLocationSpec}, {badEnvSpec},
 			{noTestNameSpec, noTestLocationSpec}, {noTestNameSpec, badEnvSpec},
 			{noTestLocationSpec, badEnvSpec},
 			{noTestNameSpec, noTestLocationSpec, badEnvSpec},

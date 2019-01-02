@@ -47,6 +47,9 @@ type Test struct {
 	// Location is a unique reference to a test: for example, a filesystem
 	// path or a Fuchsia URI.
 	Location string `json:"location"`
+
+	// OS is the operating system in which this test must be executed.
+	OS string `json:"os"`
 }
 
 func (spec TestSpec) validateAgainst(platforms []DimensionSet) error {
@@ -55,6 +58,9 @@ func (spec TestSpec) validateAgainst(platforms []DimensionSet) error {
 	}
 	if spec.Test.Location == "" {
 		return fmt.Errorf("A test spec's test must have a non-empty location")
+	}
+	if spec.Test.OS == "" {
+		return fmt.Errorf("A test spec's test must have a non-empty OS")
 	}
 
 	resolvesToOneOf := func(env Environment, platforms []DimensionSet) bool {
