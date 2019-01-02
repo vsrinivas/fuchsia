@@ -69,7 +69,7 @@ zx_status_t zxio_default_rewind(zxio_t* io);
 // This ops table is a good starting point for building other ops tables to that
 // the default implementations of unimplemented operations is consistent across
 // ops tables.
-__CONSTEXPR const zxio_ops_t zxio_default_ops = {
+static __CONSTEXPR const zxio_ops_t zxio_default_ops = {
     .release = zxio_default_release,
     .close = zxio_default_close,
     .wait_begin = zxio_default_wait_begin,

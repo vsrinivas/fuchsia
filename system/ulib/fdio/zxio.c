@@ -18,25 +18,6 @@
 #include "private-remoteio.h"
 #include "private.h"
 
-// Initial memory layout for types that bridge between |fdio_t| and |zxio_t|.
-//
-// Every |fdio_t| implementation starts with an embedded |fdio_t|, which the
-// callers use to find the fdio |ops| table. There are several |fdio_t|
-// implementations that use zxio as a backed. All of them have a memory layout
-// that matches this structure. Defining this structure lets us define
-// most of the fdio ops that use the zxio backend in a generic way.
-//
-// Will be removed once the transition to the zxio backend is complete.
-typedef struct fdio_zxio {
-    fdio_t io;
-    zxio_storage_t storage;
-} fdio_zxio_t;
-
-static inline zxio_t* fdio_get_zxio(fdio_t* io) {
-    fdio_zxio_t* wrapper = (fdio_zxio_t*)io;
-    return &wrapper->storage.io;
-}
-
 static zx_status_t fdio_zxio_close(fdio_t* io) {
     zxio_t* z = fdio_get_zxio(io);
     return zxio_close(z);
