@@ -24,6 +24,7 @@ enum class Board {
     kVim2,
     kAstro,
     kCleo,
+    kSherlock,
     kUnknown,
 };
 
@@ -57,6 +58,8 @@ Board GetBoardType() {
         return Board::kAstro;
     } else if (!strcmp(board_name, "cleo")) {
         return Board::kCleo;
+    } else if (!strcmp(board_name, "sherlock")) {
+        return Board::kSherlock;
     }
 
     return Board::kUnknown;
@@ -222,6 +225,45 @@ bool cleo_enumeration_test() {
     END_TEST;
 }
 
+bool sherlock_enumeration_test() {
+    BEGIN_TEST;
+    static const char* kDevicePaths[] = {
+        "sys/platform/sherlock",
+        "sys/platform/05:06:1/aml-axg-gpio",
+        "sys/platform/05:00:12/clocks",
+        "sys/platform/05:00:2/aml-i2c",
+        "sys/platform/05:00:e/aml-canvas",
+        "sys/platform/05:05:b/ProxyClient[7043414e]/aml-canvas-proxy",
+        "sys/platform/05:05:b/display/astro-display/display-controller",
+        "sys/platform/00:00:2/xhci/usb",
+        "sys/platform/05:00:6/aml-sd-emmc/sdmmc/sdmmc-block/block/part-000/block",
+        "sys/platform/05:00:6/aml-sd-emmc/sdmmc/sdmmc-block/block/part-002/block",
+        "sys/platform/05:00:6/aml-sd-emmc/sdmmc/sdmmc-block/block/part-003/block",
+        "sys/platform/05:00:6/aml-sd-emmc/sdmmc/sdmmc-block/block/part-004/block",
+        "sys/platform/05:00:6/aml-sd-emmc/sdmmc/sdmmc-block/block/part-005/block",
+        "sys/platform/05:00:6/aml-sd-emmc/sdmmc/sdmmc-block/block/part-006/block",
+        "sys/platform/05:00:6/aml-sd-emmc/sdmmc/sdmmc-block/block/part-007/block",
+        "sys/platform/05:00:6/aml-sd-emmc/sdmmc/sdmmc-block/block/part-008/block/fvm/blobfs-p-1/block",
+        "sys/platform/05:00:6/aml-sd-emmc/sdmmc/sdmmc-block/block/part-008/block/fvm/minfs-p-2/block",
+        "sys/platform/05:00:6/aml-sd-emmc/sdmmc/sdmmc-block/block/part-009/block",
+        "sys/platform/05:00:6/aml-sd-emmc/sdmmc/sdmmc-block/block/part-010/block",
+        //"sys/platform/05:00:6/aml-sd-emmc/sdio",
+        //"sys/platform/05:00:3/aml-uart/serial/bt-transport/uart/bcm-hci",
+        "sys/platform/05:06:13/aml-mipi",
+        "sys/platform/05:06:c/ProxyClient[7043414e]/aml-canvas-proxy",
+        "sys/platform/05:06:c/aml-video",
+        "sys/platform/05:06:d/aml-gpu",
+        "sys/platform/10:01:1/ti-lp8556",
+        "sys/platform/00:00:13/hid-buttons/hid-device-000",
+        "sys/platform/05:06:10/sherlock-audio-out",
+        "sys/platform/05:06:14/sherlock-audio-in",
+    };
+
+    ASSERT_TRUE(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
+
+    END_TEST;
+}
+
 #define MAKE_TEST_CASE(name) \
     BEGIN_TEST_CASE(name) \
     RUN_TEST(name ## _enumeration_test) \
@@ -232,6 +274,7 @@ MAKE_TEST_CASE(qemu);
 MAKE_TEST_CASE(vim2);
 MAKE_TEST_CASE(astro);
 MAKE_TEST_CASE(cleo);
+MAKE_TEST_CASE(sherlock);
 
 #undef MAKE_TEST_CASE
 
@@ -247,6 +290,8 @@ int main(int argc, char** argv) {
             return unittest_run_one_test(test_case_astro, TEST_ALL) ? 0 : -1;
         case Board::kCleo:
             return unittest_run_one_test(test_case_cleo, TEST_ALL) ? 0 : -1;
+        case Board::kSherlock:
+            return unittest_run_one_test(test_case_sherlock, TEST_ALL) ? 0 : -1;
         case Board::kUnknown:
             return 0;
     }
