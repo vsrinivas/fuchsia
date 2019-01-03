@@ -334,7 +334,7 @@ zx_status_t BlockDevice::ReadWriteData(block_op_t* operation) {
     // if that ends up being more efficient.
     fzl::VmoMapper mapper;
     zx_status_t status = mapper.Map(*zx::unowned_vmo(operation->rw.vmo), addr, length,
-                                    ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE);
+                                    ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
     if (status != ZX_OK) {
         return status;
     }

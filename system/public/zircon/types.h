@@ -358,21 +358,6 @@ typedef struct zx_handle_info {
     uint32_t unused;
 } zx_handle_info_t;
 
-// The ZX_VM_FLAG_* constants are to be deprecated in favor of the ZX_VM_*
-// versions.
-#define ZX_VM_FLAG_PERM_READ              ((uint32_t)1u << 0)
-#define ZX_VM_FLAG_PERM_WRITE             ((uint32_t)1u << 1)
-#define ZX_VM_FLAG_PERM_EXECUTE           ((uint32_t)1u << 2)
-#define ZX_VM_FLAG_COMPACT                ((uint32_t)1u << 3)
-#define ZX_VM_FLAG_SPECIFIC               ((uint32_t)1u << 4)
-#define ZX_VM_FLAG_SPECIFIC_OVERWRITE     ((uint32_t)1u << 5)
-#define ZX_VM_FLAG_CAN_MAP_SPECIFIC       ((uint32_t)1u << 6)
-#define ZX_VM_FLAG_CAN_MAP_READ           ((uint32_t)1u << 7)
-#define ZX_VM_FLAG_CAN_MAP_WRITE          ((uint32_t)1u << 8)
-#define ZX_VM_FLAG_CAN_MAP_EXECUTE        ((uint32_t)1u << 9)
-#define ZX_VM_FLAG_MAP_RANGE              ((uint32_t)1u << 10)
-#define ZX_VM_FLAG_REQUIRE_NON_RESIZABLE  ((uint32_t)1u << 11)
-
 #ifdef __cplusplus
 // We cannot use <stdatomic.h> with C++ code as _Atomic qualifier defined by
 // C11 is not valid in C++11. There is not a single standard name that can

@@ -112,7 +112,7 @@ zx_status_t ResizeableVmoMapper::Grow(size_t size) {
     // Try to extend mapping
     uintptr_t new_start;
     if ((status = zx_vmar_map(vmar_handle,
-                              map_options_ | ZX_VM_FLAG_SPECIFIC,
+                              map_options_ | ZX_VM_SPECIFIC,
                               start_ + size_ - vmar_info.base,
                               vmo().get(),
                               size_,
