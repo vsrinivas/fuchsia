@@ -66,14 +66,6 @@ zx_status_t fdio_default_set_flags(fdio_t* io, uint32_t flags) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-ssize_t fdio_default_read(fdio_t* io, void* _data, size_t len) {
-    return ZX_ERR_WRONG_TYPE;
-}
-
-ssize_t fdio_default_read_at(fdio_t* io, void* _data, size_t len, off_t offset) {
-    return ZX_ERR_WRONG_TYPE;
-}
-
 ssize_t fdio_default_write(fdio_t* io, const void* _data, size_t len) {
     return ZX_ERR_WRONG_TYPE;
 }

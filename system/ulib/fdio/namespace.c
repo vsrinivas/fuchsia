@@ -396,8 +396,6 @@ static zx_status_t zxio_dir_unlink(fdio_t* io, const char* path, size_t len) {
 }
 
 static fdio_ops_t dir_ops = {
-    .read = fdio_default_read,
-    .read_at = fdio_default_read_at,
     .write = fdio_default_write,
     .write_at = fdio_default_write_at,
     .seek = fdio_default_seek,

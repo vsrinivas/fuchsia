@@ -23,13 +23,6 @@ static inline zxio_socket_t* fdio_get_zxio_socket(fdio_t* io) {
     return (zxio_socket_t*)fdio_get_zxio(io);
 }
 
-static ssize_t zxsio_read(fdio_t* io, void* data, size_t len) {
-    zxio_socket_t* sio = fdio_get_zxio_socket(io);
-    size_t actual = 0u;
-    zx_status_t status = zxs_recv(&sio->socket, data, len, &actual);
-    return status != ZX_OK ? status : (ssize_t)actual;
-}
-
 static ssize_t zxsio_write(fdio_t* io, const void* data, size_t len) {
     zxio_socket_t* sio = fdio_get_zxio_socket(io);
     size_t actual = 0u;
@@ -319,8 +312,6 @@ static zx_status_t fdio_socket_shutdown(fdio_t* io, int how) {
 }
 
 static fdio_ops_t fdio_socket_stream_ops = {
-    .read = zxsio_read,
-    .read_at = fdio_default_read_at,
     .write = zxsio_write,
     .write_at = fdio_default_write_at,
     .seek = fdio_default_seek,
@@ -354,8 +345,6 @@ static fdio_ops_t fdio_socket_stream_ops = {
 };
 
 static fdio_ops_t fdio_socket_dgram_ops = {
-    .read = zxsio_read,
-    .read_at = fdio_default_read_at,
     .write = zxsio_write,
     .write_at = fdio_default_write_at,
     .seek = fdio_default_seek,

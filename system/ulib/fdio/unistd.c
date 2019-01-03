@@ -1057,16 +1057,17 @@ ssize_t read(int fd, void* buf, size_t count) {
         return ERRNO(EBADF);
     }
     bool nonblocking = io->ioflag & IOFLAG_NONBLOCK;
+    size_t actual = 0u;
     zx_status_t status;
     for (;;) {
-        status = io->ops->read(io, buf, count);
+        status = zxio_read(fdio_get_zxio(io), buf, count, &actual);
         if (status != ZX_ERR_SHOULD_WAIT || nonblocking) {
             break;
         }
         fdio_wait(io, FDIO_EVT_READABLE | FDIO_EVT_PEER_CLOSED, ZX_TIME_INFINITE, NULL);
     }
     fdio_release(io);
-    return status < 0 ? STATUS(status) : status;
+    return status != ZX_OK ? ERROR(status) : (ssize_t)actual;
 }
 
 __EXPORT
@@ -1125,16 +1126,17 @@ ssize_t pread(int fd, void* buf, size_t size, off_t ofs) {
         return ERRNO(EBADF);
     }
     bool nonblocking = io->ioflag & IOFLAG_NONBLOCK;
+    size_t actual = 0u;
     zx_status_t status;
     for (;;) {
-        status = io->ops->read_at(io, buf, size, ofs);
+        status = zxio_read_at(fdio_get_zxio(io), ofs, buf, size, &actual);
         if ((status != ZX_ERR_SHOULD_WAIT) || nonblocking) {
             break;
         }
         fdio_wait(io, FDIO_EVT_READABLE | FDIO_EVT_PEER_CLOSED, ZX_TIME_INFINITE, NULL);
     }
     fdio_release(io);
-    return status < 0 ? STATUS(status) : status;
+    return status != ZX_OK ? ERROR(status) : (ssize_t)actual;
 }
 
 __EXPORT

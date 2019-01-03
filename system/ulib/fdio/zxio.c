@@ -113,13 +113,6 @@ static ssize_t fdio_zxio_read(fdio_t* io, void* data, size_t len) {
     return status != ZX_OK ? status : (ssize_t)actual;
 }
 
-static ssize_t fdio_zxio_read_at(fdio_t* io, void* data, size_t len, off_t at) {
-    zxio_t* z = fdio_get_zxio(io);
-    size_t actual = 0;
-    zx_status_t status = zxio_read_at(z, at, data, len, &actual);
-    return status != ZX_OK ? status : (ssize_t)actual;
-}
-
 static ssize_t fdio_zxio_write(fdio_t* io, const void* data, size_t len) {
     zxio_t* z = fdio_get_zxio(io);
     size_t actual = 0;
@@ -163,8 +156,6 @@ static zx_status_t fdio_zxio_set_flags(fdio_t* io, uint32_t flags) {
 // Generic ---------------------------------------------------------------------
 
 fdio_ops_t fdio_zxio_ops = {
-    .read = fdio_zxio_read,
-    .read_at = fdio_zxio_read_at,
     .write = fdio_zxio_write,
     .write_at = fdio_zxio_write_at,
     .seek = fdio_zxio_seek,
@@ -409,8 +400,6 @@ static zx_status_t fdio_zxio_remote_link(fdio_t* io, const char* src, size_t src
 }
 
 static fdio_ops_t fdio_zxio_remote_ops = {
-    .read = fdio_zxio_read,
-    .read_at = fdio_zxio_read_at,
     .write = fdio_zxio_write,
     .write_at = fdio_zxio_write_at,
     .seek = fdio_zxio_seek,
@@ -542,8 +531,6 @@ static zx_status_t fdio_zxio_vmofile_get_vmo(fdio_t* io, int flags,
 }
 
 fdio_ops_t fdio_zxio_vmofile_ops = {
-    .read = fdio_zxio_read,
-    .read_at = fdio_zxio_read_at,
     .write = fdio_zxio_write,
     .write_at = fdio_zxio_write_at,
     .seek = fdio_zxio_seek,
@@ -739,8 +726,6 @@ static zx_status_t fdio_zxio_pipe_shutdown(fdio_t* io, int how) {
 }
 
 static fdio_ops_t fdio_zxio_pipe_ops = {
-    .read = fdio_zxio_read,
-    .read_at = fdio_default_read_at,
     .write = fdio_zxio_write,
     .write_at = fdio_default_write_at,
     .seek = fdio_default_seek,
@@ -860,8 +845,6 @@ static zx_status_t fdio_zxio_debuglog_clone(fdio_t* io, zx_handle_t* handles,
 }
 
 static fdio_ops_t fdio_zxio_debuglog_ops = {
-    .read = fdio_default_read,
-    .read_at = fdio_default_read_at,
     .write = fdio_zxio_write,
     .write_at = fdio_default_write_at,
     .seek = fdio_default_seek,

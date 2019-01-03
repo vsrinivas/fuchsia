@@ -34,8 +34,6 @@ typedef struct fdio_namespace fdio_ns_t;
 // The NULL protocol absorbs writes and is never readable.
 
 typedef struct fdio_ops {
-    ssize_t (*read)(fdio_t* io, void* data, size_t len);
-    ssize_t (*read_at)(fdio_t* io, void* data, size_t len, off_t offset);
     ssize_t (*write)(fdio_t* io, const void* data, size_t len);
     ssize_t (*write_at)(fdio_t* io, const void* data, size_t len, off_t offset);
     off_t (*seek)(fdio_t* io, off_t offset, int whence);
@@ -203,8 +201,6 @@ zx_status_t fdio_default_link(fdio_t* io, const char* src, size_t srclen,
                               zx_handle_t dst_token, const char* dst, size_t dstlen);
 zx_status_t fdio_default_get_flags(fdio_t* io, uint32_t* out_flags);
 zx_status_t fdio_default_set_flags(fdio_t* io, uint32_t flags);
-ssize_t fdio_default_read(fdio_t* io, void* _data, size_t len);
-ssize_t fdio_default_read_at(fdio_t* io, void* _data, size_t len, off_t offset);
 ssize_t fdio_default_write(fdio_t* io, const void* _data, size_t len);
 ssize_t fdio_default_write_at(fdio_t* io, const void* _data, size_t len, off_t offset);
 ssize_t fdio_default_recvfrom(fdio_t* io, void* _data, size_t len, int flags,

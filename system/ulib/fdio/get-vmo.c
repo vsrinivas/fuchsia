@@ -15,21 +15,26 @@
 #define MAX_WINDOW ((size_t)64 << 20)
 
 static zx_status_t read_at(fdio_t* io, void* buf, size_t len, off_t offset,
-                           size_t* actual_len) {
-    zx_status_t status;
-    while ((status = io->ops->read_at(io, buf, len, offset)) == ZX_ERR_SHOULD_WAIT) {
+                           size_t* out_actual) {
+    size_t actual = 0u;
+    zx_status_t status = ZX_OK;
+    for (;;) {
+        status = zxio_read_at(fdio_get_zxio(io), offset, buf, len, &actual);
+        if (status != ZX_ERR_SHOULD_WAIT) {
+            break;
+        }
         status = fdio_wait(io, FDIO_EVT_READABLE, ZX_TIME_INFINITE, NULL);
         if (status != ZX_OK) {
-            return status;
+            break;
         }
     }
-    if (status < 0) {
+    if (status != ZX_OK) {
         return status;
     }
-    if (status == 0) { // EOF (?)
+    if (actual == 0) { // EOF (?)
         return ZX_ERR_OUT_OF_RANGE;
     }
-    *actual_len = status;
+    *out_actual = actual;
     return ZX_OK;
 }
 
