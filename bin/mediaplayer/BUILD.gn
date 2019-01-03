@@ -68,7 +68,6 @@ executable("mediaplayer_test_util_bin") {
   ]
 
   deps = [
-    ":mediaplayer_bin",
     "//garnet/bin/mediaplayer/graph",
     "//garnet/public/fidl/fuchsia.mediaplayer",
     "//garnet/public/lib/component/cpp",
