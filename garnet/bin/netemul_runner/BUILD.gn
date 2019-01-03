@@ -91,11 +91,15 @@ package("netemul_sandbox") {
 
   deps = [
     ":bin",
+    "//garnet/bin/netemul_runner/helpers/netstack_cfg",
   ]
 
   binaries = [
     {
       name = "netemul_sandbox"
+    },
+    {
+      name = "netstack_cfg"
     },
   ]
 
@@ -103,6 +107,10 @@ package("netemul_sandbox") {
     {
       path = rebase_path("meta/netemul_sandbox.cmx")
       dest = "netemul_sandbox.cmx"
+    },
+    {
+      path = rebase_path("helpers/meta/helper_netstack_cfg.cmx")
+      dest = "helper_netstack_cfg.cmx"
     },
   ]
 }

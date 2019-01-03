@@ -157,5 +157,32 @@ In that case, it's as if only the *url* field had been specified.
 | up    | Boolean | Toggle endpoint to link up as part of setup process. Defaults to **true**.                                |
 
 
+## Helpers
 
+`netemul_sandbox` provides helpers that can be launched in sandboxed environments to perform common
+operations. 
 
+### netstack_cfg
+
+The `netstack_cfg` helper is a CLI-like tool that uses the *NetworkContext* service to retrieve
+emulated endpoints and attach them to netstack instances in an emulated environment. You can launch
+it by using its package url: `fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx`.
+It receives the command line arguments shown below and is typically used as a "setup" process in an
+[environment's facet definition](#environment). 
+
+```
+netstack_cfg 
+Configure netstack from emulated environments.
+
+USAGE:
+    netstack_cfg [OPTIONS] -e <endpoint>
+
+FLAGS:
+    -h, --help       Prints help information
+    -V, --version    Prints version information
+
+OPTIONS:
+    -e <endpoint>        Endpoint name to retrieve from network.EndpointManager
+    -i <ip>              Static ip address to assign. Omit to use DHCP.
+
+```

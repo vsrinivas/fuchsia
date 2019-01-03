@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "bin/netstack_cfg"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.netemul.network.NetworkContext",
+            "fuchsia.netstack.Netstack"
+        ]
+    }
+}

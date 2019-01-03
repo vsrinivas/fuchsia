@@ -1,0 +1,69 @@
+{
+    "facets": {
+        "fuchsia.netemul": {
+            "environment": {
+                "children": [
+                    {
+                        "name": "client",
+                        "setup": [
+                            {
+                                "arguments": [
+                                    "-e",
+                                    "client-ep",
+                                    "-i",
+                                    "192.168.0.2"
+                                ],
+                                "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
+                            }
+                        ],
+                        "test": [
+                            {
+                                "arguments": [
+                                    "-c"
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "name": "server",
+                "services": {
+                    "fuchsia.net.SocketProvider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+                    "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
+                },
+                "setup": [
+                    {
+                        "arguments": [
+                            "-e",
+                            "server-ep",
+                            "-i",
+                            "192.168.0.1"
+                        ],
+                        "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
+                    }
+                ]
+            },
+            "networks": [
+                {
+                    "endpoints": [
+                        {
+                            "name": "server-ep"
+                        },
+                        {
+                            "name": "client-ep"
+                        }
+                    ],
+                    "name": "net"
+                }
+            ]
+        }
+    },
+    "program": {
+        "binary": "test/easy_netstack_cfg"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.net.SocketProvider",
+            "fuchsia.netemul.bus.BusManager"
+        ]
+    }
+}
