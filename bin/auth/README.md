@@ -1,7 +1,4 @@
-Fuchsia Authentication
-======================
-
-This repository provides basic user authentication and authorization services for
-onboarding new users on Fuchsia and to access their data from external third
-party providers.
+`/bin/auth` contains component binaries related to user identity and
+authentication. Please refer to the more detailed README.md file in each
+package for more information.
 
