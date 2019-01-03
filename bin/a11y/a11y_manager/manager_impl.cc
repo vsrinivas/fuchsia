@@ -40,6 +40,7 @@ std::pair<Point3F, Point3F> DefaultRayForHitTestingScreenPoint(
 // |ray_origin| is relative to the display's coordinate space.
 // |ray_direction| is the direction of the ray in the device coordinate space.
 // |hit| is the view hit representation returned by Scenic hit-testing.
+// TODO(SCN-1124): This logic should move inside Scenic.
 fuchsia::math::PointF TransformPointerEvent(const Point3F& ray_origin,
                                             const Point3F& ray_direction,
                                             fuchsia::ui::gfx::Hit hit) {
@@ -61,14 +62,7 @@ fuchsia::math::PointF TransformPointerEvent(const Point3F& ray_origin,
 
 ManagerImpl::ManagerImpl(component::StartupContext* startup_context,
                          SemanticTree* semantic_tree)
-    : startup_context_(startup_context), semantic_tree_(semantic_tree) {
-  startup_context_->ConnectToEnvironmentService<
-      fuchsia::ui::viewsv1::AccessibilityViewInspector>(
-      a11y_view_inspector_.NewRequest());
-  a11y_view_inspector_.set_error_handler([this](zx_status_t status) {
-    FXL_LOG(FATAL) << "Exiting due to view inspector connection error.";
-  });
-}
+    : startup_context_(startup_context), semantic_tree_(semantic_tree) {}
 
 void ManagerImpl::AddBinding(
     fidl::InterfaceRequest<fuchsia::accessibility::Manager> request) {
@@ -99,8 +93,8 @@ void ManagerImpl::GetHitAccessibilityNode(
                                                  hits.front() /*node*/)));
             }
           };
-  a11y_view_inspector_->PerformHitTest(token, ray.first, ray.second,
-                                       std::move(view_callback));
+
+  // TODO(SCN-1124): wire hit tests through scenic a11y component
 }
 
 void ManagerImpl::SetAccessibilityFocus(int32_t view_id, int32_t node_id) {

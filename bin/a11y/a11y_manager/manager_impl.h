@@ -46,13 +46,6 @@ class ManagerImpl : public fuchsia::accessibility::Manager {
   component::StartupContext* startup_context_;
   SemanticTree* const semantic_tree_;
 
-  // Temporary solution for view hit testing. View manager should implement
-  // the fuchsia::ui::viewsv1::AccessibilityViewInspector interface as
-  // an outgoing service. The interface exposes a hit test function that
-  // the a11y manager can use to query views hit by a ray in a certain
-  // view tree.
-  fuchsia::ui::viewsv1::AccessibilityViewInspectorPtr a11y_view_inspector_;
-
   // Accessibility-focused means that there is a front-end semantics node that
   // currently has accessibility focus.
   bool a11y_focused_;

@@ -4,8 +4,7 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.tracelink.Registry",
-            "fuchsia.ui.viewsv1.AccessibilityViewInspector"
+            "fuchsia.tracelink.Registry"
         ]
     }
 }
