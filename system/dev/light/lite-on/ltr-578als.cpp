@@ -11,9 +11,37 @@
 
 namespace {
 
+// These are the register values used by the existing Cleo code.
+
 constexpr uint8_t kMainCtrlAddress = 0x00;
 constexpr uint8_t kPsActiveBit = 0x01;
 constexpr uint8_t kAlsActiveBit = 0x02;
+
+constexpr uint8_t kPsLedAddress = 0x01;
+constexpr uint8_t kPsLedFreq60Khz = 0x30;
+constexpr uint8_t kPsLedCurrent100Ma = 0x06;
+
+constexpr uint8_t kPsPulsesAddress = 0x02;
+
+constexpr uint8_t kPsMeasRateAddress = 0x03;
+constexpr uint8_t kPsMeasRate11Bit = 0x18;
+constexpr uint8_t kPsMeasRate50Ms = 0x04;
+
+constexpr uint8_t kAlsMeasRateAddress = 0x04;
+constexpr uint8_t kAlsMeasRate18Bit = 0x20;
+constexpr uint8_t kAlsMeasRate100Ms = 0x02;
+
+constexpr uint8_t kAlsGainAddress = 0x05;
+constexpr uint8_t kAlsGain1 = 0x00;
+
+constexpr uint8_t kDefaultRegValues[][2] = {
+    {kMainCtrlAddress,    kPsActiveBit | kAlsActiveBit},
+    {kPsLedAddress,       kPsLedFreq60Khz | kPsLedCurrent100Ma},
+    {kPsPulsesAddress,    16},
+    {kPsMeasRateAddress,  kPsMeasRate11Bit | kPsMeasRate50Ms},
+    {kAlsMeasRateAddress, kAlsMeasRate18Bit | kAlsMeasRate100Ms},
+    {kAlsGainAddress,     kAlsGain1},
+};
 
 constexpr uint8_t kPsDataAddress = 0x08;
 constexpr uint8_t kAlsDataAddress = 0x0d;
@@ -141,14 +169,14 @@ zx_status_t Ltr578Als::Create(zx_device_t* parent) {
 }
 
 zx_status_t Ltr578Als::Init() {
-    constexpr uint8_t kMainCtrlBuf[] = {kMainCtrlAddress, kPsActiveBit | kAlsActiveBit};
-
     {
         fbl::AutoLock lock(&i2c_lock_);
-        zx_status_t status = i2c_.WriteSync(kMainCtrlBuf, sizeof(kMainCtrlBuf));
-        if (status != ZX_OK) {
-            zxlogf(ERROR, "%s: Failed to enable sensors\n", __FILE__);
-            return status;
+        for (size_t i = 0; i < countof(kDefaultRegValues); i++) {
+            zx_status_t status = i2c_.WriteSync(kDefaultRegValues[i], sizeof(kDefaultRegValues[i]));
+            if (status != ZX_OK) {
+                zxlogf(ERROR, "%s: Failed to configure sensors\n", __FILE__);
+                return status;
+            }
         }
     }
 
