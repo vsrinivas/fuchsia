@@ -6,7 +6,6 @@
 
 #include <utility>
 
-#include <lib/component/cpp/service_provider_impl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fsl/socket/strings.h>
@@ -44,7 +43,6 @@ class LedgerAppInstanceImpl final
 
   SyncParams sync_params_;
   std::unique_ptr<component::StartupContext> startup_context_;
-  component::ServiceProviderImpl service_provider_impl_;
   cloud_provider_firestore::CloudProviderFactory cloud_provider_factory_;
 
   fuchsia::sys::ComponentControllerPtr controller_;

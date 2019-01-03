@@ -8,8 +8,6 @@
 #include <memory>
 #include <string>
 
-#include <lib/component/cpp/startup_context.h>
-
 #include "peridot/bin/cloud_provider_firestore/testing/cloud_provider_factory.h"
 #include "peridot/bin/ledger/testing/ledger_app_instance_factory.h"
 #include "peridot/bin/ledger/testing/sync_params.h"
