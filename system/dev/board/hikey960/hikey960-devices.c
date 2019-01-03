@@ -14,7 +14,7 @@
 
 // #define GPIO_TEST 1
 // #define I2C_TEST 1
-//#define DSI_ENABLE 1
+#define DSI_ENABLE 1
 
 #ifdef DSI_ENABLE
 static const pbus_mmio_t dsi_mmios[] = {
@@ -24,7 +24,7 @@ static const pbus_mmio_t dsi_mmios[] = {
     },
 };
 
-static const pbus_i2c_channel_t dsi.i2c_channel_list[] = {
+static const pbus_i2c_channel_t dsi_i2c_channel_list[] = {
     {
         // HDMI_MAIN
         .bus_id = DW_I2C_1,
@@ -68,8 +68,8 @@ static const pbus_dev_t dsi_dev = {
     .did = PDEV_DID_DSI,
     .mmio_list = dsi_mmios,
     .mmio_count = countof(dsi_mmios),
-    .i2c_channel_list = dsi.i2c_channel_list,
-    .i2c_channel_count = countof(dsi.i2c_channel_list),
+    .i2c_channel_list = dsi_i2c_channel_list,
+    .i2c_channel_count = countof(dsi_i2c_channel_list),
     .gpio_list = dsi_gpios,
     .gpio_count = countof(dsi_gpios),
     .bti_list = dsi_btis,
