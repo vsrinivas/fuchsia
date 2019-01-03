@@ -23,6 +23,10 @@ MODULE_SRCS += \
 
 MODULE_PACKAGE := src
 
+MODULE_LIBS := \
+    system/ulib/c \
+    system/ulib/zircon \
+
 include make/module.mk
 
 #
