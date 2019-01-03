@@ -186,10 +186,15 @@ def main():
         call_args += [
             "-Clinker=%s" % os.path.join(args.clang_prefix, "clang"),
         ]
-        if not args.target.endswith("darwin"):
-            call_args += ["-Clink-arg=-Wl,--threads"]
         if args.target.startswith("aarch64"):
             call_args += ["-Clink-arg=-Wl,--fix-cortex-a53-843419"]
+        if args.target.endswith("linux"):
+            call_args += [
+                "-Clink-arg=-Wl,--build-id",
+                "-Clink-arg=-Wl,--hash-style=gnu",
+            ]
+        if not args.target.endswith("darwin"):
+            call_args += ["-Clink-arg=-Wl,--threads"]
 
     if args.mmacosx_version_min:
         call_args += [
