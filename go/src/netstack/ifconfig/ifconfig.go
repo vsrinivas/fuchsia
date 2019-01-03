@@ -525,9 +525,9 @@ func main() {
 		err := a.bridge(ifaces)
 		if err != nil {
 			fmt.Printf("error creating bridge: %s", err)
+		} else {
+			fmt.Printf("Bridged interfaces %s\n", ifaces)
 		}
-		// fmt.Printf("Created virtual nic %s", bridge)
-		fmt.Printf("Bridged interfaces %s\n", ifaces)
 		return
 	case "help":
 		usage()
