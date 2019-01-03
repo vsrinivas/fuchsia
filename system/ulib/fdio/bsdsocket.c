@@ -15,6 +15,7 @@
 #include <unistd.h>
 
 #include <fuchsia/net/c/fidl.h>
+#include <zircon/assert.h>
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 
@@ -186,6 +187,8 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
         return ERROR(ZX_ERR_BAD_STATE);
     }
 
+    bool nonblocking = io->ioflag & IOFLAG_NONBLOCK;
+
     int nfd = fdio_reserve_fd(0);
     if (nfd < 0) {
         return nfd;
@@ -194,7 +197,26 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
     size_t actual = 0u;
     zxs_socket_t accepted;
     memset(&accepted, 0, sizeof(accepted));
-    zx_status_t status = zxs_accept(socket, addr, len ? *len : 0u, &actual, &accepted);
+    zx_status_t status;
+    for (;;) {
+        status = zxs_accept(socket, addr, len ? *len : 0u, &actual, &accepted);
+        if (status != ZX_ERR_SHOULD_WAIT || nonblocking) {
+            break;
+        }
+        zx_signals_t observed = ZX_SIGNAL_NONE;
+        status = zx_object_wait_one(socket->socket,
+                                    ZX_SOCKET_ACCEPT | ZX_SOCKET_PEER_CLOSED,
+                                    ZX_TIME_INFINITE, &observed);
+        if (status != ZX_OK) {
+            break;
+        }
+        if (observed & ZX_SOCKET_ACCEPT) {
+            continue;
+        }
+        ZX_ASSERT(observed & ZX_SOCKET_PEER_CLOSED);
+        status = ZX_ERR_PEER_CLOSED;
+        break;
+    }
     fdio_release(io);
     if (status == ZX_ERR_SHOULD_WAIT) {
         fdio_release_reserved(nfd);

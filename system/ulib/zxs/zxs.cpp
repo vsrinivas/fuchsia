@@ -248,30 +248,9 @@ zx_status_t zxs_listen(const zxs_socket_t* socket, uint32_t backlog) {
 zx_status_t zxs_accept(const zxs_socket_t* socket, struct sockaddr* addr,
                        size_t addr_capacity, size_t* out_addr_actual,
                        zxs_socket_t* out_socket) {
-    zx_status_t status = ZX_OK;
     zx::socket accepted;
-    for (;;) {
-        status = zx_socket_accept(socket->socket,
-                                  accepted.reset_and_get_address());
-        if (status == ZX_ERR_SHOULD_WAIT
-            && (socket->flags & ZXS_FLAG_BLOCKING)) {
-
-            zx_signals_t observed = ZX_SIGNAL_NONE;
-            status = zx_object_wait_one(socket->socket, ZX_SOCKET_ACCEPT | ZX_SOCKET_PEER_CLOSED, ZX_TIME_INFINITE, &observed);
-            if (status != ZX_OK) {
-                break;
-            }
-            if (observed & ZX_SOCKET_ACCEPT) {
-                continue;
-            }
-            if (observed & ZX_SOCKET_PEER_CLOSED) {
-                return ZX_ERR_PEER_CLOSED;
-            }
-            // impossible
-            return ZX_ERR_INTERNAL;
-        }
-        break;
-    }
+    zx_status_t status = zx_socket_accept(socket->socket,
+                                          accepted.reset_and_get_address());
 
     if (status != ZX_OK) {
         return status;
