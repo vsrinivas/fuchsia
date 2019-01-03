@@ -7,7 +7,6 @@
 #![warn(missing_docs)]
 
 use {
-    failure::Error,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
         NodeMarker, DIRENT_TYPE_BLOCK_DEVICE, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE,
@@ -15,6 +14,7 @@ use {
     },
     futures::{future::FusedFuture, Future},
     std::marker::Unpin,
+    void::Void,
 };
 
 /// Information about a directory entry, used to populate ReadDirents() output.
@@ -51,12 +51,13 @@ impl EntryInfo {
 /// its child items and will also run them as part of the pseudo directory own execution.
 ///
 /// [`Future`] is used to "run" this directory entry.  The owner is expected to run
-/// [`Future::poll`] continuously, allowing the entry to run for a bit, and the entry is expected
-/// to never complete, always returning [`Poll::Pending`].
+/// [`Future::poll`] continuously, allowing the entry to run for a bit, and the entry will never
+/// complete, always returning [`Poll::Pending`].  `Output` of [`Void`] makes sure that it is
+/// impossible for the future to complete.
 ///
 /// [`FusedFuture`] is used to distinguish cases when there is no need to run the entry at all,
 /// like a case when a directory is empty and has no active connections.
-pub trait DirectoryEntry: Future<Output = Result<(), Error>> + Unpin + FusedFuture {
+pub trait DirectoryEntry: Future<Output = Void> + Unpin + FusedFuture {
     /// Opens a connection to this item if the `path` is empty or a connection to an item inside
     /// this one otherwise.  `path` should not contain any "." or ".." components.  Those are not
     /// processed in any special way.

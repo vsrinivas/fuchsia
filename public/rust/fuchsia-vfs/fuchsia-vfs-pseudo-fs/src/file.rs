@@ -56,6 +56,7 @@ use {
     },
     libc::{S_IRUSR, S_IWUSR},
     std::{io::Write, iter, iter::ExactSizeIterator, marker::Unpin, mem, pin::Pin},
+    void::Void,
 };
 
 /// A base trait for all the pseudo files.  Most clients will probably just use the DirectoryEntry
@@ -806,7 +807,7 @@ where
     OnRead: FnMut() -> Result<Vec<u8>, Status>,
     OnWrite: FnMut(Vec<u8>) -> Result<(), Status>,
 {
-    type Output = Result<(), Error>;
+    type Output = Void;
 
     fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
         loop {
@@ -893,9 +894,7 @@ mod tests {
         // As our clients are async generators, we need to pin this future explicitly.
         // All async generators are !Unpin by default.
         pin_mut!(future);
-        if let Poll::Ready((Err(e), ())) = exec.run_until_stalled(&mut future) {
-            panic!("Server failed: {:?}", e);
-        }
+        exec.run_until_stalled(&mut future);
     }
 
     fn run_server_client_with_open_requests_channel_and_executor<GetClientRes>(
