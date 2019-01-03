@@ -148,9 +148,12 @@ fuchsia::modular::internal::BasemgrDebugPtr ConnectToBasemgr() {
   auto request = basemgr.NewRequest().TakeChannel();
 
   std::vector<DebugService> services;
-  FindDebugServicesForPath("/hub/c/basemgr/*/out/debug/basemgr", "basemgr",
-                           &services);
-  // There should only be one basemgr
+  FindDebugServicesForPath("/hub/c/basemgr.cmx/*/out/debug/basemgr",
+                           "basemgr.cmx", &services);
+
+  if (services.empty()) {
+    return nullptr;
+  }
   FXL_CHECK(services.size() == 1);
 
   std::string service_path = services[0].service_path;
@@ -172,8 +175,14 @@ int main(int argc, const char** argv) {
 
   const modular::Logger logger(
       command_line.HasOption(modular::kJsonOutFlagString));
-  auto sessions = FindAllSessions();
 
+  auto basemgr = ConnectToBasemgr();
+  if (!basemgr) {
+    logger.LogError(cmd, "Could not find a running basemgr. Is it running?");
+    return 1;
+  }
+
+  auto sessions = FindAllSessions();
   if (sessions.empty()) {
     logger.LogError(
         cmd, "Could not find a running sessionmgr. Is the user logged in?");
@@ -188,8 +197,6 @@ int main(int argc, const char** argv) {
     }
     std::cout << std::endl;
   }
-
-  auto basemgr = ConnectToBasemgr();
 
   // To get a PuppetMaster service for a session, use the following code:
   PuppetMasterPtr puppet_master = ConnectToPuppetMaster(sessions[0]);
