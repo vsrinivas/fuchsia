@@ -215,13 +215,15 @@ class ConflictResolverImpl : public ConflictResolver {
         fidl::VectorPtr<DiffEntry> new_entries;
         IterationStatus status;
         auto waiter = loop_controller_->NewWaiter();
+        std::unique_ptr<Token> new_token;
         get_diff(std::move(token),
                  callback::Capture(waiter->GetCallback(), &status, &new_entries,
-                                   &token));
+                                   &new_token));
         if (!waiter->RunUntilCalled()) {
           return ::testing::AssertionFailure()
                  << "|get_diff| failed to called back.";
         }
+        token = std::move(new_token);
         if (!token != (status == IterationStatus::OK)) {
           return ::testing::AssertionFailure()
                  << "token is "
