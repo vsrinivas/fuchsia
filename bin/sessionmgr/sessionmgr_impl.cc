@@ -551,7 +551,7 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
   AtEnd(Reset(&presentation_provider_impl_));
 
   // We create |story_provider_impl_| after |agent_runner_| so
-  // story_provider_impl_ is termiated before agent_runner_, which will cause
+  // story_provider_impl_ is terminated before agent_runner_, which will cause
   // all modules to be terminated before agents are terminated. Agents must
   // outlive the stories which contain modules that are connected to those
   // agents.
@@ -688,7 +688,7 @@ void SessionmgrImpl::RunSessionShell(
       session_shell_service_provider_ptr_.NewRequest());
 
   // |service_list| specifies which services are available to the child
-  // component from which ServiceProvicer. There is a lot of indirection here.
+  // component from which ServiceProvider. There is a lot of indirection here.
   auto service_list = fuchsia::sys::ServiceList::New();
   service_list->names.push_back(fuchsia::modular::ComponentContext::Name_);
   service_list->names.push_back(fuchsia::modular::IntelligenceServices::Name_);
@@ -702,7 +702,7 @@ void SessionmgrImpl::RunSessionShell(
 
   session_shell_app_->SetAppErrorHandler([this] {
     FXL_LOG(ERROR) << "Session Shell seems to have crashed unexpectedly."
-                   << "Logging out.";
+                   << " Logging out.";
     Logout();
   });
 
