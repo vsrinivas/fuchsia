@@ -69,24 +69,6 @@ typedef struct mbrpart_device {
     atomic_int writercount;
 } mbrpart_device_t;
 
-static zx_status_t mbr_ioctl(void* ctx, uint32_t op, const void* cmd,
-                             size_t cmdlen, void* reply, size_t max,
-                             size_t* out_actual) {
-    mbrpart_device_t* device = ctx;
-    switch (op) {
-    case IOCTL_BLOCK_GET_INFO: {
-        block_info_t* info = reply;
-        if (max < sizeof(*info))
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        memcpy(info, &device->info, sizeof(*info));
-        *out_actual = sizeof(*info);
-        return ZX_OK;
-    }
-    default:
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-}
-
 static zx_off_t to_parent_offset(mbrpart_device_t* dev, zx_off_t offset) {
     return offset + (uint64_t)(dev->partition.start_sector_lba) *
            (uint64_t)dev->info.block_size;
@@ -209,7 +191,6 @@ static zx_status_t mbr_get_protocol(void* ctx, uint32_t proto_id, void* out) {
 static zx_protocol_device_t mbr_proto = {
     .version = DEVICE_OPS_VERSION,
     .get_protocol = mbr_get_protocol,
-    .ioctl = mbr_ioctl,
     .get_size = mbr_get_size,
     .unbind = mbr_unbind,
     .release = mbr_release,

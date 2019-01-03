@@ -39,7 +39,6 @@ namespace zxcrypt {
 class Device;
 using DeviceType = ddk::Device<Device,
                                ddk::GetProtocolable,
-                               ddk::Ioctlable,
                                ddk::GetSizable,
                                ddk::Unbindable>;
 
@@ -69,8 +68,6 @@ public:
 
     // ddk::Device methods; see ddktl/device.h
     zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
-    zx_status_t DdkIoctl(uint32_t op, const void* in, size_t in_len, void* out, size_t out_len,
-                         size_t* actual);
     zx_off_t DdkGetSize();
     void DdkUnbind();
     void DdkRelease();

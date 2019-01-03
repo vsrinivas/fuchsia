@@ -78,27 +78,6 @@ void BlockDevice::virtio_block_queue(void* ctx, block_op_t* bop,
     bd->SignalWorker(txn);
 }
 
-zx_status_t BlockDevice::virtio_block_ioctl(void* ctx, uint32_t op, const void* in_buf,
-                                            size_t in_len, void* reply, size_t max,
-                                            size_t* out_actual) {
-    LTRACEF("ctx %p, op %u\n", ctx, op);
-
-    BlockDevice* bd = static_cast<BlockDevice*>(ctx);
-
-    switch (op) {
-    case IOCTL_BLOCK_GET_INFO: {
-        block_info_t* info = reinterpret_cast<block_info_t*>(reply);
-        if (max < sizeof(*info))
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        bd->GetInfo(info);
-        *out_actual = sizeof(*info);
-        return ZX_OK;
-    }
-    default:
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-}
-
 void BlockDevice::virtio_block_unbind(void* ctx) {
     BlockDevice* bd = static_cast<BlockDevice*>(ctx);
     bd->Unbind();
@@ -184,7 +163,6 @@ zx_status_t BlockDevice::Init() {
 
     // Initialize and publish the zx_device.
     device_ops_.get_size = &virtio_block_get_size;
-    device_ops_.ioctl = &virtio_block_ioctl;
     device_ops_.unbind = &virtio_block_unbind;
     device_ops_.release = &virtio_block_release;
 

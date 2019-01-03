@@ -51,8 +51,6 @@ public:
 private:
     // DDK driver hooks
     static zx_off_t virtio_block_get_size(void* ctx);
-    static zx_status_t virtio_block_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
-                                          void* out_buf, size_t out_len, size_t* out_actual);
 
     static void virtio_block_query(void* ctx, block_info_t* bi, size_t* bopsz);
     static void virtio_block_queue(void* ctx, block_op_t* bop,
