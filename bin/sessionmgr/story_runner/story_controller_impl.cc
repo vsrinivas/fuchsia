@@ -11,6 +11,7 @@
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
+#include <fuchsia/modular/storymodel/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
@@ -39,6 +40,7 @@
 #include "peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls/initialize_chain_call.h"
 #include "peridot/bin/sessionmgr/storage/constants_and_utils.h"
 #include "peridot/bin/sessionmgr/storage/story_storage.h"
+#include "peridot/bin/sessionmgr/story/model/story_observer.h"
 #include "peridot/bin/sessionmgr/story_runner/link_impl.h"
 #include "peridot/bin/sessionmgr/story_runner/module_context_impl.h"
 #include "peridot/bin/sessionmgr/story_runner/module_controller_impl.h"
@@ -221,6 +223,7 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
     ModuleContextInfo module_context_info = {
         story_controller_impl_->story_provider_impl_->component_context_info(),
         story_controller_impl_,
+        story_controller_impl_->story_visibility_system_,
         story_controller_impl_->story_provider_impl_
             ->user_intelligence_provider()};
 
@@ -1184,11 +1187,13 @@ class StoryControllerImpl::StartSnapshotLoaderCall : public Operation<> {
 StoryControllerImpl::StoryControllerImpl(
     fidl::StringPtr story_id, SessionStorage* const session_storage,
     StoryStorage* const story_storage,
+    StoryVisibilitySystem* const story_visibility_system,
     StoryProviderImpl* const story_provider_impl)
     : story_id_(story_id),
       story_provider_impl_(story_provider_impl),
       session_storage_(session_storage),
       story_storage_(story_storage),
+      story_visibility_system_(story_visibility_system),
       story_shell_context_impl_{story_id, story_provider_impl, this},
       weak_factory_(this) {
   auto story_scope = fuchsia::modular::StoryScope::New();
@@ -1223,11 +1228,6 @@ bool StoryControllerImpl::IsRunning() {
 
 fuchsia::modular::StoryState StoryControllerImpl::GetStoryState() const {
   return state_;
-}
-
-fuchsia::modular::StoryVisibilityState
-StoryControllerImpl::GetStoryVisibilityState() const {
-  return visibility_state_;
 }
 
 fidl::VectorPtr<fuchsia::modular::OngoingActivityType>
@@ -1613,8 +1613,7 @@ void StoryControllerImpl::SetState(
     (*i)->OnStateChange(state_);
   }
 
-  story_provider_impl_->NotifyStoryStateChange(story_id_, state_,
-                                               visibility_state_);
+  story_provider_impl_->NotifyStoryStateChange(story_id_);
 }
 
 bool StoryControllerImpl::IsExternalModule(
@@ -1662,19 +1661,6 @@ void StoryControllerImpl::RemoveModuleFromStory(
     const fidl::VectorPtr<fidl::StringPtr>& module_path) {
   operation_queue_.Add(
       new StopModuleAndStoryIfEmptyCall(this, module_path, [] {}));
-}
-
-void StoryControllerImpl::HandleStoryVisibilityStateRequest(
-    const fuchsia::modular::StoryVisibilityState visibility_state) {
-  if (visibility_state == visibility_state_) {
-    // no-op.
-    return;
-  }
-
-  visibility_state_ = visibility_state;
-
-  story_provider_impl_->NotifyStoryStateChange(story_id_, state_,
-                                               visibility_state_);
 }
 
 void StoryControllerImpl::InitStoryEnvironment() {

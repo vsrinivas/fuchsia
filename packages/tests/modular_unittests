@@ -1,13 +1,14 @@
 {
     "packages": [
-        "//peridot/bin/sessionmgr/agent_runner:agent_runner_unittests",
         "//peridot/bin/agents/clipboard:clipboard_unittests",
         "//peridot/bin/basemgr:basemgr_unittests",
+        "//peridot/bin/sessionctl:sessionctl_unittests",
+        "//peridot/bin/sessionmgr/agent_runner:agent_runner_unittests",
         "//peridot/bin/sessionmgr/entity_provider_runner:entity_provider_runner_unittests",
         "//peridot/bin/sessionmgr/story/model:story_model_unittests",
+        "//peridot/bin/sessionmgr/story/systems:story_systems_unittests",
         "//peridot/bin/sessionmgr/puppet_master:puppet_master_unittests",
-        "//peridot/bin/sessionmgr/story_runner:story_runner_unittests",
         "//peridot/bin/sessionmgr/storage:storage_unittests",
-        "//peridot/bin/sessionctl:sessionctl_unittests"
+        "//peridot/bin/sessionmgr/story_runner:story_runner_unittests"
     ]
 }

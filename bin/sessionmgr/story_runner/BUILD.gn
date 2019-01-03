@@ -12,6 +12,8 @@ hermetic_tests_package("story_runner_unittests") {
   ]
 }
 
+# NOTE: We are in the process of deconstructing story_runner into its
+# constituent components. Please see MF-85.
 source_set("story_runner") {
   sources = [
     "link_impl.cc",
@@ -51,6 +53,8 @@ source_set("story_runner") {
     "//peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls:get_types_from_entity_call",
     "//peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls:initialize_chain_call",
     "//peridot/bin/sessionmgr/storage:constants_and_utils",
+    "//peridot/bin/sessionmgr/story/model",
+    "//peridot/bin/sessionmgr/story/systems:story_visibility_system",
     "//peridot/lib/common:names",
     "//peridot/lib/common:teardown",
     "//peridot/lib/fidl:app_client",
@@ -76,6 +80,10 @@ source_set("story_runner") {
 
   deps = [
     "//peridot/bin/sessionmgr/storage",
+    "//peridot/bin/sessionmgr/story:system",
+    "//peridot/bin/sessionmgr/story/model",
+    "//peridot/bin/sessionmgr/story/model:story_model_owner",
+    "//peridot/bin/sessionmgr/story/model:noop_story_model_storage",
     "//peridot/lib/fidl:clone",
     "//peridot/public/fidl/fuchsia.modular",
     "//zircon/public/lib/async-loop-cpp",

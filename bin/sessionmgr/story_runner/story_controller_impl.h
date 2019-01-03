@@ -42,10 +42,12 @@
 
 namespace modular {
 
-class ModuleControllerImpl;
 class ModuleContextImpl;
+class ModuleControllerImpl;
+class StoryModelMutator;
 class StoryProviderImpl;
 class StoryStorage;
+class StoryVisibilitySystem;
 
 // The story runner, which holds all the links and runs all the modules as well
 // as the story shell. It also implements the StoryController service to give
@@ -54,6 +56,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
  public:
   StoryControllerImpl(fidl::StringPtr story_id, SessionStorage* session_storage,
                       StoryStorage* story_storage,
+                      StoryVisibilitySystem* story_visibility_system,
                       StoryProviderImpl* story_provider_impl);
   ~StoryControllerImpl() override;
 
@@ -66,9 +69,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
 
   // Called by StoryProviderImpl.
   fuchsia::modular::StoryState GetStoryState() const;
-
-  // Called by StoryProviderImpl.
-  fuchsia::modular::StoryVisibilityState GetStoryVisibilityState() const;
 
   // Called by StoryProviderImpl.
   //
@@ -142,10 +142,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   // |ModuleContext.RemoveSelfFromStory|.
   void RemoveModuleFromStory(
       const fidl::VectorPtr<fidl::StringPtr>& module_path);
-
-  // Called by ModuleContextImpl.
-  void HandleStoryVisibilityStateRequest(
-      const fuchsia::modular::StoryVisibilityState visibility_state);
 
   // Called by ModuleContextImpl.
   void StartOngoingActivity(
@@ -236,15 +232,12 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   // kept in memory.
   fuchsia::modular::StoryState state_{fuchsia::modular::StoryState::STOPPED};
 
-  // This is the canonical source for a story's visibility state within user
-  // shell. This state is per device and only kept in memory.
-  fuchsia::modular::StoryVisibilityState visibility_state_{
-      fuchsia::modular::StoryVisibilityState::DEFAULT};
+  StoryProviderImpl* const story_provider_impl_;  // Not owned.
 
-  StoryProviderImpl* const story_provider_impl_;
+  SessionStorage* const session_storage_;  // Not owned.
+  StoryStorage* const story_storage_;  // Not owned.
 
-  SessionStorage* const session_storage_;
-  StoryStorage* const story_storage_;
+  StoryVisibilitySystem* const story_visibility_system_;  // Not owned.
 
   // The application environment (which abstracts a zx::job) in which the
   // modules within this story run. This environment is only valid (not null) if

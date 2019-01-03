@@ -12,6 +12,7 @@
 
 #include "peridot/bin/sessionmgr/storage/constants_and_utils.h"
 #include "peridot/bin/sessionmgr/story_runner/story_controller_impl.h"
+#include "peridot/bin/sessionmgr/story/systems/story_visibility_system.h"
 #include "peridot/lib/fidl/clone.h"
 
 namespace modular {
@@ -23,6 +24,7 @@ ModuleContextImpl::ModuleContextImpl(
         service_provider_request)
     : module_data_(module_data),
       story_controller_impl_(info.story_controller_impl),
+      story_visibility_system_(info.story_visibility_system),
       component_context_impl_(info.component_context_info,
                               EncodeModuleComponentNamespace(
                                   info.story_controller_impl->GetStoryId()),
@@ -130,7 +132,7 @@ void ModuleContextImpl::RemoveSelfFromStory() {
 
 void ModuleContextImpl::RequestStoryVisibilityState(
     fuchsia::modular::StoryVisibilityState visibility_state) {
-  story_controller_impl_->HandleStoryVisibilityStateRequest(visibility_state);
+  story_visibility_system_->RequestStoryVisibilityStateChange(visibility_state);
 }
 
 void ModuleContextImpl::StartOngoingActivity(

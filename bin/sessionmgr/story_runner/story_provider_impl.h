@@ -28,6 +28,9 @@
 #include "peridot/bin/sessionmgr/agent_runner/agent_runner.h"
 #include "peridot/bin/sessionmgr/component_context_impl.h"
 #include "peridot/bin/sessionmgr/message_queue/message_queue_manager.h"
+#include "peridot/bin/sessionmgr/story/system.h"
+#include "peridot/bin/sessionmgr/story/model/story_model_owner.h"
+#include "peridot/bin/sessionmgr/story/model/noop_story_model_storage.h"
 #include "peridot/bin/sessionmgr/story_runner/story_entity_provider.h"
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/fidl/environment.h"
@@ -132,8 +135,8 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
 
   // Called by StoryControllerImpl. Sends, using AttachView(), the view of the
   // story identified by |story_id| to the current session shell.
-  void AttachView(
-      fidl::StringPtr story_id, fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner);
+  void AttachView(fidl::StringPtr story_id,
+                  fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner);
 
   // Called by StoryControllerImpl. Notifies, using DetachView(), the current
   // session shell that the view of the story identified by |story_id| is about
@@ -141,9 +144,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   void DetachView(fidl::StringPtr story_id, std::function<void()> done);
 
   // Called by StoryControllerImpl.
-  void NotifyStoryStateChange(
-      fidl::StringPtr story_id, fuchsia::modular::StoryState story_state,
-      fuchsia::modular::StoryVisibilityState story_visibility_state);
+  void NotifyStoryStateChange(fidl::StringPtr story_id);
 
   // Called by StoryControllerImpl.
   void NotifyStoryActivityChange(
@@ -271,6 +272,28 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   // Also keeps a cached version of the StoryData for every story so it does
   // not have to be loaded from disk when querying about this story.
   struct StoryRuntimeContainer {
+    // The executor on which asynchronous tasks are scheduled for this story.
+    //
+    // TODO(thatguy): Migrate all operations under |controller_impl| to use
+    // fit::promise and |executor|. MF-117
+    // TODO(thatguy): Once fit::scope is complete, share one executor for the
+    // whole process and take advantage of fit::scope to auto-cancel tasks when
+    // |this| dies.
+    std::unique_ptr<fit::executor> executor;
+
+    // StoryRuntime itself contains a StoryModelOwner and manages systems with
+    // asynchronous initialization and teardown operations.
+    std::unique_ptr<StoryModelOwner> model_owner;
+
+    // For ease of memory management, we store all runtime systems in
+    // |systems|.
+    std::vector<std::unique_ptr<System>> systems;
+
+    // This allows us to observe changes to the StoryModel owned by |runtime|.
+    std::unique_ptr<StoryObserver> model_observer;
+
+    // NOTE: The following are transitioning to StoryModel and associated
+    // classes above, as outlined in MF-85.
     std::unique_ptr<StoryControllerImpl> controller_impl;
     std::unique_ptr<StoryStorage> storage;
     std::unique_ptr<StoryEntityProvider> entity_provider;
