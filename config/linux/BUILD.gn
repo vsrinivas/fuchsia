@@ -2,9 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/clang/clang.gni")
 import("//build/config/sysroot.gni")
 
 config("compiler") {
+  cflags = []
+  cflags_c = []
+  cflags_cc = []
   ldflags = [
     "-static-libstdc++",
 
@@ -19,6 +23,10 @@ config("compiler") {
     # in the host build directory.
     "-Wl,-rpath=\$ORIGIN/",
   ]
+  configs = [
+    ":sysroot",
+    ":target",
+  ]
 
   # TODO(TC-74) The implicitly linked static libc++.a depends on these.
   libs = [
@@ -26,11 +34,17 @@ config("compiler") {
     "pthread",
   ]
   lib_dirs = [ rebase_path("//buildtools/${host_platform}/clang/lib") ]
-  configs = [ ":sysroot" ]
+  asmflags = cflags + cflags_c
 }
 
 config("sysroot") {
   cflags = [ "--sysroot=$sysroot" ]
   ldflags = cflags
   asmflags = cflags
+}
+
+config("target") {
+  cflags = [ "--target=$clang_target" ]
+  asmflags = cflags
+  ldflags = cflags
 }
