@@ -28,8 +28,8 @@ receive messages, and make proposals to give suggestions to the user.
 #### **AppMgr**
 
 The Application Manager (AppMgr) is responsible for launching components and managing the namespaces
-in which those components run. It is the first process started in the `fuchsia` job by the [DevMgr]
-(#DevMgr).
+in which those components run. It is the first process started in the `fuchsia` job by the
+[DevMgr](#DevMgr).
 
 #### **Armadillo**
 
