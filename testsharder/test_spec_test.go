@@ -54,6 +54,7 @@ var specFoo1 = testsharder.TestSpec{
 		Name:     "//obsidian/bin/foo:foo_unittests",
 		Location: "/system/test/foo_unittests",
 		OS:       "linux",
+		Command:  []string{"/system/test/foo_unittests", "bar", "baz"},
 	},
 	Envs: []testsharder.Environment{qemuEnv},
 }

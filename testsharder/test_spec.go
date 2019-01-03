@@ -44,12 +44,17 @@ type Test struct {
 	// (e.g., //garnet/bin/foo/tests:foo_tests).
 	Name string `json:"name"`
 
+	// (Deprecated. Use `Command` instead)
+	//
 	// Location is a unique reference to a test: for example, a filesystem
 	// path or a Fuchsia URI.
 	Location string `json:"location"`
 
 	// OS is the operating system in which this test must be executed.
 	OS string `json:"os"`
+
+	// Command is the command line to run to execute this test.
+	Command []string `json:"command"`
 }
 
 func (spec TestSpec) validateAgainst(platforms []DimensionSet) error {
