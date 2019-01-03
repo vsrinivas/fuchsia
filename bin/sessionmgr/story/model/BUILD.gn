@@ -4,8 +4,9 @@
 
 import("//peridot/build/tests_package.gni")
 
+# Convenience dep for most Systems.
 group("model") {
-  deps = [
+  public_deps = [
     ":story_observer",
     ":story_mutator",
     "//peridot/public/fidl/fuchsia.modular.storymodel",
@@ -77,6 +78,22 @@ executable("apply_mutations_unittest") {
     ":apply_mutations",
     "//third_party/googletest:gtest",
     "//third_party/googletest:gtest_main",
+  ]
+}
+
+source_set("noop_story_model_storage") {
+  sources = [
+    "noop_story_model_storage.h",
+    "noop_story_model_storage.cc",
+  ]
+
+  public_deps = [
+    "//peridot/public/fidl/fuchsia.modular.storymodel",
+  ]
+
+  deps = [
+    ":story_model_storage",
+    "//garnet/public/lib/fxl",
   ]
 }
 

@@ -38,6 +38,11 @@ class StoryModelStorage {
           void(std::vector<fuchsia::modular::storymodel::StoryModelMutation>)>
           callback);
 
+  // Returns a task that, when executed, applies |commands| to the underlying
+  // storage system. Clients can expect that, at some point later, similar
+  // mutations can be observed through SetObserveCallback()'s |callback|. In
+  // the case of conflict resolution or similar process, the set of observed
+  // mutations may be different.
   virtual fit::promise<> Execute(
       std::vector<fuchsia::modular::storymodel::StoryModelMutation>
           commands) = 0;
