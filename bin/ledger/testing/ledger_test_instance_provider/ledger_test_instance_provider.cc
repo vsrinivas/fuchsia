@@ -54,9 +54,8 @@ int main(int argc, char const *argv[]) {
   // Serve the repository.
   context->outgoing().AddPublicService<fuchsia::ledger::Ledger>(
       [&repository](fidl::InterfaceRequest<fuchsia::ledger::Ledger> request) {
-        repository->GetLedger(
-            convert::ExtendedStringView(kLedgerName).ToArray(),
-            std::move(request));
+        repository->GetLedger(convert::ToArray(kLedgerName),
+                              std::move(request));
       });
   loop.Run();
   return EXIT_SUCCESS;
