@@ -681,46 +681,6 @@ TEST_F(MergeResolverTest, WaitOnMergeOfMerges) {
   EXPECT_GT(backoff_ptr->get_next_count, 0);
 }
 
-TEST_F(MergeResolverTest, AutomaticallyMergeIdenticalCommits) {
-  // Set up conflict
-  storage::CommitId commit_1 = CreateCommit(
-      storage::kFirstPageCommitId, AddKeyValueToJournal("key1", "val1.0"));
-
-  storage::CommitId commit_2 = CreateCommit(
-      storage::kFirstPageCommitId, AddKeyValueToJournal("key1", "val1.0"));
-
-  bool called;
-  storage::Status status;
-  std::vector<storage::CommitId> ids;
-  page_storage_->GetHeadCommitIds(
-      callback::Capture(callback::SetWhenCalled(&called), &status, &ids));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  EXPECT_EQ(storage::Status::OK, status);
-  EXPECT_EQ(2u, ids.size());
-  EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), commit_1));
-  EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), commit_2));
-
-  MergeResolver resolver([] {}, &environment_, page_storage_.get(),
-                         std::make_unique<backoff::TestBackoff>());
-  resolver.set_on_empty(callback::SetWhenCalled(&called));
-  auto merge_strategy = std::make_unique<RecordingTestStrategy>();
-  auto merge_strategy_ptr = merge_strategy.get();
-  resolver.SetMergeStrategy(std::move(merge_strategy));
-
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  EXPECT_TRUE(resolver.IsEmpty());
-  ids.clear();
-  page_storage_->GetHeadCommitIds(
-      callback::Capture(callback::SetWhenCalled(&called), &status, &ids));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  EXPECT_EQ(storage::Status::OK, status);
-  EXPECT_EQ(1u, ids.size());
-  EXPECT_EQ(0u, merge_strategy_ptr->merge_calls);
-}
-
 TEST_F(MergeResolverTest, NoConflictCallback_ConflictsResolved) {
   // Set up conflict.
   CreateCommit(storage::kFirstPageCommitId, AddKeyValueToJournal("foo", "bar"));
@@ -1313,6 +1273,33 @@ TEST_F(MergeResolverTest, RecursiveMergeLastOneWins) {
   // Check if the ancestor is the one we expect.
   EXPECT_EQ("c", GetKeyOrEmpty(*strategy_ptr->ancestor, "k1"));
   EXPECT_EQ("b", GetKeyOrEmpty(*strategy_ptr->ancestor, "k2"));
+}
+
+// Identical change commits should not be considered equivalent.
+// This creates two commits with identical contents, and check that the conflict
+// resolver is called anyway.
+TEST_F(MergeResolverTest, DoNotAutoMergeIdenticalCommits) {
+  storage::CommitId commit_a =
+      CreateCommit(storage::kFirstPageCommitId, AddKeyValueToJournal("k", "v"));
+  storage::CommitId commit_b =
+      CreateCommit(storage::kFirstPageCommitId, AddKeyValueToJournal("k", "v"));
+
+  // Set up a merge strategy.
+  MergeResolver resolver([] {}, &environment_, page_storage_.get(),
+                         std::make_unique<backoff::TestBackoff>());
+  std::unique_ptr<RecordingTestStrategy> strategy =
+      std::make_unique<RecordingTestStrategy>();
+  auto strategy_ptr = strategy.get();
+  resolver.SetMergeStrategy(std::move(strategy));
+
+  RunLoopUntilIdle();
+
+  // Inspect the first merge
+  ASSERT_TRUE(strategy_ptr->callback);
+  EXPECT_EQ(storage::kFirstPageCommitId, strategy_ptr->ancestor->GetId());
+  EXPECT_THAT((std::vector<storage::CommitId>{strategy_ptr->head_1->GetId(),
+                                              strategy_ptr->head_2->GetId()}),
+              UnorderedElementsAre(commit_a, commit_b));
 }
 
 }  // namespace

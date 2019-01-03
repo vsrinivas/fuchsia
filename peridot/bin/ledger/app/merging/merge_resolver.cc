@@ -321,20 +321,6 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
               backoff_->Reset();
             }
 
-            // Check if the 2 parents have the same content.
-            if (commits[0]->GetRootIdentifier() ==
-                commits[1]->GetRootIdentifier()) {
-              // In that case, the result must be a commit with the same
-              // content.
-              MergeCommitsToContentOfLeft(
-                  std::move(commits[0]), std::move(commits[1]),
-                  [cleanup = std::move(cleanup), tracing = std::move(tracing)] {
-                    // Report the merge.
-                    ReportEvent(CobaltEvent::COMMITS_MERGED);
-                  });
-              return;
-            }
-
             // If the strategy has been changed, bail early.
             if (has_next_strategy_) {
               return;
@@ -349,28 +335,6 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
                 });
           }),
       "ledger", "merge_get_commit_finalize"));
-}
-
-void MergeResolver::MergeCommitsToContentOfLeft(
-    std::unique_ptr<const storage::Commit> left,
-    std::unique_ptr<const storage::Commit> right,
-    fit::closure on_successful_merge) {
-  coroutine_service_->StartCoroutine(
-      [this, left = std::move(left), right = std::move(right),
-       on_successful_merge = std::move(on_successful_merge)](
-          coroutine::CoroutineHandler* handler) mutable {
-        TRACE_DURATION("ledger", "merge_identical_commits");
-        storage::Status status = MergeCommitsToContentOfLeftSync(
-            handler, std::move(left), std::move(right));
-        if (status == storage::Status::INTERRUPTED) {
-          return;
-        }
-        if (status != storage::Status::OK) {
-          FXL_LOG(ERROR) << "Merge of identical commits failed";
-          return;
-        }
-        on_successful_merge();
-      });
 }
 
 void MergeResolver::RecursiveMergeOneStep(

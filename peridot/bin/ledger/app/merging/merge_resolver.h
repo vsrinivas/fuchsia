@@ -88,12 +88,6 @@ class MergeResolver : public storage::CommitWatcher {
   void ResolveConflicts(DelayedStatus delayed_status, storage::CommitId head1,
                         storage::CommitId head2);
 
-  // Creates a merge of two commits with the content of the first commit.
-  void MergeCommitsToContentOfLeft(
-      std::unique_ptr<const storage::Commit> left_commit,
-      std::unique_ptr<const storage::Commit> right_commit,
-      fit::closure on_successful_merge);
-
   // Does recursive merging, stops when one commit has been produced.
   void RecursiveMergeOneStep(
       std::unique_ptr<const storage::Commit> left_commit,
