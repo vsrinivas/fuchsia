@@ -189,25 +189,6 @@ zx_status_t VPartition::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {
     }
 }
 
-zx_status_t VPartition::DdkIoctl(uint32_t op, const void* cmd, size_t cmdlen, void* reply,
-                                 size_t max, size_t* out_actual) {
-    switch (op) {
-    case IOCTL_BLOCK_GET_INFO: {
-        block_info_t* info = static_cast<block_info_t*>(reply);
-        if (max < sizeof(*info))
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        fbl::AutoLock lock(&lock_);
-        if (IsKilledLocked())
-            return ZX_ERR_BAD_STATE;
-        memcpy(info, &info_, sizeof(*info));
-        *out_actual = sizeof(*info);
-        return ZX_OK;
-    }
-    default:
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-}
-
 typedef struct multi_txn_state {
     multi_txn_state(size_t total, block_op_t* txn, block_impl_queue_callback cb, void* cookie)
         : txns_completed(0), txns_total(total), status(ZX_OK), original(txn), completion_cb(cb),

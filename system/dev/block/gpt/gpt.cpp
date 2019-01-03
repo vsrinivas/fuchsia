@@ -116,23 +116,6 @@ void apply_guid_map(const guid_map_t* guid_map, size_t entries,
 }
 
 // implement device protocol:
-zx_status_t gpt_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmdlen,
-                      void* reply, size_t max, size_t* out_actual) {
-    gptpart_device_t* device = static_cast<gptpart_device_t*>(ctx);
-    switch (op) {
-    case IOCTL_BLOCK_GET_INFO: {
-        block_info_t* info = static_cast<block_info_t*>(reply);
-        if (max < sizeof(*info))
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        memcpy(info, &device->info, sizeof(*info));
-        *out_actual = sizeof(*info);
-        return ZX_OK;
-    }
-    default:
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-}
-
 void gpt_query(void* ctx, block_info_t* bi, size_t* bopsz) {
     gptpart_device_t* gpt = static_cast<gptpart_device_t*>(ctx);
     memcpy(bi, &gpt->info, sizeof(block_info_t));
@@ -249,7 +232,6 @@ zx_protocol_device_t gpt_proto = []() {
     gpt.unbind = gpt_unbind;
     gpt.release = gpt_release;
     gpt.get_size = gpt_get_size;
-    gpt.ioctl = gpt_ioctl;
     return gpt;
 }();
 
