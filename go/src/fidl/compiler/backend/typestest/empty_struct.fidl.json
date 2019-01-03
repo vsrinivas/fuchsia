@@ -18,6 +18,7 @@
   ],
   "table_declarations": [],
   "union_declarations": [],
+  "xunion_declarations": [],
   "declaration_order": [
     "test.name/Empty"
   ],

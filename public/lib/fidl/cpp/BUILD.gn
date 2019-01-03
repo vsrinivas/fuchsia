@@ -241,3 +241,10 @@ if (is_linux || is_mac) {
     ]
   }
 }
+
+# group("host_tests") {
+#   deps = [
+#     ":fidl_cpp_host_unittests($host_toolchain)",
+#   ]
+#   testonly = true
+# }

@@ -55,6 +55,7 @@
       "max_handles": 0
     }
   ],
+  "xunion_declarations": [],
   "declaration_order": [
     "test.name/Union"
   ],

@@ -329,6 +329,28 @@ type UnionMember struct {
 	MaxOutOfLine int        `json:"max_out_of_line"`
 }
 
+// XUnion represents the declaration of a FIDL extensible union.
+type XUnion struct {
+	Attributes
+	Name         EncodedCompoundIdentifier `json:"name"`
+	Members      []XUnionMember            `json:"members"`
+	Size         int                       `json:"size"`
+	Alignment    int                       `json:"alignment"`
+	MaxHandles   int                       `json:"max_handles"`
+	MaxOutOfLine int                       `json:"max_out_of_line"`
+}
+
+// XUnionMember represents the declaration of a field in a FIDL extensible
+// xunion.
+type XUnionMember struct {
+	Attributes
+	Ordinal      int        `json:"ordinal"`
+	Type         Type       `json:"type"`
+	Name         Identifier `json:"name"`
+	Offset       int        `json:"offset"`
+	MaxOutOfLine int        `json:"max_out_of_line"`
+}
+
 // Table represents a declaration of a FIDL table.
 type Table struct {
 	Attributes
@@ -478,6 +500,7 @@ const (
 	StructDeclType             = "struct"
 	TableDeclType              = "table"
 	UnionDeclType              = "union"
+	XUnionDeclType             = "xunion"
 )
 
 type DeclMap map[EncodedCompoundIdentifier]DeclType
@@ -498,6 +521,7 @@ type Root struct {
 	Structs    []Struct                    `json:"struct_declarations,omitempty"`
 	Tables     []Table                     `json:"table_declarations,omitempty"`
 	Unions     []Union                     `json:"union_declarations,omitempty"`
+	XUnions    []XUnion                    `json:"xunion_declarations,omitempty"`
 	DeclOrder  []EncodedCompoundIdentifier `json:"declaration_order,omitempty"`
 	Decls      DeclMap                     `json:"declarations,omitempty"`
 	Libraries  []Library                   `json:"library_dependencies,omitempty"`

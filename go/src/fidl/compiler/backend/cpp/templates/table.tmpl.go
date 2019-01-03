@@ -80,6 +80,9 @@ class {{ .Name }}  {
   {{- end }}
 
   {{- range .Members }}
+  {{/* The raw values of a table field are placed inside a union to ensure
+       that they're not initialized (since table fields are optional by
+       default). Placement new must be used to initialize the value. */ -}}
   union {{ .ValueUnionName }} {
     {{ .ValueUnionName }}() {}
     ~{{ .ValueUnionName }}() {}

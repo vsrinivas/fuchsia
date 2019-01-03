@@ -26,6 +26,7 @@ type interfaceKind struct{}
 type structKind struct{}
 type tableKind struct{}
 type unionKind struct{}
+type xunionKind struct{}
 
 var Kinds = struct {
 	Const     constKind
@@ -34,6 +35,7 @@ var Kinds = struct {
 	Struct    structKind
 	Table     tableKind
 	Union     unionKind
+	XUnion    xunionKind
 }{}
 
 type Decl interface{}
@@ -89,6 +91,28 @@ type UnionMember struct {
 	Offset      int
 }
 
+type XUnion struct {
+	types.Attributes
+	Namespace    string
+	Name         string
+	TableType    string
+	Members      []XUnionMember
+	Size         int
+	MaxHandles   int
+	MaxOutOfLine int
+	Kind         xunionKind
+}
+
+type XUnionMember struct {
+	types.Attributes
+	Ordinal     int
+	Type        Type
+	Name        string
+	StorageName string
+	TagName     string
+	Offset      int
+}
+
 type Table struct {
 	types.Attributes
 	Namespace      string
@@ -113,6 +137,7 @@ type TableMember struct {
 	MethodHasName     string
 	MethodClearName   string
 	ValueUnionName    string
+	ValueXUnionName   string
 }
 
 type Struct struct {
@@ -294,6 +319,7 @@ var reservedWords = map[string]bool{
 	"while":            true,
 	"xor":              true,
 	"xor_eq":           true,
+	"xunion":           true,
 
 	// names used in specific contexts e.g. union accessors
 	"which":           true,
@@ -478,6 +504,8 @@ func (c *compiler) compileType(val types.Type) Type {
 		case types.TableDeclType:
 			fallthrough
 		case types.UnionDeclType:
+			fallthrough
+		case types.XUnionDeclType:
 			if val.Nullable {
 				r.Decl = fmt.Sprintf("::std::unique_ptr<%s>", t)
 				r.LLDecl = fmt.Sprintf("%s*", t)
@@ -743,12 +771,12 @@ func (c *compiler) compileTable(val types.Table) Table {
 func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 	n := changeIfReserved(val.Name, "")
 	return UnionMember{
-		val.Attributes,
-		c.compileType(val.Type),
-		n,
-		changeIfReserved(val.Name, "_"),
-		fmt.Sprintf("k%s", common.ToUpperCamelCase(n)),
-		val.Offset,
+		Attributes:  val.Attributes,
+		Type:        c.compileType(val.Type),
+		Name:        n,
+		StorageName: changeIfReserved(val.Name, "_"),
+		TagName:     fmt.Sprintf("k%s", common.ToUpperCamelCase(n)),
+		Offset:      val.Offset,
 	}
 }
 
@@ -767,6 +795,38 @@ func (c *compiler) compileUnion(val types.Union) Union {
 
 	for _, v := range val.Members {
 		r.Members = append(r.Members, c.compileUnionMember(v))
+	}
+
+	return r
+}
+
+func (c *compiler) compileXUnionMember(val types.XUnionMember) XUnionMember {
+	n := changeIfReserved(val.Name, "")
+	return XUnionMember{
+		Attributes:  val.Attributes,
+		Ordinal:     val.Ordinal,
+		Type:        c.compileType(val.Type),
+		Name:        n,
+		StorageName: changeIfReserved(val.Name, "_"),
+		TagName:     fmt.Sprintf("k%s", common.ToUpperCamelCase(n)),
+		Offset:      val.Offset,
+	}
+}
+
+func (c *compiler) compileXUnion(val types.XUnion) XUnion {
+	name := c.compileCompoundIdentifier(val.Name, "")
+	r := XUnion{
+		Attributes:   val.Attributes,
+		Namespace:    c.namespace,
+		Name:         name,
+		TableType:    fmt.Sprintf("%s_%sTable", c.symbolPrefix, name),
+		Size:         val.Size,
+		MaxHandles:   val.MaxHandles,
+		MaxOutOfLine: val.MaxOutOfLine,
+	}
+
+	for _, v := range val.Members {
+		r.Members = append(r.Members, c.compileXUnionMember(v))
 	}
 
 	return r
@@ -822,6 +882,11 @@ func Compile(r types.Root) Root {
 
 	for _, v := range r.Unions {
 		d := c.compileUnion(v)
+		decls[v.Name] = &d
+	}
+
+	for _, v := range r.XUnions {
+		d := c.compileXUnion(v)
 		decls[v.Name] = &d
 	}
 

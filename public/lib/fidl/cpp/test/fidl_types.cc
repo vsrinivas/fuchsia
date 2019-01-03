@@ -28,10 +28,10 @@ struct unbounded_nonnullable_string_message_layout {
   alignas(FIDL_ALIGNMENT) char data[6];
 };
 
-static const fidl::FidlField unbounded_nonnullable_string_fields[] = {
-    fidl::FidlField(&unbounded_nonnullable_string,
-                    offsetof(unbounded_nonnullable_string_message_layout,
-                             inline_struct.string)),
+static const fidl::FidlStructField unbounded_nonnullable_string_fields[] = {
+    fidl::FidlStructField(&unbounded_nonnullable_string,
+                          offsetof(unbounded_nonnullable_string_message_layout,
+                                   inline_struct.string)),
 
 };
 

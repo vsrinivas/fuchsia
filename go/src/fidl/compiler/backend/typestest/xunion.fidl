@@ -1,0 +1,15 @@
+library test.name;
+
+xunion OlderSimpleUnion {
+  int64 i;
+  float32 f;
+};
+
+xunion NewerSimpleUnion {
+  // float f;  // removed
+
+  int64 i;  // unchanged
+
+  string s;  // added
+  vector<string> v;  // added
+};

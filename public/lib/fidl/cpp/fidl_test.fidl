@@ -21,17 +21,17 @@ struct Empty {
 };
 
 struct EmptyStructSandwich {
-  string before;
-  Empty e;
-  string after;
+    string before;
+    Empty e;
+    string after;
 };
 
 union SimpleUnion {
-  int32 i32;
-  int64 i64;
-  Int64Struct s;
-  Int64Struct? os;
-  string str;
+    int32 i32;
+    int64 i64;
+    Int64Struct s;
+    Int64Struct? os;
+    string str;
 };
 
 table SimpleTable {
@@ -59,4 +59,16 @@ table NewerSimpleTable {
     5: int64 y;
     6: int64 z;
     7: reserved;
+};
+
+xunion SampleXUnion {
+    int32 i;
+    SimpleUnion su;
+    SimpleTable st;
+};
+
+struct XUnionContainer {
+    string before;
+    SampleXUnion? xu;
+    string after;
 };
