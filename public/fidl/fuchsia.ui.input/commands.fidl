@@ -5,26 +5,26 @@
 library fuchsia.ui.input;
 
 union Command {
-    // Commands for conveying input events to a |Session|.
-    // Structs defined in input_events.fidl.
-    SendKeyboardInputCmd send_keyboard_input;
-    SendPointerInputCmd send_pointer_input;
+  // Commands for conveying input events to a |Session|.
+  // Structs defined in input_events.fidl.
+  SendKeyboardInputCmd send_keyboard_input;
+  SendPointerInputCmd send_pointer_input;
 
-    // Command to enable/disable delivery of hard keyboard events.
-    SetHardKeyboardDeliveryCmd set_hard_keyboard_delivery;
+  // Command to enable/disable delivery of hard keyboard events.
+  SetHardKeyboardDeliveryCmd set_hard_keyboard_delivery;
 
-    // Command to enable/disable parallel delivery of input events.
-    SetParallelDispatchCmd set_parallel_dispatch;
+  // Command to enable/disable parallel delivery of input events.
+  SetParallelDispatchCmd set_parallel_dispatch;
 };
 
 struct SendKeyboardInputCmd {
-    uint32 compositor_id;
-    KeyboardEvent keyboard_event; // Defined in input_events.fidl
+  uint32 compositor_id;
+  KeyboardEvent keyboard_event;  // Defined in input_events.fidl
 };
 
 struct SendPointerInputCmd {
-    uint32 compositor_id;
-    PointerEvent pointer_event; // Defined in input_events.fidl
+  uint32 compositor_id;
+  PointerEvent pointer_event;  // Defined in input_events.fidl
 };
 
 // Typically, clients should receive text inputs from an IME.
@@ -34,7 +34,7 @@ struct SendPointerInputCmd {
 //
 // By default, Scenic will *not* deliver hard keyboard events to a client.
 struct SetHardKeyboardDeliveryCmd {
-    bool delivery_request;
+  bool delivery_request;
 };
 
 // Typically, clients that participate in the hit test should receive input
@@ -44,5 +44,5 @@ struct SetHardKeyboardDeliveryCmd {
 // dispatch; it is part of the input v2 transition work.
 // TODO(SCN-1047): Remove after gesture disambiguation is implemented.
 struct SetParallelDispatchCmd {
-    bool parallel_dispatch;
+  bool parallel_dispatch;
 };

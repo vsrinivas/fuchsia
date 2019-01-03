@@ -16,5 +16,5 @@ library fuchsia.ui.viewsv1;
 // TODO(jeffbrown): This implementation is a temporary placeholder until
 // we provide a way to create tokens which cannot be forged.
 struct ViewTreeToken {
-    uint32 value;
+  uint32 value;
 };

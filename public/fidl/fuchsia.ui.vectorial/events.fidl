@@ -5,5 +5,5 @@
 library fuchsia.ui.vectorial;
 
 union Event {
-    bool placeHolder;
+  bool placeHolder;
 };

@@ -7,19 +7,19 @@ library fuchsia.ui.input;
 // The service provided by an IME
 [Discoverable]
 interface ImeService {
-    GetInputMethodEditor(KeyboardType keyboard_type,
+  1: GetInputMethodEditor(KeyboardType keyboard_type,
                          InputMethodAction action,
                          TextInputState initial_state,
                          InputMethodEditorClient client,
                          request<InputMethodEditor> editor);
-    ShowKeyboard();
-    HideKeyboard();
-    InjectInput(InputEvent event);
+  2: ShowKeyboard();
+  3: HideKeyboard();
+  4: InjectInput(InputEvent event);
 };
 
 // Onscreen keyboard containers connect to this to know when a keyboard
 // should be shown or hidden.
 [Discoverable]
 interface ImeVisibilityService {
-    -> OnKeyboardVisibilityChanged(bool visible);
+  1: -> OnKeyboardVisibilityChanged(bool visible);
 };

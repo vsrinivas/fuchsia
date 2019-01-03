@@ -30,8 +30,8 @@ library fuchsia.ui.gfx;
 // - has_shape
 // - has_material
 struct ShapeNodeArgs {
-    // TODO(SCN-694): Clean up dummy args.
-    uint32 unused = 0;
+  // TODO(SCN-694): Clean up dummy args.
+  uint32 unused = 0;
 };
 
 // Characteristics:
@@ -39,8 +39,8 @@ struct ShapeNodeArgs {
 // - is_clip
 // - has_parts
 struct ClipNodeArgs {
-    // TODO(SCN-694): Clean up dummy args.
-    uint32 unused = 0;
+  // TODO(SCN-694): Clean up dummy args.
+  uint32 unused = 0;
 };
 
 // Characteristics:
@@ -60,6 +60,6 @@ struct OpacityNodeArgs {
 // - has_parts
 // - has_clip
 struct EntityNodeArgs {
-    // TODO(SCN-694): Clean up dummy args.
-    uint32 unused = 0;
+  // TODO(SCN-694): Clean up dummy args.
+  uint32 unused = 0;
 };

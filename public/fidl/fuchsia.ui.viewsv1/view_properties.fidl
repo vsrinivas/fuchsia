@@ -11,12 +11,12 @@ using fuchsia.math;
 // When a container sets properties for its children, any properties which
 // are set to null are inherited from the container's own ancestors.
 struct ViewProperties {
-    ViewLayout? view_layout;
-    CustomFocusBehavior? custom_focus_behavior;
+  ViewLayout? view_layout;
+  CustomFocusBehavior? custom_focus_behavior;
 };
 
 struct CustomFocusBehavior {
-    bool allow_focus = true;
+  bool allow_focus = true;
 };
 
 // Provides layout constraints for a view.
@@ -25,11 +25,11 @@ struct CustomFocusBehavior {
 // bring back |BoxConstraints| or introduce some other protocol just for
 // measurement.
 struct ViewLayout {
-    // The size of the view in logical pixels.
-    // Must be non-negative.
-    fuchsia.math.SizeF size;
+  // The size of the view in logical pixels.
+  // Must be non-negative.
+  fuchsia.math.SizeF size;
 
-    // The inset of the view in logical pixels.
-    // Must be non-negative.
-    fuchsia.math.InsetF inset;
+  // The inset of the view in logical pixels.
+  // Must be non-negative.
+  fuchsia.math.InsetF inset;
 };

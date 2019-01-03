@@ -44,37 +44,37 @@ using fuchsia.ui.viewsv1token;
 //
 // 3. Set listeners on the input connection to receive events.
 interface View {
-    // Gets a service provider to access services which are associated with
-    // the view such as input, accessibility and editing capabilities.
-    // The view service provider is private to the view and should not be
-    // shared with anyone else.
-    //
-    // See |InputConnection|.
-    GetServiceProvider(request<fuchsia.sys.ServiceProvider> service_provider);
+  // Gets a service provider to access services which are associated with
+  // the view such as input, accessibility and editing capabilities.
+  // The view service provider is private to the view and should not be
+  // shared with anyone else.
+  //
+  // See |InputConnection|.
+  1: GetServiceProvider(request<fuchsia.sys.ServiceProvider> service_provider);
 
-    // This is a way for an app to offer services that are associated with a
-    // particular view. Used to expose services to the compositor
-    //
-    // In particular this should be used to let know which view is implementing
-    // the ability to show an IME
-    //
-    // |service_names| should contain a list of service names as defined with the
-    // FIDL syntax [Discoverable]
-    //
-    // The list of services will be used by the compositor to filter service
-    // providers when looking for a particular service.
-    OfferServiceProvider(fuchsia.sys.ServiceProvider service_provider,
+  // This is a way for an app to offer services that are associated with a
+  // particular view. Used to expose services to the compositor
+  //
+  // In particular this should be used to let know which view is implementing
+  // the ability to show an IME
+  //
+  // |service_names| should contain a list of service names as defined with the
+  // FIDL syntax [Discoverable]
+  //
+  // The list of services will be used by the compositor to filter service
+  // providers when looking for a particular service.
+  2: OfferServiceProvider(fuchsia.sys.ServiceProvider service_provider,
                          vector<string> service_names);
 
-    // Gets an interface for managing the view's children.
-    GetContainer(request<ViewContainer> container);
+  // Gets an interface for managing the view's children.
+  3: GetContainer(request<ViewContainer> container);
 };
 
 // An interface clients may implement to receive events from a view.
 interface ViewListener {
-    // Called when the view receives new properties from its ancestors.
-    // Initially the view has no properties so this method will be called
-    // as soon as properties first become available and whenever they change
-    // thereafter.
-    OnPropertiesChanged(ViewProperties properties) -> ();
+  // Called when the view receives new properties from its ancestors.
+  // Initially the view has no properties so this method will be called
+  // as soon as properties first become available and whenever they change
+  // thereafter.
+  1: OnPropertiesChanged(ViewProperties properties) -> ();
 };

@@ -47,156 +47,156 @@ using fuchsia.ui.viewsv1token;
 // them, as otherwise the children cannot be rendered (since they lack enough
 // context to know what to draw).
 interface ViewContainer {
-    // Sets the view container listener, or null to remove.
-    SetListener(ViewContainerListener? listener);
+  // Sets the view container listener, or null to remove.
+  1: SetListener(ViewContainerListener? listener);
 
-    // Adds the view referenced by |child_view_owner| as a child and assigns
-    // it the provided |child_key| to identify it among its children.
-    // The container may remove the child later by passing the same |child_key|
-    // to |RemoveChild()|.
-    //
-    // This method takes ownership of the view.
-    //
-    // It is important for the container to choose locally unique values for
-    // |child_key| to ensure that each child can be distinguished even as
-    // more children are added or removed.  We recommend using a simple
-    // counter which is incremented on each (re-)addition.
-    //
-    // If the child becomes unavailable at any time prior to being removed
-    // then an |OnChildUnavailable()| message will be sent.
-    //
-    // If |child_view_owner| refers to a view which is already unavailable or
-    // if adding the view would create a cycle in the view tree then the
-    // call proceeds as if it succeeded but an |OnChildUnavailable()| message
-    // will be sent.
-    //
-    // If |child_view_owner| refers to a view which already has a container or is
-    // the root of a view tree then an |OnChildUnavailable()| message will
-    // be sent to its old container or root and the the view will be
-    // (re-)added to its new container as usual.  This special case also
-    // applies when the specified view is already a child of this view, in which
-    // case the behavior is similar to the view having been transferred to
-    // some other container and then back again.
-    //
-    // Note that an unavailable child will remain in its container's list of
-    // children until its container explicitly calls |RemoveChild()| to remove
-    // it.
-    //
-    // |host_import_token| is an import token which the view manager will
-    // use to import the node to which the child view's content should
-    // be attached.
-    //
-    // To establish the graphical embedding relation, the container view
-    // must create an event pair, bind one endpoint to an |ExportResourceOp|
-    // associated with the node to which the child's content nodes will be
-    // attached as descendants, and pass the other endpoint to this method as
-    // |host_import_token|.
-    //
-    // It is an error to add a view whose |child_key| already appears
-    // in the view's list of children; the connection will be closed.
-    //
-    // It is an error to add more than one child to a |ViewTree|'s container;
-    // it can only have at most one child (its root).
-    //
-    // This method is deprecated in favor of the eventpair-based one below.
-    // TODO(SCN-1018): Remove this.
-    AddChild(uint32 child_key,
-             fuchsia.ui.viewsv1token.ViewOwner child_view_owner,
-             handle<eventpair> host_import_token);
+  // Adds the view referenced by |child_view_owner| as a child and assigns
+  // it the provided |child_key| to identify it among its children.
+  // The container may remove the child later by passing the same |child_key|
+  // to |RemoveChild()|.
+  //
+  // This method takes ownership of the view.
+  //
+  // It is important for the container to choose locally unique values for
+  // |child_key| to ensure that each child can be distinguished even as
+  // more children are added or removed.  We recommend using a simple
+  // counter which is incremented on each (re-)addition.
+  //
+  // If the child becomes unavailable at any time prior to being removed
+  // then an |OnChildUnavailable()| message will be sent.
+  //
+  // If |child_view_owner| refers to a view which is already unavailable or
+  // if adding the view would create a cycle in the view tree then the
+  // call proceeds as if it succeeded but an |OnChildUnavailable()| message
+  // will be sent.
+  //
+  // If |child_view_owner| refers to a view which already has a container or is
+  // the root of a view tree then an |OnChildUnavailable()| message will
+  // be sent to its old container or root and the the view will be
+  // (re-)added to its new container as usual.  This special case also
+  // applies when the specified view is already a child of this view, in which
+  // case the behavior is similar to the view having been transferred to
+  // some other container and then back again.
+  //
+  // Note that an unavailable child will remain in its container's list of
+  // children until its container explicitly calls |RemoveChild()| to remove
+  // it.
+  //
+  // |host_import_token| is an import token which the view manager will
+  // use to import the node to which the child view's content should
+  // be attached.
+  //
+  // To establish the graphical embedding relation, the container view
+  // must create an event pair, bind one endpoint to an |ExportResourceOp|
+  // associated with the node to which the child's content nodes will be
+  // attached as descendants, and pass the other endpoint to this method as
+  // |host_import_token|.
+  //
+  // It is an error to add a view whose |child_key| already appears
+  // in the view's list of children; the connection will be closed.
+  //
+  // It is an error to add more than one child to a |ViewTree|'s container;
+  // it can only have at most one child (its root).
+  //
+  // This method is deprecated in favor of the eventpair-based one below.
+  // TODO(SCN-1018): Remove this.
+  2: AddChild(uint32 child_key,
+      fuchsia.ui.viewsv1token.ViewOwner child_view_owner,
+      handle<eventpair> host_import_token);
 
-    AddChild2(uint32 child_key,
-              handle<eventpair> view_holder_token,
-              handle<eventpair> host_import_token);
+  3: AddChild2(uint32 child_key,
+      handle<eventpair> view_holder_token,
+      handle<eventpair> host_import_token);
 
-    // Removes the view referenced by |child_key| from the view's
-    // list of children.
-    //
-    // If |transferred_view_owner| is not null, associates it with the
-    // previously added child to allow it to be transferred elsewhere or
-    // closes the |transferred_view_owner| channel if there was none.
-    //
-    // It is an error to remove a view whose |child_key| does not appear
-    // in the container's list of children; the connection will be closed.
-    //
-    // This method is deprecated in favor of the eventpair-based one below.
-    // TODO(SCN-1018): Remove this.
-    RemoveChild(uint32 child_key,
-                request<fuchsia.ui.viewsv1token.ViewOwner>? transferred_view_owner);
+  // Removes the view referenced by |child_key| from the view's
+  // list of children.
+  //
+  // If |transferred_view_owner| is not null, associates it with the
+  // previously added child to allow it to be transferred elsewhere or
+  // closes the |transferred_view_owner| channel if there was none.
+  //
+  // It is an error to remove a view whose |child_key| does not appear
+  // in the container's list of children; the connection will be closed.
+  //
+  // This method is deprecated in favor of the eventpair-based one below.
+  // TODO(SCN-1018): Remove this.
+  4: RemoveChild(uint32 child_key,
+      request<fuchsia.ui.viewsv1token.ViewOwner>? transferred_view_owner);
 
-    RemoveChild2(uint32 child_key,
-                 handle<eventpair>? transferred_view_holder_token);
+  5: RemoveChild2(uint32 child_key,
+      handle<eventpair>? transferred_view_holder_token);
 
-    // Sets view properties for the child, such as layout constraints.
-    //
-    // This method must be called at least once after a child is added to
-    // set the view's properties before it can be rendered.  Rendering for
-    // children without properties is blocked until properties are set.
-    //
-    // The |child_view_properties| specifies the properties for the child, or
-    // null to remove the properties from the child which will cause rendering
-    // of the child's scene to be blocked until new properties are set.
-    //
-    // It is an error to specify a |child_key| that does not appear in
-    // the container's list of children; the connection will be closed.
-    //
-    // It is an error to specify malformed |child_view_properties| such
-    // as invalid layout properties; the connection will be closed.
-    SetChildProperties(uint32 child_key, ViewProperties? child_view_properties);
+  // Sets view properties for the child, such as layout constraints.
+  //
+  // This method must be called at least once after a child is added to
+  // set the view's properties before it can be rendered.  Rendering for
+  // children without properties is blocked until properties are set.
+  //
+  // The |child_view_properties| specifies the properties for the child, or
+  // null to remove the properties from the child which will cause rendering
+  // of the child's scene to be blocked until new properties are set.
+  //
+  // It is an error to specify a |child_key| that does not appear in
+  // the container's list of children; the connection will be closed.
+  //
+  // It is an error to specify malformed |child_view_properties| such
+  // as invalid layout properties; the connection will be closed.
+  6: SetChildProperties(uint32 child_key, ViewProperties? child_view_properties);
 
-    // WIP API
-    // Sends a hint about a pending size change to the given node and all nodes
-    // below. This is generally sent before an animation.
-    //
-    // |width_change_factor| and |height_change_factor| is how much bigger or smaller
-    // the item is expected to be in the near future. This one number encapsulate
-    // both changes in scale, as well as changes to layout width and height.
-    //
-    // It is an error to specify a |child_key| that does not appear in
-    // the container's list of children; the connection will be closed.
-    //
-    SendSizeChangeHintHACK(uint32 child_key, float32 width_change_factor,
-                           float32 height_change_factor);
+  // WIP API
+  // Sends a hint about a pending size change to the given node and all nodes
+  // below. This is generally sent before an animation.
+  //
+  // |width_change_factor| and |height_change_factor| is how much bigger or smaller
+  // the item is expected to be in the near future. This one number encapsulate
+  // both changes in scale, as well as changes to layout width and height.
+  //
+  // It is an error to specify a |child_key| that does not appear in
+  // the container's list of children; the connection will be closed.
+  //
+  7: SendSizeChangeHintHACK(uint32 child_key, float32 width_change_factor,
+                            float32 height_change_factor);
 
-    // Request the child view to get input focus for key events.
-    RequestFocus(uint32 child_key);
+  // Request the child view to get input focus for key events.
+  8: RequestFocus(uint32 child_key);
 
-    // Request the snapshot of the child view.
-    RequestSnapshotHACK(uint32 child_key)-> (fuchsia.mem.Buffer data);
+  // Request the snapshot of the child view.
+  9: RequestSnapshotHACK(uint32 child_key)-> (fuchsia.mem.Buffer data);
 };
 
 // An interface clients may implement to receive events from a view container.
 interface ViewContainerListener {
-    // Called when a child view is attached along with embedding information.
-    //
-    // This method will be called at most once after the child is added.
-    //
-    // The implementation should invoke the callback once the event has
-    // been handled.
-    OnChildAttached(uint32 child_key, ViewInfo child_view_info) -> ();
+  // Called when a child view is attached along with embedding information.
+  //
+  // This method will be called at most once after the child is added.
+  //
+  // The implementation should invoke the callback once the event has
+  // been handled.
+  1: OnChildAttached(uint32 child_key, ViewInfo child_view_info) -> ();
 
-    // Called when a child view has become unavailable.
-    //
-    // A child may become unavailable for many reasons such being unregistered
-    // by its application, abnormal termination of its application, or
-    // cycles being introduced in the view tree.
-    //
-    // To complete removal of an unavailable child, this view component must
-    // call RemoveChild() on its view with |child_key|.
-    //
-    // The implementation should invoke the callback once the event has
-    // been handled.
-    OnChildUnavailable(uint32 child_key) -> ();
+  // Called when a child view has become unavailable.
+  //
+  // A child may become unavailable for many reasons such being unregistered
+  // by its application, abnormal termination of its application, or
+  // cycles being introduced in the view tree.
+  //
+  // To complete removal of an unavailable child, this view component must
+  // call RemoveChild() on its view with |child_key|.
+  //
+  // The implementation should invoke the callback once the event has
+  // been handled.
+  2: OnChildUnavailable(uint32 child_key) -> ();
 
-    // TODO(jeffbrown): Once we figure out measurement, add a |OnChildResized|
-    // event or similar to allow the container to get the size along with the
-    // scene version.
+  // TODO(jeffbrown): Once we figure out measurement, add a |OnChildResized|
+  // event or similar to allow the container to get the size along with the
+  // scene version.
 };
 
 // Provides embedding information about a view for use by its container.
 //
 // This information is valid until the container removes the view.
 struct ViewInfo {
-    // There is currently no information here but we have preserved the
-    // plumbing for now.  May remove later.
-    uint8 dummy;
+  // There is currently no information here but we have preserved the
+  // plumbing for now.  May remove later.
+  uint8 dummy;
 };

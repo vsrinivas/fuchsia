@@ -5,29 +5,29 @@
 library fuchsia.ui.views;
 
 union Command {
-    CreateViewCmd create_view;
-    CreateViewHolderCmd create_view_holder;
+  CreateViewCmd create_view;
+  CreateViewHolderCmd create_view_holder;
 
-    AddChildViewCmd add_child_view;
-    RemoveChildViewCmd remove_child_view;
+  AddChildViewCmd add_child_view;
+  RemoveChildViewCmd remove_child_view;
 };
 
 struct CreateViewCmd {
-    uint32 id;
-    handle<eventpair> token;
+  uint32 id;
+  handle<eventpair> token;
 };
 
 struct CreateViewHolderCmd {
-    uint32 id;
-    handle<eventpair> token;
+  uint32 id;
+  handle<eventpair> token;
 };
 
 struct AddChildViewCmd {
-    uint32 view_id;
-    uint32 view_holder_id;
+  uint32 view_id;
+  uint32 view_holder_id;
 };
 
 struct RemoveChildViewCmd {
-    uint32 view_id;
-    uint32 view_holder_id;
+  uint32 view_id;
+  uint32 view_holder_id;
 };
