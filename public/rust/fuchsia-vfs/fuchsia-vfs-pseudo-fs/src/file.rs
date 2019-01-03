@@ -307,7 +307,7 @@ where
     /// MODE_PROTECTION_MASK attributes returned by this file through io.fild:Node::GetAttr.  They
     /// have no meaning for the file operation itself, but may have consequences to the POSIX
     /// emulation layer - for example, it makes sense to remove the read flags from a read-only
-    /// file.  This filed should only have bits in the MODE_PROTECTION_MASK part set.
+    /// file.  This field should only have set bits in the MODE_PROTECTION_MASK part.
     protection_attributes: u32,
 
     /// All the currently open connections for this file.
