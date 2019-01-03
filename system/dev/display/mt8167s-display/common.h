@@ -31,4 +31,5 @@ struct OvlConfig {
     frame_t             src_frame;
     frame_t             dest_frame;
     uint32_t            pitch;
+    frame_transform_t   transform;
 };

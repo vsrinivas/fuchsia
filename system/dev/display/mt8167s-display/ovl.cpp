@@ -194,6 +194,16 @@ zx_status_t Ovl::Config(uint8_t layer, OvlConfig &cfg) {
         regVal |= Lx_CON_BYTE_SWAP;
     }
     regVal |= Lx_CON_CLRFMT(GetFormat(cfg.format));
+
+    // enable horizontal and veritical flip
+    if (cfg.transform == FRAME_TRANSFORM_ROT_180) {
+        regVal |= Lx_CON_HFE | Lx_CON_VFE;
+    } else if (cfg.transform == FRAME_TRANSFORM_REFLECT_X) {
+        regVal |= Lx_CON_HFE;
+    } else if (cfg.transform == FRAME_TRANSFORM_REFLECT_Y) {
+        regVal |= Lx_CON_VFE;
+    }
+
     ovl_mmio_->Write32(regVal, OVL_Lx_CON(layer));
 
     // write the height and width of source buffer for this layer
@@ -203,13 +213,37 @@ zx_status_t Ovl::Config(uint8_t layer, OvlConfig &cfg) {
                        cfg.src_frame.width, OVL_Lx_SRC_SIZE(layer));
 
     // Set destination frame to be display on display
-    ovl_mmio_->Write32(cfg.dest_frame.y_pos << 16 | cfg.dest_frame.x_pos, OVL_Lx_OFFSET(layer));
+    uint32_t x_pos;
+    uint32_t y_pos;
+    uint32_t offset;
+
+    if (cfg.transform == FRAME_TRANSFORM_ROT_180) {
+        // flipping in both x and y
+        x_pos = width_ - cfg.dest_frame.width - cfg.dest_frame.x_pos;
+        y_pos = height_ - cfg.dest_frame.height - cfg.dest_frame.y_pos;
+        offset = (cfg.dest_frame.width + cfg.src_frame.x_pos)  * GetBytesPerPixel(cfg.format) +
+                 (cfg.dest_frame.height + cfg.src_frame.y_pos - 1) * cfg.pitch - 1;
+    } else if (cfg.transform == FRAME_TRANSFORM_REFLECT_X) {
+        x_pos = width_ - cfg.dest_frame.width - cfg.dest_frame.x_pos;
+        y_pos = cfg.dest_frame.y_pos;
+        offset = (cfg.dest_frame.width + cfg.src_frame.x_pos)  * GetBytesPerPixel(cfg.format) +
+                 cfg.src_frame.y_pos * cfg.pitch - 1;
+    } else if (cfg.transform == FRAME_TRANSFORM_REFLECT_Y) {
+        x_pos = cfg.dest_frame.x_pos;
+        y_pos = height_ - cfg.dest_frame.height - cfg.dest_frame.y_pos;
+        offset = cfg.src_frame.x_pos  * GetBytesPerPixel(cfg.format) +
+                 (cfg.dest_frame.height + cfg.src_frame.y_pos - 1) * cfg.pitch;
+    } else {
+        // No flipping/rotation
+        x_pos = cfg.dest_frame.x_pos;
+        y_pos = cfg.dest_frame.y_pos;
+        offset = cfg.src_frame.x_pos * GetBytesPerPixel(cfg.format) +
+                 cfg.src_frame.y_pos * cfg.pitch;
+    }
+    ovl_mmio_->Write32((y_pos << 16 | x_pos), OVL_Lx_OFFSET(layer));
 
     // set the physical address of the buffer for this layer based on source offset
-    uint32_t finaladdr = static_cast<uint32_t>(cfg.paddr) +
-                         cfg.src_frame.x_pos * GetBytesPerPixel(cfg.format) +
-                         cfg.src_frame.y_pos * cfg.pitch;
-    ovl_mmio_->Write32(finaladdr, OVL_Lx_ADDR(layer));
+    ovl_mmio_->Write32(static_cast<uint32_t>(cfg.paddr) + offset, OVL_Lx_ADDR(layer));
 
     // setup Lx_PITCH_PITCH register
     regVal = 0;

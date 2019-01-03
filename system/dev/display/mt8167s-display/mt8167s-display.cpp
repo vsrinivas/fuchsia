@@ -132,8 +132,11 @@ uint32_t Mt8167sDisplay::DisplayControllerImplCheckConfiguration(
             switch (display_configs[0]->layer_list[j]->type) {
             case LAYER_TYPE_PRIMARY: {
                 const primary_layer_t& layer = display_configs[0]->layer_list[j]->cfg.primary;
-                // TODO(payamm) Add support for rotation (ZX-3227)
-                if (layer.transform_mode != 0) {
+                // TODO(payamm) Add support for 90 and 270 degree rotation (ZX-3252)
+                if (layer.transform_mode != FRAME_TRANSFORM_IDENTITY &&
+                    layer.transform_mode != FRAME_TRANSFORM_REFLECT_X &&
+                    layer.transform_mode != FRAME_TRANSFORM_REFLECT_Y &&
+                    layer.transform_mode != FRAME_TRANSFORM_ROT_180) {
                     layer_cfg_results[0][j] |= CLIENT_TRANSFORM;
                 }
                 // TODO(payamm) Add support for scaling (ZX-3228) :
@@ -191,6 +194,7 @@ void Mt8167sDisplay::DisplayControllerImplApplyConfiguration(
             cfg.dest_frame = layer.dest_frame;
             cfg.pitch = DisplayControllerImplComputeLinearStride(layer.image.width, cfg.format) *
                         ZX_PIXEL_FORMAT_BYTES(cfg.format);
+            cfg.transform = layer.transform_mode;
             ovl_->Config(static_cast<uint8_t>(j), cfg);
         }
         // All configurations are done. Re-start the engine

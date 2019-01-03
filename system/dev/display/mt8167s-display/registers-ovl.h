@@ -58,6 +58,8 @@
 // OVL_Lx_CON Bit Definitions
 #define Lx_CON_BYTE_SWAP                (1 << 24)
 #define Lx_CON_CLRFMT(x)                (x << 12)
+#define Lx_CON_HFE                      (1 << 10)
+#define Lx_CON_VFE                      (1 << 9)
 #define Lx_CON_AEN                      (1 << 8)
 #define Lx_CON_ALPHA(x)                 (x << 0)
 
