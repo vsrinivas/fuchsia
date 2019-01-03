@@ -147,26 +147,15 @@ static zx_status_t zxsio_unwrap(fdio_t* io, zx_handle_t* handles, uint32_t* type
     return r;
 }
 
-static void zxsio_wait_begin_stream(fdio_t* io, uint32_t events, zx_handle_t* handle, zx_signals_t* _signals) {
+static void zxsio_wait_begin_stream(fdio_t* io, uint32_t events,
+                                    zx_handle_t* out_handle,
+                                    zx_signals_t* out_signals) {
     zxio_socket_t* sio = fdio_get_zxio_socket(io);
-    *handle = sio->socket.socket;
-    // TODO: locking for flags/state
-    if (io->ioflag & IOFLAG_SOCKET_CONNECTING) {
-        // check the connection state
-        zx_signals_t observed;
-        zx_status_t r;
-        r = zx_object_wait_one(sio->socket.socket, ZXSIO_SIGNAL_CONNECTED, 0u,
-                               &observed);
-        if (r == ZX_OK || r == ZX_ERR_TIMED_OUT) {
-            if (observed & ZXSIO_SIGNAL_CONNECTED) {
-                io->ioflag &= ~IOFLAG_SOCKET_CONNECTING;
-                io->ioflag |= IOFLAG_SOCKET_CONNECTED;
-            }
-        }
-    }
+    *out_handle = sio->socket.socket;
     zx_signals_t signals = ZXSIO_SIGNAL_ERROR;
     if (io->ioflag & IOFLAG_SOCKET_CONNECTED) {
-        // if socket is connected
+        // If the socket is connected, POLLIN and POLLOUT correspond to reading
+        // and writing, as usual.
         if (events & POLLIN) {
             signals |= ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED | ZX_SOCKET_PEER_CLOSED;
         }
@@ -174,39 +163,41 @@ static void zxsio_wait_begin_stream(fdio_t* io, uint32_t events, zx_handle_t* ha
             signals |= ZX_SOCKET_WRITABLE | ZX_SOCKET_WRITE_DISABLED;
         }
     } else {
-        // if socket is not connected
         if (events & POLLIN) {
-            // signal when a listening socket gets an incoming connection
-            // or a connecting socket gets connected and receives data
+            // When not connected, we need to raise POLLIN when there's a socket
+            // to accept in addition to the usual reading signals.
             signals |= ZX_SOCKET_ACCEPT |
                        ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED | ZX_SOCKET_PEER_CLOSED;
         }
         if (events & POLLOUT) {
-            // signal when connect() operation is finished
+            // When not connected, we need to raise POLLOUT when the connection
+            // state changes, which is signaled by ZXSIO_SIGNAL_OUTGOING. Whether
+            // the connection has succeeded or failed is communicated using the
+            // ZXSIO_SIGNAL_CONNECTED signal.
             signals |= ZXSIO_SIGNAL_OUTGOING;
         }
     }
     if (events & POLLRDHUP) {
         signals |= ZX_SOCKET_PEER_WRITE_DISABLED | ZX_SOCKET_PEER_CLOSED;
     }
-    *_signals = signals;
+    *out_signals = signals;
 }
 
-static void zxsio_wait_end_stream(fdio_t* io, zx_signals_t signals, uint32_t* _events) {
-    // check the connection state
-    if (io->ioflag & IOFLAG_SOCKET_CONNECTING) {
-        if (signals & ZXSIO_SIGNAL_CONNECTED) {
-            io->ioflag &= ~IOFLAG_SOCKET_CONNECTING;
-            io->ioflag |= IOFLAG_SOCKET_CONNECTED;
-        }
-    }
+static void zxsio_wait_end_stream(fdio_t* io, zx_signals_t signals, uint32_t* out_events) {
     uint32_t events = 0;
-    if (io->ioflag & IOFLAG_SOCKET_CONNECTED) {
+    if (signals & ZXSIO_SIGNAL_CONNECTED) {
         if (signals & (ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED | ZX_SOCKET_PEER_CLOSED)) {
             events |= POLLIN;
         }
         if (signals & (ZX_SOCKET_WRITABLE | ZX_SOCKET_WRITE_DISABLED)) {
             events |= POLLOUT;
+        }
+
+        // If the socket is in the IOFLAG_SOCKET_CONNECTING state, we need to
+        // update ioflag to reflet that the socket is now connected.
+        if (io->ioflag & IOFLAG_SOCKET_CONNECTING) {
+            io->ioflag &= ~IOFLAG_SOCKET_CONNECTING;
+            io->ioflag |= IOFLAG_SOCKET_CONNECTED;
         }
     } else {
         if (signals & (ZX_SOCKET_ACCEPT | ZX_SOCKET_PEER_CLOSED)) {
@@ -222,7 +213,8 @@ static void zxsio_wait_end_stream(fdio_t* io, zx_signals_t signals, uint32_t* _e
     if (signals & (ZX_SOCKET_PEER_WRITE_DISABLED | ZX_SOCKET_PEER_CLOSED)) {
         events |= POLLRDHUP;
     }
-    *_events = events;
+
+    *out_events = events;
 }
 
 static ssize_t zxsio_posix_ioctl_stream(fdio_t* io, int req, va_list va) {
