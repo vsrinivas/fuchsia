@@ -10,17 +10,36 @@
 #include <fbl/array.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/ftl/volume.h>
+#include <lib/fzl/owned-vmo-mapper.h>
 #include <unittest/unittest.h>
 
 namespace {
 
 constexpr uint32_t kPageSize = 1024;
-constexpr uint32_t kNumPages = 100;
+constexpr uint32_t kNumPages = 20;
+constexpr char kMagic = 'f';
+
+block_info_t kInfo = {kNumPages, kPageSize, BLOCK_MAX_TRANSFER_UNBOUNDED, 0, 0};
+
+bool CheckPattern(const void* buffer, size_t size, char pattern = kMagic) {
+    const char* data = reinterpret_cast<const char*>(buffer);
+    for (; size; size--) {
+        if (*data++ != pattern) {
+            return false;
+        }
+    }
+    return true;
+}
 
 class FakeVolume : public ftl::Volume {
   public:
     explicit FakeVolume(ftl::BlockDevice* device) : device_(device) {}
     ~FakeVolume() final {}
+
+    bool written() const { return written_; }
+    bool flushed() const { return flushed_; }
+    uint32_t first_page() const { return first_page_; }
+    int num_pages() const { return num_pages_; }
 
     // Volume interface.
     const char* Init(std::unique_ptr<ftl::NdmDriver> driver) final {
@@ -28,12 +47,27 @@ class FakeVolume : public ftl::Volume {
         return nullptr;
     }
     const char* ReAttach() final { return nullptr; }
-    zx_status_t Read(uint32_t first_page, int num_pages, void* buffer) final { return ZX_OK; }
+    zx_status_t Read(uint32_t first_page, int num_pages, void* buffer) final {
+        first_page_ = first_page;
+        num_pages_ = num_pages;
+        memset(buffer, kMagic, num_pages * kPageSize);
+        return ZX_OK;
+    }
     zx_status_t Write(uint32_t first_page, int num_pages, const void* buffer) final {
-        return ZX_OK; }
+        first_page_ = first_page;
+        num_pages_ = num_pages;
+        written_ = true;
+        if (!CheckPattern(buffer, kPageSize * num_pages)) {
+            return ZX_ERR_IO_DATA_INTEGRITY;
+        }
+        return ZX_OK;
+    }
     zx_status_t Format() final { return ZX_OK; }
     zx_status_t Mount() final { return ZX_OK; }
-    zx_status_t Unmount() final { return ZX_OK; }
+    zx_status_t Unmount() final {
+        flushed_ = true;
+        return ZX_OK;
+    }
     zx_status_t Flush() final { return ZX_OK; }
     zx_status_t Trim(uint32_t first_page, uint32_t num_pages) final { return ZX_OK; }
     zx_status_t GarbageCollect() final { return ZX_OK; }
@@ -41,6 +75,10 @@ class FakeVolume : public ftl::Volume {
 
   private:
     ftl::BlockDevice* device_;
+    uint32_t first_page_ = 0;
+    int num_pages_ = 0;
+    bool written_ = false;
+    bool flushed_ = false;
 };
 
 bool TrivialLifetimeTest() {
@@ -79,10 +117,342 @@ bool GetSizeTest() {
     END_TEST;
 }
 
+bool IoctlGetNameTest() {
+    BEGIN_TEST;
+    ftl::BlockDevice device;
+    device.SetVolumeForTest(std::make_unique<FakeVolume>(&device));
+    ASSERT_EQ(ZX_OK, device.Init());
+
+    char name[20];
+    size_t name_len;
+
+    ASSERT_EQ(ZX_OK,
+              device.DdkIoctl(IOCTL_BLOCK_GET_NAME, nullptr, 0, &name, sizeof(name), &name_len));
+
+    EXPECT_GT(name_len, 0);
+    EXPECT_NE('\0', name[0]);
+    EXPECT_NE('\0', name[name_len - 1]);
+    EXPECT_EQ('\0', name[name_len]);
+    END_TEST;
+}
+
+bool IoctlGetInfoTest() {
+    BEGIN_TEST;
+    ftl::BlockDevice device;
+    device.SetVolumeForTest(std::make_unique<FakeVolume>(&device));
+    ASSERT_EQ(ZX_OK, device.Init());
+
+    block_info_t info;
+    size_t info_len;
+
+    ASSERT_EQ(ZX_OK,
+              device.DdkIoctl(IOCTL_BLOCK_GET_INFO, nullptr, 0, &info, sizeof(info), &info_len));
+
+    EXPECT_EQ(sizeof(info), info_len);
+    ASSERT_EQ(0, memcmp(&info, &kInfo, sizeof(info)));
+    END_TEST;
+}
+
+bool IoctlGetTypeTest() {
+    BEGIN_TEST;
+    ftl::BlockDevice device;
+    device.SetVolumeForTest(std::make_unique<FakeVolume>(&device));
+    ASSERT_EQ(ZX_OK, device.Init());
+
+    char guid[ZBI_PARTITION_GUID_LEN];
+    size_t guid_len;
+
+    ASSERT_EQ(ZX_OK,
+              device.DdkIoctl(IOCTL_BLOCK_GET_TYPE_GUID, nullptr, 0, &guid, sizeof(guid),
+                              &guid_len));
+
+    EXPECT_EQ(sizeof(guid), guid_len);
+    EXPECT_TRUE(CheckPattern(guid, sizeof(guid), '\0'));  // No parent device.
+    END_TEST;
+}
+
+bool QueryTest() {
+    BEGIN_TEST;
+    ftl::BlockDevice device;
+    device.SetVolumeForTest(std::make_unique<FakeVolume>(&device));
+    ASSERT_EQ(ZX_OK, device.Init());
+
+    block_info_t info;
+    size_t operation_size;
+    device.BlockImplQuery(&info, &operation_size);
+
+    ASSERT_EQ(0, memcmp(&info, &kInfo, sizeof(info)));
+    ASSERT_GT(operation_size, sizeof(block_op_t));
+    END_TEST;
+}
+
+class BlockDeviceTest;
+
+// Wrapper for a block_op_t.
+class Operation {
+  public:
+    explicit Operation(size_t op_size, BlockDeviceTest* test) : op_size_(op_size), test_(test) {}
+    ~Operation() {}
+
+    // Accessors for the memory represented by the operation's vmo.
+    size_t buffer_size() const { return buffer_size_; }
+    void* buffer() const { return mapper_.start(); }
+
+    // Creates a vmo and sets the handle on the block_op_t.
+    bool SetVmo();
+
+    block_op_t* GetOperation();
+
+    void OnCompletion(zx_status_t status) {
+        status_ = status;
+        completed_ = true;
+    }
+
+    bool completed() const { return completed_; }
+    zx_status_t status() const { return status_; }
+    BlockDeviceTest* test() const { return test_; }
+
+    DISALLOW_COPY_ASSIGN_AND_MOVE(Operation);
+
+  private:
+    zx_handle_t GetVmo();
+
+    fzl::OwnedVmoMapper mapper_;
+    size_t op_size_;
+    BlockDeviceTest* test_;
+    zx_status_t status_ = ZX_ERR_ACCESS_DENIED;
+    bool completed_ = false;
+    static constexpr size_t buffer_size_ = kPageSize * kNumPages;
+    std::unique_ptr<char[]> raw_buffer_;
+};
+
+bool Operation::SetVmo() {
+    block_op_t* operation = GetOperation();
+    if (!operation) {
+        return false;
+    }
+    operation->rw.vmo = GetVmo();
+    return operation->rw.vmo != ZX_HANDLE_INVALID;
+}
+
+block_op_t* Operation::GetOperation() {
+    if (!raw_buffer_) {
+        raw_buffer_.reset(new char[op_size_]);
+        memset(raw_buffer_.get(), 0, op_size_);
+    }
+    return reinterpret_cast<block_op_t*>(raw_buffer_.get());
+}
+
+zx_handle_t Operation::GetVmo() {
+    if (mapper_.start()) {
+        return mapper_.vmo().get();
+    }
+
+    if (mapper_.CreateAndMap(buffer_size_, "") != ZX_OK) {
+        return ZX_HANDLE_INVALID;
+    }
+
+    return mapper_.vmo().get();
+}
+
+// Provides control primitives for tests that issue IO requests to the device.
+class BlockDeviceTest {
+  public:
+    BlockDeviceTest();
+    ~BlockDeviceTest() {}
+
+    ftl::BlockDevice* device() { return device_.get(); }
+    size_t op_size() const { return op_size_; }
+    FakeVolume* volume() { return volume_; }
+
+    static void CompletionCb(void* cookie, zx_status_t status, block_op_t* op) {
+        Operation* operation = reinterpret_cast<Operation*>(cookie);
+
+        operation->OnCompletion(status);
+        operation->test()->num_completed_++;
+        sync_completion_signal(&operation->test()->event_);
+    }
+
+    bool Wait() {
+        zx_status_t status = sync_completion_wait(&event_, ZX_SEC(5));
+        sync_completion_reset(&event_);
+        return status == ZX_OK;
+    }
+
+    bool WaitFor(int desired) {
+        while (num_completed_ < desired) {
+            if (!Wait()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    DISALLOW_COPY_ASSIGN_AND_MOVE(BlockDeviceTest);
+
+  private:
+    sync_completion_t event_;
+    int num_completed_ = 0;
+    std::unique_ptr<ftl::BlockDevice> device_;
+    size_t op_size_;
+    FakeVolume* volume_ = nullptr;  // Object owned by device_.
+};
+
+BlockDeviceTest::BlockDeviceTest() : device_(new ftl::BlockDevice()) {
+    volume_ = new FakeVolume(device_.get());
+    device_->SetVolumeForTest(std::unique_ptr<FakeVolume>(volume_));
+
+    block_info_t info;
+    device_->BlockImplQuery(&info, &op_size_);
+
+    if (device_->Init() != ZX_OK) {
+        device_.reset();
+    }
+}
+
+// Tests trivial attempts to queue one operation.
+bool QueueOneTest() {
+    BEGIN_TEST;
+    BlockDeviceTest test;
+    ftl::BlockDevice* device = test.device();
+    ASSERT_TRUE(device);
+
+    Operation operation(test.op_size(), &test);
+
+    block_op_t* op = operation.GetOperation();
+    ASSERT_TRUE(op);
+
+    op->rw.command = BLOCK_OP_READ;
+    device->BlockImplQueue(op, &BlockDeviceTest::CompletionCb, &operation);
+
+    ASSERT_TRUE(test.Wait());
+    ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, operation.status());
+
+    op->rw.length = 1;
+    device->BlockImplQueue(op, &BlockDeviceTest::CompletionCb, &operation);
+    ASSERT_TRUE(test.Wait());
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS, operation.status());
+
+    op->rw.offset_dev = kNumPages;
+    device->BlockImplQueue(op, &BlockDeviceTest::CompletionCb, &operation);
+    ASSERT_TRUE(test.Wait());
+    ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, operation.status());
+
+    ASSERT_TRUE(operation.SetVmo());
+
+    op->rw.offset_dev = kNumPages - 1;
+    device->BlockImplQueue(op, &BlockDeviceTest::CompletionCb, &operation);
+    ASSERT_TRUE(test.Wait());
+    ASSERT_EQ(ZX_OK, operation.status());
+    END_TEST;
+}
+
+bool ReadWriteTest() {
+    BEGIN_TEST;
+    BlockDeviceTest test;
+    ftl::BlockDevice* device = test.device();
+    ASSERT_TRUE(device);
+
+    Operation operation(test.op_size(), &test);
+    ASSERT_TRUE(operation.SetVmo());
+
+    block_op_t* op = operation.GetOperation();
+    ASSERT_TRUE(op);
+
+    op->rw.command = BLOCK_OP_READ;
+    op->rw.length = 2;
+    op->rw.offset_dev = 3;
+    ASSERT_TRUE(operation.SetVmo());
+    device->BlockImplQueue(op, &BlockDeviceTest::CompletionCb, &operation);
+
+    ASSERT_TRUE(test.Wait());
+    ASSERT_EQ(ZX_OK, operation.status());
+
+    FakeVolume* volume = test.volume();
+    EXPECT_FALSE(volume->written());
+    EXPECT_EQ(2, volume->num_pages());
+    EXPECT_EQ(3, volume->first_page());
+    EXPECT_TRUE(CheckPattern(operation.buffer(), kPageSize * 2));
+
+    op->rw.command = BLOCK_OP_WRITE;
+    op->rw.length = 4;
+    op->rw.offset_dev = 5;
+    memset(operation.buffer(), kMagic, kPageSize * 5);
+    device->BlockImplQueue(op, &BlockDeviceTest::CompletionCb, &operation);
+
+    ASSERT_TRUE(test.Wait());
+    ASSERT_EQ(ZX_OK, operation.status());
+
+    EXPECT_TRUE(volume->written());
+    EXPECT_EQ(4, volume->num_pages());
+    EXPECT_EQ(5, volume->first_page());
+    END_TEST;
+}
+
+bool FlushTest() {
+    BEGIN_TEST;
+    BlockDeviceTest test;
+    ftl::BlockDevice* device = test.device();
+    ASSERT_TRUE(device);
+
+    Operation operation(test.op_size(), &test);
+    block_op_t* op = operation.GetOperation();
+    ASSERT_TRUE(op);
+
+    op->rw.command = BLOCK_OP_FLUSH;
+    ASSERT_TRUE(operation.SetVmo());
+    device->BlockImplQueue(op, &BlockDeviceTest::CompletionCb, &operation);
+
+    ASSERT_TRUE(test.Wait());
+    ASSERT_EQ(ZX_OK, operation.status());
+
+    EXPECT_FALSE(test.volume()->flushed());
+    END_TEST;
+}
+
+// Tests serialization of multiple operations.
+bool QueueMultipleTest() {
+    BEGIN_TEST;
+    BlockDeviceTest test;
+    ftl::BlockDevice* device = test.device();
+    ASSERT_TRUE(device);
+
+    std::unique_ptr<Operation> operations[10];
+    for (int i = 0; i < 10; i++) {
+        operations[i].reset(new Operation(test.op_size(), &test));
+        Operation& operation = *(operations[i].get());
+        block_op_t* op = operation.GetOperation();
+        ASSERT_TRUE(op);
+
+        op->rw.command = BLOCK_OP_READ;
+        op->rw.length = 1;
+        op->rw.offset_dev = i;
+        ASSERT_TRUE(operation.SetVmo());
+        device->BlockImplQueue(op, &BlockDeviceTest::CompletionCb, &operation);
+    }
+
+    ASSERT_TRUE(test.WaitFor(10));
+
+    for (const auto& operation : operations) {
+        ASSERT_EQ(ZX_OK, operation->status());
+        ASSERT_TRUE(operation->completed());
+    }
+
+    END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(BlockDeviceTests)
 RUN_TEST_SMALL(TrivialLifetimeTest)
 RUN_TEST_SMALL(DdkLifetimeTest)
 RUN_TEST_SMALL(GetSizeTest)
+RUN_TEST_SMALL(IoctlGetNameTest)
+RUN_TEST_SMALL(IoctlGetInfoTest)
+RUN_TEST_SMALL(IoctlGetTypeTest)
+RUN_TEST_SMALL(QueryTest)
+RUN_TEST_SMALL(QueueOneTest)
+RUN_TEST_SMALL(ReadWriteTest)
+RUN_TEST_SMALL(FlushTest)
+RUN_TEST_SMALL(QueueMultipleTest)
 END_TEST_CASE(BlockDeviceTests)

@@ -5,13 +5,43 @@
 #include "block_device.h"
 
 #include <ddk/debug.h>
+#include <fbl/auto_lock.h>
+#include <lib/fzl/vmo-mapper.h>
 #include <zircon/assert.h>
 
 #include "nand_driver.h"
 
+namespace {
+
+constexpr char kDeviceName[] = "ftl";
+
+}  // namespace
+
 namespace ftl {
 
+struct FtlOp {
+    block_op_t op;
+    list_node_t node;
+    block_impl_queue_callback completion_cb;
+    void* cookie;
+};
+
 BlockDevice::~BlockDevice() {
+    if (thread_created_) {
+        Kill();
+        sync_completion_signal(&wake_signal_);
+        int result_code;
+        thrd_join(worker_, &result_code);
+
+        for (;;) {
+            FtlOp* nand_op = list_remove_head_type(&txn_list_, FtlOp, node);
+            if (!nand_op) {
+                break;
+            }
+            nand_op->completion_cb(nand_op->cookie, ZX_ERR_BAD_STATE, &nand_op->op);
+        }
+    }
+
     bool volume_created = (DdkGetSize() != 0);
     if (volume_created) {
         if (volume_->Unmount() != ZX_OK) {
@@ -39,19 +69,108 @@ zx_status_t BlockDevice::Bind() {
     if (status != ZX_OK) {
         return status;
     }
-    return DdkAdd("ftl");
+    return DdkAdd(kDeviceName);
 }
 
 void BlockDevice::DdkUnbind() {
+    Kill();
+    sync_completion_signal(&wake_signal_);
     DdkRemove();
 }
 
 zx_status_t BlockDevice::Init() {
+    ZX_DEBUG_ASSERT(!thread_created_);
+    list_initialize(&txn_list_);
+    if (thrd_create(&worker_, WorkerThreadStub, this) != thrd_success) {
+        return ZX_ERR_NO_RESOURCES;
+    }
+    thread_created_ = true;
+
     if (!InitFtl()) {
         return ZX_ERR_NO_RESOURCES;
     }
 
     return ZX_OK;
+}
+
+zx_status_t BlockDevice::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
+                                  void* out_buf, size_t out_len, size_t* out_actual) {
+    switch (op) {
+    // Block Protocol:
+    case IOCTL_BLOCK_GET_NAME: {
+        if (out_len < sizeof(kDeviceName)) {
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        }
+        char* name = reinterpret_cast<char*>(out_buf);
+        memset(name, 0, sizeof(kDeviceName));
+        strncpy(name, kDeviceName, out_len);
+        *out_actual = sizeof(kDeviceName) - 1;
+        return ZX_OK;
+    }
+    case IOCTL_BLOCK_GET_INFO: {
+        block_info_t* info = reinterpret_cast<block_info_t*>(out_buf);
+        if (out_len < sizeof(*info)) {
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        }
+
+        size_t dummy;
+        BlockImplQuery(info, &dummy);
+        *out_actual = sizeof(*info);
+        return ZX_OK;
+    }
+    case IOCTL_BLOCK_GET_TYPE_GUID: {
+        char* guid = reinterpret_cast<char*>(out_buf);
+        if (out_len < ZBI_PARTITION_GUID_LEN) {
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        }
+        memcpy(guid, guid_, ZBI_PARTITION_GUID_LEN);
+        *out_actual = ZBI_PARTITION_GUID_LEN;
+        return ZX_OK;
+    }
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+}
+
+void BlockDevice::BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out) {
+    zxlogf(TRACE, "FTL: Query\n");
+    memset(info_out, 0, sizeof(*info_out));
+    info_out->block_count = params_.num_pages;
+    info_out->block_size = params_.page_size;
+    info_out->max_transfer_size = BLOCK_MAX_TRANSFER_UNBOUNDED;
+    *block_op_size_out = sizeof(FtlOp);
+}
+
+void BlockDevice::BlockImplQueue(block_op_t* operation, block_impl_queue_callback completion_cb,
+                                 void* cookie) {
+  zxlogf(TRACE, "FTL: Queue\n");
+  uint32_t max_pages = params_.num_pages;
+  switch (operation->command) {
+    case BLOCK_OP_WRITE:
+    case BLOCK_OP_READ: {
+        if (operation->rw.offset_dev >= max_pages || !operation->rw.length ||
+            (max_pages - operation->rw.offset_dev) < operation->rw.length) {
+            completion_cb(cookie, ZX_ERR_OUT_OF_RANGE, operation);
+            return;
+        }
+        break;
+    }
+    case BLOCK_OP_FLUSH:
+        break;
+
+    default:
+        completion_cb(cookie, ZX_ERR_NOT_SUPPORTED, operation);
+        return;
+    }
+
+    FtlOp* block_op = reinterpret_cast<FtlOp*>(operation);
+    block_op->completion_cb = completion_cb;
+    block_op->cookie = cookie;
+    if (AddToList(block_op)) {
+        sync_completion_signal(&wake_signal_);
+    } else {
+        completion_cb(cookie, ZX_ERR_BAD_STATE, operation);
+    }
 }
 
 bool BlockDevice::OnVolumeAdded(uint32_t page_size, uint32_t num_pages) {
@@ -76,6 +195,126 @@ bool BlockDevice::InitFtl() {
 
     zxlogf(INFO, "FTL: InitFtl ok\n");
     return true;
+}
+
+void BlockDevice::Kill() {
+    fbl::AutoLock lock(&lock_);
+    dead_ = true;
+}
+
+bool BlockDevice::AddToList(FtlOp* operation) {
+    fbl::AutoLock lock(&lock_);
+    if (!dead_) {
+        list_add_tail(&txn_list_, &operation->node);
+    }
+    return !dead_;
+}
+
+bool BlockDevice::RemoveFromList(FtlOp** operation) {
+    fbl::AutoLock lock(&lock_);
+    if (!dead_) {
+        *operation = list_remove_head_type(&txn_list_, FtlOp, node);
+    }
+    return !dead_;
+}
+
+int BlockDevice::WorkerThread() {
+    for (;;) {
+        FtlOp* operation;
+        for (;;) {
+            if (!RemoveFromList(&operation)) {
+                return 0;
+            }
+            if (operation) {
+                sync_completion_reset(&wake_signal_);
+                break;
+            } else {
+                // Flush any pending data after 15 seconds of inactivity. This is
+                // meant to reduce the chances of data loss if power is removed.
+                // This value is only a guess.
+                zx_duration_t timeout = pending_flush_ ? ZX_SEC(15) : ZX_TIME_INFINITE;
+                zx_status_t status = sync_completion_wait(&wake_signal_, timeout);
+                if (status == ZX_ERR_TIMED_OUT) {
+                    Flush();
+                    pending_flush_ = false;
+                }
+            }
+        }
+
+        zx_status_t status = ZX_OK;
+
+        switch (operation->op.command) {
+        case BLOCK_OP_WRITE:
+        case BLOCK_OP_READ:
+            pending_flush_ = true;
+            status = ReadWriteData(&operation->op);
+            break;
+
+        case BLOCK_OP_FLUSH: {
+            status = Flush();
+            pending_flush_ = false;
+            break;
+        }
+        default:
+            ZX_DEBUG_ASSERT(false);  // Unexpected.
+        }
+
+        operation->completion_cb(operation->cookie, status, &operation->op);
+    }
+}
+
+int BlockDevice::WorkerThreadStub(void* arg) {
+    BlockDevice* device = reinterpret_cast<BlockDevice*>(arg);
+    return device->WorkerThread();
+}
+
+zx_status_t BlockDevice::ReadWriteData(block_op_t* operation) {
+    uint64_t addr = operation->rw.offset_vmo * params_.page_size;
+    uint32_t length = operation->rw.length * params_.page_size;
+    uint32_t offset = static_cast<uint32_t>(operation->rw.offset_dev);
+    if (offset != operation->rw.offset_dev) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    // TODO(ZX-2541): We may go back to ask the kernel to copy the data for us
+    // if that ends up being more efficient.
+    fzl::VmoMapper mapper;
+    zx_status_t status = mapper.Map(*zx::unowned_vmo(operation->rw.vmo), addr, length,
+                                    ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    if (operation->command == BLOCK_OP_WRITE) {
+        zxlogf(SPEW, "FTL: BLK To write %d blocks at %d :\n", operation->rw.length, offset);
+        status = volume_->Write(offset, operation->rw.length, mapper.start());
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "FTL: Failed to write to ftl\n");
+            return status;
+        }
+    }
+
+    if (operation->command == BLOCK_OP_READ) {
+        zxlogf(SPEW, "FTL: BLK To read %d blocks at %d :\n", operation->rw.length, offset);
+        status = volume_->Read(offset, operation->rw.length, mapper.start());
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "FTL: Failed to read from ftl\n");
+            return status;
+        }
+    }
+
+    return ZX_OK;
+}
+
+zx_status_t BlockDevice::Flush() {
+    zx_status_t status = volume_->Flush();
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "FTL: flush failed\n");
+        return status;
+    }
+
+    zxlogf(INFO, "FTL: Finished flush\n");
+    return status;
 }
 
 }  // namespace ftl.
