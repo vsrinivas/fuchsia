@@ -180,8 +180,17 @@ void ConsoleContext::SetActiveFrameForThread(const Frame* frame) {
   record->active_frame_id = IdForFrame(frame);
 }
 
-int ConsoleContext::GetActiveFrameIdForThread(const Thread* thread) {
+void ConsoleContext::SetActiveFrameIdForThread(const Thread* thread, int id) {
   ThreadRecord* record = GetThreadRecord(thread);
+  if (!record) {
+    FXL_NOTREACHED();
+    return;
+  }
+  record->active_frame_id = id;
+}
+
+int ConsoleContext::GetActiveFrameIdForThread(const Thread* thread) const {
+  const ThreadRecord* record = GetThreadRecord(thread);
   if (!record) {
     FXL_NOTREACHED();
     return 0;
@@ -495,10 +504,11 @@ void ConsoleContext::OnSymbolLoadFailure(Process* process, const Err& err) {
 void ConsoleContext::OnThreadStopped(
     Thread* thread, debug_ipc::NotifyException::Type type,
     std::vector<fxl::WeakPtr<Breakpoint>> hit_breakpoints) {
-  // Set this process and thread as active.
+  // The stopped, process, thread, and frame should be active.
   Target* target = thread->GetProcess()->GetTarget();
   SetActiveTarget(target);
   SetActiveThreadForTarget(thread);
+  SetActiveFrameIdForThread(thread, 0);
 
   Console* console = Console::get();
   OutputBuffer out;

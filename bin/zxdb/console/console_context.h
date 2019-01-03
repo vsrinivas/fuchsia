@@ -64,7 +64,8 @@ class ConsoleContext : public ProcessObserver,
   // will be 0 (so the return value can't be blindly indexed into the frames
   // list).
   void SetActiveFrameForThread(const Frame* frame);
-  int GetActiveFrameIdForThread(const Thread* thread);
+  void SetActiveFrameIdForThread(const Thread* thread, int id);
+  int GetActiveFrameIdForThread(const Thread* thread) const;
 
   // Sets the active breakpoint. Can be null/0 if there is no active breakpoint
   // (set to null to clear).
