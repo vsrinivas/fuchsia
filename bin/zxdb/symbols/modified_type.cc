@@ -15,7 +15,7 @@ namespace {
 // to the data stored in it.
 bool IsTransparentTag(int tag) {
   return tag == Symbol::kTagConstType || tag == Symbol::kTagVolatileType ||
-         tag == Symbol::kTagTypedef;
+         tag == Symbol::kTagTypedef || tag == Symbol::kTagRestrictType;
 }
 
 // Returns true if this modified holds some kind of pointer to the modified
@@ -105,7 +105,7 @@ std::string ModifiedType::ComputeFullName() const {
     case kTagReferenceType:
       return modified_name + "&";
     case kTagRestrictType:
-      return "restrict " + modified_name;
+      return modified_name + " restrict";
     case kTagRvalueReferenceType:
       return modified_name + "&&";
     case kTagVolatileType:

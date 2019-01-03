@@ -53,6 +53,12 @@ TEST(ModifiedType, GetFullName) {
   EXPECT_EQ("const int* const", const_int_const_ptr->GetFullName());
   EXPECT_EQ(kPtrSize, const_int_const_ptr->byte_size());
 
+  // const int* restrict
+  auto const_int_ptr_restrict = fxl::MakeRefCounted<ModifiedType>(
+      Symbol::kTagRestrictType, LazySymbol(const_int_ptr));
+  EXPECT_EQ("const int* restrict", const_int_ptr_restrict->GetFullName());
+  EXPECT_EQ(kPtrSize, const_int_ptr_restrict->byte_size());
+
   // const int* const&
   auto const_int_const_ptr_ref = fxl::MakeRefCounted<ModifiedType>(
       Symbol::kTagReferenceType, LazySymbol(const_int_const_ptr));
