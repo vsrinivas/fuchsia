@@ -2,11 +2,24 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+declare_args() {
+  # Selects the SoftMAC client implementation to use. Choices:
+  #   false (default) - C++ Client MLME implementation
+  #   true - Rust Client MLME implementation
+  # This argument is temporary until Rust MLME is ready to be used.
+  experimental_wlan_client_mlme = false
+}
+
+
 config("wlan_mlme_config") {
   include_dirs = [ "include" ]
 }
 
 source_set("mlme") {
+  if (experimental_wlan_client_mlme == true) {
+    defines = [ "USE_RUST_CLIENT_MLME" ]
+  }
+
   public = [
     "include/wlan/mlme/ap/ap_mlme.h",
     "include/wlan/mlme/ap/beacon_sender.h",
