@@ -24,7 +24,6 @@ constexpr fxl::StringView kLedgerName = "test ledger instance";
 }  // namespace
 
 // Exposes a public service that serves an in-memory Ledger.
-// Exits once the Ledger is served.
 int main(int argc, char const *argv[]) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   std::unique_ptr<component::StartupContext> context(
@@ -55,10 +54,9 @@ int main(int argc, char const *argv[]) {
   // Serve the repository.
   context->outgoing().AddPublicService<fuchsia::ledger::Ledger>(
       [&repository](fidl::InterfaceRequest<fuchsia::ledger::Ledger> request) {
-        zx_status_t status = repository->GetLedger(
+        repository->GetLedger(
             convert::ExtendedStringView(kLedgerName).ToArray(),
             std::move(request));
-        exit(status == ZX_OK ? EXIT_SUCCESS : EXIT_FAILURE);
       });
   loop.Run();
   return EXIT_SUCCESS;
