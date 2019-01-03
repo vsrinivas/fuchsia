@@ -5,7 +5,6 @@
     "sandbox": {
         "dev": [ "class/input" ],
         "services": [
-            "fuchsia.accessibility.ToggleBroadcaster",
             "fuchsia.tracelink.Registry",
             "fuchsia.ui.scenic.Scenic",
             "fuchsia.ui.viewsv1.ViewManager"

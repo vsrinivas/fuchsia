@@ -140,12 +140,6 @@ Presentation1::Presentation1(fuchsia::ui::scenic::Scenic* scenic,
     FXL_LOG(ERROR) << "Root presenter: View tree connection error.";
     Shutdown();
   });
-  tree_->GetToken([this](fuchsia::ui::viewsv1::ViewTreeToken token) {
-    current_view_tree_ = token;
-    if (a11y_input_connection_) {
-      a11y_input_connection_->RegisterPresentation(std::move(token));
-    }
-  });
 
   // Prepare the view tree's container for the root.
   tree_->GetContainer(tree_container_.NewRequest());
@@ -160,28 +154,6 @@ Presentation1::Presentation1(fuchsia::ui::scenic::Scenic* scenic,
   // Attach root view to view tree.
   tree_container_->AddChild2(kRootViewKey, std::move(root_view_holder_token),
                              std::move(root_view_host_import_token_));
-
-  // Set up |a11y_toggle_| to listen for turning on/off a11y support.
-  {
-    a11y_toggle_.events().OnAccessibilityToggle =
-        fit::bind_member(this, &Presentation1::OnAccessibilityToggle);
-    a11y_toggle_.set_error_handler([this](zx_status_t error) {
-      FXL_LOG(INFO) << "Disconnected from a11y toggle broadcaster.";
-      // If we disconnect from the a11y toggler, we have no way of turning on or
-      // off accessibility support, so we just force it to stay disabled.
-      accessibility_mode_ = false;
-    });
-    startup_context_->ConnectToEnvironmentService(a11y_toggle_.NewRequest());
-  }
-
-  // Set up |a11y_input_connection_| to listen for simulated events when a11y is
-  // turned on.
-  {
-    a11y_input_connection_.events().OnReturnInputEvent =
-        fit::bind_member(this, &Presentation1::OnEvent);
-    a11y_input_connection_.set_error_handler(
-        [this](zx_status_t error) { a11y_input_connection_.Unbind(); });
-  }
 
   FXL_CHECK(display_startup_rotation_adjustment_ % 90 == 0)
       << "Rotation adjustments must be in (+/-) 90 deg increments; received: "
@@ -514,7 +486,7 @@ void Presentation1::OnDeviceAdded(mozart::InputDeviceImpl* input_device) {
   } else {
     mozart::OnEventCallback callback =
         [this](fuchsia::ui::input::InputEvent event) {
-          OnAccessibilityEvent(std::move(event));
+          OnEvent(std::move(event));
         };
     state = std::make_unique<mozart::DeviceState>(
         input_device->id(), input_device->descriptor(), std::move(callback));
@@ -757,31 +729,6 @@ void Presentation1::OnSensorEvent(uint32_t device_id,
       presentation_mode_listener_->OnModeChanged();
     }
   }
-}
-
-void Presentation1::OnAccessibilityEvent(fuchsia::ui::input::InputEvent event) {
-  // We currently only send over touch events to the a11y dispatch.
-  if (accessibility_mode_ && event.is_pointer() &&
-      event.pointer().type == fuchsia::ui::input::PointerEventType::TOUCH) {
-    // If the |a11y_input_connection_| is not bound, we reconnect and
-    // re-register before sending input. This method is made with the assumption
-    // that only the active presentation can receive input, thus fulfilling the
-    // role that a presentation should reconnect when active.
-    if (!a11y_input_connection_.is_bound()) {
-      startup_context_->ConnectToEnvironmentService(
-          a11y_input_connection_.NewRequest());
-      fuchsia::ui::viewsv1::ViewTreeToken clone_token;
-      current_view_tree_.Clone(&clone_token);
-      a11y_input_connection_->RegisterPresentation(std::move(clone_token));
-    }
-    a11y_input_connection_->SendInputEvent(std::move(event));
-    return;
-  }
-  OnEvent(std::move(event));
-}
-
-void Presentation1::OnAccessibilityToggle(bool enabled) {
-  accessibility_mode_ = enabled;
 }
 
 void Presentation1::OnChildAttached(
