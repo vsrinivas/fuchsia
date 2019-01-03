@@ -286,7 +286,7 @@ added.
 
 #### **Module**
 
-A module is a role a [component](#Component) can play to participate in a [story][#Story]. Every
+A module is a role a [component](#Component) can play to participate in a [story](#Story). Every
 component can be be used as a module, but typically a module is asked to show UI.  Additionally,
 a module can have a `module` metadata file which describes the Module's data compatibility and
 semantic role.
