@@ -4,9 +4,15 @@
 
 #pragma once
 
+#include <threads.h>
+
 #include <ddktl/device.h>
 #include <ddktl/i2c-channel.h>
 #include <ddktl/protocol/hidbus.h>
+#include <fbl/mutex.h>
+#include <hid/ltr-578als.h>
+#include <lib/zx/port.h>
+#include <zircon/thread_annotations.h>
 
 namespace light {
 
@@ -34,11 +40,23 @@ public:
     zx_status_t HidbusSetProtocol(hid_protocol_t protocol);
 
 private:
-    Ltr578Als(zx_device_t* parent, ddk::I2cChannel i2c) : DeviceType(parent), i2c_(i2c) {}
+    Ltr578Als(zx_device_t* parent, ddk::I2cChannel i2c, zx::port port)
+        : DeviceType(parent), i2c_(i2c),
+          port_(std::move(port)), feature_report_{LTR_578ALS_RPT_ID_FEATURE, 0} {}
 
     zx_status_t Init();
+    zx_status_t GetInputReport(ltr_578als_input_rpt_t* report);
+    int Thread();
 
-    ddk::I2cChannel i2c_;
+    fbl::Mutex i2c_lock_;
+    fbl::Mutex client_lock_;
+    fbl::Mutex feature_report_lock_;
+
+    ddk::I2cChannel i2c_ TA_GUARDED(i2c_lock_);
+    zx::port port_;
+    ddk::HidbusIfcClient client_ TA_GUARDED(client_lock_);
+    thrd_t thread_;
+    ltr_578als_feature_rpt_t feature_report_ TA_GUARDED(feature_report_lock_);
 };
 
 }  // namespace light

@@ -33,7 +33,16 @@ static const uint8_t ltr_578als_report_desc[] = {
     HID_USAGE_SENSOR_GENERIC_UNITS_NOT_SPECIFIED,
     HID_INPUT(HID_Data_Var_Abs),
 
-    // TODO(bradenkell): Add feature report.
+    HID_REPORT_ID(LTR_578ALS_RPT_ID_FEATURE),
+
+    HID_USAGE_SENSOR_PROPERTY_REPORT_INTERVAL,
+    HID_LOGICAL_MIN(0),
+    HID_LOGICAL_MAX32(0x7fffffff),
+    HID_REPORT_SIZE(32),
+    HID_REPORT_COUNT(1),
+    HID_FEATURE(HID_Data_Var_Abs),
+
+    // TODO(bradenkell): Add additional configuration fields as needed.
 
     HID_END_COLLECTION,
 };
