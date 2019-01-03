@@ -195,8 +195,8 @@ components running on Fuchsia.
 
 The precise contents and organization of a component's namespace varies
 greatly depending on the component's role, type, identity, scope,
-relation to other components, and rights. See [sandboxing.md] for information
-about how namespaces are used to create sandboxes for components.
+relation to other components, and rights. See [Sandboxing](sandboxing.md) for
+information about how namespaces are used to create sandboxes for components.
 
 _For more information about the namespace your component can expect to
 receive from its environment, please consult the documentation related to
