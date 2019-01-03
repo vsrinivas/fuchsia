@@ -44,6 +44,22 @@ class StoryModelOwner {
                            std::unique_ptr<StoryModelStorage> model_storage);
   ~StoryModelOwner();
 
+  // Instructs |model_storage| to load persisted data. After calling, clients
+  // may begin to see notifications through any created StoryObservers.
+  //
+  // This method must be called no more than once and before any associated
+  // calls to StoryMutator.Execute().
+  void LoadStorage();
+
+  // Returns a consumer which is completed when |model_storage| has
+  // successfully executed any pending tasks to mutate its underlying storage.
+  // Note this does not indicate that the storage layer has notifed |this| of
+  // the application of those mutations.
+  //
+  // To avoid losing any pending changes to the model, it is recommended to
+  // call Flush() and wait for completion before destroying |this|.
+  fit::consumer<> FlushStorage();
+
   // Returns a mutator object that can be provided to a System that requires
   // the ability to issue commands to mutate the model. This can be provided to
   // Systems as a constructor argument.
@@ -85,6 +101,9 @@ class StoryModelOwner {
   // Called indirectly by |model_storage_| through a callback.
   void HandleObservedMutations(
       std::vector<fuchsia::modular::storymodel::StoryModelMutation> commands);
+
+  // Set to true on the first call to ExecuteCommands().
+  bool seen_any_requests_to_execute_{false};
 
   std::unique_ptr<StoryModelStorage> model_storage_;
 

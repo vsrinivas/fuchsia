@@ -20,7 +20,7 @@ namespace {
 // This persistence system acts as a mock for calls to Execute(), and promotes
 // Observe() from protected to public so that we can call it directly from the
 // test body.
-class TestPersistenceSystem : public StoryModelStorage {
+class TestModelStorage : public StoryModelStorage {
  public:
   struct ExecuteCall {
     std::vector<StoryModelMutation> commands;
@@ -29,6 +29,14 @@ class TestPersistenceSystem : public StoryModelStorage {
     fit::completer<> completer;
   };
   std::vector<ExecuteCall> calls;
+
+  fit::promise<> Load() override {
+    return fit::make_promise([] { return fit::ok(); });
+  }
+
+  fit::promise<> Flush() override {
+    return fit::make_promise([] { return fit::ok(); });
+  }
 
   fit::promise<> Execute(std::vector<StoryModelMutation> commands) override {
     fit::bridge<> bridge;
@@ -49,7 +57,7 @@ class StoryModelOwnerTest : public ::gtest::TestLoopFixture {
   StoryModelOwnerTest() : TestLoopFixture() { ResetExecutor(); }
 
   std::unique_ptr<StoryModelOwner> Create(const std::string& story_name) {
-    auto model_storage = std::make_unique<TestPersistenceSystem>();
+    auto model_storage = std::make_unique<TestModelStorage>();
     model_storage_ = model_storage.get();
 
     auto owner = std::make_unique<StoryModelOwner>(story_name, executor_.get(),
@@ -59,11 +67,11 @@ class StoryModelOwnerTest : public ::gtest::TestLoopFixture {
 
   void ResetExecutor() { executor_.reset(new async::Executor(dispatcher())); }
 
-  TestPersistenceSystem* model_storage() { return model_storage_; }
+  TestModelStorage* model_storage() { return model_storage_; }
 
  private:
   std::unique_ptr<async::Executor> executor_;
-  TestPersistenceSystem* model_storage_;
+  TestModelStorage* model_storage_;
 };
 
 TEST_F(StoryModelOwnerTest, SuccessfulMutate) {

@@ -20,6 +20,8 @@ class NoopStoryModelStorage : public StoryModelStorage {
   ~NoopStoryModelStorage() override;
 
  private:
+  fit::promise<> Load() override;
+  fit::promise<> Flush() override;
   fit::promise<> Execute(
       std::vector<fuchsia::modular::storymodel::StoryModelMutation> commands)
       override;

@@ -8,12 +8,12 @@
 #include <lib/fit/defer.h>
 #include <lib/fxl/logging.h>
 #include "peridot/bin/sessionmgr/story/model/apply_mutations.h"
-#include "peridot/bin/sessionmgr/story/model/story_mutator.h"
 #include "peridot/bin/sessionmgr/story/model/story_model_storage.h"
+#include "peridot/bin/sessionmgr/story/model/story_mutator.h"
 
+using fuchsia::modular::storymodel::ModuleModel;
 using fuchsia::modular::storymodel::StoryModel;
 using fuchsia::modular::storymodel::StoryModelMutation;
-using fuchsia::modular::storymodel::ModuleModel;
 
 namespace modular {
 
@@ -36,7 +36,8 @@ class StoryModelOwner::Mutator : public StoryMutator {
 
  private:
   // |StoryMutator|
-  fit::consumer<> ExecuteInternal(std::vector<StoryModelMutation> commands) override {
+  fit::consumer<> ExecuteInternal(
+      std::vector<StoryModelMutation> commands) override {
     if (!weak_owner_) {
       fit::bridge<> bridge;
       bridge.completer.complete_error();
@@ -90,8 +91,7 @@ class StoryModelOwner::Observer : public StoryObserver {
 };
 
 StoryModelOwner::StoryModelOwner(
-    const std::string& story_name,
-    fit::executor* executor,
+    const std::string& story_name, fit::executor* executor,
     std::unique_ptr<StoryModelStorage> model_storage)
     : model_storage_(std::move(model_storage)),
       weak_ptr_factory_(this),
@@ -115,6 +115,25 @@ std::unique_ptr<StoryObserver> StoryModelOwner::NewObserver() {
   return std::make_unique<Observer>(weak_ptr_factory_.GetWeakPtr());
 }
 
+void StoryModelOwner::LoadStorage() {
+  FXL_CHECK(!seen_any_requests_to_execute_)
+      << "Must call LoadStorage() before any calls to StoryMutator.Execute();";
+  executor_->schedule_task(model_storage_->Load());
+}
+
+fit::consumer<> StoryModelOwner::FlushStorage() {
+  fit::bridge<> bridge;
+  executor_->schedule_task(model_storage_->Flush().then(
+      [completer = std::move(bridge.completer)](fit::result<>& result) mutable {
+        if (result.is_ok()) {
+          completer.complete_ok();
+        } else {
+          completer.complete_error();
+        }
+      }));
+  return std::move(bridge.consumer);
+}
+
 fit::deferred_action<fit::function<void()>> StoryModelOwner::RegisterListener(
     fit::function<void(const StoryModel&)> listener) {
   auto it = listeners_.insert(listeners_.end(), std::move(listener));
@@ -124,6 +143,7 @@ fit::deferred_action<fit::function<void()>> StoryModelOwner::RegisterListener(
 
 fit::consumer<> StoryModelOwner::ExecuteCommands(
     std::vector<StoryModelMutation> commands) {
+  seen_any_requests_to_execute_ = true;
   // fit::bridge allows this function to return (and eventually complete) a
   // promise that is owned by the caller and still schedule a promise as a task
   // to execute the model update locally.

@@ -38,11 +38,22 @@ class StoryModelStorage {
           void(std::vector<fuchsia::modular::storymodel::StoryModelMutation>)>
           callback);
 
+  // Returns a task that, when executed, loads existing data in storage and
+  // calls Observe() with mutations that will update a default-initialized
+  // StoryModel to reflect the values in storage, THEN resolves the returned
+  // promise.
+  virtual fit::promise<> Load() = 0;
+
+  // Returns a task that, when complete, guarantees all prior calls to Execute()
+  // are complete. Any calls to Execute() that are issued after Flush() are not
+  // guaranteed to be complete.
+  virtual fit::promise<> Flush() = 0;
+
   // Returns a task that, when executed, applies |commands| to the underlying
-  // storage system. Clients can expect that, at some point later, similar
-  // mutations can be observed through SetObserveCallback()'s |callback|. In
-  // the case of conflict resolution or similar process, the set of observed
-  // mutations may be different.
+  // storage system. Clients can expect that similar mutations will be observed
+  // through SetObserveCallback()'s |callback| at some point in the future.
+  // However, in the case of conflict resolution or a similar process, the set
+  // of observed mutations may be different.
   virtual fit::promise<> Execute(
       std::vector<fuchsia::modular::storymodel::StoryModelMutation>
           commands) = 0;
