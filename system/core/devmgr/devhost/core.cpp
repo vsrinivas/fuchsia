@@ -511,7 +511,14 @@ static void devhost_unbind_children(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_
     enum_lock_acquire();
     for (auto& child : dev->children) {
         if (!(child.flags & DEV_FLAG_DEAD)) {
-            devhost_device_unbind(fbl::WrapRefPtr(&child));
+            // Try to get a reference to the child.   This will fail if the last
+            // reference to it went away and fbl_recycle() is going to blocked
+            // waiting for the DM lock
+            auto child_ref = fbl::MakeRefPtrUpgradeFromRaw(&child,
+                                                           &::devmgr::internal::devhost_api_lock);
+            if (child_ref) {
+                devhost_device_unbind(std::move(child_ref));
+            }
         }
     }
     enum_lock_release();
@@ -610,9 +617,16 @@ static zx_status_t devhost_device_suspend_locked(const fbl::RefPtr<zx_device>& d
     zx_status_t st;
     for (auto& child : dev->children) {
         if (!(child.flags & DEV_FLAG_DEAD)) {
-            st = devhost_device_suspend(fbl::WrapRefPtr(&child), flags);
-            if (st != ZX_OK) {
-                return st;
+            // Try to get a reference to the child.   This will fail if the last
+            // reference to it went away and fbl_recycle() is going to blocked
+            // waiting for the DM lock
+            auto child_ref = fbl::MakeRefPtrUpgradeFromRaw(&child,
+                                                           &::devmgr::internal::devhost_api_lock);
+            if (child_ref) {
+                st = devhost_device_suspend(std::move(child_ref), flags);
+                if (st != ZX_OK) {
+                    return st;
+                }
             }
         }
     }

@@ -9,7 +9,7 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 #include <fbl/recycler.h>
-#include <fbl/ref_counted.h>
+#include <fbl/ref_counted_upgradeable.h>
 #include <fbl/ref_ptr.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/eventpair.h>
@@ -26,7 +26,7 @@ struct ProxyIostate;
 #define DEV_MAGIC 'MDEV'
 
 // This needs to be a struct, not a class, to match the public definition
-struct zx_device : fbl::RefCounted<zx_device>, fbl::Recyclable<zx_device>  {
+struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_device>  {
     ~zx_device() = default;
 
     zx_device(const zx_device&) = delete;
