@@ -14,7 +14,6 @@ library fuchsia.modular;
 // re-enter.
 //
 // All state transitions are possible.
-//
 enum StoryVisibilityState {
     // Default state for a story.
     DEFAULT = 1;
