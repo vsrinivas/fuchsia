@@ -15,8 +15,16 @@ import (
 	"sort"
 	"time"
 
+	"fuchsia.googlesource.com/tools/netboot"
 	"fuchsia.googlesource.com/tools/retry"
 	"fuchsia.googlesource.com/tools/tftp"
+)
+
+const (
+	// ModePave is a directive to pave when booting.
+	ModePave int = iota
+	// ModeNetboot is a directive to netboot when booting.
+	ModeNetboot
 )
 
 const (
@@ -59,7 +67,7 @@ func GetNetsvcName(img Image) (string, bool) {
 }
 
 // Returns whether the list of strings containst "--boot". If an image has such a switch
-// in its PaveArgs or NetbootArgs, it should be treated as a kernel image.
+// in its bootserver args, it should be treated as a kernel image.
 func containsBootSwitch(strs []string) bool {
 	for _, s := range strs {
 		if s == "--boot" {
@@ -69,39 +77,45 @@ func containsBootSwitch(strs []string) bool {
 	return false
 }
 
-// Pave transfers all images from imgs that are required for paving to the node specified by tftpAddr.
-func Pave(ctx context.Context, t *tftp.Client, tftpAddr *net.UDPAddr, imgs []Image, cmdlineArgs []string, sshKey string) error {
-	// Key on whether bootserver paving args are present to determine if the image is used
-	// to pave.
-	var kernel *Image
-	paveImgs := []Image{}
-	for i, _ := range imgs {
-		if len(imgs[i].PaveArgs) > 0 {
-			if containsBootSwitch(imgs[i].PaveArgs) {
-				kernel = &imgs[i]
+// Boot prepares and boots a device at the given IP address. Depending on bootMode, the
+// device will either be paved or netbooted with the provided images, command-line
+// arguments and a public SSH user key.
+func Boot(ctx context.Context, addr *net.UDPAddr, bootMode int, imgs []Image, cmdlineArgs []string, sshKey string) error {
+	var ramKernel *Image
+	var paveImgs []Image
+	if bootMode == ModePave {
+		// Key on whether bootserver paving args are present to determine if the image is used
+		// to pave.
+		for i, _ := range imgs {
+			if len(imgs[i].PaveArgs) > 0 {
+				if containsBootSwitch(imgs[i].PaveArgs) {
+					ramKernel = &imgs[i]
+				}
+				paveImgs = append(paveImgs, imgs[i])
 			}
-			paveImgs = append(paveImgs, imgs[i])
 		}
+		sort.Slice(paveImgs, func(i, j int) bool {
+			return bootserverImgOrder[paveImgs[i].Name] < bootserverImgOrder[paveImgs[j].Name]
+		})
+	} else if bootMode == ModeNetboot {
+		ramKernel = GetImage(imgs, "netboot")
+	} else {
+		return fmt.Errorf("invalid boot mode: %d", bootMode)
 	}
-	sort.Slice(paveImgs, func(i, j int) bool {
-		return bootserverImgOrder[paveImgs[i].Name] < bootserverImgOrder[paveImgs[j].Name]
-	})
-	return transfer(ctx, t, tftpAddr, paveImgs, kernel, cmdlineArgs, sshKey)
-}
 
-// Netboot transfers all images from imgs that are required for netbooting to the node specified by tftpAddr.
-func Netboot(ctx context.Context, t *tftp.Client, tftpAddr *net.UDPAddr, imgs []Image, cmdlineArgs []string, sshKey string) error {
-	// Key on whether bootserver netbooting args are present to determine if the image is
-	// used to netboot.
-	var kernel *Image
-	for i, _ := range imgs {
-		if len(imgs[i].NetbootArgs) > 0 {
-			if containsBootSwitch(imgs[i].NetbootArgs) {
-				kernel = &imgs[i]
-			}
-		}
+	if err := transfer(ctx, addr, paveImgs, ramKernel, cmdlineArgs, sshKey); err != nil {
+		return err
 	}
-	return transfer(ctx, t, tftpAddr, []Image{}, kernel, cmdlineArgs, sshKey)
+
+	// If we do not load a kernel into RAM, then we reboot back into the first kernel
+	// partition; else we boot directly from RAM.
+	// TODO(ZX-2069): Eventually, no ramKernel should be present.
+	n := netboot.NewClient(time.Second)
+	if ramKernel == nil {
+		return n.Reboot(addr)
+	} else {
+		return n.Boot(addr)
+	}
 }
 
 // A struct represenitng a file to send per the netboot protocol.
@@ -136,7 +150,7 @@ func openNetsvcFile(path, name string) (*netsvcFile, error) {
 
 // Transfers images with the appropriate netboot prefixes over TFTP to a node at a given
 // address.
-func transfer(ctx context.Context, t *tftp.Client, tftpAddr *net.UDPAddr, imgs []Image, kernel *Image, cmdlineArgs []string, sshKey string) error {
+func transfer(ctx context.Context, addr *net.UDPAddr, imgs []Image, ramKernel *Image, cmdlineArgs []string, sshKey string) error {
 	// Prepare all files to be tranferred, minding the order, which follows that of the
 	// bootserver host tool.
 	netsvcFiles := []*netsvcFile{}
@@ -176,13 +190,20 @@ func transfer(ctx context.Context, t *tftp.Client, tftpAddr *net.UDPAddr, imgs [
 		netsvcFiles = append(netsvcFiles, sshNetsvcFile)
 	}
 
-	if kernel != nil {
-		kernelNetsvcFile, err := openNetsvcFile(kernel.Path, kernelNetsvcName)
+	if ramKernel != nil {
+		kernelNetsvcFile, err := openNetsvcFile(ramKernel.Path, kernelNetsvcName)
 		if err != nil {
 			return err
 		}
 		defer kernelNetsvcFile.close()
 		netsvcFiles = append(netsvcFiles, kernelNetsvcFile)
+	}
+
+	t := tftp.NewClient()
+	tftpAddr := &net.UDPAddr{
+		IP:   addr.IP,
+		Port: tftp.ClientPort,
+		Zone: addr.Zone,
 	}
 
 	// Attempt the whole process of sending every file over and retry on failure of any file.

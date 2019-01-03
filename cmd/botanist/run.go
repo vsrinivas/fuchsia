@@ -19,7 +19,6 @@ import (
 	"fuchsia.googlesource.com/tools/netboot"
 	"fuchsia.googlesource.com/tools/pdu"
 	"fuchsia.googlesource.com/tools/retry"
-	"fuchsia.googlesource.com/tools/tftp"
 	"github.com/google/subcommands"
 )
 
@@ -115,27 +114,15 @@ func (r *RunCommand) runCmd(ctx context.Context, imgs []botanist.Image, nodename
 		return fmt.Errorf("cannot find node \"%s\": %v", nodename, err)
 	}
 
-	t := tftp.NewClient()
-	tftpAddr := &net.UDPAddr{
-		IP:   addr.IP,
-		Port: tftp.ClientPort,
-		Zone: addr.Zone,
-	}
-
-	// Pave or netboot.
+	// Boot fuchsia.
+	var bootMode int
 	if r.netboot {
-		err = botanist.Netboot(ctx, t, tftpAddr, imgs, r.zirconArgs, "")
+		bootMode = botanist.ModeNetboot
 	} else {
-		err = botanist.Pave(ctx, t, tftpAddr, imgs, r.zirconArgs, "")
+		bootMode = botanist.ModePave
 	}
-	if err != nil {
+	if err = botanist.Boot(ctx, addr, bootMode, imgs, r.zirconArgs, ""); err != nil {
 		return err
-	}
-
-	// Boot Fuchsia.
-	log.Printf("sending boot command\n")
-	if err := n.Boot(addr); err != nil {
-		return fmt.Errorf("cannot boot: %v\n", err)
 	}
 
 	// Run command.
@@ -145,7 +132,7 @@ func (r *RunCommand) runCmd(ctx context.Context, imgs []botanist.Image, nodename
 	defer cancel()
 	cmd := exec.Cmd{
 		Path: args[0],
-		Args: args[1:],
+		Args: args,
 		Env: append(
 			os.Environ(),
 			fmt.Sprintf("NODENAME=%s", nodename),
@@ -158,6 +145,7 @@ func (r *RunCommand) runCmd(ctx context.Context, imgs []botanist.Image, nodename
 		if err != nil {
 			return err
 		}
+		defer f.Close()
 		cmd.Stdout = f
 	}
 

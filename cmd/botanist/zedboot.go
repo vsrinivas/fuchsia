@@ -247,30 +247,18 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs []botanist.Image, 
 		return fmt.Errorf("cannot find node \"%s\": %v", nodename, err)
 	}
 
-	t := tftp.NewClient()
-	tftpAddr := &net.UDPAddr{
-		IP:   addr.IP,
-		Port: tftp.ClientPort,
-		Zone: addr.Zone,
-	}
-
+	// Boot fuchsia.
+	var bootMode int
 	if cmd.netboot {
-		err = botanist.Netboot(ctx, t, tftpAddr, imgs, cmdlineArgs, "")
+		bootMode = botanist.ModeNetboot
 	} else {
-		err = botanist.Pave(ctx, t, tftpAddr, imgs, cmdlineArgs, "")
+		bootMode = botanist.ModePave
 	}
-	if err != nil {
+	if err = botanist.Boot(ctx, addr, bootMode, imgs, cmdlineArgs, ""); err != nil {
 		return err
 	}
 
-	// Boot Fuchsia.
-	log.Printf("sending boot command\n")
-	// Boot Fuchsia.
-	if err := n.Boot(addr); err != nil {
-		return fmt.Errorf("cannot boot: %v\n", err)
-	}
-
-	// Handle host command
+	// Handle host commands
 	// TODO(IN-831): Remove when host-target-interaction infra is ready
 	if cmd.hostCmd != "" {
 		return cmd.runHostCmd(ctx)
@@ -280,6 +268,12 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs []botanist.Image, 
 
 	// Poll for summary.json; this relies on runtest being executed using
 	// autorun and it eventually producing the summary.json file.
+	t := tftp.NewClient()
+	tftpAddr := &net.UDPAddr{
+		IP:   addr.IP,
+		Port: tftp.ClientPort,
+		Zone: addr.Zone,
+	}
 	var buffer bytes.Buffer
 	var writer io.WriterTo
 	err = retry.Retry(ctx, retry.NewConstantBackoff(cmd.filePollInterval), func() error {
