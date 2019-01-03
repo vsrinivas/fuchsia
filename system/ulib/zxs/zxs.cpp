@@ -369,53 +369,18 @@ zx_status_t zxs_setsockopts(const zxs_socket_t* socket,
 
 static zx_status_t zxs_write(const zxs_socket_t* socket, const void* buffer,
                              size_t capacity, size_t* out_actual) {
-    for (;;) {
-        zx_status_t status = zx_socket_write(socket->socket, 0, buffer,
-                                             capacity, out_actual);
-        if (status == ZX_ERR_SHOULD_WAIT && (socket->flags & ZXS_FLAG_BLOCKING)) {
-            zx_signals_t observed = ZX_SIGNAL_NONE;
-            status = zx_object_wait_one(socket->socket,
-                                        ZX_SOCKET_WRITABLE | ZX_SOCKET_WRITE_DISABLED | ZX_SOCKET_PEER_CLOSED,
-                                        ZX_TIME_INFINITE, &observed);
-            if (status != ZX_OK) {
-                return status;
-            }
-            if (observed & (ZX_SOCKET_WRITE_DISABLED | ZX_SOCKET_PEER_CLOSED)) {
-                return ZX_ERR_PEER_CLOSED;
-            }
-            ZX_ASSERT(observed & ZX_SOCKET_WRITABLE);
-            continue;
-        }
-        return status;
-    }
+    return zx_socket_write(socket->socket, 0, buffer, capacity, out_actual);
 }
 
 static zx_status_t zxs_read(const zxs_socket_t* socket, void* buffer,
                             size_t capacity, size_t* out_actual) {
-    for (;;) {
-        zx_status_t status = zx_socket_read(socket->socket, 0, buffer, capacity,
-                                            out_actual);
-        if (status == ZX_ERR_PEER_CLOSED || status == ZX_ERR_BAD_STATE) {
-            *out_actual = 0u;
-            return ZX_OK;
-        }
-        if (status == ZX_ERR_SHOULD_WAIT && (socket->flags & ZXS_FLAG_BLOCKING)) {
-            zx_signals_t observed = ZX_SIGNAL_NONE;
-            status = zx_object_wait_one(socket->socket,
-                                        ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_PEER_WRITE_DISABLED,
-                                        ZX_TIME_INFINITE, &observed);
-            if (status != ZX_OK) {
-                return status;
-            }
-            if (observed & ZX_SOCKET_READABLE) {
-                continue;
-            }
-            ZX_ASSERT(observed & (ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_PEER_WRITE_DISABLED));
-            *out_actual = 0u;
-            return ZX_OK;
-        }
-        return status;
+    zx_status_t status = zx_socket_read(socket->socket, 0, buffer, capacity,
+                                        out_actual);
+    if (status == ZX_ERR_PEER_CLOSED || status == ZX_ERR_BAD_STATE) {
+        *out_actual = 0u;
+        return ZX_OK;
     }
+    return status;
 }
 
 static zx_status_t zxs_sendmsg_stream(const zxs_socket_t* socket,
