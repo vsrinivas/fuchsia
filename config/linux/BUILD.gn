@@ -8,8 +8,15 @@ config("compiler") {
   ldflags = [
     "-static-libstdc++",
 
-    # Set rpath to find dynamically linked libraries placed next to executables in the host
-    # build directory.
+    # Generate build-id for all binaries so we can use the build-id directory
+    # scheme when using strip the same way we do for Fuchsia.
+    "-Wl,--build-id",
+
+    # Use GNU style for linker's hash tables which is more efficient.
+    "-Wl,--hash-style=gnu",
+
+    # Set rpath to find dynamically linked libraries placed next to executables
+    # in the host build directory.
     "-Wl,-rpath=\$ORIGIN/",
   ]
 
