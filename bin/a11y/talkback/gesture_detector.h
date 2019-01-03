@@ -146,7 +146,6 @@ class GestureDetector {
   component::StartupContext* startup_context_;
 
   GestureListener* listener_;
-  fuchsia::accessibility::TouchDispatcherPtr touch_dispatcher_;
 
   // The ViewTreeToken for the currently displayed presentation is needed
   // to perform hit-tests on views in the current view tree.

@@ -10,16 +10,7 @@ GestureDetector::GestureDetector(component::StartupContext* startup_context,
                                  GestureListener* listener)
     : startup_context_(startup_context),
       listener_(listener),
-      tap_dispatcher_(async_get_default_dispatcher()) {
-  touch_dispatcher_.set_error_handler([this](zx_status_t status) {
-    FXL_LOG(ERROR) << "Cannot connect to a11y touch dispatcher";
-  });
-  touch_dispatcher_.events().OnInputEvent =
-      fit::bind_member(this, &GestureDetector::OnInputEvent);
-  touch_dispatcher_.events().OnPresentationChangedEvent =
-      fit::bind_member(this, &GestureDetector::OnPresentationChangedEvent);
-  startup_context_->ConnectToEnvironmentService(touch_dispatcher_.NewRequest());
-}
+      tap_dispatcher_(async_get_default_dispatcher()) {}
 
 void GestureDetector::OnInputEvent(fuchsia::ui::input::PointerEvent event) {
   if (event.phase == fuchsia::ui::input::PointerEventPhase::CANCEL) {
@@ -156,7 +147,9 @@ void GestureDetector::FromTwoFingersDown(
     // Send simulated move events when finger #1 moves.
     if (event.phase == fuchsia::ui::input::PointerEventPhase::MOVE) {
       event.Clone(&finger1_pointer_event_);
-      touch_dispatcher_->SendSimulatedPointerEvent(std::move(event));
+
+      // TODO(SCN-1124): forward pointer events through scenic
+      // touch_dispatcher_->SendSimulatedPointerEvent(std::move(event));
       finger1_pointer_event_ = event;
     }
     // When finger #1 lifts up, finger #2 is tracked as the new finger #1.
@@ -189,29 +182,34 @@ void GestureDetector::SimulateTouchDown() {
   fuchsia::ui::input::PointerEvent clone_event;
   finger1_pointer_event_.Clone(&clone_event);
   clone_event.phase = fuchsia::ui::input::PointerEventPhase::ADD;
-  touch_dispatcher_->SendSimulatedPointerEvent(std::move(clone_event));
+  // TODO(SCN-1124): forward pointer events through scenic
+  // touch_dispatcher_->SendSimulatedPointerEvent(std::move(clone_event));
 
   finger1_pointer_event_.Clone(&clone_event);
   clone_event.phase = fuchsia::ui::input::PointerEventPhase::DOWN;
-  touch_dispatcher_->SendSimulatedPointerEvent(std::move(clone_event));
+  // TODO(SCN-1124): forward pointer events through scenic
+  // touch_dispatcher_->SendSimulatedPointerEvent(std::move(clone_event));
 }
 
 void GestureDetector::SimulateTouchUp() {
   fuchsia::ui::input::PointerEvent clone_event;
   finger1_pointer_event_.Clone(&clone_event);
   clone_event.phase = fuchsia::ui::input::PointerEventPhase::UP;
-  touch_dispatcher_->SendSimulatedPointerEvent(std::move(clone_event));
+  // TODO(SCN-1124): forward pointer events through scenic
+  // touch_dispatcher_->SendSimulatedPointerEvent(std::move(clone_event));
 
   finger1_pointer_event_.Clone(&clone_event);
   clone_event.phase = fuchsia::ui::input::PointerEventPhase::REMOVE;
-  touch_dispatcher_->SendSimulatedPointerEvent(std::move(clone_event));
+  // TODO(SCN-1124): forward pointer events through scenic
+  // touch_dispatcher_->SendSimulatedPointerEvent(std::move(clone_event));
 }
 
 void GestureDetector::SimulateCancel() {
   fuchsia::ui::input::PointerEvent clone_event;
   finger1_pointer_event_.Clone(&clone_event);
   clone_event.phase = fuchsia::ui::input::PointerEventPhase::CANCEL;
-  touch_dispatcher_->SendSimulatedPointerEvent(std::move(clone_event));
+  // TODO(SCN-1124): forward pointer events through scenic
+  // touch_dispatcher_->SendSimulatedPointerEvent(std::move(clone_event));
 }
 
 }  // namespace talkback

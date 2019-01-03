@@ -6,12 +6,8 @@ source_set("mocks") {
   testonly = true
 
   sources = [
-    "mock_gesture_listener.cc",
-    "mock_gesture_listener.h",
     "mock_semantics_provider.cc",
     "mock_semantics_provider.h",
-    "mock_touch_dispatcher.cc",
-    "mock_touch_dispatcher.h",
   ]
 
   deps = [

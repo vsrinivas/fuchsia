@@ -8,6 +8,8 @@ in progress with the current capabilities:
 
 Requires connections to the a11y manager and a11y touch dispatcher service to function.
 
+Currently inactive due to work for SCN-1124.
+
 ## Gesture Detection State Diagram
 
 ![Gesture State Diagram](talkback_gesture_state_machine.png)
