@@ -19,17 +19,28 @@
 namespace {
 
 using ByteVector = component::Property::ByteVector;
+using component::ObjectPath;
 
 const char kValue[] = "value";
 const int kSmallPropertySize = 8;
 const int kLargePropertySize = 10000;
+const ObjectPath kPath0 = {};
+const ObjectPath kPath1 = {"a"};
+const ObjectPath kPath2 = {"a", "b"};
+const ObjectPath kPath10 = {"a", "b", "c", "d", "e", "f", "g", "h", "i", "j"};
 
 class NumericItem : public component::ExposedObject {
  public:
-  NumericItem() : ExposedObject(UniqueName("itemN-")) {
-    object_dir().set_metric(kValue, component::IntMetric(0));
+  NumericItem(ObjectPath path) : ExposedObject(UniqueName("itemN-")), path_{std::move(path)} {
+    object_dir().set_metric(path_, kValue, component::IntMetric(0));
   }
-  void increment() { object_dir().add_metric(kValue, 1); }
+  NumericItem() : NumericItem(ObjectPath()) {}
+
+  void increment() {
+    object_dir().add_metric(path_, kValue, 1);
+  }
+ private:
+  ObjectPath path_;
 };
 
 class PropertyItem : public component::ExposedObject {
@@ -50,6 +61,15 @@ bool TestIncrement(perftest::RepeatState* state) {
   return true;
 }
 
+// Measure the time taken to increment an IntMetric, given a path.
+bool TestIncrementPath(perftest::RepeatState* state, ObjectPath path) {
+  NumericItem item(path);
+  while (state->KeepRunning()) {
+    item.increment();
+  }
+  return true;
+}
+
 // Measure the time taken to change a String property.
 bool TestString(perftest::RepeatState* state, int size) {
   PropertyItem item;
@@ -63,18 +83,21 @@ bool TestString(perftest::RepeatState* state, int size) {
 
 // Measure the time taken to change a ByteVector property.
 bool TestVector(perftest::RepeatState* state, int size) {
-  PropertyItem* item = new PropertyItem();
+  PropertyItem item;
   ByteVector vector;
   vector.resize(size, 'a');
-  ZX_ASSERT(item != nullptr);
   while (state->KeepRunning()) {
-    item->set(vector);
+    item.set(vector);
   }
   return true;
 }
 
 void RegisterTests() {
   perftest::RegisterTest("Inspect/Increment", TestIncrement);
+  perftest::RegisterTest("Inspect/Path0", TestIncrementPath, kPath0);
+  perftest::RegisterTest("Inspect/Path1", TestIncrementPath, kPath1);
+  perftest::RegisterTest("Inspect/Path2", TestIncrementPath, kPath2);
+  perftest::RegisterTest("Inspect/Path10", TestIncrementPath, kPath10);
   perftest::RegisterTest(fxl::StringPrintf("Inspect/String%d", kSmallPropertySize).c_str(),
                          TestString, kSmallPropertySize);
   perftest::RegisterTest(fxl::StringPrintf("Inspect/String%d", kLargePropertySize).c_str(),
