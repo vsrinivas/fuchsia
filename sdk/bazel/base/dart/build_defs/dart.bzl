@@ -145,7 +145,7 @@ def compile_kernel_action(
 
     roots_param = []
     for root in roots_dict.keys():
-        roots_param += ["--multi-root", root]
+        roots_param += ["--filesystem-root", root]
 
     # 5. Compile the kernel.
     multi_root_scheme = "main-root"
@@ -157,13 +157,15 @@ def compile_kernel_action(
             dest_dir,
             "--target",
             "dart_runner",
-            "--sdk-root",
-            sdk_root.dirname,
-            "--multi-root-scheme",
+            "--platform",
+            sdk_root.path,
+            "--filesystem-scheme",
             multi_root_scheme,
         ] + roots_param + [
             "--packages",
             "%s:///%s" % (multi_root_scheme, package_spec.short_path),
+            "--no-link-platform",
+            "--split-output-by-packages",
             "--manifest",
             manifest_file.path,
             "--output",
