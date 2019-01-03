@@ -613,60 +613,6 @@ int fdio_vmo_fd(zx_handle_t vmo, uint64_t offset, uint64_t length) {
 
 // Pipe ------------------------------------------------------------------------
 
-static zx_status_t read_blocking(zxio_t* io, void* buffer, size_t capacity,
-                                 size_t* out_actual) {
-    for (;;) {
-        zx_status_t status = zxio_read(io, buffer, capacity, out_actual);
-        if (status != ZX_ERR_SHOULD_WAIT) {
-            return status;
-        }
-        zxio_signals_t observed = ZXIO_SIGNAL_NONE;
-        status = zxio_wait_one(io, ZXIO_READABLE | ZXIO_READ_DISABLED,
-                               ZX_TIME_INFINITE, &observed);
-        if (status != ZX_OK) {
-            return status;
-        }
-    }
-}
-
-static zx_status_t write_blocking(zxio_t* io, const void* buffer,
-                                  size_t capacity, size_t* out_actual) {
-    for (;;) {
-        zx_status_t status = zxio_write(io, buffer, capacity, out_actual);
-        if (status != ZX_ERR_SHOULD_WAIT) {
-            return status;
-        }
-        zxio_signals_t observed = ZXIO_SIGNAL_NONE;
-        status = zxio_wait_one(io, ZXIO_WRITABLE | ZXIO_WRITE_DISABLED,
-                               ZX_TIME_INFINITE, &observed);
-        if (status != ZX_OK) {
-            return status;
-        }
-    }
-}
-
-static ssize_t read_internal(zxio_t* io, bool blocking, void* data, size_t len) {
-    size_t actual = 0u;
-    zx_status_t status = ZX_OK;
-    if (blocking) {
-        status = read_blocking(io, data, len, &actual);
-    } else {
-        status = zxio_read(io, data, len, &actual);
-    }
-    return status != ZX_OK ? status : (ssize_t)actual;
-}
-
-static ssize_t write_internal(zxio_t* io, bool blocking, const void* data, size_t len) {
-    size_t actual = 0u;
-    zx_status_t status = ZX_OK;
-    if (blocking) {
-        status = write_blocking(io, data, len, &actual);
-    } else {
-        status = zxio_write(io, data, len, &actual);
-    }
-    return status != ZX_OK ? status : (ssize_t)actual;
-}
-
 static inline zxio_pipe_t* fdio_get_zxio_pipe(fdio_t* io) {
     return (zxio_pipe_t*)fdio_get_zxio(io);
 }
@@ -693,18 +639,6 @@ static zx_status_t fdio_zxio_pipe_unwrap(fdio_t* io, zx_handle_t* handles,
     handles[0] = handle;
     types[0] = PA_FDIO_SOCKET;
     return 1;
-}
-
-static ssize_t fdio_zxio_pipe_read(fdio_t* io, void* data, size_t len) {
-    zxio_t* z = fdio_get_zxio(io);
-    bool blocking = !(io->ioflag & IOFLAG_NONBLOCK);
-    return read_internal(z, blocking, data, len);
-}
-
-static ssize_t fdio_zxio_pipe_write(fdio_t* io, const void* data, size_t len) {
-    zxio_t* z = fdio_get_zxio(io);
-    bool blocking = !(io->ioflag & IOFLAG_NONBLOCK);
-    return write_internal(z, blocking, data, len);
 }
 
 static ssize_t fdio_zxio_pipe_posix_ioctl(fdio_t* io, int request, va_list va) {
@@ -737,9 +671,7 @@ static ssize_t fdio_zxio_pipe_recvfrom(fdio_t* io, void* data, size_t len, int f
     if (flags & ~MSG_DONTWAIT) {
         return ZX_ERR_INVALID_ARGS;
     }
-    zxio_t* z = fdio_get_zxio(io);
-    bool blocking = !((io->ioflag & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT));
-    return read_internal(z, blocking, data, len);
+    return fdio_zxio_read(io, data, len);
 }
 
 static ssize_t fdio_zxio_pipe_sendto(fdio_t* io, const void* data, size_t len, int flags, const struct sockaddr* addr, socklen_t addrlen) {
@@ -749,21 +681,17 @@ static ssize_t fdio_zxio_pipe_sendto(fdio_t* io, const void* data, size_t len, i
     if (addr != NULL) {
         return ZX_ERR_INVALID_ARGS; // should set errno to EISCONN
     }
-    zxio_t* z = fdio_get_zxio(io);
-    bool blocking = !((io->ioflag & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT));
-    return write_internal(z, blocking, data, len);
+    return fdio_zxio_write(io, data, len);
 }
 
 static ssize_t fdio_zxio_pipe_recvmsg(fdio_t* io, struct msghdr* msg, int flags) {
     // we ignore msg_name and msg_namelen members.
     // (this is a consistent behavior with other OS implementations for TCP protocol)
-    zxio_t* z = fdio_get_zxio(io);
     ssize_t total = 0;
     ssize_t n = 0;
-    bool blocking = !((io->ioflag & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT));
     for (int i = 0; i < msg->msg_iovlen; i++) {
         struct iovec* iov = &msg->msg_iov[i];
-        n = read_internal(z, blocking, iov->iov_base, iov->iov_len);
+        n = fdio_zxio_read(io, iov->iov_base, iov->iov_len);
         if (n > 0) {
             total += n;
         }
@@ -775,21 +703,14 @@ static ssize_t fdio_zxio_pipe_recvmsg(fdio_t* io, struct msghdr* msg, int flags)
 }
 
 static ssize_t fdio_zxio_pipe_sendmsg(fdio_t* io, const struct msghdr* msg, int flags) {
-    // Note: flags typically are used to express intent _not_ to issue SIGPIPE
-    // via MSG_NOSIGNAL. Applications use this frequently to avoid having to
-    // install additional signal handlers to handle cases where connection has
-    // been closed by remote end.
-
-    zxio_t* z = fdio_get_zxio(io);
     ssize_t total = 0;
     ssize_t n = 0;
-    bool blocking = !((io->ioflag & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT));
     for (int i = 0; i < msg->msg_iovlen; i++) {
         struct iovec* iov = &msg->msg_iov[i];
         if (iov->iov_len <= 0) {
             return ZX_ERR_INVALID_ARGS;
         }
-        n = write_internal(z, blocking, iov->iov_base, iov->iov_len);
+        n = fdio_zxio_write(io, iov->iov_base, iov->iov_len);
         if (n > 0) {
             total += n;
         }
@@ -818,9 +739,9 @@ static zx_status_t fdio_zxio_pipe_shutdown(fdio_t* io, int how) {
 }
 
 static fdio_ops_t fdio_zxio_pipe_ops = {
-    .read = fdio_zxio_pipe_read,
+    .read = fdio_zxio_read,
     .read_at = fdio_default_read_at,
-    .write = fdio_zxio_pipe_write,
+    .write = fdio_zxio_write,
     .write_at = fdio_default_write_at,
     .seek = fdio_default_seek,
     .misc = fdio_default_misc,

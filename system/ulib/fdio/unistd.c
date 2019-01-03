@@ -2348,6 +2348,10 @@ ssize_t sendmsg(int fd, const struct msghdr *msg, int flags) {
     if (io == NULL) {
         return ERRNO(EBADF);
     }
+    // The |flags| are typically used to express intent *not* to issue SIGPIPE
+    // via MSG_NOSIGNAL. Applications use this frequently to avoid having to
+    // install additional signal handlers to handle cases where connection has
+    // been closed by remote end.
     bool nonblocking = (io->ioflag & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT);
     zx_status_t status;
     for (;;) {
