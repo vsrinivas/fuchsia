@@ -7,7 +7,6 @@
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include "garnet/bin/mdns/service/host_name.h"
 #include "garnet/bin/mdns/service/mdns_fidl_util.h"
 #include "garnet/bin/mdns/service/mdns_names.h"
 #include "lib/component/cpp/startup_context.h"
@@ -21,6 +20,24 @@ namespace {
 
 static const std::string kPublishAs = "_fuchsia._udp.";
 static constexpr uint64_t kPublishPort = 5353;
+static const std::string kUnsetHostName = "fuchsia-unset-device-name";
+static constexpr zx::duration kReadyPollingInterval = zx::sec(1);
+
+std::string GetHostName() {
+  char host_name_buffer[HOST_NAME_MAX + 1];
+  int result = gethostname(host_name_buffer, sizeof(host_name_buffer));
+
+  std::string host_name;
+
+  if (result < 0) {
+    FXL_LOG(ERROR) << "gethostname failed, errno " << errno;
+    host_name = kUnsetHostName;
+  } else {
+    host_name = host_name_buffer;
+  }
+
+  return host_name;
+}
 
 }  // namespace
 
@@ -33,20 +50,22 @@ MdnsServiceImpl::MdnsServiceImpl(component::StartupContext* startup_context)
 MdnsServiceImpl::~MdnsServiceImpl() {}
 
 void MdnsServiceImpl::Start() {
-  // TODO(NET-79): Remove this check when NET-79 is fixed.
-  if (!NetworkIsReady()) {
+  std::string host_name = GetHostName();
+
+  if (host_name == kUnsetHostName) {
+    // Host name not set. Try again soon.
     async::PostDelayedTask(async_get_default_dispatcher(),
-                           [this]() { Start(); }, zx::sec(5));
+                           [this]() { Start(); }, kReadyPollingInterval);
     return;
   }
 
   mdns_.Start(startup_context_
                   ->ConnectToEnvironmentService<fuchsia::netstack::Netstack>(),
-              GetHostName());
+              host_name);
 
   // Publish this device as "_fuchsia._udp.".
   // TODO(dalesat): Make this a config item or delegate to another party.
-  PublishServiceInstance(kPublishAs, GetHostName(), kPublishPort,
+  PublishServiceInstance(kPublishAs, host_name, kPublishPort,
                          fidl::VectorPtr<fidl::StringPtr>(),
                          [this](fuchsia::mdns::MdnsResult result) {
                            if (result != fuchsia::mdns::MdnsResult::OK) {
