@@ -23,6 +23,7 @@ enum class Board {
     kQemu,
     kVim2,
     kAstro,
+    kCleo,
     kUnknown,
 };
 
@@ -54,6 +55,8 @@ Board GetBoardType() {
         return Board::kVim2;
     } else if (!strcmp(board_name, "astro")) {
         return Board::kAstro;
+    } else if (!strcmp(board_name, "cleo")) {
+        return Board::kCleo;
     }
 
     return Board::kUnknown;
@@ -168,6 +171,57 @@ bool astro_enumeration_test() {
     END_TEST;
 }
 
+bool cleo_enumeration_test() {
+    BEGIN_TEST;
+    static const char* kDevicePaths[] = {
+        "sys/platform/mt8167s_ref",
+        "sys/platform/0d:00:1/mt8167-gpio",
+        "sys/platform/0d:00:4/mt8167-i2c",
+        "sys/platform/0d:00:7/mtk-clk",
+        "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-block/block/part-000/block",
+        "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-block/block/part-001/block",
+        "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-block/block/part-002/block",
+        "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-block/block/part-003/block",
+        "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-block/block/part-004/block",
+        "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-block/block/part-005/block",
+        "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-block/block/part-006/block",
+        "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-block/block/part-007/block",
+        "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-block/block/part-008/block",
+        "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-block/block/part-009/block",
+        "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-block/block/part-010/block",
+        "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-block/block/part-011/block",
+        "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-block/block/part-012/block",
+        "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-block/block/part-013/block",
+        "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-block/block/part-014/block",
+        "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-block/block/part-015/block",
+        "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-block/block/part-016/block",
+        "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-block/block/part-017/block",
+        "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-block/block/part-018/block",
+        "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-block/block/part-019/block",
+        "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-block/block/part-020/block",
+        "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-block/block/part-021/block",
+        "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-block/block/part-022/block",
+        "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-block/block/part-023/block",
+        "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-block/block/part-024/block",
+        "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-block/block/part-025/block",
+        "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-block/block/part-026/block",
+        "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-block/block/part-027/block",
+        "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-block/block/part-028/block",
+        "sys/platform/0d:00:5/mtk-sdmmc",
+        "sys/platform/0d:00:3",
+        "sys/platform/00:00:13/hid-buttons/hid-device-000",
+        "sys/platform/0d:00:6",
+        "sys/platform/0d:00:14/mt-usb/usb-peripheral/function-000/cdc-eth-function/ethernet",
+        "sys/platform/00:00:17/ft3x27 HidDevice/hid-device-000",
+        "sys/platform/0d:00:8/mtk-thermal",
+        "sys/platform/00:00:18/ltr-578als/hid-device-000",
+    };
+
+    ASSERT_TRUE(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
+
+    END_TEST;
+}
+
 #define MAKE_TEST_CASE(name) \
     BEGIN_TEST_CASE(name) \
     RUN_TEST(name ## _enumeration_test) \
@@ -177,6 +231,7 @@ bool astro_enumeration_test() {
 MAKE_TEST_CASE(qemu);
 MAKE_TEST_CASE(vim2);
 MAKE_TEST_CASE(astro);
+MAKE_TEST_CASE(cleo);
 
 #undef MAKE_TEST_CASE
 
@@ -190,6 +245,8 @@ int main(int argc, char** argv) {
             return unittest_run_one_test(test_case_vim2, TEST_ALL) ? 0 : -1;
         case Board::kAstro:
             return unittest_run_one_test(test_case_astro, TEST_ALL) ? 0 : -1;
+        case Board::kCleo:
+            return unittest_run_one_test(test_case_cleo, TEST_ALL) ? 0 : -1;
         case Board::kUnknown:
             return 0;
     }
