@@ -202,7 +202,7 @@ void AuthenticatedState::HandleAssociationRequest(MgmtFrame<AssociationRequest>&
     debugbss("[client] [%s] received Assocation Request\n", client_->addr().ToString().c_str());
 
     auto assoc_req_frame = frame.View().NextFrame();
-    Span<const uint8_t> ies = {assoc_req_frame.body()->data, assoc_req_frame.body_len()};
+    Span<const uint8_t> ies = assoc_req_frame.body_data();
 
     std::optional<Span<const uint8_t>> ssid;
     std::optional<Span<const uint8_t>> rsn_body;
@@ -505,7 +505,7 @@ void AssociatedState::HandleDataLlcFrame(DataFrame<LlcHeader>&& frame) {
     eth_hdr->dest = data_hdr->addr3;
     eth_hdr->src = data_hdr->addr2;
     eth_hdr->ether_type = llc_frame.hdr()->protocol_id;
-    w.Write({llc_frame.body()->data, payload_len});
+    w.Write(llc_frame.body_data());
 
     packet->set_len(w.WrittenBytes());
 

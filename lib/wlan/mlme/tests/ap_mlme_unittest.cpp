@@ -26,7 +26,7 @@ namespace {
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
-const std::vector<uint8_t> kTestPayload = {'F', 'u', 'c', 'h', 's', 'i', 'a'};
+constexpr uint8_t kTestPayload[] = "Hello Fuchsia";
 
 void AssertSendRate(WlanPacket pkt, CBW cbw, PHY phy, uint32_t flags) {
     EXPECT_EQ(pkt.cbw, cbw);
@@ -35,7 +35,7 @@ void AssertSendRate(WlanPacket pkt, CBW cbw, PHY phy, uint32_t flags) {
 }
 
 struct Context {
-    Context(MockDevice* device, ApMlme* ap, common::MacAddr client_addr)
+    Context(MockDevice* device, ApMlme* ap, const common::MacAddr& client_addr)
         : device(device), ap(ap), client_addr(client_addr) {}
 
     void HandleTimeout() {
@@ -77,22 +77,24 @@ struct Context {
         ap->HandleFramePacket(frame.Take());
     }
 
-    void SendDataFrame() {
-        auto frame = CreateDataFrame(kTestPayload.data(), kTestPayload.size());
+    void SendDataFrame(Span<const uint8_t> payload) {
+        auto pkt = CreateDataFrame(payload);
+        auto hdr = pkt->mut_field<DataFrameHeader>(0);
         common::MacAddr bssid(kBssid1);
-        frame.hdr()->fc.set_from_ds(0);
-        frame.hdr()->fc.set_to_ds(1);
-        frame.hdr()->addr1 = bssid;
-        frame.hdr()->addr2 = client_addr;
-        frame.hdr()->addr3 = bssid;
-        ap->HandleFramePacket(frame.Take());
+        hdr->fc.set_from_ds(0);
+        hdr->fc.set_to_ds(1);
+        hdr->addr1 = bssid;
+        hdr->addr2 = client_addr;
+        hdr->addr3 = bssid;
+        ap->HandleFramePacket(std::move(pkt));
     }
 
-    void SendEthFrame(std::vector<uint8_t> payload) {
-        auto eth_frame = CreateEthFrame(payload.data(), payload.size());
-        eth_frame.hdr()->src = common::MacAddr(kBssid1);
-        eth_frame.hdr()->dest = client_addr;
-        ap->HandleFramePacket(eth_frame.Take());
+    void SendEthFrame(Span<const uint8_t> payload) {
+        auto pkt = CreateEthFrame(payload);
+        auto hdr = pkt->mut_field<EthernetII>(0);
+        hdr->src = common::MacAddr(kBssid1);
+        hdr->dest = client_addr;
+        ap->HandleFramePacket(std::move(pkt));
     }
 
     zx::duration TuPeriodsToDuration(size_t periods) { return zx::usec(1024) * periods; }
@@ -187,7 +189,7 @@ struct Context {
         unsigned char more_data = 0;
     };
 
-    void AssertDataFrameSentToClient(WlanPacket pkt, std::vector<uint8_t> expected_payload,
+    void AssertDataFrameSentToClient(WlanPacket pkt, Span<const uint8_t> expected_payload,
                                      DataFrameAssert asserts = {.protected_frame = 0,
                                                                 .more_data = 0}) {
         auto frame = TypeCheckWlanFrame<DataFrameView<LlcHeader>>(pkt.pkt.get());
@@ -198,21 +200,20 @@ struct Context {
         EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
         EXPECT_EQ(frame.hdr()->fc.protected_frame(), asserts.protected_frame);
 
-        auto llc_hdr = frame.body();
-        EXPECT_EQ(frame.body_len() - llc_hdr->len(), expected_payload.size());
-        EXPECT_EQ(std::memcmp(llc_hdr->payload, expected_payload.data(), expected_payload.size()),
-                  0);
+        auto llc_frame = frame.NextFrame();
+        EXPECT_RANGES_EQ(llc_frame.body_data(), expected_payload);
 
         AssertSendRate(std::move(pkt), CBW20, WLAN_PHY_HT, 0);
     }
 
-    void AssertEthFrame(std::vector<uint8_t> pkt, std::vector<uint8_t> expected_payload) {
-        EXPECT_EQ(sizeof(EthernetII) + expected_payload.size(), pkt.size());
-        auto hdr = reinterpret_cast<const EthernetII*>(pkt.data());
+    void AssertEthFrame(Span<const uint8_t> pkt, Span<const uint8_t> expected_payload) {
+        BufferReader rdr(pkt);
+        auto hdr = rdr.Read<EthernetII>();
+        ASSERT_NE(hdr, nullptr);
         EXPECT_EQ(std::memcmp(hdr->src.byte, client_addr.byte, 6), 0);
         EXPECT_EQ(std::memcmp(hdr->dest.byte, kBssid1, 6), 0);
         EXPECT_EQ(hdr->ether_type, 42);
-        auto payload = Span<const uint8_t>(pkt).subspan(sizeof(EthernetII));
+        auto payload = rdr.ReadRemaining();
         EXPECT_RANGES_EQ(payload, expected_payload);
     }
 
@@ -699,19 +700,19 @@ TEST_F(ApInfraBssTest, UnprotectedApReceiveFramesAfterAssociation) {
     ctx.StartAp(false);
 
     // Simulate unauthenticated client sending data frames, which should be ignored
-    ctx.SendDataFrame();
+    ctx.SendDataFrame(kTestPayload);
     ASSERT_TRUE(device.eth_queue.empty());
     ASSERT_TRUE(device.wlan_queue.empty());
     ASSERT_TRUE(device.svc_queue.empty());
 
     ctx.AuthenticateClient();
-    ctx.SendDataFrame();
+    ctx.SendDataFrame(kTestPayload);
     ASSERT_TRUE(device.eth_queue.empty());
     ASSERT_TRUE(device.wlan_queue.empty());
     ASSERT_TRUE(device.svc_queue.empty());
 
     ctx.AssociateClient(kAid);
-    ctx.SendDataFrame();
+    ctx.SendDataFrame(kTestPayload);
     ASSERT_TRUE(device.wlan_queue.empty());
     ASSERT_TRUE(device.svc_queue.empty());
 
@@ -866,7 +867,7 @@ TEST_F(ApInfraBssTest, ReceiveFrames_BeforeControlledPortOpens) {
 
     // Simulate client sending data frame to AP
     ASSERT_TRUE(device.eth_queue.empty());
-    ctx.SendDataFrame();
+    ctx.SendDataFrame(kTestPayload);
 
     // For protected AP, controlled port is not opened until RSNA is established, so data frame
     // should be ignored
@@ -878,7 +879,7 @@ TEST_F(ApInfraBssTest, ReceiveFrames_BeforeControlledPortOpens) {
 
     // Simulate client sending data frame to AP
     ASSERT_TRUE(device.eth_queue.empty());
-    ctx.SendDataFrame();
+    ctx.SendDataFrame(kTestPayload);
 
     // Setting keys doesn't implicit open the controlled port, hence data frame is still ignored
     EXPECT_TRUE(device.eth_queue.empty());
@@ -891,7 +892,7 @@ TEST_F(ApInfraBssTest, ReceiveFrames_AfterControlledPortOpens) {
 
     // Simulate client sending data frame to AP
     ASSERT_TRUE(device.eth_queue.empty());
-    ctx.SendDataFrame();
+    ctx.SendDataFrame(kTestPayload);
 
     // Verify ethernet frame is sent out and is correct
     auto eth_frames = device.GetEthPackets();

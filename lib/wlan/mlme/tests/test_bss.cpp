@@ -474,6 +474,7 @@ fbl::unique_ptr<Packet> CreateAssocRespFrame(const AssocContext& ap_assoc_ctx) {
 
     return packet;
 }
+
 fbl::unique_ptr<Packet> CreateDisassocFrame(common::MacAddr client_addr) {
     common::MacAddr bssid(kBssid1);
 
@@ -499,11 +500,11 @@ fbl::unique_ptr<Packet> CreateDisassocFrame(common::MacAddr client_addr) {
     return packet;
 }
 
-DataFrame<LlcHeader> CreateDataFrame(const uint8_t* payload, size_t len) {
+fbl::unique_ptr<Packet> CreateDataFrame(Span<const uint8_t> payload) {
     common::MacAddr bssid(kBssid1);
     common::MacAddr client(kClientAddress);
 
-    const size_t buf_len = DataFrameHeader::max_len() + LlcHeader::max_len() + len;
+    const size_t buf_len = DataFrameHeader::max_len() + LlcHeader::max_len() + payload.size_bytes();
     auto packet = GetWlanPacket(buf_len);
     ZX_DEBUG_ASSERT(packet != nullptr);
 
@@ -523,14 +524,14 @@ DataFrame<LlcHeader> CreateDataFrame(const uint8_t* payload, size_t len) {
     llc_hdr->control = kLlcUnnumberedInformation;
     std::memcpy(llc_hdr->oui, kLlcOui, sizeof(llc_hdr->oui));
     llc_hdr->protocol_id = 42;
-    if (len > 0) { w.Write({payload, len}); }
+    w.Write(payload);
 
     packet->set_len(w.WrittenBytes());
 
     wlan_rx_info_t rx_info{.rx_flags = 0};
     packet->CopyCtrlFrom(rx_info);
 
-    return DataFrame<LlcHeader>(std::move(packet));
+    return packet;
 }
 
 DataFrame<> CreateNullDataFrame() {
@@ -558,11 +559,11 @@ DataFrame<> CreateNullDataFrame() {
     return DataFrame<>(std::move(packet));
 }
 
-EthFrame CreateEthFrame(const uint8_t* payload, size_t len) {
+fbl::unique_ptr<Packet> CreateEthFrame(Span<const uint8_t> payload) {
     common::MacAddr bssid(kBssid1);
     common::MacAddr client(kClientAddress);
 
-    size_t buf_len = EthernetII::max_len() + len;
+    size_t buf_len = EthernetII::max_len() + payload.size_bytes();
     auto packet = GetEthPacket(buf_len);
     ZX_DEBUG_ASSERT(packet != nullptr);
 
@@ -571,9 +572,9 @@ EthFrame CreateEthFrame(const uint8_t* payload, size_t len) {
     eth_hdr->src = client;
     eth_hdr->dest = bssid;
     eth_hdr->ether_type = 2;
-    w.Write({payload, len});
+    w.Write(payload);
 
-    return EthFrame(std::move(packet));
+    return packet;
 }
 
 }  // namespace wlan

@@ -148,7 +148,7 @@ void InfraBss::HandleAnyMgmtFrame(MgmtFrame<>&& frame) {
             // Valid ProbeRequest, let BeaconSender process and respond to it.
             auto ra = mgmt_probe_req_frame.hdr()->addr2;
             auto probe_req_frame = mgmt_probe_req_frame.NextFrame();
-            Span<const uint8_t> ie_chain{probe_req_frame.body()->data, probe_req_frame.body_len()};
+            Span<const uint8_t> ie_chain = probe_req_frame.body_data();
             bcn_sender_->SendProbeResponse(ra, ie_chain);
             return;
         }
@@ -452,7 +452,7 @@ std::optional<DataFrame<LlcHeader>> InfraBss::EthToDataFrame(const EthFrame& eth
     llc_hdr->control = kLlcUnnumberedInformation;
     std::memcpy(llc_hdr->oui, kLlcOui, sizeof(llc_hdr->oui));
     llc_hdr->protocol_id = eth_frame.hdr()->ether_type;
-    w.Write({eth_frame.body()->data, payload_len});
+    w.Write(eth_frame.body_data());
 
     packet->set_len(w.WrittenBytes());
 

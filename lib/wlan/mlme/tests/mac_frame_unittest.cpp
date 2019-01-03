@@ -93,7 +93,7 @@ TEST(Frame, General) {
     ASSERT_EQ(frame.len(), DefaultTripleHdrFrame::len());
     ASSERT_EQ(frame.hdr()->a, 42);
     ASSERT_EQ(frame.body_len(), DefaultTripleHdrFrame::body_len());
-    ASSERT_EQ(frame.body()->data[1], 24);
+    ASSERT_EQ(frame.body_data()[1], 24);
 }
 
 TEST(Frame, General_Const_Frame) {
@@ -109,7 +109,7 @@ TEST(Frame, General_Const_Frame) {
     ASSERT_EQ(frame.len(), DefaultTripleHdrFrame::len());
     ASSERT_EQ(frame.hdr()->a, 42);
     ASSERT_EQ(frame.body_len(), DefaultTripleHdrFrame::body_len());
-    ASSERT_EQ(frame.body()->data[1], 24);
+    ASSERT_EQ(frame.body_data()[1], 24);
 }
 
 TEST(Frame, Take) {
@@ -215,7 +215,7 @@ TEST(Frame, RxInfo_PaddingAlignedBody) {
     DataFrame<> data_frame(std::move(pkt));
     ASSERT_TRUE(data_frame.View().has_rx_info());
     ASSERT_EQ(memcmp(data_frame.View().rx_info(), &rx_info, sizeof(wlan_rx_info_t)), 0);
-    ASSERT_EQ(data_frame.body()->data[0], 42);
+    ASSERT_EQ(data_frame.body_data()[0], 42);
 }
 
 TEST(Frame, RxInfo_NoPaddingAlignedBody) {
@@ -237,7 +237,7 @@ TEST(Frame, RxInfo_NoPaddingAlignedBody) {
     DataFrame<> data_frame(std::move(pkt));
     ASSERT_TRUE(data_frame.View().has_rx_info());
     ASSERT_EQ(memcmp(data_frame.View().rx_info(), &rx_info, sizeof(wlan_rx_info_t)), 0);
-    ASSERT_EQ(data_frame.body()->data[0], 42);
+    ASSERT_EQ(data_frame.body_data()[0], 42);
 }
 
 TEST(Frame, ConstructEmptyFrame) {
@@ -353,10 +353,24 @@ TEST(Frame, DeaggregateAmsdu) {
 
     // Verify LLC MSDUs.
     ASSERT_EQ(llc_frames.size(), static_cast<size_t>(2));
-    ASSERT_EQ(llc_frames[0].first.body()->data[3], static_cast<uint8_t>(0x6c));
+    ASSERT_EQ(llc_frames[0].first.body_data()[3], static_cast<uint8_t>(0x6c));
     ASSERT_EQ(llc_frames[0].second, static_cast<size_t>(108));
-    ASSERT_EQ(llc_frames[1].first.body()->data[3], static_cast<uint8_t>(0x5e));
+    ASSERT_EQ(llc_frames[1].first.body_data()[3], static_cast<uint8_t>(0x5e));
     ASSERT_EQ(llc_frames[1].second, static_cast<size_t>(94));
+}
+
+TEST(Frame, EmptyBodyData) {
+    size_t pkt_len = sizeof(TestHdr1);
+    auto pkt = GetPacket(pkt_len);
+    Frame<TestHdr1> frame(std::move(pkt));
+    ASSERT_TRUE(frame.body_data().empty());
+}
+
+TEST(Frame, PopulatedBodyData) {
+    size_t pkt_len = sizeof(TestHdr1) + 10;
+    auto pkt = GetPacket(pkt_len);
+    Frame<TestHdr1> frame(std::move(pkt));
+    ASSERT_EQ(frame.body_data().size_bytes(), 10lu);
 }
 
 TEST(Frame, DdkConversion) {

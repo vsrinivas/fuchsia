@@ -106,9 +106,9 @@ template <typename Header, typename Body = UnknownBody> class FrameView {
 
     Span<const uint8_t> body_data() const {
         ZX_DEBUG_ASSERT(pkt_ != nullptr);
+        if (body_len() == 0) { return {}; }
 
         auto body = pkt_->field<uint8_t>(body_offset());
-        ZX_DEBUG_ASSERT(body != nullptr);
         return {body, body_len()};
     }
 
@@ -221,6 +221,8 @@ template <typename Header, typename Body = UnknownBody> class Frame {
     }
 
     const Body* body() const { return View().body(); }
+
+    Span<const uint8_t> body_data() const { return View().body_data(); }
 
     size_t body_len() const { return View().body_len(); }
 

@@ -28,7 +28,7 @@ namespace {
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
-static constexpr uint8_t kTestPayload[] = "Hello Fuchsia";
+constexpr uint8_t kTestPayload[] = "Hello Fuchsia";
 
 struct ClientTest : public ::testing::Test {
     ClientTest() : device(), client(&device) {}
@@ -48,20 +48,6 @@ struct ClientTest : public ::testing::Test {
         return frame;
     }
 
-    zx_status_t SendDataFrame() {
-        auto frame = CreateDataFrame(kTestPayload, sizeof(kTestPayload));
-        if (frame.IsEmpty()) { return ZX_ERR_NO_RESOURCES; }
-        client.HandleFramePacket(frame.Take());
-        return ZX_OK;
-    }
-
-    zx_status_t SendEmptyDataFrame() {
-        auto frame = CreateDataFrame(nullptr, 0);
-        if (frame.IsEmpty()) { return ZX_ERR_NO_RESOURCES; }
-        client.HandleFramePacket(frame.Take());
-        return ZX_OK;
-    }
-
     zx_status_t SendNullDataFrame() {
         auto frame = CreateNullDataFrame();
         if (frame.IsEmpty()) { return ZX_ERR_NO_RESOURCES; }
@@ -69,14 +55,7 @@ struct ClientTest : public ::testing::Test {
         return ZX_OK;
     }
 
-    zx_status_t SendEthFrame() {
-        auto eth_frame = CreateEthFrame(kTestPayload, sizeof(kTestPayload));
-        if (eth_frame.IsEmpty()) { return ZX_ERR_NO_RESOURCES; }
-        client.HandleFramePacket(eth_frame.Take());
-        return ZX_OK;
-    }
-
-    void SendBeaconFrame(common::MacAddr bssid = common::MacAddr(kBssid1)) {
+    void SendBeaconFrame(const common::MacAddr& bssid = common::MacAddr(kBssid1)) {
         client.HandleFramePacket(CreateBeaconFrame(bssid));
     }
 
@@ -194,7 +173,7 @@ struct ClientTest : public ::testing::Test {
         EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kClientAddress, 6), 0);
         EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
         auto assoc_req_frame = frame.NextFrame();
-        Span<const uint8_t> ie_chain{assoc_req_frame.body()->data, assoc_req_frame.body_len()};
+        Span<const uint8_t> ie_chain{assoc_req_frame.body_data()};
         ASSERT_TRUE(ValidateFrame("invalid assoc request", *pkt.pkt));
 
         bool has_ssid = false;
@@ -243,9 +222,10 @@ struct ClientTest : public ::testing::Test {
         EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
         EXPECT_EQ(frame.hdr()->fc.protected_frame(), asserts.protected_frame);
 
-        auto llc_hdr = frame.body();
-        EXPECT_EQ(frame.body_len() - llc_hdr->len(), expected_payload.size());
-        EXPECT_EQ(std::memcmp(llc_hdr->payload, expected_payload.data(), expected_payload.size()),
+        auto llc_frame = frame.NextFrame();
+        EXPECT_EQ(llc_frame.body_len(), expected_payload.size());
+        EXPECT_EQ(std::memcmp(llc_frame.body_data().data(), expected_payload.data(),
+                              expected_payload.size()),
                   0);
 
         AssertSendRate(std::move(pkt), CBW20, WLAN_PHY_HT, 0);
@@ -513,25 +493,25 @@ TEST_F(ClientTest, AssocTimeout) {
 TEST_F(ClientTest, ReceiveDataAfterAssociation_Protected) {
     // Verify no data frame can be received before RSNA is established.
     Join();
-    SendDataFrame();
+    client.HandleFramePacket(CreateDataFrame(kTestPayload));
     ASSERT_TRUE(device.AreQueuesEmpty());
 
     Authenticate();
-    SendDataFrame();
+    client.HandleFramePacket(CreateDataFrame(kTestPayload));
     ASSERT_TRUE(device.AreQueuesEmpty());
 
     Associate();
-    SendDataFrame();
+    client.HandleFramePacket(CreateDataFrame(kTestPayload));
     ASSERT_TRUE(device.AreQueuesEmpty());
 
     // Setting key does not open controlled port
     SetKey();
-    SendDataFrame();
+    client.HandleFramePacket(CreateDataFrame(kTestPayload));
     ASSERT_TRUE(device.AreQueuesEmpty());
 
     // Establish RSNA and verify data frame can be received
     EstablishRsna();
-    SendDataFrame();
+    client.HandleFramePacket(CreateDataFrame(kTestPayload));
     auto eth_frames = device.GetEthPackets();
     ASSERT_EQ(eth_frames.size(), static_cast<size_t>(1));
     ASSERT_TRUE(device.wlan_queue.empty());
@@ -541,30 +521,30 @@ TEST_F(ClientTest, ReceiveDataAfterAssociation_Protected) {
 TEST_F(ClientTest, SendDataAfterAssociation_Protected) {
     // Verify no data frame can be sent before association
     Join();
-    SendEthFrame();
+    client.HandleFramePacket(CreateEthFrame(kTestPayload));
     ASSERT_TRUE(device.AreQueuesEmpty());
 
     Authenticate();
-    SendEthFrame();
+    client.HandleFramePacket(CreateEthFrame(kTestPayload));
     ASSERT_TRUE(device.AreQueuesEmpty());
 
     // After association but before RSNA is established, data frame is sent out but unprotected
     Associate();
-    SendEthFrame();
+    client.HandleFramePacket(CreateEthFrame(kTestPayload));
     EXPECT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     AssertDataFrameSentToAp(std::move(*device.wlan_queue.begin()), kTestPayload);
     device.wlan_queue.clear();
 
     // Setting key does not open controlled port, so data frame is still unprotected
     SetKey();
-    SendEthFrame();
+    client.HandleFramePacket(CreateEthFrame(kTestPayload));
     EXPECT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     AssertDataFrameSentToAp(std::move(*device.wlan_queue.begin()), kTestPayload);
     device.wlan_queue.clear();
 
     // After RSNA is established, outbound data frames have `protected_frame` flag enabled
     EstablishRsna();
-    SendEthFrame();
+    client.HandleFramePacket(CreateEthFrame(kTestPayload));
     EXPECT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     AssertDataFrameSentToAp(std::move(*device.wlan_queue.begin()), kTestPayload,
                             {.protected_frame = 1});
@@ -598,16 +578,16 @@ TEST_F(ClientTest, SendKeepAliveFrameAfterAssociation_Protected) {
 TEST_F(ClientTest, ReceiveDataAfterAssociation_Unprotected) {
     // Verify no data frame can be received before association.
     Join(false);
-    SendDataFrame();
+    client.HandleFramePacket(CreateDataFrame(kTestPayload));
     ASSERT_TRUE(device.AreQueuesEmpty());
 
     Authenticate();
-    SendDataFrame();
+    client.HandleFramePacket(CreateDataFrame(kTestPayload));
     ASSERT_TRUE(device.AreQueuesEmpty());
 
     // Associate and verify data frame can be received.
     Associate(false);
-    SendDataFrame();
+    client.HandleFramePacket(CreateDataFrame(kTestPayload));
     auto eth_frames = device.GetEthPackets();
     ASSERT_EQ(eth_frames.size(), static_cast<size_t>(1));
     ASSERT_TRUE(device.wlan_queue.empty());
@@ -617,16 +597,16 @@ TEST_F(ClientTest, ReceiveDataAfterAssociation_Unprotected) {
 TEST_F(ClientTest, SendDataAfterAssociation_Unprotected) {
     // Verify no data frame can be sent before association.
     Join(false);
-    SendEthFrame();
+    client.HandleFramePacket(CreateEthFrame(kTestPayload));
     ASSERT_TRUE(device.AreQueuesEmpty());
 
     Authenticate();
-    SendEthFrame();
+    client.HandleFramePacket(CreateEthFrame(kTestPayload));
     ASSERT_TRUE(device.AreQueuesEmpty());
 
     // Associate and verify that data frame can be sent out.
     Associate(false);
-    SendEthFrame();
+    client.HandleFramePacket(CreateEthFrame(kTestPayload));
     EXPECT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     AssertDataFrameSentToAp(std::move(*device.wlan_queue.begin()), kTestPayload);
 }
@@ -654,7 +634,7 @@ TEST_F(ClientTest, ProcessEmptyDataFrames) {
 
     // Send a data frame which carries an LLC frame with no payload.
     // Verify no ethernet frame was queued.
-    SendEmptyDataFrame();
+    client.HandleFramePacket(CreateDataFrame({}));
     ASSERT_TRUE(device.eth_queue.empty());
 }
 
@@ -682,7 +662,7 @@ TEST_F(ClientTest, DropManagementFrames) {
     ASSERT_TRUE(device.eth_queue.empty());
 
     // Verify data frames can still be send and the clientis presumably associated.
-    SendDataFrame();
+    client.HandleFramePacket(CreateDataFrame(kTestPayload));
     ASSERT_EQ(device.eth_queue.size(), static_cast<size_t>(1));
 }
 
@@ -870,7 +850,7 @@ TEST_F(ClientTest, BufferFramesWhileOffChannelAndSendWhenOnChannel) {
     Connect();
 
     GoOffChannel();
-    SendEthFrame();
+    client.HandleFramePacket(CreateEthFrame(kTestPayload));
     ASSERT_TRUE(device.wlan_queue.empty());
 
     GoOnChannel();
@@ -882,9 +862,9 @@ TEST_F(ClientTest, BufferFramesWhileOffChannelAndSendWhenOnChannel) {
     EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kClientAddress, 6), 0);
     EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
 
-    auto llc_hdr = frame.body();
-    EXPECT_EQ(frame.body_len() - llc_hdr->len(), sizeof(kTestPayload));
-    EXPECT_EQ(std::memcmp(llc_hdr->payload, kTestPayload, sizeof(kTestPayload)), 0);
+    auto llc_frame = frame.NextFrame();
+    ASSERT_EQ(llc_frame.body_len(), sizeof(kTestPayload));
+    ASSERT_EQ(std::memcmp(llc_frame.body_data().data(), kTestPayload, sizeof(kTestPayload)), 0);
 
     AssertSendRate(std::move(pkt), CBW20, WLAN_PHY_HT, 0);
 }

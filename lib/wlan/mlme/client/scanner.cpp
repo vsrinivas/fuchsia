@@ -213,7 +213,7 @@ void Scanner::ProcessBeacon(const MgmtFrameView<Beacon>& mgmt_bcn_frame) {
 
     auto rx_info = mgmt_bcn_frame.rx_info();
     auto bcn_frame = mgmt_bcn_frame.NextFrame();
-    Span<const uint8_t> ie_chain{bcn_frame.body()->data, bcn_frame.body_len()};
+    Span<const uint8_t> ie_chain = bcn_frame.body_data();
     zx_status_t status = it->second.ProcessBeacon(*bcn_frame.hdr(), ie_chain, rx_info);
     if (status != ZX_OK) {
         debugbcn("Failed to handle beacon (err %3d): BSSID %s timestamp: %15" PRIu64 "\n", status,

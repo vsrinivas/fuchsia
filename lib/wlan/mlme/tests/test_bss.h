@@ -94,9 +94,9 @@ fbl::unique_ptr<Packet> CreateAssocReqFrame(common::MacAddr client_addr, Span<co
                                             bool rsn);
 fbl::unique_ptr<Packet> CreateAssocRespFrame(const AssocContext& ap_assoc_ctx = kAssocCtx);
 fbl::unique_ptr<Packet> CreateDisassocFrame(common::MacAddr client_addr);
-DataFrame<LlcHeader> CreateDataFrame(const uint8_t* payload, size_t len);
+fbl::unique_ptr<Packet> CreateDataFrame(Span<const uint8_t> payload);
 DataFrame<> CreateNullDataFrame();
-EthFrame CreateEthFrame(const uint8_t* payload, size_t len);
+fbl::unique_ptr<Packet> CreateEthFrame(Span<const uint8_t> payload);
 
 }  // namespace wlan
 

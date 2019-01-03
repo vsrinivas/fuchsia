@@ -377,7 +377,7 @@ void Station::HandleBeacon(MgmtFrame<Beacon>&& frame) {
     auto_deauth_last_accounted_ = timer_mgr_.Now();
 
     auto bcn_frame = frame.View().NextFrame();
-    Span<const uint8_t> ie_chain{bcn_frame.body()->data, bcn_frame.body_len()};
+    Span<const uint8_t> ie_chain = bcn_frame.body_data();
     auto tim = common::FindAndParseTim(ie_chain);
     if (tim && common::IsTrafficBuffered(assoc_ctx_.aid, tim->header, tim->bitmap)) {
         SendPsPoll();
@@ -683,8 +683,7 @@ zx_status_t Station::HandleLlcFrame(const FrameView<LlcHeader>& llc_frame, size_
     finspect("Inbound LLC frame: hdr len %zu, payload len: %zu\n", llc_frame.hdr()->len(),
              llc_payload_len);
     finspect("  llc hdr: %s\n", debug::Describe(*llc_frame.hdr()).c_str());
-    finspect("  llc payload: %s\n",
-             debug::HexDump(llc_frame.body()->data, llc_payload_len).c_str());
+    finspect("  llc payload: %s\n", debug::HexDump(llc_frame.body_data()).c_str());
     if (llc_payload_len == 0) {
         finspect("  dropping empty LLC frame\n");
         return ZX_OK;
@@ -700,7 +699,7 @@ zx_status_t Station::HandleLlcFrame(const FrameView<LlcHeader>& llc_frame, size_
     eth_hdr->dest = dest;
     eth_hdr->src = src;
     eth_hdr->ether_type = llc_frame.hdr()->protocol_id;
-    w.Write({llc_frame.body()->data, llc_payload_len});
+    w.Write(llc_frame.body_data());
 
     packet->set_len(w.WrittenBytes());
 
@@ -788,7 +787,7 @@ zx_status_t Station::HandleEthFrame(EthFrame&& eth_frame) {
 
     auto llc_hdr = w.Write<LlcHeader>();
     FillEtherLlcHeader(llc_hdr, eth_hdr->ether_type);
-    w.Write({eth_hdr->payload, eth_frame.body_len()});
+    w.Write(eth_frame.body_data());
 
     packet->set_len(w.WrittenBytes());
 
@@ -1064,10 +1063,9 @@ void Station::DumpDataFrame(const DataFrameView<>& frame) {
     bool from_bss = (join_ctx_->bssid() == hdr->addr2);
     if (state_ == WlanState::kAssociated && !from_bss) { return; }
 
-    auto msdu = frame.body()->data;
     finspect("Inbound data frame: len %zu\n", frame.len());
     finspect("  wlan hdr: %s\n", debug::Describe(*hdr).c_str());
-    finspect("  msdu    : %s\n", debug::HexDump(msdu, frame.body_len()).c_str());
+    finspect("  msdu    : %s\n", debug::HexDump(frame.body_data()).c_str());
 }
 
 zx_status_t Station::SendCtrlFrame(fbl::unique_ptr<Packet> packet, CBW cbw, PHY phy) {
@@ -1327,7 +1325,7 @@ zx_status_t Station::SetAssocContext(const MgmtFrameView<AssociationResponse>& f
     assoc_ctx_.listen_interval = join_ctx_->listen_interval();
 
     auto assoc_resp_frame = frame.NextFrame();
-    Span<const uint8_t> ie_chain{assoc_resp_frame.body()->data, assoc_resp_frame.body_len()};
+    Span<const uint8_t> ie_chain = assoc_resp_frame.body_data();
     auto bss_assoc_ctx = ParseAssocRespIe(ie_chain);
     if (!bss_assoc_ctx.has_value()) {
         debugf("failed to parse AssocResp\n");
@@ -1451,7 +1449,7 @@ std::optional<AssocContext> Station::BuildAssocCtx(const MgmtFrameView<Associati
                                                    const wlan_channel_t& join_chan, PHY join_phy,
                                                    uint16_t listen_interval) {
     auto assoc_resp_frame = frame.NextFrame();
-    Span<const uint8_t> ie_chain = {assoc_resp_frame.body()->data, assoc_resp_frame.body_len()};
+    Span<const uint8_t> ie_chain = assoc_resp_frame.body_data();
     auto bssid = frame.hdr()->addr3;
     auto bss = MakeBssAssocCtx(*frame.body(), ie_chain, bssid);
     if (!bss.has_value()) { return {}; }

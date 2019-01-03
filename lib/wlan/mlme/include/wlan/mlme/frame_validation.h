@@ -15,7 +15,6 @@
 namespace wlan {
 
 struct UnknownBody : public EmptyHdr {
-    uint8_t data[];
 } __PACKED;
 
 template <typename H> struct is_mac_hdr {

@@ -162,10 +162,10 @@ void MeshMlme::SendPeeringConfirm(const MlmeMsg<wlan_mlme::MeshPeeringConfirmAct
 void MeshMlme::ConfigurePeering(const MlmeMsg<wlan_mlme::MeshPeeringParams>& req) {
     wlan_assoc_ctx ctx = {
         .aid = req.body()->local_aid,
-        .qos = true, // all mesh nodes are expected to support QoS frames
+        .qos = true,  // all mesh nodes are expected to support QoS frames
         .rates_cnt = static_cast<uint16_t>(std::min(req.body()->rates->size(), sizeof(ctx.rates))),
         .chan = device_->GetState()->channel(),
-        .phy = WLAN_PHY_OFDM, // TODO(gbonik): get PHY from MeshPeeringParams
+        .phy = WLAN_PHY_OFDM,  // TODO(gbonik): get PHY from MeshPeeringParams
     };
     memcpy(ctx.bssid, req.body()->peer_sta_address.data(), sizeof(ctx.bssid));
     memcpy(ctx.rates, req.body()->rates->data(), ctx.rates_cnt);
@@ -240,8 +240,8 @@ void MeshMlme::HandleEthTx(EthFrame&& frame) {
             // TODO(gbonik): buffer the frame and initiate path discovery
             return;
         }
-        CreateMacHeaderWriter().WriteMeshDataHeaderIndivAddressed(&w, path->next_hop,
-                                                                  mesh_dest, self_addr());
+        CreateMacHeaderWriter().WriteMeshDataHeaderIndivAddressed(&w, path->next_hop, mesh_dest,
+                                                                  self_addr());
         auto mesh_ctl = w.Write<MeshControl>();
         mesh_ctl->ttl = ttl;
         mesh_ctl->seq = mesh_seq_++;
@@ -254,7 +254,7 @@ void MeshMlme::HandleEthTx(EthFrame&& frame) {
 
     auto llc_hdr = w.Write<LlcHeader>();
     FillEtherLlcHeader(llc_hdr, frame.hdr()->ether_type);
-    w.Write({frame.hdr()->payload, frame.body_len()});
+    w.Write(frame.body_data());
     packet->set_len(w.WrittenBytes());
     SendDataFrame(std::move(packet));
 }
@@ -352,9 +352,7 @@ void MeshMlme::HandleDataFrame(fbl::unique_ptr<Packet> packet) {
 
     // TODO(gbonik): maintain a cache of seen sequence IDs and drop duplicate frames
 
-    if (ShouldDeliverData(header->mac_header)) {
-        DeliverData(*header, *packet, r.ReadBytes());
-    }
+    if (ShouldDeliverData(header->mac_header)) { DeliverData(*header, *packet, r.ReadBytes()); }
 
     // TODO(gbonik): forward data
 }
@@ -404,8 +402,7 @@ bool MeshMlme::ShouldDeliverData(const common::ParsedDataFrameHeader& header) {
     }
 }
 
-void MeshMlme::DeliverData(const common::ParsedMeshDataHeader& header,
-                           Span<uint8_t> wlan_frame,
+void MeshMlme::DeliverData(const common::ParsedMeshDataHeader& header, Span<uint8_t> wlan_frame,
                            size_t payload_offset) {
     ZX_ASSERT(payload_offset >= sizeof(EthernetII));
     auto eth_frame = wlan_frame.subspan(payload_offset - sizeof(EthernetII));
