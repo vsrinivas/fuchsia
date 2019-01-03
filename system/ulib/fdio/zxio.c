@@ -156,8 +156,6 @@ static zx_status_t fdio_zxio_set_flags(fdio_t* io, uint32_t flags) {
 // Generic ---------------------------------------------------------------------
 
 fdio_ops_t fdio_zxio_ops = {
-    .write = fdio_zxio_write,
-    .write_at = fdio_zxio_write_at,
     .seek = fdio_zxio_seek,
     .misc = fdio_default_misc,
     .close = fdio_zxio_close,
@@ -400,8 +398,6 @@ static zx_status_t fdio_zxio_remote_link(fdio_t* io, const char* src, size_t src
 }
 
 static fdio_ops_t fdio_zxio_remote_ops = {
-    .write = fdio_zxio_write,
-    .write_at = fdio_zxio_write_at,
     .seek = fdio_zxio_seek,
     .misc = fdio_default_misc,
     .close = fdio_zxio_close,
@@ -531,8 +527,6 @@ static zx_status_t fdio_zxio_vmofile_get_vmo(fdio_t* io, int flags,
 }
 
 fdio_ops_t fdio_zxio_vmofile_ops = {
-    .write = fdio_zxio_write,
-    .write_at = fdio_zxio_write_at,
     .seek = fdio_zxio_seek,
     .misc = fdio_default_misc,
     .close = fdio_zxio_close,
@@ -726,8 +720,6 @@ static zx_status_t fdio_zxio_pipe_shutdown(fdio_t* io, int how) {
 }
 
 static fdio_ops_t fdio_zxio_pipe_ops = {
-    .write = fdio_zxio_write,
-    .write_at = fdio_default_write_at,
     .seek = fdio_default_seek,
     .misc = fdio_default_misc,
     .close = fdio_zxio_close,
@@ -845,8 +837,6 @@ static zx_status_t fdio_zxio_debuglog_clone(fdio_t* io, zx_handle_t* handles,
 }
 
 static fdio_ops_t fdio_zxio_debuglog_ops = {
-    .write = fdio_zxio_write,
-    .write_at = fdio_default_write_at,
     .seek = fdio_default_seek,
     .misc = fdio_default_misc,
     .close = fdio_zxio_close,
