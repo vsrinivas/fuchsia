@@ -49,17 +49,44 @@ func GenerateKeyPair(bitSize int) ([]byte, []byte, error) {
 }
 
 func ConnectSSH(ctx context.Context, address net.Addr, config *ssh.ClientConfig) (*ssh.Client, error) {
+	network, err := network(address)
+	if err != nil {
+		return nil, err
+	}
+
 	var client *ssh.Client
 
 	// TODO: figure out optimal backoff time and number of retries
-	err := retry.Retry(ctx, retry.WithMaxRetries(retry.NewConstantBackoff(time.Second), 10), func() error {
+	if err := retry.Retry(ctx, retry.WithMaxRetries(retry.NewConstantBackoff(time.Second), 10), func() error {
 		var err error
-		client, err = ssh.Dial(address.Network(), address.String(), config)
+		client, err = ssh.Dial(network, address.String(), config)
 		return err
-	}, nil)
-	if err != nil {
+	}, nil); err != nil {
 		return nil, fmt.Errorf("cannot connect to address '%s': %v", address, err)
 	}
 
 	return client, nil
+}
+
+// Returns the network to use to SSH into a device.
+func network(address net.Addr) (string, error) {
+	var ip *net.IP
+
+	// We need these type assertions because the net package (annoyingly) doesn't provide
+	// an interface for objects that have an IP address.
+	if udp, ok := address.(*net.UDPAddr); ok {
+		ip = &udp.IP
+	} else if tcp, ok := address.(*net.TCPAddr); ok {
+		ip = &tcp.IP
+	} else {
+		return "", fmt.Errorf("unsupported address type: %T", address)
+	}
+
+	if ip.To4() != nil {
+		return "tcp", nil // IPv4
+	}
+	if ip.To16() != nil {
+		return "tcp6", nil // IPv6
+	}
+	return "", fmt.Errorf("cannot infer network for IP address %s", ip.String())
 }
