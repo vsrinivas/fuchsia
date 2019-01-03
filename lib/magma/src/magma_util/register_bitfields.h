@@ -191,7 +191,7 @@ public:
     {
     }
 
-    uint32_t get() { return (*value_ptr_ >> shift_) & mask_; }
+    uint32_t get() const { return (*value_ptr_ >> shift_) & mask_; }
 
     void set(uint32_t field_val)
     {
@@ -199,6 +199,10 @@ public:
         *value_ptr_ &= ~(mask_ << shift_);
         *value_ptr_ |= (field_val << shift_);
     }
+
+    // Allow both implicit conversion and get() to simplify the conversion of code to the hwreg
+    // style.
+    operator uint32_t() const { return get(); }
 
 private:
     IntType* value_ptr_;
@@ -212,6 +216,11 @@ private:
     magma::BitfieldRef<uint32_t> NAME()                                                            \
     {                                                                                              \
         return magma::BitfieldRef<uint32_t>(reg_value_ptr(), (BIT_HIGH), (BIT_LOW));               \
+    }                                                                                              \
+    auto& set_##NAME(uint32_t val)                                                                 \
+    {                                                                                              \
+        magma::BitfieldRef<ValueType>(reg_value_ptr(), (BIT_HIGH), (BIT_LOW)).set(val);            \
+        return *this;                                                                              \
     }
 
 #define DEF_BIT(BIT, NAME)                                                                         \
@@ -219,6 +228,11 @@ private:
     magma::BitfieldRef<uint32_t> NAME()                                                            \
     {                                                                                              \
         return magma::BitfieldRef<uint32_t>(reg_value_ptr(), (BIT), (BIT));                        \
+    }                                                                                              \
+    auto& set_##NAME(uint32_t val)                                                                 \
+    {                                                                                              \
+        magma::BitfieldRef<ValueType>(reg_value_ptr(), (BIT), (BIT)).set(val);                     \
+        return *this;                                                                              \
     }
 
 // This defines an accessor (named SUBFIELD_NAME) for a bit range of a
