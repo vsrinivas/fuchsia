@@ -74,16 +74,16 @@ struct WlanTxStatus {
 
 interface WlantapPhy {
     // wlanmac_ifc_t callbacks
-    0x01: Rx(uint16 wlanmac_id, vector<uint8> data, WlanRxInfo info);
-    0x02: Status(uint16 wlanmac_id, uint32 st);
-    0x03: ReportTxStatus(uint16 wlanmac_id, WlanTxStatus txs);
+    Rx(uint16 wlanmac_id, vector<uint8> data, WlanRxInfo info);
+    Status(uint16 wlanmac_id, uint32 st);
+    ReportTxStatus(uint16 wlanmac_id, WlanTxStatus txs);
     // wlanmac_protocol_ops_t
-    0x11: -> Tx(TxArgs args);
-    0x12: -> SetChannel(SetChannelArgs args);
-    0x13: -> ConfigureBss(ConfigureBssArgs args);
+    -> Tx(TxArgs args);
+    -> SetChannel(SetChannelArgs args);
+    -> ConfigureBss(ConfigureBssArgs args);
     // TODO: ConfigureBeacon
-    0x14: -> SetKey(SetKeyArgs args);
-    0x15: -> WlanmacStart(WlanmacStartArgs args);
+    -> SetKey(SetKeyArgs args);
+    -> WlanmacStart(WlanmacStartArgs args);
 };
 
 struct TxArgs {

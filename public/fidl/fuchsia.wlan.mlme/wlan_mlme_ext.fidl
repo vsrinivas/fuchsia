@@ -10,7 +10,6 @@ using fuchsia.wlan.minstrel;
 // The primitives defined here are not part of the official 802.11 MLME SAP interface specification,
 // but follow the same principle for the sake of consistency.
 
-
 // SIGNAL_REPORT.indication
 
 struct SignalReportIndication {
@@ -30,7 +29,6 @@ enum MacRole {
     AP = 2;
     MESH = 3;
 };
-
 
 // BandInfo groups capabilities defined per band.
 // This grouping is the industry's de factor standard.

@@ -104,7 +104,7 @@ struct DestroyIfaceResponse {
 };
 
 interface Phy {
-    1: Query() -> (QueryResponse resp);
-    2: CreateIface(CreateIfaceRequest req) -> (CreateIfaceResponse resp);
-    3: DestroyIface(DestroyIfaceRequest req) -> (DestroyIfaceResponse resp);
+    Query() -> (QueryResponse resp);
+    CreateIface(CreateIfaceRequest req) -> (CreateIfaceResponse resp);
+    DestroyIface(DestroyIfaceRequest req) -> (DestroyIfaceResponse resp);
 };

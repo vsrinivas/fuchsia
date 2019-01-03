@@ -29,9 +29,9 @@ struct ScanError {
 
 interface ScanTransaction {
     // Can be called several times to deliver incremental scan results
-    1: -> OnResult(vector<EssInfo> aps);
-    2: -> OnFinished();
-    3: -> OnError(ScanError error);
+    -> OnResult(vector<EssInfo> aps);
+    -> OnFinished();
+    -> OnError(ScanError error);
 };
 
 struct ScanRequest {
@@ -52,7 +52,7 @@ enum ConnectResultCode {
 
 interface ConnectTransaction {
     // Could add more events here to notify the client of the progress
-    1: -> OnFinished(ConnectResultCode code);
+    -> OnFinished(ConnectResultCode code);
 };
 
 enum Phy {
@@ -95,10 +95,10 @@ struct ClientStatusResponse {
 };
 
 interface ClientSme {
-    1: Scan(ScanRequest req, request<ScanTransaction> txn);
-    2: Connect(ConnectRequest req, request<ConnectTransaction>? txn);
-    3: Disconnect() -> ();
-    4: Status() -> (ClientStatusResponse resp);
+    Scan(ScanRequest req, request<ScanTransaction> txn);
+    Connect(ConnectRequest req, request<ConnectTransaction>? txn);
+    Disconnect() -> ();
+    Status() -> (ClientStatusResponse resp);
 };
 
 struct ApConfig {
@@ -117,8 +117,8 @@ enum StartApResultCode {
 };
 
 interface ApSme {
-    1: Start(ApConfig config) -> (StartApResultCode code);
-    2: Stop() -> ();
+    Start(ApConfig config) -> (StartApResultCode code);
+    Stop() -> ();
 };
 
 struct MeshConfig {
@@ -133,5 +133,5 @@ enum JoinMeshResultCode {
 };
 
 interface MeshSme {
-    1: Join(MeshConfig config) -> (JoinMeshResultCode code);
+    Join(MeshConfig config) -> (JoinMeshResultCode code);
 };

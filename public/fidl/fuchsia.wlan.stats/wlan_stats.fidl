@@ -5,25 +5,25 @@
 library fuchsia.wlan.stats;
 
 struct Counter {
-  uint64 count;
-  string name;
+    uint64 count;
+    string name;
 };
 
 struct PacketCounter {
-  Counter in;
-  Counter out;
-  Counter drop;
-  Counter in_bytes;
-  Counter out_bytes;
-  Counter drop_bytes;
+    Counter in;
+    Counter out;
+    Counter drop;
+    Counter in_bytes;
+    Counter out_bytes;
+    Counter drop_bytes;
 };
 
 // LINT.IfChange
 struct DispatcherStats {
-  PacketCounter any_packet;
-  PacketCounter mgmt_frame;
-  PacketCounter ctrl_frame;
-  PacketCounter data_frame;
+    PacketCounter any_packet;
+    PacketCounter mgmt_frame;
+    PacketCounter ctrl_frame;
+    PacketCounter data_frame;
 };
 
 const uint8 RSSI_BINS = 129;
@@ -32,29 +32,29 @@ const uint8 RSSI_BINS = 129;
 // RSSI value r's occurrence is counted in the bin[-r],
 // where r is defined in [-128, 0] in dBm.
 struct RssiStats {
-  // TODO(alexandrew): Change this to array.
-  vector<uint64>:RSSI_BINS hist;
+    // TODO(alexandrew): Change this to array.
+    vector<uint64>:RSSI_BINS hist;
 };
 
 struct ClientMlmeStats {
-  PacketCounter svc_msg;
-  PacketCounter data_frame;
-  PacketCounter mgmt_frame;
-  PacketCounter tx_frame;
-  PacketCounter rx_frame;
-  RssiStats assoc_data_rssi;
-  RssiStats beacon_rssi;
+    PacketCounter svc_msg;
+    PacketCounter data_frame;
+    PacketCounter mgmt_frame;
+    PacketCounter tx_frame;
+    PacketCounter rx_frame;
+    RssiStats assoc_data_rssi;
+    RssiStats beacon_rssi;
 };
 
 struct ApMlmeStats {
-  PacketCounter not_used;
+    PacketCounter not_used;
 };
 
 // LINT.ThenChange(//garnet/lib/wlan/common/include/wlan/common/stats.h)
 
 union MlmeStats {
-  ClientMlmeStats client_mlme_stats;
-  ApMlmeStats ap_mlme_stats;
+    ClientMlmeStats client_mlme_stats;
+    ApMlmeStats ap_mlme_stats;
 };
 
 struct IfaceStats {
