@@ -21,7 +21,6 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/strings/string_printf.h"
-#include "lib/ui/input/cpp/formatting.h"
 #include "lib/ui/scenic/cpp/commands.h"
 #include "lib/ui/scenic/cpp/resources.h"
 #include "lib/ui/views/cpp/formatting.h"
@@ -785,24 +784,12 @@ void ViewRegistry::ConnectToViewService(ViewState* view_state,
                                         const fidl::StringPtr& service_name,
                                         zx::channel client_handle) {
   FXL_DCHECK(IsViewStateRegisteredDebug(view_state));
-  if (service_name == fuchsia::ui::input::InputConnection::Name_) {
-    CreateInputConnection(
-        view_state->view_token(),
-        fidl::InterfaceRequest<fuchsia::ui::input::InputConnection>(
-            std::move(client_handle)));
-  }
 }
 
 void ViewRegistry::ConnectToViewTreeService(ViewTreeState* tree_state,
                                             const fidl::StringPtr& service_name,
                                             zx::channel client_handle) {
   FXL_DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
-  if (service_name == fuchsia::ui::input::InputDispatcher::Name_) {
-    CreateInputDispatcher(
-        tree_state->view_tree_token(),
-        fidl::InterfaceRequest<fuchsia::ui::input::InputDispatcher>(
-            std::move(client_handle)));
-  }
 }
 
 // VIEW INSPECTOR
@@ -982,78 +969,6 @@ void ViewRegistry::SendChildUnavailable(ViewContainerState* container_state,
               << ", child_key=" << child_key;
   container_state->view_container_listener()->OnChildUnavailable(child_key,
                                                                  [] {});
-}
-
-void ViewRegistry::DeliverEvent(uint32_t view_token,
-                                fuchsia::ui::input::InputEvent event,
-                                ViewInspector::OnEventDelivered callback) {
-  FXL_VLOG(1) << "DeliverEvent: view_token=" << view_token
-              << ", event=" << event;
-
-  auto it = input_connections_by_view_token_.find(view_token);
-  if (it == input_connections_by_view_token_.end()) {
-    FXL_VLOG(1)
-        << "DeliverEvent: dropped because there was no input connection";
-    if (callback)
-      callback(false);
-    return;
-  }
-
-  it->second->DeliverEvent(
-      std::move(event),
-      fxl::MakeCopyable([callback = std::move(callback)](bool handled) {
-        if (callback)
-          callback(handled);
-      }));
-}
-
-void ViewRegistry::CreateInputConnection(
-    uint32_t view_token,
-    fidl::InterfaceRequest<fuchsia::ui::input::InputConnection> request) {
-  FXL_DCHECK(request.is_valid());
-  FXL_VLOG(1) << "CreateInputConnection: view_token=" << view_token;
-
-  input_connections_by_view_token_.emplace(
-      view_token, std::make_unique<InputConnectionImpl>(this, this, view_token,
-                                                        std::move(request)));
-}
-
-void ViewRegistry::OnInputConnectionDied(InputConnectionImpl* connection) {
-  FXL_DCHECK(connection);
-  FXL_VLOG(1) << "OnInputConnectionDied: view_token="
-              << connection->view_token();
-
-  auto it = input_connections_by_view_token_.find(connection->view_token());
-  FXL_DCHECK(it != input_connections_by_view_token_.end());
-  FXL_DCHECK(it->second.get() == connection);
-
-  input_connections_by_view_token_.erase(it);
-}
-
-void ViewRegistry::CreateInputDispatcher(
-    ::fuchsia::ui::viewsv1::ViewTreeToken view_tree_token,
-    fidl::InterfaceRequest<fuchsia::ui::input::InputDispatcher> request) {
-  FXL_DCHECK(request.is_valid());
-  FXL_VLOG(1) << "CreateInputDispatcher: view_tree_token=" << view_tree_token;
-
-  const uint32_t view_tree_token_value = view_tree_token.value;
-  input_dispatchers_by_view_tree_token_.emplace(
-      view_tree_token_value,
-      std::make_unique<InputDispatcherImpl>(this, this, view_tree_token,
-                                            std::move(request)));
-}
-
-void ViewRegistry::OnInputDispatcherDied(InputDispatcherImpl* dispatcher) {
-  FXL_DCHECK(dispatcher);
-  FXL_VLOG(1) << "OnInputDispatcherDied: view_tree_token="
-              << dispatcher->view_tree_token();
-
-  auto it = input_dispatchers_by_view_tree_token_.find(
-      dispatcher->view_tree_token().value);
-  FXL_DCHECK(it != input_dispatchers_by_view_tree_token_.end());
-  FXL_DCHECK(it->second.get() == dispatcher);
-
-  input_dispatchers_by_view_tree_token_.erase(it);
 }
 
 // SNAPSHOT

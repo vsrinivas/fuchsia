@@ -4,7 +4,6 @@
 
 source_set("internal") {
   sources = [
-    "input_owner.h",
     "view_inspector.h",
   ]
 

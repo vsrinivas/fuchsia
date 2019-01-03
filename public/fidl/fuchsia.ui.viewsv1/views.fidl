@@ -29,27 +29,11 @@ using fuchsia.ui.viewsv1token;
 // Use |GetContainer()| to obtain an interface for manipulating child views.
 //
 // See |ViewContainer| for more information.
-//
-// GETTING SERVICES
-//
-// The view's |fuchsia::sys::ServiceProvider| offers access to many services which
-// are not directly expressed by the |View| interface itself, such
-// as input, accessiblity, and editing capabilities.
-//
-// For example, perform the following actions to receive input events:
-//
-// 1. Call |GetServiceProvider()| to obtain the view's service provider.
-//
-// 2. Ask the service provider for its |InputConnection|.
-//
-// 3. Set listeners on the input connection to receive events.
 interface View {
   // Gets a service provider to access services which are associated with
-  // the view such as input, accessibility and editing capabilities.
+  // the view.
   // The view service provider is private to the view and should not be
   // shared with anyone else.
-  //
-  // See |InputConnection|.
   1: GetServiceProvider(request<fuchsia.sys.ServiceProvider> service_provider);
 
   // This is a way for an app to offer services that are associated with a

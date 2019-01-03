@@ -14,9 +14,6 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 
-#include "garnet/bin/ui/view_manager/input/input_connection_impl.h"
-#include "garnet/bin/ui/view_manager/input/input_dispatcher_impl.h"
-#include "garnet/bin/ui/view_manager/internal/input_owner.h"
 #include "garnet/bin/ui/view_manager/internal/view_inspector.h"
 #include "garnet/bin/ui/view_manager/view_container_state.h"
 #include "garnet/bin/ui/view_manager/view_state.h"
@@ -35,7 +32,6 @@ using ViewLinker = scenic_impl::gfx::ObjectLinker<ViewStub, ViewState>;
 // Maintains a registry of the state of all views.
 // All ViewState objects are owned by the registry.
 class ViewRegistry : public ViewInspector,
-                     public InputOwner,
                      public fuchsia::ui::viewsv1::AccessibilityViewInspector,
                      public scenic_impl::ErrorReporter {
  public:
@@ -143,16 +139,6 @@ class ViewRegistry : public ViewInspector,
                      fidl::InterfaceRequest<fuchsia::ui::input::ImeService>
                          ime_service) override;
 
-  // Delivers an event to a view.
-  void DeliverEvent(uint32_t view_token, fuchsia::ui::input::InputEvent event,
-                    ViewInspector::OnEventDelivered callback) override;
-
-  // INPUT CONNECTION CALLBACKS
-  void OnInputConnectionDied(InputConnectionImpl* connection) override;
-
-  // INPUT DISPATCHER CALLBACKS
-  void OnInputDispatcherDied(InputDispatcherImpl* dispatcher) override;
-
   // SNAPSHOT
   void TakeSnapshot(uint64_t view_koid,
                     fit::function<void(::fuchsia::mem::Buffer)> callback);
@@ -208,16 +194,6 @@ class ViewRegistry : public ViewInspector,
   void SendChildUnavailable(ViewContainerState* container_state,
                             uint32_t child_key);
 
-  // INPUT CONNECTION
-  void CreateInputConnection(
-      uint32_t view_token,
-      fidl::InterfaceRequest<fuchsia::ui::input::InputConnection> request);
-
-  // INPUT DISPATCHER
-  void CreateInputDispatcher(
-      ::fuchsia::ui::viewsv1::ViewTreeToken view_tree_token,
-      fidl::InterfaceRequest<fuchsia::ui::input::InputDispatcher> request);
-
   // LOOKUP
 
   // Walk up the view tree starting at |view_token| to find a service
@@ -269,10 +245,6 @@ class ViewRegistry : public ViewInspector,
   std::unordered_map<uint32_t, std::unique_ptr<ViewState>> views_by_token_;
   std::unordered_map<uint32_t, std::unique_ptr<ViewTreeState>>
       view_trees_by_token_;
-  std::unordered_map<uint32_t, std::unique_ptr<InputConnectionImpl>>
-      input_connections_by_view_token_;
-  std::unordered_map<uint32_t, std::unique_ptr<InputDispatcherImpl>>
-      input_dispatchers_by_view_tree_token_;
   std::list<std::shared_ptr<::fuchsia::ui::gfx::SnapshotCallbackHACK>>
       snapshot_bindings_;
 

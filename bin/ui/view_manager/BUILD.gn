@@ -40,7 +40,6 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//garnet/bin/ui/view_manager/input",
     "//garnet/bin/ui/view_manager/internal",
     "//garnet/lib/ui/gfx",
     "//garnet/public/fidl/fuchsia.accessibility",
@@ -51,7 +50,6 @@ source_set("lib") {
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/geometry/cpp",
-    "//garnet/public/lib/ui/input/cpp",
     "//garnet/public/lib/ui/scenic/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]

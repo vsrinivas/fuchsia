@@ -10,9 +10,7 @@ fidl("fuchsia.ui.input") {
   sources = [
     "commands.fidl",
     "ime_service.fidl",
-    "input_connection.fidl",
     "input_device_registry.fidl",
-    "input_dispatcher.fidl",
     "input_event_constants.fidl",
     "input_events.fidl",
     "input_reports.fidl",
