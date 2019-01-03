@@ -1396,8 +1396,8 @@ mod tests {
                 100,
                 |content| {
                     assert_eq!(*&content, b"Final content");
-                    //                    0         1
-                    //                    0123456789012
+                    //                      0         1
+                    //                      0123456789012
                     Ok(())
                 },
             ),
@@ -1420,8 +1420,8 @@ mod tests {
         run_server_client(
             OPEN_RIGHT_READABLE,
             read_only(|| Ok(b"Long file content".to_vec())),
-            //                    0         1
-            //                    01234567890123456
+            //                0         1
+            //                01234567890123456
             async move |proxy| {
                 assert_seek!(proxy, 5, Start);
                 assert_read!(proxy, "file");
@@ -1476,8 +1476,8 @@ mod tests {
         run_server_client(
             OPEN_RIGHT_READABLE,
             read_only(|| Ok(b"Seek position is unaffected".to_vec())),
-            //                    0         1         2
-            //                    012345678901234567890123456
+            //                0         1         2
+            //                012345678901234567890123456
             async move |proxy| {
                 assert_seek_err!(proxy, -10, Current, Status::OUT_OF_RANGE, 0);
                 assert_read!(proxy, "Seek");

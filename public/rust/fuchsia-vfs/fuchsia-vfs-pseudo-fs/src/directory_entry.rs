@@ -73,8 +73,6 @@ pub trait DirectoryEntry: Future<Output = Result<(), Error>> + Unpin + FusedFutu
     /// In case of an error, the `server_end` object is dropped and the underlying channel will be
     /// closed.
     ///
-    /// `flags` argument.
-    ///
     /// It is the responsibility of the implementation to send `OnOpen` even on the channel
     /// contained by `server_end` in case `OPEN_FLAG_STATUS` was present in `flags`, and to
     /// populate the `info` part of the event if `OPEN_FLAG_DESCRIBE` was set.  This also applies
