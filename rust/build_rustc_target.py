@@ -188,7 +188,7 @@ def main():
         ]
         if args.target.startswith("aarch64"):
             call_args += ["-Clink-arg=-Wl,--fix-cortex-a53-843419"]
-        if args.target.endswith("linux"):
+        if args.target.endswith("linux-gnu"):
             call_args += [
                 "-Clink-arg=-Wl,--build-id",
                 "-Clink-arg=-Wl,--hash-style=gnu",

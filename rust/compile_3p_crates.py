@@ -120,8 +120,8 @@ def main():
     else:
         if args.target.startswith("aarch64"):
             rustflags += ["-Clink-arg=-Wl,--fix-cortex-a53-843419"]
-        if args.target.endswith("linux"):
-            call_args += [
+        if args.target.endswith("linux-gnu"):
+            rustflags += [
                 "-Clink-arg=-Wl,--build-id",
                 "-Clink-arg=-Wl,--hash-style=gnu",
             ]
