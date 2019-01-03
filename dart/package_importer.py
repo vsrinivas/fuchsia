@@ -18,8 +18,8 @@ import yaml
 LICENSE_FILES = ['LICENSE', 'LICENSE.txt']
 
 
-IGNORED_EXTENSIONS = ['css', 'html', 'jpg', 'js', 'log', 'old', 'out',
-                      'packages', 'png', 'snapshot', 'zip']
+IGNORED_EXTENSIONS = ['css', 'html', 'js', 'log', 'old', 'out',
+                      'packages', 'snapshot', 'zip']
 
 LOCAL_PACKAGES = {
   'analyzer': '//third_party/dart/pkg/analyzer',
