@@ -8,7 +8,7 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := driver
 
-MODULE_SRCS := $(LOCAL_DIR)/ramdisk.c
+MODULE_SRCS := $(LOCAL_DIR)/ramdisk.cpp
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \

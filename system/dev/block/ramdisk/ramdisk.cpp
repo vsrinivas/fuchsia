@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <limits>
+
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
@@ -19,6 +21,7 @@
 #include <string.h>
 #include <sys/param.h>
 #include <threads.h>
+#include <zircon/assert.h>
 #include <zircon/boot/image.h>
 #include <zircon/device/block.h>
 #include <zircon/listnode.h>
@@ -69,7 +72,7 @@ static int worker_thread(void* arg) {
     ramdisk_device_t* dev = (ramdisk_device_t*)arg;
     ramdisk_txn_t* txn = NULL;
     bool dead, asleep, defer;
-    size_t blocks = 0;
+    uint64_t blocks = 0;
 
     for (;;) {
         for (;;) {
@@ -105,7 +108,7 @@ static int worker_thread(void* arg) {
             }
         }
 
-        size_t txn_blocks = txn->op.rw.length;
+        uint64_t txn_blocks = txn->op.rw.length;
         if (txn->op.command == BLOCK_OP_READ || blocks == 0 || blocks > txn_blocks) {
             // If the ramdisk is not configured to sleep after x blocks, or the number of blocks in
             // this transaction does not exceed the sa_blk_count, or we are performing a read
@@ -116,7 +119,7 @@ static int worker_thread(void* arg) {
         size_t length = blocks * dev->blk_size;
         size_t dev_offset = txn->op.rw.offset_dev * dev->blk_size;
         size_t vmo_offset = txn->op.rw.offset_vmo * dev->blk_size;
-        void* addr = (void*) dev->mapped_addr + dev_offset;
+        void* addr = reinterpret_cast<void*>(dev->mapped_addr + dev_offset);
 
         if (length > MAX_TRANSFER_SIZE) {
             status = ZX_ERR_OUT_OF_RANGE;
@@ -142,7 +145,9 @@ static int worker_thread(void* arg) {
                 // If we are deferring after this block count, update the transaction to
                 // reflect the blocks that have already been written, and add it to the
                 // deferred queue.
-                txn->op.rw.length -= blocks;
+                ZX_DEBUG_ASSERT_MSG(blocks <= std::numeric_limits<uint32_t>::max(),
+                                    "Block count overflow");
+                txn->op.rw.length -= static_cast<uint32_t>(blocks);
                 txn->op.rw.offset_vmo += blocks;
                 txn->op.rw.offset_dev += blocks;
 
@@ -206,9 +211,9 @@ static uint64_t sizebytes(ramdisk_device_t* rdev) {
 }
 
 static void ramdisk_get_info(void* ctx, block_info_t* info) {
-    ramdisk_device_t* ramdev = ctx;
+    ramdisk_device_t* ramdev = static_cast<ramdisk_device_t*>(ctx);
     memset(info, 0, sizeof(*info));
-    info->block_size = ramdev->blk_size;
+    info->block_size = static_cast<uint32_t>(ramdev->blk_size);
     info->block_count = ramdev->blk_count;
     // Arbitrarily set, but matches the SATA driver for testing
     info->max_transfer_size = MAX_TRANSFER_SIZE;
@@ -218,7 +223,7 @@ static void ramdisk_get_info(void* ctx, block_info_t* info) {
 // implement device protocol:
 
 static void ramdisk_unbind(void* ctx) {
-    ramdisk_device_t* ramdev = ctx;
+    ramdisk_device_t* ramdev = static_cast<ramdisk_device_t*>(ctx);
     mtx_lock(&ramdev->lock);
     ramdev->dead = true;
     mtx_unlock(&ramdev->lock);
@@ -228,7 +233,7 @@ static void ramdisk_unbind(void* ctx) {
 
 static zx_status_t ramdisk_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmd_len,
                                  void* reply, size_t max, size_t* out_actual) {
-    ramdisk_device_t* ramdev = ctx;
+    ramdisk_device_t* ramdev = static_cast<ramdisk_device_t*>(ctx);
     if (ramdev->dead) {
         return ZX_ERR_BAD_STATE;
     }
@@ -289,7 +294,7 @@ static zx_status_t ramdisk_ioctl(void* ctx, uint32_t op, const void* cmd, size_t
 
 static void ramdisk_queue(void* ctx, block_op_t* bop, block_impl_queue_callback completion_cb,
                           void* cookie) {
-    ramdisk_device_t* ramdev = ctx;
+    ramdisk_device_t* ramdev = static_cast<ramdisk_device_t*>(ctx);
     ramdisk_txn_t* txn = containerof(bop, ramdisk_txn_t, op);
     bool dead;
     bool read = false;
@@ -336,11 +341,11 @@ static void ramdisk_query(void* ctx, block_info_t* bi, size_t* bopsz) {
 }
 
 static zx_off_t ramdisk_getsize(void* ctx) {
-    return sizebytes(ctx);
+    return sizebytes(static_cast<ramdisk_device_t*>(ctx));
 }
 
 static void ramdisk_release(void* ctx) {
-    ramdisk_device_t* ramdev = ctx;
+    ramdisk_device_t* ramdev = static_cast<ramdisk_device_t*>(ctx);
 
     // Wake up the worker thread, in case it is sleeping
     mtx_lock(&ramdev->lock);
@@ -369,7 +374,7 @@ static zx_status_t ramdisk_get_guid(void* ctx, guidtype_t guidtype, guid_t* out_
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    ramdisk_device_t* device = ctx;
+    ramdisk_device_t* device = static_cast<ramdisk_device_t*>(ctx);
     memcpy(out_guid, device->type_guid, ZBI_PARTITION_GUID_LEN);
     return ZX_OK;
 }
@@ -381,7 +386,7 @@ static zx_status_t ramdisk_get_name(void* ctx, char* out_name, size_t capacity) 
         return ZX_ERR_BUFFER_TOO_SMALL;
     }
 
-    ramdisk_device_t* device = ctx;
+    ramdisk_device_t* device = static_cast<ramdisk_device_t*>(ctx);
     strlcpy(out_name, device->name, ZBI_PARTITION_NAME_LEN);
     return ZX_OK;
 }
@@ -392,16 +397,16 @@ static block_partition_protocol_ops_t partition_ops = {
 };
 
 static zx_status_t ramdisk_get_protocol(void* ctx, uint32_t proto_id, void* out) {
-    ramdisk_device_t* device = ctx;
+    ramdisk_device_t* device = static_cast<ramdisk_device_t*>(ctx);
     switch (proto_id) {
     case ZX_PROTOCOL_BLOCK_IMPL: {
-        block_impl_protocol_t* protocol = out;
+        block_impl_protocol_t* protocol = static_cast<block_impl_protocol_t*>(out);
         protocol->ctx = device;
         protocol->ops = &block_ops;
         return ZX_OK;
     }
     case ZX_PROTOCOL_BLOCK_PARTITION: {
-        block_partition_protocol_t* protocol = out;
+        block_partition_protocol_t* protocol = static_cast<block_partition_protocol_t*>(out);
         protocol->ctx = device;
         protocol->ops = &partition_ops;
         return ZX_OK;
@@ -411,14 +416,16 @@ static zx_status_t ramdisk_get_protocol(void* ctx, uint32_t proto_id, void* out)
     }
 }
 
-static zx_protocol_device_t ramdisk_instance_proto = {
-    .version = DEVICE_OPS_VERSION,
-    .get_protocol = ramdisk_get_protocol,
-    .ioctl = ramdisk_ioctl,
-    .get_size = ramdisk_getsize,
-    .unbind = ramdisk_unbind,
-    .release = ramdisk_release,
-};
+static zx_protocol_device_t ramdisk_instance_proto = []() {
+    zx_protocol_device_t protocol = {};
+    protocol.version = DEVICE_OPS_VERSION;
+    protocol.get_protocol = ramdisk_get_protocol;
+    protocol.unbind = ramdisk_unbind;
+    protocol.release = ramdisk_release;
+    protocol.get_size = ramdisk_getsize;
+    protocol.ioctl = ramdisk_ioctl;
+    return protocol;
+}();
 
 // implement device protocol:
 
@@ -430,11 +437,14 @@ static zx_status_t ramctl_config(ramctl_device_t* ramctl, zx_handle_t vmo,
                                  uint8_t* type_guid, void* reply, size_t max,
                                  size_t* out_actual) {
     zx_status_t status = ZX_ERR_INVALID_ARGS;
+    char* name = static_cast<char*>(reply);
+    ramdisk_device_t* ramdev = nullptr;
+    device_add_args_t args;
     if (max < 32) {
         goto fail;
     }
 
-    ramdisk_device_t* ramdev = calloc(1, sizeof(ramdisk_device_t));
+    ramdev = static_cast<ramdisk_device_t*>(calloc(1, sizeof(ramdisk_device_t)));
     if (!ramdev) {
         status = ZX_ERR_NO_MEMORY;
         goto fail;
@@ -464,21 +474,23 @@ static zx_status_t ramctl_config(ramctl_device_t* ramctl, zx_handle_t vmo,
         goto fail_unmap;
     }
 
-    device_add_args_t args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = ramdev->name,
-        .ctx = ramdev,
-        .ops = &ramdisk_instance_proto,
-        .proto_id = ZX_PROTOCOL_BLOCK_IMPL,
-        .proto_ops = &block_ops,
-    };
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.name = ramdev->name;
+    args.ctx = ramdev;
+    args.ops = &ramdisk_instance_proto;
+    args.props = nullptr;
+    args.prop_count = 0;
+    args.proto_id = ZX_PROTOCOL_BLOCK_IMPL;
+    args.proto_ops = &block_ops;
+    args.proxy_args = nullptr;
+    args.flags = 0;
 
     if ((status = device_add(ramctl->zxdev, &args, &ramdev->zxdev)) != ZX_OK) {
         ramdisk_release(ramdev);
         return status;
     }
-    strcpy(reply, ramdev->name);
-    *out_actual = strlen(reply);
+    strcpy(name, ramdev->name);
+    *out_actual = strlen(name);
     return ZX_OK;
 
 fail_unmap:
@@ -495,7 +507,7 @@ fail:
 
 static zx_status_t ramctl_ioctl(void* ctx, uint32_t op, const void* cmd,
                                 size_t cmdlen, void* reply, size_t max, size_t* out_actual) {
-    ramctl_device_t* ramctl = ctx;
+    ramctl_device_t* ramctl = static_cast<ramctl_device_t*>(ctx);
 
     switch (op) {
     case IOCTL_RAMDISK_CONFIG: {
@@ -547,31 +559,34 @@ static zx_status_t ramctl_ioctl(void* ctx, uint32_t op, const void* cmd,
     }
 }
 
-static zx_protocol_device_t ramdisk_ctl_proto = {
-    .version = DEVICE_OPS_VERSION,
-    .ioctl = ramctl_ioctl,
-};
+static zx_protocol_device_t ramdisk_ctl_proto = []() {
+    zx_protocol_device_t protocol = {};
+    protocol.version = DEVICE_OPS_VERSION;
+    protocol.ioctl = ramctl_ioctl;
+    return protocol;
+}();
 
 static zx_status_t ramdisk_driver_bind(void* ctx, zx_device_t* parent) {
-    ramctl_device_t* ramctl = calloc(1, sizeof(ramctl_device_t));
+    ramctl_device_t* ramctl = static_cast<ramctl_device_t*>(calloc(1, sizeof(ramctl_device_t)));
     if (ramctl == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    device_add_args_t args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "ramctl",
-        .ops = &ramdisk_ctl_proto,
-        .ctx = ramctl,
-    };
+    device_add_args_t args = {};
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.name = "ramctl";
+    args.ops = &ramdisk_ctl_proto;
+    args.ctx = ramctl;
 
     return device_add(parent, &args, &ramctl->zxdev);
 }
 
-static zx_driver_ops_t ramdisk_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .bind = ramdisk_driver_bind,
-};
+static zx_driver_ops_t ramdisk_driver_ops = []() {
+    zx_driver_ops_t ops = {};
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = ramdisk_driver_bind;
+    return ops;
+}();
 
 ZIRCON_DRIVER_BEGIN(ramdisk, ramdisk_driver_ops, "zircon", "0.1", 1)
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_MISC_PARENT),
