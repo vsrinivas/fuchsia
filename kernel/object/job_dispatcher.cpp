@@ -150,12 +150,15 @@ JobDispatcher::JobDispatcher(uint32_t /*flags*/,
       kill_on_oom_(false),
       policy_(policy) {
 
+    // Maintain consistent lock ordering by grabbing the all-jobs lock before
+    // any individual JobDispatcher lock.
+    Guard<fbl::Mutex> guard{AllJobsLock::Get()};
+
     // Set the initial job order, and try to make older jobs closer to
     // the root (both hierarchically and temporally) show up earlier
     // in enumeration.
     if (parent_ == nullptr) {
         // Root job is the most important.
-        Guard<fbl::Mutex> guard{AllJobsLock::Get()};
         all_jobs_list_.push_back(this);
     } else {
         Guard<fbl::Mutex> parent_guard{parent_->get_lock()};
@@ -180,7 +183,6 @@ JobDispatcher::JobDispatcher(uint32_t /*flags*/,
         }
 
         // Make ourselves appear after our next-youngest neighbor.
-        Guard<fbl::Mutex> guard{AllJobsLock::Get()};
         all_jobs_list_.insert(all_jobs_list_.make_iterator(*neighbor), this);
     }
 }
