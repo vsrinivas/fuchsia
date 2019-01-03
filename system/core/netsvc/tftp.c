@@ -512,6 +512,13 @@ void tftp_timeout_expired(void) {
     }
 }
 
+static void report_metrics(void) {
+    char buf[256];
+    if (session && tftp_get_metrics(session, buf, sizeof(buf)) == TFTP_NO_ERROR) {
+        printf("netsvc: metrics: %s\n", buf);
+    }
+}
+
 void tftp_recv(void* data, size_t len,
                const ip6_addr_t* daddr, uint16_t dport,
                const ip6_addr_t* saddr, uint16_t sport) {
@@ -546,6 +553,7 @@ void tftp_recv(void* data, size_t len,
         printf("netsvc: tftp %s of file %s completed\n",
                file_info.is_write ? "write" : "read",
                file_info.filename);
+        report_metrics();
         break;
     case TFTP_ERR_SHOULD_WAIT:
         break;
@@ -553,6 +561,7 @@ void tftp_recv(void* data, size_t len,
         printf("netsvc: %s\n", err_msg);
         netfile_abort_write();
         file_close(&file_info);
+        report_metrics();
         break;
     }
     end_connection();

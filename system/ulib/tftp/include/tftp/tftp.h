@@ -322,6 +322,16 @@ tftp_status tftp_handle_msg(tftp_session* session,
                             void* file_cookie,
                             tftp_handler_opts* opts);
 
+// Get the current metrics.
+// Fills the buffer with a JSON formatted text string containing metrics.
+// Returns TFTP_ERR_BUFFER_TOO_SMALL if buffer is too small.
+tftp_status tftp_get_metrics(tftp_session* session,
+                             char* buf,
+                             size_t buf_sz);
+
+// Clear metric counters.
+void tftp_clear_metrics(tftp_session* session);
+
 // TODO: tftp_error() for client errors that need to be sent to the remote host
 
 #ifdef __cplusplus

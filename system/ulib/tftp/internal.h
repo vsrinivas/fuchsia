@@ -181,6 +181,17 @@ struct tftp_session_t {
     // Callbacks
     tftp_file_interface file_interface;
     tftp_transport_interface transport_interface;
+
+    // Metrics
+    struct {
+        uint32_t inorder_blocks;
+        uint32_t outoforder_blocks;
+        uint32_t acks_sent;
+        uint32_t nacks_sent;
+        uint32_t sas_events;        // Sorcerer's Apprentice Syndrome
+        uint32_t timeouts;
+        uint64_t inorder_bytes;
+    } metrics;
 };
 
 // Generates a read or write request to send to a tftp server. |filename| is
