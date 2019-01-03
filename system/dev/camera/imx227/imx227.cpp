@@ -50,12 +50,12 @@ zx_status_t Imx227Device::InitPdev(zx_device_t* parent) {
     }
 
     // I2c for communicating with the sensor.
-    if (i2c_.is_valid()) {
+    if (!i2c_.is_valid()) {
         return ZX_ERR_NO_RESOURCES;
     }
 
     // Clk for gating clocks for sensor.
-    if (clk_.is_valid()) {
+    if (!clk_.is_valid()) {
         return ZX_ERR_NO_RESOURCES;
     }
 
@@ -409,8 +409,22 @@ void Imx227Device::DdkRelease() {
     delete this;
 }
 
-} // namespace camera
-
-extern "C" zx_status_t imx227_bind(void* ctx, zx_device_t* device) {
+zx_status_t imx227_bind(void* ctx, zx_device_t* device) {
     return camera::Imx227Device::Create(device);
 }
+
+static zx_driver_ops_t driver_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = imx227_bind;
+    return ops;
+}();
+
+} // namespace camera
+
+// clang-format off
+ZIRCON_DRIVER_BEGIN(imx227, camera::driver_ops, "imx227", "0.1", 3)
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_SONY),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_SONY_IMX227),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_CAMERA_SENSOR),
+ZIRCON_DRIVER_END(imx227)

@@ -9,7 +9,6 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS := \
-    $(LOCAL_DIR)/binding.c \
     $(LOCAL_DIR)/imx227.cpp \
 
 MODULE_HEADER_DEPS := \

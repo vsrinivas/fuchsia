@@ -39,6 +39,10 @@ public:
         return PDevProtocolClient::GetInterrupt(index, 0, out);
     }
 
+    zx_status_t GetBti(uint32_t index, zx::bti* out) {
+        return PDevProtocolClient::GetBti(index, out);
+    }
+
     std::optional<I2cChannel> GetI2c(uint32_t index);
     std::optional<GpioProtocolClient> GetGpio(uint32_t index);
 };

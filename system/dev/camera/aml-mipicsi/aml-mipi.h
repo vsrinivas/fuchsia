@@ -3,63 +3,51 @@
 // found in the LICENSE file.
 
 #include <atomic>
+#include <ddk/metadata/camera.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/mipicsi.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/mmio.h>
+#include <ddktl/pdev.h>
+#include <ddktl/protocol/mipicsi.h>
 #include <fbl/unique_ptr.h>
+
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/zx/interrupt.h>
 #include <threads.h>
 
 namespace camera {
 
-class AmlMipiDevice {
+class AmlMipiDevice;
+using DeviceType = ddk::Device<AmlMipiDevice, ddk::Unbindable>;
+
+class AmlMipiDevice : public DeviceType,
+                      public ddk::MipiCsiProtocol<AmlMipiDevice, ddk::base_protocol> {
 public:
-    static zx_status_t Create(zx_device_t* parent);
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlMipiDevice);
-    AmlMipiDevice(){};
+
+    explicit AmlMipiDevice(zx_device_t* parent)
+        : DeviceType(parent), pdev_(parent) {}
+
+    static zx_status_t Create(zx_device_t* parent);
+
     ~AmlMipiDevice();
-    zx_device_t* device_;
 
     // Methods required by the ddk.
-    // TODO(braval) - Use DDKTL to add child devices when
-    //                support is added (ZX-2793)
-    void DdkRelease(void* ctx);
-    void DdkUnbind(void* ctx);
-    void ShutDown();
+    void DdkRelease();
+    void DdkUnbind();
 
     // Methods for ZX_PROTOCOL_MIPI_CSI.
-    static zx_status_t MipiCsiInit(void* ctx,
-                                   const mipi_info_t* mipi_info,
-                                   const mipi_adap_info_t* adap_info);
-    static zx_status_t MipiCsiDeInit(void* ctx);
+    zx_status_t MipiCsiInit(const mipi_info_t* mipi_info,
+                            const mipi_adap_info_t* adap_info);
+    zx_status_t MipiCsiDeInit();
 
 private:
-    fbl::unique_ptr<ddk::MmioBuffer> csi_phy0_mmio_;
-    fbl::unique_ptr<ddk::MmioBuffer> aphy0_mmio_;
-    fbl::unique_ptr<ddk::MmioBuffer> csi_host0_mmio_;
-    fbl::unique_ptr<ddk::MmioBuffer> mipi_adap_mmio_;
-    fbl::unique_ptr<ddk::MmioBuffer> hiu_mmio_;
-    fbl::unique_ptr<ddk::MmioBuffer> power_mmio_;
-    fbl::unique_ptr<ddk::MmioBuffer> memory_pd_mmio_;
-    fbl::unique_ptr<ddk::MmioBuffer> reset_mmio_;
-
-    pdev_protocol_t pdev_;
-
-    zx::bti bti_;
-    zx::interrupt adap_irq_;
-    std::atomic<bool> running_;
-    thrd_t irq_thread_;
-
-    zx::vmo ring_buffer_vmo_;
-    fzl::PinnedVmo pinned_ring_buffer_;
-
     zx_status_t InitBuffer(const mipi_adap_info_t* info, size_t size);
     zx_status_t InitPdev(zx_device_t* parent);
+    zx_status_t Bind(camera_sensor_t* sensor_info);
     uint32_t AdapGetDepth(const mipi_adap_info_t* info);
     int AdapterIrqHandler();
 
@@ -101,6 +89,25 @@ private:
     void DumpAlignRegs();
     void DumpPixelRegs();
     void DumpMiscRegs();
+
+    std::optional<ddk::MmioBuffer> csi_phy0_mmio_;
+    std::optional<ddk::MmioBuffer> aphy0_mmio_;
+    std::optional<ddk::MmioBuffer> csi_host0_mmio_;
+    std::optional<ddk::MmioBuffer> mipi_adap_mmio_;
+    std::optional<ddk::MmioBuffer> hiu_mmio_;
+    std::optional<ddk::MmioBuffer> power_mmio_;
+    std::optional<ddk::MmioBuffer> memory_pd_mmio_;
+    std::optional<ddk::MmioBuffer> reset_mmio_;
+
+    ddk::PDev pdev_;
+
+    zx::bti bti_;
+    zx::interrupt adap_irq_;
+    std::atomic<bool> running_;
+    thrd_t irq_thread_;
+
+    zx::vmo ring_buffer_vmo_;
+    fzl::PinnedVmo pinned_ring_buffer_;
 };
 
 } // namespace camera

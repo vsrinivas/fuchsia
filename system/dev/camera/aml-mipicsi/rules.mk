@@ -9,7 +9,6 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS := \
-    $(LOCAL_DIR)/binding.c \
     $(LOCAL_DIR)/aml-mipi.cpp \
     $(LOCAL_DIR)/aml-mipi-adap.cpp \
     $(LOCAL_DIR)/aml-mipi-debug.cpp \
@@ -35,6 +34,8 @@ MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-platform-bus \
     system/banjo/ddk-protocol-platform-device \
     system/banjo/ddk-protocol-mipicsi \
+    system/banjo/ddk-protocol-i2c \
+    system/banjo/ddk-protocol-gpio \
 
 include make/module.mk
 
