@@ -23,22 +23,8 @@ static inline zxio_socket_t* fdio_get_zxio_socket(fdio_t* io) {
     return (zxio_socket_t*)fdio_get_zxio(io);
 }
 
-static void update_blocking_flag(fdio_t* io) {
-    zxio_socket_t* sio = fdio_get_zxio_socket(io);
-    // Ideally, we would keep the blocking state of the embedded
-    // |zxs_socket_t| up to date as the IOFLAG_NONBLOCK state of the ioflag
-    // changes, but that would involve changing generic code in unistd.c.
-    // For now, we update the |zxs_socket_t| flag state lazily here.
-    if (io->ioflag & IOFLAG_NONBLOCK) {
-        sio->socket.flags &= ~ZXS_FLAG_BLOCKING;
-    } else {
-        sio->socket.flags |= ZXS_FLAG_BLOCKING;
-    }
-}
-
 static ssize_t zxsio_read(fdio_t* io, void* data, size_t len) {
     zxio_socket_t* sio = fdio_get_zxio_socket(io);
-    update_blocking_flag(io);
     size_t actual = 0u;
     zx_status_t status = zxs_recv(&sio->socket, data, len, &actual);
     return status != ZX_OK ? status : (ssize_t)actual;
@@ -46,7 +32,6 @@ static ssize_t zxsio_read(fdio_t* io, void* data, size_t len) {
 
 static ssize_t zxsio_write(fdio_t* io, const void* data, size_t len) {
     zxio_socket_t* sio = fdio_get_zxio_socket(io);
-    update_blocking_flag(io);
     size_t actual = 0u;
     zx_status_t status = zxs_send(&sio->socket, data, len, &actual);
     return status != ZX_OK ? status : (ssize_t)actual;
@@ -56,7 +41,6 @@ static ssize_t zxsio_recvfrom(fdio_t* io, void* data, size_t len, int flags,
                               struct sockaddr* restrict addr,
                               socklen_t* restrict addrlen) {
     zxio_socket_t* sio = fdio_get_zxio_socket(io);
-    update_blocking_flag(io);
     size_t addr_actual = 0u;
     size_t actual = 0u;
     zx_status_t status = zxs_recvfrom(&sio->socket, addr, addrlen != NULL ? *addrlen : 0u,
@@ -73,7 +57,6 @@ static ssize_t zxsio_recvfrom(fdio_t* io, void* data, size_t len, int flags,
 static ssize_t zxsio_sendto(fdio_t* io, const void* data, size_t len, int flags,
                             const struct sockaddr* addr, socklen_t addrlen) {
     zxio_socket_t* sio = fdio_get_zxio_socket(io);
-    update_blocking_flag(io);
     size_t actual = 0u;
     zx_status_t status = zxs_sendto(&sio->socket, addr, addrlen, data, len, &actual);
     return status != ZX_OK ? status : (ssize_t)actual;
@@ -91,7 +74,6 @@ static ssize_t zxsio_recvmsg_stream(fdio_t* io, struct msghdr* msg, int flags) {
     // (this is a consistent behavior with other OS implementations for TCP protocol)
 
     zxio_socket_t* sio = fdio_get_zxio_socket(io);
-    update_blocking_flag(io);
     size_t actual = 0u;
     zx_status_t status = zxs_recvmsg(&sio->socket, msg, &actual);
     return status != ZX_OK ? status : (ssize_t)actual;
@@ -114,7 +96,6 @@ static ssize_t zxsio_sendmsg_stream(fdio_t* io, const struct msghdr* msg, int fl
     }
 
     zxio_socket_t* sio = fdio_get_zxio_socket(io);
-    update_blocking_flag(io);
     size_t actual = 0u;
     zx_status_t status = zxs_sendmsg(&sio->socket, msg, &actual);
     return status != ZX_OK ? status : (ssize_t)actual;
@@ -247,7 +228,6 @@ static ssize_t zxsio_recvmsg_dgram(fdio_t* io, struct msghdr* msg, int flags) {
         return ZX_ERR_NOT_SUPPORTED;
     }
     zxio_socket_t* sio = fdio_get_zxio_socket(io);
-    update_blocking_flag(io);
     size_t actual = 0u;
     zx_status_t status = zxs_recvmsg(&sio->socket, msg, &actual);
     return status != ZX_OK ? status : (ssize_t)actual;
@@ -266,7 +246,6 @@ static ssize_t zxsio_sendmsg_dgram(fdio_t* io, const struct msghdr* msg, int fla
         }
     }
     zxio_socket_t* sio = fdio_get_zxio_socket(io);
-    update_blocking_flag(io);
     size_t actual = 0u;
     zx_status_t status = zxs_sendmsg(&sio->socket, msg, &actual);
     return status != ZX_OK ? status : (ssize_t)actual;
@@ -307,7 +286,6 @@ static void zxsio_wait_end_dgram(fdio_t* io, zx_signals_t signals, uint32_t* _ev
 
 static zx_status_t zxsio_close(fdio_t* io) {
     zxio_socket_t* sio = fdio_get_zxio_socket(io);
-    update_blocking_flag(io);
     return zxs_close(&sio->socket);
 }
 
@@ -450,7 +428,6 @@ fdio_t* fd_to_socket(int fd, const zxs_socket_t** out_socket) {
     if (io->ops == &fdio_socket_stream_ops
         || io->ops == &fdio_socket_dgram_ops) {
         zxio_socket_t* sio = fdio_get_zxio_socket(io);
-    update_blocking_flag(io);
         *out_socket = &sio->socket;
         return io;
     }

@@ -359,7 +359,6 @@ static bool listen_accept_test(void) {
     if (!SetUp(&fake))
         return false;
     zxs_socket_t* socket = &fake.socket;
-    socket->flags = ZXS_FLAG_BLOCKING;
 
     ASSERT_EQ(ZX_OK, zxs_listen(socket, 5));
 
@@ -403,7 +402,6 @@ static bool ioctl_test(void) {
     if (!SetUp(&fake))
         return false;
     zxs_socket_t* socket = &fake.socket;
-    socket->flags = ZXS_FLAG_BLOCKING;
 
     const char* in_buffer = "xyz";
     char out_buffer[16];

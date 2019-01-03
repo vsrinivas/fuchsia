@@ -22,6 +22,7 @@
 #include <lib/fdio/debug.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/util.h>
+#include <lib/zxs/protocol.h>
 #include <lib/zxs/zxs.h>
 
 #include "private.h"
@@ -127,13 +128,33 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
     }
 
     zx_status_t status = zxs_connect(socket, addr, len);
+
     if (status == ZX_ERR_SHOULD_WAIT) {
-        io->ioflag |= IOFLAG_SOCKET_CONNECTING;
-        fdio_release(io);
-        return ERRNO(EINPROGRESS);
-    } else if (status == ZX_OK) {
+        if (io->ioflag & IOFLAG_NONBLOCK) {
+            io->ioflag |= IOFLAG_SOCKET_CONNECTING;
+            fdio_release(io);
+            return ERRNO(EINPROGRESS);
+        }
+
+        zx_signals_t observed = ZX_SIGNAL_NONE;
+        status = zx_object_wait_one(socket->socket, ZXSIO_SIGNAL_OUTGOING,
+                                    ZX_TIME_INFINITE, &observed);
+        if (status != ZX_OK) {
+            fdio_release(io);
+            return ERRNO(EIO);
+        }
+
+        zx_status_t remote_status = ZX_OK;
+        size_t actual = 0u;
+        status = zxs_getsockopt(socket, SOL_SOCKET, SO_ERROR, &remote_status,
+                                sizeof(remote_status), &actual);
+        status = status != ZX_OK ? ZX_ERR_IO : remote_status;
+    }
+
+    if (status == ZX_OK) {
         io->ioflag |= IOFLAG_SOCKET_CONNECTED;
     }
+
     fdio_release(io);
     return STATUS(status);
 }

@@ -20,12 +20,8 @@ struct sockaddr;
 // socket object.
 typedef uint32_t zxs_flags_t;
 
-// If set, operations wait for the remote party to provide the necessary data or
-// objects to complete the operation.
-#define ZXS_FLAG_BLOCKING ((zxs_flags_t)1u << 0)
-
 // If set, the socket is used to transport data in atomic chunks.
-#define ZXS_FLAG_DATAGRAM ((zxs_flags_t)1u << 1)
+#define ZXS_FLAG_DATAGRAM ((zxs_flags_t)1u << 0)
 
 // A socket.
 typedef struct zxs_socket {
@@ -92,6 +88,11 @@ zx_status_t zxs_close(const zxs_socket_t* socket);
 //
 // If |socket| is a stream socket, then this function attempts to establish a
 // connection to |addr|.
+//
+// This function does not block. If this function returns |ZX_ERR_SHOULD_WAIT|,
+// use |ZXSIO_SIGNAL_OUTGOING| on the underlying |zx_handle_t| to wait for the
+// operation to complete. The resulting status code can be obtained from the
+// server using |zxs_getsockopt| with |SOL_SOCKET| and |SO_ERROR|.
 zx_status_t zxs_connect(const zxs_socket_t* socket, const struct sockaddr* addr,
                         size_t addr_length);
 
@@ -114,6 +115,10 @@ zx_status_t zxs_listen(const zxs_socket_t* socket, uint32_t backlog);
 // |zxs_listen|.
 //
 // The |addr| buffer is filled with the address of peer socket.
+//
+// This function does not block. If this function returns |ZX_ERR_SHOULD_WAIT|,
+// use |ZX_SOCKET_ACCEPT| on the underlying |zx_handle_t| to wait for a socket
+// to accept.
 zx_status_t zxs_accept(const zxs_socket_t* socket, struct sockaddr* addr,
                        size_t addr_capacity, size_t* out_addr_actual,
                        zxs_socket_t* out_socket);
