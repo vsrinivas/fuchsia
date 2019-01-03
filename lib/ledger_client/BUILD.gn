@@ -7,6 +7,7 @@ group("ledger_client") {
     ":constants",
     ":operations",
     ":page_client",
+    ":promise",
     ":types",
   ]
 }
@@ -54,6 +55,17 @@ source_set("page_client") {
     "//peridot/lib/fidl:clone",
     "//peridot/public/fidl/fuchsia.ledger",
     "//peridot/public/lib/async/cpp:operation",
+  ]
+}
+
+source_set("promise") {
+  sources = [
+    "promise.h",
+  ]
+
+  public_deps = [
+    "//peridot/lib/fidl:array_to_string",
+    "//peridot/public/fidl/fuchsia.ledger",
   ]
 }
 
