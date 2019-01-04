@@ -6,6 +6,7 @@
 
 #include <ddk/debug.h>
 #include <fbl/auto_lock.h>
+#include <fuchsia/hardware/block/c/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <zircon/assert.h>
 
@@ -14,6 +15,16 @@
 namespace {
 
 constexpr char kDeviceName[] = "ftl";
+
+zx_status_t Format(void* ctx, fidl_txn_t* txn)  {
+    ftl::BlockDevice* device = reinterpret_cast<ftl::BlockDevice*>(ctx);
+    zx_status_t status = device->Format();
+    return fuchsia_hardware_block_FtlFormat_reply(txn, status);
+}
+
+fuchsia_hardware_block_Ftl_ops_t fidl_ops = {
+    .Format = Format
+};
 
 }  // namespace
 
@@ -132,6 +143,10 @@ zx_status_t BlockDevice::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len
     }
 }
 
+zx_status_t BlockDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+    return fuchsia_hardware_block_Ftl_dispatch(this, txn, msg, &fidl_ops);
+}
+
 void BlockDevice::BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out) {
     zxlogf(TRACE, "FTL: Query\n");
     memset(info_out, 0, sizeof(*info_out));
@@ -177,6 +192,14 @@ bool BlockDevice::OnVolumeAdded(uint32_t page_size, uint32_t num_pages) {
     params_ = {page_size, num_pages};
     zxlogf(INFO, "FTL: %d pages of %d bytes\n", num_pages, page_size);
     return true;
+}
+
+zx_status_t BlockDevice::Format() {
+    zx_status_t status = volume_->Format();
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "FTL: format failed\n");
+    }
+    return status;
 }
 
 bool BlockDevice::InitFtl() {

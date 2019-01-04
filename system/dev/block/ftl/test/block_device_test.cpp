@@ -38,6 +38,7 @@ class FakeVolume : public ftl::Volume {
 
     bool written() const { return written_; }
     bool flushed() const { return flushed_; }
+    bool formatted() const { return formatted_; }
     uint32_t first_page() const { return first_page_; }
     int num_pages() const { return num_pages_; }
 
@@ -62,7 +63,10 @@ class FakeVolume : public ftl::Volume {
         }
         return ZX_OK;
     }
-    zx_status_t Format() final { return ZX_OK; }
+    zx_status_t Format() final {
+        formatted_ = true;
+        return ZX_OK;
+    }
     zx_status_t Mount() final { return ZX_OK; }
     zx_status_t Unmount() final {
         flushed_ = true;
@@ -79,6 +83,7 @@ class FakeVolume : public ftl::Volume {
     int num_pages_ = 0;
     bool written_ = false;
     bool flushed_ = false;
+    bool formatted_ = false;
 };
 
 bool TrivialLifetimeTest() {
@@ -441,6 +446,17 @@ bool QueueMultipleTest() {
     END_TEST;
 }
 
+bool FormatTest() {
+    BEGIN_TEST;
+    BlockDeviceTest test;
+    ftl::BlockDevice* device = test.device();
+    ASSERT_TRUE(device);
+
+    EXPECT_EQ(ZX_OK, device->Format());
+    EXPECT_TRUE(test.volume()->formatted());
+    END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(BlockDeviceTests)
@@ -455,4 +471,5 @@ RUN_TEST_SMALL(QueueOneTest)
 RUN_TEST_SMALL(ReadWriteTest)
 RUN_TEST_SMALL(FlushTest)
 RUN_TEST_SMALL(QueueMultipleTest)
+RUN_TEST_SMALL(FormatTest)
 END_TEST_CASE(BlockDeviceTests)

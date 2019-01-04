@@ -37,7 +37,8 @@ struct BlockParams {
 struct FtlOp;
 
 class BlockDevice;
-using DeviceType = ddk::Device<BlockDevice, ddk::GetSizable, ddk::Unbindable, ddk::Ioctlable>;
+using DeviceType = ddk::Device<BlockDevice, ddk::GetSizable, ddk::Unbindable,
+                               ddk::Ioctlable, ddk::Messageable>;
 
 // Provides the bulk of the functionality for a FTL-backed block device.
 class BlockDevice : public DeviceType, public ddk::BlockImplProtocol<BlockDevice>,
@@ -57,6 +58,7 @@ class BlockDevice : public DeviceType, public ddk::BlockImplProtocol<BlockDevice
     zx_off_t DdkGetSize() { return params_.GetSize(); }
     zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
                          void* out_buf, size_t out_len, size_t* out_actual);
+    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
     // Block protocol implementation.
     void BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out);
@@ -65,6 +67,9 @@ class BlockDevice : public DeviceType, public ddk::BlockImplProtocol<BlockDevice
 
     // FtlInstance interface.
     bool OnVolumeAdded(uint32_t page_size, uint32_t num_pages) final;
+
+    // Issues a command to format the FTL (aka, delete all data).
+    zx_status_t Format();
 
     void SetVolumeForTest(std::unique_ptr<ftl::Volume> volume) {
         volume_ = std::move(volume);

@@ -34,6 +34,7 @@ MODULE_LIBS := \
     system/ulib/zircon \
 
 MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-hardware-block \
     system/fidl/fuchsia-hardware-nand \
 
 MODULE_BANJO_LIBS := \
@@ -86,6 +87,7 @@ MODULE_LIBS := \
     system/ulib/zircon \
 
 MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-hardware-block \
     system/fidl/fuchsia-hardware-nand \
 
 MODULE_BANJO_LIBS := \
