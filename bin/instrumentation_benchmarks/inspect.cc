@@ -53,6 +53,26 @@ class PropertyItem : public component::ExposedObject {
 };
 
 // Measure the time taken to increment an IntMetric.
+bool TestCreationAndDestruction(perftest::RepeatState* state) {
+  state->DeclareStep("CreateMetric");
+  state->DeclareStep("DestroyMetric");
+  state->DeclareStep("CreateProperty");
+  state->DeclareStep("DestroyProperty");
+  while (state->KeepRunning()) {
+    {
+      NumericItem item;
+      state->NextStep();
+    }
+    state->NextStep();
+    {
+      PropertyItem item;
+      state->NextStep();
+    }
+  }
+  return true;
+}
+
+// Measure the time taken to increment an IntMetric.
 bool TestIncrement(perftest::RepeatState* state) {
   NumericItem item;
   while (state->KeepRunning()) {
@@ -92,8 +112,43 @@ bool TestVector(perftest::RepeatState* state, int size) {
   return true;
 }
 
+bool TestParentage(perftest::RepeatState* state) {
+  NumericItem parent;
+  NumericItem child1;
+  NumericItem child2;
+  NumericItem child3;
+  state->DeclareStep("AddFirst");
+  state->DeclareStep("AddSecond");
+  state->DeclareStep("AddFirstAgain");
+  state->DeclareStep("AddThird");
+  state->DeclareStep("RemoveFirst");
+  state->DeclareStep("RemoveSecond");
+  state->DeclareStep("RemoveFirstAgain");
+  state->DeclareStep("RemoveThird");
+  while (state->KeepRunning()) {
+    child1.set_parent(parent.object_dir());
+    state->NextStep();
+    child2.set_parent(parent.object_dir());
+    state->NextStep();
+    child1.set_parent(parent.object_dir());
+    state->NextStep();
+    child3.set_parent(parent.object_dir());
+    state->NextStep();
+    child1.remove_from_parent();
+    state->NextStep();
+    child2.remove_from_parent();
+    state->NextStep();
+    child1.remove_from_parent();
+    state->NextStep();
+    child3.remove_from_parent();
+  }
+  return true;
+}
+
 void RegisterTests() {
+  perftest::RegisterTest("Inspect/CreateDestroy", TestCreationAndDestruction);
   perftest::RegisterTest("Inspect/Increment", TestIncrement);
+  perftest::RegisterTest("Inspect/Parentage", TestParentage);
   perftest::RegisterTest("Inspect/Path0", TestIncrementPath, kPath0);
   perftest::RegisterTest("Inspect/Path1", TestIncrementPath, kPath1);
   perftest::RegisterTest("Inspect/Path2", TestIncrementPath, kPath2);
